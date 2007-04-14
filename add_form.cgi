@@ -10,23 +10,23 @@ print &ui_form_start("add.cgi", "post");
 print &ui_table_start($text{'add_header'}, undef, 2);
 
 # Type of system
-$tfunc = "type_".$in{'type'}."_name";
+$tfunc = "type_".$in{'type'}."_desc";
 print &ui_table_row($text{'add_type'}, &$tfunc());
 
 # Hostname
 print &ui_table_row($text{'add_host'},
-	&ui_textbox("host", undef, 20));
+	&ui_textbox("host", undef, 40));
 
 # Root password / SSH key
 print &ui_table_row($text{'add_auth'},
 	&ui_radio("auth_mode", 0,
 	      [ [ 0, &text('add_auth0',
 			   &ui_textbox("upass", undef, 20))."<br>" ],
-		[ 1, &text('add_auth1', &ssh_key_menu()) ] ]));
+		[ 1, &text('add_auth1', &ssh_key_menu("key")) ] ]));
 
 # Webmin login
 print &ui_table_row($text{'add_webmin'},
-	&ui_radio("webmin_mode"
+	&ui_radio("webmin_mode", 0,
 	      [ [ 0, $text{'add_webmin0'}."<br>" ],
 		[ 1, $text{'add_webmin1'}."<br>" ],
 		[ 2, &text('add_webmin2',

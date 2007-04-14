@@ -198,5 +198,21 @@ while($text) {
 return join("\n", @rv);
 }
 
+# ssh_key_menu()
+# Returns a menu for selecting an SSH key
+sub ssh_key_menu
+{
+local ($name) = @_;
+local @keys = sort { $a->{'desc'} cmp $b->{'desc'} } &list_ssh_keys();
+if (@keys) {
+	return &ui_select($name, undef,
+		[ map { [ $_->{'id'}, $_->{'desc'} ] } @keys ]);
+	}
+else {
+	return &ui_select($name, undef,
+		[ [ undef, $text{'add_nokeys'} ] ]);
+	}
+}
+
 1;
 

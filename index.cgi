@@ -33,7 +33,7 @@ if (@servers) {
 		], 100, 0, \@tds);
 	foreach my $s (@servers) {
 		$t = $s->{'manager'};
-		$tfunc = "type_".$t."_name";
+		$tfunc = "type_".$t."_desc";
 		print &ui_checked_columns_row([
 		    "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
 		    &$tfunc(),
