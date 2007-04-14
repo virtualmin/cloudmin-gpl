@@ -189,13 +189,16 @@ return $data;
 sub wrap_long_line
 {
 local ($text, $cols) = @_;
+local @lines = split(/\r?\n/, $text);
 local @rv;
-while($text) {
-	local $l = substr($text, 0, $cols);
-	$text = substr($text, $cols);
-	push(@rv, $l);
+foreach my $text (@lines) {
+	while($text) {
+		local $l = substr($text, 0, $cols);
+		$text = substr($text, $cols);
+		push(@rv, $l);
+		}
 	}
-return join("\n", @rv);
+return join("\n", @rv)."\n";
 }
 
 # ssh_key_menu()
@@ -212,6 +215,15 @@ else {
 	return &ui_select($name, undef,
 		[ [ undef, $text{'add_nokeys'} ] ]);
 	}
+}
+
+sub cleanup_key_data
+{
+local ($text) = @_;
+$text =~ s/\r//g;
+$text =~ s/^\s*//g;
+$text =~ s/\s*$/\n/g;
+return $text;
 }
 
 1;

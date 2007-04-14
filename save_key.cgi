@@ -63,9 +63,7 @@ elsif ($in{'new'}) {
 		}
 	elsif ($in{'gen'} == 3) {
 		# Pasted text
-		$in{'data'} =~ s/\r//g;
-		$in{'data'} =~ s/^\s*//g;
-		$in{'data'} =~ s/\s*$/\n/g;
+		$in{'data'} = &cleanup_key_data($in{'data'});
 		&check_ssh_key_data($in{'data'}) ||
 			&error($text{'key_edata'});
 		$key->{'keydata'} = $in{'data'};
@@ -87,6 +85,7 @@ else {
 		}
 	elsif (defined($in{'data'})) {
 		# Update key data
+		$in{'data'} = &cleanup_key_data($in{'data'});
 		&check_ssh_key_data($in{'data'}) ||
 			&error($text{'key_edata'});
 		$key->{'keydata'} = $in{'data'};

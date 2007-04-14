@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 &ui_print_header(undef, $text{'add_title'}, "", "add");
 
 print &ui_form_start("add.cgi", "post");
+print &ui_hidden("type", $in{'type'});
 print &ui_table_start($text{'add_header'}, undef, 2);
 
 # Type of system
