@@ -8,6 +8,7 @@ require './server-manager-lib.pl';
 				   : $text{'key_edit'}, "");
 if (!$in{'new'}) {
 	($key) = grep { $_->{'id'} eq $in{'id'} } &list_ssh_keys();
+	$key || &error($text{'key_egone'});
 	}
 
 print &ui_form_start("save_key.cgi", "form-data");
@@ -30,7 +31,7 @@ if ($in{'new'}) {
 		    [ 2, &text('key_gen2',
 			       &ui_upload("upload", 40))."<br>" ],
 		    [ 3, &text('key_gen3',
-			       &ui_textarea("data", undef, 10, 64)) ] ]));
+			       &ui_textarea("data", undef, 10, 80)) ] ]));
 	}
 else {
 	# Details of existing key
@@ -40,15 +41,23 @@ else {
 			&ui_textbox("file", $key->{'file'}, 60)." ".
 			&file_chooser_button("file", 0));
 		}
-	else {
+	elsif ($key->{'keydata'} =~ /^[\040-\176\r\n]+$/) {
 		# Show key text
 		print &ui_table_row($text{'key_data'},
-			&ui_textarea("data", $key->{'data'}, 10, 64));
+			&ui_textarea("data", $key->{'keydata'}, 10, 80));
+		}
+	else {
+		# Show link to download binary key
+		print &ui_table_row($text{'key_data'},
+			"<a href='download_key.cgi/identity?id=$key->{'id'}'>".
+			"$text{'key_download'}</a>");
 		}
 
 	# Show public key
 	print &ui_table_row($text{'key_public'},
-		"<pre>".&generate_public_key($key)."</pre>");
+		&ui_textarea("public", &wrap_long_line(
+					&generate_public_key($key), 80),
+			     10, 80, "off", 0, "readonly"));
 	}
 
 print &ui_table_end();

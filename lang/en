@@ -64,8 +64,25 @@ key_gen2=In uploaded file $1
 key_gen3=Pasted into textbox below..<br>$1
 key_file=Existing key file
 key_data=Private key data
+key_err=Failed to save SSH key
+key_edesc=Missing description
+key_efile=Existing key file does not exist
+key_efile2=Existing key file does not contain an SSH key
+key_eupload=Uploaded file does not contain an SSH key
+key_edata=Pasted text does not appear to be an SSH key
+key_public=Public key<br>(Should be all on one line)
+key_download=Download..
+key_egone=Key no longer exists!
 
 dkey_title=Delete SSH Key
 dkey_rusure=Are you sure you want to remove the SSH key $1? It is used to login to the following systems :<br>$2
 dkey_rusure2=Without this key, access to these systems may no longer be possible!
 dkey_ok=Yes, Delete It
+
+dkeys_title=Delete SSH Keys
+dkeys_rusure=Are you sure you want to remove the $1 selected SSH keys? They are used to login to the following systems :<br>$2
+dkeys_rusure2=Without the keys, access to these systems may no longer be possible!
+dkeys_ok=Yes, Delete Them
+dkeys_err=Failed to delete keys
+dkeys_enone=None selected
+dkeys_egone=One of the keys no longer exists!

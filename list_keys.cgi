@@ -29,13 +29,14 @@ if (@keys) {
 			], \@tds, "d", $k->{'id'});
 		}
 	print &ui_columns_end();
+	print &ui_links_row(\@links);
 	print &ui_form_end([ [ "delete", $text{'keys_delete'} ] ]);
 	}
 else {
 	print "<b>$text{'keys_none'}</b><p>\n";
 	@links = ( $links[2] );
+	print &ui_links_row(\@links);
 	}
-print &ui_links_row(\@links);
 
 &ui_print_footer("", $text{'index_return'});
 

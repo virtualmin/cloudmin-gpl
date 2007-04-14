@@ -120,6 +120,7 @@ if (!$key->{'external'}) {
 	&open_lock_tempfile(DATA, ">$key->{'file'}");
 	&print_tempfile(DATA, $key->{'keydata'});
 	&close_tempfile(DATA);
+	&set_ownership_permissions(undef, undef, 0600, $key->{'file'});
 	}
 }
 
@@ -140,8 +141,8 @@ sub generate_public_key
 {
 local ($key) = @_;
 local $qp = quotemeta($key->{'file'});
-local $out = `echo $qp | ssh-keygen -y 2>/dev/null`;
-if ($out =~ /.*((\d+)\s+(\d+)\s+(\d+))$/) {
+local $out = `ssh-keygen -y -f $qp 2>/dev/null`;
+if ($out =~ /((\d+)\s+(\d+)\s+(\d+))$/) {
 	# Version 1
 	return $1;
 	}
@@ -152,6 +153,49 @@ elsif ($out =~ /((\S+)\s+([A-Za-z0-9\/=\+]+))$/) {
 else {
 	return undef;
 	}
+}
+
+# check_ssh_key_data(text)
+# Returns 1 if the text looks like an SSH 1 key, 2 for an SSH version 2 key,
+# 0 otherwise
+sub check_ssh_key_data
+{
+local ($text) = @_;
+if ($text =~ /-----BEGIN\s+(RSA|DSA)\s+PRIVATE\s+KEY-----\n([A-Za-z0-9\+\/=\n]+)-----END\s+(\S+)\s+PRIVATE\s+KEY-----/ && $1 eq $3) {
+	return 2;
+	}
+elsif ($text =~ /^SSH\s+PRIVATE\s+KEY\s+FILE/) {
+	return 1;
+	}
+else {
+	return 0;
+	}
+}
+
+# generate_ssh_key()
+# Create a new SSH private key, in the default format
+sub generate_ssh_key
+{
+local $temp = &transname();
+local $out = &backquote_command("ssh-keygen -f $temp -N '' 2>&1");
+if ($? || !-r $temp) {
+	&error("<tt>$out</tt>");
+	}
+local $data = &read_file_contents($temp);
+unlink($temp, $temp.".pub");
+return $data;
+}
+
+sub wrap_long_line
+{
+local ($text, $cols) = @_;
+local @rv;
+while($text) {
+	local $l = substr($text, 0, $cols);
+	$text = substr($text, $cols);
+	push(@rv, $l);
+	}
+return join("\n", @rv);
 }
 
 1;

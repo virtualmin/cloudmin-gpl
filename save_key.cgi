@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &ReadParseMime();
 if (!$in{'new'}) {
 	($key) = grep { $_->{'id'} eq $in{'id'} } &list_ssh_keys();
+	$key || &error($text{'key_egone'});
 	}
 &error_setup($text{'key_err'});
 
@@ -40,10 +41,59 @@ if ($in{'delete'}) {
 elsif ($in{'new'}) {
 	# Validate and/or generate
 	$in{'desc'} =~ /\S/ || &error($text{'key_edesc'});
-	$key = { 'desc' => $in{'desc'} };
+	$key = { 'desc' => $in{'desc'},
+		 'external' => 0 };
+	if ($in{'gen'} == 0) {
+		# Generate a new key right now
+		$key->{'keydata'} = &generate_ssh_key();
+		}
+	elsif ($in{'gen'} == 1) {
+		# In existing server-side file
+		-r $in{'file'} || &error($text{'key_efile'});
+		$data = &read_file_contents($in{'file'});
+		&check_ssh_key_data($data) || &error($text{'key_efile2'});
+		$key->{'file'} = $in{'file'};
+		$key->{'external'} = 1;
+		}
+	elsif ($in{'gen'} == 2) {
+		# Uploaded file, to be stored by module
+		&check_ssh_key_data($in{'upload'}) ||
+			&error($text{'key_eupload'});
+		$key->{'keydata'} = $in{'upload'};
+		}
+	elsif ($in{'gen'} == 3) {
+		# Pasted text
+		$in{'data'} =~ s/\r//g;
+		$in{'data'} =~ s/^\s*//g;
+		$in{'data'} =~ s/\s*$/\n/g;
+		&check_ssh_key_data($in{'data'}) ||
+			&error($text{'key_edata'});
+		$key->{'keydata'} = $in{'data'};
+		}
+	&save_ssh_key($key);
+	&webmin_log("create", "key", $key->{'id'},
+		    { 'desc' => $key->{'desc'} });
 	}
 else {
 	# Update
+	$in{'desc'} =~ /\S/ || &error($text{'key_edesc'});
+	$key->{'desc'} = $in{'desc'};
+	if ($key->{'external'}) {
+		# Change file
+		-r $in{'file'} || &error($text{'key_efile'});
+		$data = &read_file_contents($in{'file'});
+		&check_ssh_key_data($data) || &error($text{'key_efile2'});
+		$key->{'file'} = $in{'file'};
+		}
+	elsif (defined($in{'data'})) {
+		# Update key data
+		&check_ssh_key_data($in{'data'}) ||
+			&error($text{'key_edata'});
+		$key->{'keydata'} = $in{'data'};
+		}
+	&save_ssh_key($key);
+	&webmin_log("modify", "key", $key->{'id'},
+		    { 'desc' => $key->{'desc'} });
 	}
 &redirect("list_keys.cgi");
 
