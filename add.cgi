@@ -12,6 +12,7 @@ gethostbyname($in{'host'}) || &error($text{'add_ehost'});
 ($clash) = grep { $_->{'host'} eq $in{'host'} } @servers;
 $clash && &error($text{'add_eclash'});
 $server->{'host'} = $in{'host'};
+$server->{'desc'} = $in{'desc'};
 
 # SSH login
 $server->{'ssh_user'} = 'root';
@@ -23,6 +24,7 @@ elsif ($in{'auth_mode'} == 1) {
 	$in{'key'} || &error($text{'add_ekey'});
 	$server->{'key'} = $in{'key'};
 	}
+$server->{'ssh_protocol'} = $in{'protocol'};
 
 # Webmin login
 if ($in{'webmin_mode'} == 1) {
@@ -37,6 +39,9 @@ elsif ($in{'webmin_mode'} == 2) {
 	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
 	$server->{'pass'} = $in{'wpass'};
 	}
+$server->{'ssl'} = $in{'ssl'};
+$in{'port'} =~ /^\d+$/ || &error($text{'add_eport'});
+$server->{'port'} = $in{'port'};
 
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_add_parse";
@@ -45,17 +50,20 @@ if (defined(&$pfunc)) {
 	}
 
 # Make sure the SSH login is valid
-($status, $msg) = &check_system_ssh_login($server);
-$status && &error(&text('add_essh', $msg));
+($status, $msg) = &check_server_ssh_login($server);
+$status && &error(&text('add_essh', &nice_error_status($status), $msg));
 
 # And the Webmin login
 if ($server->{'user'}) {
-	($status, $msg, $os, $realos) = &check_system_webmin_login($server);
-	$status && &error(&text('add_ewebmin', $msg));
+	($status, $msg, $os, $realos) = &check_server_webmin_login($server);
+	$status && &error(&text('add_ewebmin', &nice_error_status($status),
+					       $msg));
 	$server->{'type'} = &os_to_server_type($os, $realos);
 	}
 
-# Save the server object
+# Get status one more time, and save the server object
+&save_managed_server($server);
+&check_server_status($server);
 &save_managed_server($server);
 &redirect("");
 

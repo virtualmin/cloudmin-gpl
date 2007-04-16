@@ -18,12 +18,18 @@ print &ui_table_row($text{'add_type'}, &$tfunc());
 print &ui_table_row($text{'add_host'},
 	&ui_textbox("host", undef, 40));
 
+# Description
+print &ui_table_row($text{'add_desc'},
+	&ui_textbox("desc", undef, 60));
+
 # Root password / SSH key
 print &ui_table_row($text{'add_auth'},
 	&ui_radio("auth_mode", 0,
 	      [ [ 0, &text('add_auth0',
 			   &ui_textbox("upass", undef, 20))."<br>" ],
 		[ 1, &text('add_auth1', &ssh_key_menu("key")) ] ]));
+print &ui_table_row($text{'add_protocol'},
+	&ui_radio("protocol", 2, [ [ 2 ], [ 1 ] ]));
 
 # Webmin login
 print &ui_table_row($text{'add_webmin'},
@@ -32,7 +38,12 @@ print &ui_table_row($text{'add_webmin'},
 		[ 1, $text{'add_webmin1'}."<br>" ],
 		[ 2, &text('add_webmin2',
 			   &ui_textbox("wuser", "root", 20),
-			   &ui_textbox("wpass", undef, 20)) ] ]));
+			   &ui_textbox("wpass", undef, 20)) ] ])."<br>".
+	&ui_checkbox("ssl", 1, $text{'add_ssl'}, 1));
+
+# Webmin port
+print &ui_table_row($text{'add_port'},
+	&ui_textbox("port", 10000, 6));
 
 # Type-specific options
 $ffunc = "type_".$in{'type'}."_add_form";

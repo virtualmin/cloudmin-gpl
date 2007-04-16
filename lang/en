@@ -8,22 +8,16 @@ index_dereg=De-Register Selected
 index_delete=Delete Selected
 index_header=Global Options
 index_return=list of managed servers
+index_refresh=Refresh Status of Selected
 
-status_down=Down
-status_nossh=No SSH
-status_nowebmin=No Webmin
-status_novirt=No Virtualmin
-status_virt=Ready
-status_unknown=Unknown
-
-ec2_desc=Amazon EC2
-ec2_create=Create EC2 instance.
-ec2_add=Add existing EC2 instance.
+ec2_typedesc=Amazon EC2
+ec2_createlink=Create EC2 instance.
+ec2_addlink=Add EC2 instance.
 
 ec2s_title=EC2 Accounts
 
 real_desc=Physical system
-real_add=Add existing physical system.
+real_add=Add physical system.
 
 zones_desc=Solaris Zone
 zones_create=Create Solaris Zone.
@@ -50,8 +44,15 @@ add_ekey=No SSH keys have been defined yet
 add_emode1=You can only select to login to Webmin with the same password as <tt>root</tt> if a password has been entered
 add_ewuser=Missing or invalid-looking Webmin login
 add_ewpass=Missing Webmin password
-add_essh=SSH connection failed : $1
-add_ewebmin=Webmin login failed : $1
+add_essh=SSH connection failed : $1 ($2)
+add_ewebmin=Webmin login failed : $1 ($2)
+add_ssl=Use SSL to connect to Webmin
+add_protocol=SSH protocol version
+add_port=Webmin port
+add_eport=Missing or non-numeric Webmin port
+add_desc=System description
+add_ec2account=EC2 account
+add_ec2instance=EC2 instance ID
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
@@ -123,8 +124,48 @@ ec2_edesc=Missing account description
 ec2_eaccount=Missing or invalid account ID. This must be a number like 094537821629
 ec2_ecert=Missing or invalid-looking EC2 certificate
 ec2_ekey=Missing or invalid-looking EC2 private key
+ec2_access=Access key ID
+ec2_secret=Secret access key
+ec2_elogin=Invalid access key or secret key : $1
+ec2_eaccess=Missing or invalid access key - must be like 14LJH2F92WHX2BCWZNR3
+ec2_esecret=Missing or invalid secrey key - must be like q3ibttLzHMs5lGt9hhKkCutGtD9JoBkItDMiWDpF
+ec2_instances=Running instance IDs
+ec2_none=None found
 
 dec2s_err=Failed to delete EC2 accounts
 dec2s_enone=None selected
 dec2s_egone=One of the accounts no longer exists!
 dec2s_eusers=The account $1 is being used by $2 managed servers. It cannot be removed unless they are delete or de-registered.
+
+status_0=OK
+status_1=Connection failed
+status_2=Login failed
+status_3=Unknown error
+status_4=Timeout connecting
+status_down=Down
+status_nossh=No SSH
+status_nosshlogin=SSH login failed
+status_nowebmin=No Webmin
+status_nowebminlogin=Webmin login failed
+status_novirt=No Virtualmin
+status_virt=Running Virtualmin
+status_unknown=Unknown
+status_doms=$1 domains
+
+mass_enone=No systems selected to operate on
+mass_rtitle=Refreshing System Statuses
+mass_rdoing=Now refreshing the status of $1 selected systems ..
+mass_rdone=.. done!
+mass_ebutton=No button clicked!
+
+this_desc=Physical system
+this_this=This system
+
+ichooser_title=Select EC2 Instance
+ichooser_elogin=EC2 login failed : $1
+ichooser_enone=The selected account has no associated running instances
+ichooser_id=Instance ID
+ichooser_ami=Image ID
+ichooser_state=State
+ichooser_unuse=<font color=#ff0000>Managed host $1</font>
+ichooser_free=Not yet managed

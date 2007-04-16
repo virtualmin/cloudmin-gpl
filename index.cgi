@@ -40,17 +40,20 @@ if (@servers) {
 		    &describe_os($s->{'type'}),
 		    &describe_status($s, 1),
 		    $s->{'desc'}
-		    ], \@tds);
+		    ], \@tds, "d", $s->{'id'});
 		}
 	print &ui_columns_end();
+	print &ui_links_row(\@links);
 	print &ui_form_end([ [ "dereg", $text{'index_dereg'} ],
-			     [ "delete", $text{'index_delete'} ] ]);
+			     [ "delete", $text{'index_delete'} ],
+			     undef,
+			     [ "refresh", $text{'index_refresh'} ] ]);
 	}
 else {
 	print "<b>$text{'index_none'}</b><p>\n";
 	@links = @links[2..$#links];
+	print &ui_links_row(\@links);
 	}
-print &ui_links_row(\@links);
 
 # Show icons for global settings
 push(@glinks, "list_keys.cgi");
