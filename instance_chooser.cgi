@@ -36,7 +36,7 @@ else {
 			    @servers;
 		print &ui_columns_row([
 		    $s ? $i->{'instanceId'} :
-			"<a href='' onClick='select(\"$i->{'instanceId'}\")>".
+			"<a href='' onClick='select(\"$i->{'instanceId'}\")'>".
 			"$i->{'instanceId'}</a>",
 		    $i->{'imageId'},
 		    $s ? &text('ichooser_unuse', $s->{'host'})

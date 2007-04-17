@@ -49,21 +49,43 @@ if (defined(&$pfunc)) {
 	&$pfunc($server, \%in);
 	}
 
+&ui_print_header(undef, $text{'add_title'}, "");
+
 # Make sure the SSH login is valid
+print $text{'add_sshing'},"<br>\n";
 ($status, $msg) = &check_server_ssh_login($server);
-$status && &error(&text('add_essh', &nice_error_status($status), $msg));
+if ($status) {
+	print "<b>",&text('add_essh',
+			  &nice_error_status($status), $msg),"</b><p>\n";
+	goto END;
+	}
+else {
+	print $text{'add_sshok'},"<p>\n";
+	}
 
 # And the Webmin login
 if ($server->{'user'}) {
+	print $text{'add_webmining'},"<br>\n";
 	($status, $msg, $os, $realos) = &check_server_webmin_login($server);
-	$status && &error(&text('add_ewebmin', &nice_error_status($status),
-					       $msg));
+	if ($status) {
+		print "<b>",&text('add_ewebmin',
+				&nice_error_status($status), $msg),"</b><p>\n";
+		goto END;
+		}
+	else {
+		print $text{'add_webminok'},"<p>\n";
+		}
 	$server->{'type'} = &os_to_server_type($os, $realos);
 	}
 
 # Get status one more time, and save the server object
+print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
 &check_server_status($server);
 &save_managed_server($server);
-&redirect("");
+print $text{'add_statusok'},"<p>\n";
+
+END:
+&ui_print_footer("", $text{'index_return'});
+
 

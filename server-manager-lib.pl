@@ -1,8 +1,6 @@
 # Functions for general setup and management of multiple Virtualmin servers
-# XXX what about adding 'self' ?
 # XXX search if too many servers
 # XXX grouping
-# XXX cron job to check status
 # XXX for zones, we don't need to SSH in
 
 do '../web-lib.pl';
@@ -51,7 +49,7 @@ return @rv;
 
 # save_managed_server(&server)
 # Create or update a managed server object. It will be added to both this
-# module and Webmin Servers Index (XXX not yet)
+# module and Webmin Servers Index
 sub save_managed_server
 {
 local ($server) = @_;
@@ -315,6 +313,11 @@ if ($last_remote_error) {
 	}
 if ($@) {
 	if ($@ =~ /timeout/) {
+		# A fast mode failure will look like a timeout .. try in slow
+		if ($fast_try) {
+			$server->{'fast'} = 0;
+			return &check_server_webmin_login($server);
+			}
 		return (4, "Webmin failed to complete in 10 seconds");
 		}
 	else {
@@ -461,6 +464,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 	# Webmin is OK! Check for Virtualmin
 	$server->{'status'} = 'virt';
 	$server->{'status_msg'} = undef;
+	local $info;
 	if (&remote_foreign_check($server, "virtual-server")) {
 		# Get and save remote Virtualmin domains
 		&remote_foreign_require($server, "virtual-server",
@@ -470,14 +474,25 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		&save_server_domains($server, \@doms);
 
 		# Get and save collected status info
-		local $info = &remote_foreign_call($server, "virtual-server",
-						   "get_collected_info");
-		&save_server_collected($server, $info);
+		$info = &remote_foreign_call($server, "virtual-server",
+					     "get_collected_info");
+		$info->{'minfo'} = &remote_eval($server, "virtual_server",
+						"\\\%module_info");
 		}
 	else {
 		$server->{'status'} = 'novirt';
 		$server->{'status_msg'} = undef;
+		$info = { };
 		}
+
+	# Get common Webmin information
+	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
+	$info->{'general'}->{'version'} = 
+		&remote_foreign_call($server, "webmin", "get_webmin_version");
+	$info->{'general'}->{'installtype'} = 
+		&remote_foreign_call($server, "webmin", "get_install_type");
+
+	&save_server_collected($server, $info);
 	}
 else {
 	$server->{'status'} = 'nowebmin';

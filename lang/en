@@ -44,8 +44,14 @@ add_ekey=No SSH keys have been defined yet
 add_emode1=You can only select to login to Webmin with the same password as <tt>root</tt> if a password has been entered
 add_ewuser=Missing or invalid-looking Webmin login
 add_ewpass=Missing Webmin password
-add_essh=SSH connection failed : $1 ($2)
-add_ewebmin=Webmin login failed : $1 ($2)
+add_sshing=Checking SSH login ..
+add_essh=.. SSH connection failed : $1 ($2)
+add_sshok=.. logged in OK.
+add_webmining=Checking Webmin login ..
+add_ewebmin=.. Webmin login failed : $1 ($2)
+add_webminok=.. logged in OK.
+add_statusing=Fetching current status ..
+add_statusok=.. status successfully retrieved.
 add_ssl=Use SSL to connect to Webmin
 add_protocol=SSH protocol version
 add_port=Webmin port
@@ -53,6 +59,16 @@ add_eport=Missing or non-numeric Webmin port
 add_desc=System description
 add_ec2account=EC2 account
 add_ec2instance=EC2 instance ID
+
+create_title=Create New System
+create_header=Details of new virtual system
+create_type=System type
+create_host=System hostname
+create_hostdef=Selected automatically
+create_webmin0=Don't install Webmin
+create_ok=Create System
+create_ec2image=EC2 image to start
+create_sshkey=SSH key for root
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
@@ -131,6 +147,11 @@ ec2_eaccess=Missing or invalid access key - must be like 14LJH2F92WHX2BCWZNR3
 ec2_esecret=Missing or invalid secrey key - must be like q3ibttLzHMs5lGt9hhKkCutGtD9JoBkItDMiWDpF
 ec2_instances=Running instance IDs
 ec2_none=None found
+ec2_einstance=Missing or invalid-looking instance ID
+ec2_einstance2=The instance ID was not found under the selected account
+ec2_einstanceclash=The managed server $1 is already using this instance ID
+ec2_image=Missing or invalid-looking image ID
+ec2_eimage2=The image ID is not available to the selected account
 
 dec2s_err=Failed to delete EC2 accounts
 dec2s_enone=None selected
@@ -169,3 +190,9 @@ ichooser_ami=Image ID
 ichooser_state=State
 ichooser_unuse=<font color=#ff0000>Managed host $1</font>
 ichooser_free=Not yet managed
+
+achooser_title=Select EC2 Machine Image
+achooser_enone=The selected account does not have access to any images!
+achooser_id=Image ID
+achooser_path=Path in S3
+achooser_owner=Owner ID
