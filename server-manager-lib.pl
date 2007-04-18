@@ -2,6 +2,8 @@
 # XXX search if too many servers
 # XXX grouping
 # XXX for zones, we don't need to SSH in
+# XXX EC2 can only use its own SSH keys!
+#	XXX when creating, limit list to EC2 keys
 
 do '../web-lib.pl';
 &init_config();
@@ -74,9 +76,12 @@ else {
 # Remove a managed server object
 sub delete_managed_server
 {
+local ($server) = @_;
 if ($server->{'id'}) {
 	&servers::delete_server($server->{'id'});
 	}
+unlink("$server_domains_dir/$server->{'id'}");
+unlink("$server_collected_dir/$server->{'id'}");
 }
 
 # describe_os(os)
@@ -243,17 +248,27 @@ foreach my $text (@lines) {
 return join("\n", @rv)."\n";
 }
 
-# ssh_key_menu()
+# ssh_key_menu(name, [for-type])
 # Returns a menu for selecting an SSH key
 sub ssh_key_menu
 {
-local ($name) = @_;
+local ($name, $type) = @_;
 local @keys = sort { $a->{'desc'} cmp $b->{'desc'} } &list_ssh_keys();
+local @allkeys = @keys;
+if ($type) {
+	# Limit to keys suitable for this server type
+	local $kfunc = "type_${type}_ssh_key_grep";
+	if (defined(&$kfunc)) {
+		@keys = grep { &$kfunc($_) } @keys;
+		}
+	}
 if (@keys) {
 	return &ui_select($name, undef,
 		[ map { [ $_->{'id'}, $_->{'desc'} ] } @keys ]);
 	}
 else {
+	local $msg = @keys == @allkeys ? $text{'add_nokeys'}
+				       : $text{'add_nokeys2'};
 	return &ui_select($name, undef,
 		[ [ undef, $text{'add_nokeys'} ] ]);
 	}

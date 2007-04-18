@@ -3,7 +3,7 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
-&error_setup($text{'add_err'});
+&error_setup($text{'create_err'});
 @servers = &list_managed_servers();
 $server = { 'manager' => $in{'type'} };
 
@@ -50,14 +50,45 @@ if (defined(&$pfunc)) {
 	&$pfunc($server, \%in);
 	}
 
-&ui_print_header(undef, $text{'create_title'}, "");
+&ui_print_unbuffered_header(undef, $text{'create_title'}, "");
 
-# Call the server type's creation function. This may take some time..
-# XXX
+# Call the server type's creation function, then wait for it to be come ready
+print $text{'create_creating'},"<br>\n";
+$cfunc = "type_".$in{'type'}."_create";
+$err = &$cfunc($server);
+if ($err) {
+	print &text('create_ecreate', $err),"<p>\n";
+	goto END;
+	}
+$dfunc = "type_".$in{'type'}."_create_done";
+if (defined(&$dfunc)) {
+	print $text{'create_created'},"<p>\n";
+	print $text{'create_waiting'};
+	while(1) {
+		$err = &$dfunc($server);
+		if ($err eq "OK") {
+			print "<br>\n";
+			last;
+			}
+		elsif ($err) {
+			print &text('create_ewait', $err),"<p>\n";
+			goto END;
+			}
+		else {
+			print ".";
+			}
+		sleep(1);
+		}
+	print $text{'create_waited'},"<p>\n";
+	}
+else {
+	print $text{'create_created2'},"<p>\n";
+	}
 
 # Verify that we can connect via SSH
+# XXX this may need to wait a while for SSH to come up
 # XXX
-# XXX set root password
+# XXX set root password, if requested (not for EC2)
 
 # Check if the server has Webmin.
 # XXX
@@ -69,8 +100,13 @@ if (defined(&$pfunc)) {
 # XXX
 
 # Re-check and save the status
-# XXX
+print $text{'add_statusing'},"<br>\n";
+&save_managed_server($server);
+&check_server_status($server);
+&save_managed_server($server);
+print $text{'add_statusok'},"<p>\n";
 
+END:
 &ui_print_footer("", $text{'index_return'});
 
 

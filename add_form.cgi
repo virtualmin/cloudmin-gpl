@@ -27,7 +27,7 @@ print &ui_table_row($text{'add_auth'},
 	&ui_radio("auth_mode", 0,
 	      [ [ 0, &text('add_auth0',
 			   &ui_textbox("upass", undef, 20))."<br>" ],
-		[ 1, &text('add_auth1', &ssh_key_menu("key")) ] ]));
+		[ 1, &text('add_auth1', &ssh_key_menu("key", $in{'type'}))] ]));
 print &ui_table_row($text{'add_protocol'},
 	&ui_radio("protocol", 2, [ [ 2 ], [ 1 ] ]));
 

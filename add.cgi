@@ -49,7 +49,7 @@ if (defined(&$pfunc)) {
 	&$pfunc($server, \%in);
 	}
 
-&ui_print_header(undef, $text{'add_title'}, "");
+&ui_print_unbuffered_header(undef, $text{'add_title'}, "");
 
 # Make sure the SSH login is valid
 print $text{'add_sshing'},"<br>\n";

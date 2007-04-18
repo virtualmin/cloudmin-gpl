@@ -27,7 +27,7 @@ $pfunc = "type_".$in{'type'}."_no_create_pass";
 if (defined(&$pfunc) && &$pfunc()) {
 	# This server type doesn't set a root password at creation (ie. EC2)
 	print &ui_table_row($text{'create_sshkey'},
-			    &ssh_key_menu("key"));
+			    &ssh_key_menu("key", $in{'type'}));
 	print &ui_hidden("auth_mode", 1);
 	}
 else {

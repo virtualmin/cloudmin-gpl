@@ -22,6 +22,13 @@ print &ui_table_row($text{'key_desc'},
 
 if ($in{'new'}) {
 	# Source for new key
+	@typeopts = ( );
+	foreach $t (@server_management_types) {
+		$kfunc = "type_${t}_ssh_key_opts";
+		if (defined(&$kfunc)) {
+			push(@typeopts, &$kfunc());
+			}
+		}
 	print &ui_table_row($text{'key_gen'},
 		&ui_radio("gen", 0, 
 		  [ [ 0, $text{'key_gen0'}."<br>" ],
@@ -31,7 +38,9 @@ if ($in{'new'}) {
 		    [ 2, &text('key_gen2',
 			       &ui_upload("upload", 40))."<br>" ],
 		    [ 3, &text('key_gen3',
-			       &ui_textarea("data", undef, 10, 80)) ] ]));
+			       &ui_textarea("data", undef, 5, 80))."<br>" ],
+		    @typeopts,
+		  ]));
 	}
 else {
 	# Details of existing key
@@ -58,6 +67,14 @@ else {
 		&ui_textarea("public", &wrap_long_line(
 					&generate_public_key($key), 80),
 			     10, 80, "off", 0, "readonly"));
+
+	# Show type-specific key info
+	foreach $t (@server_management_types) {
+		$kfunc = "type_${t}_ssh_key_form";
+		if (defined(&$kfunc)) {
+			print &$kfunc($key);
+			}
+		}
 	}
 
 print &ui_table_end();
