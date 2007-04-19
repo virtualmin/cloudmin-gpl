@@ -41,13 +41,16 @@ if (@servers) {
 		    &describe_status($s, 1),
 		    $s->{'desc'}
 		    ], \@tds, "d", $s->{'id'});
+		$virtcount++ if ($s->{'status'} eq 'virt');
 		}
 	print &ui_columns_end();
 	print &ui_links_row(\@links);
-	print &ui_form_end([ [ "dereg", $text{'index_dereg'} ],
-			     [ "delete", $text{'index_delete'} ],
+	print &ui_form_end([
+			     [ "refresh", $text{'index_refresh'} ],
 			     undef,
-			     [ "refresh", $text{'index_refresh'} ] ]);
+			     [ "dereg", $text{'index_dereg'} ],
+			     [ "delete", $text{'index_delete'} ],
+			   ]);
 	}
 else {
 	print "<b>$text{'index_none'}</b><p>\n";
@@ -56,9 +59,19 @@ else {
 	}
 
 # Show icons for global settings
+if ($virtcount) {
+	# Virtualmin domains
+	push(@glinks, "list_domains.cgi");
+	push(@gtitles, $text{'domains_title'});
+	push(@gicons, "images/domains.gif");
+	}
+
+# SSH key management
 push(@glinks, "list_keys.cgi");
 push(@gtitles, $text{'keys_title'});
 push(@gicons, "images/keys.gif");
+
+# Type-defined icons
 foreach $t (@server_management_types) {
 	$gfunc = "type_".$t."_global_links";
 	if (defined(&$gfunc)) {

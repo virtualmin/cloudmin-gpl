@@ -5,4 +5,4 @@ $main::no_acl_check++;
 require './server-manager-lib.pl';
 
 @servers = &list_managed_servers();
-&parallel_check_serve_status(\@servers);
+&parallel_check_server_status(\@servers);

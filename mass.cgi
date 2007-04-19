@@ -10,11 +10,11 @@ require './server-manager-lib.pl';
 
 if ($in{'refresh'}) {
 	# Fetch the status of selected servers, in 10 processes
-	&ui_print_header(undef, $text{'mass_rtitle'}, "");
+	&ui_print_header(undef, $text{'mass_ftitle'}, "");
 
-	print &text('mass_rdoing', scalar(@servers)),"<br>\n";
-	&parallel_check_serve_status(\@servers);
-	print $text{'mass_rdone'},"<p>\n";
+	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
+	&parallel_check_server_status(\@servers);
+	print $text{'mass_fdone'},"<p>\n";
 
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -45,12 +45,19 @@ elsif ($in{'delete'}) {
 		print "<table>\n";
 		foreach $s (@servers) {
 			$tfunc = "type_".$s->{'manager'}."_desc";
+			@sdoms = &get_server_domains($s);
 			print "<tr>\n";
 			print "<td><tt>$s->{'host'}</tt></td>\n";
 			print "<td>(",&$tfunc(),")</td>\n";
+			print "<td>",@sdoms ? &text('mass_ddoms',
+					scalar(@sdoms)) : undef,"</td>\n";
 			print "</tr>\n";
+			$dtotal += scalar(@sdoms);
 			}
 		print "</table>\n";
+		if ($dtotal) {
+			print "<b>",&text('mass_ddeldoms', $dtotal),"</b><p>\n";
+			}
 		print &ui_form_end([ [ "confirm", $text{'mass_dok'} ] ]);
 		print "</center>\n";
 		}
@@ -73,9 +80,33 @@ elsif ($in{'delete'}) {
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
-elsif ($in{'rereg'}) {
-	# XXX not done yet
+elsif ($in{'dereg'}) {
+	# Removing from managed servers list
 	&error_setup($text{'mass_uerr'});
+
+	&ui_print_unbuffered_header(undef, $text{'mass_rtitle'}, "");
+	if (!$in{'confirm'}) {
+		# Ask the user if he is sure
+		print "<center>\n";
+		print &ui_form_start("mass.cgi", "post");
+		print &ui_hidden("dereg", 1);
+		foreach $s (@servers) {
+			print &ui_hidden("d", $s->{'id'});
+			}
+		print &text('mass_rrusre', scalar(@servers)),"<p>\n";
+		print &ui_form_end([ [ "confirm", $text{'mass_rok'} ] ]);
+		print "</center>\n";
+		}
+	else {
+		# Do it for real
+		print $text{'mass_rdoing'},"<br>\n";
+		foreach $s (@servers) {
+			&delete_managed_server($s);
+			}
+		print $text{'mass_rdone'},"<p>\n";
+		}
+	&ui_print_footer("", $text{'index_return'});
+
 	}
 else {
 	&error($text{'mass_ebutton'});

@@ -8,7 +8,7 @@ require './server-manager-lib.pl';
 $server = { 'manager' => $in{'type'} };
 
 # Validate inputs, starting with hostname
-if (!$in{'host_def'}) {
+if (defined($in{'host'})) {
 	$in{'host'} =~ /^[a-z0-9\.\-\_]+$/ || &error($text{'create_ehost'});
 	($clash) = grep { $_->{'host'} eq $in{'host'} } @servers;
 	$clash && &error($text{'add_eclash'});

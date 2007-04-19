@@ -2,8 +2,7 @@
 # XXX search if too many servers
 # XXX grouping
 # XXX for zones, we don't need to SSH in
-# XXX EC2 can only use its own SSH keys!
-#	XXX when creating, limit list to EC2 keys
+# XXX links to virtualmin on other systems should be via link.cgi
 
 do '../web-lib.pl';
 &init_config();
@@ -30,6 +29,33 @@ $check_status_cmd = "$module_config_directory/status.pl";
 $server_domains_dir = "$module_config_directory/domains";
 $server_collected_dir = "$module_config_directory/coll";
 $this_server_status = "$module_config_directory/this";
+
+@standard_virtualmin_features = (
+	{ 'feature' => 'dir', 'desc' => 'Home directory',
+	  'enabled' => 1, 'default' => 1, 'auto' => 1 },
+	{ 'feature' => 'unix', 'desc' => 'Administration user',
+	  'enabled' => 1, 'default' => 1, 'auto' => 1 },
+	{ 'feature' => 'mail', 'desc' => 'Mail for domain',
+	  'enabled' => 1, 'default' => 1 },
+	{ 'feature' => 'dns', 'desc' => 'BIND DNS domain',
+	  'enabled' => 1, 'default' => 1 },
+	{ 'feature' => 'web', 'desc' => 'Apache website',
+	  'enabled' => 1, 'default' => 1 },
+	{ 'feature' => 'webalizer', 'desc' => 'Webalizer reporting',
+	  'enabled' => 1, 'default' => 1 },
+	{ 'feature' => 'ssl', 'desc' => 'SSL website',
+	  'enabled' => 1, 'default' => 0 },
+	{ 'feature' => 'logrotate', 'desc' => 'Log file rotation',
+	  'enabled' => 1, 'default' => 1, 'auto' => 1 },
+	{ 'feature' => 'mysql', 'desc' => 'MySQL database',
+	  'enabled' => 1, 'default' => 1 },
+	{ 'feature' => 'postgres', 'desc' => 'PostgreSQL database',
+	  'enabled' => 1, 'default' => 1 },
+	{ 'feature' => 'ftp', 'desc' => 'ProFTPd server',
+	  'enabled' => 1, 'default' => 0 },
+	{ 'feature' => 'webmin', 'desc' => 'Webmin login',
+	  'enabled' => 1, 'default' => 1 },
+	);
 
 # list_managed_servers()
 # Returns a list of all servers managed by this module. These are actually
@@ -352,6 +378,7 @@ local ($cmd, $pass, $timeout) = @_;
 &foreign_require("proc", "proc-lib.pl");
 local ($wrong_password, $got_login, $connect_failed);
 local $out;
+local $ex;
 eval {
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
@@ -381,7 +408,8 @@ eval {
 		}
 	alarm(0);
 	close($fh);
-	local $got = waitpid($fpid, 0);
+	waitpid($fpid, 0);
+	$ex = $?;
 	};
 if ($@) {
 	if ($@ =~ /timeout/) {
@@ -397,7 +425,7 @@ if ($wrong_password) {
 if ($connect_failed) {
 	return (1, $out);
 	}
-if ($got) {
+if ($ex) {
 	return (3, $out);
 	}
 return (0, $out);
@@ -444,22 +472,24 @@ local ($out, $timed_out) = &backquote_with_timeout(
 				$pingcmd." ".$server->{'host'}." 2>&1", 5, 1);
 local $ping = !$timed_out && !$?;
 
-# Check SSH status
-local ($status, $err) = &check_server_ssh_login($server);
-if ($status == 2) {
-	$server->{'status'} = 'nosshlogin';
-	$server->{'status_msg'} = $err;
-	return 0;
-	}
-elsif ($status && !$ping) {
-	$server->{'status'} = 'down';
-	$server->{'status_msg'} = $err;
-	return 0;
-	}
-elsif ($status) {
-	$server->{'status'} = 'nossh';
-	$server->{'status_msg'} = $err;
-	return 0;
+# Check SSH status (if not local)
+if ($server->{'id'} != 0) {
+	local ($status, $err) = &check_server_ssh_login($server);
+	if ($status == 2) {
+		$server->{'status'} = 'nosshlogin';
+		$server->{'status_msg'} = $err;
+		return 0;
+		}
+	elsif ($status && !$ping) {
+		$server->{'status'} = 'down';
+		$server->{'status_msg'} = $err;
+		return 0;
+		}
+	elsif ($status) {
+		$server->{'status'} = 'nossh';
+		$server->{'status_msg'} = $err;
+		return 0;
+		}
 	}
 
 # If we have a Webmin login, try it
@@ -493,6 +523,13 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					     "get_collected_info");
 		$info->{'minfo'} = &remote_eval($server, "virtual_server",
 						"\\\%module_info");
+		$info->{'config'} = &remote_foreign_config($server,
+							   "virtual-server");
+		if (&remote_eval($server, "virtual_server",
+				 "defined(\&list_available_features)")) {
+			$info->{'features'} = [ &remote_foreign_call($server,
+				"virtual-server", "list_available_features") ];
+			}
 		}
 	else {
 		$server->{'status'} = 'novirt';
@@ -506,6 +543,11 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		&remote_foreign_call($server, "webmin", "get_webmin_version");
 	$info->{'general'}->{'installtype'} = 
 		&remote_foreign_call($server, "webmin", "get_install_type");
+	$info->{'general'}->{'theme'} =
+		&remote_eval($server, "webmin", "\$current_theme");
+	$info->{'general'}->{'tinfo'} =
+		&remote_eval($server, "webmin",
+			     "\%t=get_theme_info(\$current_theme); \\\%t");
 
 	&save_server_collected($server, $info);
 	}
@@ -552,6 +594,7 @@ if (!-d $server_collected_dir) {
 &open_tempfile(DOMS, ">$server_collected_dir/$server->{'id'}");
 &print_tempfile(DOMS, &serialise_variable($info));
 &close_tempfile(DOMS);
+$get_server_collected_cache{$server->{'id'}} = $info;
 }
 
 # get_server_collected(&server)
@@ -559,14 +602,18 @@ if (!-d $server_collected_dir) {
 sub get_server_collected
 {
 local ($server) = @_;
+return $get_server_collected_cache{$server->{'id'}}
+	if ($get_server_collected_cache{$server->{'id'}});
 local $idata = &read_file_contents("$server_collected_dir/$server->{'id'}");
 return undef if (!$idata);	# Not collected yet?
-return &unserialise_variable($idata);
+local $rv = &unserialise_variable($idata);
+$get_server_collected_cache{$server->{'id'}} = $rv;
+return $rv;
 }
 
-# parallel_check_serve_status(&servers)
+# parallel_check_server_status(&servers)
 # Checks the status of multiple servers in 10 (by default) processes
-sub parallel_check_serve_status
+sub parallel_check_server_status
 {
 local ($servers) = @_;
 
@@ -597,6 +644,43 @@ while(@pids) {
 	local $pid = wait();
 	@pids = grep { $_ ne $pid } @pids;
 	}
+}
+
+# domain_link(&server, &domain)
+# Returns HTML for a link to edit a domain on some server
+sub domain_link
+{
+local ($s, $d) = @_;
+local $prot = $s->{'ssl'} ? 'https' : 'http';
+local $target;
+if ($s->{'id'} == 0) {
+	# Link to Virtualmin on this server
+	$url = "../virtual-server/edit_domain.cgi?dom=$d->{'id'}";
+	}
+else {
+	# On another server
+	local $info = &get_server_collected($s);
+	local $path;
+	if ($info->{'general'}->{'theme'} eq 'virtual-server-theme' &&
+	    $info->{'general'}->{'tinfo'}->{'version'} >= 4.01) {
+		# Can link using theme's domain display mode
+		$path = "/?dom=$d->{'id'}";
+		}
+	else {
+		# Need to link to edit_domain.cgi
+		$path = "/virtual-server/edit_domain.cgi?dom=$d->{'id'}";
+		}
+	if ($config{'link_mode'} == 1) {
+		# Direct link
+		$url = "$prot://$s->{'host'}:$s->{'port'}$path";
+		}
+	else {
+		# Via servers module
+		$url = "../servers/link.cgi/$s->{'id'}$path";
+		}
+	$target = "_new";
+	}
+return "<a href='$url' ".($target ? "target=$target" : "").">$d->{'dom'}</a>";
 }
 
 1;
