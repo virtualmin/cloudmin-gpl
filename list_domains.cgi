@@ -34,8 +34,8 @@ if ($in{'search'}) {
 					  $text{'domains_quota'},
 					  $text{'domains_uquota'} ]);
 		foreach $d (@doms) {
-			$bs = 1024;	# XXX guess
 			$server = $d->{'_server'};
+			$bs = &get_server_blocksize($server);
 			$info = &get_server_collected($server);
 			($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
 					 @{$info->{'quota'}};

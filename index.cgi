@@ -31,15 +31,25 @@ if (@servers) {
 		$text{'index_status'},
 		$text{'index_desc'},
 		], 100, 0, \@tds);
+	$posscount = 0;
 	foreach my $s (@servers) {
 		$t = $s->{'manager'};
 		$tfunc = "type_".$t."_desc";
+		$info = &get_server_collected($s);
+		$pos = $info->{'poss'} ? scalar(@{$info->{'poss'}}) : undef;
+		$posdesc = undef;
+		if ($pos) {
+			# Has some updates
+			$posscount += $pos;
+			$posdesc = " - ".&text($pos > 1 ? 'index_poss'
+							: 'index_pos', $pos);
+			}
 		print &ui_checked_columns_row([
 		    "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
 		    &$tfunc(),
 		    &describe_os($s->{'type'}),
-		    &describe_status($s, 1, 1),
-		    $s->{'desc'}
+		    &describe_status($s, 1, 1).$posdesc,
+		    $s->{'desc'},
 		    ], \@tds, "d", $s->{'id'});
 		$virtcount++ if ($s->{'status'} eq 'virt');
 		}
@@ -47,6 +57,8 @@ if (@servers) {
 	print &ui_links_row(\@links);
 	print &ui_form_end([
 			     [ "refresh", $text{'index_refresh'} ],
+			     $posscount ? ( [ "update",$text{'index_update'} ] )
+					: ( ),
 			     undef,
 			     [ "dereg", $text{'index_dereg'} ],
 			     [ "delete", $text{'index_delete'} ],

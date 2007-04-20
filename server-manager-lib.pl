@@ -616,11 +616,11 @@ $get_server_collected_cache{$server->{'id'}} = $rv;
 return $rv;
 }
 
-# parallel_check_server_status(&servers)
-# Checks the status of multiple servers in 10 (by default) processes
-sub parallel_check_server_status
+# parallel_server_function(&servers, &function, [&args])
+# Calls some function on multiple servers, in 10 (by default) processes
+sub parallel_server_function
 {
-local ($servers) = @_;
+local ($servers, $func, $args) = @_;
 
 # Build 10 buckets
 local @buckets;
@@ -636,8 +636,7 @@ for(my $i=0; $i<$procs; $i++) {
 	next if (!@bservers);
 	if (!($pid = fork())) {
 		foreach my $server (@bservers) {
-			&check_server_status($server);
-			&save_managed_server($server);
+			&$func($server, $args);
 			}
 		exit(0);
 		}
@@ -649,6 +648,44 @@ while(@pids) {
 	local $pid = wait();
 	@pids = grep { $_ ne $pid } @pids;
 	}
+}
+
+# parallel_check_server_status(&servers)
+# Checks the status of multiple servers in 10 (by default) processes
+sub parallel_check_server_status
+{
+local ($servers) = @_;
+&parallel_server_function($servers,
+	sub { &check_server_status($_[0]);
+	      &save_managed_server($_[0]); });
+}
+
+# parallel_install_package_updates(&servers)
+# Updates all packages on multiple servers, in 10 (by default) processes
+sub parallel_install_package_updates
+{
+local ($servers) = @_;
+&parallel_server_function($servers,
+	sub { my $info = &get_server_collected($_[0]);
+	      my @allgot;
+	      foreach $p (@{$info->{'poss'}}) {
+	          local $got = &install_package_update($_[0], $p);
+		  push(@allgot, @$got) if (ref($got));
+	          }
+              &refresh_server_updates($_[0], \@allgot);
+	      &check_server_status($_[0]);
+	      &save_managed_server($_[0]);
+	    });
+}
+
+# refresh_server_updates(&server, &newly-gotten)
+# Tell some server to refresh its list of installed packages
+sub refresh_server_updates
+{
+local ($server, $got) = @_;
+&remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
+&remote_foreign_call($server, "virtual-server",
+		     "refresh_possible_packages", $got);
 }
 
 # domain_link(&server, &domain)
@@ -740,6 +777,30 @@ if ($ex) {
 	}
 else {
 	return (undef, $out);
+	}
+}
+
+sub get_server_blocksize
+{
+local ($server) = @_;
+return 1024;	# Guess for now
+}
+
+# install_package_update(&server, &package)
+# Installs an updated package on some system, and returns the array ref of new
+# packages installed, or an error message
+sub install_package_update
+{
+local ($server, $p) = @_;
+$last_remote_error = undef;
+&remote_foreign_require($server, "security-updates", "security-updates-lib.pl");
+local ($out, $rv) = &remote_foreign_call($server, "security-updates",
+		"capture_function_output", "package_install", $p->{'name'});
+if ($last_remote_error) {
+	return $last_remote_error;
+	}
+else {
+	return $rv;
 	}
 }
 

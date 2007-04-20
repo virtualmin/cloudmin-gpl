@@ -106,7 +106,28 @@ elsif ($in{'dereg'}) {
 		print $text{'mass_rdone'},"<p>\n";
 		}
 	&ui_print_footer("", $text{'index_return'});
+	}
+elsif ($in{'update'}) {
+	# Update packages on multiple systems at once
+	&ui_print_unbuffered_header(undef, $text{'mass_uptitle'}, "");
 
+	# Find selected servers with updates
+	@upservers = ( );
+	$pos = 0;
+	foreach $s (@servers) {
+		$info = &get_server_collected($s);
+		if ($info->{'poss'} && @{$info->{'poss'}}) {
+			push(@upservers, $s);
+			$pos += scalar(@{$info->{'poss'}});
+			}
+		}
+
+	# Run them in parallel
+	print &text('mass_updoing', scalar(@upservers), $pos),"<br>\n";
+	&parallel_install_package_updates(\@upservers);
+	print $text{'mass_updone'},"<p>\n";
+
+	&ui_print_footer("", $text{'index_return'});
 	}
 else {
 	&error($text{'mass_ebutton'});

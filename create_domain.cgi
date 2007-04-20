@@ -9,7 +9,8 @@ require './server-manager-lib.pl';
 
 # Validate inputs, and store in args list
 @args = ( );
-$in{'dom'} =~ /^[A-Za-z0-9\.\-\_]+$/ || &error($text{'dcreate_edom'});
+$in{'dom'} = lc($in{'dom'});
+$in{'dom'} =~ /^[a-z0-9\.\-\_]+$/ || &error($text{'dcreate_edom'});
 push(@args, [ "domain", $in{'dom'} ]);
 if ($in{'desc'}) {
 	push(@args, [ "desc", $in{'desc'} ]);
