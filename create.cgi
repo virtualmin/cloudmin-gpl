@@ -43,6 +43,7 @@ elsif ($in{'webmin_mode'} == 2) {
 	}
 $server->{'ssl'} = $in{'ssl'};		# XXX test later
 $server->{'port'} = 10000;		# Assume default
+$server->{'novirt'} = !$in{'canvirt'};
 
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_create_parse";

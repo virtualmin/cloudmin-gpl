@@ -50,6 +50,10 @@ print &ui_table_row($text{'add_webmin'},
 			   &ui_textbox("wuser", "root", 20),
 			   &ui_textbox("wpass", undef, 20)) ] ]));
 
+# Can add domains?
+print &ui_table_row($text{'add_canvirt'},
+	&ui_yesno_radio("canvirt", 1));
+
 # Type-specific options
 $ffunc = "type_".$in{'type'}."_create_form";
 if (defined(&$ffunc)) {

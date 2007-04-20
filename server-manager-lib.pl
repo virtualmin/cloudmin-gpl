@@ -2,7 +2,8 @@
 # XXX search if too many servers
 # XXX grouping
 # XXX for zones, we don't need to SSH in
-# XXX links to virtualmin on other systems should be via link.cgi
+# XXX when editing a server, flag as not for creation
+# XXX kvm or vservers
 
 do '../web-lib.pl';
 &init_config();
@@ -84,6 +85,7 @@ local ($server) = @_;
 if ($server->{'id'} eq '0') {
 	# Special case - saving info about this system
 	local %this = ( 'status' => $server->{'status'},
+			'statustime' => $server->{'statustime'},
 			'status_msg' => $server->{'status_msg'} );
 	&write_file($this_server_status, \%this);
 	}
@@ -119,12 +121,12 @@ local ($type) = grep { $_->[0] eq $t } @servers::server_types;
 return $type->[1];
 }
 
-# describe_status(&server, [withcolor])
+# describe_status(&server, [withcolor], [withdomains])
 # Returns a string describing the status of some server (down, nossh,
 # nologin, nowebmin, nowebminlogin, novirt, virt)
 sub describe_status
 {
-local ($s, $withcol) = @_;
+local ($s, $withcol, $withdoms) = @_;
 local $cmap = { 'down' => 'ff0000',
 		'nossh' => 'ff00ff',
 		'nosshlogin' => 'ff00cc',
@@ -133,7 +135,7 @@ local $cmap = { 'down' => 'ff0000',
 		'novirt' => 'aaff00',
 		'virt' => '00aa00' };
 local $msg = $text{'status_'.$s->{'status'}} || $text{'status_unknown'};
-if ($s->{'status'} eq 'virt') {
+if ($s->{'status'} eq 'virt' && $withdoms) {
 	local @doms = &get_server_domains($s);
 	if (@doms) {
 		$msg .= " (".&text('status_doms', scalar(@doms)).")";
@@ -473,6 +475,7 @@ local ($out, $timed_out) = &backquote_with_timeout(
 local $ping = !$timed_out && !$?;
 
 # Check SSH status (if not local)
+$server->{'statustime'} = time();
 if ($server->{'id'} != 0) {
 	local ($status, $err) = &check_server_ssh_login($server);
 	if ($status == 2) {
@@ -530,6 +533,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			$info->{'features'} = [ &remote_foreign_call($server,
 				"virtual-server", "list_available_features") ];
 			}
+		$info->{'template'} = &remote_foreign_call($server,
+				"virtual-server", "get_template", 0);
 		}
 	else {
 		$server->{'status'} = 'novirt';
@@ -665,6 +670,7 @@ else {
 	    $info->{'general'}->{'tinfo'}->{'version'} >= 4.01) {
 		# Can link using theme's domain display mode
 		$path = "/?dom=$d->{'id'}";
+		$target = "_new";
 		}
 	else {
 		# Need to link to edit_domain.cgi
@@ -678,9 +684,63 @@ else {
 		# Via servers module
 		$url = "../servers/link.cgi/$s->{'id'}$path";
 		}
-	$target = "_new";
 	}
 return "<a href='$url' ".($target ? "target=$target" : "").">$d->{'dom'}</a>";
+}
+
+# call_virtualmin_api(&server, program, &args)
+# Call a Virtualmin API program on some server, and return an error message and
+# all the output. For this server, just run the .pl script directly.
+sub call_virtualmin_api
+{
+local ($server, $prog, $args) = @_;
+local ($out, $ex);
+
+if ($server->{'id'} == 0) {
+	# Local .. so we can just run the program
+	local $mrd = &module_root_directory("virtual-server");
+	local $cmd = "$mrd/$prog.pl";
+	foreach my $a (@$args) {
+		$cmd .= " --$a->[0]";
+		if (defined($a->[1])) {
+			$cmd .= quotemeta($a->[1]);
+			}
+		}
+	&clean_environment();
+	$out = &backquote_logged("$cmd 2>&1 </dev/null");
+	&reset_environment();
+	$ex = $?;
+	}
+else {
+	# Remote .. make HTTP call to Webmin
+	local $path = "/virtual-server/remote.cgi?program=$prog";
+	foreach my $a (@$args) {
+		$path .= "&".&urlize($a->[0])."=".&urlize($a->[1]);
+		}
+	local $herr;
+	&http_download($server->{'host'}, $server->{'port'}, $path, \$out, \$herr,
+		       undef, $server->{'ssl'}, $server->{'user'}, $server->{'pass'},
+		       60, 0, 1);
+	if ($herr) {
+		return ( $herr, undef );
+		}
+	if ($out =~ s/Exit\s+status:\s*(\d+)//) {
+		$ex = $1;
+		}
+	else {
+		$ex = -1;	# Invalid output??
+		$out = "No output" if ($out !~ /\S/);
+		}
+	}
+
+$out =~ s/\s+$//g;
+if ($ex) {
+	local @lines = split(/\r?\n/, $out);
+	return ( $lines[0] || "Unknown error", $out );
+	}
+else {
+	return (undef, $out);
+	}
 }
 
 1;

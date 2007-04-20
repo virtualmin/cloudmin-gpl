@@ -42,6 +42,7 @@ elsif ($in{'webmin_mode'} == 2) {
 $server->{'ssl'} = $in{'ssl'};
 $in{'port'} =~ /^\d+$/ || &error($text{'add_eport'});
 $server->{'port'} = $in{'port'};
+$server->{'novirt'} = !$in{'canvirt'};
 
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_add_parse";

@@ -38,7 +38,7 @@ if (@servers) {
 		    "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
 		    &$tfunc(),
 		    &describe_os($s->{'type'}),
-		    &describe_status($s, 1),
+		    &describe_status($s, 1, 1),
 		    $s->{'desc'}
 		    ], \@tds, "d", $s->{'id'});
 		$virtcount++ if ($s->{'status'} eq 'virt');

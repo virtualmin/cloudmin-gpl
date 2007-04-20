@@ -36,6 +36,9 @@ if ($in{'search'}) {
 		foreach $d (@doms) {
 			$bs = 1024;	# XXX guess
 			$server = $d->{'_server'};
+			$info = &get_server_collected($server);
+			($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
+					 @{$info->{'quota'}};
 			print &ui_columns_row([
 				&domain_link($server, $d),
 				"<a href='edit_serv.cgi?id=$server->{'id'}'>".
@@ -47,8 +50,7 @@ if ($in{'search'}) {
 				$d->{'owner'},
 				$d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
 					      : $text{'domains_unlimited'},
-				$d->{'uquota'} ? &nice_size($d->{'uquota'}*$bs)
-					       : "",
+				$dquota ? &nice_size($dquota->[1]) : "",
 				]);
 			}
 		print &ui_columns_end();
@@ -59,6 +61,7 @@ if ($in{'search'}) {
 	}
 
 # Creation form (hidden by default). For top-level servers only, limited options
+@vservers = grep { !$_->{'novirt'} } @vservers;
 print &ui_hidden_start($text{'domains_hidden'}, "create", 0,
 		       "list_domains.cgi");
 print $text{'domains_desc2'},"<p>\n";
@@ -100,7 +103,13 @@ if (!@features) {
 print &ui_table_row($text{'domains_cfeatures'},
 		    &ui_grid_table(\@grid, 2));
 
-# XXX private IP
+# Private IP
+print &ui_table_row($text{'domains_cvirt'},
+		    &ui_radio("virt_mode", 0,
+			[ [ 0, $text{'domains_cvirt0'} ],
+			  [ 1, $text{'domains_cvirt1'} ],
+			  [ 2, &text('domains_cvirt2',
+				&ui_textbox("virt", undef, 20)) ] ]));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'domains_cok'} ] ]);

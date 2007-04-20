@@ -45,6 +45,10 @@ print &ui_table_row($text{'add_webmin'},
 print &ui_table_row($text{'add_port'},
 	&ui_textbox("port", 10000, 6));
 
+# Can add domains?
+print &ui_table_row($text{'add_canvirt'},
+	&ui_yesno_radio("canvirt", 1));
+
 # Type-specific options
 $ffunc = "type_".$in{'type'}."_add_form";
 if (defined(&$ffunc)) {
