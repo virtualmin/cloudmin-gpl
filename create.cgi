@@ -54,7 +54,8 @@ if (defined(&$pfunc)) {
 &ui_print_unbuffered_header(undef, $text{'create_title'}, "");
 
 # Call the server type's creation function, then wait for it to be come ready
-print $text{'create_creating'},"<br>\n";
+$tfunc = "type_".$in{'type'}."_desc";
+print &text('create_creating', &$tfunc()),"<br>\n";
 $cfunc = "type_".$in{'type'}."_create";
 $err = &$cfunc($server);
 if ($err) {
@@ -84,6 +85,28 @@ if (defined(&$dfunc)) {
 	}
 else {
 	print $text{'create_created2'},"<p>\n";
+	}
+
+# Wait at most 60 seconds for SSH to come up (indicating that booting is done)
+print $text{'create_sshing'};
+$sshcount = 0;
+while(1) {
+	($sshstatus, $ssherr) = &check_server_ssh_login($server);
+	if ($sshstatus == 0) {
+		print "<br>\n";
+		print $text{'create_sshdone'},"<p>\n";
+		last;
+		}
+	elsif ($sshcount > 60) {
+		print "<br>\n";
+		print &text('create_sshfailed', 60, $ssherr),"<p>\n";
+		last;
+		}
+	else {
+		print ".";
+		}
+	$sshcount++;
+	sleep(1);
 	}
 
 # Verify that we can connect via SSH

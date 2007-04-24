@@ -18,7 +18,7 @@ print &ui_table_row($text{'add_type'}, &$tfunc());
 $hfunc = "type_".$in{'type'}."_no_create_hostname";
 if (!defined(&$hfunc) || !&$hfunc()) {
 	print &ui_table_row($text{'create_host'},
-			    &ui_textbox("host", undef, 40);
+			    &ui_textbox("host", undef, 40));
 	}
 
 # Description

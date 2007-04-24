@@ -433,6 +433,37 @@ if ($ex) {
 return (0, $out);
 }
 
+# execute_command_on_server(&server, command, [timeout])
+# Runs some command on a managed system (most likely via SSH), and returns
+# the output, exit status and error message if it could not be run
+sub execute_command_on_server
+{
+local ($server, $cmd, $timeout) = @_;
+local $efunc = "type_".$server->{'manager'}."_execute_command";
+if (defined(&$efunc)) {
+	# Use type-specific function call
+	return &$efunc(@_);
+	}
+else {
+	# Just run via SSH
+	local $sshcmd = "ssh -".$server->{'ssh_protocol'};
+	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
+	$sshcmd .= " -i ".quotemeta($key->{'file'});
+	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'} ".quotemeta($cmd);
+	local ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
+						 $timeout);
+	if ($status == 0) {
+		return ($out, 0, undef);
+		}
+	elsif ($status == 3) {
+		return ($out, 1, undef);
+		}
+	else {
+		return ($out, undef, $text{'status_'.$status});
+		}
+	}
+}
+
 sub remote_error_handler
 {
 $last_remote_error = join("", @_);
@@ -801,6 +832,69 @@ if ($last_remote_error) {
 	}
 else {
 	return $rv;
+	}
+}
+
+# show_confirm_form(message, cgi, &hiddens, ok-message)
+# Prints a form for confirming some action
+sub show_confirm_form
+{
+local ($msg, $cgi, $hiddens, $ok) = @_;
+print "<center>\n";
+print &ui_form_start($cgi, "post");
+foreach my $h (@$hiddens) {
+	print &ui_hidden($h->[0], $h->[1]);
+	}
+print $msg,"<p>\n";
+print &ui_form_end([ [ "confirm", $ok ] ]);
+print "</center>\n";
+}
+
+# shutdown_server(&server)
+# Remotely shut down some system. Returns undef on success, or an error
+# message on failure.
+sub shutdown_server
+{
+local ($server) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Can use Webmin API call
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "init", "init-lib.pl");
+	local $iconfig = &remote_foreign_config($server, "init");
+	&remote_foreign_call($server, "init", "execute_command",
+			     $iconfig->{'shutdown_command'});
+	return $last_remote_error;
+	}
+else {
+	# Need to try SSHing in
+	local %iconfig = &foreign_config("init");
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+		"$iconfig{'shutdown_command'} || shutdown now || shutdown -i 5 -g 0 -y");
+	return $err ? $err : $ex ? $out : undef;
+	}
+}
+
+# reboot_server(&server)
+# Remotely reboot some system. Returns undef on success, or an error
+# message on failure.
+sub reboot_server
+{
+local ($server) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Can use Webmin API call
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "init", "init-lib.pl");
+	local $iconfig = &remote_foreign_config($server, "init");
+	&remote_foreign_call($server, "init", "execute_command",
+			     $iconfig->{'reboot_command'});
+	return $last_remote_error;
+	}
+else {
+	# Need to try SSHing in
+	local %iconfig = &foreign_config("init");
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+		"$iconfig{'reboot_command'} || shutdown -r now || reboot");
+	return $err ? $err : $ex ? $out : undef;
 	}
 }
 

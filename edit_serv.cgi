@@ -50,15 +50,47 @@ if ($status eq 'virt') {
 		    &ui_yesno_radio("canvirt", $server->{'novirt'} ? 0 : 1));
 	}
 
+# Type-specific information
+$efunc = "type_".$t."_edit_form";
+if (defined(&$efunc)) {
+	print &$efunc($server);
+	}
+
 print &ui_hidden_table_end("basic");
-print &ui_form_end([ [ "save", $text{'save'} ],
-		     undef,
-		     $status eq 'novirt' ?
-		     	( [ "installvirt", $text{'edit_installvirt'} ] ) :
-		     $status eq 'nowebmin' ?
-		     	( [ "installwebmin", $text{'edit_installwebmin'} ] ) :
+
+# Action buttons at end of form (depends on status)
+if ($status eq 'down' || $status eq 'nossh') {
+	# System is down, so we can only save and perhaps startup
+	$sfunc = "type_".$t."_no_startup";
+	$nostart = defined(&$sfunc) && &$sfunc($server);
+	print &ui_form_end([
+		[ "save", $text{'save'} ],
+		  undef,
+		  $nostart ? ( ) : ( [ "startup", $text{'edit_startup'} ] ),
+		]);
+	}
+else {
+	# Running, so all options are available
+	$sfunc = "type_".$t."_no_shutdown";
+	$noshut = defined(&$sfunc) && &$sfunc($server);
+	$rfunc = "type_".$t."_no_reboot";
+	$noreboot = defined(&$rfunc) && &$rfunc($server);
+	print &ui_form_end([
+		[ "save", $text{'save'} ],
+		  undef,
+		  $status eq 'nowebmin' ?
+			( ) : ( [ "webmin", $text{'edit_webmin2'} ] ),
+		  [ "shell", $text{'edit_shell'} ],
+		  undef,
+		  $status eq 'novirt' ?
+			( [ "installvirt", $text{'edit_installvirt'} ] ) :
+		  $status eq 'nowebmin' ?
+			( [ "installwebmin", $text{'edit_installwebmin'} ] ) :
 			( ),
-		     [ "reboot", $text{'edit_reboot'} ] ]);
+		  $noreboot ? ( ) : ( [ "reboot", $text{'edit_reboot'} ] ),
+		  $noshut ? ( ) : ( [ "shutdown", $text{'edit_shutdown'} ] ),
+		]);
+	}
 
 # Virtualmin status
 if ($status eq 'virt' && $info) {
