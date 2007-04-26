@@ -2,13 +2,14 @@
 # XXX search if too many servers
 # XXX grouping
 # XXX for zones, we don't need to SSH in
-# XXX when editing a server, flag as not for creation
 # XXX kvm or vservers
+# XXX tell between webmin down vs. not running vs. cannot login
 
 do '../web-lib.pl';
 &init_config();
 do '../ui-lib.pl';
 &foreign_require("servers", "servers-lib.pl");
+&foreign_require("proc", "proc-lib.pl");
 &remote_error_setup(\&remote_error_handler);
 use Net::Amazon::EC2;
 
@@ -56,6 +57,12 @@ $this_server_status = "$module_config_directory/this";
 	  'enabled' => 1, 'default' => 0 },
 	{ 'feature' => 'webmin', 'desc' => 'Webmin login',
 	  'enabled' => 1, 'default' => 1 },
+	);
+
+%webmin_download_source = (
+	'rpm' => 'http://www.webmin.com/download/rpm/webmin-current.rpm',
+	'deb' => 'http://www.webmin.com/download/deb/webmin-current.deb',
+	'tgz' => 'http://www.webmin.com/download/webmin-current.tar.gz',
 	);
 
 # list_managed_servers()
@@ -377,7 +384,6 @@ return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'});
 sub run_ssh_command
 {
 local ($cmd, $pass, $timeout) = @_;
-&foreign_require("proc", "proc-lib.pl");
 local ($wrong_password, $got_login, $connect_failed);
 local $out;
 local $ex;
@@ -756,6 +762,18 @@ else {
 return "<a href='$url' ".($target ? "target=$target" : "").">$d->{'dom'}</a>";
 }
 
+sub webmin_link
+{
+local ($server) = @_;
+local $prot = $server->{'ssl'} ? 'https' : 'http';
+if ($config{'link_mode'} == 1) {
+	return "$prot://$server->{'host'}:$server->{'port'}/";
+	}
+else {
+	return "../servers/link.cgi/$server->{'id'}/";
+	}
+}
+
 # call_virtualmin_api(&server, program, &args)
 # Call a Virtualmin API program on some server, and return an error message and
 # all the output. For this server, just run the .pl script directly.
@@ -896,6 +914,133 @@ else {
 		"$iconfig{'reboot_command'} || shutdown -r now || reboot");
 	return $err ? $err : $ex ? $out : undef;
 	}
+}
+
+sub server_in
+{
+local ($server) = @_;
+#return &text('server_in', "<tt>$server->{'host'}</tt>");
+return "<tt>$server->{'host'}</tt>";
+}
+
+# get_install_webmin_source(&server)
+# Works out where to install Webmin from on some server, based on it's support
+# for RPM or Debian packages.
+sub get_install_webmin_source
+{
+local ($server) = @_;
+local $type;
+
+# Check for rpm and dpkg
+local ($rpmout, $rpmex, $rpmerr) =
+	&execute_command_on_server($server, "which rpm");
+return ( undef, undef, $rpmerr ) if ($rpmerr);
+if (!$rpmex) {
+	if ($rpmout =~ /rpm/) {
+		$type = "rpm";
+		}
+	else {
+		return ( undef, undef, $rpmout );
+		}
+	}
+else {
+	local ($debout, $debex, $deberr) =
+		&execute_command_on_server($server, "which dpkg");
+	if (!$debex) {
+		if ($debout =~ /rpm/) {
+			$type = "deb";
+			}
+		else {
+			return ( undef, undef, $debout );
+			}
+		}
+	else {
+		$type = "tgz";
+		}
+	}
+
+# Work out download URL
+local $source = $config{'download_'.$type} ||
+		$webmin_download_source{$type};
+return ($source, $type, undef);
+}
+
+# install_webmin_server(&server, src, type)
+# Attempt to install Webmin on some system, from the given source and type.
+# Returns the output and an error message on failure.
+sub install_webmin_server
+{
+local ($server, $src, $type) = @_;
+local ($out, $ex, $err);
+$src =~ /\/([^\/]+)$/;
+local $temp = "/tmp/$1";
+local $rootdir;
+
+if ($type eq "rpm") {
+	# RPM install direct from the URL
+	($out, $ex, $err) = &execute_command_on_server($server,
+		"rm -f $temp && wget -O $temp $src && rpm -U $temp && rm -f $temp");
+	return (undef, $err) if ($err);
+	return ($out, "RPM failed") if ($ex);
+	$rootdir = "/usr/libexec/webmin";
+	}
+
+elsif ($type eq "deb") {
+	# Download the deb and install it
+	($out, $ex, $err) = &execute_command_on_server($server,
+		"rm -f $temp && wget -O $temp $src && dpkg --install $temp && rm -f $temp");
+	return (undef, $err) if ($err);
+	return ($out, "Debian package failed") if ($ex);
+	$rootdir = "/usr/share/webmin";
+	}
+
+elsif ($type eq "tgz") {
+	# Download the tgz file, then run setup.sh
+	# XXX create 'root' user
+	$server->{'user'} = 'root';
+	$server->{'pass'} = &generate_random_password();
+	$rootdir = "/usr/local/webmin";
+	# XXX setup in rootdir
+	}
+
+else {
+	return (undef, "Unknown package type $type");
+	}
+
+# Set the Webmin password, if we don't have it
+if (!$server->{'pass'}) {
+	if ($server->{'ssh_pass'}) {
+		# Root and Webmin passwords are the same
+		$server->{'user'} = 'root';
+		$server->{'pass'} = $server->{'ssh_pass'};
+		}
+	else {
+		# Need to set, since RPM and Deb installs by default use the
+		# real root password, which we don't know
+		$server->{'user'} = 'root';
+		$server->{'pass'} = &generate_random_password();
+		local ($pout, $pex, $perr) =
+			&execute_command_on_server($server,
+				"$rootdir/changepass.pl /etc/webmin root ".
+				quotemeta($server->{'pass'}));
+		if ($perr) {
+			$out .= "\nFailed to set Webmin password : $perr\n";
+			}
+		elsif ($pex) {
+			$out .= "\nFailed to set Webmin password : $pout\n";
+			}
+		}
+	}
+}
+
+sub generate_random_password
+{
+&seed_random();
+local $pass;
+while(length($pass) < 8) {
+	$pass .= chr(int(rand()*26)+97);
+	}
+return $pass;
 }
 
 1;

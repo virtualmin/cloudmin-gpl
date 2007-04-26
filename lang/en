@@ -297,7 +297,7 @@ edit_bheader=System details
 edit_host=Internet hostname
 edit_type=System type
 edit_desc=Description or comment
-edit_status=Current status
+edit_status=Last status
 edit_statustime=$1 (Checked at $2)
 edit_os=Operating system
 edit_webmin=Webmin version
@@ -332,6 +332,7 @@ edit_ec2account=Owned by EC2 account
 edit_ec2image=Started from EC2 image
 edit_webmin2=Open Webmin
 edit_shell=Run Commands
+edit_nodoms=This system is not hosting any Virtualmin domains yet.
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..
@@ -356,3 +357,19 @@ save_rebootok=Yes, Reboot Now
 save_rebooting=Rebooting $1 ..
 save_rebootfailed=.. failed : $1
 save_rebootdone=.. reboot request has been successfully sent.
+save_webmintitle=Install Webmin
+save_webminerr=Failed to get download URL : $1
+save_webmining=Installing Webmin on $1 from $2 ..
+save_webminfailed=.. install failed : $1
+save_webmindone=.. Webmin install complete!
+
+shell_title=Run Commands
+shell_ok=Execute command:
+shell_history=Command history
+shell_clear=Clear history
+shell_clearcmds=Clear commands
+shell_desc=Enter a shell command to execute on $1 in the text field below. The <tt>cd</tt> command may be used to change directory for subsequent commands.
+shell_pok=Execute previous command
+shell_edit=Edit previous
+
+server_in=On system $1

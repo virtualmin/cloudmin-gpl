@@ -41,7 +41,7 @@ elsif ($in{'webmin_mode'} == 2) {
 	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
 	$server->{'pass'} = $in{'wpass'};
 	}
-$server->{'ssl'} = $in{'ssl'};		# XXX test later
+$server->{'ssl'} = 1;			# XXX test later
 $server->{'port'} = 10000;		# Assume default
 $server->{'novirt'} = !$in{'canvirt'};
 

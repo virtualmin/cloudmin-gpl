@@ -4,10 +4,10 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
-&ui_print_header(undef, $text{'edit_title'}, "", "edit");
 ($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
 $server || &error($text{'edit_egone'});
 $status = $server->{'status'};
+&ui_print_header(&server_in($server), $text{'edit_title'}, "", "edit");
 
 # Basic details section
 print &ui_form_start("save_serv.cgi", "post");
@@ -32,7 +32,8 @@ if ($server->{'id'} != 0) {
 # Last status
 print &ui_table_row($text{'edit_status'},
 		    &text('edit_statustime', &describe_status($server, 1, 0),
-				     &make_date($server->{'statustime'})));
+				     &make_date($server->{'statustime'})).
+		    (@actions ? "<br>".&ui_links_row(\@actions) : ""));
 
 if ($status eq 'virt' || $status eq 'novirt') {
 	# Has Webmin .. show more info
@@ -78,9 +79,10 @@ else {
 	print &ui_form_end([
 		[ "save", $text{'save'} ],
 		  undef,
-		  $status eq 'nowebmin' ?
-			( ) : ( [ "webmin", $text{'edit_webmin2'} ] ),
-		  [ "shell", $text{'edit_shell'} ],
+		  [ 'shell', $text{'edit_shell'} ],
+		  ($status eq 'novirt' || $status eq 'virt') &&
+		     $server->{'id'} ?
+			( [ "webmin", $text{'edit_webmin2'} ] ) : ( ),
 		  undef,
 		  $status eq 'novirt' ?
 			( [ "installvirt", $text{'edit_installvirt'} ] ) :

@@ -3,14 +3,13 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
-&ui_print_header(undef, $text{'edit_title'}, "", "edit");
 ($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
 $server || &error($text{'edit_egone'});
 $t = $server->{'manager'};
 
 if ($in{'shutdown'}) {
 	# Shut down this system, after asking for confirmation
-	&ui_print_header(undef, $text{'save_shuttitle'}, "");
+	&ui_print_header(&server_in($server), $text{'save_shuttitle'}, "");
 	if (!$in{'confirm'}) {
 		&show_confirm_form(
 			&text('save_shutrusure', "<tt>$server->{'host'}</tt>"),
@@ -36,11 +35,12 @@ if ($in{'shutdown'}) {
 
 elsif ($in{'startup'}) {
 	# Start up this virtual system
+	# XXX
 	}
 
 elsif ($in{'reboot'}) {
 	# Request a reboot, after asking for confirmation
-	&ui_print_header(undef, $text{'save_reboottitle'}, "");
+	&ui_print_header(&server_in($server), $text{'save_reboottitle'}, "");
 	if (!$in{'confirm'}) {
 		&show_confirm_form(
 		    &text('save_rebootrusure', "<tt>$server->{'host'}</tt>"),
@@ -64,10 +64,41 @@ elsif ($in{'reboot'}) {
 
 elsif ($in{'installvirt'}) {
 	# Install Virtualmin, after asking for version
+	# XXX
 	}
 
 elsif ($in{'installwebmin'}) {
 	# Install Webmin
+	# XXX password?
+	&ui_print_header(&server_in($server), $text{'save_webmintitle'}, "");
+
+	($src, $type, $err) = &get_install_webmin_source($server);
+	$err && &error(&text('save_webminerr', $err));
+
+	print &text('save_webmining',
+		    "<tt>$server->{'host'}</tt>", "<tt>$src</tt>"),"<br>\n";
+	($out, $err) = &install_webmin_server($server, $src, $type);
+	print "<pre>$out</pre>";
+	if ($err) {
+		print &text('save_webminfailed', $err),"<p>\n";
+		}
+	else {
+		&check_server_status($server);
+		&save_managed_server($server);
+		print $text{'save_webmindone'},"<p>\n";
+		}
+
+	&ui_print_footer("", $text{'index_return'});
+	}
+
+elsif ($in{'shell'}) {
+	# Go to shell page
+	&redirect("shell.cgi?id=$in{'id'}");
+	}
+
+elsif ($in{'webmin'}) {
+	# Go to Webmin
+	&redirect(&get_webmin_url($server));
 	}
 
 else {
