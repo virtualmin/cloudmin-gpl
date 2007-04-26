@@ -195,9 +195,10 @@ status_down=Down
 status_nossh=No SSH
 status_nosshlogin=SSH login failed
 status_nowebmin=No Webmin
+status_downwebmin=Webmin down
 status_nowebminlogin=Webmin login failed
-status_novirt=No Virtualmin
-status_virt=Running Virtualmin
+status_novirt=Webmin but no Virtualmin
+status_virt=Running Webmin and Virtualmin
 status_unknown=Unknown
 status_doms=$1 domains
 

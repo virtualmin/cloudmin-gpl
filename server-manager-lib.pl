@@ -138,6 +138,7 @@ local $cmap = { 'down' => 'ff0000',
 		'nossh' => 'ff00ff',
 		'nosshlogin' => 'ff00cc',
 		'nowebmin' => 'ffff00',
+		'downwebmin' => 'ffaa00',
 		'nowebminlogin' => 'ffcc00',
 		'novirt' => 'aaff00',
 		'virt' => '00aa00' };
@@ -321,7 +322,8 @@ return $text;
 # check_server_ssh_login(&server)
 # Checks if some system can be contacted via SSH, with the login details
 # set in the server object. Returns a status code (0=OK, 1=No connect, 2=No
-# login, 3=Unknown error, 4=Timeout) and an error message.
+# login, 3=Unknown error, 4=Timeout) and an error message, and a flag indicating
+# if Webmin is installed
 sub check_server_ssh_login
 {
 local ($server) = @_;
@@ -330,8 +332,20 @@ if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
 	$cmd .= " -i ".quotemeta($key->{'file'});
 	}
-$cmd .= " $server->{'ssh_user'}\@$server->{'host'} echo OK";
-return &run_ssh_command($cmd, $server->{'ssh_pass'}, 10);
+$cmd .= " $server->{'ssh_user'}\@$server->{'host'} grep root= /etc/webmin/miniserv.conf ; echo OK";
+local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, 10);
+if ($status == 0) {
+	# Connected OK .. check the output to see if we have Webmin
+	if ($out !~ /OK/) {
+		return (3, $out, undef);
+		}
+	else {
+		return (0, $out, $out =~ /root=(\S+)/ ? $1 : 0);
+		}
+	}
+else {
+	return ($status, $out, undef);
+	}
 }
 
 # check_server_webmin_login(&server)
@@ -380,7 +394,7 @@ return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'});
 # run_ssh_command(command, password, timeout)
 # Attempts to run some ssh or scp command, giving it a password if needed.
 # Returns 0 on success, 1 if the connection fails, 2 if the password is wrong,
-# or 3 for some other error, 4 for timeout.
+# or 3 for some other error, 4 for timeout, and the output.
 sub run_ssh_command
 {
 local ($cmd, $pass, $timeout) = @_;
@@ -512,9 +526,10 @@ local ($out, $timed_out) = &backquote_with_timeout(
 local $ping = !$timed_out && !$?;
 
 # Check SSH status (if not local)
+local $webminroot;
 $server->{'statustime'} = time();
 if ($server->{'id'} != 0) {
-	local ($status, $err) = &check_server_ssh_login($server);
+	local ($status, $err, $wr) = &check_server_ssh_login($server);
 	if ($status == 2) {
 		$server->{'status'} = 'nosshlogin';
 		$server->{'status_msg'} = $err;
@@ -530,18 +545,22 @@ if ($server->{'id'} != 0) {
 		$server->{'status_msg'} = $err;
 		return 0;
 		}
+	$webminroot = $wr;
 	}
 
 # If we have a Webmin login, try it
 if ($server->{'user'} || $server->{'id'} == 0) {
 	($status, $err) = &check_server_webmin_login($server);
 	if ($status == 2) {
+		# Webmin replied, but it rejected our login
 		$server->{'status'} = 'nowebminlogin';
 		$server->{'status_msg'} = $err;
 		return 0;
 		}
 	elsif ($status) {
-		$server->{'status'} = 'nowebmin';
+		# Could not login to Webmin .. which may be because it is down,
+		# un-contactable, or not installed
+		$server->{'status'} = $webminroot ? 'downwebmin' : 'nowebmin';
 		$server->{'status_msg'} = $err;
 		return 0;
 		}
@@ -804,9 +823,9 @@ else {
 		$path .= "&".&urlize($a->[0])."=".&urlize($a->[1]);
 		}
 	local $herr;
-	&http_download($server->{'host'}, $server->{'port'}, $path, \$out, \$herr,
-		       undef, $server->{'ssl'}, $server->{'user'}, $server->{'pass'},
-		       60, 0, 1);
+	&http_download($server->{'host'}, $server->{'port'}, $path, \$out,
+		       \$herr, undef, $server->{'ssl'}, $server->{'user'},
+		       $server->{'pass'}, 60, 0, 1);
 	if ($herr) {
 		return ( $herr, undef );
 		}
@@ -979,7 +998,7 @@ local $rootdir;
 if ($type eq "rpm") {
 	# RPM install direct from the URL
 	($out, $ex, $err) = &execute_command_on_server($server,
-		"rm -f $temp && wget -O $temp $src && rpm -U $temp && rm -f $temp");
+		"rm -f $temp && wget -nv -O $temp $src && rpm -U $temp && rm -f $temp");
 	return (undef, $err) if ($err);
 	return ($out, "RPM failed") if ($ex);
 	$rootdir = "/usr/libexec/webmin";
@@ -988,7 +1007,7 @@ if ($type eq "rpm") {
 elsif ($type eq "deb") {
 	# Download the deb and install it
 	($out, $ex, $err) = &execute_command_on_server($server,
-		"rm -f $temp && wget -O $temp $src && dpkg --install $temp && rm -f $temp");
+		"rm -f $temp && wget -nv -O $temp $src && dpkg --install $temp && rm -f $temp");
 	return (undef, $err) if ($err);
 	return ($out, "Debian package failed") if ($ex);
 	$rootdir = "/usr/share/webmin";
@@ -1006,6 +1025,7 @@ elsif ($type eq "tgz") {
 else {
 	return (undef, "Unknown package type $type");
 	}
+$server->{'port'} = 10000;
 
 # Set the Webmin password, if we don't have it
 if (!$server->{'pass'}) {
@@ -1031,6 +1051,21 @@ if (!$server->{'pass'}) {
 			}
 		}
 	}
+
+# Check if we are using SSL for this new Webmin
+$server->{'ssl'} = &get_webmin_ssl_mode($server);
+
+# Make sure Webmin is running OK, and get the OS
+local ($wstatus, $werr, $wos, $wrealos) = &check_server_webmin_login($server);
+if ($wstatus == 0) {
+	$server->{'type'} = &os_to_server_type($wos, $wrealos);
+	}
+else {
+	# Argh .. could not connect after all that work :(
+	$out .= "\nWebmin installed, but could not connect : $werr\n";
+	}
+
+return ($out, undef);
 }
 
 sub generate_random_password
@@ -1041,6 +1076,18 @@ while(length($pass) < 8) {
 	$pass .= chr(int(rand()*26)+97);
 	}
 return $pass;
+}
+
+# get_webmin_ssl_mode(&server)
+# Checks if some server is running Webmin in SSL mode
+sub get_webmin_ssl_mode
+{
+local ($server) = @_;
+local ($err, $out);
+&http_download($server->{'host'}, $server->{'port'}, $path, \$out,
+	       \$err, undef, 1, undef, undef, 10, 0, 1);
+print "out=$out err=$err\n";
+return $err =~ /401/ ? 1 : 0;
 }
 
 1;

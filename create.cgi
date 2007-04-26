@@ -41,9 +41,8 @@ elsif ($in{'webmin_mode'} == 2) {
 	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
 	$server->{'pass'} = $in{'wpass'};
 	}
-$server->{'ssl'} = 1;			# XXX test later
-$server->{'port'} = 10000;		# Assume default
 $server->{'novirt'} = !$in{'canvirt'};
+$server->{'type'} = 'webmin';
 
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_create_parse";
@@ -87,6 +86,8 @@ else {
 	print $text{'create_created2'},"<p>\n";
 	}
 
+# XXX set root password
+
 # Wait at most 60 seconds for SSH to come up (indicating that booting is done)
 print $text{'create_sshing'};
 $sshcount = 0;
@@ -109,13 +110,9 @@ while(1) {
 	sleep(1);
 	}
 
-# Verify that we can connect via SSH
-# XXX this may need to wait a while for SSH to come up
-# XXX
-# XXX set root password, if requested (not for EC2)
-
 # Check if the server has Webmin.
-# XXX
+#$server->{'ssl'} = 1;			# XXX test later
+#$server->{'port'} = 10000;		# Assume default
 
 # If it has, then cool .. set the password and update the server object
 # XXX

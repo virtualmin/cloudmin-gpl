@@ -32,8 +32,7 @@ if ($server->{'id'} != 0) {
 # Last status
 print &ui_table_row($text{'edit_status'},
 		    &text('edit_statustime', &describe_status($server, 1, 0),
-				     &make_date($server->{'statustime'})).
-		    (@actions ? "<br>".&ui_links_row(\@actions) : ""));
+				     &make_date($server->{'statustime'})));
 
 if ($status eq 'virt' || $status eq 'novirt') {
 	# Has Webmin .. show more info
@@ -76,13 +75,15 @@ else {
 	$noshut = defined(&$sfunc) && &$sfunc($server);
 	$rfunc = "type_".$t."_no_reboot";
 	$noreboot = defined(&$rfunc) && &$rfunc($server);
+	$wurl = &webmin_link($server);
 	print &ui_form_end([
 		[ "save", $text{'save'} ],
 		  undef,
 		  [ 'shell', $text{'edit_shell'} ],
 		  ($status eq 'novirt' || $status eq 'virt') &&
 		     $server->{'id'} ?
-			( [ "webmin", $text{'edit_webmin2'} ] ) : ( ),
+			( [ "webmin", $text{'edit_webmin2'}, undef, undef,
+			    "onClick='window.open(\"$wurl\"); return false'" ] ) : ( ),
 		  undef,
 		  $status eq 'novirt' ?
 			( [ "installvirt", $text{'edit_installvirt'} ] ) :

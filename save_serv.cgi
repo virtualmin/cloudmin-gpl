@@ -98,7 +98,7 @@ elsif ($in{'shell'}) {
 
 elsif ($in{'webmin'}) {
 	# Go to Webmin
-	&redirect(&get_webmin_url($server));
+	&redirect(&webmin_link($server));
 	}
 
 else {
