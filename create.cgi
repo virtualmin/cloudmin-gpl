@@ -30,14 +30,15 @@ $server->{'ssh_protocol'} = 2;	# Nobody uses 1 anymore!
 
 # Webmin login
 if ($in{'webmin_mode'} == 1) {
+	# Same as root
 	$in{'auth_mode'} == 0 || &error($text{'add_emode1'});
 	$server->{'user'} = $server->{'ssh_user'};
 	$server->{'pass'} = $server->{'ssh_pass'};
 	$server->{'ssh_pass_same'} = 1;
 	}
 elsif ($in{'webmin_mode'} == 2) {
-	$in{'wuser'} =~ /^\S+$/ || &error($text{'add_ewuser'});
-	$server->{'user'} = $in{'wuser'};
+	# Password specified for root
+	$server->{'user'} = 'root';
 	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
 	$server->{'pass'} = $in{'wpass'};
 	}
@@ -92,7 +93,8 @@ else {
 print $text{'create_sshing'};
 $sshcount = 0;
 while(1) {
-	($sshstatus, $ssherr) = &check_server_ssh_login($server);
+	($sshstatus, $ssherr, $webmindir, $webminport, $webminssh) =
+		&check_server_ssh_login($server);
 	if ($sshstatus == 0) {
 		print "<br>\n";
 		print $text{'create_sshdone'},"<p>\n";
@@ -111,14 +113,29 @@ while(1) {
 	}
 
 # Check if the server has Webmin.
-#$server->{'ssl'} = 1;			# XXX test later
-#$server->{'port'} = 10000;		# Assume default
+if ($haswebmin) {
+	# Yes .. go with its port and SSL settings
+	$server->{'port'} = $webminport;
+	$server->{'ssl'} = $webminssl;
 
-# If it has, then cool .. set the password and update the server object
-# XXX
-
-# If not, install if requested
-# XXX
+	# Forcibly set the password
+	# XXX
+	}
+elsif ($in{'webmin_mode'}) {
+	# Need to install Webmin
+	local ($src, $type, $err) = &get_install_webmin_source($server);
+	if (!$err) {
+		print &text('create_webmining', $src),"<br>\n";
+		($out, $err) = &install_webmin_server($server, $src, $type, 1);
+		print "<pre>$out</pre>";
+		if ($err) {
+			print &text('save_webminfailed', $err),"<p>\n";
+			}
+		else {
+			print $text{'save_webmindone'},"<p>\n";
+			}
+		}
+	}
 
 # Re-check and save the status
 print $text{'add_statusing'},"<br>\n";

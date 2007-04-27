@@ -3,7 +3,8 @@
 # XXX grouping
 # XXX for zones, we don't need to SSH in
 # XXX kvm or vservers
-# XXX tell between webmin down vs. not running vs. cannot login
+# XXX change Webmin or SSH login on edit form
+# XXX make sure Webmin install works in all cases (EC2 create)
 
 do '../web-lib.pl';
 &init_config();
@@ -322,8 +323,8 @@ return $text;
 # check_server_ssh_login(&server)
 # Checks if some system can be contacted via SSH, with the login details
 # set in the server object. Returns a status code (0=OK, 1=No connect, 2=No
-# login, 3=Unknown error, 4=Timeout) and an error message, and a flag indicating
-# if Webmin is installed
+# login, 3=Unknown error, 4=Timeout) and an error message, the Webmin root
+# directory (if installed), the Webmin port and the Webmin SSL flag.
 sub check_server_ssh_login
 {
 local ($server) = @_;
@@ -332,7 +333,7 @@ if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
 	$cmd .= " -i ".quotemeta($key->{'file'});
 	}
-$cmd .= " $server->{'ssh_user'}\@$server->{'host'} grep root= /etc/webmin/miniserv.conf ; echo OK";
+$cmd .= " $server->{'ssh_user'}\@$server->{'host'} 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; echo OK'";
 local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, 10);
 if ($status == 0) {
 	# Connected OK .. check the output to see if we have Webmin
@@ -340,7 +341,10 @@ if ($status == 0) {
 		return (3, $out, undef);
 		}
 	else {
-		return (0, $out, $out =~ /root=(\S+)/ ? $1 : 0);
+		local $root = $out =~ /root=(\S+)/ ? $1 : 0;
+		local $port = $out =~ /port=(\S+)/ ? $1 : 0;
+		local $ssl = $out =~ /ssl=(\S+)/ ? $1 : 0;
+		return (0, $out, $root, $port, $ssl);
 		}
 	}
 else {
@@ -378,6 +382,7 @@ if ($last_remote_error) {
 if ($@) {
 	if ($@ =~ /timeout/) {
 		# A fast mode failure will look like a timeout .. try in slow
+		# mode, if we don't know yet
 		if ($fast_try) {
 			$server->{'fast'} = 0;
 			return &check_server_webmin_login($server);
@@ -984,12 +989,12 @@ local $source = $config{'download_'.$type} ||
 return ($source, $type, undef);
 }
 
-# install_webmin_server(&server, src, type)
+# install_webmin_server(&server, src, type, set-password)
 # Attempt to install Webmin on some system, from the given source and type.
 # Returns the output and an error message on failure.
 sub install_webmin_server
 {
-local ($server, $src, $type) = @_;
+local ($server, $src, $type, $setpass) = @_;
 local ($out, $ex, $err);
 $src =~ /\/([^\/]+)$/;
 local $temp = "/tmp/$1";
@@ -1025,10 +1030,15 @@ elsif ($type eq "tgz") {
 else {
 	return (undef, "Unknown package type $type");
 	}
-$server->{'port'} = 10000;
+
+# Get details of the new Webmin
+local ($sshstatus, $ssherr, $wroot, $wport, $wssl) =
+	&check_server_ssh_login($server);
+$server->{'port'} = $wport || 10000;
+$server->{'ssl'} = $wssl;
 
 # Set the Webmin password, if we don't have it
-if (!$server->{'pass'}) {
+if ($setpass) {
 	if ($server->{'ssh_pass'}) {
 		# Root and Webmin passwords are the same
 		$server->{'user'} = 'root';
@@ -1038,7 +1048,7 @@ if (!$server->{'pass'}) {
 		# Need to set, since RPM and Deb installs by default use the
 		# real root password, which we don't know
 		$server->{'user'} = 'root';
-		$server->{'pass'} = &generate_random_password();
+		$server->{'pass'} ||= &generate_random_password();
 		local ($pout, $pex, $perr) =
 			&execute_command_on_server($server,
 				"$rootdir/changepass.pl /etc/webmin root ".
@@ -1051,9 +1061,6 @@ if (!$server->{'pass'}) {
 			}
 		}
 	}
-
-# Check if we are using SSL for this new Webmin
-$server->{'ssl'} = &get_webmin_ssl_mode($server);
 
 # Make sure Webmin is running OK, and get the OS
 local ($wstatus, $werr, $wos, $wrealos) = &check_server_webmin_login($server);
@@ -1076,18 +1083,6 @@ while(length($pass) < 8) {
 	$pass .= chr(int(rand()*26)+97);
 	}
 return $pass;
-}
-
-# get_webmin_ssl_mode(&server)
-# Checks if some server is running Webmin in SSL mode
-sub get_webmin_ssl_mode
-{
-local ($server) = @_;
-local ($err, $out);
-&http_download($server->{'host'}, $server->{'port'}, $path, \$out,
-	       \$err, undef, 1, undef, undef, 10, 0, 1);
-print "out=$out err=$err\n";
-return $err =~ /401/ ? 1 : 0;
 }
 
 1;

@@ -89,6 +89,9 @@ create_waited=.. creation has completed successfully.
 create_sshing=Waiting for SSH login ..
 create_sshdone=.. SSH server ready.
 create_sshfailed=.. SSH server failed to respond after $1 seconds : $2
+create_webmining=Installing Webmin from $1 ..
+create_webmin1=Install, and set login to <tt>root</tt> with password above
+create_webmin2=Install, and set login to $1 with password $2
 
 keys_title=Manage SSH Keys
 keys_desc=Key description

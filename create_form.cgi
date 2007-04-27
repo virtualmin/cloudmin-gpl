@@ -29,11 +29,13 @@ print &ui_table_row($text{'add_desc'},
 $pfunc = "type_".$in{'type'}."_no_create_pass";
 if (defined(&$pfunc) && &$pfunc()) {
 	# This server type doesn't set a root password at creation (ie. EC2)
+	$has_root_password = 0;
 	print &ui_table_row($text{'create_sshkey'},
 			    &ssh_key_menu("key", $in{'type'}));
 	print &ui_hidden("auth_mode", 1);
 	}
 else {
+	$has_root_password = 1;
 	print &ui_table_row($text{'add_auth'},
 		&ui_radio("auth_mode", 0,
 		      [ [ 0, &text('add_auth0',
@@ -45,9 +47,9 @@ else {
 print &ui_table_row($text{'add_webmin'},
 	&ui_radio("webmin_mode", 0,
 	      [ [ 0, $text{'create_webmin0'}."<br>" ],
-		[ 1, $text{'add_webmin1'}."<br>" ],
-		[ 2, &text('add_webmin2',
-			   &ui_textbox("wuser", "root", 20),
+		$has_root_password ? ( [ 1, $text{'create_webmin1'}."<br>" ] )
+				   : ( ),
+		[ 2, &text('create_webmin2', "<tt>root</tt>",
 			   &ui_textbox("wpass", undef, 20)) ] ]));
 
 # Can add domains?

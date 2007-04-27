@@ -56,7 +56,9 @@ elsif ($in{'delete'}) {
 			}
 		print "</table>\n";
 		if ($dtotal) {
-			print "<b>",&text('mass_ddeldoms', $dtotal),"</b><p>\n";
+			print "<b><font size=+2>",
+			      &text('mass_ddeldoms', $dtotal),
+			      "</font></b><p>\n";
 			}
 		print &ui_form_end([ [ "confirm", $text{'mass_dok'} ] ]);
 		print "</center>\n";
