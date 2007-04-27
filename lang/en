@@ -75,6 +75,7 @@ create_ok=Create System
 create_ec2image=EC2 image to start
 create_sshkey=SSH key for root
 create_eec2instance=Could not find new EC2 instance!
+create_eec2state=Instance is in un-expected state <tt>$1</tt>
 create_err=Failed to create system
 create_ehost=Missing or invalid hostname for new system
 ec2_eimage=Missing or invalid image ID
@@ -92,6 +93,9 @@ create_sshfailed=.. SSH server failed to respond after $1 seconds : $2
 create_webmining=Installing Webmin from $1 ..
 create_webmin1=Install, and set login to <tt>root</tt> with password above
 create_webmin2=Install, and set login to $1 with password $2
+create_passing=Setting password for existing Webmin install ..
+create_passfailed=.. failed : $1
+create_passdone=.. password changed successfully.
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
@@ -337,6 +341,9 @@ edit_ec2image=Started from EC2 image
 edit_webmin2=Open Webmin
 edit_shell=Run Commands
 edit_nodoms=This system is not hosting any Virtualmin domains yet.
+edit_aheader=Authentication options
+edit_auth=SSH login mode
+edit_wauth=Webmin login mode
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..

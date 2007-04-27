@@ -4,7 +4,6 @@
 # XXX for zones, we don't need to SSH in
 # XXX kvm or vservers
 # XXX change Webmin or SSH login on edit form
-# XXX make sure Webmin install works in all cases (EC2 create)
 
 do '../web-lib.pl';
 &init_config();
@@ -285,11 +284,11 @@ foreach my $text (@lines) {
 return join("\n", @rv)."\n";
 }
 
-# ssh_key_menu(name, [for-type])
+# ssh_key_menu(name, [for-type], [value])
 # Returns a menu for selecting an SSH key
 sub ssh_key_menu
 {
-local ($name, $type) = @_;
+local ($name, $type, $value) = @_;
 local @keys = sort { $a->{'desc'} cmp $b->{'desc'} } &list_ssh_keys();
 local @allkeys = @keys;
 if ($type) {
@@ -300,7 +299,7 @@ if ($type) {
 		}
 	}
 if (@keys) {
-	return &ui_select($name, undef,
+	return &ui_select($name, $value,
 		[ map { [ $_->{'id'}, $_->{'desc'} ] } @keys ]);
 	}
 else {
@@ -1043,21 +1042,17 @@ if ($setpass) {
 		# Root and Webmin passwords are the same
 		$server->{'user'} = 'root';
 		$server->{'pass'} = $server->{'ssh_pass'};
+		$server->{'ssh_pass_same'} = 1;
 		}
 	else {
 		# Need to set, since RPM and Deb installs by default use the
 		# real root password, which we don't know
 		$server->{'user'} = 'root';
 		$server->{'pass'} ||= &generate_random_password();
-		local ($pout, $pex, $perr) =
-			&execute_command_on_server($server,
-				"$rootdir/changepass.pl /etc/webmin root ".
-				quotemeta($server->{'pass'}));
+		local $perr = &set_server_webmin_password(
+				$server, $rootdir, "root", $server->{'pass'});
 		if ($perr) {
 			$out .= "\nFailed to set Webmin password : $perr\n";
-			}
-		elsif ($pex) {
-			$out .= "\nFailed to set Webmin password : $pout\n";
 			}
 		}
 	}
@@ -1083,6 +1078,16 @@ while(length($pass) < 8) {
 	$pass .= chr(int(rand()*26)+97);
 	}
 return $pass;
+}
+
+# set_server_webmin_password(&server, webminroot, user, pass)
+# Change the Webmin password on some server
+sub set_server_webmin_password
+{
+local ($server, $webmindir, $user, $pass) = @_;
+local ($pout, $pex, $perr) = &execute_command_on_server($server,
+	"$webminroot/changepass.pl /etc/webmin $user ".quotemeta($pass));
+return $perr ? $perr : $pex ? $pout : undef;
 }
 
 1;

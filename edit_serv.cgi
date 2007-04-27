@@ -10,10 +10,11 @@ $status = $server->{'status'};
 &ui_print_header(&server_in($server), $text{'edit_title'}, "", "edit");
 
 # Basic details section
+@tds = ( "width=30%" );
 print &ui_form_start("save_serv.cgi", "post");
 print &ui_hidden("id", $in{'id'});
 print &ui_hidden_table_start($text{'edit_bheader'}, "width=100%", 2,
-			     "basic", 1);
+			     "basic", 1, \@tds);
 
 # Hostname
 print &ui_table_row($text{'edit_host'}, "<tt>$server->{'host'}</tt>");
@@ -58,6 +59,29 @@ if (defined(&$efunc)) {
 
 print &ui_hidden_table_end("basic");
 
+# Show authentication form
+print &ui_hidden_table_start($text{'edit_aheader'}, "width=100%", 2,
+			     "auth", 0, \@tds);
+
+# SSH
+print &ui_table_row($text{'edit_auth'},
+   &ui_radio("auth_mode", $server->{'ssh_pass'} ? 0 : 1,
+      [ [ 0, &text('add_auth0',
+	   &ui_textbox("upass", $server->{'ssh_pass'}, 20))."<br>" ],
+	[ 1, &text('add_auth1', &ssh_key_menu("key", $t,$server->{'key'}))] ]));
+
+# Webmin
+if ($status eq 'nowebminlogin' || $status eq 'novirt' || $status eq 'virt') {
+	print &ui_table_row($text{'edit_wauth'},
+	    &ui_radio("webmin_mode", $server->{'ssh_pass_same'} ? 1 : 2,
+	      [ [ 1, $text{'add_webmin1'}."<br>" ],
+	        [ 2, &text('add_webmin2',
+		           &ui_textbox("wuser", $server->{'user'}, 20),
+		           &ui_textbox("wpass", $server->{'pass'}, 20)) ] ]));
+	}
+
+print &ui_hidden_table_end("auth");
+
 # Action buttons at end of form (depends on status)
 if ($status eq 'down' || $status eq 'nossh') {
 	# System is down, so we can only save and perhaps startup
@@ -96,9 +120,9 @@ else {
 	}
 
 # Virtualmin status
-if ($status eq 'virt' && $info) {
+if ($info) {
 	print &ui_hidden_table_start($text{'edit_cheader'}, "width=100%", 2,
-				     "coll");
+				     "coll", 0, \@tds);
 
 	# CPU load and running processes
 	if ($info->{'load'}) {
@@ -186,10 +210,10 @@ if ($status eq 'virt' && $info) {
 	}
 
 # Hosted domains 
-if ($status eq 'virt') {
-	@doms = &get_server_domains($server);
+@doms = &get_server_domains($server);
+if ($status eq 'virt' || @doms) {
 	print &ui_hidden_table_start($text{'edit_dheader'}, "width=100%", 2,
-				     "doms");
+				     "doms", 0, \@tds);
 
 	if (@doms) {
 		$bs = &get_server_blocksize($server);

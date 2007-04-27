@@ -103,6 +103,7 @@ elsif ($in{'webmin'}) {
 
 else {
 	# Validate inputs, and save details
+	&error_setup($text{'save_err'});
 	if ($server->{'id'} != 0) {
 		$server->{'desc'} = $in{'desc'};
 		}
@@ -113,6 +114,46 @@ else {
 	if (defined(&$pfunc)) {
 		&$pfunc($server, \%in);
 		}
+
+	# Validate authentication inputs
+	$oldserver = { %$server };
+	if ($in{'auth_mode'} == 0) {
+		# Via password
+		$in{'upass'} || &error($text{'add_eupass'});
+		$server->{'ssh_pass'} = $in{'upass'};
+		delete($server->{'key'});
+		}
+	else {
+		# Via SSH key
+		$server->{'key'} = $in{'key'};
+		delete($server->{'ssh_pass'});
+		}
+	if (defined($in{'webmin_mode'})) {
+		if ($in{'webmin_mode'} == 1) {
+			# Same as SSH
+			$server->{'ssh_pass'} || &error($text{'add_emode1'});
+			$server->{'user'} = 'root';
+			$server->{'pass'} = $server->{'ssh_pass'};
+			$server->{'ssh_pass_same'} = 1;
+			}
+		else {
+			# Custom Webmin login
+			$in{'wuser'} =~ /^\S+$/ || &error($text{'add_ewuser'});
+			$server->{'user'} = $in{'wuser'};
+			$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
+			$server->{'pass'} = $in{'wpass'};
+			$server->{'ssh_pass_same'} = 0;
+			}
+		}
+
+	# Re-check status if login mode has changed
+	if ($oldserver->{'ssh_pass'} ne $server->{'ssh_pass'} ||
+	    $oldserver->{'key'} ne $server->{'key'} ||
+	    $oldserver->{'user'} ne $server->{'user'} ||
+	    $oldserver->{'pass'} ne $server->{'pass'}) {
+		&check_server_status($server);
+		}
+
 	&save_managed_server($server);
 	&redirect("");
 	}

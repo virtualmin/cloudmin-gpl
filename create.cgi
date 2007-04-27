@@ -30,14 +30,14 @@ $server->{'ssh_protocol'} = 2;	# Nobody uses 1 anymore!
 
 # Webmin login
 if ($in{'webmin_mode'} == 1) {
-	# Same as root
+	# Same as SSH root
 	$in{'auth_mode'} == 0 || &error($text{'add_emode1'});
 	$server->{'user'} = $server->{'ssh_user'};
 	$server->{'pass'} = $server->{'ssh_pass'};
 	$server->{'ssh_pass_same'} = 1;
 	}
 elsif ($in{'webmin_mode'} == 2) {
-	# Password specified for root
+	# Password specified for Webmin root
 	$server->{'user'} = 'root';
 	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
 	$server->{'pass'} = $in{'wpass'};
@@ -113,13 +113,23 @@ while(1) {
 	}
 
 # Check if the server has Webmin.
-if ($haswebmin) {
-	# Yes .. go with its port and SSL settings
+if ($webmindir) {
+	# Yes, it was setup as part of the server creation .. go with its
+	# port and SSL settings
 	$server->{'port'} = $webminport;
 	$server->{'ssl'} = $webminssl;
 
 	# Forcibly set the password
-	# XXX
+	$server->{'pass'} ||= &generate_random_password();
+	print $text{'create_passing'},"<br>\n";
+	$perr = &set_server_webmin_password($server, $webminroot, "root",
+					    $server->{'pass'});
+	if ($perr) {
+		print &text('create_passfailed', $perr),"<p>\n";
+		}
+	else {
+		print $text{'create_passdone'},"<p>\n";
+		}
 	}
 elsif ($in{'webmin_mode'}) {
 	# Need to install Webmin
