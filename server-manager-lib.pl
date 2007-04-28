@@ -1,9 +1,8 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX search if too many servers
 # XXX grouping
-# XXX for zones, we don't need to SSH in
+# XXX for vserver/zones, we don't need to SSH in
 # XXX kvm or vservers
-# XXX change Webmin or SSH login on edit form
 
 do '../web-lib.pl';
 &init_config();
@@ -16,6 +15,7 @@ use Net::Amazon::EC2;
 @possible_server_management_types = ( [ "real", undef ],
 				      [ "zones", "zones" ],
 				      [ "ec2", undef ],
+				      [ "vserver", undef ],
 				      [ "this", undef ],
 				    );
 @server_management_types = ( );
@@ -1088,6 +1088,19 @@ local ($server, $webmindir, $user, $pass) = @_;
 local ($pout, $pex, $perr) = &execute_command_on_server($server,
 	"$webminroot/changepass.pl /etc/webmin $user ".quotemeta($pass));
 return $perr ? $perr : $pex ? $pout : undef;
+}
+
+# list_bind_zones()
+# Returns a list of BIND master zones that we can add vserver hostnames to
+sub list_bind_zones
+{
+if (&foreign_installed("bind8")) {
+	&foreign_require("bind8", "bind8-lib.pl");
+	return sort { $a->{'name'} cmp $b->{'name'} }
+		 grep { $_->{'type'} eq 'master' &&
+		        $_->{'name'} !~ /in-addr/i } &bind8::list_zone_names();
+	}
+return ( );
 }
 
 1;

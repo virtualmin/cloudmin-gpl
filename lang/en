@@ -384,3 +384,34 @@ shell_pok=Execute previous command
 shell_edit=Edit previous
 
 server_in=On system $1
+
+vserver_typedesc=Linux VServer
+
+vservers_title=VServer Host Systems
+vservers_add=Register a system for VServer hosting.
+vservers_host=System hostname
+vservers_os=OS
+vservers_users=Hosted systems
+vservers_nousers=None
+vservers_manyusers=$1 systems
+vservers_doneall=All possible systems have already been registered for VServer hosting.
+vservers_none=No systems have been registered for VServer hosting yet.
+vservers_none2=None of the registered systems can host VSsrvers.
+vservers_return=list of VServer hosts
+
+vserver_create=Register VServer Host
+vserver_edit=Edit VServer Host
+vserver_header=VServer host system details
+vserver_host=System hosting VServers
+vserver_dir=Base directory for virtual systems
+vserver_domain=Add VServer systems to DNS domain
+vserver_domain2=DNS domain for VServer servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
+vserver_range=IP address allocation range
+vserver_startend=$1 to $2 / $3
+vserver_iface=Base network interface
+vserver_ether=First ethernet interface
+vserver_dist=Distribution to install on VServers
+vserver_auto=Decide automatically
+vserver_reg=Register
+vserver_unreg=De-Register
+
