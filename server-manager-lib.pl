@@ -3,6 +3,8 @@
 # XXX grouping
 # XXX for vserver/zones, we don't need to SSH in
 # XXX kvm or vservers
+# XXX tar.gz installs
+# XXX deleting real systems
 
 do '../web-lib.pl';
 &init_config();
@@ -343,6 +345,14 @@ if ($status == 0) {
 		local $root = $out =~ /root=(\S+)/ ? $1 : 0;
 		local $port = $out =~ /port=(\S+)/ ? $1 : 0;
 		local $ssl = $out =~ /ssl=(\S+)/ ? $1 : 0;
+		if ($root && $ssl) {
+			# Webmin wants SSL .. but can we really provide it?
+			local ($sout, $sex) = &execute_command_on_server(
+				$server, "perl -e 'use Net::SSLeay'");
+			if ($sex) {
+				$ssl = 0;	# Missing Perl module
+				}
+			}
 		return (0, $out, $root, $port, $ssl);
 		}
 	}
@@ -1086,7 +1096,7 @@ sub set_server_webmin_password
 {
 local ($server, $webmindir, $user, $pass) = @_;
 local ($pout, $pex, $perr) = &execute_command_on_server($server,
-	"$webminroot/changepass.pl /etc/webmin $user ".quotemeta($pass));
+	"$webmindir/changepass.pl /etc/webmin $user ".quotemeta($pass));
 return $perr ? $perr : $pex ? $pout : undef;
 }
 

@@ -122,7 +122,7 @@ if ($webmindir) {
 	# Forcibly set the password
 	$server->{'pass'} ||= &generate_random_password();
 	print $text{'create_passing'},"<br>\n";
-	$perr = &set_server_webmin_password($server, $webminroot, "root",
+	$perr = &set_server_webmin_password($server, $webmindir, "root",
 					    $server->{'pass'});
 	if ($perr) {
 		print &text('create_passfailed', $perr),"<p>\n";

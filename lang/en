@@ -401,6 +401,7 @@ vservers_return=list of VServer hosts
 
 vserver_create=Register VServer Host
 vserver_edit=Edit VServer Host
+vserver_egone=The VServer host no longer exists!
 vserver_header=VServer host system details
 vserver_host=System hosting VServers
 vserver_dir=Base directory for virtual systems
@@ -414,4 +415,17 @@ vserver_dist=Distribution to install on VServers
 vserver_auto=Decide automatically
 vserver_reg=Register
 vserver_unreg=De-Register
-
+vserver_err=Failed to save VServer host/
+vserver_elinux=VServers are only supported on Linux
+vserver_ewhich=The required command $1 does not exist. Perhaps the VServer software is not installed?
+vserver_ekernel=The kernel does not include VServer support. Perhaps it not been compiled with the required patch?
+vserver_edown=A system which cannot be contacted via SSH cannot be used for VServer hosting
+vserver_esoft=The selected system cannot support VServers : $1
+vserver_edir=The specified base directory does not exist
+vserver_ezone=Missing or invalid-looking DNS domain
+vserver_estart=Missing or invalid starting IP address for allocation
+vserver_eend=Missing or invalid ending IP address for allocation
+vserver_ecidr=Missing or invalid network size for allocation - must be a number like 16 or 24
+vserver_erange=The starting IP address must be before the ending address
+vserver_eiface=Missing or invalid-looking base network interface
+vserver_edist=Missing or invalid-looking distribution code - should be like <tt>sarge</tt> or <tt>fc5</tt>
