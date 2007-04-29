@@ -33,20 +33,27 @@ $pwd = $in{'pwd'} || "/";
 if (!$in{'clear'}) {
 	$history = &un_urlize($in{'history'});
 	if ($cmd) {
-		# Execute the latest command
+		# Execute the entered command
 		$fullcmd = $cmd;
-		$ok = chdir($pwd);
 		$history .= "<b>&gt; ".&html_escape($cmd, 1)."</b>\n";
 		if ($cmd =~ /^cd\s+"([^"]+)"\s*(;?\s*(.*))$/ ||
 		    $cmd =~ /^cd\s+'([^']+)'\s*(;?\s*(.*))$/ ||
 		    $cmd =~ /^cd\s+([^; ]*)\s*(;?\s*(.*))$/) {
+			# Directory change, possibly followed by a command ..
+			# work out where we end up after the chdir
 			$cmd = undef;
-			if (!chdir($1)) {
-				$history .= &html_escape("$1: $!\n", 1);
+			local $newdir = $1;
+			local $aftercmd = $3;
+			($out, $ex, $err) = &execute_command_on_server(
+				$server, "cd ".quotemeta($pwd)." ; cd ".quotemeta($newdir)." && pwd");
+			if ($ex) {
+				# Remote chdir failed!
+				$history .= &html_escape("$newdir: $out\n");
 				}
 			else {
-				$cmd = $3 if ($2);
-				$pwd = &get_current_dir();
+				# Save the new directory
+				($pwd = $out) =~ s/\r|\n//g;
+				$cmd = $aftercmd;
 				}
 			}
 		if ($cmd) {
@@ -54,7 +61,7 @@ if (!$in{'clear'}) {
 							# programs get the right
 							# module, not this one!
 			($out, $ex, $err) = &execute_command_on_server(
-						$server, $cmd);
+				$server, "cd ".quotemeta($pwd)." ; $cmd");
 			$out = "ERROR: $err\n" if ($err);
 			$out = &html_escape($out, 1);
 			$history .= $out;

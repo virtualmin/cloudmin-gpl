@@ -43,7 +43,7 @@ elsif ($in{'webmin_mode'} == 2) {
 	$server->{'pass'} = $in{'wpass'};
 	}
 $server->{'novirt'} = !$in{'canvirt'};
-$server->{'type'} = 'webmin';
+$server->{'type'} = 'unknown';
 
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_create_parse";
@@ -93,7 +93,7 @@ else {
 print $text{'create_sshing'};
 $sshcount = 0;
 while(1) {
-	($sshstatus, $ssherr, $webmindir, $webminport, $webminssh) =
+	($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
 		&check_server_ssh_login($server);
 	if ($sshstatus == 0) {
 		print "<br>\n";

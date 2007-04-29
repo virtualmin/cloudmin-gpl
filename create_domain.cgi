@@ -78,7 +78,7 @@ $info = &get_server_collected($server);
 				 : @standard_virtualmin_features;
 foreach $f (@features) {
 	($sf) = grep { $_->{'feature'} eq $f } @sfeatures;
-	$sf && $sf->{'enabled'} || &error(&text('dcreate_efeature', $sd->{'desc'},
+	$sf && $sf->{'enabled'} || &error(&text('dcreate_efeature', $f,
 						"<tt>$server->{'host'}</tt>"));
 	}
 
@@ -89,7 +89,7 @@ print &text('dcreate_doing', "<tt>$in{'dom'}</tt>",
 	    "<tt>$server->{'host'}</tt>"),"<br>\n";
 ($err, $out) = &call_virtualmin_api($server, "create-domain", \@args);
 if ($err) {
-	print &text('dcreate_failed', $err),"<p>\n";
+	print &text('dcreate_failed', &html_escape($err)),"<p>\n";
 	}
 else {
 	print "<pre>",&html_escape($out),"</pre>\n";

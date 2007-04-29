@@ -59,19 +59,28 @@ if (defined(&$efunc)) {
 
 print &ui_hidden_table_end("basic");
 
-# Show authentication form
-print &ui_hidden_table_start($text{'edit_aheader'}, "width=100%", 2,
-			     "auth", 0, \@tds);
+# Show authentication form (if needed)
+$haswebmin = $status eq 'nowebminlogin' || $status eq 'novirt' ||
+	     $status eq 'virt';
+$sfunc = "type_".$t."_no_ssh";
+$hasssh = !defined(&$sfunc) || !&$sfunc();
+if ($haswebmin || $hasssh) {
+	print &ui_hidden_table_start($text{'edit_aheader'}, "width=100%", 2,
+				     "auth", 0, \@tds);
+	}
 
 # SSH
-print &ui_table_row($text{'edit_auth'},
-   &ui_radio("auth_mode", $server->{'ssh_pass'} ? 0 : 1,
-      [ [ 0, &text('add_auth0',
-	   &ui_textbox("upass", $server->{'ssh_pass'}, 20))."<br>" ],
-	[ 1, &text('add_auth1', &ssh_key_menu("key", $t,$server->{'key'}))] ]));
+if ($hasssh) {
+	print &ui_table_row($text{'edit_auth'},
+	   &ui_radio("auth_mode", $server->{'ssh_pass'} ? 0 : 1,
+	      [ [ 0, &text('add_auth0',
+		   &ui_textbox("upass", $server->{'ssh_pass'}, 20))."<br>" ],
+		[ 1, &text('add_auth1',
+			&ssh_key_menu("key", $t,$server->{'key'}))] ]));
+	}
 
 # Webmin
-if ($status eq 'nowebminlogin' || $status eq 'novirt' || $status eq 'virt') {
+if ($haswebmin) {
 	print &ui_table_row($text{'edit_wauth'},
 	    &ui_radio("webmin_mode", $server->{'ssh_pass_same'} ? 1 : 2,
 	      [ [ 1, $text{'add_webmin1'}."<br>" ],
@@ -80,7 +89,9 @@ if ($status eq 'nowebminlogin' || $status eq 'novirt' || $status eq 'virt') {
 		           &ui_textbox("wpass", $server->{'pass'}, 20)) ] ]));
 	}
 
-print &ui_hidden_table_end("auth");
+if ($haswebmin || $hasssh) {
+	print &ui_hidden_table_end("auth");
+	}
 
 # Action buttons at end of form (depends on status)
 if ($status eq 'down' || $status eq 'nossh') {

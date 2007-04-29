@@ -25,22 +25,30 @@ if (!defined(&$hfunc) || !&$hfunc()) {
 print &ui_table_row($text{'add_desc'},
 	&ui_textbox("desc", undef, 60));
 
-# Root password / SSH key
-$pfunc = "type_".$in{'type'}."_no_create_pass";
-if (defined(&$pfunc) && &$pfunc()) {
-	# This server type doesn't set a root password at creation (ie. EC2)
-	$has_root_password = 0;
-	print &ui_table_row($text{'create_sshkey'},
-			    &ssh_key_menu("key", $in{'type'}));
-	print &ui_hidden("auth_mode", 1);
+# Root password / SSH key (if possible)
+$sfunc = "type_".$in{'type'}."_no_ssh";
+$no_ssh = defined(&$sfunc) && &$sfunc();
+if (!$no_ssh) {
+	$pfunc = "type_".$in{'type'}."_no_create_pass";
+	if (defined(&$pfunc) && &$pfunc()) {
+		# This server type doesn't set a root password at creation
+		# (ie. EC2)
+		$has_root_password = 0;
+		print &ui_table_row($text{'create_sshkey'},
+				    &ssh_key_menu("key", $in{'type'}));
+		print &ui_hidden("auth_mode", 1);
+		}
+	else {
+		$has_root_password = 1;
+		print &ui_table_row($text{'add_auth'},
+		    &ui_radio("auth_mode", 0,
+		      [ [ 0, &text('add_auth0',
+			   &ui_textbox("upass", undef, 20))."<br>" ],
+			[ 1, &text('add_auth1', &ssh_key_menu("key")) ] ]));
+		}
 	}
 else {
-	$has_root_password = 1;
-	print &ui_table_row($text{'add_auth'},
-		&ui_radio("auth_mode", 0,
-		      [ [ 0, &text('add_auth0',
-				   &ui_textbox("upass", undef, 20))."<br>" ],
-			[ 1, &text('add_auth1', &ssh_key_menu("key")) ] ]));
+	$has_root_password = 0;
 	}
 
 # Webmin login

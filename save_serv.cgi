@@ -35,7 +35,19 @@ if ($in{'shutdown'}) {
 
 elsif ($in{'startup'}) {
 	# Start up this virtual system
-	# XXX
+	&ui_print_header(&server_in($server), $text{'save_starttitle'}, "");
+	print &text('save_starting',
+		    "<tt>$server->{'host'}</tt>"),"<br>\n";
+	$err = &startup_server($server);
+	if ($err) {
+		print &text('save_startfailed', $err),"<p>\n";
+		}
+	else {
+		&check_server_status($server);
+		&save_managed_server($server);
+		print $text{'save_startdone'},"<p>\n";
+		}
+	&ui_print_footer("", $text{'index_return'});
 	}
 
 elsif ($in{'reboot'}) {
@@ -117,16 +129,18 @@ else {
 
 	# Validate authentication inputs
 	$oldserver = { %$server };
-	if ($in{'auth_mode'} == 0) {
-		# Via password
-		$in{'upass'} || &error($text{'add_eupass'});
-		$server->{'ssh_pass'} = $in{'upass'};
-		delete($server->{'key'});
-		}
-	else {
-		# Via SSH key
-		$server->{'key'} = $in{'key'};
-		delete($server->{'ssh_pass'});
+	if (defined($in{'auth_mode'})) {
+		if ($in{'auth_mode'} == 0) {
+			# Via password
+			$in{'upass'} || &error($text{'add_eupass'});
+			$server->{'ssh_pass'} = $in{'upass'};
+			delete($server->{'key'});
+			}
+		else {
+			# Via SSH key
+			$server->{'key'} = $in{'key'};
+			delete($server->{'ssh_pass'});
+			}
 		}
 	if (defined($in{'webmin_mode'})) {
 		if ($in{'webmin_mode'} == 1) {

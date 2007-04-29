@@ -14,17 +14,21 @@ $clash && &error($text{'add_eclash'});
 $server->{'host'} = $in{'host'};
 $server->{'desc'} = $in{'desc'};
 
-# SSH login
-$server->{'ssh_user'} = 'root';
-if ($in{'auth_mode'} == 0) {
-	$in{'upass'} || &error($text{'add_eupass'});
-	$server->{'ssh_pass'} = $in{'upass'};
+# SSH login (if there is one)
+$sfunc = "type_".$in{'type'}."_no_ssh";
+$no_ssh = defined(&$sfunc) && &$sfunc();
+if (!$no_ssh) {
+	$server->{'ssh_user'} = 'root';
+	if ($in{'auth_mode'} == 0) {
+		$in{'upass'} || &error($text{'add_eupass'});
+		$server->{'ssh_pass'} = $in{'upass'};
+		}
+	elsif ($in{'auth_mode'} == 1) {
+		$in{'key'} || &error($text{'add_ekey'});
+		$server->{'key'} = $in{'key'};
+		}
+	$server->{'ssh_protocol'} = $in{'protocol'};
 	}
-elsif ($in{'auth_mode'} == 1) {
-	$in{'key'} || &error($text{'add_ekey'});
-	$server->{'key'} = $in{'key'};
-	}
-$server->{'ssh_protocol'} = $in{'protocol'};
 
 # Webmin login
 if ($in{'webmin_mode'} == 1) {
@@ -52,16 +56,18 @@ if (defined(&$pfunc)) {
 
 &ui_print_unbuffered_header(undef, $text{'add_title'}, "");
 
-# Make sure the SSH login is valid
-print $text{'add_sshing'},"<br>\n";
-($status, $msg) = &check_server_ssh_login($server);
-if ($status) {
-	print "<b>",&text('add_essh',
+if (!$no_ssh) {
+	# Make sure the SSH login is valid
+	print $text{'add_sshing'},"<br>\n";
+	($status, $msg) = &check_server_ssh_login($server);
+	if ($status) {
+		print "<b>",&text('add_essh',
 			  &nice_error_status($status), $msg),"</b><p>\n";
-	goto END;
-	}
-else {
-	print $text{'add_sshok'},"<p>\n";
+		goto END;
+		}
+	else {
+		print $text{'add_sshok'},"<p>\n";
+		}
 	}
 
 # And the Webmin login
@@ -79,7 +85,7 @@ if ($server->{'user'}) {
 	$server->{'type'} = &os_to_server_type($os, $realos);
 	}
 else {
-	$server->{'type'} = 'webmin';
+	$server->{'type'} = 'unknown';
 	}
 
 # Get status one more time, and save the server object

@@ -23,19 +23,24 @@ print &ui_table_row($text{'add_desc'},
 	&ui_textbox("desc", undef, 60));
 
 # Root password / SSH key
-print &ui_table_row($text{'add_auth'},
-	&ui_radio("auth_mode", 0,
-	      [ [ 0, &text('add_auth0',
-			   &ui_textbox("upass", undef, 20))."<br>" ],
-		[ 1, &text('add_auth1', &ssh_key_menu("key", $in{'type'}))] ]));
-print &ui_table_row($text{'add_protocol'},
-	&ui_radio("protocol", 2, [ [ 2 ], [ 1 ] ]));
+$sfunc = "type_".$in{'type'}."_no_ssh";
+$no_ssh = defined(&$sfunc) && &$sfunc();
+if (!$no_ssh) {
+	print &ui_table_row($text{'add_auth'},
+		&ui_radio("auth_mode", 0,
+		      [ [ 0, &text('add_auth0',
+				   &ui_textbox("upass", undef, 20))."<br>" ],
+			[ 1, &text('add_auth1',
+				&ssh_key_menu("key", $in{'type'}))] ]));
+	print &ui_table_row($text{'add_protocol'},
+		&ui_radio("protocol", 2, [ [ 2 ], [ 1 ] ]));
+	}
 
 # Webmin login
 print &ui_table_row($text{'add_webmin'},
 	&ui_radio("webmin_mode", 0,
 	      [ [ 0, $text{'add_webmin0'}."<br>" ],
-		[ 1, $text{'add_webmin1'}."<br>" ],
+		$no_ssh ? ( ) : ( [ 1, $text{'add_webmin1'}."<br>" ] ),
 		[ 2, &text('add_webmin2',
 			   &ui_textbox("wuser", "root", 20),
 			   &ui_textbox("wpass", undef, 20)) ] ])."<br>".

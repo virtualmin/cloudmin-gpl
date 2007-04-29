@@ -21,6 +21,8 @@ if ($in{'refresh'}) {
 elsif ($in{'delete'}) {
 	# Delete the selected servers (virtual only)
 	&error_setup($text{'mass_derr'});
+
+	# Check if servers cannot be deleted
 	@cannot = ( );
 	foreach $s (@servers) {
 		if ($s->{'manager'} eq 'real' || $s->{'manager'} eq 'this') {
@@ -30,6 +32,13 @@ elsif ($in{'delete'}) {
 	if (@cannot) {
 		&error(&text('mass_ereal',
 			join(" ", map { "<tt>$_->{'host'}</tt>" } @cannot)));
+		}
+
+	# Check for dependencies
+	@deps = map { &find_server_dependencies($_) } @servers;
+	if (@deps) {
+		&error(&text('mass_edeps',
+			join(" ", map { "<tt>$_->{'host'}</tt>" } @deps)));
 		}
 
 	&ui_print_unbuffered_header(undef, $text{'mass_dtitle'}, "");
@@ -85,6 +94,13 @@ elsif ($in{'delete'}) {
 elsif ($in{'dereg'}) {
 	# Removing from managed servers list
 	&error_setup($text{'mass_uerr'});
+
+	# Check for dependencies
+	@deps = map { &find_server_dependencies($_) } @servers;
+	if (@deps) {
+		&error(&text('mass_edeps',
+			join(" ", map { "<tt>$_->{'host'}</tt>" } @deps)));
+		}
 
 	&ui_print_unbuffered_header(undef, $text{'mass_rtitle'}, "");
 	if (!$in{'confirm'}) {

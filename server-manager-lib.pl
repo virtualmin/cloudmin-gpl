@@ -3,8 +3,10 @@
 # XXX grouping
 # XXX for vserver/zones, we don't need to SSH in
 # XXX kvm or vservers
+#	XXX create vserver
+#	XXX install webmin
 # XXX tar.gz installs
-# XXX deleting real systems
+# XXX make status updated limited to what the caller really needs
 
 do '../web-lib.pl';
 &init_config();
@@ -138,6 +140,7 @@ sub describe_status
 local ($s, $withcol, $withdoms) = @_;
 local $cmap = { 'down' => 'ff0000',
 		'nossh' => 'ff00ff',
+		'nohost' => 'ff0000',
 		'nosshlogin' => 'ff00cc',
 		'nowebmin' => 'ffff00',
 		'downwebmin' => 'ffaa00',
@@ -423,7 +426,7 @@ eval {
 		}
 	local ($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
-		$rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
+		local $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
 		$out .= $wait_for_input;
 		if ($rv == 0) {
 			syswrite($fh, "$pass\n");
@@ -524,6 +527,18 @@ foreach my $s (@servers::server_types) {
 return $type;
 }
 
+# ping_server_host(hostname|ip)
+# Returns 1 if some host responds to a ping in 5 seconds
+sub ping_server_host
+{
+local ($host) = @_;
+local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ?
+			"ping -c 1 -t 1" : "ping";
+local ($out, $timed_out) = &backquote_with_timeout(
+				$pingcmd." ".$host." 2>&1", 5, 1);
+return !$timed_out && !$?;
+}
+
 # check_server_status(&server)
 # Checks the status of a managed server, and updates the server object. Checks
 # SSH login, Webmin login, Virtualmin status, number of domains, memory, disk
@@ -533,33 +548,38 @@ sub check_server_status
 local ($server) = @_;
 
 # Do a quick ping
-local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ?
-			"ping -c 1 -t 1" : "ping";
-local ($out, $timed_out) = &backquote_with_timeout(
-				$pingcmd." ".$server->{'host'}." 2>&1", 5, 1);
-local $ping = !$timed_out && !$?;
+local $ping = &ping_server_host($server->{'host'});
 
-# Check SSH status (if not local)
+local $sfunc = "type_".$server->{'manager'}."_check_login";
 local $webminroot;
-$server->{'statustime'} = time();
-if ($server->{'id'} != 0) {
-	local ($status, $err, $wr) = &check_server_ssh_login($server);
-	if ($status == 2) {
-		$server->{'status'} = 'nosshlogin';
-		$server->{'status_msg'} = $err;
-		return 0;
-		}
-	elsif ($status && !$ping) {
-		$server->{'status'} = 'down';
-		$server->{'status_msg'} = $err;
-		return 0;
-		}
-	elsif ($status) {
-		$server->{'status'} = 'nossh';
-		$server->{'status_msg'} = $err;
-		return 0;
-		}
+if (defined(&$sfunc)) {
+	# Type has defined it's own function for checking the status
+	local ($ok, $wr) = &$sfunc($server, $ping);
+	return 0 if (!$ok);
 	$webminroot = $wr;
+	}
+else {
+	# Check SSH status (if not local)
+	$server->{'statustime'} = time();
+	if ($server->{'id'} != 0) {
+		local ($status, $err, $wr) = &check_server_ssh_login($server);
+		if ($status == 2) {
+			$server->{'status'} = 'nosshlogin';
+			$server->{'status_msg'} = $err;
+			return 0;
+			}
+		elsif ($status && !$ping) {
+			$server->{'status'} = 'down';
+			$server->{'status_msg'} = $err;
+			return 0;
+			}
+		elsif ($status) {
+			$server->{'status'} = 'nossh';
+			$server->{'status_msg'} = $err;
+			return 0;
+			}
+		$webminroot = $wr;
+		}
 	}
 
 # If we have a Webmin login, try it
@@ -907,7 +927,12 @@ print "</center>\n";
 sub shutdown_server
 {
 local ($server) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+local $sfunc = "type_".$server->{'manager'}."_shutdown";
+if (defined(&$sfunc)) {
+	# Type provides a shutdown function
+	return &$sfunc($server);
+	}
+elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Can use Webmin API call
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "init", "init-lib.pl");
@@ -931,7 +956,12 @@ else {
 sub reboot_server
 {
 local ($server) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+local $rfunc = "type_".$server->{'manager'}."_reboot";
+if (defined(&$rfunc)) {
+	# Type provides a reboot function
+	return &$rfunc($server);
+	}
+elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Can use Webmin API call
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "init", "init-lib.pl");
@@ -947,6 +977,16 @@ else {
 		"$iconfig{'reboot_command'} || shutdown -r now || reboot");
 	return $err ? $err : $ex ? $out : undef;
 	}
+}
+
+# startup_server(&server)
+# Start up some virtual system by calling it's type-specific function. Returns
+# undef on success, or an error message on failure.
+sub startup_server
+{
+local ($server) = @_;
+local $sfunc = "type_".$server->{'manager'}."_startup";
+return &$sfunc($server);
 }
 
 sub server_in
@@ -1111,6 +1151,41 @@ if (&foreign_installed("bind8")) {
 		        $_->{'name'} !~ /in-addr/i } &bind8::list_zone_names();
 	}
 return ( );
+}
+
+# find_server_dependencies(&server)
+# Returns a list of other servers that depend on this one
+sub find_server_dependencies
+{
+local ($server) = @_;
+local @allservers = &list_managed_servers();
+local @rv;
+foreach my $t (@server_management_types) {
+	local $dfunc = "type_".$t."_depends";
+	if (defined(&$dfunc)) {
+		push(@rv, grep { $_->{'id'} != $server->{'id'} &&
+				 &$dfunc($server, $_) } @allservers);
+		}
+	}
+return @rv;
+}
+
+# allocate_ip_address(start-ip, end-ip)
+# Returns an IP address from the given range that is not in use or pingable
+sub allocate_ip_address
+{
+local ($startip, $endip) = @_;
+&foreign_require("net", "net-lib.pl");
+local $start = &net::ip_to_integer($startip);
+local $end = &net::ip_to_integer($endip);
+local %used = map { &to_ipaddress($_->{'host'}), $_ } &list_managed_servers();
+for(my $n=$start; $n<=$end; $n++) {
+	local $ip = &net::integer_to_ip($n);
+	if (!$used{$ip} && !&ping_server_host($ip)) {
+		return $ip;
+		}
+	}
+return undef;
 }
 
 1;
