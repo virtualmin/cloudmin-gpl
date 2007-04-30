@@ -52,7 +52,7 @@ else {
 	}
 
 # Webmin login
-print &ui_table_row($text{'add_webmin'},
+print &ui_table_row($text{'create_webmin'},
 	&ui_radio("webmin_mode", 0,
 	      [ [ 0, $text{'create_webmin0'}."<br>" ],
 		$has_root_password ? ( [ 1, $text{'create_webmin1'}."<br>" ] )

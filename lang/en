@@ -74,6 +74,7 @@ create_header=Details of new virtual system
 create_type=System type
 create_host=System hostname
 create_hostdef=Selected automatically
+create_webmin=Webmin installation mode
 create_webmin0=Don't install Webmin
 create_ok=Create System
 create_ec2image=EC2 image to start
@@ -107,6 +108,8 @@ create_evserverip=Missing or invalid VServer IP address
 create_evserverhost=The hostname for a VServer cannot contain a . , as the domain name is added automatically
 create_evserverclash=A VServer with the same name already exists
 create_evserverdist=The distribution to install could not be worked out automatically - it must be specified manually on the VServer Hosts Systems page
+create_vserverpass=Initial root password
+create_vservernopass=Don't set any
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
