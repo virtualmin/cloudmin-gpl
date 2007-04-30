@@ -17,16 +17,20 @@ if (defined($in{'host'})) {
 $server->{'desc'} = $in{'desc'};
 
 # SSH login
-$server->{'ssh_user'} = 'root';
-if ($in{'auth_mode'} == 0) {
-	$in{'upass'} || &error($text{'add_eupass'});
-	$server->{'ssh_pass'} = $in{'upass'};
+$sfunc = "type_".$in{'type'}."_no_ssh";
+$no_ssh = defined(&$sfunc) && &$sfunc();
+if (!$no_ssh) {
+	$server->{'ssh_user'} = 'root';
+	if ($in{'auth_mode'} == 0) {
+		$in{'upass'} || &error($text{'add_eupass'});
+		$server->{'ssh_pass'} = $in{'upass'};
+		}
+	elsif ($in{'auth_mode'} == 1) {
+		$in{'key'} || &error($text{'add_ekey'});
+		$server->{'key'} = $in{'key'};
+		}
+	$server->{'ssh_protocol'} = 2;	# Nobody uses 1 anymore!
 	}
-elsif ($in{'auth_mode'} == 1) {
-	$in{'key'} || &error($text{'add_ekey'});
-	$server->{'key'} = $in{'key'};
-	}
-$server->{'ssh_protocol'} = 2;	# Nobody uses 1 anymore!
 
 # Webmin login
 if ($in{'webmin_mode'} == 1) {
@@ -87,32 +91,33 @@ else {
 	print $text{'create_created2'},"<p>\n";
 	}
 
-# XXX set root password
-
-# Wait at most 60 seconds for SSH to come up (indicating that booting is done)
-print $text{'create_sshing'};
-$sshcount = 0;
-while(1) {
-	($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
-		&check_server_ssh_login($server);
-	if ($sshstatus == 0) {
-		print "<br>\n";
-		print $text{'create_sshdone'},"<p>\n";
-		last;
+if (!$no_ssh) {
+	# Wait at most 60 seconds for SSH to come up (indicating that booting
+	# is done)
+	print $text{'create_sshing'};
+	$sshcount = 0;
+	while(1) {
+		($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
+			&check_server_ssh_login($server);
+		if ($sshstatus == 0) {
+			print "<br>\n";
+			print $text{'create_sshdone'},"<p>\n";
+			last;
+			}
+		elsif ($sshcount > 60) {
+			print "<br>\n";
+			print &text('create_sshfailed', 60, $ssherr),"<p>\n";
+			last;
+			}
+		else {
+			print ".";
+			}
+		$sshcount++;
+		sleep(1);
 		}
-	elsif ($sshcount > 60) {
-		print "<br>\n";
-		print &text('create_sshfailed', 60, $ssherr),"<p>\n";
-		last;
-		}
-	else {
-		print ".";
-		}
-	$sshcount++;
-	sleep(1);
 	}
 
-# Check if the server has Webmin.
+# Check if the server has Webmin (it may have been part of the install image)
 if ($webmindir) {
 	# Yes, it was setup as part of the server creation .. go with its
 	# port and SSL settings

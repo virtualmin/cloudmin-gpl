@@ -106,6 +106,7 @@ create_vserveripman=Address $1 / $2
 create_evserverip=Missing or invalid VServer IP address
 create_evserverhost=The hostname for a VServer cannot contain a . , as the domain name is added automatically
 create_evserverclash=A VServer with the same name already exists
+create_evserverdist=The distribution to install could not be worked out automatically - it must be specified manually on the VServer Hosts Systems page
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
