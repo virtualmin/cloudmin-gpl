@@ -3,10 +3,7 @@
 # XXX grouping
 # XXX for vserver/zones, we don't need to SSH in
 # XXX kvm or vservers
-#	XXX create vserver
 #	XXX install webmin
-#	XXX set root password
-#	XXX newvserver fails - expecting user input
 # XXX tar.gz installs
 # XXX make status updated limited to what the caller really needs
 
