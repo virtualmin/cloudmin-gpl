@@ -4,6 +4,8 @@
 # XXX for vserver/zones, we don't need to SSH in
 # XXX kvm or vservers
 #	XXX install webmin
+#		XXX what if vserver has no root password set??
+#	XXX try out on other operating systems
 # XXX tar.gz installs
 # XXX make status updated limited to what the caller really needs
 
@@ -498,6 +500,19 @@ else {
 		return ($out, undef, $text{'status_'.$status});
 		}
 	}
+}
+
+# has_command_on_server(&server, command)
+# Returns the full path to some command, or undef if missing
+sub has_command_on_server
+{
+local ($server, $cmd) = @_;
+local ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd");
+if ($ex) {
+	return undef;
+	}
+$out =~ s/\r|\n//g;
+return $out;
 }
 
 sub remote_error_handler
@@ -1019,7 +1034,7 @@ else {
 	local ($debout, $debex, $deberr) =
 		&execute_command_on_server($server, "which dpkg");
 	if (!$debex) {
-		if ($debout =~ /rpm/) {
+		if ($debout =~ /dpkg/) {
 			$type = "deb";
 			}
 		else {
@@ -1048,10 +1063,30 @@ $src =~ /\/([^\/]+)$/;
 local $temp = "/tmp/$1";
 local $rootdir;
 
+# Try to install Perl
+if ($type eq "deb" && &has_command_on_server($server, "apt-get")) {
+	($out, $ex, $err) = &execute_command_on_server(
+				$server, "apt-get install perl");
+	if ($ex) {
+		return ($out, "Failed to install Perl from APT");
+		}
+	}
+elsif ($type eq "rpm" && &has_command_on_server($server, "yum")) {
+	($out, $ex, $err) = &execute_command_on_server(
+				$server, "yum -y install perl");
+	if ($ex) {
+		return ($out, "Failed to install Perl from YUM");
+		}
+	}
+
+# Make sure the system has Perl
+local $perlpath = &has_command_on_server($server, "perl");
+$perlpath || return (undef, "Perl is not installed");
+
 if ($type eq "rpm") {
 	# RPM install direct from the URL
 	($out, $ex, $err) = &execute_command_on_server($server,
-		"rm -f $temp && wget -nv -O $temp $src && rpm -U $temp && rm -f $temp");
+		"rm -f $temp && wget -nv -O $temp $src && rpm -U --nodeps $temp && rm -f $temp");
 	return (undef, $err) if ($err);
 	return ($out, "RPM failed") if ($ex);
 	$rootdir = "/usr/libexec/webmin";
@@ -1060,7 +1095,7 @@ if ($type eq "rpm") {
 elsif ($type eq "deb") {
 	# Download the deb and install it
 	($out, $ex, $err) = &execute_command_on_server($server,
-		"rm -f $temp && wget -nv -O $temp $src && dpkg --install $temp && rm -f $temp");
+		"rm -f $temp && wget -nv -O $temp $src && dpkg --install --force-depends $temp && rm -f $temp");
 	return (undef, $err) if ($err);
 	return ($out, "Debian package failed") if ($ex);
 	$rootdir = "/usr/share/webmin";
@@ -1104,6 +1139,12 @@ if ($setpass) {
 			$out .= "\nFailed to set Webmin password : $perr\n";
 			}
 		}
+	}
+
+# Call type-specific post configuration function
+local $wfunc = "type_".$server->{'manager'}."_post_webmin";
+if (defined(&$wfunc)) {
+	&$wfunc($server, $wroot, $wport, $wssl);
 	}
 
 # Make sure Webmin is running OK, and get the OS
