@@ -2,7 +2,9 @@
 # XXX search if too many servers
 # XXX grouping
 # XXX kvm or vservers
-#	XXX try out on other operating systems
+#	XXX try out on other distros
+#	XXX need common function to get distro type
+#	XXX install sshd on vservers
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX install Virtualmin
@@ -538,7 +540,7 @@ local ($server, $localfile, $remotefile) = @_;
 local $pfunc = "type_".$server->{'manager'}."_put_file";
 if (defined(&$pfunc)) {
 	# Use type-specific function call
-	return &$gfunc(@_);
+	return &$pfunc(@_);
 	}
 else {
 	# Just scp up
@@ -1117,22 +1119,10 @@ $src =~ /\/([^\/]+)$/;
 local $temp = "/tmp/$1";
 local $rootdir;
 
-# Try to install Perl
-if (&has_command_on_server($server, "apt-get")) {
-	local ($pout, $pex, $perr) = &execute_command_on_server(
-				$server, "apt-get -y -f install perl");
-	if ($pex) {
-		return ($pout, "Failed to install Perl from APT");
-		}
-	$out .= $pout;
-	}
-elsif (&has_command_on_server($server, "yum")) {
-	local ($pout, $pex, $perr) = &execute_command_on_server(
-				$server, "yum -y install perl");
-	if ($pex) {
-		return ($pout, "Failed to install Perl from YUM");
-		}
-	$out .= $pout;
+# Try to install Perl and other dependencies
+local ($pstatus, $pout) = &install_package_on_server($server, "perl", "wget");
+if (!$pstatus && $pout) {
+	return ($pout, "Failed to install required packages");
 	}
 
 # Make sure the system has Perl
@@ -1301,6 +1291,92 @@ for(my $n=$start; $n<=$end; $n++) {
 		}
 	}
 return undef;
+}
+
+# get_server_package_system(&server)
+# Checks which package system a server uses. Returns :
+#  Package system, such as dpkg or rpm
+#  Update system, such as apt or yum
+#  Short OS code, such as redhat, fedora, debian or ubuntu
+# This is taken from Webmin if available, SSH if not.
+sub get_server_package_system
+{
+local ($server) = @_;
+local ($pkg, $update, $os);
+if ($server->{'pass'}) {
+	# Ask Webmin first
+	&remote_foreign_require($server, "software", "software-lib.pl");
+	($pkg, $update) = &remote_foreign_eval($server, "software",
+	    "(\$config{'package_system'}, \$update_system)");
+	$os = $server->{'type'};
+	}
+if (!$pkg || !$update) {
+	# No luck .. check what commands it has
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+		"(which rpm ; which dpkg ; which apt-get ; which yum ; which up2date) 2>/dev/null");
+	$pkg = $out =~ /\S+\/rpm/ ? "rpm" :
+	       $out =~ /\S+\/dpkg/ ? "dpkg" : undef;
+	$update = $out =~ /\S+\/apt-get/ ? "apt" :
+		  $out =~ /\S+\/yum/ ? "yum" :
+		  $out =~ /\S+\/up2date/ ? "up2date" : undef;
+	}
+if (!$os || $os eq 'unknown') {
+	# Could not get OS, so check useful system files
+	# XXX this should really be done with os_list.txt
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+	    "(ls /etc/fedora-release /etc/redhat-release /etc/mandrake-release /etc/SuSE-release) 2>/dev/null");
+	if ($out =~ /fedora-release/) {
+		$os = "fedora";
+		}
+	elsif ($out =~ /redhat-release/) {
+		$os = "redhat";
+		}
+	elsif ($out =~ /mandrake-release/) {
+		$os = "mandrake";
+		}
+	elsif ($out =~ /SuSE-release/) {
+		$os = "suse";
+		}
+	else {
+		# Might be Debian or Ubuntu
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"cat /etc/issue");
+		if ($out =~ /Ubuntu/) {
+			$os = "ubuntu";
+			}
+		elsif ($out =~ /Debian/) {
+			$os = "debian";
+			}
+		}
+	}
+return ($pkg, $update, $os);
+}
+
+# install_package_on_server(&server, package, ...)
+# Installs some named package on a server. The name can be an actual package
+# as recognized by the OS, or a generic known to the update service known
+# to Webmin. Returns a status code (0 if failed, 1 if OK) and the output/error.
+sub install_package_on_server
+{
+local ($server, @names) = @_;
+local ($pkg, $update, $os) = &get_server_package_system($server);
+local $names = join(" ", map { quotemeta($_) } @names);
+if ($update eq "apt") {
+	# Use apt-get
+	local ($pout, $pex, $perr) = &execute_command_on_server(
+			$server, "apt-get -y -f --force-yes install $names");
+	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
+	}
+elsif ($update eq "yum") {
+	# Use YUM
+	local ($pout, $pex, $perr) = &execute_command_on_server(
+			$server, "yum -y install $names");
+	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
+	}
+else {
+	# Don't know how
+	return (0, undef);
+	}
 }
 
 1;
