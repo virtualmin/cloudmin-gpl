@@ -1,13 +1,11 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX search if too many servers
 # XXX grouping
-# XXX for vserver/zones, we don't need to SSH in
 # XXX kvm or vservers
-#	XXX install webmin
-#		XXX what if vserver has no root password set??
 #	XXX try out on other operating systems
-# XXX tar.gz installs
+# XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
+# XXX install Virtualmin
 
 do '../web-lib.pl';
 &init_config();
@@ -140,13 +138,13 @@ sub describe_status
 {
 local ($s, $withcol, $withdoms) = @_;
 local $cmap = { 'down' => 'ff0000',
-		'nossh' => 'ff00ff',
-		'nohost' => 'ff0000',
-		'nosshlogin' => 'ff00cc',
-		'nowebmin' => 'ffff00',
-		'downwebmin' => 'ffaa00',
-		'nowebminlogin' => 'ffcc00',
-		'novirt' => 'aaff00',
+		'nossh' => 'ff220000',
+		'nohost' => 'ff440000',
+		'nosshlogin' => 'ff6600',
+		'nowebmin' => 'ff00ff',
+		'downwebmin' => 'ff22ff',
+		'nowebminlogin' => 'ff44ff',
+		'novirt' => '008800',
 		'virt' => '00aa00' };
 local $msg = $text{'status_'.$s->{'status'}} || $text{'status_unknown'};
 if ($s->{'status'} eq 'virt' && $withdoms) {
@@ -156,7 +154,7 @@ if ($s->{'status'} eq 'virt' && $withdoms) {
 		}
 	}
 if ($withcol) {
-	local $col = $cmap{$s->{'status'}};
+	local $col = $cmap->{$s->{'status'}};
 	if ($col) {
 		return "<font color=#$col>$msg</font>";
 		}
@@ -485,8 +483,11 @@ if (defined(&$efunc)) {
 else {
 	# Just run via SSH
 	local $sshcmd = "ssh -".$server->{'ssh_protocol'};
-	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
-	$sshcmd .= " -i ".quotemeta($key->{'file'});
+	if ($server->{'key'}) {
+		local ($key) = grep { $_->{'id'} == $server->{'key'} }
+				    &list_ssh_keys();
+		$sshcmd .= " -i ".quotemeta($key->{'file'});
+		}
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'} ".quotemeta($cmd);
 	local ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
 						 $timeout);
@@ -499,6 +500,59 @@ else {
 	else {
 		return ($out, undef, $text{'status_'.$status});
 		}
+	}
+}
+
+# get_file_from_server(&server, remotefile, localfile)
+# Transfers a file from the given server to this system. May use scp or some
+# type-specific method
+sub get_file_from_server
+{
+local ($server, $remotefile, $localfile) = @_;
+local $gfunc = "type_".$server->{'manager'}."_get_file";
+if (defined(&$gfunc)) {
+	# Use type-specific function call
+	return &$gfunc(@_);
+	}
+else {
+	# Just scp down
+	local $sshcmd = "scp -".$server->{'ssh_protocol'};
+	if ($server->{'key'}) {
+		local ($key) = grep { $_->{'id'} == $server->{'key'} }
+				    &list_ssh_keys();
+		$sshcmd .= " -i ".quotemeta($key->{'file'});
+		}
+	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}:".
+		   quotemeta($remotefile)." ".quotemeta($localfile);
+	local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
+	return $status ? $out : undef;
+	}
+}
+
+# put_file_to_server(&server, localfile, remotefile)
+# Transfers a file from this system to the given server. May use scp or some
+# type-specific method
+sub put_file_to_server
+{
+local ($server, $localfile, $remotefile) = @_;
+local $pfunc = "type_".$server->{'manager'}."_put_file";
+if (defined(&$pfunc)) {
+	# Use type-specific function call
+	return &$gfunc(@_);
+	}
+else {
+	# Just scp up
+	local $sshcmd = "scp -".$server->{'ssh_protocol'};
+	if ($server->{'key'}) {
+		local ($key) = grep { $_->{'id'} == $server->{'key'} }
+				    &list_ssh_keys();
+		$sshcmd .= " -i ".quotemeta($key->{'file'});
+		}
+	$sshcmd .= " ".quotemeta($localfile).
+		   " $server->{'ssh_user'}\@$server->{'host'}:".
+		   quotemeta($remotefile);
+	local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
+	return $status ? $out : undef;
 	}
 }
 
@@ -1064,19 +1118,21 @@ local $temp = "/tmp/$1";
 local $rootdir;
 
 # Try to install Perl
-if ($type eq "deb" && &has_command_on_server($server, "apt-get")) {
-	($out, $ex, $err) = &execute_command_on_server(
-				$server, "apt-get install perl");
-	if ($ex) {
-		return ($out, "Failed to install Perl from APT");
+if (&has_command_on_server($server, "apt-get")) {
+	local ($pout, $pex, $perr) = &execute_command_on_server(
+				$server, "apt-get -y -f install perl");
+	if ($pex) {
+		return ($pout, "Failed to install Perl from APT");
 		}
+	$out .= $pout;
 	}
-elsif ($type eq "rpm" && &has_command_on_server($server, "yum")) {
-	($out, $ex, $err) = &execute_command_on_server(
+elsif (&has_command_on_server($server, "yum")) {
+	local ($pout, $pex, $perr) = &execute_command_on_server(
 				$server, "yum -y install perl");
-	if ($ex) {
-		return ($out, "Failed to install Perl from YUM");
+	if ($pex) {
+		return ($pout, "Failed to install Perl from YUM");
 		}
+	$out .= $pout;
 	}
 
 # Make sure the system has Perl
@@ -1085,29 +1141,48 @@ $perlpath || return (undef, "Perl is not installed");
 
 if ($type eq "rpm") {
 	# RPM install direct from the URL
-	($out, $ex, $err) = &execute_command_on_server($server,
+	local ($wout, $wex, $werr) = &execute_command_on_server($server,
 		"rm -f $temp && wget -nv -O $temp $src && rpm -U --nodeps $temp && rm -f $temp");
-	return (undef, $err) if ($err);
-	return ($out, "RPM failed") if ($ex);
+	return (undef, $werr) if ($werr);
+	return ($wout, "RPM failed") if ($wex);
 	$rootdir = "/usr/libexec/webmin";
+	$out .= $wout;
 	}
 
 elsif ($type eq "deb") {
 	# Download the deb and install it
-	($out, $ex, $err) = &execute_command_on_server($server,
+	local ($wout, $wex, $werr) = &execute_command_on_server($server,
 		"rm -f $temp && wget -nv -O $temp $src && dpkg --install --force-depends $temp && rm -f $temp");
-	return (undef, $err) if ($err);
-	return ($out, "Debian package failed") if ($ex);
+	return (undef, $werr) if ($werr);
+	return ($wout, "Debian package failed") if ($wex);
 	$rootdir = "/usr/share/webmin";
+	$out .= $wout;
 	}
 
 elsif ($type eq "tgz") {
-	# Download the tgz file, then run setup.sh
-	# XXX create 'root' user
+	# Download the tgz file, then run setup.sh. If we know the SSH
+	# password, we can configure Webmin to use it .. otherwise, the 
+	# password will be set later in the function.
 	$server->{'user'} = 'root';
-	$server->{'pass'} = &generate_random_password();
+	local $crypt = $server->{'ssh_pass'} ? 'x' : 'fixlater';
 	$rootdir = "/usr/local/webmin";
-	# XXX setup in rootdir
+	local ($wout, $wex, $werr) = &execute_command_on_server($server,
+	    "wget -nv -O $temp $src && cd /usr/local && gunzip -c $temp | tar xf - && echo webmin-*/version && rm -f $temp");
+	return (undef, $werr) if ($werr);
+	return ($wout, "Tar file download or extraction failed") if ($wex);
+	local $tardir;
+	if ($wout =~ /(webmin-([0-9\.]+))\/version/) {
+		$tardir = $1;
+		}
+	else {
+		return ($wout, "Tar extraction failed");
+		}
+	local ($wout, $wex, $werr) = &execute_command_on_server($server,
+		"config_dir=/etc/webmin var_dir=/var/webmin perl=$perlpath autoos=3 port=10000 login=root crypt=$crypt ssl=0 atboot=1 /usr/local/$tardir/setup.sh $rootdir </dev/null");
+	&execute_command_on_server($server, "rm -rf /usr/local/$tardir");
+	return (undef, $werr) if ($werr);
+	return ($wout, "Setup script failed") if ($wex);
+	$out .= $wout;
 	}
 
 else {

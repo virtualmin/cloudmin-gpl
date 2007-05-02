@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 ($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
 $server || &error($text{'edit_egone'});
 $status = $server->{'status'};
+$info = &get_server_collected($server);
 &ui_print_header(&server_in($server), $text{'edit_title'}, "", "edit");
 
 # Basic details section
@@ -37,7 +38,6 @@ print &ui_table_row($text{'edit_status'},
 
 if ($status eq 'virt' || $status eq 'novirt') {
 	# Has Webmin .. show more info
-	$info = &get_server_collected($server);
 	print &ui_table_row($text{'edit_os'},
 			    &describe_os($server->{'type'}));
 
@@ -60,8 +60,8 @@ if (defined(&$efunc)) {
 print &ui_hidden_table_end("basic");
 
 # Show authentication form (if needed)
-$haswebmin = $status eq 'nowebminlogin' || $status eq 'novirt' ||
-	     $status eq 'virt';
+$haswebmin = ($status eq 'nowebminlogin' || $status eq 'novirt' ||
+	      $status eq 'virt') && $server->{'id'} != 0;
 $sfunc = "type_".$t."_no_ssh";
 $hasssh = !defined(&$sfunc) || !&$sfunc();
 if ($haswebmin || $hasssh) {
@@ -131,7 +131,7 @@ else {
 	}
 
 # Virtualmin status
-if ($info) {
+if ($info && scalar(keys %$info) > 1) {
 	print &ui_hidden_table_start($text{'edit_cheader'}, "width=100%", 2,
 				     "coll", 0, \@tds);
 
@@ -228,7 +228,6 @@ if ($status eq 'virt' || @doms) {
 
 	if (@doms) {
 		$bs = &get_server_blocksize($server);
-		$info = &get_server_collected($server);
 		print &ui_columns_start([ $text{'domains_dom'},
 					  $text{'domains_type'},
 					  $text{'domains_desc'},
