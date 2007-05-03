@@ -5,6 +5,8 @@
 #	XXX try out on other distros
 #	XXX need common function to get distro type
 #	XXX install sshd on vservers
+#		XXX other packages too
+#		XXX need to restrict ports?
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX install Virtualmin
