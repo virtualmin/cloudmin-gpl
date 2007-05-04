@@ -46,6 +46,10 @@ if ($status eq 'virt' || $status eq 'novirt') {
 	}
 
 if ($status eq 'virt') {
+	# Virtualmin version
+	print &ui_table_row($text{'edit_vversion'},
+			    $info->{'minfo'}->{'version'});
+
 	# Enabled for Virtualmin domain creation
 	print &ui_table_row($text{'add_canvirt'},
 		    &ui_yesno_radio("canvirt", $server->{'novirt'} ? 0 : 1));

@@ -16,6 +16,11 @@ if ($in{'refresh'}) {
 	&parallel_check_server_status(\@servers);
 	print $text{'mass_fdone'},"<p>\n";
 
+	# And go back to main menu
+	print "<script>\n";
+	print "window.location = 'index.cgi';\n";
+	print "</script>\n";
+
 	&ui_print_footer("", $text{'index_return'});
 	}
 elsif ($in{'delete'}) {

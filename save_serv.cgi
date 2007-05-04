@@ -158,13 +158,25 @@ else {
 			$server->{'pass'} = $in{'wpass'};
 			$server->{'ssh_pass_same'} = 0;
 			}
+
+		# Fill in Webmin connection details if we don't have them yet
+		if (!$server->{'port'} || $server->{'ssl'} eq '') {
+			local ($sok, $serr, $webminroot, $webminport,
+			       $webminssl) = &check_server_ssh_login($server);
+			if ($webminport) {
+				$server->{'port'} = $webminport;
+				$server->{'ssl'} = $webminssl;
+				}
+			}
 		}
 
 	# Re-check status if login mode has changed
 	if ($oldserver->{'ssh_pass'} ne $server->{'ssh_pass'} ||
 	    $oldserver->{'key'} ne $server->{'key'} ||
 	    $oldserver->{'user'} ne $server->{'user'} ||
-	    $oldserver->{'pass'} ne $server->{'pass'}) {
+	    $oldserver->{'pass'} ne $server->{'pass'} ||
+	    $oldserver->{'port'} != $server->{'port'} ||
+	    $oldserver->{'ssl'} != $server->{'ssl'}) {
 		&check_server_status($server);
 		}
 

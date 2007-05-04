@@ -3,9 +3,14 @@
 # XXX grouping
 # XXX kvm or vservers
 #	XXX try out on other distros
+#	XXX show normal root password field for vservers
+#	XXX for ubuntu, we need to add univere and security to sources.list
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX install Virtualmin
+#	XXX test script-based installs
+#	XXX needs wget or curl
+# XXX virtual IP management
 
 do '../web-lib.pl';
 &init_config();
@@ -331,6 +336,16 @@ return $text;
 sub check_server_ssh_login
 {
 local ($server) = @_;
+
+# Check if the server type has its own login check function, and if so
+# call it
+local $sfunc = "type_".$server->{'manager'}."_check_login";
+if (defined(&$sfunc)) {
+	# Type has defined it's own function for checking the status
+	return &$sfunc($server);
+	}
+
+# Need to really SSH
 local $cmd = "ssh -".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
@@ -516,7 +531,7 @@ if (defined(&$gfunc)) {
 	}
 else {
 	# Just scp down
-	local $sshcmd = "scp -".$server->{'ssh_protocol'};
+	local $sshcmd = "scp -r -".$server->{'ssh_protocol'};
 	if ($server->{'key'}) {
 		local ($key) = grep { $_->{'id'} == $server->{'key'} }
 				    &list_ssh_keys();
@@ -542,7 +557,7 @@ if (defined(&$pfunc)) {
 	}
 else {
 	# Just scp up
-	local $sshcmd = "scp -".$server->{'ssh_protocol'};
+	local $sshcmd = "scp -r -".$server->{'ssh_protocol'};
 	if ($server->{'key'}) {
 		local ($key) = grep { $_->{'id'} == $server->{'key'} }
 				    &list_ssh_keys();
@@ -616,43 +631,31 @@ sub check_server_status
 local ($server) = @_;
 
 # Do a quick ping
+$server->{'statustime'} = time();
 local $ping = &ping_server_host($server->{'host'});
 
-local $sfunc = "type_".$server->{'manager'}."_check_login";
-local $webminroot;
-$server->{'statustime'} = time();
-if (defined(&$sfunc)) {
-	# Type has defined it's own function for checking the status
-	local ($ok, $wr) = &$sfunc($server, $ping);
-	return 0 if (!$ok);
-	$webminroot = $wr;
+# Check if we can login
+local ($status, $err, $webminroot) = &check_server_ssh_login($server);
+if ($status == 2) {
+	$server->{'status'} = 'nosshlogin';
+	$server->{'status_msg'} = $err;
+	return 0;
 	}
-else {
-	# Check SSH status (if not local)
-	if ($server->{'id'} != 0) {
-		local ($status, $err, $wr) = &check_server_ssh_login($server);
-		if ($status == 2) {
-			$server->{'status'} = 'nosshlogin';
-			$server->{'status_msg'} = $err;
-			return 0;
-			}
-		elsif ($status && !$ping) {
-			$server->{'status'} = 'down';
-			$server->{'status_msg'} = $err;
-			return 0;
-			}
-		elsif ($status) {
-			$server->{'status'} = 'nossh';
-			$server->{'status_msg'} = $err;
-			return 0;
-			}
-		$webminroot = $wr;
-		}
+elsif ($status && !$ping) {
+	$server->{'status'} = 'down';
+	$server->{'status_msg'} = $err;
+	return 0;
+	}
+elsif ($status) {
+	$server->{'status'} = 'nossh';
+	$server->{'status_msg'} = $err;
+	return 0;
 	}
 
 # If we have a Webmin login, try it
 if ($server->{'user'} || $server->{'id'} == 0) {
-	local ($status, $err) = &check_server_webmin_login($server);
+	local ($status, $err, $ostype, $real_ostype) =
+		&check_server_webmin_login($server);
 	if ($status == 2) {
 		# Webmin replied, but it rejected our login
 		$server->{'status'} = 'nowebminlogin';
@@ -713,10 +716,15 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		&remote_eval($server, "webmin",
 			     "\%t=get_theme_info(\$current_theme); \\\%t");
 
+	# Fix up detected OS
+	if ($server->{'type'} eq 'unknown') {
+		$server->{'type'} = &os_to_server_type($ostype, $real_ostype);
+		}
+
 	&save_server_collected($server, $info);
 	}
 else {
-	$server->{'status'} = 'nowebmin';
+	$server->{'status'} = $webminroot ? 'nowebminlogin' : 'nowebmin';
 	$server->{'status_msg'} = undef;
 	}
 
