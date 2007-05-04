@@ -3,10 +3,6 @@
 # XXX grouping
 # XXX kvm or vservers
 #	XXX try out on other distros
-#	XXX need common function to get distro type
-#	XXX install sshd on vservers
-#		XXX other packages too
-#		XXX need to restrict ports?
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX install Virtualmin
@@ -20,7 +16,7 @@ do '../ui-lib.pl';
 use Net::Amazon::EC2;
 
 @possible_server_management_types = ( [ "real", undef ],
-				      [ "zones", "zones" ],
+				      [ "zones", undef ],
 				      [ "ec2", undef ],
 				      [ "vserver", undef ],
 				      [ "this", undef ],
@@ -68,7 +64,7 @@ $this_server_status = "$module_config_directory/this";
 
 %webmin_download_source = (
 	'rpm' => 'http://www.webmin.com/download/rpm/webmin-current.rpm',
-	'deb' => 'http://www.webmin.com/download/deb/webmin-current.deb',
+	'dpkg' => 'http://www.webmin.com/download/deb/webmin-current.deb',
 	'tgz' => 'http://www.webmin.com/download/webmin-current.tar.gz',
 	);
 
@@ -624,6 +620,7 @@ local $ping = &ping_server_host($server->{'host'});
 
 local $sfunc = "type_".$server->{'manager'}."_check_login";
 local $webminroot;
+$server->{'statustime'} = time();
 if (defined(&$sfunc)) {
 	# Type has defined it's own function for checking the status
 	local ($ok, $wr) = &$sfunc($server, $ping);
@@ -632,7 +629,6 @@ if (defined(&$sfunc)) {
 	}
 else {
 	# Check SSH status (if not local)
-	$server->{'statustime'} = time();
 	if ($server->{'id'} != 0) {
 		local ($status, $err, $wr) = &check_server_ssh_login($server);
 		if ($status == 2) {
@@ -656,7 +652,7 @@ else {
 
 # If we have a Webmin login, try it
 if ($server->{'user'} || $server->{'id'} == 0) {
-	($status, $err) = &check_server_webmin_login($server);
+	local ($status, $err) = &check_server_webmin_login($server);
 	if ($status == 2) {
 		# Webmin replied, but it rejected our login
 		$server->{'status'} = 'nowebminlogin';
@@ -699,6 +695,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				"virtual-server", "get_template", 0);
 		}
 	else {
+		&save_server_domains($server, [ ]);
 		$server->{'status'} = 'novirt';
 		$server->{'status_msg'} = undef;
 		$info = { };
@@ -1076,33 +1073,9 @@ sub get_install_webmin_source
 local ($server) = @_;
 local $type;
 
-# Check for rpm and dpkg
-local ($rpmout, $rpmex, $rpmerr) =
-	&execute_command_on_server($server, "which rpm");
-return ( undef, undef, $rpmerr ) if ($rpmerr);
-if (!$rpmex) {
-	if ($rpmout =~ /rpm/) {
-		$type = "rpm";
-		}
-	else {
-		return ( undef, undef, $rpmout );
-		}
-	}
-else {
-	local ($debout, $debex, $deberr) =
-		&execute_command_on_server($server, "which dpkg");
-	if (!$debex) {
-		if ($debout =~ /dpkg/) {
-			$type = "deb";
-			}
-		else {
-			return ( undef, undef, $debout );
-			}
-		}
-	else {
-		$type = "tgz";
-		}
-	}
+# Check what package system the host uses
+local ($type, $update, $os) = &get_server_package_system($server);
+$type ||= "tgz";
 
 # Work out download URL
 local $source = $config{'download_'.$type} ||
@@ -1141,7 +1114,7 @@ if ($type eq "rpm") {
 	$out .= $wout;
 	}
 
-elsif ($type eq "deb") {
+elsif ($type eq "dpkg") {
 	# Download the deb and install it
 	local ($wout, $wex, $werr) = &execute_command_on_server($server,
 		"rm -f $temp && wget -nv -O $temp $src && dpkg --install --force-depends $temp && rm -f $temp");
@@ -1149,6 +1122,13 @@ elsif ($type eq "deb") {
 	return ($wout, "Debian package failed") if ($wex);
 	$rootdir = "/usr/share/webmin";
 	$out .= $wout;
+
+	# Satisfy any Debian dependencies created by Webmin, if possible
+	local ($dout, $dex, $derr) = &execute_command_on_server($server,
+		"apt-get -y -f --force-yes install </dev/null | cat");
+	if (!$dex) {
+		$out .= $dout;
+		}
 	}
 
 elsif ($type eq "tgz") {
@@ -1308,7 +1288,7 @@ local ($pkg, $update, $os);
 if ($server->{'pass'}) {
 	# Ask Webmin first
 	&remote_foreign_require($server, "software", "software-lib.pl");
-	($pkg, $update) = &remote_foreign_eval($server, "software",
+	($pkg, $update) = &remote_eval($server, "software",
 	    "(\$config{'package_system'}, \$update_system)");
 	$os = $server->{'type'};
 	}
@@ -1362,17 +1342,32 @@ sub install_package_on_server
 {
 local ($server, @names) = @_;
 local ($pkg, $update, $os) = &get_server_package_system($server);
+
+# Try to use the software module to resolve names
+local $lib = &module_root_directory("software")."/".$update."-lib.pl";
+if (-r $lib) {
+	if (!$done_require{$lib}++) {
+		require $lib;
+		}
+	local @newnames;
+	foreach my $n (@names) {
+		push(@newnames, split(/\s+/, &update_system_resolve($n)));
+		}
+	@names = @newnames;
+	}
+
 local $names = join(" ", map { quotemeta($_) } @names);
 if ($update eq "apt") {
 	# Use apt-get
+	&execute_command_on_server($server, "apt-get update");
 	local ($pout, $pex, $perr) = &execute_command_on_server(
-			$server, "apt-get -y -f --force-yes install $names");
+		$server, "apt-get -y -f --force-yes install $names </dev/null | cat");
 	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
 	}
 elsif ($update eq "yum") {
 	# Use YUM
 	local ($pout, $pex, $perr) = &execute_command_on_server(
-			$server, "yum -y install $names");
+		$server, "yum -y install $names </dev/null");
 	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
 	}
 else {

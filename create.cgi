@@ -5,7 +5,8 @@ require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'create_err'});
 @servers = &list_managed_servers();
-$server = { 'manager' => $in{'type'} };
+$server = { 'id' => time().$$,
+	    'manager' => $in{'type'} };
 
 # Validate inputs, starting with hostname
 if (defined($in{'host'})) {
@@ -90,6 +91,13 @@ if (defined(&$dfunc)) {
 else {
 	print $text{'create_created2'},"<p>\n";
 	}
+&save_managed_server($server);
+
+# Call any post-creation function
+$dfunc = "type_".$in{'type'}."_create_post";
+if (defined(&$dfunc)) {
+	&$dfunc($server);
+	}
 
 if (!$no_ssh) {
 	# Wait at most 60 seconds for SSH to come up (indicating that booting
@@ -142,8 +150,10 @@ elsif ($in{'webmin_mode'}) {
 	if (!$err) {
 		print &text('create_webmining', $src),"<br>\n";
 		($out, $err) = &install_webmin_server($server, $src, $type, 1);
-		print "<pre>$out</pre>";
 		if ($err) {
+			print "<pre>$out</pre>";
+			$server->{'user'} = undef;	# No webmin
+			$server->{'pass'} = undef;
 			print &text('save_webminfailed', $err),"<p>\n";
 			}
 		else {

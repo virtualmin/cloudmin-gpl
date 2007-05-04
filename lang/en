@@ -110,6 +110,14 @@ create_evserverclash=A VServer with the same name already exists
 create_evserverdist=The distribution to install could not be worked out automatically - it must be specified manually on the VServer Hosts Systems page
 create_vserverpass=Initial root password
 create_vservernopass=Don't set any
+create_vserveretc=Setting up VServer system configuration files ..
+create_done=.. done
+create_vserversetpass=Setting VServer system root password ..
+create_vserverdns=Adding DNS entry $1 for IP address $2 ..
+create_vserverdnsalready=.. already in DNS zone!
+create_vserverpkg=Installing packages $1 ..
+create_vserverpkgfailed=.. some package installs failed! See the output above for details
+create_vserverpkgsys=.. no supported package update system was found
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
