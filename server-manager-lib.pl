@@ -8,7 +8,6 @@
 # XXX make status updated limited to what the caller really needs
 # XXX install Virtualmin
 #	XXX licence
-#		XXX licence manager (cron job, message, CGI)
 #	XXX test script-based installs
 #	XXX needs wget or curl
 # XXX virtual IP management
@@ -36,10 +35,13 @@ foreach my $smt (@possible_server_management_types) {
 	}
 
 $ssh_keys_dir = "$module_config_directory/keys";
-$check_status_cmd = "$module_config_directory/status.pl";
 $server_domains_dir = "$module_config_directory/domains";
 $server_collected_dir = "$module_config_directory/coll";
 $this_server_status = "$module_config_directory/this";
+
+$check_status_cmd = "$module_config_directory/status.pl";
+$check_licence_cmd = "$module_config_directory/licence.pl";
+@cron_cmds = ( $check_status_cmd, $check_licence_cmd );
 
 @standard_virtualmin_features = (
 	{ 'feature' => 'dir', 'desc' => 'Home directory',
@@ -81,6 +83,9 @@ $virtualmin_licence_host = "software.virtualmin.com";
 $virtualmin_licence_port = 80;
 $virtualmin_licence_prog = "/cgi-bin/slicence.cgi";
 $virtualmin_licence_ssl = 0;
+
+@virtualmin_operating_systems = ( "debian", "ubuntu", "redhat", "fedora",
+				  "centos" );
 
 # list_managed_servers()
 # Returns a list of all servers managed by this module. These are actually
@@ -1394,20 +1399,119 @@ else {
 }
 
 # install_virtualmin_server(&server, set-password)
-# Attempt to install Virtualmin on some system, by copying over the install
-# script and running it.
-# Returns the output and an error message on failure.
+# Starts the process of installing Virtualmin, by copying over the install
+# script and running it. Returns undef if start OK, or an error message on
+# failure.
 sub install_virtualmin_server
 {
 local ($server, $setpass) = @_;
 
-# Substitute serial number into install script
+# Check for a supported OS
+local ($pkg, $update, $os) = &get_server_package_system($server);
+if ($pkg ne "rpm" && $pkg ne "dpkg") {
+	return $text{'virtualmin_epkg'};
+	}
+if ($update ne "apt" && $update ne "yum" && $update ne "up2date") {
+	return $text{'virtualmin_eupdate'};
+	}
+if (!$os || $os eq "unknown") {
+	return $text{'virtualmin_eos'};
+	}
+if (&indexof($os, @virtualmin_operating_systems) < 0) {
+	local ($osinfo) = grep { $_->[0] eq $os } @servers::server_types;
+	foreach my $s (@virtualmin_operating_systems) {
+		local ($sosinfo) = grep { $_->[0] eq $s }
+					@servers::server_types;
+		push(@supp, $sosinfo->[1]);
+		}
+	return &text('virtualmin_eos2', $osinfo->[1], join(", ", @supp));
+	}
+
+# Transfer over the install script
+local $script = "/tmp/virtualmin-install.sh";
+local $err = &put_file_to_server($server, "$module_root_directory/virtualmin-install.sh", $script);
+return "Failed to copy install script : $err" if ($err);
+
+# Call type-specific pre function
+local $pfunc = "type_".$server->{'manager'}."_pre_virtualmin";
+if (defined(&$pfunc)) {
+	local $err = &$pfunc($server, $pkg, $update, $os, $script);
+	return $err if ($err);
+	}
+
+# Get our licence details
+local %serial;
+if (!&read_file($licence_file, \%serial) ||
+    !$serial{'SerialNumber'} || !$serial{'LicenseKey'}) {
+	return $text{'virtualmin_elicence'};
+	}
+
+# Run the install script, capturing output to a file
+local $temp = "/tmp/virtualmin-install.out";
+$server->{'virtualmin_temp'} = $temp;
+local ($out, $ex, $err) = &execute_command_on_server($server,
+	"chmod +x $script ; (SERIAL=$serial{'SerialNumber'} KEY=$serial{'LicenseKey'} $script && echo SERVER-MANAGER-COMPLETE) >$temp 2>&1 </dev/null &");
+
+return undef;
+}
+
+# install_virtualmin_server_done(&server)
+# Checks the status of the Virtualmin install one some server. Returns OK
+# when done, undef if still waiting, or an error message on failure.
+sub install_virtualmin_server_done
+{
+local ($server) = @_;
+
+# Check if the installer is still running
+local $temp = $server->{'virtualmin_temp'};
+local ($out) = &execute_command_on_server($server, "fuser $temp");
+local @pids;
+while($out =~ /(\d+)(.*)/) {
+	push(@pids, $1);
+	$out = $2;
+	}
+if (@pids) {
+	# Yes .. try again later
+	return undef;
+	}
+
+# Done .. but did it work?
+local ($tout, $tex, $terr) = &execute_command_on_server($server,
+				"tail -20 $temp");
+if ($tout !~ s/SERVER-MANAGER-COMPLETE//) {
+	# Looks like it didn't ..
+	&execute_command_on_server($server, "rm -f $temp");
+	return "<pre>".&html_escape($tout)."</pre>";
+	}
+
+# Make sure it got installed, by looking for Webmin
+# XXX
 
 # Set Webmin password
 # XXX
 
 # At end, do a config check
 # XXX
+
+# Call type-specific post function
+local $pfunc = "type_".$server->{'manager'}."_post_virtualmin";
+if (defined(&$pfunc)) {
+	&$pfunc($server, $pkg, $update, $os);
+	}
+}
+
+sub licence_error_message
+{
+local ($lstatus, $lexpiry, $lerr, $lservers) = &check_server_manager_licence();
+return undef if (!$lerr);
+local $rv = "<table width=100%><tr bgcolor=#ff8888><td align=center>";
+$rv .= "<b>".$text{'licence_err'}."</b><br>\n";
+$rv .= $lerr."\n";
+$rv .= &ui_form_start("/$module_name/licence.cgi");
+$rv .= &ui_submit($text{'licence_recheck'});
+$rv .= &ui_form_end();
+$rv .= "</td></tr></table>\n";
+return $rv;
 }
 
 # check_server_manager_licence()
@@ -1421,7 +1525,7 @@ local %licence;
 if (time() - $licence{'last'} > 3*24*60*60) {
 	# Hasn't been checked from cron for 3 days .. do it now
 	&update_server_manager_licence(\%licence);
-	&write_file_cached($licence_status, \%licence);
+	&write_file($licence_status, \%licence);
 	}
 return ($licence{'status'}, $licence{'expiry'},
         $licence{'err'}, $licence{'servers'});
@@ -1434,6 +1538,7 @@ sub update_server_manager_licence
 local ($licence) = @_;
 $licence->{'expiry'} = undef;
 $licence->{'servers'} = 0;
+$licence->{'last'} = time();
 
 # Do we have a licence file?
 if (!&read_file($licence_file, \%serial) ||

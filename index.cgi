@@ -5,6 +5,8 @@ require './server-manager-lib.pl';
 &ui_print_header(undef, $module_info{'desc'}, "", "intro", 1, 1);
 
 # Check server manager licence, show an error if invalid
+$lerr = &licence_error_message();
+print $lerr if ($lerr);
 
 # Build add links
 @links = ( &select_all_link("d"), &select_invert_link("d") );

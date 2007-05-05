@@ -493,6 +493,17 @@ pkg_postfix=Postfix mail server
 zone_createlink=Create Zone.
 zone_addlink=Add existing Zone.
 
-licence_efile=No Virtualmin Server Manager licence file found!
+licence_efile=No Virtualmin System Manager licence file found!
 licence_eexpired=The licence expired on $1
+licence_err=A problem was detected with your Virtualmin System Manager licence :
+licence_recheck=Re-check Licence Status
+licence_title=Re-Check Licence
+licence_doing=Now re-checking your Virtualmin Server Manager licence ..
+licence_ok=.. licence is OK!
+licence_goterr=.. a problem was detected : $1
 
+virtualmin_epkg=Virtualmin Pro can only be installed on systems using RPM or Debian packages
+virtualmin_eupdate=Virtualmin Pro can only be installed on systems using the APT, YUM or up2date package installers
+virtualmin_eos=The operating system type could not be detected
+virtualmin_eos2=Virtualmin cannot be installed on systems running $1. Supported systems are : $2
+virtualmin_elicence=Virtualmin cannot be installed without a valid licence

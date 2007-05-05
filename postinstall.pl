@@ -22,5 +22,20 @@ if (!$job) {
 	}
 
 # And cron job to check licence
+local ($job) = grep { $_->{'user'} eq 'root' &&
+		      $_->{'command'} eq $check_licence_cmd }
+		    &cron::list_cron_jobs();
+if (!$job) {
+	$job = { 'command' => $check_licence_cmd,
+		 'user' => 'root',
+		 'mins' => int(rand()*60),
+		 'hours' => '*',
+		 'days' => '*',
+		 'weekdays' => '*',
+		 'months' => '*',
+		 'active' => 1, };
+	&cron::create_cron_job($job);
+	&cron::create_wrapper($check_licence_cmd, $module_name, "licence.pl");
+	}
 }
 
