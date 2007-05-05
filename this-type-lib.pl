@@ -54,3 +54,11 @@ local ($server, $localfile, $remotefile) = @_;
 return &type_this_get_file($server, $localfile, $remotefile);
 }
 
+sub type_this_check_login
+{
+local ($server) = @_;
+local %miniserv;
+&get_miniserv_config(\%miniserv);
+return (0, undef, $miniserv{'root'}, $miniserv{'port'}, $miniserv{'ssl'});
+}
+

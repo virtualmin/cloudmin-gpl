@@ -124,8 +124,8 @@ else {
 			( [ "webmin", $text{'edit_webmin2'}, undef, undef,
 			    "onClick='window.open(\"$wurl\"); return false'" ] ) : ( ),
 		  undef,
-		  $status eq 'novirt' ?
-			( [ "installvirt", $text{'edit_installvirt'} ] ) :
+		  $status eq 'novirt' || $status eq 'nowebmin' ?
+			( [ "installvirt", $text{'edit_installvirt'} ] ) : ( ),
 		  $status eq 'nowebmin' ?
 			( [ "installwebmin", $text{'edit_installwebmin'} ] ) :
 			( ),

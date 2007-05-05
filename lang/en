@@ -118,6 +118,7 @@ create_vserverdnsalready=.. already in DNS zone!
 create_vserverpkg=Installing packages $1 ..
 create_vserverpkgfailed=.. some package installs failed! See the output above for details
 create_vserverpkgsys=.. no supported package update system was found
+create_vserverubuntu=Fixing Ubuntu APT repositories ..
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
@@ -491,3 +492,7 @@ pkg_postfix=Postfix mail server
 
 zone_createlink=Create Zone.
 zone_addlink=Add existing Zone.
+
+licence_efile=No Virtualmin Server Manager licence file found!
+licence_eexpired=The licence expired on $1
+

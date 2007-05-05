@@ -4,10 +4,11 @@
 # XXX kvm or vservers
 #	XXX try out on other distros
 #	XXX show normal root password field for vservers
-#	XXX for ubuntu, we need to add univere and security to sources.list
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX install Virtualmin
+#	XXX licence
+#		XXX licence manager (cron job, message, CGI)
 #	XXX test script-based installs
 #	XXX needs wget or curl
 # XXX virtual IP management
@@ -72,6 +73,14 @@ $this_server_status = "$module_config_directory/this";
 	'dpkg' => 'http://www.webmin.com/download/deb/webmin-current.deb',
 	'tgz' => 'http://www.webmin.com/download/webmin-current.tar.gz',
 	);
+
+$licence_status = "$module_config_directory/licence-status";
+$licence_file = "/etc/server-manager-license";
+
+$virtualmin_licence_host = "software.virtualmin.com";
+$virtualmin_licence_port = 80;
+$virtualmin_licence_prog = "/cgi-bin/slicence.cgi";
+$virtualmin_licence_ssl = 0;
 
 # list_managed_servers()
 # Returns a list of all servers managed by this module. These are actually
@@ -1381,6 +1390,102 @@ elsif ($update eq "yum") {
 else {
 	# Don't know how
 	return (0, undef);
+	}
+}
+
+# install_virtualmin_server(&server, set-password)
+# Attempt to install Virtualmin on some system, by copying over the install
+# script and running it.
+# Returns the output and an error message on failure.
+sub install_virtualmin_server
+{
+local ($server, $setpass) = @_;
+
+# Substitute serial number into install script
+
+# Set Webmin password
+# XXX
+
+# At end, do a config check
+# XXX
+}
+
+# check_server_manager_licence()
+# Checks the licence for this module, by looking for a file with the
+# licence flag set. In this function, the status from the most recent check
+# from Cron is used.
+sub check_server_manager_licence
+{
+local %licence;
+&read_file_cached($licence_status, \%licence);
+if (time() - $licence{'last'} > 3*24*60*60) {
+	# Hasn't been checked from cron for 3 days .. do it now
+	&update_server_manager_licence(\%licence);
+	&write_file_cached($licence_status, \%licence);
+	}
+return ($licence{'status'}, $licence{'expiry'},
+        $licence{'err'}, $licence{'servers'});
+}
+
+# update_server_manager_licence(&licence)
+# Checks the licence file, and tries to phone home
+sub update_server_manager_licence
+{
+local ($licence) = @_;
+$licence->{'expiry'} = undef;
+$licence->{'servers'} = 0;
+
+# Do we have a licence file?
+if (!&read_file($licence_file, \%serial) ||
+    !$serial{'SerialNumber'} || !$serial{'LicenseKey'}) {
+	# No!
+	$licence->{'status'} = 1;
+	$licence->{'err'} = $text{'licence_efile'};
+	return;
+	}
+
+# Work out a host ID, from the hostid command or MAC address or hostname
+local $id;
+if (&has_command("hostid")) {
+	chop($id = `hostid 2>/dev/null`);
+	}
+if (!$id) {
+	&foreign_require("net", "net-lib.pl");
+	local ($iface) = grep { $_->{'fullname'} eq $config{'iface'} }
+			      &net::active_interfaces();
+	$id = $iface->{'ether'} if ($iface);
+	}
+if (!$id) {
+	$id = &get_system_hostname();
+	}
+
+# Phone home to see if it is valid
+local ($out, $error);
+&http_download($virtualmin_licence_host,
+	       $virtualmin_licence_port,
+	       "$virtualmin_licence_prog?id=$id&serial=$serial{'LicenseKey'}",
+	       \$out, \$error, undef, $virtualmin_licence_ssl);
+if ($error) {
+	$licence->{'status'} = 2;
+	$licence->{'err'} = "Failed to contact licence server : $error";
+	}
+elsif ($out =~ /^EXP\s+(\S+)\s+(\S+)/) {
+	$licence->{'status'} = 3;
+	$licence->{'err'} = "The licence for this system expired on $1";
+	}
+elsif ($out =~ /^ERR\s+(.*)/) {
+	$licence->{'status'} = 2;
+	$licence->{'err'} = "An error occurred checking the licence : $1";
+	}
+elsif ($out =~ /^OK\s+(\S+)\s+(\S+)/) {
+	$licence->{'status'} = 0;
+	$licence->{'err'} = undef;
+	$licence->{'expiry'} = $1;
+	$licence->{'servers'} = $2;
+	}
+else {
+	$licence->{'status'} = 1;
+	$licence->{'err'} = "No valid licence was found for your host ID $_[0] and serial number $serial{'LicenseKey'}";
 	}
 }
 

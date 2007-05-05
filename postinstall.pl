@@ -20,5 +20,7 @@ if (!$job) {
 	&cron::create_cron_job($job);
 	&cron::create_wrapper($check_status_cmd, $module_name, "status.pl");
 	}
+
+# And cron job to check licence
 }
 

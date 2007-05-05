@@ -4,6 +4,8 @@
 require './server-manager-lib.pl';
 &ui_print_header(undef, $module_info{'desc'}, "", "intro", 1, 1);
 
+# Check server manager licence, show an error if invalid
+
 # Build add links
 @links = ( &select_all_link("d"), &select_invert_link("d") );
 foreach $t (@server_management_types) {
