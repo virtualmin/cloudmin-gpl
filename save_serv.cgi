@@ -75,13 +75,49 @@ elsif ($in{'reboot'}) {
 	}
 
 elsif ($in{'installvirt'}) {
-	# Install Virtualmin, after asking for version
-	# XXX
+	# Install Virtualmin, which may take a while
+	&ui_print_header(&server_in($server), $text{'save_virttitle'}, "");
+
+	# Start off the process
+	print $text{'save_virtstart'},"<br>\n";
+	$err = &install_virtualmin_server($server, 1);
+	if ($err) {
+		print &text('save_virterr', $err),"<p>\n";
+		goto VIRTFAILED;
+		}
+	else {
+		print $text{'save_virtstarted'},"<p>\n";
+		}
+
+	# Wait till done
+	print $text{'save_virtwait'};
+	while(1) {
+		$done = &install_virtualmin_server_done($server);
+		if ($done eq "OK") {
+			print "<br>",$text{'save_virtdone'},"<p>\n";
+			last;
+			}
+		elsif ($done) {
+			print "<br>",&text('save_virterr', $done),"<p>\n";
+			last;
+			}
+		else {
+			print ".";
+			}
+		}
+
+	# Update server status
+	print $text{'dcreate_statusing'},"<br>\n";
+	&check_server_status($server);
+	&save_managed_server($server);
+	print $text{'dcreate_statusok'},"<p>\n";
+
+	VIRTFAILED:
+	&ui_print_footer("", $text{'index_return'});
 	}
 
 elsif ($in{'installwebmin'}) {
 	# Install Webmin
-	# XXX password?
 	&ui_print_header(&server_in($server), $text{'save_webmintitle'}, "");
 
 	($src, $type, $err) = &get_install_webmin_source($server);
@@ -99,6 +135,49 @@ elsif ($in{'installwebmin'}) {
 		&save_managed_server($server);
 		print $text{'save_webmindone'},"<p>\n";
 		}
+
+	&ui_print_footer("", $text{'index_return'});
+	}
+
+elsif ($in{'recheck'}) {
+	# Perform a config re-check
+	&ui_print_header(&server_in($server), $text{'save_rechecktitle'}, "");
+
+	print $text{'save_rechecking'},"<br>\n";
+	&remote_foreign_require($server, "virtual-server",
+					 "virtual-server-lib.pl");
+	($out, $cerrarr) = &remote_foreign_call($server, "virtual-server",
+		"capture_function_output", "check_virtual_server_config");
+	print $out;
+	$cerr = $cerrarr->[0];
+	$cerr =~ s/<[^>]*>//g;  # Remove HTML
+	if ($cerr) {
+		print "<font color=#ff0000>",
+		      &text('save_recheckerr', $cerr),"</font><p>\n";
+		}
+	else {
+		print $text{'save_recheckdone'},"<p>\n";
+		}
+	$server->{'virtualmin_checked'} = $cerr ? 0 : 1;
+	$server->{'virtualmin_error'} = $cerr;
+	&save_managed_server($server);
+
+	&ui_print_footer("", $text{'index_return'});
+	}
+
+elsif ($in{'refresh'}) {
+	# Refresh monitored status
+	&ui_print_header(&server_in($server), $text{'save_refreshtitle'}, "");
+
+	print $text{'save_refreshing'},"<br>\n";
+	&check_server_status($server);
+	&save_managed_server($server);
+	print $text{'save_refreshdone'},"<p>\n";
+
+	# And go back to server form
+	print "<script>\n";
+	print "window.location = 'edit_serv.cgi?id=$in{'id'}';\n";
+	print "</script>\n";
 
 	&ui_print_footer("", $text{'index_return'});
 	}

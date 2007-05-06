@@ -36,6 +36,12 @@ print &ui_table_row($text{'edit_status'},
 		    &text('edit_statustime', &describe_status($server, 1, 0),
 				     &make_date($server->{'statustime'})));
 
+# Virtualmin config error
+if ($status eq 'virt' && $server->{'virtualmin_error'}) {
+	print &ui_table_row($text{'edit_configerr'},
+	      "<font color=#ff0000>$server->{'virtualmin_error'}</font>");
+	}
+
 if ($status eq 'virt' || $status eq 'novirt') {
 	# Has Webmin .. show more info
 	print &ui_table_row($text{'edit_os'},
@@ -65,7 +71,8 @@ print &ui_hidden_table_end("basic");
 
 # Show authentication form (if needed)
 $haswebmin = ($status eq 'nowebminlogin' || $status eq 'novirt' ||
-	      $status eq 'virt') && $server->{'id'} != 0;
+	      $status eq 'downwebmin' || $status eq 'virt') &&
+	     $server->{'id'} != 0;
 $sfunc = "type_".$t."_no_ssh";
 $hasssh = !defined(&$sfunc) || !&$sfunc();
 if ($haswebmin || $hasssh) {
@@ -103,7 +110,7 @@ if ($status eq 'down' || $status eq 'nossh') {
 	$sfunc = "type_".$t."_no_startup";
 	$nostart = defined(&$sfunc) && &$sfunc($server);
 	print &ui_form_end([
-		[ "save", $text{'save'} ],
+		  [ "save", $text{'save'} ],
 		  undef,
 		  $nostart ? ( ) : ( [ "startup", $text{'edit_startup'} ] ),
 		]);
@@ -116,7 +123,8 @@ else {
 	$noreboot = defined(&$rfunc) && &$rfunc($server);
 	$wurl = &webmin_link($server);
 	print &ui_form_end([
-		[ "save", $text{'save'} ],
+		  [ "save", $text{'save'} ],
+		  [ "refresh", $text{'edit_refresh'} ],
 		  undef,
 		  [ 'shell', $text{'edit_shell'} ],
 		  ($status eq 'novirt' || $status eq 'virt') &&
@@ -129,6 +137,8 @@ else {
 		  $status eq 'nowebmin' ?
 			( [ "installwebmin", $text{'edit_installwebmin'} ] ) :
 			( ),
+		  $status eq 'virt' && $server->{'virtualmin_error'} ?
+			( [ "recheck", $text{'edit_recheck'} ] ) : ( ),
 		  $noreboot ? ( ) : ( [ "reboot", $text{'edit_reboot'} ] ),
 		  $noshut ? ( ) : ( [ "shutdown", $text{'edit_shutdown'} ] ),
 		]);

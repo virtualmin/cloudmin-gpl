@@ -22,7 +22,7 @@ foreach $t (@server_management_types) {
 	}
 
 # Show a table of managed servers
-@servers = &list_managed_servers();
+@servers = sort { $a->{'host'} cmp $b->{'host'} } &list_managed_servers();
 if (@servers) {
 	print &ui_form_start("mass.cgi", "post");
 	print &ui_links_row(\@links);
@@ -80,6 +80,11 @@ if ($virtcount) {
 	push(@glinks, "list_domains.cgi");
 	push(@gtitles, $text{'domains_title'});
 	push(@gicons, "images/domains.gif");
+
+	# Default features
+	push(@glist, "list_features.cgi");
+	push(@gtitles, $text{'features_title'});
+	push(@gicons, "images/features.gif");
 	}
 
 # SSH key management

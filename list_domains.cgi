@@ -61,7 +61,8 @@ if ($in{'search'}) {
 	}
 
 # Creation form (hidden by default). For top-level servers only, limited options
-@vservers = grep { !$_->{'novirt'} } @vservers;
+@vservers = grep { !$_->{'novirt'} &&
+		   $_->{'virtualmin_checked'} } @vservers;
 print &ui_hidden_start($text{'domains_hidden'}, "create", 0,
 		       "list_domains.cgi");
 print $text{'domains_desc2'},"<p>\n";
@@ -85,7 +86,7 @@ print &ui_table_row($text{'domains_cserver'},
 		     map { [ $_->{'id'}, $_->{'host'} ] } @vservers ]));
 
 # Enabled features .. find those available across all servers
-foreach $s (@vservers) {
+foreach $s (sort { $a->{'host'} cmp $b->{'host'} } @vservers) {
 	$info = &get_server_collected($s);
 	foreach $f (@{$info->{'features'}}) {
 		if (!$donefeat{$f->{'feature'}}++) {

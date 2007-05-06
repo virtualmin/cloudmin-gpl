@@ -169,6 +169,20 @@ print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
 print $text{'add_statusok'},"<p>\n";
 
+# If the server has Virtualmin, do a config check
+if ($server->{'status'} eq 'virt') {
+	print $text{'add_vchecking'},"<br>\n";
+	&check_virtualmin_config($server);
+	if ($server->{'virtualmin_checked'}) {
+		print $text{'add_vcheckok'},"<p>\n";
+		}
+	else {
+		print &text('add_vcheckerr',
+			    $server->{'virtualmin_checked'}),"<p>\n";
+		}
+	&save_managed_server($server);
+	}
+
 END:
 &ui_print_footer("", $text{'index_return'});
 

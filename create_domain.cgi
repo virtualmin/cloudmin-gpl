@@ -5,7 +5,8 @@ require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'dcreate_err'});
 @vservers = grep { $_->{'status'} eq 'virt' &&
-		   !$_->{'novirt'} } &list_managed_servers();
+		   !$_->{'novirt'} &&
+		   $_->{'virtualmin_checked'} } &list_managed_servers();
 
 # Validate inputs, and store in args list
 @args = ( );

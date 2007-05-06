@@ -5,7 +5,8 @@ require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'add_err'});
 @servers = &list_managed_servers();
-$server = { 'manager' => $in{'type'} };
+$server = { 'manager' => $in{'type'},
+	    'id' => time().$$ };
 
 # Validate inputs, starting with hostname
 gethostbyname($in{'host'}) || &error($text{'add_ehost'});
@@ -94,6 +95,20 @@ print $text{'add_statusing'},"<br>\n";
 &check_server_status($server);
 &save_managed_server($server);
 print $text{'add_statusok'},"<p>\n";
+
+# If the server has Virtualmin, do a config check
+if ($server->{'status'} eq 'virt') {
+	print $text{'add_vchecking'},"<br>\n";
+	&check_virtualmin_config($server);
+	if ($server->{'virtualmin_checked'}) {
+		print $text{'add_vcheckok'},"<p>\n";
+		}
+	else {
+		print &text('add_vcheckerr',
+			    $server->{'virtualmin_checked'}),"<p>\n";
+		}
+	&save_managed_server($server);
+	}
 
 END:
 &ui_print_footer("", $text{'index_return'});

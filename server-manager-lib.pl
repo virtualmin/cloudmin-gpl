@@ -6,11 +6,9 @@
 #	XXX show normal root password field for vservers
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
-# XXX install Virtualmin
-#	XXX licence
-#	XXX test script-based installs
-#	XXX needs wget or curl
 # XXX virtual IP management
+# XXX command line and remote APIs
+# XXX page for selecting default features
 
 do '../web-lib.pl';
 &init_config();
@@ -175,7 +173,16 @@ if ($s->{'status'} eq 'virt' && $withdoms) {
 if ($withcol) {
 	local $col = $cmap->{$s->{'status'}};
 	if ($col) {
-		return "<font color=#$col>$msg</font>";
+		$msg = "<font color=#$col>$msg</font>";
+		}
+	}
+if ($s->{'status'} eq 'virt' && $s->{'virtualmin_error'}) {
+	# Add config errors warning
+	if ($withcol) {
+		$msg .= " - <font color=#ff0000>$text{'status_errs'}</font>";
+		}
+	else {
+		$msg .= " - $text{'status_errs'}";
 		}
 	}
 return $msg;
@@ -649,7 +656,8 @@ $server->{'statustime'} = time();
 local $ping = &ping_server_host($server->{'host'});
 
 # Check if we can login
-local ($status, $err, $webminroot) = &check_server_ssh_login($server);
+local ($status, $err, $webminroot, $webminport, $webminssl) =
+	&check_server_ssh_login($server);
 if ($status == 2) {
 	$server->{'status'} = 'nosshlogin';
 	$server->{'status_msg'} = $err;
@@ -664,6 +672,12 @@ elsif ($status) {
 	$server->{'status'} = 'nossh';
 	$server->{'status_msg'} = $err;
 	return 0;
+	}
+
+# Fix up Webmin port and SSL flag to reflect reality
+if ($webminport) {
+	$server->{'port'} = $webminport;
+	$server->{'ssl'} = $webminssl;
 	}
 
 # If we have a Webmin login, try it
@@ -710,6 +724,11 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			}
 		$info->{'template'} = &remote_foreign_call($server,
 				"virtual-server", "get_template", 0);
+
+		# Perform a config check, if we haven't done an OK one yet
+		if (!$server->{'virtualmin_check'}) {
+			&check_virtualmin_config($server, 1);
+			}
 		}
 	else {
 		&save_server_domains($server, [ ]);
@@ -1117,9 +1136,13 @@ local $temp = "/tmp/$1";
 local $rootdir;
 
 # Try to install Perl and other dependencies
-local ($pstatus, $pout) = &install_package_on_server($server, "perl", "wget");
-if (!$pstatus && $pout) {
-	return ($pout, "Failed to install required packages");
+if (!&has_command_on_server($server, "perl") ||
+    !&has_command_on_server($server, "wget")) {
+	local ($pstatus, $pout) = &install_package_on_server($server,
+							     "perl", "wget");
+	if (!$pstatus && $pout) {
+		return ($pout, "Failed to install required packages");
+		}
 	}
 
 # Make sure the system has Perl
@@ -1191,16 +1214,15 @@ $server->{'ssl'} = $wssl;
 
 # Set the Webmin password, if we don't have it
 if ($setpass) {
+	$server->{'user'} = 'root';
 	if ($server->{'ssh_pass'}) {
 		# Root and Webmin passwords are the same
-		$server->{'user'} = 'root';
 		$server->{'pass'} = $server->{'ssh_pass'};
 		$server->{'ssh_pass_same'} = 1;
 		}
 	else {
 		# Need to set, since RPM and Deb installs by default use the
 		# real root password, which we don't know
-		$server->{'user'} = 'root';
 		$server->{'pass'} ||= &generate_random_password();
 		local $perr = &set_server_webmin_password(
 				$server, $rootdir, "root", $server->{'pass'});
@@ -1428,9 +1450,9 @@ if (&indexof($os, @virtualmin_operating_systems) < 0) {
 	}
 
 # Transfer over the install script
-local $script = "/tmp/virtualmin-install.sh";
+local $script = "/virtualmin-install.sh";
 local $err = &put_file_to_server($server, "$module_root_directory/virtualmin-install.sh", $script);
-return "Failed to copy install script : $err" if ($err);
+return &text('virtualmin_ecopy', $err) if ($err);
 
 # Call type-specific pre function
 local $pfunc = "type_".$server->{'manager'}."_pre_virtualmin";
@@ -1446,11 +1468,27 @@ if (!&read_file($licence_file, \%serial) ||
 	return $text{'virtualmin_elicence'};
 	}
 
+# Install wget and fuser, if needed
+if (!&has_command_on_server($server, "wget")) {
+	local ($wok, $werr) = &install_package_on_server($server, "wget");
+	if (!$wok) {
+		return $werr ? &text('virtualmin_ewget', $werr, "wget") :
+			       $text{'virtualmin_ewget2', "wget"};
+		}
+	}
+if (!&has_command_on_server($server, "fuser")) {
+	local ($wok, $werr) = &install_package_on_server($server, "psmisc");
+	if (!$wok) {
+		return $werr ? &text('virtualmin_ewget', $werr, "wget") :
+			       $text{'virtualmin_ewget2', "wget"};
+		}
+	}
+
 # Run the install script, capturing output to a file
 local $temp = "/tmp/virtualmin-install.out";
 $server->{'virtualmin_temp'} = $temp;
 local ($out, $ex, $err) = &execute_command_on_server($server,
-	"chmod +x $script ; (SERIAL=$serial{'SerialNumber'} KEY=$serial{'LicenseKey'} $script && echo SERVER-MANAGER-COMPLETE) >$temp 2>&1 </dev/null &");
+	"chmod +x $script ; ((echo y ; echo $server->{'host'}) | SERIAL=$serial{'SerialNumber'} KEY=$serial{'LicenseKey'} $script && echo SERVER-MANAGER-COMPLETE) >$temp 2>&1 &");
 
 return undef;
 }
@@ -1477,27 +1515,63 @@ if (@pids) {
 
 # Done .. but did it work?
 local ($tout, $tex, $terr) = &execute_command_on_server($server,
-				"tail -20 $temp");
+				"tail -20 $temp ; rm -f $temp");
 if ($tout !~ s/SERVER-MANAGER-COMPLETE//) {
 	# Looks like it didn't ..
-	&execute_command_on_server($server, "rm -f $temp");
 	return "<pre>".&html_escape($tout)."</pre>";
 	}
 
-# Make sure it got installed, by looking for Webmin
-# XXX
+# Make sure it REALLY got installed, by looking for Webmin
+local ($sstatus, $serr, $webminroot, $webminport, $webminssl) =
+	&check_server_ssh_login($server);
+if (!$webminroot) {
+	return "<pre>".&html_escape($tout)."</pre>";
+	}
+$server->{'port'} = $webminport;
+$server->{'ssl'} = $webminssl;
 
-# Set Webmin password
-# XXX
+# And check for Virtualmin root
+local ($out, $ex, $err) = &execute_command_on_server($server,
+				"cat $webminroot/virtual-server/module.info");
+if ($ex) {
+	return $text{'virtual_evirtualmincheck'};
+	}
+
+# Set Webmin password, if we don't have the SSH password
+$server->{'user'} = 'root';
+if ($server->{'ssh_pass'}) {
+	$server->{'pass'} = $server->{'ssh_pass'};
+	$server->{'ssh_pass_same'} = 1;
+	}
+else {
+	$server->{'pass'} ||= &generate_random_password();
+	local $perr = &set_server_webmin_password(
+			$server, $webminroot, "root", $server->{'pass'});
+	if ($perr) {
+		return &text('virtualmin_epass', $perr);
+		}
+	}
 
 # At end, do a config check
-# XXX
+&remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
+local $cerr = &remote_foreign_call($server, "virtual-server",
+				   "check_virtual_server_config");
+if ($cerr) {
+	$server->{'virtualmin_checked'} = 0;
+	$server->{'virtualmin_error'} = 1;
+	}
+else {
+	$server->{'virtualmin_checked'} = 1;
+	}
 
 # Call type-specific post function
 local $pfunc = "type_".$server->{'manager'}."_post_virtualmin";
 if (defined(&$pfunc)) {
-	&$pfunc($server, $pkg, $update, $os);
+	local $perr = &$pfunc($server, $pkg, $update, $os);
+	return $perr if ($perr);
 	}
+
+return "OK";
 }
 
 sub licence_error_message
@@ -1591,6 +1665,30 @@ elsif ($out =~ /^OK\s+(\S+)\s+(\S+)/) {
 else {
 	$licence->{'status'} = 1;
 	$licence->{'err'} = "No valid licence was found for your host ID $_[0] and serial number $serial{'LicenseKey'}";
+	}
+}
+
+# check_virtualmin_config(&server, [no-require])
+# Updates a server object with Virtualmin config errors
+sub check_virtualmin_config
+{
+local ($server, $noreq) = @_;
+if ($server->{'status'} eq 'virt') {
+	if (!$noreq) {
+		&remote_foreign_require($server, "virtual-server",
+						 "virtual-server-lib.pl");
+		}
+	local $cerr = &remote_foreign_call($server, "virtual-server",
+				   "set_all_null_print");
+	local $cerr = &remote_foreign_call($server, "virtual-server",
+				   "check_virtual_server_config");
+	$cerr =~ s/<[^>]*>//g;	# Remove HTML
+	$server->{'virtualmin_checked'} = $cerr ? 0 : 1;
+	$server->{'virtualmin_error'} = $cerr;
+	}
+else {
+	delete($server->{'virtualmin_checked'});
+	delete($server->{'virtualmin_error'});
 	}
 }
 
