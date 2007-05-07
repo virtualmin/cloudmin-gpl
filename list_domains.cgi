@@ -98,8 +98,9 @@ if (!@features) {
 	# Fall back to standard core Virtualmin features
 	@features = @standard_virtualmin_features;
 	}
+%defs = map { $_, 1 } split(/\s+/, $config{'defs'});
 @grid = map { &ui_checkbox("feature", $_->{'feature'}, $_->{'desc'},
-			   $_->{'default'}) }
+			   %defs ? $defs{$_->{'feature'}} : $_->{'default'}) }
 	    grep { $_->{'enabled'} } @features;
 print &ui_table_row($text{'domains_cfeatures'},
 		    &ui_grid_table(\@grid, 2));

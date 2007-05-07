@@ -8,7 +8,6 @@
 # XXX make status updated limited to what the caller really needs
 # XXX virtual IP management
 # XXX command line and remote APIs
-# XXX page for selecting default features
 
 do '../web-lib.pl';
 &init_config();
@@ -113,7 +112,12 @@ if ($server->{'id'} eq '0') {
 	# Special case - saving info about this system
 	local %this = ( 'status' => $server->{'status'},
 			'statustime' => $server->{'statustime'},
-			'status_msg' => $server->{'status_msg'} );
+			'status_msg' => $server->{'status_msg'},
+			'virtualmin_checked' => $server->{'virtualmin_checked'},
+			'virtualmin_err' => $server->{'virtualmin_err'},
+			'virtualmin_poss' => $server->{'virtualmin_poss'},
+			'virtualmin_domains' => $server->{'virtualmin_domains'},
+		      );
 	&write_file($this_server_status, \%this);
 	}
 else {
@@ -164,11 +168,8 @@ local $cmap = { 'down' => 'ff0000',
 		'novirt' => '008800',
 		'virt' => '00aa00' };
 local $msg = $text{'status_'.$s->{'status'}} || $text{'status_unknown'};
-if ($s->{'status'} eq 'virt' && $withdoms) {
-	local @doms = &get_server_domains($s);
-	if (@doms) {
-		$msg .= " (".&text('status_doms', scalar(@doms)).")";
-		}
+if ($s->{'status'} eq 'virt' && $withdoms && $s->{'virtualmin_domains'}) {
+	$msg .= " (".&text('status_doms', $s->{'virtualmin_domains'}).")";
 	}
 if ($withcol) {
 	local $col = $cmap->{$s->{'status'}};
@@ -675,7 +676,7 @@ elsif ($status) {
 	}
 
 # Fix up Webmin port and SSL flag to reflect reality
-if ($webminport) {
+if ($webminport && $server->{'id'} != 0) {
 	$server->{'port'} = $webminport;
 	$server->{'ssl'} = $webminssl;
 	}
@@ -726,14 +727,20 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				"virtual-server", "get_template", 0);
 
 		# Perform a config check, if we haven't done an OK one yet
-		if (!$server->{'virtualmin_check'}) {
+		if (!$server->{'virtualmin_checked'}) {
 			&check_virtualmin_config($server, 1);
 			}
+
+		# Cache number of domains and updates
+		$server->{'virtualmin_domains'} = scalar(@doms);
+		$server->{'virtualmin_poss'} = scalar(@{$info->{'poss'}});
 		}
 	else {
 		&save_server_domains($server, [ ]);
 		$server->{'status'} = 'novirt';
 		$server->{'status_msg'} = undef;
+		delete($server->{'virtualmin_domains'});
+		delete($server->{'virtualmin_poss'});
 		$info = { };
 		}
 

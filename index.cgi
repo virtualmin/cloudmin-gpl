@@ -39,8 +39,7 @@ if (@servers) {
 	foreach my $s (@servers) {
 		$t = $s->{'manager'};
 		$tfunc = "type_".$t."_desc";
-		$info = &get_server_collected($s);
-		$pos = $info->{'poss'} ? scalar(@{$info->{'poss'}}) : undef;
+		$pos = $s->{'virtualmin_poss'};
 		$posdesc = undef;
 		if ($pos) {
 			# Has some updates
@@ -82,7 +81,7 @@ if ($virtcount) {
 	push(@gicons, "images/domains.gif");
 
 	# Default features
-	push(@glist, "list_features.cgi");
+	push(@glinks, "list_features.cgi");
 	push(@gtitles, $text{'features_title'});
 	push(@gicons, "images/features.gif");
 	}
