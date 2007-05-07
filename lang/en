@@ -333,6 +333,7 @@ edit_title=Edit System
 edit_bheader=System details
 edit_host=Internet hostname
 edit_type=System type
+edit_type2=Operating system
 edit_desc=Description or comment
 edit_status=Last status
 edit_configerr=Virtualmin configuration error

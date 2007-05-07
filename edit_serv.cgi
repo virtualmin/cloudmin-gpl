@@ -31,6 +31,12 @@ if ($server->{'id'} != 0) {
 			    &ui_textbox("desc", $server->{'desc'}, 50), 3);
 	}
 
+# OS type
+print &ui_table_row($text{'edit_type2'},
+		    &ui_select("type", $server->{'type'} || 'unknown',
+		      [ map { [ $_->[0], $_->[1] ] }
+			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
+
 # Last status
 print &ui_table_row($text{'edit_status'},
 		    &text('edit_statustime', &describe_status($server, 1, 0),

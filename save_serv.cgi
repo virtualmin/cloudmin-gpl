@@ -198,6 +198,7 @@ else {
 	if ($server->{'id'} != 0) {
 		$server->{'desc'} = $in{'desc'};
 		}
+	$server->{'type'} = $in{'type'};
 	if (defined($in{'canvirt'})) {
 		$server->{'novirt'} = $in{'canvirt'} ? 0 : 1;
 		}

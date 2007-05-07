@@ -3,6 +3,7 @@
 # XXX grouping
 # XXX kvm or vservers
 #	XXX try out on other distros
+#	XXX yum missing - use vyum
 #	XXX show normal root password field for vservers
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
