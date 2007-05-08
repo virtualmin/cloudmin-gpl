@@ -2,19 +2,19 @@
 # XXX search if too many servers
 # XXX grouping
 # XXX kvm or vservers
-#	XXX try out on other distros
 #	XXX show normal root password field for vservers
-#	XXX fix missing which command by uploading our own
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX virtual IP management
 # XXX command line and remote APIs
+# XXX package install after creation
 
 do '../web-lib.pl';
 &init_config();
 do '../ui-lib.pl';
 &foreign_require("servers", "servers-lib.pl");
 &foreign_require("proc", "proc-lib.pl");
+&foreign_require("net", "net-lib.pl");
 &remote_error_setup(\&remote_error_handler);
 use Net::Amazon::EC2;
 
@@ -606,7 +606,6 @@ if ($ex) {
 		# No .. which path manually
 		($out, $ex, $err) = &execute_command_on_server($server,
 			"for p in `echo \$PATH | sed -e 's/:/ /g'`; do if [ -r \"\$p/$cmd\" ]; then echo \"\$p/$cmd\"; fi; done");
-		&error("which $cmd = $out ($ex)");
 		if ($out !~ /^\S+\/\Q$cmd\E/) {
 			# That failed too :(
 			return undef;
@@ -1330,7 +1329,6 @@ return @rv;
 sub allocate_ip_address
 {
 local ($startip, $endip) = @_;
-&foreign_require("net", "net-lib.pl");
 local $start = &net::ip_to_integer($startip);
 local $end = &net::ip_to_integer($endip);
 local %used = map { &to_ipaddress($_->{'host'}), $_ } &list_managed_servers();
@@ -1362,13 +1360,19 @@ if ($server->{'pass'}) {
 	}
 if (!$pkg || !$update) {
 	# No luck .. check what commands it has
-	local ($out, $ex, $err) = &execute_command_on_server($server,
-		"(which rpm ; which dpkg ; which apt-get ; which yum ; which up2date) 2>/dev/null");
-	$pkg = $out =~ /\S+\/rpm/ ? "rpm" :
-	       $out =~ /\S+\/dpkg/ ? "dpkg" : undef;
-	$update = $out =~ /\S+\/apt-get/ ? "apt" :
-		  $out =~ /\S+\/yum/ ? "yum" :
-		  $out =~ /\S+\/up2date/ ? "up2date" : undef;
+	foreach my $cmd ("rpm", "dpkg") {
+		if (&has_command_on_server($server, $cmd)) {
+			$pkg = $cmd;
+			last;
+			}
+		}
+	foreach my $cmd ("apt-get", "yum", "up2date", "pkg-get") {
+		if (&has_command_on_server($server, $cmd)) {
+			$update = $cmd eq "up2date" ? "rhn" :
+				  $cmd eq "pkg-get" ? "csw" : $cmd;
+			last;
+			}
+		}
 	}
 if (!$os || $os eq 'unknown') {
 	# Could not get OS, so check useful system files
@@ -1653,7 +1657,6 @@ if (&has_command("hostid")) {
 	chop($id = `hostid 2>/dev/null`);
 	}
 if (!$id) {
-	&foreign_require("net", "net-lib.pl");
 	local ($iface) = grep { $_->{'fullname'} eq $config{'iface'} }
 			      &net::active_interfaces();
 	$id = $iface->{'ether'} if ($iface);
@@ -1714,6 +1717,13 @@ else {
 	delete($server->{'virtualmin_checked'});
 	delete($server->{'virtualmin_error'});
 	}
+}
+
+# get_interface_use(&server, &info, &domains, &iface)
+# Returns a string describing what some interface is for
+sub get_interface_use
+{
+# XXX
 }
 
 1;

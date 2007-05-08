@@ -124,6 +124,8 @@ create_vserverpkgsys=.. no supported package update system was found
 create_vserverubuntu=Fixing Ubuntu APT repositories ..
 create_vservervyum=Installing YUM in VServer ..
 create_vservervyumerr=.. failed : $1
+create_vserverwhich=Installing the <tt>which</tt> command ..
+create_vserverwhichfailed= .. failed. However, we can live without it.
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
@@ -385,6 +387,12 @@ edit_vserverinstance=VServer instance name
 edit_vserverctx=Context ID
 edit_vserversize=Memory used
 edit_vservervr=$1 virtual, $2 resident
+edit_iheader=Network Interfaces
+edit_ifaceadd=Add a new interface.
+edit_ifacefullname=Interface
+edit_ifaceaddress=Address
+edit_ifacenetmask=Netmask
+edit_ifaceuse=Used for
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..

@@ -120,6 +120,7 @@ if ($status eq 'down' || $status eq 'nossh') {
 		  undef,
 		  $nostart ? ( ) : ( [ "startup", $text{'edit_startup'} ] ),
 		]);
+	$down = 1;
 	}
 else {
 	# Running, so all options are available
@@ -148,6 +149,7 @@ else {
 		  $noreboot ? ( ) : ( [ "reboot", $text{'edit_reboot'} ] ),
 		  $noshut ? ( ) : ( [ "shutdown", $text{'edit_shutdown'} ] ),
 		]);
+	$down = 0;
 	}
 
 # Virtualmin status
@@ -215,8 +217,10 @@ if ($info && scalar(keys %$info) > 1) {
 		print &ui_table_row($text{'edit_iposs'},
 		    join(", ", map { "$_->{'name'} ($_->{'version'})" }
 				   @{$info->{'poss'}})." ".
-		    "<input type=button value='$text{'edit_iupdates'}' ".
-		    "onClick='document.location=\"update.cgi?id=$in{'id'}\"'>");
+		    ($down ? "" :
+		     "<input type=button value='$text{'edit_iupdates'}' ".
+		     "onClick='document.location=\"update.cgi?id=$in{'id'}\"'>")
+		    );
 		}
 
 	# IP allocation
@@ -275,6 +279,35 @@ if ($status eq 'virt' || @doms) {
 		}
 
 	print &ui_hidden_table_end("doms");
+	}
+
+# IP addresses, if we can manage them
+$ifunc = "type_".$t."_list_interfaces";
+if (defined(&$ifunc)) {
+	print &ui_hidden_table_start($text{'edit_iheader'}, "width=100%", 2,
+				     "ifaces", 0, \@tds);
+	$ifaces = &$ifunc($server);
+	@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".
+		    "$text{'edit_ifaceadd'}</a>" );
+	print &ui_links_row(\@ilinks);
+	print &ui_columns_start([ $text{'edit_ifacefullname'},
+				  $text{'edit_ifaceaddress'},
+				  $text{'edit_ifacenetmask'},
+				  $info ? ( $text{'edit_ifaceuse'} ) : ( ) ],
+				100);
+	foreach $iface (@$ifaces) {
+		print &ui_columns_row([
+			"<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>".
+			"$iface->{'fullname'}</a>",
+			$iface->{'address'},
+			$iface->{'netmask'},
+			$info ? ( &get_interface_use($server, $info, \@doms,
+						     $iface) ) : ( ),
+			]);
+		}
+	print &ui_columns_end();
+	print &ui_links_row(\@ilinks);
+	print &ui_hidden_table_end("ifaces");
 	}
 
 &ui_print_footer("", $text{'index_return'});
