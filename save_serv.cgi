@@ -170,7 +170,7 @@ elsif ($in{'refresh'}) {
 	&ui_print_header(&server_in($server), $text{'save_refreshtitle'}, "");
 
 	print $text{'save_refreshing'},"<br>\n";
-	&check_server_status($server);
+	&check_server_status($server, 1);
 	&save_managed_server($server);
 	print $text{'save_refreshdone'},"<p>\n";
 

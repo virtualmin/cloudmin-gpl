@@ -122,6 +122,8 @@ create_vserverpkg=Installing packages $1 ..
 create_vserverpkgfailed=.. some package installs failed! See the output above for details
 create_vserverpkgsys=.. no supported package update system was found
 create_vserverubuntu=Fixing Ubuntu APT repositories ..
+create_vservervyum=Installing YUM in VServer ..
+create_vservervyumerr=.. failed : $1
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
@@ -388,7 +390,8 @@ update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..
 update_pkg=Updating $1 to version $2 ..
 update_donepkg=.. installed $1 packages.
-update_pkgerr=.. updated failed! Try an update on the system directly to see more information.
+update_pkgerr=.. update failed! Try an update on the system directly to see more information.
+update_pkgerr2=.. update failed : $1
 update_done=.. all updates complete.
 update_pkgerr.. updated failed : $1
 update_statusing=Refreshing information about available updates ..

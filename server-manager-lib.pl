@@ -3,8 +3,8 @@
 # XXX grouping
 # XXX kvm or vservers
 #	XXX try out on other distros
-#	XXX yum missing - use vyum
 #	XXX show normal root password field for vservers
+#	XXX fix missing which command by uploading our own
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX virtual IP management
@@ -601,7 +601,20 @@ sub has_command_on_server
 local ($server, $cmd) = @_;
 local ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd");
 if ($ex) {
-	return undef;
+	# Failed .. but maybe we don't even have the which command??
+	if ($out =~ /which:\s+command\s+not\s+found/i) {
+		# No .. which path manually
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"for p in `echo \$PATH | sed -e 's/:/ /g'`; do if [ -r \"\$p/$cmd\" ]; then echo \"\$p/$cmd\"; fi; done");
+		&error("which $cmd = $out ($ex)");
+		if ($out !~ /^\S+\/\Q$cmd\E/) {
+			# That failed too :(
+			return undef;
+			}
+		}
+	else {
+		return undef;
+		}
 	}
 $out =~ s/\r|\n//g;
 return $out;
@@ -645,13 +658,13 @@ local ($out, $timed_out) = &backquote_with_timeout(
 return !$timed_out && !$?;
 }
 
-# check_server_status(&server)
+# check_server_status(&server, [re-generate-collected])
 # Checks the status of a managed server, and updates the server object. Checks
 # SSH login, Webmin login, Virtualmin status, number of domains, memory, disk
 # and CPU load.
 sub check_server_status
 {
-local ($server) = @_;
+local ($server, $regen) = @_;
 
 # Do a quick ping
 $server->{'statustime'} = time();
@@ -714,7 +727,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 
 		# Get and save collected status info
 		$info = &remote_foreign_call($server, "virtual-server",
-					     "get_collected_info");
+		     $regen ? "collect_system_info" : "get_collected_info");
 		$info->{'minfo'} = &remote_eval($server, "virtual_server",
 						"\\\%module_info");
 		$info->{'config'} = &remote_foreign_config($server,
@@ -858,13 +871,13 @@ while(@pids) {
 	}
 }
 
-# parallel_check_server_status(&servers)
+# parallel_check_server_status(&servers, [re-generate])
 # Checks the status of multiple servers in 10 (by default) processes
 sub parallel_check_server_status
 {
-local ($servers) = @_;
+local ($servers, $regen) = @_;
 &parallel_server_function($servers,
-	sub { &check_server_status($_[0]);
+	sub { &check_server_status($_[0], $regen);
 	      &save_managed_server($_[0]); });
 }
 
@@ -1018,6 +1031,9 @@ local ($out, $rv) = &remote_foreign_call($server, "security-updates",
 		"capture_function_output", "package_install", $p->{'name'});
 if ($last_remote_error) {
 	return $last_remote_error;
+	}
+elsif (ref($rv) && @$rv == 0 || $out =~ /install\s+failed/i) {
+	return $out;
 	}
 else {
 	return $rv;

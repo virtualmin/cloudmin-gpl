@@ -13,7 +13,7 @@ if ($in{'refresh'}) {
 	&ui_print_header(undef, $text{'mass_ftitle'}, "");
 
 	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
-	&parallel_check_server_status(\@servers);
+	&parallel_check_server_status(\@servers, 1);
 	print $text{'mass_fdone'},"<p>\n";
 
 	# And go back to main menu
