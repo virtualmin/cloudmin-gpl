@@ -15,9 +15,15 @@ if (!$in{'new'}) {
 	}
 
 &ui_print_header(&server_in($server), $in{'new'} ? $text{'iface_create'}
-						 : $text{'iface_edit'}, "", "iface");
+						 : $text{'iface_edit'},
+				      "", "iface");
+
+@tds = ( "width=30%" );
 print &ui_form_start("save_iface.cgi", "post");
-print &ui_table_start($text{'iface_header'}, undef, 2);
+print &ui_hidden("id", $in{'id'});
+print &ui_hidden("idx", $in{'idx'});
+print &ui_hidden("new", $in{'new'});
+print &ui_table_start($text{'iface_header'}, undef, 2, \@tds);
 
 # Parent interface
 if ($in{'new'}) {
@@ -35,6 +41,13 @@ else {
 			    "<tt>$iface->{'name'}</tt>");
 	print &ui_table_row($text{'iface_virt'},
 			    "<tt>$iface->{'virtual'}</tt>");
+	$info = &get_server_collected($server);
+	@doms = &get_server_domains($server);
+	if ($info) {
+		($ucode, $use) = &get_interface_use($server, $info,
+						    \@doms, $iface);
+		}
+	print &ui_table_row($text{'iface_use'}, $use);
 	}
 
 # Address

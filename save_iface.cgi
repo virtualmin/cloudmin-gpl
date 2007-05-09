@@ -12,6 +12,62 @@ if (!$in{'new'}) {
 	$ifaces = &$ifunc($server);
 	ref($ifaces) || &error(&text('iface_eget', $ifaces));
 	$iface = $ifaces->[$in{'idx'}];
+	$oldiface = { %$iface };
 	}
 
+if ($in{'delete'}) {
+	# Delete it, but ask first as this may render some site inaccessible
+	&error_setup($text{'iface_derr'});
+	$info = &get_server_collected($server);
+	@doms = &get_server_domains($server);
+	if ($info) {
+		($ucode, $use) = &get_interface_use($server, $info,
+						    \@doms, $iface);
+		}
+	if ($ucode && !$in{'confirm'}) {
+		# Need to ask the user if he is sure
+		&ui_print_header(&server_in($server), $text{'iface_delete'},"");
+		&show_confirm_form(
+			&text('iface_deleterusure', $iface->{'address'}, $use),
+			"save_iface.cgi", [ [ "id", $in{'id'} ],
+					    [ "idx", $in{'idx'} ],
+					    [ "delete", 1 ] ],
+			$text{'iface_deleteok'});
+		&ui_print_footer("edit_serv.cgi?id=$in{'id'}&ifaces=1",
+				 $text{'edit_return'});
+		}
+	else {
+		# Just do it
+		$dfunc = "type_".$server->{'manager'}."_delete_interface";
+		$err = &$dfunc($server, $iface);
+		&error($err) if ($err);
+		&redirect("edit_serv.cgi?id=$in{'id'}&ifaces=1");
+		}
+	}
+else {
+	# Validate inputs
+	&error_setup($text{'iface_err'});
+	if ($in{'new'}) {
+		$iface = { 'name' => $in{'name'} };
+		}
+	if (!$in{'new'} || !$in{'address_def'}) {
+		&check_ipaddress($in{'address'}) ||
+			&error($text{'iface_eaddress'});
+		$iface->{'address'} = $in{'address'};
+		}
+	&check_ipnetmask($in{'netmask'}) || &error($text{'iface_enetmask'});
+	$iface->{'netmask'} = $in{'netmask'};
 
+	# Save or create
+	# XXX how to modify an interface with VServers?
+	if ($in{'new'}) {
+		$cfunc = "type_".$server->{'manager'}."_create_interface";
+		$err = &$cfunc($server, $iface);
+		}
+	else {
+		$cfunc = "type_".$server->{'manager'}."_modify_interface";
+		$err = &$cfunc($server, $iface, $oldiface);
+		}
+	&error($err) if ($err);
+	&redirect("edit_serv.cgi?id=$in{'id'}&ifaces=1");
+	}

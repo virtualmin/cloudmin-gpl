@@ -740,6 +740,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			}
 		$info->{'template'} = &remote_foreign_call($server,
 				"virtual-server", "get_template", 0);
+		$info->{'defip'} = &remote_foreign_call($server,
+				"virtual-server", "get_default_ip");
 
 		# Perform a config check, if we haven't done an OK one yet
 		if (!$server->{'virtualmin_checked'}) {
@@ -1722,11 +1724,28 @@ else {
 }
 
 # get_interface_use(&server, &info, &domains, &iface)
-# Returns a string describing what some interface is for
+# Returns a code and string describing what some interface is for. Codes
+# are 0=none, 1=default IP for Virtualmin, 2=For domain
 sub get_interface_use
 {
-# XXX
-return undef;
+local ($server, $info, $doms, $iface) = @_;
+if ($iface->{'address'} eq $info->{'defip'}) {
+	return (1, $text{'iface_default'});
+	}
+else {
+	local @ipdoms = grep { $_->{'ip'} eq $iface->{'address'} } @$doms;
+	if (@ipdoms) {
+		return (1, @ipdoms > 5 ? &text('iface_many', scalar(@ipdoms)) :
+			&text('iface_doms', 
+			      join(", ", map { $_->{'dom'} } @ipdoms)) );
+		}
+	elsif ($iface->{'address'} eq &to_ipaddress($server->{'host'})) {
+		return (1, $text{'iface_primary'});
+		}
+	else {
+		return (0, $text{'iface_nothing'});
+		}
+	}
 }
 
 1;

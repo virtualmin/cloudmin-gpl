@@ -285,25 +285,30 @@ if ($status eq 'virt' || @doms) {
 $ifunc = "type_".$t."_list_interfaces";
 if (defined(&$ifunc)) {
 	print &ui_hidden_table_start($text{'edit_iheader'}, "width=100%", 2,
-				     "ifaces", 0, \@tds);
+				     "ifaces", $in{'ifaces'}, \@tds);
 	$ifaces = &$ifunc($server);
 	@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".
 		    "$text{'edit_ifaceadd'}</a>" );
 	print &ui_links_row(\@ilinks);
-	print &ui_columns_start([ $text{'edit_ifacefullname'},
-				  $text{'edit_ifaceaddress'},
+	print &ui_columns_start([ $text{'edit_ifaceaddress'},
+				  $text{'edit_ifacename'},
+				  $text{'edit_ifacenumber'},
 				  $text{'edit_ifacenetmask'},
 				  $info ? ( $text{'edit_ifaceuse'} ) : ( ) ],
 				100);
 	$n = 0;
 	foreach $iface (@$ifaces) {
+		if ($info) {
+			($ucode, $use) = &get_interface_use($server, $info,
+							    \@doms, $iface);
+			}
 		print &ui_columns_row([
 			"<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>".
-			"$iface->{'fullname'}</a>",
-			$iface->{'address'},
+			"$iface->{'address'}</a>",
+			$iface->{'name'},
+			$iface->{'virtual'},
 			$iface->{'netmask'},
-			$info ? ( &get_interface_use($server, $info, \@doms,
-						     $iface) ) : ( ),
+			$info ? ( $use ) : ( ),
 			]);
 		$n++;
 		}
