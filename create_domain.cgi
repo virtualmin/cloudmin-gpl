@@ -25,7 +25,7 @@ push(@args, [ "limits-from-template" ]);
 if ($in{'virt_mode'} == 1) {
 	push(@args, [ "allocate-ip" ]);
 	}
-elsif ($in{'virt_mode'} == 1) {
+elsif ($in{'virt_mode'} == 2) {
 	&check_ipaddress($in{'virt'}) || &error($text{'dcreate_evirt'});
 	push(@args, [ "ip", $in{'virt'} ]);
 	}
@@ -72,6 +72,25 @@ else {
 	($server) = grep { $_->{'id'} eq $in{'server'} } @vservers;
 	}
 $server || &error($text{'dcreate_eserver'});
+
+# If the target server type doesn't allow IP allocation (ie. VServers or Zones), make
+# sure the requested IP is active
+$ifunc = "type_".$server->{'manager'}."_list_interfaces";
+if ($in{'virt_mode'} && defined(&$ifunc)) {
+	if ($in{'virt_mode'} == 1) {
+		# Cannot allocate on server
+		&error(&text('dcreate_ealloc', "<tt>$server->{'host'}</tt>"));
+		}
+	else {
+		# Need to use an existing IP .. make sure it exists
+		$ifaces = &$ifunc($server);
+		ref($ifaces) || &error($ifaces);
+		($got) = grep { $_->{'address'} eq $in{'virt'} } @$ifaces;
+		$got || &error(&text('dcreate_egotvirt', "<tt>$server->{'host'}</tt>",
+							 $in{'virt'}));
+		push(@args,  [ "ip-already" ]);
+		}
+	}
 
 # Make sure the server has the selected features
 $info = &get_server_collected($server);

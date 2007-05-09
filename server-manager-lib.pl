@@ -6,10 +6,12 @@
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX virtual IP management
-#	XXX what if host is down? Should still allow add
-#	XXX used for column
+#	XXX modification
 # XXX command line and remote APIs
 # XXX package install into existing servers
+# XXX mass disable / enable domains
+#	XXX from edit system page too
+#	XXX don't show quotas if system doesn't have them
 
 do '../web-lib.pl';
 &init_config();
@@ -655,7 +657,7 @@ local ($host) = @_;
 local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ?
 			"ping -c 1 -t 1" : "ping";
 local ($out, $timed_out) = &backquote_with_timeout(
-				$pingcmd." ".$host." 2>&1", 5, 1);
+				$pingcmd." ".$host." 2>&1", 2, 1);
 return !$timed_out && !$?;
 }
 
@@ -1043,11 +1045,11 @@ else {
 	}
 }
 
-# show_confirm_form(message, cgi, &hiddens, ok-message)
+# show_confirm_form(message, cgi, &hiddens, ok-message, post-message)
 # Prints a form for confirming some action
 sub show_confirm_form
 {
-local ($msg, $cgi, $hiddens, $ok) = @_;
+local ($msg, $cgi, $hiddens, $ok, $post) = @_;
 print "<center>\n";
 print &ui_form_start($cgi, "post");
 foreach my $h (@$hiddens) {
@@ -1055,6 +1057,7 @@ foreach my $h (@$hiddens) {
 	}
 print $msg,"<p>\n";
 print &ui_form_end([ [ "confirm", $ok ] ]);
+print $post,"<p>\n" if ($post);
 print "</center>\n";
 }
 
@@ -1333,9 +1336,9 @@ return @rv;
 sub allocate_ip_address
 {
 local ($startip, $endip) = @_;
+local %used = &used_ip_addresses();
 local $start = &net::ip_to_integer($startip);
 local $end = &net::ip_to_integer($endip);
-local %used = map { &to_ipaddress($_->{'host'}), $_ } &list_managed_servers();
 for(my $n=$start; $n<=$end; $n++) {
 	local $ip = &net::integer_to_ip($n);
 	if (!$used{$ip} && !&ping_server_host($ip)) {
@@ -1343,6 +1346,26 @@ for(my $n=$start; $n<=$end; $n++) {
 		}
 	}
 return undef;
+}
+
+# used_ip_addresses()
+# Returns a hash of all IP addresses used by managed systems
+sub used_ip_addresses
+{
+local %used;
+foreach my $s (&list_managed_servers()) {
+	$used{&to_ipaddress($s->{'host'})} = $s;
+	local $ifunc = "type_".$s->{'manager'}."_list_interfaces";
+	if (defined(&$ifunc)) {
+		local $ifaces = &$ifunc($s);
+		if (ref($ifaces)) {
+			foreach my $iface (@$ifaces) {
+				$used{$iface->{'address'}} = $s;
+				}
+			}
+		}
+	}
+return %used;
 }
 
 # get_server_package_system(&server)
@@ -1735,9 +1758,12 @@ if ($iface->{'address'} eq $info->{'defip'}) {
 else {
 	local @ipdoms = grep { $_->{'ip'} eq $iface->{'address'} } @$doms;
 	if (@ipdoms) {
-		return (1, @ipdoms > 5 ? &text('iface_many', scalar(@ipdoms)) :
+		return (1,
+			@ipdoms > 5 ? &text('iface_many', scalar(@ipdoms)) :
+			@ipdoms == 1 ? &text('iface_dom', 
+					     "<tt>$ipdoms[0]->{'dom'}</tt>") :
 			&text('iface_doms', 
-			      join(", ", map { $_->{'dom'} } @ipdoms)) );
+		          join(", ", map { "<tt>$_->{'dom'}</tt>" } @ipdoms)) );
 		}
 	elsif ($iface->{'address'} eq &to_ipaddress($server->{'host'})) {
 		return (1, $text{'iface_primary'});

@@ -27,22 +27,26 @@ if ($in{'search'}) {
 	# Show results, if any
 	if (@doms) {
 		print &text('domains_matches', scalar(@doms)),"<br>\n";
-		print &ui_columns_start([ $text{'domains_dom'},
+		print &ui_form_start("mass_domains.cgi", "post");
+		print &ui_columns_start([ "",
+					  $text{'domains_dom'},
 					  $text{'domains_server'},
 					  $text{'domains_type'},
 					  $text{'domains_desc'},
 					  $text{'domains_quota'},
-					  $text{'domains_uquota'} ]);
+					  $text{'domains_uquota'} ], 100, 0, \@tds);
 		foreach $d (@doms) {
 			$server = $d->{'_server'};
 			$bs = &get_server_blocksize($server);
 			$info = &get_server_collected($server);
 			($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
 					 @{$info->{'quota'}};
-			print &ui_columns_row([
+			$di1 = $d->{'disabled'} ? "<i>" : "";
+			$di2 = $d->{'disabled'} ? "</i>" : "";
+			print &ui_checked_columns_row([
 				&domain_link($server, $d),
 				"<a href='edit_serv.cgi?id=$server->{'id'}'>".
-				 "$server->{'host'}</a>",
+				 $di1.$server->{'host'}.$di2."</a>",
 				$d->{'alias'} ? $text{'domains_alias'} :
 				 $d->{'subdom'} ? $text{'domains_subdom'} :
 				 $d->{'parent'} ? $text{'domains_sub'} :
@@ -51,9 +55,12 @@ if ($in{'search'}) {
 				$d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
 					      : $text{'domains_unlimited'},
 				$dquota ? &nice_size($dquota->[1]) : "",
-				]);
+				], \@tds, "d", $server->{'id'}."/".$d->{'id'});
 			}
 		print &ui_columns_end();
+		print &ui_form_end([ [ "delete", $text{'domains_delete'} ],
+				     [ "disable", $text{'domains_disable'} ],
+				     [ "enable", $text{'domains_enable'} ] ]);
 		}
 	else {
 		print "<b>$text{'domains_none'}</b><p>\n";

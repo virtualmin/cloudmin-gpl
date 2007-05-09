@@ -35,6 +35,7 @@ if ($in{'new'}) {
 	print &ui_table_row($text{'iface_parent'},
 		    &ui_select("name", undef,
 			[ map { [ $_->{'fullname'} ] } @$parents ]));
+	$iface->{'netmask'} = $parents->[0]->{'netmask'};
 	}
 else {
 	print &ui_table_row($text{'iface_parent'},

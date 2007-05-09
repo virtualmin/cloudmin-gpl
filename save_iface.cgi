@@ -54,8 +54,17 @@ else {
 		&check_ipaddress($in{'address'}) ||
 			&error($text{'iface_eaddress'});
 		$iface->{'address'} = $in{'address'};
+		if ($in{'new'} ||
+		    $iface->{'address'} ne $oldiface->{'address'}) {
+			# New or changed .. check for clash
+			%used = &used_ip_addresses();
+			$u = $used{$iface->{'address'}};
+			$u && &error(&text('iface_eclash', $u->{'host'}));
+			&ping_server_host($iface->{'address'}) &&
+				&error(&text('iface_eclash2'));
+			}
 		}
-	&check_ipnetmask($in{'netmask'}) || &error($text{'iface_enetmask'});
+	&check_ipaddress($in{'netmask'}) || &error($text{'iface_enetmask'});
 	$iface->{'netmask'} = $in{'netmask'};
 
 	# Save or create
