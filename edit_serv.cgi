@@ -295,6 +295,7 @@ if (defined(&$ifunc)) {
 				  $text{'edit_ifacenetmask'},
 				  $info ? ( $text{'edit_ifaceuse'} ) : ( ) ],
 				100);
+	$n = 0;
 	foreach $iface (@$ifaces) {
 		print &ui_columns_row([
 			"<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>".
@@ -304,6 +305,7 @@ if (defined(&$ifunc)) {
 			$info ? ( &get_interface_use($server, $info, \@doms,
 						     $iface) ) : ( ),
 			]);
+		$n++;
 		}
 	print &ui_columns_end();
 	print &ui_links_row(\@ilinks);

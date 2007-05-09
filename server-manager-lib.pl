@@ -6,8 +6,10 @@
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX virtual IP management
+#	XXX what if host is down? Should still allow add
+#	XXX used for column
 # XXX command line and remote APIs
-# XXX package install after creation
+# XXX package install into existing servers
 
 do '../web-lib.pl';
 &init_config();
@@ -1724,6 +1726,7 @@ else {
 sub get_interface_use
 {
 # XXX
+return undef;
 }
 
 1;

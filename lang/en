@@ -561,3 +561,14 @@ feature_all=All systems
 feature_many=$1 systems
 features_err=Failed to save default features
 features_enone=None selected
+
+iface_create=Add Network Interface
+iface_edit=Edit Network Interface
+iface_header=Virtual system network interface details
+iface_parent=Host system interface
+iface_address=IP address
+iface_netmask=Netmask
+iface_alloc=Allocate automatically
+iface_virt=Virtual interface number
+iface_eget=Failed to get list of network interfaces : $1
+iface_egetparents=Failed to get a list of host system interfaces : $1
