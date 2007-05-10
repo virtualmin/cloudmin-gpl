@@ -5,8 +5,6 @@
 #	XXX show normal root password field for vservers
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
-# XXX virtual IP management
-#	XXX modification
 # XXX command line and remote APIs
 # XXX package install into existing servers
 

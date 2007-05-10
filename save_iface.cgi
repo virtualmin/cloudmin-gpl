@@ -68,14 +68,13 @@ else {
 	$iface->{'netmask'} = $in{'netmask'};
 
 	# Save or create
-	# XXX how to modify an interface with VServers?
 	if ($in{'new'}) {
 		$cfunc = "type_".$server->{'manager'}."_create_interface";
 		$err = &$cfunc($server, $iface);
 		}
 	else {
-		$cfunc = "type_".$server->{'manager'}."_modify_interface";
-		$err = &$cfunc($server, $iface, $oldiface);
+		$mfunc = "type_".$server->{'manager'}."_modify_interface";
+		$err = &$mfunc($server, $iface, $oldiface);
 		}
 	&error($err) if ($err);
 	&redirect("edit_serv.cgi?id=$in{'id'}&ifaces=1");
