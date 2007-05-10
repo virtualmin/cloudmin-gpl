@@ -122,6 +122,11 @@ else {
 	print $text{'dcreate_statusok'},"<p>\n";
 	}
 
-&ui_print_footer("list_domains.cgi", $text{'domains_return'},
-		 "", $text{'index_return'});
+if ($in{'create'} && $in{'server'} >= 0) {
+	&ui_print_footer("edit_serv.cgi?id=$in{'server'}&doms=1",
+			 $text{'edit_return'});
+	}
+else {
+	&ui_print_footer("list_domains.cgi", $text{'domains_return'});
+	}
 

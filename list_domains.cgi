@@ -26,8 +26,11 @@ if ($in{'search'}) {
 
 	# Show results, if any
 	if (@doms) {
-		print &text('domains_matches', scalar(@doms)),"<br>\n";
+		print &text('domains_matches', scalar(@doms)),"<p>\n";
+		@links = ( &select_all_link("d", 1), &select_invert_link("d", 1) );
+		@tds = ( "width=5" );
 		print &ui_form_start("mass_domains.cgi", "post");
+		print &ui_links_row(\@links);
 		print &ui_columns_start([ "",
 					  $text{'domains_dom'},
 					  $text{'domains_server'},
@@ -39,26 +42,34 @@ if ($in{'search'}) {
 			$server = $d->{'_server'};
 			$bs = &get_server_blocksize($server);
 			$info = &get_server_collected($server);
-			($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
-					 @{$info->{'quota'}};
+			if ($info->{'quota'}) {
+				($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
+						 @{$info->{'quota'}};
+				}
 			$di1 = $d->{'disabled'} ? "<i>" : "";
 			$di2 = $d->{'disabled'} ? "</i>" : "";
 			print &ui_checked_columns_row([
-				&domain_link($server, $d),
+				$di1.&domain_link($server, $d).$di2,
 				"<a href='edit_serv.cgi?id=$server->{'id'}'>".
-				 $di1.$server->{'host'}.$di2."</a>",
+				 $server->{'host'}."</a>",
 				$d->{'alias'} ? $text{'domains_alias'} :
 				 $d->{'subdom'} ? $text{'domains_subdom'} :
 				 $d->{'parent'} ? $text{'domains_sub'} :
 						  $text{'domains_top'},
 				$d->{'owner'},
-				$d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
-					      : $text{'domains_unlimited'},
-				$dquota ? &nice_size($dquota->[1]) : "",
+				$info->{'quota'} ? (
+				    $d->{'parent'} ? $text{'domains_fromparent'} :
+				    $d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
+					          : $text{'domains_unlimited'},
+				    $dquota ? &nice_size($dquota->[1]) : "") :
+				    ( $text{'domains_unlimited'},
+				      $text{'domains_unknown'} )
 				], \@tds, "d", $server->{'id'}."/".$d->{'id'});
 			}
 		print &ui_columns_end();
+		print &ui_links_row(\@links);
 		print &ui_form_end([ [ "delete", $text{'domains_delete'} ],
+				     undef,
 				     [ "disable", $text{'domains_disable'} ],
 				     [ "enable", $text{'domains_enable'} ] ]);
 		}
@@ -70,10 +81,11 @@ if ($in{'search'}) {
 # Creation form (hidden by default). For top-level servers only, limited options
 @vservers = grep { !$_->{'novirt'} &&
 		   $_->{'virtualmin_checked'} } @vservers;
-print &ui_hidden_start($text{'domains_hidden'}, "create", 0,
+print &ui_hidden_start($text{'domains_hidden'}, "create", $in{'create'},
 		       "list_domains.cgi");
 print $text{'domains_desc2'},"<p>\n";
 print &ui_form_start("create_domain.cgi", "post");
+print &ui_hidden("create", $in{'create'});
 print &ui_table_start($text{'domains_header'}, undef, 2);
 
 # Domain name, description, password (the core fields)
@@ -86,7 +98,7 @@ print &ui_table_row($text{'domains_cpass'},
 
 # Server to create on
 print &ui_table_row($text{'domains_cserver'},
-	&ui_select("server", -1,
+	&ui_select("server", $in{'create'} ? $in{'id'} : -1,
 		   [ [ -1, $text{'domains_cfewest'} ],
 		     [ -2, $text{'domains_cspace'} ],
 		     [ -3, $text{'domains_cload'} ],
@@ -125,5 +137,10 @@ print &ui_form_end([ [ undef, $text{'domains_cok'} ] ]);
 print &ui_hidden_end();
 print "<p>\n";
 
-&ui_print_footer("", $text{'index_return'});
+if ($in{'create'}) {
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}&doms=1", $text{'edit_return'});
+	}
+else {
+	&ui_print_footer("", $text{'index_return'});
+	}
 

@@ -31,6 +31,7 @@ if ($in{'delete'}) {
 		&show_confirm_form(
 			&text('dmass_deleterusure', scalar(@serverdoms)),
 			"mass_domains.cgi", [ (map { [ "d", $_ ] } @d),
+					      [ "id", $in{'id'} ],
 					      [ "delete", 1 ] ],
 			$text{'dmass_deleteok'}, $postmsg);
 		}
@@ -50,20 +51,70 @@ if ($in{'delete'}) {
 			else {
 				print "<pre>",&html_escape($out),"</pre>\n";
 				print $text{'create_done'},"<p>\n";
+				$recheck++;
 				}
 			}
-		$recheck = 1;
 		}
 	}
 
 elsif ($in{'disable'}) {
 	# Disable the domains, after asking for confirmation
-	# XXX
+	&ui_print_header(undef, $text{'dmass_titledisable'},"");
+	if (!$in{'confirm'}) {
+		# Ask first
+		&show_confirm_form(
+			&text('dmass_disablerusure', scalar(@serverdoms)),
+			"mass_domains.cgi", [ (map { [ "d", $_ ] } @d),
+					      [ "id", $in{'id'} ],
+					      [ "disable", 1 ] ],
+			$text{'dmass_disableok'}, $postmsg);
+		}
+	else {
+		# Do them
+		foreach $sd (@serverdoms) {
+			($server, $d) = @$sd;
+			print &text('dmass_disabling', "<tt>$d->{'dom'}</tt>",
+					"<tt>$server->{'host'}</tt>"),"<br>\n";
+			@args = ( [ "domain", $d->{'dom'} ] );
+			($err, $out) = &call_virtualmin_api($server, "disable-domain",
+							    \@args);
+			if ($err) {
+				print &text('dcreate_failed',
+					    &html_escape($err)),"<p>\n";
+				}
+			else {
+				print "<pre>",&html_escape($out),"</pre>\n";
+				print $text{'create_done'},"<p>\n";
+				$recheck++;
+				}
+			}
+		}
 	}
 
-elsif ($in{'enablee'}) {
+elsif ($in{'enable'}) {
 	# Enable the domains
-	# XXX
+	&ui_print_header(undef, $text{'dmass_titleenable'},"");
+	foreach $sd (@serverdoms) {
+		($server, $d) = @$sd;
+		print &text('dmass_enabling', "<tt>$d->{'dom'}</tt>",
+				"<tt>$server->{'host'}</tt>"),"<br>\n";
+		@args = ( [ "domain", $d->{'dom'} ] );
+		($err, $out) = &call_virtualmin_api($server, "enable-domain",
+						    \@args);
+		if ($err) {
+			print &text('dcreate_failed',
+				    &html_escape($err)),"<p>\n";
+			}
+		else {
+			print "<pre>",&html_escape($out),"</pre>\n";
+			print $text{'create_done'},"<p>\n";
+			$recheck++;
+			}
+		}
+	}
+
+else {
+	&error("No button clicked!");
 	}
 
 if ($recheck) {
@@ -73,4 +124,10 @@ if ($recheck) {
 	&save_managed_server($server);
 	print $text{'dcreate_statusok'},"<p>\n";
 	}
-&ui_print_footer("list_domains.cgi", $text{'domains_return'});
+if ($in{'id'} eq '') {
+	&ui_print_footer("list_domains.cgi", $text{'domains_return'});
+	}
+else {
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}&doms=1", $text{'edit_return'});
+	}
+

@@ -248,34 +248,55 @@ if ($info && scalar(keys %$info) > 1) {
 @doms = &get_server_domains($server);
 if ($status eq 'virt' || @doms) {
 	print &ui_hidden_table_start($text{'edit_dheader'}, "width=100%", 2,
-				     "doms", 0, \@tds);
-
+				     "doms", $in{'doms'}, \@tds);
+	$clink = "<a href='list_domains.cgi?create=1&id=$server->{'id'}'>".
+		 "$text{'edit_domsadd'}</a>";
 	if (@doms) {
 		$bs = &get_server_blocksize($server);
-		print &ui_columns_start([ $text{'domains_dom'},
-					  $text{'domains_type'},
-					  $text{'domains_desc'},
-					  $text{'domains_quota'},
-					  $text{'domains_uquota'} ]);
+		@tds = ( "width=5" );
+		@links = ( &select_all_link("d", 1), &select_invert_link("d", 1),
+			   $clink );
+		print &ui_form_start("mass_domains.cgi", "post");
+		print &ui_hidden("id", $in{'id'});
+		print &ui_links_row(\@links);
+		print &ui_columns_start([ "",
+			  $text{'domains_dom'},
+			  $text{'domains_type'},
+			  $text{'domains_desc'},
+			  $info->{'quota'} ? ( $text{'domains_quota'},
+					       $text{'domains_uquota'} ) : ( ),
+			  ], 100, 0, \@tds);
 		foreach $d (sort { $a->{'dom'} cmp $b->{'dom'} } @doms) {
-			($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
-					 @{$info->{'quota'}};
-			print &ui_columns_row([
-				&domain_link($server, $d),
+			if ($info->{'quota'}) {
+				($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
+						 @{$info->{'quota'}};
+				}
+			$di1 = $d->{'disabled'} ? "<i>" : "";
+			$di2 = $d->{'disabled'} ? "</i>" : "";
+			print &ui_checked_columns_row([
+				$di1.&domain_link($server, $d).$di2,
 				$d->{'alias'} ? $text{'domains_alias'} :
 				 $d->{'subdom'} ? $text{'domains_subdom'} :
 				 $d->{'parent'} ? $text{'domains_sub'} :
 						  $text{'domains_top'},
 				$d->{'owner'},
-				$d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
-					      : $text{'domains_unlimited'},
-				$dquota ? &nice_size($dquota->[1]) : "",
-				]);
+			        $info->{'quota'} ? (
+				   $d->{'parent'} ? $text{'domains_fromparent'} :
+				   $d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
+					         : $text{'domains_unlimited'},
+				   $dquota ? &nice_size($dquota->[1]) : "" ) : ( ),
+				], \@tds, "d", $server->{'id'}."/".$d->{'id'});
 			}
 		print &ui_columns_end();
+		print &ui_links_row(\@links);
+		print &ui_form_end([ [ "delete", $text{'domains_delete'} ],
+				     undef,
+				     [ "disable", $text{'domains_disable'} ],
+				     [ "enable", $text{'domains_enable'} ] ]);
 		}
 	else {
-		print &ui_table_row(undef, "<b>$text{'edit_nodoms'}</b>", 2);
+		print &ui_table_row(undef, "<b>$text{'edit_nodoms'}</b><p>".
+					   $clink, 2);
 		}
 
 	print &ui_hidden_table_end("doms");

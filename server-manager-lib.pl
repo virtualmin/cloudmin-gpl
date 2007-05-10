@@ -9,9 +9,6 @@
 #	XXX modification
 # XXX command line and remote APIs
 # XXX package install into existing servers
-# XXX mass disable / enable domains
-#	XXX from edit system page too
-#	XXX don't show quotas if system doesn't have them
 
 do '../web-lib.pl';
 &init_config();
