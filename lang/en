@@ -22,9 +22,9 @@ ec2s_title=EC2 Accounts
 real_desc=Physical system
 real_add=Add physical system.
 
-zones_desc=Solaris Zone
-zones_create=Create Solaris Zone.
-zones_add=Add existing Solaris Zone.
+zones_typedesc=Solaris Zone
+zones_createlink=Create Solaris Zone.
+zones_addlink=Add Solaris Zone.
 
 add_title=Add Existing System
 add_header=Details of existing system to add
@@ -71,6 +71,10 @@ add_evserverinstance2=The selected VServer instance does not exist on $1
 add_vchecking=Checking Virtualmin configuration ..
 add_vcheckok=.. all OK.
 add_vcheckerr=.. errors found : $1
+add_zonehost=Solaris Zones hosting system
+add_zoneinstance=Zone name
+add_ezoneinstance=No Zone name entered
+add_ezoneinstance2=The selected Solaris Zone does not exist on $1
 
 create_title=Create New System
 create_header=Details of new virtual system
@@ -116,6 +120,8 @@ create_vservernopass=Don't set any
 create_vserveretc=Setting up VServer system configuration files ..
 create_done=.. done
 create_vserversetpass=Setting VServer system root password ..
+create_vserversetkey=Copying SSH key to VServer's root account ..
+create_vserversetkeyfailed=.. failed : $1
 create_vserverdns=Adding DNS entry $1 for IP address $2 ..
 create_vserverdnsalready=.. already in DNS zone!
 create_vserverpkg=Installing packages $1 ..
@@ -527,6 +533,16 @@ vchooser_state=State
 vchooser_unuse=<font color=#ff0000>Managed host $1</font>
 vchooser_free=Not yet managed
 
+zchooser_title=Select Solaris Zone
+zchooser_elogin=Failed to fetch Zones : $1
+zchooser_enone=The selected system has no Solaris Zones
+zchooser_name=Zone name
+zchooser_id=Zone ID
+zchooser_status=Status
+zchooser_state=State
+zchooser_unuse=<font color=#ff0000>Managed host $1</font>
+zchooser_free=Not yet managed
+
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
 pkg_bind=BIND DNS server
@@ -615,3 +631,47 @@ dmass_titledisable=Disable Virtualmin Domains
 dmass_disabling=Disabling $1 on system $2 ..
 dmass_disablerusure=Are you sure you want to disable the $1 selected Virtualmin domains? No data will be lost, but they will be in-accessible until re-enabled.
 dmass_disableok=Yes, Disable Now
+
+zones_title=Solaris Zones Host Systems
+zones_add=Register a system for Solaris Zones hosting.
+zones_host=System hostname
+zones_os=OS
+zones_users=Hosted systems
+zones_nousers=None
+zones_manyusers=$1 systems
+zones_doneall=All possible systems have already been registered for Solaris Zones hosting.
+zones_none=No systems have been registered for Solaris Zones hosting yet.
+zones_none2=None of the registered systems can host Solaris Zones.
+zones_return=list of Solaris Zones hosts
+zones_dir=Base directory
+
+zone_create=Register Solaris Zones Host
+zone_edit=Edit Solaris Zones Host
+zone_egone=The Solaris Zones host no longer exists!
+zone_header=Solaris Zones host system details
+zone_host=System hosting zones
+zone_dir=Base directory for zones
+zone_domain=Add systems in zones to DNS domain
+zone_domain2=DNS domain for systems in zones<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
+zone_range=IP address allocation range
+zone_startend=$1 to $2 / $3
+zone_iface=Base network interface
+zone_ether=First ethernet interface
+zone_auto=Decide automatically
+zone_reg=Register
+zone_unreg=De-Register
+zone_err=Failed to save Solaris Zones host
+zone_esolaris=Zones are only supported on Solaris 9 and above
+zone_edown=A system which cannot be contacted via SSH cannot be used for Solaris Zones hosting
+zone_ewebmin=Webmin is not installed or is not accessible - it is required to configure Solaris Zones
+zone_esoft=The selected system cannot support Solaris Zones : $1
+zone_ewebminmod=The Solaris Zones Webmin module is not installed
+zone_ewebminmod2=The Solaris Zones Webmin module cannot find the commands it needs - perhaps the Zones software is not installed?
+zone_edir=The specified base directory does not exist
+zone_ezone=Missing or invalid-looking DNS domain
+zone_estart=Missing or invalid starting IP address for allocation
+zone_eend=Missing or invalid ending IP address for allocation
+zone_ecidr=Missing or invalid network size for allocation - must be a number like 16 or 24
+zone_erange=The starting IP address must be before the ending address
+zone_eiface=Missing or invalid-looking base network interface
+

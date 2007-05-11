@@ -86,7 +86,7 @@ if ($server->{'user'}) {
 	$server->{'type'} = &os_to_server_type($os, $realos);
 	}
 else {
-	$server->{'type'} = 'unknown';
+	$server->{'type'} ||= 'unknown';
 	}
 
 # Get status one more time, and save the server object

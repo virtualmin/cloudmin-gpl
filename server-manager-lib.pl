@@ -1,12 +1,17 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX search if too many servers
 # XXX grouping
-# XXX kvm or vservers
-#	XXX show normal root password field for vservers
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX command line and remote APIs
 # XXX package install into existing servers
+# XXX xen
+# XXX zones
+#	XXX install pkg-get after create/add
+#	XXX reboot and shutdown
+#	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
+# XXX EC2 firewall ports (10001+)
+# XXX remove Webmin before installing Virtualmin?
 
 do '../web-lib.pl';
 &init_config();
@@ -70,6 +75,7 @@ $check_licence_cmd = "$module_config_directory/licence.pl";
 %webmin_download_source = (
 	'rpm' => 'http://www.webmin.com/download/rpm/webmin-current.rpm',
 	'dpkg' => 'http://www.webmin.com/download/deb/webmin-current.deb',
+	'pkgadd' => 'http://www.webmin.com/download/webmin-current.pkg.gz',
 	'tgz' => 'http://www.webmin.com/download/webmin-current.tar.gz',
 	);
 
@@ -463,7 +469,6 @@ eval {
 	local ($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
 		local $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
-		$out .= $wait_for_input;
 		if ($rv == 0) {
 			syswrite($fh, "$pass\n");
 			}
@@ -480,6 +485,9 @@ eval {
 		elsif ($rv < 0) {
 			last;
 			}
+		else {
+			$out .= $wait_for_input;
+			}
 		}
 	alarm(0);
 	close($fh);
@@ -494,6 +502,7 @@ if ($@) {
 		return (3, $@);
 		}
 	}
+$out =~ s/^\s*\r?\n//;	# Remove empty line at start
 if ($wrong_password) {
 	return (2, $out);
 	}
@@ -1201,6 +1210,10 @@ elsif ($type eq "dpkg") {
 		}
 	}
 
+elsif ($type eq "pkgadd") {
+	# Download Solaris package and install it
+	}
+
 elsif ($type eq "tgz") {
 	# Download the tgz file, then run setup.sh. If we know the SSH
 	# password, we can configure Webmin to use it .. otherwise, the 
@@ -1382,7 +1395,7 @@ if ($server->{'pass'}) {
 	}
 if (!$pkg || !$update) {
 	# No luck .. check what commands it has
-	foreach my $cmd ("rpm", "dpkg") {
+	foreach my $cmd ("rpm", "dpkg", "pkgadd") {
 		if (&has_command_on_server($server, $cmd)) {
 			$pkg = $cmd;
 			last;
@@ -1391,10 +1404,15 @@ if (!$pkg || !$update) {
 	foreach my $cmd ("apt-get", "yum", "up2date", "pkg-get") {
 		if (&has_command_on_server($server, $cmd)) {
 			$update = $cmd eq "up2date" ? "rhn" :
-				  $cmd eq "pkg-get" ? "csw" : $cmd;
+				  $cmd eq "pkg-get" ? "csw" :
+				  $cmd eq "apt-get" ? "apt" : $cmd;
 			last;
 			}
 		}
+	}
+if ((!$os || $os eq 'unknown') && $server->{'manager'} eq 'zones') {
+	# Zones are always Solaris
+	$os = "solaris";
 	}
 if (!$os || $os eq 'unknown') {
 	# Could not get OS, so check useful system files
