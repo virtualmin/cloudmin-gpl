@@ -17,8 +17,14 @@ print &ui_hidden("id", $in{'id'});
 print &ui_hidden_table_start($text{'edit_bheader'}, "width=100%", 2,
 			     "basic", 1, \@tds);
 
-# Hostname
-print &ui_table_row($text{'edit_host'}, "<tt>$server->{'host'}</tt>");
+# Hostname (editable for anything except this host)
+if ($server->{'id'} != 0) {
+	print &ui_table_row($text{'edit_host'},
+			    &ui_textbox("host", $server->{'host'}, 50));
+	}
+else {
+	print &ui_table_row($text{'edit_host'}, "<tt>$server->{'host'}</tt>");
+	}
 
 # System type
 $t = $server->{'manager'};

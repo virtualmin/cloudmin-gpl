@@ -196,6 +196,12 @@ else {
 	# Validate inputs, and save details
 	&error_setup($text{'save_err'});
 	if ($server->{'id'} != 0) {
+		$oldip = &to_ipaddress($server->{'host'});
+		$newip = &to_ipaddress($in{'host'});
+		if ($oldip && $oldip ne $newip) {
+			&error($text{'save_ehost'});
+			}
+		$server->{'host'} = $in{'host'};
 		$server->{'desc'} = $in{'desc'};
 		}
 	$server->{'type'} = $in{'type'};
