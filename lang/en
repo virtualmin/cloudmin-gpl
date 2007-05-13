@@ -139,6 +139,8 @@ create_ezonehost=The hostname for a Zone cannot contain a . , as the domain name
 create_ezoneclash=A Zone with the same name already exists
 create_ezoneiface=Could not find an Ethernet interface on the host system
 create_ezonecreate=Zone creation function failed!
+create_zonesvccfg=Waiting for system configuration to complete ..
+create_zonesvctimeout=.. gave up waiting after 10 minutes.
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
@@ -529,7 +531,7 @@ vserver_eiface=Missing or invalid-looking base network interface
 vserver_edist=Missing or invalid-looking distribution code - should be like <tt>sarge</tt> or <tt>fc5</tt>
 
 vserver_createlink=Create VServer.
-vserver_addlink=Add existing VServer.
+vserver_addlink=Add VServer.
 
 vchooser_title=Select VServer Instance
 vchooser_elogin=Failed to fetch VServers : $1

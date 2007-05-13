@@ -9,6 +9,7 @@
 # XXX zones
 #	XXX create a zone
 #	XXX install pkg-get after create/add
+#	XXX sysidcfg doesn't fully work
 #	XXX pkgadd -d URL works
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
 # XXX EC2 firewall ports (10001+)
@@ -609,15 +610,29 @@ sub has_command_on_server
 {
 local ($server, $cmd) = @_;
 local ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd");
-if ($ex) {
+print "has=$cmd ex=$ex out=$out<br>\n";
+if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 	# Failed .. but maybe we don't even have the which command??
 	if ($out =~ /which:\s+command\s+not\s+found/i) {
-		# No .. which path manually
-		($out, $ex, $err) = &execute_command_on_server($server,
-			"for p in `echo \$PATH | sed -e 's/:/ /g'`; do if [ -r \"\$p/$cmd\" ]; then echo \"\$p/$cmd\"; fi; done");
-		if ($out !~ /^\S+\/\Q$cmd\E/) {
-			# That failed too :(
-			return undef;
+		if ($cmd =~ /^\//) {
+			# Full path given, so just look for it
+			local (undef, $tex, undef) = &execute_command_on_server(
+				$server, "test -x $cmd");
+			if (!$tex) {
+				$out = $cmd;
+				}
+			else {
+				return undef;
+				}
+			}
+		else {
+			# Search PATH manually
+			($out, $ex, $err) = &execute_command_on_server($server,
+				"for p in `echo \$PATH | sed -e 's/:/ /g'`; do if [ -r \"\$p/$cmd\" ]; then echo \"\$p/$cmd\"; fi; done");
+			if ($out !~ /^\S+\/\Q$cmd\E/) {
+				# That failed too :(
+				return undef;
+				}
 			}
 		}
 	else {
@@ -1151,7 +1166,10 @@ local $type;
 
 # Check what package system the host uses
 local ($type, $update, $os) = &get_server_package_system($server);
-$type ||= "tgz";
+if (!$type || $type eq "pkgadd") {
+	# Don't use Solaris package of Webmin, as upgrading sucks
+	$type = "tgz";
+	}
 
 # Work out download URL
 local $source = $config{'download_'.$type} ||
@@ -1177,6 +1195,9 @@ if (!&has_command_on_server($server, "perl") ||
 							     "perl", "wget");
 	if (!$pstatus && $pout) {
 		return ($pout, "Failed to install required packages");
+		}
+	elsif (!$pstatus) {
+		return (undef, "Perl and Wget are required to install Webmin, but cannot be automatically installed");
 		}
 	}
 
@@ -1211,19 +1232,17 @@ elsif ($type eq "dpkg") {
 		}
 	}
 
-elsif ($type eq "pkgadd") {
-	# Download Solaris package and install it
-	}
-
-elsif ($type eq "tgz") {
+elsif ($type eq "tgz" || $type eq "pkgadd") {
 	# Download the tgz file, then run setup.sh. If we know the SSH
 	# password, we can configure Webmin to use it .. otherwise, the 
 	# password will be set later in the function.
 	$server->{'user'} = 'root';
 	local $crypt = $server->{'ssh_pass'} ? 'x' : 'fixlater';
-	$rootdir = "/usr/local/webmin";
+	local $basedir = $server->{'manager'} eq 'zones' ? "/opt"
+							 : "/usr/local";
+	$rootdir = "$basedir/webmin";
 	local ($wout, $wex, $werr) = &execute_command_on_server($server,
-	    "wget -nv -O $temp $src && cd /usr/local && gunzip -c $temp | tar xf - && echo webmin-*/version && rm -f $temp");
+	    "wget -nv -O $temp $src && cd $basedir && gunzip -c $temp | tar xf - && echo webmin-*/version && rm -f $temp");
 	return (undef, $werr) if ($werr);
 	return ($wout, "Tar file download or extraction failed") if ($wex);
 	local $tardir;
@@ -1234,8 +1253,8 @@ elsif ($type eq "tgz") {
 		return ($wout, "Tar extraction failed");
 		}
 	local ($wout, $wex, $werr) = &execute_command_on_server($server,
-		"config_dir=/etc/webmin var_dir=/var/webmin perl=$perlpath autoos=3 port=10000 login=root crypt=$crypt ssl=0 atboot=1 /usr/local/$tardir/setup.sh $rootdir </dev/null");
-	&execute_command_on_server($server, "rm -rf /usr/local/$tardir");
+		"config_dir=/etc/webmin var_dir=/var/webmin perl=$perlpath autoos=3 port=10000 login=root crypt=$crypt ssl=0 atboot=1 $basedir/$tardir/setup.sh $rootdir </dev/null");
+	&execute_command_on_server($server, "rm -rf $basedir/$tardir");
 	return (undef, $werr) if ($werr);
 	return ($wout, "Setup script failed") if ($wex);
 	$out .= $wout;
@@ -1481,6 +1500,18 @@ elsif ($update eq "yum") {
 	# Use YUM
 	local ($pout, $pex, $perr) = &execute_command_on_server(
 		$server, "yum -y install $names </dev/null");
+	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
+	}
+elsif ($update eq "csw") {
+	# Use blastwave, in full auto mode
+	&execute_command_on_server(
+	    $server, "cp -p /var/pkg-get/admin /var/pkg-get/admin-old");
+	&execute_command_on_server(
+	    $server, "cp -p /var/pkg-get/admin-fullauto /var/pkg-get/admin");
+	local ($pout, $pex, $perr) = &execute_command_on_server(
+		$server, "pkg-get -i $names </dev/null");
+	&execute_command_on_server(
+	    $server, "cp -p /var/pkg-get/admin-old /var/pkg-get/admin");
 	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
 	}
 else {
@@ -1786,6 +1817,27 @@ else {
 		return (0, $text{'iface_nothing'});
 		}
 	}
+}
+
+# create_authorized_key(&server)
+# Add the SSH key selected for this server to root's ~/.ssh/authorized_keys file
+sub create_authorized_key
+{
+local ($server) = @_;
+local ($key) = grep { $_->{'id'} eq $server->{'key'} } &list_ssh_keys();
+local ($roothome, $ex, $err) = &execute_command_on_server($server, "echo ~");
+$roothome =~ s/\r|\n//g;
+$roothome ||= "/root";
+&execute_command_on_server($server,
+	"mkdir $roothome/.ssh ; chmod 700 $roothome/.ssh");
+local $temp = &transname();
+&open_tempfile(AUTH, ">$temp");
+&print_tempfile(AUTH, &generate_public_key($key),"\n");
+&close_tempfile(AUTH);
+&set_ownership_permissions(undef, undef, 0700, $temp);
+local $err = &put_file_to_server($server, $temp,
+				 "$roothome/.ssh/authorized_keys");
+return $err;
 }
 
 1;
