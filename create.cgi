@@ -101,27 +101,36 @@ if (defined(&$dfunc)) {
 
 if (!$no_ssh) {
 	# Wait at most 60 seconds for SSH to come up (indicating that booting
-	# is done)
-	print $text{'create_sshing'};
-	$sshcount = 0;
-	while(1) {
-		($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
-			&check_server_ssh_login($server);
-		if ($sshstatus == 0) {
-			print "<br>\n";
-			print $text{'create_sshdone'},"<p>\n";
-			last;
+	# is done), if need be
+	$bfunc = "type_".$in{'type'}."_needs_boot";
+	if (defined(&$bfunc) && &$bfunc($server)) {
+		# Check in a loop until SSH is available
+		print $text{'create_sshing'};
+		$sshcount = 0;
+		while(1) {
+			($sshstatus, $ssherr, $webmindir, $webminport,
+			 $webminssl) = &check_server_ssh_login($server);
+			if ($sshstatus == 0) {
+				print "<br>\n";
+				print $text{'create_sshdone'},"<p>\n";
+				last;
+				}
+			elsif ($sshcount > 60) {
+				print "<br>\n";
+				print &text('create_sshfailed', 60, $ssherr),"<p>\n";
+				last;
+				}
+			else {
+				print ".";
+				}
+			$sshcount++;
+			sleep(1);
 			}
-		elsif ($sshcount > 60) {
-			print "<br>\n";
-			print &text('create_sshfailed', 60, $ssherr),"<p>\n";
-			last;
-			}
-		else {
-			print ".";
-			}
-		$sshcount++;
-		sleep(1);
+		}
+	else {
+		# Just check once to get Webmin root, if any
+		($sshstatus, $ssherr, $webmindir, $webminport,
+		   $webminssl) = &check_server_ssh_login($server);
 		}
 	}
 
