@@ -104,12 +104,13 @@ if ($hasssh) {
 
 # Webmin
 if ($haswebmin) {
+	$s = $server->{'ssh_pass_same'};
 	print &ui_table_row($text{'edit_wauth'},
-	    &ui_radio("webmin_mode", $server->{'ssh_pass_same'} ? 1 : 2,
+	    &ui_radio("webmin_mode", $s ? 1 : 2,
 	      [ [ 1, $text{'add_webmin1'}."<br>" ],
 	        [ 2, &text('add_webmin2',
-		           &ui_textbox("wuser", $server->{'user'}, 20),
-		           &ui_textbox("wpass", $server->{'pass'}, 20)) ] ]));
+		   &ui_textbox("wuser", $s ? "" : $server->{'user'}, 20),
+		   &ui_textbox("wpass", $s ? "" : $server->{'pass'}, 20)) ] ]));
 	}
 
 if ($haswebmin || $hasssh) {

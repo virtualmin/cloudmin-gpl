@@ -9,7 +9,7 @@
 # XXX zones
 #	XXX create a zone
 #	XXX install pkg-get after create/add
-#	XXX sysidcfg doesn't fully work
+#	XXX sysidcfg doesn't fully work (but does for fromold)
 #	XXX pkgadd -d URL works
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
 # XXX EC2 firewall ports (10001+)
@@ -1406,6 +1406,11 @@ sub get_server_package_system
 {
 local ($server) = @_;
 local ($pkg, $update, $os);
+local $cache = $server_package_system_cache{$server->{'id'}};
+if ($cache) {
+	# Use last checked values
+	return @$cache;
+	}
 if ($server->{'pass'}) {
 	# Ask Webmin first
 	&remote_foreign_require($server, "software", "software-lib.pl");
@@ -1463,6 +1468,7 @@ if (!$os || $os eq 'unknown') {
 			}
 		}
 	}
+$server_package_system_cache{$server->{'id'}} = [ $pkg, $update, $os ];
 return ($pkg, $update, $os);
 }
 
@@ -1481,11 +1487,14 @@ if (-r $lib) {
 	if (!$done_require{$lib}++) {
 		require $lib;
 		}
-	local @newnames;
-	foreach my $n (@names) {
-		push(@newnames, split(/\s+/, &update_system_resolve($n)));
+	if (defined(&update_system_resolve)) {
+		local @newnames;
+		foreach my $n (@names) {
+			push(@newnames,
+			     split(/\s+/, &update_system_resolve($n)));
+			}
+		@names = @newnames;
 		}
-	@names = @newnames;
 	}
 
 local $names = join(" ", map { quotemeta($_) } @names);

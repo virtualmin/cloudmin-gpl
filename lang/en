@@ -141,6 +141,7 @@ create_ezoneiface=Could not find an Ethernet interface on the host system
 create_ezonecreate=Zone creation function failed!
 create_zonesvccfg=Waiting for system configuration to complete ..
 create_zonesvctimeout=.. gave up waiting after 10 minutes.
+create_zonesupgrade=Upgrading all Blastwave packages ..
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
