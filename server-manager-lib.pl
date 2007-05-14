@@ -610,7 +610,6 @@ sub has_command_on_server
 {
 local ($server, $cmd) = @_;
 local ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd");
-print "has=$cmd ex=$ex out=$out<br>\n";
 if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 	# Failed .. but maybe we don't even have the which command??
 	if ($out =~ /which:\s+command\s+not\s+found/i) {
