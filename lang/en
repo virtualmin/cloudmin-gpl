@@ -142,6 +142,9 @@ create_ezonecreate=Zone creation function failed!
 create_zonesvccfg=Waiting for system configuration to complete ..
 create_zonesvctimeout=.. gave up waiting after 10 minutes.
 create_zonesupgrade=Upgrading all Blastwave packages ..
+create_zonepkgget=Downloading and installing Blastwave install program ..
+create_ezonepkggetdown=.. download failed : $1
+create_ezonepkgget=.. install failed : $1
 
 keys_title=Manage SSH Keys
 keys_desc=Key description
