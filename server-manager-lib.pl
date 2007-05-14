@@ -7,11 +7,8 @@
 # XXX package install into existing servers
 # XXX xen
 # XXX zones
-#	XXX install pkg-get after create/add
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
-#	XXX detect existing Webmin in zone, provided by Solaris
-#		XXX and replace!
-#	XXX need 'host down' status
+#	XXX network interfaces for zones
 # XXX EC2 firewall ports (10001+)
 # XXX remove Webmin before installing Virtualmin?
 
@@ -361,8 +358,8 @@ return $text;
 # check_server_ssh_login(&server)
 # Checks if some system can be contacted via SSH, with the login details
 # set in the server object. Returns a status code (0=OK, 1=No connect, 2=No
-# login, 3=Unknown error, 4=Timeout) and an error message, the Webmin root
-# directory (if installed), the Webmin port and the Webmin SSL flag.
+# login, 3=Unknown error, 4=Timeout, 5=Host down) and an error message, the
+# Webmin root directory (if installed), the Webmin port and the Webmin SSL flag.
 sub check_server_ssh_login
 {
 local ($server) = @_;
@@ -700,6 +697,11 @@ if ($status == 2) {
 	$server->{'status_msg'} = $err;
 	return 0;
 	}
+elsif ($status == 5) {
+	$server->{'status'} = 'nohost';
+	$server->{'status_msg'} = $err;
+	return 0;
+	}
 elsif ($status && !$ping) {
 	$server->{'status'} = 'down';
 	$server->{'status_msg'} = $err;
@@ -715,6 +717,14 @@ elsif ($status) {
 if ($webminport && $server->{'id'} != 0) {
 	$server->{'port'} = $webminport;
 	$server->{'ssl'} = $webminssl;
+	if (!$server->{'user'}) {
+		# SSH says we have Webmin, but we don't know the login! Most
+		# likely it was installed behind our back, so assume login is
+		# same as root.
+		$server->{'user'} = 'root';
+		$server->{'pass'} = $server->{'ssh_pass'};
+		$server->{'ssh_pass_same'} = $server->{'ssh_pass'} ? 1 : 0;
+		}
 	}
 
 # If we have a Webmin login, try it

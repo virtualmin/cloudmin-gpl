@@ -118,10 +118,11 @@ if ($haswebmin || $hasssh) {
 	}
 
 # Action buttons at end of form (depends on status)
-if ($status eq 'down' || $status eq 'nossh') {
+if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	# System is down, so we can only save and perhaps startup
 	$sfunc = "type_".$t."_no_startup";
-	$nostart = defined(&$sfunc) && &$sfunc($server);
+	$nostart = defined(&$sfunc) && &$sfunc($server) ||
+		   $status eq 'nohost';
 	print &ui_form_end([
 		  [ "save", $text{'save'} ],
 		  undef,
@@ -311,7 +312,7 @@ if ($status eq 'virt' || @doms) {
 
 # IP addresses, if we can manage them
 $ifunc = "type_".$t."_list_interfaces";
-if (defined(&$ifunc)) {
+if (defined(&$ifunc) && $status ne 'nohost') {
 	print &ui_hidden_table_start($text{'edit_iheader'}, "width=100%", 2,
 				     "ifaces", $in{'ifaces'}, \@tds);
 	$ifaces = &$ifunc($server);
