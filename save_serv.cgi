@@ -208,6 +208,10 @@ else {
 	if (defined($in{'canvirt'})) {
 		$server->{'novirt'} = $in{'canvirt'} ? 0 : 1;
 		}
+	$bfunc = "type_".$t."_set_atboot";
+	if (defined(&$bfunc)) {
+		&$bfunc($server, $in{'atboot'});
+		}
 	$pfunc = "type_".$t."_edit_parse";
 	if (defined(&$pfunc)) {
 		&$pfunc($server, \%in);

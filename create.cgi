@@ -192,6 +192,14 @@ if ($server->{'status'} eq 'virt') {
 	&save_managed_server($server);
 	}
 
+# Enable at boot time, if possible
+$bfunc = "type_".$in{'type'}."_set_atboot";
+if (defined(&$bfunc)) {
+	print $text{'create_atbooting'},"<br>\n";
+	&$bfunc($server, 1);
+	print $text{'create_done'},"<p>\n";
+	}
+
 END:
 &ui_print_footer("", $text{'index_return'});
 

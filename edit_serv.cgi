@@ -43,6 +43,13 @@ print &ui_table_row($text{'edit_type2'},
 		      [ map { [ $_->[0], $_->[1] ] }
 			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
 
+# Start at boot
+$bfunc = "type_".$t."_get_atboot";
+if (defined(&$bfunc)) {
+	print &ui_table_row($text{'edit_atboot'},
+			    &ui_yesno_radio("atboot",&$bfunc($server) ? 1 : 0));
+	}
+
 # Last status
 print &ui_table_row($text{'edit_status'},
 		    &text('edit_statustime', &describe_status($server, 1, 0),
