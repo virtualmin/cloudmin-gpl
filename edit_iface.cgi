@@ -30,7 +30,7 @@ if ($in{'new'}) {
 	$pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
 	$parents = &$pfunc($server);
 	ref($parents) || &error(&text('iface_egetparents', $parents));
-	$parents = [ grep { $_->{'virtual'} eq '' && $_->{'name'} ne 'lo' &&
+	$parents = [ grep { $_->{'virtual'} eq '' && $_->{'name'} !~ /^lo/ &&
                             $_->{'address'} } @$parents ];
 	print &ui_table_row($text{'iface_parent'},
 		    &ui_select("name", undef,

@@ -145,6 +145,10 @@ create_zonesupgrade=Upgrading all Blastwave packages ..
 create_zonepkgget=Downloading and installing Blastwave install program ..
 create_ezonepkggetdown=.. download failed : $1
 create_ezonepkgget=.. install failed : $1
+create_zonessunwebmin=Removing Sun's Webmin package ..
+create_ezonessunwebmin=.. failed! See the error output above.
+create_zonesrootssh=Allowing SSH logins by <tt>root</tt> ..
+create_zonesrootsshok=.. already allowed
 
 keys_title=Manage SSH Keys
 keys_desc=Key description

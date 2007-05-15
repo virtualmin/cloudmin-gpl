@@ -9,6 +9,7 @@
 # XXX zones
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
 #	XXX network interfaces for zones
+#	XXX activate at boot (vservers too)
 # XXX EC2 firewall ports (10001+)
 # XXX remove Webmin before installing Virtualmin?
 
