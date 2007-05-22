@@ -8,8 +8,7 @@
 # XXX xen
 # XXX zones
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
-# XXX EC2 firewall ports (10001+)
-# XXX remove Webmin before installing Virtualmin?
+# XXX new 'status' section on Edit System page
 
 do '../web-lib.pl';
 &init_config();

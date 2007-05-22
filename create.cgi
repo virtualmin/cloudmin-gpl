@@ -142,6 +142,7 @@ if ($webmindir) {
 	$server->{'ssl'} = $webminssl;
 
 	# Forcibly set the password
+	$server->{'user'} ||= 'root';
 	$server->{'pass'} ||= &generate_random_password();
 	print $text{'create_passing'},"<br>\n";
 	$perr = &set_server_webmin_password($server, $webmindir, "root",
