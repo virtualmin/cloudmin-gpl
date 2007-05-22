@@ -8,7 +8,6 @@
 # XXX zones
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
 # XXX new 'status' section on Edit System page
-# XXX locking to prevent concurrent status updates
 
 do '../web-lib.pl';
 &init_config();
@@ -692,6 +691,33 @@ sub check_server_status
 {
 local ($server, $regen) = @_;
 
+# Check if a status update is already happening
+local $file = "$servers::module_config_directory/$server->{'id'}.serv";
+if (&test_lock($file)) {
+	# Already locked .. wait till free, and get new status from file
+	local $c = 0;
+	while(&test_lock($file)) {
+		sleep(1);
+		$c++;
+		if ($c > 120) {
+			# Too slow!
+			&error("Pending status update for $server->{'host'} ".
+			       "took more than 2 minutes");
+			}
+		}
+	local ($newserver) = grep { $_->{'id'} eq $server->{'id'} }
+				  &list_managed_servers();
+	foreach my $k ('statustime', 'status', 'status_msg') {
+		$server->{$k} = $newserver->{$k};
+		}
+	return $server->{'status'} eq 'virt' ||
+	       $server->{'status'} eq 'novirt';
+	}
+else {
+	# Lock to prevent concurrent access
+	&lock_file($file);
+	}
+
 # Do a quick ping
 $server->{'statustime'} = time();
 local $ping = &ping_server_host($server->{'host'});
@@ -702,21 +728,25 @@ local ($status, $err, $webminroot, $webminport, $webminssl) =
 if ($status == 2) {
 	$server->{'status'} = 'nosshlogin';
 	$server->{'status_msg'} = $err;
+	&unlock_file($file);
 	return 0;
 	}
 elsif ($status == 5) {
 	$server->{'status'} = 'nohost';
 	$server->{'status_msg'} = $err;
+	&unlock_file($file);
 	return 0;
 	}
 elsif ($status && !$ping) {
 	$server->{'status'} = 'down';
 	$server->{'status_msg'} = $err;
+	&unlock_file($file);
 	return 0;
 	}
 elsif ($status) {
 	$server->{'status'} = 'nossh';
 	$server->{'status_msg'} = $err;
+	&unlock_file($file);
 	return 0;
 	}
 
@@ -742,6 +772,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		# Webmin replied, but it rejected our login
 		$server->{'status'} = 'nowebminlogin';
 		$server->{'status_msg'} = $err;
+		&unlock_file($file);
 		return 0;
 		}
 	elsif ($status) {
@@ -749,6 +780,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		# un-contactable, or not installed
 		$server->{'status'} = $webminroot ? 'downwebmin' : 'nowebmin';
 		$server->{'status_msg'} = $err;
+		&unlock_file($file);
 		return 0;
 		}
 
@@ -823,6 +855,7 @@ else {
 	$server->{'status_msg'} = undef;
 	}
 
+&unlock_file($file);
 return 1;
 }
 
