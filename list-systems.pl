@@ -81,7 +81,12 @@ if ($multi) {
 			}
 
 		# Show type-specific info
-		# XXX
+		$ifunc = "type_".$s->{'manager'}."_server_info";
+		if (defined(&$ifunc)) {
+			foreach my $i (&$ifunc($s)) {
+				print "    $i->[0]: $i->[1]\n";
+				}
+			}
 
 		# Show collected info
 		if ($info && scalar(keys %$info) > 1) {

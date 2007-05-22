@@ -8,6 +8,7 @@
 # XXX zones
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
 # XXX new 'status' section on Edit System page
+# XXX locking to prevent concurrent status updates
 
 do '../web-lib.pl';
 &init_config();
