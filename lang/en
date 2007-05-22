@@ -1,4 +1,5 @@
-index_none=No managed servers have been registered yet.
+index_none=No managed systems have been registered yet.
+index_nonematched=No managed systems matched your search.
 index_host=Hostname
 index_type=Type
 index_os=OS
@@ -7,11 +8,14 @@ index_desc=Description
 index_dereg=De-Register
 index_delete=Delete
 index_header=Global Options
-index_return=list of managed servers
+index_return=list of managed systems
 index_refresh=Refresh Status
 index_pos=$1 update available
 index_poss=$1 updates available
 index_update=Update Selected
+index_toomany=There are $1 managed systems, which is more than the configured display limit of $2.
+index_search=Show systems matching:
+index_searchok=Search
 
 ec2_typedesc=Amazon EC2
 ec2_createlink=Create EC2 instance.

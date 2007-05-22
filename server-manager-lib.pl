@@ -1,5 +1,4 @@
 # Functions for general setup and management of multiple Virtualmin servers
-# XXX search if too many servers
 # XXX grouping
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
