@@ -104,6 +104,15 @@ if ($config{'show_this'}) {
 return @rv;
 }
 
+# get_managed_server_by(key, value)
+# Returns a list of servers which have a field matching some search key
+sub get_managed_server_by
+{
+local ($key, $value) = @_;
+local @rv = grep { $_->{$key} eq $value } &list_managed_servers();
+return wantarray ? @rv : $rv[0];
+}
+
 # save_managed_server(&server)
 # Create or update a managed server object. It will be added to both this
 # module and Webmin Servers Index
@@ -1853,6 +1862,15 @@ local $temp = &transname();
 local $err = &put_file_to_server($server, $temp,
 				 "$roothome/.ssh/authorized_keys");
 return $err;
+}
+
+# strip_html_tags(html)
+# Removes all HTML tags from a string, returning plain text
+sub strip_html_tags
+{
+local ($html) = @_;
+$html =~ s/<[^>]*>//g;
+return $html;
 }
 
 1;
