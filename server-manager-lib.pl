@@ -7,7 +7,7 @@
 #	XXX install Webmin
 #	XXX install Virtualmin
 #	XXX execute remote command
-#	XXX list SSH keys and EC2 accounts
+#	XXX list EC2 accounts
 # XXX package install into existing servers
 # XXX xen
 # XXX zones
