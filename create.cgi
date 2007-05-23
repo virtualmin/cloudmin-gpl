@@ -6,7 +6,8 @@ require './server-manager-lib.pl';
 &error_setup($text{'create_err'});
 @servers = &list_managed_servers();
 $server = { 'id' => time().$$,
-	    'manager' => $in{'type'} };
+	    'manager' => $in{'type'},
+	    'status' => 'create' };
 
 # Validate inputs, starting with hostname
 if (defined($in{'host'})) {
@@ -46,6 +47,9 @@ elsif ($in{'webmin_mode'} == 2) {
 	$server->{'user'} = 'root';
 	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
 	$server->{'pass'} = $in{'wpass'};
+	}
+if ($webmin_mode) {
+	$server->{'port'} = 10000;
 	}
 $server->{'novirt'} = !$in{'canvirt'};
 $server->{'type'} = 'unknown';

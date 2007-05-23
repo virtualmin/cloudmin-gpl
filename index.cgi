@@ -68,7 +68,8 @@ if (@servers) {
 							: 'index_pos', $pos);
 			}
 		print &ui_checked_columns_row([
-		    "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
+		    $s->{'status'} eq 'create' ? $s->{'host'} :
+		      "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
 		    &$tfunc(),
 		    &describe_os($s->{'type'}),
 		    &describe_status($s, 1, 1).$posdesc,

@@ -267,6 +267,7 @@ status_nowebminlogin=Webmin login failed
 status_novirt=Webmin but no Virtualmin
 status_virt=Running Webmin and Virtualmin
 status_unknown=Unknown
+status_create=Creating
 status_doms=$1 domains
 status_errs=Config errors found
 

@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 # Lists all managed servers
 
-package virtual_server;
+package server_manager;
 $main::no_acl_check++;
 $ENV{'WEBMIN_CONFIG'} ||= "/etc/webmin";
 $ENV{'WEBMIN_VAR'} ||= "/var/webmin";
@@ -19,7 +19,7 @@ while(@ARGV > 0) {
 	if ($a eq "--multiline") {
 		$multi = 1;
 		}
-	elsif ($a eq "--system") {
+	elsif ($a eq "--host") {
 		push(@names, shift(@ARGV));
 		}
 	elsif ($a eq "--type") {
@@ -143,7 +143,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all registered managed systems.\n";
 print "\n";
 print "usage: list-systems.pl   [--multiline]\n";
-print "                         [--system name]*\n";
+print "                         [--host name]*\n";
 print "                         [--type typename]\n";
 exit(1);
 }

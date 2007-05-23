@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 # Updates the status of multiple systems, and displays the results
 
-package virtual_server;
+package server_manager;
 $main::no_acl_check++;
 $ENV{'WEBMIN_CONFIG'} ||= "/etc/webmin";
 $ENV{'WEBMIN_VAR'} ||= "/var/webmin";
@@ -16,10 +16,10 @@ $< == 0 || die "$0 must be run as root";
 # Parse command line
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
-	if ($a eq "--system") {
+	if ($a eq "--host") {
 		push(@names, shift(@ARGV));
 		}
-	elsif ($a eq "--all-systems") {
+	elsif ($a eq "--all-hosts") {
 		$all = 1;
 		}
 	elsif ($a eq "--regenerate") {
@@ -34,7 +34,8 @@ while(@ARGV > 0) {
 if (!$all) {
 	foreach my $n (@names) {
 		$server = &get_managed_server_by("host", $n);
-		push(@servers, $server) if ($server);
+		$server || &usage("No system with hostname $n exists");
+		push(@servers, $server);
 		}
 	}
 else {
@@ -54,7 +55,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Refreshes the status of some or all managed systems.\n";
 print "\n";
-print "usage: refresh-systems.pl [--all-systems] | [--system name]*\n";
+print "usage: refresh-systems.pl [--all-hosts] | [--host name]*\n";
 print "                          [--regenerate]*\n";
 exit(1);
 }

@@ -3,6 +3,11 @@
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX command line and remote APIs
+#	XXX create zones and ec2
+#	XXX install Webmin
+#	XXX install Virtualmin
+#	XXX execute remote command
+#	XXX list SSH keys and EC2 accounts
 # XXX package install into existing servers
 # XXX xen
 # XXX zones
@@ -85,6 +90,8 @@ $virtualmin_licence_ssl = 0;
 
 @virtualmin_operating_systems = ( "debian", "ubuntu", "redhat", "fedora",
 				  "centos" );
+
+&set_all_html_print();
 
 # list_managed_servers()
 # Returns a list of all servers managed by this module. These are actually
@@ -1905,6 +1912,78 @@ sub strip_html_tags
 local ($html) = @_;
 $html =~ s/<[^>]*>//g;
 return $html;
+}
+
+# Print functions for HTML output
+sub first_html_print { print @_,"<br>\n"; }
+sub second_html_print { print @_,"<p>\n"; }
+sub indent_html_print { print "<ul>\n"; }
+sub outdent_html_print { print "</ul>\n"; }
+sub block_html_print { print "<pre>".&html_escape(join("", @_))."</pre>"; }
+
+# Print functions for text output
+sub first_text_print
+{
+print $indent_text,
+      (map { &html_tags_to_text(&entities_to_ascii($_)) } @_),"\n";
+}
+sub second_text_print
+{
+print $indent_text,
+      (map { &html_tags_to_text(&entities_to_ascii($_)) } @_),"\n\n";
+}
+sub indent_text_print { $indent_text .= "    "; }
+sub outdent_text_print { $indent_text = substr($indent_text, 4); }
+sub block_text_print { print join("", @_); }
+
+sub html_tags_to_text
+{
+local ($rv) = @_;
+$rv =~ s/<tt>|<\/tt>//g;
+$rv =~ s/<b>|<\/b>//g;
+$rv =~ s/<i>|<\/i>//g;
+$rv =~ s/<u>|<\/u>//g;
+$rv =~ s/<pre>|<\/pre>//g;
+$rv =~ s/<br>/\n/g;
+$rv =~ s/<p>/\n\n/g;
+return $rv;
+}
+
+sub null_print { }
+
+sub set_all_null_print
+{
+$first_print = $second_print = $indent_print = $outdent_print = $block_print =
+	\&null_print;
+}
+sub set_all_text_print
+{
+$first_print = \&first_text_print;
+$second_print = \&second_text_print;
+$indent_print = \&indent_text_print;
+$outdent_print = \&outdent_text_print;
+$block_print = \&block_text_print;
+}
+sub set_all_html_print
+{
+$first_print = \&first_html_print;
+$second_print = \&second_html_print;
+$indent_print = \&indent_html_print;
+$outdent_print = \&outdent_html_print;
+$block_print = \&block_html_print;
+}
+
+# These functions store and retrieve the current print commands
+sub push_all_print
+{
+push(@print_function_stack, [ $first_print, $second_print,
+			      $indent_print, $outdent_print, $block_print ]);
+&set_all_null_print();
+}
+sub pop_all_print
+{
+local $p = pop(@print_function_stack);
+($first_print, $second_print, $indent_print, $outdent_print, $block_print) =@$p;
 }
 
 1;
