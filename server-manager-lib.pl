@@ -3,7 +3,6 @@
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX command line and remote APIs
-#	XXX create zones and ec2
 #	XXX list EC2 accounts
 #	XXX modify system (OS, description, hostname, SSH, webmin)
 # XXX package install into existing servers
