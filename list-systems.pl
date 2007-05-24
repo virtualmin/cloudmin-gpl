@@ -19,34 +19,20 @@ while(@ARGV > 0) {
 	if ($a eq "--multiline") {
 		$multi = 1;
 		}
-	elsif ($a eq "--host") {
-		push(@names, shift(@ARGV));
-		}
-	elsif ($a eq "--type") {
-		$type = shift(@ARGV);
-		&indexof($type, @server_management_types) >= 0 ||
-			&usage("Invalid option for --type. Valid types are : ".
-			       join(" ", @server_management_types));
-		}
+	elsif ($a eq "--all-hosts") { $all = 1; }
+	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
+	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
+	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
+	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
 	else {
 		&usage();
 		}
 	}
 
 # Work out who to list
-if (@names) {
-	foreach my $n (@names) {
-		$server = &get_managed_server_by("host", $n);
-		push(@servers, $server) if ($server);
-		}
-	}
-else {
-	@servers = &list_managed_servers();
-	}
-if ($type) {
-	@servers = grep { $_->{'manager'} eq $type } @servers;
-	}
+@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
+@servers || &usage("No systems specified");
 
 if ($multi) {
 	# Show a block for each server
@@ -142,9 +128,12 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all registered managed systems.\n";
 print "\n";
-print "usage: list-systems.pl   [--multiline]\n";
-print "                         [--host name]*\n";
-print "                         [--type typename]\n";
+print "usage: list-systems.pl [--multiline]\n";
+print "                       [--all-hosts] | [--host name]*\n";
+print "                       [--group name]*\n";
+local $types = join("|", @server_management_types);
+print "                       [--type $types]*\n";
+print "                       [--os oscode]*\n";
 exit(1);
 }
 

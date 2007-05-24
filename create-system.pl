@@ -111,7 +111,7 @@ if (!$no_ssh) {
 		$server->{'ssh_pass'} = $ssh_pass;
 		}
 	else {
-		$server->{'ssh_key'} = $ssh_key;
+		$server->{'key'} = $ssh_key;
 		}
 	$server->{'ssh_protocol'} = 2;
 	}

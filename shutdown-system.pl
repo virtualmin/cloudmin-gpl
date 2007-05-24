@@ -16,21 +16,19 @@ $< == 0 || die "$0 must be run as root";
 # Parse command line
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
-	if ($a eq "--host") {
-		push(@names, shift(@ARGV));
-		}
+	if ($a eq "--host") { push(@hosts, shift(@ARGV)); }
+	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
+	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
+	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
 	else {
 		&usage();
 		}
 	}
 
 # Get the systems
-@names || &usage("No system to shut down specified");
-foreach my $n (@names) {
-	$server = &get_managed_server_by("host", $n);
-	$server || &usage("No system with hostname $n exists");
-	push(@servers, $server);
-	}
+@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
+@servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
+@servers || &usage("No systems specified");
 
 # Check if any cannot be shutdown
 foreach $s (@servers) {
@@ -65,7 +63,11 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Shuts down one or more managed systems.\n";
 print "\n";
-print "usage: shutdown-system.pl --host name [--host name]*\n";
+print "usage: shutdown-system.pl [--host name]*\n";
+print "                          [--group name]*\n";
+local $types = join("|", @server_management_types);
+print "                          [--type $types]*\n";
+print "                          [--os oscode]*\n";
 exit(1);
 }
 

@@ -6,7 +6,6 @@
 #	XXX create zones and ec2
 #	XXX install Webmin
 #	XXX install Virtualmin
-#	XXX execute remote command
 #	XXX list EC2 accounts
 # XXX package install into existing servers
 # XXX xen
@@ -159,6 +158,27 @@ if ($server->{'id'}) {
 	}
 unlink("$server_domains_dir/$server->{'id'}");
 unlink("$server_collected_dir/$server->{'id'}");
+}
+
+# find_managed_servers(all, &hostnames, &groupnames, &managers, &types)
+# Finds all servers matching some selection criteria
+sub find_managed_servers
+{
+local ($all, $hosts, $groups, $managers, $types) = @_;
+local @rv;
+local %wantgroups = map { lc($_), 1 } @$groups;
+foreach my $s (&list_managed_servers()) {
+	local ($ingroup) = grep { $wantgroup{lc($_)} }
+				split(/\t/, $s->{'group'});
+	if ($all ||
+	    $ingroup ||
+	    &indexoflc($s->{'host'}, @$hosts) >= 0 ||
+	    &indexoflc($s->{'manager'}, @$managers) >= 0 ||
+	    &indexoflc($s->{'type'}, @$types) >= 0) {
+		push(@rv, $s);
+		}
+	}
+return @rv;
 }
 
 # describe_os(os)
@@ -927,8 +947,8 @@ local ($servers, $func, $args) = @_;
 # Build 10 buckets
 local @buckets;
 local $procs = $config{'procs'};
-for(my $i=0; $i<@servers; $i++) {
-	push(@{$buckets[$i % $procs]}, $servers[$i]);
+for(my $i=0; $i<@$servers; $i++) {
+	push(@{$buckets[$i % $procs]}, $servers->[$i]);
 	}
 
 # Fork 10 processes, each doing a bucket
