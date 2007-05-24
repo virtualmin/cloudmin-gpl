@@ -61,11 +61,8 @@ if ($status eq 'virt' && $server->{'virtualmin_error'}) {
 	      "<font color=#ff0000>$server->{'virtualmin_error'}</font>");
 	}
 
+# Webmin version
 if ($status eq 'virt' || $status eq 'novirt') {
-	# Has Webmin .. show more info
-	print &ui_table_row($text{'edit_os'},
-			    &describe_os($server->{'type'}));
-
 	print &ui_table_row($text{'edit_webmin'},
 			    $info->{'general'}->{'version'});
 	}
