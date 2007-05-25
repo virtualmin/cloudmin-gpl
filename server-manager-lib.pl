@@ -3,13 +3,11 @@
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX command line and remote APIs
-#	XXX list EC2 accounts
-#	XXX modify system (OS, description, hostname, SSH, webmin)
+#	XXX virtualmin domain commands
 # XXX package install into existing servers
 # XXX xen
 # XXX zones
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
-# XXX new 'status' section on Edit System page
 
 do '../web-lib.pl';
 &init_config();
