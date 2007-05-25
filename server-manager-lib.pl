@@ -8,6 +8,8 @@
 # XXX xen
 # XXX zones
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
+# XXX move domains
+# XXX move servers
 
 do '../web-lib.pl';
 &init_config();
@@ -1884,7 +1886,7 @@ if ($iface->{'address'} eq $info->{'defip'}) {
 else {
 	local @ipdoms = grep { $_->{'ip'} eq $iface->{'address'} } @$doms;
 	if (@ipdoms) {
-		return (1,
+		return (2,
 			@ipdoms > 5 ? &text('iface_many', scalar(@ipdoms)) :
 			@ipdoms == 1 ? &text('iface_dom', 
 					     "<tt>$ipdoms[0]->{'dom'}</tt>") :
