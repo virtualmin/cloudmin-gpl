@@ -353,6 +353,7 @@ domains_return=domains form
 domains_delete=Delete Selected
 domains_disable=Disable Selected
 domains_enable=Enable Selected
+domains_move=Move Selected
 
 dcreate_title=Create Virtualmin Domain
 dcreate_err=Failed to create Virtualmin domain
@@ -660,6 +661,14 @@ dmass_titledisable=Disable Virtualmin Domains
 dmass_disabling=Disabling $1 on system $2 ..
 dmass_disablerusure=Are you sure you want to disable the $1 selected Virtualmin domains? No data will be lost, but they will be in-accessible until re-enabled.
 dmass_disableok=Yes, Disable Now
+dmass_titlemove=Move Virtualmin Domains
+dmass_emove=The selected domains cannot be moved : $1
+dmass_mheader=Domain move options
+dmass_mdoms=Selected domains
+dmass_mdest=Destination system
+dmass_move=Move Now
+dmass_edest=The selected system does not exist!
+dmass_eparent=Domain $1 is a sub-server, but its parent does not exist on the destination system
 
 zones_title=Solaris Zones Host Systems
 zones_add=Register a system for Solaris Zones hosting.

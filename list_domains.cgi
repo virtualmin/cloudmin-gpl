@@ -71,7 +71,10 @@ if ($in{'search'}) {
 		print &ui_form_end([ [ "delete", $text{'domains_delete'} ],
 				     undef,
 				     [ "disable", $text{'domains_disable'} ],
-				     [ "enable", $text{'domains_enable'} ] ]);
+				     [ "enable", $text{'domains_enable'} ],
+				     undef,
+				     [ "move", $text{'domains_move'} ],
+				   ]);
 		}
 	else {
 		print "<b>$text{'domains_none'}</b><p>\n";

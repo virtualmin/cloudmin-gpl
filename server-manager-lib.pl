@@ -10,6 +10,12 @@
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
 # XXX move domains
 # XXX move servers
+# 
+# XXX need to provide images with Virtualmin pre-installed
+#	XXX vservers
+#	XXX zone
+#	XXX xen
+#	XXX ec2
 
 do '../web-lib.pl';
 &init_config();
@@ -1921,6 +1927,179 @@ local $temp = &transname();
 local $err = &put_file_to_server($server, $temp,
 				 "$roothome/.ssh/authorized_keys");
 return $err;
+}
+
+# check_domain_move(&serverdoms, &destserver)
+# Checks if the given set of virtual servers can be moved together, and returns
+# an error message if not.
+sub check_domain_move
+{
+local ($serverdoms, $dest) = @_;
+
+foreach my $sd (@$serverdoms) {
+	local ($server, $d) = @$sd;
+	if ($d->{'parent'}) {
+		# This is a sub-server .. either the parent must be on the
+		# target already, or in the list of those to move.
+		local ($pd) = grep { $_->[1]->{'id'} == $d->{'parent'} }
+				   @$serverdoms;
+		if (!$pd) {
+			($pd) = grep { $_->{'id'} == $d->{'parent'} }
+				     &get_server_domains($dest);
+			}
+		if (!$pd) {
+			return $text{'dmass_eparent', $d->{'dom'});
+			}
+		}
+	}
+
+return undef;
+}
+
+# move_domains_to_server(&serverdoms, &destserver)
+# Transfers domains from source systems to a single destination. Calls 
+# $first_print and friends to display progress.
+sub move_domains_to_server
+{
+local ($serverdoms, $dest) = @_;
+local (@refresh, %refreshed);
+
+# Sort list so that parents come first
+local @sorted = sort { $a->[1]->{'parent'} <=> $b->[1]->{'parent'} ||
+		       $a->[1]->{'alias'} <=> $b->[1]->{'alias'} } @$serverdoms;
+
+local %failed;
+foreach my $sd (@sorted) {
+	local ($server, $d) = @$sd;
+
+	# Find a good temp dir on the source
+	&$first_print($text{'move_backing', $d->{'dom'}));
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
+	if ($last_remote_error) {
+		&$second_print(&text('move_ewebmin', $last_remote_error));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+	local $temp = &remote_foreign_call($server, "webmin", "tempname",
+					   "$d->{'dom'}.tar.gz");
+	local $tmpdir = $temp;
+	$tmpdir =~ s/\/([^\/]+)$//;
+
+	# Check if parent has failed
+	if ($d->{'parent'} && $failed{$d->{'parent'}}) {
+		&$second_print(&text('move_eparent',
+			       $failed{$d->{'parent'}}->[1]->{'dom'}));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+	if ($d->{'alias'} && $failed{$d->{'alias'}}) {
+		&$second_print(&text('move_ealias',
+			       $failed{$d->{'alias'}}->[1]->{'dom'}));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+
+	# Backup to a temp file on the target
+	local @args = ( [ "domain", $d->{'dom'} ],
+			[ "all-features" ],
+			[ "newformat" ],
+			[ "dest", $tmpdir ] );
+	local $err = &call_virtualmin_api($server, "backup-domain", \@args);
+	if ($err) {
+		&$second_print(&text('move_ebackup', $err));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+
+	# Get the resulting size
+	local (@st, $filename);
+	foreach my $p ("$d->{'dom'}.tar.gz",
+		       "$d->{'dom'}.tar.bz2",
+		       "$d->{'dom'}.tar") {
+		@st = &remote_eval($server, "webmin", "stat('$tmpdir/$p')");
+		if (@st) {
+			$filename = $p;
+			last;
+			}
+		}
+	if (!@st) {
+		&$second_print(&text('move_estat'));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+	&$second_print(&text('move_backed', &nice_size($st[7])));
+
+	# Transfer to master system
+	&$first_print(&text('move_download', $d->{'dom'}, $filename));
+	local $localtemp = &transname($filename);
+	local $err = &get_file_from_server($server, "$tmpdir/$filename",
+					   $localtemp);
+	&execute_command_on_server($server,
+				   "rm -f ".quotemeta("$tmpdir/$filename"));
+	if ($err) {
+		&$second_print(&text('move_edownload', $err));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+	local @st = stat($localtemp);
+	&$second_print(&text('move_downloaded', &nice_size($st[7])));
+
+	# Transfer to destination
+	&$first_print(&text('move_upload', $d->{'dom'}, $filename,
+					   $dest->{'host'}));
+	$last_remote_error = undef;
+	&remote_foreign_require($dest, "webmin", "webmin-lib.pl");
+	if ($last_remote_error) {
+		&$second_print(&text('move_ewebmin', $last_remote_error));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+	local $desttemp = &remote_foreign_call($dest, "webmin", "tempname",
+					       $filename);
+	local $err = &put_file_to_server($dest, $localtemp, $desttemp);
+	unlink($localtemp);
+	if ($err) {
+		&$second_print(&text('move_eupload', $err));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+	&$second_print(&text('move_uploaded', &nice_size($st[7])));
+
+	# Restore on destination
+	&$first_print(&text('move_restore', $d->{'dom'}, $dest->{'host'}));
+	local @args = ( [ "source", $desttemp ],
+			[ "all-features" ],
+			[ "domain", $d->{'dom'} ] );
+	local $err = &call_virtualmin_api($server, "restore-domain", \@args);
+	if ($err) {
+		&$second_print(&text('move_erestore', $err));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+	&$second_print(&text('move_restored', $d->{'dom'}));
+	push(@refresh, $dest) if (!$refreshed{$server->{'id'}}++);
+
+	# Deletion from source (optionally)
+	if ($delete) {
+		# XXX
+		push(@refresh, $server) if (!$refreshed{$server->{'id'}}++);
+		}
+
+	$done{$d->{'id'}} = 1;
+	}
+
+if (@refresh) {
+	# Refresh status of all changed systems
+	&$first_print(&text('move_refresh', scalar(@refesh));
+	foreach my $server (@refresh) {
+		&check_server_status($server);
+		&save_managed_server($server);
+		}
+	&$second_print($text{'create_done'});
+	}
+
+return keys %failed;
 }
 
 # strip_html_tags(html)
