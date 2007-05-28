@@ -115,7 +115,7 @@ elsif ($in{'enable'}) {
 
 elsif ($in{'move'}) {
 	# Move the domains to another server, after asking where
-	&ui_print_header(undef, $text{'dmass_titlemove'},"");
+	&ui_print_header(undef, $text{'dmass_titlemove'}, "", "move");
 
 	if (!$in{'confirm'}) {
 		# Ask where
@@ -123,31 +123,53 @@ elsif ($in{'move'}) {
 		foreach $d (@d) {
 			print &ui_hidden("d", $d);
 			}
+		print &ui_hidden("move", 1);
 		print &ui_table_start($text{'dmass_mheader'}, undef, 2);
 
 		# Domains to move
-		print &ui_table_row($text{'dmass_mdoms'},
-			join(" ", map { $_->[1]->{'dom'} } @serverdoms));
+		@sources = &unique(map { $_->[0]->{'host'} } @serverdoms);
+		if (@sources > 1) {
+			print &ui_table_row($text{'dmass_mdoms'},
+			    join(" ", map { &text('dmass_on',
+					  $_->[1]->{'dom'}, $_->[0]->{'host'}) }
+					  @serverdoms));
+			}
+		else {
+			print &ui_table_row($text{'dmass_mdoms'},
+			    join(" ", map { $_->[1]->{'dom'} } @serverdoms));
+			}
 
 		# Destination server
 		print &ui_table_row($text{'dmass_mdest'},
 			&ui_select("dest", undef,
-				[ map { [ $_->{'id'}, $_->{'dom'} ] }
+				[ map { [ $_->{'id'}, $_->{'host'} ] }
 				      grep { $_->{'status'} eq 'virt' } 
 				           @servers ]));
+
+		# Delete from source?
+		print &ui_table_row($text{'dmass_mdelete'},
+			&ui_radio("deletesource", 2,
+				  [ [ 1, $text{'yes'} ],
+				    [ 2, $text{'dmass_mdisable'} ],
+				    [ 0, $text{'no'} ] ]));
+
+		# Re-allocate private IPs?
+		# XXX
 
 		print &ui_table_end();
 		print &ui_form_end([ [ "confirm", $text{'dmass_move'} ] ]);
 		}
 	else {
 		# Make sure the move is valid (cannot move child without parent)
-		$err = &check_domain_move(\@serverdoms, $server);
-		&error(&text('dmass_emove', $err));
-
-		# Do each one in series, by backing up and restoring
 		($server) = grep { $_->{'id'} eq $in{'dest'} } @servers;
 		$server || &error($text{'dmass_edest'});
-		&move_domains_to_server(\@serverdoms, $server);
+		$err = &check_domain_move(\@serverdoms, $server,
+					  $in{'deletesource'});
+		&error(&text('dmass_emove', $err)) if ($err);
+
+		# Do each one in series, by backing up and restoring
+		&move_domains_to_server(\@serverdoms, $server,
+				        $in{'deletesource'});
 		}
 	}
 
@@ -158,8 +180,13 @@ else {
 if ($recheck) {
 	# Re-check and save the status
 	print $text{'dcreate_statusing'},"<br>\n";
-	&check_server_status($server);
-	&save_managed_server($server);
+	foreach my $sd (@serverdoms) {
+		$server = $sd->[0];
+		if (!$donerecheck{$server->{'host'}}++) {
+			&check_server_status($server);
+			&save_managed_server($server);
+			}
+		}
 	print $text{'dcreate_statusok'},"<p>\n";
 	}
 if ($in{'id'} eq '') {

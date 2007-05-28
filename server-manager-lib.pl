@@ -4,11 +4,13 @@
 # XXX make status updated limited to what the caller really needs
 # XXX command line and remote APIs
 #	XXX virtualmin domain commands
+#	XXX list-domain.pl
+#	XXX create-domain.pl
+#	XXX delete-domain.pl
 # XXX package install into existing servers
 # XXX xen
 # XXX zones
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
-# XXX move domains
 # XXX move servers
 # 
 # XXX need to provide images with Virtualmin pre-installed
@@ -16,6 +18,8 @@
 #	XXX zone
 #	XXX xen
 #	XXX ec2
+# XXX hosting where? rsync down?
+# XXX need to fix hostname when re-creating
 
 do '../web-lib.pl';
 &init_config();
@@ -1078,7 +1082,7 @@ if ($server->{'id'} == 0) {
 	foreach my $a (@$args) {
 		$cmd .= " --$a->[0]";
 		if (defined($a->[1])) {
-			$cmd .= quotemeta($a->[1]);
+			$cmd .= " ".quotemeta($a->[1]);
 			}
 		}
 	&clean_environment();
@@ -1934,7 +1938,8 @@ return $err;
 # an error message if not.
 sub check_domain_move
 {
-local ($serverdoms, $dest) = @_;
+local ($serverdoms, $dest, $delete) = @_;
+local @destdoms = &get_server_domains($dest);
 
 foreach my $sd (@$serverdoms) {
 	local ($server, $d) = @$sd;
@@ -1944,12 +1949,32 @@ foreach my $sd (@$serverdoms) {
 		local ($pd) = grep { $_->[1]->{'id'} == $d->{'parent'} }
 				   @$serverdoms;
 		if (!$pd) {
-			($pd) = grep { $_->{'id'} == $d->{'parent'} }
-				     &get_server_domains($dest);
+			($pd) = grep { $_->{'id'} == $d->{'parent'} } @destdoms;
 			}
 		if (!$pd) {
-			return $text{'dmass_eparent', $d->{'dom'});
+			return &text('dmass_eparent', $d->{'dom'});
 			}
+		}
+
+	# Check if source and dest servers are the same
+	if ($server->{'id'} == $dest->{'id'}) {
+		return &text('dmass_esame', $d->{'dom'}, $server->{'host'});
+		}
+
+	# Check for clash on target
+	local ($idclash) = grep { $_->{'id'} eq $d->{'id'} } @destdoms;
+	if ($idclash) {
+		return &text('dmass_emoveclash', $d->{'dom'});
+		}
+	local ($clash) = grep { $_->{'dom'} eq $d->{'dom'} } @destdoms;
+	if ($clash) {
+		return &text('dmass_emoveclash2', $d->{'dom'});
+		}
+
+	# If the domain has a private IP, it must be deleted from
+	# the source system to work
+	if ($d->{'virt'} && !$d->{'virtalready'} && $delete != 1) {
+		return &text('dmass_evirtdelete', $d->{'dom'}, $d->{'ip'});
 		}
 	}
 
@@ -1961,7 +1986,7 @@ return undef;
 # $first_print and friends to display progress.
 sub move_domains_to_server
 {
-local ($serverdoms, $dest) = @_;
+local ($serverdoms, $dest, $delete) = @_;
 local (@refresh, %refreshed);
 
 # Sort list so that parents come first
@@ -1973,7 +1998,7 @@ foreach my $sd (@sorted) {
 	local ($server, $d) = @$sd;
 
 	# Find a good temp dir on the source
-	&$first_print($text{'move_backing', $d->{'dom'}));
+	&$first_print(&text('move_backing', $d->{'dom'}, $server->{'host'}));
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
 	if ($last_remote_error) {
@@ -2003,9 +2028,10 @@ foreach my $sd (@sorted) {
 	# Backup to a temp file on the target
 	local @args = ( [ "domain", $d->{'dom'} ],
 			[ "all-features" ],
+			[ "option", "mail mailfiles 1" ],
 			[ "newformat" ],
 			[ "dest", $tmpdir ] );
-	local $err = &call_virtualmin_api($server, "backup-domain", \@args);
+	local ($err, $out) = &call_virtualmin_api($server, "backup-domain", \@args);
 	if ($err) {
 		&$second_print(&text('move_ebackup', $err));
 		$failed{$d->{'id'}} = $sd;
@@ -2017,7 +2043,9 @@ foreach my $sd (@sorted) {
 	foreach my $p ("$d->{'dom'}.tar.gz",
 		       "$d->{'dom'}.tar.bz2",
 		       "$d->{'dom'}.tar") {
-		@st = &remote_eval($server, "webmin", "stat('$tmpdir/$p')");
+		local $st = &remote_eval($server, "webmin",
+					"[ stat('$tmpdir/$p') ]");
+		@st = @$st;
 		if (@st) {
 			$filename = $p;
 			last;
@@ -2030,68 +2058,125 @@ foreach my $sd (@sorted) {
 		}
 	&$second_print(&text('move_backed', &nice_size($st[7])));
 
-	# Transfer to master system
-	&$first_print(&text('move_download', $d->{'dom'}, $filename));
-	local $localtemp = &transname($filename);
-	local $err = &get_file_from_server($server, "$tmpdir/$filename",
-					   $localtemp);
-	&execute_command_on_server($server,
+	# Transfer to master system, if not already there
+	local ($localtemp, @st);
+	if ($server->{'id'} != 0) {
+		&$first_print(&text('move_download', $d->{'dom'}, $filename));
+		$localtemp = &transname($filename);
+		local $err = &get_file_from_server($server, "$tmpdir/$filename",
+						   $localtemp);
+		&execute_command_on_server($server,
 				   "rm -f ".quotemeta("$tmpdir/$filename"));
-	if ($err) {
-		&$second_print(&text('move_edownload', $err));
-		$failed{$d->{'id'}} = $sd;
-		next;
+		if ($err) {
+			&$second_print(&text('move_edownload', $err));
+			$failed{$d->{'id'}} = $sd;
+			next;
+			}
+		@st = stat($localtemp);
+		&$second_print(&text('move_downloaded', &nice_size($st[7])));
 		}
-	local @st = stat($localtemp);
-	&$second_print(&text('move_downloaded', &nice_size($st[7])));
+	else {
+		$localtemp = "$tmpdir/$filename";
+		@st = stat($localtemp);
+		}
 
-	# Transfer to destination
-	&$first_print(&text('move_upload', $d->{'dom'}, $filename,
-					   $dest->{'host'}));
-	$last_remote_error = undef;
-	&remote_foreign_require($dest, "webmin", "webmin-lib.pl");
-	if ($last_remote_error) {
-		&$second_print(&text('move_ewebmin', $last_remote_error));
-		$failed{$d->{'id'}} = $sd;
-		next;
+	# Transfer to destination (if not already there)
+	local $desttemp;
+	if ($dest->{'id'} != 0) {
+		&$first_print(&text('move_upload', $d->{'dom'}, $filename,
+						   $dest->{'host'}));
+		$last_remote_error = undef;
+		&remote_foreign_require($dest, "webmin", "webmin-lib.pl");
+		if ($last_remote_error) {
+			&$second_print(&text('move_ewebmin',
+					     $last_remote_error));
+			$failed{$d->{'id'}} = $sd;
+			next;
+			}
+		$desttemp = &remote_foreign_call($dest, "webmin",
+						 "tempname", $filename);
+		local $err = &put_file_to_server($dest, $localtemp, $desttemp);
+		unlink($localtemp);
+		if ($err) {
+			&$second_print(&text('move_eupload', $err));
+			$failed{$d->{'id'}} = $sd;
+			next;
+			}
+		&$second_print(&text('move_uploaded', &nice_size($st[7])));
 		}
-	local $desttemp = &remote_foreign_call($dest, "webmin", "tempname",
-					       $filename);
-	local $err = &put_file_to_server($dest, $localtemp, $desttemp);
-	unlink($localtemp);
-	if ($err) {
-		&$second_print(&text('move_eupload', $err));
-		$failed{$d->{'id'}} = $sd;
-		next;
+	else {
+		$desttemp = $localtemp;
 		}
-	&$second_print(&text('move_uploaded', &nice_size($st[7])));
+
+	if ($delete == 2) {
+		# Disable on source
+		&$first_print(&text('move_disable', $d->{'dom'},
+						    $server->{'host'}));
+		local @args = ( [ "domain", $d->{'dom'} ] );
+		local ($err, $out) = &call_virtualmin_api(
+					$server, "disable-domain", \@args);
+		if ($err) {
+			&$second_print(&text('move_edisable', $err));
+			$failed{$d->{'id'}} = $sd;
+			next;
+			}
+		else {
+			&$second_print(&text('move_disabled', $d->{'dom'}));
+			push(@refresh, $server)
+				if (!$refreshed{$server->{'id'}}++);
+			}
+		}
+	elsif ($delete == 1) {
+		# Delete on source
+		&$first_print(&text('move_delete', $d->{'dom'},
+						   $server->{'host'}));
+		local @args = ( [ "domain", $d->{'dom'} ] );
+		local ($err, $out) = &call_virtualmin_api(
+					$server, "delete-domain", \@args);
+		if ($err) {
+			&$second_print(&text('move_edelete', $err));
+			$failed{$d->{'id'}} = $sd;
+			next;
+			}
+		else {
+			&$second_print(&text('move_deleted', $d->{'dom'}));
+			push(@refresh, $server)
+				if (!$refreshed{$server->{'id'}}++);
+			}
+		}
 
 	# Restore on destination
 	&$first_print(&text('move_restore', $d->{'dom'}, $dest->{'host'}));
 	local @args = ( [ "source", $desttemp ],
 			[ "all-features" ],
+			[ "option", "dns fixip 1" ],
+			[ "option", "web fixip 1" ],
+			[ "option", "ssl fixip 1" ],
+			[ "option", "mail mailfiles 1" ],
 			[ "domain", $d->{'dom'} ] );
-	local $err = &call_virtualmin_api($server, "restore-domain", \@args);
+	local ($err, $out) = &call_virtualmin_api($dest, "restore-domain", \@args);
+	if ($delete != 1) {
+		&execute_command_on_server($server, "rm -f ".quotemeta($desttemp));
+		}
 	if ($err) {
+		&$block_print($out);
 		&$second_print(&text('move_erestore', $err));
+		if ($delete == 1) {
+			&$second_print(&text('move_ewarning', $d->{'dom'},
+					     $desttemp, $server->{'host'}));
+			}
 		$failed{$d->{'id'}} = $sd;
 		next;
 		}
 	&$second_print(&text('move_restored', $d->{'dom'}));
-	push(@refresh, $dest) if (!$refreshed{$server->{'id'}}++);
-
-	# Deletion from source (optionally)
-	if ($delete) {
-		# XXX
-		push(@refresh, $server) if (!$refreshed{$server->{'id'}}++);
-		}
+	push(@refresh, $dest) if (!$refreshed{$dest->{'id'}}++);
 
 	$done{$d->{'id'}} = 1;
 	}
 
 if (@refresh) {
 	# Refresh status of all changed systems
-	&$first_print(&text('move_refresh', scalar(@refesh));
+	&$first_print(&text('move_refresh', scalar(@refresh)));
 	foreach my $server (@refresh) {
 		&check_server_status($server);
 		&save_managed_server($server);
