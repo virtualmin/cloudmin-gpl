@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Lists all managed servers
+# Lists some or all managed servers
 
 package server_manager;
 $main::no_acl_check++;

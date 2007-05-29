@@ -4,7 +4,6 @@
 # XXX make status updated limited to what the caller really needs
 # XXX command line and remote APIs
 #	XXX virtualmin domain commands
-#	XXX list-domain.pl
 #	XXX create-domain.pl
 #	XXX delete-domain.pl
 # XXX package install into existing servers

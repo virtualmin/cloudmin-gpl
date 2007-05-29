@@ -73,8 +73,8 @@ else {
 	}
 $server || &error($text{'dcreate_eserver'});
 
-# If the target server type doesn't allow IP allocation (ie. VServers or Zones), make
-# sure the requested IP is active
+# If the target server type doesn't allow IP allocation
+# (ie. VServers or Zones), make sure the requested IP is active
 $ifunc = "type_".$server->{'manager'}."_list_interfaces";
 if ($in{'virt_mode'} && defined(&$ifunc)) {
 	if ($in{'virt_mode'} == 1) {
