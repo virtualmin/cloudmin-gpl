@@ -110,6 +110,29 @@ foreach $f (@features) {
 	push(@args, [ $f ]);
 	}
 
+# If the target server type doesn't allow IPs to be brought up within itself,
+# (ie. VServers or Zones) do the allocation here or check if the requested IP
+# is ative.
+$ifunc = "type_".$server->{'manager'}."_list_interfaces";
+if ($allocate && defined(&$ifunc)) {
+	# Allocate a new IP on the virtual system
+	print "Creating network interface ..\n";
+	$iface = &create_allocate_ip($server);
+	ref($iface) || &usage("Failed to allocate IP : $iface");
+	@args = grep { $_->[0] ne "allocate-ip" } @args;
+	push(@args, [ "ip", $iface->{'address'} ]);
+	push(@args, [ "ip-already" ]);
+	print ".. created with address $iface->{'address'}\n\n";
+	}
+elsif ($ip && defined(&$ifunc)) {
+	# Need to use an existing IP .. make sure it exists
+	$ifaces = &$ifunc($server);
+	ref($ifaces) || &usage($ifaces);
+	($got) = grep { $_->{'address'} eq $ip } @$ifaces;
+	$got || &usage("IP address $ip is not active on $server->{'host'}");
+	push(@args, [ "ip-already" ]);
+	}
+
 # Call create-domain.pl
 print "Creating Virtualmin domain $domain on $server->{'host'} ..\n";
 ($err, $out) = &call_virtualmin_api($server, "create-domain", \@args);

@@ -53,6 +53,24 @@ if ($in{'delete'}) {
 				print $text{'create_done'},"<p>\n";
 				$recheck++;
 				}
+
+			# Remove the virtual IP
+			$iface = &get_domain_interface($server, $d);
+			if ($iface && !$err) {
+				print &text('dmass_deleteip',
+				    "<tt>$iface->{'address'}</tt>",
+				    "<tt>$server->{'host'}</tt>"),"<br>\n";
+				$dfunc = "type_".$server->{'manager'}.
+					 "_delete_interface";
+				$err = &$dfunc($server, $iface);
+				if ($err) {
+					print &text('dcreate_failed',
+						    $err),"<p>\n";
+					}
+				else {
+					print $text{'create_done'},"<p>\n";
+					}
+				}
 			}
 		}
 	}
@@ -152,9 +170,6 @@ elsif ($in{'move'}) {
 				  [ [ 1, $text{'yes'} ],
 				    [ 2, $text{'dmass_mdisable'} ],
 				    [ 0, $text{'no'} ] ]));
-
-		# Re-allocate private IPs?
-		# XXX
 
 		print &ui_table_end();
 		print &ui_form_end([ [ "confirm", $text{'dmass_move'} ] ]);

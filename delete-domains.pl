@@ -61,15 +61,33 @@ foreach $dn (@dnames) {
 # Delete each one
 foreach $sd (@serverdoms) {
 	($server, $d) = @$sd;
-	print "Deleting Virtualmin domain $d->{'dom'} from $server->{'host'} ..\n";
+
+	# Remove the domain
+	print "Deleting Virtualmin domain $d->{'dom'} from ",
+	      "$server->{'host'} ..\n";
 	@args = ( [ "domain", $d->{'dom'} ] );
 	($err, $out) = &call_virtualmin_api($server, "delete-domain", \@args);
 	print $out;
 	if ($err) {
-		print ".. failed : $err\n";
+		print ".. failed : $err\n\n";
 		}
 	else {
-		print ".. deleted successfully\n";
+		print ".. deleted successfully\n\n";
+		}
+
+	# Remove the virtual IP
+	$iface = &get_domain_interface($server, $d);
+	if ($iface && !$err) {
+		print "Removing network interface $iface->{'address'} ",
+		      "from $server->{'host'} ..\n";
+		$dfunc = "type_".$server->{'manager'}."_delete_interface";
+		$err = &$dfunc($server, $iface);
+		if ($err) {
+			print ".. failed : $err\n\n";
+			}
+		else {
+			print ".. deleted successfully\n\n";
+			}
 		}
 	}
 
@@ -82,7 +100,7 @@ foreach my $sd (@serverdoms) {
 		&save_managed_server($server);
 		}
 	}
-print ".. done\n";
+print ".. done\n\n";
 
 sub usage
 {

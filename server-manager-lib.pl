@@ -2,9 +2,6 @@
 # XXX grouping
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
-# XXX command line and remote APIs
-#	XXX IP allocation at creation on vservers
-# XXX package install into existing servers
 # XXX xen
 # XXX zones
 #	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
@@ -2182,6 +2179,39 @@ if (@refresh) {
 	}
 
 return keys %failed;
+}
+
+# create_allocate_ip(&server)
+# Bring up a new virtual interface on the given server, and return the address.
+# Returns the interface object on success, or an error string on failure.
+sub create_allocate_ip
+{
+local ($server) = @_;
+local $pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
+local $parents = &$pfunc($server);
+ref($parents) || return "Failed to get parent network interfaces : $parents";
+local ($piface) = grep { $_->{'name'} !~ /^lo/ &&
+			 $_->{'virtual'} eq '' } @$parents;
+local $iface = { 'name' => $piface->{'name'},
+		 'netmask' => $piface->{'netmask'} };
+local $ifunc = "type_".$server->{'manager'}."_create_interface";
+local $err = &$ifunc($server, $iface);
+return $err ? $err : $iface;
+}
+
+# get_domain_interface(&server, &domain)
+# On systems that support interface management, find the private interface
+# used for some domain.
+sub get_domain_interface
+{
+local ($server, $d) = @_;
+return undef if (!$d->{'virt'});	# Has no private IP
+local $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+return undef if (!defined(&$ifunc));	# Server doesn't so interfaces
+local $ifaces = &$ifunc($server);
+return $ifaces if (!ref($ifaces));
+local ($iface) = grep { $_->{'address'} eq $d->{'ip'} } @$ifaces;
+return $iface;
 }
 
 # strip_html_tags(html)

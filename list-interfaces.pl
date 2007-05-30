@@ -56,7 +56,7 @@ if ($multi) {
 		print "    IP address: $i->{'address'}\n";
 		print "    Netmask: $i->{'netmask'}\n";
 		if ($use) {
-			print "    Use: $use\n";
+			print "    Use: ",&strip_html_tags($use),"\n";
 			print "    Use type: ",
 			      ($ucode == 0 ? "none" :
 			       $ucode == 1 ? "default" : "virt"),"\n";
@@ -74,7 +74,7 @@ else {
 							    \@doms, $i);
 			}
 		printf $fmt, $i->{'fullname'}, $i->{'address'}, $i->{'netmask'},
-			     $use;
+			     &strip_html_tags($use);
 		}
 	}
 

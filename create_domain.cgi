@@ -73,25 +73,6 @@ else {
 	}
 $server || &error($text{'dcreate_eserver'});
 
-# If the target server type doesn't allow IP allocation
-# (ie. VServers or Zones), make sure the requested IP is active
-$ifunc = "type_".$server->{'manager'}."_list_interfaces";
-if ($in{'virt_mode'} && defined(&$ifunc)) {
-	if ($in{'virt_mode'} == 1) {
-		# Cannot allocate on server
-		&error(&text('dcreate_ealloc', "<tt>$server->{'host'}</tt>"));
-		}
-	else {
-		# Need to use an existing IP .. make sure it exists
-		$ifaces = &$ifunc($server);
-		ref($ifaces) || &error($ifaces);
-		($got) = grep { $_->{'address'} eq $in{'virt'} } @$ifaces;
-		$got || &error(&text('dcreate_egotvirt', "<tt>$server->{'host'}</tt>",
-							 $in{'virt'}));
-		push(@args,  [ "ip-already" ]);
-		}
-	}
-
 # Make sure the server has the selected features
 $info = &get_server_collected($server);
 @sfeatures = $info->{'features'} ? @{$info->{'features'}}
@@ -104,6 +85,31 @@ foreach $f (@features) {
 
 # Do it
 &ui_print_unbuffered_header(undef, $text{'dcreate_title'}, "");
+
+# If the target server type doesn't allow IPs to be brought up within itself,
+# (ie. VServers or Zones) do the allocation here or check if the requested IP
+# is ative.
+$ifunc = "type_".$server->{'manager'}."_list_interfaces";
+if ($in{'virt_mode'} && defined(&$ifunc)) {
+	if ($in{'virt_mode'} == 1) {
+		# Allocate a new IP on the virtual system
+		print $text{'dcreate_iface'},"<br>\n";
+		$iface = &create_allocate_ip($server);
+		ref($iface) || &error(&text('dcreate_ealloc', $iface));
+		@args = grep { $_->[0] ne "allocate-ip" } @args;
+		push(@args, [ "ip", $iface->{'address'} ]);
+		print &text('dcreate_ifaced', $iface->{'address'}),"<p>\n";
+		}
+	else {
+		# Need to use an existing IP .. make sure it exists
+		$ifaces = &$ifunc($server);
+		ref($ifaces) || &error($ifaces);
+		($got) = grep { $_->{'address'} eq $in{'virt'} } @$ifaces;
+		$got || &error(&text('dcreate_egotvirt',
+				    "<tt>$server->{'host'}</tt>", $in{'virt'}));
+		}
+	push(@args, [ "ip-already" ]);
+	}
 
 print &text('dcreate_doing', "<tt>$in{'dom'}</tt>",
 	    "<tt>$server->{'host'}</tt>"),"<br>\n";
