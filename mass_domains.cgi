@@ -42,8 +42,8 @@ if ($in{'delete'}) {
 			print &text('dmass_deleting', "<tt>$d->{'dom'}</tt>",
 					"<tt>$server->{'host'}</tt>"),"<br>\n";
 			@args = ( [ "domain", $d->{'dom'} ] );
-			($err, $out) = &call_virtualmin_api($server, "delete-domain",
-							    \@args);
+			($err, $out) = &call_virtualmin_api($server,
+						"delete-domain", \@args);
 			if ($err) {
 				print &text('dcreate_failed',
 					    &html_escape($err)),"<p>\n";

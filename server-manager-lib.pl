@@ -3,9 +3,7 @@
 # XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX command line and remote APIs
-#	XXX virtualmin domain commands
-#	XXX create-domain.pl
-#	XXX delete-domain.pl
+#	XXX IP allocation at creation on vservers
 # XXX package install into existing servers
 # XXX xen
 # XXX zones
