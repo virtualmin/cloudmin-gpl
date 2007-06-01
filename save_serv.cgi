@@ -28,6 +28,9 @@ if ($in{'shutdown'}) {
 			&check_server_status($server);
 			&save_managed_server($server);
 			print $text{'save_shutdone'},"<p>\n";
+			if (defined(&theme_post_save_server)) {
+				&theme_post_save_server($server);
+				}
 			}
 		}
 	&ui_print_footer("", $text{'index_return'});
@@ -46,6 +49,9 @@ elsif ($in{'startup'}) {
 		&check_server_status($server);
 		&save_managed_server($server);
 		print $text{'save_startdone'},"<p>\n";
+		if (defined(&theme_post_save_server)) {
+			&theme_post_save_server($server);
+			}
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -69,10 +75,58 @@ elsif ($in{'reboot'}) {
 			}
 		else {
 			print $text{'save_rebootdone'},"<p>\n";
+			if (defined(&theme_post_save_server)) {
+				&theme_post_save_server($server);
+				}
 			}
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
+
+elsif ($in{'delete'}) {
+	# Delete system, after asking for confirmation
+
+	# Check if server can be deleted
+	if ($s->{'manager'} eq 'real' || $s->{'manager'} eq 'this') {
+		&error($text{'save_edeletemanager'});
+		}
+	@deps = &find_server_dependencies($server);
+	if (@deps) {
+		&error(&text('save_edeletedeps',
+			join(" ", map { "<tt>$_->{'host'}</tt>" } @deps)));
+		}
+
+	&ui_print_header(&server_in($server), $text{'save_deletetitle'}, "");
+	if (!$in{'confirm'}) {
+		@doms = &get_server_domains($server);
+		&show_confirm_form(
+		    &text('save_deleterusure', "<tt>$server->{'host'}</tt>").
+		    (@doms ? "<p>".&text('save_deleterusure2',
+					 scalar(@doms)) : ""),
+		    "save_serv.cgi", [ [ "id", $in{'id'} ],
+				       [ "delete", 1 ] ],
+		    $text{'save_deleteok'});
+		}
+	else {
+		print &text('save_deleteing',
+			    "<tt>$server->{'host'}</tt>"),"<br>\n";
+		$dfunc = "type_".$server->{'manager'}."_delete";
+		$err = &$dfunc($server);
+		if ($err) {
+			print &text('save_deletefailed', $err),"<p>\n";
+			}
+		else {
+			&delete_managed_server($server);
+			print $text{'save_deletedone'},"<p>\n";
+			if (defined(&theme_post_save_server)) {
+				&theme_post_save_server($server);
+				}
+			}
+		}
+	&ui_print_footer("", $text{'index_return'});
+	}
+
+
 
 elsif ($in{'installvirt'}) {
 	# Install Virtualmin, which may take a while
@@ -112,6 +166,10 @@ elsif ($in{'installvirt'}) {
 	&save_managed_server($server);
 	print $text{'dcreate_statusok'},"<p>\n";
 
+	if (defined(&theme_post_save_server)) {
+		&theme_post_save_server($server);
+		}
+
 	VIRTFAILED:
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -134,6 +192,10 @@ elsif ($in{'installwebmin'}) {
 		&check_server_status($server);
 		&save_managed_server($server);
 		print $text{'save_webmindone'},"<p>\n";
+
+		if (defined(&theme_post_save_server)) {
+			&theme_post_save_server($server);
+			}
 		}
 
 	&ui_print_footer("", $text{'index_return'});
@@ -173,6 +235,10 @@ elsif ($in{'refresh'}) {
 	&check_server_status($server, 1);
 	&save_managed_server($server);
 	print $text{'save_refreshdone'},"<p>\n";
+
+	if (defined(&theme_post_save_server)) {
+		&theme_post_save_server($server);
+		}
 
 	# And go back to server form
 	print "<script>\n";

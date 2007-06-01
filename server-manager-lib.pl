@@ -13,7 +13,9 @@
 #	XXX xen
 #	XXX ec2
 # XXX hosting where? rsync down?
-# XXX need to fix hostname when re-creating
+# XXX need to fix hostname when re-creating from image
+#
+# XXX when allocating an IP, check all systems to see if they could be using it
 
 do '../web-lib.pl';
 &init_config();
@@ -2212,6 +2214,46 @@ local $ifaces = &$ifunc($server);
 return $ifaces if (!ref($ifaces));
 local ($iface) = grep { $_->{'address'} eq $d->{'ip'} } @$ifaces;
 return $iface;
+}
+
+# get_global_links(system-count)
+# Returns 3 array refs, for links, titles and icons
+sub get_global_links
+{
+local ($virtcount) = @_;
+local (@glinks, @gtitles, @gicons);
+
+# Show icons for global settings
+if ($virtcount) {
+	# Virtualmin domains
+	push(@glinks, "list_domains.cgi");
+	push(@gtitles, $text{'domains_title'});
+	push(@gicons, "images/domains.gif");
+
+	# Default features
+	push(@glinks, "list_features.cgi");
+	push(@gtitles, $text{'features_title'});
+	push(@gicons, "images/features.gif");
+	}
+
+# SSH key management
+push(@glinks, "list_keys.cgi");
+push(@gtitles, $text{'keys_title'});
+push(@gicons, "images/keys.gif");
+
+# Type-defined icons
+foreach my $t (@server_management_types) {
+	my $gfunc = "type_".$t."_global_links";
+	if (defined(&$gfunc)) {
+		foreach my $g (&$gfunc()) {
+			push(@glinks, $g->{'link'});
+			push(@gtitles, $g->{'title'});
+			push(@gicons, $g->{'icon'});
+			}
+		}
+	}
+
+return (\@glinks, \@gtitles, \@gicons);
 }
 
 # strip_html_tags(html)

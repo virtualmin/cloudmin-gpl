@@ -16,6 +16,10 @@ if ($in{'refresh'}) {
 	&parallel_check_server_status(\@servers, 1);
 	print $text{'mass_fdone'},"<p>\n";
 
+	if (defined(&theme_post_save_server)) {
+		&theme_post_save_server($server);
+		}
+
 	# And go back to main menu
 	print "<script>\n";
 	print "window.location = 'index.cgi';\n";
@@ -91,6 +95,9 @@ elsif ($in{'delete'}) {
 			else {
 				print $text{'mass_deleted'},"<p>\n";
 				&delete_managed_server($s);
+				if (defined(&theme_post_save_server)) {
+					&theme_post_save_server($server);
+					}
 				}
 			}
 		}
@@ -127,6 +134,9 @@ elsif ($in{'dereg'}) {
 			&delete_managed_server($s);
 			}
 		print $text{'mass_rdone'},"<p>\n";
+		if (defined(&theme_post_save_server)) {
+			&theme_post_save_server($server);
+			}
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}

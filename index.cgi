@@ -102,38 +102,11 @@ else {
 	}
 
 # Show icons for global settings
-if ($virtcount) {
-	# Virtualmin domains
-	push(@glinks, "list_domains.cgi");
-	push(@gtitles, $text{'domains_title'});
-	push(@gicons, "images/domains.gif");
-
-	# Default features
-	push(@glinks, "list_features.cgi");
-	push(@gtitles, $text{'features_title'});
-	push(@gicons, "images/features.gif");
-	}
-
-# SSH key management
-push(@glinks, "list_keys.cgi");
-push(@gtitles, $text{'keys_title'});
-push(@gicons, "images/keys.gif");
-
-# Type-defined icons
-foreach $t (@server_management_types) {
-	$gfunc = "type_".$t."_global_links";
-	if (defined(&$gfunc)) {
-		foreach $g (&$gfunc()) {
-			push(@glinks, $g->{'link'});
-			push(@gtitles, $g->{'title'});
-			push(@gicons, $g->{'icon'});
-			}
-		}
-	}
-if (@glinks) {
+($glinks, $gtitles, $gicons) = &get_global_links($virtcount);
+if (@$glinks) {
 	print "<hr>\n";
 	print &ui_subheading($text{'index_header'});
-	&icons_table(\@glinks, \@gtitles, \@gicons);
+	&icons_table($glinks, $gtitles, $gicons);
 	}
 
 &ui_print_footer("/", $text{'index'});
