@@ -753,3 +753,20 @@ move_delete=Deleting $1 on $2 ..
 move_edelete=.. delete failed : $1
 move_deleted=.. deletion complete.
 move_ewarning=<b><font size=+1>WARNING! The Virtualmin domain $1 could not be retored on $2, but it has already been deleted from the source system! You will need to restore it manually from the file $2</font></b>
+
+images_title=New System Images
+images_desc=Description
+images_manager=System type
+images_size=Compressed size
+images_status=Status
+images_avail=Available
+images_down=Not download
+images_get=Download Selected Images
+images_new=Newer version $1 exists
+images_gettitle=Download Images
+images_getting=Downloading <i>$1</i> version $2 ..
+images_already=.. already have version $1.
+images_eget=.. download of information file failed : $1
+images_egetfiles=.. some files failed : $1
+images_got=.. successfully downloaded $1 of system image data.
+

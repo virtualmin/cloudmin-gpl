@@ -1,0 +1,38 @@
+#!/usr/local/bin/perl
+# Shows a list of server images that are available from Virtualmin and locally
+
+require './server-manager-lib.pl';
+&ui_print_header(undef, $text{'images_title'}, "", "images");
+
+@avail = &list_available_server_images();
+@images = &list_server_images();
+@links = ( &select_all_link("d"), &select_invert_link("d") );
+print &ui_form_start("get_images.cgi", "post");
+print &ui_links_row(\@links);
+@tds = ( "width=5" );
+print &ui_columns_start([ "",
+			  $text{'images_desc'},
+			  $text{'images_manager'},
+			  $text{'images_status'},
+			  $text{'images_size'} ]);
+foreach $i (@avail) {
+	$tfunc = "type_".$i->{'manager'}."_desc";
+	($got) = grep { $_->{'id'} eq $i->{'id'} } @images;
+	print &ui_checked_columns_row([
+		"<a href='edit_image.cgi?id=$i->{'id'}'>$i->{'desc'}</a>",
+		&$tfunc(),
+		!$got ? $text{'images_down'} :
+		$got->{'version'} < $i->{'version'} ?
+			"<font color=#aaaa00>".
+			  &text('images_new', $i->{'version'})."</font>" :
+			"<font color=#00aa00>$text{'images_avail'}</font>",
+		&nice_size($i->{'size'}),
+		], \@tds, "d", $i->{'id'});
+	}
+print &ui_columns_end();
+print &ui_links_row(\@links);
+print &ui_form_end([ [ undef, $text{'images_get'} ] ]);
+
+&ui_print_footer("", $text{'index_return'});
+
+

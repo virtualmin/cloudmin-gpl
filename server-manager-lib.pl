@@ -1,6 +1,5 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX grouping
-# XXX custom theme with server left menu
 # XXX make status updated limited to what the caller really needs
 # XXX xen
 # XXX zones
@@ -14,12 +13,11 @@
 #	XXX ec2
 # XXX hosting where? rsync down?
 # XXX need to fix hostname when re-creating from image
-#
-# XXX when allocating an IP, check all systems to see if they could be using it
 
 do '../web-lib.pl';
 &init_config();
 do '../ui-lib.pl';
+do 'images-lib.pl';
 &foreign_require("servers", "servers-lib.pl");
 &foreign_require("proc", "proc-lib.pl");
 &foreign_require("net", "net-lib.pl");
@@ -1465,9 +1463,20 @@ foreach my $s (&list_managed_servers()) {
 	$used{&to_ipaddress($s->{'host'})} = $s;
 	local $ifunc = "type_".$s->{'manager'}."_list_interfaces";
 	if (defined(&$ifunc)) {
+		# Get from server manager virtual interfaces
 		local $ifaces = &$ifunc($s);
 		if (ref($ifaces)) {
 			foreach my $iface (@$ifaces) {
+				$used{$iface->{'address'}} = $s;
+				}
+			}
+		}
+	elsif ($s->{'status'} eq 'virt' || $s->{'status'} eq 'novirt') {
+		# Get from active IPs
+		&remote_foreign_require($s, "net", "net-lib.pl");
+		foreach my $iface (&remote_foreign_call($s, "net",
+						"active_interfaces")) {
+			if ($iface->{'address'}) {
 				$used{$iface->{'address'}} = $s;
 				}
 			}
@@ -2240,6 +2249,11 @@ if ($virtcount) {
 push(@glinks, "list_keys.cgi");
 push(@gtitles, $text{'keys_title'});
 push(@gicons, "images/keys.gif");
+
+# Server images
+push(@glinks, "list_images.cgi");
+push(@gtitles, $text{'images_title'});
+push(@gicons, "images/images.gif");
 
 # Type-defined icons
 foreach my $t (@server_management_types) {
