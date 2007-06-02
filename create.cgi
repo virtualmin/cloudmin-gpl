@@ -53,6 +53,7 @@ if ($webmin_mode) {
 	}
 $server->{'novirt'} = !$in{'canvirt'};
 $server->{'type'} = 'unknown';
+$server->{'image'} = $in{'image'};
 
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_create_parse";

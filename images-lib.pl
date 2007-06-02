@@ -20,7 +20,13 @@ foreach my $f (readdir(DIR)) {
 	local %img;
 	&read_file_cached("$server_images_dir/$f", \%img);
 	$img{'id'} = $1;
-	next if (!$type || $img{'manager'} ne $type);
+	next if ($type && $img{'manager'} ne $type);
+	local $size = 0;
+	foreach my $fl (split(/\s+/, $img{'files'})) {
+		local @st = stat("$server_images_dir/$fl");
+		$size += $st[7];
+		}
+	$img{'size'} = $size;
 	push(@rv, \%img);
 	}
 closedir(DIR);
@@ -72,7 +78,21 @@ return @rv;
 # the new image object on success, or an error string on failure.
 sub get_server_image
 {
-# XXX
+local ($img) = @_;
+local ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
+local %serial;
+&read_file($licence_file, \%serial);
+local $temp = &transname();
+&http_download($host, $port, "$page/$img->{'id'}.img", $temp, \$err,
+	       undef, $ssl, $serial{'SerialNumber'}, $serial{'LicenseKey'});
+return $err if ($err);
+local %got;
+&read_file($temp, \%got);
+$got{'id'} ||= $img->{'id'};
+$got{'size'} = $img->{'size'};
+&make_dir($server_images_dir, 0700);
+&write_file("$server_images_dir/$got{'id'}.img", \%got);
+return \%got;
 }
 
 # get_server_image_files(&image)
@@ -80,7 +100,63 @@ sub get_server_image
 # Returns undef on success, or an error message on failure.
 sub get_server_image_files
 {
-# XXX
+local ($img) = @_;
+local @files = split(/\s+/, $img->{'files'});
+local ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
+local %serial;
+&read_file($licence_file, \%serial);
+foreach my $f (@files) {
+	$progress_callback_url = $server_images_base.$f;
+	&http_download($host, $port, "$page/$f", "$server_images_dir/$f",
+		       \$err, \&progress_callback, $ssl,
+		       $serial{'SerialNumber'}, $serial{'LicenseKey'});
+	if ($err) {
+		unlink("$server_images_dir/$f");
+		return $err;
+		}
+	}
+return undef;
+}
+
+# transfer_image_files(&server)
+# Transfers all files for some system's image to a parent host, and returns
+# the path to the temp directory created for them.
+sub transfer_image_files
+{
+local ($server) = @_;
+local $pfunc = "type_".$server->{'manager'}."_parent";
+local $vhost = &$pfunc($server);
+$vhost || return (0, "Could not find parent system");
+local ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
+$img || return (0, "Could not find image with ID $server->{'image'}");
+
+# Choose a temp dir
+local $temp;
+if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
+	# Ask the remote Webmin
+	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
+	$temp = &remote_foreign_call($vhost, "webmin", "tempname",
+				     $img->{'id'});
+	$temp || return (0, $remote_webmin_error);
+	}
+else {
+	# Use configure dir, or /tmp
+	local $tempdir = $config{'img_temp'} || "/tmp";
+	$temp = "$tempdir/$img->{'id'}";
+	}
+local ($out, $ex, $err) = &execute_command_on_server($vhost,
+				"mkdir ".quotemeta($temp));
+return (0, $err) if ($err);
+return (0, $out) if ($ex);
+
+# Copy files from local to that dir
+# XXX not if local
+# XXX show progress indicator
+foreach my $f (split(/\s+/, $img->{'files'})) {
+	# XXX
+	}
+
+return (1, $temp);
 }
 
 1;

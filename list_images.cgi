@@ -26,7 +26,7 @@ foreach $i (@avail) {
 			"<font color=#aaaa00>".
 			  &text('images_new', $i->{'version'})."</font>" :
 			"<font color=#00aa00>$text{'images_avail'}</font>",
-		&nice_size($i->{'size'}),
+		&nice_size($got ? $got->{'size'} : $i->{'size'}),
 		], \@tds, "d", $i->{'id'});
 	}
 print &ui_columns_end();

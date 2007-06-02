@@ -2,8 +2,6 @@
 # XXX grouping
 # XXX make status updated limited to what the caller really needs
 # XXX xen
-# XXX zones
-#	XXX cannot install Virtualmin yet .. or maybe we need custom installer?
 # XXX move servers
 # 
 # XXX need to provide images with Virtualmin pre-installed
@@ -11,7 +9,6 @@
 #	XXX zone
 #	XXX xen
 #	XXX ec2
-# XXX hosting where? rsync down?
 # XXX need to fix hostname when re-creating from image
 
 do '../web-lib.pl';

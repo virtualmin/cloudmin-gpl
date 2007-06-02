@@ -25,6 +25,15 @@ if (!defined(&$hfunc) || !&$hfunc()) {
 print &ui_table_row($text{'add_desc'},
 	&ui_textbox("desc", undef, 60));
 
+# System image, if any are available for the server type
+@images = &list_server_images($in{'type'});
+if (@images) {
+	print &ui_table_row($text{'create_image'},
+		&ui_select("image", undef,
+			[ [ undef, $text{'create_noimage'} ],
+			  map { [ $_->{'id'}, $_->{'desc'} ] } @images ]));
+	}
+
 # Root password / SSH key (if possible)
 $sfunc = "type_".$in{'type'}."_no_ssh";
 $no_ssh = defined(&$sfunc) && &$sfunc();

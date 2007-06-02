@@ -152,6 +152,8 @@ create_ezonessunwebmin=.. failed! See the error output above.
 create_zonesrootssh=Allowing SSH logins by <tt>root</tt> ..
 create_zonesrootsshok=.. already allowed
 create_atbooting=Enabling system at host boot time ..
+create_image=Initial system image
+create_noimage=&lt;None - base OS only&gt;
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -769,4 +771,4 @@ images_already=.. already have version $1.
 images_eget=.. download of information file failed : $1
 images_egetfiles=.. some files failed : $1
 images_got=.. successfully downloaded $1 of system image data.
-
+images_return=system images list

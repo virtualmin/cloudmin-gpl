@@ -60,6 +60,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--novirt") {
 		$novirt = 1;
 		}
+	elsif ($a eq "--image") {
+		$image = shift(@ARGV);
+		}
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
 		$typeargs{$1}->{$2} = shift(@ARGV);
@@ -93,6 +96,13 @@ if (($no_ssh || !$ssh_pass) && $webmin_mode == 1) {
 	&usage("--webmin-pass must be given to specify the Webmin password ".
 	       "when no SSH password is available");
 	}
+if ($image) {
+	# Validate image ID
+	@images = &list_server_images($type);
+	($img) = grep { $_->{'id'} eq $image } @images;
+	$img || &usage("Image ID does not exist or in not valid for the ".
+		       "specified system type");
+	}
 
 # Create initial server object
 $server = { 'id' => time().$$,
@@ -100,6 +110,7 @@ $server = { 'id' => time().$$,
 	    'type' => 'unknown',
 	    'novirt' => $novirt,
 	    'status' => 'create',
+	    'image' => $image,
 	  };
 $server->{'desc'} = $desc;
 if (!defined(&$hfunc) || !&$hfunc()) {
@@ -285,6 +296,7 @@ print "                         [--desc \"system description\"]\n";
 print "                         --ssh-key keyid | --ssh-pass password\n";
 print "                         [--webmin | --webmin-pass password]\n";
 print "                         [--novirt]\n";
+print "                         [--image id]\n";
 if ($type) {
 	# Show type-specific command line args
 	$afunc = "type_".$type."_create_args";
