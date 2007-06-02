@@ -154,6 +154,8 @@ create_zonesrootsshok=.. already allowed
 create_atbooting=Enabling system at host boot time ..
 create_image=Initial system image
 create_noimage=&lt;None - base OS only&gt;
+create_copying=Copying $1 image file to host system ..
+create_ecopy=.. copy failed : $1
 
 keys_title=SSH Keys
 keys_desc=Key description

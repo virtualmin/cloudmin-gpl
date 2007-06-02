@@ -33,6 +33,15 @@ closedir(DIR);
 return @rv;
 }
 
+# get_server_image(id)
+# Returns a server image object with the given ID
+sub get_server_image
+{
+local ($id) = @_;
+local ($img) = grep { $_->{'id'} eq $id } &list_server_images();
+return $img;
+}
+
 # list_available_server_images([type])
 # Returns a list of machine images provided by Virtualmin. These are in a tab-
 # separated file, containing an ID, type, description, version and size.
@@ -73,10 +82,10 @@ foreach my $l (split(/\r?\n/, $out)) {
 return @rv;
 }
 
-# get_server_image(&avail)
+# download_server_image(&avail)
 # Downloads a server image from virtualmin.com, saves it locally, and returns
 # the new image object on success, or an error string on failure.
-sub get_server_image
+sub download_server_image
 {
 local ($img) = @_;
 local ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
@@ -95,10 +104,10 @@ $got{'size'} = $img->{'size'};
 return \%got;
 }
 
-# get_server_image_files(&image)
+# download_server_image_files(&image)
 # Downloads each of the needed files for some image, and outputs progress.
 # Returns undef on success, or an error message on failure.
-sub get_server_image_files
+sub download_server_image_files
 {
 local ($img) = @_;
 local @files = split(/\s+/, $img->{'files'});
@@ -118,12 +127,12 @@ foreach my $f (@files) {
 return undef;
 }
 
-# transfer_image_files(&server)
+# transfer_image_files(&server, [show-progress-dots])
 # Transfers all files for some system's image to a parent host, and returns
 # the path to the temp directory created for them.
 sub transfer_image_files
 {
-local ($server) = @_;
+local ($server, $progress) = @_;
 local $pfunc = "type_".$server->{'manager'}."_parent";
 local $vhost = &$pfunc($server);
 $vhost || return (0, "Could not find parent system");
@@ -151,12 +160,72 @@ return (0, $out) if ($ex);
 
 # Copy files from local to that dir
 # XXX not if local
-# XXX show progress indicator
 foreach my $f (split(/\s+/, $img->{'files'})) {
-	# XXX
+	local $path = "$server_images_dir/$f";
+	local $pid = fork();
+	local $outtemp = &tempname();
+	if (!$pid) {
+		local $err = &put_file_to_server($vhost, $path, "$temp/$f");
+		open(OUT, ">$outtemp");
+		print OUT $err;
+		close(OUT);
+		exit($err ? 1 : 0);
+		}
+	while(1) {
+		local $expid = waitpid($pid, WNOHANG);
+		last if ($expid == $pid);
+		print "." if ($progress);
+		sleep(1);
+		}
+	local $err = &read_file_contents($outtemp);
+	&unlink_file($outtemp);
+	if ($err) {
+		return (0, "Failed to copy $f : $err");
+		}
 	}
 
 return (1, $temp);
+}
+
+# cleanup_image_files(&server, imagetemp)
+# Deletes any image files transferred to the host of some server
+sub cleanup_image_files
+{
+local ($server, $temp) = @_;
+return if (!$temp);
+local $pfunc = "type_".$server->{'manager'}."_parent";
+local $vhost = &$pfunc($server);
+$vhost || return "Could not find parent system";
+local ($out, $ex, $err) = &execute_command_on_server($vhost,
+				"rm -rf ".quotemeta($temp));
+return $err ? $err : $ex ? $out : undef;
+}
+
+# fix_virtualmin_licence_files(&server)
+# Once a server has been started, fix up any files containing Virtualmin
+# licence keys.
+sub fix_virtualmin_licence_files
+{
+local ($server) = @_;
+local %serial;
+&read_file($licence_file, \%serial);
+local %hash = ( 'SERIAL' => $serial{'SerialNumber'},
+		'KEY' => $serial{'LicenseKey'} );
+foreach my $fix ("/etc/virtualmin-license",
+		 "/etc/apt/sources.list",
+		 "/etc/yum.repos.d/virtualmin.repo") {
+	local $temppath = &transname();
+	local $err = &get_file_from_server($server, $fix, $temppath);
+	next if ($err);
+	local $data = &read_file_contents($temppath);
+	$data = &substitute_template($data, \%hash);
+	&open_tempfile(FIXED, ">$temppath");
+	&print_tempfile(FIXED, $data);
+	&close_tempfile(FIXED);
+	$err = &put_file_to_server($server, $temppath, $fix);
+	return "Failed to save fixed $fix : $err" if ($err);
+	}
+return undef;
 }
 
 1;

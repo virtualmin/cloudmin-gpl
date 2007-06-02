@@ -25,7 +25,7 @@ foreach $id (@d) {
 		}
 	else {
 		# Download the .img file
-		$got = &get_server_image($img);
+		$got = &download_server_image($img);
 		if (!ref($got)) {
 			print &text('images_eget', $got),"<p>\n";
 			next;
@@ -33,7 +33,7 @@ foreach $id (@d) {
 
 		# Download all other files
 		print "<ul>\n";
-		$err = &get_server_image_files($got);
+		$err = &download_server_image_files($got);
 		print "</ul>\n";
 		if ($err) {
 			print &text('images_egetfiles', $err),"<p>\n";

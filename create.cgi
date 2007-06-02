@@ -63,6 +63,22 @@ if (defined(&$pfunc)) {
 
 &ui_print_unbuffered_header(undef, $text{'create_title'}, "");
 
+# If there is an image file, copy to the server
+if ($in{'image'}) {
+	$img = &get_server_image($in{'image'});
+	print &text('create_copying', &nice_size($img->{'size'}));
+	($imageok, $imagetemp) = &transfer_image_files($server, 1);
+	print "<br>\n";
+	if (!$imageok) {
+		print &text('create_ecopy', $imagetemp),"<p>\n";
+		goto END;
+		}
+	else {
+		$server->{'imagetemp'} = $imagetemp;
+		print $text{'create_done'},"<p>\n";
+		}
+	}
+
 # Call the server type's creation function, then wait for it to be come ready
 $tfunc = "type_".$in{'type'}."_desc";
 print &text('create_creating', &$tfunc()),"<br>\n";
@@ -83,6 +99,7 @@ if (defined(&$dfunc)) {
 			last;
 			}
 		elsif ($err) {
+			&cleanup_image_files($server, $imagetemp);
 			print &text('create_ewait', $err),"<p>\n";
 			goto END;
 			}
@@ -96,6 +113,7 @@ if (defined(&$dfunc)) {
 else {
 	print $text{'create_created2'},"<p>\n";
 	}
+&cleanup_image_files($server, $imagetemp);
 &save_managed_server($server);
 
 # Call any post-creation function

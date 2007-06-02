@@ -148,6 +148,21 @@ if (defined(&$pfunc)) {
 	&usage($err) if ($err);
 	}
 
+# If there is an image file, copy to the server
+if ($image) {
+	$img = &get_server_image($image);
+	print "Copying system image files ..\n";
+	($imageok, $imagetemp) = &transfer_image_files($server);
+	if (!$imageok) {
+		print ".. failed : $imagetemp\n";
+		exit(1);
+		}
+	else {
+		$server->{'imagetemp'} = $imagetemp;
+		print " .. done\n\n";
+		}
+	}
+
 # Start the creation
 $tfunc = "type_".$type."_desc";
 $tdesc = &$tfunc();
@@ -157,6 +172,7 @@ print "Starting creation of $tdesc system ..\n";
 $cfunc = "type_".$type."_create";
 $err = &$cfunc($server);
 if ($err) {
+	$err = &strip_html_tags($err);
 	print ".. creation failed : $err\n";
 	exit(2);
 	}
@@ -171,12 +187,15 @@ if (defined(&$dfunc)) {
 			last;
 			}
 		elsif ($err) {
+			$err = &strip_html_tags($err);
+			&cleanup_image_files($server, $imagetemp);
 			print ".. creation failed : $err\n\n";
 			exit(1);
 			}
 		sleep(1);
 		}
 	}
+&cleanup_image_files($server, $imagetemp);
 print ".. creation complete\n\n";
 &save_managed_server($server);
 
