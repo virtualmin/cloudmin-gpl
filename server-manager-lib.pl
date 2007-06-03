@@ -605,6 +605,19 @@ else {
 	}
 }
 
+# get_file_data_from_server(&server, remotefile)
+# Returns the contents of some file
+sub get_file_data_from_server
+{
+local ($server, $remotefile) = @_;
+local $temp = &transname();
+local $err = &get_file_from_server($server, $remotefile, $temp);
+return undef if ($err);
+local $data = &read_file_contents($temp);
+&unlink_file($temp);
+return $data;
+}
+
 # put_file_to_server(&server, localfile, remotefile)
 # Transfers a file from this system to the given server. May use scp or some
 # type-specific method
@@ -1555,7 +1568,15 @@ if (!$os || $os eq 'unknown') {
 		$os = "fedora";
 		}
 	elsif ($out =~ /redhat-release/) {
-		$os = "redhat";
+		# Might be redhat or centos
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"cat /etc/redhat-release");
+		if ($out =~ /CentOS/i) {
+			$os = "centos";
+			}
+		else {
+			$os = "redhat";
+			}
 		}
 	elsif ($out =~ /mandrake-release/) {
 		$os = "mandrake";
@@ -1570,7 +1591,7 @@ if (!$os || $os eq 'unknown') {
 		if ($out =~ /Ubuntu/) {
 			$os = "ubuntu";
 			}
-		elsif ($out =~ /Debian/) {
+		else {
 			$os = "debian";
 			}
 		}
@@ -1684,12 +1705,19 @@ if (!&read_file($licence_file, \%serial) ||
 	return $text{'virtualmin_elicence'};
 	}
 
-# Install wget and fuser, if needed
+# Install perl, wget and fuser, if needed
 if (!&has_command_on_server($server, "wget")) {
 	local ($wok, $werr) = &install_package_on_server($server, "wget");
 	if (!$wok) {
 		return $werr ? &text('virtualmin_ewget', $werr, "wget") :
 			       $text{'virtualmin_ewget2', "wget"};
+		}
+	}
+if (!&has_command_on_server($server, "perl")) {
+	local ($wok, $werr) = &install_package_on_server($server, "perl");
+	if (!$wok) {
+		return $werr ? &text('virtualmin_ewget', $werr, "perl") :
+			       $text{'virtualmin_ewget2', "perl"};
 		}
 	}
 if (!&has_command_on_server($server, "fuser")) {
@@ -1728,6 +1756,10 @@ if (@pids) {
 	# Yes .. try again later
 	return undef;
 	}
+
+# Remove the install script
+local $script = "/virtualmin-install.sh";
+&execute_command_on_server($server, "rm -f ".quotemeta($script));
 
 # Done .. but did it work?
 local ($tout, $tex, $terr) = &execute_command_on_server($server,

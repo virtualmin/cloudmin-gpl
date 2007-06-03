@@ -150,11 +150,11 @@ if (!$no_ssh) {
 			sleep(1);
 			}
 		}
-	else {
-		# Just check once to get Webmin root, if any
-		($sshstatus, $ssherr, $webmindir, $webminport,
-		   $webminssl) = &check_server_ssh_login($server);
-		}
+	}
+if (!$webmindir) {
+	# Just check once to get Webmin root, if any
+	($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
+		&check_server_ssh_login($server);
 	}
 
 # Check if the server has Webmin (it may have been part of the install image)
@@ -235,6 +235,10 @@ if (defined(&$bfunc)) {
 	print $text{'create_atbooting'},"<br>\n";
 	&$bfunc($server, 1);
 	print $text{'create_done'},"<p>\n";
+	}
+
+if (defined(&theme_post_save_server)) {
+	&theme_post_save_server($server);
 	}
 
 END:

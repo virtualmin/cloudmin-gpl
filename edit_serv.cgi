@@ -14,8 +14,9 @@ $info = &get_server_collected($server);
 @tds = ( "width=30%" );
 print &ui_form_start("save_serv.cgi", "post");
 print &ui_hidden("id", $in{'id'});
+$in{'basic'} = 1 if (!defined($in{'basic'}));
 print &ui_hidden_table_start($text{'edit_bheader'}, "width=100%", 2,
-			     "basic", 1, \@tds);
+			     "basic", $in{'basic'}, \@tds);
 
 # Hostname (editable for anything except this host)
 if ($server->{'id'} != 0) {
@@ -93,7 +94,7 @@ $sfunc = "type_".$t."_no_ssh";
 $hasssh = !defined(&$sfunc) || !&$sfunc();
 if ($haswebmin || $hasssh) {
 	print &ui_hidden_table_start($text{'edit_aheader'}, "width=100%", 2,
-				     "auth", 0, \@tds);
+				     "auth", $in{'auth'}, \@tds);
 	}
 
 # SSH
@@ -167,7 +168,7 @@ else {
 # Virtualmin status
 if ($info && scalar(keys %$info) > 1) {
 	print &ui_hidden_table_start($text{'edit_cheader'}, "width=100%", 2,
-				     "coll", 0, \@tds);
+				     "coll", $in{'coll'}, \@tds);
 
 	# CPU load and running processes
 	if ($info->{'load'}) {

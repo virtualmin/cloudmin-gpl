@@ -228,11 +228,11 @@ if (!$no_ssh) {
 			sleep(1);
 			}
 		}
-	else {
-		# Just check once to get Webmin root, if any
-		($sshstatus, $ssherr, $webmindir, $webminport,
-		   $webminssl) = &check_server_ssh_login($server);
-		}
+	}
+if (!$webmindir) {
+	# Just check once to get Webmin root, if any
+	($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
+		&check_server_ssh_login($server);
 	}
 
 # Check if the server has Webmin (it may have been part of the install image)
