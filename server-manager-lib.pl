@@ -9,7 +9,6 @@
 #	XXX zone
 #	XXX xen
 #	XXX ec2
-# XXX need to fix hostname when re-creating from image
 
 do '../web-lib.pl';
 &init_config();
@@ -1381,7 +1380,26 @@ else {
 	$out .= "\nWebmin installed, but could not connect : $werr\n";
 	}
 
-return ($out, undef);
+return ($out, undef, $wroot);
+}
+
+# wait_webmin_server(&server, timeout)
+# Wait for Webmin to start accepting connections on some server. Returns undef
+# if OK, or the last error message on timeout.
+sub wait_webmin_server
+{
+local ($server, $timeout) = @_;
+local $start = time();
+local $err;
+while(time() - $start < $timeout) {
+	local $fh = "WEBMINSOCK";
+	if (&open_socket($server->{'host'}, $server->{'port'}, $fh, \$err)) {
+		close($fh);
+		return undef;
+		}
+	sleep(1);
+	}
+return $err;
 }
 
 sub generate_random_password
@@ -1497,12 +1515,15 @@ if ($cache) {
 	# Use last checked values
 	return @$cache;
 	}
-if ($server->{'pass'}) {
+if ($server->{'pass'} && gethostbyname($server->{'host'})) {
 	# Ask Webmin first
+	$last_remote_error = undef;
 	&remote_foreign_require($server, "software", "software-lib.pl");
-	($pkg, $update) = &remote_eval($server, "software",
-	    "(\$config{'package_system'}, \$update_system)");
-	$os = $server->{'type'};
+	if (!$last_remote_error) {
+		($pkg, $update) = &remote_eval($server, "software",
+		    "(\$config{'package_system'}, \$update_system)");
+		$os = $server->{'type'};
+		}
 	}
 if (!$pkg || !$update) {
 	# No luck .. check what commands it has

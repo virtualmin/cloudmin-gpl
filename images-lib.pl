@@ -1,5 +1,7 @@
 # Functions for server image management
 
+use POSIX;
+
 $server_images_dir = "$ENV{'WEBMIN_VAR'}/$module_name";
 $server_images_url = "http://vm2.virtualmin.com/images/images.txt";
 $server_images_base = "http://vm2.virtualmin.com/images/";
@@ -146,7 +148,7 @@ if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
 	$temp = &remote_foreign_call($vhost, "webmin", "tempname",
 				     $img->{'id'});
-	$temp || return (0, $remote_webmin_error);
+	$temp || return (0, $last_remote_error);
 	}
 else {
 	# Use configure dir, or /tmp
@@ -203,10 +205,12 @@ return $err ? $err : $ex ? $out : undef;
 
 # fix_virtualmin_licence_files(&server)
 # Once a server has been started, fix up any files containing Virtualmin
-# licence keys.
+# licence keys. Also clears any virtualmin host-specific cache files.
 sub fix_virtualmin_licence_files
 {
 local ($server) = @_;
+
+# Put serial into licence and update config files
 local %serial;
 &read_file($licence_file, \%serial);
 local %hash = ( 'SERIAL' => $serial{'SerialNumber'},
@@ -225,6 +229,10 @@ foreach my $fix ("/etc/virtualmin-license",
 	$err = &put_file_to_server($server, $temppath, $fix);
 	return "Failed to save fixed $fix : $err" if ($err);
 	}
+
+# Clear collected info cache
+&execute_command_on_server($server, "rm /etc/webmin/virtual-server/collected");
+
 return undef;
 }
 

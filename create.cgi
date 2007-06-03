@@ -182,7 +182,8 @@ elsif ($in{'webmin_mode'}) {
 	local ($src, $type, $err) = &get_install_webmin_source($server);
 	if (!$err) {
 		print &text('create_webmining', $src),"<br>\n";
-		($out, $err) = &install_webmin_server($server, $src, $type, 1);
+		($out, $err, $webmindir) =
+			&install_webmin_server($server, $src, $type, 1);
 		if ($err) {
 			print "<pre>$out</pre>";
 			$server->{'user'} = undef;	# No webmin
@@ -192,6 +193,18 @@ elsif ($in{'webmin_mode'}) {
 		else {
 			print $text{'save_webmindone'},"<p>\n";
 			}
+		}
+	}
+
+# If we do have Webmin, wait for it to start
+if ($webmindir) {
+	print $text{'create_webminstarting'},"<br>\n";
+	$err = &wait_webmin_server($server, 60);
+	if (!$err) {
+		print $text{'create_webminstarted'},"<p>\n";
+		}
+	else {
+		print &text('create_webminnostart', 60, $err),"<p>\n";
 		}
 	}
 

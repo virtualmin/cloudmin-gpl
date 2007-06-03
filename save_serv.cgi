@@ -224,6 +224,10 @@ elsif ($in{'recheck'}) {
 	$server->{'virtualmin_error'} = $cerr;
 	&save_managed_server($server);
 
+	if (defined(&theme_post_save_server)) {
+		&theme_post_save_server($server);
+		}
+
 	&ui_print_footer("", $text{'index_return'});
 	}
 

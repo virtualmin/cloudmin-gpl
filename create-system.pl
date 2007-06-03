@@ -260,7 +260,8 @@ elsif ($webmin_mode) {
 	local ($src, $type, $err) = &get_install_webmin_source($server);
 	if (!$err) {
 		print "Installing Webmin ..\n";
-		($out, $err) = &install_webmin_server($server, $src, $type, 1);
+		($out, $err, $webmindir) =
+			&install_webmin_server($server, $src, $type, 1);
 		if ($err) {
 			$server->{'user'} = undef;	# No webmin
 			$server->{'pass'} = undef;
@@ -269,6 +270,18 @@ elsif ($webmin_mode) {
 		else {
 			print ".. done\n\n";
 			}
+		}
+	}
+
+# If we do have Webmin, wait for it to start
+if ($webmindir) {
+	print "Waiting for Webmin to start ..\n";
+	$err = &wait_webmin_server($server, 60);
+	if (!$err) {
+		print ".. started OK\n\n";
+		}
+	else {
+		print ".. did not start in 60 seconds. Last error was : $err\n\n";
 		}
 	}
 

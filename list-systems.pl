@@ -49,6 +49,9 @@ if ($multi) {
 		print "    Type code: $s->{'manager'}\n";
 		print "    Status: ",$text{'status_'.$s->{'status'}},"\n";
 		print "    Status code: $s->{'status'}\n";
+		if ($s->{'status_msg'}) {
+			print "    Status error: $s->{'status_msg'}\n";
+			}
 		print "    Status checked: ",
 			&make_date($s->{'statustime'}),"\n";
 		if ($s->{'status'} eq 'virt' && $s->{'virtualmin_error'}) {
