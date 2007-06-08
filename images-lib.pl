@@ -217,7 +217,8 @@ local %hash = ( 'SERIAL' => $serial{'SerialNumber'},
 		'KEY' => $serial{'LicenseKey'} );
 foreach my $fix ("/etc/virtualmin-license",
 		 "/etc/apt/sources.list",
-		 "/etc/yum.repos.d/virtualmin.repo") {
+		 "/etc/yum.repos.d/virtualmin.repo",
+		 "/etc/webmin/webmin/config") {
 	local $temppath = &transname();
 	local $err = &get_file_from_server($server, $fix, $temppath);
 	next if ($err);
@@ -233,6 +234,51 @@ foreach my $fix ("/etc/virtualmin-license",
 # Clear collected info cache
 &execute_command_on_server($server, "rm /etc/webmin/virtual-server/collected");
 
+return undef;
+}
+
+# fix_hostname_config_files(&server, ip, shorthost, fullhost, &vhost,
+#			    &dir-on-vhost)
+# Fixes up all configuration files that contain the IP address or hostname
+sub fix_hostname_config_files
+{
+local ($server, $ip, $host, $fullhost, $vhost, $dir) = @_;
+
+foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
+		 "/etc/mailname", "/etc/resolv.conf",
+		 "/etc/sysconfig/network", "/etc/postfix/main.cf") {
+	local $fixpath = "$dir/$fix";
+	local $temppath = &transname();
+	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
+	next if ($err);
+	local $data = &read_file_contents($temppath);
+	if ($fix eq "/etc/hosts") {
+		$data = "127.0.0.1 localhost\n".
+			"$ip $fullhost $host\n";
+		}
+	elsif ($fix eq "/etc/sysconfig/network") {
+		if ($data !~ s/HOSTNAME=(\S+)/HOSTNAME=$fullhost/) {
+			$data .= "HOSTNAME=$fullhost\n";
+			}
+		}
+	elsif ($fix eq "/etc/postfix/main.cf") {
+		if ($data !~ s/myhostname\s*=.*/myhostname = $fullhost/) {
+			$data .= "myhostname = $fullhost\n";
+			}
+		$data =~ s/mydestination\s*=.*/mydestination = $fullhost, $host, localhost/;
+		}
+	elsif ($fix eq "/etc/resolv.conf") {
+		$data = &get_file_data_from_server($vhost, $fix);
+		}
+	else {
+		$data = $fullhost."\n";
+		}
+	&open_tempfile(FIXED, ">$temppath");
+	&print_tempfile(FIXED, $data);
+	&close_tempfile(FIXED);
+	$err = &put_file_to_server($vhost, $temppath, $fixpath);
+	return "Failed to save fixed $fix : $err" if ($err);
+	}
 return undef;
 }
 

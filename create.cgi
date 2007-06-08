@@ -166,6 +166,7 @@ if ($webmindir) {
 
 	# Forcibly set the password
 	$server->{'user'} ||= 'root';
+	$server->{'pass'} ||= $server->{'ssh_pass'};
 	$server->{'pass'} ||= &generate_random_password();
 	print $text{'create_passing'},"<br>\n";
 	$perr = &set_server_webmin_password($server, $webmindir, "root",

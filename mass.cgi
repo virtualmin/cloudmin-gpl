@@ -27,6 +27,7 @@ if ($in{'refresh'}) {
 
 	&ui_print_footer("", $text{'index_return'});
 	}
+
 elsif ($in{'delete'}) {
 	# Delete the selected servers (virtual only)
 	&error_setup($text{'mass_derr'});
@@ -103,6 +104,7 @@ elsif ($in{'delete'}) {
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
+
 elsif ($in{'dereg'}) {
 	# Removing from managed servers list
 	&error_setup($text{'mass_uerr'});
@@ -140,6 +142,7 @@ elsif ($in{'dereg'}) {
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
+
 elsif ($in{'update'}) {
 	# Update packages on multiple systems at once
 	&ui_print_unbuffered_header(undef, $text{'mass_uptitle'}, "");
@@ -162,6 +165,108 @@ elsif ($in{'update'}) {
 
 	&ui_print_footer("", $text{'index_return'});
 	}
+
+elsif ($in{'shutdown'}) {
+	# Shutdown the selected servers
+	&error_setup($text{'mass_shuterr'});
+
+	# Check if servers cannot be shut down
+	@cannot = ( );
+	foreach $s (@servers) {
+		if ($s->{'status'} eq 'down' || $s->{'status'} eq 'nohost') {
+			push(@cannot, $s);
+			}
+		$sfunc = "type_".$s->{'manager'}."_no_shutdown";
+		if (defined(&$sfunc) && &$sfunc($s)) {
+			push(@cannot, $s);
+			}
+		}
+	if (@cannot) {
+		&error(&text('mass_eshut',
+			join(" ", map { "<tt>$_->{'host'}</tt>" } @cannot)));
+		}
+
+	&ui_print_unbuffered_header(undef, $text{'mass_shuttitle'}, "");
+	if (!$in{'confirm'}) {
+		# Ask the user if he is sure
+		print "<center>\n";
+		print &ui_form_start("mass.cgi", "post");
+		print &ui_hidden("shutdown", 1);
+		foreach $s (@servers) {
+			print &ui_hidden("d", $s->{'id'});
+			}
+		print $text{'mass_shutrusre'},"<p>\n";
+		print "<table>\n";
+		foreach $s (@servers) {
+			$tfunc = "type_".$s->{'manager'}."_desc";
+			@sdoms = &get_server_domains($s);
+			print "<tr>\n";
+			print "<td><tt>$s->{'host'}</tt></td>\n";
+			print "<td>(",&$tfunc(),")</td>\n";
+			print "<td>",@sdoms ? &text('mass_ddoms',
+					scalar(@sdoms)) : undef,"</td>\n";
+			print "</tr>\n";
+			$dtotal += scalar(@sdoms);
+			}
+		print "</table>\n";
+		print &ui_form_end([ [ "confirm", $text{'mass_shutok'} ] ]);
+		print "</center>\n";
+		}
+	else {
+		# Do it for real, in parallel
+		print &text('mass_shutting', scalar(@servers)),"<br>\n";
+		&parallel_server_function(\@servers,
+			sub { $err = &shutdown_server($_[0]);
+			      &check_server_status($_[0]);
+			      &save_managed_server($_[0]) });
+		print $text{'mass_shutted'},"<p>\n";
+		foreach my $s (@servers) {
+			if (defined(&theme_post_save_server)) {
+				&theme_post_save_server($s);
+				}
+			}
+		}
+	&ui_print_footer("", $text{'index_return'});
+	}
+
+elsif ($in{'startup'}) {
+	# Start up the selected servers
+	&error_setup($text{'mass_starterr'});
+
+	# Check if servers cannot be started up
+	@cannot = ( );
+	foreach $s (@servers) {
+		if ($s->{'status'} ne 'down' && $s->{'status'} ne 'nossh') {
+			push(@cannot, $s);
+			}
+		$sfunc = "type_".$s->{'manager'}."_no_startup";
+		if (defined(&$sfunc) && &$sfunc($s)) {
+			push(@cannot, $s);
+			}
+		}
+	if (@cannot) {
+		&error(&text('mass_estart',
+			join(" ", map { "<tt>$_->{'host'}</tt>" } @cannot)));
+		}
+
+	&ui_print_unbuffered_header(undef, $text{'mass_starttitle'}, "");
+
+	print &text('mass_starting', scalar(@servers)),"<br>\n";
+	&parallel_server_function(\@servers,
+		sub { $err = &startup_server($_[0]);
+		      &check_server_status($_[0]);
+		      &save_managed_server($_[0]) });
+	print $text{'mass_started'},"<p>\n";
+	foreach my $s (@servers) {
+		if (defined(&theme_post_save_server)) {
+			&theme_post_save_server($s);
+			}
+		}
+
+	&ui_print_footer("", $text{'index_return'});
+	}
+
+
 else {
 	&error($text{'mass_ebutton'});
 	}

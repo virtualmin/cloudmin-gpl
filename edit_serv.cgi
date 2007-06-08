@@ -55,6 +55,10 @@ if (defined(&$bfunc)) {
 print &ui_table_row($text{'edit_status'},
 		    &text('edit_statustime', &describe_status($server, 1, 0),
 				     &make_date($server->{'statustime'})));
+if ($server->{'status_msg'}) {
+	print &ui_table_row($text{'edit_statusmsg'},
+			    $server->{'status_msg'});
+	}
 
 # Virtualmin config error
 if ($status eq 'virt' && $server->{'virtualmin_error'}) {

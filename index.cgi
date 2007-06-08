@@ -86,6 +86,9 @@ if (@servers) {
 			     undef,
 			     [ "dereg", $text{'index_dereg'} ],
 			     [ "delete", $text{'index_delete'} ],
+			     undef,
+			     [ "shutdown", $text{'index_shutdown'} ],
+			     [ "startup", $text{'index_startup'} ],
 			   ]);
 	}
 elsif (@allservers) {

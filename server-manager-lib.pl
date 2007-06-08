@@ -3,10 +3,10 @@
 # XXX make status updated limited to what the caller really needs
 # XXX xen
 # XXX move servers
+# XXX left frame should follow right
+# XXX security-updates and webmin tarball
 # 
 # XXX need to provide images with Virtualmin pre-installed
-#	XXX vservers
-#	XXX zone
 #	XXX xen
 #	XXX ec2
 
@@ -389,8 +389,9 @@ return $text;
 # check_server_ssh_login(&server)
 # Checks if some system can be contacted via SSH, with the login details
 # set in the server object. Returns a status code (0=OK, 1=No connect, 2=No
-# login, 3=Unknown error, 4=Timeout, 5=Host down) and an error message, the
-# Webmin root directory (if installed), the Webmin port and the Webmin SSL flag.
+# login, 3=Unknown error, 4=Timeout, 5=Host down, 6=Virtual system down) and
+# an error message, the Webmin root directory (if installed), the Webmin
+# port and the Webmin SSL flag.
 sub check_server_ssh_login
 {
 local ($server) = @_;
@@ -422,8 +423,12 @@ if ($status == 0) {
 		local $ssl = $out =~ /ssl=(\S+)/ ? $1 : 0;
 		if ($root && $ssl) {
 			# Webmin wants SSL .. but can we really provide it?
+			local $pp = &get_file_data_from_server($server,
+					"/etc/webmin/perl-path");
+			chop($pp);
+			$pp ||= "perl";
 			local ($sout, $sex) = &execute_command_on_server(
-				$server, "perl -e 'use Net::SSLeay'");
+				$server, "$pp -e 'use Net::SSLeay'");
 			if ($sex) {
 				$ssl = 0;	# Missing Perl module
 				}
@@ -764,24 +769,35 @@ local $ping = &ping_server_host($server->{'host'});
 local ($status, $err, $webminroot, $webminport, $webminssl) =
 	&check_server_ssh_login($server);
 if ($status == 2) {
+	# Could not login via SSH
 	$server->{'status'} = 'nosshlogin';
 	$server->{'status_msg'} = $err;
 	&unlock_file($file);
 	return 0;
 	}
 elsif ($status == 5) {
+	# Hosting system is down
 	$server->{'status'} = 'nohost';
 	$server->{'status_msg'} = $err;
 	&unlock_file($file);
 	return 0;
 	}
+elsif ($status == 6) {
+	# Virtual system down
+	$server->{'status'} = 'down';
+	$server->{'status_msg'} = $err;
+	&unlock_file($file);
+	return 0;
+	}
 elsif ($status && !$ping) {
+	# Could not SSH or ping, so assume totally down
 	$server->{'status'} = 'down';
 	$server->{'status_msg'} = $err;
 	&unlock_file($file);
 	return 0;
 	}
 elsif ($status) {
+	# Could not SSH, but can ping
 	$server->{'status'} = 'nossh';
 	$server->{'status_msg'} = $err;
 	&unlock_file($file);
@@ -826,7 +842,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 	$server->{'status'} = 'virt';
 	$server->{'status_msg'} = undef;
 	local $info;
-	if (&remote_foreign_check($server, "virtual-server")) {
+	if (&remote_foreign_check($server, "virtual-server") &&
+	    !$server->{'novirtualmin'}) {
 		# Get and save remote Virtualmin domains
 		&remote_foreign_require($server, "virtual-server",
 					"virtual-server-lib.pl");
@@ -1986,6 +2003,17 @@ local $temp = &transname();
 local $err = &put_file_to_server($server, $temp,
 				 "$roothome/.ssh/authorized_keys");
 return $err;
+}
+
+# clear_authorized_key(&server)
+# Delete root's authorized_keys file from a server
+sub clear_authorized_key
+{
+local ($server) = @_;
+local ($out, $ex, $err) = &execute_command_on_server($server,
+				"rm -f .ssh/authorized_keys ; ".
+				"rm -f .ssh/authorized_keys2");
+return $err ? $err : $ex ? $out : undef;
 }
 
 # check_domain_move(&serverdoms, &destserver)
