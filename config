@@ -1,6 +1,6 @@
 procs=10
 show_this=0
-image_owners=amazon 093590521311 635201719205 109157129749
+image_owners=amazon 093590521311
 link_mode=0
 vserver_conf=/etc/vservers
 display_max=20

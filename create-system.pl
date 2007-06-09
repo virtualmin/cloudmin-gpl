@@ -286,6 +286,12 @@ if ($webmindir) {
 		}
 	}
 
+# Call any really final post-creation function
+$dfunc = "type_".$in{'type'}."_create_ready";
+if (defined(&$dfunc)) {
+	&$dfunc($server);
+	}
+
 # Re-check and save the status
 print "Refreshing status ..\n";
 &save_managed_server($server);

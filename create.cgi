@@ -209,6 +209,12 @@ if ($webmindir) {
 		}
 	}
 
+# Call any really final post-creation function
+$dfunc = "type_".$in{'type'}."_create_ready";
+if (defined(&$dfunc)) {
+	&$dfunc($server);
+	}
+
 # Re-check and save the status
 print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
@@ -225,7 +231,7 @@ if ($server->{'status'} eq 'virt') {
 		}
 	else {
 		print &text('add_vcheckerr',
-			    $server->{'virtualmin_checked'}),"<p>\n";
+			    $server->{'virtualmin_error'}),"<p>\n";
 		}
 	&save_managed_server($server);
 	}
@@ -238,8 +244,8 @@ if (defined(&$bfunc)) {
 	print $text{'create_done'},"<p>\n";
 	}
 
-if (defined(&theme_post_save_server)) {
-	&theme_post_save_server($server);
+if (defined(&theme_select_server)) {
+	&theme_select_server($server);
 	}
 
 END:

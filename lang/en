@@ -260,6 +260,7 @@ ec2_keyimport2=Import existing EC2 key from account $1 named $2, with private ke
 ec2_ekeyimportname=Imported EC2 key does not exist
 ec2_ekeyimportdata=Imported EC2 key data does not look valid
 ec2_keyname=EC2 key name
+ec2_eauth=Failed to authorize EC2 account with Virtualmin server : $1
 
 dec2s_err=Failed to delete EC2 accounts
 dec2s_enone=None selected

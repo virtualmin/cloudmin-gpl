@@ -245,7 +245,7 @@ sub fix_hostname_config_files
 local ($server, $ip, $host, $fullhost, $vhost, $dir) = @_;
 
 foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
-		 "/etc/mailname", "/etc/resolv.conf",
+		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",
 		 "/etc/sysconfig/network", "/etc/postfix/main.cf") {
 	local $fixpath = "$dir/$fix";
 	local $temppath = &transname();

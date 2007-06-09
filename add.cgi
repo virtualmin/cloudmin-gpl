@@ -110,6 +110,10 @@ if ($server->{'status'} eq 'virt') {
 	&save_managed_server($server);
 	}
 
+if (defined(&theme_select_server)) {
+	&theme_select_server($server);
+	}
+
 END:
 &ui_print_footer("", $text{'index_return'});
 

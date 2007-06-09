@@ -1,14 +1,15 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX grouping
-# XXX make status updated limited to what the caller really needs
+# XXX make status updates limited to what the caller really needs
 # XXX xen
 # XXX move servers
 # XXX left frame should follow right
 # XXX security-updates and webmin tarball
+#
+# XXX domain move should check features
 # 
 # XXX need to provide images with Virtualmin pre-installed
 #	XXX xen
-#	XXX ec2
 
 do '../web-lib.pl';
 &init_config();
