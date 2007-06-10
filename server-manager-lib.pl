@@ -3,8 +3,7 @@
 # XXX make status updates limited to what the caller really needs
 # XXX xen
 # XXX move servers
-# XXX left frame should follow right
-# XXX security-updates and webmin tarball
+# XXX upload zones images
 #
 # XXX domain move should check features
 # 
@@ -25,6 +24,7 @@ use Net::Amazon::EC2;
 				      [ "zones", undef ],
 				      [ "ec2", undef ],
 				      [ "vserver", undef ],
+				      [ "xen", undef ],
 				      [ "this", undef ],
 				    );
 @server_management_types = ( );
@@ -1158,7 +1158,8 @@ local ($server, $p) = @_;
 $last_remote_error = undef;
 &remote_foreign_require($server, "security-updates", "security-updates-lib.pl");
 local ($out, $rv) = &remote_foreign_call($server, "security-updates",
-		"capture_function_output", "package_install", $p->{'name'});
+		"capture_function_output", "package_install",
+		$p->{'name'}, $p->{'system'});
 if ($last_remote_error) {
 	return $last_remote_error;
 	}

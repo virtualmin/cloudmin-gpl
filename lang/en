@@ -83,6 +83,11 @@ add_xenhost=Xen hosting system
 add_xeninstance=Xen instance
 add_exeninstance=No Xen instance name entered
 add_exeninstance2=The selected Xen instance does not exist on $1
+add_xenconf=Xen configuration file on hosting system
+add_exenconf=No Xen configuration file for instance entered
+add_exenconf2=Xen configuration file does not exist on selected host system
+add_exenconf3=Xen configuration file does not appear to be for the selected instance
+add_exenconf4=The specified file does not appear to be a Xen configuration file
 
 create_title=Create New System
 create_header=Details of new virtual system
@@ -805,5 +810,46 @@ images_return=system images list
 xen_typedesc=Xen
 xen_createlink=Create Xen instance.
 xen_addlink=Add Xen instance.
+
+xen_create=Register Xen Host
+xen_edit=Edit Xen Host
+xen_egone=The Xen host no longer exists!
+xen_header=Xen host system details
+xen_host=System hosting Xens
+xen_dir=Base directory for virtual systems
+xen_domain=Add Xen systems to DNS domain
+xen_domain2=DNS domain for Xen servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
+xen_range=IP address allocation range
+xen_startend=$1 to $2 / $3
+xen_iface=Base network interface
+xen_ether=First ethernet interface
+xen_reg=Register
+xen_unreg=De-Register
+xen_err=Failed to save Xen host
+xen_elinux=Xen servers are only supported on Linux
+xen_ewhich=The required command $1 does not exist. Perhaps the Xen software is not installed?
+xen_ekernel=The kernel does not include Xen support. Perhaps your do not have the Xen-specific kernel installed?
+xen_edown=A system which cannot be contacted via SSH cannot be used for Xen hosting
+xen_esoft=The selected system cannot support Xen instances : $1
+xen_edir=The specified base directory does not exist
+xen_ezone=Missing or invalid-looking DNS domain
+xen_estart=Missing or invalid starting IP address for allocation
+xen_eend=Missing or invalid ending IP address for allocation
+xen_ecidr=Missing or invalid network size - must be a number like 16 or 24
+xen_erange=The starting IP address must be before the ending address
+xen_eiface=Missing or invalid-looking base network interface
+
 xens_title=Xen Host Systems
+xens_add=Register a system for Xen hosting.
+xens_host=System hostname
+xens_os=OS
+xens_users=Hosted systems
+xens_nousers=None
+xens_manyusers=$1 systems
+xens_doneall=All possible systems have already been registered for Xen hosting.
+xens_none=No systems have been registered for Xen hosting yet.
+xens_none2=None of the registered systems can host Xen instances.
+xens_return=list of Xen hosts
+xens_dir=Base directory
+
 
