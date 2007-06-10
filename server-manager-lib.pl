@@ -402,7 +402,8 @@ local ($server) = @_;
 local $sfunc = "type_".$server->{'manager'}."_check_login";
 if (defined(&$sfunc)) {
 	# Type has defined it's own function for checking the status
-	return &$sfunc($server);
+	local @rv = &$sfunc($server);
+	return @rv if (scalar(@rv));
 	}
 
 # Need to really SSH
@@ -513,10 +514,12 @@ eval {
 			}
 		elsif ($rv == 2) {
 			$wrong_password++;
+			$out .= $wait_for_input;
 			last;
 			}
 		elsif ($rv == 3) {
 			$connect_failed++;
+			$out .= $wait_for_input;
 			}
 		elsif ($rv < 0) {
 			last;
@@ -767,6 +770,7 @@ $server->{'statustime'} = time();
 local $ping = &ping_server_host($server->{'host'});
 
 # Check if we can login
+local $clfunc = "type_".$server->{'manager'}."_check_login";
 local ($status, $err, $webminroot, $webminport, $webminssl) =
 	&check_server_ssh_login($server);
 if ($status == 2) {
@@ -790,15 +794,16 @@ elsif ($status == 6) {
 	&unlock_file($file);
 	return 0;
 	}
-elsif ($status && !$ping) {
-	# Could not SSH or ping, so assume totally down
+elsif ($status && !$ping && !defined(&$clfunc)) {
+	# Could not SSH or ping, so assume totally down (for real systems)
 	$server->{'status'} = 'down';
 	$server->{'status_msg'} = $err;
 	&unlock_file($file);
 	return 0;
 	}
 elsif ($status) {
-	# Could not SSH, but can ping
+	# Could not SSH, but can ping or the virtual system reports that
+	# it should be up
 	$server->{'status'} = 'nossh';
 	$server->{'status_msg'} = $err;
 	&unlock_file($file);

@@ -462,6 +462,11 @@ edit_vserverinstance=VServer instance name
 edit_vserverctx=Context ID
 edit_vserversize=Memory used
 edit_vservervr=$1 virtual, $2 resident
+edit_xenhost=Xen host system
+edit_xeninstance=Xen instance name
+edit_xenmem=Memory used
+edit_xenstate=Xen status
+edit_xenconf=Xen instance config file
 edit_iheader=Network Interfaces
 edit_ifaceadd=Add a new interface.
 edit_ifaceaddress=Address
@@ -852,4 +857,8 @@ xens_none2=None of the registered systems can host Xen instances.
 xens_return=list of Xen hosts
 xens_dir=Base directory
 
-
+xen_state_r=Running
+xen_state_b=Waiting to run
+xen_state_p=Paused
+xen_state_s=Shutting down
+xen_state_d=Dying
