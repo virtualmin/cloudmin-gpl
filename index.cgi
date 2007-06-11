@@ -11,13 +11,16 @@ print $lerr if ($lerr);
 
 # Build add links
 @links = ( &select_all_link("d"), &select_invert_link("d") );
-foreach $t (@server_management_types) {
-	$lfunc = "type_".$t."_create_links";
-	if (defined(&$lfunc)) {
-		foreach $l (&$lfunc()) {
-			$prog = $l->{'create'} ? "create_form.cgi"
-					       : "add_form.cgi";
-			push(@links,"<a href='$prog?type=$t'>$l->{'desc'}</a>");
+if (!$main::vm2_no_create_links) {
+	foreach $t (@server_management_types) {
+		$lfunc = "type_".$t."_create_links";
+		if (defined(&$lfunc)) {
+			foreach $l (&$lfunc()) {
+				$prog = $l->{'create'} ? "create_form.cgi"
+						       : "add_form.cgi";
+				push(@links,
+				  "<a href='$prog?type=$t'>$l->{'desc'}</a>");
+				}
 			}
 		}
 	}

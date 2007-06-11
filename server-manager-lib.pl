@@ -2,6 +2,8 @@
 # XXX grouping
 # XXX make status updates limited to what the caller really needs
 # XXX xen
+#	XXX command-line creation
+#	XXX more images (Ubuntu?)
 # XXX move servers
 # XXX upload zones images
 #
@@ -597,21 +599,22 @@ local ($server, $remotefile, $localfile) = @_;
 local $gfunc = "type_".$server->{'manager'}."_get_file";
 if (defined(&$gfunc)) {
 	# Use type-specific function call
-	return &$gfunc(@_);
+	local $rv = &$gfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to scp
 	}
-else {
-	# Just scp down
-	local $sshcmd = "scp -r -".$server->{'ssh_protocol'};
-	if ($server->{'key'}) {
-		local ($key) = grep { $_->{'id'} == $server->{'key'} }
-				    &list_ssh_keys();
-		$sshcmd .= " -i ".quotemeta($key->{'file'});
-		}
-	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}:".
-		   quotemeta($remotefile)." ".quotemeta($localfile);
-	local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
-	return $status ? $out : undef;
+
+# Just scp down
+local $sshcmd = "scp -r -".$server->{'ssh_protocol'};
+if ($server->{'key'}) {
+	local ($key) = grep { $_->{'id'} == $server->{'key'} }
+			    &list_ssh_keys();
+	$sshcmd .= " -i ".quotemeta($key->{'file'});
 	}
+$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}:".
+	   quotemeta($remotefile)." ".quotemeta($localfile);
+local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
+return $status ? $out : undef;
 }
 
 # get_file_data_from_server(&server, remotefile)
@@ -636,22 +639,23 @@ local ($server, $localfile, $remotefile) = @_;
 local $pfunc = "type_".$server->{'manager'}."_put_file";
 if (defined(&$pfunc)) {
 	# Use type-specific function call
-	return &$pfunc(@_);
+	local $rv = &$pfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to scp
 	}
-else {
-	# Just scp up
-	local $sshcmd = "scp -r -".$server->{'ssh_protocol'};
-	if ($server->{'key'}) {
-		local ($key) = grep { $_->{'id'} == $server->{'key'} }
-				    &list_ssh_keys();
-		$sshcmd .= " -i ".quotemeta($key->{'file'});
-		}
-	$sshcmd .= " ".quotemeta($localfile).
-		   " $server->{'ssh_user'}\@$server->{'host'}:".
-		   quotemeta($remotefile);
-	local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
-	return $status ? $out : undef;
+
+# Just scp up
+local $sshcmd = "scp -r -".$server->{'ssh_protocol'};
+if ($server->{'key'}) {
+	local ($key) = grep { $_->{'id'} == $server->{'key'} }
+			    &list_ssh_keys();
+	$sshcmd .= " -i ".quotemeta($key->{'file'});
 	}
+$sshcmd .= " ".quotemeta($localfile).
+	   " $server->{'ssh_user'}\@$server->{'host'}:".
+	   quotemeta($remotefile);
+local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
+return $status ? $out : undef;
 }
 
 # has_command_on_server(&server, command)
@@ -2009,6 +2013,28 @@ local $temp = &transname();
 &set_ownership_permissions(undef, undef, 0700, $temp);
 local $err = &put_file_to_server($server, $temp,
 				 "$roothome/.ssh/authorized_keys");
+return $err;
+}
+
+# set_shadow_root_password(&server, pass)
+# Sets the root password for a server by directly editing /etc/shadow
+sub set_shadow_root_password
+{
+local ($server, $pass) = @_;
+local $shadow = &transname();
+local $err = &get_file_from_server($server, "/etc/shadow", $shadow);
+if (!$err) {
+	local $lref = &read_file_lines($shadow);
+	foreach my $l (@$lref) {
+		local @w = split(/:/, $l, -1);
+		if ($w[0] eq "root") {
+			$w[1] = &unix_crypt($pass, $salt);
+			$l = join(':', @w);
+			}
+		}
+	&flush_file_lines($shadow);
+	$err = &put_file_to_server($server, $shadow, "/etc/shadow");
+	}
 return $err;
 }
 
