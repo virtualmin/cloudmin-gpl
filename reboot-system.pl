@@ -48,6 +48,7 @@ foreach $s (@servers) {
 	print "Rebooting $tdesc system $s->{'host'} ..\n";
 	$err = &reboot_server($s);
 	if ($err) {
+		$err = &html_tags_to_text($err);
 		print ".. reboot failed : $err\n\n";
 		}
 	else {

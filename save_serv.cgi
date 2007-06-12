@@ -146,6 +146,7 @@ elsif ($in{'installvirt'}) {
 	# Wait till done
 	print $text{'save_virtwait'};
 	while(1) {
+		sleep(1);
 		$done = &install_virtualmin_server_done($server);
 		if ($done eq "OK") {
 			print "<br>",$text{'save_virtdone'},"<p>\n";

@@ -47,6 +47,7 @@ foreach $s (@servers) {
 	print "Starting up $tdesc system $s->{'host'} ..\n";
 	$err = &startup_server($s);
 	if ($err) {
+		$err = &html_tags_to_text($err);
 		print ".. startup failed : $err\n\n";
 		}
 	else {

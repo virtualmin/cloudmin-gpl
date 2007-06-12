@@ -53,6 +53,10 @@ if ($webmin_mode) {
 	}
 $server->{'novirt'} = !$in{'canvirt'};
 $server->{'type'} = 'unknown';
+$ifunc = "type_".$in{'type'}."_must_image";
+if (defined(&$ifunc) && &$ifunc($server) && !$in{'image'}) {
+	&error($text{'create_eimage'});
+	}
 $server->{'image'} = $in{'image'};
 
 # Parse type-specific inputs

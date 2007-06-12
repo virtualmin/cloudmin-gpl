@@ -34,8 +34,7 @@ while(@ARGV > 0) {
 foreach $s (@servers) {
 	$sfunc = "type_".$s->{'manager'}."_no_shutdown";
 	if (defined(&$sfunc) && &$sfunc($server) ||
-	    $s->{'status'} eq 'down' || $s->{'status'} eq 'nossh' ||
-	    $s->{'status'} eq 'nohost') {
+	    $s->{'status'} eq 'down' || $s->{'status'} eq 'nohost') {
 		push(@cannot, $s);
 		}
 	}
@@ -49,6 +48,7 @@ foreach $s (@servers) {
 	print "Shutting down $tdesc system $s->{'host'} ..\n";
 	$err = &shutdown_server($s);
 	if ($err) {
+		$err = &html_tags_to_text($err);
 		print ".. shutdown failed : $err\n\n";
 		}
 	else {

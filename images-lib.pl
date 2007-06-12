@@ -250,7 +250,8 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	local $fixpath = "$dir/$fix";
 	local $temppath = &transname();
 	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
-	next if ($err);
+	next if ($err && $fix ne "/etc/hosts");	# Only files that exist,
+						# apart from /etc/hosts
 	local $data = &read_file_contents($temppath);
 	if ($fix eq "/etc/hosts") {
 		$data = "127.0.0.1 localhost\n".
@@ -278,6 +279,58 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	&close_tempfile(FIXED);
 	$err = &put_file_to_server($vhost, $temppath, $fixpath);
 	return "Failed to save fixed $fix : $err" if ($err);
+	}
+return undef;
+}
+
+# fix_network_config_files(&server, ip, netmask, gateway, vhost, dir)
+# Update network config files like /etc/sysconfig/network-scripts/ifcfg-eth0 or
+# /etc/network/interfaces to use the given static IP.
+sub fix_network_config_files
+{
+local ($server, $ip, $netmask, $gw, $vhost, $dir) = @_;
+
+# Work out broadcast and network addresses
+local $broadcast = &net::compute_broadcast($ip, $netmask);
+local $network = &net::compute_network($ip, $netmask);
+
+# Fix relevant files
+foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-eth0",
+		 "/etc/network/interfaces") {
+	local $fixpath = "$dir/$fix";
+	local $temppath = &transname();
+	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
+	next if ($err);
+	local $data = &read_file_contents($temppath);
+	if ($fix =~ /ifcfg-eth0$/) {
+		# Redhat config file
+		$data = "TYPE=Ethernet\n".
+			"DEVICE=eth0\n".
+			"IPADDR=$ip\n".
+			"NETMASK=$netmask\n".
+			"BROADCAST=$broadcast\n".
+			"NETWORK=$network\n".
+			"ONBOOT=yes\n".
+			($gw ? "GATEWAY=$gw\n" : "");
+		}
+	elsif ($fix eq "/etc/network/interfaces") {
+		# Debian-style config file. Just blow away any existing config
+		$data = "auto eth0 lo\n".
+			"\n".
+			"iface lo inet loopback\n".
+			"\n".
+			"iface eth0 inet static\n".
+			"	address $ip\n".
+			"	netmask $netmask\n".
+			"	broadcast $broadcast\n".
+			"	network $network\n".
+			($gw ? "	gateway $gw\n" : "");
+		}
+	&open_tempfile(FIXED, ">$temppath");
+	&print_tempfile(FIXED, $data);
+	&close_tempfile(FIXED);
+	$err = &put_file_to_server($vhost, $temppath, $fixpath);
+	return "Failed to save network config $fix : $err" if ($err);
 	}
 return undef;
 }

@@ -96,6 +96,10 @@ if (($no_ssh || !$ssh_pass) && $webmin_mode == 1) {
 	&usage("--webmin-pass must be given to specify the Webmin password ".
 	       "when no SSH password is available");
 	}
+$ifunc = "type_".$type."_must_image";
+if (defined(&$ifunc) && &$ifunc($server) && !$image) {
+	&usage("The --image parameter must be given for this system type");
+	}
 if ($image) {
 	# Validate image ID
 	@images = &list_server_images($type);

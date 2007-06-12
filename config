@@ -4,3 +4,4 @@ image_owners=amazon 093590521311
 link_mode=0
 vserver_conf=/etc/vservers
 display_max=20
+xen_mem=256

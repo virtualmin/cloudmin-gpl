@@ -2,10 +2,13 @@
 # XXX grouping
 # XXX make status updates limited to what the caller really needs
 # XXX xen
-#	XXX command-line creation
-#	XXX more images (Ubuntu?)
+#	XXX test Virtualmin, and create image
+#	XXX test FC6 too
+#	XXX ubuntu image?
+#	XXX resolv.conf needs 127.0.0.1 (for all types)
 # XXX move servers
 # XXX upload zones images
+# XXX refresh should be in dependency order
 #
 # XXX domain move should check features
 # 
@@ -1476,6 +1479,52 @@ if (&foreign_installed("bind8")) {
 return ( );
 }
 
+# add_bind8_record(dnsname, ip, zonename)
+# Adds a DNS record for some new virtual system to the given zone, if it exists
+sub add_bind8_record
+{
+local ($dnsname, $ip, $zonename) = @_;
+
+local @zones = &list_bind_zones();
+local ($zone) = grep { $_->{'name'} eq $zonename } @zones;
+if ($zone) {
+	&$first_print(&text('create_vserverdns', $dnsname, $ip));
+	local @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
+	local ($aready) = grep { $_->{'name'} eq $dnsname } @recs;
+	if (!$already) {
+		# Need to add
+		&bind8::create_record($zone->{'file'}, $dnsname, undef,
+				      "IN", "A", $ip);
+		&bind8::bump_soa_record(\@recs);
+		&bind8::restart_bind();
+		&$second_print($text{'create_done'});
+		return 1;
+		}
+	else {
+		&$second_print($text{'create_vserverdnsalready'});
+		}
+	}
+return 0;
+}
+
+# delete_bind8_record(dnsname, zonename)
+# Deletes the DNS record that belonged to some server
+sub delete_bind8_record
+{
+local ($dnsname, $zonename) = @_;
+local @zones = &list_bind_zones();
+local ($zone) = grep { $_->{'name'} eq $zonename } @zones;
+if ($zone && $dnsname) {
+	local @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
+	local ($r) = grep { $_->{'name'} eq $dnsname } @recs;
+	if ($r) {
+		&bind8::delete_record($zone->{'file'}, $r);
+		&bind8::bump_soa_record(\@recs);
+		&bind8::restart_bind();
+		}
+	}
+}
+
 # find_server_dependencies(&server)
 # Returns a list of other servers that depend on this one
 sub find_server_dependencies
@@ -2028,6 +2077,7 @@ if (!$err) {
 	foreach my $l (@$lref) {
 		local @w = split(/:/, $l, -1);
 		if ($w[0] eq "root") {
+			local $salt = substr(time(), -2);
 			$w[1] = &unix_crypt($pass, $salt);
 			$l = join(':', @w);
 			}
@@ -2334,6 +2384,35 @@ local $ifaces = &$ifunc($server);
 return $ifaces if (!ref($ifaces));
 local ($iface) = grep { $_->{'address'} eq $d->{'ip'} } @$ifaces;
 return $iface;
+}
+
+# get_server_default_gateway(&server)
+# Returns the default gateway IP address for some system. Uses Webmin if
+# possible, netstat otherwise.
+sub get_server_default_gateway
+{
+local ($server) = @_;
+local $gw;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Get from Webmin
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	if (!$last_remote_error) {
+		($gw) = &remote_foreign_call($server, "net",
+					     "get_default_gateway");
+		return $gw;
+		}
+	}
+# Fall back to netstat command
+local ($out, $ex, $err) = &execute_command_on_server($server, "netstat -rn");
+foreach my $l (split(/\r?\n/, $out)) {
+	local @w = split(/\s+/, $l);
+	if ($w[0] eq "default" || $w[0] eq "0.0.0.0") {
+		$gw = $w[1];
+		last;
+		}
+	}
+return $gw;
 }
 
 # get_global_links(system-count)

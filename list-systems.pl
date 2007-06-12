@@ -14,6 +14,9 @@ require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 
 # Parse command line
+if (@ARGV == 0) {
+	$all = 1;	# If called with no args, assume all systems
+	}
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--multiline") {
