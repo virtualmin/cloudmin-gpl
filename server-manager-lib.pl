@@ -2,18 +2,14 @@
 # XXX grouping
 # XXX make status updates limited to what the caller really needs
 # XXX xen
-#	XXX test Virtualmin, and create image
-#	XXX test FC6 too
-#	XXX ubuntu image?
-#	XXX resolv.conf needs 127.0.0.1 (for all types)
+#	XXX ubuntu image
+#	XXX xen instance chooser popup
 # XXX move servers
-# XXX upload zones images
+# XXX upload zones and xen images
 # XXX refresh should be in dependency order
+# XXX update Virtualmin packages after image creation
 #
 # XXX domain move should check features
-# 
-# XXX need to provide images with Virtualmin pre-installed
-#	XXX xen
 
 do '../web-lib.pl';
 &init_config();
@@ -412,7 +408,7 @@ if (defined(&$sfunc)) {
 	}
 
 # Need to really SSH
-local $cmd = "ssh -".$server->{'ssh_protocol'};
+local $cmd = "ssh -q -".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
 	$cmd .= " -i ".quotemeta($key->{'file'});
@@ -572,7 +568,7 @@ if (defined(&$efunc)) {
 	}
 else {
 	# Just run via SSH
-	local $sshcmd = "ssh -".$server->{'ssh_protocol'};
+	local $sshcmd = "ssh -q -".$server->{'ssh_protocol'};
 	if ($server->{'key'}) {
 		local ($key) = grep { $_->{'id'} == $server->{'key'} }
 				    &list_ssh_keys();
@@ -2071,7 +2067,13 @@ sub set_shadow_root_password
 {
 local ($server, $pass) = @_;
 local $shadow = &transname();
-local $err = &get_file_from_server($server, "/etc/shadow", $shadow);
+local $passfile = "/etc/shadow";
+local $err = &get_file_from_server($server, $passfile, $shadow);
+if ($err) {
+	# Perhaps it has /etc/passwd?
+	$passfile = "/etc/passwd";
+	$err = &get_file_from_server($server, $passfile, $shadow);
+	}
 if (!$err) {
 	local $lref = &read_file_lines($shadow);
 	foreach my $l (@$lref) {
@@ -2083,7 +2085,7 @@ if (!$err) {
 			}
 		}
 	&flush_file_lines($shadow);
-	$err = &put_file_to_server($server, $shadow, "/etc/shadow");
+	$err = &put_file_to_server($server, $shadow, $passfile);
 	}
 return $err;
 }

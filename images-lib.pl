@@ -32,7 +32,7 @@ foreach my $f (readdir(DIR)) {
 	push(@rv, \%img);
 	}
 closedir(DIR);
-return @rv;
+return sort { $a->{'desc'} cmp $b->{'desc'} } @rv;
 }
 
 # get_server_image(id)
@@ -244,9 +244,22 @@ sub fix_hostname_config_files
 {
 local ($server, $ip, $host, $fullhost, $vhost, $dir) = @_;
 
+# Check if the target has Virtualmin, and thus needs 127.0.0.1 in
+# /etc/resolv.conf
+local $vconfig = &transname();
+local $err = &get_file_from_server($vhost,
+		"$dir/etc/webmin/virtual-server/config", $vconfig);
+local $needs_localhost;
+if (!$err) {
+	local %vconfig;
+	&read_file($vconfig, \%vconfig);
+	$needs_localhost = $vconfig{'dns'};
+	}
+
 foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",
-		 "/etc/sysconfig/network", "/etc/postfix/main.cf") {
+		 "/etc/sysconfig/network", "/etc/postfix/main.cf",
+		 "/etc/conf.d/hostname") {
 	local $fixpath = "$dir/$fix";
 	local $temppath = &transname();
 	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
@@ -270,8 +283,19 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		}
 	elsif ($fix eq "/etc/resolv.conf") {
 		$data = &get_file_data_from_server($vhost, $fix);
+		if ($needs_localhost) {
+			$data = "nameserver 127.0.0.1\n".
+				$data;
+			}
+		}
+	elsif ($fix eq "/etc/conf.d/hostname") {
+		# Gentoo hostname file
+		$data =~ s/HOSTNAME="(.*)"/HOSTNAME="$fullhost"/ ||
+		   $data =~ s/HOSTNAME='(.*)'/HOSTNAME='$fullhost'/ ||
+		   $data =~ s/HOSTNAME=(\S+)/HOSTNAME=$fullhost/;
 		}
 	else {
+		# Other hostname file
 		$data = $fullhost."\n";
 		}
 	&open_tempfile(FIXED, ">$temppath");
@@ -296,7 +320,8 @@ local $network = &net::compute_network($ip, $netmask);
 
 # Fix relevant files
 foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-eth0",
-		 "/etc/network/interfaces") {
+		 "/etc/network/interfaces",
+		 "/etc/conf.d/net") {
 	local $fixpath = "$dir/$fix";
 	local $temppath = &transname();
 	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
@@ -326,6 +351,13 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-eth0",
 			"	network $network\n".
 			($gw ? "	gateway $gw\n" : "");
 		}
+	elsif ($fix eq "/etc/conf.d/net") {
+		# Gentoo networking config filer
+		$data = "config_eth0=( \"$ip netmask $netmask\" )\n";
+		if ($gw) {
+			$data .= "routes_eth0=( \"default via $gw\" )\n";
+			}
+		}
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
@@ -333,6 +365,34 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-eth0",
 	return "Failed to save network config $fix : $err" if ($err);
 	}
 return undef;
+}
+
+# fix_ssh_root_login(&server)
+# Configure a server to allow SSH logins by root. Returns undef if it was done,
+# OK if already allowed, NONE if no SSH config was found, or an error message
+sub fix_ssh_root_login
+{
+local ($server) = @_;
+local $sc = &transname();
+local $sshd_config = "/etc/ssh/sshd_config";
+if (!&get_file_from_server($server, $sshd_config, $sc)) {
+	local $changed = 0;
+	local $lref = &read_file_lines($sc);
+	foreach my $l (@$lref) {
+		if ($l =~ /^\s*PermitRootLogin\s+(\S+)/ && $1 ne 'yes') {
+			$l = "PermitRootLogin yes";
+			$changed = 1;
+			}
+		}
+	&flush_file_lines($sc);
+	if ($changed) {
+		return &put_file_to_server($server, $sc, $sshd_config);
+		}
+	else {
+		return "OK";
+		}
+	}
+return "NONE";
 }
 
 1;
