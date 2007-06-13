@@ -3,7 +3,9 @@
 # XXX make status updates limited to what the caller really needs
 # XXX xen
 #	XXX ubuntu image
-#	XXX xen instance chooser popup
+#		XXX 4gb seg fixup?
+#		XXX fix sources.list in base image
+#		XXX replace licence in licence files
 # XXX move servers
 # XXX upload zones and xen images
 # XXX refresh should be in dependency order

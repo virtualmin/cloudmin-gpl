@@ -659,6 +659,17 @@ zchooser_state=State
 zchooser_unuse=<font color=#ff0000>Managed host $1</font>
 zchooser_free=Not yet managed
 
+xchooser_title=Select Xen Instance
+xchooser_elogin=Failed to fetch Xen instances : $1
+xchooser_enone=The selected system has no Xen instances
+xchooser_name=Instance name
+xchooser_id=ID
+xchooser_mem=Memory
+xchooser_status=Status
+xchooser_state=State
+xchooser_unuse=<font color=#ff0000>Managed host $1</font>
+xchooser_free=Not yet managed
+
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
 pkg_bind=BIND DNS server
