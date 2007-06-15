@@ -71,6 +71,11 @@ if ($multi) {
 			print "    Virtualmin version: ",
 			      $info->{'minfo'}->{'version'},"\n";
 			}
+		$bfunc = "type_".$s->{'manager'}."_get_atboot";
+		if (defined(&$bfunc)) {
+			print "    Start at boot: ",
+			      (&$bfunc($s) ? "Yes" : "No"),"\n";
+			}
 
 		# Login information
 		$sfunc = "type_".$s->{'manager'}."_no_ssh";

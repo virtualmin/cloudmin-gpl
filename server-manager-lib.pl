@@ -2,14 +2,10 @@
 # XXX grouping
 # XXX make status updates limited to what the caller really needs
 # XXX xen
-#	XXX ubuntu image
-#		XXX 4gb seg fixup?
-#		XXX fix sources.list in base image
-#		XXX replace licence in licence files
+#	XXX xen on ubuntu
 # XXX move servers
 # XXX upload zones and xen images
 # XXX refresh should be in dependency order
-# XXX update Virtualmin packages after image creation
 #
 # XXX domain move should check features
 
@@ -416,7 +412,7 @@ if ($server->{'key'}) {
 	$cmd .= " -i ".quotemeta($key->{'file'});
 	}
 $cmd .= " $server->{'ssh_user'}\@$server->{'host'} 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; echo OK'";
-local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, 10);
+local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, 30);
 if ($status == 0) {
 	# Connected OK .. check the output to see if we have Webmin
 	if ($out !~ /OK/) {
@@ -770,12 +766,15 @@ else {
 	&lock_file($file);
 	}
 
-# Do a quick ping
+# Do a quick ping, if this is a non-virtual system
 $server->{'statustime'} = time();
-local $ping = &ping_server_host($server->{'host'});
+local $clfunc = "type_".$server->{'manager'}."_check_login";
+local $ping;
+if (!defined(&$clfunc)) {
+	$ping = &ping_server_host($server->{'host'});
+	}
 
 # Check if we can login
-local $clfunc = "type_".$server->{'manager'}."_check_login";
 local ($status, $err, $webminroot, $webminport, $webminssl) =
 	&check_server_ssh_login($server);
 if ($status == 2) {
@@ -1029,7 +1028,7 @@ local ($servers) = @_;
 &parallel_server_function($servers,
 	sub { my $info = &get_server_collected($_[0]);
 	      my @allgot;
-	      foreach $p (@{$info->{'poss'}}) {
+	      foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
 	          local $got = &install_package_update($_[0], $p);
 		  push(@allgot, @$got) if (ref($got));
 	          }
@@ -2462,6 +2461,18 @@ foreach my $t (@server_management_types) {
 	}
 
 return (\@glinks, \@gtitles, \@gicons);
+}
+
+# sort_package_updates(package, ...)
+# Sorts a list of packages into the order they should be installed, so that
+# Webmin is always done first, then virtualmin, then plugins
+sub sort_package_updates
+{
+return sort { ($b->{'name'} eq 'webmin' ? 2 :
+	       $b->{'name'} =~ /virtual-server$/ ? 1 : 0)
+	      <=>
+	      ($a->{'name'} eq 'webmin' ? 2 :
+	       $a->{'name'} =~ /virtual-server$/ ? 1 : 0) } @_;
 }
 
 # strip_html_tags(html)

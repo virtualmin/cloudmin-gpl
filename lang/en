@@ -523,9 +523,14 @@ update_donepkg=.. installed $1 packages.
 update_pkgerr=.. update failed! Try an update on the system directly to see more information.
 update_pkgerr2=.. update failed : $1
 update_done=.. all updates complete.
-update_pkgerr.. updated failed : $1
+update_pkgerr.. updates failed : $1
 update_statusing=Refreshing information about available updates ..
 update_statusok=.. refreshed successfully.
+update_ipackages=Updating $1 Virtualmin packages ..
+update_itotal=.. total packages installed : $1
+update_ipkg=Updating $1 to version $2 ..
+update_idone=.. update complete.
+update_ipkgerr.. update failed : $1
 
 save_err=Failed to save system details
 save_ehost=The new hostname does not resolve to the same IP address as the old one

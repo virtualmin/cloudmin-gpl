@@ -395,5 +395,38 @@ if (!&get_file_from_server($server, $sshd_config, $sc)) {
 return "NONE";
 }
 
+# update_virtualmin_packages(&server)
+# On a server created from an image with Virtualmin installed, update all
+# packages that need it May call the print functions.
+sub update_virtualmin_packages
+{
+local ($server) = @_;
+local $info = &get_server_collected($server);
+if ($server->{'status'} eq 'virt' && $info && @{$info->{'poss'}}) {
+	&$first_print(&text('update_ipackages', scalar(@{$info->{'poss'}})));
+	my @allgot;
+	&$indent_print();
+	foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
+		&$first_print(&text('update_ipkg', $p->{'name'},
+						   $p->{'version'}));
+		local $got = &install_package_update($server, $p);
+		push(@allgot, @$got) if (ref($got));
+		if (ref($got)) {
+			&$second_print($text{'update_idone'});
+			}
+		else {
+			&$second_print(&text('update_ipkgerr', $got));
+			}
+		}
+	&$outdent_print();
+	&$second_print(&text('update_itotal', scalar(@allgot)));
+	if (@allgot) {
+		&refresh_server_updates($server, \@allgot);
+		&check_server_status($server);
+		&save_managed_server($server);
+		}
+	}
+}
+
 1;
 

@@ -299,9 +299,14 @@ if (defined(&$dfunc)) {
 # Re-check and save the status
 print "Refreshing status ..\n";
 &save_managed_server($server);
-&check_server_status($server);
+&check_server_status($server, 1);
 &save_managed_server($server);
 print ".. done\n\n";
+
+# If the server has Virtualmin, update all Virtualmin packages
+if ($server->{'status'} eq 'virt') {
+	&update_virtualmin_packages($server);
+	}
 
 # If the server has Virtualmin, do a config check
 if ($server->{'status'} eq 'virt') {

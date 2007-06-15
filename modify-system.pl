@@ -43,6 +43,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--webmin-pass") {
 		$webmin_pass = shift(@ARGV);
 		}
+	elsif ($a eq "--boot") {
+		$boot = 1;
+		}
+	elsif ($a eq "--no-boot") {
+		$boot = 0;
+		}
 	else {
 		&usage();
 		}
@@ -135,6 +141,14 @@ else {
 		}
 	}
 
+# Change boot status
+if (defined($boot)) {
+	$bfunc = "type_".$server->{'manager'}."_set_atboot";
+	defined(&$bfunc) || &usage("This server type cannot be enabled or ".
+				   "disabled at host boot");
+	&$bfunc($server, $boot);
+	}
+
 # Update status if needed
 if ($recheck) {
 	&check_server_status($server);
@@ -160,6 +174,7 @@ print "                         [--ssh-pass passsword | --ssh-key keyid]\n";
 print "                         [--webmin-user user]\n";
 print "                         [--webmin-pass password]\n";
 print "                         [--webmin-same]\n";
+print "                         [--boot | --no-boot]\n";
 exit(1);
 }
 

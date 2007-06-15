@@ -46,7 +46,7 @@ print "Updating packages on ",scalar(@servers)," systems ..\n";
 &parallel_server_function(\@servers,
 	sub { my $info = &get_server_collected($_[0]);
 	      my @allgot;
-	      foreach $p (@{$info->{'poss'}}) {
+	      foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
 	          local $got = &install_package_update($_[0], $p);
 		  push(@allgot, @$got) if (ref($got));
 	          }
