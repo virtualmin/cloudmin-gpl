@@ -31,6 +31,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--disable") {
 		$deletesource = 2;
 		}
+	elsif ($a eq "--force") {
+		$force = 1;
+		}
 	else {
 		&usage();
 		}
@@ -73,6 +76,23 @@ foreach $dn (@dnames) {
 $err = &check_domain_move(\@serverdoms, $dest, $deletesource);
 &usage("Selected domains cannot be moved : $err") if ($err);
 
+# Check for missing features
+if (!$force) {
+	@missing = &check_move_features(\@serverdoms, $dest);
+	if (@missing) {
+		print "The following domains cannot be moved, as they use ".
+		      "features not available on\n".
+		      "the destination. Use --force to override.\n\n";
+		$fmt = "%-40.40s %-35.35s\n";
+		printf $fmt, "Domain", "Missing feature";
+		printf $fmt, ("-" x 40), ("-" x 35);
+		foreach $m (@missing) {
+			printf $fmt, $m->[1]->{'dom'}, $m->[2]->{'desc'};
+			}
+		exit(1);
+		}
+	}
+
 # Do it!
 &set_all_text_print();
 &move_domains_to_server(\@serverdoms, $dest, $deletesource);
@@ -86,6 +106,7 @@ print "usage: move-domains.pl --domain name [--domain name]*\n";
 print "                       --dest hostname\n";
 print "                      [--host source.hostname]\n";
 print "                      [--disable | --delete]\n";
+print "                      [--force]\n";
 exit(1);
 }
 

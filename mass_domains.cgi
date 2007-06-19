@@ -142,7 +142,8 @@ elsif ($in{'move'}) {
 			print &ui_hidden("d", $d);
 			}
 		print &ui_hidden("move", 1);
-		print &ui_table_start($text{'dmass_mheader'}, undef, 2);
+		print &ui_table_start($text{'dmass_mheader'}, undef, 2,
+				      [ "width=30%" ]);
 
 		# Domains to move
 		@sources = &unique(map { $_->[0]->{'host'} } @serverdoms);
@@ -171,6 +172,10 @@ elsif ($in{'move'}) {
 				    [ 2, $text{'dmass_mdisable'} ],
 				    [ 0, $text{'no'} ] ]));
 
+		# Force move?
+		print &ui_table_row($text{'dmass_mforce'},
+			&ui_yesno_radio("force", 0));
+
 		print &ui_table_end();
 		print &ui_form_end([ [ "confirm", $text{'dmass_move'} ] ]);
 		}
@@ -182,9 +187,28 @@ elsif ($in{'move'}) {
 					  $in{'deletesource'});
 		&error(&text('dmass_emove', $err)) if ($err);
 
-		# Do each one in series, by backing up and restoring
-		&move_domains_to_server(\@serverdoms, $server,
-				        $in{'deletesource'});
+		# Check for missing features
+		@missing = &check_move_features(\@serverdoms, $server);
+		if (@missing && !$in{'force'}) {
+			print $text{'dmass_emissing'},"<p>\n";
+			print &ui_columns_start([
+				$text{'dmass_msdom'},
+				$text{'dmass_msserver'},
+				$text{'dmass_msfeature'} ]);
+			foreach $m (@missing) {
+				print &ui_columns_row([
+					$m->[1]->{'dom'},
+					$m->[0]->{'host'},
+					$m->[2]->{'desc'},
+					]);
+				}
+			print &ui_columns_end();
+			}
+		else {
+			# Do each one in series, by backing up and restoring
+			&move_domains_to_server(\@serverdoms, $server,
+						$in{'deletesource'});
+			}
 		}
 	}
 

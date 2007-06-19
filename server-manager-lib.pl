@@ -6,8 +6,6 @@
 # XXX move servers
 # XXX upload zones and xen images
 # XXX refresh should be in dependency order
-#
-# XXX domain move should check features
 
 do '../web-lib.pl';
 &init_config();
@@ -2148,6 +2146,30 @@ foreach my $sd (@$serverdoms) {
 	}
 
 return undef;
+}
+
+# check_move_features(&serverdoms, &destserver)
+# Checks if the destination server has all the needed features required to
+# setup the selected domains. Returns a list of missing features and domains
+# found.
+sub check_move_features
+{
+local ($serverdoms, $dest) = @_;
+local @rv;
+local $info = &get_server_collected($dest);
+foreach my $sd (@$serverdoms) {
+	local ($server, $d) = @$sd;
+	local $sinfo = &get_server_collected($server);
+	foreach my $f (@{$sinfo->{'features'}}) {
+		local ($dgot) = grep { $_->{'feature'} eq $f->{'feature'} }
+				     @{$info->{'features'}};
+		if ($d->{$f->{'feature'}} && (!$dgot || !$dgot->{'enabled'})) {
+			# Missing on destination
+			push(@rv, [ $server, $d, $f ]);
+			}
+		}
+	}
+return @rv;
 }
 
 # move_domains_to_server(&serverdoms, &destserver)
