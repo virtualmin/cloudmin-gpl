@@ -27,6 +27,7 @@ if (!$pid) {
 	exec(@ARGV);
 	die "Exec failed : $!\n";
 	}
+print "PTY PID: $pid\n";
 $| = 1;
 select($ptyfh); $| = 1; select(STDOUT);
 while(<$ptyfh>) {

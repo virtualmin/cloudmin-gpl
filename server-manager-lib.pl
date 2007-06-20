@@ -3,6 +3,7 @@
 # XXX make status updates limited to what the caller really needs
 # XXX xen
 #	XXX xen on ubuntu
+#	XXX test one more time
 # XXX move servers
 # XXX upload zones and xen images
 # XXX refresh should be in dependency order
