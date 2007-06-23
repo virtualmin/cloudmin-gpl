@@ -132,46 +132,57 @@ elsif ($in{'installvirt'}) {
 	# Install Virtualmin, which may take a while
 	&ui_print_header(&server_in($server), $text{'save_virttitle'}, "");
 
-	# Start off the process
-	print $text{'save_virtstart'},"<br>\n";
-	$err = &install_virtualmin_server($server, 1);
-	if ($err) {
-		print &text('save_virterr', $err),"<p>\n";
-		goto VIRTFAILED;
+	if (!$in{'confirm'}) {
+		# Ask first
+		&show_confirm_form(
+		    &text('save_virtrusure', "<tt>$server->{'host'}</tt>"),
+		    "save_serv.cgi", [ [ "id", $in{'id'} ],
+				       [ "installvirt", 1 ] ],
+		    $text{'save_virtok'});
 		}
 	else {
-		print $text{'save_virtstarted'},"<p>\n";
-		}
-
-	# Wait till done
-	print $text{'save_virtwait'};
-	while(1) {
-		sleep(1);
-		$done = &install_virtualmin_server_done($server);
-		if ($done eq "OK") {
-			print "<br>",$text{'save_virtdone'},"<p>\n";
-			last;
-			}
-		elsif ($done) {
-			print "<br>",&text('save_virterr', $done),"<p>\n";
-			last;
+		# Start off the process
+		print $text{'save_virtstart'},"<br>\n";
+		$err = &install_virtualmin_server($server, 1);
+		if ($err) {
+			print &text('save_virterr', $err),"<p>\n";
+			goto VIRTFAILED;
 			}
 		else {
-			print ".";
+			print $text{'save_virtstarted'},"<p>\n";
 			}
+
+		# Wait till done
+		print $text{'save_virtwait'};
+		while(1) {
+			sleep(1);
+			$done = &install_virtualmin_server_done($server);
+			if ($done eq "OK") {
+				print "<br>",$text{'save_virtdone'},"<p>\n";
+				last;
+				}
+			elsif ($done) {
+				print "<br>",&text('save_virterr',
+						   $done),"<p>\n";
+				last;
+				}
+			else {
+				print ".";
+				}
+			}
+
+		# Update server status
+		print $text{'dcreate_statusing'},"<br>\n";
+		&check_server_status($server);
+		&save_managed_server($server);
+		print $text{'dcreate_statusok'},"<p>\n";
+
+		if (defined(&theme_post_save_server)) {
+			&theme_post_save_server($server);
+			}
+
+		VIRTFAILED:
 		}
-
-	# Update server status
-	print $text{'dcreate_statusing'},"<br>\n";
-	&check_server_status($server);
-	&save_managed_server($server);
-	print $text{'dcreate_statusok'},"<p>\n";
-
-	if (defined(&theme_post_save_server)) {
-		&theme_post_save_server($server);
-		}
-
-	VIRTFAILED:
 	&ui_print_footer("", $text{'index_return'});
 	}
 
@@ -276,6 +287,9 @@ else {
 		$server->{'desc'} = $in{'desc'};
 		}
 	$server->{'type'} = $in{'type'};
+	@groups = split(/\0/, $in{'group'});
+	push(@groups, $in{'newgroup'}) if ($in{'newgroup'});
+	$server->{'group'} = join("\t", @groups);
 	if (defined($in{'canvirt'})) {
 		$server->{'novirt'} = $in{'canvirt'} ? 0 : 1;
 		}

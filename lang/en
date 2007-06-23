@@ -17,7 +17,9 @@ index_poss=$1 updates available
 index_update=Update Packages
 index_toomany=There are $1 managed systems, which is more than the configured display limit of $2.
 index_search=Show systems matching:
+index_gsearch=Show systems in group:
 index_searchok=Search
+index_searchgok=Show
 
 ec2_typedesc=Amazon EC2
 ec2_createlink=Create EC2 instance.
@@ -517,6 +519,8 @@ edit_domsadd=Create Virtualmin domain.
 edit_zonehost=Zones host system
 edit_zoneinstance=Zone name
 edit_zoneid=Zone ID number
+edit_groups=System groups
+edit_newgroup=New group
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..
@@ -563,6 +567,8 @@ save_virterr=.. failed : $1
 save_virtstarted=.. installation started OK.
 save_virtwait=Waiting for install to complete ..
 save_virtdone=.. installation completed successfully!
+save_virtrusure=Are you sure you want to install Virtualmin $1 ? This will be done by running the regular install script, which can take a long time. It is generally faster to install from one of the available images with Virtualmin pre-installed.
+save_virtok=Install Virtualmin Now
 save_rechecktitle=Checking Virtualmin Configuration
 save_rechecking=Checking system configuration for Virtualmin ..
 save_recheckerr=.. problems found : $1

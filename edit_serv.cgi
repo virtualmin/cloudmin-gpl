@@ -4,7 +4,8 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
-($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
+@servers = &list_managed_servers();
+($server) = grep { $_->{'id'} == $in{'id'} } @servers;
 $server || &error($text{'edit_egone'});
 $status = $server->{'status'};
 $info = &get_server_collected($server);
@@ -43,6 +44,17 @@ print &ui_table_row($text{'edit_type2'},
 		    &ui_select("type", $server->{'type'} || 'unknown',
 		      [ map { [ $_->[0], $_->[1] ] }
 			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
+
+# Groups
+@groups = &unique(map { split(/\t/, $_->{'group'}) } @servers);
+%ingroups = map { $_, 1 } split(/\t/, $server->{'group'});
+@grid = ( );
+foreach $g (@groups) {
+	push(@grid, &ui_checkbox("group", $g, $g, $ingroups{$g}));
+	}
+$gtable = &ui_grid_table(\@grid, 4);
+$gtable .= $text{'edit_newgroup'}." ".&ui_textbox("newgroup", undef, 10);
+print &ui_table_row($text{'edit_groups'}, $gtable);
 
 # Start at boot
 $bfunc = "type_".$t."_get_atboot";
@@ -127,7 +139,12 @@ if ($haswebmin || $hasssh) {
 	}
 
 # Action buttons at end of form (depends on status)
-if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
+if ($main::vm2_no_edit_buttons) {
+	# Theme provides it's own action links
+	print &ui_form_end([ [ "save", $text{'save'} ] ]);
+	$down = $status eq 'down' || $status eq 'nossh' || $status eq 'nohost';
+	}
+elsif ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	# System is down, so we can only save and perhaps startup
 	$sfunc = "type_".$t."_no_startup";
 	$nostart = defined(&$sfunc) && &$sfunc($server) ||

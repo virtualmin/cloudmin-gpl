@@ -32,13 +32,34 @@ if (@allservers > $config{'display_max'}) {
 	print &text('index_toomany', scalar(@allservers),
 				     $config{'display_max'}),"<p>\n";
 	print &ui_form_start("index.cgi");
-	print "<b>$text{'index_search'}</b>\n";
-	print &ui_textbox("search", $in{'search'}, 30),"\n";
-	print &ui_submit($text{'index_searchok'});
+	print "<table cellpadding=1 cellspacing=1>\n";
+
+	print "<tr> <td><b>$text{'index_search'}</b></td>\n";
+	print "<td>",&ui_textbox("search", $in{'search'}, 30),"</td>\n";
+	print "<td>",&ui_submit($text{'index_searchok'}),"</td> </tr>\n";
+
+	@groups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
+	if (@groups) {
+		print "<tr> <td><b>$text{'index_gsearch'}</b></td>\n";
+		print "<td>",&ui_select("gsearch", $in{'gsearch'},
+					\@groups),"</td>\n";
+		print "<td>",&ui_submit($text{'index_searchgok'},
+					"gok"),"</td> </tr>\n";
+		}
+	print "</table>\n";
+
 	print &ui_form_end();
-	$s = $in{'search'};
-	@servers = grep { $_->{'host'} =~ /\Q$s\E/i ||
-			  $_->{'desc'} =~ /\Q$s\E/i } @allservers;
+	if ($in{'gok'}) {
+		# Search by group
+		@servers = grep { my @g = split(/\t/, $_->{'group'});
+				&indexof($in{'gsearch'}, @g) >= 0 } @allservers;
+		}
+	else {
+		# By hostname
+		$s = $in{'search'};
+		@servers = grep { $_->{'host'} =~ /\Q$s\E/i ||
+				  $_->{'desc'} =~ /\Q$s\E/i } @allservers;
+		}
 	}
 else {
 	@servers = @allservers;

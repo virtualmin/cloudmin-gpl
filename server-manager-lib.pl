@@ -1,12 +1,8 @@
 # Functions for general setup and management of multiple Virtualmin servers
-# XXX grouping
 # XXX make status updates limited to what the caller really needs
-# XXX xen
-#	XXX xen on ubuntu
-#	XXX test one more time
 # XXX move servers
-# XXX upload zones and xen images
 # XXX refresh should be in dependency order
+# XXX help pages
 
 do '../web-lib.pl';
 &init_config();
@@ -127,6 +123,7 @@ if ($server->{'id'} eq '0') {
 	local %this = ( 'status' => $server->{'status'},
 			'statustime' => $server->{'statustime'},
 			'status_msg' => $server->{'status_msg'},
+			'group' => $server->{'group'},
 			'virtualmin_checked' => $server->{'virtualmin_checked'},
 			'virtualmin_err' => $server->{'virtualmin_err'},
 			'virtualmin_poss' => $server->{'virtualmin_poss'},
