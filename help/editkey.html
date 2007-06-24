@@ -1,0 +1,19 @@
+<header>Edit SSH Key</header>
+
+This page allows you to change the details of an existing key registered
+with VM2. You should not do this unless you are sure that the new with
+will work on all systems that used the original key though, otherwise
+VM2 may be no longer able to manage them. <p>
+
+The key's human-readable description can be safely changed using the
+<b>Key description</b> field. To change the key itself, paste the
+new private key text into the <b>Private key data</b> field, and the
+corresponding public key (at seen in <tt>.ssh/authorized_keys</tt> files)
+into the <b>Public key</b> field. <p>
+
+Changing the public or private key text for an EC2-registered key is
+unlikely to work properly, as EC2 stores its own copy of your public
+key, which cannot be updated by VM2. <p>
+
+<footer>
+

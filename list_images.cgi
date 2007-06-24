@@ -4,7 +4,7 @@
 require './server-manager-lib.pl';
 &ui_print_header(undef, $text{'images_title'}, "", "images");
 
-@avail = &list_available_server_images();
+@avail = sort { $a->{'desc'} cmp $b->{'desc'} } &list_available_server_images();
 @images = &list_server_images();
 @links = ( &select_all_link("d"), &select_invert_link("d") );
 print &ui_form_start("get_images.cgi", "post");

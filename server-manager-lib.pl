@@ -15,10 +15,10 @@ do 'images-lib.pl';
 use Net::Amazon::EC2;
 
 @possible_server_management_types = ( [ "real", undef ],
+				      [ "xen", undef ],
+				      [ "vserver", undef ],
 				      [ "zones", undef ],
 				      [ "ec2", undef ],
-				      [ "vserver", undef ],
-				      [ "xen", undef ],
 				      [ "this", undef ],
 				    );
 @server_management_types = ( );

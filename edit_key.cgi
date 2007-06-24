@@ -5,7 +5,8 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &ui_print_header(undef, $in{'new'} ? $text{'key_create'}
-				   : $text{'key_edit'}, "");
+				   : $text{'key_edit'}, "",
+		 $in{'new'} ? "createkey" : "editkey");
 if (!$in{'new'}) {
 	($key) = grep { $_->{'id'} eq $in{'id'} } &list_ssh_keys();
 	$key || &error($text{'key_egone'});

@@ -1,0 +1,27 @@
+<header>New System Images</header>
+
+A VM2 system image is a file containing all the data needed to create a new
+virtual system. Typically it is a TAR file or filesystem dump of the entire
+virtual OS, including all system commands, servers like Apache and Postfix,
+data files and configuration files. When a virtual system is created, an
+image can be used to populate the initial filesystem for the virtual OS.<p>
+
+For Xen instances, an image must be selected at creation time. For VServers
+and Solaris Zones, you have the option of using an image (recommended), or 
+copying the software from the host system into the new virtual system. An
+image is typically faster, as it simply needs to be extracted from a TAR file,
+rather than installing or copying packages into the new virtual system
+directory.<p>
+
+A VM2 subscription includes access to a number of pre-created system images for Xen, VServers and Solaris Zones. However, before images can be used they
+must first be downloaded to your master system from the VM2 webserver. Because
+image files are typically hundreds of MB in size, you should only download
+the ones you need. <p>
+
+To download images that are marked as <b>Not download</b> or <b>Newer version
+exists</b>, check the boxes next to them and click the <b>Download Selected
+Images</b> button. Depending on the speed of your network connection, the
+download may take minutes or hours. <p>
+
+<footer>
+

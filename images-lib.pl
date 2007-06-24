@@ -203,6 +203,17 @@ local ($out, $ex, $err) = &execute_command_on_server($vhost,
 return $err ? $err : $ex ? $out : undef;
 }
 
+# delete_server_image(&image)
+# Deletes a local image and all files
+sub delete_server_image
+{
+local ($img) = @_;
+foreach my $fl (split(/\s+/, $img->{'files'})) {
+	unlink("$server_images_dir/$fl");
+	}
+unlink("$server_images_dir/$img->{'id'}.img");
+}
+
 # fix_virtualmin_licence_files(&server)
 # Once a server has been started, fix up any files containing Virtualmin
 # licence keys. Also clears any virtualmin host-specific cache files.
