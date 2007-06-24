@@ -1,5 +1,5 @@
 procs=10
-show_this=0
+show_this=1
 image_owners=amazon 093590521311
 link_mode=0
 vserver_conf=/etc/vservers

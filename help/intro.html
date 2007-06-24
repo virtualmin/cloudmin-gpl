@@ -1,0 +1,38 @@
+<header>Virtualmin Machine Manager</header>
+
+Virtualmin Machine Manager (or VM2) provides a way to manage multiple
+systems from a single interface. These can be real machines or virtual
+systems running under a virtualization technology like Xen, VServers or
+Solaris Zones. Typically the managed systems will run Virtualmin and all
+associated servers, like Apache, Postfix and MySQL. <p>
+
+The main page of VM2 shows a list of registered systems at the top, and
+icons for various global settings at the bottom. You can edit the details of
+single system by clicking on it, or perform operations like rebooting, deleting
+and refreshing multiple systems at once by selecting them and clicking the
+appropriate button below the list. <p>
+
+For each system, the status determined by the last automatic or manual
+refresh displayed. Systems can be in various states, such as <b>Down</b>
+for one that is powered off, <b>No Webmin</b> for a bare install, and
+<b>Webmin and Virtualmin</b> for one with the full Virtualmin stack.
+Because the status is only automatically updated once every 5 minutes,
+the status may not be accurate for systems that have been started up or shut
+down outside of VM2. <p>
+
+To add a new system to the list, use the links under the <b>Create System</b>
+or <b>Add System</b> categories on the left menu. Creation is for building
+virtual systems like Xen instances, while addition is for bringing existing
+real or virtual systems under VM2's control. However, you cannot create
+virtual systems until at least one hosting system for that virtual type
+has been added, such as on the <b>Xen Host Systems</b> page. <p>
+
+The icons below the system list link to a variety of pages for settings
+that are not specific to any one managed system. If you want to use VM2
+to create Xen, VServer or Solaris Zone instances, you must first add them
+by clicking on the appropriate <b>Host Systems</b> icon. Similarly, to create
+EC2 systems you must first add at least one account on the <b>EC2 Accounts</b>
+page. <p>
+
+<footer>
+

@@ -1,0 +1,55 @@
+<header>Virtualmin Domains</header>
+
+<h3>Managing Domains</h3>
+
+This page can be used to search for Virtualmin domains (virtual servers)
+across all of the systems managed by VM2. To find domains, enter part or
+all of the domain name into the text box at the top of the page, and click
+the <b>Search</b> button. Matching domains will then be displayed in a list
+below it. <p>
+
+To manage a domain, click on it's name in the list. This will open a separate
+browser window which will be automatically logged into the hosting system,
+with the domain selected. Unless the domain is on the same system as VM2, in
+which case it will be displayed in the same frame. <p>
+
+To delete one or more domains, select them from the search results and click
+the <b>Delete Selected</b> button. Similarly, you can disable or enable
+multiple domains on different systems at once using the <b>Disable Selected</b>
+and <b>Enable Selected</b> buttons. Finally, you can transfer one or more
+domains from their current host systems to a new host with the <b>Move
+Selected</b> button. <p>
+
+<h3>Creating a Domain</h3>
+
+At the bottom of the page is a collapsible section containing a form for adding
+a new domain, which you can expand by clicking on the <b>+</b> image. To
+create a domain, fill in the domain name, description and password, just
+as you would when using Virtualmin directly. All other settings such as the
+username, template and limits will use the defaults, and the created domain
+will always be a top-level virtual server with it's own Webmin and SSH login.<p>
+
+If you want to create the domain on a specific system, select it from
+the <b>Create on system</b> menu. Otherwise you can let VM2 decide where
+to create it, by finding the system with the fewest domains, most free disk
+or lowest CPU use, depending on your selection. <p>
+
+To control which features are activated for the new domain, select them from
+the <b>Enable features</b> list. All possible features are displayed, but
+VM2 will not allow you to create a domain on a system that does not support
+the features you selected. The features checked by default can be controlled
+on the <b>Default Virtualmin Features</b> page. <p>
+
+By default, new domains will use the primary shared IP address of the
+selected system. To have the target Virtualmin system allocate a new private
+IP instead (needed for SSL web hosting), select the <b>Yes, allocate
+automatically</b> option. Or if you want to manually enter the IP to use,
+select <b>Yes, with address</b> and enter it into the adjacent text box. <p>
+
+Some virtual system types like Solaris Zones and Linux VServers cannot
+add their own additional private IP addresses, so for target systems of 
+those types VM2 will perform the IP address allocation and creation if you
+select the <b>allocate automatically</b> option. <p>
+
+<footer>
+
