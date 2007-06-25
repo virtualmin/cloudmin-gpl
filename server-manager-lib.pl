@@ -456,7 +456,7 @@ local $rfc;
 eval {
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
-	alarm(10);
+	alarm(20);
 	$last_remote_error = undef;
 	$rfc = &remote_foreign_config($server, "");
 	alarm(0);
@@ -473,7 +473,7 @@ if ($@) {
 			$server->{'fast'} = 0;
 			return &check_server_webmin_login($server);
 			}
-		return (4, "Webmin failed to complete in 10 seconds");
+		return (4, "Webmin failed to complete in 20 seconds");
 		}
 	else {
 		return (3, $@);

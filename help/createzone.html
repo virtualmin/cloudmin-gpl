@@ -1,0 +1,41 @@
+<header>Register Solaris Zones Host</header>
+
+This page allows you to tell VM2 that an existing system it manages is
+suitable for hosting zones. To do this, the following fields must
+be filled in :<p>
+
+<dl>
+<dt><b>System hosting zones</b>
+<dd>From the menu you must select a physical system running Solaris 10 or
+    later on X86 and Sparc hardware. Because Solaris comes with all the packages
+    and kernel support needed for zones, any system with enough disk space
+    should work fine.
+
+<dt><b>Base directory for zones</b>
+<dd>Here you must enter a directory under which zones will be created,
+    which must already exist on the selected host system. Because zones
+    can consume a large amount of disk space, this should be on a filesystem
+    with plenty of free space.
+
+<dt><b>Add systems in zones to DNS domain</b>
+<dd>If the master VM2 system runs a DNS server, this field will show a menu
+    of local DNS domains to which the hostname of newly created zones
+    will be added. It is highly recommended that you setup a DNS server and make    sure it can be managed through Webmin before using zones and VM2, so that
+    new instances will have resolvable hostnames.
+
+<dt><b>IP address allocation range</b>
+<dd>When a Solaris zone is created, VM2 can assign an IP address for it
+    automatically. The IP will be taken from the range you enter in this field,
+    by finding addresses that are not in use by any other virtual system and
+    do not respond to pings.
+
+<dt><b>Base network interface</b>
+<dd>By default, VM2 will create zones whose network interfaces
+    are a virtual interface on the host's first ethernet interface, like
+    <tt>bge0</tt>. If this host has multiple interfaces, you can enter a
+    different name here, like <tt>bge1</tt>.
+
+</dl>
+
+<footer>
+

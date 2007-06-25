@@ -1,0 +1,39 @@
+<dt><b>Internet hostname</b>
+<dd>Here you must enter the full resolvable hostname of the system being added,
+    or its IP address if it has no DNS entry.
+
+<dt><b>System description</b>
+<dd>This field is for entering a description of your choice to identify the
+    system, like <i>Primary Xen hosting server</i>.
+
+<dt><b>Root login mode</b>
+<dd>In order to manage a system, VM2 needs to remotely login to it via SSH.
+    In this section, you must either enter the <tt>root</tt> password for SSH,
+    or select a key registered with VM2 that the <tt>root</tt> account is 
+    configured to accept.
+
+<dt><b>SSH protocol version</b>
+<dd>By default VM2 uses the newer and almost universally deployed SSH version 2
+    protocol to connect to managed systems, but if the system you are adding
+    only supports SSH 1 you can select it here.
+
+<dt><b>Webmin login mode</b>
+<dd>If Webmin or Virtualmin is already installed on the system being added,
+    you must select the correct authentication credentials in this section.
+    If the Webmin password is the same as the Unix <tt>root</tt> account,
+    select the <b>Login as root with same password as Unix</b> mode. If Webmin
+    uses a different login, choose <b>Login as</b> and enter the correct
+    username and password.<br>
+    If Webmin is running in SSL mode, you will need to check the
+    <b>Use SSL to connect to Webmin</b> box. This is the default for most
+    installs, especially when Webmin is setup as part of the Virtualmin stack.
+
+<dt><b>Webmin port</b>
+<dd>If Webmin is running on the default port 10000, you can leave this field
+    un-changed. Otherwise, you must enter the correct port number.
+
+<dt><b>Allow creation of Virtualmin domains?</b>
+<dd>This setting determines if the newly added server can have Virtualmin
+    domains added to it. Typically you will want to leave this set to
+    <b>Yes</b>.
+

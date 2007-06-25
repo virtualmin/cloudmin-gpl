@@ -1,0 +1,25 @@
+<header>Add Existing EC2 Instance</header>
+
+This page allows you to bring an existing system running on Amazon's EC2
+service under the control of VM2, so that its Virtualmin domains can be managed
+from a central console. Naturally, only EC2 instances created by accounts
+registered with VM2 on the <a href=ec2s>EC2 Account</a> page can be added.
+The fields displayed on the form are :
+
+<dl>
+<include add>
+
+<dt><b>EC2 account</b>
+<dd>From this menu you must select the Amazon account number that owns the
+    EC2 instance.
+
+<dt><b>EC2 instance ID</b>
+<dd>If you have a single EC2 account, this field will be a menu for selecting
+    an un-mananged instance owned by that account. If multiple accounts exist, this will be
+    a text field for either entering the instance ID, or selecting it from
+    a popup window that appears when the <b>...</b> button is clicked.
+
+</dl>
+
+<footer>
+

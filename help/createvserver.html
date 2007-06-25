@@ -1,0 +1,61 @@
+<header>Register VServer Host</header>
+
+This page allows you to tell VM2 that an existing system it manages is
+suitable for hosting VServer instances. To do this, the following fields must
+be filled in :<p>
+
+<dl>
+<dt><b>System hosting VServers</b>
+<dd>From the menu you must select a physical system that has the software
+    installed and kernel patch required for VServers. VM2 does not yet have
+    the ability to install these packages automatically.
+
+<dt><b>Base directory for virtual systems</b>
+<dd>Here you must enter a directory under which Xen instances will be created,
+    which must already exist on the selected host system. Because Xen instances
+    use a large amount of disk space (2GB or more each), you should choose
+    a local directory with plenty of space.
+
+<dt><b>Add VServer systems to DNS domain</b>
+<dd>If the master VM2 system runs a DNS server, this field will show a menu
+    of local DNS domains to which the hostname of newly created VServer instances
+    will be added. It is highly recommended that you setup a DNS server and make    sure it can be managed through Webmin before using VServers and VM2, so that
+    new instances will have resolvable hostnames.
+
+<dt><b>IP address allocation range</b>
+<dd>When a VServer instance is created, VM2 can assign an IP address for it
+    automatically. The IP will be taken from the range you enter in this field,
+    by finding addresses that are not in use by any other virtual system and
+    do not respond to pings.
+
+<dt><b>Base network interface</b>
+<dd>By default, VM2 will create VServers instances whose network interfaces
+    are a virtual interface on the host's primary ethernet <tt>eth0</tt>.
+    If this host has multiple interfaces, you can enter a different 
+    name here, like <tt>eth1</tt> or <tt>ppp0</tt>.
+
+<dt><b>Distribution to install on VServers</b>
+<dd>When VServer instances are created by the traditional manual installation
+    process, it is possible to select which Linux distribution to install.
+    If your VServer host runs Debian or Ubuntu you have a choice of their
+    distributions, such as <tt>sarge</tt> and <tt>edgy</tt>, which on Fedora
+    you can select a core release such as <tt>fc5</tt> or <tt>fc6</tt>. <br>
+    When <b>Decide automatically</b> is selected, new VServers will
+    be created with the same distribution as the host system. Otherwise you
+    can select a distro by entering one of the aforementioned distribution
+    names here.
+
+<dt><b>Packages to install on VServers</b>
+<dd>When VServer instances are created by the traditional process (rather than
+    from a VM2 system image), they typically have very few packages installed
+    apart from those needed for the base operating system. You can choose to
+    have additional packages installed by selecting them using the checkboxes
+    in this field.
+
+</dl>
+
+
+</dl>
+
+<footer>
+
