@@ -156,6 +156,7 @@ else {
 	$temp = "$tempdir/$img->{'id'}";
 	}
 local ($out, $ex, $err) = &execute_command_on_server($vhost,
+				"rm -rf ".quotemeta($temp)." ; ".
 				"mkdir ".quotemeta($temp));
 return (0, $err) if ($err);
 return (0, $out) if ($ex);

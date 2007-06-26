@@ -3,6 +3,8 @@
 # XXX move servers
 # XXX refresh should be in dependency order
 # XXX help pages
+# XXX xen centos 4
+#	XXX upload
 
 do '../web-lib.pl';
 &init_config();

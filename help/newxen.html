@@ -1,0 +1,97 @@
+<header>Create New Xen System</header>
+
+This page allows you to create a new virtual system, running inside a Xen
+instance. Because VM2 always creates new Xen systems from images, you must
+have downloaded at least one image using the <a href=images>New System
+Images</a> page before an instance can be created. <p>
+
+The fields on this form that need to be filled in to create a Xen instance
+are :<p>
+
+<dl>
+
+<dt><b>System hostname</b>
+<dd>This must be the name of the new Xen instance to create, which should not
+    include a domain name. Suitable instance names are like <i>centos1</i> or
+    <i>xen-foocorp</i>.The final hostname of the instance will have
+    the DNS domain name selected for the host system appended.
+
+<dt><b>System description</b>
+<dd>A short human-readable description for this new virtual system, like 
+    <i>Webserver for Foo Corp</i>.
+
+<dt><b>Initial system image</b>
+<dd>From this menu you must select the Xen operating system image to start the
+    new system with. VM2 provides two types of images - base operating systems,
+    and full stacks with Virtualmin. In most cases, you will want to select
+    the latter. 
+
+<dt><b>Root login mode</b>
+<dd>This field allows you to set the initial password for the new Xen instance.
+    Typically you will select <b>Using password</b> and enter a password into
+    the adjacent text box, which can then be given to whoever will manage the
+    server. Alternately, if you have any SSH keys registered with VM2 you can
+    select <b>Using SSH key</b> and choose a key from the menu next to it. Once
+    the instance is created, it will be configured to allow passwordless logins
+    using that key.
+
+<dt><b>Webmin installation mode</b>
+<dd>If you are creating a Xen instance from an image that includes Virtualmin,
+    this field can be left set the <b>Don't install Webmin</b>, as the Webmin
+    login will be the same as <tt>root</tt>'s SSH login. Otherwise, you can
+    select <b>Install, and set login to root with password above</b> to have
+    to have Webmin downloaded and installed as part of the Xen creation process.
+
+<dt><b>Allow creation of Virtualmin domains?</b>
+<dd>This setting determines if the newly create system can have Virtualmin
+    domains added to it. Typically you will want to leave this set to
+    <b>Yes</b>.
+
+<dt><b>Xen hosting system</b>
+<dd>From this menu you must select the physical system on which you want
+    the Xen instance created.
+
+<dt><b>IP address for Xen instance</b>
+<dd>Every new Xen system is given a private IP address, which can either be
+    allocated automatically from the range defined for the host system, or
+    entered manually by selecting the <b>Address</b> option. <br>
+    If the VM2 master runs a DNS server (highly recommended), an entry will
+    be added to the DNS zone selected for the Xen host system for the full
+    hostname and Xen instance IP address.
+
+<dt><b>Memory allocated to instance</b>
+<dd>Xen instances have a fixed upper bound on the amount of memory they can
+    use, which is controlled by this option. 256 is the minimum for a web
+    webhosting system with Virtualmin, but 512 is recommended.
+
+<dt><b>Swap file size for instance</b>
+<dd>By default, VM2 will create Xen instances with regular memory allocated,
+    but no swap space. However, you can select the second radio button here
+    and enter the amount of swap (virtual) memory to allocate in MB, which will
+    allow processes in the instance to use more than the allocated RAM, at the
+    cost of performance. Because the swap space is stored in a file on the host
+    system of the same size, it is a good idea to limit this to twice the
+    amount of regular memory.
+
+<dt><b>Disk space allocated to instance</b>
+<dd>Unlike some other virtual machine types, Xen stores each instance's file
+    system inside a single file on the host, which is a disk image in EXT3
+    format. The size of the filesystem within the instance is thus limited
+    to the disk image size.<br>
+    By default, the disk file size depends on the system image selected. All
+    images that contain the full Virtualmin stack are 2 GB, while those with
+    just the base OS are 1 GB. Because this may not be enough for a system 
+    that will host multiple websites, you can enter a larger size in MB using
+    this option, and the disk image will be grown to that size during the
+    instance creation process.
+
+</dl>
+
+When the <b>Create</b> button is clicked, VM2 will start the Xen setup process.
+Status messages will be displayed as each step is done. The total time
+depends on the size
+of the image, speed of the host system and speed of the network between the
+host and the VM2 master, but around five minutes seems to be the average. <p>
+
+<footer>
+
