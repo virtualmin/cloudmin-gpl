@@ -1,0 +1,38 @@
+<header>Status Descriptions</header>
+
+The possible statuses for each virtual system are :
+<dl>
+<dt><b><font color=#ff0000>Down</font></b>
+<dd>The virtual system has been shut down, or a physical system is not 
+    responding to pings.
+
+<dt><b><font color=#ff440000>Parent host is down</font></b>
+<dd>For a virtual system, the machine that hosts it is down.
+
+<dt><b><font color=#ff220000>No SSH</font></b>
+<dd>The virtual system appears to be up, but SSH connections fail or timeout.
+
+<dt><b><font color=#ff6600>SSH login failed</font></b>
+<dd>The system and SSH are running, but the <tt>root</tt> login credentials known to VM2 are incorrect.
+
+<dt><b><font color=#ff00ff>No Webmin</font></b>
+<dd>The system is up and running, but Webmin is not installed.
+
+<dt><b><font color=#ff22ff>Webmin down</font></b>
+<dd>The system is up and Webmin is installed, but it is not running.
+
+<dt><b><font color=#ff44ff>Webmin login failed</font></b>
+<dd>The system is up and Webmin is running, but the credentials for it known to VM2 are incorrect.
+
+<dt><b><font color=#008800>Webmin but no Virtualmin</font></b>
+<dd>The system is up and Webmin is installed and running, but the Virtualmin module is missing.
+
+<dt><b><font color=#00aa00>Webmin and Virtualmin</font></b>
+<dd>The system is up, and both Webmin and Virtualmin are installed and available.
+
+</dl>
+
+On some pages, the status includes additional information, such as the number of domains hosted or problems found with the Virtualmin configuration. <p>
+
+<footer>
+

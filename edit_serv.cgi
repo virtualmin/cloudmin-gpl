@@ -111,7 +111,9 @@ $haswebmin = ($status eq 'nowebminlogin' || $status eq 'novirt' ||
 $sfunc = "type_".$t."_no_ssh";
 $hasssh = !defined(&$sfunc) || !&$sfunc();
 if ($haswebmin || $hasssh) {
-	print &ui_hidden_table_start($text{'edit_aheader'}, "width=100%", 2,
+	print &ui_hidden_table_start($text{'edit_aheader'}." ".
+				     &hlink($text{'edit_help'}, "editauth"),
+				     "width=100%", 2,
 				     "auth", $in{'auth'}, \@tds);
 	}
 
@@ -190,7 +192,9 @@ else {
 
 # Virtualmin status
 if ($info && scalar(keys %$info) > 1) {
-	print &ui_hidden_table_start($text{'edit_cheader'}, "width=100%", 2,
+	print &ui_hidden_table_start($text{'edit_cheader'}." ".
+				     &hlink($text{'edit_help'}, "editstatus"),
+				     "width=100%", 2,
 				     "coll", $in{'coll'}, \@tds);
 
 	# CPU load and running processes
@@ -283,7 +287,9 @@ if ($info && scalar(keys %$info) > 1) {
 # Hosted domains 
 @doms = &get_server_domains($server);
 if ($status eq 'virt' || @doms) {
-	print &ui_hidden_table_start($text{'edit_dheader'}, "width=100%", 2,
+	print &ui_hidden_table_start($text{'edit_dheader'}." ".
+				     &hlink($text{'edit_help'}, "editdoms"),
+				     "width=100%", 2,
 				     "doms", $in{'doms'}, \@tds);
 	$clink = "<a href='list_domains.cgi?create=1&id=$server->{'id'}'>".
 		 "$text{'edit_domsadd'}</a>";
@@ -344,7 +350,9 @@ if ($status eq 'virt' || @doms) {
 # IP addresses, if we can manage them
 $ifunc = "type_".$t."_list_interfaces";
 if (defined(&$ifunc) && $status ne 'nohost') {
-	print &ui_hidden_table_start($text{'edit_iheader'}, "width=100%", 2,
+	print &ui_hidden_table_start($text{'edit_iheader'}." ".
+				     &hlink($text{'edit_help'}, "editiface"),
+				     "width=100%", 2,
 				     "ifaces", $in{'ifaces'}, \@tds);
 	$ifaces = &$ifunc($server);
 	@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".

@@ -3,8 +3,8 @@
 # XXX move servers
 # XXX refresh should be in dependency order
 # XXX help pages
-#	XXX shell
 #	XXX edit page (various sections need separate help)
+#	XXX interfaces
 # XXX xen centos 4
 #	XXX upload
 #	XXX also upload ubuntu base vserver

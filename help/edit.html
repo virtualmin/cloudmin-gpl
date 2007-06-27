@@ -1,0 +1,49 @@
+<header>Edit System</header>
+
+This page displays the details of an existing managed system, and allows 
+some of its settings to be changed. The common fields that appear regardless
+of the type of system are :<p>
+
+<dl>
+<dt><b>Internet hostname</b>
+<dd>This must contain the DNS-resolvable hostname or IP address of the system.
+    It can be changed, but only to a different hostname that resolves to the
+    same address.
+
+<dt><b>Description or comment</b>
+<dd>This field is for entering your own description of the system, like 
+    <i>Joe's web server</i>.
+
+<dt><b>Operating system</b>
+<dd>From this menu you should select the OS or Linux distribution that the
+    managed system runs. VM2 will use this when installing Webmin or other
+    packages to determine the correct package format.
+
+<dt><b>System groups</b>
+<dd>This section can be used to assign systems to one or more groups, for
+    easier categorization when you have a large number of systems. You can
+    either check the boxes next to group names (if any exist), or enter a new
+    name into the <b>New group</b> field.
+
+<dt><b>Start at host boot time?</b>
+<dd>For virtual systems using Xen, VServers or Zones, this field controls if
+    the system is started up when the host machine is booted.
+
+<dt><b>Last status</b>
+<dd>This field shows the status of the system, as determined by VM2 at the
+    last scheduled or manual check. See the <a href=status>status descriptions</a> help page for more details.
+
+<dt><b>Detailed status error</b>
+<dd>If the status indicates some error talking to the system, this field
+    will show more details on what went wrong, such as why SSH failed or why
+    Webmin could not be contacted.
+
+</dl>
+
+Other fields depend on the virtual system type, but typically include the
+host system, memory used and instance name. If you change the hostname, 
+description, <a href=editauth>authentication options</a> or other settings,
+click the <b>Save</b> button to make them active. <p>
+
+<footer>
+

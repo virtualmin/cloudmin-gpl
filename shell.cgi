@@ -11,7 +11,7 @@ else {
 	}
 ($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
 $server || &error($text{'edit_egone'});
-&ui_print_header(&server_in($server), $text{'shell_title'}, "", undef,
+&ui_print_header(&server_in($server), $text{'shell_title'}, "", "shell",
 		 0, 0, undef, undef, undef,
 	"onLoad='window.scroll(0, 10000); document.forms[0].cmd.focus()'");
 
