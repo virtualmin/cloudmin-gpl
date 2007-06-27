@@ -3,8 +3,12 @@
 # XXX move servers
 # XXX refresh should be in dependency order
 # XXX help pages
+#	XXX shell
+#	XXX edit page (various sections need separate help)
 # XXX xen centos 4
 #	XXX upload
+#	XXX also upload ubuntu base vserver
+#	XXX and create fc6 base vserver
 
 do '../web-lib.pl';
 &init_config();

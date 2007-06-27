@@ -1,0 +1,74 @@
+<header>Create New Solaris Zones System</header>
+
+This page allows you to create a new virtual system, running inside a
+Solaris zone. You have the option of having VM2 create the system
+'manually' using the <tt>zoneadm install</tt> command, or from an image
+supplied by Virtualmin. <p>
+
+The fields on this form that need to be filled in to create a zone
+are :<p>
+
+<dl>
+
+<dt><b>System hostname</b>
+<dd>This must be the name of the new zone to create, which should not
+    include a domain name. Suitable instance names are like <i>solaris1</i> or
+    <i>zone-foocorp</i>. The final hostname of the instance will have
+    the DNS domain name selected for the host system appended.
+
+<dt><b>System description</b>
+<dd>A short human-readable description for this new virtual system, like 
+    <i>Webserver for Foo Corp</i>.
+
+<dt><b>Initial system image</b>
+<dd>From this menu you can select the Solaris operating system image to copy
+    into the new instance's filesystem, or select <b>None</b> to have the
+    system build as part of the install process. The latter option is generally
+    slower though.<br>
+    Make sure you select an image of the same architecture as the Zones host
+    system (X86 or Sparc), as an image of the wrong type will not boot.
+
+<dt><b>Root login mode</b>
+<dd>This field allows you to set the initial password for the new zone.
+    Typically you will select <b>Using password</b> and enter a password into
+    the adjacent text box, which can then be given to whoever will manage the
+    server. Alternately, if you have any SSH keys registered with VM2 you can
+    select <b>Using SSH key</b> and choose a key from the menu next to it. Once
+    the instance is created, it will be configured to allow passwordless logins
+    using that key.
+
+<dt><b>Webmin installation mode</b>
+<dd>If you are creating a zone from an image that includes Virtualmin,
+    this field can be left set the <b>Don't install Webmin</b>, as the Webmin
+    login will be the same as <tt>root</tt>'s SSH login. Otherwise, you can
+    select <b>Install, and set login to root with password above</b> to have
+    to have Webmin downloaded and installed as part of the zone
+    creation process.
+
+<dt><b>Allow creation of Virtualmin domains?</b>
+<dd>This setting determines if the newly create system can have Virtualmin
+    domains added to it. Typically you will want to leave this set to
+    <b>Yes</b>.
+
+<dt><b>Solaris Zones hosting system</b>
+<dd>From this menu you must select the physical system on which you want
+    the zone created.
+
+<dt><b>IP address for Zone</b>
+<dd>Every new zone is given a private IP address, which can either be
+    allocated automatically from the range defined for the host system, or
+    entered manually by selecting the <b>Address</b> option. <br>
+    If the VM2 master runs a DNS server (highly recommended), an entry will
+    be added to the DNS zone selected for the zone system for the full
+    hostname and zone's IP address.
+
+</dl>
+
+When the <b>Create</b> button is clicked, VM2 will start the zone setup process.
+Status messages will be displayed as each step is done. The total time
+can vary depending on whether you are creating from an image, or doing a
+manual build. In the former case, 5-10 minutes is expected, but in the latter
+it can take around 30 minutes, depending on your hardware. <p>
+
+<footer>
+

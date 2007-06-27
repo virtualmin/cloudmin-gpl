@@ -1,0 +1,54 @@
+<header>Create New EC2 System</header>
+
+This page allows you to create a new virtual system running on Amazon's
+EC2 service. Unlike the other virtual system types supported by VM2,
+it is not created on a host system owned by you or from one of the locally
+stored images - instead, it is created from a AMI (Amazon Machine Image)
+hosted on the S3 service. <p>
+
+The fields on this form that need to be filled in to create a Xen instance
+are :<p>
+
+<dl>
+
+<dt><b>System description</b>
+<dd>A short human-readable description for this new virtual system, like 
+    <i>Webserver on EC2</i>.
+
+<dt><b>SSH key for root</b>
+<dd>New EC2 instances are always only accessible via an SSH key, rather than
+    with a password. From this menu you must select a key that has been
+    registered with VM2, and with EC2.
+
+<dt><b>Webmin installation mode</b>
+<dd>Unless you do not plan to use Webmin, this field should be set to
+    <b>Install, and set login to root with password</b>, and a password entered
+    into the adjacent text box. If the EC2 image selected includes Webmin, its
+    password will be changed to whatever you enter. If not, Webmin will be
+    installed and the password set to the one you entered.
+
+<dt><b>Allow creation of Virtualmin domains?</b>
+<dd>This setting determines if the newly create system can have Virtualmin
+    domains added to it. Typically you will want to leave this set to
+    <b>Yes</b>.
+
+<dt><b>EC2 account</b>
+<dd>If you have multiple EC2 accounts registered with VM2, you must select
+    the one that will own this new instance from this menu.
+
+<dt><b>EC2 image to start</b>
+<dd>This menu lists all of the EC2 images (or AMIs) that are available to you.
+    The default will be an image containing the full Virtualmin stack, but you
+    can also choose images with various Linux distributions provided by Amazon
+    and other vendors.
+
+</dl>
+
+When the <b>Create</b> button is clicked, VM2 will contact Amazon to start
+the creation process. Depending on the size of the image, this can take between
+5 and 10 minutes. The DNS hostname of the newly created system is assigned by 
+Amazon, but can be changed later once you have added an entry for the same
+IP address to your own DNS domain. <p>
+
+<footer>
+
