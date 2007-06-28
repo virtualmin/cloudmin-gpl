@@ -541,6 +541,7 @@ update_ipkgerr.. update failed : $1
 
 save_err=Failed to save system details
 save_ehost=The new hostname does not resolve to the same IP address as the old one
+save_egroup2=Invalid new group name
 save_shuttitle=Shut Down System
 save_shutrusure=Are you sure you want to shut down the system $1?
 save_shutok=Yes, Shutdown Now
