@@ -5,6 +5,12 @@
 # XXX xen images
 #	XXX upload fc6 base vserver
 #	XXX upload centos 4.4 base image
+# XXX resource management
+#	XXX xen disk sizes
+#	XXX edit memory allocations
+#	XXX cpu limits
+# XXX install script
+# XXX documentation
 
 do '../web-lib.pl';
 &init_config();
@@ -847,64 +853,82 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		}
 
 	# Webmin is OK! Check for Virtualmin
-	$server->{'status'} = 'virt';
-	$server->{'status_msg'} = undef;
 	local $info;
-	if (&remote_foreign_check($server, "virtual-server") &&
-	    !$server->{'novirtualmin'}) {
-		# Get and save remote Virtualmin domains
-		&remote_foreign_require($server, "virtual-server",
-					"virtual-server-lib.pl");
-		local @doms = &remote_foreign_call($server, "virtual-server",
-						   "list_domains");
-		&save_server_domains($server, \@doms);
-
-		# Get and save collected status info
-		$info = &remote_foreign_call($server, "virtual-server",
-		     $regen ? "collect_system_info" : "get_collected_info");
-		$info->{'minfo'} = &remote_eval($server, "virtual_server",
-						"\\\%module_info");
-		$info->{'config'} = &remote_foreign_config($server,
-							   "virtual-server");
-		if (&remote_eval($server, "virtual_server",
-				 "defined(\&list_available_features)")) {
-			$info->{'features'} = [ &remote_foreign_call($server,
-				"virtual-server", "list_available_features") ];
-			}
-		$info->{'template'} = &remote_foreign_call($server,
-				"virtual-server", "get_template", 0);
-		$info->{'defip'} = &remote_foreign_call($server,
-				"virtual-server", "get_default_ip");
-
-		# Perform a config check, if we haven't done an OK one yet
-		if (!$server->{'virtualmin_checked'}) {
-			&check_virtualmin_config($server, 1);
-			}
-
-		# Cache number of domains and updates
-		$server->{'virtualmin_domains'} = scalar(@doms);
-		$server->{'virtualmin_poss'} = scalar(@{$info->{'poss'}});
-		}
-	else {
-		&save_server_domains($server, [ ]);
-		$server->{'status'} = 'novirt';
+	eval {
+		local $SIG{'ALRM'} = sub { die "timeout\n" };
+		local $main::error_must_die = 1;
+		alarm(60);
+		$server->{'status'} = 'virt';
 		$server->{'status_msg'} = undef;
-		delete($server->{'virtualmin_domains'});
-		delete($server->{'virtualmin_poss'});
-		$info = { };
-		}
+		if (&remote_foreign_check($server, "virtual-server") &&
+		    !$server->{'novirtualmin'}) {
+			# Get and save remote Virtualmin domains
+			&remote_foreign_require($server, "virtual-server",
+						"virtual-server-lib.pl");
+			local @doms = &remote_foreign_call($server,
+					"virtual-server", "list_domains");
+			&save_server_domains($server, \@doms);
 
-	# Get common Webmin information
-	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
-	$info->{'general'}->{'version'} = 
-		&remote_foreign_call($server, "webmin", "get_webmin_version");
-	$info->{'general'}->{'installtype'} = 
-		&remote_foreign_call($server, "webmin", "get_install_type");
-	$info->{'general'}->{'theme'} =
-		&remote_eval($server, "webmin", "\$current_theme");
-	$info->{'general'}->{'tinfo'} =
-		&remote_eval($server, "webmin",
-			     "\%t=get_theme_info(\$current_theme); \\\%t");
+			# Get and save collected status info
+			$info = &remote_foreign_call($server, "virtual-server",
+			     $regen ? "collect_system_info"
+				    : "get_collected_info");
+			$info->{'minfo'} = &remote_eval($server,
+				"virtual_server", "\\\%module_info");
+			$info->{'config'} = &remote_foreign_config(
+				$server, "virtual-server");
+			if (&remote_eval($server, "virtual_server",
+				      "defined(\&list_available_features)")) {
+				$info->{'features'} = [
+					&remote_foreign_call($server,
+					"virtual-server",
+					"list_available_features") ];
+				}
+			$info->{'template'} = &remote_foreign_call($server,
+					"virtual-server", "get_template", 0);
+			$info->{'defip'} = &remote_foreign_call($server,
+					"virtual-server", "get_default_ip");
+
+			# Perform a config check, if we haven't done an OK
+			# one yet
+			if (!$server->{'virtualmin_checked'}) {
+				&check_virtualmin_config($server, 1);
+				}
+
+			# Cache number of domains and updates
+			$server->{'virtualmin_domains'} = scalar(@doms);
+			$server->{'virtualmin_poss'} =
+				scalar(@{$info->{'poss'}});
+			}
+		else {
+			&save_server_domains($server, [ ]);
+			$server->{'status'} = 'novirt';
+			$server->{'status_msg'} = undef;
+			delete($server->{'virtualmin_domains'});
+			delete($server->{'virtualmin_poss'});
+			$info = { };
+			}
+
+		# Get common Webmin information
+		&remote_foreign_require($server, "webmin", "webmin-lib.pl");
+		$info->{'general'}->{'version'} = 
+			&remote_foreign_call($server, "webmin",
+					     "get_webmin_version");
+		$info->{'general'}->{'installtype'} = 
+			&remote_foreign_call($server, "webmin",
+					     "get_install_type");
+		$info->{'general'}->{'theme'} =
+			&remote_eval($server, "webmin", "\$current_theme");
+		$info->{'general'}->{'tinfo'} =
+			&remote_eval($server, "webmin",
+				 "\%t=get_theme_info(\$current_theme); \\\%t");
+		alarm(0);
+		};
+	if ($@) {
+		# Failed in some way, most likely a timeout
+		$server->{'status'} = 'downwebmin';
+		$server->{'status_msg'} = $@;
+		}
 
 	# Fix up detected OS
 	if ($server->{'type'} eq 'unknown') {
