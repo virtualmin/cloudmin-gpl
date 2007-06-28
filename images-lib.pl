@@ -274,9 +274,13 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/conf.d/hostname") {
 	local $fixpath = "$dir/$fix";
 	local $temppath = &transname();
+
+	# Only do files that exist, apart from /etc/hosts and /etc/resolv.conf
+	# which should be everywhere
 	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
-	next if ($err && $fix ne "/etc/hosts");	# Only files that exist,
-						# apart from /etc/hosts
+	next if ($err && $fix ne "/etc/hosts" &&
+			 $fix ne "/etc/resolv.conf");
+
 	local $data = &read_file_contents($temppath);
 	if ($fix eq "/etc/hosts") {
 		$data = "127.0.0.1 localhost\n".

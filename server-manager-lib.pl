@@ -2,13 +2,9 @@
 # XXX make status updates limited to what the caller really needs
 # XXX move servers
 # XXX refresh should be in dependency order
-# XXX help pages
-#	XXX edit page (various sections need separate help)
-#	XXX interfaces
-# XXX xen centos 4
-#	XXX upload
-#	XXX also upload ubuntu base vserver
-#	XXX and create fc6 base vserver
+# XXX xen images
+#	XXX upload fc6 base vserver
+#	XXX upload centos 4.4 base image
 
 do '../web-lib.pl';
 &init_config();

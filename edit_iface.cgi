@@ -16,7 +16,7 @@ if (!$in{'new'}) {
 
 &ui_print_header(&server_in($server), $in{'new'} ? $text{'iface_create'}
 						 : $text{'iface_edit'},
-				      "", "iface");
+		 "", "iface");
 
 @tds = ( "width=30%" );
 print &ui_form_start("save_iface.cgi", "post");

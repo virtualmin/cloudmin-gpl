@@ -1,0 +1,26 @@
+<header>Add Network Interface</header>
+
+This page is for adding a new network interface to a virtual system, or
+for changing the settings for an existing interface. When adding, you must
+complete the following fields :<p>
+
+<dl>
+<dt><b>Host system interface</b>
+<dd>The interface on the parent host system that this new virtual interface
+    will be created under. Typically you will want to stick with the primary
+    ethernet connection, like <tt>eth0</tt> or <tt>bge0</tt>.
+
+<dt><b>IP address</b>
+<dd>If <b>Allocate automatically</b> is selected, VM2 will select a free IP
+    address from the range defined for the host system. Otherwise, you can
+    enter an IP of your choice - just make sure that it is not allocated to
+    any other system.
+
+<dt><b>Netmask</b>
+<dd>Can generally be left un-changed, unless you need to use a mask different
+    from that of the host system's primary network interface.
+
+</dl>
+
+<footer>
+
