@@ -129,6 +129,33 @@ foreach my $f (@files) {
 return undef;
 }
 
+# create_image_files_tempdir(&vhost, id)
+# Attempts to create a temp directory for image files on some host, and returns
+# either (1, dir) or (0, some error).
+sub create_image_files_tempdir
+{
+local ($vhost, $id) = @_;
+
+local $temp;
+if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
+	# Ask the remote Webmin
+	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
+	$temp = &remote_foreign_call($vhost, "webmin", "tempname", $id);
+	$temp || return (0, $last_remote_error);
+	}
+else {
+	# Use configure dir, or /tmp
+	local $tempdir = $config{'img_temp'} || "/tmp";
+	$temp = "$tempdir/$id";
+	}
+local ($out, $ex, $err) = &execute_command_on_server($vhost,
+				"rm -rf ".quotemeta($temp)." ; ".
+				"mkdir ".quotemeta($temp));
+return (0, $err) if ($err);
+return (0, $out) if ($ex);
+return (1, $temp);
+}
+
 # transfer_image_files(&server, [show-progress-dots])
 # Transfers all files for some system's image to a parent host, and returns
 # the path to the temp directory created for them.
@@ -142,24 +169,8 @@ local ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
 $img || return (0, "Could not find image with ID $server->{'image'}");
 
 # Choose a temp dir
-local $temp;
-if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
-	# Ask the remote Webmin
-	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
-	$temp = &remote_foreign_call($vhost, "webmin", "tempname",
-				     $img->{'id'});
-	$temp || return (0, $last_remote_error);
-	}
-else {
-	# Use configure dir, or /tmp
-	local $tempdir = $config{'img_temp'} || "/tmp";
-	$temp = "$tempdir/$img->{'id'}";
-	}
-local ($out, $ex, $err) = &execute_command_on_server($vhost,
-				"rm -rf ".quotemeta($temp)." ; ".
-				"mkdir ".quotemeta($temp));
-return (0, $err) if ($err);
-return (0, $out) if ($ex);
+local ($tempok, $temp) = &create_image_files_tempdir($vhost, $img->{'id'});
+return (0, $temp) if (!$tempok);
 
 # Copy files from local to that dir
 # XXX not if local
@@ -442,6 +453,111 @@ if ($server->{'status'} eq 'virt' && $info && @{$info->{'poss'}}) {
 		&save_managed_server($server);
 		}
 	}
+}
+
+# munge_virtualmin_licence_files(&server)
+# On a server that is being prepared for imaging, modify the serial number in
+# all Virtualmin licence files. Returns a list of original filenames and
+# contents (for later restoring) on success, or an error string on failure.
+sub munge_virtualmin_licence_files
+{
+local ($server) = @_;
+local @rv;
+foreach my $fix ("/etc/virtualmin-license",
+		 "/etc/apt/sources.list",
+		 "/etc/yum.repos.d/virtualmin.repo",
+		 "/etc/webmin/webmin/config") {
+	local $temppath = &transname();
+	local $err = &get_file_from_server($server, $fix, $temppath);
+	next if ($err);
+	local $data = &read_file_contents($temppath);
+	push(@rv, [ $fix, $data ]);
+	if ($fix eq "/etc/virtualmin-license") {
+		# Can create entirely
+		$data = "SerialNumber=\${SERIAL}\n".
+			"LicenseKey=\${KEY}\n";
+		}
+	elsif ($fix eq "/etc/apt/sources.list" ||
+	       $fix eq "/etc/yum.repos.d/virtualmin.repo") {
+		# Need to replace login to Virtualmin repo
+		$data =~ s/http:\/\/(.*)\@software.virtualmin.com/http:\/\/\$SERIAL:\$KEY\@software.virtualmin.com/g;
+		}
+	elsif ($fix eq "/etc/webmin/webmin/config") {
+		# Need to change updates server lines
+		$data =~ s/upuser=.*/upuser=\$SERIAL/g;
+		$data =~ s/uppass=.*/uppass=\$SERIAL/g;
+		}
+	$err = &put_file_to_server($server, $temppath, $fix);
+	return "Failed to save munged $fix : $err" if ($err);
+	}
+return \@rv;
+}
+
+# munge_shadow_root_password(&server)
+# Changes the root password in /etc/shadow or /etc/passwd to 'changeme', and
+# in /etc/webmin/miniserv.users if needed. Returns a list of files changed and
+# original contents, or an error string
+sub munge_shadow_root_password
+{
+local ($server) = @_;
+
+# Do /etc/shadow or /etc/passwd
+local $shadow = &transname();
+local $passfile = "/etc/shadow";
+local $err = &get_file_from_server($server, $passfile, $shadow);
+if ($err) {
+	$passfile = "/etc/passwd";
+	$err = &get_file_from_server($server, $passfile, $shadow);
+	}
+if (!$err) {
+	# Fix password in first column for root
+	local $lref = &read_file_lines($shadow);
+	foreach my $l (@$lref) {
+		local @w = split(/:/, $l, -1);
+		if ($w[0] eq "root") {
+			local $salt = substr(time(), -2);
+			$w[1] = &unix_crypt("changeme", $salt);
+			$l = join(':', @w);
+			}
+		}
+	&flush_file_lines($shadow);
+	$err = &put_file_to_server($server, $shadow, $passfile);
+	return "Failed to save munged $passfile : $err" if ($err);
+	}
+
+# Do /etc/webmin/miniserv.users for root or admin
+local $users = &transname();
+local $passfile = "/etc/webmin/miniserv.users";
+local $err = &get_file_from_server($server, $passfile, $users);
+if (!$err) {
+	local $lref = &read_file_lines($users);
+	local $changed;
+	foreach my $l (@$lref) {
+                local @w = split(/:/, $l, -1);
+		if (($w[0] eq "root" || $w[0] eq "admin") && $w[1] ne "x") {
+			$w[1] = &unix_crypt("changeme", $salt);
+			$l = join(':', @w);
+			$changed++;
+			}
+		}
+	&flush_file_lines($users);
+	if ($changed) {
+		$err = &put_file_to_server($server, $users, $passfile);
+		return "Failed to save munged miniserv.users : $err" if ($err);
+		}
+	}
+
+return undef;
+}
+
+# munge_authorized_key(&server)
+# Removes all keys from ~root/.ssh/authorized_keys* .  Returns a list of files
+# changed and original contents, or an error string
+sub munge_authorized_key
+{
+local ($server) = @_;
+
+
 }
 
 1;

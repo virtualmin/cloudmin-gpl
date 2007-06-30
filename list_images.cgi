@@ -6,6 +6,11 @@ require './server-manager-lib.pl';
 
 @avail = sort { $a->{'desc'} cmp $b->{'desc'} } &list_available_server_images();
 @images = &list_server_images();
+@combined = @images;
+%incombined = map { $_->{'id'}, $_ } @combined;
+foreach $i (@avail) {
+	push(@combined, $i) if (!$incombined{$_->{'id'}});
+	}
 @links = ( &select_all_link("d"), &select_invert_link("d") );
 print &ui_form_start("get_images.cgi", "post");
 print &ui_links_row(\@links);
@@ -15,12 +20,14 @@ print &ui_columns_start([ "",
 			  $text{'images_manager'},
 			  $text{'images_status'},
 			  $text{'images_size'} ]);
-foreach $i (@avail) {
+foreach $i (@combined) {
 	$tfunc = "type_".$i->{'manager'}."_desc";
+	($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
 	($got) = grep { $_->{'id'} eq $i->{'id'} } @images;
 	print &ui_checked_columns_row([
 		"<a href='edit_image.cgi?id=$i->{'id'}'>$i->{'desc'}</a>",
 		&$tfunc(),
+		$got && !$avail ? $text{'images_local'} :
 		!$got ? $text{'images_down'} :
 		$got->{'version'} < $i->{'version'} ?
 			"<font color=#aaaa00>".

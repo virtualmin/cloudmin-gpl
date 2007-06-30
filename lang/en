@@ -947,3 +947,11 @@ dimage_egone=Image no longer exists!
 remote_eprogram=Invalid remote program name
 remote_eprogram2=Remote program $1 does not exist
 
+mkimage_xenmount=Mounting Xen instance filesystem ..
+mkimage_xenumount=Un-mounting Xen instance filesystem ..
+mkimage_mungelicence=Removing Virtualmin licence ..
+mkimage_mungeshadow=Resetting root password ..
+mkimage_mungessh=Removing authorized SSH keys ..
+mkimage_xengzip=Compressing filesystem image ..
+mkimage_exengzip=.. failed : $1
+mkimage_emunge=.. failed : $1

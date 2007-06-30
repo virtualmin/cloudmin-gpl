@@ -9,6 +9,9 @@
 # XXX install script
 # XXX documentation
 # XXX creating images
+#	XXX shutdown, munge, copy, un-munge
+#	XXX need create-image.pl , delete-image.pl
+#	XXX need web interface
 
 do '../web-lib.pl';
 &init_config();

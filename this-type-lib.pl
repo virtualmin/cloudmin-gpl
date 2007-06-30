@@ -25,6 +25,11 @@ sub type_this_no_ssh
 return 1;		# We never need to SSH into vservers
 }
 
+sub type_this_no_image
+{
+return 1;	# Real systems cannot be imaged
+}
+
 # type_this_execute_command(&server, comand, [timeout])
 # Just runs a command locally
 sub type_this_execute_command

@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Lists all available system images
+# Lists all downloaded system images
 
 package server_manager;
 $main::no_acl_check++;
@@ -28,14 +28,23 @@ while(@ARGV > 0) {
 	}
 
 @images = sort { $a->{'id'} cmp $b->{'id'} } &list_server_images($type);
+@avail = &list_available_server_images($type);
 if ($multi) {
 	# One block per image
 	foreach $i (@images) {
 		$tfunc = "type_".$i->{'manager'}."_desc";
+		($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
 		print $i->{'id'},"\n";
 		print "    Description: $i->{'desc'}\n";
 		print "    System type: ",&$tfunc(),"\n";
 		print "    Version: $i->{'version'}\n";
+		if ($avail) {
+			print "    Available version: $avail->{'version'}\n";
+			print "    Source: Virtualmin\n";
+			}
+		else {
+			print "    Source: Local\n";
+			}
 		print "    Compressed size: $i->{'size'}\n";
 		}
 	}
