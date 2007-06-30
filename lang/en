@@ -943,3 +943,7 @@ eimage_files=Component files
 eimage_delete=Delete From This System
 eimage_users=Used to create systems
 dimage_egone=Image no longer exists!
+
+remote_eprogram=Invalid remote program name
+remote_eprogram2=Remote program $1 does not exist
+

@@ -2,15 +2,13 @@
 # XXX make status updates limited to what the caller really needs
 # XXX move servers
 # XXX refresh should be in dependency order
-# XXX xen images
-#	XXX upload fc6 base vserver
-#	XXX upload centos 4.4 base image
 # XXX resource management
 #	XXX xen disk sizes
 #	XXX edit memory allocations
 #	XXX cpu limits
 # XXX install script
 # XXX documentation
+# XXX creating images
 
 do '../web-lib.pl';
 &init_config();

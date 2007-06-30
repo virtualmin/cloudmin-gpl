@@ -3,6 +3,18 @@ do 'server-manager-lib.pl';
 
 sub module_install
 {
+# Make sure the remote.cgi page is accessible in non-session mode
+local %miniserv;
+&get_miniserv_config(\%miniserv);
+if ($virtualmin_pro) {
+	local @sa = split(/\s+/, $miniserv{'sessiononly'});
+	if (&indexof("/$module_name/remote.cgi", @sa) < 0) {
+		# Need to add
+		push(@sa, "/$module_name/remote.cgi");
+		$miniserv{'sessiononly'} = join(" ", @sa);
+		}
+	}
+
 # Setup Cron job to check managed server statuses
 &foreign_require("cron", "cron-lib.pl");
 local ($job) = grep { $_->{'user'} eq 'root' &&
