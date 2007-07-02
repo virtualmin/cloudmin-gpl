@@ -955,3 +955,7 @@ mkimage_mungessh=Removing authorized SSH keys ..
 mkimage_xengzip=Compressing filesystem image ..
 mkimage_exengzip=.. failed : $1
 mkimage_emunge=.. failed : $1
+mkimage_xendelete=Deleting compressed filesystem image ..
+mkimage_exendelete=.. failed : $1
+mkimage_unmunge=Undoing licence and password changes ..
+create_eunmunge=.. failed to revert $1 : $2

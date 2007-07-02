@@ -9,7 +9,7 @@ require './server-manager-lib.pl';
 @combined = @images;
 %incombined = map { $_->{'id'}, $_ } @combined;
 foreach $i (@avail) {
-	push(@combined, $i) if (!$incombined{$_->{'id'}});
+	push(@combined, $i) if (!$incombined{$i->{'id'}});
 	}
 @links = ( &select_all_link("d"), &select_invert_link("d") );
 print &ui_form_start("get_images.cgi", "post");

@@ -52,9 +52,24 @@ $clash && &usage("An image with the ID $id already exists");
 # Create initial image hash
 $image = { 'id' => $id,
 	   'desc' => $desc,
-	   'type' => $server->{'manager'} };
+	   'manager' => $server->{'manager'} };
 
-if ($server->{'status'} ne 'down') {
+# Select temp dir for image on parent host
+&$first_print("Creating temporary directory for image files ..");
+$pfunc = "type_".$server->{'manager'}."_parent";
+$vhost = &$pfunc($server);
+($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
+if (!$tempok) {
+	&$second_print(".. failed : $temp");
+	exit(3);
+	}
+else {
+	&$second_print(".. done");
+	}
+
+$sfunc = "type_".$server->{'manager'}."_no_shutdown";
+$noshut = defined(&$sfunc) && &$sfunc($server);
+if ($server->{'status'} ne 'down' && !$noshut) {
 	# Shut it down
 	&$first_print("Shutting down system ..");
 	$err = &shutdown_server($server);
@@ -65,37 +80,57 @@ if ($server->{'status'} ne 'down') {
 	else {
 		&$second_print(".. done");
 		}
+	$server->{'status'} = 'down';
+	&save_managed_server($server);
 	$shutdown = 1;
 	}
 
-# Select temp dir for image on parent host
-$pfunc = "type_".$server->{'manager'}."_parent";
-$vhost = &$pfunc($server);
-($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
-
-# Convert the remote system into an image file
-# XXX same function will mount (if xen), do munge, un-mount, tar up (if vserver)
+# Convert the remote system into an image file - this will output progress
 $ifunc = "type_".$server->{'manager'}."_create_image";
 if (!&$ifunc($server, $image, $temp)) {
 	exit(3);
 	}
 
 # Transfer the image file to the master
-# XXX
+&$first_print("Fetching image files from host ..");
+$err = &fetch_image_files($vhost, $image, $temp, 0);
+if ($err) {
+	&$second_print(".. failed : $err");
+	}
+else {
+	&$second_print(".. fetched all files");
 
-# Cleanup the image
-# XXX delete tar.gz (if vserver), un-munge
+	# Save the new image file
+	&save_server_image($image);
+	}
+
+# Cleanup the image on the host
+$ifunc = "type_".$server->{'manager'}."_cleanup_image";
+if (!&$ifunc($server, $image, $temp)) {
+	exit(3);
+	}
 
 if ($shutdown) {
 	&$first_print("Starting up system ..");
 	$err = &startup_server($server);
 	if ($err) {
 		&$second_print(".. startup failed : $err");
-		exit(2);
+		exit(4);
 		}
 	else {
 		&$second_print(".. done");
 		}
+
+	# Re-check status
+	&$first_print("Refreshing system status ..");
+	&check_server_status($server);
+	&save_managed_server($server);
+	&$second_print(".. done");
+	}
+
+# Exit if image transfer failed, but only after cleanup is done
+if ($err) {
+	exit(5);
 	}
 
 sub usage

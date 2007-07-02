@@ -101,8 +101,7 @@ local %got;
 &read_file($temp, \%got);
 $got{'id'} ||= $img->{'id'};
 $got{'size'} = $img->{'size'};
-&make_dir($server_images_dir, 0700);
-&write_file("$server_images_dir/$got{'id'}.img", \%got);
+&save_server_image(\%got);
 return \%got;
 }
 
@@ -213,6 +212,15 @@ $vhost || return "Could not find parent system";
 local ($out, $ex, $err) = &execute_command_on_server($vhost,
 				"rm -rf ".quotemeta($temp));
 return $err ? $err : $ex ? $out : undef;
+}
+
+# save_server_image(&image)
+# Just writes out an image .img info file
+sub save_server_image
+{
+local ($image) = @_;
+&make_dir($server_images_dir, 0700);
+&write_file("$server_images_dir/$image->{'id'}.img", $image);
 }
 
 # delete_server_image(&image)
@@ -487,7 +495,7 @@ foreach my $fix ("/etc/virtualmin-license",
 		$data =~ s/upuser=.*/upuser=\$SERIAL/g;
 		$data =~ s/uppass=.*/uppass=\$SERIAL/g;
 		}
-	$err = &put_file_to_server($server, $temppath, $fix);
+	$err = &put_file_data_to_server($server, $data, $fix);
 	return "Failed to save munged $fix : $err" if ($err);
 	}
 return \@rv;
@@ -500,6 +508,8 @@ return \@rv;
 sub munge_shadow_root_password
 {
 local ($server) = @_;
+local @rv;
+local $salt = substr(time(), -2);
 
 # Do /etc/shadow or /etc/passwd
 local $shadow = &transname();
@@ -511,11 +521,12 @@ if ($err) {
 	}
 if (!$err) {
 	# Fix password in first column for root
+	local $data = &read_file_contents($shadow);
+	push(@rv, [ $passfile, $data ]);
 	local $lref = &read_file_lines($shadow);
 	foreach my $l (@$lref) {
 		local @w = split(/:/, $l, -1);
 		if ($w[0] eq "root") {
-			local $salt = substr(time(), -2);
 			$w[1] = &unix_crypt("changeme", $salt);
 			$l = join(':', @w);
 			}
@@ -530,6 +541,8 @@ local $users = &transname();
 local $passfile = "/etc/webmin/miniserv.users";
 local $err = &get_file_from_server($server, $passfile, $users);
 if (!$err) {
+	local $data = &read_file_contents($users);
+	push(@rv, [ $passfile, $data ]);
 	local $lref = &read_file_lines($users);
 	local $changed;
 	foreach my $l (@$lref) {
@@ -547,7 +560,7 @@ if (!$err) {
 		}
 	}
 
-return undef;
+return \@rv;
 }
 
 # munge_authorized_key(&server)
@@ -556,8 +569,58 @@ return undef;
 sub munge_authorized_key
 {
 local ($server) = @_;
+local ($roothome, $ex, $err) = &execute_command_on_server($server, "echo ~");
+$roothome =~ s/\r|\n//g;
+$roothome ||= "/root";
+local @rv;
+foreach my $fix ("$roothome/.ssh/authorized_keys",
+		 "$roothome/.ssh/authorized_keys2") {
+	local $data = &get_file_data_from_server($server, $fix);
+	if ($data) {
+		local $err = &put_file_data_to_server($server, "", $fix);
+		if ($err) {
+			return "Failed to truncate $fix : $err";
+			}
+		else {
+			push(@rv, [ $fix, $data ]);
+			}
+		}
+	}
+return \@rv;
+}
 
+# fetch_image_files(&vhost, &image, tempdir, [show-progress-dots])
+# Fetches from some host system the files that make up some image, and saves
+# them in the /var/webmin/server-manager directory on this system. Since this
+# can take some time, outputs progress dots.
+sub fetch_image_files
+{
+local ($vhost, $image, $temp, $progress) = @_;
 
+foreach my $f (split(/\s+/, $image->{'files'})) {
+	local $path = "$server_images_dir/$f";
+	local $pid = fork();
+	local $outtemp = &tempname();
+	if (!$pid) {
+		local $err = &get_file_from_server($vhost, "$temp/$f", $path);
+		open(OUT, ">$outtemp");
+		print OUT $err;
+		close(OUT);
+		exit($err ? 1 : 0);
+		}
+	while(1) {
+		local $expid = waitpid($pid, WNOHANG);
+		last if ($expid == $pid);
+		print "." if ($progress);
+		sleep(1);
+		}
+	local $err = &read_file_contents($outtemp);
+	&unlink_file($outtemp);
+	if ($err) {
+		return "Failed to copy $f : $err";
+		}
+	}
+return undef;
 }
 
 1;

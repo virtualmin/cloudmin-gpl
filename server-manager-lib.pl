@@ -9,9 +9,8 @@
 # XXX install script
 # XXX documentation
 # XXX creating images
-#	XXX shutdown, munge, copy, un-munge
-#	XXX need create-image.pl , delete-image.pl
 #	XXX need web interface
+#	XXX vservers, zones, ec2 ?
 
 do '../web-lib.pl';
 &init_config();
@@ -498,7 +497,7 @@ return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'});
 sub run_ssh_command
 {
 local ($cmd, $pass, $timeout) = @_;
-local ($wrong_password, $got_login, $connect_failed);
+local ($wrong_password, $got_login, $connect_failed, $given_password);
 local $out;
 local $ex;
 eval {
@@ -512,6 +511,7 @@ eval {
 		local $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
 		if ($rv == 0) {
 			syswrite($fh, "$pass\n");
+			$given_password++;
 			}
 		elsif ($rv == 1) {
 			syswrite($fh, "yes\n");
@@ -546,7 +546,7 @@ if ($@) {
 		}
 	}
 $out =~ s/^\s*\r?\n//;	# Remove empty line at start
-if ($wrong_password) {
+if ($wrong_password || $given_password >= 3) {
 	return (2, $out);
 	}
 if ($connect_failed) {
@@ -658,6 +658,21 @@ $sshcmd .= " ".quotemeta($localfile).
 	   quotemeta($remotefile);
 local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
 return $status ? $out : undef;
+}
+
+# put_file_data_to_server(&server, data, remotefile)
+# Writes the given data to some remote file. Returns an error message on failure
+# or undef on success.
+sub put_file_data_to_server
+{
+local ($server, $data, $remotefile) = @_;
+local $temp = &transname();
+&open_tempfile(TEMP, ">$temp", 0, 1);
+&print_tempfile(TEMP, $data);
+&close_tempfile(TEMP);
+local $err = &put_file_to_server($server, $temp, $remotefile);
+&unlink_file($temp);
+return $err;
 }
 
 # has_command_on_server(&server, command)
