@@ -1,5 +1,4 @@
 # Functions for general setup and management of multiple Virtualmin servers
-# XXX make status updates limited to what the caller really needs
 # XXX move servers
 # XXX refresh should be in dependency order
 # XXX resource management
@@ -409,7 +408,7 @@ if (defined(&$sfunc)) {
 	}
 
 # Need to really SSH
-local $cmd = "ssh -q -".$server->{'ssh_protocol'};
+local $cmd = "ssh -q -x -".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
 	$cmd .= " -i ".quotemeta($key->{'file'});
@@ -570,7 +569,7 @@ if (defined(&$efunc)) {
 	}
 else {
 	# Just run via SSH
-	local $sshcmd = "ssh -q -".$server->{'ssh_protocol'};
+	local $sshcmd = "ssh -q -x -".$server->{'ssh_protocol'};
 	if ($server->{'key'}) {
 		local ($key) = grep { $_->{'id'} == $server->{'key'} }
 				    &list_ssh_keys();
