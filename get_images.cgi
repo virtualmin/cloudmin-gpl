@@ -14,8 +14,11 @@ require './server-manager-lib.pl';
 
 foreach $id (@d) {
 	($img) = grep { $_->{'id'} eq $id } @avail;
-	next if (!$img);
 	($got) = grep { $_->{'id'} eq $id } @images;
+	if (!$img && $got) {
+		print &text('images_getlocal', $got->{'desc'}),"<p>\n";
+		next;
+		}
 
 	print &text('images_getting', $img->{'desc'},
 				      $img->{'version'}),"<br>\n";

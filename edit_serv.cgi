@@ -143,6 +143,8 @@ if ($haswebmin || $hasssh) {
 	}
 
 # Action buttons at end of form (depends on status)
+$nfunc = "type_".$server->{'manager'}."_no_image";
+$noimage = defined(&$nfunc) && &$nfunc($server);
 if ($main::vm2_no_edit_buttons) {
 	# Theme provides it's own action links
 	print &ui_form_end([ [ "save", $text{'save'} ] ]);
@@ -157,6 +159,7 @@ elsif ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 		  [ "save", $text{'save'} ],
 		  undef,
 		  $nostart ? ( ) : ( [ "startup", $text{'edit_startup'} ] ),
+		  $noimage ? ( ) : ( [ "image", $text{'edit_image'} ] ),
 		]);
 	$down = 1;
 	}
@@ -186,6 +189,7 @@ else {
 			( [ "recheck", $text{'edit_recheck'} ] ) : ( ),
 		  $noreboot ? ( ) : ( [ "reboot", $text{'edit_reboot'} ] ),
 		  $noshut ? ( ) : ( [ "shutdown", $text{'edit_shutdown'} ] ),
+		  $noimage ? ( ) : ( [ "image", $text{'edit_image'} ] ),
 		]);
 	$down = 0;
 	}

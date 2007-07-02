@@ -8,9 +8,8 @@
 #	XXX cpu limits
 # XXX install script
 # XXX documentation
-# XXX creating images
-#	XXX need web interface
-#	XXX vservers, zones, ec2 ?
+# XXX make left-menu options generic
+# XXX ec2 AMI creation?
 
 do '../web-lib.pl';
 &init_config();

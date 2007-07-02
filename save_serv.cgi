@@ -274,6 +274,11 @@ elsif ($in{'webmin'}) {
 	&redirect(&webmin_link($server));
 	}
 
+elsif ($in{'image'}) {
+	# Go to image creation form
+	&redirect("image_form.cgi?id=$in{'id'}");
+	}
+
 else {
 	# Validate inputs, and save details
 	&error_setup($text{'save_err'});

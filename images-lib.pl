@@ -144,7 +144,8 @@ if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	}
 else {
 	# Use configure dir, or /tmp
-	local $tempdir = $config{'img_temp'} || "/tmp";
+	local $ostemp = $vhost->{'type'} eq 'solaris' ? '/var/tmp' : '/tmp';
+	local $tempdir = $config{'img_temp'} || $ostemp;
 	$temp = "$tempdir/$id";
 	}
 local ($out, $ex, $err) = &execute_command_on_server($vhost,
@@ -493,7 +494,7 @@ foreach my $fix ("/etc/virtualmin-license",
 	elsif ($fix eq "/etc/webmin/webmin/config") {
 		# Need to change updates server lines
 		$data =~ s/upuser=.*/upuser=\$SERIAL/g;
-		$data =~ s/uppass=.*/uppass=\$SERIAL/g;
+		$data =~ s/uppass=.*/uppass=\$KEY/g;
 		}
 	$err = &put_file_data_to_server($server, $data, $fix);
 	return "Failed to save munged $fix : $err" if ($err);
