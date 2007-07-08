@@ -63,6 +63,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--image") {
 		$image = shift(@ARGV);
 		}
+	elsif ($a eq "--no-update") {
+		$noupdate = 1;
+		}
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
 		$typeargs{$1}->{$2} = shift(@ARGV);
@@ -304,7 +307,7 @@ print "Refreshing status ..\n";
 print ".. done\n\n";
 
 # If the server has Virtualmin, update all Virtualmin packages
-if ($server->{'status'} eq 'virt') {
+if ($server->{'status'} eq 'virt' && !$noupdate) {
 	&update_virtualmin_packages($server);
 	}
 
@@ -345,6 +348,7 @@ print "                         --ssh-key keyid | --ssh-pass password\n";
 print "                         [--webmin | --webmin-pass password]\n";
 print "                         [--novirt]\n";
 print "                         [--image id]\n";
+print "                         [--no-update]\n";
 if ($type) {
 	# Show type-specific command line args
 	$afunc = "type_".$type."_create_args";

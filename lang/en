@@ -215,6 +215,7 @@ create_exenresize=.. expansion failed : $1
 create_xendisksize=Disk space allocated to instance
 create_xendiskdef=Image default (typically 1GB)
 create_exendisksize=Disk space must be a number
+create_update=Update Virtualmin packages?
 
 keys_title=SSH Keys
 keys_desc=Key description

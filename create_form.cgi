@@ -76,6 +76,10 @@ print &ui_table_row($text{'create_webmin'},
 print &ui_table_row($text{'add_canvirt'},
 	&ui_yesno_radio("canvirt", 1));
 
+# Update Virtualmin package?
+print &ui_table_row($text{'create_update'},
+	&ui_yesno_radio("update", 1));
+
 # Type-specific options
 $ffunc = "type_".$in{'type'}."_create_form";
 if (defined(&$ffunc)) {

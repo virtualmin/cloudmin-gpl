@@ -228,7 +228,7 @@ print $text{'add_statusok'},"<p>\n";
 
 # If the server has Virtualmin, update all Virtualmin packages
 $info = &get_server_collected($server);
-if ($server->{'status'} eq 'virt') {
+if ($server->{'status'} eq 'virt' && $in{'update'}) {
 	&update_virtualmin_packages($server);
 	}
 
