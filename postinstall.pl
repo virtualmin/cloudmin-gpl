@@ -49,5 +49,12 @@ if (!$job) {
 	&cron::create_cron_job($job);
 	&cron::create_wrapper($check_licence_cmd, $module_name, "licence.pl");
 	}
+
+# Refresh local status
+local ($server) = grep { $_->{'id'} == 0 } &list_managed_servers();
+if ($server) {
+	&check_server_status($server);
+	&save_managed_server($server);
+	}
 }
 
