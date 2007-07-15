@@ -2544,9 +2544,15 @@ local ($server) = @_;
 local $status = $server->{'status'};
 local $t = $server->{'manager'};
 local @rv;
+
+# Work out what we can and cannot do
 local $nfunc = "type_".$server->{'manager'}."_no_image";
 local $noimage = defined(&$nfunc) && &$nfunc($server) ||
 		 $status eq 'nohost';
+local $sfunc = "type_".$t."_no_shutdown";
+local $noshut = defined(&$sfunc) && &$sfunc($server);
+local $rfunc = "type_".$t."_no_reboot";
+local $noreboot = defined(&$rfunc) && &$rfunc($server);
 
 if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	# Actions are limited when system is down
@@ -2554,14 +2560,13 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
 		   	 $status eq 'nohost';
 	push(@rv, [ "startup", $text{'edit_startup'} ]) if (!$nostart);
+	if ($status eq 'nossh' && !$noshut) {
+		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
+		}
 	push(@rv, [ "image", $text{'edit_image'} ]) if (!$noimage);
 	}
 else {
 	# Most actions are only for up servers
-	local $sfunc = "type_".$t."_no_shutdown";
-	local $noshut = defined(&$sfunc) && &$sfunc($server);
-	local $rfunc = "type_".$t."_no_reboot";
-	local $noreboot = defined(&$rfunc) && &$rfunc($server);
 	local $wurl = &webmin_link($server);
 	push(@rv, [ "refresh", $text{'edit_refresh'} ],
 		  undef,
