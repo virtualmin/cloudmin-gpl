@@ -9,6 +9,7 @@
 # XXX documentation
 # XXX make left-menu options generic
 # XXX ec2 AMI creation?
+# XXX password setting
 
 do '../web-lib.pl';
 &init_config();
@@ -2533,6 +2534,62 @@ return sort { ($b->{'name'} eq 'webmin' ? 2 :
 	      <=>
 	      ($a->{'name'} eq 'webmin' ? 2 :
 	       $a->{'name'} =~ /virtual-server$/ ? 1 : 0) } @_;
+}
+
+# get_server_actions(&server)
+# Returns a list of array refs containing possible actions for some server
+sub get_server_actions
+{
+local ($server) = @_;
+local $status = $server->{'status'};
+local $t = $server->{'manager'};
+local @rv;
+local $nfunc = "type_".$server->{'manager'}."_no_image";
+local $noimage = defined(&$nfunc) && &$nfunc($server) ||
+		 $status eq 'nohost';
+
+if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
+	# Actions are limited when system is down
+	local $sfunc = "type_".$t."_no_startup";
+	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
+		   	 $status eq 'nohost';
+	push(@rv, [ "startup", $text{'edit_startup'} ]) if (!$nostart);
+	push(@rv, [ "image", $text{'edit_image'} ]) if (!$noimage);
+	}
+else {
+	# Most actions are only for up servers
+	local $sfunc = "type_".$t."_no_shutdown";
+	local $noshut = defined(&$sfunc) && &$sfunc($server);
+	local $rfunc = "type_".$t."_no_reboot";
+	local $noreboot = defined(&$rfunc) && &$rfunc($server);
+	local $wurl = &webmin_link($server);
+	push(@rv, [ "refresh", $text{'edit_refresh'} ],
+		  undef,
+		  [ "shell", $text{'edit_shell'} ]);
+	if (($status eq 'novirt' || $status eq 'virt') && $server->{'id'}) {
+		push(@rv, [ "webmin", $text{'edit_webmin2'}, 1, $wurl ]);
+		}
+	push(@rv, undef);	# Spacer
+	if ($status eq 'novirt' || $status eq 'nowebmin') {
+		push(@rv, [ "installvirt", $text{'edit_installvirt'} ]);
+		}
+	elsif ($status eq 'nowebmin') {
+		push(@rv, [ "installwebmin", $text{'edit_installwebmin'} ]);
+		}
+	if ($status eq 'virt' && $server->{'virtualmin_error'}) {
+		push(@rv, [ "recheck", $text{'edit_recheck'} ]);
+		}
+	if (!$noreboot) {
+		push(@rv, [ "reboot", $text{'edit_reboot'} ]);
+		}
+	if (!$noshut) {
+		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
+		}
+	if (!$noimage) {
+		push(@rv, [ "image", $text{'edit_image'} ]);
+		}
+	}
+return @rv;
 }
 
 # strip_html_tags(html)

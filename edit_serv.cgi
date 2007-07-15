@@ -143,55 +143,28 @@ if ($haswebmin || $hasssh) {
 	}
 
 # Action buttons at end of form (depends on status)
-$nfunc = "type_".$server->{'manager'}."_no_image";
-$noimage = defined(&$nfunc) && &$nfunc($server);
+$down = $status eq 'down' || $status eq 'nossh' || $status eq 'nohost';
 if ($main::vm2_no_edit_buttons) {
 	# Theme provides it's own action links
 	print &ui_form_end([ [ "save", $text{'save'} ] ]);
-	$down = $status eq 'down' || $status eq 'nossh' || $status eq 'nohost';
-	}
-elsif ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
-	# System is down, so we can only save and perhaps startup
-	$sfunc = "type_".$t."_no_startup";
-	$nostart = defined(&$sfunc) && &$sfunc($server) ||
-		   $status eq 'nohost';
-	print &ui_form_end([
-		  [ "save", $text{'save'} ],
-		  undef,
-		  $nostart ? ( ) : ( [ "startup", $text{'edit_startup'} ] ),
-		  $noimage ? ( ) : ( [ "image", $text{'edit_image'} ] ),
-		]);
-	$down = 1;
 	}
 else {
-	# Running, so all options are available
-	$sfunc = "type_".$t."_no_shutdown";
-	$noshut = defined(&$sfunc) && &$sfunc($server);
-	$rfunc = "type_".$t."_no_reboot";
-	$noreboot = defined(&$rfunc) && &$rfunc($server);
-	$wurl = &webmin_link($server);
-	print &ui_form_end([
-		  [ "save", $text{'save'} ],
-		  [ "refresh", $text{'edit_refresh'} ],
-		  undef,
-		  [ 'shell', $text{'edit_shell'} ],
-		  ($status eq 'novirt' || $status eq 'virt') &&
-		     $server->{'id'} ?
-			( [ "webmin", $text{'edit_webmin2'}, undef, undef,
-			    "onClick='window.open(\"$wurl\"); return false'" ] ) : ( ),
-		  undef,
-		  $status eq 'novirt' || $status eq 'nowebmin' ?
-			( [ "installvirt", $text{'edit_installvirt'} ] ) : ( ),
-		  $status eq 'nowebmin' ?
-			( [ "installwebmin", $text{'edit_installwebmin'} ] ) :
-			( ),
-		  $status eq 'virt' && $server->{'virtualmin_error'} ?
-			( [ "recheck", $text{'edit_recheck'} ] ) : ( ),
-		  $noreboot ? ( ) : ( [ "reboot", $text{'edit_reboot'} ] ),
-		  $noshut ? ( ) : ( [ "shutdown", $text{'edit_shutdown'} ] ),
-		  $noimage ? ( ) : ( [ "image", $text{'edit_image'} ] ),
-		]);
-	$down = 0;
+	# Show our own buttons
+	local @buts = ( [ "save", $text{'save'} ] );
+	foreach my $b (&get_server_actions($server)) {
+		if (!$b) {
+			push(@buts, undef);
+			}
+		elsif ($b->[3]) {
+			# Opens a separate URL
+			push(@buts, [ $b->[0], $b->[1], undef, undef,
+			    "onClick='window.open(\"$b->[3]\"); return false'" ] );
+			}
+		else {
+			push(@buts, $b);
+			}
+		}
+	print &ui_form_end(\@buts);
 	}
 
 # Virtualmin status
