@@ -496,6 +496,7 @@ edit_ec2image=Started from EC2 image
 edit_webmin2=Open Webmin
 edit_shell=Run Commands
 edit_refresh=Refresh Status
+edit_delete=Delete System
 edit_nodoms=This system is not hosting any Virtualmin domains yet.
 edit_aheader=Authentication options
 edit_auth=SSH login mode

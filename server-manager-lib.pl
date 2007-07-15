@@ -6,8 +6,6 @@
 #	XXX edit memory allocations
 #	XXX cpu limits
 # XXX install script
-# XXX documentation
-# XXX make left-menu options generic
 # XXX ec2 AMI creation?
 # XXX password setting
 
@@ -2589,6 +2587,9 @@ else {
 		}
 	if (!$noshut) {
 		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
+		}
+	if ($t ne 'real' && $t ne 'this') {
+		push(@rv, [ "delete", $text{'edit_delete'} ]);
 		}
 	if (!$noimage) {
 		push(@rv, [ "image", $text{'edit_image'} ]);
