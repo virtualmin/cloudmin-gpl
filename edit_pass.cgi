@@ -1,6 +1,5 @@
 #!/usr/local/bin/perl
 # Show a form for changing a server's passwords
-# XXX need to force webmin password to root
 
 require './server-manager-lib.pl';
 &ReadParse();

@@ -8,7 +8,6 @@
 # XXX install script
 # XXX ec2 AMI creation?
 # XXX password setting
-#	XXX command line
 #	XXX docs (both web and CLI)
 
 do '../web-lib.pl';
@@ -2147,6 +2146,14 @@ return $err;
 sub set_shadow_root_password
 {
 local ($server, $pass) = @_;
+
+# If this is an EC2 server, the default SSHd config doesn't allow password-less
+# root logins! Fix that (in advanced, so that the new password works)
+if ($server->{'manager'} eq 'ec2') {
+	&fix_ssh_root_login($server);
+	&execute_command_on_server($server, "killall -HUP sshd");
+	}
+
 local $shadow = &transname();
 local $passfile = "/etc/shadow";
 local $err = &get_file_from_server($server, $passfile, $shadow);
@@ -2168,6 +2175,7 @@ if (!$err) {
 	&flush_file_lines($shadow);
 	$err = &put_file_to_server($server, $shadow, $passfile);
 	}
+
 return $err;
 }
 
