@@ -1,0 +1,9 @@
+<header>Change Password</header>
+
+This page can be used to change either a system's <tt>root</tt> password (used for SSH logins), its Webmin password, or both. This may be necessary when you are turning a system over to another user or customer, or if the original password is too weak or has been compromised. <p>
+
+When changing the Webmin password, you have an option to make it the same as the Unix <tt>root</tt> password. This is done by configuring Webmin on the system to use PAM or read the <tt>/etc/shadow</tt> file when <tt>root</tt> logs in,
+so that any future changes to the SSH password will match. <p>
+
+<footer>
+

@@ -274,6 +274,11 @@ elsif ($in{'webmin'}) {
 	&redirect(&webmin_link($server));
 	}
 
+elsif ($in{'pass'}) {
+	# Go to password change page
+	&redirect("edit_pass.cgi?id=$in{'id'}");
+	}
+
 elsif ($in{'image'}) {
 	# Go to image creation form
 	&redirect("image_form.cgi?id=$in{'id'}");

@@ -8,6 +8,8 @@
 # XXX install script
 # XXX ec2 AMI creation?
 # XXX password setting
+#	XXX command line
+#	XXX docs (both web and CLI)
 
 do '../web-lib.pl';
 &init_config();
@@ -1498,6 +1500,49 @@ local ($pout, $pex, $perr) = &execute_command_on_server($server,
 return $perr ? $perr : $pex ? $pout : undef;
 }
 
+# set_server_webmin_password_crypt(&server, user, crypted)
+# Sets the password for some user in Webmin to an encrypted string
+sub set_server_webmin_password_crypt
+{
+local ($server, $user, $crypted) = @_;
+
+# Get the miniserv.users file
+local $passfile = "/etc/webmin/miniserv.users";
+local $temp = &transname();
+local $err = &get_file_from_server($server, $passfile, $temp);
+return $err if ($err);
+
+# Patch the line for the user
+local $found;
+local $lref = &read_file_lines($temp);
+foreach my $l (@$lref) {
+	local @w = split(/:/, $l);
+	if ($w[0] eq $user) {
+		$w[1] = $crypted;
+		$l = join(':', @w);
+		$found = 1;
+		}
+	}
+&flush_file_lines($temp);
+$found || return "Webmin user $user does not exist";
+
+# Upload to server
+local $err = &put_file_to_server($server, $temp, $passfile);
+return $err if ($err);
+
+# Update Webmin to apply the change
+if ($server->{'status'} eq 'virt' ||
+    $server->{'status'} eq 'novirt' ||
+    $server->{'status'} eq 'nowebminlogin') {
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+		"kill -USR1 `cat /var/webmin/miniserv.pid`");
+	return $err if ($err);
+	return "Failed to reload Webmin : $out" if ($ex);
+	}
+
+return undef;
+}
+
 # list_bind_zones()
 # Returns a list of BIND master zones that we can add vserver hostnames to
 sub list_bind_zones
@@ -2573,6 +2618,7 @@ else {
 		push(@rv, [ "webmin", $text{'edit_webmin2'}, 1, $wurl ]);
 		}
 	push(@rv, undef);	# Spacer
+	push(@rv, [ "pass",  $text{'edit_setpass'} ]);
 	if ($status eq 'novirt' || $status eq 'nowebmin') {
 		push(@rv, [ "installvirt", $text{'edit_installvirt'} ]);
 		}
