@@ -7,8 +7,6 @@
 #	XXX cpu limits
 # XXX install script
 # XXX ec2 AMI creation?
-# XXX password setting
-#	XXX docs (both web and CLI)
 
 do '../web-lib.pl';
 &init_config();
