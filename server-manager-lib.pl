@@ -7,6 +7,10 @@
 #	XXX cpu limits
 # XXX install script
 # XXX ec2 AMI creation?
+# XXX virtualmin licence management
+#	XXX when adding a virtualmin machine, prompt for licence
+#	XXX automatically allocate from list
+#	XXX or fetch from virtualmin.com
 
 do '../web-lib.pl';
 &init_config();
