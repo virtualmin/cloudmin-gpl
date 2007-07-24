@@ -2632,7 +2632,7 @@ else {
 	if ($status eq 'novirt' || $status eq 'nowebmin') {
 		push(@rv, [ "installvirt", $text{'edit_installvirt'} ]);
 		}
-	elsif ($status eq 'nowebmin') {
+	if ($status eq 'nowebmin') {
 		push(@rv, [ "installwebmin", $text{'edit_installwebmin'} ]);
 		}
 	if ($status eq 'virt' && $server->{'virtualmin_error'}) {
