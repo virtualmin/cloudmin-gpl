@@ -134,8 +134,12 @@ elsif ($in{'installvirt'}) {
 
 	if (!$in{'confirm'}) {
 		# Ask first
+		$vlform = &ui_table_start(undef, undef, 2);
+		$vlform .= &virtualmin_licence_form(1);
+		$vlform .= &ui_table_end();
 		&show_confirm_form(
-		    &text('save_virtrusure', "<tt>$server->{'host'}</tt>"),
+		    &text('save_virtrusure', "<tt>$server->{'host'}</tt>").
+		    "<br>".$vlform,
 		    "save_serv.cgi", [ [ "id", $in{'id'} ],
 				       [ "installvirt", 1 ] ],
 		    $text{'save_virtok'});

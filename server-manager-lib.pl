@@ -11,6 +11,7 @@
 #	XXX when adding a virtualmin machine, prompt for licence
 #	XXX automatically allocate from list
 #	XXX or fetch from virtualmin.com
+#	XXX need to track used serials, by status updates
 
 do '../web-lib.pl';
 &init_config();
@@ -85,8 +86,10 @@ $licence_file = "/etc/server-manager-license";
 
 $virtualmin_licence_host = "software.virtualmin.com";
 $virtualmin_licence_port = 80;
-$virtualmin_licence_prog = "/cgi-bin/slicence.cgi";
+$vm2_licence_prog = "/cgi-bin/slicence.cgi";
+$virtualmin_licence_prog = "/cgi-bin/vlicence.cgi";
 $virtualmin_licence_ssl = 0;
+$virtualmin_installer_prog = "/cgi-bin/install.cgi";
 
 @virtualmin_operating_systems = ( "debian", "ubuntu", "redhat", "fedora",
 				  "centos" );
@@ -904,6 +907,17 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					"virtual-server", "get_template", 0);
 			$info->{'defip'} = &remote_foreign_call($server,
 					"virtual-server", "get_default_ip");
+
+			# Get and save serial number
+			if ($info->{'minfo'}->{'version'} !~ /gpl/) {
+				local $serial = &remote_eval($server,
+					"virtual_server",
+					"\&read_env_file(\$virtualmin_license_file, \\\%serial); return \\\%serial");
+				$info->{'serial'}->{'serial'} =
+					$serial->{'SerialNumber'};
+				$info->{'serial'}->{'key'} =
+					$serial->{'LicenseKey'};
+				}
 
 			# Perform a config check, if we haven't done an OK
 			# one yet
@@ -1812,13 +1826,13 @@ else {
 	}
 }
 
-# install_virtualmin_server(&server, set-password)
+# install_virtualmin_server(&server, set-password, serial, key)
 # Starts the process of installing Virtualmin, by copying over the install
 # script and running it. Returns undef if start OK, or an error message on
 # failure.
 sub install_virtualmin_server
 {
-local ($server, $setpass) = @_;
+local ($server, $setpass, $serial, $key) = @_;
 
 # Check for a supported OS
 local ($pkg, $update, $os) = &get_server_package_system($server);
@@ -1841,9 +1855,29 @@ if (&indexof($os, @virtualmin_operating_systems) < 0) {
 	return &text('virtualmin_eos2', $osinfo->[1], join(", ", @supp));
 	}
 
+# Get our licence details
+# XXX parameterize
+local ($serial, $key) = &get_server_manager_serial();
+if (!$serial) {
+	return $text{'virtualmin_elicence'};
+	}
+
+# Download the installer
+local $itemp = &transname("virtualmin-install.sh");
+local $error;
+&http_download($virtualmin_licence_host,
+	       $virtualmin_licence_port,
+	       "$virtualmin_installer_prog?serial=$serial;key=$key",
+	       $itemp, \$error, undef, $virtualmin_licence_ssl);
+if ($error) {
+	return &text('virtualmin_einstaller', $error);
+	}
+&set_ownership_permissions(undef, undef, 0755, $itemp);
+
 # Transfer over the install script
 local $script = "/virtualmin-install.sh";
-local $err = &put_file_to_server($server, "$module_root_directory/virtualmin-install.sh", $script);
+local $err = &put_file_to_server($server, $itemp, $script);
+unlink($itemp);
 return &text('virtualmin_ecopy', $err) if ($err);
 
 # Call type-specific pre function
@@ -1851,13 +1885,6 @@ local $pfunc = "type_".$server->{'manager'}."_pre_virtualmin";
 if (defined(&$pfunc)) {
 	local $err = &$pfunc($server, $pkg, $update, $os, $script);
 	return $err if ($err);
-	}
-
-# Get our licence details
-local %serial;
-if (!&read_file($licence_file, \%serial) ||
-    !$serial{'SerialNumber'} || !$serial{'LicenseKey'}) {
-	return $text{'virtualmin_elicence'};
 	}
 
 # Install perl, wget and fuser, if needed
@@ -1887,7 +1914,7 @@ if (!&has_command_on_server($server, "fuser")) {
 local $temp = "/tmp/virtualmin-install.out";
 $server->{'virtualmin_temp'} = $temp;
 local ($out, $ex, $err) = &execute_command_on_server($server,
-	"chmod +x $script ; ((echo y ; echo $server->{'host'}) | SERIAL=$serial{'SerialNumber'} KEY=$serial{'LicenseKey'} $script && echo SERVER-MANAGER-COMPLETE) >$temp 2>&1 &");
+	"chmod +x $script ; ((echo y ; echo $server->{'host'}) | $script && echo SERVER-MANAGER-COMPLETE) >$temp 2>&1 &");
 
 return undef;
 }
@@ -2008,25 +2035,11 @@ return ($licence{'status'}, $licence{'expiry'},
         $licence{'err'}, $licence{'servers'});
 }
 
-# update_server_manager_licence(&licence)
-# Checks the licence file, and tries to phone home
-sub update_server_manager_licence
+# get_host_id()
+# Returns a unique host ID for this system, based on the CPU, MAC address or
+# hostname.
+sub get_host_id
 {
-local ($licence) = @_;
-$licence->{'expiry'} = undef;
-$licence->{'servers'} = 0;
-$licence->{'last'} = time();
-
-# Do we have a licence file?
-if (!&read_file($licence_file, \%serial) ||
-    !$serial{'SerialNumber'} || !$serial{'LicenseKey'}) {
-	# No!
-	$licence->{'status'} = 1;
-	$licence->{'err'} = $text{'licence_efile'};
-	return;
-	}
-
-# Work out a host ID, from the hostid command or MAC address or hostname
 local $id;
 if (&has_command("hostid")) {
 	chop($id = `hostid 2>/dev/null`);
@@ -2039,12 +2052,35 @@ if (!$id) {
 if (!$id) {
 	$id = &get_system_hostname();
 	}
+return $id;
+}
+
+# update_server_manager_licence(&licence)
+# Checks the licence file, and tries to phone home
+sub update_server_manager_licence
+{
+local ($licence) = @_;
+$licence->{'expiry'} = undef;
+$licence->{'servers'} = 0;
+$licence->{'last'} = time();
+
+# Do we have a licence file?
+local ($serial, $key) = &get_server_manager_serial();
+if (!$serial || !$key) {
+	# No!
+	$licence->{'status'} = 1;
+	$licence->{'err'} = $text{'licence_efile'};
+	return;
+	}
+
+# Work out a host ID, from the hostid command or MAC address or hostname
+local $id = &get_host_id();
 
 # Phone home to see if it is valid
 local ($out, $error);
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
-	       "$virtualmin_licence_prog?id=$id&serial=$serial{'LicenseKey'}",
+	       "$vm2_licence_prog?id=$id&serial=$key",
 	       \$out, \$error, undef, $virtualmin_licence_ssl);
 if ($error) {
 	$licence->{'status'} = 2;
@@ -2066,7 +2102,7 @@ elsif ($out =~ /^OK\s+(\S+)\s+(\S+)/) {
 	}
 else {
 	$licence->{'status'} = 1;
-	$licence->{'err'} = "No valid licence was found for your host ID $_[0] and serial number $serial{'LicenseKey'}";
+	$licence->{'err'} = "No valid licence was found for your host ID $_[0] and license key $key";
 	}
 }
 
@@ -2552,6 +2588,11 @@ if ($virtcount) {
 	push(@gicons, "images/features.gif");
 	}
 
+# Virtualmin licences
+push(@glinks, "list_licences.cgi");
+push(@gtitles, $text{'licences_title'});
+push(@gicons, "images/licences.gif");
+
 # SSH key management
 push(@glinks, "list_keys.cgi");
 push(@gtitles, $text{'keys_title'});
@@ -2653,6 +2694,57 @@ else {
 	}
 return @rv;
 }
+
+# check_virtualmin_serial(serial, key)
+# Checks if some licence is valid for Virtualmin. This is done via an HTTP
+# request to www.virtualmin.com, with some local caching. Returns a number of
+# domains if yes, 0 if no, -1 if could not tell
+sub check_virtualmin_serial
+{
+local ($serial, $key) = @_;
+local $id = &get_host_id();
+local ($out, $error);
+&http_download($virtualmin_licence_host,
+	       $virtualmin_licence_port,
+	       "$virtualmin_licence_prog?id=$id&serial=$key",
+	       \$out, \$error, undef, $virtualmin_licence_ssl);
+if ($out =~ /^OK\s+(\S+)\s+(\S+)/) {
+	return $2 || 99999;
+	}
+elsif ($error || $out =~ /^ERR\s+/) {
+	return -1;
+	}
+else {
+	return 0;
+	}
+}
+
+# get_server_manager_serial()
+# Returns the serial number and key for this VM2 install
+sub get_server_manager_serial
+{
+local %serial;
+if (&read_file($licence_file, \%serial)) {
+	return ($serial{'SerialNumber'}, $serial{'LicenseKey'});
+	}
+return ( );
+}
+
+# allocate_virtualmin_serial()
+# Returns either a serial number or key from the list of those pre-allocated,
+# or undef and an error message
+sub allocate_virtualmin_serial
+{
+# XXX
+}
+
+# virtualmin_licence_form(no-none)
+# Returns ui_table_row-generated HTML for selecting a Virtualmin licence
+sub virtualmin_licence_form
+{
+# XXX
+}
+
 
 # strip_html_tags(html)
 # Removes all HTML tags from a string, returning plain text

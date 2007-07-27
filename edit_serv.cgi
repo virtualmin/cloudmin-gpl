@@ -94,6 +94,13 @@ if ($status eq 'virt') {
 	# Enabled for Virtualmin domain creation
 	print &ui_table_row($text{'add_canvirt'},
 		    &ui_yesno_radio("canvirt", $server->{'novirt'} ? 0 : 1));
+
+	# Virtualmin licence
+	if ($info->{'serial'}) {
+		print &ui_table_row($text{'edit_vlicence'},
+		    &text('edit_vsk', "<tt>$info->{'serial'}->{'serial'}</tt>",
+				      "<tt>$info->{'serial'}->{'key'}</tt>"));
+		}
 	}
 
 # Type-specific information

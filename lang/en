@@ -463,6 +463,8 @@ edit_os=Operating system
 edit_webmin=Webmin version
 edit_image=Create Image
 edit_vversion=Virtualmin version
+edit_vlicence=Virtualmin license
+edit_vsk=Serial $1 key $2
 edit_setpass=Change Password
 edit_installvirt=Install Virtualmin
 edit_installwebmin=Install Webmin
@@ -717,6 +719,7 @@ virtual_evirtualmincheck=Virtualmin was not found, even though the install appea
 virtualmin_epass=Install completed OK, but an error occurred setting the Webmin password : $1
 virtualmin_ewget=Failed to install <tt>$2</tt> : $1
 virtualmin_ewget2=<tt>$1</tt> could not be installed, as the package update system on this system is not supported
+virtualmin_einstaller=Failed to download the Virtualmin install script : $1
 
 features_title=Default Virtualmin Features
 features_topdesc=Use the form below to select the features that will be enabled by default for new Virtualmin domains.
@@ -1004,3 +1007,5 @@ pass_sameing=Setting Webmin password to be the same as Unix ..
 pass_esame=.. failed : $1
 pass_webmining=Changing Webmin password ..
 pass_ewebmin=.. failed : $1
+
+licences_title=Virtualmin Licences

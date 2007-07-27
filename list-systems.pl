@@ -141,6 +141,12 @@ if ($multi) {
 				print "    Available updates: ",
 					join(", ", map { "$_->{'name'} ($_->{'version'})" } @{$info->{'poss'}}),"\n";
 				}
+			if ($info->{'serial'}) {
+				print "    Virtualmin serial: ",
+					$info->{'serial'}->{'serial'},"\n";
+				print "    Virtualmin key: ",
+					$info->{'serial'}->{'key'},"\n";
+				}
 			}
 		}
 	}

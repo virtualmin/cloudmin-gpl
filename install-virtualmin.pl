@@ -20,10 +20,18 @@ while(@ARGV > 0) {
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
+	elsif ($a eq "--serial") { $serial = shift(@ARGV); }
+	elsif ($a eq "--key") { $key = shift(@ARGV); }
+	elsif ($a eq "--same-serial") { $same_serial = 1; }
+	elsif ($a eq "--allocate-serial") { $allocate_serial = 1; }
 	else {
 		&usage();
 		}
 	}
+
+# Make sure a serial number is specified
+$serial && $key || $same_serial || $allocate_serial ||
+	&usage("A Virtualmin licence must be specified with --serial, --same-serial or --allocate-serial");
 
 # Work out who to install on
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
@@ -39,11 +47,37 @@ foreach $s (@servers) {
 @cannot && &usage("The following systems cannot have Virtualmin installed : ".
 		  join(" ", map { $_->{'host'} } @cannot));
 
+# Work out the serial and key to use
+if ($same_serial) {
+	%serialmap = map { $_->{'id'}, [ &get_server_manager_serial() ] }
+			 @servers;
+	}
+elsif ($allocate_serial) {
+	foreach $s (@servers) {
+		($serial, $key) = &allocate_virtualmin_serial();
+		$serial || &usage("Could not allocate serial number ".
+				  "for $s->{'host'} : $key");
+		$serialmap{$s->{'id'}} = [ $serial, $key ];
+		}
+	}
+else {
+	%serialmap = map { $_->{'id'}, [ $serial, $key ] } @servers;
+	}
+
+# Validate serials
+foreach $s (@servers) {
+	($tserial, $tkey) = @{$serialmap{$s->{'id'}}};
+	$tok = &check_virtualmin_serial($tserial, $tkey);
+	$tok || &usage("Serial $tserial or key $tkey for $s->{'host'} is not valid");
+	$tok > 0 || &usage("Could not validate serial for $s->{'host'}");
+	}
+
 # Do the parallel refresh
 print "Installing Virtualmin on ",scalar(@servers)," systems ..\n";
 &parallel_server_function(\@servers,
 	sub { # Start install
-	      $err = &install_virtualmin_server($_[0]);
+	      ($serial, $key) = @{$serialmap{$_[0]->{'id'}}};
+	      $err = &install_virtualmin_server($_[0], 0, $serial, $key);
 	      if ($err) {
 	          print "$_[0]->{'host'}: ERROR: $err\n";
                   return 1;
@@ -74,6 +108,8 @@ print "                         [--group name]*\n";
 local $types = join("|", @server_management_types);
 print "                         [--type $types]*\n";
 print "                         [--os oscode]*\n";
+print "                         [--serial number --key number] |\n";
+print "                         [--same-serial] | [--allocate-serial]\n";
 exit(1);
 }
 
