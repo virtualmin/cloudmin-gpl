@@ -134,8 +134,9 @@ elsif ($in{'installvirt'}) {
 
 	if (!$in{'confirm'}) {
 		# Ask first
-		$vlform = &ui_table_start(undef, undef, 2);
-		$vlform .= &virtualmin_licence_form(1);
+		$vlform = &ui_table_start($text{'virtualmin_lheader'},undef, 2);
+		$vlform .= &ui_table_row($text{'virtualmin_lfrom'},
+				&virtualmin_licence_form("licence", 1));
 		$vlform .= &ui_table_end();
 		&show_confirm_form(
 		    &text('save_virtrusure', "<tt>$server->{'host'}</tt>").
@@ -145,9 +146,14 @@ elsif ($in{'installvirt'}) {
 		    $text{'save_virtok'});
 		}
 	else {
+		# Parse licence inputs
+		($serial, $key) = &virtualmin_licence_parse("licence", \%in);
+		$serial || &error($key);
+
 		# Start off the process
 		print $text{'save_virtstart'},"<br>\n";
-		$err = &install_virtualmin_server($server, 1);
+	        &start_installing_virtualmin_licence($serial, $key);
+		$err = &install_virtualmin_server($server, 1, $serial, $key);
 		if ($err) {
 			print &text('save_virterr', $err),"<p>\n";
 			goto VIRTFAILED;
@@ -174,6 +180,7 @@ elsif ($in{'installvirt'}) {
 				print ".";
 				}
 			}
+	        &stop_installing_virtualmin_licence($serial, $key);
 
 		# Update server status
 		print $text{'dcreate_statusing'},"<br>\n";

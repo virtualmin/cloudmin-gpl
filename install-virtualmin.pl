@@ -77,6 +77,7 @@ print "Installing Virtualmin on ",scalar(@servers)," systems ..\n";
 &parallel_server_function(\@servers,
 	sub { # Start install
 	      ($serial, $key) = @{$serialmap{$_[0]->{'id'}}};
+	      &start_installing_virtualmin_licence($serial, $key);
 	      $err = &install_virtualmin_server($_[0], 0, $serial, $key);
 	      if ($err) {
 	          print "$_[0]->{'host'}: ERROR: $err\n";
@@ -85,6 +86,9 @@ print "Installing Virtualmin on ",scalar(@servers)," systems ..\n";
 	      print "$_[0]->{'host'}: Started\n";
 	      while(1) {
 		  $done = &install_virtualmin_server_done($_[0]);
+		  if ($done) {
+	              &stop_installing_virtualmin_licence($serial, $key);
+		  }
 		  if ($done eq "OK") {
 		      last;
 		      }

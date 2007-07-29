@@ -8,7 +8,7 @@ require './server-manager-lib.pl';
 
 print &ui_form_start("create.cgi", "post");
 print &ui_hidden("type", $in{'type'});
-print &ui_table_start($text{'create_header'}, undef, 2);
+print &ui_table_start($text{'create_header'}, undef, 2, [ "width=30%" ]);
 
 # Type of system
 $tfunc = "type_".$in{'type'}."_desc";
@@ -72,6 +72,21 @@ print &ui_table_row($text{'create_webmin'},
 		[ 2, &text('create_webmin2', "<tt>root</tt>",
 			   &ui_textbox("wpass", undef, 20)) ] ]));
 
+# Type-specific options
+$ffunc = "type_".$in{'type'}."_create_form";
+if (defined(&$ffunc)) {
+	print &$ffunc();
+	}
+
+print &ui_table_end();
+
+# Start of section for Virtualmin options
+print &ui_hidden_table_start($text{'create_vheader'}, undef, 2);
+
+# Virtualmin licence
+print &ui_table_row($text{'create_vlicence'},
+	&virtualmin_licence_form("licence", 0));
+
 # Can add domains?
 print &ui_table_row($text{'add_canvirt'},
 	&ui_yesno_radio("canvirt", 1));
@@ -80,13 +95,8 @@ print &ui_table_row($text{'add_canvirt'},
 print &ui_table_row($text{'create_update'},
 	&ui_yesno_radio("update", 1));
 
-# Type-specific options
-$ffunc = "type_".$in{'type'}."_create_form";
-if (defined(&$ffunc)) {
-	print &$ffunc();
-	}
+print &ui_hidden_table_end();
 
-print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'create_ok'} ] ]);
 
 &ui_print_footer("", $text{'index_return'});

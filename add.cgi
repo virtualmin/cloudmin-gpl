@@ -94,7 +94,7 @@ print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
 &check_server_status($server);
 &save_managed_server($server);
-print $text{'add_statusok'},"<p>\n";
+print &text('add_statusok', &describe_status($server, 1)),"<p>\n";
 
 # If the server has Virtualmin, do a config check
 if ($server->{'status'} eq 'virt') {

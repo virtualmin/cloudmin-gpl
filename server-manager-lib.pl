@@ -7,11 +7,21 @@
 #	XXX cpu limits
 # XXX install script
 # XXX ec2 AMI creation?
+# XXX images in menu should have best choice first (ie. CentOS 5 on Xen)
 # XXX virtualmin licence management
 #	XXX when adding a virtualmin machine, prompt for licence
 #	XXX automatically allocate from list
 #	XXX or fetch from virtualmin.com
-#	XXX need to track used serials, by status updates
+#	XXX need to track used serials, by status updates (cache in server hash)
+#	XXX command-line API for serial management
+#	XXX documentation
+#	XXX need to get and show licence types (domains, number of boxes)
+#	XXX we need to know which images have Virtualmin Pro
+#		XXX track at image creation (pro vs gpl)
+#	XXX allow selection of specific licence from pool
+#	XXX create-system.pl needs licence args
+#	XXX update help pages
+#	XXX when installing, mark a serial from the pool as used
 
 do '../web-lib.pl';
 &init_config();
@@ -90,6 +100,10 @@ $vm2_licence_prog = "/cgi-bin/slicence.cgi";
 $virtualmin_licence_prog = "/cgi-bin/vlicence.cgi";
 $virtualmin_licence_ssl = 0;
 $virtualmin_installer_prog = "/cgi-bin/install.cgi";
+
+$virtualmin_licences_file = "$module_config_directory/virtualmin-licences";
+$serial_cache_file = "$module_config_directory/serial-cache";
+$virtualmin_progress_file = "$module_config_directory/progress-licences";
 
 @virtualmin_operating_systems = ( "debian", "ubuntu", "redhat", "fedora",
 				  "centos" );
@@ -678,6 +692,26 @@ local $err = &put_file_to_server($server, $temp, $remotefile);
 return $err;
 }
 
+# delete_file_on_server(&server, remotefile)
+# Deletes a file on a managed server. Returns undef on success, or an error
+# message on failure.
+sub delete_file_on_server
+{
+local ($server, $remotefile) = @_;
+local $dfunc = "type_".$server->{'manager'}."_delete_file";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	local $rv = &$dfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to scp
+	}
+
+# Just run rm via SSH
+local ($out, $ex, $err) = &execute_command_on_server($server,
+				"rm -rf ".quotemeta($remotefile));
+return $err ? $err : $ex ? $out : undef;
+}
+
 # has_command_on_server(&server, command)
 # Returns the full path to some command, or undef if missing
 sub has_command_on_server
@@ -873,10 +907,11 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 
 	# Webmin is OK! Check for Virtualmin
 	local $info;
+	local $webmin_timeout = $regen ? 180 : 60;
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		local $main::error_must_die = 1;
-		alarm(60);
+		alarm($webmin_timeout);
 		$server->{'status'} = 'virt';
 		$server->{'status_msg'} = undef;
 		if (&remote_foreign_check($server, "virtual-server") &&
@@ -909,14 +944,14 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					"virtual-server", "get_default_ip");
 
 			# Get and save serial number
+			delete($info->{'serial'});
 			if ($info->{'minfo'}->{'version'} !~ /gpl/) {
 				local $serial = &remote_eval($server,
 					"virtual_server",
 					"\&read_env_file(\$virtualmin_license_file, \\\%serial); return \\\%serial");
-				$info->{'serial'}->{'serial'} =
-					$serial->{'SerialNumber'};
-				$info->{'serial'}->{'key'} =
-					$serial->{'LicenseKey'};
+				$info->{'serial'} =
+				  { 'serial' => $serial->{'SerialNumber'},
+				    'key' => $serial->{'LicenseKey'} };
 				}
 
 			# Perform a config check, if we haven't done an OK
@@ -925,10 +960,20 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				&check_virtualmin_config($server, 1);
 				}
 
-			# Cache number of domains and updates
+			# Cache number of domains, updates and licence
 			$server->{'virtualmin_domains'} = scalar(@doms);
 			$server->{'virtualmin_poss'} =
 				scalar(@{$info->{'poss'}});
+			if ($info->{'serial'}) {
+				$server->{'virtualmin_serial'} =
+					$info->{'serial'}->{'serial'};
+				$server->{'virtualmin_key'} =
+					$info->{'serial'}->{'key'};
+				}
+			else {
+				delete($server->{'virtualmin_serial'});
+				delete($server->{'virtualmin_key'});
+				}
 			}
 		else {
 			&save_server_domains($server, [ ]);
@@ -957,7 +1002,12 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 	if ($@) {
 		# Failed in some way, most likely a timeout
 		$server->{'status'} = 'downwebmin';
-		$server->{'status_msg'} = $@;
+		if ($@ =~ /timeout/) {
+			$server->{'status_msg'} = "Failed to get status from Webmin in $webmin_timeout seconds";
+			}
+		else {
+			$server->{'status_msg'} = $@;
+			}
 		}
 
 	# Fix up detected OS
@@ -2620,13 +2670,16 @@ return (\@glinks, \@gtitles, \@gicons);
 
 # sort_package_updates(package, ...)
 # Sorts a list of packages into the order they should be installed, so that
-# Webmin is always done first, then virtualmin, then plugins
+# Webmin is always done first, then the updates module, then virtualmin,
+# then plugins
 sub sort_package_updates
 {
-return sort { ($b->{'name'} eq 'webmin' ? 2 :
+return sort { ($b->{'name'} eq 'webmin' ? 3 :
+	       $b->{'name'} =~ /security-updates$/ ? 2 :
 	       $b->{'name'} =~ /virtual-server$/ ? 1 : 0)
 	      <=>
-	      ($a->{'name'} eq 'webmin' ? 2 :
+	      ($a->{'name'} eq 'webmin' ? 3 :
+	       $a->{'name'} =~ /security-updates$/ ? 2 :
 	       $a->{'name'} =~ /virtual-server$/ ? 1 : 0) } @_;
 }
 
@@ -2653,6 +2706,7 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	local $sfunc = "type_".$t."_no_startup";
 	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
 		   	 $status eq 'nohost';
+	push(@rv, [ "refresh", $text{'edit_refresh'} ]);
 	push(@rv, [ "startup", $text{'edit_startup'} ]) if (!$nostart);
 	if ($status eq 'nossh' && !$noshut) {
 		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
@@ -2697,26 +2751,51 @@ return @rv;
 
 # check_virtualmin_serial(serial, key)
 # Checks if some licence is valid for Virtualmin. This is done via an HTTP
-# request to www.virtualmin.com, with some local caching. Returns a number of
-# domains if yes, 0 if no, -1 if could not tell
+# request to www.virtualmin.com, with some local caching. Returns 1 if yes
+# (and the number of domains and servers in an array context), 0 if no,
+# -1 if could not tell
 sub check_virtualmin_serial
 {
 local ($serial, $key) = @_;
 local $id = &get_host_id();
+
+# First check out positive responses cache
+local %serialcache;
+&read_file($serial_cache_file, \%serialcache);
+local $skh = join(" ", $serial, $key, $id);
+if (defined($serialcache{$shk})) {
+	($lastcheck, $domains, $servers) = split(/\s+/, $serialcache{$shk});
+	if ($lastcheck > time()-60*60) {
+		return (1, $domains, $servers);
+		}
+	}
+
+# Need to really query Virtualmin
 local ($out, $error);
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
 	       "$virtualmin_licence_prog?id=$id&serial=$key",
 	       \$out, \$error, undef, $virtualmin_licence_ssl);
-if ($out =~ /^OK\s+(\S+)\s+(\S+)/) {
-	return $2 || 99999;
+local @rv;
+if ($out =~ /^OK\s+(\S+)\s+(\S+)\s+(\S+)/) {
+	@rv = ( 1, $2, $3 );
 	}
 elsif ($error || $out =~ /^ERR\s+/) {
-	return -1;
+	@rv = ( -1 );
 	}
 else {
-	return 0;
+	@rv = ( 0 );
 	}
+
+# Update cache and return result
+if ($rv[0]) {
+	$serialcache{$skh} = join(" ", time(), $rv[1], $rv[2]);
+	}
+else {
+	delete($serialcache{$skh});
+	}
+&write_file($serial_cache_file, \%serialcache);
+return wantarray ? @rv : $rv[0];
 }
 
 # get_server_manager_serial()
@@ -2730,21 +2809,237 @@ if (&read_file($licence_file, \%serial)) {
 return ( );
 }
 
-# allocate_virtualmin_serial()
+# allocate_virtualmin_serial([vm2])
 # Returns either a serial number or key from the list of those pre-allocated,
 # or undef and an error message
 sub allocate_virtualmin_serial
 {
-# XXX
+local ($vm2) = @_;
+local @lics = &list_virtualmin_licences();
+local ($first) = grep { $_->{'vm2'} == $vm2 &&
+			$_->{'free'} && !$_->{'install'} } @lics;
+if ($first) {
+	return ($first->{'serial'}, $first->{'key'});
+	}
+else {
+	return (undef, $text{'virtualmin_efree'});
+	}
 }
 
-# virtualmin_licence_form(no-none)
-# Returns ui_table_row-generated HTML for selecting a Virtualmin licence
+# virtualmin_licence_form(name, no-none)
+# Returns HTML for selecting a Virtualmin licence
 sub virtualmin_licence_form
 {
-# XXX
+local ($name, $nonone) = @_;
+local @opts;
+local ($cansame, $canalloc);
+if (!$nonone) {
+	push(@opts, [ 0, $text{'virtualmin_smode0'}."<br>" ]);
+	}
+push(@opts, [ 1, &text('virtualmin_smode1',
+		       &ui_textbox($name."_serial", undef, 20),
+		       &ui_textbox($name."_key", undef, 20))."<br>" ]);
+local ($vaserial, $vakey) = &allocate_virtualmin_serial(1);
+if ($vaserial) {
+	$cansame = 1;
+	push(@opts, [ 2, $text{'virtualmin_smode2'}."<br>" ]);
+	}
+local ($aserial, $akey) = &allocate_virtualmin_serial(0);
+if ($aserial) {
+	push(@opts, [ 3, $text{'virtualmin_smode3'}."<br>" ]);
+	$canalloc = 1;
+	}
+if (@opts > 1) {
+	return &ui_radio($name, $cansame ? 2 :
+				$canalloc ? 3 :
+				$nonone ? 1 : 0, \@opts);
+	}
+else {
+	return &ui_hidden($name, $opts[0]->[0]).$opts[0]->[1];
+	}
 }
 
+# virtualmin_licence_parse(name, &in)
+# Returns a serial number and key for Virtualmin, or undef and an error message
+# explaining why the key is not valid
+sub virtualmin_licence_parse
+{
+local ($name, $in) = @_;
+if ($in->{$name} == 0) {
+	# None needed
+	return ();
+	}
+elsif ($in->{$name} == 1) {
+	# Manually entered
+	$in{$name."_serial"} =~ /^\S+$/ ||
+		return (undef, $text{'virtualmin_eserial'});
+	$in{$name."_key"} =~ /^\S+$/ ||
+		return (undef, $text{'virtualmin_ekey'});
+	local $lok = &check_virtualmin_serial($in{$name."_serial"},
+					      $in{$name."_key"});
+	$lok > 0 || return (undef, $text{'virtualmin_evalid'});
+	return ($in{$name."_serial"}, $in{$name."_key"});
+	}
+elsif ($in->{$name} == 2) {
+	# Same as VM2
+	return &get_server_manager_serial();
+	}
+elsif ($in->{$name} == 3) {
+	# Allocate from pool
+	local ($aserial, $akey) = &allocate_virtualmin_serial();
+	return ($aserial, $akey);
+	}
+else {
+	return (undef, "Unknown licence mode!");
+	}
+}
+
+# list_virtualmin_licences()
+# Returns a list of serial numbers and keys that have been pre-registered
+# for use by Virtualmin
+sub list_virtualmin_licences
+{
+# If the VM2 licence can also be used for Virtualmin, start with it
+&lock_file($virtualmin_licences_file);
+local @rv;
+local ($vm2serial, $vm2key) = &get_server_manager_serial();
+local ($lok, $ldoms, $lservers) = &check_virtualmin_serial($vm2serial, $vm2key);
+if ($lok > 0) {
+	push(@rv, { 'serial' => $vm2serial,
+		    'key' => $vm2key,
+		    'domains' => $ldoms,
+		    'servers' => $lservers,
+		    'max_last' => time(),
+		    'vm2' => 1 });
+	}
+
+# Read the licence pool
+open(LIC, $virtualmin_licences_file);
+while(<LIC>) {
+	s/\r|\n//g;
+	local %lic = map { split(/=/, $_) } split(/\s+/, $_);
+	if ($lic{'install'} && !kill(0, $lic{'install'})) {
+		delete($lic{'install'});
+		}
+	push(@rv, \%lic);
+	}
+close(LIC);
+
+# For licences that we don't have domain and server counts for, get them
+# from Virtualmin. Re-do this every 24 hours, as the customer may have upgraded
+foreach my $l (@rv) {
+	if (!$l->{'max'} || time() - $l->{'max_last'} >= 24*60*60) {
+		local ($lok, $ldoms, $lservers) =
+			&check_virtualmin_serial($l->{'serial'}, $l->{'key'});
+		if ($lok == 0) {
+			# Invalid!
+			$l->{'invalid'} = 1;
+			}
+		elsif ($lok > 0) {
+			delete($l->{'invalid'});
+			$l->{'domains'} = $ldoms;
+			$l->{'servers'} = $lservers;
+			}
+		$l->{'max_last'} = time();
+		$changed = 1;
+		}
+	}
+
+# For each licence, find out which systems it is used on
+local @servers = &list_managed_servers();
+local %lmap = map { $_->{'serial'}, $_ } @rv;
+foreach my $s (@servers) {
+	if ($s->{'virtualmin_serial'}) {
+		local $l = $lmap{$s->{'virtualmin_serial'}};
+		if ($l) {
+			push(@{$l->{'users'}}, $s);
+			}
+		}
+	}
+
+# For each licence, find in-progress installs and decrease the free count
+&lock_file($virtualmin_progress_file);
+local %progress;
+&read_file($virtualmin_progress_file, \%progress);
+foreach my $l (@rv) {
+	$l->{'progress'} = 0;
+	local @newprog;
+	foreach my $p (split(/\s+/, $progress{$l->{'serial'}})) {
+		if (kill(0, $p)) {
+			$l->{'progress'}++;
+			push(@newprog, $p);
+			}
+		}
+	$progress{$l->{'serial'}} = join(' ', @newprog);
+	}
+&write_file($virtualmin_progress_file, \%progress);
+&unlock_file($virtualmin_progress_file);
+
+# For each licence, work out how many more servers it can be used on
+foreach my $l (@rv) {
+	if (!$l->{'invalid'}) {
+		if ($l->{'servers'}) {
+			$l->{'free'} = $l->{'servers'} -
+				       scalar(@{$l->{'users'}}) -
+				       $l->{'progress'};
+			$l->{'free'} = 0 if ($l->{'free'} < 0);
+			}
+		else {
+			$l->{'free'} = -1;	# Unlimited
+			}
+		}
+	}
+
+# Write out the licence list if changed
+if ($changed) {
+	&save_virtualmin_licences(\@rv);
+	}
+&unlock_file($virtualmin_licences_file);
+
+return @rv;
+}
+
+# save_virtualmin_licences(&licences)
+# Updates the Virtualmin licence pool
+sub save_virtualmin_licences
+{
+local ($licences) = @_;
+&open_tempfile(LIC, ">$virtualmin_licences_file");
+foreach my $l (@$licences) {
+	next if ($l->{'vm2'});
+	&print_tempfile(LIC, join(" ", map { $_."=".$l->{$_} }
+				grep { $_ ne "users" &&
+				       $_ ne "progress" } keys %$l)."\n");
+	}
+&close_tempfile(LIC);
+}
+
+# start_installing_virtualmin_licence(serial, key)
+# Marks some serial number and key as being installed now
+sub start_installing_virtualmin_licence
+{
+local ($serial, $key) = @_;
+local %progress;
+&lock_file($virtualmin_progress_file);
+&read_file($virtualmin_progress_file, \%progress);
+$progress{$serial} = join(' ', split(/\s+/, $progress{$serial}), $$);
+&write_file($virtualmin_progress_file, \%progress);
+&unlock_file($virtualmin_progress_file);
+}
+
+# start_installing_virtualmin_licence(serial, key)
+# Marks some serial number and key as no longer being installed
+sub stop_installing_virtualmin_licence
+{
+local ($serial, $key) = @_;
+local %progress;
+&lock_file($virtualmin_progress_file);
+&read_file($virtualmin_progress_file, \%progress);
+$progress{$serial} = join(' ', grep { $_ != $$ }
+				    split(/\s+/, $progress{$serial}));
+&write_file($virtualmin_progress_file, \%progress);
+&unlock_file($virtualmin_progress_file);
+}
 
 # strip_html_tags(html)
 # Removes all HTML tags from a string, returning plain text

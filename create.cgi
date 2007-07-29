@@ -58,6 +58,9 @@ if (defined(&$ifunc) && &$ifunc($server) && !$in{'image'}) {
 	&error($text{'create_eimage'});
 	}
 $server->{'image'} = $in{'image'};
+if ($in{'image'}) {
+	$img = &get_server_image($in{'image'});
+	}
 
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_create_parse";
@@ -65,11 +68,31 @@ if (defined(&$pfunc)) {
 	&$pfunc($server, \%in);
 	}
 
+# Validate licence
+($serial, $key) = &virtualmin_licence_parse("licence", \%in);
+if (!$serial && $key) {
+	&error($key);
+	}
+elsif (!$serial && !$key) {
+	# None given .. but does the image need one?
+	if ($in{'image'}) {
+		$img->{'virtualmin'} eq 'pro' &&
+			&error($text{'create_eimagevirt'});
+		}
+	$vfunc = "type_".$in{'type'}."_will_virtualmin";
+	if (defined(&$vfunc) && &$vfunc($server)) {
+		&error($text{'create_eimagevirt'});
+		}
+	}
+if ($serial) {
+	# Mark this key as in-use
+	&start_installing_virtualmin_licence($serial, $key);
+	}
+
 &ui_print_unbuffered_header(undef, $text{'create_title'}, "");
 
 # If there is an image file, copy to the server
 if ($in{'image'}) {
-	$img = &get_server_image($in{'image'});
 	print &text('create_copying', &nice_size($img->{'size'}));
 	($imageok, $imagetemp) = &transfer_image_files($server, 1);
 	print "<br>\n";
@@ -87,7 +110,7 @@ if ($in{'image'}) {
 $tfunc = "type_".$in{'type'}."_desc";
 print &text('create_creating', &$tfunc()),"<br>\n";
 $cfunc = "type_".$in{'type'}."_create";
-$err = &$cfunc($server);
+$err = &$cfunc($server, $serial, $key);
 if ($err) {
 	print &text('create_ecreate', $err),"<p>\n";
 	goto END;
@@ -123,7 +146,7 @@ else {
 # Call any post-creation function
 $dfunc = "type_".$in{'type'}."_create_post";
 if (defined(&$dfunc)) {
-	&$dfunc($server);
+	&$dfunc($server, $serial, $key);
 	}
 
 if (!$no_ssh) {
@@ -139,7 +162,14 @@ if (!$no_ssh) {
 			 $webminssl) = &check_server_ssh_login($server);
 			if ($sshstatus == 0) {
 				print "<br>\n";
-				print $text{'create_sshdone'},"<p>\n";
+				if ($webmindir) {
+					print &text('create_sshdone2',
+						    "<tt>$webmindir</tt>");
+					}
+				else {
+					print $text{'create_sshdone'};
+					}
+				print "<p>\n";
 				last;
 				}
 			elsif ($sshcount > 60) {
@@ -216,7 +246,7 @@ if ($webmindir) {
 # Call any really final post-creation function
 $dfunc = "type_".$in{'type'}."_create_ready";
 if (defined(&$dfunc)) {
-	&$dfunc($server);
+	&$dfunc($server, $serial, $key);
 	}
 
 # Re-check and save the status
@@ -224,7 +254,7 @@ print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
 &check_server_status($server, 1);
 &save_managed_server($server);
-print $text{'add_statusok'},"<p>\n";
+print &text('add_statusok', &describe_status($server, 1)),"<p>\n";
 
 # If the server has Virtualmin, update all Virtualmin packages
 $info = &get_server_collected($server);
@@ -259,6 +289,12 @@ if (defined(&theme_select_server)) {
 	}
 
 END:
+
+if ($serial) {
+	# Key is no longer in progress
+	&stop_installing_virtualmin_licence($serial, $key);
+	}
+
 &ui_print_footer("", $text{'index_return'});
 
 

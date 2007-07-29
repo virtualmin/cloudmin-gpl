@@ -235,18 +235,16 @@ foreach my $fl (split(/\s+/, $img->{'files'})) {
 unlink("$server_images_dir/$img->{'id'}.img");
 }
 
-# fix_virtualmin_licence_files(&server)
+# fix_virtualmin_licence_files(&server, serial, key)
 # Once a server has been started, fix up any files containing Virtualmin
 # licence keys. Also clears any virtualmin host-specific cache files.
 sub fix_virtualmin_licence_files
 {
-local ($server) = @_;
+local ($server, $serial, $key) = @_;
 
 # Put serial into licence and update config files
-local %serial;
-&read_file($licence_file, \%serial);
-local %hash = ( 'SERIAL' => $serial{'SerialNumber'},
-		'KEY' => $serial{'LicenseKey'} );
+local %hash = ( 'SERIAL' => $serial,
+		'KEY' => $key );
 foreach my $fix ("/etc/virtualmin-license",
 		 "/etc/apt/sources.list",
 		 "/etc/yum.repos.d/virtualmin.repo",
@@ -264,7 +262,7 @@ foreach my $fix ("/etc/virtualmin-license",
 	}
 
 # Clear collected info cache
-&execute_command_on_server($server, "rm /etc/webmin/virtual-server/collected");
+&delete_file_on_server($server, "/etc/webmin/virtual-server/collected");
 
 return undef;
 }
