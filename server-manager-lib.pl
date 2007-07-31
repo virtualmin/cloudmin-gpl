@@ -7,7 +7,6 @@
 #	XXX cpu limits
 # XXX install script
 # XXX ec2 AMI creation?
-# XXX images in menu should have best choice first (ie. CentOS 5 on Xen)
 # XXX virtualmin licence management
 #	XXX documentation
 #	XXX allow selection of specific licence from pool

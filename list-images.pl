@@ -27,7 +27,8 @@ while(@ARGV > 0) {
 		}
 	}
 
-@images = sort { $a->{'id'} cmp $b->{'id'} } &list_server_images($type);
+@images = sort { $b->{'priority'} <=> $a->{'priority'} ||
+		 $a->{'id'} cmp $b->{'id'} } &list_server_images($type);
 @avail = &list_available_server_images($type);
 if ($multi) {
 	# One block per image

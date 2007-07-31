@@ -32,7 +32,8 @@ foreach my $f (readdir(DIR)) {
 	push(@rv, \%img);
 	}
 closedir(DIR);
-return sort { $a->{'desc'} cmp $b->{'desc'} } @rv;
+return sort { $b->{'priority'} <=> $a->{'priority'} ||
+	      $a->{'desc'} cmp $b->{'desc'} } @rv;
 }
 
 # get_server_image(id)
