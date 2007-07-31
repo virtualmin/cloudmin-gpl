@@ -9,19 +9,11 @@
 # XXX ec2 AMI creation?
 # XXX images in menu should have best choice first (ie. CentOS 5 on Xen)
 # XXX virtualmin licence management
-#	XXX when adding a virtualmin machine, prompt for licence
-#	XXX automatically allocate from list
-#	XXX or fetch from virtualmin.com
-#	XXX need to track used serials, by status updates (cache in server hash)
 #	XXX command-line API for serial management
 #	XXX documentation
-#	XXX need to get and show licence types (domains, number of boxes)
-#	XXX we need to know which images have Virtualmin Pro
-#		XXX track at image creation (pro vs gpl)
 #	XXX allow selection of specific licence from pool
-#	XXX create-system.pl needs licence args
 #	XXX update help pages
-#	XXX when installing, mark a serial from the pool as used
+#	XXX auto-fetch all customer's licenses
 
 do '../web-lib.pl';
 &init_config();
@@ -153,6 +145,8 @@ if ($server->{'id'} eq '0') {
 			'virtualmin_err' => $server->{'virtualmin_err'},
 			'virtualmin_poss' => $server->{'virtualmin_poss'},
 			'virtualmin_domains' => $server->{'virtualmin_domains'},
+			'virtualmin_serial' => $server->{'virtualmin_serial'},
+			'virtualmin_key' => $server->{'virtualmin_key'},
 		      );
 	&write_file($this_server_status, \%this);
 	}
@@ -2886,7 +2880,7 @@ elsif ($in->{$name} == 2) {
 	}
 elsif ($in->{$name} == 3) {
 	# Allocate from pool
-	local ($aserial, $akey) = &allocate_virtualmin_serial();
+	local ($aserial, $akey) = &allocate_virtualmin_serial(0);
 	return ($aserial, $akey);
 	}
 else {

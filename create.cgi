@@ -256,6 +256,11 @@ print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
 print &text('add_statusok', &describe_status($server, 1)),"<p>\n";
 
+if ($serial) {
+	# Key is no longer in progress
+	&stop_installing_virtualmin_licence($serial, $key);
+	}
+
 # If the server has Virtualmin, update all Virtualmin packages
 $info = &get_server_collected($server);
 if ($server->{'status'} eq 'virt' && $in{'update'}) {
@@ -290,8 +295,8 @@ if (defined(&theme_select_server)) {
 
 END:
 
+# Do this again, in case we goto'd to END
 if ($serial) {
-	# Key is no longer in progress
 	&stop_installing_virtualmin_licence($serial, $key);
 	}
 

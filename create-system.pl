@@ -66,6 +66,10 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-update") {
 		$noupdate = 1;
 		}
+	elsif ($a eq "--serial") { $serial = shift(@ARGV); }
+	elsif ($a eq "--key") { $key = shift(@ARGV); }
+	elsif ($a eq "--same-serial") { $same_serial = 1; }
+	elsif ($a eq "--allocate-serial") { $allocate_serial = 1; }
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
 		$typeargs{$1}->{$2} = shift(@ARGV);
@@ -109,6 +113,20 @@ if ($image) {
 	($img) = grep { $_->{'id'} eq $image } @images;
 	$img || &usage("Image ID does not exist or in not valid for the ".
 		       "specified system type");
+	}
+
+# Work out serial and key
+if ($same_serial) {
+	($serial, $key) = &get_server_manager_serial();
+	}
+elsif ($allocate_serial) {
+	($serial, $key) = &allocate_virtualmin_serial(0);
+	$serial || &usage($key);
+	}
+elsif ($serial) {
+	$tok = &check_virtualmin_serial($serial, $key);
+	$tok || &usage("Serial $serial or key $key is not valid");
+	$tok > 0 || &usage("Could not validate serial number and key");
 	}
 
 # Create initial server object
@@ -155,6 +173,25 @@ if (defined(&$pfunc)) {
 	&usage($err) if ($err);
 	}
 
+# Make sure a serial is given if needed
+if (!$serial && !$key) {
+	if ($image) {
+		$img->{'virtualmin'} eq 'pro' &&
+			&usage("A Virtualmin license must be specified when ".
+			       "creating from an image that includes it");
+		}
+	$vfunc = "type_".$in{'type'}."_will_virtualmin";
+	if (defined(&$vfunc) && &$vfunc($server)) {
+		&usage("A Virtualmin license must be specified when ".
+		       "creating from an image that includes it");
+		}
+	}
+
+if ($serial) {
+	# Mark this key as in-use
+	&start_installing_virtualmin_licence($serial, $key);
+	}
+
 # If there is an image file, copy to the server
 if ($image) {
 	$img = &get_server_image($image);
@@ -177,7 +214,7 @@ print "Starting creation of $tdesc system ..\n";
 
 # Call the server type's creation function, then wait for it to be come ready
 $cfunc = "type_".$type."_create";
-$err = &$cfunc($server);
+$err = &$cfunc($server, $serial, $key);
 if ($err) {
 	$err = &strip_html_tags($err);
 	print ".. creation failed : $err\n";
@@ -209,7 +246,7 @@ print ".. creation complete\n\n";
 # Call any post-creation function
 $dfunc = "type_".$type."_create_post";
 if (defined(&$dfunc)) {
-	&$dfunc($server);
+	&$dfunc($server, $serial, $key);
 	}
 
 if (!$no_ssh) {
@@ -296,7 +333,7 @@ if ($webmindir) {
 # Call any really final post-creation function
 $dfunc = "type_".$in{'type'}."_create_ready";
 if (defined(&$dfunc)) {
-	&$dfunc($server);
+	&$dfunc($server, $serial, $key);
 	}
 
 # Re-check and save the status
@@ -305,6 +342,11 @@ print "Refreshing status ..\n";
 &check_server_status($server, 1);
 &save_managed_server($server);
 print ".. done\n\n";
+
+if ($serial) {
+	# Key is no longer in progress
+	&stop_installing_virtualmin_licence($serial, $key);
+	}
 
 # If the server has Virtualmin, update all Virtualmin packages
 if ($server->{'status'} eq 'virt' && !$noupdate) {
@@ -349,6 +391,8 @@ print "                         [--webmin | --webmin-pass password]\n";
 print "                         [--novirt]\n";
 print "                         [--image id]\n";
 print "                         [--no-update]\n";
+print "                         [--serial number --key number] |\n";
+print "                         [--same-serial] | [--allocate-serial]\n";
 if ($type) {
 	# Show type-specific command line args
 	$afunc = "type_".$type."_create_args";
