@@ -17,6 +17,11 @@ $clash && &error($text{'mkimage_eclash'});
 $image = { 'id' => $in{'imageid'},
 	   'desc' => $in{'desc'},
 	   'manager' => $server->{'manager'} };
+$info = &get_server_collected($server);
+if ($info) {
+	$image->{'virtualmin'} =
+		$info->{'minfo'}->{'version'} =~ /gpl/ ? 'gpl' : 'pro';
+	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'mkimage_title'}, "");
 

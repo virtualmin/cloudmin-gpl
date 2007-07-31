@@ -53,6 +53,11 @@ $clash && &usage("An image with the ID $id already exists");
 $image = { 'id' => $id,
 	   'desc' => $desc,
 	   'manager' => $server->{'manager'} };
+$info = &get_server_collected($server);
+if ($info) {
+	$image->{'virtualmin'} =
+		$info->{'minfo'}->{'version'} =~ /gpl/ ? 'gpl' : 'pro';
+	}
 
 # Select temp dir for image on parent host
 &$first_print("Creating temporary directory for image files ..");
