@@ -11,8 +11,8 @@
 # XXX virtualmin licence management
 #	XXX documentation
 #	XXX allow selection of specific licence from pool
-#	XXX update help pages
 #	XXX auto-fetch all customer's licenses
+#	XXX image creation needs to set virtualmin flag
 
 do '../web-lib.pl';
 &init_config();
