@@ -11,6 +11,7 @@ $lic || &error($text{'ledit_egone'});
 
 if (!$lic->{'vm2'}) {
 	print &ui_form_start("delete_licences.cgi");
+	print &ui_hidden("d", $in{'serial'});
 	}
 
 print &ui_table_start($text{'ledit_header'}, undef, 2, [ "width=30%" ]);

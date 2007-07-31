@@ -341,7 +341,7 @@ print "Refreshing status ..\n";
 &save_managed_server($server);
 &check_server_status($server, 1);
 &save_managed_server($server);
-print ".. done\n\n";
+print ".. done ($server->{'status'})\n\n";
 
 if ($serial) {
 	# Key is no longer in progress

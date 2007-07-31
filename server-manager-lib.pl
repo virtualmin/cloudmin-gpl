@@ -9,7 +9,6 @@
 # XXX ec2 AMI creation?
 # XXX images in menu should have best choice first (ie. CentOS 5 on Xen)
 # XXX virtualmin licence management
-#	XXX command-line API for serial management
 #	XXX documentation
 #	XXX allow selection of specific licence from pool
 #	XXX update help pages
@@ -2937,6 +2936,7 @@ foreach my $l (@rv) {
 		$l->{'max_last'} = time();
 		$changed = 1;
 		}
+	$l->{'users'} = [ ];
 	}
 
 # For each licence, find out which systems it is used on
