@@ -6,16 +6,26 @@ require './server-manager-lib.pl';
 &ReadParse();
 
 # Create the licence objects
-foreach $line (split(/\r?\n/, $in{'licences'})) {
-	next if ($line !~ /\S/);
-	$line =~ s/^\s+//;
-	$line =~ s/\s+$//;
-	($serial, $key) = split(/\s+/, $line);
-	$serial && $key || &error(&text('ladd_eline', $line));
-	push(@newlics, { 'serial' => $serial,
-			 'key' => $key });
+if (defined($in{'licences'})) {
+	# Bulk add
+	foreach $line (split(/\r?\n/, $in{'licences'})) {
+		next if ($line !~ /\S/);
+		$line =~ s/^\s+//;
+		$line =~ s/\s+$//;
+		($serial, $key) = split(/\s+/, $line);
+		$serial && $key || &error(&text('ladd_eline', $line));
+		push(@newlics, { 'serial' => $serial,
+				 'key' => $key });
+		}
+	@newlics || &error($text{'ladd_enone'});
 	}
-@newlics || &error($text{'ladd_enone'});
+else {
+	# Adding one
+	$in{'serial'} =~ /^\S+$/ || $text{'ladd_eserial'};
+	$in{'key'} =~ /^\S+$/ || $text{'ladd_ekey'};
+	push(@newlics, { 'serial' => $in{'serial'},
+			 'key' => $in{'key'} });
+	}
 
 # Validate them, by checking for clashes or bogus IDs
 @lics = &list_virtualmin_licences();

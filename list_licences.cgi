@@ -48,7 +48,22 @@ else {
 	print "<b>$text{'licences_none'}</b><p>\n";
 	}
 
-# Show form to add
+# Show form to add one
+print "<hr>\n";
+print &ui_form_start("add_licences.cgi");
+print &ui_table_start($text{'licences_header'}, undef, 4,
+		      [ "width=20%", undef, "width=20%", undef ]);
+
+print &ui_table_row($text{'licences_serial'},
+		    &ui_textbox("serial", undef, 20));
+
+print &ui_table_row($text{'licences_key'},
+		    &ui_textbox("key", undef, 30));
+
+print &ui_table_end();
+print &ui_form_end([ [ undef, $text{'licences_addok'} ] ]);
+
+# Show form to add in bulk
 print "<hr>\n";
 print $text{'licences_adddesc'},"<p>\n";
 print &ui_form_start("add_licences.cgi", "post");

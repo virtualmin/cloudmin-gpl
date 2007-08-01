@@ -1040,6 +1040,8 @@ licences_delete=Remove Selected Licences
 licences_adddesc=To add one or more Virtualmin licenses that you have purchased, enter their serial numbers and licence keys below. Each must be on a separate line, with the serial and key separated by a space. These will then be used when new systems running Virtualmin are created.
 licences_add=Add Licenses
 licences_return=license list
+licences_header=Add Virtualmin license
+licences_addok=Add Licence
 
 ladd_err=Failed to add license
 ladd_enone=None entered
@@ -1047,6 +1049,8 @@ ladd_eline=Line $1 does not contain a license and key
 ladd_eclash=Serial number $1 has already been registered
 ladd_edup=Serial number $1 was listed twice
 ladd_echeck=Serial number $1 and key $2 is not valid
+ladd_eserial=Missing or invalid serial nunber
+ladd_ekey=Missing or invalid license key
 
 ldelete_err=Failed to remove licenses
 ldelete_evm2=The VM2 license cannot be removed
