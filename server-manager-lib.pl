@@ -11,6 +11,7 @@
 #	XXX allow selection of specific licence from pool
 #	XXX auto-fetch all customer's licenses
 # XXX theme should show VM2-specific info on right
+# XXX delete from left menu not fully working? not de-registered?
 
 do '../web-lib.pl';
 &init_config();
@@ -2730,12 +2731,12 @@ else {
 	if (!$noshut) {
 		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
 		}
-	if ($t ne 'real' && $t ne 'this') {
-		push(@rv, [ "delete", $text{'edit_delete'} ]);
-		}
-	if (!$noimage) {
-		push(@rv, [ "image", $text{'edit_image'} ]);
-		}
+	}
+if ($t ne 'real' && $t ne 'this') {
+	push(@rv, [ "delete", $text{'edit_delete'} ]);
+	}
+if (!$noimage) {
+	push(@rv, [ "image", $text{'edit_image'} ]);
 	}
 return @rv;
 }
@@ -3045,10 +3046,13 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 	local $lref = &read_file_lines($f);
 	for(my $i=0; $i<@$lref; $i++) {
 		local @w = split(/\s+/, $lref->[$i]);
-		if ($w[0] eq $server->{'host'} ||
-		    $ip && $w[0] eq $ip) {
-			# Found one to remove
-			splice(@$lref, $i--, 1);
+		foreach my $hn (split(/,/, $w[0])) {
+			if ($hn eq $server->{'host'} ||
+			    $ip && $hn eq $ip) {
+				# Found one to remove
+				splice(@$lref, $i--, 1);
+				last;
+				}
 			}
 		}
 	&flush_file_lines($f);

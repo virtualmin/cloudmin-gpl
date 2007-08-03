@@ -48,7 +48,7 @@ elsif ($in{'webmin_mode'} == 2) {
 	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
 	$server->{'pass'} = $in{'wpass'};
 	}
-if ($webmin_mode) {
+if ($in{'webmin_mode'}) {
 	$server->{'port'} = 10000;
 	}
 $server->{'novirt'} = !$in{'canvirt'};
