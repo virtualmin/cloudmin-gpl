@@ -63,6 +63,7 @@ foreach $s (@servers) {
 		print ".. deletion failed : $err\n\n";
 		}
 	else {
+		&remove_server_ssh_keys($s);
 		&delete_managed_server($s);
 		print ".. deleted successfully\n\n";
 		}

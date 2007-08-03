@@ -8,9 +8,9 @@
 # XXX install script
 # XXX ec2 AMI creation?
 # XXX virtualmin licence management
-#	XXX documentation
 #	XXX allow selection of specific licence from pool
 #	XXX auto-fetch all customer's licenses
+# XXX theme should show VM2-specific info on right
 
 do '../web-lib.pl';
 &init_config();
@@ -3031,6 +3031,28 @@ $progress{$serial} = join(' ', grep { $_ != $$ }
 				    split(/\s+/, $progress{$serial}));
 &write_file($virtualmin_progress_file, \%progress);
 &unlock_file($virtualmin_progress_file);
+}
+
+# remove_server_ssh_keys(&server)
+# Delete from root's ~/.ssh/authorized_keys* files any entries for a new system
+sub remove_server_ssh_keys
+{
+local ($server) = @_;
+local $ip = &to_ipaddress($server->{'host'});
+local @uinfo = getpwnam("root");
+foreach my $f ("$uinfo[7]/.ssh/known_hosts",
+	       "$uinfo[7]/.ssh/known_hosts2") {
+	local $lref = &read_file_lines($f);
+	for(my $i=0; $i<@$lref; $i++) {
+		local @w = split(/\s+/, $lref->[$i]);
+		if ($w[0] eq $server->{'host'} ||
+		    $ip && $w[0] eq $ip) {
+			# Found one to remove
+			splice(@$lref, $i--, 1);
+			}
+		}
+	&flush_file_lines($f);
+	}
 }
 
 # strip_html_tags(html)

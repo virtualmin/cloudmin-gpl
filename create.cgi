@@ -143,6 +143,9 @@ else {
 &cleanup_image_files($server, $imagetemp);
 &save_managed_server($server);
 
+# Remove old SSH keys for this system
+&remove_server_ssh_keys($server);
+
 # Call any post-creation function
 $dfunc = "type_".$in{'type'}."_create_post";
 if (defined(&$dfunc)) {

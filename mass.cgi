@@ -95,6 +95,7 @@ elsif ($in{'delete'}) {
 				}
 			else {
 				print $text{'mass_deleted'},"<p>\n";
+				&remove_server_ssh_keys($s);
 				&delete_managed_server($s);
 				if (defined(&theme_post_save_server)) {
 					&theme_post_save_server($server);

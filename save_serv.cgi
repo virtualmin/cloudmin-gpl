@@ -116,6 +116,7 @@ elsif ($in{'delete'}) {
 			print &text('save_deletefailed', $err),"<p>\n";
 			}
 		else {
+			&remove_server_ssh_keys($server);
 			&delete_managed_server($server);
 			print $text{'save_deletedone'},"<p>\n";
 			if (defined(&theme_post_save_server)) {
