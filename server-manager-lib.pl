@@ -7,11 +7,9 @@
 #	XXX cpu limits
 # XXX install script
 # XXX ec2 AMI creation?
-# XXX virtualmin licence management
-#	XXX allow selection of specific licence from pool
-#	XXX auto-fetch all customer's licenses
+#	XXX command-line
+#	XXX documentation
 # XXX theme should show VM2-specific info on right
-# XXX delete from left menu not fully working? not de-registered?
 
 do '../web-lib.pl';
 &init_config();
@@ -2703,7 +2701,6 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	if ($status eq 'nossh' && !$noshut) {
 		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
 		}
-	push(@rv, [ "image", $text{'edit_image'} ]) if (!$noimage);
 	}
 else {
 	# Most actions are only for up servers
@@ -2737,6 +2734,11 @@ if ($t ne 'real' && $t ne 'this') {
 	}
 if (!$noimage) {
 	push(@rv, [ "image", $text{'edit_image'} ]);
+	}
+# Add type-specific actions
+local $afunc = "type_".$t."_server_actions";
+if (defined(&$afunc)) {
+	push(@rv, &$afunc($server));
 	}
 return @rv;
 }

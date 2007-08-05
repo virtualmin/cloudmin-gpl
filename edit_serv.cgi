@@ -164,8 +164,10 @@ else {
 			}
 		elsif ($b->[3]) {
 			# Opens a separate URL
+			local $js = $b->[2] ? "document.location = \"$b->[3]\""
+					    : "window.open(\"$b->[3]\")";
 			push(@buts, [ $b->[0], $b->[1], undef, undef,
-			    "onClick='window.open(\"$b->[3]\"); return false'" ] );
+			    "onClick='$js; return false'" ] );
 			}
 		else {
 			push(@buts, $b);
