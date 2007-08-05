@@ -7,10 +7,10 @@
 #	XXX cpu limits
 # XXX install script
 # XXX ec2 AMI creation?
-#	XXX command-line
 #	XXX documentation
 #	XXX image management page!
 # XXX theme should show VM2-specific info on right
+# XXX config page to control which virtual types are active
 
 do '../web-lib.pl';
 &init_config();
@@ -348,6 +348,9 @@ unlink($temp, $temp.".pub");
 return $data;
 }
 
+# wrap_long_line(text, cols)
+# If any lines in text are longer than cols, wrap them onto the next line.
+# Returns the resulting wrapped text as a single string.
 sub wrap_long_line
 {
 local ($text, $cols) = @_;

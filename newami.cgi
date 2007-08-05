@@ -16,23 +16,13 @@ $in{'size'} *= $in{'size_units'};
 
 &ui_print_unbuffered_header(&server_in($server), $text{'newami_title'}, "");
 
+print &text('newami_doing', "<tt>$server->{'host'}</tt>",
+			    "<tt>$ec2->{'account'}</tt>"),"<p>\n";
+
 # Munge passwords and Virtualmin licence
-# XXX re-factor
-local @munged;
-foreach my $m ([ \&munge_virtualmin_licence_files, 'mkimage_mungelicence' ],
-	       [ \&munge_shadow_root_password, 'mkimage_mungeshadow' ],
-	       [ \&munge_authorized_key, 'mkimage_mungessh' ]) {
-	&$first_print($text{$m->[1]});
-	local $mfunc = $m->[0];
-	local $munged = &$mfunc($server);
-	if (!ref($munged)) {
-		&$second_print(&text('mkimage_emunge', $err));
-		goto FAILED;
-		}
-	else {
-		push(@munged, @$munged);
-		&$second_print($text{'create_done'});
-		}
+($mok, $munged) = &munge_all_files($server, 1);
+if (!$mok) {
+	goto FAILED;
 	}
 
 # Start the imaging process
@@ -102,19 +92,17 @@ if ($ok) {
 else {
 	print &text('newami_eregister', $ami),"<p>\n";
 	}
+$complete = 1;
 
 # Un-munge
 FAILED:
-&$first_print($text{'mkimage_unmunge'});
-foreach my $m (@munged) {
-	local ($file, $data) = @$m;
-	local $err = &put_file_data_to_server($server, $data, $file);
-	if ($err) {
-		&$second_print(&text('create_eunmunge', $file, $err));
-		return 0;
-		}
-	}
-&$second_print($text{'create_done'});
+&unmunge_all_files($server, $munged);
 
+if ($complete) {
+	print $text{'newami_alldone'},"<p>\n";
+	}
+else {
+	print "<b>",$text{'newami_allfailed'},"</b><p>\n";
+	}
 
 &ui_print_footer("", $text{'index_return'});

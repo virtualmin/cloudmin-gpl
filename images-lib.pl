@@ -623,5 +623,52 @@ foreach my $f (split(/\s+/, $image->{'files'})) {
 return undef;
 }
 
+# munge_all_files(&server, [no-authkeys])
+# Munges Virtualmin licences, the root password and authorized keys, printing
+# progress reports as they are done. Returns a status code and a list of munged
+# files and their original content.
+sub munge_all_files
+{
+local ($server, $noauth) = @_;
+local @munged;
+local $ok = 1;
+foreach my $m ([ \&munge_virtualmin_licence_files, 'mkimage_mungelicence' ],
+	       [ \&munge_shadow_root_password, 'mkimage_mungeshadow' ],
+	       [ \&munge_authorized_key, 'mkimage_mungessh' ]) {
+	next if ($m->[1] eq 'mkimage_mungessh' && $noauth);
+	&$first_print($text{$m->[1]});
+	local $mfunc = $m->[0];
+	local $munged = &$mfunc($server);
+	if (!ref($munged)) {
+		&$second_print(&text('mkimage_emunge', $err));
+		$ok = 0;
+		}
+	else {
+		push(@munged, @$munged);
+		&$second_print($text{'create_done'});
+		}
+	}
+return ($ok, \@munged);
+}
+
+# unmunge_all_files(&server, &files)
+# Puts back munged files, while outputting messages to the user. Return 1 on
+# success, 0 on failure.
+sub unmunge_all_files
+{
+local ($server, $munged) = @_;
+&$first_print($text{'mkimage_unmunge'});
+foreach my $m (@$munged) {
+	local ($file, $data) = @$m;
+	local $err = &put_file_data_to_server($server, $data, $file);
+	if ($err) {
+		&$second_print(&text('create_eunmunge', $file, $err));
+		return 0;
+		}
+	}
+&$second_print($text{'create_done'});
+return 1;
+}
+
 1;
 

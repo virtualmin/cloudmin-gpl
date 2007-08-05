@@ -178,7 +178,7 @@ create_copying=Copying $1 image file to host system ..
 create_ecopy=.. copy failed : $1
 create_webminstarting=Waiting for Webmin to start ..
 create_webminstarted=.. started successfully
-create_webminnostart=.. failure to start in $1 seconds. Last error was : $1
+create_webminnostart=.. failed to start in $1 seconds. Last error was : $2
 create_xenip=IP address for Xen instance
 create_xenipauto=Assign automatically
 create_xenipman=Address $1 / $2
@@ -974,7 +974,7 @@ remote_eprogram2=Remote program $1 does not exist
 
 mkimage_xenmount=Mounting Xen instance filesystem ..
 mkimage_xenumount=Un-mounting Xen instance filesystem ..
-mkimage_mungelicence=Removing Virtualmin licence ..
+mkimage_mungelicence=Removing Virtualmin licence files ..
 mkimage_mungeshadow=Resetting root password ..
 mkimage_mungessh=Removing authorized SSH keys ..
 mkimage_xengzip=Compressing filesystem image ..
@@ -1101,3 +1101,9 @@ newami_udone=.. upload done
 newami_register=Registering new image ..
 newami_registered=.. image ID is $1
 newami_eregister=.. registration failed : $1
+newami_doing=Creating EC2 image of $1 under account $2 ..
+newami_alldone=.. image creation was successful! It can now be used to create new Virtualmin systems using VM2.
+newami_allfailed=.. image creation failed! See the error messages above for the reason why.
+
+amis_title=EC2 Images
+
