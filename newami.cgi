@@ -11,6 +11,9 @@ $in{'path'} =~ /^\S+$/ || &error($text{'newami_epath'});
 $in{'size'} =~ /^\d+$/ || &error($text{'newami_esize'});
 $in{'size'} *= $in{'size_units'};
 
+# Get the EC2 account
+($ec2) = grep { $_->{'id'} eq $in{'account'} } &list_ec2_accounts();
+
 &ui_print_unbuffered_header(&server_in($server), $text{'newami_title'}, "");
 
 # Munge passwords and Virtualmin licence
@@ -34,7 +37,7 @@ foreach my $m ([ \&munge_virtualmin_licence_files, 'mkimage_mungelicence' ],
 
 # Start the imaging process
 print $text{'newami_creating'},"<br>\n";
-$err = &type_ec2_create_ami($server);
+$err = &type_ec2_create_ami($server, $in{'path'}, $ec2, $in{'size'});
 if ($err) {
 	print &text('newami_failed', $err),"<p>\n";
 	goto FAILED;
@@ -62,8 +65,8 @@ while(1) {
 	}
 
 # Start the upload to S3
-print $text{'newami_uploading'},"<br>\n";
-$err = &type_ec2_upload_ami($server);
+print &text('newami_uploading', "<tt>$in{'path'}</tt>"),"<br>\n";
+$err = &type_ec2_upload_ami($server, $in{'path'}, $ec2);
 if ($err) {
 	print &text('newami_ufailed', $err),"<p>\n";
 	goto FAILED;
@@ -73,8 +76,32 @@ else {
 	}
 
 # Wait for completion
+print $text{'newami_uwaiting'};
+while(1) {
+	sleep(1);
+	print ".";
+	$done = &type_ec2_upload_ami_done($server);
+	if ($done eq "OK") {
+		print "<br>\n";
+		print $text{'newami_udone'},"<p>\n";
+		last;
+		}
+	elsif ($done) {
+		print "<br>\n";
+		print &text('newami_ufailed', $done),"<p>\n";
+		goto FAILED;
+		}
+	}
 
 # Register the new AMI, and optionally make public
+print $text{'newami_register'},"<br>\n";
+($ok, $ami) = &type_ec2_register_ami($server, $in{'path'}, $ec2, $in{'public'});
+if ($ok) {
+	print &text('newami_registered', "<tt>$ami</tt>"),"<p>\n";
+	}
+else {
+	print &text('newami_eregister', $ami),"<p>\n";
+	}
 
 # Un-munge
 FAILED:

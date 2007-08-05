@@ -9,6 +9,7 @@
 # XXX ec2 AMI creation?
 #	XXX command-line
 #	XXX documentation
+#	XXX image management page!
 # XXX theme should show VM2-specific info on right
 
 do '../web-lib.pl';
