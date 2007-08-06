@@ -332,7 +332,7 @@ status_nosshlogin=SSH login failed
 status_nowebmin=No Webmin
 status_downwebmin=Webmin down
 status_nowebminlogin=Webmin login failed
-status_novirt=Webmin but no Virtualmin
+status_novirt=Webmin
 status_virt=Webmin and Virtualmin
 status_unknown=Unknown
 status_create=Creating
@@ -1106,4 +1106,13 @@ newami_alldone=.. image creation was successful! It can now be used to create ne
 newami_allfailed=.. image creation failed! See the error messages above for the reason why.
 
 amis_title=EC2 Images
-
+amis_id=Image ID
+amis_path=Path in S3
+amis_owner=Owner
+amis_public=Public?
+amis_users=Used by systems
+amis_ours=Your account
+amis_delete=Delete Selected Images
+amis_makepublic=Make Public
+amis_makeprivate=Make Private
+amis_none=No EC2 images were found. Perhaps VM2 could not contact the EC2 service.
