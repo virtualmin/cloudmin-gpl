@@ -1116,3 +1116,20 @@ amis_delete=Delete Selected Images
 amis_makepublic=Make Public
 amis_makeprivate=Make Private
 amis_none=No EC2 images were found. Perhaps VM2 could not contact the EC2 service.
+amis_return=list of EC2 images
+
+eami=Edit EC2 Image
+eami_header=EC2 image details
+eami_ami=Image ID
+eami_path=Path to manifest in S3
+eami_account=Accessed by account
+eami_users=Used by managed systems
+eami_grants=Granted to accounts
+eami_public=Grant access to everyone
+eami_err=Failed to save EC2 image
+eami_egone=Image no longer exists!
+
+dami_title=Delete EC2 Image
+dami_rusure=Are you sure you want to delete the EC2 image with ID $1, stored in S3 as $2? Existing EC2 systems using it will not be effected.
+dami_ok=Yes, Delete It
+dami_s3=Also delete image files from S3

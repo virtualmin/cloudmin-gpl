@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 # Shows a list of AMIs, with checkboxes to delete
-# XXX allow granting
+# XXX how to tell if public?
 
 require './server-manager-lib.pl';
 &ui_print_header(undef, $text{'amis_title'}, "", "amis");
@@ -38,6 +38,9 @@ if (@amis) {
 		$users = @users == 0 ? $text{'keys_nousers'} :
 			 @users > 4 ? &text('keys_manyusers', scalar(@users)) :
 			   join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
+		$public = $ami->{'isPublic'} eq 'true' ?
+			"<font color=#00aa00>$text{'yes'}</font>" :
+			"<font color=#ff0000>$text{'no'}</font>";
 		if ($myaccounts{$ami->{'imageOwnerId'}}) {
 			# Our image
 			print &ui_checked_columns_row([
@@ -46,7 +49,7 @@ if (@amis) {
 				 "$ami->{'imageId'}</a>",
 				$ami->{'imageLocation'},
 				"<i>$text{'amis_ours'}</i>",
-				$ami->{'isPublic'} ? $text{'yes'} : $text{'no'},
+				$public,
 				$users,
 				], \@tds, "d",
 				$ami->{'imageId'}."/".$ec2->{'id'});
@@ -58,7 +61,7 @@ if (@amis) {
 				$ami->{'imageId'},
 				$ami->{'imageLocation'},
 				$ami->{'imageOwnerId'},
-				$ami->{'isPublic'} ? $text{'yes'} : $text{'no'},
+				$public,
 				$users
 				], \@tds);
 			}

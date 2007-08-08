@@ -16,7 +16,7 @@ $ami || &error($text{'eami_egone'});
 print &ui_form_start("save_ami.cgi", "post");
 print &ui_hidden("id", $in{'id'});
 print &ui_hidden("ec2", $in{'ec2'});
-print &ui_table_start($text{'eami_header'}, undef, 2);
+print &ui_table_start($text{'eami_header'}, undef, 2, [ "width=30%" ]);
 
 # AMI ID
 print &ui_table_row($text{'eami_ami'}, "<tt>$ami->{'imageId'}</tt>");
@@ -30,7 +30,7 @@ print &ui_table_row($text{'eami_account'},
 
 # Used by systems
 @users = grep { $_->{'ec2_image'} eq $ami->{'imageId'} }
-	      &list_managed_systems();
+	      &list_managed_servers();
 if (@users) {
 	print &ui_table_row($text{'eami_users'},
 		join("<br>", map { "<a href='edit_serv.cgi?id=$_->{'id'}'>".
@@ -38,10 +38,27 @@ if (@users) {
 	}
 
 # Grants
-# XXX how to get?
+$grants = &list_ec2_ami_grants($ec2, $ami->{'imageId'});
+if (ref($grants)) {
+	$gstr = "";
+	foreach $g (@$grants) {
+		if ($g->[0] eq 'user') {
+			$gstr .= $g->[1]."\n";
+			}
+		elsif ($g->[1] eq 'all') {
+			$public = 1;
+			}
+		else {
+			$gstr .= "\@".$g->[1]."\n";
+			}
+		}
+	print &ui_table_row($text{'eami_grants'},
+		&ui_textarea("grants", $gstr, 3, 30)."<br>\n".
+		&ui_checkbox("public", 1, $text{'eami_public'}, $public));
+	}
 
 print &ui_table_end();
-print &ui_form_end([ [ undef, $text{'save'} ],
+print &ui_form_end([ ref($grants) ? ( [ undef, $text{'save'} ] ) : ( ),
 		     [ "delete", $text{'delete'} ] ]);
 
 &ui_print_footer("list_amis.cgi", $text{'amis_return'});
