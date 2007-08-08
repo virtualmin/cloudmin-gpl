@@ -1,6 +1,5 @@
 #!/usr/local/bin/perl
 # Shows a list of AMIs, with checkboxes to delete
-# XXX how to tell if public?
 
 require './server-manager-lib.pl';
 &ui_print_header(undef, $text{'amis_title'}, "", "amis");
@@ -18,6 +17,7 @@ foreach $ec2 (&list_ec2_accounts()) {
 		}
 	$myaccounts{$ec2->{'account'}} = $ec2;
 	}
+@amis = sort { $a->{'imageId'} cmp $b->{'imageId'} } @amis;
 
 if (@amis) {
 	@links = ( &select_all_link("d"), &select_invert_link("d") );

@@ -1133,3 +1133,15 @@ dami_title=Delete EC2 Image
 dami_rusure=Are you sure you want to delete the EC2 image with ID $1, stored in S3 as $2? Existing EC2 systems using it will not be effected.
 dami_ok=Yes, Delete It
 dami_s3=Also delete image files from S3
+
+mami_err1=Failed to delete EC2 images
+mami_err2=Failed to make EC2 images public
+mami_err3=Failed to make EC2 images private
+mami_egrant=Updating grants on $1 failed : $2
+mami_edelete=Failed to delete image $1 : $2
+mami_es3=Failed to delete files from S3 for image $1 : $2
+mami_dtitle=Delete EC2 Images
+mami_rusure=Are you sure you want to delete the $1 selected EC2 images? Existing EC2 systems using them will not be effected.
+mami_ok=Yes, Delete Them
+mami_enone=No EC2 images selected
+mami_selected=Selected image IDs: $1

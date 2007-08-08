@@ -9,9 +9,8 @@
 # XXX ec2 AMI creation?
 #	XXX help for amis and newami
 #	XXX documentation
-#	XXX image management page!
+#	XXX command-line ami listing
 # XXX theme should show VM2-specific info on right
-# XXX config page to control which virtual types are active
 # XXX theme should show module config on left
 #	XXX module config settings to control enabled system types
 # XXX cut-down version for just EC2?
