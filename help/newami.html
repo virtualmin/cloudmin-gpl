@@ -1,0 +1,28 @@
+<header>Create EC2 Image</header>
+
+This page can be used to create a running EC2 virtual system into an image
+(also known as an AMI), which can then be used to create new EC2 instances.
+These images are similar to those used by VM2 to create Xen and VServer systems,
+but are stored on Amazon's S3 service, rather than on your VM2 master system.
+<p>
+
+To create an image, you must fill in the following fields :
+<dl>
+<dt><b>S3 bucket for image</b>
+<dd>A bucket is like a directory in your S3 storage. In this field you should enter a short name like <i>centos-virtualmin-custom</i>, which will be created when the image is made. Each bucket can be used only by a single EC2 image.
+
+<dt><b>Save under S3 account</b>
+<dd>If you have more than one EC2 account, select the account that will be used to store and own the new image from this menu.
+
+<dt><b>Size of image filesystem</b>
+<dd>When a system is created from your new image, its root filesystem will be of the size entered here - and cannot be expanded. The size is a trade-off between the amount of disk space you will need for hosting domains in the virtual systems, and the amount you are charged by Amazon for storing the image in S3.
+
+<dt><b>Make image publicly available?</b>
+<dd>If <b>Yes</b> is selected, the new image will be usable by anyone who knows your EC2 account number. This is not advisible if you are creating an image that contains commerical software like Virtualmin Pro.
+
+</dl>
+
+When the <b>Create Image</b> button is clicked, the process of making an image from the system will begin. It will not be shut down during the imaging, but it is recommended that you minimize use of the source system to reduce the change of files being in an in-consistent state. <p>
+
+<footer>
+
