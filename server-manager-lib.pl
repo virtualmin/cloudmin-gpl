@@ -7,8 +7,6 @@
 #	XXX cpu limits
 # XXX install script
 # XXX theme should show VM2-specific info on right
-# XXX theme should show module config on left
-#	XXX module config settings to control enabled system types
 # XXX cut-down version for just EC2?
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX when creating images, allow overwriting of existing ID
@@ -27,18 +25,21 @@ do 'images-lib.pl';
 &remote_error_setup(\&remote_error_handler);
 use Net::Amazon::EC2;
 
-@possible_server_management_types = ( [ "real", undef ],
-				      [ "xen", undef ],
-				      [ "vserver", undef ],
-				      [ "zones", undef ],
-				      [ "ec2", undef ],
-				      [ "this", undef ],
+@possible_server_management_types = ( "real",
+				      "xen",
+				      "vserver",
+				      "zones",
+				      "ec2",
+				      "this",
 				    );
 @server_management_types = ( );
+%server_management_types = ( );
 foreach my $smt (@possible_server_management_types) {
-	if (!$smt->[1] || &foreign_installed($smt->[1])) {
-		push(@server_management_types, $smt->[0]);
-		do "$smt->[0]-type-lib.pl";
+	if ($config{'show_'.$smt} &&
+	    -r $module_root_directory."/".$smt."-type-lib.pl") {
+		push(@server_management_types, $smt);
+		$server_management_types{$smt} = 1;
+		do $smt."-type-lib.pl";
 		}
 	}
 
@@ -110,6 +111,7 @@ $virtualmin_progress_file = "$module_config_directory/progress-licences";
 sub list_managed_servers
 {
 local @rv = grep { $_->{'module'} eq $module_name } &servers::list_servers();
+@rv = grep { $server_management_types{$_->{'manager'}} } @rv;
 @rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
 if ($config{'show_this'}) {
 	local $this = &servers::this_server();

@@ -1,5 +1,10 @@
 procs=10
 show_this=1
+show_real=1
+show_xen=1
+show_vserver=1
+show_zones=1
+show_ec2=1
 image_owners=amazon 093590521311
 link_mode=0
 vserver_conf=/etc/vservers
