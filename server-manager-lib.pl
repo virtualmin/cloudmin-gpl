@@ -6,7 +6,6 @@
 #	XXX edit memory allocations
 #	XXX cpu limits
 # XXX install script
-# XXX theme should show VM2-specific info on right
 # XXX cut-down version for just EC2?
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX production deployment
@@ -82,6 +81,18 @@ $check_licence_cmd = "$module_config_directory/licence.pl";
 	'dpkg' => 'http://www.webmin.com/download/deb/webmin-current.deb',
 	'pkgadd' => 'http://www.webmin.com/download/webmin-current.pkg.gz',
 	'tgz' => 'http://www.webmin.com/download/webmin-current.tar.gz',
+	);
+
+@server_statuses = (
+	[ 'down' => 'ff0000' ],
+	[ 'nossh' => 'ff220000' ],
+	[ 'nohost' => 'ff440000' ],
+	[ 'nosshlogin' => 'ff6600' ],
+	[ 'nowebmin' => 'ff00ff' ],
+	[ 'downwebmin' => 'ff22ff' ],
+	[ 'nowebminlogin' => 'ff44ff' ],
+	[ 'novirt' => '008800' ],
+	[ 'virt' => '00aa00' ]
 	);
 
 $licence_status = "$module_config_directory/licence-status";
@@ -211,21 +222,13 @@ return $type->[1];
 sub describe_status
 {
 local ($s, $withcol, $withdoms) = @_;
-local $cmap = { 'down' => 'ff0000',
-		'nossh' => 'ff220000',
-		'nohost' => 'ff440000',
-		'nosshlogin' => 'ff6600',
-		'nowebmin' => 'ff00ff',
-		'downwebmin' => 'ff22ff',
-		'nowebminlogin' => 'ff44ff',
-		'novirt' => '008800',
-		'virt' => '00aa00' };
+local %cmap = map { $_->[0], $_->[1] } @server_statuses;
 local $msg = $text{'status_'.$s->{'status'}} || $text{'status_unknown'};
 if ($s->{'status'} eq 'virt' && $withdoms && $s->{'virtualmin_domains'}) {
 	$msg .= " (".&text('status_doms', $s->{'virtualmin_domains'}).")";
 	}
 if ($withcol) {
-	local $col = $cmap->{$s->{'status'}};
+	local $col = $cmap{$s->{'status'}};
 	if ($col) {
 		$msg = "<font color=#$col>$msg</font>";
 		}
