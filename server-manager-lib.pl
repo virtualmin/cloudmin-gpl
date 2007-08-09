@@ -6,8 +6,6 @@
 #	XXX edit memory allocations
 #	XXX cpu limits
 # XXX install script
-# XXX ec2 AMI creation?
-#	XXX documentation
 # XXX theme should show VM2-specific info on right
 # XXX theme should show module config on left
 #	XXX module config settings to control enabled system types
