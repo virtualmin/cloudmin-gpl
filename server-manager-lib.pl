@@ -9,8 +9,6 @@
 # XXX theme should show VM2-specific info on right
 # XXX cut-down version for just EC2?
 # XXX backup and restore managed systems? Use Backup Configuration Files module
-# XXX when creating images, allow overwriting of existing ID
-#	XXX and entering of version
 # XXX production deployment
 #	XXX repository
 #	XXX serial generation / product field in serial table

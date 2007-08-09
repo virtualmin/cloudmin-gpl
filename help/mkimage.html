@@ -21,12 +21,20 @@ the process may take 5-10 minutes. <p>
 To create an image, the following fields must be filled in :
 <dl>
 <dt><b>Unique ID for image</b>
-<dd>Here you must enter an ID that is not used by any other image. Typically,
-    Virtualmin images use IDs in the format <i>type</i>-<i>os</i>-<i>software</i>, such as <tt>xen-centos5-lamp</tt>.
+<dd>Here you have two choices - either select <b>New image</b> and enter an
+    ID that is not being used yet, or <b>Overwrite old image</b> and choose
+    an image to replace from the menu.  Typically, new
+    VM2 images use IDs in the format <i>type</i>-<i>os</i>-<i>software</i>, such as <tt>xen-centos5-lamp</tt>.
 
 <dt><b>Description for image</b>
 <dd>In this field you should enter a human-readable description, which appears
     when you select the image at system creation time.
+
+<dt><b>Version number</b>
+<dd>If you have created several images with the same ID over time, this optional
+    field can be used to set a version number for the new image. If you are
+    running multiple VM2 master systems and copying images between them, a
+    version makes it easier to keep track of image changes.
 </dl>
 
 <footer>

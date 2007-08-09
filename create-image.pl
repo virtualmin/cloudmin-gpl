@@ -26,6 +26,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--id") {
 		$id = shift(@ARGV);
 		}
+	elsif ($a eq "--overwrite") {
+		$overwrite = 1;
+		}
+	elsif ($a eq "--version") {
+		$version = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
@@ -46,13 +52,16 @@ if (defined(&$nfunc) && &$nfunc($server)) {
 if ($server->{'status'} eq 'nohost') {
 	&usage("A server whose host system is down cannot be imaged");
 	}
-($clash) = grep { $_->{'id'} eq $id } &list_server_images();
-$clash && &usage("An image with the ID $id already exists");
+if (!$overwrite) {
+	($clash) = grep { $_->{'id'} eq $id } &list_server_images();
+	$clash && &usage("An image with the ID $id already exists, and --overwrite was not set");
+	}
 
 # Create initial image hash
 $image = { 'id' => $id,
 	   'desc' => $desc,
-	   'manager' => $server->{'manager'} };
+	   'manager' => $server->{'manager'},
+	   'version' => $version };
 $info = &get_server_collected($server);
 if ($info) {
 	$image->{'virtualmin'} =
@@ -146,6 +155,8 @@ print "\n";
 print "usage: create-image.pl --host name\n";
 print "                       --desc \"image description\"\n";
 print "                       --id image-id\n";
+print "                       [--overwrite]\n";
+print "                       [--version number]\n";
 exit(1);
 }
 

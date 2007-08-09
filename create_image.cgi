@@ -8,15 +8,22 @@ require './server-manager-lib.pl';
 $server || &error($text{'mkimage_egone'});
 
 # Validate inputs
-$in{'imageid'} =~ /^\S+$/ || &error($text{'mkimage_eid'});
 $in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
-($clash) = grep { $_->{'id'} eq $in{'imageid'} } &list_server_images();
-$clash && &error($text{'mkimage_eclash'});
+if (!$in{'imageid_def'}) {
+	$in{'imageid'} =~ /^\S+$/ || &error($text{'mkimage_eid'});
+	($clash) = grep { $_->{'id'} eq $in{'imageid'} } &list_server_images();
+	$clash && &error($text{'mkimage_eclash'});
+	$imageid = $in{'imageid'};
+	}
+else {
+	$imageid = $in{'oldid'};
+	}
 
 # Create initial image hash
-$image = { 'id' => $in{'imageid'},
+$image = { 'id' => $imageid,
 	   'desc' => $in{'desc'},
 	   'manager' => $server->{'manager'} };
+$image->{'version'} = $in{'version'} if (!$in{'version_def'});
 $info = &get_server_collected($server);
 if ($info) {
 	$image->{'virtualmin'} =

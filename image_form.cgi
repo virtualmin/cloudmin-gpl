@@ -16,15 +16,36 @@ print &ui_form_start("create_image.cgi", "post");
 print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'mkimage_header'}, undef, 2, [ "width=30%" ]);
 
+# System type
 $tfunc = "type_".$server->{'manager'}."_desc";
 print &ui_table_row($text{'mkimage_type'},
 		    &$tfunc());
 
-print &ui_table_row($text{'mkimage_id'},
-		    &ui_textbox("imageid", undef, 30));
+# Image ID (new or old)
+@images = &list_server_images($server->{'manager'});
+if (@images) {
+	print &ui_table_row($text{'mkimage_id'},
+	    &ui_radio("imageid_def", 0,
+		[ [ 0, &text('mkimage_new',
+			     &ui_textbox("imageid", undef, 30))."<br>" ],
+		  [ 1, &text('mkimage_over',
+			&ui_select("oldid", undef,
+				   [ map { [ $_->{'id'} ] } @images ])) ],
+		]));
+	}
+else {
+	print &ui_table_row($text{'mkimage_id'},
+			    &ui_textbox("imageid", undef, 30));
+	}
 
+# Description
 print &ui_table_row($text{'mkimage_desc'},
 		    &ui_textbox("desc", undef, 60));
+
+# Version number
+print &ui_table_row($text{'mkimage_version'},
+		    &ui_opt_textbox("version", undef, 5,
+				    $text{'mkimage_none'}));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'mkimage_ok'} ] ]);
