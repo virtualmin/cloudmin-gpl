@@ -1090,6 +1090,7 @@ newami_account=Save under S3 account
 newami_ok=Create Image
 newami_public=Make image publicly available?
 newami_err=Failed to create EC2 image
+newami_eclash=The EC2 image $1 is already using the bucket $2
 newami_epath=Missing or invalid S3 bucket name
 newami_esize=Missing or invalid image size
 newami_creating=Creating image from filesystem ..

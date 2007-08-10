@@ -14,6 +14,15 @@ $in{'size'} *= $in{'size_units'};
 # Get the EC2 account
 ($ec2) = grep { $_->{'id'} eq $in{'account'} } &list_ec2_accounts();
 
+# Check for a clash
+$images = &list_ec2_images($ec2);
+if (ref($images)) {
+	($clash) = grep { $_->{'imageLocation'} =~ /^\Q$in{'path'}\E\// }
+			@$images;
+	$clash && &usage(&text('newami_eclash', $clash->{'imageId'},
+						$in{'path'}));
+	}
+
 &ui_print_unbuffered_header(&server_in($server), $text{'newami_title'}, "");
 
 print &text('newami_doing', "<tt>$server->{'host'}</tt>",
