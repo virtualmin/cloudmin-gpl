@@ -23,6 +23,9 @@ print &ui_table_row($text{'mkimage_type'},
 
 # Image ID (new or old)
 @images = &list_server_images($server->{'manager'});
+if (!$config{'vm2_overwrite'}) {
+	@images = grep { !$_->{'vm2'} } @images;
+	}
 if (@images) {
 	print &ui_table_row($text{'mkimage_id'},
 	    &ui_radio("imageid_def", 0,

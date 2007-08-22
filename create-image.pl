@@ -55,6 +55,10 @@ if ($server->{'status'} eq 'nohost') {
 if (!$overwrite) {
 	($clash) = grep { $_->{'id'} eq $id } &list_server_images();
 	$clash && &usage("An image with the ID $id already exists, and --overwrite was not set");
+	if (!$config{'vm2_overwrite'}) {
+		$clash->{'vm2'} && &usage("The image with ID $id is provided ".
+				  "by Virtualmin, and cannot be overwritten");
+		}
 	}
 
 # Create initial image hash

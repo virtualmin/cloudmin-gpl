@@ -13,7 +13,6 @@
 #	XXX serial generation / product field in serial table
 #	XXX create new serial table, tell Joe about packages
 # XXX automatic Virtualmin serial download (cron job)
-# XXX don't allow overwriting of VM2-supplied images
 
 do '../web-lib.pl';
 &init_config();
