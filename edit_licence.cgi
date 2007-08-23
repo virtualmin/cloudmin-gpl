@@ -51,5 +51,6 @@ if (!$lic->{'vm2'}) {
 	print &ui_form_end([ [ undef, $text{'ledit_delete'} ] ]);
 	}
 
-&ui_print_footer("list_licences.cgi", $text{'licences_return'});
+&ui_print_footer("list_licences.cgi?mode=list",
+		 $text{'licences_return'});
 

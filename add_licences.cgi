@@ -41,4 +41,4 @@ foreach $nl (@newlics) {
 push(@lics, @newlics);
 &save_virtualmin_licences(\@lics);
 
-&redirect("list_licences.cgi");
+&redirect("list_licences.cgi?mode=list");

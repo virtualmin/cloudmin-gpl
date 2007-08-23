@@ -17,4 +17,4 @@ foreach $d (@d) {
 		}
 	}
 &save_virtualmin_licences(\@lics);
-&redirect("list_licences.cgi");
+&redirect("list_licences.cgi?mode=list");
