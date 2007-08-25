@@ -10,9 +10,7 @@
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX production deployment
 #	XXX repository
-#	XXX serial generation / product field in serial table
-#	XXX create new serial table, tell Joe about packages
-# XXX automatic Virtualmin serial download (cron job)
+#	XXX solaris install script
 
 do '../web-lib.pl';
 &init_config();
@@ -106,6 +104,7 @@ $vm2_licence_prog = "/cgi-bin/slicence.cgi";
 $virtualmin_licence_prog = "/cgi-bin/vlicence.cgi";
 $virtualmin_licence_ssl = 0;
 $virtualmin_installer_prog = "/cgi-bin/install.cgi";
+$virtualmin_alllicences_prog = "/cgi-bin/alllicences.cgi";
 
 $virtualmin_licences_file = "$module_config_directory/virtualmin-licences";
 $serial_cache_file = "$module_config_directory/serial-cache";
@@ -3048,6 +3047,55 @@ $progress{$serial} = join(' ', grep { $_ != $$ }
 				    split(/\s+/, $progress{$serial}));
 &write_file($virtualmin_progress_file, \%progress);
 &unlock_file($virtualmin_progress_file);
+}
+
+# fetch_virtualmin_licences()
+# Checks for new Virtualmin licences associated with the VM2 licence, and
+# adds them. Returns an error message on failure, or a list of added licenses
+# on success.
+sub fetch_virtualmin_licences
+{
+local $id = &get_host_id();
+local ($serial, $key) = &get_server_manager_serial();
+local ($out, $error);
+&http_download($virtualmin_licence_host,
+	       $virtualmin_licence_port,
+	       "$virtualmin_alllicences_prog?id=$id&serial=$key",
+	       \$out, \$error, undef, $virtualmin_licence_ssl);
+if ($out =~ /^BAD\s+(.*)/) {
+	return $1;
+	}
+elsif ($out =~ /^OK\s+(\d+)/) {
+	local @lics = &list_virtualmin_licences();
+	local %got = map { $_->{'serial'}, $_ } @lics;
+	local @lines = split(/\r?\n/, $out);
+	shift(@lines);
+	local @rv;
+	foreach my $l (@lines) {
+		local ($vserial, $vkey, $vend, $vdoms, $vservers) =
+			split(/\s+/, $l);
+		local $got = $got{$vserial};
+		if ($got) {
+			# Update existing details, to be one the safe side
+			$got->{'domains'} = $vdoms;
+			$got->{'servers'} = $vservers;
+			}
+		else {
+			# Add to list
+			local $lic = { 'serial' => $vserial,
+				       'key' => $vkey,
+				       'domains' => $vdoms,
+				       'servers' => $vservers };
+			push(@rv, $lic);
+			push(@lics, $lic);
+			}
+		}
+	&save_virtualmin_licences(\@lics);
+	return \@rv;
+	}
+else {
+	return "No Virtualmin licenses found";
+	}
 }
 
 # remove_server_ssh_keys(&server)
