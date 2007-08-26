@@ -5,12 +5,11 @@
 #	XXX xen disk sizes
 #	XXX edit memory allocations
 #	XXX cpu limits
-# XXX install script
 # XXX cut-down version for just EC2?
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX production deployment
 #	XXX repository
-#	XXX solaris install script
+#	XXX redhat install script
 
 do '../web-lib.pl';
 &init_config();
