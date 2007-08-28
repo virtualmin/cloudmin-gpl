@@ -113,6 +113,9 @@ if (@servers) {
 			     undef,
 			     [ "shutdown", $text{'index_shutdown'} ],
 			     [ "startup", $text{'index_startup'} ],
+#			     undef,
+#			     [ "upload", $text{'index_upload'} ],
+#			     [ "run", $text{'index_run'} ],
 			   ]);
 	}
 elsif (@allservers) {

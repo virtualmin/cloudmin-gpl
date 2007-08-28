@@ -57,9 +57,6 @@ if (!$in{'clear'}) {
 				}
 			}
 		if ($cmd) {
-			delete($ENV{'SCRIPT_NAME'});	# So that called Webmin
-							# programs get the right
-							# module, not this one!
 			($out, $ex, $err) = &execute_command_on_server(
 				$server, "cd ".quotemeta($pwd)." ; $cmd");
 			$out = "ERROR: $err\n" if ($err);

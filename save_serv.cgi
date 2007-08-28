@@ -296,6 +296,11 @@ elsif ($in{'image'}) {
 	&redirect("image_form.cgi?id=$in{'id'}");
 	}
 
+elsif ($in{'transfer'}) {
+	# Go to file transfer form
+	&redirect("transfer_form.cgi?id=$in{'id'}");
+	}
+
 else {
 	# Validate inputs, and save details
 	&error_setup($text{'save_err'});

@@ -22,12 +22,17 @@ return 1;	# This system cannot start itself up!
 
 sub type_this_no_ssh
 {
-return 1;		# We never need to SSH into vservers
+return 1;	# We never need to SSH into vservers
 }
 
 sub type_this_no_image
 {
 return 1;	# Real systems cannot be imaged
+}
+
+sub type_this_can_transfer
+{
+return 1;	# Can always transfer to self
 }
 
 # type_this_execute_command(&server, comand, [timeout])

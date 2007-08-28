@@ -1,5 +1,9 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
+# XXX web UI to upload / download files
+#	XXX mass upload
+#	XXX command line upload / download
+#	XXX finish off download form
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
@@ -2740,6 +2744,10 @@ else {
 	if (!$noshut) {
 		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
 		}
+	}
+local $tfunc = "type_".$t."_can_transfer";
+if (defined(&$tfunc) && &$tfunc($server)) {
+	push(@rv, [ "transfer", $text{'edit_transfer'} ]);
 	}
 if ($t ne 'real' && $t ne 'this') {
 	push(@rv, [ "delete", $text{'edit_delete'} ]);

@@ -1,0 +1,56 @@
+#!/usr/local/bin/perl
+# Fetch a file from a VM2-managed system and save to the master or download
+
+require './server-manager-lib.pl';
+&ReadParse();
+($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
+&error_setup($text{'download_err'});
+
+# Validate inputs and get dest file
+if ($in{'dest'} == 0) {
+	# Downloading in browser, so save to local file
+	$dest = &transname();
+	}
+else {
+	# Saving to master
+	$in{'file'} =~ /^\// || &error($text{'download_efile'});
+	$dest = $in{'file'};
+	}
+$in{'source'} =~ //^\// || &error($text{'download_esource'});
+
+if ($in{'dest'} == 1) {
+	&ui_print_unbuffered_header(&server_in($server),
+				    $text{'download_title'}, "");
+	print &text('download_doing', "<tt>$in{'source'}</tt>",
+				      "<tt>$dest</tt>"),"<br>\n";
+	}
+
+$err = &get_file_from_server($server, $in{'source'}, $dest);
+
+if ($in{'dest'} == 0) {
+	# Send to browser
+	$err && &error(&html_escape($err));
+	$type = $in{'force'} ? "application/octet-stream"
+			     : &guess_mime_type($in{'source'}, "text/plain");
+	print "Content-type: $type\n\n";
+	open(FILE, $dest);
+	while(read(FILE, $buf, 1024) > 0) {
+		print $buf;
+		}
+	close(FILE);
+	unlink($dest);
+	}
+else {
+	# Show results
+	if ($err) {
+		print &text('download_failed', $err),"<p>\n";
+		}
+	else {
+		print $text{'download_done'},"<p>\n";
+		}
+
+	&ui_print_footer("transfer_form.cgi?id=$in{'id'}&mode=download",
+			 $text{'transfer_return'},
+			 "", $text{'index_return'});
+	}
+

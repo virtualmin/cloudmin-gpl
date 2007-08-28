@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
 @servers || &error($text{'mass_enone'});
+$ids = join("&", map { "d=".$_ } keys %d);
 
 if ($in{'refresh'}) {
 	# Fetch the status of selected servers, in 10 processes
@@ -267,6 +268,15 @@ elsif ($in{'startup'}) {
 	&ui_print_footer("", $text{'index_return'});
 	}
 
+elsif ($in{'upload'}) {
+	# Redirect to mass upload form
+	&redirect("upload_form.cgi?$ids");
+	}
+
+elsif ($in{'run'}) {
+	# Redirect to mass shell form
+	&redirect("massshell.cgi?$ids");
+	}
 
 else {
 	&error($text{'mass_ebutton'});
