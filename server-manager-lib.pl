@@ -2,8 +2,7 @@
 # XXX move servers
 # XXX web UI to upload / download files
 #	XXX mass upload
-#	XXX command line upload / download
-#	XXX finish off download form
+#	XXX docs for command-line API
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
@@ -2706,6 +2705,8 @@ local $sfunc = "type_".$t."_no_shutdown";
 local $noshut = defined(&$sfunc) && &$sfunc($server);
 local $rfunc = "type_".$t."_no_reboot";
 local $noreboot = defined(&$rfunc) && &$rfunc($server);
+local $tfunc = "type_".$t."_can_transfer";
+local $cantransfer = defined(&$tfunc) && &$tfunc($server);
 
 if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	# Actions are limited when system is down
@@ -2713,6 +2714,9 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
 		   	 $status eq 'nohost';
 	push(@rv, [ "refresh", $text{'edit_refresh'} ]);
+	if ($cantransfer) {
+		push(@rv, [ "transfer", $text{'edit_transfer'} ]);
+		}
 	push(@rv, [ "startup", $text{'edit_startup'} ]) if (!$nostart);
 	if ($status eq 'nossh' && !$noshut) {
 		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
@@ -2724,6 +2728,9 @@ else {
 	push(@rv, [ "refresh", $text{'edit_refresh'} ],
 		  undef,
 		  [ "shell", $text{'edit_shell'} ]);
+	if ($cantransfer) {
+		push(@rv, [ "transfer", $text{'edit_transfer'} ]);
+		}
 	if (($status eq 'novirt' || $status eq 'virt') && $server->{'id'}) {
 		push(@rv, [ "webmin", $text{'edit_webmin2'}, 1, $wurl ]);
 		}
@@ -2744,10 +2751,6 @@ else {
 	if (!$noshut) {
 		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
 		}
-	}
-local $tfunc = "type_".$t."_can_transfer";
-if (defined(&$tfunc) && &$tfunc($server)) {
-	push(@rv, [ "transfer", $text{'edit_transfer'} ]);
 	}
 if ($t ne 'real' && $t ne 'this') {
 	push(@rv, [ "delete", $text{'edit_delete'} ]);

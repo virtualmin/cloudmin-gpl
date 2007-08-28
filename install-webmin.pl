@@ -38,7 +38,7 @@ foreach $s (@servers) {
 @cannot && &usage("The following systems cannot have Webmin installed : ".
 		  join(" ", map { $_->{'host'} } @cannot));
 
-# Do the parallel refresh
+# Do the parallel install
 print "Installing Webmin on ",scalar(@servers)," systems ..\n";
 &parallel_server_function(\@servers,
 	sub { ($src, $type, $err) = &get_install_webmin_source($_[0]);
