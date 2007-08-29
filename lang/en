@@ -1212,6 +1212,7 @@ download_failed=.. download failed : $1
 download_done=.. download completed successfully.
 
 mupload_title=Mass Upload File
+mupload_err=Failed to upload file to multiple systems
 mupload_header=Options for upload to multiple systems
 mupload_servers=Uploading to systems
 mupload_desc=This form allows you to transfer a file to the $1 selected managed systems, either from your PC or from the VM2 master system.
