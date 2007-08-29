@@ -1,7 +1,7 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
 # XXX web UI to upload / download files
-#	XXX mass upload
+#	XXX mass shell
 #	XXX docs for command-line API
 # XXX refresh should be in dependency order
 # XXX resource management

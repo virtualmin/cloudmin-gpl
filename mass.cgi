@@ -270,7 +270,7 @@ elsif ($in{'startup'}) {
 
 elsif ($in{'upload'}) {
 	# Redirect to mass upload form
-	&redirect("upload_form.cgi?$ids");
+	&redirect("massupload_form.cgi?$ids");
 	}
 
 elsif ($in{'run'}) {

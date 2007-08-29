@@ -1201,7 +1201,7 @@ upload_edest=Missing or invalid absolute destination path
 upload_title=Upload File
 upload_doing=Uploading file $1 to $2 ..
 upload_failed=.. upload failed : $1
-upload_done=.. uploaded completed successfully.
+upload_done=.. upload completed successfully.
 
 download_err=Failed to download file
 download_efile=Missing or invalid absolute destination file path
@@ -1210,3 +1210,11 @@ download_title=Download File
 download_doing=Downloading file $1 to $2 ..
 download_failed=.. download failed : $1
 download_done=.. download completed successfully.
+
+mupload_title=Mass Upload File
+mupload_header=Options for upload to multiple systems
+mupload_servers=Uploading to systems
+mupload_desc=This form allows you to transfer a file to the $1 selected managed systems, either from your PC or from the VM2 master system.
+mupload_doing=Uploading $1 to $2 on $3 systems ..
+mupload_failed=.. $1 : upload failed : $2
+mupload_done=.. $1 : upload completed successfully.
