@@ -10,7 +10,7 @@ index_delete=Delete
 index_shutdown=Shutdown
 index_startup=Startup
 index_upload=Upload File
-index_run=Run Command
+index_run=Run Commands
 index_header=Global Options
 index_return=list of managed systems
 index_refresh=Refresh Status
@@ -1219,3 +1219,6 @@ mupload_desc=This form allows you to transfer a file to the $1 selected managed 
 mupload_doing=Uploading $1 to $2 on $3 systems ..
 mupload_failed=.. $1 : upload failed : $2
 mupload_done=.. $1 : upload completed successfully.
+
+mshell_title=Mass Run Commands
+mshell_on=Running on : $1

@@ -10,9 +10,12 @@ else {
 	}
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
-&ui_print_header(undef, $text{'massshell_title'}, "", "massshell",
+&ui_print_header(undef, $text{'mshell_title'}, "", "mshell",
 		 0, 0, undef, undef, undef,
 	"onLoad='window.scroll(0, 10000); document.forms[0].cmd.focus()'");
+
+print &text('mshell_on', join(" , ", map { "<tt>$_->{'host'}</tt>" }
+					 @servers)),"<br>\n";
 
 $prevfile = "$module_config_directory/previous.mass";
 if ($in{'clearcmds'}) {
@@ -27,41 +30,49 @@ else {
 	close(PREVFILE);
 	}
 $cmd = $in{'doprev'} ? $in{'pcmd'} : $in{'cmd'};
-$pwd = $in{'pwd'} || "/";
 
 if (!$in{'clear'}) {
 	$history = &un_urlize($in{'history'});
 	if ($cmd) {
 		# Execute the entered command, on each server
-		# XXX
 		$fullcmd = $cmd;
 		$history .= "<b>&gt; ".&html_escape($cmd, 1)."</b>\n";
-		if ($cmd =~ /^cd\s+"([^"]+)"\s*(;?\s*(.*))$/ ||
-		    $cmd =~ /^cd\s+'([^']+)'\s*(;?\s*(.*))$/ ||
-		    $cmd =~ /^cd\s+([^; ]*)\s*(;?\s*(.*))$/) {
-			# Directory change, possibly followed by a command ..
-			# work out where we end up after the chdir
-			$cmd = undef;
-			local $newdir = $1;
-			local $aftercmd = $3;
-			($out, $ex, $err) = &execute_command_on_server(
-				$server, "cd ".quotemeta($pwd)." ; cd ".quotemeta($newdir)." && pwd");
-			if ($ex) {
-				# Remote chdir failed!
-				$history .= &html_escape("$newdir: $out\n");
+		foreach $server (@servers) {
+			$cmd = $in{'doprev'} ? $in{'pcmd'} : $in{'cmd'};
+			$pwd = $in{'pwd_'.$server->{'id'}} || "/";
+			$pwdmap{$server->{'id'}} = $pwd;
+			if ($cmd =~ /^cd\s+"([^"]+)"\s*(;?\s*(.*))$/ ||
+			    $cmd =~ /^cd\s+'([^']+)'\s*(;?\s*(.*))$/ ||
+			    $cmd =~ /^cd\s+([^; ]*)\s*(;?\s*(.*))$/) {
+				# Directory change, possibly followed by a
+				# command .. work out where we end up after
+				# the chdir
+				$cmd = undef;
+				local $newdir = $1;
+				local $aftercmd = $3;
+				($out, $ex, $err) = &execute_command_on_server(
+					$server, "cd ".quotemeta($pwd)." ; cd ".quotemeta($newdir)." && pwd");
+				if ($ex) {
+					# Remote chdir failed!
+					$history .= "<b>$server->{'host'}</b> : ";
+					$history .= &html_escape(
+						"$newdir: $out\n");
+					}
+				else {
+					# Save the new directory
+					($pwd = $out) =~ s/\r|\n//g;
+					$pwdmap{$server->{'id'}} = $pwd;
+					$cmd = $aftercmd;
+					}
 				}
-			else {
-				# Save the new directory
-				($pwd = $out) =~ s/\r|\n//g;
-				$cmd = $aftercmd;
+			if ($cmd) {
+				($out, $ex, $err) = &execute_command_on_server(
+					$server, "cd ".quotemeta($pwd)." ; $cmd");
+				$history .= "<b>$server->{'host'}</b> : ";
+				$out = "ERROR: $err\n" if ($err);
+				$out = &html_escape($out, 1);
+				$history .= $out;
 				}
-			}
-		if ($cmd) {
-			($out, $ex, $err) = &execute_command_on_server(
-				$server, "cd ".quotemeta($pwd)." ; $cmd");
-			$out = "ERROR: $err\n" if ($err);
-			$out = &html_escape($out, 1);
-			$history .= $out;
 			}
 		@previous = &unique(@previous, $fullcmd);
 		&lock_file($prevfile);
@@ -81,8 +92,10 @@ if ($history) {
 	}
 
 print &text('shell_desc', "<tt>$server->{'host'}</tt>"),"<br>\n";
-print &ui_form_start("shell.cgi", "form-data");
-print &ui_hidden("id", $in{'id'});
+print &ui_form_start("massshell.cgi", "form-data");
+foreach $d (keys %d) {
+	print &ui_hidden("d", $d);
+	}
 
 print "<table width=100%><tr>\n";
 
@@ -94,7 +107,9 @@ print "<td align=right width=10%>",&ui_submit($text{'shell_clear'}, "clear"),
       "</td>\n";
 print "</tr>\n";
 
-print &ui_hidden("pwd", $pwd);
+foreach $id (keys %pwdmap) {
+	print &ui_hidden("pwd_".$id, $pwdmap{$id});
+	}
 print &ui_hidden("history", &urlize($history));
 foreach $p (@previous) {
 	print &ui_hidden("previous", $p);
