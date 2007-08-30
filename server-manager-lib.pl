@@ -1,7 +1,5 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
-# XXX web UI to upload / download files
-#	XXX docs for command-line API
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
@@ -10,7 +8,6 @@
 # XXX cut-down version for just EC2?
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX production deployment
-#	XXX repository
 #	XXX redhat install script
 
 do '../web-lib.pl';
@@ -113,6 +110,9 @@ $virtualmin_progress_file = "$module_config_directory/progress-licences";
 
 @virtualmin_operating_systems = ( "debian", "ubuntu", "redhat", "fedora",
 				  "centos" );
+
+$virtualmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-virtualmin";
+$virtualmin_webmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-webmin";
 
 &set_all_html_print();
 
@@ -3114,6 +3114,7 @@ sub remove_server_ssh_keys
 local ($server) = @_;
 local $ip = &to_ipaddress($server->{'host'});
 local @uinfo = getpwnam("root");
+&make_dir("$uinfo[7]/.ssh", 0700);
 foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 	       "$uinfo[7]/.ssh/known_hosts2") {
 	local $lref = &read_file_lines($f);

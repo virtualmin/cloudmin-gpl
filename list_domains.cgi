@@ -5,13 +5,20 @@ require './server-manager-lib.pl';
 &ReadParse();
 &ui_print_header(undef, $text{'domains_title'}, "", "domains");
 @vservers = grep { $_->{'status'} eq 'virt' } &list_managed_servers();
+foreach $s (@vservers) {
+	$totaldomains += $s->{'virtualmin_domains'};
+	}
 
-# Search form
-print &ui_form_start("list_domains.cgi");
-print "<b>$text{'domains_find'}</b>\n";
-print &ui_textbox("search", $in{'search'}, 30);
-print &ui_submit($text{'domains_ok'});
-print &ui_form_end();
+$formno = 0;
+if ($totaldomains) {
+	# Search form
+	print &ui_form_start("list_domains.cgi");
+	print "<b>$text{'domains_find'}</b>\n";
+	print &ui_textbox("search", $in{'search'}, 30);
+	print &ui_submit($text{'domains_ok'});
+	print &ui_form_end();
+	$formno++;
+	}
 
 if ($in{'search'}) {
 	# Search across all servers
@@ -27,7 +34,8 @@ if ($in{'search'}) {
 	# Show results, if any
 	if (@doms) {
 		print &text('domains_matches', scalar(@doms)),"<p>\n";
-		@links = ( &select_all_link("d", 1), &select_invert_link("d", 1) );
+		@links = ( &select_all_link("d", $formno),
+			   &select_invert_link("d", $formno) );
 		@tds = ( "width=5" );
 		print &ui_form_start("mass_domains.cgi", "post");
 		print &ui_links_row(\@links);

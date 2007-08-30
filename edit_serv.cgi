@@ -52,7 +52,7 @@ print &ui_table_row($text{'edit_type2'},
 foreach $g (@groups) {
 	push(@grid, &ui_checkbox("group", $g, $g, $ingroups{$g}));
 	}
-push(@grid, "&nbsp;&nbsp;&nbsp;".
+push(@grid, (@grid ? "&nbsp;&nbsp;&nbsp;" : "").
 	    &text('edit_newgroup', &ui_textbox("newgroup", undef, 10)));
 $gtable = &ui_grid_table(\@grid, 4);
 #$gtable .= $text{'edit_newgroup'}." ".&ui_textbox("newgroup", undef, 10);

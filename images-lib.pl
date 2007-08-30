@@ -268,6 +268,30 @@ foreach my $fix ("/etc/virtualmin-license",
 return undef;
 }
 
+# fix_virtualmin_after_boot(&server)
+# Called after a new virtual system has been booted, to perform various
+# tasks :
+# - Import the Virtualmin GPG keys for packages. This is needed for older images
+#   that don't have the latest keys. It can only be called on a running system.
+# - Run freshclam for the first time, to load the virus DB.
+sub fix_virtualmin_after_boot
+{
+local ($server) = @_;
+if (&has_command_on_server($server, "apt-key")) {
+	foreach my $url ($virtualmin_apt_package_key,
+			 $virtualmin_webmin_apt_package_key) {
+		local ($out, $ex, $err) = &execute_command_on_server($server,
+			"wget -q $url -O - | apt-key add -");
+		return $err if ($err);
+		return $out if ($ex);
+		}
+	}
+if (&has_command_on_server($server, "freshclam")) {
+	&execute_command_on_server($server, "freshclam", 120);
+	}
+return undef;
+}
+
 # fix_hostname_config_files(&server, ip, shorthost, fullhost, &vhost,
 #			    &dir-on-vhost)
 # Fixes up all configuration files that contain the IP address or hostname
