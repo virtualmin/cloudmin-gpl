@@ -9,6 +9,8 @@
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX production deployment
 #	XXX redhat install script
+# XXX Xen instance clash at creation!
+# XXX graphing of stats with timeplot
 
 do '../web-lib.pl';
 &init_config();
@@ -953,9 +955,11 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				local $serial = &remote_eval($server,
 					"virtual_server",
 					"\&read_env_file(\$virtualmin_license_file, \\\%serial); return \\\%serial");
-				$info->{'serial'} =
-				  { 'serial' => $serial->{'SerialNumber'},
-				    'key' => $serial->{'LicenseKey'} };
+				if ($serial->{'SerialNumber'} ne 'GPL') {
+				    $info->{'serial'} =
+					{ 'serial' => $serial->{'SerialNumber'},
+					  'key' => $serial->{'LicenseKey'} };
+				    }
 				}
 
 			# Perform a config check, if we haven't done an OK
