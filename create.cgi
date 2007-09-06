@@ -68,6 +68,12 @@ if (defined(&$pfunc)) {
 	&$pfunc($server, \%in);
 	}
 
+# Check for hostname clash again, as the parse may have changed it
+if ($server->{'host'}) {
+	($clash) = grep { $_->{'host'} eq $server->{'host'} } @servers;
+	$clash && &error($text{'add_eclash'});
+	}
+
 # Validate licence
 ($serial, $key) = &virtualmin_licence_parse("licence", \%in);
 if (!$serial && $key) {

@@ -7,9 +7,6 @@
 #	XXX cpu limits
 # XXX cut-down version for just EC2?
 # XXX backup and restore managed systems? Use Backup Configuration Files module
-# XXX production deployment
-#	XXX redhat install script
-# XXX Xen instance clash at creation!
 # XXX graphing of stats with timeplot
 
 do '../web-lib.pl';

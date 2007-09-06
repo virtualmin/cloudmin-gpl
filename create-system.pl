@@ -173,6 +173,12 @@ if (defined(&$pfunc)) {
 	&usage($err) if ($err);
 	}
 
+# Check for hostname clash again, as the parse may have changed it
+if ($server->{'host'}) {
+	($clash) = grep { $_->{'host'} eq $server->{'host'} } @servers;
+	$clash && &usage("A system with the same hostname already exists");
+	}
+
 # Make sure a serial is given if needed
 if (!$serial && !$key) {
 	if ($image) {
