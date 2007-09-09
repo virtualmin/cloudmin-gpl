@@ -503,6 +503,11 @@ foreach my $fix ("/etc/virtualmin-license",
 	local $err = &get_file_from_server($server, $fix, $temppath);
 	next if ($err);
 	local $data = &read_file_contents($temppath);
+	if ($fix eq "/etc/virtualmin-license" &&
+	    $data =~ /SerialNumber=GPL/) {
+		# No need to munge GPL licence file
+		next;
+		}
 	push(@rv, [ $fix, $data ]);
 	if ($fix eq "/etc/virtualmin-license") {
 		# Can create entirely
