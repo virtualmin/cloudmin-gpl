@@ -44,13 +44,13 @@ $id || &usage("Missing --id parameter");
 
 # Get the server to image
 ($server) = grep { $_->{'host'} eq $host } &list_managed_servers();
-$server || &usage("No server with hostname $host was found");
+$server || &usage("No system with hostname $host was found");
 $nfunc = "type_".$server->{'manager'}."_no_image";
 if (defined(&$nfunc) && &$nfunc($server)) {
-	&usage("The selected server type cannot be converted to an image");
+	&usage("The selected system type cannot be converted to an image");
 	}
 if ($server->{'status'} eq 'nohost') {
-	&usage("A server whose host system is down cannot be imaged");
+	&usage("A system whose host system is down cannot be imaged");
 	}
 if (!$overwrite) {
 	($clash) = grep { $_->{'id'} eq $id } &list_server_images();
@@ -69,7 +69,8 @@ $image = { 'id' => $id,
 $info = &get_server_collected($server);
 if ($info) {
 	$image->{'virtualmin'} =
-		$info->{'minfo'}->{'version'} =~ /gpl/ ? 'gpl' : 'pro';
+		$info->{'minfo'}->{'version'} =~ /gpl/ ||
+		$info->{'minfo'}->{'virtualmin'} eq 'gpl' ? 'gpl' : 'pro';
 	}
 
 # Select temp dir for image on parent host
