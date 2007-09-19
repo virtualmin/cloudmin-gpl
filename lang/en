@@ -1172,7 +1172,7 @@ lsched_err=Failed to save automatic license addition
 lsched_eemail=Missing or invalid email address
 lsched_title=Automatic License Addition
 lsched_checking=Checking for new Virtualmin licenses for your account ..
-lsched_err=.. failed : $1
+lsched_failed=.. failed : $1
 lsched_done=.. found $1 new licenses, listed below :
 lsched_none=.. no new licenses were found.
 

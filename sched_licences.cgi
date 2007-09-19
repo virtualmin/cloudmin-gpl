@@ -36,7 +36,7 @@ if ($in{'now'}) {
 			}
 		}
 	else {
-		print &text('lsched_err', $got),"<p>\n";
+		print &text('lsched_failed', $got),"<p>\n";
 		}
 
 	&ui_print_footer("list_licences.cgi", $text{'licences_return'});
