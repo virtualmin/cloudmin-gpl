@@ -162,6 +162,14 @@ if ($server->{'id'} eq '0') {
 			'virtualmin_serial' => $server->{'virtualmin_serial'},
 			'virtualmin_key' => $server->{'virtualmin_key'},
 		      );
+	# Save all VM2 type-specific details
+	foreach my $t (@server_management_types) {
+		foreach my $k (keys %$server) {
+			if ($k =~ /^\Q$t\E_/) {
+				$this->{$k} = $server->{$k};
+				}
+			}
+		}
 	&write_file($this_server_status, \%this);
 	}
 else {
