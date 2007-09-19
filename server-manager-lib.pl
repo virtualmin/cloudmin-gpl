@@ -8,6 +8,7 @@
 # XXX cut-down version for just EC2?
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX graphing of stats with timeplot
+# XXX can we work out CIDRs automatically?
 
 do '../web-lib.pl';
 &init_config();
@@ -166,7 +167,7 @@ if ($server->{'id'} eq '0') {
 	foreach my $t (@server_management_types) {
 		foreach my $k (keys %$server) {
 			if ($k =~ /^\Q$t\E_/) {
-				$this->{$k} = $server->{$k};
+				$this{$k} = $server->{$k};
 				}
 			}
 		}
