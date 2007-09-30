@@ -9,6 +9,7 @@
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX graphing of stats with timeplot
 # XXX can we work out CIDRs automatically?
+# XXX create new Xen images with updates
 
 do '../web-lib.pl';
 &init_config();
@@ -503,9 +504,9 @@ if ($last_remote_error) {
 	return ($ec, $last_remote_error);
 	}
 if ($@) {
-	if ($@ =~ /timeout/) {
-		# A fast mode failure will look like a timeout .. try in slow
-		# mode, if we don't know yet
+	if ($@ =~ /timeout|Connection refused/i) {
+		# A fast mode failure will look like a timeout or connection
+		# refused .. try in slow mode, if we don't know yet
 		if ($fast_try) {
 			$server->{'fast'} = 0;
 			return &check_server_webmin_login($server);
