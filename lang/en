@@ -24,15 +24,15 @@ index_searchok=Search
 index_searchgok=Show
 
 ec2_typedesc=Amazon EC2
-ec2_createlink=Create EC2 instance.
-ec2_addlink=Add EC2 instance.
+ec2_createlink=Create EC2 instance
+ec2_addlink=Add EC2 instance
 
 real_desc=Physical system
-real_add=Add physical system.
+real_add=Add physical system
 
 zones_typedesc=Solaris Zone
-zones_createlink=Create Solaris Zone.
-zones_addlink=Add Solaris Zone.
+zones_createlink=Create Solaris Zone
+zones_addlink=Add Solaris Zone
 
 add_title=Add Existing System
 add_header=Details of existing system to add
