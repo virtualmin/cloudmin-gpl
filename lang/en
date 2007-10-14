@@ -912,8 +912,8 @@ images_getlocal=Image <i>$1</i> only exists locally and cannot be downloaded.
 images_return=system images list
 
 xen_typedesc=Xen
-xen_createlink=Create Xen instance.
-xen_addlink=Add Xen instance.
+xen_createlink=Create Xen instance
+xen_addlink=Add Xen instance
 
 xen_create=Register Xen Host
 xen_edit=Edit Xen Host
