@@ -99,7 +99,7 @@ sub _init {
 	my $ts = time2isoz();
 
 	$self->{signature_version} = 1;
-	$self->{version} = '2007-01-19';
+	$self->{version} = '2007-08-29';
 	$self->{base_url} = 'http://ec2.amazonaws.com';
 	$self->{AWSAccessKeyId} = $args{AWSAccessKeyId};
 	$self->{SecretAccessKey} = $args{SecretAccessKey};
@@ -412,6 +412,7 @@ sub run_instances {
 								SecurityGroup	=> { type => SCALAR | ARRAYREF, optional => 1 },
 								UserData		=> { type => SCALAR, optional => 1 },
 								AddressingType	=> { type => SCALAR, optional => 1 },
+								InstanceType	=> { type => SCALAR, optional => 1 },
 	});
 	
 	# If we have a array ref of instances lets split them out into their SecurityGroup.n format

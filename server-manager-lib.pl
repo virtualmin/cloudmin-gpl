@@ -11,7 +11,7 @@
 # XXX flag images that are being downloaded (with PID to clear?)
 #
 # XXX cut-down version for just EC2?
-#	XXX should this grant access to Virtualmin AMI? No ..
+#	XXX should this grant access to Virtualmin AMI? Ask Joe ..
 # XXX version just for local Xen
 #	XXX add this system automatically
 #	XXX install kernel and dependencies
