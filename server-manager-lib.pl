@@ -16,6 +16,7 @@
 #	XXX add this system automatically
 #	XXX install kernel and dependencies
 #	XXX special licence
+#	XXX installer should include and setup BIND
 
 do '../web-lib.pl';
 &init_config();
@@ -2670,9 +2671,13 @@ push(@gtitles, $text{'keys_title'});
 push(@gicons, "images/keys.gif");
 
 # Server images
-push(@glinks, "list_images.cgi");
-push(@gtitles, $text{'images_title'});
-push(@gicons, "images/images.gif");
+if ($server_management_types{'xen'} ||
+    $server_management_types{'vserver'} ||
+    $server_management_types{'zones'}) {
+	push(@glinks, "list_images.cgi");
+	push(@gtitles, $text{'images_title'});
+	push(@gicons, "images/images.gif");
+	}
 
 # Type-defined icons
 foreach my $t (@server_management_types) {

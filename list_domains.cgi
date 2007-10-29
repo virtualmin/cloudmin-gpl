@@ -92,7 +92,8 @@ if ($in{'search'}) {
 # Creation form (hidden by default). For top-level servers only, limited options
 @vservers = grep { !$_->{'novirt'} &&
 		   $_->{'virtualmin_checked'} } @vservers;
-print &ui_hidden_start($text{'domains_hidden'}, "create", $in{'create'},
+print &ui_hidden_start($text{'domains_hidden'}, "create",
+		       $in{'create'} || !$totaldomains,
 		       "list_domains.cgi");
 print $text{'domains_desc2'},"<p>\n";
 print &ui_form_start("create_domain.cgi", "post");

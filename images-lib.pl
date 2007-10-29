@@ -71,11 +71,13 @@ local %serial;
 local @rv;
 foreach my $l (split(/\r?\n/, $out)) {
 	local ($id, $manager, $desc, $version, $size) = split(/\t+/, $l);
-	push(@rv, { 'id' => $id,
-		    'manager' => $manager,
-		    'desc' => $desc,
-		    'version' => $version,
-		    'size' => $size });
+	if ($server_management_types{$manager}) {
+		push(@rv, { 'id' => $id,
+			    'manager' => $manager,
+			    'desc' => $desc,
+			    'version' => $version,
+			    'size' => $size });
+		}
 	}
 
 # Save to cache and return

@@ -1034,7 +1034,7 @@ pass_esame=.. failed : $1
 pass_webmining=Changing Webmin password ..
 pass_ewebmin=.. failed : $1
 
-licences_title=Virtualmin Licenses
+licences_title=Virtualmin Pro Licenses
 licences_serial=Serial number
 licences_key=License key
 licences_status=Status
