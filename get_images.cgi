@@ -42,6 +42,13 @@ foreach $id (@d) {
 			print &text('images_egetfiles', $err),"<p>\n";
 			}
 		else {
+			# Refresh left frame if this was the first Xen image
+			@old = grep { $_->{'manager'} eq $got->{'manager'} }
+				    @images;
+			if (!@old &&defined(&theme_post_save_server)) {
+				&theme_post_save_server();
+				}
+
 			print &text('images_got',
 				    &nice_size($got->{'size'})),"<p>\n";
 			}

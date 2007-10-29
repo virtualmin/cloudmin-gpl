@@ -228,6 +228,7 @@ create_update=Update Virtualmin packages?
 create_vlicence=License for Virtualmin Pro from image
 create_vheader=Virtualmin options
 create_eimagevirt=You have selected a system image with Virtualmin Pro, but have not entered license details
+create_xendnswarn=Warning : No DNS zone for new Xen instances has been configured on the <a href='$1'>module configuration</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -715,12 +716,12 @@ pkg_postfix=Postfix mail server
 zone_createlink=Create Zone.
 zone_addlink=Add existing Zone.
 
-licence_efile=No Virtualmin System Manager licence file found!
+licence_efile=No Virtualmin Machine Manager licence file found!
 licence_eexpired=The licence expired on $1
-licence_err=A problem was detected with your Virtualmin System Manager licence :
+licence_err=A problem was detected with your Virtualmin Machine Manager licence :
 licence_recheck=Re-check License Status
 licence_title=Re-Check License
-licence_doing=Now re-checking your Virtualmin Server Manager licence ..
+licence_doing=Now re-checking your Virtualmin Machine Manager licence ..
 licence_ok=.. licence is OK!
 licence_goterr=.. a problem was detected : $1
 

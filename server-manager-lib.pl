@@ -13,7 +13,6 @@
 # XXX cut-down version for just EC2?
 #	XXX should this grant access to Virtualmin AMI? Ask Joe ..
 # XXX version just for local Xen
-#	XXX add this system automatically
 #	XXX install kernel and dependencies
 #	XXX special licence
 #	XXX installer should include and setup BIND (and create a zone)
@@ -145,7 +144,7 @@ if ($config{'show_this'}) {
 	# be a host
 	if ($module_info{'onehost'} eq 'xen' &&
 	    $server_management_types{'xen'} &&
-	    &check_xen_host_software($this)) {
+	    ($config{'xen_checked'} || !&check_xen_host_software($this))) {
 		$this->{'xen_host'} = 1;
 		local $eth0 = &first_ethernet_iface();
 		if ($config{'xen_start'}) {
@@ -160,7 +159,7 @@ if ($config{'show_this'}) {
 			local $netnum = &net::ip_to_integer($eth0->{'netmask'});
 			local $netstart = ($ipnum & $netnum) + 1;
 			local $netsize = ~$netnum;
-			local $netstart = ($ipnum & $netnum) + $netnum - 2;
+			local $netend = ($ipnum & $netnum) + $netsize - 1;
 			$this->{'xen_start'} = &net::integer_to_ip($netstart);
 			$this->{'xen_end'} = &net::integer_to_ip($netend);
 			}
@@ -175,6 +174,11 @@ if ($config{'show_this'}) {
 			}
 		$this->{'xen_dir'} = $config{'xen_dir'};
 		$this->{'xen_zone'} = $config{'xen_zone'};
+
+		# Save flag indicating that we have already checked out Xen
+		# on this machine, as doing so can be slow
+		$config{'xen_checked'} = 1;
+		&save_module_config();
 		}
 	}
 return @rv;
