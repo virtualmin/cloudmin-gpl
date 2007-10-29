@@ -16,7 +16,7 @@
 #	XXX add this system automatically
 #	XXX install kernel and dependencies
 #	XXX special licence
-#	XXX installer should include and setup BIND
+#	XXX installer should include and setup BIND (and create a zone)
 
 do '../web-lib.pl';
 &init_config();
@@ -133,14 +133,65 @@ local @rv = grep { $_->{'module'} eq $module_name } &servers::list_servers();
 @rv = grep { $server_management_types{$_->{'manager'}} } @rv;
 @rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
 if ($config{'show_this'}) {
+	# Magically add this system to the list
 	local $this = &servers::this_server();
 	$this->{'manager'} = 'this';
 	$this->{'host'} = &get_system_hostname();
 	$this->{'desc'} = $text{'this_this'};
 	&read_file($this_server_status, $this);
 	splice(@rv, 0, 0, $this);
+
+	# If this system can host Xen and we are in Xen-only mode, allow it to
+	# be a host
+	if ($module_info{'onehost'} eq 'xen' &&
+	    $server_management_types{'xen'} &&
+	    &check_xen_host_software($this)) {
+		$this->{'xen_host'} = 1;
+		local $eth0 = &first_ethernet_iface();
+		if ($config{'xen_start'}) {
+			# Allocation range is set from module config
+			$this->{'xen_start'} = $config{'xen_start'};
+			$this->{'xen_end'} = $config{'xen_end'};
+			}
+		else {
+			# Range comes from primary interface. Take the network
+			# address 
+			local $ipnum = &net::ip_to_integer($eth0->{'address'});
+			local $netnum = &net::ip_to_integer($eth0->{'netmask'});
+			local $netstart = ($ipnum & $netnum) + 1;
+			local $netsize = ~$netnum;
+			local $netstart = ($ipnum & $netnum) + $netnum - 2;
+			$this->{'xen_start'} = &net::integer_to_ip($netstart);
+			$this->{'xen_end'} = &net::integer_to_ip($netend);
+			}
+		if ($config{'xen_cidr'}) {
+			# Set on Module Config page
+			$this->{'xen_cidr'} = $config{'xen_cidr'};
+			}
+		else {
+			# CIDR is same as primary interface
+			$this->{'xen_cidr'} = &net::mask_to_prefix(
+						$eth0->{'netmask'});
+			}
+		$this->{'xen_dir'} = $config{'xen_dir'};
+		$this->{'xen_zone'} = $config{'xen_zone'};
+		}
 	}
 return @rv;
+}
+
+# first_ethernet_iface()
+# Returns the name of the first active ethernet interface
+sub first_ethernet_iface
+{
+foreach my $a (&net::active_interfaces()) {
+	if ($a->{'up'} && $a->{'virtual'} eq '' &&
+	    (&net::iface_type($a->{'name'}) =~ /ethernet/i ||
+	     $a->{'name'} =~ /^bond/)) {
+		return $a;
+		}
+	}
+return undef;
 }
 
 # get_managed_server_by(key, value)
