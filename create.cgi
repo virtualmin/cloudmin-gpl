@@ -220,6 +220,10 @@ if ($webmindir) {
 	else {
 		print $text{'create_passdone'},"<p>\n";
 		}
+
+	# Start Webmin in case it hasn't been
+	&execute_command_on_server($server,
+		"/etc/webmin/start >/dev/null 2>&1 </dev/null &");
 	}
 elsif ($in{'webmin_mode'}) {
 	# Need to install Webmin

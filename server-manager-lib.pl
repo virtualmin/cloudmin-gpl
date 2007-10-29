@@ -5,11 +5,17 @@
 #	XXX xen disk sizes
 #	XXX edit memory allocations
 #	XXX cpu limits
-# XXX cut-down version for just EC2?
 # XXX backup and restore managed systems? Use Backup Configuration Files module
-# XXX graphing of stats with timeplot
 # XXX can we work out CIDRs automatically?
 # XXX create new Xen images with updates
+# XXX flag images that are being downloaded (with PID to clear?)
+#
+# XXX cut-down version for just EC2?
+#	XXX should this grant access to Virtualmin AMI? No ..
+# XXX version just for local Xen
+#	XXX add this system automatically
+#	XXX install kernel and dependencies
+#	XXX special licence
 
 do '../web-lib.pl';
 &init_config();
@@ -2746,7 +2752,8 @@ else {
 		}
 	push(@rv, undef);	# Spacer
 	push(@rv, [ "pass",  $text{'edit_setpass'} ]);
-	if ($status eq 'novirt' || $status eq 'nowebmin') {
+	if (($status eq 'novirt' || $status eq 'nowebmin') &&
+	    $server->{'manager'} ne 'this') {
 		push(@rv, [ "installvirt", $text{'edit_installvirt'} ]);
 		}
 	if ($status eq 'nowebmin') {

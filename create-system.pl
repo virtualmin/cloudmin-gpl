@@ -308,6 +308,10 @@ if ($webmindir) {
 	else {
 		print ".. done\n\n";
 		}
+
+	# Start Webmin in case it hasn't been
+	&execute_command_on_server($server,
+		"/etc/webmin/start >/dev/null 2>&1 </dev/null &");
 	}
 elsif ($webmin_mode) {
 	# Need to install Webmin
