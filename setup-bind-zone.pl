@@ -73,7 +73,60 @@ foreach $z (&find("zone", $vconf)) {
 	}
 
 # Make sure BIND is setup
-# XXX
+if (!-r &bind8::make_chroot($bind8::config{'named_conf'})) {
+	# No .. create base directories
+	$chroot = &bind8::get_chroot();
+	if ($chroot && !-d $chroot) {
+		&make_dir($chroot, 0755);
+		}
+	$bind8::config{'named_conf'} =~ /^(\S+)\/([^\/]+)$/;
+	$conf_directory = $1;
+	if (!-d &bind8::make_chroot($conf_directory)) {
+		&make_dir(&bind8::make_chroot($conf_directory), 0755);
+		}
+	if ($bind8::config{'master_dir'} &&
+	    !-d &bind8::make_chroot($bind8::config{'master_dir'})) {
+		&make_dir(&bind8::make_chroot($bind8::config{'master_dir'}),
+			  0755);
+		}
+
+	# Create PID dir and file
+	$pid_file = $bind8::config{'pid_file'} || "/var/run/named.pid";
+	if ($pid_file =~ /^(.*)\//) {
+		$pid_dir = $1;
+		if (!-d &bind8::make_chroot($pid_dir)) {
+			&make_dir(&bind8::make_chroot($pid_dir), 0777);
+			}
+		}
+	if (!-r &bind8::make_chroot($pid_file)) {
+		&open_tempfile(PID, ">".&bind8::make_chroot($pid_file));
+		&close_tempfile(PID);
+		&bind8::set_ownership(&bind8::make_chroot($pid_file));
+		}
+
+	# Copy root zone hint file from Webmin
+	&copy_source_dest("$bind8::module_root_directory/db.cache",
+			  &bind8::make_chroot("$conf_directory/db.cache"));
+
+	# Create initial named.conf
+	&open_tempfile(CONF, ">".&bind8::make_chroot(
+					$bind8::config{'named_conf'}));
+	&print_tempfile(CONF, "options {\n".
+			      "\tdirectory \"$conf_directory\";\n".
+			      "\tpid-file \"$pid_file\";\n".
+			      "};\n".
+			      "\n");
+	&print_tempfile(CONF, "zone \".\" {\n".
+			      "\ttype hint;\n".
+			      "\tfile \"$conf_directory/db.cache\";\n".
+			      "\t};\n".
+			      "\n");
+	&close_tempfile(CONF);
+
+	# Re-get config
+	undef(@bind8::get_config_cache);
+	$conf = $vconf = &bind8::get_config();
+	}
 
 # Add the zone to named.conf
 # XXX
