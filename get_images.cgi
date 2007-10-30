@@ -20,6 +20,10 @@ foreach $id (@d) {
 		print &text('images_getlocal', $got->{'desc'}),"<p>\n";
 		next;
 		}
+	if ($got && $got->{'partial'}) {
+		print &text('images_getpartial', $got->{'desc'}),"<p>\n";
+		next;
+		}
 
 	print &text('images_getting', $img->{'desc'},
 				      $img->{'version'}),"<br>\n";

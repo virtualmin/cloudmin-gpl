@@ -904,6 +904,7 @@ images_size=Compressed size
 images_status=Status
 images_avail=Available
 images_down=Not download
+images_partial=Downloading now
 images_local=Local image
 images_get=Download Selected Images
 images_new=Newer version $1 exists
@@ -915,6 +916,7 @@ images_elicence=.. images containing Virtualmin Pro cannot be used until you hav
 images_egetfiles=.. some files failed : $1
 images_got=.. successfully downloaded $1 of system image data.
 images_getlocal=Image <i>$1</i> only exists locally and cannot be downloaded.
+images_getpartial=Image <i>$1</i> is already being downloaded.
 images_return=system images list
 
 xen_typedesc=Xen

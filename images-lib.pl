@@ -26,7 +26,12 @@ foreach my $f (readdir(DIR)) {
 	local $size = 0;
 	foreach my $fl (split(/\s+/, $img{'files'})) {
 		local @st = stat("$server_images_dir/$fl");
-		$size += $st[7];
+		if (@st) {
+			$size += $st[7];
+			}
+		else {
+			$img{'partial'} = 1;
+			}
 		}
 	$img{'size'} = $size;
 	push(@rv, \%img);

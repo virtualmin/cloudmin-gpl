@@ -6,9 +6,7 @@
 #	XXX edit memory allocations
 #	XXX cpu limits
 # XXX backup and restore managed systems? Use Backup Configuration Files module
-# XXX can we work out CIDRs automatically?
 # XXX create new Xen images with updates
-# XXX flag images that are being downloaded (with PID to clear?)
 #
 # XXX cut-down version for just EC2?
 #	XXX only show Pro AMI if user has a licence to Virtualmin

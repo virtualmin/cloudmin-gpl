@@ -27,13 +27,15 @@ foreach $i (@combined) {
 	print &ui_checked_columns_row([
 		"<a href='edit_image.cgi?id=$i->{'id'}'>$i->{'desc'}</a>",
 		&$tfunc(),
+		$got && $got->{'partial'} ? $text{'images_partial'} :
 		$got && !$avail ? $text{'images_local'} :
 		!$got ? $text{'images_down'} :
 		$got->{'version'} < $i->{'version'} ?
 			"<font color=#aaaa00>".
 			  &text('images_new', $i->{'version'})."</font>" :
 			"<font color=#00aa00>$text{'images_avail'}</font>",
-		&nice_size($got ? $got->{'size'} : $i->{'size'}),
+		&nice_size($got && !$got->{'partial'} ? $got->{'size'}
+						      : $avail->{'size'}),
 		], \@tds, "d", $i->{'id'});
 	}
 print &ui_columns_end();
