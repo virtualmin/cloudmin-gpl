@@ -11,6 +11,7 @@ require './server-manager-lib.pl';
 # Do each selected image, where needed
 @avail = &list_available_server_images();
 @images = &list_server_images();
+@prolics = &list_virtualmin_licences();
 
 foreach $id (@d) {
 	($img) = grep { $_->{'id'} eq $id } @avail;
@@ -31,6 +32,14 @@ foreach $id (@d) {
 		$got = &download_server_image($img);
 		if (!ref($got)) {
 			print &text('images_eget', $got),"<p>\n";
+			next;
+			}
+
+		# Does it require Pro?
+		if ($got->{'virtualmin'} eq 'pro' && !@prolics) {
+			print &text('images_elicence', 'list_licences.cgi'),
+			      "<p>\n";
+			&delete_server_image($got);
 			next;
 			}
 

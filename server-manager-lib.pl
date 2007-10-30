@@ -11,10 +11,9 @@
 # XXX flag images that are being downloaded (with PID to clear?)
 #
 # XXX cut-down version for just EC2?
-#	XXX should this grant access to Virtualmin AMI? Ask Joe ..
+#	XXX only show Pro AMI if user has a licence to Virtualmin
 # XXX version just for local Xen
 #	XXX install kernel and dependencies
-#	XXX special licence
 #	XXX installer should include and setup BIND (and create a zone)
 
 do '../web-lib.pl';

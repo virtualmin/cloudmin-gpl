@@ -911,6 +911,7 @@ images_gettitle=Download Images
 images_getting=Downloading <i>$1</i> version $2 ..
 images_already=.. already have version $1.
 images_eget=.. download of information file failed : $1
+images_elicence=.. images containing Virtualmin Pro cannot be used until you have added at least one serial number to the <a href='$1'>Virtualmin Pro Licenses</a> page.
 images_egetfiles=.. some files failed : $1
 images_got=.. successfully downloaded $1 of system image data.
 images_getlocal=Image <i>$1</i> only exists locally and cannot be downloaded.
