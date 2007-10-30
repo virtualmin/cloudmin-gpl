@@ -13,6 +13,7 @@
 # XXX version just for local Xen
 #	XXX install kernel and dependencies
 #	XXX installer should include and setup BIND (and create a zone)
+#	XXX command-line script to setup DNS
 
 do '../web-lib.pl';
 &init_config();
