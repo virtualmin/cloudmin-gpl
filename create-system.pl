@@ -186,7 +186,7 @@ if (!$serial && !$key) {
 			&usage("A Virtualmin license must be specified when ".
 			       "creating from an image that includes it");
 		}
-	$vfunc = "type_".$in{'type'}."_will_virtualmin";
+	$vfunc = "type_".$type."_will_virtualmin";
 	if (defined(&$vfunc) && &$vfunc($server)) {
 		&usage("A Virtualmin license must be specified when ".
 		       "creating from an image that includes it");
@@ -198,14 +198,18 @@ if ($serial) {
 	&start_installing_virtualmin_licence($serial, $key);
 	}
 
-# If there is an image file, copy to the server
+# If there is an image file, copy to the server (if needed)
 if ($image) {
 	$img = &get_server_image($image);
 	print "Copying system image files ..\n";
 	($imageok, $imagetemp) = &transfer_image_files($server);
-	if (!$imageok) {
+	if ($imageok == 0) {
 		print ".. failed : $imagetemp\n";
 		exit(1);
+		}
+	elsif ($imageok == 2) {
+		$server->{'imagetemp'} = $imagetemp;
+		print " .. already on host system\n\n";
 		}
 	else {
 		$server->{'imagetemp'} = $imagetemp;
@@ -238,14 +242,18 @@ if (defined(&$dfunc)) {
 			}
 		elsif ($err) {
 			$err = &strip_html_tags($err);
-			&cleanup_image_files($server, $imagetemp);
+			if ($imageok == 1) {
+				&cleanup_image_files($server, $imagetemp);
+				}
 			print ".. creation failed : $err\n\n";
 			exit(1);
 			}
 		sleep(1);
 		}
 	}
-&cleanup_image_files($server, $imagetemp);
+if ($imageok == 1) {
+	&cleanup_image_files($server, $imagetemp);
+	}
 print ".. creation complete\n\n";
 &save_managed_server($server);
 
@@ -344,7 +352,7 @@ if ($webmindir) {
 	}
 
 # Call any really final post-creation function
-$dfunc = "type_".$in{'type'}."_create_ready";
+$dfunc = "type_".$type."_create_ready";
 if (defined(&$dfunc)) {
 	&$dfunc($server, $serial, $key);
 	}

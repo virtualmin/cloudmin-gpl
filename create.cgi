@@ -102,9 +102,13 @@ if ($in{'image'}) {
 	print &text('create_copying', &nice_size($img->{'size'}));
 	($imageok, $imagetemp) = &transfer_image_files($server, 1);
 	print "<br>\n";
-	if (!$imageok) {
+	if ($imageok == 0) {
 		print &text('create_ecopy', $imagetemp),"<p>\n";
 		goto END;
+		}
+	elsif ($imageok == 2) {
+		$server->{'imagetemp'} = $imagetemp;
+		print $text{'create_nocopy'},"<p>\n";
 		}
 	else {
 		$server->{'imagetemp'} = $imagetemp;
@@ -132,7 +136,9 @@ if (defined(&$dfunc)) {
 			last;
 			}
 		elsif ($err) {
-			&cleanup_image_files($server, $imagetemp);
+			if ($imageok == 1) {
+				&cleanup_image_files($server, $imagetemp);
+				}
 			print &text('create_ewait', $err),"<p>\n";
 			goto END;
 			}
@@ -146,7 +152,9 @@ if (defined(&$dfunc)) {
 else {
 	print $text{'create_created2'},"<p>\n";
 	}
-&cleanup_image_files($server, $imagetemp);
+if ($imageok == 1) {
+	&cleanup_image_files($server, $imagetemp);
+	}
 &save_managed_server($server);
 
 # Remove old SSH keys for this system

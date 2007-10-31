@@ -166,7 +166,8 @@ return (1, $temp);
 
 # transfer_image_files(&server, [show-progress-dots])
 # Transfers all files for some system's image to a parent host, and returns
-# the path to the temp directory created for them.
+# a success flag (0=failed, 1=transferred, 2=not needed) the path to the temp
+# directory created for them.
 sub transfer_image_files
 {
 local ($server, $progress) = @_;
@@ -175,6 +176,11 @@ local $vhost = &$pfunc($server);
 $vhost || return (0, "Could not find parent system");
 local ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
 $img || return (0, "Could not find image with ID $server->{'image'}");
+
+# No need to transfer if the host is the VM2 master
+if ($vhost->{'manager'} eq 'this') {
+	return (2, $server_images_dir);
+	}
 
 # Choose a temp dir
 local ($tempok, $temp) = &create_image_files_tempdir($vhost, $img->{'id'});
