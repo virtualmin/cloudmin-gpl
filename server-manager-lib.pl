@@ -13,7 +13,7 @@
 # XXX version just for local Xen
 #	XXX install kernel and dependencies
 #	XXX installer should include and setup BIND (and create a zone)
-#	XXX command-line script to setup DNS
+#	XXX don't copy image files when master is Xen host
 
 do '../web-lib.pl';
 &init_config();
