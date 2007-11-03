@@ -10,9 +10,6 @@
 #
 # XXX cut-down version for just EC2?
 #	XXX only show Pro AMI if user has a licence to Virtualmin
-# XXX version just for local Xen
-#	XXX installer just for Xen
-#	XXX install kernel and dependencies
 
 do '../web-lib.pl';
 &init_config();

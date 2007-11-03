@@ -16,10 +16,10 @@ $in{'size'} *= $in{'size_units'};
 
 # Check for a clash
 $images = &list_ec2_images($ec2);
-if (ref($images)) {
+if (ref($images) && !$in{'over'}) {
 	($clash) = grep { $_->{'imageLocation'} =~ /^\Q$in{'path'}\E\// }
 			@$images;
-	$clash && &usage(&text('newami_eclash', $clash->{'imageId'},
+	$clash && &error(&text('newami_eclash', $clash->{'imageId'},
 						$in{'path'}));
 	}
 

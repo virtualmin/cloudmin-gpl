@@ -32,6 +32,9 @@ print &ui_table_row($text{'newami_size'},
 print &ui_table_row($text{'newami_public'},
 		    &ui_yesno_radio("public", 0));
 
+print &ui_table_row($text{'newami_over'},
+		    &ui_yesno_radio("over", 0));
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'newami_ok'} ] ]);
 
