@@ -294,7 +294,13 @@ local ($s, $withcol, $withdoms) = @_;
 local %cmap = map { $_->[0], $_->[1] } @server_statuses;
 local $msg = $text{'status_'.$s->{'status'}} || $text{'status_unknown'};
 if ($s->{'status'} eq 'virt' && $withdoms && $s->{'virtualmin_domains'}) {
-	$msg .= " (".&text('status_doms', $s->{'virtualmin_domains'}).")";
+	if ($withdoms == 1) {
+		$msg .= " (".&text('status_doms',
+				   $s->{'virtualmin_domains'}).")";
+		}
+	elsif ($withdoms == 2) {
+		$msg .= " ($s->{'virtualmin_domains'})";
+		}
 	}
 if ($withcol) {
 	local $col = $cmap{$s->{'status'}};
