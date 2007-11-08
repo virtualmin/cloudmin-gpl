@@ -11,6 +11,7 @@
 # XXX cut-down version for just EC2?
 #	XXX only show Pro AMI if user has a licence to Virtualmin
 #	XXX EC2 firewall management
+#	XXX test EC2 creation with Virtualmin account
 
 do '../web-lib.pl';
 &init_config();

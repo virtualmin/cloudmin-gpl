@@ -32,7 +32,7 @@ else {
 				  $text{'ichooser_state'} ], 100);
 	@servers = &list_managed_servers();
 	foreach my $i (@$instances) {
-		($s) = grep { $_->{'instance'} eq $i->{'instanceId'} }
+		($s) = grep { $_->{'ec2_instance'} eq $i->{'instanceId'} }
 			    @servers;
 		print &ui_columns_row([
 		    $s ? $i->{'instanceId'} :
