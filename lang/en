@@ -319,11 +319,13 @@ ec2_keygen=Generate new EC2 key
 ec2_keygen2=Generate new EC2 key under account $1
 ec2_ekeygen=Failed to generate EC2 key : $1
 ec2_keyimport=Import existing EC2 key $1, with private key text below..<br>$2
-ec2_keyimport2=Import existing EC2 key from account $1 named $2, with private key text below..<br>$2
+ec2_keyimport2=Import existing EC2 key from account $1 named $2, with private key text below..<br>$3
 ec2_ekeyimportname=Imported EC2 key does not exist
 ec2_ekeyimportdata=Imported EC2 key data does not look valid
 ec2_keyname=EC2 key name
 ec2_eauth=Failed to authorize EC2 account with Virtualmin server : $1
+ec2_ekeyec2=Selected SSH key is not for use with EC2
+ec2_ekeyaccount=Selected SSH key is not associated with the selected EC2 account
 
 dec2s_err=Failed to delete EC2 accounts
 dec2s_enone=None selected
