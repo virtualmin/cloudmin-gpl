@@ -1236,3 +1236,6 @@ mupload_done=.. $1 : upload completed successfully.
 
 mshell_title=Mass Run Commands
 mshell_on=Running on : $1
+
+sgroups_title=EC2 Security Groups
+
