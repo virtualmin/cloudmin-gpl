@@ -514,6 +514,7 @@ edit_return=system details
 edit_ec2instance=EC2 instance ID
 edit_ec2account=Owned by EC2 account
 edit_ec2image=Started from EC2 image
+edit_ec2sgroup=EC2 security groups
 edit_ec2newami=Create EC2 Image
 edit_webmin2=Open Webmin
 edit_shell=Run Commands
@@ -1238,4 +1239,11 @@ mshell_title=Mass Run Commands
 mshell_on=Running on : $1
 
 sgroups_title=EC2 Security Groups
-
+sgroup_name=Group name
+sgroup_account=EC2 account
+sgroup_ports=Ports
+sgroups_users=Used by systems
+sgroups_delete=Delete Selected Security Groups
+sgroups_none=No EC2 security groups have been defined yet.
+sgroups_more=$1 more ..
+sgroups_noports=None

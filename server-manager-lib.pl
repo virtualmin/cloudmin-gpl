@@ -11,6 +11,8 @@
 # XXX cut-down version for just EC2?
 #	XXX only show Pro AMI if user has a licence to Virtualmin
 #	XXX EC2 firewall management
+#		XXX set at creation time
+#		XXX editing
 #	XXX test EC2 creation with Virtualmin account
 
 do '../web-lib.pl';
@@ -127,6 +129,14 @@ sub list_managed_servers
 local @rv = grep { $_->{'module'} eq $module_name } &servers::list_servers();
 @rv = grep { $server_management_types{$_->{'manager'}} } @rv;
 @rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
+
+foreach my $s (@rv) {
+	if ($s->{'manager'} eq 'ec2' && !$s->{'ec2_sgroup'}) {
+		# Assume security group is Virtualmin default
+		$s->{'ec2_sgroup'} = $ec2_security_group;
+		}
+	}
+
 if ($config{'show_this'}) {
 	# Magically add this system to the list
 	local $this = &servers::this_server();
