@@ -13,6 +13,7 @@
 #	XXX EC2 firewall management
 #		XXX set at creation time
 #		XXX editing
+#		XXX help pages
 #	XXX test EC2 creation with Virtualmin account
 
 do '../web-lib.pl';

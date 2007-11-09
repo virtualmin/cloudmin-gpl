@@ -1248,6 +1248,7 @@ sgroups_none=No EC2 security groups have been defined yet.
 sgroups_more=$1 more ..
 sgroups_noports=None
 sgroups_add=Create an EC2 security group.
+sgroups_add2=Create group for account <i>$1</i>.
 sgroups_return=security groups
 
 egroup_title1=Create Security Group
@@ -1262,3 +1263,9 @@ egroup_cidr=Hosts to allow
 egroup_sel=Network/CIDR
 egroup_all=All
 egroup_egone=Group no longer exists!
+egroup_desc=Group description
+egroup_ports=Allowed ports and hosts
+egroup_groups=Allowed security groups
+egroup_sgowner=Security group owner
+egroup_sgname=Group name
+egroup_other=Other account ID..
