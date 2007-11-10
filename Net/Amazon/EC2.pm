@@ -1046,7 +1046,7 @@ sub authorize_security_group_ingress {
 								SourceSecurityGroupOwnerId	=> { type => SCALAR, optional => 1 },
 								IpProtocol 					=> { 
 																	type => SCALAR,
-																	depends => ['FromPort', 'ToPort', 'CidrIp'],
+																	depends => ['FromPort', 'ToPort'],
 																	optional => 1 
 								},
 								FromPort 					=> { type => SCALAR, optional => 1 },
@@ -1122,7 +1122,7 @@ sub revoke_security_group_ingress {
 								SourceSecurityGroupOwnerId	=> { type => SCALAR, optional => 1 },
 								IpProtocol 					=> { 
 																	type => SCALAR,
-																	depends => ['FromPort', 'ToPort', 'CidrIp'],
+																	depends => ['FromPort', 'ToPort'],
 																	optional => 1 
 								},
 								FromPort 					=> { type => SCALAR, optional => 1 },

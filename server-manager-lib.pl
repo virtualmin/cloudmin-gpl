@@ -12,7 +12,7 @@
 #	XXX only show Pro AMI if user has a licence to Virtualmin
 #	XXX EC2 firewall management
 #		XXX set at creation time
-#		XXX editing
+#		XXX editing (verify CIDR, group mode, un-necessary deletion)
 #		XXX help pages
 #	XXX test EC2 creation with Virtualmin account
 
