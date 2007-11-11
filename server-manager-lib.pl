@@ -10,13 +10,6 @@
 #
 # XXX cut-down version for just EC2?
 #	XXX only show Pro AMI if user has a licence to Virtualmin
-#	XXX EC2 firewall management
-#		XXX set at creation time
-#		XXX mass deletion, deletion
-#		XXX name clashes
-#		XXX group-based entries
-#		XXX help pages
-#	XXX test EC2 creation with Virtualmin account
 
 do '../web-lib.pl';
 &init_config();

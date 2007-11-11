@@ -1,0 +1,24 @@
+<header>Edit Security Group</header>
+
+This page allows you to either create a new security group or edit the details
+of an existing one. When creating, you must enter a name and short description
+for the group - but when editing, these cannot be changed. <p>
+
+The most important part of the page is the <b>Allowed ports and hosts</b> table.
+Each row grants incoming network access to a range of ports using some protocol,
+such as TCP or UDP. To add a new port, select TCP from the <b>Protocol</b>
+column in a empty row, and enter the port number in the <b>Start port</b> field.
+To add a range of ports, enter a second number in the <b>End port</b> field
+in the new row. <p>
+
+By default, all hosts on the Internet are allowed to connect to the ports you
+open up. To restrict connections to selected hosts or networks, select
+<b>Network/CIDR</b> in the <b>Hosts to allow</b> column and enter a network
+address and CIDR size into the adjacent text box. For example, to allow the
+single host <tt>76.102.155.133</tt> you would enter <i>76.102.155.133/32</i>.
+To allow an entire class C network, you could enter <i>76.102.155.0/24</i>. <p>
+
+To grant access to all EC2 instances in a security group, fill in an empty row in the <b>Allowed security groups</b>. The first column is for selecting the EC2 account that owns the group, which will typically be your own. The second is for entering the group name to grant access. <p>
+
+<footer>
+
