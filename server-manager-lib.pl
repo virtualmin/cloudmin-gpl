@@ -7,9 +7,6 @@
 #	XXX cpu limits
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
-#
-# XXX cut-down version for just EC2?
-#	XXX only show Pro AMI if user has a licence to Virtualmin
 
 do '../web-lib.pl';
 &init_config();
