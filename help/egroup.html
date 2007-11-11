@@ -20,5 +20,9 @@ To allow an entire class C network, you could enter <i>76.102.155.0/24</i>. <p>
 
 To grant access to all EC2 instances in a security group, fill in an empty row in the <b>Allowed security groups</b>. The first column is for selecting the EC2 account that owns the group, which will typically be your own. The second is for entering the group name to grant access. <p>
 
+When an existing security group is updated, the new port access rules will
+be immediately applied to all EC2 instances using that group. And they will
+be used by new systems created from now on in the group. <p>
+
 <footer>
 

@@ -50,6 +50,19 @@ are :<p>
     can also choose images with various Linux distributions provided by Amazon
     and other vendors.
 
+<dt><b>EC2 instance size</b>
+<dd>Amazon offers three different virtual system types for EC2 instances, of
+    varying CPU speed, available memory and disk space. The <b>large</b>
+    and <b>extra large</b> sizes can only be used with 64-bit images, and
+    cost more per instance-hour than the small size.
+
+<dt><b>EC2 security groups</b>
+<dd>Each EC2 instance can be a member of one or more security groups, which
+    determine the ports and hosts allowed to connect to it. If <b>Default</b>
+    is selected the <tt>virtualmin</tt> group created by VM2 will be used - or
+    you can choose <b>Selected below</b> and check the boxes next to one or more
+    of your own groups.
+
 </dl>
 
 When the <b>Create</b> button is clicked, VM2 will contact Amazon to start
