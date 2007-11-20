@@ -7,6 +7,7 @@
 #	XXX cpu limits
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
+# XXX domain transfer by rsyncing home directory
 
 do '../web-lib.pl';
 &init_config();
