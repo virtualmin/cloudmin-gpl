@@ -267,7 +267,7 @@ if (defined(&$dfunc)) {
 	}
 
 if (!$no_ssh) {
-	# Wait at most 60 seconds for SSH to come up (indicating that booting
+	# Wait at most 120 seconds for SSH to come up (indicating that booting
 	# is done), if need be
 	$bfunc = "type_".$type."_needs_boot";
 	if (defined(&$bfunc) && &$bfunc($server)) {
@@ -281,7 +281,7 @@ if (!$no_ssh) {
 				print ".. SSH server ready\n\n";
 				last;
 				}
-			elsif ($sshcount > 60) {
+			elsif ($sshcount > 120) {
 				print ".. SSH server took too long\n\n";
 				last;
 				}
