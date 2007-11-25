@@ -181,6 +181,18 @@ if ($config{'show_this'}) {
 		&save_module_config();
 		}
 	}
+
+# Compute short hostnames
+foreach my $s (@rv) {
+	local $shost = $s->{'host'};
+	if ($config{'name_max'} && length($shost) > $config{'name_max'}) {
+		# Show first and last max/2 chars, with ... between
+		local $h = int($config{'name_max'} / 2);
+		$shost = substr($shost, 0, $h)."...".substr($shost, -$h);
+		}
+	$s->{'short_host'} = $shost;
+	}
+
 return @rv;
 }
 

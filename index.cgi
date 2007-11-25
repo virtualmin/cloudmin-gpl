@@ -91,9 +91,10 @@ if (@servers) {
 			$posdesc = " - ".&text($pos > 1 ? 'index_poss'
 							: 'index_pos', $pos);
 			}
+		$shost = $s->{'short_host'};
 		print &ui_checked_columns_row([
-		    $s->{'status'} eq 'create' ? $s->{'host'} :
-		      "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
+		    $s->{'status'} eq 'create' ? $shost :
+		      "<a href='edit_serv.cgi?id=$s->{'id'}'>$shost</a>",
 		    &$tfunc(),
 		    &describe_os($s->{'type'}),
 		    &describe_status($s, 1, 2).$posdesc,

@@ -11,3 +11,4 @@ vserver_conf=/etc/vservers
 display_max=20
 xen_mem=256
 xen_dir=/xen
+name_max=20
