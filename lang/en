@@ -22,6 +22,8 @@ index_search=Show systems matching:
 index_gsearch=Show systems in group:
 index_searchok=Search
 index_searchgok=Show
+index_selup=Select up systems.
+index_selwe=Select Webmin systems.
 
 ec2_typedesc=Amazon EC2
 ec2_createlink=Create EC2 instance

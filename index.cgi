@@ -9,8 +9,27 @@ require './server-manager-lib.pl';
 $lerr = &licence_error_message();
 print $lerr if ($lerr);
 
-# Build add links
+@allservers = sort { $a->{'host'} cmp $b->{'host'} } &list_managed_servers();
+
+# Build select links
 @links = ( &select_all_link("d"), &select_invert_link("d") );
+@upservers = grep { $_->{'status'} eq 'virt' ||
+		    $_->{'status'} eq 'novirt' ||
+		    $_->{'status'} eq 'nowebminlogin' ||
+		    $_->{'status'} eq 'downwebmin' ||
+		    $_->{'status'} eq 'nowebmin' } @allservers;
+@weservers = grep { $_->{'status'} eq 'virt' ||
+                    $_->{'status'} eq 'novirt' } @allservers;
+if (@upservers && defined(&select_rows_link)) {
+	push(@links, &select_rows_link("d", 0, $text{'index_selup'},
+				       [ map { $_->{'id'} } @upservers ]));
+	}
+if (@weservers && defined(&select_rows_link)) {
+	push(@links, &select_rows_link("d", 0, $text{'index_selwe'},
+				       [ map { $_->{'id'} } @weservers ]));
+	}
+
+# Build add links
 if (!$main::vm2_no_create_links) {
 	foreach $t (@server_management_types) {
 		$lfunc = "type_".$t."_create_links";
@@ -26,7 +45,6 @@ if (!$main::vm2_no_create_links) {
 	}
 
 # Find all servers
-@allservers = sort { $a->{'host'} cmp $b->{'host'} } &list_managed_servers();
 if (@allservers > $config{'display_max'}) {
 	# Too many! Show a search form
 	print &text('index_toomany', scalar(@allservers),
