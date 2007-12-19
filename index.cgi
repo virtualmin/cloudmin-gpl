@@ -87,40 +87,82 @@ else {
 if (@servers) {
 	# Some servers to show
 	print &ui_form_start("mass.cgi", "post");
-	print &ui_links_row(\@links);
-	@tds = ( "width=5" );
-	print &ui_columns_start([
-		"",
-		$text{'index_host'},
-		$text{'index_type'},
-		$text{'index_os'},
-		$text{'index_status'},
-		$text{'index_desc'},
-		], 100, 0, \@tds);
-	$posscount = 0;
-	foreach my $s (@servers) {
-		$t = $s->{'manager'};
-		$tfunc = "type_".$t."_desc";
-		$pos = $s->{'virtualmin_poss'};
-		$posdesc = undef;
-		if ($pos) {
-			# Has some updates
-			$posscount += $pos;
-			$posdesc = " - ".&text($pos > 1 ? 'index_poss'
-							: 'index_pos', $pos);
-			}
-		$shost = $s->{'short_host'};
-		print &ui_checked_columns_row([
-		    $s->{'status'} eq 'create' ? $shost :
-		      "<a href='edit_serv.cgi?id=$s->{'id'}'>$shost</a>",
-		    &$tfunc(),
-		    &describe_os($s->{'type'}),
-		    &describe_status($s, 1, 2).$posdesc,
-		    $s->{'desc'},
-		    ], \@tds, "d", $s->{'id'});
-		$virtcount++ if ($s->{'status'} eq 'virt');
+
+	# Make categories to show
+	if ($config{'cat_mode'} == 0) {
+		# All in one
+		@cats = ( [ \@servers ] );
 		}
-	print &ui_columns_end();
+	elsif ($config{'cat_mode'} == 1) {
+		# By manager
+		foreach my $s (@servers) {
+			$s->{'cat_manager'} = $s->{'manager'} eq 'this' ?
+						'real' : $s->{'manager'};
+			}
+		foreach my $t (&unique(map { $_->{'cat_manager'} } @servers)) {
+			my @intype = grep { $_->{'cat_manager'} eq $t }@servers;
+			$dfunc = "type_".$t."_desc";
+			push(@cats, [ \@intype, &text('index_cattype',
+						      &$dfunc()) ]);
+			}
+		}
+	elsif ($config{'cat_mode'} == 2) {
+		# By group
+		foreach my $g ("", &unique(map { split(/\t+/, $_->{'group'}) }
+					       @servers)) {
+			my @ingroup;
+			if ($g eq '') {
+				@ingroup = grep { $_->{'group'} eq '' }@servers;
+				}
+			else {
+				@ingroup = grep { &indexof($g,
+				  split(/\t+/, $_->{'group'})) >= 0 } @servers;
+				}
+			if (@ingroup) {
+				push(@cats, [ \@ingroup,
+				   $g ? &text('index_catgroup', "<tt>$g</tt>")
+				      : $text{'index_catnogroup'} ]);
+				}
+			}
+		}
+
+	$posscount = 0;
+	@tds = ( "width=5" );
+	print &ui_links_row(\@links);
+	foreach $cat (@cats) {
+		print &ui_subheading($cat->[1]) if ($cat->[1]);
+		print &ui_columns_start([
+			"",
+			$text{'index_host'},
+			$text{'index_type'},
+			$text{'index_os'},
+			$text{'index_status'},
+			$text{'index_desc'},
+			], 100, 0, \@tds);
+		foreach my $s (@{$cat->[0]}) {
+			$t = $s->{'manager'};
+			$tfunc = "type_".$t."_desc";
+			$pos = $s->{'virtualmin_poss'};
+			$posdesc = undef;
+			if ($pos) {
+				# Has some updates
+				$posscount += $pos;
+				$posdesc = " - ".&text($pos > 1 ?
+					'index_poss' : 'index_pos', $pos);
+				}
+			$shost = $s->{'short_host'};
+			print &ui_checked_columns_row([
+			    $s->{'status'} eq 'create' ? $shost :
+			     "<a href='edit_serv.cgi?id=$s->{'id'}'>$shost</a>",
+			    &$tfunc(),
+			    &describe_os($s->{'type'}),
+			    &describe_status($s, 1, 2).$posdesc,
+			    $s->{'desc'},
+			    ], \@tds, "d", $s->{'id'});
+			$virtcount++ if ($s->{'status'} eq 'virt');
+			}
+		print &ui_columns_end();
+		}
 	print &ui_links_row(\@links);
 	print &ui_form_end([
 			     [ "refresh", $text{'index_refresh'} ],

@@ -8,6 +8,8 @@
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
+# XXX option to SSH in as non-root and sudo or su to root
+#	XXX FS#3428
 
 do '../web-lib.pl';
 &init_config();

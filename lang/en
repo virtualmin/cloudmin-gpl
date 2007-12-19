@@ -24,12 +24,15 @@ index_searchok=Search
 index_searchgok=Show
 index_selup=Select up systems.
 index_selwe=Select Webmin systems.
+index_cattype=$1 Systems
+index_catgroup=Systems in group $1
+index_catnogroup=Systems with no group
 
 ec2_typedesc=Amazon EC2
 ec2_createlink=Create EC2 instance
 ec2_addlink=Add EC2 instance
 
-real_desc=Physical system
+real_desc=Physical
 real_add=Add physical system
 
 zones_typedesc=Solaris Zone
@@ -73,7 +76,7 @@ add_eport=Missing or non-numeric Webmin port
 add_desc=System description
 add_ec2account=EC2 account
 add_ec2instance=EC2 instance ID
-add_canvirt=Allow creation of Virtualmin domains?
+add_canvirt=Create Virtualmin domains?
 add_vserverhost=VServer hosting system
 add_vserverinstance=VServer instance name
 add_evserverinstance=No VServer instance name entered
