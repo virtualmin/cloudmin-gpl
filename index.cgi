@@ -84,6 +84,7 @@ else {
 	}
 
 # Show a table of managed servers
+$posscount = $virtcount = $procount = 0;
 if (@servers) {
 	# Some servers to show
 	print &ui_form_start("mass.cgi", "post");
@@ -126,7 +127,6 @@ if (@servers) {
 			}
 		}
 
-	$posscount = 0;
 	@tds = ( "width=5" );
 	print &ui_links_row(\@links);
 	foreach $cat (@cats) {
@@ -160,6 +160,7 @@ if (@servers) {
 			    $s->{'desc'},
 			    ], \@tds, "d", $s->{'id'});
 			$virtcount++ if ($s->{'status'} eq 'virt');
+			$procount++ if ($s->{'virtualmin_serial'});
 			}
 		print &ui_columns_end();
 		}
@@ -168,6 +169,8 @@ if (@servers) {
 			     [ "refresh", $text{'index_refresh'} ],
 			     $posscount ? ( [ "update",$text{'index_update'} ] )
 					: ( ),
+			     $procount ? ( [ "script", $text{'index_script'} ] )
+				       : ( ),
 			     undef,
 			     [ "dereg", $text{'index_dereg'} ],
 			     [ "delete", $text{'index_delete'} ],

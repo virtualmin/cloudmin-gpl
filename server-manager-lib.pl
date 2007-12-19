@@ -8,8 +8,8 @@
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
-# XXX option to SSH in as non-root and sudo or su to root
-#	XXX FS#3428
+# XXX multi-server script upgrades
+#	XXX FS#3433
 
 do '../web-lib.pl';
 &init_config();
@@ -3229,6 +3229,44 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 		}
 	&flush_file_lines($f);
 	}
+}
+
+# list_all_script_updates(&servers)
+# Fetch all possible script upgrades from multiple systems. Returns a list of
+# hashes, each containing the details of one upgrade in one domain on one system
+sub list_all_script_updates
+{
+local ($servers) = @_;
+local @rv;
+local @canservers = grep { $_->{'status'} eq 'virt' &&
+			   $_->{'virtualmin_serial'} } @$servers;
+local $temp = &transname();
+&parallel_server_function(\@canservers, \&fetch_all_script_updates, $temp);
+foreach my $s (@canservers) {
+	local $data = &read_file_contents($temp.".".$s->{'id'});
+	next if (!$data);
+	local $updates = &unserialise_variable($data);
+	foreach my $u (@$updates) {
+		$u->{'server'} = $s;
+		push(@rv, $u);
+		}
+	unlink($temp.".".$s->{'id'});
+	}
+return @rv;
+}
+
+# fetch_all_script_updates(&server, file)
+# Fetch a list of script updates from some server, and serialize into a file
+sub fetch_all_script_updates
+{
+local ($server, $tempbase) = @_;
+$last_remote_error = undef;
+&remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
+local $updates = &remote_eval($server, "virtual-server",
+			'[ &list_script_upgrades([ &list_domains() ]) ]');
+&open_tempfile(SERIAL, ">".$tempbase.".".$server->{'id'});
+&print_tempfile(SERIAL, &serialise_variable($updates));
+&close_tempfile(SERIAL);
 }
 
 # strip_html_tags(html)

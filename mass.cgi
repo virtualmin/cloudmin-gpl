@@ -168,6 +168,61 @@ elsif ($in{'update'}) {
 	&ui_print_footer("", $text{'index_return'});
 	}
 
+elsif ($in{'script'}) {
+	# Show a form for updating scripts from multiple systems
+	&ui_print_unbuffered_header(undef, $text{'mass_sctitle'}, "");
+
+	# Find available updates across systems
+	print &text('mass_scgetting', scalar(@servers)),"<br>\n";
+	@updates = &list_all_script_updates(\@servers);
+
+	# Show a table of them, by script
+	if (@updates) {
+		@scripts = &unique(map { $_->{'script'}->{'name'}."/".
+					 $_->{'ver'} } @updates);
+		print $text{'mass_scdone'},"<p>\n";
+		print &ui_form_start("mass_script.cgi", "post");
+		@links = ( &select_all_link("d"), &select_invert_link("d") );
+		@tds = ( "width=5", "width=20%", "width=10%", "width=10%",
+			 "width=60%" );
+		print &ui_links_row(\@links);
+		print &ui_columns_start([ "",
+					  $text{'mass_scname'},
+					  $text{'mass_scver'},
+					  $text{'mass_scnewver'},
+					  $text{'mass_scdoms'} ], 100, 1,\@tds);
+		foreach my $namever (@scripts) {
+			($name, $ver) = split(/\//, $namever);
+			@thisname = grep { $_->{'script'}->{'name'} eq $name &&
+					   $_->{'ver'} eq $ver } @updates;
+			@vers = &unique(map { $_->{'sinfo'}->{'version'} }
+					    @thisname);
+			@doms = &unique(map { $_->{'dom'}->{'dom'} } @thisname);
+			$doms = @doms > 4 ?
+				&text('mass_manydoms', scalar(@doms)) :
+				join(" , ", @doms);
+			print &ui_checked_columns_row([
+				$thisname[0]->{'script'}->{'desc'},
+				join(", ", @vers),
+				$ver,
+				$doms,
+				], \@tds, "d", $namever);
+			foreach $u (@thisname) {
+				print &ui_hidden("on_$namever",
+					$u->{'server'}->{'id'});
+				}	
+			}
+		print &ui_columns_end();
+		print &ui_links_row(\@links);
+		print &ui_form_end([ [ undef, $text{'mass_scok'} ] ]);
+		}
+	else {
+		print $text{'mass_scnone'},"<p>\n";
+		}
+
+	&ui_print_footer("", $text{'index_return'});
+	}
+
 elsif ($in{'shutdown'}) {
 	# Shutdown the selected servers
 	&error_setup($text{'mass_shuterr'});
