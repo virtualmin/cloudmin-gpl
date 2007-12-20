@@ -8,8 +8,6 @@
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
-# XXX multi-server script upgrades
-#	XXX FS#3433
 
 do '../web-lib.pl';
 &init_config();
@@ -3262,11 +3260,33 @@ sub fetch_all_script_updates
 local ($server, $tempbase) = @_;
 $last_remote_error = undef;
 &remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
+return undef if ($last_remote_error);
 local $updates = &remote_eval($server, "virtual-server",
 			'[ &list_script_upgrades([ &list_domains() ]) ]');
 &open_tempfile(SERIAL, ">".$tempbase.".".$server->{'id'});
 &print_tempfile(SERIAL, &serialise_variable($updates));
 &close_tempfile(SERIAL);
+}
+
+# update_server_scripts(&server, &updates)
+# Install all scripts from a set of possible updates on a Virtualmin server, via
+# API calls.
+sub update_server_scripts
+{
+local ($server, $updates) = @_;
+local @rv;
+foreach my $u (@$updates) {
+	# Build API call args
+	local @args = ( [ 'domain', $u->{'dom'}->{'dom'} ],
+			[ 'type', $u->{'script'}->{'name'} ],
+			[ 'upgrade', $u->{'sinfo'}->{'id'} ],
+			[ 'version', $u->{'ver'} ],
+		      );
+	local ($err, $out) = &call_virtualmin_api($server, "install-script",
+						  \@args);
+	push(@rv, [ $u, $err, $out ]);
+	}
+return @rv;
 }
 
 # strip_html_tags(html)
