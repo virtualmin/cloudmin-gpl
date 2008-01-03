@@ -8,6 +8,7 @@
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
+# XXX mobile theme for VM2 - FS#3459
 
 do '../web-lib.pl';
 &init_config();
