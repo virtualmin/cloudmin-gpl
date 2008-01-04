@@ -149,6 +149,7 @@ sub _sign {
 	$self->_debug("GENERATED QUERY URL: $ur");
 	my $ua = LWP::UserAgent->new();
 	my $res = $ua->get($ur);
+        print STDERR "URL=$ur\n";
 	
 	# We should force <item> elements to be in an array
 	my $xs = XML::Simple->new(ForceArray => qr/item/);
@@ -784,10 +785,11 @@ sub modify_image_attribute {
 	my $self = shift;
 	my %args = validate( @_, {
 								ImageId			=> { type => SCALAR },
-								Attribute 		=> { type => SCALAR },
-								OperationType	=> { type => SCALAR },
+								Attribute 		=> { type => SCALAR, optional => 1 },
+								OperationType	=> { type => SCALAR, optional => 1 },
 								UserId 			=> { type => SCALAR | ARRAYREF, optional => 1 },
 								UserGroup 		=> { type => SCALAR | ARRAYREF, optional => 1 },
+								ProductCode 		=> { type => SCALAR | ARRAYREF, optional => 1 },
 	});
 	
 	

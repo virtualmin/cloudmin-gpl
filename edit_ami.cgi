@@ -57,6 +57,15 @@ if (ref($grants)) {
 		&ui_checkbox("public", 1, $text{'eami_public'}, $public));
 	}
 
+# Product codes
+foreach $pc (@{$ami->{'productCodes'}->{'item'}}) {
+	push(@pcodes, $pc->{'productCode'});
+	}
+print &ui_table_row($text{'eami_codes'},
+	@pcodes ? "<tt>$pcodes[0]</tt>"
+		: &ui_opt_textbox("code", undef, 30, $text{'eami_nocode'}).
+		  "<br>".$text{'eami_codewarn'});
+
 print &ui_table_end();
 print &ui_form_end([ ref($grants) ? ( [ undef, $text{'save'} ] ) : ( ),
 		     [ "delete", $text{'delete'} ] ]);

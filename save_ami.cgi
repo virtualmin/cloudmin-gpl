@@ -65,6 +65,13 @@ else {
 	$err = &save_ec2_ami_grants($ec2, $ami->{'imageId'}, \@newgrants);
 	&error($err) if ($err);
 
+	# Update product code
+	if (defined($in{'code'}) && !$in{'code_def'}) {
+		$err = &save_ec2_ami_product($ec2, $ami->{'imageId'},
+					     $in{'code'});
+		&error($err) if ($err);
+		}
+
 	&redirect("list_amis.cgi");
 	}
 
