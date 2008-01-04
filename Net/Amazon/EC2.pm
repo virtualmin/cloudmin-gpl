@@ -149,7 +149,6 @@ sub _sign {
 	$self->_debug("GENERATED QUERY URL: $ur");
 	my $ua = LWP::UserAgent->new();
 	my $res = $ua->get($ur);
-        print STDERR "URL=$ur\n";
 	
 	# We should force <item> elements to be in an array
 	my $xs = XML::Simple->new(ForceArray => qr/item/);
