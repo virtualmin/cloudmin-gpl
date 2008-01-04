@@ -35,6 +35,9 @@ print &ui_table_row($text{'newami_public'},
 print &ui_table_row($text{'newami_over'},
 		    &ui_yesno_radio("over", 0));
 
+print &ui_table_row($text{'newami_munge'},
+		    &ui_yesno_radio("munge", 1));
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'newami_ok'} ] ]);
 

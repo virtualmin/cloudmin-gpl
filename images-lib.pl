@@ -665,19 +665,20 @@ foreach my $f (split(/\s+/, $image->{'files'})) {
 return undef;
 }
 
-# munge_all_files(&server, [no-authkeys])
+# munge_all_files(&server, [no-authkeys], [no-serials])
 # Munges Virtualmin licences, the root password and authorized keys, printing
 # progress reports as they are done. Returns a status code and a list of munged
 # files and their original content.
 sub munge_all_files
 {
-local ($server, $noauth) = @_;
+local ($server, $noauth, $noserial) = @_;
 local @munged;
 local $ok = 1;
 foreach my $m ([ \&munge_virtualmin_licence_files, 'mkimage_mungelicence' ],
 	       [ \&munge_shadow_root_password, 'mkimage_mungeshadow' ],
 	       [ \&munge_authorized_key, 'mkimage_mungessh' ]) {
 	next if ($m->[1] eq 'mkimage_mungessh' && $noauth);
+	next if ($m->[1] eq 'mkimage_mungelicence' && $noserial);
 	&$first_print($text{$m->[1]});
 	local $mfunc = $m->[0];
 	local $munged = &$mfunc($server);

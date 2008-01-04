@@ -29,7 +29,7 @@ print &text('newami_doing', "<tt>$server->{'host'}</tt>",
 			    "<tt>$ec2->{'account'}</tt>"),"<p>\n";
 
 # Munge passwords and Virtualmin licence
-($mok, $munged) = &munge_all_files($server, 1);
+($mok, $munged) = &munge_all_files($server, 1, !$in{'munge'});
 if (!$mok) {
 	goto FAILED;
 	}
