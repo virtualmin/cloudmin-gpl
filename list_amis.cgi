@@ -9,10 +9,18 @@ foreach $ec2 (&list_ec2_accounts()) {
 	local $images = &list_ec2_images($ec2);
 	if (ref($images)) {
 		foreach $ami (@$images) {
-			if (!$done{$ami->{'imageId'}}++) {
-				$ami->{'ec2'} = $ec2;
-				push(@amis, $ami);
+			local $alr = $done{$ami->{'imageId'}};
+			if ($alr) {
+				# Already seen .. but is this EC2 account the
+				# owner, and so better?
+				if ($alr->{'imageOwnerId'} eq $ec2->{'account'}) {
+					$alr->{'ec2'} = $ec2;
+					}
+				next;
 				}
+			$done{$ami->{'imageId'}} = $ami;
+			$ami->{'ec2'} = $ec2;
+			push(@amis, $ami);
 			}
 		}
 	$myaccounts{$ec2->{'account'}} = $ec2;
@@ -41,6 +49,8 @@ if (@amis) {
 		$public = $ami->{'isPublic'} eq 'true' ?
 			"<font color=#00aa00>$text{'yes'}</font>" :
 			"<font color=#ff0000>$text{'no'}</font>";
+		$ami->{'imageLocation'} =~ s/\.manifest\.xml$//;
+		$ami->{'imageLocation'} =~ s/\.img$//;
 		if ($myaccounts{$ami->{'imageOwnerId'}}) {
 			# Our image
 			print &ui_checked_columns_row([
