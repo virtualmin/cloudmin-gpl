@@ -15,6 +15,7 @@ $< == 0 || die "$0 must be run as root";
 &set_all_text_print();
 
 # Parse command line
+$munge = 1;
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--host") {
@@ -31,6 +32,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--version") {
 		$version = shift(@ARGV);
+		}
+	elsif ($a eq "--no-serial") {
+		$munge = 0;
 		}
 	else {
 		&usage();
@@ -106,7 +110,7 @@ if ($server->{'status'} ne 'down' && !$noshut) {
 
 # Convert the remote system into an image file - this will output progress
 $ifunc = "type_".$server->{'manager'}."_create_image";
-if (!&$ifunc($server, $image, $temp)) {
+if (!&$ifunc($server, $image, $temp, $munge ? 0 : 2)) {
 	exit(3);
 	}
 
@@ -162,6 +166,7 @@ print "                       --desc \"image description\"\n";
 print "                       --id image-id\n";
 print "                       [--overwrite]\n";
 print "                       [--version number]\n";
+print "                       [--no-serial]\n";
 exit(1);
 }
 

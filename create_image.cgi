@@ -65,7 +65,7 @@ if ($server->{'status'} ne 'down' && !$noshut) {
 
 # Convert the remote system into an image file - this will output progress
 $ifunc = "type_".$server->{'manager'}."_create_image";
-if (!&$ifunc($server, $image, $temp)) {
+if (!&$ifunc($server, $image, $temp, $in{'munge'} ? 0 : 2)) {
 	goto FAILED;
 	}
 

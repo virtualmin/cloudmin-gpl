@@ -50,6 +50,10 @@ print &ui_table_row($text{'mkimage_version'},
 		    &ui_opt_textbox("version", undef, 5,
 				    $text{'mkimage_none'}));
 
+# Clear serials?
+print &ui_table_row($text{'newami_munge'},
+		    &ui_yesno_radio("munge", 1));
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'mkimage_ok'} ] ]);
 
