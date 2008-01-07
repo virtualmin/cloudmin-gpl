@@ -9,9 +9,6 @@
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
-# XXX SSH login as other user
-#	XXX command-line
-#	XXX adding
 
 do '../web-lib.pl';
 &init_config();
