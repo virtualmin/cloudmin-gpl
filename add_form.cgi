@@ -36,6 +36,12 @@ if (!$no_ssh) {
 		&ui_radio("protocol", 2, [ [ 2 ], [ 1 ] ]));
 	}
 
+# Root login
+if (!$no_ssh) {
+	print &ui_table_row($text{'add_user'},
+		&ui_textbox("uuser", "root", 20));
+	}
+
 # Webmin login
 print &ui_table_row($text{'add_webmin'},
 	&ui_radio("webmin_mode", 0,

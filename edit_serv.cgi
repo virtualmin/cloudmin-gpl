@@ -127,12 +127,17 @@ if ($haswebmin || $hasssh) {
 
 # SSH
 if ($hasssh) {
+	# SSH password / key
 	print &ui_table_row($text{'edit_auth'},
 	   &ui_radio("auth_mode", $server->{'ssh_pass'} ? 0 : 1,
 	      [ [ 0, &text('add_auth0',
 		   &ui_textbox("upass", $server->{'ssh_pass'}, 20))."<br>" ],
 		[ 1, &text('add_auth1',
 			&ssh_key_menu("key", $t,$server->{'key'}))] ]));
+
+	# SSH user
+	print &ui_table_row($text{'edit_authuser'},
+	   &ui_textbox("uuser", $server->{'ssh_user'}, 20));
 	}
 
 # Webmin

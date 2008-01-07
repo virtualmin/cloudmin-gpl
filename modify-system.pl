@@ -28,6 +28,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--newhost") {
 		$newhost = shift(@ARGV);
 		}
+	elsif ($a eq "--ssh-user") {
+		$ssh_user = shift(@ARGV);
+		}
 	elsif ($a eq "--ssh-pass") {
 		$ssh_pass = shift(@ARGV);
 		}
@@ -122,6 +125,10 @@ elsif (defined($ssh_key)) {
 	$server->{'key'} = $key->{'id'};
 	$recheck = 1;
 	}
+if (defined($ssh_user)) {
+	$server->{'ssh_user'} = $ssh_user;
+	$recheck = 1;
+	}
 if ($webmin_same) {
 	$server->{'ssh_pass_same'} = 1;
 	$server->{'user'} = 'root';
@@ -171,6 +178,7 @@ print "                         [--newhost name]\n";
 print "                         [--os code]\n";
 print "                         [--virt | --novirt]\n";
 print "                         [--ssh-pass passsword | --ssh-key keyid]\n";
+print "                         [--ssh-user username]\n";
 print "                         [--webmin-user user]\n";
 print "                         [--webmin-pass password]\n";
 print "                         [--webmin-same]\n";

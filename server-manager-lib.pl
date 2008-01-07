@@ -9,6 +9,9 @@
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
+# XXX SSH login as other user
+#	XXX command-line
+#	XXX adding
 
 do '../web-lib.pl';
 &init_config();
@@ -504,9 +507,9 @@ return $text;
 # check_server_ssh_login(&server)
 # Checks if some system can be contacted via SSH, with the login details
 # set in the server object. Returns a status code (0=OK, 1=No connect, 2=No
-# login, 3=Unknown error, 4=Timeout, 5=Host down, 6=Virtual system down) and
-# an error message, the Webmin root directory (if installed), the Webmin
-# port and the Webmin SSL flag.
+# login, 3=Unknown error, 4=Timeout, 5=Host down, 6=Virtual system down,
+# 7=user is not roo) and an error message, the Webmin root directory
+# (if installed), the Webmin port and the Webmin SSL flag.
 sub check_server_ssh_login
 {
 local ($server) = @_;
@@ -526,14 +529,20 @@ if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
 	$cmd .= " -i ".quotemeta($key->{'file'});
 	}
-$cmd .= " $server->{'ssh_user'}\@$server->{'host'} 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; echo OK'";
+$cmd .= " $server->{'ssh_user'}\@$server->{'host'} 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK'";
 local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, 30);
 if ($status == 0) {
 	# Connected OK .. check the output to see if we have Webmin
 	if ($out !~ /OK/) {
+		# Could not run commands
 		return (3, $out, undef);
 		}
+	elsif ($out =~ /uid=(\d+)/ && $1 != 0) {
+		# Not root!
+		return (7, $out, undef);
+		}
 	else {
+		# Check Webmin location
 		local $root = $out =~ /root=(\S+)/ ? $1 : 0;
 		local $port = $out =~ /port=(\S+)/ ? $1 : 0;
 		local $ssl = $out =~ /ssl=(\S+)/ ? $1 : 0;
@@ -935,6 +944,13 @@ if ($status == 2) {
 	&unlock_file($file);
 	return 0;
 	}
+elsif ($status == 7) {
+	# SSH login is not root
+	$server->{'status'} = 'nosshlogin';
+	$server->{'status_msg'} = "User does not have root access";
+	&unlock_file($file);
+	return 0;
+	}
 elsif ($status == 5) {
 	# Hosting system is down
 	$server->{'status'} = 'nohost';
@@ -973,7 +989,7 @@ if ($webminport && $server->{'id'} != 0) {
 		# SSH says we have Webmin, but we don't know the login! Most
 		# likely it was installed behind our back, so assume login is
 		# same as root.
-		$server->{'user'} = 'root';
+		$server->{'user'} = $server->{'ssh_user'} || 'root';
 		$server->{'pass'} = $server->{'ssh_pass'};
 		$server->{'ssh_pass_same'} = $server->{'ssh_pass'} ? 1 : 0;
 		}

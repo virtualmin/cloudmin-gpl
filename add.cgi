@@ -19,7 +19,8 @@ $server->{'desc'} = $in{'desc'};
 $sfunc = "type_".$in{'type'}."_no_ssh";
 $no_ssh = defined(&$sfunc) && &$sfunc();
 if (!$no_ssh) {
-	$server->{'ssh_user'} = 'root';
+	$in{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i || &error($text{'add_euuser'});
+	$server->{'ssh_user'} = $in{'uuser'};
 	if ($in{'auth_mode'} == 0) {
 		$in{'upass'} || &error($text{'add_eupass'});
 		$server->{'ssh_pass'} = $in{'upass'};

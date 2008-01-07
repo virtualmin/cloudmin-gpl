@@ -346,12 +346,15 @@ else {
 			$server->{'key'} = $in{'key'};
 			delete($server->{'ssh_pass'});
 			}
+		$in{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i ||
+			&error($text{'add_euuser'});
+		$server->{'ssh_user'} = $in{'uuser'};
 		}
 	if (defined($in{'webmin_mode'})) {
 		if ($in{'webmin_mode'} == 1) {
 			# Same as SSH
 			$server->{'ssh_pass'} || &error($text{'add_emode1'});
-			$server->{'user'} = 'root';
+			$server->{'user'} = $server->{'ssh_user'} || 'root';
 			$server->{'pass'} = $server->{'ssh_pass'};
 			$server->{'ssh_pass_same'} = 1;
 			}
@@ -377,6 +380,7 @@ else {
 
 	# Re-check status if login mode has changed
 	if ($oldserver->{'ssh_pass'} ne $server->{'ssh_pass'} ||
+	    $oldserver->{'ssh_user'} ne $server->{'ssh_user'} ||
 	    $oldserver->{'key'} ne $server->{'key'} ||
 	    $oldserver->{'user'} ne $server->{'user'} ||
 	    $oldserver->{'pass'} ne $server->{'pass'} ||
