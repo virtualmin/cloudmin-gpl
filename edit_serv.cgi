@@ -277,18 +277,34 @@ if ($info && scalar(keys %$info) > 1) {
 	}
 
 # Hosted domains 
-@doms = &get_server_domains($server);
-if ($status eq 'virt' || @doms) {
+if (defined($server->{'virtualmin_domains'}) &&
+   $server->{'virtualmin_domains'} > $config{'display_max'}) {
+	# Too many domains to show
+	$toomanydoms = 1;
+	}
+if ($toomanydoms || $status eq 'virt' ||
+    (@doms = &get_server_domains($server))) {
 	print &ui_hidden_table_start($text{'edit_dheader'}." ".
 				     &hlink($text{'edit_help'}, "editdoms"),
 				     "width=100%", 2,
 				     "doms", $in{'doms'}, \@tds);
 	$clink = "<a href='list_domains.cgi?create=1&id=$server->{'id'}'>".
 		 "$text{'edit_domsadd'}</a>";
-	if (@doms) {
+	if ($toomanydoms) {
+		# Show too many message
+		print "<b>",&text('edit_toomany',
+				  $server->{'virtualmin_domains'}),"</b><p>\n";
+		print &ui_table_row(undef,
+		    &ui_links_row([
+			"<a href='edit_serv.cgi?id=$in{'id'}&doms=1&many=1'>".
+			 "$text{'edit_showmany'}</a>",
+			$clink ]), 2);
+		}
+	elsif (@doms) {
 		$bs = &get_server_blocksize($server);
 		@tds = ( "width=5" );
-		@links = ( &select_all_link("d", 1), &select_invert_link("d", 1),
+		@links = ( &select_all_link("d", 1),
+			   &select_invert_link("d", 1),
 			   $clink );
 		print &ui_form_start("mass_domains.cgi", "post");
 		print &ui_hidden("id", $in{'id'});

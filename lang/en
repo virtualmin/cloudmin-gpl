@@ -571,6 +571,8 @@ edit_zoneid=Zone ID number
 edit_groups=System groups
 edit_newgroup=New group $1
 edit_help=( Help .. )
+edit_toomany=This system has $1 Virtualmin domains, which is too many to list by default.
+edit_showmany=Show domains anyway.
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..
