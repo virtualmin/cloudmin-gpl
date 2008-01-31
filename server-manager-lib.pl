@@ -1026,6 +1026,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			# Get and save remote Virtualmin domains
 			&remote_foreign_require($server, "virtual-server",
 						"virtual-server-lib.pl");
+			alarm($webmin_timeout * 3);	# Give this longer,
+							# as connect worked
 			local @doms = &remote_foreign_call($server,
 					"virtual-server", "list_domains");
 			&save_server_domains($server, \@doms);
@@ -1064,8 +1066,9 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				}
 
 			# Perform a config check, if we haven't done an OK
-			# one yet
+			# one yet. This may be slow, so reset the timeout.
 			if (!$server->{'virtualmin_checked'}) {
+				alarm($webmin_timeout * 3);
 				&check_virtualmin_config($server, 1);
 				}
 
