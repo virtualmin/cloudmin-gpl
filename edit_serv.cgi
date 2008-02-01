@@ -278,12 +278,14 @@ if ($info && scalar(keys %$info) > 1) {
 
 # Hosted domains 
 if (defined($server->{'virtualmin_domains'}) &&
-   $server->{'virtualmin_domains'} > $config{'display_max'}) {
+    $server->{'virtualmin_domains'} > $config{'display_max'} &&
+    !$in{'many'}) {
 	# Too many domains to show
 	$toomanydoms = 1;
 	}
-if ($toomanydoms || $status eq 'virt' ||
-    (@doms = &get_server_domains($server))) {
+if ($toomanydoms ||
+    (@doms = &get_server_domains($server)) ||
+    $status eq 'virt') {
 	print &ui_hidden_table_start($text{'edit_dheader'}." ".
 				     &hlink($text{'edit_help'}, "editdoms"),
 				     "width=100%", 2,
