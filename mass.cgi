@@ -69,8 +69,10 @@ elsif ($in{'delete'}) {
 			print "<tr>\n";
 			print "<td><tt>$s->{'host'}</tt></td>\n";
 			print "<td>(",&$tfunc(),")</td>\n";
-			print "<td>",@sdoms ? &text('mass_ddoms',
+			if (@servers > 1) {
+				print "<td>",@sdoms ? &text('mass_ddoms',
 					scalar(@sdoms)) : undef,"</td>\n";
+				}
 			print "</tr>\n";
 			$dtotal += scalar(@sdoms);
 			}
