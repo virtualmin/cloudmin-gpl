@@ -2,6 +2,7 @@
 # This program is designed to be called via HTTP requests from programs, and
 # simply passes on parameters to a specified command-line program
 
+$trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
 
