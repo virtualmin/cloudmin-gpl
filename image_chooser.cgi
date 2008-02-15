@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
 # Opens a window for selecting an EC2 AMI
 
+$trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
 &popup_header($text{'achooser_title'});

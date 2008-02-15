@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
 # Opens a window for selecting a running EC2 instance
 
+$trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
 &popup_header($text{'ichooser_title'});
