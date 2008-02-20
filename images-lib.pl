@@ -306,11 +306,11 @@ return undef;
 }
 
 # fix_hostname_config_files(&server, ip, shorthost, fullhost, &vhost,
-#			    &dir-on-vhost)
+#			    &dir-on-vhost, [resolv-conf])
 # Fixes up all configuration files that contain the IP address or hostname
 sub fix_hostname_config_files
 {
-local ($server, $ip, $host, $fullhost, $vhost, $dir) = @_;
+local ($server, $ip, $host, $fullhost, $vhost, $dir, $resolv) = @_;
 
 # Check if the target has Virtualmin, and thus needs 127.0.0.1 in
 # /etc/resolv.conf
@@ -354,8 +354,16 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		$data =~ s/mydestination\s*=.*/mydestination = $fullhost, $host, localhost/;
 		}
 	elsif ($fix eq "/etc/resolv.conf") {
-		$data = &get_file_data_from_server($vhost, $fix);
-		if ($needs_localhost) {
+		if ($resolv) {
+			# From master
+			$data = &read_file_contents($fix);
+			}
+		else {
+			# From xen host
+			$data = &get_file_data_from_server($vhost, $fix);
+			}
+		if ($needs_localhost &&
+		    $data !~ /nameserver\s+127.0.0.1/i) {
 			$data = "nameserver 127.0.0.1\n".
 				$data;
 			}
