@@ -356,7 +356,7 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	elsif ($fix eq "/etc/resolv.conf") {
 		if ($resolv) {
 			# From master
-			$data = &read_file_contents($fix);
+			$data = &read_file_contents($resolv);
 			}
 		else {
 			# From xen host

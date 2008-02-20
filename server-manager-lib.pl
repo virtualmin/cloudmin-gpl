@@ -1789,7 +1789,7 @@ local @rv;
 foreach my $t (@server_management_types) {
 	local $dfunc = "type_".$t."_depends";
 	if (defined(&$dfunc)) {
-		push(@rv, grep { $_->{'id'} != $server->{'id'} &&
+		push(@rv, grep { local $_; $_->{'id'} != $server->{'id'} &&
 				 &$dfunc($server, $_) } @allservers);
 		}
 	}
