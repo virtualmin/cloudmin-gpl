@@ -2708,7 +2708,12 @@ sub get_server_default_gateway
 {
 local ($server) = @_;
 local $gw;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if ($server->{'manager'} eq 'this') {
+        # Just call own module
+        &foreign_require("net", "net-lib.pl");
+        ($gw) = &net::get_default_gateway();
+        }
+elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Get from Webmin
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
