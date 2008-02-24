@@ -28,7 +28,8 @@ foreach $i (@combined) {
 		"<a href='edit_image.cgi?id=$i->{'id'}'>$i->{'desc'}</a>",
 		&$tfunc(),
 		$got && $got->{'partial'} ? $text{'images_partial'} :
-		$got && !$avail ? $text{'images_local'} :
+		$got && !$avail ?
+			"<font color=#00aa00>$text{'images_local'}</font>" :
 		!$got ? $text{'images_down'} :
 		$got->{'version'} < $i->{'version'} ?
 			"<font color=#aaaa00>".
