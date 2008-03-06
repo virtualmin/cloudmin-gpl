@@ -137,7 +137,7 @@ elsif ($in{'installvirt'}) {
 		# Ask first
 		$vlform = &ui_table_start($text{'virtualmin_lheader'},undef, 2);
 		$vlform .= &ui_table_row($text{'virtualmin_lfrom'},
-				&virtualmin_licence_form("licence", 1));
+				&virtualmin_licence_form("licence", 1, 1));
 		$vlform .= &ui_table_end();
 		&show_confirm_form(
 		    &text('save_virtrusure', "<tt>$server->{'host'}</tt>").

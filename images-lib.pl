@@ -22,7 +22,8 @@ foreach my $f (readdir(DIR)) {
 	local %img;
 	&read_file_cached("$server_images_dir/$f", \%img);
 	$img{'id'} = $1;
-	next if ($type && $img{'manager'} ne $type);
+	next if ($type && $img{'manager'} ne $type);	# Don't want this type
+	next if (!$server_management_types{$img{'manager'}});	# Not supported
 	local $size = 0;
 	foreach my $fl (split(/\s+/, $img{'files'})) {
 		local @st = stat("$server_images_dir/$fl");

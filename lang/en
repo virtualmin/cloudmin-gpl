@@ -770,6 +770,7 @@ virtualmin_smode0=Virtualmin Pro is not installed
 virtualmin_smode1=Serial number $1 and key $2
 virtualmin_smode2=Same as VM2 license
 virtualmin_smode3=Allocate from license pool
+virtualmin_smode4=Install GPL version
 virtualmin_lfrom=License for Virtualmin
 virtualmin_efree=No available Virtualmin serial numbers were found in your license pool
 virtualmin_ekey=Missing Virtualmin license key

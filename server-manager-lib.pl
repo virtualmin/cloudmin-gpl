@@ -9,6 +9,11 @@
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
+# XXX GPL virtualmin install
+#
+# XXX built-in monitoring, based on states
+#	XXX can select hosts to include
+#	XXX for each state, select an action to perform (reboot, re-image)
 
 do '../web-lib.pl';
 &init_config();
@@ -103,6 +108,7 @@ $virtualmin_licence_prog = "/cgi-bin/vlicence.cgi";
 $virtualmin_licence_ssl = 0;
 $virtualmin_installer_prog = "/cgi-bin/install.cgi";
 $virtualmin_alllicences_prog = "/cgi-bin/alllicences.cgi";
+$virtualmin_gpl_installer_path = "/gpl/scripts/install.sh";
 
 $virtualmin_licences_file = "$module_config_directory/virtualmin-licences";
 $serial_cache_file = "$module_config_directory/serial-cache";
@@ -2017,9 +2023,6 @@ if (&indexof($os, @virtualmin_operating_systems) < 0) {
 	return &text('virtualmin_eos2', $osinfo->[1], join(", ", @supp));
 	}
 
-# Get our licence details
-# XXX parameterize
-local ($serial, $key) = &get_server_manager_serial();
 if (!$serial) {
 	return $text{'virtualmin_elicence'};
 	}
@@ -2029,7 +2032,9 @@ local $itemp = &transname("virtualmin-install.sh");
 local $error;
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
-	       "$virtualmin_installer_prog?serial=$serial;key=$key",
+	       $serial eq "GPL" ?
+			$virtualmin_gpl_installer_path :
+			"$virtualmin_installer_prog?serial=$serial;key=$key",
 	       $itemp, \$error, undef, $virtualmin_licence_ssl);
 if ($error) {
 	return &text('virtualmin_einstaller', $error);
@@ -2960,11 +2965,11 @@ else {
 	}
 }
 
-# virtualmin_licence_form(name, no-none)
+# virtualmin_licence_form(name, no-none, gpl-opt)
 # Returns HTML for selecting a Virtualmin licence
 sub virtualmin_licence_form
 {
-local ($name, $nonone) = @_;
+local ($name, $nonone, $gpl) = @_;
 local @opts;
 local ($cansame, $canalloc);
 if (!$nonone) {
@@ -2982,6 +2987,10 @@ local ($aserial, $akey) = &allocate_virtualmin_serial(0);
 if ($aserial) {
 	push(@opts, [ 3, $text{'virtualmin_smode3'}."<br>" ]);
 	$canalloc = 1;
+	}
+if ($gpl) {
+	# GPL mode, only for script install
+	push(@opts, [ 4, $text{'virtualmin_smode4'}."<br>" ]);
 	}
 if (@opts > 1) {
 	return &ui_radio($name, $cansame ? 2 :
@@ -3022,6 +3031,10 @@ elsif ($in->{$name} == 3) {
 	# Allocate from pool
 	local ($aserial, $akey) = &allocate_virtualmin_serial(0);
 	return ($aserial, $akey);
+	}
+elsif ($in->{$name} == 4) {
+	# Fixed GPL version
+	return ("GPL", "GPL");
 	}
 else {
 	return (undef, "Unknown licence mode!");
