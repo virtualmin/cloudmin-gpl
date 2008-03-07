@@ -14,6 +14,7 @@ $0 = "$pwd/setup-bind-zone.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &foreign_require("bind8", "bind8-lib.pl");
+&foreign_require("init", "init-lib.pl");
 &set_all_text_print();
 
 # Parse command line
@@ -176,6 +177,11 @@ $dir = { 'name' => 'zone',
 # Apply changes
 &$first_print("Restarting BIND ..");
 &bind8::restart_bind();
+foreach $a ("named", "bind", "bind8", "bind9") {
+	if (&init::action_status($a) == 1) {
+		&init::enable_at_boot($a);
+		}
+	}
 &$second_print(".. done");
 
 sub usage
