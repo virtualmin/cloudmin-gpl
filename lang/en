@@ -976,6 +976,7 @@ xen_err=Failed to save Xen host
 xen_elinux=Xen servers are only supported on Linux
 xen_ewhich=The required command $1 does not exist. Perhaps the Xen software is not installed?
 xen_ekernel=The kernel does not include Xen support. Perhaps your do not have the Xen-specific kernel installed?
+xen_evibr=The QEMU interface $1 is active, which can break networking for Xen instances. On Redhat-derived systems, remove the file $2 and then reboot.
 xen_edown=A system which cannot be contacted via SSH cannot be used for Xen hosting
 xen_esoft=The selected system cannot support Xen instances : $1
 xen_edir=The specified base directory does not exist
