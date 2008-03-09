@@ -395,6 +395,33 @@ if (defined(&$ifunc) && $status ne 'nohost') {
 	print &ui_hidden_table_end("ifaces");
 	}
 
+# CPU and memory limits, if we can manage them
+if (&can_edit_limits($server) && $status ne 'nohost') {
+	@tds = ( "width=30%" );
+	print &ui_hidden_table_start($text{'edit_lheader'}." ".
+				     &hlink($text{'edit_help'}, "editlimits"),
+				     "width=100%", 2,
+				     "limits", $in{'limits'}, \@tds);
+	print &ui_form_start("save_limits.cgi");
+	print &ui_hidden("id", $in{'id'});
+
+	# Memory limit
+	$mfunc = "type_".$t."_get_memory";
+	$m = defined(&$mfunc) ? &$mfunc($server) : undef;
+	if ($m) {
+		print &ui_table_row($text{'edit_lmemory'},
+			&ui_bytesbox("memory", $m));
+		}
+
+	# CPU limit
+
+	# XXX CPU pinning?
+
+	print &ui_table_row(undef, &ui_submit($text{'save'}), 2);
+	print &ui_form_end();
+	print &ui_hidden_table_end("limits");
+	}
+
 &ui_print_footer("", $text{'index_return'});
 
 if (defined(&theme_select_server)) {

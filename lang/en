@@ -573,6 +573,8 @@ edit_newgroup=New group $1
 edit_help=( Help .. )
 edit_toomany=This system has $1 Virtualmin domains, which is too many to list by default.
 edit_showmany=Show domains anyway.
+edit_lheader=Memory and CPU limits
+edit_lmemory=Maximum memory allocation
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..
@@ -1333,3 +1335,10 @@ script_upok=Update to version $1 OK
 script_notok=Update failed : $1
 script_failed=Updates failed : $1
 script_indom=$1 in $2
+
+limits_title=Updating Limits
+limits_setting=Setting maximum memory allocation to $1 ..
+limits_failed=.. failed : $1
+limits_needreboot=The system must be rebooted for these changes to be fully applied.
+limits_reboot=Reboot Now
+

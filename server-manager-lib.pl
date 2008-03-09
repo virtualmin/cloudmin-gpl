@@ -5,15 +5,11 @@
 #	XXX xen disk sizes
 #	XXX edit memory allocations
 #	XXX cpu limits
+#	XXX command line too
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
-# XXX GPL virtualmin install
-#
-# XXX built-in monitoring, based on states
-#	XXX can select hosts to include
-#	XXX for each state, select an action to perform (reboot, re-image)
 
 do '../web-lib.pl';
 &init_config();
@@ -3322,6 +3318,15 @@ foreach my $u (@$updates) {
 	push(@rv, [ $u, $err, $out ]);
 	}
 return @rv;
+}
+
+sub can_edit_limits
+{
+local ($server) = @_;
+local $cfunc = "type_".$server->{'manager'}."_can_cpu";
+local $mfunc = "type_".$server->{'manager'}."_can_memory";
+return defined(&$cfunc) && &$cfunc($server) ||
+       defined(&$mfunc) && &$mfunc($server);
 }
 
 # strip_html_tags(html)
