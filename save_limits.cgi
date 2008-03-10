@@ -24,7 +24,7 @@ if (defined($in{'memory'})) {
 	$m = $in{'memory'}*$in{'memory_units'};
 	&$first_print(&text('limits_setting', &nice_size($m)));
 	$mfunc = "type_".$t."_save_memory";
-	$err = &mfunc($server, $m);
+	$err = &$mfunc($server, $m);
 	if ($err) {
 		&$second_print(&text('limits_failed', $err));
 		}
@@ -39,9 +39,12 @@ if (defined($in{'memory'})) {
 # XXX
 
 # Offer to reboot if needed
-if ($reboot) {
-	print &ui_form_start("reboot.cgi");
+if ($reboot && $server->{'status'} ne 'down') {
+	print &ui_form_start("save_serv.cgi");
 	print &ui_hidden("id", $in{'id'});
+	print &ui_hidden("reboot", 1);
+	print &ui_hidden("confirm", 1);
+	print &ui_hidden("updown", 1);
 	print "<b>$text{'limits_needreboot'}</b><p>\n";
 	print &ui_form_end([ [ undef, $text{'limits_reboot'} ] ]);
 	}

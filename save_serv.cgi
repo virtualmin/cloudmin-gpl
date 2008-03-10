@@ -66,7 +66,30 @@ elsif ($in{'reboot'}) {
 				       [ "reboot", 1 ] ],
 		    $text{'save_rebootok'});
 		}
+	elsif ($in{'updown'}) {
+		# Take down and start up again
+		print &text('save_shutting',
+			    "<tt>$server->{'host'}</tt>"),"<br>\n";
+		$err = &shutdown_server($server);
+		if ($err) {
+			print &text('save_shutfailed', $err),"<p>\n";
+			}
+		else {
+			print $text{'save_shutdone'},"<p>\n";
+
+			print &text('save_starting',
+				    "<tt>$server->{'host'}</tt>"),"<br>\n";
+			$err = &startup_server($server);
+			if ($err) {
+				print &text('save_startfailed', $err),"<p>\n";
+				}
+			else {
+				print $text{'save_startdone'},"<p>\n";
+				}
+			}
+		}
 	else {
+		# Just reboot
 		print &text('save_rebooting',
 			    "<tt>$server->{'host'}</tt>"),"<br>\n";
 		$err = &reboot_server($server);
