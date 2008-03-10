@@ -8,7 +8,7 @@ require './server-manager-lib.pl';
 &update_server_manager_licence(\%licence);
 &write_file($licence_status, \%licence);
 
-# Check for new licences
+# Check for new Virtualmin licences
 if ($config{'licences_sched'}) {
 	$got = &fetch_virtualmin_licences();
 	if (ref($got) && @$got) {

@@ -10,6 +10,9 @@
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
+# XXX post-system-creation scripts, run either locally or on the remote system
+# XXX multiple IP ranges for allocation for xen, zones and vservers
+# XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 
 do '../web-lib.pl';
 &init_config();
@@ -1111,6 +1114,16 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		$info->{'general'}->{'tinfo'} =
 			&remote_eval($server, "webmin",
 				 "\%t=get_theme_info(\$current_theme); \\\%t");
+
+		# Get network interfaces, as seen by the system
+		local $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+		if (!defined(&$ifunc) &&
+		    &remote_foreign_check($server, "net")) {
+			&remote_foreign_require($server, "net", "net-lib.pl");
+			$info->{'ifaces'} = [ &remote_foreign_call(
+				$server, "net", "active_interfaces") ];
+			}
+
 		alarm(0);
 		};
 	if ($@) {
@@ -1832,17 +1845,19 @@ foreach my $s (&list_managed_servers()) {
 				}
 			}
 		}
-	elsif ($s->{'status'} eq 'virt' || $s->{'status'} eq 'novirt') {
-		# Get from active IPs
-		&remote_foreign_require($s, "net", "net-lib.pl");
-		foreach my $iface (&remote_foreign_call($s, "net",
-						"active_interfaces")) {
-			if ($iface->{'address'}) {
-				$used{$iface->{'address'}} = $s;
+	else {
+		# Get from active IPs, from last poll
+		local $coll = &get_server_collected($s);
+		if ($coll->{'ifaces'}) {
+			foreach my $iface (@{$coll->{'ifaces'}}) {
+				if ($iface->{'address'}) {
+					$used{$iface->{'address'}} = $s;
+					}
 				}
 			}
 		}
 	}
+die "smeg";
 return %used;
 }
 
