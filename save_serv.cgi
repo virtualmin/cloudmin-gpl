@@ -131,6 +131,9 @@ elsif ($in{'delete'}) {
 		    $text{'save_deleteok'});
 		}
 	else {
+		# Run pre-deletion script
+		&run_system_script($server, 'before', 'delete') || goto FAILED;
+
 		print &text('save_deleteing',
 			    "<tt>$server->{'host'}</tt>"),"<br>\n";
 		$dfunc = "type_".$server->{'manager'}."_delete";
@@ -142,11 +145,16 @@ elsif ($in{'delete'}) {
 			&remove_server_ssh_keys($server);
 			&delete_managed_server($server);
 			print $text{'save_deletedone'},"<p>\n";
+
+			# Run post-deletion script
+			&run_system_script($server, 'after', 'delete');
+
 			if (defined(&theme_post_save_server)) {
 				&theme_post_save_server($server);
 				}
 			}
 		}
+	FAILED:
 	&ui_print_footer("", $text{'index_return'});
 	}
 

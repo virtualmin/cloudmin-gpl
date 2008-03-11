@@ -88,6 +88,9 @@ elsif ($in{'delete'}) {
 	else {
 		# Do it for real
 		foreach $s (@servers) {
+			# Run pre-deletion script
+			&run_system_script($s, 'before', 'delete') || next;
+
 			$tfunc = "type_".$s->{'manager'}."_desc";
 			print &text('mass_deleting', &$tfunc(),
 				    "<tt>$s->{'host'}</tt>"),"<br>\n";
@@ -100,6 +103,10 @@ elsif ($in{'delete'}) {
 				print $text{'mass_deleted'},"<p>\n";
 				&remove_server_ssh_keys($s);
 				&delete_managed_server($s);
+
+				# Run post-deletion script
+				&run_system_script($s, 'after', 'delete');
+
 				if (defined(&theme_post_save_server)) {
 					&theme_post_save_server($server);
 					}

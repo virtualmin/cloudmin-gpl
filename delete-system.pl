@@ -56,6 +56,10 @@ if (@deps) {
 foreach $s (@servers) {
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
+
+	# Run pre-deletion script
+	&run_system_script($s, 'before', 'delete') || next;
+
 	print "Deleting $tdesc system $s->{'host'} ..\n";
 	$dfunc = "type_".$s->{'manager'}."_delete";
 	$err = &$dfunc($s);
@@ -66,6 +70,9 @@ foreach $s (@servers) {
 		&remove_server_ssh_keys($s);
 		&delete_managed_server($s);
 		print ".. deleted successfully\n\n";
+
+		# Run post-deletion script
+		&run_system_script($s, 'after', 'delete');
 		}
 	}
 

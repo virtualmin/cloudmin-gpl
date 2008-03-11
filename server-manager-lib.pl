@@ -9,9 +9,6 @@
 # XXX create new Xen images with updates
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
-# XXX post-system-creation scripts, run either locally or on the remote system
-#	XXX deletion too
-#	XXX environment variables
 # XXX multiple IP ranges for allocation for xen, zones and vservers
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX show and allow editing of interfaces in Xen systems
@@ -1859,7 +1856,6 @@ foreach my $s (&list_managed_servers()) {
 			}
 		}
 	}
-die "smeg";
 return %used;
 }
 
@@ -3353,6 +3349,27 @@ sub run_system_script
 local ($server, $when, $action) = @_;
 local $cmd = $config{$when.'_'.$action.'_cmd'};
 return 1 if (!$cmd);
+
+# Set environment variables
+foreach $e (keys %ENVS) {
+	delete($ENV{$e}) if ($e =~ /^SERVERMANAGER_/);
+	}
+$ENV{'SERVERMANAGER_WHEN'} = uc($when);
+$ENV{'SERVERMANAGER_ACTION'} = uc($action);
+foreach my $k (keys %$server) {
+	$ENV{'SERVERMANAGER_'.uc($k)} = $server->{$k};
+	}
+if ($server->{'manager'} ne 'this' && $server->{'manager'} ne 'real') {
+	# Add host variables too
+	local $pfunc = "type_".$server->{'manager'}."_parent";
+	if (defined(&$pfunc)) {
+		local $parent = &$pfunc($server);
+		foreach my $k (keys %$parent) {
+			$ENV{'SERVERMANAGER_PARENT_'.uc($k)} = $parent->{$k};
+			}
+		}
+	}
+
 &$first_print($text{'run_'.$when.'_'.$action});
 local $out = &backquote_logged("($cmd) 2>&1 </dev/null");
 if ($?) {
