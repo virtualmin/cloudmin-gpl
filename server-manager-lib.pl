@@ -3,7 +3,6 @@
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
-#	XXX edit memory allocations
 #	XXX cpu limits
 #	XXX command line too
 # XXX backup and restore managed systems? Use Backup Configuration Files module
@@ -11,8 +10,11 @@
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
 # XXX post-system-creation scripts, run either locally or on the remote system
+#	XXX deletion too
+#	XXX environment variables
 # XXX multiple IP ranges for allocation for xen, zones and vservers
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
+# XXX show and allow editing of interfaces in Xen systems
 
 do '../web-lib.pl';
 &init_config();
@@ -3342,6 +3344,25 @@ local $cfunc = "type_".$server->{'manager'}."_can_cpu";
 local $mfunc = "type_".$server->{'manager'}."_can_memory";
 return defined(&$cfunc) && &$cfunc($server) ||
        defined(&$mfunc) && &$mfunc($server);
+}
+
+# run_system_script(&system, when, action)
+# Run the pre/post creation/deletion script, if defined, and tell the user
+sub run_system_script
+{
+local ($server, $when, $action) = @_;
+local $cmd = $config{$when.'_'.$action.'_cmd'};
+return 1 if (!$cmd);
+&$first_print($text{'run_'.$when.'_'.$action});
+local $out = &backquote_logged("($cmd) 2>&1 </dev/null");
+if ($?) {
+	&$second_print(&text('run_failed', "<tt>".&html_escape($out)."</tt>"));
+	return 0;
+	}
+else {
+	&$second_print($text{'create_done'});
+	return 1;
+	}
 }
 
 # strip_html_tags(html)

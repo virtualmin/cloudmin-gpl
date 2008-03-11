@@ -193,6 +193,9 @@ if (!$serial && !$key) {
 		}
 	}
 
+# Run pre-creation script
+&run_system_script($server, 'before', 'create') || exit(2);
+
 if ($serial) {
 	# Mark this key as in-use
 	&start_installing_virtualmin_licence($serial, $key);
@@ -394,6 +397,9 @@ if (defined(&$bfunc)) {
 	&$bfunc($server, 1);
 	print ".. done\n\n";
 	}
+
+# Run post-creation script
+&run_system_script($server, 'after', 'create');
 
 print "Creation of $tdesc system $server->{'host'} is complete\n";
 exit(0);

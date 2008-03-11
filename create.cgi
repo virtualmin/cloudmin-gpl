@@ -90,12 +90,17 @@ elsif (!$serial && !$key) {
 		&error($text{'create_eimagevirt'});
 		}
 	}
+&ui_print_unbuffered_header(undef, $text{'create_title'}, "");
+
+# Run pre-creation script
+if (!&run_system_script($server, 'before', 'create')) {
+	goto END;
+	}
+
 if ($serial) {
 	# Mark this key as in-use
 	&start_installing_virtualmin_licence($serial, $key);
 	}
-
-&ui_print_unbuffered_header(undef, $text{'create_title'}, "");
 
 # If there is an image file, copy to the server
 if ($in{'image'}) {
@@ -309,6 +314,9 @@ if (defined(&$bfunc)) {
 	&$bfunc($server, 1);
 	print $text{'create_done'},"<p>\n";
 	}
+
+# Run post-creation script
+&run_system_script($server, 'after', 'create');
 
 if (defined(&theme_select_server)) {
 	&theme_select_server($server);

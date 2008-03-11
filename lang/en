@@ -1342,3 +1342,8 @@ limits_failed=.. failed : $1
 limits_needreboot=The system must be rebooted for these changes to be fully applied.
 limits_reboot=Reboot Now
 
+run_before_create=Running pre-creation script ..
+run_after_create=Running post-creation script ..
+run_before_delete=Running pre-deletion script ..
+run_after_delete=Running post-deletion script ..
+run_failed=.. script failed : $1
