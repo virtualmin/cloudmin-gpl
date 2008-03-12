@@ -575,6 +575,9 @@ edit_toomany=This system has $1 Virtualmin domains, which is too many to list by
 edit_showmany=Show domains anyway.
 edit_lheader=Memory and CPU limits
 edit_lmemory=Maximum memory allocation
+edit_lcpu=Maximum CPU use
+edit_lweight=CPU allocation weighting
+edit_lunlimit=Unlimited
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..
@@ -1341,6 +1344,8 @@ limits_setting=Setting maximum memory allocation to $1 ..
 limits_failed=.. failed : $1
 limits_needreboot=The system must be rebooted for these changes to be fully applied.
 limits_reboot=Reboot Now
+limits_settingcpu=Setting CPU to $1%, and weight to $2 ..
+limits_settingcpu2=Setting CPU to $1% ..
 
 run_before_create=Running pre-creation script ..
 run_after_create=Running post-creation script ..

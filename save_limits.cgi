@@ -15,6 +15,13 @@ $t = $server->{'manager'};
 if (defined($in{'memory'})) {
 	$in{'memory'} =~ /^\d+$/ || &error($text{'limits_ememory'});
 	}
+if (defined($in{'cpu'})) {
+	$in{'cpu_def'} || $in{'cpu'} =~ /^\d+$/ && $in{'cpu'} > 0 ||
+		&error($text{'limits_ecpu'});
+	}
+if (defined($in{'weight'})) {
+	$in{'weight'} =~ /^\d+$/ || &error($text{'limits_eweight'});
+	}
 
 # Apply them, telling the user
 &ui_print_unbuffered_header(&server_in($server), $text{'limits_title'}, "");
@@ -35,8 +42,31 @@ if (defined($in{'memory'})) {
 		}
 	}
 
-# Update CPU
-# XXX
+# Update CPU and weight
+if (defined($in{'cpu'}) || defined($in{'weight'})) {
+	$cpudesc = $in{'cpu_def'} ? $text{'edit_lunlimit'} : $in{'cpu'};
+	if (defined($in{'weight'})) {
+		&$first_print(&text('limits_settingcpu',
+				    $cpudesc, $in{'weight'}));
+		}
+	else {
+		&$first_print(&text('limits_settingcpu2', $cpudesc));
+		}
+	$cfunc = "type_".$t."_save_cpu";
+	$err = &$cfunc($server,
+		       !defined($in{'cpu'}) ? undef :
+		       $in{'cpu_def'} ? 0 : $in{'cpu'},
+		       !defined($in{'weight'}) ? undef : $in{'weight'});
+	if ($err) {
+		&$second_print(&text('limits_failed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		$cfunc = "type_".$t."_can_cpu";
+		$reboot++ if (&$cfunc($server) == 2 ||
+			      &$cfunc($server) == 4);
+		}
+	}
 
 # Offer to reboot if needed
 if ($reboot && $server->{'status'} ne 'down') {

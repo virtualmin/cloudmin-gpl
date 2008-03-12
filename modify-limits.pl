@@ -31,6 +31,14 @@ while(@ARGV > 0) {
 		$cpu =~ /^\d+$/ && $cpu > 0 ||
 			&usage("--cpu must be followed by a percentage");
 		}
+	elsif ($a eq "--no-cpu") {
+		$cpu = 0;
+		}
+	elsif ($a eq "--weight") {
+		$weight = shift(@ARGV);
+		$weight =~ /^\d+$/ && $weight > 0 ||
+			&usage("--weight must be followed by a number");
+		}
 	elsif ($a eq "--reboot") {
 		# Reboot after
 		$do_reboot = 1;
@@ -39,7 +47,7 @@ while(@ARGV > 0) {
 		&usage();
 		}
 	}
-$cpu || $memory || &usage("Nothing to modify!");
+defined($cpu) || defined($weight) || $memory || &usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
@@ -88,10 +96,30 @@ foreach $s (@servers) {
 		print "\n";
 		}
 
-	# Change CPU, if we can
-	if ($cpu) {
-		# XXX
+	# Change CPU and weight, if we can
+	if (defined($cpu) || defined($weight)) {
+		print "Setting CPU limit on $tdesc system $s->{'host'} ..\n";
+		$cfunc = "type_".$t."_can_cpu";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$cfunc = "type_".$t."_save_cpu";
+			$err = &$cfunc($s, $cpu, $weight);
+			if ($err) {
+				print ".. failed : $err\n";
+				}
+			else {
+				print ".. done\n";
+				$reboot++ if (&$cfunc($s) == 2 ||
+					      &$cfunc($s) == 4);
+				}
+			}
+		else {
+			print ".. not supported\n";
+			}
+		print "\n";
 		}
+
+	# Update and changed parameters
+	&save_managed_server($s);
 
 	# Restart if needed
 	if ($reboot && $s->{'status'} ne 'down') {
@@ -137,6 +165,7 @@ local $types = join("|", @server_management_types);
 print "                        [--type $types]*\n";
 print "                        [--os oscode]*\n";
 print "                        [--cpu percentage]\n";
+print "                        [--weight number]\n";
 print "                        [--memory MB]\n";
 print "                        [--reboot]\n";
 exit(1);

@@ -414,8 +414,19 @@ if (&can_edit_limits($server) && $status ne 'nohost') {
 		}
 
 	# CPU limit
-
-	# XXX CPU pinning?
+	$cfunc = "type_".$t."_get_cpu";
+	if (defined(&$cfunc)) {
+		($cpu, $weight) = &$cfunc($server);
+		if (defined($cpu)) {
+			print &ui_table_row($text{'edit_lcpu'},
+				&ui_opt_textbox("cpu", $cpu, 4,
+					$text{'edit_lunlimit'})."%");
+			}
+		if (defined($weight)) {
+			print &ui_table_row($text{'edit_lweight'},
+				&ui_textbox("weight", $weight, 4));
+			}
+		}
 
 	print &ui_table_row(undef, &ui_submit($text{'save'}), 2);
 	print &ui_form_end();

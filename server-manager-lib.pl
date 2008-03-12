@@ -4,9 +4,10 @@
 # XXX resource management
 #	XXX xen disk sizes
 #	XXX cpu limits
-#	XXX command line too
+#		XXX don't reboot if not needed if .cgi
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
+#	XXX co:2345:respawn:/sbin/mingetty console
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
 # XXX multiple IP ranges for allocation for xen, zones and vservers
