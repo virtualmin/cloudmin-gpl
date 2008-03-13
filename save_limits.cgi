@@ -30,21 +30,30 @@ if (defined($in{'weight'})) {
 if (defined($in{'memory'})) {
 	$m = $in{'memory'}*$in{'memory_units'};
 	&$first_print(&text('limits_setting', &nice_size($m)));
-	$mfunc = "type_".$t."_save_memory";
-	$err = &$mfunc($server, $m);
-	if ($err) {
-		&$second_print(&text('limits_failed', $err));
+	$gfunc = "type_".$t."_get_memory";
+	$oldm = &$gfunc($server);
+	if ($m == $oldm) {
+		# No need to change
+		&$second_print($text{'limits_already'});
 		}
 	else {
-		&$second_print($text{'create_done'});
-		$cfunc = "type_".$t."_can_memory";
-		$reboot++ if (&$cfunc($server) == 2);
+		# Call set function and check
+		$mfunc = "type_".$t."_save_memory";
+		$err = &$mfunc($server, $m);
+		if ($err) {
+			&$second_print(&text('limits_failed', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			$cfunc = "type_".$t."_can_memory";
+			$reboot++ if (&$cfunc($server) == 2);
+			}
 		}
 	}
 
 # Update CPU and weight
 if (defined($in{'cpu'}) || defined($in{'weight'})) {
-	$cpudesc = $in{'cpu_def'} ? $text{'edit_lunlimit'} : $in{'cpu'};
+	$cpudesc = $in{'cpu_def'} ? $text{'edit_lunlimit'} : $in{'cpu'}."%";
 	if (defined($in{'weight'})) {
 		&$first_print(&text('limits_settingcpu',
 				    $cpudesc, $in{'weight'}));
@@ -52,19 +61,29 @@ if (defined($in{'cpu'}) || defined($in{'weight'})) {
 	else {
 		&$first_print(&text('limits_settingcpu2', $cpudesc));
 		}
-	$cfunc = "type_".$t."_save_cpu";
-	$err = &$cfunc($server,
-		       !defined($in{'cpu'}) ? undef :
-		       $in{'cpu_def'} ? 0 : $in{'cpu'},
-		       !defined($in{'weight'}) ? undef : $in{'weight'});
-	if ($err) {
-		&$second_print(&text('limits_failed', $err));
+	$gfunc = "type_".$t."_get_cpu";
+	($oldc, $oldw) = &$gfunc($server);
+	if ($oldc == ($in{'cpu_def'} ? 0 : $in{'cpu'}) &&
+	    $oldw == $in{'weight'}) {
+		# No need to change
+		&$second_print($text{'limits_already'});
 		}
 	else {
-		&$second_print($text{'create_done'});
-		$cfunc = "type_".$t."_can_cpu";
-		$reboot++ if (&$cfunc($server) == 2 ||
-			      &$cfunc($server) == 4);
+		# Call set function and check
+		$cfunc = "type_".$t."_save_cpu";
+		$err = &$cfunc($server,
+			       !defined($in{'cpu'}) ? undef :
+			       $in{'cpu_def'} ? 0 : $in{'cpu'},
+			       !defined($in{'weight'}) ? undef : $in{'weight'});
+		if ($err) {
+			&$second_print(&text('limits_failed', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			$cfunc = "type_".$t."_can_cpu";
+			$reboot++ if (&$cfunc($server) == 2 ||
+				      &$cfunc($server) == 4);
+			}
 		}
 	}
 

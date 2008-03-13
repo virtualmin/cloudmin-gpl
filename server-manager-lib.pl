@@ -3,8 +3,6 @@
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
-#	XXX cpu limits
-#		XXX don't reboot if not needed if .cgi
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console

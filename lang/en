@@ -1341,11 +1341,12 @@ script_indom=$1 in $2
 
 limits_title=Updating Limits
 limits_setting=Setting maximum memory allocation to $1 ..
+limits_already=.. already set
 limits_failed=.. failed : $1
 limits_needreboot=The system must be rebooted for these changes to be fully applied.
 limits_reboot=Reboot Now
-limits_settingcpu=Setting CPU to $1%, and weight to $2 ..
-limits_settingcpu2=Setting CPU to $1% ..
+limits_settingcpu=Setting CPU to $1, and weight to $2 ..
+limits_settingcpu2=Setting CPU to $1 ..
 
 run_before_create=Running pre-creation script ..
 run_after_create=Running post-creation script ..
