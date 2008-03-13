@@ -419,8 +419,8 @@ if (&can_edit_limits($server) && $status ne 'nohost') {
 		($cpu, $weight) = &$cfunc($server);
 		if (defined($cpu)) {
 			print &ui_table_row($text{'edit_lcpu'},
-				&ui_opt_textbox("cpu", $cpu, 4,
-					$text{'edit_lunlimit'})."%");
+				&ui_opt_textbox("cpu", $cpu == 0 ? undef : $cpu,
+					4, $text{'edit_lunlimit'})."%");
 			}
 		if (defined($weight)) {
 			print &ui_table_row($text{'edit_lweight'},
