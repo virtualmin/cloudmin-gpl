@@ -1,0 +1,14 @@
+<header>Memory and CPU limits</header>
+
+This section allows you to change the amount of memory allocated to a
+virtual system, and the percentage of CPU it is assigned on the hosting server.
+CPU is expressed as a percentage of a core, so 100% would mean only half
+the CPU capacity of a two-core host system. <p>
+
+On Xen systems you can also set the CPU weighting, which is used when the total
+CPU consumed by all instances exceeds that provided by the host. An instance
+with a weight of 512 will get twice the CPU of one with 256, assuming they are
+both doing equal amounts of processing. <p>
+
+<footer>
+
