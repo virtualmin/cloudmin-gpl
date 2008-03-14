@@ -12,7 +12,6 @@
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX show and allow editing of interfaces in Xen systems
 #
-# XXX radio button to select default xen / vservers / zones host
 # XXX detailed system status is empty for geylang
 # XXX can change memory dynamically with xm mem-set
 
@@ -3402,7 +3401,7 @@ sub is_parent_server
 {
 local ($server) = @_;
 local @rv;
-foreach my $t (grep { $_ ne 'ec2' } @server_management_types) {
+foreach my $t ('xen', 'vserver', 'zone') {
 	if ($server->{$t."_host"}) {
 		push(@rv, $t);
 		}

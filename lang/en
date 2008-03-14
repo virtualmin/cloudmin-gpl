@@ -1014,6 +1014,7 @@ xens_none=No systems have been registered for Xen hosting yet.
 xens_none2=None of the registered systems can host Xen instances.
 xens_return=list of Xen hosts
 xens_dir=Base directory
+xens_default=Make Selected the Default Host System
 
 xen_state_r=Running
 xen_state_b=Waiting to run
