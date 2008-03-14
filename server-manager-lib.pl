@@ -11,8 +11,6 @@
 # XXX multiple IP ranges for allocation for xen, zones and vservers
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX show and allow editing of interfaces in Xen systems
-#
-# XXX can change memory dynamically with xm mem-set
 
 do '../web-lib.pl';
 &init_config();

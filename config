@@ -13,3 +13,4 @@ xen_mem=256
 xen_dir=/xen
 name_max=20
 cat_mode=0
+xen_mem_mode=0
