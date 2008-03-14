@@ -11,6 +11,10 @@
 # XXX multiple IP ranges for allocation for xen, zones and vservers
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX show and allow editing of interfaces in Xen systems
+#
+# XXX radio button to select default xen / vservers / zones host
+# XXX detailed system status is empty for geylang
+# XXX can change memory dynamically with xm mem-set
 
 do '../web-lib.pl';
 &init_config();
@@ -3360,9 +3364,8 @@ foreach my $k (keys %$server) {
 	}
 if ($server->{'manager'} ne 'this' && $server->{'manager'} ne 'real') {
 	# Add host variables too
-	local $pfunc = "type_".$server->{'manager'}."_parent";
-	if (defined(&$pfunc)) {
-		local $parent = &$pfunc($server);
+	local $parent = &get_parent_server($server);
+	if ($parent) {
 		foreach my $k (keys %$parent) {
 			$ENV{'SERVERMANAGER_PARENT_'.uc($k)} = $parent->{$k};
 			}
@@ -3379,6 +3382,32 @@ else {
 	&$second_print($text{'create_done'});
 	return 1;
 	}
+}
+
+# get_parent_server(&server)
+# Given a server, returns the one that hosts it or undef
+sub get_parent_server
+{
+local ($server) = @_;
+local $pfunc = "type_".$server->{'manager'}."_parent";
+if (defined(&$pfunc)) {
+	return &$pfunc($server);
+	}
+return undef;
+}
+
+# is_parent_server(&server)
+# Returns a list of the system types this server hosts
+sub is_parent_server
+{
+local ($server) = @_;
+local @rv;
+foreach my $t (grep { $_ ne 'ec2' } @server_management_types) {
+	if ($server->{$t."_host"}) {
+		push(@rv, $t);
+		}
+	}
+return wantarray ? @rv : $rv[0];
 }
 
 # strip_html_tags(html)

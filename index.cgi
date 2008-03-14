@@ -37,7 +37,7 @@ if (!$main::vm2_no_create_links) {
 			foreach $l (&$lfunc()) {
 				$prog = $l->{'create'} ? "create_form.cgi"
 						       : "add_form.cgi";
-				push(@links,
+				push(@crlinks,
 				  "<a href='$prog?type=$t'>$l->{'desc'}</a>");
 				}
 			}
@@ -45,17 +45,23 @@ if (!$main::vm2_no_create_links) {
 	}
 
 # Find all servers
-if (@allservers > $config{'display_max'}) {
+$searching = $in{'search'} || $in{'gok'} || $in{'pok'} || $in{'eok'};
+if (@allservers > $config{'display_max'} || $searching) {
 	# Too many! Show a search form
-	print &text('index_toomany', scalar(@allservers),
-				     $config{'display_max'}),"<p>\n";
+	if (!$searching) {
+		print &text('index_toomany', scalar(@allservers),
+					     $config{'display_max'}),"<p>\n";
+		}
+
 	print &ui_form_start("index.cgi");
 	print "<table cellpadding=1 cellspacing=1>\n";
 
+	# Search by hostname or desc
 	print "<tr> <td><b>$text{'index_search'}</b></td>\n";
 	print "<td>",&ui_textbox("search", $in{'search'}, 30),"</td>\n";
 	print "<td>",&ui_submit($text{'index_searchok'}),"</td> </tr>\n";
 
+	# Search by group
 	@groups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 	if (@groups) {
 		print "<tr> <td><b>$text{'index_gsearch'}</b></td>\n";
@@ -64,6 +70,27 @@ if (@allservers > $config{'display_max'}) {
 		print "<td>",&ui_submit($text{'index_searchgok'},
 					"gok"),"</td> </tr>\n";
 		}
+
+	# Search by host system
+	@parents = grep { &is_parent_server($_) } @allservers;
+	if (@parents) {
+		print "<tr> <td><b>$text{'index_psearch'}</b></td>\n";
+		print "<td>",&ui_select("psearch", $in{'psearch'},
+		    [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ]),"</td>\n";
+		print "<td>",&ui_submit($text{'index_searchpok'},
+					"pok"),"</td> </tr>\n";
+		}
+
+	# Search by EC2 account (normally hidden)
+	if ($in{'eok'}) {
+		print "<tr> <td><b>$text{'index_esearch'}</b></td>\n";
+		print "<td>",&ui_select("esearch", $in{'esearch'},
+		    [ map { [ $_->{'id'}, $_->{'account'} ] }
+			  &list_ec2_accounts() ]),"</td>\n";
+		print "<td>",&ui_submit($text{'index_searcheok'},
+					"eok"),"</td> </tr>\n";
+		}
+
 	print "</table>\n";
 
 	print &ui_form_end();
@@ -71,6 +98,18 @@ if (@allservers > $config{'display_max'}) {
 		# Search by group
 		@servers = grep { my @g = split(/\t/, $_->{'group'});
 				&indexof($in{'gsearch'}, @g) >= 0 } @allservers;
+		}
+	elsif ($in{'pok'}) {
+		# Search by parent
+		($parent) = grep { $_->{'id'} eq $in{'psearch'} } @allservers;
+		@servers = grep { my $p = &get_parent_server($_);
+			  $p && $p->{'id'} eq $parent->{'id'} } @allservers;
+		}
+	elsif ($in{'eok'}) {
+		# Search by EC2 account
+		($ec2) = grep { $_->{'id'} == $in{'esearch'} }
+			      &list_ec2_accounts();
+		@servers = grep { $_->{'ec2'} == $in{'esearch'} } @allservers;
 		}
 	else {
 		# By hostname
@@ -86,8 +125,23 @@ else {
 # Show a table of managed servers
 $posscount = $virtcount = $procount = 0;
 if (@servers) {
-	# Some servers to show
-	print &ui_form_start("mass.cgi", "post");
+	# Some servers to show .. display search type message
+	if ($in{'gok'}) {
+		print &text('index_resgroup', &html_escape($in{'gsearch'}),
+			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		}
+	elsif ($in{'pok'}) {
+		print &text('index_resparent', &html_escape($parent->{'host'}),
+			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		}
+	elsif ($in{'eok'}) {
+		print &text('index_resec2', &html_escape($ec2->{'account'}),
+			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		}
+	elsif ($in{'search'}) {
+		print &text('index_ressearch', &html_escape($in{'search'}),
+			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		}
 
 	# Make categories to show
 	if ($config{'cat_mode'} == 0) {
@@ -127,8 +181,9 @@ if (@servers) {
 			}
 		}
 
+	print &ui_form_start("mass.cgi", "post");
 	@tds = ( "width=5" );
-	print &ui_links_row(\@links);
+	print &ui_links_row([ @links, @crlinks ]);
 	foreach $cat (@cats) {
 		print &ui_subheading($cat->[1]) if ($cat->[1]);
 		print &ui_columns_start([
@@ -164,7 +219,7 @@ if (@servers) {
 			}
 		print &ui_columns_end();
 		}
-	print &ui_links_row(\@links);
+	print &ui_links_row([ @links, @crlinks ]);
 	print &ui_form_end([
 			     [ "refresh", $text{'index_refresh'} ],
 			     $posscount ? ( [ "update",$text{'index_update'} ] )
@@ -185,14 +240,13 @@ if (@servers) {
 elsif (@allservers) {
 	# No servers matched the search
 	print "<b>$text{'index_nonematched'}</b><p>\n" if ($in{'search'});
-	@links = @links[2..$#links];
-	print &ui_links_row(\@links);
+	print &ui_links_row(\@crlinks);
 	}
 else {
 	# No servers exist
 	print "<b>$text{'index_none'}</b><p>\n";
 	@links = @links[2..$#links];
-	print &ui_links_row(\@links);
+	print &ui_links_row(\@crlinks);
 	}
 
 # Show icons for global settings
