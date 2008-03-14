@@ -193,7 +193,9 @@ if ($info && scalar(keys %$info) > 1) {
 	if ($info->{'load'}) {
 		@l = @{$info->{'load'}};
 		print &ui_table_row($text{'edit_iload'},
-			&text('edit_iloadlevel', @l[0..2], $info->{'procs'}));
+			&text($info->{'procs'} ? 'edit_iloadlevel'
+					       : 'edit_iloadlevel2',
+			      @l[0..2], $info->{'procs'}));
 		}
 
 	# Memory used

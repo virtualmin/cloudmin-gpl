@@ -523,6 +523,7 @@ edit_cheader=Detailed system status
 edit_dheader=Virtualmin domains
 edit_iload=CPU load averages
 edit_iloadlevel=$1 (1 min) $2 (5 mins) $3 (15 mins), from $4 processes
+edit_iloadlevel2=$1 (1 min) $2 (5 mins) $3 (15 mins)
 edit_imem=Real memory used
 edit_outof=$2 out of $1
 edit_iswap=Virtual memory used

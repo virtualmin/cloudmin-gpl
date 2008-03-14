@@ -12,7 +12,6 @@
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX show and allow editing of interfaces in Xen systems
 #
-# XXX detailed system status is empty for geylang
 # XXX can change memory dynamically with xm mem-set
 
 do '../web-lib.pl';
@@ -1094,12 +1093,29 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				}
 			}
 		else {
+			# Doesn't have Virtualmin
 			&save_server_domains($server, [ ]);
 			$server->{'status'} = 'novirt';
 			$server->{'status_msg'} = undef;
 			delete($server->{'virtualmin_domains'});
 			delete($server->{'virtualmin_poss'});
 			$info = { };
+
+			# Make some direct Webmin calls to get info
+			if (&remote_foreign_check("proc")) {
+				&remote_foreign_require($server, "proc",
+					"proc-lib.pl");
+				local @load = &remote_foreign_call($server,
+					"proc", "get_cpu_info");
+				if (@load) {
+					$info->{'load'} = \@load;
+					}
+				local @mem = &remote_foreign_call($server,
+					"proc", "get_memory_info");
+				if (@mem) {
+					$info->{'mem'} = \@mem;
+					}
+				}
 			}
 
 		# Get common Webmin information
