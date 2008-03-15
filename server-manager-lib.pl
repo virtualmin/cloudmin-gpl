@@ -1,5 +1,6 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
+#	XXX what if IP changes?
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
@@ -10,6 +11,11 @@
 # XXX mobile theme for VM2 - FS#3459
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX show and allow editing of interfaces in Xen systems
+#	XXX active and boot time at once
+#	XXX what is parent?
+# XXX xen console access
+#	XXX telnet session connected to xm console?
+#	XXX SSH would be better
 
 do '../web-lib.pl';
 &init_config();

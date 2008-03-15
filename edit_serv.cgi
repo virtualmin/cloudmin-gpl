@@ -361,7 +361,8 @@ if ($toomanydoms ||
 
 # IP addresses, if we can manage them
 $ifunc = "type_".$t."_list_interfaces";
-if (defined(&$ifunc) && $status ne 'nohost') {
+$cfunc = "type_".$c."_can_interfaces";
+if (defined(&$cfunc) && &$cfunc($server) && $status ne 'nohost') {
 	print &ui_hidden_table_start($text{'edit_iheader'}." ".
 				     &hlink($text{'edit_help'}, "editiface"),
 				     "width=100%", 2,

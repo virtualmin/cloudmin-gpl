@@ -45,53 +45,63 @@ if (!$main::vm2_no_create_links) {
 	}
 
 # Find all servers
-$searching = $in{'search'} || $in{'gok'} || $in{'pok'} || $in{'eok'};
+$searching = $in{'search'} || $in{'gok'} || $in{'pok'} || $in{'eok'} ||
+	     $in{'sok'};
 if (@allservers > $config{'display_max'} || $searching) {
 	# Too many! Show a search form
 	if (!$searching) {
 		print &text('index_toomany', scalar(@allservers),
 					     $config{'display_max'}),"<p>\n";
 		}
+	else {
+		print &text('index_searchform'),"<p>\n";
+		}
 
 	print &ui_form_start("index.cgi");
-	print "<table cellpadding=1 cellspacing=1>\n";
+	@grid = ( );
 
 	# Search by hostname or desc
-	print "<tr> <td><b>$text{'index_search'}</b></td>\n";
-	print "<td>",&ui_textbox("search", $in{'search'}, 30),"</td>\n";
-	print "<td>",&ui_submit($text{'index_searchok'}),"</td> </tr>\n";
+	push(@grid, "<b>$text{'index_search'}</b>");
+	push(@grid, &ui_textbox("search", $in{'search'}, 30).
+	            " ".&ui_submit($text{'index_searchok'}));
 
 	# Search by group
 	@groups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 	if (@groups) {
-		print "<tr> <td><b>$text{'index_gsearch'}</b></td>\n";
-		print "<td>",&ui_select("gsearch", $in{'gsearch'},
-					\@groups),"</td>\n";
-		print "<td>",&ui_submit($text{'index_searchgok'},
-					"gok"),"</td> </tr>\n";
+		push(@grid, "<b>$text{'index_gsearch'}</b>");
+		push(@grid, &ui_select("gsearch", $in{'gsearch'}, \@groups).
+			    " ".&ui_submit($text{'index_searchgok'}, "gok"));
 		}
 
 	# Search by host system
 	@parents = grep { &is_parent_server($_) } @allservers;
 	if (@parents) {
-		print "<tr> <td><b>$text{'index_psearch'}</b></td>\n";
-		print "<td>",&ui_select("psearch", $in{'psearch'},
-		    [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ]),"</td>\n";
-		print "<td>",&ui_submit($text{'index_searchpok'},
-					"pok"),"</td> </tr>\n";
+		push(@grid, "<b>$text{'index_psearch'}</b>");
+		push(@grid, &ui_select("psearch", $in{'psearch'},
+		    [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ]).
+			    " ".&ui_submit($text{'index_searchpok'}, "pok"));
 		}
+
+	# Search by status (including some useful pseudo-statuses)
+	push(@grid, "<b>$text{'index_ssearch'}</b>");
+	push(@grid, &ui_select("ssearch", $in{'ssearch'} || 'up',
+			[ [ 'up', "&lt;$text{'status_up'}&gt;" ],
+			  [ 'wm', "&lt;$text{'status_wm'}&gt;" ],
+			  [ 'bad', "&lt;$text{'status_bad'}&gt;" ],
+			  map { [ $_->[0], $text{'status_'.$_->[0]} ] }
+			      @server_statuses ]).
+		    " ".&ui_submit($text{'index_searchsok'}, "sok"));
 
 	# Search by EC2 account (normally hidden)
 	if ($in{'eok'}) {
-		print "<tr> <td><b>$text{'index_esearch'}</b></td>\n";
-		print "<td>",&ui_select("esearch", $in{'esearch'},
+		push(@grid, "<b>$text{'index_esearch'}</b>");
+		push(@grid, &ui_select("esearch", $in{'esearch'},
 		    [ map { [ $_->{'id'}, $_->{'account'} ] }
-			  &list_ec2_accounts() ]),"</td>\n";
-		print "<td>",&ui_submit($text{'index_searcheok'},
-					"eok"),"</td> </tr>\n";
+			  &list_ec2_accounts() ]).
+			    " ".&ui_submit($text{'index_searcheok'}, "eok"));
 		}
-
-	print "</table>\n";
+	print &ui_grid_table(\@grid, 4, 100,
+		[ "width=10%", "width=40%", "width=10%", "width=40%" ]);
 
 	print &ui_form_end();
 	if ($in{'gok'}) {
@@ -110,6 +120,24 @@ if (@allservers > $config{'display_max'} || $searching) {
 		($ec2) = grep { $_->{'id'} == $in{'esearch'} }
 			      &list_ec2_accounts();
 		@servers = grep { $_->{'ec2'} == $in{'esearch'} } @allservers;
+		}
+	elsif ($in{'sok'}) {
+		# Search by status
+		if ($in{'ssearch'} eq 'up') {
+			@sts = ( 'nowebmin', 'novirt', 'virt' );
+			}
+		elsif ($in{'ssearch'} eq 'wm') {
+			@sts = ( 'novirt', 'virt' );
+			}
+		elsif ($in{'ssearch'} eq 'bad') {
+			@sts = ( 'down', 'nohost', 'nossh', 'nosshlogin',
+				 'downwebmin', 'nowebminlogin' );
+			}
+		else {
+			@sts = ( $in{'ssearch'} );
+			}
+		@servers = grep { &indexof($_->{'status'}, @sts) >= 0 }
+				@allservers;
 		}
 	else {
 		# By hostname
@@ -136,6 +164,15 @@ if (@servers) {
 		}
 	elsif ($in{'eok'}) {
 		print &text('index_resec2', &html_escape($ec2->{'account'}),
+			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		}
+	elsif ($in{'sok'}) {
+		($st) = grep { $_->[0] eq $in{'ssearch'} } @server_statuses;
+		$msg = $text{'status_'.$in{'ssearch'}};
+		if ($st) {
+			$msg = "<font color=$st->[1]>$msg</font>";
+			}
+		print &text('index_resstatus', $msg,
 			    scalar(@allservers), scalar(@servers)),"<p>\n";
 		}
 	elsif ($in{'search'}) {

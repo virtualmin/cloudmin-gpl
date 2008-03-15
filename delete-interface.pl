@@ -37,6 +37,9 @@ $server || &usage("System with hostname $host does not exist");
 $ifunc = "type_".$server->{'manager'}."_list_interfaces";
 defined(&$ifunc) || &usage("System type $server->{'manager'} does not support ".
 			   "network interface management");
+$cfunc = "type_".$server->{'manager'}."_can_interfaces";
+defined(&$cfunc) && &$cfunc($server) ||
+	&usage("Interfaces cannot be managed on this system");
 $server->{'status'} eq 'nohost' && &usage("Host for system is down");
 
 # Get the interface
