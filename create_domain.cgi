@@ -89,8 +89,9 @@ foreach $f (@features) {
 # If the target server type doesn't allow IPs to be brought up within itself,
 # (ie. VServers or Zones) do the allocation here or check if the requested IP
 # is ative.
-$ifunc = "type_".$server->{'manager'}."_list_interfaces";
-if ($in{'virt_mode'} && defined(&$ifunc)) {
+$cfunc = "type_".$server->{'manager'}."_can_interfaces";
+if ($in{'virt_mode'} && defined(&$cfunc) && &$cfunc($server) == 1) {
+	$ifunc = "type_".$server->{'manager'}."_list_interfaces";
 	if ($in{'virt_mode'} == 1) {
 		# Allocate a new IP on the virtual system
 		print $text{'dcreate_iface'},"<br>\n";

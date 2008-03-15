@@ -361,7 +361,7 @@ if ($toomanydoms ||
 
 # IP addresses, if we can manage them
 $ifunc = "type_".$t."_list_interfaces";
-$cfunc = "type_".$c."_can_interfaces";
+$cfunc = "type_".$t."_can_interfaces";
 if (defined(&$cfunc) && &$cfunc($server) && $status ne 'nohost') {
 	print &ui_hidden_table_start($text{'edit_iheader'}." ".
 				     &hlink($text{'edit_help'}, "editiface"),
@@ -384,10 +384,12 @@ if (defined(&$cfunc) && &$cfunc($server) && $status ne 'nohost') {
 							    \@doms, $iface);
 			}
 		print &ui_columns_row([
-			"<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>".
-			"$iface->{'address'}</a>",
+			$iface->{'noedit'} ? $iface->{'address'} :
+			    "<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>".
+			    "$iface->{'address'}</a>",
 			$iface->{'name'},
-			$iface->{'virtual'},
+			$iface->{'virtual'} eq '' ?
+			 "<i>$text{'edit_ifacereal'}</i>" : $iface->{'virtual'},
 			$iface->{'netmask'},
 			$info ? ( $use ) : ( ),
 			]);

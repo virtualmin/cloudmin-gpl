@@ -11,8 +11,9 @@
 # XXX mobile theme for VM2 - FS#3459
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX show and allow editing of interfaces in Xen systems
-#	XXX active and boot time at once
-#	XXX what is parent?
+#	XXX don't allow changing of main IP - use separate page for that
+#	XXX command line too
+#	XXX ip allocation in vservers broken?
 # XXX xen console access
 #	XXX telnet session connected to xm console?
 #	XXX SSH would be better
@@ -1888,7 +1889,13 @@ local %used;
 foreach my $s (&list_managed_servers()) {
 	$used{&to_ipaddress($s->{'host'})} = $s;
 	local $ifunc = "type_".$s->{'manager'}."_list_interfaces";
-	if (defined(&$ifunc)) {
+	local $cfunc = "type_".$s->{'manager'}."_can_interfaces";
+	local $should = !defined(&$cfunc) ? 0 :
+			&$cfunc($s) == 0 ? 0 :
+			&$cfunc($s) == 2 ? ($s->{'status'} eq 'virt' ||
+					    $s->{'status'} eq 'novirt') :
+					   $s->{'status'} ne 'nohost';
+	if ($should) {
 		# Get from server manager virtual interfaces
 		local $ifaces = &$ifunc($s);
 		if (ref($ifaces)) {
@@ -2372,7 +2379,7 @@ else {
 	local @ipdoms = grep { $_->{'ip'} eq $iface->{'address'} } @$doms;
 	if (@ipdoms) {
 		return (2,
-			@ipdoms > 5 ? &text('iface_many', scalar(@ipdoms)) :
+			@ipdoms > 4 ? &text('iface_many', scalar(@ipdoms)) :
 			@ipdoms == 1 ? &text('iface_dom', 
 					     "<tt>$ipdoms[0]->{'dom'}</tt>") :
 			&text('iface_doms', 

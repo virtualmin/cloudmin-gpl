@@ -13,6 +13,9 @@ if (!$in{'new'}) {
 	ref($ifaces) || &error(&text('iface_eget', $ifaces));
 	$iface = $ifaces->[$in{'idx'}];
 	}
+$cfunc = "type_".$server->{'manager'}."_can_interfaces";
+$can = &$cfunc($server);
+$can || &error($text{'iface_esupport'});
 
 &ui_print_header(&server_in($server), $in{'new'} ? $text{'iface_create'}
 						 : $text{'iface_edit'},
@@ -27,17 +30,20 @@ print &ui_table_start($text{'iface_header'}, undef, 2, \@tds);
 
 # Parent interface
 if ($in{'new'}) {
+	# New interface .. show parent chooser
 	$pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
 	$parents = &$pfunc($server);
 	ref($parents) || &error(&text('iface_egetparents', $parents));
 	$parents = [ grep { $_->{'virtual'} eq '' && $_->{'name'} !~ /^lo/ &&
                             $_->{'address'} } @$parents ];
-	print &ui_table_row($text{'iface_parent'},
+	print &ui_table_row($can ? $text{'iface_parent2'} 
+				 : $text{'iface_parent'},
 		    &ui_select("name", undef,
 			[ map { [ $_->{'fullname'} ] } @$parents ]));
 	$iface->{'netmask'} = $parents->[0]->{'netmask'};
 	}
 else {
+	# Show details of existing interface
 	print &ui_table_row($text{'iface_parent'},
 			    "<tt>$iface->{'name'}</tt>");
 	print &ui_table_row($text{'iface_virt'},
