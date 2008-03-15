@@ -708,10 +708,6 @@ vserver_edown=A system which cannot be contacted via SSH cannot be used for VSer
 vserver_esoft=The selected system cannot support VServers : $1
 vserver_edir=The specified base directory does not exist
 vserver_ezone=Missing or invalid-looking DNS domain
-vserver_estart=Missing or invalid starting IP address for allocation
-vserver_eend=Missing or invalid ending IP address for allocation
-vserver_ecidr=Missing or invalid network size - must be a number like 16 or 24
-vserver_erange=The starting IP address must be before the ending address
 vserver_eiface=Missing or invalid-looking base network interface
 vserver_edist=Missing or invalid-looking distribution code - should be like <tt>sarge</tt> or <tt>fc5</tt>
 
@@ -908,10 +904,6 @@ zone_ewebminmod=The Solaris Zones Webmin module is not installed
 zone_ewebminmod2=The Solaris Zones Webmin module cannot find the commands it needs - perhaps the Zones software is not installed?
 zone_edir=The specified base directory does not exist
 zone_ezone=Missing or invalid-looking DNS domain
-zone_estart=Missing or invalid starting IP address for allocation
-zone_eend=Missing or invalid ending IP address for allocation
-zone_ecidr=Missing or invalid network size for allocation - must be a number like 16 or 24
-zone_erange=The starting IP address must be before the ending address
 zone_eiface=Missing or invalid-looking base network interface
 
 move_backing=Creating backup of $1 on $2 ..

@@ -8,8 +8,6 @@
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
-# XXX multiple IP ranges for allocation for xen, zones and vservers
-#	XXX zones and vservers too
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX show and allow editing of interfaces in Xen systems
 
