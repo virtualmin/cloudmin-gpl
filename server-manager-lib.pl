@@ -4,19 +4,18 @@
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
+#	XXX cpu core assignment
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
-# XXX show and allow editing of interfaces in Xen systems
-#	XXX don't allow changing of main IP - use separate page for that
-#	XXX command line too
-#	XXX ip allocation in vservers broken?
 # XXX xen console access
 #	XXX telnet session connected to xm console?
 #	XXX SSH would be better
+# XXX allow changing of main IP
+#	XXX do virtualmin too
 
 do '../web-lib.pl';
 &init_config();

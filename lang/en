@@ -373,6 +373,7 @@ status_unknown=Unknown
 status_up=Up and usable
 status_wm=Webmin or Virtualmin
 status_bad=Down or unusable
+status_updates=Updates available
 status_create=Creating
 status_doms=$1 domains
 status_errs=Config errors found

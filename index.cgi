@@ -11,24 +11,6 @@ print $lerr if ($lerr);
 
 @allservers = sort { $a->{'host'} cmp $b->{'host'} } &list_managed_servers();
 
-# Build select links
-@links = ( &select_all_link("d"), &select_invert_link("d") );
-@upservers = grep { $_->{'status'} eq 'virt' ||
-		    $_->{'status'} eq 'novirt' ||
-		    $_->{'status'} eq 'nowebminlogin' ||
-		    $_->{'status'} eq 'downwebmin' ||
-		    $_->{'status'} eq 'nowebmin' } @allservers;
-@weservers = grep { $_->{'status'} eq 'virt' ||
-                    $_->{'status'} eq 'novirt' } @allservers;
-if (@upservers && defined(&select_rows_link)) {
-	push(@links, &select_rows_link("d", 0, $text{'index_selup'},
-				       [ map { $_->{'id'} } @upservers ]));
-	}
-if (@weservers && defined(&select_rows_link)) {
-	push(@links, &select_rows_link("d", 0, $text{'index_selwe'},
-				       [ map { $_->{'id'} } @weservers ]));
-	}
-
 # Build add links
 if (!$main::vm2_no_create_links) {
 	foreach $t (@server_management_types) {
@@ -47,6 +29,7 @@ if (!$main::vm2_no_create_links) {
 # Find all servers
 $searching = $in{'search'} || $in{'gok'} || $in{'pok'} || $in{'eok'} ||
 	     $in{'sok'};
+$formno = 0;
 if (@allservers > $config{'display_max'} || $searching) {
 	# Too many! Show a search form
 	if (!$searching) {
@@ -88,6 +71,7 @@ if (@allservers > $config{'display_max'} || $searching) {
 			[ [ 'up', "&lt;$text{'status_up'}&gt;" ],
 			  [ 'wm', "&lt;$text{'status_wm'}&gt;" ],
 			  [ 'bad', "&lt;$text{'status_bad'}&gt;" ],
+			  [ 'updates', "&lt;$text{'status_updates'}&gt;" ],
 			  map { [ $_->[0], $text{'status_'.$_->[0]} ] }
 			      @server_statuses ]).
 		    " ".&ui_submit($text{'index_searchsok'}, "sok"));
@@ -136,8 +120,15 @@ if (@allservers > $config{'display_max'} || $searching) {
 		else {
 			@sts = ( $in{'ssearch'} );
 			}
-		@servers = grep { &indexof($_->{'status'}, @sts) >= 0 }
-				@allservers;
+		if ($in{'ssearch'} eq 'updates') {
+			# Search by updates
+			@servers = grep { $_->{'virtualmin_poss'} } @allservers;
+			}
+		else {
+			# By regular status
+			@servers = grep { &indexof($_->{'status'}, @sts) >= 0 }
+					@allservers;
+			}
 		}
 	else {
 		# By hostname
@@ -145,9 +136,28 @@ if (@allservers > $config{'display_max'} || $searching) {
 		@servers = grep { $_->{'host'} =~ /\Q$s\E/i ||
 				  $_->{'desc'} =~ /\Q$s\E/i } @allservers;
 		}
+	$formno++;
 	}
 else {
 	@servers = @allservers;
+	}
+
+# Build select links
+@links = ( &select_all_link("d", $formno), &select_invert_link("d", $formno) );
+@upservers = grep { $_->{'status'} eq 'virt' ||
+		    $_->{'status'} eq 'novirt' ||
+		    $_->{'status'} eq 'nowebminlogin' ||
+		    $_->{'status'} eq 'downwebmin' ||
+		    $_->{'status'} eq 'nowebmin' } @servers;
+@weservers = grep { $_->{'status'} eq 'virt' ||
+                    $_->{'status'} eq 'novirt' } @servers;
+if (@upservers && defined(&select_rows_link)) {
+	push(@links, &select_rows_link("d", $formno, $text{'index_selup'},
+				       [ map { $_->{'id'} } @upservers ]));
+	}
+if (@weservers && defined(&select_rows_link)) {
+	push(@links, &select_rows_link("d", $formno, $text{'index_selwe'},
+				       [ map { $_->{'id'} } @weservers ]));
 	}
 
 # Show a table of managed servers
