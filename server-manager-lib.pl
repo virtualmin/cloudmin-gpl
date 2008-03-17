@@ -4,18 +4,27 @@
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
+#		XXX add/remove disks
+#		XXX command-line tools
+#		XXX offer to mount when creating
 #	XXX cpu core assignment
+#	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
 # XXX backup and restore managed systems? Use Backup Configuration Files module
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX domain transfer by rsyncing home directory
 # XXX mobile theme for VM2 - FS#3459
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
-# XXX xen console access
-#	XXX telnet session connected to xm console?
-#	XXX SSH would be better
 # XXX allow changing of main IP
 #	XXX do virtualmin too
+# XXX bandwidth monitoring
+#	XXX by traffic counts on interfaces
+#	XXX for xen, vservers and zones only
+# XXX show Xen resource allocation out of total on edit_xen.cgi
+# XXX sort mode by host system, with indenting
+# XXX extra webmin logins to manage servers
+#     XXX reboot/shutdown/view
+#     XXX one login can own several servers
 
 do '../web-lib.pl';
 &init_config();
@@ -818,6 +827,48 @@ if (defined(&$dfunc)) {
 local ($out, $ex, $err) = &execute_command_on_server($server,
 				"rm -rf ".quotemeta($remotefile));
 return $err ? $err : $ex ? $out : undef;
+}
+
+# stat_file_on_server(&server, remotefile)
+# Returns the stat structure for a file on a server.
+# If something failed, returns a 1-element array containing the error.
+# If the file doesn't exist, returns an empty array.
+sub stat_file_on_server
+{
+local ($server, $remotefile) = @_;
+local $gfunc = "type_".$server->{'manager'}."_stat_file";
+if (defined(&$gfunc)) {
+	# Use type-specific function call
+	local @rv = &$gfunc(@_);
+	return @rv if ($rv[0] ne 'FALLBACK');
+	}
+
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# If the remote system has Webmin, ask it to stat
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
+	return ( $last_remote_error ) if ($last_remote_error);
+	local $st = &remote_eval($server, "webmin", "[ stat('$remotefile') ]");
+	return $st ? @$st : "Stat via Webmin failed";
+	}
+else {
+	# Use stat command, or in worst case ls -l
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+		"stat ".quotemeta($remotefile));
+	return $err if ($err);
+	if ($out =~ /No such file/i) {
+		return ( );
+		}
+	elsif (!$ex && $out =~ /File:/) {
+		# Parse stat command output
+		local @st = ( );
+		if ($out =~ /Size:\s*(\d+)/) { $st[7] = $1; }
+		if ($out =~ /Blocks:\s*(\d+)/) { $st[12] = $1; }
+		if ($out =~ /IO Block:\s*(\d+)/) { $st[11] = $1; }
+		# XXX not done yet
+		return @st;
+		}
+	}
 }
 
 # has_command_on_server(&server, command)
