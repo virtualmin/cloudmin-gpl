@@ -21,7 +21,7 @@
 #	XXX by traffic counts on interfaces
 #	XXX for xen, vservers and zones only
 # XXX show Xen resource allocation out of total on edit_xen.cgi
-# XXX sort mode by host system, with indenting
+#	XXX show hosts too
 # XXX extra webmin logins to manage servers
 #     XXX reboot/shutdown/view
 #     XXX one login can own several servers
@@ -35,6 +35,7 @@ do 'images-lib.pl';
 &foreign_require("net", "net-lib.pl");
 &remote_error_setup(\&remote_error_handler);
 use Net::Amazon::EC2;
+use Time::Local;
 
 @possible_server_management_types = ( "real",
 				      "xen",
@@ -852,21 +853,81 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	return $st ? @$st : "Stat via Webmin failed";
 	}
 else {
-	# Use stat command, or in worst case ls -l
+	# Use perl, stat command, or in worst case ls -l
 	local ($out, $ex, $err) = &execute_command_on_server($server,
-		"stat ".quotemeta($remotefile));
-	return $err if ($err);
+		"perl -e 'print join(":", stat(\@ARGV[0]))' ".
+		quotemeta($remotefile));
+	return ( $err ) if ($err);
+	if (!$ex) {
+		$out =~ s/\r|\n//g;
+		return split(/:/, $out);
+		}
+
+	# Now try stat
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+		"stat -t ".quotemeta($remotefile));
+	return ( $err ) if ($err);
 	if ($out =~ /No such file/i) {
 		return ( );
 		}
-	elsif (!$ex && $out =~ /File:/) {
+	elsif (!$ex && $out =~ /^\Q$remotefile\E\s/) {
 		# Parse stat command output
-		local @st = ( );
-		if ($out =~ /Size:\s*(\d+)/) { $st[7] = $1; }
-		if ($out =~ /Blocks:\s*(\d+)/) { $st[12] = $1; }
-		if ($out =~ /IO Block:\s*(\d+)/) { $st[11] = $1; }
-		# XXX not done yet
+		local @w = split(/\s+/, $out);
+		local @st;
+		$st[0] = hex($w[6]);		# Device
+		$st[1] = $w[7];			# Inode
+		$st[2] = hex($w[3]);		# Permissions
+		$st[3] = $w[8];			# Links
+		$st[4] = $w[4];			# UID
+		$st[5] = $w[5];			# GID
+		$st[6] = undef;			# Rdev .. don't know
+		$st[7] = $w[1];			# Size
+		$st[8] = $w[11];		# Last access time
+		$st[9] = $w[12];		# Modify time
+		$st[10] = $w[13];		# Inode change time
+		$st[11] = $w[14];		# Block size
+		$st[12] = $w[2];		# Number of blocks
 		return @st;
+		}
+
+	# Finally, use ls .. which gives less info :-(
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+		"ls -ldn ".quotemeta($remotefile));
+	return ( $err ) if ($err);
+	if ($out =~ /No such file/i) {
+		return ( );
+		}
+	elsif ($ex || $out !~ /\s\Q$remotefile\E$/) {
+		return ( "ls -ldn $remotefile failed : $out" );
+		}
+	else {
+		# Parse ls command output
+		local @now = localtime(time());
+		local @st;
+		$st[3] = $w[1];			# Links
+		$st[4] = $w[2];			# UID
+		$st[5] = $w[3];			# GID
+		$st[7] = $w[4];			# Size
+		if ($w[7] =~ /^(\d+):(\d+)$/) {
+			# Time is month day hour:minute
+			local @tm = ( 0, $2, $1, $w[6],
+				      &month_to_number($w[5]), $now[5] );
+			$st[8] = $st[9] = $st[10] = timelocal(@tm);
+			}
+		elsif ($w[7] =~ /^\d+$/) {
+			# Time is month day year
+			local @tm = ( 0, 0, 0, $w[6],
+				      &month_to_number($w[5]), $w[7]-1900 );
+			$st[8] = $st[9] = $st[10] = timelocal(@tm);
+			}
+		$st[2] = 0;			# Permissions
+		local @p = reverse(split(//, $w[0]));
+		for(my $i=0; $i<9; $i++) {
+			if ($p[$i] ne '-') {
+				$st[2] += (1<<$i);
+				}
+			}
+		local @st;
 		}
 	}
 }
