@@ -332,6 +332,11 @@ elsif ($in{'transfer'}) {
 	&redirect("transfer_form.cgi?id=$in{'id'}");
 	}
 
+elsif ($in{'disks'}) {
+	# Go to disk management form
+	&redirect("list_disks.cgi?id=$in{'id'}");
+	}
+
 else {
 	# Validate inputs, and save details
 	&error_setup($text{'save_err'});

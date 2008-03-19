@@ -855,7 +855,7 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 else {
 	# Use perl, stat command, or in worst case ls -l
 	local ($out, $ex, $err) = &execute_command_on_server($server,
-		"perl -e 'print join(":", stat(\@ARGV[0]))' ".
+		"perl -e 'print join(\":\", stat(\@ARGV[0]))' ".
 		quotemeta($remotefile));
 	return ( $err ) if ($err);
 	if (!$ex) {
@@ -3060,6 +3060,13 @@ if ($t ne 'real' && $t ne 'this') {
 if (!$noimage) {
 	push(@rv, [ "image", $text{'edit_image'} ]);
 	}
+
+# Complex pages associated with system
+local $dfunc = "type_".$t."_can_disks";
+if (defined(&$dfunc) && &$dfunc($server)) {
+	push(@rv, [ "disks", $text{'edit_disks'} ]);
+	}
+
 # Add type-specific actions
 local $afunc = "type_".$t."_server_actions";
 if (defined(&$afunc)) {
