@@ -7,6 +7,7 @@
 #		XXX add/remove disks
 #		XXX command-line tools
 #		XXX offer to mount when creating
+#		XXX what if system is up / down?
 #	XXX cpu core assignment
 #	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
 # XXX backup and restore managed systems? Use Backup Configuration Files module
