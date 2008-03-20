@@ -40,6 +40,7 @@ index_resparent=Showing $3 systems hosted on <tt>$1</tt>, out of $2 in total ..
 index_ressearch=Showing $3 systems matching <i>$1</i>, out of $2 in total ..
 index_resec2=Showing $3 systems run by EC2 account <tt>$1</tt>, out of $2 in total ..
 index_resstatus=Showing $3 systems with status $1, out of $2 in total ..
+index_bindlink=(Add and manage DNS zones)
 
 ec2_typedesc=Amazon EC2
 ec2_createlink=Create EC2 instance

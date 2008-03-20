@@ -1927,6 +1927,11 @@ if ($zone && $dnsname) {
 	}
 }
 
+sub bind_module_link
+{
+return "<a href=../bind8/index.cgi>$text{'index_bindlink'}</a>";
+}
+
 # find_server_dependencies(&server)
 # Returns a list of other servers that depend on this one
 sub find_server_dependencies
