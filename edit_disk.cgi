@@ -11,7 +11,7 @@ if (&foreign_check("mount")) {
 	}
 
 # Show title and get the disk
-$disks = &type_xen_list_disks($server);
+$disks = &type_xen_list_disks($server, 1);
 ref($disks) || &error(&text('disks_eget', $disks));
 if ($in{'new'}) {
 	&ui_print_header(&server_in($server), $text{'disk_title'.$in{'new'}},
@@ -79,10 +79,19 @@ elsif (!$in{'new'} && $disk->{'size'}) {
 	}
 
 # Current use on virtual system
-# XXX
+if (!$in{'new'}) {
+	# XXX
+	}
 
 # Offer to mkfs
-# XXX
+if ($in{'new'}) {
+	$ffunc = "type_".$server->{'manager'}."_list_disk_filesystems";
+	@fs = &$ffunc($server);
+	print &ui_table_row($text{'disk_mkfs'},
+		&ui_select("fs", $disk->{'device'} ? "" : $fs[0],
+			   [ [ "", $text{'disk_mkfs_none'} ],
+			     map { [ $_, $text{'fs_'.$_} ] } @fs ]));
+	}
 
 # Offer to mount
 # XXX
