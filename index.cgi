@@ -11,6 +11,13 @@ if (!%in) {
 		$using_default_search = 1;
 		}
 	}
+else {
+	# See what default search is
+	&read_file($default_search_file, \%defsearch);
+	if (&same_hash(\%in, \%defsearch)) {
+		$using_default_search = 1;
+		}
+	}
 
 # Check server manager licence, show an error if invalid
 $lerr = &licence_error_message();
@@ -326,4 +333,12 @@ if (@$glinks) {
 	}
 
 &ui_print_footer("/", $text{'index'});
+
+sub same_hash
+{
+local ($a, $b) = @_;
+local $aa = join("&", map { $_."=".$a->{$_} } sort { $a cmp $b } (keys %$a));
+local $bb = join("&", map { $_."=".$b->{$_} } sort { $a cmp $b } (keys %$b));
+return $aa eq $bb;
+}
 

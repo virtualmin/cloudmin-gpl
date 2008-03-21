@@ -6,10 +6,6 @@
 #	XXX xen disk sizes
 #		XXX add/remove disks
 #		XXX command-line tools
-#		XXX offer to mount when creating
-#		XXX what if system is up / down?
-#		XXX put_fstab has wrong status conditions (and elsewhere)
-#		XXX need to create mount point dir
 #	XXX cpu core assignment
 #	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
 # XXX backup and restore managed systems? Use Backup Configuration Files module

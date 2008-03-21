@@ -23,8 +23,14 @@ while(@ARGV > 0) {
 	elsif ($a eq "--real") {
 		$real = shift(@ARGV);
 		}
+	elsif ($a eq "--auto-real") {
+		$real = "auto";
+		}
 	elsif ($a eq "--virt") {
 		$virt = shift(@ARGV);
+		}
+	elsif ($a eq "--auto-virt") {
+		$virt = "auto";
 		}
 	elsif ($a eq "--device") {
 		$device = 1;
@@ -44,8 +50,10 @@ while(@ARGV > 0) {
 	}
 
 # Validate parameters
-$real =~ /^\/\S+$/ || &usage("Missing or invalid --real parameter - should be like /xen/foo.img");
-$virt =~ /^\/\S+$/ || &usage("Missing or invalid --virt parameter - should be like /dev/sda2");
+$real =~ /^\/\S+$/ || $real eq "auto" ||
+	&usage("Missing or invalid --real parameter - should be like /xen/foo.img");
+$virt =~ /^\/\S+$/ || $virt eq "auto" ||
+	&usage("Missing or invalid --virt parameter - should be like /dev/sda2");
 $size =~ /^\d*$/ || &usage("Invalid --size parameter - must be followed by a number of MB");
 if ($mount) {
 	$mount =~ /^\/\S+$/ || &usage("Invalid --mount parameter - should be like /mnt/disk2");
@@ -74,23 +82,27 @@ if ($format) {
 		&usage("Specified filesystem is not valid. Types supported are : ".join(" ", @fs));
 	}
 
+# Create a new disk object
+$nfunc = "type_".$server->{'manager'}."_new_disk";
+$disk = &$nfunc($server, $disks, $device);
+$disk->{'real'} = $real if ($real ne 'auto');
+$disk->{'virt'} = $virt if ($virt ne 'auto');
+
 # Check for clashes
-($rclash) = grep { $_->{'real'} eq $real } @$disks;
-$rclash && &usage("The real file $real is already mapped to $rclash->{'virt'}");
-($vclash) = grep { $_->{'virt'} eq $virt } @$disks;
-$vclash && &usage("The virtual device $virt is already mapped from $vclash->{'real'}");
+($rclash) = grep { $_->{'real'} eq $disk->{'real'} } @$disks;
+$rclash && &usage("The real file $disk->{'real'} is already mapped to $rclash->{'virt'}");
+($vclash) = grep { $_->{'virt'} eq $disk->{'virt'} } @$disks;
+$vclash && &usage("The virtual device $disk->{'virt'} is already mapped from $vclash->{'real'}");
 if ($mount) {
 	($mclash) = grep { $_->{'mount'} eq $mount } @$disks;
 	$mclash && &usage("The filesystem $mount is already mounted from $mclash->{'virt'}");
 	}
 
 # Do it
-$disk = { 'real' => $real,
-	  'virt' => $virt,
-	  'size' => $size*1024*1024,
-	  'device' => $device,
-	  'fs' => $fs,
-	  'mount' => $mount };
+$disk->{'size'} = $size*1024*1024;
+$disk->{'device'} = $device;
+$disk->{'fs'} = $fs;
+$disk->{'mount'} = $mount;
 &$first_print("Creating virtual disk for $disk->{'virt'} ..");
 $cfunc = "type_".$server->{'manager'}."_create_disk";
 $err = &$cfunc($server, $disk);
@@ -114,8 +126,8 @@ print "$_[0]\n\n" if ($_[0]);
 print "Adds a disk device to some virtual system.\n";
 print "\n";
 print "usage: create-disk.pl --host hostname\n";
-print "                      --real device|file\n";
-print "                      --virt device\n";
+print "                      --real device|file | --auto-real\n";
+print "                      --virt device | --auto-virt\n";
 print "                     [--size MB]\n";
 print "                     [--device]\n";
 print "                     [--format filesystem]\n";
