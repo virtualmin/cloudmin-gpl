@@ -35,7 +35,7 @@ $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
 
-# Get the interfaces
+# Get the disks
 $dfunc = "type_".$server->{'manager'}."_list_disks";
 defined(&$dfunc) || &usage("System type $server->{'manager'} does not support ".
 			   "disk management");

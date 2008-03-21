@@ -79,8 +79,10 @@ elsif (!$in{'new'} && $disk->{'size'}) {
 	}
 
 # Current use on virtual system
-if (!$in{'new'}) {
-	# XXX
+if (!$in{'new'} && $disk->{'mount'}) {
+	&ui_table_row($text{'disk_use'},
+		&text('disk_used', "<tt>$disk->{'mount'}</tt>",
+		      $text{'fs_'.$disk->{'fs'}} || uc($disk->{'fs'})));
 	}
 
 # Offer to mkfs
@@ -94,7 +96,11 @@ if ($in{'new'}) {
 	}
 
 # Offer to mount
-# XXX
+if ($in{'new'}) {
+	print &ui_table_row($text{'disk_mount'},
+		&ui_opt_textbox("mount", $disk->{'mount'}, 30,
+				$text{'disk_nomount'}, $text{'disk_dirmount'}));
+	}
 
 print &ui_table_end();
 print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]

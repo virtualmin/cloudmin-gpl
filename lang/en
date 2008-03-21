@@ -1401,3 +1401,15 @@ disk_size=Device size
 disk_other=Other device or file ..
 disk_mkfs=Filesystem to create on new disk
 disk_mkfs_none=&lt;None - leave empty or preserve existing data&gt;
+disk_use=Current use
+disk_used=Mounted on $1 as $2
+disk_mount=Mount new disk as
+disk_nomount=Don't mount
+disk_dirmount=Directory
+
+fs_ext3=Linux EXT3
+fs_ext2=Linux EXT2 (old)
+fs_reiser=ReiserFS
+fs_xfs=XFS
+fs_jfs=JFS
+fs_swap=Virtual memory
