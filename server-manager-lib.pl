@@ -5,6 +5,8 @@
 # XXX resource management
 #	XXX xen disk sizes
 #		XXX add/remove disks
+#		XXX web interface
+#		XXX resize disks
 #		XXX command-line tools
 #	XXX cpu core assignment
 #	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
