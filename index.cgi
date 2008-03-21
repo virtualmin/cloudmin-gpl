@@ -5,6 +5,13 @@ require './server-manager-lib.pl';
 &ui_print_header(undef, $module_info{'desc'}, "", "intro", 1, 1);
 &ReadParse();
 
+if (!%in) {
+	# Try to use default search
+	if (&read_file($default_search_file, \%in)) {
+		$using_default_search = 1;
+		}
+	}
+
 # Check server manager licence, show an error if invalid
 $lerr = &licence_error_message();
 print $lerr if ($lerr);
@@ -85,7 +92,7 @@ if (@allservers > $config{'display_max'} || $searching) {
 			    " ".&ui_submit($text{'index_searcheok'}, "eok"));
 		}
 	print &ui_grid_table(\@grid, 4, 100,
-		[ "width=10%", "width=40%", "width=10%", "width=40%" ]);
+		[ "width=10%", "width=40%", "width=10%", "width=40%" ]),"<p>\n";
 
 	print &ui_form_end();
 	if ($in{'gok'}) {
@@ -163,18 +170,20 @@ if (@weservers && defined(&select_rows_link)) {
 # Show a table of managed servers
 $posscount = $virtcount = $procount = 0;
 if (@servers) {
-	# Some servers to show .. display search type message
+	# Some servers to show .. display search type message if any
+	@g = ( );
 	if ($in{'gok'}) {
-		print &text('index_resgroup', &html_escape($in{'gsearch'}),
-			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		push(@g, &text('index_resgroup', &html_escape($in{'gsearch'}),
+			    scalar(@allservers), scalar(@servers)));
 		}
 	elsif ($in{'pok'}) {
-		print &text('index_resparent', &html_escape($parent->{'host'}),
-			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		push(@g, &text('index_resparent',
+			    &html_escape($parent->{'host'}),
+			    scalar(@allservers), scalar(@servers)));
 		}
 	elsif ($in{'eok'}) {
-		print &text('index_resec2', &html_escape($ec2->{'account'}),
-			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		push(@g, &text('index_resec2', &html_escape($ec2->{'account'}),
+			    scalar(@allservers), scalar(@servers)));
 		}
 	elsif ($in{'sok'}) {
 		($st) = grep { $_->[0] eq $in{'ssearch'} } @server_statuses;
@@ -182,12 +191,24 @@ if (@servers) {
 		if ($st) {
 			$msg = "<font color=$st->[1]>$msg</font>";
 			}
-		print &text('index_resstatus', $msg,
-			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		push(@g, &text('index_resstatus', $msg,
+			    scalar(@allservers), scalar(@servers)));
 		}
 	elsif ($in{'search'}) {
-		print &text('index_ressearch', &html_escape($in{'search'}),
-			    scalar(@allservers), scalar(@servers)),"<p>\n";
+		push(@g, &text('index_ressearch', &html_escape($in{'search'}),
+			    scalar(@allservers), scalar(@servers)));
+		}
+	if (@g) {
+		if ($using_default_search) {
+			push(@g, "<a href='save_search.cgi'>".
+				 "$text{'index_nosearch'}</a>");
+			}
+		else {
+			push(@g, "<a href='save_search.cgi?in=".&urlize($in).
+				 "'>$text{'index_savesearch'}</a>");
+			}
+		print &ui_grid_table(\@g, 2, 100,
+			[ "", "width=20% align=right" ]);
 		}
 
 	# Make categories to show

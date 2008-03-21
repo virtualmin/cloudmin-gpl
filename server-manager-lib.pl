@@ -135,6 +135,8 @@ $virtualmin_progress_file = "$module_config_directory/progress-licences";
 $virtualmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-virtualmin";
 $virtualmin_webmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-webmin";
 
+$default_search_file = "$module_config_directory/defaultsearch";
+
 &set_all_html_print();
 
 # list_managed_servers()
