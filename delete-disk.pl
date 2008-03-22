@@ -9,7 +9,7 @@ if ($0 =~ /^(.*\/)[^\/]+$/) {
 	chdir($1);
 	}
 chop($pwd = `pwd`);
-$0 = "$pwd/create-disk.pl";
+$0 = "$pwd/delete-disk.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 

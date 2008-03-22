@@ -1,0 +1,103 @@
+#!/usr/local/bin/perl
+# Change the size or virtual device of some disk
+
+package server_manager;
+$main::no_acl_check++;
+$ENV{'WEBMIN_CONFIG'} ||= "/etc/webmin";
+$ENV{'WEBMIN_VAR'} ||= "/var/webmin";
+if ($0 =~ /^(.*\/)[^\/]+$/) {
+	chdir($1);
+	}
+chop($pwd = `pwd`);
+$0 = "$pwd/modify-disk.pl";
+require './server-manager-lib.pl';
+$< == 0 || die "$0 must be run as root";
+
+# Parse command line
+&set_all_text_print();
+while(@ARGV > 0) {
+	local $a = shift(@ARGV);
+	if ($a eq "--host") {
+		$host = shift(@ARGV);
+		}
+	elsif ($a eq "--real") {
+		$real = shift(@ARGV);
+		}
+	elsif ($a eq "--virt") {
+		$virt = shift(@ARGV);
+		}
+	elsif ($a eq "--new-size") {
+		$newsize = shift(@ARGV);
+		}
+	elsif ($a eq "--new-virt") {
+		$newvirt = shift(@ARGV);
+		}
+	else {
+		&usage();
+		}
+	}
+
+# Validate parameters
+$real || $virt || &usage("The disk to modify must be identified by the --real or --virt parameters");
+$newsize || $newvirt || &usage("Nothing to do");
+!$newsize || $newsize =~ /^\d*$/ || &usage("Invalid --new-size parameter - must be followed by a number of MB");
+!$newvirt || $virt =~ /^\/\S+$/ || &usage("Missing or invalid --new-virt parameter - should be like /dev/sda2");
+
+# Get the server
+$host || &usage("Missing --host parameter");
+$server = &get_managed_server_by("host", $host);
+$server || &usage("System with hostname $host does not exist");
+
+# Get the current disks
+$dfunc = "type_".$server->{'manager'}."_list_disks";
+defined(&$dfunc) || &usage("System type $server->{'manager'} does not support ".
+			   "disk management");
+$cfunc = "type_".$server->{'manager'}."_can_disks";
+defined(&$cfunc) && &$cfunc($server) ||
+	&usage("Disks cannot be managed on this system");
+$disks = &$dfunc($server, 1);
+ref($disks) || &usage("Failed to list disks : $disks");
+
+# Find the disk to modify
+if ($real) {
+	($disk) = grep { $_->{'real'} eq $real } @$disks;
+	$disk || &usage("No disk for the real file or device $real was found");
+	}
+else {
+	($disk) = grep { $_->{'virt'} eq $virt } @$disks;
+	$disk || &usage("No disk mapped to the virtual device $virt was found");
+	}
+
+# Change the object
+$olddisk = { %$disk };
+if ($newsize) {
+	$disk->{'size'} = $newsize*1024*1024;
+	}
+if ($newvirt) {
+	$disk->{'virt'} = $newvirt;
+	}
+
+# Do it
+&$first_print("Modifying virtual disk for $disk->{'virt'} ..");
+$cfunc = "type_".$server->{'manager'}."_modify_disk";
+$err = &$cfunc($server, $disk, $olddisk);
+if ($err) {
+	&$second_print(".. failed : $err");
+	}
+else {
+	# Tell the user about reboot
+	&$second_print(".. done");
+	}
+
+sub usage
+{
+print "$_[0]\n\n" if ($_[0]);
+print "Changes the size or virtual device for a disk on some virtual system.\n";
+print "\n";
+print "usage: modify-disk.pl --host hostname\n";
+print "                      --real device|file | --virt device\n";
+print "                      [--new-size MB]\n";
+print "                      [--new-virt device]\n";
+exit(1);
+}
+

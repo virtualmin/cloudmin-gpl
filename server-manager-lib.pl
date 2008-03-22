@@ -6,8 +6,7 @@
 #	XXX xen disk sizes
 #		XXX add/remove disks
 #		XXX web interface
-#		XXX resize disks
-#		XXX command-line tools
+#		XXX a xen reboot doesn't re-read the .cfg file?
 #	XXX cpu core assignment
 #	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
 # XXX backup and restore managed systems? Use Backup Configuration Files module

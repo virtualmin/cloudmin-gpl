@@ -56,7 +56,7 @@ $virt =~ /^\/\S+$/ || $virt eq "auto" ||
 	&usage("Missing or invalid --virt parameter - should be like /dev/sda2");
 $size =~ /^\d*$/ || &usage("Invalid --size parameter - must be followed by a number of MB");
 if ($mount) {
-	$mount =~ /^\/\S+$/ || &usage("Invalid --mount parameter - should be like /mnt/disk2");
+	$mount =~ /^\/\S+$/ || $mount eq 'swap' || &usage("Invalid --mount parameter - should be like /mnt/disk2");
 	}
 
 # Get the server
@@ -93,7 +93,7 @@ $disk->{'virt'} = $virt if ($virt ne 'auto');
 $rclash && &usage("The real file $disk->{'real'} is already mapped to $rclash->{'virt'}");
 ($vclash) = grep { $_->{'virt'} eq $disk->{'virt'} } @$disks;
 $vclash && &usage("The virtual device $disk->{'virt'} is already mapped from $vclash->{'real'}");
-if ($mount) {
+if ($mount && $mount ne 'swap') {
 	($mclash) = grep { $_->{'mount'} eq $mount } @$disks;
 	$mclash && &usage("The filesystem $mount is already mounted from $mclash->{'virt'}");
 	}
@@ -131,7 +131,7 @@ print "                      --virt device | --auto-virt\n";
 print "                     [--size MB]\n";
 print "                     [--device]\n";
 print "                     [--format filesystem]\n";
-print "                     [--mount directory]\n";
+print "                     [--mount directory|\"swap\"]\n";
 exit(1);
 }
 
