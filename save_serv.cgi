@@ -44,6 +44,7 @@ elsif ($in{'startup'}) {
 	$err = &startup_server($server);
 	if ($err) {
 		print &text('save_startfailed', $err),"<p>\n";
+		&save_managed_server($server);
 		}
 	else {
 		&check_server_status($server);
@@ -87,6 +88,7 @@ elsif ($in{'reboot'}) {
 				print $text{'save_startdone'},"<p>\n";
 				}
 			}
+		&save_managed_server($server);
 		}
 	else {
 		# Just reboot
@@ -102,6 +104,7 @@ elsif ($in{'reboot'}) {
 				&theme_post_save_server($server);
 				}
 			}
+		&save_managed_server($server);
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}

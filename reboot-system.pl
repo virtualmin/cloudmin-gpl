@@ -54,6 +54,7 @@ foreach $s (@servers) {
 	else {
 		print ".. rebooted successfully\n\n";
 		}
+	&save_managed_server($s);
 	}
 
 sub usage

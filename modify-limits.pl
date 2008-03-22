@@ -127,14 +127,14 @@ foreach $s (@servers) {
 			# Yes .. do it now
 			print "Rebooting system $s->{'host'} to ",
 			      "apply limits ..\n";
-			my $err = &shutdown_server($s);
-			$err = &startup_server($s) if (!$err);
+			my $err = &reboot_server($s);
 			if ($err) {
 				print ".. failed : $err\n";
 				}
 			else {
 				print ".. done\n";
 				}
+			&save_managed_server($s);
 			print "\n";
 			}
 		else {

@@ -52,9 +52,9 @@ foreach $s (@servers) {
 		}
 	else {
 		&check_server_status($s);
-		&save_managed_server($s);
 		print ".. startup successfull\n\n";
 		}
+	&save_managed_server($s);
 	}
 
 sub usage
