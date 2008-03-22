@@ -34,6 +34,9 @@ else {
 print &ui_form_start("save_disk.cgi", "post");
 print &ui_hidden("new", $in{'new'});
 print &ui_hidden("id", $in{'id'});
+if (!$in{'new'}) {
+	print &ui_hidden("oldreal", $disk->{'real'});
+	}
 print &ui_table_start($text{'disk_header'}, "width=100%", 2);
 
 # Real file on host system
