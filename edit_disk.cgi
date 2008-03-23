@@ -25,9 +25,9 @@ if ($in{'new'}) {
 		}
 	}
 else {
-	$disk = grep { $_->{'real'} eq $in{'real'} } @$disks;
+	($disk) = grep { $_->{'real'} eq $in{'real'} } @$disks;
 	$disk || &error($text{'disk_egone'});
-	&ui_print_header(&server_in($server), $text{'disk_title0'}, "", "disk");
+	&ui_print_header(&server_in($server), $text{'disk_title'}, "", "disk");
 	}
 
 # Show form with disk details
@@ -37,7 +37,7 @@ print &ui_hidden("id", $in{'id'});
 if (!$in{'new'}) {
 	print &ui_hidden("oldreal", $disk->{'real'});
 	}
-print &ui_table_start($text{'disk_header'}, "width=100%", 2);
+print &ui_table_start($text{'disk_header'}, "width=100%", 2, [ "width=30%" ]);
 
 # Real file on host system
 # XXX why are in-use disks being shown?
@@ -57,7 +57,8 @@ if ($in{'new'} == 2) {
 		}
 	}
 $realsel ||= &ui_textbox("real", $disk->{'real'}, 50);
-print &ui_table_row(&text($in{'new'} == 2 ? 'disk_real' : 'disk_real2',
+print &ui_table_row(&text($in{'new'} == 2 ? 'disk_real1' :
+			  $in{'new'} == 1 ? 'disk_real2' : 'disk_real',
 			  "<tt>$vhost->{'host'}</tt>"), $realsel);
 
 # Device on virtual system
@@ -83,7 +84,7 @@ elsif (!$in{'new'} && $disk->{'size'}) {
 
 # Current use on virtual system
 if (!$in{'new'} && $disk->{'mount'}) {
-	&ui_table_row($text{'disk_use'},
+	print &ui_table_row($text{'disk_use'},
 		&text('disk_used', "<tt>$disk->{'mount'}</tt>",
 		      $text{'fs_'.$disk->{'fs'}} || uc($disk->{'fs'})));
 	}
@@ -101,14 +102,18 @@ if ($in{'new'}) {
 # Offer to mount
 if ($in{'new'}) {
 	print &ui_table_row($text{'disk_mount'},
-		&ui_opt_textbox("mount", $disk->{'mount'}, 30,
-				$text{'disk_nomount'}, $text{'disk_dirmount'}));
+		&ui_radio("mount_def", 1,
+			  [ [ 1, $text{'disk_nomount'} ],
+			    [ 2, $text{'disk_swapmount'} ],
+			    [ 0, $text{'disk_dirmount'} ] ])." ".
+		&ui_textbox("mount", undef, 30));
 	}
 
+$root = $disk->{'mount'} eq '/' ? 1 : 0;
 print &ui_table_end();
 print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]
-		   	      : [ [ undef, $text{'save'} ],
-			          [ 'delete', $text{'delete'} ] ]);
+		      : [ [ undef, $text{'save'} ],
+			  $root ? ( ) : ( [ 'delete', $text{'delete'} ] ) ]);
 
 &ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 		 "", $text{'index_return'});

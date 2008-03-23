@@ -24,6 +24,7 @@ if (@$disks) {
 	unshift(@links, &select_all_link("d"), &select_invert_link("d"));
 	@tds = ( "width=5" );
 	print &ui_form_start("delete_disks.cgi", "post");
+	print &ui_hidden("id", $in{'id'});
 	print &ui_links_row(\@links);
 	print &ui_columns_start([ "", $text{'disks_real'}, $text{'disks_virt'},
 				  $text{'disks_type'}, $text{'disks_size'} ],

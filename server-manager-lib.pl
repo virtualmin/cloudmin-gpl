@@ -4,8 +4,7 @@
 # XXX refresh should be in dependency order
 # XXX resource management
 #	XXX xen disk sizes
-#		XXX add/remove disks
-#		XXX web interface
+#		XXX help pages
 #	XXX cpu core assignment
 #	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
 # XXX backup and restore managed systems? Use Backup Configuration Files module
@@ -3645,6 +3644,23 @@ for(my $i=0; defined($in->{"start_$i"}); $i++) {
 	}
 @starts || &error($text{'range_enone'});
 return (join(" ", @starts), join(" ", @ends), join(" ", @cidrs));
+}
+
+# show_disk_reboot_message(&server, &disk)
+# Prints a form prompting for a reboot if needed after some disk change
+sub show_disk_reboot_message
+{
+local ($server, $disk) = @_;
+local $rfunc = "type_".$server->{'manager'}."_need_disk_reboot";
+if ($server->{'status'} ne 'down' &&
+    defined(&$rfunc) && &$rfunc($server, $disk)) {
+	print &ui_form_start("save_serv.cgi");
+	print &ui_hidden("id", $in{'id'});
+	print &ui_hidden("reboot", 1);
+	print &ui_hidden("confirm", 1);
+	print "<b>$text{'disk_needreboot'}</b><p>\n";
+	print &ui_form_end([ [ undef, $text{'limits_reboot'} ] ]);
+	}
 }
 
 # strip_html_tags(html)

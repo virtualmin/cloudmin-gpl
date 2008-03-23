@@ -15,20 +15,48 @@ ref($disks) || &error($disks);
 if (!$in{'new'}) {
 	($disk) = grep { $_->{'real'} eq $in{'oldreal'} } @$disks;
 	$disk || &error($text{'disk_egone'});
+	$olddisk = { %$disk };
 	}
 
 if ($in{'delete'}) {
-	# Remove the disk
+	# Remove the disk, after asking for confirmation
 	&ui_print_header(&server_in($server), $text{'disk_titled'}, "");
-	&$first_print(&text('disk_deleting', "<tt>$disk->{'real'}</tt>"));
-	$dfunc = "type_".$server->{'manager'}."_delete_disk";
-	$err = &$dfunc($server, $disk);
-	if ($err) {
-		&$second_print(&text('disk_deletefailed', $err));
+	if ($in{'confirm'}) {
+		# Do it
+		&$first_print(&text('disk_deleting',
+				    "<tt>$disk->{'real'}</tt>"));
+		$dfunc = "type_".$server->{'manager'}."_delete_disk";
+		$err = &$dfunc($server, $disk);
+		if ($err) {
+			&$second_print(&text('disk_deletefailed', $err));
+			}
+		else {
+			&$second_print(&text('disk_deletedok'));
+			&show_disk_reboot_message($server, $disk);
+			}
 		}
 	else {
-		&$second_print(&text('disk_deleteok'));
-		&show_reboot_message();
+		# Ask first
+		print "<center>\n";
+		print &ui_form_start("save_disk.cgi");
+		print &ui_hidden("id", $in{'id'});
+		print &ui_hidden("oldreal", $in{'oldreal'});
+		print &ui_hidden("delete", 1);
+		$desc = "<tt>$disk->{'real'}</tt>";
+		if ($disk->{'device'}) {
+			print &text('disk_rusure2', $desc),"<p>\n";
+			}
+		else {
+			print &text('disk_rusure', $desc,
+				    &nice_size($disk->{'size'})),"<p>\n";
+			}
+		if ($disk->{'mount'} && $disk->{'fs'} ne 'swap') {
+			print &text('disk_rusuremount',
+				    "<tt>$disk->{'mount'}</tt>",
+				    uc($disk->{'fs'})),"<p>\n";
+			}
+		print &ui_form_end([ [ "confirm", $text{'disk_deleteok'} ] ]);
+		print "</center>\n";
 		}
 	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 			 "", $text{'index_return'});
@@ -72,27 +100,50 @@ else {
 	# New filesystem and mount point
 	if ($in{'new'}) {
 		$disk->{'fs'} = $in{'fs'};
-		# XXX
+		if ($in{'mount_def'} == 0) {
+			$in{'mount'} =~ /^\/\S+$/ ||
+				&error($text{'disk_emount'});
+			$disk->{'mount'} = $in{'mount'};
+			}
+		elsif ($in{'mount_def'} == 1) {
+			$in{'fs'} eq 'swap' || $in{'new'} == 2 ||
+				&error($text{'disk_eswap'});
+			}
 		}
 
 	if ($in{'new'}) {
 		# Create the disk
+		&ui_print_header(&server_in($server), $text{'disk_titlec'}, "");
+		&$first_print(&text('disk_creating',
+				    "<tt>$disk->{'real'}</tt>"));
+		$cfunc = "type_".$server->{'manager'}."_create_disk";
+		$err = &$cfunc($server, $disk);
+		if ($err) {
+			&$second_print(&text('disk_createfailed', $err));
+			}
+		else {
+			&$second_print(&text('disk_createok'));
+			&show_disk_reboot_message($server, $disk);
+			}
 		}
 	else {
 		# Modify the size or devices, if we can
+		&ui_print_header(&server_in($server), $text{'disk_titlem'}, "");
+		&$first_print(&text('disk_modifying',
+				    "<tt>$disk->{'real'}</tt>"));
+		$cfunc = "type_".$server->{'manager'}."_modify_disk";
+		$err = &$cfunc($server, $disk, $olddisk);
+		if ($err) {
+			&$second_print(&text('disk_modifyfailed', $err));
+			}
+		else {
+			&$second_print(&text('disk_modifyok'));
+			&show_disk_reboot_message($server, $disk);
+			}
 		}
+
+	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
+			 "", $text{'index_return'});
 	}
 
-sub show_reboot_message
-{
-$rfunc = "type_".$server->{'manager'}."_need_disk_reboot";
-if (defined(&$rfunc) && &$rfunc($server, $disk)) {
-	print &ui_form_start("save_serv.cgi");
-	print &ui_hidden("id", $in{'id'});
-	print &ui_hidden("reboot", 1);
-	print &ui_hidden("confirm", 1);
-	print "<b>$text{'disk_needreboot'}</b><p>\n";
-	print &ui_form_end([ [ undef, $text{'limits_reboot'} ] ]);
-	}
-}
 
