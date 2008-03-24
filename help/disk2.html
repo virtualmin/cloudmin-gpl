@@ -1,0 +1,23 @@
+<header>Add Disk Device</header>
+
+This page allows you to add a new virtual disk to a system, using an
+existing file or real device on the host system. The former is useful
+if you already have a file from another system - but don't try to make
+the same disk available to two running systems at once, as this will cause
+data corruption. <p>
+
+Adding a real device can be useful for granting access to a CD or DVD drive,
+or for mapping an LVM volume or even real partition to a virtual system for
+increased performance. <p>
+
+If you want the existing disk re-formatted with a new filesystem, select
+the type from the <b>Filesystem to create on new disk</b>. If you also want
+it mounted on the virtual system, enter a mount directory in the <b>Mount new
+disk as</b> field. <p>
+
+If the system is current running, the changes will not be fully applied
+until the next reboot. Otherwise, they will be applied when it is started up.
+<p>
+
+<footer>
+

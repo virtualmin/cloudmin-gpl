@@ -3,8 +3,6 @@
 #	XXX what if IP changes?
 # XXX refresh should be in dependency order
 # XXX resource management
-#	XXX xen disk sizes
-#		XXX help pages
 #	XXX cpu core assignment
 #	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
 # XXX backup and restore managed systems? Use Backup Configuration Files module

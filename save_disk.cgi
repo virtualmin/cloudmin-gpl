@@ -78,7 +78,7 @@ else {
 			$disk->{'real'} = $in{'other'};
 			}
 		}
-	else {
+	elsif ($in{'new'} == 1) {
 		# Just from text box
 		$in{'real'} =~ /^\/\S+$/ || &error($text{'disk_ereal'});
 		$disk->{'real'} = $in{'real'};

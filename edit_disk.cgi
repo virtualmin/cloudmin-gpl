@@ -55,8 +55,15 @@ if ($in{'new'} == 2) {
 				&ui_textbox("other", undef, 30);
 			}
 		}
+	$realsel ||= &ui_textbox("real", $disk->{'real'}, 50);
 	}
-$realsel ||= &ui_textbox("real", $disk->{'real'}, 50);
+elsif ($in{'new'} == 1) {
+	$realsel = &ui_textbox("real", $disk->{'real'}, 50);
+	}
+else {
+	# Cannot edit real file for existing disks
+	$realsel = "<tt>$disk->{'real'}</tt>";
+	}
 print &ui_table_row(&text($in{'new'} == 2 ? 'disk_real1' :
 			  $in{'new'} == 1 ? 'disk_real2' : 'disk_real',
 			  "<tt>$vhost->{'host'}</tt>"), $realsel);
@@ -83,7 +90,12 @@ elsif (!$in{'new'} && $disk->{'size'}) {
 	}
 
 # Current use on virtual system
-if (!$in{'new'} && $disk->{'mount'}) {
+if (!$in{'new'} && $disk->{'fs'} eq 'swap') {
+	# Virtual memory
+	print &ui_table_row($text{'disk_use'}, $text{'disk_useswap'});
+	}
+elsif (!$in{'new'} && $disk->{'mount'}) {
+	# Filesystem mount
 	print &ui_table_row($text{'disk_use'},
 		&text('disk_used', "<tt>$disk->{'mount'}</tt>",
 		      $text{'fs_'.$disk->{'fs'}} || uc($disk->{'fs'})));
