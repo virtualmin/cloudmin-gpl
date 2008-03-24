@@ -719,13 +719,13 @@ else {
 	local ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
 						 $timeout);
 	if ($status == 0) {
-		return ($out, 0, undef);
+		return ($out, 0, undef, $status);
 		}
 	elsif ($status == 3) {
-		return ($out, 1, undef);
+		return ($out, 1, undef, $status);
 		}
 	else {
-		return ($out, undef, $text{'status_'.$status});
+		return ($out, undef, $text{'status_'.$status}, $status);
 		}
 	}
 }
