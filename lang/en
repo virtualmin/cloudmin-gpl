@@ -1447,3 +1447,12 @@ ddisk_enone=None selected
 ddisk_rusure2=Are you sure you want to remove the $1 selected disks?
 disk_rusure=Are you sure you want to delete the $1 selected disks? $2 of data will be lost forever!
 ddisk_deleteok=Delete Them Now
+
+nf_header=The following new features are available in $1 ..
+nf_desc=Feature
+nf_html=Description
+nf_vm=VM2
+nf_date=(installed $1)
+nf_and=$1 and $2
+nf_seen=Hide New Features
+nf_try=Try it ..

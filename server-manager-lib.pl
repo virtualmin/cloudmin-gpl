@@ -28,6 +28,7 @@ do '../web-lib.pl';
 &init_config();
 do '../ui-lib.pl';
 do 'images-lib.pl';
+do 'newfeatures-lib.pl';
 &foreign_require("servers", "servers-lib.pl");
 &foreign_require("proc", "proc-lib.pl");
 &foreign_require("net", "net-lib.pl");
@@ -131,6 +132,10 @@ $virtualmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-vi
 $virtualmin_webmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-webmin";
 
 $default_search_file = "$module_config_directory/defaultsearch";
+
+@newfeatures_dirs = ( "$module_root_directory/newfeatures-all" );
+$newfeatures_seen_dir = "$module_config_directory/seenfeatures";
+$install_times_file = "$module_config_directory/installtimes";
 
 &set_all_html_print();
 
@@ -539,7 +544,7 @@ if (defined(&$sfunc)) {
 	}
 
 # Need to really SSH
-local $cmd = "ssh -q -x -".$server->{'ssh_protocol'};
+local $cmd = "ssh -x -".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
 	$cmd .= " -i ".quotemeta($key->{'file'});
