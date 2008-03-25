@@ -39,6 +39,17 @@ while(@ARGV > 0) {
 		$weight =~ /^\d+$/ && $weight > 0 ||
 			&usage("--weight must be followed by a number");
 		}
+	elsif ($a eq "--vcpus") {
+		$vcpus = shift(@ARGV);
+		if ($vcpus =~ /^\d+$/) {
+			# Just a number of CPUs
+			$vcpus || &usage("Number of virtual CPUs cannot be 0");
+			$vcpus = join(",", (0..($vcpus-1)));
+			}
+		else {
+			$vcpus ne '' || &usage("--vcpus must be followed by a number of CPUs, or a list of mappings");
+			}
+		}
 	elsif ($a eq "--reboot") {
 		# Reboot after
 		$do_reboot = 1;
@@ -47,7 +58,8 @@ while(@ARGV > 0) {
 		&usage();
 		}
 	}
-defined($cpu) || defined($weight) || $memory || &usage("Nothing to modify!");
+defined($cpu) || defined($weight) || $memory || defined($vcpus) ||
+	&usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
@@ -59,6 +71,22 @@ foreach $s (@servers) {
 	}
 $anycan || &usage("None of the specified systems can have their ".
 		  "CPU or memory limits changed");
+
+# Parse virtual CPUs list
+if (defined($vcpus)) {
+	@vcpus = ( );
+	foreach $c (split(/,/, $vcpus)) {
+		if ($c =~ /^(\d+):((\d+)\-(\d+)|\d+)$/) {
+			push(@vcpus, { 'num' => $1, 'pin' => $2 });
+			}
+		elsif ($c =~ /^\d+$/) {
+			push(@vcpus, { 'num' => $c });
+			}
+		else {
+			&usage("Invalid virtual CPU specification $c - must like 0 or 0:0-1");
+			}
+		}
+	}
 
 # Do each system
 foreach $s (@servers) {
@@ -101,8 +129,8 @@ foreach $s (@servers) {
 		print "Setting CPU limit on $tdesc system $s->{'host'} ..\n";
 		$cfunc = "type_".$t."_can_cpu";
 		if (defined(&$cfunc) && &$cfunc($s)) {
-			$cfunc = "type_".$t."_save_cpu";
-			$err = &$cfunc($s, $cpu, $weight);
+			$sfunc = "type_".$t."_save_cpu";
+			$err = &$sfunc($s, $cpu, $weight);
 			if ($err) {
 				print ".. failed : $err\n";
 				}
@@ -110,6 +138,27 @@ foreach $s (@servers) {
 				print ".. done\n";
 				$reboot++ if (&$cfunc($s) == 2 ||
 					      &$cfunc($s) == 4);
+				}
+			}
+		else {
+			print ".. not supported\n";
+			}
+		print "\n";
+		}
+
+	# Change virtual CPUs
+	if (defined($vcpus)) {
+		print "Setting virtual CPUs on $tdesc system $s->{'host'} ..\n";
+		$cfunc = "type_".$t."_can_vcpus";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$vfunc = "type_".$t."_save_vcpus";
+			$err = &$vfunc($s, \@vcpus);
+			if ($err) {
+				print ".. failed : $err\n";
+				}
+			else {
+				print ".. done\n";
+				$reboot++ if (&$cfunc($s) == 2);
 				}
 			}
 		else {
@@ -168,6 +217,7 @@ print "                        [--cpu percentage]\n";
 print "                        [--weight number]\n";
 print "                        [--memory MB]\n";
 print "                        [--reboot]\n";
+print "                        [--vcpus N | --vcpus list]\n";
 exit(1);
 }
 

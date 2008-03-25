@@ -106,6 +106,41 @@ if ($multi) {
 				}
 			}
 
+		# Show limits, where we can
+		$cfunc = "type_".$s->{'manager'}."_can_memory";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$mfunc = "type_".$s->{'manager'}."_get_memory";
+			$mem = &$mfunc($s);
+			if ($mem) {
+				print "    Memory limit: ",
+				      &nice_size($mem),"\n";
+				}
+			}
+		$cfunc = "type_".$s->{'manager'}."_can_cpu";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$mfunc = "type_".$s->{'manager'}."_get_cpu";
+			($cpu, $weight) = &$mfunc($s);
+			print "    Maximum CPU use: ",
+			      ($cpu ? $cpu."%" : "Unlimited"),"\n";
+			if ($weight) {
+				print "    CPU allocation weighting: $weight\n";
+				}
+			}
+		$cfunc = "type_".$s->{'manager'}."_can_vcpus";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$mfunc = "type_".$s->{'manager'}."_get_vcpus";
+			$vcpus = &$mfunc($s);
+			if (ref($vcpus)) {
+				@v = ( );
+				foreach $cpu (@$vcpus) {
+					push(@v, "ID:$cpu->{'num'}".
+					   ($cpu->{'pin'} ne '' ?
+					    " RealCPU:$cpu->{'pin'}" : ""));
+					}
+				print "    Virtual CPUs: ",join(", ", @v),"\n";
+				}
+			}
+
 		# Show collected info
 		if ($info && scalar(keys %$info) > 1) {
 			if ($info->{'load'}) {

@@ -5,7 +5,8 @@
 # XXX resource management
 #	XXX cpu core assignment
 #	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
-# XXX backup and restore managed systems? Use Backup Configuration Files module
+#	XXX web interface
+#	XXX not working for xengtest ??
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX domain transfer by rsyncing home directory
@@ -3524,8 +3525,10 @@ sub can_edit_limits
 local ($server) = @_;
 local $cfunc = "type_".$server->{'manager'}."_can_cpu";
 local $mfunc = "type_".$server->{'manager'}."_can_memory";
+local $vfunc = "type_".$server->{'manager'}."_can_vcpus";
 return defined(&$cfunc) && &$cfunc($server) ||
-       defined(&$mfunc) && &$mfunc($server);
+       defined(&$mfunc) && &$mfunc($server) ||
+       defined(&$vfunc) && &$vfunc($server);
 }
 
 # run_system_script(&system, when, action)
