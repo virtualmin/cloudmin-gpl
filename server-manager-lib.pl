@@ -2,11 +2,6 @@
 # XXX move servers
 #	XXX what if IP changes?
 # XXX refresh should be in dependency order
-# XXX resource management
-#	XXX cpu core assignment
-#	XXX xen can define multiple virtual CPUs, and pin each to a real CPU
-#	XXX web interface
-#	XXX not working for xengtest ??
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX domain transfer by rsyncing home directory
@@ -3074,6 +3069,10 @@ if (!$noimage) {
 local $dfunc = "type_".$t."_can_disks";
 if (defined(&$dfunc) && &$dfunc($server)) {
 	push(@rv, [ "disks", $text{'edit_disks'} ]);
+	}
+local $vfunc = "type_".$t."_can_vcpus";
+if (defined(&$vfunc) && &$vfunc($server)) {
+	push(@rv, [ "vcpus", $text{'edit_vcpus'} ]);
 	}
 
 # Add type-specific actions

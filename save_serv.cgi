@@ -340,6 +340,11 @@ elsif ($in{'disks'}) {
 	&redirect("list_disks.cgi?id=$in{'id'}");
 	}
 
+elsif ($in{'vcpus'}) {
+	# Go to disk management form
+	&redirect("list_vcpus.cgi?id=$in{'id'}");
+	}
+
 else {
 	# Validate inputs, and save details
 	&error_setup($text{'save_err'});
