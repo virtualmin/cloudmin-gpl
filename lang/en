@@ -1447,7 +1447,7 @@ ddisk_title=Delete Disks
 ddisk_err=Failed to delete disks
 ddisk_enone=None selected
 ddisk_rusure2=Are you sure you want to remove the $1 selected disks?
-disk_rusure=Are you sure you want to delete the $1 selected disks? $2 of data will be lost forever!
+ddisk_rusure=Are you sure you want to delete the $1 selected disks? $2 of data will be lost forever!
 ddisk_deleteok=Delete Them Now
 
 nf_header=The following new features are available in $1 ..
