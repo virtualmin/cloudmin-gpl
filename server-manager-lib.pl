@@ -15,7 +15,7 @@
 # XXX show Xen resource allocation out of total on edit_xen.cgi
 #	XXX show hosts too
 # XXX extra webmin logins to manage servers
-#     XXX reboot/shutdown/view
+#     XXX reboot/shutdown/view/bandwidth
 #     XXX one login can own several servers
 
 do '../web-lib.pl';
@@ -23,6 +23,7 @@ do '../web-lib.pl';
 do '../ui-lib.pl';
 do 'images-lib.pl';
 do 'newfeatures-lib.pl';
+do 'bw-lib.pl';
 &foreign_require("servers", "servers-lib.pl");
 &foreign_require("proc", "proc-lib.pl");
 &foreign_require("net", "net-lib.pl");
