@@ -17,6 +17,7 @@
 # XXX extra webmin logins to manage servers
 #     XXX reboot/shutdown/view/bandwidth
 #     XXX one login can own several servers
+# XXX EC2 new static IPs feature
 
 do '../web-lib.pl';
 &init_config();
@@ -131,6 +132,8 @@ $default_search_file = "$module_config_directory/defaultsearch";
 @newfeatures_dirs = ( "$module_root_directory/newfeatures-all" );
 $newfeatures_seen_dir = "$module_config_directory/seenfeatures";
 $install_times_file = "$module_config_directory/installtimes";
+
+$bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 
 &set_all_html_print();
 
@@ -2962,6 +2965,15 @@ if ($server_management_types{'xen'} ||
 	push(@glinks, "list_images.cgi");
 	push(@gtitles, $text{'images_title'});
 	push(@gicons, "images/images.gif");
+	}
+
+# Bandwidth monitoring
+if ($server_management_types{'xen'} ||
+    $server_management_types{'vserver'} ||
+    $server_management_types{'zones'}) {
+	push(@glinks, "edit_be.cgi");
+	push(@gtitles, $text{'bw_title'});
+	push(@gicons, "images/bw.gif");
 	}
 
 # Type-defined icons

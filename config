@@ -14,3 +14,4 @@ xen_dir=/xen
 name_max=20
 cat_mode=0
 xen_mem_mode=0
+bw_period=month
