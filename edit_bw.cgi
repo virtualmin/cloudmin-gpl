@@ -33,18 +33,18 @@ print &ui_table_row($text{'bw_msg'},
 
 # Send to who
 print &ui_table_row($text{'bw_email'},
-	&ui_checkbox("bw_email_admin", 1, $text{'bw_email_admin'},
+	&ui_checkbox("email_admin", 1, $text{'bw_email_admin'},
 		     $config{'bw_email'})." ".
-	&ui_textbox("bw_email", $config{'bw_email'}, 40)."<br>\n".
-	&ui_checkbox("bw_owner", 1, $text{'bw_owner'},
+	&ui_textbox("email", $config{'bw_email'}, 40)."<br>\n".
+	&ui_checkbox("owner", 1, $text{'bw_owner'},
 		     $config{'bw_owner'}));
 
 # Default limit for new servers
 print &ui_table_row($text{'bw_def'},
-	&ui_radio("bw_def_def", $config{'bw_def'} ? 0 : 1,
+	&ui_radio("default_def", $config{'bw_def'} ? 0 : 1,
 		  [ [ 1, $text{'bw_unlimited'} ],
 		    [ 0, $text{'bw_defset'} ] ])." ".
-	&ui_bytesbox("bw_def", $config{'bw_def'}, 8));
+	&ui_bytesbox("default", $config{'bw_def'}, 8));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'save'} ] ]);
