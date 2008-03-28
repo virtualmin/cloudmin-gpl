@@ -135,6 +135,8 @@ $default_search_file = "$module_config_directory/defaultsearch";
 $newfeatures_seen_dir = "$module_config_directory/seenfeatures";
 $install_times_file = "$module_config_directory/installtimes";
 
+$bandwidth_dir = "$module_config_directory/bandwidth";
+
 &set_all_html_print();
 
 # list_managed_servers()

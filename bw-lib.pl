@@ -5,6 +5,7 @@
 # - Ability to email or shutdown system if over limit
 # - Cron job to poll up systems
 # - Support vservers and zones
+# - Cache reads of /proc/net/dev and instances
 
 # get_server_traffic(&server)
 # Returns the number of in and out bytes and packets for some virtual system,
@@ -57,6 +58,26 @@ local ($msg) = @_;
 sub find_bw_cron_job
 {
 return &find_server_manager_cron_job($bandwidth_cron_cmd);
+}
+
+# get_bandwidth(&server)
+# Returns the bandwidth usage object for some server
+sub get_bandwidth
+{
+if (!defined($get_bandwidth_cache{$_[0]->{'id'}})) {
+	local %bwinfo;
+	&read_file("$bandwidth_dir/$_[0]->{'id'}", \%bwinfo);
+	$get_bandwidth_cache{$_[0]->{'id'}} = \%bwinfo;
+	}
+return $get_bandwidth_cache{$_[0]->{'id'}};
+}
+
+# save_bandwidth(&server, &info)
+sub save_bandwidth
+{
+&make_dir($bandwidth_dir, 0700);
+&write_file("$bandwidth_dir/$_[0]->{'id'}", $_[1]);
+$get_bandwidth_cache{$_[0]->{'id'}} ||= $_[1];
 }
 
 1;
