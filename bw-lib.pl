@@ -17,9 +17,12 @@ local $vhost = &get_parent_server($server);
 return ( ) if (!$vhost);
 local $ifunc = "type_".$server->{'manager'}."_real_interfaces";
 if (defined(&$ifunc)) {
-	local @ifaces = &$ifunc($server, $vhost);
+	local $ifaces = &$ifunc($server, $vhost);
+	if (!ref($ifaces)) {
+		return ( );
+		}
 	local @rv = ( 0, 0, 0, 0 );
-	foreach my $i (@ifaces) {
+	foreach my $i (@$ifaces) {
 		$rv[0] += $i->{'bytes_in'};
 		$rv[1] += $i->{'bytes_out'};
 		$rv[2] += $i->{'packets_in'};
