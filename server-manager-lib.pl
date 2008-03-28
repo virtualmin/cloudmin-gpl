@@ -57,7 +57,9 @@ $this_server_status = "$module_config_directory/this";
 
 $check_status_cmd = "$module_config_directory/status.pl";
 $check_licence_cmd = "$module_config_directory/licence.pl";
-@cron_cmds = ( $check_status_cmd, $check_licence_cmd );
+$bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
+@cron_cmds = ( $check_status_cmd, $check_licence_cmd,
+	       $bandwidth_cron_cmd );
 
 @standard_virtualmin_features = (
 	{ 'feature' => 'dir', 'desc' => 'Home directory',
@@ -132,8 +134,6 @@ $default_search_file = "$module_config_directory/defaultsearch";
 @newfeatures_dirs = ( "$module_root_directory/newfeatures-all" );
 $newfeatures_seen_dir = "$module_config_directory/seenfeatures";
 $install_times_file = "$module_config_directory/installtimes";
-
-$bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 
 &set_all_html_print();
 
@@ -2971,7 +2971,7 @@ if ($server_management_types{'xen'} ||
 if ($server_management_types{'xen'} ||
     $server_management_types{'vserver'} ||
     $server_management_types{'zones'}) {
-	push(@glinks, "edit_be.cgi");
+	push(@glinks, "edit_bw.cgi");
 	push(@gtitles, $text{'bw_title'});
 	push(@gicons, "images/bw.gif");
 	}
@@ -3679,6 +3679,21 @@ if ($server->{'status'} ne 'down' &&
 	print "<b>$text{'disk_needreboot'}</b><p>\n";
 	print &ui_form_end([ [ undef, $text{'limits_reboot'} ] ]);
 	}
+}
+
+# find_server_manager_cron_job(command, [&jobs], [user])
+# Returns the cron job object that runs some command (perhaps with redirection)
+sub find_server_manager_cron_job
+{
+local ($cmd, $jobs, $user) = @_;
+if (!$jobs) {
+	&foreign_require("cron", "cron-lib.pl");
+	$jobs = [ &cron::list_cron_jobs() ];
+	}
+$user ||= "root";
+local @rv = grep { $_->{'user'} eq $user &&
+	     $_->{'command'} =~ /(^|[ \|\&;])\Q$cmd\E($|[ \|\&><;])/ } @$jobs;
+return wantarray ? @rv : $rv[0];
 }
 
 # strip_html_tags(html)

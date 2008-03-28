@@ -56,11 +56,7 @@ local ($msg) = @_;
 # Returns the job object for bandwidth monitoring
 sub find_bw_cron_job
 {
-&foreign_require("cron", "cron-lib.pl");
-local @jobs = &cron::list_cron_jobs();
-local ($job) = grep { $_->{'user'} eq 'root' &&
-		      $_->{'command'} = $bandwidth_cron_cmd } @jobs;
-return $job;
+return &find_server_manager_cron_job($bandwidth_cron_cmd);
 }
 
 1;
