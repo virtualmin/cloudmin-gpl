@@ -55,41 +55,46 @@ foreach $s (@servers) {
 	if ($bwinfo->{'last_time'}) {
 		# By hour
 		$hours = ($now - $bwinfo->{'last_time'}) / 3600.0;
+		$hours = 1 if ($hours < 1);
+		print STDERR "hours=$hours\n";
 		for(my $h=$bwinfo->{'last_time'}; $h<$now; $h+=3600) {
 			$hh = int($h/3600) * 3600;
 			$bwinfo->{'hour_in_'.$hh} += $in_diff / $hours;
 			$bwinfo->{'hour_out_'.$hh} += $out_diff / $hours;
 			$bwinfo->{'hour_inp_'.$hh} += $inp_diff / $hours;
 			$bwinfo->{'hour_outp_'.$hh} += $outp_diff / $hours;
+			print STDERR "hours for $s->{'host'} at ",
+				&make_date($hh)," in=$in_diff out=$out_diff\n";
 			}
 		$bwinfo->{'old_hour'} ||= int($bwinfo->{'last_time'}/3600)*3600;
 
 		# By minute
 		$mins = ($now - $bwinfo->{'last_time'}) / 60.0;
+		$mins = 1 if ($mins < 1);
+		print STDERR "mins=$mins\n";
 		for(my $m=$bwinfo->{'last_time'}; $m<$now; $m+=60) {
 			$mm = int($m/60) * 60;
 			$bwinfo->{'min_in_'.$mm} += $in_diff / $mins;
 			$bwinfo->{'min_out_'.$mm} += $out_diff / $mins;
 			$bwinfo->{'min_inp_'.$mm} += $inp_diff / $mins;
 			$bwinfo->{'min_outp_'.$mm} += $outp_diff / $mins;
-			print STDERR "for $s->{'host'} at ",
+			print STDERR "mins for $s->{'host'} at ",
 				&make_date($mm)," in=$in_diff out=$out_diff\n";
 			}
+		$bwinfo->{'old_min'} ||= int($bwinfo->{'last_time'}/60)*60;
 
 		# Get rid of per-minute stats more than 1 week old
-		# XXX don't set old_min to older than first collected
-		$oldmm = int($bwinfo->{'last_time'}/60) * 60;
-		$oldmm = $bwinfo->{'old_min'} if ($bwinfo->{'old_min'} &&
-						  $bwinfo->{'old_min'} <$oldmm);
-		$newmm = $now - 7*24*60*60;
-		$newmm = int($newmm/60) * 60;
-		for(my $mm=$oldmm; $mm<$newmm; $mm+=60) {
-			delete($bwinfo->{'min_in_'.$mm});
-			delete($bwinfo->{'min_out_'.$mm});
-			delete($bwinfo->{'min_inp_'.$mm});
-			delete($bwinfo->{'min_outp_'.$mm});
+		$weekago = $now - 7*24*60*60;
+		$weekago = int($weekago/60) * 60;
+		if ($bwinfo->{'old_min'} < $weekago) {
+			for(my $mm=$bwinfo->{'old_min'}; $mm<$weekago; $mm+=60){
+				delete($bwinfo->{'min_in_'.$mm});
+				delete($bwinfo->{'min_out_'.$mm});
+				delete($bwinfo->{'min_inp_'.$mm});
+				delete($bwinfo->{'min_outp_'.$mm});
+				}
+			$bwinfo->{'old_min'} = $weekago;
 			}
-		$bwinfo->{'old_min'} = $newmm;
 		}
 	$bwinfo->{'last_time'} = $now;
 

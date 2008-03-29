@@ -3089,6 +3089,9 @@ local $vfunc = "type_".$t."_can_vcpus";
 if (defined(&$vfunc) && &$vfunc($server)) {
 	push(@rv, [ "vcpus", $text{'edit_vcpus'} ]);
 	}
+if ($config{'bw_enabled'}) {
+	push(@rv, [ "bw", $text{'edit_bw'} ]);
+	}
 
 # Add type-specific actions
 local $afunc = "type_".$t."_server_actions";

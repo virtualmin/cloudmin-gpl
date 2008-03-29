@@ -3,9 +3,9 @@
 # - Compare with last run, if positive add to total for the day
 # - Graphing per system / per period
 # - Ability to email or shutdown system if over limit
-# - Cron job to poll up systems
 # - Support vservers and zones
-# - Cache reads of /proc/net/dev and instances
+# - Sum up for period, show in UI and list-systems.pl
+# - Nice graphs
 
 # get_server_traffic(&server)
 # Returns the number of in and out bytes and packets for some virtual system,

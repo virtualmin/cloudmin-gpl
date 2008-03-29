@@ -49,4 +49,10 @@ print &ui_table_row($text{'bw_def'},
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'save'} ] ]);
 
+# Button for global graph
+print "<hr>\n";
+print &ui_buttons_start();
+print &ui_buttons_row("bwgraph.cgi", $text{'bw_graph'}, $text{'bw_graphdesc'});
+print &ui_buttons_end();
+
 &ui_print_footer("", $text{'index_return'});

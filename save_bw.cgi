@@ -35,6 +35,7 @@ else {
 	}
 
 # Update config and cron job
+$config{'bw_enabled'} = $in{'enabled'};
 &save_module_config();
 &save_bandwidth_message($in{'msg'});
 $job = &find_bw_cron_job();
