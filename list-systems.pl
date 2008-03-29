@@ -141,6 +141,24 @@ if ($multi) {
 				}
 			}
 
+		# Show bandwidth limit and usage
+		$rfunc = "type_".$s->{'manager'}."_real_interfaces";
+		if (defined(&$rfunc) && $config{'bw_enabled'}) {
+			print "    Bandwidth limit: ",
+			      ($s->{'bw_limit'} ? &nice_size($s->{'bw_limit'})
+						: "Unlimited"),"\n";
+			print "    Bandwidth accounting period: ",
+			      ($config{'bw_period'} ?
+				"Current ".$config{'bw_period'} :
+				"Last ".$config{'bw_days'}." days"),"\n";
+			print "    Bandwidth usage towards limit: ",
+				&nice_size($s->{'bw_usage'}),"\n";
+			print "    Bandwidth usage incoming: ",
+				&nice_size($s->{'bw_usage_in'}),"\n";
+			print "    Bandwidth usage outgoing: ",
+				&nice_size($s->{'bw_usage_out'}),"\n";
+			}
+
 		# Show collected info
 		if ($info && scalar(keys %$info) > 1) {
 			if ($info->{'load'}) {

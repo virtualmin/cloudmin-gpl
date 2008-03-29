@@ -50,6 +50,15 @@ while(@ARGV > 0) {
 			$vcpus ne '' || &usage("--vcpus must be followed by a number of CPUs, or a list of mappings");
 			}
 		}
+	elsif ($a eq "--bw-limit") {
+		$bw = shift(@ARGV);
+		$bw =~ /^[1-9]\d*$/ ||
+			&usage("--bw-limit must be followed by a number in MB");
+		$bw *= 1024*1024;
+		}
+	elsif ($a eq "--bw-unlimited") {
+		$bw = '';
+		}
 	elsif ($a eq "--reboot") {
 		# Reboot after
 		$do_reboot = 1;
@@ -59,7 +68,7 @@ while(@ARGV > 0) {
 		}
 	}
 defined($cpu) || defined($weight) || $memory || defined($vcpus) ||
-	&usage("Nothing to modify!");
+   defined($bw) || &usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
@@ -167,6 +176,25 @@ foreach $s (@servers) {
 		print "\n";
 		}
 
+	# Change bandwidth limit
+	if (defined($bw)) {
+		print "Setting bandwidth limit on $tdesc system $s->{'host'} ..\n";
+		$rfunc = "type_".$t."_real_interfaces";
+		if (defined(&$rfunc)) {
+			$s->{'bw_limit'} = $bw;
+			if ($bw) {
+				print ".. set to ",&nice_size($bw),"\n";
+				}
+			else {
+				print ".. set to unlimited\n";
+				}
+			}
+		else {
+			print ".. not supported\n";
+			}
+		print "\n";
+		}
+
 	# Update and changed parameters
 	&save_managed_server($s);
 
@@ -218,6 +246,7 @@ print "                        [--weight number]\n";
 print "                        [--memory MB]\n";
 print "                        [--reboot]\n";
 print "                        [--vcpus N | --vcpus list]\n";
+print "                        [--bw-limit MB | --bw-unlimited]\n";
 exit(1);
 }
 

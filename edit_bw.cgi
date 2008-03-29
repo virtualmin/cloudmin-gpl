@@ -46,6 +46,11 @@ print &ui_table_row($text{'bw_def'},
 		    [ 0, $text{'bw_defset'} ] ])." ".
 	&ui_bytesbox("default", $config{'bw_def'}, 8));
 
+# Include in or out?
+print &ui_table_row($text{'bw_dir'},
+	&ui_checkbox("dir_in", 1, $text{'bw_dir_in'}, $config{'bw_dir_in'})." ".
+	&ui_checkbox("dir_out", 1, $text{'bw_dir_out'}, $config{'bw_dir_out'}));
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'save'} ] ]);
 

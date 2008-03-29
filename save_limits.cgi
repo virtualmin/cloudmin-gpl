@@ -22,6 +22,10 @@ if (defined($in{'cpu'})) {
 if (defined($in{'weight'})) {
 	$in{'weight'} =~ /^\d+$/ || &error($text{'limits_eweight'});
 	}
+if (defined($in{'bw'})) {
+	$in{'bw_def'} || $in{'bw'} =~ /^[1-9]\d*$/ ||
+		&error($text{'limits_ebw'});
+	}
 
 # Apply them, telling the user
 &ui_print_unbuffered_header(&server_in($server), $text{'limits_title'}, "");
@@ -86,6 +90,23 @@ if (defined($in{'cpu'}) || defined($in{'weight'})) {
 			}
 		}
 	}
+
+# Bandwidth limit
+if (defined($in{'bw'})) {
+	$bw = $in{'bw_def'} ? '' : $in{'bw'}*$in{'bw_units'};
+	&$first_print(&text($in{'bw_def'} ? 'limits_settingbwu' :
+				'limits_settingbw', &nice_size($bw)));
+	if ($server->{'bw_limit'} != $bw) {
+		$server->{'bw_limit'} = $bw;
+		&$second_print($text{'create_done'});
+		}
+	else {
+		# No need to change
+		&$second_print($text{'limits_already'});
+		}
+	}
+
+&save_managed_server($server);
 
 # Offer to reboot if needed
 if ($reboot && $server->{'status'} ne 'down') {

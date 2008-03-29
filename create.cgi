@@ -7,7 +7,8 @@ require './server-manager-lib.pl';
 @servers = &list_managed_servers();
 $server = { 'id' => time().$$,
 	    'manager' => $in{'type'},
-	    'status' => 'create' };
+	    'status' => 'create',
+	    'bw_limit' => $config{'bw_def'},
 
 # Validate inputs, starting with hostname
 if (defined($in{'host'})) {

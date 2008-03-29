@@ -33,6 +33,9 @@ else {
 	$in{'default'} =~ /^[1-9][0-9]*$/ || &error($text{'bw_edefault'});
 	$config{'bw_def'} = $in{'default'}*$in{'default_units'};
 	}
+$in{'dir_in'} || $in{'dir_out'} || &error($text{'bw_edir'});
+$config{'bw_dir_in'} = $in{'dir_in'};
+$config{'bw_dir_out'} = $in{'dir_out'};
 
 # Update config and cron job
 $config{'bw_enabled'} = $in{'enabled'};

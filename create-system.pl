@@ -136,6 +136,7 @@ $server = { 'id' => time().$$,
 	    'novirt' => $novirt,
 	    'status' => 'create',
 	    'image' => $image,
+	    'bw_limit' => $config{'bw_def'},
 	  };
 $server->{'desc'} = $desc;
 if (!defined(&$hfunc) || !&$hfunc()) {

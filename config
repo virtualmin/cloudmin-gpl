@@ -15,3 +15,5 @@ name_max=20
 cat_mode=0
 xen_mem_mode=0
 bw_period=month
+bw_dir_in=1
+bw_dir_out=1

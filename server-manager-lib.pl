@@ -3543,9 +3543,11 @@ local ($server) = @_;
 local $cfunc = "type_".$server->{'manager'}."_can_cpu";
 local $mfunc = "type_".$server->{'manager'}."_can_memory";
 local $vfunc = "type_".$server->{'manager'}."_can_vcpus";
+local $rfunc = "type_".$server->{'manager'}."_real_interfaces";
 return defined(&$cfunc) && &$cfunc($server) ||
        defined(&$mfunc) && &$mfunc($server) ||
-       defined(&$vfunc) && &$vfunc($server);
+       defined(&$vfunc) && &$vfunc($server) ||
+       defined(&$rfunc) && $config{'bw_enabled'};
 }
 
 # run_system_script(&system, when, action)

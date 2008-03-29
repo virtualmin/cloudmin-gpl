@@ -433,6 +433,22 @@ if (&can_edit_limits($server) && $status ne 'nohost') {
 			}
 		}
 
+	# Bandwidth limit
+	$rfunc = "type_".$t."_real_interfaces";
+	if (defined(&$rfunc) && $config{'bw_enabled'}) {
+		print &ui_table_row($text{'edit_lbw'},
+			&ui_radio("bw_def", $server->{'bw_limit'} ? 0 : 1,
+				  [ [ 1, $text{'bw_unlimited'} ],
+				    [ 0, $text{'bw_setto'} ] ])."\n".
+			&ui_bytesbox("bw", $server->{'bw_limit'}, 8)."\n".
+			&describe_bandwidth_period(0));
+
+		# Current usage
+		print &ui_table_row($text{'edit_lusage'},
+			&nice_size($server->{'bw_usage'})." ".
+			&describe_bandwidth_period(1));
+		}
+
 	print &ui_table_row(undef, &ui_submit($text{'save'}), 2);
 	print &ui_form_end();
 	print &ui_hidden_table_end("limits");

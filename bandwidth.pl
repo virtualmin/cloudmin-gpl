@@ -66,6 +66,7 @@ foreach $s (@servers) {
 			print STDERR "hours for $s->{'host'} at ",
 				&make_date($hh)," in=$in_diff out=$out_diff\n";
 			}
+		$bwinfo->{'new_hour'} = $hh;
 		$bwinfo->{'old_hour'} ||= int($bwinfo->{'last_time'}/3600)*3600;
 
 		# By minute
@@ -82,6 +83,7 @@ foreach $s (@servers) {
 				&make_date($mm)," in=$in_diff out=$out_diff\n";
 			}
 		$bwinfo->{'old_min'} ||= int($bwinfo->{'last_time'}/60)*60;
+		$bwinfo->{'new_min'} = $mm;
 
 		# Get rid of per-minute stats more than 1 week old
 		$weekago = $now - 7*24*60*60;
@@ -104,7 +106,37 @@ foreach $s (@servers) {
 
 # For each server, sum up usage over the relevant accounting period, and
 # send email or disable if needed
-# XXX
+$start = &bandwidth_period_start();
+$now = time();
+foreach $s (@servers) {
+	local $bwinfo = &get_bandwidth($s);
+	next if (!$bwinfo->{'last_time'});	# Only do if bandwidth is
+						# supported by system type
+
+	# Sum up usage over the period, by day
+	$s->{'bw_usage_in'} = $s->{'bw_usage_out'} =
+	    $s->{'bw_usage_inp'} = $s->{'bw_usage_outp'} = 0;
+	for($hh=$start; $hh<$now; $hh+=3600) {
+		$s->{'bw_usage_in'} += $bwinfo->{'hour_in_'.$hh};
+		$s->{'bw_usage_out'} += $bwinfo->{'hour_out_'.$hh};
+		$s->{'bw_usage_inp'} += $bwinfo->{'hour_inp_'.$hh};
+		$s->{'bw_usage_outp'} += $bwinfo->{'hour_outp_'.$hh};
+		}
+	$s->{'bw_usage'} = ($config{'bw_dir_in'} ? $s->{'bw_usage_in'} : 0) +
+			   ($config{'bw_dir_out'} ? $s->{'bw_usage_out'} : 0);
+
+	# If over, send email and perhaps shutdown the system
+	if ($s->{'bw_limit'} && $s->{'bw_usage'} > $s->{'bw_limit'}) {
+		}
+
+	# If under limit and the system was shutdown due to exceeding it,
+	# start up again
+	if ($s->{'bw_limit'} && $s->{'bw_usage'} <= $s->{'bw_limit'}) {
+		# XXX
+		}
+
+	&save_managed_server($s);
+	}
 
 sub usage
 {

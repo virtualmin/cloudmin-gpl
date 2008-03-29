@@ -7,6 +7,8 @@
 # - Sum up for period, show in UI and list-systems.pl
 # - Nice graphs
 
+use Time::Local;
+
 # get_server_traffic(&server)
 # Returns the number of in and out bytes and packets for some virtual system,
 # taken by sampling it's interface on the host system.
@@ -81,6 +83,59 @@ sub save_bandwidth
 &make_dir($bandwidth_dir, 0700);
 &write_file("$bandwidth_dir/$_[0]->{'id'}", $_[1]);
 $get_bandwidth_cache{$_[0]->{'id'}} ||= $_[1];
+}
+
+# describe_bandwidth_period(for-usage)
+sub describe_bandwidth_period
+{
+local ($usage) = @_;
+local $suffix = $usage ? 'bw_desc2' : 'bw_desc';
+if ($config{'bw_period'}) {
+	return &text($suffix.'_period', lc($config{'bw_period'}));
+	}
+else {
+	return &text($suffix.'_days', $config{'bw_days'});
+	}
+}
+
+# bandwidth_period_start([ago])
+# Returns the unix time number on which the current (or some previous)
+# bandwidth period started
+sub bandwidth_period_start
+{
+local ($ago) = @_;
+local $now = time();
+local @tm = localtime(time());
+local $day = timelocal(0, 0, 0, $tm[3], $tm[4], $tm[5]);  # Start of this day
+local $rv;
+if ($config{'bw_period'} eq 'week') {
+	# Start on last sunday
+	$rv = $day - $tm[6]*24*60*60;
+	$rv -= $ago*7*24*60*60;
+	}
+elsif ($config{'bw_past'} eq 'month') {
+	# Start at 1st of month
+	for(my $i=0; $i<$ago; $i++) {
+		$tm[4]--;
+		if ($tm[4] < 0) {
+			$tm[5]--;
+			$tm[4] = 11;
+			}
+		}
+	$rv = timelocal(0, 0, 0, 1, $tm[4], $tm[5]);
+	}
+elsif ($config{'bw_past'} eq 'year') {
+	# Start at start of year
+	$tm[4] -= $ago;
+	$rv = timelocal(0, 0, 0, 1, 0, $tm[5]);
+	}
+else {
+	# Start N days ago
+	$rv = $day - $config{'bw_period'}*24*60*60;
+	$rv -= $ago*$config{'bw_period'}*24*60*60;
+	}
+$rv = int($rv/3600)*3600;	# Round to hour, just in case
+return $rv;
 }
 
 1;
