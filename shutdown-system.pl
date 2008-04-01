@@ -52,7 +52,8 @@ foreach $s (@servers) {
 		print ".. shutdown failed : $err\n\n";
 		}
 	else {
-		&check_server_status($s);
+		#&check_server_status($s);
+		$s->{'status'} = 'down';	# Assume it worked
 		&save_managed_server($s);
 		print ".. shutdown successfull\n\n";
 		}

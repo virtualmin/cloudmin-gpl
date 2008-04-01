@@ -3089,7 +3089,8 @@ local $vfunc = "type_".$t."_can_vcpus";
 if (defined(&$vfunc) && &$vfunc($server)) {
 	push(@rv, [ "vcpus", $text{'edit_vcpus'} ]);
 	}
-if ($config{'bw_enabled'}) {
+local $rfunc = "type_".$t."_real_interfaces";
+if ($config{'bw_enabled'} && defined(&$rfunc)) {
 	push(@rv, [ "bw", $text{'edit_bw'} ]);
 	}
 

@@ -138,5 +138,38 @@ $rv = int($rv/3600)*3600;	# Round to hour, just in case
 return $rv;
 }
 
+# bandwidth_period_end([ago])
+# Returns the unix time on which some bandwidth period ends (inclusive)
+sub bandwidth_period_end
+{
+local ($ago) = @_;
+local $now = time();
+if ($ago == 0) {
+	# Current time
+	$rv = $now;
+	}
+else {
+	local $start = &bandwidth_period_start($ago);
+	if ($config{'bw_period'} eq 'week') {
+		# 7 days after start
+		return $day + 7*24*60*60 - 1;
+		}
+	elsif ($config{'bw_period'} eq 'month') {
+		# End of the month
+		return &bandwidth_period_start($ago-1)-1;
+		}
+	elsif ($config{'bw_period'} eq 'year') {
+		# End of the year
+		return &bandwidth_period_start($ago-1)-1;
+		}
+	else {
+		return $day + $config{'bw_days'}*24*60*60 - 1;
+		}
+	}
+return $rv;
+}
+
+
+
 1;
 

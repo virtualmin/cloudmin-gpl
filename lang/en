@@ -1515,3 +1515,9 @@ bw_dir=Traffic direction to include in limits
 bw_dir_in=Incoming traffic (to system)
 bw_dir_out=Outgoing traffic (sent by system)
 bw_edir=No traffic directions selected for bandwidth limits
+
+graph_title=Bandwidth Graph
+bw_mode=Display mode:
+bw_mode_host=By host system
+bw_mode_total=Total for all systems
+bw_mode_systems=By system

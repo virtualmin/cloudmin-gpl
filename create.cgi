@@ -9,6 +9,7 @@ $server = { 'id' => time().$$,
 	    'manager' => $in{'type'},
 	    'status' => 'create',
 	    'bw_limit' => $config{'bw_def'},
+	  };
 
 # Validate inputs, starting with hostname
 if (defined($in{'host'})) {

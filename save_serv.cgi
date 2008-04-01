@@ -25,7 +25,8 @@ if ($in{'shutdown'}) {
 			print &text('save_shutfailed', $err),"<p>\n";
 			}
 		else {
-			&check_server_status($server);
+			#&check_server_status($server);
+			$server->{'status'} = 'down';        # Assume it worked
 			&save_managed_server($server);
 			print $text{'save_shutdone'},"<p>\n";
 			if (defined(&theme_post_save_server)) {
@@ -343,6 +344,11 @@ elsif ($in{'disks'}) {
 elsif ($in{'vcpus'}) {
 	# Go to disk management form
 	&redirect("list_vcpus.cgi?id=$in{'id'}");
+	}
+
+elsif ($in{'bw'}) {
+	# Go to system's bandwidth graph
+	&redirect("bwgraph.cgi?id=$in{'id'}");
 	}
 
 else {
