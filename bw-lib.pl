@@ -85,6 +85,14 @@ sub save_bandwidth
 $get_bandwidth_cache{$_[0]->{'id'}} ||= $_[1];
 }
 
+# get_bandwidth_time(&server)
+# Returns the unix time of the last check for this server
+sub get_bandwidth_time
+{
+local @st = stat("$bandwidth_dir/$_[0]->{'id'}");
+return $st[9];
+}
+
 # describe_bandwidth_period(for-usage)
 sub describe_bandwidth_period
 {
@@ -113,7 +121,7 @@ if ($config{'bw_period'} eq 'week') {
 	$rv = $day - $tm[6]*24*60*60;
 	$rv -= $ago*7*24*60*60;
 	}
-elsif ($config{'bw_past'} eq 'month') {
+elsif ($config{'bw_period'} eq 'month') {
 	# Start at 1st of month
 	for(my $i=0; $i<$ago; $i++) {
 		$tm[4]--;
@@ -124,7 +132,7 @@ elsif ($config{'bw_past'} eq 'month') {
 		}
 	$rv = timelocal(0, 0, 0, 1, $tm[4], $tm[5]);
 	}
-elsif ($config{'bw_past'} eq 'year') {
+elsif ($config{'bw_period'} eq 'year') {
 	# Start at start of year
 	$tm[4] -= $ago;
 	$rv = timelocal(0, 0, 0, 1, 0, $tm[5]);

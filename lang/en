@@ -1517,7 +1517,13 @@ bw_dir_out=Outgoing traffic (sent by system)
 bw_edir=No traffic directions selected for bandwidth limits
 
 graph_title=Bandwidth Graph
-bw_mode=Display mode:
-bw_mode_host=By host system
-bw_mode_total=Total for all systems
-bw_mode_systems=By system
+graph_mode=Display mode:
+graph_mode_host=By host system
+graph_mode_total=Total for all systems
+graph_mode_systems=By system
+graph_ago=Accounting period to display:
+graph_ok=Show
+graph_dir=Traffic direction to display:
+graph_in=Incoming (to system)
+graph_out=Outgoing (from system)
+graph_total=Sum of incoming and outgoing

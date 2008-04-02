@@ -1,19 +1,23 @@
 #!/usr/local/bin/perl
 # Output data for a graph
 
+$trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
 print "Content-type: text/plain\n\n";
 use POSIX;
 
-# Work out range size
+# Work out range size - by hour if more than 1 day
+$start = $in{'start'};
+$end = $in{'end'};
 $range = $end - $start;
-if ($range > 1024*60) {
+if ($range > 24*60*60) {
 	# By hour
 	$step = 3600;
 	$prefix = "hour";
 	}
 else {
+	# By minute
 	$step = 60;
 	$prefix = "min";
 	}
@@ -33,13 +37,12 @@ if ($in{'mode'} eq 'server') {
 	$bwinfo = &get_bandwidth($server);
 	for($i=$start; $i<=$end; $i+=$step) {
 		@tm = localtime($i);
-		$total = $config{'bw_dir_in'} && $config{'bw_dir_out'} ?
-			$bwinfo->{$prefix."_in_".$i} +
-			$bwinfo->{$prefix."_out_".$i} : undef;
+		$total = $bwinfo->{$prefix."_in_".$i} +
+			 $bwinfo->{$prefix."_out_".$i};
 		print strftime("%Y-%m-%d %H:%M:%S", @tm).",".
-		      $bwinfo->{$prefix."_in_".$i}.",".
-		      $bwinfo->{$prefix."_out_".$i}.
-		      (defined($total) ? ",".$total : "")."\n";
+		      int($bwinfo->{$prefix."_in_".$i}).",".
+		      int($bwinfo->{$prefix."_out_".$i}).",".
+		      int($total)."\n";
 		}
 	}
 

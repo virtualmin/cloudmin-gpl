@@ -217,6 +217,24 @@ foreach my $s (@rv) {
 	$s->{'short_host'} = $shost;
 	}
 
+# Fill in creation times
+foreach my $s (@rv) {
+	if (!$s->{'created'}) {
+		if ($s->{'id'} =~ /^(\d{10})/) {
+			$s->{'created'} = $1;
+			}
+		else {
+			# Assume created at module install time
+			local %itimes;
+			&read_file($install_times_file, \%itimes);
+			local @vers = sort { $a <=> $b } (keys %itimes);
+			if (@vers) {
+				$s->{'created'} = $itimes{$vers[0]};
+				}
+			}
+		}
+	}
+
 return @rv;
 }
 
