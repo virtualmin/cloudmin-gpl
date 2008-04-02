@@ -2732,6 +2732,10 @@ foreach my $sd (@sorted) {
 		next;
 		}
 
+	# Re-connect to Webmin, to avoid RPC timeout
+	&remote_finished();
+	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
+
 	# Get the resulting size
 	local (@st, $filename);
 	foreach my $p ("$d->{'dom'}.tar.gz",
@@ -2864,6 +2868,9 @@ foreach my $sd (@sorted) {
 		}
 	&$second_print(&text('move_restored', $d->{'dom'}));
 	push(@refresh, $dest) if (!$refreshed{$dest->{'id'}}++);
+
+	# Re-connect to Webmin, to avoid RPC timeout
+	&remote_finished();
 
 	$done{$d->{'id'}} = 1;
 	}

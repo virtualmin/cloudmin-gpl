@@ -159,11 +159,18 @@ elsif ($in{'move'}) {
 			}
 
 		# Destination server
+		if (@sources == 1) {
+			@destservers = grep { $_->{'id'} ne
+					      $sources[0]->{'id'} } @servers;
+			}
+		else {
+			@destservers = @servers;
+			}
 		print &ui_table_row($text{'dmass_mdest'},
 			&ui_select("dest", undef,
 				[ map { [ $_->{'id'}, $_->{'host'} ] }
 				      grep { $_->{'status'} eq 'virt' } 
-				           @servers ]));
+				           @destservers ]));
 
 		# Delete from source?
 		print &ui_table_row($text{'dmass_mdelete'},
