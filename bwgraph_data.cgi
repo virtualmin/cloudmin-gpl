@@ -30,24 +30,44 @@ if ($in{'mode'} ne 'system') {
 		$count /= 2;
 		}
 	}
+@servers = &list_managed_servers();
 
 if ($in{'mode'} eq 'server') {
 	# Show points for one server (in, out and total)
-	($server) = grep { $_->{'id'} eq $in{'id'} } &list_managed_servers();
+	($server) = grep { $_->{'id'} eq $in{'id'} } @servers;
 	$bwinfo = &get_bandwidth($server);
 	for($i=$start; $i<=$end; $i+=$step) {
 		@tm = localtime($i);
-		$total = $bwinfo->{$prefix."_in_".$i} +
-			 $bwinfo->{$prefix."_out_".$i};
+		$in = $bwinfo->{$prefix."_in_".$i};
+		$out = $bwinfo->{$prefix."_out_".$i};
+		$in /= $in{'scale'} if ($in{'scale'});
+		$out /= $in{'scale'} if ($in{'scale'});
+		$total = $in + $out;
 		print strftime("%Y-%m-%d %H:%M:%S", @tm).",".
-		      int($bwinfo->{$prefix."_in_".$i}).",".
-		      int($bwinfo->{$prefix."_out_".$i}).",".
-		      int($total)."\n";
+		      int($in).",".int($out).",".int($total)."\n";
 		}
 	}
 
 elsif ($in{'mode'} eq 'total') {
 	# Show sum of all servers
+	@bwinfos = ( );
+	foreach $server (@servers) {
+		$bwinfo = &get_bandwidth($server);
+		push(@bwinfos, $bwinfo) if ($bwinfo);
+		}
+	for($i=$start; $i<=$end; $i+=$step) {
+		@tm = localtime($i);
+		$in = $out = 0;
+		foreach $bwinfo (@bwinfos) {
+			$in += $bwinfo->{$prefix."_in_".$i};
+			$out += $bwinfo->{$prefix."_out_".$i};
+			}
+		$in /= $in{'scale'} if ($in{'scale'});
+		$out /= $in{'scale'} if ($in{'scale'});
+		$total = $in + $out;
+		print strftime("%Y-%m-%d %H:%M:%S", @tm).",".
+		      int($in).",".int($out).",".int($total)."\n";
+		}
 	}
 
 elsif ($in{'mode'} eq 'system') {

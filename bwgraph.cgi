@@ -1,15 +1,15 @@
 #!/usr/local/bin/perl
 # Show bandwidth usage for some or all systems with timeplot
-# XXX period selector
-# XXX option to show total / breakdown by system
 # XXX option to show bar chart by system and limit over the month
 # XXX all modes
 # XXX host mode?
-# XXX scaling
-# XXX option to show just the last hour
+# XXX test on IE
 
 require './server-manager-lib.pl';
 &ReadParse();
+$color_mapping = { 'in', '#ff0000',
+		   'out', '#0000ff',
+		   'total', '#ff00ff' };
 
 # Get the server being shown
 @servers = &list_managed_servers();
@@ -33,9 +33,7 @@ if ($in{'id'}) {
 else {
 	$mode = $in{'mode'} || "systems";
 	}
-$dir = $in{'dir'} ? $in{'dir'} :
-       $config{'bw_dir_in'} && $config{'bw_dir_out'} ? 'total' :
-       $config{'bw_dir_in'} ? 'in' : 'out';
+$dir = $in{'dir'} || 'inout';
 if ($mode ne "server") {
 	# Show mode switcher
 	@links = ( );
@@ -61,9 +59,22 @@ foreach $s (@showservers) {
 	}
 
 # Work out time range to show
-$start = &bandwidth_period_start($in{'ago'});
-$end = &bandwidth_period_end($in{'ago'});
-if ($in{'ago'} == 0) {
+if ($in{'ago'} == -1) {
+	# Special mode - last hour
+	$end = int(time()/60)*60;
+	$start = $end - 3600;
+	}
+elsif ($in{'ago'} == -2) {
+	# Last day
+	$end = int(time()/60)*60;
+	$start = $end - 24*3600;
+	}
+else {
+	# Some accounting period
+	$start = &bandwidth_period_start($in{'ago'});
+	$end = &bandwidth_period_end($in{'ago'});
+	}
+if ($in{'ago'} <= 0) {
 	# End shouldn't be later than last collection
 	$max_last = 0;
 	foreach $s (@showservers) {
@@ -80,7 +91,8 @@ print &ui_form_start("bwgraph.cgi");
 print &ui_hidden("mode", $mode);
 print &ui_hidden("dir", $dir);
 print &ui_hidden("id", $in{'id'});
-@agos = ( );
+@agos = ( [ -1, $text{'graph_lasthour'} ],
+	  [ -2, $text{'graph_lastday'} ] );
 for($ago=0; $ago<24; $ago++) {
 	$astart = &bandwidth_period_start($ago);
 	$aend = &bandwidth_period_end($ago);
@@ -89,32 +101,77 @@ for($ago=0; $ago<24; $ago++) {
 			    &make_date($aend, 1) ]);
 	}
 print "<b>$text{'graph_ago'}</b> ",
-      &ui_select("ago", $in{'ago'}, \@agos, 1, 0, 0, 0,
+      &ui_select("ago", $in{'ago'} || 0, \@agos, 1, 0, 0, 0,
 		 "onChange='form.submit()'"),"\n",
       &ui_submit($text{'graph_ok'}),"\n";
 print &ui_form_end();
 
+# Work out range size
+$range = $end - $start;
+if ($range > 24*60*60) {
+	# By hour
+	$step = 3600;
+	$prefix = "hour";
+	}
+else {
+	# By minute
+	$step = 60;
+	$prefix = "min";
+	}
+
+# Work out units, based on average of graphed systems
+$utotal = 0;
+$ufield = $dir eq 'in' ? 'bw_usage_in' :
+	  $dir eq 'out' ? 'bw_usage_out' : 'bw_usage';
+foreach $s (@showservers) {
+	$utotal += $s->{$ufield} / $step;
+	}
+$utotal /= scalar(@showservers) if ($mode ne 'total');
+if ($utotal > 10*1024*1024*1024) {
+	$scale = 1024*1024*1024;
+	$units = "GB";
+	}
+elsif ($utotal > 10*1024*1024) {
+	$scale = 1024*1024;
+	$units = "MB";
+	}
+elsif ($utotal > 10*1024) {
+	$scale = 1024;
+	$units = "kB";
+	}
+else {
+	$scale = 1;
+	$units = "bytes";
+	}
+
+# Labels
+@dirs = $dir eq 'inout' ? ( 'in', 'out' ) : ( $dir );
+foreach $d (@dirs) {
+	$lc = $color_mapping->{$d};
+	print "<font color=$lc>&bull;</font> ",
+	      $text{'graph_'.$d}," ($units)\n";
+	}
+print "<br>\n";
+
 # The graph itself
-print "</tr></table>\n";
 print "<div id='history' style='height: 500px;'></div><br>\n";
 
 # Direction mode
-@dirs = ( [ "in", $text{'graph_in'} ],
-	  [ "out", $text{'graph_out'} ] );
+@dirsel = ( [ "inout", $text{'graph_inout'}.$umsg ],
+	    [ "in", $text{'graph_in'}.$umsg ],
+	    [ "out", $text{'graph_out'}.$umsg ] );
 if ($config{'bw_dir_in'} && $config{'bw_dir_out'}) {
-	push(@dirs, [ "total", $text{'graph_total'} ]);
+	push(@dirsel, [ "total", $text{'graph_total'}.$umsg ]);
 	}
 print &ui_form_start("bwgraph.cgi");
 print &ui_hidden("mode", $mode);
 print &ui_hidden("ago", $in{'ago'});
 print &ui_hidden("id", $in{'id'});
 print "<b>$text{'graph_dir'}</b> ",
-      &ui_select("dir", $dir, \@dirs, 1, 0, 0, 0,
+      &ui_select("dir", $dir, \@dirsel, 1, 0, 0, 0,
 		 "onChange='form.submit()'"),"\n",
       &ui_submit($text{'graph_ok'}),"\n";
 print &ui_form_end();
-
-# XXX labels
 
 # Generic javascript start
 print "<script>\n";
@@ -134,17 +191,24 @@ if ($mode eq 'server' || $mode eq 'total') {
         print "        gridColor: '#B3B6B0',\n";
         print "        axisLabelsPlacement: 'top'\n";
         print "      });\n";
-	$c = $dir eq 'in' ? 1 : $dir eq 'out' ? 2 : 3;
-	$lc = $dir eq 'in' ? '#ff0000' : $dir eq 'out' ? '#0000ff' : '#ff00ff';
 	print "  var plotInfo = [\n";
-	print "    Timeplot.createPlotInfo({\n";
-	print "      id: 'out',\n";
-	print "      dataSource: new Timeplot.ColumnSource(eventSource, $c),\n";
-	print "      valueGeometry: vg,\n";
-	print "      timeGeometry: tg,\n";
-	print "      showValues: true,\n";
-	print "      lineColor: '$lc'\n";
-	print "    })\n";
+	foreach $d (@dirs) {
+		$c = $d eq 'in' ? 1 : $d eq 'out' ? 2 : 3;
+		$lc = $color_mapping->{$d};
+		print "    Timeplot.createPlotInfo({\n";
+		print "      id: '$d',\n";
+		print "      dataSource: new Timeplot.ColumnSource(eventSource, $c),\n";
+		print "      valueGeometry: vg,\n";
+		print "      timeGeometry: tg,\n";
+		print "      showValues: true,\n";
+		print "      lineColor: '$lc'\n";
+		if ($d eq $dirs[$#dirs]) {
+			print "    })\n";
+			}
+		else {
+			print "    }),\n";
+			}
+		}
 	print "  ];\n";
 	}
 
@@ -154,7 +218,7 @@ elsif ($mode eq 'systems') {
 
 # Generic javascript end
 print "  timeplot = Timeplot.create(document.getElementById('history'), plotInfo);\n";
-print "  timeplot.loadText('bwgraph_data.cgi?id=$in{'id'}&mode=$mode&start=$start&end=$end&nice=1', ',', eventSource);\n";
+print "  timeplot.loadText('bwgraph_data.cgi?id=$in{'id'}&mode=$mode&start=$start&end=$end&scale=$scale', ',', eventSource);\n";
 print "}\n";
 
 # Resize handler Javascript
