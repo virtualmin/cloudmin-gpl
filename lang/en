@@ -1531,3 +1531,5 @@ graph_inout=Incoming and outgoing
 graph_lasthour=&lt;Last hour&gt;
 graph_lastday=&lt;Last day&gt;
 graph_units=Graph units
+graph_unlimit=Unlimited
+graph_limit=Bandwidth limit

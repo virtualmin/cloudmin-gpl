@@ -1,15 +1,13 @@
 #!/usr/local/bin/perl
 # Show bandwidth usage for some or all systems with timeplot
-# XXX option to show bar chart by system and limit over the month
-# XXX all modes
-# XXX host mode?
-# XXX test on IE
+# XXX host mode - show usage by systems on some host, as bar
 
 require './server-manager-lib.pl';
 &ReadParse();
 $color_mapping = { 'in', '#ff0000',
 		   'out', '#0000ff',
 		   'total', '#ff00ff' };
+$bar_width = 100;
 
 # Get the server being shown
 @servers = &list_managed_servers();
@@ -18,7 +16,7 @@ if ($in{'id'}) {
 	@showservers = ( $server );
 	}
 else {
-	@showservers = @servers;
+	@showservers = grep { $rfunc = "type_".$_->{'manager'}."_real_interfaces"; defined(&$rfunc) } @servers;
 	}
 
 &ui_print_header(&server_in($server),
@@ -33,11 +31,12 @@ if ($in{'id'}) {
 else {
 	$mode = $in{'mode'} || "systems";
 	}
-$dir = $in{'dir'} || 'inout';
+$dir = $in{'dir'} ? $in{'dir'} :
+       $mode eq 'systems' ? 'total' : 'inout';
 if ($mode ne "server") {
 	# Show mode switcher
 	@links = ( );
-	foreach $m ("host", "total", "systems") {
+	foreach $m ("systems", "host", "total") {
 		if ($mode eq $m) {
 			push(@links, "<b>".$text{'graph_mode_'.$m}."</b>");
 			}
@@ -145,23 +144,78 @@ else {
 	}
 
 # Labels
-@dirs = $dir eq 'inout' ? ( 'in', 'out' ) : ( $dir );
-foreach $d (@dirs) {
-	$lc = $color_mapping->{$d};
-	print "<font color=$lc>&bull;</font> ",
-	      $text{'graph_'.$d}," ($units)\n";
+if ($mode eq 'systems') {
+	# One direction and limit
+	print "<font color=#ff0000>&bull;</font> ",
+	      $text{'graph_'.$dir},"\n";
+	print "<font color=#0000ff>&bull;</font> ",
+	      $text{'graph_limit'},"\n";
+	}
+else {
+	@dirs = $dir eq 'inout' ? ( 'in', 'out' ) : ( $dir );
+	foreach $d (@dirs) {
+		$lc = $color_mapping->{$d};
+		print "<font color=$lc>&bull;</font> ",
+		      $text{'graph_'.$d}," ($units)\n";
+		}
 	}
 print "<br>\n";
 
-# The graph itself
-print "<div id='history' style='height: 500px;'></div><br>\n";
+if ($mode ne "systems") {
+	# The time graph itself
+	print "<div id='history' style='height: 500px;'></div><br>\n";
+	}
+else {
+	# A bar chart by system .. first need to work out usage for each one
+	$bwmap = { };
+	$max_total = 0;
+	foreach $s (@showservers) {
+		my $b = { 'in' => 0, 'out' => 0 };
+		$bwinfo = &get_bandwidth($s);
+		for($hh=$start; $hh<$end; $hh+=$step) {
+			$b->{'in'} += $bwinfo->{$prefix.'_in_'.$hh};
+			$b->{'out'} += $bwinfo->{$prefix.'_out_'.$hh};
+			}
+		$b->{'total'} = $b->{'in'} + $b->{'out'};
+		$bwmap->{$s->{'id'}} = $b;
+		$max_total = $b->{$dir} if ($b->{$dir} > $max_total);
+		$max_total = $s->{'bw_limit'} if ($s->{'bw_limit'} >$max_total);
+		}
+
+	# Sort by usage, and show
+	@showservers = sort { $bwmap->{$b->{'id'}}->{$dir} <=>
+			      $bwmap->{$a->{'id'}}->{$dir} } @showservers;
+	print "<table width=100%>\n";
+	foreach $s (@showservers) {
+		$b = $bwmap->{$s->{'id'}};
+		print "<tr>\n";
+		print "<td width=20%><a href='edit_serv.cgi?id=$s->{'id'}'>",
+		      $s->{'short_host'}."</a></td>\n";
+		print "<td width=70%>";
+		if ($max_total && ($b->{$dir} || $s->{'bw_limit'})) {
+			print &bar_chart($max_total, $b->{$dir},
+					 $s->{'bw_limit'} ? 1 : 0);
+			}
+		print "</td>\n";
+		print "<td width=5% nowrap>",&nice_size($b->{$dir}),"</td>\n";
+		print "<td>/</td>\n";
+		print "<td width=5% nowrap>",
+			($s->{'bw_limit'} ? &nice_size($s->{'bw_limit'})
+					  : $text{'graph_unlimit'}),"</td>\n";
+		print "</tr>\n";
+		}
+	print "</table>\n";
+	}
 
 # Direction mode
-@dirsel = ( [ "inout", $text{'graph_inout'}.$umsg ],
-	    [ "in", $text{'graph_in'}.$umsg ],
-	    [ "out", $text{'graph_out'}.$umsg ] );
+@dirsel = ( );
+if ($mode ne 'systems') {
+	push(@dirsel, [ "inout", $text{'graph_inout'} ]);
+	}
+push(@dirsel, [ "in", $text{'graph_in'} ],
+	      [ "out", $text{'graph_out'} ] );
 if ($config{'bw_dir_in'} && $config{'bw_dir_out'}) {
-	push(@dirsel, [ "total", $text{'graph_total'}.$umsg ]);
+	push(@dirsel, [ "total", $text{'graph_total'} ]);
 	}
 print &ui_form_start("bwgraph.cgi");
 print &ui_hidden("mode", $mode);
@@ -174,52 +228,51 @@ print "<b>$text{'graph_dir'}</b> ",
 print &ui_form_end();
 
 # Generic javascript start
-print "<script>\n";
-print "var timeplot;\n";
-print "function onLoad() {\n";
-print "  var eventSource = new Timeplot.DefaultEventSource();\n";
-$plotno = 1;
+if ($mode ne "system") {
+	print "<script>\n";
+	print "var timeplot;\n";
+	print "function onLoad() {\n";
+	print "  var eventSource = new Timeplot.DefaultEventSource();\n";
+	$plotno = 1;
 
-if ($mode eq 'server' || $mode eq 'total') {
-	# Show graph for one server, with limit
-	print "  var vg = new Timeplot.DefaultValueGeometry({\n";
-        print "        gridColor: '#B3B6B0',\n";
-        print "        axisLabelsPlacement: 'left',\n";
-        print "        min: 0\n";
-        print "      });\n";
-	print "  var tg = new Timeplot.DefaultTimeGeometry({\n";
-        print "        gridColor: '#B3B6B0',\n";
-        print "        axisLabelsPlacement: 'top'\n";
-        print "      });\n";
-	print "  var plotInfo = [\n";
-	foreach $d (@dirs) {
-		$c = $d eq 'in' ? 1 : $d eq 'out' ? 2 : 3;
-		$lc = $color_mapping->{$d};
-		print "    Timeplot.createPlotInfo({\n";
-		print "      id: '$d',\n";
-		print "      dataSource: new Timeplot.ColumnSource(eventSource, $c),\n";
-		print "      valueGeometry: vg,\n";
-		print "      timeGeometry: tg,\n";
-		print "      showValues: true,\n";
-		print "      lineColor: '$lc'\n";
-		if ($d eq $dirs[$#dirs]) {
-			print "    })\n";
+	if ($mode eq 'server' || $mode eq 'total') {
+		# Show graph for one server, with limit
+		print "  var vg = new Timeplot.DefaultValueGeometry({\n";
+		print "        gridColor: '#B3B6B0',\n";
+		print "        axisLabelsPlacement: 'left',\n";
+		print "        min: 0\n";
+		print "      });\n";
+		print "  var tg = new Timeplot.DefaultTimeGeometry({\n";
+		print "        gridColor: '#B3B6B0',\n";
+		print "        axisLabelsPlacement: 'top'\n";
+		print "      });\n";
+		print "  var plotInfo = [\n";
+		foreach $d (@dirs) {
+			$c = $d eq 'in' ? 1 : $d eq 'out' ? 2 : 3;
+			$lc = $color_mapping->{$d};
+			print "    Timeplot.createPlotInfo({\n";
+			print "      id: '$d',\n";
+			print "      dataSource: ",
+			      "new Timeplot.ColumnSource(eventSource, $c),\n";
+			print "      valueGeometry: vg,\n";
+			print "      timeGeometry: tg,\n";
+			print "      showValues: true,\n";
+			print "      lineColor: '$lc'\n";
+			if ($d eq $dirs[$#dirs]) {
+				print "    })\n";
+				}
+			else {
+				print "    }),\n";
+				}
 			}
-		else {
-			print "    }),\n";
-			}
+		print "  ];\n";
 		}
-	print "  ];\n";
-	}
 
-elsif ($mode eq 'systems') {
-	# Show bar chart of systems and limits
+	# Generic javascript end
+	print "  timeplot = Timeplot.create(document.getElementById('history'), plotInfo);\n";
+	print "  timeplot.loadText('bwgraph_data.cgi?id=$in{'id'}&mode=$mode&start=$start&end=$end&scale=$scale', ',', eventSource);\n";
+	print "}\n";
 	}
-
-# Generic javascript end
-print "  timeplot = Timeplot.create(document.getElementById('history'), plotInfo);\n";
-print "  timeplot.loadText('bwgraph_data.cgi?id=$in{'id'}&mode=$mode&start=$start&end=$end&scale=$scale', ',', eventSource);\n";
-print "}\n";
 
 # Resize handler Javascript
 print <<EOF;
@@ -235,3 +288,24 @@ function onResize() {
 </script>
 EOF
 &ui_print_footer("", $text{'index_return'});
+
+# bar_chart(total, used, blue-rest)
+# Returns HTML for a bar chart of a single value
+sub bar_chart
+{
+local ($total, $used, $blue) = @_;
+local $rv;
+$rv .= sprintf "<div class='barchart'><img src=images/red.gif width=%s%% height=12px>",
+  int($bar_width*$used/$total);
+if ($blue) {
+  $rv .= sprintf "<img src=images/blue.gif width=%s%% height=12px></div>",
+    $bar_width - int($bar_width*$used/$total);
+  }
+else {
+  $rv .= sprintf "<img src=images/white.gif width=%s%% height=12px></div>",
+    $bar_width - int($bar_width*$used/$total);
+  }
+return $rv;
+}
+
+
