@@ -1,6 +1,5 @@
 #!/usr/local/bin/perl
 # Show bandwidth usage for some or all systems with timeplot
-# XXX host mode - show usage by systems on some host, as bar
 
 require './server-manager-lib.pl';
 &ReadParse();
@@ -8,21 +7,6 @@ $color_mapping = { 'in', '#ff0000',
 		   'out', '#0000ff',
 		   'total', '#ff00ff' };
 $bar_width = 100;
-
-# Get the server being shown
-@servers = &list_managed_servers();
-if ($in{'id'}) {
-	($server) = grep { $_->{'id'} eq $in{'id'} } @servers;
-	@showservers = ( $server );
-	}
-else {
-	@showservers = grep { $rfunc = "type_".$_->{'manager'}."_real_interfaces"; defined(&$rfunc) } @servers;
-	}
-
-&ui_print_header(&server_in($server),
-		 $text{'graph_title'}, "", undef, 0, 0, 0, undef,
-		 "<script src='timeplot/timeplot-api.js?local'></script>",
-		 "onload='onLoad();' onresize='onResize();'");
 
 # Work out which mode we are in
 if ($in{'id'}) {
@@ -32,7 +16,29 @@ else {
 	$mode = $in{'mode'} || "systems";
 	}
 $dir = $in{'dir'} ? $in{'dir'} :
-       $mode eq 'systems' ? 'total' : 'inout';
+       $mode eq 'systems' || $mode eq 'host' ? 'total' : 'inout';
+
+# Get the server being shown
+@servers = &list_managed_servers();
+if ($in{'id'}) {
+	# One server
+	($server) = grep { $_->{'id'} eq $in{'id'} } @servers;
+	@showservers = ( $server );
+	}
+elsif ($mode eq 'host') {
+	# Servers that can host
+	@showservers = grep { &is_parent_server($_) } @servers;
+	}
+else {
+	# Servers with bandwidth
+	@showservers = grep { $rfunc = "type_".$_->{'manager'}."_real_interfaces"; defined(&$rfunc) } @servers;
+	}
+
+&ui_print_header(&server_in($server),
+		 $text{'graph_title'}, "", undef, 0, 0, 0, undef,
+		 "<script src='timeplot/timeplot-api.js?local'></script>",
+		 "onload='onLoad();' onresize='onResize();'");
+
 if ($mode ne "server") {
 	# Show mode switcher
 	@links = ( );
@@ -46,7 +52,7 @@ if ($mode ne "server") {
 				     $text{'graph_mode_'.$m}."</a>");
 			}
 		}
-	print $text{'bw_mode'}," ",&ui_links_row(\@links),"<br>\n";
+	print $text{'graph_mode'}," ",&ui_links_row(\@links),"<br>\n";
 	}
 
 # Work out age of oldest server
@@ -144,7 +150,7 @@ else {
 	}
 
 # Labels
-if ($mode eq 'systems') {
+if ($mode eq 'systems' || $mode eq 'host') {
 	# One direction and limit
 	print "<font color=#ff0000>&bull;</font> ",
 	      $text{'graph_'.$dir},"\n";
@@ -161,7 +167,7 @@ else {
 	}
 print "<br>\n";
 
-if ($mode ne "systems") {
+if ($mode ne "systems" && $mode ne "host") {
 	# The time graph itself
 	print "<div id='history' style='height: 500px;'></div><br>\n";
 	}
@@ -171,15 +177,26 @@ else {
 	$max_total = 0;
 	foreach $s (@showservers) {
 		my $b = { 'in' => 0, 'out' => 0 };
-		$bwinfo = &get_bandwidth($s);
-		for($hh=$start; $hh<$end; $hh+=$step) {
-			$b->{'in'} += $bwinfo->{$prefix.'_in_'.$hh};
-			$b->{'out'} += $bwinfo->{$prefix.'_out_'.$hh};
+		@adding = ( );
+		if ($mode eq 'systems') {
+			# This system's bandwidth
+			@adding = ( $s );
+			}
+		else {
+			# All hosted systems
+			@adding = &list_child_servers($s);
+			}
+		foreach $as (@adding) {
+			$bwinfo = &get_bandwidth($as);
+			for($hh=$start; $hh<$end; $hh+=$step) {
+				$b->{'in'} += $bwinfo->{$prefix.'_in_'.$hh};
+				$b->{'out'} += $bwinfo->{$prefix.'_out_'.$hh};
+				}
 			}
 		$b->{'total'} = $b->{'in'} + $b->{'out'};
-		$bwmap->{$s->{'id'}} = $b;
 		$max_total = $b->{$dir} if ($b->{$dir} > $max_total);
 		$max_total = $s->{'bw_limit'} if ($s->{'bw_limit'} >$max_total);
+		$bwmap->{$s->{'id'}} = $b;
 		}
 
 	# Sort by usage, and show
@@ -198,10 +215,13 @@ else {
 			}
 		print "</td>\n";
 		print "<td width=5% nowrap>",&nice_size($b->{$dir}),"</td>\n";
-		print "<td>/</td>\n";
-		print "<td width=5% nowrap>",
-			($s->{'bw_limit'} ? &nice_size($s->{'bw_limit'})
+		if ($mode ne 'host') {
+			# Only show limit for specific hosts
+			print "<td>/</td>\n";
+			print "<td width=5% nowrap>",
+				($s->{'bw_limit'} ? &nice_size($s->{'bw_limit'})
 					  : $text{'graph_unlimit'}),"</td>\n";
+			}
 		print "</tr>\n";
 		}
 	print "</table>\n";

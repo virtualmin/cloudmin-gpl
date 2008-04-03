@@ -12,6 +12,7 @@
 # XXX bandwidth monitoring
 #	XXX by traffic counts on interfaces
 #	XXX for xen, vservers and zones only
+#	XXX disable / email
 # XXX show Xen resource allocation out of total on edit_xen.cgi
 #	XXX show hosts too
 # XXX extra webmin logins to manage servers
@@ -3639,6 +3640,28 @@ foreach my $t ('xen', 'vserver', 'zone') {
 		}
 	}
 return wantarray ? @rv : $rv[0];
+}
+
+# list_child_servers(&server)
+# Returns a list of other servers this one hosts. For each type it can host,
+# check all other servers of that type to see if their parent is this one.
+sub list_child_servers
+{
+local ($server) = @_;
+local @servers = &list_managed_servers();
+local @rv;
+foreach my $p (&is_parent_server($server)) {
+	local $pfunc = "type_".$p."_parent";
+	if (defined(&$pfunc)) {
+		foreach my $s (grep { $_->{'manager'} eq $p } @servers) {
+			local $par = &$pfunc($s, \@servers);
+			if ($par && $par->{'id'} eq $server->{'id'}) {
+				push(@rv, $s);
+				}
+			}
+		}
+	}
+return @rv;
 }
 
 # show_ip_range_input(starts, ends, cidrs)

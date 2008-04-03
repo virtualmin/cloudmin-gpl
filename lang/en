@@ -1518,7 +1518,7 @@ bw_edir=No traffic directions selected for bandwidth limits
 
 graph_title=Bandwidth Graph
 graph_mode=Display mode:
-graph_mode_host=By host system
+graph_mode_host=By hosted systems
 graph_mode_total=Total for all systems
 graph_mode_systems=By system
 graph_ago=Period to display:
