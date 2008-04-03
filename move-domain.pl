@@ -34,6 +34,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--force") {
 		$force = 1;
 		}
+	elsif ($a eq "--direct") {
+		$direct = 1;
+		}
 	else {
 		&usage();
 		}
@@ -73,7 +76,7 @@ foreach $dn (@dnames) {
 	}
 
 # Validate move
-$err = &check_domain_move(\@serverdoms, $dest, $deletesource);
+$err = &check_domain_move(\@serverdoms, $dest, $deletesource, $direct);
 &usage("Selected domains cannot be moved : $err") if ($err);
 
 # Check for missing features
@@ -95,7 +98,7 @@ if (!$force) {
 
 # Do it!
 &set_all_text_print();
-&move_domains_to_server(\@serverdoms, $dest, $deletesource);
+&move_domains_to_server(\@serverdoms, $dest, $deletesource, $direct);
 
 sub usage
 {
@@ -107,6 +110,7 @@ print "                       --dest hostname\n";
 print "                      [--host source.hostname]\n";
 print "                      [--disable | --delete]\n";
 print "                      [--force]\n";
+print "                      [--direct]\n";
 exit(1);
 }
 

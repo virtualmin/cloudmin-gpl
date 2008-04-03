@@ -47,6 +47,7 @@ index_nosearch=Clear default search
 ec2_typedesc=Amazon EC2
 ec2_createlink=Create EC2 instance
 ec2_addlink=Add EC2 instance
+ec2_typeshort=EC2
 
 real_desc=Physical
 real_add=Add physical system
@@ -54,6 +55,7 @@ real_add=Add physical system
 zones_typedesc=Solaris Zone
 zones_createlink=Create Solaris Zone
 zones_addlink=Add Solaris Zone
+zones_typeshort=Zones
 
 add_title=Add Existing System
 add_header=Details of existing system to add
@@ -681,6 +683,7 @@ shell_edit=Edit previous
 server_in=On system $1
 
 vserver_typedesc=Linux VServer
+vserver_typeshort=VServer
 
 vservers_title=VServer Host Systems
 vservers_add=Register a system for VServer hosting.
@@ -885,6 +888,7 @@ dmass_mdisable=Disable only
 dmass_emoveclash=The domain $1 already exists on the target system
 dmass_emoveclash2=A domain named $1 already exists on the target system
 dmass_evirtdelete=Domain $1 has a private IP address $2, but you have not chosen to delete it from the source system when moving. This would cause an IP address conflict.
+dmass_emovessh=A direct domain move from $1 to $2 is not possible, as VM2 cannot SSH without a password : $3
 
 zones_title=Solaris Zones Host Systems
 zones_add=Register a system for Solaris Zones hosting.
@@ -926,6 +930,7 @@ zone_ezone=Missing or invalid-looking DNS domain
 zone_eiface=Missing or invalid-looking base network interface
 
 move_backing=Creating backup of $1 on $2 ..
+move_backing2=Creating backup of $1 on $2, and sending it to $3 ..
 move_ewebmin=.. failed to connect to Webmin : $1
 move_eparent=.. parent domain $1 was not transferred successfully.
 move_ealias=.. alias target domain $1 was not transferred successfully.
@@ -975,6 +980,7 @@ images_return=system images list
 xen_typedesc=Xen
 xen_createlink=Create Xen instance
 xen_addlink=Add Xen instance
+xen_typeshort=Xen
 
 xen_create=Register Xen Host
 xen_edit=Edit Xen Host
@@ -1518,7 +1524,7 @@ bw_edir=No traffic directions selected for bandwidth limits
 
 graph_title=Bandwidth Graph
 graph_mode=Display mode:
-graph_mode_host=By hosted systems
+graph_mode_host=By hosting system
 graph_mode_total=Total for all systems
 graph_mode_systems=By system
 graph_ago=Period to display:

@@ -5,6 +5,7 @@
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX domain transfer by rsyncing home directory
+#	XXX or scp directly, as in FS#3795
 # XXX mobile theme for VM2 - FS#3459
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX allow changing of main IP
@@ -1529,8 +1530,18 @@ else {
 
 $out =~ s/\s+$//g;
 if ($ex) {
-	local @lines = split(/\r?\n/, $out);
-	return ( $lines[0] || "Unknown error", $out );
+	# Work out error message
+	local @lines = grep { /\S/ } split(/\r?\n/, $out);
+	local $err;
+	if ($out =~ /usage:/i) {
+		# First line, before usage message
+		$err = $lines[0];
+		}
+	else {
+		# The whole error
+		$err = $out;
+		}
+	return ( $err || "Unknown error", $out );
 	}
 else {
 	return (undef, $out);
@@ -2604,16 +2615,18 @@ local ($out, $ex, $err) = &execute_command_on_server($server,
 return $err ? $err : $ex ? $out : undef;
 }
 
-# check_domain_move(&serverdoms, &destserver)
+# check_domain_move(&serverdoms, &destserver, delete, direct)
 # Checks if the given set of virtual servers can be moved together, and returns
 # an error message if not.
 sub check_domain_move
 {
-local ($serverdoms, $dest, $delete) = @_;
+local ($serverdoms, $dest, $delete, $direct) = @_;
 local @destdoms = &get_server_domains($dest);
+local %sources;
 
 foreach my $sd (@$serverdoms) {
 	local ($server, $d) = @$sd;
+	$sources{$server->{'id'}} ||= $server;
 	if ($d->{'parent'}) {
 		# This is a sub-server .. either the parent must be on the
 		# target already, or in the list of those to move.
@@ -2649,6 +2662,24 @@ foreach my $sd (@$serverdoms) {
 		}
 	}
 
+# If doing a direct transfer, make sure all sources can SSH to the dest
+if ($direct) {
+	foreach my $server (values %sources) {
+		next if ($dest->{'ssh_pass'});	# Assume it will work
+		local ($out, $ex, $err) = &execute_command_on_server($server,
+			"ssh -o PasswordAuthentication=no -x ".
+			"-".$dest->{'ssh_protocol'}." ".
+			$dest->{'ssh_user'}."\@".$dest->{'host'}." echo OK");
+		return $err if ($err);
+		if ($ex || $out !~ /OK/) {
+			return &text('dmass_emovessh',
+				     "<tt>$server->{'host'}</tt>",
+				     "<tt>$dest->{'host'}</tt>",
+				     "<tt>".&html_escape($out)."</tt>");
+			}
+		}
+	}
+
 return undef;
 }
 
@@ -2676,13 +2707,14 @@ foreach my $sd (@$serverdoms) {
 return @rv;
 }
 
-# move_domains_to_server(&serverdoms, &destserver)
+# move_domains_to_server(&serverdoms, &destserver, delete-source, direct-copy)
 # Transfers domains from source systems to a single destination. Calls 
 # $first_print and friends to display progress.
 sub move_domains_to_server
 {
-local ($serverdoms, $dest, $delete) = @_;
+local ($serverdoms, $dest, $delete, $direct) = @_;
 local (@refresh, %refreshed);
+$direct = 0 if ($dest->{'id'} == 0);	# Transferring to master
 
 # Sort list so that parents come first
 local @sorted = sort { $a->[1]->{'parent'} <=> $b->[1]->{'parent'} ||
@@ -2692,8 +2724,17 @@ local %failed;
 foreach my $sd (@sorted) {
 	local ($server, $d) = @$sd;
 
+	# Show start message
+	if ($direct) {
+		&$first_print(&text('move_backing2', $d->{'dom'},
+				    $server->{'host'}, $dest->{'host'}));
+		}
+	else {
+		&$first_print(&text('move_backing', $d->{'dom'},
+				    $server->{'host'}));
+		}
+
 	# Find a good temp dir on the source
-	&$first_print(&text('move_backing', $d->{'dom'}, $server->{'host'}));
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
 	if ($last_remote_error) {
@@ -2705,6 +2746,21 @@ foreach my $sd (@sorted) {
 					   "$d->{'dom'}.tar.gz");
 	local $tmpdir = $temp;
 	$tmpdir =~ s/\/([^\/]+)$//;
+
+	# Find a temp file on the target, if needed
+	local $desttemp;
+	if ($dest->{'id'} != 0) {
+		$last_remote_error = undef;
+                &remote_foreign_require($dest, "webmin", "webmin-lib.pl");
+		if ($last_remote_error) {
+			&$second_print(&text('move_ewebmin',
+					     $last_remote_error));
+			$failed{$d->{'id'}} = $sd;
+			next;
+			}
+		$desttemp = &remote_foreign_call($dest, "webmin",
+						 "tempname", $filename);
+		}
 
 	# Check if parent has failed
 	if ($d->{'parent'} && $failed{$d->{'parent'}}) {
@@ -2720,13 +2776,21 @@ foreach my $sd (@sorted) {
 		next;
 		}
 
-	# Backup to a temp file on the target
 	local @args = ( [ "domain", $d->{'dom'} ],
 			[ "all-features" ],
 			[ "option", "mail mailfiles 1" ],
-			[ "newformat" ],
-			[ "dest", $tmpdir ] );
-	local ($err, $out) = &call_virtualmin_api($server, "backup-domain", \@args);
+		      );
+	if ($direct) {
+		# Backup to dest via SSH directly
+		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}\@$dest->{'host'}$desttemp" ]);
+		}
+	else {
+		# Backup to a temp file on the target
+		push(@args, [ "dest", $tmpdir ]);
+		push(@args, [ "newformat" ]);
+		}
+	local ($err, $out) = &call_virtualmin_api(
+		$server, "backup-domain", \@args);
 	if ($err) {
 		&$second_print(&text('move_ebackup', $err));
 		$failed{$d->{'id'}} = $sd;
@@ -2739,15 +2803,25 @@ foreach my $sd (@sorted) {
 
 	# Get the resulting size
 	local (@st, $filename);
-	foreach my $p ("$d->{'dom'}.tar.gz",
-		       "$d->{'dom'}.tar.bz2",
-		       "$d->{'dom'}.tar") {
-		local $st = &remote_eval($server, "webmin",
-					"[ stat('$tmpdir/$p') ]");
+	if ($direct) {
+		# Stat on dest server
+		&remote_foreign_require($dest, "webmin", "webmin-lib.pl");
+		local $st = &remote_eval($dest, "webmin",
+					"[ stat('$desttemp') ]");
 		@st = @$st;
-		if (@st) {
-			$filename = $p;
-			last;
+		}
+	else {
+		# Stat file in destination directory
+		foreach my $p ("$d->{'dom'}.tar.gz",
+			       "$d->{'dom'}.tar.bz2",
+			       "$d->{'dom'}.tar") {
+			local $st = &remote_eval($server, "webmin",
+						"[ stat('$tmpdir/$p') ]");
+			@st = @$st;
+			if (@st) {
+				$filename = $p;
+				last;
+				}
 			}
 		}
 	if (!@st) {
@@ -2759,52 +2833,47 @@ foreach my $sd (@sorted) {
 
 	# Transfer to master system, if not already there
 	local ($localtemp, @st);
-	if ($server->{'id'} != 0) {
-		&$first_print(&text('move_download', $d->{'dom'}, $filename));
-		$localtemp = &transname($filename);
-		local $err = &get_file_from_server($server, "$tmpdir/$filename",
-						   $localtemp);
-		&execute_command_on_server($server,
+	if (!$direct) {
+		if ($server->{'id'} != 0) {
+			&$first_print(&text('move_download',
+					    $d->{'dom'}, $filename));
+			$localtemp = &transname($filename);
+			local $err = &get_file_from_server($server,
+				"$tmpdir/$filename", $localtemp);
+			&execute_command_on_server($server,
 				   "rm -f ".quotemeta("$tmpdir/$filename"));
-		if ($err) {
-			&$second_print(&text('move_edownload', $err));
-			$failed{$d->{'id'}} = $sd;
-			next;
+			if ($err) {
+				&$second_print(&text('move_edownload', $err));
+				$failed{$d->{'id'}} = $sd;
+				next;
+				}
+			@st = stat($localtemp);
+			&$second_print(&text('move_downloaded',
+					     &nice_size($st[7])));
 			}
-		@st = stat($localtemp);
-		&$second_print(&text('move_downloaded', &nice_size($st[7])));
-		}
-	else {
-		$localtemp = "$tmpdir/$filename";
-		@st = stat($localtemp);
-		}
+		else {
+			$localtemp = "$tmpdir/$filename";
+			@st = stat($localtemp);
+			}
 
-	# Transfer to destination (if not already there)
-	local $desttemp;
-	if ($dest->{'id'} != 0) {
-		&$first_print(&text('move_upload', $d->{'dom'}, $filename,
-						   $dest->{'host'}));
-		$last_remote_error = undef;
-		&remote_foreign_require($dest, "webmin", "webmin-lib.pl");
-		if ($last_remote_error) {
-			&$second_print(&text('move_ewebmin',
-					     $last_remote_error));
-			$failed{$d->{'id'}} = $sd;
-			next;
+		# Transfer to destination (if not already there)
+		if ($dest->{'id'} != 0) {
+			&$first_print(&text('move_upload', $d->{'dom'},
+				$filename, $dest->{'host'}));
+			local $err = &put_file_to_server($dest, $localtemp,
+							 $desttemp);
+			unlink($localtemp);
+			if ($err) {
+				&$second_print(&text('move_eupload', $err));
+				$failed{$d->{'id'}} = $sd;
+				next;
+				}
+			&$second_print(&text('move_uploaded',
+					     &nice_size($st[7])));
 			}
-		$desttemp = &remote_foreign_call($dest, "webmin",
-						 "tempname", $filename);
-		local $err = &put_file_to_server($dest, $localtemp, $desttemp);
-		unlink($localtemp);
-		if ($err) {
-			&$second_print(&text('move_eupload', $err));
-			$failed{$d->{'id'}} = $sd;
-			next;
+		else {
+			$desttemp = $localtemp;
 			}
-		&$second_print(&text('move_uploaded', &nice_size($st[7])));
-		}
-	else {
-		$desttemp = $localtemp;
 		}
 
 	if ($delete == 2) {
