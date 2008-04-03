@@ -2666,6 +2666,7 @@ foreach my $sd (@$serverdoms) {
 if ($direct) {
 	foreach my $server (values %sources) {
 		next if ($dest->{'ssh_pass'});	# Assume it will work
+		next if ($dest->{'id'} == 0);	# Direct isn't even needed
 		local ($out, $ex, $err) = &execute_command_on_server($server,
 			"ssh -o PasswordAuthentication=no -x ".
 			"-".$dest->{'ssh_protocol'}." ".
