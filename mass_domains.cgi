@@ -147,15 +147,18 @@ elsif ($in{'move'}) {
 
 		# Domains to move
 		@sources = &unique(map { $_->[0]->{'host'} } @serverdoms);
+		$subcheck = "<br>".&ui_checkbox("incsubs", 1,
+						$text{'dmass_incsubs'}, 1);
 		if (@sources > 1) {
 			print &ui_table_row($text{'dmass_mdoms'},
 			    join(" ", map { &text('dmass_on',
 					  $_->[1]->{'dom'}, $_->[0]->{'host'}) }
-					  @serverdoms));
+					  @serverdoms).$subcheck);
 			}
 		else {
 			print &ui_table_row($text{'dmass_mdoms'},
-			    join(" ", map { $_->[1]->{'dom'} } @serverdoms));
+			    join(" ", map { $_->[1]->{'dom'} } @serverdoms).
+			    $subcheck);
 			}
 
 		# Destination server
@@ -194,9 +197,15 @@ elsif ($in{'move'}) {
 		print &ui_form_end([ [ "confirm", $text{'dmass_move'} ] ]);
 		}
 	else {
-		# Make sure the move is valid (cannot move child without parent)
+		# Get the dest and domains
 		($server) = grep { $_->{'id'} eq $in{'dest'} } @servers;
 		$server || &error($text{'dmass_edest'});
+		if ($in{'incsubs'}) {
+			@serverdoms = &unique_serverdoms(
+			    [ @serverdoms, &find_sub_servers(\@serverdoms) ]);
+			}
+
+		# Make sure the move is valid (cannot move child without parent)
 		$err = &check_domain_move(\@serverdoms, $server,
 					  $in{'deletesource'}, $in{'direct'});
 		&error(&text('dmass_emove', $err)) if ($err);

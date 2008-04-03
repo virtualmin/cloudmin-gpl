@@ -37,6 +37,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--direct") {
 		$direct = 1;
 		}
+	elsif ($a eq "--include-sub-servers") {
+		$incsubs = 1;
+		}
 	else {
 		&usage();
 		}
@@ -75,6 +78,12 @@ foreach $dn (@dnames) {
 	$found{$dn} || &usage("Domain $dn was not found on any system running Virtualmin");
 	}
 
+if ($incsubs) {
+	# Automatically add sub-servers
+	@serverdoms = &unique_serverdoms([ @serverdoms,
+					   &find_sub_servers(\@serverdoms) ]);
+	}
+
 # Validate move
 $err = &check_domain_move(\@serverdoms, $dest, $deletesource, $direct);
 &usage("Selected domains cannot be moved : $err") if ($err);
@@ -111,6 +120,7 @@ print "                      [--host source.hostname]\n";
 print "                      [--disable | --delete]\n";
 print "                      [--force]\n";
 print "                      [--direct]\n";
+print "                      [--include-sub-servers]\n";
 exit(1);
 }
 

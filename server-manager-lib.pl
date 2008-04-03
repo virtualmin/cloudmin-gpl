@@ -1321,6 +1321,7 @@ if (!-d $server_domains_dir) {
 &open_tempfile(DOMS, ">$server_domains_dir/$server->{'id'}");
 &print_tempfile(DOMS, &serialise_variable($doms));
 &close_tempfile(DOMS);
+$get_server_domains_cache{$server->{'id'}} = $doms;
 }
 
 # get_server_domains(&server)
@@ -1328,10 +1329,14 @@ if (!-d $server_domains_dir) {
 sub get_server_domains
 {
 local ($server) = @_;
-local $ddata = &read_file_contents("$server_domains_dir/$server->{'id'}");
-return ( ) if (!$ddata);	# Not collected yet?
-local $doms = &unserialise_variable($ddata);
-return @$doms;
+if (!$get_server_domains_cache{$server->{'id'}}) {
+	local $ddata = &read_file_contents(
+			"$server_domains_dir/$server->{'id'}");
+	return ( ) if (!$ddata);	# Not collected yet?
+	local $doms = &unserialise_variable($ddata);
+	$get_server_domains_cache{$server->{'id'}} = $doms;
+	}
+return @{$get_server_domains_cache{$server->{'id'}}};
 }
 
 # save_server_collected(&server, &info)
@@ -2639,6 +2644,24 @@ foreach my $sd (@$serverdoms) {
 			return &text('dmass_eparent', $d->{'dom'});
 			}
 		}
+	else {
+		# This is a top-level server .. all child domains must be
+		# included if in delete mode, or they would be lost
+		if ($delete) {
+			local @srcdoms = &get_server_domains($server);
+			local @children = grep { $_->{'parent'} == $d->{'id'} }
+					       @srcdoms;
+			foreach my $cd (@children) {
+				local ($inlist) =
+					grep { $_->[1]->{'id'} == $cd->{'id'} }
+					     @$serverdoms;
+				if (!$inlist) {
+					return &text('dmass_echild',
+						     $d->{'dom'}, $cd->{'dom'});
+					}
+				}
+			}
+		}
 
 	# Check if source and dest servers are the same
 	if ($server->{'id'} == $dest->{'id'}) {
@@ -2674,9 +2697,8 @@ if ($direct) {
 		return $err if ($err);
 		if ($ex || $out !~ /OK/) {
 			return &text('dmass_emovessh',
-				     "<tt>$server->{'host'}</tt>",
-				     "<tt>$dest->{'host'}</tt>",
-				     "<tt>".&html_escape($out)."</tt>");
+				     $server->{'host'}, $dest->{'host'},
+				     &html_escape($out));
 			}
 		}
 	}
@@ -2721,9 +2743,12 @@ $direct = 0 if ($dest->{'id'} == 0);	# Transferring to master
 local @sorted = sort { $a->[1]->{'parent'} <=> $b->[1]->{'parent'} ||
 		       $a->[1]->{'alias'} <=> $b->[1]->{'alias'} } @$serverdoms;
 
-local %failed;
+local (%failed, %donebackup, %sourcetemp);
 foreach my $sd (@sorted) {
 	local ($server, $d) = @$sd;
+
+	# Re-connect to Webmin, to avoid RPC timeout
+	&remote_finished();
 
 	# Show start message
 	if ($direct) {
@@ -2743,10 +2768,13 @@ foreach my $sd (@sorted) {
 		$failed{$d->{'id'}} = $sd;
 		next;
 		}
-	local $temp = &remote_foreign_call($server, "webmin", "tempname",
-					   "$d->{'dom'}.tar.gz");
-	local $tmpdir = $temp;
-	$tmpdir =~ s/\/([^\/]+)$//;
+	local $tmpdir = $sourcetemp{$server->{'id'}};
+	if (!$tmpdir) {
+		local $temp = &remote_foreign_call($server, "webmin",
+					"tempname", "$d->{'dom'}.tar.gz");
+		$tmpdir = $temp;
+		$tmpdir =~ s/\/([^\/]+)$//;
+		}
 
 	# Find a temp file on the target, if needed
 	local $desttemp;
@@ -2761,6 +2789,12 @@ foreach my $sd (@sorted) {
 			}
 		$desttemp = &remote_foreign_call($dest, "webmin",
 						 "tempname", $filename);
+		if ($direct) {
+			# For a direct transfer, this is a directory that we
+			# scp the backup into
+			&remote_foreign_call($dest, "webmin", "make_dir",
+					     $desttemp, 0700);
+			}
 		}
 
 	# Check if parent has failed
@@ -2780,6 +2814,7 @@ foreach my $sd (@sorted) {
 	local @args = ( [ "domain", $d->{'dom'} ],
 			[ "all-features" ],
 			[ "option", "mail mailfiles 1" ],
+			[ "newformat" ],
 		      );
 	if ($direct) {
 		# Backup to dest via SSH directly
@@ -2788,7 +2823,6 @@ foreach my $sd (@sorted) {
 	else {
 		# Backup to a temp file on the target
 		push(@args, [ "dest", $tmpdir ]);
-		push(@args, [ "newformat" ]);
 		}
 	local ($err, $out) = &call_virtualmin_api(
 		$server, "backup-domain", \@args);
@@ -2798,31 +2832,28 @@ foreach my $sd (@sorted) {
 		next;
 		}
 
-	# Re-connect to Webmin, to avoid RPC timeout
-	&remote_finished();
-	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
-
-	# Get the resulting size
-	local (@st, $filename);
+	# Work out the resulting filename and size
+	local (@st, $filename, $statserver, $statdir);
 	if ($direct) {
 		# Stat on dest server
-		&remote_foreign_require($dest, "webmin", "webmin-lib.pl");
-		local $st = &remote_eval($dest, "webmin",
-					"[ stat('$desttemp') ]");
-		@st = @$st;
+		$statserver = $dest;
+		$statdir = $desttemp;
 		}
 	else {
-		# Stat file in destination directory
-		foreach my $p ("$d->{'dom'}.tar.gz",
-			       "$d->{'dom'}.tar.bz2",
-			       "$d->{'dom'}.tar") {
-			local $st = &remote_eval($server, "webmin",
-						"[ stat('$tmpdir/$p') ]");
-			@st = @$st;
-			if (@st) {
-				$filename = $p;
-				last;
-				}
+		# Stat on source server
+		$statserver = $server;
+		$statdir = $tmpdir;
+		}
+	&remote_foreign_require($statserver, "webmin", "webmin-lib.pl");
+	foreach my $p ("$d->{'dom'}.tar.gz",
+		       "$d->{'dom'}.tar.bz2",
+		       "$d->{'dom'}.tar") {
+		local $st = &remote_eval($statserver, "webmin",
+					"[ stat('$statdir/$p') ]");
+		@st = @$st;
+		if (@st) {
+			$filename = $p;
+			last;
 			}
 		}
 	if (!@st) {
@@ -2876,6 +2907,25 @@ foreach my $sd (@sorted) {
 			$desttemp = $localtemp;
 			}
 		}
+	else {
+		# Work out real destination filename
+		$desttemp .= "/".$filename;
+		}
+
+	# Flag as done
+	$donebackup{$d->{'id'}} = $desttemp;
+	}
+
+# Disable or delete requested domains
+foreach my $sd (@sorted) {
+	local ($server, $d) = @$sd;
+
+	# Skip if not done
+	next if (!$donebackup{$d->{'id'}});
+
+	# Skip if the parent has already been done, or has failed
+	next if ($d->{'parent'} && $donebackup{$d->{'parent'}});
+	next if ($d->{'parent'} && $failed{$d->{'parent'}});
 
 	if ($delete == 2) {
 		# Disable on source
@@ -2913,8 +2963,18 @@ foreach my $sd (@sorted) {
 				if (!$refreshed{$server->{'id'}}++);
 			}
 		}
+	}
+
+# Re-create all domains from backups. This has to be done after deleting from
+# the source (if requested), so that we don't get clashes.
+foreach my $sd (@sorted) {
+	local ($server, $d) = @$sd;
+
+	# Skip if failed
+	next if ($failed{$d->{'id'}});
 
 	# Restore on destination
+	my $desttemp = $donebackup{$d->{'id'}};
 	&$first_print(&text('move_restore', $d->{'dom'}, $dest->{'host'}));
 	local @args = ( [ "source", $desttemp ],
 			[ "all-features" ],
@@ -2923,9 +2983,11 @@ foreach my $sd (@sorted) {
 			[ "option", "ssl fixip 1" ],
 			[ "option", "mail mailfiles 1" ],
 			[ "domain", $d->{'dom'} ] );
-	local ($err, $out) = &call_virtualmin_api($dest, "restore-domain", \@args);
+	local ($err, $out) = &call_virtualmin_api($dest,
+			"restore-domain", \@args);
 	if ($delete != 1) {
-		&execute_command_on_server($server, "rm -f ".quotemeta($desttemp));
+		&execute_command_on_server($server,
+			"rm -f ".quotemeta($desttemp));
 		}
 	if ($err) {
 		&$block_print($out);
@@ -2939,11 +3001,6 @@ foreach my $sd (@sorted) {
 		}
 	&$second_print(&text('move_restored', $d->{'dom'}));
 	push(@refresh, $dest) if (!$refreshed{$dest->{'id'}}++);
-
-	# Re-connect to Webmin, to avoid RPC timeout
-	&remote_finished();
-
-	$done{$d->{'id'}} = 1;
 	}
 
 if (@refresh) {
@@ -2957,6 +3014,43 @@ if (@refresh) {
 	}
 
 return keys %failed;
+}
+
+# find_sub_servers(&serverdoms)
+# Given a list of server/domain tuples, finds all their sub-servers and aliases
+# and returns a list. 
+sub find_sub_servers
+{
+local ($serverdoms) = @_;
+local @rv;
+foreach my $sd (@serverdoms) {
+	local ($server, $d) = @$sd;
+	local @doms = &get_server_domains($server);
+	if (!$d->{'parent'}) {
+		# Find sub-servers
+		push(@rv, map { [ $server, $_ ] }
+			      grep { $_->{'parent'} &&
+				     $_->{'parent'} == $d->{'id'} } @doms);
+		}
+	# Find sub-domains
+	push(@rv, map { [ $server, $_ ] }
+		      grep { $_->{'subdom'} &&
+			     $_->{'subdom'} == $d->{'id'} } @doms);
+	# Find aliases
+	push(@rv, map { [ $server, $_ ] }
+		      grep { $_->{'alias'} &&
+			     $_->{'alias'} == $d->{'id'} } @doms);
+	}
+return &unique_serverdoms(\@rv);
+}
+
+# unique_serverdoms(&serverdoms)
+# Given a list of server/domain tuples, removes duplicates
+sub unique_serverdoms
+{
+local ($serverdoms) = @_;
+local %done;
+return grep { !$done{$_->[0]->{'id'},$_->[1]->{'id'}}++ } @$serverdoms;
 }
 
 # create_allocate_ip(&server)
