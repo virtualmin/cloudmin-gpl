@@ -183,6 +183,13 @@ elsif ($in{'move'}) {
 		print &ui_table_row($text{'dmass_mforce'},
 			&ui_yesno_radio("force", 0));
 
+		# Direct transfer
+		print &ui_table_row($text{'dmass_mdirect'},
+			&ui_radio("direct", 1,
+				  [ [ 1, $text{'dmass_mdirect1'} ],
+				    [ 0, $text{'dmass_mdirect0'} ] ]));
+
+
 		print &ui_table_end();
 		print &ui_form_end([ [ "confirm", $text{'dmass_move'} ] ]);
 		}
@@ -191,7 +198,7 @@ elsif ($in{'move'}) {
 		($server) = grep { $_->{'id'} eq $in{'dest'} } @servers;
 		$server || &error($text{'dmass_edest'});
 		$err = &check_domain_move(\@serverdoms, $server,
-					  $in{'deletesource'});
+					  $in{'deletesource'}, $in{'direct'});
 		&error(&text('dmass_emove', $err)) if ($err);
 
 		# Check for missing features
@@ -214,7 +221,8 @@ elsif ($in{'move'}) {
 		else {
 			# Do each one in series, by backing up and restoring
 			&move_domains_to_server(\@serverdoms, $server,
-						$in{'deletesource'});
+						$in{'deletesource'},
+						$in{'direct'});
 			}
 		}
 	}
