@@ -3215,70 +3215,158 @@ local $noreboot = defined(&$rfunc) && &$rfunc($server);
 local $tfunc = "type_".$t."_can_transfer";
 local $cantransfer = defined(&$tfunc) && &$tfunc($server);
 
+# Start with links to edit_serv.cgi
+local $ed = "edit_serv.cgi?id=$server->{'id'}";
+push(@rv, { 'id' => 'edit',
+	    'desc' => $text{'edit_link_edit'},
+	    'cat' => '',
+	    'link' => $ed });
+if ($status eq 'virt') {
+	push(@rv, { 'id' => 'coll',
+		    'desc' => $text{'edit_link_coll'},
+		    'cat' => 'system',
+		    'link' => $ed."&basic=0&coll=1" });
+	push(@rv, { 'id' => 'doms',
+		    'desc' => $text{'edit_link_doms'},
+		    'cat' => 'system',
+		    'link' => $ed."&basic=0&doms=1" });
+	}
+local $ifunc = "type_".$t."_list_interfaces";
+if (defined(&$ifunc)) {
+	push(@rv, { 'id' => 'ifaces',
+		    'desc' => $text{'edit_link_ifaces'},
+		    'cat' => 'system',
+		    'link' => $ed."&basic=0&ifaces=1" });
+	}
+if (&can_edit_limits($server)) {
+	push(@rv, { 'id' => 'limits',
+		    'desc' => $text{'edit_link_limits'},
+		    'cat' => 'system',
+		    'link' => $ed."&basic=0&limits=1" });
+	}
+
 if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	# Actions are limited when system is down
 	local $sfunc = "type_".$t."_no_startup";
 	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
 		   	 $status eq 'nohost';
-	push(@rv, [ "refresh", $text{'edit_refresh'} ]);
+	push(@rv, { 'id' => 'refresh',
+		    'desc' => $text{'edit_refresh'},
+		    'cat' => undef });
 	if ($cantransfer) {
-		push(@rv, [ "transfer", $text{'edit_transfer'} ]);
+		push(@rv, { 'id' => 'transfer',
+			    'desc' => $text{'edit_transfer'},
+			    'cat' => 'manage',
+			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
 		}
-	push(@rv, [ "startup", $text{'edit_startup'} ]) if (!$nostart);
+	push(@rv, { 'id' => 'startup',
+		    'desc' => $text{'edit_startup'},
+		    'cat' => 'power' }) if (!$nostart);
 	if ($status eq 'nossh' && !$noshut) {
-		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
+		push(@rv, { 'id' => 'shutdown',
+			    'desc' => $text{'edit_shutdown'},
+			    'cat' => 'power' });
 		}
 	}
 else {
 	# Most actions are only for up servers
 	local $wurl = &webmin_link($server);
-	push(@rv, [ "refresh", $text{'edit_refresh'} ],
+	push(@rv, { 'id' => 'refresh',
+		    'desc' => $text{'edit_refresh'},
+		    'cat' => '' },
 		  undef,
-		  [ "shell", $text{'edit_shell'} ]);
+		  { 'id' => 'shell',
+		    'desc' => $text{'edit_shell'},
+		    'cat' => 'manage' });
 	if ($cantransfer) {
-		push(@rv, [ "transfer", $text{'edit_transfer'} ]);
+		push(@rv, { 'id' => 'transfer',
+			    'desc' => $text{'edit_transfer'},
+			    'cat' => 'manage',
+			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
 		}
 	if (($status eq 'novirt' || $status eq 'virt') && $server->{'id'}) {
-		push(@rv, [ "webmin", $text{'edit_webmin2'}, 1, $wurl ]);
+		# Tunneled link to Webmin
+		push(@rv, { 'id' => 'webmin',
+			    'desc' => $text{'edit_webmin2'},
+			    'cat' => '',
+			    'target' => '_new',
+			    'link' => $wurl });
+		if ($wurl =~ /link.cgi/) {
+			# Also direct link
+			local $prot = $server->{'ssl'} ? 'https' : 'http';
+			local $durl = "$prot://$server->{'host'}:$server->{'port'}/";
+			push(@rv, { 'id' => 'webmin',
+				    'desc' => $text{'edit_webmin3'},
+				    'cat' => '',
+				    'target' => '_new',
+				    'link' => $durl });
+			}
 		}
 	push(@rv, undef);	# Spacer
-	push(@rv, [ "pass",  $text{'edit_setpass'} ]);
+	push(@rv, { 'id' => 'pass',
+		    'desc' => $text{'edit_setpass'},
+		    'cat' => 'manage',
+		    'link' => "edit_pass.cgi?id=$server->{'id'}" });
 	if (($status eq 'novirt' || $status eq 'nowebmin') &&
 	    $server->{'manager'} ne 'this') {
-		push(@rv, [ "installvirt", $text{'edit_installvirt'} ]);
+		push(@rv, { 'id' => 'installvirt',
+			    'desc' => $text{'edit_installvirt'},
+			    'cat' => 'manage' });
 		}
 	if ($status eq 'nowebmin') {
-		push(@rv, [ "installwebmin", $text{'edit_installwebmin'} ]);
+		push(@rv, { 'id' => 'installwebmin',
+			    'desc' => $text{'edit_installwebmin'},
+			    'cat' => 'manage' });
 		}
 	if ($status eq 'virt' && $server->{'virtualmin_error'}) {
-		push(@rv, [ "recheck", $text{'edit_recheck'} ]);
+		push(@rv, { 'id' => 'recheck',
+			    'desc' => $text{'edit_recheck'},
+			    'cat' => '' });
 		}
 	if (!$noreboot) {
-		push(@rv, [ "reboot", $text{'edit_reboot'} ]);
+		push(@rv, { 'id' => 'reboot',
+			    'desc' => $text{'edit_reboot'},
+			    'cat' => 'power' });
 		}
 	if (!$noshut) {
-		push(@rv, [ "shutdown", $text{'edit_shutdown'} ]);
+		push(@rv, { 'id' => 'shutdown',
+			    'desc' => $text{'edit_shutdown'},
+			    'cat' => 'power' });
 		}
 	}
 if ($t ne 'real' && $t ne 'this') {
-	push(@rv, [ "delete", $text{'edit_delete'} ]);
+	push(@rv, { 'id' => 'delete',
+		    'desc' => $text{'edit_delete'},
+		    'cat' => 'power' });
 	}
 if (!$noimage) {
-	push(@rv, [ "image", $text{'edit_image'} ]);
+	push(@rv, { 'id' => 'image',
+		    'desc' => $text{'edit_image'},
+		    'cat' => 'manage',
+		    'link' => "image_form.cgi?id=$server->{'id'}" });
 	}
 
 # Complex pages associated with system
 local $dfunc = "type_".$t."_can_disks";
 if (defined(&$dfunc) && &$dfunc($server)) {
-	push(@rv, [ "disks", $text{'edit_disks'} ]);
+	push(@rv, { 'id' => 'disks',
+		    'desc' => $text{'edit_disks'},
+		    'cat' => 'res',
+		    'link' => "list_disks.cgi?id=$server->{'id'}" });
 	}
 local $vfunc = "type_".$t."_can_vcpus";
 if (defined(&$vfunc) && &$vfunc($server)) {
-	push(@rv, [ "vcpus", $text{'edit_vcpus'} ]);
+	push(@rv, { 'id' => 'vcpus',
+		    'desc' => $text{'edit_vcpus'},
+		    'cat' => 'res',
+		    'link' => "list_vcpus.cgi?id=$server->{'id'}" });
 	}
 local $rfunc = "type_".$t."_real_interfaces";
 if ($config{'bw_enabled'} && defined(&$rfunc)) {
-	push(@rv, [ "bw", $text{'edit_bw'} ]);
+	push(@rv, { 'id' => 'bw',
+		    'desc' => $text{'edit_bw'},
+		    'cat' => 'res',
+		    'link' => "bwgraph.cgi?id=$server->{'id'}" });
 	}
 
 # Add type-specific actions

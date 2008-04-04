@@ -168,15 +168,16 @@ else {
 		if (!$b) {
 			push(@buts, undef);
 			}
-		elsif ($b->[3]) {
+		elsif ($b->{'link'}) {
 			# Opens a separate URL
-			local $js = $b->[2] ? "document.location = \"$b->[3]\""
-					    : "window.open(\"$b->[3]\")";
-			push(@buts, [ $b->[0], $b->[1], undef, undef,
+			local $js = $b->{'target'} ?
+				"window.open(\"$b->[3]\")" :
+				"document.location = \"$b->[3]\"";
+			push(@buts, [ $b->{'id'}, $b->{'desc'}, undef, undef,
 			    "onClick='$js; return false'" ] );
 			}
 		else {
-			push(@buts, $b);
+			push(@buts, [ $b->{'id'}, $b->{'desc'} ]);
 			}
 		}
 	print &ui_form_end(\@buts);
