@@ -26,6 +26,8 @@ else {
 	delete($config{'bw_email'});
 	}
 $config{'bw_owner'} = $in{'owner'};
+$in{'notify'} =~ /^[1-9]\d*$/ || &error($text{'bw_enotify'});
+$config{'bw_notify'} = $in{'notify'};
 if ($in{'default_def'}) {
 	delete($config{'bw_def'});
 	}

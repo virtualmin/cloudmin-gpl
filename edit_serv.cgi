@@ -444,9 +444,18 @@ if (&can_edit_limits($server) && $status ne 'nohost') {
 			&describe_bandwidth_period(0));
 
 		# Current usage
-		print &ui_table_row($text{'edit_lusage'},
-			&nice_size($server->{'bw_usage'})." ".
-			&describe_bandwidth_period(1));
+		$umsg = &nice_size($server->{'bw_usage'})." ".
+			&describe_bandwidth_period(1);
+		if ($server->{'bw_limit'} &&
+		    $server->{'bw_usage'} > $server->{'bw_limit'}) {
+			# Over limit! Highlight it
+			$umsg = "<font color=#ff0000>$umsg</font>";
+			if ($server->{'bw_notify'}) {
+				$umsg .= " (".&text('edit_lnotify',
+					&make_date($server->{'bw_notify'})).")";
+				}
+			}
+		print &ui_table_row($text{'edit_lusage'}, $umsg);
 		}
 
 	print &ui_table_row(undef, &ui_submit($text{'save'}), 2);

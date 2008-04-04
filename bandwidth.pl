@@ -3,6 +3,7 @@
 
 $main::no_acl_check++;
 require './server-manager-lib.pl';
+&foreign_require("mailboxes", "mailboxes-lib.pl");
 
 # Parse command line for hosts
 if (@ARGV == 0) {
@@ -32,7 +33,6 @@ foreach $s (@servers) {
 	local $bwinfo = &get_bandwidth($s);
 	$now = time();
 	($in, $out, $inp, $outp) = &get_server_traffic($s);
-	print STDERR "for $s->{'host'} in=$in out=$out\n";
 	next if (!defined($in));
 
 	# Work out diffs
@@ -56,15 +56,12 @@ foreach $s (@servers) {
 		# By hour
 		$hours = ($now - $bwinfo->{'last_time'}) / 3600.0;
 		$hours = 1 if ($hours < 1);
-		print STDERR "hours=$hours\n";
 		for(my $h=$bwinfo->{'last_time'}; $h<$now; $h+=3600) {
 			$hh = int($h/3600) * 3600;
 			$bwinfo->{'hour_in_'.$hh} += $in_diff / $hours;
 			$bwinfo->{'hour_out_'.$hh} += $out_diff / $hours;
 			$bwinfo->{'hour_inp_'.$hh} += $inp_diff / $hours;
 			$bwinfo->{'hour_outp_'.$hh} += $outp_diff / $hours;
-			print STDERR "hours for $s->{'host'} at ",
-				&make_date($hh)," in=$in_diff out=$out_diff\n";
 			}
 		$bwinfo->{'new_hour'} = $hh;
 		$bwinfo->{'old_hour'} ||= int($bwinfo->{'last_time'}/3600)*3600;
@@ -72,15 +69,12 @@ foreach $s (@servers) {
 		# By minute
 		$mins = ($now - $bwinfo->{'last_time'}) / 60.0;
 		$mins = 1 if ($mins < 1);
-		print STDERR "mins=$mins\n";
 		for(my $m=$bwinfo->{'last_time'}; $m<$now; $m+=60) {
 			$mm = int($m/60) * 60;
 			$bwinfo->{'min_in_'.$mm} += $in_diff / $mins;
 			$bwinfo->{'min_out_'.$mm} += $out_diff / $mins;
 			$bwinfo->{'min_inp_'.$mm} += $inp_diff / $mins;
 			$bwinfo->{'min_outp_'.$mm} += $outp_diff / $mins;
-			print STDERR "mins for $s->{'host'} at ",
-				&make_date($mm)," in=$in_diff out=$out_diff\n";
 			}
 		$bwinfo->{'old_min'} ||= int($bwinfo->{'last_time'}/60)*60;
 		$bwinfo->{'new_min'} = $mm;
@@ -127,7 +121,43 @@ foreach $s (@servers) {
 
 	# If over, send email and perhaps shutdown the system
 	if ($s->{'bw_limit'} && $s->{'bw_usage'} > $s->{'bw_limit'}) {
-		# XXX
+		# Send email
+		local @to;
+		push(@to, $config{'bw_email'}) if ($config{'bw_email'});
+		# XXX server owner?
+		$etime = $now - $s->{'bw_notify'} > $config{'bw_notify'}*60*60;
+		if (@to && $etime) {
+			local $msg = &get_bandwidth_message();
+			local %hash = %$s;
+			$hash{'bw_period'} = $config{'bw_period'};
+			$hash{'bw_days'} = $config{'bw_period'};
+			foreach $n ('bw_limit', 'bw_usage',
+				    'bw_usage_in', 'bw_usage_out') {
+				$hash{$n} = &nice_size($hash{$n});
+				}
+			$msg = &substitute_template($msg, \%hash);
+			print STDERR "to=",join(", ", @to),"\n";
+			print STDERR "msg=\n".$msg."\n";
+			&mailboxes::send_text_mail(
+				&get_global_from_address($server),
+				join(", ", @to),
+				undef,
+				&text('bw_subject', $s->{'host'}),
+				$msg);
+			$s->{'bw_notify'} = $now;
+			}
+
+		# Perhaps shutdown
+		$sfunc = "type_".$s->{'manager'}."_no_shutdown";
+		if ($config{'bw_disable'} &&
+		    $s->{'status'} ne 'down' && $s->{'status'} ne 'nohost' &&
+		    (!defined(&$sfunc) || !&$sfunc($s))) {
+			$err = &shutdown_server($s);
+			if ($err) {
+				print STDERR "Failed to shut down $s->{'host'} for exceeding bandwidth limit : $err\n";
+				}
+			$s->{'shutdown_reason'} = 'bw';
+			}
 		}
 
 	# If under limit and the system was shutdown due to exceeding it,

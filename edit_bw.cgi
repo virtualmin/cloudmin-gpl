@@ -29,7 +29,7 @@ print &ui_table_row($text{'bw_disable'},
 
 # Email message to send when over
 print &ui_table_row($text{'bw_msg'},
-	&ui_textarea("msg", &get_bandwidth_message(), 5, 60));
+	&ui_textarea("msg", &get_bandwidth_message(), 5, 80));
 
 # Send to who
 print &ui_table_row($text{'bw_email'},
@@ -38,6 +38,10 @@ print &ui_table_row($text{'bw_email'},
 	&ui_textbox("email", $config{'bw_email'}, 40)."<br>\n".
 	&ui_checkbox("owner", 1, $text{'bw_owner'},
 		     $config{'bw_owner'}));
+
+# Interval between notifications
+print &ui_table_row($text{'bw_notify'},
+	&ui_textbox("notify", $config{'bw_notify'}, 8));
 
 # Default limit for new servers
 print &ui_table_row($text{'bw_def'},

@@ -598,13 +598,14 @@ edit_newgroup=New group $1
 edit_help=( Help .. )
 edit_toomany=This system has $1 Virtualmin domains, which is too many to list by default.
 edit_showmany=Show domains anyway.
-edit_lheader=Memory and CPU limits
+edit_lheader=Resource limits
 edit_lmemory=Maximum memory allocation
 edit_lcpu=Maximum CPU use
 edit_lweight=CPU allocation weighting
 edit_lunlimit=Unlimited
 edit_lbw=Bandwidth usage limit
 edit_lusage=Bandwidth usage so far
+edit_lnotify=Notification sent at $1
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..
@@ -1526,6 +1527,10 @@ bw_dir=Traffic direction to include in limits
 bw_dir_in=Incoming traffic (to system)
 bw_dir_out=Outgoing traffic (sent by system)
 bw_edir=No traffic directions selected for bandwidth limits
+bw_subject=Bandwidth limit exceeded by $1
+bw_notify=Period between email notifications
+bw_days=hours
+bw_enotify=Missing or invalid number of hours between email notifications
 
 graph_title=Bandwidth Graph
 graph_mode=Display mode:

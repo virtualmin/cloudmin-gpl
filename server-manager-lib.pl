@@ -10,16 +10,13 @@
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX allow changing of main IP
 #	XXX do virtualmin too
-# XXX bandwidth monitoring
-#	XXX by traffic counts on interfaces
-#	XXX for xen, vservers and zones only
-#	XXX disable / email
 # XXX show Xen resource allocation out of total on edit_xen.cgi
 #	XXX show hosts too
 # XXX extra webmin logins to manage servers
 #     XXX reboot/shutdown/view/bandwidth
 #     XXX one login can own several servers
 # XXX EC2 new static IPs feature
+# XXX zones bandwidth monitoring
 
 do '../web-lib.pl';
 &init_config();
@@ -3914,6 +3911,16 @@ $user ||= "root";
 local @rv = grep { $_->{'user'} eq $user &&
 	     $_->{'command'} =~ /(^|[ \|\&;])\Q$cmd\E($|[ \|\&><;])/ } @$jobs;
 return wantarray ? @rv : $rv[0];
+}
+
+# get_global_from_address(&server)
+# Returns the from address to use when sending email to some server.
+sub get_global_from_address
+{
+local ($server) = @_;
+&foreign_require("mailboxes", "mailboxes-lib.pl");
+local $rv = $config{'from_addr'} || &mailboxes::get_from_address();
+return $rv;
 }
 
 # strip_html_tags(html)

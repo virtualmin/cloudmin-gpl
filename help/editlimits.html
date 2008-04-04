@@ -1,4 +1,4 @@
-<header>Memory and CPU limits</header>
+<header>Resource limits</header>
 
 This section allows you to change the amount of memory allocated to a
 virtual system, and the percentage of CPU it is assigned on the hosting server.
@@ -12,6 +12,12 @@ both doing equal amounts of processing. <p>
 
 <b>Warning</b> - reducing the memory of a running system below what it is 
 current using will almost certainly cause it to crash. <p>
+
+On Xen, Zones and Vservers systems, when VM2 bandwidth monitoring is enabled,
+you can set the limit on the amount of data traffic that this system is allowed
+to consume over the current accounting period (typically the calendar month).
+Exceeding this limit will trigger an email and possibly shut the system down.
+<p>
 
 <footer>
 
