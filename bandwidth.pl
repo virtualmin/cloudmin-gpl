@@ -136,8 +136,6 @@ foreach $s (@servers) {
 				$hash{$n} = &nice_size($hash{$n});
 				}
 			$msg = &substitute_template($msg, \%hash);
-			print STDERR "to=",join(", ", @to),"\n";
-			print STDERR "msg=\n".$msg."\n";
 			&mailboxes::send_text_mail(
 				&get_global_from_address($server),
 				join(", ", @to),

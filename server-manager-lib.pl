@@ -16,7 +16,6 @@
 #     XXX reboot/shutdown/view/bandwidth
 #     XXX one login can own several servers
 # XXX EC2 new static IPs feature
-# XXX zones bandwidth monitoring
 
 do '../web-lib.pl';
 &init_config();

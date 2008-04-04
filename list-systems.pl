@@ -157,6 +157,11 @@ if ($multi) {
 				&nice_size($s->{'bw_usage_in'}),"\n";
 			print "    Bandwidth usage outgoing: ",
 				&nice_size($s->{'bw_usage_out'}),"\n";
+			if ($s->{'bw_usage'} > $s->{'bw_limit'} &&
+			    $s->{'bw_limit'} && $s->{'bw_notify'}) {
+				print "    Bandwidth notification sent: ",
+				      &make_date($s->{'bw_notify'}),"\n";
+				}
 			}
 
 		# Show collected info
