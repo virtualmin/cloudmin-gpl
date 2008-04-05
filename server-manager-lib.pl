@@ -105,6 +105,7 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 
 $licence_status = "$module_config_directory/licence-status";
 $licence_file = "/etc/server-manager-license";
+$licence_cache_file = "$module_config_directory/licence-cache";
 
 $virtualmin_licence_host = "software.virtualmin.com";
 $virtualmin_licence_port = 80;
@@ -3539,18 +3540,36 @@ else {
 # for use by Virtualmin
 sub list_virtualmin_licences
 {
+# Use cache if possible
+if (defined(@list_virtualmin_licences_cache)) {
+	return @list_virtualmin_licences_cache;
+	}
+
 # If the VM2 licence can also be used for Virtualmin, start with it
 &lock_file($virtualmin_licences_file);
 local @rv;
 local ($vm2serial, $vm2key) = &get_server_manager_serial();
-local ($lok, $ldoms, $lservers) = &check_virtualmin_serial($vm2serial, $vm2key);
-if ($lok > 0) {
-	push(@rv, { 'serial' => $vm2serial,
-		    'key' => $vm2key,
-		    'domains' => $ldoms,
-		    'servers' => $lservers,
-		    'max_last' => time(),
-		    'vm2' => 1 });
+local %vm2cache;
+&read_file($licence_cache_file, \%vm2cache);
+if ($vm2cache{'max_last'} &&
+    time() - $vm2cache{'max_last'} < 24*60*60) {
+	# Use cached version
+	push(@rv, \%vm2cache);
+	}
+else {
+	# Check VM2 licence for real
+	local ($lok, $ldoms, $lservers) =
+		&check_virtualmin_serial($vm2serial, $vm2key);
+	if ($lok > 0) {
+		%vm2cache = ( 'serial' => $vm2serial,
+			      'key' => $vm2key,
+			      'domains' => $ldoms,
+			      'servers' => $lservers,
+			      'max_last' => time(),
+			      'vm2' => 1 );
+		push(@rv, \%vm2cache);
+		&write_file($licence_cache_file, \%vm2cache);
+		}
 	}
 
 # Read the licence pool
@@ -3568,7 +3587,8 @@ close(LIC);
 # For licences that we don't have domain and server counts for, get them
 # from Virtualmin. Re-do this every 24 hours, as the customer may have upgraded
 foreach my $l (@rv) {
-	if (!$l->{'max'} || time() - $l->{'max_last'} >= 24*60*60) {
+	if ($l->{'domains'} eq '' ||
+	    time() - $l->{'max_last'} >= 24*60*60) {
 		local ($lok, $ldoms, $lservers) =
 			&check_virtualmin_serial($l->{'serial'}, $l->{'key'});
 		if ($lok == 0) {
@@ -3637,6 +3657,7 @@ if ($changed) {
 	}
 &unlock_file($virtualmin_licences_file);
 
+@list_virtualmin_licences_cache = @rv;
 return @rv;
 }
 
