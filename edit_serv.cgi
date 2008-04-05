@@ -301,7 +301,7 @@ if ($toomanydoms ||
 				  $server->{'virtualmin_domains'}),"</b><p>\n";
 		print &ui_table_row(undef,
 		    &ui_links_row([
-			"<a href='edit_serv.cgi?id=$in{'id'}&doms=1&many=1'>".
+			"<a href='edit_serv.cgi?id=$in{'id'}&doms=1&many=1&basic=0'>".
 			 "$text{'edit_showmany'}</a>",
 			$clink ]), 2);
 		}

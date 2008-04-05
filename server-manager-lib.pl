@@ -3146,6 +3146,11 @@ if ($server_management_types{'xen'} ||
 	push(@gtitles, $text{'bw_title'});
 	push(@gicons, "images/bw.gif");
 	push(@gcats, "settings");
+
+	push(@glinks, "bwgraph.cgi");
+	push(@gtitles, $text{'graph_title2'});
+	push(@gicons, "images/graph.gif");
+	push(@gcats, "settings");
 	}
 
 # Show icons for global settings
@@ -3925,6 +3930,7 @@ local ($server) = @_;
 local @servers = &list_managed_servers();
 local @rv;
 foreach my $p (&is_parent_server($server)) {
+	$p = "zones" if ($p eq "zone");
 	local $pfunc = "type_".$p."_parent";
 	if (defined(&$pfunc)) {
 		foreach my $s (grep { $_->{'manager'} eq $p } @servers) {

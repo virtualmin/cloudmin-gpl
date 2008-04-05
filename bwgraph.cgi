@@ -154,8 +154,10 @@ if ($mode eq 'systems' || $mode eq 'host') {
 	# One direction and limit
 	print "<font color=#ff0000>&bull;</font> ",
 	      $text{'graph_'.$dir},"\n";
-	print "<font color=#0000ff>&bull;</font> ",
-	      $text{'graph_limit'},"\n";
+	if ($mode eq 'systems') {
+		print "<font color=#0000ff>&bull;</font> ",
+		      $text{'graph_limit'},"\n";
+		}
 	}
 else {
 	@dirs = $dir eq 'inout' ? ( 'in', 'out' ) : ( $dir );

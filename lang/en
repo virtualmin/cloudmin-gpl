@@ -1539,6 +1539,7 @@ bw_days=hours
 bw_enotify=Missing or invalid number of hours between email notifications
 
 graph_title=Bandwidth Graph
+graph_title2=Overall Bandwidth Graph
 graph_mode=Display mode:
 graph_mode_host=By hosting system
 graph_mode_total=Total for all systems
