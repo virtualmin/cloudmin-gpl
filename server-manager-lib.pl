@@ -20,7 +20,9 @@ do '../web-lib.pl';
 do '../ui-lib.pl';
 do 'images-lib.pl';
 do 'newfeatures-lib.pl';
-do 'bw-lib.pl';
+if (-r "$module_root_directory/bw-lib.pl") {
+	do 'bw-lib.pl';
+	}
 &foreign_require("servers", "servers-lib.pl");
 &foreign_require("proc", "proc-lib.pl");
 &foreign_require("net", "net-lib.pl");
