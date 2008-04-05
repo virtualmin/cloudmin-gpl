@@ -4,8 +4,6 @@
 # XXX refresh should be in dependency order
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
-# XXX domain transfer by rsyncing home directory
-#	XXX or scp directly, as in FS#3795
 # XXX mobile theme for VM2 - FS#3459
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX allow changing of main IP
@@ -3117,34 +3115,17 @@ return $gw;
 }
 
 # get_global_links(system-count)
-# Returns 3 array refs, for links, titles and icons
+# Returns 4 array refs, for links, titles, icons and categories
 sub get_global_links
 {
 local ($virtcount) = @_;
-local (@glinks, @gtitles, @gicons);
-
-# Show icons for global settings
-if ($virtcount) {
-	# Virtualmin domains
-	push(@glinks, "list_domains.cgi");
-	push(@gtitles, $text{'domains_title'});
-	push(@gicons, "images/domains.gif");
-
-	# Default features
-	push(@glinks, "list_features.cgi");
-	push(@gtitles, $text{'features_title'});
-	push(@gicons, "images/features.gif");
-	}
-
-# Virtualmin licences
-push(@glinks, "list_licences.cgi");
-push(@gtitles, $text{'licences_title'});
-push(@gicons, "images/licences.gif");
+local (@glinks, @gtitles, @gicons, @gcats);
 
 # SSH key management
 push(@glinks, "list_keys.cgi");
 push(@gtitles, $text{'keys_title'});
 push(@gicons, "images/keys.gif");
+push(@gcats, "settings");
 
 # Server images
 if ($server_management_types{'xen'} ||
@@ -3153,6 +3134,7 @@ if ($server_management_types{'xen'} ||
 	push(@glinks, "list_images.cgi");
 	push(@gtitles, $text{'images_title'});
 	push(@gicons, "images/images.gif");
+	push(@gcats, "settings");
 	}
 
 # Bandwidth monitoring
@@ -3162,7 +3144,29 @@ if ($server_management_types{'xen'} ||
 	push(@glinks, "edit_bw.cgi");
 	push(@gtitles, $text{'bw_title'});
 	push(@gicons, "images/bw.gif");
+	push(@gcats, "settings");
 	}
+
+# Show icons for global settings
+if ($virtcount) {
+	# Virtualmin domains
+	push(@glinks, "list_domains.cgi");
+	push(@gtitles, $text{'domains_title'});
+	push(@gicons, "images/domains.gif");
+	push(@gcats, "virtualmin");
+
+	# Default features
+	push(@glinks, "list_features.cgi");
+	push(@gtitles, $text{'features_title'});
+	push(@gicons, "images/features.gif");
+	push(@gcats, "virtualmin");
+	}
+
+# Virtualmin licences
+push(@glinks, "list_licences.cgi");
+push(@gtitles, $text{'licences_title'});
+push(@gicons, "images/licences.gif");
+push(@gcats, "virtualmin");
 
 # Type-defined icons
 foreach my $t (@server_management_types) {
@@ -3172,11 +3176,12 @@ foreach my $t (@server_management_types) {
 			push(@glinks, $g->{'link'});
 			push(@gtitles, $g->{'title'});
 			push(@gicons, $g->{'icon'});
+			push(@gcats, $g->{'cat'} || "settings");
 			}
 		}
 	}
 
-return (\@glinks, \@gtitles, \@gicons);
+return (\@glinks, \@gtitles, \@gicons, \@gcats);
 }
 
 # sort_package_updates(package, ...)

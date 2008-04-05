@@ -29,7 +29,7 @@ print &ui_table_row($text{'bw_disable'},
 
 # Email message to send when over
 print &ui_table_row($text{'bw_msg'},
-	&ui_textarea("msg", &get_bandwidth_message(), 5, 80));
+	&ui_textarea("msg", &get_bandwidth_message(), 5, 70));
 
 # Send to who
 print &ui_table_row($text{'bw_email'},

@@ -1560,3 +1560,7 @@ cat_system=System Configuration
 cat_res=Resources
 cat_power=System State
 cat_manage=System Operations
+cat_ec2=Amazon EC2
+cat_settings=System Settings
+cat_virtualmin=Virtualmin Settings
+cat_hosts=Host Systems

@@ -325,11 +325,13 @@ else {
 	}
 
 # Show icons for global settings
-($glinks, $gtitles, $gicons) = &get_global_links($virtcount);
-if (@$glinks) {
-	print "<hr>\n";
-	print &ui_subheading($text{'index_header'});
-	&icons_table($glinks, $gtitles, $gicons);
+if (!$main::vm2_no_global_links) {
+	($glinks, $gtitles, $gicons) = &get_global_links($virtcount);
+	if (@$glinks) {
+		print "<hr>\n";
+		print &ui_subheading($text{'index_header'});
+		&icons_table($glinks, $gtitles, $gicons);
+		}
 	}
 
 &ui_print_footer("/", $text{'index'});
