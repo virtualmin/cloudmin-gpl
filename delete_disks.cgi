@@ -34,6 +34,7 @@ if ($in{'confirm'}) {
 			}
 		}
 	&show_disk_reboot_message($server, $disks->[0]);
+	&save_managed_server($server);
 	}
 else {
 	# Ask first

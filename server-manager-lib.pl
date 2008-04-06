@@ -8,8 +8,6 @@
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX allow changing of main IP
 #	XXX do virtualmin too
-# XXX show Xen resource allocation out of total on edit_xen.cgi
-#	XXX show hosts too
 # XXX extra webmin logins to manage servers
 #     XXX reboot/shutdown/view/bandwidth
 #     XXX one login can own several servers
@@ -585,14 +583,22 @@ if ($status == 0) {
 		local $ssl = $out =~ /ssl=(\S+)/ ? $1 : 0;
 		if ($root && $ssl) {
 			# Webmin wants SSL .. but can we really provide it?
-			local $pp = &get_file_data_from_server($server,
-					"/etc/webmin/perl-path");
-			chop($pp);
-			$pp ||= "perl";
-			local ($sout, $sex) = &execute_command_on_server(
-				$server, "$pp -e 'use Net::SSLeay'");
-			if ($sex) {
-				$ssl = 0;	# Missing Perl module
+			if (!$server->{'has_net_ssleay'}) {
+				local $pp = &get_file_data_from_server($server,
+						"/etc/webmin/perl-path");
+				chop($pp);
+				$pp ||= "perl";
+				local ($sout, $sex) =
+				    &execute_command_on_server(
+					$server, "$pp -e 'use Net::SSLeay'");
+				if ($sex) {
+					$ssl = 0;	# Missing Perl module
+					}
+				else {
+					# Cache this, as once it is installed
+					# it is unlikely to disappear
+					$server->{'has_net_ssleay'} = 1;
+					}
 				}
 			}
 		return (0, $out, $root, $port, $ssl);
@@ -1074,50 +1080,45 @@ if (!defined(&$clfunc)) {
 	}
 
 # Check if we can login
+local $rv = 0;
 local ($status, $err, $webminroot, $webminport, $webminssl) =
 	&check_server_ssh_login($server);
 if ($status == 2) {
 	# Could not login via SSH
 	$server->{'status'} = 'nosshlogin';
 	$server->{'status_msg'} = $err;
-	&unlock_file($file);
-	return 0;
+	goto DONECHECK;
 	}
 elsif ($status == 7) {
 	# SSH login is not root
 	$server->{'status'} = 'nosshlogin';
 	$server->{'status_msg'} = "User does not have root access";
-	&unlock_file($file);
-	return 0;
+	goto DONECHECK;
 	}
 elsif ($status == 5) {
 	# Hosting system is down
 	$server->{'status'} = 'nohost';
 	$server->{'status_msg'} = $err;
-	&unlock_file($file);
-	return 0;
+	goto DONECHECK;
 	}
 elsif ($status == 6) {
 	# Virtual system down
 	$server->{'status'} = 'down';
 	$server->{'status_msg'} = $err;
-	&unlock_file($file);
-	return 0;
+	goto DONECHECK;
 	}
 elsif ($status && !$ping && !defined(&$clfunc)) {
 	# Could not SSH or ping, so assume totally down (for real systems)
 	$server->{'status'} = 'down';
 	$server->{'status_msg'} = $err;
-	&unlock_file($file);
-	return 0;
+	goto DONECHECK;
 	}
 elsif ($status) {
 	# Could not SSH, but can ping or the virtual system reports that
 	# it should be up
 	$server->{'status'} = 'nossh';
 	$server->{'status_msg'} = $err;
-	&unlock_file($file);
-	return 0;
+	goto DONECHECK;
 	}
 
 # Fix up Webmin port and SSL flag to reflect reality
@@ -1135,6 +1136,7 @@ if ($webminport && $server->{'id'} != 0) {
 	}
 
 # If we have a Webmin login, try it
+local ($got_memory, $got_disk);
 if ($server->{'user'} || $server->{'id'} == 0) {
 	local ($status, $err, $ostype, $real_ostype) =
 		&check_server_webmin_login($server);
@@ -1142,16 +1144,14 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		# Webmin replied, but it rejected our login
 		$server->{'status'} = 'nowebminlogin';
 		$server->{'status_msg'} = $err;
-		&unlock_file($file);
-		return 0;
+		goto DONECHECK;
 		}
 	elsif ($status) {
 		# Could not login to Webmin .. which may be because it is down,
 		# un-contactable, or not installed
 		$server->{'status'} = $webminroot ? 'downwebmin' : 'nowebmin';
 		$server->{'status_msg'} = $err;
-		&unlock_file($file);
-		return 0;
+		goto DONECHECK;
 		}
 
 	# Webmin is OK! Check for Virtualmin
@@ -1193,6 +1193,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					"virtual-server", "get_template", 0);
 			$info->{'defip'} = &remote_foreign_call($server,
 					"virtual-server", "get_default_ip");
+			$got_memory = 1;
+			$got_disk = 1;
 
 			# Get and save serial number
 			delete($info->{'serial'});
@@ -1238,7 +1240,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			delete($server->{'virtualmin_poss'});
 			$info = { };
 
-			# Make some direct Webmin calls to get info
+			# Make some direct Webmin calls to get info, starting
+			# with memory total and used
 			if (&remote_foreign_check("proc")) {
 				&remote_foreign_require($server, "proc",
 					"proc-lib.pl");
@@ -1251,6 +1254,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					"proc", "get_memory_info");
 				if (@mem) {
 					$info->{'mem'} = \@mem;
+					$got_memory = 1;
 					}
 				}
 			}
@@ -1299,12 +1303,78 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 	&save_server_collected($server, $info);
 	}
 else {
+	# Webmin is not available
 	$server->{'status'} = $webminroot ? 'nowebminlogin' : 'nowebmin';
 	$server->{'status_msg'} = undef;
 	}
 
+# If we couldn't get memory or disk from Webmin, get it via SSH
+local $info = &get_server_collected($server);
+local $got_more_info;
+if (!$got_memory) {
+	local ($out, $ex, $err) = &execute_command_on_server($server, "free");
+	if (!$ex && !$err) {
+		local @mem;
+		if ($out =~ /Mem:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/i) {
+			$mem[0] = $2*1024;
+			$mem[1] = $3*1024 + $5*1024 + $6*1024;
+			}
+		if ($out =~ /Swap:\s+(\d+)\s+(\d+)\s+(\d+)/i) {
+			$mem[2] = $1;
+			$mem[3] = $3;
+			}
+		if (@mem) {
+			$info->{'mem'} = \@mem;
+			$got_more_info = 1;
+			}
+		}
+	local ($out, $ex, $err) = &execute_command_on_server($server, "uptime");
+	if (!$ex && !$err &&
+	    $out =~ /average:\s+([0-9\.]+),\s*([0-9\.]+),\s*([0-9\.]+)/i) {
+		$info->{'load'} = [ $1, $2, $3 ];
+		$got_more_info = 1;
+		}
+	}
+if (!$got_disk) {
+	local ($out, $ex, $err) = &execute_command_on_server($server, "df -kl");
+	if (!$ex && !$err) {
+		local @lines = split(/\r?\n/, $out);
+		local ($total, $free);
+		for(my $i=0; $i<@lines; $i++) {
+			local $l = $lines[$i];
+			if ($l =~ /^\/\S+$/) {
+				# Filesystem name on own line
+				$l .= $lines[++$i];
+				}
+			if ($l =~ /^\// && $l !~ /^\/platform\//) {
+				local ($fs, $blocks, $used, $avail) =
+					split(/\s+/, $l);
+				$total += $blocks*1024;
+				$free += $avail*1024;
+				}
+			}
+		if ($total) {
+			$info->{'disk_total'} = $total;
+			$info->{'disk_free'} = $free;
+			}
+		$got_more_info = 1;
+		}
+	}
+if ($got_more_info) {
+	&save_server_collected($server, $info);
+	}
+
+$rv = 1;
+
+# Call any type-specific post-refresh function
+DONECHECK:
+local $rfunc = "type_".$server->{'manager'}."_post_refresh";
+if (defined(&$rfunc)) {
+	&$rfunc($server);
+	}
+
 &unlock_file($file);
-return 1;
+return $rv;
 }
 
 # save_server_domains(&server, &domains)
@@ -3381,6 +3451,17 @@ if ($config{'bw_enabled'} && defined(&$rfunc)) {
 		    'desc' => $text{'edit_bw'},
 		    'cat' => 'res',
 		    'link' => "bwgraph.cgi?id=$server->{'id'}" });
+	}
+
+# Host system pages
+local @par = &is_parent_server($server);
+foreach my $p (@par) {
+	if (-r "$module_root_directory/list_${p}s.cgi") {
+		push(@rv, { 'id' => 'host',
+			    'desc' => $text{$p.'_edit'},
+			    'cat' => 'manage',
+			    'link' => "edit_${p}.cgi?id=$server->{'id'}" });
+		}
 	}
 
 # Add type-specific actions

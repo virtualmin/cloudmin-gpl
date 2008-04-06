@@ -34,6 +34,7 @@ if ($in{'delete'}) {
 			&$second_print(&text('disk_deletedok'));
 			&show_disk_reboot_message($server, $disk);
 			}
+		&save_managed_server($server);
 		}
 	else {
 		# Ask first
@@ -141,6 +142,7 @@ else {
 			&show_disk_reboot_message($server, $disk);
 			}
 		}
+	&save_managed_server($server);
 
 	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 			 "", $text{'index_return'});
