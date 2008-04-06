@@ -3149,10 +3149,12 @@ if ($server_management_types{'xen'} ||
 	push(@gicons, "images/bw.gif");
 	push(@gcats, "settings");
 
-	push(@glinks, "bwgraph.cgi");
-	push(@gtitles, $text{'graph_title2'});
-	push(@gicons, "images/graph.gif");
-	push(@gcats, "settings");
+	if ($config{'bw_enabled'}) {
+		push(@glinks, "bwgraph.cgi");
+		push(@gtitles, $text{'graph_title2'});
+		push(@gicons, "images/graph.gif");
+		push(@gcats, "settings");
+		}
 	}
 
 # Show icons for global settings
