@@ -134,6 +134,8 @@ $install_times_file = "$module_config_directory/installtimes";
 
 $bandwidth_dir = "$module_config_directory/bandwidth";
 
+$shell_previous_dir = "$module_config_directory/previous";
+
 &set_all_html_print();
 
 # list_managed_servers()

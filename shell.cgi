@@ -15,7 +15,7 @@ $server || &error($text{'edit_egone'});
 		 0, 0, undef, undef, undef,
 	"onLoad='window.scroll(0, 10000); document.forms[0].cmd.focus()'");
 
-$prevfile = "$module_config_directory/previous.$in{'id'}";
+$prevfile = "$shell_previous_dir/$in{'id'}";
 if ($in{'clearcmds'}) {
 	&lock_file($prevfile);
 	unlink($prevfile);
@@ -64,11 +64,10 @@ if (!$in{'clear'}) {
 			$history .= $out;
 			}
 		@previous = &unique(@previous, $fullcmd);
-		&lock_file($prevfile);
-		&open_tempfile(PREVFILE, ">>$prevfile");
+		&make_dir($shell_previous_dir, 0700);
+		&open_lock_tempfile(PREVFILE, ">>$prevfile");
 		&print_tempfile(PREVFILE, $fullcmd,"\n");
 		&close_tempfile(PREVFILE);
-		&unlock_file($prevfile);
 		}
 	}
 

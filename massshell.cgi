@@ -17,7 +17,7 @@ else {
 print &text('mshell_on', join(" , ", map { "<tt>$_->{'host'}</tt>" }
 					 @servers)),"<br>\n";
 
-$prevfile = "$module_config_directory/previous.mass";
+$prevfile = "$shell_previous_dir/mass";
 if ($in{'clearcmds'}) {
 	&lock_file($prevfile);
 	unlink($prevfile);
@@ -75,11 +75,10 @@ if (!$in{'clear'}) {
 				}
 			}
 		@previous = &unique(@previous, $fullcmd);
-		&lock_file($prevfile);
-		&open_tempfile(PREVFILE, ">>$prevfile");
+		&make_dir($shell_previous_dir, 0700);
+		&open_lock_tempfile(PREVFILE, ">>$prevfile");
 		&print_tempfile(PREVFILE, $fullcmd,"\n");
 		&close_tempfile(PREVFILE);
-		&unlock_file($prevfile);
 		}
 	}
 
