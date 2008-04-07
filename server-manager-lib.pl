@@ -2913,6 +2913,7 @@ foreach my $sd (@sorted) {
 		$statserver = $server;
 		$statdir = $tmpdir;
 		}
+	&remote_finished();
 	&remote_foreign_require($statserver, "webmin", "webmin-lib.pl");
 	foreach my $p ("$d->{'dom'}.tar.gz",
 		       "$d->{'dom'}.tar.bz2",
