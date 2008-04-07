@@ -78,11 +78,20 @@ return $get_bandwidth_cache{$_[0]->{'id'}};
 }
 
 # save_bandwidth(&server, &info)
+# Updates collected bandwidth counts for some server
 sub save_bandwidth
 {
 &make_dir($bandwidth_dir, 0700);
 &write_file("$bandwidth_dir/$_[0]->{'id'}", $_[1]);
 $get_bandwidth_cache{$_[0]->{'id'}} ||= $_[1];
+}
+
+# delete_bandwidth(&server)
+# Remove all bandwidth counts for some server
+sub delete_bandwidth
+{
+&unlink_file("$bandwidth_dir/$_[0]->{'id'}");
+delete($get_bandwidth_cache{$_[0]->{'id'}});
 }
 
 # get_bandwidth_time(&server)

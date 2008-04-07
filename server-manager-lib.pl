@@ -300,16 +300,20 @@ else {
 	}
 }
 
-# delete_managed_server(&server)
+# delete_managed_server(&server, [keep-info])
 # Remove a managed server object
 sub delete_managed_server
 {
-local ($server) = @_;
+local ($server, $keep) = @_;
 if ($server->{'id'}) {
 	&servers::delete_server($server->{'id'});
 	}
-unlink("$server_domains_dir/$server->{'id'}");
-unlink("$server_collected_dir/$server->{'id'}");
+if (!$keep) {
+	unlink("$server_domains_dir/$server->{'id'}");
+	unlink("$server_collected_dir/$server->{'id'}");
+	unlink("$shell_previous_dir//$server->{'id'}");
+	&delete_bandwidth($server);
+	}
 }
 
 # find_managed_servers(all, &hostnames, &groupnames, &managers, &types)

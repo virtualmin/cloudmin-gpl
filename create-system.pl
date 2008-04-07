@@ -66,6 +66,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-update") {
 		$noupdate = 1;
 		}
+	elsif ($a eq "--id") {
+		$newid = shift(@ARGV);
+		}
 	elsif ($a eq "--serial") { $serial = shift(@ARGV); }
 	elsif ($a eq "--key") { $key = shift(@ARGV); }
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
@@ -130,7 +133,7 @@ elsif ($serial) {
 	}
 
 # Create initial server object
-$server = { 'id' => time().$$,
+$server = { 'id' => $newid || time().$$,
 	    'manager' => $type,
 	    'type' => 'unknown',
 	    'novirt' => $novirt,
@@ -422,6 +425,7 @@ print "                         [--image id]\n";
 print "                         [--no-update]\n";
 print "                         [--serial number --key number] |\n";
 print "                         [--same-serial] | [--allocate-serial]\n";
+print "                         [--id number]\n";
 if ($type) {
 	# Show type-specific command line args
 	$afunc = "type_".$type."_create_args";

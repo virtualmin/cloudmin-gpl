@@ -20,6 +20,9 @@ while(@ARGV > 0) {
 	if ($a eq "--host") {
 		push(@names, shift(@ARGV));
 		}
+	elsif ($a eq "--keep") {
+		$keep = 1;
+		}
 	else {
 		&usage();
 		}
@@ -69,7 +72,7 @@ foreach $s (@servers) {
 		}
 	else {
 		&remove_server_ssh_keys($s);
-		&delete_managed_server($s);
+		&delete_managed_server($s, $keep);
 		print ".. deleted successfully\n\n";
 
 		# Run post-deletion script
@@ -83,6 +86,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Deletes one or more managed systems.\n";
 print "\n";
 print "usage: delete-system.pl --host name [--host name]*\n";
+print "                        [--keep]\n";
 exit(1);
 }
 
