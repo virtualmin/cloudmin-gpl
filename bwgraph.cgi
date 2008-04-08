@@ -125,28 +125,62 @@ else {
 	}
 
 # Work out units, based on average of graphed systems
-$utotal = 0;
-$ufield = $dir eq 'in' ? 'bw_usage_in' :
-	  $dir eq 'out' ? 'bw_usage_out' : 'bw_usage';
-foreach $s (@showservers) {
-	$utotal += $s->{$ufield} / $step;
-	}
-$utotal /= scalar(@showservers) if ($mode ne 'total');
-if ($utotal > 10*1024*1024*1024) {
-	$scale = 1024*1024*1024;
-	$units = "GB";
-	}
-elsif ($utotal > 10*1024*1024) {
-	$scale = 1024*1024;
-	$units = "MB";
-	}
-elsif ($utotal > 10*1024) {
-	$scale = 1024;
-	$units = "kB";
-	}
-else {
-	$scale = 1;
-	$units = "bytes";
+if ($mode ne 'systems' && $mode ne 'host') {
+	$utotal = 0;
+	if ($in{'ago'} < 0) {
+		# Get total over last hour or day
+		local ($stotal, $scount);
+		foreach $s (@showservers) {
+			$b = &get_bandwidth($s);
+			for($i=$start; $i<=$end; $i+=$step) {
+				if ($dir eq 'in') {
+					$stotal += $b->{$prefix.'_in_'.$i};
+					}
+				elsif ($dir eq 'out') {
+					$stotal += $b->{$prefix.'_out_'.$i};
+					}
+				elsif ($dir eq 'total') {
+					$stotal += $b->{$prefix.'_in_'.$i} +
+						   $b->{$prefix.'_out_'.$i};
+					}
+				else {
+					$stotal += ($b->{$prefix.'_in_'.$i} +
+						    $b->{$prefix.'_out_'.$i})/2;
+					}
+				$scount++;
+				}
+			if ($scount) {
+				$utotal += $stotal / $scount;
+				}
+			}
+		}
+	else {
+		# Get usage over for the current accounting period
+		$ufield = $dir eq 'in' ? 'bw_usage_in' :
+			  $dir eq 'out' ? 'bw_usage_out' : 'bw_usage';
+		foreach $s (@showservers) {
+			$utotal += $s->{$ufield} / $step;
+			}
+		}
+	# Convert to average
+	$utotal /= scalar(@showservers) if ($mode ne 'total');
+	print "utotal=$utotal\n";
+	if ($utotal > 10*1024*1024*1024) {
+		$scale = 1024*1024*1024;
+		$units = "GB";
+		}
+	elsif ($utotal > 10*1024*1024) {
+		$scale = 1024*1024;
+		$units = "MB";
+		}
+	elsif ($utotal > 10*1024) {
+		$scale = 1024;
+		$units = "kB";
+		}
+	else {
+		$scale = 1;
+		$units = "bytes";
+		}
 	}
 
 # Labels
