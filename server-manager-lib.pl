@@ -18,6 +18,7 @@ do '../web-lib.pl';
 do '../ui-lib.pl';
 do 'images-lib.pl';
 do 'newfeatures-lib.pl';
+do 'owners-lib.pl';
 if (-r "$module_root_directory/bw-lib.pl") {
 	do 'bw-lib.pl';
 	}
@@ -3234,7 +3235,12 @@ if ($server_management_types{'xen'} ||
 		}
 	}
 
-# Show icons for global settings
+# System owners
+push(@glinks, "list_users.cgi");
+push(@gtitles, $text{'users_title'});
+push(@gicons, "images/users.gif");
+push(@gcats, "settings");
+
 if ($virtcount) {
 	# Virtualmin domains
 	push(@glinks, "list_domains.cgi");

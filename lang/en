@@ -900,7 +900,7 @@ dmass_mdisable=Disable only
 dmass_emoveclash=The domain $1 already exists on the target system
 dmass_emoveclash2=A domain named $1 already exists on the target system
 dmass_evirtdelete=Domain $1 has a private IP address $2, but you have not chosen to delete it from the source system when moving. This would cause an IP address conflict.
-dmass_emovessh=A direct domain move from $1 to $2 is not possible, as VM2 cannot SSH without a password : $3
+dmass_emovessh=A direct domain move from $1 to $2 is not possible, as VM2 cannot SSH without a password, or unless passwordless SSH between the systems is configured : $3. 
 
 zones_title=Solaris Zones Host Systems
 zones_add=Register a system for Solaris Zones hosting.
@@ -1551,7 +1551,7 @@ graph_title=Bandwidth Graph
 graph_title2=Overall Bandwidth Graph
 graph_mode=Display mode:
 graph_mode_host=By hosting system
-graph_mode_total=Total for all systems
+graph_mode_total=Total for all virtual systems
 graph_mode_systems=By system
 graph_ago=Period to display:
 graph_ok=Show
@@ -1574,3 +1574,5 @@ cat_ec2=Amazon EC2
 cat_settings=VM2 Settings
 cat_virtualmin=Virtualmin Settings
 cat_hosts=Host Systems
+
+users_title=System Owners
