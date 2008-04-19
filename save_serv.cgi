@@ -399,6 +399,14 @@ else {
 		$in{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i ||
 			&error($text{'add_euuser'});
 		$server->{'ssh_user'} = $in{'uuser'};
+		if ($in{'uport_def'}) {
+			delete($server->{'ssh_port'});
+			}
+		else {
+			$in{'uport'} =~ /^\d+$/ && $in{'uport'} > 0 &&
+			    $in{'uport'} < 65536 || error($text{'add_euport'});
+			$server->{'ssh_port'} = $in{'uport'};
+			}
 		}
 	if (defined($in{'webmin_mode'})) {
 		if ($in{'webmin_mode'} == 1) {

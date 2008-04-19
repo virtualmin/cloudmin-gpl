@@ -138,6 +138,11 @@ if ($hasssh) {
 	# SSH user
 	print &ui_table_row($text{'edit_authuser'},
 	   &ui_textbox("uuser", $server->{'ssh_user'}, 20));
+
+	# SSH port
+	print &ui_table_row($text{'edit_authport'},
+	   &ui_opt_textbox("uport", $server->{'ssh_port'}, 5,
+			   $text{'default'}." (22)"));
 	}
 
 # Webmin

@@ -12,6 +12,11 @@
 #     XXX reboot/shutdown/view/bandwidth
 #     XXX one login can own several servers
 # XXX EC2 new static IPs feature
+#     XXX and persistent storage
+# XXX SSH ports
+#     XXX adding page too
+#     XXX command-line API
+# XXX indent left menu by host system
 
 do '../web-lib.pl';
 &init_config();
@@ -571,6 +576,9 @@ if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
 	$cmd .= " -i ".quotemeta($key->{'file'});
 	}
+if ($server->{'ssh_port'}) {
+	$cmd .= " -p ".$server->{'ssh_port'};
+	}
 $cmd .= " $server->{'ssh_user'}\@$server->{'host'} 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK'";
 local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, 30);
 if ($status == 0) {
@@ -747,6 +755,9 @@ else {
 				    &list_ssh_keys();
 		$sshcmd .= " -i ".quotemeta($key->{'file'});
 		}
+	if ($server->{'ssh_port'}) {
+		$sshcmd .= " -p ".$server->{'ssh_port'};
+		}
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'} ".quotemeta($cmd);
 	local ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
 						 $timeout);
@@ -782,6 +793,9 @@ if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
 	$sshcmd .= " -i ".quotemeta($key->{'file'});
+	}
+if ($server->{'ssh_port'}) {
+	$sshcmd .= " -P ".$server->{'ssh_port'};
 	}
 $sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}:".
 	   quotemeta($remotefile)." ".quotemeta($localfile);
@@ -822,6 +836,9 @@ if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
 	$sshcmd .= " -i ".quotemeta($key->{'file'});
+	}
+if ($server->{'ssh_port'}) {
+	$sshcmd .= " -P ".$server->{'ssh_port'};
 	}
 $sshcmd .= " ".quotemeta($localfile).
 	   " $server->{'ssh_user'}\@$server->{'host'}:".
@@ -2767,6 +2784,7 @@ if ($direct) {
 		local ($out, $ex, $err) = &execute_command_on_server($server,
 			"ssh -o PasswordAuthentication=no -x ".
 			"-".$dest->{'ssh_protocol'}." ".
+			($dest->{'ssh_port'} ? " -p ".$dest->{'ssh_port'} : "").
 			$dest->{'ssh_user'}."\@".$dest->{'host'}." echo OK");
 		return $err if ($err);
 		if ($ex || $out !~ /OK/) {
@@ -2892,7 +2910,8 @@ foreach my $sd (@sorted) {
 		      );
 	if ($direct) {
 		# Backup to dest via SSH directly
-		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}\@$dest->{'host'}$desttemp" ]);
+		local $pa = $dest->{'ssh_port'} ? ":".$dest->{'ssh_port'} : "";
+		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}$pa\@$dest->{'host'}$desttemp" ]);
 		}
 	else {
 		# Backup to a temp file on the target
