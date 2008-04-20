@@ -37,6 +37,14 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ssh-key") {
 		$ssh_key = shift(@ARGV);
 		}
+	elsif ($a eq "--ssh-port") {
+		$ssh_port = shift(@ARGV);
+		$ssh_port =~ /^\d+$/ || $ssh_port > 0 && $ssh_port < 65536 ||
+			&usage("Invalid SSH port number");
+		}
+	elsif ($a eq "--default-ssh-port") {
+		$ssh_port = "";
+		}
 	elsif ($a eq "--webmin-same") {
 		$webmin_same = 1;
 		}
@@ -129,6 +137,10 @@ if (defined($ssh_user)) {
 	$server->{'ssh_user'} = $ssh_user;
 	$recheck = 1;
 	}
+if (defined($ssh_port)) {
+	$server->{'ssh_port'} = $ssh_port;
+	$recheck = 1;
+	}
 if ($webmin_same) {
 	$server->{'ssh_pass_same'} = 1;
 	$server->{'user'} = 'root';
@@ -179,6 +191,7 @@ print "                         [--os code]\n";
 print "                         [--virt | --novirt]\n";
 print "                         [--ssh-pass passsword | --ssh-key keyid]\n";
 print "                         [--ssh-user username]\n";
+print "                         [--ssh-port number | --default-ssh-port]\n";
 print "                         [--webmin-user user]\n";
 print "                         [--webmin-pass password]\n";
 print "                         [--webmin-same]\n";

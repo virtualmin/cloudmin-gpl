@@ -13,9 +13,6 @@
 #     XXX one login can own several servers
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
-# XXX SSH ports
-#     XXX adding page too
-#     XXX command-line API
 # XXX indent left menu by host system
 
 do '../web-lib.pl';

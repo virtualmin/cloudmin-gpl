@@ -21,6 +21,11 @@ $no_ssh = defined(&$sfunc) && &$sfunc();
 if (!$no_ssh) {
 	$in{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i || &error($text{'add_euuser'});
 	$server->{'ssh_user'} = $in{'uuser'};
+	if (!$in{'uport_def'}) {
+		$in{'uport'} =~ /^\d+$/ && $in{'uport'} > 0 &&
+		    $in{'uport'} < 65536 || error($text{'add_euport'});
+		$server->{'ssh_port'} = $in{'uport'};
+		}
 	if ($in{'auth_mode'} == 0) {
 		$in{'upass'} || &error($text{'add_eupass'});
 		$server->{'ssh_pass'} = $in{'upass'};

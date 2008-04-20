@@ -63,6 +63,7 @@ add_type=System type
 add_host=Internet hostname
 add_auth=SSH login mode
 add_user=SSH username
+add_port=SSH port number
 add_auth0=Using password $1
 add_auth1=Using SSH key $1
 add_webmin=Webmin login mode
