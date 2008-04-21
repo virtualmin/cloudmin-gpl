@@ -13,7 +13,6 @@
 #     XXX one login can own several servers
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
-# XXX indent left menu by host system
 
 do '../web-lib.pl';
 &init_config();
@@ -237,6 +236,39 @@ foreach my $s (@rv) {
 		}
 	}
 
+return @rv;
+}
+
+# list_managed_servers_sorted()
+# Returns servers list, with sorting and possibly 'indent' fields
+sub list_managed_servers_sorted
+{
+local @rv = &list_managed_servers();
+foreach my $s (@rv) {
+	$s->{'indent'} = 0;
+	}
+if ($config{'sort_mode'} == 0) {
+	# By hostname
+	@rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
+	}
+elsif ($config{'sort_mode'} == 1) {
+	# Under host systems
+	local @newrv;
+	@rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
+	foreach my $s (grep { $_->{'manager'} eq 'this' ||
+			      $_->{'manager'} eq 'real' } @rv) {
+		push(@newrv, $s);
+		foreach my $cs (&list_child_servers($s, \@rv)) {
+			$cs->{'indent'} = 1;
+			push(@newrv, $cs);
+			}
+		}
+	@rv = @newrv;
+	}
+elsif ($config{'sort_mode'} == 2) {
+	# By description
+	@rv = sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @rv;
+	}
 return @rv;
 }
 
@@ -4035,13 +4067,13 @@ foreach my $t ('xen', 'vserver', 'zone') {
 return wantarray ? @rv : $rv[0];
 }
 
-# list_child_servers(&server)
+# list_child_servers(&server, [&all-servers])
 # Returns a list of other servers this one hosts. For each type it can host,
 # check all other servers of that type to see if their parent is this one.
 sub list_child_servers
 {
-local ($server) = @_;
-local @servers = &list_managed_servers();
+local ($server, $allservers) = @_;
+local @servers = $allservers ? @$allservers : &list_managed_servers();
 local @rv;
 foreach my $p (&is_parent_server($server)) {
 	$p = "zones" if ($p eq "zone");

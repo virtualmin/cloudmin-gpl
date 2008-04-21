@@ -18,3 +18,4 @@ bw_period=month
 bw_dir_in=1
 bw_dir_out=1
 bw_notify=24
+sort_mode=0

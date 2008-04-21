@@ -23,7 +23,7 @@ else {
 $lerr = &licence_error_message();
 print $lerr if ($lerr);
 
-@allservers = sort { $a->{'host'} cmp $b->{'host'} } &list_managed_servers();
+@allservers = &list_managed_servers_sorted();
 
 # Build add links
 if (!$main::vm2_no_create_links) {
@@ -282,8 +282,10 @@ if (@servers) {
 				}
 			$shost = $s->{'short_host'};
 			print &ui_checked_columns_row([
-			    $s->{'status'} eq 'create' ? $shost :
-			     "<a href='edit_serv.cgi?id=$s->{'id'}'>$shost</a>",
+			    ("&nbsp;&nbsp;" x $s->{'indent'}).
+			    ($s->{'status'} eq 'create' ? $shost :
+				     "<a href='edit_serv.cgi?".
+				     "id=$s->{'id'}'>$shost</a>"),
 			    &$tfunc(),
 			    &describe_os($s->{'type'}),
 			    &describe_status($s, 1, 2).$posdesc,
