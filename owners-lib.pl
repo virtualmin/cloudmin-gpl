@@ -58,5 +58,29 @@ local ($u) = @_;
 &acl::delete_user($u->{'name'});
 }
 
+# list_owner_actions()
+# Returns a list of all possible actions
+sub list_owner_actions
+{
+return ( 'startup', 'shutdown', 'reboot', 'graph', 'view', 'run' );
+}
+
+# can_action(&server, action)
+# Returns if the current user can perform some action
+sub can_action
+{
+local ($server, $action) = @_;
+return 1 if (!$access{'owner'});
+if ($access{'servers'} ne '*') {
+	local @servers = split(/\s+/, $access{'servers'});
+	return 0 if (&indexof($server->{'id'}, @servers) < 0);
+	}
+if ($access{'actions'} ne '*') {
+	local @actions = split(/\s+/, $access{'actions'});
+	return 0 if (&indexof($action, $actions) < 0);
+	}
+return 1;
+}
+
 1;
 

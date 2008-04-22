@@ -1578,4 +1578,22 @@ cat_settings=VM2 Settings
 cat_virtualmin=Virtualmin Settings
 cat_hosts=Host Systems
 
-users_title=System Owners
+owners_title=System Owners
+owners_add=Add a new system owner.
+owners_name=Owner's login
+owners_real=Description
+owners_users=Managed systems
+owners_delete=Delete Selected Owners
+owners_none=No system owner accounts have been defined yet.
+
+owner_title1=Create System Owner
+owner_title2=Edit System Owner
+owner_header=System owner account details
+owner_name=Login username
+owner_pass=Login password
+owner_leave=Don't change
+owner_set=Set to
+owner_real=Description or real name
+owner_email=Contact email address
+owner_servers=Systems that can be managed
+owner_actions=Allowed operations

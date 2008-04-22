@@ -11,6 +11,7 @@
 # XXX extra webmin logins to manage servers
 #     XXX reboot/shutdown/view/bandwidth
 #     XXX one login can own several servers
+#     XXX help page
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
 
@@ -29,6 +30,7 @@ if (-r "$module_root_directory/bw-lib.pl") {
 &remote_error_setup(\&remote_error_handler);
 use Net::Amazon::EC2;
 use Time::Local;
+%access = &get_module_acl();
 
 @possible_server_management_types = ( "real",
 				      "xen",
@@ -3284,9 +3286,9 @@ if ($server_management_types{'xen'} ||
 	}
 
 # System owners
-push(@glinks, "list_users.cgi");
-push(@gtitles, $text{'users_title'});
-push(@gicons, "images/users.gif");
+push(@glinks, "list_owners.cgi");
+push(@gtitles, $text{'owners_title'});
+push(@gicons, "images/owners.gif");
 push(@gcats, "settings");
 
 if ($virtcount) {
