@@ -3,8 +3,10 @@
 
 require './server-manager-lib.pl';
 &ReadParseMime();
-($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
 &error_setup($text{'upload_err'});
+($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
+$server || &error($text{'edit_egone'});
+&can_action_error($server, "transfer");
 
 # Validate inputs, and get the file
 if ($in{'source'} == 0) {

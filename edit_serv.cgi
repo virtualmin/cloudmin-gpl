@@ -9,18 +9,29 @@ require './server-manager-lib.pl';
 $server || &error($text{'edit_egone'});
 $status = $server->{'status'};
 $info = &get_server_collected($server);
-&ui_print_header(&server_in($server), $text{'edit_title'}, "", "edit");
+&can_action($server, "edit") || &can_action_error($server, "view");
+$view = !&can_action($server, "edit");
 
-# Basic details section
+# Heading and form start
 @tds = ( "width=30%" );
-print &ui_form_start("save_serv.cgi", "post");
-print &ui_hidden("id", $in{'id'});
 $in{'basic'} = 1 if (!defined($in{'basic'}));
-print &ui_hidden_table_start($text{'edit_bheader'}, "width=100%", 2,
-			     "basic", $in{'basic'}, \@tds);
+if ($view) {
+	&ui_print_header(&server_in($server), $text{'view_title'}, "");
+
+	print &ui_hidden_table_start($text{'edit_bheader'}, "width=100%", 2,
+				     "basic", $in{'basic'}, \@tds);
+	}
+else {
+	&ui_print_header(&server_in($server), $text{'edit_title'}, "", "edit");
+
+	print &ui_form_start("save_serv.cgi", "post");
+	print &ui_hidden("id", $in{'id'});
+	print &ui_hidden_table_start($text{'edit_bheader'}, "width=100%", 2,
+				     "basic", $in{'basic'}, \@tds);
+	}
 
 # Hostname (editable for anything except this host)
-if ($server->{'id'} != 0) {
+if ($server->{'id'} != 0 && !$view) {
 	print &ui_table_row($text{'edit_host'},
 			    &ui_textbox("host", $server->{'host'}, 50));
 	}
@@ -34,35 +45,44 @@ $tfunc = "type_".$t."_desc";
 print &ui_table_row($text{'edit_type'}, &$tfunc());
 
 if ($server->{'id'} != 0) {
-	# Description (editable)
+	# Description (maybe editable)
 	print &ui_table_row($text{'edit_desc'},
-			    &ui_textbox("desc", $server->{'desc'}, 50), 3);
+		$view ? $server->{'desc'}
+		      : &ui_textbox("desc", $server->{'desc'}, 50), 3);
 	}
 
 # OS type
-print &ui_table_row($text{'edit_type2'},
+if ($view) {
+	($os) = grep { $_->[0] eq $server->{'type'} }
+		     @servers::server_types;
+	print &ui_table_row($text{'edit_type2'}, $os->[1]);
+	}
+else {
+	print &ui_table_row($text{'edit_type2'},
 		    &ui_select("type", $server->{'type'} || 'unknown',
 		      [ map { [ $_->[0], $_->[1] ] }
 			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
-
-# Groups
-@groups = &unique(map { split(/\t/, $_->{'group'}) } @servers);
-%ingroups = map { $_, 1 } split(/\t/, $server->{'group'});
-@grid = ( );
-foreach $g (@groups) {
-	push(@grid, &ui_checkbox("group", $g, $g, $ingroups{$g}));
 	}
-push(@grid, (@grid ? "&nbsp;&nbsp;&nbsp;" : "").
-	    &text('edit_newgroup', &ui_textbox("newgroup", undef, 10)));
-$gtable = &ui_grid_table(\@grid, 4);
-#$gtable .= $text{'edit_newgroup'}." ".&ui_textbox("newgroup", undef, 10);
-print &ui_table_row($text{'edit_groups'}, $gtable);
 
-# Start at boot
-$bfunc = "type_".$t."_get_atboot";
-if (defined(&$bfunc)) {
-	print &ui_table_row($text{'edit_atboot'},
+if (!$view) {
+	# Groups
+	@groups = &unique(map { split(/\t/, $_->{'group'}) } @servers);
+	%ingroups = map { $_, 1 } split(/\t/, $server->{'group'});
+	@grid = ( );
+	foreach $g (@groups) {
+		push(@grid, &ui_checkbox("group", $g, $g, $ingroups{$g}));
+		}
+	push(@grid, (@grid ? "&nbsp;&nbsp;&nbsp;" : "").
+		    &text('edit_newgroup', &ui_textbox("newgroup", undef, 10)));
+	$gtable = &ui_grid_table(\@grid, 4);
+	print &ui_table_row($text{'edit_groups'}, $gtable);
+
+	# Start at boot
+	$bfunc = "type_".$t."_get_atboot";
+	if (defined(&$bfunc)) {
+		print &ui_table_row($text{'edit_atboot'},
 			    &ui_yesno_radio("atboot",&$bfunc($server) ? 1 : 0));
+		}
 	}
 
 # Last status
@@ -92,9 +112,11 @@ if ($status eq 'virt') {
 	    $info->{'minfo'}->{'version'}.' ('.
 	    ($info->{'minfo'}->{'virtualmin'} eq 'gpl' ? 'GPL' : 'Pro').')');
 
-	# Enabled for Virtualmin domain creation
-	print &ui_table_row($text{'add_canvirt'},
+	if (!$view) {
+		# Enabled for Virtualmin domain creation
+		print &ui_table_row($text{'add_canvirt'},
 		    &ui_yesno_radio("canvirt", $server->{'novirt'} ? 0 : 1));
+		}
 
 	# Virtualmin licence
 	if ($info->{'serial'}) {
@@ -104,20 +126,40 @@ if ($status eq 'virt') {
 		}
 	}
 
+# Read-only bandwidth limit
+$rfunc = "type_".$t."_real_interfaces";
+if ($view && defined(&$rfunc) && $config{'bw_enabled'}) {
+	# Limit
+	print &ui_table_row($text{'edit_lbw'},
+		$server->{'bw_limit'} ? &nice_size($server->{'bw_limit'})." ".
+					&describe_bandwidth_period(0)
+				      : $text{'bw_unlimited'});
+
+	# Usage over this period
+	print &ui_table_row($text{'edit_lusage'},
+		&bandwidth_usage_message($server));
+	}
+
 # Type-specific information
 $efunc = "type_".$t."_edit_form";
 if (defined(&$efunc)) {
-	print &$efunc($server);
+	print &$efunc($server, $view);
 	}
 
 print &ui_hidden_table_end("basic");
 
 # Show authentication form (if needed)
-$haswebmin = ($status eq 'nowebminlogin' || $status eq 'novirt' ||
-	      $status eq 'downwebmin' || $status eq 'virt') &&
-	     $server->{'id'} != 0;
-$sfunc = "type_".$t."_no_ssh";
-$hasssh = !defined(&$sfunc) || !&$sfunc();
+if ($view) {
+	# Cannot edit authentication options in view mode
+	$haswebmin = $hasssh = 0;
+	}
+else {
+	$haswebmin = ($status eq 'nowebminlogin' || $status eq 'novirt' ||
+		      $status eq 'downwebmin' || $status eq 'virt') &&
+		     $server->{'id'} != 0;
+	$sfunc = "type_".$t."_no_ssh";
+	$hasssh = !defined(&$sfunc) || !&$sfunc();
+	}
 if ($haswebmin || $hasssh) {
 	print &ui_hidden_table_start($text{'edit_aheader'}." ".
 				     &hlink($text{'edit_help'}, "editauth"),
@@ -162,7 +204,10 @@ if ($haswebmin || $hasssh) {
 
 # Action buttons at end of form (depends on status)
 $down = $status eq 'down' || $status eq 'nossh' || $status eq 'nohost';
-if ($main::vm2_no_edit_buttons) {
+if ($view) {
+	# No form, so no buttons
+	}
+elsif ($main::vm2_no_edit_buttons) {
 	# Theme provides it's own action links
 	print &ui_form_end([ [ "save", $text{'save'} ] ]);
 	}
@@ -257,7 +302,7 @@ if ($info && scalar(keys %$info) > 1) {
 		print &ui_table_row($text{'edit_iposs'},
 		    join(", ", map { "$_->{'name'} ($_->{'version'})" }
 				   @{$info->{'poss'}})." ".
-		    ($down ? "" :
+		    ($down || !&can_action($server, "update") ? "" :
 		     "<input type=button value='$text{'edit_iupdates'}' ".
 		     "onClick='document.location=\"update.cgi?id=$in{'id'}\"'>")
 		    );
@@ -374,8 +419,11 @@ if (defined(&$cfunc) && &$cfunc($server) && $status ne 'nohost') {
 				     "width=100%", 2,
 				     "ifaces", $in{'ifaces'}, \@tds);
 	$ifaces = &$ifunc($server);
-	@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".
-		    "$text{'edit_ifaceadd'}</a>" );
+	@ilinks = ( );
+	if (&can_action($server, "ifaces")) {
+		@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".
+			    "$text{'edit_ifaceadd'}</a>" );
+		}
 	print &ui_links_row(\@ilinks);
 	print &ui_columns_start([ $text{'edit_ifaceaddress'},
 				  $text{'edit_ifacename'},
@@ -390,7 +438,8 @@ if (defined(&$cfunc) && &$cfunc($server) && $status ne 'nohost') {
 							    \@doms, $iface);
 			}
 		print &ui_columns_row([
-			$iface->{'noedit'} ? $iface->{'address'} :
+			$iface->{'noedit'} || !&can_action($server, "ifaces") ?
+			    $iface->{'address'} :
 			    "<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>".
 			    "$iface->{'address'}</a>",
 			$iface->{'name'},
@@ -407,7 +456,8 @@ if (defined(&$cfunc) && &$cfunc($server) && $status ne 'nohost') {
 	}
 
 # CPU and memory limits, if we can manage them
-if (&can_edit_limits($server) && $status ne 'nohost') {
+if (&can_edit_limits($server) && $status ne 'nohost' &&
+    &can_action($server, "limits")) {
 	@tds = ( "width=30%" );
 	print &ui_hidden_table_start($text{'edit_lheader'}." ".
 				     &hlink($text{'edit_help'}, "editlimits"),
@@ -450,18 +500,8 @@ if (&can_edit_limits($server) && $status ne 'nohost') {
 			&describe_bandwidth_period(0));
 
 		# Current usage
-		$umsg = &nice_size($server->{'bw_usage'})." ".
-			&describe_bandwidth_period(1);
-		if ($server->{'bw_limit'} &&
-		    $server->{'bw_usage'} > $server->{'bw_limit'}) {
-			# Over limit! Highlight it
-			$umsg = "<font color=#ff0000>$umsg</font>";
-			if ($server->{'bw_notify'}) {
-				$umsg .= " (".&text('edit_lnotify',
-					&make_date($server->{'bw_notify'})).")";
-				}
-			}
-		print &ui_table_row($text{'edit_lusage'}, $umsg);
+		print &ui_table_row($text{'edit_lusage'},
+			&bandwidth_usage_message($server));
 		}
 
 	print &ui_table_row(undef, &ui_submit($text{'save'}), 2);

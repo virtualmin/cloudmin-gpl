@@ -186,6 +186,24 @@ else {
 return $rv;
 }
 
+# bandwidth_usage_message(&server)
+# Returns text describing usage over this period
+sub bandwidth_usage_message
+{
+local ($server) = @_;
+local $umsg = &nice_size($server->{'bw_usage'})." ".
+	      &describe_bandwidth_period(1);
+if ($server->{'bw_limit'} &&
+    $server->{'bw_usage'} > $server->{'bw_limit'}) {
+	# Over limit! Highlight it
+	$umsg = "<font color=#ff0000>$umsg</font>";
+	if ($server->{'bw_notify'}) {
+		$umsg .= " (".&text('edit_lnotify',
+			&make_date($server->{'bw_notify'})).")";
+		}
+	}
+return $umsg;
+}
 
 
 1;

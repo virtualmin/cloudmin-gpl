@@ -6,6 +6,7 @@ require './server-manager-lib.pl';
 &error_setup($text{'pass_err'});
 ($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
 $server || &error($text{'edit_egone'});
+&can_action_error($server, "pass");
 
 # Validate inputs
 $in{'ssh_pass_def'} || $in{'ssh_pass'} =~ /\S/ ||

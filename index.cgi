@@ -281,11 +281,20 @@ if (@servers) {
 					'index_poss' : 'index_pos', $pos);
 				}
 			$shost = $s->{'short_host'};
+			if ($s->{'status'} eq 'create') {
+				# Creating, cannot edit
+				$link = $shost;
+				}
+			elsif (&can_action($s, "edit") ||
+			       &can_action($s, "view")) {
+				$link = "<a href='edit_serv.cgi?".
+                                     "id=$s->{'id'}'>$shost</a>";
+				}
+			else {
+				$link = $shost;
+				}
 			print &ui_checked_columns_row([
-			    ("&nbsp;&nbsp;" x $s->{'indent'}).
-			    ($s->{'status'} eq 'create' ? $shost :
-				     "<a href='edit_serv.cgi?".
-				     "id=$s->{'id'}'>$shost</a>"),
+			    ("&nbsp;&nbsp;" x $s->{'indent'}).$link,
 			    &$tfunc(),
 			    &describe_os($s->{'type'}),
 			    &describe_status($s, 1, 2).$posdesc,

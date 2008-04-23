@@ -616,6 +616,7 @@ edit_link_coll=Detailed Status
 edit_link_doms=Virtualmin Domains
 edit_link_ifaces=Network Interfaces
 edit_link_limits=Resource Limits
+edit_link_view=System Details
 
 update_title=Update Packages
 update_doing=Updating $2 packages on $1 ..
@@ -1612,6 +1613,9 @@ owner_action_reboot=Reboot systems
 owner_action_graph=View bandwidth usage graph
 owner_action_view=View system details
 owner_action_run=Run commands on systems
+owner_action_edit=Edit system
+owner_action_view=View system details
+owner_action_transfer=Transfer files
 
 downers_err=Failed to delete system owners
 downers_enone=None selected
@@ -1620,3 +1624,5 @@ can_eserver=You are not allowed to manage the system $1
 can_eaction=You are not allowed to perform the action : $1
 can_ecreate=You are not allowed to create new $1 systems
 can_eadd=You are not allowed to add existing $1 systems
+
+view_title=System Details

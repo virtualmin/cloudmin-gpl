@@ -33,6 +33,7 @@ else {
 	# Servers with bandwidth
 	@showservers = grep { $rfunc = "type_".$_->{'manager'}."_real_interfaces"; defined(&$rfunc) } @servers;
 	}
+&can_action_error(\@showservers, "graph");
 
 &ui_print_header(&server_in($server),
 		 $text{'graph_title'}, "", undef, 0, 0, 0, undef,

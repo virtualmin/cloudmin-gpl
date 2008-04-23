@@ -13,6 +13,7 @@
 #     XXX help page
 #     XXX other actions, like installing updates and scripts?
 #     XXX new features page
+#     XXX all CGIs must check
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
 
@@ -263,6 +264,7 @@ elsif ($config{'sort_mode'} == 1) {
 		push(@newrv, $s);
 		foreach my $cs (&list_child_servers($s, \@rv)) {
 			$cs->{'indent'} = 1;
+			$cs->{'indent_host'} = $s->{'id'};
 			push(@newrv, $cs);
 			}
 		}
@@ -276,10 +278,18 @@ return @rv;
 }
 
 # list_available_managed_servers_sorted()
-# Returns a sorted list of servers this user can see
+# Returns a sorted list of servers this user can see. Remove indents if the
+# user can't see the host system.
 sub list_available_managed_servers_sorted
 {
-return grep { &can_action($_) } &list_managed_servers_sorted();
+local @rv = grep { &can_action($_) } &list_managed_servers_sorted();
+local %got = map { $_->{'id'}, $_ } @rv;
+foreach my $s (@rv) {
+	if ($s->{'indent_host'} && !$got{$s->{'indent_host'}}) {
+		$s->{'indent'} = 0;
+		}
+	}
+return @rv;
 }
 
 # list_available_managed_servers()
@@ -3405,32 +3415,41 @@ local $cantransfer = defined(&$tfunc) && &$tfunc($server);
 
 # Start with links to edit_serv.cgi
 local $ed = "edit_serv.cgi?id=$server->{'id'}";
-push(@rv, { 'id' => 'edit',
-	    'desc' => $text{'edit_link_edit'},
-	    'cat' => '',
-	    'link' => $ed });
-if ($status eq 'virt') {
-	push(@rv, { 'id' => 'coll',
-		    'desc' => $text{'edit_link_coll'},
-		    'cat' => 'system',
-		    'link' => $ed."&basic=0&coll=1" });
-	push(@rv, { 'id' => 'doms',
-		    'desc' => $text{'edit_link_doms'},
-		    'cat' => 'system',
-		    'link' => $ed."&basic=0&doms=1" });
+if (&can_action($server, "edit")) {
+	push(@rv, { 'id' => 'edit',
+		    'desc' => $text{'edit_link_edit'},
+		    'cat' => '',
+		    'link' => $ed });
+	if ($status eq 'virt') {
+		push(@rv, { 'id' => 'coll',
+			    'desc' => $text{'edit_link_coll'},
+			    'cat' => 'system',
+			    'link' => $ed."&basic=0&coll=1" });
+		push(@rv, { 'id' => 'doms',
+			    'desc' => $text{'edit_link_doms'},
+			    'cat' => 'system',
+			    'link' => $ed."&basic=0&doms=1" });
+		}
+	local $ifunc = "type_".$t."_list_interfaces";
+	if (defined(&$ifunc)) {
+		push(@rv, { 'id' => 'ifaces',
+			    'desc' => $text{'edit_link_ifaces'},
+			    'cat' => 'system',
+			    'link' => $ed."&basic=0&ifaces=1" });
+		}
+	if (&can_edit_limits($server)) {
+		push(@rv, { 'id' => 'limits',
+			    'desc' => $text{'edit_link_limits'},
+			    'cat' => 'system',
+			    'link' => $ed."&basic=0&limits=1" });
+		}
 	}
-local $ifunc = "type_".$t."_list_interfaces";
-if (defined(&$ifunc)) {
-	push(@rv, { 'id' => 'ifaces',
-		    'desc' => $text{'edit_link_ifaces'},
-		    'cat' => 'system',
-		    'link' => $ed."&basic=0&ifaces=1" });
-	}
-if (&can_edit_limits($server)) {
-	push(@rv, { 'id' => 'limits',
-		    'desc' => $text{'edit_link_limits'},
-		    'cat' => 'system',
-		    'link' => $ed."&basic=0&limits=1" });
+elsif (&can_action($server, "view")) {
+	# Or link to view details
+	push(@rv, { 'id' => 'view',
+		    'desc' => $text{'edit_link_view'},
+		    'cat' => '',
+		    'link' => "edit_serv.cgi?id=$server->{'id'}" });
 	}
 
 if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
@@ -3438,19 +3457,24 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 	local $sfunc = "type_".$t."_no_startup";
 	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
 		   	 $status eq 'nohost';
-	push(@rv, { 'id' => 'refresh',
-		    'desc' => $text{'edit_refresh'},
-		    'cat' => undef });
-	if ($cantransfer) {
+	if (&can_action($server, "refresh")) {
+		push(@rv, { 'id' => 'refresh',
+			    'desc' => $text{'edit_refresh'},
+			    'cat' => undef });
+		}
+	if ($cantransfer && &can_action($server, "transfer")) {
 		push(@rv, { 'id' => 'transfer',
 			    'desc' => $text{'edit_transfer'},
 			    'cat' => 'manage',
 			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
 		}
-	push(@rv, { 'id' => 'startup',
-		    'desc' => $text{'edit_startup'},
-		    'cat' => 'power' }) if (!$nostart);
-	if ($status eq 'nossh' && !$noshut) {
+	if (!$nostart && &can_action($server, "startup")) {
+		push(@rv, { 'id' => 'startup',
+			    'desc' => $text{'edit_startup'},
+			    'cat' => 'power' });
+		}
+	if ($status eq 'nossh' && !$noshut &&
+	    &can_action($server, "shutdown")) {
 		push(@rv, { 'id' => 'shutdown',
 			    'desc' => $text{'edit_shutdown'},
 			    'cat' => 'power' });
@@ -3459,14 +3483,18 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 else {
 	# Most actions are only for up servers
 	local $wurl = &webmin_link($server);
-	push(@rv, { 'id' => 'refresh',
-		    'desc' => $text{'edit_refresh'},
-		    'cat' => '' },
-		  undef,
-		  { 'id' => 'shell',
-		    'desc' => $text{'edit_shell'},
-		    'cat' => 'manage' });
-	if ($cantransfer) {
+	if (&can_action($server, "refresh")) {
+		push(@rv, { 'id' => 'refresh',
+			    'desc' => $text{'edit_refresh'},
+			    'cat' => '' });
+		push(@rv, undef);
+		}
+	if (&can_action($server, "run")) {
+		push(@rv, { 'id' => 'shell',
+		    	    'desc' => $text{'edit_shell'},
+		    	    'cat' => 'manage' });
+		}
+	if ($cantransfer && &can_action($server, "transfer")) {
 		push(@rv, { 'id' => 'transfer',
 			    'desc' => $text{'edit_transfer'},
 			    'cat' => 'manage',
@@ -3491,43 +3519,48 @@ else {
 			}
 		}
 	push(@rv, undef);	# Spacer
-	push(@rv, { 'id' => 'pass',
-		    'desc' => $text{'edit_setpass'},
-		    'cat' => 'manage',
-		    'link' => "edit_pass.cgi?id=$server->{'id'}" });
+	if (&can_action($server, "pass")) {
+		push(@rv, { 'id' => 'pass',
+			    'desc' => $text{'edit_setpass'},
+			    'cat' => 'manage',
+			    'link' => "edit_pass.cgi?id=$server->{'id'}" });
+		}
 	if (($status eq 'novirt' || $status eq 'nowebmin') &&
-	    $server->{'manager'} ne 'this') {
+	    $server->{'manager'} ne 'this' &&
+	    &can_action($server, "installvirt")) {
 		push(@rv, { 'id' => 'installvirt',
 			    'desc' => $text{'edit_installvirt'},
 			    'cat' => 'manage' });
 		}
-	if ($status eq 'nowebmin') {
+	if ($status eq 'nowebmin' &&
+	    &can_action($server, "installwebmin")) {
 		push(@rv, { 'id' => 'installwebmin',
 			    'desc' => $text{'edit_installwebmin'},
 			    'cat' => 'manage' });
 		}
-	if ($status eq 'virt' && $server->{'virtualmin_error'}) {
+	if ($status eq 'virt' && $server->{'virtualmin_error'} &&
+	    &can_action($server, "refresh")) {
 		push(@rv, { 'id' => 'recheck',
 			    'desc' => $text{'edit_recheck'},
 			    'cat' => '' });
 		}
-	if (!$noreboot) {
+	if (!$noreboot && &can_action($server, "reboot")) {
 		push(@rv, { 'id' => 'reboot',
 			    'desc' => $text{'edit_reboot'},
 			    'cat' => 'power' });
 		}
-	if (!$noshut) {
+	if (!$noshut && &can_action($server, "shutdown")) {
 		push(@rv, { 'id' => 'shutdown',
 			    'desc' => $text{'edit_shutdown'},
 			    'cat' => 'power' });
 		}
 	}
-if ($t ne 'real' && $t ne 'this') {
+if ($t ne 'real' && $t ne 'this' && &can_action($server, "delete")) {
 	push(@rv, { 'id' => 'delete',
 		    'desc' => $text{'edit_delete'},
 		    'cat' => 'power' });
 	}
-if (!$noimage) {
+if (!$noimage && &can_action($server, "image")) {
 	push(@rv, { 'id' => 'image',
 		    'desc' => $text{'edit_image'},
 		    'cat' => 'manage',
@@ -3536,21 +3569,24 @@ if (!$noimage) {
 
 # Complex pages associated with system
 local $dfunc = "type_".$t."_can_disks";
-if (defined(&$dfunc) && &$dfunc($server)) {
+if (defined(&$dfunc) && &$dfunc($server) &&
+    &can_action($server, "disks")) {
 	push(@rv, { 'id' => 'disks',
 		    'desc' => $text{'edit_disks'},
 		    'cat' => 'res',
 		    'link' => "list_disks.cgi?id=$server->{'id'}" });
 	}
 local $vfunc = "type_".$t."_can_vcpus";
-if (defined(&$vfunc) && &$vfunc($server)) {
+if (defined(&$vfunc) && &$vfunc($server) &&
+    &can_action($server, "vcpus")) {
 	push(@rv, { 'id' => 'vcpus',
 		    'desc' => $text{'edit_vcpus'},
 		    'cat' => 'res',
 		    'link' => "list_vcpus.cgi?id=$server->{'id'}" });
 	}
 local $rfunc = "type_".$t."_real_interfaces";
-if ($config{'bw_enabled'} && defined(&$rfunc)) {
+if ($config{'bw_enabled'} && defined(&$rfunc) &&
+    &can_action($server, "graph")) {
 	push(@rv, { 'id' => 'bw',
 		    'desc' => $text{'edit_bw'},
 		    'cat' => 'res',
@@ -3560,7 +3596,8 @@ if ($config{'bw_enabled'} && defined(&$rfunc)) {
 # Host system pages
 local @par = &is_parent_server($server);
 foreach my $p (@par) {
-	if (-r "$module_root_directory/list_${p}s.cgi") {
+	if (-r "$module_root_directory/list_${p}s.cgi" &&
+	    &can_action(undef, "global")) {
 		push(@rv, { 'id' => 'host',
 			    'desc' => $text{$p.'_edit'},
 			    'cat' => 'manage',

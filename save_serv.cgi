@@ -9,6 +9,7 @@ $t = $server->{'manager'};
 
 if ($in{'shutdown'}) {
 	# Shut down this system, after asking for confirmation
+	&can_action_error($server, "shutdown");
 	&ui_print_header(&server_in($server), $text{'save_shuttitle'}, "");
 	if (!$in{'confirm'}) {
 		&show_confirm_form(
@@ -39,6 +40,7 @@ if ($in{'shutdown'}) {
 
 elsif ($in{'startup'}) {
 	# Start up this virtual system
+	&can_action_error($server, "startup");
 	&ui_print_header(&server_in($server), $text{'save_starttitle'}, "");
 	print &text('save_starting',
 		    "<tt>$server->{'host'}</tt>"),"<br>\n";
@@ -60,6 +62,7 @@ elsif ($in{'startup'}) {
 
 elsif ($in{'reboot'}) {
 	# Request a reboot, after asking for confirmation
+	&can_action_error($server, "reboot");
 	&ui_print_header(&server_in($server), $text{'save_reboottitle'}, "");
 	if (!$in{'confirm'}) {
 		&show_confirm_form(
@@ -112,6 +115,7 @@ elsif ($in{'reboot'}) {
 
 elsif ($in{'delete'}) {
 	# Delete system, after asking for confirmation
+	&can_action_error($server, "delete");
 
 	# Check if server can be deleted
 	if ($s->{'manager'} eq 'real' || $s->{'manager'} eq 'this') {
@@ -166,6 +170,7 @@ elsif ($in{'delete'}) {
 
 elsif ($in{'installvirt'}) {
 	# Install Virtualmin, which may take a while
+	&can_action_error($server, "installvirt");
 	&ui_print_header(&server_in($server), $text{'save_virttitle'}, "");
 
 	if (!$in{'confirm'}) {
@@ -235,6 +240,7 @@ elsif ($in{'installvirt'}) {
 
 elsif ($in{'installwebmin'}) {
 	# Install Webmin
+	&can_action_error($server, "installwebmin");
 	&ui_print_header(&server_in($server), $text{'save_webmintitle'}, "");
 
 	($src, $type, $err) = &get_install_webmin_source($server);
@@ -262,6 +268,7 @@ elsif ($in{'installwebmin'}) {
 
 elsif ($in{'recheck'}) {
 	# Perform a config re-check
+	&can_action_error($server, "refresh");
 	&ui_print_header(&server_in($server), $text{'save_rechecktitle'}, "");
 
 	print $text{'save_rechecking'},"<br>\n";
@@ -292,6 +299,7 @@ elsif ($in{'recheck'}) {
 
 elsif ($in{'refresh'}) {
 	# Refresh monitored status
+	&can_action_error($server, "refresh");
 	&ui_print_header(&server_in($server), $text{'save_refreshtitle'}, "");
 
 	print $text{'save_refreshing'},"<br>\n";
@@ -354,6 +362,7 @@ elsif ($in{'bw'}) {
 else {
 	# Validate inputs, and save details
 	&error_setup($text{'save_err'});
+	&can_action($server, "edit");
 	if ($server->{'id'} != 0) {
 		$oldip = &to_ipaddress($server->{'host'});
 		$newip = &to_ipaddress($in{'host'});

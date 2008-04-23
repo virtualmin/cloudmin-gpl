@@ -38,16 +38,27 @@ local ($u, $oldu) = @_;
 &foreign_require("acl", "acl-lib.pl");
 local $acl = $u->{'acl'};
 delete($u->{'acl'});
+$u->{'readonly'} = $module_name;
+$u->{'modules'} = [ $module_name, "servers" ];
 if ($oldu) {
 	&acl::modify_user($oldu->{'name'}, $u);
 	}
 else {
-	$u->{'modules'} ||= [ $module_name ];
 	&acl::create_user($u);
 	}
 $acl->{'owner'} = 1;
 $acl->{'noconfig'} = 1;
 &save_module_acl($acl, $u->{'name'});
+
+# Grant access to just owned servers
+local %sacl = ( 'servers' => $acl->{'servers'},
+		'edit' => 0,
+		'find' => 0,
+		'auto' => 0,
+		'add' => 0,
+		'links' => 1 );
+&save_module_acl(\%sacl, $u->{'name'}, "servers");
+
 &reload_miniserv();
 }
 

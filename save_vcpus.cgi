@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 @servers = &list_managed_servers();
 ($server) = grep { $_->{'id'} == $in{'id'} } @servers;
 $server || &error($text{'edit_egone'});
+&can_action_error($server, "vcpus");
 
 # Get the CPUs
 $vfunc = "type_".$server->{'manager'}."_get_vcpus";
