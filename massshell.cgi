@@ -10,6 +10,7 @@ else {
 	}
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
+&can_action_error(\@servers, "run");
 &ui_print_header(undef, $text{'mshell_title'}, "", "mshell",
 		 0, 0, undef, undef, undef,
 	"onLoad='window.scroll(0, 10000); document.forms[0].cmd.focus()'");
@@ -67,9 +68,10 @@ if (!$in{'clear'}) {
 				}
 			if ($cmd) {
 				($out, $ex, $err) = &execute_command_on_server(
-					$server, "cd ".quotemeta($pwd)." ; $cmd");
+				    $server, "cd ".quotemeta($pwd)." ; $cmd");
 				$history .= "<b>$server->{'host'}</b> : ";
 				$out = "ERROR: $err\n" if ($err);
+				$out = "\n" if ($out !~ /\S/);
 				$out = &html_escape($out, 1);
 				$history .= $out;
 				}

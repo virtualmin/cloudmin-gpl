@@ -6,6 +6,7 @@ require './server-manager-lib.pl';
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
 &error_setup($text{'mupload_err'});
+&can_action_error(\@servers, "upload");
 
 # Validate inputs, and get the file
 if ($in{'source'} == 0) {

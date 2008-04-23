@@ -10,8 +10,9 @@
 #	XXX do virtualmin too
 # XXX extra webmin logins to manage servers
 #     XXX reboot/shutdown/view/bandwidth
-#     XXX one login can own several servers
 #     XXX help page
+#     XXX other actions, like installing updates and scripts?
+#     XXX new features page
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
 
@@ -130,7 +131,7 @@ $virtualmin_progress_file = "$module_config_directory/progress-licences";
 $virtualmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-virtualmin";
 $virtualmin_webmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-webmin";
 
-$default_search_file = "$module_config_directory/defaultsearch";
+$default_search_file = "$module_config_directory/defaultsearch.$remote_user";
 
 @newfeatures_dirs = ( "$module_root_directory/newfeatures-all" );
 $newfeatures_seen_dir = "$module_config_directory/seenfeatures";
@@ -272,6 +273,20 @@ elsif ($config{'sort_mode'} == 2) {
 	@rv = sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @rv;
 	}
 return @rv;
+}
+
+# list_available_managed_servers_sorted()
+# Returns a sorted list of servers this user can see
+sub list_available_managed_servers_sorted
+{
+return grep { &can_action($_) } &list_managed_servers_sorted();
+}
+
+# list_available_managed_servers()
+# Returns a list of servers this user can see
+sub list_available_managed_servers
+{
+return grep { &can_action($_) } &list_managed_servers();
 }
 
 # first_ethernet_iface()
@@ -796,7 +811,7 @@ else {
 		return ($out, 0, undef, $status);
 		}
 	elsif ($status == 3) {
-		return ($out, 1, undef, $status);
+		return ($out || "Connection failed\n", 1, undef, $status);
 		}
 	else {
 		return ($out, undef, $text{'status_'.$status}, $status);
@@ -3251,6 +3266,9 @@ sub get_global_links
 {
 local ($virtcount) = @_;
 local (@glinks, @gtitles, @gicons, @gcats);
+if (!&can_action(undef, "global")) {
+	goto NOGLOBAL;
+	}
 
 # SSH key management
 push(@glinks, "list_keys.cgi");
@@ -3324,7 +3342,30 @@ foreach my $t (@server_management_types) {
 		}
 	}
 
+NOGLOBAL:
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
+}
+
+# get_available_create_links()
+# Returns a list of link objects for creation actions available to the
+# current user
+sub get_available_create_links
+{
+local @rv;
+foreach $t (@server_manager::server_management_types) {
+	$lfunc = "server_manager::type_".$t."_create_links";
+	if (defined(&$lfunc)) {
+		foreach $l (&$lfunc()) {
+			$l->{'type'} = $t;
+			local $cfunc = $l->{'create'} ? \&can_create_server
+						      : \&can_add_server;
+			if (&$cfunc($t)) {
+				push(@rv, $l);
+				}
+			}
+		}
+	}
+return @rv;
 }
 
 # sort_package_updates(package, ...)

@@ -23,7 +23,7 @@ else {
 $lerr = &licence_error_message();
 print $lerr if ($lerr);
 
-@allservers = &list_managed_servers_sorted();
+@allservers = &list_available_managed_servers_sorted();
 
 # Build add links
 if (!$main::vm2_no_create_links) {
@@ -297,22 +297,24 @@ if (@servers) {
 		print &ui_columns_end();
 		}
 	print &ui_links_row([ @links, @crlinks ]);
-	print &ui_form_end([
-			     [ "refresh", $text{'index_refresh'} ],
-			     $posscount ? ( [ "update",$text{'index_update'} ] )
-					: ( ),
-			     $procount ? ( [ "script", $text{'index_script'} ] )
-				       : ( ),
-			     undef,
-			     [ "dereg", $text{'index_dereg'} ],
-			     [ "delete", $text{'index_delete'} ],
-			     undef,
-			     [ "shutdown", $text{'index_shutdown'} ],
-			     [ "startup", $text{'index_startup'} ],
-			     undef,
-			     [ "upload", $text{'index_upload'} ],
-			     [ "run", $text{'index_run'} ],
-			   ]);
+	@buts = (    [ "refresh", $text{'index_refresh'} ],
+		     $posscount ? ( [ "update",$text{'index_update'} ] )
+				: ( ),
+		     $procount ? ( [ "script", $text{'index_script'} ] )
+			       : ( ),
+		     undef,
+		     [ "dereg", $text{'index_dereg'} ],
+		     [ "delete", $text{'index_delete'} ],
+		     undef,
+		     [ "shutdown", $text{'index_shutdown'} ],
+		     [ "startup", $text{'index_startup'} ],
+		     undef,
+		     [ "upload", $text{'index_upload'} ],
+		     [ "run", $text{'index_run'} ],
+		 );
+	@buts = grep { !$_ || &can_action(undef, $_->[0]) } @buts;
+	while(@buts && !$buts[0]) { shift(@buts); }	# Strip leading spacers
+	print &ui_form_end(\@buts);
 	}
 elsif (@allservers) {
 	# No servers matched the search

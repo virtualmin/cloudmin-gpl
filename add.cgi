@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
+&can_add_server_error($in{'type'});
 &error_setup($text{'add_err'});
 @servers = &list_managed_servers();
 $server = { 'manager' => $in{'type'},

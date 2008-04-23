@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
+&can_action_error(\@servers, "upload");
 
 &ui_print_header(&server_in($server), $text{'mupload_title'}, "", "mupload");
 

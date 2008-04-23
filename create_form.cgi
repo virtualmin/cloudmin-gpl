@@ -4,6 +4,7 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
+&can_create_server_error($in{'type'});
 &ui_print_header(undef, $text{'create_title'}, "", "new".$in{'type'});
 
 print &ui_form_start("create.cgi", "post");

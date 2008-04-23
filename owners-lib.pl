@@ -46,6 +46,7 @@ else {
 	&acl::create_user($u);
 	}
 $acl->{'owner'} = 1;
+$acl->{'noconfig'} = 1;
 &save_module_acl($acl, $u->{'name'});
 &reload_miniserv();
 }
@@ -67,21 +68,111 @@ sub list_owner_actions
 return ( 'startup', 'shutdown', 'reboot', 'graph', 'view', 'run' );
 }
 
-# can_action(&server, [action])
+# can_action([&server|&servers], [action])
 # Returns if the current user can perform some action on some server
 sub can_action
 {
 local ($server, $action) = @_;
-return 1 if (!$access{'owner'});
-if ($access{'servers'} ne '*') {
-	local @servers = split(/\s+/, $access{'servers'});
-	return 0 if (&indexof($server->{'id'}, @servers) < 0);
+if (!$access{'owner'}) {
+	# Master admin can do anything
+	return wantarray ? ( 1, undef ) : 1;
 	}
-if ($action && $access{'actions'} ne '*') {
-	local @actions = split(/\s+/, $access{'actions'});
-	return 0 if (&indexof($action, $actions) < 0);
+local @rv = ( 1, undef );
+if ($server && $access{'servers'} ne '*') {
+	if (!defined(%can_servers_cache)) {
+		foreach my $id (split(/\s+/, $access{'servers'})) {
+			$can_servers_cache{$id} = 1;
+			}
+		}
+	if (ref($server) eq 'ARRAY') {
+		# Test a bunch of servers
+		foreach my $s (@$server) {
+			if (!$can_servers_cache{$s->{'id'}}) {
+				@rv = ( 0, &text('can_eserver', $s->{'host'}) );
+				}
+			}
+		}
+	else {
+		if (!$can_servers_cache{$server->{'id'}}) {
+			@rv = ( 0, &text('can_eserver', $server->{'host'}) );
+			}
+		}
 	}
-return 1;
+if ($action && $access{'actions'} ne '*' && $rv[0]) {
+	if (!defined(%can_actions_cache)) {
+		foreach my $a (split(/\s+/, $access{'actions'})) {
+			$can_actions_cache{$a} = 1;
+			}
+		$can_actions_cache{'refresh'} = 1;	# Always allowed
+		}
+	if (!$can_actions_cache{$action}) {
+		@rv = ( 0, &text('can_eaction', $text{'owner_action_'.$action}
+						|| $action) );
+		}
+	}
+return wantarray ? @rv : $rv[0];
+}
+
+# can_action_error([&server|&servers], [action])
+# Check if some action is allowed, call error if not
+sub can_action_error
+{
+local ($server, $action) = @_;
+local ($ok, $why) = &can_action($server, $action);
+$ok || &error($why);
+}
+
+# can_create_server(type)
+# Returns 1 if create a virtual system of some type is allowed.
+# Only true for master admin right now
+sub can_create_server
+{
+local ($type) = @_;
+local $tdesc = $text{$type.'_typeshort'};
+local @rv = !$access{'owner'} ? ( 1, undef )
+			      : ( 0, &text('can_ecreate', $tdesc) );
+return wantarray ? @rv : $rv[0];
+}
+
+# can_add_server(type)
+# Returns 1 if adding a system of some type is allowed.
+# Only true for master admin right now
+sub can_add_server
+{
+local ($type) = @_;
+local $tdesc = $text{$type.'_typeshort'};
+local @rv = !$access{'owner'} ? ( 1, undef )
+			      : ( 0, &text('can_eadd', $tdesc) );
+return wantarray ? @rv : $rv[0];
+}
+
+# Calls error if the current user can't create a server
+sub can_create_server_error
+{
+local ($type) = @_;
+local ($ok, $why) = &can_create_server($type);
+$ok || &error($why);
+}
+
+# Calls error if the current user can't add a server
+sub can_add_server_error
+{
+local ($type) = @_;
+local ($ok, $why) = &can_add_server($type);
+$ok || &error($why);
+}
+
+# get_server_owners(&server)
+# Returns a list of owner objects for some server
+sub get_server_owners
+{
+local ($server) = @_;
+local @rv;
+foreach my $o (&list_system_owners()) {
+	local @acc = split(/\s+/, $o->{'acl'}->{'servers'});
+	push(@rv, $o) if (&indexof($server->{'id'}, @acc) >= 0);
+	}
+return @rv;
 }
 
 1;

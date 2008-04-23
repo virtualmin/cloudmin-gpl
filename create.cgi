@@ -4,6 +4,7 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'create_err'});
+&can_create_server_error($in{'type'});
 @servers = &list_managed_servers();
 $server = { 'id' => time().$$,
 	    'manager' => $in{'type'},

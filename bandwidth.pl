@@ -124,7 +124,10 @@ foreach $s (@servers) {
 		# Send email
 		local @to;
 		push(@to, $config{'bw_email'}) if ($config{'bw_email'});
-		# XXX server owner?
+		if ($config{'bw_owner'}) {
+			push(@to, map { $_->{'email'} }
+				      &get_server_owners($s));
+			}
 		$etime = $now - $s->{'bw_notify'} > $config{'bw_notify'}*60*60;
 		if (@to && $etime) {
 			local $msg = &get_bandwidth_message();

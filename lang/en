@@ -51,6 +51,7 @@ ec2_typeshort=EC2
 
 real_desc=Physical
 real_add=Add physical system
+real_typeshort=physical
 
 zones_typedesc=Solaris Zone
 zones_createlink=Create Solaris Zone
@@ -1614,3 +1615,8 @@ owner_action_run=Run commands on systems
 
 downers_err=Failed to delete system owners
 downers_enone=None selected
+
+can_eserver=You are not allowed to manage the system $1
+can_eaction=You are not allowed to perform the action : $1
+can_ecreate=You are not allowed to create new $1 systems
+can_eadd=You are not allowed to add existing $1 systems

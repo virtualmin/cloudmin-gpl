@@ -11,6 +11,7 @@ $ids = join("&", map { "d=".$_ } keys %d);
 
 if ($in{'refresh'}) {
 	# Fetch the status of selected servers, in 10 processes
+	&can_action_error(\@servers, "refresh");
 	&ui_print_header(undef, $text{'mass_ftitle'}, "");
 
 	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
@@ -31,6 +32,7 @@ if ($in{'refresh'}) {
 
 elsif ($in{'delete'}) {
 	# Delete the selected servers (virtual only)
+	&can_action_error(\@servers, "delete");
 	&error_setup($text{'mass_derr'});
 
 	# Check if servers cannot be deleted
@@ -118,6 +120,7 @@ elsif ($in{'delete'}) {
 
 elsif ($in{'dereg'}) {
 	# Removing from managed servers list
+	&can_action_error(\@servers, "dereg");
 	&error_setup($text{'mass_uerr'});
 
 	# Check for dependencies
@@ -156,6 +159,7 @@ elsif ($in{'dereg'}) {
 
 elsif ($in{'update'}) {
 	# Update packages on multiple systems at once
+	&can_action_error(\@servers, "update");
 	&ui_print_unbuffered_header(undef, $text{'mass_uptitle'}, "");
 
 	# Find selected servers with updates
@@ -179,6 +183,7 @@ elsif ($in{'update'}) {
 
 elsif ($in{'script'}) {
 	# Show a form for updating scripts from multiple systems
+	&can_action_error(\@servers, "script");
 	&ui_print_unbuffered_header(undef, $text{'mass_sctitle'}, "");
 
 	# Find available updates across systems
@@ -235,6 +240,7 @@ elsif ($in{'script'}) {
 elsif ($in{'shutdown'}) {
 	# Shutdown the selected servers
 	&error_setup($text{'mass_shuterr'});
+	&can_action_error(\@servers, "shutdown");
 
 	# Check if servers cannot be shut down
 	@cannot = ( );
@@ -298,6 +304,7 @@ elsif ($in{'shutdown'}) {
 elsif ($in{'startup'}) {
 	# Start up the selected servers
 	&error_setup($text{'mass_starterr'});
+	&can_action_error(\@servers, "startup");
 
 	# Check if servers cannot be started up
 	@cannot = ( );
