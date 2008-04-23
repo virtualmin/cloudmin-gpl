@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 if ($in{'new'}) {
 	&ui_print_header(undef, $text{'owner_title1'}, "");
+	$owner = { 'acl' => { 'actions' => join(' ', &list_owner_actions()) } };
 	}
 else {
 	&ui_print_header(undef, $text{'owner_title2'}, "");
@@ -15,18 +16,18 @@ else {
 print &ui_form_start("save_owner.cgi", "post");
 print &ui_hidden("new", $in{'new'});
 print &ui_hidden("old", $in{'name'});
-print &ui_table_start($text{'owner_header'}, undef, 2);
+print &ui_table_start($text{'owner_header'}, undef, 2, [ "width=30%" ]);
 
 # Username
 print &ui_table_row($text{'owner_name'},
-	&ui_textbox("name", $owner->{'name'}, 40));
+	&ui_textbox("oname", $owner->{'name'}, 40));
 
 # Password
 print &ui_table_row($text{'owner_pass'},
-	($in{'new'} ? "" : &ui_radio("pass_def", 1, 
+	($in{'new'} ? "" : &ui_radio("opass_def", 1, 
 			    [ [ 1, $text{'owner_leave'} ],
 			      [ 0, $text{'owner_set'} ] ])).
-	&ui_password("pass", undef, 20));
+	&ui_password("opass", undef, 20));
 
 # Description
 print &ui_table_row($text{'owner_real'},
@@ -39,9 +40,16 @@ print &ui_table_row($text{'owner_email'},
 # Managed servers
 print &ui_table_row($text{'owner_servers'},
 	&ui_select("servers", [ split(/\s+/, $owner->{'acl'}->{'servers'}) ],
-		   [ map { $_->{'id'}, ("&nbsp;&nbsp;" x $_->{'indent'}).
-					$_->{'short_host'} } @allservers ],
+		   [ map { [ $_->{'id'}, ("&nbsp;&nbsp;" x $_->{'indent'}).
+					 $_->{'short_host'} ] } @allservers ],
 		   10, 1));
+
+# Allowed actions
+%actions = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'actions'});
+print &ui_table_row($text{'owner_actions'},
+	join("<br>\n",
+	     map { &ui_checkbox("actions", $_, $text{'owner_action_'.$_},
+				$actions{$_}) } &list_owner_actions()));
 
 print &ui_table_end();
 print &ui_form_end(

@@ -45,6 +45,7 @@ else {
 	$u->{'modules'} ||= [ $module_name ];
 	&acl::create_user($u);
 	}
+$acl->{'owner'} = 1;
 &save_module_acl($acl, $u->{'name'});
 &reload_miniserv();
 }
@@ -56,6 +57,7 @@ sub delete_system_owner
 local ($u) = @_;
 &foreign_require("acl", "acl-lib.pl");
 &acl::delete_user($u->{'name'});
+&reload_miniserv();
 }
 
 # list_owner_actions()
@@ -65,8 +67,8 @@ sub list_owner_actions
 return ( 'startup', 'shutdown', 'reboot', 'graph', 'view', 'run' );
 }
 
-# can_action(&server, action)
-# Returns if the current user can perform some action
+# can_action(&server, [action])
+# Returns if the current user can perform some action on some server
 sub can_action
 {
 local ($server, $action) = @_;
@@ -75,7 +77,7 @@ if ($access{'servers'} ne '*') {
 	local @servers = split(/\s+/, $access{'servers'});
 	return 0 if (&indexof($server->{'id'}, @servers) < 0);
 	}
-if ($access{'actions'} ne '*') {
+if ($action && $access{'actions'} ne '*') {
 	local @actions = split(/\s+/, $access{'actions'});
 	return 0 if (&indexof($action, $actions) < 0);
 	}

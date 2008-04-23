@@ -1585,6 +1585,7 @@ owners_real=Description
 owners_users=Managed systems
 owners_delete=Delete Selected Owners
 owners_none=No system owner accounts have been defined yet.
+owners_return=system owners
 
 owner_title1=Create System Owner
 owner_title2=Edit System Owner
@@ -1597,3 +1598,19 @@ owner_real=Description or real name
 owner_email=Contact email address
 owner_servers=Systems that can be managed
 owner_actions=Allowed operations
+owner_err=Failed to save system owner
+owner_ename=Missing or invalid username - only letters, numbers and the characters dot, dash and underscore are allowed
+owner_eclash=A user with the same name already exists
+owner_epass=Missing password
+owner_eemail=Missing or invalid-looking email address
+owner_eservers=No systems to manage selected
+owner_eactions=No allowed operations selected
+owner_action_startup=Startup systems
+owner_action_shutdown=Shut down systems
+owner_action_reboot=Reboot systems
+owner_action_graph=View bandwidth usage graph
+owner_action_view=View system details
+owner_action_run=Run commands on systems
+
+downers_err=Failed to delete system owners
+downers_enone=None selected
