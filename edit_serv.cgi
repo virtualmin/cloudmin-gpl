@@ -343,28 +343,32 @@ if ($toomanydoms ||
 				     &hlink($text{'edit_help'}, "editdoms"),
 				     "width=100%", 2,
 				     "doms", $in{'doms'}, \@tds);
-	$clink = "<a href='list_domains.cgi?create=1&id=$server->{'id'}'>".
-		 "$text{'edit_domsadd'}</a>";
+	$candoms = &can_action($server, "domains");
+	$clink = "<a href='list_domains.cgi?create=1&".
+		 "id=$server->{'id'}'>$text{'edit_domsadd'}</a>";
 	if ($toomanydoms) {
 		# Show too many message
 		print "<b>",&text('edit_toomany',
 				  $server->{'virtualmin_domains'}),"</b><p>\n";
 		print &ui_table_row(undef,
 		    &ui_links_row([
-			"<a href='edit_serv.cgi?id=$in{'id'}&doms=1&many=1&basic=0'>".
-			 "$text{'edit_showmany'}</a>",
-			$clink ]), 2);
+			"<a href='edit_serv.cgi?id=$in{'id'}&doms=1&many=1&".
+			 "basic=0'>$text{'edit_showmany'}</a>",
+			$candoms ? ( $clink ) : ( ) ]), 2);
 		}
 	elsif (@doms) {
 		$bs = &get_server_blocksize($server);
-		@tds = ( "width=5" );
+		@tds = $candoms ? ( "width=5" ) : ( );
 		@links = ( &select_all_link("d", 1),
 			   &select_invert_link("d", 1),
 			   $clink );
-		print &ui_form_start("mass_domains.cgi", "post");
-		print &ui_hidden("id", $in{'id'});
-		print &ui_links_row(\@links);
-		print &ui_columns_start([ "",
+		if ($candoms) {
+			print &ui_form_start("mass_domains.cgi", "post");
+			print &ui_hidden("id", $in{'id'});
+			print &ui_links_row(\@links);
+			}
+		print &ui_columns_start([
+			  $candoms ? ( "" ) : ( ),
 			  $text{'domains_dom'},
 			  $text{'domains_type'},
 			  $text{'domains_desc'},
@@ -373,12 +377,13 @@ if ($toomanydoms ||
 			  ], 100, 0, \@tds);
 		foreach $d (sort { $a->{'dom'} cmp $b->{'dom'} } @doms) {
 			if ($info->{'quota'}) {
-				($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
-						 @{$info->{'quota'}};
+				($dquota) = grep
+					{ $_->[0]->{'id'} == $d->{'id'} }
+					@{$info->{'quota'}};
 				}
 			$di1 = $d->{'disabled'} ? "<i>" : "";
 			$di2 = $d->{'disabled'} ? "</i>" : "";
-			print &ui_checked_columns_row([
+			@cols = (
 				$di1.&domain_link($server, $d).$di2,
 				$d->{'alias'} ? $text{'domains_alias'} :
 				 $d->{'subdom'} ? $text{'domains_subdom'} :
@@ -386,21 +391,32 @@ if ($toomanydoms ||
 						  $text{'domains_top'},
 				$d->{'owner'},
 			        $info->{'quota'} ? (
-				   $d->{'parent'} ? $text{'domains_fromparent'} :
+				   $d->{'parent'} ?$text{'domains_fromparent'} :
 				   $d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
 					         : $text{'domains_unlimited'},
-				   $dquota ? &nice_size($dquota->[1]) : "" ) : ( ),
-				], \@tds, "d", $server->{'id'}."/".$d->{'id'});
+				   $dquota ? &nice_size($dquota->[1]) : "" )
+					   : ( ),
+				);
+			if ($candoms) {
+				print &ui_checked_columns_row(\@cols, \@tds,
+					"d", $server->{'id'}."/".$d->{'id'});
+				}
+			else {
+				print &ui_columns_row(\@cols, \@tds);
+				}
 			}
 		print &ui_columns_end();
-		print &ui_links_row(\@links);
-		print &ui_form_end([ [ "delete", $text{'domains_delete'} ],
-				     undef,
-				     [ "disable", $text{'domains_disable'} ],
-				     [ "enable", $text{'domains_enable'} ],
-				     undef,
-				     [ "move", $text{'domains_move'} ],
-				   ]);
+		if ($candoms) {
+			print &ui_links_row(\@links);
+			print &ui_form_end([
+				[ "delete", $text{'domains_delete'} ],
+				undef,
+				[ "disable", $text{'domains_disable'} ],
+				[ "enable", $text{'domains_enable'} ],
+				undef,
+				[ "move", $text{'domains_move'} ],
+				]);
+			}
 		}
 	else {
 		print &ui_table_row(undef, "<b>$text{'edit_nodoms'}</b><p>".

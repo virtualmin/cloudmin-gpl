@@ -2,6 +2,7 @@
 # Delete a bunch of system owners
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 &error_setup($text{'downers_err'});
 @d = split(/\0/, $in{'d'});

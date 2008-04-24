@@ -2,6 +2,7 @@
 # Delete a bunch of SSH keys
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 &error_setup($text{'dkeys_err'});
 @d = split(/\0/, $in{'d'});

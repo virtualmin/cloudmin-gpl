@@ -9,11 +9,10 @@
 # XXX allow changing of main IP
 #	XXX do virtualmin too
 # XXX extra webmin logins to manage servers
-#     XXX reboot/shutdown/view/bandwidth
 #     XXX help page
-#     XXX other actions, like installing updates and scripts?
-#     XXX new features page
+#     XXX new-features page
 #     XXX all CGIs must check
+#     XXX licence recheck
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
 
@@ -3419,7 +3418,8 @@ if (&can_action($server, "edit")) {
 	push(@rv, { 'id' => 'edit',
 		    'desc' => $text{'edit_link_edit'},
 		    'cat' => '',
-		    'link' => $ed });
+		    'link' => $ed,
+		    'priority' => 1 });
 	if ($status eq 'virt') {
 		push(@rv, { 'id' => 'coll',
 			    'desc' => $text{'edit_link_coll'},
@@ -3449,7 +3449,8 @@ elsif (&can_action($server, "view")) {
 	push(@rv, { 'id' => 'view',
 		    'desc' => $text{'edit_link_view'},
 		    'cat' => '',
-		    'link' => "edit_serv.cgi?id=$server->{'id'}" });
+		    'link' => "edit_serv.cgi?id=$server->{'id'}",
+		    'priority' => 1 });
 	}
 
 if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {

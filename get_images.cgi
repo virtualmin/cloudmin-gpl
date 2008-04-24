@@ -2,6 +2,7 @@
 # Downloads new server images from Virtualmin
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 &ui_print_header(undef, $text{'images_gettitle'}, "");
 

@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &error_setup($text{'ldelete_err'});
+&can_action_error(undef, "global");
 &ReadParse();
 @d = split(/\0/, $in{'d'});
 @d || &error($text{'ldelete_enone'});

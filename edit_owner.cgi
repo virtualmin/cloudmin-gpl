@@ -2,6 +2,7 @@
 # Show a form for creating or editing an owner
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 if ($in{'new'}) {
 	&ui_print_header(undef, $text{'owner_title1'}, "");

@@ -2,6 +2,7 @@
 # Shows a list of AMIs, with checkboxes to delete
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ui_print_header(undef, $text{'amis_title'}, "", "amis");
 
 # Get all the AMIs that are visible

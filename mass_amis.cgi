@@ -2,6 +2,7 @@
 # Delete, grant or revoke a bunch of AMIs
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 
 # Get all the AMIs selected

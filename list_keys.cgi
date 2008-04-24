@@ -2,6 +2,7 @@
 # Shows a list of known SSH keys
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ui_print_header(undef, $text{'keys_title'}, "", "keys");
 
 @keys = &list_ssh_keys();

@@ -20,6 +20,8 @@ foreach $sd (@d) {
 	push(@serverdoms, [ $server, $d ]);
 	}
 @serverdoms || &error($text{'dmass_enone'});
+@domservers = map { $_->[0] } @serverdoms;
+&can_action_error(\@domservers, "domains");
 $postmsg = &text('dmass_post', join(", ", map { "<tt>$_->[1]->{'dom'}</tt>" }
 					      @serverdoms));
 

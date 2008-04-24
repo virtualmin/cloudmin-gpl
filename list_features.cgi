@@ -2,6 +2,7 @@
 # Show a table of available features and the servers they can be used on
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 &ui_print_header(undef, $text{'features_title'}, "", "features");
 

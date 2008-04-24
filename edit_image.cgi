@@ -2,6 +2,7 @@
 # Shows the details of a single image
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ui_print_header(undef, $text{'eimage_title'}, "", "editimage");
 &ReadParse();
 ($avail) = grep { $_->{'id'} eq $in{'id'} } &list_available_server_images();

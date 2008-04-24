@@ -3,6 +3,7 @@
 # from an upload), or editing one
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 &ui_print_header(undef, $in{'new'} ? $text{'key_create'}
 				   : $text{'key_edit'}, "",

@@ -1,13 +1,14 @@
 #!/usr/local/bin/perl
-# Show a form for searching for domains, and a link to add a new one
+# Show a form for searching for domains, and a form to add a new one
 
 require './server-manager-lib.pl';
 &ReadParse();
 &ui_print_header(undef, $text{'domains_title'}, "", "domains");
-@vservers = grep { $_->{'status'} eq 'virt' } &list_managed_servers();
+@vservers = grep { $_->{'status'} eq 'virt' } &list_available_managed_servers();
 foreach $s (@vservers) {
 	$totaldomains += $s->{'virtualmin_domains'};
 	}
+&can_action_error(\@vservers, "domains");
 
 $formno = 0;
 if ($totaldomains) {

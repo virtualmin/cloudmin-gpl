@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &error_setup($text{'ladd_err'});
+&can_action_error(undef, "global");
 &ReadParse();
 
 # Create the licence objects

@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 # Get the server and interface
 ($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
 $server || &error($text{'edit_egone'});
+&can_action_error($server, "ifaces");
 if (!$in{'new'}) {
 	$ifunc = "type_".$server->{'manager'}."_list_interfaces";
 	$ifaces = &$ifunc($server);

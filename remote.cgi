@@ -25,6 +25,10 @@ if (!$in{'program'}) {
 	print "All output from the command will be returned to the caller.\n";
 	exit;
 	}
+elsif (!&can_action(undef, "global")) {
+	print "Content-type: text/plain\n\n";
+	print "You are not allowed to call the remote API.\n";
+	}
 
 # Run the program
 $in{'program'} =~ /^[a-z0-9\.-]+$/i || &error($text{'remote_eprogram'});

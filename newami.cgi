@@ -4,6 +4,7 @@
 require './server-manager-lib.pl';
 &ReadParse();
 ($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
+&can_action_error($server, "image");
 &error_setup($text{'newami_err'});
 
 # Validate inputs

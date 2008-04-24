@@ -2,6 +2,7 @@
 # Updates the permission grants on an owned AMI
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 &error_setup($text{'eami_err'});
 

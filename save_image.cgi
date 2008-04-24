@@ -2,6 +2,7 @@
 # Deletes a local image
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 ($got) = grep { $_->{'id'} eq $in{'id'} } &list_server_images();
 $got || &error($text{'dimage_egone'});

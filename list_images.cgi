@@ -2,6 +2,7 @@
 # Shows a list of server images that are available from Virtualmin and locally
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ui_print_header(undef, $text{'images_title'}, "", "images");
 
 @avail = sort { $a->{'desc'} cmp $b->{'desc'} } &list_available_server_images();

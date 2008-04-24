@@ -165,7 +165,6 @@ if ($mode ne 'systems' && $mode ne 'host') {
 		}
 	# Convert to average
 	$utotal /= scalar(@showservers) if ($mode ne 'total');
-	print "utotal=$utotal\n";
 	if ($utotal > 10*1024*1024*1024) {
 		$scale = 1024*1024*1024;
 		$units = "GB";

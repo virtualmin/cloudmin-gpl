@@ -2,6 +2,7 @@
 # Show a form for turning on bandwidth monitoring, and configuring disables
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ui_print_header(undef, $text{'bw_title'}, "", "bw");
 
 print &ui_form_start("save_bw.cgi", "post");

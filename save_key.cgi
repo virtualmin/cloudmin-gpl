@@ -2,6 +2,7 @@
 # Create, update or delete an SSH key
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParseMime();
 if (!$in{'new'}) {
 	($key) = grep { $_->{'id'} eq $in{'id'} } &list_ssh_keys();

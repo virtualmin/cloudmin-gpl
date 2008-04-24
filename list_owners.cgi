@@ -2,6 +2,7 @@
 # Show a list of system owners
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ui_print_header(undef, $text{'owners_title'}, "", "owners");
 @allservers = &list_managed_servers();
 

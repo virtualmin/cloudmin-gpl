@@ -2,6 +2,7 @@
 # Change the default host system of some type
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 @servers = &list_managed_servers();
 

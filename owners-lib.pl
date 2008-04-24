@@ -76,7 +76,8 @@ local ($u) = @_;
 # Returns a list of all possible actions
 sub list_owner_actions
 {
-return ( 'startup', 'shutdown', 'reboot', 'graph', 'view', 'run' );
+return ( 'startup', 'shutdown', 'reboot', 'graph', 'view', 'run',
+	 'domains', 'update', 'script' );
 }
 
 # can_action([&server|&servers], [action])

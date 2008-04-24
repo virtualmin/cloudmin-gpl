@@ -1616,6 +1616,9 @@ owner_action_run=Run commands on systems
 owner_action_edit=Edit system
 owner_action_view=View system details
 owner_action_transfer=Transfer files
+owner_action_domains=Manage Virtualmin domains
+owner_action_update=Update packages
+owner_action_script=Update installed scripts
 
 downers_err=Failed to delete system owners
 downers_enone=None selected

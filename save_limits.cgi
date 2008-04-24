@@ -9,6 +9,7 @@ require './server-manager-lib.pl';
 @servers = &list_managed_servers();
 ($server) = grep { $_->{'id'} == $in{'id'} } @servers;
 $server || &error($text{'edit_egone'});
+&can_action_error($server, "limits");
 $t = $server->{'manager'};
 
 # Validate inputs

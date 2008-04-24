@@ -4,6 +4,7 @@
 $trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
+&can_add_server_error("ec2");
 &popup_header($text{'ichooser_title'});
 
 # Get the account, and it's instances

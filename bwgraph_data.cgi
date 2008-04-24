@@ -35,6 +35,8 @@ if ($in{'mode'} ne 'system') {
 if ($in{'mode'} eq 'server') {
 	# Show points for one server (in, out and total)
 	($server) = grep { $_->{'id'} eq $in{'id'} } @servers;
+	$server || &error($text{'edit_egone'});
+	&can_action_error($server, "graph");
 	$bwinfo = &get_bandwidth($server);
 	for($i=$start; $i<=$end; $i+=$step) {
 		@tm = localtime($i);
@@ -50,6 +52,7 @@ if ($in{'mode'} eq 'server') {
 
 elsif ($in{'mode'} eq 'total') {
 	# Show sum of all servers
+	&can_action_error(\@servers, "graph");
 	@bwinfos = ( );
 	foreach $server (@servers) {
 		$bwinfo = &get_bandwidth($server);
@@ -68,10 +71,5 @@ elsif ($in{'mode'} eq 'total') {
 		print strftime("%Y-%m-%d %H:%M:%S", @tm).",".
 		      int($in).",".int($out).",".int($total)."\n";
 		}
-	}
-
-elsif ($in{'mode'} eq 'system') {
-	# Show per-server for period
-	# XXX cannot skip step
 	}
 

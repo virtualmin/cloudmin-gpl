@@ -2,6 +2,7 @@
 # Shows details of one AMI that you own, with a field to control grants
 
 require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 
 # Get the EC2 account and AMI
