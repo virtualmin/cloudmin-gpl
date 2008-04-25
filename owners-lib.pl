@@ -48,6 +48,7 @@ else {
 	}
 $acl->{'owner'} = 1;
 $acl->{'noconfig'} = 1;
+$acl->{'real'} = $u->{'real'};
 &save_module_acl($acl, $u->{'name'});
 
 # Grant access to just owned servers
@@ -172,6 +173,12 @@ sub can_add_server_error
 local ($type) = @_;
 local ($ok, $why) = &can_add_server($type);
 $ok || &error($why);
+}
+
+# Returns 1 if the current user can re-check and see licence info
+sub can_licence
+{
+return !$access{'owner'};
 }
 
 # get_server_owners(&server)

@@ -793,6 +793,7 @@ licence_title=Re-Check License
 licence_doing=Now re-checking your Virtualmin Machine Manager licence ..
 licence_ok=.. licence is OK!
 licence_goterr=.. a problem was detected : $1
+licence_ecannot=You are not allowed to re-check the license status
 
 virtualmin_epkg=Virtualmin Pro can only be installed on systems using RPM or Debian packages
 virtualmin_eupdate=Virtualmin Pro can only be installed on systems using the APT, YUM or up2date package installers

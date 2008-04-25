@@ -8,11 +8,6 @@
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX allow changing of main IP
 #	XXX do virtualmin too
-# XXX extra webmin logins to manage servers
-#     XXX help page
-#     XXX new-features page
-#     XXX all CGIs must check
-#     XXX licence recheck
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
 
@@ -2549,9 +2544,11 @@ return undef if (!$lerr);
 local $rv = "<table width=100%><tr bgcolor=#ff8888><td align=center>";
 $rv .= "<b>".$text{'licence_err'}."</b><br>\n";
 $rv .= $lerr."\n";
-$rv .= &ui_form_start("/$module_name/licence.cgi");
-$rv .= &ui_submit($text{'licence_recheck'});
-$rv .= &ui_form_end();
+if (&can_licence()) {
+	$rv .= &ui_form_start("/$module_name/licence.cgi");
+	$rv .= &ui_submit($text{'licence_recheck'});
+	$rv .= &ui_form_end();
+	}
 $rv .= "</td></tr></table>\n";
 return $rv;
 }
