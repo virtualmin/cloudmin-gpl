@@ -224,6 +224,7 @@ create_exenhost=The hostname for a Xen instance cannot contain a . , as the doma
 create_exenclash=A Xen instance with the same name already exists
 create_xenmount=Mounting new instance's filesystem ..
 create_xenumount=Un-mounting instance's filesystem ..
+create_exenfsfile=.. VM2 does not know which file contains the Xen instance's filesystem
 create_exenmount=.. failed : $1
 create_xenmounted=.. mounted on $1
 create_xenmods=Copying modules for kernel $1 to Xen filesystem ..
