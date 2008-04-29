@@ -254,7 +254,8 @@ elsif ($config{'sort_mode'} == 1) {
 	local @newrv;
 	@rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
 	foreach my $s (grep { $_->{'manager'} eq 'this' ||
-			      $_->{'manager'} eq 'real' } @rv) {
+			      $_->{'manager'} eq 'real' ||
+			      $_->{'manager'} eq 'ec2' } @rv) {
 		push(@newrv, $s);
 		foreach my $cs (&list_child_servers($s, \@rv)) {
 			$cs->{'indent'} = 1;
