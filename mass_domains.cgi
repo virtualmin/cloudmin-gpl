@@ -171,11 +171,12 @@ elsif ($in{'move'}) {
 		else {
 			@destservers = @servers;
 			}
+		@destservers = grep { &can_action($_, "domains") &&
+				      $_->{'status'} eq 'virt' } @destservers;
 		print &ui_table_row($text{'dmass_mdest'},
 			&ui_select("dest", undef,
 				[ map { [ $_->{'id'}, $_->{'host'} ] }
-				      grep { $_->{'status'} eq 'virt' } 
-				           @destservers ]));
+				      @destservers ]));
 
 		# Delete from source?
 		print &ui_table_row($text{'dmass_mdelete'},
@@ -202,6 +203,7 @@ elsif ($in{'move'}) {
 		# Get the dest and domains
 		($server) = grep { $_->{'id'} eq $in{'dest'} } @servers;
 		$server || &error($text{'dmass_edest'});
+		&can_action_error($server, "domains");
 		if ($in{'incsubs'}) {
 			@serverdoms = &unique_serverdoms(
 			    [ @serverdoms, &find_sub_servers(\@serverdoms) ]);
