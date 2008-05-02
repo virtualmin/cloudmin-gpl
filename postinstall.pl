@@ -12,6 +12,8 @@ if ($virtualmin_pro) {
 		# Need to add
 		push(@sa, "/$module_name/remote.cgi");
 		$miniserv{'sessiononly'} = join(" ", @sa);
+		&put_miniserv_config(\%miniserv);
+		&reload_miniserv();
 		}
 	}
 
