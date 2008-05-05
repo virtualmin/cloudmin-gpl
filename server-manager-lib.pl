@@ -2069,6 +2069,7 @@ return ( );
 sub add_bind8_record
 {
 local ($dnsname, $ip, $zonename) = @_;
+&foreign_require("bind8", "bind8-lib.pl");
 
 local @zones = &list_bind_zones();
 local ($zone) = grep { $_->{'name'} eq $zonename } @zones;
@@ -2081,6 +2082,20 @@ if ($zone) {
 		&bind8::create_record($zone->{'file'}, $dnsname, undef,
 				      "IN", "A", $ip);
 		&bind8::bump_soa_record(\@recs);
+
+		# See if we can add to a reverse too
+		local ($rfn, $rrecs, $arpa, $rzone) =
+			&get_reverse_dns_zone($ip);
+		if ($rfn) {
+			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
+					 @$rrecs;
+			if (!$old) {
+				&bind8::create_record($rfn, $arpa.".", undef,
+						      "IN", "PTR", $dnsname);
+				&bind8::bump_soa_record($rrecs);
+				}
+			}
+
 		&bind8::restart_bind();
 		&$second_print($text{'create_done'});
 		return 1;
@@ -2092,22 +2107,57 @@ if ($zone) {
 return 0;
 }
 
-# delete_bind8_record(dnsname, zonename)
+# delete_bind8_record(dnsname, zonename, ip)
 # Deletes the DNS record that belonged to some server
 sub delete_bind8_record
 {
-local ($dnsname, $zonename) = @_;
+local ($dnsname, $zonename, $ip) = @_;
+&foreign_require("bind8", "bind8-lib.pl");
 local @zones = &list_bind_zones();
 local ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 if ($zone && $dnsname) {
 	local @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
 	local ($r) = grep { $_->{'name'} eq $dnsname } @recs;
 	if ($r) {
+		# Can remove
 		&bind8::delete_record($zone->{'file'}, $r);
 		&bind8::bump_soa_record(\@recs);
+
+		# See if we can remove a reverse too
+		local ($rfn, $rrecs, $arpa, $rzone) =
+			&get_reverse_dns_zone($ip);
+		if ($ip && $rfn) {
+			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
+					 @$rrecs;
+			if ($old) {
+				&bind8::delete_record($rfn, $old);
+				&bind8::bump_soa_record($rrecs);
+				}
+			}
+
 		&bind8::restart_bind();
 		}
 	}
+}
+
+# get_reverse_dns_zone(ip)
+# Returns the records file and list of records for the domain for some IP
+sub get_reverse_dns_zone
+{
+local ($ip) = @_;
+local $conf = &bind8::get_config();
+local @zones = &bind8::find("zone", $conf);
+foreach my $v (&bind8::find("view", $conf)) {
+	push(@zones, &bind8::find("zone", $v->{'members'}));
+	}
+local $arpa = &bind8::ip_to_arpa($ip);
+$arpa =~ s/\.$//;
+local ($z) = grep { $arpa =~ /\.$_->{'value'}$/i } @zones;
+return ( ) if (!$z);
+local $file = &bind8::find("file", $z->{'members'});
+local $fn = $file->{'values'}->[0];
+local @recs = &bind8::read_zone_file($fn, $config{'domain'});
+return ( $fn, \@recs, $arpa, $z->{'value'} );
 }
 
 sub bind_module_link
