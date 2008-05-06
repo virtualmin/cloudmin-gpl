@@ -64,6 +64,14 @@ else {
 			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
 	}
 
+# Kernel info
+$k = $info->{'kernel'};
+if ($k->{'version'}) {
+	print &ui_table_row($text{'edit_kernel'},
+		&text('edit_kernelon', $k->{'os'},
+		       $k->{'version'}, $k->{'arch'}));
+	}
+
 if (!$view) {
 	# Groups
 	@groups = &unique(map { split(/\t/, $_->{'group'}) } @servers);

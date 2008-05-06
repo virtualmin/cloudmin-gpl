@@ -71,6 +71,13 @@ if ($multi) {
 			print "    Virtualmin version: ",
 			      $info->{'minfo'}->{'version'},"\n";
 			}
+		$k = $info->{'kernel'};
+		if ($k->{'version'}) {
+			print "    Kernel version: $k->{'os'} $k->{'version'}\n";
+			}
+		if ($k->{'arch'}) {
+			print "    CPU architecture: $k->{'arch'}\n";
+			}
 		$bfunc = "type_".$s->{'manager'}."_get_atboot";
 		if (defined(&$bfunc)) {
 			print "    Start at boot: ",

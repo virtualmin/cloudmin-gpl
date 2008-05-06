@@ -14,6 +14,8 @@
 # XXX extra public keys for new systems
 #     XXX set on keys page
 # XXX mac addresses, interface names, uuids when creating Xen instances
+# XXX xencentos ./refresh-systems.pl --host xencentos.home --regenerate
+#	XXX fails getting quota in collect-lib.pl ?
 
 do '../web-lib.pl';
 &init_config();
@@ -1439,9 +1441,18 @@ if (!$got_disk) {
 		$got_more_info = 1;
 		}
 	}
-if ($got_more_info) {
-	&save_server_collected($server, $info);
+
+# Get kernel and CPU info
+local ($out, $ex, $err) = &execute_command_on_server($server, 
+	"uname -r ; uname -m ; uname -s");
+if (!$ex && !$err) {
+	local ($r, $m, $o) = split(/\r?\n/, $out);
+	$info->{'kernel'} = { 'version' => $r,
+			      'arch' => $m,
+			      'os' => $o };
 	}
+
+&save_server_collected($server, $info);
 
 $rv = 1;
 
