@@ -4,6 +4,7 @@
 # XXX refresh should be in dependency order
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
+#	XXX console access
 # XXX mobile theme for VM2 - FS#3459
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX allow changing of main IP
@@ -12,6 +13,7 @@
 #     XXX and persistent storage
 # XXX extra public keys for new systems
 #     XXX set on keys page
+# XXX mac addresses, interface names, uuids when creating Xen instances
 
 do '../web-lib.pl';
 &init_config();
