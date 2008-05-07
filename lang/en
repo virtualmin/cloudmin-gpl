@@ -1452,6 +1452,7 @@ disk_virt=Device on virtual system
 disk_size1=New disk file size
 disk_size0=Disk file size
 disk_size=Device size
+disk_sizefree=$2 of $1 free on host system
 disk_other=Other device or file ..
 disk_mkfs=Filesystem to create on new disk
 disk_mkfs_none=&lt;None - leave empty or preserve existing data&gt;

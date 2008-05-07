@@ -73,16 +73,25 @@ print &ui_table_row(&text($in{'new'} == 2 ? 'disk_real1' :
 print &ui_table_row($text{'disk_virt'},
 	&ui_textbox("virt", $disk->{'virt'}, 30));
 
+# Get current disk used and free on host
+$freemsg = "";
+$vinfo = &get_server_collected($vhost);
+if ($vinfo->{'disk_total'}) {
+	$freemsg = &text('disk_sizefree',
+			&nice_size($vinfo->{'disk_total'}),
+			&nice_size($vinfo->{'disk_free'}));
+	}
+
 # Size of file
 if ($in{'new'} == 1) {
 	# File size to create
 	print &ui_table_row($text{'disk_size1'},
-		&ui_bytesbox("size", 1024*1024*1024, 8));
+		&ui_bytesbox("size", 1024*1024*1024, 8)." ".$freemsg);
 	}
 elsif (!$in{'new'} && !$disk->{'device'}) {
 	# Current size of the file, which can be changed
 	print &ui_table_row($text{'disk_size0'},
-		&ui_bytesbox("size", $disk->{'size'}, 8));
+		&ui_bytesbox("size", $disk->{'size'}, 8)." ".$freemsg);
 	}
 elsif (!$in{'new'} && $disk->{'size'}) {
 	# Real device size, if we can get it
