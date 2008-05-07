@@ -279,6 +279,8 @@ create_xenuuidset=128-bit hex UUID
 create_exenmac=Missing or invalid MAC address - should be like <tt>00:19:B9:34:16:88</tt>
 create_exenvif=Missing or invalid interface name - should be like <tt>foo0</tt>
 create_exenuuid=Missing or invalid UUID - should be like <tt>06ed00fe-1162-4fc4-b5d8-11993ee4a8b9</tt>
+create_hostdisk=$1 free disk
+create_hostmem=$1 free RAM
 
 keys_title=SSH Keys
 keys_desc=Key description

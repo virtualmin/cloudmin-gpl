@@ -11,9 +11,9 @@
 #	XXX do virtualmin too
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
+#     XXX and location?
 # XXX extra public keys for new systems
 #     XXX set on keys page
-# XXX mac addresses, interface names, uuids when creating Xen instances
 
 do '../web-lib.pl';
 &init_config();
@@ -4340,6 +4340,23 @@ local ($server) = @_;
 &foreign_require("mailboxes", "mailboxes-lib.pl");
 local $rv = $config{'from_addr'} || &mailboxes::get_from_address();
 return $rv;
+}
+
+# host_free_desc(&vhost)
+# Returns a string listing free disk space and RAM for some host
+sub host_free_desc
+{
+local ($vhost) = @_;
+local $vinfo = &get_server_collected($vhost);
+local @rv;
+if ($vinfo && $vinfo->{'disk_free'}) {
+	push(@rv, &text('create_hostdisk', &nice_size($vinfo->{'disk_free'})));
+	}
+if ($vinfo && $vinfo->{'mem'}) {
+	push(@rv, &text('create_hostmem',
+			&nice_size($vinfo->{'mem'}->[1]*1024)));
+	}
+return @rv ? " (".join(", ", @rv).")" : "";
 }
 
 # strip_html_tags(html)
