@@ -81,8 +81,17 @@ if (defined(&$ffunc)) {
 
 print &ui_table_end();
 
+# Type-specific advanced options
+$afunc = "type_".$in{'type'}."_advanced_create_form";
+if (defined(&$afunc)) {
+	print &ui_hidden_table_start($text{'create_aheader'}, undef, 2,
+				     "advanced");
+	print &$afunc();
+	print &ui_hidden_table_end();
+	}
+
 # Start of section for Virtualmin options
-print &ui_hidden_table_start($text{'create_vheader'}, undef, 2);
+print &ui_hidden_table_start($text{'create_vheader'}, undef, 2, "virtualmin");
 
 # Virtualmin licence
 print &ui_table_row($text{'create_vlicence'},

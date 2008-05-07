@@ -137,6 +137,8 @@ create_ec2m1.large=Large (4 cores, 7.5GB RAM, 64-bit)
 create_ec2m1.xlarge=Extra-large (8 cores, 15GB RAM, 64-bit)
 create_ec2sgroups=EC2 security groups
 create_ec2sbelow=Selected below ..
+create_ec2apiurl=EC2 API base URL
+create_ec2apiset=URL
 create_sshkey=SSH key for root
 create_eec2instance=Could not find new EC2 instance!
 create_eec2state=Instance is in un-expected state <tt>$1</tt>
@@ -262,6 +264,7 @@ create_exendisksize=Disk space must be a number
 create_update=Update Virtualmin packages?
 create_vlicence=License for Virtualmin Pro from image
 create_vheader=Virtualmin options
+create_aheader=Advanced options
 create_eimagevirt=You have selected a system image with Virtualmin Pro, but have not entered license details
 create_xendnswarn=Warning : No DNS zone for new Xen instances has been configured on the <a href='$1'>module configuration</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.
 
@@ -351,6 +354,7 @@ ec2_image=Missing or invalid-looking image ID
 ec2_eimage2=The image ID is not available to the selected account
 ec2_esgroup=One of the selected security groups does not belong to the selected EC2 account
 ec2_enosgroup=No security groups were selected
+ec2_apiurl=Missing or invalid EC2 API base URL
 ec2_keygen=Generate new EC2 key
 ec2_keygen2=Generate new EC2 key under account $1
 ec2_ekeygen=Failed to generate EC2 key : $1
@@ -802,7 +806,7 @@ licence_ok=.. licence is OK!
 licence_goterr=.. a problem was detected : $1
 licence_ecannot=You are not allowed to re-check the license status
 
-virtualmin_epkg=Virtualmin Pro can only be installed on systems using RPM or Debian packages
+virtualmin_epkg=Virtualmin Pro can only be installed on systems using RPM, Debian or Solaris packages
 virtualmin_eupdate=Virtualmin Pro can only be installed on systems using the APT, YUM or up2date package installers
 virtualmin_eos=The operating system type could not be detected
 virtualmin_eos2=Virtualmin cannot be installed on systems running $1. Supported systems are : $2

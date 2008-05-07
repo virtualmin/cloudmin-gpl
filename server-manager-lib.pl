@@ -14,8 +14,6 @@
 # XXX extra public keys for new systems
 #     XXX set on keys page
 # XXX mac addresses, interface names, uuids when creating Xen instances
-# XXX xencentos ./refresh-systems.pl --host xencentos.home --regenerate
-#	XXX fails getting quota in collect-lib.pl ?
 
 do '../web-lib.pl';
 &init_config();
@@ -119,6 +117,7 @@ $vm2_licence_prog = "/cgi-bin/slicence.cgi";
 $virtualmin_licence_prog = "/cgi-bin/vlicence.cgi";
 $virtualmin_licence_ssl = 0;
 $virtualmin_installer_prog = "/cgi-bin/install.cgi";
+$virtualmin_solaris_installer_prog = "/cgi-bin/install.cgi";
 $virtualmin_alllicences_prog = "/cgi-bin/alllicences.cgi";
 $virtualmin_gpl_installer_path = "/gpl/scripts/install.sh";
 
@@ -127,7 +126,7 @@ $serial_cache_file = "$module_config_directory/serial-cache";
 $virtualmin_progress_file = "$module_config_directory/progress-licences";
 
 @virtualmin_operating_systems = ( "debian", "ubuntu", "redhat", "fedora",
-				  "centos" );
+				  "centos", "solaris" );
 
 $virtualmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-virtualmin";
 $virtualmin_webmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-webmin";
@@ -2328,6 +2327,14 @@ if ((!$os || $os eq 'unknown') && $server->{'manager'} eq 'zones') {
 	# Zones are always Solaris
 	$os = "solaris";
 	}
+if ((!$os || $os eq 'unknown') && $pkg eq "pkgadd") {
+	# Only Solaris has pkgadd
+	local ($out, $ex, $err) = &execute_command_on_server($server,
+		"uname -s");
+	if ($out =~ /SunOS|Solaris/i) {
+		$os = "solaris";
+		}
+	}
 if (!$os || $os eq 'unknown') {
 	# Could not get OS, so check useful system files
 	# XXX this should really be done with os_list.txt
@@ -2436,10 +2443,11 @@ local ($server, $setpass, $serial, $key) = @_;
 
 # Check for a supported OS
 local ($pkg, $update, $os) = &get_server_package_system($server);
-if ($pkg ne "rpm" && $pkg ne "dpkg") {
+if ($pkg ne "rpm" && $pkg ne "dpkg" && $pkg ne "pkgadd") {
 	return $text{'virtualmin_epkg'};
 	}
-if ($update ne "apt" && $update ne "yum" && $update ne "up2date") {
+if ($update ne "apt" && $update ne "yum" && $update ne "up2date" &&
+    $os ne "solaris") {
 	return $text{'virtualmin_eupdate'};
 	}
 if (!$os || $os eq "unknown") {
@@ -2465,8 +2473,10 @@ local $error;
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
 	       $serial eq "GPL" ?
-			$virtualmin_gpl_installer_path :
-			"$virtualmin_installer_prog?serial=$serial;key=$key",
+		$virtualmin_gpl_installer_path :
+	       $os eq "solaris" ?
+		"$virtualmin_solaris_installer_prog?serial=$serial;key=$key",
+		"$virtualmin_installer_prog?serial=$serial;key=$key",
 	       $itemp, \$error, undef, $virtualmin_licence_ssl);
 if ($error) {
 	return &text('virtualmin_einstaller', $error);
