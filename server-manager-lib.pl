@@ -11,9 +11,6 @@
 #	XXX do virtualmin too
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
-#     XXX and zones
-#	XXX choose at creation time
-#	XXX display for running instances?
 # XXX extra public keys for new systems
 #     XXX set on keys page
 

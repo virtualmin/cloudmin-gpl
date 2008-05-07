@@ -9,7 +9,7 @@ use Digest::HMAC_SHA1;
 use URI;
 use MIME::Base64 qw(encode_base64 decode_base64);
 use HTTP::Date qw(time2isoz);
-use Params::Validate qw(validate SCALAR ARRAYREF);
+use Params::Validate qw(validate SCALAR ARRAYREF HASHREF);
 
 $VERSION = '0.04';
 
@@ -413,6 +413,7 @@ sub run_instances {
 								UserData		=> { type => SCALAR, optional => 1 },
 								AddressingType	=> { type => SCALAR, optional => 1 },
 								InstanceType	=> { type => SCALAR, optional => 1 },
+								Placement	=> { type => HASHREF, optional => 1 },
 	});
 	
 	# If we have a array ref of instances lets split them out into their SecurityGroup.n format
@@ -428,6 +429,7 @@ sub run_instances {
 	my $xml = $self->_sign(Action  => 'RunInstances', %args);
 	
 	if ( grep { defined && length } $xml->{Errors} ) {
+		print STDERR "ec2 error: ",$xml->{Errors}{Error}{Message},"\n";
 		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
 		$self->{error} = $xml->{Errors}{Error}{Message};
 
