@@ -99,7 +99,7 @@ sub _init {
 	my $ts = time2isoz();
 
 	$self->{signature_version} = 1;
-	$self->{version} = '2007-08-29';
+	$self->{version} = '2008-02-01';
 	$self->{base_url} = 'http://ec2.amazonaws.com';
 	$self->{AWSAccessKeyId} = $args{AWSAccessKeyId};
 	$self->{SecretAccessKey} = $args{SecretAccessKey};
@@ -1277,6 +1277,31 @@ sub describe_image_attribute {
 		return $struct;
 	}
 }
+
+
+=head2 describe_availability_zones(%params)
+
+This method pulls a list of EC2 availability zones.
+
+=cut
+
+sub describe_availability_zones {
+	my $self = shift;
+        my %args;
+	
+	my $xml = $self->_sign(Action  => 'DescribeAvailabilityZones', %args);
+	
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{availabilityZoneInfo}{item};
+	}
+}
+
 
 1;
 
