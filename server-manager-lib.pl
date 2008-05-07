@@ -2475,7 +2475,7 @@ local $error;
 	       $serial eq "GPL" ?
 		$virtualmin_gpl_installer_path :
 	       $os eq "solaris" ?
-		"$virtualmin_solaris_installer_prog?serial=$serial;key=$key",
+		"$virtualmin_solaris_installer_prog?serial=$serial;key=$key" :
 		"$virtualmin_installer_prog?serial=$serial;key=$key",
 	       $itemp, \$error, undef, $virtualmin_licence_ssl);
 if ($error) {
