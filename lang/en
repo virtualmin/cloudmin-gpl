@@ -564,6 +564,7 @@ edit_recheck=Check Configuration
 edit_reboot=Reboot
 edit_shutdown=Shutdown
 edit_startup=Startup
+edit_console=View Console
 edit_cheader=Detailed system status
 edit_dheader=Virtualmin domains
 edit_iload=CPU load averages
@@ -1658,3 +1659,6 @@ can_ecreate=You are not allowed to create new $1 systems
 can_eadd=You are not allowed to add existing $1 systems
 
 view_title=System Details
+
+console_title=View Console
+console_eget=Console messages could not be displayed : $1

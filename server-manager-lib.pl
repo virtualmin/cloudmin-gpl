@@ -13,6 +13,11 @@
 #     XXX and persistent storage
 # XXX extra public keys for new systems
 #     XXX set on keys page
+# XXX ec2 console
+#	XXX and xen too
+#	XXX command line
+#	XXX fix up backspaces, wrap at 80 columns
+#	XXX CHANGELOG
 
 do '../web-lib.pl';
 &init_config();
@@ -3483,6 +3488,8 @@ local $rfunc = "type_".$t."_no_reboot";
 local $noreboot = defined(&$rfunc) && &$rfunc($server);
 local $tfunc = "type_".$t."_can_transfer";
 local $cantransfer = defined(&$tfunc) && &$tfunc($server);
+local $cfunc = "type_".$t."_get_console_output";
+local $canconsole = defined(&$cfunc);
 
 # Start with links to edit_serv.cgi
 local $ed = "edit_serv.cgi?id=$server->{'id'}";
@@ -3626,6 +3633,12 @@ else {
 		push(@rv, { 'id' => 'shutdown',
 			    'desc' => $text{'edit_shutdown'},
 			    'cat' => 'power' });
+		}
+	if ($canconsole && &can_action($server, "console")) {
+		push(@rv, { 'id' => 'console',
+			    'desc' => $text{'edit_console'},
+			    'cat' => 'power',
+			    'link' => "console.cgi?id=$server->{'id'}" });
 		}
 	}
 if ($t ne 'real' && $t ne 'this' && &can_action($server, "delete")) {
