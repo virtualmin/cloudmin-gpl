@@ -1649,6 +1649,7 @@ owner_action_transfer=Transfer files
 owner_action_domains=Manage Virtualmin domains
 owner_action_update=Update packages
 owner_action_script=Update installed scripts
+owner_action_console=View console
 
 downers_err=Failed to delete system owners
 downers_enone=None selected
@@ -1662,3 +1663,4 @@ view_title=System Details
 
 console_title=View Console
 console_eget=Console messages could not be displayed : $1
+console_refresh=Refresh messages

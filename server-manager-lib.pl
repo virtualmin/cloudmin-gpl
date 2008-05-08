@@ -13,11 +13,6 @@
 #     XXX and persistent storage
 # XXX extra public keys for new systems
 #     XXX set on keys page
-# XXX ec2 console
-#	XXX and xen too
-#	XXX command line
-#	XXX fix up backspaces, wrap at 80 columns
-#	XXX CHANGELOG
 
 do '../web-lib.pl';
 &init_config();
@@ -3634,6 +3629,9 @@ else {
 			    'desc' => $text{'edit_shutdown'},
 			    'cat' => 'power' });
 		}
+	}
+if ($status ne 'nohost') {
+	# Console messages can be displayed as long as the host system is up
 	if ($canconsole && &can_action($server, "console")) {
 		push(@rv, { 'id' => 'console',
 			    'desc' => $text{'edit_console'},
