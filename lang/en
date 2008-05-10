@@ -241,6 +241,8 @@ create_xensetpass=Setting root password ..
 create_exensetpass=.. failed : $1
 create_xensetkey=Setting up SSH key ..
 create_exensetkey=.. failed : $1
+create_xenaddnewkeys=Adding extra authorized SSH keys ..
+create_exenaddnewkeys=.. some failed : $1
 create_xenfix=Updating configuration files with hostname and IP address ..
 create_exenfix= .. failed : $1
 create_xenlicence=Updating Virtualmin licence files ..
@@ -317,6 +319,7 @@ key_edata=Pasted text does not appear to be an SSH key
 key_public=Public key<br>(Should be all on one line)
 key_download=Download..
 key_egone=Key no longer exists!
+key_addnew=Add to <tt>root</tt>'s authorized keys on new systems?
 
 dkey_title=Delete SSH Key
 dkey_rusure=Are you sure you want to remove the SSH key $1? It is used to login to the following systems :<br>$2

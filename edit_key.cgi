@@ -79,6 +79,10 @@ else {
 		}
 	}
 
+# Put on new systems?
+print &ui_table_row($text{'key_addnew'},
+	&ui_yesno_radio("addnew", $key->{'addnew'}));
+
 print &ui_table_end();
 print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]
 			      : [ [ undef, $text{'save'} ],

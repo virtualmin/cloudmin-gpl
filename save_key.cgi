@@ -43,7 +43,8 @@ elsif ($in{'new'}) {
 	# Validate and/or generate
 	$in{'desc'} =~ /\S/ || &error($text{'key_edesc'});
 	$key = { 'desc' => $in{'desc'},
-		 'external' => 0 };
+		 'external' => 0,
+		 'addnew' => $in{'addnew'} };
 	if ($in{'gen'} eq 0) {
 		# Generate a new key right now
 		$key->{'keydata'} = &generate_ssh_key();
@@ -83,6 +84,7 @@ else {
 	# Update
 	$in{'desc'} =~ /\S/ || &error($text{'key_edesc'});
 	$key->{'desc'} = $in{'desc'};
+	$key->{'addnew'} = $in{'addnew'};
 	if ($key->{'external'}) {
 		# Change file
 		-r $in{'file'} || &error($text{'key_efile'});

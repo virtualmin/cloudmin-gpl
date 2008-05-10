@@ -12,7 +12,8 @@
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
 # XXX extra public keys for new systems
-#     XXX set on keys page
+#     XXX key setup on Xen not working!
+#     XXX CHANGELOG
 
 do '../web-lib.pl';
 &init_config();
@@ -2774,19 +2775,27 @@ sub create_authorized_key
 {
 local ($server) = @_;
 local ($key) = grep { $_->{'id'} eq $server->{'key'} } &list_ssh_keys();
-local ($roothome, $ex, $err) = &execute_command_on_server($server, "echo ~");
-$roothome =~ s/\r|\n//g;
-$roothome ||= "/root";
-&execute_command_on_server($server,
-	"mkdir $roothome/.ssh ; chmod 700 $roothome/.ssh");
+local $authkeys = &setup_authorized_keys($server);
 local $temp = &transname();
 &open_tempfile(AUTH, ">$temp");
 &print_tempfile(AUTH, &generate_public_key($key),"\n");
 &close_tempfile(AUTH);
 &set_ownership_permissions(undef, undef, 0700, $temp);
-local $err = &put_file_to_server($server, $temp,
-				 "$roothome/.ssh/authorized_keys");
-return $err;
+return &put_file_to_server($server, $temp, $authkeys);
+}
+
+# setup_authorized_keys(&server)
+# Ensure that ~/.ssh exists, and return the path to  the authorized_keys file
+sub setup_authorized_keys
+{
+local ($server) = @_;
+local ($roothome, $ex, $err) = &execute_command_on_server($server, "echo ~");
+$roothome = "" if ($ex || $err);
+$roothome =~ s/\r|\n//g;
+$roothome ||= "/root";
+&execute_command_on_server($server,
+	"mkdir $roothome/.ssh ; chmod 700 $roothome/.ssh");
+return "$roothome/.ssh/authorized_keys";
 }
 
 # set_shadow_root_password(&server, pass)
@@ -2836,6 +2845,35 @@ local ($out, $ex, $err) = &execute_command_on_server($server,
 				"rm -f .ssh/authorized_keys ; ".
 				"rm -f .ssh/authorized_keys2");
 return $err ? $err : $ex ? $out : undef;
+}
+
+# has_addnew_keys(&server)
+# Returns 1 if there are any extra SSH keys to add for this server
+sub has_addnew_keys
+{
+local ($server) = @_;
+local @keys = grep { $_->{'id'} ne $server->{'key'} } &list_ssh_keys();
+return @keys ? 1 : 0;
+}
+
+# addnew_authorized_keys(&server)
+# Add extra authorized keys to a new server
+sub addnew_authorized_keys
+{
+local ($server) = @_;
+local $authkeys = &setup_authorized_keys($server);
+local $temp = &transname();
+&get_file_from_server($server, $authkeys, $temp);	# OK if missing
+local $missing = -r $temp ? 0 : 1;
+&open_tempfile(AUTH, ">>$temp");
+foreach my $key (grep { $_->{'id'} ne $server->{'key'} } &list_ssh_keys()) {
+	print STDERR "adding key ",&generate_public_key($key),"\n";
+	&print_tempfile(AUTH, &generate_public_key($key),"\n");
+	}
+&close_tempfile(AUTH);
+print STDERR "temp=$temp authkeys=$authkeys\n";
+&set_ownership_permissions(undef, undef, 0700, $temp) if ($missing);
+return &put_file_to_server($server, $temp, $authkeys);
 }
 
 # check_domain_move(&serverdoms, &destserver, delete, direct)
