@@ -11,9 +11,6 @@
 #	XXX do virtualmin too
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
-# XXX extra public keys for new systems
-#     XXX key setup on Xen not working!
-#     XXX CHANGELOG
 
 do '../web-lib.pl';
 &init_config();
@@ -2789,12 +2786,28 @@ return &put_file_to_server($server, $temp, $authkeys);
 sub setup_authorized_keys
 {
 local ($server) = @_;
-local ($roothome, $ex, $err) = &execute_command_on_server($server, "echo ~");
-$roothome = "" if ($ex || $err);
-$roothome =~ s/\r|\n//g;
+
+# Work out root's home dir
+local $roothome;
+local $data = &get_file_data_from_server($server, "/etc/passwd");
+foreach my $l (split(/\r?\n/, $data)) {
+	local @w = split(/:/, $l);
+	if ($w[0] eq 'root') {
+		$roothome = $w[5];
+		last;
+		}
+	}
 $roothome ||= "/root";
-&execute_command_on_server($server,
-	"mkdir $roothome/.ssh ; chmod 700 $roothome/.ssh");
+
+# Create .ssh dir if missing
+local $sshdir = "$roothome/.ssh";
+local @st = &stat_file_on_server($server, "$sshdir");
+if (!@st) {
+	local $temp = &transname();
+	&make_dir($temp, 0700);
+	&put_file_to_server($server, $temp, $sshdir);
+	}
+
 return "$roothome/.ssh/authorized_keys";
 }
 
@@ -2852,7 +2865,8 @@ return $err ? $err : $ex ? $out : undef;
 sub has_addnew_keys
 {
 local ($server) = @_;
-local @keys = grep { $_->{'id'} ne $server->{'key'} } &list_ssh_keys();
+local @keys = grep { $_->{'id'} ne $server->{'key'} && $_->{'addnew'} }
+		   &list_ssh_keys();
 return @keys ? 1 : 0;
 }
 
@@ -2866,12 +2880,11 @@ local $temp = &transname();
 &get_file_from_server($server, $authkeys, $temp);	# OK if missing
 local $missing = -r $temp ? 0 : 1;
 &open_tempfile(AUTH, ">>$temp");
-foreach my $key (grep { $_->{'id'} ne $server->{'key'} } &list_ssh_keys()) {
-	print STDERR "adding key ",&generate_public_key($key),"\n";
+foreach my $key (grep { $_->{'id'} ne $server->{'key'} && $_->{'addnew'} }
+		      &list_ssh_keys()) {
 	&print_tempfile(AUTH, &generate_public_key($key),"\n");
 	}
 &close_tempfile(AUTH);
-print STDERR "temp=$temp authkeys=$authkeys\n";
 &set_ownership_permissions(undef, undef, 0700, $temp) if ($missing);
 return &put_file_to_server($server, $temp, $authkeys);
 }
