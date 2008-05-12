@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 &error_setup($text{'disk_err'});
 ($server) = grep { $_->{'id'} == $in{'id'} } @servers;
 $server || &error($text{'edit_egone'});
+&check_server_status($server);	# In case state has changed
 &can_action_error($server, "disks");
 
 # Get the disk

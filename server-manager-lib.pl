@@ -11,6 +11,7 @@
 #	XXX do virtualmin too
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
+# XXX HVM Xen instances
 
 do '../web-lib.pl';
 &init_config();
