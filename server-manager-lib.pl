@@ -12,6 +12,8 @@
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
 # XXX HVM Xen instances
+# XXX quick mode for check_server_status
+#	XXX use in save_disk.cgi and delete_disks.cgi
 
 do '../web-lib.pl';
 &init_config();
