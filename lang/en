@@ -298,6 +298,7 @@ create_xenonrename-restart=Rename and restart
 keys_title=SSH Keys
 keys_desc=Key description
 keys_external=Type
+keys_addnew=Add to new?
 keys_ext=Existing
 keys_int=Generated
 keys_users=Used by

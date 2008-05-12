@@ -17,6 +17,7 @@ if (@keys) {
 	print &ui_columns_start([ "",
 				  $text{'keys_desc'},
 				  $text{'keys_external'},
+				  $text{'keys_addnew'},
 				  $text{'keys_users'} ]);
 	foreach $k (@keys) {
 		@users = grep { $_->{'key'} eq $k->{'id'} } @servers;
@@ -26,6 +27,7 @@ if (@keys) {
 		print &ui_checked_columns_row([
 			"<a href='edit_key.cgi?id=$k->{'id'}'>$k->{'desc'}</a>",
 			$k->{'external'} ? $text{'keys_ext'} :$text{'keys_int'},
+			$k->{'addnew'} ? $text{'yes'} : $text{'no'},
 			$users
 			], \@tds, "d", $k->{'id'});
 		}
