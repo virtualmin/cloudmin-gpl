@@ -12,8 +12,7 @@
 # XXX EC2 new static IPs feature
 #     XXX and persistent storage
 # XXX HVM Xen instances
-# XXX quick mode for check_server_status
-#	XXX use in save_disk.cgi and delete_disks.cgi
+# XXX allow setting of root password and SSH key at creation
 
 do '../web-lib.pl';
 &init_config();
@@ -1116,13 +1115,13 @@ local ($out, $timed_out) = &backquote_with_timeout(
 return !$timed_out && !$?;
 }
 
-# check_server_status(&server, [re-generate-collected])
+# check_server_status(&server, [re-generate-collected], [skip-info])
 # Checks the status of a managed server, and updates the server object. Checks
 # SSH login, Webmin login, Virtualmin status, number of domains, memory, disk
 # and CPU load.
 sub check_server_status
 {
-local ($server, $regen) = @_;
+local ($server, $regen, $skipinfo) = @_;
 
 # Check if a status update is already happening
 local $file = "$servers::module_config_directory/$server->{'id'}.serv";
@@ -1231,6 +1230,10 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		# un-contactable, or not installed
 		$server->{'status'} = $webminroot ? 'downwebmin' : 'nowebmin';
 		$server->{'status_msg'} = $err;
+		goto DONECHECK;
+		}
+	if ($skipinfo) {
+		# No need to collect domains and so on
 		goto DONECHECK;
 		}
 

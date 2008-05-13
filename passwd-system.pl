@@ -99,7 +99,7 @@ elsif ($webmin_same) {
 
 # Refresh status
 print "Re-checking system status..\n";
-&check_server_status($server);
+&check_server_status($server, 0, 1);
 &save_managed_server($server);
 print ".. done\n\n";
 

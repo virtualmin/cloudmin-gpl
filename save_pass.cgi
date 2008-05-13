@@ -80,7 +80,7 @@ elsif ($in{'webmin_pass_def'} == 2) {
 if ($done) {
 	# Refresh status
 	&$first_print($text{'pass_refreshing'});
-	&check_server_status($server);
+	&check_server_status($server, 0, 1);
 	&save_managed_server($server);
 	&$second_print($text{'create_done'});
 
