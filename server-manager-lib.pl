@@ -13,6 +13,7 @@
 #     XXX and persistent storage
 # XXX HVM Xen instances
 # XXX allow setting of root password and SSH key at creation
+# XXX devpay instance
 
 do '../web-lib.pl';
 &init_config();

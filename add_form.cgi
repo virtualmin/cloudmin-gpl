@@ -43,7 +43,7 @@ if (!$no_ssh) {
 		&ui_textbox("uuser", "root", 20));
 
 	# SSH port number
-	print &ui_table_row($text{'add_port'},
+	print &ui_table_row($text{'add_sshport'},
 		&ui_opt_textbox("uport", undef, 5, $text{'default'}." (22)"));
 	}
 

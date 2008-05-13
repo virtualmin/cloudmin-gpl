@@ -1304,6 +1304,47 @@ sub describe_availability_zones {
 	}
 }
 
+=head2 describe_addresses()
+
+This method lists IP addresses owned by the account.
+
+=cut
+
+sub describe_addresses {
+	my $self = shift;
+        my %args;
+	my $xml = $self->_sign(Action  => 'DescribeAddresses', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{addressesSet}{item} || [ ];
+	}
+}
+
+=head2 allocate_address()
+
+Allocates and returns a new EC2 static IP address
+
+=cut
+
+sub allocate_address {
+	my $self = shift;
+        my %args;
+	my $xml = $self->_sign(Action  => 'AllocateAddress', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{publicIp};
+	}
+}
 
 1;
 
