@@ -366,8 +366,10 @@ else {
 	if ($server->{'id'} != 0) {
 		$oldip = &to_ipaddress($server->{'host'});
 		$newip = &to_ipaddress($in{'host'});
-		if ($oldip && $oldip ne $newip) {
-			&error($text{'save_ehost'});
+		if ($oldip && $oldip ne $newip && !$in{'confirm'}) {
+			# IP mismatch .. but allow override
+			&show_host_override_form($oldip, $newip);
+			exit;
 			}
 		$server->{'host'} = $in{'host'};
 		$server->{'desc'} = $in{'desc'};
@@ -461,3 +463,24 @@ else {
 	&redirect("");
 	}
 
+# show_host_override_form(oldip, newip)
+# Tell the user that changing the IP may be a bad idea
+sub show_host_override_form
+{
+local ($oldip, $newip) = @_;
+&ui_print_header(&server_in($server), $text{'save_title'}, "");
+
+print "<center>\n";
+print &ui_form_start("save_serv.cgi", "post");
+foreach my $i (keys %in) {
+	foreach my $v (split(/\0/, $in{$i})) {
+		print &ui_hidden($i, $v);
+		}
+	}
+print &text('save_iprusure', "<tt>$server->{'host'}</tt>",
+    "<tt>$in{'host'}</tt>", "<tt>$oldip</tt>", "<tt>$newip</tt>"),"<p>\n";
+print &ui_form_end([ [ "confirm", $text{'save_ipok'} ] ]);
+print "</center>\n";
+
+&ui_print_footer("", $text{'index_return'});
+}

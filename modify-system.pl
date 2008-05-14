@@ -19,6 +19,9 @@ while(@ARGV > 0) {
 	if ($a eq "--host") {
 		$host = shift(@ARGV);
 		}
+	elsif ($a eq "--force-host") {
+		$forcehost = 1;
+		}
 	elsif ($a eq "--desc") {
 		$desc = shift(@ARGV);
 		}
@@ -86,9 +89,9 @@ if (defined($newhost)) {
 				       "cannot be changed");
 	$oldip = &to_ipaddress($server->{'host'});
 	$newip = &to_ipaddress($newhost);
-	if ($oldip && $oldip ne $newip) {
+	if ($oldip && $oldip ne $newip && !$forcehost) {
 		&usage("The new hostname must resolve to the same IP address ".
-		       "as the old hostname");
+		       "as the old hostname, or --force-host must be used");
 		}
 	}
 
@@ -185,6 +188,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Modifies the details of one managed system.\n";
 print "\n";
 print "usage: modify-systems.pl --host name\n";
+print "                         [--force-host]\n";
 print "                         [--desc \"new description\"]\n";
 print "                         [--newhost name]\n";
 print "                         [--os code]\n";

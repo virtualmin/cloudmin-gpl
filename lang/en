@@ -723,6 +723,9 @@ save_deletefailed=.. failed : $1
 save_deletedone=.. deletion complete.
 save_edeletemanager=This type of system cannot be deleted
 save_edeletedeps=This system cannot be deleted, as the following other systems depened upon it : $1
+save_title=Save System
+save_iprusure=Are you sure you want to change the hostname from $1 to $2 ?<p>This will change the IP address from $3 to $4, which may cause VM2 to start managing a different system!
+save_ipok=Yes, Change Hostname
 
 shell_title=Run Commands
 shell_ok=Execute command:
