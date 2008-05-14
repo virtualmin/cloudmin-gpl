@@ -1346,6 +1346,28 @@ sub allocate_address {
 	}
 }
 
+=head2 associate_address(%params)
+
+Connects an EC2 address with a running instance.
+
+=cut
+
+sub associate_address {
+	my $self = shift;
+	my %args = validate( @_, { InstanceId => { type => SCALAR },
+				   PublicIp => { type => SCALAR } });
+	my $xml = $self->_sign(Action  => 'AssociateAddress', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{return};
+	}
+}
+
 1;
 
 __END__
