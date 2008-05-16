@@ -123,6 +123,9 @@ if (defined($type)) {
 if (defined($type)) {
 	$server->{'type'} = $type;
 	}
+if (defined($newhost)) {
+	$server->{'host'} = $newhost;
+	}
 if (defined($ssh_pass)) {
 	$server->{'ssh_pass'} = $ssh_pass;
 	delete($server->{'key'});

@@ -1683,9 +1683,38 @@ console_refresh=Refresh messages
 
 addresses_title=EC2 Static IP Addresses
 addresses_ip=IP address
+addresses_account=EC2 account
 addresses_ami=Used by EC2 instance
 addresses_host=Used by system
 addresses_delete=Return Selected IP Addresses
 addresses_none=No EC2 static IP addresses have been allocated yet.
 addresses_create=Allocate New Address
 addresses_asel=under EC2 account:
+addresses_return=static addresses list
+addresses_none=None
+
+caddress_title=Allocate EC2 Address
+caddress_doing=Requesting a new EC2 static IP address for account $1 ..
+caddress_done=.. received address $1.
+caddress_failed=.. request failed : $1
+caddress_info=You can now assign this address to EC2 systems using the <b>Assign EC2 IP Address</b> on the left menu.
+caddress_err=Failed to allocate address
+
+daddress_err=Failed to return addresses
+daddress_enone=None selected
+daddress_title=Return EC2 Addresses
+daddress_doing=Returning address $2, owned by account $1 ..
+daddress_failed=.. return failed : $1
+
+ec2addr_title=Assign EC2 IP Address
+ec2addr_eget=Failed to get available IP addresses : $1
+ec2addr_none=The EC2 account $1 does not have any static IP addresses yet. They can be requested on the <a href='$2'>EC2 Static IP Addresses</a> page.
+ec2addr_header=Static IP address assignment
+ec2addr_host=Current hostname
+ec2addr_ami=EC2 instance ID
+ec2addr_ip=IP address to assign
+ec2addr_none=None - let EC2 select automatically
+ec2addr_ok=Update IP Address
+ec2addr_err=Failed to update EC2 IP address
+ec2addr_enonesel=No IP address is currently assigned, and none was selected
+ec2addr_enochange=The assigned IP address was not changed

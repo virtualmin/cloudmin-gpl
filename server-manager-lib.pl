@@ -10,7 +10,8 @@
 # XXX allow changing of main IP
 #	XXX do virtualmin too
 # XXX EC2 new static IPs feature
-#     XXX and persistent storage
+#	XXX help pages
+#	XXX link to -ec2 directory
 # XXX HVM Xen instances
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
