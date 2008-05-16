@@ -13,6 +13,10 @@
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
 # XXX devpay instance
+#	XXX automatic license add!
+#	XXX why does 'Same as VM2 license' option appear?
+#	XXX cleanup system, create image
+#	XXX docs
 
 do '../web-lib.pl';
 &init_config();
@@ -372,8 +376,10 @@ if ($server->{'id'}) {
 if (!$keep) {
 	unlink("$server_domains_dir/$server->{'id'}");
 	unlink("$server_collected_dir/$server->{'id'}");
-	unlink("$shell_previous_dir//$server->{'id'}");
-	&delete_bandwidth($server);
+	unlink("$shell_previous_dir/$server->{'id'}");
+	if (defined(&delete_bandwidth)) {
+		&delete_bandwidth($server);
+		}
 	}
 }
 

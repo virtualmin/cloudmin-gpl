@@ -85,7 +85,7 @@ print &ui_table_end();
 $afunc = "type_".$in{'type'}."_advanced_create_form";
 if (defined(&$afunc)) {
 	print &ui_hidden_table_start($text{'create_aheader'}, undef, 2,
-				     "advanced");
+				     "advanced", 0, [ "width=30%" ]);
 	print &$afunc();
 	print &ui_hidden_table_end();
 	}
