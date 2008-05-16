@@ -9,9 +9,6 @@
 # XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX allow changing of main IP
 #	XXX do virtualmin too
-# XXX EC2 new static IPs feature
-#	XXX help pages
-#	XXX link to -ec2 directory
 # XXX HVM Xen instances
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
