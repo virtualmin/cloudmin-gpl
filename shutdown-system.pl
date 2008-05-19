@@ -20,6 +20,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
+	elsif ($a eq "--force") { $force = 1; }
 	else {
 		&usage();
 		}
@@ -46,7 +47,7 @@ foreach $s (@servers) {
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
 	print "Shutting down $tdesc system $s->{'host'} ..\n";
-	$err = &shutdown_server($s);
+	$err = &shutdown_server($s, $force);
 	if ($err) {
 		$err = &html_tags_to_text($err);
 		print ".. shutdown failed : $err\n\n";
@@ -69,6 +70,7 @@ print "                          [--group name]*\n";
 local $types = join("|", @server_management_types);
 print "                          [--type $types]*\n";
 print "                          [--os oscode]*\n";
+print "                          [--force]\n";
 exit(1);
 }
 

@@ -54,6 +54,7 @@ foreach $s (@servers) {
 		&check_server_status($s);
 		print ".. startup successfull\n\n";
 		}
+	&check_server_status($s, 0, 1);
 	&save_managed_server($s);
 	}
 

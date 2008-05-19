@@ -13,7 +13,9 @@ if ($in{'shutdown'}) {
 	&ui_print_header(&server_in($server), $text{'save_shuttitle'}, "");
 	if (!$in{'confirm'}) {
 		&show_confirm_form(
-			&text('save_shutrusure', "<tt>$server->{'host'}</tt>"),
+			&text('save_shutrusure', "<tt>$server->{'host'}</tt>").
+			"<br>\n".
+			&ui_checkbox("force", 1, $text{'save_shutforce'}, 0),
 			"save_serv.cgi", [ [ "id", $in{'id'} ],
 					   [ "shutdown", 1 ] ],
 			$text{'save_shutok'});
@@ -21,7 +23,7 @@ if ($in{'shutdown'}) {
 	else {
 		print &text('save_shutting',
 			    "<tt>$server->{'host'}</tt>"),"<br>\n";
-		$err = &shutdown_server($server);
+		$err = &shutdown_server($server, $in{'force'});
 		if ($err) {
 			print &text('save_shutfailed', $err),"<p>\n";
 			}
@@ -50,7 +52,7 @@ elsif ($in{'startup'}) {
 		&save_managed_server($server);
 		}
 	else {
-		&check_server_status($server);
+		&check_server_status($server, 0, 1);
 		&save_managed_server($server);
 		print $text{'save_startdone'},"<p>\n";
 		if (defined(&theme_post_save_server)) {

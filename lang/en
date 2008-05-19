@@ -681,6 +681,7 @@ save_ehost=The new hostname does not resolve to the same IP address as the old o
 save_egroup2=Invalid new group name
 save_shuttitle=Shut Down System
 save_shutrusure=Are you sure you want to shut down the system $1?
+save_shutforce=Force immediate termination, instead of Unix shutdown?
 save_shutok=Yes, Shutdown Now
 save_shutting=Shutting down $1 ..
 save_shutfailed=.. failed : $1

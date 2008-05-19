@@ -289,7 +289,7 @@ elsif ($in{'shutdown'}) {
 		print &text('mass_shutting', scalar(@servers)),"<br>\n";
 		&parallel_server_function(\@servers,
 			sub { $err = &shutdown_server($_[0]);
-			      &check_server_status($_[0]);
+			      &check_server_status($_[0], 0, 1);
 			      &save_managed_server($_[0]) });
 		print $text{'mass_shutted'},"<p>\n";
 		foreach my $s (@servers) {
@@ -327,7 +327,7 @@ elsif ($in{'startup'}) {
 	print &text('mass_starting', scalar(@servers)),"<br>\n";
 	&parallel_server_function(\@servers,
 		sub { $err = &startup_server($_[0]);
-		      &check_server_status($_[0]);
+		      &check_server_status($_[0], 0, 1);
 		      &save_managed_server($_[0]) });
 	print $text{'mass_started'},"<p>\n";
 	foreach my $s (@servers) {

@@ -616,7 +616,7 @@ return $text;
 # Checks if some system can be contacted via SSH, with the login details
 # set in the server object. Returns a status code (0=OK, 1=No connect, 2=No
 # login, 3=Unknown error, 4=Timeout, 5=Host down, 6=Virtual system down,
-# 7=user is not roo) and an error message, the Webmin root directory
+# 7=user is not root) and an error message, the Webmin root directory
 # (if installed), the Webmin port and the Webmin SSL flag.
 sub check_server_ssh_login
 {
@@ -1762,16 +1762,16 @@ print $post,"<p>\n" if ($post);
 print "</center>\n";
 }
 
-# shutdown_server(&server)
+# shutdown_server(&server, [force])
 # Remotely shut down some system. Returns undef on success, or an error
 # message on failure.
 sub shutdown_server
 {
-local ($server) = @_;
+local ($server, $force) = @_;
 local $sfunc = "type_".$server->{'manager'}."_shutdown";
 if (defined(&$sfunc)) {
 	# Type provides a shutdown function
-	return &$sfunc($server);
+	return &$sfunc($server, $force);
 	}
 elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Can use Webmin API call
