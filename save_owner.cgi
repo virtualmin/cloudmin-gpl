@@ -32,6 +32,12 @@ else {
 		$owner->{'pass'} = &acl::encrypt_password($in{'opass'});
 		}
 
+	# Update lock setting
+	$owner->{'pass'} =~ s/^!//;
+	if ($in{'lock'}) {
+		$owner->{'pass'} = "!".$owner->{'pass'};
+		}
+
 	# Description and email
 	$owner->{'real'} = $in{'real'};
 	$in{'email'} =~ /^\S+\@\S+$/ ||

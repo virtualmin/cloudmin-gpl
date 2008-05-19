@@ -23,9 +23,13 @@ if (@owners) {
 		$users = @users == 0 ? $text{'xens_nousers'} :
 		    @users > 4 ? &text('xens_manyusers', scalar(@users)) :
 		    join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
+		$name = $o->{'name'};
+		if ($o->{'pass'} =~ /^!/) {
+			$name = "<i>$name</i>";
+			}
 		print &ui_checked_columns_row([
 			"<a href='edit_owner.cgi?name=".&urlize($o->{'name'}).
-			 "'>$o->{'name'}</a>",
+			 "'>$name</a>",
 			$o->{'real'},
 			$users,
 			], \@tds, "d", $o->{'name'});

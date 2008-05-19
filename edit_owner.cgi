@@ -28,7 +28,8 @@ print &ui_table_row($text{'owner_pass'},
 	($in{'new'} ? "" : &ui_radio("opass_def", 1, 
 			    [ [ 1, $text{'owner_leave'} ],
 			      [ 0, $text{'owner_set'} ] ])).
-	&ui_password("opass", undef, 20));
+	&ui_password("opass", undef, 20)."<br>\n".
+	&ui_checkbox("lock", 1, $text{'owner_lock'}, $owner->{'pass'} =~ /^!/));
 
 # Description
 print &ui_table_row($text{'owner_real'},

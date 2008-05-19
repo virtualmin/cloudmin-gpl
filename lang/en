@@ -1642,6 +1642,7 @@ owner_title2=Edit System Owner
 owner_header=System owner account details
 owner_name=Login username
 owner_pass=Login password
+owner_lock=Temporarily locked
 owner_leave=Don't change
 owner_set=Set to
 owner_real=Description or real name
