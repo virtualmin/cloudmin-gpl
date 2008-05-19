@@ -13,8 +13,6 @@
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
 # XXX devpay instance
-#	XXX automatic license add!
-#	XXX why does 'Same as VM2 license' option appear?
 #	XXX cleanup system, create image
 #	XXX docs
 
@@ -4128,6 +4126,15 @@ elsif ($out =~ /^OK\s+(\d+)/) {
 else {
 	return "No Virtualmin licenses found";
 	}
+}
+
+# can_all_licenses()
+# Returns 1 if current VM2 license can be used to fetch associated Virtualmin
+# licenses. Not true for EC2 shared keys.
+sub can_all_licenses
+{
+local ($serial, $key) = &get_server_manager_serial();
+return $key !~ /^AMAZON/i;
 }
 
 # remove_server_ssh_keys(&server)

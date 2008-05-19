@@ -13,7 +13,8 @@ $prog = "list_licences.cgi?mode=";
 @tabs = ( [ "list", $text{'licences_tablist'}, $prog."list" ],
 	  [ "add", $text{'licences_tabadd'}, $prog."add" ],
 	  [ "multi", $text{'licences_tabmulti'}, $prog."multi" ],
-	  [ "sched", $text{'licences_tabsched'}, $prog."sched" ],
+	  &can_all_licenses() ? 
+	    ( [ "sched", $text{'licences_tabsched'}, $prog."sched" ] ) : ( ),
 	);
 print &ui_tabs_start(\@tabs, "mode", $in{'mode'} || "list", 1);
 

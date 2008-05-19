@@ -1326,6 +1326,7 @@ lsched_checking=Checking for new Virtualmin licenses for your account ..
 lsched_failed=.. failed : $1
 lsched_done=.. found $1 new licenses, listed below :
 lsched_none=.. no new licenses were found.
+lsched_eall=Your VM2 license is not capable of fetching associated Virtualmin licenses
 
 transfer_title=Transfer Files
 transfer_tabupload=Upload File
