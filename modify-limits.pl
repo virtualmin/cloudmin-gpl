@@ -102,6 +102,7 @@ foreach $s (@servers) {
 	$t = $s->{'manager'};
 	$tfunc = "type_".$t."_desc";
 	$tdesc = &$tfunc();
+	&check_server_status($s, 0, 1);
 
 	# Change memory, if we can
 	$reboot = 0;

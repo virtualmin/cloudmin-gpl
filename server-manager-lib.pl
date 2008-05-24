@@ -12,9 +12,7 @@
 # XXX HVM Xen instances
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
-# XXX devpay instance
-#	XXX cleanup system, create image
-#	XXX docs
+# XXX file: deprecated with Xen 3.2 ?
 
 do '../web-lib.pl';
 &init_config();
