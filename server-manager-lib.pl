@@ -1234,10 +1234,6 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		$server->{'status_msg'} = $err;
 		goto DONECHECK;
 		}
-	if ($skipinfo) {
-		# No need to collect domains and so on
-		goto DONECHECK;
-		}
 
 	# Webmin is OK! Check for Virtualmin
 	local $info;
@@ -1251,6 +1247,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		if (&remote_foreign_check($server, "virtual-server") &&
 		    !$server->{'novirtualmin'}) {
 			# Get and save remote Virtualmin domains
+			goto SKIPINFO if ($skipinfo);
 			&remote_foreign_require($server, "virtual-server",
 						"virtual-server-lib.pl");
 			alarm($webmin_timeout * 3);	# Give this longer,
@@ -1323,6 +1320,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			$server->{'status_msg'} = undef;
 			delete($server->{'virtualmin_domains'});
 			delete($server->{'virtualmin_poss'});
+			goto SKIPINFO if ($skipinfo);
 			$info = { };
 
 			# Make some direct Webmin calls to get info, starting
@@ -1367,6 +1365,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				$server, "net", "active_interfaces") ];
 			}
 
+		SKIPINFO:
 		alarm(0);
 		};
 	if ($@) {
