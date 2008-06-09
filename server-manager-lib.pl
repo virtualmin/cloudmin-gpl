@@ -13,6 +13,10 @@
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
 # XXX file: deprecated with Xen 3.2 ?
+# XXX console access
+#	XXX unix user on master per Xen instance, with shell set to command
+#	    which runs SSH to host
+#	XXX ssh applet
 
 do '../web-lib.pl';
 &init_config();
@@ -1446,13 +1450,15 @@ if (!$got_disk) {
 	}
 
 # Get kernel and CPU info
-local ($out, $ex, $err) = &execute_command_on_server($server, 
-	"uname -r ; uname -m ; uname -s");
-if (!$ex && !$err) {
-	local ($r, $m, $o) = split(/\r?\n/, $out);
-	$info->{'kernel'} = { 'version' => $r,
-			      'arch' => $m,
-			      'os' => $o };
+if (!$info->{'kernel'}) {
+	local ($out, $ex, $err) = &execute_command_on_server($server, 
+		"uname -r ; uname -m ; uname -s");
+	if (!$ex && !$err) {
+		local ($r, $m, $o) = split(/\r?\n/, $out);
+		$info->{'kernel'} = { 'version' => $r,
+				      'arch' => $m,
+				      'os' => $o };
+		}
 	}
 
 &save_server_collected($server, $info);
