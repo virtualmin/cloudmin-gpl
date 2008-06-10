@@ -73,7 +73,7 @@ $image = { 'id' => $id,
 $info = &get_server_collected($server);
 if ($info) {
 	$image->{'virtualmin'} =
-		$info->{'minfo'}->{'version'} =~ /gpl/ ||
+		$info->{'minfo'}->{'version'} =~ /gpl/i ||
 		$info->{'minfo'}->{'virtualmin'} eq 'gpl' ? 'gpl' : 'pro';
 	}
 

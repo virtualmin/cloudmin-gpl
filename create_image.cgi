@@ -28,7 +28,8 @@ $image->{'version'} = $in{'version'} if (!$in{'version_def'});
 $info = &get_server_collected($server);
 if ($info) {
 	$image->{'virtualmin'} =
-		$info->{'minfo'}->{'version'} =~ /gpl/ ? 'gpl' : 'pro';
+		$info->{'minfo'}->{'version'} =~ /gpl/i ||
+		$info->{'minfo'}->{'virtualmin'} eq 'gpl' ? 'gpl' : 'pro';
 	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'mkimage_title'}, "");
