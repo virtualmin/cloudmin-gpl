@@ -26,7 +26,7 @@ $image = { 'id' => $imageid,
 	   'manager' => $server->{'manager'} };
 $image->{'version'} = $in{'version'} if (!$in{'version_def'});
 $info = &get_server_collected($server);
-if ($info) {
+if ($info && $info->{'minfo'} && $info->{'minfo'}->{'version'}) {
 	$image->{'virtualmin'} =
 		$info->{'minfo'}->{'version'} =~ /gpl/i ||
 		$info->{'minfo'}->{'virtualmin'} eq 'gpl' ? 'gpl' : 'pro';
