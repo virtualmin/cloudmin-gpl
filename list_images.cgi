@@ -5,13 +5,15 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ui_print_header(undef, $text{'images_title'}, "", "images");
 
-@avail = sort { $a->{'desc'} cmp $b->{'desc'} } &list_available_server_images();
+# Get all the available and local images
+@avail = &list_available_server_images();
 @images = &list_server_images();
 @combined = @images;
 %incombined = map { $_->{'id'}, $_ } @combined;
 foreach $i (@avail) {
 	push(@combined, $i) if (!$incombined{$i->{'id'}});
 	}
+
 @links = ( &select_all_link("d"), &select_invert_link("d") );
 print &ui_form_start("get_images.cgi", "post");
 print &ui_links_row(\@links);
@@ -21,7 +23,7 @@ print &ui_columns_start([ "",
 			  $text{'images_manager'},
 			  $text{'images_status'},
 			  $text{'images_size'} ]);
-foreach $i (@combined) {
+foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
 	$tfunc = "type_".$i->{'manager'}."_desc";
 	($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
 	($got) = grep { $_->{'id'} eq $i->{'id'} } @images;

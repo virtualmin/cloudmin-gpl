@@ -129,6 +129,7 @@ else {
 	&$second_print(".. fetched all files");
 
 	# Save the new image file
+	&generate_image_md5s($image);
 	&save_server_image($image);
 	}
 

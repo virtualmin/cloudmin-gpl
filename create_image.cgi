@@ -83,6 +83,7 @@ else {
 	&$second_print($text{'create_done'});
 
 	# Save the new image file
+	&generate_image_md5s($image);
 	&save_server_image($image);
 	}
 

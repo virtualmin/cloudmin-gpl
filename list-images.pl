@@ -22,6 +22,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--type") {
 		$type = shift(@ARGV);
 		}
+	elsif ($a eq "--md5-verify") {
+		$md5verify = 1;
+		}
 	else {
 		&usage();
 		}
@@ -47,6 +50,16 @@ if ($multi) {
 			print "    Source: Local\n";
 			}
 		print "    Compressed size: $i->{'size'}\n";
+		@md5s = split(/\s+/, $i->{'md5'});
+		if (@md5s && $md5s[0] ne "-" && $md5verify) {
+			print "    MD5 expected checksum: ",
+				join(" ", @md5s),"\n";
+			@realmd5s = &get_image_md5s($i);
+			print "    MD5 actual checksum: ",
+				join(" ", @realmd5s),"\n";
+			print "    MD5 status: ",
+				&compare_md5_lists(\@md5s, \@realmd5s) ? "OK" : "Bad","\n";
+			}
 		}
 	}
 else {
@@ -66,6 +79,7 @@ print "Lists all downloaded system images.\n";
 print "\n";
 print "usage: list-images.pl [--multiline]\n";
 print "                      [--type typename]\n";
+print "                      [--md5-verify]\n";
 exit(1);
 }
 

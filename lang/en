@@ -1120,6 +1120,7 @@ eimage_size=Compressed size
 eimage_files=Component files
 eimage_delete=Delete From This System
 eimage_users=Used to create systems
+eimage_md5=Expected MD5	checksum
 dimage_egone=Image no longer exists!
 
 remote_eprogram=Invalid remote program name

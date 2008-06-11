@@ -250,6 +250,39 @@ foreach my $fl (split(/\s+/, $img->{'files'})) {
 unlink("$server_images_dir/$img->{'id'}.img");
 }
 
+# generate_image_md5s(&image)
+# Create the md5 key in the image hash, which is a list of MD5 checksums
+# for image files
+sub generate_image_md5s
+{
+local ($image) = @_;
+$image->{'md5'} = join(" ", &get_image_md5s($image));
+}
+
+# get_image_md5s(&image)
+# Generate MD5 checksums for image files, and return them as a list
+sub get_image_md5s
+{
+local ($image) = @_;
+local @rv;
+foreach my $f (split(/\s+/, $image->{'files'})) {
+	local $out = &backquote_command("md5sum ".
+		quotemeta("$server_images_dir/$f")." 2>/dev/null </dev/null");
+	$out =~ s/\r|\n//g;
+	$out =~ s/^(\S+)\s+.*/$1/;
+	push(@rv, $out || "-");
+	}
+return @rv;
+}
+
+# compare_md5_lists(&list1, &list2)
+# Check if two lists are case-insentively the same
+sub compare_md5_lists
+{
+local ($l1, $l2) = @_;
+return join(" ", map { lc($_) } @$l1) eq join(" ", map { lc($_) } @$l2);
+}
+
 # fix_virtualmin_licence_files(&server, serial, key)
 # Once a server has been started, fix up any files containing Virtualmin
 # licence keys. Also clears any virtualmin host-specific cache files.

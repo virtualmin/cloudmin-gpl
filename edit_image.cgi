@@ -34,6 +34,7 @@ print &ui_table_row($text{'eimage_status'},
 print &ui_table_row($text{'eimage_size'},
 		    &nice_size($i->{'size'}));
 
+# If we have downloaded the image, shown more details
 if ($got) {
 	print &ui_table_row($text{'eimage_files'},
 			    "<tt>$got->{'files'}</tt>");
@@ -45,6 +46,13 @@ if ($got) {
 				    "id=$_->{'id'}'>$_->{'host'}</a></tt>" }
 				  @users);
 	print &ui_table_row($text{'eimage_users'}, $users);
+	}
+
+# MD5 checksum, if we have it
+@md5s = split(/\s+/, $i->{'md5'});
+if (@md5s && $md5s[0] ne "-") {
+	print &ui_table_row($text{'eimage_md5'},
+		"<tt>".join(" ", @md5s)."</tt>");
 	}
 
 print &ui_table_end();
