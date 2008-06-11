@@ -36,6 +36,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-serial") {
 		$munge = 0;
 		}
+	elsif ($a eq "--no-compress") {
+		$nocompress = 1;
+		}
 	else {
 		&usage();
 		}
@@ -69,7 +72,9 @@ if (!$overwrite) {
 $image = { 'id' => $id,
 	   'desc' => $desc,
 	   'manager' => $server->{'manager'},
-	   'version' => $version };
+	   'version' => $version,
+	   'nocompress' => $nocompress,
+	 };
 $info = &get_server_collected($server);
 if ($info && $info->{'minfo'} && $info->{'minfo'}->{'version'}) {
 	$image->{'virtualmin'} =
@@ -167,6 +172,7 @@ print "                       --id image-id\n";
 print "                       [--overwrite]\n";
 print "                       [--version number]\n";
 print "                       [--no-serial]\n";
+print "                       [--no-compress]\n";
 exit(1);
 }
 

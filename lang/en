@@ -1132,6 +1132,7 @@ mkimage_mungeshadow=Resetting root password ..
 mkimage_mungessh=Removing authorized SSH keys ..
 mkimage_xengzip=Compressing filesystem image ..
 mkimage_exengzip=.. failed : $1
+mkimage_exenlink=Failed to link filesystem image for copying : $1
 mkimage_vservertar=Taring up filesystem ..
 mkimage_evservertar=.. tar failed : $1
 mkimage_emunge=.. failed : $1
@@ -1159,6 +1160,7 @@ mkimage_estartup=.. startup failed : $1
 mkimage_new=New image $1
 mkimage_over=Overwrite old image $1
 mkimage_version=Version number
+mkimage_compress=Compress image filesystem?
 mkimage_none=None
 
 pass_title=Change Password

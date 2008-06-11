@@ -117,10 +117,12 @@ if ($in{'image'}) {
 		}
 	elsif ($imageok == 2) {
 		$server->{'imagetemp'} = $imagetemp;
+		$server->{'imagelocal'} = 1;
 		print $text{'create_nocopy'},"<p>\n";
 		}
 	else {
 		$server->{'imagetemp'} = $imagetemp;
+		$server->{'imagelocal'} = 0;
 		print $text{'create_done'},"<p>\n";
 		}
 	}

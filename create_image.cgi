@@ -23,7 +23,9 @@ else {
 # Create initial image hash
 $image = { 'id' => $imageid,
 	   'desc' => $in{'desc'},
-	   'manager' => $server->{'manager'} };
+	   'manager' => $server->{'manager'},
+	   'nocompress' => !$in{'compress'},
+	 };
 $image->{'version'} = $in{'version'} if (!$in{'version_def'});
 $info = &get_server_collected($server);
 if ($info && $info->{'minfo'} && $info->{'minfo'}->{'version'}) {

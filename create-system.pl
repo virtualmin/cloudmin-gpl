@@ -217,10 +217,12 @@ if ($image) {
 		}
 	elsif ($imageok == 2) {
 		$server->{'imagetemp'} = $imagetemp;
+		$server->{'imagelocal'} = 1;
 		print " .. already on host system\n\n";
 		}
 	else {
 		$server->{'imagetemp'} = $imagetemp;
+		$server->{'imagelocal'} = 0;
 		print " .. done\n\n";
 		}
 	}
