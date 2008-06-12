@@ -4,15 +4,12 @@
 # XXX refresh should be in dependency order
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
-#	XXX console access
 # XXX mobile theme for VM2 - FS#3459
-# XXX make adding Xen hosts easier (auto-add physical on add page, install kernel)
 # XXX allow changing of main IP
 #	XXX do virtualmin too
 # XXX HVM Xen instances
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
-# XXX file: deprecated with Xen 3.2 ?
 # XXX console access
 #	XXX unix user on master per Xen instance, with shell set to command
 #	    which runs SSH to host

@@ -108,7 +108,7 @@ else {
 				&error($text{'disk_emount'});
 			$disk->{'mount'} = $in{'mount'};
 			}
-		elsif ($in{'mount_def'} == 1) {
+		elsif ($in{'mount_def'} == 2) {
 			$in{'fs'} eq 'swap' || $in{'new'} == 2 ||
 				&error($text{'disk_eswap'});
 			}
