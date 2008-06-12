@@ -21,6 +21,7 @@ do '../ui-lib.pl';
 do 'images-lib.pl';
 do 'newfeatures-lib.pl';
 do 'owners-lib.pl';
+do 'console-lib.pl';
 if (-r "$module_root_directory/bw-lib.pl") {
 	do 'bw-lib.pl';
 	}
@@ -140,6 +141,9 @@ $install_times_file = "$module_config_directory/installtimes";
 $bandwidth_dir = "$module_config_directory/bandwidth";
 
 $shell_previous_dir = "$module_config_directory/previous";
+
+$console_shell_cmd = "$module_config_directory/console.pl";
+$console_home_base = $ENV{'WEBMIN_VAR'}."/console";
 
 &set_all_html_print();
 
