@@ -6,7 +6,7 @@ $main::no_acl_check++;
 require './server-manager-lib.pl';
 
 # Work out server, based on username
-($server) = grep { $_->{'console_user'} eq $ENV{'USER'} }
+($server) = grep { $_->{'login_user'} eq $ENV{'USER'} }
 		 &list_managed_servers();
 if (!$server) {
 	print "Failed to find a VM2 managed system for $ENV{'USER'}\n";

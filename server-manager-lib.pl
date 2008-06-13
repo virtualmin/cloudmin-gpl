@@ -11,14 +11,10 @@
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
 # XXX console access
-#	XXX unix user on master per Xen instance, with shell set to command
-#	    which runs SSH to host
 #	XXX ssh auto-login
-#	XXX link to other modules
-#	XXX CHANGELOG
 #	XXX what if hosted locally?
-#	XXX zones support
 #	XXX custom SSH port
+#	XXX applet not working
 
 do '../web-lib.pl';
 &init_config();
@@ -838,6 +834,7 @@ else {
 		$sshcmd .= " -p ".$server->{'ssh_port'};
 		}
 	if ($leave) {
+		$sshcmd .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'} ".quotemeta($cmd);
