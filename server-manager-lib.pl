@@ -14,6 +14,11 @@
 #	XXX unix user on master per Xen instance, with shell set to command
 #	    which runs SSH to host
 #	XXX ssh applet
+#	XXX ssh auto-login
+#	XXX link to other modules
+#	XXX CHANGELOG
+#	XXX what if hosted locally?
+#	XXX double-echo at console?
 
 do '../web-lib.pl';
 &init_config();
@@ -21,7 +26,7 @@ do '../ui-lib.pl';
 do 'images-lib.pl';
 do 'newfeatures-lib.pl';
 do 'owners-lib.pl';
-do 'console-lib.pl';
+do 'login-lib.pl';
 if (-r "$module_root_directory/bw-lib.pl") {
 	do 'bw-lib.pl';
 	}
@@ -142,8 +147,8 @@ $bandwidth_dir = "$module_config_directory/bandwidth";
 
 $shell_previous_dir = "$module_config_directory/previous";
 
-$console_shell_cmd = "$module_config_directory/console.pl";
-$console_home_base = $ENV{'WEBMIN_VAR'}."/console";
+$login_shell_cmd = "$module_config_directory/login.pl";
+$login_home_base = $ENV{'WEBMIN_VAR'}."/login";
 
 &set_all_html_print();
 
@@ -371,6 +376,7 @@ else {
 sub delete_managed_server
 {
 local ($server, $keep) = @_;
+&delete_login_user($server);
 if ($server->{'id'}) {
 	&servers::delete_server($server->{'id'});
 	}
@@ -730,25 +736,28 @@ if ($@) {
 return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'});
 }
 
-# run_ssh_command(command, password, timeout)
+# run_ssh_command(command, password, timeout, [leave-open])
 # Attempts to run some ssh or scp command, giving it a password if needed.
 # Returns 0 on success, 1 if the connection fails, 2 if the password is wrong,
 # or 3 for some other error, 4 for timeout, and the output.
+# If the leave-open parameter is given, the loop stops when that message is
+# read, and the still-open file descriptor is returned
 sub run_ssh_command
 {
-local ($cmd, $pass, $timeout) = @_;
+local ($cmd, $pass, $timeout, $leave) = @_;
 local ($wrong_password, $got_login, $connect_failed, $given_password);
 local $out;
 local $ex;
+local ($fh, $fpid);
 eval {
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
 	if ($timeout) {
 		alarm($timeout);
 		}
-	local ($fh, $fpid) = &proc::pty_process_exec($cmd);
+	($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
-		local $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
+		local $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n", $leave ? ( $leave ) : ( ));
 		if ($rv == 0) {
 			syswrite($fh, "$pass\n");
 			$given_password++;
@@ -765,6 +774,10 @@ eval {
 			$connect_failed++;
 			$out .= $wait_for_input;
 			}
+		elsif ($rv == 5) {
+			# Hit leave-open message
+			last;
+			}
 		elsif ($rv < 0) {
 			last;
 			}
@@ -773,9 +786,11 @@ eval {
 			}
 		}
 	alarm(0);
-	close($fh);
-	waitpid($fpid, 0);
-	$ex = $?;
+	if (!$leave) {
+		close($fh);
+		waitpid($fpid, 0);
+		$ex = $?;
+		}
 	};
 if ($@) {
 	if ($@ =~ /timeout/) {
@@ -795,15 +810,17 @@ if ($connect_failed) {
 if ($ex) {
 	return (3, $out);
 	}
-return (0, $out);
+return (0, $out, $fh, $fpid);
 }
 
-# execute_command_on_server(&server, command, [timeout])
+# execute_command_on_server(&server, command, [timeout], [leave-open])
 # Runs some command on a managed system (most likely via SSH), and returns
-# the output, exit status and error message if it could not be run
+# the output, exit status and error message if it could not be run.
+# If the leave-open parameter is set, the command is left running and a file
+# handle for talking to it is returned.
 sub execute_command_on_server
 {
-local ($server, $cmd, $timeout) = @_;
+local ($server, $cmd, $timeout, $leave) = @_;
 local $efunc = "type_".$server->{'manager'}."_execute_command";
 if (defined(&$efunc)) {
 	# Use type-specific function call
@@ -820,11 +837,16 @@ else {
 	if ($server->{'ssh_port'}) {
 		$sshcmd .= " -p ".$server->{'ssh_port'};
 		}
+	if ($leave) {
+		$sshcmd .= " -t";
+		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
+		}
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'} ".quotemeta($cmd);
-	local ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
-						 $timeout);
+	local ($status, $out, $fh, $fpid) =
+	    &run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout,
+			     $leave ? "SERVER_MANAGER_LOGIN_DONE" : undef);
 	if ($status == 0) {
-		return ($out, 0, undef, $status);
+		return ($out, 0, undef, $status, $fh, $fpid);
 		}
 	elsif ($status == 3) {
 		return ($out || "Connection failed\n", 1, undef, $status);
@@ -3550,6 +3572,8 @@ local $tfunc = "type_".$t."_can_transfer";
 local $cantransfer = defined(&$tfunc) && &$tfunc($server);
 local $cfunc = "type_".$t."_get_console_output";
 local $canconsole = defined(&$cfunc);
+local $clfunc = "type_".$t."_supports_console_login";
+local $canlogin = defined(&$clfunc) && &$clfunc($server);
 
 # Start with links to edit_serv.cgi
 local $ed = "edit_serv.cgi?id=$server->{'id'}";
@@ -3703,6 +3727,13 @@ if ($status ne 'nohost') {
 			    'cat' => 'power',
 			    'link' => "console.cgi?id=$server->{'id'}" });
 		}
+	}
+if ($canlogin && &can_action($server, "console") && &foreign_check("telnet")) {
+	# Access console interactively
+	push(@rv, { 'id' => 'login',
+		    'desc' => $text{'edit_login'},
+		    'cat' => 'power',
+		    'link' => "login.cgi?id=$server->{'id'}" });
 	}
 if ($t ne 'real' && $t ne 'this' && &can_action($server, "delete")) {
 	push(@rv, { 'id' => 'delete',

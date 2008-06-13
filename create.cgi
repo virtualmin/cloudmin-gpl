@@ -321,6 +321,19 @@ if (defined(&$bfunc)) {
 	print $text{'create_done'},"<p>\n";
 	}
 
+# Create console user
+$cfunc = "type_".$in{'type'}."_supports_console_login";
+if (defined(&$cfunc)) {
+	print $text{'create_consoleuser'},"<p>\n";
+	$err = &create_login_user($server);
+	if ($err) {
+		print &text('create_ecreate', $err),"<p>\n";
+		}
+	else {
+		print $text{'create_done'},"<p>\n";
+		}
+	}
+
 # Run post-creation script
 &run_system_script($server, 'after', 'create');
 

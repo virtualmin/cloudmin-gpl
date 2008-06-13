@@ -213,6 +213,7 @@ create_zonesrootssh=Allowing SSH logins by <tt>root</tt> ..
 create_zonesrootsshok=.. already allowed
 create_zonesrootsshnone=.. SSH configuration not found
 create_atbooting=Enabling system at host boot time ..
+create_consoleuser=Creating console access user ..
 create_image=Initial system image
 create_noimage=&lt;None - base OS only&gt;
 create_copying=Copying $1 image file to host system ..
@@ -579,7 +580,8 @@ edit_recheck=Check Configuration
 edit_reboot=Reboot
 edit_shutdown=Shutdown
 edit_startup=Startup
-edit_console=View Console
+edit_console=View Boot Messages
+edit_login=Access Console
 edit_cheader=Detailed system status
 edit_dheader=Virtualmin domains
 edit_iload=CPU load averages
@@ -1689,7 +1691,7 @@ can_eadd=You are not allowed to add existing $1 systems
 
 view_title=System Details
 
-console_title=View Console
+console_title=Console Boot Messages
 console_eget=Console messages could not be displayed : $1
 console_refresh=Refresh messages
 
@@ -1741,3 +1743,8 @@ ec2addr_used2=(Assigned to instance $1)
 ec2addr_assing=Associating EC2 static IP address $1 ..
 ec2addr_asserr=.. association failed : $1
 ec2addr_assdone=Waiting for IP address association to be assigned ..
+
+login_title=Console Login
+login_euser=Failed to create console access user : $1
+login_esupport=This system does not support console access at this time
+login_nojava=Java must be installed in your browser to use the console login applet.

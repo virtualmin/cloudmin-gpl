@@ -405,6 +405,14 @@ if (defined(&$bfunc)) {
 	print ".. done\n\n";
 	}
 
+# Create console user
+$cfunc = "type_".$in{'type'}."_supports_console_login";
+if (defined(&$cfunc)) {
+	print "Creating console access user ..\n";
+	$err = &create_login_user($server);
+	print $err ? ".. creation failed : $err\n\n" : ".. done\n\n";
+	}
+
 # Run post-creation script
 &run_system_script($server, 'after', 'create');
 
