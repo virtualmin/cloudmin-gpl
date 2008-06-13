@@ -21,13 +21,17 @@ elsif ($ok == 0) {
 	}
 
 # Create the SSH applet
-# XXX how to auto-login?
+$host = $ENV{'HTTP_HOST'};
+$host =~ s/:\d+$//;
 print <<EOF;
-<applet archive=../telnet/jta25.jar code=de.mud.jta.Applet
+<applet archive=jta26.jar code=de.mud.jta.Applet
  width=100% height=90%>
-<param name=config value=../telnet/ssh.conf>
+<param name=config value="sshconf.cgi?id=$server->{'id'}">
+<param name=Socket.host value=$host>
+<param name=Socket.port value=22>
 $text{'login_nojava'}
 </applet>
+<a href="sshconf.cgi?id=$server->{'id'}">config</a>
 EOF
 
 &ui_print_footer("", $text{'index_return'});

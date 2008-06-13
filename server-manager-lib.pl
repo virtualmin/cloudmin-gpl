@@ -13,12 +13,12 @@
 # XXX console access
 #	XXX unix user on master per Xen instance, with shell set to command
 #	    which runs SSH to host
-#	XXX ssh applet
 #	XXX ssh auto-login
 #	XXX link to other modules
 #	XXX CHANGELOG
 #	XXX what if hosted locally?
-#	XXX double-echo at console?
+#	XXX zones support
+#	XXX custom SSH port
 
 do '../web-lib.pl';
 &init_config();
@@ -838,7 +838,6 @@ else {
 		$sshcmd .= " -p ".$server->{'ssh_port'};
 		}
 	if ($leave) {
-		$sshcmd .= " -t";
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'} ".quotemeta($cmd);
@@ -3728,7 +3727,7 @@ if ($status ne 'nohost') {
 			    'link' => "console.cgi?id=$server->{'id'}" });
 		}
 	}
-if ($canlogin && &can_action($server, "console") && &foreign_check("telnet")) {
+if ($canlogin && &can_action($server, "console")) {
 	# Access console interactively
 	push(@rv, { 'id' => 'login',
 		    'desc' => $text{'edit_login'},
