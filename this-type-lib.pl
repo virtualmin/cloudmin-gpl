@@ -35,15 +35,24 @@ sub type_this_can_transfer
 return 1;	# Can always transfer to self
 }
 
-# type_this_execute_command(&server, comand, [timeout])
+# type_this_execute_command(&server, comand, [timeout], [leave-open])
 # Just runs a command locally
 sub type_this_execute_command
 {
-local ($server, $cmd, $timeout) = @_;
-local $out = $timeout ?
-	&backquote_with_timeout("($cmd) 2>&1 </dev/null", $timeout) :
-	&backquote_command("($cmd) 2>&1 </dev/null");
-return ($out, $?);
+local ($server, $cmd, $timeout, $leave) = @_;
+if ($leave) {
+	# Open the command in a new pty
+	&foreign_require("proc", "proc-lib.pl");
+	local ($fh, $fpid) = &proc::pty_process_exec($cmd);
+	return (undef, 0, 0, $fh, $fpid);
+	}
+else {
+	# Just run the command, and get the output
+	local $out = $timeout ?
+		&backquote_with_timeout("($cmd) 2>&1 </dev/null", $timeout) :
+		&backquote_command("($cmd) 2>&1 </dev/null");
+	return ($out, $?);
+	}
 }
 
 # type_this_get_file(&server, remotefile, localfile)

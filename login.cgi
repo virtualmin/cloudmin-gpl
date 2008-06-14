@@ -21,17 +21,15 @@ elsif ($ok == 0) {
 	}
 
 # Create the SSH applet
-$host = $ENV{'HTTP_HOST'};
-$host =~ s/:\d+$//;
+($host, $port) = &get_ssh_host_port();
 print <<EOF;
 <applet archive=jta26.jar code=de.mud.jta.Applet
  width=100% height=90%>
 <param name=config value="sshconf.cgi?id=$server->{'id'}">
 <param name=Socket.host value=$host>
-<param name=Socket.port value=22>
+<param name=Socket.port value=$port>
 $text{'login_nojava'}
 </applet>
-<a href="sshconf.cgi?id=$server->{'id'}">config</a>
 EOF
 
 &ui_print_footer("", $text{'index_return'});

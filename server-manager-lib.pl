@@ -10,11 +10,6 @@
 # XXX HVM Xen instances
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
-# XXX console access
-#	XXX ssh auto-login
-#	XXX what if hosted locally?
-#	XXX custom SSH port
-#	XXX applet not working
 
 do '../web-lib.pl';
 &init_config();

@@ -100,7 +100,23 @@ foreach (1 .. $len) {
 return $random_password;
 }
 
-
+# get_ssh_host_port()
+# Returns the SSH hostname and port number for the VM2 master
+sub get_ssh_host_port
+{
+local $host = $ENV{'HTTP_HOST'} || $ENV{'SERVER_NAME'} ||
+	      &get_system_hostname();
+$host =~ s/:\d+$//;
+local $port;
+if (&foreign_check("sshd")) {
+	# Ask the SSH server module for the port
+	&foreign_require("sshd", "sshd-lib.pl");
+	local $conf = &sshd::get_sshd_config();
+	$port = &sshd::find_value("Port", $conf);
+	}
+$port ||= 22;
+return ($host, $port);
+}
 
 1;
 
