@@ -325,7 +325,7 @@ if (defined(&$bfunc)) {
 $cfunc = "type_".$in{'type'}."_supports_console_login";
 if (defined(&$cfunc)) {
 	print $text{'create_consoleuser'},"<p>\n";
-	$err = &create_login_user($server);
+	$err = &create_console_user($server);
 	if ($err) {
 		print &text('create_ecreate', $err),"<p>\n";
 		}
