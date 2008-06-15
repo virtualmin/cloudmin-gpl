@@ -1748,3 +1748,8 @@ login_title=Console Login
 login_euser=Failed to create console access user : $1
 login_esupport=This system does not support console access at this time
 login_nojava=Java must be installed in your browser to use the console login applet.
+
+setup_edomain=Missing or invalid domain name - only letters, numbers and the dot, dash and underscore characters are allowed
+setup_edomain2=Domain names cannot start or end with a .
+setup_edomain3=The final component of a domain name cannot contain non-english letters
+setup_edomainprefix=The domain name does not need to have $1 at the start

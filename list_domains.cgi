@@ -23,9 +23,11 @@ if ($totaldomains) {
 
 if ($in{'search'}) {
 	# Search across all servers
+	$parsedsearch = &parse_domain_name($in{'search'});
 	foreach $s (@vservers) {
 		foreach $d (&get_server_domains($s)) {
-			if ($d->{'dom'} =~ /\Q$in{'search'}\E/i) {
+			if ($d->{'dom'} =~ /\Q$in{'search'}\E/i ||
+			    $d->{'dom'} =~ /\Q$parsedsearch\E/i) {
 				push(@doms, $d);
 				$d->{'_server'} = $s;
 				}
