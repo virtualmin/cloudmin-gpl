@@ -101,21 +101,26 @@ return $random_password;
 }
 
 # get_ssh_host_port()
-# Returns the SSH hostname and port number for the VM2 master
+# Returns the SSH hostname and port number for the VM2 master, and a list of
+# SSH protocol versions accepted.
 sub get_ssh_host_port
 {
 local $host = $ENV{'HTTP_HOST'} || $ENV{'SERVER_NAME'} ||
 	      &get_system_hostname();
 $host =~ s/:\d+$//;
 local $port;
+local @protos;
 if (&foreign_check("sshd")) {
 	# Ask the SSH server module for the port
 	&foreign_require("sshd", "sshd-lib.pl");
 	local $conf = &sshd::get_sshd_config();
 	$port = &sshd::find_value("Port", $conf);
+	local $protos = &sshd::find_value("Protocol", $conf);
+	@protos = split(/,/, $protos);
 	}
 $port ||= 22;
-return ($host, $port);
+@protos = (1,2) if (!@protos);
+return ($host, $port, \@protos);
 }
 
 1;

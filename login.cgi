@@ -20,9 +20,23 @@ elsif ($ok == 0) {
 	&error($text{'login_esupport'});
 	}
 
-# Create the SSH applet
-($host, $port) = &get_ssh_host_port();
-print <<EOF;
+# Get and check SSH config
+($host, $port, $protos) = &get_ssh_host_port();
+if (&indexof("1", @$protos) < 0) {
+	# No SSH 1 support in server :-(
+	print &text('login_essh1'),"<p>\n";
+	if (&foreign_available("sshd")) {
+		print &text('login_sshlink', "../sshd/edit_net.cgi"),"<p>\n";
+		}
+	print &ui_hr();
+	print $text{'login_sshcmd'},"\n";
+	print "<pre>ssh $server->{'login_user'}\@$host</pre>\n";
+	print &text('login_sshpasswd',
+		"<tt>$server->{'login_pass'}</tt>"),"<p>\n";
+	}
+else {
+	# Create the SSH applet
+	print <<EOF;
 <applet archive=jta26.jar code=de.mud.jta.Applet
  width=100% height=90%>
 <param name=config value="sshconf.cgi?id=$server->{'id'}">
@@ -31,6 +45,7 @@ print <<EOF;
 $text{'login_nojava'}
 </applet>
 EOF
+	}
 
 &ui_print_footer("", $text{'index_return'});
 
