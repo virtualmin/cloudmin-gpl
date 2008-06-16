@@ -56,6 +56,16 @@ if ($multi) {
 	}
 else {
 	# Just summary
+	$fmt = "%-20.20s %-20.20s %-38.38s\n";
+	printf $fmt, "Login", "Real name", "Systems";
+	printf $fmt, ("-" x 20), ("-" x 20), ("-" x 38);
+	foreach $o (@owners) {
+		%canservers = map { $_, 1 }
+			split(/\s+/, $o->{'acl'}->{'servers'});
+		@users = grep { $canservers{$_->{'id'}} } @allservers;
+		printf $fmt, $o->{'name'}, $o->{'real'},
+			     join(" ", map { $_->{'host'} } @users);
+		}
 	}
 
 sub usage
