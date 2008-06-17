@@ -17,6 +17,11 @@ push(@rv, $virtualmin_licences_file);
 # Add Bandwidth data and previous commands
 push(@rv, $bandwidth_dir, $shell_previous_dir);
 
+# Add EC2 accounts
+if ($ec2_accounts_dir) {
+	push(@rv, $ec2_accounts_dir);
+	}
+
 return &unique(@rv);
 }
 
