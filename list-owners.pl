@@ -20,7 +20,7 @@ while(@ARGV > 0) {
 	if ($a eq "--multiline") {
 		$multi = 1;
 		}
-	elsif ($a eq "--owner") {
+	elsif ($a eq "--name") {
 		push(@onames, shift(@ARGV));
 		}
 	else {
@@ -74,7 +74,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all systems owners.\n";
 print "\n";
 print "usage: list-owners.pl [--multiline]\n";
-print "                      [--owner username]*\n";
+print "                      [--name username]*\n";
 exit(1);
 }
 

@@ -13,7 +13,6 @@ $0 = "$pwd/create-owner.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &foreign_require("acl", "acl-lib.pl");
-@allservers = &list_managed_servers();
 
 # Parse command line
 @allactions = &list_owner_actions();
@@ -49,9 +48,9 @@ while(@ARGV > 0) {
 $name || &usage("Missing --name parameter");
 $email || &usage("Missing --email parameter");
 $pass || &usage("Missing --pass parameter");
-@allservers = &list_managed_servers();
+%allservers = map { $_->{'host'}, $_ } &list_managed_servers();
 foreach $n (@hosts) {
-	($s) = grep { $_->{'host'} eq $n } @allservers;
+	$s = $allservers{$n};
 	$s || &usage("No system named $n exists");
 	push(@ids, $s->{'id'});
 	}
