@@ -297,6 +297,7 @@ create_xenondestroy=Destroy instance
 create_xenonrestart=Restart instance
 create_xenonpreserve=Preverse for manual cleanup
 create_xenonrename-restart=Rename and restart
+create_xenmanual=Other configuration file entries
 
 keys_title=SSH Keys
 keys_desc=Key description
