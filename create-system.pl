@@ -406,7 +406,7 @@ if (defined(&$bfunc)) {
 	}
 
 # Create console user
-$cfunc = "type_".$in{'type'}."_supports_console_login";
+$cfunc = "type_".$type."_supports_console_login";
 if (defined(&$cfunc)) {
 	print "Creating console access user ..\n";
 	$err = &create_console_user($server);
