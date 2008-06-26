@@ -4472,6 +4472,32 @@ if ($vinfo && $vinfo->{'mem'}) {
 return @rv ? " (".join(", ", @rv).")" : "";
 }
 
+# get_provider_link()
+# Returns HTML for the logo that should be displayed in the theme for the
+# Virtualmin hosting provider. In an array context, also returns the image
+# URL and link URL, if set.
+sub get_provider_link
+{
+# Does this owner have a logo
+local ($logo, $link);
+($logo, $link) = ($access{'theme_image'}, $access{'theme_link'});
+if (!$logo) {
+        # Call back to global config
+        $logo = $config{'theme_image'} || $gconfig{'vm2_theme_image'};
+        $link = $config{'theme_link'} || $gconfig{'vm2_theme_link'};
+        }
+if ($logo && $logo ne "none") {
+        local $html;
+        $html .= "<a href='$link' target=_new>" if ($link);
+        $html .= "<img src='$image' border=0>";
+        $html .= "</a>" if ($link);
+        return wantarray ? ( $html, $logo, $link ) : $html;
+        }
+else {
+        return wantarray ? ( ) : undef;
+        }
+}
+
 # strip_html_tags(html)
 # Removes all HTML tags from a string, returning plain text
 sub strip_html_tags
