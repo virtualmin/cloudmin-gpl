@@ -12,6 +12,7 @@
 #	XXX can select multiple keys
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
+# XXX POD API docs
 
 do '../web-lib.pl';
 &init_config();
