@@ -1,5 +1,28 @@
 #!/usr/local/bin/perl
-# Lists some or all managed servers
+
+=head1 list-systems.pl
+
+Output a table of all systems managed by VM2.
+
+When run with no parameters, this command outputs a table of all virtual
+systems known to VM2. You can limit the display to a subset of systems using
+the standard options above, or have it output all available information with
+the C<--multiline> parameter.
+
+  ./list-systems.pl --type xen
+  Hostname                       Type            Description
+  ------------------------------ --------------- ------------------------------
+  xencentos.home                 Xen             CentOS 5 on Xen
+  xencentos4.home                Xen             Test system with CentOS 4
+  xengentoo.home                 Xen             Gentoo on Xen
+  xenrails.home                  Xen             Test server for Rails on Xen
+  xentemplatecentos.home         Xen             Xen Virtualmin template for Ce
+  xentemplatecentos4.home        Xen             Xen template for CentOS 4.4
+  xentemplatedebian.home         Xen             Xen Virtualmin template for De
+  xentemplatefc6.home            Xen             Xen Virtualmin template for Fe
+  xentemplateubuntu.home         Xen             Ubuntu on Xen
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
