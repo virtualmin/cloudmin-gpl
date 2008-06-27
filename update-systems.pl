@@ -1,6 +1,23 @@
 #!/usr/local/bin/perl
-# Installs updated Virtualmin packages on multiple systems, and displays
-# the results
+
+=head1 update-systems.pl
+
+Installs updated Virtualmin packages on multiple systems, and displays the results
+
+This command installs all available package updates on specified systems. This
+is only suppported on systems running Virtualmin, which has a module for
+finding new versions of packages that relate to virtual hosting, such as
+Apache, BIND, MySQL and of course the Virtualmin modules themselves. Updates
+are done in parallel across all systems, and the packages installed on each
+are displayed as they complete.
+
+=head1 Example usage
+
+  [root@fudu server-manager]# ./update-systems.pl --host xennoupdate.home
+  Updating packages on 1 systems ..
+  xennoupdate.home: spamassassin mod_perl
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

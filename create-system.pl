@@ -1,5 +1,71 @@
 #!/usr/local/bin/perl
-# Creates a new virtual system of some type
+
+=head1 create-system.pl
+
+Creates a new virtual system of some type
+
+This command takes different parameters depending on the type of virtual
+system being created, but the following are always required :
+
+C<--host> I<hostname> A short hostname for the system to create, which will also be used as the Xen or VServers instance name.
+C<--desc> I<description> A human-readable name for the system, which you will typically have to quote.
+C<--type> I<code> The virtualization type code, like ''xen'' , ''zones''  or ''vservers''
+C<--ssh-pass> I<password> The initial root password for the new system.
+
+For a virtual system, you will need to specify the host system to create it
+on, using the C<--xen-host>, C<--vservers-host> or C<--zones-host> parameter.
+If the system is to be created from an image, you will need to select it with
+the C<--image> parameter, followed by an image ID. To see the full list of
+available and required options for a particular system type, run
+C<create-system.pl> with the C<--type> and C<--help> flags.
+
+If you are creating a system from an image that includes Virtualmin Pro, you
+will need to specify a license using either the C<--allocate-serial> parameter,
+or C<--serial> and C<--key>. The former will select an available license from
+the pool of those registered with VM2, while the latter let you specify a
+serial number and key explicity. 
+
+=head1 Example usage
+  ./create-system.pl --host xennoupdate --type xen --desc "Test without updates" --ssh-pass smeg  --no-update --xen-host sentosa.home --xen-memory 512 --image xen-centos5.0-virtualmin --allocate-serial
+  Copying system image files ..
+   .. done
+  Starting creation of Xen system ..
+  .. creation started
+  Waiting for creation to complete ..
+  .. creation complete
+  Mounting new instance's filesystem ..
+  .. mounted on /mnt/xen-xennoupdate
+  Copying modules for kernel 2.6.18-8.1.4.el5xen to Xen filesystem ..
+  .. done
+  Setting root password ..
+  .. done
+  Updating configuration files with hostname and IP address ..
+  .. done
+  Updating network configuration files ..
+  .. done
+  Updating Virtualmin licence files ..
+  .. done
+  Allowing SSH logins by root ..
+  .. already allowed
+  Un-mounting instance's filesystem ..
+  .. done
+  Adding DNS entry xennoupdate.home. for IP address 193.9.101.245 ..
+  .. done
+  Starting up new Xen instance ..
+  .. done
+  Setting Webmin password ..
+  .. done
+  Waiting for Webmin to start ..
+  .. started OK
+  Refreshing status ..
+  .. done
+  Checking Virtualmin configuration ..
+  .. done
+  Enabling at hosting system boot ..
+  .. done
+  Creation of Xen system xennoupdate.home is complete
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

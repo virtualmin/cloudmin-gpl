@@ -1,5 +1,49 @@
 #!/usr/local/bin/perl
-# Creates a new virtualmin domain on one system
+
+=head1 create-domain.pl
+
+Creates a new virtualmin domain on one system
+
+This command creates a Virtualmin top-level domain on a specified managed
+system. You must specify the C<--host> parameter, followed by the name of a
+host to create on (which of course must have Virtualmin installed). Other
+required parameters are C<--domain> and C<--pass>, followed by the domain
+name and password respectively. You also need to choose features, either with
+the C<--default-features> option, or multiple uses of C<--feature> followed by
+a feature code like C<web> or C<dir>.
+
+The command may take a few seconds to run, and will output the messages from
+the Virtualmin create-domain.pl command run on the remote system. Even though
+it is effectively invoked remotely, you cannot use all of the same command-line
+flags that it supports. 
+
+=head1 Example usage
+
+  ./create-domain.pl --host xencentos.home --domain wibble.com --desc "Example domain" --pass foo --feature dir --feature unix --feature web --feature webmin
+  Creating Virtualmin domain wibble.com on xencentos.home ..
+  Beginning server creation ..
+  Creating home directory ..
+  .. done
+  Creating administration group wibble ..
+  .. done
+  Creating administration user wibble ..
+  .. done
+  Adding new virtual website ..
+  .. done
+  Adding Apache user apache to server's group ..
+  .. done
+  Creating Webmin user ..
+  .. done
+  Applying web server configuration ..
+  .. done
+  Re-loading Webmin ..
+  .. done
+  Saving server details ..
+  .. done
+  All done!
+  .. creation complete!
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

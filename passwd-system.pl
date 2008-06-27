@@ -1,5 +1,26 @@
 #!/usr/local/bin/perl
-# Changes the SSH and/or Webmin password on some system
+
+=head1 passwd-system.pl
+
+Changes the SSH and/or Webmin password on some system
+
+This command can be used to change the root password for SSH or Webmin on a
+managed system. The Unix password can be set with the C<--ssh-pass> parameter,
+while the Webmin password can be changed with C<--webmin-pass>. To configure
+Webmin to check the Unix password when root logs, use the C<--webmin-same>
+parameter.
+
+When the command is run, it will update C</etc/shadow> and
+C</etc/webmin/miniserv.users> on the selected machine to make the changes.
+VM2's authentication information for the system will also be updated to match.
+
+If you have created a virtual system for a customer, changing the root
+password when you are ready to hand it over is a good idea. Be aware that 
+for Xen systems, if the password is changed on the system directly (perhaps
+using the passwd command), VM2 will be no longer able to login via SSH to
+change it, or even to check the system's status.
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

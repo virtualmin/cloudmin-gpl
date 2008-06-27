@@ -1,5 +1,21 @@
 #!/usr/local/bin/perl
-# Deletes a virtual system or systems
+
+=head1 delete-system.pl
+
+Deletes a virtual system or systems
+
+Virtual systems can also be deleted from the command line. This should be done
+with extreme care, as you will not get any confirmation before deletion
+happens, and all data on the system will be lost forever. The system to
+destroy is specified with the C<--host> parameter.
+
+=head1 Example usage
+
+  ./delete-system.pl --host xennoupdate.home
+  Deleting Xen system xennoupdate.home ..
+  .. deleted successfully
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
