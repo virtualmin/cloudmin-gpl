@@ -1,5 +1,21 @@
 #!/usr/local/bin/perl
-# Reboots one or more managed systems
+
+=head1 reboot-system.pl
+
+Reboots one or more managed systems
+
+Triggers an immediate reboot of the specified systems. For virtual machines,
+VM2 will wait until they come back up before exiting, while for real systems
+it just runs the reboot command, which merely starts the reboot process in the
+background.
+
+=head1 Example usage
+
+  ./reboot-system.pl --host xencentos.home
+  Rebooting Xen system xencentos.home ..
+  .. rebooted successfully
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

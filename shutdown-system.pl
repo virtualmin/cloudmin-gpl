@@ -1,5 +1,25 @@
 #!/usr/local/bin/perl
-# Shuts down one or more managed systems
+
+=head1 shutdown-system.pl
+
+Shuts down one or more managed systems
+
+Shuts down the specified systems, as long as their virtualization type
+supports it. For virtual machines, VM2 will wait until they are completely
+shut down before this command exists, while for real systems it just runs the
+shutdown command, which merely starts the power-off process in the background.
+
+Some virtualization types (like Xen) support a forced shutdown mode, which
+immediately terminates the instance. To use this, add the C<--force> flag
+to the command line.
+
+=head1 Example usage
+
+  ./shutdown-system.pl --host xencentos.home
+  Shutting down Xen system xencentos.home ..
+  .. shutdown successfull
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

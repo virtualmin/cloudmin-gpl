@@ -1,5 +1,24 @@
 #!/usr/local/bin/perl
-# Updates the status of multiple systems, and displays the results
+
+=head1 refresh-system.pl
+
+Updates the status of multiple systems, and displays the results
+
+Forces VM2 to re-query the actual status of the specified systems. This is
+done in parallel so that many can be updated at once, and the status from
+each is displayed once it is retrieved. By default, Virtualmin status
+information like the amount of free RAM and available package updates is only
+fetched from the remote system's cache, which is typically updated once
+every 5 minutes. To force a full status update, use the C<--regenerate>
+command-line option - this will make the update take longer though.
+
+=head1 Example usage
+
+  ./refresh-systems.pl --host xenrails.home
+  Refreshing status of 1 systems ..
+  xenrails.home: virt (Webmin and Virtualmin)
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

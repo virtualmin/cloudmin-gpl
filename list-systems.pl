@@ -9,6 +9,8 @@ systems known to VM2. You can limit the display to a subset of systems using
 the standard options above, or have it output all available information with
 the C<--multiline> parameter.
 
+=head1 Example usage
+
   ./list-systems.pl --type xen
   Hostname                       Type            Description
   ------------------------------ --------------- ------------------------------

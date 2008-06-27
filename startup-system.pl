@@ -1,5 +1,20 @@
 #!/usr/local/bin/perl
-# Starts up one or more managed systems
+
+=head1 startup-system.pl
+
+Starts up one or more managed systems
+
+For virtual systems running under Xen, VServers or Zones, VM2 can start up
+existing instances using this command. The command will only exit when all the
+specified systems have been booted.
+
+=head1 Example usage
+
+  bash# ./startup-system.pl --host xencentos.home
+  Starting up Xen system xencentos.home ..
+  .. startup successfull
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
