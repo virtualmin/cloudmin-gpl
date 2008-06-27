@@ -1,5 +1,59 @@
 #!/usr/local/bin/perl
-# Packages an existing system up as an image
+
+=head1 create-image.pl
+
+Packages an existing system up as an image
+
+This command performs the complex process of converting an existing virtual
+system into a VM2 machine image. It has three required parameters : C<--host>
+followed by the hostname of the system to image, C<--desc> followed by a
+description of the image, and C<--id> followed by a new unique image ID. The
+ID is typically formatted like I<type-os-software>, such as
+I<xen-centos6-virtualmin>.
+
+If the ID refers to an image that already exists and you want to replace it,
+add the C<--overwrite> paramter to the command line. You should also use
+C<--version> followed by a version number, to make it easier to keep track of
+different instances of the same image.
+
+Creation takes several minutes, but the command will display each step in the
+process as it proceeds, and inform you of its final success or failure. 
+
+=head1 Example usage
+
+  ./create-image.pl --host xenrails.home --desc "Image with rails" --id xen-centos5.0-rails
+  Creating temporary directory for image files ..
+  .. done
+  Shutting down system ..
+  .. done
+  Mounting Xen instance filesystem ..
+  .. mounted on /mnt/xen-xenrails
+  Removing Virtualmin licence ..
+  .. done
+  Resetting root password ..
+  .. done
+  Removing authorized SSH keys ..
+  .. done
+  Un-mounting Xen instance filesystem ..
+  .. done
+  Compressing filesystem image ..
+  .. done
+  Fetching image files from host ..
+  .. fetched all files
+  Deleting compressed filesystem image ..
+  .. done
+  Mounting Xen instance filesystem ..
+  .. mounted on /mnt/xen-xenrails
+  Undoing licence and password changes ..
+  .. done
+  Un-mounting Xen instance filesystem ..
+  .. done
+  Starting up system ..
+  .. done
+  Refreshing system status ..
+  .. done
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

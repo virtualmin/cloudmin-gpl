@@ -1,5 +1,31 @@
 #!/usr/local/bin/perl
-# Lists all downloaded system images
+
+=head1 list-images.pl
+
+Lists all downloaded system images
+
+This command lists all images that are available for creating systems on the
+VM2 master. By default it will show all of them in a table, but you can use
+the C<--multiline> parameter to display more details in a machine-readable
+format, or C<--type> to limit the display to images for some virtualization
+type like C<xen> or C<vservers>.
+
+=head1 Example usage
+
+  ./list-images.pl --type xen
+  ID                             Description
+  ------------------------------ ------------------------------------------------
+  xen-centos4.4-base             CentOS 4.4 Xen instance with base OS
+  xen-centos4.4-virtualmin       CentOS 4.4 Xen instance with Virtualmin Pro
+  xen-centos5.0-base             CentOS 5 Xen instance with base OS
+  xen-centos5.0-virtualmin       CentOS 5 Xen instance with Virtualmin Pro
+  xen-debian3.1-base             Debian 3.1 Xen instance with base OS
+  xen-fc6-base                   Fedora Core 6 Xen instance with base OS
+  xen-fc6-virtualmin             Fedora Core 6 Xen instance with Virtualmin Pro
+  xen-ubuntu6.10-base            Ubuntu 6.10 Xen instance with base OS
+  xen-ubuntu6.10-virtualmin      Ubuntu 6.10 Xen instance with Virtualmin Pro
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

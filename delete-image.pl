@@ -1,5 +1,18 @@
 #!/usr/local/bin/perl
-# Deletes a local image from the syste,
+
+=head1 delete-image.pl
+
+Deletes a local image from the master system
+
+This command simply removes one of the existing images on your VM2 master. The
+image ID is specified with the C<--id> parameter.
+
+=head1 Example usage
+
+  ./delete-image.pl --id xen-centos-test1
+  Image xen-centos-test1 successfully deleted.
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

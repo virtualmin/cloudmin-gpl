@@ -1,5 +1,51 @@
 #!/usr/local/bin/perl
-# Moves a domain from one system to another
+
+=head1 move-domain.pl
+
+Moves a domain from one system to another
+
+This command allows you to transfer one or more Virtualmin domains from their
+current host systems to another system managed by VM2. Like the web-based
+domain move feature, it operates by backing them up on the source and
+restoring on the destination - so it is recommended that you transfer only
+between similar systems where possible.
+
+The domains to move are selected by the C<--domain> parameter. If a domain
+exists on more than one host, you will also need to specify C<--host> followed
+by the correct source hostname. The final system is selected by the C<--dest>
+parameter. If the C<--include-sub-servers> parameter is given and a top-level
+domain is selected, any sub-servers owned by the same user will be transferred
+at the same time.
+
+To have VM2 delete the domains from the source, use the C<--delete> parameter
+(this is recommended). Or to just disable them when moving, use C<--disable>.
+
+Once a domain has been moved, you will almost certainly need to make DNS
+changes to reflect the new website or nameserver IP address.
+
+By default, VM2 attempts to transfer the domain backup first to the master
+system, and then to the target. However, the C<--direct> parameter will
+trigger the attempted use of a direct copy from the source to the target
+system, which can be faster if the network connectivity between the managed
+systems and the VM2 master is poor. 
+
+=head1 Example usage
+
+  ./move-domain.pl --domain wibble.com --dest xenrails.home --delete
+  Creating backup of wibble.com on xencentos.home ..
+  .. created backup of 32.53 kB.
+  Downloading backup of wibble.com in file wibble.com.tar.gz ..
+  .. download of 32.53 kB complete.
+  Uploading backup of wibble.com in file wibble.com.tar.gz to xenrails.home ..
+  .. upload of 32.53 kB complete.
+  Deleting wibble.com on xencentos.home ..
+  .. deletion complete.
+  Restoring backup of wibble.com on xenrails.home ..
+  .. restore of wibble.com complete. Domain move was successfull!
+  Refreshing status of 2 systems ..
+  .. done
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

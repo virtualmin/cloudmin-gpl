@@ -1,5 +1,47 @@
 #!/usr/local/bin/perl
-# Removes Virtualmin domains from managed systems
+
+=head1 delete-domains.pl
+
+Removes Virtualmin domains from managed systems
+
+This command deletes a domain (specified with the C<--domain> parameter) from
+which every VM2-managed system hosts it. This can be normally worked out
+automatically, but if the same domain exists on more than one machine, you
+will need to add C<--host> followed by the correct hostname. Be careful using
+it, as it will not prompt for any confirmation before deletion.
+
+When the command is run, it will display all of the output from the
+C<delete-domain.pl> command on the remote system. More than one domain can
+be deleted by specifying the C<--domain> parameter multiple times.
+
+=head1 Example usage
+
+  ./delete-domains.pl --domain wibble.com
+  Deleting Virtualmin domain wibble.com from xencentos.home ..
+  Deleting virtual server wibble.com ..
+  Deleting mail aliases ..
+  .. done
+  Deleting Webmin login ..
+  .. done
+  Deleting virtual website ..
+  .. done
+  Deleting administration user ..
+  .. done
+  Deleting administration group ..
+  .. done
+  Deleting home directory ..
+  .. done
+  Deleting server details for wibble.com ..
+  .. done
+  Re-loading Webmin ..
+  .. done
+  Applying web server configuration ..
+  .. done
+  All done!.. deleted successfully
+  Refreshing status of changed systems ..
+  .. done
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
