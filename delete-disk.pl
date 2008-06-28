@@ -1,5 +1,26 @@
 #!/usr/local/bin/perl
-# Remove a virtual disk from some system
+
+=head1 delete-disk.pl
+
+Remove a virtual disk from some system
+
+This command dis-associates a real file or device with a virtual device on
+some system, and deletes the underlying file. The system to modify is
+identified with the C<--host> flag, and the disk to remove can be set with
+either C<--real> followed by the real file (like C</xen/newdisk.img>) or 
+C<--virt> followed by the device on the virtual system (like C</dev/sda3>).
+
+If the system is running, the disk will not be really deleted until it is 
+shutdown or restarted, and thus the disk space on the host system will not be
+immediately freed up.
+
+=head1 Example usage
+
+  ./delete-disk.pl --host xencentos.home --virt /dev/sda3
+  Removing virtual disk for /dev/sda3 ..
+  .. done. However, the disk will not be fully removed until the system is rebooted
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

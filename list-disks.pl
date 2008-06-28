@@ -1,5 +1,27 @@
 #!/usr/local/bin/perl
-# Lists virtual disks on some system
+
+=head1 list-disks.pl
+
+Lists virtual disks on some system
+
+By default, this command outputs a table of virtual disks on the system 
+identified with the C<--host> parameter. However, you can get more detail
+with the optional C<--multiline> flag, which will include their mount points
+and filesystem types (where available).
+
+=head1 Example usage
+
+  ./list-disks.pl --host xencentos.home
+  Real file                      Device on system     Type       Size      
+  ------------------------------ -------------------- ---------- ----------
+  /xen/xencentos.img             /dev/sda1            File       2 GB      
+  /xen/xencentos-disk2.img       /dev/sdb             File       1024 MB   
+  /xen/xencentos-disk3.img       /dev/sdc             File       1024 MB   
+  /xen/xencentos-disk4.img       /dev/sdd             File       1024 MB   
+  /xen/xencentos-disk5.img       /dev/sde             File       1024 MB   
+  /xen/xencentos-var.img         /dev/sda3            File       1024 MB   
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

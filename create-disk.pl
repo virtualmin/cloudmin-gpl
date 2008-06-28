@@ -1,5 +1,36 @@
 #!/usr/local/bin/perl
-# Adds a virtual disk to some system
+
+=head1 create-disk.pl
+
+Adds a virtual disk to some system
+
+This command adds a new virtual disk to a system managed by VM2, typically
+a Xen instance. Normally, a virtual disk is a file on the host system that
+is mapped to a device on the instance, like C</dev/sda3>. However, it can also
+be a real disk device on the host system (such as an LVM logical volume).
+
+The system to add the disk to is specified with the C<--host> parameter. 
+The disk file on the host can either be set with C<--real> followed by a
+filename like C</xen/newdisk.img>, or you can have VM2 choose a filename
+automatically with the C<--auto-real> flag.
+
+The device file on the virtual system can either be set with C<--virt>
+followed by a device name, or you can use C<--auto-virt> to have VM2 choose
+an un-used device.
+
+When adding a new file as a disk, the C<--size> parameter must be given and
+followed by a disk size in megabytes. If you want it formatted with a
+filesystem, use the C<--format> flag followed by a type like C<ext3>. To have
+it mounted on the virtual system, use C<--mount> flag followed by a mount
+point like C</mnt/disk2>.
+
+=head1 Example usage
+
+  ./create-disk.pl --host xencentos.home --auto-virt --auto-real --size 500
+  Creating virtual disk for /dev/sda3 ..
+  .. done. However, the disk will not be visible until the system is rebooted
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

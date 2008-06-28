@@ -1,5 +1,28 @@
 #!/usr/local/bin/perl
-# Uploads a file to one or more systems
+
+=head1 upload-file.pl
+
+Uploads a file to one or more systems
+
+This command can send a file from the VM2 master system to one or more managed
+hosts. The file is specified with the C<--source> parameter, and the
+destination file or directory with C<--dest>. Alternately, you can have it
+write input to the command to the destination with the C<--stdin> parameter.
+
+The destination systems are specified with the C<--host>, C<--group> and other
+standard system-selection parameters. When copying the file is transferred to
+all systems in parallel, and the success or failure of each is shown as the
+transfer completes.
+
+=head1 Example usage
+
+  ./upload-file.pl --host xencentos.home --host xenrails.home --host fedora.home --source /etc/hosts --dest /tmp/hosts
+  Uploading file to 3 systems ..
+  xencentos.home: OK
+  xenrails.home: OK
+  fedora.home: ERROR: ssh: connect to host fedora.home port 22: No route to host lost connection
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
