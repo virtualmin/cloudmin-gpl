@@ -1,5 +1,37 @@
 #!/usr/local/bin/perl
-# Installs Virtualmin on multiple systems
+
+=head1 install-virtualmin.pl
+
+Installs Virtualmin on multiple systems
+
+If you have a system without Virtualmin installed, this command can be used to
+perform a manual install on it using the Virtualmin standard install script.
+In general we do not recommend this - it is much simpler and more reliable
+to create virtual systems from an image that already includes the full
+Virtualmin software stack.
+
+This command can install on multiple systems at once, specified using
+C<--host>, C<--type> and other standard system selection parameters. This
+install will be done in parallel, but can still take some time (10-20 minutes)
+as it will download required packages from your Linux distribution's
+repository and the Virtualmin website.
+
+All Virtualmin Pro installs require a license, which can be specified to this
+command using either the C<--allocate-serial> parameter, or C<--serial> and
+C<--key>. The former selects a free serial for each system you are installing
+on from the license pool, while the latter lets you manually select a serial
+number and key to be used on all systems. 
+
+=head1 Example usage
+
+For each system that the install completes successfully on, a line starting
+with the hostname followed OK will be output.
+
+  ./install-virtualmin.pl --host xencentos.home
+  xencentos.home: Started
+  xencentos.home: OK
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

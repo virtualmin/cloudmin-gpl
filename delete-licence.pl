@@ -1,5 +1,20 @@
 #!/usr/local/bin/perl
-# Removes one Virtualmin licence from the pool
+
+=head1 delete-licence.pl
+
+Removes one Virtualmin licence from the pool
+
+If you no longer want a license to be used when creating new Virtualmin
+systems, this command can remove it from the VM2 license pool. It will not
+effect any existing systems using the license though. The only parameter is
+C<--serial>, which must be followed by a serial number.
+
+=head1 Example usage
+
+  ./delete-licence.pl --serial 55555
+  The Virtualmin license with serial 55555 has been removed.
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

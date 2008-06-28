@@ -1,5 +1,21 @@
 #!/usr/local/bin/perl
-# Adds one Virtualmin licence to the pool
+
+=head1 add-licence.pl
+
+Adds one Virtualmin licence to the pool
+
+This command adds a new license to the pool of those managed by VM2. It must
+have been already purchased from the Virtualmin website, and you must have the
+serial number and key. These are specified to the command using the
+C<--serial> and C<--key> parameters respectively, and will be validated before
+it is added to the license pool.
+
+=head1 Example usage
+
+  ./add-licence.pl --serial 213323 --key fdsdsfdffdsff
+  The Virtualmin license with serial 213323 and key fdsdsfdffdsff has been added.
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

@@ -1,5 +1,24 @@
 #!/usr/local/bin/perl
-# Lists network interfaces on some system
+
+=head1 list-interfaces.pl
+
+Lists network interfaces on some system
+
+This command outputs a list of virtual interfaces on some managed system,
+selected using the C<--host> command-line parameter. By default they are shown
+in a table, but you can select a more machine-readable format with the
+optional C<--multiline> parameter.
+
+=head1 Example usage
+
+  ./list-interfaces.pl  --host vvirtualmin.home
+  Interface  Address         Netmask         Use
+  ---------- --------------- --------------- -----------------------------------
+  eth0:0     193.9.101.224   255.255.255.0   Virtualmin shared address default
+  eth0:1     193.9.101.225   255.255.255.0   Virtualmin domain vservervirt.com
+  eth0:2     193.9.101.227   255.255.255.0   Virtualmin domain autoip.com
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

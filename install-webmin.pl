@@ -1,5 +1,32 @@
 #!/usr/local/bin/perl
-# Installs Webmin on multiple systems
+
+=head1 install-webmin.pl
+
+Installs Webmin on multiple systems
+
+This command can be used to install Webmin on a real or virtual system that
+does not have it yet. On operating systems that support RPM packages (Fedora,
+CentOS and Redhat) it will download the latest version in C<.rpm> format from
+www.webmin.com , while on Debian and Ubuntu systems it will use the latest
+C<.deb>. On other platforms, the C<.tar.gz> package of Webmin is used instead.
+
+Installation is fully automatic, and where possible the initial Webmin login
+is set to match the system's root password. If necessary, the C<wget> and
+C<perl> programs are automatically installed on the target system, as they are
+needed to fetch and run Webmin.
+
+This command can install on multiple systems at once, specified using C<--host>,
+C<--type> and other standard system selection parameters. This install will be
+done in parallel, and for each system it completes successfully on the
+hostname followed by OK, the package type and download URL will be displayed.
+
+=head1 Example usage
+
+  ./install-webmin.pl --host xenempty.home
+  Installing Webmin on 1 systems ..
+  xenempty.home: OK rpm http://www.webmin.com/download/rpm/webmin-current.rpm
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

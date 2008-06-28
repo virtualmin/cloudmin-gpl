@@ -1,5 +1,24 @@
 #!/usr/local/bin/perl
-# Adds a new network interface to some system
+
+=head1 create-interface.pl
+
+Adds a new network interface to some system
+
+This program adds a virtual interface to some VM2-managed system. You must
+specify the system with the C<--host> parameter, and the base interface with
+C<--name>. The IP address can be either explitly set with C<--address>, or VM2
+can allocate a free IP from the range defined for the host system with
+C<--allocate>.
+
+Either way, the full inteface name and IP address will be displayed if the
+command completes successfully.
+
+=head1 Example usage
+
+  ./create-interface.pl --host vvirtualmin.home --name eth0 --address 193.9.101.250
+  Created interface eth0:3 with address 193.9.101.250
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

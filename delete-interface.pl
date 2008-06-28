@@ -1,5 +1,21 @@
 #!/usr/local/bin/perl
-# Removes a network interface from some system
+
+=head1 delete-interface.pl
+
+Removes a network interface from some system
+
+This removes a virtual interface from some system. It takes two parameters :
+C<--host> followed by the name of the system, and C<--address> followed by
+the IP of the interface to remove. Be careful doing this though, as it may cut
+off access to a Virtualmin domain, or prevent SSH logins to the system
+altogether.
+
+=head1 Example usage
+
+  ./delete-interface.pl --host vvirtualmin.home --address 193.9.101.250
+  Deleted interface eth0:3
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

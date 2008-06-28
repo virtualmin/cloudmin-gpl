@@ -1,5 +1,26 @@
 #!/usr/local/bin/perl
-# Lists all registered SSH keys
+
+=head1 list-ssh-keys.pl
+
+Lists all registered SSH keys
+
+This program displays a list of all SSH keys registered with VM2, in a table
+format. To show more details, use the C<--multiline> command-line argument.
+It is most useful when creating a system that will use SSH authentication to
+login as root, such as an EC2 instance. In this case, the key ID must be
+passed to C<create-system.pl> as a command-line argument.
+
+=head1 Example usage
+
+  ./list-ssh-keys.pl
+  ID         Description
+  ---------- -----------------------------------------------------------------
+  1176512463 Jamie's SSH 1 key. uploaded copy
+  1176512615 Jamie's SSH 2  key, in home directory
+  1176513526 Amazon EC2 SSH key
+  1176848976 EC2 generated key
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

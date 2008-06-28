@@ -1,5 +1,30 @@
 #!/usr/local/bin/perl
-# Run some shell command on multiple systems in parallel
+
+=head1 run-command.pl
+
+Run some shell command on multiple systems in parallel
+
+This is the equivalent of the command shell in the VM2 web interface, but
+arguably more powerful. It can be used to run a command on one or several
+hosts managed by VM2, and display the output from all of them. Systems are
+selected by the standard optons (C<--host>, C<--type> and so on), and the
+command to run follows the other parameters.
+
+=head1 Example usage
+
+  ./run-command.pl --host xencentos.home "df -h"
+  Filesystem            Size  Used Avail Use% Mounted on
+  /dev/sda1             2.0G  1.2G  777M  60% /
+  none                  257M     0  257M   0% /dev/shm
+
+When multiple systems are specified, the output from each is preceeded by the
+hostname.
+
+  ./run-command.pl --host xencentos.home --host suntec.home uname
+  xencentos.home: Linux
+  suntec.home: SunOS
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

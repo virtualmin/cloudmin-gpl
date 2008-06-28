@@ -1,5 +1,22 @@
 #!/usr/local/bin/perl
-# Lists all Virtualmin licences
+
+=head1 list-licences.pl
+
+Lists all Virtualmin licences
+
+This program displays a list of all licenses registered with VM2, in a table
+format. To show more details about each license, use the C<--multiline>
+command-line argument.
+
+=head1 Example usage
+
+  ./list-licences.pl
+  Serial     Key                  Domains    Systems    Used
+  ---------- -------------------- ---------- ---------- ----------
+  5555555    3rfafsfdsfsfds       Unlimited  Unlimited  6
+  14433      HGHJJ7JJJ            250        1          0
+
+=cut 
 
 package server_manager;
 $main::no_acl_check++;

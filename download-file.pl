@@ -1,5 +1,23 @@
 #!/usr/local/bin/perl
-# Downloads a file from a single system
+
+=head1 download-file.pl
+
+Downloads a file from a single system
+
+This script can be used to fetch a single file from a VM2 managed system and
+either save it on the master, or print it to standard output. The system is
+selected with the C<--host> parameter, and the source file with C<--source>. To 
+have the file saved on the master, add the C<--dest> parameter followed by a
+filename. To have its contents output by the script, use the C<--stdout>
+parameter instead.
+
+=head1 Example usage
+
+  ./download-file.pl --host xencentos.home --source /etc/hosts --stdout
+  127.0.0.1 localhost
+  193.9.101.242 xencentos.home xencentos
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
