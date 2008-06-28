@@ -1,5 +1,19 @@
 #!/usr/local/bin/perl
-# Delete an existing VM2 system owner
+
+=head1 delete-owner.pl
+
+Delete an existing VM2 system owner
+
+This command deletes a single owner account, identified with the C<--name>
+parameter. No confirmation is requested, but none of the systems he owns
+are effected.
+
+=head1 Example usage
+
+  ./delete-owner.pl --name freeman
+  Deleted VM2 system owner freeman
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

@@ -1,5 +1,41 @@
 #!/usr/local/bin/perl
-# Create a new VM2 system owner
+
+=head1 create-owner.pl
+
+Create a new VM2 system owner
+
+A system owner in VM2 is an additional Webmin login who can manage some
+aspects of selected systems. To create a new owner, run this command with
+the C<--name> parameter followed by a login name, C<--email> followed by
+a contact address, and C<--pass> followed by a password.
+
+Since you will generally want the new owner account to be able to manage
+at least one system, the C<--host> flag should be given followed by a hostname.
+This can be given multiple times to allow management of several hosts, which
+can be real or virtual systems.
+
+To specify which actions the owner is allowed to perform on those hosts,
+use the following flags :
+
+C<--can-startup> - Startup systems
+C<--can-shutdown> - Shut down systems
+C<--can-reboot> - Reboot systems
+C<--can-graph> - View bandwidth usage graph
+C<--can-view> - View system details
+C<--can-run> - Run commands on systems
+C<--can-edit> - Edit system
+C<--can-transfer> - Transfer files
+C<--can-domains> - Manage Virtualmin domains
+C<--can-update> - Update packages
+C<--can-script> - Update installed scripts
+C<--can-console> - View and interact with console
+
+=head1 Example usage
+
+  ./create-owner.pl --name bob --email bob@example.com --pass smeg --host xencentos.home --can-reboot --can-console --can-startup --can-shutdown
+  Created VM2 system owner bob
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

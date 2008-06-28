@@ -1,5 +1,23 @@
 #!/usr/local/bin/perl
-# Lists some or all system owners
+
+=head1 list-owners.pl
+
+Lists some or all VM2 system owners
+
+By default, this command outputs a table of all VM2 system owners. To switch
+to a more complete and parsable format, use the C<--multiline> flag. To
+limit the listing to just some owners, use the C<--name> flag followed by
+a owner's login. This can be given more than once.
+
+=head1 Example usage
+
+  ./list-owners.pl
+  Login                Real name            Systems                               
+  -------------------- -------------------- ----------------------------------
+  freeman              Gordon Freeman       xenbacula.home xencentos.home
+  joe                  Joe Cooper           xencentos.home xensendmail.home    
+  
+=cut
 
 package server_manager;
 $main::no_acl_check++;

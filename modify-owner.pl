@@ -1,5 +1,31 @@
 #!/usr/local/bin/perl
-# Update a VM2 system owner
+
+=head1 modify-owner.pl
+
+Updates a VM2 system owner
+
+This command changes the details or permissions of a VM2 system owner account.
+The account to modify is specified by the C<--name> parameter, and a new login,
+real name, email address or password can be set with the C<--newname>, 
+C<--real>, C<--email> or C<--pass> flags respectively.
+
+To temporarily lock the account, use the C<--lock> flag. To reverse the lock,
+use C<--unlock>.
+
+To add a system to the list of those managed by this account, use the
+C<--add-host> flag followed by a hostname known to VM2. Or to take away a
+system, use C<--remove-host> followed by a hostname.
+
+The C<--can-*> and C<--cannot-*> families of flags can be used to grant or
+remove permissions on the hosts this account owners. For a full list, see
+the documentation for the C<create-owner.pl> command.
+
+=head1 Example usage
+
+  ./modify-owner.pl --name freeman --add-host xenblah.home --can-run 
+  Updated VM2 system owner freeman
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
