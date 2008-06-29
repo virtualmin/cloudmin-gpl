@@ -5,7 +5,9 @@
 Lists all registered SSH keys
 
 This program displays a list of all SSH keys registered with VM2, in a table
-format. To show more details, use the C<--multiline> command-line argument.
+format. To show more details, use the C<--multiline> command-line argument, or
+to show only key IDs use the C<--name-only> flag.
+
 It is most useful when creating a system that will use SSH authentication to
 login as root, such as an EC2 instance. In this case, the key ID must be
 passed to C<create-system.pl> as a command-line argument.
@@ -40,6 +42,9 @@ while(@ARGV > 0) {
 	if ($a eq "--multiline") {
 		$multi = 1;
 		}
+	elsif ($a eq "--name-only") {
+		$nameonly = 1;
+		}
 	else {
 		&usage();
 		}
@@ -63,6 +68,12 @@ if ($multi) {
 			}
 		}
 	}
+elsif ($nameonly) {
+	# Just key IDs
+	foreach $k (@keys) {
+		print $k->{'id'},"\n";
+		}
+	}
 else {
 	# One key per line
 	$fmt = "%-10.10s %-65.65s\n";
@@ -78,7 +89,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists all registered SSH keys.\n";
 print "\n";
-print "usage: list-ssh-keys.pl [--multiline]\n";
+print "usage: list-ssh-keys.pl [--multiline | --name-only]\n";
 exit(1);
 }
 

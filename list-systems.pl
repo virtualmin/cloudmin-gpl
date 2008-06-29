@@ -6,8 +6,9 @@ Output a table of all systems managed by VM2.
 
 When run with no parameters, this command outputs a table of all virtual
 systems known to VM2. You can limit the display to a subset of systems using
-the standard options above, or have it output all available information with
-the C<--multiline> parameter.
+the standard options like C<--host> and C<--type>, have it output all
+available information with the C<--multiline> parameter, or just show hostnames
+with C<--name-only>.
 
 =head1 Example usage
 
@@ -46,6 +47,9 @@ while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--multiline") {
 		$multi = 1;
+		}
+	elsif ($a eq "--name-only") {
+		$nameonly = 1;
 		}
 	elsif ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
@@ -240,6 +244,12 @@ if ($multi) {
 			}
 		}
 	}
+elsif ($nameonly) {
+	# Just hostnames
+	foreach $s (@servers) {
+		print $s->{'host'},"\n";
+		}
+	}
 else {
 	# Show one server per line
 	$fmt = "%-30.30s %-15.15s %-30.30s\n";
@@ -256,7 +266,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all registered managed systems.\n";
 print "\n";
-print "usage: list-systems.pl [--multiline]\n";
+print "usage: list-systems.pl [--multiline | --name-only]\n";
 print "                       [--all-hosts] | [--host name]*\n";
 print "                       [--group name]*\n";
 local $types = join("|", @server_management_types);

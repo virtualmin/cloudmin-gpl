@@ -7,7 +7,8 @@ Lists network interfaces on some system
 This command outputs a list of virtual interfaces on some managed system,
 selected using the C<--host> command-line parameter. By default they are shown
 in a table, but you can select a more machine-readable format with the
-optional C<--multiline> parameter.
+optional C<--multiline> parameter, or get a list of just IP addresses with
+C<--name-only>.
 
 =head1 Example usage
 
@@ -40,6 +41,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--multiline") {
 		$multi = 1;
+		}
+	elsif ($a eq "--name-only") {
+		$nameonly = 1;
 		}
 	else {
 		&usage();
@@ -85,6 +89,12 @@ if ($multi) {
 			}
 		}
 	}
+elsif ($nameonly) {
+	# Show IPs only
+	foreach $i (@$ifaces) {
+		print $i->{'address'},"\n";
+		}
+	}
 else {
 	# Show one per line
 	$fmt = "%-10.10s %-15.15s %-15.15s %-35.35s\n";
@@ -106,7 +116,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Lists all network interfaces on some virtual system.\n";
 print "\n";
 print "usage: list-interfaces.pl --host hostname\n";
-print "                          [--multiline]\n";
+print "                          [--multiline | --name-only]\n";
 exit(1);
 }
 

@@ -7,8 +7,9 @@ Lists all downloaded system images
 This command lists all images that are available for creating systems on the
 VM2 master. By default it will show all of them in a table, but you can use
 the C<--multiline> parameter to display more details in a machine-readable
-format, or C<--type> to limit the display to images for some virtualization
-type like C<xen> or C<vservers>.
+format, or C<--name-only> to just show image IDs. To limit the list to images
+for some virtualization type, use the C<--type> flag followed by a type code
+like C<xen> or C<vservers>.
 
 =head1 Example usage
 
@@ -44,6 +45,9 @@ while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--multiline") {
 		$multi = 1;
+		}
+	elsif ($a eq "--name-only") {
+		$nameonly = 1;
 		}
 	elsif ($a eq "--type") {
 		$type = shift(@ARGV);
@@ -88,6 +92,12 @@ if ($multi) {
 			}
 		}
 	}
+elsif ($nameonly) {
+	# Just image IDs
+	foreach $i (@images) {
+		print $i->{'id'},"\n";
+		}
+	}
 else {
 	# One image per line
 	$fmt = "%-30.30s %-48.48s\n";
@@ -103,7 +113,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists all downloaded system images.\n";
 print "\n";
-print "usage: list-images.pl [--multiline]\n";
+print "usage: list-images.pl [--multiline | --name-only]\n";
 print "                      [--type typename]\n";
 print "                      [--md5-verify]\n";
 exit(1);

@@ -5,9 +5,10 @@
 Lists some or all VM2 system owners
 
 By default, this command outputs a table of all VM2 system owners. To switch
-to a more complete and parsable format, use the C<--multiline> flag. To
-limit the listing to just some owners, use the C<--name> flag followed by
-a owner's login. This can be given more than once.
+to a more complete and parsable format, use the C<--multiline> flag, or to
+get a list of just logins use C<--name-only>. To limit the listing to just
+some owners, use the C<--name> flag followed by a owner's login. This can be
+given more than once.
 
 =head1 Example usage
 
@@ -41,6 +42,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--name") {
 		push(@onames, shift(@ARGV));
 		}
+	elsif ($a eq "--name-only") {
+		$nameonly = 1;
+		}
 	else {
 		&usage();
 		}
@@ -72,6 +76,12 @@ if ($multi) {
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";
 		}
 	}
+elsif ($nameonly) {
+	# Just logins
+	foreach $o (@owners) {
+		print $o->{'name'},"\n";
+		}
+	}
 else {
 	# Just summary
 	$fmt = "%-20.20s %-20.20s %-38.38s\n";
@@ -91,7 +101,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all systems owners.\n";
 print "\n";
-print "usage: list-owners.pl [--multiline]\n";
+print "usage: list-owners.pl [--multiline | --name-only]\n";
 print "                      [--name username]*\n";
 exit(1);
 }

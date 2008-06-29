@@ -6,7 +6,8 @@ Lists all Virtualmin licences
 
 This program displays a list of all licenses registered with VM2, in a table
 format. To show more details about each license, use the C<--multiline>
-command-line argument.
+command-line argument. To just output serial numbers, use the C<--name-only>
+flag.
 
 =head1 Example usage
 
@@ -35,6 +36,9 @@ while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--multiline") {
 		$multi = 1;
+		}
+	elsif ($a eq "--name-only") {
+		$nameonly = 1;
 		}
 	else {
 		&usage();
@@ -65,6 +69,12 @@ if ($multi) {
 			}
 		}
 	}
+elsif ($nameonly) {
+	# Just serial numbers
+	foreach $l (@lics) {
+		print $l->{'serial'},"\n";
+		}
+	}
 else {
 	# One line each
 	$fmt = "%-10.10s %-20.20s %-10.10s %-10.10s %-10.10s\n";
@@ -83,7 +93,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists all registered Virtualmin licenses.\n";
 print "\n";
-print "usage: list-licences.pl [--multiline]\n";
+print "usage: list-licences.pl [--multiline | --name-only]\n";
 exit(1);
 }
 
