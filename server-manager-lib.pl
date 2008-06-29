@@ -1036,6 +1036,7 @@ else {
 	else {
 		# Parse ls command output
 		local @now = localtime(time());
+		local @w = split(/\s+/, $out);
 		local @st;
 		$st[3] = $w[1];			# Links
 		$st[4] = $w[2];			# UID
@@ -1060,7 +1061,7 @@ else {
 				$st[2] += (1<<$i);
 				}
 			}
-		local @st;
+		return @st;
 		}
 	}
 }
