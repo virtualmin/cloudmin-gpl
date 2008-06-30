@@ -1,5 +1,10 @@
 #!/usr/local/bin/perl
-# Changes memory and CPU limits on one or more systems
+
+=head2 modify-limits.pl
+
+Changes memory and CPU limits on one or more systems
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;

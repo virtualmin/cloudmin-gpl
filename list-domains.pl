@@ -1,5 +1,29 @@
 #!/usr/local/bin/perl
-# Lists domains on some or all managed servers
+
+=head1 list-domains.pl
+
+Lists domains on some or all managed servers
+
+This command outputs a list of Virtualmin domains on some or all managed
+systems. By default the output is in table format similar to Virtualmin's
+own C<list-domains.pl> command, but you can switch to a more complete
+and parsable format with the C<--multiline> flag.
+
+=head1 Example usage
+
+  ./list-domains.pl --host xencentos.home
+  Domain                    System                    Description
+  ------------------------- ------------------------- -------------------------
+  xencentos.home            xencentos.home            Test domain on CentOS
+  xencentos.com.au          xencentos.home            Alias in real domain
+  atname.xencentos.home     xencentos.home            Test for @ names
+  imapproblem.com           xencentos.home            imapproblem.com
+  dnstest.com               xencentos.home            dnstest.com
+  php4move.com              xencentos.home            PHP 4 wrapper move test
+  django.xencentos.home     xencentos.home            Test for django
+  domainmove.com            xencentos.home            Test for moving scripts
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
