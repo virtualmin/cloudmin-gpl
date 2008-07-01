@@ -1,8 +1,40 @@
 #!/usr/local/bin/perl
 
-=head2 modify-limits.pl
+=head1 modify-limits.pl
 
 Changes memory and CPU limits on one or more systems
+
+This command changes the allocated memory and limits on CPU use for a virtual
+system. At the time of writing this was only possible for Xen instances, but
+may be extended to other types in future.
+
+The systems to modify are set using the standard flags like C<--host> and
+C<--type>. Memory allocated is set with the C<--memory> flag, which must be
+followed by a number in MB. For Xen instances, available memory cannot be
+increased above the amount set at boot time without a reboot, but it can be
+reduced. Lowering it too much may cause the virtual system to crash though.
+
+The percentage of the host system's CPU that is assigned to the instance
+is set with the C<--cpu> flag, which must be followed by a number. This can be
+greater than 100 for host systems with more than one CPU. To remove CPU limits
+completely, use the C<--no-cpu> flag.
+
+If bandwidth monitoring is enabled in VM2, the C<--bw-limit> flag can be
+used to set the maximum bandwidth this system is allowed to consume per
+accounting period. It must be followed by a number in MB. To remove the limit,
+use the C<--bw-unlimited> flag.
+
+By default, the command will inform you if a reboot is needed to apply any
+CPU or memory limit changes. However, you can force an immediate shutdown
+and restart with the C<--reboot> flag, if needed.
+
+=head1 Example usage
+
+  ./modify-limits.pl --host xencentos.home --memory 512 --bw-limit 1024
+  Setting memory limit on Xen system xencentos.home to 512 MB ..
+  .. already set
+  Setting bandwidth limit on Xen system xencentos.home ..
+  .. set to 1024 MB
 
 =cut
 

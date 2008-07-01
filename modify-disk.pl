@@ -1,5 +1,29 @@
 #!/usr/local/bin/perl
-# Change the size or virtual device of some disk
+
+=head1 modify-disk.pl
+
+Change the size or virtual device of some disk
+
+This command is commonly used to increase or decrease the size of a virtual
+disk file, perhaps because the filesystem on it is getting full. The system
+the disk is on is set with the C<--host> flag, and the disk to change can
+be specified by real filename using C<--real> or virtual device with C<--virt>.
+
+To set a new size, use the C<--new-size> flag followed by a number in MB.
+This is only possible if the system is not running, as resizing of an in-use
+disk is not supported. If the new size is smaller than the amount of space
+consumed by files on the filesystem, the resize will fail.
+
+To change the device on the virtual system that the disk is mapped to, use
+the C<--new-virt> flag followed by a device like I</dev/sda3>.
+
+=head1 Example usage
+
+  ./modify-disk.pl --host xencentos.home --virt /dev/sda3 --new-size 2048
+  Modifying virtual disk for /dev/sda3 ..
+  .. done
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
