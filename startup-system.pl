@@ -35,6 +35,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
+	elsif ($a eq "--help") { &usage(); }
 	else {
 		&usage();
 		}
