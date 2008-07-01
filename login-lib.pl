@@ -131,7 +131,9 @@ local ($fh) = @_;
 
 # Turn off echo on STDIN
 eval "use IO::Stty";
+local $old_mode;
 if (!$@) {
+	$old_mode=IO::Stty::stty(\*STDIN, '-g');
 	IO::Stty::stty(\*STDIN, 'raw', '-echo');
 	}
 
@@ -157,6 +159,11 @@ while(1) {
 		last if ($ok <= 0);	# End of the client
 		syswrite(STDOUT, $buf, length($buf));
 		}
+	}
+
+# Put back TTY settings
+if (defined($old_mode)) {
+	IO::Stty::stty(\*STDIN, $old_mode);
 	}
 }
 
