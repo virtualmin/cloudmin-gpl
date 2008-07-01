@@ -123,5 +123,42 @@ $port ||= 22;
 return ($host, $port, \@protos);
 }
 
+# forward_console_data(fh)
+# Forward traffic from STDIN/OUT to and from a console file handle
+sub forward_console_data
+{
+local ($fh) = @_;
+
+# Turn off echo on STDIN
+eval "use IO::Stty";
+if (!$@) {
+	IO::Stty::stty(\*STDIN, 'raw', '-echo');
+	}
+
+# Pass all input back and forth
+select($fh); $| = 1; select(STDOUT);
+$| = 1;
+while(1) {
+	local $rmask = undef;
+	vec($rmask, fileno(STDIN), 1) = 1;
+	vec($rmask, fileno($fh), 1) = 1;
+	local $sel = select($rmask, undef, undef, 0);
+	if (vec($rmask, fileno(STDIN), 1)) {
+		# Got something from SSH client
+		my $buf;
+		$ok = sysread(STDIN, $buf, 1024);
+		last if ($ok <= 0);	# End of the client
+		syswrite($fh, $buf, length($buf));
+		}
+	if (vec($rmask, fileno($fh), 1)) {
+		# Got something from console
+		my $buf;
+		$ok = sysread($fh, $buf, 1024);
+		last if ($ok <= 0);	# End of the client
+		syswrite(STDOUT, $buf, length($buf));
+		}
+	}
+}
+
 1;
 
