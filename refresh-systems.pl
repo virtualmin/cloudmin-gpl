@@ -52,13 +52,19 @@ while(@ARGV > 0) {
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types);
 @servers || &usage("No systems specified");
 
+# Identify parent and virtual systems
+@pservers = grep { &is_parent_server($_) } @servers;
+@oservers = grep { !&is_parent_server($_) } @servers;
+
 # Do the parallel refresh and print
 print "Refreshing status of ",scalar(@servers)," systems ..\n";
-&parallel_server_function(\@servers,
-	sub { &check_server_status($_[0], $regen);
-	      &save_managed_server($_[0]);
-	      $desc = $text{'status_'.$_[0]->{'status'}};
-	      print "$_[0]->{'host'}: $_[0]->{'status'} ($desc)\n" });
+foreach $l (\@pservers, \@oservers) {
+	&parallel_server_function($l,
+		sub { &check_server_status($_[0], $regen);
+		      &save_managed_server($_[0]);
+		      $desc = $text{'status_'.$_[0]->{'status'}};
+		      print "$_[0]->{'host'}: $_[0]->{'status'} ($desc)\n" });
+	}
 
 sub usage
 {

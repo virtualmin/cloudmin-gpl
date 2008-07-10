@@ -1,7 +1,6 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
 #	XXX what if IP changes?
-# XXX refresh should be in dependency order
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX mobile theme for VM2 - FS#3459
@@ -12,7 +11,6 @@
 #	XXX can select multiple keys
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
-# XXX POD API docs
 
 do '../web-lib.pl';
 &init_config();
