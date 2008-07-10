@@ -15,8 +15,8 @@ if ($in{'refresh'}) {
 	&ui_print_header(undef, $text{'mass_ftitle'}, "");
 
 	# Identify parent and virtual systems
-	@pservers = grep { &is_parent_server($_) } @servers;
-	@oservers = grep { !&is_parent_server($_) } @servers;
+	@pservers = grep { !&is_virtual_server($_) } @servers;
+	@oservers = grep { &is_virtual_server($_) } @servers;
 
 	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
 	&parallel_check_server_status(\@pservers, 1);

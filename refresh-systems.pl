@@ -53,8 +53,8 @@ while(@ARGV > 0) {
 @servers || &usage("No systems specified");
 
 # Identify parent and virtual systems
-@pservers = grep { &is_parent_server($_) } @servers;
-@oservers = grep { !&is_parent_server($_) } @servers;
+@pservers = grep { !&is_virtual_server($_) } @servers;
+@oservers = grep { &is_virtual_server($_) } @servers;
 
 # Do the parallel refresh and print
 print "Refreshing status of ",scalar(@servers)," systems ..\n";

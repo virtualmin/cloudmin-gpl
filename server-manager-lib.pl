@@ -4333,6 +4333,17 @@ foreach my $t ('xen', 'vserver', 'zone') {
 return wantarray ? @rv : $rv[0];
 }
 
+# is_virtual_server(&server)
+# Returns the manager type of some system is virtual
+sub is_virtual_server
+{
+local ($server) = @_;
+foreach my $t ('xen', 'vserver', 'zones') {
+	return $t if ($server->{'manager'} eq $t);
+	}
+return undef;
+}
+
 # list_child_servers(&server, [&all-servers])
 # Returns a list of other servers this one hosts. For each type it can host,
 # check all other servers of that type to see if their parent is this one.
