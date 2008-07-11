@@ -78,7 +78,7 @@ local ($u) = @_;
 sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
-	 'domains', 'update', 'script' );
+	 'domains', 'update', 'script', 'pause' );
 }
 
 # can_action([&server|&servers], [action])

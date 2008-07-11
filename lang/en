@@ -582,6 +582,8 @@ edit_recheck=Check Configuration
 edit_reboot=Reboot
 edit_shutdown=Shutdown
 edit_startup=Startup
+edit_pause=Pause
+edit_unpause=Un-pause
 edit_console=View Boot Messages
 edit_login=Access Console
 edit_cheader=Detailed system status
@@ -1682,6 +1684,7 @@ owner_action_domains=Manage Virtualmin domains
 owner_action_update=Update packages
 owner_action_script=Update installed scripts
 owner_action_console=View console
+owner_action_pause=Pause and un-pause
 
 downers_err=Failed to delete system owners
 downers_enone=None selected

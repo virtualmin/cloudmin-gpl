@@ -3751,6 +3751,24 @@ if (!$noimage && &can_action($server, "image")) {
 		    'link' => "image_form.cgi?id=$server->{'id'}" });
 	}
 
+# Pause/un-pause link
+local $pfunc = "type_".$t."_can_pause";
+if (defined(&$pfunc) && &can_action($server, "pause")) {
+	local $p = &$pfunc($server);
+	if ($p == 1) {
+		push(@rv, { 'id' => 'pause',
+			    'desc' => $text{'edit_pause'},
+			    'cat' => 'power',
+			    'link' => "pause_form.cgi?id=$server->{'id'}" });
+		}
+	elsif ($p == 2) {
+		push(@rv, { 'id' => 'unpause',
+			    'desc' => $text{'edit_unpause'},
+			    'cat' => 'power',
+			    'link' => "unpause.cgi?id=$server->{'id'}" });
+		}
+	}
+
 # Complex pages associated with system
 local $dfunc = "type_".$t."_can_disks";
 if (defined(&$dfunc) && &$dfunc($server) &&
