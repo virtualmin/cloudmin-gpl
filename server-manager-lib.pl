@@ -2,6 +2,8 @@
 # XXX move servers
 #	XXX what if IP changes?
 #	XXX Xen pause and resume
+#		XXX command-line API (and docs)
+#		XXX all code that checks state
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX mobile theme for VM2 - FS#3459
