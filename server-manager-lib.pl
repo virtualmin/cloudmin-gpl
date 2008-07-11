@@ -1,6 +1,7 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
 #	XXX what if IP changes?
+#	XXX Xen pause and resume
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX mobile theme for VM2 - FS#3459
@@ -618,7 +619,7 @@ return $text;
 # Checks if some system can be contacted via SSH, with the login details
 # set in the server object. Returns a status code (0=OK, 1=No connect, 2=No
 # login, 3=Unknown error, 4=Timeout, 5=Host down, 6=Virtual system down,
-# 7=user is not root) and an error message, the Webmin root directory
+# 7=user is not root, 8=Paused) and an error message, the Webmin root directory
 # (if installed), the Webmin port and the Webmin SSL flag.
 sub check_server_ssh_login
 {
@@ -1197,6 +1198,12 @@ elsif ($status == 7) {
 	# SSH login is not root
 	$server->{'status'} = 'nosshlogin';
 	$server->{'status_msg'} = "User does not have root access";
+	goto DONECHECK;
+	}
+elsif ($status == 8) {
+	# Intentionally paused
+	$server->{'status'} = 'paused';
+	$server->{'status_msg'} = 'Virtual system suspended';
 	goto DONECHECK;
 	}
 elsif ($status == 5) {

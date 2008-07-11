@@ -411,6 +411,7 @@ status_2=Login failed
 status_3=Unknown error
 status_4=Timeout connecting
 status_down=Down
+status_paused=Paused
 status_nossh=No SSH
 status_nohost=Parent host is down
 status_nosshlogin=SSH login failed
