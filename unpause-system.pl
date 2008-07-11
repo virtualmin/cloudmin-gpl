@@ -49,7 +49,7 @@ while(@ARGV > 0) {
 # Check if any cannot be un-paused
 foreach $s (@servers) {
 	$pfunc = "type_".$s->{'manager'}."_can_pause";
-	if (!defined(&$pfunc) || &$pfunc($server) != 2) {
+	if (!defined(&$pfunc) || &$pfunc($s) != 2) {
 		push(@cannot, $s);
 		}
 	}
@@ -68,6 +68,7 @@ foreach $s (@servers) {
 		print ".. un-pause failed : $err\n\n";
 		}
 	else {
+		&check_server_status($s, 0, 1);
 		print ".. un-pause successfully\n\n";
 		}
 	&save_managed_server($s);
