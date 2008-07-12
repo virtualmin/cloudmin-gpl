@@ -1762,3 +1762,14 @@ setup_edomain=Missing or invalid domain name - only letters, numbers and the dot
 setup_edomain2=Domain names cannot start or end with a .
 setup_edomain3=The final component of a domain name cannot contain non-english letters
 setup_edomainprefix=The domain name does not need to have $1 at the start
+
+pause_title=Pause System
+pause_rusure=Are you sure you want to pause the virtual system $1 ? Any running applications will be temporarily halted, and open network connections may be broken.
+pause_ok=Pause Now
+pause_doing=Now pausing $1 system $2 ..
+pause_failed=.. pausing failed : $1
+pause_ecannot=This system type cannot be paused, or the system is already paused
+
+unpause_title=Un-pause System
+unpause_doing=Now un-pausing $1 system $2 ..
+unpause_ecannot=This system type cannot be un-paused, or the system is not paused
