@@ -22,8 +22,12 @@ if ($err) {
 	}
 else {
 	&check_server_status($server, 0, 1);
-	&$second_print($text{'setup_done'});
+	&$second_print($text{'create_done'});
 	}
 &save_managed_server($server);
+
+if (defined(&theme_post_save_server)) {
+	&theme_post_save_server($server);
+	}
 
 &ui_print_footer("", $text{'index_return'});

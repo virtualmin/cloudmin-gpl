@@ -1,9 +1,6 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
 #	XXX what if IP changes?
-#	XXX Xen pause and resume
-#		XXX command-line API (and docs)
-#		XXX all code that checks state
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
 # XXX mobile theme for VM2 - FS#3459
@@ -99,6 +96,7 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 
 @server_statuses = (
 	[ 'down' => 'ff0000' ],
+	[ 'paused' => 'aa0000' ],
 	[ 'nossh' => 'ff220000' ],
 	[ 'nohost' => 'ff440000' ],
 	[ 'nosshlogin' => 'ff6600' ],
@@ -3600,7 +3598,7 @@ if (&can_action($server, "edit")) {
 			    'link' => $ed."&basic=0&doms=1" });
 		}
 	local $ifunc = "type_".$t."_list_interfaces";
-	if (defined(&$ifunc)) {
+	if (defined(&$ifunc) && $status ne 'paused') {
 		push(@rv, { 'id' => 'ifaces',
 			    'desc' => $text{'edit_link_ifaces'},
 			    'cat' => 'system',
@@ -3622,7 +3620,8 @@ elsif (&can_action($server, "view")) {
 		    'priority' => 1 });
 	}
 
-if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
+if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
+    $status eq 'paused') {
 	# Actions are limited when system is down
 	local $sfunc = "type_".$t."_no_startup";
 	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
@@ -3638,12 +3637,13 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost') {
 			    'cat' => 'manage',
 			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
 		}
-	if (!$nostart && &can_action($server, "startup")) {
+	if ($status ne 'paused' && !$nostart &&
+	    &can_action($server, "startup")) {
 		push(@rv, { 'id' => 'startup',
 			    'desc' => $text{'edit_startup'},
 			    'cat' => 'power' });
 		}
-	if ($status eq 'nossh' && !$noshut &&
+	if (($status eq 'nossh' || $status eq 'paused') && !$noshut &&
 	    &can_action($server, "shutdown")) {
 		push(@rv, { 'id' => 'shutdown',
 			    'desc' => $text{'edit_shutdown'},
@@ -3725,7 +3725,7 @@ else {
 			    'cat' => 'power' });
 		}
 	}
-if ($status ne 'nohost') {
+if ($status ne 'nohost' && $status ne 'paused') {
 	# Console messages can be displayed as long as the host system is up
 	if ($canconsole && &can_action($server, "console")) {
 		push(@rv, { 'id' => 'console',
@@ -3773,7 +3773,7 @@ if (defined(&$pfunc) && &can_action($server, "pause")) {
 
 # Complex pages associated with system
 local $dfunc = "type_".$t."_can_disks";
-if (defined(&$dfunc) && &$dfunc($server) &&
+if (defined(&$dfunc) && &$dfunc($server) && $status ne 'paused' &&
     &can_action($server, "disks")) {
 	push(@rv, { 'id' => 'disks',
 		    'desc' => $text{'edit_disks'},
