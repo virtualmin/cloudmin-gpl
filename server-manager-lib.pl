@@ -1855,7 +1855,24 @@ sub startup_server
 {
 local ($server) = @_;
 local $sfunc = "type_".$server->{'manager'}."_startup";
-return &$sfunc($server);
+local $err = &$sfunc($server);
+return $err if ($err);
+
+# If the server has Webmin, wait for it to come up
+if ($server->{'user'}) {
+	local $wtries = 0;
+	while($wtries++ < 60) {
+		sleep(1);
+		local $werr;
+		&open_socket($server->{'host'}, $server->{'port'} || 10000,
+			     WTEST, \$werr);
+		if (!$werr) {
+			close(WTEST);
+			last;
+			}
+		}
+	}
+return undef;
 }
 
 sub server_in

@@ -57,7 +57,7 @@ print &ui_table_row($text{'newami_munge'},
 		    &ui_yesno_radio("munge", 1));
 
 # Compress image
-print &ui_table_row($text{'newami_compress'},
+print &ui_table_row($text{'mkimage_compress'},
 		    &ui_yesno_radio("compress", 1));
 
 print &ui_table_end();
