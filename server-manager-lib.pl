@@ -1,8 +1,11 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
 #	XXX what if IP changes?
+#	XXX transfer-file.pl command line script
 # XXX create new Xen images with updates
 #	XXX co:2345:respawn:/sbin/mingetty console
+#	XXX GPL too
+#	XXX upgrade to vm2.virtualmin.com
 # XXX mobile theme for VM2 - FS#3459
 # XXX allow changing of main IP
 #	XXX do virtualmin too
@@ -940,6 +943,44 @@ local $temp = &transname();
 local $err = &put_file_to_server($server, $temp, $remotefile);
 &unlink_file($temp);
 return $err;
+}
+
+# transfer_file_between_servers(&source-server, &dest-server,
+#				source-file, dest-file)
+# Copy a file from one system to another, directly if possible. Returns undef
+# if OK, or an error message on failure.
+sub transfer_file_between_servers
+{
+local ($srcserver, $destserver, $src, $dest) = @_;
+if ($srcserver->{'id'} eq $destserver->{'id'}) {
+	# Self to self - just copy
+	local ($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"cp ".quotemeta($src)." ".quotemeta($dest));
+	return $err ? $err : $ex ? $out : undef;
+	}
+elsif ($srcserver->{'id'} == 0) {
+	# Copying from VM2 master - just upload
+	return &put_file_to_server($destserver, $src, $dest);
+	}
+elsif ($destserver->{'id'} == 0) {
+	# Copying to VM2 master - just download
+	return &get_file_from_server($srcserver, $src, $dest);
+	}
+else {
+	# Both are remote! First try scp on source to dest
+	# XXX
+
+	# Fall back to fetching to master and uploading
+	local $srcfile = $src;
+	$srcfile =~ s/^.*[\\\/]//;
+	local $temp = &transname($srcfile);
+	local $err = &get_file_from_server($srcserver, $src, $temp);
+	return "Download to VM2 master failed : $err" if ($err);
+	$err = &put_file_to_server($destserver, $temp, $dest);
+	&unlink_file($temp);
+	return "Upload from VM2 master failed : $err" if ($err);
+	return undef;
+	}
 }
 
 # delete_file_on_server(&server, remotefile)
@@ -4550,6 +4591,40 @@ if ($logo && $logo ne "none") {
 else {
         return wantarray ? ( ) : undef;
         }
+}
+
+# move_system(&system, &dest)
+# Moves a virtual system to a host hosting server, which is assumed to be
+# able to support it. Calls the appropriate type-specific move function to
+# do most of the work. Returns undef on success or an error message on failure.
+# May print stuff.
+sub move_system
+{
+local ($server, $dest) = @_;
+local @pars = &is_parent_server($dest);
+local $dfunc = "type_".$server->{'manager'}."_desc";
+local $desc = &$dfunc($server);
+&indexof($server->{'manager'}, @pars) >= 0 ||
+	return "Destination system $dest->{'host'} cannot host $desc systems";
+local $vhost = &get_parent_server($server);
+$vhost->{'id'} ne $dest->{'id'} ||
+	return "Source and destination host systems are the same!";
+
+# Check if moving is supported, then do it
+local $cfunc = "type_".$server->{'manager'}."_can_move";
+if (!defined(&$cfunc) || !&$cfunc($server, $dest)) {
+	return "The $desc system $server->{'host'} cannot be moved to $dest->{'host'}";
+	}
+local $mfunc = "type_".$server->{'manager'}."_move_system";
+local $err = &$mfunc($server, $dest);
+
+# Refresh status
+&$first_print($text{'save_refreshing'});
+&check_server_status($server, 0, 1);
+&save_managed_server($server);
+&$first_print($text{'save_refreshdone'});
+
+return $err;
 }
 
 # strip_html_tags(html)
