@@ -52,12 +52,24 @@ while(@ARGV > 0) {
 # Validate args
 $srchost || &usage("Missing --source flag");
 $desthost || &usage("Missing --dest flag");
-$file || &usage("Missing --file flag");
+$src || &usage("Missing --file flag");
 $dest ||= $src;
 
-# XXX get the servers
+# Get the servers
+$srcserver = &get_managed_server_by("host", $srchost);
+$destserver = &get_managed_server_by("host", $desthost);
+$srcserver || &usage("No system named $srchost exists");
+$destserver || &usage("No system named $desthost exists");
 
-# XXX do the transfer
+# Do the transfer
+print "Copying $src on $srcserver->{'host'} to $dest on $destserver->{'host'} ..\n";
+$err = &transfer_file_between_servers($srcserver, $destserver, $src, $dest);
+if ($err) {
+	print ".. copy failed : $err\n";
+	}
+else {
+	print ".. done\n";
+	}
 
 sub usage
 {
@@ -67,7 +79,7 @@ print "\n";
 print "usage: transfer-file.pl --source hostname\n";
 print "                        --dest hostname\n";
 print "                        --file path\n";
-rint "                         [--destfile path]\n";
+print "                        [--destfile path]\n";
 exit(1);
 }
 
