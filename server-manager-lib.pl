@@ -2,10 +2,6 @@
 # XXX move servers
 #	XXX what if IP changes?
 #	XXX transfer-file.pl command line script
-# XXX create new Xen images with updates
-#	XXX co:2345:respawn:/sbin/mingetty console
-#	XXX GPL too
-#	XXX upgrade to vm2.virtualmin.com
 # XXX mobile theme for VM2 - FS#3459
 # XXX allow changing of main IP
 #	XXX do virtualmin too
@@ -968,7 +964,58 @@ elsif ($destserver->{'id'} == 0) {
 	}
 else {
 	# Both are remote! First try scp on source to dest
-	# XXX
+	# First build scp command
+	local $sshcmd = "scp -r -".$destserver->{'ssh_protocol'};
+	if ($destserver->{'key'}) {
+		# XXX copy key across??
+		local ($key) = grep { $_->{'id'} == $destserver->{'key'} }
+				    &list_ssh_keys();
+		$sshcmd .= " -i ".quotemeta($key->{'file'});
+		}
+	if ($destserver->{'ssh_port'}) {
+		$sshcmd .= " -P ".$destserver->{'ssh_port'};
+		}
+	$sshcmd .= " ".quotemeta($srcfile).
+	$sshcmd .= " ".quotemeta($destfile).
+		   " $destserver->{'ssh_user'}\@$destserver->{'host'}:".
+		   quotemeta($destfile);
+
+	# Then execute on the source system
+	local ($out, $ex, $err, $status, $fh, $fpid) =
+		&execute_command_on_server($srcserver, $sshcmd, undef, 1);
+	if (!$err && !$ex) {
+		# Started OK .. wait for a password prompt
+		$out = undef;
+		local ($given_password, $wrong_password, $connect_failed);
+		while(1) {
+			local $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
+			if ($rv == 0) {
+				syswrite($fh, "$destserver->{'ssh_pass'}\n");
+				$given_password++;
+				}
+			elsif ($rv == 1) {
+				syswrite($fh, "yes\n");
+				}
+			elsif ($rv == 2) {
+				$wrong_password++;
+				$out .= $wait_for_input;
+				last;
+				}
+			elsif ($rv == 3) {
+				$connect_failed++;
+				$out .= $wait_for_input;
+				}
+			elsif ($rv < 0) {
+				last;
+				}
+			else {
+				$out .= $wait_for_input;
+				}
+			}
+
+		# Check if it worked
+		# XXX
+		}
 
 	# Fall back to fetching to master and uploading
 	local $srcfile = $src;
