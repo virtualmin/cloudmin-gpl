@@ -1,7 +1,8 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
 #	XXX what if IP changes?
-#	XXX transfer-file.pl command line script
+#	XXX command-line API
+#	XXX web UI
 # XXX mobile theme for VM2 - FS#3459
 # XXX allow changing of main IP
 #	XXX do virtualmin too
@@ -966,19 +967,26 @@ else {
 	# Both are remote! First try scp on source to dest
 	# First build scp command
 	local $sshcmd = "scp -r -".$destserver->{'ssh_protocol'};
+	local $keytemp;
 	if ($destserver->{'key'}) {
-		# XXX copy key across??
+		# A key is needed - copy it to the source system
 		local ($key) = grep { $_->{'id'} == $destserver->{'key'} }
 				    &list_ssh_keys();
-		$sshcmd .= " -i ".quotemeta($key->{'file'});
+		$keytemp = $key->{'file'};
+		$keytemp =~ s/^.*[\\\/]//;
+		$keytemp = "/tmp/$keytemp";
+		&put_file_to_server($srcserver, $key->{'file'}, $keytemp);
+		$sshcmd .= " -i ".quotemeta($keytemp);
 		}
 	if ($destserver->{'ssh_port'}) {
 		$sshcmd .= " -P ".$destserver->{'ssh_port'};
 		}
-	$sshcmd .= " ".quotemeta($srcfile).
-	$sshcmd .= " ".quotemeta($destfile).
-		   " $destserver->{'ssh_user'}\@$destserver->{'host'}:".
-		   quotemeta($destfile);
+	$sshcmd .= " ".quotemeta($src);
+	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'host'}:".
+		   quotemeta($dest);
+	if ($keytemp) {
+		$sshcmd .= " ; rm -f ".quotemeta($keytemp);
+		}
 
 	# Then execute on the source system
 	local ($out, $ex, $err, $status, $fh, $fpid) =
@@ -1012,9 +1020,19 @@ else {
 				$out .= $wait_for_input;
 				}
 			}
+		close($fh);
+		waitpid($fpid, 0);
+		$ex = $?;
 
 		# Check if it worked
-		# XXX
+		if (!$wrong_password && $given_password < 3 &&
+		    !$connect_failed) {
+			# Looks like it did!
+			return undef;
+			}
+		}
+	if ($keytemp) {
+		&delete_file_on_server($srcserver, $keytemp);
 		}
 
 	# Fall back to fetching to master and uploading
