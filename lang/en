@@ -1773,3 +1773,16 @@ pause_ecannot=This system type cannot be paused, or the system is already paused
 unpause_title=Un-pause System
 unpause_doing=Now un-pausing $1 system $2 ..
 unpause_ecannot=This system type cannot be un-paused, or the system is not paused
+
+smove_shutting=Shutting down on original host system ..
+smove_shutfailed=.. shutdown failed : $1
+smove_disks=Copying disk images to new host system ..
+smove_onedisk=Copying disk $1 ..
+smove_devdisk=.. not a disk image, so cannot be copied
+smove_alrdisk=.. already available on the new host system
+smove_errdisk=.. copy failed : $1
+smove_donedisk=.. copied image of $1
+smove_disksdone=.. copied $1 disk images totalling $2
+smove_xenconf=Fixing and copying Xen config file $1 ..
+smove_xenconfdone=.. copied to $1
+smove_starting=Starting up on new host system ..
