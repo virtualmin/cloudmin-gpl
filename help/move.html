@@ -1,0 +1,17 @@
+<header>Move Virtual System</header>
+
+This command allows you to transfer a Xen instance or other supported virtual
+system from one hosting server to another. It can be useful if the original
+host is getting overloaded, and you have brought a new host system online to
+take some of the load. <p>
+
+During the move process, the system will generally be temporarily shut down
+and un-available. All data files will be copied to the new host that you
+select, and then the virtual system restarted. <p>
+
+Currently, the IP address of the system is not changed during the move
+process. This means that the new host system must be on the same subnet
+as the original. <p>
+
+<footer>
+

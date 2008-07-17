@@ -1,15 +1,14 @@
 # Functions for general setup and management of multiple Virtualmin servers
-# XXX move servers
-#	XXX what if IP changes?
-#	XXX web UI
 # XXX mobile theme for VM2 - FS#3459
 # XXX allow changing of main IP
 #	XXX do virtualmin too
+#	XXX support when moving systems
 # XXX HVM Xen instances
 # XXX allow setting of root password and SSH key at creation
 #	XXX can select multiple keys
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
+# XXX moving zones
 
 do '../web-lib.pl';
 &init_config();
@@ -3690,6 +3689,8 @@ local @rv;
 local $nfunc = "type_".$server->{'manager'}."_no_image";
 local $noimage = defined(&$nfunc) && &$nfunc($server) ||
 		 $status eq 'nohost';
+local $mfunc = "type_".$server->{'manager'}."_can_move";
+local $canmove = defined(&$mfunc) && &$mfunc($server);
 local $sfunc = "type_".$t."_no_shutdown";
 local $noshut = defined(&$sfunc) && &$sfunc($server);
 local $rfunc = "type_".$t."_no_reboot";
@@ -3864,15 +3865,24 @@ if ($canlogin && &can_action($server, "console")) {
 		    'link' => "login.cgi?id=$server->{'id'}" });
 	}
 if ($t ne 'real' && $t ne 'this' && &can_action($server, "delete")) {
+	# Can delete the system
 	push(@rv, { 'id' => 'delete',
 		    'desc' => $text{'edit_delete'},
 		    'cat' => 'power' });
 	}
 if (!$noimage && &can_action($server, "image")) {
+	# Can create an image
 	push(@rv, { 'id' => 'image',
 		    'desc' => $text{'edit_image'},
 		    'cat' => 'manage',
 		    'link' => "image_form.cgi?id=$server->{'id'}" });
+	}
+if ($canmove && &can_action($server, "move")) {
+	# Can move to another host
+	push(@rv, { 'id' => 'move',
+		    'desc' => $text{'edit_move'},
+		    'cat' => 'manage',
+		    'link' => "move_form.cgi?id=$server->{'id'}" });
 	}
 
 # Pause/un-pause link

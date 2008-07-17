@@ -19,7 +19,27 @@ and then the virtual system restarted.
 
 =head1 Example usage
 
-  XXX
+  ./move-system --host xengtest.home --dest geylang.home
+  Moving Xen system xengtest.home from sentosa.home to geylang.home ..
+  Shutting down on original host system ..
+  .. done
+  Copying disk images to new host system ..
+      Copying disk /xen/xengtest.img ..
+      .. copied image of 1001 MB
+      Copying disk /dev/cdrom ..
+      .. not a disk image, so cannot be copied
+      Copying disk /xen/xengtest.3.img ..
+      .. copied image of 200 MB
+  .. copied 2 disk images totalling 1.17 GB
+  Fixing and copying Xen config file /xen/xengtest.cfg ..
+  .. copied to /xen/xengtest.cfg
+  Deleting disk and config files from original host ..
+  .. done
+  Starting up on new host system ..
+  .. done
+  Re-fetching system status ..
+  .. done.
+  .. all done
 
 =cut
 
