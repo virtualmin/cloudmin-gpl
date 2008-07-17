@@ -1,7 +1,6 @@
 # Functions for general setup and management of multiple Virtualmin servers
 # XXX move servers
 #	XXX what if IP changes?
-#	XXX command-line API
 #	XXX web UI
 # XXX mobile theme for VM2 - FS#3459
 # XXX allow changing of main IP
@@ -4687,7 +4686,7 @@ local $err = &$mfunc($server, $dest);
 &$first_print($text{'save_refreshing'});
 &check_server_status($server, 0, 1);
 &save_managed_server($server);
-&$first_print($text{'save_refreshdone'});
+&$second_print($text{'save_refreshdone'});
 
 return $err;
 }

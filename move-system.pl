@@ -2,8 +2,26 @@
 # Moves a virtual system to another host, by imaging it and copying across
 # the image file
 # XXX need to update DNS
-# XXX don't allow transfer to self
-# XXX new system must support same virtual type!
+
+=head1 move-system.pl
+
+Moves a virtual system from one host to another
+
+This command allows you to transfer a Xen instance or other supported virtual
+system from one hosting server to another. It can be useful if the original
+host is getting overloaded, and you have brought a new host system online to
+take some of the load.
+
+During the move process, the system specified with the C<--host> flag will
+generally be temporarily shut down and un-available. All data files will be
+copied to the new host (set with the C<--dest> flag), modified as needed,
+and then the virtual system restarted.
+
+=head1 Example usage
+
+  XXX
+
+=cut
 
 package server_manager;
 $main::no_acl_check++;
@@ -25,7 +43,7 @@ while(@ARGV > 0) {
 		$host = shift(@ARGV);
 		}
 	elsif ($a eq "--dest") {
-		$dest = shift(@ARGV);
+		$desthost = shift(@ARGV);
 		}
 	else {
 		&usage();
@@ -34,109 +52,30 @@ while(@ARGV > 0) {
 
 # Check for mandatory args
 $host || &usage("Missing --host parameter");
-$dest || &usage("Missing --dest parameter");
+$desthost || &usage("Missing --dest parameter");
 
-# Get the server to image
-($server) = grep { $_->{'host'} eq $host } &list_managed_servers();
-$server || &usage("No system with hostname $host was found");
-$nfunc = "type_".$server->{'manager'}."_no_image";
-if (defined(&$nfunc) && &$nfunc($server)) {
-	&usage("The selected system type cannot be converted to an image ".
-	       "for moving");
-	}
-if ($server->{'status'} eq 'nohost') {
-	&usage("A system whose host system is down cannot be moved");
-	}
-($destserver) = grep { $_->{'host'} eq $dest } &list_managed_servers();
-$destserver || &usage("No system with hostname $host was found");
+# Get the systems
+$server = &get_managed_server_by("host", $host);
+$dest = &get_managed_server_by("host", $desthost);
+$vhost = &get_parent_server($server);
+$server->{'id'} eq $dest->{'id'} && &usage("A system cannot be transferred to itself");
+$vhost->{'id'} eq $dest->{'id'} && &usage("$dest->{'host'} is already hosting this system");
 
-# Create a fake image hash, for use by functions
-$image = { 'id' => time().".move",
-	   'manager' => $server->{'manager'},
-	 };
+# Check if supported
+$dfunc = "type_".$server->{'manager'}."_desc";
+$desc = &$dfunc();
+$cfunc = "type_".$server->{'manager'}."_can_move";
+defined(&$cfunc) || &usage("Systems of type $desc cannot be moved");
+&$cfunc($server, $dest) || &usage("The selected system cannot be moved to the new host");
 
-# Select temp dir for image on parent host
-&$first_print("Creating temporary directory for image files ..");
-$pfunc = "type_".$server->{'manager'}."_parent";
-$vhost = &$pfunc($server);
-($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
-if (!$tempok) {
-	&$second_print(".. failed : $temp");
-	exit(3);
-	}
-else {
-	&$second_print(".. done");
-	}
-
-$sfunc = "type_".$server->{'manager'}."_no_shutdown";
-$noshut = defined(&$sfunc) && &$sfunc($server);
-if ($server->{'status'} ne 'down' && !$noshut) {
-	# Shut it down
-	&$first_print("Shutting down system ..");
-	$err = &shutdown_server($server);
-	if ($err) {
-		&$second_print(".. shutdown failed : $err");
-		exit(2);
-		}
-	else {
-		&$second_print(".. done");
-		}
-	$server->{'status'} = 'down';
-	&save_managed_server($server);
-	$shutdown = 1;
-	}
-
-# Convert the remote system into an image file - this will output progress
-$ifunc = "type_".$server->{'manager'}."_create_image";
-if (!&$ifunc($server, $image, $temp, 1)) {
-	exit(3);
-	}
-
-# Transfer the image file to the master
-&$first_print("Fetching image files from host ..");
-$err = &fetch_image_files($vhost, $image, $temp, 0);
+# Do the transfer
+print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
+$err = &move_system($server, $dest);
 if ($err) {
-	&$second_print(".. failed : $err");
+	print $err,"\n";
+	exit(1);
 	}
-else {
-	&$second_print(".. fetched all files");
-	}
-
-# Cleanup the image on the old host
-$ifunc = "type_".$server->{'manager'}."_cleanup_image";
-if (!&$ifunc($server, $image, $temp)) {
-	exit(3);
-	}
-
-# Exit if image transfer failed, but only after cleanup is done
-if ($err) {
-	exit(5);
-	}
-
-# Transfer the image to the new host system
-# XXX
-
-# Delete the old system
-# XXX
-
-# Create the new system
-# XXX populate $newserver
-
-&$first_print("Starting up system ..");
-$err = &startup_server($newserver);
-if ($err) {
-	&$second_print(".. startup failed : $err");
-	exit(4);
-	}
-else {
-	&$second_print(".. done");
-	}
-
-# Re-check status
-&$first_print("Refreshing system status ..");
-&check_server_status($newserver);
-&save_managed_server($newserver);
-&$second_print(".. done");
+print ".. all done\n";
 
 sub usage
 {
@@ -145,7 +84,6 @@ print "Moves a virtual system from one host to another.\n";
 print "\n";
 print "usage: move-system.pl --host name\n";
 print "                      --dest new-host-system-name\n";
-print "                      [--direct]\n";
 exit(1);
 }
 

@@ -14,6 +14,8 @@ is given.
 =head1 Example usage
 
   ./transfer-file.pl --source xencentos.home --dest xensendmail.home --file /etc/hosts --destfile /tmp/hosts
+  Copying /etc/hosts on xencentos.home to /tmp/hosts on xensendmail.home ..
+  .. done
 
 =cut
 
