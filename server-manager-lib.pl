@@ -4701,6 +4701,14 @@ local $err = &$mfunc($server, $dest);
 return $err;
 }
 
+# substitute_virtualmin_template(string, &hash)
+# Just exists to be called from newfeatures-lib.pl
+sub substitute_virtualmin_template
+{
+local ($str, $hash) = @_;
+return &substitute_template($str, $hash);
+}
+
 # strip_html_tags(html)
 # Removes all HTML tags from a string, returning plain text
 sub strip_html_tags
