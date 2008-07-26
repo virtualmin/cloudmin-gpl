@@ -18,6 +18,7 @@ do 'newfeatures-lib.pl';
 do 'owners-lib.pl';
 do 'login-lib.pl';
 do 'domainname-lib.pl';
+do 'commands-lib.pl';
 if (-r "$module_root_directory/bw-lib.pl") {
 	do 'bw-lib.pl';
 	}
