@@ -112,6 +112,5 @@ if ($shutdown) {
 	}
 
 FAILED:
-&ui_print_footer("edit_serv.cgi?id=$in{'id'}",
-		 $text{'edit_return'});
+&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 

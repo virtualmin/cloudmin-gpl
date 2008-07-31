@@ -37,4 +37,4 @@ if ($server->{'status'} eq 'virt' ||
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'pass_ok'} ] ]);
 
-&ui_print_footer("", $text{'index_return'});
+&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});

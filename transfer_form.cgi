@@ -62,4 +62,4 @@ print &ui_tabs_end_tab();
 
 print &ui_tabs_end(1);
 
-&ui_print_footer("", $text{'index_return'});
+&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});

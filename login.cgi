@@ -47,5 +47,4 @@ $text{'login_nojava'}
 EOF
 	}
 
-&ui_print_footer("", $text{'index_return'});
-
+&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
