@@ -28,9 +28,7 @@ if ($in{'refresh'}) {
 		}
 
 	# And go back to main menu
-	print "<script>\n";
-	print "window.location = 'index.cgi';\n";
-	print "</script>\n";
+	print &vm2_js_redirect("index.cgi");
 
 	&ui_print_footer("", $text{'index_return'});
 	}

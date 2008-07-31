@@ -37,7 +37,7 @@ if ($in{'shutdown'}) {
 				}
 			}
 		}
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
 elsif ($in{'startup'}) {
@@ -59,7 +59,7 @@ elsif ($in{'startup'}) {
 			&theme_post_save_server($server);
 			}
 		}
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
 elsif ($in{'reboot'}) {
@@ -112,7 +112,7 @@ elsif ($in{'reboot'}) {
 			}
 		&save_managed_server($server);
 		}
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
 elsif ($in{'delete'}) {
@@ -165,7 +165,7 @@ elsif ($in{'delete'}) {
 			}
 		}
 	FAILED:
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
 
@@ -237,7 +237,7 @@ elsif ($in{'installvirt'}) {
 
 		VIRTFAILED:
 		}
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
 elsif ($in{'installwebmin'}) {
@@ -265,7 +265,7 @@ elsif ($in{'installwebmin'}) {
 			}
 		}
 
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
 elsif ($in{'recheck'}) {
@@ -296,7 +296,7 @@ elsif ($in{'recheck'}) {
 		&theme_post_save_server($server);
 		}
 
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
 elsif ($in{'refresh'}) {
@@ -314,11 +314,9 @@ elsif ($in{'refresh'}) {
 		}
 
 	# And go back to server form
-	print "<script>\n";
-	print "window.location = 'edit_serv.cgi?id=$in{'id'}';\n";
-	print "</script>\n";
+	print &vm2_js_redirect("edit_serv.cgi?id=$in{'id'}");
 
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
 elsif ($in{'shell'}) {
@@ -484,5 +482,5 @@ print &text('save_iprusure', "<tt>$server->{'host'}</tt>",
 print &ui_form_end([ [ "confirm", $text{'save_ipok'} ] ]);
 print "</center>\n";
 
-&ui_print_footer("", $text{'index_return'});
+&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 }

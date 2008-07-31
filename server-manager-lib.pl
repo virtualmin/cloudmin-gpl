@@ -9,6 +9,8 @@
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX moving zones
+# XXX option to turn off SSH checking
+#	XXX new status 'alive'
 
 do '../web-lib.pl';
 &init_config();
@@ -4789,6 +4791,21 @@ sub pop_all_print
 {
 local $p = pop(@print_function_stack);
 ($first_print, $second_print, $indent_print, $outdent_print, $block_print) =@$p;
+}
+
+# Temporary function until Webmin 1.430 is out
+sub vm2_js_redirect
+{
+local ($url) = @_;
+if (defined(&js_redirect)) {
+	return &js_redirect(@_);
+	}
+elsif (defined(&theme_js_redirect)) {
+	return &theme_js_redirect(@_);
+	}
+else {
+	return "<script>window.location = '".&quote_escape($url)."';</script>\n";
+	}
 }
 
 1;
