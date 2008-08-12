@@ -1,5 +1,4 @@
 # Functions for general setup and management of multiple Virtualmin servers
-# XXX mobile theme for VM2 - FS#3459
 # XXX allow changing of main IP
 #	XXX do virtualmin too
 #	XXX support when moving systems
@@ -11,6 +10,7 @@
 # XXX moving zones
 # XXX option to turn off SSH checking
 #	XXX new status 'alive'
+# XXX break edit_serv.cgi into separate CGIs
 
 do '../web-lib.pl';
 &init_config();

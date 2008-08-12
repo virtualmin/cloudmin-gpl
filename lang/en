@@ -798,8 +798,8 @@ vserver_ezone=Missing or invalid-looking DNS domain
 vserver_eiface=Missing or invalid-looking base network interface
 vserver_edist=Missing or invalid-looking distribution code - should be like <tt>sarge</tt> or <tt>fc5</tt>
 
-vserver_createlink=Create VServer.
-vserver_addlink=Add VServer.
+vserver_createlink=Create VServer
+vserver_addlink=Add VServer
 
 vchooser_title=Select VServer Instance
 vchooser_elogin=Failed to fetch VServers : $1
@@ -1733,7 +1733,7 @@ ec2addr_header=Static IP address assignment
 ec2addr_host=Current hostname
 ec2addr_ami=EC2 instance ID
 ec2addr_ip=IP address to assign
-ec2addr_none=None - let EC2 select automatically
+ec2addr_auto=None - let EC2 select automatically
 ec2addr_ok=Update IP Address
 ec2addr_err=Failed to update EC2 IP address
 ec2addr_enonesel=No IP address is currently assigned, and none was selected
