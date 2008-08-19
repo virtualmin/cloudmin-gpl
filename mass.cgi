@@ -9,14 +9,14 @@ require './server-manager-lib.pl';
 @servers || &error($text{'mass_enone'});
 $ids = join("&", map { "d=".$_ } keys %d);
 
+# Identify parent and virtual systems
+@pservers = grep { !&is_virtual_server($_) } @servers;
+@oservers = grep { &is_virtual_server($_) } @servers;
+
 if ($in{'refresh'}) {
 	# Fetch the status of selected servers, in 10 processes
 	&can_action_error(\@servers, "refresh");
 	&ui_print_header(undef, $text{'mass_ftitle'}, "");
-
-	# Identify parent and virtual systems
-	@pservers = grep { !&is_virtual_server($_) } @servers;
-	@oservers = grep { &is_virtual_server($_) } @servers;
 
 	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
 	&parallel_check_server_status(\@pservers, 1);
@@ -288,12 +288,14 @@ elsif ($in{'shutdown'}) {
 		print "</center>\n";
 		}
 	else {
-		# Do it for real, in parallel
+		# Do it for real, in parallel. Virtual systems are done first.
 		print &text('mass_shutting', scalar(@servers)),"<br>\n";
-		&parallel_server_function(\@servers,
-			sub { $err = &shutdown_server($_[0]);
-			      &check_server_status($_[0], 0, 1);
-			      &save_managed_server($_[0]) });
+		foreach my $sl (\@oservers, \@pservers) {
+			&parallel_server_function($sl,
+				sub { $err = &shutdown_server($_[0]);
+				      &check_server_status($_[0], 0, 1);
+				      &save_managed_server($_[0]) });
+			}
 		print $text{'mass_shutted'},"<p>\n";
 		foreach my $s (@servers) {
 			if (defined(&theme_post_save_server)) {
@@ -327,11 +329,14 @@ elsif ($in{'startup'}) {
 
 	&ui_print_unbuffered_header(undef, $text{'mass_starttitle'}, "");
 
+	# Do the startup, in parallel. Real systems are done first.
 	print &text('mass_starting', scalar(@servers)),"<br>\n";
-	&parallel_server_function(\@servers,
-		sub { $err = &startup_server($_[0]);
-		      &check_server_status($_[0], 0, 1);
-		      &save_managed_server($_[0]) });
+	foreach my $sl (\@pservers, \@oservers) {
+		&parallel_server_function($sl,
+			sub { $err = &startup_server($_[0]);
+			      &check_server_status($_[0], 0, 1);
+			      &save_managed_server($_[0]) });
+		}
 	print $text{'mass_started'},"<p>\n";
 	foreach my $s (@servers) {
 		if (defined(&theme_post_save_server)) {
