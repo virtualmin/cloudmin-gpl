@@ -12,7 +12,7 @@ if (&foreign_check("mount")) {
 	}
 
 # Show title and get the disk
-$disks = &type_xen_list_disks($server, 1);
+$disks = &type_xen_list_disks($server, 2);
 ref($disks) || &error(&text('disks_eget', $disks));
 if ($in{'new'}) {
 	&ui_print_header(&server_in($server), $text{'disk_title'.$in{'new'}},
@@ -109,6 +109,13 @@ elsif (!$in{'new'} && $disk->{'mount'}) {
 	print &ui_table_row($text{'disk_use'},
 		&text('disk_used', "<tt>$disk->{'mount'}</tt>",
 		      $text{'fs_'.$disk->{'fs'}} || uc($disk->{'fs'})));
+	}
+
+# Filesystem size and free space
+if (!$in{'new'} && $disk->{'df_size'}) {
+	print &ui_table_row($text{'disk_fssize'},
+		&text('disk_fssizeu', &nice_size($disk->{'df_size'}),
+				      &nice_size($disk->{'df_used'})));
 	}
 
 # Offer to mkfs
