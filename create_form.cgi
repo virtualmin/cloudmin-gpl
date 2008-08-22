@@ -9,7 +9,8 @@ require './server-manager-lib.pl';
 
 print &ui_form_start("create.cgi", "post");
 print &ui_hidden("type", $in{'type'});
-print &ui_table_start($text{'create_header'}, undef, 2, [ "width=30%" ]);
+print &ui_hidden_table_start($text{'create_header'}, undef, 2,
+			     "main", 1, [ "width=30%" ]);
 
 # Type of system
 $tfunc = "type_".$in{'type'}."_desc";
