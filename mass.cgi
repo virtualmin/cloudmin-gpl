@@ -19,16 +19,26 @@ if ($in{'refresh'}) {
 	&ui_print_header(undef, $text{'mass_ftitle'}, "");
 
 	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
-	&parallel_check_server_status(\@pservers, 1);
-	&parallel_check_server_status(\@oservers, 1);
+	print "<ul>\n";
+	@prv = &parallel_check_server_status(\@pservers, 1);
+	@orv = &parallel_check_server_status(\@oservers, 1);
+
+	# Show new statuses
+	@rv = ( @prv, @orv );
+	@aservers = ( @pservers, @oservers );
+	for($i=0; $i<@rv; $i++) {
+		$s = $aservers[$i];
+		($s->{'status'}, $s->{'status_msg'},
+		 $s->{'virtualmin_domains'},
+		 $s->{'virtualmin_error'}) = @{$rv[$i]};
+		print $s->{'host'}," : ",&describe_status($s, 1, 1),"<br>\n";
+		}
+	print "</ul>\n";
 	print $text{'mass_fdone'},"<p>\n";
 
 	if (defined(&theme_post_save_server)) {
-		&theme_post_save_server($server);
+		&theme_post_save_server();
 		}
-
-	# And go back to main menu
-	print &vm2_js_redirect("index.cgi");
 
 	&ui_print_footer("", $text{'index_return'});
 	}

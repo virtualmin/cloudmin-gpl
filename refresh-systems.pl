@@ -59,11 +59,14 @@ while(@ARGV > 0) {
 # Do the parallel refresh and print
 print "Refreshing status of ",scalar(@servers)," systems ..\n";
 foreach $l (\@pservers, \@oservers) {
-	&parallel_server_function($l,
+	@rv = &parallel_server_function($l,
 		sub { &check_server_status($_[0], $regen);
 		      &save_managed_server($_[0]);
-		      $desc = $text{'status_'.$_[0]->{'status'}};
-		      print "$_[0]->{'host'}: $_[0]->{'status'} ($desc)\n" });
+		      return $_[0]->{'status'}; });
+	for($i=0; $i<@rv; $i++) {
+		$desc = $text{'status_'.$rv[$i]->[0]};
+		print "$l->[$i]->{'host'}: $rv[$i]->[0] ($desc)\n";
+		}
 	}
 
 sub usage

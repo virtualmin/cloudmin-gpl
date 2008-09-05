@@ -307,14 +307,12 @@ elsif ($in{'refresh'}) {
 	print $text{'save_refreshing'},"<br>\n";
 	&check_server_status($server, 1);
 	&save_managed_server($server);
-	print $text{'save_refreshdone'},"<p>\n";
+	print &text('save_refreshdone2',
+		    describe_status($server, 1, 1)),"<p>\n";
 
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server($server);
 		}
-
-	# And go back to server form
-	print &vm2_js_redirect("edit_serv.cgi?id=$in{'id'}");
 
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}

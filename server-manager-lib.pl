@@ -1681,6 +1681,10 @@ for(my $i=0; $i<@$servers; $i++) {
 	push(@{$buckets[$i % $procs]}, $servers->[$i]);
 	}
 
+# Create results dir
+my $resdir = &transname();
+&make_dir($resdir, 0700);
+
 # Fork 10 processes, each doing a bucket
 local @pids;
 for(my $i=0; $i<$procs; $i++) {
@@ -1688,7 +1692,10 @@ for(my $i=0; $i<$procs; $i++) {
 	next if (!@bservers);
 	if (!($pid = fork())) {
 		foreach my $server (@bservers) {
-			&$func($server, $args);
+			my @r = &$func($server, $args);
+			&open_tempfile(RESULTS, ">$resdir/$server->{'id'}",0,1);
+			&print_tempfile(RESULTS, &serialise_variable(\@r));
+			&close_tempfile(RESULTS);
 			}
 		exit(0);
 		}
@@ -1700,6 +1707,20 @@ while(@pids) {
 	local $pid = wait();
 	@pids = grep { $_ ne $pid } @pids;
 	}
+
+# Read back result files, and return as list
+my @rv;
+foreach my $s (@$servers) {
+	my $rvser = &read_file_contents("$resdir/$s->{'id'}");
+	if ($rvser) {
+		my $rv = &unserialise_variable($rvser);
+		push(@rv, $rv);
+		}
+	else {
+		push(@rv, undef);
+		}
+	}
+return @rv;
 }
 
 # parallel_check_server_status(&servers, [re-generate])
@@ -1707,9 +1728,13 @@ while(@pids) {
 sub parallel_check_server_status
 {
 local ($servers, $regen) = @_;
-&parallel_server_function($servers,
+return &parallel_server_function($servers,
 	sub { &check_server_status($_[0], $regen);
-	      &save_managed_server($_[0]); });
+	      &save_managed_server($_[0]);
+	      return ( $_[0]->{'status'}, $_[0]->{'status_msg'},
+		       $_[0]->{'virtualmin_domains'},
+		       $_[0]->{'virtualmin_error'} );
+	    });
 }
 
 # parallel_install_package_updates(&servers)
