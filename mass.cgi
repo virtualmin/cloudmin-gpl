@@ -186,9 +186,38 @@ elsif ($in{'update'}) {
 			}
 		}
 
-	# Run them in parallel
+	# Run them in parallel, and report on updates done
 	print &text('mass_updoing', scalar(@upservers), $pos),"<br>\n";
-	&parallel_install_package_updates(\@upservers);
+	print "<ul>\n";
+	@rv = &parallel_install_package_updates(\@upservers);
+	for($i=0; $i<@rv; $i++) {
+		$s = $upservers[$i];
+		if (@{$rv[$i]}) {
+			print &text('mass_upserver',
+				"<tt>$s->{'host'}</tt>"),"<br>\n";
+			print "<ul>\n";
+			foreach $p (@{$rv[$i]}) {
+				print &text('update_pkg',
+					    "<tt>$p->{'name'}</tt>",
+					    $p->{'version'}),"<br>\n";
+				if (!$p->{'status'}) {
+					print &text('mass_upfailed',
+						    $p->{'error'});
+					}
+				elsif (@{$p->{'updates'}}) {
+					print &text('mass_uplist', 
+						join(" ", map { "<tt>$_</tt>" }
+							@{$p->{'updates'}}));
+					}
+				else {
+					print $text{'mass_upnone'};
+					}
+				print "<br>\n";
+				}
+			print "</ul>\n";
+			}
+		}
+	print "</ul>\n";
 	print $text{'mass_updone'},"<p>\n";
 
 	&ui_print_footer("", $text{'index_return'});

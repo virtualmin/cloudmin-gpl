@@ -1738,20 +1738,35 @@ return &parallel_server_function($servers,
 }
 
 # parallel_install_package_updates(&servers)
-# Updates all packages on multiple servers, in 10 (by default) processes
+# Updates all packages on multiple servers, in 10 (by default) processes.
+# Each element of the per-server return array is an hash ref with status,
+# packages and error fields.
 sub parallel_install_package_updates
 {
 local ($servers) = @_;
-&parallel_server_function($servers,
+return &parallel_server_function($servers,
 	sub { my $info = &get_server_collected($_[0]);
 	      my @allgot;
 	      foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
 	          local $got = &install_package_update($_[0], $p);
-		  push(@allgot, @$got) if (ref($got));
+		  my $status = { 'name' => $p->{'name'},
+				 'version' => $p->{'version'} };
+		  if (ref($got)) {
+		    # Installed something
+                    $status->{'status'} = 1;
+                    $status->{'updates'} = $got;
+		    }
+		  else {
+		    # Install failed
+                    $status->{'status'} = 0;
+                    $status->{'error'} = $got;
+                    }
+                  push(@allgot, $status);
 	          }
               &refresh_server_updates($_[0], \@allgot);
 	      &check_server_status($_[0]);
 	      &save_managed_server($_[0]);
+              return @allgot;
 	    });
 }
 
