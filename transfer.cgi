@@ -1,0 +1,40 @@
+#!/usr/local/bin/perl
+# Transfer a file from one VM2 system to another
+
+require './server-manager-lib.pl';
+&ReadParse();
+&error_setup($text{'transfer_err'});
+@servers = &list_managed_servers();
+($server) = grep { $_->{'id'} == $in{'id'} } @servers;
+$server || &error($text{'edit_egone'});
+&can_action_error($server, "transfer");
+
+# Validate inputs
+$in{'source'} =~ /^\/\S/ || &error($text{'transfer_esource'});
+($dest) = grep { $_->{'id'} eq $in{'destid'} } @servers;
+$dest || &error($text{'transfer_edest'});
+&can_action_error($dest, "transfer");
+$in{'dest_def'} || $in{'dest'} =~ /^\/\S/ || &error($text{'transfer_edest'});
+
+&ui_print_unbuffered_header(&server_in($server),
+			    $text{'transfer_title'}, "");
+
+# Do it
+$in{'dest'} = $in{'source'} if ($in{'dest_def'});
+print &text('transfer_done', "<tt>$in{'source'}</tt>",
+			     "<tt>$server->{'host'}</tt>",
+			     "<tt>$in{'dest'}</tt>",
+			     "<tt>$dest->{'host'}</tt>"),"<br>\n";
+$err = &transfer_file_between_servers($server, $dest,
+				      $in{'source'}, $in{'dest'});
+if ($err) {
+	print &text('transfer_failed', $err),"<p>\n";
+	}
+else {
+	print $text{'create_done'},"<p>\n";
+	}
+
+&ui_print_footer("transfer_form.cgi?id=$in{'id'}&mode=download",
+		 $text{'transfer_return'},
+		 "", $text{'index_return'});
+

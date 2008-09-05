@@ -1351,6 +1351,7 @@ lsched_eall=Your VM2 license is not capable of fetching associated Virtualmin li
 transfer_title=Transfer Files
 transfer_tabupload=Upload File
 transfer_tabdownload=Download File
+transfer_tabtransfer=Transfer File
 transfer_uploaddesc=This form allows you to transfer a file to the managed system, either from your PC or from the VM2 master system.
 transfer_upsource=Source file
 transfer_local=Uploaded file
@@ -1367,6 +1368,12 @@ transfer_show=Display in browser
 transfer_force=Force save to PC
 transfer_file2=Save to VM2 master as
 transfer_return=upload and download form
+transfer_theader=File transfer options
+transfer_transferdesc=This form allows you to transfer a file the selected system to another managed by VM2. If possible, the transfer will be done directly instead of via the VM2 master.
+transfer_transdestid=Destination system
+transfer_transdest=Destination file
+transfer_transsource=Source file
+transfer_transferok=Transfer Now
 
 upload_err=Failed to upload file
 upload_efile=Missing or non-existant file on VM master
@@ -1809,3 +1816,12 @@ smove_err=Failed to move system
 smove_doing=Moving $1 system from $2 to $3 ..
 smove_egone=Destination system no longer exists
 smove_emove=This system cannot be moved to the selected host system
+
+transfer_title=Transfer File
+transfer_err=Failed to transfer file
+transfer_esource=Missing or non-absolute source filename
+transfer_edest=Destination system does not exist!
+transfer_edest=Missing or non-absolute destination filename
+transfer_done=Transferring $1 on $2 to $3 on $4 ..
+transfer_failed=.. transfer failed : $1
+
