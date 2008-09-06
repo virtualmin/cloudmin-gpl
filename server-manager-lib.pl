@@ -1355,7 +1355,7 @@ if ($webminport && $server->{'id'} != 0) {
 	}
 
 # If we have a Webmin login, try it
-local ($got_memory, $got_disk);
+local ($got_memory, $got_disk, $got_kernel);
 if ($server->{'user'} || $server->{'id'} == 0) {
 	local ($status, $err, $ostype, $real_ostype) =
 		&check_server_webmin_login($server);
@@ -1415,6 +1415,9 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					"virtual-server", "get_default_ip");
 			$got_memory = 1;
 			$got_disk = 1;
+			if ($info->{'kernel'}) {
+				$got_kernel = 1;
+				}
 
 			# Get and save serial number
 			delete($info->{'serial'});
@@ -1583,8 +1586,8 @@ if (!$got_disk) {
 		}
 	}
 
-# Get kernel and CPU info
-if (!$info->{'kernel'}) {
+# Get kernel and CPU info via SSH
+if (!$got_kernel) {
 	local ($out, $ex, $err) = &execute_command_on_server($server, 
 		"uname -r ; uname -m ; uname -s");
 	if (!$ex && !$err) {
