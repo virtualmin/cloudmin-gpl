@@ -1816,6 +1816,13 @@ smove_err=Failed to move system
 smove_doing=Moving $1 system from $2 to $3 ..
 smove_egone=Destination system no longer exists
 smove_emove=This system cannot be moved to the selected host system
+smove_copying=Copying $1 tar file to target system ..
+smove_copyfailed=.. copy failed : $1
+smove_copypartial=.. copy was not complete. Original file was $1 bytes, but file on destination is $2 bytes.
+smove_emptyzone=Creating empty zone on target system ..
+smove_untar=Extracting tar file of filesystem ..
+smove_euntar=.. extraction failed : $1
+smove_einstalled=.. failed to flag zone as installed : $1
 
 transfer_title=Transfer File
 transfer_err=Failed to transfer file

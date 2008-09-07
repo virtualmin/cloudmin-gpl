@@ -870,7 +870,8 @@ if (defined(&$gfunc)) {
 	}
 
 # Just scp down
-local $sshcmd = "scp -r -".$server->{'ssh_protocol'};
+local $sshcmd = "scp -r";
+$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
@@ -913,7 +914,8 @@ if (defined(&$pfunc)) {
 	}
 
 # Just scp up
-local $sshcmd = "scp -r -".$server->{'ssh_protocol'};
+local $sshcmd = "scp -r";
+$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
@@ -968,7 +970,8 @@ elsif ($destserver->{'id'} == 0) {
 else {
 	# Both are remote! First try scp on source to dest
 	# First build scp command
-	local $sshcmd = "scp -r -".$destserver->{'ssh_protocol'};
+	local $sshcmd = "scp -r";
+	$sshcmd .= " -o Protocol=".$destserver->{'ssh_protocol'};
 	local $keytemp;
 	if ($destserver->{'key'}) {
 		# A key is needed - copy it to the source system
@@ -4533,7 +4536,7 @@ local ($server) = @_;
 local @rv;
 foreach my $t ('xen', 'vserver', 'zone') {
 	if ($server->{$t."_host"}) {
-		push(@rv, $t);
+		push(@rv, $t eq 'zone' ? 'zones' : $t);
 		}
 	}
 return wantarray ? @rv : $rv[0];
@@ -4740,10 +4743,14 @@ local $mfunc = "type_".$server->{'manager'}."_move_system";
 local $err = &$mfunc($server, $dest);
 
 # Refresh status
-&$first_print($text{'save_refreshing'});
+if (!$err) {
+	&$first_print($text{'save_refreshing'});
+	}
 &check_server_status($server, 0, 1);
 &save_managed_server($server);
-&$second_print($text{'save_refreshdone'});
+if (!$err) {
+	&$second_print($text{'save_refreshdone'});
+	}
 
 return $err;
 }
