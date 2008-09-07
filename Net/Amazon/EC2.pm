@@ -99,7 +99,7 @@ sub _init {
 	my $ts = time2isoz();
 
 	$self->{signature_version} = 1;
-	$self->{version} = '2008-02-01';
+	$self->{version} = '2008-05-05';
 	$self->{base_url} = 'http://ec2.amazonaws.com';
 	$self->{AWSAccessKeyId} = $args{AWSAccessKeyId};
 	$self->{SecretAccessKey} = $args{SecretAccessKey};
@@ -1407,6 +1407,58 @@ sub disassociate_address {
 	}
 	else {
 		return $xml->{return};
+	}
+}
+
+=head2 describe_volumes()
+
+This method lists EBS volumes owned by the account.
+
+=cut
+
+sub describe_volumes {
+	my $self = shift;
+        my %args;
+	my $xml = $self->_sign(Action  => 'DescribeVolumes', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{volumeSet}{item} || [ ];
+	}
+}
+
+=head2 create_volume(%params)
+
+Creates a new EBS volume, and returns it's ID. Required parameters are :
+
+size - Size of the volume in GB
+snapshotId - ID of a snapshot to clone it from
+availabilityZone - Zone to create in
+
+Only one of size and snapshotId must be given.
+
+=cut
+
+sub create_volume {
+	my $self = shift;
+	my %args = validate( @_, { size => { type => SCALAR,
+					     optional => 1 },
+				   snapshotId => { type => SCALAR,
+						   optional => 1 },
+				   availabilityZone => { type => SCALAR } });
+	my $xml = $self->_sign(Action  => 'CreateVolume', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{volumeId};
 	}
 }
 
