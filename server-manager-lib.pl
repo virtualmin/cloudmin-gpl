@@ -7,7 +7,6 @@
 #	XXX can select multiple keys
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
-# XXX moving zones
 # XXX option to turn off SSH checking
 #	XXX new status 'alive'
 # XXX break edit_serv.cgi into separate CGIs
@@ -1577,7 +1576,12 @@ if (!$got_disk) {
 			if ($l =~ /^\// && $l !~ /^\/platform\//) {
 				local ($fs, $blocks, $used, $avail) =
 					split(/\s+/, $l);
-				$total += $blocks*1024;
+				if ($blocks) {
+					$total += $blocks*1024;
+					}
+				else {
+					$total += ($used+$avail)*1024;
+					}
 				$free += $avail*1024;
 				}
 			}
@@ -4749,7 +4753,8 @@ if (!$err) {
 &check_server_status($server, 0, 1);
 &save_managed_server($server);
 if (!$err) {
-	&$second_print($text{'save_refreshdone'});
+	&$second_print(&text('save_refreshdone2',
+		&describe_status($server, 1, 1)));
 	}
 
 return $err;

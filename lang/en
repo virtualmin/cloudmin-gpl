@@ -1803,6 +1803,8 @@ smove_xenconfdone=.. copied to $1
 smove_starting=Starting up on new host system ..
 smove_delfiles=Deleting disk and config files from original host ..
 smove_delerr=.. failed to delete $1 : $2
+smove_deldir=Deleting filesystem from $1 ..
+smove_edeldir=.. deletion failed : $1
 smove_title=Move Virtual System
 smove_header=Options for move to new host system
 smove_host=Current host system
@@ -1823,6 +1825,7 @@ smove_emptyzone=Creating empty zone on target system ..
 smove_untar=Extracting tar file of filesystem ..
 smove_euntar=.. extraction failed : $1
 smove_einstalled=.. failed to flag zone as installed : $1
+smove_ezinfo=Failed to get information about original Solaris Zone
 
 transfer_title=Transfer File
 transfer_err=Failed to transfer file
