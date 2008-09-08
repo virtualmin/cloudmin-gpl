@@ -1462,6 +1462,56 @@ sub create_volume {
 	}
 }
 
+=head2 attach_volume(%params)
+
+Connects an EC2 volume with a running instance.
+
+=cut
+
+sub attach_volume {
+	my $self = shift;
+	my %args = validate( @_, { VolumeId => { type => SCALAR },
+				   InstanceId => { type => SCALAR },
+				   Device => { type => SCALAR, optional => 1 },
+				 });
+	my $xml = $self->_sign(Action  => 'AttachVolume', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{device};
+	}
+}
+
+=head2 detach_volume(%params)
+
+Dis-connects an EC2 volume from a running instance.
+
+=cut
+
+sub detach_volume {
+	my $self = shift;
+	my %args = validate( @_, { VolumeId => { type => SCALAR },
+				   InstanceId => { type => SCALAR },
+                                   Force => { type => SCALAR, optional => 1 },
+				 });
+	my $xml = $self->_sign(Action  => 'DetachVolume', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{device};
+	}
+}
+
+
+
 1;
 
 __END__
