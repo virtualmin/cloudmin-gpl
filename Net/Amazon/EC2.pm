@@ -1510,7 +1510,26 @@ sub detach_volume {
 	}
 }
 
+=head2 delete_volume(%params)
 
+Deletes an EC2 EBS volume.
+
+=cut
+
+sub delete_volume {
+	my $self = shift;
+	my %args = validate( @_, { VolumeId => { type => SCALAR } });
+	my $xml = $self->_sign(Action  => 'DeleteVolume', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{return};
+	}
+}
 
 1;
 
