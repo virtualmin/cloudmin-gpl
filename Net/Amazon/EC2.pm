@@ -1445,11 +1445,11 @@ Only one of size and snapshotId must be given.
 
 sub create_volume {
 	my $self = shift;
-	my %args = validate( @_, { size => { type => SCALAR,
+	my %args = validate( @_, { Size => { type => SCALAR,
 					     optional => 1 },
-				   snapshotId => { type => SCALAR,
+				   SnapshotId => { type => SCALAR,
 						   optional => 1 },
-				   availabilityZone => { type => SCALAR } });
+				   AvailabilityZone => { type => SCALAR } });
 	my $xml = $self->_sign(Action  => 'CreateVolume', %args);
 	if ( grep { defined && length } $xml->{Errors} ) {
 		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
