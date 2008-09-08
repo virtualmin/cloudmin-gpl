@@ -355,6 +355,8 @@ ec2s_none=You have not entered any EC2 accounts yet.
 ec2s_add=Add an EC2 account.
 ec2s_return=EC2 accounts list
 ec2s_delete=Delete Selected Accounts
+ec2s_def=Default?
+ecs2_setdef=Change Default Account
 
 ec2_create=Add EC2 Account
 ec2_edit=Edit EC2 Account
@@ -404,6 +406,7 @@ dec2s_err=Failed to delete EC2 accounts
 dec2s_enone=None selected
 dec2s_egone=One of the accounts no longer exists!
 dec2s_eusers=The account $1 is being used by $2 managed servers. It cannot be removed unless they are delete or de-registered.
+dec2s_edefault=No new default account selected
 
 status_0=OK
 status_1=Connection failed

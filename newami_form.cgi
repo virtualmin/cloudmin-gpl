@@ -22,8 +22,10 @@ print &ui_table_row($text{'newami_path'},
 		    &ui_textbox("path", undef, 60));
 
 @accounts = &list_ec2_accounts();
+$defaccount = &get_default_ec2_account(1);
+$defaccount ||= $accounts[0];
 print &ui_table_row($text{'newami_account'},
-     &ui_select("account", $accounts[0]->{'id'},
+     &ui_select("account", $defaccount->{'id'},
 		[ map { [ $_->{'id'}, "$_->{'desc'} ($_->{'account'})" ] }
 		      @accounts ]));
 
