@@ -46,7 +46,7 @@ if (@amis) {
 			      @servers;
 		$users = @users == 0 ? $text{'keys_nousers'} :
 			 @users > 4 ? &text('keys_manyusers', scalar(@users)) :
-			   join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
+			   join("<br>", map { "<tt>$_->{'host'}</tt>" } @users);
 		$public = $ami->{'isPublic'} eq 'true' ?
 			"<font color=#00aa00>$text{'yes'}</font>" :
 			"<font color=#ff0000>$text{'no'}</font>";
