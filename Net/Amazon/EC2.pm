@@ -1531,6 +1531,69 @@ sub delete_volume {
 	}
 }
 
+=head2 describe_snapshots()
+
+This method lists EBS snapshots owned by the account.
+
+=cut
+
+sub describe_snapshots {
+	my $self = shift;
+        my %args;
+	my $xml = $self->_sign(Action  => 'DescribeSnapshots', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{snapshotSet}{item} || [ ];
+	}
+}
+
+=head2 create_snapshot(%params)
+
+Creates a new EBS volume, snapshot and returns it's ID.
+
+=cut
+
+sub create_snapshot {
+	my $self = shift;
+	my %args = validate( @_, { VolumeId => { type => SCALAR } });
+	my $xml = $self->_sign(Action  => 'CreateSnapshot', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{snapshotId};
+	}
+}
+
+=head2 delete_snapshot(%params)
+
+Deletes an EC2 EBS volume snapshot.
+
+=cut
+
+sub delete_snapshot {
+	my $self = shift;
+	my %args = validate( @_, { SnapshotId => { type => SCALAR } });
+	my $xml = $self->_sign(Action  => 'DeleteSnapshot', %args);
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{return};
+	}
+}
+
 1;
 
 __END__

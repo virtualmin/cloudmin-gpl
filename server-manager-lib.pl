@@ -11,6 +11,9 @@
 #	XXX new status 'alive'
 # XXX break edit_serv.cgi into separate CGIs
 # XXX amazon EBS support
+#	XXX web API
+#	XXX CHANGELOG
+#	XXX snapshots
 
 do '../web-lib.pl';
 &init_config();
