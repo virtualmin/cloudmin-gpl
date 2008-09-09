@@ -1856,6 +1856,14 @@ volumes_desc=This tab lists existing EC2 volumes, if any have been created yet. 
 volumes_delete=Delete Selected Volumes
 volumes_return1=volumes list
 volumes_return2=snapshots list
+volumes_sid=Snapshot ID
+volumes_progress=Creation progress
+volumes_snone=No EC2 EBS volume snapshots have been created yet.
+volumes_sheader=New volume snapshot details
+volumes_snapvol=Copy from volume
+volumes_nosnap=You cannot create a snapshot until at least one volume exists to copy it from.
+volumes_sdesc=This tab lists existing EC2 volume snapshots, which are created by copying a volume and can be used to create new volumes.
+volumes_sdelete=Delete Selected Snapshots
 
 cvolume_err=Failed to create EC2 volume
 cvolume_esize=Missing or non-integer size in GB
@@ -1875,3 +1883,18 @@ dvolumes_vols=Volumes to delete : $1
 dvolumes_ok=Yes, Delete Volumes
 dvolumes_deleting=Deleting volume $1 with size $2 ..
 dvolumes_failed=.. deletion failed : $1
+
+csnapshot_err=Failed to create snapshot
+csnapshot_title=Create EC2 Snapshot
+csnapshot_doing=Creating snapshot of volume $1, with size $2 ..
+csnapshot_done=.. created with ID $1
+csnapshot_failed=.. creation failed : $1
+
+dsnapshots_err=Failed to delete EC2 snapshots
+dsnapshot_egone2=EC2 snapshot $1 no longer exists
+dsnapshots_enone=No snapshots selected
+dsnapshots_title=Delete EC2 Snapshots
+dsnapshots_deleting=Deleting snapshot $1 ..
+dsnapshots_rusure=Are you sure you want to delete the $1 selected snapshots? Any data they contain will be lost <b>forever</b>.
+dsnapshots_ok=Yes, Delete Snapshots
+dsnapshots_snaps=Snapshots to delete : $1
