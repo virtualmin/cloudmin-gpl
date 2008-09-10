@@ -15,6 +15,7 @@
 #	XXX CHANGELOG
 #	XXX help
 #	XXX when detaching, show mount point and message about un-mount
+#	XXX test with Solaris
 
 do '../web-lib.pl';
 &init_config();
@@ -4762,6 +4763,32 @@ if (!$err) {
 	}
 
 return $err;
+}
+
+# get_device_filesystem(&server, device-file)
+# Returns the code for the filesystem on some device, or undef if none
+sub get_device_filesystem
+{
+local ($server, $device) = @_;
+local ($out, $ex, $err) = &execute_command_on_server($server,
+				"file -s ".quotemeta($device));
+if ($out =~ /(\S+)\s+filesystem\s+data/) {
+	# EXT2 or 3 or XFS
+	return lc($1);
+	}
+elsif ($out =~ /FAT\s+\(32/) {
+	return "vfat";
+	}
+elsif ($out =~ /FAT\s+\((16|12)/) {
+	return "fat";
+	}
+elsif ($out =~ /ReiserFS/) {
+	return "reiserfs";
+	}
+else {
+	# XXX what about Solaris?
+	return undef;
+	}
 }
 
 # substitute_virtualmin_template(string, &hash)
