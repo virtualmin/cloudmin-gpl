@@ -11,9 +11,10 @@
 #	XXX new status 'alive'
 # XXX break edit_serv.cgi into separate CGIs
 # XXX amazon EBS support
-#	XXX web API
+#	XXX web UI
 #	XXX CHANGELOG
 #	XXX help
+#	XXX when detaching, show mount point and message about un-mount
 
 do '../web-lib.pl';
 &init_config();

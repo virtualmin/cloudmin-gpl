@@ -1851,7 +1851,7 @@ volumes_vnone=No EC2 EBS volumes have been created yet.
 volumes_vheader=New volume details
 volumes_account=EC2 account
 volumes_src=Creation type
-volumes_size=New volume with size
+volumes_size=New volume of size
 volumes_snap=Copy of snapshot
 volumes_size2=New volume size
 volumes_desc=This tab lists existing EC2 volumes, if any have been created yet. Once you have at least one, it can be attached to a running EC2 instance on the <b>Attach EC2 Volume</b> page.
@@ -1883,12 +1883,12 @@ dvolumes_title=Delete EC2 Volumes
 dvolumes_rusure=Are you sure you want to delete the $1 selected volumes? The $2 of data on them will be lost <b>forever</b>.
 dvolumes_vols=Volumes to delete : $1
 dvolumes_ok=Yes, Delete Volumes
-dvolumes_deleting=Deleting volume $1 with size $2 ..
+dvolumes_deleting=Deleting volume $1 of size $2 ..
 dvolumes_failed=.. deletion failed : $1
 
 csnapshot_err=Failed to create snapshot
 csnapshot_title=Create EC2 Snapshot
-csnapshot_doing=Creating snapshot of volume $1, with size $2 ..
+csnapshot_doing=Creating snapshot of volume $1 of size $2 ..
 csnapshot_done=.. created with ID $1
 csnapshot_failed=.. creation failed : $1
 
@@ -1921,3 +1921,10 @@ attach_create=Attach EC2 Volume
 attach_nounmounts=All available volumes are already attached to this system.
 attach_nounmounts2=Use the <a href='$1'>EC2 Volumes</a> page to create a new one.
 attach_mount=Mount on directory
+attach_return=attached EC2 volumes
+
+detach_err=Failed to detach volumes
+detach_title=Detach EC2 Volumes
+detach_doing=Detaching volume $1 of size $2 ..
+detach_failed=.. failed : $1
+detach_evol=Volume $1 no longer exists
