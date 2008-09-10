@@ -622,6 +622,7 @@ edit_ec2image=Started from EC2 image
 edit_ec2sgroup=EC2 security groups
 edit_ec2newami=Create EC2 Image
 edit_ec2address=Assign EC2 Address
+edit_ec2attach=Attach EC2 Volumes
 edit_webmin2=Open Webmin
 edit_webmin3=Link to Webmin
 edit_shell=Run Commands
@@ -1561,6 +1562,7 @@ fs_reiserfs=ReiserFS
 fs_xfs=SGI XFS
 fs_jfs=IBM JFS
 fs_swap=Virtual memory
+fs_ufs=Solaris UFS
 
 ddisk_title=Delete Disks
 ddisk_err=Failed to delete disks
@@ -1898,3 +1900,24 @@ dsnapshots_deleting=Deleting snapshot $1 ..
 dsnapshots_rusure=Are you sure you want to delete the $1 selected snapshots? Any data they contain will be lost <b>forever</b>.
 dsnapshots_ok=Yes, Delete Snapshots
 dsnapshots_snaps=Snapshots to delete : $1
+
+attach_title=Attached EC2 Volumes
+attach_delete=Detach Selected Volumes
+attach_volume=Volume ID
+attach_size=Size
+attach_device=Device path
+attach_dir=Mount point
+attach_none=No EC2 volumes have been attached to this system yet.
+attach_evols=EC2 volumes cannot be attached to this system, has none have been created under its account yet.
+attach_evols2=Use the <a href='$1'>EC2 Volumes</a> page to create some.
+attach_header=Volume attachment options
+attach_avolume=Volume to attach
+attach_adevice=Device file path
+attach_auto=Decide automatically
+attach_nomount=Don't mount
+attach_fs=Format with filesystem
+attach_nofs=Don't format
+attach_create=Attach EC2 Volume
+attach_nounmounts=All available volumes are already attached to this system.
+attach_nounmounts2=Use the <a href='$1'>EC2 Volumes</a> page to create a new one.
+attach_mount=Mount on directory

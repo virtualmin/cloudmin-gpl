@@ -13,6 +13,7 @@
 # XXX amazon EBS support
 #	XXX web API
 #	XXX CHANGELOG
+#	XXX help
 
 do '../web-lib.pl';
 &init_config();
