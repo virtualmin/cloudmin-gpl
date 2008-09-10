@@ -1,0 +1,16 @@
+<header>Attached EC2 Volumes</header>
+
+This page lists EC2 volumes already attached to this system, and allows you
+to add a new volume if any have been defined. When adding a volume, you can
+optionally have a filesystem created on it and mounted on some directory -
+however, VM2 will not re-create the filesystem if it detects that one 
+already exists. <p>
+
+Existing volumes can be detached from the system without any loss of the
+data they contain. VM2 will attempt to un-mount the volume's device, but
+this is not possible if it is in active use - for example by a web server
+or MySQL database. Once detached, the volume can be attached to a different
+system. <p>
+
+<footer>
+
