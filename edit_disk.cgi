@@ -12,7 +12,12 @@ if (&foreign_check("mount")) {
 	}
 
 # Show title and get the disk
-$disks = &type_xen_list_disks($server, 2);
+$lfunc = "type_".$server->{'manager'}."_list_disks";
+$disks = &$lfunc($server, 2);
+if (!ref($disks)) {
+	# Try again without asking for mounts
+	$disks = &$lfunc($server, 0);
+	}
 ref($disks) || &error(&text('disks_eget', $disks));
 if ($in{'new'}) {
 	&ui_print_header(&server_in($server), $text{'disk_title'.$in{'new'}},

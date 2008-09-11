@@ -52,7 +52,7 @@ else {
 		print &text('ddisk_rusure2', scalar(@$disks)),"<p>\n";
 		}
 	else {
-		print &text('disk_rusure', scalar(@$disks),
+		print &text('ddisk_rusure', scalar(@$disks),
 			    &nice_size($totalsize)),"<p>\n";
 		}
 	print &ui_form_end([ [ "confirm", $text{'ddisk_deleteok'} ] ]);

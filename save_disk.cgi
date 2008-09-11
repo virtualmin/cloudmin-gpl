@@ -13,6 +13,10 @@ $server || &error($text{'edit_egone'});
 # Get the disk
 $lfunc = "type_".$server->{'manager'}."_list_disks";
 $disks = &$lfunc($server, 1);
+if (!ref($disks)) {
+	# Try again without asking for mounts
+	$disks = &$lfunc($server, 0);
+	}
 ref($disks) || &error($disks);
 if (!$in{'new'}) {
 	($disk) = grep { $_->{'real'} eq $in{'oldreal'} } @$disks;

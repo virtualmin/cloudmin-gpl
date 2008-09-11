@@ -7,10 +7,6 @@
 #	XXX can select multiple keys
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
-# XXX option to turn off SSH checking
-#	XXX new status 'alive'
-#	XXX what parts of disk management work?
-#	XXX all SSH functions should fail
 # XXX break edit_serv.cgi into separate CGIs
 
 do '../web-lib.pl';
@@ -874,7 +870,7 @@ if (defined(&$gfunc)) {
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to scp
 	}
-elsif ($server->{'ssh_nologin'}) {
+if ($server->{'ssh_nologin'}) {
 	return "SSH logins are not available";
 	}
 
@@ -921,7 +917,7 @@ if (defined(&$pfunc)) {
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to scp
 	}
-elsif ($server->{'ssh_nologin'}) {
+if ($server->{'ssh_nologin'}) {
 	return "SSH logins are not available";
 	}
 
@@ -982,6 +978,9 @@ elsif ($destserver->{'id'} == 0) {
 else {
 	# Both are remote! First try scp on source to dest
 	# First build scp command
+	if ($destserver->{'ssh_nologin'}) {
+		return "SSH logins on target system are not available";
+		}
 	local $sshcmd = "scp -r";
 	$sshcmd .= " -o Protocol=".$destserver->{'ssh_protocol'};
 	local $keytemp;

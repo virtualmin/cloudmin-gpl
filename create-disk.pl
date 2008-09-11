@@ -102,7 +102,7 @@ defined(&$dfunc) || &usage("System type $server->{'manager'} does not support ".
 $cfunc = "type_".$server->{'manager'}."_can_disks";
 defined(&$cfunc) && &$cfunc($server) ||
 	&usage("Disks cannot be managed on this system");
-$disks = &$dfunc($server, 1);
+$disks = &$dfunc($server, $mount ? 1 : 0);
 ref($disks) || &usage("Failed to list disks : $disks");
 
 # More parameter validation 

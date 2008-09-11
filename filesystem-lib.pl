@@ -73,6 +73,7 @@ sub get_system_fstab
 {
 local ($server) = @_;
 local (@rv, $mounted);
+local $fstab;
 if ($server->{'status'} eq 'down' && $server->{'manager'} eq 'xen') {
 	# Fetch /etc/fstab from root filesystem
 	local $vhost = &type_xen_parent($server);
@@ -92,6 +93,7 @@ elsif ($server->{'status'} ne 'nohost' && $server->{'status'} ne 'down') {
 	# Get from /etc/fstab on system directly
 	$fstab = &transname();
 	local $err = &get_file_from_server($server, "/etc/fstab", $fstab);
+	print STDERR "fstab err=$err\n";
 	return "Failed to get /etc/fstab : $err" if ($err);
 	}
 else {

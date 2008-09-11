@@ -122,7 +122,7 @@ if (@allservers > $config{'display_max'} || $searching) {
 	elsif ($in{'sok'}) {
 		# Search by status
 		if ($in{'ssearch'} eq 'up') {
-			@sts = ( 'nowebmin', 'novirt', 'virt' );
+			@sts = ( 'nowebmin', 'novirt', 'virt', 'alive' );
 			}
 		elsif ($in{'ssearch'} eq 'wm') {
 			@sts = ( 'novirt', 'virt' );
