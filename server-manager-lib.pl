@@ -9,6 +9,8 @@
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX option to turn off SSH checking
 #	XXX new status 'alive'
+#	XXX what parts of disk management work?
+#	XXX all SSH functions should fail
 # XXX break edit_serv.cgi into separate CGIs
 
 do '../web-lib.pl';
@@ -97,6 +99,7 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 
 @server_statuses = (
 	[ 'down' => 'ff0000' ],
+	[ 'alive' => '00ff00' ],
 	[ 'paused' => 'aa0000' ],
 	[ 'nossh' => 'ff220000' ],
 	[ 'nohost' => 'ff440000' ],
@@ -823,6 +826,10 @@ if (defined(&$efunc)) {
 	# Use type-specific function call
 	return &$efunc(@_);
 	}
+elsif ($server->{'ssh_nologin'}) {
+	# Cannot run commands
+	return (undef, undef, "SSH logins are not available");
+	}
 else {
 	# Just run via SSH
 	local $sshcmd = "ssh -q -x -".$server->{'ssh_protocol'};
@@ -867,6 +874,9 @@ if (defined(&$gfunc)) {
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to scp
 	}
+elsif ($server->{'ssh_nologin'}) {
+	return "SSH logins are not available";
+	}
 
 # Just scp down
 local $sshcmd = "scp -r";
@@ -910,6 +920,9 @@ if (defined(&$pfunc)) {
 	local $rv = &$pfunc(@_);
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to scp
+	}
+elsif ($server->{'ssh_nologin'}) {
+	return "SSH logins are not available";
 	}
 
 # Just scp up
@@ -1290,8 +1303,16 @@ else {
 $server->{'statustime'} = time();
 local $clfunc = "type_".$server->{'manager'}."_check_login";
 local $ping;
-if (!defined(&$clfunc)) {
+if (!defined(&$clfunc) || $server->{'ssh_nologin'}) {
 	$ping = &ping_server_host($server->{'host'});
+	}
+
+# If SSH logins are disabled, go no further
+if ($server->{'ssh_nologin'}) {
+	$server->{'status'} = $ping ? "alive" : "down";
+	$server->{'status_msg'} = $ping ? undef : "Ping failed";
+	&save_server_collected($server, undef);
+	goto DONECHECK;
 	}
 
 # Check if we can login
@@ -1657,10 +1678,18 @@ local ($server, $info) = @_;
 if (!-d $server_collected_dir) {
 	&make_dir($server_collected_dir, 0700);
 	}
-&open_tempfile(DOMS, ">$server_collected_dir/$server->{'id'}");
-&print_tempfile(DOMS, &serialise_variable($info));
-&close_tempfile(DOMS);
-$get_server_collected_cache{$server->{'id'}} = $info;
+if ($info) {
+	# Have info to write
+	&open_tempfile(DOMS, ">$server_collected_dir/$server->{'id'}");
+	&print_tempfile(DOMS, &serialise_variable($info));
+	&close_tempfile(DOMS);
+	$get_server_collected_cache{$server->{'id'}} = $info;
+	}
+else {
+	# Info is being cleared
+	&unlink_file("$server_collected_dir/$server->{'id'}");
+	delete($get_server_collected_cache{$server->{'id'}});
+	}
 }
 
 # get_server_collected(&server)
@@ -3775,7 +3804,7 @@ if (&can_action($server, "edit")) {
 			    'link' => $ed."&basic=0&doms=1" });
 		}
 	local $ifunc = "type_".$t."_list_interfaces";
-	if (defined(&$ifunc) && $status ne 'paused') {
+	if (defined(&$ifunc) && $status ne 'paused' && $status ne 'alive') {
 		push(@rv, { 'id' => 'ifaces',
 			    'desc' => $text{'edit_link_ifaces'},
 			    'cat' => 'system',
@@ -3822,6 +3851,26 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
 		}
 	if (($status eq 'nossh' || $status eq 'paused') && !$noshut &&
 	    &can_action($server, "shutdown")) {
+		push(@rv, { 'id' => 'shutdown',
+			    'desc' => $text{'edit_shutdown'},
+			    'cat' => 'power' });
+		}
+	}
+elsif ($status eq 'alive') {
+	# For servers where we are not allowed to login, only show boot-related
+	# actions
+	if (&can_action($server, "refresh")) {
+		push(@rv, { 'id' => 'refresh',
+			    'desc' => $text{'edit_refresh'},
+			    'cat' => '' });
+		push(@rv, undef);
+		}
+	if (!$noreboot && &can_action($server, "reboot")) {
+		push(@rv, { 'id' => 'reboot',
+			    'desc' => $text{'edit_reboot'},
+			    'cat' => 'power' });
+		}
+	if (!$noshut && &can_action($server, "shutdown")) {
 		push(@rv, { 'id' => 'shutdown',
 			    'desc' => $text{'edit_shutdown'},
 			    'cat' => 'power' });
