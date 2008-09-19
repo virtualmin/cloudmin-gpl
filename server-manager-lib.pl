@@ -110,6 +110,8 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 $licence_status = "$module_config_directory/licence-status";
 $licence_file = "/etc/server-manager-license";
 $licence_cache_file = "$module_config_directory/licence-cache";
+$vm2_yum_repo = "/etc/yum.repos.d/vm2.repo";
+$upgrade_vm2_host = "vm2.virtualmin.com";
 
 $virtualmin_licence_host = "software.virtualmin.com";
 $virtualmin_licence_port = 80;
@@ -2928,33 +2930,44 @@ if (!$serial || !$key) {
 local $id = &get_host_id();
 
 # Phone home to see if it is valid
+local ($status, $err, $expiry, $servers) =
+	&licence_scheduled($id, $serial, $key);
+$licence->{'status'} = $status;
+$licence->{'err'} = $err;
+if ($status == 0) {
+	$licence->{'expiry'} = $expiry;
+	$licence->{'servers'} = $servers;
+	}
+}
+
+# licence_scheduled(id, serial, key)
+# Actually check a serial number and get with the Virtualmin license server.
+# Returns the status code, error message, expiry date and max servers
+sub licence_scheduled
+{
+local ($id, $serial, $key) = @_;
 local ($out, $error);
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
 	       "$vm2_licence_prog?id=$id&serial=$key",
 	       \$out, \$error, undef, $virtualmin_licence_ssl);
 if ($error) {
-	$licence->{'status'} = 2;
-	$licence->{'err'} = "Failed to contact licence server : $error";
+	return (2, "Failed to contact licence server : $error");
 	}
 elsif ($out =~ /^EXP\s+(\S+)\s+(\S+)/) {
-	$licence->{'status'} = 3;
-	$licence->{'err'} = "The licence for this system expired on $1";
+	return (3, "The licence for this system expired on $1");
 	}
 elsif ($out =~ /^ERR\s+(.*)/) {
-	$licence->{'status'} = 2;
-	$licence->{'err'} = "An error occurred checking the licence : $1";
+	return (2, "An error occurred checking the licence : $1");
 	}
 elsif ($out =~ /^OK\s+(\S+)\s+(\S+)/) {
-	$licence->{'status'} = 0;
-	$licence->{'err'} = undef;
-	$licence->{'expiry'} = $1;
-	$licence->{'servers'} = $2;
+	return (0, undef, $1, $2);
 	}
 else {
-	$licence->{'status'} = 1;
-	$licence->{'err'} = "No valid licence was found for your host ID $_[0] and license key $key";
+	return (1, "No valid licence was found for your host ID $id ".
+		   "and license key $key");
 	}
+
 }
 
 # check_virtualmin_config(&server, [no-require])
