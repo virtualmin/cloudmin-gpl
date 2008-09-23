@@ -3816,7 +3816,7 @@ if (&can_action($server, "edit")) {
 		push(@rv, { 'id' => 'doms',
 			    'desc' => $text{'edit_link_doms'},
 			    'cat' => 'system',
-			    'link' => $ed."&basic=0&doms=1" });
+			    'link' => "edit_domains.cgi?id=$server->{'id'}" });
 		}
 	local $ifunc = "type_".$t."_list_interfaces";
 	local $cfunc = "type_".$t."_can_interfaces";
