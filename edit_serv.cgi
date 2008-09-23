@@ -481,60 +481,6 @@ if (defined(&$cfunc) && &$cfunc($server) && $status ne 'nohost') {
 	print &ui_hidden_table_end("ifaces");
 	}
 
-# CPU and memory limits, if we can manage them
-if (&can_edit_limits($server) && $status ne 'nohost' &&
-    &can_action($server, "limits")) {
-	@tds = ( "width=30%" );
-	print &ui_hidden_table_start($text{'edit_lheader'}." ".
-				     &hlink($text{'edit_help'}, "editlimits"),
-				     "width=100%", 2,
-				     "limits", $in{'limits'}, \@tds);
-	print &ui_form_start("save_limits.cgi");
-	print &ui_hidden("id", $in{'id'});
-
-	# Memory limit
-	$mfunc = "type_".$t."_get_memory";
-	$m = defined(&$mfunc) ? &$mfunc($server) : undef;
-	if ($m) {
-		print &ui_table_row($text{'edit_lmemory'},
-			&ui_bytesbox("memory", $m));
-		}
-
-	# CPU limit
-	$cfunc = "type_".$t."_get_cpu";
-	if (defined(&$cfunc)) {
-		($cpu, $weight) = &$cfunc($server);
-		if (defined($cpu)) {
-			print &ui_table_row($text{'edit_lcpu'},
-				&ui_opt_textbox("cpu", $cpu == 0 ? undef : $cpu,
-					4, $text{'edit_lunlimit'})."%");
-			}
-		if (defined($weight)) {
-			print &ui_table_row($text{'edit_lweight'},
-				&ui_textbox("weight", $weight, 4));
-			}
-		}
-
-	# Bandwidth limit
-	$rfunc = "type_".$t."_real_interfaces";
-	if (defined(&$rfunc) && $config{'bw_enabled'}) {
-		print &ui_table_row($text{'edit_lbw'},
-			&ui_radio("bw_def", $server->{'bw_limit'} ? 0 : 1,
-				  [ [ 1, $text{'bw_unlimited'} ],
-				    [ 0, $text{'bw_setto'} ] ])."\n".
-			&ui_bytesbox("bw", $server->{'bw_limit'}, 8)."\n".
-			&describe_bandwidth_period(0));
-
-		# Current usage
-		print &ui_table_row($text{'edit_lusage'},
-			&bandwidth_usage_message($server));
-		}
-
-	print &ui_table_row(undef, &ui_submit($text{'save'}), 2);
-	print &ui_form_end();
-	print &ui_hidden_table_end("limits");
-	}
-
 &ui_print_footer("", $text{'index_return'});
 
 if (defined(&theme_select_server)) {

@@ -8,6 +8,8 @@
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX break edit_serv.cgi into separate CGIs
+#	XXX links from left menu, iphone
+#	XXX help pages
 
 do '../web-lib.pl';
 &init_config();
@@ -3826,7 +3828,7 @@ if (&can_action($server, "edit")) {
 		push(@rv, { 'id' => 'limits',
 			    'desc' => $text{'edit_link_limits'},
 			    'cat' => 'system',
-			    'link' => $ed."&basic=0&limits=1" });
+			    'link' => "edit_limits.cgi?id=$server->{'id'}" });
 		}
 	}
 elsif (&can_action($server, "view")) {

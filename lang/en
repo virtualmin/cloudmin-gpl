@@ -1468,6 +1468,7 @@ script_notok=Update failed : $1
 script_failed=Updates failed : $1
 script_indom=$1 in $2
 
+limits_title2=Resource Limits
 limits_title=Updating Limits
 limits_setting=Setting maximum memory allocation to $1 ..
 limits_already=.. already set
