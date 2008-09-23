@@ -8,6 +8,7 @@ require './server-manager-lib.pl';
 @servers = &list_managed_servers();
 ($server) = grep { $_->{'id'} == $in{'id'} } @servers;
 $server || &error($text{'edit_egone'});
+&can_action($server, "view") || &can_action_error($server, "edit");
 
 &ui_print_header(&server_in($server), $text{'domains_title'}, "", "domains2");
 
@@ -35,6 +36,7 @@ if ($toomanydoms) {
 		$candoms ? ( $clink ) : ( ) ]);
 	}
 elsif (@doms) {
+	# Show list of domains
 	$bs = &get_server_blocksize($server);
 	@tds = $candoms ? ( "width=5" ) : ( );
 	@links = ( &select_all_link("d"),
@@ -98,6 +100,7 @@ elsif (@doms) {
 	}
 else {
 	print "<b>$text{'edit_nodoms'}</b><p>\n";
+	print &ui_links_row([ $clink ]);
 	}
 
 &ui_print_footer("", $text{'index_return'});

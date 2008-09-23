@@ -22,12 +22,11 @@ $can || &error($text{'iface_esupport'});
 						 : $text{'iface_edit'},
 		 "", "iface");
 
-@tds = ( "width=30%" );
 print &ui_form_start("save_iface.cgi", "post");
 print &ui_hidden("id", $in{'id'});
 print &ui_hidden("idx", $in{'idx'});
 print &ui_hidden("new", $in{'new'});
-print &ui_table_start($text{'iface_header'}, undef, 2, \@tds);
+print &ui_table_start($text{'iface_header'}, undef, 2);
 
 # Parent interface
 if ($in{'new'}) {

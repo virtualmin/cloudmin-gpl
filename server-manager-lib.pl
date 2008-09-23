@@ -7,10 +7,6 @@
 #	XXX can select multiple keys
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
-# XXX break edit_serv.cgi into separate CGIs
-#	XXX links from left menu, iphone
-#	XXX help pages
-#	XXX test interfaces on Solaris
 
 do '../web-lib.pl';
 &init_config();
@@ -3812,7 +3808,7 @@ if (&can_action($server, "edit")) {
 		push(@rv, { 'id' => 'coll',
 			    'desc' => $text{'edit_link_coll'},
 			    'cat' => 'system',
-			    'link' => $ed."&basic=0&coll=1" });
+			    'link' => "edit_status.cgi?id=$server->{'id'}" });
 		push(@rv, { 'id' => 'doms',
 			    'desc' => $text{'edit_link_doms'},
 			    'cat' => 'system',
