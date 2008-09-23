@@ -900,6 +900,8 @@ feature_many=$1 systems
 features_err=Failed to save default features
 features_enone=None selected
 
+ifaces_title=Network Interfaces
+
 iface_create=Add Network Interface
 iface_edit=Edit Network Interface
 iface_header=Virtual system network interface details

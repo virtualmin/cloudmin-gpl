@@ -10,6 +10,7 @@
 # XXX break edit_serv.cgi into separate CGIs
 #	XXX links from left menu, iphone
 #	XXX help pages
+#	XXX test interfaces on Solaris
 
 do '../web-lib.pl';
 &init_config();
@@ -3818,11 +3819,13 @@ if (&can_action($server, "edit")) {
 			    'link' => $ed."&basic=0&doms=1" });
 		}
 	local $ifunc = "type_".$t."_list_interfaces";
-	if (defined(&$ifunc) && $status ne 'paused' && $status ne 'alive') {
+	local $cfunc = "type_".$t."_can_interfaces";
+	if (defined(&$ifunc) && &$cfunc($server) &&
+	    $status ne 'paused' && $status ne 'alive' && $status ne 'nohost') {
 		push(@rv, { 'id' => 'ifaces',
 			    'desc' => $text{'edit_link_ifaces'},
 			    'cat' => 'system',
-			    'link' => $ed."&basic=0&ifaces=1" });
+			    'link' => "list_ifaces.cgi?id=$server->{'id'}" });
 		}
 	if (&can_edit_limits($server)) {
 		push(@rv, { 'id' => 'limits',
