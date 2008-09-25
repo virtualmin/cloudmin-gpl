@@ -3,8 +3,6 @@
 #	XXX do virtualmin too
 #	XXX support when moving systems
 # XXX HVM Xen instances
-# XXX allow setting of root password and SSH key at creation
-#	XXX can select multiple keys
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 

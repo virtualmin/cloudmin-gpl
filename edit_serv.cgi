@@ -173,10 +173,10 @@ else {
 	$hasssh = !defined(&$sfunc) || !&$sfunc();
 	}
 if ($haswebmin || $hasssh) {
-	print &ui_hidden_table_start($text{'edit_aheader'}." ".
-				     &hlink($text{'edit_help'}, "editauth"),
+	print &ui_hidden_table_start($text{'edit_aheader'},
 				     "width=100%", 2,
-				     "auth", $in{'auth'}, \@tds);
+				     "auth", $in{'auth'}, \@tds,
+				     &hlink($text{'edit_help'}, "editauth"));
 	}
 
 # SSH
