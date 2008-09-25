@@ -23,7 +23,7 @@ if (-r "$module_root_directory/bw-lib.pl") {
 &foreign_require("proc", "proc-lib.pl");
 &foreign_require("net", "net-lib.pl");
 &remote_error_setup(\&remote_error_handler);
-use Net::Amazon::EC2;
+eval "use Net::Amazon::EC2;";		# Fails if no S3 type
 use Time::Local;
 %access = &get_module_acl();
 
