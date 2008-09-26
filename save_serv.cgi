@@ -399,15 +399,18 @@ else {
 			$in{'upass'} || &error($text{'add_eupass'});
 			$server->{'ssh_pass'} = $in{'upass'};
 			delete($server->{'key'});
+			delete($server->{'ssh_nologin'});
 			}
 		elsif ($in{'auth_mode'} == 1) {
 			# Via SSH key
 			$server->{'key'} = $in{'key'};
 			delete($server->{'ssh_pass'});
+			delete($server->{'ssh_nologin'});
 			}
 		elsif ($in{'auth_mode'} == 2) {
 			# No SSH login should be tried
 			$server->{'ssh_nologin'} = 1;
+			delete($server->{'ssh_nologin'});
 			}
 		$in{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i ||
 			&error($text{'add_euuser'});

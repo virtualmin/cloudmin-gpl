@@ -28,12 +28,18 @@ if (!$no_ssh) {
 		$server->{'ssh_port'} = $in{'uport'};
 		}
 	if ($in{'auth_mode'} == 0) {
+		# Via password
 		$in{'upass'} || &error($text{'add_eupass'});
 		$server->{'ssh_pass'} = $in{'upass'};
 		}
 	elsif ($in{'auth_mode'} == 1) {
+		# Via SSH key
 		$in{'key'} || &error($text{'add_ekey'});
 		$server->{'key'} = $in{'key'};
+		}
+	elsif ($in{'auth_mode'} == 2) {
+		# No SSH login should be tried
+		$server->{'ssh_nologin'} = 1;
 		}
 	$server->{'ssh_protocol'} = $in{'protocol'};
 	}
@@ -64,7 +70,7 @@ if (defined(&$pfunc)) {
 
 &ui_print_unbuffered_header(undef, $text{'add_title'}, "");
 
-if (!$no_ssh) {
+if (!$no_ssh && !$server->{'ssh_nologin'}) {
 	# Make sure the SSH login is valid
 	print $text{'add_sshing'},"<br>\n";
 	($status, $msg) = &check_server_ssh_login($server);
