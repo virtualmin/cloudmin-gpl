@@ -8,6 +8,9 @@
 # XXX VNC access
 #	XXX re-allocate port when moving
 #	XXX CHANGELOG
+#	XXX password
+#	XXX test on xenhost
+# XXX newfeatures should link to up systems by default
 
 do '../web-lib.pl';
 &init_config();
