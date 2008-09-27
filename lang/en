@@ -1971,3 +1971,4 @@ vnc_title=VNC Graphical Console
 vnc_ecannot=VNC console access is not enabled for this system
 vnc_needreboot=The system must be rebooted for VNC access to be activated.
 vnc_nolisten=VNC has been configured on this system by VM2, but the VNC server on port $1 on host system $2 is not accessible. If it was just enabled, the system will need to be rebooted before VNC is available.
+vnc_nojava=This page requires Java to display the VNC applet.

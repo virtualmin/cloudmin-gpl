@@ -140,31 +140,41 @@ if (!$@) {
 # Pass all input back and forth
 select($fh); $| = 1; select(STDOUT);
 $| = 1;
-while(1) {
-	local $rmask = undef;
-	vec($rmask, fileno(STDIN), 1) = 1;
-	vec($rmask, fileno($fh), 1) = 1;
-	local $sel = select($rmask, undef, undef, 0);
-	if (vec($rmask, fileno(STDIN), 1)) {
-		# Got something from SSH client
-		my $buf;
-		$ok = sysread(STDIN, $buf, 1024);
-		last if ($ok <= 0);	# End of the client
-		syswrite($fh, $buf, length($buf));
-		}
-	if (vec($rmask, fileno($fh), 1)) {
-		# Got something from console
-		my $buf;
-		$ok = sysread($fh, $buf, 1024);
-		last if ($ok <= 0);	# End of the client
-		syswrite(STDOUT, $buf, length($buf));
-		}
-	}
+&forward_connection_sockets(STDIN, STDOUT, $fh, $fh);
 
 # Put back TTY settings
 if (defined($old_mode)) {
 	IO::Stty::stty(\*STDIN, $old_mode);
 	}
+}
+
+# forward_connection_sockets(input1, output1, input2, output2)
+# Forward all traffic in both directions between two sockets
+sub forward_connection_sockets
+{
+local ($in1, $out1, $in2, $out2) = @_;
+while(1) {
+	local $rmask = undef;
+	vec($rmask, fileno($in1), 1) = 1;
+	vec($rmask, fileno($in2), 1) = 1;
+	local $sel = select($rmask, undef, undef, 0);
+	if (vec($rmask, fileno($in1), 1)) {
+		# Got something from SSH client
+		my $buf;
+		$ok = sysread($in1, $buf, 1024);
+		last if ($ok <= 0);	# End of the client
+		syswrite($out2, $buf, length($buf));
+		}
+	if (vec($rmask, fileno($in2), 1)) {
+		# Got something from console
+		my $buf;
+		$ok = sysread($in2, $buf, 1024);
+		last if ($ok <= 0);	# End of the client
+		syswrite($out1, $buf, length($buf));
+		}
+	}
+
+
 }
 
 1;
