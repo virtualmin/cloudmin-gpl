@@ -6,10 +6,8 @@
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX VNC access
-#	XXX add to Xen .cfg at creation time, or when needed
 #	XXX re-allocate port when moving
 #	XXX CHANGELOG
-#	XXX password prompt
 
 do '../web-lib.pl';
 &init_config();

@@ -157,24 +157,22 @@ while(1) {
 	local $rmask = undef;
 	vec($rmask, fileno($in1), 1) = 1;
 	vec($rmask, fileno($in2), 1) = 1;
-	local $sel = select($rmask, undef, undef, 0);
+	local $sel = select($rmask, undef, undef, 10);
 	if (vec($rmask, fileno($in1), 1)) {
 		# Got something from SSH client
 		my $buf;
 		$ok = sysread($in1, $buf, 1024);
 		last if ($ok <= 0);	# End of the client
-		syswrite($out2, $buf, length($buf));
+		syswrite($out2, $buf, length($buf)) || last;
 		}
 	if (vec($rmask, fileno($in2), 1)) {
 		# Got something from console
 		my $buf;
 		$ok = sysread($in2, $buf, 1024);
 		last if ($ok <= 0);	# End of the client
-		syswrite($out1, $buf, length($buf));
+		syswrite($out1, $buf, length($buf)) || last;
 		}
 	}
-
-
 }
 
 1;
