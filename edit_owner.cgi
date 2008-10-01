@@ -17,7 +17,7 @@ else {
 print &ui_form_start("save_owner.cgi", "post");
 print &ui_hidden("new", $in{'new'});
 print &ui_hidden("old", $in{'name'});
-print &ui_table_start($text{'owner_header'}, undef, 2, [ "width=30%" ]);
+print &ui_table_start($text{'owner_header'}, undef, 2);
 
 # Username
 print &ui_table_row($text{'owner_name'},

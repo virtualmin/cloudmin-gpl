@@ -15,7 +15,7 @@ if (@owners) {
 	@tds = ( "width=5" );
 	print &ui_columns_start([ "", $text{'owners_name'},
 				  $text{'owners_real'},
-				  $text{'owners_users'} ], \@tds);
+				  $text{'owners_users'} ], 100, 0, \@tds);
 	foreach $o (@owners) {
 		%canservers = map { $_, 1 }
 			split(/\s+/, $o->{'acl'}->{'servers'});

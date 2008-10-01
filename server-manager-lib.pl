@@ -5,9 +5,6 @@
 # XXX HVM Xen instances
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
-# XXX VNC access
-#	XXX re-allocate port when moving
-#	XXX test on xenhost
 
 do '../web-lib.pl';
 &init_config();
