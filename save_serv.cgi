@@ -390,6 +390,10 @@ else {
 	if (defined(&$pfunc)) {
 		&$pfunc($server, \%in);
 		}
+	if (defined($in{'packages'})) {
+		$err = &save_server_cluster_software($server, $in{'packages'});
+		&error(&text('save_epackages', $err)) if ($err);
+		}
 
 	# Validate authentication inputs
 	$oldserver = { %$server };

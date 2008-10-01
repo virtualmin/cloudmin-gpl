@@ -1527,6 +1527,11 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				$server, "net", "active_interfaces") ];
 			}
 
+		# Refresh software packages, if enabled
+		if (&get_server_cluster_software($server) > 0) {
+			&refresh_server_cluster_software($server);
+			}
+
 		SKIPINFO:
 		alarm(0);
 		};
@@ -4017,6 +4022,14 @@ if (defined(&$pfunc) && &can_action($server, "pause")) {
 		}
 	}
 
+# Package management link
+if (&get_server_cluster_software($server) > 0) {
+	push(@rv, { 'id' => 'packages',
+		    'desc' => $text{'edit_packages'},
+		    'cat' => 'manage',
+		    'link' => "/cluster-software/edit_host.cgi?id=$server->{'id'}" });
+	}
+
 # Complex pages associated with system
 local $dfunc = "type_".$t."_can_disks";
 if (defined(&$dfunc) && &$dfunc($server) && $status ne 'paused' &&
@@ -4818,6 +4831,72 @@ if (!$err) {
 	}
 
 return $err;
+}
+
+# get_server_cluster_software(&server)
+# Returns 1 if some server is having software packages managed by the VM2
+# master, 0 if not, -1 if not possible
+sub get_server_cluster_software
+{
+local ($server) = @_;
+if ($server->{'manager'} ne 'this' &&
+    ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') &&
+    (!$remote_user || &foreign_available("cluster-software"))) {
+	# Can use in theory
+	return -d "$config_directory/cluster-software/hosts/$server->{'id'}" ?
+		1 : 0;
+	}
+return -1;
+}
+
+# save_server_cluster_software(&server, enabled?)
+# Either turns on or off cluster software management. When enabling for the
+# first time, packages are fetched from the host.
+# Returns undef on success or an error message on failure.
+sub save_server_cluster_software
+{
+local ($server, $enabled) = @_;
+if (!&foreign_check("cluster-software")) {
+	return "The Cluster Software Packages module is not installed";
+	}
+if ($remote_user && !&foreign_available("cluster-software")) {
+	return "The Cluster Software Packages module is not available to you";
+	}
+if ($enabled &&
+    $server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
+	return "Webmin is not installed on the remote system";
+	}
+local $hdir = "$config_directory/cluster-software/hosts/$server->{'id'}";
+if ($enabled && !-d $hdir) {
+	# Enable and fetch packages
+	&foreign_require("cluster-software", "cluster-software-lib.pl");
+	local ($ok, $msg) = &cluster_software::add_managed_host($server);
+	return $msg if (!$ok);
+	}
+elsif (!$enabled && -d $hdir) {
+	&foreign_require("cluster-software", "cluster-software-lib.pl");
+	&cluster_software::delete_software_host($server);
+	}
+return undef;
+}
+
+# refresh_server_cluster_software(&server)
+# Re-fetch software packages from some server. Returns undef on success or an
+# error message on failure.
+sub refresh_server_cluster_software
+{
+local ($server) = @_;
+if (!&foreign_check("cluster-software")) {
+	return "The Cluster Software Packages module is not installed";
+	}
+if ($server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
+	return "Webmin is not installed on the remote system";
+	}
+&foreign_require("cluster-software", "cluster-software-lib.pl");
+local ($h) = grep { $_->{'id'} eq $server->{'id'} }
+		  &cluster_software::list_software_hosts();
+local ($rv) = &cluster_software::refresh_packages([ $h ]);
+return ref($rv) ? undef : $rv;
 }
 
 # substitute_virtualmin_template(string, &hash)

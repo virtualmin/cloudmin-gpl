@@ -334,6 +334,18 @@ if (defined(&$cfunc)) {
 		}
 	}
 
+# Enable package management
+if ($config{'packages_def'}) {
+	print $text{'create_packages'},"<br>\n";
+	$err = &save_server_cluster_software($server, 1);
+	if ($err) {
+		print &text('create_epackages', $err),"<p>\n";
+		}
+	else {
+		print $text{'create_done'},"<p>\n";
+		}
+	}
+
 # Run post-creation script
 &run_system_script($server, 'after', 'create');
 

@@ -21,3 +21,4 @@ bw_notify=24
 sort_mode=0
 show_nf=master,owner
 xen_vnc=1
+packages_def=0

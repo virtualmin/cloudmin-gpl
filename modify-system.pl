@@ -94,6 +94,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-boot") {
 		$boot = 0;
 		}
+	elsif ($a eq "--packages") {
+		$packages = 1;
+		}
+	elsif ($a eq "--no-packages") {
+		$packages = 0;
+		}
 	else {
 		&usage();
 		}
@@ -203,6 +209,17 @@ if (defined($boot)) {
 	defined(&$bfunc) || &usage("This server type cannot be enabled or ".
 				   "disabled at host boot");
 	&$bfunc($server, $boot);
+	}
+
+# Enable or disable package management
+if (defined($packages)) {
+	$err = &save_server_cluster_software($server, $packages);
+	if ($err && $packages) {
+		&usage("Package management cannot be enabled : $err");
+		}
+	elsif ($err && !$packages) {
+		&usage("Package management cannot be disabled : $err");
+		}
 	}
 
 # Update status if needed
