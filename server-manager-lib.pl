@@ -5,6 +5,8 @@
 # XXX HVM Xen instances
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
+# XXX LVM disk support
+# XXX graphing of CPU / memory / disk use across systems
 
 do '../web-lib.pl';
 &init_config();
