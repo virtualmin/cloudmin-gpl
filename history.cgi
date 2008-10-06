@@ -6,7 +6,7 @@
 require './virtual-server-lib.pl';
 &can_show_history() || &error($text{'history_ecannot'});
 &ReadParse();
-@allservers = &list_managed_servers();
+@allservers = &list_available_managed_servers_sorted();
 
 @history_periods = (
 	[ 'year', 365*24*60*60 ],
@@ -166,8 +166,8 @@ foreach $i (keys %in) {
 		}
 	}
 @grid = ( );
-foreach $s (sort { $text{'history_stat_'.$a} cmp
-		   $text{'history_stat_'.$b} } &list_historic_stats()) {
+foreach $s (sort { $text{'history_stat_'.$a} cmp $text{'history_stat_'.$b} }
+		 &list_historic_stats(\@servers)) {
 	push(@grid, &ui_oneradio("stat", $s, $text{'history_stat_'.$s},
 			   	 $s eq $in{'stat'}));
 	}

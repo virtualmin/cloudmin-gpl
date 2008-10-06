@@ -8,6 +8,8 @@
 # XXX LVM disk support
 #	XXX need another disk in sentosa
 # XXX graphing of CPU / memory / disk use across systems
+#	XXX test on IE
+#	XXX for system owners too?
 
 do '../web-lib.pl';
 &init_config();
@@ -19,6 +21,7 @@ do 'login-lib.pl';
 do 'domainname-lib.pl';
 do 'commands-lib.pl';
 do 'filesystem-lib.pl';
+do 'history-lib.pl';
 if (-r "$module_root_directory/bw-lib.pl") {
 	do 'bw-lib.pl';
 	}
@@ -52,7 +55,6 @@ $ssh_keys_dir = "$module_config_directory/keys";
 $server_domains_dir = "$module_config_directory/domains";
 $server_collected_dir = "$module_config_directory/coll";
 $this_server_status = "$module_config_directory/this";
-$historic_info_dir = "$module_config_directory/history";
 
 $check_status_cmd = "$module_config_directory/status.pl";
 $check_licence_cmd = "$module_config_directory/licence.pl";
@@ -148,26 +150,6 @@ $login_shell_cmd = "$module_config_directory/login.pl";
 $login_home_base = $ENV{'WEBMIN_VAR'}."/login";
 
 $api_helper_command = "/usr/sbin/vm2";
-
-# Colors for graphs, ripped from Gnuplot
-@historic_graph_colors = (
-	"#ff0000",  "#00c000",  "#0080ff",  "#c000ff",  "#00eeee",  "#c04000",  
-	"#eeee00",  "#2020c0",  "#ffc020",  "#008040",  "#a080ff",  "#804000",  
-	"#ff80ff",  "#00c060",  "#00c0c0",  "#006080",  "#c06080",  "#008000",  
-	"#40ff80",  "#306080",  "#806000",  "#404040",  "#408000",  "#000080",  
-	"#806010",  "#806060",  "#806080",  "#0000c0",  "#0000ff",  "#006000",  
-	"#e3b0c0",  "#40c080",  "#60a0c0",  "#60c000",  "#60c0a0",  "#800000",  
-	"#800080",  "#602080",  "#606060",  "#202020",  "#204040",  "#204080",  
-	"#608020",  "#608060",  "#608080",  "#808040",  "#208020",  "#808080",  
-	"#a0a0a0",  "#a0d0e0",  "#c02020",  "#008080",  "#c06000",  "#80c0e0",  
-	"#c060c0",  "#c08000",  "#c08060",  "#ff4000",  "#ff4040",  "#80c0ff",  
-	"#ff8060",  "#ff8080",  "#c0a000",  "#c0c0c0",  "#c0ffc0",  "#ff0000",  
-	"#ff00ff",  "#ff80a0",  "#c0c0a0",  "#ff6060",  "#00ff00",  "#ff8000",  
-	"#ffa000",  "#80e0e0",  "#a0e0e0",  "#a0ff20",  "#c00000",  "#c000c0",  
-	"#a02020",  "#a020ff",  "#802000",  "#802020",  "#804020",  "#804080",  
-	"#8060c0",  "#8060ff",  "#808000",  "#c0c000",  "#ff8040",  "#ffa040",  
-	"#ffa060",  "#ffa070",  "#ffc0c0",  "#ffff00",  "#ffff80",  "#ffffc0"   
-	);
 
 &set_all_html_print();
 
@@ -1294,7 +1276,6 @@ return !$timed_out && !$?;
 sub check_server_status
 {
 local ($server, $regen, $skipinfo, $time) = @_;
-$time ||= time();
 
 # Check if a status update is already happening
 local $file = "$servers::module_config_directory/$server->{'id'}.serv";
@@ -1667,55 +1648,7 @@ if (defined(&$rfunc)) {
 	}
 
 # Add disk usage, CPU and memory to historic stats, if we got them
-if (!-d $historic_info_dir) {
-        &make_dir($historic_info_dir, 0700);
-        }
-if (!-d "$historic_info_dir/$server->{'id'}") {
-	&make_dir("$historic_info_dir/$server->{'id'}", 0700);
-	}
-local @stats;
-if ($info->{'load'}) {
-	push(@stats, [ "load", $info->{'load'}->[0] ]);
-	push(@stats, [ "load5", $info->{'load'}->[1] ]);
-	push(@stats, [ "load15", $info->{'load'}->[2] ]);
-	}
-if ($info->{'mem'}) {
-        push(@stats, [ "memused",
-                       ($info->{'mem'}->[0]-$info->{'mem'}->[1])*1024,
-                       $info->{'mem'}->[0]*1024 ]);
-        if ($info->{'mem'}->[2]) {
-                push(@stats, [ "swapused",
-                              ($info->{'mem'}->[2]-$info->{'mem'}->[3])*1024,
-                              $info->{'mem'}->[2]*1024 ]);
-                }
-        }
-if ($info->{'disk_total'}) {
-        push(@stats, [ "diskused",
-                       $info->{'disk_total'}-$info->{'disk_free'},
-                       $info->{'disk_total'} ]);
-        }
-if ($info->{'fcount'}) {
-	push(@stats, [ "doms", int($info->{'fcount'}->{'doms'}) ]);
-	push(@stats, [ "users", int($info->{'fcount'}->{'users'}) ]);
-	push(@stats, [ "aliases", int($info->{'fcount'}->{'aliases'}) ]);
-	}
-if ($info->{'quota'}) {
-	local $qlimit = 0;
-	local $qused = 0;
-	foreach my $q (@{$info->{'quota'}}) {
-		$qlimit += $q->[2];
-		$qused += $q->[1]+$q->[3];
-		}
-	push(@stats, [ "quotalimit", $qlimit ]);
-	push(@stats, [ "quotaused", $qused ]);
-	}
-
-# Save historic stats
-foreach my $stat (@stats) {
-	open(HISTORY, ">>$historic_info_dir/$server->{'id'}/$stat->[0]");
-        print HISTORY $time," ",$stat->[1],"\n";
-        close(HISTORY);
-	}
+&add_historic_collected_info($info, $time || $server->{'statustime'}, $server);
 
 &unlock_file($file);
 return $rv;
