@@ -1675,9 +1675,9 @@ if ($info->{'disk_total'}) {
                        $info->{'disk_total'} ]);
         }
 if ($info->{'fcount'}) {
-	push(@stats, [ "doms", $info->{'fcount'}->{'doms'} ]);
-	push(@stats, [ "users", $info->{'fcount'}->{'users'} ]);
-	push(@stats, [ "aliases", $info->{'fcount'}->{'aliases'} ]);
+	push(@stats, [ "doms", int($info->{'fcount'}->{'doms'}) ]);
+	push(@stats, [ "users", int($info->{'fcount'}->{'users'}) ]);
+	push(@stats, [ "aliases", int($info->{'fcount'}->{'aliases'}) ]);
 	}
 if ($info->{'quota'}) {
 	local $qlimit = 0;
@@ -3751,6 +3751,12 @@ if ($server_management_types{'xen'} ||
 		}
 	}
 
+# Historic graphs for all systems
+push(@glinks, "history.cgi");
+push(@gtitles, $text{'history_title'});
+push(@gicons, "images/hist.gif");
+push(@gcats, "settings");
+
 # System owners
 push(@glinks, "list_owners.cgi");
 push(@gtitles, $text{'owners_title'});
@@ -4963,6 +4969,115 @@ sub substitute_virtualmin_template
 {
 local ($str, $hash) = @_;
 return &substitute_template($str, $hash);
+}
+
+# show_search_form(&in, &candiate-servers)
+# Return a grid of inputs for searching for systems, with fields filled in
+sub show_search_form
+{
+local ($in, $servers) = @_;
+local @grid = ( );
+
+# Search by hostname or desc
+push(@grid, "<b>$text{'index_search'}</b>");
+push(@grid, &ui_textbox("search", $in->{'search'}, 30).
+	    " ".&ui_submit($text{'index_searchok'}));
+
+# Search by group
+local @groups = &unique(map { split(/\t/, $_->{'group'}) } @$servers);
+if (@groups) {
+	push(@grid, "<b>$text{'index_gsearch'}</b>");
+	push(@grid, &ui_select("gsearch", $in->{'gsearch'}, \@groups).
+		    " ".&ui_submit($text{'index_searchgok'}, "gok"));
+	}
+
+# Search by host system
+local @parents = grep { &is_parent_server($_) } @$servers;
+if (@parents) {
+	push(@grid, "<b>$text{'index_psearch'}</b>");
+	push(@grid, &ui_select("psearch", $in->{'psearch'},
+	    [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ]).
+		    " ".&ui_submit($text{'index_searchpok'}, "pok"));
+	}
+
+# Search by status (including some useful pseudo-statuses)
+push(@grid, "<b>$text{'index_ssearch'}</b>");
+push(@grid, &ui_select("ssearch", $in->{'ssearch'} || 'up',
+		[ [ 'up', "&lt;$text{'status_up'}&gt;" ],
+		  [ 'wm', "&lt;$text{'status_wm'}&gt;" ],
+		  [ 'bad', "&lt;$text{'status_bad'}&gt;" ],
+		  [ 'updates', "&lt;$text{'status_updates'}&gt;" ],
+		  map { [ $_->[0], $text{'status_'.$_->[0]} ] }
+		      @server_statuses ]).
+	    " ".&ui_submit($text{'index_searchsok'}, "sok"));
+
+# Search by EC2 account (normally hidden)
+if ($in->{'eok'}) {
+	push(@grid, "<b>$text{'index_esearch'}</b>");
+	push(@grid, &ui_select("esearch", $in->{'esearch'},
+	    [ map { [ $_->{'id'}, $_->{'account'} ] }
+		  &list_ec2_accounts() ]).
+		    " ".&ui_submit($text{'index_searcheok'}, "eok"));
+	}
+return &ui_grid_table(\@grid, 4, 100,
+	[ "width=10%", "width=40%", "width=10%", "width=40%" ]);
+}
+
+# apply_search_form(&in, &servers)
+# Given a list of servers and a search criteria from show_search_form, return
+# only those servers which match
+sub apply_search_form
+{ 
+local ($in, $servers) = @_;
+if ($in->{'gok'}) {
+	# Search by group
+	return grep { my @g = split(/\t/, $_->{'group'});
+			&indexof($in->{'gsearch'}, @g) >= 0 } @$servers;
+	}
+elsif ($in->{'pok'}) {
+	# Search by parent
+	local ($parent) = grep { $_->{'id'} eq $in->{'psearch'} } @$servers;
+	return grep { my $p = &get_parent_server($_);
+		  $p && $p->{'id'} eq $parent->{'id'} } @$servers;
+	}
+elsif ($in->{'eok'}) {
+	# Search by EC2 account
+	local ($ec2) = grep { $_->{'id'} == $in->{'esearch'} }
+		      &list_ec2_accounts();
+	return grep { $_->{'ec2'} == $in->{'esearch'} } @$servers;
+	}
+elsif ($in->{'sok'}) {
+	# Search by status
+	local @sts;
+	if ($in->{'ssearch'} eq 'up') {
+		@sts = ( 'nowebmin', 'novirt', 'virt', 'alive' );
+		}
+	elsif ($in->{'ssearch'} eq 'wm') {
+		@sts = ( 'novirt', 'virt' );
+		}
+	elsif ($in->{'ssearch'} eq 'bad') {
+		@sts = ( 'down', 'nohost', 'nossh', 'nosshlogin',
+			 'downwebmin', 'nowebminlogin' );
+		}
+	else {
+		@sts = ( $in->{'ssearch'} );
+		}
+	if ($in->{'ssearch'} eq 'updates') {
+		# Search by updates
+		return grep { $_->{'virtualmin_poss'} } @$servers;
+		}
+	else {
+		# By regular status
+		return grep { &indexof($_->{'status'}, @sts) >= 0 }
+				@$servers;
+		}
+	}
+else {
+	# By hostname
+	local $s = $in->{'search'};
+	return grep { $_->{'host'} =~ /\Q$s\E/i ||
+		      $_->{'desc'} =~ /\Q$s\E/i } @$servers;
+	}
 }
 
 # strip_html_tags(html)

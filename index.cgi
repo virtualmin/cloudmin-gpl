@@ -53,104 +53,13 @@ if (@allservers > $config{'display_max'} || $searching) {
 	else {
 		print &text('index_searchform'),"<p>\n";
 		}
-
 	print &ui_form_start("index.cgi");
-	@grid = ( );
-
-	# Search by hostname or desc
-	push(@grid, "<b>$text{'index_search'}</b>");
-	push(@grid, &ui_textbox("search", $in{'search'}, 30).
-	            " ".&ui_submit($text{'index_searchok'}));
-
-	# Search by group
-	@groups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
-	if (@groups) {
-		push(@grid, "<b>$text{'index_gsearch'}</b>");
-		push(@grid, &ui_select("gsearch", $in{'gsearch'}, \@groups).
-			    " ".&ui_submit($text{'index_searchgok'}, "gok"));
-		}
-
-	# Search by host system
-	@parents = grep { &is_parent_server($_) } @allservers;
-	if (@parents) {
-		push(@grid, "<b>$text{'index_psearch'}</b>");
-		push(@grid, &ui_select("psearch", $in{'psearch'},
-		    [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ]).
-			    " ".&ui_submit($text{'index_searchpok'}, "pok"));
-		}
-
-	# Search by status (including some useful pseudo-statuses)
-	push(@grid, "<b>$text{'index_ssearch'}</b>");
-	push(@grid, &ui_select("ssearch", $in{'ssearch'} || 'up',
-			[ [ 'up', "&lt;$text{'status_up'}&gt;" ],
-			  [ 'wm', "&lt;$text{'status_wm'}&gt;" ],
-			  [ 'bad', "&lt;$text{'status_bad'}&gt;" ],
-			  [ 'updates', "&lt;$text{'status_updates'}&gt;" ],
-			  map { [ $_->[0], $text{'status_'.$_->[0]} ] }
-			      @server_statuses ]).
-		    " ".&ui_submit($text{'index_searchsok'}, "sok"));
-
-	# Search by EC2 account (normally hidden)
-	if ($in{'eok'}) {
-		push(@grid, "<b>$text{'index_esearch'}</b>");
-		push(@grid, &ui_select("esearch", $in{'esearch'},
-		    [ map { [ $_->{'id'}, $_->{'account'} ] }
-			  &list_ec2_accounts() ]).
-			    " ".&ui_submit($text{'index_searcheok'}, "eok"));
-		}
-	print &ui_grid_table(\@grid, 4, 100,
-		[ "width=10%", "width=40%", "width=10%", "width=40%" ]),"<p>\n";
-
+	print &show_search_form(\%in, \@allservers);
 	print &ui_form_end();
-	if ($in{'gok'}) {
-		# Search by group
-		@servers = grep { my @g = split(/\t/, $_->{'group'});
-				&indexof($in{'gsearch'}, @g) >= 0 } @allservers;
-		}
-	elsif ($in{'pok'}) {
-		# Search by parent
-		($parent) = grep { $_->{'id'} eq $in{'psearch'} } @allservers;
-		@servers = grep { my $p = &get_parent_server($_);
-			  $p && $p->{'id'} eq $parent->{'id'} } @allservers;
-		}
-	elsif ($in{'eok'}) {
-		# Search by EC2 account
-		($ec2) = grep { $_->{'id'} == $in{'esearch'} }
-			      &list_ec2_accounts();
-		@servers = grep { $_->{'ec2'} == $in{'esearch'} } @allservers;
-		}
-	elsif ($in{'sok'}) {
-		# Search by status
-		if ($in{'ssearch'} eq 'up') {
-			@sts = ( 'nowebmin', 'novirt', 'virt', 'alive' );
-			}
-		elsif ($in{'ssearch'} eq 'wm') {
-			@sts = ( 'novirt', 'virt' );
-			}
-		elsif ($in{'ssearch'} eq 'bad') {
-			@sts = ( 'down', 'nohost', 'nossh', 'nosshlogin',
-				 'downwebmin', 'nowebminlogin' );
-			}
-		else {
-			@sts = ( $in{'ssearch'} );
-			}
-		if ($in{'ssearch'} eq 'updates') {
-			# Search by updates
-			@servers = grep { $_->{'virtualmin_poss'} } @allservers;
-			}
-		else {
-			# By regular status
-			@servers = grep { &indexof($_->{'status'}, @sts) >= 0 }
-					@allservers;
-			}
-		}
-	else {
-		# By hostname
-		$s = $in{'search'};
-		@servers = grep { $_->{'host'} =~ /\Q$s\E/i ||
-				  $_->{'desc'} =~ /\Q$s\E/i } @allservers;
-		}
 	$formno++;
+
+	# Apply the current search
+	@servers = &apply_search_form(\%in, \@allservers);
 	}
 else {
 	@servers = @allservers;
