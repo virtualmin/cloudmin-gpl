@@ -6,6 +6,7 @@
 # XXX ajaxterm instead of java
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX LVM disk support
+#	XXX need another disk in sentosa
 # XXX graphing of CPU / memory / disk use across systems
 
 do '../web-lib.pl';
@@ -51,6 +52,7 @@ $ssh_keys_dir = "$module_config_directory/keys";
 $server_domains_dir = "$module_config_directory/domains";
 $server_collected_dir = "$module_config_directory/coll";
 $this_server_status = "$module_config_directory/this";
+$historic_info_dir = "$module_config_directory/history";
 
 $check_status_cmd = "$module_config_directory/status.pl";
 $check_licence_cmd = "$module_config_directory/licence.pl";
@@ -378,9 +380,10 @@ if ($server->{'id'}) {
 	&servers::delete_server($server->{'id'});
 	}
 if (!$keep) {
-	unlink("$server_domains_dir/$server->{'id'}");
-	unlink("$server_collected_dir/$server->{'id'}");
-	unlink("$shell_previous_dir/$server->{'id'}");
+	&unlink_file("$server_domains_dir/$server->{'id'}");
+	&unlink_file("$server_collected_dir/$server->{'id'}");
+	&unlink_file("$shell_previous_dir/$server->{'id'}");
+	&unlink_file("$historic_info_dir/$server->{'id'}");
 	if (defined(&delete_bandwidth)) {
 		&delete_bandwidth($server);
 		}
@@ -1264,13 +1267,14 @@ local ($out, $timed_out) = &backquote_with_timeout(
 return !$timed_out && !$?;
 }
 
-# check_server_status(&server, [re-generate-collected], [skip-info])
+# check_server_status(&server, [re-generate-collected], [skip-info], [time])
 # Checks the status of a managed server, and updates the server object. Checks
 # SSH login, Webmin login, Virtualmin status, number of domains, memory, disk
 # and CPU load.
 sub check_server_status
 {
-local ($server, $regen, $skipinfo) = @_;
+local ($server, $regen, $skipinfo, $time) = @_;
+$time ||= time();
 
 # Check if a status update is already happening
 local $file = "$servers::module_config_directory/$server->{'id'}.serv";
@@ -1642,6 +1646,57 @@ if (defined(&$rfunc)) {
 	&$rfunc($server);
 	}
 
+# Add disk usage, CPU and memory to historic stats, if we got them
+if (!-d $historic_info_dir) {
+        &make_dir($historic_info_dir, 0700);
+        }
+if (!-d "$historic_info_dir/$server->{'id'}") {
+	&make_dir("$historic_info_dir/$server->{'id'}", 0700);
+	}
+local @stats;
+if ($info->{'load'}) {
+	push(@stats, [ "load", $info->{'load'}->[0] ]);
+	push(@stats, [ "load5", $info->{'load'}->[1] ]);
+	push(@stats, [ "load15", $info->{'load'}->[2] ]);
+	}
+if ($info->{'mem'}) {
+        push(@stats, [ "memused",
+                       ($info->{'mem'}->[0]-$info->{'mem'}->[1])*1024,
+                       $info->{'mem'}->[0]*1024 ]);
+        if ($info->{'mem'}->[2]) {
+                push(@stats, [ "swapused",
+                              ($info->{'mem'}->[2]-$info->{'mem'}->[3])*1024,
+                              $info->{'mem'}->[2]*1024 ]);
+                }
+        }
+if ($info->{'disk_total'}) {
+        push(@stats, [ "diskused",
+                       $info->{'disk_total'}-$info->{'disk_free'},
+                       $info->{'disk_total'} ]);
+        }
+if ($info->{'fcount'}) {
+	push(@stats, [ "doms", $info->{'fcount'}->{'doms'} ]);
+	push(@stats, [ "users", $info->{'fcount'}->{'users'} ]);
+	push(@stats, [ "aliases", $info->{'fcount'}->{'aliases'} ]);
+	}
+if ($info->{'quota'}) {
+	local $qlimit = 0;
+	local $qused = 0;
+	foreach my $q (@{$info->{'quota'}}) {
+		$qlimit += $q->[2];
+		$qused += $q->[1]+$q->[3];
+		}
+	push(@stats, [ "quotalimit", $qlimit ]);
+	push(@stats, [ "quotaused", $qused ]);
+	}
+
+# Save historic stats
+foreach my $stat (@stats) {
+	open(HISTORY, ">>$historic_info_dir/$server->{'id'}/$stat->[0]");
+        print HISTORY $time," ",$stat->[1],"\n";
+        close(HISTORY);
+	}
+
 &unlock_file($file);
 return $rv;
 }
@@ -1771,8 +1826,9 @@ return @rv;
 sub parallel_check_server_status
 {
 local ($servers, $regen) = @_;
+local $time = time();
 return &parallel_server_function($servers,
-	sub { &check_server_status($_[0], $regen);
+	sub { &check_server_status($_[0], $regen, 0, $time);
 	      &save_managed_server($_[0]);
 	      return ( $_[0]->{'status'}, $_[0]->{'status_msg'},
 		       $_[0]->{'virtualmin_domains'},

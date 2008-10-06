@@ -58,9 +58,10 @@ while(@ARGV > 0) {
 
 # Do the parallel refresh and print
 print "Refreshing status of ",scalar(@servers)," systems ..\n";
+$time = time();
 foreach $l (\@pservers, \@oservers) {
 	@rv = &parallel_server_function($l,
-		sub { &check_server_status($_[0], $regen);
+		sub { &check_server_status($_[0], $regen, 0, $time);
 		      &save_managed_server($_[0]);
 		      return $_[0]->{'status'}; });
 	for($i=0; $i<@rv; $i++) {
