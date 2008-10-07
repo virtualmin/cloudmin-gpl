@@ -9,7 +9,7 @@
 #	XXX need another disk in sentosa
 # XXX graphing of CPU / memory / disk use across systems
 #	XXX test on IE
-#	XXX for system owners too?
+#	XXX CHANGELOG
 
 do '../web-lib.pl';
 &init_config();
@@ -4056,6 +4056,8 @@ if (defined(&$dfunc) && &$dfunc($server) && $status ne 'paused' &&
 		    'cat' => 'res',
 		    'link' => "list_disks.cgi?id=$server->{'id'}" });
 	}
+
+# Virtual CPUs
 local $vfunc = "type_".$t."_can_vcpus";
 if (defined(&$vfunc) && &$vfunc($server) &&
     &can_action($server, "vcpus")) {
@@ -4064,6 +4066,8 @@ if (defined(&$vfunc) && &$vfunc($server) &&
 		    'cat' => 'res',
 		    'link' => "list_vcpus.cgi?id=$server->{'id'}" });
 	}
+
+# Bandwidth graph
 local $rfunc = "type_".$t."_real_interfaces";
 if ($config{'bw_enabled'} && defined(&$rfunc) &&
     &can_action($server, "graph")) {
@@ -4071,6 +4075,15 @@ if ($config{'bw_enabled'} && defined(&$rfunc) &&
 		    'desc' => $text{'edit_bw'},
 		    'cat' => 'res',
 		    'link' => "bwgraph.cgi?id=$server->{'id'}" });
+	}
+
+# System statistics, if we have any
+if (&can_action($server, "graph") &&
+    &list_historic_stats([ $server ])) {
+	push(@rv, { 'id' => 'history',
+		    'desc' => $text{'edit_history'},
+		    'cat' => 'res',
+		    'link' => "history.cgi?search=$server->{'host'}" });
 	}
 
 # Host system pages
@@ -4972,6 +4985,7 @@ if ($in->{'eok'}) {
 		  &list_ec2_accounts() ]).
 		    " ".&ui_submit($text{'index_searcheok'}, "eok"));
 	}
+
 return &ui_grid_table(\@grid, 4, 100,
 	[ "width=10%", "width=40%", "width=10%", "width=40%" ]);
 }

@@ -9,9 +9,11 @@ use POSIX;
 # Get the servers we need
 @allservers = &list_available_managed_servers_sorted();
 @servers = &apply_search_form(\%in, \@allservers);
+&can_action_error(\@servers, "graph");
 
 # Get the stat for each server, and fill in missing section to the left. All
 # servers need to have the same time range.
+$first = undef;
 foreach $s (@servers) {
 	my @info = &list_historic_collected_info($in{'stat'}, $s,
 			$in{'start'} || undef, $in{'end'} || undef);
@@ -22,11 +24,15 @@ foreach $s (@servers) {
 			}
 		}
 	$infomap{$s->{'id'}} = \@info;
+	if (@info > 1) {
+		# Find first with some data
+		$first ||= $infomap{$s->{'id'}};
+		}
 	}
 
 # If there is too much data to reasonably display, reduce the number of points
 # to approx 1024
-$first = $infomap{$servers[0]->{'id'}};
+$first ||= $infomap{$servers[0]->{'id'}};
 if (scalar(@$first) > 1024) {
 	$step = int(scalar(@$first) / 1024);
 	foreach $s (@servers) {
@@ -37,7 +43,6 @@ if (scalar(@$first) > 1024) {
 		$infomap{$s->{'id'}} = \@newinfo;
 		}
 	}
-$first = $infomap{$servers[0]->{'id'}};
 
 print "Content-type: text/plain\n\n";
 for($i=0; $i<scalar(@$first); $i++) {

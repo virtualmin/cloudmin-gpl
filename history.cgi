@@ -41,6 +41,7 @@ print &ui_form_end();
 if (!@servers) {
 	&ui_print_endpage($text{'history_nomatch'});
 	}
+&can_action_error(\@servers, "graph");
 
 # Build URL parameters
 $in{'stat'} ||= "load";
