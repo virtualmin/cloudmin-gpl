@@ -52,6 +52,7 @@ ec2_typeshort=EC2
 real_desc=Physical
 real_add=Add physical system
 real_typeshort=physical
+real_scan=Find physical systems
 
 zones_typedesc=Solaris Zone
 zones_createlink=Create Solaris Zone
@@ -2021,3 +2022,8 @@ history_mode_average=Average
 history_label_total=Total over $1 systems
 history_label_average=Average of $1 systems
 history_search=Select systems to graph ..
+
+scan_title=Find Existing Systems
+scan_header=System scan details
+scan_range=IP range to search
+scan_ok=Start Scan

@@ -9,6 +9,10 @@
 #	XXX need another disk in sentosa
 # XXX plugin support
 #	XXX extra left menu items
+# XXX scan for real systems
+#	XXX also for EC2 instances under some account
+# XXX allow specification that a system is a Xen host when adding
+# XXX auto-detection of running Xen instances, when adding
 
 do '../web-lib.pl';
 &init_config();
@@ -190,15 +194,9 @@ if ($config{'show_this'}) {
 			$this->{'xen_end'} = $config{'xen_end'};
 			}
 		else {
-			# Range comes from primary interface. Take the network
-			# address 
-			local $ipnum = &net::ip_to_integer($eth0->{'address'});
-			local $netnum = &net::ip_to_integer($eth0->{'netmask'});
-			local $netstart = ($ipnum & $netnum) + 1;
-			local $netsize = ~$netnum;
-			local $netend = ($ipnum & $netnum) + $netsize - 1;
-			$this->{'xen_start'} = &net::integer_to_ip($netstart);
-			$this->{'xen_end'} = &net::integer_to_ip($netend);
+			# Range comes from primary interface.
+			($this->{'xen_start'}, $this->{'xen_end'}) =
+				&first_ethernet_range();
 			}
 		if ($config{'xen_cidr'}) {
 			# Set on Module Config page
@@ -309,7 +307,7 @@ return grep { &can_action($_) } &list_managed_servers();
 }
 
 # first_ethernet_iface()
-# Returns the name of the first active ethernet interface
+# Returns the object for the first active ethernet interface
 sub first_ethernet_iface
 {
 foreach my $a (&net::active_interfaces()) {
@@ -320,6 +318,27 @@ foreach my $a (&net::active_interfaces()) {
 		}
 	}
 return undef;
+}
+
+# first_ethernet_range()
+# Returns the starting and ending IPs for the network that the first
+# ethernet interface is on
+sub first_ethernet_range
+{
+local $eth0 = &first_ethernet_iface();
+if (!$eth0) {
+	# Fake it
+	$eth0 = { 'address' => &to_ipaddress(&get_system_hostname()) ||
+			       '127.0.0.1',
+		  'netmask' => '255.255.255.0' };
+	}
+local $ipnum = &net::ip_to_integer($eth0->{'address'});
+local $netnum = &net::ip_to_integer($eth0->{'netmask'});
+local $netstart = ($ipnum & $netnum) + 1;
+local $netsize = ~$netnum;
+local $netend = ($ipnum & $netnum) + $netsize - 1;
+return ( &net::integer_to_ip($netstart),
+	 &net::integer_to_ip($netend) );
 }
 
 # get_managed_server_by(key, value)
