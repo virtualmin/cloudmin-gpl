@@ -7,9 +7,6 @@
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX LVM disk support
 #	XXX need another disk in sentosa
-# XXX graphing of CPU / memory / disk use across systems
-#	XXX test on IE
-#	XXX CHANGELOG
 # XXX plugin support
 #	XXX extra left menu items
 
