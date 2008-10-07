@@ -2,11 +2,15 @@
 # Show a historic graph of one or more collected stats, on one or more systems
 # XXX system chooser, by name, group or type
 # XXX separate / average / total mode
+# XXX move all inputs up?
 
-require './virtual-server-lib.pl';
-&can_show_history() || &error($text{'history_ecannot'});
+require './server-manager-lib.pl';
 &ReadParse();
 @allservers = &list_available_managed_servers_sorted();
+if (!%in) {
+	# Use default search, if any
+	&read_file($default_search_file, \%in);
+	}
 
 @history_periods = (
 	[ 'year', 365*24*60*60 ],
@@ -21,7 +25,7 @@ require './virtual-server-lib.pl';
 		 "onload='onLoad();' onresize='onResize();'");
 
 # Show inputs for selecting systems
-print &ui_form_start("historycgi");
+print &ui_form_start("history.cgi");
 print &show_search_form(\%in, \@allservers);
 
 # Show inputs for graph mode
@@ -34,6 +38,9 @@ print &ui_form_end();
 
 # Get the systems
 @servers = &apply_search_form(\%in, \@allservers);
+if (!@servers) {
+	&ui_print_endpage($text{'history_nomatch'});
+	}
 
 # Build URL parameters
 $in{'stat'} ||= "load";
@@ -59,37 +66,24 @@ if ($end > $last) {
 	}
 
 # Heading for stats being shown
-# XXX
-$maxes = &get_historic_maxes();
-for($i=0; $i<@stats; $i++) {
-	$color = $historic_graph_colors[$i % scalar(@historic_graph_colors)];
-	$stat = $stats[$i];
-	if ($stat eq 'memused' || $stat eq 'swapused') {
-		$units = "MB";
-		}
-	elsif ($stat eq 'quotalimit' || $stat eq 'quotaused') {
-		if ($maxes->{$stat} < 10*1024*1024*1024) {
-			$units = "MB";
-			}
-		else {
-			$units = "GB";
-			}
-		}
-	elsif ($stat eq 'diskused') {
-		$units = "GB";
-		}
-	elsif ($stat eq 'load' || $stat eq 'load5' || $stat eq 'load15') {
-		$units = $text{'history_pc'};
-		}
-	else {
-		$units = undef;
-		}
-	push(@statnames, "<font color=$color>".
-			 $text{'history_stat_'.$stat}.
-			 ($units ? " ($units)" : "").
-			 "</font>");
+if ($in{'stat'} eq 'memused' || $in{'stat'} eq 'swapused') {
+	$units = "MB";
 	}
-print "<b>",&text('history_showing', join(", ", @statnames)),"</b><p>\n";
+elsif ($in{'stat'} eq 'quotalimit' || $in{'stat'} eq 'quotaused') {
+	$units = "MB";
+	}
+elsif ($in{'stat'} eq 'diskused') {
+	$units = "GB";
+	}
+elsif ($in{'stat'} eq 'load' || $in{'stat'} eq 'load5' ||
+       $in{'stat'} eq 'load15') {
+	$units = $text{'history_pc'};
+	}
+else {
+	$units = undef;
+	}
+print "<b>",&text('history_showing', $text{'history_stat_'.$in{'stat'}}.
+				     ($units ? " ($units)" : ""))."</b><p>\n";
 
 # Move back links. The steps are 1, 2 and 4 times the period
 print "<table cellpadding=0 cellspacing=0 width=100%><tr>\n";
@@ -136,8 +130,6 @@ print "</tr></table>\n";
 
 # The graph itself
 print "<div id='history' style='height: 300px;'></div>\n";
-print "<a href='history_data.cgi?$statsparams&start=$start&end=$end&nice=1'>".
-      "$text{'history_rawdata'}</a><br>\n";
 
 # Systems shown, with colours
 @labels = ( );
@@ -147,14 +139,16 @@ if ($in{'mode'} eq 'total' || $in{'mode'} eq 'average') {
 	}
 else {
 	for($i=0; $i<@servers; $i++) {
-		push(@labels, [ $servers[$i]->{'host'},
+		push(@labels, [ $servers[$i]->{'short_host'},
 				$historic_graph_colors[
 				  $i % scalar(@historic_graph_colors)] ]);
 		}
 	}
-@grid = map { "<font color=$l->[1]>$l->[0]</font>" } @labels;
-print &ui_grid_table(\@grid, 100, 4,
+@grid = map { "<font color=$_->[1]>$_->[0]</font>" } @labels;
+print &ui_grid_table(\@grid, 4, 100,
 	[ "width=25%", "width=25%", "width=25%", "width=25%" ]);
+print "<a href='history_data.cgi?$statsparams&start=$start&end=$end&nice=1'>".
+      "$text{'history_rawdata'}</a><br>\n";
 
 # Radio buttons for stats to show
 print &ui_hr();
@@ -171,7 +165,7 @@ foreach $s (sort { $text{'history_stat_'.$a} cmp $text{'history_stat_'.$b} }
 	push(@grid, &ui_oneradio("stat", $s, $text{'history_stat_'.$s},
 			   	 $s eq $in{'stat'}));
 	}
-print &ui_grid_table(\@grid, 4);
+print &ui_grid_table(\@grid, 4, 100);
 print &ui_form_end([ [ undef, $text{'history_ok'} ] ]);
 
 # Javascript to generate the graph, with just one Y axis
@@ -197,7 +191,7 @@ foreach $label (@labels) {
 	print "    Timeplot.createPlotInfo({\n";
 	print "      id: 'plot$plotno',\n";
 	print "      dataSource: new Timeplot.ColumnSource(eventSource, $plotno),\n";
-	print "      valueGeometry: valuevalueGeometry,\n";
+	print "      valueGeometry: valueGeometry,\n";
 	print "      timeGeometry: timeGeometry,\n";
 	print "      showValues: true,\n";
 	print "      roundValues: false,\n";

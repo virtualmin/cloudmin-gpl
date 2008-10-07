@@ -1,8 +1,8 @@
 #!/usr/local/bin/perl
 # Output the CSV for some stat over some time, possibly for multiple systems
 
-require './virtual-server-lib.pl';
-&can_show_history() || &error($text{'history_ecannot'});
+$trust_unknown_referers = 1;
+require './server-manager-lib.pl';
 &ReadParse();
 use POSIX;
 
@@ -13,7 +13,7 @@ use POSIX;
 # Get the stat for each server, and fill in missing section to the left. All
 # servers need to have the same time range.
 foreach $s (@servers) {
-	my @info = &list_historic_collected_info($stat, $s,
+	my @info = &list_historic_collected_info($in{'stat'}, $s,
 			$in{'start'} || undef, $in{'end'} || undef);
 	if ($in{'start'} && @info > 1) {
 		$gap = $info[1]->[0] - $info[0]->[0];
@@ -43,19 +43,21 @@ print "Content-type: text/plain\n\n";
 for($i=0; $i<scalar(@$first); $i++) {
 	@values = ( );
 	foreach $s (@servers) {
-		$v = $infomap{$->{'id'}}->[$i]->[1];
+		$v = $infomap{$s->{'id'}}->[$i]->[1];
 		if ($in{'nice'}) {
 			# Scale to something more easily readable
-			if ($stat eq 'memused' || $stat eq 'swapused') {
+			if ($in{'stat'} eq 'memused' ||
+			    $in{'stat'} eq 'swapused') {
 				$v /= 1024*1024;
 				}
-			elsif ($stat eq 'quotalimit' || $stat eq 'quotaused') {
+			elsif ($in{'stat'} eq 'quotalimit' ||
+			       $in{'stat'} eq 'quotaused') {
 				$v /= 1024*1024;
 				}
-			elsif ($stat eq 'diskused') {
+			elsif ($in{'stat'} eq 'diskused') {
 				$v /= 1024*1024*1024;
 				}
-			elsif ($stat =~ /^load(|5|15)$/) {
+			elsif ($in{'stat'} =~ /^load(|5|15)$/) {
 				$v *= 100;
 				}
 			}
