@@ -17,16 +17,38 @@ $first = undef;
 foreach $s (@servers) {
 	my @info = &list_historic_collected_info($in{'stat'}, $s,
 			$in{'start'} || undef, $in{'end'} || undef);
-	if ($in{'start'} && @info > 1) {
+	if ($in{'start'} && scalar(@info) > 1) {
+		# Extend data range from the left until it reaches the
+		# requested start time
 		$gap = $info[1]->[0] - $info[0]->[0];
 		while($info[0]->[0] > $in{'start'}+$gap) {
-			unshift(@info, [ $info[0]->[0]-$gap, undef ]);
+			unshift(@info, [ $info[0]->[0]-$gap, 0 ]);
 			}
 		}
 	$infomap{$s->{'id'}} = \@info;
 	if (@info > 1) {
 		# Find first with some data
 		$first ||= $infomap{$s->{'id'}};
+		}
+	}
+
+# Find the shortest range
+$shortest = $shortserver = undef;
+foreach $s (@servers) {
+	$info = $infomap{$s->{'id'}};
+	if (scalar(@$info) > 1 &&
+	    (scalar(@$info) < $shortest || !defined($shortest))) {
+		$shortest = scalar(@$info);
+		$shortserver = $s;
+		}
+	}
+
+# Chop off any ranges longer than the shortest
+# XXX not perfect - should really re-sample
+foreach $s (@servers) {
+        $info = $infomap{$s->{'id'}};
+	if (scalar(@$info) > $shortest) {
+		splice(@$info, $shortest, scalar(@$info)-$shortest);
 		}
 	}
 
@@ -49,7 +71,7 @@ for($i=0; $i<scalar(@$first); $i++) {
 	@values = ( );
 	foreach $s (@servers) {
 		$v = $infomap{$s->{'id'}}->[$i]->[1];
-		if ($in{'nice'}) {
+		if ($in{'nice'} && $v ne '0') {
 			# Scale to something more easily readable
 			if ($in{'stat'} eq 'memused' ||
 			    $in{'stat'} eq 'swapused') {
@@ -66,11 +88,24 @@ for($i=0; $i<scalar(@$first); $i++) {
 				$v *= 100;
 				}
 			}
-		if ($v ne int($v)) {
+		if ($v ne '0' && $v ne int($v)) {
 			# Two decimal places only
 			$v = sprintf("%.2f", $v);
 			}
 		push(@values, $v);
+		}
+	if ($in{'mode'} eq 'total' || $in{'mode'} eq 'average') {
+		# Convert to sum total
+		my $total;
+		foreach my $v (@values) {
+			$total += $v;
+			}
+		if ($in{'mode'} eq 'total') {
+			@values = ( $total );
+			}
+		else {
+			@values = ( $total / scalar(@values) );
+			}
 		}
 	print strftime("%Y-%m-%d %H:%M:%S", localtime($first->[$i]->[0])),",",
 	      join(",", @values),"\n";

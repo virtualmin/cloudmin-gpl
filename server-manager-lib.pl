@@ -10,6 +10,8 @@
 # XXX graphing of CPU / memory / disk use across systems
 #	XXX test on IE
 #	XXX CHANGELOG
+# XXX plugin support
+#	XXX extra left menu items
 
 do '../web-lib.pl';
 &init_config();
@@ -4944,15 +4946,23 @@ sub show_search_form
 local ($in, $servers) = @_;
 local @grid = ( );
 
+sub highlight_field
+{
+local ($msg, $but) = @_;
+$msg = "<b>$msg</b>";
+$msg = "<i>$msg</i>" if ($in->{$but});
+return $msg;
+}
+
 # Search by hostname or desc
-push(@grid, "<b>$text{'index_search'}</b>");
+push(@grid, &highlight_field($text{'index_search'}, "ok"));
 push(@grid, &ui_textbox("search", $in->{'search'}, 30).
-	    " ".&ui_submit($text{'index_searchok'}));
+	    " ".&ui_submit($text{'index_searchok'}, "ok"));
 
 # Search by group
 local @groups = &unique(map { split(/\t/, $_->{'group'}) } @$servers);
 if (@groups) {
-	push(@grid, "<b>$text{'index_gsearch'}</b>");
+	push(@grid, &highlight_field($text{'index_gsearch'}, "gok"));
 	push(@grid, &ui_select("gsearch", $in->{'gsearch'}, \@groups).
 		    " ".&ui_submit($text{'index_searchgok'}, "gok"));
 	}
@@ -4960,14 +4970,14 @@ if (@groups) {
 # Search by host system
 local @parents = grep { &is_parent_server($_) } @$servers;
 if (@parents) {
-	push(@grid, "<b>$text{'index_psearch'}</b>");
+	push(@grid, &highlight_field($text{'index_psearch'}, "pok"));
 	push(@grid, &ui_select("psearch", $in->{'psearch'},
 	    [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ]).
 		    " ".&ui_submit($text{'index_searchpok'}, "pok"));
 	}
 
 # Search by status (including some useful pseudo-statuses)
-push(@grid, "<b>$text{'index_ssearch'}</b>");
+push(@grid, &highlight_field($text{'index_ssearch'}, "sok"));
 push(@grid, &ui_select("ssearch", $in->{'ssearch'} || 'up',
 		[ [ 'up', "&lt;$text{'status_up'}&gt;" ],
 		  [ 'wm', "&lt;$text{'status_wm'}&gt;" ],
@@ -4979,7 +4989,7 @@ push(@grid, &ui_select("ssearch", $in->{'ssearch'} || 'up',
 
 # Search by EC2 account (normally hidden)
 if ($in->{'eok'}) {
-	push(@grid, "<b>$text{'index_esearch'}</b>");
+	push(@grid, &highlight_field($text{'index_esearch'}, "eok"));
 	push(@grid, &ui_select("esearch", $in->{'esearch'},
 	    [ map { [ $_->{'id'}, $_->{'account'} ] }
 		  &list_ec2_accounts() ]).

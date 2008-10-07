@@ -1,8 +1,5 @@
 #!/usr/local/bin/perl
 # Show a historic graph of one or more collected stats, on one or more systems
-# XXX system chooser, by name, group or type
-# XXX separate / average / total mode
-# XXX move all inputs up?
 
 require './server-manager-lib.pl';
 &ReadParse();
@@ -26,14 +23,28 @@ if (!%in) {
 
 # Show inputs for selecting systems
 print &ui_form_start("history.cgi");
+print $text{'history_search'},"<br>\n";
 print &show_search_form(\%in, \@allservers);
 
-# Show inputs for graph mode
-print "<b>$text{'history_mode'}</b>\n";
-print &ui_radio("mode", $in{'mode'},
+# Create input for graph mode
+@grid = ( );
+push(@grid, "<b>$text{'history_mode'}</b>");
+push(@grid, &ui_radio("mode", $in{'mode'},
 		[ [ "", $text{'history_mode_'} ],
 		  [ "total", $text{'history_mode_total'} ],
-		  [ "average", $text{'history_mode_average'} ] ]),"<br>\n";
+		  [ "average", $text{'history_mode_average'} ] ]));
+
+# And for stat to show
+push(@grid, "<b>$text{'history_showsel'}</b>");
+push(@grid, &ui_select("stat", $in{'stat'},
+		[ map { [ $_, $text{'history_stat_'.$_} ] }
+		      sort { $text{'history_stat_'.$a} cmp
+			     $text{'history_stat_'.$b} }
+			   &list_historic_stats(\@allservers) ]));
+
+print &ui_grid_table(\@grid, 4, 100,
+	[ "width=10%", "width=40%", "width=10%", "width=40%" ]);
+
 print &ui_form_end();
 
 # Get the systems
@@ -135,7 +146,7 @@ print "<div id='history' style='height: 300px;'></div>\n";
 # Systems shown, with colours
 @labels = ( );
 if ($in{'mode'} eq 'total' || $in{'mode'} eq 'average') {
-	push(@labels, [ $text{'history_label_'.$in{'mode'}},
+	push(@labels, [ &text('history_label_'.$in{'mode'}, scalar(@servers)),
 			$historic_graph_colors[0] ]);
 	}
 else {
@@ -150,24 +161,6 @@ print &ui_grid_table(\@grid, 4, 100,
 	[ "width=25%", "width=25%", "width=25%", "width=25%" ]);
 print "<a href='history_data.cgi?$statsparams&start=$start&end=$end&nice=1'>".
       "$text{'history_rawdata'}</a><br>\n";
-
-# Radio buttons for stats to show
-print &ui_hr();
-print "<b>$text{'history_showsel'}</b><br>\n";
-print &ui_form_start("history.cgi");
-foreach $i (keys %in) {
-	if ($i ne 'stat') {
-		print &ui_hidden($i, $in{$i});
-		}
-	}
-@grid = ( );
-foreach $s (sort { $text{'history_stat_'.$a} cmp $text{'history_stat_'.$b} }
-		 &list_historic_stats(\@servers)) {
-	push(@grid, &ui_oneradio("stat", $s, $text{'history_stat_'.$s},
-			   	 $s eq $in{'stat'}));
-	}
-print &ui_grid_table(\@grid, 4, 100);
-print &ui_form_end([ [ undef, $text{'history_ok'} ] ]);
 
 # Javascript to generate the graph, with just one Y axis
 print "<script>\n";

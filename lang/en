@@ -2010,7 +2010,7 @@ history_stat_spamcount=Spam per minute history_stat_viruscount=Viruses per minut
 history_showing=Showing historic values for : $1
 history_none=No historic system statistics have been recorded for the selected systems yet.
 history_nomatch=Your search did not match any systems.
-history_showsel=Select historic statistics to show :
+history_showsel=Stats to show:
 history_ok=Show Selected
 history_pc=percent
 history_rawdata=Download raw data..
@@ -2018,3 +2018,6 @@ history_mode=Graph mode:
 history_mode_=One line per system
 history_mode_total=Sum total
 history_mode_average=Average
+history_label_total=Total over $1 systems
+history_label_average=Average of $1 systems
+history_search=Select systems to graph ..
