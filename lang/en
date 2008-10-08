@@ -48,6 +48,7 @@ ec2_typedesc=Amazon EC2
 ec2_createlink=Create EC2 instance
 ec2_addlink=Add EC2 instance
 ec2_typeshort=EC2
+ec2_scan=Find EC2 instances
 
 real_desc=Physical
 real_add=Add physical system
@@ -2048,3 +2049,11 @@ scan_used=Finding IP addresses for managed systems ..
 scan_useddone=.. found $1
 scan_essh=SSH connection failed : $1 ($2)
 scan_ewebmin=Webmin login failed : $1 ($2)
+
+ec2scan_title=Find EC2 Instances
+ec2scan_header=EC2 instance import details
+ec2scan_auth=SSH login key
+ec2scan_ok=Add Systems Under Account
+ec2scan_err=Failed to find EC2 instances
+ec2scan_doing=Searching for instances under account $1 ..
+ec2scan_failed=.. failed to list instances : $1
