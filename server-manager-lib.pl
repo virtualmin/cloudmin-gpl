@@ -1276,7 +1276,7 @@ return $type;
 }
 
 # ping_server_host(hostname|ip)
-# Returns 1 if some host responds to a ping in 5 seconds
+# Returns 1 if some host responds to a ping in 2 seconds
 sub ping_server_host
 {
 local ($host) = @_;
@@ -1738,7 +1738,8 @@ return $rv;
 }
 
 # parallel_server_function(&servers, &function, [&args])
-# Calls some function on multiple servers, in 10 (by default) processes
+# Calls some function on multiple servers, in 10 (by default) processes.
+# Returns an array of the return values from the functions in those processes.
 sub parallel_server_function
 {
 local ($servers, $func, $args) = @_;
