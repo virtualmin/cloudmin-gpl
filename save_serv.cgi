@@ -398,35 +398,8 @@ else {
 	# Validate authentication inputs
 	$oldserver = { %$server };
 	if (defined($in{'auth_mode'})) {
-		if ($in{'auth_mode'} == 0) {
-			# Via password
-			$in{'upass'} || &error($text{'add_eupass'});
-			$server->{'ssh_pass'} = $in{'upass'};
-			delete($server->{'key'});
-			delete($server->{'ssh_nologin'});
-			}
-		elsif ($in{'auth_mode'} == 1) {
-			# Via SSH key
-			$server->{'key'} = $in{'key'};
-			delete($server->{'ssh_pass'});
-			delete($server->{'ssh_nologin'});
-			}
-		elsif ($in{'auth_mode'} == 2) {
-			# No SSH login should be tried
-			$server->{'ssh_nologin'} = 1;
-			delete($server->{'ssh_nologin'});
-			}
-		$in{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i ||
-			&error($text{'add_euuser'});
-		$server->{'ssh_user'} = $in{'uuser'};
-		if ($in{'uport_def'}) {
-			delete($server->{'ssh_port'});
-			}
-		else {
-			$in{'uport'} =~ /^\d+$/ && $in{'uport'} > 0 &&
-			    $in{'uport'} < 65536 || error($text{'add_euport'});
-			$server->{'ssh_port'} = $in{'uport'};
-			}
+		$err = &parse_ssh_login_form(\%in, $server);
+		&error($err) if ($err);
 		}
 	if (defined($in{'webmin_mode'})) {
 		$err = &parse_webmin_login_form(\%in, $server);
@@ -456,7 +429,7 @@ else {
 		}
 
 	&save_managed_server($server);
-	&redirect("");
+	&redirect("index.cgi?refresh=$server->{'id'}");
 	}
 
 # show_host_override_form(oldip, newip)

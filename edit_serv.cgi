@@ -187,29 +187,13 @@ if ($haswebmin || $hasssh) {
 				     &hlink($text{'edit_help'}, "editauth"));
 	}
 
-# SSH
+# SSH login details
 if ($hasssh) {
-	# SSH password / key
-	print &ui_table_row($text{'edit_auth'},
-	   &ui_radio("auth_mode", $server->{'ssh_nologin'} ? 2 :
-				  $server->{'ssh_pass'} ? 0 : 1,
-	      [ [ 0, &text('add_auth0',
-		   &ui_textbox("upass", $server->{'ssh_pass'}, 20))."<br>" ],
-		[ 1, &text('add_auth1',
-			&ssh_key_menu("key", $t,$server->{'key'}))."<br>" ],
-		[ 2, $text{'add_auth2'} ] ]));
-
-	# SSH user
-	print &ui_table_row($text{'edit_authuser'},
-	   &ui_textbox("uuser", $server->{'ssh_user'}, 20));
-
-	# SSH port
-	print &ui_table_row($text{'edit_authport'},
-	   &ui_opt_textbox("uport", $server->{'ssh_port'}, 5,
-			   $text{'default'}." (22)"));
+	&show_ssh_login_form($server);
+	print &ui_table_hr() if ($haswebmin);
 	}
 
-# Webmin
+# Webmin login details
 if ($haswebmin) {
 	&show_webmin_login_form($server);
 	}

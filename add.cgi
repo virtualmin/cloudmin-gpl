@@ -17,32 +17,8 @@ $server->{'host'} = $in{'host'};
 $server->{'desc'} = $in{'desc'};
 
 # SSH login (if there is one)
-$sfunc = "type_".$in{'type'}."_no_ssh";
-$no_ssh = defined(&$sfunc) && &$sfunc();
-if (!$no_ssh) {
-	$in{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i || &error($text{'add_euuser'});
-	$server->{'ssh_user'} = $in{'uuser'};
-	if (!$in{'uport_def'}) {
-		$in{'uport'} =~ /^\d+$/ && $in{'uport'} > 0 &&
-		    $in{'uport'} < 65536 || error($text{'add_euport'});
-		$server->{'ssh_port'} = $in{'uport'};
-		}
-	if ($in{'auth_mode'} == 0) {
-		# Via password
-		$in{'upass'} || &error($text{'add_eupass'});
-		$server->{'ssh_pass'} = $in{'upass'};
-		}
-	elsif ($in{'auth_mode'} == 1) {
-		# Via SSH key
-		$in{'key'} || &error($text{'add_ekey'});
-		$server->{'key'} = $in{'key'};
-		}
-	elsif ($in{'auth_mode'} == 2) {
-		# No SSH login should be tried
-		$server->{'ssh_nologin'} = 1;
-		}
-	$server->{'ssh_protocol'} = $in{'protocol'};
-	}
+$err = &parse_ssh_login_form(\%in, $server);
+&error($err) if ($err);
 
 # Webmin login
 $err = &parse_webmin_login_form(\%in, $server);

@@ -5079,7 +5079,7 @@ else {
 	}
 }
 
-# show_webmin_login_form([&server], type)
+# show_webmin_login_form([&server], [type])
 # Outputs fields for selecting the Webmin login and password for a system
 sub show_webmin_login_form
 {
@@ -5126,9 +5126,9 @@ if ($in->{'webmin_mode'} == 1) {
 elsif ($in->{'webmin_mode'} == 2) {
 	# Username and password given
 	$in->{'wuser'} =~ /^\S+$/ || return $text{'add_ewuser'};
-	$server->{'user'} = $in{'wuser'};
+	$server->{'user'} = $in->{'wuser'};
 	$in->{'wpass'} =~ /\S/ || return $text{'add_ewpass'};
-	$server->{'pass'} = $in{'wpass'};
+	$server->{'pass'} = $in->{'wpass'};
 	$server->{'ssh_pass_same'} = 0;
 	}
 else {
@@ -5137,9 +5137,88 @@ else {
 	delete($server->{'pass'});
 	$server->{'ssh_pass_same'} = 0;
 	}
-$server->{'ssl'} = $in{'ssl'};
-$in{'port'} =~ /^\d+$/ || return $text{'add_eport'};
-$server->{'port'} = $in{'port'};
+$server->{'ssl'} = $in->{'ssl'};
+$in->{'port'} =~ /^\d+$/ || return $text{'add_eport'};
+$server->{'port'} = $in->{'port'};
+return undef;
+}
+
+# show_ssh_login_form([&server], [type])
+# Outputs fields for selecting the SSH login and password or key for a system.
+# May not output anything if the system type doesn't support or need SSH.
+sub show_ssh_login_form
+{
+local ($server, $type) = @_;
+$type ||= $server->{'manager'} if ($server);
+
+local $sfunc = "type_".$type."_no_ssh";
+local $no_ssh = defined(&$sfunc) && &$sfunc();
+return if ($no_ssh);
+
+# Root password / key
+print &ui_table_row($text{'add_auth'},
+	&ui_radio("auth_mode", !$server ? 0 :
+			       $server->{'ssh_nologin'} ? 2 :
+			       $server->{'key'} ? 1 : 0,
+	      [ [ 0, &text('add_auth0',
+			   &ui_textbox("upass", $server ? $server->{'ssh_pass'}
+							: undef, 20))."<br>" ],
+		[ 1, &text('add_auth1',
+			&ssh_key_menu("key", $type,
+				$server ? $server->{'key'}
+					: undef))."<br>" ],
+		[ 2, $text{'add_auth2'} ] ]));
+
+# SSH protocol version
+print &ui_table_row($text{'add_protocol'},
+	&ui_radio("protocol", $server ? $server->{'ssh_protocol'} : 2,
+		  [ [ 2 ], [ 1 ] ]));
+
+# Root login
+print &ui_table_row($text{'add_user'},
+	&ui_textbox("uuser", $server ? $server->{'ssh_user'}
+				     : "root", 20));
+
+# SSH port number
+print &ui_table_row($text{'add_sshport'},
+	&ui_opt_textbox("uport", $server ? $server->{'ssh_port'}
+					 : undef, 5, $text{'default'}." (22)"));
+}
+
+# parse_ssh_login_form(&in, &server)
+# Update a server object based on inputs from show_ssh_login_form. Returns undef
+# on success, or an error message on failure.
+sub parse_ssh_login_form
+{
+local ($in, $server) = @_;
+return undef if (!defined($in->{'auth_mode'}));		# No SSH mode
+
+$in->{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i || return $text{'add_euuser'};
+$server->{'ssh_user'} = $in->{'uuser'};
+if (!$in->{'uport_def'}) {
+	$in->{'uport'} =~ /^\d+$/ && $in->{'uport'} > 0 &&
+	    $in->{'uport'} < 65536 || return $text{'add_euport'};
+	$server->{'ssh_port'} = $in->{'uport'};
+	}
+if ($in->{'auth_mode'} == 0) {
+	# Via password
+	$in->{'upass'} || return $text{'add_eupass'};
+	$server->{'ssh_pass'} = $in->{'upass'};
+	delete($server->{'key'});
+	$server->{'ssh_nologin'} = 0;
+	}
+elsif ($in->{'auth_mode'} == 1) {
+	# Via SSH key
+	$in->{'key'} || return $text{'add_ekey'};
+	$server->{'key'} = $in->{'key'};
+	delete($server->{'ssh_pass'});
+	$server->{'ssh_nologin'} = 0;
+	}
+elsif ($in->{'auth_mode'} == 2) {
+	# No SSH login should be tried
+	$server->{'ssh_nologin'} = 1;
+	}
+$server->{'ssh_protocol'} = $in->{'protocol'};
 return undef;
 }
 
