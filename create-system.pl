@@ -199,7 +199,7 @@ elsif ($serial) {
 	}
 
 # Create initial server object
-$server = { 'id' => $newid || time().$$,
+$server = { 'id' => $newid || &server_id(),
 	    'manager' => $type,
 	    'type' => 'unknown',
 	    'novirt' => $novirt,

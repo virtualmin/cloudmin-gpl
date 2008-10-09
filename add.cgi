@@ -7,7 +7,7 @@ require './server-manager-lib.pl';
 &error_setup($text{'add_err'});
 @servers = &list_managed_servers();
 $server = { 'manager' => $in{'type'},
-	    'id' => time().$$ };
+	    'id' => &server_id(), };
 
 # Validate inputs, starting with hostname
 gethostbyname($in{'host'}) || &error($text{'add_ehost'});

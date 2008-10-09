@@ -306,6 +306,12 @@ sub list_available_managed_servers
 return grep { &can_action($_) } &list_managed_servers();
 }
 
+# Returns a unique ID for a new VM2 server
+sub server_id
+{
+return time().$$.($main::server_id_count++);
+}
+
 # first_ethernet_iface()
 # Returns the object for the first active ethernet interface
 sub first_ethernet_iface

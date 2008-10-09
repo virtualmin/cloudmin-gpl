@@ -6,7 +6,7 @@ require './server-manager-lib.pl';
 &error_setup($text{'create_err'});
 &can_create_server_error($in{'type'});
 @servers = &list_managed_servers();
-$server = { 'id' => time().$$,
+$server = { 'id' => &server_id(),
 	    'manager' => $in{'type'},
 	    'status' => 'create',
 	    'bw_limit' => $config{'bw_def'},
