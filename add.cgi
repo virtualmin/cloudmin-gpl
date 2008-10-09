@@ -45,21 +45,8 @@ if (!$no_ssh) {
 	}
 
 # Webmin login
-if ($in{'webmin_mode'} == 1) {
-	$in{'auth_mode'} == 0 || &error($text{'add_emode1'});
-	$server->{'user'} = $server->{'ssh_user'};
-	$server->{'pass'} = $server->{'ssh_pass'};
-	$server->{'ssh_pass_same'} = 1;
-	}
-elsif ($in{'webmin_mode'} == 2) {
-	$in{'wuser'} =~ /^\S+$/ || &error($text{'add_ewuser'});
-	$server->{'user'} = $in{'wuser'};
-	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
-	$server->{'pass'} = $in{'wpass'};
-	}
-$server->{'ssl'} = $in{'ssl'};
-$in{'port'} =~ /^\d+$/ || &error($text{'add_eport'});
-$server->{'port'} = $in{'port'};
+$err = &parse_webmin_login_form(\%in, $server);
+&error($err) if ($err);
 $server->{'novirt'} = !$in{'canvirt'};
 
 # Parse type-specific inputs

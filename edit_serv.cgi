@@ -137,7 +137,7 @@ if ($status eq 'virt') {
 # Cluster package management
 $pkgs = &get_server_cluster_software($server);
 if ($pkgs >= 0) {
-	print &ui_table_row($text{'edit_packages'},
+	print &ui_table_row($text{'edit_managepackages'},
 		$view ? ($pkgs ? $text{'yes'} : $text{'no'})
 		      : &ui_yesno_radio("packages", $pkgs));
 	}
@@ -211,13 +211,7 @@ if ($hasssh) {
 
 # Webmin
 if ($haswebmin) {
-	$s = $server->{'ssh_pass_same'};
-	print &ui_table_row($text{'edit_wauth'},
-	    &ui_radio("webmin_mode", $s ? 1 : 2,
-	      [ [ 1, $text{'add_webmin1'}."<br>" ],
-	        [ 2, &text('add_webmin2',
-		   &ui_textbox("wuser", $s ? "" : $server->{'user'}, 20),
-		   &ui_textbox("wpass", $s ? "" : $server->{'pass'}, 20)) ] ]));
+	&show_webmin_login_form($server);
 	}
 
 if ($haswebmin || $hasssh) {

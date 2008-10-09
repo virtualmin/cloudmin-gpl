@@ -50,19 +50,8 @@ if (!$no_ssh) {
 
 print &ui_table_hr();
 
-# Webmin login
-print &ui_table_row($text{'add_webmin'},
-	&ui_radio("webmin_mode", 0,
-	      [ [ 0, $text{'add_webmin0'}."<br>" ],
-		$no_ssh ? ( ) : ( [ 1, $text{'add_webmin1'}."<br>" ] ),
-		[ 2, &text('add_webmin2',
-			   &ui_textbox("wuser", "root", 20),
-			   &ui_textbox("wpass", undef, 20)) ] ])."<br>".
-	&ui_checkbox("ssl", 1, $text{'add_ssl'}, 1));
-
-# Webmin port
-print &ui_table_row($text{'add_port'},
-	&ui_textbox("port", 10000, 6));
+# Webmin login details
+&show_webmin_login_form(undef, $in{'type'});
 
 # Can add domains?
 print &ui_table_row($text{'add_canvirt'},

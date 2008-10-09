@@ -429,21 +429,8 @@ else {
 			}
 		}
 	if (defined($in{'webmin_mode'})) {
-		if ($in{'webmin_mode'} == 1) {
-			# Same as SSH
-			$server->{'ssh_pass'} || &error($text{'add_emode1'});
-			$server->{'user'} = $server->{'ssh_user'} || 'root';
-			$server->{'pass'} = $server->{'ssh_pass'};
-			$server->{'ssh_pass_same'} = 1;
-			}
-		else {
-			# Custom Webmin login
-			$in{'wuser'} =~ /^\S+$/ || &error($text{'add_ewuser'});
-			$server->{'user'} = $in{'wuser'};
-			$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
-			$server->{'pass'} = $in{'wpass'};
-			$server->{'ssh_pass_same'} = 0;
-			}
+		$err = &parse_webmin_login_form(\%in, $server);
+		&error($err) if ($err);
 
 		# Fill in Webmin connection details if we don't have them yet
 		if (!$server->{'port'} || $server->{'ssl'} eq '') {
