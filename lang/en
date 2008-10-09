@@ -2057,3 +2057,13 @@ ec2scan_ok=Add Systems Under Account
 ec2scan_err=Failed to find EC2 instances
 ec2scan_doing=Searching for instances under account $1 ..
 ec2scan_failed=.. failed to list instances : $1
+
+find_xendirs=Finding Xen configuration files under $1 ..
+find_xendirsdone=.. found $1 files
+find_xendirsnone=.. no files matching $1 found!
+find_xeninstances=Finding running Xen instances ..
+find_xeninstancesdone=.. found $1 instances
+find_xeninstanceserr=.. failed : $1
+find_xenconfig=Processing Xen configuration file $1
+find_xenconfigerr=.. failed to fetch file : $1
+find_xenconfigparse=.. failed to parse file
