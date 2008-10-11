@@ -14,10 +14,10 @@ $in{'source'} =~ /^\/\S/ || &error($text{'transfer_esource'});
 ($dest) = grep { $_->{'id'} eq $in{'destid'} } @servers;
 $dest || &error($text{'transfer_edest'});
 &can_action_error($dest, "transfer");
-$in{'dest_def'} || $in{'dest'} =~ /^\/\S/ || &error($text{'transfer_edest'});
+$in{'dest_def'} || $in{'dest'} =~ /^\/\S/ || &error($text{'transfer_edest2'});
 
 &ui_print_unbuffered_header(&server_in($server),
-			    $text{'transfer_title'}, "");
+			    $text{'transfer_title2'}, "");
 
 # Do it
 $in{'dest'} = $in{'source'} if ($in{'dest_def'});

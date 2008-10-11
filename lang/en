@@ -1856,11 +1856,11 @@ smove_euntar=.. extraction failed : $1
 smove_einstalled=.. failed to flag zone as installed : $1
 smove_ezinfo=Failed to get information about original Solaris Zone
 
-transfer_title=Transfer File
+transfer_title2=Transfer File
 transfer_err=Failed to transfer file
 transfer_esource=Missing or non-absolute source filename
 transfer_edest=Destination system does not exist!
-transfer_edest=Missing or non-absolute destination filename
+transfer_edest2=Missing or non-absolute destination filename
 transfer_done=Transferring $1 on $2 to $3 on $4 ..
 transfer_failed=.. transfer failed : $1
 
@@ -1874,7 +1874,7 @@ volumes_vsize=Size
 volumes_users=Used by systems
 volumes_vnone=No EC2 EBS volumes have been created yet.
 volumes_vheader=New volume details
-volumes_account=EC2 account
+volumes_account2=EC2 account
 volumes_src=Creation type
 volumes_size=New volume of size
 volumes_snap=Copy of snapshot
