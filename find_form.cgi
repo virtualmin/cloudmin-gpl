@@ -11,6 +11,7 @@ $type = $in{'type'};
 
 print &ui_form_start("find.cgi", "post");
 print &ui_hidden("type", $type);
+print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'find_header'}, undef, 2);
 
 # Type of system

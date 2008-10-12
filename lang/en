@@ -2076,3 +2076,5 @@ find_xenconfigerr=.. failed to fetch file : $1
 find_xenconfigparse=.. failed to parse file
 find_xenalready=.. already managed by VM2 as $1
 find_xenconfigmiss=.. the <tt>$1</tt> options is not set in the config file
+find_xendone=.. added system $1 with status $2
+find_err=Failed to find systems
