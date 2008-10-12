@@ -5,7 +5,7 @@ require './server-manager-lib.pl';
 &ui_print_header(undef, $module_info{'desc'}, "", "intro", 1, 1);
 &ReadParse();
 
-if (!%in) {
+if (!%in || scalar(keys %in) == 1 && $in{'refresh'}) {
 	# Try to use default search
 	if (&read_file($default_search_file, \%in)) {
 		$using_default_search = 1;
