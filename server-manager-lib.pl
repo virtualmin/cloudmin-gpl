@@ -11,6 +11,8 @@
 #	XXX extra left menu items
 # XXX allow specification that a system is a Xen host when adding
 # XXX auto-detection of running Xen instances, when adding
+#	XXX new left menu link for finding running xen instances
+#	XXX also button on register form
 
 do '../web-lib.pl';
 &init_config();
@@ -4115,10 +4117,19 @@ local @par = &is_parent_server($server);
 foreach my $p (@par) {
 	if (-r "$module_root_directory/list_${p}s.cgi" &&
 	    &can_action(undef, "global")) {
+		# Edit Xen/whatever host details
 		push(@rv, { 'id' => 'host',
 			    'desc' => $text{$p.'_edit'},
 			    'cat' => 'manage',
 			    'link' => "edit_${p}.cgi?id=$server->{'id'}" });
+		}
+	local $ffunc = "type_".$p."_find_servers";
+	if (defined(&$ffunc) && &can_action(undef, "global")) {
+		# Find hosted systems
+		push(@rv, { 'id' => 'find',
+			    'desc' => $text{'find_title_'.$p},
+			    'cat' => 'manage',
+			    'link' => "find_form.cgi?id=$server->{'id'}&type=$p" });
 		}
 	}
 
