@@ -591,7 +591,7 @@ edit_move=Move System
 edit_disks=Manage Disks
 edit_vcpus=Manage Virtual CPUs
 edit_bw=Bandwidth Graph
-edit_history=Statistics Graph
+edit_history=Statistics Graphs
 edit_vversion=Virtualmin version
 edit_vlicence=Virtualmin license
 edit_vsk=Serial $1 key $2
@@ -1984,7 +1984,7 @@ vnc_needreboot=The system must be rebooted for VNC access to be activated.
 vnc_nolisten=VNC has been configured on this system by VM2, but the VNC server on port $1 on host system $2 is not accessible. If it was just enabled, the system will need to be rebooted before VNC is available.
 vnc_nojava=This page requires Java to display the VNC applet.
 
-history_title=System Statistics Graph
+history_title=System Statistics Graphs
 history_ecannot=You are not allowed to view historic system statistics
 history_year=1 year
 history_years=$1 years
