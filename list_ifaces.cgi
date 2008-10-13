@@ -51,7 +51,7 @@ foreach $iface (@$ifaces) {
 print &ui_columns_end();
 print &ui_links_row(\@ilinks);
 
-&ui_print_footer("", $text{'index_return'});
+&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 
 if (defined(&theme_select_server)) {
 	&theme_select_server($server);

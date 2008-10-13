@@ -13,7 +13,6 @@
 # XXX auto-detection of running Xen instances, when adding
 #	XXX new left menu link for finding running xen instances
 #	XXX also button on register form
-# XXX links back from edit_domains.cgi, edit_limits.cgi, etc.. in iPhone theme
 
 do '../web-lib.pl';
 &init_config();
@@ -4110,7 +4109,8 @@ if (&can_action($server, "graph") &&
 	push(@rv, { 'id' => 'history',
 		    'desc' => $text{'edit_history'},
 		    'cat' => 'res',
-		    'link' => "history.cgi?search=$server->{'host'}" });
+		    'link' => "history.cgi?search=$server->{'host'}&".
+			      "id=$server->{'id'}" });
 	}
 
 # Host system pages

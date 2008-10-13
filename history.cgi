@@ -217,7 +217,12 @@ function onResize() {
 </script>
 EOF
 
-&ui_print_footer("", $text{'index_return'});
+if ($in{'id'}) {
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
+	}
+else {
+	&ui_print_footer("", $text{'index_return'});
+	}
 
 sub period_to_name
 {

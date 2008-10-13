@@ -357,7 +357,13 @@ function onResize() {
 }
 </script>
 EOF
-&ui_print_footer("", $text{'index_return'});
+
+if ($in{'id'}) {
+	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
+	}
+else {
+	&ui_print_footer("", $text{'index_return'});
+	}
 
 # bar_chart(total, used, blue-rest)
 # Returns HTML for a bar chart of a single value
