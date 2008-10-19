@@ -11,8 +11,13 @@
 #	XXX extra left menu items
 # XXX allow specification that a system is a Xen host when adding
 # XXX auto-detection of running Xen instances, when adding
-#	XXX new left menu link for finding running xen instances
 #	XXX also button on register form
+#	XXX CHANGELOG
+#	XXX command-line API
+# XXX restart xenconsoled if down
+#	XXX was missing on sentosa, command is :
+#	    xenconsoled --log none --timestamp none
+#	XXX xend restart fixed it
 
 do '../web-lib.pl';
 &init_config();
@@ -5155,6 +5160,16 @@ $server->{'port'} = $in->{'port'};
 return undef;
 }
 
+# copy_webmin_login_details(&source, &dest)
+# Copy Webmin login fields from one server to another
+sub copy_webmin_login_details
+{
+local ($src, $dst) = @_;
+foreach my $f ('user', 'pass', 'ssh_pass_same', 'ssl', 'port') {
+	$dst->{$f} = $src->{$f};
+	}
+}
+
 # show_ssh_login_form([&server], [type])
 # Outputs fields for selecting the SSH login and password or key for a system.
 # May not output anything if the system type doesn't support or need SSH.
@@ -5232,6 +5247,17 @@ elsif ($in->{'auth_mode'} == 2) {
 	}
 $server->{'ssh_protocol'} = $in->{'protocol'};
 return undef;
+}
+
+# copy_ssh_login_details(&source, &dest)
+# Copy SSH login fields from one server to another
+sub copy_ssh_login_details
+{
+local ($src, $dst) = @_;
+foreach my $f ('ssh_user', 'ssh_port', 'ssh_pass', 'ssh_nologin',
+	       'ssh_protocol') {
+	$dst->{$f} = $src->{$f};
+	}
 }
 
 # strip_html_tags(html)

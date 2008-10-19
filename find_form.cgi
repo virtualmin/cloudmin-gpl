@@ -7,7 +7,8 @@ require './server-manager-lib.pl';
 $server = &get_managed_server_by("id", $in{'id'});
 $server || &error($text{'edit_egone'});
 $type = $in{'type'};
-&ui_print_header(undef, $text{'find_title_'.$type}, "", "find".$type);
+&ui_print_header(&server_in($server), $text{'find_title_'.$type},
+		 "", "find".$type);
 
 print &ui_form_start("find.cgi", "post");
 print &ui_hidden("type", $type);
@@ -21,6 +22,11 @@ print &ui_table_row($text{'find_type'}, &$tfunc());
 # Base directory for .cfg files
 print &ui_table_row($text{'find_dir'},
 	&ui_opt_textbox("dir", undef, 40, $text{'find_dirauto'}));
+
+# Limit to running instances?
+print &ui_table_row($text{'find_running'},
+	&ui_yesno_radio("running",
+			defined($in{'running'}) ? $in{'running'} : 1));
 
 # SSH login details for found instances
 print &ui_table_hr();

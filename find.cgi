@@ -10,16 +10,25 @@ use Socket;
 ($vhost) = grep { $_->{'id'} eq $in{'id'} } @servers;
 $tmplserver = { 'manager' => $in{'type'} };
 
-# Validate inputs and update template object
-$err = &parse_ssh_login_form(\%in, $tmplserver);
-&error($err) if ($err);
-$err = &parse_webmin_login_form(\%in, $tmplserver);
-&error($err) if ($err);
+if (!$in{'copyauth'}) {
+	# Validate inputs and update template object
+	$err = &parse_ssh_login_form(\%in, $tmplserver);
+	&error($err) if ($err);
+	$err = &parse_webmin_login_form(\%in, $tmplserver);
+	&error($err) if ($err);
+	}
+else {
+	# Default authentication settings come from Xen host
+	&copy_ssh_login_details($vhost, $tmplserver);
+	&copy_webmin_login_details($vhost, $tmplserver);
+	}
 
 # Show progress
-&ui_print_unbuffered_header(&server_in($vhost), $text{'find_title'}, "");
+&ui_print_unbuffered_header(&server_in($vhost),
+			    $text{'find_title_'.$in{'type'}}, "");
 
-@found = &type_xen_find_servers($vhost, $tmplserver);
+$ffunc = "type_".$in{'type'}."_find_servers";
+@found = &$ffunc($vhost, $tmplserver, $in{'running'});
 if (@found && defined(&theme_post_save_server)) {
 	&theme_post_save_server($found[0]);
 	}
