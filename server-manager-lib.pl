@@ -10,10 +10,6 @@
 # XXX plugin support
 #	XXX extra left menu items
 # XXX allow specification that a system is a Xen host when adding
-# XXX auto-detection of running Xen instances, when adding
-#	XXX also button on register form
-#	XXX CHANGELOG
-#	XXX command-line API
 # XXX restart xenconsoled if down
 #	XXX was missing on sentosa, command is :
 #	    xenconsoled --log none --timestamp none
@@ -5295,6 +5291,7 @@ sub html_tags_to_text
 {
 local ($rv) = @_;
 $rv =~ s/<tt>|<\/tt>//g;
+$rv =~ s/<font[^>]*>|<\/font>//g;
 $rv =~ s/<b>|<\/b>//g;
 $rv =~ s/<i>|<\/i>//g;
 $rv =~ s/<u>|<\/u>//g;

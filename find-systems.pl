@@ -2,13 +2,50 @@
 
 =head1 find-systems.pl
 
-Scan a hosting system for Xen instances already running on it
+Scan a hosting system for virtual instances already running on it
 
-XXX
+If you have added to VM2 a host system that has manually created Xen instances
+which are not yet under VM2's control, this command can be used to find and
+automatically add them. The system to scan must be specified with the
+C<--host> parameter, and if hosts more than one type of virtual system, the
+type to search for must be specified with the C<--type> flag.
+
+If the C<--same-login> flag is given, VM2 will use the same SSH and Webmin
+username and password to login to any discovered systems as it currently uses
+for the host system. Alternately, you can select a different SSH password
+with C<--ssh-pass> followed by a password, or C<--ssh-key> followed by a
+key ID. The SSH username, protocol version and port can be changed from their
+defaults with the C<--ssh-user>, C<--ssh-protocol> and C<--ssh-port> flags.
+Finally, to prevent SSH logins altogether, the C<--ssh-nologin> flag can be
+given instead.
+
+If VM2 is to login to Webmin or Virtualmin on the discovered systems, the
+C<--webmin-user> and C<--webmin-pass> flags must be given, followed by a
+username and password respectively. Alternately, you can use the
+C<--webmin-same> flag to use the same credentials as for SSH access.
+The port for Webmin can be changed from the default of 10000 with the
+C<--webmin-port> flag, and SSL access can be enabled with C<--webmin-ssh>.
+
+By default, VM2 will find all virtual systems on the host, regardless of
+whether they are currently running or not. To limit the search to instances
+that are active, add the C<--running-only> flag to the command line.
 
 =head1 Example usage
-  ./find-systems.pl --host xenhost --type xen
-  XXX
+  ./find-systems.pl --host xenhost --ssh-nologin --running-only
+  Finding Xen configuration files under /etc/xen, /xen ..
+  .. found 3 files
+
+  Finding running Xen instances ..
+  .. found 2 instances
+
+  Processing Xen configuration file /xen/centos64gpl.cfg
+  .. instance centos64gpl is not currently running
+
+  Processing Xen configuration file /xen/virtualmin-demo.cfg
+  .. added system 10.20.144.132 with status Down
+
+  Processing Xen configuration file /xen/webmin-demo.cfg
+  .. added system 10.20.144.133 with status Down
 
 =cut
 
@@ -23,20 +60,26 @@ chop($pwd = `pwd`);
 $0 = "$pwd/find-systems.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+&set_all_text_print();
 
 # Parse command line
 $ssh_user = 'root';
 $ssh_protocol = 2;
+$webmin_ssl = 0;
+$webmin_port = 10000;
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--host") {
 		$host = shift(@ARGV);
 		}
-	elsif ($a eq "--same-login") {
-		$samelogin = 1;
+	elsif ($a eq "--type") {
+		$type = shift(@ARGV);
 		}
 	elsif ($a eq "--running-only") {
 		$running = 1;
+		}
+	elsif ($a eq "--same-login") {
+		$samelogin = 1;
 		}
 	elsif ($a eq "--ssh-key") {
 		$ssh_key = shift(@ARGV);
@@ -54,20 +97,26 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ssh-nologin") {
 		$ssh_nologin = 1;
 		}
-	elsif ($a eq "--webmin") {
-		$webmin_mode = 1;
+	elsif ($a eq "--webmin-same") {
+		$webmin_same = 1;
+		}
+	elsif ($a eq "--webmin-user") {
+		$webmin_user = shift(@ARGV);
 		}
 	elsif ($a eq "--webmin-pass") {
 		$webmin_pass = shift(@ARGV);
-		$webmin_mode = 2;
 		}
-	elsif ($a eq "--type") {
-		$type = shift(@ARGV);
+	elsif ($a eq "--webmin-ssl") {
+		$webmin_ssl = 1;
+		}
+	elsif ($a eq "--webmin-port") {
+		$webmin_port = shift(@ARGV);
 		}
 	else {
 		&usage();
 		}
 	}
+@keys = &list_ssh_keys();
 
 # Check for mandatory args
 $host || &usage("Missing --host parameter");
@@ -114,6 +163,19 @@ else {
 		}
 
 	# Set Webmin login fields
+	$tmplserver->{'ssl'} = $webmin_ssl;
+	$tmplserver->{'port'} = $webmin_port;
+	if ($webmin_same) {
+		$tmplserver->{'user'} = $tmplserver->{'ssh_user'};
+		$tmplserver->{'ssh_pass'} ||
+			&usage("The --webmin-same flag cannot be given unless ".
+			       "an SSH password is specified with --ssh-pass");
+		$tmplserver->{'pass'} = $tmplserver->{'ssh_pass'};
+		}
+	elsif ($webmin_user) {
+		$tmplserver->{'user'} = $webmin_user;
+		$tmplserver->{'pass'} = $webmin_pass;
+		}
 	}
 
 # Do it!
@@ -122,6 +184,9 @@ $ffunc = "type_".$type."_find_servers";
 
 sub usage
 {
+@crtypes = grep { $ffunc = "type_".$_."_find_servers"; defined(&$ffunc) }
+		@server_management_types;
+$crtypes = join("|", @crtypes);
 print "$_[0]\n\n" if ($_[0]);
 print "Searches a host system for existing virtual systems of some type.\n";
 print "\n";
@@ -134,5 +199,9 @@ print "                        --ssh-nologin]\n";
 print "                       [--ssh-user username]\n";
 print "                       [--ssh-port number]\n";
 print "                       [--ssh-protocol number]\n";
+print "                       [--webmin-same | --webmin-user username\n";
+print "                                        --webmin-pass password]\n";
+print "                       [--webmin-ssh]\n";
+print "                       [--webmin-port number]\n";
 exit(1);
 }
