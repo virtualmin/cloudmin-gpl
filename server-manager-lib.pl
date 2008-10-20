@@ -10,11 +10,6 @@
 # XXX plugin support
 #	XXX extra left menu items
 # XXX allow specification that a system is a Xen host when adding
-# XXX restart xenconsoled if down
-#	XXX was missing on sentosa, command is :
-#	    xenconsoled --log none --timestamp none
-#	XXX xend restart fixed it
-#	XXX does this effect VNC?
 
 do '../web-lib.pl';
 &init_config();

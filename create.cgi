@@ -335,7 +335,8 @@ if (defined(&$cfunc)) {
 	}
 
 # Enable package management
-if ($config{'packages_def'}) {
+if ($config{'packages_def'} && ($server->{'status'} eq 'virt' ||
+			        $server->{'status'} eq 'novirt')) {
 	print $text{'create_packages'},"<br>\n";
 	$err = &save_server_cluster_software($server, 1);
 	if ($err) {
