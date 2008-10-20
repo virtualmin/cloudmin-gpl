@@ -14,6 +14,7 @@
 #	XXX was missing on sentosa, command is :
 #	    xenconsoled --log none --timestamp none
 #	XXX xend restart fixed it
+#	XXX does this effect VNC?
 
 do '../web-lib.pl';
 &init_config();
@@ -1258,6 +1259,49 @@ $out =~ s/\r|\n//g;
 return $out;
 }
 
+# list_processes_on_server(&server)
+# Returns a list of running processes, in a format similar to
+# proc::list_processes. Only the pid, user and args are guaranteed though.
+# Return an array ref on success, or an error string on failure.
+sub list_processes_on_server
+{
+local ($server) = @_;
+local @procs;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Can call Webmin
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "proc", "proc-lib.pl");
+	if (!$last_remote_error) {
+		@procs = &remote_foreign_call($server, "proc","list_processes");
+		}
+	if (!$last_remote_error) {
+		return \@procs;
+		}
+	}
+# Fall back to ps command, trying various options
+local ($out, $ex, $err);
+foreach my $cmd (
+	[ "ps --cols 500 -e -o pid,user,args", 3, [ 0, 1, 2 ] ],  # Linux
+	[ "ps -e -o pid,user,args", 3, [ 0, 1, 2 ] ],		  # Solaris
+	) {
+	($out, $ex, $err) = &execute_command_on_server($server,$cmd->[0]);
+	if (!$ex && !$err) {
+		foreach my $l (split(/\r?\n/, $out)) {
+			my %p;
+			$l =~ s/^\s+//;
+			my @w = split(/\s+/, $l, $cmd->[1]);
+			$p{'pid'} = $w[$cmd->[2]->[0]];
+			$p{'user'} = $w[$cmd->[2]->[1]];
+			$p{'args'} = $w[$cmd->[2]->[2]];
+			push(@procs, \%p);
+			}
+		return \@procs;
+		}
+	}
+local $msg = $err || $out;
+return "Failed to list processes : $msg";
+}
+
 sub remote_error_handler
 {
 $last_remote_error = join("", @_);
@@ -1671,6 +1715,14 @@ DONECHECK:
 local $rfunc = "type_".$server->{'manager'}."_post_refresh";
 if (defined(&$rfunc)) {
 	&$rfunc($server);
+	}
+
+# Call any host-type-specific post-refresh function
+foreach my $p (&is_parent_server($server)) {
+	local $rfunc = "type_".$p."_post_host_refresh";
+	if (defined(&$rfunc)) {
+		&$rfunc($server);
+		}
 	}
 
 # Add disk usage, CPU and memory to historic stats, if we got them

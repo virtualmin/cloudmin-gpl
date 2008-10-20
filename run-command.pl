@@ -52,12 +52,11 @@ while(@ARGV > 0) {
 		}
 	}
 
-# Work out who to refresh
+# Work out who to run on
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types);
 @servers || &usage("No systems specified");
 
 # Build the command
-#$cmd = join(" ", map { quotemeta($_) } @cmd);
 $cmd = join(" ", @cmd);
 $cmd || &usage("No command to run given");
 
