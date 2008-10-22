@@ -153,6 +153,19 @@ $api_helper_command = "/usr/sbin/vm2";
 
 $ping_host_timeout = 2;
 
+# Init all plugins
+@confplugins = split(/\s+/, $config{'plugins'});
+if ($no_vm2_plugins) {
+	@confplugins = ( );
+	}
+@plugins = ( );
+foreach my $pname (@confplugins) {
+	if (&foreign_check($pname)) {
+		&foreign_require($pname, "vm2_feature.pl");
+		push(@plugins, $pname);
+		}
+	}
+
 &set_all_html_print();
 
 # list_managed_servers()
@@ -3810,11 +3823,29 @@ push(@gtitles, $text{'licences_title'});
 push(@gicons, "images/licences.gif");
 push(@gcats, "virtualmin");
 
+# Plugins
+push(@glist, "list_plugins.cgi");
+push(@gtitles, $text{'plugins_title'});
+push(@gicons, "images/plugins.gif");
+push(@gcats, "settings");
+
 # Type-defined icons
 foreach my $t (@server_management_types) {
 	my $gfunc = "type_".$t."_global_links";
 	if (defined(&$gfunc)) {
 		foreach my $g (&$gfunc()) {
+			push(@glinks, $g->{'link'});
+			push(@gtitles, $g->{'title'});
+			push(@gicons, $g->{'icon'});
+			push(@gcats, $g->{'cat'} || "settings");
+			}
+		}
+	}
+
+# Plugin-defined icons
+foreach my $p (@plugins) {
+	if (&plugin_defined($p, "settings_links")) {
+		foreach my $g (&plugin_call($p, "settings_links")) {
 			push(@glinks, $g->{'link'});
 			push(@gtitles, $g->{'title'});
 			push(@gicons, $g->{'icon'});
@@ -4187,6 +4218,14 @@ local $afunc = "type_".$t."_server_actions";
 if (defined(&$afunc)) {
 	push(@rv, &$afunc($server));
 	}
+
+# Add plugin-defined actions
+foreach my $p (@plugins) {
+	if (&plugin_defined($p, "server_actions")) {
+		push(@rv, &plugin_call($p, "server_actions", $server));
+		}
+	}
+
 return @rv;
 }
 
@@ -5301,6 +5340,38 @@ foreach my $f ('ssh_user', 'ssh_port', 'ssh_pass', 'ssh_nologin',
 	       'ssh_protocol') {
 	$dst->{$f} = $src->{$f};
 	}
+}
+
+# plugin_call(module, function, [arg, ...])
+# If some plugin function is defined, call it and return the result,
+# otherwise return undef
+sub plugin_call
+{
+local ($mod, $func, @args) = @_;
+if (&plugin_defined($mod, $func)) {
+	if ($main::module_name ne "server_manager") {
+		# Set up server_manager package
+		&foreign_require("server-manager", "server-manager-lib.pl");
+		$server_manager::first_print = $first_print;
+		$server_manager::second_print = $second_print;
+		$server_manager::indent_print = $indent_print;
+		$server_manager::outdent_print = $outdent_print;
+		}
+	return &foreign_call($mod, $func, @args);
+	}
+else {
+	return wantarray ? ( ) : undef;
+	}
+}
+
+# plugin_defined(module, function)
+# Returns 1 if some function is defined in a plugin
+sub plugin_defined
+{
+local $pkg = $_[0];
+$pkg =~ s/[^A-Za-z0-9]/_/g;
+local $func = "${pkg}::$_[1]";
+return defined(&$func);
 }
 
 # strip_html_tags(html)
