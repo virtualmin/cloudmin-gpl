@@ -3824,7 +3824,7 @@ push(@gicons, "images/licences.gif");
 push(@gcats, "virtualmin");
 
 # Plugins
-push(@glist, "list_plugins.cgi");
+push(@glinks, "list_plugins.cgi");
 push(@gtitles, $text{'plugins_title'});
 push(@gicons, "images/plugins.gif");
 push(@gcats, "settings");

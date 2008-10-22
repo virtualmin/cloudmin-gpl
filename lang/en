@@ -2087,3 +2087,16 @@ find_xenconfigmiss=.. the <tt>$1</tt> options is not set in the config file
 find_notrunning=.. instance $1 is not currently running
 find_xendone=.. added system $1 with status $2
 find_err=Failed to find systems
+
+plugins_title=VM2 Plugins
+plugins_config=Configure..
+plugins_open=Open..
+plugins_active=Enabled?
+plugins_desc=Plugin description
+plugins_actions=Actions
+plugins_none=No available VM2 plugins were found on your system.
+plugins_prov=Provides
+plugins_server_actions=System-level link
+plugins_settings_links=Global setting
+plugins_noacts=None
+
