@@ -7,8 +7,6 @@
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX LVM disk support
 #	XXX need another disk in sentosa
-# XXX plugin support
-#	XXX extra left menu items
 # XXX allow specification that a system is a Xen host when adding
 
 do '../web-lib.pl';

@@ -258,9 +258,16 @@ if (!$main::vm2_no_global_links) {
 
 # Refresh left frame if requested by redirector
 if ($in{'refresh'} && defined(&theme_post_save_server)) {
-	$server = &get_managed_server_by("id", $in{'refresh'});
-	if ($server) {
-		&theme_post_save_server($server);
+	if ($in{'refresh'} eq 'all') {
+		# Whole left frame
+		&theme_post_save_server($allservers[0]);
+		}
+	else {
+		# Just one server
+		$server = &get_managed_server_by("id", $in{'refresh'});
+		if ($server) {
+			&theme_post_save_server($server);
+			}
 		}
 	}
 
