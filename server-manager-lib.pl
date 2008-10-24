@@ -8,6 +8,8 @@
 # XXX LVM disk support
 #	XXX need another disk in sentosa
 # XXX allow specification that a system is a Xen host when adding
+# XXX improve default view in history graph if few systems .. perhaps make
+#     default search all 'up and usable' ?
 
 do '../web-lib.pl';
 &init_config();

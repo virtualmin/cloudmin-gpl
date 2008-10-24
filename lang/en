@@ -14,8 +14,8 @@ index_run=Run Commands
 index_header=Global Options
 index_return=list of managed systems
 index_refresh=Refresh Status
-index_pos=$1 update
-index_poss=$1 updates 
+index_pos=<a href='$2'>$1 update</a>
+index_poss=<a href='$2'>$1 updates</a>
 index_update=Update Packages
 index_script=Update Scripts
 index_toomany=There are $1 managed systems, which is more than the configured display limit of $2. Use the form below to search them ..
@@ -2019,6 +2019,7 @@ history_stat_spamcount=Spam per minute history_stat_viruscount=Viruses per minut
 history_showing=Showing historic values for : $1
 history_none=No historic system statistics have been recorded for the selected systems yet.
 history_nomatch=Your search did not match any systems.
+history_nomatch2=You did not select any systems to display.
 history_showsel=Stats to show:
 history_ok=Show Selected
 history_pc=percent

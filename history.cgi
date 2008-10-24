@@ -50,7 +50,8 @@ print &ui_form_end();
 # Get the systems
 @servers = &apply_search_form(\%in, \@allservers);
 if (!@servers) {
-	&ui_print_endpage($text{'history_nomatch'});
+	&ui_print_endpage(keys(%in) ? $text{'history_nomatch'}
+				    : $text{'history_nomatch2'});
 	}
 &can_action_error(\@servers, "graph");
 

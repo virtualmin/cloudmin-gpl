@@ -187,7 +187,8 @@ if (@servers) {
 				# Has some updates
 				$posscount += $pos;
 				$posdesc = " - ".&text($pos > 1 ?
-					'index_poss' : 'index_pos', $pos);
+					'index_poss' : 'index_pos', $pos,
+					"edit_status.cgi?id=$s->{'id'}");
 				}
 			$shost = $s->{'short_host'};
 			if ($s->{'status'} eq 'create') {
