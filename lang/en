@@ -1699,6 +1699,8 @@ owners_name=Owner's login
 owners_real=Description
 owners_users=Managed systems
 owners_delete=Delete Selected Owners
+owners_disable=Disable Selected
+owners_enable=Enable Selected
 owners_none=No system owner accounts have been defined yet.
 owners_return=system owners
 

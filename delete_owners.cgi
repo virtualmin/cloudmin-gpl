@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Delete a bunch of system owners
+# Delete, disable or enable a bunch of system owners
 
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
@@ -11,7 +11,21 @@ require './server-manager-lib.pl';
 foreach $d (@d) {
 	$owner = &get_system_owner($d);
 	if ($owner) {
-		&delete_system_owner($owner);
+		if ($in{'disable'}) {
+			# Just lock password
+			$owner->{'pass'} = "!".$owner->{'pass'}
+				if ($owner->{'pass'} !~ /^!/);
+			&save_system_owner($owner, $owner);
+			}
+		elsif ($in{'enable'}) {
+			# Un-lock password
+			$owner->{'pass'} =~ s/^!//;
+			&save_system_owner($owner, $owner);
+			}
+		else {
+			# Delete him
+			&delete_system_owner($owner);
+			}
 		}
 	}
 &redirect("list_owners.cgi");

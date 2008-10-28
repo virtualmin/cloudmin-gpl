@@ -36,7 +36,9 @@ if (@owners) {
 		}
 	print &ui_columns_end();
 	print &ui_links_row(\@links);
-	print &ui_form_end([ [ undef, $text{'owners_delete'} ] ]);
+	print &ui_form_end([ [ undef, $text{'owners_delete'} ],
+		             [ 'disable', $text{'owners_disable'} ],
+		             [ 'enable', $text{'owners_enable'} ] ]);
 	}
 else {
 	print "<b>$text{'owners_none'}</b><p>\n";
