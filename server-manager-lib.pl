@@ -10,6 +10,10 @@
 # XXX allow specification that a system is a Xen host when adding
 # XXX improve default view in history graph if few systems .. perhaps make
 #     default search all 'up and usable' ?
+# XXX windows on EC2
+#	XXX detect that it is windows, turn off SSH
+#	XXX RDP access
+#	XXX http://developer.amazonwebservices.com/connect/entry.jspa?externalID=1767
 
 do '../web-lib.pl';
 &init_config();
