@@ -168,6 +168,69 @@ if (defined(&$efunc)) {
 	print &ui_hidden_table_end("extra");
 	}
 
+# Show status form, if any info
+if (keys %$info) {
+	@down = grep { !$_->{'status'} } @{$info->{'startstop'}};
+	print &ui_hidden_table_start($text{'edit_cheader'}, "width=100%", 2,
+				     "status", @down ? 1 : 0, \@tds);
+
+	# CPU load and running processes
+	if ($info->{'load'}) {
+		@l = @{$info->{'load'}};
+		print &ui_table_row($text{'edit_iload'},
+			&text($info->{'procs'} ? 'edit_iloadlevel'
+					       : 'edit_iloadlevel2',
+			      @l[0..2], $info->{'procs'}));
+		}
+
+	# Memory used
+	if ($info->{'mem'}) {
+		@m = @{$info->{'mem'}};
+		if ($m[0]) {
+			# Real memory
+			print &ui_table_row($text{'edit_imem'},
+				&bar_chart($m[0], $m[0]-$m[1], 1)." ".
+				&text('edit_outof',
+				      &nice_size($m[0]*1024),
+				      &nice_size(($m[0]-$m[1])*1024)));
+			}
+		if ($m[2]) {
+			# Swap space
+			print &ui_table_row($text{'edit_iswap'},
+				&bar_chart($m[2], $m[2]-$m[3], 1)." ".
+				&text('edit_outof',
+				      &nice_size($m[2]*1024),
+				      &nice_size(($m[2]-$m[3])*1024)));
+			}
+		}
+
+	# Disk used
+	if ($info->{'disk_total'}) {
+		print &ui_table_row($text{'edit_idisk'},
+			&bar_chart($info->{'disk_total'},
+			   $info->{'disk_total'}-$info->{'disk_free'}, 1)." ".
+			&text('edit_outof',
+			      &nice_size($info->{'disk_total'}),
+			      &nice_size($info->{'disk_total'}-
+					 $info->{'disk_free'})));
+		}
+
+	# Feature statuses
+	if ($info->{'startstop'}) {
+		@grid = ( );
+		foreach $ss (@{$info->{'startstop'}}) {
+			push(@grid, $ss->{'name'});
+			push(@grid, ($ss->{'status'} ?
+			    "<font color=#00aa00>$text{'edit_iup'}</font>" :
+			    "<font color=#ff0000>$text{'edit_idown'}</font>"));
+			}
+		print &ui_table_row($text{'edit_istatus'},
+				    &ui_grid_table(\@grid, 4, 75));
+		}
+
+	print &ui_hidden_table_end();
+	}
+
 # Show authentication form (if needed)
 if ($view) {
 	# Cannot edit authentication options in view mode
@@ -239,4 +302,23 @@ if (defined(&theme_select_server)) {
 	&theme_select_server($server);
 	}
 
+# bar_chart(total, used, blue-rest)
+# Returns HTML for a bar chart of a single value
+sub bar_chart
+{
+local ($total, $used, $blue) = @_;
+local $bar_width = 100;
+local $rv = "<div class='barchart'>";
+$rv .= sprintf "<img src=images/red.gif width=%s%% height=12>",
+  int($bar_width*$used/$total)+1;
+if ($blue) {
+  $rv .= sprintf "<img src=images/blue.gif width=%s%% height=12></div>",
+	    $bar_width - int($bar_width*$used/$total)-1;
+  }
+else {
+  $rv .= sprintf "<img src=images/white.gif width=%s%% height=12></div>",
+	    $bar_width - int($bar_width*$used/$total)-1;
+  }
+return $rv;
+}
 

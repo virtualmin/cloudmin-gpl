@@ -3934,10 +3934,6 @@ if (&can_action($server, "edit")) {
 		    'link' => $ed,
 		    'priority' => 1 });
 	if ($status eq 'virt') {
-		push(@rv, { 'id' => 'coll',
-			    'desc' => $text{'edit_link_coll'},
-			    'cat' => 'system',
-			    'link' => "edit_status.cgi?id=$server->{'id'}" });
 		push(@rv, { 'id' => 'doms',
 			    'desc' => $text{'edit_link_doms'},
 			    'cat' => 'system',
