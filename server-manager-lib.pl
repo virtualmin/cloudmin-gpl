@@ -3933,6 +3933,13 @@ if (&can_action($server, "edit")) {
 		    'cat' => '',
 		    'link' => $ed,
 		    'priority' => 1 });
+	if ($server->{'virtualmin_poss'}) {
+		push(@rv, { 'id' => 'update',
+			    'desc' => &text('edit_link_update',
+					    $server->{'virtualmin_poss'}),
+			    'cat' => '',
+			    'link' => "edit_update.cgi?id=$server->{'id'}" });
+		}
 	if ($status eq 'virt') {
 		push(@rv, { 'id' => 'doms',
 			    'desc' => $text{'edit_link_doms'},

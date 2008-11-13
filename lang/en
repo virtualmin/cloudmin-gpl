@@ -689,6 +689,7 @@ edit_lnotify=Notification sent at $1
 edit_link_edit=Edit System
 edit_link_coll=Detailed Status
 edit_link_doms=Virtualmin Domains
+edit_link_update=Package Updates ($1)
 edit_link_ifaces=Network Interfaces
 edit_link_limits=Resource Limits
 edit_link_view=System Details
@@ -708,6 +709,12 @@ update_itotal=.. total packages installed : $1
 update_ipkg=Updating $1 to version $2 ..
 update_idone=.. update complete.
 update_ipkgerr.. update failed : $1
+update_ok=Update Selected Packages
+update_name=Package name
+update_version=New version
+update_desc=Update description
+update_msg=The following $1 packages are available for update on the managed system ..
+update_enone=No packages selected to update
 
 save_err=Failed to save system details
 save_ehost=The new hostname does not resolve to the same IP address as the old one
