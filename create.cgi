@@ -177,7 +177,7 @@ if (defined(&$dfunc)) {
 	&$dfunc($server, $serial, $key);
 	}
 
-if (!$no_ssh) {
+if (!$no_ssh && !$server->{'no_sshlogin'}) {
 	# Wait at most 120 seconds for SSH to come up (indicating that booting
 	# is done), if need be
 	$bfunc = "type_".$in{'type'}."_needs_boot";

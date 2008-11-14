@@ -11,8 +11,8 @@
 # XXX improve default view in history graph if few systems .. perhaps make
 #     default search all 'up and usable' ?
 # XXX windows on EC2
-#	XXX detect that it is windows, turn off SSH
 #	XXX RDP access
+#	XXX RDP applet? If not, show password
 #	XXX http://developer.amazonwebservices.com/connect/entry.jspa?externalID=1767
 
 do '../web-lib.pl';
