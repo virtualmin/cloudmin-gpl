@@ -13,7 +13,12 @@
 # XXX windows on EC2
 #	XXX RDP access
 #	XXX RDP applet? If not, show password
-#	XXX http://developer.amazonwebservices.com/connect/entry.jspa?externalID=1767
+#	XXX check in applet
+#	XXX grant clipboard access
+#	XXX tiny popup window???
+#	XXX better way of detecting windows .. os field?
+#	XXX link to other modules
+#	XXX CHANGELOG
 
 do '../web-lib.pl';
 &init_config();

@@ -636,6 +636,7 @@ edit_ec2account=Owned by EC2 account
 edit_ec2image=Started from EC2 image
 edit_ec2sgroup=EC2 security groups
 edit_ec2azone=EC2 availability zone
+edit_ec2pass=Windows password
 edit_ec2newami=Create EC2 Image
 edit_ec2address=Assign EC2 Address
 edit_ec2attach=Attached EC2 Volumes
