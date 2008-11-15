@@ -2112,3 +2112,10 @@ plugins_settings_links=Global setting
 plugins_noacts=None
 plugins_err=Failed to save plugins
 plugins_echeck=$1 cannot be enabled : $2
+
+rdp_title=RPD Graphical Login
+rdp_nolisten=No RDP server is running on $2 port $1. Typically on Windows EC2 instances accept RDP connections
+rdp_timeout=The RDP server running on $2 port $1 is not accessible. This may be due to it being blocked by the EC2 firewall.
+rdp_firewall=You can open up the RDP port on the <a href='$1'>EC2 Security Groups</a> page.
+rdp_eec2=RDP access is only available for EC2 instances
+rdp_desc=This page should open a window that will log you into the Windows system <tt>$1</tt> on port $2, using password <tt>$3</tt>. If this fails, the regular Windows Remote Desktop or the <tt>rdesktop</tt> command on Linux can be used instead.

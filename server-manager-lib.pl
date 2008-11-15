@@ -10,15 +10,6 @@
 # XXX allow specification that a system is a Xen host when adding
 # XXX improve default view in history graph if few systems .. perhaps make
 #     default search all 'up and usable' ?
-# XXX windows on EC2
-#	XXX RDP access
-#	XXX RDP applet? If not, show password
-#	XXX check in applet
-#	XXX grant clipboard access
-#	XXX tiny popup window???
-#	XXX better way of detecting windows .. os field?
-#	XXX link to other modules
-#	XXX CHANGELOG
 
 do '../web-lib.pl';
 &init_config();
