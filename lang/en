@@ -1816,6 +1816,7 @@ login_essh1=Your SSH server does not accept version 1 of the SSH protocol, which
 login_sshlink=However, you can enable version 1 in the <a href='$1'>SSH Server</a> module.
 login_sshcmd=To connect to the console using a command-line SSH client, run a command like :
 login_sshpasswd=and login with the password $1
+login_desc=The console can also be accessed by SSHing to <tt>$1</tt> port $2 and logging in as <tt>$3</tt> with password <tt>$4</tt> .
 
 setup_edomain=Missing or invalid domain name - only letters, numbers and the dot, dash and underscore characters are allowed
 setup_edomain2=Domain names cannot start or end with a .

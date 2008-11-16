@@ -47,4 +47,8 @@ $text{'login_nojava'}
 EOF
 	}
 
+# Show message about how to do direct login
+print &text('login_desc', $ENV{'SERVER_NAME'}, $port, $server->{'login_user'},
+			  $server->{'login_pass'}),"<p>\n";
+
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
