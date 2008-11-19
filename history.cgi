@@ -8,6 +8,10 @@ if (!%in) {
 	# Use default search, if any
 	&read_file($default_search_file, \%in);
 	}
+if (!%in) {
+	# Finally fall back to 'up and usable'
+	%in = ( 'sok' => 1, 'ssearch' => 'up' );
+	}
 
 @history_periods = (
 	[ 'year', 365*24*60*60 ],

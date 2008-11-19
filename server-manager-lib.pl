@@ -8,8 +8,6 @@
 # XXX LVM disk support
 #	XXX need another disk in sentosa
 # XXX allow specification that a system is a Xen host when adding
-# XXX improve default view in history graph if few systems .. perhaps make
-#     default search all 'up and usable' ?
 # XXX status for 'xen running but not pingable'
 #	XXX noping for real systems?
 
