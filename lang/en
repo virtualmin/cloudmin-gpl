@@ -1089,6 +1089,9 @@ xen_typedesc=Xen
 xen_createlink=Create Xen instance
 xen_addlink=Add Xen instance
 xen_typeshort=Xen
+xen_estartxm=Xen instance is not running after $1 seconds
+xen_estartping=Xen instance was started, but could not be pinged after $1 seconds
+xen_estartssh=Xen instance was started, but could not be accessed via SSH after $1 seconds
 
 xen_create=Register Xen Host
 xen_edit=Edit Xen Host
