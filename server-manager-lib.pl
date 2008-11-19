@@ -11,6 +11,7 @@
 # XXX improve default view in history graph if few systems .. perhaps make
 #     default search all 'up and usable' ?
 # XXX status for 'xen running but not pingable'
+#	XXX noping for real systems?
 
 do '../web-lib.pl';
 &init_config();
@@ -99,6 +100,7 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 
 @server_statuses = (
 	[ 'down' => 'ff0000' ],
+	[ 'noping' => 'ff1100' ],
 	[ 'alive' => '00ff00' ],
 	[ 'paused' => 'aa0000' ],
 	[ 'nossh' => 'ff220000' ],
@@ -1383,7 +1385,9 @@ else {
 	&lock_file($file);
 	}
 
-# Do a quick ping, if this is a non-virtual system
+# Do a quick ping, if this is a non-virtual system.
+# Don't ping if the virtual system type (ie Xen) has it's own function to 
+# detect status though, unless SSH logins are disabled
 $server->{'statustime'} = time();
 local $clfunc = "type_".$server->{'manager'}."_check_login";
 local $ping;
@@ -1393,10 +1397,20 @@ if (!defined(&$clfunc) || $server->{'ssh_nologin'}) {
 
 # If SSH logins are disabled, go no further
 if ($server->{'ssh_nologin'}) {
-	$server->{'status'} = $ping ? "alive" : "down";
-	$server->{'status_msg'} = $ping ? undef : "Ping failed";
-	&save_server_collected($server, undef);
-	goto DONECHECK;
+	local $status;
+	if (defined(&$clfunc)) {
+		# Call the Xen status function, which can provide more info
+		# on why it is down
+		($status) = &$clfunc($server);
+		}
+	if (!$status) {
+		# Only if the Xen status function didn't report any further
+		# error do we use the result of the ping
+		$server->{'status'} = $ping ? "alive" : "noping";
+		$server->{'status_msg'} = $ping ? undef : "Ping failed";
+		&save_server_collected($server, undef);
+		goto DONECHECK;
+		}
 	}
 
 # Check if we can login
@@ -3969,7 +3983,7 @@ elsif (&can_action($server, "view")) {
 	}
 
 if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
-    $status eq 'paused') {
+    $status eq 'paused' || $status eq 'noping') {
 	# Actions are limited when system is down
 	local $sfunc = "type_".$t."_no_startup";
 	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
@@ -3991,7 +4005,8 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
 			    'desc' => $text{'edit_startup'},
 			    'cat' => 'power' });
 		}
-	if (($status eq 'nossh' || $status eq 'paused') && !$noshut &&
+	if (($status eq 'nossh' || $status eq 'paused' ||
+	     $status eq 'noping') && !$noshut &&
 	    &can_action($server, "shutdown")) {
 		push(@rv, { 'id' => 'shutdown',
 			    'desc' => $text{'edit_shutdown'},
@@ -5158,7 +5173,7 @@ elsif ($in->{'sok'}) {
 		@sts = ( 'novirt', 'virt' );
 		}
 	elsif ($in->{'ssearch'} eq 'bad') {
-		@sts = ( 'down', 'nohost', 'nossh', 'nosshlogin',
+		@sts = ( 'down', 'noping', 'nohost', 'nossh', 'nosshlogin',
 			 'downwebmin', 'nowebminlogin' );
 		}
 	else {
