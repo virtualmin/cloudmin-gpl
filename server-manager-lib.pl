@@ -2002,8 +2002,8 @@ if ($server->{'id'} == 0) {
 		}
 	&clean_environment();
 	$out = &backquote_logged("$cmd 2>&1 </dev/null");
-	&reset_environment();
 	$ex = $?;
+	&reset_environment();
 	}
 else {
 	# Remote .. make HTTP call to Webmin
@@ -3629,6 +3629,10 @@ foreach my $sd (@sorted) {
 	if ($delete != 1) {
 		&execute_command_on_server($server,
 			"rm -f ".quotemeta($desttemp));
+		}
+	if (!$err && $out =~ /Restore\s+failed/i) {
+		# Catch case where restore-domain didn't exit with non-zero
+		$err = $out;
 		}
 	if ($err) {
 		&$block_print($out);
