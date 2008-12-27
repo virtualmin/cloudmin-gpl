@@ -38,6 +38,9 @@ while(@ARGV > 0) {
 	if ($a eq "--regenerate") {
 		$regen = 1;
 		}
+	elsif ($a eq "--serial") {
+		$serial = 1;
+		}
 	elsif ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
@@ -58,15 +61,27 @@ while(@ARGV > 0) {
 
 # Do the parallel refresh and print
 print "Refreshing status of ",scalar(@servers)," systems ..\n";
-$time = time();
-foreach $l (\@pservers, \@oservers) {
-	@rv = &parallel_server_function($l,
-		sub { &check_server_status($_[0], $regen, 0, $time);
-		      &save_managed_server($_[0]);
-		      return $_[0]->{'status'}; });
-	for($i=0; $i<@rv; $i++) {
-		$desc = $text{'status_'.$rv[$i]->[0]};
-		print "$l->[$i]->{'host'}: $rv[$i]->[0] ($desc)\n";
+if ($serial) {
+	# In one process
+	foreach $s (@pservers, @oservers) {
+		&check_server_status($s, $regen, 0, $time);
+		&save_managed_server($s);
+		$desc = $text{'status_'.$s->{'status'}};
+		print "$s->{'host'}: $s->{'status'} ($desc)\n";
+		}
+	}
+else {
+	# In separate processes
+	$time = time();
+	foreach $l (\@pservers, \@oservers) {
+		@rv = &parallel_server_function($l,
+			sub { &check_server_status($_[0], $regen, 0, $time);
+			      &save_managed_server($_[0]);
+			      return $_[0]->{'status'}; });
+		for($i=0; $i<@rv; $i++) {
+			$desc = $text{'status_'.$rv[$i]->[0]};
+			print "$l->[$i]->{'host'}: $rv[$i]->[0] ($desc)\n";
+			}
 		}
 	}
 
@@ -81,6 +96,7 @@ local $types = join("|", @server_management_types);
 print "                          [--type $types]*\n";
 print "                          [--os oscode]*\n";
 print "                          [--regenerate]*\n";
+print "                          [--serial]\n";
 exit(1);
 }
 
