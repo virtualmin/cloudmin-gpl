@@ -1459,10 +1459,14 @@ elsif ($status) {
 	goto DONECHECK;
 	}
 
-# Fix up Webmin port and SSL flag to reflect reality
+# Fix up Webmin port and SSL flag to reflect reality, if we don't know them
 if ($webminport && $server->{'id'} != 0) {
-	$server->{'port'} = $webminport;
-	$server->{'ssl'} = $webminssl;
+	if ($server->{'port'} eq '') {
+		$server->{'port'} = $webminport;
+		}
+	if ($server->{'ssl'} eq '') {
+		$server->{'ssl'} = $webminssl;
+		}
 	if (!$server->{'user'}) {
 		# SSH says we have Webmin, but we don't know the login! Most
 		# likely it was installed behind our back, so assume login is
@@ -5220,8 +5224,8 @@ print &ui_table_row($text{'add_webmin'},
 						       : "root", 20),
 			  &ui_textbox("wpass", $server ? $server->{'pass'}
 						       : "", 20)) ] ])."<br>".
-	&ui_checkbox("ssl", $server ? $server->{'ssl'} : 1,
-		     $text{'add_ssl'}, 1));
+	&ui_checkbox("ssl", 1, $text{'add_ssl'},
+		     $server ? $server->{'ssl'} : 1));
 
 # Webmin port
 print &ui_table_row($text{'add_port'},
@@ -5257,7 +5261,7 @@ else {
 	delete($server->{'pass'});
 	$server->{'ssh_pass_same'} = 0;
 	}
-$server->{'ssl'} = $in->{'ssl'};
+$server->{'ssl'} = $in->{'ssl'} ? 1 : 0;
 $in->{'port'} =~ /^\d+$/ || return $text{'add_eport'};
 $server->{'port'} = $in->{'port'};
 return undef;

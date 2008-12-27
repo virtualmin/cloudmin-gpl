@@ -415,7 +415,6 @@ else {
 				}
 			}
 		}
-
 	# Re-check status if login mode has changed
 	if ($oldserver->{'ssh_pass'} ne $server->{'ssh_pass'} ||
 	    $oldserver->{'ssh_user'} ne $server->{'ssh_user'} ||
