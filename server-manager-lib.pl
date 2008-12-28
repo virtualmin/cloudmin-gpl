@@ -1342,10 +1342,10 @@ return $type;
 sub ping_server_host
 {
 local ($host) = @_;
-local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c 1 -t 1" : "ping";
+local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c 1" : "ping";
 local ($out, $timed_out) = &backquote_with_timeout(
 	$pingcmd." ".$host." 2>&1", $ping_host_timeout, 1);
-return !$timed_out && !$?;
+return !$timed_out && !$? ? 1 : 0;
 }
 
 # check_server_status(&server, [re-generate-collected], [skip-info], [time])
@@ -1391,6 +1391,7 @@ local $clfunc = "type_".$server->{'manager'}."_check_login";
 local $ping;
 if (!defined(&$clfunc) || $server->{'ssh_nologin'}) {
 	$ping = &ping_server_host($server->{'host'});
+	print STDERR "ping=$ping\n";
 	}
 
 # If SSH logins are disabled, go no further
