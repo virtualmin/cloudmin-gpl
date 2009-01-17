@@ -990,6 +990,7 @@ dmass_esame=Domain $1 is already hosted on $2
 dmass_on=$1 on $2
 dmass_mdelete=Delete from source systems?
 dmass_mforce=Move even if features are missing?
+dmass_mrealloc=Re-allocate private IP addresses?
 dmass_mdirect=Transfer method
 dmass_mdirect1=Directly from source to destination
 dmass_mdirect0=Via VM2 master

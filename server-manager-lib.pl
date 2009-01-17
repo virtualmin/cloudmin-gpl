@@ -10,6 +10,8 @@
 # XXX allow specification that a system is a Xen host when adding
 # XXX status for 'xen running but not pingable'
 #	XXX noping for real systems?
+# XXX ec2 regions
+# 	XXX  FS#4950
 
 do '../web-lib.pl';
 &init_config();
@@ -1391,7 +1393,6 @@ local $clfunc = "type_".$server->{'manager'}."_check_login";
 local $ping;
 if (!defined(&$clfunc) || $server->{'ssh_nologin'}) {
 	$ping = &ping_server_host($server->{'host'});
-	print STDERR "ping=$ping\n";
 	}
 
 # If SSH logins are disabled, go no further
@@ -3263,12 +3264,12 @@ foreach my $key (grep { $_->{'id'} ne $server->{'key'} && $_->{'addnew'} }
 return &put_file_to_server($server, $temp, $authkeys);
 }
 
-# check_domain_move(&serverdoms, &destserver, delete, direct)
+# check_domain_move(&serverdoms, &destserver, delete, direct, re-allocate-ip)
 # Checks if the given set of virtual servers can be moved together, and returns
 # an error message if not.
 sub check_domain_move
 {
-local ($serverdoms, $dest, $delete, $direct) = @_;
+local ($serverdoms, $dest, $delete, $direct, $realloc) = @_;
 local @destdoms = &get_server_domains($dest);
 local %sources;
 
@@ -3322,8 +3323,8 @@ foreach my $sd (@$serverdoms) {
 		}
 
 	# If the domain has a private IP, it must be deleted from
-	# the source system to work
-	if ($d->{'virt'} && !$d->{'virtalready'} && $delete != 1) {
+	# the source system to work, unless re-allocating
+	if ($d->{'virt'} && !$d->{'virtalready'} && $delete != 1 && !$realloc) {
 		return &text('dmass_evirtdelete', $d->{'dom'}, $d->{'ip'});
 		}
 	}
@@ -3374,12 +3375,13 @@ foreach my $sd (@$serverdoms) {
 return @rv;
 }
 
-# move_domains_to_server(&serverdoms, &destserver, delete-source, direct-copy)
+# move_domains_to_server(&serverdoms, &destserver, delete-source, direct-copy,
+# 		  	 re-allocate-ip)
 # Transfers domains from source systems to a single destination. Calls 
 # $first_print and friends to display progress.
 sub move_domains_to_server
 {
-local ($serverdoms, $dest, $delete, $direct) = @_;
+local ($serverdoms, $dest, $delete, $direct, $realloc) = @_;
 local (@refresh, %refreshed);
 $direct = 0 if ($dest->{'id'} == 0);	# Transferring to master
 
@@ -3629,6 +3631,9 @@ foreach my $sd (@sorted) {
 			[ "option", "ssl fixip 1" ],
 			[ "option", "mail mailfiles 1" ],
 			[ "domain", $d->{'dom'} ] );
+	if ($realloc && $d->{'virt'}) {
+		push(@args, [ "allocate-ip" ]);
+		}
 	local ($err, $out) = &call_virtualmin_api($dest,
 			"restore-domain", \@args);
 	if ($delete != 1) {

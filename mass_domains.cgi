@@ -189,6 +189,10 @@ elsif ($in{'move'}) {
 		print &ui_table_row($text{'dmass_mforce'},
 			&ui_yesno_radio("force", 0));
 
+		# Re-allocate private IP?
+		print &ui_table_row($text{'dmass_mrealloc'},
+			&ui_yesno_radio("realloc", 0));
+
 		# Direct transfer
 		print &ui_table_row($text{'dmass_mdirect'},
 			&ui_radio("direct", 1,
@@ -211,7 +215,9 @@ elsif ($in{'move'}) {
 
 		# Make sure the move is valid (cannot move child without parent)
 		$err = &check_domain_move(\@serverdoms, $server,
-					  $in{'deletesource'}, $in{'direct'});
+					  $in{'deletesource'},
+					  $in{'direct'},
+					  $in{'realloc'});
 		&error(&text('dmass_emove', $err)) if ($err);
 
 		# Check for missing features
@@ -235,7 +241,8 @@ elsif ($in{'move'}) {
 			# Do each one in series, by backing up and restoring
 			&move_domains_to_server(\@serverdoms, $server,
 						$in{'deletesource'},
-						$in{'direct'});
+						$in{'direct'},
+						$in{'realloc'});
 			}
 		}
 	}

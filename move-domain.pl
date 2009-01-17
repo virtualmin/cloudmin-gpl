@@ -83,6 +83,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--direct") {
 		$direct = 1;
 		}
+	elsif ($a eq "--allocate-ip") {
+		$realloc = 1;
+		}
 	elsif ($a eq "--include-sub-servers") {
 		$incsubs = 1;
 		}
@@ -131,7 +134,8 @@ if ($incsubs) {
 	}
 
 # Validate move
-$err = &check_domain_move(\@serverdoms, $dest, $deletesource, $direct);
+$err = &check_domain_move(\@serverdoms, $dest,
+			  $deletesource, $direct, $realloc);
 &usage("Selected domains cannot be moved : $err") if ($err);
 
 # Check for missing features
@@ -153,7 +157,8 @@ if (!$force) {
 
 # Do it!
 &set_all_text_print();
-&move_domains_to_server(\@serverdoms, $dest, $deletesource, $direct);
+&move_domains_to_server(\@serverdoms, $dest,
+			$deletesource, $direct, $realloc);
 
 sub usage
 {
