@@ -7,9 +7,6 @@
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX LVM disk support
 #	XXX need another disk in sentosa
-# XXX allow specification that a system is a Xen host when adding
-# XXX status for 'xen running but not pingable'
-#	XXX noping for real systems?
 # XXX ec2 regions
 # 	XXX  FS#4950
 
@@ -1390,10 +1387,7 @@ else {
 # detect status though, unless SSH logins are disabled
 $server->{'statustime'} = time();
 local $clfunc = "type_".$server->{'manager'}."_check_login";
-local $ping;
-if (!defined(&$clfunc) || $server->{'ssh_nologin'}) {
-	$ping = &ping_server_host($server->{'host'});
-	}
+local $ping = &ping_server_host($server->{'host'});
 
 # If SSH logins are disabled, go no further
 if ($server->{'ssh_nologin'}) {
@@ -1450,6 +1444,13 @@ elsif ($status == 6) {
 elsif ($status && !$ping && !defined(&$clfunc)) {
 	# Could not SSH or ping, so assume totally down (for real systems)
 	$server->{'status'} = 'down';
+	$server->{'status_msg'} = $err;
+	goto DONECHECK;
+	}
+elsif ($status && !$ping) {
+	# Could not SSH or ping, but this is a virtual system which is
+	# supposedly up.
+	$server->{'status'} = 'noping';
 	$server->{'status_msg'} = $err;
 	goto DONECHECK;
 	}
