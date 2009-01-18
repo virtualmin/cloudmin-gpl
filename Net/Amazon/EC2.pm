@@ -99,7 +99,7 @@ sub _init {
 	my $ts = time2isoz();
 
 	$self->{signature_version} = 1;
-	$self->{version} = '2008-05-05';
+	$self->{version} = '2008-12-01';
 	$self->{base_url} = 'http://ec2.amazonaws.com';
 	$self->{AWSAccessKeyId} = $args{AWSAccessKeyId};
 	$self->{SecretAccessKey} = $args{SecretAccessKey};
@@ -1301,6 +1301,29 @@ sub describe_availability_zones {
 	}
 	else {
 		return $xml->{availabilityZoneInfo}{item};
+	}
+}
+
+=head2 describe_regions(%params)
+
+This method pulls a list of EC2 regions.
+
+=cut
+
+sub describe_regions {
+	my $self = shift;
+        my %args;
+	
+	my $xml = $self->_sign(Action  => 'DescribeRegions', %args);
+	
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{regionInfo}{item};
 	}
 }
 

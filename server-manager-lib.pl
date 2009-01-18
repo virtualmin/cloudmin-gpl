@@ -8,7 +8,9 @@
 # XXX LVM disk support
 #	XXX need another disk in sentosa
 # XXX ec2 regions
-# 	XXX  FS#4950
+# 	XXX FS#4950
+#	XXX All 'global' commands must support all regions
+#	XXX What are aki- and ari- images? Skip them ..
 
 do '../web-lib.pl';
 &init_config();
