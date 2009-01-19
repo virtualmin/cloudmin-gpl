@@ -31,8 +31,10 @@ elsif (!@$images) {
 else {
 	print &ui_columns_start([ $text{'achooser_id'},
 				  $text{'achooser_path'},
+				  $text{'achooser_region'},
 				  $text{'achooser_owner'} ], 100);
 	foreach my $i (@$images) {
+		next if ($i->{'imageType'} ne 'ami');
 		local $path = $i->{'imageLocation'};
 		$path =~ s/\.manifest\.xml$//;
 		$path =~ s/\.img$//;
@@ -40,6 +42,7 @@ else {
 		    "<a href='' onClick='select(\"$i->{'imageId'}\")'>".
 		    "$i->{'imageId'}</a>",
 		    $path,
+		    $i->{'region'}->{'regionName'},
 		    $i->{'imageOwnerId'},
 		    ]);
 		}

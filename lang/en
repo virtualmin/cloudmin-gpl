@@ -398,6 +398,7 @@ ec2_eimage2=The image ID is not available to the selected account
 ec2_esgroup=One of the selected security groups does not belong to the selected EC2 account
 ec2_enosgroup=No security groups were selected
 ec2_eapiurl=Missing or invalid EC2 API base URL
+ec2_eazone=Selected availability zone does not exist!
 ec2_keygen=Generate new EC2 key
 ec2_keygen2=Generate new EC2 key under account $1
 ec2_ekeygen=Failed to generate EC2 key : $1
@@ -511,6 +512,7 @@ achooser_enone=The selected account does not have access to any images!
 achooser_id=Image ID
 achooser_path=Path in S3
 achooser_owner=Owner ID
+achooser_region=Region
 
 domains_title=Virtualmin Domains
 domains_find=Find domains containing:
