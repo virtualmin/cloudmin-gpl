@@ -22,8 +22,28 @@ top.close();
 </script>
 EOF
 
+# Show search form
+print &ui_form_start("image_chooser.cgi");
+print &ui_hidden("account", $in{'account'});
+print "<b>$text{'ichooser_search'}</b>\n";
+print &ui_textbox("search", $in{'search'}, 30);
+print &ui_submit($text{'ichooser_ok'});
+print &ui_form_end();
+
+# Apply search
+$s = $in{'search'};
+if (ref($images) && $s) {
+	$images = [ grep { $_->{'imageId'} =~ /\Q$s\E/i ||
+			   $_->{'imageLocation'} =~ /\Q$s\E/i ||
+			   $_->{'imageOwnerId'} =~ /\Q$s\E/i } @$images ];
+	}
+
 if (!ref($images)) {
 	print "<b>",&text('ichooser_elogin', $images),"</b><p>\n";
+	}
+elsif (!@$images && $s) {
+	print "<b>",&text('achooser_enone2',
+			  "<i>".&html_escape($s)."</i>"),"</b><p>\n";
 	}
 elsif (!@$images) {
 	print "<b>",$text{'achooser_enone'},"</b><p>\n";
@@ -31,7 +51,6 @@ elsif (!@$images) {
 else {
 	print &ui_columns_start([ $text{'achooser_id'},
 				  $text{'achooser_path'},
-				  $text{'achooser_region'},
 				  $text{'achooser_owner'} ], 100);
 	foreach my $i (@$images) {
 		next if ($i->{'imageType'} ne 'ami');
@@ -42,7 +61,6 @@ else {
 		    "<a href='' onClick='select(\"$i->{'imageId'}\")'>".
 		    "$i->{'imageId'}</a>",
 		    $path,
-		    $i->{'region'}->{'regionName'},
 		    $i->{'imageOwnerId'},
 		    ]);
 		}

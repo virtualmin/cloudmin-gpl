@@ -507,9 +507,12 @@ ichooser_ami=Image ID
 ichooser_state=State
 ichooser_unuse=<font color=#ff0000>Managed host $1</font>
 ichooser_free=Not yet managed
+ichooser_search=Find images matching:
+ichooser_ok=Search
 
 achooser_title=Select EC2 Machine Image
 achooser_enone=The selected account does not have access to any images!
+achooser_enone2=No images matched your search for $1.
 achooser_id=Image ID
 achooser_path=Path in S3
 achooser_owner=Owner ID
