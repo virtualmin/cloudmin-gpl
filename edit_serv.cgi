@@ -216,7 +216,7 @@ if (keys %$info) {
 		}
 
 	# Feature statuses
-	if ($info->{'startstop'}) {
+	if ($info->{'startstop'} && @{$info->{'startstop'}}) {
 		@grid = ( );
 		foreach $ss (@{$info->{'startstop'}}) {
 			push(@grid, $ss->{'name'});

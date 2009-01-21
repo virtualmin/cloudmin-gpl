@@ -7,10 +7,6 @@
 #	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
 # XXX LVM disk support
 #	XXX need another disk in sentosa
-# XXX ec2 regions
-# 	XXX FS#4950
-#	XXX All 'global' commands must support all regions
-#	XXX keys are region-specific!?
 
 do '../web-lib.pl';
 &init_config();
@@ -1674,7 +1670,7 @@ if (!$got_memory) {
 	if (!$ex && !$err) {
 		local @mem;
 		if ($out =~ /Mem:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/i) {
-			$mem[0] = $2;
+			$mem[0] = $1;
 			$mem[1] = $3 + $5 + $6;
 			}
 		if ($out =~ /Swap:\s+(\d+)\s+(\d+)\s+(\d+)/i) {

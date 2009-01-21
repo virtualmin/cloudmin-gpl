@@ -371,6 +371,7 @@ ec2_edit=Edit EC2 Account
 ec2_header=Amazon EC2 account details
 ec2_desc=Account description
 ec2_account=Account ID
+ec2_region=EC2 region
 ec2_cert=X509 certificate
 ec2_key=X509 private key
 ec2_donthave=Not set
