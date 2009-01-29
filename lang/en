@@ -749,6 +749,7 @@ save_starttitle=Start Up System
 save_starting=Starting up $1 ..
 save_startfailed=.. failed : $1
 save_startdone=.. system has been successfully started up.
+save_startmaybe=.. started, but a problem was detected : $1
 save_virttitle=Installing Virtualmin
 save_virtstart=Starting installation process ..
 save_virterr=.. failed : $1

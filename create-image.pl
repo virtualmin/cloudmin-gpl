@@ -195,8 +195,8 @@ if (!&$ifunc($server, $image, $temp)) {
 
 if ($shutdown) {
 	&$first_print("Starting up system ..");
-	$err = &startup_server($server);
-	if ($err) {
+	($ok, $err) = &startup_server($server);
+	if (!$ok) {
 		&$second_print(".. startup failed : $err");
 		exit(4);
 		}

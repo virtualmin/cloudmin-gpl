@@ -372,7 +372,7 @@ elsif ($in{'startup'}) {
 	print &text('mass_starting', scalar(@servers)),"<br>\n";
 	foreach my $sl (\@pservers, \@oservers) {
 		&parallel_server_function($sl,
-			sub { $err = &startup_server($_[0]);
+			sub { ($ok, $err) = &startup_server($_[0]);
 			      &check_server_status($_[0], 0, 1);
 			      &save_managed_server($_[0]) });
 		}

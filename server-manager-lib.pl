@@ -2155,17 +2155,18 @@ else {
 }
 
 # startup_server(&server)
-# Start up some virtual system by calling it's type-specific function. Returns
-# undef on success, or an error message on failure.
+# Start up some virtual system by calling it's type-specific function.
+# Returns a status code (0=failed, 1=OK, 2=No ping, 3=No SSH) and an error
+# message.
 sub startup_server
 {
 local ($server) = @_;
 local $sfunc = "type_".$server->{'manager'}."_startup";
-local $err = &$sfunc($server);
-return $err if ($err);
+local ($ok, $err) = &$sfunc($server);
+return ($ok, $err) if (!$ok);
 
 # If the server has Webmin, wait for it to come up
-if ($server->{'user'}) {
+if ($server->{'user'} && $ok != 2) {
 	local $wtries = 0;
 	while($wtries++ < 60) {
 		sleep(1);
@@ -2178,7 +2179,7 @@ if ($server->{'user'}) {
 			}
 		}
 	}
-return undef;
+return (1, undef);
 }
 
 sub server_in

@@ -46,15 +46,20 @@ elsif ($in{'startup'}) {
 	&ui_print_header(&server_in($server), $text{'save_starttitle'}, "");
 	print &text('save_starting',
 		    "<tt>$server->{'host'}</tt>"),"<br>\n";
-	$err = &startup_server($server);
-	if ($err) {
+	($ok, $err) = &startup_server($server);
+	if (!$ok) {
 		print &text('save_startfailed', $err),"<p>\n";
 		&save_managed_server($server);
 		}
 	else {
 		&check_server_status($server, 0, 1);
 		&save_managed_server($server);
-		print $text{'save_startdone'},"<p>\n";
+		if ($ok == 1) {
+			print $text{'save_startdone'},"<p>\n";
+			}
+		else {
+			print &text('save_startmaybe', $err),"<p>\n";
+			}
 		if (defined(&theme_post_save_server)) {
 			&theme_post_save_server($server);
 			}
@@ -86,8 +91,8 @@ elsif ($in{'reboot'}) {
 
 			print &text('save_starting',
 				    "<tt>$server->{'host'}</tt>"),"<br>\n";
-			$err = &startup_server($server);
-			if ($err) {
+			($ok, $err) = &startup_server($server);
+			if (!$ok) {
 				print &text('save_startfailed', $err),"<p>\n";
 				}
 			else {

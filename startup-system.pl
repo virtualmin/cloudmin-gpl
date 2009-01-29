@@ -61,14 +61,19 @@ foreach $s (@servers) {
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
 	print "Starting up $tdesc system $s->{'host'} ..\n";
-	$err = &startup_server($s);
-	if ($err) {
+	($ok, $err) = &startup_server($s);
+	if (!$ok) {
 		$err = &html_tags_to_text($err);
 		print ".. startup failed : $err\n\n";
 		}
 	else {
 		&check_server_status($s);
-		print ".. startup successfull\n\n";
+		if ($ok == 1) {
+			print ".. startup successfull\n\n";
+			}
+		else {
+			print ".. started, but a problem was detected : $err\n\n";
+			}
 		}
 	&check_server_status($s, 0, 1);
 	&save_managed_server($s);
