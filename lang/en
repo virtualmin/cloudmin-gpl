@@ -72,6 +72,7 @@ add_auth1=Using SSH key $1
 add_auth2=Do not attempt SSH login
 add_webmin=Webmin login mode
 add_webmin0=Webmin is not installed yet
+add_webmin0a=Do not attempt Webmin login
 add_webmin1=Login as <tt>root</tt> with same password as Unix
 add_webmin2=Login as $1 with password $2
 add_nokeys=&lt;No SSH keys have been defined yet&gt;

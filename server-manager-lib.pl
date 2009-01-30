@@ -1468,7 +1468,7 @@ if ($webminport && $server->{'id'} != 0) {
 	if ($server->{'ssl'} eq '') {
 		$server->{'ssl'} = $webminssl;
 		}
-	if (!$server->{'user'}) {
+	if (!$server->{'user'} && !$server->{'no_webmin_login'}) {
 		# SSH says we have Webmin, but we don't know the login! Most
 		# likely it was installed behind our back, so assume login is
 		# same as root.
@@ -1658,7 +1658,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 	}
 else {
 	# Webmin is not available
-	$server->{'status'} = $webminroot ? 'nowebminlogin' : 'nowebmin';
+	$server->{'status'} = $webminroot && !$server->{'no_webmin_login'} ?
+				'nowebminlogin' : 'nowebmin';
 	$server->{'status_msg'} = undef;
 	}
 
@@ -5217,13 +5218,16 @@ local ($server, $type) = @_;
 $type ||= $server->{'manager'} if ($server);
 local $sfunc = "type_".$type."_no_ssh";
 local $no_ssh = defined(&$sfunc) && &$sfunc();
+local $newserver = !$server || !$server->{'id'};
 
 # Webmin login
+print &ui_hidden("webmin_newserver", $newserver);
 print &ui_table_row($text{'add_webmin'},
 	&ui_radio("webmin_mode", !$server ? 0 :
 				 $server->{'ssh_pass_same'} ? 1 :
 				 $server->{'user'} ? 2 : 0,
-	      [ [ 0, $text{'add_webmin0'}."<br>" ],
+	      [ [ 0, ($newserver ? $text{'add_webmin0'}
+				 : $text{'add_webmin0a'})."<br>" ],
 		$no_ssh ? ( ) : ( [ 1, $text{'add_webmin1'}."<br>" ] ),
 		[ 2, &text('add_webmin2',
 			  &ui_textbox("wuser", $server ? $server->{'user'}
@@ -5252,6 +5256,7 @@ if ($in->{'webmin_mode'} == 1) {
 	$server->{'user'} = $server->{'ssh_user'};
 	$server->{'pass'} = $server->{'ssh_pass'};
 	$server->{'ssh_pass_same'} = 1;
+	$server->{'no_webmin_login'} = 0;
 	}
 elsif ($in->{'webmin_mode'} == 2) {
 	# Username and password given
@@ -5260,12 +5265,16 @@ elsif ($in->{'webmin_mode'} == 2) {
 	$in->{'wpass'} =~ /\S/ || return $text{'add_ewpass'};
 	$server->{'pass'} = $in->{'wpass'};
 	$server->{'ssh_pass_same'} = 0;
+	$server->{'no_webmin_login'} = 0;
 	}
 else {
 	# No Webmin
 	delete($server->{'user'});
 	delete($server->{'pass'});
 	$server->{'ssh_pass_same'} = 0;
+	if (!$in->{'webmin_newserver'}) {
+		$server->{'no_webmin_login'} = 1;
+		}
 	}
 $server->{'ssl'} = $in->{'ssl'} ? 1 : 0;
 $in->{'port'} =~ /^\d+$/ || return $text{'add_eport'};
