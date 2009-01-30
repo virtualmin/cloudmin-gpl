@@ -1656,10 +1656,14 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 
 	&save_server_collected($server, $info);
 	}
+elsif ($server->{'no_webmin_login'}) {
+	# Webmin login disabled
+	$server->{'status'} = 'downwebmin';
+	$server->{'status_msg'} = "Webmin login disabled";
+	}
 else {
 	# Webmin is not available
-	$server->{'status'} = $webminroot && !$server->{'no_webmin_login'} ?
-				'nowebminlogin' : 'nowebmin';
+	$server->{'status'} = $webminroot ? 'nowebminlogin' : 'nowebmin';
 	$server->{'status_msg'} = undef;
 	}
 
