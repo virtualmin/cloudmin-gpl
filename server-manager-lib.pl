@@ -8,9 +8,15 @@
 # XXX LVM disk support
 #	XXX need another disk in sentosa
 
-do '../web-lib.pl';
+BEGIN { push(@INC, ".."); };
+eval "use WebminCore;";
+if ($@) {
+	# Old Webmin version
+	do '../web-lib.pl';
+	do '../ui-lib.pl';
+	}
+
 &init_config();
-do '../ui-lib.pl';
 do 'images-lib.pl';
 do 'newfeatures-lib.pl';
 do 'owners-lib.pl';
@@ -557,7 +563,7 @@ sub generate_public_key
 {
 local ($key) = @_;
 local $qp = quotemeta($key->{'file'});
-local $out = `ssh-keygen -y -f $qp 2>/dev/null`;
+local $out = &backquote_command("ssh-keygen -y -f $qp 2>/dev/null");
 if ($out =~ /((\d+)\s+(\d+)\s+(\d+))$/) {
 	# Version 1
 	return $1;
