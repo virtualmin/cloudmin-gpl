@@ -79,5 +79,11 @@ return ( "upload-api-docs.pl",
        );
 }
 
+sub list_api_directories
+{
+local ($pwd) = @_;
+return ( $pwd );
+}
+
 1;
 
