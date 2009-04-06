@@ -3792,6 +3792,15 @@ sub get_global_links
 {
 local ($virtcount) = @_;
 local (@glinks, @gtitles, @gicons, @gcats);
+
+if ($virtcount) {
+	# Virtualmin domains
+	push(@glinks, "list_domains.cgi");
+	push(@gtitles, $text{'domains_title'});
+	push(@gicons, "images/domains.gif");
+	push(@gcats, "virtualmin");
+	}
+
 if (!&can_action(undef, "global")) {
 	goto NOGLOBAL;
 	}
@@ -3842,13 +3851,7 @@ push(@gicons, "images/owners.gif");
 push(@gcats, "settings");
 
 if ($virtcount) {
-	# Virtualmin domains
-	push(@glinks, "list_domains.cgi");
-	push(@gtitles, $text{'domains_title'});
-	push(@gicons, "images/domains.gif");
-	push(@gcats, "virtualmin");
-
-	# Default features
+	# Default Virtualmin features
 	push(@glinks, "list_features.cgi");
 	push(@gtitles, $text{'features_title'});
 	push(@gicons, "images/features.gif");
