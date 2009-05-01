@@ -2680,7 +2680,7 @@ if ($server->{'pass'} && gethostbyname($server->{'host'})) {
 	}
 if (!$pkg || !$update) {
 	# No luck .. check what commands it has
-	foreach my $cmd ("rpm", "dpkg", "pkgadd") {
+	foreach my $cmd ("dpkg", "rpm", "pkgadd") {
 		if (&has_command_on_server($server, $cmd)) {
 			$pkg = $cmd;
 			last;
