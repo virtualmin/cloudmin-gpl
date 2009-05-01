@@ -2270,7 +2270,7 @@ elsif ($type eq "dpkg") {
 
 	# Satisfy any Debian dependencies created by Webmin, if possible
 	local ($dout, $dex, $derr) = &execute_command_on_server($server,
-		"apt-get -y -f --force-yes install </dev/null | cat");
+		"apt-get update ; apt-get -y -f --force-yes install </dev/null | cat");
 	if (!$dex) {
 		$out .= $dout;
 		}
