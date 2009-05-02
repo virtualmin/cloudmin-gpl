@@ -145,7 +145,8 @@ $shell_previous_dir = "$module_config_directory/previous";
 $login_shell_cmd = "$module_config_directory/login.pl";
 $login_home_base = $ENV{'WEBMIN_VAR'}."/login";
 
-$api_helper_command = "/usr/sbin/vm2";
+$api_helper_command = "/usr/sbin/cloudmin";
+$old_api_helper_command = "/usr/sbin/vm2";
 
 $ping_host_timeout = 2;
 

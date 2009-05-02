@@ -59,7 +59,7 @@ if ($server) {
 	&save_managed_server($server);
 	}
 
-# Create API helper script /usr/bin/vm2
+# Create API helper script /usr/bin/cloudmin
 local $bash = &has_command("bash");
 if ($bash) {
         &open_tempfile(HELPER, ">$api_helper_command", 1, 0);
@@ -98,6 +98,10 @@ EOF
         &close_tempfile(HELPER);
         &set_ownership_permissions(undef, undef, 0755, $api_helper_command);
         }
+
+# Link vm2 command as well
+&unlink_file($old_api_helper_command);
+&symlink_file($api_helper_command, $old_api_helper_command);
 
 # Record the install time for this version
 local %itimes;
