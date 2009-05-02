@@ -4,18 +4,18 @@
 
 Adds a virtual disk to some system
 
-This command adds a new virtual disk to a system managed by VM2, typically
+This command adds a new virtual disk to a system managed by Cloudmin, typically
 a Xen instance. Normally, a virtual disk is a file on the host system that
 is mapped to a device on the instance, like C</dev/sda3>. However, it can also
 be a real disk device on the host system (such as an LVM logical volume).
 
 The system to add the disk to is specified with the C<--host> parameter. 
 The disk file on the host can either be set with C<--real> followed by a
-filename like C</xen/newdisk.img>, or you can have VM2 choose a filename
+filename like C</xen/newdisk.img>, or you can have Cloudmin choose a filename
 automatically with the C<--auto-real> flag.
 
 The device file on the virtual system can either be set with C<--virt>
-followed by a device name, or you can use C<--auto-virt> to have VM2 choose
+followed by a device name, or you can use C<--auto-virt> to have Cloudmin choose
 an un-used device.
 
 When adding a new file as a disk, the C<--size> parameter must be given and

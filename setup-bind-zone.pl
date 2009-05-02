@@ -4,7 +4,7 @@
 
 Creates a new BIND zone, and sets up BIND if needed.
 
-This script is designed to be called from the VM2 installer, but can be used
+This script is designed to be called from the Cloudmin installer, but can be used
 anywhere if you like. It creates a DNS domain set with the C<--zone> flag, and
 whose owner email address is set with C<--email>. The primary nameserver is
 set with the optional C<--master> flag, which defaults to the system's

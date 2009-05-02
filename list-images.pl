@@ -5,7 +5,7 @@
 Lists all downloaded system images
 
 This command lists all images that are available for creating systems on the
-VM2 master. By default it will show all of them in a table, but you can use
+Cloudmin master. By default it will show all of them in a table, but you can use
 the C<--multiline> parameter to display more details in a machine-readable
 format, or C<--name-only> to just show image IDs. To limit the list to images
 for some virtualization type, use the C<--type> flag followed by a type code

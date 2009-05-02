@@ -2,9 +2,9 @@
 
 =head1 modify-owner.pl
 
-Updates a VM2 system owner
+Updates a Cloudmin system owner
 
-This command changes the details or permissions of a VM2 system owner account.
+This command changes the details or permissions of a Cloudmin system owner account.
 The account to modify is specified by the C<--name> parameter, and a new login,
 real name, email address or password can be set with the C<--newname>, 
 C<--real>, C<--email> or C<--pass> flags respectively.
@@ -13,7 +13,7 @@ To temporarily lock the account, use the C<--lock> flag. To reverse the lock,
 use C<--unlock>.
 
 To add a system to the list of those managed by this account, use the
-C<--add-host> flag followed by a hostname known to VM2. Or to take away a
+C<--add-host> flag followed by a hostname known to Cloudmin. Or to take away a
 system, use C<--remove-host> followed by a hostname.
 
 The C<--can-*> and C<--cannot-*> families of flags can be used to grant or
@@ -23,7 +23,7 @@ the documentation for the C<create-owner.pl> command.
 =head1 Example usage
 
   ./modify-owner.pl --name freeman --add-host xenblah.home --can-run 
-  Updated VM2 system owner freeman
+  Updated Cloudmin system owner freeman
 
 =cut
 
@@ -138,12 +138,12 @@ $owner->{'acl'}->{'actions'} = join(" ", &unique(@actions));
 
 # Save the owner
 &save_system_owner($owner, $oldowner);
-print "Updated VM2 system owner $name\n";
+print "Updated Cloudmin system owner $name\n";
 
 sub usage
 {
 print "$_[0]\n\n" if ($_[0]);
-print "Updates an existing VM2 system owner.\n";
+print "Updates an existing Cloudmin system owner.\n";
 print "\n";
 print "usage: modify-owner.pl --name username\n";
 print "                       [--newname username]\n";

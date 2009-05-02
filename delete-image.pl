@@ -4,7 +4,7 @@
 
 Deletes a local image from the master system
 
-This command simply removes one of the existing images on your VM2 master. The
+This command simply removes one of the existing images on your Cloudmin master. The
 image ID is specified with the C<--id> parameter.
 
 =head1 Example usage

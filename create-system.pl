@@ -22,7 +22,7 @@ C<create-system.pl> with the C<--type> and C<--help> flags.
 If you are creating a system from an image that includes Virtualmin Pro, you
 will need to specify a license using either the C<--allocate-serial> parameter,
 or C<--serial> and C<--key>. The former will select an available license from
-the pool of those registered with VM2, while the latter let you specify a
+the pool of those registered with Cloudmin, while the latter let you specify a
 serial number and key explicity. 
 
 =head1 Example usage

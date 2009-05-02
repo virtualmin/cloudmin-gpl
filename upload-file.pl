@@ -4,7 +4,7 @@
 
 Uploads a file to one or more systems
 
-This command can send a file from the VM2 master system to one or more managed
+This command can send a file from the Cloudmin master system to one or more managed
 hosts. The file is specified with the C<--source> parameter, and the
 destination file or directory with C<--dest>. Alternately, you can have it
 write input to the command to the destination with the C<--stdin> parameter.

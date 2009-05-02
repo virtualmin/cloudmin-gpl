@@ -4,9 +4,9 @@
 
 Adds a new network interface to some system
 
-This program adds a virtual interface to some VM2-managed system. You must
+This program adds a virtual interface to some Cloudmin-managed system. You must
 specify the system with the C<--host> parameter, and the base interface with
-C<--name>. The IP address can be either explitly set with C<--address>, or VM2
+C<--name>. The IP address can be either explitly set with C<--address>, or Cloudmin
 can allocate a free IP from the range defined for the host system with
 C<--allocate>.
 

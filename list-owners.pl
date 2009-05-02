@@ -2,9 +2,9 @@
 
 =head1 list-owners.pl
 
-Lists some or all VM2 system owners
+Lists some or all Cloudmin system owners
 
-By default, this command outputs a table of all VM2 system owners. To switch
+By default, this command outputs a table of all Cloudmin system owners. To switch
 to a more complete and parsable format, use the C<--multiline> flag, or to
 get a list of just logins use C<--name-only>. To limit the listing to just
 some owners, use the C<--name> flag followed by a owner's login. This can be

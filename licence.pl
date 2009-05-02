@@ -14,7 +14,7 @@ if ($config{'licences_sched'}) {
 	if (ref($got) && @$got) {
 		# Found some .. email to the user
 		&foreign_require("mailboxes", "mailboxes-lib.pl");
-		$msg = "The following Virtualmin licenses have been automaticallly added for\nuse by systems managed by VM2 :\n\n";
+		$msg = "The following Virtualmin licenses have been automaticallly added for\nuse by systems managed by Cloudmin :\n\n";
 		$fmt = "%-20.20s %-20.20s %-10.10s %-10.10s\n";
 		$msg .= sprintf $fmt, "Serial", "Key", "Domains", "Servers";
 		$msg .= sprintf $fmt, ("-" x 20), ("-" x 20), ("-" x 10), ("-" x 10);

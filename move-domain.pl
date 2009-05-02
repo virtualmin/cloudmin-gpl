@@ -5,7 +5,7 @@
 Moves a domain from one system to another
 
 This command allows you to transfer one or more Virtualmin domains from their
-current host systems to another system managed by VM2. Like the web-based
+current host systems to another system managed by Cloudmin. Like the web-based
 domain move feature, it operates by backing them up on the source and
 restoring on the destination - so it is recommended that you transfer only
 between similar systems where possible.
@@ -17,17 +17,17 @@ parameter. If the C<--include-sub-servers> parameter is given and a top-level
 domain is selected, any sub-servers owned by the same user will be transferred
 at the same time.
 
-To have VM2 delete the domains from the source, use the C<--delete> parameter
+To have Cloudmin delete the domains from the source, use the C<--delete> parameter
 (this is recommended). Or to just disable them when moving, use C<--disable>.
 
 Once a domain has been moved, you will almost certainly need to make DNS
 changes to reflect the new website or nameserver IP address.
 
-By default, VM2 attempts to transfer the domain backup first to the master
+By default, Cloudmin attempts to transfer the domain backup first to the master
 system, and then to the target. However, the C<--direct> parameter will
 trigger the attempted use of a direct copy from the source to the target
 system, which can be faster if the network connectivity between the managed
-systems and the VM2 master is poor. 
+systems and the Cloudmin master is poor. 
 
 =head1 Example usage
 

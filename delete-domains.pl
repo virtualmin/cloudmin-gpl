@@ -5,7 +5,7 @@
 Removes Virtualmin domains from managed systems
 
 This command deletes a domain (specified with the C<--domain> parameter) from
-which every VM2-managed system hosts it. This can be normally worked out
+which every Cloudmin-managed system hosts it. This can be normally worked out
 automatically, but if the same domain exists on more than one machine, you
 will need to add C<--host> followed by the correct hostname. Be careful using
 it, as it will not prompt for any confirmation before deletion.

@@ -10,7 +10,7 @@ for Xen and EC2 instances. It can be useful for debugging boot failures or
 figuring out why some server processes were not started at boot time.
 
 For interactive access to the console, you can instead use the Console Login
-page in the VM2 web user interface.
+page in the Cloudmin web user interface.
 
 =head1 Example usage
 

@@ -314,7 +314,7 @@ sub list_available_managed_servers
 return grep { &can_action($_) } &list_managed_servers();
 }
 
-# Returns a unique ID for a new VM2 server
+# Returns a unique ID for a new Cloudmin server
 sub server_id
 {
 return time().$$.($main::server_id_count++);
@@ -383,7 +383,7 @@ if ($server->{'id'} eq '0') {
 			'virtualmin_serial' => $server->{'virtualmin_serial'},
 			'virtualmin_key' => $server->{'virtualmin_key'},
 		      );
-	# Save all VM2 type-specific details
+	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types) {
 		foreach my $k (keys %$server) {
 			if ($k =~ /^\Q$t\E_/) {
@@ -1006,11 +1006,11 @@ if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	return $err ? $err : $ex ? $out : undef;
 	}
 elsif ($srcserver->{'id'} == 0) {
-	# Copying from VM2 master - just upload
+	# Copying from Cloudmin master - just upload
 	return &put_file_to_server($destserver, $src, $dest);
 	}
 elsif ($destserver->{'id'} == 0) {
-	# Copying to VM2 master - just download
+	# Copying to Cloudmin master - just download
 	return &get_file_from_server($srcserver, $src, $dest);
 	}
 else {
@@ -1094,10 +1094,10 @@ else {
 	$srcfile =~ s/^.*[\\\/]//;
 	local $temp = &transname($srcfile);
 	local $err = &get_file_from_server($srcserver, $src, $temp);
-	return "Download to VM2 master failed : $err" if ($err);
+	return "Download to Cloudmin master failed : $err" if ($err);
 	$err = &put_file_to_server($destserver, $temp, $dest);
 	&unlink_file($temp);
-	return "Upload from VM2 master failed : $err" if ($err);
+	return "Upload from Cloudmin master failed : $err" if ($err);
 	return undef;
 	}
 }
@@ -4316,7 +4316,7 @@ return wantarray ? @rv : $rv[0];
 }
 
 # get_server_manager_serial()
-# Returns the serial number and key for this VM2 install
+# Returns the serial number and key for this Cloudmin install
 sub get_server_manager_serial
 {
 local %serial;
@@ -4402,7 +4402,7 @@ elsif ($in->{$name} == 1) {
 	return ($in{$name."_serial"}, $in{$name."_key"});
 	}
 elsif ($in->{$name} == 2) {
-	# Same as VM2
+	# Same as Cloudmin
 	return &get_server_manager_serial();
 	}
 elsif ($in->{$name} == 3) {
@@ -4429,7 +4429,7 @@ if (defined(@list_virtualmin_licences_cache)) {
 	return @list_virtualmin_licences_cache;
 	}
 
-# If the VM2 licence can also be used for Virtualmin, start with it
+# If the Cloudmin licence can also be used for Virtualmin, start with it
 &lock_file($virtualmin_licences_file);
 local @rv;
 local ($vm2serial, $vm2key) = &get_server_manager_serial();
@@ -4441,7 +4441,7 @@ if ($vm2cache{'max_last'} &&
 	push(@rv, \%vm2cache);
 	}
 else {
-	# Check VM2 licence for real
+	# Check Cloudmin licence for real
 	local ($lok, $ldoms, $lservers) =
 		&check_virtualmin_serial($vm2serial, $vm2key);
 	if ($lok > 0) {
@@ -4588,7 +4588,7 @@ $progress{$serial} = join(' ', grep { $_ != $$ }
 }
 
 # fetch_virtualmin_licences()
-# Checks for new Virtualmin licences associated with the VM2 licence, and
+# Checks for new Virtualmin licences associated with the Cloudmin licence, and
 # adds them. Returns an error message on failure, or a list of added licenses
 # on success.
 sub fetch_virtualmin_licences
@@ -4637,7 +4637,7 @@ else {
 }
 
 # can_all_licenses()
-# Returns 1 if current VM2 license can be used to fetch associated Virtualmin
+# Returns 1 if current Cloudmin license can be used to fetch associated Virtualmin
 # licenses. Not true for EC2 shared keys.
 sub can_all_licenses
 {
@@ -5024,7 +5024,7 @@ return $err;
 }
 
 # get_server_cluster_software(&server)
-# Returns 1 if some server is having software packages managed by the VM2
+# Returns 1 if some server is having software packages managed by the Cloudmin
 # master, 0 if not, -1 if not possible
 sub get_server_cluster_software
 {

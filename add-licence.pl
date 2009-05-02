@@ -4,7 +4,7 @@
 
 Adds one Virtualmin licence to the pool
 
-This command adds a new license to the pool of those managed by VM2. It must
+This command adds a new license to the pool of those managed by Cloudmin. It must
 have been already purchased from the Virtualmin website, and you must have the
 serial number and key. These are specified to the command using the
 C<--serial> and C<--key> parameters respectively, and will be validated before

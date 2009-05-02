@@ -4,7 +4,7 @@
 
 Downloads a file from a single system
 
-This script can be used to fetch a single file from a VM2 managed system and
+This script can be used to fetch a single file from a Cloudmin managed system and
 either save it on the master, or print it to standard output. The system is
 selected with the C<--host> parameter, and the source file with C<--source>. To 
 have the file saved on the master, add the C<--dest> parameter followed by a

@@ -1,19 +1,19 @@
 <header>VServer Host Systems</header>
 
-Before VM2 can create any virtual systems using Linux VServer instances, you
-must register the host systems on which VServers will run using this page. VM2 has
-a three-layer architecture, in which the master system (on which the VM2
+Before Cloudmin can create any virtual systems using Linux VServer instances, you
+must register the host systems on which VServers will run using this page. Cloudmin has
+a three-layer architecture, in which the master system (on which the Cloudmin
 Webmin interface runs) is separate from the systems that host VServer instances,
 which are in turn separate from the VServer systems themselves. <p>
 
 Before a Xen host system can be registered here, you must first bring it
-under VM2's control using the <b>Add physical system</b> link under <b>Add
+under Cloudmin's control using the <b>Add physical system</b> link under <b>Add
 system</b> on the left menu. It is possible for a single system to both
 host Virtualmin domains and VServer instances, although this is almost always
 a bad idea as VServers used for virtual hosting require that the host system
 not have any server processes accepting connections on all network interfaces.
 
-Once a system is known to VM2, use the
+Once a system is known to Cloudmin, use the
 <b>Register a system for VServer hosting</b> link to start the registration
 process. <p>
 

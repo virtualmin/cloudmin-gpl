@@ -4,7 +4,7 @@
 
 Lists all Virtualmin licences
 
-This program displays a list of all licenses registered with VM2, in a table
+This program displays a list of all licenses registered with Cloudmin, in a table
 format. To show more details about each license, use the C<--multiline>
 command-line argument. To just output serial numbers, use the C<--name-only>
 flag.
@@ -52,7 +52,7 @@ if ($multi) {
 		print $l->{'serial'},"\n";
 		print "    Serial: $l->{'serial'}\n";
 		print "    Key: $l->{'key'}\n";
-		print "    Source: ",$l->{'vm2'} ? "VM2" : "Virtualmin","\n";
+		print "    Source: ",$l->{'vm2'} ? "Cloudmin" : "Virtualmin","\n";
 		print "    Status: ",$l->{'invalid'} ? "Invalid" : "Valid","\n";
 		print "    Max systems: ",$l->{'servers'} || "Unlimited","\n";
 		print "    Max domains: ",$l->{'domains'} || "Unlimited","\n";

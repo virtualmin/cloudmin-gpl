@@ -2,10 +2,10 @@
 
 =head1 list-systems.pl
 
-Output a table of all systems managed by VM2.
+Output a table of all systems managed by Cloudmin.
 
 When run with no parameters, this command outputs a table of all virtual
-systems known to VM2. You can limit the display to a subset of systems using
+systems known to Cloudmin. You can limit the display to a subset of systems using
 the standard options like C<--host> and C<--type>, have it output all
 available information with the C<--multiline> parameter, or just show hostnames
 with C<--name-only>.

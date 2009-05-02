@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Fetch a file from a VM2-managed system and save to the master or download
+# Fetch a file from a Cloudmin-managed system and save to the master or download
 
 require './server-manager-lib.pl';
 &ReadParse();

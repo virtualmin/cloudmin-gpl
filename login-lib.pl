@@ -101,7 +101,7 @@ return $random_password;
 }
 
 # get_ssh_host_port()
-# Returns the SSH hostname and port number for the VM2 master, and a list of
+# Returns the SSH hostname and port number for the Cloudmin master, and a list of
 # SSH protocol versions accepted.
 sub get_ssh_host_port
 {

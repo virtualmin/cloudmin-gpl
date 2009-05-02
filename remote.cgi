@@ -10,11 +10,11 @@ if (!$in{'program'}) {
 	# Tell the user what needs to be done
 	print "Content-type: text/plain\n\n";
 	print "This CGI is designed to be invoked by other programs wanting\n";
-	print "to perform some VM2 action programatically, such as\n";
+	print "to perform some Cloudmin action programatically, such as\n";
 	print "creating or modifying systems and domains.\n\n";
 
 	print "You must supply at least the CGI parameter 'program', which\n";
-	print "specifies which of the VM2 command-line scripts to\n";
+	print "specifies which of the Cloudmin command-line scripts to\n";
 	print "run. You must also supply appropriate parameters to the\n";
 	print "program, similar to those that it accepts on the Unix command\n";
 	print "line. For example, to reboot a system you would use a URL\n";

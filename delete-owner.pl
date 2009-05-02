@@ -2,7 +2,7 @@
 
 =head1 delete-owner.pl
 
-Delete an existing VM2 system owner
+Delete an existing Cloudmin system owner
 
 This command deletes a single owner account, identified with the C<--name>
 parameter. No confirmation is requested, but none of the systems he owns
@@ -11,7 +11,7 @@ are effected.
 =head1 Example usage
 
   ./delete-owner.pl --name freeman
-  Deleted VM2 system owner freeman
+  Deleted Cloudmin system owner freeman
 
 =cut
 
@@ -45,12 +45,12 @@ $owner || &usage("No system owner named $name exists");
 
 # Delete him
 &delete_system_owner($owner);
-print "Deleted VM2 system owner $name\n";
+print "Deleted Cloudmin system owner $name\n";
 
 sub usage
 {
 print "$_[0]\n\n" if ($_[0]);
-print "Deletes an existing VM2 system owner.\n";
+print "Deletes an existing Cloudmin system owner.\n";
 print "\n";
 print "usage: delete-owner.pl --name username\n";
 exit(1);

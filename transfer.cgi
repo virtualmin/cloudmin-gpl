@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Transfer a file from one VM2 system to another
+# Transfer a file from one Cloudmin system to another
 
 require './server-manager-lib.pl';
 &ReadParse();

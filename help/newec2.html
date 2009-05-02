@@ -1,7 +1,7 @@
 <header>Create New EC2 System</header>
 
 This page allows you to create a new virtual system running on Amazon's
-EC2 service. Unlike the other virtual system types supported by VM2,
+EC2 service. Unlike the other virtual system types supported by Cloudmin,
 it is not created on a host system owned by you or from one of the locally
 stored images - instead, it is created from a AMI (Amazon Machine Image)
 hosted on the S3 service. <p>
@@ -18,7 +18,7 @@ are :<p>
 <dt><b>SSH key for root</b>
 <dd>New EC2 instances are always only accessible via an SSH key, rather than
     with a password. From this menu you must select a key that has been
-    registered with VM2, and with EC2.
+    registered with Cloudmin, and with EC2.
 
 <dt><b>Webmin installation mode</b>
 <dd>Unless you do not plan to use Webmin, this field should be set to
@@ -41,7 +41,7 @@ are :<p>
     is complete.
 
 <dt><b>EC2 account</b>
-<dd>If you have multiple EC2 accounts registered with VM2, you must select
+<dd>If you have multiple EC2 accounts registered with Cloudmin, you must select
     the one that will own this new instance from this menu.
 
 <dt><b>EC2 image to start</b>
@@ -59,13 +59,13 @@ are :<p>
 <dt><b>EC2 security groups</b>
 <dd>Each EC2 instance can be a member of one or more security groups, which
     determine the ports and hosts allowed to connect to it. If <b>Default</b>
-    is selected the <tt>virtualmin</tt> group created by VM2 will be used - or
+    is selected the <tt>virtualmin</tt> group created by Cloudmin will be used - or
     you can choose <b>Selected below</b> and check the boxes next to one or more
     of your own groups.
 
 </dl>
 
-When the <b>Create</b> button is clicked, VM2 will contact Amazon to start
+When the <b>Create</b> button is clicked, Cloudmin will contact Amazon to start
 the creation process. Depending on the size of the image, this can take between
 5 and 10 minutes. The DNS hostname of the newly created system is assigned by 
 Amazon, but can be changed later once you have added an entry for the same

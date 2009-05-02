@@ -4,7 +4,7 @@
 
 Lists all registered SSH keys
 
-This program displays a list of all SSH keys registered with VM2, in a table
+This program displays a list of all SSH keys registered with Cloudmin, in a table
 format. To show more details, use the C<--multiline> command-line argument, or
 to show only key IDs use the C<--name-only> flag.
 

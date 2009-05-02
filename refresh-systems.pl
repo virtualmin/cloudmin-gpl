@@ -4,7 +4,7 @@
 
 Updates the status of multiple systems, and displays the results
 
-Forces VM2 to re-query the actual status of the specified systems. This is
+Forces Cloudmin to re-query the actual status of the specified systems. This is
 done in parallel so that many can be updated at once, and the status from
 each is displayed once it is retrieved. By default, Virtualmin status
 information like the amount of free RAM and available package updates is only

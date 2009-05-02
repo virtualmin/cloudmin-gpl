@@ -12,12 +12,12 @@ parameter.
 
 When the command is run, it will update C</etc/shadow> and
 C</etc/webmin/miniserv.users> on the selected machine to make the changes.
-VM2's authentication information for the system will also be updated to match.
+Cloudmin's authentication information for the system will also be updated to match.
 
 If you have created a virtual system for a customer, changing the root
 password when you are ready to hand it over is a good idea. Be aware that 
 for Xen systems, if the password is changed on the system directly (perhaps
-using the passwd command), VM2 will be no longer able to login via SSH to
+using the passwd command), Cloudmin will be no longer able to login via SSH to
 change it, or even to check the system's status.
 
 =cut

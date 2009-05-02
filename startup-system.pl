@@ -4,7 +4,7 @@
 
 Starts up one or more managed systems
 
-For virtual systems running under Xen, VServers or Zones, VM2 can start up
+For virtual systems running under Xen, VServers or Zones, Cloudmin can start up
 existing instances using this command. The command will only exit when all the
 specified systems have been booted.
 

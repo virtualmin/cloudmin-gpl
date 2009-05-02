@@ -4,9 +4,9 @@
 
 Run some shell command on multiple systems in parallel
 
-This is the equivalent of the command shell in the VM2 web interface, but
+This is the equivalent of the command shell in the Cloudmin web interface, but
 arguably more powerful. It can be used to run a command on one or several
-hosts managed by VM2, and display the output from all of them. Systems are
+hosts managed by Cloudmin, and display the output from all of them. Systems are
 selected by the standard optons (C<--host>, C<--type> and so on), and the
 command to run follows the other parameters.
 

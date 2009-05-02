@@ -5,7 +5,7 @@
 Reboots one or more managed systems
 
 Triggers an immediate reboot of the specified systems. For virtual machines,
-VM2 will wait until they come back up before exiting, while for real systems
+Cloudmin will wait until they come back up before exiting, while for real systems
 it just runs the reboot command, which merely starts the reboot process in the
 background.
 

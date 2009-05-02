@@ -178,7 +178,7 @@ $vhost || return (0, "Could not find parent system");
 local ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
 $img || return (0, "Could not find image with ID $server->{'image'}");
 
-# No need to transfer if the host is the VM2 master
+# No need to transfer if the host is the Cloudmin master
 if ($vhost->{'manager'} eq 'this') {
 	return (2, $server_images_dir);
 	}

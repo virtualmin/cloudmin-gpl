@@ -1,7 +1,7 @@
 <header>Create New Xen System</header>
 
 This page allows you to create a new virtual system, running inside a Xen
-instance. Because VM2 always creates new Xen systems from images, you must
+instance. Because Cloudmin always creates new Xen systems from images, you must
 have downloaded at least one image using the <a href=images>New System
 Images</a> page before an instance can be created. <p>
 
@@ -22,7 +22,7 @@ are :<p>
 
 <dt><b>Initial system image</b>
 <dd>From this menu you must select the Xen operating system image to start the
-    new system with. VM2 provides two types of images - base operating systems,
+    new system with. Cloudmin provides two types of images - base operating systems,
     and full stacks with Virtualmin. In most cases, you will want to select
     the latter. 
 
@@ -30,7 +30,7 @@ are :<p>
 <dd>This field allows you to set the initial password for the new Xen instance.
     Typically you will select <b>Using password</b> and enter a password into
     the adjacent text box, which can then be given to whoever will manage the
-    server. Alternately, if you have any SSH keys registered with VM2 you can
+    server. Alternately, if you have any SSH keys registered with Cloudmin you can
     select <b>Using SSH key</b> and choose a key from the menu next to it. Once
     the instance is created, it will be configured to allow passwordless logins
     using that key.
@@ -63,7 +63,7 @@ are :<p>
 <dd>Every new Xen system is given a private IP address, which can either be
     allocated automatically from the range defined for the host system, or
     entered manually by selecting the <b>Address</b> option. <br>
-    If the VM2 master runs a DNS server (highly recommended), an entry will
+    If the Cloudmin master runs a DNS server (highly recommended), an entry will
     be added to the DNS zone selected for the Xen host system for the full
     hostname and Xen instance IP address.
 
@@ -73,7 +73,7 @@ are :<p>
     webhosting system with Virtualmin, but 512 is recommended.
 
 <dt><b>Swap file size for instance</b>
-<dd>By default, VM2 will create Xen instances with regular memory allocated,
+<dd>By default, Cloudmin will create Xen instances with regular memory allocated,
     but no swap space. However, you can select the second radio button here
     and enter the amount of swap (virtual) memory to allocate in MB, which will
     allow processes in the instance to use more than the allocated RAM, at the
@@ -95,11 +95,11 @@ are :<p>
 
 </dl>
 
-When the <b>Create</b> button is clicked, VM2 will start the Xen setup process.
+When the <b>Create</b> button is clicked, Cloudmin will start the Xen setup process.
 Status messages will be displayed as each step is done. The total time
 depends on the size
 of the image, speed of the host system and speed of the network between the
-host and the VM2 master, but around five minutes seems to be the average. <p>
+host and the Cloudmin master, but around five minutes seems to be the average. <p>
 
 <footer>
 

@@ -1,7 +1,7 @@
-# Functions for managing Webmin users who own VM2 systems.
+# Functions for managing Webmin users who own Cloudmin systems.
 
 # list_system_owners()
-# Returns a list of Webmin user objects for additional VM2 logins
+# Returns a list of Webmin user objects for additional Cloudmin logins
 sub list_system_owners
 {
 &foreign_require("acl", "acl-lib.pl");
@@ -17,7 +17,7 @@ return @rv;
 }
 
 # get_system_owner(name)
-# Returns the hash ref for a VM2 system owner user
+# Returns the hash ref for a Cloudmin system owner user
 sub get_system_owner
 {
 local ($name) = @_;
@@ -31,7 +31,7 @@ return $u;
 }
 
 # save_system_owner(&user, [&old])
-# Create or update a Webmin user who can manage VM2 systems
+# Create or update a Webmin user who can manage Cloudmin systems
 sub save_system_owner
 {
 local ($u, $oldu) = @_;
@@ -64,7 +64,7 @@ local %sacl = ( 'servers' => $acl->{'servers'},
 }
 
 # delete_system_owner(&user)
-# Remove a Webmin user who can manage VM2 systems
+# Remove a Webmin user who can manage Cloudmin systems
 sub delete_system_owner
 {
 local ($u) = @_;

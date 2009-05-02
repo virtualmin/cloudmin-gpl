@@ -1,7 +1,7 @@
 <header>Create New Solaris Zones System</header>
 
 This page allows you to create a new virtual system, running inside a
-Solaris zone. You have the option of having VM2 create the system
+Solaris zone. You have the option of having Cloudmin create the system
 'manually' using the <tt>zoneadm install</tt> command, or from an image
 supplied by Virtualmin. <p>
 
@@ -32,7 +32,7 @@ are :<p>
 <dd>This field allows you to set the initial password for the new zone.
     Typically you will select <b>Using password</b> and enter a password into
     the adjacent text box, which can then be given to whoever will manage the
-    server. Alternately, if you have any SSH keys registered with VM2 you can
+    server. Alternately, if you have any SSH keys registered with Cloudmin you can
     select <b>Using SSH key</b> and choose a key from the menu next to it. Once
     the instance is created, it will be configured to allow passwordless logins
     using that key.
@@ -66,13 +66,13 @@ are :<p>
 <dd>Every new zone is given a private IP address, which can either be
     allocated automatically from the range defined for the host system, or
     entered manually by selecting the <b>Address</b> option. <br>
-    If the VM2 master runs a DNS server (highly recommended), an entry will
+    If the Cloudmin master runs a DNS server (highly recommended), an entry will
     be added to the DNS zone selected for the zone system for the full
     hostname and zone's IP address.
 
 </dl>
 
-When the <b>Create</b> button is clicked, VM2 will start the zone setup process.
+When the <b>Create</b> button is clicked, Cloudmin will start the zone setup process.
 Status messages will be displayed as each step is done. The total time
 can vary depending on whether you are creating from an image, or doing a
 manual build. In the former case, 5-10 minutes is expected, but in the latter

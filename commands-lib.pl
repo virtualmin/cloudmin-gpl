@@ -32,7 +32,7 @@ systems to operate on :
 ",
 
 "Virtual disks",
-"Xen instances managed by VM2 can have one or more virtual disks, which are
+"Xen instances managed by Cloudmin can have one or more virtual disks, which are
 typically stored in files on the host system. These commands allow you to
 create, resize and delete disk images, or associate real devices with disks
 on virtual systems.",
@@ -47,23 +47,23 @@ own network interfaces - instead, they must be assigned by the host system,
 which can be done using the commands in this section.",
 
 "System owners",
-"VM2 system owners are additional logins who have access to a limit set of
+"Cloudmin system owners are additional logins who have access to a limit set of
 functions and managed systems. These commands allow you to list, create and
 manage owner accounts.",
 
 "Virtualmin domains",
-"VM2 can manage Virtualmin domains across all managed systems via both the web
+"Cloudmin can manage Virtualmin domains across all managed systems via both the web
 interface and from the command line. This can be particularly useful if you
 have multiple hosting systems, and need a single location from which domains
 can be setup, perhaps for use by a billing system.",
 
 "License management",
-"VM2 has the ability to add and manage Virtualmin licenses, which are needed
+"Cloudmin has the ability to add and manage Virtualmin licenses, which are needed
 when creating new systems with Virtualmin installed. This category covers the
 license management commands.",
 
 "File management",
-"VM2 can fetch files from and send files to any of the systems it manages,
+"Cloudmin can fetch files from and send files to any of the systems it manages,
 either using SCP or direct access to the filesystem where possible. This
 category covers commands for fetching and uploading files.",
 

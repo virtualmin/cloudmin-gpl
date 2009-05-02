@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Upload a file to server VM2 systems
+# Upload a file to server Cloudmin systems
 
 require './server-manager-lib.pl';
 &ReadParseMime();

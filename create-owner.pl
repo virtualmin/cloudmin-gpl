@@ -2,9 +2,9 @@
 
 =head1 create-owner.pl
 
-Create a new VM2 system owner
+Create a new Cloudmin system owner
 
-A system owner in VM2 is an additional Webmin login who can manage some
+A system owner in Cloudmin is an additional Webmin login who can manage some
 aspects of selected systems. To create a new owner, run this command with
 the C<--name> parameter followed by a login name, C<--email> followed by
 a contact address, and C<--pass> followed by a password.
@@ -33,7 +33,7 @@ C<--can-console> - View and interact with console
 =head1 Example usage
 
   ./create-owner.pl --name bob --email bob@example.com --pass smeg --host xencentos.home --can-reboot --can-console --can-startup --can-shutdown
-  Created VM2 system owner bob
+  Created Cloudmin system owner bob
 
 =cut
 
@@ -107,12 +107,12 @@ if ($lock) {
 	$owner->{'pass'} = "!".$owner->{'pass'};
 	}
 &save_system_owner($owner);
-print "Created VM2 system owner $name\n";
+print "Created Cloudmin system owner $name\n";
 
 sub usage
 {
 print "$_[0]\n\n" if ($_[0]);
-print "Creates a new VM2 system owner.\n";
+print "Creates a new Cloudmin system owner.\n";
 print "\n";
 print "usage: create-owner.pl --name username\n";
 print "                       --email address\@domain\n";

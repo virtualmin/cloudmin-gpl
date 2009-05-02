@@ -4,13 +4,13 @@
 
 Scan a hosting system for virtual instances already running on it
 
-If you have added to VM2 a host system that has manually created Xen instances
-which are not yet under VM2's control, this command can be used to find and
+If you have added to Cloudmin a host system that has manually created Xen instances
+which are not yet under Cloudmin's control, this command can be used to find and
 automatically add them. The system to scan must be specified with the
 C<--host> parameter, and if hosts more than one type of virtual system, the
 type to search for must be specified with the C<--type> flag.
 
-If the C<--same-login> flag is given, VM2 will use the same SSH and Webmin
+If the C<--same-login> flag is given, Cloudmin will use the same SSH and Webmin
 username and password to login to any discovered systems as it currently uses
 for the host system. Alternately, you can select a different SSH password
 with C<--ssh-pass> followed by a password, or C<--ssh-key> followed by a
@@ -19,14 +19,14 @@ defaults with the C<--ssh-user>, C<--ssh-protocol> and C<--ssh-port> flags.
 Finally, to prevent SSH logins altogether, the C<--ssh-nologin> flag can be
 given instead.
 
-If VM2 is to login to Webmin or Virtualmin on the discovered systems, the
+If Cloudmin is to login to Webmin or Virtualmin on the discovered systems, the
 C<--webmin-user> and C<--webmin-pass> flags must be given, followed by a
 username and password respectively. Alternately, you can use the
 C<--webmin-same> flag to use the same credentials as for SSH access.
 The port for Webmin can be changed from the default of 10000 with the
 C<--webmin-port> flag, and SSL access can be enabled with C<--webmin-ssh>.
 
-By default, VM2 will find all virtual systems on the host, regardless of
+By default, Cloudmin will find all virtual systems on the host, regardless of
 whether they are currently running or not. To limit the search to instances
 that are active, add the C<--running-only> flag to the command line.
 

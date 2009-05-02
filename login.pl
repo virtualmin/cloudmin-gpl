@@ -9,7 +9,7 @@ require './server-manager-lib.pl';
 ($server) = grep { $_->{'login_user'} eq $ENV{'USER'} }
 		 &list_managed_servers();
 if (!$server) {
-	print "Failed to find a VM2 managed system for $ENV{'USER'}\n";
+	print "Failed to find a Cloudmin managed system for $ENV{'USER'}\n";
 	exit(1);
 	}
 

@@ -5,7 +5,7 @@
 Shuts down one or more managed systems
 
 Shuts down the specified systems, as long as their virtualization type
-supports it. For virtual machines, VM2 will wait until they are completely
+supports it. For virtual machines, Cloudmin will wait until they are completely
 shut down before this command exists, while for real systems it just runs the
 shutdown command, which merely starts the power-off process in the background.
 

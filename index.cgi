@@ -2,7 +2,7 @@
 # Show a table of managed servers, links to create new ones, and global options
 
 require './server-manager-lib.pl';
-&ui_print_header(undef, $module_info{'desc'}, "", "intro", 1, 1);
+&ui_print_header(undef, $text{'index_title'}, "", "intro", 1, 1);
 &ReadParse();
 
 if (!%in || scalar(keys %in) == 1 && $in{'refresh'}) {

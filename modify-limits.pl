@@ -19,7 +19,7 @@ is set with the C<--cpu> flag, which must be followed by a number. This can be
 greater than 100 for host systems with more than one CPU. To remove CPU limits
 completely, use the C<--no-cpu> flag.
 
-If bandwidth monitoring is enabled in VM2, the C<--bw-limit> flag can be
+If bandwidth monitoring is enabled in Cloudmin, the C<--bw-limit> flag can be
 used to set the maximum bandwidth this system is allowed to consume per
 accounting period. It must be followed by a number in MB. To remove the limit,
 use the C<--bw-unlimited> flag.

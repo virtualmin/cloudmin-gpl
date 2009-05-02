@@ -5,7 +5,7 @@
 Changes the description, hostname, OS or login details of a single system
 
 This command can change the details of an existing system, such as its
-hostname, description, OS or the passwords used by VM2 to login via SSH and
+hostname, description, OS or the passwords used by Cloudmin to login via SSH and
 Webmin. The system to change is specified using the --host parameter, which
 of course must be followed by a hostname. All other parameters are optional,
 and the most commonly used ones are :
@@ -14,13 +14,13 @@ C<--desc> I<new description>
 Sets a new human-readable description for this system.
 
 C<--newhost> I<hostname>
-Changes the hostname used by VM2. This must resolve to the same IP address as the old name, unless the C<--force-host> flag is given.
+Changes the hostname used by Cloudmin. This must resolve to the same IP address as the old name, unless the C<--force-host> flag is given.
 
 C<--os> I<code>
 Changes the operating system code, to something like debian or centos.
 
 C<--ssh-pass> I<password>
-Changes the password VM2 will use to login, *not* the system's actual root password.
+Changes the password Cloudmin will use to login, *not* the system's actual root password.
 
 C<--boot> or C<--no-boot>
 Either enables the system at host boot time, or disables it.

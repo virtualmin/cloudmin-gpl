@@ -5,7 +5,7 @@
 Packages an existing system up as an image
 
 This command performs the complex process of converting an existing virtual
-system into a VM2 machine image. It has three required parameters : C<--host>
+system into a Cloudmin machine image. It has three required parameters : C<--host>
 followed by the hostname of the system to image, C<--desc> followed by a
 description of the image, and C<--id> followed by a new unique image ID. The
 ID is typically formatted like I<type-os-software>, such as

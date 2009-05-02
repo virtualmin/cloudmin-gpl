@@ -23,7 +23,7 @@ $historic_info_dir = "$module_config_directory/history";
 	);
 
 # add_historic_collected_info(&info, time, &server)
-# Log some historic data for a VM2-monitored system
+# Log some historic data for a Cloudmin-monitored system
 sub add_historic_collected_info
 {
 local ($info, $time, $server) = @_;
