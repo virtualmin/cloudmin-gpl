@@ -1,12 +1,4 @@
 # Functions for general setup and management of multiple Virtualmin servers
-# XXX allow changing of main IP
-#	XXX do virtualmin too
-#	XXX support when moving systems
-# XXX HVM Xen instances
-# XXX ajaxterm instead of java
-#	XXX http://antony.lesuisse.org/qweb/trac/wiki/AjaxTerm
-# XXX LVM disk support
-#	XXX need another disk in sentosa
 
 BEGIN { push(@INC, ".."); };
 eval "use WebminCore;";
