@@ -9,8 +9,8 @@ require './server-manager-lib.pl';
 foreach $minfo (&get_all_module_infos()) {
 	$root = &module_root_directory($minfo->{'dir'});
 	if (&check_os_support($minfo) &&
-	    -r "$root/vm2_feature.pl") {
-		&foreign_require($minfo->{'dir'}, "vm2_feature.pl");
+	    -r "$root/cloudmin_feature.pl") {
+		&foreign_require($minfo->{'dir'}, "cloudmin_feature.pl");
 
 		# What does this plugin provide?
 		@prov = ( );

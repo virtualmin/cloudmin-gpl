@@ -158,7 +158,7 @@ if ($no_vm2_plugins) {
 @plugins = ( );
 foreach my $pname (@confplugins) {
 	if (&foreign_check($pname)) {
-		&foreign_require($pname, "vm2_feature.pl");
+		&foreign_require($pname, "cloudmin_feature.pl");
 		push(@plugins, $pname);
 		}
 	}

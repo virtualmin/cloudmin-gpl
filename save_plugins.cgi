@@ -9,7 +9,7 @@ require './server-manager-lib.pl';
 # Check each to see if usable
 @newplugins = split(/\0/, $in{'d'});
 foreach my $p (@newplugins) {
-	&foreign_require($p, "vm2_feature.pl");
+	&foreign_require($p, "cloudmin_feature.pl");
 	$desc = &plugin_call($p, "plugin_desc");
 	$err = &plugin_call($p, "plugin_check");
 	if ($err) {
