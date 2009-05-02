@@ -270,7 +270,7 @@ $down = $status eq 'down' || $status eq 'nossh' || $status eq 'nohost';
 if ($view) {
 	# No form, so no buttons
 	}
-elsif ($main::vm2_no_edit_buttons) {
+elsif ($main::cloudmin_no_edit_buttons) {
 	# Theme provides it's own action links
 	print &ui_form_end([ [ "save", $text{'save'} ] ]);
 	}

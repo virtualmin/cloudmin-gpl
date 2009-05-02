@@ -26,7 +26,7 @@ print $lerr if ($lerr);
 @allservers = &list_available_managed_servers_sorted();
 
 # Build add links
-if (!$main::vm2_no_create_links) {
+if (!$main::cloudmin_no_create_links) {
 	foreach $t (@server_management_types) {
 		$lfunc = "type_".$t."_create_links";
 		if (defined(&$lfunc)) {
@@ -248,7 +248,7 @@ else {
 	}
 
 # Show icons for global settings
-if (!$main::vm2_no_global_links) {
+if (!$main::cloudmin_no_global_links) {
 	($glinks, $gtitles, $gicons) = &get_global_links($virtcount);
 	if (@$glinks) {
 		print "<hr>\n";

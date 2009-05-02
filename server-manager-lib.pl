@@ -109,7 +109,11 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 $licence_status = "$module_config_directory/licence-status";
 $licence_file = "/etc/server-manager-license";
 $licence_cache_file = "$module_config_directory/licence-cache";
-$vm2_yum_repo = "/etc/yum.repos.d/vm2.repo";
+$cloudmin_yum_repo = "/etc/yum.repos.d/vm2.repo";
+if (!-r $cloudmin_yum_repo) {
+	$cloudmin_yum_repo = "/etc/yum.repos.d/cloudmin.repo";
+	}
+$upgrade_cloudmin_host = "cloudmin.virtualmin.com";
 $upgrade_vm2_host = "vm2.virtualmin.com";
 
 $virtualmin_licence_host = "software.virtualmin.com";

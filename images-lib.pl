@@ -3,8 +3,8 @@
 use POSIX;
 
 $server_images_dir = "$ENV{'WEBMIN_VAR'}/$module_name";
-$server_images_url = "http://vm2.virtualmin.com/images/images.txt";
-$server_images_base = "http://vm2.virtualmin.com/images/";
+$server_images_url = "http://cloudmin.virtualmin.com/images/images.txt";
+$server_images_base = "http://cloudmin.virtualmin.com/images/";
 $server_images_cache = "$module_config_directory/server-images-cache";
 
 # list_server_images([type])
