@@ -26,6 +26,8 @@ if (-r "$module_root_directory/bw-lib.pl") {
 &remote_error_setup(\&remote_error_handler);
 eval "use Net::Amazon::EC2;";		# Fails if no S3 type
 use Time::Local;
+use POSIX;
+use Socket;
 %access = &get_module_acl();
 
 @possible_server_management_types = ( "real",
@@ -389,7 +391,7 @@ if ($server->{'id'} eq '0') {
 			'virtualmin_key' => $server->{'virtualmin_key'},
 		      );
 	# Save all Cloudmin type-specific details
-	foreach my $t (@server_management_types) {
+	foreach my $t (@server_management_types, 'zone') {
 		foreach my $k (keys %$server) {
 			if ($k =~ /^\Q$t\E_/) {
 				$this{$k} = $server->{$k};
