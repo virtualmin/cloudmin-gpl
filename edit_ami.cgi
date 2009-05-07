@@ -17,7 +17,7 @@ $ami || &error($text{'eami_egone'});
 print &ui_form_start("save_ami.cgi", "post");
 print &ui_hidden("id", $in{'id'});
 print &ui_hidden("ec2", $in{'ec2'});
-print &ui_table_start($text{'eami_header'}, undef, 2, [ "width=30%" ]);
+print &ui_table_start($text{'eami_header'}, undef, 2);
 
 # AMI ID
 print &ui_table_row($text{'eami_ami'}, "<tt>$ami->{'imageId'}</tt>");
