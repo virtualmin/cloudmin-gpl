@@ -66,6 +66,9 @@ if ($serial) {
 	foreach $s (@pservers, @oservers) {
 		&check_server_status($s, $regen, 0, $time);
 		&save_managed_server($s);
+	        if (defined(&refresh_server_usage)) {
+			&refresh_server_usage($s, $time);
+			}
 		$desc = $text{'status_'.$s->{'status'}};
 		print "$s->{'host'}: $s->{'status'} ($desc)\n";
 		}
@@ -77,6 +80,9 @@ else {
 		@rv = &parallel_server_function($l,
 			sub { &check_server_status($_[0], $regen, 0, $time);
 			      &save_managed_server($_[0]);
+			      if (defined(&refresh_server_usage)) {
+				&refresh_server_usage($_[0], $time);
+			      }
 			      return $_[0]->{'status'}; });
 		for($i=0; $i<@rv; $i++) {
 			$desc = $text{'status_'.$rv[$i]->[0]};

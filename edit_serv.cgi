@@ -158,6 +158,57 @@ if ($view && defined(&$rfunc) && $config{'bw_enabled'}) {
 
 print &ui_hidden_table_end("basic");
 
+# Resource usage, if supported
+if (defined(&get_server_usage)) {
+	print &ui_hidden_table_start($text{'edit_uheader'},
+				     "width=100%", 2, "usage", 0, \@tds);
+
+	# Accounting period
+	print &ui_table_row($text{'edit_uperiod'},
+		$config{'bw_period'} ? $text{'bw_last_'.$config{'bw_period'}}
+				     : &text('bw_days', $config{'bw_days'}));
+
+	# Get usage and current period
+	$start = &bandwidth_period_start();
+	$now = time();
+	@usage = &get_server_usage($server);
+	if (@usage && $start < $usage[0]->{'start'}) {
+		# Cannot be older than first sample
+		$start = $usage[0]->{'start'};
+		}
+
+	# Uptime and percentage
+	$up = &sum_usage_over_period(\@usage, $start, $now, 'up');
+	$pc = $up ? int($up * 100 / ($now - $start)) : 0;
+	print &ui_table_row($text{'edit_uup'},
+			    &text('edit_ulen', &nice_hour_mins_secs($up), $pc));
+
+	# Memory usage, in GB hours and average
+	$mem = &sum_usage_over_period(\@usage, $start, $now, 'mem');
+	if ($mem) {
+		$gbh = sprintf("%.2f", ($mem / (3600*1024*1024*1024)));
+		$avgmem = &nice_size(int($mem / ($now - $start)));
+		$upmem = &nice_size(int($mem / $up));
+		print &ui_table_row($text{'edit_umem'},
+				    &text('edit_ugbh', $gbh, $avgmem, $upmem));
+		}
+
+	# CPU cores, in core hours
+	# XXX not implemented yet
+
+	# CPU allocation, in percent hours
+	$cpu = &sum_usage_over_period(\@usage, $start, $now, 'cpu');
+	if ($cpu) {
+		$cpuh = sprintf("%.2f", ($cpu / 3600));
+		$avgcpu = int($cpu / ($now - $start));
+		$upcpu = int($cpu / $up);
+		print &ui_table_row($text{'edit_ucpu'},
+			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
+		}
+
+	print &ui_hidden_table_end("usage");
+	}
+
 # Type-specific extra information, if any
 $efunc = "type_".$t."_edit_form";
 if (defined(&$efunc)) {

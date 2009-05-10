@@ -1,6 +1,7 @@
 # Functions for collecting virtual system run-time usage
 
 $usage_data_dir = "$module_config_directory/usage";
+$usage_cron_cmd = "$module_config_directory/usage.pl";
 
 # get_server_usage(&server)
 # Returns a list of usage samples for a system, each of which is a hash ref
@@ -21,6 +22,7 @@ open(USAGE, "$usage_data_dir/$server->{'id'}");
 while(<USAGE>) {
 	s/\r|\n//g;
 	my %u = map { split(/=/, $_) } split(/\s+/, $_);
+	push(@rv, \%u);
 	}
 close(USAGE);
 return @rv;
@@ -31,6 +33,9 @@ return @rv;
 sub save_server_usage
 {
 my ($server, $usages) = @_;
+if (!-d $usage_data_dir) {
+	&make_dir($usage_data_dir, 0700);
+	}
 &open_tempfile(USAGE, ">$usage_data_dir/$server->{'id'}");
 foreach my $usage (@$usages) {
 	&print_tempfile(USAGE, &usage_line($usage),"\n");
@@ -43,6 +48,9 @@ foreach my $usage (@$usages) {
 sub append_server_usage
 {
 my ($server, $usage) = @_;
+if (!-d $usage_data_dir) {
+	&make_dir($usage_data_dir, 0700);
+	}
 &open_tempfile(USAGE, ">>$usage_data_dir/$server->{'id'}");
 &print_tempfile(USAGE, &usage_line($usage),"\n");
 &close_tempfile(USAGE);
@@ -63,7 +71,7 @@ sub update_server_usage
 {
 my ($server, $usage) = @_;
 my $pos = &find_last_usage_pos($server);
-if ($pos > 0) {
+if ($pos >= 0) {
 	open(USAGE, "+<$usage_data_dir/$server->{'id'}");
 	seek(USAGE, $pos, 0);
 	print USAGE &usage_line($usage),"\n";
@@ -80,6 +88,7 @@ sub last_server_usage
 {
 my ($server) = @_;
 my $pos = &find_last_usage_pos($server);
+print STDERR "pos=$pos\n";
 return undef if ($pos < 0);
 open(USAGE, "$usage_data_dir/$server->{'id'}");
 seek(USAGE, $pos, 0);
@@ -104,6 +113,7 @@ if ($st[7] > 1024) {
 	}
 my @lines = <USAGE>;
 close(USAGE);
+print STDERR "len=$st[7] last line=",length($lines[$#lines]),"\n";
 return $st[7] - length($lines[$#lines]);
 }
 
@@ -115,28 +125,38 @@ sub refresh_server_usage
 my ($server, $now) = @_;
 $now ||= time();
 my $usage = &last_server_usage($server);
+print STDERR "last usage = $usage\n";
 
 # Get current status and usage
-my $up = $server->{'status'} ne 'down';
-my ($mem, $cpu, $cores);
-my $mfunc = "type_".$server->{'type'}."_get_memory";
+my $up = $server->{'status'} ne 'down' &&
+         $server->{'status'} ne 'nohost' ? 1 : 0;
+my ($mem, $cpu, $cores, $secs);
+my $mfunc = "type_".$server->{'manager'}."_get_memory";
 if (defined(&$mfunc)) {
 	$mem = &$mfunc($server);
 	}
-my $cfunc = "type_".$server->{'type'}."_get_cpu";
+my $cfunc = "type_".$server->{'manager'}."_get_cpu";
 if (defined(&$cfunc)) {
-	my ($cpu) = &$cfunc($server);
+	($cpu) = &$cfunc($server);
+	$cpu ||= 100;
 	}
-my $vfunc = "type_".$server->{'type'}."_get_vcpus";
+my $vfunc = "type_".$server->{'manager'}."_get_vcpus";
 if (defined(&$vfunc)) {
 	my @vcpus = &$vfunc($server);
-	# XXX how to compute usage?
+	# XXX CPU core pinning?
+	}
+my $sfunc = "type_".$server->{'manager'}."_get_cpu_seconds";
+if (defined(&$sfunc)) {
+	# XXX need to subtract last sample
+	#$secs = &$sfunc($server);
 	}
 
 my $extend = 0;
 if ($usage && $usage->{'up'} && $up) {
 	# Can just extend current sample, if memory and CPU are same
 	if ($cores == $usage->{'cores'} &&
+	    $cpu == $usage->{'cpu'} &&
+	    $secs == $usage->{'secs'} &&
 	    $mem == $usage->{'mem'}) {
 		$extend = 1;
 		}
@@ -148,6 +168,7 @@ elsif ($usage && !$usage->{'up'} && !$up) {
 if ($extend) {
 	# Update last sample
 	$usage->{'end'} = $now;
+	print STDERR "can update usage\n";
 	&update_server_usage($server, $usage);
 	}
 else {
@@ -158,8 +179,53 @@ else {
 	$newusage->{'mem'} = $mem if (defined($mem));
 	$newusage->{'cpu'} = $cpu if (defined($cpu));
 	$newusage->{'cores'} = $cores if (defined($cores));
+	$newusage->{'secs'} = $secs if (defined($secs));
 	&append_server_usage($server, $newusage);
 	}
+}
+
+# nice_hour_mins_secs(unixtime)
+# Convert a number of seconds into an HH hours, MM minutes, SS seconds format
+sub nice_hour_mins_secs
+{
+local ($time) = @_;
+local $days = int($time / (24*60*60));
+local $hours = int($time / (60*60)) % 24;
+local $mins = sprintf("%2.2d", int($time / 60) % 60);
+local $secs = sprintf("%2.2d", int($time) % 60);
+if ($days) {
+	return &text('nicetime_days', $days, $hours, $mins, $secs);
+	}
+elsif ($days || $hours) {
+	return &text('nicetime_hours', $hours, $mins, $secs);
+	}
+else {
+	return &text('nicetime_mins', $mins, $secs);
+	}
+}
+
+# sum_usage_over_period(&usage, start, end, what)
+# For usage samples over some period, returns the sum of the what parameter
+# times the length of samples.
+sub sum_usage_over_period
+{
+my ($usage, $start, $end, $what) = @_;
+my $rv = 0;
+foreach my $u (@$usage) {
+	next if ($u->{'start'} > $end);
+	next if ($u->{'end'} < $start);
+	my $len = $u->{'end'} - $u->{'start'};
+	if ($u->{'start'} < $start) {
+		# Sample starts before start time .. cut off that piece
+		$len -= ($start - $u->{'start'});
+		}
+	if ($u->{'end'} > $end) {
+		# Sample starts after end time .. cut off that piece
+		$len -= ($u->{'end'} - $end);
+		}
+	$rv += $u->{$what} * $len;
+	}
+return $rv;
 }
 
 1;

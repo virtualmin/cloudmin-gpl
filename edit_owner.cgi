@@ -17,7 +17,7 @@ else {
 print &ui_form_start("save_owner.cgi", "post");
 print &ui_hidden("new", $in{'new'});
 print &ui_hidden("old", $in{'name'});
-print &ui_table_start($text{'owner_header'}, undef, 2);
+print &ui_hidden_table_start($text{'owner_header'}, "width=100%", 2, "main", 1);
 
 # Username
 print &ui_table_row($text{'owner_name'},
@@ -33,13 +33,14 @@ print &ui_table_row($text{'owner_pass'},
 
 # Description
 print &ui_table_row($text{'owner_real'},
-	&ui_textbox("real", $owner->{'real'}, 40));
+	&ui_textbox("real", $owner->{'real'}, 60));
 
 # Contact email
 print &ui_table_row($text{'owner_email'},
-	&ui_textbox("email", $owner->{'acl'}->{'email'}, 40));
+	&ui_textbox("email", $owner->{'acl'}->{'email'}, 60));
 
 # Managed servers
+# XXX left / right chooser
 print &ui_table_row($text{'owner_servers'},
 	&ui_select("servers", [ split(/\s+/, $owner->{'acl'}->{'servers'}) ],
 		   [ map { [ $_->{'id'}, ("&nbsp;&nbsp;" x $_->{'indent'}).
@@ -53,7 +54,25 @@ print &ui_table_row($text{'owner_actions'},
 	     map { &ui_checkbox("actions", $_, $text{'owner_action_'.$_},
 				$actions{$_}) } &list_owner_actions()));
 
-print &ui_table_end();
+print &ui_hidden_table_end();
+
+# Section for usage data, if we have it
+if (defined(&get_server_usage)) {
+	print &ui_hidden_table_start($text{'owner_header2'}, "width=100%", 2,
+				     "usage", 1);
+
+	# System use over accounting period
+	# XXX
+	
+	# Memory over accounting period
+	# XXX
+
+	# CPU core usage
+	# XXX
+
+	print &ui_hidden_table_end();
+	}
+
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
 	       : [ [ undef, $text{'save'} ], [ 'delete', $text{'delete'} ] ]); 

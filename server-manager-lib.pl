@@ -431,6 +431,9 @@ if (!$keep) {
 	if (defined(&delete_bandwidth)) {
 		&delete_bandwidth($server);
 		}
+	if (defined($usage_data_dir)) {
+		&unlink_file("$usage_data_dir/$server->{'id'}");
+		}
 	}
 }
 
@@ -1901,6 +1904,9 @@ local $time = time();
 return &parallel_server_function($servers,
 	sub { &check_server_status($_[0], $regen, 0, $time);
 	      &save_managed_server($_[0]);
+	      if (defined(&refresh_server_usage)) {
+		&refresh_server_usage($_[0], $time);
+	      }
 	      return ( $_[0]->{'status'}, $_[0]->{'status_msg'},
 		       $_[0]->{'virtualmin_domains'},
 		       $_[0]->{'virtualmin_error'} );
