@@ -200,6 +200,50 @@ if ($multi) {
 				}
 			}
 
+		# Show resource usage
+		if (defined(&get_server_usage)) {
+			# Get usage and current period
+			$start = &bandwidth_period_start();
+			$now = time();
+			@usage = &get_server_usage($s);
+			if (@usage && $start < $usage[0]->{'start'}) {
+				$start = $usage[0]->{'start'};
+				}
+			print "    Resource accounting period: ",
+				$config{'bw_period'} ?
+					"Current ".$config{'bw_period'} :
+					"Last ".$config{'bw_days'}." days","\n";
+			$ago = time() - $start;
+			print "    Start of period: ",
+				&make_date($start)," ($ago seconds ago)\n";
+
+			# System uptime
+			$up = &sum_usage_over_period(
+				\@usage, $start, $now, 'up');
+			print "    System uptime over period: ",
+				&nice_hour_mins_secs($up)," ($up seconds)\n";
+
+			# Memory use
+			$mem = &sum_usage_over_period(
+				\@usage, $start, $now, 'mem');
+			if ($mem) {
+				$gbh = sprintf("%.2f",
+					($mem / (3600*1024*1024*1024)));
+				print "    Memory used over period: ",
+					$gbh," GB hours ($mem byte seconds)\n";
+				}
+
+			# CPU allocation
+			$cpu = &sum_usage_over_period(
+				\@usage, $start, $now, 'cpu');
+			if ($cpu) {
+				$cpuh = sprintf("%.2f", ($cpu / 3600));
+				print "    CPU allocated over period: ",
+					$cpuh," percent hours ",
+					"($cpu percent seconds)\n";
+				}
+			}
+
 		# Show collected info
 		if ($info && scalar(keys %$info) > 1) {
 			if ($info->{'load'}) {
