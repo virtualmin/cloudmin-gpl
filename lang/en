@@ -1738,6 +1738,7 @@ owners_return=system owners
 owner_title1=Create System Owner
 owner_title2=Edit System Owner
 owner_header=System owner account details
+owner_header2=Usage by all owned systems
 owner_name=Login username
 owner_pass=Login password
 owner_lock=Temporarily locked

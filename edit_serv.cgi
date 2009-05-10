@@ -206,6 +206,9 @@ if (defined(&get_server_usage)) {
 			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
 		}
 
+	# CPU seconds of usage
+	# XXX
+
 	print &ui_hidden_table_end("usage");
 	}
 

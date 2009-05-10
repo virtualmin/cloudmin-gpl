@@ -41,8 +41,9 @@ print &ui_table_row($text{'owner_email'},
 
 # Managed servers
 # XXX left / right chooser
+@sids = split(/\s+/, $owner->{'acl'}->{'servers'});
 print &ui_table_row($text{'owner_servers'},
-	&ui_select("servers", [ split(/\s+/, $owner->{'acl'}->{'servers'}) ],
+	&ui_select("servers", \@sids,
 		   [ map { [ $_->{'id'}, ("&nbsp;&nbsp;" x $_->{'indent'}).
 					 $_->{'short_host'} ] } @allservers ],
 		   10, 1));
@@ -61,14 +62,48 @@ if (defined(&get_server_usage)) {
 	print &ui_hidden_table_start($text{'owner_header2'}, "width=100%", 2,
 				     "usage", 1);
 
-	# System use over accounting period
-	# XXX
+	# Accounting period
+	print &ui_table_row($text{'edit_uperiod'},
+		$config{'bw_period'} ? $text{'bw_last_'.$config{'bw_period'}}
+				     : &text('bw_days', $config{'bw_days'}));
+
+	# Total uptime over usage period
+	$start = &bandwidth_period_start();
+	$now = time();
+	@allservers = &list_managed_servers();
+	@allusage = ( );
+	foreach $id (@sids) {
+		my ($server) = grep { $_->{'id'} eq $id } @allservers;
+		if ($server) {
+			my @usage = &get_server_usage($server);
+			if (@usage && $start < $usage[0]->{'start'}) {
+				$start = $usage[0]->{'start'};
+				}
+			push(@allusage, @usage);
+			}
+		}
+	$up = &sum_usage_over_period(\@allusage, $start, $now, 'up');
+	print &ui_table_row($text{'edit_uup'}, &nice_hour_mins_secs($up));
 	
 	# Memory over accounting period
-	# XXX
+	$mem = &sum_usage_over_period(\@allusage, $start, $now, 'mem');
+	if ($mem) {
+		$gbh = sprintf("%.2f", ($mem / (3600*1024*1024*1024)));
+		$avgmem = &nice_size(int($mem / ($now - $start)));
+		$upmem = &nice_size(int($mem / $up));
+		print &ui_table_row($text{'edit_umem'},
+				    &text('edit_ugbh', $gbh, $avgmem, $upmem));
+		}
 
-	# CPU core usage
-	# XXX
+	# CPU allocation, in percent hours
+	$cpu = &sum_usage_over_period(\@allusage, $start, $now, 'cpu');
+	if ($cpu) {
+		$cpuh = sprintf("%.2f", ($cpu / 3600));
+		$avgcpu = int($cpu / ($now - $start));
+		$upcpu = int($cpu / $up);
+		print &ui_table_row($text{'edit_ucpu'},
+			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
+		}
 
 	print &ui_hidden_table_end();
 	}
