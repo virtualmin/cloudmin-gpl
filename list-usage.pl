@@ -65,7 +65,7 @@ while(@ARGV > 0) {
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
 
-$fmt = " %-18.18s %-18.18s %-4.4s %-10.10s %-5.5s %-10.10s\n";
+$fmt = " %-18.18s %-18.18s %-4.4s %-10.10s %-10.10s %-10.10s\n";
 $now = time();
 foreach $s (@servers) {
 	print $s->{'host'},"\n";
@@ -82,7 +82,7 @@ foreach $s (@servers) {
 	$myend ||= time();
 
 	# Show samples that fill into the period
-	printf $fmt, "Start", "End", "Up?", "Memory", "CPU", "CPU time";
+	printf $fmt, "Start", "End", "Up?", "Memory", "CPU alloc", "CPU load";
 	foreach my $u (@usage) {
 		next if ($u->{'end'} < $mystart ||
 			 $u->{'start'} > $myend);
@@ -91,7 +91,7 @@ foreach $s (@servers) {
 			     $u->{'up'} ? "Yes" : "No",
 			     $u->{'mem'} ? &nice_size($u->{'mem'}) : "-",
 			     $u->{'cpu'} ? $u->{'cpu'}."%" : "-",
-			     $u->{'secs'} eq '' ? '-' : $u->{'secs'};
+			     $u->{'load'} ? $u->{'load'}."%" : "-";
 		}
 	}
 

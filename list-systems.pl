@@ -242,6 +242,16 @@ if ($multi) {
 					$cpuh," percent hours ",
 					"($cpu percent seconds)\n";
 				}
+
+			# CPU usage
+			$load = &sum_usage_over_period(
+				\@usage, $start, $now, 'load');
+			if ($load) {
+				$loadh = sprintf("%.2f", ($load / 3600));
+				print "    CPU used over period: ",
+					$loadh," percent hours ",
+					"(loadu percent seconds)\n";
+				}
 			}
 
 		# Show collected info

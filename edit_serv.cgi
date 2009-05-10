@@ -206,8 +206,15 @@ if (defined(&get_server_usage)) {
 			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
 		}
 
-	# CPU seconds of usage
-	# XXX
+	# CPU load, in percent hours
+	$load = &sum_usage_over_period(\@usage, $start, $now, 'load');
+	if ($load) {
+		$cpuh = sprintf("%.2f", ($load / 3600));
+		$avgcpu = int($load / ($now - $start));
+		$upcpu = int($load / $up);
+		print &ui_table_row($text{'edit_uload'},
+			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
+		}
 
 	print &ui_hidden_table_end("usage");
 	}

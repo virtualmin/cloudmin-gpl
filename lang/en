@@ -695,6 +695,7 @@ edit_ulen=$1 ($2% of period)
 edit_umem=Memory used over period
 edit_ugbh=$1 GB hours, $2 average, $3 average while up
 edit_ucpu=CPU allocated over period
+edit_uload=CPU used over period
 edit_ucpuh=$1 percent hours, $2% average, $3% while up
 edit_lheader=Resource limits
 edit_lmemory=Maximum memory allocation

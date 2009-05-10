@@ -159,6 +159,8 @@ $old_api_helper_command = "/usr/sbin/vm2";
 
 $ping_host_timeout = 2;
 
+$xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {

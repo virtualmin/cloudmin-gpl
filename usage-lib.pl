@@ -125,15 +125,23 @@ sub refresh_server_usage
 my ($server, $now) = @_;
 $now ||= time();
 my $usage = &last_server_usage($server);
+my $info;
 print STDERR "last usage = $usage\n";
 
 # Get current status and usage
 my $up = $server->{'status'} ne 'down' &&
          $server->{'status'} ne 'nohost' ? 1 : 0;
-my ($mem, $cpu, $cores, $secs);
+my ($mem, $cpu, $cores, $load);
 my $mfunc = "type_".$server->{'manager'}."_get_memory";
 if (defined(&$mfunc)) {
 	$mem = &$mfunc($server);
+	}
+if (!$mem) {
+	# Get from collected info
+	$info ||= &get_server_collected($server);
+	if ($info->{'mem'} && $info->{'mem'}->[0]) {
+		$mem = $info->{'mem'}->[0] * 1024;
+		}
 	}
 my $cfunc = "type_".$server->{'manager'}."_get_cpu";
 if (defined(&$cfunc)) {
@@ -145,10 +153,17 @@ if (defined(&$vfunc)) {
 	my @vcpus = &$vfunc($server);
 	# XXX CPU core pinning?
 	}
-my $sfunc = "type_".$server->{'manager'}."_get_cpu_seconds";
+my $sfunc = "type_".$server->{'manager'}."_get_cpu_load";
 if (defined(&$sfunc)) {
-	# XXX need to subtract last sample
-	#$secs = &$sfunc($server);
+	($load) = &$sfunc($server);
+	$load = int($load) if (defined($load));
+	}
+if (!defined($load)) {
+	# Get from collected info instead
+	$info ||= &get_server_collected($server);
+	if ($info->{'load'} && $info->{'load'}->[0] ne '') {
+		$load = int($info->{'load'}->[0]*100);
+		}
 	}
 
 my $extend = 0;
@@ -156,7 +171,7 @@ if ($usage && $usage->{'up'} && $up) {
 	# Can just extend current sample, if memory and CPU are same
 	if ($cores == $usage->{'cores'} &&
 	    $cpu == $usage->{'cpu'} &&
-	    $secs == $usage->{'secs'} &&
+	    $load == $usage->{'load'} &&
 	    $mem == $usage->{'mem'}) {
 		$extend = 1;
 		}
@@ -179,7 +194,7 @@ else {
 	$newusage->{'mem'} = $mem if (defined($mem));
 	$newusage->{'cpu'} = $cpu if (defined($cpu));
 	$newusage->{'cores'} = $cores if (defined($cores));
-	$newusage->{'secs'} = $secs if (defined($secs));
+	$newusage->{'load'} = $load if (defined($load));
 	&append_server_usage($server, $newusage);
 	}
 }
