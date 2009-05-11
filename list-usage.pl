@@ -90,8 +90,8 @@ foreach $s (@servers) {
 			     &make_date($u->{'end'}),
 			     $u->{'up'} ? "Yes" : "No",
 			     $u->{'mem'} ? &nice_size($u->{'mem'}) : "-",
-			     $u->{'cpu'} ? $u->{'cpu'}."%" : "-",
-			     $u->{'load'} ? $u->{'load'}."%" : "-";
+			     $u->{'cpu'} ne '' ? int($u->{'cpu'})."%" : "-",
+			     $u->{'load'} ne '' ? int($u->{'load'})."%" : "-";
 		}
 	}
 

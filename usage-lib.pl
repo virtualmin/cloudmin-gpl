@@ -88,7 +88,6 @@ sub last_server_usage
 {
 my ($server) = @_;
 my $pos = &find_last_usage_pos($server);
-print STDERR "pos=$pos\n";
 return undef if ($pos < 0);
 open(USAGE, "$usage_data_dir/$server->{'id'}");
 seek(USAGE, $pos, 0);
@@ -113,7 +112,6 @@ if ($st[7] > 1024) {
 	}
 my @lines = <USAGE>;
 close(USAGE);
-print STDERR "len=$st[7] last line=",length($lines[$#lines]),"\n";
 return $st[7] - length($lines[$#lines]);
 }
 
@@ -126,43 +124,49 @@ my ($server, $now) = @_;
 $now ||= time();
 my $usage = &last_server_usage($server);
 my $info;
-print STDERR "last usage = $usage\n";
 
 # Get current status and usage
 my $up = $server->{'status'} ne 'down' &&
          $server->{'status'} ne 'nohost' ? 1 : 0;
-my ($mem, $cpu, $cores, $load);
-my $mfunc = "type_".$server->{'manager'}."_get_memory";
-if (defined(&$mfunc)) {
-	$mem = &$mfunc($server);
-	}
-if (!$mem) {
-	# Get from collected info
-	$info ||= &get_server_collected($server);
-	if ($info->{'mem'} && $info->{'mem'}->[0]) {
-		$mem = $info->{'mem'}->[0] * 1024;
+my ($mem, $cpu, $cores, $load, $loadtime);
+if ($up) {
+	# CPU and memory is only consumed by up systems
+	my $mfunc = "type_".$server->{'manager'}."_get_memory";
+	if (defined(&$mfunc)) {
+		$mem = &$mfunc($server);
 		}
-	}
-my $cfunc = "type_".$server->{'manager'}."_get_cpu";
-if (defined(&$cfunc)) {
-	($cpu) = &$cfunc($server);
-	$cpu ||= 100;
-	}
-my $vfunc = "type_".$server->{'manager'}."_get_vcpus";
-if (defined(&$vfunc)) {
-	my @vcpus = &$vfunc($server);
-	# XXX CPU core pinning?
-	}
-my $sfunc = "type_".$server->{'manager'}."_get_cpu_load";
-if (defined(&$sfunc)) {
-	($load) = &$sfunc($server);
-	$load = int($load) if (defined($load));
-	}
-if (!defined($load)) {
-	# Get from collected info instead
-	$info ||= &get_server_collected($server);
-	if ($info->{'load'} && $info->{'load'}->[0] ne '') {
-		$load = int($info->{'load'}->[0]*100);
+	if (!$mem) {
+		# Get from collected info
+		$info ||= &get_server_collected($server);
+		if ($info->{'mem'} && $info->{'mem'}->[0]) {
+			$mem = $info->{'mem'}->[0] * 1024;
+			}
+		}
+	my $cfunc = "type_".$server->{'manager'}."_get_cpu";
+	if (defined(&$cfunc)) {
+		($cpu) = &$cfunc($server);
+		$cpu ||= 100;
+		}
+	my $vfunc = "type_".$server->{'manager'}."_get_vcpus";
+	if (defined(&$vfunc)) {
+		my @vcpus = &$vfunc($server);
+		# XXX CPU core pinning?
+		}
+	my $sfunc = "type_".$server->{'manager'}."_get_cpu_load";
+	if (defined(&$sfunc)) {
+		($load, $loadtime) = &$sfunc($server);
+		}
+	if (!defined($load)) {
+		# Get from collected info instead
+		$info ||= &get_server_collected($server);
+		if ($info->{'load'} && $info->{'load'}->[0] ne '') {
+			$load = int($info->{'load'}->[0]*100);
+			if ($usage) {
+				# Assume the load is over the time period
+				# since the last usage sample
+				$loadtime = $now - $usage->{'end'};
+				}
+			}
 		}
 	}
 
@@ -171,7 +175,7 @@ if ($usage && $usage->{'up'} && $up) {
 	# Can just extend current sample, if memory and CPU are same
 	if ($cores == $usage->{'cores'} &&
 	    $cpu == $usage->{'cpu'} &&
-	    $load == $usage->{'load'} &&
+	    ($load == $usage->{'load'} || $loadtime) &&
 	    $mem == $usage->{'mem'}) {
 		$extend = 1;
 		}
@@ -180,10 +184,20 @@ elsif ($usage && !$usage->{'up'} && !$up) {
 	# Was down, still down .. can extend
 	$extend = 1;
 	}
+if ($extend && $up && $usage->{'start'} < $now-3600) {
+	# If last sample was more than 1 hour long, start a new one
+	$extend = 0;
+	}
 if ($extend) {
 	# Update last sample
 	$usage->{'end'} = $now;
-	print STDERR "can update usage\n";
+	if (defined($load)) {
+		# Re-compute the CPU load for this period
+		$usage->{'load'} = ($usage->{'load'} * $usage->{'loadtime'} +
+				    $load * $loadtime) / 
+				   ($usage->{'loadtime'} + $loadtime);
+		$usage->{'loadtime'} += $loadtime;
+		}
 	&update_server_usage($server, $usage);
 	}
 else {
@@ -194,7 +208,10 @@ else {
 	$newusage->{'mem'} = $mem if (defined($mem));
 	$newusage->{'cpu'} = $cpu if (defined($cpu));
 	$newusage->{'cores'} = $cores if (defined($cores));
-	$newusage->{'load'} = $load if (defined($load));
+	if (defined($load)) {
+		$newusage->{'load'} = $load;
+		$newusage->{'loadtime'} = $loadtime;
+		}
 	&append_server_usage($server, $newusage);
 	}
 }
