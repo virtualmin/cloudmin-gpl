@@ -333,6 +333,7 @@ elsif ($in{'shutdown'}) {
 			&parallel_server_function($sl,
 				sub { $err = &shutdown_server($_[0]);
 				      &check_server_status($_[0], 0, 1);
+				      &refresh_server_usage($_[0]);
 				      &save_managed_server($_[0]) });
 			}
 		print $text{'mass_shutted'},"<p>\n";
@@ -374,6 +375,7 @@ elsif ($in{'startup'}) {
 		&parallel_server_function($sl,
 			sub { ($ok, $err) = &startup_server($_[0]);
 			      &check_server_status($_[0], 0, 1);
+			      &refresh_server_usage($_[0]);
 			      &save_managed_server($_[0]) });
 		}
 	print $text{'mass_started'},"<p>\n";

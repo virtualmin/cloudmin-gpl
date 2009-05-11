@@ -76,6 +76,7 @@ foreach $s (@servers) {
 			}
 		}
 	&check_server_status($s, 0, 1);
+	&refresh_server_usage($s);
 	&save_managed_server($s);
 	}
 

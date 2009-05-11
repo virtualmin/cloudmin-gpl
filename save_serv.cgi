@@ -30,6 +30,7 @@ if ($in{'shutdown'}) {
 		else {
 			#&check_server_status($server);
 			$server->{'status'} = 'down';        # Assume it worked
+			&refresh_server_usage($server);
 			&save_managed_server($server);
 			print $text{'save_shutdone'},"<p>\n";
 			if (defined(&theme_post_save_server)) {
@@ -53,6 +54,7 @@ elsif ($in{'startup'}) {
 		}
 	else {
 		&check_server_status($server, 0, 1);
+		&refresh_server_usage($server);
 		&save_managed_server($server);
 		if ($ok == 1) {
 			print $text{'save_startdone'},"<p>\n";
@@ -99,6 +101,7 @@ elsif ($in{'reboot'}) {
 				print $text{'save_startdone'},"<p>\n";
 				}
 			}
+		&refresh_server_usage($server);
 		&save_managed_server($server);
 		}
 	else {

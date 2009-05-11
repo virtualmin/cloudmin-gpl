@@ -184,7 +184,7 @@ elsif ($usage && !$usage->{'up'} && !$up) {
 	# Was down, still down .. can extend
 	$extend = 1;
 	}
-if ($extend && $up && $usage->{'start'} < $now-3600) {
+if ($extend && $up && $usage && $usage->{'start'} < $now-3600) {
 	# If last sample was more than 1 hour long, start a new one
 	$extend = 0;
 	}
