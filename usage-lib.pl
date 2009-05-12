@@ -74,6 +74,7 @@ my $pos = &find_last_usage_pos($server);
 if ($pos >= 0) {
 	open(USAGE, "+<$usage_data_dir/$server->{'id'}");
 	seek(USAGE, $pos, 0);
+	truncate(USAGE, $pos);
 	print USAGE &usage_line($usage),"\n";
 	close(USAGE);
 	}
