@@ -203,12 +203,8 @@ if ($multi) {
 		# Show resource usage
 		if (defined(&get_server_usage)) {
 			# Get usage and current period
-			$start = &bandwidth_period_start();
-			$now = time();
 			@usage = &get_server_usage($s);
-			if (@usage && $start < $usage[0]->{'start'}) {
-				$start = $usage[0]->{'start'};
-				}
+			($start, $now) = &usage_period_start_end(\@usage);
 			print "    Resource accounting period: ",
 				$config{'bw_period'} ?
 					"Current ".$config{'bw_period'} :

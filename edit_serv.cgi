@@ -169,13 +169,8 @@ if (defined(&get_server_usage)) {
 				     : &text('bw_days', $config{'bw_days'}));
 
 	# Get usage and current period
-	$start = &bandwidth_period_start();
-	$now = time();
 	@usage = &get_server_usage($server);
-	if (@usage && $start < $usage[0]->{'start'}) {
-		# Cannot be older than first sample
-		$start = $usage[0]->{'start'};
-		}
+	($start, $now) = &usage_period_start_end(\@usage);
 
 	# Uptime and percentage
 	$up = &sum_usage_over_period(\@usage, $start, $now, 'up');

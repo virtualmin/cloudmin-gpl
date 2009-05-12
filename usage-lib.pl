@@ -261,5 +261,24 @@ foreach my $u (@$usage) {
 return $rv;
 }
 
+# usage_period_start_end(&usage)
+# Returns start and end times for usage display. The start will be start of
+# the current accounting period or the oldest sample, whichever is newer
+sub usage_period_start_end
+{
+my ($usage) = @_;
+my $start = &bandwidth_period_start();
+my $end = time();
+my $len = scalar(@$usage);
+if ($len && $start < $usage->[0]->{'start'}) {
+	# Cannot be older than first sample
+	$start = $usage->[0]->{'start'};
+	}
+if ($len && $end > $usage->[$len-1]->{'end'}) {
+	$end = $usage->[$len-1]->{'end'};
+	}
+return ($start, $end);
+}
+
 1;
 

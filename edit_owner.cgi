@@ -68,20 +68,16 @@ if (defined(&get_server_usage)) {
 				     : &text('bw_days', $config{'bw_days'}));
 
 	# Total uptime over usage period
-	$start = &bandwidth_period_start();
-	$now = time();
 	@allservers = &list_managed_servers();
 	@allusage = ( );
 	foreach $id (@sids) {
 		my ($server) = grep { $_->{'id'} eq $id } @allservers;
 		if ($server) {
-			my @usage = &get_server_usage($server);
-			if (@usage && $start < $usage[0]->{'start'}) {
-				$start = $usage[0]->{'start'};
-				}
-			push(@allusage, @usage);
+			push(@allusage, &get_server_usage($server));
 			}
 		}
+	@allusage = sort { $a->{'start'} cmp $b->{'start'} } @allusage;
+	($start, $now) = &usage_period_start_end(\@usage);
 	$up = &sum_usage_over_period(\@allusage, $start, $now, 'up');
 	print &ui_table_row($text{'edit_uup'}, &nice_hour_mins_secs($up));
 	
