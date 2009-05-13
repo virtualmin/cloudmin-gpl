@@ -175,11 +175,11 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Check for and sum up bandwidth use on managed systems.\n";
 print "\n";
-print "usage: bandwidth.pl [--all-hosts] | [--host name]*\n";
-print "                    [--group name]*\n";
+print "cloudmin bandwidth [--all-hosts] | [--host name]*\n";
+print "                   [--group name]*\n";
 local $types = join("|", @server_management_types);
-print "                    [--type $types]*\n";
-print "                    [--os oscode]*\n";
+print "                   [--type $types]*\n";
+print "                   [--os oscode]*\n";
 exit(1);
 }
 

@@ -78,10 +78,10 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Copies a file from one managed system to another.\n";
 print "\n";
-print "usage: transfer-file.pl --source hostname\n";
-print "                        --dest hostname\n";
-print "                        --file path\n";
-print "                        [--destfile path]\n";
+print "cloudmin transfer-file --source hostname\n";
+print "                       --dest hostname\n";
+print "                       --file path\n";
+print "                      [--destfile path]\n";
 exit(1);
 }
 

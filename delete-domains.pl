@@ -149,8 +149,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Deletes one or more Virtualmin domains from managed systems.\n";
 print "\n";
-print "usage: delete-domains.pl --domain name [--domain name]*\n";
-print "                         [--host source.hostname]\n";
+print "cloudmin delete-domains --domain name [--domain name]*\n";
+print "                       [--host source.hostname]\n";
 exit(1);
 }
 

@@ -114,14 +114,14 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Creates a new Cloudmin system owner.\n";
 print "\n";
-print "usage: create-owner.pl --name username\n";
-print "                       --email address\@domain\n";
-print "                       --pass password\n";
-print "                       [--lock]\n";
-print "                       [--real \"Real name\"]\n";
-print "                       [--host hostname]*\n";
+print "cloudmin create-owner --name username\n";
+print "                      --email address\@domain\n";
+print "                      --pass password\n";
+print "                     [--lock]\n";
+print "                     [--real \"Real name\"]\n";
+print "                     [--host hostname]*\n";
 foreach $a (@allactions) {
-	print "                       [--can-$a]\n";
+	print "                     [--can-$a]\n";
 	}
 exit(1);
 }

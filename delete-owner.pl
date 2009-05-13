@@ -52,7 +52,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Deletes an existing Cloudmin system owner.\n";
 print "\n";
-print "usage: delete-owner.pl --name username\n";
+print "cloudmin delete-owner --name username\n";
 exit(1);
 }
 

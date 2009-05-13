@@ -139,13 +139,13 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Installs Virtualmin on one or more managed systems.\n";
 print "\n";
-print "usage: install-webmin.pl [--host name]*\n";
-print "                         [--group name]*\n";
+print "cloudmin install-virtualmin [--host name]*\n";
+print "                            [--group name]*\n";
 local $types = join("|", @server_management_types);
-print "                         [--type $types]*\n";
-print "                         [--os oscode]*\n";
-print "                         [--serial number --key number] |\n";
-print "                         [--same-serial] | [--allocate-serial]\n";
+print "                            [--type $types]*\n";
+print "                            [--os oscode]*\n";
+print "                            [--serial number --key number] |\n";
+print "                            [--same-serial] | [--allocate-serial]\n";
 exit(1);
 }
 

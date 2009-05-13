@@ -93,12 +93,12 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Runs a shell command on some or all managed systems.\n";
 print "\n";
-print "usage: run-command.pl [--all-hosts] | [--host name]*\n";
-print "                      [--group name]*\n";
+print "cloudmin run-command [--all-hosts] | [--host name]*\n";
+print "                     [--group name]*\n";
 local $types = join("|", @server_management_types);
-print "                      [--type $types]*\n";
-print "                      [--os oscode]*\n";
-print "                      command arg ...\n";
+print "                     [--type $types]*\n";
+print "                     [--os oscode]*\n";
+print "                     command arg ...\n";
 exit(1);
 }
 

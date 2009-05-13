@@ -88,11 +88,11 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Installs Webmin on one or more managed systems.\n";
 print "\n";
-print "usage: install-webmin.pl [--host name]*\n";
-print "                         [--group name]*\n";
+print "cloudmin install-webmin [--host name]*\n";
+print "                        [--group name]*\n";
 local $types = join("|", @server_management_types);
-print "                         [--type $types]*\n";
-print "                         [--os oscode]*\n";
+print "                        [--type $types]*\n";
+print "                        [--os oscode]*\n";
 exit(1);
 }
 

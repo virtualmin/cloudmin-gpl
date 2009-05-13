@@ -2058,7 +2058,7 @@ if ($ex) {
 	# Work out error message
 	local @lines = grep { /\S/ } split(/\r?\n/, $out);
 	local $err;
-	if ($out =~ /usage:/i) {
+	if ($out =~ /usage:|\nvirtualmin\s/i) {
 		# First line, before usage message
 		$err = $lines[0];
 		}

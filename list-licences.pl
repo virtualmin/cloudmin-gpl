@@ -93,7 +93,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists all registered Virtualmin licenses.\n";
 print "\n";
-print "usage: list-licences.pl [--multiline | --name-only]\n";
+print "cloudmin list-licences [--multiline | --name-only]\n";
 exit(1);
 }
 

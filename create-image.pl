@@ -221,13 +221,13 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Converts an existing virtual system into an image.\n";
 print "\n";
-print "usage: create-image.pl --host name\n";
-print "                       --desc \"image description\"\n";
-print "                       --id image-id\n";
-print "                       [--overwrite]\n";
-print "                       [--version number]\n";
-print "                       [--no-serial]\n";
-print "                       [--no-compress]\n";
+print "cloudmin create-image --host name\n";
+print "                      --desc \"image description\"\n";
+print "                      --id image-id\n";
+print "                     [--overwrite]\n";
+print "                     [--version number]\n";
+print "                     [--no-serial]\n";
+print "                     [--no-compress]\n";
 exit(1);
 }
 

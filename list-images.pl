@@ -113,9 +113,9 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists all downloaded system images.\n";
 print "\n";
-print "usage: list-images.pl [--multiline | --name-only]\n";
-print "                      [--type typename]\n";
-print "                      [--md5-verify]\n";
+print "cloudmin list-images [--multiline | --name-only]\n";
+print "                     [--type typename]\n";
+print "                     [--md5-verify]\n";
 exit(1);
 }
 

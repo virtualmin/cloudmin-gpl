@@ -238,19 +238,19 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Modifies the details of one managed system.\n";
 print "\n";
-print "usage: modify-systems.pl --host name\n";
-print "                         [--force-host]\n";
-print "                         [--desc \"new description\"]\n";
-print "                         [--newhost name]\n";
-print "                         [--os code]\n";
-print "                         [--virt | --novirt]\n";
-print "                         [--ssh-pass passsword | --ssh-key keyid]\n";
-print "                         [--ssh-user username]\n";
-print "                         [--ssh-port number | --default-ssh-port]\n";
-print "                         [--webmin-user user]\n";
-print "                         [--webmin-pass password]\n";
-print "                         [--webmin-same]\n";
-print "                         [--boot | --no-boot]\n";
+print "cloudmin modify-system --host name\n";
+print "                      [--force-host]\n";
+print "                      [--desc \"new description\"]\n";
+print "                      [--newhost name]\n";
+print "                      [--os code]\n";
+print "                      [--virt | --novirt]\n";
+print "                      [--ssh-pass passsword | --ssh-key keyid]\n";
+print "                      [--ssh-user username]\n";
+print "                      [--ssh-port number | --default-ssh-port]\n";
+print "                      [--webmin-user user]\n";
+print "                      [--webmin-pass password]\n";
+print "                      [--webmin-same]\n";
+print "                      [--boot | --no-boot]\n";
 exit(1);
 }
 

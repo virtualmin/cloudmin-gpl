@@ -86,9 +86,9 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Downloads a file from a managed system.\n";
 print "\n";
-print "usage: download-file.pl --host name\n";
-print "                        --source sourcepath\n";
-print "                        [--dest destpath] | [--stdout]\n";
+print "cloudmin download-file --host name\n";
+print "                       --source sourcepath\n";
+print "                      [--dest destpath] | [--stdout]\n";
 exit(1);
 }
 

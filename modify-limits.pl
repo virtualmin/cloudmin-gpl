@@ -274,17 +274,17 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Changes memory and CPU limits on one or more managed systems.\n";
 print "\n";
-print "usage: modify-limits.pl [--host name]*\n";
-print "                        [--group name]*\n";
+print "cloudmin modify-limits [--host name]*\n";
+print "                       [--group name]*\n";
 local $types = join("|", @server_management_types);
-print "                        [--type $types]*\n";
-print "                        [--os oscode]*\n";
-print "                        [--cpu percentage]\n";
-print "                        [--weight number]\n";
-print "                        [--memory MB]\n";
-print "                        [--reboot]\n";
-print "                        [--vcpus N | --vcpus list]\n";
-print "                        [--bw-limit MB | --bw-unlimited]\n";
+print "                       [--type $types]*\n";
+print "                       [--os oscode]*\n";
+print "                       [--cpu percentage]\n";
+print "                       [--weight number]\n";
+print "                       [--memory MB]\n";
+print "                       [--reboot]\n";
+print "                       [--vcpus N | --vcpus list]\n";
+print "                       [--bw-limit MB | --bw-unlimited]\n";
 exit(1);
 }
 

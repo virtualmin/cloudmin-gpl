@@ -156,13 +156,13 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Adds a disk device to some virtual system.\n";
 print "\n";
-print "usage: create-disk.pl --host hostname\n";
-print "                      --real device|file | --auto-real\n";
-print "                      --virt device | --auto-virt\n";
-print "                     [--size MB]\n";
-print "                     [--device]\n";
-print "                     [--format filesystem]\n";
-print "                     [--mount directory|\"swap\"]\n";
+print "cloudmin create-disk --host hostname\n";
+print "                     --real device|file | --auto-real\n";
+print "                     --virt device | --auto-virt\n";
+print "                    [--size MB]\n";
+print "                    [--device]\n";
+print "                    [--format filesystem]\n";
+print "                    [--mount directory|\"swap\"]\n";
 exit(1);
 }
 

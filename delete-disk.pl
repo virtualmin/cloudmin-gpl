@@ -108,8 +108,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Removes a disk device from some virtual system.\n";
 print "\n";
-print "usage: delete-disk.pl --host hostname\n";
-print "                      --real device|file | --virt device\n";
+print "cloudmin delete-disk --host hostname\n";
+print "                     --real device|file | --virt device\n";
 exit(1);
 }
 

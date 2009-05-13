@@ -145,16 +145,16 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Updates an existing Cloudmin system owner.\n";
 print "\n";
-print "usage: modify-owner.pl --name username\n";
-print "                       [--newname username]\n";
-print "                       [--email address\@domain]\n";
-print "                       [--pass password]\n";
-print "                       [--lock | --unlock]\n";
-print "                       [--real \"Real name\"]\n";
-print "                       [--add-host hostname]*\n";
-print "                       [--remove-host hostname]*\n";
+print "cloudmin modify-owner --name username\n";
+print "                     [--newname username]\n";
+print "                     [--email address\@domain]\n";
+print "                     [--pass password]\n";
+print "                     [--lock | --unlock]\n";
+print "                     [--real \"Real name\"]\n";
+print "                     [--add-host hostname]*\n";
+print "                     [--remove-host hostname]*\n";
 foreach $a (@allactions) {
-	print "                       [--can-$a | --cannot-$a]\n";
+	print "                     [--can-$a | --cannot-$a]\n";
 	}
 exit(1);
 }

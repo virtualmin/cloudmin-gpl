@@ -499,24 +499,24 @@ print "$_[0]\n\n" if ($_[0]);
 print "Creates a new virtual system of some type.\n";
 print "\n";
 local $crtypes = join("|", @crtypes);
-print "usage: create-systems.pl --host name\n";
-print "                         --type $crtypes\n" if ($crtypes);
-print "                         [--desc \"system description\"]\n";
-print "                         --ssh-key keyid | --ssh-pass password\n";
-print "                         [--webmin | --webmin-pass password]\n";
-print "                         [--novirt]\n";
-print "                         [--image id]\n";
-print "                         [--no-update]\n";
-print "                         [--serial number --key number] |\n";
-print "                         [--same-serial] | [--allocate-serial]\n";
-print "                         [--id number]\n";
+print "cloudmin create-system --host name\n";
+print "                       --type $crtypes\n" if ($crtypes);
+print "                      [--desc \"system description\"]\n";
+print "                       --ssh-key keyid | --ssh-pass password\n";
+print "                      [--webmin | --webmin-pass password]\n";
+print "                      [--novirt]\n";
+print "                      [--image id]\n";
+print "                      [--no-update]\n";
+print "                      [--serial number --key number] |\n";
+print "                      [--same-serial] | [--allocate-serial]\n";
+print "                      [--id number]\n";
 if ($type) {
 	# Show type-specific command line args
 	$afunc = "type_".$type."_create_args";
 	if (defined(&$afunc)) {
 		foreach $a (&$afunc()) {
 			local ($o1, $o2) = $a->{'opt'} ? ("[", "]") : ( );
-			print "                         ";
+			print "                       ";
 			if ($a->{'value'}) {
 				print $o1,"--".$type."-".$a->{'name'}," ",$a->{'value'}.$o2;
 				}

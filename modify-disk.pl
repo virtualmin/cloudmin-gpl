@@ -118,10 +118,10 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Changes the size or virtual device for a disk on some virtual system.\n";
 print "\n";
-print "usage: modify-disk.pl --host hostname\n";
-print "                      --real device|file | --virt device\n";
-print "                      [--new-size MB]\n";
-print "                      [--new-virt device]\n";
+print "cloudmin modify-disk --host hostname\n";
+print "                     --real device|file | --virt device\n";
+print "                    [--new-size MB]\n";
+print "                    [--new-virt device]\n";
 exit(1);
 }
 

@@ -89,7 +89,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists all registered SSH keys.\n";
 print "\n";
-print "usage: list-ssh-keys.pl [--multiline | --name-only]\n";
+print "cloudmin list-ssh-keys [--multiline | --name-only]\n";
 exit(1);
 }
 

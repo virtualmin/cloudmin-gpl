@@ -102,8 +102,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Moves a virtual system from one host to another.\n";
 print "\n";
-print "usage: move-system.pl --host name\n";
-print "                      --dest new-host-system-name\n";
+print "cloudmin move-system --host name\n";
+print "                     --dest new-host-system-name\n";
 exit(1);
 }
 

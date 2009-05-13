@@ -95,12 +95,12 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Uploads a file to one or more managed systems.\n";
 print "\n";
-print "usage: upload-file.pl [--host name]*\n";
-print "                      [--group name]*\n";
+print "cloudmin upload-file [--host name]*\n";
+print "                     [--group name]*\n";
 local $types = join("|", @server_management_types);
-print "                      [--type $types]*\n";
-print "                      [--os oscode]*\n";
-print "                      [--source sourcepath] | [--stdin]\n";
+print "                     [--type $types]*\n";
+print "                     [--os oscode]*\n";
+print "                     [--source sourcepath] | [--stdin]\n";
 print "                      --dest destpath\n";
 exit(1);
 }

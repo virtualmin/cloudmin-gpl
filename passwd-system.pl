@@ -131,9 +131,9 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Changes the SSH or Webmin passwords for a managed system.\n";
 print "\n";
-print "usage: passwd-systems.pl --host name\n";
-print "                         [--ssh-pass password]\n";
-print "                         [--webmin-pass password | --webmin-same]\n";
+print "cloudmin passwd-systems --host name\n";
+print "                       [--ssh-pass password]\n";
+print "                       [--webmin-pass password | --webmin-same]\n";
 exit(1);
 }
 

@@ -101,8 +101,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Deletes one or more managed systems.\n";
 print "\n";
-print "usage: delete-system.pl --host name [--host name]*\n";
-print "                        [--keep]\n";
+print "cloudmin delete-system --host name [--host name]*\n";
+print "                      [--keep]\n";
 exit(1);
 }
 

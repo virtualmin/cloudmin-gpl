@@ -101,8 +101,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all systems owners.\n";
 print "\n";
-print "usage: list-owners.pl [--multiline | --name-only]\n";
-print "                      [--name username]*\n";
+print "cloudmin list-owners [--multiline | --name-only]\n";
+print "                     [--name username]*\n";
 exit(1);
 }
 

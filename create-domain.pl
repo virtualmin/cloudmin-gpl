@@ -195,12 +195,12 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Creates a new top-level Virtualmin domain on a managed system.\n";
 print "\n";
-print "usage: create-domain.pl --host hostname\n";
-print "                        --domain name\n";
-print "                        [--desc \"domain description\"]\n";
-print "                        --pass password\n";
-print "                        --default-features | [--feature name]*\n";
-print "                        [--ip address | --allocate-ip]\n";
+print "cloudmin create-domain --host hostname\n";
+print "                       --domain name\n";
+print "                      [--desc \"domain description\"]\n";
+print "                       --pass password\n";
+print "                       --default-features | [--feature name]*\n";
+print "                      [--ip address | --allocate-ip]\n";
 exit(1);
 }
 

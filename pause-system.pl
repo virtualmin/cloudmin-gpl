@@ -78,11 +78,11 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Pauses one or more managed systems.\n";
 print "\n";
-print "usage: pause-system.pl [--host name]*\n";
-print "                       [--group name]*\n";
+print "cloudmin pause-system [--host name]*\n";
+print "                      [--group name]*\n";
 local $types = join("|", @server_management_types);
-print "                       [--type $types]*\n";
-print "                       [--os oscode]*\n";
+print "                      [--type $types]*\n";
+print "                      [--os oscode]*\n";
 exit(1);
 }
 

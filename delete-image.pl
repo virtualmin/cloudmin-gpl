@@ -51,7 +51,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Deletes one downloaded system image.\n";
 print "\n";
-print "usage: delete-image.pl --id image-id\n";
+print "cloudmin delete-image --id image-id\n";
 exit(1);
 }
 

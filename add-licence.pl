@@ -61,8 +61,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Adds a valid existing Virtualmin license.\n";
 print "\n";
-print "usage: add-licence.pl --serial number\n";
-print "                      --key string\n";
+print "cloudmin add-licence --serial number\n";
+print "                     --key string\n";
 exit(1);
 }
 

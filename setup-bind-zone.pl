@@ -202,10 +202,10 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Creates a new BIND DNS zone.\n";
 print "\n";
-print "usage: setup-bind-zone.pl --zone domain.name\n";
-print "                         [--email address\@host]\n";
-print "                         [--master hostname]\n";
-print "                         [--view name | --auto-view]\n";
+print "cloudmin setup-bind-zone --zone domain.name\n";
+print "                        [--email address\@host]\n";
+print "                        [--master hostname]\n";
+print "                        [--view name | --auto-view]\n";
 exit(1);
 }
 

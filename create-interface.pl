@@ -110,10 +110,10 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Adds a network interface to some virtual system.\n";
 print "\n";
-print "usage: create-interfaces.pl --host hostname\n";
-print "                            --name interface\n";
-print "                            --address ip.address | --allocate\n";
-print "                            [--netmask ip.netmask]\n";
+print "cloidmin create-interfaces --host hostname\n";
+print "                           --name interface\n";
+print "                           --address ip.address | --allocate\n";
+print "                          [--netmask ip.netmask]\n";
 exit(1);
 }
 

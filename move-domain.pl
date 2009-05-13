@@ -165,13 +165,13 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Moves one or more Virtualmin domains to another system.\n";
 print "\n";
-print "usage: move-domains.pl --domain name [--domain name]*\n";
-print "                       --dest hostname\n";
-print "                      [--host source.hostname]\n";
-print "                      [--disable | --delete]\n";
-print "                      [--force]\n";
-print "                      [--direct]\n";
-print "                      [--include-sub-servers]\n";
+print "cloudmin move-domain --domain name [--domain name]*\n";
+print "                     --dest hostname\n";
+print "                    [--host source.hostname]\n";
+print "                    [--disable | --delete]\n";
+print "                    [--force]\n";
+print "                    [--direct]\n";
+print "                    [--include-sub-servers]\n";
 exit(1);
 }
 

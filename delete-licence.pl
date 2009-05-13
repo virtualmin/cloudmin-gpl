@@ -55,7 +55,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Removes a registered Virtualmin license.\n";
 print "\n";
-print "usage: delete-licence.pl --serial number\n";
+print "cloudmin delete-licence --serial number\n";
 exit(1);
 }
 

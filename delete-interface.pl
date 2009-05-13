@@ -79,8 +79,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Deletes a network interface from some virtual system.\n";
 print "\n";
-print "usage: delete-interfaces.pl --host hostname\n";
-print "                            --address ip.address\n";
+print "cloudmin delete-interface --host hostname\n";
+print "                          --address ip.address\n";
 exit(1);
 }
 

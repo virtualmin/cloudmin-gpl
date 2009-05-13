@@ -115,8 +115,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists all network interfaces on some virtual system.\n";
 print "\n";
-print "usage: list-interfaces.pl --host hostname\n";
-print "                          [--multiline | --name-only]\n";
+print "cloudmin list-interfaces --host hostname\n";
+print "                        [--multiline | --name-only]\n";
 exit(1);
 }
 

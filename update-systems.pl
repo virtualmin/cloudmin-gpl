@@ -83,11 +83,11 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Installs updated Virtualmin packages on some or all managed systems.\n";
 print "\n";
-print "usage: update-systems.pl [--all-hosts] | [--host name]*\n";
-print "                         [--group name]*\n";
+print "cloudmin update-systems [--all-hosts] | [--host name]*\n";
+print "                        [--group name]*\n";
 local $types = join("|", @server_management_types);
-print "                         [--type $types]*\n";
-print "                         [--os oscode]*\n";
+print "                        [--type $types]*\n";
+print "                        [--os oscode]*\n";
 exit(1);
 }
 

@@ -112,8 +112,8 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists all disks on some virtual system.\n";
 print "\n";
-print "usage: list-disks.pl --host hostname\n";
-print "                    [--multiline]\n";
+print "cloudmin list-disks --host hostname\n";
+print "                   [--multiline]\n";
 exit(1);
 }
 

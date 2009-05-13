@@ -72,7 +72,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Opens the console of a managed system.\n";
 print "\n";
-print "usage: login-system.pl --host name\n";
+print "cloudmin login-system --host name\n";
 exit(1);
 }
 
