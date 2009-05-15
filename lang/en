@@ -2051,7 +2051,11 @@ history_stat_doms=Number of virtual servers
 history_stat_users=Number of mail and FTP users
 history_stat_aliases=Number of mail aliases
 history_stat_mailcount=Email per minute
-history_stat_spamcount=Spam per minute history_stat_viruscount=Viruses per minute history_range=$1 from $2 to $3
+history_stat_spamcount=Spam per minute
+history_stat_viruscount=Viruses per minute
+history_stat_cputemp=CPU temperature
+history_stat_drivetemp=Drive temperature
+history_range=$1 from $2 to $3
 history_showing=Showing historic values for : $1
 history_none=No historic system statistics have been recorded for the selected systems yet.
 history_nomatch=Your search did not match any systems.

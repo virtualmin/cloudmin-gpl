@@ -71,6 +71,18 @@ if ($info->{'quota'}) {
 	push(@stats, [ "quotalimit", $qlimit ]);
 	push(@stats, [ "quotaused", $qused ]);
 	}
+foreach my $tt ("drive", "cpu") {
+	if ($info->{$tt.'temps'}) {
+		local ($temptotal, $tempcount);
+		foreach my $t (@{$info->{$tt.'temps'}}) {
+			$temptotal += $t->{'temp'};
+			$tempcount++;
+			}
+		if ($temptotal) {
+			push(@stats, [ $tt."temp", $temptotal / $tempcount ]);
+			}
+		}
+	}
 
 # Save historic stats
 foreach my $stat (@stats) {
