@@ -15,7 +15,7 @@ command completes successfully.
 
 =head1 Example usage
 
-  ./create-interface.pl --host vvirtualmin.home --name eth0 --address 193.9.101.250
+  cloudmin create-interface --host vvirtualmin.home --name eth0 --address 193.9.101.250
   Created interface eth0:3 with address 193.9.101.250
 
 =cut

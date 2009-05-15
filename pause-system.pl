@@ -10,7 +10,7 @@ a laptop. Not all virtual system types support pausing.
 
 =head1 Example usage
 
-  ./pause-system.pl --host xencentos.home
+  cloudmin pause-system --host xencentos.home
   Pausing Xen system xencentos.home ..
   .. paused successfully
 

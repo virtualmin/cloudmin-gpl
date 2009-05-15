@@ -10,7 +10,7 @@ are effected.
 
 =head1 Example usage
 
-  ./delete-owner.pl --name freeman
+  cloudmin delete-owner --name freeman
   Deleted Cloudmin system owner freeman
 
 =cut

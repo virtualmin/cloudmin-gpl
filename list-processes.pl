@@ -11,7 +11,7 @@ flag.
 
 =head1 Example usage
 
-  ./list-processes.pl --host xencentos.home --match httpd
+  cloudmin list-processes --host xencentos.home --match httpd
   PID      User             Command
   -------- ---------------- ---------------------------------------------------
   926      root             /usr/sbin/httpd
@@ -22,7 +22,7 @@ flag.
 When multiple systems are specified, the output from each is preceeded by the
 hostname.
 
-  ./list-processes.pl --host xencentos.home --host suntec.home --match httpd
+  cloudmin list-processes --host xencentos.home --host suntec.home --match httpd
   xencentos.home:
   PID      User             Command
   -------- ---------------- ---------------------------------------------------

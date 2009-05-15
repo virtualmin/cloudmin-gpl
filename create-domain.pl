@@ -19,7 +19,7 @@ flags that it supports.
 
 =head1 Example usage
 
-  ./create-domain.pl --host xencentos.home --domain wibble.com --desc "Example domain" --pass foo --feature dir --feature unix --feature web --feature webmin
+  cloudmin create-domain --host xencentos.home --domain wibble.com --desc "Example domain" --pass foo --feature dir --feature unix --feature web --feature webmin
   Creating Virtualmin domain wibble.com on xencentos.home ..
   Beginning server creation ..
   Creating home directory ..

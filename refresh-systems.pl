@@ -14,7 +14,7 @@ command-line option - this will make the update take longer though.
 
 =head1 Example usage
 
-  ./refresh-systems.pl --host xenrails.home
+  cloudmin refresh-systems --host xenrails.home
   Refreshing status of 1 systems ..
   xenrails.home: virt (Webmin and Virtualmin)
 

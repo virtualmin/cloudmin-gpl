@@ -9,7 +9,7 @@ image ID is specified with the C<--id> parameter.
 
 =head1 Example usage
 
-  ./delete-image.pl --id xen-centos-test1
+  cloudmin delete-image --id xen-centos-test1
   Image xen-centos-test1 successfully deleted.
 
 =cut

@@ -14,7 +14,7 @@ passed to C<create-system.pl> as a command-line argument.
 
 =head1 Example usage
 
-  ./list-ssh-keys.pl
+  cloudmin list-ssh-keys
   ID         Description
   ---------- -----------------------------------------------------------------
   1176512463 Jamie's SSH 1 key. uploaded copy

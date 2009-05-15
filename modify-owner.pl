@@ -22,7 +22,7 @@ the documentation for the C<create-owner.pl> command.
 
 =head1 Example usage
 
-  ./modify-owner.pl --name freeman --add-host xenblah.home --can-run 
+  cloudmin modify-owner --name freeman --add-host xenblah.home --can-run 
   Updated Cloudmin system owner freeman
 
 =cut

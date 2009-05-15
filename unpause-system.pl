@@ -11,7 +11,7 @@ due to TCP session timeouts.
 
 =head1 Example usage
 
-  ./unpause-system.pl --host xencentos.home
+  cloudmin unpause-system --host xencentos.home
   Un-pausing Xen system xencentos.home ..
   .. un-paused successfully
 

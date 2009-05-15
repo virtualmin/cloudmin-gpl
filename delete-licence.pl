@@ -11,7 +11,7 @@ C<--serial>, which must be followed by a serial number.
 
 =head1 Example usage
 
-  ./delete-licence.pl --serial 55555
+  cloudmin delete-licence --serial 55555
   The Virtualmin license with serial 55555 has been removed.
 
 =cut

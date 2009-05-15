@@ -26,7 +26,7 @@ point like C</mnt/disk2>.
 
 =head1 Example usage
 
-  ./create-disk.pl --host xencentos.home --auto-virt --auto-real --size 500
+  cloudmin create-disk --host xencentos.home --auto-virt --auto-real --size 500
   Creating virtual disk for /dev/sda3 ..
   .. done. However, the disk will not be visible until the system is rebooted
 

@@ -31,7 +31,8 @@ whether they are currently running or not. To limit the search to instances
 that are active, add the C<--running-only> flag to the command line.
 
 =head1 Example usage
-  ./find-systems.pl --host xenhost --ssh-nologin --running-only
+
+  cloudmin find-systems --host xenhost --ssh-nologin --running-only
   Finding Xen configuration files under /etc/xen, /xen ..
   .. found 3 files
 

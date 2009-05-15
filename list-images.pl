@@ -13,7 +13,7 @@ like C<xen> or C<vservers>.
 
 =head1 Example usage
 
-  ./list-images.pl --type xen
+  cloudmin list-images.pl --type xen
   ID                             Description
   ------------------------------ ------------------------------------------------
   xen-centos4.4-base             CentOS 4.4 Xen instance with base OS

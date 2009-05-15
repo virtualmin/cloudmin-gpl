@@ -12,7 +12,7 @@ it is added to the license pool.
 
 =head1 Example usage
 
-  ./add-licence.pl --serial 213323 --key fdsdsfdffdsff
+  cloudmin add-licence --serial 213323 --key fdsdsfdffdsff
   The Virtualmin license with serial 213323 and key fdsdsfdffdsff has been added.
 
 =cut 

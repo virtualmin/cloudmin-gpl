@@ -15,7 +15,7 @@ to the command line.
 
 =head1 Example usage
 
-  ./shutdown-system.pl --host xencentos.home
+  cloudmin shutdown-system --host xencentos.home
   Shutting down Xen system xencentos.home ..
   .. shutdown successfull
 

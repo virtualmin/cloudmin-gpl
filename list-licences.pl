@@ -11,7 +11,7 @@ flag.
 
 =head1 Example usage
 
-  ./list-licences.pl
+  cloudmin list-licences
   Serial     Key                  Domains    Systems    Used
   ---------- -------------------- ---------- ---------- ----------
   5555555    3rfafsfdsfsfds       Unlimited  Unlimited  6

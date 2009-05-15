@@ -27,7 +27,7 @@ number and key to be used on all systems.
 For each system that the install completes successfully on, a line starting
 with the hostname followed OK will be output.
 
-  ./install-virtualmin.pl --host xencentos.home
+  cloudmin install-virtualmin --host xencentos.home
   xencentos.home: Started
   xencentos.home: OK
 

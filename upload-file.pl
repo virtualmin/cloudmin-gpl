@@ -16,7 +16,7 @@ transfer completes.
 
 =head1 Example usage
 
-  ./upload-file.pl --host xencentos.home --host xenrails.home --host fedora.home --source /etc/hosts --dest /tmp/hosts
+  cloudmin upload-file --host xencentos.home --host xenrails.home --host fedora.home --source /etc/hosts --dest /tmp/hosts
   Uploading file to 3 systems ..
   xencentos.home: OK
   xenrails.home: OK

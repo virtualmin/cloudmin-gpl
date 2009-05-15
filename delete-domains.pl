@@ -16,7 +16,7 @@ be deleted by specifying the C<--domain> parameter multiple times.
 
 =head1 Example usage
 
-  ./delete-domains.pl --domain wibble.com
+  cloudmin delete-domains --domain wibble.com
   Deleting Virtualmin domain wibble.com from xencentos.home ..
   Deleting virtual server wibble.com ..
   Deleting mail aliases ..

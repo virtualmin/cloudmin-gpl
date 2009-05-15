@@ -11,7 +11,7 @@ background.
 
 =head1 Example usage
 
-  ./reboot-system.pl --host xencentos.home
+  cloudmin reboot-system --host xencentos.home
   Rebooting Xen system xencentos.home ..
   .. rebooted successfully
 

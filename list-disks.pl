@@ -11,7 +11,7 @@ and filesystem types (where available).
 
 =head1 Example usage
 
-  ./list-disks.pl --host xencentos.home
+  cloudmin list-disks --host xencentos.home
   Real file                      Device on system     Type       Size      
   ------------------------------ -------------------- ---------- ----------
   /xen/xencentos.img             /dev/sda1            File       2 GB      

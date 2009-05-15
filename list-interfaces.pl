@@ -12,7 +12,7 @@ C<--name-only>.
 
 =head1 Example usage
 
-  ./list-interfaces.pl  --host vvirtualmin.home
+  cloudmin list-interfaces --host vvirtualmin.home
   Interface  Address         Netmask         Use
   ---------- --------------- --------------- -----------------------------------
   eth0:0     193.9.101.224   255.255.255.0   Virtualmin shared address default

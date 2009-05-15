@@ -12,7 +12,7 @@ command to run follows the other parameters.
 
 =head1 Example usage
 
-  ./run-command.pl --host xencentos.home "df -h"
+  cloudmin run-command --host xencentos.home "df -h"
   Filesystem            Size  Used Avail Use% Mounted on
   /dev/sda1             2.0G  1.2G  777M  60% /
   none                  257M     0  257M   0% /dev/shm

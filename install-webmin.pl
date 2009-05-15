@@ -22,7 +22,7 @@ hostname followed by OK, the package type and download URL will be displayed.
 
 =head1 Example usage
 
-  ./install-webmin.pl --host xenempty.home
+  cloudmin install-webmin --host xenempty.home
   Installing Webmin on 1 systems ..
   xenempty.home: OK rpm http://www.webmin.com/download/rpm/webmin-current.rpm
 

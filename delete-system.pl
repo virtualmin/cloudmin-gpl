@@ -11,7 +11,7 @@ destroy is specified with the C<--host> parameter.
 
 =head1 Example usage
 
-  ./delete-system.pl --host xennoupdate.home
+  cloudmin delete-system --host xennoupdate.home
   Deleting Xen system xennoupdate.home ..
   .. deleted successfully
 

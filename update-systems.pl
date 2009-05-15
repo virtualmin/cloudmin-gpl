@@ -13,7 +13,7 @@ are displayed as they complete.
 
 =head1 Example usage
 
-  [root@fudu server-manager]# ./update-systems.pl --host xennoupdate.home
+  cloudmin update-systems --host xennoupdate.home
   Updating packages on 1 systems ..
   xennoupdate.home: spamassassin mod_perl
 

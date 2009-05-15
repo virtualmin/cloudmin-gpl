@@ -27,7 +27,7 @@ Either enables the system at host boot time, or disables it.
 
 =head1 Example usage
 
-  ./modify-system.pl --host xencentos.home --desc "CentOS 5 on Xen"
+  cloudmin modify-system --host xencentos.home --desc "CentOS 5 on Xen"
   xencentos.home modified successfully
 
 =cut 

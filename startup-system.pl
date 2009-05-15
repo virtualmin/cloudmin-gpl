@@ -10,7 +10,7 @@ specified systems have been booted.
 
 =head1 Example usage
 
-  bash# ./startup-system.pl --host xencentos.home
+  cloudmin startup-system --host xencentos.home
   Starting up Xen system xencentos.home ..
   .. startup successfull
 

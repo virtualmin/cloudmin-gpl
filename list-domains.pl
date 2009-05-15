@@ -11,7 +11,7 @@ and parsable format with the C<--multiline> flag.
 
 =head1 Example usage
 
-  ./list-domains.pl --host xencentos.home
+  cloudmin list-domains --host xencentos.home
   Domain                    System                    Description
   ------------------------- ------------------------- -------------------------
   xencentos.home            xencentos.home            Test domain on CentOS

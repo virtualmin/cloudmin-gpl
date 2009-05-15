@@ -19,7 +19,7 @@ and then the virtual system restarted.
 
 =head1 Example usage
 
-  ./move-system --host xengtest.home --dest geylang.home
+  cloudmin move-system --host xengtest.home --dest geylang.home
   Moving Xen system xengtest.home from sentosa.home to geylang.home ..
   Shutting down on original host system ..
   .. done

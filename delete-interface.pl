@@ -12,7 +12,7 @@ altogether.
 
 =head1 Example usage
 
-  ./delete-interface.pl --host vvirtualmin.home --address 193.9.101.250
+  cloudmin delete-interface --host vvirtualmin.home --address 193.9.101.250
   Deleted interface eth0:3
 
 =cut 

@@ -14,7 +14,7 @@ page in the Cloudmin web user interface.
 
 =head1 Example usage
 
-  ./get-console.pl --host xensendmail.home
+  cloudmin get-console --host xensendmail.home
   PTY PID: 9535
   Using config file "/xen/xensendmail.cfg".
   Started domain xensendmail

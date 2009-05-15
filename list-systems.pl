@@ -12,7 +12,7 @@ with C<--name-only>.
 
 =head1 Example usage
 
-  ./list-systems.pl --type xen
+  cloudmin list-systems --type xen
   Hostname                       Type            Description
   ------------------------------ --------------- ------------------------------
   xencentos.home                 Xen             CentOS 5 on Xen

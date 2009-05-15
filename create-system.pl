@@ -26,7 +26,7 @@ the pool of those registered with Cloudmin, while the latter let you specify a
 serial number and key explicity. 
 
 =head1 Example usage
-  ./create-system.pl --host xennoupdate --type xen --desc "Test without updates" --ssh-pass smeg  --no-update --xen-host sentosa.home --xen-memory 512 --image xen-centos5.0-virtualmin --allocate-serial
+  cloudmin create-system --host xennoupdate --type xen --desc "Test without updates" --ssh-pass smeg  --no-update --xen-host sentosa.home --xen-memory 512 --image xen-centos5.0-virtualmin --allocate-serial
   Copying system image files ..
    .. done
   Starting creation of Xen system ..

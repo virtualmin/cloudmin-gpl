@@ -30,7 +30,7 @@ and restart with the C<--reboot> flag, if needed.
 
 =head1 Example usage
 
-  ./modify-limits.pl --host xencentos.home --memory 512 --bw-limit 1024
+  cloudmin modify-limits --host xencentos.home --memory 512 --bw-limit 1024
   Setting memory limit on Xen system xencentos.home to 512 MB ..
   .. already set
   Setting bandwidth limit on Xen system xencentos.home ..

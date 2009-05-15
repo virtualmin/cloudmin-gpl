@@ -13,7 +13,7 @@ parameter instead.
 
 =head1 Example usage
 
-  ./download-file.pl --host xencentos.home --source /etc/hosts --stdout
+  cloudmin download-file --host xencentos.home --source /etc/hosts --stdout
   127.0.0.1 localhost
   193.9.101.242 xencentos.home xencentos
 

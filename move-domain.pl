@@ -31,7 +31,7 @@ systems and the Cloudmin master is poor.
 
 =head1 Example usage
 
-  ./move-domain.pl --domain wibble.com --dest xenrails.home --delete
+  cloudmin move-domain --domain wibble.com --dest xenrails.home --delete
   Creating backup of wibble.com on xencentos.home ..
   .. created backup of 32.53 kB.
   Downloading backup of wibble.com in file wibble.com.tar.gz ..

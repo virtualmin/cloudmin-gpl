@@ -19,7 +19,7 @@ the C<--new-virt> flag followed by a device like I</dev/sda3>.
 
 =head1 Example usage
 
-  ./modify-disk.pl --host xencentos.home --virt /dev/sda3 --new-size 2048
+  cloudmin modify-disk --host xencentos.home --virt /dev/sda3 --new-size 2048
   Modifying virtual disk for /dev/sda3 ..
   .. done
 

@@ -19,7 +19,7 @@ the current date like I<-5>.
 
 =head1 Example usage
 
-  ./list-usage.pl --host xencentos.home
+  cloudmin list-usage --host xencentos.home
   Start              End                Up?  Memory     CPU   CPU time
   09/May/2009 14:50  09/May/2009 14:55  Yes  -          100%  -
   09/May/2009 14:55  09/May/2009 14:58  No   -          -     -

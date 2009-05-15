@@ -11,8 +11,9 @@ be used to diagnose boot-time problems.
 
 =head1 Example usage
 
-  ./login-system.pl --host xennoupdate.home
-  XXX
+  cloudmin login-system --host xennoupdate.home
+  Login: root
+  Password: ****
 
 =cut
 

@@ -21,7 +21,7 @@ process as it proceeds, and inform you of its final success or failure.
 
 =head1 Example usage
 
-  ./create-image.pl --host xenrails.home --desc "Image with rails" --id xen-centos5.0-rails
+  cloudmin create-image --host xenrails.home --desc "Image with rails" --id xen-centos5.0-rails
   Creating temporary directory for image files ..
   .. done
   Shutting down system ..

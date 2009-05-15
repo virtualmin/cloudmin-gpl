@@ -32,7 +32,7 @@ C<--can-console> - View and interact with console
 
 =head1 Example usage
 
-  ./create-owner.pl --name bob --email bob@example.com --pass smeg --host xencentos.home --can-reboot --can-console --can-startup --can-shutdown
+  cloudmin create-owner --name bob --email bob@example.com --pass smeg --host xencentos.home --can-reboot --can-console --can-startup --can-shutdown
   Created Cloudmin system owner bob
 
 =cut

@@ -12,7 +12,7 @@ given more than once.
 
 =head1 Example usage
 
-  ./list-owners.pl
+  cloudmin list-owners
   Login                Real name            Systems                               
   -------------------- -------------------- ----------------------------------
   freeman              Gordon Freeman       xenbacula.home xencentos.home

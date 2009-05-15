@@ -16,7 +16,7 @@ immediately freed up.
 
 =head1 Example usage
 
-  ./delete-disk.pl --host xencentos.home --virt /dev/sda3
+  cloudmin delete-disk --host xencentos.home --virt /dev/sda3
   Removing virtual disk for /dev/sda3 ..
   .. done. However, the disk will not be fully removed until the system is rebooted
 
