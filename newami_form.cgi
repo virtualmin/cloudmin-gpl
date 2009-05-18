@@ -12,7 +12,7 @@ print $text{'newami_desc'},"<p>\n";
 
 print &ui_form_start("newami.cgi", "post");
 print &ui_hidden("id", $in{'id'});
-print &ui_table_start($text{'newami_header'}, undef, 2, [ "width=30%" ]);
+print &ui_table_start($text{'newami_header'}, undef, 2);
 
 $tfunc = "type_".$server->{'manager'}."_desc";
 print &ui_table_row($text{'mkimage_type'},

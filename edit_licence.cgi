@@ -15,7 +15,7 @@ if (!$lic->{'vm2'}) {
 	print &ui_hidden("d", $in{'serial'});
 	}
 
-print &ui_table_start($text{'ledit_header'}, undef, 2, [ "width=30%" ]);
+print &ui_table_start($text{'ledit_header'}, undef, 2);
 
 # Serial and key
 print &ui_table_row($text{'ledit_serial'}, $lic->{'serial'});

@@ -92,7 +92,7 @@ print &ui_tabs_end_tab();
 print &ui_tabs_start_tab("mode", "sched");
 print $text{'licences_scheddesc'},"<p>\n";
 print &ui_form_start("sched_licences.cgi", "post");
-print &ui_table_start($text{'licences_sheader'}, undef, 2, [ "width=30%" ]);
+print &ui_table_start($text{'licences_sheader'}, undef, 2);
 
 # Checking enabled?
 print &ui_table_row($text{'licences_enabled'},

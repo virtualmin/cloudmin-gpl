@@ -16,7 +16,7 @@ if ($server->{'status'} ne 'down') {
 
 print &ui_form_start("create_image.cgi", "post");
 print &ui_hidden("id", $in{'id'});
-print &ui_table_start($text{'mkimage_header'}, undef, 2, [ "width=30%" ]);
+print &ui_table_start($text{'mkimage_header'}, undef, 2);
 
 # System type
 $tfunc = "type_".$server->{'manager'}."_desc";

@@ -144,8 +144,7 @@ elsif ($in{'move'}) {
 			print &ui_hidden("d", $d);
 			}
 		print &ui_hidden("move", 1);
-		print &ui_table_start($text{'dmass_mheader'}, undef, 2,
-				      [ "width=30%" ]);
+		print &ui_table_start($text{'dmass_mheader'}, undef, 2);
 
 		# Domains to move
 		@sources = &unique(map { $_->[0]->{'host'} } @serverdoms);

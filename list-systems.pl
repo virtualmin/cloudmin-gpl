@@ -246,7 +246,7 @@ if ($multi) {
 				$loadh = sprintf("%.2f", ($load / 3600));
 				print "    CPU used over period: ",
 					$loadh," percent hours ",
-					"(loadu percent seconds)\n";
+					"($load percent seconds)\n";
 				}
 			}
 

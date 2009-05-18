@@ -829,6 +829,7 @@ vserver_iface=Base network interface
 vserver_ether=First ethernet interface
 vserver_dist=Distribution to install on VServers
 vserver_pkgs=Packages to install on VServers
+vserver_portclash=Check for possible port clashes?
 vserver_auto=Decide automatically
 vserver_reg=Register
 vserver_unreg=De-Register
