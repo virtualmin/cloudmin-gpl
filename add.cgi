@@ -32,6 +32,7 @@ if (defined(&$pfunc)) {
 	}
 
 &ui_print_unbuffered_header(undef, $text{'add_title'}, "");
+&obtain_lock_server($server);
 
 if (!$no_ssh && !$server->{'ssh_nologin'}) {
 	# Make sure the SSH login is valid
@@ -103,6 +104,8 @@ if (defined(&theme_select_server)) {
 	}
 
 END:
+&release_lock_server($server);
+
 &ui_print_footer("", $text{'index_return'});
 
 

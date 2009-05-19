@@ -35,6 +35,7 @@ if ($info && $info->{'minfo'} && $info->{'minfo'}->{'version'}) {
 	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'mkimage_title'}, "");
+&obtain_lock_server($server);
 
 # Select temp dir for image on parent host
 &$first_print($text{'mkimage_temping'});
@@ -112,5 +113,6 @@ if ($shutdown) {
 	}
 
 FAILED:
+&release_lock_server($server);
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 

@@ -95,6 +95,7 @@ elsif (!$serial && !$key) {
 		}
 	}
 &ui_print_unbuffered_header(undef, $text{'create_title'}, "");
+&obtain_lock_server($server);
 
 # Run pre-creation script
 if (!&run_system_script($server, 'before', 'create')) {
@@ -360,6 +361,7 @@ END:
 if ($serial) {
 	&stop_installing_virtualmin_licence($serial, $key);
 	}
+&release_lock_server($server);
 
 &ui_print_footer("", $text{'index_return'});
 

@@ -1368,10 +1368,10 @@ local ($server, $regen, $skipinfo, $time) = @_;
 
 # Check if a status update is already happening
 local $file = "$servers::module_config_directory/$server->{'id'}.serv";
-if (&test_lock($file)) {
+if (&test_lock_server($server)) {
 	# Already locked .. wait till free, and get new status from file
 	local $c = 0;
-	while(&test_lock($file)) {
+	while(&test_lock_server($server)) {
 		sleep(1);
 		$c++;
 		if ($c > 120) {
@@ -1390,7 +1390,7 @@ if (&test_lock($file)) {
 	}
 else {
 	# Lock to prevent concurrent access
-	&lock_file($file);
+	&obtain_lock_server($server);
 	}
 
 # Do a quick ping, if this is a non-virtual system.
@@ -1772,7 +1772,7 @@ foreach my $p (&is_parent_server($server)) {
 # Add disk usage, CPU and memory to historic stats, if we got them
 &add_historic_collected_info($info, $time || $server->{'statustime'}, $server);
 
-&unlock_file($file);
+&release_lock_server($server);
 return $rv;
 }
 
@@ -5532,6 +5532,36 @@ elsif (defined(&theme_js_redirect)) {
 else {
 	return "<script>window.location = '".&quote_escape($url)."';</script>\n";
 	}
+}
+
+# obtain_lock_server(&server, [readonly])
+# Lock a server for some update
+sub obtain_lock_server
+{
+local ($server, $ro) = @_;
+if (!$ro) {
+	$SIG{'PIPE'} = 'ignore';
+	}
+if ($server) {
+	&lock_file("$servers::module_config_directory/$server->{'id'}.serv",
+		   $ro);
+	}
+}
+
+# release_lock_server(&server)
+# Un-lock a server after some update
+sub release_lock_server
+{
+local ($server) = @_;
+if ($server) {
+	&unlock_file("$servers::module_config_directory/$server->{'id'}.serv");
+	}
+}
+
+sub test_lock_server
+{
+local ($server) = @_;
+return &test_lock("$servers::module_config_directory/$server->{'id'}.serv");
 }
 
 1;
