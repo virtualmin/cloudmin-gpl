@@ -36,7 +36,9 @@ if (@images) {
 		&ui_select("image", undef,
 			[ $mustimage ? ( )
 				     : ( [ undef, $text{'create_noimage'} ] ),
-			  map { [ $_->{'id'}, $_->{'desc'} ] } @images ]));
+			  map { [ $_->{'id'}, $_->{'desc'} ] }
+			      sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }
+				   @images ]));
 	}
 
 # Root password / SSH key (if possible)
