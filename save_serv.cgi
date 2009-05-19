@@ -21,6 +21,7 @@ if ($in{'shutdown'}) {
 			$text{'save_shutok'});
 		}
 	else {
+		&obtain_lock_server($server);
 		print &text('save_shutting',
 			    "<tt>$server->{'host'}</tt>"),"<br>\n";
 		$err = &shutdown_server($server, $in{'force'});
@@ -37,6 +38,7 @@ if ($in{'shutdown'}) {
 				&theme_post_save_server($server);
 				}
 			}
+		&release_lock_server($server);
 		}
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
@@ -45,6 +47,7 @@ elsif ($in{'startup'}) {
 	# Start up this virtual system
 	&can_action_error($server, "startup");
 	&ui_print_header(&server_in($server), $text{'save_starttitle'}, "");
+	&obtain_lock_server($server);
 	print &text('save_starting',
 		    "<tt>$server->{'host'}</tt>"),"<br>\n";
 	($ok, $err) = &startup_server($server);
@@ -66,6 +69,7 @@ elsif ($in{'startup'}) {
 			&theme_post_save_server($server);
 			}
 		}
+	&release_lock_server($server);
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
@@ -73,6 +77,7 @@ elsif ($in{'reboot'}) {
 	# Request a reboot, after asking for confirmation
 	&can_action_error($server, "reboot");
 	&ui_print_header(&server_in($server), $text{'save_reboottitle'}, "");
+	&obtain_lock_server($server);
 	if (!$in{'confirm'}) {
 		&show_confirm_form(
 		    &text('save_rebootrusure', "<tt>$server->{'host'}</tt>"),
@@ -102,7 +107,6 @@ elsif ($in{'reboot'}) {
 				}
 			}
 		&refresh_server_usage($server);
-		&save_managed_server($server);
 		}
 	else {
 		# Just reboot
@@ -118,8 +122,9 @@ elsif ($in{'reboot'}) {
 				&theme_post_save_server($server);
 				}
 			}
-		&save_managed_server($server);
 		}
+	&save_managed_server($server);
+	&release_lock_server($server);
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
@@ -150,6 +155,7 @@ elsif ($in{'delete'}) {
 		}
 	else {
 		# Run pre-deletion script
+		&obtain_lock_server($server);
 		&run_system_script($server, 'before', 'delete') || goto FAILED;
 
 		print &text('save_deleteing',
@@ -171,12 +177,11 @@ elsif ($in{'delete'}) {
 				&theme_post_save_server($server);
 				}
 			}
+		FAILED:
+		&release_lock_server($server);
 		}
-	FAILED:
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
-
-
 
 elsif ($in{'installvirt'}) {
 	# Install Virtualmin, which may take a while
@@ -203,6 +208,7 @@ elsif ($in{'installvirt'}) {
 
 		# Start off the process
 		print $text{'save_virtstart'},"<br>\n";
+		&obtain_lock_server($server);
 	        &start_installing_virtualmin_licence($serial, $key);
 		$err = &install_virtualmin_server($server, 1, $serial, $key);
 		if ($err) {
@@ -244,6 +250,7 @@ elsif ($in{'installvirt'}) {
 			}
 
 		VIRTFAILED:
+		&release_lock_server($server);
 		}
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
@@ -252,6 +259,7 @@ elsif ($in{'installwebmin'}) {
 	# Install Webmin
 	&can_action_error($server, "installwebmin");
 	&ui_print_header(&server_in($server), $text{'save_webmintitle'}, "");
+	&obtain_lock_server($server);
 
 	($src, $type, $err) = &get_install_webmin_source($server);
 	$err && &error(&text('save_webminerr', $err));
@@ -272,6 +280,7 @@ elsif ($in{'installwebmin'}) {
 			&theme_post_save_server($server);
 			}
 		}
+	&release_lock_server($server);
 
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
@@ -280,6 +289,7 @@ elsif ($in{'recheck'}) {
 	# Perform a config re-check
 	&can_action_error($server, "refresh");
 	&ui_print_header(&server_in($server), $text{'save_rechecktitle'}, "");
+	&obtain_lock_server($server);
 
 	print $text{'save_rechecking'},"<br>\n";
 	&remote_foreign_require($server, "virtual-server",
@@ -303,6 +313,7 @@ elsif ($in{'recheck'}) {
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server($server);
 		}
+	&release_lock_server($server);
 
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
@@ -311,6 +322,7 @@ elsif ($in{'refresh'}) {
 	# Refresh monitored status
 	&can_action_error($server, "refresh");
 	&ui_print_header(&server_in($server), $text{'save_refreshtitle'}, "");
+	&obtain_lock_server($server);
 
 	print $text{'save_refreshing'},"<br>\n";
 	&check_server_status($server, 1);
@@ -321,6 +333,7 @@ elsif ($in{'refresh'}) {
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server($server);
 		}
+	&release_lock_server($server);
 
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
@@ -369,6 +382,7 @@ else {
 	# Validate inputs, and save details
 	&error_setup($text{'save_err'});
 	&can_action($server, "edit");
+	&obtain_lock_server($server);
 	if ($server->{'id'} != 0) {
 		$oldip = &to_ipaddress($server->{'host'});
 		$newip = &to_ipaddress($in{'host'});
@@ -436,6 +450,7 @@ else {
 		}
 
 	&save_managed_server($server);
+	&release_lock_server($server);
 	&redirect("index.cgi?refresh=$server->{'id'}");
 	}
 

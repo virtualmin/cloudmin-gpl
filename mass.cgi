@@ -20,8 +20,10 @@ if ($in{'refresh'}) {
 
 	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
 	print "<ul>\n";
+	&obtain_lock_server(\@servers);
 	@prv = &parallel_check_server_status(\@pservers, 1);
 	@orv = &parallel_check_server_status(\@oservers, 1);
+	&release_lock_server(\@servers);
 
 	# Show new statuses
 	@rv = ( @prv, @orv );
@@ -102,6 +104,7 @@ elsif ($in{'delete'}) {
 		}
 	else {
 		# Do it for real
+		&obtain_lock_server(\@servers);
 		foreach $s (@servers) {
 			# Run pre-deletion script
 			&run_system_script($s, 'before', 'delete') || next;
@@ -127,6 +130,7 @@ elsif ($in{'delete'}) {
 					}
 				}
 			}
+		&release_lock_server(\@servers);
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -159,6 +163,7 @@ elsif ($in{'dereg'}) {
 	else {
 		# Do it for real
 		print $text{'mass_rdoing'},"<br>\n";
+		&obtain_lock_server(\@servers);
 		foreach $s (@servers) {
 			&delete_managed_server($s);
 			}
@@ -166,6 +171,7 @@ elsif ($in{'dereg'}) {
 		if (defined(&theme_post_save_server)) {
 			&theme_post_save_server($server);
 			}
+		&release_lock_server(\@servers);
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -188,6 +194,7 @@ elsif ($in{'update'}) {
 
 	# Run them in parallel, and report on updates done
 	print &text('mass_updoing', scalar(@upservers), $pos),"<br>\n";
+	&obtain_lock_server(\@upservers);
 	print "<ul>\n";
 	@rv = &parallel_install_package_updates(\@upservers);
 	for($i=0; $i<@rv; $i++) {
@@ -218,6 +225,7 @@ elsif ($in{'update'}) {
 			}
 		}
 	print "</ul>\n";
+	&release_lock_server(\@upservers);
 	print $text{'mass_updone'},"<p>\n";
 
 	&ui_print_footer("", $text{'index_return'});
@@ -329,6 +337,7 @@ elsif ($in{'shutdown'}) {
 	else {
 		# Do it for real, in parallel. Virtual systems are done first.
 		print &text('mass_shutting', scalar(@servers)),"<br>\n";
+		&obtain_lock_server(\@servers);
 		foreach my $sl (\@oservers, \@pservers) {
 			&parallel_server_function($sl,
 				sub { $err = &shutdown_server($_[0]);
@@ -342,6 +351,7 @@ elsif ($in{'shutdown'}) {
 				&theme_post_save_server($s);
 				}
 			}
+		&release_lock_server(\@servers);
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -371,6 +381,7 @@ elsif ($in{'startup'}) {
 
 	# Do the startup, in parallel. Real systems are done first.
 	print &text('mass_starting', scalar(@servers)),"<br>\n";
+	&obtain_lock_server(\@servers);
 	foreach my $sl (\@pservers, \@oservers) {
 		&parallel_server_function($sl,
 			sub { ($ok, $err) = &startup_server($_[0]);
@@ -384,6 +395,7 @@ elsif ($in{'startup'}) {
 			&theme_post_save_server($s);
 			}
 		}
+	&release_lock_server(\@servers);
 
 	&ui_print_footer("", $text{'index_return'});
 	}

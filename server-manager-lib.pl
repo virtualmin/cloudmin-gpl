@@ -5534,15 +5534,22 @@ else {
 	}
 }
 
-# obtain_lock_server(&server, [readonly])
+# obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update
 sub obtain_lock_server
 {
 local ($server, $ro) = @_;
-if (!$ro) {
-	$SIG{'PIPE'} = 'ignore';
+if (ref($server) eq 'ARRAY') {
+	# Do a list
+	foreach my $s (@$server) {
+		&obtain_lock_server($s);
+		}
 	}
-if ($server) {
+else {
+	# Do one
+	if (!$ro) {
+		$SIG{'PIPE'} = 'ignore';
+		}
 	&lock_file("$servers::module_config_directory/$server->{'id'}.serv",
 		   $ro);
 	}
@@ -5553,7 +5560,14 @@ if ($server) {
 sub release_lock_server
 {
 local ($server) = @_;
-if ($server) {
+if (ref($server) eq 'ARRAY') {
+	# Do a list
+	foreach my $s (@$server) {
+		&release_lock_server($s);
+		}
+	}
+else {
+	# Un-lock one
 	&unlock_file("$servers::module_config_directory/$server->{'id'}.serv");
 	}
 }
