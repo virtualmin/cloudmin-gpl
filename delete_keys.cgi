@@ -39,6 +39,7 @@ if (@users && !$in{'confirm'}) {
 	}
 else {
 	# Do them
+	&obtain_lock_anything();
 	foreach $key (@keys) {
 		&delete_ssh_key($key);
 		}

@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 @d = split(/\0/, $in{'d'});
 @d || &error($text{'ldelete_enone'});
+&obtain_lock_anything();
 
 # Remove from list
 @lics = &list_virtualmin_licences();

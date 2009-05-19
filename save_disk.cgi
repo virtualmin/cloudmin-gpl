@@ -31,6 +31,7 @@ if ($in{'delete'}) {
 		# Do it
 		&$first_print(&text('disk_deleting',
 				    "<tt>$disk->{'real'}</tt>"));
+		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_disk";
 		$err = &$dfunc($server, $disk);
 		if ($err) {
@@ -41,6 +42,7 @@ if ($in{'delete'}) {
 			&show_disk_reboot_message($server, $disk);
 			}
 		&save_managed_server($server);
+		&release_lock_server($server);
 		}
 	else {
 		# Ask first
@@ -118,6 +120,7 @@ else {
 			}
 		}
 
+	&obtain_lock_server($server);
 	if ($in{'new'}) {
 		# Create the disk
 		&ui_print_header(&server_in($server), $text{'disk_titlec'}, "");
@@ -149,6 +152,7 @@ else {
 			}
 		}
 	&save_managed_server($server);
+	&release_lock_server($server);
 
 	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 			 "", $text{'index_return'});

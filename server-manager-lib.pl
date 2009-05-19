@@ -5548,10 +5548,13 @@ if (ref($server) eq 'ARRAY') {
 else {
 	# Do one
 	if (!$ro) {
-		$SIG{'PIPE'} = 'ignore';
+		&obtain_lock_anything();
 		}
-	&lock_file("$servers::module_config_directory/$server->{'id'}.serv",
-		   $ro);
+	if ($main::got_lock_server{$server->{'id'}} == 0) {
+		&lock_file("$servers::module_config_directory/".
+			   "$server->{'id'}.serv", $ro);
+		}
+	$main::got_lock_server{$server->{'id'}}++;
 	}
 }
 
@@ -5568,8 +5571,20 @@ if (ref($server) eq 'ARRAY') {
 	}
 else {
 	# Un-lock one
-	&unlock_file("$servers::module_config_directory/$server->{'id'}.serv");
+	if ($main::got_lock_server{$server->{'id'}} == 1) {
+		&unlock_file("$servers::module_config_directory/".
+			     "$server->{'id'}.serv");
+		}
+	$main::got_lock_server{$server->{'id'}}--
+		if ($main::got_lock_server{$server->{'id'}});
 	}
+}
+
+# obtain_lock_anything()
+# Should be called before any state-changing action
+sub obtain_lock_anything
+{
+$SIG{'PIPE'} = 'ignore';
 }
 
 sub test_lock_server

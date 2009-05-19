@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 &error_setup($text{'features_err'});
+&obtain_lock_anything();
 
 if ($in{'def'}) {
 	# Use automatic defaults

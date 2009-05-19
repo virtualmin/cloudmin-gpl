@@ -12,6 +12,7 @@ $cfunc = "type_".$server->{'manager'}."_can_pause";
 defined(&$cfunc) && &$cfunc($server) == 1 || &error($text{'pause_ecannot'});
 
 &ui_print_unbuffered_header(&server_in($server), $text{'pause_title'}, "");
+&obtain_lock_server($server);
 
 $dfunc = "type_".$server->{'manager'}."_desc";
 &$first_print(&text('pause_doing', &$dfunc(), "<tt>$server->{'host'}</tt>"));
@@ -29,5 +30,6 @@ else {
 if (defined(&theme_post_save_server)) {
 	&theme_post_save_server($server);
 	}
+&release_lock_server($server);
 
 &ui_print_footer("", $text{'index_return'});

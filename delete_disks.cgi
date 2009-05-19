@@ -23,6 +23,7 @@ $disks = [ grep { $d{$_->{'real'}} } @$disks ];
 &ui_print_header(&server_in($server), $text{'ddisk_title'}, "");
 if ($in{'confirm'}) {
 	# Do it
+	&obtain_lock_server($server);
 	foreach $disk (@$disks) {
 		&$first_print(&text('disk_deleting',
 				    "<tt>$disk->{'real'}</tt>"));
@@ -36,6 +37,7 @@ if ($in{'confirm'}) {
 			}
 		}
 	&show_disk_reboot_message($server, $disks->[0]);
+	&release_lock_server($server);
 	&save_managed_server($server);
 	}
 else {

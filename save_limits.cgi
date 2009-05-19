@@ -30,6 +30,7 @@ if (defined($in{'bw'})) {
 
 # Apply them, telling the user
 &ui_print_unbuffered_header(&server_in($server), $text{'limits_title'}, "");
+&obtain_lock_server($server);
 
 # Make sure status is up to date
 &check_server_status($server, 0, 1);
@@ -111,6 +112,7 @@ if (defined($in{'bw'})) {
 	}
 
 &save_managed_server($server);
+&release_lock_server($server);
 
 # Offer to reboot if needed
 if ($reboot && $server->{'status'} ne 'down') {

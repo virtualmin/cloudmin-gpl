@@ -39,8 +39,10 @@ if ($in{'delete'}) {
 		}
 	else {
 		# Just do it
+		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_interface";
 		$err = &$dfunc($server, $iface);
+		&release_lock_server($server);
 		&error($err) if ($err);
 		&redirect("edit_serv.cgi?id=$in{'id'}&ifaces=1");
 		}
@@ -69,6 +71,7 @@ else {
 	$iface->{'netmask'} = $in{'netmask'};
 
 	# Save or create
+	&obtain_lock_server($server);
 	if ($in{'new'}) {
 		$cfunc = "type_".$server->{'manager'}."_create_interface";
 		$err = &$cfunc($server, $iface);
@@ -77,6 +80,7 @@ else {
 		$mfunc = "type_".$server->{'manager'}."_modify_interface";
 		$err = &$mfunc($server, $iface, $oldiface);
 		}
+	&release_lock_server($server);
 	&error($err) if ($err);
 	&redirect("edit_serv.cgi?id=$in{'id'}&ifaces=1");
 	}

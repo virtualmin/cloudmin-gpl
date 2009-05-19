@@ -24,6 +24,7 @@ foreach $d (split(/\0/, $in{'sd'})) {
 if ($in{'confirm'}) {
 	# Do it!
 	&ui_print_unbuffered_header(undef, $text{'dsnapshots_title'}, "");
+	&obtain_lock_anything();
 	foreach $del (@del) {
 		print &text('dsnapshots_deleting',
 			    $del->[1]->{'snapshotId'}),"<br>\n";

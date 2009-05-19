@@ -18,6 +18,7 @@ $v || &error(&text('dvolume_egone2', $vid));
 
 # Do it, and tell the user
 &ui_print_unbuffered_header(undef, $text{'csnapshot_title'}, "");
+&obtain_lock_anything();
 
 print &text('csnapshot_doing', $vid,
 	    &nice_size($v->{'size'}*1024*1024*1024)),"<br>\n";

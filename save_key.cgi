@@ -34,6 +34,7 @@ if ($in{'delete'}) {
 		}
 	else {
 		# Do it..
+		&obtain_lock_anything();
 		&delete_ssh_key($key);
 		}
 	&webmin_log("delete", "key", $key->{'id'},
@@ -76,6 +77,7 @@ elsif ($in{'new'}) {
 		$sfunc = "type_${type}_ssh_key_save";
 		&$sfunc($key, $in{'gen'}, \%in);
 		}
+	&obtain_lock_anything();
 	&save_ssh_key($key);
 	&webmin_log("create", "key", $key->{'id'},
 		    { 'desc' => $key->{'desc'} });
@@ -99,6 +101,7 @@ else {
 			&error($text{'key_edata'});
 		$key->{'keydata'} = $in{'data'};
 		}
+	&obtain_lock_anything();
 	&save_ssh_key($key);
 	&webmin_log("modify", "key", $key->{'id'},
 		    { 'desc' => $key->{'desc'} });

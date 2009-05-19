@@ -41,6 +41,7 @@ $config{'bw_dir_in'} = $in{'dir_in'};
 $config{'bw_dir_out'} = $in{'dir_out'};
 
 # Update config and cron job
+&obtain_lock_anything();
 $config{'bw_enabled'} = $in{'enabled'};
 &save_module_config();
 &save_bandwidth_message($in{'msg'});

@@ -24,6 +24,7 @@ foreach $sd (@d) {
 &can_action_error(\@domservers, "domains");
 $postmsg = &text('dmass_post', join(", ", map { "<tt>$_->[1]->{'dom'}</tt>" }
 					      @serverdoms));
+&obtain_lock_server(\@domservers);
 
 if ($in{'delete'}) {
 	# Delete the domains, after asking for confirmation
@@ -262,6 +263,8 @@ if ($recheck) {
 		}
 	print $text{'dcreate_statusok'},"<p>\n";
 	}
+&release_lock_server(\@domservers);
+
 if ($in{'id'} eq '') {
 	&ui_print_footer("list_domains.cgi", $text{'domains_return'});
 	}

@@ -27,6 +27,7 @@ if ($in{'delete'}) {
 	&error_setup($text{'mami_err1'});
 	if ($in{'confirm'}) {
 		# Just do it
+		&obtain_lock_anything();
 		foreach $ami (@amis) {
 			$ec2 = $ami->{'ec2'};
 			$err = &type_ec2_deregister_ami(
@@ -70,6 +71,7 @@ if ($in{'delete'}) {
 elsif ($in{'public'}) {
 	# Add public grant to selected
 	&error_setup($text{'mami_err2'});
+	&obtain_lock_anything();
 	foreach my $ami (@amis) {
 		$ec2 = $ami->{'ec2'};
 		$grants = &list_ec2_ami_grants($ec2, $ami->{'imageId'});
@@ -89,6 +91,7 @@ elsif ($in{'public'}) {
 elsif ($in{'private'}) {
 	# Remove public grant from selected
 	&error_setup($text{'mami_err2'});
+	&obtain_lock_anything();
 	foreach my $ami (@amis) {
 		$ec2 = $ami->{'ec2'};
 		$grants = &list_ec2_ami_grants($ec2, $ami->{'imageId'});

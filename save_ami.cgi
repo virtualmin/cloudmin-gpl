@@ -17,6 +17,7 @@ if ($in{'delete'}) {
 	# De-register, after asking for confirmation
 	if ($in{'confirm'}) {
 		# Just do it
+		&obtain_lock_anything();
 		$err = &type_ec2_deregister_ami($ec2, $ami->{'imageId'});
 		&error($err) if ($err);
 
@@ -51,6 +52,7 @@ else {
 	# Updating grants .. need to work out what has changed
 	$oldgrants = &list_ec2_ami_grants($ec2, $ami->{'imageId'});
 	ref($oldgrants) || &error($oldgrants);
+	&obtain_lock_anything();
 	@newgrants = ( );
 	foreach $g (split(/\s+/, $in{'grants'})) {
 		if ($g =~ /^\@(\S+)$/) {

@@ -88,6 +88,7 @@ foreach $f (@features) {
 
 # Do it
 &ui_print_unbuffered_header(undef, $text{'dcreate_title'}, "");
+&obtain_lock_server($server);
 
 # If the target server type doesn't allow IPs to be brought up within itself,
 # (ie. VServers or Zones) do the allocation here or check if the requested IP
@@ -131,6 +132,8 @@ else {
 	&save_managed_server($server);
 	print $text{'dcreate_statusok'},"<p>\n";
 	}
+
+&release_lock_server($server);
 
 if ($in{'create'} && $in{'server'} >= 0) {
 	&ui_print_footer("edit_serv.cgi?id=$in{'server'}&doms=1",

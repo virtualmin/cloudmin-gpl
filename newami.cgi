@@ -25,6 +25,7 @@ if (ref($images) && !$in{'over'}) {
 	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'newami_title'}, "");
+&obtain_lock_server($server);
 
 print &text('newami_doing', "<tt>$server->{'host'}</tt>",
 			    "<tt>$ec2->{'account'}</tt>"),"<p>\n";
@@ -107,6 +108,7 @@ $complete = 1;
 # Un-munge
 FAILED:
 &unmunge_all_files($server, $munged);
+&release_lock_server($server);
 
 if ($complete) {
 	print $text{'newami_alldone'},"<p>\n";

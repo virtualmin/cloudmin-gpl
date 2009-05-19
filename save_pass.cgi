@@ -21,6 +21,7 @@ if ($in{'webmin_pass_def'} == 2 &&
 
 # Actually make the changes
 &ui_print_unbuffered_header(&server_in($server), $text{'pass_title'}, "");
+&obtain_lock_server($server);
 
 # Change SSH password, by updating /etc/shadow
 if (!$in{'ssh_pass_def'}) {
@@ -93,5 +94,6 @@ else {
 	}
 
 DONE:
+&release_lock_server($server);
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 

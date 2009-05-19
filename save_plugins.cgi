@@ -18,6 +18,7 @@ foreach my $p (@newplugins) {
 	}
 
 # Save them
+&obtain_lock_anything();
 $config{'plugins'} = join(" ", @newplugins);
 &lock_file($module_config_file);
 &save_module_config();
