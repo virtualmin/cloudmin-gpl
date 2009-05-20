@@ -5590,6 +5590,10 @@ $SIG{'PIPE'} = 'ignore';
 sub test_lock_server
 {
 local ($server) = @_;
+if ($main::got_lock_server{$server->{'id'}}) {
+	# Locked already in this process
+	return 0;
+	}
 return &test_lock("$servers::module_config_directory/$server->{'id'}.serv");
 }
 
