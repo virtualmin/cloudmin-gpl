@@ -10,7 +10,7 @@ $server || &error($text{'mkimage_egone'});
 
 # Validate inputs
 $in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
-if (!$in{'imageid_def'}) {
+if (!$in{'imageid_def'} || !defined($in{'oldid'})) {
 	$in{'imageid'} =~ /^\S+$/ || &error($text{'mkimage_eid'});
 	($clash) = grep { $_->{'id'} eq $in{'imageid'} } &list_server_images();
 	$clash && &error($text{'mkimage_eclash'});

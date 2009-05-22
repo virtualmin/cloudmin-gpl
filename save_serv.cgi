@@ -295,7 +295,8 @@ elsif ($in{'recheck'}) {
 	&remote_foreign_require($server, "virtual-server",
 					 "virtual-server-lib.pl");
 	($out, $cerrarr) = &remote_foreign_call($server, "virtual-server",
-		"capture_function_output", "check_virtual_server_config");
+		"capture_function_output",
+		"virtual_server::check_virtual_server_config");
 	print $out;
 	$cerr = $cerrarr->[0];
 	$cerr =~ s/<[^>]*>//g;  # Remove HTML

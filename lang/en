@@ -1243,6 +1243,9 @@ mkimage_over=Overwrite old image $1
 mkimage_version=Version number
 mkimage_compress=Compress image filesystem?
 mkimage_none=None
+mkimage_edesc=Missing description for image
+mkimage_eid=Missing or invalid image ID - no spaces are allowed
+mkimage_eclash=An image with the same ID already exists
 
 pass_title=Change Password
 pass_header=New system passwords
