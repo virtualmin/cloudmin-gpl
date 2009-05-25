@@ -1117,12 +1117,12 @@ else {
 	}
 }
 
-# delete_file_on_server(&server, remotefile)
+# delete_file_on_server(&server, remotefile, [no-quote])
 # Deletes a file on a managed server. Returns undef on success, or an error
 # message on failure.
 sub delete_file_on_server
 {
-local ($server, $remotefile) = @_;
+local ($server, $remotefile, $noquote) = @_;
 local $dfunc = "type_".$server->{'manager'}."_delete_file";
 if (defined(&$dfunc)) {
 	# Use type-specific function call
@@ -1133,7 +1133,8 @@ if (defined(&$dfunc)) {
 
 # Just run rm via SSH
 local ($out, $ex, $err) = &execute_command_on_server($server,
-				"rm -rf ".quotemeta($remotefile));
+				"rm -rf ".($noquote ? $remotefile
+						    : quotemeta($remotefile)));
 return $err ? $err : $ex ? $out : undef;
 }
 

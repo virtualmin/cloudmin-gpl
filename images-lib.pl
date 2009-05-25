@@ -647,6 +647,40 @@ if (!$err) {
 return \@rv;
 }
 
+# munge_log_files(&server)
+# Clears root's shell history files, everything in /tmp, and most logs
+sub munge_log_files
+{
+local ($server) = @_;
+
+# Clear history files
+foreach my $f (".bash_history", ".mysql_history",
+	       ".psql_history", ".history") {
+	&delete_file_on_server($server, "/root/$f");
+	&delete_file_on_server($server, "/$f");
+	}
+
+# Clear all of /tmp
+&delete_file_on_server($server, "/tmp/*", 1);
+
+# Clear common logs
+local $logdir = "/var/log";
+foreach my $f ("messages", "auth.log", "secure", "daemon.log", "syslog",
+	       "dmesg", "mailman", "mysql.err", "mysql.log", "lastlog",
+	       "wtmp", "dpkg.log", "anaconda.log", "boot.log", "cron",
+	       "faillog", "freshclam.log", "maillog", "mail.*", "mysqld.log",
+	       "rpmpkgs", "xferlog", "yum.log") {
+	&delete_file_on_server($server, "$logdir/$f", 1);
+	}
+
+# Clear rotated logs
+&delete_file_on_server($server, "$logdir/*.gz", 1);
+&delete_file_on_server($server, "$logdir/*.[0-9]", 1);
+&delete_file_on_server($server, "$logdir/*-[0-9]*[0-9]", 1);
+
+return [ ];	# Files cannot be reverted
+}
+
 # munge_authorized_key(&server)
 # Removes all keys from ~root/.ssh/authorized_keys* .  Returns a list of files
 # changed and original contents, or an error string
@@ -718,6 +752,7 @@ local @munged;
 local $ok = 1;
 foreach my $m ([ \&munge_virtualmin_licence_files, 'mkimage_mungelicence' ],
 	       [ \&munge_shadow_root_password, 'mkimage_mungeshadow' ],
+	       [ \&munge_log_files, 'mkimage_mungelogs' ],
 	       [ \&munge_authorized_key, 'mkimage_mungessh' ]) {
 	next if ($m->[1] eq 'mkimage_mungessh' && $noauth);
 	next if ($m->[1] eq 'mkimage_mungelicence' && $noserial);
