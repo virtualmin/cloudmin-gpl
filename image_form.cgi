@@ -35,7 +35,8 @@ if (@images) {
 			     &ui_textbox("imageid", undef, 30))."<br>" ],
 		  [ 1, &text('mkimage_over',
 			&ui_select("oldid", undef,
-				   [ map { [ $_->{'id'} ] } @images ])) ],
+			   [ map { [ $_->{'id'} ] }
+			      sort { $a->{'id'} cmp $b->{'id'} } @images ])) ],
 		]));
 	}
 else {
