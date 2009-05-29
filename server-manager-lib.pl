@@ -2088,8 +2088,12 @@ sub install_package_update
 local ($server, $p) = @_;
 $last_remote_error = undef;
 &remote_foreign_require($server, "security-updates", "security-updates-lib.pl");
+local $func = &remote_eval($server, "security-updates",
+			   'defined(&capture_function_output_tempfile)') ?
+				"capture_function_output_tempfile" :
+				"capture_function_output";
 local ($out, $rv) = &remote_foreign_call($server, "security-updates",
-		"capture_function_output", "security_updates::package_install",
+		$func, "security_updates::package_install",
 		$p->{'update'} || $p->{'name'}, $p->{'system'});
 if ($last_remote_error) {
 	return $last_remote_error;
