@@ -678,6 +678,10 @@ foreach my $f ("messages", "auth.log", "secure", "daemon.log", "syslog",
 &delete_file_on_server($server, "$logdir/*.[0-9]", 1);
 &delete_file_on_server($server, "$logdir/*-[0-9]*[0-9]", 1);
 
+# Clear Webmin logs
+&delete_file_on_server($server, "/var/webmin/miniserv.log");
+&delete_file_on_server($server, "/var/webmin/webmin.log");
+
 return [ ];	# Files cannot be reverted
 }
 
