@@ -1607,16 +1607,22 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			if (&remote_foreign_check("proc")) {
 				&remote_foreign_require($server, "proc",
 					"proc-lib.pl");
-				local @load = &remote_foreign_call($server,
-					"proc", "get_cpu_info");
-				if (@load) {
-					$info->{'load'} = \@load;
+				if (&remote_eval($server, "proc",
+					'defined(&get_cpu_info)')) {
+					local @load = &remote_foreign_call(
+					    $server, "proc", "get_cpu_info");
+					if (@load) {
+						$info->{'load'} = \@load;
+						}
 					}
-				local @mem = &remote_foreign_call($server,
-					"proc", "get_memory_info");
-				if (@mem) {
-					$info->{'mem'} = \@mem;
-					$got_memory = 1;
+				if (&remote_eval($server, "proc",
+					'defined(&get_memory_info)')) {
+					local @mem = &remote_foreign_call(
+					    $server, "proc", "get_memory_info");
+					if (@mem) {
+						$info->{'mem'} = \@mem;
+						$got_memory = 1;
+						}
 					}
 				}
 			}

@@ -363,10 +363,11 @@ if (defined(&theme_select_server)) {
 sub bar_chart
 {
 local ($total, $used, $blue) = @_;
+return undef if (!int($total));
 local $bar_width = 100;
 local $rv = "<div class='barchart'>";
 $rv .= sprintf "<img src=images/red.gif width=%s%% height=12>",
-  int($bar_width*$used/$total)+1;
+	  int($bar_width*$used/$total)+1;
 if ($blue) {
   $rv .= sprintf "<img src=images/blue.gif width=%s%% height=12></div>",
 	    $bar_width - int($bar_width*$used/$total)-1;
