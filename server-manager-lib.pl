@@ -3982,6 +3982,8 @@ local $cfunc = "type_".$t."_get_console_output";
 local $canconsole = defined(&$cfunc);
 local $clfunc = "type_".$t."_supports_console_login";
 local $canlogin = defined(&$clfunc) && &$clfunc($server);
+local $rsfunc = "type_".$server->{'manager'}."_can_reset";
+local $canreset = defined(&$rsfunc) && &$rsfunc($server);
 
 # Start with links to edit_serv.cgi
 local $ed = "edit_serv.cgi?id=$server->{'id'}";
@@ -4195,6 +4197,13 @@ if ($canmove && &can_action($server, "move")) {
 		    'desc' => $text{'edit_move'},
 		    'cat' => 'manage',
 		    'link' => "move_form.cgi?id=$server->{'id'}" });
+	}
+if ($canreset && &can_action($server, "reset")) {
+	# Can reset to original image
+	push(@rv, { 'id' => 'reset',
+		    'desc' => $text{'edit_reset'},
+		    'cat' => 'manage',
+		    'link' => "reset_form.cgi?id=$server->{'id'}" });
 	}
 
 # Pause/un-pause link
@@ -5042,6 +5051,57 @@ if (!defined(&$cfunc) || !&$cfunc($server, $dest)) {
 	}
 local $mfunc = "type_".$server->{'manager'}."_move_system";
 local $err = &$mfunc($server, $dest);
+
+# Refresh status
+if (!$err) {
+	&$first_print($text{'save_refreshing'});
+	}
+&check_server_status($server, 0, 1);
+&save_managed_server($server);
+if (!$err) {
+	&$second_print(&text('save_refreshdone2',
+		&describe_status($server, 1, 1)));
+	}
+
+return $err;
+}
+
+# reset_system(&system)
+# Resets a virtual system to its original image. 
+sub reset_system
+{
+local ($server) = @_;
+
+# If running, shut down
+local $was_up = 0;
+if ($server->{'status'} ne 'down') {
+	&$first_print($text{'smove_shutting'});
+	$err = &shutdown_server($server);
+	if ($err) {
+		return &text('smove_shutfailed', $err);
+		}
+	$s->{'status'} = 'down';	# Assume it worked
+	$was_up = 1;
+	&$second_print($text{'create_done'});
+	}
+
+# Transfer across the original image
+
+# Re-apply the original image
+
+# XXX same as creation?
+
+# XXX
+
+# If was running before, start up
+if ($was_up) {
+	&$first_print($text{'smove_starting'});
+	local ($ok, $err) = &startup_server($server);
+	if (!$ok) {
+		return $text{'smove_startfailed'};
+		}
+	&$second_print($text{'create_done'});
+	}
 
 # Refresh status
 if (!$err) {

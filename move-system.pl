@@ -1,7 +1,6 @@
 #!/usr/local/bin/perl
 # Moves a virtual system to another host, by imaging it and copying across
 # the image file
-# XXX need to update DNS
 
 =head1 move-system.pl
 
