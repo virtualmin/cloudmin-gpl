@@ -4087,6 +4087,11 @@ else {
 		push(@rv, { 'id' => 'refresh',
 			    'desc' => $text{'edit_refresh'},
 			    'cat' => '' });
+		if ($server->{'status'} eq 'virt') {
+			push(@rv, { 'id' => 'regen',
+				    'desc' => $text{'edit_regen'},
+				    'cat' => '' });
+			}
 		push(@rv, undef);
 		}
 	if (&can_action($server, "run")) {

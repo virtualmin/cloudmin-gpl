@@ -21,8 +21,8 @@ if ($in{'refresh'}) {
 	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
 	print "<ul>\n";
 	&obtain_lock_server(\@servers);
-	@prv = &parallel_check_server_status(\@pservers, 1);
-	@orv = &parallel_check_server_status(\@oservers, 1);
+	@prv = &parallel_check_server_status(\@pservers, 0);
+	@orv = &parallel_check_server_status(\@oservers, 0);
 	&release_lock_server(\@servers);
 
 	# Show new statuses

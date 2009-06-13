@@ -319,14 +319,16 @@ elsif ($in{'recheck'}) {
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 
-elsif ($in{'refresh'}) {
+elsif ($in{'refresh'} || $in{'regen'}) {
 	# Refresh monitored status
 	&can_action_error($server, "refresh");
 	&ui_print_header(&server_in($server), $text{'save_refreshtitle'}, "");
 	&obtain_lock_server($server);
 
-	print $text{'save_refreshing'},"<br>\n";
-	&check_server_status($server, 1);
+	print $in{'regen'} ? $text{'save_refreshing2'}
+			   : $text{'save_refreshing'};
+	print "<br>\n";
+	&check_server_status($server, $in{'regen'} ? 1 : 0);
 	&save_managed_server($server);
 	print &text('save_refreshdone2',
 		    describe_status($server, 1, 1)),"<p>\n";
