@@ -74,6 +74,7 @@ if (@deps) {
 
 # Do it!
 foreach $s (@servers) {
+	&obtain_lock_server($server);
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
 
@@ -94,6 +95,7 @@ foreach $s (@servers) {
 		# Run post-deletion script
 		&run_system_script($s, 'after', 'delete');
 		}
+	&release_lock_server($server);
 	}
 
 sub usage

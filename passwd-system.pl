@@ -65,6 +65,7 @@ $server || &usage("System with hostname $host does not exist");
 if ($webmin_same && !$server->{'ssh_pass'} && !$ssh_pass) {
 	&usage("The current Unix password is not known, so --webmin-same cannot be used");
 	}
+&obtain_lock_server($server);
 $failed = 0;
 
 if (defined($ssh_pass)) {
@@ -124,6 +125,7 @@ print "Re-checking system status..\n";
 &save_managed_server($server);
 print ".. done\n\n";
 
+&release_lock_server($server);
 exit($failed);
 
 sub usage

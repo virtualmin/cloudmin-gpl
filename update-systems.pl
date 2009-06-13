@@ -60,6 +60,7 @@ else {
 
 # Do the parallel update and print
 print "Updating packages on ",scalar(@servers)," systems ..\n";
+&obtain_lock_server(\@servers);
 &parallel_server_function(\@servers,
 	sub { my $info = &get_server_collected($_[0]);
 	      my @allgot;
@@ -77,6 +78,7 @@ print "Updating packages on ",scalar(@servers)," systems ..\n";
 	          print "$_[0]->{'host'}: NONE\n"
                   }
 	      });
+&release_lock_server(\@servers);
 
 sub usage
 {

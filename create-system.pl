@@ -266,6 +266,7 @@ if (!$serial && !$key) {
 
 # Run pre-creation script
 &run_system_script($server, 'before', 'create') || exit(2);
+&obtain_lock_server($server);
 
 if ($serial) {
 	# Mark this key as in-use
@@ -489,6 +490,7 @@ if ($config{'packages_def'} && ($server->{'status'} eq 'virt' ||
 
 # Run post-creation script
 &run_system_script($server, 'after', 'create');
+&release_lock_server($server);
 
 print "Creation of $tdesc system $server->{'host'} is complete\n";
 exit(0);

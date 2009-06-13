@@ -103,6 +103,7 @@ foreach $dn (@dnames) {
 # Delete each one
 foreach $sd (@serverdoms) {
 	($server, $d) = @$sd;
+	&obtain_lock_server($server);
 
 	# Remove the domain
 	print "Deleting Virtualmin domain $d->{'dom'} from ",
@@ -131,6 +132,7 @@ foreach $sd (@serverdoms) {
 			print ".. deleted successfully\n\n";
 			}
 		}
+	&release_lock_server($server);
 	}
 
 # Recheck server statuses

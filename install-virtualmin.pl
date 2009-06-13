@@ -106,6 +106,7 @@ foreach $s (@servers) {
 
 # Do the parallel refresh
 print "Installing Virtualmin on ",scalar(@servers)," systems ..\n";
+&obtain_lock_server(\@servers);
 &parallel_server_function(\@servers,
 	sub { # Start install
 	      ($serial, $key) = @{$serialmap{$_[0]->{'id'}}};
@@ -133,6 +134,7 @@ print "Installing Virtualmin on ",scalar(@servers)," systems ..\n";
 	       &save_managed_server($_[0]);
 	       print "$_[0]->{'host'}: OK\n";
 	    });
+&release_lock_server(\@servers);
 
 sub usage
 {

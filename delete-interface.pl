@@ -48,6 +48,7 @@ $address || &usage("Missing --address parameter");
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&obtain_lock_server($server);
 
 # Check the function and status
 $ifunc = "type_".$server->{'manager'}."_list_interfaces";
@@ -73,6 +74,7 @@ if ($err) {
 else {
 	print "Deleted interface $iface->{'fullname'}\n";
 	}
+&release_lock_server($server);
 
 sub usage
 {

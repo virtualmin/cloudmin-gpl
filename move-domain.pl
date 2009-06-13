@@ -157,8 +157,12 @@ if (!$force) {
 
 # Do it!
 &set_all_text_print();
+&obtain_lock_server($dest);
+&obtain_lock_server([ map { $_->[0] } @serverdoms ]);
 &move_domains_to_server(\@serverdoms, $dest,
 			$deletesource, $direct, $realloc);
+&release_lock_server([ map { $_->[0] } @serverdoms ]);
+&release_lock_server($dest);
 
 sub usage
 {

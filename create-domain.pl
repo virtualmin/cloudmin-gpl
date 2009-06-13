@@ -113,6 +113,7 @@ $dfeatures || @features || &usage("Either the --default-features or several --fe
 $server = &get_managed_server_by("host", $host);
 $server || &usage("No system with hostname $host was found");
 $server->{'status'} eq 'virt' || &usage("System $host is not running Virtualmin");
+&obtain_lock_server($server);
 
 # Work out features
 $info = &get_server_collected($server);
@@ -189,6 +190,7 @@ else {
 	&save_managed_server($server);
 	print ".. creation complete!\n";
 	}
+&release_lock_server($server);
 
 sub usage
 {

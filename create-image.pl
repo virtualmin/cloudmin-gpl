@@ -121,6 +121,7 @@ if (!$overwrite) {
 				  "by Virtualmin, and cannot be overwritten");
 		}
 	}
+&obtain_lock_server($server);
 
 # Create initial image hash
 $image = { 'id' => $id,
@@ -210,6 +211,7 @@ if ($shutdown) {
 	&save_managed_server($server);
 	&$second_print(".. done");
 	}
+&release_lock_server($server);
 
 # Exit if image transfer failed, but only after cleanup is done
 if ($err) {

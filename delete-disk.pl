@@ -59,6 +59,7 @@ $real || $virt || &usage("The disk to remove must be identified by the --real or
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&obtain_lock_server($server);
 
 # Get the current disks
 $dfunc = "type_".$server->{'manager'}."_list_disks";
@@ -102,6 +103,7 @@ else {
 		&$second_print(".. done");
 		}
 	}
+&release_lock_server($server);
 
 sub usage
 {

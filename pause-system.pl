@@ -56,6 +56,7 @@ foreach $s (@servers) {
 		  join(" ", map { $_->{'host'} } @cannot));
 
 # Do it!
+&obtain_lock_server(\@servers);
 foreach $s (@servers) {
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
@@ -72,6 +73,7 @@ foreach $s (@servers) {
 		}
 	&save_managed_server($s);
 	}
+&release_lock_server(\@servers);
 
 sub usage
 {

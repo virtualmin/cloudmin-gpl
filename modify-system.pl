@@ -109,6 +109,7 @@ while(@ARGV > 0) {
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&obtain_lock_server($server);
 
 # Validate all options
 if (defined($desc)) {
@@ -232,6 +233,7 @@ if ($recheck) {
 	$desc = $text{'status_'.$server->{'status'}};
 	print "New status is: $server->{'status'} ($desc)\n";
 	}
+&release_lock_server($server);
 
 sub usage
 {

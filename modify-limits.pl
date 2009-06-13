@@ -135,6 +135,7 @@ if (defined($vcpus)) {
 	}
 
 # Do each system
+&obtain_lock_server(\@servers);
 foreach $s (@servers) {
 	$t = $s->{'manager'};
 	$tfunc = "type_".$t."_desc";
@@ -258,6 +259,7 @@ foreach $s (@servers) {
 			}
 		}
 	}
+&release_lock_server(\@servers);
 
 # Tell the user if he should have given --reboot
 if (@need_reboot) {

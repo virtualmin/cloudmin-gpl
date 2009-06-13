@@ -63,6 +63,7 @@ $address || $allocate || &usage("One of --address or --allocate must be given");
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&obtain_lock_server($server);
 
 # Check the function and status
 $ifunc = "type_".$server->{'manager'}."_create_interface";
@@ -104,6 +105,7 @@ if ($err) {
 else {
 	print "Created interface $iface->{'fullname'} with address $iface->{'address'}\n";
 	}
+&release_lock_server($server);
 
 sub usage
 {

@@ -61,6 +61,7 @@ while(@ARGV > 0) {
 
 # Do the parallel refresh and print
 print "Refreshing status of ",scalar(@servers)," systems ..\n";
+&obtain_lock_server(\@servers);
 if ($serial) {
 	# In one process
 	foreach $s (@pservers, @oservers) {
@@ -90,6 +91,7 @@ else {
 			}
 		}
 	}
+&release_lock_server(\@servers);
 
 sub usage
 {

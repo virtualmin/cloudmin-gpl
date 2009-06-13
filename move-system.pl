@@ -90,7 +90,11 @@ defined(&$cfunc) || &usage("Systems of type $desc cannot be moved");
 
 # Do the transfer
 print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
+&obtain_lock_server($dest);
+&obtain_lock_server($server);
 $err = &move_system($server, $dest);
+&release_lock_server($server);
+&release_lock_server($dest);
 if ($err) {
 	print $err,"\n";
 	exit(1);

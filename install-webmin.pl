@@ -67,6 +67,7 @@ foreach $s (@servers) {
 
 # Do the parallel install
 print "Installing Webmin on ",scalar(@servers)," systems ..\n";
+&obtain_lock_server(\@servers);
 &parallel_server_function(\@servers,
 	sub { ($src, $type, $err) = &get_install_webmin_source($_[0]);
 	      if ($err) {
@@ -82,6 +83,7 @@ print "Installing Webmin on ",scalar(@servers)," systems ..\n";
 	          print "$_[0]->{'host'}: OK $type $src\n";
 	      }
 	    });
+&release_lock_server(\@servers);
 
 sub usage
 {
