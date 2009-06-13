@@ -5072,6 +5072,14 @@ sub reset_system
 {
 local ($server) = @_;
 
+# Get the current Virtualmin serial and key, if any
+my $info = &get_server_collected($server);
+my ($serial, $key);
+if ($info && $info->{'serial'}) {
+	$serial = $info->{'serial'}->{'serial'};
+	$key = $info->{'key'}->{'key'};
+	}
+
 # If running, shut down
 local $was_up = 0;
 if ($server->{'status'} ne 'down') {
@@ -5086,35 +5094,118 @@ if ($server->{'status'} ne 'down') {
 	}
 
 # Transfer across the original image
-
-# Re-apply the original image
-
-# XXX same as creation?
-
-# XXX
-
-# If was running before, start up
-if ($was_up) {
-	&$first_print($text{'smove_starting'});
-	local ($ok, $err) = &startup_server($server);
-	if (!$ok) {
-		return $text{'smove_startfailed'};
-		}
+my $img = &get_server_image($server->{'image'});
+&$first_print(&text('create_copying', &nice_size($img->{'size'})));
+my ($imageok, $imagetemp) = &transfer_image_files($server, 1);
+if ($imageok == 0) {
+	return &text('create_ecopy', $imagetemp);
+	}
+elsif ($imageok == 2) {
+	$server->{'imagetemp'} = $imagetemp;
+	$server->{'imagelocal'} = 1;
+	&$second_print($text{'create_nocopy'});
+	}
+else {
+	$server->{'imagetemp'} = $imagetemp;
+	$server->{'imagelocal'} = 0;
 	&$second_print($text{'create_done'});
 	}
 
-# Refresh status
-if (!$err) {
-	&$first_print($text{'save_refreshing'});
+# Start creation process and wait for it to complete
+# XXX make sure old instance ID and filesystem image are used
+&$first_print($text{'reset_recreating'});
+my $cfunc = "type_".$server->{'manager'}."_create";
+my $err = &$cfunc($server, $serial, $key);
+if ($err) {
+	return &text('create_ecreate', $err);
 	}
-&check_server_status($server, 0, 1);
+my $dfunc = "type_".$server->{'manager'}."_create_done";
+&$second_print($text{'create_created'});
+&$first_print($text{'create_waiting'});
+while(1) {
+	my $err = &$dfunc($server);
+	if ($err eq "OK") {
+		last;
+		}
+	elsif ($err) {
+		if ($imageok == 1) {
+			&cleanup_image_files($server, $imagetemp);
+			}
+		return &text('create_ewait', $err);
+		}
+	sleep(1);
+	}
+&$second_print($text{'create_waited'});
+
+# Clean up image files
+if ($imageok == 1) {
+        &cleanup_image_files($server, $imagetemp);
+        }
 &save_managed_server($server);
-if (!$err) {
-	&$second_print(&text('save_refreshdone2',
-		&describe_status($server, 1, 1)));
+
+# Remove old SSH keys for this system
+&remove_server_ssh_keys($server);
+
+# Call any post-creation function
+$dfunc = "type_".$server->{'manager'}."_create_post";
+if (defined(&$dfunc)) {
+        &$dfunc($server, $serial, $key);
+        }
+
+# Wait for SSH login
+my ($sshstatus, $ssherr, $webmindir, $webminport, $webminssl);
+my $bfunc = "type_".$server->{'manager'}."_needs_boot";
+if ($server->{'no_sshlogin'} && defined(&$bfunc) && &$bfunc($server)) {
+	&$first_print($text{'create_sshing'});
+	my $sshcount = 0;
+	while(1) {
+		($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
+			&check_server_ssh_login($server);
+		if ($sshstatus == 0) {
+			# All OK
+			&$second_print($text{'create_sshdone'});
+			last;
+			}
+		elsif ($sshcount > 120) {
+			# Timeout
+			&$second_print(&text('create_sshfailed', 120, $ssherr));
+			last;
+			}
+		$sshcount++;
+		sleep(1);
+		}
+	}
+if (!$webmindir) {
+        ($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
+		&check_server_ssh_login($server);
 	}
 
-return $err;
+# Wait for Webmin to start, if we have it
+if ($webmindir) {
+        &$first_print($text{'create_webminstarting'});
+        my $err = &wait_webmin_server($server, 60);
+        if (!$err) {
+                &$second_print($text{'create_webminstarted'});
+                }
+        else {
+                &$second_print(&text('create_webminnostart', 60, $err));
+                }
+	}
+
+# Call any really final post-creation function
+my $dfunc = "type_".$server->{'manager'}."_create_ready";
+if (defined(&$dfunc)) {
+        &$dfunc($server, $serial, $key);
+        }
+
+# Refresh status
+&$first_print($text{'save_refreshing'});
+&check_server_status($server, 0, 1);
+&save_managed_server($server);
+&$second_print(&text('save_refreshdone2',
+	&describe_status($server, 1, 1)));
+
+return undef;
 }
 
 # get_server_cluster_software(&server)
