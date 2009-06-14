@@ -2481,7 +2481,7 @@ local ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 if ($zone) {
 	&$first_print(&text('create_vserverdns', $dnsname, $ip));
 	local @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
-	local ($aready) = grep { $_->{'name'} eq $dnsname } @recs;
+	local ($already) = grep { $_->{'name'} eq $dnsname } @recs;
 	if (!$already) {
 		# Need to add
 		&bind8::create_record($zone->{'file'}, $dnsname, undef,
@@ -2522,12 +2522,16 @@ local @zones = &list_bind_zones();
 local ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 if ($zone && $dnsname) {
 	local @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
-	local ($r) = grep { $_->{'name'} eq $dnsname } @recs;
-	if ($r) {
+	local @r = grep { $_->{'name'} eq $dnsname } @recs;
+	foreach my $r (reverse(@r)) {
 		# Can remove
 		&bind8::delete_record($zone->{'file'}, $r);
+		}
+	if (@r) {
 		&bind8::bump_soa_record(\@recs);
+		}
 
+	if (@r) {
 		# See if we can remove a reverse too
 		local ($rfn, $rrecs, $arpa, $rzone) =
 			&get_reverse_dns_zone($ip);
@@ -2539,7 +2543,8 @@ if ($zone && $dnsname) {
 				&bind8::bump_soa_record($rrecs);
 				}
 			}
-
+		}
+	if (@r) {
 		&bind8::restart_bind();
 		}
 	}
