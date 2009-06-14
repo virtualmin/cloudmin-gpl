@@ -1779,6 +1779,7 @@ owner_action_update=Update packages
 owner_action_script=Update installed scripts
 owner_action_console=View console
 owner_action_pause=Pause and un-pause
+owner_action_reset=Reset from image
 
 downers_err=Failed to delete system owners
 downers_enone=None selected
@@ -2165,7 +2166,7 @@ nicetime_hours=$1 hours, $2:$3 minutes
 nicetime_mins=$1 minutes, $2 seconds
 
 reset_title=Reset From Image
-reset_rusure=Are you sure you want to reset the virtual system $1 to the state it was in when first created? All data and files added since creation will be deleted.
+reset_rusure=Are you sure you want to reset the virtual system $1 to the state it was in when first created from the image $2? All data and files added since creation will be deleted.
 reset_ok=Reset System
 reset_err=Failed to reset system
 reset_ereset=This system cannot be reset!

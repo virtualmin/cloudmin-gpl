@@ -10,8 +10,11 @@ $server || &error($text{'edit_egone'});
 &ui_print_header(&server_in($server), $text{'reset_title'}, "", "reset");
 
 @doms = &get_server_domains($server);
-print &ui_confirmation_form("reset.cgi", &text('reset_rusure',
-					       "<tt>$server->{'host'}</tt>"),
+$img = &get_server_image($server->{'image'});
+print &ui_confirmation_form("reset.cgi",
+			    &text('reset_rusure',
+				  "<tt>$server->{'host'}</tt>",
+				  "<i>".&html_escape($img->{'desc'})."</i>"),
 			    [ [ "id", $server->{'id'} ] ],
 			    [ [ "confirm", $text{'reset_ok'} ] ],
 			    undef,
