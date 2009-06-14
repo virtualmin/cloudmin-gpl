@@ -2173,3 +2173,29 @@ reset_ereset=This system cannot be reset!
 reset_doing=Starting reset of $1 system $2 ..
 reset_recreating=Re-creating filesystem from original image ..
 reset_shutting=Shutting down system ..
+
+plans_title=Account Plans
+plans_add=Add a new account plan.
+plans_desc=Plan name
+plans_max_servers=Maximum systems
+plans_max_ram=Maximum RAM
+plans_max_disk=Maximum disk
+plans_owners=Applied to owners
+plans_nousers=None
+plans_manyusers=$1 owners
+plans_delete=Delete Selected Plans
+plans_defplan=Default plan
+plans_return=account plans
+
+plan_title1=Create Account Plan
+plan_title2=Edit Account Plan
+plan_header=Plan details and limits
+plan_header2=Plan restrictions
+plan_desc=Plan name
+plan_max_servers=Maximum allowed system
+plan_max_ram=Maximum RAM for systems
+plan_max_disk=Maximum disk space for systems
+plan_actions=Allowed actions for system owners
+plan_types=System types that can be created
+plan_save=Save and Apply
+

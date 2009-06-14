@@ -33,6 +33,7 @@ use POSIX;
 use Socket;
 %access = &get_module_acl();
 
+# Work out which system types this version of Cloudmin supports
 @possible_server_management_types = ( "real",
 				      "xen",
 				      "vserver",
@@ -42,12 +43,17 @@ use Socket;
 				    );
 @server_management_types = ( );
 %server_management_types = ( );
+@virtual_server_management_types = ( );
 foreach my $smt (@possible_server_management_types) {
 	if ($config{'show_'.$smt} &&
 	    -r $module_root_directory."/".$smt."-type-lib.pl") {
 		push(@server_management_types, $smt);
 		$server_management_types{$smt} = 1;
 		do $smt."-type-lib.pl";
+		my $vfunc = "type_".$smt."_is_virtual";
+		if (defined(&$vfunc) && &$vfunc()) {
+			push(@virtual_server_management_types, $smt);
+			}
 		}
 	}
 
@@ -160,6 +166,8 @@ $old_api_helper_command = "/usr/sbin/vm2";
 $ping_host_timeout = 2;
 
 $xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
+
+$owner_plans_dir = "$module_config_directory/plans";
 
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
@@ -3875,6 +3883,14 @@ push(@glinks, "list_owners.cgi");
 push(@gtitles, $text{'owners_title'});
 push(@gicons, "images/owners.gif");
 push(@gcats, "settings");
+
+# Account plans
+if (&supports_plans()) {
+	push(@glinks, "list_plans.cgi");
+	push(@gtitles, $text{'plans_title'});
+	push(@gicons, "images/plans.gif");
+	push(@gcats, "settings");
+	}
 
 if ($virtcount) {
 	# Default Virtualmin features

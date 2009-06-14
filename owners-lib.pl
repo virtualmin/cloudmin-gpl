@@ -6,10 +6,15 @@ sub list_system_owners
 {
 &foreign_require("acl", "acl-lib.pl");
 local @rv;
+my @plans = &list_plans();
 foreach my $u (&acl::list_users()) {
 	next if (&indexof($module_name, @{$u->{'modules'}}) < 0);
 	local %acl = &get_module_acl($u->{'name'});
 	next if (!$acl{'owner'});
+	if (!$acl{'plan'}) {
+		# Assume on first plan
+		$acl{'plan'} = $plans[0]->{'id'};
+		}
 	$u->{'acl'} = \%acl;
 	push(@rv, $u);
 	}
@@ -192,6 +197,49 @@ foreach my $o (&list_system_owners()) {
 	push(@rv, $o) if (&indexof($server->{'id'}, @acc) >= 0);
 	}
 return @rv;
+}
+
+# Returns non-zero if this Cloudmin install supports plans
+sub supports_plans
+{
+return scalar(@virtual_server_management_types);
+}
+
+# list_plans()
+# Returns a list of owner plan objects, each of which is a hash ref. If none
+# exist yet, a default plan is returned.
+sub list_plans
+{
+my @rv;
+opendir(PLANS, $owner_plans_dir);
+foreach my $f (readdir(PLANS)) {
+	next if ($f eq "." || $f eq "..");
+	my %plan;
+	&read_file("$owner_plans_dir/$f", \%plan);
+	$plan{'id'} = $f;
+	push(@rv, \%plan);
+	}
+closedir(PLANS);
+if (!@rv) {
+	push(@rv, { 'id' => 1,
+		    'default' => 1,
+		    'desc' => $text{'plans_defplan'},
+		    'max_servers' => 5,
+		    'max_ram' => 1024*1024*1024,
+		    'max_disk' => 10*1024*1024*1024,
+		    'types' => join(' ', @virtual_server_management_types),
+		    'actions' => join(' ', &list_owner_actions()),
+		  });
+	}
+return @rv;
+}
+
+sub save_plan
+{
+}
+
+sub delete_plan
+{
 }
 
 1;
