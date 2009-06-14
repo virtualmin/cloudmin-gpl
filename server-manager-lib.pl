@@ -5083,7 +5083,7 @@ if ($info && $info->{'serial'}) {
 # If running, shut down
 local $was_up = 0;
 if ($server->{'status'} ne 'down') {
-	&$first_print($text{'smove_shutting'});
+	&$first_print($text{'reset_shutting'});
 	$err = &shutdown_server($server);
 	if ($err) {
 		return &text('smove_shutfailed', $err);
@@ -5112,10 +5112,9 @@ else {
 	}
 
 # Start creation process and wait for it to complete
-# XXX make sure old instance ID and filesystem image are used
 &$first_print($text{'reset_recreating'});
 my $cfunc = "type_".$server->{'manager'}."_create";
-my $err = &$cfunc($server, $serial, $key);
+my $err = &$cfunc($server, $serial, $key, 1);
 if ($err) {
 	return &text('create_ecreate', $err);
 	}

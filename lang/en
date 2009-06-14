@@ -2171,3 +2171,4 @@ reset_err=Failed to reset system
 reset_ereset=This system cannot be reset!
 reset_doing=Starting reset of $1 system $2 ..
 reset_recreating=Re-creating filesystem from original image ..
+reset_shutting=Shutting down system ..
