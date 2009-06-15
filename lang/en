@@ -1758,6 +1758,7 @@ owner_set=Set to
 owner_real=Description or real name
 owner_email=Contact email address
 owner_servers=Systems that can be managed
+owner_plan=Account plan
 owner_actions=Allowed operations
 owner_err=Failed to save system owner
 owner_ename=Missing or invalid username - only letters, numbers and the characters dot, dash and underscore are allowed
@@ -2198,4 +2199,4 @@ plan_max_disk=Maximum disk space for systems
 plan_actions=Allowed actions for system owners
 plan_types=System types that can be created
 plan_save=Save and Apply
-
+plan_dstr=$1 systems, $2 RAM, $3 disk

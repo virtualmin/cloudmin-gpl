@@ -11,7 +11,7 @@ foreach my $u (&acl::list_users()) {
 	next if (&indexof($module_name, @{$u->{'modules'}}) < 0);
 	local %acl = &get_module_acl($u->{'name'});
 	next if (!$acl{'owner'});
-	if (!$acl{'plan'}) {
+	if (!$acl{'plan'} && &supports_plans()) {
 		# Assume on first plan
 		$acl{'plan'} = $plans[0]->{'id'};
 		}
@@ -234,12 +234,38 @@ if (!@rv) {
 return @rv;
 }
 
+# save_plan(&plan)
+# Create or update an account plan
 sub save_plan
 {
+my ($plan) = @_;
+if (!-d $owner_plans_dir) {
+	&make_dir($owner_plans_dir, 0700);
+	}
+$plan->{'id'} ||= &server_id();
+&write_file("$owner_plans_dir/$plan->{'id'}", $plan);
 }
 
+# delete_plan(&delete)
+# Delete an existing plan
 sub delete_plan
 {
+my ($plan) = @_;
+&unlink_file("$owner_plans_dir/$plan->{'id'}");
+}
+
+# describe_plan(&plan)
+# Returns a description of a plan and its limits
+sub describe_plan
+{
+my ($plan) = @_;
+return $plan->{'desc'}.' ('.
+       &text('plan_dstr',
+	     $plan->{'max_servers'} || $text{'domains_unlimited'},
+	     $plan->{'max_ram'} ? &nice_size($plan->{'max_ram'})
+				: $text{'domains_unlimited'},
+	     $plan->{'max_disk'} ? &nice_size($plan->{'max_disk'})
+				: $text{'domains_unlimited'}).')';
 }
 
 1;

@@ -48,12 +48,27 @@ print &ui_table_row($text{'owner_servers'},
 					 $_->{'short_host'} ] } @allservers ],
 		   10, 1));
 
+# Account plan, if any
+if (&supports_plans()) {
+	@plans = &list_plans();
+	print &ui_table_row($text{'owner_plan'},
+		&ui_select("plan", $owner->{'acl'}->{'plan'},
+		   [ map { [ $_->{'id'}, &describe_plan($_) ] } @plans ]));
+	}
+
 # Allowed actions
 %actions = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'actions'});
-print &ui_table_row($text{'owner_actions'},
-	join("<br>\n",
+$afield = '';
+if (&supports_plans()) {
+	$afield .= &ui_radio("actions_def",
+			     $owner->{'acl'}->{'actions_def'} ? 1 : 0,
+			     [ [ 1, $text{'owner_actions_def1'} ],
+			       [ 0, $text{'owner_actions_def0'} ] ])."<br>\n";
+	}
+$afield .= join("<br>\n",
 	     map { &ui_checkbox("actions", $_, $text{'owner_action_'.$_},
-				$actions{$_}) } &list_owner_actions()));
+				$actions{$_}) } &list_owner_actions());
+print &ui_table_row($text{'owner_actions'}, $afield);
 
 print &ui_hidden_table_end();
 
