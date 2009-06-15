@@ -49,13 +49,30 @@ else {
 	$owner->{'acl'}->{'servers'} =
 		join(" ", split(/\0/, $in{'servers'}));
 
+	# Plan, if any
+	if (&supports_plans()) {
+		$owner->{'acl'}->{'plan'} = $in{'plan'};
+		}
+
 	# Allowed actions
-	$in{'actions'} eq '' && &error($text{'owner_eactions'});
-	$owner->{'acl'}->{'actions'} =
-		join(" ", split(/\0/, $in{'actions'}));
+	if ($in{'actions_def'}) {
+		$owner->{'acl'}->{'actions_def'} = 1;
+		}
+	else {
+		$owner->{'acl'}->{'actions_def'} = 0;
+		$in{'actions'} eq '' && &error($text{'owner_eactions'});
+		$owner->{'acl'}->{'actions'} =
+			join(" ", split(/\0/, $in{'actions'}));
+		}
 
 	# Create or update
 	&save_system_owner($owner, $old);
+
+	# Apply this plan, if any
+	if (&supports_plans()) {
+		$plan = &get_plan($in{'plan'});
+		&apply_plan($plan);
+		}
 	}
 
 &redirect("list_owners.cgi");

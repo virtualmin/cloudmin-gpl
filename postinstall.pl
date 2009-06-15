@@ -103,6 +103,20 @@ EOF
 &unlink_file($old_api_helper_command);
 &symlink_file($api_helper_command, $old_api_helper_command);
 
+# Update system owners to set plan if missing
+if (&supports_plans()) {
+	my ($plan) = &list_plans();
+	my $fixed_count = 0;
+	foreach my $o (&list_system_owners()) {
+		if (!$o->{'acl'}->{'plan'}) {
+			$o->{'acl'}->{'plan'} = $plan->{'id'};
+			&save_system_owner($o, $o);
+			$fixed_count++;
+			}
+		}
+	&apply_plan($plan) if ($fixed_count);
+	}
+
 # Record the install time for this version
 local %itimes;
 &read_file($install_times_file, \%itimes);

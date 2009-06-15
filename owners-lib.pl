@@ -11,10 +11,6 @@ foreach my $u (&acl::list_users()) {
 	next if (&indexof($module_name, @{$u->{'modules'}}) < 0);
 	local %acl = &get_module_acl($u->{'name'});
 	next if (!$acl{'owner'});
-	if (!$acl{'plan'} && &supports_plans()) {
-		# Assume on first plan
-		$acl{'plan'} = $plans[0]->{'id'};
-		}
 	$u->{'acl'} = \%acl;
 	push(@rv, $u);
 	}
@@ -234,6 +230,15 @@ if (!@rv) {
 return @rv;
 }
 
+# get_plan(id)
+# Returns a plan looked up by ID
+sub get_plan
+{
+my ($id) = @_;
+my ($rv) = grep { $_->{'id'} eq $id } &list_plans();
+return $rv;
+}
+
 # save_plan(&plan)
 # Create or update an account plan
 sub save_plan
@@ -266,6 +271,24 @@ return $plan->{'desc'}.' ('.
 				: $text{'domains_unlimited'},
 	     $plan->{'max_disk'} ? &nice_size($plan->{'max_disk'})
 				: $text{'domains_unlimited'}).')';
+}
+
+# apply_plan(&plan)
+# Update limits on all system owners from this plan
+sub apply_plan
+{
+my ($plan) = @_;
+foreach my $o (grep { $_->{'acl'}->{'plan'} eq $plan->{'id'} }
+		    &list_system_owners()) {
+	$o->{'acl'}->{'max_servers'} = $plan->{'max_servers'};
+	$o->{'acl'}->{'max_ram'} = $plan->{'max_ram'};
+	$o->{'acl'}->{'max_disk'} = $plan->{'max_disk'};
+	$o->{'acl'}->{'types'} = $plan->{'types'};
+	if ($o->{'acl'}->{'actions_def'}) {
+		$o->{'acl'}->{'actions'} = $plan->{'actions'};
+		}
+	&save_system_owner($o, $o);
+	}
 }
 
 1;

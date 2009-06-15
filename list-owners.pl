@@ -71,6 +71,23 @@ if ($multi) {
 		foreach $s (@users) {
 			print "    Managed system: $s->{'host'}\n";
 			}
+		if (&supports_plans()) {
+			$plan = &get_plan($o->{'acl'}->{'plan'});
+			print "    Plan: ",$plan->{'desc'},"\n";
+			print "    Max systems: ",
+				$o->{'acl'}->{'max_servers'},"\n";
+			print "    Max RAM: ",
+				&nice_size($o->{'acl'}->{'max_ram'}),"\n";
+			print "    Max RAM in bytes: ",
+				$o->{'acl'}->{'max_ram'},"\n";
+			print "    Max disk: ",
+				&nice_size($o->{'acl'}->{'max_disk'}),"\n";
+			print "    Max disk in bytes: ",
+				$o->{'acl'}->{'max_disk'},"\n";
+			print "    Actions from plan: ",
+				($o->{'acl'}->{'actions_def'} ? "Yes" : "No"),
+				"\n";
+			}
 		%actions = map { $_, 1 } split(/\s+/, $o->{'acl'}->{'actions'});
 		print "    Allowed actions: ",
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";

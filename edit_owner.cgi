@@ -6,7 +6,15 @@ require './server-manager-lib.pl';
 &ReadParse();
 if ($in{'new'}) {
 	&ui_print_header(undef, $text{'owner_title1'}, "");
-	$owner = { 'acl' => { 'actions' => join(' ', &list_owner_actions()) } };
+	if (&supports_plans()) {
+		@plans = &list_plans();
+		$owner = { 'acl' => { 'actions_def' => 1,
+				      'plan' => $plans[0]->{'id'} } };
+		}
+	else {
+		$owner = { 'acl' => { 'actions' =>
+				join(' ', &list_owner_actions()) } };
+		}
 	}
 else {
 	&ui_print_header(undef, $text{'owner_title2'}, "");
@@ -40,7 +48,7 @@ print &ui_table_row($text{'owner_email'},
 	&ui_textbox("email", $owner->{'acl'}->{'email'}, 60));
 
 # Managed servers
-# XXX left / right chooser
+# XXX left / right chooser?
 @sids = split(/\s+/, $owner->{'acl'}->{'servers'});
 print &ui_table_row($text{'owner_servers'},
 	&ui_select("servers", \@sids,
@@ -50,7 +58,6 @@ print &ui_table_row($text{'owner_servers'},
 
 # Account plan, if any
 if (&supports_plans()) {
-	@plans = &list_plans();
 	print &ui_table_row($text{'owner_plan'},
 		&ui_select("plan", $owner->{'acl'}->{'plan'},
 		   [ map { [ $_->{'id'}, &describe_plan($_) ] } @plans ]));

@@ -64,6 +64,20 @@ foreach $t (@virtual_server_management_types) {
 	}
 print &ui_table_row($text{'plan_types'}, join("<br>\n", @typesboxes));
 
+# Users on this plan
+if (!$in{'new'}) {
+	@users = grep { $_->{'acl'}->{'plan'} eq $plan->{'id'} }
+		      &list_system_owners();
+	if (@users) {
+		print &ui_table_row($text{'plan_owners'},
+			&ui_grid_table([
+			   map { "<a href='edit_owner.cgi?name='.
+				 &urlize($_->{'name'})."'>".
+				 &html_escape($_->{'name'})."</a>" } @users ],
+			   4, 100));
+		}
+	}
+
 print &ui_hidden_table_end();
 
 print &ui_form_end(

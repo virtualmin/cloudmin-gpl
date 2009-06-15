@@ -1781,6 +1781,8 @@ owner_action_script=Update installed scripts
 owner_action_console=View console
 owner_action_pause=Pause and un-pause
 owner_action_reset=Reset from image
+owner_actions_def1=From plan
+owner_actions_def0=Selected below ..
 
 downers_err=Failed to delete system owners
 downers_enone=None selected
@@ -2200,3 +2202,4 @@ plan_actions=Allowed actions for system owners
 plan_types=System types that can be created
 plan_save=Save and Apply
 plan_dstr=$1 systems, $2 RAM, $3 disk
+plan_owners=System owners on this plan
