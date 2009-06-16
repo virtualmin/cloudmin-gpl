@@ -17,8 +17,8 @@ C<--add-host> flag followed by a hostname known to Cloudmin. Or to take away a
 system, use C<--remove-host> followed by a hostname.
 
 The C<--can-*> and C<--cannot-*> families of flags can be used to grant or
-remove permissions on the hosts this account owners. For a full list, see
-the documentation for the C<create-owner.pl> command.
+remove permissions on the hosts this account owns. For a full list, see
+the documentation for the C<create-owner> command.
 
 =head1 Example usage
 

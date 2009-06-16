@@ -34,14 +34,14 @@ while(@ARGV > 0) {
 		$name = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown flag $a");
 		}
 	}
 
 # Get the plan
 @plans = &list_plans();
 $name || &usage("Missing --name parameter");
-($plan) = grep { $_->{'name'} eq $name ||
+($plan) = grep { $_->{'desc'} eq $name ||
 	         $_->{'id'} eq $name } @plans;
 $plan || &usage("No plan named $name exists");
 @plans > 1 || &usage("The last plan cannot be deleted");

@@ -80,13 +80,13 @@ while(@ARGV > 0) {
 		push(@types, $t);
 		}
 	else {
-		&usage();
+		&usage("Unknown flag $a");
 		}
 	}
 
 # Validate parameters
 $name || &usage("Missing --name parameter");
-($clash) = grep { lc($_->{'name'}) eq lc($name) } &list_plans();
+($clash) = grep { lc($_->{'desc'}) eq lc($name) } &list_plans();
 $clash && &usage("A plan with the same name already exists");
 @types = @virtual_server_management_types if (!@types);
 @actions = @allactions if (!@actions);
@@ -109,7 +109,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Creates a new Cloudmin account plan.\n";
 print "\n";
 print "cloudmin create-plan --name plan-name\n";
-print "                    [--max-servers num]\n";
+print "                    [--max-systems num]\n";
 print "                    [--max-ram bytes]\n";
 print "                    [--max-disk bytes]\n";
 print "                    [--type ".
