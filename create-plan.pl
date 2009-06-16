@@ -86,6 +86,8 @@ while(@ARGV > 0) {
 
 # Validate parameters
 $name || &usage("Missing --name parameter");
+($clash) = grep { lc($_->{'name'}) eq lc($name) } &list_plans();
+$clash && &usage("A plan with the same name already exists");
 @types = @virtual_server_management_types if (!@types);
 @actions = @allactions if (!@actions);
 
