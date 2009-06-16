@@ -77,6 +77,22 @@ while(@ARGV > 0) {
 	elsif ($a =~ /^--cannot-(\S+)$/ && &indexof($1, @allactions) >= 0) {
 		push(@remactions, $1);
 		}
+	elsif ($a eq "--plan") {
+		&supports_plans() || &usage("The --plan flag is not supported");
+		$planid = shift(@ARGV);
+		($plan) = grep { $_->{'id'} eq $planid ||
+				 lc($_->{'name'}) eq lc($planid) }
+			       &list_plans();
+		$plan || &usage("No plan with ID or name $planid exists");
+		}
+	elsif ($a eq "--plan-actions") {
+		&supports_plans() || &usage("The --plan-actions flag is not supported");
+		$actions_def = 1;
+		}
+	elsif ($a eq "--no-plan-actions") {
+		&supports_plans() || &usage("The --no-plan-actions flag is not supported");
+		$actions_def = 0;
+		}
 	else {
 		&usage();
 		}
@@ -128,13 +144,24 @@ foreach $n (@remhosts) {
 	}
 $owner->{'acl'}->{'servers'} = join(" ", &unique(@ids));
 
-# Update allowed actions
-@actions = split(/\s+/, $owner->{'acl'}->{'actions'});
-push(@actions, @addactions);
-foreach $a (@remactions) {
-	@actions = grep { $_ ne $a } @actions;
+# Update plan
+if (defined($actions_def)) {
+	$owner->{'acl'}->{'actions_def'} = $actions_def;
 	}
-$owner->{'acl'}->{'actions'} = join(" ", &unique(@actions));
+if ($plan) {
+	$owner->{'acl'}->{'plan'} = $plan->{'id'};
+	&apply_plan_to_owner($plan, $owner);
+	}
+
+# Update allowed actions, if not coming from the plan
+if (!$owner->{'acl'}->{'actions_def'}) {
+	@actions = split(/\s+/, $owner->{'acl'}->{'actions'});
+	push(@actions, @addactions);
+	foreach $a (@remactions) {
+		@actions = grep { $_ ne $a } @actions;
+		}
+	$owner->{'acl'}->{'actions'} = join(" ", &unique(@actions));
+	}
 
 # Save the owner
 &save_system_owner($owner, $oldowner);
@@ -149,6 +176,10 @@ print "cloudmin modify-owner --name username\n";
 print "                     [--newname username]\n";
 print "                     [--email address\@domain]\n";
 print "                     [--pass password]\n";
+if (&supports_plans()) {
+	print "                     [--plan name]\n";
+	print "                     [--plan-actions | --no-plan-actions]\n";
+	}
 print "                     [--lock | --unlock]\n";
 print "                     [--real \"Real name\"]\n";
 print "                     [--add-host hostname]*\n";

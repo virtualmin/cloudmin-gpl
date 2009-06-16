@@ -75,6 +75,14 @@ while(@ARGV > 0) {
 	elsif ($a =~ /^--can-(\S+)$/ && &indexof($1, @allactions) >= 0) {
 		push(@actions, $1);
 		}
+	elsif ($a eq "--plan") {
+		&supports_plans() || &usage("The --plan flag is not supported");
+		$planid = shift(@ARGV);
+		($plan) = grep { $_->{'id'} eq $planid ||
+				 lc($_->{'name'}) eq lc($planid) }
+			       &list_plans();
+		$plan || &usage("No plan with ID or name $planid exists");
+		}
 	else {
 		&usage();
 		}
@@ -93,6 +101,9 @@ foreach $n (@hosts) {
 $name =~ /^[a-z0-9\.\-\_]+$/i || &usage("Invalid system owner login");
 ($clash) = grep { $_->{'name'} eq $name } &acl::list_users();
 $clash && &usage("A user named $name already exists");
+if (&supports_plans() && !$plan) {
+	&usage("Missing --plan parameter");
+	}
 
 # Create the user
 $owner = { 'name' => $name,
@@ -106,6 +117,13 @@ $owner = { 'name' => $name,
 if ($lock) {
 	$owner->{'pass'} = "!".$owner->{'pass'};
 	}
+if ($plan) {
+	$owner->{'acl'}->{'plan'} = $plan->{'id'};
+	$owner->{'acl'}->{'actions_def'} = @actions ? 0 : 1;
+	}
+if ($plan) {
+	&apply_plan_to_owner($plan, $owner);
+	}
 &save_system_owner($owner);
 print "Created Cloudmin system owner $name\n";
 
@@ -117,6 +135,9 @@ print "\n";
 print "cloudmin create-owner --name username\n";
 print "                      --email address\@domain\n";
 print "                      --pass password\n";
+if (&supports_plans()) {
+	print "                      --plan name\n";
+	}
 print "                     [--lock]\n";
 print "                     [--real \"Real name\"]\n";
 print "                     [--host hostname]*\n";

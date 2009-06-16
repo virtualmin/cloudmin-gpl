@@ -280,14 +280,22 @@ sub apply_plan
 my ($plan) = @_;
 foreach my $o (grep { $_->{'acl'}->{'plan'} eq $plan->{'id'} }
 		    &list_system_owners()) {
-	$o->{'acl'}->{'max_servers'} = $plan->{'max_servers'};
-	$o->{'acl'}->{'max_ram'} = $plan->{'max_ram'};
-	$o->{'acl'}->{'max_disk'} = $plan->{'max_disk'};
-	$o->{'acl'}->{'types'} = $plan->{'types'};
-	if ($o->{'acl'}->{'actions_def'}) {
-		$o->{'acl'}->{'actions'} = $plan->{'actions'};
-		}
+	&apply_plan_to_owner($plan, $o);
 	&save_system_owner($o, $o);
+	}
+}
+
+# apply_plan_to_owner(&plan, &owner)
+# Update an owner's ACL with plan limits
+sub apply_plan_to_owner
+{
+my ($plan, $o) = @_;
+$o->{'acl'}->{'max_servers'} = $plan->{'max_servers'};
+$o->{'acl'}->{'max_ram'} = $plan->{'max_ram'};
+$o->{'acl'}->{'max_disk'} = $plan->{'max_disk'};
+$o->{'acl'}->{'types'} = $plan->{'types'};
+if ($o->{'acl'}->{'actions_def'}) {
+	$o->{'acl'}->{'actions'} = $plan->{'actions'};
 	}
 }
 
