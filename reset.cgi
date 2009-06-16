@@ -29,4 +29,8 @@ else {
 	}
 &release_lock_server($server);
 
+if (defined(&theme_post_save_server)) {
+	&theme_post_save_server($server);
+	}
+
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
