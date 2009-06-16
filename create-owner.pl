@@ -14,21 +14,27 @@ at least one system, the C<--host> flag should be given followed by a hostname.
 This can be given multiple times to allow management of several hosts, which
 can be real or virtual systems.
 
+If your Cloudmin system supports plans, you must supply the C<--plan>
+parameter followed by a plan ID or name. The list of available plans can
+be displayed using the C<list-plans> command.
+
 To specify which actions the owner is allowed to perform on those hosts,
 use the following flags :
 
 C<--can-startup> - Startup systems
 C<--can-shutdown> - Shut down systems
 C<--can-reboot> - Reboot systems
+C<--can-console> - View and interact with console
 C<--can-graph> - View bandwidth usage graph
 C<--can-view> - View system details
 C<--can-run> - Run commands on systems
-C<--can-edit> - Edit system
-C<--can-transfer> - Transfer files
 C<--can-domains> - Manage Virtualmin domains
 C<--can-update> - Update packages
 C<--can-script> - Update installed scripts
-C<--can-console> - View and interact with console
+C<--can-pause> - Pause virtual systems
+C<--can-reset> - Reset to original image
+
+If no action flags are given, those defined in the plan will be allowed instead.
 
 =head1 Example usage
 

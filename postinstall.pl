@@ -115,6 +115,7 @@ if (&supports_plans()) {
 			}
 		}
 	&apply_plan($plan) if ($fixed_count);
+	&save_plan($plan);
 	}
 
 # Record the install time for this version
