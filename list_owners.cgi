@@ -15,6 +15,8 @@ if (@owners) {
 	@tds = ( "width=5" );
 	print &ui_columns_start([ "", $text{'owners_name'},
 				  $text{'owners_real'},
+				  &supports_plans() ? 
+					( $text{'owners_plan'} ) : ( ),
 				  $text{'owners_users'} ], 100, 0, \@tds);
 	foreach $o (@owners) {
 		%canservers = map { $_, 1 }
@@ -27,10 +29,13 @@ if (@owners) {
 		if ($o->{'pass'} =~ /^!/) {
 			$name = "<i>$name</i>";
 			}
+		$plan = &supports_plans() ? &get_plan($o->{'acl'}->{'plan'})
+					  : undef;
 		print &ui_checked_columns_row([
 			"<a href='edit_owner.cgi?name=".&urlize($o->{'name'}).
 			 "'>$name</a>",
 			$o->{'real'},
+			$plan ? ( $plan->{'desc'} ) : ( ),
 			$users,
 			], \@tds, "d", $o->{'name'});
 		}

@@ -8,10 +8,23 @@ require './server-manager-lib.pl';
 &foreign_require("acl", "acl-lib.pl");
 if (!$in{'new'}) {
 	$owner = &get_system_owner($in{'old'});
+	$owner || &error($text{'owner_egone'});
 	$old = { %$owner };
 	}
 
-if ($in{'delete'}) {
+if ($in{'switch'}) {
+	# Special case - switch to the Webmin user for this owner
+	&ui_print_header(undef, $text{'owner_title2'}, "");
+	print &text('owner_switching', "<tt>$in{'name'}</tt>"),"<p>\n";
+	print "<script>\n";
+	print "var w = window;\n";
+	print "while(w.parent && w.parent != w) { w = w.parent; }\n";
+	print "w.location = \"switch.cgi?name=$in{'old'}\";\n";
+	print "</script>\n";
+	&ui_print_footer();
+	exit;
+	}
+elsif ($in{'delete'}) {
 	# Just remove owner account
 	&delete_system_owner($owner);
 	}
@@ -45,7 +58,7 @@ else {
 	$owner->{'acl'}->{'email'} = $in{'email'};
 
 	# Allowed servers
-	$in{'servers'} eq '' && &error($text{'owner_eservers'});
+	#$in{'servers'} eq '' && &error($text{'owner_eservers'});
 	$owner->{'acl'}->{'servers'} =
 		join(" ", split(/\0/, $in{'servers'}));
 

@@ -4,10 +4,10 @@
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
+@plans = &list_plans();
 if ($in{'new'}) {
 	&ui_print_header(undef, $text{'owner_title1'}, "");
 	if (&supports_plans()) {
-		@plans = &list_plans();
 		$owner = { 'acl' => { 'actions_def' => 1,
 				      'plan' => $plans[0]->{'id'} } };
 		}
@@ -25,7 +25,8 @@ else {
 print &ui_form_start("save_owner.cgi", "post");
 print &ui_hidden("new", $in{'new'});
 print &ui_hidden("old", $in{'name'});
-print &ui_hidden_table_start($text{'owner_header'}, "width=100%", 2, "main", 1);
+print &ui_hidden_table_start($text{'owner_header'}, "width=100%", 2, "main", 1,
+			     [ 'width=30%' ]);
 
 # Username
 print &ui_table_row($text{'owner_name'},
@@ -48,13 +49,17 @@ print &ui_table_row($text{'owner_email'},
 	&ui_textbox("email", $owner->{'acl'}->{'email'}, 60));
 
 # Managed servers
-# XXX left / right chooser?
 @sids = split(/\s+/, $owner->{'acl'}->{'servers'});
 print &ui_table_row($text{'owner_servers'},
 	&ui_select("servers", \@sids,
 		   [ map { [ $_->{'id'}, ("&nbsp;&nbsp;" x $_->{'indent'}).
 					 $_->{'short_host'} ] } @allservers ],
 		   10, 1));
+
+print &ui_hidden_table_end();
+
+print &ui_hidden_table_start($text{'owner_header3'}, "width=100%", 2,
+			     "limits", 0, [ 'width=30%' ]);
 
 # Account plan, if any
 if (&supports_plans()) {
@@ -67,14 +72,18 @@ if (&supports_plans()) {
 %actions = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'actions'});
 $afield = '';
 if (&supports_plans()) {
+	$dis1 = &js_disable_inputs([ "actions" ], [ ], "onClick");
+	$dis0 = &js_disable_inputs([ ], [ "actions" ], "onClick");
 	$afield .= &ui_radio("actions_def",
-			     $owner->{'acl'}->{'actions_def'} ? 1 : 0,
-			     [ [ 1, $text{'owner_actions_def1'} ],
-			       [ 0, $text{'owner_actions_def0'} ] ])."<br>\n";
+		     $owner->{'acl'}->{'actions_def'} ? 1 : 0,
+		     [ [ 1, $text{'owner_actions_def1'}, $dis1 ],
+		       [ 0, $text{'owner_actions_def0'}, $dis0 ] ])."<br>\n";
 	}
 $afield .= join("<br>\n",
 	     map { &ui_checkbox("actions", $_, $text{'owner_action_'.$_},
-				$actions{$_}) } &list_owner_actions());
+				$actions{$_}, undef,
+				$owner->{'acl'}->{'actions_def'}) }
+		 &list_owner_actions());
 print &ui_table_row($text{'owner_actions'}, $afield);
 
 print &ui_hidden_table_end();
@@ -82,7 +91,7 @@ print &ui_hidden_table_end();
 # Section for usage data, if we have it
 if (defined(&get_server_usage)) {
 	print &ui_hidden_table_start($text{'owner_header2'}, "width=100%", 2,
-				     "usage", 1);
+				     "usage", 0, [ 'width=30%' ]);
 
 	# Accounting period
 	print &ui_table_row($text{'edit_uperiod'},
@@ -138,7 +147,10 @@ if (defined(&get_server_usage)) {
 
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
-	       : [ [ undef, $text{'save'} ], [ 'delete', $text{'delete'} ] ]); 
+	       : [ [ undef, $text{'save'} ],
+		   &supports_switch() ? ( [ 'switch', $text{'owner_switch'} ] )
+				      : ( ),
+		   [ 'delete', $text{'delete'} ] ]); 
 
 &ui_print_footer("list_owners.cgi", $text{'owners_return'});
 

@@ -1745,11 +1745,14 @@ owners_disable=Disable Selected
 owners_enable=Enable Selected
 owners_none=No system owner accounts have been defined yet.
 owners_return=system owners
+owners_plan=Account plan
 
 owner_title1=Create System Owner
 owner_title2=Edit System Owner
+owner_switching=Switching to system owner $1 ..
 owner_header=System owner account details
 owner_header2=Usage by all owned systems
+owner_header3=Limits and restrictions
 owner_name=Login username
 owner_pass=Login password
 owner_lock=Temporarily locked
@@ -1783,6 +1786,8 @@ owner_action_pause=Pause and un-pause
 owner_action_reset=Reset from image
 owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
+owner_egone=System owner no longer exists!
+owner_switch=Switch to Owner
 
 downers_err=Failed to delete system owners
 downers_enone=None selected
@@ -2213,3 +2218,9 @@ plan_eclash=A plan with the same name already exists
 plan_emax_servers=Missing or non-numeric maximum allowed systems
 plan_emax_ram=Missing or non-numeric maximum RAM for systems
 plan_emax_disk=Missing or non-numeric maximum disk space for systems
+plan_etypes=No virtual system types selected
+
+dplan_err=Failed to delete plans
+dplan_enone=None selected!
+dplan_eall=You cannot delete all account plans
+dplan_eusers=The plan $1 is still being used by $2 system owners

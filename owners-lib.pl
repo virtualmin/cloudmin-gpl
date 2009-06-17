@@ -195,6 +195,12 @@ foreach my $o (&list_system_owners()) {
 return @rv;
 }
 
+# Returns non-zero if switching to system owners is possible
+sub supports_switch
+{
+return $main::session_id;
+}
+
 # Returns non-zero if this Cloudmin install supports plans
 sub supports_plans
 {

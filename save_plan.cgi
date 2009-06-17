@@ -65,10 +65,12 @@ else {
 		}
 
 	# Actions
-	# XXX
+	$in{'actions'} eq '' && &error($text{'owner_eactions'});
+	$plan->{'actions'} = join(" ", split(/\0/, $in{'actions'}));
 
 	# VPS types
-	# XXX
+	$in{'types'} eq '' && &error($text{'plan_etypes'});
+	$plan->{'types'} = join(" ", split(/\0/, $in{'types'}));
 
 	# Save and apply
 	&save_plan($plan);

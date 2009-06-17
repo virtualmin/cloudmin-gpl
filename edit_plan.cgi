@@ -27,7 +27,7 @@ print &ui_table_row($text{'plan_desc'},
 
 # Maximum systems
 print &ui_table_row($text{'plan_max_servers'},
-	&ui_opt_textbox("max_servers", $plan->{'max_servers'}, 6,
+	&ui_opt_textbox("max_servers", $plan->{'max_servers'} || undef, 6,
 			$text{'domains_unlimited'}));
 
 # Maximum RAM that can be allocated
@@ -71,7 +71,7 @@ if (!$in{'new'}) {
 	if (@users) {
 		print &ui_table_row($text{'plan_owners'},
 			&ui_grid_table([
-			   map { "<a href='edit_owner.cgi?name='.
+			   map { "<a href='edit_owner.cgi?name=".
 				 &urlize($_->{'name'})."'>".
 				 &html_escape($_->{'name'})."</a>" } @users ],
 			   4, 100));
