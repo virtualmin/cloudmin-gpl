@@ -14,7 +14,8 @@ $t = $server->{'manager'};
 
 # Validate inputs
 if (defined($in{'memory'})) {
-	$in{'memory'} =~ /^\d+$/ || &error($text{'limits_ememory'});
+	$in{'memory_def'} || $in{'memory'} =~ /^\d+$/ ||
+		&error($text{'limits_ememory'});
 	}
 if (defined($in{'cpu'})) {
 	$in{'cpu_def'} || $in{'cpu'} =~ /^\d+$/ && $in{'cpu'} > 0 ||
@@ -37,8 +38,9 @@ if (defined($in{'bw'})) {
 
 # Update memory
 if (defined($in{'memory'})) {
-	$m = $in{'memory'}*$in{'memory_units'};
-	&$first_print(&text('limits_setting', &nice_size($m)));
+	$m = $in{'memory_def'} ? 0 : $in{'memory'}*$in{'memory_units'};
+	&$first_print(&text('limits_setting', $m ? &nice_size($m)
+						 : $text{'edit_lunlimit'}));
 	$gfunc = "type_".$t."_get_memory";
 	$oldm = &$gfunc($server);
 	if ($m == $oldm) {

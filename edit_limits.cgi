@@ -20,9 +20,20 @@ print &ui_table_start($text{'edit_lheader'}, undef, 2);
 # Memory limit
 $mfunc = "type_".$t."_get_memory";
 $m = defined(&$mfunc) ? &$mfunc($server) : undef;
-if ($m) {
-	print &ui_table_row($text{'edit_lmemory'},
-		&ui_bytesbox("memory", $m));
+if (defined($m)) {
+	$ufunc =  "type_".$t."_can_unlimited_memory";
+	if (defined(&$ufunc) && &$ufunc($server)) {
+		# Unlimited option
+		print &ui_table_row($text{'edit_lmemory'},
+			&ui_radio("memory_def", $m ? 0 : 1,
+				  [ [ 1, $text{'edit_lunlimit'} ],
+				    [ 0, &ui_bytesbox("memory", $m || '') ] ]));
+		}
+	else {
+		# Memory limit must exist
+		print &ui_table_row($text{'edit_lmemory'},
+			&ui_bytesbox("memory", $m));
+		}
 	}
 
 # CPU limit

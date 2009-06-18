@@ -158,7 +158,8 @@ foreach $s (@servers) {
 			if ($oldmemory && $oldmemory == $memory) {
 				print ".. already set\n";
 				}
-			elsif ($memory == 0 && defined(&$ufunc) && !&$ufunc()) {
+			elsif ($memory == 0 && defined(&$ufunc) &&
+			       !&$ufunc($s)) {
 				print ".. this system does not support ".
 				      "unlimited memory\n";
 				}
