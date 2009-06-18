@@ -37,7 +37,7 @@ if (defined($in{'bw'})) {
 &check_server_status($server, 0, 1);
 
 # Update memory
-if (defined($in{'memory'})) {
+if (defined($in{'memory'}) || defined($in{'memory_def'})) {
 	$m = $in{'memory_def'} ? 0 : $in{'memory'}*$in{'memory_units'};
 	&$first_print(&text('limits_setting', $m ? &nice_size($m)
 						 : $text{'edit_lunlimit'}));
@@ -63,7 +63,7 @@ if (defined($in{'memory'})) {
 	}
 
 # Update CPU and weight
-if (defined($in{'cpu'}) || defined($in{'weight'})) {
+if (defined($in{'cpu'}) || defined($in{'weight'}) || defined($in{'cpu_def'})) {
 	$cpudesc = $in{'cpu_def'} ? $text{'edit_lunlimit'} : $in{'cpu'}."%";
 	if (defined($in{'weight'})) {
 		&$first_print(&text('limits_settingcpu',

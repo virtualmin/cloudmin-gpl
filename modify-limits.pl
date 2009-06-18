@@ -13,6 +13,8 @@ C<--type>. Memory allocated is set with the C<--memory> flag, which must be
 followed by a number in MB. For Xen instances, available memory cannot be
 increased above the amount set at boot time without a reboot, but it can be
 reduced. Lowering it too much may cause the virtual system to crash though.
+On system types that support it (like Vservers and Zones), the memory limit
+can be completed removed with the C<--no-memory> flag.
 
 The percentage of the host system's CPU that is assigned to the instance
 is set with the C<--cpu> flag, which must be followed by a number. This can be
@@ -63,7 +65,7 @@ while(@ARGV > 0) {
 			&usage("--memory must be followed by a number in MB");
 		$memory *= 1024*1024;
 		}
-	elsif ($a eq "--unlimited-memory") {
+	elsif ($a eq "--no-memory") {
 		$memory = 0;
 		}
 	elsif ($a eq "--cpu") {
@@ -290,9 +292,9 @@ print "                       [--group name]*\n";
 local $types = join("|", @server_management_types);
 print "                       [--type $types]*\n";
 print "                       [--os oscode]*\n";
-print "                       [--cpu percentage]\n";
+print "                       [--cpu percentage | --no-cpu]\n";
 print "                       [--weight number]\n";
-print "                       [--memory MB]\n";
+print "                       [--memory MB | --no-memory]\n";
 print "                       [--reboot]\n";
 print "                       [--vcpus N | --vcpus list]\n";
 print "                       [--bw-limit MB | --bw-unlimited]\n";
