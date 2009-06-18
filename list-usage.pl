@@ -20,12 +20,12 @@ the current date like I<-5>.
 =head1 Example usage
 
   cloudmin list-usage --host xencentos.home
-  Start              End                Up?  Memory     CPU   CPU time
-  09/May/2009 14:50  09/May/2009 14:55  Yes  -          100%  -
-  09/May/2009 14:55  09/May/2009 14:58  No   -          -     -
-  09/May/2009 14:58  09/May/2009 14:59  Yes  640 MB     100%  -
-  09/May/2009 14:59  09/May/2009 17:04  Yes  640 MB     100%  -
-  09/May/2009 17:04  09/May/2009 17:10  Yes  640 MB     50%   -
+  Start              End                Up?  Memory     CPU   Load  Disk
+  09/May/2009 14:50  09/May/2009 14:55  Yes  -          100%  -     1 GB
+  09/May/2009 14:55  09/May/2009 14:58  No   -          -     -     1 GB
+  09/May/2009 14:58  09/May/2009 14:59  Yes  640 MB     100%  16%   1 GB
+  09/May/2009 14:59  09/May/2009 17:04  Yes  640 MB     100%  30%   1 GB
+  09/May/2009 17:04  09/May/2009 17:10  Yes  640 MB     50%   10%   1 GB
 
 =cut
 
@@ -65,7 +65,7 @@ while(@ARGV > 0) {
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
 
-$fmt = " %-18.18s %-18.18s %-4.4s %-10.10s %-10.10s %-10.10s\n";
+$fmt = " %-18.18s %-18.18s %-4.4s %-10.10s %-6.6s %-6.6s %-10.10s\n";
 $now = time();
 foreach $s (@servers) {
 	print $s->{'host'},"\n";
@@ -82,7 +82,7 @@ foreach $s (@servers) {
 	$myend ||= time();
 
 	# Show samples that fill into the period
-	printf $fmt, "Start", "End", "Up?", "Memory", "CPU alloc", "CPU load";
+	printf $fmt, "Start", "End", "Up?", "Memory", "CPU", "Load", "Disk";
 	foreach my $u (@usage) {
 		next if ($u->{'end'} < $mystart ||
 			 $u->{'start'} > $myend);
@@ -91,7 +91,8 @@ foreach $s (@servers) {
 			     $u->{'up'} ? "Yes" : "No",
 			     $u->{'mem'} ? &nice_size($u->{'mem'}) : "-",
 			     $u->{'cpu'} ne '' ? int($u->{'cpu'})."%" : "-",
-			     $u->{'load'} ne '' ? int($u->{'load'})."%" : "-";
+			     $u->{'load'} ne '' ? int($u->{'load'})."%" : "-",
+			     $u->{'disk'} ? &nice_size($u->{'disk'}) : "-";
 		}
 	}
 

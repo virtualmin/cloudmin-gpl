@@ -6,10 +6,11 @@ $usage_cron_cmd = "$module_config_directory/usage.pl";
 # get_server_usage(&server)
 # Returns a list of usage samples for a system, each of which is a hash ref
 # with the following keys :
-#   start - Unix time the same begins
+#   start - Unix time the sample begins
 #   end - Unix time it ends
 #   up - Set to 1 if running
-#   mem - Bytes of memory allocated during the same
+#   mem - Bytes of memory allocated during the sample
+#   disk - Bytes of disk allocated (typically as seen on host system)
 #   cores - CPU cores allocated
 #   cpu - Average percentage of CPU used
 # Each represents the time some system was known to be running or down with
@@ -129,9 +130,9 @@ my $info;
 # Get current status and usage
 my $up = $server->{'status'} ne 'down' &&
          $server->{'status'} ne 'nohost' ? 1 : 0;
-my ($mem, $cpu, $cores, $load, $loadtime);
+my ($mem, $cpu, $cores, $load, $loadtime, $disk);
 if ($up) {
-	# CPU and memory is only consumed by up systems
+	# Get memory allocated to system, or physcially installed
 	my $mfunc = "type_".$server->{'manager'}."_get_memory";
 	if (defined(&$mfunc)) {
 		$mem = &$mfunc($server);
@@ -143,6 +144,8 @@ if ($up) {
 			$mem = $info->{'mem'}->[0] * 1024;
 			}
 		}
+
+	# Get percentage of CPU allocated
 	my $cfunc = "type_".$server->{'manager'}."_get_cpu";
 	if (defined(&$cfunc)) {
 		($cpu) = &$cfunc($server);
@@ -153,6 +156,8 @@ if ($up) {
 		my @vcpus = &$vfunc($server);
 		# XXX CPU core pinning?
 		}
+
+	# Get actual CPU usage
 	my $sfunc = "type_".$server->{'manager'}."_get_cpu_load";
 	if (defined(&$sfunc)) {
 		($load, $loadtime) = &$sfunc($server);
@@ -169,6 +174,12 @@ if ($up) {
 				}
 			}
 		}
+
+	# Get disk size
+	my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
+	if (defined(&$dfunc)) {
+		$disk = &$dfunc($server);
+		}
 	}
 
 my $extend = 0;
@@ -177,7 +188,8 @@ if ($usage && $usage->{'up'} && $up) {
 	if ($cores == $usage->{'cores'} &&
 	    $cpu == $usage->{'cpu'} &&
 	    ($load == $usage->{'load'} || $loadtime) &&
-	    $mem == $usage->{'mem'}) {
+	    $mem == $usage->{'mem'} &&
+	    $disk == $usage->{'disk'}) {
 		$extend = 1;
 		}
 	}
@@ -207,6 +219,7 @@ else {
 			 'start' => $usage ? $usage->{'end'} : $now,
 			 'end' => $now };
 	$newusage->{'mem'} = $mem if (defined($mem));
+	$newusage->{'disk'} = $disk if (defined($disk));
 	$newusage->{'cpu'} = $cpu if (defined($cpu));
 	$newusage->{'cores'} = $cores if (defined($cores));
 	if (defined($load)) {

@@ -201,6 +201,34 @@ sub supports_switch
 return $main::session_id;
 }
 
+# get_owner_limits([username])
+# Returns a hash ref of limits and counts for the current system owner. The
+# keys are max_servers, servers, max_disk, disk, max_ram and ram
+sub get_owner_limits
+{
+my ($name) = @_;
+$name ||= $base_remote_user;
+my $owner = &get_system_owner($name);
+return undef if (!$owner);
+my $rv = { 'max_servers' => $owner->{'acl'}->{'max_servers'},
+	   'servers' => 0,
+	   'max_ram' => $owner->{'acl'}->{'max_ram'},
+	   'ram' => 0,
+	   'max_disk' => $owner->{'acl'}->{'max_disk'},
+	   'disk' => 0,
+	   'list' => [ ],
+	 };
+my %owned = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
+foreach my $s (grep { $owned{$_->{'id'}} } &list_managed_servers()) {
+	$rv->{'servers'}++;
+	push(@{$rv->{'servers'}}, $s);
+
+	# XXX need to get limits, not usage
+	# XXX need to detect systems with unlimited, add special flag for that
+	}
+return $rv;
+}
+
 # Returns non-zero if this Cloudmin install supports plans
 sub supports_plans
 {
