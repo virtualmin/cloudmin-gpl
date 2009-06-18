@@ -3827,14 +3827,6 @@ sub get_global_links
 local ($virtcount) = @_;
 local (@glinks, @gtitles, @gicons, @gcats);
 
-if ($virtcount) {
-	# Virtualmin domains
-	push(@glinks, "list_domains.cgi");
-	push(@gtitles, $text{'domains_title'});
-	push(@gicons, "images/domains.gif");
-	push(@gcats, "virtualmin");
-	}
-
 if (!&can_action(undef, "global")) {
 	goto NOGLOBAL;
 	}
@@ -3938,6 +3930,14 @@ foreach my $p (@plugins) {
 	}
 
 NOGLOBAL:
+if ($virtcount) {
+	# Virtualmin domains
+	push(@glinks, "list_domains.cgi");
+	push(@gtitles, $text{'domains_title'});
+	push(@gicons, "images/domains.gif");
+	push(@gcats, "virtualmin");
+	}
+
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
 }
 
