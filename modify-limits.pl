@@ -59,9 +59,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
 	elsif ($a eq "--memory") {
 		$memory = shift(@ARGV);
-		$memory =~ /^\d+$/ ||
+		$memory =~ /^[1-9][0-9]*$/ ||
 			&usage("--memory must be followed by a number in MB");
 		$memory *= 1024*1024;
+		}
+	elsif ($a eq "--unlimited-memory") {
+		$memory = 0;
 		}
 	elsif ($a eq "--cpu") {
 		$cpu = shift(@ARGV);
@@ -104,7 +107,7 @@ while(@ARGV > 0) {
 		&usage();
 		}
 	}
-defined($cpu) || defined($weight) || $memory || defined($vcpus) ||
+defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
    defined($bw) || &usage("Nothing to modify!");
 
 # Get the systems
@@ -144,15 +147,20 @@ foreach $s (@servers) {
 
 	# Change memory, if we can
 	$reboot = 0;
-	if ($memory) {
+	if (defined($memory)) {
 		print "Setting memory limit on $tdesc system $s->{'host'} to ",
-		      &nice_size($memory)," ..\n";
+		      ($memory ? &nice_size($memory) : "Unlimited")," ..\n";
 		$cfunc = "type_".$t."_can_memory";
+		$ufunc = "type_".$t."_can_unlimited_memory";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_memory";
 			$oldmemory = &$gfunc($s);
 			if ($oldmemory && $oldmemory == $memory) {
 				print ".. already set\n";
+				}
+			elsif ($memory == 0 && defined(&$ufunc) && !&$ufunc()) {
+				print ".. this system does not support ".
+				      "unlimited memory\n";
 				}
 			else {
 				$mfunc = "type_".$t."_save_memory";

@@ -149,7 +149,8 @@ if ($multi) {
 			$mem = &$mfunc($s);
 			if ($mem) {
 				print "    Memory limit: ",
-				      &nice_size($mem),"\n";
+				      ($mem ? &nice_size($mem)
+					    : "Unlimited"),"\n";
 				}
 			}
 		$cfunc = "type_".$s->{'manager'}."_can_cpu";
