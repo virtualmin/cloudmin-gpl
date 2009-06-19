@@ -223,8 +223,21 @@ foreach my $s (grep { $owned{$_->{'id'}} } &list_managed_servers()) {
 	$rv->{'servers'}++;
 	push(@{$rv->{'servers'}}, $s);
 
-	# XXX need to get limits, not usage
-	# XXX need to detect systems with unlimited, add special flag for that
+	# Get disk limit, and add to total count
+	my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
+	my $disk = defined(&$dfunc) ? &$dfunc($s) : undef;
+	if (defined($disk)) {
+		if ($disk) { $rv->{'disk'} += $disk; }
+		else { $rv->{'disk_unlimited'}++; }
+		}
+
+	# Get RAM limit, and add to total count
+	my $mfunc = "type_".$server->{'manager'}."_get_memory_size";
+	my $ram = defined(&$mfunc) ? &$mfunc($s) : undef;
+	if (defined($ram)) {
+		if ($ram) { $rv->{'ram'} += $ram; }
+		else { $rv->{'ram_unlimited'}++; }
+		}
 	}
 return $rv;
 }
