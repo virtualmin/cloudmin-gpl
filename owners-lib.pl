@@ -216,6 +216,8 @@ my $rv = { 'max_servers' => $owner->{'acl'}->{'max_servers'},
 	   'ram' => 0,
 	   'max_disk' => $owner->{'acl'}->{'max_disk'},
 	   'disk' => 0,
+	   'max_cpu' => $owner->{'acl'}->{'max_cpu'},
+	   'cpu' => 0,
 	   'list' => [ ],
 	 };
 my %owned = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
@@ -224,7 +226,7 @@ foreach my $s (grep { $owned{$_->{'id'}} } &list_managed_servers()) {
 	push(@{$rv->{'servers'}}, $s);
 
 	# Get disk limit, and add to total count
-	my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
+	my $dfunc = "type_".$s->{'manager'}."_get_disk_size";
 	my $disk = defined(&$dfunc) ? &$dfunc($s) : undef;
 	if (defined($disk)) {
 		if ($disk) { $rv->{'disk'} += $disk; }
@@ -232,14 +234,33 @@ foreach my $s (grep { $owned{$_->{'id'}} } &list_managed_servers()) {
 		}
 
 	# Get RAM limit, and add to total count
-	my $mfunc = "type_".$server->{'manager'}."_get_memory_size";
+	my $mfunc = "type_".$s->{'manager'}."_get_memory_size";
 	my $ram = defined(&$mfunc) ? &$mfunc($s) : undef;
 	if (defined($ram)) {
 		if ($ram) { $rv->{'ram'} += $ram; }
 		else { $rv->{'ram_unlimited'}++; }
 		}
+
+	# Get CPU limit
+	my $cfunc = "type_".$s->{'manager'}."_get_cpu_size";
+	my $cpu = defined(&$cfunc) ? &$cfunc($s) : undef;
+	if (defined($cpu)) {
+		if ($cpu) { $rv->{'cpu'} += $cpu; }
+		else { $rv->{'cpu_unlimited'}++; }
+		}
 	}
 return $rv;
+}
+
+# get_owner_plan([username])
+# Returns the plan hash ref for the current user
+sub get_owner_plan
+{
+my ($name) = @_;
+$name ||= $base_remote_user;
+my %oaccess = &get_module_acl($name);
+return undef if (!$oaccess{'plan'});
+return &get_plan($oaccess{'plan'});
 }
 
 # Returns non-zero if this Cloudmin install supports plans
@@ -340,6 +361,7 @@ my ($plan, $o) = @_;
 $o->{'acl'}->{'max_servers'} = $plan->{'max_servers'};
 $o->{'acl'}->{'max_ram'} = $plan->{'max_ram'};
 $o->{'acl'}->{'max_disk'} = $plan->{'max_disk'};
+$o->{'acl'}->{'max_cpu'} = $plan->{'max_cpu'};
 $o->{'acl'}->{'types'} = $plan->{'types'};
 if ($o->{'acl'}->{'actions_def'}) {
 	$o->{'acl'}->{'actions'} = $plan->{'actions'};

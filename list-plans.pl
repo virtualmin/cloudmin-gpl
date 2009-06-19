@@ -13,9 +13,9 @@ plan unique IDs.
 =head1 Example usage
 
   cloudmin list-plans
-  Plan name                      Max systems     Max RAM         Max disk
-  ------------------------------ --------------- --------------- ---------------
-  Default plan                   5               1024 MB         10 GB
+  Plan name                      Max systems     Max RAM    Max disk   Max CPU
+  ------------------------------ --------------- ---------- ---------- --------
+  Default plan                   5               1024 MB    10 GB      50%
   
 =cut
 
@@ -53,19 +53,25 @@ while(@ARGV > 0) {
 @plans = &list_plans();
 if ($multi) {
 	# Full details
+	@owners = &list_system_owners();
 	foreach $p (@plans) {
 		print $p->{'desc'},"\n";
 		print "    Plan ID: $p->{'id'}\n";
 		print "    Max systems: ",
-			$p->{'max_servers'},"\n";
+			($p->{'max_servers'} || "Unlimited"),"\n";
 		print "    Max RAM: ",
-			&nice_size($p->{'max_ram'}),"\n";
+			($p->{'max_ram'} ? &nice_size($p->{'max_ram'})
+					 : "Unlimited"),"\n";
 		print "    Max RAM in bytes: ",
-			$p->{'max_ram'},"\n";
+			($p->{'max_ram'} || "Unlimited"),"\n";
 		print "    Max disk: ",
-			&nice_size($p->{'max_disk'}),"\n";
+			($p->{'max_disk'} ? &nice_size($p->{'max_disk'})
+					  : "Unlimited"),"\n";
 		print "    Max disk in bytes: ",
-			$p->{'max_disk'},"\n";
+			($p->{'max_disk'} || "Unlimited"),"\n";
+		print "    Max CPU: ",
+			($p->{'max_cpu'} ? $p->{'max_cpu'}."%"
+					 : "Unlimited"),"\n";
 		%actions = map { $_, 1 } split(/\s+/, $p->{'actions'});
 		print "    Allowed actions: ",
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";
@@ -73,6 +79,10 @@ if ($multi) {
 		print "    Allowed system types: ",
 		    join(" ", grep { $types{$_} }
 				   @virtual_server_management_types),"\n"; 
+		print "    System owners on plan: ",
+		    join(" ", map { $_->{'name'} }
+				grep { $_->{'acl'}->{'plan'} eq $p->{'id'} }
+				   @owners),"\n";
 		}
 	}
 elsif ($nameonly) {
@@ -89,16 +99,18 @@ elsif ($idonly) {
 	}
 else {
 	# Just summary
-	$fmt = "%-30.30s %-15.15s %-15.15s %-15.15s\n";
-	printf $fmt, "Plan name", "Max systems", "Max RAM", "Max disk";
-	printf $fmt, ("-" x 30), ("-" x 15), ("-" x 15), ("-" x 15);
+	$fmt = "%-30.30s %-15.15s %-10.10s %-10.10s %-10.10s\n";
+	printf $fmt, "Plan name", "Max systems", "Max RAM", "Max disk", "Max CPU";
+	printf $fmt, ("-" x 30), ("-" x 15), ("-" x 10), ("-" x 10), ("-" x 10);
 	foreach $p (@plans) {
 		printf $fmt, $p->{'desc'},
 			     $p->{'max_servers'} || "Unlimited",
 			     $p->{'max_ram'} ? &nice_size($p->{'max_ram'})
 					     : "Unlimited",
 			     $p->{'max_disk'} ? &nice_size($p->{'max_disk'})
-					      : "Unlimited";
+					      : "Unlimited",
+			     $p->{'max_cpu'} ? $p->{'max_cpu'}."%"
+					     : "Unlimited";
 		}
 	}
 

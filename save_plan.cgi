@@ -64,6 +64,16 @@ else {
 		$plan->{'max_disk'} = $in{'max_disk'}*$in{'max_disk_units'};
 		}
 
+	# Max allowed CPU limit
+	if ($in{'max_cpu_def'}) {
+		$plan->{'max_cpu'} = 0;
+		}
+	else {
+		$in{'max_cpu'} =~ /^[1-9][0-9]*$/ ||
+			&error($text{'plan_emax_cpu'});
+		$plan->{'max_cpu'} = $in{'max_cpu'};
+		}
+
 	# Actions
 	$in{'actions'} eq '' && &error($text{'owner_eactions'});
 	$plan->{'actions'} = join(" ", split(/\0/, $in{'actions'}));
