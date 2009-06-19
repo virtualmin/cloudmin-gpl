@@ -340,8 +340,8 @@ else {
 		elsif ($b->{'link'}) {
 			# Opens a separate URL
 			local $js = $b->{'target'} ?
-				"window.open(\"$b->[3]\")" :
-				"document.location = \"$b->[3]\"";
+				"window.open(\"$b->{'link'}\")" :
+				"document.location = \"$b->{'link'}\"";
 			push(@buts, [ $b->{'id'}, $b->{'desc'}, undef, undef,
 			    "onClick='$js; return false'" ] );
 			}
