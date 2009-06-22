@@ -39,6 +39,14 @@ else {
 	print &ui_table_row($text{'edit_host'}, "<tt>$server->{'host'}</tt>");
 	}
 
+# IP address
+if (!&check_ipaddress($server->{'host'})) {
+	$ip = &to_ipaddress($server->{'host'});
+	print &ui_table_row($text{'edit_ipaddr'},
+		$ip ? "<tt>$ip</tt>"
+		    : "<font color=#ff0000>$text{'edit_ipfailed'}</font>");
+	}
+
 # System type
 $t = $server->{'manager'};
 $tfunc = "type_".$t."_desc";
