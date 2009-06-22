@@ -153,7 +153,7 @@ $type || &usage("Missing required --type parameter");
 $hfunc = "type_".$type."_no_create_hostname";
 if (!defined(&$hfunc) || !&$hfunc()) {
 	$host || &usage("Missing required --host parameter");
-	$host =~ /^[a-z0-9\.\-\_]+$/ || &usage("Invalid hostname");
+	$host =~ /^[a-z0-9\.\-]+$/ || &usage("Invalid hostname");
 	($clash) = grep { $_->{'host'} eq $host } @servers;
 	$clash && &usage("A system with the same hostname already exists");
 	}

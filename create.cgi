@@ -15,7 +15,7 @@ $server = { 'id' => &server_id(),
 
 # Validate inputs, starting with hostname
 if (defined($in{'host'})) {
-	$in{'host'} =~ /^[a-z0-9\.\-\_]+$/ || &error($text{'create_ehost'});
+	$in{'host'} =~ /^[a-z0-9\.\-]+$/ || &error($text{'create_ehost'});
 	($clash) = grep { $_->{'host'} eq $in{'host'} } @servers;
 	$clash && &error($text{'add_eclash'});
 	$server->{'host'} = $in{'host'};
