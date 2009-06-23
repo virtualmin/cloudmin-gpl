@@ -66,7 +66,7 @@ if (@cannot) {
 	}
 
 # Check for dependencies
-@deps = map { local $_; &find_server_dependencies($_) } @servers;
+@deps = &find_server_dependencies(@servers);
 if (@deps) {
 	&usage("The following systems have dependencies and cannot be ".
 	       "deleted : ".join(" ", map { $_->{'host'} } @deps));

@@ -63,7 +63,7 @@ elsif ($in{'delete'}) {
 		}
 
 	# Check for dependencies
-	@deps = map { &find_server_dependencies($_) } @servers;
+	@deps = &find_server_dependencies(@servers);
 	if (@deps) {
 		&error(&text('mass_edeps',
 			join(" ", map { "<tt>$_->{'host'}</tt>" } @deps)));
@@ -141,7 +141,7 @@ elsif ($in{'dereg'}) {
 	&error_setup($text{'mass_uerr'});
 
 	# Check for dependencies
-	@deps = map { &find_server_dependencies($_) } @servers;
+	@deps = &find_server_dependencies(@servers);
 	if (@deps) {
 		&error(&text('mass_edeps',
 			join(" ", map { "<tt>$_->{'host'}</tt>" } @deps)));

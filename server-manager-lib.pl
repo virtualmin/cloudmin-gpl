@@ -2583,18 +2583,20 @@ sub bind_module_link
 return "<a href=../bind8/index.cgi>$text{'index_bindlink'}</a>";
 }
 
-# find_server_dependencies(&server)
+# find_server_dependencies(&server, ...)
 # Returns a list of other servers that depend on this one
 sub find_server_dependencies
 {
-local ($server) = @_;
 local @allservers = &list_managed_servers();
 local @rv;
-foreach my $t (@server_management_types) {
-	local $dfunc = "type_".$t."_depends";
-	if (defined(&$dfunc)) {
-		push(@rv, grep { local $_; $_->{'id'} != $server->{'id'} &&
-				 &$dfunc($server, $_) } @allservers);
+foreach my $server (@_) {
+	foreach my $t (@server_management_types) {
+		local $dfunc = "type_".$t."_depends";
+		if (defined(&$dfunc)) {
+			push(@rv, grep { local $_;
+					 $_->{'id'} != $server->{'id'} &&
+					 &$dfunc($server, $_) } @allservers);
+			}
 		}
 	}
 return @rv;
