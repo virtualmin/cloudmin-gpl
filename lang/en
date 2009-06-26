@@ -1127,6 +1127,9 @@ xen_egone=The Xen host no longer exists!
 xen_header=Xen host system details
 xen_host=System hosting Xens
 xen_dir=Base directory for virtual systems
+xen_lvm=LVM volume group for disk images
+xen_nolvm=None - use regular files
+xen_lvmvg=Volume group name
 xen_domain=Add Xen systems to DNS domain
 xen_domain2=DNS domain for Xen servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
 xen_range=IP address allocation range
@@ -1176,6 +1179,12 @@ xen_autoadd2=All instances with config files
 xen_autologin=Login for found instances
 xen_autologin0=Select before searching
 xen_autologin1=Same as Xen host system
+xen_elvm=Missing or invalid-looking volume group name
+xen_elvmerr=LVM for disk images cannot be used : $1
+xen_elvmwebmin=Webmin is not installed on the host system
+xen_elvmmod=The LVM Webmin module is not installed
+xen_elvmmod2=The LVM Webmin module is not usable
+xen_elvmmod3=LVM software or kernel support is not available
 
 xens_title=Xen Host Systems
 xens_add=Register a system for Xen hosting.
