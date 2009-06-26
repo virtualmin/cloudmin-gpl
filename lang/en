@@ -1185,6 +1185,8 @@ xen_elvmwebmin=Webmin is not installed on the host system
 xen_elvmmod=The LVM Webmin module is not installed
 xen_elvmmod2=The LVM Webmin module is not usable
 xen_elvmmod3=LVM software or kernel support is not available
+xen_elvmvgs=No volume groups were found!
+xen_elvmvg=The entered volume group does not exist. Available groups are : $1
 
 xens_title=Xen Host Systems
 xens_add=Register a system for Xen hosting.
