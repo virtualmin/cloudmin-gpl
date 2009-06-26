@@ -3204,7 +3204,7 @@ return &put_file_to_server($server, $temp, $authkeys);
 }
 
 # setup_authorized_keys(&server)
-# Ensure that ~/.ssh exists, and return the path to  the authorized_keys file
+# Ensure that ~/.ssh exists, and return the path to the authorized_keys file
 sub setup_authorized_keys
 {
 local ($server) = @_;
