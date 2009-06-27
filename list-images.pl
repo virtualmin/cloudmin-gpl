@@ -80,6 +80,9 @@ if ($multi) {
 			print "    Source: Local\n";
 			}
 		print "    Compressed size: $i->{'size'}\n";
+		if ($i->{'rawsize'}) {
+			print "    Contents size: $i->{'rawsize'}\n";
+			}
 		@md5s = split(/\s+/, $i->{'md5'});
 		if (@md5s && $md5s[0] ne "-" && $md5verify) {
 			print "    MD5 expected checksum: ",

@@ -41,7 +41,8 @@ if (@$disks) {
 		    "<a href='edit_disk.cgi?id=$in{'id'}&real=$d->{'real'}'>".
 		    "$rdesc</a>",
 		    $vdesc,
-		    $d->{'device'} ? $text{'disks_dev'} : $text{'disks_file'},
+		    $d->{'lv'} ? $text{'disks_lvm'} :
+		      $d->{'device'} ? $text{'disks_dev'} : $text{'disks_file'},
 		    $d->{'size'} ? &nice_size($d->{'size'}) : undef,
 		    ], \@tds, "d", $d->{'real'});
 		}

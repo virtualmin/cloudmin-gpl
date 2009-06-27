@@ -34,6 +34,11 @@ print &ui_table_row($text{'eimage_status'},
 print &ui_table_row($text{'eimage_size'},
 		    &nice_size($i->{'size'}));
 
+if ($i->{'rawsize'}) {
+	print &ui_table_row($text{'eimage_rawsize'},
+			    &nice_size($i->{'rawsize'}));
+	}
+
 # If we have downloaded the image, shown more details
 if ($got) {
 	print &ui_table_row($text{'eimage_files'},
