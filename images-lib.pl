@@ -188,7 +188,6 @@ local ($tempok, $temp) = &create_image_files_tempdir($vhost, $img->{'id'});
 return (0, $temp) if (!$tempok);
 
 # Copy files from local to that dir
-# XXX not if local
 foreach my $f (split(/\s+/, $img->{'files'})) {
 	local $path = "$server_images_dir/$f";
 	local $pid = fork();
