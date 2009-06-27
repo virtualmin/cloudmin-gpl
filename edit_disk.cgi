@@ -46,7 +46,6 @@ if (!$in{'new'}) {
 print &ui_table_start($text{'disk_header'}, "width=100%", 2);
 
 # Real file on host system
-# XXX why are in-use disks being shown?
 $vhost = &get_parent_server($server);
 if ($in{'new'} == 2) {
 	# Show device selector from host, if we can
@@ -62,17 +61,32 @@ if ($in{'new'} == 2) {
 			}
 		}
 	$realsel ||= &ui_textbox("real", $disk->{'real'}, 50);
+	$txt = 'disk_real1';
 	}
 elsif ($in{'new'} == 1) {
-	$realsel = &ui_textbox("real", $disk->{'real'}, 50);
+	if ($disk->{'lv'}) {
+		# On LVM, show field for LV name
+		$realsel = &ui_textbox("lv", $disk->{'lv'}, 20);
+		$txt = 'disk_real2lvm';
+		}
+	else {
+		# Show field for image file
+		$realsel = &ui_textbox("real", $disk->{'real'}, 50);
+		$txt = 'disk_real2';
+		}
 	}
 else {
 	# Cannot edit real file for existing disks
-	$realsel = "<tt>$disk->{'real'}</tt>";
+	if ($disk->{'lv'} && $disk->{'real'} =~ /^\/dev\/(\S+)\/(\S+)$/) {
+		$realsel = "<tt>$2</tt>";
+		$txt = 'disk_reallvm';
+		}
+	else {
+		$realsel = "<tt>$disk->{'real'}</tt>";
+		$txt = 'disk_real';
+		}
 	}
-print &ui_table_row(&text($in{'new'} == 2 ? 'disk_real1' :
-			  $in{'new'} == 1 ? 'disk_real2' : 'disk_real',
-			  "<tt>$vhost->{'host'}</tt>"), $realsel);
+print &ui_table_row(&text($txt, "<tt>$vhost->{'host'}</tt>"), $realsel);
 
 # Device on virtual system
 print &ui_table_row($text{'disk_virt'},
@@ -93,7 +107,7 @@ if ($in{'new'} == 1) {
 	print &ui_table_row($text{'disk_size1'},
 		&ui_bytesbox("size", 1024*1024*1024, 8)." ".$freemsg);
 	}
-elsif (!$in{'new'} && !$disk->{'device'}) {
+elsif (!$in{'new'} && (!$disk->{'device'} || $disk->{'lv'})) {
 	# Current size of the file, which can be changed
 	print &ui_table_row($text{'disk_size0'},
 		&ui_bytesbox("size", $disk->{'size'}, 8)." ".$freemsg);

@@ -73,7 +73,13 @@ if ($in{'delete'}) {
 else {
 	# Validate inputs, and update the disk hash
 	if ($in{'new'}) {
-		$disk = { };
+		$nfunc = "type_".$server->{'manager'}."_new_disk";
+		if (defined(&$nfunc)) {
+			$disk = &$nfunc($server, $disks, $in{'new'} == 2);
+			}
+		else {
+			$disk = { };
+			}
 		}
 
 	# Real disk device
@@ -88,9 +94,19 @@ else {
 			}
 		}
 	elsif ($in{'new'} == 1) {
-		# Just from text box
-		$in{'real'} =~ /^\/\S+$/ || &error($text{'disk_ereal'});
-		$disk->{'real'} = $in{'real'};
+		if ($disk->{'lv'}) {
+			# From LV name text box
+			$in{'lv'} =~ /^[A-Za-z0-9\.\-\_]+$/ ||
+				&error($text{'disk_elv'});
+			$disk->{'lv'} = $in{'lv'};
+			$disk->{'real'} = '/dev/'.$disk->{'vg'}.
+					  '/'.$disk->{'lv'};
+			}
+		else {
+			# From image file text box
+			$in{'real'} =~ /^\/\S+$/ || &error($text{'disk_ereal'});
+			$disk->{'real'} = $in{'real'};
+			}
 		}
 	if ($in{'new'}) {
 		$disk->{'device'} = ($disk->{'real'} =~ /^\/dev\//);
