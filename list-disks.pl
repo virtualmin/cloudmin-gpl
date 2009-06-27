@@ -85,6 +85,10 @@ if ($multi) {
 				}
 			}
 		print "    Type: ",($d->{'device'} ? "Device" : "File"),"\n";
+		if ($d->{'lv'}) {
+			print "    LVM volume group: $d->{'vg'}\n";
+			print "    LVM logical volume: $d->{'lv'}\n";
+			}
 		if ($d->{'size'}) {
 			print "    Size: $d->{'size'}\n";
 			print "    Nice size: ",&nice_size($d->{'size'}),"\n";

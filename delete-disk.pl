@@ -7,8 +7,9 @@ Remove a virtual disk from some system
 This command dis-associates a real file or device with a virtual device on
 some system, and deletes the underlying file. The system to modify is
 identified with the C<--host> flag, and the disk to remove can be set with
-either C<--real> followed by the real file (like C</xen/newdisk.img>) or 
-C<--virt> followed by the device on the virtual system (like C</dev/sda3>).
+either C<--real> followed by the real file (like C</xen/newdisk.img>),
+C<--virt> followed by the device on the virtual system (like C</dev/sda3>),
+or C<--lv> followed by the logical volume name.
 
 If the system is running, the disk will not be really deleted until it is 
 shutdown or restarted, and thus the disk space on the host system will not be
@@ -44,6 +45,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--real") {
 		$real = shift(@ARGV);
 		}
+	elsif ($a eq "--lv") {
+		$lv = shift(@ARGV);
+		}
 	elsif ($a eq "--virt") {
 		$virt = shift(@ARGV);
 		}
@@ -53,7 +57,7 @@ while(@ARGV > 0) {
 	}
 
 # Validate parameters
-$real || $virt || &usage("The disk to remove must be identified by the --real or --virt parameters");
+$real || $virt || $lv || &usage("The disk to remove must be identified by the --real, --virt or --lv parameters");
 
 # Get the server
 $host || &usage("Missing --host parameter");
@@ -79,6 +83,10 @@ ref($disks) || &usage("Failed to list disks : $disks");
 if ($real) {
 	($disk) = grep { $_->{'real'} eq $real } @$disks;
 	$disk || &usage("No disk for the real file or device $real was found");
+	}
+elsif ($lv) {
+	($disk) = grep { $_->{'lv'} eq $lv } @$disks;
+	$disk || &usage("No disk for the LVM logical volume $lv was found");
 	}
 else {
 	($disk) = grep { $_->{'virt'} eq $virt } @$disks;
@@ -111,7 +119,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Removes a disk device from some virtual system.\n";
 print "\n";
 print "cloudmin delete-disk --host hostname\n";
-print "                     --real device|file | --virt device\n";
+print "                     --real device|file | --virt device | --lv name\n";
 exit(1);
 }
 

@@ -7,12 +7,17 @@ Adds a virtual disk to some system
 This command adds a new virtual disk to a system managed by Cloudmin, typically
 a Xen instance. Normally, a virtual disk is a file on the host system that
 is mapped to a device on the instance, like C</dev/sda3>. However, it can also
-be a real disk device on the host system (such as an LVM logical volume).
+be a real disk device on the host system (such as a partiton, or a logical
+volume).
 
 The system to add the disk to is specified with the C<--host> parameter. 
 The disk file on the host can either be set with C<--real> followed by a
 filename like C</xen/newdisk.img>, or you can have Cloudmin choose a filename
 automatically with the C<--auto-real> flag.
+
+If your host system supports LVM and has it configured in Cloudmin, you
+can instead use the C<--lv> flag followed by the name of a new logical volume
+to create.
 
 The device file on the virtual system can either be set with C<--virt>
 followed by a device name, or you can use C<--auto-virt> to have Cloudmin choose
@@ -54,6 +59,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--real") {
 		$real = shift(@ARGV);
 		}
+	elsif ($a eq "--lv") {
+		$lv = shift(@ARGV);
+		}
 	elsif ($a eq "--auto-real") {
 		$real = "auto";
 		}
@@ -81,13 +89,18 @@ while(@ARGV > 0) {
 	}
 
 # Validate parameters
-$real =~ /^\/\S+$/ || $real eq "auto" ||
+$real =~ /^\/\S+$/ || $real eq "auto" || $lv ||
 	&usage("Missing or invalid --real parameter - should be like /xen/foo.img");
 $virt =~ /^\/\S+$/ || $virt eq "auto" ||
 	&usage("Missing or invalid --virt parameter - should be like /dev/sda2");
 $size =~ /^\d*$/ || &usage("Invalid --size parameter - must be followed by a number of MB");
 if ($mount) {
 	$mount =~ /^\/\S+$/ || $mount eq 'swap' || &usage("Invalid --mount parameter - should be like /mnt/disk2");
+	}
+if ($lv) {
+	$real && &usage("The --lv and --real or --auto-real parameters cannot be used at the same time");
+	$lv =~ /^[A-Za-z0-9\.\-\_]+$/ ||
+		&usage("Invalid logical volume name from --lv parameter");
 	}
 
 # Get the server
@@ -119,6 +132,11 @@ $nfunc = "type_".$server->{'manager'}."_new_disk";
 $disk = &$nfunc($server, $disks, $device);
 $disk->{'real'} = $real if ($real ne 'auto');
 $disk->{'virt'} = $virt if ($virt ne 'auto');
+if ($lv) {
+	$disk->{'lv'} = $lv;
+	$disk->{'real'} = '/dev/'.$disk->{'vg'}.'/'.$disk->{'lv'};
+	$device = 1;
+	}
 
 # Check for clashes
 ($rclash) = grep { $_->{'real'} eq $disk->{'real'} } @$disks;
@@ -159,7 +177,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Adds a disk device to some virtual system.\n";
 print "\n";
 print "cloudmin create-disk --host hostname\n";
-print "                     --real device|file | --auto-real\n";
+print "                     --real device|file | --auto-real | --lv name\n";
 print "                     --virt device | --auto-virt\n";
 print "                    [--size MB]\n";
 print "                    [--device]\n";

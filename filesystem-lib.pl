@@ -93,7 +93,6 @@ elsif ($server->{'status'} ne 'nohost' && $server->{'status'} ne 'down') {
 	# Get from /etc/fstab on system directly
 	$fstab = &transname();
 	local $err = &get_file_from_server($server, "/etc/fstab", $fstab);
-	print STDERR "fstab err=$err\n";
 	return "Failed to get /etc/fstab : $err" if ($err);
 	}
 else {

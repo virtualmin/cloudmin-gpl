@@ -47,6 +47,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--real") {
 		$real = shift(@ARGV);
 		}
+	elsif ($a eq "--lv") {
+		$lv = shift(@ARGV);
+		}
 	elsif ($a eq "--virt") {
 		$virt = shift(@ARGV);
 		}
@@ -62,7 +65,7 @@ while(@ARGV > 0) {
 	}
 
 # Validate parameters
-$real || $virt || &usage("The disk to modify must be identified by the --real or --virt parameters");
+$real || $virt || $lv || &usage("The disk to modify must be identified by the --real, --virt or --lv parameters");
 $newsize || $newvirt || &usage("Nothing to do");
 !$newsize || $newsize =~ /^\d*$/ || &usage("Invalid --new-size parameter - must be followed by a number of MB");
 !$newvirt || $virt =~ /^\/\S+$/ || &usage("Missing or invalid --new-virt parameter - should be like /dev/sda2");
@@ -87,6 +90,10 @@ ref($disks) || &usage("Failed to list disks : $disks");
 if ($real) {
 	($disk) = grep { $_->{'real'} eq $real } @$disks;
 	$disk || &usage("No disk for the real file or device $real was found");
+	}
+elsif ($lv) {
+	($disk) = grep { $_->{'lv'} eq $lv } @$disks;
+	$disk || &usage("No disk for the LVM logical volume $lv was found");
 	}
 else {
 	($disk) = grep { $_->{'virt'} eq $virt } @$disks;
@@ -121,7 +128,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Changes the size or virtual device for a disk on some virtual system.\n";
 print "\n";
 print "cloudmin modify-disk --host hostname\n";
-print "                     --real device|file | --virt device\n";
+print "                     --real device|file | --virt device | --lv name\n";
 print "                    [--new-size MB]\n";
 print "                    [--new-virt device]\n";
 exit(1);
