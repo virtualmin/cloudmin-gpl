@@ -14,6 +14,9 @@ standard system-selection parameters. When copying the file is transferred to
 all systems in parallel, and the success or failure of each is shown as the
 transfer completes.
 
+If the source or destination file is block-special device (like an LVM logical
+volume), you must add the --device-file flag.
+
 =head1 Example usage
 
   cloudmin upload-file --host xencentos.home --host xenrails.home --host fedora.home --source /etc/hosts --dest /tmp/hosts
@@ -52,6 +55,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--dest") {
 		$dest = shift(@ARGV);
 		}
+	elsif ($a eq "--device-file") {
+		$device = 1;
+		}
 	else {
 		&usage();
 		}
@@ -64,7 +70,7 @@ $dest || &usage("Missing --dest parameter");
 
 # Get the file data
 if ($file) {
-	-f $file || &usage("File to upload does not exist");
+	-r $file || &usage("File to upload does not exist");
 	}
 elsif ($stdin) {
 	$file = &transname("file.txt");
@@ -81,7 +87,7 @@ else {
 # Do the parallel upload
 print "Uploading file to ",scalar(@servers)," systems ..\n";
 &parallel_server_function(\@servers,
-	sub { $err = &put_file_to_server($_[0], $file, $dest);
+	sub { $err = &put_file_to_server($_[0], $file, $dest, $device);
 	      if ($err) {
 	          print "$_[0]->{'host'}: ERROR: $err\n";
 	          }
@@ -102,6 +108,7 @@ print "                     [--type $types]*\n";
 print "                     [--os oscode]*\n";
 print "                     [--source sourcepath] | [--stdin]\n";
 print "                      --dest destpath\n";
+print "                     [--device-file]\n";
 exit(1);
 }
 

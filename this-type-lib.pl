@@ -55,22 +55,25 @@ else {
 	}
 }
 
-# type_this_get_file(&server, remotefile, localfile)
+# type_this_get_file(&server, remotefile, localfile, device-file)
 # Can just copy the file, since we are on the same box!
 sub type_this_get_file
 {
-local ($server, $remotefile, $localfile) = @_;
-local $out = &backquote_command("cp ".quotemeta($remotefile)." ".
-				      quotemeta($localfile)." 2>&1");
+local ($server, $remotefile, $localfile, $device) = @_;
+local $out = &backquote_command(
+	$device ?
+	  "dd if=".quotemeta($remotefile)." of=".quotemeta($localfile).
+	  "bs=1024 2>&1" :
+	"cp ".quotemeta($remotefile)." ".quotemeta($localfile)." 2>&1");
 return $? ? $out : undef;
 }
 
-# type_this_put_file(&server, localfile, remotefile)
+# type_this_put_file(&server, localfile, remotefile, device-file)
 # Can just copy the file, since we are on the same box!
 sub type_this_put_file
 {
-local ($server, $localfile, $remotefile) = @_;
-return &type_this_get_file($server, $localfile, $remotefile);
+local ($server, $localfile, $remotefile, $device) = @_;
+return &type_this_get_file($server, $localfile, $remotefile, $device);
 }
 
 sub type_this_check_login

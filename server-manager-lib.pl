@@ -889,20 +889,12 @@ elsif ($server->{'ssh_nologin'}) {
 	}
 else {
 	# Just run via SSH
-	local $sshcmd = "ssh -q -x -".$server->{'ssh_protocol'};
-	if ($server->{'key'}) {
-		local ($key) = grep { $_->{'id'} == $server->{'key'} }
-				    &list_ssh_keys();
-		$sshcmd .= " -i ".quotemeta($key->{'file'});
-		}
-	if ($server->{'ssh_port'}) {
-		$sshcmd .= " -p ".$server->{'ssh_port'};
-		}
+	local $sshcmd = &build_ssh_command($server);
 	if ($leave) {
 		$sshcmd .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
-	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'} ".quotemeta($cmd);
+	$sshcmd .= " ".quotemeta($cmd);
 	local ($status, $out, $fh, $fpid) =
 	    &run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout,
 			     $leave ? "SERVER_MANAGER_LOGIN_DONE" : undef);
@@ -918,12 +910,12 @@ else {
 	}
 }
 
-# get_file_from_server(&server, remotefile, localfile)
+# get_file_from_server(&server, remotefile, localfile, device-file)
 # Transfers a file from the given server to this system. May use scp or some
 # type-specific method
 sub get_file_from_server
 {
-local ($server, $remotefile, $localfile) = @_;
+local ($server, $remotefile, $localfile, $device) = @_;
 local $gfunc = "type_".$server->{'manager'}."_get_file";
 if (defined(&$gfunc)) {
 	# Use type-specific function call
@@ -935,21 +927,51 @@ if ($server->{'ssh_nologin'}) {
 	return "SSH logins are not available";
 	}
 
-# Just scp down
-local $sshcmd = "scp -r";
-$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+if ($device) {
+	# Run dd on the server and capture output
+	local $sshcmd = &build_ssh_command($server);
+	$sshcmd .= " dd if=".quotemeta($remotefile)." bs=1024 |".
+		   " dd of=".quotemeta($localfile)." bs=1024";
+	local ($status, $out) =
+		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
+	return $status ? $out : undef;
+	}
+else {
+	# Just scp down
+	local $sshcmd = "scp -r";
+	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+	if ($server->{'key'}) {
+		local ($key) = grep { $_->{'id'} == $server->{'key'} }
+				    &list_ssh_keys();
+		$sshcmd .= " -i ".quotemeta($key->{'file'});
+		}
+	if ($server->{'ssh_port'}) {
+		$sshcmd .= " -P ".$server->{'ssh_port'};
+		}
+	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}:".
+		   quotemeta($remotefile)." ".quotemeta($localfile);
+	local ($status, $out) =
+		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
+	return $status ? $out : undef;
+	}
+}
+
+# build_ssh_command(&server)
+# Returns the base of an SSH comand for logging into some system
+sub build_ssh_command
+{
+local ($server) = @_;
+local $sshcmd = "ssh -q -x -".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	local ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
 	$sshcmd .= " -i ".quotemeta($key->{'file'});
 	}
 if ($server->{'ssh_port'}) {
-	$sshcmd .= " -P ".$server->{'ssh_port'};
+	$sshcmd .= " -p ".$server->{'ssh_port'};
 	}
-$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}:".
-	   quotemeta($remotefile)." ".quotemeta($localfile);
-local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
-return $status ? $out : undef;
+$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}";
+return $sshcmd;
 }
 
 # get_file_data_from_server(&server, remotefile)
@@ -965,12 +987,12 @@ local $data = &read_file_contents($temp);
 return $data;
 }
 
-# put_file_to_server(&server, localfile, remotefile)
+# put_file_to_server(&server, localfile, remotefile, device-file)
 # Transfers a file from this system to the given server. May use scp or some
 # type-specific method
 sub put_file_to_server
 {
-local ($server, $localfile, $remotefile) = @_;
+local ($server, $localfile, $remotefile, $device) = @_;
 local $pfunc = "type_".$server->{'manager'}."_put_file";
 if (defined(&$pfunc)) {
 	# Use type-specific function call
@@ -982,22 +1004,33 @@ if ($server->{'ssh_nologin'}) {
 	return "SSH logins are not available";
 	}
 
-# Just scp up
-local $sshcmd = "scp -r";
-$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
-if ($server->{'key'}) {
-	local ($key) = grep { $_->{'id'} == $server->{'key'} }
-			    &list_ssh_keys();
-	$sshcmd .= " -i ".quotemeta($key->{'file'});
+if ($device) {
+	# Run dd piped into SSH
+	local $sshcmd = &build_ssh_command($server);
+	$sshcmd .= " dd of=".quotemeta($remotefile)." bs=1024";
+	$sshcmd = "dd if=".quotemeta($localfile)." bs=1024 | ".$sshcmd;
+	local ($status, $out) =
+		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
+	return $status ? $out : undef;
 	}
-if ($server->{'ssh_port'}) {
-	$sshcmd .= " -P ".$server->{'ssh_port'};
+else {
+	# Just scp up
+	local $sshcmd = "scp -r";
+	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+	if ($server->{'key'}) {
+		local ($key) = grep { $_->{'id'} == $server->{'key'} }
+				    &list_ssh_keys();
+		$sshcmd .= " -i ".quotemeta($key->{'file'});
+		}
+	if ($server->{'ssh_port'}) {
+		$sshcmd .= " -P ".$server->{'ssh_port'};
+		}
+	$sshcmd .= " ".quotemeta($localfile).
+		   " $server->{'ssh_user'}\@$server->{'host'}:".
+		   quotemeta($remotefile);
+	local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
+	return $status ? $out : undef;
 	}
-$sshcmd .= " ".quotemeta($localfile).
-	   " $server->{'ssh_user'}\@$server->{'host'}:".
-	   quotemeta($remotefile);
-local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
-return $status ? $out : undef;
 }
 
 # put_file_data_to_server(&server, data, remotefile)
@@ -1016,27 +1049,29 @@ return $err;
 }
 
 # transfer_file_between_servers(&source-server, &dest-server,
-#				source-file, dest-file)
+#				source-file, dest-file, device-file)
 # Copy a file from one system to another, directly if possible. Returns undef
 # if OK, or an error message on failure.
 sub transfer_file_between_servers
 {
-local ($srcserver, $destserver, $src, $dest) = @_;
+local ($srcserver, $destserver, $src, $dest, $device) = @_;
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just copy
 	local ($out, $ex, $err) = &execute_command_on_server($srcserver,
-		"cp ".quotemeta($src)." ".quotemeta($dest));
+		$device ?
+		  "dd if=".quotemeta($src)." of=".quotemeta($dest)." bs=1024" :
+		  "cp ".quotemeta($src)." ".quotemeta($dest));
 	return $err ? $err : $ex ? $out : undef;
 	}
 elsif ($srcserver->{'id'} == 0) {
 	# Copying from Cloudmin master - just upload
-	return &put_file_to_server($destserver, $src, $dest);
+	return &put_file_to_server($destserver, $src, $dest, $device);
 	}
 elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - just download
-	return &get_file_from_server($srcserver, $src, $dest);
+	return &get_file_from_server($srcserver, $src, $dest, $device);
 	}
-else {
+elsif (!$device) {
 	# Both are remote! First try scp on source to dest
 	# First build scp command
 	if ($destserver->{'ssh_nologin'}) {
@@ -1111,18 +1146,18 @@ else {
 	if ($keytemp) {
 		&delete_file_on_server($srcserver, $keytemp);
 		}
-
-	# Fall back to fetching to master and uploading
-	local $srcfile = $src;
-	$srcfile =~ s/^.*[\\\/]//;
-	local $temp = &transname($srcfile);
-	local $err = &get_file_from_server($srcserver, $src, $temp);
-	return "Download to Cloudmin master failed : $err" if ($err);
-	$err = &put_file_to_server($destserver, $temp, $dest);
-	&unlink_file($temp);
-	return "Upload from Cloudmin master failed : $err" if ($err);
-	return undef;
 	}
+
+# Fall back to fetching to master and uploading
+local $srcfile = $src;
+$srcfile =~ s/^.*[\\\/]//;
+local $temp = &transname($srcfile);
+local $err = &get_file_from_server($srcserver, $src, $temp, $device);
+return "Download to Cloudmin master failed : $err" if ($err);
+$err = &put_file_to_server($destserver, $temp, $dest, $device);
+&unlink_file($temp);
+return "Upload from Cloudmin master failed : $err" if ($err);
+return undef;
 }
 
 # delete_file_on_server(&server, remotefile, [no-quote])

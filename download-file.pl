@@ -11,6 +11,9 @@ have the file saved on the master, add the C<--dest> parameter followed by a
 filename. To have its contents output by the script, use the C<--stdout>
 parameter instead.
 
+If the source or destination file is block-special device (like an LVM logical
+volume), you must add the --device-file flag.
+
 =head1 Example usage
 
   cloudmin download-file --host xencentos.home --source /etc/hosts --stdout
@@ -46,6 +49,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--dest") {
 		$dest = shift(@ARGV);
 		}
+	elsif ($a eq "--device-file") {
+		$device = 1;
+		}
 	else {
 		&usage();
 		}
@@ -62,7 +68,7 @@ $dest || $stdout || &usage("Missing --dest or --stdout parameter");
 if ($stdout) {
 	$dest = &transname();
 	}
-$err = &get_file_from_server($server, $source, $dest);
+$err = &get_file_from_server($server, $source, $dest, $device);
 if ($err) {
 	print "ERROR: $err\n";
 	exit(1);
@@ -89,6 +95,7 @@ print "\n";
 print "cloudmin download-file --host name\n";
 print "                       --source sourcepath\n";
 print "                      [--dest destpath] | [--stdout]\n";
+print "                      [--device-file]\n";
 exit(1);
 }
 
