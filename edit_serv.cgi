@@ -136,9 +136,18 @@ if ($status eq 'virt') {
 
 	# Virtualmin licence
 	if ($info->{'serial'}) {
+		$exp = $info->{'serial'}->{'expiry'};
+		$expired = &check_licence_expiry($exp);
+		if ($expired == 2) {
+			$exp = "<font color=red>$exp</font>";
+			}
+		elsif ($expired == 1) {
+			$exp = "<font color=orange>$exp</font>";
+			}
 		print &ui_table_row($text{'edit_vlicence'},
 		    &text('edit_vsk', "<tt>$info->{'serial'}->{'serial'}</tt>",
-				      "<tt>$info->{'serial'}->{'key'}</tt>"));
+				      "<tt>$info->{'serial'}->{'key'}</tt>",
+				      $exp));
 		}
 	}
 

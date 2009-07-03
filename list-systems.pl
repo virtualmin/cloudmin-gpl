@@ -291,6 +291,8 @@ if ($multi) {
 					$info->{'serial'}->{'serial'},"\n";
 				print "    Virtualmin key: ",
 					$info->{'serial'}->{'key'},"\n";
+				print "    Virtualmin expiry date: ",
+					$info->{'serial'}->{'expiry'},"\n";
 				}
 			}
 	

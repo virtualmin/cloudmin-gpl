@@ -1610,6 +1610,13 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				    $info->{'serial'} =
 					{ 'serial' => $serial->{'SerialNumber'},
 					  'key' => $serial->{'LicenseKey'} };
+				    local $lstatus = &remote_eval($server,
+					"virtual_server",
+					"\&read_env_file(\$licence_status, \\\%lstatus); return \\\%lstatus");
+				    if ($lstatus && ref($lstatus)) {
+					$info->{'serial'}->{'expiry'} =
+						$lstatus->{'expiry'};
+					}
 				    }
 				}
 
@@ -4370,8 +4377,8 @@ return @rv;
 # check_virtualmin_serial(serial, key)
 # Checks if some licence is valid for Virtualmin. This is done via an HTTP
 # request to www.virtualmin.com, with some local caching. Returns 1 if yes
-# (and the number of domains and servers in an array context), 0 if no,
-# -1 if could not tell
+# (and the number of domains, servers and expiry date in an array context),
+# 0 if no, -1 if could not tell
 sub check_virtualmin_serial
 {
 local ($serial, $key) = @_;
@@ -4396,7 +4403,7 @@ local ($out, $error);
 	       \$out, \$error, undef, $virtualmin_licence_ssl);
 local @rv;
 if ($out =~ /^OK\s+(\S+)\s+(\S+)\s+(\S+)/) {
-	@rv = ( 1, $2, $3 );
+	@rv = ( 1, $2, $3, $1 );
 	}
 elsif ($error || $out =~ /^ERR\s+/) {
 	@rv = ( -1 );
@@ -4543,13 +4550,14 @@ if ($vm2cache{'max_last'} &&
 	}
 else {
 	# Check Cloudmin licence for real
-	local ($lok, $ldoms, $lservers) =
+	local ($lok, $ldoms, $lservers, $lexpiry) =
 		&check_virtualmin_serial($vm2serial, $vm2key);
 	if ($lok > 0) {
 		%vm2cache = ( 'serial' => $vm2serial,
 			      'key' => $vm2key,
 			      'domains' => $ldoms,
 			      'servers' => $lservers,
+			      'expiry' => $lexpiry,
 			      'max_last' => time(),
 			      'vm2' => 1 );
 		push(@rv, \%vm2cache);
@@ -4574,7 +4582,7 @@ close(LIC);
 foreach my $l (@rv) {
 	if ($l->{'domains'} eq '' ||
 	    time() - $l->{'max_last'} >= 24*60*60) {
-		local ($lok, $ldoms, $lservers) =
+		local ($lok, $ldoms, $lservers, $lexpiry) =
 			&check_virtualmin_serial($l->{'serial'}, $l->{'key'});
 		if ($lok == 0) {
 			# Invalid!
@@ -4584,6 +4592,7 @@ foreach my $l (@rv) {
 			delete($l->{'invalid'});
 			$l->{'domains'} = $ldoms;
 			$l->{'servers'} = $lservers;
+			$l->{'expiry'} = $lexpiry;
 			}
 		$l->{'max_last'} = time();
 		$changed = 1;
@@ -4644,6 +4653,22 @@ if ($changed) {
 
 @list_virtualmin_licences_cache = @rv;
 return @rv;
+}
+
+# check_licence_expiry(&license|date)
+# Returns 0 if some license is OK, 1 if close to expiry (7 days), 2 if expired
+sub check_licence_expiry
+{
+local ($lic) = @_;
+local $date = ref($lic) ? $lic->{'expiry'} : $lic;
+if ($date =~ /^(\d{4})\-(\d+)\-(\d+)$/) {
+	local $ut = timelocal(0, 0, 0, $3, $2-1, $1-1900);
+	local $days = int(($ut - time()) / (24*60*60));
+	return $days < 0 ? 2 : $days < 7 ? 1 : 0;
+	}
+else {
+	return -1;
+	}
 }
 
 # save_virtualmin_licences(&licences)

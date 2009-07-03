@@ -28,6 +28,7 @@ if (@lics) {
 	print &ui_columns_start([ "",
 				  $text{'licences_serial'},
 				  $text{'licences_key'},
+				  $text{'licences_exp'},
 				  $text{'licences_status'},
 				  $text{'licences_domains'},
 				  $text{'licences_servers'},
@@ -40,10 +41,19 @@ if (@lics) {
 		if ($l->{'progress'}) {
 			$users .= &text('licences_progress', $l->{'progress'});
 			}
+		$exp = $l->{'expiry'};
+		$expired = &check_licence_expiry($l->{'expiry'});
+		if ($expired == 2) {
+			$exp = "<font color=red>$exp</font>";
+			}
+		elsif ($expired == 1) {
+			$exp = "<font color=orange>$exp</font>";
+			}
 		print &ui_checked_columns_row([
 		    "<a href='edit_licence.cgi?serial=$l->{'serial'}'>".
 		     $l->{'serial'}."</a>",
 		    $l->{'key'},
+		    $exp,
 		    $l->{'invalid'} ?
 			"<font color=#ff0000>$text{'licences_invalid'}</font>" :
 		    $l->{'vm2'} ?
