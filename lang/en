@@ -1129,7 +1129,7 @@ xen_host=System hosting Xens
 xen_dir=Base directory for virtual systems
 xen_lvm=LVM volume group for disk images
 xen_nolvm=None - use regular files
-xen_lvmvg=Volume group name
+xen_lvmvg=Volume group named
 xen_domain=Add Xen systems to DNS domain
 xen_domain2=DNS domain for Xen servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
 xen_range=IP address allocation range
@@ -1187,6 +1187,12 @@ xen_elvmmod2=The LVM Webmin module is not usable
 xen_elvmmod3=LVM software or kernel support is not available
 xen_elvmvgs=No volume groups were found!
 xen_elvmvg=The entered volume group does not exist. Available groups are : $1
+xen_header3=System image cache
+xen_cachesize=Maximum image cache size
+xen_nocache=Don't cache images
+xen_cachedir=Directory for images
+xen_atmost=At most
+xen_cachein=Directory
 
 xens_title=Xen Host Systems
 xens_add=Register a system for Xen hosting.

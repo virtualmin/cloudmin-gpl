@@ -6,6 +6,7 @@ $server_images_dir = "$ENV{'WEBMIN_VAR'}/$module_name";
 $server_images_url = "http://cloudmin.virtualmin.com/images/images.txt";
 $server_images_base = "http://cloudmin.virtualmin.com/images/";
 $server_images_cache = "$module_config_directory/server-images-cache";
+$images_cache_dir = "/var/cloudmin-images";
 
 # list_server_images([type])
 # Returns a list of images that can be used to create servers, possibly of
@@ -177,18 +178,64 @@ local $vhost = &$pfunc($server);
 $vhost || return (0, "Could not find parent system");
 local ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
 $img || return (0, "Could not find image with ID $server->{'image'}");
+local @files = split(/\s+/, $img->{'files'});
 
 # No need to transfer if the host is the Cloudmin master
 if ($vhost->{'manager'} eq 'this') {
 	return (2, $server_images_dir);
 	}
 
-# Choose a temp dir
-local ($tempok, $temp) = &create_image_files_tempdir($vhost, $img->{'id'});
-return (0, $temp) if (!$tempok);
+# Check if the host has image caching enabled, and if we have the image
+# already
+local $prefix = $server->{'manager'};
+local $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
+local $imagedir;
+if ($vhost->{$prefix.'_cachesize'}) {
+	# Make the directory if needed
+	local ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"test -d ".quotemeta($cachedir).
+		" || mkdir -p ".quotemeta($cachedir));
+	if ($ex || $err) {
+		return (0, "Failed to create cache directory $cachedir : ".
+			   ($err || $out));
+		}
+
+	# See if we have all the needed files in the cache
+	local $missing = 0;
+	foreach my $f (@files) {
+		local @st = &stat_file_on_server($vhost, "$cachedir/$f");
+		$missing++ if (!@st);
+		}
+	if (!$missing) {
+		# Yes! Use them..
+		return (2, $cachedir);
+		}
+
+	# No, need to transfer to the cache
+	$imagedir = $cachedir;
+
+	# If cache is too big, clean up some files first
+	local ($out, $ex, $err) = &execute_command_on_server(
+				$vhost, "du -k ".quotemeta($cachedir)."/*");
+	local $totalsize = 0;
+	foreach my $l (split(/\r?\n/, $out)) {
+		local ($blocks, $f) = split(/\s+/, $l);
+		$f =~ s/^\Q$cachedir\E\///g;
+		$totalsize += $kb*1024;
+		$sizemap{$f} = $kb*1024;
+		}
+	# XXX
+	}
+else {
+	# Choose a temp dir
+	local ($tempok, $temp) = &create_image_files_tempdir(
+					$vhost, $img->{'id'});
+	return (0, $temp) if (!$tempok);
+	$imagedir = $temp;
+	}
 
 # Copy files from local to that dir
-foreach my $f (split(/\s+/, $img->{'files'})) {
+foreach my $f (@files) {
 	local $path = "$server_images_dir/$f";
 	local $pid = fork();
 	local $outtemp = &tempname();
@@ -212,6 +259,13 @@ foreach my $f (split(/\s+/, $img->{'files'})) {
 		}
 	}
 
+# Remove old files from the cache if it would be too big
+# XXX
+
+# Add new images to the cache
+# XXX
+
+# XXX return 3 if now cache, don't clean up in this case
 return (1, $temp);
 }
 
@@ -791,6 +845,55 @@ foreach my $m (@$munged) {
 	}
 &$second_print($text{'create_done'});
 return 1;
+}
+
+# show_host_images_cache_table(&server, prefix)
+# Output a table for configuring image caching on a host system
+sub show_host_images_cache_table
+{
+local ($server, $prefix) = @_;
+print &ui_hidden_table_start($text{'xen_header3'}, "width=100%", 2,
+			     "cache", 0);
+
+# Cache size (in GB)
+print &ui_table_row($text{'xen_cachesize'},
+	&ui_opt_textbox("cachesize", $server->{$prefix.'_cachesize'},
+			10, $text{'xen_nocache'}, $text{'xen_atmost'})." GB");
+
+# Directory on host
+print &ui_table_row($text{'xen_cachedir'},
+	&ui_opt_textbox("cachedir", $server->{$prefix.'_cachedir'}, 50,
+			$text{'default'}." (<tt>$images_cache_dir</tt>)<br>",
+			$text{'xen_cachein'}));
+
+print &ui_hidden_table_end("cache");
+}
+
+# parse_host_images_cache_table(&server, &in, prefix)
+# Update a host system with inputs from show_host_images_cache_table
+sub parse_host_images_cache_table
+{
+local ($server, $in, $prefix) = @_;
+
+# Parse cache size
+if ($in->{'cachesize_def'}) {
+	delete($server->{$prefix.'_cachesize'});
+	}
+else {
+	$in->{'cachesize'} =~ /^\d+$/ ||
+		&error($text{'xen_ecachesize'});
+	$server->{$prefix.'_cachesize'} = $in->{'cachesize'};
+	}
+
+# Parse cache directory
+if ($in->{'cachedir_def'}) {
+	delete($server->{$prefix.'_cachedir'});
+	}
+else {
+	$in->{'cachedir'} =~ /^\/\S+/ ||
+		&error($text{'xen_ecachedir'});
+	$server->{$prefix.'_cachedir'} = $in->{'cachedir'};
+	}
 }
 
 1;
