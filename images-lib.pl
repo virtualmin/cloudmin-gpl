@@ -222,9 +222,9 @@ if ($vhost->{$prefix.'_cachesize'}) {
 	# If cache is too big, clean up some files first
 	local ($out, $ex, $err) = &execute_command_on_server(
 				$vhost, "du -k ".quotemeta($cachedir)."/*");
-	local $totalsize = 0;
+	local $totalsize = $img->{'size'};
 	foreach my $l (split(/\r?\n/, $out)) {
-		local ($blocks, $f) = split(/\s+/, $l);
+		local ($kb, $f) = split(/\s+/, $l);
 		$f =~ s/^\Q$cachedir\E\///g;
 		$totalsize += $kb*1024;
 		$sizemap{$f} = $kb*1024;
@@ -241,7 +241,7 @@ if ($vhost->{$prefix.'_cachesize'}) {
 		local @delfiles = reverse(split(/\r?\n/, $out));
 		while(@delfiles && $totalsize > $maxsize) {
 			local $f = $delfiles[0];
-			local $err = &unlink_file_on_server(
+			local $err = &delete_file_on_server(
 				$vhost, "$cachedir/$f");
 			if ($err) {
 				return (0, "Failed to delete old cached ".
