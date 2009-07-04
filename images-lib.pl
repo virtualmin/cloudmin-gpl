@@ -188,6 +188,7 @@ if ($vhost->{'manager'} eq 'this') {
 # Check if the host has image caching enabled, and if we have the image
 # already
 local $prefix = $server->{'manager'};
+$prefix = "zone" if ($prefix eq "zones");
 local $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
 local $imagedir;
 if ($vhost->{$prefix.'_cachesize'}) {
