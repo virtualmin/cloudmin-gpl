@@ -4083,7 +4083,7 @@ if (&can_action($server, "edit")) {
 	if (&can_edit_limits($server)) {
 		push(@rv, { 'id' => 'limits',
 			    'desc' => $text{'edit_link_limits'},
-			    'cat' => 'system',
+			    'cat' => 'res',
 			    'link' => "edit_limits.cgi?id=$server->{'id'}" });
 		}
 	}

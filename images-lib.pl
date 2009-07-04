@@ -481,9 +481,9 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		}
 	elsif ($fix eq "/etc/conf.d/hostname") {
 		# Gentoo hostname file
-		$data =~ s/HOSTNAME="(.*)"/HOSTNAME="$fullhost"/ ||
-		   $data =~ s/HOSTNAME='(.*)'/HOSTNAME='$fullhost'/ ||
-		   $data =~ s/HOSTNAME=(\S+)/HOSTNAME=$fullhost/;
+		$data =~ s/(HOSTNAME|hostname)="(.*)"/$1="$fullhost"/ ||
+		   $data =~ s/(HOSTNAME|hostname)='(.*)'/$1='$fullhost'/ ||
+		   $data =~ s/(HOSTNAME|hostname)=(\S+)/$1=$fullhost/;
 		}
 	else {
 		# Other hostname file

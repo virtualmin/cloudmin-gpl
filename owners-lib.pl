@@ -79,7 +79,8 @@ local ($u) = @_;
 sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
-	 'domains', 'update', 'script', 'pause', 'reset' );
+	 'domains', 'update', 'script', 'pause', 'reset',
+	 'create', 'delete', 'limits', 'disks' );
 }
 
 # can_action([&server|&servers], [action])
@@ -137,14 +138,30 @@ $ok || &error($why);
 }
 
 # can_create_server(type)
-# Returns 1 if create a virtual system of some type is allowed.
-# Only true for master admin right now
+# Returns 1 if creating a virtual system of some type is allowed.
 sub can_create_server
 {
 local ($type) = @_;
 local $tdesc = $text{$type.'_typeshort'};
-local @rv = !$access{'owner'} ? ( 1, undef )
-			      : ( 0, &text('can_ecreate', $tdesc) );
+local @rv;
+local %actions = map { $_, 1 } split(/\s+/, $access{'actions'});
+if (!$access{'owner'}) {
+	# Master admin can do anything
+	@rv = ( 1, undef );
+	}
+elsif ($actions{'actions'}) {
+	# Creation not allowed at all
+	@rv = ( 0, $text{'can_ecreate'} );
+	}
+elsif ($access{'types'} && $access{'types'} !~ /\Q$type\E/) {
+	# Cannot create this type
+	@rv = ( 0, &text('can_ecreate', $tdesc) );
+	}
+else {
+	# Check limits
+	# XXX
+	@rv = ( 1, undef );
+	}
 return wantarray ? @rv : $rv[0];
 }
 
