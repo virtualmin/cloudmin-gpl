@@ -282,15 +282,13 @@ if ($image) {
 		print ".. failed : $imagetemp\n";
 		exit(1);
 		}
-	elsif ($imageok == 2) {
-		$server->{'imagetemp'} = $imagetemp;
-		$server->{'imagelocal'} = 1;
-		print " .. already on host system\n\n";
-		}
 	else {
 		$server->{'imagetemp'} = $imagetemp;
-		$server->{'imagelocal'} = 0;
-		print " .. done\n\n";
+		$server->{'imagelocal'} = ($imageok != 1);
+		print $imageok == 1 ? " .. done\n\n" :
+		      $imageok == 2 ? " .. already on host system\n\n" :
+		      $imageok == 3 ? " .. already in host cache\n\n" :
+				      " .. done, and added to host cache\n\n";
 		}
 	}
 

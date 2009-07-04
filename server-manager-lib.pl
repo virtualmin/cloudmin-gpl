@@ -5183,15 +5183,13 @@ my ($imageok, $imagetemp) = &transfer_image_files($server, 1);
 if ($imageok == 0) {
 	return &text('create_ecopy', $imagetemp);
 	}
-elsif ($imageok == 2) {
-	$server->{'imagetemp'} = $imagetemp;
-	$server->{'imagelocal'} = 1;
-	&$second_print($text{'create_nocopy'});
-	}
 else {
 	$server->{'imagetemp'} = $imagetemp;
-	$server->{'imagelocal'} = 0;
-	&$second_print($text{'create_done'});
+	$server->{'imagelocal'} = ($imageok != 1);
+	&$second_print($imageok == 1 ? $text{'create_done'} :
+		       $imageok == 2 ? $text{'create_nocopy'} :
+		       $imageok == 3 ? $text{'create_incache'} :
+			 	       $text{'create_addcache'});
 	}
 
 # Start creation process and wait for it to complete

@@ -113,18 +113,18 @@ if ($in{'image'}) {
 	($imageok, $imagetemp) = &transfer_image_files($server, 1);
 	print "<br>\n";
 	if ($imageok == 0) {
+		# Copy failed
 		print &text('create_ecopy', $imagetemp),"<p>\n";
 		goto END;
 		}
-	elsif ($imageok == 2) {
-		$server->{'imagetemp'} = $imagetemp;
-		$server->{'imagelocal'} = 1;
-		print $text{'create_nocopy'},"<p>\n";
-		}
 	else {
 		$server->{'imagetemp'} = $imagetemp;
-		$server->{'imagelocal'} = 0;
-		print $text{'create_done'},"<p>\n";
+		$server->{'imagelocal'} = ($imageok != 1);
+		print $imageok == 1 ? $text{'create_done'} :
+		      $imageok == 2 ? $text{'create_nocopy'} :
+		      $imageok == 3 ? $text{'create_incache'} :
+				      $text{'create_addcache'};
+		print "<p>\n";
 		}
 	}
 

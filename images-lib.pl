@@ -168,8 +168,8 @@ return (1, $temp);
 
 # transfer_image_files(&server, [show-progress-dots])
 # Transfers all files for some system's image to a parent host, and returns
-# a success flag (0=failed, 1=transferred, 2=not needed) the path to the temp
-# directory created for them.
+# a success flag (0=failed, 1=transferred, 2=not needed, 3=in cache, 4=
+# transferred to cache) the path to the temp directory created for them.
 sub transfer_image_files
 {
 local ($server, $progress) = @_;
@@ -207,8 +207,13 @@ if ($vhost->{$prefix.'_cachesize'}) {
 		$missing++ if (!@st);
 		}
 	if (!$missing) {
-		# Yes! Use them..
-		return (2, $cachedir);
+		# We have them all, so no need to transfer. Touch the image
+		# files to indicate most recent use
+		foreach my $f (@files) {
+			&execute_command_on_server(
+				$vhost, "touch ".quotemeta("$cachedir/$f"));
+			}
+		return (3, $cachedir);
 		}
 
 	# No, need to transfer to the cache
@@ -224,7 +229,27 @@ if ($vhost->{$prefix.'_cachesize'}) {
 		$totalsize += $kb*1024;
 		$sizemap{$f} = $kb*1024;
 		}
-	# XXX
+	local $maxsize = $vhost->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
+	if ($totalsize > $maxsize) {
+		# Too big! Delete images, ordered by time
+		local ($out, $ex, $err) = &execute_command_on_server(
+			$vhost, "ls -t ".quotemeta($cachedir));
+		if ($ex || $err) {
+			return (0, "Failed to list cache files for cleanup : ".
+				   ($err || $out));
+			}
+		local @delfiles = reverse(split(/\r?\n/, $out));
+		while(@delfiles && $totalsize > $maxsize) {
+			local $f = $delfiles[0];
+			local $err = &unlink_file_on_server(
+				$vhost, "$cachedir/$f");
+			if ($err) {
+				return (0, "Failed to delete old cached ".
+					   "file $f : $err");
+				}
+			$totalsize -= $sizemap{$f};
+			}
+		}
 	}
 else {
 	# Choose a temp dir
@@ -240,7 +265,7 @@ foreach my $f (@files) {
 	local $pid = fork();
 	local $outtemp = &tempname();
 	if (!$pid) {
-		local $err = &put_file_to_server($vhost, $path, "$temp/$f");
+		local $err = &put_file_to_server($vhost, $path, "$imagedir/$f");
 		open(OUT, ">$outtemp");
 		print OUT $err;
 		close(OUT);
@@ -259,14 +284,12 @@ foreach my $f (@files) {
 		}
 	}
 
-# Remove old files from the cache if it would be too big
-# XXX
-
-# Add new images to the cache
-# XXX
-
-# XXX return 3 if now cache, don't clean up in this case
-return (1, $temp);
+if ($cachedir eq $imagedir) {
+	return (4, $imagedir);
+	}
+else {
+	return (1, $imagedir);
+	}
 }
 
 # cleanup_image_files(&server, imagetemp)
