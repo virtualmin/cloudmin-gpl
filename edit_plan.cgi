@@ -85,6 +85,31 @@ if (!$in{'new'}) {
 
 print &ui_hidden_table_end();
 
+print &ui_hidden_table_start($text{'plan_header3'}, "width=100%", 2, "hosts", 0,
+			     [ "width=30%" ]);
+
+# Allowed host systems
+@parents = grep { &is_parent_server($_) } &list_managed_servers();
+if (@parents) {
+	@parents = sort { $a->{'host'} cmp $b->{'host'} } @parents;
+	print &ui_table_row($text{'plan_hosts'},
+		&ui_radio("hosts_def", $plan->{'hosts'} ? 0 : 1,
+			  [ [ 1, $text{'plan_hosts1'} ],
+			    [ 0, $text{'plan_hosts0'} ] ])."<br>\n".
+		&ui_select("hosts", [ split(/\s+/, $plan->{'hosts'}) ],
+			   [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ],
+			   5, 1));
+	}
+
+# Host system allocation mode
+print &ui_table_row($text{'plan_hostmode'},
+	&ui_radio_table("hostmode", $plan->{'hostmode'},
+			[ [ '', $text{'plan_hostmodefree'} ],
+			  [ 'mem', $text{'plan_hostmodemem'} ],
+			  [ 'disk', $text{'plan_hostmodedisk'} ] ], 1));
+
+print &ui_hidden_table_end();
+
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
 	       : [ [ undef, $text{'plan_save'} ],

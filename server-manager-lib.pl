@@ -5394,6 +5394,7 @@ if (@groups) {
 # Search by host system
 local @parents = grep { &is_parent_server($_) } @$servers;
 if (@parents) {
+	@parents = sort { $a->{'host'} cmp $b->{'host'} } @parents;
 	push(@grid, &highlight_field($text{'index_psearch'}, "pok"));
 	push(@grid, &ui_select("psearch", $in->{'psearch'},
 	    [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ]).

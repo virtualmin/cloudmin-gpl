@@ -392,6 +392,8 @@ $o->{'acl'}->{'types'} = $plan->{'types'};
 if ($o->{'acl'}->{'actions_def'}) {
 	$o->{'acl'}->{'actions'} = $plan->{'actions'};
 	}
+$o->{'acl'}->{'hosts'} = $plan->{'hosts'};
+$o->{'acl'}->{'hostmode'} = $plan->{'hostmode'};
 }
 
 1;

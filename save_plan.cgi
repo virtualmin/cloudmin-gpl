@@ -82,6 +82,18 @@ else {
 	$in{'types'} eq '' && &error($text{'plan_etypes'});
 	$plan->{'types'} = join(" ", split(/\0/, $in{'types'}));
 
+	# Allowed host systems
+	if ($in{'hosts_def'}) {
+		delete($plan->{'hosts'});
+		}
+	else {
+		$in{'hosts'} eq '' && &error($text{'plan_ehosts'});
+		$plan->{'hosts'} = join(' ', split(/\0/, $in{'hosts'}));
+		}
+
+	# Allocation mode
+	$plan->{'hostmode'} = $in{'hostmode'};
+
 	# Save and apply
 	&save_plan($plan);
 	&apply_plan($plan) if (!$in{'new'});

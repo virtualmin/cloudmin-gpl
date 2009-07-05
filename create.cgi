@@ -169,6 +169,13 @@ if ($imageok == 1) {
 	}
 &save_managed_server($server);
 
+# If this is a system owner, add it to his list
+if ($access{'owner'}) {
+	$access{'servers'} = join(' ', split(/\s+/, $access{'servers'}),
+				       $server->{'id'});
+	&save_module_acl(\%access);
+	}
+
 # Remove old SSH keys for this system
 &remove_server_ssh_keys($server);
 
