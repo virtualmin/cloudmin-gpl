@@ -1819,6 +1819,8 @@ owner_action_create=Create systems
 owner_action_delete=Delete systems
 owner_action_limits=Edit resource limits
 owner_action_disks=Manage disks
+owner_action_advanced=Use advanced system creation options
+owner_action_ips=Manually select IP addresses
 owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
 owner_egone=System owner no longer exists!
@@ -1832,6 +1834,7 @@ can_eaction=You are not allowed to perform the action : $1
 can_ecreate=You are not allowed to create new $1 systems
 can_eadd=You are not allowed to add existing $1 systems
 can_ecreateany=You are not allowed to create new systems
+can_ecreatelimit=You have reached your limit of $1 systems
 
 view_title=System Details
 

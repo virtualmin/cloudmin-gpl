@@ -117,7 +117,7 @@ $plan->{'types'} = join(" ", &unique(@types));
 
 &save_plan($plan);
 &apply_plan($plan);
-print "Updated Cloudmin account plan $plan->{'name'}\n";
+print "Updated Cloudmin account plan $plan->{'desc'}\n";
 
 sub usage
 {

@@ -80,7 +80,7 @@ sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
-	 'create', 'delete', 'limits', 'disks' );
+	 'create', 'delete', 'advanced', 'ips', 'limits', 'disks' );
 }
 
 # can_action([&server|&servers], [action])
@@ -151,7 +151,7 @@ if (!$access{'owner'}) {
 	}
 elsif ($actions{'actions'}) {
 	# Creation not allowed at all
-	@rv = ( 0, $text{'can_ecreate'} );
+	@rv = ( 0, $text{'can_ecreateany'} );
 	}
 elsif ($access{'types'} && $access{'types'} !~ /\Q$type\E/) {
 	# Cannot create this type
@@ -159,8 +159,17 @@ elsif ($access{'types'} && $access{'types'} !~ /\Q$type\E/) {
 	}
 else {
 	# Check limits
-	# XXX
-	@rv = ( 1, undef );
+	local $limits = &get_owner_limits();
+	if (!$limits->{'max_servers'} ||
+	    $limits->{'max_servers'} > $limits->{'servers'}) {
+		# Under limit
+		@rv = ( 1, undef );
+		}
+	else {
+		# At limit
+		@rv = ( 0,  &text('can_ecreatelimit',
+				  $limits->{'max_servers'}) );
+		}
 	}
 return wantarray ? @rv : $rv[0];
 }

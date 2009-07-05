@@ -86,7 +86,7 @@ print &ui_table_end();
 
 # Type-specific advanced options
 $afunc = "type_".$in{'type'}."_advanced_create_form";
-if (defined(&$afunc)) {
+if (defined(&$afunc) && &can_action(undef, "advanced")) {
 	print &ui_hidden_table_start($text{'create_aheader'}, "width=100%", 2,
 				     "advanced", 0);
 	print &$afunc();
