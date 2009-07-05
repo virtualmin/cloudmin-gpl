@@ -445,6 +445,17 @@ if (!$keep) {
 		&unlink_file("$usage_data_dir/$server->{'id'}");
 		}
 	}
+if (defined(&list_system_owners)) {
+	# Remove from any owners
+	foreach my $o (&list_system_owners()) {
+		local @os = split(/\s+/, $o->{'acl'}->{'servers'});
+		local @newos = grep { $_ ne $server->{'id'} } @os;
+		if (scalar(@os) != scalar(@newos)) {
+			$o->{'acl'}->{'servers'} = join(' ', @newos);
+			&save_system_owner($o, $o);
+			}
+		}
+	}
 }
 
 # find_managed_servers(all, &hostnames, &groupnames, &managers, &types)
@@ -5652,6 +5663,17 @@ foreach my $f ('ssh_user', 'ssh_port', 'ssh_pass', 'ssh_nologin',
 	       'ssh_protocol') {
 	$dst->{$f} = $src->{$f};
 	}
+}
+
+# find_host_server(&server, host-type)
+# Returns a host system for some type (xen, vserver, zone), based on those
+# available to the system owner and available RAM / etc
+sub find_host_server
+{
+local ($server, $htype) = @_;
+local @vhosts = grep { $_->{$htype.'_host'} &&
+                       &can_host_server($_) } &list_managed_servers();
+# XXX
 }
 
 # plugin_call(module, function, [arg, ...])

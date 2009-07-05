@@ -208,6 +208,23 @@ sub can_licence
 return !$access{'owner'};
 }
 
+# can_host_server(&server)
+# Returns 1 if virtual systems can be created on some host by the current user
+sub can_host_server
+{
+local ($vhost) = @_;
+return 1 if (!$access{'hosts'});
+local %can = map { $_, 1 } split(/\s+/, $access{'hosts'});
+return $can{$vhost->{'id'}};
+}
+
+# can_select_host_server()
+# Returns 1 if the current user is allowed to select hosts
+sub can_select_host_server
+{
+return !$access{'hostmode'};
+}
+
 # get_server_owners(&server)
 # Returns a list of owner objects for some server
 sub get_server_owners
