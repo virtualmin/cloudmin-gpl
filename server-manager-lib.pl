@@ -237,6 +237,7 @@ if ($config{'show_this'}) {
 			}
 		$this->{'xen_dir'} = $config{'xen_dir'};
 		$this->{'xen_zone'} = $config{'xen_zone'};
+		$this->{'xen_vg'} = $config{'xen_vg'};
 
 		# Save flag indicating that we have already checked out Xen
 		# on this machine, as doing so can be slow
