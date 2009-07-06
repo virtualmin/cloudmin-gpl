@@ -1827,14 +1827,14 @@ $rv = 1;
 DONECHECK:
 local $rfunc = "type_".$server->{'manager'}."_post_refresh";
 if (defined(&$rfunc)) {
-	&$rfunc($server);
+	&$rfunc($server, $regen);
 	}
 
 # Call any host-type-specific post-refresh function
 foreach my $p (&is_parent_server($server)) {
 	local $rfunc = "type_".$p."_post_host_refresh";
 	if (defined(&$rfunc)) {
-		&$rfunc($server);
+		&$rfunc($server, $regen);
 		}
 	}
 

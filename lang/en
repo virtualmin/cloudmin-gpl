@@ -1169,6 +1169,7 @@ xen_udisk=Total virtual disk
 xen_umemory=Total memory
 xen_ustate=Current status
 xen_diskalloc=Disk space allocated
+xen_vgalloc=LVM space allocation
 xen_diskmsg=$2 out of $1 ($3%)
 xen_memoryalloc=Real memory allocated
 xen_memoryalloc2=Memory allocated to up systems

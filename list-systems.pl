@@ -142,6 +142,16 @@ if ($multi) {
 				}
 			}
 
+		# Show host-type-specific info
+		foreach my $p (&is_parent_server($s)) {
+			$ifunc = "type_".$p."_server_host_info";
+			if (defined(&$ifunc)) {
+				foreach my $i (&$ifunc($s)) {
+					print "    $i->[0]: $i->[1]\n";
+					}
+				}
+			}
+
 		# Show limits, where we can
 		$cfunc = "type_".$s->{'manager'}."_can_memory";
 		if (defined(&$cfunc) && &$cfunc($s)) {
