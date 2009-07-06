@@ -36,6 +36,11 @@ else {
 	&ui_print_header(&server_in($server), $text{'disk_title'}, "", "disk");
 	}
 
+# Make sure owner can edit devices
+if ($disk->{'device'} && !$disk->{'lv'}) {
+	&can_action_error($server, "devices");
+	}
+
 # Show form with disk details
 print &ui_form_start("save_disk.cgi", "post");
 print &ui_hidden("new", $in{'new'});
@@ -63,7 +68,7 @@ if ($in{'new'} == 2) {
 	$realsel ||= &ui_textbox("real", $disk->{'real'}, 50);
 	$txt = 'disk_real1';
 	}
-elsif ($in{'new'} == 1) {
+elsif ($in{'new'} == 1 && &can_action($server, "devices")) {
 	if ($disk->{'lv'}) {
 		# On LVM, show field for LV name
 		$realsel = &ui_textbox("lv", $disk->{'lv'}, 20);

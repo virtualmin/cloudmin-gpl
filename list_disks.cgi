@@ -18,8 +18,12 @@ ref($disks) || &error(&text('disks_eget', $disks));
 &ui_print_header(&server_in($server), $text{'disks_title'}, "", "disks");
 
 # Show a table
-@links = ( "<a href='edit_disk.cgi?new=1&id=$in{'id'}'>$text{'disks_add1'}</a>",
-	   "<a href='edit_disk.cgi?new=2&id=$in{'id'}'>$text{'disks_add2'}</a>" );
+@links = ( "<a href='edit_disk.cgi?new=1&id=$in{'id'}'>".
+	   "$text{'disks_add1'}</a>" );
+if (&can_action($server, "devices")) {
+	push(@links, "<a href='edit_disk.cgi?new=2&id=$in{'id'}'>".
+		     "$text{'disks_add2'}</a>");
+	}
 if (@$disks) {
 	# We have some to show
 	unshift(@links, &select_all_link("d"), &select_invert_link("d"));
@@ -37,14 +41,17 @@ if (@$disks) {
 		$vdesc = defined(&mount::device_name) ?
 				&mount::device_name($d->{'virt'}) :
 				"<tt>$d->{'virt'}</tt>";
+		$canedit = !$d->{'device'} || $d->{'lv'} ||
+			   &can_action($server, 'devices');
 		print &ui_checked_columns_row([
-		    "<a href='edit_disk.cgi?id=$in{'id'}&real=$d->{'real'}'>".
-		    "$rdesc</a>",
+		    $canedit ?
+		     "<a href='edit_disk.cgi?id=$in{'id'}&real=$d->{'real'}'>".
+		      "$rdesc</a>" : $rdesc,
 		    $vdesc,
 		    $d->{'lv'} ? $text{'disks_lvm'} :
 		      $d->{'device'} ? $text{'disks_dev'} : $text{'disks_file'},
 		    $d->{'size'} ? &nice_size($d->{'size'}) : undef,
-		    ], \@tds, "d", $d->{'real'});
+		    ], \@tds, "d", $d->{'real'}, 0, !$canedit);
 		}
 	print &ui_columns_end();
 	print &ui_links_row(\@links);

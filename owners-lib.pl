@@ -80,7 +80,17 @@ sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
-	 'create', 'delete', 'advanced', 'ips', 'limits', 'disks' );
+	 'create', 'delete', 'advanced', 'ips', 'limits', 'disks',
+	 'devices' );
+}
+
+# list_safe_owner_actions()
+# Returns a set of actions that are reasonable for system owners
+sub list_safe_owner_actions
+{
+return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
+	 'domains', 'update', 'script', 'pause', 'reset',
+         'create', 'delete', 'limits', 'disks' );
 }
 
 # can_action([&server|&servers], [action])
@@ -328,6 +338,7 @@ foreach my $f (readdir(PLANS)) {
 	}
 closedir(PLANS);
 if (!@rv) {
+	# Create default plan
 	push(@rv, { 'id' => 1,
 		    'default' => 1,
 		    'desc' => $text{'plans_defplan'},
@@ -335,7 +346,7 @@ if (!@rv) {
 		    'max_ram' => 1024*1024*1024,
 		    'max_disk' => 10*1024*1024*1024,
 		    'types' => join(' ', @virtual_server_management_types),
-		    'actions' => join(' ', &list_owner_actions()),
+		    'actions' => join(' ', &list_safe_owner_actions()),
 		  });
 	}
 return @rv;

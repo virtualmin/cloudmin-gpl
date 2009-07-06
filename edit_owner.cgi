@@ -13,7 +13,7 @@ if ($in{'new'}) {
 		}
 	else {
 		$owner = { 'acl' => { 'actions' =>
-				join(' ', &list_owner_actions()) } };
+				join(' ', &list_safe_owner_actions()) } };
 		}
 	}
 else {

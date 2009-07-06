@@ -19,6 +19,13 @@ ref($disks) || &error($disks);
 $disks = [ grep { $d{$_->{'real'}} } @$disks ];
 @$disks || &error($text{'ddisk_enone'});
 
+# Validate editablility
+foreach $disk (@$disks) {
+	if ($device->{'device'} && !$disk->{'lv'}) {
+		&can_action_error($server, "devices");
+		}
+	}
+
 # Remove the disk, after asking for confirmation
 &ui_print_header(&server_in($server), $text{'ddisk_title'}, "");
 if ($in{'confirm'}) {

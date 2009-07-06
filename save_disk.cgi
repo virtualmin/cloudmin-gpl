@@ -93,7 +93,7 @@ else {
 			$disk->{'real'} = $in{'other'};
 			}
 		}
-	elsif ($in{'new'} == 1) {
+	elsif ($in{'new'} == 1 && &can_action($server, "devices")) {
 		if ($disk->{'lv'}) {
 			# From LV name text box
 			$in{'lv'} =~ /^[A-Za-z0-9\.\-\_]+$/ ||
@@ -116,9 +116,20 @@ else {
 	$in{'virt'} =~ /^\/\S+$/ || &error($text{'disk_evirt'});
 	$disk->{'virt'} = $in{'virt'};
 
-	# New or current size
+	# New or current size. Make sure it comes in under the owner's limit
 	if (defined($in{'size'})) {
 		$in{'size'} =~ /^\d+$/ || &error($text{'disk_esize'});
+		$incr = $in{'size'}*$in{'size_units'};
+		if (!$in{'new'}) {
+			$incr -= $disk->{'size'};
+			}
+		$limits = &get_owner_limits();
+		if ($limits && $limits->{'max_disk'} &&
+		    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {
+			&error(&text('disk_elimit',
+			       &nice_size($limits->{'max_disk'}),
+			       &nice_size($limits->{'disk'})));
+			}
 		$disk->{'size'} = $in{'size'}*$in{'size_units'};
 		}
 
@@ -135,6 +146,8 @@ else {
 				&error($text{'disk_eswap'});
 			}
 		}
+
+	# Validate new disk size
 
 	&obtain_lock_server($server);
 	if ($in{'new'}) {

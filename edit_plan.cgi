@@ -8,7 +8,7 @@ require './server-manager-lib.pl';
 if ($in{'new'}) {
 	&ui_print_header(undef, $text{'plan_title1'}, "");
 	$plan = { 'types' => join(' ', @virtual_server_management_types),
-		  'actions' => join(' ', &list_owner_actions()) };
+		  'actions' => join(' ', &list_safe_owner_actions()) };
 	}
 else {
 	&ui_print_header(undef, $text{'plan_title2'}, "");
