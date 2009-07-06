@@ -135,6 +135,11 @@ while(@ARGV > 0) {
 	elsif ($a eq "--id") {
 		$newid = shift(@ARGV);
 		}
+	elsif ($a eq "--owner") {
+		$ownername = shift(@ARGV);
+		$owner = &get_system_owner($ownername);
+		$owner || &usage("No system owner named $ownername exists");
+		}
 	elsif ($a eq "--serial") { $serial = shift(@ARGV); }
 	elsif ($a eq "--key") { $key = shift(@ARGV); }
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
@@ -332,6 +337,14 @@ if ($imageok == 1) {
 print ".. creation complete\n\n";
 &save_managed_server($server);
 
+# Add to system owner
+if ($owner) {
+	$owner->{'acl'}->{'servers'} =
+		join(' ', split(/\s+/, $owner->{'acl'}->{'servers'}),
+			  $server->{'id'});
+	&save_system_owner($owner, $owner);
+	}
+
 # Remove old SSH keys for this system
 &remove_server_ssh_keys($server);
 
@@ -510,6 +523,9 @@ print "                      [--no-update]\n";
 print "                      [--serial number --key number] |\n";
 print "                      [--same-serial] | [--allocate-serial]\n";
 print "                      [--id number]\n";
+if (defined(&list_system_owners)) {
+	print "                      [--owner name]\n";
+	}
 if ($type) {
 	# Show type-specific command line args
 	$afunc = "type_".$type."_create_args";

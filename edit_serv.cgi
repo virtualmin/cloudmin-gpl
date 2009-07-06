@@ -180,6 +180,21 @@ if (defined(&get_server_usage)) {
 	print &ui_hidden_table_start($text{'edit_uheader'},
 				     "width=100%", 2, "usage", 0, \@tds);
 
+	# System owner
+	if (defined(&list_system_owners)) {
+		foreach $o (&list_system_owners()) {
+			@ids = split(/\s+/, $o->{'acl'}->{'servers'});
+			if (&indexof($server->{'id'}, @ids) >= 0) {
+				print &ui_table_row($text{'edit_owner'},
+				    &can_action(undef, 'global') ?
+					"<a href='edit_owner.cgi?name=".
+					  &urlize($o->{'name'})."'>".
+					  &html_escape($o->{'name'})."</a>" :
+					&html_escape($o->{'name'}));
+				}
+			}
+		}
+
 	# Accounting period
 	print &ui_table_row($text{'edit_uperiod'},
 		$config{'bw_period'} ? $text{'bw_last_'.$config{'bw_period'}}

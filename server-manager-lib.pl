@@ -5089,7 +5089,7 @@ local $vinfo = &get_server_collected($vhost);
 local @rv;
 if ($vhost->{'xen_vg_free'}) {
 	push(@rv, &text('create_hostdisk',
-			&nice_size($vinfo->{'xen_vg_free'})));
+			&nice_size($vhost->{'xen_vg_free'})));
 	}
 elsif ($vinfo && $vinfo->{'disk_free'}) {
 	push(@rv, &text('create_hostdisk', &nice_size($vinfo->{'disk_free'})));

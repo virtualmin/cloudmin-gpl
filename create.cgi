@@ -203,6 +203,16 @@ if ($access{'owner'}) {
 				       $server->{'id'});
 	&save_module_acl(\%access);
 	}
+elsif ($in{'owner'}) {
+	# Add to another owner
+	$owner = &get_system_owner($in{'owner'});
+	if ($owner) {
+		$owner->{'acl'}->{'servers'} =
+			join(' ', split(/\s+/, $owner->{'acl'}->{'servers'}),
+				  $server->{'id'});
+		&save_system_owner($owner, $owner);
+		}
+	}
 
 # Remove old SSH keys for this system
 &remove_server_ssh_keys($server);

@@ -76,6 +76,16 @@ print &ui_table_row($text{'create_webmin'},
 		[ 2, &text('create_webmin2', "<tt>root</tt>",
 			   &ui_textbox("wpass", undef, 20)) ] ]));
 
+# Owner, if any
+@owners = defined(&list_system_owners) ? &list_system_owners() : ( );
+if (!$access{'owner'} && scalar(@owners)) {
+	@owners = sort { $a->{'name'} cmp $b->{'name'} } @owners;
+	print &ui_table_row($text{'create_owner'},
+		&ui_select("owner", undef,
+			   [ [ '', "&lt;$text{'create_noowner'}&gt;" ],
+			     map { $_->{'name'} } @owners ]));
+	}
+
 # Type-specific options
 $ffunc = "type_".$in{'type'}."_create_form";
 if (defined(&$ffunc)) {
