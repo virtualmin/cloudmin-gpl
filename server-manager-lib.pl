@@ -5087,7 +5087,11 @@ sub host_free_desc
 local ($vhost) = @_;
 local $vinfo = &get_server_collected($vhost);
 local @rv;
-if ($vinfo && $vinfo->{'disk_free'}) {
+if ($vhost->{'xen_vg_free'}) {
+	push(@rv, &text('create_hostdisk',
+			&nice_size($vinfo->{'xen_vg_free'})));
+	}
+elsif ($vinfo && $vinfo->{'disk_free'}) {
 	push(@rv, &text('create_hostdisk', &nice_size($vinfo->{'disk_free'})));
 	}
 if ($vinfo && $vinfo->{'mem'}) {
@@ -5680,20 +5684,37 @@ local @vhosts = grep { $_->{$htype.'_host'} &&
 return undef if (!@vhosts);
 if ($access{'hostmode'} eq 'mem') {
 	# Sort by free memory, get best
+	local %memmap;
+	foreach my $vhost (@vhost) {
+		local $info = &get_server_collected($vhost);
+		if ($info->{'mem'}) {
+			$memmap{$vhost->{'id'}} = $info->{'mem'}->[1];
+			}
+		}
+	@vhosts = sort { $memmap{$b->{'id'}} <=> $memmap{$a->{'id'}} } @vhosts;
 	return $vhosts[0];
-	# XXX
 	}
 elsif ($access{'hostmode'} eq 'disk') {
 	# Sort by free disk
+	local %diskmap;
+	foreach my $vhost (@vhost) {
+		if ($vhost->{'xen_vg_free'}) {
+			# Special case for Xen on LVM
+			$diskmap{$vhost->{'id'}} = $vhost->{'xen_vg_free'};
+			}
+		else {
+			local $info = &get_server_collected($vhost);
+			$diskmap{$vhost->{'id'}} = $info->{'disk_free'};
+			}
+		}
+	@vhosts = sort { $diskmap{$b->{'id'}} <=> $diskmap{$a->{'id'}}} @vhosts;
 	return $vhosts[0];
-	# XXX
 	}
 else {
 	# Choose randomly
 	local $r = int(rand()*scalar(@vhosts));
 	return $vhosts[$r];
 	}
-# XXX error handling?
 }
 
 # plugin_call(module, function, [arg, ...])
