@@ -315,6 +315,8 @@ create_xenmanual=Other configuration file entries
 create_xenvnc=Configuring Xen instance for VNC console access ..
 create_xenvncfailed=.. failed : $1
 create_xenvncdone=.. added on display $1
+create_edisklimit=Creating this system would exceed your total disk limit of $1. Currently you are using $2 of disk space.
+create_edisklimit2=Creating this system would exceed your total disk limit of $1, as it does not have any limits on disk usage.
 
 keys_title=SSH Keys
 keys_desc=Key description

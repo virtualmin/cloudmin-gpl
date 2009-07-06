@@ -94,6 +94,34 @@ elsif (!$serial && !$key) {
 		&error($text{'create_eimagevirt'});
 		}
 	}
+
+# Validate resource limits
+$limits = &get_owner_limits();
+if ($limits) {
+	# Validate disk limit
+	$dsfunc = "type_".$in{'type'}."_get_disk_size";
+	$incr = defined(&$dsfunc) ? &$dsfunc($server) : undef;
+	if ($incr && $limits->{'max_disk'}) {
+		# May be over disk limit
+		if ($limits->{'disk'} + $incr > $limits->{'max_disk'}) {
+			&error(&text('create_edisklimit',
+			       &nice_size($limits->{'max_disk'}),
+			       &nice_size($limits->{'disk'})));
+			}
+		}
+	elsif (!$incr && $limits->{'max_disk'}) {
+		# System has no disk limits, but owner does
+		&error(&text('create_edisklimit2',
+		       &nice_size($limits->{'max_disk'})));
+		}
+
+	# Validate RAM limit
+	# XXX
+
+	# Validate CPU limit
+	# XXX
+	}
+
 &ui_print_unbuffered_header(undef, $text{'create_title'}, "");
 &obtain_lock_server($server);
 
