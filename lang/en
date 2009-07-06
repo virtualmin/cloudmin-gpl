@@ -2271,6 +2271,7 @@ plan_hostmode=Host system selection
 plan_hostmodefree=By system owner
 plan_hostmodemem=Automatically select system with most free RAM
 plan_hostmodedisk=Automatically select system with most free disk space
+plan_hostmoderand=Choose system randomly
 plan_ehosts=No host systems selected
 
 dplan_err=Failed to delete plans

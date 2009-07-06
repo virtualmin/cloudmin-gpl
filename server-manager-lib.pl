@@ -5673,7 +5673,26 @@ sub find_host_server
 local ($server, $htype) = @_;
 local @vhosts = grep { $_->{$htype.'_host'} &&
                        &can_host_server($_) } &list_managed_servers();
-# XXX
+@vhosts = grep { $_->{'status'} eq 'nowebmin' ||
+		 $_->{'status'} eq 'novirt' ||
+		 $_->{'status'} eq 'virt' } @vhosts;
+return undef if (!@vhosts);
+if ($access{'hostmode'} eq 'mem') {
+	# Sort by free memory, get best
+	return $vhosts[0];
+	# XXX
+	}
+elsif ($access{'hostmode'} eq 'disk') {
+	# Sort by free disk
+	return $vhosts[0];
+	# XXX
+	}
+else {
+	# Choose randomly
+	local $r = int(rand()*scalar(@vhosts));
+	return $vhosts[$r];
+	}
+# XXX error handling?
 }
 
 # plugin_call(module, function, [arg, ...])
