@@ -145,6 +145,48 @@ if (defined(&get_server_usage)) {
 	print &ui_hidden_table_end();
 	}
 
+# Section for current usage and limits from plan
+if (&supports_plans() && !$in{'new'}) {
+	print &ui_hidden_table_start($text{'owner_header4'}, "width=100%", 2,
+				     "planlimits", 0, [ 'width=30%' ]);
+	$limits = &get_owner_limits($owner->{'name'});
+
+	# Limit on systems and count
+	print &ui_table_row($text{'owner_serverlimit'},
+		&text('owner_outof',
+		      $limits->{'servers'},
+		      $limits->{'max_servers'} || $text{'owner_unlimit'}));
+
+	# Limit on RAM and count
+	print &ui_table_row($text{'owner_ramlimit'},
+		&text('owner_outof',
+		      &nice_size($limits->{'ram'}),
+		      $limits->{'max_ram'} ? &nice_size($limits->{'max_ram'})
+					   : $text{'owner_unlimit'}).' '.
+		($limits->{'ram_unlimited'} ?
+		  &text('owner_nolimit', $limits->{'ram_unlimited'}) : ''));
+
+	# Limit on disk and count
+	print &ui_table_row($text{'owner_disklimit'},
+		&text('owner_outof',
+		      &nice_size($limits->{'disk'}),
+		      $limits->{'max_disk'} ? &nice_size($limits->{'max_disk'})
+					   : $text{'owner_unlimit'}).' '.
+		($limits->{'disk_unlimited'} ?
+		  &text('owner_nolimit', $limits->{'disk_unlimited'}) : ''));
+
+	# Limits on CPU
+	print &ui_table_row($text{'owner_cpulimit'},
+		&text('owner_outof',
+		      $limits->{'cpu'}.'%',
+		      $limits->{'max_cpu'} ? $limits->{'max_cpu'}.'%'
+					   : $text{'owner_unlimit'}).' '.
+		($limits->{'cpu_unlimited'} ?
+		  &text('owner_nolimit', $limits->{'cpu_unlimited'}) : ''));
+
+	print &ui_hidden_table_end();
+	}
+
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
 	       : [ [ undef, $text{'save'} ],

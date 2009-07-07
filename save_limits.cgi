@@ -97,20 +97,37 @@ if (defined($in{'cpu'}) || defined($in{'weight'}) || defined($in{'cpu_def'})) {
 		&$second_print($text{'limits_already'});
 		}
 	else {
-		# Call set function and check
-		$cfunc = "type_".$t."_save_cpu";
-		$err = &$cfunc($server,
-			       !defined($in{'cpu'}) ? undef :
-			       $in{'cpu_def'} ? 0 : $in{'cpu'},
-			       !defined($in{'weight'}) ? undef : $in{'weight'});
-		if ($err) {
-			&$second_print(&text('limits_failed', $err));
+		# Check CPU limit
+		$c = !defined($in{'cpu_def'}) ? undef :
+		     $in{'cpu_def'} ? 0 : $in{'cpu'};
+	        $w = !defined($in{'weight'}) ? undef : $in{'weight'};
+		$incr = $c - $oldc;
+		if ($limits && $limits->{'max_cpu'} &&
+		    $limits->{'cpu'} + $incr > $limits->{'max_cpu'} &&
+		    defined($c)) {
+			# Over CPU limit
+			&$second_print(&text('limits_ecpulimit',
+				$limits->{'max_cpu'}, $limits->{'cpu'}));
+			}
+		elsif ($limits && $limits->{'max_cpu'} && !$c &&
+		       defined($c)) {
+			# Set to unlimited but not allowed
+			&$second_print(&text('limits_ecpulimit2',
+				$limits->{'max_cpu'}));
 			}
 		else {
-			&$second_print($text{'create_done'});
-			$cfunc = "type_".$t."_can_cpu";
-			$reboot++ if (&$cfunc($server) == 2 ||
-				      &$cfunc($server) == 4);
+			# Call set function and check
+			$cfunc = "type_".$t."_save_cpu";
+			$err = &$cfunc($server, $c, $w);
+			if ($err) {
+				&$second_print(&text('limits_failed', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				$cfunc = "type_".$t."_can_cpu";
+				$reboot++ if (&$cfunc($server) == 2 ||
+					      &$cfunc($server) == 4);
+				}
 			}
 		}
 	}

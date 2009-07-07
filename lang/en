@@ -321,6 +321,8 @@ create_edisklimit=Creating this system would exceed your total disk limit of $1.
 create_edisklimit2=Creating this system would exceed your total disk limit of $1, as it does not have any limits on disk usage.
 create_eramlimit=Creating this system would exceed your total memory limit of $1. Currently you are using $2 of memory.
 create_eramlimit2=Creating this system would exceed your total memory limit of $1, as it does not have any limits on memory usage.
+create_ecpulimit=Creating this system would exceed your total CPU limit of $1%. Currently you are using $2% of CPU.
+create_ecpulimit2=Creating this system would exceed your total CPU limit of $1%, as it does not have any limits on CPU usage.
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -1583,7 +1585,9 @@ limits_settingbw=Setting bandwidth limit to $1 ..
 limits_settingbwu=Setting bandwidth limit to Unlimited ..
 limits_ebw=Missing or invalid bandwidth limit
 limits_eramlimit=.. this would exceed your total memory limit of $1. Currently you are using $2 of memory.
-limits_eramlimit2=.. this would exceed your total memory limit of $1, as it does not have any limits on memory usage.
+limits_eramlimit2=.. this would exceed your total memory limit of $1, as it removes any limits on memory usage.
+limits_ecpulimit=.. this would exceed your total CPU limit of $1%. Currently you are using $2% of CPU.
+limits_ecpulimit2=.. this would exceed your total CPU limit of $1%, as it removes any limits on CPU usage.
 
 run_before_create=Running pre-creation script ..
 run_after_create=Running post-creation script ..
@@ -1838,6 +1842,14 @@ owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
 owner_egone=System owner no longer exists!
 owner_switch=Switch to Owner
+owner_header4=Limits and usage
+owner_serverlimit=Virtual systems
+owner_ramlimit=RAM assigned to systems
+owner_disklimit=Disk assigned to systems
+owner_cpulimit=CPU assigned to systems
+owner_outof=$1 out of $2
+owner_unlimit=unlimited
+owner_nolimit=($1 systems have no limit)
 
 downers_err=Failed to delete system owners
 downers_enone=None selected

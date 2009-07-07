@@ -72,18 +72,51 @@ if ($multi) {
 			print "    Managed system: $s->{'host'}\n";
 			}
 		if (&supports_plans()) {
+			# Limits and usage
 			$plan = &get_plan($o->{'acl'}->{'plan'});
+			$limits = &get_owner_limits($o->{'name'});
 			print "    Plan: ",$plan->{'desc'},"\n";
 			print "    Max systems: ",
-				$o->{'acl'}->{'max_servers'},"\n";
+				($o->{'acl'}->{'max_servers'} || "Unlimited"),
+				"\n";
+			print "    Current systems: ",
+				$limits->{'servers'},"\n";
+
 			print "    Max RAM: ",
-				&nice_size($o->{'acl'}->{'max_ram'}),"\n";
+				($o->{'acl'}->{'max_ram'} ?
+				   &nice_size($o->{'acl'}->{'max_ram'}) :
+				   "Unlimited"),"\n";
 			print "    Max RAM in bytes: ",
-				$o->{'acl'}->{'max_ram'},"\n";
+				($o->{'acl'}->{'max_ram'} || "Unlimited"),"\n";
+			if ($limits->{'ram'}) {
+				print "    Current RAM: ",
+					&nice_size($limits->{'ram'}),"\n";
+				print "    Current RAM in bytes: ",
+					$limits->{'ram'},"\n";
+				}
+
 			print "    Max disk: ",
-				&nice_size($o->{'acl'}->{'max_disk'}),"\n";
+				($o->{'acl'}->{'max_disk'} ?
+				   &nice_size($o->{'acl'}->{'max_disk'}) :
+				   "Unlimited"),"\n";
 			print "    Max disk in bytes: ",
-				$o->{'acl'}->{'max_disk'},"\n";
+				($o->{'acl'}->{'max_disk'} || "Unlimited"),"\n";
+			if ($limits->{'disk'}) {
+				print "    Current disk: ",
+					&nice_size($limits->{'disk'}),"\n";
+				print "    Current disk in bytes: ",
+					$limits->{'disk'},"\n";
+				}
+
+			print "    Max CPU: ",
+				($o->{'acl'}->{'max_cpu'} ?
+				   $o->{'acl'}->{'max_cpu'}."%" : "Unlimited"),
+				"\n";
+			if ($limits->{'cpu'}) {
+				print "    Current CPU: ",
+					$limits->{'cpu'},"%\n";
+				}
+
 			print "    Actions from plan: ",
 				($o->{'acl'}->{'actions_def'} ? "Yes" : "No"),
 				"\n";
