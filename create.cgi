@@ -392,6 +392,7 @@ if (defined(&$cfunc)) {
 	else {
 		print $text{'create_done'},"<p>\n";
 		}
+	&save_managed_server($server);
 	}
 
 # Enable package management

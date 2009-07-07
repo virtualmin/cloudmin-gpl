@@ -44,9 +44,9 @@ if (&foreign_check("useradmin")) {
 return "Users and Groups module is not installed or not supported";
 }
 
-# delete_login_user(&server)
+# delete_console_user(&server)
 # Deletes the console Unix user for a server
-sub delete_login_user
+sub delete_console_user
 {
 local ($server) = @_;
 if (!$server->{'login_user'}) {
@@ -60,7 +60,7 @@ if (&foreign_check("useradmin")) {
 	local ($uinfo) = grep { $_->{'user'} eq $server->{'login_user'} }
 			      @users;
 	return "User $server->{'login_user'} does not exist" if (!$uinfo);
-	&useradmin::set_user_envs($user, 'DELETE_USER');
+	&useradmin::set_user_envs($uinfo, 'DELETE_USER');
 	&useradmin::making_changes();
 	&useradmin::delete_user($uinfo);
 	&useradmin::made_changes();

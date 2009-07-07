@@ -430,7 +430,7 @@ else {
 sub delete_managed_server
 {
 local ($server, $keep) = @_;
-&delete_login_user($server);
+&delete_console_user($server);
 if ($server->{'id'}) {
 	&servers::delete_server($server->{'id'});
 	}

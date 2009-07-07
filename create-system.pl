@@ -489,6 +489,7 @@ $cfunc = "type_".$type."_supports_console_login";
 if (defined(&$cfunc)) {
 	print "Creating console access user ..\n";
 	$err = &create_console_user($server);
+	&save_managed_server($server);
 	print $err ? ".. creation failed : $err\n\n" : ".. done\n\n";
 	}
 
