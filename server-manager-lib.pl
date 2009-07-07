@@ -5304,9 +5304,11 @@ if (defined(&$dfunc)) {
         &$dfunc($server, $serial, $key);
         }
 
-# Refresh status
+# Refresh status, forcing a full re-collection
 &$first_print($text{'save_refreshing'});
-&check_server_status($server, 0, 1);
+&save_server_domains($server, [ ]);
+&save_server_collected($server, undef);
+&check_server_status($server, 1);
 &save_managed_server($server);
 &$second_print(&text('save_refreshdone2',
 	&describe_status($server, 1, 1)));
