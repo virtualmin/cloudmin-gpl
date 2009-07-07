@@ -176,7 +176,7 @@ if (!&$ifunc($server, $image, $temp, $munge ? 0 : 2)) {
 
 # Transfer the image file to the master
 &$first_print("Fetching image files from host ..");
-$err = &fetch_image_files($vhost, $image, $temp, 0);
+$err = &fetch_image_files($vhost, $image, $temp, 0, $server);
 if ($err) {
 	&$second_print(".. failed : $err");
 	}

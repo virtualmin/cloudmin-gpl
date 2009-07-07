@@ -221,36 +221,10 @@ if ($vhost->{$prefix.'_cachesize'}) {
 	$imagedir = $cachedir;
 
 	# If cache is too big, clean up some files first
-	local ($out, $ex, $err) = &execute_command_on_server(
-				$vhost, "du -k ".quotemeta($cachedir)."/*");
-	local $totalsize = $img->{'size'};
-	foreach my $l (split(/\r?\n/, $out)) {
-		local ($kb, $f) = split(/\s+/, $l);
-		$f =~ s/^\Q$cachedir\E\///g;
-		$totalsize += $kb*1024;
-		$sizemap{$f} = $kb*1024;
-		}
 	local $maxsize = $vhost->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
-	if ($totalsize > $maxsize) {
-		# Too big! Delete images, ordered by time
-		local ($out, $ex, $err) = &execute_command_on_server(
-			$vhost, "ls -t ".quotemeta($cachedir));
-		if ($ex || $err) {
-			return (0, "Failed to list cache files for cleanup : ".
-				   ($err || $out));
-			}
-		local @delfiles = reverse(split(/\r?\n/, $out));
-		while(@delfiles && $totalsize > $maxsize) {
-			local $f = $delfiles[0];
-			local $err = &delete_file_on_server(
-				$vhost, "$cachedir/$f");
-			if ($err) {
-				return (0, "Failed to delete old cached ".
-					   "file $f : $err");
-				}
-			$totalsize -= $sizemap{$f};
-			}
-		}
+	local $err = &cleanup_cache_dir($vhost, $cachedir,
+					$maxsize, $img->{'size'});
+	return (0, $err) if ($err);
 	}
 else {
 	# Choose a temp dir
@@ -291,6 +265,45 @@ if ($cachedir eq $imagedir) {
 else {
 	return (1, $imagedir);
 	}
+}
+
+# cleanup_cache_dir(vhost, cachedir, max-size, need-size)
+# If the cache size is larger than some maximum, delete older files. Returns
+# undef on success or an error message on failure.
+sub cleanup_cache_dir
+{
+local ($vhost, $cachedir, $maxsize, $incr) = @_;
+return undef if ($incr <= 0);
+local ($out, $ex, $err) = &execute_command_on_server(
+			$vhost, "du -k ".quotemeta($cachedir)."/*");
+local $totalsize = $incr;
+local %sizemap;
+foreach my $l (split(/\r?\n/, $out)) {
+	local ($kb, $f) = split(/\s+/, $l);
+	$f =~ s/^\Q$cachedir\E\///g;
+	$totalsize += $kb*1024;
+	$sizemap{$f} = $kb*1024;
+	}
+if ($totalsize > $maxsize) {
+	# Too big! Delete images, ordered by time
+	local ($out, $ex, $err) = &execute_command_on_server(
+		$vhost, "ls -t ".quotemeta($cachedir));
+	if ($ex || $err) {
+		return "Failed to list cache files for cleanup : ".
+		       ($err || $out);
+		}
+	local @delfiles = reverse(split(/\r?\n/, $out));
+	while(@delfiles && $totalsize > $maxsize) {
+		local $f = $delfiles[0];
+		local $err = &delete_file_on_server(
+			$vhost, "$cachedir/$f");
+		if ($err) {
+			return "Failed to delete old cached file $f : $err";
+			}
+		$totalsize -= $sizemap{$f};
+		}
+	}
+return undef;
 }
 
 # cleanup_image_files(&server, imagetemp)
@@ -788,16 +801,22 @@ foreach my $fix ("$roothome/.ssh/authorized_keys",
 return \@rv;
 }
 
-# fetch_image_files(&vhost, &image, tempdir, [show-progress-dots])
+# fetch_image_files(&vhost, &image, tempdir, show-progress-dots?, &server)
 # Fetches from some host system the files that make up some image, and saves
 # them in the /var/webmin/server-manager directory on this system. Since this
 # can take some time, outputs progress dots.
 sub fetch_image_files
 {
-local ($vhost, $image, $temp, $progress) = @_;
+local ($vhost, $image, $temp, $progress, $server) = @_;
 
-foreach my $f (split(/\s+/, $image->{'files'})) {
+# Download each file in the image
+local $totalsize = 0;
+local $oldsize;
+local @imgfiles = split(/\s+/, $image->{'files'});
+foreach my $f (@imgfiles) {
 	local $path = "$server_images_dir/$f";
+	local @oldst = stat($path);
+	$oldsize += $st[7];
 	local $pid = fork();
 	local $outtemp = &tempname();
 	if (!$pid) {
@@ -818,7 +837,46 @@ foreach my $f (split(/\s+/, $image->{'files'})) {
 	if ($err) {
 		return "Failed to copy $f : $err";
 		}
+	local @st = stat($path);
+	if (!@st) {
+		return "Copy of $f to $path failed";
+		}
+	$totalsize += $st[7];
 	}
+
+# If caching is enabled, save in the cache too
+local $prefix = $server->{'manager'};
+$prefix = "zone" if ($prefix eq "zones");
+if ($vhost->{$prefix.'_cachesize'}) {
+	# Create the cache dir if needed
+	local $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
+	local ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"test -d ".quotemeta($cachedir).
+		" || mkdir -p ".quotemeta($cachedir));
+	if ($ex || $err) {
+		return "Failed to create cache directory $cachedir : ".
+		       ($err || $out);
+		}
+
+	# If the cache would be too big after adding the new images,
+	# clean it up first
+	local $maxsize = $vhost->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
+	local $err = &cleanup_cache_dir($vhost, $cachedir, $maxsize,
+					$totalsize - $oldsize);
+	return "Cache cleanup failed : $err" if ($err);
+
+	# Copy them into the cache
+	foreach my $f (@imgfiles) {
+		local ($out, $ex, $err) = &execute_command_on_server(
+			$vhost, "cp ".quotemeta("$temp/$f")." ".
+				      quotemeta("$cachedir/$f"));
+		if ($ex || $err) {
+			return "Failed to copy $f to cache : ".($err || $out);
+			}
+		}
+	}
+local $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
+
 return undef;
 }
 

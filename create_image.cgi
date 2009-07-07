@@ -76,7 +76,7 @@ if (!&$ifunc($server, $image, $temp, $in{'munge'} ? 0 : 2)) {
 
 # Transfer the image file to the master
 &$first_print($text{'mkimage_fetching'});
-$err = &fetch_image_files($vhost, $image, $temp, 1);
+$err = &fetch_image_files($vhost, $image, $temp, 1, $server);
 if ($err) {
 	&$second_print(&text('mkimage_failed', $err));
 	}
