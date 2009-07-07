@@ -5255,7 +5255,7 @@ if ($imageok == 1) {
 # Call any post-creation function
 $dfunc = "type_".$server->{'manager'}."_create_post";
 if (defined(&$dfunc)) {
-        &$dfunc($server, $serial, $key);
+        &$dfunc($server, $serial, $key, 1);
         }
 
 # Wait for SSH login
