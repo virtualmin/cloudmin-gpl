@@ -116,7 +116,21 @@ if ($limits) {
 		}
 
 	# Validate RAM limit
-	# XXX
+	$mfunc = "type_".$in{'type'}."_get_memory_size";
+	$incr = defined(&$mfunc) ? &$mfunc($server) : undef;
+	if ($incr && $limits->{'max_ram'}) {
+		# May be over RAM limit
+		if ($limits->{'ram'} + $incr > $limits->{'max_ram'}) {
+			&error(&text('create_eramlimit',
+			       &nice_size($limits->{'max_ram'}),
+			       &nice_size($limits->{'ram'})));
+			}
+		}
+	elsif (!$incr && $limits->{'max_ram'}) {
+		# System has no RAM limits, but owner does
+		&error(&text('create_eramlimit2',
+		       &nice_size($limits->{'max_ram'})));
+		}
 
 	# Validate CPU limit
 	# XXX

@@ -4071,19 +4071,6 @@ if (&can_action($server, "edit")) {
 		    'cat' => '',
 		    'link' => $ed,
 		    'priority' => 1 });
-	if ($server->{'virtualmin_poss'}) {
-		push(@rv, { 'id' => 'update',
-			    'desc' => &text('edit_link_update',
-					    $server->{'virtualmin_poss'}),
-			    'cat' => '',
-			    'link' => "edit_update.cgi?id=$server->{'id'}" });
-		}
-	if ($status eq 'virt') {
-		push(@rv, { 'id' => 'doms',
-			    'desc' => $text{'edit_link_doms'},
-			    'cat' => 'system',
-			    'link' => "edit_domains.cgi?id=$server->{'id'}" });
-		}
 	local $ifunc = "type_".$t."_list_interfaces";
 	local $cfunc = "type_".$t."_can_interfaces";
 	if (defined(&$ifunc) && &$cfunc($server) &&
@@ -4093,12 +4080,6 @@ if (&can_action($server, "edit")) {
 			    'cat' => 'system',
 			    'link' => "list_ifaces.cgi?id=$server->{'id'}" });
 		}
-	if (&can_edit_limits($server)) {
-		push(@rv, { 'id' => 'limits',
-			    'desc' => $text{'edit_link_limits'},
-			    'cat' => 'res',
-			    'link' => "edit_limits.cgi?id=$server->{'id'}" });
-		}
 	}
 elsif (&can_action($server, "view")) {
 	# Or link to view details
@@ -4107,6 +4088,32 @@ elsif (&can_action($server, "view")) {
 		    'cat' => '',
 		    'link' => "edit_serv.cgi?id=$server->{'id'}",
 		    'priority' => 1 });
+	}
+
+# Link for Virtualmin domains
+if ($status eq 'virt' && (&can_action($server, "edit") ||
+			  &can_action($server, "view"))) {
+	push(@rv, { 'id' => 'doms',
+		    'desc' => $text{'edit_link_doms'},
+		    'cat' => 'system',
+		    'link' => "edit_domains.cgi?id=$server->{'id'}" });
+	}
+
+# Link for updates, if any
+if ($server->{'virtualmin_poss'} && &can_action($server, "update")) {
+	push(@rv, { 'id' => 'update',
+		    'desc' => &text('edit_link_update',
+				    $server->{'virtualmin_poss'}),
+		    'cat' => '',
+		    'link' => "edit_update.cgi?id=$server->{'id'}" });
+	}
+
+# Link to edit limits
+if (&can_edit_limits($server) && &can_action($server, "limits")) {
+	push(@rv, { 'id' => 'limits',
+		    'desc' => $text{'edit_link_limits'},
+		    'cat' => 'res',
+		    'link' => "edit_limits.cgi?id=$server->{'id'}" });
 	}
 
 if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||

@@ -11,6 +11,7 @@ require './server-manager-lib.pl';
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "limits");
 $t = $server->{'manager'};
+$limits = &get_owner_limits();
 
 # Validate inputs
 if (defined($in{'memory'})) {
@@ -48,16 +49,32 @@ if (defined($in{'memory'}) || defined($in{'memory_def'})) {
 		&$second_print($text{'limits_already'});
 		}
 	else {
-		# Call set function and check
-		$mfunc = "type_".$t."_save_memory";
-		$err = &$mfunc($server, $m);
-		if ($err) {
-			&$second_print(&text('limits_failed', $err));
+		# Check limits
+		$incr = $m - $oldm;
+		if ($limits && $limits->{'max_ram'} &&
+		    $limits->{'ram'} + $incr > $limits->{'max_ram'}) {
+			# Over RAM limit
+			&$second_print(&text('limits_eramlimit',
+				&nice_size($limits->{'max_ram'}),
+				&nice_size($limits->{'ram'})));
+			}
+		elsif ($limits && $limits->{'max_ram'} && !$m) {
+			# Set to unlimited but not allowed
+			&$second_print(&text('limits_eramlimit2',
+				&nice_size($limits->{'max_ram'})));
 			}
 		else {
-			&$second_print($text{'create_done'});
-			$cfunc = "type_".$t."_can_memory";
-			$reboot++ if (&$cfunc($server) == 2);
+			# Call set function and check
+			$mfunc = "type_".$t."_save_memory";
+			$err = &$mfunc($server, $m);
+			if ($err) {
+				&$second_print(&text('limits_failed', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				$cfunc = "type_".$t."_can_memory";
+				$reboot++ if (&$cfunc($server) == 2);
+				}
 			}
 		}
 	}
@@ -99,7 +116,7 @@ if (defined($in{'cpu'}) || defined($in{'weight'}) || defined($in{'cpu_def'})) {
 	}
 
 # Bandwidth limit
-if (defined($in{'bw'})) {
+if (defined($in{'bw'}) && &can_action($server, "bw")) {
 	$bw = $in{'bw_def'} ? '' : $in{'bw'}*$in{'bw_units'};
 	&$first_print(&text($in{'bw_def'} ? 'limits_settingbwu' :
 				'limits_settingbw', &nice_size($bw)));

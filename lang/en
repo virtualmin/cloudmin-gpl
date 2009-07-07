@@ -319,6 +319,8 @@ create_xenvncfailed=.. failed : $1
 create_xenvncdone=.. added on display $1
 create_edisklimit=Creating this system would exceed your total disk limit of $1. Currently you are using $2 of disk space.
 create_edisklimit2=Creating this system would exceed your total disk limit of $1, as it does not have any limits on disk usage.
+create_eramlimit=Creating this system would exceed your total memory limit of $1. Currently you are using $2 of memory.
+create_eramlimit2=Creating this system would exceed your total memory limit of $1, as it does not have any limits on memory usage.
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -1580,6 +1582,8 @@ limits_settingcpu2=Setting CPU to $1 ..
 limits_settingbw=Setting bandwidth limit to $1 ..
 limits_settingbwu=Setting bandwidth limit to Unlimited ..
 limits_ebw=Missing or invalid bandwidth limit
+limits_eramlimit=.. this would exceed your total memory limit of $1. Currently you are using $2 of memory.
+limits_eramlimit2=.. this would exceed your total memory limit of $1, as it does not have any limits on memory usage.
 
 run_before_create=Running pre-creation script ..
 run_after_create=Running post-creation script ..
@@ -1825,7 +1829,7 @@ owner_action_pause=Pause and un-pause
 owner_action_reset=Reset from image
 owner_action_create=Create systems
 owner_action_delete=Delete systems
-owner_action_limits=Edit resource limits
+owner_action_limits=Edit RAM and CPU limits
 owner_action_disks=Manage disks
 owner_action_devices=Add files or devices as disks
 owner_action_advanced=Use advanced system creation options
