@@ -25,6 +25,7 @@ $image = { 'id' => $imageid,
 	   'desc' => $in{'desc'},
 	   'manager' => $server->{'manager'},
 	   'nocompress' => !$in{'compress'},
+	   'type' => $server->{'type'},
 	 };
 $image->{'version'} = $in{'version'} if (!$in{'version_def'});
 $info = &get_server_collected($server);

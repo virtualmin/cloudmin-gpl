@@ -273,6 +273,8 @@ create_exennet=.. failed : $1. The Xen instance may be in-accessible after it is
 create_xenmemory=Memory allocated to instance
 create_xenswapsize=Swap file size for instance
 create_xennoswap=No swap file
+create_xencpu=Maximum CPU use
+create_exencpu=Maximum CPU use must be a number
 create_exenmemory=Memory allocated must be a number
 create_exenswapsize=Swap file size must be a number
 create_xenstartup=Starting up new Xen instance ..
@@ -288,6 +290,7 @@ create_update=Update Virtualmin packages?
 create_vlicence=License for Virtualmin Pro from image
 create_vheader=Virtualmin options
 create_aheader=Advanced options
+create_lheader=Resource limit options
 create_eimagevirt=You have selected a system image with Virtualmin Pro, but have not entered license details
 create_xendnswarn=Warning : No DNS zone for new Xen instances has been configured on the <a href='$1'>module configuration</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.
 create_xenmac=MAC address for primary interface

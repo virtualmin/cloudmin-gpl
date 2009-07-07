@@ -10,7 +10,7 @@ require './server-manager-lib.pl';
 print &ui_form_start("create.cgi", "post");
 print &ui_hidden("type", $in{'type'});
 print &ui_hidden_table_start($text{'create_header'}, "width=100%", 2,
-			     "main", 1);
+			     "main", 1, [ "width=30%" ]);
 
 # Type of system
 $tfunc = "type_".$in{'type'}."_desc";
@@ -92,20 +92,29 @@ if (defined(&$ffunc)) {
 	print &$ffunc();
 	}
 
-print &ui_table_end();
+print &ui_hidden_table_end();
+
+# Type-specific limit options
+$afunc = "type_".$in{'type'}."_limits_create_form";
+if (defined(&$afunc)) {
+	print &ui_hidden_table_start($text{'create_lheader'}, "width=100%", 2,
+				     "limits", 0, [ "width=30%" ]);
+	print &$afunc();
+	print &ui_hidden_table_end();
+	}
 
 # Type-specific advanced options
 $afunc = "type_".$in{'type'}."_advanced_create_form";
 if (defined(&$afunc) && &can_action(undef, "advanced")) {
 	print &ui_hidden_table_start($text{'create_aheader'}, "width=100%", 2,
-				     "advanced", 0);
+				     "advanced", 0, [ "width=30%" ]);
 	print &$afunc();
 	print &ui_hidden_table_end();
 	}
 
 # Start of section for Virtualmin options
 print &ui_hidden_table_start($text{'create_vheader'}, "width=100%", 2,
-			     "virtualmin");
+			     "virtualmin", 0, [ "width=30%" ]);
 
 # Virtualmin licence
 print &ui_table_row($text{'create_vlicence'},

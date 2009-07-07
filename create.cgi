@@ -133,7 +133,21 @@ if ($limits) {
 		}
 
 	# Validate CPU limit
-	# XXX
+	$cfunc = "type_".$in{'type'}."_get_cpu_size";
+	$incr = defined(&$cfunc) ? &$cfunc($server) : undef;
+	if ($incr && $limits->{'max_cpu'}) {
+		# May be over CPU limit
+		if ($limits->{'cpu'} + $incr > $limits->{'max_cpu'}) {
+			&error(&text('create_ecpulimit',
+			       $limits->{'max_cpu'},
+			       $limits->{'cpu'}));
+			}
+		}
+	elsif (!$incr && $limits->{'max_cpu'}) {
+		# System has no CPU limit, but owner does
+		&error(&text('create_ecpulimit2',
+		       $limits->{'max_cpu'}));
+		}
 	}
 
 &ui_print_unbuffered_header(undef, $text{'create_title'}, "");

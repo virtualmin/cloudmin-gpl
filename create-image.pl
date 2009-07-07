@@ -129,6 +129,7 @@ $image = { 'id' => $id,
 	   'manager' => $server->{'manager'},
 	   'version' => $version,
 	   'nocompress' => $nocompress,
+	   'type' => $server->{'type'},
 	 };
 $info = &get_server_collected($server);
 if ($info && $info->{'minfo'} && $info->{'minfo'}->{'version'}) {
