@@ -4219,13 +4219,13 @@ else {
 		}
 	if (($status eq 'novirt' || $status eq 'nowebmin') &&
 	    $server->{'manager'} ne 'this' &&
-	    &can_action($server, "installvirt")) {
+	    &can_action($server, "run")) {
 		push(@rv, { 'id' => 'installvirt',
 			    'desc' => $text{'edit_installvirt'},
 			    'cat' => 'manage' });
 		}
 	if ($status eq 'nowebmin' &&
-	    &can_action($server, "installwebmin")) {
+	    &can_action($server, "run")) {
 		push(@rv, { 'id' => 'installwebmin',
 			    'desc' => $text{'edit_installwebmin'},
 			    'cat' => 'manage' });
@@ -4484,15 +4484,17 @@ if (!$nonone) {
 push(@opts, [ 1, &text('virtualmin_smode1',
 		       &ui_textbox($name."_serial", undef, 20),
 		       &ui_textbox($name."_key", undef, 20))."<br>" ]);
-local ($vaserial, $vakey) = &allocate_virtualmin_serial(1);
-if ($vaserial) {
-	$cansame = 1;
-	push(@opts, [ 2, $text{'virtualmin_smode2'}."<br>" ]);
-	}
-local ($aserial, $akey) = &allocate_virtualmin_serial(0);
-if ($aserial) {
-	push(@opts, [ 3, $text{'virtualmin_smode3'}."<br>" ]);
-	$canalloc = 1;
+if (&can_action(undef, "licence")) {
+	local ($vaserial, $vakey) = &allocate_virtualmin_serial(1);
+	if ($vaserial) {
+		$cansame = 1;
+		push(@opts, [ 2, $text{'virtualmin_smode2'}."<br>" ]);
+		}
+	local ($aserial, $akey) = &allocate_virtualmin_serial(0);
+	if ($aserial) {
+		push(@opts, [ 3, $text{'virtualmin_smode3'}."<br>" ]);
+		$canalloc = 1;
+		}
 	}
 if ($gpl) {
 	# GPL mode, only for script install
@@ -4529,11 +4531,11 @@ elsif ($in->{$name} == 1) {
 	$lok > 0 || return (undef, $text{'virtualmin_evalid'});
 	return ($in{$name."_serial"}, $in{$name."_key"});
 	}
-elsif ($in->{$name} == 2) {
+elsif ($in->{$name} == 2 && &can_action(undef, "licence")) {
 	# Same as Cloudmin
 	return &get_server_manager_serial();
 	}
-elsif ($in->{$name} == 3) {
+elsif ($in->{$name} == 3 && &can_action(undef, "licence")) {
 	# Allocate from pool
 	local ($aserial, $akey) = &allocate_virtualmin_serial(0);
 	return ($aserial, $akey);

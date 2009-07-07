@@ -185,7 +185,7 @@ elsif ($in{'delete'}) {
 
 elsif ($in{'installvirt'}) {
 	# Install Virtualmin, which may take a while
-	&can_action_error($server, "installvirt");
+	&can_action_error($server, "run");
 	&ui_print_header(&server_in($server), $text{'save_virttitle'}, "");
 
 	if (!$in{'confirm'}) {
@@ -257,7 +257,7 @@ elsif ($in{'installvirt'}) {
 
 elsif ($in{'installwebmin'}) {
 	# Install Webmin
-	&can_action_error($server, "installwebmin");
+	&can_action_error($server, "run");
 	&ui_print_header(&server_in($server), $text{'save_webmintitle'}, "");
 	&obtain_lock_server($server);
 
