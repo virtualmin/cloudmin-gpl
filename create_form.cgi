@@ -29,12 +29,13 @@ print &ui_table_row($text{'add_desc'},
 
 # System image, if any are available for the server type
 @images = &list_server_images($in{'type'});
+@images = grep { &can_image($_) } @images;
 if (@images) {
 	$ifunc = "type_".$in{'type'}."_must_image";
 	$mustimage = defined(&$ifunc) && &$ifunc();
 	print &ui_table_row($text{'create_image'},
 		&ui_select("image", undef,
-			[ $mustimage ? ( )
+			[ $mustimage || !&can_image(undef) ? ( )
 				     : ( [ undef, $text{'create_noimage'} ] ),
 			  map { [ $_->{'id'}, $_->{'desc'} ] }
 			      sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }

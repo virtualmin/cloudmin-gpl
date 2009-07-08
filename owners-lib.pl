@@ -235,6 +235,19 @@ sub can_select_host_server
 return !$access{'hostmode'};
 }
 
+# can_image([&image])
+# Returns 1 if the current user can use some image. If no image is given, checks
+# if creation from the base OS is allowed (as on Vservers or Zones)
+sub can_image
+{
+local ($image) = @_;
+if ($access{'images'}) {
+	local @imgids = split(/\s+/, $access{'images'});
+	return &indexof($image ? $image->{'id'} : 'none', @imgids) >= 0;
+	}
+return 1;
+}
+
 # get_server_owners(&server)
 # Returns a list of owner objects for some server
 sub get_server_owners
@@ -422,6 +435,7 @@ if ($o->{'acl'}->{'actions_def'}) {
 	}
 $o->{'acl'}->{'hosts'} = $plan->{'hosts'};
 $o->{'acl'}->{'hostmode'} = $plan->{'hostmode'};
+$o->{'acl'}->{'images'} = $plan->{'images'};
 }
 
 1;

@@ -36,6 +36,16 @@ foreach my $f (readdir(DIR)) {
 			}
 		}
 	$img{'size'} = $size;
+	$img{'longdesc'} = $img{'desc'};
+	if (@server_management_types > 1) {
+		local $dfunc = "type_".$img{'manager'}."_desc";
+		if (defined(&$dfunc)) {
+			$img{'longdesc'} .= " - ".&$dfunc();
+			}
+		}
+	if ($img{'rawsize'}) {
+		$img{'longdesc'} .= " - ".&nice_size($img{'rawsize'});
+		}
 	push(@rv, \%img);
 	}
 closedir(DIR);

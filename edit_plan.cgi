@@ -111,6 +111,25 @@ print &ui_table_row($text{'plan_hostmode'},
 
 print &ui_hidden_table_end();
 
+@images = defined(&list_server_images) ? &list_server_images() : ( );
+if (@images) {
+	print &ui_hidden_table_start($text{'plan_header4'}, "width=100%", 2,
+				     "images", 0, [ "width=30%" ]);
+
+	# Allowed system images
+	print &ui_table_row($text{'plan_images'},
+		&ui_radio("images_def", $plan->{'images'} ? 0 : 1,
+			  [ [ 1, $text{'plan_images1'} ],
+			    [ 0, $text{'plan_images0'} ] ])."<br>\n".
+		&ui_select("images", [ split(/\s+/, $plan->{'images'}) ],
+			   [ [ "none", $text{'plan_noimage'} ],
+			     map { [ $_->{'id'}, $_->{'longdesc'} ] }
+				 sort { $a->{'desc'} cmp $b->{'desc'} }
+				      &list_server_images() ], 10, 1));
+
+	print &ui_hidden_table_end();
+	}
+
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
 	       : [ [ undef, $text{'plan_save'} ],

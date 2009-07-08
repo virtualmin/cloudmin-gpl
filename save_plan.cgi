@@ -91,6 +91,18 @@ else {
 		$plan->{'hosts'} = join(' ', split(/\0/, $in{'hosts'}));
 		}
 
+	# Allowed system images
+	if (defined($in{'images_def'})) {
+		if ($in{'images_def'}) {
+			delete($plan->{'images'});
+			}
+		else {
+			$in{'images'} eq '' && &error($text{'plan_eimages'});
+			$plan->{'images'} =
+				join(' ', split(/\0/, $in{'images'}));
+			}
+		}
+
 	# Allocation mode
 	$plan->{'hostmode'} = $in{'hostmode'};
 
