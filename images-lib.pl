@@ -294,7 +294,7 @@ if ($totalsize > $maxsize) {
 		}
 	local @delfiles = reverse(split(/\r?\n/, $out));
 	while(@delfiles && $totalsize > $maxsize) {
-		local $f = $delfiles[0];
+		local $f = shift(@delfiles);
 		local $err = &delete_file_on_server(
 			$vhost, "$cachedir/$f");
 		if ($err) {

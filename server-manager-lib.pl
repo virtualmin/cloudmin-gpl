@@ -2666,17 +2666,25 @@ local @startips = split(/\s+/, $startips);
 local @endips = split(/\s+/, $endips);
 local @cidrs = split(/\s+/, $cidrs);
 local %used = &used_ip_addresses();
+
+# Find out which IPs we might be able to use
+local @poss;
 for(my $i=0; $i<@startips; $i++) {
 	local $start = &net::ip_to_integer($startips[$i]);
 	local $end = &net::ip_to_integer($endips[$i]);
 	for(my $n=$start; $n<=$end; $n++) {
 		local $ip = &net::integer_to_ip($n);
-		if (!$used{$ip} && !&ping_server_host($ip)) {
-			return ($ip, $cidrs[$i]);
-			}
+		push(@poss, { 'id' => $ip, 'ip' => $ip, 'cidr' => $cidrs[$i] })
+			if (!$used{$ip});
 		}
 	}
-return ( );
+
+# Parallel ping them all
+local @rvs = map { $_->[0] } grep { $_ } &parallel_server_function(\@poss, 
+	sub { return &ping_server_host($_[0]->{'ip'}) ? undef : $_[0] });
+@rvs = sort { &net::ip_to_integer($a->{'ip'}) <=>
+	      &net::ip_to_integer($b->{'ip'}) } @rvs;
+return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'} ) : ( );
 }
 
 # describe_ip_range(start-ips, end-ips)
