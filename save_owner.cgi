@@ -79,13 +79,11 @@ else {
 		}
 
 	# Create or update
-	&save_system_owner($owner, $old);
-
-	# Apply this plan, if any
 	if (&supports_plans()) {
-		$plan = &get_plan($in{'plan'});
-		&apply_plan($plan);
+                $plan = &get_plan($in{'plan'});
+		&apply_plan_to_owner($plan, $owner);
 		}
+	&save_system_owner($owner, $old);
 	}
 
 &redirect("list_owners.cgi");

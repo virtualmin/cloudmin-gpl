@@ -2548,7 +2548,7 @@ if ($zone) {
 		# Need to add
 		&bind8::create_record($zone->{'file'}, $dnsname, undef,
 				      "IN", "A", $ip);
-		&bind8::bump_soa_record(\@recs);
+		&bind8::bump_soa_record($zone->{'file'}, \@recs);
 
 		# See if we can add to a reverse too
 		local ($rfn, $rrecs, $arpa, $rzone) =
@@ -2559,7 +2559,7 @@ if ($zone) {
 			if (!$old) {
 				&bind8::create_record($rfn, $arpa.".", undef,
 						      "IN", "PTR", $dnsname);
-				&bind8::bump_soa_record($rrecs);
+				&bind8::bump_soa_record($rfn, $rrecs);
 				}
 			}
 
@@ -2590,7 +2590,7 @@ if ($zone && $dnsname) {
 		&bind8::delete_record($zone->{'file'}, $r);
 		}
 	if (@r) {
-		&bind8::bump_soa_record(\@recs);
+		&bind8::bump_soa_record($zone->{'file'}, \@recs);
 		}
 
 	if (@r) {
@@ -2602,7 +2602,7 @@ if ($zone && $dnsname) {
 					 @$rrecs;
 			if ($old) {
 				&bind8::delete_record($rfn, $old);
-				&bind8::bump_soa_record($rrecs);
+				&bind8::bump_soa_record($rfn, $rrecs);
 				}
 			}
 		}
