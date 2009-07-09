@@ -2680,8 +2680,9 @@ for(my $i=0; $i<@startips; $i++) {
 	}
 
 # Parallel ping them all
-local @rvs = map { $_->[0] } grep { $_ } &parallel_server_function(\@poss, 
-	sub { return &ping_server_host($_[0]->{'ip'}) ? undef : $_[0] });
+local @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss, 
+	sub { my $p = &ping_server_host($_[0]->{'ip'});
+	      return $p ? undef : $_[0] });
 @rvs = sort { &net::ip_to_integer($a->{'ip'}) <=>
 	      &net::ip_to_integer($b->{'ip'}) } @rvs;
 return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'} ) : ( );
