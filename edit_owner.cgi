@@ -89,7 +89,7 @@ print &ui_table_row($text{'owner_actions'}, $afield);
 print &ui_hidden_table_end();
 
 # Section for usage data, if we have it
-if (defined(&get_server_usage)) {
+if (defined(&get_server_usage) && !$in{'new'}) {
 	print &ui_hidden_table_start($text{'owner_header2'}, "width=100%", 2,
 				     "usage", 0, [ 'width=30%' ]);
 
