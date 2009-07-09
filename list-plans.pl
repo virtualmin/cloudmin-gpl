@@ -79,10 +79,14 @@ if ($multi) {
 		print "    Allowed system types: ",
 		    join(" ", grep { $types{$_} }
 				   @virtual_server_management_types),"\n"; 
+
 		print "    System owners on plan: ",
 		    join(" ", map { $_->{'name'} }
 				grep { $_->{'acl'}->{'plan'} eq $p->{'id'} }
 				   @owners),"\n";
+
+		print "    Allowed images: ",
+			($p->{'images'} || "All"),"\n";
 		}
 	}
 elsif ($nameonly) {

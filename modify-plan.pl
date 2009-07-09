@@ -18,6 +18,11 @@ To add a new virtual system type to the list of those that system owners
 on this plan can created, use the C<--add-type> flag followed by a type
 name, like C<xen>. To take away a type, use the C<--remove-type> flag.
 
+To grant owners on this plan access to a system image, use the C<--image>
+flag followed by an image ID. Similarly, to deny access to an image use
+the C<--remove-image> flag. To given owners access to all images, use the
+C<--all-images> flag.
+
 The C<--can-*> and C<--cannot-*> families of flags can be used to grant or
 remove permissions on the systems account owners manage. For a full list, see
 the documentation for the C<create-plan> command.
@@ -46,6 +51,9 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 @allactions = &list_owner_actions();
+if (defined(&list_server_images)) {
+	@imageids = map { $_->{'id'} } &list_server_images();
+	}
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--name") {
@@ -81,6 +89,19 @@ while(@ARGV > 0) {
 		$t = shift(@ARGV);
 		push(@remtypes, $t);
 		}
+	elsif ($a eq "--add-image") {
+		$i = shift(@ARGV);
+		$i eq 'none' || &indexof($i, @imageids) >= 0 ||
+			&usage("$i is not a valid image ID");
+		push(@addimages, $i);
+		}
+	elsif ($a eq "--remove-image") {
+		$i = shift(@ARGV);
+		push(@remimages, $i);
+		}
+	elsif ($a eq "--all-images") {
+		$allimages = 1;
+		}
 	else {
 		&usage("Unknown flag $a");
 		}
@@ -108,12 +129,28 @@ $plan->{'actions'} = join(" ", &unique(@actions));
 foreach $m (keys %maxes) {
 	$plan->{'max_'.$m} = $maxes{$m};
 	}
+
+# Apply VPS type changes
 @types = split(/\s+/, $plan->{'types'});
 push(@types, @addtypes);
 foreach $a (@remtypes) {
 	@types = grep { $_ ne $a } @types;
 	}
 $plan->{'types'} = join(" ", &unique(@types));
+
+# Apply image changes
+if ($allimages) {
+	delete($plan->{'images'});
+	}
+else {
+	@images = split(/\s+/, $plan->{'images'});
+	push(@images, @addimages);
+	foreach $a (@remimages) {
+		@images = grep { $_ ne $a } @images;
+		}
+	@images || &usage("At least one image must be allowed");
+	$plan->{'images'} = join(" ", &unique(@images));
+	}
 
 &save_plan($plan);
 &apply_plan($plan);
@@ -133,6 +170,9 @@ print "                    [--add-type ".
       join("|", @virtual_server_management_types)."]*\n";
 print "                    [--remove-type ".
       join("|", @virtual_server_management_types)."]*\n";
+print "                    [--add-image id]*\n";
+print "                    [--remove-image id]*\n";
+print "                    [--all-images]\n";
 foreach $a (@allactions) {
 	print "                    [--can-$a | --cannot-$a]\n";
 	}

@@ -19,6 +19,11 @@ If your Cloudmin install manages more than one type of virtual system
 (such as Xen instances and Solaris Zones), the C<--type> flag can be given,
 followed by a system type. If missing, all VPS types will be allowed.
 
+By default, owners on this plan will be able to create virtual systems
+using any image. To restrict them to a subset of images, add the C<--image>
+flag followed by an image ID, like C<xen-centos5.3-base>. This can be given
+multiple times to allow more than one image.
+
 To specify which actions owners on this plan are allowed to perform, use
 the following flags :
 
@@ -58,6 +63,9 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 @allactions = &list_owner_actions();
+if (defined(&list_server_images)) {
+	@imageids = map { $_->{'id'} } &list_server_images();
+	}
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--name") {
@@ -79,6 +87,12 @@ while(@ARGV > 0) {
 			&usage("$t is not a valid system type");
 		push(@types, $t);
 		}
+	elsif ($a eq "--image") {
+		$i = shift(@ARGV);
+		$i eq 'none' || &indexof($i, @imageids) >= 0 ||
+			&usage("$i is not a valid image ID");
+		push(@images, $i);
+		}
 	else {
 		&usage("Unknown flag $a");
 		}
@@ -95,6 +109,7 @@ $clash && &usage("A plan with the same name already exists");
 $plan = { 'desc' => $name,
 	  'actions' => join(' ', @actions),
 	  'types' => join(' ', @types),
+	  'images' => join(' ', @images),
 	};
 foreach $m (keys %maxes) {
 	$plan->{'max_'.$m} = $maxes{$m};
@@ -115,6 +130,7 @@ print "                    [--max-disk bytes]\n";
 print "                    [--max-cpu percent]\n";
 print "                    [--type ".
       join("|", @virtual_server_management_types)."]*\n";
+print "                    [--image id]*\n";
 foreach $a (@allactions) {
 	print "                    [--can-$a]\n";
 	}
