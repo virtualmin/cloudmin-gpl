@@ -826,6 +826,9 @@ server_in=On system $1
 vserver_typedesc=Linux VServer
 vserver_typeshort=VServer
 
+openvz_typedesc=OpenVZ
+openvz_typeshort=OpenVZ
+
 vservers_title=VServer Host Systems
 vservers_add=Register a system for VServer hosting.
 vservers_host=System hostname
@@ -875,6 +878,45 @@ vserver_edist=Missing or invalid-looking distribution code - should be like <tt>
 
 vserver_createlink=Create VServer
 vserver_addlink=Add VServer
+
+openvzs_title=OpenVZ Host Systems
+openvzs_add=Register a system for OpenVZ hosting.
+openvzs_host=System hostname
+openvzs_os=OS
+openvzs_users=Hosted systems
+openvzs_nousers=None
+openvzs_manyusers=$1 systems
+openvzs_doneall=All possible systems have already been registered for OpenVZ hosting.
+openvzs_none=No systems have been registered for OpenVZ hosting yet.
+openvzs_none2=None of the registered systems can host OpenVZ containers.
+openvzs_return=list of OpenVZ hosts
+openvzs_dir=Base directory
+
+openvz_create=Register OpenVZ Host
+openvz_edit=Edit OpenVZ Host
+openvz_egone=The OpenVZ host no longer exists!
+openvz_header=OpenVZ host system details
+openvz_host=System hosting OpenVZ containers
+openvz_dir=Base directory for virtual systems
+openvz_domain=Add OpenVZ systems to DNS domain
+openvz_domain2=DNS domain for OpenVZ servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
+openvz_range=IP address allocation range
+openvz_startend=$1 to $2 / $3
+openvz_iface=Base network interface
+openvz_ether=First ethernet interface
+openvz_portclash=Check for possible port clashes?
+openvz_auto=Decide automatically
+openvz_reg=Register
+openvz_unreg=De-Register
+openvz_err=Failed to save OpenVZ host
+openvz_elinux=OpenVZ containers are only supported on Linux
+openvz_ewhich=The required command $1 does not exist. Perhaps the OpenVZ software is not installed?
+openvz_ekernel=The kernel does not include OpenVZ support. Perhaps it not been compiled with the required patch?
+openvz_edown=A system which cannot be contacted via SSH cannot be used for OpenVZ hosting
+openvz_esoft=The selected system cannot support OpenVZ containers : $1
+openvz_edir=The specified base directory does not exist
+openvz_ezone=Missing or invalid-looking DNS domain
+openvz_eiface=Missing or invalid-looking base network interface
 
 vchooser_title=Select VServer Instance
 vchooser_elogin=Failed to fetch VServers : $1
@@ -2312,3 +2354,8 @@ dplan_err=Failed to delete plans
 dplan_enone=None selected!
 dplan_eall=You cannot delete all account plans
 dplan_eusers=The plan $1 is still being used by $2 system owners
+
+openvz_createlink=Create OpenVZ Container
+openvz_addlink=Add OpenVZ Container
+
+

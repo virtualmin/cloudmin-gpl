@@ -38,6 +38,7 @@ use Socket;
 				      "xen",
 				      "vserver",
 				      "zones",
+				      "openvz",
 				      "ec2",
 				      "this",
 				    );
