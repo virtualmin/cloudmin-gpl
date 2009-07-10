@@ -2527,7 +2527,8 @@ if (&foreign_installed("bind8")) {
 	&foreign_require("bind8", "bind8-lib.pl");
 	return sort { $a->{'name'} cmp $b->{'name'} }
 		 grep { $_->{'type'} eq 'master' &&
-		        $_->{'name'} !~ /in-addr/i } &bind8::list_zone_names();
+		        $_->{'name'} !~ /in-addr|ip6.arpa/i }
+		      &bind8::list_zone_names();
 	}
 return ( );
 }
@@ -4972,7 +4973,7 @@ return wantarray ? @rv : $rv[0];
 sub is_virtual_server
 {
 local ($server) = @_;
-foreach my $t ('xen', 'vserver', 'zones') {
+foreach my $t (@virtual_server_management_types) {
 	return $t if ($server->{'manager'} eq $t);
 	}
 return undef;

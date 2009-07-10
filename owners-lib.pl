@@ -155,6 +155,19 @@ local ($type) = @_;
 local $tdesc = $text{$type.'_typeshort'};
 local @rv;
 local %actions = map { $_, 1 } split(/\s+/, $access{'actions'});
+
+# First check global license cap
+local %licence;
+&read_file_cached($licence_status, \%licence);
+if ($licence{'servers'} > 0) {
+	local @allservers = grep { &is_virtual_server($_) }
+				 &list_managed_servers();
+	if (scalar(@allservers) > $licence{'servers'}) {
+		@rv = ( 0, &text('can_ecreatelic', $licence{'servers'}) );
+		return wantarray ? @rv : $rv[0];
+		}
+	}
+
 if (!$access{'owner'}) {
 	# Master admin can do anything
 	@rv = ( 1, undef );
@@ -191,6 +204,20 @@ sub can_add_server
 {
 local ($type) = @_;
 local $tdesc = $text{$type.'_typeshort'};
+
+# First check global license cap
+local %licence;
+&read_file_cached($licence_status, \%licence);
+if ($licence{'servers'} > 0 && $type ne 'real') {
+	local @allservers = grep { &is_virtual_server($_) }
+				 &list_managed_servers();
+	if (scalar(@allservers) > $licence{'servers'}) {
+		local @rv = ( 0, &text('can_ecreatelic', $licence{'servers'}) );
+		return wantarray ? @rv : $rv[0];
+		}
+	}
+
+# Only root can add
 local @rv = !$access{'owner'} ? ( 1, undef )
 			      : ( 0, &text('can_eadd', $tdesc) );
 return wantarray ? @rv : $rv[0];

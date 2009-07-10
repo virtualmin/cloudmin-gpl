@@ -1905,6 +1905,7 @@ can_ecreate=You are not allowed to create new $1 systems
 can_eadd=You are not allowed to add existing $1 systems
 can_ecreateany=You are not allowed to create new systems
 can_ecreatelimit=You have reached your limit of $1 systems
+can_ecreatelic=Cloudmin has reached its license limit of $1 systems
 
 view_title=System Details
 

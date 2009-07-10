@@ -190,6 +190,10 @@ if ($image) {
 		       "specified system type");
 	}
 
+# Check if can create
+($can, $canerr) = &can_create_server($type);
+$can || &usage("Creation is not allowed : $canerr");
+
 # Work out serial and key
 if ($same_serial) {
 	($serial, $key) = &get_server_manager_serial();
