@@ -125,6 +125,10 @@ add_exenconf=No Xen configuration file for instance entered
 add_exenconf2=Xen configuration file does not exist on selected host system
 add_exenconf3=Xen configuration file does not appear to be for the selected instance
 add_exenconf4=The specified file does not appear to be a Xen configuration file
+add_openvzhost=OpenVZ hosting system
+add_openvzinstance=OpenVZ container name
+add_eopenvzinstance=No OpenVZ container name entered
+add_eopenvzinstance2=The selected OpenVZ container does not exist on $1
 
 create_title=Create New System
 create_header=Details of new virtual system
@@ -948,6 +952,16 @@ xchooser_status=Status
 xchooser_state=State
 xchooser_unuse=<font color=#ff0000>Managed host $1</font>
 xchooser_free=Not yet managed
+
+vzchooser_title=Select OpenVZ Container
+vzchooser_elogin=Failed to fetch containers : $1
+vzchooser_enone=The selected system has no OpenVZ containers
+vzchooser_name=Hostname
+vzchooser_ctx=Context ID
+vzchooser_procs=Processes
+vzchooser_state=State
+vzchooser_unuse=<font color=#ff0000>Managed host $1</font>
+vzchooser_free=Not yet managed
 
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
@@ -2356,7 +2370,7 @@ dplan_enone=None selected!
 dplan_eall=You cannot delete all account plans
 dplan_eusers=The plan $1 is still being used by $2 system owners
 
-openvz_createlink=Create OpenVZ Container
-openvz_addlink=Add OpenVZ Container
+openvz_createlink=Create OpenVZ container
+openvz_addlink=Add OpenVZ container
 
 

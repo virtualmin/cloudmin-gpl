@@ -93,6 +93,7 @@ if (@servers) {
 			    scalar(@allservers), scalar(@servers)));
 		}
 	elsif ($in{'pok'}) {
+		local $parent = &get_managed_server_by("id", $in{'psearch'});
 		push(@g, &text('index_resparent',
 			    &html_escape($parent->{'host'}),
 			    scalar(@allservers), scalar(@servers)));

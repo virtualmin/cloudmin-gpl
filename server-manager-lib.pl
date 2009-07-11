@@ -4960,7 +4960,7 @@ sub is_parent_server
 {
 local ($server) = @_;
 local @rv;
-foreach my $t ('xen', 'vserver', 'zone') {
+foreach my $t ('xen', 'vserver', 'zone', 'openvz') {
 	if ($server->{$t."_host"}) {
 		push(@rv, $t eq 'zone' ? 'zones' : $t);
 		}
