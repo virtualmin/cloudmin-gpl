@@ -1023,6 +1023,7 @@ features_err=Failed to save default features
 features_enone=None selected
 
 ifaces_title=Network Interfaces
+ifaces_return=network intefaces
 
 iface_create=Add Network Interface
 iface_edit=Edit Network Interface

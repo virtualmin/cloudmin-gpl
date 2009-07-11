@@ -86,6 +86,6 @@ print &ui_form_end(
 	$in{'new'} ? [ [ undef, $text{'create'} ] ]
 		   : [ [ undef, $text{'save'} ], [ 'delete', $text{'delete'} ] ]);
 
-&ui_print_footer("edit_serv.cgi?id=$in{'id'}&ifaces=1",
-		 $text{'edit_return'});
+&ui_print_footer("list_ifaces.cgi?id=$in{'id'}",
+		 $text{'ifaces_return'});
 

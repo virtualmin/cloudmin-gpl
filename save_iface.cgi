@@ -34,8 +34,8 @@ if ($in{'delete'}) {
 					    [ "idx", $in{'idx'} ],
 					    [ "delete", 1 ] ],
 			$text{'iface_deleteok'});
-		&ui_print_footer("edit_serv.cgi?id=$in{'id'}&ifaces=1",
-				 $text{'edit_return'});
+		&ui_print_footer("list_ifaces.cgi?id=$in{'id'}",
+				 $text{'ifaces_return'});
 		}
 	else {
 		# Just do it
@@ -44,7 +44,7 @@ if ($in{'delete'}) {
 		$err = &$dfunc($server, $iface);
 		&release_lock_server($server);
 		&error($err) if ($err);
-		&redirect("edit_serv.cgi?id=$in{'id'}&ifaces=1");
+		&redirect("list_ifaces.cgi?id=$in{'id'}");
 		}
 	}
 else {
