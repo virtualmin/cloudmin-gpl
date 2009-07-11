@@ -9,6 +9,7 @@ show_openvz=1
 image_owners=amazon 093590521311
 link_mode=0
 vserver_conf=/etc/vservers
+openvz_conf=/etc/vz
 display_max=20
 xen_mem=256
 xen_dir=/xen
