@@ -82,5 +82,5 @@ else {
 		}
 	&release_lock_server($server);
 	&error($err) if ($err);
-	&redirect("edit_serv.cgi?id=$in{'id'}&ifaces=1");
+	&redirect("list_ifaces.cgi?id=$in{'id'}");
 	}

@@ -34,11 +34,12 @@ if ($in{'new'}) {
 	$pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
 	$parents = &$pfunc($server);
 	ref($parents) || &error(&text('iface_egetparents', $parents));
-	$parents = [ grep { $_->{'virtual'} eq '' && $_->{'name'} !~ /^lo/ &&
+	$parents = [ grep { $_->{'virtual'} eq '' &&
+			    $_->{'name'} !~ /^lo/ &&
                             $_->{'address'} } @$parents ];
 	print &ui_table_row($can ? $text{'iface_parent2'} 
 				 : $text{'iface_parent'},
-		    &ui_select("name", undef,
+		    &ui_select("name", $parents->[0]->{'fullname'},
 			[ map { [ $_->{'fullname'} ] } @$parents ]));
 	$iface->{'netmask'} = $parents->[0]->{'netmask'};
 	}
@@ -70,8 +71,15 @@ else {
 	}
 
 # Netmask
-print &ui_table_row($text{'iface_netmask'},
-	    &ui_textbox("netmask", $iface->{'netmask'}, 20));
+$nfunc = "type_".$server->{'manager'}."_force_netmask";
+if (defined(&$nfunc) && ($forcemask = &$nfunc($server))) {
+	print &ui_hidden("netmask", $forcemask);
+	print &ui_table_row($text{'iface_netmask'}, "<tt>$forcemask</tt>");
+	}
+else {
+	print &ui_table_row($text{'iface_netmask'},
+		    &ui_textbox("netmask", $iface->{'netmask'}, 20));
+	}
 
 print &ui_table_end();
 print &ui_form_end(
