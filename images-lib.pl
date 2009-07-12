@@ -26,6 +26,7 @@ foreach my $f (readdir(DIR)) {
 	next if ($type && $img{'manager'} ne $type);	# Don't want this type
 	next if (!$server_management_types{$img{'manager'}});	# Not supported
 	local $size = 0;
+	local $partialsize = 0;
 	foreach my $fl (split(/\s+/, $img{'files'})) {
 		local @st = stat("$server_images_dir/$fl");
 		if (@st) {
@@ -33,9 +34,15 @@ foreach my $f (readdir(DIR)) {
 			}
 		else {
 			$img{'partial'} = 1;
+			local ($tmp) = glob("$server_images_dir/$fl.webmintmp.*");
+			if ($tmp) {
+				local @tst = stat($tmp);
+				$partialsize += $tst[7];
+				}
 			}
 		}
 	$img{'size'} = $size;
+	$img{'partialsize'} = $partialsize;
 	$img{'longdesc'} = $img{'desc'};
 	if (@server_management_types > 1) {
 		local $dfunc = "type_".$img{'manager'}."_desc";

@@ -30,7 +30,9 @@ foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
 	print &ui_checked_columns_row([
 		"<a href='edit_image.cgi?id=$i->{'id'}'>$i->{'desc'}</a>",
 		&$tfunc(),
-		$got && $got->{'partial'} ? $text{'images_partial'} :
+		$got && $got->{'partial'} ?
+			&text('images_partial',
+			      &nice_size($got->{'partialsize'})) :
 		$got && !$avail ?
 			"<font color=#00aa00>$text{'images_local'}</font>" :
 		!$got ? $text{'images_down'} :

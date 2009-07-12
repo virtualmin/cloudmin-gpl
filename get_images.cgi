@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 &ui_print_header(undef, $text{'images_gettitle'}, "");
+&obtain_lock_anything();
 
 @d = split(/\0/, $in{'d'});
 @d || &error($text{'images_enone'});
