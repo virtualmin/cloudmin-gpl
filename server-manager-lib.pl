@@ -5100,16 +5100,16 @@ local $rv = $config{'from_addr'} || &mailboxes::get_from_address();
 return $rv;
 }
 
-# host_free_desc(&vhost)
+# host_free_desc(&vhost, [manager])
 # Returns a string listing free disk space and RAM for some host
 sub host_free_desc
 {
-local ($vhost) = @_;
+local ($vhost, $manager) = @_;
 local $vinfo = &get_server_collected($vhost);
 local @rv;
-if ($vhost->{'xen_vg_free'}) {
+if ($manager && $vhost->{$manager.'_vg_free'}) {
 	push(@rv, &text('create_hostdisk',
-			&nice_size($vhost->{'xen_vg_free'})));
+			&nice_size($vhost->{$manager.'_vg_free'})));
 	}
 elsif ($vinfo && $vinfo->{'disk_free'}) {
 	push(@rv, &text('create_hostdisk', &nice_size($vinfo->{'disk_free'})));

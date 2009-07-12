@@ -330,6 +330,11 @@ create_eramlimit=Creating this system would exceed your total memory limit of $1
 create_eramlimit2=Creating this system would exceed your total memory limit of $1, as it does not have any limits on memory usage.
 create_ecpulimit=Creating this system would exceed your total CPU limit of $1%. Currently you are using $2% of CPU.
 create_ecpulimit2=Creating this system would exceed your total CPU limit of $1%, as it does not have any limits on CPU usage.
+create_openvztemplate=OpenVZ template cache
+create_openvznotemplate=&lt;None - use Cloudmin system image&gt;
+create_openvzmemory=Memory limit for OpenVZ container
+create_openvzdisk=Disk space limit for OpenVZ container
+create_openvzip=IP address for OpenVZ container
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -964,6 +969,14 @@ vzchooser_procs=Processes
 vzchooser_state=State
 vzchooser_unuse=<font color=#ff0000>Managed host $1</font>
 vzchooser_free=Not yet managed
+
+vtchooser_title=Select OpenVZ Template
+vtchooser_elogin=Failed to fetch templates : $1
+vtchooser_enone=The selected system has no OpenVZ templates
+vtchooser_id=Template ID
+vtchooser_file=Filename
+vtchooser_size=Compressed size
+
 
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
