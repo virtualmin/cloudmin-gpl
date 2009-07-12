@@ -25,6 +25,10 @@ if (defined($in{'cpu'})) {
 if (defined($in{'weight'})) {
 	$in{'weight'} =~ /^\d+$/ || &error($text{'limits_eweight'});
 	}
+if (defined($in{'disk'})) {
+	$in{'disk_def'} || $in{'disk'} =~ /^\d+$/ ||
+		&error($text{'limits_edisk'});
+	}
 if (defined($in{'bw'})) {
 	$in{'bw_def'} || $in{'bw'} =~ /^[1-9]\d*$/ ||
 		&error($text{'limits_ebw'});
@@ -127,6 +131,48 @@ if (defined($in{'cpu'}) || defined($in{'weight'}) || defined($in{'cpu_def'})) {
 				$cfunc = "type_".$t."_can_cpu";
 				$reboot++ if (&$cfunc($server) == 2 ||
 					      &$cfunc($server) == 4);
+				}
+			}
+		}
+	}
+
+# Update disk space
+if (defined($in{'disk'}) || defined($in{'disk_def'})) {
+	$d = $in{'disk_def'} ? 0 : $in{'disk'}*$in{'disk_units'};
+	&$first_print(&text('limits_setting', $d ? &nice_size($d)
+						 : $text{'edit_lunlimit'}));
+	$gfunc = "type_".$t."_get_disk";
+	$oldd = &$gfunc($server);
+	if ($d == $oldd) {
+		# No need to change
+		&$second_print($text{'limits_already'});
+		}
+	else {
+		# Check limits
+		$incr = $d - $oldd;
+		if ($limits && $limits->{'max_disk'} &&
+		    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {
+			# Over RAM limit
+			&$second_print(&text('limits_edisklimit',
+				&nice_size($limits->{'max_disk'}),
+				&nice_size($limits->{'disk'})));
+			}
+		elsif ($limits && $limits->{'max_disk'} && !$d) {
+			# Set to unlimited but not allowed
+			&$second_print(&text('limits_edisklimit2',
+				&nice_size($limits->{'max_disk'})));
+			}
+		else {
+			# Call set function and check
+			$dfunc = "type_".$t."_save_disk";
+			$err = &$dfunc($server, $d);
+			if ($err) {
+				&$second_print(&text('limits_failed', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				$cfunc = "type_".$t."_can_disk";
+				$reboot++ if (&$cfunc($server) == 2);
 				}
 			}
 		}

@@ -51,6 +51,16 @@ if (defined(&$cfunc)) {
 		}
 	}
 
+# Disk limit
+$dfunc = "type_".$t."_get_disk";
+if (defined(&$dfunc)) {
+	$disk = &$dfunc($server);
+	print &ui_table_row($text{'edit_ldisk'},
+		&ui_radio("disk_def", $disk ? 0 : 1,
+			  [ [ 1, $text{'edit_lunlimit'} ],
+			    [ 0, &ui_bytesbox("disk", $disk || undef) ] ]));
+	}
+
 # Bandwidth limit
 $rfunc = "type_".$t."_real_interfaces";
 if (defined(&$rfunc) && $config{'bw_enabled'}) {

@@ -68,6 +68,15 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-memory") {
 		$memory = 0;
 		}
+	elsif ($a eq "--disk") {
+		$disk = shift(@ARGV);
+		$disk =~ /^[1-9][0-9]*$/ ||
+			&usage("--disk must be followed by a number in MB");
+		$disk *= 1024*1024;
+		}
+	elsif ($a eq "--no-disk") {
+		$disk = 0;
+		}
 	elsif ($a eq "--cpu") {
 		$cpu = shift(@ARGV);
 		$cpu =~ /^\d+$/ && $cpu > 0 ||
@@ -110,7 +119,7 @@ while(@ARGV > 0) {
 		}
 	}
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
-   defined($bw) || &usage("Nothing to modify!");
+   defined($bw) || defined($disk) || &usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
@@ -218,6 +227,35 @@ foreach $s (@servers) {
 			else {
 				print ".. done\n";
 				$reboot++ if (&$cfunc($s) == 2);
+				}
+			}
+		else {
+			print ".. not supported\n";
+			}
+		print "\n";
+		}
+
+	# Change disk, if we can
+	if (defined($disk)) {
+		print "Setting disk limit on $tdesc system $s->{'host'} to ",
+		      ($disk ? &nice_size($disk) : "Unlimited")," ..\n";
+		$cfunc = "type_".$t."_can_disk";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$gfunc = "type_".$t."_get_disk";
+			$olddisk = &$gfunc($s);
+			if ($olddisk && $olddisk == $disk) {
+				print ".. already set\n";
+				}
+			else {
+				$dfunc = "type_".$t."_save_disk";
+				$err = &$dfunc($s, $disk);
+				if ($err) {
+					print ".. failed : $err\n";
+					}
+				else {
+					print ".. done\n";
+					$reboot++ if (&$cfunc($s) == 2);
+					}
 				}
 			}
 		else {

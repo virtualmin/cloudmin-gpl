@@ -157,7 +157,7 @@ if ($multi) {
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$mfunc = "type_".$s->{'manager'}."_get_memory";
 			$mem = &$mfunc($s);
-			if ($mem) {
+			if (defined($mem)) {
 				print "    Memory limit: ",
 				      ($mem ? &nice_size($mem)
 					    : "Unlimited"),"\n";
@@ -185,6 +185,16 @@ if ($multi) {
 					    " RealCPU:$cpu->{'pin'}" : ""));
 					}
 				print "    Virtual CPUs: ",join(", ", @v),"\n";
+				}
+			}
+		$cfunc = "type_".$s->{'manager'}."_can_disk";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$dfunc = "type_".$s->{'manager'}."_get_disk";
+			$disk = &$dfunc($s);
+			if (defined($disk)) {
+				print "    Disk space limit: ",
+				      ($disk ? &nice_size($disk)
+					    : "Unlimited"),"\n";
 				}
 			}
 
