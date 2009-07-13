@@ -40,6 +40,7 @@ if ($in{'refresh'}) {
 
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server();
+		&theme_select_server($aservers[0]) if (@aservers == 1);
 		}
 
 	&ui_print_footer("", $text{'index_return'});
@@ -351,6 +352,8 @@ elsif ($in{'shutdown'}) {
 				&theme_post_save_server($s);
 				}
 			}
+		&theme_select_server($servers[0]) if (@servers == 1 &&
+						defined(&theme_select_server));
 		&release_lock_server(\@servers);
 		}
 	&ui_print_footer("", $text{'index_return'});
@@ -395,6 +398,8 @@ elsif ($in{'startup'}) {
 			&theme_post_save_server($s);
 			}
 		}
+	&theme_select_server($servers[0]) if (@servers == 1 &&
+					      defined(&theme_select_server));
 	&release_lock_server(\@servers);
 
 	&ui_print_footer("", $text{'index_return'});
