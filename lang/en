@@ -330,11 +330,23 @@ create_eramlimit=Creating this system would exceed your total memory limit of $1
 create_eramlimit2=Creating this system would exceed your total memory limit of $1, as it does not have any limits on memory usage.
 create_ecpulimit=Creating this system would exceed your total CPU limit of $1%. Currently you are using $2% of CPU.
 create_ecpulimit2=Creating this system would exceed your total CPU limit of $1%, as it does not have any limits on CPU usage.
-create_openvztemplate=OpenVZ template cache
+create_openvztemplate=OpenVZ template
 create_openvznotemplate=&lt;None - use Cloudmin system image&gt;
 create_openvzmemory=Memory limit for OpenVZ container
 create_openvzdisk=Disk space limit for OpenVZ container
 create_openvzip=IP address for OpenVZ container
+create_eopenvztemplate=No OpenVZ template selected
+create_eopenvztemplate2=The selected OpenVZ template $1 does not exist on the host system
+create_eopenvzhost=The hostname for an OpenVZ container cannot contain a . , as the domain name is added automatically
+create_openvznet=Adding OpenVZ container IP address ..
+create_eopenvznet=.. failed : $1
+create_openvzns=Setting nameservers to match host system ..
+create_eopenvzns=.. failed : $1
+create_eopenvznsnone=.. none found in named.conf
+create_openvzstartup=Starting up new OpenVZ container ..
+create_eopenvzstartup=.. failed to start : $1
+create_openvzetc=Setting up OpenVZ container configuration files ..
+create_openvzsetpass=Setting OpenVZ container root password ..
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -976,7 +988,6 @@ vtchooser_enone=The selected system has no OpenVZ templates
 vtchooser_id=Template ID
 vtchooser_file=Filename
 vtchooser_size=Compressed size
-
 
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
