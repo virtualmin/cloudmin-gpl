@@ -2,6 +2,7 @@
 # This program is designed to be called via HTTP requests from programs, and
 # simply passes on parameters to a specified command-line program
 
+package server_manager;
 $trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
@@ -29,6 +30,9 @@ elsif (!&can_action(undef, "global")) {
 	print "Content-type: text/plain\n\n";
 	print "You are not allowed to call the remote API.\n";
 	}
+
+# Prevent executed programs from doing referer checks
+delete($ENV{'MINISERV_CONFIG'});
 
 # Run the program
 $in{'program'} =~ /^[a-z0-9\.-]+$/i || &error($text{'remote_eprogram'});
