@@ -6,12 +6,13 @@ a three-layer architecture, in which the master system (on which the Cloudmin
 Webmin interface runs) is separate from the systems that host VServer instances,
 which are in turn separate from the VServer systems themselves. <p>
 
-Before a Xen host system can be registered here, you must first bring it
+Before a VServer host system can be registered here, you must first bring it
 under Cloudmin's control using the <b>Add physical system</b> link under <b>Add
 system</b> on the left menu. It is possible for a single system to both
 host Virtualmin domains and VServer instances, although this is almost always
 a bad idea as VServers used for virtual hosting require that the host system
 not have any server processes accepting connections on all network interfaces.
+<p>
 
 Once a system is known to Cloudmin, use the
 <b>Register a system for VServer hosting</b> link to start the registration
