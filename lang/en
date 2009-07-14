@@ -709,6 +709,7 @@ edit_vserverinstance=VServer instance name
 edit_vserverctx=Context ID
 edit_vserversize=Memory used
 edit_vservervr=$1 virtual, $2 resident
+edit_openvzhost=VServer host system
 edit_openvzinstance=OpenVZ context ID
 edit_xenhost=Xen host system
 edit_xeninstance=Xen instance name
