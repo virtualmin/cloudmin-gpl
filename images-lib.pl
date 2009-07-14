@@ -528,19 +528,20 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 return undef;
 }
 
-# fix_network_config_files(&server, ip, netmask, gateway, vhost, dir)
+# fix_network_config_files(&server, ip, netmask, gateway, vhost, dir, [iface])
 # Update network config files like /etc/sysconfig/network-scripts/ifcfg-eth0 or
 # /etc/network/interfaces to use the given static IP.
 sub fix_network_config_files
 {
-local ($server, $ip, $netmask, $gw, $vhost, $dir) = @_;
+local ($server, $ip, $netmask, $gw, $vhost, $dir, $iface) = @_;
+$iface ||= "eth0";
 
 # Work out broadcast and network addresses
 local $broadcast = &net::compute_broadcast($ip, $netmask);
 local $network = &net::compute_network($ip, $netmask);
 
 # Fix relevant files
-foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-eth0",
+foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/network/interfaces",
 		 "/etc/conf.d/net") {
 	local $fixpath = "$dir/$fix";
@@ -548,10 +549,10 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-eth0",
 	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
 	next if ($err);
 	local $data = &read_file_contents($temppath);
-	if ($fix =~ /ifcfg-eth0$/) {
+	if ($fix =~ /ifcfg-$iface/) {
 		# Redhat config file
 		$data = "TYPE=Ethernet\n".
-			"DEVICE=eth0\n".
+			"DEVICE=$iface\n".
 			"IPADDR=$ip\n".
 			"NETMASK=$netmask\n".
 			"BROADCAST=$broadcast\n".
@@ -559,13 +560,33 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-eth0",
 			"ONBOOT=yes\n".
 			($gw ? "GATEWAY=$gw\n" : "");
 		}
-	elsif ($fix eq "/etc/network/interfaces") {
-		# Debian-style config file. Just blow away any existing config
-		$data = "auto eth0 lo\n".
+	elsif ($fix eq "/etc/network/interfaces" && $iface =~ /^venet0:/) {
+		# Debian-style config, for OpenVZ
+		$data = "auto venet0 $iface lo\n".
 			"\n".
 			"iface lo inet loopback\n".
 			"\n".
-			"iface eth0 inet static\n".
+			"iface venet0 inet static\n".
+			"	address 127.0.0.1\n".
+			"	netmask 255.255.255.255\n".
+			"	broadcast 0.0.0.0\n".
+			"	up route add -net 192.0.2.1 netmask 255.255.255.255 dev venet0\n".
+			"	up route add default gw 192.0.2.1\n".
+			"\n".
+			"iface $iface inet static\n".
+			"	address $ip\n".
+			"	netmask $netmask\n".
+			"	broadcast $broadcast\n".
+			"	network $network\n".
+			($gw ? "	gateway $gw\n" : "");
+		}
+	elsif ($fix eq "/etc/network/interfaces") {
+		# Debian-style config file. Just blow away any existing config
+		$data = "auto $iface lo\n".
+			"\n".
+			"iface lo inet loopback\n".
+			"\n".
+			"iface $iface inet static\n".
 			"	address $ip\n".
 			"	netmask $netmask\n".
 			"	broadcast $broadcast\n".
@@ -574,9 +595,9 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-eth0",
 		}
 	elsif ($fix eq "/etc/conf.d/net") {
 		# Gentoo networking config filer
-		$data = "config_eth0=( \"$ip netmask $netmask\" )\n";
+		$data = "config_$iface=( \"$ip netmask $netmask\" )\n";
 		if ($gw) {
-			$data .= "routes_eth0=( \"default via $gw\" )\n";
+			$data .= "routes_$iface=( \"default via $gw\" )\n";
 			}
 		}
 	&open_tempfile(FIXED, ">$temppath");
