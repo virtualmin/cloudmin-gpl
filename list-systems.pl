@@ -197,6 +197,16 @@ if ($multi) {
 					    : "Unlimited"),"\n";
 				}
 			}
+		$cfunc = "type_".$s->{'manager'}."_can_network_rate";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$rfunc = "type_".$s->{'manager'}."_get_network_rate";
+			$rate = &$rfunc($s);
+			if (defined($rate)) {
+				print "    Network rate: ",
+				      ($rate ? &nice_rate($rate)
+					     : "Unlimited"),"\n";
+				}
+			}
 
 		# Show bandwidth limit and usage
 		$rfunc = "type_".$s->{'manager'}."_real_interfaces";

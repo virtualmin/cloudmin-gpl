@@ -110,6 +110,15 @@ while(@ARGV > 0) {
 	elsif ($a eq "--bw-unlimited") {
 		$bw = '';
 		}
+	elsif ($a eq "--rate-limit") {
+		$rate = shift(@ARGV);
+		$rate =~ /^[1-9]\d*$/ ||
+			&usage("--rate-limit must be followed by a number in Mbits/s");
+		$rate *= 1024*1024;
+		}
+	elsif ($a eq "--rate-unlimited") {
+		$rate = 0;
+		}
 	elsif ($a eq "--reboot") {
 		# Reboot after
 		$do_reboot = 1;
@@ -119,7 +128,8 @@ while(@ARGV > 0) {
 		}
 	}
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
-   defined($bw) || defined($disk) || &usage("Nothing to modify!");
+   defined($bw) || defined($rate) || defined($disk) ||
+   &usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
@@ -264,6 +274,35 @@ foreach $s (@servers) {
 		print "\n";
 		}
 
+	# Change disk, if we can
+	if (defined($rate)) {
+		print "Setting network rate on $tdesc system $s->{'host'} to ",
+		      ($rate ? &nice_rate($rate) : "Unlimited")," ..\n";
+		$cfunc = "type_".$t."_can_network_rate";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$gfunc = "type_".$t."_get_network_rate";
+			$oldrate = &$gfunc($s);
+			if (defined($oldrate) && $oldrate == $rate) {
+				print ".. already set\n";
+				}
+			else {
+				$dfunc = "type_".$t."_save_network_rate";
+				$err = &$dfunc($s, $rate);
+				if ($err) {
+					print ".. failed : $err\n";
+					}
+				else {
+					print ".. done\n";
+					$reboot++ if (&$cfunc($s) == 2);
+					}
+				}
+			}
+		else {
+			print ".. not supported\n";
+			}
+		print "\n";
+		}
+
 	# Change bandwidth limit
 	if (defined($bw)) {
 		print "Setting bandwidth limit on $tdesc system $s->{'host'} ..\n";
@@ -333,9 +372,11 @@ print "                       [--os oscode]*\n";
 print "                       [--cpu percentage | --no-cpu]\n";
 print "                       [--weight number]\n";
 print "                       [--memory MB | --no-memory]\n";
+print "                       [--disk MB | --no-disk]\n";
 print "                       [--reboot]\n";
 print "                       [--vcpus N | --vcpus list]\n";
 print "                       [--bw-limit MB | --bw-unlimited]\n";
+print "                       [--rate-limit Mb/s | --rate-unlimited]\n";
 exit(1);
 }
 

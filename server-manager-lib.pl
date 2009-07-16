@@ -5868,6 +5868,16 @@ else {
 	}
 }
 
+# nice_rate(bits-per-sec)
+# Returns a number of bits per second, nicely formatted
+sub nice_rate
+{
+local ($bps) = @_;
+local $n = &nice_size($bps);
+$n =~ s/B$/bits\/s/;
+return $n;
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update
 sub obtain_lock_server
