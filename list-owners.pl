@@ -117,6 +117,19 @@ if ($multi) {
 					$limits->{'cpu'},"%\n";
 				}
 
+			print "    Max bandwidth: ",
+				($o->{'acl'}->{'max_bw'} ?
+				   &nice_size($o->{'acl'}->{'max_bw'}) :
+				   "Unlimited"),"\n";
+			print "    Max bandwidth in bytes: ",
+				($o->{'acl'}->{'max_bw'} || "Unlimited"),"\n";
+			if ($limits->{'bw'}) {
+				print "    Bandwidth use: ",
+					&nice_size($limits->{'bw'}),"\n";
+				print "    Bandwidth use in bytes: ",
+					$limits->{'bw'},"\n";
+				}
+
 			print "    Actions from plan: ",
 				($o->{'acl'}->{'actions_def'} ? "Yes" : "No"),
 				"\n";

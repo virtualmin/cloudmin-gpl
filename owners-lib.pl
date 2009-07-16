@@ -311,6 +311,8 @@ my $rv = { 'max_servers' => $owner->{'acl'}->{'max_servers'},
 	   'disk' => 0,
 	   'max_cpu' => $owner->{'acl'}->{'max_cpu'},
 	   'cpu' => 0,
+	   'max_bw' => $owner->{'acl'}->{'max_bw'},
+	   'bw' => 0,
 	   'list' => [ ],
 	 };
 my %owned = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
@@ -341,6 +343,9 @@ foreach my $s (grep { $owned{$_->{'id'}} } &list_managed_servers()) {
 		if ($cpu) { $rv->{'cpu'} += $cpu; }
 		else { $rv->{'cpu_unlimited'}++; }
 		}
+
+	# Add bandwidth usage
+	$rv->{'bw'} += $s->{'bw_usage'};
 	}
 return $rv;
 }
