@@ -29,6 +29,10 @@ if (defined($in{'disk'})) {
 	$in{'disk_def'} || $in{'disk'} =~ /^\d+$/ ||
 		&error($text{'limits_edisk'});
 	}
+if (defined($in{'rate'})) {
+	$in{'rate_def'} || $in{'rate'} =~ /^\d+$/ ||
+		&error($text{'limits_erate'});
+	}
 if (defined($in{'bw'})) {
 	$in{'bw_def'} || $in{'bw'} =~ /^[1-9]\d*$/ ||
 		&error($text{'limits_ebw'});
@@ -190,6 +194,32 @@ if (defined($in{'bw'}) && &can_action($server, "bw")) {
 	else {
 		# No need to change
 		&$second_print($text{'limits_already'});
+		}
+	}
+
+# Update network rate
+if (defined($in{'rate'}) || defined($in{'rate_def'})) {
+	$d = $in{'rate_def'} ? 0 : $in{'rate'}*$in{'rate_units'};
+	&$first_print(&text('limits_setting', $d ? &nice_size($d)
+						 : $text{'edit_lunlimit'}));
+	$gfunc = "type_".$t."_get_network_rate";
+	$oldd = &$gfunc($server);
+	if ($d == $oldd) {
+		# No need to change
+		&$second_print($text{'limits_already'});
+		}
+	else {
+		# Call set function and check
+		$dfunc = "type_".$t."_save_network_rate";
+		$err = &$dfunc($server, $d);
+		if ($err) {
+			&$second_print(&text('limits_failed', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			$cfunc = "type_".$t."_can_network_rate";
+			$reboot++ if (&$cfunc($server) == 2);
+			}
 		}
 	}
 

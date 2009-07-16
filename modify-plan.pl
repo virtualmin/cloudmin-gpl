@@ -14,6 +14,10 @@ C<--unlimited-systems> flag. Similarly, the C<--max-ram>, C<--max-disk>
 and C<--max-cpu> flags can be used to limit total allocated RAM, disk space
 and CPU load. Both must be followed by a number in bytes.
 
+The C<--max-bw> flag can be used to set the maximum bandwidth the owner's
+systems can consume over the bandwidth accounting period. The C<--unlimited-bw>
+flag can be used to remove this limit.
+
 To add a new virtual system type to the list of those that system owners
 on this plan can created, use the C<--add-type> flag followed by a type
 name, like C<xen>. To take away a type, use the C<--remove-type> flag.
@@ -68,14 +72,14 @@ while(@ARGV > 0) {
 	elsif ($a =~ /^--cannot-(\S+)$/ && &indexof($1, @allactions) >= 0) {
 		push(@remactions, $1);
 		}
-	elsif ($a =~ /^--max-(systems|ram|disk|cpu)$/) {
+	elsif ($a =~ /^--max-(systems|ram|disk|cpu|bw)$/) {
 		$w = $1 eq 'systems' ? 'servers' : $1;
 		$m = shift(@ARGV);
 		$maxes{$w} = $m;
 		$m =~ /^\d+$/ ||
 			&usage("--max-$w must be followed by an integer");
 		}
-	elsif ($a =~ /^--unlimited-(systems|ram|disk|cpu)$/) {
+	elsif ($a =~ /^--unlimited-(systems|ram|disk|cpu|bw)$/) {
 		$w = $1 eq 'systems' ? 'servers' : $1;
 		$maxes{$w} = 0;
 		}
@@ -166,6 +170,7 @@ print "                    [--max-systems num | --unlimited-systems]\n";
 print "                    [--max-ram bytes | --unlimited-ram]\n";
 print "                    [--max-disk bytes | --unlimited-disk]\n";
 print "                    [--max-cpu percent | --unlimited-cpu]\n";
+print "                    [--max-bw bytes | --unlimited-bw]\n";
 print "                    [--add-type ".
       join("|", @virtual_server_management_types)."]*\n";
 print "                    [--remove-type ".

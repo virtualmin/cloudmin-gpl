@@ -87,6 +87,16 @@ if (defined(&$rfunc) && $config{'bw_enabled'}) {
 		&bandwidth_usage_message($server));
 	}
 
+# Network rate limit
+$rfunc = "type_".$t."_get_network_rate";
+if (defined(&$rfunc)) {
+	$rate = &$rfunc($server);
+	print &ui_table_row($text{'edit_lrate'},
+		&ui_radio("rate_def", $rate ? 0 : 1,
+			  [ [ 1, $text{'edit_lunlimit'} ],
+			    [ 0, &ui_bitsbox("rate", $rate || undef) ] ]));
+	}
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'save'} ] ]);
 

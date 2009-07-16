@@ -74,6 +74,16 @@ else {
 		$plan->{'max_cpu'} = $in{'max_cpu'};
 		}
 
+	# Max bandwidth
+	if ($in{'max_bw_def'}) {
+		$plan->{'max_bw'} = 0;
+		}
+	else {
+		$in{'max_bw'} =~ /^[1-9][0-9]*$/ ||
+			&error($text{'plan_emax_bw'});
+		$plan->{'max_bw'} = $in{'max_bw'}*$in{'max_bw_units'};
+		}
+
 	# Actions
 	$in{'actions'} eq '' && &error($text{'owner_eactions'});
 	$plan->{'actions'} = join(" ", split(/\0/, $in{'actions'}));

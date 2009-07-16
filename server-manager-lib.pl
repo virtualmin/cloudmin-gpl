@@ -5889,6 +5889,42 @@ $n =~ s/B$/bits\/s/;
 return $n;
 }
 
+# ui_ratebox(name, bits, size, [disabled])
+# Returns a field for selecting a network rate in bps
+sub ui_ratebox
+{
+my ($name, $bits, $size, $dis) = @_;
+my $units = 1;
+if ($bits >= 10*1024*1024*1024*1024) {
+	$units = 1024*1024*1024*1024;
+	}
+elsif ($bits >= 10*1024*1024*1024) {
+	$units = 1024*1024*1024;
+	}
+elsif ($bits >= 10*1024*1024) {
+	$units = 1024*1024;
+	}
+elsif ($bits >= 10*1024) {
+	$units = 1024;
+	}
+else {
+	$units = 1;
+	}
+if ($bits ne "") {
+	$bits = sprintf("%.2f", ($bits*1.0)/$units);
+	$bits =~ s/\.00$//;
+	}
+$size = &ui_max_text_width($size || 8);
+return &ui_textbox($name, $bits, $size, $dis)." ".
+       &ui_select($name."_units", $units,
+		 [ [ 1, "bits/s" ],
+		   [ 1024, "kb/sec" ],
+		   [ 1024*1024, "Mb/sec" ],
+		   [ 1024*1024*1024, "Gb/sec" ],
+		   [ 1024*1024*1024*1024, "Tb/sec" ] ],
+		 undef, undef, undef, $dis);
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update
 sub obtain_lock_server

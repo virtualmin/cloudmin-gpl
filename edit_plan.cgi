@@ -47,6 +47,12 @@ print &ui_table_row($text{'plan_max_cpu'},
 	&ui_opt_textbox("max_cpu", $plan->{'max_cpu'} || undef, 4,
 			$text{'domains_unlimited'})."%");
 
+# Maximum bandwidth use
+print &ui_table_row($text{'plan_max_bw'},
+	&ui_radio("max_bw_def", $plan->{'max_bw'} ? 0 : 1,
+		  [ [ 1, $text{'domains_unlimited'} ],
+		    [ 0, &ui_bytesbox("max_bw", $plan->{'max_bw'}, 6) ] ]));
+
 print &ui_hidden_table_end();
 
 print &ui_hidden_table_start($text{'plan_header2'}, "width=100%", 2, "acts", 1,

@@ -456,6 +456,7 @@ $o->{'acl'}->{'max_servers'} = $plan->{'max_servers'};
 $o->{'acl'}->{'max_ram'} = $plan->{'max_ram'};
 $o->{'acl'}->{'max_disk'} = $plan->{'max_disk'};
 $o->{'acl'}->{'max_cpu'} = $plan->{'max_cpu'};
+$o->{'acl'}->{'max_bw'} = $plan->{'max_bw'};
 $o->{'acl'}->{'types'} = $plan->{'types'};
 if ($o->{'acl'}->{'actions_def'}) {
 	$o->{'acl'}->{'actions'} = $plan->{'actions'};

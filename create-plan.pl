@@ -15,6 +15,10 @@ will be enforced. Similarly, the C<--max-ram> and C<--max-disk> flags can be
 used to limit total allocated RAM and disk space. Both must be followed by
 a number in bytes.
 
+The C<--max-bw> flag can be used to set the maximum bandwidth the owner's
+systems can consume over the bandwidth accounting period. If this is exceeded,
+email will be sent to the master administrator and the system owner.
+
 If your Cloudmin install manages more than one type of virtual system 
 (such as Xen instances and Solaris Zones), the C<--type> flag can be given,
 followed by a system type. If missing, all VPS types will be allowed.
@@ -74,7 +78,7 @@ while(@ARGV > 0) {
 	elsif ($a =~ /^--can-(\S+)$/ && &indexof($1, @allactions) >= 0) {
 		push(@actions, $1);
 		}
-	elsif ($a =~ /^--max-(systems|ram|disk|cpu)$/) {
+	elsif ($a =~ /^--max-(systems|ram|disk|cpu|bw)$/) {
 		$w = $1 eq 'systems' ? 'servers' : $1;
 		$m = shift(@ARGV);
 		$maxes{$w} = $m;
@@ -128,6 +132,7 @@ print "                    [--max-systems num]\n";
 print "                    [--max-ram bytes]\n";
 print "                    [--max-disk bytes]\n";
 print "                    [--max-cpu percent]\n";
+print "                    [--max-bw bytes]\n";
 print "                    [--type ".
       join("|", @virtual_server_management_types)."]*\n";
 print "                    [--image id]*\n";

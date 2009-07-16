@@ -72,6 +72,11 @@ if ($multi) {
 		print "    Max CPU: ",
 			($p->{'max_cpu'} ? $p->{'max_cpu'}."%"
 					 : "Unlimited"),"\n";
+		print "    Max bandwidth: ",
+			($p->{'max_bw'} ? &nice_size($p->{'max_bw'})
+					  : "Unlimited"),"\n";
+		print "    Max bandwidth in bytes: ",
+			($p->{'max_bw'} || "Unlimited"),"\n";
 		%actions = map { $_, 1 } split(/\s+/, $p->{'actions'});
 		print "    Allowed actions: ",
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";
