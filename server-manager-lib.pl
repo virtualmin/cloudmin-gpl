@@ -3621,6 +3621,17 @@ foreach my $sd (@sorted) {
 		$failed{$d->{'id'}} = $sd;
 		next;
 		}
+
+	# Make sure the target can support the backup format
+	local $unc = $filename =~ /\.gz$/ ? "gunzip" :
+		     $filename =~ /\.bz2$/ ? "bunzip2" :
+		     $filename =~ /\.zip$/ ? "unzip" : "tar";
+	if (!&has_command_on_server($dest, $unc)) {
+		&$second_print(&text('move_eunc', "<tt>$unc</tt>"));
+		$failed{$d->{'id'}} = $sd;
+		next;
+		}
+
 	&$second_print(&text('move_backed', &nice_size($st[7])));
 
 	# Transfer to master system, if not already there

@@ -1171,6 +1171,7 @@ move_eparent=.. parent domain $1 was not transferred successfully.
 move_ealias=.. alias target domain $1 was not transferred successfully.
 move_ebackup=.. backup failed : $1
 move_estat=.. backup appeared to complete successfully, but no output file was found!
+move_eunc=.. backup cannot be extracted on the destination system, as the command $1 is missing
 move_backed=.. created backup of $1.
 move_download=Downloading backup of $1 in file $2 ..
 move_edownload=.. download failed : $1
