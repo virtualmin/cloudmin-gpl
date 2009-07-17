@@ -315,8 +315,7 @@ my $rv = { 'max_servers' => $owner->{'acl'}->{'max_servers'},
 	   'bw' => 0,
 	   'list' => [ ],
 	 };
-my %owned = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
-foreach my $s (grep { $owned{$_->{'id'}} } &list_managed_servers()) {
+foreach my $s (&get_owner_servers($owner)) {
 	$rv->{'servers'}++;
 	push(@{$rv->{'servers'}}, $s);
 
@@ -359,6 +358,15 @@ $name ||= $base_remote_user;
 my %oaccess = &get_module_acl($name);
 return undef if (!$oaccess{'plan'});
 return &get_plan($oaccess{'plan'});
+}
+
+# get_owner_servers(&owner)
+# Returns the server hash refs for some owner
+sub get_owner_servers
+{
+local ($owner) = @_;
+my %owned = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
+return grep { $owned{$_->{'id'}} } &list_managed_servers();
 }
 
 # Returns non-zero if this Cloudmin install supports plans

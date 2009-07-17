@@ -175,6 +175,8 @@ if (&supports_plans()) {
 	foreach $o (&list_system_owners()) {
 		$limits = &get_owner_limits($o->{'name'});
 		next if (!$limits || !$limits->{'max_bw'});
+		local @os = sort { $b->{'bw_usage'} cmp $a->{'bw_usage'} }
+				 &get_owner_servers($o);
 
 		# If over limit, send email
 		if ($limits && $limits->{'max_bw'} &&
@@ -186,9 +188,13 @@ if (&supports_plans()) {
 				 $config{'bw_notify'}*60*60;
 			if (@to && $etime) {
 				local $msg = &get_owner_bandwidth_message();
+				local $hosts = join(" ",
+					map { $_->{'host'} } @os);
 				local %hash = (
 					'name', $o->{'name'},
 					'real', $o->{'real'},
+					'hosts', $hosts,
+					'worst', $os[0]->{'host'},
 					'bw_limit',
 					   &nice_size($limits->{'max_bw'}),
 					'bw_usage',
@@ -196,7 +202,7 @@ if (&supports_plans()) {
 					'email', $o->{'acl'}->{'email'},
 					'bw_period', $config{'bw_period'},
 					'bw_days', $config{'bw_days'},
-					)
+					);
 				$plan = &get_plan($o->{'acl'}->{'plan'});
 				$hash{'plan'} = $plan->{'desc'};
 				$msg = &substitute_template($msg, \%hash);
