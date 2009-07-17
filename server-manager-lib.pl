@@ -5895,7 +5895,10 @@ sub ui_ratebox
 {
 my ($name, $bits, $size, $dis) = @_;
 my $units = 1;
-if ($bits >= 10*1024*1024*1024*1024) {
+if (!defined($bits)) {
+	$units = 1024*1024;
+	}
+elsif ($bits >= 10*1024*1024*1024*1024) {
 	$units = 1024*1024*1024*1024;
 	}
 elsif ($bits >= 10*1024*1024*1024) {

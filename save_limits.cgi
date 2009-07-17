@@ -200,7 +200,7 @@ if (defined($in{'bw'}) && &can_action($server, "bw")) {
 # Update network rate
 if (defined($in{'rate'}) || defined($in{'rate_def'})) {
 	$d = $in{'rate_def'} ? 0 : $in{'rate'}*$in{'rate_units'};
-	&$first_print(&text('limits_setting', $d ? &nice_size($d)
+	&$first_print(&text('limits_settingrate', $d ? &nice_size($d)
 						 : $text{'edit_lunlimit'}));
 	$gfunc = "type_".$t."_get_network_rate";
 	$oldd = &$gfunc($server);
