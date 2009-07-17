@@ -19,6 +19,10 @@ else {
 $config{'bw_disable'} = $in{'disable'};
 $in{'msg'} =~ s/\r//g;
 $in{'msg'} =~ /\S/ || &error($text{'bw_emsg'});
+if (&supports_plans()) {
+	$in{'omsg'} =~ s/\r//g;
+	$in{'omsg'} =~ /\S/ || &error($text{'bw_eomsg'});
+	}
 if ($in{'email_admin'}) {
 	$in{'email'} =~ /^\S+\@\S+$/ || &error($text{'bw_eemail'});
 	$config{'bw_email'} = $in{'email'};
@@ -45,6 +49,9 @@ $config{'bw_dir_out'} = $in{'dir_out'};
 $config{'bw_enabled'} = $in{'enabled'};
 &save_module_config();
 &save_bandwidth_message($in{'msg'});
+if (&supports_plans()) {
+	&save_owner_bandwidth_message($in{'omsg'});
+	}
 $job = &find_bw_cron_job();
 if (!$job && $in{'enabled'}) {
 	# Create the job

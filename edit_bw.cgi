@@ -32,6 +32,12 @@ print &ui_table_row($text{'bw_disable'},
 print &ui_table_row($text{'bw_msg'},
 	&ui_textarea("msg", &get_bandwidth_message(), 5, 70));
 
+# Email to send to system owners when their limit is exceeded
+if (&supports_plans()) {
+	print &ui_table_row($text{'bw_omsg'},
+		&ui_textarea("omsg", &get_owner_bandwidth_message(), 5, 70));
+	}
+
 # Send to who
 print &ui_table_row($text{'bw_email'},
 	&ui_checkbox("email_admin", 1, $text{'bw_email_admin'},

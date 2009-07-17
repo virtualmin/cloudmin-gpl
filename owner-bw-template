@@ -1,0 +1,8 @@
+The following system owner has exceeded his Cloudmin bandwidth limit :
+
+System owner:            ${NAME}
+Real name:               ${REAL}
+Accounting period:       ${IF-BW_PERIOD}Current ${BW_PERIOD}${ELSE-BW_PERIOD}Last ${BW_DAYS} days${ENDIF-BW_PERIOD}
+Bandwidth limit:         ${BW_LIMIT}
+Bandwidth usage:         ${BW_USAGE} over the last ${BW_PERIOD}
+

@@ -125,7 +125,7 @@ foreach $s (@servers) {
 		local @to;
 		push(@to, $config{'bw_email'}) if ($config{'bw_email'});
 		if ($config{'bw_owner'}) {
-			push(@to, map { $_->{'email'} }
+			push(@to, map { $_->{'acl'}->{'email'} }
 				      &get_server_owners($s));
 			}
 		$etime = $now - $s->{'bw_notify'} > $config{'bw_notify'}*60*60;
@@ -133,7 +133,7 @@ foreach $s (@servers) {
 			local $msg = &get_bandwidth_message();
 			local %hash = %$s;
 			$hash{'bw_period'} = $config{'bw_period'};
-			$hash{'bw_days'} = $config{'bw_period'};
+			$hash{'bw_days'} = $config{'bw_days'};
 			foreach $n ('bw_limit', 'bw_usage',
 				    'bw_usage_in', 'bw_usage_out') {
 				$hash{$n} = &nice_size($hash{$n});
@@ -168,6 +168,49 @@ foreach $s (@servers) {
 		}
 
 	&save_managed_server($s);
+	}
+
+# For each system owner with a plan limit, sum up his usage
+if (&supports_plans()) {
+	foreach $o (&list_system_owners()) {
+		$limits = &get_owner_limits($o->{'name'});
+		next if (!$limits || !$limits->{'max_bw'});
+
+		# If over limit, send email
+		if ($limits && $limits->{'max_bw'} &&
+		    $limits->{'bw'} > $limits->{'max_bw'}) {
+			local @to;
+			push(@to, $config{'bw_email'}) if ($config{'bw_email'});
+			push(@to, $o->{'email'}) if ($o->{'email'});
+			$etime = $now - $o->{'acl'}->{'bw_notify'} >
+				 $config{'bw_notify'}*60*60;
+			if (@to && $etime) {
+				local $msg = &get_owner_bandwidth_message();
+				local %hash = (
+					'name', $o->{'name'},
+					'real', $o->{'real'},
+					'bw_limit',
+					   &nice_size($limits->{'max_bw'}),
+					'bw_usage',
+					   &nice_size($limits->{'bw'}),
+					'email', $o->{'acl'}->{'email'},
+					'bw_period', $config{'bw_period'},
+					'bw_days', $config{'bw_days'},
+					)
+				$plan = &get_plan($o->{'acl'}->{'plan'});
+				$hash{'plan'} = $plan->{'desc'};
+				$msg = &substitute_template($msg, \%hash);
+				&mailboxes::send_text_mail(
+					&get_global_from_address($server),
+					join(", ", @to),
+					undef,
+					&text('bw_subject2', $o->{'name'}),
+					$msg);
+				$o->{'acl'}->{'bw_notify'} = $now;
+				&save_system_owner($o, $o);
+				}
+			}
+		}
 	}
 
 sub usage

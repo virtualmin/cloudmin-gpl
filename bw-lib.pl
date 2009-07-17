@@ -58,6 +58,27 @@ local ($msg) = @_;
 &close_tempfile(MSG);
 }
 
+# get_owner_bandwidth_message()
+# Returns the message to send when an owner exceeds his bandwidth limit
+sub get_owner_bandwidth_message
+{
+local $f = "$module_config_directory/owner-bw-template";
+if (!-r $f) {
+	$f = "$module_root_directory/owner-bw-template";
+	}
+return &read_file_contents($f);
+}
+
+# save_owner_bandwidth_message(msg)
+# Save the email template for owners over their bandwidth quota
+sub save_owner_bandwidth_message
+{
+local ($msg) = @_;
+&open_lock_tempfile(MSG, ">$module_config_directory/owner-bw-template");
+&print_tempfile(MSG, $msg);
+&close_tempfile(MSG);
+}
+
 # find_bw_cron_job()
 # Returns the job object for bandwidth monitoring
 sub find_bw_cron_job
