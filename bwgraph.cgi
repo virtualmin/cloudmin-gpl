@@ -198,7 +198,7 @@ else {
 	foreach $d (@dirs) {
 		$lc = $color_mapping->{$d};
 		print "<font color=$lc>&bull;</font> ",
-		      $text{'graph_'.$d}," ($units)\n";
+		      $text{'graph_'.$d}," ($units/minute)\n";
 		}
 	}
 print "<br>\n";

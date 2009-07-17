@@ -94,7 +94,7 @@ if (defined(&$rfunc)) {
 	print &ui_table_row($text{'edit_lrate'},
 		&ui_radio("rate_def", $rate ? 0 : 1,
 			  [ [ 1, $text{'edit_lunlimit'} ],
-			    [ 0, &ui_bitsbox("rate", $rate || undef) ] ]));
+			    [ 0, &ui_ratebox("rate", $rate || undef) ] ]));
 	}
 
 print &ui_table_end();
