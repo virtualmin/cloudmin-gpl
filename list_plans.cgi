@@ -18,6 +18,7 @@ print &ui_columns_start([ "",
 			  $text{'plans_max_ram'},
 			  $text{'plans_max_disk'},
 			  $text{'plans_max_cpu'},
+			  $text{'plans_max_bw'},
 			  $text{'plans_owners'}, ], 100, 0, \@tds);
 foreach $p (@plans) {
 	@users = grep { $_->{'acl'}->{'plan'} eq $p->{'id'} } @owners;
@@ -34,6 +35,8 @@ foreach $p (@plans) {
 				 : $text{'domains_unlimited'},
 		$p->{'max_cpu'} ? $p->{'max_cpu'}."%"
 				: $text{'domains_unlimited'},
+		$p->{'max_bw'} ? &nice_size($p->{'max_bw'})
+			       : $text{'domains_unlimited'},
 		$users,
 		], \@tds, "d", $p->{'id'});
 	}

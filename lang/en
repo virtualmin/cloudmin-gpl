@@ -2356,6 +2356,7 @@ plans_max_servers=Maximum systems
 plans_max_ram=Maximum RAM
 plans_max_disk=Maximum disk
 plans_max_cpu=Maximum CPU
+plans_max_bw=Maximum bandwidth
 plans_owners=Applied to owners
 plans_nousers=None
 plans_manyusers=$1 owners
