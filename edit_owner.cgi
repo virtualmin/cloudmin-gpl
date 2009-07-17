@@ -184,6 +184,17 @@ if (&supports_plans() && !$in{'new'}) {
 		($limits->{'cpu_unlimited'} ?
 		  &text('owner_nolimit', $limits->{'cpu_unlimited'}) : ''));
 
+	# Limit on bandwidth and usage
+	if ($limits->{'bw'}) {
+		print &ui_table_row($text{'owner_bwlimit'},
+			&text('owner_outof',
+			      &nice_size($limits->{'bw'}),
+			      $limits->{'max_bw'} ?
+				&nice_size($limits->{'max_bw'}) :
+				$text{'owner_unlimit'}).
+			" ".&describe_bandwidth_period(1));
+		}
+
 	print &ui_hidden_table_end();
 	}
 
