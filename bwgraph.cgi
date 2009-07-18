@@ -221,7 +221,7 @@ print "<br>\n";
 if ($mode ne "systems" && $mode ne "host") {
 	# The time graph itself
 	$datalink = "bwgraph_data.cgi?id=$in{'id'}&mode=$mode&start=$start&end=$end&scale=$scale&owner=$in{'owner'}";
-	print "<div id='history' style='height: 500px;'></div><br>\n";
+	print "<div id='history' style='height: 500px;'></div>\n";
 	print "<a href='$datalink'>$text{'graph_raw'}</a><br>\n";
 	}
 else {

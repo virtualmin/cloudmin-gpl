@@ -151,48 +151,24 @@ if (&supports_plans() && !$in{'new'}) {
 				     "planlimits", 0, [ 'width=30%' ]);
 	$limits = &get_owner_limits($owner->{'name'});
 
-	# Limit on systems and count
-	print &ui_table_row($text{'owner_serverlimit'},
-		&text('owner_outof',
-		      $limits->{'servers'},
-		      $limits->{'max_servers'} || $text{'owner_unlimit'}));
-
-	# Limit on RAM and count
-	print &ui_table_row($text{'owner_ramlimit'},
-		&text('owner_outof',
-		      &nice_size($limits->{'ram'}),
-		      $limits->{'max_ram'} ? &nice_size($limits->{'max_ram'})
-					   : $text{'owner_unlimit'}).' '.
-		($limits->{'ram_unlimited'} ?
-		  &text('owner_nolimit', $limits->{'ram_unlimited'}) : ''));
-
-	# Limit on disk and count
-	print &ui_table_row($text{'owner_disklimit'},
-		&text('owner_outof',
-		      &nice_size($limits->{'disk'}),
-		      $limits->{'max_disk'} ? &nice_size($limits->{'max_disk'})
-					   : $text{'owner_unlimit'}).' '.
-		($limits->{'disk_unlimited'} ?
-		  &text('owner_nolimit', $limits->{'disk_unlimited'}) : ''));
-
-	# Limits on CPU
-	print &ui_table_row($text{'owner_cpulimit'},
-		&text('owner_outof',
-		      $limits->{'cpu'}.'%',
-		      $limits->{'max_cpu'} ? $limits->{'max_cpu'}.'%'
-					   : $text{'owner_unlimit'}).' '.
-		($limits->{'cpu_unlimited'} ?
-		  &text('owner_nolimit', $limits->{'cpu_unlimited'}) : ''));
-
-	# Limit on bandwidth and usage
-	if ($limits->{'bw'}) {
-		print &ui_table_row($text{'owner_bwlimit'},
-			&text('owner_outof',
-			      &nice_size($limits->{'bw'}),
-			      $limits->{'max_bw'} ?
-				&nice_size($limits->{'max_bw'}) :
-				$text{'owner_unlimit'}).
-			" ".&describe_bandwidth_period(1));
+	foreach my $l (@plan_limit_types) {
+		$n = &indexof($l, @nice_plan_limit_types) >= 0;
+		$nice = $n ? &nice_size($limits->{$l})
+			   : $limits->{$l};
+		$nicemax = $n ? &nice_size($limits->{'max_'.$l})
+			      : $limits->{'max_'.$l};
+		$msg = &text('owner_outof', $nice,
+			     $limits->{'max_'.$l} ? $nicemax
+						  : $text{'owner_unlimit'});
+		if ($limits->{$l.'_unlimited'}) {
+			$msg .= " ".&text('owner_nolimit',
+					  $limits->{$l.'_unlimited'});
+			}
+		if ($limits->{'max_'.$l} &&
+		    $limits->{$l} > $limits->{'max_'.$l}) {
+			$msg = "<font color=red>$msg</font>";
+			}
+		print &ui_table_row($text{'owner_'.$l.'limit'}, $msg);
 		}
 
 	print &ui_hidden_table_end();
