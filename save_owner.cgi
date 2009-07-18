@@ -24,6 +24,10 @@ if ($in{'switch'}) {
 	&ui_print_footer();
 	exit;
 	}
+elsif ($in{'bw'}) {
+	# Redirect to bandwidth graph for owner
+	&redirect("bwgraph.cgi?owner=".&urlize($owner->{'name'}));
+	}
 elsif ($in{'delete'}) {
 	# Just remove owner account
 	&delete_system_owner($owner);

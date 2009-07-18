@@ -12,6 +12,9 @@ $bar_width = 100;
 if ($in{'id'}) {
 	$mode = "server";
 	}
+elsif ($in{'owner'}) {
+	$mode = "owner";
+	}
 else {
 	$mode = $in{'mode'} || "systems";
 	}
@@ -23,7 +26,17 @@ $dir = $in{'dir'} ? $in{'dir'} :
 if ($in{'id'}) {
 	# One server
 	($server) = grep { $_->{'id'} eq $in{'id'} } @servers;
+	$server || &error($text{'graph_eserver'});
 	@showservers = ( $server );
+	$title = &server_in($server);
+	}
+elsif ($in{'owner'}) {
+	# Servers for some owner
+	&can_action_error(undef, "global");
+	$owner = &get_system_owner($in{'owner'});
+	$owner || &error($text{'graph_eowner'});
+	@showservers = &get_owner_servers($owner);
+	$title = &text('graph_owner', "<tt>$owner->{'name'}</tt>");
 	}
 elsif ($mode eq 'host') {
 	# Servers that can host
@@ -35,13 +48,13 @@ else {
 	}
 &can_action_error(\@showservers, "graph");
 
-&ui_print_header(&server_in($server),
+&ui_print_header($title,
 		 $text{'graph_title'}, "", undef, 0, 0, 0, undef,
 		 "<script src='timeplot/timeplot-api.js?local'></script>",
 		 "onload='onLoad();' onresize='onResize();'");
 
-if ($mode ne "server") {
-	# Show mode switcher
+if ($mode ne "server" && $mode ne "owner") {
+	# Show mode switcher (systems separate, by host system, total)
 	@links = ( );
 	foreach $m ("systems", "host", "total") {
 		if ($mode eq $m) {
@@ -95,6 +108,7 @@ if ($in{'ago'} <= 0) {
 # Period selector
 print &ui_form_start("bwgraph.cgi");
 print &ui_hidden("mode", $mode);
+print &ui_hidden("owner", $in{'owner'});
 print &ui_hidden("dir", $dir);
 print &ui_hidden("id", $in{'id'});
 print &ui_hidden("log", $in{'log'});
@@ -206,7 +220,9 @@ print "<br>\n";
 
 if ($mode ne "systems" && $mode ne "host") {
 	# The time graph itself
+	$datalink = "bwgraph_data.cgi?id=$in{'id'}&mode=$mode&start=$start&end=$end&scale=$scale&owner=$in{'owner'}";
 	print "<div id='history' style='height: 500px;'></div><br>\n";
+	print "<a href='$datalink'>$text{'graph_raw'}</a><br>\n";
 	}
 else {
 	# A bar chart by system .. first need to work out usage for each one
@@ -289,6 +305,7 @@ if ($config{'bw_dir_in'} && $config{'bw_dir_out'}) {
 	}
 print &ui_form_start("bwgraph.cgi");
 print &ui_hidden("mode", $mode);
+print &ui_hidden("owner", $in{'owner'});
 print &ui_hidden("ago", $in{'ago'});
 print &ui_hidden("id", $in{'id'});
 print "<table>\n";
@@ -319,44 +336,42 @@ if ($mode ne "system") {
 	print "  var eventSource = new Timeplot.DefaultEventSource();\n";
 	$plotno = 1;
 
-	if ($mode eq 'server' || $mode eq 'total') {
-		# Show graph for one or all servers, with limit
-		$geom = $in{'log'} ? 'LogarithmicValueGeometry'
-				   : 'DefaultValueGeometry';
-		print "  var vg = new Timeplot.${geom}({\n";
-		print "        gridColor: '#B3B6B0',\n";
-		print "        axisLabelsPlacement: 'left',\n";
-		print "        min: 0\n";
-		print "      });\n";
-		print "  var tg = new Timeplot.DefaultTimeGeometry({\n";
-		print "        gridColor: '#B3B6B0',\n";
-		print "        axisLabelsPlacement: 'top'\n";
-		print "      });\n";
-		print "  var plotInfo = [\n";
-		foreach $d (@dirs) {
-			$c = $d eq 'in' ? 1 : $d eq 'out' ? 2 : 3;
-			$lc = $color_mapping->{$d};
-			print "    Timeplot.createPlotInfo({\n";
-			print "      id: '$d',\n";
-			print "      dataSource: ",
-			      "new Timeplot.ColumnSource(eventSource, $c),\n";
-			print "      valueGeometry: vg,\n";
-			print "      timeGeometry: tg,\n";
-			print "      showValues: true,\n";
-			print "      lineColor: '$lc'\n";
-			if ($d eq $dirs[$#dirs]) {
-				print "    })\n";
-				}
-			else {
-				print "    }),\n";
-				}
+	# Show graph for one or all servers, with limit
+	$geom = $in{'log'} ? 'LogarithmicValueGeometry'
+			   : 'DefaultValueGeometry';
+	print "  var vg = new Timeplot.${geom}({\n";
+	print "        gridColor: '#B3B6B0',\n";
+	print "        axisLabelsPlacement: 'left',\n";
+	print "        min: 0\n";
+	print "      });\n";
+	print "  var tg = new Timeplot.DefaultTimeGeometry({\n";
+	print "        gridColor: '#B3B6B0',\n";
+	print "        axisLabelsPlacement: 'top'\n";
+	print "      });\n";
+	print "  var plotInfo = [\n";
+	foreach $d (@dirs) {
+		$c = $d eq 'in' ? 1 : $d eq 'out' ? 2 : 3;
+		$lc = $color_mapping->{$d};
+		print "    Timeplot.createPlotInfo({\n";
+		print "      id: '$d',\n";
+		print "      dataSource: ",
+		      "new Timeplot.ColumnSource(eventSource, $c),\n";
+		print "      valueGeometry: vg,\n";
+		print "      timeGeometry: tg,\n";
+		print "      showValues: true,\n";
+		print "      lineColor: '$lc'\n";
+		if ($d eq $dirs[$#dirs]) {
+			print "    })\n";
 			}
-		print "  ];\n";
+		else {
+			print "    }),\n";
+			}
 		}
+	print "  ];\n";
 
 	# Generic javascript end
 	print "  timeplot = Timeplot.create(document.getElementById('history'), plotInfo);\n";
-	print "  timeplot.loadText('bwgraph_data.cgi?id=$in{'id'}&mode=$mode&start=$start&end=$end&scale=$scale', ',', eventSource);\n";
+	print "  timeplot.loadText('$datalink', ',', eventSource);\n";
 	print "}\n";
 	}
 

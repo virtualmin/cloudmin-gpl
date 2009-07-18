@@ -203,6 +203,8 @@ print &ui_form_end(
 	       : [ [ undef, $text{'save'} ],
 		   &supports_switch() ? ( [ 'switch', $text{'owner_switch'} ] )
 				      : ( ),
+		   $config{'bw_enabled'} ? ( [ 'bw', $text{'owner_bwgraph'} ] )
+					 : ( ),
 		   [ 'delete', $text{'delete'} ] ]); 
 
 &ui_print_footer("list_owners.cgi", $text{'owners_return'});

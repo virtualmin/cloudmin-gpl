@@ -50,8 +50,13 @@ if ($in{'mode'} eq 'server') {
 		}
 	}
 
-elsif ($in{'mode'} eq 'total') {
-	# Show sum of all servers
+elsif ($in{'mode'} eq 'total' || $in{'mode'} eq 'owner') {
+	# Show sum of all servers, or those for some owner
+	if ($in{'mode'} eq 'owner') {
+		&can_action_error(undef, "global");
+		$owner = &get_system_owner($in{'owner'});
+		@servers = &get_owner_servers($owner);
+		}
 	&can_action_error(\@servers, "graph");
 	@bwinfos = ( );
 	foreach $server (@servers) {

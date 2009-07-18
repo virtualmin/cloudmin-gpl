@@ -1855,6 +1855,7 @@ bw_enotify=Missing or invalid number of hours between email notifications
 
 graph_title=Bandwidth Graph
 graph_title2=Overall Bandwidth Graph
+graph_owner=System owner $1
 graph_mode=Display mode:
 graph_mode_host=By hosting system
 graph_mode_total=Total for all virtual systems
@@ -1874,6 +1875,9 @@ graph_limit=Bandwidth limit
 graph_log=Vertical axis scaling
 graph_log0=Linear
 graph_log1=Logarithmic
+graph_raw=Download raw data..
+graph_eserver=System to graph does not exist!
+graph_eowner=Owner to graph does not exist!
 
 cat_system=System Configuration
 cat_res=Resources
@@ -1952,6 +1956,7 @@ owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
 owner_egone=System owner no longer exists!
 owner_switch=Switch to Owner
+owner_bwgraph=Bandwidth Graph
 owner_header4=Limits and usage against plan
 owner_serverlimit=Virtual systems
 owner_ramlimit=RAM assigned to systems
