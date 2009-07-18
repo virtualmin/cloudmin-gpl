@@ -1842,6 +1842,19 @@ foreach my $p (&is_parent_server($server)) {
 # Add disk usage, CPU and memory to historic stats, if we got them
 &add_historic_collected_info($info, $time || $server->{'statustime'}, $server);
 
+# Cache IP addresses, if we don't have them yet
+if (!$server->{'ip_addresses'} && $server->{'status'} ne 'nohost') {
+	local $cfunc = "type_".$server->{'manager'}."_can_interfaces";
+	if (defined(&$cfunc) && &$cfunc($server)) {
+		local $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+		local $ifaces = &$ifunc($server);
+		if (ref($ifaces)) {
+			$server->{'ip_addresses'} = join(" ",
+				map { $_->{'address'} } @$ifaces);
+			}
+		}
+	}
+
 &release_lock_server($server);
 return $rv;
 }
