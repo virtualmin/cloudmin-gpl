@@ -76,60 +76,25 @@ if ($multi) {
 			$plan = &get_plan($o->{'acl'}->{'plan'});
 			$limits = &get_owner_limits($o->{'name'});
 			print "    Plan: ",$plan->{'desc'},"\n";
-			print "    Max systems: ",
-				($o->{'acl'}->{'max_servers'} || "Unlimited"),
-				"\n";
-			print "    Current systems: ",
-				$limits->{'servers'},"\n";
-
-			print "    Max RAM: ",
-				($o->{'acl'}->{'max_ram'} ?
-				   &nice_size($o->{'acl'}->{'max_ram'}) :
-				   "Unlimited"),"\n";
-			print "    Max RAM in bytes: ",
-				($o->{'acl'}->{'max_ram'} || "Unlimited"),"\n";
-			if ($limits->{'ram'}) {
-				print "    Current RAM: ",
-					&nice_size($limits->{'ram'}),"\n";
-				print "    Current RAM in bytes: ",
-					$limits->{'ram'},"\n";
+			foreach $l (@plan_limit_types) {
+				$n = &indexof($l, @nice_plan_limit_types) >= 0;
+				$m = $limits->{'max_'.$l};
+				$c = $limits->{$l};
+				print "    Max ${l}: ",
+					!$m ? "Unlimited" :
+					$n ? &nice_size($m) : $m,"\n";
+				if ($n) {
+					print "    Max ${l} in bytes: ",
+						!$m ? "Unlimited" : $m,"\n";
+					}
+				if ($c) {
+					print "    Current ${l}: $c\n";
+					}
+				if ($c && $n) {
+					print "    Current ${l} in bytes: ",
+						&nice_size($c),"\n";
+					}
 				}
-
-			print "    Max disk: ",
-				($o->{'acl'}->{'max_disk'} ?
-				   &nice_size($o->{'acl'}->{'max_disk'}) :
-				   "Unlimited"),"\n";
-			print "    Max disk in bytes: ",
-				($o->{'acl'}->{'max_disk'} || "Unlimited"),"\n";
-			if ($limits->{'disk'}) {
-				print "    Current disk: ",
-					&nice_size($limits->{'disk'}),"\n";
-				print "    Current disk in bytes: ",
-					$limits->{'disk'},"\n";
-				}
-
-			print "    Max CPU: ",
-				($o->{'acl'}->{'max_cpu'} ?
-				   $o->{'acl'}->{'max_cpu'}."%" : "Unlimited"),
-				"\n";
-			if ($limits->{'cpu'}) {
-				print "    Current CPU: ",
-					$limits->{'cpu'},"%\n";
-				}
-
-			print "    Max bandwidth: ",
-				($o->{'acl'}->{'max_bw'} ?
-				   &nice_size($o->{'acl'}->{'max_bw'}) :
-				   "Unlimited"),"\n";
-			print "    Max bandwidth in bytes: ",
-				($o->{'acl'}->{'max_bw'} || "Unlimited"),"\n";
-			if ($limits->{'bw'}) {
-				print "    Bandwidth use: ",
-					&nice_size($limits->{'bw'}),"\n";
-				print "    Bandwidth use in bytes: ",
-					$limits->{'bw'},"\n";
-				}
-
 			print "    Actions from plan: ",
 				($o->{'acl'}->{'actions_def'} ? "Yes" : "No"),
 				"\n";

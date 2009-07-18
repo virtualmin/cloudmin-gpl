@@ -57,26 +57,17 @@ if ($multi) {
 	foreach $p (@plans) {
 		print $p->{'desc'},"\n";
 		print "    Plan ID: $p->{'id'}\n";
-		print "    Max systems: ",
-			($p->{'max_servers'} || "Unlimited"),"\n";
-		print "    Max RAM: ",
-			($p->{'max_ram'} ? &nice_size($p->{'max_ram'})
-					 : "Unlimited"),"\n";
-		print "    Max RAM in bytes: ",
-			($p->{'max_ram'} || "Unlimited"),"\n";
-		print "    Max disk: ",
-			($p->{'max_disk'} ? &nice_size($p->{'max_disk'})
-					  : "Unlimited"),"\n";
-		print "    Max disk in bytes: ",
-			($p->{'max_disk'} || "Unlimited"),"\n";
-		print "    Max CPU: ",
-			($p->{'max_cpu'} ? $p->{'max_cpu'}."%"
-					 : "Unlimited"),"\n";
-		print "    Max bandwidth: ",
-			($p->{'max_bw'} ? &nice_size($p->{'max_bw'})
-					  : "Unlimited"),"\n";
-		print "    Max bandwidth in bytes: ",
-			($p->{'max_bw'} || "Unlimited"),"\n";
+		foreach $l (@plan_limit_types) {
+			$n = &indexof($l, @nice_plan_limit_types) >= 0;
+			$m = $p->{'max_'.$l};
+			print "    Max ${l}: ",
+				!$m ? "Unlimited" :
+				$n ? &nice_size($m) : $m,"\n";
+			if ($n) {
+				print "    Max ${l} in bytes: ",
+					!$m ? "Unlimited" : $m,"\n";
+				}
+			}
 		%actions = map { $_, 1 } split(/\s+/, $p->{'actions'});
 		print "    Allowed actions: ",
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";

@@ -25,33 +25,15 @@ print &ui_hidden_table_start($text{'plan_header'}, "width=100%", 2, "main", 1,
 print &ui_table_row($text{'plan_desc'},
 	&ui_textbox("desc", $plan->{'desc'}, 60));
 
-# Maximum systems
-print &ui_table_row($text{'plan_max_servers'},
-	&ui_opt_textbox("max_servers", $plan->{'max_servers'} || undef, 6,
-			$text{'domains_unlimited'}));
-
-# Maximum RAM that can be allocated
-print &ui_table_row($text{'plan_max_ram'},
-	&ui_radio("max_ram_def", $plan->{'max_ram'} ? 0 : 1,
-		  [ [ 1, $text{'domains_unlimited'} ],
-		    [ 0, &ui_bytesbox("max_ram", $plan->{'max_ram'}, 6) ] ]));
-
-# Maximum disk
-print &ui_table_row($text{'plan_max_disk'},
-	&ui_radio("max_disk_def", $plan->{'max_disk'} ? 0 : 1,
-		  [ [ 1, $text{'domains_unlimited'} ],
-		    [ 0, &ui_bytesbox("max_disk", $plan->{'max_disk'}, 6) ] ]));
-
-# Maximum CPU
-print &ui_table_row($text{'plan_max_cpu'},
-	&ui_opt_textbox("max_cpu", $plan->{'max_cpu'} || undef, 4,
-			$text{'domains_unlimited'})."%");
-
-# Maximum bandwidth use
-print &ui_table_row($text{'plan_max_bw'},
-	&ui_radio("max_bw_def", $plan->{'max_bw'} ? 0 : 1,
-		  [ [ 1, $text{'domains_unlimited'} ],
-		    [ 0, &ui_bytesbox("max_bw", $plan->{'max_bw'}, 6) ] ]));
+foreach $l (@plan_limit_types) {
+	$field = &indexof($l, @nice_plan_limit_types) >= 0 ?
+		&ui_bytesbox("max_".$l, $plan->{'max_'.$l}, 6) :
+		&ui_textbox("max_".$l, $plan->{'max_'.$l} || undef, 6);
+	print &ui_table_row($text{'plan_max_'.$l},
+		&ui_radio("max_".$l."_def", $plan->{'max_'.$l} ? 0 : 1,
+			  [ [ 1, $text{'domains_unlimited'} ],
+			    [ 0, $field ] ]));
+	}
 
 print &ui_hidden_table_end();
 
@@ -81,11 +63,10 @@ if (!$in{'new'}) {
 		      &list_system_owners();
 	if (@users) {
 		print &ui_table_row($text{'plan_owners'},
-			&ui_grid_table([
+			&ui_links_row([
 			   map { "<a href='edit_owner.cgi?name=".
 				 &urlize($_->{'name'})."'>".
-				 &html_escape($_->{'name'})."</a>" } @users ],
-			   4, 100));
+				 &html_escape($_->{'name'})."</a>" } @users ]));
 		}
 	}
 

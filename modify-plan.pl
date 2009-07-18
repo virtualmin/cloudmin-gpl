@@ -72,15 +72,19 @@ while(@ARGV > 0) {
 	elsif ($a =~ /^--cannot-(\S+)$/ && &indexof($1, @allactions) >= 0) {
 		push(@remactions, $1);
 		}
-	elsif ($a =~ /^--max-(systems|ram|disk|cpu|bw)$/) {
+	elsif ($a =~ /^--max-(\S+)$/) {
 		$w = $1 eq 'systems' ? 'servers' : $1;
+		&indexof($w, @plan_limit_types) >= 0 ||
+			&usage("Unknown limit type $w");
 		$m = shift(@ARGV);
 		$maxes{$w} = $m;
 		$m =~ /^\d+$/ ||
 			&usage("--max-$w must be followed by an integer");
 		}
-	elsif ($a =~ /^--unlimited-(systems|ram|disk|cpu|bw)$/) {
+	elsif ($a =~ /^--unlimited-(\S+)$/) {
 		$w = $1 eq 'systems' ? 'servers' : $1;
+		&indexof($w, @plan_limit_types) >= 0 ||
+			&usage("Unknown limit type $w");
 		$maxes{$w} = 0;
 		}
 	elsif ($a eq "--add-type") {
@@ -166,11 +170,10 @@ print "$_[0]\n\n" if ($_[0]);
 print "Updates an existing Cloudmin account plan.\n";
 print "\n";
 print "cloudmin modify-plan --name plan-name\n";
-print "                    [--max-systems num | --unlimited-systems]\n";
-print "                    [--max-ram bytes | --unlimited-ram]\n";
-print "                    [--max-disk bytes | --unlimited-disk]\n";
-print "                    [--max-cpu percent | --unlimited-cpu]\n";
-print "                    [--max-bw bytes | --unlimited-bw]\n";
+foreach $l (@plan_limit_types) {
+	$units = &indexof($l, @nice_plan_limit_types) >= 0 ? "bytes" : "number";
+	print "                    [--max-${l} $units | --unlimited-${l}]\n";
+	}
 print "                    [--add-type ".
       join("|", @virtual_server_management_types)."]*\n";
 print "                    [--remove-type ".

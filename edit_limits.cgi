@@ -91,10 +91,12 @@ if (defined(&$rfunc) && $config{'bw_enabled'}) {
 $rfunc = "type_".$t."_get_network_rate";
 if (defined(&$rfunc)) {
 	$rate = &$rfunc($server);
-	print &ui_table_row($text{'edit_lrate'},
-		&ui_radio("rate_def", $rate ? 0 : 1,
+	if (defined($rate)) {
+		print &ui_table_row($text{'edit_lrate'},
+			&ui_radio("rate_def", $rate ? 0 : 1,
 			  [ [ 1, $text{'edit_lunlimit'} ],
 			    [ 0, &ui_ratebox("rate", $rate || undef) ] ]));
+		}
 	}
 
 print &ui_table_end();

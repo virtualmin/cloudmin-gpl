@@ -78,8 +78,10 @@ while(@ARGV > 0) {
 	elsif ($a =~ /^--can-(\S+)$/ && &indexof($1, @allactions) >= 0) {
 		push(@actions, $1);
 		}
-	elsif ($a =~ /^--max-(systems|ram|disk|cpu|bw)$/) {
+	elsif ($a =~ /^--max-(\S+)$/) {
 		$w = $1 eq 'systems' ? 'servers' : $1;
+		&indexof($w, @plan_limit_types) >= 0 ||
+			&usage("Unknown limit type $w");
 		$m = shift(@ARGV);
 		$maxes{$w} = $m;
 		$m =~ /^\d+$/ ||
@@ -128,11 +130,10 @@ print "$_[0]\n\n" if ($_[0]);
 print "Creates a new Cloudmin account plan.\n";
 print "\n";
 print "cloudmin create-plan --name plan-name\n";
-print "                    [--max-systems num]\n";
-print "                    [--max-ram bytes]\n";
-print "                    [--max-disk bytes]\n";
-print "                    [--max-cpu percent]\n";
-print "                    [--max-bw bytes]\n";
+foreach $l (@plan_limit_types) {
+	$units = &indexof($l, @nice_plan_limit_types) >= 0 ? "bytes" : "number";
+	print "                    [--max-${l} $units]\n";
+	}
 print "                    [--type ".
       join("|", @virtual_server_management_types)."]*\n";
 print "                    [--image id]*\n";

@@ -34,54 +34,19 @@ else {
 		}
 	$plan->{'desc'} = $in{'desc'};
 
-	# Max allowed servers
-	if ($in{'max_servers_def'}) {
-		$plan->{'max_servers'} = 0;
-		}
-	else {
-		$in{'max_servers'} =~ /^[1-9][0-9]*$/ ||
-			&error($text{'plan_emax_servers'});
-		$plan->{'max_servers'} = $in{'max_servers'};
-		}
-
-	# Max allowed RAM
-	if ($in{'max_ram_def'}) {
-		$plan->{'max_ram'} = 0;
-		}
-	else {
-		$in{'max_ram'} =~ /^[1-9][0-9]*$/ ||
-			&error($text{'plan_emax_ram'});
-		$plan->{'max_ram'} = $in{'max_ram'}*$in{'max_ram_units'};
-		}
-
-	# Max allowed disk
-	if ($in{'max_disk_def'}) {
-		$plan->{'max_disk'} = 0;
-		}
-	else {
-		$in{'max_disk'} =~ /^[1-9][0-9]*$/ ||
-			&error($text{'plan_emax_disk'});
-		$plan->{'max_disk'} = $in{'max_disk'}*$in{'max_disk_units'};
-		}
-
-	# Max allowed CPU limit
-	if ($in{'max_cpu_def'}) {
-		$plan->{'max_cpu'} = 0;
-		}
-	else {
-		$in{'max_cpu'} =~ /^[1-9][0-9]*$/ ||
-			&error($text{'plan_emax_cpu'});
-		$plan->{'max_cpu'} = $in{'max_cpu'};
-		}
-
-	# Max bandwidth
-	if ($in{'max_bw_def'}) {
-		$plan->{'max_bw'} = 0;
-		}
-	else {
-		$in{'max_bw'} =~ /^[1-9][0-9]*$/ ||
-			&error($text{'plan_emax_bw'});
-		$plan->{'max_bw'} = $in{'max_bw'}*$in{'max_bw_units'};
+	# Save maximums
+	foreach $l (@plan_limit_types) {
+		if ($in{'max_'.$l.'_def'}) {
+			$plan->{'max_'.$l} = 0;
+			}
+		else {
+			$in{'max_'.$l} =~ /^[1-9][0-9]*$/ ||
+				&error($text{'plan_emax_'.$l});
+			$plan->{'max_'.$l} = $in{'max_'.$l};
+			if (defined($in{'max_'.$l.'_units'})) {
+				$plan->{'max_'.$l} *= $in{'max_'.$l.'_units'};
+				}
+			}
 		}
 
 	# Actions
