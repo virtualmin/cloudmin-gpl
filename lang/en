@@ -1892,6 +1892,14 @@ owners_enable=Enable Selected
 owners_none=No system owner accounts have been defined yet.
 owners_return=system owners
 owners_plan=Account plan
+owners_limits=Over limits
+owners_nolimits=None
+
+limit_servers=$1 systems
+limit_ram=$1 RAM
+limit_disk=$1 disk
+limit_cpu=$1% CPU
+limit_bw=$1 bandwidth
 
 owner_title1=Create System Owner
 owner_title2=Edit System Owner

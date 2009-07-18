@@ -1,5 +1,8 @@
 # Functions for managing Webmin users who own Cloudmin systems.
 
+@plan_limit_types = ( 'servers', 'ram', 'disk', 'cpu', 'bw' );
+@nice_plan_limit_types = ( 'ram', 'disk', 'bw' );
+
 # list_system_owners()
 # Returns a list of Webmin user objects for additional Cloudmin logins
 sub list_system_owners
@@ -294,14 +297,14 @@ sub supports_switch
 return $main::session_id;
 }
 
-# get_owner_limits([username])
+# get_owner_limits([username|&owner])
 # Returns a hash ref of limits and counts for the current system owner. The
 # keys are max_servers, servers, max_disk, disk, max_ram and ram
 sub get_owner_limits
 {
 my ($name) = @_;
 $name ||= $base_remote_user;
-my $owner = &get_system_owner($name);
+my $owner = ref($name) ? $name : &get_system_owner($name);
 return undef if (!$owner);
 my $rv = { 'max_servers' => $owner->{'acl'}->{'max_servers'},
 	   'servers' => 0,
@@ -465,11 +468,9 @@ foreach my $o (grep { $_->{'acl'}->{'plan'} eq $plan->{'id'} }
 sub apply_plan_to_owner
 {
 my ($plan, $o) = @_;
-$o->{'acl'}->{'max_servers'} = $plan->{'max_servers'};
-$o->{'acl'}->{'max_ram'} = $plan->{'max_ram'};
-$o->{'acl'}->{'max_disk'} = $plan->{'max_disk'};
-$o->{'acl'}->{'max_cpu'} = $plan->{'max_cpu'};
-$o->{'acl'}->{'max_bw'} = $plan->{'max_bw'};
+foreach my $l (@plan_limit_types) {
+	$o->{'acl'}->{'max_'.$l} = $plan->{'max_'.$l};
+	}
 $o->{'acl'}->{'types'} = $plan->{'types'};
 if ($o->{'acl'}->{'actions_def'}) {
 	$o->{'acl'}->{'actions'} = $plan->{'actions'};
@@ -477,6 +478,32 @@ if ($o->{'acl'}->{'actions_def'}) {
 $o->{'acl'}->{'hosts'} = $plan->{'hosts'};
 $o->{'acl'}->{'hostmode'} = $plan->{'hostmode'};
 $o->{'acl'}->{'images'} = $plan->{'images'};
+}
+
+# owner_limits_desc(&owner, [only-over])
+# Return an HTML string describing this owner's limits
+sub owner_limits_desc
+{
+local ($owner, $over) = @_;
+local $limits = &get_owner_limits($owner->{'name'});
+local @rv;
+foreach my $l (@plan_limit_types) {
+	local $msg = $limits->{'max_'.$l};
+	if ($msg) {
+		if (&indexof($l, @nice_plan_limit_types) >= 0) {
+			$msg = &nice_size($msg);
+			}
+		$msg = &text('limit_'.$l, $msg);
+		if ($limits->{$l} > $limits->{'max_'.$l}) {
+			$msg = "<font color=red>$msg</font>";
+			}
+		elsif ($over) {
+			next;
+			}
+		push(@rv, $msg);
+		}
+	}
+return join(', ', @rv) || $text{'owners_nolimits'};
 }
 
 1;

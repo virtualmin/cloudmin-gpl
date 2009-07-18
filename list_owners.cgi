@@ -16,7 +16,8 @@ if (@owners) {
 	print &ui_columns_start([ "", $text{'owners_name'},
 				  $text{'owners_real'},
 				  &supports_plans() ? 
-					( $text{'owners_plan'} ) : ( ),
+					( $text{'owners_plan'},
+					  $text{'owners_limits'} ) : ( ),
 				  $text{'owners_users'} ], 100, 0, \@tds);
 	foreach $o (@owners) {
 		%canservers = map { $_, 1 }
@@ -35,7 +36,8 @@ if (@owners) {
 			"<a href='edit_owner.cgi?name=".&urlize($o->{'name'}).
 			 "'>$name</a>",
 			$o->{'real'},
-			$plan ? ( $plan->{'desc'} ) : ( ),
+			$plan ? ( $plan->{'desc'}, &owner_limits_desc($o, 1) )
+			      : ( ),
 			$users,
 			], \@tds, "d", $o->{'name'});
 		}
