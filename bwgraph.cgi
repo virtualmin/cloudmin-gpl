@@ -97,6 +97,7 @@ print &ui_form_start("bwgraph.cgi");
 print &ui_hidden("mode", $mode);
 print &ui_hidden("dir", $dir);
 print &ui_hidden("id", $in{'id'});
+print &ui_hidden("log", $in{'log'});
 @agos = ( [ -1, $text{'graph_lasthour'} ],
 	  [ -2, $text{'graph_lastday'} ] );
 for($ago=0; $ago<24; $ago++) {
@@ -277,7 +278,6 @@ else {
 	print "</table>\n";
 	}
 
-# Direction mode
 @dirsel = ( );
 if ($mode ne 'systems') {
 	push(@dirsel, [ "inout", $text{'graph_inout'} ]);
@@ -291,10 +291,24 @@ print &ui_form_start("bwgraph.cgi");
 print &ui_hidden("mode", $mode);
 print &ui_hidden("ago", $in{'ago'});
 print &ui_hidden("id", $in{'id'});
-print "<b>$text{'graph_dir'}</b> ",
+print "<table>\n";
+
+# Direction mode
+print "<tr> <td><b>$text{'graph_dir'}</b></td> <td>",
       &ui_select("dir", $dir, \@dirsel, 1, 0, 0, 0,
 		 "onChange='form.submit()'"),"\n",
-      &ui_submit($text{'graph_ok'}),"\n";
+      &ui_submit($text{'graph_ok'}),"</td> </tr>\n";
+
+# Log or integer mode
+if ($mode ne "system") {
+	print "<tr> <td><b>$text{'graph_log'}</b></td> <td>";
+	print &ui_radio("log", int($in{'log'}),
+			[ [ 0, $text{'graph_log0'} ],
+			  [ 1, $text{'graph_log1'} ] ]);
+	print "</td> </tr>\n";
+	}
+
+print "<table>\n";
 print &ui_form_end();
 
 # Generic javascript start
@@ -306,8 +320,10 @@ if ($mode ne "system") {
 	$plotno = 1;
 
 	if ($mode eq 'server' || $mode eq 'total') {
-		# Show graph for one server, with limit
-		print "  var vg = new Timeplot.DefaultValueGeometry({\n";
+		# Show graph for one or all servers, with limit
+		$geom = $in{'log'} ? 'LogarithmicValueGeometry'
+				   : 'DefaultValueGeometry';
+		print "  var vg = new Timeplot.${geom}({\n";
 		print "        gridColor: '#B3B6B0',\n";
 		print "        axisLabelsPlacement: 'left',\n";
 		print "        min: 0\n";

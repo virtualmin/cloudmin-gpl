@@ -1871,6 +1871,9 @@ graph_lastday=&lt;Last day&gt;
 graph_units=Graph units
 graph_unlimit=Unlimited
 graph_limit=Bandwidth limit
+graph_log=Vertical axis scaling
+graph_log0=Linear
+graph_log1=Logarithmic
 
 cat_system=System Configuration
 cat_res=Resources
