@@ -54,7 +54,8 @@ else {
 	if ($in{'new'}) {
 		$iface = { 'name' => $in{'name'} };
 		}
-	if (!$in{'new'} || !$in{'address_def'}) {
+	if ((!$in{'new'} || !$in{'address_def'}) &&
+	    &can_action($server, "ips")) {
 		&check_ipaddress($in{'address'}) ||
 			&error($text{'iface_eaddress'});
 		$iface->{'address'} = $in{'address'};

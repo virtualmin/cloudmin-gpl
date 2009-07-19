@@ -62,10 +62,25 @@ else {
 $afunc = "type_".$server->{'manager'}."_can_allocate_address";
 if ($in{'new'} && defined(&$afunc) && &$afunc($server)) {
 	# Show auto-allocate option
+	if (&can_action($server, "ips")) {
+		# Can allocate or enter
+		print &ui_table_row($text{'iface_address'},
+			    &ui_opt_textbox("address", undef, 20,
+					    $text{'iface_alloc'}));
+		}
+	else {
+		# Always allocated
+		print &ui_table_row($text{'iface_address'},
+				    "<i>$text{'iface_alloc'}</i>");
+		}
+	}
+elsif (!&can_action($server, "ips")) {
+	# Show existing IP
 	print &ui_table_row($text{'iface_address'},
-		    &ui_opt_textbox("address", undef, 20, $text{'iface_alloc'}));
+		"<tt>$iface->{'address'}</tt>");
 	}
 else {
+	# Must enter
 	print &ui_table_row($text{'iface_address'},
 		    &ui_textbox("address", $iface->{'address'}, 20));
 	}
