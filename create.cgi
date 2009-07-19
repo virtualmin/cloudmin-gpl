@@ -148,6 +148,16 @@ if ($limits) {
 		&error(&text('create_ecpulimit2',
 		       $limits->{'max_cpu'}));
 		}
+
+	# Validate IPs limit, assuming new system will have exactly 1
+	$incr = scalar(split(/\s+/, $server->{'ip_addresses'})) || 1;
+	if ($limits->{'max_ips'}) {
+		if ($limits->{'ips'} + $incr > $limits->{'max_ips'}) {
+			&error(&text('create_epulimit',
+			       $limits->{'max_ips'},
+			       $limits->{'ips'}));
+			}
+		}
 	}
 
 &ui_print_unbuffered_header(undef, $text{'create_title'}, "");

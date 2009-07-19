@@ -1843,7 +1843,21 @@ foreach my $p (&is_parent_server($server)) {
 &add_historic_collected_info($info, $time || $server->{'statustime'}, $server);
 
 # Cache IP addresses, if we don't have them yet
-if (!$server->{'ip_addresses'} && $server->{'status'} ne 'nohost') {
+if (!$server->{'ip_addresses'} || $regen) {
+	&compute_ip_addresses($server);
+	}
+
+&release_lock_server($server);
+return $rv;
+}
+
+# compute_ip_addresses(&server)
+# Update's a server hash's ip_addresses field with IPs actually active
+# on the system.
+sub compute_ip_addresses
+{
+local ($server) = @_;
+if ($server->{'status'} ne 'nohost') {
 	local $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 	if (defined(&$cfunc) && &$cfunc($server)) {
 		local $ifunc = "type_".$server->{'manager'}."_list_interfaces";
@@ -1854,9 +1868,24 @@ if (!$server->{'ip_addresses'} && $server->{'status'} ne 'nohost') {
 			}
 		}
 	}
+}
 
-&release_lock_server($server);
-return $rv;
+# add_ip_address(&server, ip)
+# Adds to the cached list of IP addresses
+sub add_ip_address
+{
+local ($server, $ip) = @_;
+$server->{'ip_addresses'} = join(" ",
+	&unique(split(/\s+/, $server->{'ip_addresses'}), $ip));
+}
+
+# delete_ip_address(&server, ip)
+# Removes from the cached list of IP addresses
+sub delete_ip_address
+{
+local ($server, $ip) = @_;
+$server->{'ip_addresses'} = join(" ",
+	grep { $_ ne $ip } split(/\s+/, $server->{'ip_addresses'}));
 }
 
 # save_server_domains(&server, &domains)
@@ -2735,31 +2764,18 @@ sub used_ip_addresses
 {
 local %used;
 foreach my $s (&list_managed_servers()) {
+	# Add IPs from VPS
 	$used{&to_ipaddress($s->{'host'})} = $s;
-	local $ifunc = "type_".$s->{'manager'}."_list_interfaces";
-	local $cfunc = "type_".$s->{'manager'}."_can_interfaces";
-	local $should = !defined(&$cfunc) ? 0 :
-			&$cfunc($s) == 0 ? 0 :
-			&$cfunc($s) == 2 ? ($s->{'status'} eq 'virt' ||
-					    $s->{'status'} eq 'novirt') :
-					   $s->{'status'} ne 'nohost';
-	if ($should) {
-		# Get from server manager virtual interfaces
-		local $ifaces = &$ifunc($s);
-		if (ref($ifaces)) {
-			foreach my $iface (@$ifaces) {
-				$used{$iface->{'address'}} = $s;
-				}
-			}
+	foreach my $ip (@{$s->{'ip_addresses'}}) {
+		$used{$ip}++;
 		}
-	else {
-		# Get from active IPs, from last poll
-		local $coll = &get_server_collected($s);
-		if ($coll->{'ifaces'}) {
-			foreach my $iface (@{$coll->{'ifaces'}}) {
-				if ($iface->{'address'}) {
-					$used{$iface->{'address'}} = $s;
-					}
+
+	# Add IPs from last collected from Virtualmin
+	local $coll = &get_server_collected($s);
+	if ($coll && $coll->{'ifaces'}) {
+		foreach my $iface (@{$coll->{'ifaces'}}) {
+			if ($iface->{'address'}) {
+				$used{$iface->{'address'}} = $s;
 				}
 			}
 		}
@@ -4106,15 +4122,6 @@ if (&can_action($server, "edit")) {
 		    'cat' => '',
 		    'link' => $ed,
 		    'priority' => 1 });
-	local $ifunc = "type_".$t."_list_interfaces";
-	local $cfunc = "type_".$t."_can_interfaces";
-	if (defined(&$ifunc) && &$cfunc($server) &&
-	    $status ne 'paused' && $status ne 'alive' && $status ne 'nohost') {
-		push(@rv, { 'id' => 'ifaces',
-			    'desc' => $text{'edit_link_ifaces'},
-			    'cat' => 'system',
-			    'link' => "list_ifaces.cgi?id=$server->{'id'}" });
-		}
 	}
 elsif (&can_action($server, "view")) {
 	# Or link to view details
@@ -4123,6 +4130,18 @@ elsif (&can_action($server, "view")) {
 		    'cat' => '',
 		    'link' => "edit_serv.cgi?id=$server->{'id'}",
 		    'priority' => 1 });
+	}
+
+# Link for interfaces
+local $ifunc = "type_".$t."_list_interfaces";
+local $cfunc = "type_".$t."_can_interfaces";
+if (defined(&$ifunc) && &$cfunc($server) &&
+    $status ne 'paused' && $status ne 'alive' && $status ne 'nohost' &&
+    &can_action($server, "ifaces")) {
+	push(@rv, { 'id' => 'ifaces',
+		    'desc' => $text{'edit_link_ifaces'},
+		    'cat' => 'system',
+		    'link' => "list_ifaces.cgi?id=$server->{'id'}" });
 	}
 
 # Link for Virtualmin domains

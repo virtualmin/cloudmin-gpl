@@ -83,7 +83,7 @@ sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
-	 'create', 'delete', 'advanced', 'ips', 'limits', 'disks',
+	 'create', 'delete', 'advanced', 'ips', 'ifaces', 'limits', 'disks',
 	 'devices' );
 }
 
@@ -93,7 +93,7 @@ sub list_safe_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
-         'create', 'delete', 'limits', 'disks' );
+         'create', 'delete', 'ifaces', 'limits', 'disks' );
 }
 
 # can_action([&server|&servers], [action])
@@ -306,18 +306,12 @@ my ($name) = @_;
 $name ||= $base_remote_user;
 my $owner = ref($name) ? $name : &get_system_owner($name);
 return undef if (!$owner);
-my $rv = { 'max_servers' => $owner->{'acl'}->{'max_servers'},
-	   'servers' => 0,
-	   'max_ram' => $owner->{'acl'}->{'max_ram'},
-	   'ram' => 0,
-	   'max_disk' => $owner->{'acl'}->{'max_disk'},
-	   'disk' => 0,
-	   'max_cpu' => $owner->{'acl'}->{'max_cpu'},
-	   'cpu' => 0,
-	   'max_bw' => $owner->{'acl'}->{'max_bw'},
-	   'bw' => 0,
-	   'list' => [ ],
+my $rv = { 'list' => [ ],
 	 };
+foreach my $l (@plan_limit_types) {
+	$rv->{$l} = 0;
+	$rv->{'max_'.$l} = $owner->{'acl'}->{'max_'.$l};
+	}
 foreach my $s (&get_owner_servers($owner)) {
 	$rv->{'servers'}++;
 	push(@{$rv->{'servers'}}, $s);
@@ -348,6 +342,9 @@ foreach my $s (&get_owner_servers($owner)) {
 
 	# Add bandwidth usage
 	$rv->{'bw'} += $s->{'bw_usage'};
+
+	# Add IP usage
+	$rv->{'ips'} += scalar(split(/\s+/, $s->{'ip_addresses'}));
 	}
 return $rv;
 }

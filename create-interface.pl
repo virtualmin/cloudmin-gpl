@@ -105,6 +105,7 @@ if ($err) {
 else {
 	print "Created interface $iface->{'fullname'} with address $iface->{'address'}\n";
 	}
+&save_managed_server($server);
 &release_lock_server($server);
 
 sub usage

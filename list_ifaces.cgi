@@ -9,7 +9,7 @@ require './server-manager-lib.pl';
 ($server) = grep { $_->{'id'} == $in{'id'} } @servers;
 $server || &error($text{'edit_egone'});
 $t = $server->{'manager'};
-&can_action($server, "edit") || &can_action_error($server, "view");
+&can_action_error($server, "ifaces");
 
 &ui_print_header(&server_in($server), $text{'ifaces_title'}, "", "ifaces");
 

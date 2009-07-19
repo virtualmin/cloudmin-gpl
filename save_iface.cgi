@@ -42,6 +42,7 @@ if ($in{'delete'}) {
 		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_interface";
 		$err = &$dfunc($server, $iface);
+		&save_managed_server($server);
 		&release_lock_server($server);
 		&error($err) if ($err);
 		&redirect("list_ifaces.cgi?id=$in{'id'}");
@@ -70,6 +71,15 @@ else {
 	&check_ipaddress($in{'netmask'}) || &error($text{'iface_enetmask'});
 	$iface->{'netmask'} = $in{'netmask'};
 
+	# Check if over limit
+	$limits = &get_owner_limits();
+	if ($in{'new'} && $limits && $limits->{'max_ips'}) {
+		if ($limits->{'ips'} + 1 > $limits->{'max_ips'}) {
+			&error(&text('iface_elimit',
+			       $limits->{'max_ips'}, $limits->{'ips'}));
+			}
+		}
+
 	# Save or create
 	&obtain_lock_server($server);
 	if ($in{'new'}) {
@@ -80,6 +90,7 @@ else {
 		$mfunc = "type_".$server->{'manager'}."_modify_interface";
 		$err = &$mfunc($server, $iface, $oldiface);
 		}
+	&save_managed_server($server);
 	&release_lock_server($server);
 	&error($err) if ($err);
 	&redirect("list_ifaces.cgi?id=$in{'id'}");

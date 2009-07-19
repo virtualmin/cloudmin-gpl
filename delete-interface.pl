@@ -74,6 +74,7 @@ if ($err) {
 else {
 	print "Deleted interface $iface->{'fullname'}\n";
 	}
+&save_managed_server($server);
 &release_lock_server($server);
 
 sub usage
