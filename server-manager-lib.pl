@@ -5960,6 +5960,37 @@ return &ui_textbox($name, $bits, $size, $dis)." ".
 		 undef, undef, undef, $dis);
 }
 
+# parse_ifconfig_output(out)
+# Parses the output of ifconfig -a into a list of interfaces
+sub parse_ifconfig_output
+{
+local ($out) = @_;
+local @ifaces;
+local @lines;
+foreach my $l (split(/\r?\n/, $out)) {
+	if ($l =~ /^\S+/) { push(@lines, $l); }
+	else { $lines[$#lines] .= $l; }
+	}
+foreach my $l (@lines) {
+	local %ifc;
+	$l =~ /^([^:\s]+)/; $ifc{'name'} = $1;
+	$l =~ /^(\S+)/; $ifc{'fullname'} = $1;
+	if ($l =~ /^(\S+):(\d+)/) { $ifc{'virtual'} = $2; }
+	if ($l =~ /inet addr:(\S+)/) { $ifc{'address'} = $1; }
+	if ($l =~ /Mask:(\S+)/) { $ifc{'netmask'} = $1; }
+	if ($l =~ /Bcast:(\S+)/) { $ifc{'broadcast'} = $1; }
+	if ($l =~ /HWaddr (\S+)/) { $ifc{'ether'} = $1; }
+	if ($l =~ /MTU:(\d+)/) { $ifc{'mtu'} = $1; }
+	if ($l =~ /P-t-P:(\S+)/) { $ifc{'ptp'} = $1; }
+	$ifc{'up'}++ if ($l =~ /\sUP\s/);
+	$ifc{'promisc'}++ if ($l =~ /\sPROMISC\s/);
+	$ifc{'edit'} = ($ifc{'name'} !~ /^ppp/);
+	$ifc{'index'} = scalar(@rv);
+	push(@ifaces, \%ifc);
+	}
+return @ifaces;
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update
 sub obtain_lock_server
