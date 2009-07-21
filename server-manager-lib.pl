@@ -23,6 +23,9 @@ if (-r "$module_root_directory/bw-lib.pl") {
 if (-r "$module_root_directory/usage-lib.pl") {
 	do 'usage-lib.pl';
 	}
+if (-r "$module_root_directory/backups-lib.pl") {
+	do 'backups-lib.pl';
+	}
 &foreign_require("servers", "servers-lib.pl");
 &foreign_require("proc", "proc-lib.pl");
 &foreign_require("net", "net-lib.pl");
@@ -169,6 +172,8 @@ $ping_host_timeout = 2;
 $xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
 
 $owner_plans_dir = "$module_config_directory/plans";
+
+$backups_dir = "$module_config_directory/backups";
 
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
@@ -404,6 +409,7 @@ if ($server->{'id'} eq '0') {
 			'virtualmin_domains' => $server->{'virtualmin_domains'},
 			'virtualmin_serial' => $server->{'virtualmin_serial'},
 			'virtualmin_key' => $server->{'virtualmin_key'},
+			'backup_default' => $server->{'backup_default'},
 		      );
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone') {

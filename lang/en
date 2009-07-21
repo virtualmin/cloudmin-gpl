@@ -2440,4 +2440,15 @@ dplan_eusers=The plan $1 is still being used by $2 system owners
 openvz_createlink=Create OpenVZ container
 openvz_addlink=Add OpenVZ container
 
-
+backups_dheader=Default backup destination
+backups_def=Backup hosted systems to
+backups_mode0=Directory on Cloudmin master
+backups_mode1=Directory on host system
+backups_mode2=Directory on system
+backups_mode3=Remote SSH server
+backups_sshhost=SSH host
+backups_sshport=SSH port
+backups_sshuser=SSH username
+backups_sshpass=SSH password
+backups_sshpath=Directory
+backups_modenone=None set yet
