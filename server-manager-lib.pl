@@ -715,16 +715,10 @@ if (defined(&$sfunc)) {
 	}
 
 # Need to really SSH
-local $cmd = "ssh -x -".$server->{'ssh_protocol'};
-if ($server->{'key'}) {
-	local ($key) = grep { $_->{'id'} == $server->{'key'} } &list_ssh_keys();
-	$cmd .= " -i ".quotemeta($key->{'file'});
-	}
-if ($server->{'ssh_port'}) {
-	$cmd .= " -p ".$server->{'ssh_port'};
-	}
-$cmd .= " $server->{'ssh_user'}\@$server->{'host'} 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK'";
-local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, 30);
+local $cmd = &build_ssh_command($server);
+local $timeout = int($config{'ssh_timeout'}) || 30;
+$cmd .= " 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK'";
+local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, $timeout);
 if ($status == 0) {
 	# Connected OK .. check the output to see if we have Webmin
 	if ($out !~ /OK/) {
@@ -1415,9 +1409,10 @@ return $type;
 sub ping_server_host
 {
 local ($host) = @_;
-local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c 1" : "ping";
+local $timeout = int($config{'ping_timeout'}) || 1;
+local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c $timeout" : "ping";
 local ($out, $timed_out) = &backquote_with_timeout(
-	$pingcmd." ".$host." 2>&1", $ping_host_timeout, 1);
+	$pingcmd." ".$host." 2>&1", $ping_host_timeout, $timeout);
 return !$timed_out && !$? ? 1 : 0;
 }
 
@@ -1575,7 +1570,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 
 	# Webmin is OK! Check for Virtualmin
 	local $info;
-	local $webmin_timeout = $regen ? 180 : 60;
+	local $webmin_timeout = int($config{'webmin_timeout'}) || 60;
+	$webmin_timeout *= 3 if ($regen);
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		local $main::error_must_die = 1;
@@ -5900,21 +5896,6 @@ sub pop_all_print
 {
 local $p = pop(@print_function_stack);
 ($first_print, $second_print, $indent_print, $outdent_print, $block_print) =@$p;
-}
-
-# Temporary function until Webmin 1.430 is out
-sub vm2_js_redirect
-{
-local ($url) = @_;
-if (defined(&js_redirect)) {
-	return &js_redirect(@_);
-	}
-elsif (defined(&theme_js_redirect)) {
-	return &theme_js_redirect(@_);
-	}
-else {
-	return "<script>window.location = '".&quote_escape($url)."';</script>\n";
-	}
 }
 
 # nice_rate(bits-per-sec)
