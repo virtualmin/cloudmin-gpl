@@ -57,7 +57,7 @@ $backup->{'file'} = "$scheduled_backups_dir/$backup->{'id'}";
 
 # Update or delete cron job
 &foreign_require("cron", "cron-lib.pl");
-my $cmd = $backup_cron_cmd." --id ".$backup->{'id'}";
+my $cmd = $backup_cron_cmd." --id ".$backup->{'id'};
 my $job;
 if (!$wasnew) {
 	($job) = &find_server_manager_cron_job($cmd);
