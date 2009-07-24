@@ -83,8 +83,8 @@ sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
-	 'create', 'delete', 'advanced', 'ips', 'ifaces', 'limits', 'disks',
-	 'devices' );
+	 'create', 'delete', 'advanced', 'ips', 'ifaces', 'reverse', 'limits',
+	 'disks', 'devices', 'sshkeys' );
 }
 
 # list_safe_owner_actions()

@@ -55,7 +55,14 @@ if (!$no_ssh) {
 				    &ssh_key_menu("key", $in{'type'}));
 		print &ui_hidden("auth_mode", 1);
 		}
+	elsif (!&can_action(undef, "sshkeys")) {
+		# Cannot select SSH keys
+		$has_root_password = 1;
+		print &ui_table_row($text{'add_authpass'},
+			&ui_textbox("upass", undef, 20));
+		}
 	else {
+		# Can enter password or key
 		$has_root_password = 1;
 		print &ui_table_row($text{'add_auth'},
 		    &ui_radio("auth_mode", 0,
