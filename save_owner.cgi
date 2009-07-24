@@ -46,6 +46,7 @@ else {
 	# Validate password
 	if (!$in{'opass_def'}) {
 		$in{'opass'} =~ /\S/ || &error($text{'owner_epass'});
+		$in{'opass'} =~ /:/ && &error($text{'owner_epass2'});
 		$owner->{'pass'} = &acl::encrypt_password($in{'opass'});
 		}
 

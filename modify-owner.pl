@@ -121,6 +121,7 @@ if (defined($email)) {
 	$owner->{'acl'}->{'email'} = $email;
 	}
 if (defined($pass)) {
+	$pass =~ /:/ && &usage("The password set with --pass cannot contain :");
 	$oldlock = $owner->{'pass'} =~ /^\!/ ? "!" : "";
 	$owner->{'pass'} = $oldlock.&acl::encrypt_password($pass);
 	}

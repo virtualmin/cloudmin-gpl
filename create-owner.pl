@@ -98,6 +98,7 @@ while(@ARGV > 0) {
 $name || &usage("Missing --name parameter");
 $email || &usage("Missing --email parameter");
 $pass || &usage("Missing --pass parameter");
+$pass =~ /:/ && &usage("The password set with --pass cannot contain :");
 %allservers = map { $_->{'host'}, $_ } &list_managed_servers();
 foreach $n (@hosts) {
 	$s = $allservers{$n};
