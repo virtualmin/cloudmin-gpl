@@ -32,7 +32,8 @@ foreach $l (@plan_limit_types) {
 	print &ui_table_row($text{'plan_max_'.$l},
 		&ui_radio("max_".$l."_def", $plan->{'max_'.$l} ? 0 : 1,
 			  [ [ 1, $text{'domains_unlimited'} ],
-			    [ 0, $field ] ]));
+			    [ 0, $field ] ]).
+		($l eq "cpu" ? "%" : ""));
 	}
 
 print &ui_hidden_table_end();

@@ -153,10 +153,12 @@ if (&supports_plans() && !$in{'new'}) {
 
 	foreach my $l (@plan_limit_types) {
 		$n = &indexof($l, @nice_plan_limit_types) >= 0;
-		$nice = $n ? &nice_size($limits->{$l})
-			   : $limits->{$l};
-		$nicemax = $n ? &nice_size($limits->{'max_'.$l})
-			      : $limits->{'max_'.$l};
+		$nice = $n ? &nice_size($limits->{$l}) :
+		        $l eq "cpu" ? $limits->{$l}."%"
+				    : $limits->{$l};
+		$nicemax = $n ? &nice_size($limits->{'max_'.$l}) :
+			   $l eq "cpu" ? $limits->{'max_'.$l}."%"
+				       : $limits->{'max_'.$l};
 		$msg = &text('owner_outof', $nice,
 			     $limits->{'max_'.$l} ? $nicemax
 						  : $text{'owner_unlimit'});
