@@ -173,7 +173,8 @@ $xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
 
 $owner_plans_dir = "$module_config_directory/plans";
 
-$backups_dir = "$module_config_directory/backups";
+$scheduled_backups_dir = "$module_config_directory/backups";
+$backup_cron_cmd = "$module_config_directory/backup.pl";
 
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});

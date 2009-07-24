@@ -4,14 +4,98 @@
 # Returns a list of backups configured by root or system owners
 sub list_backups
 {
+opendir(BACKUPS, $scheduled_backups_dir);
+foreach my $b (readdir(BACKUPS)) {
+	if ($b ne "." && $b ne "..") {
+		my %backup;
+		&read_file("$scheduled_backups_dir/$b", \%backup);
+		$backup{'id'} = $b;
+		$backup{'file'} = "$scheduled_backups_dir/$b";
+		delete($backup{'enabled'});	# Worked out below
+		push(@rv, \%backup);
+		}
+	}
+closedir(BACKUPS);
+
+# Merge in cron jobs to see which are enabled
+&foreign_require("cron", "cron-lib.pl");
+my @jobs = &cron::list_cron_jobs();
+foreach my $j (@jobs) {
+	if ($j->{'user'} eq 'root' &&
+	    $j->{'command'} =~ /^\Q$backup_cron_cmd\E(\s+\-\-id\s+(\d+))?/) {
+		my $id = $2 || 1;
+		my ($backup) = grep { $_->{'id'} eq $id } @rv;
+		if ($backup) {
+			$backup->{'enabled'} = 1;
+			&copy_cron_sched_keys($j, $backup);
+			}
+		}
+	}
+
+@rv = sort { $a->{'id'} <=> $b->{'id'} } @rv;
+return @rv;
 }
 
+sub copy_cron_sched_keys
+{
+my ($src, $dst) = @_;
+foreach my $k ('mins', 'hours', 'days', 'months', 'weekdays', 'special') {
+	$dst->{$k} = $src->{$k};
+	}
+}
+
+# save_backup(&backup)
+# Create or update a scheduled backup. Also creates any needed cron job.
 sub save_backup
 {
+my ($backup) = @_;
+my $wasnew = !$backup->{'id'};
+&make_dir($scheduled_backups_dir, 0700) if (!-d $scheduled_backups_dir);
+$backup->{'id'} ||= &domain_id();
+$backup->{'file'} = "$scheduled_backups_dir/$backup->{'id'}";
+&write_file($backup->{'file'}, $backup);
+
+# Update or delete cron job
+&foreign_require("cron", "cron-lib.pl");
+my $cmd = $backup_cron_cmd." --id ".$backup->{'id'}";
+my $job;
+if (!$wasnew) {
+	($job) = &find_server_manager_cron_job($cmd);
+	}
+if ($backup->{'enabled'} && $job) {
+	# Fix job schedule
+	&copy_cron_sched_keys($backup, $job);
+	&cron::change_cron_job($job);
+	}
+elsif ($backup->{'enabled'} && !$job) {
+	# Create cron job
+	$job = { 'user' => 'root',
+		 'active' => 1,
+		 'command' => $cmd };
+	&copy_cron_sched_keys($backup, $job);
+	&cron::create_cron_job($job);
+	}
+elsif (!$backup->{'enabled'} && $job) {
+	# Delete cron job
+	&cron::delete_cron_job($job);
+	}
+&cron::create_wrapper($backup_cron_cmd, $module_name, "backup.pl");
 }
 
+# delete_backup(&backup)
+# Delete one scheduled backup, and its cron job
 sub delete_backup
 {
+my ($backup) = @_;
+&unlink_file($backup->{'file'});
+
+# Delete cron too
+&foreign_require("cron", "cron-lib.pl");
+my $cmd = $backup_cron_cmd." --id ".$backup->{'id'};
+my @jobs = &find_server_manager_cron_job($cmd);
+if (@jobs) {
+	&cron::delete_cron_job($jobs[0]);
+	}
 }
 
 sub execute_backup
@@ -55,6 +139,13 @@ else {
 	}
 }
 
+# join_backup_destination(&dest)
+# Converts a destination hash ref into a string, like vm2:3423423423:/backup
+sub join_backup_destination
+{
+my ($dest) = @_;
+}
+
 # show_default_backup_dest_table(&server)
 # Output a table for a host system's page for selecting a default backup
 # destination for instances on that host.
@@ -91,11 +182,20 @@ print &ui_hidden_table_end("backups");
 
 # parse_default_backup_dest_table(&server, &in)
 # Updates a server's backup_default key with details of the default 
-# destination. May call error if input is invalid
+# destination. Calls error on failure.
 sub parse_default_backup_dest_table
 {
 my ($server, $in) = @_;
-# XXX
+my $mode = $in->{'backup_mode'};
+my $dest = $mode == -1 ? undef : { 'mode' => $mode };
+if ($mode == 2) {
+	$dest->{'id'} = $in->{'backup_vm2'};
+	}
+elsif ($mode == 3) {
+	my $err = &parse_backup_ssh_dest($dest, "backup", $in);
+	&error($err) if ($err);
+	}
+$server->{'backup_default'} = $dest ? &join_backup_destination($dest) : undef;
 }
 
 # show_backup_ssh_dest(&destination, prefix)
