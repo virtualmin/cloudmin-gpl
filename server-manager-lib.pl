@@ -348,6 +348,16 @@ sub server_id
 return time().$$.($main::server_id_count++);
 }
 
+# get_server_ip(&server)
+# Returns the IP address (or addresses in an array context) for a system
+sub get_server_ip
+{
+local ($server) = @_;
+local @ips = split(/\s+/, $server->{'ip_addresses'});
+@ips = ( &to_ipaddress($server->{'host'}) ) if (!@ips);
+return wantarray ? @ips : $ips[0];
+}
+
 # first_ethernet_iface()
 # Returns the object for the first active ethernet interface
 sub first_ethernet_iface
@@ -2664,6 +2674,7 @@ if ($zone && $dnsname) {
 sub get_reverse_dns_zone
 {
 local ($ip) = @_;
+&foreign_require("bind8", "bind8-lib.pl");
 local $conf = &bind8::get_config();
 local @zones = &bind8::find("zone", $conf);
 foreach my $v (&bind8::find("view", $conf)) {
@@ -4147,6 +4158,16 @@ if (defined(&$ifunc) && &$cfunc($server) &&
 		    'link' => "list_ifaces.cgi?id=$server->{'id'}" });
 	}
 
+# Link for reverse IP, if possible
+local $ip = &get_server_ip($server);
+local ($rfn) = &get_reverse_dns_zone($ip);
+if (&can_action($server, "reverse") && $rfn) {
+	push(@rv, { 'id' => 'reverse',
+		    'desc' => $text{'edit_link_reverse'},
+		    'cat' => 'system',
+		    'link' => "edit_reverse.cgi?id=$server->{'id'}" });
+	}
+
 # Link for Virtualmin domains
 if ($status eq 'virt' && (&can_action($server, "edit") ||
 			  &can_action($server, "view"))) {
@@ -5152,6 +5173,7 @@ sub host_free_desc
 {
 local ($vhost, $manager) = @_;
 local $vinfo = &get_server_collected($vhost);
+return "" if (!can_action(undef, "global"));
 local @rv;
 if ($manager && $vhost->{$manager.'_vg_free'}) {
 	push(@rv, &text('create_hostdisk',

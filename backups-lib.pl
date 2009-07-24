@@ -51,7 +51,7 @@ sub save_backup
 my ($backup) = @_;
 my $wasnew = !$backup->{'id'};
 &make_dir($scheduled_backups_dir, 0700) if (!-d $scheduled_backups_dir);
-$backup->{'id'} ||= &domain_id();
+$backup->{'id'} ||= &server_id();
 $backup->{'file'} = "$scheduled_backups_dir/$backup->{'id'}";
 &write_file($backup->{'file'}, $backup);
 

@@ -41,7 +41,7 @@ else {
 
 # IP address
 if (!&check_ipaddress($server->{'host'})) {
-	$ip = &to_ipaddress($server->{'host'});
+	$ip = &get_server_ip($server);
 	print &ui_table_row($text{'edit_ipaddr'},
 		$ip ? "<tt>$ip</tt>"
 		    : "<font color=#ff0000>$text{'edit_ipfailed'}</font>");
