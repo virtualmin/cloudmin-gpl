@@ -29,6 +29,7 @@ if (!$in{'program'}) {
 elsif (!&can_action(undef, "global")) {
 	print "Content-type: text/plain\n\n";
 	print "You are not allowed to call the remote API.\n";
+	exit(0);
 	}
 
 # Prevent executed programs from doing referer checks
