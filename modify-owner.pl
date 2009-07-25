@@ -81,7 +81,7 @@ while(@ARGV > 0) {
 		&supports_plans() || &usage("The --plan flag is not supported");
 		$planid = shift(@ARGV);
 		($plan) = grep { $_->{'id'} eq $planid ||
-				 lc($_->{'name'}) eq lc($planid) }
+				 lc($_->{'desc'}) eq lc($planid) }
 			       &list_plans();
 		$plan || &usage("No plan with ID or name $planid exists");
 		}
