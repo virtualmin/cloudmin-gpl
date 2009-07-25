@@ -20,14 +20,24 @@ print &ui_table_start($text{'reverse_header'}, undef, 2);
 @ips = &get_server_ip($server);
 $i = 0;
 foreach $ip (@ips) {
+	print &ui_table_hr() if ($i);
 	print &ui_table_row($i == 0 ? $text{'reverse_ip0'}
 				    : &text('reverse_ipn', $i), "<tt>$ip</tt>");
-	($rfn) = &get_reverse_dns_zone($ip);
+	($rfn, $rrecs) = &get_reverse_dns_zone($ip);
+	$arpa = &bind8::ip_to_arpa($ip);
 	if ($rfn) {
-		# XXX
+		# Can edit reverse for IP
+		($r) = grep { $_->{'name'} eq $arpa } @$rrecs;
+		$rev = $r ? $r->{'values'}->[0] : '';
+		$rev =~ s/\.$//;
+		print &ui_table_row($text{'reverse_host'},
+			&ui_opt_textbox("host_$ip", $rev, 30,
+					$text{'reverse_none'}));
 		}
 	else {
-		# Cannot set
+		# Cannot set, as no reverse zone
+		print &ui_table_row($text{'reverse_host'},
+				    "<i>$text{'reverse_nozone'}</i>");
 		}
 	$i++;
 	}

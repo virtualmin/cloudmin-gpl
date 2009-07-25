@@ -2463,3 +2463,11 @@ backups_esshport=Missing or non-numeric SSH port
 backups_esshuser=Missing or invalid SSH username
 backups_esshpass=Invalid SSH port number
 backups_esshpath=Missing or non-absolute SSH directory
+
+reverse_title=Reverse Addresses
+reverse_header=Reverse address mappings
+reverse_ip0=Primary IP address
+reverse_ipn=Additional IP address $1
+reverse_host=Reverse mapping hostname
+reverse_none=None set
+reverse_nozone=Reverse zone not on system
