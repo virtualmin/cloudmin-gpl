@@ -21,21 +21,27 @@ foreach $ip (@ips) {
 	$rfn || &error(&text('reverse_ezone', $ip));
         $arpa = &bind8::ip_to_arpa($ip);
 	($r) = grep { $_->{'name'} eq $arpa } @$rrecs;
+	$in{"host_".$ip."_def"} || $in{"host_".$ip} =~ /^[a-z0-9\.\-\_]+$/i ||
+		&error(&text('reverse_ehost', $in{"host_".$ip}));
 	if ($r && $in{"host_".$ip."_def"}) {
 		# Delete the record
-		# XXX
+		&bind8::delete_record($rfn, $r);
 		}
 	elsif ($r && !$in{"host_".$ip."_def"}) {
 		# Update the record
-		# XXX
+		&bind8::modify_record($rfn, $r, $r->{'name'}, $r->{'ttl'},
+				      $r->{'class'}, $r->{'type'},
+				      $in{"host_$ip"}.".");
 		}
 	elsif (!$r && !$in{"host_".$ip."_def"}) {
 		# Add a record
-		# XXX
+		&bind8::create_record($rfn, $arpa, undef, "IN", "PTR",
+				      $in{"host_$ip"}.".");
 		}
-	# XXX bump SOAs
+	&bind8::bump_soa_record($rfn, $rrecs);
 	}
+&bind8::restart_bind();
 &release_lock_server($server);
 
-&redirect("edit_serv.cgi?id=".$in{'id'}");
+&redirect("edit_serv.cgi?id=".$in{'id'});
 

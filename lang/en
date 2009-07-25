@@ -2473,3 +2473,6 @@ reverse_ipn=Additional IP address $1
 reverse_host=Reverse mapping hostname
 reverse_none=None set
 reverse_nozone=Reverse zone not on system
+reverse_err=Failed to save reverse addresses
+reverse_ezone=No reverse zone found for IP address $1
+reverse_ehost=Missing or invalid hostname for IP address $1
