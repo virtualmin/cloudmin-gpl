@@ -84,7 +84,7 @@ sub list_owner_actions
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
 	 'create', 'delete', 'advanced', 'ips', 'ifaces', 'reverse', 'limits',
-	 'disks', 'devices', 'sshkeys' );
+	 'disks', 'devices', 'sshkeys', 'webmin', 'virtualmin' );
 }
 
 # list_safe_owner_actions()
@@ -93,7 +93,8 @@ sub list_safe_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
-         'create', 'delete', 'ifaces', 'reverse', 'limits', 'disks' );
+         'create', 'delete', 'ifaces', 'reverse', 'limits', 'disks',
+	 'webmin', 'virtualmin' );
 }
 
 # can_action([&server|&servers], [action])

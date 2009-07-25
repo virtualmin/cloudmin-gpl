@@ -4297,13 +4297,13 @@ else {
 		}
 	if (($status eq 'novirt' || $status eq 'nowebmin') &&
 	    $server->{'manager'} ne 'this' &&
-	    &can_action($server, "run")) {
+	    &can_action($server, "virtualmin")) {
 		push(@rv, { 'id' => 'installvirt',
 			    'desc' => $text{'edit_installvirt'},
 			    'cat' => 'manage' });
 		}
 	if ($status eq 'nowebmin' &&
-	    &can_action($server, "run")) {
+	    &can_action($server, "webmin")) {
 		push(@rv, { 'id' => 'installwebmin',
 			    'desc' => $text{'edit_installwebmin'},
 			    'cat' => 'manage' });

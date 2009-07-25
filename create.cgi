@@ -39,21 +39,23 @@ if (!$no_ssh) {
 	}
 
 # Webmin login
-if ($in{'webmin_mode'} == 1) {
-	# Same as SSH root
-	$in{'auth_mode'} == 0 || &error($text{'add_emode1'});
-	$server->{'user'} = $server->{'ssh_user'};
-	$server->{'pass'} = $server->{'ssh_pass'};
-	$server->{'ssh_pass_same'} = 1;
-	}
-elsif ($in{'webmin_mode'} == 2) {
-	# Password specified for Webmin root
-	$server->{'user'} = 'root';
-	$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
-	$server->{'pass'} = $in{'wpass'};
-	}
-if ($in{'webmin_mode'}) {
-	$server->{'port'} = 10000;
+if (&can_action(undef, "webmin")) {
+	if ($in{'webmin_mode'} == 1) {
+		# Same as SSH root
+		$in{'auth_mode'} == 0 || &error($text{'add_emode1'});
+		$server->{'user'} = $server->{'ssh_user'};
+		$server->{'pass'} = $server->{'ssh_pass'};
+		$server->{'ssh_pass_same'} = 1;
+		}
+	elsif ($in{'webmin_mode'} == 2) {
+		# Password specified for Webmin root
+		$server->{'user'} = 'root';
+		$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
+		$server->{'pass'} = $in{'wpass'};
+		}
+	if ($in{'webmin_mode'}) {
+		$server->{'port'} = 10000;
+		}
 	}
 $server->{'novirt'} = !$in{'canvirt'};
 $server->{'type'} = 'unknown';
@@ -79,7 +81,9 @@ if ($server->{'host'}) {
 	}
 
 # Validate licence
-($serial, $key) = &virtualmin_licence_parse("licence", \%in);
+if (&can_action(undef, "virtualmin")) {
+	($serial, $key) = &virtualmin_licence_parse("licence", \%in);
+	}
 if (!$serial && $key) {
 	&error($key);
 	}

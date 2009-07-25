@@ -76,13 +76,15 @@ else {
 	}
 
 # Webmin login
-print &ui_table_row($text{'create_webmin'},
-	&ui_radio("webmin_mode", 0,
+if (&can_action(undef, "webmin")) {
+	print &ui_table_row($text{'create_webmin'},
+	   &ui_radio("webmin_mode", 0,
 	      [ [ 0, $text{'create_webmin0'}."<br>" ],
 		$has_root_password ? ( [ 1, $text{'create_webmin1'}."<br>" ] )
 				   : ( ),
 		[ 2, &text('create_webmin2', "<tt>root</tt>",
 			   &ui_textbox("wpass", undef, 20)) ] ]));
+	}
 
 # Owner, if any
 @owners = defined(&list_system_owners) ? &list_system_owners() : ( );
@@ -121,22 +123,24 @@ if (defined(&$afunc) && &can_action(undef, "advanced")) {
 	}
 
 # Start of section for Virtualmin options
-print &ui_hidden_table_start($text{'create_vheader'}, "width=100%", 2,
-			     "virtualmin", 0, [ "width=30%" ]);
+if (&can_action(undef, "virtualmin")) {
+	print &ui_hidden_table_start($text{'create_vheader'}, "width=100%", 2,
+				     "virtualmin", 0, [ "width=30%" ]);
 
-# Virtualmin licence
-print &ui_table_row($text{'create_vlicence'},
-	&virtualmin_licence_form("licence", 0));
+	# Virtualmin licence
+	print &ui_table_row($text{'create_vlicence'},
+		&virtualmin_licence_form("licence", 0));
 
-# Can add domains?
-print &ui_table_row($text{'add_canvirt'},
-	&ui_yesno_radio("canvirt", 1));
+	# Can add domains?
+	print &ui_table_row($text{'add_canvirt'},
+		&ui_yesno_radio("canvirt", 1));
 
-# Update Virtualmin package?
-print &ui_table_row($text{'create_update'},
-	&ui_yesno_radio("update", 1));
+	# Update Virtualmin package?
+	print &ui_table_row($text{'create_update'},
+		&ui_yesno_radio("update", 1));
 
-print &ui_hidden_table_end();
+	print &ui_hidden_table_end();
+	}
 
 print &ui_form_end([ [ undef, $text{'create_ok'} ] ]);
 
