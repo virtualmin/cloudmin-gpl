@@ -44,7 +44,7 @@ while(@ARGV > 0) {
 	}
 
 # Get the systems
-@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owner);
+@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
 
 # Check if any cannot be rebooted
@@ -87,6 +87,7 @@ print "                       [--group name]*\n";
 local $types = join("|", @server_management_types);
 print "                       [--type $types]*\n";
 print "                       [--os oscode]*\n";
+print "                       [--owner name]*\n";
 exit(1);
 }
 

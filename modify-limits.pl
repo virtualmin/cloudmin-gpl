@@ -370,6 +370,7 @@ print "                       [--group name]*\n";
 local $types = join("|", @server_management_types);
 print "                       [--type $types]*\n";
 print "                       [--os oscode]*\n";
+print "                       [--owner name]*\n";
 print "                       [--cpu percentage | --no-cpu]\n";
 print "                       [--weight number]\n";
 print "                       [--memory MB | --no-memory]\n";

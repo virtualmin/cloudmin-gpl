@@ -149,6 +149,7 @@ print "                            [--type $types]*\n";
 print "                            [--os oscode]*\n";
 print "                            [--serial number --key number] |\n";
 print "                            [--same-serial] | [--allocate-serial]\n";
+print "                            [--owner name]*\n";
 exit(1);
 }
 

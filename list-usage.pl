@@ -62,7 +62,7 @@ while(@ARGV > 0) {
 	}
 
 # Work out who to list
-@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owner);
+@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
 
@@ -127,6 +127,7 @@ print "                    [--group name]*\n";
 local $types = join("|", @server_management_types);
 print "                    [--type $types]*\n";
 print "                    [--os oscode]*\n";
+print "                    [--owner name]*\n";
 exit(1);
 }
 

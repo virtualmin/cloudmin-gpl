@@ -107,6 +107,7 @@ print "                     [--group name]*\n";
 local $types = join("|", @server_management_types);
 print "                     [--type $types]*\n";
 print "                     [--os oscode]*\n";
+print "                     [--owner name]*\n";
 print "                     [--source sourcepath] | [--stdin]\n";
 print "                      --dest destpath\n";
 print "                     [--device-file]\n";
