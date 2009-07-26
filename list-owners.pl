@@ -88,11 +88,12 @@ if ($multi) {
 						!$m ? "Unlimited" : $m,"\n";
 					}
 				if ($c) {
-					print "    Current ${l}: $c\n";
+					print "    Current ${l}: ",
+						$n ? &nice_size($c) : $c,"\n";
 					}
 				if ($c && $n) {
 					print "    Current ${l} in bytes: ",
-						&nice_size($c),"\n";
+						$c,"\n";
 					}
 				}
 			print "    Actions from plan: ",
