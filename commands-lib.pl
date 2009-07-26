@@ -9,6 +9,7 @@ return (
 	[ "Amazon EC2", "*-ec2-*.pl" ],
 	[ "Network interfaces", "*-interface.pl", "*-interfaces.pl" ],
 	[ "System owners", "*-owner.pl", "*-owners.pl",
+			   "list-owner-bandwidth.pl",
 			   "*-plan.pl", "*-plans.pl" ],
 	[ "Virtualmin domains", "*-domain.pl", "*-domains.pl" ],
 	[ "License management", "*-licence.pl", "*-licences.pl" ],
