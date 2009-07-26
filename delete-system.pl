@@ -34,7 +34,10 @@ $< == 0 || die "$0 must be run as root";
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--host") {
-		push(@names, shift(@ARGV));
+		push(@hosts, shift(@ARGV));
+		}
+	elsif ($a eq "--owner") {
+		push(@owners, shift(@ARGV));
 		}
 	elsif ($a eq "--keep") {
 		$keep = 1;
@@ -44,13 +47,9 @@ while(@ARGV > 0) {
 		}
 	}
 
-# Get the systems
-@names || &usage("No system to delete specified");
-foreach my $n (@names) {
-	$server = &get_managed_server_by("host", $n);
-	$server || &usage("No system with hostname $n exists");
-	push(@servers, $server);
-	}
+# Work out who to list
+@servers = &find_managed_servers(0, \@hosts, [ ], [ ], [ ], \@owners);
+@servers || &usage("No systems specified");
 
 # Check if they can all be deleted
 foreach $s (@servers) {
@@ -103,8 +102,9 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Deletes one or more managed systems.\n";
 print "\n";
-print "cloudmin delete-system --host name [--host name]*\n";
-print "                      [--keep]\n";
+print "cloudmin delete-system [--host name]*\n";
+print "                       [--owner name]*\n";
+print "                       [--keep]\n";
 exit(1);
 }
 
