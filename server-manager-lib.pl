@@ -477,13 +477,22 @@ if (defined(&list_system_owners)) {
 	}
 }
 
-# find_managed_servers(all, &hostnames, &groupnames, &managers, &types)
+# find_managed_servers(all, &hostnames, &groupnames, &managers, &types, &owners)
 # Finds all servers matching some selection criteria
 sub find_managed_servers
 {
-local ($all, $hosts, $groups, $managers, $types) = @_;
+local ($all, $hosts, $groups, $managers, $types, $owners) = @_;
 local @rv;
 local %wantgroups = map { lc($_), 1 } @$groups;
+local %wantowned;
+foreach my $oname (@$owners) {
+	my $o = &get_system_owner($oname);
+	if ($o) {
+		foreach my $sid (split(/\s+/, $o->{'acl'}->{'servers'})) {
+			$wantowned{$sid}++;
+			}
+		}
+	}
 foreach my $s (&list_managed_servers()) {
 	local ($ingroup) = grep { $wantgroup{lc($_)} }
 				split(/\t/, $s->{'group'});
@@ -491,7 +500,8 @@ foreach my $s (&list_managed_servers()) {
 	    $ingroup ||
 	    &indexoflc($s->{'host'}, @$hosts) >= 0 ||
 	    &indexoflc($s->{'manager'}, @$managers) >= 0 ||
-	    &indexoflc($s->{'type'}, @$types) >= 0) {
+	    &indexoflc($s->{'type'}, @$types) >= 0 ||
+	    $wantowned{$s->{'id'}}) {
 		push(@rv, $s);
 		}
 	}

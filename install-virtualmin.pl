@@ -52,6 +52,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
+        elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
 	elsif ($a eq "--serial") { $serial = shift(@ARGV); }
 	elsif ($a eq "--key") { $key = shift(@ARGV); }
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
@@ -66,7 +67,7 @@ $serial && $key || $same_serial || $allocate_serial ||
 	&usage("A Virtualmin licence must be specified with --serial, --same-serial or --allocate-serial");
 
 # Work out who to install on
-@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
+@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
 
 # Make sure servers are valid

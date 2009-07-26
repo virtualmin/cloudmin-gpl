@@ -46,6 +46,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
+        elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
 	elsif ($a eq "--help") { &usage(); }
 	else {
 		push(@cmd, $a);
@@ -53,7 +54,7 @@ while(@ARGV > 0) {
 	}
 
 # Work out who to run on
-@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types);
+@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
 
 # Build the command

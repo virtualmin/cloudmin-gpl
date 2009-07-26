@@ -40,6 +40,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
+        elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
 	elsif ($a eq "--force") { $force = 1; }
 	elsif ($a eq "--help") { &usage(); }
 	else {
@@ -48,7 +49,7 @@ while(@ARGV > 0) {
 	}
 
 # Get the systems
-@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types);
+@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
 
