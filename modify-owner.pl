@@ -93,6 +93,27 @@ while(@ARGV > 0) {
 		&supports_plans() || &usage("The --no-plan-actions flag is not supported");
 		$actions_def = 0;
 		}
+	elsif ($a =~ /^--max-(\S+)$/) {
+		$w = $1 eq 'systems' ? 'servers' : $1;
+		&indexof($w, @plan_limit_types) >= 0 ||
+			&usage("Unknown limit type $w");
+		$m = shift(@ARGV);
+		$maxes{$w} = $m;
+		$m =~ /^\d+$/ ||
+			&usage("--max-$w must be followed by an integer");
+		}
+	elsif ($a =~ /^--unlimited-(\S+)$/) {
+		$w = $1 eq 'systems' ? 'servers' : $1;
+		&indexof($w, @plan_limit_types) >= 0 ||
+			&usage("Unknown limit type $w");
+		$maxes{$w} = 0;
+		}
+	elsif ($a =~ /^--plan-(\S+)$/) {
+		$w = $1 eq 'systems' ? 'servers' : $1;
+		&indexof($w, @plan_limit_types) >= 0 ||
+			&usage("Unknown limit type $w");
+		$maxes{$w} = -1;
+		}
 	else {
 		&usage();
 		}
@@ -145,16 +166,10 @@ foreach $n (@remhosts) {
 	}
 $owner->{'acl'}->{'servers'} = join(" ", &unique(@ids));
 
-# Update plan
+# Update allowed actions, if not coming from the plan
 if (defined($actions_def)) {
 	$owner->{'acl'}->{'actions_def'} = $actions_def;
 	}
-if ($plan) {
-	$owner->{'acl'}->{'plan'} = $plan->{'id'};
-	&apply_plan_to_owner($plan, $owner);
-	}
-
-# Update allowed actions, if not coming from the plan
 if (!$owner->{'acl'}->{'actions_def'}) {
 	@actions = split(/\s+/, $owner->{'acl'}->{'actions'});
 	push(@actions, @addactions);
@@ -162,6 +177,23 @@ if (!$owner->{'acl'}->{'actions_def'}) {
 		@actions = grep { $_ ne $a } @actions;
 		}
 	$owner->{'acl'}->{'actions'} = join(" ", &unique(@actions));
+	}
+
+# Update limits that override plan
+foreach $m (keys %maxes) {
+	if ($maxes{$m} < 0) {
+		delete($owner->{'acl'}->{'custom_'.$m});
+		}
+	else {
+		$owner->{'acl'}->{'max_'.$m} = $maxes{$m};
+		$owner->{'acl'}->{'custom_'.$m} = 1;
+		}
+	}
+
+# Update plan
+if ($plan) {
+	$owner->{'acl'}->{'plan'} = $plan->{'id'};
+	&apply_plan_to_owner($plan, $owner);
 	}
 
 # Save the owner
@@ -180,6 +212,10 @@ print "                     [--pass password]\n";
 if (&supports_plans()) {
 	print "                     [--plan name]\n";
 	print "                     [--plan-actions | --no-plan-actions]\n";
+	foreach $l (@plan_limit_types) {
+		$units = &indexof($l, @nice_plan_limit_types) >= 0 ? "bytes" : "number";
+		print "                     [--max-${l} $units | --unlimited-${l} | --plan-${l}]\n";
+		}
 	}
 print "                     [--lock | --unlock]\n";
 print "                     [--real \"Real name\"]\n";

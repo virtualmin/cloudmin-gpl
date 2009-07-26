@@ -83,6 +83,30 @@ else {
 			join(" ", split(/\0/, $in{'actions'}));
 		}
 
+	# Plan limit overrides
+	if (&supports_plans()) {
+		$acl = $owner->{'acl'};
+		foreach $l (@plan_limit_types) {
+			if ($in{'max_'.$l.'_def'} == 2) {
+				delete($acl->{'custom_'.$l});
+				}
+			elsif ($in{'max_'.$l.'_def'} == 1) {
+				$acl->{'max_'.$l} = 0;
+				$acl->{'custom_'.$l} = 1;
+				}
+			else {
+				$in{'max_'.$l} =~ /^[1-9][0-9]*$/ ||
+					&error($text{'plan_emax_'.$l});
+				$acl->{'max_'.$l} = $in{'max_'.$l};
+				if (defined($in{'max_'.$l.'_units'})) {
+					$acl->{'max_'.$l} *=
+						$in{'max_'.$l.'_units'};
+					}
+				$acl->{'custom_'.$l} = 1;
+				}
+			}
+		}
+
 	# Create or update
 	if (&supports_plans()) {
                 $plan = &get_plan($in{'plan'});

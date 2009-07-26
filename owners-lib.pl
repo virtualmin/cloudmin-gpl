@@ -467,7 +467,9 @@ sub apply_plan_to_owner
 {
 my ($plan, $o) = @_;
 foreach my $l (@plan_limit_types) {
-	$o->{'acl'}->{'max_'.$l} = $plan->{'max_'.$l};
+	if (!$o->{'acl'}->{'custom_'.$l}) {
+		$o->{'acl'}->{'max_'.$l} = $plan->{'max_'.$l};
+		}
 	}
 $o->{'acl'}->{'types'} = $plan->{'types'};
 if ($o->{'acl'}->{'actions_def'}) {

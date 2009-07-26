@@ -1978,6 +1978,7 @@ owner_ipslimit=IP addresses active on systems
 owner_outof=$1 out of $2
 owner_unlimit=unlimited
 owner_nolimit=($1 systems have no limit)
+owner_fromplan=From plan
 
 downers_err=Failed to delete system owners
 downers_enone=None selected

@@ -79,12 +79,32 @@ if (&supports_plans()) {
 		     [ [ 1, $text{'owner_actions_def1'}, $dis1 ],
 		       [ 0, $text{'owner_actions_def0'}, $dis0 ] ])."<br>\n";
 	}
-$afield .= join("<br>\n",
-	     map { &ui_checkbox("actions", $_, $text{'owner_action_'.$_},
+$afield .= &ui_grid_table(
+	     [ map { &ui_checkbox("actions", $_, $text{'owner_action_'.$_},
 				$actions{$_}, undef,
 				$owner->{'acl'}->{'actions_def'}) }
-		 &list_owner_actions());
+		 &list_owner_actions() ],
+	     2, 100, [ "width=50%", "width=50%" ]);
 print &ui_table_row($text{'owner_actions'}, $afield);
+
+# Limits separate from plan
+if (&supports_plans()) {
+	print &ui_table_hr();
+	$acl = $owner->{'acl'};
+	foreach $l (@plan_limit_types) {
+		$field = &indexof($l, @nice_plan_limit_types) >= 0 ?
+			&ui_bytesbox("max_".$l, $acl->{'max_'.$l}, 6) :
+			&ui_textbox("max_".$l, $acl->{'max_'.$l} || undef, 6);
+		print &ui_table_row($text{'plan_max_'.$l},
+			&ui_radio("max_".$l."_def",
+				  !$acl->{'custom_'.$l} ? 2 :
+				   $acl->{'max_'.$l} ? 0 : 1,
+				  [ [ 2, $text{'owner_fromplan'} ],
+				    [ 1, $text{'domains_unlimited'} ],
+				    [ 0, $field ] ]).
+			($l eq "cpu" ? "%" : ""));
+		}
+	}
 
 print &ui_hidden_table_end();
 
