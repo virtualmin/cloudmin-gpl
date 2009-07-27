@@ -26,6 +26,9 @@ if (-r "$module_root_directory/usage-lib.pl") {
 if (-r "$module_root_directory/backups-lib.pl") {
 	do 'backups-lib.pl';
 	}
+if (-r "$module_root_directory/locations-lib.pl") {
+	do 'locations-lib.pl';
+	}
 &foreign_require("servers", "servers-lib.pl");
 &foreign_require("proc", "proc-lib.pl");
 &foreign_require("net", "net-lib.pl");
@@ -5815,28 +5818,6 @@ else {
 	local $r = int(rand()*scalar(@vhosts));
 	return $vhosts[$r];
 	}
-}
-
-# show_host_location_table(&server)
-# Show fields for selecting or creating a host system location
-sub show_host_location_table
-{
-local ($server) = @_;
-print &ui_hidden_table_start($text{'xen_header5'}, "width=100%", 2,
-			     "location", 0);
-
-local @locs = &list_locations();
-print &ui_table_row($text{'xen_location'},
-	&ui_radio_table("location", $server->{'location'} ? 1 : 0,
-		[ [ 0, $text{'xen_location0'} ],
-		  @locs ? ( [ 1, $text{'xen_location1'},
-			    &ui_select("location_old", $server->{'location'},
-				       [ map { [ $_->{'id'}, $_->{'desc'} ] }
-					     @locs ]) ] ) : ( ),
-		  [ 2, $text{'xen_location2'},
-		    &ui_textbox("location_new", undef, 40) ] ]));
-
-print &ui_hidden_table_end("location");
 }
 
 # plugin_call(module, function, [arg, ...])
