@@ -5817,6 +5817,28 @@ else {
 	}
 }
 
+# show_host_location_table(&server)
+# Show fields for selecting or creating a host system location
+sub show_host_location_table
+{
+local ($server) = @_;
+print &ui_hidden_table_start($text{'xen_header5'}, "width=100%", 2,
+			     "location", 0);
+
+local @locs = &list_locations();
+print &ui_table_row($text{'xen_location'},
+	&ui_radio_table("location", $server->{'location'} ? 1 : 0,
+		[ [ 0, $text{'xen_location0'} ],
+		  @locs ? ( [ 1, $text{'xen_location1'},
+			    &ui_select("location_old", $server->{'location'},
+				       [ map { [ $_->{'id'}, $_->{'desc'} ] }
+					     @locs ]) ] ) : ( ),
+		  [ 2, $text{'xen_location2'},
+		    &ui_textbox("location_new", undef, 40) ] ]));
+
+print &ui_hidden_table_end("location");
+}
+
 # plugin_call(module, function, [arg, ...])
 # If some plugin function is defined, call it and return the result,
 # otherwise return undef

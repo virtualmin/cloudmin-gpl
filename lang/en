@@ -1299,6 +1299,11 @@ xen_nocache=Don't cache images
 xen_cachedir=Directory for images
 xen_atmost=At most
 xen_cachein=Directory
+xen_header5=Location group settings
+xen_location=Member of location
+xen_location0=None
+xen_location1=Existing location
+xen_location2=New location
 
 xens_title=Xen Host Systems
 xens_add=Register a system for Xen hosting.
