@@ -110,6 +110,14 @@ while(@ARGV > 0) {
 	elsif ($a eq "--all-images") {
 		$allimages = 1;
 		}
+	elsif ($a eq "--host-mode") {
+		$hostmode = shift(@ARGV);
+		&indexof($hostmode, @plan_hostmodes) >= 0 ||
+			&usage("$hostmode is not a valid host mode");
+		}
+	elsif ($a eq "--no-host-mode") {
+		$hostmode = '';
+		}
 	else {
 		&usage("Unknown flag $a");
 		}
@@ -160,6 +168,11 @@ else {
 	$plan->{'images'} = join(" ", &unique(@images));
 	}
 
+# Apply host system changes
+if (defined($hostmode)) {
+	$plan->{'hostmode'} = $hostmode;
+	}
+
 &save_plan($plan);
 &apply_plan($plan);
 print "Updated Cloudmin account plan $plan->{'desc'}\n";
@@ -184,6 +197,8 @@ print "                    [--all-images]\n";
 foreach $a (@allactions) {
 	print "                    [--can-$a | --cannot-$a]\n";
 	}
+print "                    [--host-mode ",
+	join("|", @plan_hostmodes)," | --no-host-mode]\n";
 exit(1);
 }
 

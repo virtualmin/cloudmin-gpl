@@ -99,6 +99,14 @@ while(@ARGV > 0) {
 			&usage("$i is not a valid image ID");
 		push(@images, $i);
 		}
+	elsif ($a eq "--host-mode") {
+		$hostmode = shift(@ARGV);
+		&indexof($hostmode, @plan_hostmodes) >= 0 ||
+			&usage("$hostmode is not a valid host mode");
+		}
+	elsif ($a eq "--no-host-mode") {
+		$hostmode = '';
+		}
 	else {
 		&usage("Unknown flag $a");
 		}
@@ -116,6 +124,7 @@ $plan = { 'desc' => $name,
 	  'actions' => join(' ', @actions),
 	  'types' => join(' ', @types),
 	  'images' => join(' ', @images),
+	  'hostmode' => $hostmode,
 	};
 foreach $m (keys %maxes) {
 	$plan->{'max_'.$m} = $maxes{$m};
@@ -140,6 +149,8 @@ print "                    [--image id]*\n";
 foreach $a (@allactions) {
 	print "                    [--can-$a]\n";
 	}
+print "                    [--host-mode ",
+	join("|", @plan_hostmodes)," | --no-host-mode]\n";
 exit(1);
 }
 

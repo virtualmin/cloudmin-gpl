@@ -2,6 +2,7 @@
 
 @plan_limit_types = ( 'servers', 'ram', 'disk', 'cpu', 'ips', 'bw' );
 @nice_plan_limit_types = ( 'ram', 'disk', 'bw' );
+@plan_hostmodes = ( 'mem', 'disk', 'rand', 'location' );
 
 # list_system_owners()
 # Returns a list of Webmin user objects for additional Cloudmin logins

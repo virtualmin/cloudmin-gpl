@@ -179,6 +179,8 @@ $owner_plans_dir = "$module_config_directory/plans";
 $scheduled_backups_dir = "$module_config_directory/backups";
 $backup_cron_cmd = "$module_config_directory/backup.pl";
 
+$locations_file = "$module_config_directory/locations";
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {
@@ -3974,6 +3976,7 @@ push(@gcats, "settings");
 # Server images
 if ($server_management_types{'xen'} ||
     $server_management_types{'vserver'} ||
+    $server_management_types{'openvz'} ||
     $server_management_types{'zones'}) {
 	push(@glinks, "list_images.cgi");
 	push(@gtitles, $text{'images_title'});
@@ -3984,6 +3987,7 @@ if ($server_management_types{'xen'} ||
 # Bandwidth monitoring
 if ($server_management_types{'xen'} ||
     $server_management_types{'vserver'} ||
+    $server_management_types{'openvz'} ||
     $server_management_types{'zones'}) {
 	push(@glinks, "edit_bw.cgi");
 	push(@gtitles, $text{'bw_title'});
@@ -4049,6 +4053,14 @@ foreach my $t (@server_management_types) {
 			push(@gcats, $g->{'cat'} || "settings");
 			}
 		}
+	}
+
+# Host locations
+if (defined(&list_locations)) {
+	push(@glinks, "list_locations.cgi");
+	push(@gtitles, $text{'locations_title'});
+	push(@gicons, "images/locations.gif");
+	push(@gcats, "hosts");
 	}
 
 # Plugin-defined icons

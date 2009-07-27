@@ -22,6 +22,15 @@ if ($ec2_accounts_dir) {
 	push(@rv, $ec2_accounts_dir);
 	}
 
+# Add plans
+push(@rv, $owner_plans_dir);
+
+# Scheduled backups
+push(@rv, $scheduled_backups_dir);
+
+# Locations file
+push(@rv, $locations_file);
+
 return &unique(@rv);
 }
 

@@ -93,9 +93,8 @@ if (@parents) {
 print &ui_table_row($text{'plan_hostmode'},
 	&ui_radio_table("hostmode", $plan->{'hostmode'},
 			[ [ '', $text{'plan_hostmodefree'} ],
-			  [ 'mem', $text{'plan_hostmodemem'} ],
-			  [ 'disk', $text{'plan_hostmodedisk'} ],
-			  [ 'rand', $text{'plan_hostmoderand'} ] ], 1));
+			  map { [ $_, $text{'plan_hostmode'.$_} ] }
+			      @plan_hostmodes ], 1));
 
 print &ui_hidden_table_end();
 
