@@ -5833,6 +5833,90 @@ else {
 	}
 }
 
+# show_host_server_field(label, name, manager)
+# Prints HTML for selecting a host system, if the user is allowed to.
+sub show_host_server_field
+{
+my ($label, $name, $type) = @_;
+my @vhosts = grep { $_->{$type.'_host'} &&
+                    &can_host_server($_) } &list_managed_servers();
+local ($default) = grep { $_->{$name.'_default'} } @vhosts;
+$default ||= $vhosts[0];
+my @locs = &list_vhost_locations(\@vhosts);
+my ($defloc) = grep { $_->{'default'} } @locs;
+$defloc ||= $locs[0] if (@locs);
+my $field;
+my $hostfield = &ui_select($name."_on", $default->{'id'},
+		[ map { [ $_->{'id'}, $_->{'host'}.
+		      &host_free_desc($_, $type) ] } @vhosts ]);
+my $locfield = &ui_select($name."_loc", $defloc->{'id'},
+		[ map { [ $_->{'id'}, $_->{'desc'} ] } @locs ]);
+if (&can_select_host_server() && &can_select_host_location() && @locs) {
+	# Can choose explicit host, or location
+	$field = &ui_radio_table($name."_def", 1,
+			[ [ 1, $text{'locations_sel'}, $locfield ],
+			  [ 0, $text{'locations_host'}, $hostfield ] ], 1);
+	}
+elsif (&can_select_host_location() && @locs) {
+	# Can only choose location
+	$field = &ui_hidden($name."_def", 1).
+		 $text{'locations_sel'}.' '.$locfield;
+	}
+elsif (&can_select_host_server()) {
+	# Can only choose host
+	$field = &ui_hidden($name."_def", 0).
+		 $hostfield;
+	}
+if ($field) {
+	print &ui_table_row($label, $field);
+	}
+}
+
+# parse_host_server_field(&server, name, manager, &in)
+# Returns a host system object parsed from the form by show_host_server_field,
+# or calls error
+sub parse_host_server_field
+{
+my ($server, $name, $type, $in) = @_;
+my @vhosts = grep { $_->{$type.'_host'} &&
+                    &can_host_server($_) } &list_managed_servers();
+my @locs = &list_vhost_locations(\@vhosts);
+my ($vhost, $loc);
+if (&can_select_host_server() && &can_select_host_location() && @locs) {
+	# Either host or location
+	if ($in->{$name."_def"} == 1) {
+		($loc) = grep { $_->{'id'} eq $in{$name."_loc"} } @locs;
+		$loc || &error($text{'create_exenvhostloc'});
+		}
+	else {
+		($vhost) = grep { $_->{'id'} eq $in->{$name."_on"} } @vhosts;
+		$vhost || &error($text{'create_exenvhostsel'});
+		}
+	}
+elsif (&can_select_host_location() && @locs) {
+	# Pick one from a location
+	($loc) = grep { $_->{'id'} eq $in{$name."_loc"} } @locs;
+	$loc || &error($text{'create_exenvhostloc'});
+	}
+elsif (&can_select_host_server()) {
+	# Specific host chosen
+	($vhost) = grep { $_->{'id'} eq $in->{$name."_on"} } @vhosts;
+	$vhost || &error($text{'create_exenvhostsel'});
+	}
+else {
+	# Cannot choose any host - let plan decide
+	$vhost = &find_host_server($server, $type);
+	$vhost || &error($text{'create_exenvhostalloc'});
+	}
+if ($loc) {
+	# Have a location, need to pick host from it
+	# XXX limit to allowed vhosts, of the right type, in the location!
+	$vhost = &find_host_from_location($server, $loc, $type);
+	$vhost || &error(&text('create_exenvhostalloc2', $loc->{'desc'}));
+	}
+return $vhost;
+}
+
 # plugin_call(module, function, [arg, ...])
 # If some plugin function is defined, call it and return the result,
 # otherwise return undef
