@@ -17,6 +17,7 @@ do 'domainname-lib.pl';
 do 'commands-lib.pl';
 do 'filesystem-lib.pl';
 do 'history-lib.pl';
+do 'json-lib.pl';
 if (-r "$module_root_directory/bw-lib.pl") {
 	do 'bw-lib.pl';
 	}

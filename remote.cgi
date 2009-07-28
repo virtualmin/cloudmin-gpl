@@ -32,6 +32,9 @@ elsif (!&can_action(undef, "global")) {
 	exit(0);
 	}
 
+# Get output format
+$format = $in{'json'} ? 'json' : $in{'xml'} ? 'xml' : undef;
+
 # Prevent executed programs from doing referer checks
 delete($ENV{'MINISERV_CONFIG'});
 
@@ -51,11 +54,19 @@ foreach $i (keys %in) {
 		}
 	}
 print "Content-type: text/plain\n\n";
-&open_execute_command(OUT, "$cmd 2>&1", 1);
-while(<OUT>) {
-	print $_;
+if ($format) {
+	# Convert to selected format
+	$out = &backquote_command("$cmd 2>&1");
+	print &convert_remote_format($out, $?, $in{'program'}, \%in, $format);
 	}
-close(OUT);
-print "\n";
-print "Exit status: $?\n";
+else {
+	# Stream output directly
+	&open_execute_command(OUT, "$cmd 2>&1", 1);
+	while(<OUT>) {
+		print $_;
+		}
+	close(OUT);
+	print "\n";
+	print "Exit status: $?\n";
+	}
 
