@@ -33,7 +33,7 @@ elsif (!&can_action(undef, "global")) {
 	}
 
 # Get output format
-$format = $in{'json'} ? 'json' : $in{'xml'} ? 'xml' : undef;
+$format = defined($in{'json'}) ? 'json' : defined($in{'xml'}) ? 'xml' : undef;
 
 # Prevent executed programs from doing referer checks
 delete($ENV{'MINISERV_CONFIG'});
@@ -43,7 +43,7 @@ $in{'program'} =~ /^[a-z0-9\.-]+$/i || &error($text{'remote_eprogram'});
 $cmd = "$module_root_directory/$in{'program'}.pl";
 -x $cmd || &error(&text('remote_eprogram2', "<tt>$cmd</tt>"));
 foreach $i (keys %in) {
-	next if ($i eq "program");
+	next if ($i eq "program" || $i eq "xml" || $i eq "json");
 	if ($in{$i} eq "") {
 		$cmd .= " --".quotemeta($i);
 		}
