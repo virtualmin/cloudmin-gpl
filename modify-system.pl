@@ -25,6 +25,9 @@ Changes the password Cloudmin will use to login, *not* the system's actual root 
 C<--boot> or C<--no-boot>
 Either enables the system at host boot time, or disables it.
 
+C<--location> I<name> or C<--no-location>
+Sets the location group for a host system, or removes it from a group.
+
 =head1 Example usage
 
   cloudmin modify-system --host xencentos.home --desc "CentOS 5 on Xen"
@@ -100,6 +103,16 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-packages") {
 		$packages = 0;
 		}
+	elsif ($a eq "--location") {
+		$lname = shift(@ARGV);
+		($loc) = grep { $_->{'id'} eq $lname ||
+				lc($_->{'desc'}) eq lc($lname) }
+			      &list_locations();
+		$loc || &usage("No location with name or ID $lname found");
+		}
+	elsif ($a eq "--no-location") {
+		$loc = '';
+		}
 	else {
 		&usage();
 		}
@@ -131,6 +144,11 @@ if (defined($newhost)) {
 		&usage("The new hostname must resolve to the same IP address ".
 		       "as the old hostname, or --force-host must be used");
 		}
+	}
+if (defined($loc)) {
+	&is_parent_server($server) ||
+		&usage("The --location and --no-location flags can only be ".
+		       "used for host systems");
 	}
 
 # Validate SSH login parameters
@@ -203,6 +221,9 @@ else {
 		$recheck = 1;
 		}
 	}
+if (defined($loc)) {
+	$server->{'location'} = $loc ? $loc->{'id'} : undef;
+	}
 
 # Change boot status
 if (defined($boot)) {
@@ -253,6 +274,9 @@ print "                      [--webmin-user user]\n";
 print "                      [--webmin-pass password]\n";
 print "                      [--webmin-same]\n";
 print "                      [--boot | --no-boot]\n";
+if (defined(&list_locations)) {
+	print "                      [--location id | --no-location]\n";
+	}
 exit(1);
 }
 

@@ -6,9 +6,13 @@ Output a table of all systems managed by Cloudmin.
 
 When run with no parameters, this command outputs a table of all virtual
 systems known to Cloudmin. You can limit the display to a subset of systems using
-the standard options like C<--host> and C<--type>, have it output all
+the standard options like C<--host>, C<--type> and C<--owner>, have it output all
 available information with the C<--multiline> parameter, or just show hostnames
 with C<--name-only>.
+
+To limit the display to only systems that can host virtual systems, use the
+C<--host-type> flag followed by a virtualization type like C<xen>, C<openvz>
+or C<zones>. Or if you want to get all host systems, use C<--host-type all>.
 
 =head1 Example usage
 
@@ -40,9 +44,6 @@ require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 
 # Parse command line
-if (@ARGV == 0) {
-	$all = 1;	# If called with no args, assume all systems
-	}
 while(@ARGV > 0) {
 	local $a = shift(@ARGV);
 	if ($a eq "--multiline") {
@@ -57,16 +58,31 @@ while(@ARGV > 0) {
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
 	elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
+	elsif ($a eq "--host-type") { $hosttypes{shift(@ARGV)} = 1; }
 	else {
 		&usage();
 		}
+	}
+if (!@hosts && !@groups && !@types && !@managers && !@owners) {
+	# If called with no selector, assume all
+	$all = 1;
 	}
 
 # Work out who to list
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
+if (keys %hosttypes) {
+	@servers = grep {
+		my @pt = &is_parent_server($_);
+		scalar(@pt) && ($hosttypes{'all'} ||
+				scalar(grep { $hosttypes{$_} } @pt));
+		} @servers;
+	}
 @servers || &usage("No systems specified");
 
+if (defined(&list_locations)) {
+	@locs = &list_locations();
+	}
 if ($multi) {
 	# Show a block for each server
 	foreach $s (@servers) {
@@ -80,6 +96,12 @@ if ($multi) {
 			}
 		print "    Type: ",&$tfunc(),"\n";
 		print "    Type code: $s->{'manager'}\n";
+		if ($s->{'location'}) {
+			($loc) = grep { $_->{'id'} eq $s->{'location'} } @locs;
+			if ($loc) {
+				print "Location group: $loc->{'desc'}\n";
+				}
+			}
 		print "    Status: ",$text{'status_'.$s->{'status'}},"\n";
 		print "    Status code: $s->{'status'}\n";
 		if ($s->{'status_msg'}) {
@@ -363,6 +385,7 @@ local $types = join("|", @server_management_types);
 print "                      [--type $types]*\n";
 print "                      [--os oscode]*\n";
 print "                      [--owner name]*\n";
+print "                      [--host-type type|\"all\"]\n";
 exit(1);
 }
 
