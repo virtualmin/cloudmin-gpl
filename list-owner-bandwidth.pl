@@ -7,7 +7,8 @@ Lists bandwidth use for all systems belonging to some owner over some date range
 This command outputs hourly or per-minute bandwidth usage stats for selected
 owner's systems. It provides the same information as the bandwidth
 graphs in the web UI, but in a format that can be parsed or graphed by
-other programs.
+other programs. Owners are chosen with the C<--owner> flag, or you can 
+select all of them with C<--all-owners>.
 
 The date range to output is selected by the C<--start> and C<--end> flags,
 which must be followed by either a date in I<yyyy-mm-dd> format, or a number
@@ -51,6 +52,9 @@ while(@ARGV > 0) {
 		$owner = &get_system_owner($oname);
 		$owner || &usage("No system owner named $oname found");
 		push(@owners, $owner);
+		}
+	elsif ($a eq "--all-owners") {
+		@owners = &list_system_owners();
 		}
 	elsif ($a eq "--start") {
 		$start = int(&date_to_time(shift(@ARGV)) / (60*60)) *
@@ -171,7 +175,7 @@ print "Shows bandwidth usage by system owner and time\n";
 print "\n";
 print "cloudmin list-owner-bandwidth [--start yyyy-mm-dd]\n";
 print "                              [--end yyyy-mm-dd]\n";
-print "                              --owner name [--owner name]*\n";
+print "                              [--owner name]* | [--all-owners]\n";
 print "                              [--minute]\n";
 print "                              [--exact]\n";
 exit(1);
