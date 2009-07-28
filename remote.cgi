@@ -33,7 +33,10 @@ elsif (!&can_action(undef, "global")) {
 	}
 
 # Get output format
-$format = defined($in{'json'}) ? 'json' : defined($in{'xml'}) ? 'xml' : undef;
+$format = defined($in{'json'}) ? 'json' :
+	  defined($in{'xml'}) ? 'xml' :
+	  defined($in{'perl'}) ? 'perl' :
+		undef;
 
 # Prevent executed programs from doing referer checks
 delete($ENV{'MINISERV_CONFIG'});
@@ -43,7 +46,7 @@ $in{'program'} =~ /^[a-z0-9\.-]+$/i || &error($text{'remote_eprogram'});
 $cmd = "$module_root_directory/$in{'program'}.pl";
 -x $cmd || &error(&text('remote_eprogram2', "<tt>$cmd</tt>"));
 foreach $i (keys %in) {
-	next if ($i eq "program" || $i eq "xml" || $i eq "json");
+	next if ($i eq "program" || $i eq $format);
 	if ($in{$i} eq "") {
 		$cmd .= " --".quotemeta($i);
 		}
@@ -56,6 +59,11 @@ foreach $i (keys %in) {
 print "Content-type: text/plain\n\n";
 if ($format) {
 	# Convert to selected format
+	$err = &check_remote_format($format);
+	if ($err) {
+		print "Invalid format $format : $err\n";
+		exit(0);
+		}
 	$out = &backquote_command("$cmd 2>&1");
 	print &convert_remote_format($out, $?, $in{'program'}, \%in, $format);
 	}
