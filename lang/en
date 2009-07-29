@@ -256,6 +256,7 @@ create_exenvhostalloc=No suitable host system could be found
 create_exenvhostsel=The selected host system does not exist or is no longer available!
 create_exenvhostloc=The selected location does not exist or is no longer available!
 create_exenvhostalloc2=No host system could be allocated from the location $1
+create_exenvhostnone=No suitable running host systems are available
 create_exenclash=A Xen instance with the same name already exists
 create_xenmount=Mounting new instance's filesystem ..
 create_xenumount=Un-mounting instance's filesystem ..

@@ -5786,23 +5786,43 @@ foreach my $f ('ssh_user', 'ssh_port', 'ssh_pass', 'ssh_nologin',
 	}
 }
 
+# list_available_host_servers(type)
+# Returns a list of systems that can host some virtualization type, and
+# are up and running.
+sub list_available_host_servers
+{
+my ($type) = @_;
+my $alttype = $type eq "zones" ? "zone" : $type;
+my @vhosts = grep { ($_->{$type.'_host'} || $_->{$alttype.'_host'}) &&
+                    &can_host_server($_) } &list_managed_servers();
+@vhosts = grep { $_->{'status'} eq 'nowebmin' ||
+		 $_->{'status'} eq 'novirt' ||
+		 $_->{'status'} eq 'virt' } @vhosts;
+return @vhosts;
+}
+
 # find_host_server(&server, host-type)
 # Returns a host system for some type (xen, vserver, zone), based on those
 # available to the system owner and available RAM / etc
 sub find_host_server
 {
-local ($server, $htype) = @_;
-local @vhosts = grep { $_->{$htype.'_host'} &&
-                       &can_host_server($_) } &list_managed_servers();
-@vhosts = grep { $_->{'status'} eq 'nowebmin' ||
-		 $_->{'status'} eq 'novirt' ||
-		 $_->{'status'} eq 'virt' } @vhosts;
+my ($server, $type) = @_;
+my @vhosts = &list_available_host_servers($type);
 return undef if (!@vhosts);
-if ($access{'hostmode'} eq 'mem') {
+return &find_host_server_from_vhosts($server, \@vhosts, $access{'hostmode'});
+}
+
+# find_host_server_from_vhosts(&server, &vhosts, host-allocation-mode)
+# Finds the best host system from a list
+sub find_host_server_from_vhosts
+{
+my ($server, $vhosts, $hostmode) = @_;
+my @vhosts = @$vhosts;
+if ($hostmode eq 'mem') {
 	# Sort by free memory, get best
-	local %memmap;
-	foreach my $vhost (@vhost) {
-		local $info = &get_server_collected($vhost);
+	my %memmap;
+	foreach my $vhost (@vhosts) {
+		my $info = &get_server_collected($vhost);
 		if ($info->{'mem'}) {
 			$memmap{$vhost->{'id'}} = $info->{'mem'}->[1];
 			}
@@ -5810,16 +5830,16 @@ if ($access{'hostmode'} eq 'mem') {
 	@vhosts = sort { $memmap{$b->{'id'}} <=> $memmap{$a->{'id'}} } @vhosts;
 	return $vhosts[0];
 	}
-elsif ($access{'hostmode'} eq 'disk') {
+elsif ($hostmode eq 'disk') {
 	# Sort by free disk
-	local %diskmap;
-	foreach my $vhost (@vhost) {
+	my %diskmap;
+	foreach my $vhost (@vhosts) {
 		if ($vhost->{'xen_vg_free'}) {
 			# Special case for Xen on LVM
 			$diskmap{$vhost->{'id'}} = $vhost->{'xen_vg_free'};
 			}
 		else {
-			local $info = &get_server_collected($vhost);
+			my $info = &get_server_collected($vhost);
 			$diskmap{$vhost->{'id'}} = $info->{'disk_free'};
 			}
 		}
@@ -5828,19 +5848,18 @@ elsif ($access{'hostmode'} eq 'disk') {
 	}
 else {
 	# Choose randomly
-	local $r = int(rand()*scalar(@vhosts));
+	my $r = int(rand()*scalar(@vhosts));
 	return $vhosts[$r];
 	}
 }
 
 # show_host_server_field(label, name, manager)
-# Prints HTML for selecting a host system, if the user is allowed to.
+# Returns HTML for selecting a host system, if the user is allowed to.
 sub show_host_server_field
 {
 my ($label, $name, $type) = @_;
-my @vhosts = grep { $_->{$type.'_host'} &&
-                    &can_host_server($_) } &list_managed_servers();
-local ($default) = grep { $_->{$name.'_default'} } @vhosts;
+my @vhosts = &list_available_host_servers($type);
+local ($default) = grep { $_->{$type.'_default'} } @vhosts;
 $default ||= $vhosts[0];
 my @locs = &list_vhost_locations(\@vhosts);
 my ($defloc) = grep { $_->{'default'} } @locs;
@@ -5868,8 +5887,9 @@ elsif (&can_select_host_server()) {
 		 $hostfield;
 	}
 if ($field) {
-	print &ui_table_row($label, $field);
+	return &ui_table_row($label, $field);
 	}
+return undef;
 }
 
 # parse_host_server_field(&server, name, manager, &in)
@@ -5878,8 +5898,8 @@ if ($field) {
 sub parse_host_server_field
 {
 my ($server, $name, $type, $in) = @_;
-my @vhosts = grep { $_->{$type.'_host'} &&
-                    &can_host_server($_) } &list_managed_servers();
+my @vhosts = &list_available_host_servers($type);
+@vhosts || &error($text{'create_exenvhostnone'});
 my @locs = &list_vhost_locations(\@vhosts);
 my ($vhost, $loc);
 if (&can_select_host_server() && &can_select_host_location() && @locs) {
@@ -5910,7 +5930,6 @@ else {
 	}
 if ($loc) {
 	# Have a location, need to pick host from it
-	# XXX limit to allowed vhosts, of the right type, in the location!
 	$vhost = &find_host_from_location($server, $loc, $type);
 	$vhost || &error(&text('create_exenvhostalloc2', $loc->{'desc'}));
 	}
