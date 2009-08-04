@@ -28,7 +28,8 @@ else {
 			    $text{'find_title_'.$in{'type'}}, "");
 
 $ffunc = "type_".$in{'type'}."_find_servers";
-@found = &$ffunc($vhost, $tmplserver, $in{'running'});
+@found = &$ffunc($vhost, $tmplserver, $in{'running'},
+		 $in{'dir_def'} ? undef : $in{'dir'});
 if (@found && defined(&theme_post_save_server)) {
 	&theme_post_save_server($found[0]);
 	}
