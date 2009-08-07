@@ -1,4 +1,4 @@
-index_title=Cloudmin Managed Systems
+Index_title=Cloudmin Managed Systems
 index_none=No managed systems have been registered yet.
 index_nonematched=No managed systems matched your search.
 index_host=Hostname
@@ -295,6 +295,7 @@ create_exenresize=.. expansion failed : $1
 create_xendisksize=Disk space allocated to instance
 create_xendiskdef=Image default (typically 1GB)
 create_exendisksize=Disk space must be a number
+create_exendisksize2=Disk space must be at least $1, which is the size of the selected image
 create_update=Update Virtualmin packages?
 create_vlicence=License for Virtualmin Pro from image
 create_vheader=Virtualmin options
