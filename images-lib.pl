@@ -824,7 +824,9 @@ $roothome =~ s/\r|\n//g;
 $roothome ||= "/root";
 local @rv;
 foreach my $fix ("$roothome/.ssh/authorized_keys",
-		 "$roothome/.ssh/authorized_keys2") {
+		 "$roothome/.ssh/authorized_keys2",
+		 "$roothome/.ssh/known_hosts",
+		 "$roothome/.ssh/known_hosts2",) {
 	local $data = &get_file_data_from_server($server, $fix);
 	if ($data) {
 		local $err = &put_file_data_to_server($server, "", $fix);
