@@ -16,6 +16,8 @@ else {
 	}
 
 print &ui_form_start("save_backup.cgi", "post");
+print &ui_hidden("id", $in{'id'});
+print &ui_hidden("new", $in{'new'});
 print &ui_hidden_table_start($text{'backup_header'}, "width=100%", 2,
 			     "main", 1);
 

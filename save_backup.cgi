@@ -1,0 +1,61 @@
+#!/usr/local/bin/perl
+# Create, update or delete a backup
+
+require './server-manager-lib.pl';
+&error_setup($text{'backup_err'});
+&can_action_error(undef, "backup");
+&ReadParse();
+if (!$in{'new'}) {
+	($backup) = grep { $_->{'id'} eq $in{'id'} } &list_available_backups();
+	$backup || &error($text{'backup_egone'});
+	}
+else {
+	# Create new empty object
+	$backup = { };
+	if ($access{'owner'}) {
+		$backup->{'owner'} = $base_remote_user;
+		}
+	}
+
+if ($in{'delete'}) {
+	# Just remove this backup
+	&delete_backup($backup);
+	}
+else {
+	# Validate and store inputs
+	@allservers = grep { &supports_backup($_) }
+                &list_available_managed_servers_sorted();
+	if ($in{'servers_def'}) {
+		$backup->{'servers'} = '*';
+		}
+	else {
+		%sids = map { $_, 1 } split(/\0/, $in{'servers'});
+		@servers = grep { $sids{$_->{'id'}} } @allservers;
+		@servers || &error($text{'backup_eservers'});
+		$backup->{'servers'} = join(' ', map { $_->{'id'} } @servers);
+		}
+	
+	$backup->{'shutdown'} = $in{'shutdown'};
+	$backup->{'parallel'} = $in{'parallel'};
+
+	# Parse destination
+	if ($in{'dest_def'}) {
+		delete($backup->{'dest'});
+		}
+	else {
+		$dest = { 'mode' => 3 };
+		$err = &parse_backup_ssh_dest($dest, "ssh", \%in);
+		&error($err) if ($err);
+		$backup->{'dest'} = &join_backup_destination($dest);
+		}
+
+	# Parse schedule
+	$backup->{'enabled'} = $in{'enabled'};
+	&virtualmin_ui_parse_cron_time("when", $backup, \%in);
+	
+	# Update the backup
+	&save_backup($backup);
+	}
+
+&redirect("list_backups.cgi");
+

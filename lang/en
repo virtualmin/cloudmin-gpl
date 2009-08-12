@@ -2476,6 +2476,9 @@ backups_mode0=Directory on Cloudmin master
 backups_mode1=Directory on host system
 backups_mode2=Directory on system
 backups_mode3=Remote SSH server
+backups_emode0=Missing or non-absolute directory on Cloudmin master
+backups_emode1=Missing or non-absolute directory on host system
+backups_emode2=Missing or non-absolute directory on other system
 backups_sshhost=SSH host
 backups_sshport=SSH port
 backups_sshuser=SSH username
@@ -2488,6 +2491,7 @@ backups_esshport=Missing or non-numeric SSH port
 backups_esshuser=Missing or invalid SSH username
 backups_esshpass=Invalid SSH port number
 backups_esshpath=Missing or non-absolute SSH directory
+backups_fromhost=From host system
 backups_return=backups list
 
 backup_title1=Create Backup
@@ -2511,6 +2515,14 @@ backup_parallel1=All at once
 backup_parallel0=One by one
 backup_enabled=Scheduled backup enabled?
 backup_when=When to backup
+backup_err=Failed to save backup
+backup_eservers=No usable systems selected
+backup_run=Backup Now
+
+bdest_mode0=<tt>$1</tt> on Cloudmin master
+bdest_mode1=<tt>$1</tt> on host system
+bdest_mode2=<tt>$2</tt> on system <tt>$1</tt>
+bdest_mode3=<tt>$3</tt> on SSH server <tt>$2</tt> as <tt>$1</tt>
 
 reverse_title=Reverse Addresses
 reverse_header=Reverse address mappings

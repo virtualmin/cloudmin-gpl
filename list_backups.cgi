@@ -9,7 +9,6 @@ require './server-manager-lib.pl';
 @links = ( "<a href='edit_backup.cgi?new=1'>$text{'backups_add'}</a>" );
 if (@backups) {
 	# Show table of existing backups
-	unshift(@links, &select_all_link("d"), &select_invert_link("d"));
 	print &ui_links_row(\@links);
 	print &ui_columns_start([
 		$text{'backups_servers'},
@@ -27,13 +26,16 @@ if (@backups) {
 			 @users > 4 ? &text('keys_manyusers', scalar(@users)) :
 			   join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
 			}
-		$dest = &nice_backup_dest($b->{'dest'});
-		$when = $backup->{'enabled'} ? &cron::when_text($backup, 1)
-					     : $text{'backups_dis'};
+		$dest = $b->{'dest'} ? &nice_backup_destination($b->{'dest'})
+				     : "<i>$text{'backups_fromhost'}</i>";
+		$when = $b->{'enabled'} ? &cron::when_text($b, 1)
+					: $text{'backups_dis'};
 		print &ui_columns_row([
 			"<a href='edit_backup.cgi?id=$b->{'id'}'>$servs</a>",
 			$dest,
-			$access{'owner'} ? ( ) : ( $backup->{'owner'} ),
+			$access{'owner'} ? ( ) :
+				( $b->{'owner'} ||
+				  "<i>$text{'vservers_nousers'}</i>" ),
 			$when,
 			]);
 		}

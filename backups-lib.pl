@@ -170,6 +170,48 @@ else {
 sub join_backup_destination
 {
 my ($dest) = @_;
+if ($dest->{'mode'} == 0) {
+	return "master:".$dest->{'path'};
+	}
+elsif ($dest->{'mode'} == 1) {
+	return "host:".$dest->{'path'};
+	}
+elsif ($dest->{'mode'} == 2) {
+	return "vm2:".$dest->{'id'}.":".$dest->{'path'};
+	}
+elsif ($dest->{'mode'} == 3) {
+	return "ssh:".$dest->{'user'}.":".$dest->{'pass'}."\@".$dest->{'host'}.
+	       ($dest->{'port'} ? ":".$dest->{'port'} : "").
+	       $dest->{'path'};
+	}
+else {
+	return undef;
+	}
+}
+
+# nice_backup_destination(string)
+# Convert a destination string into a human-readable format
+sub nice_backup_destination
+{
+my ($dstr) = @_;
+my $dest = &parse_backup_destination($dstr);
+if ($dest->{'mode'} == 0) {
+	return &text('bdest_mode0', $dest->{'path'});
+	}
+elsif ($dest->{'mode'} == 1) {
+	return &text('bdest_mode1', $dest->{'path'});
+	}
+elsif ($dest->{'mode'} == 2) {
+	my $server = &get_managed_server_by("id", $dest->{'id'});
+	return &text('bdest_mode2', $server->{'host'}, $dest->{'path'});
+	}
+elsif ($dest->{'mode'} == 3) {
+	return &text('bdest_mode3', $dest->{'user'}, $dest->{'host'},
+				    $dest->{'path'});
+	}
+else {
+	return undef;
+	}
 }
 
 # show_default_backup_dest_table(&server)
@@ -214,8 +256,18 @@ sub parse_default_backup_dest_table
 my ($server, $in) = @_;
 my $mode = $in->{'backup_mode'};
 my $dest = $mode == -1 ? undef : { 'mode' => $mode };
-if ($mode == 2) {
+if ($mode == 0) {
+	$dest->{'path'} = $in->{'backup_masterdir'};
+	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode0'});
+	}
+elsif ($mode == 1) {
+	$dest->{'path'} = $in->{'backup_hostdir'};
+	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode1'});
+	}
+elsif ($mode == 2) {
+	$dest->{'path'} = $in->{'backup_vm2dir'};
 	$dest->{'id'} = $in->{'backup_vm2'};
+	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode2'});
 	}
 elsif ($mode == 3) {
 	my $err = &parse_backup_ssh_dest($dest, "backup", $in);
@@ -229,6 +281,7 @@ $server->{'backup_default'} = $dest ? &join_backup_destination($dest) : undef;
 sub show_backup_ssh_dest
 {
 my ($dest, $pfx) = @_;
+my $noac = "autocomplete=off";
 return "<table>".
        "<tr> <td><b>$text{'backups_sshhost'}</b></td> ".
        "<td>".&ui_textbox($pfx."_host", $dest->{'host'}, 30)."</td> </tr>\n".
@@ -236,9 +289,11 @@ return "<table>".
        "<td>".&ui_opt_textbox($pfx."_port", $dest->{'port'}, 6,
 			      $text{'default'}." (22)")."</td> </tr>\n".
        "<tr> <td><b>$text{'backups_sshuser'}</b></td> ".
-       "<td>".&ui_textbox($pfx."_user", $dest->{'user'}, 20)."</td> </tr>\n".
+       "<td>".&ui_textbox($pfx."_user", $dest->{'user'}, 20,
+			  0, undef, $noac)."</td> </tr>\n".
        "<tr> <td><b>$text{'backups_sshpass'}</b></td> ".
-       "<td>".&ui_password($pfx."_pass", $dest->{'pass'}, 20)."</td> </tr>\n".
+       "<td>".&ui_password($pfx."_pass", $dest->{'pass'}, 20,
+			  0, undef, $noac)."</td> </tr>\n".
        "<tr> <td><b>$text{'backups_sshpath'}</b></td> ".
        "<td>".&ui_textbox($pfx."_path", $dest->{'path'}, 40)."</td> </tr>\n".
        "</table>\n";
@@ -259,11 +314,11 @@ $in->{$pfx."_port_def"} || $in->{$pfx."_port"} =~ /^\d+$/ ||
 	return $text{'backups_esshport'};
 $dest->{'port'} = $in->{$pfx."_port_def"} ? undef : $in->{$pfx."_port"};
 
-$in->{$pfx."_user"} =~ /^[\:\@ \t\r\n]+$/ ||
+$in->{$pfx."_user"} =~ /^[^\:\@ \t\r\n]+$/ ||
 	return $text{'backups_esshuser'};
 $dest->{'user'} = $in->{$pfx."_user"};
 
-$in->{$pfx."_pass"} =~ /^[\:\@ \t\r\n]*$/ ||
+$in->{$pfx."_pass"} =~ /^[^\:\@ \t\r\n]*$/ ||
 	return $text{'backups_esshpass'};
 $dest->{'pass'} = $in->{$pfx."_pass"};
 
