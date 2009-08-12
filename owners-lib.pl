@@ -75,6 +75,12 @@ sub delete_system_owner
 local ($u) = @_;
 &foreign_require("acl", "acl-lib.pl");
 &acl::delete_user($u->{'name'});
+if (defined(&list_backups)) {
+	foreach my $backup (grep { $_->{'owner'} eq $u->{'name'} }
+				 &list_backups()) {
+		&delete_backup($backup);
+		}
+	}
 &reload_miniserv();
 }
 

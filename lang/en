@@ -2489,6 +2489,23 @@ backups_esshuser=Missing or invalid SSH username
 backups_esshpass=Invalid SSH port number
 backups_esshpath=Missing or non-absolute SSH directory
 
+backup_title1=Create Backup
+backup_title2=Edit Backup
+backup_egone=Selected backup no longer exists!
+backup_header=Systems and destination options
+backup_servers=Systems to backup
+backup_servers1=All systems
+backup_servers1a=All systems owned by <tt>$1</tt>
+backup_servers0=Only selected ..
+backup_dest=Backup destination
+backup_dest1=Default for host system
+backup_dest0=Remote SSH server
+backup_owner=Created by system owner
+backup_shutdown=Shut down systems?
+backup_shutdown1=Yes (ensures filesystem consistency)
+backup_shutdown0=No (uses LVM snapshot if possible)
+backup_sched=Backup schedule
+
 reverse_title=Reverse Addresses
 reverse_header=Reverse address mappings
 reverse_ip0=Primary IP address
