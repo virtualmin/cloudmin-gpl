@@ -85,7 +85,7 @@ sub list_owner_actions
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
 	 'create', 'delete', 'advanced', 'ips', 'ifaces', 'reverse', 'limits',
-	 'disks', 'devices', 'sshkeys', 'webmin', 'virtualmin' );
+	 'disks', 'devices', 'sshkeys', 'backup', 'webmin', 'virtualmin' );
 }
 
 # list_safe_owner_actions()

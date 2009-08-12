@@ -36,6 +36,32 @@ foreach my $j (@jobs) {
 return @rv;
 }
 
+# list_available_backups()
+# Lists all backups the current user has access to
+sub list_available_backups
+{
+my @backups = &list_backups();
+if ($access{'owner'}) {
+	@backups = grep { $_->{'owner'} eq $base_remote_user } @backups;
+	}
+return @backups;
+}
+
+# get_backup_servers(&backup)
+# Converts a backup into a list of system hashes
+sub get_backup_servers
+{
+my ($backup) = @_;
+my @servers = &list_managed_servers();
+if ($backup->{'servers'} eq '*') {
+	return @servers;
+	}
+else {
+	my %sids = map { $_, 1 } split(/\s+/, $backup->{'servers'});
+	return $sids{$_->{'id'}} @servers;
+	}
+}
+
 sub copy_cron_sched_keys
 {
 my ($src, $dst) = @_;

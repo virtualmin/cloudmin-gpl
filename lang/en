@@ -1973,6 +1973,7 @@ owner_action_reverse=Change reverse IP mappings
 owner_action_sshkeys=Can select SSH keys
 owner_action_webmin=Install Webmin
 owner_action_virtualmin=Install Virtualmin
+owner_action_backup=Backup and restore systems
 owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
 owner_egone=System owner no longer exists!
@@ -2459,6 +2460,16 @@ dplan_eusers=The plan $1 is still being used by $2 system owners
 openvz_createlink=Create OpenVZ container
 openvz_addlink=Add OpenVZ container
 
+backups_title=System Backups
+backups_add=Add a new system backup.
+backups_servers=Systems to backup
+backups_dest=Destination
+backups_owner=Owner
+backups_sched=Schedule
+backups_all=All systems
+backups_dis=Disabled
+backups_none=No backups have been created yet.
+
 backups_dheader=Default backup destination
 backups_def=Backup hosted systems to
 backups_mode0=Directory on Cloudmin master
@@ -2499,3 +2510,4 @@ locations_edesc=Missing description for group in row $1
 locations_einuse=Group in row $1 cannot be removed, as it contains $2 host systems
 locations_sel=In location
 locations_host=Specific system
+

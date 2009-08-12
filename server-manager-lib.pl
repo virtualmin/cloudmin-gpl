@@ -4085,6 +4085,14 @@ if ($virtcount) {
 	push(@gcats, "virtualmin");
 	}
 
+if (&can_action(undef, "backup")) {
+	# Backup and restore
+	push(@glinks, "list_backups.cgi");
+	push(@gtitles, $text{'backups_title'});
+	push(@gicons, "images/backups.gif");
+	push(@gcats, "cloudmin");
+	}
+
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
 }
 
