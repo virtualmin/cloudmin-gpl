@@ -1,4 +1,4 @@
-Index_title=Cloudmin Managed Systems
+index_title=Cloudmin Managed Systems
 index_none=No managed systems have been registered yet.
 index_nonematched=No managed systems matched your search.
 index_host=Hostname
@@ -2488,23 +2488,29 @@ backups_esshport=Missing or non-numeric SSH port
 backups_esshuser=Missing or invalid SSH username
 backups_esshpass=Invalid SSH port number
 backups_esshpath=Missing or non-absolute SSH directory
+backups_return=backups list
 
 backup_title1=Create Backup
 backup_title2=Edit Backup
 backup_egone=Selected backup no longer exists!
-backup_header=Systems and destination options
+backup_header=Systems and backup method
 backup_servers=Systems to backup
 backup_servers1=All systems
 backup_servers1a=All systems owned by <tt>$1</tt>
 backup_servers0=Only selected ..
 backup_dest=Backup destination
-backup_dest1=Default for host system
+backup_dest1=Default destination for host system
 backup_dest0=Remote SSH server
 backup_owner=Created by system owner
 backup_shutdown=Shut down systems?
 backup_shutdown1=Yes (ensures filesystem consistency)
 backup_shutdown0=No (uses LVM snapshot if possible)
-backup_sched=Backup schedule
+backup_sched=Destination and schedule
+backup_parallel=Backup order
+backup_parallel1=All at once
+backup_parallel0=One by one
+backup_enabled=Scheduled backup enabled?
+backup_when=When to backup
 
 reverse_title=Reverse Addresses
 reverse_header=Reverse address mappings
@@ -2527,4 +2533,11 @@ locations_edesc=Missing description for group in row $1
 locations_einuse=Group in row $1 cannot be removed, as it contains $2 host systems
 locations_sel=In location
 locations_host=Specific system
+
+cron_special=Simple schedule
+cron_complex=Complex schedule
+cron_cron=Cron specification
+cron_title=Select Schedule
+cron_ok=OK
+cron_ehidden=No complex schedule was selected
 

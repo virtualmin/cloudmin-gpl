@@ -58,7 +58,7 @@ if ($backup->{'servers'} eq '*') {
 	}
 else {
 	my %sids = map { $_, 1 } split(/\s+/, $backup->{'servers'});
-	return $sids{$_->{'id'}} @servers;
+	return grep { $sids{$_->{'id'}} } @servers;
 	}
 }
 
@@ -272,6 +272,77 @@ $in->{$pfx."_path"} =~ /^\/\S*$/ ||
 $dest->{'path'} = $in->{$pfx."_path"};
 
 return undef;
+}
+
+# supports_backup(&server)
+# Returns 1 if some system can be backed up
+sub supports_backup
+{
+my ($server) = @_;
+local $bfunc = "type_".$server->{'manager'}."_can_backup";
+return defined(&$bfunc) && &$bfunc($server);
+}
+
+# virtualmin_ui_show_cron_time(name, &job, off-text)
+# Returns HTML for a field for entering a cron time, or selecting a disabled
+# option. Uses a popup for the complex time
+sub virtualmin_ui_show_cron_time
+{
+return &theme_virtualmin_ui_show_cron_time(@_)
+	if (defined(&theme_virtualmin_ui_show_cron_time));
+local ($name, $job, $offmsg) = @_;
+&foreign_require("cron", "cron-lib.pl");
+local $rv;
+local $mode = !$job ? 0 : $job->{'special'} ? 1 : 2;
+local $complex = $mode == 2 ? &cron::when_text($job, 1) : undef;
+local $button = "<input type=button onClick='cfield = form.${name}_complex; hfield = form.${name}_hidden; chooser = window.open(\"cron_chooser.cgi?complex=\"+escape(hfield.value), \"cronchooser\", \"toolbar=no,menubar=no,scrollbars=no,resizable=yes,width=800,height=400\"); chooser.cfield = cfield; window.cfield = cfield; chooser.hfield = hfield; window.hfield = hfield;' value=\"...\">\n";
+local $hidden = $mode == 2 ?
+	join(" ", $job->{'mins'}, $job->{'hours'},
+		  $job->{'days'}, $job->{'months'}, $job->{'weekdays'}) : "";
+return &ui_radio_table($name, $mode,
+	 [ $offmsg ? ( [ 0, $offmsg ] ) : ( ),
+	   $cron::config{'vixie_cron'} ? (
+	   [ 1, $text{'cron_special'},
+		   &ui_select($name."_special", $job->{'special'},
+		      [ map { [ $_, $cron::text{'edit_special_'.$_} ] }
+			    ('hourly', 'daily', 'weekly', 'monthly', 'yearly')
+		      ]) ] ) : ( ),
+	   [ 2, $text{'cron_complex'},
+		   &ui_textbox($name."_complex", $complex, 40, 0, undef,
+				  "readonly=true")." ".$button ],
+	 ]).&ui_hidden($name."_hidden", $hidden);
+}
+
+# virtualmin_ui_parse_cron_time(name, &job, &in)
+# Updates the given job object with the selected schedule. Return 1 if a
+# schedule was chosen, 0 if not.
+sub virtualmin_ui_parse_cron_time
+{
+return &theme_virtualmin_ui_parse_cron_time(@_)
+	if (defined(&theme_virtualmin_ui_parse_cron_time));
+local ($name, $job, $in) = @_;
+if ($in{$name} == 0) {
+	# Disabled
+	return 0;
+	}
+else {
+	&copy_cron_sched_keys({ }, $job);
+	if ($in{$name} == 1) {
+		# Simple time
+		$job->{'special'} = $in{$name."_special"};
+		}
+	else {
+		# Complex time
+		local @j = split(/\s+/, $in{$name."_hidden"});
+		@j == 5 || &error($text{'cron_ehidden'});
+		$job->{'mins'} = $j[0];
+		$job->{'hours'} = $j[1];
+		$job->{'days'} = $j[2];
+		$job->{'months'} = $j[3];
+		$job->{'weekdays'} = $j[4];
+		}
+	return 1;
+	}
 }
 
 1;

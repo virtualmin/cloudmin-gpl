@@ -6,6 +6,8 @@ require './server-manager-lib.pl';
 &ReadParse();
 if ($in{'new'}) {
 	&ui_print_header(undef, $text{'backup_title1'}, "");
+	$backup = { 'special' => 'daily',
+		    'servers' => '*' };
 	}
 else {
 	($backup) = grep { $_->{'id'} eq $in{'id'} } &list_available_backups();
@@ -30,15 +32,6 @@ print &ui_table_row($text{'backup_servers'},
 		   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ],
 		   10, 1));
 
-# Destination
-$dest = $backup->{'dest'} ? &parse_backup_destination($backup->{'dest'})
-			  : undef;
-print &ui_table_row($text{'backup_dest'},
-	&ui_radio_table("dest_def", $backup->{'dest'} ? 0 : 1,
-		[ [ 1, $text{'backup_dest1'} ],
-		  [ 0, $text{'backup_dest0'},
-			&show_backup_ssh_dest($dest, "ssh") ] ]));
-
 # Owner, if logged in as root
 if (!$access{'owner'} && $backup->{'owner'}) {
 	print &ui_table_row($text{'backup_owner'},
@@ -49,21 +42,36 @@ if (!$access{'owner'} && $backup->{'owner'}) {
 # Shutdown or pause?
 print &ui_table_row($text{'backup_shutdown'},
 	&ui_radio("shutdown", int($backup->{'shutdown'}),
-		  [ [ 1, $text{'backup_shutdown1'}."<br>" ],
+		  [ [ 1, $text{'backup_shutdown1'} ],
 		    [ 0, $text{'backup_shutdown0'} ] ]));
+
+# Parallel mode
+print &ui_table_row($text{'backup_parallel'},
+	&ui_radio("parallel", int($backup->{'parallel'}),
+		  [ [ 1, $text{'backup_parallel1'} ],
+		    [ 0, $text{'backup_parallel0'} ] ]));
 
 print &ui_hidden_table_end("main");
 
 print &ui_hidden_table_start($text{'backup_sched'}, "width=100%", 2,
                              "sched", 0);
 
+# Destination
+$dest = $backup->{'dest'} ? &parse_backup_destination($backup->{'dest'})
+			  : undef;
+print &ui_table_row($text{'backup_dest'},
+	&ui_radio_table("dest_def", $backup->{'dest'} ? 0 : 1,
+		[ [ 1, $text{'backup_dest1'} ],
+		  [ 0, $text{'backup_dest0'},
+			&show_backup_ssh_dest($dest, "ssh") ] ]));
+
 # Backup on scheduled enabled?
 print &ui_table_row($text{'backup_enabled'},
 	&ui_yesno_radio("enabled", $backup->{'enabled'}));
 
 # Scheduled run time
-# XXX
-# XXX do nicely
+print &ui_table_row($text{'backup_when'},
+	&virtualmin_ui_show_cron_time("when", $backup, undef));
 
 print &ui_hidden_table_end("sched");
 

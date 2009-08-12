@@ -4090,7 +4090,7 @@ if (&can_action(undef, "backup")) {
 	push(@glinks, "list_backups.cgi");
 	push(@gtitles, $text{'backups_title'});
 	push(@gicons, "images/backups.gif");
-	push(@gcats, "cloudmin");
+	push(@gcats, "settings");
 	}
 
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
