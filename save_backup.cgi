@@ -55,6 +55,17 @@ else {
 	# Parse schedule
 	$backup->{'enabled'} = $in{'enabled'};
 	&virtualmin_ui_parse_cron_time("when", $backup, \%in);
+
+	# Parse email settings
+	if ($in{'email_def'}) {
+		delete($backup->{'email'});
+		}
+	else {
+		$in{'email'} =~ /^\S+\@\S+$/ ||
+			&error($text{'backup_eemail'});
+		$backup->{'email'} = $in{'email'};
+		}
+	$backup->{'always'} = $in{'always'};
 	
 	# Update the backup
 	&save_backup($backup);

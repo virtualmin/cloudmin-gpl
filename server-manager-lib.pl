@@ -4096,7 +4096,12 @@ if (&can_action(undef, "backup")) {
 	push(@glinks, "list_backups.cgi");
 	push(@gtitles, $text{'backups_title'});
 	push(@gicons, "images/backups.gif");
-	push(@gcats, "settings");
+	push(@gcats, "backup");
+
+	push(@glinks, "backup_logs.cgi");
+	push(@gtitles, $text{'backuplog_title'});
+	push(@gicons, "images/backuplog.gif");
+	push(@gcats, "backup");
 	}
 
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
