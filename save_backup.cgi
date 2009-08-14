@@ -39,12 +39,15 @@ else {
 	$backup->{'parallel'} = $in{'parallel'};
 
 	# Parse destination
-	if ($in{'dest_def'}) {
+	if ($in{'dest_mode'} == -1) {
+		# Use host system setting
 		delete($backup->{'dest'});
 		}
 	else {
-		$dest = { 'mode' => 3 };
-		$err = &parse_backup_ssh_dest($dest, "ssh", \%in);
+		# SSH or FTP
+		$dest = { 'mode' => $in{'dest_mode'} };
+		$pfx = $in{'dest_mode'} == 3 ? 'ssh' : 'ftp';
+		$err = &parse_backup_ssh_dest($dest, $pfx, \%in);
 		&error($err) if ($err);
 		$backup->{'dest'} = &join_backup_destination($dest);
 		}

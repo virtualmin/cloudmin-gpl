@@ -61,11 +61,17 @@ print &ui_hidden_table_start($text{'backup_sched'}, "width=100%", 2,
 # Destination
 $dest = $backup->{'dest'} ? &parse_backup_destination($backup->{'dest'})
 			  : undef;
+$mode = !$backup->{'dest'} ? -1 : $dest->{'mode'};
 print &ui_table_row($text{'backup_dest'},
-	&ui_radio_table("dest_def", $backup->{'dest'} ? 0 : 1,
-		[ [ 1, $text{'backup_dest1'} ],
-		  [ 0, $text{'backup_dest0'},
-			&show_backup_ssh_dest($dest, "ssh") ] ]));
+	&ui_radio_table("dest_mode", $mode,
+		[ [ -1, $text{'backup_dest0'} ],
+		  [ 3, $text{'backup_dest3'},
+			&show_backup_ssh_dest(
+			    $mode == 3 ? $dest : { }, "ssh", 22) ],
+		  [ 4, $text{'backup_dest4'},
+			&show_backup_ssh_dest(
+			    $mode == 4 ? $dest : { }, "ftp", 21) ],
+	 	]));
 
 # Backup on scheduled enabled?
 print &ui_table_row($text{'backup_enabled'},
