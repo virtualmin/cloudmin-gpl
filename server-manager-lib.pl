@@ -2333,13 +2333,19 @@ return ($ok, $err) if (!$ok);
 
 # If the server has Webmin, wait for it to come up
 if ($server->{'user'} && $ok != 2) {
-	local $wtries = 0;
-	while($wtries++ < 60) {
+	local $start = time();
+	while(time() - $start < 60) {
 		sleep(1);
 		local $werr;
-		&open_socket($server->{'host'}, $server->{'port'} || 10000,
-			     WTEST, \$werr);
-		if (!$werr) {
+		alarm(5);
+		eval {
+			local $SIG{'ALRM'} = sub { die "timeout\n" };
+			&open_socket($server->{'host'},
+				     $server->{'port'} || 10000,
+				     WTEST, \$werr);
+			};
+		alarm(0);
+		if (!$werr && !$@) {
 			close(WTEST);
 			last;
 			}
