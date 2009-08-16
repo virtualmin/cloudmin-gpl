@@ -2575,3 +2575,5 @@ cron_ok=OK
 cron_ehidden=No complex schedule was selected
 
 backuplog_title=Backup Logs
+
+brun_evhost=Host system $1 does not have a default destination set

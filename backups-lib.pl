@@ -421,5 +421,114 @@ else {
 	}
 }
 
+# execute_backup(&backup)
+# Run a backup of multiple virtual systems, to the destination set in the 
+# backup or on the host system(s). Returns a hash ref mapping system IDs to
+# status hashes with keys: 'ok', 'msg', 'size', 'dest'
+sub execute_backup
+{
+my ($backup) = @_;
+
+# Find the systems
+my %want = map { $_, 1 } split(/\s+/, $backup->{'servers'});
+my @servers = grep { ($want{$_->{'id'}} || $want{'*')) &&
+		     &supports_backup($_) }
+		   &list_available_managed_servers_sorted();
+if ($backup->{'owner'}) {
+	# Limit to systems owned by the backup's owner
+	my $owner = &get_system_owner($backup->{'owner'});
+	if ($owner) {
+		my %oids = split(/\s+/, $owner->{'acl'}->{'servers'});
+		@servers = grep { $oids{$_->{'id'}} } @servers;
+		}
+	}
+
+# Work out the destination for each, perhaps from the host
+my %rv;
+my %destmap;
+foreach my $s (@servers) {
+	my $destdir;
+	if ($backup->{'dest'}) {
+		# Use dir in backup
+		$destdir = $backup->{'dest'};
+		}
+	else {
+		# From host system, if we can find it
+		my $vhost = &get_parent_server($s);
+		$destdir = $vhost->{'dest'};
+		if (!$destdir) {
+			$rv{$s->{'id'}} = {
+				'ok' => 1,
+				'msg' => &text('brun_evhost', $vhost->{'host'}),
+				};
+			next;
+			}
+		if ($backup->{'owner'}) {
+			$destdir .= '/'.$backup->{'owner'};
+			}
+		}
+	$destmap{$s->{'id'}} = $destdir."/".$s->{'host'}.".tar.gz";
+	}
+
+# Exclude failures
+@servers = grep { !$rv{$_->{'id'}} } @servers;
+
+if ($backup->{'parallel'}) {
+	# Run each of them in parallel
+	my @prv = &parallel_server_function(\@servers,
+			sub { my ($s) = @_;
+			      return &execute_system_backup(
+					$s, $destmap{$s->{'id'}},
+					$backup->{'shutdown'});
+					);
+			    });
+	for(my $i=0; $i<@prv; $i++) {
+		my $s = $servers[$i];
+		$rv{$s->{'id'}} = $prv[$i]->[0];
+		}
+	}
+else {
+	# Do them one by one
+	foreach my $s (@servers) {
+		my $srv = &execute_system_backup($s, $destmap{$s->{'id'}},
+						 $backup->{'shutdown'});
+		$rv{$s->{'id'}} = $srv;
+		}
+	}
+
+return \%rv;
+}
+
+# execute_system_backup(&server, destination, shutdown?)
+# Backup one virtual system to the given destination. Returns a status hash
+# ref, with keys 'ok', 'msg', 'size'
+sub execute_system_backup
+{
+my ($server, $dest, $shutdown) = @_;
+
+# Check if running, and if so shut down
+my $was_up = 0;
+if ($server->{'status'} ne 'down' && $shutdown) {
+	$err = &shutdown_server($server);
+	if ($err) {
+		return { 'ok' => 0,
+			 'msg' => &text('smove_shutfailed', $err) };
+		}
+	$s->{'status'} = 'down';	# Assume it worked
+	$was_up = 1;
+	}
+
+# Call the type-specific backup function
+my $bfunc = "type_".$server->{'manager'}."_backup";
+my $rv = &$bfunc($server, $dest, $shutdown);
+
+# Start up again
+if ($was_up) {
+	&startup_server($server);
+	}
+
+return $rv;
+}
+
 1;
 

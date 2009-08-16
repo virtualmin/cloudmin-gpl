@@ -5955,6 +5955,27 @@ if ($loc) {
 return $vhost;
 }
 
+# tempname_on_server(&server, [basename])
+# Returns a temporary file name on a remote system
+sub tempname_on_server
+{
+my ($server, $base) = @_;
+if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
+	# Ask the remote Webmin
+	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
+	return &remote_foreign_call($vhost, "webmin", "tempname", $base);
+	}
+else {
+	# Use the configured dir
+	my $ostemp = $vhost->{'type'} eq 'solaris' ? '/var/tmp' : '/tmp';
+	my $tempdir = $config{'img_temp'} || $ostemp;
+	$main::tempfilecount++;
+	&seed_random();
+	return $tempdir.'/'.int(rand(1000000))."_".
+               $main::tempfilecount."_".$scriptname;
+	}
+}
+
 # plugin_call(module, function, [arg, ...])
 # If some plugin function is defined, call it and return the result,
 # otherwise return undef
