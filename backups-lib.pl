@@ -138,6 +138,7 @@ sub restore_backup
 #        1 = Host system
 #        2 = Other Cloudmin-managed system
 #        3 = SSH server
+#	 4 = FTP server
 # id   = Cloudmin host ID
 # host = SSH hostname
 # port = SSH port number
@@ -431,7 +432,7 @@ my ($backup) = @_;
 
 # Find the systems
 my %want = map { $_, 1 } split(/\s+/, $backup->{'servers'});
-my @servers = grep { ($want{$_->{'id'}} || $want{'*')) &&
+my @servers = grep { ($want{$_->{'id'}} || $want{'*'}) &&
 		     &supports_backup($_) }
 		   &list_available_managed_servers_sorted();
 if ($backup->{'owner'}) {
@@ -479,7 +480,7 @@ if ($backup->{'parallel'}) {
 			sub { my ($s) = @_;
 			      return &execute_system_backup(
 					$s, $destmap{$s->{'id'}},
-					$backup->{'shutdown'});
+					$backup->{'shutdown'}
 					);
 			    });
 	for(my $i=0; $i<@prv; $i++) {
