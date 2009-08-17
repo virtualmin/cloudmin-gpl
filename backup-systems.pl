@@ -119,8 +119,8 @@ print "The destination can be one of :\n";
 print " - A dir on the VM2 master, like /backup\n";
 print " - A dir on another VM2-managed system, like backupbox:/backup\n";
 print " - A dir on the host systems, like host:/backup\n";
-print " - An FTP destination, like ftp://login:pass\@server/backup\n";
-print " - An SSH destination, like ssh://login:pass\@server/backup\n";
+print " - An FTP destination, like ftp:login:pass\@server/backup\n";
+print " - An SSH destination, like ssh:login:pass\@server/backup\n";
 exit(1);
 }
 

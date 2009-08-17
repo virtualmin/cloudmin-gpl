@@ -520,7 +520,7 @@ if ($server->{'status'} ne 'down' && $shutdown) {
 		}
 	$s->{'status'} = 'down';	# Assume it worked
 	$was_up = 1;
-	&$second_print($text{'setup_done'});
+	&$second_print($text{'create_done'});
 	}
 
 # Call the type-specific backup function
@@ -541,7 +541,7 @@ else {
 if ($was_up) {
 	&$first_print(&text('brun_startup', $server->{'host'}));
 	&startup_server($server);
-	&$second_print($text{'setup_done'});
+	&$second_print($text{'create_done'});
 	}
 
 return $rv;
@@ -603,7 +603,7 @@ elsif ($dest->{'mode'} == 4) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"perl /tmp/pty.pl ftp ".quotemeta($dest->{'host'}).
 		" 2>&1 <$ftpin");
-	&unlink_file_on_server($server, $ftpin);
+	&delete_file_on_server($server, $ftpin);
 	return $err ? $err : $ex ? "FTP upload failed : $out" : undef;
 	}
 else {
