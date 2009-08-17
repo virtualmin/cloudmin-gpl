@@ -4,12 +4,28 @@
 
 Backups up one or more Cloudmin-managed virtual systems.
 
-XXX
+This command creates backups of one or more Cloudmin systems to the specified
+backup destination. The systems to include are selected using standard
+flags like C<--host> or C<--owner>, and the destination by the C<--dest>
+flag followed by a destination specification like I</backup/cloudmin> or
+I<backupserver:/cloudmin>.
+
+By default, systems are backed up one by one. However, you can have them
+done in parallel with the C<--parallel> flag.
+
+Systems will be left running during the backup, which may lead to filesystem
+or database inconsistencies. To have them shut down (if running) during the
+backup, use the C<--shutdown> flag.
 
 =head1 Example usage
 
-  cloudmin backup-systems --host xenrails.home
-  XXX
+  cloudmin backup-systems --host openvzgpl.home
+  Finding systems to backup ..
+  .. found 1 systems
+  Working out backup destinations ..
+  .. found 1 usable destinations
+  Backing up openvzgpl.home to /backup/cloudmin/openvzgpl.home.tar.gz on Cloudmin master ..
+  .. created backup of 160.40 MB
 
 =cut
 
@@ -36,6 +52,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--dest") { $dest = shift(@ARGV); }
 	elsif ($a eq "--shutdown") { $shutdown = 1; }
 	elsif ($a eq "--parallel") { $parallel = 1; }
+	elsif ($a eq "--quiet") { $quiet = 1; }
 	else {
 		&usage();
 		}
@@ -55,11 +72,15 @@ $backup = { 'dest' => $dest,
 	    'parallel' => $parallel };
 
 # Do the backup
-print "Starting backup of ",scalar(@servers)," systems to $dest ..\n";
+if ($quiet) {
+	&set_all_null_print();
+	}
+else {
+	&set_all_text_print();
+	}
 &obtain_lock_server(\@servers);
 $rv = &execute_backup($backup);
 &release_lock_server(\@servers);
-print ".. backup complete :\n\n";
 
 # Show results
 foreach $s (@servers) {

@@ -30,6 +30,9 @@ if (!$pid) {
 print "PTY PID: $pid\n";
 $| = 1;
 select($ptyfh); $| = 1; select(STDOUT);
+while(<STDIN>) {
+	print $ptyfh $_;
+	}
 while(<$ptyfh>) {
 	print;
 	}

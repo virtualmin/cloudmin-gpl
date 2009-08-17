@@ -19,8 +19,9 @@ $backup = &get_backup($backupid);
 $backup || &usage("No backup with ID $backupid found");
 
 # Execute it, capturing the output
+&set_all_null_print();
 &obtain_lock_server(\@servers);
-# XXX
+$rv = &execute_backup($backup);
 &release_lock_server(\@servers);
 
 # Send email with results

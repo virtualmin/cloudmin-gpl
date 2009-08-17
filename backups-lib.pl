@@ -124,14 +124,6 @@ if (@jobs) {
 	}
 }
 
-sub execute_backup
-{
-}
-
-sub restore_backup
-{
-}
-
 # parse_backup_destination(dest)
 # Given a destination string, split into into a hash ref with keys
 # mode = 0 = Cloudmin master
@@ -148,7 +140,7 @@ sub restore_backup
 sub parse_backup_destination
 {
 my ($dest) = @_;
-if ($dest =~ /^master:(\/\S*)$/ || /^(\/\S*)$/) {
+if ($dest =~ /^master:(\/\S*)$/ || $dest =~ /^(\/\S*)$/) {
 	return { 'mode' => 0, 'path' => $1 };
 	}
 elsif ($dest =~ /^host:(\/\S*)$/) {
@@ -205,12 +197,12 @@ else {
 	}
 }
 
-# nice_backup_destination(string)
+# nice_backup_destination(string|&dest)
 # Convert a destination string into a human-readable format
 sub nice_backup_destination
 {
 my ($dstr) = @_;
-my $dest = &parse_backup_destination($dstr);
+my $dest = ref($dstr) ? $dstr : &parse_backup_destination($dstr);
 if ($dest->{'mode'} == 0) {
 	return &text('bdest_mode0', $dest->{'path'});
 	}
@@ -437,6 +429,7 @@ sub execute_backup
 my ($backup) = @_;
 
 # Find the systems
+&$first_print($text{'brun_finding'});
 my %want = map { $_, 1 } split(/\s+/, $backup->{'servers'});
 my @servers = grep { ($want{$_->{'id'}} || $want{'*'}) &&
 		     &supports_backup($_) }
@@ -449,8 +442,10 @@ if ($backup->{'owner'}) {
 		@servers = grep { $oids{$_->{'id'}} } @servers;
 		}
 	}
+&$second_print(&text('brun_found', scalar(@servers)));
 
 # Work out the destination for each, perhaps from the host
+&$first_print($text{'brun_findingdests'});
 my %rv;
 my %destmap;
 foreach my $s (@servers) {
@@ -479,6 +474,7 @@ foreach my $s (@servers) {
 
 # Exclude failures
 @servers = grep { !$rv{$_->{'id'}} } @servers;
+&$second_print(&text('brun_founddests', scalar(@servers)));
 
 if ($backup->{'parallel'}) {
 	# Run each of them in parallel
@@ -516,6 +512,7 @@ my ($server, $dest, $shutdown) = @_;
 # Check if running, and if so shut down
 my $was_up = 0;
 if ($server->{'status'} ne 'down' && $shutdown) {
+	&$first_print(&text('brun_shutdown', $server->{'host'}));
 	$err = &shutdown_server($server);
 	if ($err) {
 		return { 'ok' => 0,
@@ -523,15 +520,28 @@ if ($server->{'status'} ne 'down' && $shutdown) {
 		}
 	$s->{'status'} = 'down';	# Assume it worked
 	$was_up = 1;
+	&$second_print($text{'setup_done'});
 	}
 
 # Call the type-specific backup function
-my $bfunc = "type_".$server->{'manager'}."_backup";
+&$first_print(&text('brun_backing', $server->{'host'},
+		    &nice_backup_destination($dest)));
+&$indent_print();
+my $bfunc = "type_".$server->{'manager'}."_backup_system";
 my $rv = &$bfunc($server, $dest, $shutdown);
+&$outdent_print();
+if ($rv->{'ok'}) {
+	&$second_print(&text('brun_backed', &nice_size($rv->{'size'})));
+	}
+else {
+	&$second_print(&text('brun_failed', $rv->{'msg'}));
+	}
 
 # Start up again
 if ($was_up) {
+	&$first_print(&text('brun_startup', $server->{'host'}));
 	&startup_server($server);
+	&$second_print($text{'setup_done'});
 	}
 
 return $rv;
@@ -553,18 +563,48 @@ elsif ($dest->{'mode'} == 1) {
 	}
 elsif ($dest->{'mode'} == 2) {
 	# To some other Cloudmin system
-	local $destserver = &get_managed_server_by("id", $dest->{'id'});
+	my $destserver = &get_managed_server_by("id", $dest->{'id'});
 	$destserver || return "No Cloudmin system with ID $dest->{'id'} exists";
 	return &transfer_file_between_servers($server, $destserver,
 					      $file, $dest->{'path'}, 0);
 	}
 elsif ($dest->{'mode'} == 3) {
-	# Send via SSH
-	# XXX
+	# Send via SSH (using a fake server object)
+	my $destserver = { 'id' => &server_id(),
+			   'ssh_protocol' => 2,
+			   'host' => $dest->{'host'},
+			   'ssh_user' => $dest->{'user'},
+			   'ssh_pass' => $dest->{'pass'},
+			   'ssh_port' => $dest->{'port'},
+			   'status' => 'nowebmin',
+			  };
+	return &transfer_file_between_servers($server, $destserver,
+					      $file, $dest->{'path'}, 0);
 	}
 elsif ($dest->{'mode'} == 4) {
-	# Send via FTP
-	# XXX
+	# Send via FTP, using ftp command run in wrapper
+	if (!&has_command_on_server($server, "ftp")) {
+		return "Missing ftp command";
+		}
+	my $err = &put_file_to_server($server,
+			"$module_root_directory/pty.pl", "/tmp/pty.pl");
+	if ($err) {
+		return "Failed to copy pty.pl : $err";
+		}
+	my $ftpin = &tempname_on_server($server);
+	my $ftpdata = $dest->{'user'}."\n".
+		      $dest->{'pass'}."\n".
+		      "put $file $dest->{'path'}\n".
+		      "quit\n";
+	my $err = &put_file_data_to_server($server, $ftpdata, $ftpin);
+	if ($err) {
+		return "Failed to copy FTP login details : $err";
+		}
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"perl /tmp/pty.pl ftp ".quotemeta($dest->{'host'}).
+		" 2>&1 <$ftpin");
+	&unlink_file_on_server($server, $ftpin);
+	return $err ? $err : $ex ? "FTP upload failed : $out" : undef;
 	}
 else {
 	return "Unknown destination mode $dest->{'mode'}";
