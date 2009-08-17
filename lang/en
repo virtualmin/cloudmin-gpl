@@ -2580,3 +2580,4 @@ brun_evhost=Host system $1 does not have a default destination set
 brun_etemp=Failed to select temporary file on $1
 brun_etar=Failed to create TAR file of filesystem : $1
 brun_estat=TAR creation appeared to succeed, but destination file $1 was not created
+brun_esend=Failed to transfer to destination : $1

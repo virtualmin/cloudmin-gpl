@@ -148,7 +148,7 @@ sub restore_backup
 sub parse_backup_destination
 {
 my ($dest) = @_;
-if ($dest =~ /^master:(\/\S*)$/) {
+if ($dest =~ /^master:(\/\S*)$/ || /^(\/\S*)$/) {
 	return { 'mode' => 0, 'path' => $1 };
 	}
 elsif ($dest =~ /^host:(\/\S*)$/) {
@@ -164,6 +164,12 @@ elsif ($dest =~ /^ssh:([^:]+):([^\@]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
 elsif ($dest =~ /^ftp:([^:]+):([^\@]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
 	return { 'mode' => 4, 'user' => $1, 'pass' => $2,
 		 'host' => $3, 'port' => $5, 'path' => $6 };
+	}
+elsif ($dest =~ /^([a-zA-Z0-9\.\-\_]+):(\/\S*)$/) {
+	my ($hostname, $path) = ($1, $2);
+	my $server = &get_managed_server_by("host", $hostname);
+	$server || return undef;
+	return { 'mode' => 2, 'id' => $server->{'id'}, 'path' => $path };
 	}
 else {
 	return undef;
@@ -529,6 +535,40 @@ if ($was_up) {
 	}
 
 return $rv;
+}
+
+# send_to_backup_dest(&server, file, &destination)
+# Send some file to a backup destination. Returns an error on failure, undef on
+# success.
+sub send_to_backup_dest
+{
+my ($server, $file, $dest) = @_;
+if ($dest->{'mode'} == 0) {
+	# Download to Cloudmin master
+	return &get_file_from_server($server, $file, $dest->{'path'});
+	}
+elsif ($dest->{'mode'} == 1) {
+	# To host system, which makes no sense!
+	return "send_to_backup_dest called with crazy mode $dest->{'mode'}";
+	}
+elsif ($dest->{'mode'} == 2) {
+	# To some other Cloudmin system
+	local $destserver = &get_managed_server_by("id", $dest->{'id'});
+	$destserver || return "No Cloudmin system with ID $dest->{'id'} exists";
+	return &transfer_file_between_servers($server, $destserver,
+					      $file, $dest->{'path'}, 0);
+	}
+elsif ($dest->{'mode'} == 3) {
+	# Send via SSH
+	# XXX
+	}
+elsif ($dest->{'mode'} == 4) {
+	# Send via FTP
+	# XXX
+	}
+else {
+	return "Unknown destination mode $dest->{'mode'}";
+	}
 }
 
 1;
