@@ -457,10 +457,10 @@ foreach my $s (@servers) {
 	else {
 		# From host system, if we can find it
 		my $vhost = &get_parent_server($s);
-		$destdir = $vhost->{'dest'};
+		$destdir = $vhost->{'backup_default'};
 		if (!$destdir) {
 			$rv{$s->{'id'}} = {
-				'ok' => 1,
+				'ok' => 0,
 				'msg' => &text('brun_evhost', $vhost->{'host'}),
 				};
 			next;
@@ -477,17 +477,24 @@ foreach my $s (@servers) {
 &$second_print(&text('brun_founddests', scalar(@servers)));
 
 if ($backup->{'parallel'}) {
-	# Run each of them in parallel
+	# Run each of them in parallel. If capturing output, add it all
+	# from the sub-processes when they complete.
 	my @prv = &parallel_server_function(\@servers,
 			sub { my ($s) = @_;
-			      return &execute_system_backup(
+			      $capture_print = undef;
+			      my $r = &execute_system_backup(
 					$s, $destmap{$s->{'id'}},
 					$backup->{'shutdown'}
 					);
+			      $r->{'capture'} = $capture_print;
+			      return $r;
 			    });
 	for(my $i=0; $i<@prv; $i++) {
 		my $s = $servers[$i];
 		$rv{$s->{'id'}} = $prv[$i]->[0];
+		if ($capture_print && $prv[$i]->[0]) {
+			$capture_print .= $prv[$i]->[0]->{'capture'};
+			}
 		}
 	}
 else {

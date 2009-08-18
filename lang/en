@@ -2576,7 +2576,7 @@ cron_ehidden=No complex schedule was selected
 
 backuplog_title=Backup Logs
 
-brun_evhost=Host system $1 does not have a default destination set
+brun_evhost=No default destination set on $1
 brun_etemp=Failed to select temporary file on $1
 brun_etar=Failed to create TAR file of filesystem : $1
 brun_estat=TAR creation appeared to succeed, but destination file $1 was not created
@@ -2592,3 +2592,6 @@ brun_backed=.. created backup of $1
 brun_failed=.. backup failed : $1
 brun_tarring=TARing up filesystem for $1 under $2 ..
 brun_sending=Sending backup for $1 to $2 ..
+brun_fsubject=Failed Cloudmin backup of $1 systems to $2
+brun_subject=Cloudmin backup of $1 systems to $2
+brun_hostdest=destination from host

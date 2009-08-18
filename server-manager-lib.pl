@@ -6039,6 +6039,22 @@ sub indent_text_print { $indent_text .= "    "; }
 sub outdent_text_print { $indent_text = substr($indent_text, 4); }
 sub block_text_print { print join("", @_); }
 
+# Print functions to capture output as text
+sub first_capture_text_print
+{
+$capture_print .= $indent_text.
+      join("", map { &html_tags_to_text(&entities_to_ascii($_)) } @_)."\n";
+}
+sub second_capture_text_print
+{
+$capture_print .= $indent_text.
+      join("", map { &html_tags_to_text(&entities_to_ascii($_)) } @_)."\n\n";
+}
+sub block_capture_text_print
+{
+$capture_print .= join("", @_);
+}
+
 sub html_tags_to_text
 {
 local ($rv) = @_;
@@ -6075,6 +6091,14 @@ $second_print = \&second_html_print;
 $indent_print = \&indent_html_print;
 $outdent_print = \&outdent_html_print;
 $block_print = \&block_html_print;
+}
+sub set_all_capture_text_print
+{
+$first_print = \&first_capture_text_print;
+$second_print = \&second_capture_text_print;
+$indent_print = \&indent_text_print;
+$outdent_print = \&outdent_text_print;
+$block_print = \&block_capture_text_print;
 }
 
 # These functions store and retrieve the current print commands
