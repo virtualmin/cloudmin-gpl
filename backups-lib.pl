@@ -634,7 +634,7 @@ my ($server) = @_;
 my @rv;
 opendir(LOGDIR, $backup_log_dir);
 foreach my $f (readdir(LOGDIR)) {
-	my ($time, $id) = split('_', $f);
+	my ($time, $id) = split(/_/, $f, 2);
 	next if ($time eq '' || $id eq '');
 	next if ($server && $id ne $server->{'id'});
 	my $log = &get_backup_log($f);
@@ -643,6 +643,7 @@ foreach my $f (readdir(LOGDIR)) {
 		}
 	}
 closedir(LOGDIR);
+return @rv;
 }
 
 # get_backup_log(id)
@@ -651,8 +652,8 @@ sub get_backup_log
 {
 my ($id) = @_;
 my %log;
-&read_file_lines("$backup_log_dir/$id", \%log) || return undef;
-return %log;
+&read_file("$backup_log_dir/$id", \%log) || return undef;
+return \%log;
 }
 
 # save_backup_log(&server, server-dest, &result, &backup)

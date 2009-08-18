@@ -20,7 +20,7 @@ print "<b>$text{'backuplogs_find'}</b>\n",
       &ui_textbox("search", $in{'search'}, 30),"\n",
       &ui_submit($text{'backuplogs_ok'})," ",
       &ui_submit($text{'backuplogs_week'}, "week"),"\n";
-print &ui_form_end();
+print &ui_form_end(),"<p>\n";
 
 if ($in{'search'} || $in{'week'}) {
 	# Show matching backups (that the user is allowed to see)
@@ -40,17 +40,17 @@ if ($in{'search'} || $in{'week'}) {
 		# Limit to last 7 days
 		$cutoff = time()-(7*24*60*60);
 		@backups = grep { $_->{'time'} >= $cutoff } @backups;
-		print &text('backuplogs_weekdesc', 7),"<p>\n";
+		$msg = &text('backuplogs_weekdesc', 7);
 		}
 	else {
 		# Limit by search term
 		@backups = grep { &match_backup($_, $in{'search'}) } @backups;
-		print &text('backuplogs_finddesc',
-			    "<i>$in{'search'}</i>"),"<p>\n";
+		$msg = &text('backuplogs_finddesc', "<i>$in{'search'}</i>");
 		}
 
 	# Show the results, with links to restore
 	if (@backups) {
+		print $msg,"<br>\n";
 		print &ui_columns_start([
 			$text{'backuplogs_dest'},
 			$text{'backuplogs_time'},
@@ -68,7 +68,7 @@ if ($in{'search'} || $in{'week'}) {
 				 ( $servermap{$b->{'server'}}->{'host'} ),
 				$b->{'ok'} ?
 				  &text('backuplogs_size',
-					&nice_size($b->{'size'}) :
+					&nice_size($b->{'size'})) :
 				  &text('backuplogs_failed', $b->{'msg'}),
 				]);
 			}

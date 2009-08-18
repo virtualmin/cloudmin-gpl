@@ -2606,6 +2606,6 @@ backuplogs_dest=Destination
 backuplogs_time=Date and time
 backuplogs_server=System
 backuplogs_status=Status
-backuplogs_size=Completed with size $1
-backuplogs_failed=Failed : $1
+backuplogs_size=Complete : $1
+backuplogs_failed=<font color=red>Failed : $1</font>
 backuplogs_none=No backups matching your search were found.

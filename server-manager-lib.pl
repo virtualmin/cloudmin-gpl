@@ -4099,7 +4099,7 @@ if (&can_action(undef, "backup")) {
 	push(@gicons, "images/backups.gif");
 	push(@gcats, "backup");
 
-	push(@glinks, "backup_logs.cgi");
+	push(@glinks, "list_backuplogs.cgi");
 	push(@gtitles, $text{'backuplog_title'});
 	push(@gicons, "images/backuplog.gif");
 	push(@gcats, "backup");
