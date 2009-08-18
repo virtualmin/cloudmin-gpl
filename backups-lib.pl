@@ -486,6 +486,8 @@ if ($backup->{'parallel'}) {
 					$s, $destmap{$s->{'id'}},
 					$backup->{'shutdown'}
 					);
+			      &save_backup_log($s, $destmap{$s->{'id'}}, $r,
+					       $backup);
 			      $r->{'capture'} = $capture_print;
 			      return $r;
 			    });
@@ -503,7 +505,13 @@ else {
 		my $srv = &execute_system_backup($s, $destmap{$s->{'id'}},
 						 $backup->{'shutdown'});
 		$rv{$s->{'id'}} = $srv;
+		&save_backup_log($s, $destmap{$s->{'id'}}, $srv, $backup);
 		}
+	}
+
+# Add in destinations to results
+foreach my $s (@servers) {
+	$rv{$s->{'id'}}->{'dest'} = $destmap{$s->{'id'}};
 	}
 
 return \%rv;
@@ -616,6 +624,57 @@ elsif ($dest->{'mode'} == 4) {
 else {
 	return "Unknown destination mode $dest->{'mode'}";
 	}
+}
+
+# list_backup_logs([&server])
+# Return a list of all logged server backups, or just those for one system
+sub list_backup_logs
+{
+my ($server) = @_;
+my @rv;
+opendir(LOGDIR, $backup_log_dir);
+foreach my $f (readdir(LOGDIR)) {
+	my ($time, $id) = split('_', $f);
+	next if ($time eq '' || $id eq '');
+	next if ($server && $id ne $server->{'id'});
+	my $log = &get_backup_log($f);
+	if ($log) {
+		push(@rv, $log);
+		}
+	}
+closedir(LOGDIR);
+}
+
+# get_backup_log(id)
+# Returns the hash ref for a backup log
+sub get_backup_log
+{
+my ($id) = @_;
+my %log;
+&read_file_lines("$backup_log_dir/$id", \%log) || return undef;
+return %log;
+}
+
+# save_backup_log(&server, server-dest, &result, &backup)
+# Log the backup of one virtual system
+sub save_backup_log
+{
+my ($server, $dest, $rv, $backup) = @_;
+if (!-d $backup_log_dir) {
+	&make_dir($backup_log_dir, 0700);
+	}
+my $log = { 'time' => time(),
+	    'server' => $server->{'id'},
+	    'host' => $server->{'host'},
+	    'dest' => $dest,
+	    'ok' => $rv->{'ok'},
+	    'size' => $rv->{'size'},
+	    'msg' => $rv->{'msg'},
+	    'base_dest' => $backup->{'dest'},
+	    'backup' => $backup->{'id'},
+	    'owner' => $backup->{'owner'} };
+$log->{'id'} = $log->{'time'}.'_'.$server->{'id'};
+&write_file("$backup_log_dir/$log->{'id'}", $log);
 }
 
 1;

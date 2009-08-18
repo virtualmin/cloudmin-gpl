@@ -179,6 +179,7 @@ $owner_plans_dir = "$module_config_directory/plans";
 
 $scheduled_backups_dir = "$module_config_directory/backups";
 $backup_cron_cmd = "$module_config_directory/backup.pl";
+$backup_log_dir = "$module_config_directory/backuplogs";
 
 $locations_file = "$module_config_directory/locations";
 

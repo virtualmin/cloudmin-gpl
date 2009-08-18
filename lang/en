@@ -2595,3 +2595,10 @@ brun_sending=Sending backup for $1 to $2 ..
 brun_fsubject=Failed Cloudmin backup of $1 systems to $2
 brun_subject=Cloudmin backup of $1 systems to $2
 brun_hostdest=destination from host
+
+backuplogs_title=Backup Logs
+backuplogs_find=Find logs matching:
+backuplogs_ok=Search
+backuplogs_week=Show Last Week's Backups
+backuplogs_weekdesc=Virtual system backups over the last $1 days ..
+backuplogs_finddesc=Virtual system backups matching $1 ..
