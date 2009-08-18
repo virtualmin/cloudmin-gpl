@@ -40,18 +40,54 @@ if ($in{'search'} || $in{'week'}) {
 		# Limit to last 7 days
 		$cutoff = time()-(7*24*60*60);
 		@backups = grep { $_->{'time'} >= $cutoff } @backups;
-		print "<b>",&text('backuplogs_weekdesc', 7),"</b><p>\n";
+		print &text('backuplogs_weekdesc', 7),"<p>\n";
 		}
 	else {
 		# Limit by search term
-		# XXX
+		@backups = grep { &match_backup($_, $in{'search'}) } @backups;
+		print &text('backuplogs_finddesc',
+			    "<i>$in{'search'}</i>"),"<p>\n";
 		}
 
-	# XXX
+	# Show the results, with links to restore
 	if (@backups) {
+		print &ui_columns_start([
+			$text{'backuplogs_dest'},
+			$text{'backuplogs_time'},
+			$server ? ( ) :
+				( $text{'backuplogs_server'} ),
+			$text{'backuplogs_status'},
+			], 100);
+		foreach $b (@backups) {
+			print &ui_columns_row([
+				"<a href='edit_restore.cgi?id=$b->{'id'}'>".
+				 &nice_backup_destination($b->{'dest'}).
+				 "</a>",
+				&make_date($b->{'time'}),
+				$server ? ( ) :
+				 ( $servermap{$b->{'server'}}->{'host'} ),
+				$b->{'ok'} ?
+				  &text('backuplogs_size',
+					&nice_size($b->{'size'}) :
+				  &text('backuplogs_failed', $b->{'msg'}),
+				]);
+			}
+		print &ui_columns_end();
 		}
 	else {
+		print "<b>$text{'backuplogs_none'}</b><p>\n";
 		}
 	}
 
 &ui_print_footer("", $text{'index_return'});
+
+sub match_backup
+{
+my ($backuplog, $search) = @_;
+my $server = $servermap{$_->{'server'}};
+return $server->{'host'} =~ /\Q$search\E/i ||
+       $backuplog->{'owner'} =~ /\Q$search\E/i ||
+       &nice_backup_destination($backuplog->{'dest'}) =~ /\Q$search\E/i;
+return 0;
+}
+
