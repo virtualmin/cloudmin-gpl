@@ -535,8 +535,9 @@ if ($server->{'status'} ne 'down' && $shutdown) {
 		return { 'ok' => 0,
 			 'msg' => &text('smove_shutfailed', $err) };
 		}
-	$s->{'status'} = 'down';	# Assume it worked
+	$server->{'status'} = 'down';	# Assume it worked
 	$was_up = 1;
+	&save_managed_server($server);
 	&$second_print($text{'create_done'});
 	}
 
@@ -558,6 +559,8 @@ else {
 if ($was_up) {
 	&$first_print(&text('brun_startup', $server->{'host'}));
 	&startup_server($server);
+	&check_server_status($server, 0, 1);
+	&save_managed_server($server);
 	&$second_print($text{'create_done'});
 	}
 
