@@ -427,6 +427,7 @@ else {
 sub execute_backup
 {
 my ($backup) = @_;
+my $start = time();
 
 # Find the systems
 &$first_print($text{'brun_finding'});
@@ -487,7 +488,7 @@ if ($backup->{'parallel'}) {
 					$backup->{'shutdown'}
 					);
 			      &save_backup_log($s, $destmap{$s->{'id'}}, $r,
-					       $backup);
+					       $backup, $start);
 			      $r->{'capture'} = $capture_print;
 			      return $r;
 			    });
@@ -505,7 +506,8 @@ else {
 		my $srv = &execute_system_backup($s, $destmap{$s->{'id'}},
 						 $backup->{'shutdown'});
 		$rv{$s->{'id'}} = $srv;
-		&save_backup_log($s, $destmap{$s->{'id'}}, $srv, $backup);
+		&save_backup_log($s, $destmap{$s->{'id'}}, $srv,
+				 $backup, $start);
 		}
 	}
 
@@ -656,15 +658,15 @@ my %log;
 return \%log;
 }
 
-# save_backup_log(&server, server-dest, &result, &backup)
+# save_backup_log(&server, server-dest, &result, &backup, start-time)
 # Log the backup of one virtual system
 sub save_backup_log
 {
-my ($server, $dest, $rv, $backup) = @_;
+my ($server, $dest, $rv, $backup, $time) = @_;
 if (!-d $backup_log_dir) {
 	&make_dir($backup_log_dir, 0700);
 	}
-my $log = { 'time' => time(),
+my $log = { 'time' => $time,
 	    'server' => $server->{'id'},
 	    'host' => $server->{'host'},
 	    'dest' => $dest,
