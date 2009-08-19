@@ -47,6 +47,7 @@ if ($in{'search'} || $in{'week'}) {
 		@backups = grep { &match_backup($_, $in{'search'}) } @backups;
 		$msg = &text('backuplogs_finddesc', "<i>$in{'search'}</i>");
 		}
+	@backups = sort { $b->{'time'} <=> $a->{'time'} } @backups;
 
 	# Show the results, with links to restore
 	if (@backups) {

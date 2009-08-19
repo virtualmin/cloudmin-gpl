@@ -622,6 +622,7 @@ elsif ($dest->{'mode'} == 4) {
 		}
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"perl /tmp/pty.pl ftp ".quotemeta($dest->{'host'}).
+		($dest->{'port'} ? " ".$dest->{'port'} : "").
 		" 2>&1 <$ftpin");
 	&delete_file_on_server($server, $ftpin);
 	return $err ? $err : $ex ? "FTP upload failed : $out" : undef;
@@ -629,6 +630,115 @@ elsif ($dest->{'mode'} == 4) {
 else {
 	return "Unknown destination mode $dest->{'mode'}";
 	}
+}
+
+# execute_restore(&backup)
+# Restores a backup of one or more virtual systems, and returns a map from
+# system IDs to status hashes in the same format as execute_backup
+sub execute_restore
+{
+my ($backup) = @_;
+
+# Find the systems
+&$first_print($text{'rrun_finding'});
+my %want = map { $_, 1 } split(/\s+/, $backup->{'servers'});
+my @servers = grep { ($want{$_->{'id'}} || $want{'*'}) &&
+		     &supports_backup($_) }
+		   &list_available_managed_servers_sorted();
+if ($backup->{'owner'}) {
+	# Limit to systems owned by the backup's owner
+	my $owner = &get_system_owner($backup->{'owner'});
+	if ($owner) {
+		my %oids = split(/\s+/, $owner->{'acl'}->{'servers'});
+		@servers = grep { $oids{$_->{'id'}} } @servers;
+		}
+	}
+&$second_print(&text('rrun_found', scalar(@servers)));
+
+# Work out the destination for each, based on the given destination spec
+my %rv;
+my %destmap;
+foreach my $s (@servers) {
+	$destmap{$s->{'id'}} = $backup->{'dest'}."/".$s->{'host'}.".tar.gz";
+	}
+
+if ($backup->{'parallel'}) {
+	# Run each of them in parallel
+	my @prv = &parallel_server_function(\@servers,
+			sub { my ($s) = @_;
+			      my $r = &execute_system_restore(
+					$s, $destmap{$s->{'id'}},
+					);
+			      return $r;
+			    });
+	for(my $i=0; $i<@prv; $i++) {
+		my $s = $servers[$i];
+		$rv{$s->{'id'}} = $prv[$i]->[0];
+		}
+	}
+else {
+	# Do them one by one
+	foreach my $s (@servers) {
+		my $srv = &execute_system_restore($s, $destmap{$s->{'id'}});
+		$rv{$s->{'id'}} = $srv;
+		}
+	}
+
+# Add in destinations to results
+foreach my $s (@servers) {
+	$rv{$s->{'id'}}->{'dest'} = $destmap{$s->{'id'}};
+	}
+
+return \%rv;
+
+}
+
+# execute_system_restore(&server, dest)
+# Restore a backup of a single system, and return a status hash ref
+sub execute_system_restore
+{
+my ($server, $dest) = @_;
+
+# Check if running, and if so shut down
+my $was_up = 0;
+if ($server->{'status'} ne 'down') {
+	&$first_print(&text('rrun_shutdown', $server->{'host'}));
+	$err = &shutdown_server($server);
+	if ($err) {
+		return { 'ok' => 0,
+			 'msg' => &text('smove_shutfailed', $err) };
+		}
+	$server->{'status'} = 'down';	# Assume it worked
+	$was_up = 1;
+	&save_managed_server($server);
+	&$second_print($text{'create_done'});
+	}
+
+# Call the type-specific backup function
+&$first_print(&text('rrun_restoring', $server->{'host'},
+		    &nice_backup_destination($dest)));
+&$indent_print();
+my $bfunc = "type_".$server->{'manager'}."_restore_system";
+my $rv = &$bfunc($server, $dest);
+&$outdent_print();
+if ($rv->{'ok'}) {
+	&$second_print($text{'rrun_restored'});
+	}
+else {
+	&$second_print(&text('rrun_failed', $rv->{'msg'}));
+	}
+
+# Start up again
+if ($was_up) {
+	&$first_print(&text('rrun_startup', $server->{'host'}));
+	&startup_server($server);
+	&check_server_status($server, 0, 1);
+	&save_managed_server($server);
+	&$second_print($text{'create_done'});
+	}
+
+return $rv;
+
 }
 
 # list_backup_logs([&server])
@@ -682,6 +792,190 @@ my $log = { 'time' => $time,
 $log->{'id'} = $log->{'time'}.'_'.$server->{'id'};
 &write_file("$backup_log_dir/$log->{'id'}", $log);
 }
+
+# tar_backup_system(&server, dest, root-dir)
+# Backup a virtual system by tarring up its filesystem on the host. Works
+# with OpenVZ, Vservers and Zones.
+sub tar_backup_system
+{
+my ($server, $deststr, $root) = @_;
+my $vhost = &get_parent_server($server);
+my $dest = &parse_backup_destination($deststr);
+
+# Pick a temp file on the host system, if needed
+my $tarfile;
+if ($dest->{'mode'} == 1) {
+	$tarfile = $dest->{'path'};
+	}
+else {
+	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
+	if (!$tarfile) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_etemp', $vhost->{'host'}) };
+		}
+	}
+
+# Tar up the filesystem
+&$first_print(&text('brun_tarring', $server->{'host'}, $root));
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"cd ".quotemeta($root)." && ".
+	"tar cf - . | gzip -c >".quotemeta($tarfile));
+if ($ex || $err) {
+	$err = $out if ($ex);
+	return { 'ok' => 0,
+		 'msg' => &text('brun_etar',
+				"<tt>".&html_escape($out)."</tt>") };
+	}
+&remote_finished();
+
+# Get the size
+my @st = &stat_file_on_server($vhost, $tarfile);
+if (!@st || !$st[7]) {
+	return { 'ok' => 0,
+		 'msg' => &text('brun_estat', $tarfile) };
+	}
+my $size = $st[7];
+
+# Transfer to the destination, if needed
+if ($dest->{'mode'} != 1) {
+	# Send via SCP or FTP
+	&$first_print(&text('brun_sending', $server->{'host'},
+					    &nice_backup_destination($dest)));
+	my $err = &send_to_backup_dest($vhost, $tarfile, $dest);
+
+	# Delete from host
+	&delete_file_on_server($vhost, $tarfile);
+
+	if ($err) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_esend', $err) };
+		}
+	}
+
+# Return status
+return { 'ok' => 1,
+	 'size' => $size };
+
+}
+
+# tar_restore_system(&server, dest, root-dir)
+# Restore a virtual system by un-tarring up its filesystem on the host. Works
+# with OpenVZ, Vservers and Zones.
+sub tar_restore_system
+{
+my ($server, $deststr, $root) = @_;
+my $vhost = &get_parent_server($server);
+my $dest = &parse_backup_destination($deststr);
+
+# Pick a temp file on the host system, if needed
+my $tarfile;
+if ($dest->{'mode'} == 1) {
+	$tarfile = $dest->{'path'};
+	}
+else {
+	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
+	if (!$tarfile) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_etemp', $vhost->{'host'}) };
+		}
+	}
+
+# Copy in the tar.gz backup file, if needed
+if ($dest->{'mode'} != 1) {
+	&$first_print(&text('rrun_getting', $server->{'host'},
+					    &nice_backup_destination($dest)));
+	my $err = &get_from_backup_dest($vhost, $tarfile, $dest);
+	if ($err) {
+		return { 'ok' => 0,
+			 'msg' => &text('rrun_eget', $err) };
+		}
+	}
+my @st = &stat_file_on_server($vhost, $tarfile);
+if (!@st || !$st[7]) {
+	return { 'ok' => 0,
+		 'msg' => &text('rrun_estat', $tarfile) };
+	}
+my $size = $st[7];
+
+# Un-tar the filesystem
+&$first_print(&text('rrun_untarring', $server->{'host'}, $root));
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"cd ".quotemeta($root)." && ".
+	"rm -rf * && ".
+	"gunzip -c ".quotemeta($tarfile)." | tar xpf -");
+if ($ex || $err) {
+	$err = $out if ($ex);
+	return { 'ok' => 0,
+		 'msg' => &text('rrun_etar',
+				"<tt>".&html_escape($out)."</tt>") };
+	}
+&remote_finished();
+
+# Remove the temp file if needed
+if ($dest->{'mode'} != 1) {
+	&delete_file_on_server($vhost, $tarfile);
+	}
+
+# Return status
+return { 'ok' => 1, 'size' => $st[7] };
+
+}
+
+# get_from_backup_dest(&server, file, &destination)
+# Get some file from a backup destination and put it on the given server.
+# Returns an error on failure, undef on success.
+sub get_from_backup_dest
+{
+my ($server, $file, $dest) = @_;
+if ($dest->{'mode'} == 0) {
+	# Upload from Cloudmin master
+	return &put_file_to_server($server, $dest->{'path'}, $file);
+	}
+elsif ($dest->{'mode'} == 1) {
+	# From host system, which makes no sense!
+	return "get_from_backup_dest called with crazy mode $dest->{'mode'}";
+	}
+elsif ($dest->{'mode'} == 2) {
+	# From some other Cloudmin system
+	my $destserver = &get_managed_server_by("id", $dest->{'id'});
+	$destserver ||
+		return "No Cloudmin system with ID $dest->{'id'} exists";
+	return &transfer_file_between_servers($destserver, $server,
+					      $dest->{'path'}, $file, 0);
+	}
+elsif ($dest->{'mode'} == 3) {
+	# Get via SSH (using a fake server object)
+	my $destserver = { 'id' => &server_id(),
+			   'ssh_protocol' => 2,
+			   'host' => $dest->{'host'},
+			   'ssh_user' => $dest->{'user'},
+			   'ssh_pass' => $dest->{'pass'},
+			   'ssh_port' => $dest->{'port'},
+			   'status' => 'nowebmin',
+			  };
+	return &transfer_file_between_servers($destserver, $server,
+					      $dest->{'path'}, $file, 0);
+	}
+elsif ($dest->{'mode'} == 4) {
+	# Download via FTP, using wget command
+	if (!&has_command_on_server($server, "wget")) {
+		return "Missing wget command";
+		}
+	my $cmd = "wget -O ".quotemeta($file).
+		  "ftp://".quotemeta($dest->{'user'}).":".
+		  	   quotemeta($dest->{'pass'})."\@".
+		  $dest->{'host'}.($dest->{'port'} ? ":$dest->{'port'}" : "").
+		  quotemeta($dest->{'path'});
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	return $err ? $err : $ex ? "FTP download failed : $out" : undef;
+	}
+else {
+	return "Unknown destination mode $dest->{'mode'}";
+	}
+}
+
+
+
 
 1;
 

@@ -2,7 +2,7 @@
 
 =head1 backup-systems.pl
 
-Backups up one or more Cloudmin-managed virtual systems.
+Backs up one or more Cloudmin-managed virtual systems.
 
 This command creates backups of one or more Cloudmin systems to the specified
 backup destination. The systems to include are selected using standard
@@ -37,7 +37,7 @@ if ($0 =~ /^(.*\/)[^\/]+$/) {
 	chdir($1);
 	}
 chop($pwd = `pwd`);
-$0 = "$pwd/refresh-systems.pl";
+$0 = "$pwd/backup-systems.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 
@@ -78,9 +78,7 @@ if ($quiet) {
 else {
 	&set_all_text_print();
 	}
-&obtain_lock_server(\@servers);
 $rv = &execute_backup($backup);
-&release_lock_server(\@servers);
 
 # Show results
 foreach $s (@servers) {

@@ -2606,6 +2606,19 @@ brun_emktemp=Failed to create temporary directory on $1 : $2
 brun_edd=Failed to create copy of LVM disk $1 : $2
 brun_dd=Creating copies of LVM disk for $1 ..
 
+rrun_finding=Finding systems to restore ..
+rrun_found=.. found $1 systems
+rrun_shutdown=Shutting down $1 prior to restore ..
+rrun_startup=Starting up $1 after restore ..
+rrun_restoring=Restoring $1 from $2 ..
+rrun_backed=.. restored backup
+rrun_failed=.. restore failed : $1
+rrun_untarring=Un-TARing filesystem for $1 under $2 ..
+rrun_getting=Fetching backup for $1 from $2 ..
+rrun_etar=Failed to extract TAR file of filesystem : $1
+rrun_eget=Failed to fetch from source : $1
+rrun_estat=TAR fetch appeared to succeed, but destination file $1 was not created
+
 backuplogs_title=Backup Logs
 backuplogs_find=Find logs matching:
 backuplogs_ok=Search

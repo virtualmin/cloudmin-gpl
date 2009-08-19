@@ -22,9 +22,7 @@ $backup || &usage("No backup with ID $backupid found");
 # Execute it, capturing the output
 $capture_print = undef;
 &set_all_capture_text_print();
-&obtain_lock_server(\@servers);
 $rv = &execute_backup($backup);
-&release_lock_server(\@servers);
 
 # Check if any failed
 $failcount = 0;
