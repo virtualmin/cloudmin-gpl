@@ -61,7 +61,7 @@ if ($in{'search'} || $in{'week'}) {
 			], 100);
 		foreach $b (@backups) {
 			print &ui_columns_row([
-				"<a href='edit_restore.cgi?id=$b->{'id'}'>".
+				"<a href='restore_form.cgi?log=$b->{'id'}'>".
 				 &nice_backup_destination($b->{'dest'}).
 				 "</a>",
 				&make_date($b->{'time'}),

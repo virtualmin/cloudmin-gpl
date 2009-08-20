@@ -21,6 +21,16 @@ if ($in{'delete'}) {
 	# Just remove this backup
 	&delete_backup($backup);
 	}
+elsif ($in{'restore'}) {
+	# Redirect to restore form
+	&redirect("restore_form.cgi?id=$backup->{'id'}");
+	return;
+	}
+elsif ($in{'run'}) {
+	# Redirect to run backup
+	&redirect("backup.cgi?id=$backup->{'id'}");
+	return;
+	}
 else {
 	# Validate and store inputs
 	@allservers = grep { &supports_backup($_) }

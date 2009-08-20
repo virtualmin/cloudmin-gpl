@@ -106,6 +106,7 @@ if ($in{'new'}) {
 else {
 	print &ui_form_end([ [ undef, $text{'save'} ],
 			     [ 'run', $text{'backup_run'} ],
+			     [ 'restore', $text{'backup_restore'} ],
 			     [ 'delete', $text{'delete'} ] ]);
 	}
 

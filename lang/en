@@ -2532,6 +2532,7 @@ backup_when=When to backup
 backup_err=Failed to save backup
 backup_eservers=No usable systems selected
 backup_run=Backup Now
+backup_restore=Restore..
 backup_email=Email results to
 backup_noemail=Nobody
 backup_always=Send email when
