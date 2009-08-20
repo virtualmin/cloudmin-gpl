@@ -898,6 +898,7 @@ if (!@st || !$st[7]) {
 my $size = $st[7];
 
 # Un-tar the filesystem
+my $tarerr;
 &$first_print(&text('rrun_untarring', $server->{'host'}, $root));
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"cd ".quotemeta($root)." && ".
@@ -905,9 +906,7 @@ my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"gunzip -c ".quotemeta($tarfile)." | tar xpf -");
 if ($ex || $err) {
 	$err = $out if ($ex);
-	return { 'ok' => 0,
-		 'msg' => &text('rrun_etar',
-				"<tt>".&html_escape($out)."</tt>") };
+	$tarerr = &text('rrun_etar', "<tt>".&html_escape($out)."</tt>");
 	}
 &remote_finished();
 
@@ -917,8 +916,12 @@ if ($dest->{'mode'} != 1) {
 	}
 
 # Return status
-return { 'ok' => 1, 'size' => $st[7] };
-
+if ($tarerr) {
+	return { 'ok' => 0, 'msg' => $tarerr };
+	}
+else {
+	return { 'ok' => 1, 'size' => $st[7] };
+	}
 }
 
 # get_from_backup_dest(&server, file, &destination)
