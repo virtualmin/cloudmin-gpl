@@ -2577,6 +2577,10 @@ cron_ehidden=No complex schedule was selected
 
 backuplog_title=Backup Logs
 
+brun_title=Execute Backup
+brun_ecannot=You are not allowed to execute this backup
+brun_destdesc=Backing up $1 systems to $2 ..
+brun_destdesc2=Backing up $1 systems to destinations from host systems ..
 brun_evhost=No default destination set on $1
 brun_etemp=Failed to select temporary file on $1
 brun_etar=Failed to create TAR file of filesystem : $1
@@ -2607,6 +2611,8 @@ brun_unsnapshot=Removing LVM snapshots for disks of $1 ..
 brun_emktemp=Failed to create temporary directory on $1 : $2
 brun_edd=Failed to create copy of LVM disk $1 : $2
 brun_dd=Creating copies of LVM disk for $1 ..
+brun_allok=Backups of $1 systems completed successfully.
+brun_somefailed=Backups of $1 completed, but $2 failed!
 
 rrun_finding=Finding systems to restore ..
 rrun_found=.. found $1 systems
