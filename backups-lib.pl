@@ -818,6 +818,14 @@ $log->{'id'} = $log->{'time'}.'_'.$server->{'id'};
 &write_file("$backup_log_dir/$log->{'id'}", $log);
 }
 
+# delete_backup_log(&log)
+# Delete a backup log entry
+sub delete_backup_log
+{
+my ($log) = @_;
+&unlink_file("$backup_log_dir/$log->{'id'}");
+}
+
 # tar_backup_system(&server, dest, root-dir)
 # Backup a virtual system by tarring up its filesystem on the host. Works
 # with OpenVZ, Vservers and Zones.
@@ -1006,8 +1014,49 @@ else {
 	}
 }
 
-
-
+# delete_backup_dest(&dest, &server)
+# Delete the file at some backup destination, return undef if OK, or an error
+# message on failure.
+sub delete_backup_dest
+{
+my ($dest, $server) = @_;
+if ($dest->{'mode'} == 0) {
+	# Just remove locally
+	return &unlink_file($dest->{'path'}) ? undef : "$!";
+	}
+elsif ($dest->{'mode'} == 1) {
+	# From host system
+	my $vhost = &get_parent_server($server);
+	$vhost || return "No host system for $server->{'host'} found";
+	return &delete_file_on_server($vhost, $dest->{'path'});
+	}
+elsif ($dest->{'mode'} == 2) {
+	# From other Cloudmin system
+	my $destserver = &get_managed_server_by("id", $dest->{'id'});
+	$destserver || return "No Cloudmin system with ID $dest->{'id'} found";
+	return &delete_file_on_server($destserver, $dest->{'path'});
+	}
+elsif ($dest->{'mode'} == 3) {
+	# From SSH server
+	my $destserver = { 'id' => &server_id(),
+			   'ssh_protocol' => 2,
+			   'host' => $dest->{'host'},
+			   'ssh_user' => $dest->{'user'},
+			   'ssh_pass' => $dest->{'pass'},
+			   'ssh_port' => $dest->{'port'},
+			   'status' => 'nowebmin',
+			  };
+	return &delete_file_on_server($destserver, $dest->{'path'});
+	}
+elsif ($dest->{'mode'} == 4) {
+	# From FTP server
+	# XXX
+	return "Deletion via FTP not supported";
+	}
+else {
+	return "Unknown backup destination mode $dest->{'mode'}";
+	}
+}
 
 1;
 

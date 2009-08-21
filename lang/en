@@ -2650,6 +2650,8 @@ backuplogs_status=Status
 backuplogs_size=Complete : $1
 backuplogs_failed=<font color=red>Failed : $1</font>
 backuplogs_none=No backups matching your search were found.
+backuplogs_delete=Delete Selected Backups
+backuplogs_return=backup logs
 
 restore_title=Restore Backup
 restore_header=Virtual system restore options
@@ -2661,3 +2663,12 @@ restore_servers=Virtual systems to restore
 restore_parallel=Restore order
 restore_dest=Restore from source
 restore_ok=Restore Now
+
+dbackup_err=Failed to delete backups
+dbackup_enone=None selected to delete!
+dbackup_egone=Backup log with ID $1 does not exist!
+dbackup_egone2=Virtual system for backup log with ID $1 does not exist, or is not available to you
+dbackup_title=Delete Backups
+dbackup_deleting=Deleting backup of $1 from $2 ..
+dbackup_failed=.. deletion failed : $1
+dbackup_done=.. deleted backup of $1

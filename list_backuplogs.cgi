@@ -52,15 +52,21 @@ if ($in{'search'} || $in{'week'}) {
 	# Show the results, with links to restore
 	if (@backups) {
 		print $msg,"<br>\n";
+		@tds = ( "width=5" );
+		print &ui_form_start("delete_backuplogs.cgi", "post");
+		print &ui_hidden("id", $in{'id'});
 		print &ui_columns_start([
+			"",
 			$text{'backuplogs_dest'},
 			$text{'backuplogs_time'},
 			$server ? ( ) :
 				( $text{'backuplogs_server'} ),
 			$text{'backuplogs_status'},
-			], 100);
+			], 100, 0, \@tds);
 		foreach $b (@backups) {
-			print &ui_columns_row([
+			$candelete = $dest->{'mode'} <= 2 &&
+				     $b->{'ok'};
+			print &ui_checked_columns_row([
 				"<a href='restore_form.cgi?log=$b->{'id'}'>".
 				 &nice_backup_destination($b->{'dest'}).
 				 "</a>",
@@ -71,9 +77,10 @@ if ($in{'search'} || $in{'week'}) {
 				  &text('backuplogs_size',
 					&nice_size($b->{'size'})) :
 				  &text('backuplogs_failed', $b->{'msg'}),
-				]);
+				], \@tds, "d", $b->{'id'}, 0, !$candelete);
 			}
 		print &ui_columns_end();
+		print &ui_form_end([ [ undef, $text{'backuplogs_delete'} ] ]);
 		}
 	else {
 		print "<b>$text{'backuplogs_none'}</b><p>\n";
