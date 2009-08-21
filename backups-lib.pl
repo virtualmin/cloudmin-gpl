@@ -819,7 +819,9 @@ else {
 &$first_print(&text('brun_tarring', $server->{'host'}, $root));
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"cd ".quotemeta($root)." && ".
-	"tar cf - . | gzip -c >".quotemeta($tarfile));
+	(&tar_supports_gzip($vhost) ?
+		"tar czf ".quotemeta($tarfile)." ." :
+		"tar cf - . | gzip -c >".quotemeta($tarfile)));
 if ($ex || $err) {
 	$err = $out if ($ex);
 	return { 'ok' => 0,
@@ -903,7 +905,9 @@ my $tarerr;
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"cd ".quotemeta($root)." && ".
 	"rm -rf * && ".
-	"gunzip -c ".quotemeta($tarfile)." | tar xpf -");
+	(&tar_supports_gzip($vhost) ?
+		"tar xpzf ".quotemeta($tarfile) :
+		"gunzip -c ".quotemeta($tarfile)." | tar xpf -"));
 if ($ex || $err) {
 	$err = $out if ($ex);
 	$tarerr = &text('rrun_etar', "<tt>".&html_escape($out)."</tt>");

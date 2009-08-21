@@ -2610,8 +2610,12 @@ brun_emktemp=Failed to create temporary directory on $1 : $2
 brun_edd=Failed to create copy of LVM disk $1 : $2
 brun_dd=Creating copies of LVM disk for $1 ..
 brun_allok=Backups of $1 systems completed successfully.
-brun_somefailed=Backups of $1 completed, but $2 failed!
+brun_somefailed=Backups of $1 systems completed, but $2 failed!
 
+rrun_title=Restore Systems
+rrun_err=Restore failed
+rrun_destdesc=Restoring $1 systems from $2 ..
+rrun_destdesc2=Restoring $1 systems from destinations from host systems ..
 rrun_finding=Finding systems to restore ..
 rrun_found=.. found $1 systems
 rrun_shutdown=Shutting down $1 prior to restore ..
@@ -2628,6 +2632,8 @@ rrun_getting=Fetching backup for $1 from $2 ..
 rrun_etar=Failed to extract TAR file : $1
 rrun_eget=Failed to fetch from source : $1
 rrun_estat=TAR fetch appeared to succeed, but destination file $1 was not created
+rrun_allok=Restores of $1 systems completed successfully.
+rrun_somefailed=Restores of $1 systems completed, but $2 failed!
 
 backuplogs_title=Backup Logs
 backuplogs_find=Find logs matching:

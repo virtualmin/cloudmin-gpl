@@ -6200,6 +6200,16 @@ foreach my $l (@lines) {
 return @ifaces;
 }
 
+# tar_supports_gzip(&server)
+# Returns 1 if tar on some system supports the z option to do gzip compression.
+# Assumed true for GNU tar.
+sub tar_supports_gzip
+{
+my ($server) = @_;
+my ($out, $ex, $err) = &execute_command_on_server($server,"tar --version 2>&1");
+return !$err && !$ex && $out =~ /GNU\s+tar/i ? 1 : 0;
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update
 sub obtain_lock_server
