@@ -4100,8 +4100,13 @@ if (&can_action(undef, "backup")) {
 	push(@gcats, "backup");
 
 	push(@glinks, "list_backuplogs.cgi");
-	push(@gtitles, $text{'backuplog_title'});
+	push(@gtitles, $text{'backuplogs_title'});
 	push(@gicons, "images/backuplog.gif");
+	push(@gcats, "backup");
+
+	push(@glinks, "restore_form.cgi");
+	push(@gtitles, $text{'restore_title'});
+	push(@gicons, "images/restore.gif");
 	push(@gcats, "backup");
 	}
 

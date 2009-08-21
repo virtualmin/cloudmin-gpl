@@ -8,8 +8,10 @@ if ($in{'log'}) {
 	# From backup log, for one system
 	$backuplog = &get_backup_log($in{'log'});
 	$backuplog || &error($text{'restore_egone'});
-	@servers = ( &get_managed_server_by("id", $backuplog->{'server'}) );
+	$server = &get_managed_server_by("id", $backuplog->{'server'});
+	@servers = ( $server );
 	$dest = $backuplog->{'dest'};
+	$dest =~ s/\/([^\/]+)$//;	# Remove host.tar.gz
 	}
 elsif ($in{'id'}) {
 	# All systems from a backup schedule
@@ -22,26 +24,60 @@ elsif ($in{'id'}) {
 	}
 else {
 	# Allow free choice of systems and source (Host, FTP or SSH)
-	# XXX
+	$dest = undef;
 	}
 
 &ui_print_header(undef, $text{'restore_title'}, "");
 
+print $text{'restore_desc'},"<p>\n";
+
 print &ui_form_start("restore.cgi", "post");
+print &ui_hidden("log", $in{'log'});
+print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'restore_header'}, "width=100%", 2);
 
 # Systems to include
-# XXX limit to owner
+if ($in{'log'}) {
+	# Exactly one system
+	print &ui_table_row($text{'restore_servers'},
+		"<tt>$servers[0]->{'host'}</tt>");
+	print &ui_hidden("servers", $servers[0]->{'id'});
+	}
+else {
+	# Allow selection, with those from backup checked by default
+	@allservers = grep { &supports_backup($_) }
+			&list_available_managed_servers_sorted();
+	print &ui_table_row($text{'restore_servers'},
+		&ui_select("servers", [ map { $_->{'id'} } @servers ],
+			   [ map { [ $_->{'id'}, $_->{'host'} ] } @allservers ],
+			   10, 1));
+	}
 
 # Parallel mode
-print &ui_table_row($text{'restore_parallel'},
-	&ui_radio("parallel", int($backup->{'parallel'}),
-		  [ [ 1, $text{'backup_parallel1'} ],
-		    [ 0, $text{'backup_parallel0'} ] ]));
+if (!$in{'log'}) {
+	print &ui_table_row($text{'restore_parallel'},
+		&ui_radio("parallel", int($backup->{'parallel'}),
+			  [ [ 1, $text{'backup_parallel1'} ],
+			    [ 0, $text{'backup_parallel0'} ] ]));
+	}
 
-# Destination
-# XXX (may be fixed if $dest is set)
+# Destination, which may be fixed
+if ($dest) {
+	print &ui_table_row($text{'restore_dest'},
+		&nice_backup_destination($dest));
+	}
+else {
+	print &ui_table_row($text{'restore_dest'},
+	    &ui_radio_table("dest_mode", -1,
+		[ [ -1, $text{'backup_dest0'} ],
+		  [ 3, $text{'backup_dest3'},
+			&show_backup_ssh_dest({ }, "ssh", 22) ],
+		  [ 4, $text{'backup_dest4'},
+			&show_backup_ssh_dest({ }, "ftp", 21) ],
+	 	]));
+	}
 
+print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'restore_ok'} ] ]);
 
 &ui_print_footer("", $text{'return'});
