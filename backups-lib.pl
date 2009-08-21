@@ -149,11 +149,11 @@ elsif ($dest =~ /^host:(\/\S*)$/) {
 elsif ($dest =~ /^vm2:([^:]+):(\/\S*)$/) {
 	return { 'mode' => 2, 'id' => $1, 'path' => $2 };
 	}
-elsif ($dest =~ /^ssh:([^:]+):([^\@]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
+elsif ($dest =~ /^ssh:\/*([^:]+):([^\@]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
 	return { 'mode' => 3, 'user' => $1, 'pass' => $2,
 		 'host' => $3, 'port' => $5, 'path' => $6 };
 	}
-elsif ($dest =~ /^ftp:([^:]+):([^\@]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
+elsif ($dest =~ /^ftp:\/*([^:]+):([^\@]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
 	return { 'mode' => 4, 'user' => $1, 'pass' => $2,
 		 'host' => $3, 'port' => $5, 'path' => $6 };
 	}
@@ -964,11 +964,11 @@ elsif ($dest->{'mode'} == 4) {
 	if (!&has_command_on_server($server, "wget")) {
 		return "Missing wget command";
 		}
-	my $cmd = "wget -O ".quotemeta($file).
+	my $cmd = "wget -O ".quotemeta($file)." ".
 		  "ftp://".quotemeta($dest->{'user'}).":".
 		  	   quotemeta($dest->{'pass'})."\@".
 		  $dest->{'host'}.($dest->{'port'} ? ":$dest->{'port'}" : "").
-		  quotemeta($dest->{'path'});
+		  "/".quotemeta($dest->{'path'});
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err ? $err : $ex ? "FTP download failed : $out" : undef;
 	}
