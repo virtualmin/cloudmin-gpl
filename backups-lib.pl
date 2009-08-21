@@ -656,11 +656,36 @@ if ($backup->{'owner'}) {
 &$second_print(&text('rrun_found', scalar(@servers)));
 
 # Work out the destination for each, based on the given destination spec
+&$first_print($text{'rrun_findingdests'});
 my %rv;
 my %destmap;
 foreach my $s (@servers) {
-	$destmap{$s->{'id'}} = $backup->{'dest'}."/".$s->{'host'}.".tar.gz";
+	my $destdir;
+	if ($backup->{'dest'}) {
+		# Use dir in backup
+		$destdir = $backup->{'dest'};
+		}
+	else {
+		# From host system, if we can find it
+		my $vhost = &get_parent_server($s);
+		$destdir = $vhost->{'backup_default'};
+		if (!$destdir) {
+			$rv{$s->{'id'}} = {
+				'ok' => 0,
+				'msg' => &text('brun_evhost', $vhost->{'host'}),
+				};
+			next;
+			}
+		if ($backup->{'owner'}) {
+			$destdir .= '/'.$backup->{'owner'};
+			}
+		}
+	$destmap{$s->{'id'}} = $destdir."/".$s->{'host'}.".tar.gz";
 	}
+
+# Exclude failures
+@servers = grep { !$rv{$_->{'id'}} } @servers;
+&$second_print(&text('rrun_founddests', scalar(@servers)));
 
 if ($backup->{'parallel'}) {
 	# Run each of them in parallel
