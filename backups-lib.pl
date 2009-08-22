@@ -52,8 +52,15 @@ return @backups;
 sub get_backup_servers
 {
 my ($backup) = @_;
-my @servers = &list_managed_servers();
+my @servers = grep { &supports_backup($_) } &list_managed_servers();
 if ($backup->{'servers'} eq '*') {
+	if ($backup->{'owner'}) {
+		# Limit to backup's owner
+		my $owner = &get_system_owner($backup->{'owner'});
+		my %osys = map { $_, 1 }
+				split(/\s+/, $owner->{'acl'}->{'servers'});
+		@servers = grep { $osys{$_->{'id'}} } @servers;
+		}
 	return @servers;
 	}
 else {
@@ -431,18 +438,7 @@ my $start = time();
 
 # Find the systems
 &$first_print($text{'brun_finding'});
-my %want = map { $_, 1 } split(/\s+/, $backup->{'servers'});
-my @servers = grep { ($want{$_->{'id'}} || $want{'*'}) &&
-		     &supports_backup($_) }
-		   &list_available_managed_servers_sorted();
-if ($backup->{'owner'}) {
-	# Limit to systems owned by the backup's owner
-	my $owner = &get_system_owner($backup->{'owner'});
-	if ($owner) {
-		my %oids = split(/\s+/, $owner->{'acl'}->{'servers'});
-		@servers = grep { $oids{$_->{'id'}} } @servers;
-		}
-	}
+my @servers = &get_backup_servers($backup);
 &$second_print(&text('brun_found', scalar(@servers)));
 
 # Work out the destination for each, perhaps from the host
@@ -630,6 +626,15 @@ elsif ($dest->{'mode'} == 4) {
 else {
 	return "Unknown destination mode $dest->{'mode'}";
 	}
+}
+
+# create_backup_dest_dir(&server, path)
+# If needed, create the directory for a backup destination. Returns undef
+# if OK, or an error on failure.
+sub create_backup_dest_dir
+{
+my ($server, $path) = @_;
+# XXX call this function
 }
 
 # execute_restore(&backup)

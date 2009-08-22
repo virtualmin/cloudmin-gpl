@@ -11,7 +11,7 @@ $backup || &error($text{'backup_egone'});
 
 # Make sure this backup can be run
 if ($access{'owner'}) {
-	$backup->{'owner'} eq $access{'owner'} ||
+	$backup->{'owner'} eq $base_remote_user ||
 		&error($text{'brun_ecannot'});
 	}
 @servers = &get_backup_servers($backup);
