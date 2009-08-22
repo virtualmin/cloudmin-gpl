@@ -3,6 +3,8 @@
 sub list_api_categories
 {
 return (
+	[ "Backup and restore", "backup-systems.pl", "restore-systems.pl",
+				"list-backup-logs.pl" ],
 	[ "Virtual systems", "*-system.pl", "*-systems.pl",
 			     "modify-limits.pl", "get-console.pl" ],
 	[ "Virtual disks", "*-disk.pl", "*-disks.pl" ],
@@ -14,6 +16,7 @@ return (
 	[ "Virtualmin domains", "*-domain.pl", "*-domains.pl" ],
 	[ "License management", "*-licence.pl", "*-licences.pl" ],
 	[ "File management", "*-file.pl" ],
+	[ "Image management", "*-image.pl", "*-images.pl" ],
 	[ "Other scripts", "*.pl" ],
 	);
 }
@@ -68,6 +71,14 @@ license management commands.",
 "Cloudmin can fetch files from and send files to any of the systems it manages,
 either using SCP or direct access to the filesystem where possible. This
 category covers commands for fetching and uploading files.",
+
+"Backup and restore",
+"Cloudmin can create backups of virtual systems and restore them using the
+commands defined in this category.",
+
+"Image management",
+"An image is a template from which a virtual system can be created. Commands in
+this category can be used to create, list and remove images.",
 
 "Other scripts",
 "Programs in this section don't fall into any of the other categories.",

@@ -66,7 +66,7 @@ $desthash ||  &usage("Invalid --dest specification $dest");
 # Work out who to backup
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
-$backup = { 'dest' => $dest,
+$backup = { 'dest' => &join_backup_destination($desthash),
 	    'servers' => join(' ', map { $_->{'id'} } @servers),
 	    'shutdown' => $shutdown,
 	    'parallel' => $parallel };
