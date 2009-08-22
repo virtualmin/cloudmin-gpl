@@ -1112,5 +1112,70 @@ else {
 	}
 }
 
+# compute_backup_space()
+# Update all system owners with the amount of disk space they are using for
+# backups that actually exist.
+sub compute_backup_space
+{
+# Init size counts and latest backups for owner
+my @owners = &list_system_owners();
+my %ownermap;
+my %changed;
+foreach my $o (@owners) {
+	$o->{'acl'}->{'backup_size'} = 0;
+	$o->{'acl'}->{'backup_list'} = '';
+	$ownermap{$o->{'name'}} = $o;
+	}
+
+my %donedest;
+my @ownerlogs = grep { $_->{'owner'} && $_->{'ok'} } &list_backup_logs();
+my %servermap = map { $_->{'id'}, $_ } &list_managed_servers();
+foreach my $l (sort { $b->{'time'} <=> $a->{'time'} } @ownerlogs) {
+	next if ($donedest{$l->{'dest'}}++);
+	my $owner = $ownermap{$l->{'owner'}};
+	next if (!$owner);
+
+	# Does the dest file still exist?
+	my $dest = &parse_backup_destination($l->{'dest'});
+	my $exists;
+	if ($dest->{'mode'} == 0) {
+		# Check on Cloudmin master
+		$exists = -r $dest->{'path'} ? 1 : 0;
+		}
+	elsif ($dest->{'mode'} == 1) {
+		# Check on host system
+		my $vhost = &get_parent_server($s);
+		if ($vhost) {
+			my @st = &stat_file_on_server($vhost, $dest->{'path'});
+			$exists = $st[7] ? 1 : 0;
+			}
+		}
+	elsif ($dest->{'mode'} == 2) {
+		# Check on some other system
+		my $server = $servermap{$dest->{'id'}};
+		if ($server) {
+			my @st = &stat_file_on_server($server, $dest->{'path'});
+			$exists = $st[7] ? 1 : 0;
+			}
+		}
+	else {
+		# For remote FTP or SSH, we don't care
+		next;
+		}
+
+	# Add to size count for owner
+	$owner->{'acl'}->{'backup_size'} += $l->{'size'};
+	$owner->{'acl'}->{'backup_list'} .= $l->{'id'}.' ';
+	$changed{$owner->{'name'}} = $owner;
+	}
+
+# Save out all changed owners
+foreach my $owner (values %changed) {
+	&save_system_owner($owner, $owner, 1);
+	}
+
+# XXX don't check same logs twice
+}
+
 1;
 

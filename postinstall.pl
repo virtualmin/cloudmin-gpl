@@ -116,6 +116,26 @@ if (&supports_plans()) {
 	&save_plan($plan);
 	}
 
+# Create cron job to count owner's backup space used
+if (defined(&list_backups)) {
+	local ($job) = grep { $_->{'user'} eq 'root' &&
+			      $_->{'command'} eq $backup_space_cmd }
+			    &cron::list_cron_jobs();
+	if (!$job) {
+		$job = { 'command' => $backup_space_cmd,
+			 'user' => 'root',
+			 'mins' => int(rand()*60),
+			 'hours' => int(rand()*24),
+			 'days' => '*',
+			 'weekdays' => '*',
+			 'months' => '*',
+			 'active' => 1, };
+		&cron::create_cron_job($job);
+		&cron::create_wrapper($backup_space_cmd,
+				      $module_name, "space.pl");
+		}
+	}
+
 # Record the install time for this version
 local %itimes;
 &read_file($install_times_file, \%itimes);

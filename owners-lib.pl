@@ -1,7 +1,8 @@
 # Functions for managing Webmin users who own Cloudmin systems.
 
-@plan_limit_types = ( 'servers', 'ram', 'disk', 'cpu', 'ips', 'bw' );
-@nice_plan_limit_types = ( 'ram', 'disk', 'bw' );
+@plan_limit_types = ( 'servers', 'ram', 'disk', 'cpu', 'ips', 'bw',
+		      'space' );
+@nice_plan_limit_types = ( 'ram', 'disk', 'bw', 'space' );
 @plan_hostmodes = ( 'mem', 'disk', 'rand', 'location' );
 
 # list_system_owners()
@@ -35,21 +36,24 @@ $u->{'acl'} = \%acl;
 return $u;
 }
 
-# save_system_owner(&user, [&old])
+# save_system_owner(&user, [&old], [acl-only])
 # Create or update a Webmin user who can manage Cloudmin systems
 sub save_system_owner
 {
-local ($u, $oldu) = @_;
+local ($u, $oldu, $aclonly) = @_;
 &foreign_require("acl", "acl-lib.pl");
 local $acl = $u->{'acl'};
-delete($u->{'acl'});
-$u->{'readonly'} = $module_name;
-$u->{'modules'} = [ $module_name, "servers" ];
-if ($oldu) {
-	&acl::modify_user($oldu->{'name'}, $u);
-	}
-else {
-	&acl::create_user($u);
+if (!$aclonly) {
+	delete($u->{'acl'});
+	$u->{'readonly'} = $module_name;
+	$u->{'modules'} = [ $module_name, "servers" ];
+	if ($oldu) {
+		&acl::modify_user($oldu->{'name'}, $u);
+		}
+	else {
+		&acl::create_user($u);
+		}
+	&reload_miniserv();
 	}
 $acl->{'owner'} = 1;
 $acl->{'noconfig'} = 1;
@@ -64,8 +68,6 @@ local %sacl = ( 'servers' => $acl->{'servers'},
 		'add' => 0,
 		'links' => 1 );
 &save_module_acl(\%sacl, $u->{'name'}, "servers");
-
-&reload_miniserv();
 }
 
 # delete_system_owner(&user)
@@ -361,6 +363,9 @@ foreach my $s (&get_owner_servers($owner)) {
 	# Add IP usage
 	$rv->{'ips'} += scalar(split(/\s+/, $s->{'ip_addresses'}));
 	}
+
+# Owner's backup usage is set by space.pl
+$rv->{'space'} = $owner->{'acl'}->{'backup_size'};
 return $rv;
 }
 

@@ -196,6 +196,30 @@ if (&supports_plans() && !$in{'new'}) {
 	print &ui_hidden_table_end();
 	}
 
+# Section for owner's backups
+if ($owner->{'acl'}->{'backup_list'}) {
+	print &ui_hidden_table_start($text{'owner_header5'}, "width=100%", 2,
+				     "backups", 0, [ 'width=30%' ]);
+
+	$btable = &ui_columns_start([ $text{'backuplogs_dest'},
+				      $text{'backuplogs_server'},
+				      $text{'backuplogs_sz'} ], 100);
+	foreach $bid (split(/\s+/, $owner->{'acl'}->{'backup_list'})) {
+		$log = &get_backup_log($bid);
+		if ($log) {
+			$btable .= &ui_columns_row([
+				&nice_backup_destination($log->{'dest'}),
+				$log->{'host'},
+				&nice_size($log->{'size'}),
+				]);
+			}
+		}
+	$btable .= &ui_columns_end();
+	print &ui_table_row(undef, $btable, 2);
+
+	print &ui_hidden_table_end();
+	}
+
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
 	       : [ [ undef, $text{'save'} ],
