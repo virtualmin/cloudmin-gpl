@@ -2533,12 +2533,14 @@ backup_err=Failed to save backup
 backup_eservers=No usable systems selected
 backup_run=Backup Now
 backup_restore=Restore..
+backup_logs=Show Logs
 backup_email=Email results to
 backup_noemail=Nobody
 backup_always=Send email when
 backup_always1=Every time the backup completes
 backup_always0=Only on failure
 backup_eemail=Missing or invalid-looking email address
+backup_return=scheduled backup
 
 bdest_mode0=<tt>$1</tt> on Cloudmin master
 bdest_mode1=<tt>$1</tt> on host system
@@ -2654,6 +2656,9 @@ backuplogs_failed=<font color=red>Failed : $1</font>
 backuplogs_none=No backups matching your search were found.
 backuplogs_delete=Delete Selected Backups
 backuplogs_return=backup logs
+backuplogs_subh=For backups to $1
+backuplogs_subh2=For selected scheduled backup
+backuplogs_help=Click on a backup destination below to restore from it, or select one or more backups and click the <b>Delete</b> button to remove backup files.
 
 restore_title=Restore Backup
 restore_header=Virtual system restore options

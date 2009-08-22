@@ -31,6 +31,11 @@ elsif ($in{'run'}) {
 	&redirect("backup.cgi?id=$backup->{'id'}");
 	return;
 	}
+elsif ($in{'logs'}) {
+	# Redirect to logs for this backup
+	&redirect("list_backuplogs.cgi?log=$backup->{'id'}");
+	return;
+	}
 else {
 	# Validate and store inputs
 	@allservers = grep { &supports_backup($_) }

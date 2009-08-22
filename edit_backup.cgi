@@ -107,6 +107,7 @@ else {
 	print &ui_form_end([ [ undef, $text{'save'} ],
 			     [ 'run', $text{'backup_run'} ],
 			     [ 'restore', $text{'backup_restore'} ],
+			     [ 'logs', $text{'backup_logs'} ],
 			     [ 'delete', $text{'delete'} ] ]);
 	}
 

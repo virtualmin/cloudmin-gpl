@@ -8,25 +8,47 @@ if ($in{'id'} ne '') {
 	&can_action_error($server, "backup");
 	$subh = &server_in($server);
 	}
+elsif ($in{'log'}) {
+	($backup) = grep { $_->{'id'} eq $in{'log'} }
+			 &list_available_backups();
+	$backup || &error($text{'backup_egone'});
+	if ($backup->{'dest'}) {
+		$subh = &text('backuplogs_subh',
+			      &nice_backup_destination($backup->{'dest'}));
+		}
+	else {
+		$subh = &text('backuplogs_subh2');
+		}
+	}
 else {
 	&can_action_error(undef, "backup");
 	}
 &ui_print_header($subh, $text{'backuplogs_title'}, "");
 
 # Show search form
-print &ui_form_start("list_backuplogs.cgi", "post");
-print &ui_hidden("id", $in{'id'});
-print "<b>$text{'backuplogs_find'}</b>\n",
-      &ui_textbox("search", $in{'search'}, 30),"\n",
-      &ui_submit($text{'backuplogs_ok'})," ",
-      &ui_submit($text{'backuplogs_week'}, "week"),"\n";
-print &ui_form_end(),"<p>\n";
+if (!$in{'log'}) {
+	print &ui_form_start("list_backuplogs.cgi", "post");
+	print &ui_hidden("id", $in{'id'});
+	print "<b>$text{'backuplogs_find'}</b>\n",
+	      &ui_textbox("search", $in{'search'}, 30),"\n",
+	      &ui_submit($text{'backuplogs_ok'})," ",
+	      &ui_submit($text{'backuplogs_week'}, "week"),"\n";
+	print &ui_form_end(),"<p>\n";
+	}
 
-if ($in{'search'} || $in{'week'}) {
+if ($in{'search'} || $in{'week'} || $in{'log'}) {
 	# Show matching backups (that the user is allowed to see)
 	if ($server) {
+		# For one system
 		@backups = &list_backup_logs($server);
 		%servermap = ( $server->{'id'}, $server );
+		}
+	elsif ($in{'log'}) {
+		# From one scheduled backup
+		@backups = &list_backup_logs();
+		%servermap = map { $_->{'id'}, $_ }
+				 &list_available_managed_servers();
+		@backups = grep { $_->{'backup'} eq $in{'log'} } @backups;
 		}
 	else {
 		@backups = &list_backup_logs();
@@ -42,7 +64,7 @@ if ($in{'search'} || $in{'week'}) {
 		@backups = grep { $_->{'time'} >= $cutoff } @backups;
 		$msg = &text('backuplogs_weekdesc', 7);
 		}
-	else {
+	elsif ($in{'search'}) {
 		# Limit by search term
 		@backups = grep { &match_backup($_, $in{'search'}) } @backups;
 		$msg = &text('backuplogs_finddesc', "<i>$in{'search'}</i>");
@@ -51,7 +73,8 @@ if ($in{'search'} || $in{'week'}) {
 
 	# Show the results, with links to restore
 	if (@backups) {
-		print $msg,"<br>\n";
+		print $msg,"<br>\n" if ($msg);
+		print $text{'backuplogs_help'},"<br>\n";
 		@tds = ( "width=5" );
 		print &ui_form_start("delete_backuplogs.cgi", "post");
 		print &ui_hidden("id", $in{'id'});
@@ -87,7 +110,13 @@ if ($in{'search'} || $in{'week'}) {
 		}
 	}
 
-&ui_print_footer("", $text{'index_return'});
+if ($in{'log'}) {
+	&ui_print_footer("edit_backup.cgi?id=$in{'log'}",
+			 $text{'backup_return'});
+	}
+else {
+	&ui_print_footer("", $text{'index_return'});
+	}
 
 sub match_backup
 {
