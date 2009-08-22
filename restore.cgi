@@ -68,14 +68,23 @@ $rv = &execute_restore($backup);
 # Print a summary line
 @ok = grep { $rv->{$_->{'id'}} &&
 	     $rv->{$_->{'id'}}->{'ok'} } @servers;
+@bad = grep { !$rv->{$_->{'id'}} ||
+	      !$rv->{$_->{'id'}}->{'ok'} } @servers;
 if (scalar(@ok) == scalar(@servers)) {
 	print "<b>",&text('rrun_allok', scalar(@ok)),"</b><p>\n";
 	}
 else {
 	print "<b><font color=red>",
-	      &text('rrun_somefailed', scalar(@ok),
-		    scalar(@servers)-scalar(@ok)),"</font></b><p>\n";
+	      &text('rrun_somefailed', scalar(@ok), scalar(@bad)),
+	      "</font></b><p>\n";
 	}
+
+# Show failure reasons
+print "<table>\n";
+foreach $s (@bad) {
+	print "<tr> <td>$s->{'host'}</td> <td>:</td> <td>$rv->{$s->{'id'}}->{'msg'}</td> </tr>\n";
+	}
+print "</table>\n";
 
 &ui_print_footer("", $text{'return'});
 

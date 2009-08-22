@@ -4092,7 +4092,7 @@ if ($virtcount) {
 	push(@gcats, "virtualmin");
 	}
 
-if (&can_action(undef, "backup")) {
+if (&can_action(undef, "backup") && defined(&list_backups)) {
 	# Backup and restore
 	push(@glinks, "list_backups.cgi");
 	push(@gtitles, $text{'backups_title'});

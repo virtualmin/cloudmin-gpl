@@ -436,14 +436,23 @@ sub execute_backup
 my ($backup) = @_;
 my $start = time();
 
-# Find the systems
+# Find the systems, and make sure their hosts are up
+my %rv;
 &$first_print($text{'brun_finding'});
 my @servers = &get_backup_servers($backup);
+foreach my $s (@servers) {
+	if ($s->{'status'} eq 'nohost') {
+		$rv{$s->{'id'}} = {
+			'ok' => 0,
+			'msg' => &text('brun_ehostdown'),
+			};
+		}
+	}
+@servers = grep { !$rv{$_->{'id'}} } @servers;
 &$second_print(&text('brun_found', scalar(@servers)));
 
 # Work out the destination for each, perhaps from the host
 &$first_print($text{'brun_findingdests'});
-my %rv;
 my %destmap;
 foreach my $s (@servers) {
 	my $destdir;
@@ -659,14 +668,23 @@ sub execute_restore
 {
 my ($backup) = @_;
 
-# Find the systems
+# Find the systems, and make sure their hosts are up
+my %rv;
 &$first_print($text{'rrun_finding'});
 my @servers = &get_backup_servers($backup);
+foreach my $s (@servers) {
+	if ($s->{'status'} eq 'nohost') {
+		$rv{$s->{'id'}} = {
+			'ok' => 0,
+			'msg' => &text('brun_ehostdown'),
+			};
+		}
+	}
+@servers = grep { !$rv{$_->{'id'}} } @servers;
 &$second_print(&text('rrun_found', scalar(@servers)));
 
 # Work out the destination for each, based on the given destination spec
 &$first_print($text{'rrun_findingdests'});
-my %rv;
 my %destmap;
 foreach my $s (@servers) {
 	my $destdir;
