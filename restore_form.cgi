@@ -17,7 +17,7 @@ elsif ($in{'id'}) {
 	# All systems from a backup schedule
 	($backup) = grep { $_->{'id'} eq $in{'id'} } &list_backups();
 	$backup || &error($text{'restore_egone2'});
-	!$access{'owner'} || $access{'owner'} eq $base_remote_user ||
+	!$access{'owner'} || $backup->{'owner'} eq $base_remote_user ||
 		&error($text{'restore_ecannot'});
 	@servers = &get_backup_servers($backup);
 	$dest = $backup->{'dest'};

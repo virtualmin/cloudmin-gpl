@@ -569,8 +569,14 @@ return $rv;
 sub send_to_backup_dest
 {
 my ($server, $file, $dest) = @_;
+my $destdir = $dest->{'path'};
+$destdir =~ s/\/([^\/]+)$//;
 if ($dest->{'mode'} == 0) {
 	# Download to Cloudmin master
+	if (!-d $destdir) {
+		&make_dir($destdir, 0700, 1) ||
+			return &text('brun_emkdir', "$!");
+		}
 	return &get_file_from_server($server, $file, $dest->{'path'});
 	}
 elsif ($dest->{'mode'} == 1) {
@@ -581,6 +587,8 @@ elsif ($dest->{'mode'} == 2) {
 	# To some other Cloudmin system
 	my $destserver = &get_managed_server_by("id", $dest->{'id'});
 	$destserver || return "No Cloudmin system with ID $dest->{'id'} exists";
+	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
+	return &text('brun_emkdir', $mkerr) if ($mkerr);
 	return &transfer_file_between_servers($server, $destserver,
 					      $file, $dest->{'path'}, 0);
 	}
@@ -594,6 +602,8 @@ elsif ($dest->{'mode'} == 3) {
 			   'ssh_port' => $dest->{'port'},
 			   'status' => 'nowebmin',
 			  };
+	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
+	return &text('brun_emkdir', $mkerr) if ($mkerr);
 	return &transfer_file_between_servers($server, $destserver,
 					      $file, $dest->{'path'}, 0);
 	}
@@ -610,6 +620,7 @@ elsif ($dest->{'mode'} == 4) {
 	my $ftpin = &tempname_on_server($server);
 	my $ftpdata = $dest->{'user'}."\n".
 		      $dest->{'pass'}."\n".
+		      "mkdir $destdir\n".
 		      "put $file $dest->{'path'}\n".
 		      "quit\n";
 	my $err = &put_file_data_to_server($server, $ftpdata, $ftpin);
@@ -634,7 +645,11 @@ else {
 sub create_backup_dest_dir
 {
 my ($server, $path) = @_;
-# XXX call this function
+my $dir = $path;
+$dir =~ s/\/([^\/]+)$//;
+my ($out, $ex, $err) = &execute_command_on_server($server,
+			"mkdir -p ".quotemeta($dir));
+return $err ? $err : $ex ? $out : undef;
 }
 
 # execute_restore(&backup)
@@ -646,18 +661,7 @@ my ($backup) = @_;
 
 # Find the systems
 &$first_print($text{'rrun_finding'});
-my %want = map { $_, 1 } split(/\s+/, $backup->{'servers'});
-my @servers = grep { ($want{$_->{'id'}} || $want{'*'}) &&
-		     &supports_backup($_) }
-		   &list_available_managed_servers_sorted();
-if ($backup->{'owner'}) {
-	# Limit to systems owned by the backup's owner
-	my $owner = &get_system_owner($backup->{'owner'});
-	if ($owner) {
-		my %oids = split(/\s+/, $owner->{'acl'}->{'servers'});
-		@servers = grep { $oids{$_->{'id'}} } @servers;
-		}
-	}
+my @servers = &get_backup_servers($backup);
 &$second_print(&text('rrun_found', scalar(@servers)));
 
 # Work out the destination for each, based on the given destination spec
@@ -843,7 +847,13 @@ my $dest = &parse_backup_destination($deststr);
 # Pick a temp file on the host system, if needed
 my $tarfile;
 if ($dest->{'mode'} == 1) {
+	# Target is on host already
 	$tarfile = $dest->{'path'};
+	my $mkerr = &create_backup_dest_dir($vhost, $tarfile);
+	if ($mkerr) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_emkdir', $mkerr) };
+		}
 	}
 else {
 	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
@@ -1055,8 +1065,29 @@ elsif ($dest->{'mode'} == 3) {
 	}
 elsif ($dest->{'mode'} == 4) {
 	# From FTP server
-	# XXX
-	return "Deletion via FTP not supported";
+	if (!&has_command_on_server($server, "ftp")) {
+		return "Missing ftp command";
+		}
+	my $err = &put_file_to_server($server,
+			"$module_root_directory/pty.pl", "/tmp/pty.pl");
+	if ($err) {
+		return "Failed to copy pty.pl : $err";
+		}
+	my $ftpin = &tempname_on_server($server);
+	my $ftpdata = $dest->{'user'}."\n".
+		      $dest->{'pass'}."\n".
+		      "del $dest->{'path'}\n".
+		      "quit\n";
+	my $err = &put_file_data_to_server($server, $ftpdata, $ftpin);
+	if ($err) {
+		return "Failed to copy FTP login details : $err";
+		}
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"perl /tmp/pty.pl ftp ".quotemeta($dest->{'host'}).
+		($dest->{'port'} ? " ".$dest->{'port'} : "").
+		" 2>&1 <$ftpin");
+	&delete_file_on_server($server, $ftpin);
+	return $err ? $err : $ex ? "FTP deletion failed : $out" : undef;
 	}
 else {
 	return "Unknown backup destination mode $dest->{'mode'}";

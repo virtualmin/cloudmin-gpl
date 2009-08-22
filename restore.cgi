@@ -22,10 +22,11 @@ elsif ($in{'id'}) {
 	# Some or all systems from a backup schedule
 	($backup) = grep { $_->{'id'} eq $in{'id'} } &list_backups();
 	$backup || &error($text{'restore_egone2'});
-	!$access{'owner'} || $access{'owner'} eq $base_remote_user ||
+	!$access{'owner'} || $backup->{'owner'} eq $base_remote_user ||
 		&error($text{'restore_ecannot'});
 	@servers = grep { $want{$_->{'id'}} } &get_backup_servers($backup);
 	$backup->{'parallel'} = $in{'parallel'};
+	$backup->{'servers'} = join(' ', map { $_->{'id'} } @servers);
 	}
 else {
 	# Allow free choice of systems and source (Host, FTP or SSH)

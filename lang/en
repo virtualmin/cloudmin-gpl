@@ -2611,6 +2611,7 @@ brun_edd=Failed to create copy of LVM disk $1 : $2
 brun_dd=Creating copies of LVM disk for $1 ..
 brun_allok=Backups of $1 systems completed successfully.
 brun_somefailed=Backups of $1 systems completed, but $2 failed!
+brun_emkdir=Failed to create destination directory : $1
 
 rrun_title=Restore Systems
 rrun_err=Restore failed

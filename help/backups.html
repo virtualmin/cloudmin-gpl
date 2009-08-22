@@ -1,0 +1,33 @@
+<header>System Backups</header>
+
+Cloudmin allows you to backup the filesystems of virtual systems, either
+on a regular schedule or on demand via the web UI. Backups are limited to
+systems you own, and may be further limited by the amount of disk space 
+granted for backups in your plan, if you are a system owner. <p>
+
+When creating a backup, you can select the systems to include and a destination.
+The destination can be one of :
+
+<ul>
+<li><b>Default destination for host system</b><br>
+    This is a location chosen by the Cloudmin master administrator, such as a directory on a centralized backup system or the host for the selected virtual systems. <p>
+
+<li><b>Remote SSH server</b><br>
+    This can be any system accessible via SSH, even one not managed by Cloudmin.<p>
+
+<li><b>Remote FTP server</b><br>
+    This can be any system accessible via FTP that allows uploads.<p>
+
+</ul>
+
+When defining a backup, you can select if virtual systems will be shut down
+during the process or not. This will interrupt any serving they might be
+performing, but ensures consistency of the filesystem and any databases they
+host. Systems that were shut down will be re-started when the backup completes.
+<p>
+
+A backup can also have a schedule, which defines how often it is automatically
+run, and an email address to send a backup report or failure report to. <p>
+
+<footer>
+
