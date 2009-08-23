@@ -52,8 +52,7 @@ foreach $log (@logs) {
 			}
 		}
 	}
-
-# XXX re-compute owner's disk space?
+&compute_backup_space();
 
 &ui_print_footer("list_backuplogs.cgi?id=$in{'id'}",
 		 $text{'backuplogs_return'});

@@ -478,6 +478,21 @@ foreach my $s (@servers) {
 	$destmap{$s->{'id'}} = $destdir."/".$s->{'host'}.".tar.gz";
 	}
 
+# If backup is by an owner, check if he is over his backup space
+if ($backup->{'owner'}) {
+	my $limits = &get_owner_limits($backup->{'owner'});
+	if ($limits && $limits->{'max_space'} &&
+	    $limits->{'space'} >= $limits->{'max_space'}) {
+		foreach my $s (@servers) {
+			$rv{$s->{'id'}} ||= {
+				'ok' => 0,
+				'msg' => &text('brun_espace',
+					    &nice_size($limits->{'max_space'})),
+				};
+			}
+		}
+	}
+
 # Exclude failures
 @servers = grep { !$rv{$_->{'id'}} } @servers;
 &$second_print(&text('brun_founddests', scalar(@servers)));
@@ -490,7 +505,8 @@ if ($backup->{'parallel'}) {
 			      $capture_print = undef;
 			      my $r = &execute_system_backup(
 					$s, $destmap{$s->{'id'}},
-					$backup->{'shutdown'}
+					$backup->{'shutdown'},
+					$backup->{'owner'},
 					);
 			      &save_backup_log($s, $destmap{$s->{'id'}}, $r,
 					       $backup, $start);
@@ -509,11 +525,17 @@ else {
 	# Do them one by one
 	foreach my $s (@servers) {
 		my $srv = &execute_system_backup($s, $destmap{$s->{'id'}},
-						 $backup->{'shutdown'});
+						 $backup->{'shutdown'},
+						 $backup->{'owner'});
 		$rv{$s->{'id'}} = $srv;
 		&save_backup_log($s, $destmap{$s->{'id'}}, $srv,
 				 $backup, $start);
 		}
+	}
+
+# If backup was by a system owner, re-compute his usage
+if ($backup->{'owner'}) {
+	&compute_backup_space();
 	}
 
 # Add in destinations to results
@@ -524,12 +546,12 @@ foreach my $s (@servers) {
 return \%rv;
 }
 
-# execute_system_backup(&server, destination, shutdown?)
+# execute_system_backup(&server, destination, shutdown?, owner-name)
 # Backup one virtual system to the given destination. Returns a status hash
 # ref, with keys 'ok', 'msg', 'size'
 sub execute_system_backup
 {
-my ($server, $dest, $shutdown) = @_;
+my ($server, $dest, $shutdown, $owner) = @_;
 
 # Check if running, and if so shut down
 my $was_up = 0;
@@ -551,7 +573,7 @@ if ($server->{'status'} ne 'down' && $shutdown) {
 		    &nice_backup_destination($dest)));
 &$indent_print();
 my $bfunc = "type_".$server->{'manager'}."_backup_system";
-my $rv = &$bfunc($server, $dest, $shutdown);
+my $rv = &$bfunc($server, $dest, $shutdown, $owner);
 &$outdent_print();
 if ($rv->{'ok'}) {
 	&$second_print(&text('brun_backed', &nice_size($rv->{'size'})));
@@ -853,12 +875,12 @@ my ($log) = @_;
 &unlink_file("$backup_log_dir/$log->{'id'}");
 }
 
-# tar_backup_system(&server, dest, root-dir)
+# tar_backup_system(&server, dest, root-dir, owner)
 # Backup a virtual system by tarring up its filesystem on the host. Works
 # with OpenVZ, Vservers and Zones.
 sub tar_backup_system
 {
-my ($server, $deststr, $root) = @_;
+my ($server, $deststr, $root, $owner) = @_;
 my $vhost = &get_parent_server($server);
 my $dest = &parse_backup_destination($deststr);
 
@@ -906,10 +928,15 @@ my $size = $st[7];
 
 # Transfer to the destination, if needed
 if ($dest->{'mode'} != 1) {
+	# Check if size would exceed limits
+	my $err = &check_backup_dest_size($server, $dest, $size, $owner);
+
 	# Send via SCP or FTP
-	&$first_print(&text('brun_sending', $server->{'host'},
+	if (!$err) {
+		&$first_print(&text('brun_sending', $server->{'host'},
 					    &nice_backup_destination($dest)));
-	my $err = &send_to_backup_dest($vhost, $tarfile, $dest);
+		$err = &send_to_backup_dest($vhost, $tarfile, $dest);
+		}
 
 	# Delete from host
 	&delete_file_on_server($vhost, $tarfile);
@@ -1175,6 +1202,48 @@ foreach my $owner (values %changed) {
 	}
 
 # XXX don't check same logs twice
+}
+
+# check_backup_dest_size(&server, &dest, size, $owner)
+# Checks if transferring a backup to some destination would exceed the backup
+# owner's size limit
+sub check_backup_dest_size
+{
+my ($server, $dest, $size, $owner) = @_;
+return undef if (!$owner);
+my $limits = &get_owner_limits($owner);
+return undef if (!$limits || !$limits->{'max_space'});
+return undef if ($dest->{'mode'} >= 3);
+
+# How big is the existing file at that dest?
+my @st;
+if ($dest->{'mode'} == 0) {
+	# Check on Cloudmin master
+	@st = stat($dest->{'path'});
+	}
+elsif ($dest->{'mode'} == 1) {
+	# Check on host system
+	my $vhost = &get_parent_server($s);
+	if ($vhost) {
+		@st = &stat_file_on_server($vhost, $dest->{'path'});
+		}
+	}
+elsif ($dest->{'mode'} == 2) {
+	# Check on some other system
+	my $server = $servermap{$dest->{'id'}};
+	if ($server) {
+		@st = &stat_file_on_server($server, $dest->{'path'});
+		}
+	}
+
+# Work out increment, check against limit
+my $growth = $size - $st[7];
+if ($limits->{'space'} + $growth > $limits->{'max_space'}) {
+	return &text('brun_eover', &nice_size($limits->{'space'}),
+				   &nice_size($limits->{'max_space'}),
+				   &nice_size($size));
+	}
+return undef;
 }
 
 1;

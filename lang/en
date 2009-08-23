@@ -2588,6 +2588,7 @@ brun_ecannot=You are not allowed to execute this backup
 brun_destdesc=Backing up $1 systems to $2 ..
 brun_destdesc2=Backing up $1 systems to destinations from host systems ..
 brun_evhost=No default destination set on $1
+brun_espace=Backup disk space limit of $1 has been reached
 brun_ehostdown=Host system is down
 brun_etemp=Failed to select temporary file on $1
 brun_etar=Failed to create TAR file of filesystem : $1
@@ -2621,6 +2622,7 @@ brun_dd=Creating copies of LVM disk for $1 ..
 brun_allok=Backups of $1 systems completed successfully.
 brun_somefailed=Backups of $1 systems completed, but $2 failed!
 brun_emkdir=Failed to create destination directory : $1
+brun_eover=You have used $1 of your backup space limit of $2, and this backup is $3 in size
 
 rrun_title=Restore Systems
 rrun_err=Restore failed
