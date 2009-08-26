@@ -1115,7 +1115,7 @@ elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - just download
 	return &get_file_from_server($srcserver, $src, $dest, $device);
 	}
-elsif (!$device) {
+else {
 	# Both are remote! First try scp on source to dest
 	# First build scp command
 	if ($destserver->{'ssh_nologin'}) {
