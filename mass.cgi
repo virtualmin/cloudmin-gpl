@@ -405,6 +405,61 @@ elsif ($in{'startup'}) {
 	&ui_print_footer("", $text{'index_return'});
 	}
 
+elsif ($in{'reboot'}) {
+	# Reboot the selected servers
+	&error_setup($text{'mass_rebooterr'});
+	&can_action_error(\@servers, "reboot");
+
+	&ui_print_unbuffered_header(undef, $text{'mass_reboottitle'}, "");
+	if (!$in{'confirm'}) {
+		# Ask the user if he is sure
+		print "<center>\n";
+		print &ui_form_start("mass.cgi", "post");
+		print &ui_hidden("reboot", 1);
+		foreach $s (@servers) {
+			print &ui_hidden("d", $s->{'id'});
+			}
+		print $text{'mass_rebootrusre'},"<p>\n";
+		print "<table>\n";
+		foreach $s (@servers) {
+			$tfunc = "type_".$s->{'manager'}."_desc";
+			@sdoms = &get_server_domains($s);
+			print "<tr>\n";
+			print "<td><tt>$s->{'host'}</tt></td>\n";
+			print "<td>(",&$tfunc(),")</td>\n";
+			print "<td>",@sdoms ? &text('mass_ddoms',
+					scalar(@sdoms)) : undef,"</td>\n";
+			print "</tr>\n";
+			$dtotal += scalar(@sdoms);
+			}
+		print "</table>\n";
+		print &ui_form_end([ [ "confirm", $text{'mass_rebootok'} ] ]);
+		print "</center>\n";
+		}
+	else {
+		# Do it for real, in parallel. Virtual systems are done first.
+		print &text('mass_rebooting', scalar(@servers)),"<br>\n";
+		&obtain_lock_server(\@servers);
+		foreach my $sl (\@oservers, \@pservers) {
+			&parallel_server_function($sl,
+				sub { $err = &reboot_server($_[0]);
+				      &save_managed_server($_[0]) });
+			}
+		print $text{'mass_rebooted'},"<p>\n";
+		foreach my $s (@servers) {
+			if (defined(&theme_post_save_server)) {
+				&theme_post_save_server($s);
+				}
+			}
+		&theme_select_server($servers[0]) if (@servers == 1 &&
+						defined(&theme_select_server));
+		&release_lock_server(\@servers);
+		}
+	&ui_print_footer("", $text{'index_return'});
+	}
+
+
+
 elsif ($in{'upload'}) {
 	# Redirect to mass upload form
 	&redirect("massupload_form.cgi?$ids");

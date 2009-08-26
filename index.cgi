@@ -228,6 +228,7 @@ if (@servers) {
 		     undef,
 		     [ "shutdown", $text{'index_shutdown'} ],
 		     [ "startup", $text{'index_startup'} ],
+		     [ "reboot", $text{'index_reboot'} ],
 		     undef,
 		     [ "upload", $text{'index_upload'} ],
 		     [ "run", $text{'index_run'} ],
