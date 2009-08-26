@@ -1121,8 +1121,7 @@ elsif (!$device) {
 	if ($destserver->{'ssh_nologin'}) {
 		return "SSH logins on target system are not available";
 		}
-	local $sshcmd = "scp -r";
-	$sshcmd .= " -o Protocol=".$destserver->{'ssh_protocol'};
+
 	local $keytemp;
 	if ($destserver->{'key'}) {
 		# A key is needed - copy it to the source system
@@ -1132,14 +1131,33 @@ elsif (!$device) {
 		$keytemp =~ s/^.*[\\\/]//;
 		$keytemp = "/tmp/$keytemp";
 		&put_file_to_server($srcserver, $key->{'file'}, $keytemp);
-		$sshcmd .= " -i ".quotemeta($keytemp);
 		}
-	if ($destserver->{'ssh_port'}) {
-		$sshcmd .= " -P ".$destserver->{'ssh_port'};
+
+	local $sshcmd;
+	if ($device) {
+		# Use dd piped into SSH
+		$sshcmd = "dd if=".quotemeta($src)." bs=32768 | ssh -q -x";
+		$sshcmd .= " -".$destserver->{'ssh_protocol'};
+		if ($destserver->{'ssh_port'}) {
+			$sshcmd .= " -p ".$destserver->{'ssh_port'};
+			}
+		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'host'}";
+		$sshcmd .= " dd of=".quotemeta($dest)." bs=32768";
 		}
-	$sshcmd .= " ".quotemeta($src);
-	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'host'}:".
-		   quotemeta($dest);
+	else {
+		# Can use scp
+		$sshcmd = "scp -r";
+		$sshcmd .= " -o Protocol=".$destserver->{'ssh_protocol'};
+		if ($keytemp) {
+			$sshcmd .= " -i ".quotemeta($keytemp);
+			}
+		if ($destserver->{'ssh_port'}) {
+			$sshcmd .= " -P ".$destserver->{'ssh_port'};
+			}
+		$sshcmd .= " ".quotemeta($src);
+		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'host'}:".
+			   quotemeta($dest);
+		}
 	if ($keytemp) {
 		$sshcmd .= " ; rm -f ".quotemeta($keytemp);
 		}
