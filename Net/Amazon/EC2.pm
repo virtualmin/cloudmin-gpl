@@ -349,6 +349,10 @@ This method will start instance(s) of AMIs on EC2. The parameters indicate which
 
 The image id you want to start an instance of.
 
+=item KernelId (required)
+
+The kernel image id to use in the instance.
+
 =item MinCount (required)
 
 The minimum number of instances to start.
@@ -406,6 +410,7 @@ sub run_instances {
 	my $self = shift;
 	my %args = validate( @_, {
 								ImageId			=> { type => SCALAR },
+								KernelId		=> { type => SCALAR, optional => 1 },
 								MinCount		=> { type => SCALAR },
 								MaxCount		=> { type => SCALAR },
 								KeyName			=> { type => SCALAR, optional => 1 },
