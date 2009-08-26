@@ -253,6 +253,8 @@ if ($config{'show_this'}) {
 		$this->{'xen_dir'} = $config{'xen_dir'};
 		$this->{'xen_zone'} = $config{'xen_zone'};
 		$this->{'xen_vg'} = $config{'xen_vg'};
+		$this->{'backup_default'} = $config{'xen_backupdir'} ?
+				'host:'.$config{'xen_backupdir'} : undef;
 
 		# Save flag indicating that we have already checked out Xen
 		# on this machine, as doing so can be slow
