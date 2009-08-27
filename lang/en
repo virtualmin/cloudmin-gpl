@@ -291,6 +291,7 @@ create_xenswapsize=Swap file size for instance
 create_xennoswap=No swap file
 create_xencpu=Maximum CPU use
 create_exencpu=Maximum CPU use must be a number
+create_xenrate=Maximum network speed
 create_exenmemory=Memory allocated must be a number
 create_exenswapsize=Swap file size must be a number
 create_xenstartup=Starting up new Xen instance ..
