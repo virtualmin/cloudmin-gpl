@@ -25,6 +25,7 @@ EOF
 # Show search form
 print &ui_form_start("image_chooser.cgi");
 print &ui_hidden("account", $in{'account'});
+print &ui_hidden("type", $in{'type'});
 print "<b>$text{'ichooser_search'}</b>\n";
 print &ui_textbox("search", $in{'search'}, 30);
 print &ui_submit($text{'ichooser_ok'});
@@ -53,7 +54,7 @@ else {
 				  $text{'achooser_path'},
 				  $text{'achooser_owner'} ], 100);
 	foreach my $i (@$images) {
-		next if ($i->{'imageType'} ne 'ami');
+		next if ($i->{'imageType'} ne $in{'type'});
 		local $path = $i->{'imageLocation'};
 		$path =~ s/\.manifest\.xml$//;
 		$path =~ s/\.img$//;
