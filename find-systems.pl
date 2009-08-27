@@ -4,7 +4,8 @@
 
 Scan a hosting system for virtual instances already running on it
 
-If you have added to Cloudmin a host system that has manually created Xen instances
+If you have added to Cloudmin a host system that has manually created Xen
+instances or OpenVZ containers
 which are not yet under Cloudmin's control, this command can be used to find and
 automatically add them. The system to scan must be specified with the
 C<--host> parameter, and if hosts more than one type of virtual system, the
