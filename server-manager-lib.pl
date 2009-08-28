@@ -974,8 +974,8 @@ if ($server->{'ssh_nologin'}) {
 if ($device) {
 	# Run dd on the server and capture output
 	local $sshcmd = &build_ssh_command($server);
-	$sshcmd .= " dd if=".quotemeta($remotefile)." bs=1024 |".
-		   " dd of=".quotemeta($localfile)." bs=1024";
+	$sshcmd .= " dd if=".quotemeta($remotefile)." bs=32768 |".
+		   " dd of=".quotemeta($localfile)." bs=32768";
 	local ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1051,8 +1051,8 @@ if ($server->{'ssh_nologin'}) {
 if ($device) {
 	# Run dd piped into SSH
 	local $sshcmd = &build_ssh_command($server);
-	$sshcmd .= " dd of=".quotemeta($remotefile)." bs=1024";
-	$sshcmd = "dd if=".quotemeta($localfile)." bs=1024 | ".$sshcmd;
+	$sshcmd .= " dd of=".quotemeta($remotefile)." bs=32768";
+	$sshcmd = "dd if=".quotemeta($localfile)." bs=32768 | ".$sshcmd;
 	local ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1103,7 +1103,7 @@ if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just copy
 	local ($out, $ex, $err) = &execute_command_on_server($srcserver,
 		$device ?
-		  "dd if=".quotemeta($src)." of=".quotemeta($dest)." bs=1024" :
+		  "dd if=".quotemeta($src)." of=".quotemeta($dest)." bs=32768" :
 		  "cp ".quotemeta($src)." ".quotemeta($dest));
 	return $err ? $err : $ex ? $out : undef;
 	}
@@ -1474,7 +1474,6 @@ sub check_server_status
 local ($server, $regen, $skipinfo, $time) = @_;
 
 # Check if a status update is already happening
-local $file = "$servers::module_config_directory/$server->{'id'}.serv";
 if (&test_lock_server($server)) {
 	# Already locked .. wait till free, and get new status from file
 	local $c = 0;
@@ -2060,17 +2059,19 @@ foreach my $s (@$servers) {
 return @rv;
 }
 
-# parallel_check_server_status(&servers, [re-generate])
+# parallel_check_server_status(&servers, [re-generate], [skip-locked])
 # Checks the status of multiple servers in 10 (by default) processes
 sub parallel_check_server_status
 {
-local ($servers, $regen) = @_;
+local ($servers, $regen, $skiplock) = @_;
 local $time = time();
 return &parallel_server_function($servers,
-	sub { &check_server_status($_[0], $regen, 0, $time);
-	      &save_managed_server($_[0]);
-	      if (defined(&refresh_server_usage)) {
-		&refresh_server_usage($_[0], $time);
+	sub { if (!$skiplock || !&test_lock_server($_[0])) {
+	        &check_server_status($_[0], $regen, 0, $time);
+	        &save_managed_server($_[0]);
+	        if (defined(&refresh_server_usage)) {
+		  &refresh_server_usage($_[0], $time);
+	        }
 	      }
 	      return ( $_[0]->{'status'}, $_[0]->{'status_msg'},
 		       $_[0]->{'virtualmin_domains'},
@@ -5355,7 +5356,9 @@ if ($server->{'status'} ne 'down') {
 
 # Transfer across the original image
 my $img = &get_server_image($server->{'image'});
-&$first_print(&text('create_copying', &nice_size($img->{'size'})));
+my $vhost = &get_parent_server($server);
+&$first_print(&text('create_copying', &nice_size($img->{'size'}),
+				      $vhost->{'host'}));
 my ($imageok, $imagetemp) = &transfer_image_files($server, 1);
 if ($imageok == 0) {
 	return &text('create_ecopy', $imagetemp);

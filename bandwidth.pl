@@ -27,6 +27,9 @@ while(@ARGV > 0) {
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
 
+# Skip any currently locked
+@servers = grep { !&test_lock_server($_) } @servers;
+
 # For each system, get it's current counts, compare to old counts, then up
 # the total for this hour
 foreach $s (@servers) {

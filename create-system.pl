@@ -286,7 +286,8 @@ if ($serial) {
 # If there is an image file, copy to the server (if needed)
 if ($image) {
 	$img = &get_server_image($image);
-	print "Copying system image files ..\n";
+	$vhost = &get_parent_server($server);
+	print "Copying system image files to host system $vhost->{'host'} ..\n";
 	($imageok, $imagetemp) = &transfer_image_files($server);
 	if ($imageok == 0) {
 		print ".. failed : $imagetemp\n";

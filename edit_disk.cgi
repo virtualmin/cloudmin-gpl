@@ -48,7 +48,7 @@ print &ui_hidden("id", $in{'id'});
 if (!$in{'new'}) {
 	print &ui_hidden("oldreal", $disk->{'real'});
 	}
-print &ui_table_start($text{'disk_header'}, "width=100%", 2);
+print &ui_table_start($text{'disk_header'}, undef, 2);
 
 # Real file on host system
 $vhost = &get_parent_server($server);
