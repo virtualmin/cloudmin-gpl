@@ -1267,17 +1267,7 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	return $st ? @$st : ("Stat via Webmin failed");
 	}
 else {
-	# Use perl, stat command, or in worst case ls -l
-	local ($out, $ex, $err) = &execute_command_on_server($server,
-		"perl -e 'print join(\":\", stat(\@ARGV[0]))' ".
-		quotemeta($remotefile));
-	return ( $err ) if ($err);
-	if (!$ex) {
-		$out =~ s/\r|\n//g;
-		return split(/:/, $out);
-		}
-
-	# Now try stat
+	# Use stat command, perl, or in worst case ls -l
 	local ($out, $ex, $err) = &execute_command_on_server($server,
 		"stat -t ".quotemeta($remotefile));
 	return ( $err ) if ($err);
@@ -1302,6 +1292,22 @@ else {
 		$st[11] = $w[14];		# Block size
 		$st[12] = $w[2];		# Number of blocks
 		return @st;
+		}
+
+	# Next try perl, with script as an input file as passing a complex
+	# command via -e doesn't work
+	local $cmdtemp = &tempname_on_server($server);
+	local $err = &put_file_data_to_server($server,
+			'print join(":", stat($ARGV[0]))."\n"', $cmdtemp);
+	if (!$err) {
+		local ($out, $ex, $err) = &execute_command_on_server($server,
+			"perl $cmdtemp ".quotemeta($remotefile));
+		&delete_file_on_server($server, $cmdtemp);
+		return ( $err ) if ($err);
+		if (!$ex) {
+			$out =~ s/\r|\n//g;
+			return split(/:/, $out);
+			}
 		}
 
 	# Finally, use ls .. which gives less info :-(
