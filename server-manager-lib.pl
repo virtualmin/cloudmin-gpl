@@ -1264,7 +1264,7 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
 	return ( $last_remote_error ) if ($last_remote_error);
 	local $st = &remote_eval($server, "webmin", "[ stat('$remotefile') ]");
-	return $st ? @$st : "Stat via Webmin failed";
+	return $st ? @$st : ("Stat via Webmin failed");
 	}
 else {
 	# Use perl, stat command, or in worst case ls -l

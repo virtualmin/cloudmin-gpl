@@ -2147,6 +2147,7 @@ smove_openvzconf=Copying OpenVZ config file $1 ..
 smove_tarring=Creating TAR file of filesystem ..
 smove_tardone=.. created TAR file of $1
 smove_tarfailed=.. TAR failed : $1
+smove_tarfailed2=.. creation of TAR file $1 did not complete successfully
 smove_untarring=Extracting TAR file on new host system ..
 smove_undumping=Restoring running processes ..
 smove_eundump=.. restore failed : $1
