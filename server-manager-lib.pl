@@ -18,6 +18,7 @@ do 'commands-lib.pl';
 do 'filesystem-lib.pl';
 do 'history-lib.pl';
 do 'json-lib.pl';
+do 'dns-lib.pl';
 if (-r "$module_root_directory/bw-lib.pl") {
 	do 'bw-lib.pl';
 	}
@@ -2617,127 +2618,6 @@ if ($server->{'status'} eq 'virt' ||
 	}
 
 return undef;
-}
-
-# list_bind_zones()
-# Returns a list of BIND master zones that we can add vserver hostnames to
-sub list_bind_zones
-{
-if (&foreign_installed("bind8")) {
-	&foreign_require("bind8", "bind8-lib.pl");
-	return sort { $a->{'name'} cmp $b->{'name'} }
-		 grep { $_->{'type'} eq 'master' &&
-		        $_->{'name'} !~ /in-addr|ip6.arpa/i }
-		      &bind8::list_zone_names();
-	}
-return ( );
-}
-
-# add_bind8_record(dnsname, ip, zonename)
-# Adds a DNS record for some new virtual system to the given zone, if it exists
-sub add_bind8_record
-{
-local ($dnsname, $ip, $zonename) = @_;
-&foreign_require("bind8", "bind8-lib.pl");
-
-local @zones = &list_bind_zones();
-local ($zone) = grep { $_->{'name'} eq $zonename } @zones;
-if ($zone) {
-	&$first_print(&text('create_vserverdns', $dnsname, $ip));
-	local @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
-	local ($already) = grep { $_->{'name'} eq $dnsname } @recs;
-	if (!$already) {
-		# Need to add
-		&bind8::create_record($zone->{'file'}, $dnsname, undef,
-				      "IN", "A", $ip);
-		&bind8::bump_soa_record($zone->{'file'}, \@recs);
-
-		# See if we can add to a reverse too
-		local ($rfn, $rrecs, $arpa, $rzone) =
-			&get_reverse_dns_zone($ip);
-		if ($rfn) {
-			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
-					 @$rrecs;
-			if (!$old) {
-				&bind8::create_record($rfn, $arpa.".", undef,
-						      "IN", "PTR", $dnsname);
-				&bind8::bump_soa_record($rfn, $rrecs);
-				}
-			}
-
-		&bind8::restart_bind();
-		&$second_print($text{'create_done'});
-		return 1;
-		}
-	else {
-		&$second_print($text{'create_vserverdnsalready'});
-		}
-	}
-return 0;
-}
-
-# delete_bind8_record(dnsname, zonename, ip)
-# Deletes the DNS record that belonged to some server
-sub delete_bind8_record
-{
-local ($dnsname, $zonename, $ip) = @_;
-&foreign_require("bind8", "bind8-lib.pl");
-local @zones = &list_bind_zones();
-local ($zone) = grep { $_->{'name'} eq $zonename } @zones;
-if ($zone && $dnsname) {
-	local @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
-	local @r = grep { $_->{'name'} eq $dnsname } @recs;
-	foreach my $r (reverse(@r)) {
-		# Can remove
-		&bind8::delete_record($zone->{'file'}, $r);
-		}
-	if (@r) {
-		&bind8::bump_soa_record($zone->{'file'}, \@recs);
-		}
-
-	if (@r) {
-		# See if we can remove a reverse too
-		local ($rfn, $rrecs, $arpa, $rzone) =
-			&get_reverse_dns_zone($ip);
-		if ($ip && $rfn) {
-			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
-					 @$rrecs;
-			if ($old) {
-				&bind8::delete_record($rfn, $old);
-				&bind8::bump_soa_record($rfn, $rrecs);
-				}
-			}
-		}
-	if (@r) {
-		&bind8::restart_bind();
-		}
-	}
-}
-
-# get_reverse_dns_zone(ip)
-# Returns the records file and list of records for the domain for some IP
-sub get_reverse_dns_zone
-{
-local ($ip) = @_;
-&foreign_require("bind8", "bind8-lib.pl");
-local $conf = &bind8::get_config();
-local @zones = &bind8::find("zone", $conf);
-foreach my $v (&bind8::find("view", $conf)) {
-	push(@zones, &bind8::find("zone", $v->{'members'}));
-	}
-local $arpa = &bind8::ip_to_arpa($ip);
-$arpa =~ s/\.$//;
-local ($z) = grep { $arpa =~ /\.$_->{'value'}$/i } @zones;
-return ( ) if (!$z);
-local $file = &bind8::find("file", $z->{'members'});
-local $fn = $file->{'values'}->[0];
-local @recs = &bind8::read_zone_file($fn, $config{'domain'});
-return ( $fn, \@recs, $arpa, $z->{'value'} );
-}
-
-sub bind_module_link
-{
-return "<a href=../bind8/index.cgi>$text{'index_bindlink'}</a>";
 }
 
 # find_server_dependencies(&server, ...)
@@ -5999,10 +5879,16 @@ else {
 	# Use the configured dir
 	my $ostemp = $vhost->{'type'} eq 'solaris' ? '/var/tmp' : '/tmp';
 	my $tempdir = $config{'img_temp'} || $ostemp;
-	$main::tempfilecount++;
-	&seed_random();
-	return $tempdir.'/'.int(rand(1000000))."_".
-               $main::tempfilecount."_".$scriptname;
+	if ($base) {
+		$base =~ s/^(.*)\///;
+		return $tempdir.'/'.$base;
+		}
+	else {
+		$main::tempfilecount++;
+		&seed_random();
+		return $tempdir.'/'.int(rand(1000000))."_".
+		       $main::tempfilecount."_".$scriptname;
+		}
 	}
 }
 

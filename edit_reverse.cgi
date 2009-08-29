@@ -17,27 +17,21 @@ print &ui_form_start("save_reverse.cgi");
 print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'reverse_header'}, undef, 2);
 
-@ips = &get_server_ip($server);
+@revs = &get_server_reverse_records($server);
 $i = 0;
-foreach $ip (@ips) {
+foreach $rev (@revs) {
 	print &ui_table_hr() if ($i);
-	print &ui_table_row($i == 0 ? $text{'reverse_ip0'}
-				    : &text('reverse_ipn', $i), "<tt>$ip</tt>");
-	($rfn, $rrecs) = &get_reverse_dns_zone($ip);
-	$arpa = &bind8::ip_to_arpa($ip);
-	if ($rfn) {
-		# Can edit reverse for IP
-		($r) = grep { $_->{'name'} eq $arpa } @$rrecs;
-		$rev = $r ? $r->{'values'}->[0] : '';
-		$rev =~ s/\.$//;
-		print &ui_table_row($text{'reverse_host'},
-			&ui_opt_textbox("host_$ip", $rev, 30,
-					$text{'reverse_none'}));
-		}
-	else {
+	print &ui_table_row($i == 0 ? $text{'reverse_ip0'} :
+		&text('reverse_ipn', $i), "<tt>$rev->{'ip'}</tt>");
+	if ($rev->{'outside'}) {
 		# Cannot set, as no reverse zone
 		print &ui_table_row($text{'reverse_host'},
 				    "<i>$text{'reverse_nozone'}</i>");
+		}
+	else {
+		print &ui_table_row($text{'reverse_host'},
+			&ui_opt_textbox("host_$rev->{'ip'}", $rev->{'name'}, 30,
+					$text{'reverse_none'}));
 		}
 	$i++;
 	}
