@@ -34,13 +34,14 @@ if ($zone) {
 		&bind8::bump_soa_record($zone->{'file'}, \@recs);
 
 		# See if we can add to a reverse too
-		my ($rfn, $rrecs, $arpa, $rzone) =
+		my ($rfn, $rrecs, undef, $rzone) =
 			&get_reverse_dns_zone($ip);
 		if ($rfn) {
+			my $arpa = &ip_address_to_arpa($ip, $rzone);
 			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
 					 @$rrecs;
 			if (!$old) {
-				&bind8::create_record($rfn, $arpa.".", undef,
+				&bind8::create_record($rfn, $arpa, undef,
 						      "IN", "PTR", $dnsname);
 				&bind8::bump_soa_record($rfn, $rrecs);
 				}
@@ -78,7 +79,7 @@ if ($zone && $dnsname) {
 
 	if (@r) {
 		# See if we can remove a reverse too
-		my ($rfn, $rrecs, $arpa, $rzone) =
+		my ($rfn, $rrecs, undef, $rzone) =
 			&get_reverse_dns_zone($ip);
 		if ($ip && $rfn) {
 			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
@@ -109,10 +110,29 @@ foreach my $v (&bind8::find("view", $conf)) {
 my $arpa = &bind8::ip_to_arpa($ip);
 $arpa =~ s/\.$//;
 my ($z) = grep { $arpa =~ /\.$_->{'value'}$/i } @zones;
+if (!$z) {
+	# Look for a partial zone that could contain the IP. For example,
+	# 1.2.3.4 could be in 0-10.2.3.4.in-addr-arpa
+	my @o = split(/\./, $ip);
+	foreach my $pz (@zones) {
+		my $pip = &bind8::arpa_to_ip($pz->{'value'});
+		next if ($pip eq $pz->{'value'});
+		my @po = split(/\./, $pip);
+		if ($po[0] == $o[0] && $po[1] == $o[1] && $po[2] == $o[2] &&
+		    $po[3] =~ /^(\d+)\-(\d+)$/ &&
+		    $o[3] >= $1 && $o[3] <= $2) {
+			# Found one that matches!
+			$z = $pz;
+			last;
+			}
+		}
+	}
 return ( ) if (!$z);
+
+# Return details of the matching domain
 my $file = &bind8::find("file", $z->{'members'});
 my $fn = $file->{'values'}->[0];
-my @recs = &bind8::read_zone_file($fn, $config{'domain'});
+my @recs = &bind8::read_zone_file($fn, $z->{'value'});
 return ( $fn, \@recs, $arpa, $z->{'value'} );
 }
 
@@ -127,8 +147,8 @@ my ($server) = @_;
 my @ips = &get_server_ip($server);
 my @rv;
 foreach my $ip (@ips) {
-	my ($rfn, $rrecs, $arpa, $zone) = &get_reverse_dns_zone($ip);
-	my $arpa = &bind8::ip_to_arpa($ip);
+	my ($rfn, $rrecs, undef, $zone) = &get_reverse_dns_zone($ip);
+	my $arpa = &ip_address_to_arpa($ip, $zone);
 	if ($rfn) {
 		# Can edit reverse for IP
 		my ($r) = grep { $_->{'name'} eq $arpa } @$rrecs;
@@ -157,11 +177,11 @@ foreach my $rev (@$revs) {
 	if (!$got) {
 		return &text('reverse_eip', $ip);
 		}
-	my ($rfn, $rrecs) = &get_reverse_dns_zone($ip);
+	my ($rfn, $rrecs, undef, $zone) = &get_reverse_dns_zone($ip);
 	if (!$rfn) {
 		return &text('reverse_ezone', $ip);
 		}
-	my $arpa = &bind8::ip_to_arpa($ip);
+	my $arpa = &ip_address_to_arpa($ip, $zone);
 	my ($r) = grep { $_->{'name'} eq $arpa } @$rrecs;
 	if ($r && !$rev->{'name'}) {
 		# Delete the record
@@ -182,6 +202,23 @@ foreach my $rev (@$revs) {
 	}
 &bind8::restart_bind();
 return undef;
+}
+
+# ip_address_to_arpa(ip, zone-name)
+# Converts an IP address to a record name, taking partial reverse delegation
+# into account. Includes the . at the end.
+sub ip_address_to_arpa
+{
+my ($ip, $zone) = @_;
+if ($zone =~ /^([0-9\.]+)\.in-addr\.arpa$/) {
+	# Normal class C
+	return &bind8::ip_to_arpa($ip);
+	}
+else {
+	# Assume last octet is within the zone
+	my @o = split(/\./, $ip);
+	return $o[3].".".$zone.".";
+	}
 }
 
 sub bind_module_link
