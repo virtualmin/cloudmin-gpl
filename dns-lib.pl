@@ -127,14 +127,14 @@ my ($server) = @_;
 my @ips = &get_server_ip($server);
 my @rv;
 foreach my $ip (@ips) {
-	my ($rfn, $rrecs) = &get_reverse_dns_zone($ip);
+	my ($rfn, $rrecs, $arpa, $zone) = &get_reverse_dns_zone($ip);
 	my $arpa = &bind8::ip_to_arpa($ip);
 	if ($rfn) {
 		# Can edit reverse for IP
 		my ($r) = grep { $_->{'name'} eq $arpa } @$rrecs;
                 my $rev = $r ? $r->{'values'}->[0] : '';
                 $rev =~ s/\.$//;
-		push(@rv, { 'ip' => $ip, 'name' => $rev });
+		push(@rv, { 'ip' => $ip, 'name' => $rev, 'zone' => $zone });
 		}
 	else {
 		push(@rv, { 'ip' => $ip, 'outside' => 1 });
