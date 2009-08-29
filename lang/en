@@ -2149,6 +2149,7 @@ smove_tardone=.. created TAR file of $1
 smove_tarfailed=.. TAR failed : $1
 smove_tarfailed2=.. creation of TAR file $1 did not complete successfully
 smove_untarring=Extracting TAR file on new host system ..
+smove_untarfailed=.. TAR failed : $1
 smove_undumping=Restoring running processes ..
 smove_eundump=.. restore failed : $1
 

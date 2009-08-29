@@ -5876,7 +5876,11 @@ return $vhost;
 sub tempname_on_server
 {
 my ($server, $base) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if ($server->{'manager'} eq 'this') {
+	# Use local function
+	return &tempname($base);
+	}
+elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Ask the remote Webmin
 	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
 	return &remote_foreign_call($vhost, "webmin", "tempname", $base);
