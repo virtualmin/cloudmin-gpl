@@ -5045,8 +5045,9 @@ for(my $i=0; $i<=@starts; $i++) {
 		&ui_textbox("start_$i", $starts[$i], 20),
 		&ui_textbox("end_$i", $ends[$i], 20),
 		&ui_textbox("cidr_$i", $cidrs[$i], 20),
-		$poss ? ( &ui_select("iface_$i", $ifaces[$i] || $poss->[0],
-				     $poss, 1, 0, 1) ) : ( ),
+		$poss ? ( &ui_select("iface_$i", $ifaces[$i] || '*',
+				     [ [ '*', $text{'default'} ], @$poss ],
+				     1, 0, 1) ) : ( ),
 		]);
 	}
 $table .= &ui_columns_end();
