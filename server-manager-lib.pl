@@ -2645,20 +2645,27 @@ foreach my $server (@_) {
 return @rv;
 }
 
-# allocate_ip_address(start-ips, end-ips, cidrs)
+# allocate_ip_address(start-ips, end-ips, cidrs, [ifaces, want-iface])
 # Returns an IP address from the given range that is not in use or pingable,
 # and a CIDR. If not IP could be allocated, returns undef.
 sub allocate_ip_address
 {
-local ($startips, $endips, $cidrs) = @_;
+local ($startips, $endips, $cidrs, $ifaces, $wantiface) = @_;
 local @startips = split(/\s+/, $startips);
 local @endips = split(/\s+/, $endips);
 local @cidrs = split(/\s+/, $cidrs);
+local @ifaces = split(/\s+/, $ifaces);
 local %used = &used_ip_addresses();
 
 # Find out which IPs we might be able to use
 local @poss;
 for(my $i=0; $i<@startips; $i++) {
+	# If this range is for some host system interface, skip if we aren't
+	# allocating for that interface
+	next if ($wantiface && $ifaces[$i] ne $wantiface &&
+		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
+
+	# Try each IP within the range
 	local $start = &net::ip_to_integer($startips[$i]);
 	local $end = &net::ip_to_integer($endips[$i]);
 	for(my $n=$start; $n<=$end; $n++) {
@@ -2677,15 +2684,20 @@ local @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss,
 return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'} ) : ( );
 }
 
-# describe_ip_range(start-ips, end-ips)
+# describe_ip_range(start-ips, end-ips, cidrs, [ifaces, want-iface])
 # Turns space-separated strings of ranges into a nicer format
 sub describe_ip_range
 {
-local ($startips, $endips, $cidrs) = @_;
+local ($startips, $endips, $cidrs, $ifaces, $wantiface) = @_;
 local @startips = split(/\s+/, $startips);
 local @endips = split(/\s+/, $endips);
+local @ifaces = split(/\s+/, $ifaces);
 local @rv;
 for(my $i=0; $i<@startips; $i++) {
+	# Remove from description IP ranges for interfaces we don't care about
+	next if ($wantiface && $ifaces[$i] ne $wantiface &&
+		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
+
 	if ($startips[$i] eq $endips[$i]) {
 		push(@rv, $startips[$i]);
 		}
@@ -5046,7 +5058,7 @@ for(my $i=0; $i<=@starts; $i++) {
 		&ui_textbox("end_$i", $ends[$i], 20),
 		&ui_textbox("cidr_$i", $cidrs[$i], 20),
 		$poss ? ( &ui_select("iface_$i", $ifaces[$i] || '*',
-				     [ [ '*', $text{'default'} ], @$poss ],
+				     [ [ '*', $text{'range_any'} ], @$poss ],
 				     1, 0, 1) ) : ( ),
 		]);
 	}

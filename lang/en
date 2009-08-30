@@ -1728,7 +1728,8 @@ range_eend=Missing or invalid ending IP address for allocation in row $1
 range_ecidr=Missing or invalid network size in row $1 - must be a number like 16 or 24
 range_erange=The starting IP address must be before the ending address in row $1
 range_enone=No IP allocation ranges entered
-range_iface=Network interface
+range_iface=For interface
+range_any=&lt;Any&gt;
 
 disks_title=Manage Disks
 disks_real=File or device on host
