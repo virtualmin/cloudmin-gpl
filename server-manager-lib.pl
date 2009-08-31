@@ -6164,13 +6164,8 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	&remote_foreign_require($server, "net", "net-lib.pl");
 	return $last_remote_error if ($last_remote_error);
 	local @active = &remote_foreign_call(
-		$server, "net", "active_interfaces");
+		$server, "net", "active_interfaces", 1);
 	return $last_remote_error if ($last_remote_error);
-	@active = grep { $_->{'name'} ne 'lo' &&
-			 $_->{'address'} } @active;
-	foreach my $a (@active) {
-		$a->{'noedit'} = $a->{'virtual'} eq '';
-		}
 	return \@active;
 	}
 else {
@@ -6179,12 +6174,7 @@ else {
 		"ifconfig -a");
 	return $err if ($err);
 	return $out if ($ex);
-	local @active = grep { $_->{'name'} ne 'lo' &&
-			       $_->{'address'} }
-			     &parse_ifconfig_output($out);
-	foreach my $a (@active) {
-		$a->{'noedit'} = $a->{'virtual'} eq '';
-		}
+	local @active = &parse_ifconfig_output($out);
 	return \@active;
 	}
 }

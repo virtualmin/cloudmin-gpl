@@ -1259,8 +1259,8 @@ xen_domain=Add Xen systems to DNS domain
 xen_domain2=DNS domain for Xen servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
 xen_range=IP address allocation range
 xen_startend=$1 to $2 / $3
-xen_iface=Host system interfaces for Xen instances
-xen_iface1=First Ethernet inteface
+xen_iface=Bridges on host system for Xen interfaces
+xen_iface1=Default bridge
 xen_iface0=Selected below ..
 xen_ether=First ethernet interface
 xen_gw=Default gateway for new systems
