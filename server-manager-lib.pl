@@ -2684,6 +2684,25 @@ local @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss,
 return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'} ) : ( );
 }
 
+# get_ip_range_usage(start, end)
+# Returns the number of IPs and the number used in some range
+sub get_ip_range_usage
+{
+my ($startip, $endip) = @_;
+my ($count, $used) = (0, 0);
+my $start = &net::ip_to_integer($startip);
+my $end = &net::ip_to_integer($endip);
+my %used = &used_ip_addresses();
+for(my $n=$start; $n<=$end; $n++) {
+	my $ip = &net::integer_to_ip($n);
+	$count++;
+	if ($used{$ip}) {
+		$used++;
+		}
+	}
+return ($count, $used);
+}
+
 # describe_ip_range(start-ips, end-ips, cidrs, [ifaces, want-iface])
 # Turns space-separated strings of ranges into a nicer format
 sub describe_ip_range
@@ -5044,23 +5063,36 @@ return @rv;
 # Returns HTML for entering 1 or more IP allocation ranges
 sub show_ip_range_input
 {
-local ($starts, $ends, $cidrs, $ifaces, $poss) = @_;
-local @starts = split(/\s+/, $starts);
-local @ends = split(/\s+/, $ends);
-local @cidrs = split(/\s+/, $cidrs);
-local @ifaces = split(/\s+/, $ifaces);
-local $table = &ui_columns_start(
-	[ $text{'range_start'}, $text{'range_end'}, $text{'range_cidr'},
-	  $poss ? ( $text{'range_iface'} ) : ( ) ]);
+my ($starts, $ends, $cidrs, $ifaces, $poss) = @_;
+my @starts = split(/\s+/, $starts);
+my @ends = split(/\s+/, $ends);
+my @cidrs = split(/\s+/, $cidrs);
+my @ifaces = split(/\s+/, $ifaces);
+my @cols = ( $text{'range_start'}, $text{'range_end'}, $text{'range_cidr'} );
+if ($poss) {
+	push(@cols, $text{'range_iface'});
+	}
+if ($starts) {
+	push(@cols, $text{'range_count'}, $text{'range_used'});
+	}
+my $table = &ui_columns_start(\@cols);
 for(my $i=0; $i<=@starts; $i++) {
-	$table .= &ui_columns_row([
-		&ui_textbox("start_$i", $starts[$i], 20),
-		&ui_textbox("end_$i", $ends[$i], 20),
-		&ui_textbox("cidr_$i", $cidrs[$i], 20),
-		$poss ? ( &ui_select("iface_$i", $ifaces[$i] || '*',
-				     [ [ '*', $text{'range_any'} ], @$poss ],
-				     1, 0, 1) ) : ( ),
-		]);
+	my @cols = ( &ui_textbox("start_$i", $starts[$i], 20),
+		     &ui_textbox("end_$i", $ends[$i], 20),
+		     &ui_textbox("cidr_$i", $cidrs[$i], 20) );
+	if ($poss) {
+		push(@cols, &ui_select("iface_$i", $ifaces[$i] || '*',
+				       [ [ '*', $text{'range_any'} ], @$poss ],
+				       1, 0, 1));
+		}
+	if ($starts[$i]) {
+		my ($count, $used) = &get_ip_range_usage($starts[$i],$ends[$i]);
+		push(@cols, $count, $used);
+		}
+	elsif ($starts) {
+		push(@cols, '', '');
+		}
+	$table .= &ui_columns_row(\@cols);
 	}
 $table .= &ui_columns_end();
 return $table;
