@@ -1466,7 +1466,7 @@ sub ping_server_host
 {
 local ($host) = @_;
 local $timeout = int($config{'ping_timeout'}) || 1;
-local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c $timeout" : "ping";
+local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c 1" : "ping";
 local ($out, $timed_out) = &backquote_with_timeout(
 	$pingcmd." ".$host." 2>&1", $ping_host_timeout, $timeout);
 return !$timed_out && !$? ? 1 : 0;

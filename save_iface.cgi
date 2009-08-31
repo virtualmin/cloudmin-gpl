@@ -42,6 +42,7 @@ if ($in{'delete'}) {
 		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_interface";
 		$err = &$dfunc($server, $iface);
+		&compute_ip_addresses($server);
 		&save_managed_server($server);
 		&release_lock_server($server);
 		&error($err) if ($err);
@@ -91,6 +92,7 @@ else {
 		$mfunc = "type_".$server->{'manager'}."_modify_interface";
 		$err = &$mfunc($server, $iface, $oldiface);
 		}
+	&compute_ip_addresses($server);
 	&save_managed_server($server);
 	&release_lock_server($server);
 	&error($err) if ($err);
