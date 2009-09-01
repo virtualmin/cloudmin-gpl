@@ -84,3 +84,12 @@ my %miniserv;
 return (0, undef, $miniserv{'root'}, $miniserv{'port'}, $miniserv{'ssl'});
 }
 
+# type_this_stat_file(&server, remotefile)
+# For a file on the Cloudmin master, just stat it directly
+sub type_this_stat_file
+{
+my ($server, $remotefile) = @_;
+return stat($remotefile);
+}
+
+
