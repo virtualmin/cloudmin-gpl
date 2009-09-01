@@ -2,7 +2,7 @@
 
 =head1 delete-image.pl
 
-Deletes a local image from the master system
+Deletes a my image from the master system
 
 This command simply removes one of the existing images on your Cloudmin master. The
 image ID is specified with the C<--id> parameter.
@@ -28,7 +28,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--id") {
 		$id = shift(@ARGV);
 		}

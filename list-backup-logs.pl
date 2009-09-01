@@ -46,7 +46,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--multiline") {
 		$multi = 1;
 		}
@@ -131,8 +131,8 @@ else {
 # Convert a date string like YYYY-MM-DD or -5 to a Unix time
 sub date_to_time
 {
-local ($date) = @_;
-local $rv;
+my ($date) = @_;
+my $rv;
 if ($date =~ /^(\d{4})-(\d+)-(\d+)$/) {
 	# Date only
 	$rv = timelocal(0, 0, 0, $3, $2-1, $1-1900);

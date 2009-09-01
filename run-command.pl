@@ -40,7 +40,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
@@ -76,7 +76,7 @@ if (@servers == 1) {
 else {
 	# Do multiple in parallel
 	&parallel_server_function(\@servers,
-		sub { local ($out, $ex, $err) =
+		sub { my ($out, $ex, $err) =
 			&execute_command_on_server($_[0], $cmd);
 		      if ($err) {
 		          print "$_[0]->{'host'}: ERROR: $err\n";
@@ -96,7 +96,7 @@ print "Runs a shell command on some or all managed systems.\n";
 print "\n";
 print "cloudmin run-command [--all-hosts] | [--host name]*\n";
 print "                     [--group name]*\n";
-local $types = join("|", @server_management_types);
+my $types = join("|", @server_management_types);
 print "                     [--type $types]*\n";
 print "                     [--os oscode]*\n";
 print "                     [--owner name]*\n";

@@ -33,7 +33,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--host") {
 		push(@names, shift(@ARGV));
 		}
@@ -65,7 +65,7 @@ print "Updating packages on ",scalar(@servers)," systems ..\n";
 	sub { my $info = &get_server_collected($_[0]);
 	      my @allgot;
 	      foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
-	          local $got = &install_package_update($_[0], $p);
+	          my $got = &install_package_update($_[0], $p);
 		  push(@allgot, @$got) if (ref($got));
 	          }
 	      if (@allgot) {
@@ -87,7 +87,7 @@ print "Installs updated Virtualmin packages on some or all managed systems.\n";
 print "\n";
 print "cloudmin update-systems [--all-hosts] | [--host name]*\n";
 print "                        [--group name]*\n";
-local $types = join("|", @server_management_types);
+my $types = join("|", @server_management_types);
 print "                        [--type $types]*\n";
 print "                        [--os oscode]*\n";
 exit(1);

@@ -45,8 +45,8 @@ sub get_new_pty
 {
 if (-r "/dev/ptmx" && -d "/dev/pts" && open(PTMX, "+>/dev/ptmx")) {
 	# Can use new-style PTY number allocation device
-	local $unl;
-	local $ptn;
+	my $unl;
+	my $ptn;
 
 	# ioctl to unlock the PTY (TIOCSPTLCK)
 	$unl = pack("i", 0);
@@ -57,13 +57,13 @@ if (-r "/dev/ptmx" && -d "/dev/pts" && open(PTMX, "+>/dev/ptmx")) {
 	ioctl(PTMX, 0x80045430, $ptn) || die "PTY ioctl failed : $!";
 	$ptn = unpack("i", $ptn);
 
-	local $tty = "/dev/pts/$ptn";
+	my $tty = "/dev/pts/$ptn";
 	return (*PTMX, undef, $tty, $tty);
 	}
 else {
 	# Have to search manually through pty files!
-	local @ptys;
-	local $devstyle;
+	my @ptys;
+	my $devstyle;
 	if (-d "/dev/pty") {
 		opendir(DEV, "/dev/pty");
 		@ptys = map { "/dev/pty/$_" } readdir(DEV);
@@ -76,17 +76,17 @@ else {
 		closedir(DEV);
 		$devstyle = 0;
 		}
-	local ($pty, $tty);
+	my ($pty, $tty);
 	foreach $pty (@ptys) {
 		open(PTY, "+>$pty") || next;
-		local $tty = $pty;
+		my $tty = $pty;
 		if ($devstyle == 0) {
 			$tty =~ s/pty/tty/;
 			}
 		else {
 			$tty =~ s/m(\d+)$/s$1/;
 			}
-		local $old = select(PTY); $| = 1; select($old);
+		my $old = select(PTY); $| = 1; select($old);
 		if ($< == 0) {
 			# Don't need to open the TTY file here for root,
 			# as it will be opened later after the controlling
@@ -120,7 +120,7 @@ if (open(DEVTTY, "/dev/tty")) {
 # this process.
 sub open_controlling_pty
 {
-local ($ptyfh, $ttyfh, $pty, $tty) = @_;
+my ($ptyfh, $ttyfh, $pty, $tty) = @_;
 
 # Call special ioctl to attach /dev/tty to this new tty (TIOCSCTTY)
 ioctl($ttyfh, 0x540e, 0);

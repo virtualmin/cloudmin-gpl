@@ -59,7 +59,7 @@ if (defined(&list_server_images)) {
 	@imageids = map { $_->{'id'} } &list_server_images();
 	}
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--name") {
 		$name = shift(@ARGV);
 		}

@@ -34,7 +34,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--regenerate") {
 		$regen = 1;
 		}
@@ -101,7 +101,7 @@ print "Refreshes the status of some or all managed systems.\n";
 print "\n";
 print "cloudmin refresh-systems [--all-hosts] | [--host name]*\n";
 print "                         [--group name]*\n";
-local $types = join("|", @server_management_types);
+my $types = join("|", @server_management_types);
 print "                         [--type $types]*\n";
 print "                         [--os oscode]*\n";
 print "                         [--owner name]*\n";

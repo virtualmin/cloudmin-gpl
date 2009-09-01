@@ -38,7 +38,7 @@ $< == 0 || die "$0 must be run as root";
 # Parse command line
 &set_all_text_print();
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--host") {
 		$host = shift(@ARGV);
 		}

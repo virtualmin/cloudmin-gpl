@@ -51,7 +51,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
@@ -96,7 +96,7 @@ print "Outputs console messages for one or more managed systems.\n";
 print "\n";
 print "cloudmin get-console [--all-hosts] | [--host name]*\n";
 print "                     [--group name]*\n";
-local $types = join("|", @server_management_types);
+my $types = join("|", @server_management_types);
 print "                     [--type $types]*\n";
 print "                     [--os oscode]*\n";
 print "                     [--owner name]*\n";

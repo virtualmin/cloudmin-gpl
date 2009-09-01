@@ -43,7 +43,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line for hosts
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
@@ -101,8 +101,8 @@ foreach $s (@servers) {
 # Convert a date string like YYYY-MM-DD or -5 to a Unix time
 sub date_to_time
 {
-local ($date) = @_;
-local $rv;
+my ($date) = @_;
+my $rv;
 if ($date =~ /^(\d{4})-(\d+)-(\d+)$/) {
 	# Date only
 	$rv = timelocal(0, 0, 0, $3, $2-1, $1-1900);
@@ -124,7 +124,7 @@ print "cloudmin list-usage [--start yyyy-mm-dd]\n";
 print "                    [--end yyyy-mm-dd]\n";
 print "                    [--all-hosts] | [--host name]*\n";
 print "                    [--group name]*\n";
-local $types = join("|", @server_management_types);
+my $types = join("|", @server_management_types);
 print "                    [--type $types]*\n";
 print "                    [--os oscode]*\n";
 print "                    [--owner name]*\n";

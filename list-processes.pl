@@ -50,7 +50,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
@@ -67,7 +67,7 @@ while(@ARGV > 0) {
 
 # Do each system in parallel
 @rv = &parallel_server_function(\@servers,
-	sub { local ($server) = @_;
+	sub { my ($server) = @_;
 	      $procs = &list_processes_on_server($server);
 	      if (ref($procs) && defined($match)) {
 		$procs = [ grep { $_->{'args'} =~ /$match/i } @$procs ];
@@ -102,7 +102,7 @@ print "Lists or finds processes on some or all managed systems.\n";
 print "\n";
 print "cloudmin list-processes [--all-hosts] | [--host name]*\n";
 print "                        [--group name]*\n";
-local $types = join("|", @server_management_types);
+my $types = join("|", @server_management_types);
 print "                        [--type $types]*\n";
 print "                        [--os oscode]*\n";
 print "                        [--owner name]*\n";

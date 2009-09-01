@@ -10,7 +10,7 @@ if (@ARGV == 0) {
 	$all = 1;	# If called with no args, assume all systems
 	}
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
@@ -34,7 +34,7 @@ while(@ARGV > 0) {
 # the total for this hour
 foreach $s (@servers) {
 	next if ($s->{'status'} eq 'nohost');
-	local $bwinfo = &get_bandwidth($s);
+	my $bwinfo = &get_bandwidth($s);
 	$now = time();
 	($in, $out, $inp, $outp) = &get_server_traffic($s);
 	next if (!defined($in));
@@ -107,7 +107,7 @@ foreach $s (@servers) {
 $start = &bandwidth_period_start();
 $now = time();
 foreach $s (@servers) {
-	local $bwinfo = &get_bandwidth($s);
+	my $bwinfo = &get_bandwidth($s);
 	next if (!$bwinfo->{'last_time'});	# Only do if bandwidth is
 						# supported by system type
 
@@ -126,7 +126,7 @@ foreach $s (@servers) {
 	# If over, send email and perhaps shutdown the system
 	if ($s->{'bw_limit'} && $s->{'bw_usage'} > $s->{'bw_limit'}) {
 		# Send email
-		local @to;
+		my @to;
 		push(@to, $config{'bw_email'}) if ($config{'bw_email'});
 		if ($config{'bw_owner'}) {
 			push(@to, map { $_->{'acl'}->{'email'} }
@@ -134,8 +134,8 @@ foreach $s (@servers) {
 			}
 		$etime = $now - $s->{'bw_notify'} > $config{'bw_notify'}*60*60;
 		if (@to && $etime) {
-			local $msg = &get_bandwidth_message();
-			local %hash = %$s;
+			my $msg = &get_bandwidth_message();
+			my %hash = %$s;
 			$hash{'bw_period'} = $config{'bw_period'};
 			$hash{'bw_days'} = $config{'bw_days'};
 			foreach $n ('bw_limit', 'bw_usage',
@@ -179,22 +179,22 @@ if (&supports_plans()) {
 	foreach $o (&list_system_owners()) {
 		$limits = &get_owner_limits($o->{'name'});
 		next if (!$limits || !$limits->{'max_bw'});
-		local @os = sort { $b->{'bw_usage'} cmp $a->{'bw_usage'} }
+		my @os = sort { $b->{'bw_usage'} cmp $a->{'bw_usage'} }
 				 &get_owner_servers($o);
 
 		# If over limit, send email
 		if ($limits && $limits->{'max_bw'} &&
 		    $limits->{'bw'} > $limits->{'max_bw'}) {
-			local @to;
+			my @to;
 			push(@to, $config{'bw_email'}) if ($config{'bw_email'});
 			push(@to, $o->{'email'}) if ($o->{'email'});
 			$etime = $now - $o->{'acl'}->{'bw_notify'} >
 				 $config{'bw_notify'}*60*60;
 			if (@to && $etime) {
-				local $msg = &get_owner_bandwidth_message();
-				local $hosts = join(" ",
+				my $msg = &get_owner_bandwidth_message();
+				my $hosts = join(" ",
 					map { $_->{'host'} } @os);
-				local %hash = (
+				my %hash = (
 					'name', $o->{'name'},
 					'real', $o->{'real'},
 					'hosts', $hosts,
@@ -230,7 +230,7 @@ print "Check for and sum up bandwidth use on managed systems.\n";
 print "\n";
 print "cloudmin bandwidth [--all-hosts] | [--host name]*\n";
 print "                   [--group name]*\n";
-local $types = join("|", @server_management_types);
+my $types = join("|", @server_management_types);
 print "                   [--type $types]*\n";
 print "                   [--os oscode]*\n";
 print "                   [--owner name]*\n";

@@ -99,7 +99,7 @@ foreach $t (@server_management_types) {
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--type") {
 		$type = shift(@ARGV);
 		}
@@ -417,7 +417,7 @@ if ($webmindir) {
 	}
 elsif ($webmin_mode) {
 	# Need to install Webmin
-	local ($src, $type, $err) = &get_install_webmin_source($server);
+	my ($src, $type, $err) = &get_install_webmin_source($server);
 	if (!$err) {
 		print "Installing Webmin ..\n";
 		($out, $err, $webmindir) =
@@ -518,7 +518,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Creates a new virtual system of some type.\n";
 print "\n";
-local $crtypes = join("|", @crtypes);
+my $crtypes = join("|", @crtypes);
 print "cloudmin create-system --host name\n";
 print "                       --type $crtypes\n" if ($crtypes);
 print "                      [--desc \"system description\"]\n";
@@ -538,7 +538,7 @@ if ($type) {
 	$afunc = "type_".$type."_create_args";
 	if (defined(&$afunc)) {
 		foreach $a (&$afunc()) {
-			local ($o1, $o2) = $a->{'opt'} ? ("[", "]") : ( );
+			my ($o1, $o2) = $a->{'opt'} ? ("[", "]") : ( );
 			print "                      ";
 			if ($a->{'value'}) {
 				print $o1,"--".$type."-".$a->{'name'}," ",$a->{'value'}.$o2;

@@ -70,7 +70,7 @@ $ssh_protocol = 2;
 $webmin_ssl = 0;
 $webmin_port = 10000;
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--host") {
 		$host = shift(@ARGV);
 		}

@@ -45,7 +45,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 while(@ARGV > 0) {
-	local $a = shift(@ARGV);
+	my $a = shift(@ARGV);
 	if ($a eq "--multiline") {
 		$multi = 1;
 		}
@@ -384,7 +384,7 @@ print "\n";
 print "cloudmin list-systems [--multiline | --name-only]\n";
 print "                      [--all-hosts] | [--host name]*\n";
 print "                      [--group name]*\n";
-local $types = join("|", @server_management_types);
+my $types = join("|", @server_management_types);
 print "                      [--type $types]*\n";
 print "                      [--os oscode]*\n";
 print "                      [--owner name]*\n";

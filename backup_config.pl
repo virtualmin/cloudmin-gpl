@@ -5,7 +5,7 @@ do 'server-manager-lib.pl';
 # Returns files and directories that can be backed up
 sub backup_config_files
 {
-local @rv;
+my @rv;
 
 # Add SSH keys, domains, collected info and this system
 push(@rv, $ssh_keys_dir, $server_domains_dir, $server_collected_dir,
