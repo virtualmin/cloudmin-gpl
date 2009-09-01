@@ -205,7 +205,7 @@ foreach my $pname (@confplugins) {
 # just a subset of those from the Webmin Servers Index module
 sub list_managed_servers
 {
-local @rv = grep { $_->{'module'} eq $module_name } &servers::list_servers();
+my @rv = grep { $_->{'module'} eq $module_name } &servers::list_servers();
 @rv = grep { $server_management_types{$_->{'manager'}} } @rv;
 @rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
 
@@ -218,7 +218,7 @@ foreach my $s (@rv) {
 
 if ($config{'show_this'}) {
 	# Magically add this system to the list
-	local $this = &servers::this_server();
+	my $this = &servers::this_server();
 	$this->{'manager'} = 'this';
 	$this->{'host'} = &get_system_hostname();
 	$this->{'desc'} = $text{'this_this'};
@@ -231,7 +231,7 @@ if ($config{'show_this'}) {
 	    $server_management_types{'xen'} &&
 	    ($config{'xen_checked'} || !&check_xen_host_software($this))) {
 		$this->{'xen_host'} = 1;
-		local $eth0 = &first_ethernet_iface();
+		my $eth0 = &first_ethernet_iface();
 		if ($config{'xen_start'}) {
 			# Allocation range is set from module config
 			$this->{'xen_start'} = $config{'xen_start'};
@@ -266,10 +266,10 @@ if ($config{'show_this'}) {
 
 # Compute short hostnames
 foreach my $s (@rv) {
-	local $shost = $s->{'host'};
+	my $shost = $s->{'host'};
 	if ($config{'name_max'} && length($shost) > $config{'name_max'}) {
 		# Show first and last max/2 chars, with ... between
-		local $h = int($config{'name_max'} / 2);
+		my $h = int($config{'name_max'} / 2);
 		$shost = substr($shost, 0, $h)."...".substr($shost, -$h);
 		}
 	$s->{'short_host'} = $shost;
@@ -283,9 +283,9 @@ foreach my $s (@rv) {
 			}
 		else {
 			# Assume created at module install time
-			local %itimes;
+			my %itimes;
 			&read_file($install_times_file, \%itimes);
-			local @vers = sort { $a <=> $b } (keys %itimes);
+			my @vers = sort { $a <=> $b } (keys %itimes);
 			if (@vers) {
 				$s->{'created'} = $itimes{$vers[0]};
 				}
@@ -300,7 +300,7 @@ return @rv;
 # Returns servers list, with sorting and possibly 'indent' fields
 sub list_managed_servers_sorted
 {
-local @rv = &list_managed_servers();
+my @rv = &list_managed_servers();
 foreach my $s (@rv) {
 	$s->{'indent'} = 0;
 	}
@@ -310,7 +310,7 @@ if ($config{'sort_mode'} == 0) {
 	}
 elsif ($config{'sort_mode'} == 1) {
 	# Under host systems
-	local @newrv;
+	my @newrv;
 	@rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
 	foreach my $s (grep { $_->{'manager'} eq 'this' ||
 			      $_->{'manager'} eq 'real' ||
@@ -336,8 +336,8 @@ return @rv;
 # user can't see the host system.
 sub list_available_managed_servers_sorted
 {
-local @rv = grep { &can_action($_) } &list_managed_servers_sorted();
-local %got = map { $_->{'id'}, $_ } @rv;
+my @rv = grep { &can_action($_) } &list_managed_servers_sorted();
+my %got = map { $_->{'id'}, $_ } @rv;
 foreach my $s (@rv) {
 	if ($s->{'indent_host'} && !$got{$s->{'indent_host'}}) {
 		$s->{'indent'} = 0;
@@ -363,8 +363,8 @@ return time().$$.($main::server_id_count++);
 # Returns the IP address (or addresses in an array context) for a system
 sub get_server_ip
 {
-local ($server) = @_;
-local @ips = split(/\s+/, $server->{'ip_addresses'});
+my ($server) = @_;
+my @ips = split(/\s+/, $server->{'ip_addresses'});
 @ips = ( &to_ipaddress($server->{'host'}) ) if (!@ips);
 return wantarray ? @ips : $ips[0];
 }
@@ -388,18 +388,18 @@ return undef;
 # ethernet interface is on
 sub first_ethernet_range
 {
-local $eth0 = &first_ethernet_iface();
+my $eth0 = &first_ethernet_iface();
 if (!$eth0) {
 	# Fake it
 	$eth0 = { 'address' => &to_ipaddress(&get_system_hostname()) ||
 			       '127.0.0.1',
 		  'netmask' => '255.255.255.0' };
 	}
-local $ipnum = &net::ip_to_integer($eth0->{'address'});
-local $netnum = &net::ip_to_integer($eth0->{'netmask'});
-local $netstart = ($ipnum & $netnum) + 1;
-local $netsize = ~$netnum;
-local $netend = ($ipnum & $netnum) + $netsize - 1;
+my $ipnum = &net::ip_to_integer($eth0->{'address'});
+my $netnum = &net::ip_to_integer($eth0->{'netmask'});
+my $netstart = ($ipnum & $netnum) + 1;
+my $netsize = ~$netnum;
+my $netend = ($ipnum & $netnum) + $netsize - 1;
 return ( &net::integer_to_ip($netstart),
 	 &net::integer_to_ip($netend) );
 }
@@ -408,8 +408,8 @@ return ( &net::integer_to_ip($netstart),
 # Returns a list of servers which have a field matching some search key
 sub get_managed_server_by
 {
-local ($key, $value) = @_;
-local @rv = grep { $_->{$key} eq $value } &list_managed_servers();
+my ($key, $value) = @_;
+my @rv = grep { $_->{$key} eq $value } &list_managed_servers();
 return wantarray ? @rv : $rv[0];
 }
 
@@ -418,10 +418,10 @@ return wantarray ? @rv : $rv[0];
 # module and Webmin Servers Index
 sub save_managed_server
 {
-local ($server) = @_;
+my ($server) = @_;
 if ($server->{'id'} eq '0') {
 	# Special case - saving info about this system
-	local %this = ( 'status' => $server->{'status'},
+	my %this = ( 'status' => $server->{'status'},
 			'statustime' => $server->{'statustime'},
 			'status_msg' => $server->{'status_msg'},
 			'group' => $server->{'group'},
@@ -445,7 +445,7 @@ if ($server->{'id'} eq '0') {
 	}
 else {
 	if (!$server->{'id'}) {
-		local ($same) = grep { $_->{'host'} eq $server->{'host'} }
+		my ($same) = grep { $_->{'host'} eq $server->{'host'} }
 				     &servers::list_servers();
 		$server->{'id'} = $same ? $same->{'id'} : time();
 		}
@@ -458,7 +458,7 @@ else {
 # Remove a managed server object
 sub delete_managed_server
 {
-local ($server, $keep) = @_;
+my ($server, $keep) = @_;
 &delete_console_user($server);
 if ($server->{'id'}) {
 	&servers::delete_server($server->{'id'});
@@ -478,8 +478,8 @@ if (!$keep) {
 if (defined(&list_system_owners)) {
 	# Remove from any owners
 	foreach my $o (&list_system_owners()) {
-		local @os = split(/\s+/, $o->{'acl'}->{'servers'});
-		local @newos = grep { $_ ne $server->{'id'} } @os;
+		my @os = split(/\s+/, $o->{'acl'}->{'servers'});
+		my @newos = grep { $_ ne $server->{'id'} } @os;
 		if (scalar(@os) != scalar(@newos)) {
 			$o->{'acl'}->{'servers'} = join(' ', @newos);
 			&save_system_owner($o, $o);
@@ -492,10 +492,10 @@ if (defined(&list_system_owners)) {
 # Finds all servers matching some selection criteria
 sub find_managed_servers
 {
-local ($all, $hosts, $groups, $managers, $types, $owners) = @_;
-local @rv;
-local %wantgroups = map { lc($_), 1 } @$groups;
-local %wantowned;
+my ($all, $hosts, $groups, $managers, $types, $owners) = @_;
+my @rv;
+my %wantgroups = map { lc($_), 1 } @$groups;
+my %wantowned;
 foreach my $oname (@$owners) {
 	my $o = &get_system_owner($oname);
 	if ($o) {
@@ -505,7 +505,7 @@ foreach my $oname (@$owners) {
 		}
 	}
 foreach my $s (&list_managed_servers()) {
-	local ($ingroup) = grep { $wantgroup{lc($_)} }
+	my ($ingroup) = grep { $wantgroup{lc($_)} }
 				split(/\t/, $s->{'group'});
 	if ($all ||
 	    $ingroup ||
@@ -523,8 +523,8 @@ return @rv;
 # Converts an OS code as used by the 'servers' module into a name
 sub describe_os
 {
-local ($t) = @_;
-local ($type) = grep { $_->[0] eq $t } @servers::server_types;
+my ($t) = @_;
+my ($type) = grep { $_->[0] eq $t } @servers::server_types;
 return $type->[1];
 }
 
@@ -533,9 +533,9 @@ return $type->[1];
 # nologin, nowebmin, nowebminlogin, novirt, virt)
 sub describe_status
 {
-local ($s, $withcol, $withdoms) = @_;
-local %cmap = map { $_->[0], $_->[1] } @server_statuses;
-local $msg = $text{'status_'.$s->{'status'}} || $text{'status_unknown'};
+my ($s, $withcol, $withdoms) = @_;
+my %cmap = map { $_->[0], $_->[1] } @server_statuses;
+my $msg = $text{'status_'.$s->{'status'}} || $text{'status_unknown'};
 if ($s->{'status'} eq 'virt' && $withdoms && $s->{'virtualmin_domains'}) {
 	if ($withdoms == 1) {
 		$msg .= " (".&text('status_doms',
@@ -546,7 +546,7 @@ if ($s->{'status'} eq 'virt' && $withdoms && $s->{'virtualmin_domains'}) {
 		}
 	}
 if ($withcol) {
-	local $col = $cmap{$s->{'status'}};
+	my $col = $cmap{$s->{'status'}};
 	if ($col) {
 		$msg = "<font color=#$col>$msg</font>";
 		}
@@ -567,11 +567,11 @@ return $msg;
 # Returns a list of SSH keys used to login to servers
 sub list_ssh_keys
 {
-local @rv;
+my @rv;
 opendir(DIR, $ssh_keys_dir);
 foreach my $f (readdir(DIR)) {
 	next if ($f !~ /^(\S+)\.info$/i);
-	local %key;
+	my %key;
 	&read_file("$ssh_keys_dir/$f", \%key);
 	$key{'keydata'} = &read_file_contents($key{'file'});
 	push(@rv, \%key);
@@ -584,7 +584,7 @@ return @rv;
 # Creates or updates an SSH key
 sub save_ssh_key
 {
-local ($key) = @_;
+my ($key) = @_;
 if (!-d $ssh_keys_dir) {
 	&make_dir($ssh_keys_dir, 0700);
 	}
@@ -601,7 +601,7 @@ if (!$key->{'id'}) {
 		$key->{'external'} = 1;
 		}
 	}
-local %nodata = %$key;
+my %nodata = %$key;
 delete($nodata{'keydata'});
 &write_file("$ssh_keys_dir/$key->{'id'}.info", \%nodata);
 if (!$key->{'external'}) {
@@ -616,7 +616,7 @@ if (!$key->{'external'}) {
 # Removes a known SSH key
 sub delete_ssh_key
 {
-local ($key) = @_;
+my ($key) = @_;
 &unlink_logged("$ssh_keys_dir/$key->{'id'}.info");
 if (!$key->{'external'}) {
 	&unlink_logged($key->{'file'});
@@ -627,9 +627,9 @@ if (!$key->{'external'}) {
 # Returns the public key string for some key
 sub generate_public_key
 {
-local ($key) = @_;
-local $qp = quotemeta($key->{'file'});
-local $out = &backquote_command("ssh-keygen -y -f $qp 2>/dev/null");
+my ($key) = @_;
+my $qp = quotemeta($key->{'file'});
+my $out = &backquote_command("ssh-keygen -y -f $qp 2>/dev/null");
 if ($out =~ /((\d+)\s+(\d+)\s+(\d+))$/) {
 	# Version 1
 	return $1;
@@ -648,7 +648,7 @@ else {
 # 0 otherwise
 sub check_ssh_key_data
 {
-local ($text) = @_;
+my ($text) = @_;
 if ($text =~ /-----BEGIN\s+(RSA|DSA)\s+PRIVATE\s+KEY-----\n([A-Za-z0-9\+\/=\n]+)-----END\s+(\S+)\s+PRIVATE\s+KEY-----/ && $1 eq $3) {
 	return 2;
 	}
@@ -664,12 +664,12 @@ else {
 # Create a new SSH private key, in the default format
 sub generate_ssh_key
 {
-local $temp = &transname();
-local $out = &backquote_command("ssh-keygen -f $temp -N '' 2>&1");
+my $temp = &transname();
+my $out = &backquote_command("ssh-keygen -f $temp -N '' 2>&1");
 if ($? || !-r $temp) {
 	&error("<tt>$out</tt>");
 	}
-local $data = &read_file_contents($temp);
+my $data = &read_file_contents($temp);
 unlink($temp, $temp.".pub");
 return $data;
 }
@@ -679,12 +679,12 @@ return $data;
 # Returns the resulting wrapped text as a single string.
 sub wrap_long_line
 {
-local ($text, $cols) = @_;
-local @lines = split(/\r?\n/, $text);
-local @rv;
+my ($text, $cols) = @_;
+my @lines = split(/\r?\n/, $text);
+my @rv;
 foreach my $text (@lines) {
 	while($text) {
-		local $l = substr($text, 0, $cols);
+		my $l = substr($text, 0, $cols);
 		$text = substr($text, $cols);
 		push(@rv, $l);
 		}
@@ -696,12 +696,12 @@ return join("\n", @rv)."\n";
 # Returns a menu for selecting an SSH key
 sub ssh_key_menu
 {
-local ($name, $type, $value) = @_;
-local @keys = sort { $a->{'desc'} cmp $b->{'desc'} } &list_ssh_keys();
-local @allkeys = @keys;
+my ($name, $type, $value) = @_;
+my @keys = sort { $a->{'desc'} cmp $b->{'desc'} } &list_ssh_keys();
+my @allkeys = @keys;
 if ($type) {
 	# Limit to keys suitable for this server type
-	local $kfunc = "type_${type}_ssh_key_grep";
+	my $kfunc = "type_${type}_ssh_key_grep";
 	if (defined(&$kfunc)) {
 		@keys = grep { &$kfunc($_) } @keys;
 		}
@@ -711,7 +711,7 @@ if (@keys) {
 		[ map { [ $_->{'id'}, $_->{'desc'} ] } @keys ]);
 	}
 else {
-	local $msg = @keys == @allkeys ? $text{'add_nokeys'}
+	my $msg = @keys == @allkeys ? $text{'add_nokeys'}
 				       : $text{'add_nokeys2'};
 	return &ui_select($name, undef,
 		[ [ undef, $text{'add_nokeys'} ] ]);
@@ -720,7 +720,7 @@ else {
 
 sub cleanup_key_data
 {
-local ($text) = @_;
+my ($text) = @_;
 $text =~ s/\r//g;
 $text =~ s/^\s*//g;
 $text =~ s/\s*$/\n/g;
@@ -735,22 +735,22 @@ return $text;
 # (if installed), the Webmin port and the Webmin SSL flag.
 sub check_server_ssh_login
 {
-local ($server) = @_;
+my ($server) = @_;
 
 # Check if the server type has its own login check function, and if so
 # call it
-local $sfunc = "type_".$server->{'manager'}."_check_login";
+my $sfunc = "type_".$server->{'manager'}."_check_login";
 if (defined(&$sfunc)) {
 	# Type has defined it's own function for checking the status
-	local @rv = &$sfunc($server);
+	my @rv = &$sfunc($server);
 	return @rv if (scalar(@rv));
 	}
 
 # Need to really SSH
-local $cmd = &build_ssh_command($server);
-local $timeout = int($config{'ssh_timeout'}) || 30;
+my $cmd = &build_ssh_command($server);
+my $timeout = int($config{'ssh_timeout'}) || 30;
 $cmd .= " 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK'";
-local ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, $timeout);
+my ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, $timeout);
 if ($status == 0) {
 	# Connected OK .. check the output to see if we have Webmin
 	if ($out !~ /OK/) {
@@ -763,17 +763,17 @@ if ($status == 0) {
 		}
 	else {
 		# Check Webmin location
-		local $root = $out =~ /root=(\S+)/ ? $1 : 0;
-		local $port = $out =~ /port=(\S+)/ ? $1 : 0;
-		local $ssl = $out =~ /ssl=(\S+)/ ? $1 : 0;
+		my $root = $out =~ /root=(\S+)/ ? $1 : 0;
+		my $port = $out =~ /port=(\S+)/ ? $1 : 0;
+		my $ssl = $out =~ /ssl=(\S+)/ ? $1 : 0;
 		if ($root && $ssl) {
 			# Webmin wants SSL .. but can we really provide it?
 			if (!$server->{'has_net_ssleay'}) {
-				local $pp = &get_file_data_from_server($server,
+				my $pp = &get_file_data_from_server($server,
 						"/etc/webmin/perl-path");
 				chop($pp);
 				$pp ||= "perl";
-				local ($sout, $sex) =
+				my ($sout, $sex) =
 				    &execute_command_on_server(
 					$server, "$pp -e 'use Net::SSLeay'");
 				if ($sex) {
@@ -801,14 +801,14 @@ else {
 # and real OS type
 sub check_server_webmin_login
 {
-local ($server) = @_;
-local $fast_try = 0;
+my ($server) = @_;
+my $fast_try = 0;
 if (!defined($server->{'fast'})) {
 	# Try fast mode first
 	$fast_try = 1;
 	$server->{'fast'} = 1;
 	}
-local $rfc;
+my $rfc;
 eval {
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
@@ -818,7 +818,7 @@ eval {
 	alarm(0);
 	};
 if ($last_remote_error) {
-	local $ec = $last_remote_error =~ /Login\s+to\s+RPC/ ? 2 : 1;
+	my $ec = $last_remote_error =~ /Login\s+to\s+RPC/ ? 2 : 1;
 	return ($ec, $last_remote_error);
 	}
 if ($@) {
@@ -846,11 +846,11 @@ return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'});
 # read, and the still-open file descriptor is returned
 sub run_ssh_command
 {
-local ($cmd, $pass, $timeout, $leave) = @_;
-local ($wrong_password, $got_login, $connect_failed, $given_password);
-local $out;
-local $ex;
-local ($fh, $fpid);
+my ($cmd, $pass, $timeout, $leave) = @_;
+my ($wrong_password, $got_login, $connect_failed, $given_password);
+my $out;
+my $ex;
+my ($fh, $fpid);
 eval {
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
@@ -859,7 +859,7 @@ eval {
 		}
 	($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
-		local $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n", $leave ? ( $leave ) : ( ));
+		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n", $leave ? ( $leave ) : ( ));
 		if ($rv == 0) {
 			syswrite($fh, "$pass\n");
 			$given_password++;
@@ -922,8 +922,8 @@ return (0, $out, $fh, $fpid);
 # handle for talking to it is returned.
 sub execute_command_on_server
 {
-local ($server, $cmd, $timeout, $leave) = @_;
-local $efunc = "type_".$server->{'manager'}."_execute_command";
+my ($server, $cmd, $timeout, $leave) = @_;
+my $efunc = "type_".$server->{'manager'}."_execute_command";
 if (defined(&$efunc)) {
 	# Use type-specific function call
 	return &$efunc(@_);
@@ -934,13 +934,13 @@ elsif ($server->{'ssh_nologin'}) {
 	}
 else {
 	# Just run via SSH
-	local $sshcmd = &build_ssh_command($server);
+	my $sshcmd = &build_ssh_command($server);
 	if ($leave) {
 		$sshcmd .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
 	$sshcmd .= " ".quotemeta($cmd);
-	local ($status, $out, $fh, $fpid) =
+	my ($status, $out, $fh, $fpid) =
 	    &run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout,
 			     $leave ? "SERVER_MANAGER_LOGIN_DONE" : undef);
 	if ($status == 0) {
@@ -960,11 +960,11 @@ else {
 # type-specific method
 sub get_file_from_server
 {
-local ($server, $remotefile, $localfile, $device) = @_;
-local $gfunc = "type_".$server->{'manager'}."_get_file";
+my ($server, $remotefile, $localfile, $device) = @_;
+my $gfunc = "type_".$server->{'manager'}."_get_file";
 if (defined(&$gfunc)) {
 	# Use type-specific function call
-	local $rv = &$gfunc(@_);
+	my $rv = &$gfunc(@_);
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to scp
 	}
@@ -974,19 +974,19 @@ if ($server->{'ssh_nologin'}) {
 
 if ($device) {
 	# Run dd on the server and capture output
-	local $sshcmd = &build_ssh_command($server);
+	my $sshcmd = &build_ssh_command($server);
 	$sshcmd .= " dd if=".quotemeta($remotefile)." bs=32768 |".
 		   " dd of=".quotemeta($localfile)." bs=32768";
-	local ($status, $out) =
+	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
 	}
 else {
 	# Just scp down
-	local $sshcmd = "scp -r";
+	my $sshcmd = "scp -r";
 	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
 	if ($server->{'key'}) {
-		local ($key) = grep { $_->{'id'} == $server->{'key'} }
+		my ($key) = grep { $_->{'id'} == $server->{'key'} }
 				    &list_ssh_keys();
 		$sshcmd .= " -i ".quotemeta($key->{'file'});
 		}
@@ -995,7 +995,7 @@ else {
 		}
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}:".
 		   quotemeta($remotefile)." ".quotemeta($localfile);
-	local ($status, $out) =
+	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
 	}
@@ -1005,10 +1005,10 @@ else {
 # Returns the base of an SSH comand for logging into some system
 sub build_ssh_command
 {
-local ($server) = @_;
-local $sshcmd = "ssh -q -x -".$server->{'ssh_protocol'};
+my ($server) = @_;
+my $sshcmd = "ssh -q -x -".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
-	local ($key) = grep { $_->{'id'} == $server->{'key'} }
+	my ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
 	$sshcmd .= " -i ".quotemeta($key->{'file'});
 	}
@@ -1023,11 +1023,11 @@ return $sshcmd;
 # Returns the contents of some file
 sub get_file_data_from_server
 {
-local ($server, $remotefile) = @_;
-local $temp = &transname();
-local $err = &get_file_from_server($server, $remotefile, $temp);
+my ($server, $remotefile) = @_;
+my $temp = &transname();
+my $err = &get_file_from_server($server, $remotefile, $temp);
 return undef if ($err);
-local $data = &read_file_contents($temp);
+my $data = &read_file_contents($temp);
 &unlink_file($temp);
 return $data;
 }
@@ -1037,11 +1037,11 @@ return $data;
 # type-specific method
 sub put_file_to_server
 {
-local ($server, $localfile, $remotefile, $device) = @_;
-local $pfunc = "type_".$server->{'manager'}."_put_file";
+my ($server, $localfile, $remotefile, $device) = @_;
+my $pfunc = "type_".$server->{'manager'}."_put_file";
 if (defined(&$pfunc)) {
 	# Use type-specific function call
-	local $rv = &$pfunc(@_);
+	my $rv = &$pfunc(@_);
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to scp
 	}
@@ -1051,19 +1051,19 @@ if ($server->{'ssh_nologin'}) {
 
 if ($device) {
 	# Run dd piped into SSH
-	local $sshcmd = &build_ssh_command($server);
+	my $sshcmd = &build_ssh_command($server);
 	$sshcmd .= " dd of=".quotemeta($remotefile)." bs=32768";
 	$sshcmd = "dd if=".quotemeta($localfile)." bs=32768 | ".$sshcmd;
-	local ($status, $out) =
+	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
 	}
 else {
 	# Just scp up
-	local $sshcmd = "scp -r";
+	my $sshcmd = "scp -r";
 	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
 	if ($server->{'key'}) {
-		local ($key) = grep { $_->{'id'} == $server->{'key'} }
+		my ($key) = grep { $_->{'id'} == $server->{'key'} }
 				    &list_ssh_keys();
 		$sshcmd .= " -i ".quotemeta($key->{'file'});
 		}
@@ -1073,7 +1073,7 @@ else {
 	$sshcmd .= " ".quotemeta($localfile).
 		   " $server->{'ssh_user'}\@$server->{'host'}:".
 		   quotemeta($remotefile);
-	local ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
+	my ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
 	return $status ? $out : undef;
 	}
 }
@@ -1083,12 +1083,12 @@ else {
 # or undef on success.
 sub put_file_data_to_server
 {
-local ($server, $data, $remotefile) = @_;
-local $temp = &transname();
+my ($server, $data, $remotefile) = @_;
+my $temp = &transname();
 &open_tempfile(TEMP, ">$temp", 0, 1);
 &print_tempfile(TEMP, $data);
 &close_tempfile(TEMP);
-local $err = &put_file_to_server($server, $temp, $remotefile);
+my $err = &put_file_to_server($server, $temp, $remotefile);
 &unlink_file($temp);
 return $err;
 }
@@ -1099,10 +1099,10 @@ return $err;
 # if OK, or an error message on failure.
 sub transfer_file_between_servers
 {
-local ($srcserver, $destserver, $src, $dest, $device) = @_;
+my ($srcserver, $destserver, $src, $dest, $device) = @_;
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just copy
-	local ($out, $ex, $err) = &execute_command_on_server($srcserver,
+	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
 		$device ?
 		  "dd if=".quotemeta($src)." of=".quotemeta($dest)." bs=32768" :
 		  "cp ".quotemeta($src)." ".quotemeta($dest));
@@ -1123,10 +1123,10 @@ else {
 		return "SSH logins on target system are not available";
 		}
 
-	local $keytemp;
+	my $keytemp;
 	if ($destserver->{'key'}) {
 		# A key is needed - copy it to the source system
-		local ($key) = grep { $_->{'id'} == $destserver->{'key'} }
+		my ($key) = grep { $_->{'id'} == $destserver->{'key'} }
 				    &list_ssh_keys();
 		$keytemp = $key->{'file'};
 		$keytemp =~ s/^.*[\\\/]//;
@@ -1134,7 +1134,7 @@ else {
 		&put_file_to_server($srcserver, $key->{'file'}, $keytemp);
 		}
 
-	local $sshcmd;
+	my $sshcmd;
 	if ($device) {
 		# Use dd piped into SSH
 		$sshcmd = "dd if=".quotemeta($src)." bs=32768 | ssh -q -x";
@@ -1164,14 +1164,14 @@ else {
 		}
 
 	# Then execute on the source system
-	local ($out, $ex, $err, $status, $fh, $fpid) =
+	my ($out, $ex, $err, $status, $fh, $fpid) =
 		&execute_command_on_server($srcserver, $sshcmd, undef, 1);
 	if (!$err && !$ex) {
 		# Started OK .. wait for a password prompt
 		$out = undef;
-		local ($given_password, $wrong_password, $connect_failed);
+		my ($given_password, $wrong_password, $connect_failed);
 		while(1) {
-			local $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
+			my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
 			if ($rv == 0) {
 				syswrite($fh, "$destserver->{'ssh_pass'}\n");
 				$given_password++;
@@ -1212,10 +1212,10 @@ else {
 	}
 
 # Fall back to fetching to master and uploading
-local $srcfile = $src;
+my $srcfile = $src;
 $srcfile =~ s/^.*[\\\/]//;
-local $temp = &transname($srcfile);
-local $err = &get_file_from_server($srcserver, $src, $temp, $device);
+my $temp = &transname($srcfile);
+my $err = &get_file_from_server($srcserver, $src, $temp, $device);
 return "Download to Cloudmin master failed : $err" if ($err);
 $err = &put_file_to_server($destserver, $temp, $dest, $device);
 &unlink_file($temp);
@@ -1228,17 +1228,17 @@ return undef;
 # message on failure.
 sub delete_file_on_server
 {
-local ($server, $remotefile, $noquote) = @_;
-local $dfunc = "type_".$server->{'manager'}."_delete_file";
+my ($server, $remotefile, $noquote) = @_;
+my $dfunc = "type_".$server->{'manager'}."_delete_file";
 if (defined(&$dfunc)) {
 	# Use type-specific function call
-	local $rv = &$dfunc(@_);
+	my $rv = &$dfunc(@_);
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to scp
 	}
 
 # Just run rm via SSH
-local ($out, $ex, $err) = &execute_command_on_server($server,
+my ($out, $ex, $err) = &execute_command_on_server($server,
 				"rm -rf ".($noquote ? $remotefile
 						    : quotemeta($remotefile)));
 return $err ? $err : $ex ? $out : undef;
@@ -1250,11 +1250,11 @@ return $err ? $err : $ex ? $out : undef;
 # If the file doesn't exist, returns an empty array.
 sub stat_file_on_server
 {
-local ($server, $remotefile) = @_;
-local $gfunc = "type_".$server->{'manager'}."_stat_file";
+my ($server, $remotefile) = @_;
+my $gfunc = "type_".$server->{'manager'}."_stat_file";
 if (defined(&$gfunc)) {
 	# Use type-specific function call
-	local @rv = &$gfunc(@_);
+	my @rv = &$gfunc(@_);
 	return @rv if ($rv[0] ne 'FALLBACK');
 	}
 
@@ -1263,12 +1263,12 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
 	return ( $last_remote_error ) if ($last_remote_error);
-	local $st = &remote_eval($server, "webmin", "[ stat('$remotefile') ]");
+	my $st = &remote_eval($server, "webmin", "[ stat('$remotefile') ]");
 	return $st ? @$st : ("Stat via Webmin failed");
 	}
 else {
 	# Use stat command, perl, or in worst case ls -l
-	local ($out, $ex, $err) = &execute_command_on_server($server,
+	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"stat -t ".quotemeta($remotefile));
 	return ( $err ) if ($err);
 	if ($out =~ /No such file/i) {
@@ -1276,8 +1276,8 @@ else {
 		}
 	elsif (!$ex && $out =~ /^\Q$remotefile\E\s/) {
 		# Parse stat command output
-		local @w = split(/\s+/, $out);
-		local @st;
+		my @w = split(/\s+/, $out);
+		my @st;
 		$st[0] = hex($w[6]);		# Device
 		$st[1] = $w[7];			# Inode
 		$st[2] = hex($w[3]);		# Permissions
@@ -1296,11 +1296,11 @@ else {
 
 	# Next try perl, with script as an input file as passing a complex
 	# command via -e doesn't work
-	local $cmdtemp = &tempname_on_server($server);
-	local $err = &put_file_data_to_server($server,
+	my $cmdtemp = &tempname_on_server($server);
+	my $err = &put_file_data_to_server($server,
 			'print join(":", stat($ARGV[0]))."\n"', $cmdtemp);
 	if (!$err) {
-		local ($out, $ex, $err) = &execute_command_on_server($server,
+		my ($out, $ex, $err) = &execute_command_on_server($server,
 			"perl $cmdtemp ".quotemeta($remotefile));
 		&delete_file_on_server($server, $cmdtemp);
 		return ( $err ) if ($err);
@@ -1311,7 +1311,7 @@ else {
 		}
 
 	# Finally, use ls .. which gives less info :-(
-	local ($out, $ex, $err) = &execute_command_on_server($server,
+	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"ls -ldn ".quotemeta($remotefile));
 	return ( $err ) if ($err);
 	if ($out =~ /No such file/i) {
@@ -1322,27 +1322,27 @@ else {
 		}
 	else {
 		# Parse ls command output
-		local @now = localtime(time());
-		local @w = split(/\s+/, $out);
-		local @st;
+		my @now = localtime(time());
+		my @w = split(/\s+/, $out);
+		my @st;
 		$st[3] = $w[1];			# Links
 		$st[4] = $w[2];			# UID
 		$st[5] = $w[3];			# GID
 		$st[7] = $w[4];			# Size
 		if ($w[7] =~ /^(\d+):(\d+)$/) {
 			# Time is month day hour:minute
-			local @tm = ( 0, $2, $1, $w[6],
+			my @tm = ( 0, $2, $1, $w[6],
 				      &month_to_number($w[5]), $now[5] );
 			$st[8] = $st[9] = $st[10] = timelocal(@tm);
 			}
 		elsif ($w[7] =~ /^\d+$/) {
 			# Time is month day year
-			local @tm = ( 0, 0, 0, $w[6],
+			my @tm = ( 0, 0, 0, $w[6],
 				      &month_to_number($w[5]), $w[7]-1900 );
 			$st[8] = $st[9] = $st[10] = timelocal(@tm);
 			}
 		$st[2] = 0;			# Permissions
-		local @p = reverse(split(//, $w[0]));
+		my @p = reverse(split(//, $w[0]));
 		for(my $i=0; $i<9; $i++) {
 			if ($p[$i] ne '-') {
 				$st[2] += (1<<$i);
@@ -1357,14 +1357,14 @@ else {
 # Returns the full path to some command, or undef if missing
 sub has_command_on_server
 {
-local ($server, $cmd) = @_;
-local ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd");
+my ($server, $cmd) = @_;
+my ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd");
 if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 	# Failed .. but maybe we don't even have the which command??
 	if ($out =~ /which:\s+command\s+not\s+found/i) {
 		if ($cmd =~ /^\//) {
 			# Full path given, so just look for it
-			local (undef, $tex, undef) = &execute_command_on_server(
+			my (undef, $tex, undef) = &execute_command_on_server(
 				$server, "test -x $cmd");
 			if (!$tex) {
 				$out = $cmd;
@@ -1397,8 +1397,8 @@ return $out;
 # Return an array ref on success, or an error string on failure.
 sub list_processes_on_server
 {
-local ($server) = @_;
-local @procs;
+my ($server) = @_;
+my @procs;
 if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Can call Webmin
 	$last_remote_error = undef;
@@ -1411,7 +1411,7 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 		}
 	}
 # Fall back to ps command, trying various options
-local ($out, $ex, $err);
+my ($out, $ex, $err);
 foreach my $cmd (
 	[ "ps --cols 500 -e -o pid,user,args", 3, [ 0, 1, 2 ] ],  # Linux
 	[ "ps -e -o pid,user,args", 3, [ 0, 1, 2 ] ],		  # Solaris
@@ -1430,7 +1430,7 @@ foreach my $cmd (
 		return \@procs;
 		}
 	}
-local $msg = $err || $out;
+my $msg = $err || $out;
 return "Failed to list processes : $msg";
 }
 
@@ -1441,7 +1441,7 @@ $last_remote_error = join("", @_);
 
 sub nice_error_status
 {
-local ($status) = @_;
+my ($status) = @_;
 return $text{'status_'.int($status)};
 }
 
@@ -1449,8 +1449,8 @@ return $text{'status_'.int($status)};
 # Returns an OS type as used by the Webmin Servers Index module
 sub os_to_server_type
 {
-local ($os, $realos) = @_;
-local $type = 'unknown';
+my ($os, $realos) = @_;
+my $type = 'unknown';
 foreach my $s (@servers::server_types) {
 	if ($s->[2] && $os =~ /^$s->[2]$/ || $s->[3] && $realos =~ /$s->[3]/) {
 		$type = $s->[0];
@@ -1464,10 +1464,10 @@ return $type;
 # Returns 1 if some host responds to a ping in 2 seconds
 sub ping_server_host
 {
-local ($host) = @_;
-local $timeout = int($config{'ping_timeout'}) || 1;
-local $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c 1" : "ping";
-local ($out, $timed_out) = &backquote_with_timeout(
+my ($host) = @_;
+my $timeout = int($config{'ping_timeout'}) || 1;
+my $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c 1" : "ping";
+my ($out, $timed_out) = &backquote_with_timeout(
 	$pingcmd." ".$host." 2>&1", $ping_host_timeout, $timeout);
 return !$timed_out && !$? ? 1 : 0;
 }
@@ -1478,12 +1478,12 @@ return !$timed_out && !$? ? 1 : 0;
 # and CPU load.
 sub check_server_status
 {
-local ($server, $regen, $skipinfo, $time) = @_;
+my ($server, $regen, $skipinfo, $time) = @_;
 
 # Check if a status update is already happening
 if (&test_lock_server($server)) {
 	# Already locked .. wait till free, and get new status from file
-	local $c = 0;
+	my $c = 0;
 	while(&test_lock_server($server)) {
 		sleep(1);
 		$c++;
@@ -1493,7 +1493,7 @@ if (&test_lock_server($server)) {
 			       "took more than 2 minutes");
 			}
 		}
-	local ($newserver) = grep { $_->{'id'} eq $server->{'id'} }
+	my ($newserver) = grep { $_->{'id'} eq $server->{'id'} }
 				  &list_managed_servers();
 	foreach my $k ('statustime', 'status', 'status_msg') {
 		$server->{$k} = $newserver->{$k};
@@ -1510,12 +1510,12 @@ else {
 # Don't ping if the virtual system type (ie Xen) has it's own function to 
 # detect status though, unless SSH logins are disabled
 $server->{'statustime'} = time();
-local $clfunc = "type_".$server->{'manager'}."_check_login";
-local $ping = &ping_server_host($server->{'host'});
+my $clfunc = "type_".$server->{'manager'}."_check_login";
+my $ping = &ping_server_host($server->{'host'});
 
 # If SSH logins are disabled, go no further
 if ($server->{'ssh_nologin'}) {
-	local $status;
+	my $status;
 	if (defined(&$clfunc)) {
 		# Call the Xen status function, which can provide more info
 		# on why it is down
@@ -1532,8 +1532,8 @@ if ($server->{'ssh_nologin'}) {
 	}
 
 # Check if we can login
-local $rv = 0;
-local ($status, $err, $webminroot, $webminport, $webminssl) =
+my $rv = 0;
+my ($status, $err, $webminroot, $webminport, $webminssl) =
 	&check_server_ssh_login($server);
 if ($status == 2) {
 	# Could not login via SSH
@@ -1605,9 +1605,9 @@ if ($webminport && $server->{'id'} != 0) {
 	}
 
 # If we have a Webmin login, try it
-local ($got_memory, $got_disk, $got_kernel);
+my ($got_memory, $got_disk, $got_kernel);
 if ($server->{'user'} || $server->{'id'} == 0) {
-	local ($status, $err, $ostype, $real_ostype) =
+	my ($status, $err, $ostype, $real_ostype) =
 		&check_server_webmin_login($server);
 	if ($status == 2) {
 		# Webmin replied, but it rejected our login
@@ -1624,8 +1624,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		}
 
 	# Webmin is OK! Check for Virtualmin
-	local $info;
-	local $webmin_timeout = int($config{'webmin_timeout'}) || 60;
+	my $info;
+	my $webmin_timeout = int($config{'webmin_timeout'}) || 60;
 	$webmin_timeout *= 3 if ($regen);
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
@@ -1641,7 +1641,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 						"virtual-server-lib.pl");
 			alarm($webmin_timeout * 3);	# Give this longer,
 							# as connect worked
-			local @doms = &remote_foreign_call($server,
+			my @doms = &remote_foreign_call($server,
 					"virtual-server", "list_domains");
 			&save_server_domains($server, \@doms);
 
@@ -1673,14 +1673,14 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			# Get and save serial number
 			delete($info->{'serial'});
 			if ($info->{'minfo'}->{'version'} !~ /gpl/) {
-				local $serial = &remote_eval($server,
+				my $serial = &remote_eval($server,
 					"virtual_server",
 					"\&read_env_file(\$virtualmin_license_file, \\\%serial); return \\\%serial");
 				if ($serial->{'SerialNumber'} ne 'GPL') {
 				    $info->{'serial'} =
 					{ 'serial' => $serial->{'SerialNumber'},
 					  'key' => $serial->{'LicenseKey'} };
-				    local $lstatus = &remote_eval($server,
+				    my $lstatus = &remote_eval($server,
 					"virtual_server",
 					"\&read_env_file(\$licence_status, \\\%lstatus); return \\\%lstatus");
 				    if ($lstatus && ref($lstatus)) {
@@ -1729,7 +1729,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					"proc-lib.pl");
 				if (&remote_eval($server, "proc",
 					'defined(&get_cpu_info)')) {
-					local @load = &remote_foreign_call(
+					my @load = &remote_foreign_call(
 					    $server, "proc", "get_cpu_info");
 					if (@load) {
 						$info->{'load'} = \@load;
@@ -1737,7 +1737,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					}
 				if (&remote_eval($server, "proc",
 					'defined(&get_memory_info)')) {
-					local @mem = &remote_foreign_call(
+					my @mem = &remote_foreign_call(
 					    $server, "proc", "get_memory_info");
 					if (@mem) {
 						$info->{'mem'} = \@mem;
@@ -1762,7 +1762,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				 "\%t=get_theme_info(\$current_theme); \\\%t");
 
 		# Get network interfaces, as seen by the system
-		local $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+		my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
 		if (!defined(&$ifunc) &&
 		    &remote_foreign_check($server, "net")) {
 			&remote_foreign_require($server, "net", "net-lib.pl");
@@ -1808,12 +1808,12 @@ else {
 	}
 
 # If we couldn't get memory or disk from Webmin, get it via SSH
-local $info = &get_server_collected($server);
-local $got_more_info;
+my $info = &get_server_collected($server);
+my $got_more_info;
 if (!$got_memory) {
-	local ($out, $ex, $err) = &execute_command_on_server($server, "free");
+	my ($out, $ex, $err) = &execute_command_on_server($server, "free");
 	if (!$ex && !$err) {
-		local @mem;
+		my @mem;
 		if ($out =~ /Mem:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/i) {
 			$mem[0] = $1;
 			$mem[1] = $3 + $5 + $6;
@@ -1827,7 +1827,7 @@ if (!$got_memory) {
 			$got_more_info = 1;
 			}
 		}
-	local ($out, $ex, $err) = &execute_command_on_server($server, "uptime");
+	my ($out, $ex, $err) = &execute_command_on_server($server, "uptime");
 	if (!$ex && !$err &&
 	    $out =~ /average:\s+([0-9\.]+),\s*([0-9\.]+),\s*([0-9\.]+)/i) {
 		$info->{'load'} = [ $1, $2, $3 ];
@@ -1835,18 +1835,18 @@ if (!$got_memory) {
 		}
 	}
 if (!$got_disk) {
-	local ($out, $ex, $err) = &execute_command_on_server($server, "df -kl");
+	my ($out, $ex, $err) = &execute_command_on_server($server, "df -kl");
 	if (!$ex && !$err) {
-		local @lines = split(/\r?\n/, $out);
-		local ($total, $free);
+		my @lines = split(/\r?\n/, $out);
+		my ($total, $free);
 		for(my $i=0; $i<@lines; $i++) {
-			local $l = $lines[$i];
+			my $l = $lines[$i];
 			if ($l =~ /^\/\S+$/) {
 				# Filesystem name on own line
 				$l .= $lines[++$i];
 				}
 			if ($l =~ /^\// && $l !~ /^\/platform\//) {
-				local ($fs, $blocks, $used, $avail) =
+				my ($fs, $blocks, $used, $avail) =
 					split(/\s+/, $l);
 				if ($blocks) {
 					$total += $blocks*1024;
@@ -1867,10 +1867,10 @@ if (!$got_disk) {
 
 # Get kernel and CPU info via SSH
 if (!$got_kernel) {
-	local ($out, $ex, $err) = &execute_command_on_server($server, 
+	my ($out, $ex, $err) = &execute_command_on_server($server, 
 		"uname -r ; uname -m ; uname -s");
 	if (!$ex && !$err) {
-		local ($r, $m, $o) = split(/\r?\n/, $out);
+		my ($r, $m, $o) = split(/\r?\n/, $out);
 		$info->{'kernel'} = { 'version' => $r,
 				      'arch' => $m,
 				      'os' => $o };
@@ -1883,14 +1883,14 @@ $rv = 1;
 
 # Call any type-specific post-refresh function
 DONECHECK:
-local $rfunc = "type_".$server->{'manager'}."_post_refresh";
+my $rfunc = "type_".$server->{'manager'}."_post_refresh";
 if (defined(&$rfunc)) {
 	&$rfunc($server, $regen);
 	}
 
 # Call any host-type-specific post-refresh function
 foreach my $p (&is_parent_server($server)) {
-	local $rfunc = "type_".$p."_post_host_refresh";
+	my $rfunc = "type_".$p."_post_host_refresh";
 	if (defined(&$rfunc)) {
 		&$rfunc($server, $regen);
 		}
@@ -1913,12 +1913,12 @@ return $rv;
 # on the system.
 sub compute_ip_addresses
 {
-local ($server) = @_;
+my ($server) = @_;
 if ($server->{'status'} ne 'nohost') {
-	local $cfunc = "type_".$server->{'manager'}."_can_interfaces";
+	my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 	if (defined(&$cfunc) && &$cfunc($server)) {
-		local $ifunc = "type_".$server->{'manager'}."_list_interfaces";
-		local $ifaces = &$ifunc($server);
+		my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+		my $ifaces = &$ifunc($server);
 		if (ref($ifaces)) {
 			$server->{'ip_addresses'} = join(" ",
 				map { $_->{'address'} } @$ifaces);
@@ -1931,7 +1931,7 @@ if ($server->{'status'} ne 'nohost') {
 # Adds to the cached list of IP addresses
 sub add_ip_address
 {
-local ($server, $ip) = @_;
+my ($server, $ip) = @_;
 $server->{'ip_addresses'} = join(" ",
 	&unique(split(/\s+/, $server->{'ip_addresses'}), $ip));
 }
@@ -1940,7 +1940,7 @@ $server->{'ip_addresses'} = join(" ",
 # Removes from the cached list of IP addresses
 sub delete_ip_address
 {
-local ($server, $ip) = @_;
+my ($server, $ip) = @_;
 $server->{'ip_addresses'} = join(" ",
 	grep { $_ ne $ip } split(/\s+/, $server->{'ip_addresses'}));
 }
@@ -1949,7 +1949,7 @@ $server->{'ip_addresses'} = join(" ",
 # Writes out the list of domains hosted by some server
 sub save_server_domains
 {
-local ($server, $doms) = @_;
+my ($server, $doms) = @_;
 if (!-d $server_domains_dir) {
 	&make_dir($server_domains_dir, 0700);
 	}
@@ -1963,12 +1963,12 @@ $get_server_domains_cache{$server->{'id'}} = $doms;
 # Returns an array of domain objects from some server
 sub get_server_domains
 {
-local ($server) = @_;
+my ($server) = @_;
 if (!$get_server_domains_cache{$server->{'id'}}) {
-	local $ddata = &read_file_contents(
+	my $ddata = &read_file_contents(
 			"$server_domains_dir/$server->{'id'}");
 	return ( ) if (!$ddata);	# Not collected yet?
-	local $doms = &unserialise_variable($ddata);
+	my $doms = &unserialise_variable($ddata);
 	$get_server_domains_cache{$server->{'id'}} = $doms;
 	}
 return @{$get_server_domains_cache{$server->{'id'}}};
@@ -1978,7 +1978,7 @@ return @{$get_server_domains_cache{$server->{'id'}}};
 # Writes out the status information collected from some server
 sub save_server_collected
 {
-local ($server, $info) = @_;
+my ($server, $info) = @_;
 if (!-d $server_collected_dir) {
 	&make_dir($server_collected_dir, 0700);
 	}
@@ -2000,12 +2000,12 @@ else {
 # Returns the hash ref of collected stats info from some server
 sub get_server_collected
 {
-local ($server) = @_;
+my ($server) = @_;
 return $get_server_collected_cache{$server->{'id'}}
 	if ($get_server_collected_cache{$server->{'id'}});
-local $idata = &read_file_contents("$server_collected_dir/$server->{'id'}");
+my $idata = &read_file_contents("$server_collected_dir/$server->{'id'}");
 return undef if (!$idata);	# Not collected yet?
-local $rv = &unserialise_variable($idata);
+my $rv = &unserialise_variable($idata);
 $get_server_collected_cache{$server->{'id'}} = $rv;
 return $rv;
 }
@@ -2015,11 +2015,11 @@ return $rv;
 # Returns an array of the return values from the functions in those processes.
 sub parallel_server_function
 {
-local ($servers, $func, $args) = @_;
+my ($servers, $func, $args) = @_;
 
 # Build 10 buckets
-local @buckets;
-local $procs = $config{'procs'};
+my @buckets;
+my $procs = $config{'procs'};
 for(my $i=0; $i<@$servers; $i++) {
 	push(@{$buckets[$i % $procs]}, $servers->[$i]);
 	}
@@ -2029,9 +2029,9 @@ my $resdir = &transname();
 &make_dir($resdir, 0700);
 
 # Fork 10 processes, each doing a bucket
-local @pids;
+my @pids;
 for(my $i=0; $i<$procs; $i++) {
-	local @bservers = @{$buckets[$i]};
+	my @bservers = @{$buckets[$i]};
 	next if (!@bservers);
 	if (!($pid = fork())) {
 		foreach my $server (@bservers) {
@@ -2047,7 +2047,7 @@ for(my $i=0; $i<$procs; $i++) {
 
 # Wait for them all
 while(@pids) {
-	local $pid = wait();
+	my $pid = wait();
 	@pids = grep { $_ ne $pid } @pids;
 	}
 
@@ -2070,8 +2070,8 @@ return @rv;
 # Checks the status of multiple servers in 10 (by default) processes
 sub parallel_check_server_status
 {
-local ($servers, $regen, $skiplock) = @_;
-local $time = time();
+my ($servers, $regen, $skiplock) = @_;
+my $time = time();
 return &parallel_server_function($servers,
 	sub { if (!$skiplock || !&test_lock_server($_[0])) {
 	        &check_server_status($_[0], $regen, 0, $time);
@@ -2092,12 +2092,12 @@ return &parallel_server_function($servers,
 # packages and error fields.
 sub parallel_install_package_updates
 {
-local ($servers) = @_;
+my ($servers) = @_;
 return &parallel_server_function($servers,
 	sub { my $info = &get_server_collected($_[0]);
 	      my @allgot;
 	      foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
-	          local $got = &install_package_update($_[0], $p);
+	          my $got = &install_package_update($_[0], $p);
 		  my $status = { 'name' => $p->{'name'},
 				 'version' => $p->{'version'} };
 		  if (ref($got)) {
@@ -2123,7 +2123,7 @@ return &parallel_server_function($servers,
 # Tell some server to refresh its list of installed packages
 sub refresh_server_updates
 {
-local ($server, $got) = @_;
+my ($server, $got) = @_;
 &remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
 &remote_foreign_call($server, "virtual-server",
 		     "refresh_possible_packages", $got);
@@ -2133,17 +2133,17 @@ local ($server, $got) = @_;
 # Returns HTML for a link to edit a domain on some server
 sub domain_link
 {
-local ($s, $d) = @_;
-local $prot = $s->{'ssl'} ? 'https' : 'http';
-local $target;
+my ($s, $d) = @_;
+my $prot = $s->{'ssl'} ? 'https' : 'http';
+my $target;
 if ($s->{'id'} == 0) {
 	# Link to Virtualmin on this server
 	$url = "../virtual-server/edit_domain.cgi?dom=$d->{'id'}";
 	}
 else {
 	# On another server
-	local $info = &get_server_collected($s);
-	local $path;
+	my $info = &get_server_collected($s);
+	my $path;
 	if ($info->{'general'}->{'theme'} eq 'virtual-server-theme' &&
 	    $info->{'general'}->{'tinfo'}->{'version'} >= 4.01) {
 		# Can link using theme's domain display mode
@@ -2169,8 +2169,8 @@ return "<a href='$url' ".($target ? "target=$target" : "").
 
 sub webmin_link
 {
-local ($server) = @_;
-local $prot = $server->{'ssl'} ? 'https' : 'http';
+my ($server) = @_;
+my $prot = $server->{'ssl'} ? 'https' : 'http';
 if ($config{'link_mode'} == 1) {
 	return "$prot://$server->{'host'}:$server->{'port'}/";
 	}
@@ -2184,13 +2184,13 @@ else {
 # all the output. For this server, just run the .pl script directly.
 sub call_virtualmin_api
 {
-local ($server, $prog, $args) = @_;
-local ($out, $ex);
+my ($server, $prog, $args) = @_;
+my ($out, $ex);
 
 if ($server->{'id'} == 0) {
 	# Local .. so we can just run the program
-	local $mrd = &module_root_directory("virtual-server");
-	local $cmd = "$mrd/$prog.pl";
+	my $mrd = &module_root_directory("virtual-server");
+	my $cmd = "$mrd/$prog.pl";
 	foreach my $a (@$args) {
 		$cmd .= " --$a->[0]";
 		if (defined($a->[1])) {
@@ -2204,11 +2204,11 @@ if ($server->{'id'} == 0) {
 	}
 else {
 	# Remote .. make HTTP call to Webmin
-	local $path = "/virtual-server/remote.cgi?program=$prog";
+	my $path = "/virtual-server/remote.cgi?program=$prog";
 	foreach my $a (@$args) {
 		$path .= "&".&urlize($a->[0])."=".&urlize($a->[1]);
 		}
-	local $herr;
+	my $herr;
 	&http_download($server->{'host'}, $server->{'port'}, $path, \$out,
 		       \$herr, undef, $server->{'ssl'}, $server->{'user'},
 		       $server->{'pass'}, 60, 0, 1);
@@ -2227,8 +2227,8 @@ else {
 $out =~ s/\s+$//g;
 if ($ex) {
 	# Work out error message
-	local @lines = grep { /\S/ } split(/\r?\n/, $out);
-	local $err;
+	my @lines = grep { /\S/ } split(/\r?\n/, $out);
+	my $err;
 	if ($out =~ /usage:|\nvirtualmin\s/i) {
 		# First line, before usage message
 		$err = $lines[0];
@@ -2246,7 +2246,7 @@ else {
 
 sub get_server_blocksize
 {
-local ($server) = @_;
+my ($server) = @_;
 return 1024;	# Guess for now
 }
 
@@ -2255,14 +2255,14 @@ return 1024;	# Guess for now
 # packages installed, or an error message
 sub install_package_update
 {
-local ($server, $p) = @_;
+my ($server, $p) = @_;
 $last_remote_error = undef;
 &remote_foreign_require($server, "security-updates", "security-updates-lib.pl");
-local $func = &remote_eval($server, "security-updates",
+my $func = &remote_eval($server, "security-updates",
 			   'defined(&capture_function_output_tempfile)') ?
 				"capture_function_output_tempfile" :
 				"capture_function_output";
-local ($out, $rv) = &remote_foreign_call($server, "security-updates",
+my ($out, $rv) = &remote_foreign_call($server, "security-updates",
 		$func, "security_updates::package_install",
 		$p->{'update'} || $p->{'name'}, $p->{'system'});
 if ($last_remote_error) {
@@ -2280,7 +2280,7 @@ else {
 # Prints a form for confirming some action
 sub show_confirm_form
 {
-local ($msg, $cgi, $hiddens, $ok, $post) = @_;
+my ($msg, $cgi, $hiddens, $ok, $post) = @_;
 print "<center>\n";
 print &ui_form_start($cgi, "post");
 foreach my $h (@$hiddens) {
@@ -2297,8 +2297,8 @@ print "</center>\n";
 # message on failure.
 sub shutdown_server
 {
-local ($server, $force) = @_;
-local $sfunc = "type_".$server->{'manager'}."_shutdown";
+my ($server, $force) = @_;
+my $sfunc = "type_".$server->{'manager'}."_shutdown";
 if (defined(&$sfunc)) {
 	# Type provides a shutdown function
 	return &$sfunc($server, $force);
@@ -2307,15 +2307,15 @@ elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Can use Webmin API call
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "init", "init-lib.pl");
-	local $iconfig = &remote_foreign_config($server, "init");
+	my $iconfig = &remote_foreign_config($server, "init");
 	&remote_foreign_call($server, "init", "execute_command",
 			     $iconfig->{'shutdown_command'});
 	return $last_remote_error;
 	}
 else {
 	# Need to try SSHing in
-	local %iconfig = &foreign_config("init");
-	local ($out, $ex, $err) = &execute_command_on_server($server,
+	my %iconfig = &foreign_config("init");
+	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"$iconfig{'shutdown_command'} || shutdown now || shutdown -i 5 -g 0 -y");
 	return $err ? $err : $ex ? $out : undef;
 	}
@@ -2326,8 +2326,8 @@ else {
 # message on failure.
 sub reboot_server
 {
-local ($server) = @_;
-local $rfunc = "type_".$server->{'manager'}."_reboot";
+my ($server) = @_;
+my $rfunc = "type_".$server->{'manager'}."_reboot";
 if (defined(&$rfunc)) {
 	# Type provides a reboot function
 	return &$rfunc($server);
@@ -2336,15 +2336,15 @@ elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Can use Webmin API call
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "init", "init-lib.pl");
-	local $iconfig = &remote_foreign_config($server, "init");
+	my $iconfig = &remote_foreign_config($server, "init");
 	&remote_foreign_call($server, "init", "execute_command",
 			     $iconfig->{'reboot_command'});
 	return $last_remote_error;
 	}
 else {
 	# Need to try SSHing in
-	local %iconfig = &foreign_config("init");
-	local ($out, $ex, $err) = &execute_command_on_server($server,
+	my %iconfig = &foreign_config("init");
+	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"$iconfig{'reboot_command'} || shutdown -r now || reboot");
 	return $err ? $err : $ex ? $out : undef;
 	}
@@ -2356,17 +2356,17 @@ else {
 # message.
 sub startup_server
 {
-local ($server) = @_;
-local $sfunc = "type_".$server->{'manager'}."_startup";
-local ($ok, $err) = &$sfunc($server);
+my ($server) = @_;
+my $sfunc = "type_".$server->{'manager'}."_startup";
+my ($ok, $err) = &$sfunc($server);
 return ($ok, $err) if (!$ok);
 
 # If the server has Webmin, wait for it to come up
 if ($server->{'user'} && $ok != 2) {
-	local $start = time();
+	my $start = time();
 	while(time() - $start < 60) {
 		sleep(1);
-		local $werr;
+		my $werr;
 		alarm(5);
 		eval {
 			local $SIG{'ALRM'} = sub { die "timeout\n" };
@@ -2386,7 +2386,7 @@ return (1, undef);
 
 sub server_in
 {
-local ($server) = @_;
+my ($server) = @_;
 #return &text('server_in', "<tt>$server->{'host'}</tt>");
 return "<tt>$server->{'host'}</tt>";
 }
@@ -2396,18 +2396,18 @@ return "<tt>$server->{'host'}</tt>";
 # for RPM or Debian packages.
 sub get_install_webmin_source
 {
-local ($server) = @_;
-local $type;
+my ($server) = @_;
+my $type;
 
 # Check what package system the host uses
-local ($type, $update, $os) = &get_server_package_system($server);
+my ($type, $update, $os) = &get_server_package_system($server);
 if (!$type || $type eq "pkgadd") {
 	# Don't use Solaris package of Webmin, as upgrading sucks
 	$type = "tgz";
 	}
 
 # Work out download URL
-local $source = $config{'download_'.$type} ||
+my $source = $config{'download_'.$type} ||
 		$webmin_download_source{$type};
 return ($source, $type, undef);
 }
@@ -2417,16 +2417,16 @@ return ($source, $type, undef);
 # Returns the output and an error message on failure.
 sub install_webmin_server
 {
-local ($server, $src, $type, $setpass) = @_;
-local ($out, $ex, $err);
+my ($server, $src, $type, $setpass) = @_;
+my ($out, $ex, $err);
 $src =~ /\/([^\/]+)$/;
-local $temp = "/tmp/$1";
-local $rootdir;
+my $temp = "/tmp/$1";
+my $rootdir;
 
 # Try to install Perl and other dependencies
 if (!&has_command_on_server($server, "perl") ||
     !&has_command_on_server($server, "wget")) {
-	local ($pstatus, $pout) = &install_package_on_server($server,
+	my ($pstatus, $pout) = &install_package_on_server($server,
 							     "perl", "wget");
 	if (!$pstatus && $pout) {
 		return ($pout, "Failed to install required packages");
@@ -2437,12 +2437,12 @@ if (!&has_command_on_server($server, "perl") ||
 	}
 
 # Make sure the system has Perl
-local $perlpath = &has_command_on_server($server, "perl");
+my $perlpath = &has_command_on_server($server, "perl");
 $perlpath || return (undef, "Perl is not installed");
 
 if ($type eq "rpm") {
 	# RPM install direct from the URL
-	local ($wout, $wex, $werr) = &execute_command_on_server($server,
+	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 		"rm -f $temp && wget -nv -O $temp $src && rpm -U --nodeps $temp && rm -f $temp");
 	return (undef, $werr) if ($werr);
 	return ($wout, "RPM failed") if ($wex);
@@ -2452,7 +2452,7 @@ if ($type eq "rpm") {
 
 elsif ($type eq "dpkg") {
 	# Download the deb and install it
-	local ($wout, $wex, $werr) = &execute_command_on_server($server,
+	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 		"rm -f $temp && wget -nv -O $temp $src && dpkg --install --force-depends $temp && rm -f $temp");
 	return (undef, $werr) if ($werr);
 	return ($wout, "Debian package failed") if ($wex);
@@ -2460,7 +2460,7 @@ elsif ($type eq "dpkg") {
 	$out .= $wout;
 
 	# Satisfy any Debian dependencies created by Webmin, if possible
-	local ($dout, $dex, $derr) = &execute_command_on_server($server,
+	my ($dout, $dex, $derr) = &execute_command_on_server($server,
 		"apt-get update ; apt-get -y -f --force-yes install </dev/null | cat");
 	if (!$dex) {
 		$out .= $dout;
@@ -2472,22 +2472,22 @@ elsif ($type eq "tgz" || $type eq "pkgadd") {
 	# password, we can configure Webmin to use it .. otherwise, the 
 	# password will be set later in the function.
 	$server->{'user'} = 'root';
-	local $crypt = $server->{'ssh_pass'} ? 'x' : 'fixlater';
-	local $basedir = $server->{'manager'} eq 'zones' ? "/opt"
+	my $crypt = $server->{'ssh_pass'} ? 'x' : 'fixlater';
+	my $basedir = $server->{'manager'} eq 'zones' ? "/opt"
 							 : "/usr/local";
 	$rootdir = "$basedir/webmin";
-	local ($wout, $wex, $werr) = &execute_command_on_server($server,
+	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 	    "wget -nv -O $temp $src && mkdir -p $basedir && cd $basedir && gunzip -c $temp | tar xf - && echo webmin-*/version && rm -f $temp");
 	return (undef, $werr) if ($werr);
 	return ($wout, "Tar file download or extraction failed") if ($wex);
-	local $tardir;
+	my $tardir;
 	if ($wout =~ /(webmin-([0-9\.]+))\/version/) {
 		$tardir = $1;
 		}
 	else {
 		return ($wout, "Tar extraction failed");
 		}
-	local ($wout, $wex, $werr) = &execute_command_on_server($server,
+	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 		"config_dir=/etc/webmin var_dir=/var/webmin perl=$perlpath autoos=3 port=10000 login=root crypt=$crypt ssl=0 atboot=1 $basedir/$tardir/setup.sh $rootdir </dev/null");
 	&execute_command_on_server($server, "rm -rf $basedir/$tardir");
 	return (undef, $werr) if ($werr);
@@ -2500,7 +2500,7 @@ else {
 	}
 
 # Get details of the new Webmin
-local ($sshstatus, $ssherr, $wroot, $wport, $wssl) =
+my ($sshstatus, $ssherr, $wroot, $wport, $wssl) =
 	&check_server_ssh_login($server);
 $server->{'port'} = $wport || 10000;
 $server->{'ssl'} = $wssl;
@@ -2517,7 +2517,7 @@ if ($setpass) {
 		# Need to set, since RPM and Deb installs by default use the
 		# real root password, which we don't know
 		$server->{'pass'} ||= &generate_random_password();
-		local $perr = &set_server_webmin_password(
+		my $perr = &set_server_webmin_password(
 				$server, $rootdir, "root", $server->{'pass'});
 		if ($perr) {
 			$out .= "\nFailed to set Webmin password : $perr\n";
@@ -2526,13 +2526,13 @@ if ($setpass) {
 	}
 
 # Call type-specific post configuration function
-local $wfunc = "type_".$server->{'manager'}."_post_webmin";
+my $wfunc = "type_".$server->{'manager'}."_post_webmin";
 if (defined(&$wfunc)) {
 	&$wfunc($server, $wroot, $wport, $wssl);
 	}
 
 # Make sure Webmin is running OK, and get the OS
-local ($wstatus, $werr, $wos, $wrealos) = &check_server_webmin_login($server);
+my ($wstatus, $werr, $wos, $wrealos) = &check_server_webmin_login($server);
 if ($wstatus == 0) {
 	$server->{'type'} = &os_to_server_type($wos, $wrealos);
 	}
@@ -2549,11 +2549,11 @@ return ($out, undef, $wroot);
 # if OK, or the last error message on timeout.
 sub wait_webmin_server
 {
-local ($server, $timeout) = @_;
-local $start = time();
-local $err;
+my ($server, $timeout) = @_;
+my $start = time();
+my $err;
 while(time() - $start < $timeout) {
-	local $fh = "WEBMINSOCK";
+	my $fh = "WEBMINSOCK";
 	if (&open_socket($server->{'host'}, $server->{'port'}, $fh, \$err)) {
 		close($fh);
 		return undef;
@@ -2566,7 +2566,7 @@ return $err;
 sub generate_random_password
 {
 &seed_random();
-local $pass;
+my $pass;
 while(length($pass) < 8) {
 	$pass .= chr(int(rand()*26)+97);
 	}
@@ -2577,8 +2577,8 @@ return $pass;
 # Change the Webmin password on some server
 sub set_server_webmin_password
 {
-local ($server, $webmindir, $user, $pass) = @_;
-local ($pout, $pex, $perr) = &execute_command_on_server($server,
+my ($server, $webmindir, $user, $pass) = @_;
+my ($pout, $pex, $perr) = &execute_command_on_server($server,
 	"$webmindir/changepass.pl /etc/webmin $user ".quotemeta($pass));
 return $perr ? $perr : $pex ? $pout : undef;
 }
@@ -2587,19 +2587,19 @@ return $perr ? $perr : $pex ? $pout : undef;
 # Sets the password for some user in Webmin to an encrypted string
 sub set_server_webmin_password_crypt
 {
-local ($server, $user, $crypted) = @_;
+my ($server, $user, $crypted) = @_;
 
 # Get the miniserv.users file
-local $passfile = "/etc/webmin/miniserv.users";
-local $temp = &transname();
-local $err = &get_file_from_server($server, $passfile, $temp);
+my $passfile = "/etc/webmin/miniserv.users";
+my $temp = &transname();
+my $err = &get_file_from_server($server, $passfile, $temp);
 return $err if ($err);
 
 # Patch the line for the user
-local $found;
-local $lref = &read_file_lines($temp);
+my $found;
+my $lref = &read_file_lines($temp);
 foreach my $l (@$lref) {
-	local @w = split(/:/, $l);
+	my @w = split(/:/, $l);
 	if ($w[0] eq $user) {
 		$w[1] = $crypted;
 		$l = join(':', @w);
@@ -2610,14 +2610,14 @@ foreach my $l (@$lref) {
 $found || return "Webmin user $user does not exist";
 
 # Upload to server
-local $err = &put_file_to_server($server, $temp, $passfile);
+my $err = &put_file_to_server($server, $temp, $passfile);
 return $err if ($err);
 
 # Update Webmin to apply the change
 if ($server->{'status'} eq 'virt' ||
     $server->{'status'} eq 'novirt' ||
     $server->{'status'} eq 'nowebminlogin') {
-	local ($out, $ex, $err) = &execute_command_on_server($server,
+	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"kill -USR1 `cat /var/webmin/miniserv.pid`");
 	return $err if ($err);
 	return "Failed to reload Webmin : $out" if ($ex);
@@ -2630,13 +2630,13 @@ return undef;
 # Returns a list of other servers that depend on this one
 sub find_server_dependencies
 {
-local @allservers = &list_managed_servers();
-local @rv;
+my @allservers = &list_managed_servers();
+my @rv;
 foreach my $server (@_) {
 	foreach my $t (@server_management_types) {
-		local $dfunc = "type_".$t."_depends";
+		my $dfunc = "type_".$t."_depends";
 		if (defined(&$dfunc)) {
-			push(@rv, grep { local $_;
+			push(@rv, grep { my $_;
 					 $_->{'id'} != $server->{'id'} &&
 					 &$dfunc($server, $_) } @allservers);
 			}
@@ -2650,15 +2650,15 @@ return @rv;
 # and a CIDR. If not IP could be allocated, returns undef.
 sub allocate_ip_address
 {
-local ($startips, $endips, $cidrs, $ifaces, $wantiface) = @_;
-local @startips = split(/\s+/, $startips);
-local @endips = split(/\s+/, $endips);
-local @cidrs = split(/\s+/, $cidrs);
-local @ifaces = split(/\s+/, $ifaces);
-local %used = &used_ip_addresses();
+my ($startips, $endips, $cidrs, $ifaces, $wantiface) = @_;
+my @startips = split(/\s+/, $startips);
+my @endips = split(/\s+/, $endips);
+my @cidrs = split(/\s+/, $cidrs);
+my @ifaces = split(/\s+/, $ifaces);
+my %used = &used_ip_addresses();
 
 # Find out which IPs we might be able to use
-local @poss;
+my @poss;
 for(my $i=0; $i<@startips; $i++) {
 	# If this range is for some host system interface, skip if we aren't
 	# allocating for that interface
@@ -2666,17 +2666,17 @@ for(my $i=0; $i<@startips; $i++) {
 		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
 
 	# Try each IP within the range
-	local $start = &net::ip_to_integer($startips[$i]);
-	local $end = &net::ip_to_integer($endips[$i]);
+	my $start = &net::ip_to_integer($startips[$i]);
+	my $end = &net::ip_to_integer($endips[$i]);
 	for(my $n=$start; $n<=$end; $n++) {
-		local $ip = &net::integer_to_ip($n);
+		my $ip = &net::integer_to_ip($n);
 		push(@poss, { 'id' => $ip, 'ip' => $ip, 'cidr' => $cidrs[$i] })
 			if (!$used{$ip});
 		}
 	}
 
 # Parallel ping them all
-local @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss, 
+my @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss, 
 	sub { my $p = &ping_server_host($_[0]->{'ip'});
 	      return $p ? undef : $_[0] });
 @rvs = sort { &net::ip_to_integer($a->{'ip'}) <=>
@@ -2707,11 +2707,11 @@ return ($count, $used);
 # Turns space-separated strings of ranges into a nicer format
 sub describe_ip_range
 {
-local ($startips, $endips, $cidrs, $ifaces, $wantiface) = @_;
-local @startips = split(/\s+/, $startips);
-local @endips = split(/\s+/, $endips);
-local @ifaces = split(/\s+/, $ifaces);
-local @rv;
+my ($startips, $endips, $cidrs, $ifaces, $wantiface) = @_;
+my @startips = split(/\s+/, $startips);
+my @endips = split(/\s+/, $endips);
+my @ifaces = split(/\s+/, $ifaces);
+my @rv;
 for(my $i=0; $i<@startips; $i++) {
 	# Remove from description IP ranges for interfaces we don't care about
 	next if ($wantiface && $ifaces[$i] ne $wantiface &&
@@ -2721,8 +2721,8 @@ for(my $i=0; $i<@startips; $i++) {
 		push(@rv, $startips[$i]);
 		}
 	else {
-		local @so = split(/\./, $startips[$i]);
-		local @eo = split(/\./, $endips[$i]);
+		my @so = split(/\./, $startips[$i]);
+		my @eo = split(/\./, $endips[$i]);
 		if ($so[0] == $eo[0] && $so[1] == $eo[1] && $so[2] == $eo[2]) {
 			push(@rv, "$so[0].$so[1].$so[2].$so[3]-$eo[3]");
 			}
@@ -2738,7 +2738,7 @@ return join(", ", @rv);
 # Returns a hash of all IP addresses used by managed systems
 sub used_ip_addresses
 {
-local %used;
+my %used;
 foreach my $s (&list_managed_servers()) {
 	# Add IPs from VPS
 	$used{&to_ipaddress($s->{'host'})} = $s;
@@ -2747,7 +2747,7 @@ foreach my $s (&list_managed_servers()) {
 		}
 
 	# Add IPs from last collected from Virtualmin
-	local $coll = &get_server_collected($s);
+	my $coll = &get_server_collected($s);
 	if ($coll && $coll->{'ifaces'}) {
 		foreach my $iface (@{$coll->{'ifaces'}}) {
 			if ($iface->{'address'}) {
@@ -2767,9 +2767,9 @@ return %used;
 # This is taken from Webmin if available, SSH if not.
 sub get_server_package_system
 {
-local ($server) = @_;
-local ($pkg, $update, $os);
-local $cache = $server_package_system_cache{$server->{'id'}};
+my ($server) = @_;
+my ($pkg, $update, $os);
+my $cache = $server_package_system_cache{$server->{'id'}};
 if ($cache) {
 	# Use last checked values
 	return @$cache;
@@ -2807,7 +2807,7 @@ if ((!$os || $os eq 'unknown') && $server->{'manager'} eq 'zones') {
 	}
 if ((!$os || $os eq 'unknown') && $pkg eq "pkgadd") {
 	# Only Solaris has pkgadd
-	local ($out, $ex, $err) = &execute_command_on_server($server,
+	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"uname -s");
 	if ($out =~ /SunOS|Solaris/i) {
 		$os = "solaris";
@@ -2816,7 +2816,7 @@ if ((!$os || $os eq 'unknown') && $pkg eq "pkgadd") {
 if (!$os || $os eq 'unknown') {
 	# Could not get OS, so check useful system files
 	# XXX this should really be done with os_list.txt
-	local ($out, $ex, $err) = &execute_command_on_server($server,
+	my ($out, $ex, $err) = &execute_command_on_server($server,
 	    "(ls /etc/fedora-release /etc/redhat-release /etc/mandrake-release /etc/SuSE-release) 2>/dev/null");
 	if ($out =~ /fedora-release/) {
 		$os = "fedora";
@@ -2860,17 +2860,17 @@ return ($pkg, $update, $os);
 # to Webmin. Returns a status code (0 if failed, 1 if OK) and the output/error.
 sub install_package_on_server
 {
-local ($server, @names) = @_;
-local ($pkg, $update, $os) = &get_server_package_system($server);
+my ($server, @names) = @_;
+my ($pkg, $update, $os) = &get_server_package_system($server);
 
 # Try to use the software module to resolve names
-local $lib = &module_root_directory("software")."/".$update."-lib.pl";
+my $lib = &module_root_directory("software")."/".$update."-lib.pl";
 if (-r $lib) {
 	if (!$done_require{$lib}++) {
 		require $lib;
 		}
 	if (defined(&update_system_resolve)) {
-		local @newnames;
+		my @newnames;
 		foreach my $n (@names) {
 			push(@newnames,
 			     split(/\s+/, &update_system_resolve($n)));
@@ -2879,17 +2879,17 @@ if (-r $lib) {
 		}
 	}
 
-local $names = join(" ", map { quotemeta($_) } @names);
+my $names = join(" ", map { quotemeta($_) } @names);
 if ($update eq "apt") {
 	# Use apt-get
 	&execute_command_on_server($server, "apt-get update");
-	local ($pout, $pex, $perr) = &execute_command_on_server(
+	my ($pout, $pex, $perr) = &execute_command_on_server(
 		$server, "apt-get -y -f --force-yes install $names </dev/null | cat");
 	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
 	}
 elsif ($update eq "yum") {
 	# Use YUM
-	local ($pout, $pex, $perr) = &execute_command_on_server(
+	my ($pout, $pex, $perr) = &execute_command_on_server(
 		$server, "yum -y install $names </dev/null");
 	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
 	}
@@ -2899,7 +2899,7 @@ elsif ($update eq "csw") {
 	    $server, "cp -p /var/pkg-get/admin /var/pkg-get/admin-old");
 	&execute_command_on_server(
 	    $server, "cp -p /var/pkg-get/admin-fullauto /var/pkg-get/admin");
-	local ($pout, $pex, $perr) = &execute_command_on_server(
+	my ($pout, $pex, $perr) = &execute_command_on_server(
 		$server, "pkg-get -i $names </dev/null");
 	&execute_command_on_server(
 	    $server, "cp -p /var/pkg-get/admin-old /var/pkg-get/admin");
@@ -2917,10 +2917,10 @@ else {
 # failure.
 sub install_virtualmin_server
 {
-local ($server, $setpass, $serial, $key) = @_;
+my ($server, $setpass, $serial, $key) = @_;
 
 # Check for a supported OS
-local ($pkg, $update, $os) = &get_server_package_system($server);
+my ($pkg, $update, $os) = &get_server_package_system($server);
 if ($pkg ne "rpm" && $pkg ne "dpkg" && $pkg ne "pkgadd") {
 	return $text{'virtualmin_epkg'};
 	}
@@ -2932,9 +2932,9 @@ if (!$os || $os eq "unknown") {
 	return $text{'virtualmin_eos'};
 	}
 if (&indexof($os, @virtualmin_operating_systems) < 0) {
-	local ($osinfo) = grep { $_->[0] eq $os } @servers::server_types;
+	my ($osinfo) = grep { $_->[0] eq $os } @servers::server_types;
 	foreach my $s (@virtualmin_operating_systems) {
-		local ($sosinfo) = grep { $_->[0] eq $s }
+		my ($sosinfo) = grep { $_->[0] eq $s }
 					@servers::server_types;
 		push(@supp, $sosinfo->[1]);
 		}
@@ -2946,8 +2946,8 @@ if (!$serial) {
 	}
 
 # Download the installer
-local $itemp = &transname("virtualmin-install.sh");
-local $error;
+my $itemp = &transname("virtualmin-install.sh");
+my $error;
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
 	       $serial eq "GPL" ?
@@ -2962,35 +2962,35 @@ if ($error) {
 &set_ownership_permissions(undef, undef, 0755, $itemp);
 
 # Transfer over the install script
-local $script = "/virtualmin-install.sh";
-local $err = &put_file_to_server($server, $itemp, $script);
+my $script = "/virtualmin-install.sh";
+my $err = &put_file_to_server($server, $itemp, $script);
 unlink($itemp);
 return &text('virtualmin_ecopy', $err) if ($err);
 
 # Call type-specific pre function
-local $pfunc = "type_".$server->{'manager'}."_pre_virtualmin";
+my $pfunc = "type_".$server->{'manager'}."_pre_virtualmin";
 if (defined(&$pfunc)) {
-	local $err = &$pfunc($server, $pkg, $update, $os, $script);
+	my $err = &$pfunc($server, $pkg, $update, $os, $script);
 	return $err if ($err);
 	}
 
 # Install perl, wget and fuser, if needed
 if (!&has_command_on_server($server, "wget")) {
-	local ($wok, $werr) = &install_package_on_server($server, "wget");
+	my ($wok, $werr) = &install_package_on_server($server, "wget");
 	if (!$wok) {
 		return $werr ? &text('virtualmin_ewget', $werr, "wget") :
 			       $text{'virtualmin_ewget2', "wget"};
 		}
 	}
 if (!&has_command_on_server($server, "perl")) {
-	local ($wok, $werr) = &install_package_on_server($server, "perl");
+	my ($wok, $werr) = &install_package_on_server($server, "perl");
 	if (!$wok) {
 		return $werr ? &text('virtualmin_ewget', $werr, "perl") :
 			       $text{'virtualmin_ewget2', "perl"};
 		}
 	}
 if (!&has_command_on_server($server, "fuser")) {
-	local ($wok, $werr) = &install_package_on_server($server, "psmisc");
+	my ($wok, $werr) = &install_package_on_server($server, "psmisc");
 	if (!$wok) {
 		return $werr ? &text('virtualmin_ewget', $werr, "wget") :
 			       $text{'virtualmin_ewget2', "wget"};
@@ -2998,9 +2998,9 @@ if (!&has_command_on_server($server, "fuser")) {
 	}
 
 # Run the install script, capturing output to a file
-local $temp = "/tmp/virtualmin-install.out";
+my $temp = "/tmp/virtualmin-install.out";
 $server->{'virtualmin_temp'} = $temp;
-local ($out, $ex, $err) = &execute_command_on_server($server,
+my ($out, $ex, $err) = &execute_command_on_server($server,
 	"chmod +x $script ; ((echo y ; echo $server->{'host'}) | $script && echo SERVER-MANAGER-COMPLETE) >$temp 2>&1 &");
 
 return undef;
@@ -3011,12 +3011,12 @@ return undef;
 # when done, undef if still waiting, or an error message on failure.
 sub install_virtualmin_server_done
 {
-local ($server) = @_;
+my ($server) = @_;
 
 # Check if the installer is still running
-local $temp = $server->{'virtualmin_temp'};
-local ($out) = &execute_command_on_server($server, "fuser $temp");
-local @pids;
+my $temp = $server->{'virtualmin_temp'};
+my ($out) = &execute_command_on_server($server, "fuser $temp");
+my @pids;
 while($out =~ /(\d+)(.*)/) {
 	push(@pids, $1);
 	$out = $2;
@@ -3027,11 +3027,11 @@ if (@pids) {
 	}
 
 # Remove the install script
-local $script = "/virtualmin-install.sh";
+my $script = "/virtualmin-install.sh";
 &execute_command_on_server($server, "rm -f ".quotemeta($script));
 
 # Done .. but did it work?
-local ($tout, $tex, $terr) = &execute_command_on_server($server,
+my ($tout, $tex, $terr) = &execute_command_on_server($server,
 				"tail -20 $temp ; rm -f $temp");
 if ($tout !~ s/SERVER-MANAGER-COMPLETE//) {
 	# Looks like it didn't ..
@@ -3039,7 +3039,7 @@ if ($tout !~ s/SERVER-MANAGER-COMPLETE//) {
 	}
 
 # Make sure it REALLY got installed, by looking for Webmin
-local ($sstatus, $serr, $webminroot, $webminport, $webminssl) =
+my ($sstatus, $serr, $webminroot, $webminport, $webminssl) =
 	&check_server_ssh_login($server);
 if (!$webminroot) {
 	return "<pre>".&html_escape($tout)."</pre>";
@@ -3048,7 +3048,7 @@ $server->{'port'} = $webminport;
 $server->{'ssl'} = $webminssl;
 
 # And check for Virtualmin root
-local ($out, $ex, $err) = &execute_command_on_server($server,
+my ($out, $ex, $err) = &execute_command_on_server($server,
 				"cat $webminroot/virtual-server/module.info");
 if ($ex) {
 	return $text{'virtual_evirtualmincheck'};
@@ -3062,7 +3062,7 @@ if ($server->{'ssh_pass'}) {
 	}
 else {
 	$server->{'pass'} ||= &generate_random_password();
-	local $perr = &set_server_webmin_password(
+	my $perr = &set_server_webmin_password(
 			$server, $webminroot, "root", $server->{'pass'});
 	if ($perr) {
 		return &text('virtualmin_epass', $perr);
@@ -3071,7 +3071,7 @@ else {
 
 # At end, do a config check
 &remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
-local $cerr = &remote_foreign_call($server, "virtual-server",
+my $cerr = &remote_foreign_call($server, "virtual-server",
 				   "check_virtual_server_config");
 if ($cerr) {
 	$server->{'virtualmin_checked'} = 0;
@@ -3082,9 +3082,9 @@ else {
 	}
 
 # Call type-specific post function
-local $pfunc = "type_".$server->{'manager'}."_post_virtualmin";
+my $pfunc = "type_".$server->{'manager'}."_post_virtualmin";
 if (defined(&$pfunc)) {
-	local $perr = &$pfunc($server, $pkg, $update, $os);
+	my $perr = &$pfunc($server, $pkg, $update, $os);
 	return $perr if ($perr);
 	}
 
@@ -3093,9 +3093,9 @@ return "OK";
 
 sub licence_error_message
 {
-local ($lstatus, $lexpiry, $lerr, $lservers) = &check_server_manager_licence();
+my ($lstatus, $lexpiry, $lerr, $lservers) = &check_server_manager_licence();
 return undef if (!$lerr);
-local $rv = "<table width=100%><tr bgcolor=#ff8888><td align=center>";
+my $rv = "<table width=100%><tr bgcolor=#ff8888><td align=center>";
 $rv .= "<b>".$text{'licence_err'}."</b><br>\n";
 $rv .= $lerr."\n";
 if (&can_licence()) {
@@ -3113,7 +3113,7 @@ return $rv;
 # from Cron is used.
 sub check_server_manager_licence
 {
-local %licence;
+my %licence;
 &read_file_cached($licence_status, \%licence);
 if (time() - $licence{'last'} > 3*24*60*60) {
 	# Hasn't been checked from cron for 3 days .. do it now
@@ -3129,12 +3129,12 @@ return ($licence{'status'}, $licence{'expiry'},
 # hostname.
 sub get_host_id
 {
-local $id;
+my $id;
 if (&has_command("hostid")) {
 	chop($id = `hostid 2>/dev/null`);
 	}
 if (!$id) {
-	local ($iface) = grep { $_->{'fullname'} eq $config{'iface'} }
+	my ($iface) = grep { $_->{'fullname'} eq $config{'iface'} }
 			      &net::active_interfaces();
 	$id = $iface->{'ether'} if ($iface);
 	}
@@ -3148,13 +3148,13 @@ return $id;
 # Checks the licence file, and tries to phone home
 sub update_server_manager_licence
 {
-local ($licence) = @_;
+my ($licence) = @_;
 $licence->{'expiry'} = undef;
 $licence->{'servers'} = 0;
 $licence->{'last'} = time();
 
 # Do we have a licence file?
-local ($serial, $key) = &get_server_manager_serial();
+my ($serial, $key) = &get_server_manager_serial();
 if (!$serial || !$key) {
 	# No!
 	$licence->{'status'} = 1;
@@ -3163,10 +3163,10 @@ if (!$serial || !$key) {
 	}
 
 # Work out a host ID, from the hostid command or MAC address or hostname
-local $id = &get_host_id();
+my $id = &get_host_id();
 
 # Phone home to see if it is valid
-local ($status, $err, $expiry, $servers) =
+my ($status, $err, $expiry, $servers) =
 	&licence_scheduled($id, $serial, $key);
 $licence->{'status'} = $status;
 $licence->{'err'} = $err;
@@ -3181,8 +3181,8 @@ if ($status == 0) {
 # Returns the status code, error message, expiry date and max servers
 sub licence_scheduled
 {
-local ($id, $serial, $key) = @_;
-local ($out, $error);
+my ($id, $serial, $key) = @_;
+my ($out, $error);
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
 	       "$vm2_licence_prog?id=$id&serial=$key",
@@ -3210,15 +3210,15 @@ else {
 # Updates a server object with Virtualmin config errors
 sub check_virtualmin_config
 {
-local ($server, $noreq) = @_;
+my ($server, $noreq) = @_;
 if ($server->{'status'} eq 'virt') {
 	if (!$noreq) {
 		&remote_foreign_require($server, "virtual-server",
 						 "virtual-server-lib.pl");
 		}
-	local $cerr = &remote_foreign_call($server, "virtual-server",
+	my $cerr = &remote_foreign_call($server, "virtual-server",
 				   "set_all_null_print");
-	local $cerr = &remote_foreign_call($server, "virtual-server",
+	my $cerr = &remote_foreign_call($server, "virtual-server",
 				   "check_virtual_server_config");
 	$cerr =~ s/<[^>]*>//g;	# Remove HTML
 	$server->{'virtualmin_checked'} = $cerr ? 0 : 1;
@@ -3235,12 +3235,12 @@ else {
 # are 0=none, 1=default IP for Virtualmin, 2=For domain
 sub get_interface_use
 {
-local ($server, $info, $doms, $iface) = @_;
+my ($server, $info, $doms, $iface) = @_;
 if ($iface->{'address'} eq $info->{'defip'}) {
 	return (1, $text{'iface_default'});
 	}
 else {
-	local @ipdoms = grep { $_->{'ip'} eq $iface->{'address'} } @$doms;
+	my @ipdoms = grep { $_->{'ip'} eq $iface->{'address'} } @$doms;
 	if (@ipdoms) {
 		return (2,
 			@ipdoms > 4 ? &text('iface_many', scalar(@ipdoms)) :
@@ -3262,10 +3262,10 @@ else {
 # Add the SSH key selected for this server to root's ~/.ssh/authorized_keys file
 sub create_authorized_key
 {
-local ($server) = @_;
-local ($key) = grep { $_->{'id'} eq $server->{'key'} } &list_ssh_keys();
-local $authkeys = &setup_authorized_keys($server);
-local $temp = &transname();
+my ($server) = @_;
+my ($key) = grep { $_->{'id'} eq $server->{'key'} } &list_ssh_keys();
+my $authkeys = &setup_authorized_keys($server);
+my $temp = &transname();
 &open_tempfile(AUTH, ">$temp");
 &print_tempfile(AUTH, &generate_public_key($key),"\n");
 &close_tempfile(AUTH);
@@ -3277,13 +3277,13 @@ return &put_file_to_server($server, $temp, $authkeys);
 # Ensure that ~/.ssh exists, and return the path to the authorized_keys file
 sub setup_authorized_keys
 {
-local ($server) = @_;
+my ($server) = @_;
 
 # Work out root's home dir
-local $roothome;
-local $data = &get_file_data_from_server($server, "/etc/passwd");
+my $roothome;
+my $data = &get_file_data_from_server($server, "/etc/passwd");
 foreach my $l (split(/\r?\n/, $data)) {
-	local @w = split(/:/, $l);
+	my @w = split(/:/, $l);
 	if ($w[0] eq 'root') {
 		$roothome = $w[5];
 		last;
@@ -3292,10 +3292,10 @@ foreach my $l (split(/\r?\n/, $data)) {
 $roothome ||= "/root";
 
 # Create .ssh dir if missing
-local $sshdir = "$roothome/.ssh";
-local @st = &stat_file_on_server($server, "$sshdir");
+my $sshdir = "$roothome/.ssh";
+my @st = &stat_file_on_server($server, "$sshdir");
 if (!@st) {
-	local $temp = &transname();
+	my $temp = &transname();
 	&make_dir($temp, 0700);
 	&put_file_to_server($server, $temp, $sshdir);
 	}
@@ -3307,7 +3307,7 @@ return "$roothome/.ssh/authorized_keys";
 # Sets the root password for a server by directly editing /etc/shadow
 sub set_shadow_root_password
 {
-local ($server, $pass) = @_;
+my ($server, $pass) = @_;
 
 # If this is an EC2 server, the default SSHd config doesn't allow password-less
 # root logins! Fix that (in advanced, so that the new password works)
@@ -3316,20 +3316,20 @@ if ($server->{'manager'} eq 'ec2') {
 	&execute_command_on_server($server, "killall -HUP sshd");
 	}
 
-local $shadow = &transname();
-local $passfile = "/etc/shadow";
-local $err = &get_file_from_server($server, $passfile, $shadow);
+my $shadow = &transname();
+my $passfile = "/etc/shadow";
+my $err = &get_file_from_server($server, $passfile, $shadow);
 if ($err) {
 	# Perhaps it has /etc/passwd?
 	$passfile = "/etc/passwd";
 	$err = &get_file_from_server($server, $passfile, $shadow);
 	}
 if (!$err) {
-	local $lref = &read_file_lines($shadow);
+	my $lref = &read_file_lines($shadow);
 	foreach my $l (@$lref) {
-		local @w = split(/:/, $l, -1);
+		my @w = split(/:/, $l, -1);
 		if ($w[0] eq "root") {
-			local $salt = substr(time(), -2);
+			my $salt = substr(time(), -2);
 			$w[1] = &unix_crypt($pass, $salt);
 			$l = join(':', @w);
 			}
@@ -3345,8 +3345,8 @@ return $err;
 # Delete root's authorized_keys file from a server
 sub clear_authorized_key
 {
-local ($server) = @_;
-local ($out, $ex, $err) = &execute_command_on_server($server,
+my ($server) = @_;
+my ($out, $ex, $err) = &execute_command_on_server($server,
 				"rm -f .ssh/authorized_keys ; ".
 				"rm -f .ssh/authorized_keys2");
 return $err ? $err : $ex ? $out : undef;
@@ -3356,8 +3356,8 @@ return $err ? $err : $ex ? $out : undef;
 # Returns 1 if there are any extra SSH keys to add for this server
 sub has_addnew_keys
 {
-local ($server) = @_;
-local @keys = grep { $_->{'id'} ne $server->{'key'} && $_->{'addnew'} }
+my ($server) = @_;
+my @keys = grep { $_->{'id'} ne $server->{'key'} && $_->{'addnew'} }
 		   &list_ssh_keys();
 return @keys ? 1 : 0;
 }
@@ -3366,11 +3366,11 @@ return @keys ? 1 : 0;
 # Add extra authorized keys to a new server
 sub addnew_authorized_keys
 {
-local ($server) = @_;
-local $authkeys = &setup_authorized_keys($server);
-local $temp = &transname();
+my ($server) = @_;
+my $authkeys = &setup_authorized_keys($server);
+my $temp = &transname();
 &get_file_from_server($server, $authkeys, $temp);	# OK if missing
-local $missing = -r $temp ? 0 : 1;
+my $missing = -r $temp ? 0 : 1;
 &open_tempfile(AUTH, ">>$temp");
 foreach my $key (grep { $_->{'id'} ne $server->{'key'} && $_->{'addnew'} }
 		      &list_ssh_keys()) {
@@ -3386,17 +3386,17 @@ return &put_file_to_server($server, $temp, $authkeys);
 # an error message if not.
 sub check_domain_move
 {
-local ($serverdoms, $dest, $delete, $direct, $realloc) = @_;
-local @destdoms = &get_server_domains($dest);
-local %sources;
+my ($serverdoms, $dest, $delete, $direct, $realloc) = @_;
+my @destdoms = &get_server_domains($dest);
+my %sources;
 
 foreach my $sd (@$serverdoms) {
-	local ($server, $d) = @$sd;
+	my ($server, $d) = @$sd;
 	$sources{$server->{'id'}} ||= $server;
 	if ($d->{'parent'}) {
 		# This is a sub-server .. either the parent must be on the
 		# target already, or in the list of those to move.
-		local ($pd) = grep { $_->[1]->{'id'} == $d->{'parent'} }
+		my ($pd) = grep { $_->[1]->{'id'} == $d->{'parent'} }
 				   @$serverdoms;
 		if (!$pd) {
 			($pd) = grep { $_->{'id'} == $d->{'parent'} } @destdoms;
@@ -3409,11 +3409,11 @@ foreach my $sd (@$serverdoms) {
 		# This is a top-level server .. all child domains must be
 		# included if in delete mode, or they would be lost
 		if ($delete) {
-			local @srcdoms = &get_server_domains($server);
-			local @children = grep { $_->{'parent'} == $d->{'id'} }
+			my @srcdoms = &get_server_domains($server);
+			my @children = grep { $_->{'parent'} == $d->{'id'} }
 					       @srcdoms;
 			foreach my $cd (@children) {
-				local ($inlist) =
+				my ($inlist) =
 					grep { $_->[1]->{'id'} == $cd->{'id'} }
 					     @$serverdoms;
 				if (!$inlist) {
@@ -3430,11 +3430,11 @@ foreach my $sd (@$serverdoms) {
 		}
 
 	# Check for clash on target
-	local ($idclash) = grep { $_->{'id'} eq $d->{'id'} } @destdoms;
+	my ($idclash) = grep { $_->{'id'} eq $d->{'id'} } @destdoms;
 	if ($idclash) {
 		return &text('dmass_emoveclash', $d->{'dom'});
 		}
-	local ($clash) = grep { $_->{'dom'} eq $d->{'dom'} } @destdoms;
+	my ($clash) = grep { $_->{'dom'} eq $d->{'dom'} } @destdoms;
 	if ($clash) {
 		return &text('dmass_emoveclash2', $d->{'dom'});
 		}
@@ -3451,7 +3451,7 @@ if ($direct) {
 	foreach my $server (values %sources) {
 		next if ($dest->{'ssh_pass'});	# Assume it will work
 		next if ($dest->{'id'} == 0);	# Direct isn't even needed
-		local ($out, $ex, $err) = &execute_command_on_server($server,
+		my ($out, $ex, $err) = &execute_command_on_server($server,
 			"ssh -o PasswordAuthentication=no -x ".
 			"-".$dest->{'ssh_protocol'}." ".
 			($dest->{'ssh_port'} ? " -p ".$dest->{'ssh_port'} : "").
@@ -3474,14 +3474,14 @@ return undef;
 # found.
 sub check_move_features
 {
-local ($serverdoms, $dest) = @_;
-local @rv;
-local $info = &get_server_collected($dest);
+my ($serverdoms, $dest) = @_;
+my @rv;
+my $info = &get_server_collected($dest);
 foreach my $sd (@$serverdoms) {
-	local ($server, $d) = @$sd;
-	local $sinfo = &get_server_collected($server);
+	my ($server, $d) = @$sd;
+	my $sinfo = &get_server_collected($server);
 	foreach my $f (@{$sinfo->{'features'}}) {
-		local ($dgot) = grep { $_->{'feature'} eq $f->{'feature'} }
+		my ($dgot) = grep { $_->{'feature'} eq $f->{'feature'} }
 				     @{$info->{'features'}};
 		if ($d->{$f->{'feature'}} && (!$dgot || !$dgot->{'enabled'})) {
 			# Missing on destination
@@ -3498,17 +3498,17 @@ return @rv;
 # $first_print and friends to display progress.
 sub move_domains_to_server
 {
-local ($serverdoms, $dest, $delete, $direct, $realloc) = @_;
-local (@refresh, %refreshed);
+my ($serverdoms, $dest, $delete, $direct, $realloc) = @_;
+my (@refresh, %refreshed);
 $direct = 0 if ($dest->{'id'} == 0);	# Transferring to master
 
 # Sort list so that parents come first
-local @sorted = sort { $a->[1]->{'parent'} <=> $b->[1]->{'parent'} ||
+my @sorted = sort { $a->[1]->{'parent'} <=> $b->[1]->{'parent'} ||
 		       $a->[1]->{'alias'} <=> $b->[1]->{'alias'} } @$serverdoms;
 
-local (%failed, %donebackup, %sourcetemp);
+my (%failed, %donebackup, %sourcetemp);
 foreach my $sd (@sorted) {
-	local ($server, $d) = @$sd;
+	my ($server, $d) = @$sd;
 
 	# Re-connect to Webmin, to avoid RPC timeout
 	&remote_finished();
@@ -3531,16 +3531,16 @@ foreach my $sd (@sorted) {
 		$failed{$d->{'id'}} = $sd;
 		next;
 		}
-	local $tmpdir = $sourcetemp{$server->{'id'}};
+	my $tmpdir = $sourcetemp{$server->{'id'}};
 	if (!$tmpdir) {
-		local $temp = &remote_foreign_call($server, "webmin",
+		my $temp = &remote_foreign_call($server, "webmin",
 					"tempname", "$d->{'dom'}.tar.gz");
 		$tmpdir = $temp;
 		$tmpdir =~ s/\/([^\/]+)$//;
 		}
 
 	# Find a temp file on the target, if needed
-	local $desttemp;
+	my $desttemp;
 	if ($dest->{'id'} != 0) {
 		$last_remote_error = undef;
                 &remote_foreign_require($dest, "webmin", "webmin-lib.pl");
@@ -3574,21 +3574,21 @@ foreach my $sd (@sorted) {
 		next;
 		}
 
-	local @args = ( [ "domain", $d->{'dom'} ],
+	my @args = ( [ "domain", $d->{'dom'} ],
 			[ "all-features" ],
 			[ "option", "mail mailfiles 1" ],
 			[ "newformat" ],
 		      );
 	if ($direct) {
 		# Backup to dest via SSH directly
-		local $pa = $dest->{'ssh_port'} ? ":".$dest->{'ssh_port'} : "";
+		my $pa = $dest->{'ssh_port'} ? ":".$dest->{'ssh_port'} : "";
 		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}$pa\@$dest->{'host'}$desttemp" ]);
 		}
 	else {
 		# Backup to a temp file on the target
 		push(@args, [ "dest", $tmpdir ]);
 		}
-	local ($err, $out) = &call_virtualmin_api(
+	my ($err, $out) = &call_virtualmin_api(
 		$server, "backup-domain", \@args);
 	if ($err) {
 		&$second_print(&text('move_ebackup', $err));
@@ -3597,7 +3597,7 @@ foreach my $sd (@sorted) {
 		}
 
 	# Work out the resulting filename and size
-	local (@st, $filename, $statserver, $statdir);
+	my (@st, $filename, $statserver, $statdir);
 	if ($direct) {
 		# Stat on dest server
 		$statserver = $dest;
@@ -3613,7 +3613,7 @@ foreach my $sd (@sorted) {
 	foreach my $p ("$d->{'dom'}.tar.gz",
 		       "$d->{'dom'}.tar.bz2",
 		       "$d->{'dom'}.tar") {
-		local $st = &remote_eval($statserver, "webmin",
+		my $st = &remote_eval($statserver, "webmin",
 					"[ stat('$statdir/$p') ]");
 		@st = @$st;
 		if (@st) {
@@ -3628,7 +3628,7 @@ foreach my $sd (@sorted) {
 		}
 
 	# Make sure the target can support the backup format
-	local $unc = $filename =~ /\.gz$/ ? "gunzip" :
+	my $unc = $filename =~ /\.gz$/ ? "gunzip" :
 		     $filename =~ /\.bz2$/ ? "bunzip2" :
 		     $filename =~ /\.zip$/ ? "unzip" : "tar";
 	if (!&has_command_on_server($dest, $unc)) {
@@ -3640,13 +3640,13 @@ foreach my $sd (@sorted) {
 	&$second_print(&text('move_backed', &nice_size($st[7])));
 
 	# Transfer to master system, if not already there
-	local ($localtemp, @st);
+	my ($localtemp, @st);
 	if (!$direct) {
 		if ($server->{'id'} != 0) {
 			&$first_print(&text('move_download',
 					    $d->{'dom'}, $filename));
 			$localtemp = &transname($filename);
-			local $err = &get_file_from_server($server,
+			my $err = &get_file_from_server($server,
 				"$tmpdir/$filename", $localtemp);
 			&execute_command_on_server($server,
 				   "rm -f ".quotemeta("$tmpdir/$filename"));
@@ -3668,7 +3668,7 @@ foreach my $sd (@sorted) {
 		if ($dest->{'id'} != 0) {
 			&$first_print(&text('move_upload', $d->{'dom'},
 				$filename, $dest->{'host'}));
-			local $err = &put_file_to_server($dest, $localtemp,
+			my $err = &put_file_to_server($dest, $localtemp,
 							 $desttemp);
 			unlink($localtemp);
 			if ($err) {
@@ -3694,7 +3694,7 @@ foreach my $sd (@sorted) {
 
 # Disable or delete requested domains
 foreach my $sd (@sorted) {
-	local ($server, $d) = @$sd;
+	my ($server, $d) = @$sd;
 
 	# Skip if not done
 	next if (!$donebackup{$d->{'id'}});
@@ -3707,8 +3707,8 @@ foreach my $sd (@sorted) {
 		# Disable on source
 		&$first_print(&text('move_disable', $d->{'dom'},
 						    $server->{'host'}));
-		local @args = ( [ "domain", $d->{'dom'} ] );
-		local ($err, $out) = &call_virtualmin_api(
+		my @args = ( [ "domain", $d->{'dom'} ] );
+		my ($err, $out) = &call_virtualmin_api(
 					$server, "disable-domain", \@args);
 		if ($err) {
 			&$second_print(&text('move_edisable', $err));
@@ -3725,8 +3725,8 @@ foreach my $sd (@sorted) {
 		# Delete on source
 		&$first_print(&text('move_delete', $d->{'dom'},
 						   $server->{'host'}));
-		local @args = ( [ "domain", $d->{'dom'} ] );
-		local ($err, $out) = &call_virtualmin_api(
+		my @args = ( [ "domain", $d->{'dom'} ] );
+		my ($err, $out) = &call_virtualmin_api(
 					$server, "delete-domain", \@args);
 		if ($err) {
 			&$second_print(&text('move_edelete', $err));
@@ -3744,7 +3744,7 @@ foreach my $sd (@sorted) {
 # Re-create all domains from backups. This has to be done after deleting from
 # the source (if requested), so that we don't get clashes.
 foreach my $sd (@sorted) {
-	local ($server, $d) = @$sd;
+	my ($server, $d) = @$sd;
 
 	# Skip if failed
 	next if ($failed{$d->{'id'}});
@@ -3752,7 +3752,7 @@ foreach my $sd (@sorted) {
 	# Restore on destination
 	my $desttemp = $donebackup{$d->{'id'}};
 	&$first_print(&text('move_restore', $d->{'dom'}, $dest->{'host'}));
-	local @args = ( [ "source", $desttemp ],
+	my @args = ( [ "source", $desttemp ],
 			[ "all-features" ],
 			[ "option", "dns fixip 1" ],
 			[ "option", "web fixip 1" ],
@@ -3762,7 +3762,7 @@ foreach my $sd (@sorted) {
 	if ($realloc && $d->{'virt'}) {
 		push(@args, [ "allocate-ip" ]);
 		}
-	local ($err, $out) = &call_virtualmin_api($dest,
+	my ($err, $out) = &call_virtualmin_api($dest,
 			"restore-domain", \@args);
 	if ($delete != 1) {
 		&execute_command_on_server($server,
@@ -3804,11 +3804,11 @@ return keys %failed;
 # and returns a list. 
 sub find_sub_servers
 {
-local ($serverdoms) = @_;
-local @rv;
+my ($serverdoms) = @_;
+my @rv;
 foreach my $sd (@serverdoms) {
-	local ($server, $d) = @$sd;
-	local @doms = &get_server_domains($server);
+	my ($server, $d) = @$sd;
+	my @doms = &get_server_domains($server);
 	if (!$d->{'parent'}) {
 		# Find sub-servers
 		push(@rv, map { [ $server, $_ ] }
@@ -3831,8 +3831,8 @@ return &unique_serverdoms(\@rv);
 # Given a list of server/domain tuples, removes duplicates
 sub unique_serverdoms
 {
-local ($serverdoms) = @_;
-local %done;
+my ($serverdoms) = @_;
+my %done;
 return grep { !$done{$_->[0]->{'id'},$_->[1]->{'id'}}++ } @$serverdoms;
 }
 
@@ -3841,16 +3841,16 @@ return grep { !$done{$_->[0]->{'id'},$_->[1]->{'id'}}++ } @$serverdoms;
 # Returns the interface object on success, or an error string on failure.
 sub create_allocate_ip
 {
-local ($server) = @_;
-local $pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
-local $parents = &$pfunc($server);
+my ($server) = @_;
+my $pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
+my $parents = &$pfunc($server);
 ref($parents) || return "Failed to get parent network interfaces : $parents";
-local ($piface) = grep { $_->{'name'} !~ /^lo/ &&
+my ($piface) = grep { $_->{'name'} !~ /^lo/ &&
 			 $_->{'virtual'} eq '' } @$parents;
-local $iface = { 'name' => $piface->{'name'},
+my $iface = { 'name' => $piface->{'name'},
 		 'netmask' => $piface->{'netmask'} };
-local $ifunc = "type_".$server->{'manager'}."_create_interface";
-local $err = &$ifunc($server, $iface);
+my $ifunc = "type_".$server->{'manager'}."_create_interface";
+my $err = &$ifunc($server, $iface);
 return $err ? $err : $iface;
 }
 
@@ -3859,13 +3859,13 @@ return $err ? $err : $iface;
 # used for some domain.
 sub get_domain_interface
 {
-local ($server, $d) = @_;
+my ($server, $d) = @_;
 return undef if (!$d->{'virt'});	# Has no private IP
-local $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
 return undef if (!defined(&$ifunc));	# Server doesn't so interfaces
-local $ifaces = &$ifunc($server);
+my $ifaces = &$ifunc($server);
 return $ifaces if (!ref($ifaces));
-local ($iface) = grep { $_->{'address'} eq $d->{'ip'} } @$ifaces;
+my ($iface) = grep { $_->{'address'} eq $d->{'ip'} } @$ifaces;
 return $iface;
 }
 
@@ -3874,8 +3874,8 @@ return $iface;
 # possible, netstat otherwise.
 sub get_server_default_gateway
 {
-local ($server) = @_;
-local $gw;
+my ($server) = @_;
+my $gw;
 if ($server->{'manager'} eq 'this') {
         # Just call own module
         &foreign_require("net", "net-lib.pl");
@@ -3892,9 +3892,9 @@ elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 		}
 	}
 # Fall back to netstat command
-local ($out, $ex, $err) = &execute_command_on_server($server, "netstat -rn");
+my ($out, $ex, $err) = &execute_command_on_server($server, "netstat -rn");
 foreach my $l (split(/\r?\n/, $out)) {
-	local @w = split(/\s+/, $l);
+	my @w = split(/\s+/, $l);
 	if ($w[0] eq "default" || $w[0] eq "0.0.0.0") {
 		$gw = $w[1];
 		last;
@@ -3907,8 +3907,8 @@ return $gw;
 # Returns 4 array refs, for links, titles, icons and categories
 sub get_global_links
 {
-local ($virtcount) = @_;
-local (@glinks, @gtitles, @gicons, @gcats);
+my ($virtcount) = @_;
+my (@glinks, @gtitles, @gicons, @gcats);
 
 if (!&can_action(undef, "global")) {
 	goto NOGLOBAL;
@@ -4057,15 +4057,15 @@ return (\@glinks, \@gtitles, \@gicons, \@gcats);
 # current user
 sub get_available_create_links
 {
-local @rv;
+my @rv;
 foreach $t (@server_manager::server_management_types) {
 	$lfunc = "server_manager::type_".$t."_create_links";
 	if (defined(&$lfunc)) {
 		foreach $l (&$lfunc()) {
 			$l->{'type'} = $t;
-			local $cfunc = $l->{'create'} ? \&can_create_server
+			my $cfunc = $l->{'create'} ? \&can_create_server
 						      : \&can_add_server;
-			local $can = &$cfunc($t);
+			my $can = &$cfunc($t);
 			if ($can) {
 				push(@rv, $l);
 				}
@@ -4094,32 +4094,32 @@ return sort { ($b->{'name'} eq 'webmin' ? 3 :
 # Returns a list of array refs containing possible actions for some server
 sub get_server_actions
 {
-local ($server) = @_;
-local $status = $server->{'status'};
-local $t = $server->{'manager'};
-local @rv;
+my ($server) = @_;
+my $status = $server->{'status'};
+my $t = $server->{'manager'};
+my @rv;
 
 # Work out what we can and cannot do
-local $nfunc = "type_".$server->{'manager'}."_no_image";
-local $noimage = defined(&$nfunc) && &$nfunc($server) ||
+my $nfunc = "type_".$server->{'manager'}."_no_image";
+my $noimage = defined(&$nfunc) && &$nfunc($server) ||
 		 $status eq 'nohost';
-local $mfunc = "type_".$server->{'manager'}."_can_move";
-local $canmove = defined(&$mfunc) && &$mfunc($server);
-local $sfunc = "type_".$t."_no_shutdown";
-local $noshut = defined(&$sfunc) && &$sfunc($server);
-local $rfunc = "type_".$t."_no_reboot";
-local $noreboot = defined(&$rfunc) && &$rfunc($server);
-local $tfunc = "type_".$t."_can_transfer";
-local $cantransfer = defined(&$tfunc) && &$tfunc($server);
-local $cfunc = "type_".$t."_get_console_output";
-local $canconsole = defined(&$cfunc);
-local $clfunc = "type_".$t."_supports_console_login";
-local $canlogin = defined(&$clfunc) && &$clfunc($server);
-local $rsfunc = "type_".$server->{'manager'}."_can_reset";
-local $canreset = defined(&$rsfunc) && &$rsfunc($server);
+my $mfunc = "type_".$server->{'manager'}."_can_move";
+my $canmove = defined(&$mfunc) && &$mfunc($server);
+my $sfunc = "type_".$t."_no_shutdown";
+my $noshut = defined(&$sfunc) && &$sfunc($server);
+my $rfunc = "type_".$t."_no_reboot";
+my $noreboot = defined(&$rfunc) && &$rfunc($server);
+my $tfunc = "type_".$t."_can_transfer";
+my $cantransfer = defined(&$tfunc) && &$tfunc($server);
+my $cfunc = "type_".$t."_get_console_output";
+my $canconsole = defined(&$cfunc);
+my $clfunc = "type_".$t."_supports_console_login";
+my $canlogin = defined(&$clfunc) && &$clfunc($server);
+my $rsfunc = "type_".$server->{'manager'}."_can_reset";
+my $canreset = defined(&$rsfunc) && &$rsfunc($server);
 
 # Start with links to edit_serv.cgi
-local $ed = "edit_serv.cgi?id=$server->{'id'}";
+my $ed = "edit_serv.cgi?id=$server->{'id'}";
 if (&can_action($server, "edit")) {
 	push(@rv, { 'id' => 'edit',
 		    'desc' => $text{'edit_link_edit'},
@@ -4137,8 +4137,8 @@ elsif (&can_action($server, "view")) {
 	}
 
 # Link for interfaces
-local $ifunc = "type_".$t."_list_interfaces";
-local $cfunc = "type_".$t."_can_interfaces";
+my $ifunc = "type_".$t."_list_interfaces";
+my $cfunc = "type_".$t."_can_interfaces";
 if (defined(&$ifunc) && &$cfunc($server) &&
     $status ne 'paused' && $status ne 'alive' && $status ne 'nohost' &&
     &can_action($server, "ifaces")) {
@@ -4149,8 +4149,8 @@ if (defined(&$ifunc) && &$cfunc($server) &&
 	}
 
 # Link for reverse IP, if possible
-local $ip = &get_server_ip($server);
-local ($rfn) = &get_reverse_dns_zone($ip);
+my $ip = &get_server_ip($server);
+my ($rfn) = &get_reverse_dns_zone($ip);
 if (&can_action($server, "reverse") && $rfn) {
 	push(@rv, { 'id' => 'reverse',
 		    'desc' => $text{'edit_link_reverse'},
@@ -4187,8 +4187,8 @@ if (&can_edit_limits($server) && &can_action($server, "limits")) {
 if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
     $status eq 'paused' || $status eq 'noping') {
 	# Actions are limited when system is down
-	local $sfunc = "type_".$t."_no_startup";
-	local $nostart = defined(&$sfunc) && &$sfunc($server) ||
+	my $sfunc = "type_".$t."_no_startup";
+	my $nostart = defined(&$sfunc) && &$sfunc($server) ||
 		   	 $status eq 'nohost';
 	if (&can_action($server, "refresh")) {
 		push(@rv, { 'id' => 'refresh',
@@ -4237,7 +4237,7 @@ elsif ($status eq 'alive') {
 	}
 else {
 	# Most actions are only for up servers
-	local $wurl = &webmin_link($server);
+	my $wurl = &webmin_link($server);
 	if (&can_action($server, "refresh")) {
 		push(@rv, { 'id' => 'refresh',
 			    'desc' => $text{'edit_refresh'},
@@ -4269,8 +4269,8 @@ else {
 			    'link' => $wurl });
 		if ($wurl =~ /link.cgi/) {
 			# Also direct link
-			local $prot = $server->{'ssl'} ? 'https' : 'http';
-			local $durl = "$prot://$server->{'host'}:$server->{'port'}/";
+			my $prot = $server->{'ssl'} ? 'https' : 'http';
+			my $durl = "$prot://$server->{'host'}:$server->{'port'}/";
 			push(@rv, { 'id' => 'webmin',
 				    'desc' => $text{'edit_webmin3'},
 				    'cat' => '',
@@ -4360,9 +4360,9 @@ if ($canreset && &can_action($server, "reset")) {
 	}
 
 # Pause/un-pause link
-local $pfunc = "type_".$t."_can_pause";
+my $pfunc = "type_".$t."_can_pause";
 if (defined(&$pfunc) && &can_action($server, "pause")) {
-	local $p = &$pfunc($server);
+	my $p = &$pfunc($server);
 	if ($p == 1) {
 		push(@rv, { 'id' => 'pause',
 			    'desc' => $text{'edit_pause'},
@@ -4386,7 +4386,7 @@ if (&get_server_cluster_software($server) > 0) {
 	}
 
 # Complex pages associated with system
-local $dfunc = "type_".$t."_can_disks";
+my $dfunc = "type_".$t."_can_disks";
 if (defined(&$dfunc) && &$dfunc($server) && $status ne 'paused' &&
     &can_action($server, "disks")) {
 	push(@rv, { 'id' => 'disks',
@@ -4396,7 +4396,7 @@ if (defined(&$dfunc) && &$dfunc($server) && $status ne 'paused' &&
 	}
 
 # Virtual CPUs
-local $vfunc = "type_".$t."_can_vcpus";
+my $vfunc = "type_".$t."_can_vcpus";
 if (defined(&$vfunc) && &$vfunc($server) &&
     &can_action($server, "vcpus")) {
 	push(@rv, { 'id' => 'vcpus',
@@ -4406,7 +4406,7 @@ if (defined(&$vfunc) && &$vfunc($server) &&
 	}
 
 # Bandwidth graph
-local $rfunc = "type_".$t."_real_interfaces";
+my $rfunc = "type_".$t."_real_interfaces";
 if ($config{'bw_enabled'} && defined(&$rfunc) &&
     &can_action($server, "graph")) {
 	push(@rv, { 'id' => 'bw',
@@ -4426,7 +4426,7 @@ if (&can_action($server, "graph") &&
 	}
 
 # Host system pages
-local @par = &is_parent_server($server);
+my @par = &is_parent_server($server);
 foreach my $p (@par) {
 	if (-r "$module_root_directory/list_${p}s.cgi" &&
 	    &can_action(undef, "global")) {
@@ -4436,7 +4436,7 @@ foreach my $p (@par) {
 			    'cat' => 'manage',
 			    'link' => "edit_${p}.cgi?id=$server->{'id'}" });
 		}
-	local $ffunc = "type_".$p."_find_servers";
+	my $ffunc = "type_".$p."_find_servers";
 	if (defined(&$ffunc) && &can_action(undef, "global")) {
 		# Find hosted systems
 		push(@rv, { 'id' => 'find',
@@ -4447,7 +4447,7 @@ foreach my $p (@par) {
 	}
 
 # Add type-specific actions
-local $afunc = "type_".$t."_server_actions";
+my $afunc = "type_".$t."_server_actions";
 if (defined(&$afunc)) {
 	push(@rv, &$afunc($server));
 	}
@@ -4464,18 +4464,18 @@ return @rv;
 
 # check_virtualmin_serial(serial, key)
 # Checks if some licence is valid for Virtualmin. This is done via an HTTP
-# request to www.virtualmin.com, with some local caching. Returns 1 if yes
+# request to www.virtualmin.com, with some my caching. Returns 1 if yes
 # (and the number of domains, servers and expiry date in an array context),
 # 0 if no, -1 if could not tell
 sub check_virtualmin_serial
 {
-local ($serial, $key) = @_;
-local $id = &get_host_id();
+my ($serial, $key) = @_;
+my $id = &get_host_id();
 
 # First check out positive responses cache
-local %serialcache;
+my %serialcache;
 &read_file($serial_cache_file, \%serialcache);
-local $skh = join(" ", $serial, $key, $id);
+my $skh = join(" ", $serial, $key, $id);
 if (defined($serialcache{$shk})) {
 	($lastcheck, $domains, $servers) = split(/\s+/, $serialcache{$shk});
 	if ($lastcheck > time()-60*60) {
@@ -4484,12 +4484,12 @@ if (defined($serialcache{$shk})) {
 	}
 
 # Need to really query Virtualmin
-local ($out, $error);
+my ($out, $error);
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
 	       "$virtualmin_licence_prog?id=$id&serial=$key",
 	       \$out, \$error, undef, $virtualmin_licence_ssl);
-local @rv;
+my @rv;
 if ($out =~ /^OK\s+(\S+)\s+(\S+)\s+(\S+)/) {
 	@rv = ( 1, $2, $3, $1 );
 	}
@@ -4515,7 +4515,7 @@ return wantarray ? @rv : $rv[0];
 # Returns the serial number and key for this Cloudmin install
 sub get_server_manager_serial
 {
-local %serial;
+my %serial;
 if (&read_file($licence_file, \%serial)) {
 	return ($serial{'SerialNumber'}, $serial{'LicenseKey'});
 	}
@@ -4527,9 +4527,9 @@ return ( );
 # or undef and an error message
 sub allocate_virtualmin_serial
 {
-local ($vm2) = @_;
-local @lics = &list_virtualmin_licences();
-local ($first) = grep { $_->{'vm2'} == $vm2 &&
+my ($vm2) = @_;
+my @lics = &list_virtualmin_licences();
+my ($first) = grep { $_->{'vm2'} == $vm2 &&
 			$_->{'free'} && !$_->{'install'} } @lics;
 if ($first) {
 	return ($first->{'serial'}, $first->{'key'});
@@ -4543,9 +4543,9 @@ else {
 # Returns HTML for selecting a Virtualmin licence
 sub virtualmin_licence_form
 {
-local ($name, $nonone, $gpl) = @_;
-local @opts;
-local ($cansame, $canalloc);
+my ($name, $nonone, $gpl) = @_;
+my @opts;
+my ($cansame, $canalloc);
 if (!$nonone) {
 	push(@opts, [ 0, $text{'virtualmin_smode0'}."<br>" ]);
 	}
@@ -4553,12 +4553,12 @@ push(@opts, [ 1, &text('virtualmin_smode1',
 		       &ui_textbox($name."_serial", undef, 20),
 		       &ui_textbox($name."_key", undef, 20))."<br>" ]);
 if (&can_action(undef, "licence")) {
-	local ($vaserial, $vakey) = &allocate_virtualmin_serial(1);
+	my ($vaserial, $vakey) = &allocate_virtualmin_serial(1);
 	if ($vaserial) {
 		$cansame = 1;
 		push(@opts, [ 2, $text{'virtualmin_smode2'}."<br>" ]);
 		}
-	local ($aserial, $akey) = &allocate_virtualmin_serial(0);
+	my ($aserial, $akey) = &allocate_virtualmin_serial(0);
 	if ($aserial) {
 		push(@opts, [ 3, $text{'virtualmin_smode3'}."<br>" ]);
 		$canalloc = 1;
@@ -4583,7 +4583,7 @@ else {
 # explaining why the key is not valid
 sub virtualmin_licence_parse
 {
-local ($name, $in) = @_;
+my ($name, $in) = @_;
 if ($in->{$name} == 0) {
 	# None needed
 	return ();
@@ -4594,7 +4594,7 @@ elsif ($in->{$name} == 1) {
 		return (undef, $text{'virtualmin_eserial'});
 	$in{$name."_key"} =~ /^\S+$/ ||
 		return (undef, $text{'virtualmin_ekey'});
-	local $lok = &check_virtualmin_serial($in{$name."_serial"},
+	my $lok = &check_virtualmin_serial($in{$name."_serial"},
 					      $in{$name."_key"});
 	$lok > 0 || return (undef, $text{'virtualmin_evalid'});
 	return ($in{$name."_serial"}, $in{$name."_key"});
@@ -4605,7 +4605,7 @@ elsif ($in->{$name} == 2 && &can_action(undef, "licence")) {
 	}
 elsif ($in->{$name} == 3 && &can_action(undef, "licence")) {
 	# Allocate from pool
-	local ($aserial, $akey) = &allocate_virtualmin_serial(0);
+	my ($aserial, $akey) = &allocate_virtualmin_serial(0);
 	return ($aserial, $akey);
 	}
 elsif ($in->{$name} == 4) {
@@ -4629,9 +4629,9 @@ if (defined(@list_virtualmin_licences_cache)) {
 
 # If the Cloudmin licence can also be used for Virtualmin, start with it
 &lock_file($virtualmin_licences_file);
-local @rv;
-local ($vm2serial, $vm2key) = &get_server_manager_serial();
-local %vm2cache;
+my @rv;
+my ($vm2serial, $vm2key) = &get_server_manager_serial();
+my %vm2cache;
 &read_file($licence_cache_file, \%vm2cache);
 if ($vm2cache{'max_last'} &&
     time() - $vm2cache{'max_last'} < 24*60*60) {
@@ -4640,7 +4640,7 @@ if ($vm2cache{'max_last'} &&
 	}
 else {
 	# Check Cloudmin licence for real
-	local ($lok, $ldoms, $lservers, $lexpiry) =
+	my ($lok, $ldoms, $lservers, $lexpiry) =
 		&check_virtualmin_serial($vm2serial, $vm2key);
 	if ($lok > 0) {
 		%vm2cache = ( 'serial' => $vm2serial,
@@ -4659,7 +4659,7 @@ else {
 open(LIC, $virtualmin_licences_file);
 while(<LIC>) {
 	s/\r|\n//g;
-	local %lic = map { split(/=/, $_) } split(/\s+/, $_);
+	my %lic = map { split(/=/, $_) } split(/\s+/, $_);
 	if ($lic{'install'} && !kill(0, $lic{'install'})) {
 		delete($lic{'install'});
 		}
@@ -4672,7 +4672,7 @@ close(LIC);
 foreach my $l (@rv) {
 	if ($l->{'domains'} eq '' ||
 	    time() - $l->{'max_last'} >= 24*60*60) {
-		local ($lok, $ldoms, $lservers, $lexpiry) =
+		my ($lok, $ldoms, $lservers, $lexpiry) =
 			&check_virtualmin_serial($l->{'serial'}, $l->{'key'});
 		if ($lok == 0) {
 			# Invalid!
@@ -4691,11 +4691,11 @@ foreach my $l (@rv) {
 	}
 
 # For each licence, find out which systems it is used on
-local @servers = &list_managed_servers();
-local %lmap = map { $_->{'serial'}, $_ } @rv;
+my @servers = &list_managed_servers();
+my %lmap = map { $_->{'serial'}, $_ } @rv;
 foreach my $s (@servers) {
 	if ($s->{'virtualmin_serial'}) {
-		local $l = $lmap{$s->{'virtualmin_serial'}};
+		my $l = $lmap{$s->{'virtualmin_serial'}};
 		if ($l) {
 			push(@{$l->{'users'}}, $s);
 			}
@@ -4704,11 +4704,11 @@ foreach my $s (@servers) {
 
 # For each licence, find in-progress installs and decrease the free count
 &lock_file($virtualmin_progress_file);
-local %progress;
+my %progress;
 &read_file($virtualmin_progress_file, \%progress);
 foreach my $l (@rv) {
 	$l->{'progress'} = 0;
-	local @newprog;
+	my @newprog;
 	foreach my $p (split(/\s+/, $progress{$l->{'serial'}})) {
 		if (kill(0, $p)) {
 			$l->{'progress'}++;
@@ -4749,11 +4749,11 @@ return @rv;
 # Returns 0 if some license is OK, 1 if close to expiry (7 days), 2 if expired
 sub check_licence_expiry
 {
-local ($lic) = @_;
-local $date = ref($lic) ? $lic->{'expiry'} : $lic;
+my ($lic) = @_;
+my $date = ref($lic) ? $lic->{'expiry'} : $lic;
 if ($date =~ /^(\d{4})\-(\d+)\-(\d+)$/) {
-	local $ut = timelocal(0, 0, 0, $3, $2-1, $1-1900);
-	local $days = int(($ut - time()) / (24*60*60));
+	my $ut = timelocal(0, 0, 0, $3, $2-1, $1-1900);
+	my $days = int(($ut - time()) / (24*60*60));
 	return $days < 0 ? 2 : $days < 7 ? 1 : 0;
 	}
 else {
@@ -4765,7 +4765,7 @@ else {
 # Updates the Virtualmin licence pool
 sub save_virtualmin_licences
 {
-local ($licences) = @_;
+my ($licences) = @_;
 &open_tempfile(LIC, ">$virtualmin_licences_file");
 foreach my $l (@$licences) {
 	next if ($l->{'vm2'});
@@ -4780,8 +4780,8 @@ foreach my $l (@$licences) {
 # Marks some serial number and key as being installed now
 sub start_installing_virtualmin_licence
 {
-local ($serial, $key) = @_;
-local %progress;
+my ($serial, $key) = @_;
+my %progress;
 &lock_file($virtualmin_progress_file);
 &read_file($virtualmin_progress_file, \%progress);
 $progress{$serial} = join(' ', split(/\s+/, $progress{$serial}), $$);
@@ -4793,8 +4793,8 @@ $progress{$serial} = join(' ', split(/\s+/, $progress{$serial}), $$);
 # Marks some serial number and key as no longer being installed
 sub stop_installing_virtualmin_licence
 {
-local ($serial, $key) = @_;
-local %progress;
+my ($serial, $key) = @_;
+my %progress;
 &lock_file($virtualmin_progress_file);
 &read_file($virtualmin_progress_file, \%progress);
 $progress{$serial} = join(' ', grep { $_ != $$ }
@@ -4809,9 +4809,9 @@ $progress{$serial} = join(' ', grep { $_ != $$ }
 # on success.
 sub fetch_virtualmin_licences
 {
-local $id = &get_host_id();
-local ($serial, $key) = &get_server_manager_serial();
-local ($out, $error);
+my $id = &get_host_id();
+my ($serial, $key) = &get_server_manager_serial();
+my ($out, $error);
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
 	       "$virtualmin_alllicences_prog?id=$id&serial=$key",
@@ -4820,15 +4820,15 @@ if ($out =~ /^BAD\s+(.*)/) {
 	return $1;
 	}
 elsif ($out =~ /^OK\s+(\d+)/) {
-	local @lics = &list_virtualmin_licences();
-	local %got = map { $_->{'serial'}, $_ } @lics;
-	local @lines = split(/\r?\n/, $out);
+	my @lics = &list_virtualmin_licences();
+	my %got = map { $_->{'serial'}, $_ } @lics;
+	my @lines = split(/\r?\n/, $out);
 	shift(@lines);
-	local @rv;
+	my @rv;
 	foreach my $l (@lines) {
-		local ($vserial, $vkey, $vend, $vdoms, $vservers) =
+		my ($vserial, $vkey, $vend, $vdoms, $vservers) =
 			split(/\s+/, $l);
-		local $got = $got{$vserial};
+		my $got = $got{$vserial};
 		if ($got) {
 			# Update existing details, to be one the safe side
 			$got->{'domains'} = $vdoms;
@@ -4836,7 +4836,7 @@ elsif ($out =~ /^OK\s+(\d+)/) {
 			}
 		else {
 			# Add to list
-			local $lic = { 'serial' => $vserial,
+			my $lic = { 'serial' => $vserial,
 				       'key' => $vkey,
 				       'domains' => $vdoms,
 				       'servers' => $vservers };
@@ -4857,7 +4857,7 @@ else {
 # licenses. Not true for EC2 shared keys.
 sub can_all_licenses
 {
-local ($serial, $key) = &get_server_manager_serial();
+my ($serial, $key) = &get_server_manager_serial();
 return $key !~ /^AMAZON/i;
 }
 
@@ -4865,15 +4865,15 @@ return $key !~ /^AMAZON/i;
 # Delete from root's ~/.ssh/authorized_keys* files any entries for a new system
 sub remove_server_ssh_keys
 {
-local ($server) = @_;
-local $ip = &to_ipaddress($server->{'host'});
-local @uinfo = getpwnam("root");
+my ($server) = @_;
+my $ip = &to_ipaddress($server->{'host'});
+my @uinfo = getpwnam("root");
 &make_dir("$uinfo[7]/.ssh", 0700);
 foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 	       "$uinfo[7]/.ssh/known_hosts2") {
-	local $lref = &read_file_lines($f);
+	my $lref = &read_file_lines($f);
 	for(my $i=0; $i<@$lref; $i++) {
-		local @w = split(/\s+/, $lref->[$i]);
+		my @w = split(/\s+/, $lref->[$i]);
 		foreach my $hn (split(/,/, $w[0])) {
 			if ($hn eq $server->{'host'} ||
 			    $ip && $hn eq $ip) {
@@ -4892,16 +4892,16 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 # hashes, each containing the details of one upgrade in one domain on one system
 sub list_all_script_updates
 {
-local ($servers) = @_;
-local @rv;
-local @canservers = grep { $_->{'status'} eq 'virt' &&
+my ($servers) = @_;
+my @rv;
+my @canservers = grep { $_->{'status'} eq 'virt' &&
 			   $_->{'virtualmin_serial'} } @$servers;
-local $temp = &transname();
+my $temp = &transname();
 &parallel_server_function(\@canservers, \&fetch_all_script_updates, $temp);
 foreach my $s (@canservers) {
-	local $data = &read_file_contents($temp.".".$s->{'id'});
+	my $data = &read_file_contents($temp.".".$s->{'id'});
 	next if (!$data);
-	local $updates = &unserialise_variable($data);
+	my $updates = &unserialise_variable($data);
 	foreach my $u (@$updates) {
 		$u->{'server'} = $s;
 		push(@rv, $u);
@@ -4915,11 +4915,11 @@ return @rv;
 # Fetch a list of script updates from some server, and serialize into a file
 sub fetch_all_script_updates
 {
-local ($server, $tempbase) = @_;
+my ($server, $tempbase) = @_;
 $last_remote_error = undef;
 &remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
 return undef if ($last_remote_error);
-local $updates = &remote_eval($server, "virtual-server",
+my $updates = &remote_eval($server, "virtual-server",
 			'[ &list_script_upgrades([ &list_domains() ]) ]');
 &open_tempfile(SERIAL, ">".$tempbase.".".$server->{'id'});
 &print_tempfile(SERIAL, &serialise_variable($updates));
@@ -4931,16 +4931,16 @@ local $updates = &remote_eval($server, "virtual-server",
 # API calls.
 sub update_server_scripts
 {
-local ($server, $updates) = @_;
-local @rv;
+my ($server, $updates) = @_;
+my @rv;
 foreach my $u (@$updates) {
 	# Build API call args
-	local @args = ( [ 'domain', $u->{'dom'}->{'dom'} ],
+	my @args = ( [ 'domain', $u->{'dom'}->{'dom'} ],
 			[ 'type', $u->{'script'}->{'name'} ],
 			[ 'upgrade', $u->{'sinfo'}->{'id'} ],
 			[ 'version', $u->{'ver'} ],
 		      );
-	local ($err, $out) = &call_virtualmin_api($server, "install-script",
+	my ($err, $out) = &call_virtualmin_api($server, "install-script",
 						  \@args);
 	push(@rv, [ $u, $err, $out ]);
 	}
@@ -4949,11 +4949,11 @@ return @rv;
 
 sub can_edit_limits
 {
-local ($server) = @_;
-local $cfunc = "type_".$server->{'manager'}."_can_cpu";
-local $mfunc = "type_".$server->{'manager'}."_can_memory";
-local $vfunc = "type_".$server->{'manager'}."_can_vcpus";
-local $rfunc = "type_".$server->{'manager'}."_real_interfaces";
+my ($server) = @_;
+my $cfunc = "type_".$server->{'manager'}."_can_cpu";
+my $mfunc = "type_".$server->{'manager'}."_can_memory";
+my $vfunc = "type_".$server->{'manager'}."_can_vcpus";
+my $rfunc = "type_".$server->{'manager'}."_real_interfaces";
 return defined(&$cfunc) && &$cfunc($server) ||
        defined(&$mfunc) && &$mfunc($server) ||
        defined(&$vfunc) && &$vfunc($server) ||
@@ -4964,8 +4964,8 @@ return defined(&$cfunc) && &$cfunc($server) ||
 # Run the pre/post creation/deletion script, if defined, and tell the user
 sub run_system_script
 {
-local ($server, $when, $action) = @_;
-local $cmd = $config{$when.'_'.$action.'_cmd'};
+my ($server, $when, $action) = @_;
+my $cmd = $config{$when.'_'.$action.'_cmd'};
 return 1 if (!$cmd);
 
 # Set environment variables
@@ -4979,7 +4979,7 @@ foreach my $k (keys %$server) {
 	}
 if ($server->{'manager'} ne 'this' && $server->{'manager'} ne 'real') {
 	# Add host variables too
-	local $parent = &get_parent_server($server);
+	my $parent = &get_parent_server($server);
 	if ($parent) {
 		foreach my $k (keys %$parent) {
 			$ENV{'SERVERMANAGER_PARENT_'.uc($k)} = $parent->{$k};
@@ -4988,7 +4988,7 @@ if ($server->{'manager'} ne 'this' && $server->{'manager'} ne 'real') {
 	}
 
 &$first_print($text{'run_'.$when.'_'.$action});
-local $out = &backquote_logged("($cmd) 2>&1 </dev/null");
+my $out = &backquote_logged("($cmd) 2>&1 </dev/null");
 if ($?) {
 	&$second_print(&text('run_failed', "<tt>".&html_escape($out)."</tt>"));
 	return 0;
@@ -5003,8 +5003,8 @@ else {
 # Given a server, returns the one that hosts it or undef
 sub get_parent_server
 {
-local ($server) = @_;
-local $pfunc = "type_".$server->{'manager'}."_parent";
+my ($server) = @_;
+my $pfunc = "type_".$server->{'manager'}."_parent";
 if (defined(&$pfunc)) {
 	return &$pfunc($server);
 	}
@@ -5015,8 +5015,8 @@ return undef;
 # Returns a list of the system types this server hosts
 sub is_parent_server
 {
-local ($server) = @_;
-local @rv;
+my ($server) = @_;
+my @rv;
 foreach my $t ('xen', 'vserver', 'zone', 'openvz') {
 	if ($server->{$t."_host"}) {
 		push(@rv, $t eq 'zone' ? 'zones' : $t);
@@ -5029,7 +5029,7 @@ return wantarray ? @rv : $rv[0];
 # Returns the manager type of some system is virtual
 sub is_virtual_server
 {
-local ($server) = @_;
+my ($server) = @_;
 foreach my $t (@virtual_server_management_types) {
 	return $t if ($server->{'manager'} eq $t);
 	}
@@ -5041,15 +5041,15 @@ return undef;
 # check all other servers of that type to see if their parent is this one.
 sub list_child_servers
 {
-local ($server, $allservers) = @_;
-local @servers = $allservers ? @$allservers : &list_managed_servers();
-local @rv;
+my ($server, $allservers) = @_;
+my @servers = $allservers ? @$allservers : &list_managed_servers();
+my @rv;
 foreach my $p (&is_parent_server($server)) {
 	$p = "zones" if ($p eq "zone");
-	local $pfunc = "type_".$p."_parent";
+	my $pfunc = "type_".$p."_parent";
 	if (defined(&$pfunc)) {
 		foreach my $s (grep { $_->{'manager'} eq $p } @servers) {
-			local $par = &$pfunc($s, \@servers);
+			my $par = &$pfunc($s, \@servers);
 			if ($par && $par->{'id'} eq $server->{'id'}) {
 				push(@rv, $s);
 				}
@@ -5103,8 +5103,8 @@ return $table;
 # end and cidr addresses, and maybe interfaces
 sub parse_ip_range_input
 {
-local ($in) = @_;
-local (@starts, @ends, @cidrs, @ifaces);
+my ($in) = @_;
+my (@starts, @ends, @cidrs, @ifaces);
 for(my $i=0; defined($in->{"start_$i"}); $i++) {
 	next if ($in->{"start_$i"} !~ /\S/);
 	&check_ipaddress($in->{"start_$i"}) ||
@@ -5143,8 +5143,8 @@ return @rv;
 # Prints a form prompting for a reboot if needed after some disk change
 sub show_disk_reboot_message
 {
-local ($server, $disk) = @_;
-local $rfunc = "type_".$server->{'manager'}."_need_disk_reboot";
+my ($server, $disk) = @_;
+my $rfunc = "type_".$server->{'manager'}."_need_disk_reboot";
 if ($server->{'status'} ne 'down' &&
     defined(&$rfunc) && &$rfunc($server, $disk)) {
 	print &ui_form_start("save_serv.cgi");
@@ -5160,13 +5160,13 @@ if ($server->{'status'} ne 'down' &&
 # Returns the cron job object that runs some command (perhaps with redirection)
 sub find_server_manager_cron_job
 {
-local ($cmd, $jobs, $user) = @_;
+my ($cmd, $jobs, $user) = @_;
 if (!$jobs) {
 	&foreign_require("cron", "cron-lib.pl");
 	$jobs = [ &cron::list_cron_jobs() ];
 	}
 $user ||= "root";
-local @rv = grep { $_->{'user'} eq $user &&
+my @rv = grep { $_->{'user'} eq $user &&
 	     $_->{'command'} =~ /(^|[ \|\&;])\Q$cmd\E($|[ \|\&><;])/ } @$jobs;
 return wantarray ? @rv : $rv[0];
 }
@@ -5175,9 +5175,9 @@ return wantarray ? @rv : $rv[0];
 # Returns the from address to use when sending email to some server.
 sub get_global_from_address
 {
-local ($server) = @_;
+my ($server) = @_;
 &foreign_require("mailboxes", "mailboxes-lib.pl");
-local $rv = $config{'from_addr'} || &mailboxes::get_from_address();
+my $rv = $config{'from_addr'} || &mailboxes::get_from_address();
 return $rv;
 }
 
@@ -5185,10 +5185,10 @@ return $rv;
 # Returns a string listing free disk space and RAM for some host
 sub host_free_desc
 {
-local ($vhost, $manager) = @_;
-local $vinfo = &get_server_collected($vhost);
+my ($vhost, $manager) = @_;
+my $vinfo = &get_server_collected($vhost);
 return "" if (!can_action(undef, "global"));
-local @rv;
+my @rv;
 if ($manager && $vhost->{$manager.'_vg_free'}) {
 	push(@rv, &text('create_hostdisk',
 			&nice_size($vhost->{$manager.'_vg_free'})));
@@ -5210,7 +5210,7 @@ return @rv ? " (".join(", ", @rv).")" : "";
 sub get_provider_link
 {
 # Does this owner have a logo
-local ($logo, $link);
+my ($logo, $link);
 ($logo, $link) = ($access{'theme_image'}, $access{'theme_link'});
 if (!$logo) {
         # Call back to global config
@@ -5218,7 +5218,7 @@ if (!$logo) {
         $link = $config{'theme_link'} || $gconfig{'vm2_theme_link'};
         }
 if ($logo && $logo ne "none") {
-        local $html;
+        my $html;
         $html .= "<a href='$link' target=_new>" if ($link);
         $html .= "<img src='$image' border=0>";
         $html .= "</a>" if ($link);
@@ -5236,23 +5236,23 @@ else {
 # May print stuff.
 sub move_system
 {
-local ($server, $dest) = @_;
-local @pars = &is_parent_server($dest);
-local $dfunc = "type_".$server->{'manager'}."_desc";
-local $desc = &$dfunc($server);
+my ($server, $dest) = @_;
+my @pars = &is_parent_server($dest);
+my $dfunc = "type_".$server->{'manager'}."_desc";
+my $desc = &$dfunc($server);
 &indexof($server->{'manager'}, @pars) >= 0 ||
 	return "Destination system $dest->{'host'} cannot host $desc systems";
-local $vhost = &get_parent_server($server);
+my $vhost = &get_parent_server($server);
 $vhost->{'id'} ne $dest->{'id'} ||
 	return "Source and destination host systems are the same!";
 
 # Check if moving is supported, then do it
-local $cfunc = "type_".$server->{'manager'}."_can_move";
+my $cfunc = "type_".$server->{'manager'}."_can_move";
 if (!defined(&$cfunc) || !&$cfunc($server, $dest)) {
 	return "The $desc system $server->{'host'} cannot be moved to $dest->{'host'}";
 	}
-local $mfunc = "type_".$server->{'manager'}."_move_system";
-local $err = &$mfunc($server, $dest);
+my $mfunc = "type_".$server->{'manager'}."_move_system";
+my $err = &$mfunc($server, $dest);
 
 # Refresh status
 if (!$err) {
@@ -5272,7 +5272,7 @@ return $err;
 # Resets a virtual system to its original image. 
 sub reset_system
 {
-local ($server) = @_;
+my ($server) = @_;
 
 # Get the current Virtualmin serial and key, if any
 my $info = &get_server_collected($server);
@@ -5283,7 +5283,7 @@ if ($info && $info->{'serial'}) {
 	}
 
 # If running, shut down
-local $was_up = 0;
+my $was_up = 0;
 if ($server->{'status'} ne 'down') {
 	&$first_print($text{'reset_shutting'});
 	$err = &shutdown_server($server);
@@ -5416,7 +5416,7 @@ return undef;
 # master, 0 if not, -1 if not possible
 sub get_server_cluster_software
 {
-local ($server) = @_;
+my ($server) = @_;
 if ($server->{'manager'} ne 'this' &&
     ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') &&
     (!$remote_user || &foreign_available("cluster-software"))) {
@@ -5433,7 +5433,7 @@ return -1;
 # Returns undef on success or an error message on failure.
 sub save_server_cluster_software
 {
-local ($server, $enabled) = @_;
+my ($server, $enabled) = @_;
 if (!&foreign_check("cluster-software")) {
 	return "The Cluster Software Packages module is not installed";
 	}
@@ -5444,11 +5444,11 @@ if ($enabled &&
     $server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
 	return "Webmin is not installed on the remote system";
 	}
-local $hdir = "$config_directory/cluster-software/hosts/$server->{'id'}";
+my $hdir = "$config_directory/cluster-software/hosts/$server->{'id'}";
 if ($enabled && !-d $hdir) {
 	# Enable and fetch packages
 	&foreign_require("cluster-software", "cluster-software-lib.pl");
-	local ($ok, $msg) = &cluster_software::add_managed_host($server);
+	my ($ok, $msg) = &cluster_software::add_managed_host($server);
 	return $msg if (!$ok);
 	}
 elsif (!$enabled && -d $hdir) {
@@ -5463,7 +5463,7 @@ return undef;
 # error message on failure.
 sub refresh_server_cluster_software
 {
-local ($server) = @_;
+my ($server) = @_;
 if (!&foreign_check("cluster-software")) {
 	return "The Cluster Software Packages module is not installed";
 	}
@@ -5471,9 +5471,9 @@ if ($server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
 	return "Webmin is not installed on the remote system";
 	}
 &foreign_require("cluster-software", "cluster-software-lib.pl");
-local ($h) = grep { $_->{'id'} eq $server->{'id'} }
+my ($h) = grep { $_->{'id'} eq $server->{'id'} }
 		  &cluster_software::list_software_hosts();
-local ($rv) = &cluster_software::refresh_packages([ $h ]);
+my ($rv) = &cluster_software::refresh_packages([ $h ]);
 return ref($rv) ? undef : $rv;
 }
 
@@ -5481,7 +5481,7 @@ return ref($rv) ? undef : $rv;
 # Just exists to be called from newfeatures-lib.pl
 sub substitute_virtualmin_template
 {
-local ($str, $hash) = @_;
+my ($str, $hash) = @_;
 return &substitute_template($str, $hash);
 }
 
@@ -5489,12 +5489,12 @@ return &substitute_template($str, $hash);
 # Return a grid of inputs for searching for systems, with fields filled in
 sub show_search_form
 {
-local ($in, $servers) = @_;
-local @grid = ( );
+my ($in, $servers) = @_;
+my @grid = ( );
 
 sub highlight_field
 {
-local ($msg, $but) = @_;
+my ($msg, $but) = @_;
 $msg = "<b>$msg</b>";
 $msg = "<i>$msg</i>" if ($in->{$but});
 return $msg;
@@ -5506,7 +5506,7 @@ push(@grid, &ui_textbox("search", $in->{'search'}, 30).
 	    " ".&ui_submit($text{'index_searchok'}, "ok"));
 
 # Search by group
-local @groups = &unique(map { split(/\t/, $_->{'group'}) } @$servers);
+my @groups = &unique(map { split(/\t/, $_->{'group'}) } @$servers);
 if (@groups) {
 	push(@grid, &highlight_field($text{'index_gsearch'}, "gok"));
 	push(@grid, &ui_select("gsearch", $in->{'gsearch'}, \@groups).
@@ -5514,7 +5514,7 @@ if (@groups) {
 	}
 
 # Search by host system
-local @parents = grep { &is_parent_server($_) } @$servers;
+my @parents = grep { &is_parent_server($_) } @$servers;
 if (@parents) {
 	@parents = sort { $a->{'host'} cmp $b->{'host'} } @parents;
 	push(@grid, &highlight_field($text{'index_psearch'}, "pok"));
@@ -5552,7 +5552,7 @@ return &ui_grid_table(\@grid, 4, 100,
 # only those servers which match
 sub apply_search_form
 { 
-local ($in, $servers) = @_;
+my ($in, $servers) = @_;
 if ($in->{'gok'}) {
 	# Search by group
 	return grep { my @g = split(/\t/, $_->{'group'});
@@ -5560,19 +5560,19 @@ if ($in->{'gok'}) {
 	}
 elsif ($in->{'pok'}) {
 	# Search by parent
-	local ($parent) = grep { $_->{'id'} eq $in->{'psearch'} } @$servers;
+	my ($parent) = grep { $_->{'id'} eq $in->{'psearch'} } @$servers;
 	return grep { my $p = &get_parent_server($_);
 		  $p && $p->{'id'} eq $parent->{'id'} } @$servers;
 	}
 elsif ($in->{'eok'}) {
 	# Search by EC2 account
-	local ($ec2) = grep { $_->{'id'} == $in->{'esearch'} }
+	my ($ec2) = grep { $_->{'id'} == $in->{'esearch'} }
 		      &list_ec2_accounts();
 	return grep { $_->{'ec2'} == $in->{'esearch'} } @$servers;
 	}
 elsif ($in->{'sok'}) {
 	# Search by status
-	local @sts;
+	my @sts;
 	if ($in->{'ssearch'} eq 'up') {
 		@sts = ( 'nowebmin', 'novirt', 'virt', 'alive' );
 		}
@@ -5598,7 +5598,7 @@ elsif ($in->{'sok'}) {
 	}
 else {
 	# By hostname
-	local $s = $in->{'search'};
+	my $s = $in->{'search'};
 	return grep { $_->{'host'} =~ /\Q$s\E/i ||
 		      $_->{'desc'} =~ /\Q$s\E/i } @$servers;
 	}
@@ -5608,11 +5608,11 @@ else {
 # Outputs fields for selecting the Webmin login and password for a system
 sub show_webmin_login_form
 {
-local ($server, $type) = @_;
+my ($server, $type) = @_;
 $type ||= $server->{'manager'} if ($server);
-local $sfunc = "type_".$type."_no_ssh";
-local $no_ssh = defined(&$sfunc) && &$sfunc();
-local $newserver = !$server || !$server->{'id'};
+my $sfunc = "type_".$type."_no_ssh";
+my $no_ssh = defined(&$sfunc) && &$sfunc();
+my $newserver = !$server || !$server->{'id'};
 
 # Webmin login
 print &ui_hidden("webmin_newserver", $newserver);
@@ -5642,7 +5642,7 @@ print &ui_table_row($text{'add_port'},
 # on failure.
 sub parse_webmin_login_form
 {
-local ($in, $server) = @_;
+my ($in, $server) = @_;
 
 if ($in->{'webmin_mode'} == 1) {
 	# Password is same as SSH
@@ -5680,7 +5680,7 @@ return undef;
 # Copy Webmin login fields from one server to another
 sub copy_webmin_login_details
 {
-local ($src, $dst) = @_;
+my ($src, $dst) = @_;
 foreach my $f ('user', 'pass', 'ssh_pass_same', 'ssl', 'port') {
 	$dst->{$f} = $src->{$f};
 	}
@@ -5691,11 +5691,11 @@ foreach my $f ('user', 'pass', 'ssh_pass_same', 'ssl', 'port') {
 # May not output anything if the system type doesn't support or need SSH.
 sub show_ssh_login_form
 {
-local ($server, $type) = @_;
+my ($server, $type) = @_;
 $type ||= $server->{'manager'} if ($server);
 
-local $sfunc = "type_".$type."_no_ssh";
-local $no_ssh = defined(&$sfunc) && &$sfunc();
+my $sfunc = "type_".$type."_no_ssh";
+my $no_ssh = defined(&$sfunc) && &$sfunc();
 return if ($no_ssh);
 
 # Root password / key
@@ -5733,7 +5733,7 @@ print &ui_table_row($text{'add_sshport'},
 # on success, or an error message on failure.
 sub parse_ssh_login_form
 {
-local ($in, $server) = @_;
+my ($in, $server) = @_;
 return undef if (!defined($in->{'auth_mode'}));		# No SSH mode
 
 $in->{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i || return $text{'add_euuser'};
@@ -5769,7 +5769,7 @@ return undef;
 # Copy SSH login fields from one server to another
 sub copy_ssh_login_details
 {
-local ($src, $dst) = @_;
+my ($src, $dst) = @_;
 foreach my $f ('ssh_user', 'ssh_port', 'ssh_pass', 'ssh_nologin',
 	       'ssh_protocol') {
 	$dst->{$f} = $src->{$f};
@@ -5849,7 +5849,7 @@ sub show_host_server_field
 {
 my ($label, $name, $type) = @_;
 my @vhosts = &list_available_host_servers($type);
-local ($default) = grep { $_->{$type.'_default'} } @vhosts;
+my ($default) = grep { $_->{$type.'_default'} } @vhosts;
 $default ||= $vhosts[0];
 my @locs = &list_vhost_locations(\@vhosts);
 my ($defloc) = grep { $_->{'default'} } @locs;
@@ -5932,7 +5932,7 @@ sub tempname_on_server
 {
 my ($server, $base) = @_;
 if ($server->{'manager'} eq 'this') {
-	# Use local function
+	# Use my function
 	return &tempname($base);
 	}
 elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
@@ -5962,7 +5962,7 @@ else {
 # otherwise return undef
 sub plugin_call
 {
-local ($mod, $func, @args) = @_;
+my ($mod, $func, @args) = @_;
 if (&plugin_defined($mod, $func)) {
 	if ($main::module_name ne "server_manager") {
 		# Set up server_manager package
@@ -5983,9 +5983,9 @@ else {
 # Returns 1 if some function is defined in a plugin
 sub plugin_defined
 {
-local $pkg = $_[0];
+my $pkg = $_[0];
 $pkg =~ s/[^A-Za-z0-9]/_/g;
-local $func = "${pkg}::$_[1]";
+my $func = "${pkg}::$_[1]";
 return defined(&$func);
 }
 
@@ -5993,7 +5993,7 @@ return defined(&$func);
 # Removes all HTML tags from a string, returning plain text
 sub strip_html_tags
 {
-local ($html) = @_;
+my ($html) = @_;
 $html =~ s/<[^>]*>//g;
 return $html;
 }
@@ -6038,7 +6038,7 @@ $capture_print .= join("", @_);
 
 sub html_tags_to_text
 {
-local ($rv) = @_;
+my ($rv) = @_;
 $rv =~ s/<tt>|<\/tt>//g;
 $rv =~ s/<font[^>]*>|<\/font>//g;
 $rv =~ s/<b>|<\/b>//g;
@@ -6091,7 +6091,7 @@ push(@print_function_stack, [ $first_print, $second_print,
 }
 sub pop_all_print
 {
-local $p = pop(@print_function_stack);
+my $p = pop(@print_function_stack);
 ($first_print, $second_print, $indent_print, $outdent_print, $block_print) =@$p;
 }
 
@@ -6099,8 +6099,8 @@ local $p = pop(@print_function_stack);
 # Returns a number of bits per second, nicely formatted
 sub nice_rate
 {
-local ($bps) = @_;
-local $n = &nice_size($bps);
+my ($bps) = @_;
+my $n = &nice_size($bps);
 $n =~ s/B$/bits\/s/;
 return $n;
 }
@@ -6148,15 +6148,15 @@ return &ui_textbox($name, $bits, $size, $dis)." ".
 # Parses the output of ifconfig -a into a list of interfaces
 sub parse_ifconfig_output
 {
-local ($out) = @_;
-local @ifaces;
-local @lines;
+my ($out) = @_;
+my @ifaces;
+my @lines;
 foreach my $l (split(/\r?\n/, $out)) {
 	if ($l =~ /^\S+/) { push(@lines, $l); }
 	else { $lines[$#lines] .= $l; }
 	}
 foreach my $l (@lines) {
-	local %ifc;
+	my %ifc;
 	$l =~ /^([^:\s]+)/; $ifc{'name'} = $1;
 	$l =~ /^(\S+)/; $ifc{'fullname'} = $1;
 	if ($l =~ /^(\S+):(\d+)/) { $ifc{'virtual'} = $2; }
@@ -6195,18 +6195,18 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
 	return $last_remote_error if ($last_remote_error);
-	local @active = &remote_foreign_call(
+	my @active = &remote_foreign_call(
 		$server, "net", "active_interfaces", 1);
 	return $last_remote_error if ($last_remote_error);
 	return \@active;
 	}
 else {
 	# Try parsing ifconfig output
-	local ($out, $ex, $err) = &execute_command_on_server($server,
+	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"ifconfig -a");
 	return $err if ($err);
 	return $out if ($ex);
-	local @active = &parse_ifconfig_output($out);
+	my @active = &parse_ifconfig_output($out);
 	return \@active;
 	}
 }
@@ -6215,7 +6215,7 @@ else {
 # Lock a server for some update
 sub obtain_lock_server
 {
-local ($server, $ro) = @_;
+my ($server, $ro) = @_;
 if (ref($server) eq 'ARRAY') {
 	# Do a list
 	foreach my $s (@$server) {
@@ -6239,7 +6239,7 @@ else {
 # Un-lock a server after some update
 sub release_lock_server
 {
-local ($server) = @_;
+my ($server) = @_;
 if (ref($server) eq 'ARRAY') {
 	# Do a list
 	foreach my $s (@$server) {
@@ -6266,7 +6266,7 @@ $SIG{'PIPE'} = 'ignore';
 
 sub test_lock_server
 {
-local ($server) = @_;
+my ($server) = @_;
 if ($main::got_lock_server{$server->{'id'}}) {
 	# Locked already in this process
 	return 0;
