@@ -234,11 +234,11 @@ else {
 # Convert a number of seconds into an HH hours, MM minutes, SS seconds format
 sub nice_hour_mins_secs
 {
-local ($time) = @_;
-local $days = int($time / (24*60*60));
-local $hours = int($time / (60*60)) % 24;
-local $mins = sprintf("%2.2d", int($time / 60) % 60);
-local $secs = sprintf("%2.2d", int($time) % 60);
+my ($time) = @_;
+my $days = int($time / (24*60*60));
+my $hours = int($time / (60*60)) % 24;
+my $mins = sprintf("%2.2d", int($time / 60) % 60);
+my $secs = sprintf("%2.2d", int($time) % 60);
 if ($days) {
 	return &text('nicetime_days', $days, $hours, $mins, $secs);
 	}

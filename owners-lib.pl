@@ -10,11 +10,11 @@
 sub list_system_owners
 {
 &foreign_require("acl", "acl-lib.pl");
-local @rv;
+my @rv;
 my @plans = &list_plans();
 foreach my $u (&acl::list_users()) {
 	next if (&indexof($module_name, @{$u->{'modules'}}) < 0);
-	local %acl = &get_module_acl($u->{'name'});
+	my %acl = &get_module_acl($u->{'name'});
 	next if (!$acl{'owner'});
 	$u->{'acl'} = \%acl;
 	push(@rv, $u);
@@ -26,11 +26,11 @@ return @rv;
 # Returns the hash ref for a Cloudmin system owner user
 sub get_system_owner
 {
-local ($name) = @_;
+my ($name) = @_;
 &foreign_require("acl", "acl-lib.pl");
-local ($u) = grep { $_->{'name'} eq $name } &acl::list_users();
+my ($u) = grep { $_->{'name'} eq $name } &acl::list_users();
 return undef if (!$u);
-local %acl = &get_module_acl($u->{'name'});
+my %acl = &get_module_acl($u->{'name'});
 return undef if (!$acl{'owner'});
 $u->{'acl'} = \%acl;
 return $u;
@@ -40,9 +40,9 @@ return $u;
 # Create or update a Webmin user who can manage Cloudmin systems
 sub save_system_owner
 {
-local ($u, $oldu, $aclonly) = @_;
+my ($u, $oldu, $aclonly) = @_;
 &foreign_require("acl", "acl-lib.pl");
-local $acl = $u->{'acl'};
+my $acl = $u->{'acl'};
 if (!$aclonly) {
 	delete($u->{'acl'});
 	$u->{'readonly'} = $module_name;
@@ -61,7 +61,7 @@ $acl->{'real'} = $u->{'real'};
 &save_module_acl($acl, $u->{'name'});
 
 # Grant access to just owned servers
-local %sacl = ( 'servers' => $acl->{'servers'},
+my %sacl = ( 'servers' => $acl->{'servers'},
 		'edit' => 0,
 		'find' => 0,
 		'auto' => 0,
@@ -74,7 +74,7 @@ local %sacl = ( 'servers' => $acl->{'servers'},
 # Remove a Webmin user who can manage Cloudmin systems
 sub delete_system_owner
 {
-local ($u) = @_;
+my ($u) = @_;
 &foreign_require("acl", "acl-lib.pl");
 &acl::delete_user($u->{'name'});
 if (defined(&list_backups)) {
@@ -110,12 +110,12 @@ return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 # Returns if the current user can perform some action on some server
 sub can_action
 {
-local ($server, $action) = @_;
+my ($server, $action) = @_;
 if (!$access{'owner'}) {
 	# Master admin can do anything
 	return wantarray ? ( 1, undef ) : 1;
 	}
-local @rv = ( 1, undef );
+my @rv = ( 1, undef );
 if ($server && $access{'servers'} ne '*') {
 	if (!defined(%can_servers_cache)) {
 		foreach my $id (split(/\s+/, $access{'servers'})) {
@@ -155,8 +155,8 @@ return wantarray ? @rv : $rv[0];
 # Check if some action is allowed, call error if not
 sub can_action_error
 {
-local ($server, $action) = @_;
-local ($ok, $why) = &can_action($server, $action);
+my ($server, $action) = @_;
+my ($ok, $why) = &can_action($server, $action);
 $ok || &error($why);
 }
 
@@ -164,16 +164,16 @@ $ok || &error($why);
 # Returns 1 if creating a virtual system of some type is allowed.
 sub can_create_server
 {
-local ($type) = @_;
-local $tdesc = $text{$type.'_typeshort'};
-local @rv;
-local %actions = map { $_, 1 } split(/\s+/, $access{'actions'});
+my ($type) = @_;
+my $tdesc = $text{$type.'_typeshort'};
+my @rv;
+my %actions = map { $_, 1 } split(/\s+/, $access{'actions'});
 
 # First check global license cap
-local %licence;
+my %licence;
 &read_file_cached($licence_status, \%licence);
 if ($licence{'servers'} > 0) {
-	local @allservers = grep { &is_virtual_server($_) }
+	my @allservers = grep { &is_virtual_server($_) }
 				 &list_managed_servers();
 	if (scalar(@allservers) > $licence{'servers'}) {
 		@rv = ( 0, &text('can_ecreatelic', $licence{'servers'}) );
@@ -195,7 +195,7 @@ elsif ($access{'types'} && $access{'types'} !~ /\Q$type\E/) {
 	}
 else {
 	# Check limits
-	local $limits = &get_owner_limits();
+	my $limits = &get_owner_limits();
 	if (!$limits->{'max_servers'} ||
 	    $limits->{'max_servers'} > $limits->{'servers'}) {
 		# Under limit
@@ -215,23 +215,23 @@ return wantarray ? @rv : $rv[0];
 # Only true for master admin right now
 sub can_add_server
 {
-local ($type) = @_;
-local $tdesc = $text{$type.'_typeshort'};
+my ($type) = @_;
+my $tdesc = $text{$type.'_typeshort'};
 
 # First check global license cap
-local %licence;
+my %licence;
 &read_file_cached($licence_status, \%licence);
 if ($licence{'servers'} > 0 && $type ne 'real') {
-	local @allservers = grep { &is_virtual_server($_) }
+	my @allservers = grep { &is_virtual_server($_) }
 				 &list_managed_servers();
 	if (scalar(@allservers) > $licence{'servers'}) {
-		local @rv = ( 0, &text('can_ecreatelic', $licence{'servers'}) );
+		my @rv = ( 0, &text('can_ecreatelic', $licence{'servers'}) );
 		return wantarray ? @rv : $rv[0];
 		}
 	}
 
 # Only root can add
-local @rv = !$access{'owner'} ? ( 1, undef )
+my @rv = !$access{'owner'} ? ( 1, undef )
 			      : ( 0, &text('can_eadd', $tdesc) );
 return wantarray ? @rv : $rv[0];
 }
@@ -239,16 +239,16 @@ return wantarray ? @rv : $rv[0];
 # Calls error if the current user can't create a server
 sub can_create_server_error
 {
-local ($type) = @_;
-local ($ok, $why) = &can_create_server($type);
+my ($type) = @_;
+my ($ok, $why) = &can_create_server($type);
 $ok || &error($why);
 }
 
 # Calls error if the current user can't add a server
 sub can_add_server_error
 {
-local ($type) = @_;
-local ($ok, $why) = &can_add_server($type);
+my ($type) = @_;
+my ($ok, $why) = &can_add_server($type);
 $ok || &error($why);
 }
 
@@ -262,9 +262,9 @@ return !$access{'owner'};
 # Returns 1 if virtual systems can be created on some host by the current user
 sub can_host_server
 {
-local ($vhost) = @_;
+my ($vhost) = @_;
 return 1 if (!$access{'hosts'});
-local %can = map { $_, 1 } split(/\s+/, $access{'hosts'});
+my %can = map { $_, 1 } split(/\s+/, $access{'hosts'});
 return $can{$vhost->{'id'}};
 }
 
@@ -287,9 +287,9 @@ return $access{'hostmode'} eq '' || $access{'hostmode'} eq 'location';
 # if creation from the base OS is allowed (as on Vservers or Zones)
 sub can_image
 {
-local ($image) = @_;
+my ($image) = @_;
 if ($access{'images'}) {
-	local @imgids = split(/\s+/, $access{'images'});
+	my @imgids = split(/\s+/, $access{'images'});
 	return &indexof($image ? $image->{'id'} : 'none', @imgids) >= 0;
 	}
 return 1;
@@ -299,10 +299,10 @@ return 1;
 # Returns a list of owner objects for some server
 sub get_server_owners
 {
-local ($server) = @_;
-local @rv;
+my ($server) = @_;
+my @rv;
 foreach my $o (&list_system_owners()) {
-	local @acc = split(/\s+/, $o->{'acl'}->{'servers'});
+	my @acc = split(/\s+/, $o->{'acl'}->{'servers'});
 	push(@rv, $o) if (&indexof($server->{'id'}, @acc) >= 0);
 	}
 return @rv;
@@ -384,7 +384,7 @@ return &get_plan($oaccess{'plan'});
 # Returns the server hash refs for some owner
 sub get_owner_servers
 {
-local ($owner) = @_;
+my ($owner) = @_;
 my %owned = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
 return grep { $owned{$_->{'id'}} } &list_managed_servers();
 }
@@ -503,11 +503,11 @@ $o->{'acl'}->{'images'} = $plan->{'images'};
 # Return an HTML string describing this owner's limits
 sub owner_limits_desc
 {
-local ($owner, $over) = @_;
-local $limits = &get_owner_limits($owner->{'name'});
-local @rv;
+my ($owner, $over) = @_;
+my $limits = &get_owner_limits($owner->{'name'});
+my @rv;
 foreach my $l (@plan_limit_types) {
-	local $msg = $limits->{'max_'.$l};
+	my $msg = $limits->{'max_'.$l};
 	if ($msg) {
 		if (&indexof($l, @nice_plan_limit_types) >= 0) {
 			$msg = &nice_size($msg);

@@ -15,28 +15,28 @@ $images_cache_dir = "/var/cloudmin-images";
 # associated files or directories containing the image data.
 sub list_server_images
 {
-local ($type) = @_;
-local @rv;
+my ($type) = @_;
+my @rv;
 opendir(DIR, $server_images_dir);
 foreach my $f (readdir(DIR)) {
 	next if ($f !~ /^(\S+)\.img$/);
-	local %img;
+	my %img;
 	&read_file_cached("$server_images_dir/$f", \%img);
 	$img{'id'} = $1;
 	next if ($type && $img{'manager'} ne $type);	# Don't want this type
 	next if (!$server_management_types{$img{'manager'}});	# Not supported
-	local $size = 0;
-	local $partialsize = 0;
+	my $size = 0;
+	my $partialsize = 0;
 	foreach my $fl (split(/\s+/, $img{'files'})) {
-		local @st = stat("$server_images_dir/$fl");
+		my @st = stat("$server_images_dir/$fl");
 		if (@st) {
 			$size += $st[7];
 			}
 		else {
 			$img{'partial'} = 1;
-			local ($tmp) = glob("$server_images_dir/$fl.webmintmp.*");
+			my ($tmp) = glob("$server_images_dir/$fl.webmintmp.*");
 			if ($tmp) {
-				local @tst = stat($tmp);
+				my @tst = stat($tmp);
 				$partialsize += $tst[7];
 				}
 			}
@@ -45,7 +45,7 @@ foreach my $f (readdir(DIR)) {
 	$img{'partialsize'} = $partialsize;
 	$img{'longdesc'} = $img{'desc'};
 	if (@server_management_types > 1) {
-		local $dfunc = "type_".$img{'manager'}."_desc";
+		my $dfunc = "type_".$img{'manager'}."_desc";
 		if (defined(&$dfunc)) {
 			$img{'longdesc'} .= " - ".&$dfunc();
 			}
@@ -64,8 +64,8 @@ return sort { $b->{'priority'} <=> $a->{'priority'} ||
 # Returns a server image object with the given ID
 sub get_server_image
 {
-local ($id) = @_;
-local ($img) = grep { $_->{'id'} eq $id } &list_server_images();
+my ($id) = @_;
+my ($img) = grep { $_->{'id'} eq $id } &list_server_images();
 return $img;
 }
 
@@ -74,27 +74,27 @@ return $img;
 # separated file, containing an ID, type, description, version and size.
 sub list_available_server_images
 {
-local ($type) = @_;
+my ($type) = @_;
 
 # Use cache if less than 1 hour old
-local @st = stat($server_images_cache);
+my @st = stat($server_images_cache);
 if (@st && $st[9] > time()-3600) {
-	local $rv = &unserialise_variable(
+	my $rv = &unserialise_variable(
 			&read_file_contents($server_images_cache));
 	return @$rv;
 	}
 
 # Need to download actual list
-local ($host, $port, $page, $ssl) = &parse_http_url($server_images_url);
-local ($out, $err);
-local %serial;
+my ($host, $port, $page, $ssl) = &parse_http_url($server_images_url);
+my ($out, $err);
+my %serial;
 &read_file($licence_file, \%serial);
 &http_download($host, $port, $page, \$out, \$err, undef, $ssl,
 	       $serial{'SerialNumber'}, $serial{'LicenseKey'});
 &error("Failed to get server images : $err") if ($err);
-local @rv;
+my @rv;
 foreach my $l (split(/\r?\n/, $out)) {
-	local ($id, $manager, $desc, $version, $size) = split(/\t+/, $l);
+	my ($id, $manager, $desc, $version, $size) = split(/\t+/, $l);
 	if ($server_management_types{$manager}) {
 		push(@rv, { 'id' => $id,
 			    'manager' => $manager,
@@ -116,15 +116,15 @@ return @rv;
 # the new image object on success, or an error string on failure.
 sub download_server_image
 {
-local ($img) = @_;
-local ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
-local %serial;
+my ($img) = @_;
+my ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
+my %serial;
 &read_file($licence_file, \%serial);
-local $temp = &transname();
+my $temp = &transname();
 &http_download($host, $port, "$page/$img->{'id'}.img", $temp, \$err,
 	       undef, $ssl, $serial{'SerialNumber'}, $serial{'LicenseKey'});
 return $err if ($err);
-local %got;
+my %got;
 &read_file($temp, \%got);
 $got{'id'} ||= $img->{'id'};
 $got{'size'} = $img->{'size'};
@@ -137,10 +137,10 @@ return \%got;
 # Returns undef on success, or an error message on failure.
 sub download_server_image_files
 {
-local ($img) = @_;
-local @files = split(/\s+/, $img->{'files'});
-local ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
-local %serial;
+my ($img) = @_;
+my @files = split(/\s+/, $img->{'files'});
+my ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
+my %serial;
 &read_file($licence_file, \%serial);
 foreach my $f (@files) {
 	$progress_callback_url = $server_images_base.$f;
@@ -160,9 +160,9 @@ return undef;
 # either (1, dir) or (0, some error).
 sub create_image_files_tempdir
 {
-local ($vhost, $id) = @_;
+my ($vhost, $id) = @_;
 
-local $temp;
+my $temp;
 if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	# Ask the remote Webmin
 	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
@@ -171,11 +171,11 @@ if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	}
 else {
 	# Use configure dir, or /tmp
-	local $ostemp = $vhost->{'type'} eq 'solaris' ? '/var/tmp' : '/tmp';
-	local $tempdir = $config{'img_temp'} || $ostemp;
+	my $ostemp = $vhost->{'type'} eq 'solaris' ? '/var/tmp' : '/tmp';
+	my $tempdir = $config{'img_temp'} || $ostemp;
 	$temp = "$tempdir/$id";
 	}
-local ($out, $ex, $err) = &execute_command_on_server($vhost,
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
 				"rm -rf ".quotemeta($temp)." ; ".
 				"mkdir ".quotemeta($temp));
 return (0, $err) if ($err);
@@ -189,13 +189,13 @@ return (1, $temp);
 # transferred to cache) the path to the temp directory created for them.
 sub transfer_image_files
 {
-local ($server, $progress) = @_;
-local $pfunc = "type_".$server->{'manager'}."_parent";
-local $vhost = &$pfunc($server);
+my ($server, $progress) = @_;
+my $pfunc = "type_".$server->{'manager'}."_parent";
+my $vhost = &$pfunc($server);
 $vhost || return (0, "Could not find parent system");
-local ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
+my ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
 $img || return (0, "Could not find image with ID $server->{'image'}");
-local @files = split(/\s+/, $img->{'files'});
+my @files = split(/\s+/, $img->{'files'});
 
 # No need to transfer if the host is the Cloudmin master
 if ($vhost->{'manager'} eq 'this') {
@@ -204,13 +204,13 @@ if ($vhost->{'manager'} eq 'this') {
 
 # Check if the host has image caching enabled, and if we have the image
 # already
-local $prefix = $server->{'manager'};
+my $prefix = $server->{'manager'};
 $prefix = "zone" if ($prefix eq "zones");
-local $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
-local $imagedir;
+my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
+my $imagedir;
 if ($vhost->{$prefix.'_cachesize'}) {
 	# Make the directory if needed
-	local ($out, $ex, $err) = &execute_command_on_server($vhost,
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"test -d ".quotemeta($cachedir).
 		" || mkdir -p ".quotemeta($cachedir));
 	if ($ex || $err) {
@@ -219,9 +219,9 @@ if ($vhost->{$prefix.'_cachesize'}) {
 		}
 
 	# See if we have all the needed files in the cache
-	local $missing = 0;
+	my $missing = 0;
 	foreach my $f (@files) {
-		local @st = &stat_file_on_server($vhost, "$cachedir/$f");
+		my @st = &stat_file_on_server($vhost, "$cachedir/$f");
 		$missing++ if (!@st);
 		}
 	if (!$missing) {
@@ -238,38 +238,38 @@ if ($vhost->{$prefix.'_cachesize'}) {
 	$imagedir = $cachedir;
 
 	# If cache is too big, clean up some files first
-	local $maxsize = $vhost->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
-	local $err = &cleanup_cache_dir($vhost, $cachedir,
+	my $maxsize = $vhost->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
+	my $err = &cleanup_cache_dir($vhost, $cachedir,
 					$maxsize, $img->{'size'});
 	return (0, $err) if ($err);
 	}
 else {
 	# Choose a temp dir
-	local ($tempok, $temp) = &create_image_files_tempdir(
+	my ($tempok, $temp) = &create_image_files_tempdir(
 					$vhost, $img->{'id'});
 	return (0, $temp) if (!$tempok);
 	$imagedir = $temp;
 	}
 
-# Copy files from local to that dir
+# Copy files from my to that dir
 foreach my $f (@files) {
-	local $path = "$server_images_dir/$f";
-	local $pid = fork();
-	local $outtemp = &tempname();
+	my $path = "$server_images_dir/$f";
+	my $pid = fork();
+	my $outtemp = &tempname();
 	if (!$pid) {
-		local $err = &put_file_to_server($vhost, $path, "$imagedir/$f");
+		my $err = &put_file_to_server($vhost, $path, "$imagedir/$f");
 		open(OUT, ">$outtemp");
 		print OUT $err;
 		close(OUT);
 		exit($err ? 1 : 0);
 		}
 	while(1) {
-		local $expid = waitpid($pid, WNOHANG);
+		my $expid = waitpid($pid, WNOHANG);
 		last if ($expid == $pid);
 		print "." if ($progress);
 		sleep(1);
 		}
-	local $err = &read_file_contents($outtemp);
+	my $err = &read_file_contents($outtemp);
 	&unlink_file($outtemp);
 	if ($err) {
 		return (0, "Failed to copy $f : $err");
@@ -289,30 +289,30 @@ else {
 # undef on success or an error message on failure.
 sub cleanup_cache_dir
 {
-local ($vhost, $cachedir, $maxsize, $incr) = @_;
+my ($vhost, $cachedir, $maxsize, $incr) = @_;
 return undef if ($incr <= 0);
-local ($out, $ex, $err) = &execute_command_on_server(
+my ($out, $ex, $err) = &execute_command_on_server(
 			$vhost, "du -k ".quotemeta($cachedir)."/*");
-local $totalsize = $incr;
-local %sizemap;
+my $totalsize = $incr;
+my %sizemap;
 foreach my $l (split(/\r?\n/, $out)) {
-	local ($kb, $f) = split(/\s+/, $l);
+	my ($kb, $f) = split(/\s+/, $l);
 	$f =~ s/^\Q$cachedir\E\///g;
 	$totalsize += $kb*1024;
 	$sizemap{$f} = $kb*1024;
 	}
 if ($totalsize > $maxsize) {
 	# Too big! Delete images, ordered by time
-	local ($out, $ex, $err) = &execute_command_on_server(
+	my ($out, $ex, $err) = &execute_command_on_server(
 		$vhost, "ls -t ".quotemeta($cachedir));
 	if ($ex || $err) {
 		return "Failed to list cache files for cleanup : ".
 		       ($err || $out);
 		}
-	local @delfiles = reverse(split(/\r?\n/, $out));
+	my @delfiles = reverse(split(/\r?\n/, $out));
 	while(@delfiles && $totalsize > $maxsize) {
-		local $f = shift(@delfiles);
-		local $err = &delete_file_on_server(
+		my $f = shift(@delfiles);
+		my $err = &delete_file_on_server(
 			$vhost, "$cachedir/$f");
 		if ($err) {
 			return "Failed to delete old cached file $f : $err";
@@ -327,12 +327,12 @@ return undef;
 # Deletes any image files transferred to the host of some server
 sub cleanup_image_files
 {
-local ($server, $temp) = @_;
+my ($server, $temp) = @_;
 return if (!$temp);
-local $pfunc = "type_".$server->{'manager'}."_parent";
-local $vhost = &$pfunc($server);
+my $pfunc = "type_".$server->{'manager'}."_parent";
+my $vhost = &$pfunc($server);
 $vhost || return "Could not find parent system";
-local ($out, $ex, $err) = &execute_command_on_server($vhost,
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
 				"rm -rf ".quotemeta($temp));
 return $err ? $err : $ex ? $out : undef;
 }
@@ -341,16 +341,16 @@ return $err ? $err : $ex ? $out : undef;
 # Just writes out an image .img info file
 sub save_server_image
 {
-local ($image) = @_;
+my ($image) = @_;
 &make_dir($server_images_dir, 0700);
 &write_file("$server_images_dir/$image->{'id'}.img", $image);
 }
 
 # delete_server_image(&image)
-# Deletes a local image and all files
+# Deletes a my image and all files
 sub delete_server_image
 {
-local ($img) = @_;
+my ($img) = @_;
 foreach my $fl (split(/\s+/, $img->{'files'})) {
 	unlink("$server_images_dir/$fl");
 	}
@@ -362,7 +362,7 @@ unlink("$server_images_dir/$img->{'id'}.img");
 # for image files
 sub generate_image_md5s
 {
-local ($image) = @_;
+my ($image) = @_;
 $image->{'md5'} = join(" ", &get_image_md5s($image));
 }
 
@@ -370,10 +370,10 @@ $image->{'md5'} = join(" ", &get_image_md5s($image));
 # Generate MD5 checksums for image files, and return them as a list
 sub get_image_md5s
 {
-local ($image) = @_;
-local @rv;
+my ($image) = @_;
+my @rv;
 foreach my $f (split(/\s+/, $image->{'files'})) {
-	local $out = &backquote_command("md5sum ".
+	my $out = &backquote_command("md5sum ".
 		quotemeta("$server_images_dir/$f")." 2>/dev/null </dev/null");
 	$out =~ s/\r|\n//g;
 	$out =~ s/^(\S+)\s+.*/$1/;
@@ -386,7 +386,7 @@ return @rv;
 # Check if two lists are case-insentively the same
 sub compare_md5_lists
 {
-local ($l1, $l2) = @_;
+my ($l1, $l2) = @_;
 return join(" ", map { lc($_) } @$l1) eq join(" ", map { lc($_) } @$l2);
 }
 
@@ -395,19 +395,19 @@ return join(" ", map { lc($_) } @$l1) eq join(" ", map { lc($_) } @$l2);
 # licence keys. Also clears any virtualmin host-specific cache files.
 sub fix_virtualmin_licence_files
 {
-local ($server, $serial, $key) = @_;
+my ($server, $serial, $key) = @_;
 
 # Put serial into licence and update config files
-local %hash = ( 'SERIAL' => $serial,
+my %hash = ( 'SERIAL' => $serial,
 		'KEY' => $key );
 foreach my $fix ("/etc/virtualmin-license",
 		 "/etc/apt/sources.list",
 		 "/etc/yum.repos.d/virtualmin.repo",
 		 "/etc/webmin/webmin/config") {
-	local $temppath = &transname();
-	local $err = &get_file_from_server($server, $fix, $temppath);
+	my $temppath = &transname();
+	my $err = &get_file_from_server($server, $fix, $temppath);
 	next if ($err);
-	local $data = &read_file_contents($temppath);
+	my $data = &read_file_contents($temppath);
 	$data = &substitute_template($data, \%hash);
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
@@ -430,11 +430,11 @@ return undef;
 # - Run freshclam for the first time, to load the virus DB.
 sub fix_virtualmin_after_boot
 {
-local ($server) = @_;
+my ($server) = @_;
 if (&has_command_on_server($server, "apt-key")) {
 	foreach my $url ($virtualmin_apt_package_key,
 			 $virtualmin_webmin_apt_package_key) {
-		local ($out, $ex, $err) = &execute_command_on_server($server,
+		my ($out, $ex, $err) = &execute_command_on_server($server,
 			"wget -q $url -O - | apt-key add -");
 		return $err if ($err);
 		return $out if ($ex);
@@ -451,16 +451,16 @@ return undef;
 # Fixes up all configuration files that contain the IP address or hostname
 sub fix_hostname_config_files
 {
-local ($server, $ip, $host, $fullhost, $vhost, $dir, $resolv) = @_;
+my ($server, $ip, $host, $fullhost, $vhost, $dir, $resolv) = @_;
 
 # Check if the target has Virtualmin, and thus needs 127.0.0.1 in
 # /etc/resolv.conf
-local $vconfig = &transname();
-local $err = &get_file_from_server($vhost,
+my $vconfig = &transname();
+my $err = &get_file_from_server($vhost,
 		"$dir/etc/webmin/virtual-server/config", $vconfig);
-local $needs_localhost;
+my $needs_localhost;
 if (!$err) {
-	local %vconfig;
+	my %vconfig;
 	&read_file($vconfig, \%vconfig);
 	$needs_localhost = $vconfig{'dns'};
 	}
@@ -469,16 +469,16 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",
 		 "/etc/sysconfig/network", "/etc/postfix/main.cf",
 		 "/etc/conf.d/hostname") {
-	local $fixpath = "$dir/$fix";
-	local $temppath = &transname();
+	my $fixpath = "$dir/$fix";
+	my $temppath = &transname();
 
 	# Only do files that exist, apart from /etc/hosts and /etc/resolv.conf
 	# which should be everywhere
-	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
+	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
 	next if ($err && $fix ne "/etc/hosts" &&
 			 $fix ne "/etc/resolv.conf");
 
-	local $data = &read_file_contents($temppath);
+	my $data = &read_file_contents($temppath);
 	if ($fix eq "/etc/hosts") {
 		$data = "127.0.0.1 localhost\n".
 			"$ip $fullhost $host\n";
@@ -533,22 +533,22 @@ return undef;
 # /etc/network/interfaces to use the given static IP.
 sub fix_network_config_files
 {
-local ($server, $ip, $netmask, $gw, $vhost, $dir, $iface) = @_;
+my ($server, $ip, $netmask, $gw, $vhost, $dir, $iface) = @_;
 $iface ||= "eth0";
 
 # Work out broadcast and network addresses
-local $broadcast = &net::compute_broadcast($ip, $netmask);
-local $network = &net::compute_network($ip, $netmask);
+my $broadcast = &net::compute_broadcast($ip, $netmask);
+my $network = &net::compute_network($ip, $netmask);
 
 # Fix relevant files
 foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/network/interfaces",
 		 "/etc/conf.d/net") {
-	local $fixpath = "$dir/$fix";
-	local $temppath = &transname();
-	local $err = &get_file_from_server($vhost, $fixpath, $temppath);
+	my $fixpath = "$dir/$fix";
+	my $temppath = &transname();
+	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
 	next if ($err);
-	local $data = &read_file_contents($temppath);
+	my $data = &read_file_contents($temppath);
 	if ($fix =~ /ifcfg-$iface/) {
 		# Redhat config file
 		$data = "TYPE=Ethernet\n".
@@ -684,12 +684,12 @@ return undef;
 # OK if already allowed, NONE if no SSH config was found, or an error message
 sub fix_ssh_root_login
 {
-local ($server) = @_;
-local $sc = &transname();
-local $sshd_config = "/etc/ssh/sshd_config";
+my ($server) = @_;
+my $sc = &transname();
+my $sshd_config = "/etc/ssh/sshd_config";
 if (!&get_file_from_server($server, $sshd_config, $sc)) {
-	local $changed = 0;
-	local $lref = &read_file_lines($sc);
+	my $changed = 0;
+	my $lref = &read_file_lines($sc);
 	foreach my $l (@$lref) {
 		if ($l =~ /^\s*PermitRootLogin\s+(\S+)/ && $1 ne 'yes') {
 			$l = "PermitRootLogin yes";
@@ -712,8 +712,8 @@ return "NONE";
 # packages that need it May call the print functions.
 sub update_virtualmin_packages
 {
-local ($server) = @_;
-local $info = &get_server_collected($server);
+my ($server) = @_;
+my $info = &get_server_collected($server);
 if ($server->{'status'} eq 'virt' && $info && @{$info->{'poss'}}) {
 	&$first_print(&text('update_ipackages', scalar(@{$info->{'poss'}})));
 	my @allgot;
@@ -721,7 +721,7 @@ if ($server->{'status'} eq 'virt' && $info && @{$info->{'poss'}}) {
 	foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
 		&$first_print(&text('update_ipkg', $p->{'name'},
 						   $p->{'version'}));
-		local $got = &install_package_update($server, $p);
+		my $got = &install_package_update($server, $p);
 		push(@allgot, @$got) if (ref($got));
 		if (ref($got)) {
 			&$second_print($text{'update_idone'});
@@ -746,16 +746,16 @@ if ($server->{'status'} eq 'virt' && $info && @{$info->{'poss'}}) {
 # contents (for later restoring) on success, or an error string on failure.
 sub munge_virtualmin_licence_files
 {
-local ($server) = @_;
-local @rv;
+my ($server) = @_;
+my @rv;
 foreach my $fix ("/etc/virtualmin-license",
 		 "/etc/apt/sources.list",
 		 "/etc/yum.repos.d/virtualmin.repo",
 		 "/etc/webmin/webmin/config") {
-	local $temppath = &transname();
-	local $err = &get_file_from_server($server, $fix, $temppath);
+	my $temppath = &transname();
+	my $err = &get_file_from_server($server, $fix, $temppath);
 	next if ($err);
-	local $data = &read_file_contents($temppath);
+	my $data = &read_file_contents($temppath);
 	if ($fix eq "/etc/virtualmin-license" &&
 	    $data =~ /SerialNumber=GPL/) {
 		# No need to munge GPL licence file
@@ -789,25 +789,25 @@ return \@rv;
 # original contents, or an error string
 sub munge_shadow_root_password
 {
-local ($server) = @_;
-local @rv;
-local $salt = substr(time(), -2);
+my ($server) = @_;
+my @rv;
+my $salt = substr(time(), -2);
 
 # Do /etc/shadow or /etc/passwd
-local $shadow = &transname();
-local $passfile = "/etc/shadow";
-local $err = &get_file_from_server($server, $passfile, $shadow);
+my $shadow = &transname();
+my $passfile = "/etc/shadow";
+my $err = &get_file_from_server($server, $passfile, $shadow);
 if ($err) {
 	$passfile = "/etc/passwd";
 	$err = &get_file_from_server($server, $passfile, $shadow);
 	}
 if (!$err) {
 	# Fix password in first column for root
-	local $data = &read_file_contents($shadow);
+	my $data = &read_file_contents($shadow);
 	push(@rv, [ $passfile, $data ]);
-	local $lref = &read_file_lines($shadow);
+	my $lref = &read_file_lines($shadow);
 	foreach my $l (@$lref) {
-		local @w = split(/:/, $l, -1);
+		my @w = split(/:/, $l, -1);
 		if ($w[0] eq "root") {
 			$w[1] = &unix_crypt("changeme", $salt);
 			$l = join(':', @w);
@@ -819,16 +819,16 @@ if (!$err) {
 	}
 
 # Do /etc/webmin/miniserv.users for root or admin
-local $users = &transname();
-local $passfile = "/etc/webmin/miniserv.users";
-local $err = &get_file_from_server($server, $passfile, $users);
+my $users = &transname();
+my $passfile = "/etc/webmin/miniserv.users";
+my $err = &get_file_from_server($server, $passfile, $users);
 if (!$err) {
-	local $data = &read_file_contents($users);
+	my $data = &read_file_contents($users);
 	push(@rv, [ $passfile, $data ]);
-	local $lref = &read_file_lines($users);
-	local $changed;
+	my $lref = &read_file_lines($users);
+	my $changed;
 	foreach my $l (@$lref) {
-                local @w = split(/:/, $l, -1);
+                my @w = split(/:/, $l, -1);
 		if (($w[0] eq "root" || $w[0] eq "admin") && $w[1] ne "x") {
 			$w[1] = &unix_crypt("changeme", $salt);
 			$l = join(':', @w);
@@ -849,7 +849,7 @@ return \@rv;
 # Clears root's shell history files, everything in /tmp, and most logs
 sub munge_log_files
 {
-local ($server) = @_;
+my ($server) = @_;
 
 # Clear history files
 foreach my $f (".bash_history", ".mysql_history",
@@ -862,7 +862,7 @@ foreach my $f (".bash_history", ".mysql_history",
 &delete_file_on_server($server, "/tmp/*", 1);
 
 # Clear common logs
-local $logdir = "/var/log";
+my $logdir = "/var/log";
 foreach my $f ("messages", "auth.log", "secure", "daemon.log", "syslog",
 	       "dmesg", "mailman", "mysql.err", "mysql.log", "lastlog",
 	       "wtmp", "dpkg.log", "anaconda.log", "boot.log", "cron",
@@ -888,18 +888,18 @@ return [ ];	# Files cannot be reverted
 # changed and original contents, or an error string
 sub munge_authorized_key
 {
-local ($server) = @_;
-local ($roothome, $ex, $err) = &execute_command_on_server($server, "echo ~");
+my ($server) = @_;
+my ($roothome, $ex, $err) = &execute_command_on_server($server, "echo ~");
 $roothome =~ s/\r|\n//g;
 $roothome ||= "/root";
-local @rv;
+my @rv;
 foreach my $fix ("$roothome/.ssh/authorized_keys",
 		 "$roothome/.ssh/authorized_keys2",
 		 "$roothome/.ssh/known_hosts",
 		 "$roothome/.ssh/known_hosts2",) {
-	local $data = &get_file_data_from_server($server, $fix);
+	my $data = &get_file_data_from_server($server, $fix);
 	if ($data) {
-		local $err = &put_file_data_to_server($server, "", $fix);
+		my $err = &put_file_data_to_server($server, "", $fix);
 		if ($err) {
 			return "Failed to truncate $fix : $err";
 			}
@@ -917,37 +917,37 @@ return \@rv;
 # can take some time, outputs progress dots.
 sub fetch_image_files
 {
-local ($vhost, $image, $temp, $progress, $server) = @_;
+my ($vhost, $image, $temp, $progress, $server) = @_;
 
 # Download each file in the image
-local $totalsize = 0;
-local $oldsize;
-local @imgfiles = split(/\s+/, $image->{'files'});
+my $totalsize = 0;
+my $oldsize;
+my @imgfiles = split(/\s+/, $image->{'files'});
 foreach my $f (@imgfiles) {
-	local $path = "$server_images_dir/$f";
-	local @oldst = stat($path);
+	my $path = "$server_images_dir/$f";
+	my @oldst = stat($path);
 	$oldsize += $st[7];
-	local $pid = fork();
-	local $outtemp = &tempname();
+	my $pid = fork();
+	my $outtemp = &tempname();
 	if (!$pid) {
-		local $err = &get_file_from_server($vhost, "$temp/$f", $path);
+		my $err = &get_file_from_server($vhost, "$temp/$f", $path);
 		open(OUT, ">$outtemp");
 		print OUT $err;
 		close(OUT);
 		exit($err ? 1 : 0);
 		}
 	while(1) {
-		local $expid = waitpid($pid, WNOHANG);
+		my $expid = waitpid($pid, WNOHANG);
 		last if ($expid == $pid);
 		print "." if ($progress);
 		sleep(1);
 		}
-	local $err = &read_file_contents($outtemp);
+	my $err = &read_file_contents($outtemp);
 	&unlink_file($outtemp);
 	if ($err) {
 		return "Failed to copy $f : $err";
 		}
-	local @st = stat($path);
+	my @st = stat($path);
 	if (!@st) {
 		return "Copy of $f to $path failed";
 		}
@@ -955,12 +955,12 @@ foreach my $f (@imgfiles) {
 	}
 
 # If caching is enabled, save in the cache too
-local $prefix = $server->{'manager'};
+my $prefix = $server->{'manager'};
 $prefix = "zone" if ($prefix eq "zones");
 if ($vhost->{$prefix.'_cachesize'}) {
 	# Create the cache dir if needed
-	local $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
-	local ($out, $ex, $err) = &execute_command_on_server($vhost,
+	my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"test -d ".quotemeta($cachedir).
 		" || mkdir -p ".quotemeta($cachedir));
 	if ($ex || $err) {
@@ -970,14 +970,14 @@ if ($vhost->{$prefix.'_cachesize'}) {
 
 	# If the cache would be too big after adding the new images,
 	# clean it up first
-	local $maxsize = $vhost->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
-	local $err = &cleanup_cache_dir($vhost, $cachedir, $maxsize,
+	my $maxsize = $vhost->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
+	my $err = &cleanup_cache_dir($vhost, $cachedir, $maxsize,
 					$totalsize - $oldsize);
 	return "Cache cleanup failed : $err" if ($err);
 
 	# Copy them into the cache
 	foreach my $f (@imgfiles) {
-		local ($out, $ex, $err) = &execute_command_on_server(
+		my ($out, $ex, $err) = &execute_command_on_server(
 			$vhost, "cp ".quotemeta("$temp/$f")." ".
 				      quotemeta("$cachedir/$f"));
 		if ($ex || $err) {
@@ -985,7 +985,7 @@ if ($vhost->{$prefix.'_cachesize'}) {
 			}
 		}
 	}
-local $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
+my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
 
 return undef;
 }
@@ -996,9 +996,9 @@ return undef;
 # files and their original content.
 sub munge_all_files
 {
-local ($server, $noauth, $noserial) = @_;
-local @munged;
-local $ok = 1;
+my ($server, $noauth, $noserial) = @_;
+my @munged;
+my $ok = 1;
 foreach my $m ([ \&munge_virtualmin_licence_files, 'mkimage_mungelicence' ],
 	       [ \&munge_shadow_root_password, 'mkimage_mungeshadow' ],
 	       [ \&munge_log_files, 'mkimage_mungelogs' ],
@@ -1006,8 +1006,8 @@ foreach my $m ([ \&munge_virtualmin_licence_files, 'mkimage_mungelicence' ],
 	next if ($m->[1] eq 'mkimage_mungessh' && $noauth);
 	next if ($m->[1] eq 'mkimage_mungelicence' && $noserial);
 	&$first_print($text{$m->[1]});
-	local $mfunc = $m->[0];
-	local $munged = &$mfunc($server);
+	my $mfunc = $m->[0];
+	my $munged = &$mfunc($server);
 	if (!ref($munged)) {
 		&$second_print(&text('mkimage_emunge', $err));
 		$ok = 0;
@@ -1025,11 +1025,11 @@ return ($ok, \@munged);
 # success, 0 on failure.
 sub unmunge_all_files
 {
-local ($server, $munged) = @_;
+my ($server, $munged) = @_;
 &$first_print($text{'mkimage_unmunge'});
 foreach my $m (@$munged) {
-	local ($file, $data) = @$m;
-	local $err = &put_file_data_to_server($server, $data, $file);
+	my ($file, $data) = @$m;
+	my $err = &put_file_data_to_server($server, $data, $file);
 	if ($err) {
 		&$second_print(&text('create_eunmunge', $file, $err));
 		return 0;
@@ -1043,7 +1043,7 @@ return 1;
 # Output a table for configuring image caching on a host system
 sub show_host_images_cache_table
 {
-local ($server, $prefix) = @_;
+my ($server, $prefix) = @_;
 print &ui_hidden_table_start($text{'xen_header3'}, "width=100%", 2,
 			     "cache", 0);
 
@@ -1065,7 +1065,7 @@ print &ui_hidden_table_end("cache");
 # Update a host system with inputs from show_host_images_cache_table
 sub parse_host_images_cache_table
 {
-local ($server, $in, $prefix) = @_;
+my ($server, $in, $prefix) = @_;
 
 # Parse cache size
 if ($in->{'cachesize_def'}) {

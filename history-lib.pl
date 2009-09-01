@@ -26,7 +26,7 @@ $historic_info_dir = "$module_config_directory/history";
 # Log some historic data for a Cloudmin-monitored system
 sub add_historic_collected_info
 {
-local ($info, $time, $server) = @_;
+my ($info, $time, $server) = @_;
 
 # Add disk usage, CPU and memory to historic stats, if we got them
 if (!-d $historic_info_dir) {
@@ -35,7 +35,7 @@ if (!-d $historic_info_dir) {
 if (!-d "$historic_info_dir/$server->{'id'}") {
 	&make_dir("$historic_info_dir/$server->{'id'}", 0700);
 	}
-local @stats;
+my @stats;
 if ($info->{'load'}) {
 	push(@stats, [ "load", $info->{'load'}->[0] ]);
 	push(@stats, [ "load5", $info->{'load'}->[1] ]);
@@ -62,8 +62,8 @@ if ($info->{'fcount'}) {
 	push(@stats, [ "aliases", int($info->{'fcount'}->{'aliases'}) ]);
 	}
 if ($info->{'quota'}) {
-	local $qlimit = 0;
-	local $qused = 0;
+	my $qlimit = 0;
+	my $qused = 0;
 	foreach my $q (@{$info->{'quota'}}) {
 		$qlimit += $q->[2];
 		$qused += $q->[1]+$q->[3];
@@ -73,7 +73,7 @@ if ($info->{'quota'}) {
 	}
 foreach my $tt ("drive", "cpu") {
 	if ($info->{$tt.'temps'}) {
-		local ($temptotal, $tempcount);
+		my ($temptotal, $tempcount);
 		foreach my $t (@{$info->{$tt.'temps'}}) {
 			$temptotal += $t->{'temp'};
 			$tempcount++;
@@ -97,12 +97,12 @@ foreach my $stat (@stats) {
 # time period
 sub list_historic_collected_info
 {
-local ($stat, $server, $start, $end) = @_;
-local @rv;
+my ($stat, $server, $start, $end) = @_;
+my @rv;
 open(HISTORY, "$historic_info_dir/$server->{'id'}/$stat");
 while(<HISTORY>) {
         chop;
-        local ($time, $value) = split(" ", $_);
+        my ($time, $value) = split(" ", $_);
         if ((!defined($start) || $time >= $start) &&
             (!defined($end) || $time <= $end)) {
                 push(@rv, [ $time, $value ]);
@@ -120,24 +120,24 @@ return @rv;
 # a list of servers, taking the max if there is more than one server
 sub get_historic_first_last
 {
-local ($stat, $servers) = @_;
-local ($firsttime, $lasttime);
+my ($stat, $servers) = @_;
+my ($firsttime, $lasttime);
 foreach my $s (@$servers) {
 	open(HISTORY, "$historic_info_dir/$s->{'id'}/$stat") || next;
-	local $first = <HISTORY>;
+	my $first = <HISTORY>;
 	if (!$first) {
 		close(HISTORY);
 		next;
 		}
 	chop($first);
-	local ($sfirsttime, undef) = split(" ", $first);
+	my ($sfirsttime, undef) = split(" ", $first);
 	seek(HISTORY, 2, -256) || seek(HISTORY, 0, 0);
 	while(<HISTORY>) {
 		$last = $_;
 		}
 	close(HISTORY);
 	chop($last);
-	local ($slasttime, undef) = split(" ", $last);
+	my ($slasttime, undef) = split(" ", $last);
 	$firsttime = $sfirsttime if (!defined($firsttime) ||
 				     $sfirsttime < $firsttime);
 	$lasttime = $slasttime if (!defined($lasttime) ||
@@ -150,9 +150,9 @@ return ($firsttime, $lasttime);
 # Returns a list of variables on which we have stats for some or all servers
 sub list_historic_stats
 {
-local ($servers) = @_;
-local @rv;
-local %done;
+my ($servers) = @_;
+my @rv;
+my %done;
 foreach my $s (@$servers) {
 	opendir(HISTDIR, "$historic_info_dir/$s->{'id'}");
 	foreach my $f (readdir(HISTDIR)) {

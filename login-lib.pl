@@ -5,18 +5,18 @@
 # remote system. Returns undef if done, or an error message on failure.
 sub create_console_user
 {
-local ($server) = @_;
+my ($server) = @_;
 if (&foreign_check("useradmin")) {
 	&foreign_require("useradmin", "user-lib.pl");
 	&foreign_require("cron", "cron-lib.pl");
-	local $uname = $server->{'manager'}."-".$server->{'host'}."-console";
+	my $uname = $server->{'manager'}."-".$server->{'host'}."-console";
 	&useradmin::lock_user_files();
-	local @users = &useradmin::list_users();
-	local ($clash) = grep { $_->{'user'} eq $uname } @users;
+	my @users = &useradmin::list_users();
+	my ($clash) = grep { $_->{'user'} eq $uname } @users;
 	return "A user named $uname already exists" if ($clash);
-	local $pass = $server->{'ssh_pass'} || &random_password(16);
+	my $pass = $server->{'ssh_pass'} || &random_password(16);
 	&cron::create_wrapper($login_shell_cmd, $module_name, "login.pl");
-	local $uinfo = { 'user' => $uname,
+	my $uinfo = { 'user' => $uname,
 			 'uid' => 0,
 			 'gid' => 0,
 			 'pass' => &useradmin::encrypt_password($pass),
@@ -48,7 +48,7 @@ return "Users and Groups module is not installed or not supported";
 # Deletes the console Unix user for a server
 sub delete_console_user
 {
-local ($server) = @_;
+my ($server) = @_;
 if (!$server->{'login_user'}) {
 	# Was never setup
 	return undef;
@@ -56,8 +56,8 @@ if (!$server->{'login_user'}) {
 if (&foreign_check("useradmin")) {
 	&foreign_require("useradmin", "user-lib.pl");
 	&useradmin::lock_user_files();
-	local @users = &useradmin::list_users();
-	local ($uinfo) = grep { $_->{'user'} eq $server->{'login_user'} }
+	my @users = &useradmin::list_users();
+	my ($uinfo) = grep { $_->{'user'} eq $server->{'login_user'} }
 			      @users;
 	return "User $server->{'login_user'} does not exist" if (!$uinfo);
 	&useradmin::set_user_envs($uinfo, 'DELETE_USER');
@@ -80,8 +80,8 @@ return "Users and Groups module is not installed or not supported";
 # Retuens 1 if the special console user exists, 0 if not
 sub has_login_user
 {
-local ($server) = @_;
-local $uname = $server->{'manager'}."-".$server->{'host'}."-console";
+my ($server) = @_;
+my $uname = $server->{'manager'}."-".$server->{'host'}."-console";
 return defined(getpwnam($uname)) ? 1 : 0;
 }
 
@@ -91,8 +91,8 @@ sub random_password
 {
 &seed_random();
 &foreign_require("useradmin", "user-lib.pl");
-local $random_password;
-local $len = $_[0] || 16;
+my $random_password;
+my $len = $_[0] || 16;
 foreach (1 .. $len) {
 	$random_password .= $useradmin::random_password_chars[
 			rand(scalar(@useradmin::random_password_chars))];
@@ -105,17 +105,17 @@ return $random_password;
 # SSH protocol versions accepted.
 sub get_ssh_host_port
 {
-local $host = $ENV{'HTTP_HOST'} || $ENV{'SERVER_NAME'} ||
+my $host = $ENV{'HTTP_HOST'} || $ENV{'SERVER_NAME'} ||
 	      &get_system_hostname();
 $host =~ s/:\d+$//;
-local $port;
-local @protos;
+my $port;
+my @protos;
 if (&foreign_check("sshd")) {
 	# Ask the SSH server module for the port
 	&foreign_require("sshd", "sshd-lib.pl");
-	local $conf = &sshd::get_sshd_config();
+	my $conf = &sshd::get_sshd_config();
 	$port = &sshd::find_value("Port", $conf);
-	local $protos = &sshd::find_value("Protocol", $conf);
+	my $protos = &sshd::find_value("Protocol", $conf);
 	@protos = split(/,/, $protos);
 	}
 $port ||= 22;
@@ -127,11 +127,11 @@ return ($host, $port, \@protos);
 # Forward traffic from STDIN/OUT to and from a console file handle
 sub forward_console_data
 {
-local ($fh) = @_;
+my ($fh) = @_;
 
 # Turn off echo on STDIN
 eval "use IO::Stty";
-local $old_mode;
+my $old_mode;
 if (!$@) {
 	$old_mode=IO::Stty::stty(\*STDIN, '-g');
 	IO::Stty::stty(\*STDIN, 'raw', '-echo');
@@ -152,12 +152,12 @@ if (defined($old_mode)) {
 # Forward all traffic in both directions between two sockets
 sub forward_connection_sockets
 {
-local ($in1, $out1, $in2, $out2) = @_;
+my ($in1, $out1, $in2, $out2) = @_;
 while(1) {
-	local $rmask = undef;
+	my $rmask = undef;
 	vec($rmask, fileno($in1), 1) = 1;
 	vec($rmask, fileno($in2), 1) = 1;
-	local $sel = select($rmask, undef, undef, 10);
+	my $sel = select($rmask, undef, undef, 10);
 	if (vec($rmask, fileno($in1), 1)) {
 		# Got something from SSH client
 		my $buf;

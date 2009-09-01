@@ -14,16 +14,16 @@ use Time::Local;
 # taken by sampling it's interface on the host system.
 sub get_server_traffic
 {
-local ($server) = @_;
-local $vhost = &get_parent_server($server);
+my ($server) = @_;
+my $vhost = &get_parent_server($server);
 return ( ) if (!$vhost);
-local $ifunc = "type_".$server->{'manager'}."_real_interfaces";
+my $ifunc = "type_".$server->{'manager'}."_real_interfaces";
 if (defined(&$ifunc)) {
-	local $ifaces = &$ifunc($server, $vhost);
+	my $ifaces = &$ifunc($server, $vhost);
 	if (!ref($ifaces)) {
 		return ( );
 		}
-	local @rv = ( 0, 0, 0, 0 );
+	my @rv = ( 0, 0, 0, 0 );
 	foreach my $i (@$ifaces) {
 		$rv[0] += $i->{'bytes_in'};
 		$rv[1] += $i->{'bytes_out'};
@@ -41,7 +41,7 @@ else {
 # Returns the message to send when a system exceeds it's bandwidth limit
 sub get_bandwidth_message
 {
-local $f = "$module_config_directory/bw-template";
+my $f = "$module_config_directory/bw-template";
 if (!-r $f) {
 	$f = "$module_root_directory/bw-template";
 	}
@@ -52,7 +52,7 @@ return &read_file_contents($f);
 # Save the email template for systems over their bandwidth quota
 sub save_bandwidth_message
 {
-local ($msg) = @_;
+my ($msg) = @_;
 &open_lock_tempfile(MSG, ">$module_config_directory/bw-template");
 &print_tempfile(MSG, $msg);
 &close_tempfile(MSG);
@@ -62,7 +62,7 @@ local ($msg) = @_;
 # Returns the message to send when an owner exceeds his bandwidth limit
 sub get_owner_bandwidth_message
 {
-local $f = "$module_config_directory/owner-bw-template";
+my $f = "$module_config_directory/owner-bw-template";
 if (!-r $f) {
 	$f = "$module_root_directory/owner-bw-template";
 	}
@@ -73,7 +73,7 @@ return &read_file_contents($f);
 # Save the email template for owners over their bandwidth quota
 sub save_owner_bandwidth_message
 {
-local ($msg) = @_;
+my ($msg) = @_;
 &open_lock_tempfile(MSG, ">$module_config_directory/owner-bw-template");
 &print_tempfile(MSG, $msg);
 &close_tempfile(MSG);
@@ -91,7 +91,7 @@ return &find_server_manager_cron_job($bandwidth_cron_cmd);
 sub get_bandwidth
 {
 if (!defined($get_bandwidth_cache{$_[0]->{'id'}})) {
-	local %bwinfo;
+	my %bwinfo;
 	&read_file("$bandwidth_dir/$_[0]->{'id'}", \%bwinfo);
 	$get_bandwidth_cache{$_[0]->{'id'}} = \%bwinfo;
 	}
@@ -119,15 +119,15 @@ delete($get_bandwidth_cache{$_[0]->{'id'}});
 # Returns the unix time of the last check for this server
 sub get_bandwidth_time
 {
-local @st = stat("$bandwidth_dir/$_[0]->{'id'}");
+my @st = stat("$bandwidth_dir/$_[0]->{'id'}");
 return $st[9];
 }
 
 # describe_bandwidth_period(for-usage)
 sub describe_bandwidth_period
 {
-local ($usage) = @_;
-local $suffix = $usage ? 'bw_desc2' : 'bw_desc';
+my ($usage) = @_;
+my $suffix = $usage ? 'bw_desc2' : 'bw_desc';
 if ($config{'bw_period'}) {
 	return &text($suffix.'_period', lc($config{'bw_period'}));
 	}
@@ -141,11 +141,11 @@ else {
 # bandwidth period started
 sub bandwidth_period_start
 {
-local ($ago) = @_;
-local $now = time();
-local @tm = localtime(time());
-local $day = timelocal(0, 0, 0, $tm[3], $tm[4], $tm[5]);  # Start of this day
-local $rv;
+my ($ago) = @_;
+my $now = time();
+my @tm = localtime(time());
+my $day = timelocal(0, 0, 0, $tm[3], $tm[4], $tm[5]);  # Start of this day
+my $rv;
 if ($config{'bw_period'} eq 'week') {
 	# Start on last sunday
 	$rv = $day - $tm[6]*24*60*60;
@@ -180,14 +180,14 @@ return $rv;
 # Returns the unix time on which some bandwidth period ends (inclusive)
 sub bandwidth_period_end
 {
-local ($ago) = @_;
-local $now = time();
+my ($ago) = @_;
+my $now = time();
 if ($ago == 0) {
 	# Current time
 	$rv = $now;
 	}
 else {
-	local $start = &bandwidth_period_start($ago);
+	my $start = &bandwidth_period_start($ago);
 	if ($config{'bw_period'} eq 'week') {
 		# 7 days after start
 		return $day + 7*24*60*60 - 1;
@@ -211,8 +211,8 @@ return $rv;
 # Returns text describing usage over this period
 sub bandwidth_usage_message
 {
-local ($server) = @_;
-local $umsg = &nice_size($server->{'bw_usage'})." ".
+my ($server) = @_;
+my $umsg = &nice_size($server->{'bw_usage'})." ".
 	      &describe_bandwidth_period(1);
 if ($server->{'bw_limit'} &&
     $server->{'bw_usage'} > $server->{'bw_limit'}) {

@@ -361,7 +361,7 @@ return undef;
 sub supports_backup
 {
 my ($server) = @_;
-local $bfunc = "type_".$server->{'manager'}."_can_backup";
+my $bfunc = "type_".$server->{'manager'}."_can_backup";
 return defined(&$bfunc) && &$bfunc($server);
 }
 
@@ -372,13 +372,13 @@ sub virtualmin_ui_show_cron_time
 {
 return &theme_virtualmin_ui_show_cron_time(@_)
 	if (defined(&theme_virtualmin_ui_show_cron_time));
-local ($name, $job, $offmsg) = @_;
+my ($name, $job, $offmsg) = @_;
 &foreign_require("cron", "cron-lib.pl");
-local $rv;
-local $mode = !$job ? 0 : $job->{'special'} ? 1 : 2;
-local $complex = $mode == 2 ? &cron::when_text($job, 1) : undef;
-local $button = "<input type=button onClick='cfield = form.${name}_complex; hfield = form.${name}_hidden; chooser = window.open(\"cron_chooser.cgi?complex=\"+escape(hfield.value), \"cronchooser\", \"toolbar=no,menubar=no,scrollbars=no,resizable=yes,width=800,height=400\"); chooser.cfield = cfield; window.cfield = cfield; chooser.hfield = hfield; window.hfield = hfield;' value=\"...\">\n";
-local $hidden = $mode == 2 ?
+my $rv;
+my $mode = !$job ? 0 : $job->{'special'} ? 1 : 2;
+my $complex = $mode == 2 ? &cron::when_text($job, 1) : undef;
+my $button = "<input type=button onClick='cfield = form.${name}_complex; hfield = form.${name}_hidden; chooser = window.open(\"cron_chooser.cgi?complex=\"+escape(hfield.value), \"cronchooser\", \"toolbar=no,menubar=no,scrollbars=no,resizable=yes,width=800,height=400\"); chooser.cfield = cfield; window.cfield = cfield; chooser.hfield = hfield; window.hfield = hfield;' value=\"...\">\n";
+my $hidden = $mode == 2 ?
 	join(" ", $job->{'mins'}, $job->{'hours'},
 		  $job->{'days'}, $job->{'months'}, $job->{'weekdays'}) : "";
 return &ui_radio_table($name, $mode,
@@ -402,7 +402,7 @@ sub virtualmin_ui_parse_cron_time
 {
 return &theme_virtualmin_ui_parse_cron_time(@_)
 	if (defined(&theme_virtualmin_ui_parse_cron_time));
-local ($name, $job, $in) = @_;
+my ($name, $job, $in) = @_;
 if ($in{$name} == 0) {
 	# Disabled
 	return 0;
@@ -415,7 +415,7 @@ else {
 		}
 	else {
 		# Complex time
-		local @j = split(/\s+/, $in{$name."_hidden"});
+		my @j = split(/\s+/, $in{$name."_hidden"});
 		@j == 5 || &error($text{'cron_ehidden'});
 		$job->{'mins'} = $j[0];
 		$job->{'hours'} = $j[1];
