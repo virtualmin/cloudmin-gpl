@@ -278,9 +278,9 @@ if ($in{'refresh'} && defined(&theme_post_save_server)) {
 
 sub same_hash
 {
-my ($a, $b) = @_;
-my $aa = join("&", map { $_."=".$a->{$_} } sort { $a cmp $b } (keys %$a));
-my $bb = join("&", map { $_."=".$b->{$_} } sort { $a cmp $b } (keys %$b));
+my ($ahash, $bhash) = @_;
+my $aa = join("&", map { $_."=".$a->{$_} } sort { $a cmp $b } (keys %$ahash));
+my $bb = join("&", map { $_."=".$b->{$_} } sort { $a cmp $b } (keys %$bhash));
 return $aa eq $bb;
 }
 

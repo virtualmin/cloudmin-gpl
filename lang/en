@@ -2086,12 +2086,12 @@ ec2addr_assdone=Waiting for IP address association to be assigned ..
 login_title=Console Login
 login_euser=Failed to create console access user : $1
 login_esupport=This system does not support console access at this time
-login_nojava=Java must be installed in your browser to use the console login applet.
-login_essh1=Your SSH server does not accept version 1 of the SSH protocol, which the console login applet on this page needs to connect.
-login_sshlink=However, you can enable version 1 in the <a href='$1'>SSH Server</a> module.
-login_sshcmd=To connect to the console using a command-line SSH client, run a command like :
-login_sshpasswd=and login with the password $1
-login_desc=The console can also be accessed by SSHing to <tt>$1</tt> port $2 and logging in as <tt>$3</tt> with password <tt>$4</tt> .
+login_desc=The console can also be accessed by SSHing to <tt>$1</tt> port $2 and logging in as <tt>$3</tt> with password <tt>$4</tt> . Example command :
+login_epython=Ajaxterm requires Python to run, but the $1 command was not found on your system.
+login_estart=Ajaxterm did not start accepting connections on port $2 after $1 seconds.
+login_popup=Open in separate window ..
+login_euser=Mis-use of login owned by different user!
+login_instr=Console access via SSH ..
 
 setup_edomain=Missing or invalid domain name - only letters, numbers and the dot, dash and underscore characters are allowed
 setup_edomain2=Domain names cannot start or end with a .

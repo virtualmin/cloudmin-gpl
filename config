@@ -28,3 +28,4 @@ xen_consoled=1
 ping_timeout=1
 ssh_timeout=30
 webmin_timeout=60
+login_timeout=60
