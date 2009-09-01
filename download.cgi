@@ -10,7 +10,7 @@ $server || &error($text{'edit_egone'});
 
 # Validate inputs and get dest file
 if ($in{'dest'} == 0) {
-	# Downloading in browser, so save to local file
+	# Downloading in browser, so save to my file
 	$dest = &transname();
 	}
 else {

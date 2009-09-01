@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Deletes a local image
+# Deletes a my image
 
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");

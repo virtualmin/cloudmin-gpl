@@ -5,7 +5,7 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ui_print_header(undef, $text{'images_title'}, "", "images");
 
-# Get all the available and local images
+# Get all the available and my images
 @avail = &list_available_server_images();
 @images = &list_server_images();
 @combined = @images;

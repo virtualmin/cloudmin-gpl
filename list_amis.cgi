@@ -7,11 +7,11 @@ require './server-manager-lib.pl';
 
 # Get all the AMIs that are visible
 foreach $ec2 (&list_ec2_accounts()) {
-	local $images = &list_ec2_images($ec2);
+	my $images = &list_ec2_images($ec2);
 	if (ref($images)) {
 		foreach $ami (@$images) {
 			next if ($ami->{'imageType'} ne 'ami');
-			local $alr = $done{$ami->{'imageId'}};
+			my $alr = $done{$ami->{'imageId'}};
 			if ($alr) {
 				# Already seen .. but is this EC2 account the
 				# owner, and so better?

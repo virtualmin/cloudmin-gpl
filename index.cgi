@@ -93,7 +93,7 @@ if (@servers) {
 			    scalar(@allservers), scalar(@servers)));
 		}
 	elsif ($in{'pok'}) {
-		local $parent = &get_managed_server_by("id", $in{'psearch'});
+		my $parent = &get_managed_server_by("id", $in{'psearch'});
 		push(@g, &text('index_resparent',
 			    &html_escape($parent->{'host'}),
 			    scalar(@allservers), scalar(@servers)));
@@ -278,9 +278,9 @@ if ($in{'refresh'} && defined(&theme_post_save_server)) {
 
 sub same_hash
 {
-local ($a, $b) = @_;
-local $aa = join("&", map { $_."=".$a->{$_} } sort { $a cmp $b } (keys %$a));
-local $bb = join("&", map { $_."=".$b->{$_} } sort { $a cmp $b } (keys %$b));
+my ($a, $b) = @_;
+my $aa = join("&", map { $_."=".$a->{$_} } sort { $a cmp $b } (keys %$a));
+my $bb = join("&", map { $_."=".$b->{$_} } sort { $a cmp $b } (keys %$b));
 return $aa eq $bb;
 }
 

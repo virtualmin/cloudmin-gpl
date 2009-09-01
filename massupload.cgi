@@ -36,10 +36,10 @@ foreach $s (@servers) {
 
 sub upload_cbfunc
 {
-local ($server, $args) = @_;
-local ($source, $dest, $tempmap) = @$args;
-local $err = &put_file_to_server($server, $source, $dest);
-local $temp = $tempmap->{$server->{'id'}};
+my ($server, $args) = @_;
+my ($source, $dest, $tempmap) = @$args;
+my $err = &put_file_to_server($server, $source, $dest);
+my $temp = $tempmap->{$server->{'id'}};
 open(TEMP, ">$temp");
 print TEMP $err;
 close(TEMP);

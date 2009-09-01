@@ -145,7 +145,7 @@ if ($mode ne 'systems' && $mode ne 'host') {
 	$utotal = 0;
 	if ($in{'ago'} < 0) {
 		# Get total over last hour or day
-		local ($stotal, $scount);
+		my ($stotal, $scount);
 		foreach $s (@showservers) {
 			$b = &get_bandwidth($s);
 			for($i=$start; $i<=$end; $i+=$step) {
@@ -400,8 +400,8 @@ else {
 # Returns HTML for a bar chart of a single value
 sub bar_chart
 {
-local ($total, $used, $blue) = @_;
-local $rv;
+my ($total, $used, $blue) = @_;
+my $rv;
 $rv .= sprintf "<div class='barchart'><img src=images/red.gif width=%s%% height=12px>",
   int($bar_width*$used/$total);
 if ($blue) {
@@ -419,15 +419,15 @@ return $rv;
 # Returns HTML for a bar chart of three values, stacked
 sub bar_chart_three
 {
-local ($total, $used1, $used2, $used3) = @_;
-local $rv;
-local $w1 = int($bar_width*$used1/$total);
-local $w2 = int($bar_width*$used2/$total);
-local $w3 = int($bar_width*$used3/$total);
+my ($total, $used1, $used2, $used3) = @_;
+my $rv;
+my $w1 = int($bar_width*$used1/$total);
+my $w2 = int($bar_width*$used2/$total);
+my $w3 = int($bar_width*$used3/$total);
 if ($w1) { $w1++; }
 elsif ($w2) { $w2++; }
 elsif ($w3) { $w3++; }
-local $w4 = int($bar_width - $w1 - $w2 - $w3);
+my $w4 = int($bar_width - $w1 - $w2 - $w3);
 $rv .= "<div class='barchart' nowrap='nowrap'>";
 if ($w1) {$rv .= sprintf "<img src=images/red.gif width=%s%% height=12px>", $w1;}
 if ($w2) {$rv .= sprintf "<img src=images/purple.gif width=%s%% height=12px>", $w2;}

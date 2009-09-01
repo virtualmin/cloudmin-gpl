@@ -231,7 +231,7 @@ else {
 
 sub period_to_name
 {
-local ($p) = @_;
+my ($p) = @_;
 foreach my $hp (@history_periods) {
 	return $hp->[0] if ($p == $hp->[1]);
 	}

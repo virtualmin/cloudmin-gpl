@@ -43,8 +43,8 @@ if (!$in{'clear'}) {
 			# Directory change, possibly followed by a command ..
 			# work out where we end up after the chdir
 			$cmd = undef;
-			local $newdir = $1;
-			local $aftercmd = $3;
+			my $newdir = $1;
+			my $aftercmd = $3;
 			($out, $ex, $err) = &execute_command_on_server(
 				$server, "cd ".quotemeta($pwd)." ; cd ".quotemeta($newdir)." && pwd");
 			if ($ex) {

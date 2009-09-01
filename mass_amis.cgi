@@ -11,7 +11,7 @@ foreach $d (split(/\0/, $in{'d'})) {
 	($amiid, $ec2id) = split(/\//, $d);
 	($ec2) = grep { $_->{'id'} eq $ec2id } @ec2s;
 	if (!$amicache{$ec2id}) {
-		local $images = &list_ec2_images($ec2);
+		my $images = &list_ec2_images($ec2);
 		ref($images) || &error($images);
 		$amicache{$ec2id} = $images;
 		}

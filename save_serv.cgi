@@ -432,7 +432,7 @@ else {
 
 		# Fill in Webmin connection details if we don't have them yet
 		if (!$server->{'port'} || $server->{'ssl'} eq '') {
-			local ($sok, $serr, $webminroot, $webminport,
+			my ($sok, $serr, $webminroot, $webminport,
 			       $webminssl) = &check_server_ssh_login($server);
 			if ($webminport) {
 				$server->{'port'} = $webminport;
@@ -461,7 +461,7 @@ else {
 # Tell the user that changing the IP may be a bad idea
 sub show_host_override_form
 {
-local ($oldip, $newip) = @_;
+my ($oldip, $newip) = @_;
 &ui_print_header(&server_in($server), $text{'save_title'}, "");
 
 print "<center>\n";

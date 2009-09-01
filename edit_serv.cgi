@@ -364,14 +364,14 @@ elsif ($main::cloudmin_no_edit_buttons) {
 	}
 else {
 	# Show our own buttons
-	local @buts = ( [ "save", $text{'save'} ] );
+	my @buts = ( [ "save", $text{'save'} ] );
 	foreach my $b (&get_server_actions($server)) {
 		if (!$b) {
 			push(@buts, undef);
 			}
 		elsif ($b->{'link'}) {
 			# Opens a separate URL
-			local $js = $b->{'target'} ?
+			my $js = $b->{'target'} ?
 				"window.open(\"$b->{'link'}\")" :
 				"document.location = \"$b->{'link'}\"";
 			push(@buts, [ $b->{'id'}, $b->{'desc'}, undef, undef,
@@ -394,10 +394,10 @@ if (defined(&theme_select_server)) {
 # Returns HTML for a bar chart of a single value
 sub bar_chart
 {
-local ($total, $used, $blue) = @_;
+my ($total, $used, $blue) = @_;
 return undef if (!int($total));
-local $bar_width = 100;
-local $rv = "<div class='barchart'>";
+my $bar_width = 100;
+my $rv = "<div class='barchart'>";
 $rv .= sprintf "<img src=images/red.gif width=%s%% height=12>",
 	  int($bar_width*$used/$total)+1;
 if ($blue) {

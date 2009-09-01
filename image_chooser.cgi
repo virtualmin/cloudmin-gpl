@@ -55,7 +55,7 @@ else {
 				  $text{'achooser_owner'} ], 100);
 	foreach my $i (@$images) {
 		next if ($i->{'imageType'} ne $in{'type'});
-		local $path = $i->{'imageLocation'};
+		my $path = $i->{'imageLocation'};
 		$path =~ s/\.manifest\.xml$//;
 		$path =~ s/\.img$//;
 		print &ui_columns_row([
