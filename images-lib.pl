@@ -591,7 +591,8 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 			"	netmask $netmask\n".
 			"	broadcast $broadcast\n".
 			"	network $network\n".
-			($gw ? "	gateway $gw\n" : "");
+			($gw ? "	gateway $gw\n" : "").
+			"\n";
 		}
 	elsif ($fix eq "/etc/conf.d/net") {
 		# Gentoo networking config filer
@@ -604,6 +605,75 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
 	$err = &put_file_to_server($vhost, $temppath, $fixpath);
+	return "Failed to save network config $fix : $err" if ($err);
+	}
+return undef;
+}
+
+# fix_additional_network_interface_files(&server, &ips, &netmasks, gateway,
+# 					 vhost, dir, [base-iface])
+# Create boot-time configs for additional network interfaces, assumed to
+# start with eth1.
+sub fix_additional_network_interface_files
+{
+my ($server, $ips, $netmasks, $gw, $vhost, $dir, $iface) = @_;
+$iface ||= "eth0";
+
+# Work out file we are editing
+my ($fix, $data);
+foreach my $f ("/etc/sysconfig/network-scripts/ifcfg-$iface",
+	       "/etc/network/interfaces",
+	       "/etc/conf.d/net") {
+	my $fixpath = "$dir/$f";
+	$data = &get_file_data_from_server($vhost, $fixpath);
+	if ($data) {
+		$fix = $f;
+		last;
+		}
+	}
+return "No networking configuration file found" if (!$fix);
+
+# Add each of the IPs
+for(my $i=0; $i<@$ips; $i++) {
+	my $ip = $ips->[$i];
+	my $netmask = $netmasks->[$i];
+	if ($iface =~ /^(\S+)(\d+)$/) {
+		$iface = $1.($2+1);
+		}
+	my $broadcast = &net::compute_broadcast($ip, $netmask);
+	my $network = &net::compute_network($ip, $netmask);
+	if ($fix =~ /^(\/etc\/sysconfig\/network-scripts\/ifcfg-)\S+$/) {
+		# Create new redhat-style config file
+		$data = "TYPE=Ethernet\n".
+			"DEVICE=$iface\n".
+			"IPADDR=$ip\n".
+			"NETMASK=$netmask\n".
+			"BROADCAST=$broadcast\n".
+			"NETWORK=$network\n".
+			"ONBOOT=yes\n".
+			($gw ? "GATEWAY=$gw\n" : "");
+		$fix = $1.$iface;
+		}
+	elsif ($fix eq "/etc/network/interfaces") {
+		# Append Debian networking block
+		$data .= "auto $iface\n".
+			 "\n".
+			 "iface $iface inet static\n".
+			 "	address $ip\n".
+			 "	netmask $netmask\n".
+			 "	broadcast $broadcast\n".
+			 "	network $network\n".
+			 ($gw ? "	gateway $gw\n" : "");
+		}
+	elsif ($fix eq "/etc/conf.d/net") {
+		# Add Gentoo networking line
+		$data .= "config_$iface=( \"$ip netmask $netmask\" )\n";
+		if ($gw) {
+			$data .= "routes_$iface=( \"default via $gw\" )\n";
+			}
+		}
+	my $fixpath = "$dir/$fix";
+	my $err = &put_file_data_to_server($vhost, $data, $fixpath);
 	return "Failed to save network config $fix : $err" if ($err);
 	}
 return undef;
