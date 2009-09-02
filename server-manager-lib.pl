@@ -2636,7 +2636,7 @@ foreach my $server (@_) {
 	foreach my $t (@server_management_types) {
 		my $dfunc = "type_".$t."_depends";
 		if (defined(&$dfunc)) {
-			push(@rv, grep { my $_;
+			push(@rv, grep { local $_;
 					 $_->{'id'} != $server->{'id'} &&
 					 &$dfunc($server, $_) } @allservers);
 			}
@@ -4149,9 +4149,8 @@ if (defined(&$ifunc) && &$cfunc($server) &&
 	}
 
 # Link for reverse IP, if possible
-my $ip = &get_server_ip($server);
-my ($rfn) = &get_reverse_dns_zone($ip);
-if (&can_action($server, "reverse") && $rfn) {
+my @revs = grep { !$_->{'outside'} } &get_server_reverse_records($server);
+if (&can_action($server, "reverse") && @revs) {
 	push(@rv, { 'id' => 'reverse',
 		    'desc' => $text{'edit_link_reverse'},
 		    'cat' => 'system',

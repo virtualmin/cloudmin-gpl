@@ -140,7 +140,6 @@ return ( $fn, \@recs, $arpa, $z->{'value'} );
 # Returns a list of reverse records for some system, each of which is a hash
 # ref with 'ip' and possibly 'name' keys. If an IP is not in a zone we host,
 # the 'outside' key is set.
-# XXX deal with smaller-than-class-C zones
 sub get_server_reverse_records
 {
 my ($server) = @_;
