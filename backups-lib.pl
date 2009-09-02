@@ -639,30 +639,20 @@ elsif ($dest->{'mode'} == 3) {
 					      $file, $dest->{'path'}, 0);
 	}
 elsif ($dest->{'mode'} == 4) {
-	# Send via FTP, using ftp command run in wrapper
-	if (!&has_command_on_server($server, "ftp")) {
-		return "Missing ftp command";
-		}
+	# Send via FTP, using our little FTP uploader
 	my $err = &put_file_to_server($server,
-			"$module_root_directory/pty.pl", "/tmp/pty.pl");
+		"$module_root_directory/ftpupload.pl", "/tmp/ftpupload.pl");
 	if ($err) {
-		return "Failed to copy pty.pl : $err";
-		}
-	my $ftpin = &tempname_on_server($server);
-	my $ftpdata = $dest->{'user'}."\n".
-		      $dest->{'pass'}."\n".
-		      "mkdir $destdir\n".
-		      "put $file $dest->{'path'}\n".
-		      "quit\n";
-	my $err = &put_file_data_to_server($server, $ftpdata, $ftpin);
-	if ($err) {
-		return "Failed to copy FTP login details : $err";
+		return "Failed to copy ftpupload.pl : $err";
 		}
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"perl /tmp/pty.pl ftp ".quotemeta($dest->{'host'}).
-		($dest->{'port'} ? " ".$dest->{'port'} : "").
-		" 2>&1 <$ftpin");
-	&delete_file_on_server($server, $ftpin);
+		"perl /tmp/ftpupload.pl ".
+		quotemeta($dest->{'user'})." ".
+		quotemeta($dest->{'pass'})." ".
+		quotemeta($dest->{'host'})." ".
+		($dest->{'port'} || 21)." ".
+		quotemeta($dest->{'path'})." ".
+		quotemeta($file)." 2>&1");
 	return $err ? $err : $ex ? "FTP upload failed : $out" : undef;
 	}
 else {
@@ -1110,28 +1100,19 @@ elsif ($dest->{'mode'} == 3) {
 	}
 elsif ($dest->{'mode'} == 4) {
 	# From FTP server
-	if (!&has_command_on_server($server, "ftp")) {
-		return "Missing ftp command";
-		}
 	my $err = &put_file_to_server($server,
-			"$module_root_directory/pty.pl", "/tmp/pty.pl");
+		"$module_root_directory/ftpupload.pl", "/tmp/ftpupload.pl");
 	if ($err) {
-		return "Failed to copy pty.pl : $err";
-		}
-	my $ftpin = &tempname_on_server($server);
-	my $ftpdata = $dest->{'user'}."\n".
-		      $dest->{'pass'}."\n".
-		      "del $dest->{'path'}\n".
-		      "quit\n";
-	my $err = &put_file_data_to_server($server, $ftpdata, $ftpin);
-	if ($err) {
-		return "Failed to copy FTP login details : $err";
+		return "Failed to copy ftpupload.pl : $err";
 		}
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"perl /tmp/pty.pl ftp ".quotemeta($dest->{'host'}).
-		($dest->{'port'} ? " ".$dest->{'port'} : "").
-		" 2>&1 <$ftpin");
-	&delete_file_on_server($server, $ftpin);
+		"perl /tmp/ftpupload.pl ".
+		quotemeta($dest->{'user'})." ".
+		quotemeta($dest->{'pass'})." ".
+		quotemeta($dest->{'host'})." ".
+		($dest->{'port'} || 21)." ".
+		quotemeta($dest->{'path'})." ".
+		"--delete 2>&1");
 	return $err ? $err : $ex ? "FTP deletion failed : $out" : undef;
 	}
 else {
