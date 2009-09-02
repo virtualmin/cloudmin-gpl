@@ -747,7 +747,7 @@ if (defined(&$sfunc)) {
 	}
 
 # Need to really SSH
-my $cmd = &build_ssh_command($server);
+my $cmd = &build_ssh_command($server, 1);
 my $timeout = int($config{'ssh_timeout'}) || 30;
 $cmd .= " 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK'";
 my ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, $timeout);
@@ -847,7 +847,8 @@ return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'});
 sub run_ssh_command
 {
 my ($cmd, $pass, $timeout, $leave) = @_;
-my ($wrong_password, $got_login, $connect_failed, $given_password);
+my ($wrong_password, $got_login, $connect_failed, $given_password,
+    $hostkey_failed);
 my $out;
 my $ex;
 my ($fh, $fpid);
@@ -859,7 +860,7 @@ eval {
 		}
 	($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
-		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n", $leave ? ( $leave ) : ( ));
+		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", "REMOTE HOST IDENTIFICATION", ".*\n", $leave ? ( $leave ) : ( ));
 		if ($rv == 0) {
 			syswrite($fh, "$pass\n");
 			$given_password++;
@@ -876,7 +877,11 @@ eval {
 			$connect_failed++;
 			$out .= $wait_for_input;
 			}
-		elsif ($rv == 5) {
+		elsif ($rv == 4) {
+			$hostkey_failed++;
+			$out .= $wait_for_input;
+			}
+		elsif ($rv == 6) {
 			# Hit leave-open message
 			last;
 			}
@@ -905,6 +910,14 @@ if ($@) {
 $out =~ s/^\s*\r?\n//;	# Remove empty line at start
 if ($wrong_password || $given_password >= 3) {
 	return (2, $out);
+	}
+if ($hostkey_failed) {
+	if ($out =~ /Offending\s+key\s+in\s+(\S+):(\d+)/) {
+		return (1, "Invalid host key in $1 at line $2");
+		}
+	else {
+		return (1, "Invalid host key");
+		}
 	}
 if ($connect_failed) {
 	return (1, $out);
@@ -1001,12 +1014,12 @@ else {
 	}
 }
 
-# build_ssh_command(&server)
+# build_ssh_command(&server, [no-quiet])
 # Returns the base of an SSH comand for logging into some system
 sub build_ssh_command
 {
-my ($server) = @_;
-my $sshcmd = "ssh -q -x -".$server->{'ssh_protocol'};
+my ($server, $loud) = @_;
+my $sshcmd = "ssh".($loud ? "" : " -q")." -x -".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	my ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
