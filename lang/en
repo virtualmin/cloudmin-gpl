@@ -563,7 +563,7 @@ mass_scdoms=Virtualmin domains
 mass_scnone=.. no required script updates were found.
 mass_scok=Update Selected Scripts
 
-this_desc=Physical system
+this_desc=Cloudmin master
 this_this=This system
 
 ichooser_title=Select EC2 Instance

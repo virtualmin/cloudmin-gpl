@@ -209,91 +209,140 @@ my @rv = grep { $_->{'module'} eq $module_name } &servers::list_servers();
 @rv = grep { $server_management_types{$_->{'manager'}} } @rv;
 @rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
 
-foreach my $s (@rv) {
-	if ($s->{'manager'} eq 'ec2' && !$s->{'ec2_sgroup'}) {
-		# Assume security group is Virtualmin default
-		$s->{'ec2_sgroup'} = $ec2_security_group;
-		}
-	}
-
 if ($config{'show_this'}) {
 	# Magically add this system to the list
-	my $this = &servers::this_server();
-	$this->{'manager'} = 'this';
-	$this->{'host'} = &get_system_hostname();
-	$this->{'desc'} = $text{'this_this'};
-	&read_file($this_server_status, $this);
+	my $this = &get_this_managed_server();
 	splice(@rv, 0, 0, $this);
-
-	# If this system can host Xen and we are in Xen-only mode, allow it to
-	# be a host
-	if ($module_info{'onehost'} eq 'xen' &&
-	    $server_management_types{'xen'} &&
-	    ($config{'xen_checked'} || !&check_xen_host_software($this))) {
-		$this->{'xen_host'} = 1;
-		my $eth0 = &first_ethernet_iface();
-		if ($config{'xen_start'}) {
-			# Allocation range is set from module config
-			$this->{'xen_start'} = $config{'xen_start'};
-			$this->{'xen_end'} = $config{'xen_end'};
-			}
-		else {
-			# Range comes from primary interface.
-			($this->{'xen_start'}, $this->{'xen_end'}) =
-				&first_ethernet_range();
-			}
-		if ($config{'xen_cidr'}) {
-			# Set on Module Config page
-			$this->{'xen_cidr'} = $config{'xen_cidr'};
-			}
-		else {
-			# CIDR is same as primary interface
-			$this->{'xen_cidr'} = &net::mask_to_prefix(
-						$eth0->{'netmask'});
-			}
-		$this->{'xen_dir'} = $config{'xen_dir'};
-		$this->{'xen_zone'} = $config{'xen_zone'};
-		$this->{'xen_vg'} = $config{'xen_vg'};
-		$this->{'backup_default'} = $config{'xen_backupdir'} ?
-				'host:'.$config{'xen_backupdir'} : undef;
-
-		# Save flag indicating that we have already checked out Xen
-		# on this machine, as doing so can be slow
-		$config{'xen_checked'} = 1;
-		&save_module_config();
-		}
 	}
 
-# Compute short hostnames
+# Fill in missing details
 foreach my $s (@rv) {
-	my $shost = $s->{'host'};
-	if ($config{'name_max'} && length($shost) > $config{'name_max'}) {
-		# Show first and last max/2 chars, with ... between
-		my $h = int($config{'name_max'} / 2);
-		$shost = substr($shost, 0, $h)."...".substr($shost, -$h);
-		}
-	$s->{'short_host'} = $shost;
-	}
-
-# Fill in creation times
-foreach my $s (@rv) {
-	if (!$s->{'created'}) {
-		if ($s->{'id'} =~ /^(\d{10})/) {
-			$s->{'created'} = $1;
-			}
-		else {
-			# Assume created at module install time
-			my %itimes;
-			&read_file($install_times_file, \%itimes);
-			my @vers = sort { $a <=> $b } (keys %itimes);
-			if (@vers) {
-				$s->{'created'} = $itimes{$vers[0]};
-				}
-			}
-		}
+	&complete_managed_server($s);
 	}
 
 return @rv;
+}
+
+# get_managed_server(id)
+# Returns the hash ref for one Cloudmin system
+sub get_managed_server
+{
+my ($id) = @_;
+my $rv;
+if ($id eq '0') {
+	$rv = $config{'show_this'} ? &get_this_managed_server() : undef;
+	}
+else {
+	$rv = &servers::get_server($id);
+	}
+return undef if (!$rv);
+&complete_managed_server($rv);
+return $rv;
+}
+
+# get_this_managed_server()
+# Returns a hash ref for this system
+sub get_this_managed_server
+{
+# Magically add this system to the list
+my $this = &servers::this_server();
+$this->{'manager'} = 'this';
+$this->{'host'} = &get_system_hostname();
+$this->{'desc'} = $text{'this_this'};
+&read_file($this_server_status, $this);
+splice(@rv, 0, 0, $this);
+
+# If this system can host Xen and we are in Xen-only mode, allow it to
+# be a host
+if ($module_info{'onehost'} eq 'xen' &&
+    $server_management_types{'xen'} &&
+    ($config{'xen_checked'} || !&check_xen_host_software($this))) {
+	$this->{'xen_host'} = 1;
+	my $eth0 = &first_ethernet_iface();
+	if ($config{'xen_start'}) {
+		# Allocation range is set from module config
+		$this->{'xen_start'} = $config{'xen_start'};
+		$this->{'xen_end'} = $config{'xen_end'};
+		}
+	else {
+		# Range comes from primary interface.
+		($this->{'xen_start'}, $this->{'xen_end'}) =
+			&first_ethernet_range();
+		}
+	if ($config{'xen_cidr'}) {
+		# Set on Module Config page
+		$this->{'xen_cidr'} = $config{'xen_cidr'};
+		}
+	else {
+		# CIDR is same as primary interface
+		$this->{'xen_cidr'} = &net::mask_to_prefix(
+					$eth0->{'netmask'});
+		}
+	$this->{'xen_dir'} = $config{'xen_dir'};
+	$this->{'xen_zone'} = $config{'xen_zone'};
+	$this->{'xen_vg'} = $config{'xen_vg'};
+	$this->{'backup_default'} = $config{'xen_backupdir'} ?
+			'host:'.$config{'xen_backupdir'} : undef;
+
+	# Save flag indicating that we have already checked out Xen
+	# on this machine, as doing so can be slow
+	$config{'xen_checked'} = 1;
+	&save_module_config();
+	}
+return $this;
+}
+
+# get_managed_server_by(key, value)
+# Returns a list of servers which have a field matching some search key
+sub get_managed_server_by
+{
+my ($key, $value) = @_;
+my @rv;
+if ($key eq "id") {
+	my $s = &get_managed_server($value);
+	push(@rv, $s) if ($s);
+	}
+else {
+	@rv = grep { $_->{$key} eq $value } &list_managed_servers();
+	}
+return wantarray ? @rv : $rv[0];
+}
+
+# complete_managed_server(&server)
+# Fill in missing details for some virtual system
+sub complete_managed_server
+{
+my ($s) = @_;
+
+# Assume EC2 security group is default
+if ($s->{'manager'} eq 'ec2' && !$s->{'ec2_sgroup'}) {
+	$s->{'ec2_sgroup'} = $ec2_security_group;
+	}
+
+# Set short hostname
+my $shost = $s->{'host'};
+if ($config{'name_max'} && length($shost) > $config{'name_max'}) {
+	# Show first and last max/2 chars, with ... between
+	my $h = int($config{'name_max'} / 2);
+	$shost = substr($shost, 0, $h)."...".substr($shost, -$h);
+	}
+$s->{'short_host'} = $shost;
+
+# Fill in creation time with module install time if missing
+if (!$s->{'created'}) {
+	if ($s->{'id'} =~ /^(\d{10})/) {
+		$s->{'created'} = $1;
+		}
+	else {
+		# Assume created at module install time
+		my %itimes;
+		&read_file($install_times_file, \%itimes);
+		my @vers = sort { $a <=> $b } (keys %itimes);
+		if (@vers) {
+			$s->{'created'} = $itimes{$vers[0]};
+			}
+		}
+	}
 }
 
 # list_managed_servers_sorted()
@@ -402,15 +451,6 @@ my $netsize = ~$netnum;
 my $netend = ($ipnum & $netnum) + $netsize - 1;
 return ( &net::integer_to_ip($netstart),
 	 &net::integer_to_ip($netend) );
-}
-
-# get_managed_server_by(key, value)
-# Returns a list of servers which have a field matching some search key
-sub get_managed_server_by
-{
-my ($key, $value) = @_;
-my @rv = grep { $_->{$key} eq $value } &list_managed_servers();
-return wantarray ? @rv : $rv[0];
 }
 
 # save_managed_server(&server)
@@ -6240,8 +6280,14 @@ else {
 		&obtain_lock_anything();
 		}
 	if ($main::got_lock_server{$server->{'id'}} == 0) {
-		&lock_file("$servers::module_config_directory/".
-			   "$server->{'id'}.serv", $ro);
+		my $sfile = $servers::module_config_directory."/".
+			    $server->{'id'}.".serv";
+		my @stbefore = stat($sfile);
+		&lock_file($sfile, $ro);
+		my @stafter = stat($sfile);
+		if (@stbefore && $stbefore[9] != $stafter[9]) {
+			# Changed since it was locked .. re-read it
+			}
 		}
 	$main::got_lock_server{$server->{'id'}}++;
 	}
