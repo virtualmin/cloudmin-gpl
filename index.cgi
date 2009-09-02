@@ -166,6 +166,12 @@ if (@servers) {
 			}
 		}
 
+	# Work out columns to show
+	@colnames = ( split(/,/, $config{'index_cols'}) );
+	if (defined(&list_locations)) {
+		%lmap = map { $_->{'id'}, $_->{'desc'} } &list_locations();
+		}
+
 	print &ui_form_start("mass.cgi", "post");
 	@tds = ( "width=5" );
 	print &ui_links_row([ @links, @crlinks ]);
@@ -174,10 +180,7 @@ if (@servers) {
 		print &ui_columns_start([
 			"",
 			$text{'index_host'},
-			$text{'index_type'},
-			$text{'index_os'},
-			$text{'index_status'},
-			$text{'index_desc'},
+			(map { $text{'index_'.$_} } @colnames),
 			], 100, 0, \@tds);
 		foreach my $s (@{$cat->[0]}) {
 			$t = $s->{'manager'};
@@ -191,6 +194,8 @@ if (@servers) {
 					'index_poss' : 'index_pos', $pos,
 					"edit_update.cgi?id=$s->{'id'}");
 				}
+
+			# Create hostname link
 			$shost = $s->{'short_host'};
 			if ($s->{'status'} eq 'create') {
 				# Creating, cannot edit
@@ -204,12 +209,52 @@ if (@servers) {
 			else {
 				$link = $shost;
 				}
+
+			# Create other columns
+			@cols = ( );
+			foreach $c (@colnames) {
+				if ($c eq "manager") {
+					push(@cols, &$tfunc());
+					}
+				elsif ($c eq "type") {
+					push(@cols, &describe_os($s->{'type'}));
+					}
+				elsif ($c eq "status") {
+					push(@cols, &describe_status($s, 1, 2).
+						    $posdesc);
+					}
+				elsif ($c eq "location") {
+					if ($s->{'location'}) {
+						$l = $s->{'location'};
+						}
+					else {
+						my $vs = &get_parent_server($s);
+						if ($vs && $vs->{'location'}) {
+							$l = $vs->{'location'};
+							}
+						else {
+							$l = undef;
+							}
+						}
+					if ($l && $lmap{$l}) {
+						push(@cols, $lmap{$l});
+						}
+					else {
+						push(@cols, '');
+						}
+					}
+				elsif ($c eq "ip") {
+					$ip = &get_server_ip($s);
+					push(@cols, $ip);
+					}
+				else {
+					push(@cols, $s->{$c});
+					}
+				}
+
 			print &ui_checked_columns_row([
 			    ("&nbsp;&nbsp;" x $s->{'indent'}).$link,
-			    &$tfunc(),
-			    &describe_os($s->{'type'}),
-			    &describe_status($s, 1, 2).$posdesc,
-			    $s->{'desc'},
+			    @cols,
 			    ], \@tds, "d", $s->{'id'});
 			$virtcount++ if ($s->{'status'} eq 'virt');
 			$procount++ if ($s->{'virtualmin_serial'});
