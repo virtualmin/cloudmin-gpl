@@ -143,7 +143,7 @@ if (defined($in{'cpu'}) || defined($in{'weight'}) || defined($in{'cpu_def'})) {
 # Update disk space
 if (defined($in{'disk'}) || defined($in{'disk_def'})) {
 	$d = $in{'disk_def'} ? 0 : $in{'disk'}*$in{'disk_units'};
-	&$first_print(&text('limits_setting', $d ? &nice_size($d)
+	&$first_print(&text('limits_settingdisk', $d ? &nice_size($d)
 						 : $text{'edit_lunlimit'}));
 	$gfunc = "type_".$t."_get_disk";
 	$oldd = &$gfunc($server);
