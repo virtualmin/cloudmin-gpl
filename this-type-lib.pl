@@ -100,7 +100,10 @@ sub type_this_open_shell
 my ($server) = @_;
 &foreign_require("proc");
 my $shell = &has_command("bash") || &has_command("sh");
+my $pwd = &get_current_dir();
+chdir("/root") || chdir("/");
 my ($fh, $pid) = &proc::pty_process_exec($shell);
+chdir($pwd);
 return (undef, $fh);
 }
 

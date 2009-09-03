@@ -4366,6 +4366,13 @@ else {
 			    'desc' => $text{'edit_shutdown'},
 			    'cat' => 'power' });
 		}
+	if (&can_action($server, "run") && $canlogin != 2 && $canlogin != -2) {
+		# Root shell (don't show if console is the same)
+		push(@rv, { 'id' => 'rootshell',
+			    'desc' => $text{'edit_rootshell'},
+			    'cat' => 'manage',
+			    'link' => "login.cgi?id=$server->{'id'}&shell=1" });
+		}
 	}
 if ($status ne 'nohost' && $status ne 'paused') {
 	# Console messages can be displayed as long as the host system is up
@@ -4484,7 +4491,8 @@ foreach my $p (@par) {
 	    &can_action(undef, "global")) {
 		# Edit Xen/whatever host details
 		push(@rv, { 'id' => 'host',
-			    'desc' => $text{$p.'_edit'},
+			    'desc' => $text{$p.'_editlink'} ||
+				      $text{$p.'_edit'},
 			    'cat' => 'manage',
 			    'link' => "edit_${p}.cgi?id=$server->{'id'}" });
 		}

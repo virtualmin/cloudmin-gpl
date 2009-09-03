@@ -720,6 +720,7 @@ edit_ec2attach=Attached EC2 Volumes
 edit_webmin2=Open Webmin
 edit_webmin3=Link to Webmin
 edit_shell=Run Commands
+edit_rootshell=Root Shell
 edit_refresh=Refresh Status
 edit_regen=Refresh Status Fully
 edit_delete=Delete System
@@ -899,6 +900,7 @@ vservers_dir=Base directory
 
 vserver_create=Register VServer Host
 vserver_edit=Edit VServer Host
+vserver_editlink=VServer Host Settings
 vserver_egone=The VServer host no longer exists!
 vserver_header=VServer host system details
 vserver_host=System hosting VServers
@@ -949,6 +951,7 @@ openvzs_dir=Base directory
 
 openvz_create=Register OpenVZ Host
 openvz_edit=Edit OpenVZ Host
+openvz_editlink=OpenVZ Host Settings
 openvz_egone=The OpenVZ host no longer exists!
 openvz_header=OpenVZ host system details
 openvz_host=System hosting OpenVZ containers
@@ -1173,6 +1176,7 @@ zones_dir=Base directory
 
 zone_create=Register Solaris Zones Host
 zone_edit=Edit Solaris Zones Host
+zone_editlink=Solaris Zone Host Settings
 zone_egone=The Solaris Zones host no longer exists!
 zone_header=Solaris Zones host system details
 zone_host=System hosting zones
@@ -1256,6 +1260,7 @@ xen_estartssh=Xen instance was started, but could not be accessed via SSH after 
 
 xen_create=Register Xen Host
 xen_edit=Edit Xen Host
+xen_editlink=Xen Host Settings
 xen_egone=The Xen host no longer exists!
 xen_header=Xen host system details
 xen_host=System hosting Xens

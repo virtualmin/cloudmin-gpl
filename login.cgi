@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Show an SSH applet for logging into a system's console
+# Show an SSH applet for logging into a system's console, or root SSH
 
 require './server-manager-lib.pl';
 &ReadParse();
@@ -7,7 +7,8 @@ use Socket;
 ($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "console");
-&ui_print_header(&server_in($server), $text{'login_title'}, "");
+&ui_print_header(&server_in($server),
+	 $in{'shell'} ? $text{'login_title'} : $text{'login_title2'}, "");
 
 # Check for python
 $python = &has_command("python");
@@ -16,13 +17,15 @@ if (!$python) {
         }
 
 # Setup user if needed
-$clfunc = "type_".$server->{'manager'}."_supports_console_login";
-$ok = &$clfunc($server);
-if ($ok == -1) {
-       $err = &create_console_user($server);
-       $err && &error(&text('login_euser', $err));
-       &save_managed_server($server);
-       }
+if (!$in{'shell'}) {
+	$clfunc = "type_".$server->{'manager'}."_supports_console_login";
+	$ok = &$clfunc($server);
+	if ($ok < 0) {
+	       $err = &create_console_user($server);
+	       $err && &error(&text('login_euser', $err));
+	       &save_managed_server($server);
+	       }
+	}
 
 # Pick a free port
 &get_miniserv_config(\%miniserv);
@@ -44,8 +47,9 @@ if (!$pid) {
         untie(*STDIN); open(STDIN, "</dev/null");
         untie(*STDOUT); open(STDOUT, ">/dev/null");
         untie(*STDERR); open(STDERR, ">/dev/null");
+	$cmd = $in{'shell'} ? "shell-system.pl" : "login-system.pl";
         exec($python, "ajaxterm.py", "--port", $port, "--log",
-		      "--command", "$module_root_directory/login-system.pl --host $server->{'host'}");
+		      "--command", "$module_root_directory/$cmd --host $server->{'host'}");
         exit(1);
         }
 
@@ -102,7 +106,7 @@ if (!fork()) {
 	}
 
 # Show message about how to do direct login
-if ($server->{'login_user'}) {
+if ($server->{'login_user'} && !$in{'shell'}) {
 	print &ui_hidden_start($text{'login_instr'}, 'instr', 0);
 	($host, $sshport, $protos) = &get_ssh_host_port();
 	print &text('login_desc', $ENV{'SERVER_NAME'}, $sshport,
