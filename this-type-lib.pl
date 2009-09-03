@@ -92,4 +92,16 @@ my ($server, $remotefile) = @_;
 return stat($remotefile);
 }
 
+# type_this_open_shell(&server)
+# Opens a shell in a sub-process, connected to a pty. Returns an error message
+# (or undef if OK), and a file handle.
+sub type_this_open_shell
+{
+my ($server) = @_;
+&foreign_require("proc");
+my $shell = &has_command("bash") || &has_command("sh");
+my ($fh, $pid) = &proc::pty_process_exec($shell);
+return (undef, $fh);
+}
+
 
