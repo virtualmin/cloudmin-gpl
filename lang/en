@@ -2167,6 +2167,7 @@ smove_untarring=Extracting TAR file on new host system ..
 smove_untarfailed=.. TAR failed : $1
 smove_undumping=Restoring running processes ..
 smove_eundump=.. restore failed : $1
+smove_evzclash=An OpenVZ container with the context ID $1 already exists on the target system
 
 transfer_title2=Transfer File
 transfer_err=Failed to transfer file
