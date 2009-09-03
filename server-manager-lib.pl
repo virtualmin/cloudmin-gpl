@@ -6264,7 +6264,7 @@ else {
 }
 
 # obtain_lock_server(&server|&servers, [readonly])
-# Lock a server for some update
+# Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server
 {
 my ($server, $ro) = @_;
@@ -6287,6 +6287,10 @@ else {
 		my @stafter = stat($sfile);
 		if (@stbefore && $stbefore[9] != $stafter[9]) {
 			# Changed since it was locked .. re-read it
+			my $reserver = &get_managed_server($server->{'id'});
+			if ($reserver) {
+				%$server = %$reserver;
+				}
 			}
 		}
 	$main::got_lock_server{$server->{'id'}}++;

@@ -111,6 +111,7 @@ else {
 		&$second_print(".. done");
 		}
 	}
+&save_managed_server($server);
 &release_lock_server($server);
 
 sub usage

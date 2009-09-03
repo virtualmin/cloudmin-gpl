@@ -90,7 +90,7 @@ while(@ARGV > 0) {
 
 # Validate parameters
 $real =~ /^\/\S+$/ || $real eq "auto" || $lv ||
-	&usage("Missing or invalid --real parameter - should be like /xen/foo.img");
+	&usage("Missing or invalid --real or --lv parameter - should be like /xen/foo.img");
 $virt =~ /^\/\S+$/ || $virt eq "auto" ||
 	&usage("Missing or invalid --virt parameter - should be like /dev/sda2");
 $size =~ /^\d*$/ || &usage("Invalid --size parameter - must be followed by a number of MB");
@@ -169,6 +169,7 @@ else {
 		&$second_print(".. done");
 		}
 	}
+&save_managed_server($server);
 &release_lock_server($server);
 
 sub usage
