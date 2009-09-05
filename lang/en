@@ -383,7 +383,7 @@ keys_add=Add a new SSH key.
 keys_return=list of SSH keys
 
 key_edit=Edit SSH Key
-key_create=Create SSH Key
+key_create=Add SSH Key
 key_header=SSH key details
 key_desc=Key description
 key_gen=Source for new key
