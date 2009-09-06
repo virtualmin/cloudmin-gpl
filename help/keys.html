@@ -1,7 +1,8 @@
 <header>SSH Keys</header>
 
 This page allows you to register SSH keys that are used to access newly
-created virtual systems. When a Xen instance, Solaris Zone or VServer is
+created virtual systems. When a Xen instance, OpenVZ container, Solaris Zone
+or VServer is
 created, you can select if it's <tt>root</tt> login should be accessed via
 a password, or using one of the keys on this page. For EC2 instances, you
 <b>must</b> have at least one key registered before they can be created, as
@@ -12,6 +13,13 @@ below the table of existing keys. To edit the details of one that already
 exists, click on its name. To remove keys, check the boxes next to them and
 click the <b>Delete Selected Keys</b> button. You can only remove keys
 that are not being used to login to any managed systems though. <p>
+
+<hr>
+
+You can also add keys for which the public key data only is available to
+this list, for use as secondary keys for new systems. This is useful if you
+have an existing key (perhaps with a passphrase) that you would like to be
+able to login to all virtual systems. <p>
 
 <footer>
 

@@ -668,6 +668,12 @@ if (!$key->{'external'}) {
 sub generate_public_key
 {
 my ($key) = @_;
+if ($key->{'public'}) {
+	# Already public, can just return text (minus trailing whitespace)
+	my $rv = $key->{'keydata'};
+	$rv =~ s/\s+$//;
+	return $rv;
+	}
 my $qp = quotemeta($key->{'file'});
 my $out = &backquote_command("ssh-keygen -y -f $qp 2>/dev/null");
 if ($out =~ /((\d+)\s+(\d+)\s+(\d+))$/) {
@@ -754,7 +760,8 @@ return join("\n", @rv)."\n";
 sub ssh_key_menu
 {
 my ($name, $type, $value) = @_;
-my @keys = sort { $a->{'desc'} cmp $b->{'desc'} } &list_ssh_keys();
+my @keys = sort { $a->{'desc'} cmp $b->{'desc'} }
+		grep { !$_->{'public'} } &list_ssh_keys();
 my @allkeys = @keys;
 if ($type) {
 	# Limit to keys suitable for this server type

@@ -23,7 +23,7 @@ print &ui_table_row($text{'key_desc'},
 
 if ($in{'new'}) {
 	# Source for new key
-	print &ui_table_row($text{'key_gen'},
+	print &ui_table_row($text{'pubkey_gen'},
 		&ui_radio("gen", 1, 
 		  [ [ 1, &text('key_gen1',
 			       &ui_textbox("file", undef, 40))." ".

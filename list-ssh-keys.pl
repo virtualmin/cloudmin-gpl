@@ -57,6 +57,12 @@ if ($multi) {
 		print $k->{'id'},"\n";
 		print "    Description: $k->{'desc'}\n";
 		print "    Key file: $k->{'file'}\n";
+		if ($k->{'public'}) {
+			print "    Type: public\n";
+			}
+		else {
+			print "    Type: private\n";
+			}
 		print "    Public key: ",&generate_public_key($k),"\n";
 		foreach $t (@server_management_types) {
 			$kfunc = "type_${t}_ssh_key_info";
@@ -76,11 +82,12 @@ elsif ($nameonly) {
 	}
 else {
 	# One key per line
-	$fmt = "%-10.10s %-65.65s\n";
-	printf $fmt, "ID", "Description";
-	printf $fmt, ("-" x 10), ("-" x 65);
+	$fmt = "%-10.10s %-7.7s %-58.58s\n";
+	printf $fmt, "ID", "Type", "Description";
+	printf $fmt, ("-" x 10), ("-" x 7), ("-" x 58);
 	foreach $k (@keys) {
-		printf $fmt, $k->{'id'}, $k->{'desc'};
+		printf $fmt, $k->{'id'}, $k->{'public'} ? "Public" : "Private",
+			     $k->{'desc'};
 		}
 	}
 

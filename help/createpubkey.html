@@ -1,0 +1,21 @@
+<header>Add SSH Public Key</header>
+
+This page allows you to add an existing SSH public key to Cloudmin, for
+use as a secondary key on newly created virtual systems. You
+must enter a description for the key, and then select one of the options
+for the <b>Source for public key</b> :
+
+<dl>
+<dt><b>In existing file</b>
+<dd>The key in the file on the server entered into the adjacent text field will be used. You only need to enter the private key - Cloudmin will compute the public key from it automatically. This key cannot be protected by a passphrase though.
+
+<dt><b>In uploaded file</b>
+<dd>Like the previous option, but the private key can be in a file uploaded from the system on which your browser runs.
+
+<dt><b>Pasted into textbox below</b>
+<dd>Like the last two options, but you must copy and paste the private key data into the text box.
+
+</dl>
+
+<footer>
+

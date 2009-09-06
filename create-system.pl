@@ -113,6 +113,7 @@ while(@ARGV > 0) {
 		$ssh_key = shift(@ARGV);
 		($key) = grep { $_->{'id'} eq $ssh_key } @keys;
 		$key || &usage("No SSH key with ID $ssh_key found");
+		$key->{'public'} && &usage("The SSH key with ID $ssh_key is a public key only");
 		}
 	elsif ($a eq "--ssh-pass") {
 		$ssh_pass = shift(@ARGV);
