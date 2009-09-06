@@ -5950,7 +5950,10 @@ sub parse_host_server_field
 my ($server, $name, $type, $in) = @_;
 my @vhosts = &list_available_host_servers($type);
 @vhosts || &error($text{'create_exenvhostnone'});
-my @locs = &list_vhost_locations(\@vhosts);
+my @locs;
+if (defined(&list_vhost_locations)) {
+	@locs = &list_vhost_locations(\@vhosts);
+	}
 my ($vhost, $loc);
 if (&can_select_host_server() && &can_select_host_location() && @locs) {
 	# Either host or location
