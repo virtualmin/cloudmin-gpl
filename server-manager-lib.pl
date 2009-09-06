@@ -700,6 +700,23 @@ else {
 	}
 }
 
+# check_ssh_public_key_data(text)
+# Returns 1 if the text looks like an SSH 1 key, 2 for an SSH version 2 key,
+# 0 otherwise
+sub check_ssh_public_key_data
+{
+my ($text) = @_;
+my @lines = split(/\r?\n/, $text);
+#return 0 if (@lines != 1);
+if ($text =~ /^(ssh-rsa|ssh-dss)\s+(\S+)\s+(\S+)\r?\n/) {
+	return 2;
+	}
+elsif ($text =~ /^(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\r?\n/) {
+	return 1;
+	}
+return 0;
+}
+
 # generate_ssh_key()
 # Create a new SSH private key, in the default format
 sub generate_ssh_key

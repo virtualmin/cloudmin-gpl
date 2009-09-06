@@ -31,7 +31,7 @@ if ($in{'new'}) {
 			push(@typeopts, &$kfunc());
 			}
 		}
-	print &ui_table_row($text{'key_gen'},
+	print &ui_table_row($text{'pubkey_gen'},
 		&ui_radio("gen", 0, 
 		  [ [ 0, $text{'key_gen0'}."<br>" ],
 		    [ 1, &text('key_gen1',

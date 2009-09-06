@@ -380,7 +380,9 @@ keys_manyusers=$1 systems
 keys_delete=Delete Selected Keys
 keys_none=No SSH keys have been defined yet.
 keys_add=Add a new SSH key.
+keys_pubadd=Add an SSH public key.
 keys_return=list of SSH keys
+keys_public=Public key
 
 key_edit=Edit SSH Key
 key_create=Add SSH Key
@@ -403,6 +405,12 @@ key_public=Public key<br>(Should be all on one line)
 key_download=Download..
 key_egone=Key no longer exists!
 key_addnew=Add to <tt>root</tt>'s authorized keys on new systems?
+
+pubkey_edit=Edit SSH Public Key
+pubkey_create=Add SSH Public Key
+pubkey_header=SSH public key details
+pubkey_err=Failed to save SSH public key
+pubkey_gen=Source for public key
 
 dkey_title=Delete SSH Key
 dkey_rusure=Are you sure you want to remove the SSH key $1? It is used to login to the following systems :<br>$2

@@ -7,7 +7,8 @@ require './server-manager-lib.pl';
 
 @keys = &list_ssh_keys();
 @links = ( &select_all_link("d"), &select_invert_link("d"),
-	   "<a href='edit_key.cgi?new=1'>$text{'keys_add'}</a>" );
+	   "<a href='edit_key.cgi?new=1'>$text{'keys_add'}</a>",
+	   "<a href='edit_pubkey.cgi?new=1'>$text{'keys_pubadd'}</a>" );
 if (@keys) {
 	# Show table
 	@servers = &list_managed_servers();
@@ -20,12 +21,19 @@ if (@keys) {
 				  $text{'keys_addnew'},
 				  $text{'keys_users'} ]);
 	foreach $k (@keys) {
-		@users = grep { $_->{'key'} eq $k->{'id'} } @servers;
-		$users = @users == 0 ? $text{'keys_nousers'} :
-			 @users > 4 ? &text('keys_manyusers', scalar(@users)) :
-			   join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
+		if ($k->{'public'}) {
+			$cgi = 'edit_pubkey.cgi';
+			$users = "<i>$text{'keys_public'}</i>";
+			}
+		else {
+			$cgi = 'edit_key.cgi';
+			@users = grep { $_->{'key'} eq $k->{'id'} } @servers;
+			$users = @users == 0 ? $text{'keys_nousers'} :
+			  @users > 4 ? &text('keys_manyusers', scalar(@users)) :
+			  join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
+			}
 		print &ui_checked_columns_row([
-			"<a href='edit_key.cgi?id=$k->{'id'}'>$k->{'desc'}</a>",
+			"<a href='$cgi?id=$k->{'id'}'>$k->{'desc'}</a>",
 			$k->{'external'} ? $text{'keys_ext'} :$text{'keys_int'},
 			$k->{'addnew'} ? $text{'yes'} : $text{'no'},
 			$users
