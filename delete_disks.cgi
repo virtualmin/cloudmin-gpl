@@ -5,7 +5,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 @servers = &list_managed_servers();
 &error_setup($text{'ddisk_err'});
-($server) = grep { $_->{'id'} == $in{'id'} } @servers;
+$server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &check_server_status($server, 0, 1);	# In case state has changed
 &can_action_error($server, "disks");

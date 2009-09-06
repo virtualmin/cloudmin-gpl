@@ -6,8 +6,7 @@ use Socket;
 &ReadParse();
 &can_add_server_error($in{'type'});
 &error_setup($text{'find_err'});
-@servers = &list_managed_servers();
-($vhost) = grep { $_->{'id'} eq $in{'id'} } @servers;
+$vhost = &get_managed_server($in{'id'});
 $tmplserver = { 'manager' => $in{'type'} };
 
 if (!$in{'copyauth'}) {

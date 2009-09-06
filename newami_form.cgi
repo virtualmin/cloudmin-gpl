@@ -3,7 +3,7 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
-($server) = grep { $_->{'id'} == $in{'id'} } &list_managed_servers();
+$server = &get_managed_server($in{'id'});
 &can_action_error($server, "image");
 
 &ui_print_header(&server_in($server), $text{'newami_title'}, "", "newami");

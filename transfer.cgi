@@ -4,14 +4,13 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'transfer_err'});
-@servers = &list_managed_servers();
-($server) = grep { $_->{'id'} == $in{'id'} } @servers;
+$server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "transfer");
 
 # Validate inputs
 $in{'source'} =~ /^\/\S/ || &error($text{'transfer_esource'});
-($dest) = grep { $_->{'id'} eq $in{'destid'} } @servers;
+$dest = &get_managed_server($in{'destid'});
 $dest || &error($text{'transfer_edest'});
 &can_action_error($dest, "transfer");
 $in{'dest_def'} || $in{'dest'} =~ /^\/\S/ || &error($text{'transfer_edest2'});

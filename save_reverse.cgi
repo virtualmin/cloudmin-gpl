@@ -6,8 +6,7 @@ require './server-manager-lib.pl';
 &error_setup($text{'reverse_err'});
 
 # Get and check system
-@servers = &list_managed_servers();
-($server) = grep { $_->{'id'} == $in{'id'} } @servers;
+$server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "reverse");
 

@@ -5,8 +5,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 
 # Get and check system
-@servers = &list_managed_servers();
-($server) = grep { $_->{'id'} == $in{'id'} } @servers;
+$server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 $t = $server->{'manager'};
 &can_action_error($server, "limits");

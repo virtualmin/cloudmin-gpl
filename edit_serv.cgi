@@ -4,9 +4,9 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
-@servers = &list_managed_servers();
-($server) = grep { $_->{'id'} == $in{'id'} } @servers;
+$server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
+@servers = &list_managed_servers();
 $status = $server->{'status'};
 $info = &get_server_collected($server);
 &can_action($server, "edit") || &can_action_error($server, "view");
