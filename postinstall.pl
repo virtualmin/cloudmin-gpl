@@ -51,10 +51,12 @@ if (!$job) {
 	}
 
 # Refresh my status
-my ($server) = grep { $_->{'id'} == 0 } &list_managed_servers();
-if ($server) {
-	&check_server_status($server);
-	&save_managed_server($server);
+if ($config{'show_this'}) {
+	my $server = &get_managed_server(0);
+	if ($server) {
+		&check_server_status($server);
+		&save_managed_server($server);
+		}
 	}
 
 # Create API helper script /usr/bin/cloudmin

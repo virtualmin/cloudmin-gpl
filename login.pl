@@ -6,8 +6,7 @@ $main::no_acl_check++;
 require './server-manager-lib.pl';
 
 # Work out server, based on username
-($server) = grep { $_->{'login_user'} eq $ENV{'USER'} }
-		 &list_managed_servers();
+$server = &get_managed_server_by("login_user", $ENV{'USER'});
 if (!$server) {
 	print "Failed to find a Cloudmin managed system for $ENV{'USER'}\n";
 	exit(1);

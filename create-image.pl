@@ -104,7 +104,7 @@ $desc || &usage("Missing --desc parameter");
 $id || &usage("Missing --id parameter");
 
 # Get the server to image
-($server) = grep { $_->{'host'} eq $host } &list_managed_servers();
+$server = &get_managed_server_by("host", $host);
 $server || &usage("No system with hostname $host was found");
 $nfunc = "type_".$server->{'manager'}."_no_image";
 if (defined(&$nfunc) && &$nfunc($server)) {
