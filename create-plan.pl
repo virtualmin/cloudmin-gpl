@@ -48,7 +48,7 @@ If none are given, all actions will be allowed.
 
 =head1 Example usage
 
-  vm2 create-plan --name "Command line plan" --max-servers 2 --max-ram 1000000000 --max-disk 5000000000 --type xen
+  cloudmin create-plan --name "Command line plan" --max-servers 2 --max-ram 1000000000 --max-disk 5000000000 --type xen
   Created Cloudmin account plan Command line plan
 
 =cut
@@ -64,6 +64,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/create-plan.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 @allactions = &list_owner_actions();
@@ -132,6 +133,7 @@ foreach $m (keys %maxes) {
 
 &save_plan($plan);
 print "Created Cloudmin account plan $name\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

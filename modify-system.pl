@@ -46,6 +46,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/modify-system.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -255,6 +256,7 @@ if ($recheck) {
 	print "New status is: $server->{'status'} ($desc)\n";
 	}
 &release_lock_server($server);
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

@@ -28,6 +28,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/add-licence.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -55,6 +56,7 @@ $ok == 1 || &usage("The specified serial number and key are not valid");
 push(@lics, { 'serial' => $serial, 'key' => $key });
 &save_virtualmin_licences(\@lics);
 print "The Virtualmin license with serial $serial and key $key has been added.\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

@@ -58,6 +58,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/move-domain.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -163,6 +164,7 @@ if (!$force) {
 			$deletesource, $direct, $realloc);
 &release_lock_server([ map { $_->[0] } @serverdoms ]);
 &release_lock_server($dest);
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

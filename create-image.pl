@@ -67,6 +67,7 @@ $0 = "$pwd/create-image.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &set_all_text_print();
+@OLDARGV = @ARGV;
 
 # Parse command line
 $munge = 1;
@@ -217,6 +218,9 @@ if ($shutdown) {
 # Exit if image transfer failed, but only after cleanup is done
 if ($err) {
 	exit(5);
+	}
+else {
+	&cloudmin_api_log(\@OLDARGV);
 	}
 
 sub usage

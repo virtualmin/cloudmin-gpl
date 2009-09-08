@@ -79,6 +79,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/create-system.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Get SSH keys
 @keys = &list_ssh_keys();
@@ -512,6 +513,7 @@ if ($config{'packages_def'} && ($server->{'status'} eq 'virt' ||
 &release_lock_server($server);
 
 print "Creation of $tdesc system $server->{'host'} is complete\n";
+&cloudmin_api_log(\@OLDARGV);
 exit(0);
 
 sub usage

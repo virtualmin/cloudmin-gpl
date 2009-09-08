@@ -39,6 +39,7 @@ $0 = "$pwd/modify-owner.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &foreign_require("acl", "acl-lib.pl");
+@OLDARGV = @ARGV;
 
 # Parse command line
 @allactions = &list_owner_actions();
@@ -199,6 +200,7 @@ if ($plan) {
 # Save the owner
 &save_system_owner($owner, $oldowner);
 print "Updated Cloudmin system owner $name\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

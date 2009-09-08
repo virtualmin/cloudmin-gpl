@@ -10,7 +10,7 @@ followed by the plan name or ID.
 
 =head1 Example usage
 
-  vm2 delete-plan --name "Command line plan"
+  cloudmin delete-plan --name "Command line plan"
   Deleted Cloudmin account plan Command line plan
 
 =cut
@@ -26,6 +26,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/delete-plan.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -54,6 +55,7 @@ $plan || &usage("No plan named $name exists");
 
 &delete_plan($plan);
 print "Deleted Cloudmin account plan $plan->{'name'}\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

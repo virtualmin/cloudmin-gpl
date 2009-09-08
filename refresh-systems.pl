@@ -31,6 +31,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/refresh-systems.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -93,6 +94,7 @@ else {
 		}
 	}
 &release_lock_server(\@servers);
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

@@ -51,6 +51,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/modify-limits.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -359,6 +360,7 @@ if (@need_reboot) {
 		print $s->{'host'},"\n";
 		}
 	}
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

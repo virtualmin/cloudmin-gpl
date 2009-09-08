@@ -29,6 +29,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/modify-reverse-address.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -75,6 +76,7 @@ if ($name) {
 else {
 	print "Removed reverse DNS name for $ip\n";
 	}
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

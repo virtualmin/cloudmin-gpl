@@ -56,6 +56,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/create-domain.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Build a list of all known feature names
 @vservers = grep { $_->{'status'} eq 'virt' } &list_managed_servers();
@@ -191,6 +192,7 @@ else {
 	print ".. creation complete!\n";
 	}
 &release_lock_server($server);
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

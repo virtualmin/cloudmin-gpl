@@ -54,6 +54,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/delete-domain.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -145,6 +146,7 @@ foreach my $sd (@serverdoms) {
 		}
 	}
 print ".. done\n\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

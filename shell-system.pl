@@ -28,6 +28,7 @@ $0 = "$pwd/shell-system.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &set_all_text_print();
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -54,6 +55,7 @@ if ($err) {
 print "Opened shell on $server->{'host'} ..\n\n";
 &forward_console_data($fh);
 print "Shell login closed\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

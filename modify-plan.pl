@@ -36,7 +36,7 @@ a name that is not currently in use by any other plan.
 
 =head1 Example usage
 
-  vm2 modify-plan --name "Command line plan" --max-servers 5 --add-type xen
+  cloudmin modify-plan --name "Command line plan" --max-servers 5 --add-type xen
   Updated Cloudmin account plan Command line plan
 
 =cut
@@ -52,6 +52,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/modify-plan.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 @allactions = &list_owner_actions();
@@ -176,6 +177,7 @@ if (defined($hostmode)) {
 &save_plan($plan);
 &apply_plan($plan);
 print "Updated Cloudmin account plan $plan->{'desc'}\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

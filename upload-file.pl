@@ -38,6 +38,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/install-webmin.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -96,6 +97,7 @@ print "Uploading file to ",scalar(@servers)," systems ..\n";
 	          print "$_[0]->{'host'}: OK\n";
 	          }
 	    });
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

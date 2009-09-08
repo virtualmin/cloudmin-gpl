@@ -25,6 +25,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/delete-image.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -45,6 +46,7 @@ $image || &usage("No image with ID $id was found");
 # Delete it
 &delete_server_image($image);
 print "Image $id successfully deleted.\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

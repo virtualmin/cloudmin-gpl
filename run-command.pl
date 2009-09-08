@@ -37,6 +37,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/run-command.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -64,6 +65,7 @@ $cmd || &usage("No command to run given");
 if (@servers == 1) {
 	# Just do one
 	($out, $ex, $err) = &execute_command_on_server($servers[0], $cmd);
+	&cloudmin_api_log(\@OLDARGV);
 	if ($err) {
 		print "ERROR: $err\n";
 		exit(255);
@@ -87,6 +89,7 @@ else {
 			  return $ex;
                       }
 	            });
+	&cloudmin_api_log(\@OLDARGV);
 	}
 
 sub usage

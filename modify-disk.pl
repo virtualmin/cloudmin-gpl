@@ -36,6 +36,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/modify-disk.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 &set_all_text_print();
@@ -113,14 +114,15 @@ if ($newvirt) {
 &$first_print("Modifying virtual disk for $disk->{'virt'} ..");
 $cfunc = "type_".$server->{'manager'}."_modify_disk";
 $err = &$cfunc($server, $disk, $olddisk);
+&release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");
 	}
 else {
 	# Tell the user about reboot
 	&$second_print(".. done");
+	&cloudmin_api_log(\@OLDARGV);
 	}
-&release_lock_server($server);
 
 sub usage
 {

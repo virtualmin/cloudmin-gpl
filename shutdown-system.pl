@@ -32,6 +32,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/shutdown-system.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -84,6 +85,7 @@ foreach $s (@servers) {
 		}
 	}
 &release_lock_server(\@servers);
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

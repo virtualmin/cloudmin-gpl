@@ -24,6 +24,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/restore-systems.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -79,6 +80,7 @@ foreach $s (@servers) {
 		}
 	print "\n";
 	}
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

@@ -27,6 +27,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/delete-licence.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -49,6 +50,7 @@ $lic || &usage("No license with serial nunber $serial exists");
 @lics = grep { $_ ne $lic } @lics;
 &save_virtualmin_licences(\@lics);
 print "The Virtualmin license with serial $serial has been removed.\n";
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

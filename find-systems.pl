@@ -63,6 +63,7 @@ $0 = "$pwd/find-systems.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &set_all_text_print();
+@OLDARGV = @ARGV;
 
 # Parse command line
 $ssh_user = 'root';
@@ -183,6 +184,7 @@ else {
 # Do it!
 $ffunc = "type_".$type."_find_servers";
 &$ffunc($vhost, $tmplserver, $running);
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

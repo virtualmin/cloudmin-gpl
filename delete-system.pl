@@ -29,6 +29,7 @@ $0 = "$pwd/delete-system.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &set_all_text_print();
+@OLDARGV = @ARGV;
 
 # Parse command line
 while(@ARGV > 0) {
@@ -96,6 +97,7 @@ foreach $s (@servers) {
 		}
 	&release_lock_server($server);
 	}
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {
