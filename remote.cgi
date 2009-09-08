@@ -42,6 +42,8 @@ $format = defined($in{'json'}) ? 'json' :
 delete($ENV{'MINISERV_CONFIG'});
 
 # Run the program
+$main::virtualmin_remote_api = 1;
+$ENV{'VIRTUALMIN_REMOTE_API'} = 1;
 $in{'program'} =~ /^[a-z0-9\.-]+$/i || &error($text{'remote_eprogram'});
 $cmd = "$module_root_directory/$in{'program'}.pl";
 -x $cmd || &error(&text('remote_eprogram2', "<tt>$cmd</tt>"));

@@ -6298,6 +6298,55 @@ else {
 	}
 }
 
+# cloudmin_api_log(&argv, [&server])
+# Log an action taken by a Virtualmin command-line API call
+sub cloudmin_api_log
+{
+local ($argv, $server) = @_;
+
+# Parse into flags hash
+local (%flags, $lastflag);
+local @argv = @$argv;
+while(@argv) {
+	local $a = shift(@argv);
+	if ($a =~ /^\-+(\S+)$/) {
+		# A new flag
+		$lastflag = $1;
+		$flags{$lastflag} = "";
+		}
+	elsif ($lastflag) {
+		# A flag value
+		if ($flags{$lastflag} ne "") {
+			$flags{$lastflag} .= " ";
+			}
+		$flags{$lastflag} .= $a;
+		}
+	if ($a =~ /^[^"' ]+$/) {
+		push(@qargv, $a);
+		}
+	elsif ($a !~ /"/) {
+		push(@qargv, "\"$a\"");
+		}
+	elsif ($a !~ /'/) {
+		push(@qargv, "'$a'");
+		}
+	else {
+		push(@qargv, quotameta($a));
+		}
+	}
+$flags{'argv'} = &urlize(join(" ", @qargv));
+
+# Log it
+local $script = $0;
+$script =~ s/^.*\///;
+local $remote_user = "root";
+local $WebminCore::remote_user = "root";
+local $ENV{'REMOTE_HOST'} ||= "127.0.0.1";
+&webmin_log($main::virtualmin_remote_api ||
+	    $ENV{'VIRTUALMIN_REMOTE_API'} ? "remote" : "cmd",
+	    $script, $server ? $server->{'host'} : undef, \%flags);
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server

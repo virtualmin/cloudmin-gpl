@@ -34,6 +34,7 @@ chop($pwd = `pwd`);
 $0 = "$pwd/delete-disk.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+@OLDARGV = @ARGV;
 
 # Parse command line
 &set_all_text_print();
@@ -113,6 +114,7 @@ else {
 	}
 &save_managed_server($server);
 &release_lock_server($server);
+&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {

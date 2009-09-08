@@ -2761,3 +2761,8 @@ dbackup_title=Delete Backups
 dbackup_deleting=Deleting backup of $1 from $2 ..
 dbackup_failed=.. deletion failed : $1
 dbackup_done=.. deleted backup of $1
+
+log_cmd=Ran API command $1
+log_cmd_l=Ran API command $1 $2
+log_remote=Called remote API $1
+log_remote_l=Called remote API $1 $2
