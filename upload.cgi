@@ -36,6 +36,8 @@ if ($err) {
 	}
 else {
 	print $text{'upload_done'},"<p>\n";
+	&webmin_log("upload", "file", $server->{'host'},
+		    { 'file' => $in{'dest'} });
 	}
 
 &ui_print_footer("transfer_form.cgi?id=$in{'id'}&mode=upload",

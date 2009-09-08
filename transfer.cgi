@@ -31,6 +31,9 @@ if ($err) {
 	}
 else {
 	print $text{'create_done'},"<p>\n";
+	&webmin_log("transfer", "file", $server->{'host'},
+		    { 'file' => $in{'dest'},
+		      'dest' => $dest->{'host'} });
 	}
 
 &ui_print_footer("transfer_form.cgi?id=$in{'id'}&mode=download",

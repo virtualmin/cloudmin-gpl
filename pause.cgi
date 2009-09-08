@@ -31,5 +31,6 @@ if (defined(&theme_post_save_server)) {
 	&theme_post_save_server($server);
 	}
 &release_lock_server($server);
+&webmin_log("pause", "server", $server->{'host'});
 
 &ui_print_footer("", $text{'index_return'});

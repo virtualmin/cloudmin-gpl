@@ -10,6 +10,7 @@ else {
 	}
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
+@hostnames = map { $_->{'host'} } @servers;
 &can_action_error(\@servers, "run");
 &ui_print_header(undef, $text{'mshell_title'}, "", "mshell",
 		 0, 0, undef, undef, undef,
@@ -81,6 +82,9 @@ if (!$in{'clear'}) {
 		&open_lock_tempfile(PREVFILE, ">>$prevfile");
 		&print_tempfile(PREVFILE, $fullcmd,"\n");
 		&close_tempfile(PREVFILE);
+		&webmin_log("shell", "servers", scalar(@servers),
+			    { 'cmd' => &urlize($cmd),
+			      'hosts' => \@hostnames });
 		}
 	}
 

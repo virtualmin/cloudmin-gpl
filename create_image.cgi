@@ -115,5 +115,7 @@ if ($shutdown) {
 
 FAILED:
 &release_lock_server($server);
+&webmin_log("image", "server", $server->{'host'},
+	    'cmd' => $image->{'id'});
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 

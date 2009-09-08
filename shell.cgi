@@ -69,6 +69,8 @@ if (!$in{'clear'}) {
 		&open_lock_tempfile(PREVFILE, ">>$prevfile");
 		&print_tempfile(PREVFILE, $fullcmd,"\n");
 		&close_tempfile(PREVFILE);
+		&webmin_log("shell", "server", $server->{'host'},
+			    { 'cmd' => &urlize($cmd) });
 		}
 	}
 

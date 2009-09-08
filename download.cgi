@@ -41,6 +41,8 @@ if ($in{'dest'} == 0) {
 		}
 	close(FILE);
 	unlink($dest);
+	&webmin_log("download", "file", $server->{'host'},
+		    { 'file' => $in{'source'} });
 	}
 else {
 	# Show results
@@ -49,6 +51,8 @@ else {
 		}
 	else {
 		print $text{'download_done'},"<p>\n";
+		&webmin_log("download", "file", $server->{'host'},
+			    { 'file' => $in{'source'} });
 		}
 
 	&ui_print_footer("transfer_form.cgi?id=$in{'id'}&mode=download",

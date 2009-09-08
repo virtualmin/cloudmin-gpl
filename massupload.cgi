@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &ReadParseMime();
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
+@hostnames = map { $_->{'host'} } @servers;
 &error_setup($text{'mupload_err'});
 &can_action_error(\@servers, "upload");
 
@@ -63,6 +64,9 @@ foreach $s (@servers) {
 		}
 	}
 print "<p>\n";
+&webmin_log("upload", "servers", scalar(@servers),
+	    { 'cmd' => &urlize($in{'dest'}),
+	      'hosts' => \@hostnames });
 
 &ui_print_footer("", $text{'index_return'});
 

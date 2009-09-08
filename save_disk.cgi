@@ -146,8 +146,6 @@ else {
 			}
 		}
 
-	# Validate new disk size
-
 	&obtain_lock_server($server);
 	if ($in{'new'}) {
 		# Create the disk

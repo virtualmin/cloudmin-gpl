@@ -12,6 +12,7 @@ $ids = join("&", map { "d=".$_ } keys %d);
 # Identify parent and virtual systems
 @pservers = grep { !&is_virtual_server($_) } @servers;
 @oservers = grep { &is_virtual_server($_) } @servers;
+@hostnames = map { $_->{'host'} } @servers;
 
 if ($in{'refresh'}) {
 	# Fetch the status of selected servers, in 10 processes
@@ -42,6 +43,8 @@ if ($in{'refresh'}) {
 		&theme_post_save_server();
 		&theme_select_server($aservers[0]) if (@aservers == 1);
 		}
+	&webmin_log("refresh", "servers", scalar(@servers),
+		    { 'hosts' => \@hostnames });
 
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -132,6 +135,8 @@ elsif ($in{'delete'}) {
 				}
 			}
 		&release_lock_server(\@servers);
+		&webmin_log("delete", "servers", scalar(@servers),
+			    { 'hosts' => \@hostnames });
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -173,6 +178,8 @@ elsif ($in{'dereg'}) {
 			&theme_post_save_server($server);
 			}
 		&release_lock_server(\@servers);
+		&webmin_log("dereg", "servers", scalar(@servers),
+			    { 'hosts' => \@hostnames });
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -228,6 +235,8 @@ elsif ($in{'update'}) {
 	print "</ul>\n";
 	&release_lock_server(\@upservers);
 	print $text{'mass_updone'},"<p>\n";
+	&webmin_log("update", "servers", scalar(@servers),
+		    { 'hosts' => \@hostnames });
 
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -355,6 +364,8 @@ elsif ($in{'shutdown'}) {
 		&theme_select_server($servers[0]) if (@servers == 1 &&
 						defined(&theme_select_server));
 		&release_lock_server(\@servers);
+		&webmin_log("shutdown", "servers", scalar(@servers),
+			    { 'hosts' => \@hostnames });
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -401,6 +412,8 @@ elsif ($in{'startup'}) {
 	&theme_select_server($servers[0]) if (@servers == 1 &&
 					      defined(&theme_select_server));
 	&release_lock_server(\@servers);
+	&webmin_log("startup", "servers", scalar(@servers),
+		    { 'hosts' => \@hostnames });
 
 	&ui_print_footer("", $text{'index_return'});
 	}
@@ -454,6 +467,8 @@ elsif ($in{'reboot'}) {
 		&theme_select_server($servers[0]) if (@servers == 1 &&
 						defined(&theme_select_server));
 		&release_lock_server(\@servers);
+		&webmin_log("reboot", "servers", scalar(@servers),
+			    { 'hosts' => \@hostnames });
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}

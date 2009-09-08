@@ -112,6 +112,8 @@ FAILED:
 
 if ($complete) {
 	print $text{'newami_alldone'},"<p>\n";
+	&webmin_log("newami", "server", $server->{'host'},
+		    'cmd' => $ami);
 	}
 else {
 	print "<b>",$text{'newami_allfailed'},"</b><p>\n";
