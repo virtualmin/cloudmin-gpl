@@ -69,6 +69,7 @@ foreach $id (@d) {
 			}
 		}
 	}
+&webmin_log("download", "images", scalar(@d));
 
 &ui_print_footer("list_images.cgi", $text{'images_return'});
 

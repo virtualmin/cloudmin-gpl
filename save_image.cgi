@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Deletes a my image
+# Deletes a system image
 
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
@@ -10,6 +10,7 @@ $got || &error($text{'dimage_egone'});
 
 if ($in{'delete'}) {
 	&delete_server_image($got);
+	&webmin_log("delete", "image", $got->{'id'});
 	}
 &redirect("list_images.cgi");
 

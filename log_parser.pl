@@ -54,6 +54,14 @@ elsif ($type eq "keys") {
 	# Multiple SSH keys
 	return &text('log_'.$action.'_keys', $object);
 	}
+elsif ($type eq "image") {
+	# System image
+	return &text('log_'.$action.'_image', &html_escape($object));
+	}
+elsif ($type eq "images") {
+	# Multiple system images
+	return &text('log_'.$action.'_images', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

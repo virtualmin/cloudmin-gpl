@@ -343,7 +343,9 @@ sub save_server_image
 {
 my ($image) = @_;
 &make_dir($server_images_dir, 0700);
+&lock_file("$server_images_dir/$image->{'id'}.img");
 &write_file("$server_images_dir/$image->{'id'}.img", $image);
+&unlock_file("$server_images_dir/$image->{'id'}.img");
 }
 
 # delete_server_image(&image)
@@ -352,9 +354,9 @@ sub delete_server_image
 {
 my ($img) = @_;
 foreach my $fl (split(/\s+/, $img->{'files'})) {
-	unlink("$server_images_dir/$fl");
+	&unlink_file("$server_images_dir/$fl");
 	}
-unlink("$server_images_dir/$img->{'id'}.img");
+&unlink_logged("$server_images_dir/$img->{'id'}.img");
 }
 
 # generate_image_md5s(&image)

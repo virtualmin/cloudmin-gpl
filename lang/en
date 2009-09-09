@@ -2824,3 +2824,5 @@ log_create_key=Created SSH key $1
 log_modify_key=Modified SSH key $1
 log_delete_key=Deleted SSH key $1
 log_delete_keys=Deleted $1 SSH keys
+log_delete_image=Deleted system image <tt>$1</tt>
+log_download_images=Downloaded $1 system images
