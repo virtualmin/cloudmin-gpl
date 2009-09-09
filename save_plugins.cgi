@@ -23,5 +23,6 @@ $config{'plugins'} = join(" ", @newplugins);
 &lock_file($module_config_file);
 &save_module_config();
 &unlock_file($module_config_file);
+&webmin_log("plugins");
 &redirect("index.cgi?refresh=all");
 

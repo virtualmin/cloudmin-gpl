@@ -1098,6 +1098,33 @@ $sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}";
 return $sshcmd;
 }
 
+# clear_ssh_host_key(&server)
+# Remove the key for some system from .ssh/known_hosts on the Cloudmin master
+sub clear_ssh_host_key
+{
+my ($server) = @_;
+my $ip = &get_server_ip($server);
+my @uinfo = getpwnam("root");
+foreach my $f ("$uinfo[7]/.ssh/known_hosts",
+	       "$uinfo[7]/.ssh/known_hosts2",
+	       "$ENV{'HOME'}/.ssh/known_hosts",
+	       "$ENV{'HOME'}/.ssh/known_hosts2") {
+	next if (!-r $f);
+	&lock_file($f);
+	my $lref = &read_file_lines($f);
+	for(my $i=0; $i<@$lref; $i++) {
+		my @w = split(/\s+/, $lref->[$i]);
+		my @h = split(/,/, $w[0]);
+		if (&indexof($server->{'host'}, @h) >= 0 ||
+		    &indexof($ip, @h) >= 0) {
+			splice(@$lref, $i--, 1);
+			}
+		}
+	&flush_file_lines($f);
+	&unlock_file($f);
+	}
+}
+
 # get_file_data_from_server(&server, remotefile)
 # Returns the contents of some file
 sub get_file_data_from_server
@@ -1589,6 +1616,7 @@ else {
 # Don't ping if the virtual system type (ie Xen) has it's own function to 
 # detect status though, unless SSH logins are disabled
 $server->{'statustime'} = time();
+$server->{'status_hostkey'} = 0;
 my $clfunc = "type_".$server->{'manager'}."_check_login";
 my $ping = &ping_server_host($server->{'host'});
 
@@ -1662,6 +1690,7 @@ elsif ($status) {
 	# it should be up
 	$server->{'status'} = 'nossh';
 	$server->{'status_msg'} = $err;
+	$server->{'status_hostkey'} = $err =~ /Invalid\s+host\s+key/i ? 1 : 0;
 	goto DONECHECK;
 	}
 

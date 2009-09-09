@@ -106,8 +106,13 @@ print &ui_table_row($text{'edit_status'},
 		    &text('edit_statustime', &describe_status($server, 1, 0),
 				     &make_date($server->{'statustime'})));
 if ($server->{'status_msg'}) {
+	my $clearkey;
+	if ($server->{'status_hostkey'}) {
+		$clearkey = " ".&ui_button($text{'edit_hostkey'}, undef, 0,
+				"onClick='document.location=\"hostkey.cgi?id=$server->{'id'}\"'");
+		}
 	print &ui_table_row($text{'edit_statusmsg'},
-			    $server->{'status_msg'});
+			    $server->{'status_msg'}.$clearkey);
 	}
 
 # Virtualmin config error
