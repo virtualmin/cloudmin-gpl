@@ -46,6 +46,8 @@ if ($in{'delete'}) {
 		&save_managed_server($server);
 		&release_lock_server($server);
 		&error($err) if ($err);
+		&webmin_log("delete", "iface", $server->{'host'},
+			    { 'address' => $iface->{'address'} });
 		&redirect("list_ifaces.cgi?id=$in{'id'}");
 		}
 	}
@@ -96,5 +98,8 @@ else {
 	&save_managed_server($server);
 	&release_lock_server($server);
 	&error($err) if ($err);
+	&webmin_log($in{'new'} ? "create" : "modify",
+		    "iface", $server->{'host'},
+		    { 'address' => $iface->{'address'} });
 	&redirect("list_ifaces.cgi?id=$in{'id'}");
 	}

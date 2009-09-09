@@ -29,6 +29,7 @@ foreach $rev (@revs) {
 $err = &save_server_reverse_records($server, \@revs);
 &error($err) if ($err);
 &release_lock_server($server);
+&webmin_log("reverse", "server", $server->{'host'});
 
 &redirect("edit_serv.cgi?id=".$in{'id'});
 

@@ -46,6 +46,8 @@ if ($in{'confirm'}) {
 	&show_disk_reboot_message($server, $disks->[0]);
 	&release_lock_server($server);
 	&save_managed_server($server);
+	&webmin_log("delete", "disks", $server->{'host'},
+		    { 'real' => [ map { $_->{'real'} } @$disks ] });
 	}
 else {
 	# Ask first

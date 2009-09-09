@@ -42,6 +42,8 @@ if ($in{'delete'}) {
 			}
 		&save_managed_server($server);
 		&release_lock_server($server);
+		&webmin_log("delete", "disk", $server->{'host'},
+			    { 'real' => $disk->{'real'} });
 		}
 	else {
 		# Ask first
@@ -160,6 +162,8 @@ else {
 		else {
 			&$second_print(&text('disk_createok'));
 			&show_disk_reboot_message($server, $disk);
+			&webmin_log("create", "disk", $server->{'host'},
+				    { 'real' => $disk->{'real'} });
 			}
 		}
 	else {
@@ -175,6 +179,8 @@ else {
 		else {
 			&$second_print(&text('disk_modifyok'));
 			&show_disk_reboot_message($server, $disk);
+			&webmin_log("modify", "disk", $server->{'host'},
+				    { 'real' => $disk->{'real'} });
 			}
 		}
 	&save_managed_server($server);

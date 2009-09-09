@@ -29,6 +29,22 @@ elsif ($type eq "file") {
 		     &html_escape($p->{'file'}),
 		     &html_escape($p->{'dest'}));
 	}
+elsif ($type eq "disk") {
+	# Disk operation
+	return &text('log_'.$action.'_disk', $object,
+		     &html_escape($p->{'real'}));
+	}
+elsif ($type eq "disks") {
+	# Multi-disk operation
+	my @reals = split(/\0/, $p->{'real'});
+	return &text('log_'.$action.'_disks', $object,
+		     &html_escape(join(" ", @reals)));
+	}
+elsif ($type eq "iface") {
+	# Network interface operation
+	return &text('log_'.$action.'_iface', $object,
+		     $p->{'address'});
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

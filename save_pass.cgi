@@ -95,5 +95,6 @@ else {
 
 DONE:
 &release_lock_server($server);
+&webmin_log("pass", "server", $server->{'host'});
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 

@@ -39,11 +39,14 @@ foreach $i (@nums) {
 @vcpus || &error($text{'vcpus_nonesel'});
 
 &ui_print_unbuffered_header(&server_in($server), $text{'vcpus_title'}, "");
+&obtain_lock_server($server);
 
 # Apply on system
 &$first_print($text{'vcpus_applying'});
 $vfunc = "type_".$server->{'manager'}."_save_vcpus";
 $err = &$vfunc($server, \@vcpus);
+&save_managed_server($server);
+&release_lock_server($server);
 if ($err) {
 	&$second_print(&text('vcpus_failed', $err));
 	}
@@ -60,6 +63,8 @@ else {
 		print "<b>$text{'vcpus_needreboot'}</b><p>\n";
 		print &ui_form_end([ [ undef, $text{'limits_reboot'} ] ]);
 		}
+
+	&webmin_log("vcpus", "server", $server->{'host'});
 	}
 
 &ui_print_footer("", $text{'index_return'});

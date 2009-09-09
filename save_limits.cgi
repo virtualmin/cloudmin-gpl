@@ -224,6 +224,7 @@ if (defined($in{'rate'}) || defined($in{'rate_def'})) {
 
 &save_managed_server($server);
 &release_lock_server($server);
+&webmin_log("limits", "server", $server->{'host'});
 
 # Offer to reboot if needed
 if ($reboot && $server->{'status'} ne 'down') {
