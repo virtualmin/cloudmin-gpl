@@ -21,6 +21,8 @@ foreach $sd (@d) {
 	}
 @serverdoms || &error($text{'dmass_enone'});
 @domservers = map { $_->[0] } @serverdoms;
+$hostlist = join(' ', map { $_->[0]->{'host'} } @serverdoms);
+$domlist = join(' ', map { $_->[1]->{'dom'} } @serverdoms);
 &can_action_error(\@domservers, "domains");
 $postmsg = &text('dmass_post', join(", ", map { "<tt>$_->[1]->{'dom'}</tt>" }
 					      @serverdoms));
@@ -75,6 +77,8 @@ if ($in{'delete'}) {
 					}
 				}
 			}
+		&webmin_log("delete", "domains", scalar(@serverdoms),
+			    { 'host' => $hostlist, 'dom' => $domlist });
 		}
 	}
 
@@ -109,6 +113,8 @@ elsif ($in{'disable'}) {
 				$recheck++;
 				}
 			}
+		&webmin_log("disable", "domains", scalar(@serverdoms),
+			    { 'host' => $hostlist, 'dom' => $domlist });
 		}
 	}
 
@@ -132,6 +138,8 @@ elsif ($in{'enable'}) {
 			$recheck++;
 			}
 		}
+	&webmin_log("enable", "domains", scalar(@serverdoms),
+		    { 'host' => $hostlist, 'dom' => $domlist });
 	}
 
 elsif ($in{'move'}) {
@@ -243,6 +251,9 @@ elsif ($in{'move'}) {
 						$in{'deletesource'},
 						$in{'direct'},
 						$in{'realloc'});
+			&webmin_log("move", "domains", scalar(@serverdoms),
+				    { 'host' => $hostlist, 'dom' => $domlist,
+				      'dest' => $server->{'host'} });
 			}
 		}
 	}

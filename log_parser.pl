@@ -86,6 +86,24 @@ elsif ($type eq "licences") {
 	# Many licenses
 	return &text('log_'.$action.'_licences', $object);
 	}
+elsif ($type eq "domain") {
+	# One Virtualmin domain
+	return &text('log_'.$action.'_domain', $object,
+		     $p->{'host'});
+	}
+elsif ($type eq "domains") {
+	# Many domains
+	my @hosts = &unique(split(/\0/, $p->{'host'}));
+	my @doms = split(/\0/, $p->{'dom'});
+	if ($long || @doms == 1) {
+		return &text('log_'.$action.'_domains_l',
+			     join(' ', @doms), join(' ', @hosts), $p->{'dest'});
+		}
+	else {
+		return &text('log_'.$action.'_domains',
+			     scalar(@doms), scalar(@hosts), $p->{'dest'});
+		}
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

@@ -134,6 +134,10 @@ else {
 	}
 
 &release_lock_server($server);
+if (!$err) {
+	&webmin_log("create", "domain", $in{'dom'},
+		    { 'host' => $server->{'host'} });
+	}
 
 if ($in{'create'} && $in{'server'} >= 0) {
 	&ui_print_footer("edit_serv.cgi?id=$in{'server'}&doms=1",

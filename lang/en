@@ -2844,6 +2844,15 @@ log_add_licences=Added $1 Virtualmin licences
 log_fetch_licences=Fetched $1 new Virtualmin licences
 log_sched_licences=Enabled automatic licence fetching
 log_unsched_licences=Disabled automatic licence fetching
+log_create_domain=Created virtual server <tt>$1</tt> on $2
+log_delete_domains=Deleted $1 virtual servers on $2 systems
+log_delete_domains_l=Deleted virtual servers <tt>$1</tt> on $2
+log_disable_domains=Disabled $1 virtual servers on $2 systems
+log_disable_domains_l=Disabled virtual servers <tt>$1</tt> on $2
+log_enable_domains=Enabled $1 virtual servers on $2 systems
+log_enable_domains_l=Enabled virtual servers <tt>$1</tt> on $2
+log_move_domains=Move $1 virtual servers on $2 systems to $3
+log_move_domains_l=Moved virtual servers <tt>$1</tt> on $2 to $3
 
 log_bw=Changed bandwidth monitoring settings
 log_plugins=Changed Cloudmin plugins
