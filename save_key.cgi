@@ -36,9 +36,9 @@ if ($in{'delete'}) {
 		# Do it..
 		&obtain_lock_anything();
 		&delete_ssh_key($key);
+		&webmin_log("delete", "key", $key->{'id'},
+			    { 'desc' => $key->{'desc'} });
 		}
-	&webmin_log("delete", "key", $key->{'id'},
-		    { 'desc' => $key->{'desc'} });
 	}
 elsif ($in{'new'}) {
 	# Validate and/or generate

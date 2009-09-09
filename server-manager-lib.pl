@@ -643,7 +643,9 @@ if (!$key->{'id'}) {
 	}
 my %nodata = %$key;
 delete($nodata{'keydata'});
+&lock_file("$ssh_keys_dir/$key->{'id'}.info");
 &write_file("$ssh_keys_dir/$key->{'id'}.info", \%nodata);
+&unlock_file("$ssh_keys_dir/$key->{'id'}.info");
 if (!$key->{'external'}) {
 	&open_lock_tempfile(DATA, ">$key->{'file'}");
 	&print_tempfile(DATA, $key->{'keydata'});

@@ -180,6 +180,7 @@ foreach my $rev (@$revs) {
 	if (!$rfn) {
 		return &text('reverse_ezone', $ip);
 		}
+	&lock_file(&bind8::make_chroot(&bind8::absolute_path($rfn)));
 	my $arpa = &ip_address_to_arpa($ip, $zone);
 	my ($r) = grep { $_->{'name'} eq $arpa } @$rrecs;
 	if ($r && !$rev->{'name'}) {
@@ -198,6 +199,7 @@ foreach my $rev (@$revs) {
 				      $rev->{'name'}.".");
 		}
 	&bind8::bump_soa_record($rfn, $rrecs);
+	&unlock_file(&bind8::make_chroot(&bind8::absolute_path($rfn)));
 	}
 &bind8::restart_bind();
 return undef;

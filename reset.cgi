@@ -28,6 +28,7 @@ else {
 	print "<b>$text{'create_done'}</b><p>\n";
 	}
 &release_lock_server($server);
+&webmin_log("reset", "server", $server->{'host'});
 
 if (defined(&theme_post_save_server)) {
 	&theme_post_save_server($server);

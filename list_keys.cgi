@@ -5,7 +5,7 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ui_print_header(undef, $text{'keys_title'}, "", "keys");
 
-@keys = &list_ssh_keys();
+@keys = sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } &list_ssh_keys();
 @links = ( &select_all_link("d"), &select_invert_link("d"),
 	   "<a href='edit_key.cgi?new=1'>$text{'keys_add'}</a>",
 	   "<a href='edit_pubkey.cgi?new=1'>$text{'keys_pubadd'}</a>" );

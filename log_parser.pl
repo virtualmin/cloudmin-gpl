@@ -45,6 +45,15 @@ elsif ($type eq "iface") {
 	return &text('log_'.$action.'_iface', $object,
 		     $p->{'address'});
 	}
+elsif ($type eq "key") {
+	# SSH key
+	return &text('log_'.$action.'_key',
+		     "<i>".&html_escape($p->{'desc'})."</i>");
+	}
+elsif ($type eq "keys") {
+	# Multiple SSH keys
+	return &text('log_'.$action.'_keys', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),
