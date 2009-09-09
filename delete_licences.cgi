@@ -19,4 +19,5 @@ foreach $d (@d) {
 		}
 	}
 &save_virtualmin_licences(\@lics);
+&webmin_log("delete", "licences", scalar(@d));
 &redirect("list_licences.cgi?mode=list");

@@ -4881,7 +4881,7 @@ else {
 sub save_virtualmin_licences
 {
 my ($licences) = @_;
-&open_tempfile(LIC, ">$virtualmin_licences_file");
+&open_lock_tempfile(LIC, ">$virtualmin_licences_file");
 foreach my $l (@$licences) {
 	next if ($l->{'vm2'});
 	&print_tempfile(LIC, join(" ", map { $_."=".$l->{$_} }

@@ -17,6 +17,9 @@ else {
 	@features || &error($text{'features_enone'});
 	$config{'defs'} = join(" ", @features);
 	}
+&lock_file($module_config_file);
 &save_module_config();
+&unlock_file($module_config_file);
+&webmin_log("features");
 &redirect("");
 

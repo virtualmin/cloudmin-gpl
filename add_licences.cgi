@@ -41,5 +41,11 @@ foreach $nl (@newlics) {
 # Save then
 push(@lics, @newlics);
 &save_virtualmin_licences(\@lics);
+if (scalar(@newlics) > 1) {
+	&webmin_log("create", "licences", scalar(@newlics));
+	}
+else {
+	&webmin_log("create", "licence", $newlics[0]->{'serial'});
+	}
 
 &redirect("list_licences.cgi?mode=list");

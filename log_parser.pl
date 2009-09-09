@@ -78,6 +78,14 @@ elsif ($type eq "plans") {
 	# Multiple account plans
 	return &text('log_'.$action.'_plans', $object);
 	}
+elsif ($type eq "licence") {
+	# One license
+	return &text('log_'.$action.'_licence', $object);
+	}
+elsif ($type eq "licences") {
+	# Many licenses
+	return &text('log_'.$action.'_licences', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

@@ -41,11 +41,13 @@ if ($in{'now'}) {
 		print &text('lsched_failed', $got),"<p>\n";
 		}
 
+	if (ref($got)) {
+		&webmin_log("fetch", "licences", scalar(@$got));
+		}
 	&ui_print_footer("list_licences.cgi", $text{'licences_return'});
 	}
 else {
 	# Validate and save inputs
-	# XXX update cron job too
 	$config{'licences_sched'} = $in{'sched'};
 	if ($in{'email_def'}) {
 		delete($config{'licences_email'});
@@ -54,7 +56,10 @@ else {
 		$in{'email'} =~ /^\S+\@\S+$/ || &error($text{'lsched_eemail'});
 		$config{'licences_email'} = $in{'email'};
 		}
+	&lock_file($module_config_file);
 	&save_module_config();
+	&unlock_file($module_config_file);
+	&webmin_log($in{'sched'} ? "sched" : "unsched", "licences");
 
 	&redirect("list_licences.cgi?mode=list");
 	}
