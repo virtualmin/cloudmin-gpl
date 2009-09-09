@@ -8,7 +8,7 @@ require './server-manager-lib.pl';
 
 @links = ( &select_all_link("d"), &select_invert_link("d"),
 	   "<a href='edit_owner.cgi?new=1'>$text{'owners_add'}</a>" );
-@owners = &list_system_owners();
+@owners = sort { lc($a->{'name'}) cmp lc($b->{'name'}) } &list_system_owners();
 if (@owners) {
 	print &ui_form_start("delete_owners.cgi", "post");
 	print &ui_links_row(\@links);

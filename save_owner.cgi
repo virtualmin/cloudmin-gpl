@@ -31,6 +31,7 @@ elsif ($in{'bw'}) {
 elsif ($in{'delete'}) {
 	# Just remove owner account
 	&delete_system_owner($owner);
+	&webmin_log("delete", "owner", $owner->{'name'});
 	}
 else {
 	# Validate inputs, starting with login
@@ -113,6 +114,8 @@ else {
 		&apply_plan_to_owner($plan, $owner);
 		}
 	&save_system_owner($owner, $old);
+	&webmin_log($in{'new'} ? "create" : "modify",
+		    "owner", $owner->{'name'});
 	}
 
 &redirect("list_owners.cgi");

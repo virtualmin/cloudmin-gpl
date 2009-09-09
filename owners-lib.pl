@@ -58,7 +58,9 @@ if (!$aclonly) {
 $acl->{'owner'} = 1;
 $acl->{'noconfig'} = 1;
 $acl->{'real'} = $u->{'real'};
+&lock_file("$module_config_directory/$u->{'name'}.acl");
 &save_module_acl($acl, $u->{'name'});
+&unlock_file("$module_config_directory/$u->{'name'}.acl");
 
 # Grant access to just owned servers
 my %sacl = ( 'servers' => $acl->{'servers'},
@@ -67,7 +69,9 @@ my %sacl = ( 'servers' => $acl->{'servers'},
 		'auto' => 0,
 		'add' => 0,
 		'links' => 1 );
+&lock_file("$config_directory/servers/$u->{'name'}.acl");
 &save_module_acl(\%sacl, $u->{'name'}, "servers");
+&unlock_file("$config_directory/servers/$u->{'name'}.acl");
 }
 
 # delete_system_owner(&user)
@@ -83,6 +87,8 @@ if (defined(&list_backups)) {
 		&delete_backup($backup);
 		}
 	}
+&unlink_logged("$module_config_directory/$u->{'name'}.acl");
+&unlink_logged("$config_directory/servers/$u->{'name'}.acl");
 &reload_miniserv();
 }
 
@@ -443,7 +449,9 @@ if (!-d $owner_plans_dir) {
 	&make_dir($owner_plans_dir, 0700);
 	}
 $plan->{'id'} ||= &server_id();
+&lock_file("$owner_plans_dir/$plan->{'id'}");
 &write_file("$owner_plans_dir/$plan->{'id'}", $plan);
+&unlock_file("$owner_plans_dir/$plan->{'id'}");
 }
 
 # delete_plan(&delete)
@@ -451,7 +459,7 @@ $plan->{'id'} ||= &server_id();
 sub delete_plan
 {
 my ($plan) = @_;
-&unlink_file("$owner_plans_dir/$plan->{'id'}");
+&unlink_logged("$owner_plans_dir/$plan->{'id'}");
 }
 
 # describe_plan(&plan)

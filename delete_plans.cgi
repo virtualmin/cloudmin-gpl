@@ -25,6 +25,7 @@ foreach $d (@d) {
 foreach $plan (@del) {
 	&delete_plan($plan);
 	}
+&webmin_log("delete", "plans", scalar(@del));
 
 &redirect("list_plans.cgi");
 

@@ -24,6 +24,8 @@ if ($in{'delete'}) {
 	@users && &error(&text('plan_eusers', scalar(@users)));
 	@plans > 1 || &error($text{'plan_elast'});
 	&delete_plan($plan);
+	&webmin_log("delete", "plan", $plan->{'id'},
+		    { 'desc' => $plan->{'desc'} });
 	}
 else {
 	# Validate inputs
@@ -84,6 +86,8 @@ else {
 	# Save and apply
 	&save_plan($plan);
 	&apply_plan($plan) if (!$in{'new'});
+	&webmin_log($in{'new'} ? 'create' : 'modify', "plan", $plan->{'id'},
+		    { 'desc' => $plan->{'desc'} });
 	}
 
 &redirect("list_plans.cgi");

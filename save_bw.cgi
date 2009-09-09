@@ -47,7 +47,9 @@ $config{'bw_dir_out'} = $in{'dir_out'};
 # Update config and cron job
 &obtain_lock_anything();
 $config{'bw_enabled'} = $in{'enabled'};
+&lock_file($module_config_file);
 &save_module_config();
+&unlock_file($module_config_file);
 &save_bandwidth_message($in{'msg'});
 if (&supports_plans()) {
 	&save_owner_bandwidth_message($in{'omsg'});
@@ -63,13 +65,18 @@ if (!$job && $in{'enabled'}) {
 		 'weekdays' => '*',
 		 'months' => '*',
 		 'active' => 1, };
+	&lock_file(&cron::cron_file($job));
 	&cron::create_cron_job($job);
 	&cron::create_wrapper($bandwidth_cron_cmd, $module_name,"bandwidth.pl");
+	&unlock_file(&cron::cron_file($job));
 	}
 elsif ($job && !$in{'enabled'}) {
 	# Delete the job
+	&lock_file(&cron::cron_file($job));
 	&cron::delete_cron_job($job);
+	&unlock_file(&cron::cron_file($job));
 	}
+&webmin_log("bw");
 
 &redirect("");
 

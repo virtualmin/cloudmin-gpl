@@ -28,5 +28,7 @@ foreach $d (@d) {
 			}
 		}
 	}
+&webmin_log($in{'disable'} ? 'disable' : $in{'enable'} ? 'enable' : 'delete',
+	    'owners', scalar(@d));
 &redirect("list_owners.cgi");
 

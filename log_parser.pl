@@ -62,6 +62,22 @@ elsif ($type eq "images") {
 	# Multiple system images
 	return &text('log_'.$action.'_images', $object);
 	}
+elsif ($type eq "owner") {
+	# One system owner
+	return &text('log_'.$action.'_owner', &html_escape($object));
+	}
+elsif ($type eq "owners") {
+	# Multiple system owners
+	return &text('log_'.$action.'_owners', $object);
+	}
+elsif ($type eq "plan") {
+	# One account plan
+	return &text('log_'.$action.'_plan', &html_escape($p->{'desc'}));
+	}
+elsif ($type eq "plans") {
+	# Multiple account plans
+	return &text('log_'.$action.'_plans', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),
