@@ -105,6 +105,8 @@ if (defined(&theme_select_server)) {
 
 END:
 &release_lock_server($server);
+&webmin_log("add", $server, $server->{'host'},
+	    { 'type' => $server->{'manager'} });
 
 &ui_print_footer("", $text{'index_return'});
 

@@ -115,6 +115,28 @@ elsif ($type eq "domains") {
 			     scalar(@doms), scalar(@hosts), $p->{'dest'});
 		}
 	}
+elsif ($type eq "ec2") {
+	# One EC2 account
+	return &text('log_'.$action.'_ec2', &html_escape($p->{'desc'}));
+	}
+elsif ($type eq "ec2s") {
+	# Many accounts
+	return &text('log_'.$action.'_ec2s', $object);
+	}
+elsif ($type eq "ami") {
+	# One Amazon AMI
+	return &text('log_'.$action.'_ami', &html_escape($object));
+	}
+elsif ($type eq "amis") {
+	# Multiple AMIs
+	my @amis = split(/\0/, $p->{'ami'});
+	if ($long || @amis == 1) {
+		return &text('log_'.$action.'_amis_l', join(' ', @amis));
+		}
+	else {
+		return &text('log_'.$action.'_amis', $object);
+		}
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

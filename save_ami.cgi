@@ -27,6 +27,7 @@ if ($in{'delete'}) {
 			&error($err) if ($err);
 			}
 
+		&webmin_log("delete", "ami", $ami->{'imageId'});
 		&redirect("list_amis.cgi");
 		}
 	else {
@@ -75,6 +76,7 @@ else {
 		&error($err) if ($err);
 		}
 
+	&webmin_log("modify", "ami", $ami->{'imageId'});
 	&redirect("list_amis.cgi");
 	}
 

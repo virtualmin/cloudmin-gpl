@@ -21,6 +21,7 @@ foreach $d (split(/\0/, $in{'d'})) {
 	push(@amis, $ami);
 	}
 @amis || &error($text{'mami_enone'});
+$amiids = join(" ", map { $_->{'imageId'} } @amis);
 
 if ($in{'delete'}) {
 	# Delete selected, after asking first
@@ -44,6 +45,8 @@ if ($in{'delete'}) {
 				}
 			}
 
+		&webmin_log("delete", "amis", scalar(@amis),
+			    { 'ami' => $amiids });
 		&redirect("list_amis.cgi");
 		}
 	else {
@@ -86,6 +89,8 @@ elsif ($in{'public'}) {
 							    $err));
 			}
 		}
+	&webmin_log("public", "amis", scalar(@amis),
+		    { 'ami' => $amiids });
 	&redirect("list_amis.cgi");
 	}
 elsif ($in{'private'}) {
@@ -106,6 +111,8 @@ elsif ($in{'private'}) {
 							    $err));
 			}
 		}
+	&webmin_log("private", "amis", scalar(@amis),
+		    { 'ami' => $amiids });
 	&redirect("list_amis.cgi");
 	}
 else {
