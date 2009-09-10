@@ -10,8 +10,19 @@ sub parse_webmin_log
 my ($user, $script, $action, $type, $object, $p, $long) = @_;
 if ($type eq "server") {
 	# Operation on one server
+	my $typestr;
+	if ($p->{'type'}) {
+		my $tfunc = "type_".$p->{'type'}."_desc";
+		if (defined(&$tfunc)) {
+			$typestr = &$tfunc();
+			}
+		else {
+			$typestr = ucfirst($p->{'type'});
+			}
+		}
 	return &text('log_'.$action.'_server', $object,
-		     &html_escape(&un_urlize($p->{'cmd'})));
+		     &html_escape(&un_urlize($p->{'cmd'})),
+		     $typestr);
 	}
 elsif ($type eq "servers") {
 	# Operation on multiple servers
