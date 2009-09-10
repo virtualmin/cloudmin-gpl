@@ -137,6 +137,15 @@ elsif ($type eq "amis") {
 		return &text('log_'.$action.'_amis', $object);
 		}
 	}
+elsif ($type eq "sgroup") {
+	# One security group
+	return &text('log_'.$action.'_sgroup', &html_escape($object));
+	}
+elsif ($type eq "sgroups") {
+	# Multiple security groups
+	my @groups = split(/\0/, $p->{'group'});
+	return &text('log_'.$action.'_sgroups', join(' ', @groups));
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

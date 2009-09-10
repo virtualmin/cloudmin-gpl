@@ -1673,7 +1673,7 @@ sgroups_none=No EC2 security groups have been defined yet.
 sgroups_more=$1 more ..
 sgroups_noports=None
 sgroups_add=Create an EC2 security group.
-sgroups_add2=Create group for account <i>$1</i>.
+sgroups_add2=Create group for <i>$1</i>.
 sgroups_return=security groups
 
 egroup_title1=Create Security Group
@@ -2871,6 +2871,10 @@ log_public_amis=Made public $1 EC2 images
 log_public_amis_l=Made public EC2 images : <tt>$1</tt>
 log_private_amis=Made private $1 EC2 images
 log_private_amis_l=Made private EC2 images : <tt>$1</tt>
+log_create_sgroup=Created EC2 security group <tt>$1</tt>
+log_modify_sgroup=Modified EC2 security group <tt>$1</tt>
+log_delete_sgroup=Deleted EC2 security group <tt>$1</tt>
+log_delete_sgroups=Deleted EC2 security groups : <tt>$1</tt>
 
 log_bw=Changed bandwidth monitoring settings
 log_plugins=Changed Cloudmin plugins
