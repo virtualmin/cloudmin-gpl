@@ -2894,6 +2894,8 @@ log_backup_backup=Backed up $2 systems to $1
 log_backup_backup_l=Backed up systems $2 to $1
 log_restore_backup=Restored $2 systems from $1
 log_restore_backup_l=Restored systems $2 from $1
+log_delete_backuplogs=Deleted $1 system backups
+log_delete_backuplogs_l=Deleted system backups to $1
 
 log_bw=Changed bandwidth monitoring settings
 log_plugins=Changed Cloudmin plugins

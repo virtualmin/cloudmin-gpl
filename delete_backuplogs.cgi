@@ -31,6 +31,7 @@ foreach $id (@d) {
 # Do it, showing progress to the user
 &ui_print_unbuffered_header($subh, $text{'dbackup_title'}, "");
 
+@dest = ( );
 foreach $log (@logs) {
 	$server = $servermap{$log->{'server'}};
 	&$first_print(&text('dbackup_deleting', $server->{'host'},
@@ -44,15 +45,21 @@ foreach $log (@logs) {
 		&$second_print(&text('dbackup_done',
 				     &nice_size($log->{'size'})));
 
-		# Also remove logs for this dest
+		# Also remove other logs for this dest
 		@samelogs = grep { $_->{'dest'} eq $log->{'dest'} }
 				 &list_backup_logs($server);
 		foreach $samelog (@samelogs) {
 			&delete_backup_log($samelog);
 			}
+		push(@dest, $log->{'dest'});
 		}
 	}
 &compute_backup_space();
+@dest = &unique(@dest);
+if (@dest) {
+	&webmin_log("delete", "backuplog", scalar(@dest),
+		    { 'dest' => join(' ', @dest) });
+	}
 
 &ui_print_footer("list_backuplogs.cgi?id=$in{'id'}",
 		 $text{'backuplogs_return'});

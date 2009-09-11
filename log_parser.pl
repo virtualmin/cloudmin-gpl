@@ -178,11 +178,23 @@ elsif ($type eq "snaps") {
 		     join(' ', split(/\0/, $p->{'snap'})));
 	}
 elsif ($type eq "backup") {
+	# Changing or running a backup
 	my @hosts = split(/\0/, $p->{'host'});
 	return &text('log_'.$action.'_backup'.($long ? '_l' : ''),
 		     $p->{'dest'} ? &nice_backup_destination($p->{'dest'})
 				  : $text{'log_host_backup'},
 		     $long ? join(' ', @hosts) : scalar(@hosts));
+	}
+elsif ($type eq "backuplog") {
+	# Deleting backup logs
+	my @dests = split(/\0/, $p->{'dest'});
+	if ($long) {
+		return &text('log_'.$action.'_backuplogs_l',
+		     join(' ', map { &nice_backup_destination($_) } @dests));
+		}
+	else {
+		return &text('log_'.$action.'_backuplogs', scalar(@dests));
+		}
 	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
