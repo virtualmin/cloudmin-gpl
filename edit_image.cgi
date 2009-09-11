@@ -23,7 +23,9 @@ $tfunc = "type_".$i->{'manager'}."_desc";
 print &ui_table_row($text{'eimage_type'}, &$tfunc());
 
 print &ui_table_row($text{'eimage_status'},
-		    $got && $got->{'partial'} ? $text{'images_partial'} :
+		    $got && $got->{'partial'} ?
+			&text('images_partial',
+                              &nice_size($got->{'partialsize'})) :
 		    $got && !$avail ? $text{'images_local'} :
 		    !$got && $avail ? $text{'images_down'} :
 		    $got->{'version'} < $i->{'version'} ?
