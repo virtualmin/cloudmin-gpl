@@ -351,11 +351,11 @@ $in->{$pfx."_port_def"} || $in->{$pfx."_port"} =~ /^\d+$/ ||
 	return $text{'backups_e'.$pfx.'port'};
 $dest->{'port'} = $in->{$pfx."_port_def"} ? undef : $in->{$pfx."_port"};
 
-$in->{$pfx."_user"} =~ /^[^\:\@ \t\r\n]+$/ ||
+$in->{$pfx."_user"} =~ /^[^\: \t\r\n]+$/ ||
 	return $text{'backups_e'.$pfx.'user'};
 $dest->{'user'} = $in->{$pfx."_user"};
 
-$in->{$pfx."_pass"} =~ /^[^\:\@ \t\r\n]*$/ ||
+$in->{$pfx."_pass"} =~ /^[^\@ \t\r\n]*$/ ||
 	return $text{'backups_e'.$pfx.'pass'};
 $dest->{'pass'} = $in->{$pfx."_pass"};
 
