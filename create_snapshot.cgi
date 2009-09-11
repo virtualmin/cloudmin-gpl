@@ -25,6 +25,8 @@ print &text('csnapshot_doing', $vid,
 ($ok, $msg) = &create_ec2_snapshot($ec2, $vid);
 if ($ok) {
 	print &text('csnapshot_done', "<tt>$msg</tt>"),"<p>\n";
+	&webmin_log("create", 'snap', $msg,
+	 	    { 'snap' => $vid });
 	}
 else {
 	print &text('csnapshot_failed', $msg),"<p>\n";

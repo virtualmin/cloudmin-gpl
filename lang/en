@@ -2875,6 +2875,13 @@ log_create_sgroup=Created EC2 security group <tt>$1</tt>
 log_modify_sgroup=Modified EC2 security group <tt>$1</tt>
 log_delete_sgroup=Deleted EC2 security group <tt>$1</tt>
 log_delete_sgroups=Deleted EC2 security groups : <tt>$1</tt>
+log_create_address=Allocated EC2 address <tt>$1</tt>
+log_delete_address=Returned EC2 addresses <tt>$1</tt>
+log_create_volume=Created EC2 volume <tt>$1</tt> of $2 GB
+log_create_volumeof=Created EC2 volume <tt>$1</tt> from snapshot <tt>$2</tt>
+log_delete_volumes=Deleted EC2 volumes <tt>$1</tt>
+log_create_snap=Created EC2 snapshot <tt>$1</tt> of volume <tt>$2</tt>
+log_delete_snaps=Deleted EC2 snapshots <tt>$1</tt>
 
 log_bw=Changed bandwidth monitoring settings
 log_plugins=Changed Cloudmin plugins

@@ -146,6 +146,34 @@ elsif ($type eq "sgroups") {
 	my @groups = split(/\0/, $p->{'group'});
 	return &text('log_'.$action.'_sgroups', join(' ', @groups));
 	}
+elsif ($type eq "address") {
+	# EC2 addresses
+	return &text('log_'.$action.'_address',
+		     join(' ', split(/\0/, $p->{'ip'})));
+	}
+elsif ($type eq "volume") {
+	# EC2 volume
+	if ($p->{'size'}) {
+		return &text('log_'.$action.'_volume', $object, $p->{'size'});
+		}
+	else {
+		return &text('log_'.$action.'_volumeof', $object, $p->{'snap'});
+		}
+	}
+elsif ($type eq "volumes") {
+	# EC2 volumes
+	return &text('log_'.$action.'_volumes', 
+		     join(' ', split(/\0/, $p->{'vol'})));
+	}
+elsif ($type eq "snap") {
+	# EC2 snapshot
+	return &text('log_'.$action.'_snap', $object, $p->{'snap'});
+	}
+elsif ($type eq "snaps") {
+	# EC2 snapshots
+	return &text('log_'.$action.'_snaps', 
+		     join(' ', split(/\0/, $p->{'snap'})));
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

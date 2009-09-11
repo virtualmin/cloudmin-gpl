@@ -25,6 +25,7 @@ if ($in{'confirm'}) {
 	# Do it!
 	&ui_print_unbuffered_header(undef, $text{'dsnapshots_title'}, "");
 	&obtain_lock_anything();
+	@snaps = ( );
 	foreach $del (@del) {
 		print &text('dsnapshots_deleting',
 			    $del->[1]->{'snapshotId'}),"<br>\n";
@@ -32,10 +33,15 @@ if ($in{'confirm'}) {
 					    $del->[1]->{'snapshotId'});
 		if ($err) {
 			print &text('dvolumes_failed', $err),"<p>\n";
+			push(@snaps, $del->[1]->{'snapshotId'});
 			}
 		else {
 			print $text{'create_done'},"<p>\n";
 			}
+		}
+	if (@snaps) {
+		&webmin_log("delete", "snaps", scalar(@snaps),
+			    { 'snap' => join(' ', @snaps) });
 		}
 	}
 else {
