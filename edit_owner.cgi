@@ -227,6 +227,7 @@ print &ui_form_end(
 				      : ( ),
 		   $config{'bw_enabled'} ? ( [ 'bw', $text{'owner_bwgraph'} ] )
 					 : ( ),
+		   [ 'logs', $text{'owner_logs'} ],
 		   [ 'delete', $text{'delete'} ] ]); 
 
 &ui_print_footer("list_owners.cgi", $text{'owners_return'});

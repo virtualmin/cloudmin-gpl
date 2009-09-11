@@ -28,6 +28,11 @@ elsif ($in{'bw'}) {
 	# Redirect to bandwidth graph for owner
 	&redirect("bwgraph.cgi?owner=".&urlize($owner->{'name'}));
 	}
+elsif ($in{'logs'}) {
+	# Redirect to Webmin Actions Log module for user
+	&redirect("../webminlog/search.cgi?tall=4&uall=0&user=".
+		  &urlize($owner->{'name'})."&mall=1");
+	}
 elsif ($in{'delete'}) {
 	# Just remove owner account
 	&delete_system_owner($owner);

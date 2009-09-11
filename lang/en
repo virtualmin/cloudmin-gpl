@@ -2044,6 +2044,7 @@ owner_unlimit=unlimited
 owner_nolimit=($1 systems have no limit)
 owner_fromplan=From plan
 owner_header5=Backups that count towards plan
+owner_logs=View Logs
 
 downers_err=Failed to delete system owners
 downers_enone=None selected
