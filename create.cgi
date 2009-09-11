@@ -452,7 +452,7 @@ if ($serial) {
 	&stop_installing_virtualmin_licence($serial, $key);
 	}
 &release_lock_server($server);
-&webmin_log("create", $server, $server->{'host'},
+&webmin_log("create", "server", $server->{'host'},
 	    { 'type' => $server->{'manager'} });
 
 &ui_print_footer("", $text{'index_return'});

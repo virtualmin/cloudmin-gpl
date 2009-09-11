@@ -20,6 +20,8 @@ else {
 if ($in{'delete'}) {
 	# Just remove this backup
 	&delete_backup($backup);
+	&webmin_log("delete", "backup", $backup->{'id'},
+		    { 'dest' => $backup->{'dest'} });
 	}
 elsif ($in{'restore'}) {
 	# Redirect to restore form
@@ -84,6 +86,8 @@ else {
 	
 	# Update the backup
 	&save_backup($backup);
+	&webmin_log($in{'new'} ? "create" : "modify", "backup", $backup->{'id'},
+		    { 'dest' => $backup->{'dest'} });
 	}
 
 &redirect("list_backups.cgi");

@@ -965,6 +965,7 @@ eval {
 		$ex = $?;
 		}
 	};
+&additional_log('exec', undef, $cmd);
 if ($@) {
 	if ($@ =~ /timeout/) {
 		return (4, "SSH failed to complete in $timeout seconds");

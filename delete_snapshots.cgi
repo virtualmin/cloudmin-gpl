@@ -33,10 +33,10 @@ if ($in{'confirm'}) {
 					    $del->[1]->{'snapshotId'});
 		if ($err) {
 			print &text('dvolumes_failed', $err),"<p>\n";
-			push(@snaps, $del->[1]->{'snapshotId'});
 			}
 		else {
 			print $text{'create_done'},"<p>\n";
+			push(@snaps, $del->[1]->{'snapshotId'});
 			}
 		}
 	if (@snaps) {

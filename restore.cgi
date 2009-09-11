@@ -85,6 +85,9 @@ foreach $s (@bad) {
 	print "<tr> <td>$s->{'host'}</td> <td>:</td> <td>$rv->{$s->{'id'}}->{'msg'}</td> </tr>\n";
 	}
 print "</table>\n";
+&webmin_log("restore", "backup", $backup->{'id'},
+	    { 'dest' => $backup->{'dest'},
+	      'host' => join(' ', map { $_->{'host'} } @servers) });
 
 &ui_print_footer("", $text{'return'});
 

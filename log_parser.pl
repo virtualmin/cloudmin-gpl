@@ -149,11 +149,14 @@ elsif ($type eq "sgroups") {
 elsif ($type eq "address") {
 	# EC2 addresses
 	return &text('log_'.$action.'_address',
-		     join(' ', split(/\0/, $p->{'ip'})));
+		     join(' ', split(/\0/, $p->{'ip'})), $object);
 	}
 elsif ($type eq "volume") {
 	# EC2 volume
-	if ($p->{'size'}) {
+	if ($action eq "attach" || $action eq "detach") {
+		return &text('log_'.$action.'_volume', $object, $p->{'host'});
+		}
+	elsif ($p->{'size'}) {
 		return &text('log_'.$action.'_volume', $object, $p->{'size'});
 		}
 	else {
@@ -173,6 +176,13 @@ elsif ($type eq "snaps") {
 	# EC2 snapshots
 	return &text('log_'.$action.'_snaps', 
 		     join(' ', split(/\0/, $p->{'snap'})));
+	}
+elsif ($type eq "backup") {
+	my @hosts = split(/\0/, $p->{'host'});
+	return &text('log_'.$action.'_backup'.($long ? '_l' : ''),
+		     $p->{'dest'} ? &nice_backup_destination($p->{'dest'})
+				  : $text{'log_host_backup'},
+		     $long ? join(' ', @hosts) : scalar(@hosts));
 	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call

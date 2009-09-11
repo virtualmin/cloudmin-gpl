@@ -55,5 +55,8 @@ foreach $s (@bad) {
 	print "<tr> <td>$s->{'host'}</td> <td>:</td> <td>$rv->{$s->{'id'}}->{'msg'}</td> </tr>\n";
 	}
 print "</table>\n";
+&webmin_log("backup", "backup", $backup->{'id'},
+	    { 'dest' => $backup->{'dest'},
+	      'host' => join(' ', map { $_->{'host'} } @servers) });
 
 &ui_print_footer("list_backups.cgi", $text{'backups_return'});

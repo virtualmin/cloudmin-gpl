@@ -86,7 +86,9 @@ my $wasnew = !$backup->{'id'};
 &make_dir($scheduled_backups_dir, 0700) if (!-d $scheduled_backups_dir);
 $backup->{'id'} ||= &server_id();
 $backup->{'file'} = "$scheduled_backups_dir/$backup->{'id'}";
+&lock_file($backup->{'file'});
 &write_file($backup->{'file'}, $backup);
+&unlock_file($backup->{'file'});
 
 # Update or delete cron job
 &foreign_require("cron", "cron-lib.pl");
@@ -98,7 +100,9 @@ if (!$wasnew) {
 if ($backup->{'enabled'} && $job) {
 	# Fix job schedule
 	&copy_cron_sched_keys($backup, $job);
+	&lock_file(&cron::cron_file($job));
 	&cron::change_cron_job($job);
+	&unlock_file(&cron::cron_file($job));
 	}
 elsif ($backup->{'enabled'} && !$job) {
 	# Create cron job
@@ -106,11 +110,15 @@ elsif ($backup->{'enabled'} && !$job) {
 		 'active' => 1,
 		 'command' => $cmd };
 	&copy_cron_sched_keys($backup, $job);
+	&lock_file(&cron::cron_file($job));
 	&cron::create_cron_job($job);
+	&unlock_file(&cron::cron_file($job));
 	}
 elsif (!$backup->{'enabled'} && $job) {
 	# Delete cron job
+	&lock_file(&cron::cron_file($job));
 	&cron::delete_cron_job($job);
+	&unlock_file(&cron::cron_file($job));
 	}
 &cron::create_wrapper($backup_cron_cmd, $module_name, "backup.pl");
 }
@@ -120,14 +128,16 @@ elsif (!$backup->{'enabled'} && $job) {
 sub delete_backup
 {
 my ($backup) = @_;
-&unlink_file($backup->{'file'});
+&unlink_logged($backup->{'file'});
 
 # Delete cron too
 &foreign_require("cron", "cron-lib.pl");
 my $cmd = $backup_cron_cmd." --id ".$backup->{'id'};
-my @jobs = &find_server_manager_cron_job($cmd);
-if (@jobs) {
-	&cron::delete_cron_job($jobs[0]);
+my ($job) = &find_server_manager_cron_job($cmd);
+if ($job) {
+	&lock_file(&cron::cron_file($job));
+	&cron::delete_cron_job($job);
+	&unlock_file(&cron::cron_file($job));
 	}
 }
 
