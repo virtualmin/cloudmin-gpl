@@ -66,6 +66,9 @@ if (defined(&$ifunc) && &$ifunc($server) && !$in{'image'}) {
 $server->{'image'} = $in{'image'};
 if ($in{'image'}) {
 	$img = &get_server_image($in{'image'});
+	if ($img->{'type'}) {
+		$server->{'type'} = $img->{'type'};
+		}
 	}
 
 # Parse type-specific inputs

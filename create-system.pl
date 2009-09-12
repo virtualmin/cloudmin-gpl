@@ -221,6 +221,9 @@ $server = { 'id' => $newid || &server_id(),
 	    'created' => time(),
 	  };
 $server->{'desc'} = $desc;
+if ($image && $img->{'type'}) {
+	$server->{'type'} = $img->{'type'};
+	}
 if (!defined(&$hfunc) || !&$hfunc()) {
 	$server->{'host'} = $host;
 	}
