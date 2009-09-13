@@ -1,16 +1,26 @@
 #!/usr/local/bin/perl
-# Deletes a system image
+# Updates or deletes a system image
 
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
-($got) = grep { $_->{'id'} eq $in{'id'} } &list_server_images();
-$got || &error($text{'dimage_egone'});
+($img) = grep { $_->{'id'} eq $in{'id'} } &list_server_images();
+$img || &error($text{'dimage_egone'});
 &obtain_lock_anything();
 
 if ($in{'delete'}) {
-	&delete_server_image($got);
-	&webmin_log("delete", "image", $got->{'id'});
+	# Just delete
+	&delete_server_image($img);
+	&webmin_log("delete", "image", $img->{'id'});
+	}
+else {
+	# Update description and OS
+	&error_setup($text{'eimage_err'});
+	$in{'desc'} =~ /\S/ || &error($text{'eimage_edesc'});
+	$img->{'desc'} = $in{'desc'};
+	$img->{'type'} = $in{'type'};
+	&save_server_image($img);
+	&webmin_log("modify", "image", $img->{'id'});
 	}
 &redirect("list_images.cgi");
 

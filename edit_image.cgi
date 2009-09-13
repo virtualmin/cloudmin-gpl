@@ -17,8 +17,28 @@ print &ui_table_start($text{'eimage_header'}, undef, 2);
 
 print &ui_table_row($text{'eimage_id'}, $i->{'id'});
 
-print &ui_table_row($text{'eimage_desc'}, $i->{'desc'});
+# Description
+if ($got) {
+	print &ui_table_row($text{'eimage_desc'},
+		&ui_textbox("desc", $i->{'desc'}, 40));
+	}
+else {
+	print &ui_table_row($text{'eimage_desc'}, $i->{'desc'});
+	}
 
+# OS type
+($os) = grep { $_->[0] eq $i->{'type'} } @servers::server_types;
+if ($got) {
+	print &ui_table_row($text{'eimage_os'},
+		    &ui_select("type", $i->{'type'} || 'unknown',
+		      [ map { [ $_->[0], $_->[1] ] }
+			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
+	}
+elsif ($os) {
+	print &ui_table_row($text{'eimage_os'}, $os->[1]);
+	}
+
+# VPS type
 $tfunc = "type_".$i->{'manager'}."_desc";
 print &ui_table_row($text{'eimage_type'}, &$tfunc());
 
@@ -64,7 +84,8 @@ if (@md5s && $md5s[0] ne "-") {
 
 print &ui_table_end();
 if ($got) {
-	print &ui_form_end([ [ "delete", $text{'eimage_delete'} ] ]);
+	print &ui_form_end([ [ '', $text{'save'} ],
+			     [ "delete", $text{'eimage_delete'} ] ]);
 	}
 
 &ui_print_footer("list_images.cgi", $text{'images_return'});
