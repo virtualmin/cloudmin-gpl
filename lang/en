@@ -886,7 +886,7 @@ save_ipok=Yes, Change Hostname
 save_epackages=Failed to configure package management : $1
 
 shell_title=Run Commands
-shell_ok=Execute command:
+shell_ok=Execute command
 shell_history=Command history
 shell_clear=Clear history
 shell_clearcmds=Clear commands
