@@ -100,6 +100,7 @@ if ($imageid) {
 else {
 	# Same as before
 	$img = &get_server_image($server->{'image'});
+	$img || &usage("Original image with ID $server->{'image'} no longer exists!");
 	}
 
 # Do the reset

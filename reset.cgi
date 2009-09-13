@@ -14,12 +14,18 @@ $cfunc = "type_".$server->{'manager'}."_can_reset";
 
 &ui_print_unbuffered_header(&server_in($server), $text{'reset_title'}, "");
 &obtain_lock_server($server);
+$server->{'image'} = $in{'image'};
+$img = &get_server_image($server->{'image'});
+$img && &can_image($img) || &error($text{'reset_eimage'});
+if ($img->{'type'}) {
+	$server->{'type'} = $img->{'type'};
+	}
 
 # Call the reset function
 $dfunc = "type_".$server->{'manager'}."_desc";
 $desc = &$dfunc();
 print "<b>",&text('reset_doing', $desc,
-		  "<tt>$vhost->{'host'}</tt>"),"</b><p>\n";
+	  "<tt>$server->{'host'}</tt>", "<i>$img->{'desc'}</i>"),"</b><p>\n";
 $err = &reset_system($server);
 if ($err) {
 	print "<b>$err</b><p>\n";

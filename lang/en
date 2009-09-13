@@ -2461,13 +2461,17 @@ nicetime_hours=$1 hours, $2:$3 minutes
 nicetime_mins=$1 minutes, $2 seconds
 
 reset_title=Reset From Image
-reset_rusure=Are you sure you want to reset the virtual system $1 to the state it was in when first created from the image $2? All data and files added since creation will be deleted.
+reset_rusure=Are you sure you want to reset the virtual system $1 to the state it was in when first created from the image selected below? All data and files added since creation will be deleted.
 reset_ok=Reset System
 reset_err=Failed to reset system
 reset_ereset=This system cannot be reset!
-reset_doing=Starting reset of $1 system $2 ..
+reset_eimage=Selected image does not exist!
+reset_doing=Starting reset of $1 system $2 from image $3 ..
 reset_recreating=Re-creating filesystem from original image ..
 reset_shutting=Shutting down system ..
+reset_header=System reset options
+reset_desc=System description
+reset_image=Reset to image
 
 plans_title=Account Plans
 plans_add=Add a new account plan.

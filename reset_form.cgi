@@ -11,15 +11,31 @@ $server || &error($text{'edit_egone'});
 
 @doms = &get_server_domains($server);
 $img = &get_server_image($server->{'image'});
-print &ui_confirmation_form("reset.cgi",
-			    &text('reset_rusure',
-				  "<tt>$server->{'host'}</tt>",
-				  "<i>".&html_escape($img->{'desc'})."</i>"),
-			    [ [ "id", $server->{'id'} ] ],
-			    [ [ "confirm", $text{'reset_ok'} ] ],
-			    undef,
-			    (@doms ? &text('save_deleterusure2',
-					   scalar(@doms)) : ""));
+
+print &text('reset_rusure', "<tt>$server->{'host'}</tt>"),"<p>\n";
+print &ui_form_start("reset.cgi");
+print &ui_hidden("id", $server->{'id'});
+print &ui_table_start($text{'reset_header'}, undef, 2);
+
+print &ui_table_row($text{'reset_desc'}, $server->{'desc'});
+
+@images = &list_server_images($server->{'manager'});
+@images = grep { &can_image($_) } @images;
+if ($img) {
+	($inlist) = grep { $_->{'id'} eq $img->{'id'} } @images;
+	if (!$inlist) {
+		# Make sure initial image is there
+		push(@images, $img);
+		}
+	}
+print &ui_table_row($text{'reset_image'},
+	&ui_select("image", $img ? $img->{'id'} : undef,
+		   [ map { [ $_->{'id'}, $_->{'desc'} ] }
+		      sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }
+			   @images ]));
+
+print &ui_table_end();
+print &ui_form_end([ [ 'confirm', $text{'reset_ok'} ] ]);
 
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 
