@@ -35,6 +35,11 @@ sub type_this_can_transfer
 return 1;	# Can always transfer to self
 }
 
+sub type_this_can_password
+{
+return 1;
+}
+
 # type_this_execute_command(&server, comand, [timeout], [leave-open])
 # Just runs a command locally
 sub type_this_execute_command

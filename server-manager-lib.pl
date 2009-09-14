@@ -3425,6 +3425,16 @@ if ($server->{'manager'} eq 'ec2') {
 	&execute_command_on_server($server, "killall -HUP sshd");
 	}
 
+# Mount filesystem if needed
+my $nfunc = "type_".$server->{'manager'}."_need_mount";
+my $mounted = 0;
+if (defined(&$nfunc) && &$nfunc($server)) {
+	my $mfunc = "type_".$server->{'manager'}."_mount_filesystem";
+	my $err = &$mfunc($server);
+	return $err if ($err);
+	$mount = 1;
+	}
+
 my $shadow = &transname();
 my $passfile = "/etc/shadow";
 my $err = &get_file_from_server($server, $passfile, $shadow);
@@ -3445,6 +3455,12 @@ if (!$err) {
 		}
 	&flush_file_lines($shadow);
 	$err = &put_file_to_server($server, $shadow, $passfile);
+	}
+
+# Un-mount if mounted before
+if ($mounted) {
+	my $ufunc = "type_".$server->{'manager'}."_umount_filesystem";
+	&$ufunc($server);
 	}
 
 return $err;
@@ -4226,6 +4242,8 @@ my $clfunc = "type_".$t."_supports_console_login";
 my $canlogin = defined(&$clfunc) && &$clfunc($server);
 my $rsfunc = "type_".$server->{'manager'}."_can_reset";
 my $canreset = defined(&$rsfunc) && &$rsfunc($server);
+my $pfunc = "type_".$server->{'manager'}."_can_password";
+my $canpass = defined(&$pfunc) && &$pfunc($server);
 
 # Start with links to edit_serv.cgi
 my $ed = "edit_serv.cgi?id=$server->{'id'}";
@@ -4387,12 +4405,6 @@ else {
 			}
 		}
 	push(@rv, undef);	# Spacer
-	if (&can_action($server, "pass")) {
-		push(@rv, { 'id' => 'pass',
-			    'desc' => $text{'edit_setpass'},
-			    'cat' => 'manage',
-			    'link' => "edit_pass.cgi?id=$server->{'id'}" });
-		}
 	if (($status eq 'novirt' || $status eq 'nowebmin') &&
 	    $server->{'manager'} ne 'this' &&
 	    &can_action($server, "virtualmin")) {
@@ -4429,6 +4441,12 @@ else {
 			    'cat' => 'manage',
 			    'link' => "login.cgi?id=$server->{'id'}&shell=1" });
 		}
+	}
+if (&can_action($server, "pass") && $canpass) {
+	push(@rv, { 'id' => 'pass',
+		    'desc' => $text{'edit_setpass'},
+		    'cat' => 'manage',
+		    'link' => "edit_pass.cgi?id=$server->{'id'}" });
 	}
 if ($status ne 'nohost' && $status ne 'paused') {
 	# Console messages can be displayed as long as the host system is up
