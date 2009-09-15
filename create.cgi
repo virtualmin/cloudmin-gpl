@@ -242,6 +242,7 @@ else {
 if ($imageok == 1) {
 	&cleanup_image_files($server, $imagetemp);
 	}
+&complete_managed_server($server);
 &save_managed_server($server);
 
 # If this is a system owner, add it to his list

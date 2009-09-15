@@ -346,6 +346,7 @@ if ($imageok == 1) {
 	&cleanup_image_files($server, $imagetemp);
 	}
 print ".. creation complete\n\n";
+&complete_managed_server($server);
 &save_managed_server($server);
 
 # Add to system owner

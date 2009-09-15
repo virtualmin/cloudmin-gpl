@@ -68,6 +68,7 @@ else {
 
 # Get status one more time, and save the server object
 print $text{'add_statusing'},"<br>\n";
+&complete_managed_server($server);
 &save_managed_server($server);
 &check_server_status($server);
 &save_managed_server($server);

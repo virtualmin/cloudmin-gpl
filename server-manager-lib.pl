@@ -343,6 +343,12 @@ if (!$s->{'created'}) {
 			}
 		}
 	}
+
+# Fill in 'ip' convenience field
+my $ip = &get_server_ip($s);
+$ip ||= &to_ipaddress($s->{'host'});
+$ip ||= $s->{'host'};
+$s->{'ip'} = $ip;
 }
 
 # list_managed_servers_sorted()
@@ -1073,7 +1079,7 @@ else {
 	if ($server->{'ssh_port'}) {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
-	$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}:".
+	$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}:".
 		   quotemeta($remotefile)." ".quotemeta($localfile);
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
@@ -1095,7 +1101,7 @@ if ($server->{'key'}) {
 if ($server->{'ssh_port'}) {
 	$sshcmd .= " -p ".$server->{'ssh_port'};
 	}
-$sshcmd .= " $server->{'ssh_user'}\@$server->{'host'}";
+$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}";
 return $sshcmd;
 }
 
@@ -1117,7 +1123,8 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 		my @w = split(/\s+/, $lref->[$i]);
 		my @h = split(/,/, $w[0]);
 		if (&indexof($server->{'host'}, @h) >= 0 ||
-		    &indexof($ip, @h) >= 0) {
+		    &indexof($ip, @h) >= 0 ||
+		    &indexof($server->{'ip'}, @h) >= 0) {
 			splice(@$lref, $i--, 1);
 			}
 		}
@@ -1178,7 +1185,7 @@ else {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
 	$sshcmd .= " ".quotemeta($localfile).
-		   " $server->{'ssh_user'}\@$server->{'host'}:".
+		   " $server->{'ssh_user'}\@$server->{'ip'}:".
 		   quotemeta($remotefile);
 	my ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1249,7 +1256,7 @@ else {
 		if ($destserver->{'ssh_port'}) {
 			$sshcmd .= " -p ".$destserver->{'ssh_port'};
 			}
-		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'host'}";
+		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
 		$sshcmd .= " dd of=".quotemeta($dest)." bs=32768";
 		}
 	else {
@@ -1263,7 +1270,7 @@ else {
 			$sshcmd .= " -P ".$destserver->{'ssh_port'};
 			}
 		$sshcmd .= " ".quotemeta($src);
-		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'host'}:".
+		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}:".
 			   quotemeta($dest);
 		}
 	if ($keytemp) {
@@ -1619,7 +1626,7 @@ else {
 $server->{'statustime'} = time();
 $server->{'status_hostkey'} = 0;
 my $clfunc = "type_".$server->{'manager'}."_check_login";
-my $ping = &ping_server_host($server->{'host'});
+my $ping = &ping_server_host($server->{'ip'});
 
 # If SSH logins are disabled, go no further
 if ($server->{'ssh_nologin'}) {
@@ -2318,7 +2325,7 @@ else {
 		$path .= "&".&urlize($a->[0])."=".&urlize($a->[1]);
 		}
 	my $herr;
-	&http_download($server->{'host'}, $server->{'port'}, $path, \$out,
+	&http_download($server->{'ip'}, $server->{'port'}, $path, \$out,
 		       \$herr, undef, $server->{'ssl'}, $server->{'user'},
 		       $server->{'pass'}, 60, 0, 1);
 	if ($herr) {
@@ -2479,7 +2486,7 @@ if ($server->{'user'} && $ok != 2) {
 		alarm(5);
 		eval {
 			local $SIG{'ALRM'} = sub { die "timeout\n" };
-			&open_socket($server->{'host'},
+			&open_socket($server->{'ip'},
 				     $server->{'port'} || 10000,
 				     WTEST, \$werr);
 			};
@@ -2496,7 +2503,6 @@ return (1, undef);
 sub server_in
 {
 my ($server) = @_;
-#return &text('server_in', "<tt>$server->{'host'}</tt>");
 return "<tt>$server->{'host'}</tt>";
 }
 
@@ -2663,7 +2669,7 @@ my $start = time();
 my $err;
 while(time() - $start < $timeout) {
 	my $fh = "WEBMINSOCK";
-	if (&open_socket($server->{'host'}, $server->{'port'}, $fh, \$err)) {
+	if (&open_socket($server->{'ip'}, $server->{'port'}, $fh, \$err)) {
 		close($fh);
 		return undef;
 		}
@@ -2851,6 +2857,7 @@ my %used;
 foreach my $s (&list_managed_servers()) {
 	# Add IPs from VPS
 	$used{&to_ipaddress($s->{'host'})} = $s;
+	$used{$s->{'ip'}} = $s;
 	foreach my $ip (@{$s->{'ip_addresses'}}) {
 		$used{$ip}++;
 		}
@@ -3358,7 +3365,8 @@ else {
 			&text('iface_doms', 
 		          join(", ", map { "<tt>$_->{'dom'}</tt>" } @ipdoms)) );
 		}
-	elsif ($iface->{'address'} eq &to_ipaddress($server->{'host'})) {
+	elsif ($iface->{'address'} eq $server->{'ip'} ||
+	       $iface->{'address'} eq &to_ipaddress($server->{'host'})) {
 		return (1, $text{'iface_primary'});
 		}
 	else {
@@ -3432,7 +3440,7 @@ if (defined(&$nfunc) && &$nfunc($server)) {
 	my $mfunc = "type_".$server->{'manager'}."_mount_filesystem";
 	my $err = &$mfunc($server);
 	return $err if ($err);
-	$mount = 1;
+	$mounted = 1;
 	}
 
 my $shadow = &transname();
@@ -3580,7 +3588,7 @@ if ($direct) {
 			"ssh -o PasswordAuthentication=no -x ".
 			"-".$dest->{'ssh_protocol'}." ".
 			($dest->{'ssh_port'} ? " -p ".$dest->{'ssh_port'} : "").
-			$dest->{'ssh_user'}."\@".$dest->{'host'}." echo OK");
+			$dest->{'ssh_user'}."\@".$dest->{'ip'}." echo OK");
 		return $err if ($err);
 		if ($ex || $out !~ /OK/) {
 			return &text('dmass_emovessh',
@@ -3707,7 +3715,7 @@ foreach my $sd (@sorted) {
 	if ($direct) {
 		# Backup to dest via SSH directly
 		my $pa = $dest->{'ssh_port'} ? ":".$dest->{'ssh_port'} : "";
-		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}$pa\@$dest->{'host'}$desttemp" ]);
+		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}$pa\@$dest->{'ip'}$desttemp" ]);
 		}
 	else {
 		# Backup to a temp file on the target
