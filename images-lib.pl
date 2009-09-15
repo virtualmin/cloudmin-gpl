@@ -1,13 +1,5 @@
 # Functions for server image management
 
-use POSIX;
-
-$server_images_dir = "$ENV{'WEBMIN_VAR'}/$module_name";
-$server_images_url = "http://cloudmin.virtualmin.com/images/images.txt";
-$server_images_base = "http://cloudmin.virtualmin.com/images/";
-$server_images_cache = "$module_config_directory/server-images-cache";
-$images_cache_dir = "/var/cloudmin-images";
-
 # list_server_images([type])
 # Returns a list of images that can be used to create servers, possibly of
 # some type. Each is a hash ref, representing a file under

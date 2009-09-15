@@ -138,6 +138,21 @@ if (defined(&list_backups)) {
 		}
 	}
 
+# Enable preloading of server-manager-lib-funcs.pl
+my $msc = $ENV{'MINISERV_CONFIG'} || "$config_directory/miniserv.conf";
+my %miniserv;
+&get_miniserv_config(\%miniserv);
+my @preload = split(/\s+/, $miniserv{'preload'});
+my $lib = "server-manager=server-manager/server-manager-lib-funcs.pl";
+if (&indexof($lib, @preload) < 0) {
+	push(@preload, $lib);
+	$miniserv{'preload'} = join(" ", &unique(@preload));
+	&put_miniserv_config(\%miniserv);
+	if (&check_pid_file($miniserv{'pidfile'})) {
+		&restart_miniserv();
+		}
+	}
+
 # Record the install time for this version
 my %itimes;
 &read_file($install_times_file, \%itimes);

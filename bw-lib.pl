@@ -7,8 +7,6 @@
 # - Sum up for period, show in UI and list-systems.pl
 # - Nice graphs
 
-use Time::Local;
-
 # get_server_traffic(&server)
 # Returns the number of in and out bytes and packets for some virtual system,
 # taken by sampling it's interface on the host system.

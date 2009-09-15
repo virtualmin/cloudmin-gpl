@@ -1,7 +1,5 @@
 # Functions for managing historic data
 
-$historic_info_dir = "$module_config_directory/history";
-
 # Colors for graphs, ripped from Gnuplot
 @historic_graph_colors = (
 	"#ff0000",  "#00c000",  "#0080ff",  "#c000ff",  "#00eeee",  "#c04000",  

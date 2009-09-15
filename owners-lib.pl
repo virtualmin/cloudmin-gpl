@@ -1,10 +1,5 @@
 # Functions for managing Webmin users who own Cloudmin systems.
 
-@plan_limit_types = ( 'servers', 'ram', 'disk', 'cpu', 'ips', 'bw',
-		      'space' );
-@nice_plan_limit_types = ( 'ram', 'disk', 'bw', 'space' );
-@plan_hostmodes = ( 'mem', 'disk', 'rand', 'location' );
-
 # list_system_owners()
 # Returns a list of Webmin user objects for additional Cloudmin logins
 sub list_system_owners

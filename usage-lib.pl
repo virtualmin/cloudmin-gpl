@@ -1,8 +1,5 @@
 # Functions for collecting virtual system run-time usage
 
-$usage_data_dir = "$module_config_directory/usage";
-$usage_cron_cmd = "$module_config_directory/usage.pl";
-
 # get_server_usage(&server)
 # Returns a list of usage samples for a system, each of which is a hash ref
 # with the following keys :
