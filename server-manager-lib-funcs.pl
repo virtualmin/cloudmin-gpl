@@ -6308,7 +6308,7 @@ else {
 # Should be called before any state-changing action
 sub obtain_lock_anything
 {
-$SIG{'PIPE'} = 'ignore';
+$SIG{'PIPE'} = 'IGNORE';
 }
 
 sub test_lock_server
