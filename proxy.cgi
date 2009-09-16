@@ -19,7 +19,7 @@ $statusfile = "$statusdir/$port";
 $real_user = &read_file_contents($statusfile);
 $real_user =~ s/\r|\n//g;
 if ($real_user ne $base_remote_user) {
-	&error($text{'login_euser'});
+	&error($text{'login_euser2'});
 	}
 
 # Connect to the Ajaxterm server, send HTTP request

@@ -2122,7 +2122,7 @@ login_desc=The console can also be accessed by SSHing to <tt>$1</tt> port $2 and
 login_epython=Ajaxterm requires Python to run, but the $1 command was not found on your system.
 login_estart=Ajaxterm did not start accepting connections on port $2 after $1 seconds.
 login_popup=Open in separate window ..
-login_euser=Mis-use of login owned by different user!
+login_euser2=Mis-use of login owned by different user!
 login_instr=Console access via SSH ..
 
 setup_edomain=Missing or invalid domain name - only letters, numbers and the dot, dash and underscore characters are allowed
