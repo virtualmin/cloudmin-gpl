@@ -26,6 +26,7 @@ eval "use Net::Amazon::EC2;";		# Fails if no S3 type
 use Time::Local;
 use POSIX;
 use Socket;
+push(@INC, $server_manager_root);
 
 # Load type-specific library functions
 @possible_server_management_types = ( "real",
