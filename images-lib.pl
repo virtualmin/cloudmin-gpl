@@ -604,13 +604,13 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 return undef;
 }
 
-# fix_additional_network_interface_files(&server, &ips, &netmasks, gateway,
+# fix_additional_network_interface_files(&server, &ips, &netmasks, &gateways,
 # 					 vhost, dir, [base-iface])
 # Create boot-time configs for additional network interfaces, assumed to
 # start with eth1.
 sub fix_additional_network_interface_files
 {
-my ($server, $ips, $netmasks, $gw, $vhost, $dir, $iface) = @_;
+my ($server, $ips, $netmasks, $gws, $vhost, $dir, $iface) = @_;
 $iface ||= "eth0";
 
 # Work out file we are editing
@@ -631,6 +631,7 @@ return "No networking configuration file found" if (!$fix);
 for(my $i=0; $i<@$ips; $i++) {
 	my $ip = $ips->[$i];
 	my $netmask = $netmasks->[$i];
+	my $gw = $gws->[$i];
 	if ($iface =~ /^(\S+)(\d+)$/) {
 		$iface = $1.($2+1);
 		}
