@@ -256,6 +256,7 @@ create_xenip2=IP addresses for Xen instance
 create_xenifacecol=Host bridge
 create_xenipcol=IP address
 create_xencidrcol=CIDR
+create_xengwcol=Gateway IP address
 create_xenipman2=Manually entered addresses below ..
 create_xengw=Default gateway
 create_xengwdef=From host system
