@@ -187,6 +187,13 @@ if (!$s->{'created'}) {
 		}
 	}
 
+# For a Xen host with no gateways set, assume first IP range uses old
+# single default gateway
+if ($s->{'xen_host'} && !$s->{'xen_gws'} && $s->{'xen_gw'}) {
+	$s->{'xen_gws'} = $s->{'xen_gw'} || '*';
+	delete($s->{'xen_gw'});
+	}
+
 # Fill in 'ip' convenience field
 my $ip = &get_server_ip($s);
 $ip ||= &to_ipaddress($s->{'host'});
@@ -348,6 +355,7 @@ else {
 sub delete_managed_server
 {
 my ($server, $keep) = @_;
+&clear_ssh_host_key($server);
 &delete_console_user($server);
 if ($server->{'id'}) {
 	&servers::delete_server($server->{'id'});
@@ -5057,9 +5065,10 @@ my @ends = split(/\s+/, $ends);
 my @cidrs = split(/\s+/, $cidrs);
 my @ifaces = split(/\s+/, $ifaces);
 my @gws = map { $_ eq '*' ? '' : $_ } split(/\s+/, $gws);
-my @cols = ( $text{'range_start'}, $text{'range_end'}, $text{'range_cidr'} );
+my @cols = ( $text{'range_start'}, $text{'range_end'}, $text{'range_cidr'},
+	     $text{'range_gw'} );
 if ($poss) {
-	push(@cols, $text{'range_gw'}, $text{'range_iface'});
+	push(@cols, $text{'range_iface'});
 	}
 if ($starts) {
 	push(@cols, $text{'range_count'}, $text{'range_used'});
@@ -5068,9 +5077,9 @@ my $table = &ui_columns_start(\@cols);
 for(my $i=0; $i<=@starts; $i++) {
 	my @cols = ( &ui_textbox("start_$i", $starts[$i], 15),
 		     &ui_textbox("end_$i", $ends[$i], 15),
-		     &ui_textbox("cidr_$i", $cidrs[$i], 5) );
+		     &ui_textbox("cidr_$i", $cidrs[$i], 5),
+		     &ui_textbox("gw_$i", $gws[$i], 15));
 	if ($poss) {
-		push(@cols, &ui_textbox("gw_$i", $gws[$i], 15));
 		push(@cols, &ui_select("iface_$i", $ifaces[$i] || '*',
 				       [ [ '*', $text{'range_any'} ], @$poss ],
 				       1, 0, 1));

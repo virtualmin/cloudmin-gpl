@@ -528,6 +528,7 @@ return undef;
 sub fix_network_config_files
 {
 my ($server, $ip, $netmask, $gw, $vhost, $dir, $iface) = @_;
+$gw = '' if ($gw eq "*");
 $iface ||= "eth0";
 
 # Work out broadcast and network addresses
@@ -632,6 +633,7 @@ for(my $i=0; $i<@$ips; $i++) {
 	my $ip = $ips->[$i];
 	my $netmask = $netmasks->[$i];
 	my $gw = $gws->[$i];
+	$gw = '' if ($gw eq "*");
 	if ($iface =~ /^(\S+)(\d+)$/) {
 		$iface = $1.($2+1);
 		}
