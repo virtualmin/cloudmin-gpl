@@ -166,11 +166,11 @@ elsif ($dest =~ /^host:(\/\S*)$/) {
 elsif ($dest =~ /^vm2:([^:]+):(\/\S*)$/) {
 	return { 'mode' => 2, 'id' => $1, 'path' => $2 };
 	}
-elsif ($dest =~ /^ssh:\/*([^:]+):([^\@]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
+elsif ($dest =~ /^ssh:\/*([^:]+):([^:\/]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
 	return { 'mode' => 3, 'user' => $1, 'pass' => $2,
 		 'host' => $3, 'port' => $5, 'path' => $6 };
 	}
-elsif ($dest =~ /^ftp:\/*([^:]+):([^\@]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
+elsif ($dest =~ /^ftp:\/*([^:]+):([^:\/]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
 	return { 'mode' => 4, 'user' => $1, 'pass' => $2,
 		 'host' => $3, 'port' => $5, 'path' => $6 };
 	}
@@ -355,7 +355,7 @@ $in->{$pfx."_user"} =~ /^[^\: \t\r\n]+$/ ||
 	return $text{'backups_e'.$pfx.'user'};
 $dest->{'user'} = $in->{$pfx."_user"};
 
-$in->{$pfx."_pass"} =~ /^[^\@ \t\r\n]*$/ ||
+$in->{$pfx."_pass"} =~ /^[^\:\/ \t\r\n]*$/ ||
 	return $text{'backups_e'.$pfx.'pass'};
 $dest->{'pass'} = $in->{$pfx."_pass"};
 
