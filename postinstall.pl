@@ -143,10 +143,19 @@ my $msc = $ENV{'MINISERV_CONFIG'} || "$config_directory/miniserv.conf";
 my %miniserv;
 &get_miniserv_config(\%miniserv);
 my @preload = split(/\s+/, $miniserv{'preload'});
+my $changed_preload = 0;
 my $lib = "server-manager=server-manager/server-manager-lib-funcs.pl";
 if (&indexof($lib, @preload) < 0) {
 	push(@preload, $lib);
 	$miniserv{'preload'} = join(" ", &unique(@preload));
+	$changed_preload = 1;
+	}
+if (!$miniserv{'premodules'}) {
+	$miniserv{'premodules'} = "WebminCore";
+	$changed_preload = 1;
+	}
+if ($changed_preload) {
+	# Only apply miniserv change if needed
 	&put_miniserv_config(\%miniserv);
 	if (&check_pid_file($miniserv{'pidfile'})) {
 		&restart_miniserv();
