@@ -2,11 +2,6 @@
 
 BEGIN { push(@INC, ".."); };
 eval "use WebminCore;";
-if ($@) {
-	# Old Webmin version
-	do '../web-lib.pl';
-	do '../ui-lib.pl';
-	}
 
 &init_config();
 &foreign_require("servers", "servers-lib.pl");
