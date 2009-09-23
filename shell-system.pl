@@ -20,10 +20,12 @@ package server_manager;
 $main::no_acl_check++;
 $ENV{'WEBMIN_CONFIG'} ||= "/etc/webmin";
 $ENV{'WEBMIN_VAR'} ||= "/var/webmin";
-if ($0 =~ /^(.*\/)[^\/]+$/) {
-	chdir($1);
+if ($0 =~ /^(.*)\/[^\/]+$/) {
+	chdir($pwd = $1);
 	}
-chop($pwd = `pwd`);
+else {
+	chop($pwd = `pwd`);
+	}
 $0 = "$pwd/shell-system.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
