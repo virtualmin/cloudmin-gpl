@@ -3332,10 +3332,13 @@ return $err;
 sub clear_authorized_key
 {
 my ($server) = @_;
-my ($out, $ex, $err) = &execute_command_on_server($server,
-				"rm -f .ssh/authorized_keys ; ".
-				"rm -f .ssh/authorized_keys2");
-return $err ? $err : $ex ? $out : undef;
+foreach my $f ("/root/.ssh/authorized_keys",
+	       "/root/.ssh/authorized_keys2",
+	       "/.ssh/authorized_keys",
+	       "/.ssh/authorized_keys2") {
+	&delete_file_on_server($server, $f);
+	}
+return undef;
 }
 
 # has_addnew_keys(&server)
