@@ -2203,6 +2203,15 @@ smove_undumping=Restoring running processes ..
 smove_eundump=.. restore failed : $1
 smove_evzclash=An OpenVZ container with the context ID $1 already exists on the target system
 smove_etemp=.. failed to get temporary file name
+smove_livecheck=Checking if live migration is possible ..
+smove_elivedown=.. not needed when system is down
+smove_eliveshut=.. not possible when system will be shut down for moving
+smove_eliveport=.. new host system is not accepting migration connections on port $1
+smove_elivever=.. old host system runs Xen version $1, but new system has version $2
+smove_elivedisk=.. virtual disk $1 is not on shared storage
+smove_liveok=.. live migration appears to be possible
+smove_living=Live migrating virtual system ..
+smove_elived=.. migration failed : $1
 
 transfer_title2=Transfer File
 transfer_err=Failed to transfer file
