@@ -2119,6 +2119,7 @@ ec2addr_asserr=.. association failed : $1
 ec2addr_assdone=Waiting for IP address association to be assigned ..
 
 login_title=Console Login
+login_title2=Root Login
 login_euser=Failed to create console access user : $1
 login_esupport=This system does not support console access at this time
 login_desc=The console can also be accessed by SSHing to <tt>$1</tt> port $2 and logging in as <tt>$3</tt> with password <tt>$4</tt> . Example command :
@@ -2145,6 +2146,9 @@ unpause_doing=Now un-pausing $1 system $2 ..
 unpause_ecannot=This system type cannot be un-paused, or the system is not paused
 
 smove_shutting=Shutting down on original host system ..
+smove_shutting2=Shutting down on original host system (because $1) ..
+smove_diffvg=LVM volume group is different
+smove_diffdir=Xen base directory is different
 smove_shutfailed=.. shutdown failed : $1
 smove_disks=Copying disk images to new host system ..
 smove_onedisk=Copying disk $1 ..
@@ -2197,6 +2201,7 @@ smove_untarfailed=.. TAR failed : $1
 smove_undumping=Restoring running processes ..
 smove_eundump=.. restore failed : $1
 smove_evzclash=An OpenVZ container with the context ID $1 already exists on the target system
+smove_etemp=.. failed to get temporary file name
 
 transfer_title2=Transfer File
 transfer_err=Failed to transfer file

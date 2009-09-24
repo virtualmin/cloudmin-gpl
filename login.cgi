@@ -8,7 +8,7 @@ $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "console");
 &ui_print_header(&server_in($server),
-	 $in{'shell'} ? $text{'login_title'} : $text{'login_title2'}, "");
+	 $in{'shell'} ? $text{'login_title2'} : $text{'login_title'}, "");
 
 # Check for python
 $python = &has_command("python");

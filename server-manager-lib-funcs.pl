@@ -5241,14 +5241,14 @@ else {
         }
 }
 
-# move_system(&system, &dest)
+# move_system(&system, &dest, [shutdown])
 # Moves a virtual system to a host hosting server, which is assumed to be
 # able to support it. Calls the appropriate type-specific move function to
 # do most of the work. Returns undef on success or an error message on failure.
 # May print stuff.
 sub move_system
 {
-my ($server, $dest) = @_;
+my ($server, $dest, $shutdown) = @_;
 my @pars = &is_parent_server($dest);
 my $dfunc = "type_".$server->{'manager'}."_desc";
 my $desc = &$dfunc($server);
@@ -5264,7 +5264,7 @@ if (!defined(&$cfunc) || !&$cfunc($server, $dest)) {
 	return "The $desc system $server->{'host'} cannot be moved to $dest->{'host'}";
 	}
 my $mfunc = "type_".$server->{'manager'}."_move_system";
-my $err = &$mfunc($server, $dest);
+my $err = &$mfunc($server, $dest, $shutdown);
 
 # Refresh status
 if (!$err) {

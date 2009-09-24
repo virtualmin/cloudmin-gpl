@@ -16,6 +16,12 @@ generally be temporarily shut down and un-available. All data files will be
 copied to the new host (set with the C<--dest> flag), modified as needed,
 and then the virtual system restarted.
 
+By default, the move will be done without shutting down the virtual system
+if possible. However, you can force a shutdown and restart with the
+C<--shutdown> flag. In some cases (such as when the source and destination
+host systems use different directories), the virtual system may be shut down
+anyway.
+
 =head1 Example usage
 
   cloudmin move-system --host xengtest.home --dest geylang.home
@@ -59,6 +65,7 @@ $< == 0 || die "$0 must be run as root";
 @OLDARGV = @ARGV;
 
 # Parse command line
+$shutdown = 0;
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--host") {
@@ -66,6 +73,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--dest") {
 		$desthost = shift(@ARGV);
+		}
+	elsif ($a eq "--shutdown") {
+		$shutdown = 1;
 		}
 	else {
 		&usage();
@@ -94,7 +104,7 @@ defined(&$cfunc) || &usage("Systems of type $desc cannot be moved");
 print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
 &obtain_lock_server($dest);
 &obtain_lock_server($server);
-$err = &move_system($server, $dest);
+$err = &move_system($server, $dest, $shutdown);
 &release_lock_server($server);
 &release_lock_server($dest);
 if ($err) {
@@ -111,6 +121,7 @@ print "Moves a virtual system from one host to another.\n";
 print "\n";
 print "cloudmin move-system --host name\n";
 print "                     --dest new-host-system-name\n";
+print "                    [--shutdown]\n";
 exit(1);
 }
 
