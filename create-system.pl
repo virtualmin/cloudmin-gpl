@@ -159,6 +159,7 @@ while(@ARGV > 0) {
 	}
 
 # Check for mandatory args
+@servers = &list_managed_servers();
 $type || &usage("Missing required --type parameter");
 $hfunc = "type_".$type."_no_create_hostname";
 if (!defined(&$hfunc) || !&$hfunc()) {
