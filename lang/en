@@ -2171,6 +2171,7 @@ smove_title=Move Virtual System
 smove_header=Options for move to new host system
 smove_host=Current host system
 smove_dest=New host system
+smove_shutdown=Shut down before moving?
 smove_nowhere=This system cannot be moved from $1, as there are no other $2 host systems available.
 smove_desc=This page allows you to move a virtual system from its current host system to another. The system may be shut down or temporarily un-available during this process.
 smove_ok=Start Move
