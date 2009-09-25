@@ -147,6 +147,7 @@ $old_api_helper_command = "/usr/sbin/vm2";
 $ping_host_timeout = 2;
 
 $xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
+$xen_migration_port = 8002;
 
 $owner_plans_dir = "$module_config_directory/plans";
 
