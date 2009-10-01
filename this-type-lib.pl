@@ -69,7 +69,7 @@ my $out = &backquote_command(
 	$device ?
 	  "dd if=".quotemeta($remotefile)." of=".quotemeta($localfile).
 	  "bs=1024 2>&1" :
-	"cp -r ".quotemeta($remotefile)." ".quotemeta($localfile)." 2>&1");
+	"cp -r -H ".quotemeta($remotefile)." ".quotemeta($localfile)." 2>&1");
 return $? ? $out : undef;
 }
 
