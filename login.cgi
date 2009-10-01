@@ -49,7 +49,7 @@ if (!$pid) {
         untie(*STDERR); open(STDERR, ">/dev/null");
 	$cmd = $in{'shell'} ? "shell-system.pl" : "login-system.pl";
         exec($python, "ajaxterm.py", "--port", $port, "--log",
-		      "--command", "$module_root_directory/$cmd --host $server->{'host'}");
+		      "--command", "PERLLIB=$root_directory $module_root_directory/$cmd --host $server->{'host'}");
         exit(1);
         }
 
