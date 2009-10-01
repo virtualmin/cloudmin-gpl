@@ -6275,6 +6275,31 @@ local $ENV{'REMOTE_HOST'} ||= "127.0.0.1";
 	    $script, $server ? $server->{'host'} : undef, \%flags);
 }
 
+# list_ports_in_use(&server, [protocol])
+# Returns an array ref of TCP ports in use on some system, using lsof, or an
+# error message.
+sub list_ports_in_use
+{
+my ($server, $proto) = @_;
+$proto ||= "tcp";
+if (&has_command_on_server($server, "lsof")) {
+	# Parse lsof for LISTEN lines
+	my ($out, $ex, $err) = &execute_command_on_server(
+				$server, "lsof -i $proto -n -l -P");
+	return $err if ($err);
+	return $out if ($ex);
+	my @rv;
+	foreach my $l (split(/\r?\n/, $out)) {
+		if ($l =~ /\s+([^:]+):(\d+)\s+\(LISTEN\)/) {
+			push(@rv, $2);
+			}
+		}
+	@rv = &unique(@rv);
+	return \@rv;
+	}
+return "Missing lsof command";
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server
