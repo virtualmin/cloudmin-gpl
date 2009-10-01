@@ -3263,14 +3263,14 @@ $roothome ||= "/root";
 
 # Create .ssh dir if missing
 my $sshdir = "$roothome/.ssh";
-my @st = &stat_file_on_server($server, "$sshdir");
+my @st = &stat_file_on_server($server, $sshdir);
 if (!@st) {
 	my $temp = &transname();
 	&make_dir($temp, 0700);
 	&put_file_to_server($server, $temp, $sshdir);
 	}
 
-return "$roothome/.ssh/authorized_keys";
+return "$sshdir/authorized_keys";
 }
 
 # set_shadow_root_password(&server, pass)
