@@ -342,7 +342,8 @@ elsif ($in{'webmin_mode'}) {
 	# Need to install Webmin
 	my ($src, $type, $err) = &get_install_webmin_source($server);
 	if (!$err) {
-		print &text('create_webmining', $src),"<br>\n";
+		print &text('create_webmining',
+			    $src =~ /:/ ? "<tt>$src</tt>" : uc($src)),"<br>\n";
 		($out, $err, $webmindir) =
 			&install_webmin_server($server, $src, $type, 1);
 		if ($err) {

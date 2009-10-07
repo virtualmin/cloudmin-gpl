@@ -271,8 +271,8 @@ elsif ($in{'installwebmin'}) {
 	($src, $type, $err) = &get_install_webmin_source($server);
 	$err && &error(&text('save_webminerr', $err));
 
-	print &text('save_webmining',
-		    "<tt>$server->{'host'}</tt>", "<tt>$src</tt>"),"<br>\n";
+	print &text('save_webmining', "<tt>$server->{'host'}</tt>",
+		    $src =~ /:/ ? "<tt>$src</tt>" : uc($src)),"<br>\n";
 	($out, $err) = &install_webmin_server($server, $src, $type, 1);
 	print "<pre>$out</pre>";
 	if ($err) {

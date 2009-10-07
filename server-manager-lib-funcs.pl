@@ -2373,8 +2373,8 @@ if (!$type || $type eq "pkgadd") {
 	}
 
 # Work out download URL
-my $source = $config{'download_'.$type} ||
-		$webmin_download_source{$type};
+my $source = $update eq "yum" || $update eq "apt" ? $update :
+		$config{'download_'.$type} || $webmin_download_source{$type};
 return ($source, $type, undef);
 }
 
@@ -2406,12 +2406,67 @@ if (!&has_command_on_server($server, "perl") ||
 my $perlpath = &has_command_on_server($server, "perl");
 $perlpath || return (undef, "Perl is not installed");
 
-if ($type eq "rpm") {
+if ($type eq "rpm" && $src eq "yum") {
+	# RPM install using Webmin YUM repository
+	my $err = &put_file_to_server($server,
+			"$module_root_directory/webmin.repo",
+			"/etc/yum.repos.d/webmin.repo");
+	if ($err) {
+		return (undef, "Failed to create webmin.repo : $err");
+		}
+	my ($wout, $wex, $werr) = &execute_command_on_server($server,
+					"yum -y install webmin");
+	return (undef, $werr) if ($werr);
+	return (undef, "YUM failed : $wout") if ($wex);
+	$rootdir = "/usr/libexec/webmin";
+	$out .= $wout;
+	}
+
+elsif ($type eq "rpm") {
 	# RPM install direct from the URL
 	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 		"rm -f $temp && wget -nv -O $temp $src && rpm -U --nodeps $temp && rm -f $temp");
 	return (undef, $werr) if ($werr);
 	return ($wout, "RPM failed") if ($wex);
+	$rootdir = "/usr/libexec/webmin";
+	$out .= $wout;
+	}
+
+elsif ($type eq "dpkg" && $src eq "apt") {
+	# APT install using Webmin repository
+	my $temp = &transname();
+	my $err = &get_file_from_server($server, "/etc/apt/sources.list",$temp);
+	if ($err) {
+		return (undef, "Failed to fetch sources.list : $err");
+		}
+	my $srcs_lref = &read_file_lines($temp);
+	my $webmin_lref = &read_file_lines(
+				"$module_root_directory/webmin.source", 1);
+	my $found;
+	foreach my $l (@$srcs_lref) {
+		if ($l eq $webmin_lref->[0]) {
+			$found++;
+			}
+		}
+	if (!$found) {
+		push(@$srcs_lref, @$webmin_lref);
+		&flush_file_lines($temp);
+		my $err = &put_file_to_server($server, $temp,
+					      "/etc/apt/sources.list");
+		if ($err) {
+			return (undef, "Failed to save sources.list : $err");
+			}
+		&execute_command_on_server($server, "apt-get update");
+		}
+	else {
+		&unflush_file_lines($temp);
+		}
+
+	# Now call apt-get to do the install
+	my ($wout, $wex, $werr) = &execute_command_on_server($server,
+				"apt-get -y --force-yes -f install webmin");
+	return (undef, $werr) if ($werr);
+	return (undef, "APT failed : $wout") if ($wex);
 	$rootdir = "/usr/libexec/webmin";
 	$out .= $wout;
 	}
@@ -2506,6 +2561,10 @@ else {
 	# Argh .. could not connect after all that work :(
 	$out .= "\nWebmin installed, but could not connect : $werr\n";
 	}
+
+# Setup status collection if possible - needs Webmin 1.491 or later
+&execute_command_on_server($server,
+	"/etc/webmin/system-status/enable-collection.pl 5");
 
 return ($out, undef, $wroot);
 }
