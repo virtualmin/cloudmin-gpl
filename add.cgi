@@ -75,7 +75,7 @@ print $text{'add_statusing'},"<br>\n";
 print &text('add_statusok', &describe_status($server, 1)),"<p>\n";
 
 # Enable Webmin status collection
-if ($server->{'status'} eq 'webmin') {
+if ($server->{'status'} eq 'novirt') {
 	print $text{'add_collecting'},"<br>\n";
 	$err = &enable_webmin_status_collection($server);
 	if ($err) {

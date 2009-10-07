@@ -1598,11 +1598,11 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		local $main::error_must_die = 1;
 		alarm($webmin_timeout);
-		$server->{'status'} = 'virt';
 		$server->{'status_msg'} = undef;
 		if (&remote_foreign_check($server, "virtual-server") &&
 		    !$server->{'novirtualmin'}) {
 			# Get and save remote Virtualmin domains
+			$server->{'status'} = 'virt';
 			goto SKIPINFO if ($skipinfo);
 			&remote_foreign_require($server, "virtual-server",
 						"virtual-server-lib.pl");
@@ -1681,7 +1681,18 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			}
 		elsif (&remote_foreign_check($server, "system-status")) {
 			# Get info from new Webmin status module
-			# XXX
+			$server->{'status'} = 'novirt';
+			goto SKIPINFO if ($skipinfo);
+			&remote_foreign_require($server, "system-status",
+						"system-status-lib.pl");
+			$info = &remote_foreign_call($server, "system-status",
+			     $regen ? "collect_system_info"
+				    : "get_collected_info");
+			if ($info->{'kernel'}) {
+				$got_kernel = 1;
+				}
+			$server->{'virtualmin_poss'} =
+				scalar(@{$info->{'poss'}});
 			}
 		else {
 			# Doesn't have Virtualmin
@@ -2095,9 +2106,20 @@ return &parallel_server_function($servers,
 sub refresh_server_updates
 {
 my ($server, $got) = @_;
-&remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
-&remote_foreign_call($server, "virtual-server",
-		     "refresh_possible_packages", $got);
+if ($server->{'status'} eq 'virt') {
+	# Call Virtualmin collector function
+	&remote_foreign_require($server, "virtual-server",
+				"virtual-server-lib.pl");
+	&remote_foreign_call($server, "virtual-server",
+			     "refresh_possible_packages", $got);
+	}
+elsif ($server->{'status'} eq 'novirt') {
+	# Call new Webmin collector function
+	&remote_foreign_require($server, "system-status",
+				"system-status-lib.pl");
+	&remote_foreign_call($server, "system-status",
+			     "refresh_possible_packages", $got);
+	}
 }
 
 # domain_link(&server, &domain)
@@ -2228,14 +2250,18 @@ sub install_package_update
 {
 my ($server, $p) = @_;
 $last_remote_error = undef;
-&remote_foreign_require($server, "security-updates", "security-updates-lib.pl");
-my $func = &remote_eval($server, "security-updates",
+my $mod = $server->{'status'} eq 'virt' ? 'security-updates'
+					: 'package-updates';
+my $pkg = $mod;
+$pkg =~ s/-/_/g;
+&remote_foreign_require($server, $mod, $mod."-lib.pl");
+my $func = &remote_eval($server, $mod,
 			   'defined(&capture_function_output_tempfile)') ?
 				"capture_function_output_tempfile" :
 				"capture_function_output";
-my ($out, $rv) = &remote_foreign_call($server, "security-updates",
-		$func, "security_updates::package_install",
-		$p->{'update'} || $p->{'name'}, $p->{'system'});
+my ($out, $rv) = &remote_foreign_call($server, $mod,
+		$func, $pkg."::package_install",
+		$p->{'update'} || $p->{'name'}, $p->{'system'}, 1);
 if ($last_remote_error) {
 	return $last_remote_error;
 	}
@@ -4326,7 +4352,8 @@ else {
 		push(@rv, { 'id' => 'refresh',
 			    'desc' => $text{'edit_refresh'},
 			    'cat' => '' });
-		if ($server->{'status'} eq 'virt') {
+		if ($server->{'status'} eq 'virt' ||
+		    $server->{'status'} eq 'novirt') {
 			push(@rv, { 'id' => 'regen',
 				    'desc' => $text{'edit_regen'},
 				    'cat' => '' });

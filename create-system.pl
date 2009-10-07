@@ -468,7 +468,7 @@ print "Refreshing status ..\n";
 print ".. done ($server->{'status'})\n\n";
 
 # Enable Webmin status collection
-if ($server->{'status'} eq 'webmin') {
+if ($server->{'status'} eq 'novirt') {
 	print "Enabling background status collection ..\n";
 	$err = &enable_webmin_status_collection($server);
 	if ($err) {
