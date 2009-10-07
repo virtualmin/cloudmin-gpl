@@ -467,6 +467,18 @@ print "Refreshing status ..\n";
 &save_managed_server($server);
 print ".. done ($server->{'status'})\n\n";
 
+# Enable Webmin status collection
+if ($server->{'status'} eq 'webmin') {
+	print "Enabling background status collection ..\n";
+	$err = &enable_webmin_status_collection($server);
+	if ($err) {
+		print ".. failed : $err\n\n";
+		}
+	else {
+		print ".. done\n\n";
+		}
+	}
+
 if ($serial) {
 	# Key is no longer in progress
 	&stop_installing_virtualmin_licence($serial, $key);

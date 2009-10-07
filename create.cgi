@@ -383,6 +383,18 @@ print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
 print &text('add_statusok', &describe_status($server, 1)),"<p>\n";
 
+# Enable Webmin status collection
+if ($server->{'status'} eq 'webmin') {
+	print $text{'add_collecting'},"<br>\n";
+	$err = &enable_webmin_status_collection($server);
+	if ($err) {
+		print &text('add_ecollect', $err),"<p>\n";
+		}
+	else {
+		print $text{'create_done'},"<p>\n";
+		}
+	}
+
 if ($serial) {
 	# Key is no longer in progress
 	&stop_installing_virtualmin_licence($serial, $key);

@@ -1679,6 +1679,10 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				delete($server->{'virtualmin_key'});
 				}
 			}
+		elsif (&remote_foreign_check($server, "system-status")) {
+			# Get info from new Webmin status module
+			# XXX
+			}
 		else {
 			# Doesn't have Virtualmin
 			&save_server_domains($server, [ ]);
@@ -2406,6 +2410,17 @@ if (!&has_command_on_server($server, "perl") ||
 my $perlpath = &has_command_on_server($server, "perl");
 $perlpath || return (undef, "Perl is not installed");
 
+# Upload Webmin public key if needed
+my $keytemp = &tempname_on_server($server, "jcameron-key.asc");
+if ($src eq "yum" || $src eq "apt") {
+	my $err = &put_file_to_server($server,
+			"$module_root_directory/jcameron-key.asc",
+			$keytemp);
+	if ($err) {
+		return (undef, "Failed to upload Webmin public key : $err");
+		}
+	}
+
 if ($type eq "rpm" && $src eq "yum") {
 	# RPM install using Webmin YUM repository
 	my $err = &put_file_to_server($server,
@@ -2414,6 +2429,7 @@ if ($type eq "rpm" && $src eq "yum") {
 	if ($err) {
 		return (undef, "Failed to create webmin.repo : $err");
 		}
+	&execute_command_on_server($server, "rpm --import $keytemp");
 	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 					"yum -y install webmin");
 	return (undef, $werr) if ($werr);
@@ -2463,6 +2479,7 @@ elsif ($type eq "dpkg" && $src eq "apt") {
 		}
 
 	# Now call apt-get to do the install
+	&execute_command_on_server($server, "apt-get add $keytemp");
 	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 				"apt-get -y --force-yes -f install webmin");
 	return (undef, $werr) if ($werr);
@@ -2552,6 +2569,8 @@ if (defined(&$wfunc)) {
 	&$wfunc($server, $wroot, $wport, $wssl);
 	}
 
+&enable_webmin_status_collection($server);
+
 # Make sure Webmin is running OK, and get the OS
 my ($wstatus, $werr, $wos, $wrealos) = &check_server_webmin_login($server);
 if ($wstatus == 0) {
@@ -2562,11 +2581,27 @@ else {
 	$out .= "\nWebmin installed, but could not connect : $werr\n";
 	}
 
-# Setup status collection if possible - needs Webmin 1.491 or later
-&execute_command_on_server($server,
-	"/etc/webmin/system-status/enable-collection.pl 5");
-
 return ($out, undef, $wroot);
+}
+
+# enable_webmin_status_collection(&server)
+# If possible, configure a system with Webmin to collect status info via
+# a background cron job
+sub enable_webmin_status_collection
+{
+my ($server) = @_;
+my @st = &stat_file_on_server($server,
+		"/etc/webmin/system-status/enable-collection.pl");
+if (!@st) {
+	return "Webmin version 1.491 or later is required";
+	}
+my ($out, $ex, $err) = &execute_command_on_server($server,
+	"/etc/webmin/system-status/enable-collection.pl 5");
+if (!$ex && !$err) {
+	($out, $ex, $err) = &execute_command_on_server($server,
+		"/etc/webmin/system-status/systeminfo.pl");
+	}
+return $err ? $err : $ex ? $out : undef;
 }
 
 # wait_webmin_server(&server, timeout)

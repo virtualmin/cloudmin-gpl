@@ -74,6 +74,18 @@ print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
 print &text('add_statusok', &describe_status($server, 1)),"<p>\n";
 
+# Enable Webmin status collection
+if ($server->{'status'} eq 'webmin') {
+	print $text{'add_collecting'},"<br>\n";
+	$err = &enable_webmin_status_collection($server);
+	if ($err) {
+		print &text('add_ecollect', $err),"<p>\n";
+		}
+	else {
+		print $text{'create_done'},"<p>\n";
+		}
+	}
+
 # If the server has Virtualmin, do a config check
 if ($server->{'status'} eq 'virt') {
 	print $text{'add_vchecking'},"<br>\n";
