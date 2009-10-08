@@ -1363,6 +1363,7 @@ xen_livehost0=IP address
 xen_liveport=and port
 xen_elivehost=Missing or invalid destination hostname for live migration
 xen_eliveport=Missing or non-numeric port for live migration
+xen_header5=Xen configuration settings for hosted systems
 
 xens_title=Xen Host Systems
 xens_add=Register a system for Xen hosting.
