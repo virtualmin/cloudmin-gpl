@@ -185,7 +185,12 @@ elsif ($in{'dereg'}) {
 	}
 
 elsif ($in{'update'}) {
+	&redirect("mass_update_form.cgi?$ids");
+	}
+
+elsif ($in{'update'}) {
 	# Update packages on multiple systems at once
+	# XXX move me
 	&can_action_error(\@servers, "update");
 	&ui_print_unbuffered_header(undef, $text{'mass_uptitle'}, "");
 
