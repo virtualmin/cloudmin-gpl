@@ -328,6 +328,7 @@ if ($server->{'id'} eq '0') {
 			'virtualmin_serial' => $server->{'virtualmin_serial'},
 			'virtualmin_key' => $server->{'virtualmin_key'},
 			'backup_default' => $server->{'backup_default'},
+			'all_poss' => $server->{'all_poss'},
 		      );
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone') {
@@ -1668,6 +1669,10 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			$server->{'virtualmin_domains'} = scalar(@doms);
 			$server->{'virtualmin_poss'} =
 				scalar(@{$info->{'poss'}});
+			if ($info->{'allposs'}) {
+				$server->{'all_poss'} =
+					scalar(@{$info->{'allposs'}});
+				}
 			if ($info->{'serial'}) {
 				$server->{'virtualmin_serial'} =
 					$info->{'serial'}->{'serial'};
@@ -1691,7 +1696,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			if ($info->{'kernel'}) {
 				$got_kernel = 1;
 				}
-			$server->{'virtualmin_poss'} =
+			$server->{'all_poss'} =
 				scalar(@{$info->{'poss'}});
 			}
 		else {
@@ -1701,6 +1706,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			$server->{'status_msg'} = undef;
 			delete($server->{'virtualmin_domains'});
 			delete($server->{'virtualmin_poss'});
+			delete($server->{'all_poss'});
 			goto SKIPINFO if ($skipinfo);
 			$info = { };
 
@@ -2078,7 +2084,9 @@ my ($servers) = @_;
 return &parallel_server_function($servers,
 	sub { my $info = &get_server_collected($_[0]);
 	      my @allgot;
-	      foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
+	      @poss = @{$info->{'allposs'}};
+	      @poss = @{$info->{'poss'}} if (!@poss);
+	      foreach $p (&sort_package_updates(@poss)) {
 	          my $got = &install_package_update($_[0], $p);
 		  my $status = { 'name' => $p->{'name'},
 				 'version' => $p->{'version'} };
@@ -4278,10 +4286,12 @@ if ($status eq 'virt' && (&can_action($server, "edit") ||
 	}
 
 # Link for updates, if any
-if ($server->{'virtualmin_poss'} && &can_action($server, "update")) {
+if (($server->{'virtualmin_poss'} || $server->{'all_poss'}) &&
+    &can_action($server, "update")) {
 	push(@rv, { 'id' => 'update',
 		    'desc' => &text('edit_link_update',
-				    $server->{'virtualmin_poss'}),
+		    		    $server->{'all_poss'} ||
+				      $server->{'virtualmin_poss'}),
 		    'cat' => '',
 		    'link' => "edit_update.cgi?id=$server->{'id'}" });
 	}
@@ -5721,7 +5731,8 @@ elsif ($in->{'sok'}) {
 		}
 	if ($in->{'ssearch'} eq 'updates') {
 		# Search by updates
-		return grep { $_->{'virtualmin_poss'} } @$servers;
+		return grep { $_->{'virtualmin_poss'} ||
+			      $_->{'all_poss'} } @$servers;
 		}
 	else {
 		# By regular status

@@ -194,9 +194,11 @@ elsif ($in{'update'}) {
 	$pos = 0;
 	foreach $s (@servers) {
 		$info = &get_server_collected($s);
-		if ($info->{'poss'} && @{$info->{'poss'}}) {
+		@poss = @{$info->{'allposs'}};
+		@poss = @{$info->{'poss'}} if (!@poss);
+		if (@poss) {
 			push(@upservers, $s);
-			$pos += scalar(@{$info->{'poss'}});
+			$pos += scalar(@poss);
 			}
 		}
 

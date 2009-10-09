@@ -185,7 +185,7 @@ if (@servers) {
 		foreach my $s (@{$cat->[0]}) {
 			$t = $s->{'manager'};
 			$tfunc = "type_".$t."_desc";
-			$pos = $s->{'virtualmin_poss'};
+			$pos = $s->{'all_poss'} || $s->{'virtualmin_poss'};
 			$posdesc = undef;
 			if ($pos) {
 				# Has some updates

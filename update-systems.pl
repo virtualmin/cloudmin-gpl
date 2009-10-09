@@ -66,8 +66,10 @@ print "Updating packages on ",scalar(@servers)," systems ..\n";
 &obtain_lock_server(\@servers);
 &parallel_server_function(\@servers,
 	sub { my $info = &get_server_collected($_[0]);
+	      @poss = @{$info->{'allposs'}};
+	      @poss = @{$info->{'poss'}} if (!@poss);
 	      my @allgot;
-	      foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
+	      foreach $p (&sort_package_updates(@poss)) {
 	          my $got = &install_package_update($_[0], $p);
 		  push(@allgot, @$got) if (ref($got));
 	          }
