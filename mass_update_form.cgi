@@ -7,7 +7,12 @@ require './server-manager-lib.pl';
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
 @servers || &error($text{'mass_enone'});
 &can_action_error(\@servers, "update");
-&ui_print_unbuffered_header(undef, $text{'update_title'}, "");
+if (@servers == 1) {
+	&ui_print_header(&server_in($servers[0]), $text{'update_title'}, "");
+	}
+else {
+	&ui_print_header(undef, $text{'update_title'}, "");
+	}
 
 # Find all the updates
 @upservers = ( );
@@ -76,19 +81,20 @@ if (@pkgs) {
 	@links = ( &select_all_link("p", 1),
 		   &select_invert_link("p", 1) );
 	print &ui_links_row(\@links);
-	print &ui_columns_start([ '',
-				  $text{'update_name'},
-				  $olds ? ( $text{'update_oldversions'} ) : ( ),
-				  $text{'update_versions'},
-				  $text{'update_servers'},
-				  $text{'update_desc'} ], 100, 0, \@tds);
+	print &ui_columns_start([
+		'',
+		$text{'update_name'},
+		$olds ? ( $text{'update_oldversions'} ) : ( ),
+		$text{'update_versions'},
+		@servers > 1 ? ( $text{'update_servers'} ) : ( ),
+		$text{'update_desc'} ], 100, 0, \@tds);
 	foreach $pkg (@pkgs) {
 		$k = $pkg->{'system'}."/".$pkg->{'name'};
 		print &ui_checked_columns_row([
 			$pkg->{'name'},
 			$olds ? ( join(" ", @{$oldvers{$k}}) ) : ( ),
 			join(" ", @{$newvers{$k}}),
-			$pkg->{'count'},
+			@servers == 1 ? ( ) : ( $pkg->{'count'} ),
 			$pkg->{'desc'},
 			], \@tds, "p", $k, 1);
 		}

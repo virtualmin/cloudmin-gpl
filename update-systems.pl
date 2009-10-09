@@ -2,14 +2,16 @@
 
 =head1 update-systems.pl
 
-Installs updated Virtualmin packages on multiple systems, and displays the results
+Updates installed packages on multiple systems, and displays the results.
 
-This command installs all available package updates on specified systems. This
-is only suppported on systems running Virtualmin, which has a module for
-finding new versions of packages that relate to virtual hosting, such as
-Apache, BIND, MySQL and of course the Virtualmin modules themselves. Updates
-are done in parallel across all systems, and the packages installed on each
-are displayed as they complete.
+This command updates some or all packages on selected systems, using YUM,
+APT, CWS or other supported package management systems. Only systems running
+Webmin 1.500 or later or Virtualmin can be updated.
+
+By default, all available updates are installed. However, you can limit this
+to just Virtualmin-specific updates with the C<--virtualmin> flag. To select
+specific packages, use the C<--package> flag followed by a name like 
+I<dovecot>.
 
 =head1 Example usage
 
@@ -37,11 +39,20 @@ $< == 0 || die "$0 must be run as root";
 # Parse command line
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
-	if ($a eq "--host") {
-		push(@names, shift(@ARGV));
+	if ($a eq "--all-hosts") { $all = 1; }
+	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
+	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
+	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
+	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
+	elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
+	elsif ($a eq "--virtualmin") {
+		$virtonly = 1;
 		}
-	elsif ($a eq "--all-hosts") {
-		$all = 1;
+	elsif ($a eq "--package") {
+		push(@pkgnames, shift(@ARGV));
+		}
+	elsif ($a eq "--test") {
+		$testmode = 1;
 		}
 	else {
 		&usage();
@@ -49,34 +60,46 @@ while(@ARGV > 0) {
 	}
 
 # Work out who to refresh
-if (!$all) {
-	foreach my $n (@names) {
-		$server = &get_managed_server_by("host", $n);
-		$server || &usage("No system with hostname $n exists");
-		push(@servers, $server);
-		}
-	}
-else {
-	@servers = &list_managed_servers();
-	}
+@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
 
 # Do the parallel update and print
-print "Updating packages on ",scalar(@servers)," systems ..\n";
+if ($testmode) {
+	print "Finding updated packages on ",scalar(@servers)," systems ..\n";
+	}
+else {
+	print "Updating packages on ",scalar(@servers)," systems ..\n";
+	}
 &obtain_lock_server(\@servers);
 &parallel_server_function(\@servers,
 	sub { my $info = &get_server_collected($_[0]);
-	      @poss = @{$info->{'allposs'}};
+	      my @poss;
+	      if (!$virtonly) {
+	          @poss = @{$info->{'allposs'}};
+	      }
 	      @poss = @{$info->{'poss'}} if (!@poss);
+	      if (@pkgnames) {
+		@poss = grep { &indexof($_->{'name'}, @pkgnames) >= 0 } @poss;
+	      }
+
 	      my @allgot;
-	      foreach $p (&sort_package_updates(@poss)) {
-	          my $got = &install_package_update($_[0], $p);
-		  push(@allgot, @$got) if (ref($got));
+	      if ($testmode) {
+	          # Assume all would be done
+		  push(@allgot, map { $_->{'name'} } @poss);
 	          }
+	      else {
+		  # Do them one by one
+	          foreach $p (&sort_package_updates(@poss)) {
+	              my $got = &install_package_update($_[0], $p);
+		      push(@allgot, @$got) if (ref($got));
+	              }
+		  }
 	      if (@allgot) {
-                  &refresh_server_updates($_[0], \@allgot);
-	          &check_server_status($_[0]);
-	          &save_managed_server($_[0]);
+		  if (!$testmode) {
+                      &refresh_server_updates($_[0], \@allgot);
+	              &check_server_status($_[0]);
+	              &save_managed_server($_[0]);
+		  }
 	          print "$_[0]->{'host'}: ".join(" ", @allgot)."\n"
 	          }
               else {
@@ -89,7 +112,7 @@ print "Updating packages on ",scalar(@servers)," systems ..\n";
 sub usage
 {
 print "$_[0]\n\n" if ($_[0]);
-print "Installs updated Virtualmin packages on some or all managed systems.\n";
+print "Updates installed packages on some or all managed systems.\n";
 print "\n";
 print "cloudmin update-systems [--all-hosts] | [--host name]*\n";
 print "                        [--group name]*\n";

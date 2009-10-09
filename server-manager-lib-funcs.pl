@@ -2074,18 +2074,29 @@ return &parallel_server_function($servers,
 	    });
 }
 
-# parallel_install_package_updates(&servers)
+# parallel_install_package_updates(&servers, [&packages])
 # Updates all packages on multiple servers, in 10 (by default) processes.
 # Each element of the per-server return array is an hash ref with status,
 # packages and error fields.
 sub parallel_install_package_updates
 {
-my ($servers) = @_;
+my ($servers, $packages) = @_;
+my %want;
+if ($packages) {
+	foreach my $p (@$packages) {
+		$want{$p->{'name'},$p->{'system'}} = 1;
+		}
+	}
 return &parallel_server_function($servers,
-	sub { my $info = &get_server_collected($_[0]);
+	sub { my ($server, $want) = @_;
+	      my $info = &get_server_collected($server);
 	      my @allgot;
 	      @poss = @{$info->{'allposs'}};
 	      @poss = @{$info->{'poss'}} if (!@poss);
+	      if ($want) {
+		# Limit to those requested
+		@poss = grep { $want{$_->{'name'},$_->{'system'}} } @poss;
+	      }
 	      foreach $p (&sort_package_updates(@poss)) {
 	          my $got = &install_package_update($_[0], $p);
 		  my $status = { 'name' => $p->{'name'},
@@ -2106,7 +2117,7 @@ return &parallel_server_function($servers,
 	      &check_server_status($_[0]);
 	      &save_managed_server($_[0]);
               return @allgot;
-	    });
+	    }, $packages ? \%want : undef);
 }
 
 # refresh_server_updates(&server, &newly-gotten)
@@ -4293,7 +4304,7 @@ if (($server->{'virtualmin_poss'} || $server->{'all_poss'}) &&
 		    		    $server->{'all_poss'} ||
 				      $server->{'virtualmin_poss'}),
 		    'cat' => '',
-		    'link' => "edit_update.cgi?id=$server->{'id'}" });
+		    'link' => "mass_update_form.cgi?d=$server->{'id'}" });
 	}
 
 # Link to edit limits

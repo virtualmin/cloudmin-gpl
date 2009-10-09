@@ -551,6 +551,7 @@ mass_uptitle=Updating Systems
 mass_updoing=Updating $2 packages on $1 systems ..
 mass_updone=.. update complete.
 mass_upserver=Updated packages on $1 ..
+mass_upservernone=No package updates done on $1.
 mass_uplist=.. installed $1
 mass_upnone=.. nothing was installed!
 mass_upfailed=.. update failed : $1

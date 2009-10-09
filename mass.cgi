@@ -188,66 +188,6 @@ elsif ($in{'update'}) {
 	&redirect("mass_update_form.cgi?$ids");
 	}
 
-elsif ($in{'update'}) {
-	# Update packages on multiple systems at once
-	# XXX move me
-	&can_action_error(\@servers, "update");
-	&ui_print_unbuffered_header(undef, $text{'mass_uptitle'}, "");
-
-	# Find selected servers with updates
-	@upservers = ( );
-	$pos = 0;
-	foreach $s (@servers) {
-		$info = &get_server_collected($s);
-		@poss = @{$info->{'allposs'}};
-		@poss = @{$info->{'poss'}} if (!@poss);
-		if (@poss) {
-			push(@upservers, $s);
-			$pos += scalar(@poss);
-			}
-		}
-
-	# Run them in parallel, and report on updates done
-	print &text('mass_updoing', scalar(@upservers), $pos),"<br>\n";
-	&obtain_lock_server(\@upservers);
-	print "<ul>\n";
-	@rv = &parallel_install_package_updates(\@upservers);
-	for($i=0; $i<@rv; $i++) {
-		$s = $upservers[$i];
-		if (@{$rv[$i]}) {
-			print &text('mass_upserver',
-				"<tt>$s->{'host'}</tt>"),"<br>\n";
-			print "<ul>\n";
-			foreach $p (@{$rv[$i]}) {
-				print &text('update_pkg',
-					    "<tt>$p->{'name'}</tt>",
-					    $p->{'version'}),"<br>\n";
-				if (!$p->{'status'}) {
-					print &text('mass_upfailed',
-						    $p->{'error'});
-					}
-				elsif (@{$p->{'updates'}}) {
-					print &text('mass_uplist', 
-						join(" ", map { "<tt>$_</tt>" }
-							@{$p->{'updates'}}));
-					}
-				else {
-					print $text{'mass_upnone'};
-					}
-				print "<br>\n";
-				}
-			print "</ul>\n";
-			}
-		}
-	print "</ul>\n";
-	&release_lock_server(\@upservers);
-	print $text{'mass_updone'},"<p>\n";
-	&webmin_log("update", "servers", scalar(@servers),
-		    { 'hosts' => \@hostnames });
-
-	&ui_print_footer("", $text{'index_return'});
-	}
-
 elsif ($in{'script'}) {
 	# Show a form for updating scripts from multiple systems
 	&can_action_error(\@servers, "script");
@@ -479,8 +419,6 @@ elsif ($in{'reboot'}) {
 		}
 	&ui_print_footer("", $text{'index_return'});
 	}
-
-
 
 elsif ($in{'upload'}) {
 	# Redirect to mass upload form
