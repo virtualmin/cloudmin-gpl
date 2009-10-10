@@ -80,6 +80,20 @@ if ($k->{'version'}) {
 		       $k->{'version'}, $k->{'arch'}));
 	}
 
+# Original image
+if ($server->{'image'}) {
+	$imgid = $server->{'image'};
+	$img = &get_server_image($imgid);
+	if ($img) {
+		$imgid .= " ($img->{'desc'})";
+		if (&can_action(undef, "global")) {
+			$imgid ="<a href='edit_image.cgi?id=$img->{'id'}'>".
+				"$imgid</a>";
+			}
+		}
+	print &ui_table_row($text{'edit_imagefrom'}, $imgid);
+	}
+
 if (!$view) {
 	# Groups
 	@groups = &unique(map { split(/\t/, $_->{'group'}) } @servers);
