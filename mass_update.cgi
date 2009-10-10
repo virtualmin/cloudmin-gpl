@@ -75,6 +75,10 @@ print $text{'mass_updone'},"<p>\n";
 &webmin_log("update", "servers", scalar(@servers),
 	    { 'hosts' => \@hostnames });
 
+if (defined(&theme_post_save_server)) {
+	&theme_post_save_server();
+	&theme_select_server($servers[0]) if (@servers == 1);
+	}
 
 &ui_print_footer("", $text{'index_return'});
 
