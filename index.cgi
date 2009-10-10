@@ -192,7 +192,7 @@ if (@servers) {
 				$posscount += $pos;
 				$posdesc = " - ".&text($pos > 1 ?
 					'index_poss' : 'index_pos', $pos,
-					"edit_update.cgi?id=$s->{'id'}");
+					"mass_update_form.cgi?d=$s->{'id'}");
 				}
 
 			# Create hostname link
