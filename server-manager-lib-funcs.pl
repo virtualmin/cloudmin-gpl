@@ -2097,7 +2097,9 @@ return &parallel_server_function($servers,
 		# Limit to those requested
 		@poss = grep { $want{$_->{'name'},$_->{'system'}} } @poss;
 	      }
-	      foreach $p (&sort_package_updates(@poss)) {
+	      my %donedep;
+	      foreach my $p (&sort_package_updates(@poss)) {
+		  next if ($donedep{$p->{'name'}});
 	          my $got = &install_package_update($_[0], $p);
 		  my $status = { 'name' => $p->{'name'},
 				 'version' => $p->{'version'} };
@@ -2105,6 +2107,9 @@ return &parallel_server_function($servers,
 		    # Installed something
                     $status->{'status'} = 1;
                     $status->{'updates'} = $got;
+		    foreach my $g (@$got) {
+			$donedep{$g}++;
+		        }
 		    }
 		  else {
 		    # Install failed
