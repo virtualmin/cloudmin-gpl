@@ -10,7 +10,8 @@ $server = { 'manager' => $in{'type'},
 	    'id' => &server_id(), };
 
 # Validate inputs, starting with hostname
-gethostbyname($in{'host'}) || &error($text{'add_ehost'});
+$server->{'ip'} = $server->{'ip_addresses'} = &to_ipaddress($in{'host'});
+$server->{'ip'} || &error($text{'add_ehost'});
 ($clash) = grep { $_->{'host'} eq $in{'host'} } @servers;
 $clash && &error($text{'add_eclash'});
 $server->{'host'} = $in{'host'};
