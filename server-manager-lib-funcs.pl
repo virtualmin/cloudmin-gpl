@@ -3514,6 +3514,34 @@ foreach my $key (grep { $_->{'id'} ne $server->{'key'} && $_->{'addnew'} }
 return &put_file_to_server($server, $temp, $authkeys);
 }
 
+# regenerate_ssh_host_keys(&server)
+# Delete all SSH host keys from a system, re-generate and restart SSHd
+sub regenerate_ssh_host_keys
+{
+my ($server) = @_;
+my $found = 0;
+if (!&has_command_on_server($server, "ssh-keygen")) {
+	return "ssh-keygen command not found";
+	}
+foreach my $t ('', 'dsa', 'rsa') {
+	my $hkf = "/etc/ssh/".($t ? "ssh_host_${t}_key" : "ssh_host_key");
+	my @st = &stat_file_on_server($server, $hkf);
+	next if (!@st);
+	my $err = &delete_file_on_server($server, $hkf);
+	if ($err) {
+		return "Failed to delete $hkf : $err";
+		}
+	&delete_file_on_server($server, $hkf.".pub");
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"ssh-keygen".($t ? " -t $t" : "")." -f $hkf -N '' </dev/null");
+	if ($ex || $err) {
+		return "Failed to generate $hkf : ".($err || $out);
+		}
+	$found++;
+	}
+return $found ? undef : "No SSH host keys found";
+}
+
 # check_domain_move(&serverdoms, &destserver, delete, direct, re-allocate-ip)
 # Checks if the given set of virtual servers can be moved together, and returns
 # an error message if not.

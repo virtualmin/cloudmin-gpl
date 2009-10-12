@@ -289,6 +289,7 @@ create_xensetkey=Setting up SSH key ..
 create_exensetkey=.. failed : $1
 create_xenaddnewkeys=Adding extra authorized SSH keys ..
 create_exenaddnewkeys=.. some failed : $1
+create_xenhostkey=Regenerating SSH host keys ..
 create_xenfix=Updating configuration files with hostname and IP address ..
 create_exenfix= .. failed : $1
 create_xenlicence=Updating Virtualmin license files ..
