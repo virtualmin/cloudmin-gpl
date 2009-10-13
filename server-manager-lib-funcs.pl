@@ -3594,6 +3594,12 @@ foreach my $t ('', 'dsa', 'rsa') {
 		}
 	$found++;
 	}
+if ($found) {
+	# Restart SSHd too
+	&execute_command_on_server($server,
+		$server->{'type'} eq 'solaris' ?
+			'pkill -HUP sshd' : 'killall -HUP sshd');
+	}
 return $found ? undef : "No SSH host keys found";
 }
 
