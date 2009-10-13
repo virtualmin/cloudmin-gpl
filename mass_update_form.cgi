@@ -106,5 +106,9 @@ else {
 	print "<p>$text{'update_none'}<p>\n";
 	}
 
+if (@servers == 1 && defined(&theme_select_server)) {
+	&theme_select_server($servers[0]);
+	}
+
 &ui_print_footer("", $text{'index_return'});
 

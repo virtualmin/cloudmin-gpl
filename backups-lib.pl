@@ -777,7 +777,7 @@ my ($server, $dest) = @_;
 my $was_up = 0;
 if ($server->{'status'} ne 'down') {
 	&$first_print(&text('rrun_shutdown', $server->{'host'}));
-	$err = &shutdown_server($server);
+	$err = &shutdown_server($server, 1);
 	if ($err) {
 		return { 'ok' => 0,
 			 'msg' => &text('smove_shutfailed', $err) };

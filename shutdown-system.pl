@@ -79,12 +79,15 @@ foreach $s (@servers) {
 		print ".. shutdown failed : $err\n\n";
 		}
 	else {
-		#&check_server_status($s);
-		$s->{'status'} = 'down';	# Assume it worked
-		&refresh_server_usage($s);
-		&save_managed_server($s);
 		print ".. shutdown successfull\n\n";
 		}
+
+	print "Refreshing status of $s->{'host'} ..\n";
+	&check_server_status($s, 0, 1);
+	&refresh_server_usage($s);
+	&save_managed_server($s);
+	$desc = $text{'status_'.$s->{'status'}};
+	print ".. new status is : $s->{'status'} ($desc)\n";
 	}
 &release_lock_server(\@servers);
 &cloudmin_api_log(\@OLDARGV);
