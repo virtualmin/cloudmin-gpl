@@ -631,7 +631,7 @@ elsif ($dest->{'mode'} == 2) {
 	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
 	return &text('brun_emkdir', $mkerr) if ($mkerr);
 	return &transfer_file_between_servers($server, $destserver,
-					      $file, $dest->{'path'}, 0);
+					      $file, $dest->{'path'}, 0, 1);
 	}
 elsif ($dest->{'mode'} == 3) {
 	# Send via SSH (using a fake server object)
@@ -1041,7 +1041,7 @@ elsif ($dest->{'mode'} == 2) {
 	$destserver ||
 		return "No Cloudmin system with ID $dest->{'id'} exists";
 	return &transfer_file_between_servers($destserver, $server,
-					      $dest->{'path'}, $file, 0);
+					      $dest->{'path'}, $file, 0, 1);
 	}
 elsif ($dest->{'mode'} == 3) {
 	# Get via SSH (using a fake server object)

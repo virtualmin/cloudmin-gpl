@@ -34,6 +34,10 @@ print &ui_table_row($text{'transfer_upsource'},
 print &ui_table_row($text{'transfer_updest'},
 	&ui_textbox("dest", undef, 60));
 
+# Checksum file?
+print &ui_table_row($text{'transfer_checksum'},
+	&ui_yesno_radio("checksum", 0));
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'transfer_uploadok'} ] ]);
 print &ui_tabs_end_tab();

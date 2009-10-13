@@ -25,7 +25,8 @@ print &text('transfer_done', "<tt>$in{'source'}</tt>",
 			     "<tt>$in{'dest'}</tt>",
 			     "<tt>$dest->{'host'}</tt>"),"<br>\n";
 $err = &transfer_file_between_servers($server, $dest,
-				      $in{'source'}, $in{'dest'});
+				      $in{'source'}, $in{'dest'},
+				      0, $in{'checksum'});
 if ($err) {
 	print &text('transfer_failed', $err),"<p>\n";
 	}

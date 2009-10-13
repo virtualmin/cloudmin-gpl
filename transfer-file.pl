@@ -11,6 +11,10 @@ copy is set with C<--file>. By default it will be copied to the same path
 on the target, unless the C<--destfile> parameter followed by a new filename
 is given.
 
+To double-check that the file was transferred correctly, use the 
+C<--checksum> flag. This will trigger an md5 checksum on the source and
+destination files.
+
 =head1 Example usage
 
   cloudmin transfer-file --source xencentos.home --dest xensendmail.home --file /etc/hosts --destfile /tmp/hosts
@@ -49,6 +53,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--destfile") {
 		$dest = shift(@ARGV);
 		}
+	elsif ($a eq "--checksum") {
+		$checksum = 1;
+		}
 	else {
 		&usage();
 		}
@@ -68,7 +75,8 @@ $destserver || &usage("No system named $desthost exists");
 
 # Do the transfer
 print "Copying $src on $srcserver->{'host'} to $dest on $destserver->{'host'} ..\n";
-$err = &transfer_file_between_servers($srcserver, $destserver, $src, $dest);
+$err = &transfer_file_between_servers($srcserver, $destserver, $src, $dest,
+				      0, $checksum);
 if ($err) {
 	print ".. copy failed : $err\n";
 	}
@@ -86,6 +94,7 @@ print "cloudmin transfer-file --source hostname\n";
 print "                       --dest hostname\n";
 print "                       --file path\n";
 print "                      [--destfile path]\n";
+print "                      [--checksum]\n";
 exit(1);
 }
 

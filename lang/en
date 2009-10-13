@@ -1639,6 +1639,7 @@ transfer_upsource=Source file
 transfer_local=Uploaded file
 transfer_file=File on VM master
 transfer_updest=Destination file or directory
+transfer_checksum=Checksum transferred file?
 transfer_uploadok=Upload Now
 transfer_uheader=File upload options
 transfer_dheader=File download options

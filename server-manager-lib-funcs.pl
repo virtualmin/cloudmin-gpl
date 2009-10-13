@@ -1060,27 +1060,36 @@ return $err;
 }
 
 # transfer_file_between_servers(&source-server, &dest-server,
-#				source-file, dest-file, device-file)
+#				source-file, dest-file,
+#				[device-file?], [checksum?])
 # Copy a file from one system to another, directly if possible. Returns undef
 # if OK, or an error message on failure.
 sub transfer_file_between_servers
 {
-my ($srcserver, $destserver, $src, $dest, $device) = @_;
+my ($srcserver, $destserver, $src, $dest, $device, $checksum) = @_;
+my $rv;
+my ($srccs_ok, $srccs);
+
+# Get checksum on source system, if possible
+if ($checksum) {
+	($srccs_ok, $srccs) = &checksum_file_on_server($srcserver, $src);
+	}
+
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just copy
 	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
 		$device ?
 		  "dd if=".quotemeta($src)." of=".quotemeta($dest)." bs=32768" :
 		  "cp ".quotemeta($src)." ".quotemeta($dest));
-	return $err ? $err : $ex ? $out : undef;
+	$rv = $err ? $err : $ex ? $out : undef;
 	}
 elsif ($srcserver->{'id'} == 0) {
 	# Copying from Cloudmin master - just upload
-	return &put_file_to_server($destserver, $src, $dest, $device);
+	$rv = &put_file_to_server($destserver, $src, $dest, $device);
 	}
 elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - just download
-	return &get_file_from_server($srcserver, $src, $dest, $device);
+	$rv = &get_file_from_server($srcserver, $src, $dest, $device);
 	}
 else {
 	# Both are remote! First try scp on source to dest
@@ -1169,7 +1178,7 @@ else {
 		if (!$wrong_password && $given_password < 3 &&
 		    !$connect_failed) {
 			# Looks like it did!
-			return undef;
+			$rv = undef;
 			}
 		}
 	if ($keytemp) {
@@ -1177,16 +1186,31 @@ else {
 		}
 	}
 
-# Fall back to fetching to master and uploading
-my $srcfile = $src;
-$srcfile =~ s/^.*[\\\/]//;
-my $temp = &transname($srcfile);
-my $err = &get_file_from_server($srcserver, $src, $temp, $device);
-return "Download to Cloudmin master failed : $err" if ($err);
-$err = &put_file_to_server($destserver, $temp, $dest, $device);
-&unlink_file($temp);
-return "Upload from Cloudmin master failed : $err" if ($err);
-return undef;
+if (!$rv) {
+	# Fall back to fetching to master and uploading
+	my $srcfile = $src;
+	$srcfile =~ s/^.*[\\\/]//;
+	my $temp = &transname($srcfile);
+	my $err = &get_file_from_server($srcserver, $src, $temp, $device);
+	$rv = "Download to Cloudmin master failed : $err" if ($err);
+	$err = &put_file_to_server($destserver, $temp, $dest, $device);
+	&unlink_file($temp);
+	$rv = "Upload from Cloudmin master failed : $err" if ($err);
+	}
+
+# Checksum on target
+if (!$rv && $srccs_ok) {
+	my ($destcs_ok, $destcs) = &checksum_file_on_server($destserver, $dest);
+	print STDERR "srccs=$srccs srccs_ok=$srccs_ok destcs=$destcs destcs_ok=$destcs_ok\n";
+	if (!$destcs_ok) {
+		$rv = "Failed to checksum file on destination system : $destcs";
+		}
+	elsif ($srccs ne $destcs) {
+		$rv = "Checksum mismatch after file transfer : $srccs != $destcs";
+		}
+	}
+
+return $rv;
 }
 
 # delete_file_on_server(&server, remotefile, [no-quote])
@@ -1355,6 +1379,37 @@ if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 	}
 $out =~ s/\r|\n//g;
 return $out;
+}
+
+# checksum_file_on_server(&server, file)
+# Performs an MD5 checksum of a file on some system. Returns 1 and the checksum
+# on success, or 0 and an error message on failure.
+sub checksum_file_on_server
+{
+my ($server, $file) = @_;
+my $dfunc = "type_".$server->{'manager'}."_checksum_file";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	my @rv = &$dfunc(@_);
+	return @rv if ($rv[0] ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to scp
+	}
+
+# Run md5sum via SSH
+my ($out, $ex, $err) = &execute_command_on_server($server,
+			"md5sum ".quotemeta($file));
+if ($err) {
+	return (0, $err);
+	}
+elsif ($ex) {
+	return (0, $out);
+	}
+elsif ($out =~ /^([0-9a-f]+)\s+/) {
+	return (1, $1);
+	}
+else {
+	return (0, "Unknown md5sum output : $out");
+	}
 }
 
 # list_processes_on_server(&server)
