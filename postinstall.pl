@@ -157,9 +157,10 @@ if (!$miniserv{'premodules'}) {
 if ($changed_preload) {
 	# Only apply miniserv change if needed
 	&put_miniserv_config(\%miniserv);
-	if (&check_pid_file($miniserv{'pidfile'})) {
-		&restart_miniserv();
-		}
+	}
+if (&check_pid_file($miniserv{'pidfile'})) {
+	# Always restart, in case code has changed
+	&restart_miniserv();
 	}
 
 # Record the install time for this version
