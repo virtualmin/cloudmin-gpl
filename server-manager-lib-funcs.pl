@@ -4439,6 +4439,13 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
 			    'desc' => $text{'edit_shutdown'},
 			    'cat' => 'power' });
 		}
+	if (($status eq 'nossh' || $status eq 'paused' ||
+             $status eq 'noping') && !$noreboot &&
+	    &can_action($server, "reboot")) {
+		push(@rv, { 'id' => 'reboot',
+			    'desc' => $text{'edit_reboot'},
+			    'cat' => 'power' });
+		}
 	}
 elsif ($status eq 'alive') {
 	# For servers where we are not allowed to login, only show boot-related
