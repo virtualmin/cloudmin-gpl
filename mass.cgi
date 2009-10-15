@@ -123,7 +123,7 @@ elsif ($in{'delete'}) {
 				}
 			else {
 				print $text{'mass_deleted'},"<p>\n";
-				&remove_server_ssh_keys($s);
+				&clear_ssh_host_key($s);
 				&delete_managed_server($s);
 
 				# Run post-deletion script

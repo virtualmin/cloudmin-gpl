@@ -171,7 +171,7 @@ elsif ($in{'delete'}) {
 			print &text('save_deletefailed', $err),"<p>\n";
 			}
 		else {
-			&remove_server_ssh_keys($server);
+			&clear_ssh_host_key($server);
 			&delete_managed_server($server);
 			print $text{'save_deletedone'},"<p>\n";
 

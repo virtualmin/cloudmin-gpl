@@ -3599,6 +3599,7 @@ if ($found) {
 	&execute_command_on_server($server,
 		$server->{'type'} eq 'solaris' ?
 			'pkill -HUP sshd' : 'killall -HUP sshd');
+	&clear_ssh_host_key($server);
 	}
 return $found ? undef : "No SSH host keys found";
 }
@@ -5102,32 +5103,6 @@ my ($serial, $key) = &get_server_manager_serial();
 return $key !~ /^AMAZON/i;
 }
 
-# remove_server_ssh_keys(&server)
-# Delete from root's ~/.ssh/authorized_keys* files any entries for a new system
-sub remove_server_ssh_keys
-{
-my ($server) = @_;
-my $ip = &to_ipaddress($server->{'host'});
-my @uinfo = getpwnam("root");
-&make_dir("$uinfo[7]/.ssh", 0700);
-foreach my $f ("$uinfo[7]/.ssh/known_hosts",
-	       "$uinfo[7]/.ssh/known_hosts2") {
-	my $lref = &read_file_lines($f);
-	for(my $i=0; $i<@$lref; $i++) {
-		my @w = split(/\s+/, $lref->[$i]);
-		foreach my $hn (split(/,/, $w[0])) {
-			if ($hn eq $server->{'host'} ||
-			    $ip && $hn eq $ip) {
-				# Found one to remove
-				splice(@$lref, $i--, 1);
-				last;
-				}
-			}
-		}
-	&flush_file_lines($f);
-	}
-}
-
 # list_all_script_updates(&servers)
 # Fetch all possible script upgrades from multiple systems. Returns a list of
 # hashes, each containing the details of one upgrade in one domain on one system
@@ -5600,7 +5575,7 @@ if ($imageok == 1) {
 &save_managed_server($server);
 
 # Remove old SSH keys for this system
-&remove_server_ssh_keys($server);
+&clear_ssh_host_key($server);
 
 # Call any post-creation function
 $dfunc = "type_".$server->{'manager'}."_create_post";

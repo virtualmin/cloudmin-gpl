@@ -90,7 +90,7 @@ foreach $s (@servers) {
 		print ".. deletion failed : $err\n\n";
 		}
 	else {
-		&remove_server_ssh_keys($s);
+		&clear_ssh_host_key($s);
 		&delete_managed_server($s, $keep);
 		print ".. deleted successfully\n\n";
 

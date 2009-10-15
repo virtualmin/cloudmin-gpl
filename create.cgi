@@ -263,7 +263,7 @@ elsif ($in{'owner'}) {
 	}
 
 # Remove old SSH keys for this system
-&remove_server_ssh_keys($server);
+&clear_ssh_host_key($server);
 
 # Call any post-creation function
 $dfunc = "type_".$in{'type'}."_create_post";
