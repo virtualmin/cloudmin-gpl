@@ -355,6 +355,7 @@ create_xenmanual=Other configuration file entries
 create_xenvnc=Configuring Xen instance for VNC console access ..
 create_xenvncfailed=.. failed : $1
 create_xenvncdone=.. added on display $1
+create_exenpvgrub=Kernel loading with PvGrub was requested, but the $1 command was not found on $2
 create_edisklimit=Creating this system would exceed your total disk limit of $1. Currently you are using $2 of disk space.
 create_edisklimit2=Creating this system would exceed your total disk limit of $1, as it does not have any limits on disk usage.
 create_eramlimit=Creating this system would exceed your total memory limit of $1. Currently you are using $2 of memory.
@@ -1375,6 +1376,9 @@ xen_liveport=and port
 xen_elivehost=Missing or invalid destination hostname for live migration
 xen_eliveport=Missing or non-numeric port for live migration
 xen_header5=Xen configuration settings for hosted systems
+xen_pvgrub=Kernel for Xen instances
+xen_pvgrub0=From host system
+xen_pvgrub1=From Xen system (using PvGrub)
 
 xens_title=Xen Host Systems
 xens_add=Register a system for Xen hosting.
