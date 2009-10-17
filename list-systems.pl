@@ -14,6 +14,11 @@ To limit the display to only systems that can host virtual systems, use the
 C<--host-type> flag followed by a virtualization type like C<xen>, C<openvz>
 or C<zones>. Or if you want to get all host systems, use C<--host-type all>.
 
+In mutiline mode, uptime, CPU and RAM usage is displayed for the current
+account period. To show the previous period instead, use the C<--last-period>
+flag. Or to select any period in the past, use the C<--period-ago> flag followed
+by a number of weeks or months.
+
 =head1 Example usage
 
   cloudmin list-systems --type xen
@@ -61,6 +66,8 @@ while(@ARGV > 0) {
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
 	elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
 	elsif ($a eq "--host-type") { $hosttypes{shift(@ARGV)} = 1; }
+	elsif ($a eq "--last-period") { $period_ago = 1; }
+	elsif ($a eq "--period-ago") { $period_ago = shift(@ARGV); }
 	else {
 		&usage();
 		}
@@ -263,7 +270,8 @@ if ($multi) {
 		if (defined(&get_server_usage)) {
 			# Get usage and current period
 			@usage = &get_server_usage($s);
-			($start, $now) = &usage_period_start_end(\@usage);
+			($start, $end) = &usage_period_start_end(
+						\@usage, $period_ago);
 			print "    Resource accounting period: ",
 				$config{'bw_period'} ?
 					"Current ".$config{'bw_period'} :
@@ -271,16 +279,19 @@ if ($multi) {
 			$ago = time() - $start;
 			print "    Start of period: ",
 				&make_date($start)," ($ago seconds ago)\n";
+			$eago = time() - $end;
+			print "    End of period: ",
+				&make_date($end)," ($eago seconds ago)\n";
 
 			# System uptime
 			$up = &sum_usage_over_period(
-				\@usage, $start, $now, 'up');
+				\@usage, $start, $end, 'up');
 			print "    System uptime over period: ",
 				&nice_hour_mins_secs($up)," ($up seconds)\n";
 
 			# Memory use
 			$mem = &sum_usage_over_period(
-				\@usage, $start, $now, 'mem');
+				\@usage, $start, $end, 'mem');
 			if ($mem) {
 				$gbh = sprintf("%.2f",
 					($mem / (3600*1024*1024*1024)));
@@ -290,7 +301,7 @@ if ($multi) {
 
 			# CPU allocation
 			$cpu = &sum_usage_over_period(
-				\@usage, $start, $now, 'cpu');
+				\@usage, $start, $end, 'cpu');
 			if ($cpu) {
 				$cpuh = sprintf("%.2f", ($cpu / 3600));
 				print "    CPU allocated over period: ",
@@ -300,7 +311,7 @@ if ($multi) {
 
 			# CPU usage
 			$load = &sum_usage_over_period(
-				\@usage, $start, $now, 'load');
+				\@usage, $start, $end, 'load');
 			if ($load) {
 				$loadh = sprintf("%.2f", ($load / 3600));
 				print "    CPU used over period: ",
@@ -391,6 +402,7 @@ print "                      [--type $types]*\n";
 print "                      [--os oscode]*\n";
 print "                      [--owner name]*\n";
 print "                      [--host-type type|\"all\"]\n";
+print "                      [--last-period | --period-ago N]\n";
 exit(1);
 }
 
