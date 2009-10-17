@@ -111,14 +111,30 @@ print &ui_hidden_table_end();
 # Section for usage data, if we have it
 if (defined(&get_server_usage) && !$in{'new'}) {
 	print &ui_hidden_table_start($text{'owner_header2'}, "width=100%", 2,
-				     "usage", 0, [ 'width=30%' ]);
+			     "usage", defined($in{'ago'}), [ 'width=30%' ]);
 
-	# Accounting period
-	print &ui_table_row($text{'edit_uperiod'},
-		$config{'bw_period'} ? $text{'bw_last_'.$config{'bw_period'}}
-				     : &text('bw_days', $config{'bw_days'}));
+	# Accounting period selector
+	@agos = ( );
+	foreach my $ago (0 .. 3) {
+		if ($ago) {
+			$msg = $config{'bw_period'} ?
+				&text('bw_ago_'.$config{'bw_period'}, $ago) :
+				&text('bw_ago', $config{'bw_days'}, $ago);
+			}
+		else {
+			$msg = $config{'bw_period'} ?
+				$text{'bw_last_'.$config{'bw_period'}} :
+				&text('bw_days', $config{'bw_days'});
+			}
+		if ($ago != $in{'ago'}) {
+			$msg = "<a href='edit_owner.cgi?name=".
+				&urlize($in{'name'})."&ago=$ago'>$msg</a>";
+			}
+		push(@agos, $msg);
+		}
+	print &ui_table_row($text{'edit_uperiod'}, &ui_links_row(\@agos));
 
-	# Total uptime over usage period
+	# Find all usage for managed systems
 	@allservers = &list_managed_servers();
 	@allusage = ( );
 	foreach $id (@sids) {
@@ -128,35 +144,43 @@ if (defined(&get_server_usage) && !$in{'new'}) {
 			}
 		}
 	@allusage = sort { $a->{'start'} cmp $b->{'start'} } @allusage;
-	($start, $now) = &usage_period_start_end(\@usage);
-	$up = &sum_usage_over_period(\@allusage, $start, $now, 'up');
+	($start, $end) = &usage_period_start_end(\@allusage, $in{'ago'});
+
+	# Period start and end
+	print &ui_table_row($text{'edit_ustart'}, &make_date($start));
+	if ($in{'ago'}) {
+		print &ui_table_row($text{'edit_uend'}, &make_date($end));
+		}
+
+	# Total uptime over usage period
+	$up = &sum_usage_over_period(\@allusage, $start, $end, 'up');
 	print &ui_table_row($text{'edit_uup'}, &nice_hour_mins_secs($up));
 	
 	# Memory over accounting period
-	$mem = &sum_usage_over_period(\@allusage, $start, $now, 'mem');
+	$mem = &sum_usage_over_period(\@allusage, $start, $end, 'mem');
 	if ($mem) {
 		$gbh = sprintf("%.2f", ($mem / (3600*1024*1024*1024)));
-		$avgmem = &nice_size(int($mem / ($now - $start)));
+		$avgmem = &nice_size(int($mem / ($end - $start)));
 		$upmem = &nice_size(int($mem / $up));
 		print &ui_table_row($text{'edit_umem'},
 				    &text('edit_ugbh', $gbh, $avgmem, $upmem));
 		}
 
 	# CPU allocation, in percent hours
-	$cpu = &sum_usage_over_period(\@allusage, $start, $now, 'cpu');
+	$cpu = &sum_usage_over_period(\@allusage, $start, $end, 'cpu');
 	if ($cpu) {
 		$cpuh = sprintf("%.2f", ($cpu / 3600));
-		$avgcpu = int($cpu / ($now - $start));
+		$avgcpu = int($cpu / ($end - $start));
 		$upcpu = int($cpu / $up);
 		print &ui_table_row($text{'edit_ucpu'},
 			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
 		}
 
 	# CPU load, in percent hours
-	$load = &sum_usage_over_period(\@allusage, $start, $now, 'load');
+	$load = &sum_usage_over_period(\@allusage, $start, $end, 'load');
 	if ($load) {
 		$cpuh = sprintf("%.2f", ($load / 3600));
-		$avgcpu = int($load / ($now - $start));
+		$avgcpu = int($load / ($end - $start));
 		$upcpu = int($load / $up);
 		print &ui_table_row($text{'edit_uload'},
 			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
