@@ -10,6 +10,11 @@ get a list of just logins use C<--name-only>. To limit the listing to just
 some owners, use the C<--name> flag followed by a owner's login. This can be
 given more than once.
 
+In mutiline mode, uptime, CPU and RAM usage is displayed for the current
+account period. To show the previous period instead, use the C<--last-period>
+flag. Or to select any period in the past, use the C<--period-ago> flag followed
+by a number of weeks or months.
+
 =head1 Example usage
 
   cloudmin list-owners
@@ -46,6 +51,12 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--name-only") {
 		$nameonly = 1;
+		}
+	elsif ($a eq "--last-period") {
+		$period_ago = 1;
+		}
+	elsif ($a eq "--period-ago") {
+		$period_ago = shift(@ARGV);
 		}
 	else {
 		&usage();
@@ -105,6 +116,62 @@ if ($multi) {
 		%actions = map { $_, 1 } split(/\s+/, $o->{'acl'}->{'actions'});
 		print "    Allowed actions: ",
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";
+
+		# Find all usage for managed systems
+		@allusage = ( );
+		foreach $s (@users) {
+			push(@allusage, &get_server_usage($s));
+			}
+		@allusage = sort { $a->{'start'} cmp $b->{'start'} } @allusage;
+		($start, $end) = &usage_period_start_end(\@allusage,
+							 $period_ago);
+
+		print "    Resource accounting period: ",
+			$config{'bw_period'} ?
+				"One ".$config{'bw_period'} :
+				"Last ".$config{'bw_days'}." days","\n";
+		$ago = time() - $start;
+		print "    Start of period: ",
+			&make_date($start)," ($ago seconds ago)\n";
+		$eago = time() - $end;
+		print "    End of period: ",
+			&make_date($end)," ($eago seconds ago)\n";
+
+		# System uptime
+		$up = &sum_usage_over_period(
+			\@allusage, $start, $end, 'up');
+		print "    System uptime over period: ",
+			&nice_hour_mins_secs($up)," ($up seconds)\n";
+
+		# Memory use
+		$mem = &sum_usage_over_period(
+			\@allusage, $start, $end, 'mem');
+		if ($mem) {
+			$gbh = sprintf("%.2f",
+				($mem / (3600*1024*1024*1024)));
+			print "    Memory used over period: ",
+				$gbh," GB hours ($mem byte seconds)\n";
+			}
+
+		# CPU allocation
+		$cpu = &sum_usage_over_period(
+			\@allusage, $start, $end, 'cpu');
+		if ($cpu) {
+			$cpuh = sprintf("%.2f", ($cpu / 3600));
+			print "    CPU allocated over period: ",
+				$cpuh," percent hours ",
+				"($cpu percent seconds)\n";
+			}
+
+		# CPU usage
+		$load = &sum_usage_over_period(
+			\@allusage, $start, $end, 'load');
+		if ($load) {
+			$loadh = sprintf("%.2f", ($load / 3600));
+			print "    CPU used over period: ",
+				$loadh," percent hours ",
+				"($load percent seconds)\n";
+			}
 		}
 	}
 elsif ($nameonly) {
@@ -134,6 +201,7 @@ print "Lists some or all systems owners.\n";
 print "\n";
 print "cloudmin list-owners [--multiline | --name-only]\n";
 print "                     [--name username]*\n";
+print "                     [--last-period | --period-ago N]\n";
 exit(1);
 }
 

@@ -274,7 +274,7 @@ if ($multi) {
 						\@usage, $period_ago);
 			print "    Resource accounting period: ",
 				$config{'bw_period'} ?
-					"Current ".$config{'bw_period'} :
+					"One ".$config{'bw_period'} :
 					"Last ".$config{'bw_days'}." days","\n";
 			$ago = time() - $start;
 			print "    Start of period: ",
