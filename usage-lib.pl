@@ -295,5 +295,30 @@ if ($len && $end > $usage->[$len-1]->{'end'}) {
 return ($start, $end);
 }
 
+# usage_period_selector(name, current-value, base-url)
+# Returns HTML for selecting an accounting period
+sub usage_period_selector
+{
+my ($name, $inago, $url) = @_;
+my @agos = ( );
+foreach my $ago (0 .. 3) {
+	if ($ago) {
+		$msg = $config{'bw_period'} ?
+			&text('bw_ago_'.$config{'bw_period'}, $ago) :
+			&text('bw_ago', $config{'bw_days'}, $ago);
+		}
+	else {
+		$msg = $config{'bw_period'} ?
+			$text{'bw_last_'.$config{'bw_period'}} :
+			&text('bw_days', $config{'bw_days'});
+		}
+	if ($ago != $inago) {
+		$msg = "<a href='$url&ago=$ago'>$msg</a>";
+		}
+	push(@agos, $msg);
+	}
+return &ui_links_row(\@agos);
+}
+
 1;
 

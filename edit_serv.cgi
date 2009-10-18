@@ -197,7 +197,7 @@ print &ui_hidden_table_end("basic");
 # Resource usage, if supported
 if (defined(&get_server_usage)) {
 	print &ui_hidden_table_start($text{'edit_uheader'},
-				     "width=100%", 2, "usage", 0, \@tds);
+		     "width=100%", 2, "usage", defined($in{'ago'}), \@tds);
 
 	# System owner
 	if (defined(&list_system_owners)) {
@@ -216,50 +216,63 @@ if (defined(&get_server_usage)) {
 
 	# Accounting period
 	print &ui_table_row($text{'edit_uperiod'},
-		$config{'bw_period'} ? $text{'bw_last_'.$config{'bw_period'}}
-				     : &text('bw_days', $config{'bw_days'}));
+		&usage_period_selector("ago", $in{'ago'},
+			"edit_serv.cgi?id=$in{'id'}"));
 
 	# Get usage and current period
 	@usage = &get_server_usage($server);
-	($start, $now) = &usage_period_start_end(\@usage);
+	($start, $end) = &usage_period_start_end(\@usage, $in{'ago'});
 
 	# Uptime and percentage
-	$up = &sum_usage_over_period(\@usage, $start, $now, 'up');
-	$pc = $up ? int($up * 100 / ($now - $start)) : 0;
+	$up = &sum_usage_over_period(\@usage, $start, $end, 'up');
+	$pc = $up ? int($up * 100 / ($end - $start)) : 0;
 	print &ui_table_row($text{'edit_uup'},
 			    &text('edit_ulen', &nice_hour_mins_secs($up), $pc));
 
 	# Memory usage, in GB hours and average
-	$mem = &sum_usage_over_period(\@usage, $start, $now, 'mem');
+	$mem = &sum_usage_over_period(\@usage, $start, $end, 'mem');
 	if ($mem) {
 		$gbh = sprintf("%.2f", ($mem / (3600*1024*1024*1024)));
-		$avgmem = &nice_size(int($mem / ($now - $start)));
+		$avgmem = &nice_size(int($mem / ($end - $start)));
 		$upmem = &nice_size(int($mem / $up));
 		print &ui_table_row($text{'edit_umem'},
 				    &text('edit_ugbh', $gbh, $avgmem, $upmem));
 		}
 
-	# CPU cores, in core hours
-	# XXX not implemented yet
-
 	# CPU allocation, in percent hours
-	$cpu = &sum_usage_over_period(\@usage, $start, $now, 'cpu');
+	$cpu = &sum_usage_over_period(\@usage, $start, $end, 'cpu');
 	if ($cpu) {
 		$cpuh = sprintf("%.2f", ($cpu / 3600));
-		$avgcpu = int($cpu / ($now - $start));
+		$avgcpu = int($cpu / ($end - $start));
 		$upcpu = int($cpu / $up);
 		print &ui_table_row($text{'edit_ucpu'},
 			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
 		}
 
 	# CPU load, in percent hours
-	$load = &sum_usage_over_period(\@usage, $start, $now, 'load');
+	$load = &sum_usage_over_period(\@usage, $start, $end, 'load');
 	if ($load) {
 		$cpuh = sprintf("%.2f", ($load / 3600));
-		$avgcpu = int($load / ($now - $start));
+		$avgcpu = int($load / ($end - $start));
 		$upcpu = int($load / $up);
 		print &ui_table_row($text{'edit_uload'},
 			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
+		}
+
+	# Disk assigned and used over period
+	$disk = &sum_usage_over_period(\@usage, $start, $end, 'disk');
+	$space = &sum_usage_over_period(\@usage, $start, $end, 'space');
+	if ($disk && $disk != $space) {
+		$gbh = sprintf("%.2f", ($disk / (3600*1024*1024*1024)));
+		$avgdisk = &nice_size(int($disk / ($end - $start)));
+		print &ui_table_row($text{'edit_udisk'},
+				    &text('edit_ugbh2', $gbh, $avgdisk));
+		}
+	if ($space) {
+		$gbh = sprintf("%.2f", ($space / (3600*1024*1024*1024)));
+		$avgspace = &nice_size(int($space / ($end - $start)));
+		print &ui_table_row($text{'edit_uspace'},
+				    &text('edit_ugbh2', $gbh, $avgspace));
 		}
 
 	print &ui_hidden_table_end("usage");

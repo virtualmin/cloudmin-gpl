@@ -114,25 +114,9 @@ if (defined(&get_server_usage) && !$in{'new'}) {
 			     "usage", defined($in{'ago'}), [ 'width=30%' ]);
 
 	# Accounting period selector
-	@agos = ( );
-	foreach my $ago (0 .. 3) {
-		if ($ago) {
-			$msg = $config{'bw_period'} ?
-				&text('bw_ago_'.$config{'bw_period'}, $ago) :
-				&text('bw_ago', $config{'bw_days'}, $ago);
-			}
-		else {
-			$msg = $config{'bw_period'} ?
-				$text{'bw_last_'.$config{'bw_period'}} :
-				&text('bw_days', $config{'bw_days'});
-			}
-		if ($ago != $in{'ago'}) {
-			$msg = "<a href='edit_owner.cgi?name=".
-				&urlize($in{'name'})."&ago=$ago'>$msg</a>";
-			}
-		push(@agos, $msg);
-		}
-	print &ui_table_row($text{'edit_uperiod'}, &ui_links_row(\@agos));
+	print &ui_table_row($text{'edit_uperiod'},
+		&usage_period_selector("ago", $in{'ago'},
+				"edit_owner.cgi?name=".&urlize($in{'name'})));
 
 	# Find all usage for managed systems
 	@allservers = &list_managed_servers();
@@ -184,6 +168,22 @@ if (defined(&get_server_usage) && !$in{'new'}) {
 		$upcpu = int($load / $up);
 		print &ui_table_row($text{'edit_uload'},
 			    &text('edit_ucpuh', $cpuh, $avgcpu, $upcpu));
+		}
+
+	# Disk assigned and used over period
+	$disk = &sum_usage_over_period(\@allusage, $start, $end, 'disk');
+	$space = &sum_usage_over_period(\@allusage, $start, $end, 'space');
+	if ($disk && $disk != $space) {
+		$gbh = sprintf("%.2f", ($disk / (3600*1024*1024*1024)));
+		$avgdisk = &nice_size(int($disk / ($end - $start)));
+		print &ui_table_row($text{'edit_udisk'},
+				    &text('edit_ugbh2', $gbh, $avgdisk));
+		}
+	if ($space) {
+		$gbh = sprintf("%.2f", ($space / (3600*1024*1024*1024)));
+		$avgspace = &nice_size(int($space / ($end - $start)));
+		print &ui_table_row($text{'edit_uspace'},
+				    &text('edit_ugbh2', $gbh, $avgspace));
 		}
 
 	print &ui_hidden_table_end();

@@ -154,8 +154,8 @@ if ($multi) {
 			}
 
 		# CPU allocation
-		$cpu = &sum_usage_over_period(
-			\@allusage, $start, $end, 'cpu');
+		$cpu = int(&sum_usage_over_period(
+			\@allusage, $start, $end, 'cpu'));
 		if ($cpu) {
 			$cpuh = sprintf("%.2f", ($cpu / 3600));
 			print "    CPU allocated over period: ",
@@ -164,13 +164,33 @@ if ($multi) {
 			}
 
 		# CPU usage
-		$load = &sum_usage_over_period(
-			\@allusage, $start, $end, 'load');
+		$load = int(&sum_usage_over_period(
+			\@allusage, $start, $end, 'load'));
 		if ($load) {
 			$loadh = sprintf("%.2f", ($load / 3600));
 			print "    CPU used over period: ",
 				$loadh," percent hours ",
 				"($load percent seconds)\n";
+			}
+
+		# Disk allocation
+		$disk = &sum_usage_over_period(
+			\@allusage, $start, $end, 'disk');
+		if ($disk) {
+			$gbh = sprintf("%.2f",
+				($disk / (3600*1024*1024*1024)));
+			print "    Disk limit over period: ",
+				$gbh," GB hours ($disk byte seconds)\n";
+			}
+
+		# Disk used
+		$space = &sum_usage_over_period(
+			\@allusage, $start, $end, 'space');
+		if ($space) {
+			$gbh = sprintf("%.2f",
+				($space / (3600*1024*1024*1024)));
+			print "    Disk used over period: ",
+			       $gbh," GB hours ($space byte seconds)\n";
 			}
 		}
 	}
