@@ -167,24 +167,24 @@ if ($up) {
 				}
 			}
 		}
+	}
 
-	# Get disk size
-	my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
-	if (defined(&$dfunc)) {
-		$disk = &$dfunc($server);
-		}
+# Get disk size
+my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
+if (defined(&$dfunc)) {
+	$disk = &$dfunc($server);
+	}
 
-	# Get disk usage, rounded to the MB to avoid small changes
-	my $sfunc = "type_".$server->{'manager'}."_get_disk_space";
-	if (defined(&$sfunc)) {
-		$space = &$sfunc($server);
-		$space = int($space / (1024*1024)) * (1024*1024);
-		}
+# Get disk usage, rounded to the MB to avoid small changes
+my $sfunc = "type_".$server->{'manager'}."_get_disk_space";
+if (defined(&$sfunc)) {
+	$space = &$sfunc($server);
+	$space = int($space / (1024*1024)) * (1024*1024);
 	}
 
 my $extend = 0;
 if ($usage && $usage->{'up'} && $up) {
-	# Can just extend current sample, if memory and CPU are same
+	# Can just extend current sample, if memory, CPU and disk are same
 	if ($cores == $usage->{'cores'} &&
 	    $cpu == $usage->{'cpu'} &&
 	    ($load == $usage->{'load'} || $loadtime) &&
@@ -194,8 +194,10 @@ if ($usage && $usage->{'up'} && $up) {
 		$extend = 1;
 		}
 	}
-elsif ($usage && !$usage->{'up'} && !$up) {
-	# Was down, still down .. can extend
+elsif ($usage && !$usage->{'up'} && !$up &&
+       $disk == $usage->{'disk'} &&
+       $space == $usage->{'space'}) {
+	# Was down, still down .. can extend if disk has not changed
 	$extend = 1;
 	}
 if ($extend && $up && $usage && $usage->{'start'} < $now-3600) {
