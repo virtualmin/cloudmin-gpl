@@ -807,6 +807,7 @@ edit_lheader=Resource limits
 edit_lmemory=Maximum memory allocation
 edit_lcpu=Maximum CPU use
 edit_ldisk=Maximum disk space
+edit_lspace=Disk space used
 edit_lrate=Maximum network speed
 edit_lweight=CPU allocation weighting
 edit_lunlimit=Unlimited

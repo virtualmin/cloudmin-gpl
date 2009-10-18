@@ -187,7 +187,7 @@ if ($multi) {
 				}
 			}
 
-		# Show limits, where we can
+		# Show limits, where we can, starting with memory
 		$cfunc = "type_".$s->{'manager'}."_can_memory";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$mfunc = "type_".$s->{'manager'}."_get_memory";
@@ -198,6 +198,8 @@ if ($multi) {
 					    : "Unlimited"),"\n";
 				}
 			}
+
+		# CPU limit
 		$cfunc = "type_".$s->{'manager'}."_can_cpu";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$mfunc = "type_".$s->{'manager'}."_get_cpu";
@@ -208,6 +210,8 @@ if ($multi) {
 				print "    CPU allocation weighting: $weight\n";
 				}
 			}
+
+		# Virtual CPU mappings
 		$cfunc = "type_".$s->{'manager'}."_can_vcpus";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$mfunc = "type_".$s->{'manager'}."_get_vcpus";
@@ -222,16 +226,30 @@ if ($multi) {
 				print "    Virtual CPUs: ",join(", ", @v),"\n";
 				}
 			}
+
+		# Disk space limit
 		$cfunc = "type_".$s->{'manager'}."_can_disk";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$dfunc = "type_".$s->{'manager'}."_get_disk";
 			$disk = &$dfunc($s);
 			if (defined($disk)) {
-				print "    Disk space limit: ",
+				print "    Disk space limit on host: ",
 				      ($disk ? &nice_size($disk)
 					    : "Unlimited"),"\n";
 				}
 			}
+
+		# Disk space used
+		$dfunc = "type_".$s->{'manager'}."_get_disk_space";
+		if (defined(&$dfunc)) {
+			$space = &$dfunc($s);
+			if ($space) {
+				print "    Disk space used on host: ",
+					&nice_size($space),"\n";
+				}
+			}
+
+		# Network rate
 		$cfunc = "type_".$s->{'manager'}."_can_network_rate";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$rfunc = "type_".$s->{'manager'}."_get_network_rate";
@@ -300,8 +318,8 @@ if ($multi) {
 				}
 
 			# CPU allocation
-			$cpu = &sum_usage_over_period(
-				\@usage, $start, $end, 'cpu');
+			$cpu = int(&sum_usage_over_period(
+				\@usage, $start, $end, 'cpu'));
 			if ($cpu) {
 				$cpuh = sprintf("%.2f", ($cpu / 3600));
 				print "    CPU allocated over period: ",
@@ -310,13 +328,33 @@ if ($multi) {
 				}
 
 			# CPU usage
-			$load = &sum_usage_over_period(
-				\@usage, $start, $end, 'load');
+			$load = int(&sum_usage_over_period(
+				\@usage, $start, $end, 'load'));
 			if ($load) {
 				$loadh = sprintf("%.2f", ($load / 3600));
 				print "    CPU used over period: ",
 					$loadh," percent hours ",
 					"($load percent seconds)\n";
+				}
+
+			# Disk allocation
+			$disk = &sum_usage_over_period(
+				\@usage, $start, $end, 'disk');
+			if ($disk) {
+				$gbh = sprintf("%.2f",
+					($disk / (3600*1024*1024*1024)));
+				print "    Disk limit over period: ",
+					$gbh," GB hours ($disk byte seconds)\n";
+				}
+
+			# Disk used
+			$space = &sum_usage_over_period(
+				\@usage, $start, $end, 'space');
+			if ($space) {
+				$gbh = sprintf("%.2f",
+					($space / (3600*1024*1024*1024)));
+				print "    Disk used over period: ",
+				       $gbh," GB hours ($space byte seconds)\n";
 				}
 			}
 

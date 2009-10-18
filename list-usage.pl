@@ -58,6 +58,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--end") {
 		$end = int(&date_to_time(shift(@ARGV)) / (24*60*60));
 		}
+	elsif ($a eq "--multiline") {
+		$multi = 1;
+		}
 	else {
 		&usage();
 		}
@@ -85,17 +88,45 @@ foreach $s (@servers) {
 	$myend ||= time();
 
 	# Show samples that fill into the period
-	printf $fmt, "Start", "End", "Up?", "Memory", "CPU", "Load", "Disk";
-	foreach my $u (@usage) {
-		next if ($u->{'end'} < $mystart ||
-			 $u->{'start'} > $myend);
-		printf $fmt, &make_date($u->{'start'}),
-			     &make_date($u->{'end'}),
-			     $u->{'up'} ? "Yes" : "No",
-			     $u->{'mem'} ? &nice_size($u->{'mem'}) : "-",
-			     $u->{'cpu'} ne '' ? int($u->{'cpu'})."%" : "-",
-			     $u->{'load'} ne '' ? int($u->{'load'})."%" : "-",
-			     $u->{'disk'} ? &nice_size($u->{'disk'}) : "-";
+	if ($multi) {
+		# In multi-line format
+		foreach my $u (@usage) {
+			print "    Start: ",&make_date($u->{'start'}),"\n";
+			print "    End: ",&make_date($u->{'end'}),"\n";
+			print "    Status: ",($u->{'up'} ? "Up" : "Down"),"\n";
+			if ($u->{'mem'}) {
+				print "    Memory: $u->{'mem'}\n";
+				}
+			if ($u->{'cpu'}) {
+				print "    CPU limit: ",int($u->{'cpu'}),"\n";
+				}
+			if ($u->{'load'}) {
+				print "    CPU used: ",int($u->{'load'}),"\n";
+				}
+			if ($u->{'disk'}) {
+				print "    Disk limit: $u->{'disk'}\n";
+				}
+			if ($u->{'space'}) {
+				print "    Disk used: $u->{'space'}\n";
+				}
+			}
+		}
+	else {
+		# As columns
+		printf $fmt, "Start", "End", "Up?", "Memory",
+			     "CPU", "Load", "Disk";
+		foreach my $u (@usage) {
+			next if ($u->{'end'} < $mystart ||
+				 $u->{'start'} > $myend);
+			printf $fmt,
+			    &make_date($u->{'start'}),
+			    &make_date($u->{'end'}),
+			    $u->{'up'} ? "Yes" : "No",
+			    $u->{'mem'} ? &nice_size($u->{'mem'}) : "-",
+			    $u->{'cpu'} ne '' ? int($u->{'cpu'})."%" : "-",
+			    $u->{'load'} ne '' ? int($u->{'load'})."%" : "-",
+			    $u->{'space'} ? &nice_size($u->{'space'}) : "-";
+			}
 		}
 	}
 
@@ -130,6 +161,7 @@ my $types = join("|", @server_management_types);
 print "                    [--type $types]*\n";
 print "                    [--os oscode]*\n";
 print "                    [--owner name]*\n";
+print "                    [--multiline]\n";
 exit(1);
 }
 

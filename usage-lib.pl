@@ -8,6 +8,7 @@
 #   up - Set to 1 if running
 #   mem - Bytes of memory allocated during the sample
 #   disk - Bytes of disk allocated (typically as seen on host system)
+#   space - Bytes of disk used (as seen on host system)
 #   cores - CPU cores allocated
 #   cpu - Average percentage of CPU used
 # Each represents the time some system was known to be running or down with
@@ -127,7 +128,7 @@ my $info;
 # Get current status and usage
 my $up = $server->{'status'} ne 'down' &&
          $server->{'status'} ne 'nohost' ? 1 : 0;
-my ($mem, $cpu, $cores, $load, $loadtime, $disk);
+my ($mem, $cpu, $cores, $load, $loadtime, $disk, $space);
 if ($up) {
 	# Get memory allocated to system, or physcially installed
 	my $mfunc = "type_".$server->{'manager'}."_get_memory";
@@ -147,11 +148,6 @@ if ($up) {
 	if (defined(&$cfunc)) {
 		($cpu) = &$cfunc($server);
 		$cpu ||= 100;
-		}
-	my $vfunc = "type_".$server->{'manager'}."_get_vcpus";
-	if (defined(&$vfunc)) {
-		my @vcpus = &$vfunc($server);
-		# XXX CPU core pinning?
 		}
 
 	# Get actual CPU usage
@@ -177,6 +173,13 @@ if ($up) {
 	if (defined(&$dfunc)) {
 		$disk = &$dfunc($server);
 		}
+
+	# Get disk usage, rounded to the MB to avoid small changes
+	my $sfunc = "type_".$server->{'manager'}."_get_disk_space";
+	if (defined(&$sfunc)) {
+		$space = &$sfunc($server);
+		$space = int($space / (1024*1024)) * (1024*1024);
+		}
 	}
 
 my $extend = 0;
@@ -186,7 +189,8 @@ if ($usage && $usage->{'up'} && $up) {
 	    $cpu == $usage->{'cpu'} &&
 	    ($load == $usage->{'load'} || $loadtime) &&
 	    $mem == $usage->{'mem'} &&
-	    $disk == $usage->{'disk'}) {
+	    $disk == $usage->{'disk'} &&
+	    $space == $usage->{'space'}) {
 		$extend = 1;
 		}
 	}
@@ -217,6 +221,7 @@ else {
 			 'end' => $now };
 	$newusage->{'mem'} = $mem if (defined($mem));
 	$newusage->{'disk'} = $disk if (defined($disk));
+	$newusage->{'space'} = $space if (defined($space));
 	$newusage->{'cpu'} = $cpu if (defined($cpu));
 	$newusage->{'cores'} = $cores if (defined($cores));
 	if (defined($load)) {

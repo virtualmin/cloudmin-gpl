@@ -58,6 +58,16 @@ if (defined(&$dfunc)) {
 		&ui_radio("disk_def", $disk ? 0 : 1,
 			  [ [ 1, $text{'edit_lunlimit'} ],
 			    [ 0, &ui_bytesbox("disk", $disk || undef) ] ]));
+
+	# Current usage
+	$sfunc = "type_".$t."_get_disk_space";
+	if (defined(&$sfunc)) {
+		$space = &$sfunc($server);
+		if ($space) {
+			print &ui_table_row($text{'edit_lspace'},
+				&nice_size($space));
+			}
+		}
 	}
 
 # Bandwidth limit
