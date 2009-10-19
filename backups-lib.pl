@@ -257,7 +257,7 @@ my $dest = &parse_backup_destination($dstr);
 
 my @servers = grep { $_->{'id'} ne '0' } &list_managed_servers_sorted();
 my $mode = $dest ? $dest->{'mode'} : -1;
-print &ui_table_row($text{'backups_def'},
+print &ui_table_row(&hlink($text{'backups_def'}, "backups_def"),
     &ui_radio_table("backup_mode", $mode,
 	[ [ -1, $text{'backups_modenone'} ],
 	  [ 0, $text{'backups_mode0'},
@@ -485,7 +485,8 @@ foreach my $s (@servers) {
 			$destdir .= '/'.$backup->{'owner'};
 			}
 		}
-	$destmap{$s->{'id'}} = $destdir."/".$s->{'host'}.".tar.gz";
+	$destmap{$s->{'id'}} = &backup_strftime($destdir).
+				"/".$s->{'host'}.".tar.gz";
 	}
 
 # If backup is by an owner, check if he is over his backup space
@@ -729,7 +730,8 @@ foreach my $s (@servers) {
 			$destdir .= '/'.$backup->{'owner'};
 			}
 		}
-	$destmap{$s->{'id'}} = $destdir."/".$s->{'host'}.".tar.gz";
+	$destmap{$s->{'id'}} = &backup_strftime($destdir).
+			        "/".$s->{'host'}.".tar.gz";
 	}
 
 # Exclude failures
@@ -1235,6 +1237,17 @@ if ($limits->{'space'} + $growth > $limits->{'max_space'}) {
 				   &nice_size($size));
 	}
 return undef;
+}
+
+# backup_strftime(path)
+# Replaces stftime-style % codes in a path with the current time
+sub backup_strftime
+{
+local @tm = localtime(time());
+&clear_time_locale();
+local $rv = strftime($_[0], @tm);
+&reset_time_locale();
+return $rv;
 }
 
 1;

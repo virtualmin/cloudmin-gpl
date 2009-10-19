@@ -66,7 +66,7 @@ print &ui_hidden_table_start($text{'backup_sched'}, "width=100%", 2,
 $dest = $backup->{'dest'} ? &parse_backup_destination($backup->{'dest'})
 			  : undef;
 $mode = !$backup->{'dest'} ? -1 : $dest->{'mode'};
-print &ui_table_row($text{'backup_dest'},
+print &ui_table_row(&hlink($text{'backup_dest'}, "backup_dest"),
 	&ui_radio_table("dest_mode", $mode,
 		[ [ -1, $text{'backup_dest0'} ],
 		  [ 3, $text{'backup_dest3'},
