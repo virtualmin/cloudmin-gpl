@@ -6,7 +6,8 @@ return (
 	[ "Backup and restore", "backup-systems.pl", "restore-systems.pl",
 				"list-backup-logs.pl" ],
 	[ "Virtual systems", "*-system.pl", "*-systems.pl",
-			     "modify-limits.pl", "get-console.pl" ],
+			     "modify-limits.pl", "get-console.pl",
+			     "modify-reverse-address.pl", ],
 	[ "Virtual disks", "*-disk.pl", "*-disks.pl" ],
 	[ "Amazon EC2", "*-ec2-*.pl" ],
 	[ "Network interfaces", "*-interface.pl", "*-interfaces.pl" ],
@@ -16,7 +17,8 @@ return (
 	[ "Virtualmin domains", "*-domain.pl", "*-domains.pl" ],
 	[ "License management", "*-licence.pl", "*-licences.pl" ],
 	[ "File management", "*-file.pl" ],
-	[ "Image management", "*-image.pl", "*-images.pl" ],
+	[ "Image management", "*-image.pl", "*-images.pl",
+			      "set-image-rawsize.pl" ],
 	[ "Other scripts", "*.pl" ],
 	);
 }
