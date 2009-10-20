@@ -16,7 +16,7 @@ if (!$server_manager_root) {
 
 foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
-		 "bw", "usage", "backups", "locations") {
+		 "bw", "usage", "backups", "locations", "vsync") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -4252,6 +4252,12 @@ if ($virtcount) {
 	push(@gtitles, $text{'domains_title'});
 	push(@gicons, "images/domains.gif");
 	push(@gcats, "virtualmin");
+
+	# Virtualmin syncing
+	push(@glinks, "list_vsyncs.cgi");
+	push(@gtitles, $text{'vsyncs_title'});
+	push(@gicons, "images/vsyncs.gif");
+	push(@gcats, "virtualmin");
 	}
 
 if (&can_action(undef, "backup") && defined(&list_backups)) {
@@ -6517,6 +6523,16 @@ if (&has_command_on_server($server, "lsof")) {
 	return \@rv;
 	}
 return "Missing lsof command";
+}
+
+# copy_cron_sched_keys(&src, &dest)
+# Copy keys defining a cron schedule from one hash ref to another
+sub copy_cron_sched_keys
+{
+my ($src, $dst) = @_;
+foreach my $k ('mins', 'hours', 'days', 'months', 'weekdays', 'special') {
+	$dst->{$k} = $src->{$k};
+	}
 }
 
 # obtain_lock_server(&server|&servers, [readonly])

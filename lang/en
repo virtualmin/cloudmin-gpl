@@ -2966,3 +2966,13 @@ log_bw=Changed bandwidth monitoring settings
 log_plugins=Changed Cloudmin plugins
 log_features=Changed default Virtualmin features
 log_locations=Saved location groups
+
+vsyncs_title=Virtual Server Replication
+vsyncs_src=Source system
+vsyncs_dest=Destination systems
+vsyncs_what=Virtual servers
+vsyncs_sched=Schedule
+vsyncs_templates=Global settings
+vsyncs_manydoms=$1 virtual servers
+vsyncs_none=No Virtualmin server replications have been created yet.
+vsyncs_add=Add a new server replication.

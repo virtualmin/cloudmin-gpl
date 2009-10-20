@@ -69,14 +69,6 @@ else {
 	}
 }
 
-sub copy_cron_sched_keys
-{
-my ($src, $dst) = @_;
-foreach my $k ('mins', 'hours', 'days', 'months', 'weekdays', 'special') {
-	$dst->{$k} = $src->{$k};
-	}
-}
-
 # save_backup(&backup)
 # Create or update a scheduled backup. Also creates any needed cron job.
 sub save_backup

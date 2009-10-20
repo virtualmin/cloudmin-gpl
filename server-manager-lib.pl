@@ -172,6 +172,9 @@ $server_images_base = "http://cloudmin.virtualmin.com/images/";
 $server_images_cache = "$module_config_directory/server-images-cache";
 $images_cache_dir = "/var/cloudmin-images";
 
+$vsyncs_dir = "$module_config_directory/vsyncs";
+$vsync_cron_job = "$module_config_directory/vsync.pl";
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {

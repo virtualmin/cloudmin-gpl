@@ -31,6 +31,9 @@ push(@rv, $scheduled_backups_dir);
 # Locations file
 push(@rv, $locations_file);
 
+# Syncs dir
+push(@rv, $vsyncs_dir);
+
 return &unique(@rv);
 }
 
