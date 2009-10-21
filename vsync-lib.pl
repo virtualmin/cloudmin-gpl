@@ -127,5 +127,13 @@ foreach my $s ($src, @dests) {
 return 1;
 }
 
+# list_virtualmin_globals()
+# Returns a list of codes for Virtualmin global settings that can be replicated
+sub list_virtualmin_globals
+{
+return ( 'config', 'templates', 'scheds', 'resellers', 'email', 'custom',
+	 'scripts', 'styles', 'chroot' );
+}
+
 1;
 

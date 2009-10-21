@@ -2,9 +2,8 @@
 # Show a list of domain syncs between virtual systems
 
 require './server-manager-lib.pl';
-&ReadParse();
 &ui_print_header(undef, $text{'vsyncs_title'}, "", "vsyncs");
-&can_action_error(undef, "vsyncs");
+&can_action_error(undef, "domains");
 
 # Find existing syncs and list them
 @links = ( "<a href='edit_vsync.cgi?new=1'>$text{'vsyncs_add'}</a>" );
