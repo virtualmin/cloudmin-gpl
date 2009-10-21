@@ -34,22 +34,45 @@ else {
 	$vsync->{'dest'} = join(" ", @destids);
 
 	# Parse domains
-	# XXX
+	@doms = split(/\r?\n/, $in{'doms'});
+	$vsync->{'doms'} = join(" ", @doms);
+	%srcdoms = map { $_->{'dom'}, $_ } &get_server_domains($src);
+	foreach $dname (@doms) {
+		$srcdoms{$dname} ||
+		    &error(&text('vsync_edomon', &show_domain_name($dname)));
+		}
 
 	# Parse global settings
-	# XXX
+	$vsync->{'tmpls'} = join(" ", split(/\0/, $in{'tmpls'}));
+	$vsync->{'doms'} || $vsync->{'tmpls'} || &error($text{'vsync_edoms'});
 	
 	# Parse features
-	# XXX
+	if ($in{'feats_def'}) {
+		delete($vsync->{'feats'});
+		}
+	else {
+		@feats = split(/\0/, $in{'feats'});
+		@feats || &error($text{'vsync_efeats'});
+		$vsync->{'feats'} = join(" ", @feats);
+		}
 
 	# Parse schedule
-	# XXX
+	$vsync->{'enabled'} = $in{'enabled'};
+	&virtualmin_ui_parse_cron_time("when", $vsync, \%in);
 
 	# Parse email
-	# XXX
+	if ($in{'email_def'}) {
+		delete($vsync->{'email'});
+		}
+	else {
+		$in{'email'} =~ /^\S+$/ || &error($text{'vsync_eemail'});
+		$vsync->{'email'} = $in{'email'};
+		}
 
 	# Update or create sync
+	&save_virtualmin_sync($vsync);
 
 	&webmin_log($in{'new'} ? "create" : "modify", "vsync", $src->{'host'});
 	}
+&redirect("list_vsyncs.cgi");
 

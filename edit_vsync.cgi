@@ -8,6 +8,9 @@ require './server-manager-lib.pl';
 if ($in{'new'}) {
 	&ui_print_header(undef, $text{'vsync_title1'}, "");
 	$vsync = { 'special' => 'daily' };
+	if ($access{'owner'}) {
+		$vsync->{'email'} = $access{'email'};
+		}
 	&can_action_error(undef, "domains");
 	}
 else {

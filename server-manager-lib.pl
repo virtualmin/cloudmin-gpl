@@ -173,7 +173,7 @@ $server_images_cache = "$module_config_directory/server-images-cache";
 $images_cache_dir = "/var/cloudmin-images";
 
 $vsyncs_dir = "$module_config_directory/vsyncs";
-$vsync_cron_job = "$module_config_directory/vsync.pl";
+$vsync_cron_cmd = "$module_config_directory/vsync.pl";
 
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});

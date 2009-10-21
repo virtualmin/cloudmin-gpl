@@ -41,7 +41,9 @@ sub save_virtualmin_sync
 my ($vsync) = @_;
 my $wasnew = !$vsync->{'id'};
 if (!-d $vsyncs_dir) {
-	&make_dir_logged($vsyncs_dir, 0700);
+	&lock_file($vsyncs_dir);
+	&make_dir($vsyncs_dir, 0700);
+	&unlock_file($vsyncs_dir);
 	}
 $vsync->{'id'} ||= &server_id();
 my $file = $vsyncs_dir."/".$vsync->{'id'};
@@ -133,6 +135,133 @@ sub list_virtualmin_globals
 {
 return ( 'config', 'templates', 'scheds', 'resellers', 'email', 'custom',
 	 'scripts', 'styles', 'chroot' );
+}
+
+# sync_virtualmin_domains(&vsync)
+# Execute a Virtualmin domain sync, printing output as it goes
+sub sync_virtualmin_domains
+{
+my ($vsync) = @_;
+
+&$first_print($text{'vsync_finding'});
+my $src = &get_managed_server($vsync->{'src'});
+my @dests = &get_virtualmin_sync_dests($vsync);
+if (!$src) {
+	&$second_print($text{'vsync_efindsrc'});
+	return 0;
+	}
+if (!@dests) {
+	&$second_print($text{'vsync_efinddest'});
+	return 0;
+	}
+&$second_print(&text('vsync_found', $src->{'host'}, scalar(@dests)));
+
+# Create temp dirs on the source and dests
+&$first_print($text{'vsync_temp'});
+my %tempdir;
+foreach my $s ($src, @dests) {
+	my $temp = &tempname_on_server($s);
+	if (!$temp) {
+		&$first_print(&text('vsync_etemp', $s->{'host'}));
+		return 0;
+		}
+	my ($out, $ex, $err) = &execute_command_on_server($s,
+				"mkdir -p ".quotemeta($temp));
+	if ($ex || $err) {
+		&$first_print(&text('vsync_emktemp',
+				    $s->{'host'}, $err || $out));
+		return 0;
+		}
+	$tempdir{$s->{'id'}} = $temp;
+	}
+my $srctemp = $tempdir{$src->{'id'}};
+&$second_print($text{'create_done'});
+
+# Backup all domains to the temp dir
+&$first_print($text{'vsync_backup'});
+my @args = ( [ "newformat" ],
+	     [ "dest", $srctemp ] );
+my @doms = split(/\s+/, $vsync->{'doms'});
+push(@args, map { [ "domain", $_ ] } @doms);
+my @tmpls = split(/\s+/, $vsync->{'tmpls'});
+push(@args, map { [ "virtualmin", $_ ] } @tmpls);
+my @feats = split(/\s+/, $vsync->{'feats'});
+if (@feats) {
+	push(@args, map { [ "feature", $_ ] } @feats);
+	}
+else {
+	push(@args, [ "all-features" ]);
+	}
+my ($err, $out) = &call_virtualmin_api($src, "backup-domain", \@args);
+if ($err || $out !~ /Final\s+size\s+was\s+([0-9\.]+\s*\S+)/) {
+	&delete_file_on_server($src, $srctemp);
+	&$second_print(&text('vsync_ebackup', $err));
+	return 0;
+	}
+my $nicesize = $1;
+
+# Find the created file for each domain
+my %dompath;
+foreach my $dname (@doms) {
+	foreach my $sfx ("tar.gz", "tar.bz2", "tar", "zip") {
+		my $path = "$srctemp/$dname.$sfx";
+		my @st = &stat_file_on_server($src, $path);
+		if (@st && $st[7]) {
+			$dompath{$dname} = $path;
+			last;
+			}
+		}
+	if (!$dompath{$dname}) {
+		&delete_file_on_server($src, $srctemp);
+		&$second_print(&text('vsync_ebackupfile', $dname));
+		return 0;
+		}
+	}
+&$second_print(&text('vsync_backed', $nicesize));
+
+# Transfer each to the targets, in parallel
+&$first_print($text{'vsync_transfer'});
+my $args = [ $src, \@doms, \%dompath, \%tempdir ];
+my @transouts = &parallel_server_function(
+			\@dests, \&transfer_virtualmin_domains, $args);
+
+# Clean up on source
+if ($srctemp) {
+	&delete_file_on_server($src, $srctemp);
+	}
+
+# Restore on the targets for which the transfer worked, in parallel
+# XXX
+
+# Clean up on targets
+foreach my $dest (@dests) {
+	my $desttemp = $tempdir{$dest->{'id'}};
+	if ($desttemp) {
+		&delete_file_on_server($dest, $desttemp);
+		}
+	}
+
+# XXX
+return $ok;
+}
+
+# transfer_virtualmin_domains(&dest, &args)
+# Transfer all domain files to a remote system
+sub transfer_virtualmin_domains
+{
+my $dest = $_[0];
+my ($src, $doms, $dompath, $tempdir) = @{$_[1]};
+my $desttemp = $tempdir->{$dest->{'id'}};
+foreach my $dname (@$doms) {
+	my $filename = $dompath->{$dname};
+	$filename =~ s/^.*\///;
+	my $err = &transfer_file_between_servers(
+		$src, $dest, $dompath->{$dname}, "$desttemp/$filename");
+	if ($err) {
+		return ( 0, $dname, $err );
+		}
+	}
+return ( 1 );
 }
 
 1;

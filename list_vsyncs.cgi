@@ -24,7 +24,7 @@ if (@vsyncs) {
 		$what = @doms == 0 ? $text{'vsyncs_templates'} :
 			@doms > 4 ? &text('vsyncs_manydoms', scalar(@doms)) :
 			  join(", ", map { "<tt>$_</tt>" } @doms);
-		print &columns_row([
+		print &ui_columns_row([
 			"<a href='edit_vsync.cgi?id=$v->{'id'}'>".
 			  $src->{'host'}."</a>",
 			$users,
