@@ -24,6 +24,7 @@ if ($ok) {
 else {
 	print "<b>$text{'vsync_failed'}</b><p>\n";
 	}
+&webmin_log("exec", "vsync", $src->{'host'}, { 'doms' => \@doms });
 
 &ui_print_footer("list_vsyncs.cgi", $text{'vsyncs_return'});
 

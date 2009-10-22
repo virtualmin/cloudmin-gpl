@@ -15,8 +15,10 @@ if (!$in{'new'}) {
 if ($in{'delete'}) {
 	# Just remove this replication config
 	$src = &get_managed_server($vsync->{'src'});
+	@doms = split(/\s+/, $vsync->{'doms'});
 	&delete_virtualmin_sync($vsync);
-	&webmin_log("delete", "vsync", $src->{'host'});
+	&webmin_log("delete", "vsync", $src->{'host'},
+		    { 'doms' => \@doms });
 	}
 elsif ($in{'run'}) {
 	# Redirec to execute page
@@ -37,6 +39,8 @@ else {
 		$dest = &get_managed_server($id);
 		$dest && &can_action("domains", $dest) ||
 			&error($text{'vsync_edest'});
+		$dest->{'id'} eq $src->{'id'} &&
+			&error(&text('vsync_edestsame', $dest->{'host'}));
 		}
 	$vsync->{'dest'} = join(" ", @destids);
 
@@ -50,7 +54,7 @@ else {
 		}
 
 	# Parse global settings
-	$vsync->{'tmpls'} = join(" ", split(/\0/, $in{'tmpls'}));
+	$vsync->{'tmpls'} = join(" ", split(/\0/, $in{'tmpl'}));
 	$vsync->{'doms'} || $vsync->{'tmpls'} || &error($text{'vsync_edoms'});
 	
 	# Parse features
@@ -79,7 +83,8 @@ else {
 	# Update or create sync
 	&save_virtualmin_sync($vsync);
 
-	&webmin_log($in{'new'} ? "create" : "modify", "vsync", $src->{'host'});
+	&webmin_log($in{'new'} ? "create" : "modify", "vsync", $src->{'host'},
+		    { 'doms' => \@doms });
 	}
 &redirect("list_vsyncs.cgi");
 

@@ -202,6 +202,9 @@ my $nicesize = $1;
 
 # Find the created file for each domain
 my %dompath;
+if (@tmpls) {
+	push(@doms, "virtualmin");
+	}
 foreach my $dname (@doms) {
 	foreach my $sfx ("tar.gz", "tar.bz2", "tar", "zip") {
 		my $path = "$srctemp/$dname.$sfx";
@@ -311,7 +314,7 @@ my @rargs = @$rargs;
 push(@rargs, [ "source", $desttemp ]);
 my ($err, $out) = &call_virtualmin_api($dest, "restore-domain", \@rargs);
 if ($err) {
-	return ( 0, $dname, $err, $dest->{'host'} );
+	return ( 0, $err, $dest->{'host'} );
 	}
 return ( 1 );
 }

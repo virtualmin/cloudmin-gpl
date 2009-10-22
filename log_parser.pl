@@ -196,6 +196,21 @@ elsif ($type eq "backuplog") {
 		return &text('log_'.$action.'_backuplogs', scalar(@dests));
 		}
 	}
+elsif ($type eq "vsync") {
+	# Domain sync
+	my @doms = split(/\0/, $p->{'doms'});
+	if (!@doms) {
+		return &text('log_'.$action.'_vsync_g', $object);
+		}
+	elsif (!$long) {
+		return &text('log_'.$action.'_vsync', $object, scalar(@doms));
+		}
+	else {
+		@doms = @doms[0..4] if (@doms > 4);
+		return &text('log_'.$action.'_vsync_l', $object,
+				join(' ', @doms));
+		}
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

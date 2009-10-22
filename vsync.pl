@@ -32,7 +32,8 @@ if (!$ok && $vsync->{'email'}) {
 		&get_global_from_address($src),
 		$vsync->{'email'},
 		undef,
-		&text('vsync_fsubject', scalar(@doms), $src->{'host'}),
+		&text(@doms ? 'vsync_fsubject' : 'vsync_fsubject2',
+		      scalar(@doms), $src->{'host'}),
 		$capture_print,
 		);
 	}
