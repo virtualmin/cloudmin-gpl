@@ -38,6 +38,7 @@ systems to operate on :
 <li><tt>--os</tt> <i>code</i><br>Matches systems known to be running some OS, specified by a code like <tt>centos</tt> , <tt>solaris</tt> , <tt>redhat</tt> or <tt>ubuntu</tt>.
 <li><tt>--all-hosts</tt><br>Always matches all registered systems.
 </ul>
+<p></p>
 ",
 
 "Virtual disks",
