@@ -373,6 +373,7 @@ if (!$keep) {
 		&unlink_file("$usage_data_dir/$server->{'id'}");
 		}
 	}
+
 if (defined(&list_system_owners)) {
 	# Remove from any owners
 	foreach my $o (&list_system_owners()) {
@@ -382,6 +383,13 @@ if (defined(&list_system_owners)) {
 			$o->{'acl'}->{'servers'} = join(' ', @newos);
 			&save_system_owner($o, $o);
 			}
+		}
+	}
+
+# Remove from any domain syncs
+foreach my $vsync (&list_virtualmin_syncs()) {
+	if ($vsync->{'src'} eq $server->{'id'}) {
+		&delete_virtualmin_sync($vsync);
 		}
 	}
 }

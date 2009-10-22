@@ -4,10 +4,12 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'vsync_err'});
+&can_action_error(undef, "domains");
 
 if (!$in{'new'}) {
 	$vsync = &get_virtualmin_sync($in{'id'});
         $vsync || &error($text{'vsync_egone'});
+	&can_virtualmin_sync($vsync) || &error($text{'vsync_ecannot'});
 	}
 
 if ($in{'delete'}) {
@@ -15,6 +17,11 @@ if ($in{'delete'}) {
 	$src = &get_managed_server($vsync->{'src'});
 	&delete_virtualmin_sync($vsync);
 	&webmin_log("delete", "vsync", $src->{'host'});
+	}
+elsif ($in{'run'}) {
+	# Redirec to execute page
+	&redirect("exec_vsync.cgi?id=$in{'id'}");
+	return;
 	}
 else {
 	# Validate inputs, starting with source host

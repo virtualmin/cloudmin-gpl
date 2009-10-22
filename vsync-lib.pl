@@ -221,9 +221,25 @@ foreach my $dname (@doms) {
 
 # Transfer each to the targets, in parallel
 &$first_print($text{'vsync_transfer'});
-my $args = [ $src, \@doms, \%dompath, \%tempdir ];
+my @rargs = grep { $_->[0] ne "dest" && $_->[0] ne "newformat" } @args;
+my $args = [ $src, \@doms, \%dompath, \%tempdir, \@rargs ];
 my @transouts = &parallel_server_function(
 			\@dests, \&transfer_virtualmin_domains, $args);
+my @transok = grep { $_->[0] } @transouts;
+my @transfailed = grep { !$_->[0] } @transouts;
+my $ok = 1;
+if (@transfailed) {
+	&$second_print(&text('vsync_etransfer',
+			     scalar(@transok), scalar(@transfailed)));
+	foreach my $t (@transfailed) {
+		&$second_print(&text('vsync_etransfer2',
+				     $t->[1], $t->[3], $t->[2]));
+		}
+	$ok = 0;
+	}
+else {
+	&$second_print($text{'create_done'});
+	}
 
 # Clean up on source
 if ($srctemp) {
@@ -231,7 +247,28 @@ if ($srctemp) {
 	}
 
 # Restore on the targets for which the transfer worked, in parallel
-# XXX
+&$first_print($text{'vsync_restore'});
+my @okdests;
+for(my $i=0; $i<@dests; $i++) {
+	if ($transouts[$i]->[0]) {
+		push(@okdests, $dests[$i]);
+		}
+	}
+my @restoreouts = &parallel_server_function(
+			\@okdests, \&restore_virtualmin_domains, $args);
+my @restoreok = grep { $_->[0] } @restoreouts;
+my @restorefailed = grep { !$_->[0] } @restoreouts;
+if (@restorefailed) {
+	&$second_print(&text('vsync_erestore',
+			     scalar(@restoreok), scalar(@restorefailed)));
+	foreach my $t (@restorefailed) {
+		&$second_print(&text('vsync_erestore2', $t->[2], $t->[1]));
+		}
+	$ok = 0;
+	}
+else {
+	&$second_print($text{'create_done'});
+	}
 
 # Clean up on targets
 foreach my $dest (@dests) {
@@ -241,7 +278,6 @@ foreach my $dest (@dests) {
 		}
 	}
 
-# XXX
 return $ok;
 }
 
@@ -258,11 +294,29 @@ foreach my $dname (@$doms) {
 	my $err = &transfer_file_between_servers(
 		$src, $dest, $dompath->{$dname}, "$desttemp/$filename");
 	if ($err) {
-		return ( 0, $dname, $err );
+		return ( 0, $err, $dest->{'host'} );
 		}
 	}
 return ( 1 );
 }
+
+# restore_virtualmin_domains(&dest, &args)
+# Restore all domain files on a remote system
+sub restore_virtualmin_domains
+{
+my $dest = $_[0];
+my ($src, $doms, $dompath, $tempdir, $rargs) = @{$_[1]};
+my $desttemp = $tempdir->{$dest->{'id'}};
+my @rargs = @$rargs;
+push(@rargs, [ "source", $desttemp ]);
+my ($err, $out) = &call_virtualmin_api($dest, "restore-domain", \@rargs);
+if ($err) {
+	return ( 0, $dname, $err, $dest->{'host'} );
+	}
+return ( 1 );
+}
+
+
 
 1;
 

@@ -103,6 +103,7 @@ if ($in{'new'}) {
 	}
 else {
 	print &ui_form_end([ [ undef, $text{'save'} ],
+			     [ 'run', $text{'vsync_run'} ],
 			     [ 'delete', $text{'delete'} ] ]);
 	}
 
