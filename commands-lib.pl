@@ -31,11 +31,13 @@ return (
 systems. Most of them take the following parameters to control which system or
 systems to operate on :
 
-  * ''--host'' //hostname//\\\\ Can be given multiple times to specify systems by name.
-  * ''--group'' //groupname//\\\\ Specifies systems that are members of the named group.
-  * ''--type'' //code//\\\\ Matches systems of some virtualization type, which can be one of ''xen'' , ''vservers'' , ''zones'' or ''real''
-  * ''--os'' //code//\\\\ Matches systems known to be running some OS, specified by a code like ''centos'' , ''solaris'' , ''redhat'' or ''ubuntu''.
-  * ''--all-hosts''\\\\ Always matches all registered systems.
+<ul>
+<li><tt>--host</tt> <i>hostname</i><br>Can be given multiple times to specify systems by name.
+<li><tt>--group</tt> <i>groupname</i><br>Specifies systems that are members of the named group.
+<li><tt>--type</tt> <i>code</i><br>Matches systems of some virtualization type, which can be one of <tt>xen</tt> , <tt>vservers</tt> , <tt>zones</tt> or <tt>real</tt>
+<li><tt>--os</tt> <i>code</i><br>Matches systems known to be running some OS, specified by a code like <tt>centos</tt> , <tt>solaris</tt> , <tt>redhat</tt> or <tt>ubuntu</tt>.
+<li><tt>--all-hosts</tt><br>Always matches all registered systems.
+</ul>
 ",
 
 "Virtual disks",
@@ -91,6 +93,8 @@ sub list_api_skip_scripts
 {
 return ( "upload-api-docs.pl",
 	 "postinstall.pl",
+	 "import-api-docs.pl",
+	 "set-image-rawsize.pl",
        );
 }
 
