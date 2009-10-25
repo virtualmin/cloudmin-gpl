@@ -6565,6 +6565,12 @@ else {
 		my @stbefore = stat($sfile);
 		&lock_file($sfile, $ro);
 		my @stafter = stat($sfile);
+		if (@stbefore && !@stafter) {
+			# No longer exists .. must have been deleted during
+			# lock. Give up!
+			&error("System $server->{'host'} ID $server->{'id'} ".
+			       "deleted while waiting for lock!");
+			}
 		if (@stbefore && $stbefore[9] != $stafter[9]) {
 			# Changed since it was locked .. re-read it
 			my $reserver = &get_managed_server($server->{'id'});

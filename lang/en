@@ -1388,7 +1388,7 @@ xen_eliveport=Missing or non-numeric port for live migration
 xen_header5=Xen configuration settings for hosted systems
 xen_pygrub=Kernel for Xen instances
 xen_pygrub0=Use kernel from host system
-xen_pygrub1=Use kernel Xen system (using PyGrub)
+xen_pygrub1=Use kernel from Xen system (using PyGrub)
 xen_pygrub2=Host system default
 
 xens_title=Xen Host Systems
