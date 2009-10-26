@@ -30,3 +30,4 @@ ssh_timeout=30
 webmin_timeout=60
 login_timeout=60
 index_cols=manager,type,status,desc
+xen_pygrub=0

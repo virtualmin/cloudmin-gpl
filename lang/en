@@ -284,7 +284,7 @@ create_xenmounted=.. mounted on $1
 create_xenkernel=Configuring kernel for Xen instance ..
 create_xenkernelpv=.. setup to boot Xen system's kernel with PvGrub
 create_xenkernelhost=.. setup to boot from host system's kernel
-create_xenkernelhost2=.. could not setup to boot Xen system's kernel, as <tt>/boot/grub/menu.lst</tt> is missing
+create_xenkernelhost2=.. could not setup to boot Xen system's kernel, as <tt>/boot/grub/grub.conf</tt> is missing
 create_xenmods=Copying modules for kernel $1 to Xen filesystem ..
 create_exenmods=.. copy failed : $1
 create_xensetpass=Setting root password ..
@@ -1388,7 +1388,7 @@ xen_eliveport=Missing or non-numeric port for live migration
 xen_header5=Xen configuration settings for hosted systems
 xen_pygrub=Kernel for Xen instances
 xen_pygrub0=Use kernel from host system
-xen_pygrub1=Use kernel from Xen system (using PyGrub)
+xen_pygrub1=Use kernel from Xen system (with PyGrub)
 xen_pygrub2=Host system default
 
 xens_title=Xen Host Systems
@@ -1427,6 +1427,7 @@ eimage_md5=Expected MD5	checksum
 dimage_egone=Image no longer exists!
 eimage_err=Failed to save image
 eimage_edesc=Missing description
+eimage_version=Image version
 
 remote_eprogram=Invalid remote program name
 remote_eprogram2=Remote program $1 does not exist

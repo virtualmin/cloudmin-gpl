@@ -26,11 +26,16 @@ else {
 	print &ui_table_row($text{'eimage_desc'}, $i->{'desc'});
 	}
 
+# Version, if any
+if ($got && $got->{'version'}) {
+	print &ui_table_row($text{'eimage_version'}, $got->{'version'});
+	}
+
 # OS type
 ($os) = grep { $_->[0] eq $i->{'type'} } @servers::server_types;
 if ($got) {
 	print &ui_table_row($text{'eimage_os'},
-		    &ui_select("type", $i->{'type'} || 'unknown',
+		    &ui_select("type", $got->{'type'} || 'unknown',
 		      [ map { [ $_->[0], $_->[1] ] }
 			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
 	}

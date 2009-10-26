@@ -38,6 +38,7 @@ if (defined(&$pfunc)) {
 if (!$no_ssh && !$server->{'ssh_nologin'}) {
 	# Make sure the SSH login is valid
 	print $text{'add_sshing'},"<br>\n";
+	&clear_ssh_host_key($server);
 	($status, $msg) = &check_server_ssh_login($server);
 	if ($status) {
 		print "<b>",&text('add_essh',
