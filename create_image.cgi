@@ -34,6 +34,9 @@ if ($info && $info->{'minfo'} && $info->{'minfo'}->{'version'}) {
 		$info->{'minfo'}->{'version'} =~ /gpl/i ||
 		$info->{'minfo'}->{'virtualmin'} eq 'gpl' ? 'gpl' : 'pro';
 	}
+if ($info && $info->{'kernel'}) {
+	$image->{'arch'} = $info->{'kernel'}->{'arch'};
+	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'mkimage_title'}, "");
 &obtain_lock_server($server);

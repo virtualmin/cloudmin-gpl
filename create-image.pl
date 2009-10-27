@@ -140,6 +140,9 @@ if ($info && $info->{'minfo'} && $info->{'minfo'}->{'version'}) {
 		$info->{'minfo'}->{'version'} =~ /gpl/i ||
 		$info->{'minfo'}->{'virtualmin'} eq 'gpl' ? 'gpl' : 'pro';
 	}
+if ($info && $info->{'kernel'}) {
+	$image->{'arch'} = $info->{'kernel'}->{'arch'};
+	}
 
 # Select temp dir for image on parent host
 &$first_print("Creating temporary directory for image files ..");
