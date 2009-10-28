@@ -1896,7 +1896,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 	}
 elsif ($server->{'no_webmin_login'}) {
 	# Webmin login disabled
-	$server->{'status'} = 'downwebmin';
+	$server->{'status'} = 'nowebmin';
 	$server->{'status_msg'} = "Webmin login disabled";
 	}
 else {
@@ -6506,6 +6506,56 @@ else {
 	}
 }
 
+# create_active_server_interface(&server, &iface)
+# Use the ifconfig command or Webmin to activate an interface
+sub create_active_server_interface
+{
+my ($server, $iface) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Call remote Webmin to bring up interface
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	return $last_remote_error if ($last_remote_error);
+	$iface->{'up'} = 1;
+	&remote_foreign_call($server, "net", "activate_interface", $iface);
+	return $last_remote_error if ($last_remote_error);
+	}
+else {
+	# Activate with ifconfig command
+	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." ".
+		     quotemeta($iface->{'address'})." up ".
+		     "netmask ".quotemeta($iface->{'netmask'})." ".
+		     "broadcast ".quotemeta($iface->{'broadcast'});
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	return $err if ($err);
+	return $out if ($ex);
+	}
+return undef;
+}
+
+# delete_active_server_interface(&server, &iface)
+# De-activate an interface, either via Webmin or running ifconfig
+sub delete_active_server_interface
+{
+my ($server, $iface) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# De-activate it using Webmin
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	return $last_remote_error if ($last_remote_error);
+	&remote_foreign_call($server, "net", "deactivate_interface", $iface);
+	return $last_remote_error if ($last_remote_error);
+	}
+else {
+	# Just remove with ifconfig
+	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." down";
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	return $err if ($err);
+	return $out if ($ex);
+	}
+return undef;
+}
+
 # list_boot_server_interfaces(&server)
 # Returns a list of all bootup network interfaces on a system, as an array ref
 sub list_boot_server_interfaces
@@ -6516,21 +6566,147 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
 	return $last_remote_error if ($last_remote_error);
-	my @active = &remote_foreign_call(
+	my @boot = &remote_foreign_call(
 		$server, "net", "boot_interfaces", 1);
 	return $last_remote_error if ($last_remote_error);
-	return \@active;
+	return \@boot;
 	}
 elsif (&redhat_server_type($server)) {
 	# Read all ifcfg-* files
+	my $idir = "/etc/sysconfig/network-scripts";
+	my $files = &list_dir_on_server($server, $idir);
+	return "Failed to list $idir : $files" if (!ref($files));
+	my @boot;
+	foreach my $f (grep { /^ifcfg-[a-z0-9:\.]+$/ && !/\.(bak|old)$/ }
+			    @$files) {
+		my $temp = &transname();
+		my $err = &get_file_from_server($server, $idir."/".$f, $temp);
+		next if ($err);
+		my %conf;
+		&read_env_file($temp, \%conf);
+		my $b = { };
+                $b->{'fullname'} = $conf{'DEVICE'};
+                if ($b->{'fullname'} =~ /(\S+):(\d+)/) {
+                        $b->{'name'} = $1;
+                        $b->{'virtual'} = $2;
+                        }
+                else {
+			$b->{'name'} = $b->{'fullname'};
+			}
+                $b->{'up'} = defined($conf{'ONPARENT'}) &&
+			     $b->{'virtual'} ne '' ?
+                                ($conf{'ONPARENT'} eq 'yes') :
+                                ($conf{'ONBOOT'} eq 'yes');
+                $b->{'address'} = $conf{'IPADDR'};
+                $b->{'netmask'} = $conf{'NETMASK'};
+                $b->{'broadcast'} = $conf{'BROADCAST'};
+                $b->{'gateway'} = $conf{'GATEWAY'};
+                $b->{'mtu'} = $conf{'MTU'};
+                $b->{'dhcp'} = ($conf{'BOOTPROTO'} eq 'dhcp');
+                $b->{'bootp'} = ($conf{'BOOTPROTO'} eq 'bootp');
+                $b->{'edit'} = 1;
+                $b->{'desc'} = $conf{'NAME'};
+                $b->{'file'} = $idir."/".$f;
+		&unlink_file($temp);
+		push(@boot, $b);
+		}
+	return \@boot;
 	}
 elsif (&debian_server_type($server)) {
 	# Read /etc/network/interfaces
+	# XXX
 	}
 else {
 	# Out of luck ..
 	return "Listing boot-time network interfaces on systems of type ".
 	       $server->{'type'}." is not supported";
+	}
+}
+
+# create_boot_server_interface(&server, &iface)
+# Add an interface to be activated at boot, via Webmin or editing config files
+sub create_boot_server_interface
+{
+my ($server, $iface) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Ask Webmin to add
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	return $last_remote_error if ($last_remote_error);
+	&remote_foreign_call($server, "net", "save_interface", $iface);
+	return $last_remote_error if ($last_remote_error);
+	}
+elsif (&redhat_server_type($server)) {
+	# Create ifcfg- file
+        &foreign_require("net", "net-lib.pl");
+	my %conf;
+	my $name = $iface->{'virtual'} ne "" ?
+			$iface->{'name'}.":".$iface->{'virtual'} :
+			$iface->{'name'};
+	$conf{'DEVICE'} = $name;
+	$conf{'IPADDR'} = $iface->{'address'};
+	$conf{'NETMASK'} = $iface->{'netmask'};
+	$conf{'NETWORK'} = &net::compute_network($iface->{'address'},
+						 $iface->{'netmask'});
+	$conf{'BROADCAST'} = $iface->{'broadcast'};
+	$conf{'ONBOOT'} = 'yes';
+	$conf{'ONPARENT'} = 'yes' if ($iface->{'virtual'} ne '');
+	$conf{'BOOTPROTO'} = 'none';
+	$conf{'NAME'} = $iface->{'desc'};
+	my $temp = &transname();
+	&write_env_file($temp, \%conf);
+	my $idir = "/etc/sysconfig/network-scripts";
+	my $err = &put_file_to_server($server, $temp,
+				      $idir."/ifcfg-".$iface->{'fullname'});
+	&unlink_file($temp);
+	return $err;
+	}
+elsif (&debian_server_type($server)) {
+	# Add to /etc/network/interfaces
+	# XXX
+	}
+else {
+	# Out of luck
+	return "Creating boot-time network interfaces on systems of type ".
+               $server->{'type'}." is not supported";
+	}
+}
+
+# delete_boot_server_interface(&server, &iface)
+# Delete a boot-time interface, either via Webmin or direct file manipulation
+sub delete_boot_server_interface
+{
+my ($server, $iface) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Get from Webmin and delete it
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	return $last_remote_error if ($last_remote_error);
+	my @boot = &remote_foreign_call($server, "net", "boot_interfaces");
+	my ($boot) = grep { $_->{'fullname'} eq $iface->{'fullname'} } @boot;
+	if ($boot) {
+		&remote_foreign_call($server, "net", "delete_interface", $boot);
+		}
+	}
+elsif (&redhat_server_type($server)) {
+	# Delete ifcfg- file
+        &foreign_require("net", "net-lib.pl");
+	my $idir = "/etc/sysconfig/network-scripts";
+	my $ifile = $idir."/ifcfg-".$iface->{'fullname'};
+	if (&stat_file_on_server($server, $ifile)) {
+		my $err = &delete_file_on_server($server, $ifile);
+		return $err if ($err);
+		}
+	return undef;
+	}
+elsif (&debian_server_type($server)) {
+	# Delete from /etc/network/interfaces
+	# XXX
+	}
+else {
+	# Out of luck
+	return "Deleting boot-time network interfaces on systems of type ".
+               $server->{'type'}." is not supported";
 	}
 }
 
