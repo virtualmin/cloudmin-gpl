@@ -165,11 +165,9 @@ foreach my $s ($src, @dests) {
 		&$first_print(&text('vsync_etemp', $s->{'host'}));
 		return 0;
 		}
-	my ($out, $ex, $err) = &execute_command_on_server($s,
-				"mkdir -p ".quotemeta($temp));
-	if ($ex || $err) {
-		&$first_print(&text('vsync_emktemp',
-				    $s->{'host'}, $err || $out));
+	my $err = &make_dir_on_server($s, $temp, 0700, 1);
+	if ($err) {
+		&$first_print(&text('vsync_emktemp', $s->{'host'}, $err));
 		return 0;
 		}
 	$tempdir{$s->{'id'}} = $temp;

@@ -1435,8 +1435,11 @@ if (defined(&$dfunc)) {
 	}
 
 # Run mkdir via SSH
+my $operms = sprintf("%o", $perms);
 my ($out, $ex, $err) = &execute_command_on_server($server,
-	"mkdir -m ".quotemeta($perms).($recur ? " -p" : "")." ".
+	"mkdir ".
+	($perms ? " -m ".quotemeta($operms) : "").
+	($recur ? " -p" : "")." ".
 	quotemeta($dir));
 return $err ? $err : $ex ? $out : undef;
 }

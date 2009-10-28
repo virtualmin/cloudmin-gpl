@@ -167,11 +167,9 @@ else {
 	my $tempdir = $config{'img_temp'} || $ostemp;
 	$temp = "$tempdir/$id";
 	}
-my ($out, $ex, $err) = &execute_command_on_server($vhost,
-				"rm -rf ".quotemeta($temp)." ; ".
-				"mkdir ".quotemeta($temp));
+&delete_file_on_server($vhost, $temp);
+my $err = &make_dir_on_server($vhost, $temp, 0700);
 return (0, $err) if ($err);
-return (0, $out) if ($ex);
 return (1, $temp);
 }
 
@@ -202,12 +200,9 @@ my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
 my $imagedir;
 if ($vhost->{$prefix.'_cachesize'}) {
 	# Make the directory if needed
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"test -d ".quotemeta($cachedir).
-		" || mkdir -p ".quotemeta($cachedir));
-	if ($ex || $err) {
-		return (0, "Failed to create cache directory $cachedir : ".
-			   ($err || $out));
+	my $err = &make_dir_on_server($vhost, $cachedir, 0700);
+	if ($err) {
+		return (0, "Failed to create cache directory $cachedir : $err");
 		}
 
 	# See if we have all the needed files in the cache
@@ -957,12 +952,9 @@ $prefix = "zone" if ($prefix eq "zones");
 if ($vhost->{$prefix.'_cachesize'}) {
 	# Create the cache dir if needed
 	my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"test -d ".quotemeta($cachedir).
-		" || mkdir -p ".quotemeta($cachedir));
-	if ($ex || $err) {
-		return "Failed to create cache directory $cachedir : ".
-		       ($err || $out);
+	my $err = &make_dir_on_server($vhost, $cachedir, 0700);
+	if ($err) {
+		return "Failed to create cache directory $cachedir : $err";
 		}
 
 	# If the cache would be too big after adding the new images,
