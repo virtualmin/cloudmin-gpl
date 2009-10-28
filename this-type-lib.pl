@@ -97,6 +97,26 @@ my ($server, $remotefile) = @_;
 return stat($remotefile);
 }
 
+# type_this_make_dir(&server, remotedir, perms, recur)
+# For a dir on the Cloudmin master, just create it directly
+sub type_this_make_dir
+{
+my ($server, $remotedir, $perms, $recur) = @_;
+my $ok = &make_dir($remotedir, $perms, $recur);
+return $ok ? undef : "$!";
+}
+
+# type_this_list_dir(&server, remotedir)
+# For a dir on the Cloudmin master, just list it directly
+sub type_this_list_dir
+{
+my ($server, $remotedir) = @_;
+opendir(LISTDIR, $remotedir) || return "$!";
+my @files = grep { $_ ne "." && $_ ne ".." } readdir(LISTDIR);
+closedir(LISTDIR);
+return \@rv;
+}
+
 # type_this_open_shell(&server)
 # Opens a shell in a sub-process, connected to a pty. Returns an error message
 # (or undef if OK), and a file handle.
