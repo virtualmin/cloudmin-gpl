@@ -1400,7 +1400,7 @@ if (defined(&$dfunc)) {
 	# Use type-specific function call
 	my @rv = &$dfunc(@_);
 	return @rv if ($rv[0] ne 'FALLBACK');	# Type-specific function has
-						# asked to fallback to scp
+						# asked to fallback to ssh
 	}
 
 # Run md5sum via SSH
@@ -1418,6 +1418,50 @@ elsif ($out =~ /^([0-9a-f]+)\s+/) {
 else {
 	return (0, "Unknown md5sum output : $out");
 	}
+}
+
+# make_dir_on_server(&server, dir, perms, [recursive])
+# Creates a directory on a remote system. Returns an error message on failure,
+# undef on success.
+sub make_dir_on_server
+{
+my ($server, $dir, $perms, $recur) = @_;
+my $dfunc = "type_".$server->{'manager'}."_make_dir";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	my $rv = &$dfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to ssh
+	}
+
+# Run mkdir via SSH
+my ($out, $ex, $err) = &execute_command_on_server($server,
+	"mkdir -m ".quotemeta($perms).($recur ? " -p" : "")." ".
+	quotemeta($dir));
+return $err ? $err : $ex ? $out : undef;
+}
+
+# list_dir_on_server(&server, dir)
+# Lists the contents of a directory on a remote system. Returns an array ref
+# of filenames (except . and ..) on success, or an error message on failure.
+sub list_dir_on_server
+{
+my ($server, $dir) = @_;
+my $dfunc = "type_".$server->{'manager'}."_list_dir";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	my $rv = &$dfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to ssh
+	}
+
+# Run ls via SSH
+my ($out, $ex, $err) = &execute_command_on_server($server,
+	"ls -a ".quotemeta($dir));
+return $err if ($err);
+return $out if ($ex);
+my @rv = grep { $_ ne "." && $_ ne ".." } split(/\r?\n/, $out);
+return \@rv;
 }
 
 # list_processes_on_server(&server)
@@ -6433,9 +6477,9 @@ my ($out, $ex, $err) = &execute_command_on_server($server,"tar --version 2>&1");
 return !$err && !$ex && $out =~ /GNU\s+tar/i ? 1 : 0;
 }
 
-# list_server_interfaces(&server)
-# Returns a list of all network interfaces on a system, as an array ref
-sub list_server_interfaces
+# list_active_server_interfaces(&server)
+# Returns a list of all running network interfaces on a system, as an array ref
+sub list_active_server_interfaces
 {
 my ($server) = @_;
 if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
@@ -6457,6 +6501,53 @@ else {
 	my @active = &parse_ifconfig_output($out);
 	return \@active;
 	}
+}
+
+# list_boot_server_interfaces(&server)
+# Returns a list of all bootup network interfaces on a system, as an array ref
+sub list_boot_server_interfaces
+{
+my ($server) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Get from Webmin
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	return $last_remote_error if ($last_remote_error);
+	my @active = &remote_foreign_call(
+		$server, "net", "boot_interfaces", 1);
+	return $last_remote_error if ($last_remote_error);
+	return \@active;
+	}
+elsif (&redhat_server_type($server)) {
+	# Read all ifcfg-* files
+	}
+elsif (&debian_server_type($server)) {
+	# Read /etc/network/interfaces
+	}
+else {
+	# Out of luck ..
+	return "Listing boot-time network interfaces on systems of type ".
+	       $server->{'type'}." is not supported";
+	}
+}
+
+# redhat_server_type(&server)
+# Returns 1 if a system is some Redhat variant
+sub redhat_server_type
+{
+my ($server) = @_;
+return $server->{'type'} eq 'centos' ||
+       $server->{'type'} eq 'redhat' ||
+       $server->{'type'} eq 'fedora';
+}
+
+# debian_server_type(&server)
+# Returns 1 if a system is some Debian variant
+sub debian_server_type
+{
+my ($server) = @_;
+return $server->{'type'} eq 'debian' ||
+       $server->{'type'} eq 'ubuntu';
 }
 
 # cloudmin_api_log(&argv, [&server])
