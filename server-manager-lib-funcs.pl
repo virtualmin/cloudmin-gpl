@@ -2043,6 +2043,53 @@ $server->{'ip_addresses'} = join(" ",
 	grep { $_ ne $ip } split(/\s+/, $server->{'ip_addresses'}));
 }
 
+# modify_primary_ip_address(&server, old-ip, new-ip)
+# Update DNS, reverse DNS and on-host files when a primary IP is changed
+sub modify_primary_ip_address
+{
+my ($server, $oldip, $newip) = @_;
+
+# Fix DNS record
+my $dfunc = "type_".$server->{'manager'}."_get_dns_name";
+if (defined(&$dfunc)) {
+	my ($dnsname, $zonename) = &$dfunc($server);
+	if ($dnsname) {
+		&modify_bind_dns_record($dnsname, $zonename, $oldip, $newip);
+		}
+	}
+
+# Mount filesystem if needed
+my $nfunc = "type_".$server->{'manager'}."_need_mount";
+my $mounted = 0;
+if (defined(&$nfunc) && &$nfunc($server)) {
+	my $mfunc = "type_".$server->{'manager'}."_mount_filesystem";
+	my $err = &$mfunc($server);
+	return $err if ($err);
+	$mounted = 1;
+	}
+
+# Update /etc/hosts
+my $temp = &transname();
+my $err = &get_file_from_server($server, "/etc/hosts", $temp);
+print STDERR "hosts err=$err\n";
+if (!$err) {
+	my $lref = &read_file_lines($temp);
+	foreach my $l (@$lref) {
+		$l =~ s/^\Q$oldip\E\s/$newip /;
+		print STDERR "l=$l\n";
+		}
+	&flush_file_lines($temp);
+	&put_file_to_server($server, $temp, "/etc/hosts");
+	}
+&unlink_file($temp);
+
+# Un-mount if mounted before
+if ($mounted) {
+	my $ufunc = "type_".$server->{'manager'}."_umount_filesystem";
+	&$ufunc($server);
+	}
+}
+
 # save_server_domains(&server, &domains)
 # Writes out the list of domains hosted by some server
 sub save_server_domains
@@ -6816,7 +6863,6 @@ elsif (&debian_server_type($server)) {
 			else {
 				splice(@$lref, $lnum, 1);
 				}
-			last;
 			}
 		$lnum++;
 		}
@@ -6878,8 +6924,31 @@ elsif (&redhat_server_type($server)) {
 	return $err;
 	}
 elsif (&debian_server_type($server)) {
-	# Delete from /etc/network/interfaces
-	# XXX
+	# Update in from /etc/network/interfaces
+	&foreign_require("net", "net-lib.pl");
+	my $ifile = "/etc/network/interfaces";
+	my $temp = &transname();
+	my $err = &get_file_from_server($server, $ifile, $temp);
+	return $err if ($err);
+	my $lref = &read_file_lines($temp);
+	my $iniface = 0;
+	$iface->{'network'} = &net::compute_network($iface->{'address'},
+                                                    $iface->{'netmask'});
+	foreach my $l (@$lref) {
+		if ($l =~ /^iface\s+(\S+)/) {
+			# Start of interface, may be the one to edit
+			$iniface = $1 eq $iface->{'fullname'} ? 1 : 0;
+			}
+		elsif ($l =~ /^\s+(address|netmask|network|broadcast)\s+/ &&
+		       $iniface && $iface->{$1}) {
+			# Some interface parameter to edit
+			$l = "\t".$1." ".$iface->{$1};
+			}
+		}
+	&flush_file_lines($temp);
+	my $err = &put_file_to_server($server, $temp, $ifile);
+	&unlink_file($temp);
+        return $err;
 	}
 else {
 	# Out of luck

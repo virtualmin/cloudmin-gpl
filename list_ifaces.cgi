@@ -9,12 +9,14 @@ $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 $t = $server->{'manager'};
 &can_action_error($server, "ifaces");
+$cfunc = "type_".$t."_can_interfaces";
+$can = &$cfunc($server);
+$can || &error($text{'iface_esupport'});
 
 &ui_print_header(&server_in($server), $text{'ifaces_title'}, "", "ifaces");
 
 # IP addresses, if we can manage them
 $ifunc = "type_".$t."_list_interfaces";
-$cfunc = "type_".$t."_can_interfaces";
 $ifaces = &$ifunc($server);
 @ilinks = ( );
 if (&can_action($server, "ifaces")) {
@@ -23,7 +25,8 @@ if (&can_action($server, "ifaces")) {
 	}
 print &ui_links_row(\@ilinks);
 print &ui_columns_start([ $text{'edit_ifaceaddress'},
-			  $text{'edit_ifacename'},
+			  $can == 1 ? $text{'edit_ifacename'}
+				    : $text{'edit_ifacename2'},
 			  $text{'edit_ifacenumber'},
 			  $text{'edit_ifacenetmask'},
 			  $info ? ( $text{'edit_ifaceuse'} ) : ( ) ],

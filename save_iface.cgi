@@ -19,6 +19,7 @@ if (!$in{'new'}) {
 if ($in{'delete'}) {
 	# Delete it, but ask first as this may render some site inaccessible
 	&error_setup($text{'iface_derr'});
+	$iface->{'nodelete'} && &error($text{'iface_edelete'});
 	$info = &get_server_collected($server);
 	@doms = &get_server_domains($server);
 	if ($info) {
@@ -86,6 +87,7 @@ else {
 
 	# Save or create
 	&obtain_lock_server($server);
+	$oldip = &get_server_ip($server);
 	if ($in{'new'}) {
 		$cfunc = "type_".$server->{'manager'}."_create_interface";
 		$err = &$cfunc($server, $iface);
@@ -94,7 +96,19 @@ else {
 		$mfunc = "type_".$server->{'manager'}."_modify_interface";
 		$err = &$mfunc($server, $iface, $oldiface);
 		}
+
+	# Check for change in main IP, which effects DNS
+	if (!$in{'new'} && $iface->{'address'} ne $oldiface->{'address'} &&
+	    $oldiface->{'address'} eq $oldip) {
+		&remote_finished();
+		$server->{'ip'} = $iface->{'address'};
+		&modify_primary_ip_address($server, $oldiface->{'address'},
+						    $iface->{'address'});
+		}
+
+	# Refresh IP cache
 	&compute_ip_addresses($server);
+
 	&save_managed_server($server);
 	&release_lock_server($server);
 	&error($err) if ($err);

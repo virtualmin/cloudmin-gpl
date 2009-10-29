@@ -67,6 +67,7 @@ $ifaces = &$ifunc($server);
 ref($ifaces) || &usage("Failed to list network interfaces : $ifaces");
 ($iface) = grep { $_->{'address'} eq $address } @$ifaces;
 $iface || &usage("No interface with address $address found");
+$iface->{'nodelete'} && &usage("This interface cannot be deleted");
 
 # Call the deletion function
 $dfunc = "type_".$server->{'manager'}."_delete_interface";

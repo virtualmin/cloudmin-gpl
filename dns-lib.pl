@@ -96,6 +96,51 @@ if ($zone && $dnsname) {
 	}
 }
 
+# modify_bind_dns_record(dnsname, zonename, old-ip, new-ip)
+# Update the IP in DNS for a system
+sub modify_bind_dns_record
+{
+my ($dnsname, $zonename, $oldip, $ip) = @_;
+&foreign_require("bind8", "bind8-lib.pl");
+my @zones = &list_bind_zones();
+my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
+print STDERR "zone=$zone zonename=$zonename dnsname=$dnsname oldip=$oldip ip=$ip\n";
+if ($zone && $dnsname) {
+	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
+        my @r = grep { $_->{'name'} eq $dnsname } @recs;
+	foreach my $r (@r) {
+		print STDERR "fixing $r\n";
+		&bind8::modify_record($zone->{'file'}, $r, $r->{'name'},
+				      $r->{'ttl'}, $r->{'class'}, $r->{'type'},
+				      $ip, $r->{'comment'});
+		}
+	if (@r) {
+                &bind8::bump_soa_record($zone->{'file'}, \@recs);
+                }
+
+	if (@r) {
+		# See if we can update a reverse too
+		my ($rfn, $rrecs, undef, $rzone) =
+			&get_reverse_dns_zone($oldip);
+		if ($ip && $rfn) {
+			my $arpa = &ip_address_to_arpa($ip, $rzone);
+			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
+					 @$rrecs;
+			if ($old) {
+				&bind8::modify_record($rfn, $old, $arpa,
+					$old->{'ttl'}, $old->{'class'},
+					$old->{'type'}, $dnsname,
+					$old->{'comment'});
+				&bind8::bump_soa_record($rfn, $rrecs);
+				}
+			}
+		}
+	if (@r) {
+		&bind8::restart_bind();
+		}
+	}
+}
+
 # get_reverse_dns_zone(ip)
 # Returns the records file and list of records for the domain for some IP
 sub get_reverse_dns_zone
@@ -136,14 +181,14 @@ my @recs = &bind8::read_zone_file($fn, $z->{'value'});
 return ( $fn, \@recs, $arpa, $z->{'value'} );
 }
 
-# get_server_reverse_records(&server)
+# get_server_reverse_records(&server, [&ips])
 # Returns a list of reverse records for some system, each of which is a hash
 # ref with 'ip' and possibly 'name' keys. If an IP is not in a zone we host,
 # the 'outside' key is set.
 sub get_server_reverse_records
 {
-my ($server) = @_;
-my @ips = &get_server_ip($server);
+my ($server, $force_ips) = @_;
+my @ips = $force_ips ? @$force_ips : &get_server_ip($server);
 my @rv;
 foreach my $ip (@ips) {
 	my ($rfn, $rrecs, undef, $zone) = &get_reverse_dns_zone($ip);

@@ -45,17 +45,20 @@ if ($in{'new'}) {
 	}
 else {
 	# Show details of existing interface
-	print &ui_table_row($text{'iface_parent'},
+	print &ui_table_row($can == 1 ? $text{'iface_parent'}
+				      : $text{'iface_name'},
 			    "<tt>$iface->{'name'}</tt>");
-	print &ui_table_row($text{'iface_virt'},
-			    "<tt>$iface->{'virtual'}</tt>");
+	if ($iface->{'virtual'} ne '') {
+		print &ui_table_row($text{'iface_virt'},
+				    "<tt>$iface->{'virtual'}</tt>");
+		}
 	$info = &get_server_collected($server);
 	@doms = &get_server_domains($server);
 	if ($info) {
 		($ucode, $use) = &get_interface_use($server, $info,
 						    \@doms, $iface);
+		print &ui_table_row($text{'iface_use'}, $use);
 		}
-	print &ui_table_row($text{'iface_use'}, $use);
 	}
 
 # Address
@@ -97,9 +100,15 @@ else {
 	}
 
 print &ui_table_end();
-print &ui_form_end(
-	$in{'new'} ? [ [ undef, $text{'create'} ] ]
-		   : [ [ undef, $text{'save'} ], [ 'delete', $text{'delete'} ] ]);
+if ($in{'new'}) {
+	print &ui_form_end([ [ undef, $text{'create'} ] ]);
+	}
+else {
+	print &ui_form_end(
+		[ [ undef, $text{'save'} ],
+		  $iface->{'nodelete'} ? ( ) : ( [ 'delete', $text{'delete'} ] )
+		]);
+	}
 
 &ui_print_footer("list_ifaces.cgi?id=$in{'id'}",
 		 $text{'ifaces_return'});
