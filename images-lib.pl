@@ -200,7 +200,7 @@ my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
 my $imagedir;
 if ($vhost->{$prefix.'_cachesize'}) {
 	# Make the directory if needed
-	my $err = &make_dir_on_server($vhost, $cachedir, 0700);
+	my $err = &make_dir_on_server($vhost, $cachedir, 0700, 1);
 	if ($err) {
 		return (0, "Failed to create cache directory $cachedir : $err");
 		}
@@ -952,7 +952,7 @@ $prefix = "zone" if ($prefix eq "zones");
 if ($vhost->{$prefix.'_cachesize'}) {
 	# Create the cache dir if needed
 	my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
-	my $err = &make_dir_on_server($vhost, $cachedir, 0700);
+	my $err = &make_dir_on_server($vhost, $cachedir, 0700, 1);
 	if ($err) {
 		return "Failed to create cache directory $cachedir : $err";
 		}

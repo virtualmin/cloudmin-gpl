@@ -6556,6 +6556,32 @@ else {
 return undef;
 }
 
+# modify_active_server_interface(&server, &iface, &oldiface)
+# Update an active interface, either via Webmin or ifconfig command
+sub modify_active_server_interface
+{
+my ($server, $iface, $oldiface) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Change it using Webmin
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	return $last_remote_error if ($last_remote_error);
+	&remote_foreign_call($server, "net", "activate_interface", $iface);
+	return $last_remote_error if ($last_remote_error);
+	}
+else {
+	# Use the ifconfig command
+	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." ".
+		     quotemeta($iface->{'address'})." ".
+		     "netmask ".quotemeta($iface->{'netmask'})." ".
+		     "broadcast ".quotemeta($iface->{'broadcast'});
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	return $err if ($err);
+	return $out if ($ex);
+	}
+return undef;
+}
+
 # list_boot_server_interfaces(&server)
 # Returns a list of all bootup network interfaces on a system, as an array ref
 sub list_boot_server_interfaces
@@ -6614,7 +6640,37 @@ elsif (&redhat_server_type($server)) {
 	}
 elsif (&debian_server_type($server)) {
 	# Read /etc/network/interfaces
-	# XXX
+	my $temp = &transname();
+	my $ifile = "/etc/network/interfaces";
+	my $err = &get_file_from_server($server, $ifile, $temp);
+	return $err if ($err);
+	my $lref = &read_file_lines($temp, 1);
+	my @boot;
+	my %auto;
+	foreach my $l (@$lref) {
+		if ($l =~ /^iface\s+(\S+)\s+inet\s+(static|loopback)/) {
+			# Start of a new interface
+			$b = { 'name' => $1,
+			       'fullname' => $1 };
+			$b->{'name'} =~ s/:\d+$//;
+			push(@boot, $b);
+			}
+		elsif ($l =~ /^\s+(address|netmask|network|broadcast|gateway)\s+(\S+)/ && $b) {
+			# Some parameter of an interface
+			$b->{$1} = $2;
+			}
+		elsif ($l =~ /^auto\s+(.*)/) {
+			# Auto line - save to apply later
+			foreach my $a (split(/\s+/, $1)) {
+				$auto{$a}++;
+				}
+			}
+		}
+	foreach my $b (@boot) {
+		$b->{'up'} = $auto{$b->{'fullname'}};
+		}
+	&unlink_file($temp);
+	return \@boot;
 	}
 else {
 	# Out of luck ..
@@ -6663,7 +6719,28 @@ elsif (&redhat_server_type($server)) {
 	}
 elsif (&debian_server_type($server)) {
 	# Add to /etc/network/interfaces
-	# XXX
+        &foreign_require("net", "net-lib.pl");
+	my $ifile = "/etc/network/interfaces";
+	my $temp = &transname();
+	my $err = &get_file_from_server($server, $ifile, $temp);
+	return $err if ($err);
+	my $lref = &read_file_lines($temp);
+	push(@$lref, "") if ($lref->[@$lref - 1]);
+	push(@$lref, "auto ".$iface->{'fullname'});
+	push(@$lref, "");
+	push(@$lref, "iface ".$iface->{'fullname'}." inet static");
+	push(@$lref, "\t"."address ".$iface->{'address'});
+	push(@$lref, "\t"."netmask ".$iface->{'netmask'});
+	$iface->{'network'} = &net::compute_network($iface->{'address'},
+                                                    $iface->{'netmask'});
+	push(@$lref, "\t"."network ".$iface->{'network'});
+	if ($iface->{'broadcast'}) {
+		push(@$lref, "\t"."broadcast ".$iface->{'broadcast'});
+		}
+	&flush_file_lines($temp);
+	my $err = &put_file_to_server($server, $temp, $ifile);
+	&unlink_file($temp);
+        return $err;
 	}
 else {
 	# Out of luck
@@ -6701,11 +6778,112 @@ elsif (&redhat_server_type($server)) {
 	}
 elsif (&debian_server_type($server)) {
 	# Delete from /etc/network/interfaces
-	# XXX
+        &foreign_require("net", "net-lib.pl");
+	my $ifile = "/etc/network/interfaces";
+	my $temp = &transname();
+	my $err = &get_file_from_server($server, $ifile, $temp);
+	return $err if ($err);
+	my $lref = &read_file_lines($temp);
+	my $lnum = 0;
+	my ($startline, $endline);
+	foreach my $l (@$lref) {
+		if ($l =~ /^iface\s+(\S+)/ && $1 eq $iface->{'fullname'}) {
+			# Start of interface to remove
+			$startline = $endline = $lnum;
+			}
+		elsif ($l =~ /\S/ && defined($startline)) {
+			# Still in interface to remove
+			$endline = $lnum;
+			}
+		$lnum++;
+		}
+	if (defined($startline)) {
+		# Remove interface definition
+		if ($startline && $lref->[$startline-1] !~ /\S/) {
+			# Take out blank line before too
+			$startline--;
+			}
+		splice(@$lref, $startline, $endline-$startline+1);
+		}
+	$lnum = 0;
+	foreach my $l (@$lref) {
+		if ($l =~ /^auto\s+(.*)/) {
+			my @autos = split(/\s+/, $1);
+			@autos = grep { $_ ne $iface->{'fullname'} } @autos;
+			if (@autos) {
+				$lref->[$lnum] = "auto ".join(" ", @autos);
+				}
+			else {
+				splice(@$lref, $lnum, 1);
+				}
+			last;
+			}
+		$lnum++;
+		}
+	&flush_file_lines($temp);
+	my $err = &put_file_to_server($server, $temp, $ifile);
+	&unlink_file($temp);
+        return $err;
 	}
 else {
 	# Out of luck
 	return "Deleting boot-time network interfaces on systems of type ".
+               $server->{'type'}." is not supported";
+	}
+}
+
+# modify_boot_server_interface(&server, &iface, &oldiface)
+# Update a boot-time interface, either via Webmin or modifying config files
+sub modify_boot_server_interface
+{
+my ($server, $iface, $oldiface) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Use Webmin
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	my @boot = &remote_foreign_call($server, "net", "boot_interfaces");
+	my ($boot) = grep { $_->{'fullname'} eq $oldiface->{'fullname'} } @boot;
+	if ($boot) {
+		$boot->{'address'} = $iface->{'address'};
+		$boot->{'netmask'} = $iface->{'netmask'};
+		$boot->{'broadcast'} = $iface->{'broadcast'};
+		$boot->{'network'} = $iface->{'network'};
+		&remote_foreign_call($server, "net", "save_interface", $boot);
+		return $last_remote_error if ($last_remote_error);
+		}
+	return undef;
+	}
+elsif (&redhat_server_type($server)) {
+	# Update ifcfg- file
+	&foreign_require("net", "net-lib.pl");
+	my %conf;
+	my $idir = "/etc/sysconfig/network-scripts";
+	my $ifile = $idir."/ifcfg-".$iface->{'fullname'};
+	if (!&stat_file_on_server($server, $ifile)) {
+		# If missing, do nothing
+		return undef;
+		}
+	my $temp = &transname();
+	my $err = &get_file_from_server($server, $ifile, $temp);
+	return $err if ($err);
+	&read_env_file($temp, \%conf);
+	$conf{'IPADDR'} = $iface->{'address'};
+	$conf{'NETMASK'} = $iface->{'netmask'};
+	$conf{'NETWORK'} = &net::compute_network($iface->{'address'},
+						 $iface->{'netmask'});
+	$conf{'BROADCAST'} = $iface->{'broadcast'};
+	&write_env_file($temp, \%conf);
+	my $err = &put_file_to_server($server, $temp, $ifile);
+	&unlink_file($temp);
+	return $err;
+	}
+elsif (&debian_server_type($server)) {
+	# Delete from /etc/network/interfaces
+	# XXX
+	}
+else {
+	# Out of luck
+	return "Modifying boot-time network interfaces on systems of type ".
                $server->{'type'}." is not supported";
 	}
 }
