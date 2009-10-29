@@ -1209,7 +1209,6 @@ if (!$rv) {
 # Checksum on target
 if (!$rv && $srccs_ok) {
 	my ($destcs_ok, $destcs) = &checksum_file_on_server($destserver, $dest);
-	print STDERR "srccs=$srccs srccs_ok=$srccs_ok destcs=$destcs destcs_ok=$destcs_ok\n";
 	if (!$destcs_ok) {
 		$rv = "Failed to checksum file on destination system : $destcs";
 		}
@@ -2071,12 +2070,10 @@ if (defined(&$nfunc) && &$nfunc($server)) {
 # Update /etc/hosts
 my $temp = &transname();
 my $err = &get_file_from_server($server, "/etc/hosts", $temp);
-print STDERR "hosts err=$err\n";
 if (!$err) {
 	my $lref = &read_file_lines($temp);
 	foreach my $l (@$lref) {
 		$l =~ s/^\Q$oldip\E\s/$newip /;
-		print STDERR "l=$l\n";
 		}
 	&flush_file_lines($temp);
 	&put_file_to_server($server, $temp, "/etc/hosts");
@@ -6608,7 +6605,10 @@ return undef;
 sub modify_active_server_interface
 {
 my ($server, $iface, $oldiface) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+my $oldip = &get_server_ip($server);
+my $primary = $oldip eq $oldiface->{'address'} ? 1 : 0;
+if (($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') &&
+    !$primary) {
 	# Change it using Webmin
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
@@ -6622,6 +6622,10 @@ else {
 		     quotemeta($iface->{'address'})." ".
 		     "netmask ".quotemeta($iface->{'netmask'})." ".
 		     "broadcast ".quotemeta($iface->{'broadcast'});
+	if ($primary) {
+		# Will hang, so background it
+		$cmd = "(sleep 2 ; $cmd >/dev/null 2>&1 </dev/null) &";
+		}
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err if ($err);
 	return $out if ($ex);

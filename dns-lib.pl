@@ -104,12 +104,10 @@ my ($dnsname, $zonename, $oldip, $ip) = @_;
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
-print STDERR "zone=$zone zonename=$zonename dnsname=$dnsname oldip=$oldip ip=$ip\n";
 if ($zone && $dnsname) {
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
         my @r = grep { $_->{'name'} eq $dnsname } @recs;
 	foreach my $r (@r) {
-		print STDERR "fixing $r\n";
 		&bind8::modify_record($zone->{'file'}, $r, $r->{'name'},
 				      $r->{'ttl'}, $r->{'class'}, $r->{'type'},
 				      $ip, $r->{'comment'});
