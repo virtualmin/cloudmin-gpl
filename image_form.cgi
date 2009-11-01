@@ -46,12 +46,16 @@ else {
 
 # Description
 print &ui_table_row($text{'mkimage_desc'},
-		    &ui_textbox("desc", undef, 60));
+		    &ui_opt_textbox("desc", undef, 60,
+				    $text{'mkimage_descdef'}));
 
 # Version number
 print &ui_table_row($text{'mkimage_version'},
-		    &ui_opt_textbox("version", undef, 5,
-				    $text{'mkimage_none'}));
+		    &ui_radio("version_def", 0,
+			      [ [ 0, $text{'mkimage_none'} ],
+				[ 2, $text{'mkimage_inc'} ],
+				[ 1, $text{'mkimage_ver'} ] ])." ".
+		    &ui_textbox("version", undef, 5));
 
 # Clear serials?
 print &ui_table_row($text{'newami_munge'},

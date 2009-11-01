@@ -9,25 +9,39 @@ $server || &error($text{'mkimage_egone'});
 &can_action_error($server, "image");
 
 # Validate inputs
-$in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
 if (!$in{'imageid_def'} || !defined($in{'oldid'})) {
+	# Creating a new image ID
 	$in{'imageid'} =~ /^\S+$/ || &error($text{'mkimage_eid'});
 	($clash) = grep { $_->{'id'} eq $in{'imageid'} } &list_server_images();
 	$clash && &error($text{'mkimage_eclash'});
 	$imageid = $in{'imageid'};
 	}
 else {
+	# Over-writing old
 	$imageid = $in{'oldid'};
 	}
 
 # Create initial image hash
 $image = { 'id' => $imageid,
-	   'desc' => $in{'desc'},
 	   'manager' => $server->{'manager'},
 	   'nocompress' => !$in{'compress'},
 	   'type' => $server->{'type'},
 	 };
-$image->{'version'} = $in{'version'} if (!$in{'version_def'});
+if ($in{'version_def'} == 0) {
+	$image->{'version'} = $in{'version'};
+	}
+elsif ($in{'version_def'} == 2) {
+	$clash && $clash->{'version'} || &error($text{'mkimage_einc'});
+	$image->{'version'} = $clash->{'version'} + 0.1;
+	}
+if ($in{'desc_def'}) {
+	$clash && $clash->{'desc'} || error($text{'mkimage_edesc2'});
+	$image->{'desc'} = $clash->{'desc'};
+	}
+else {
+	$in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
+	$image->{'desc'} = $in{'desc'};
+	}
 $info = &get_server_collected($server);
 if ($info && $info->{'minfo'} && $info->{'minfo'}->{'version'}) {
 	$image->{'virtualmin'} =

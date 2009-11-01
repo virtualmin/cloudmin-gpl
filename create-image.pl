@@ -90,6 +90,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--version") {
 		$version = shift(@ARGV);
 		}
+	elsif ($a eq "--inc-version") {
+		$incversion = 1;
+		}
 	elsif ($a eq "--no-serial") {
 		$munge = 0;
 		}
@@ -103,7 +106,6 @@ while(@ARGV > 0) {
 
 # Check for mandatory args
 $host || &usage("Missing --host parameter");
-$desc || &usage("Missing --desc parameter");
 $id || &usage("Missing --id parameter");
 
 # Get the server to image
@@ -116,14 +118,21 @@ if (defined(&$nfunc) && &$nfunc($server)) {
 if ($server->{'status'} eq 'nohost') {
 	&usage("A system whose host system is down cannot be imaged");
 	}
+($clash) = grep { $_->{'id'} eq $id } &list_server_images();
+if ($clash) {
+	$desc ||= $clash->{'desc'};
+	if ($incversion && $clash->{'version'}) {
+		$version = $clash->{'version'} + 0.1;
+		}
+	}
 if (!$overwrite) {
-	($clash) = grep { $_->{'id'} eq $id } &list_server_images();
 	$clash && &usage("An image with the ID $id already exists, and --overwrite was not set");
 	if (!$config{'vm2_overwrite'}) {
 		$clash->{'vm2'} && &usage("The image with ID $id is provided ".
 				  "by Virtualmin, and cannot be overwritten");
 		}
 	}
+$desc || &usage("Missing --desc parameter");
 &obtain_lock_server($server);
 
 # Create initial image hash
@@ -237,7 +246,7 @@ print "cloudmin create-image --host name\n";
 print "                      --desc \"image description\"\n";
 print "                      --id image-id\n";
 print "                     [--overwrite]\n";
-print "                     [--version number]\n";
+print "                     [--version number | --inc-version]\n";
 print "                     [--no-serial]\n";
 print "                     [--no-compress]\n";
 exit(1);
