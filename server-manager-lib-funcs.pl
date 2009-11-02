@@ -1154,24 +1154,24 @@ else {
 		$out = undef;
 		my ($given_password, $wrong_password, $connect_failed);
 		while(1) {
-			my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
-			if ($rv == 0) {
+			my $wrv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
+			if ($wrv == 0) {
 				syswrite($fh, "$destserver->{'ssh_pass'}\n");
 				$given_password++;
 				}
-			elsif ($rv == 1) {
+			elsif ($wrv == 1) {
 				syswrite($fh, "yes\n");
 				}
-			elsif ($rv == 2) {
+			elsif ($wrv == 2) {
 				$wrong_password++;
 				$out .= $wait_for_input;
 				last;
 				}
-			elsif ($rv == 3) {
+			elsif ($wrv == 3) {
 				$connect_failed++;
 				$out .= $wait_for_input;
 				}
-			elsif ($rv < 0) {
+			elsif ($wrv < 0) {
 				last;
 				}
 			else {
@@ -1188,22 +1188,31 @@ else {
 			# Looks like it did!
 			$rv = undef;
 			}
+		else {
+			# Failed .. record error
+			$out =~ s/^\s*\r?\n//;	# Remove empty line at start
+			$rv = $out;
+			}
+		}
+	else {
+		$rv = "Direct scp failed : ".($err || $out);
 		}
 	if ($keytemp) {
 		&delete_file_on_server($srcserver, $keytemp);
 		}
-	}
 
-if (!$rv) {
-	# Fall back to fetching to master and uploading
-	my $srcfile = $src;
-	$srcfile =~ s/^.*[\\\/]//;
-	my $temp = &transname($srcfile);
-	my $err = &get_file_from_server($srcserver, $src, $temp, $device);
-	$rv = "Download to Cloudmin master failed : $err" if ($err);
-	$err = &put_file_to_server($destserver, $temp, $dest, $device);
-	&unlink_file($temp);
-	$rv = "Upload from Cloudmin master failed : $err" if ($err);
+	if ($rv) {
+		# Fall back to fetching to master and uploading
+		my $temp = &transname();
+		$rv = undef;
+		my $err = &get_file_from_server(
+				$srcserver, $src, $temp, $device);
+		$rv = undef;
+		$rv = "Download to Cloudmin master failed : $err" if ($err);
+		$err = &put_file_to_server($destserver, $temp, $dest, $device);
+		&unlink_file($temp);
+		$rv = "Upload from Cloudmin master failed : $err" if ($err);
+		}
 	}
 
 # Checksum on target
@@ -5625,7 +5634,7 @@ if ($server->{'status'} ne 'down') {
 	if ($err) {
 		return &text('smove_shutfailed', $err);
 		}
-	$s->{'status'} = 'down';	# Assume it worked
+	$server->{'status'} = 'down';	# Assume it worked
 	$was_up = 1;
 	&$second_print($text{'create_done'});
 	}
