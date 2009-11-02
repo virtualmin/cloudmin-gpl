@@ -998,7 +998,7 @@ foreach my $m ([ \&munge_virtualmin_licence_files, 'mkimage_mungelicence' ],
 	my $mfunc = $m->[0];
 	my $munged = &$mfunc($server);
 	if (!ref($munged)) {
-		&$second_print(&text('mkimage_emunge', $err));
+		&$second_print(&text('mkimage_emunge', $munged));
 		$ok = 0;
 		}
 	else {
