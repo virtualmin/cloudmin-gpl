@@ -98,6 +98,11 @@ if ($multi) {
 		if ($d->{'mount'}) {
 			print "    Mount point: $d->{'mount'}\n";
 			print "    Filesystem: $d->{'fs'}\n";
+			print "    Mounted: ",
+			      ($d->{'mounted'} ? "Yes" : "No"),"\n";
+			}
+		if ($d->{'blockid'}) {
+			print "    Xen block ID: $d->{'blockid'}\n";
 			}
 		}
 	}

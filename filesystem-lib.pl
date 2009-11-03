@@ -105,7 +105,12 @@ if ($fstab) {
 	while(<FSTAB>) {
 		s/\r|\n//g;
 		s/#.*$//g;
-		push(@rv, [ split(/\s+/, $_) ]);
+		my @r = split(/\s+/, $_);
+		if ($r[0] =~ /^dev\//) {
+			# Fix stupid dev/sdaX line
+			$r[0] = "/".$r[0];
+			}
+		push(@rv, \@r);
 		}
 	close(FSTAB);
 	}
