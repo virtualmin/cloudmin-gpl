@@ -469,6 +469,25 @@ if ($s->{'status'} eq 'virt' && $s->{'virtualmin_error'}) {
 return $msg;
 }
 
+# can_ssh_status(&server)
+# Return 1 if Cloudmin can run commands on a system via SSH
+sub can_ssh_status
+{
+my ($server) = @_;
+return $server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt' ||
+       $server->{'status'} eq 'nowebmin' ||
+       $server->{'status'} eq 'nowebminlogin' ||
+       $server->{'status'} eq 'downwebmin';
+}
+
+# can_webmin_status(&server)
+# Return 1 if Cloudmin can use Webmin on a system
+sub can_webmin_status
+{
+my ($server) = @_;
+return $server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt';
+}
+
 # list_ssh_keys()
 # Returns a list of SSH keys used to login to servers
 sub list_ssh_keys
