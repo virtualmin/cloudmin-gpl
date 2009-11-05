@@ -2214,6 +2214,7 @@ smove_disksnone=.. no disk images were copied
 smove_xenconf=Fixing and copying Xen config file $1 ..
 smove_xenconfdone=.. copied to $1
 smove_starting=Starting up on new host system ..
+smove_startfailed=.. startup failed : $1
 smove_delfiles=Deleting disk and config files from original host ..
 smove_delerr=.. failed to delete $1 : $2
 smove_deldir=Deleting filesystem from $1 ..

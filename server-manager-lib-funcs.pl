@@ -1141,6 +1141,9 @@ else {
 		# Use dd piped into SSH
 		$sshcmd = "dd if=".quotemeta($src)." bs=32768 | ssh -q -x";
 		$sshcmd .= " -".$destserver->{'ssh_protocol'};
+		if ($keytemp) {
+			$sshcmd .= " -i ".quotemeta($keytemp);
+			}
 		if ($destserver->{'ssh_port'}) {
 			$sshcmd .= " -p ".$destserver->{'ssh_port'};
 			}
@@ -5650,15 +5653,11 @@ my $mfunc = "type_".$server->{'manager'}."_move_system";
 my $err = &$mfunc($server, $dest, $shutdown, $allocate);
 
 # Refresh status
-if (!$err) {
-	&$first_print($text{'save_refreshing'});
-	}
+&$first_print($text{'save_refreshing'});
 &check_server_status($server, 0, 1);
 &save_managed_server($server);
-if (!$err) {
-	&$second_print(&text('save_refreshdone2',
-		&describe_status($server, 1, 1)));
-	}
+&$second_print(&text('save_refreshdone2',
+	&describe_status($server, 1, 1)));
 
 return $err;
 }
