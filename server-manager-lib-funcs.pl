@@ -2978,6 +2978,37 @@ my @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss,
 return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gw'} ) : ( );
 }
 
+# range_check_ip_address(ip, start-ips, end-ips, cidrs,
+# 			 [gateways, ifaces, want-iface])
+# Returns 1 if some IP is within the given ranges
+sub range_check_ip_address
+{
+my ($ip, $startips, $endips, $cidrs, $gws, $ifaces, $wantiface) = @_;
+my @startips = split(/\s+/, $startips);
+my @endips = split(/\s+/, $endips);
+my @cidrs = split(/\s+/, $cidrs);
+my @gws = split(/\s+/, $gws);
+my @ifaces = split(/\s+/, $ifaces);
+
+for(my $i=0; $i<@startips; $i++) {
+	# If this range is for some host system interface, skip if we aren't
+	# allocating for that interface
+	next if ($wantiface && $ifaces[$i] ne $wantiface &&
+		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
+
+	# Check if the IP falls within the range
+	my $start = &net::ip_to_integer($startips[$i]);
+	my $end = &net::ip_to_integer($endips[$i]);
+        for(my $n=$start; $n<=$end; $n++) {
+                my $rip = &net::integer_to_ip($n);
+		if ($rip eq $ip) {
+			return 1;
+			}
+		}
+	}
+return 0;
+}
+
 # get_ip_range_usage(start, end)
 # Returns the number of IPs and the number used in some range
 sub get_ip_range_usage
@@ -4228,7 +4259,6 @@ my ($server) = @_;
 my $gw;
 if ($server->{'manager'} eq 'this') {
         # Just call own module
-        &foreign_require("net", "net-lib.pl");
         ($gw) = &net::get_default_gateway();
         }
 elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
@@ -5592,14 +5622,14 @@ else {
         }
 }
 
-# move_system(&system, &dest, [shutdown])
+# move_system(&system, &dest, [shutdown], [reallocate-ip])
 # Moves a virtual system to a host hosting server, which is assumed to be
 # able to support it. Calls the appropriate type-specific move function to
 # do most of the work. Returns undef on success or an error message on failure.
 # May print stuff.
 sub move_system
 {
-my ($server, $dest, $shutdown) = @_;
+my ($server, $dest, $shutdown, $allocate) = @_;
 my @pars = &is_parent_server($dest);
 my $dfunc = "type_".$server->{'manager'}."_desc";
 my $desc = &$dfunc($server);
@@ -5609,13 +5639,15 @@ my $vhost = &get_parent_server($server);
 $vhost->{'id'} ne $dest->{'id'} ||
 	return "Source and destination host systems are the same!";
 
-# Check if moving is supported, then do it
+# Check if moving is supported
 my $cfunc = "type_".$server->{'manager'}."_can_move";
 if (!defined(&$cfunc) || !&$cfunc($server, $dest)) {
 	return "The $desc system $server->{'host'} cannot be moved to $dest->{'host'}";
 	}
+
+# Do the actual move
 my $mfunc = "type_".$server->{'manager'}."_move_system";
-my $err = &$mfunc($server, $dest, $shutdown);
+my $err = &$mfunc($server, $dest, $shutdown, $allocate);
 
 # Refresh status
 if (!$err) {
@@ -6948,7 +6980,6 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	}
 elsif (&redhat_server_type($server)) {
 	# Update ifcfg- file
-	&foreign_require("net", "net-lib.pl");
 	my %conf;
 	my $idir = "/etc/sysconfig/network-scripts";
 	my $ifile = $idir."/ifcfg-".$iface->{'fullname'};
@@ -6972,7 +7003,6 @@ elsif (&redhat_server_type($server)) {
 	}
 elsif (&debian_server_type($server)) {
 	# Update in from /etc/network/interfaces
-	&foreign_require("net", "net-lib.pl");
 	my $ifile = "/etc/network/interfaces";
 	my $temp = &transname();
 	my $err = &get_file_from_server($server, $ifile, $temp);

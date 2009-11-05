@@ -22,6 +22,10 @@ C<--shutdown> flag. In some cases (such as when the source and destination
 host systems use different directories), the virtual system may be shut down
 anyway.
 
+If the C<--allocate-ip> flag is given and the destination host system uses
+a different IP range to the source host (perhaps because it is on a different
+network), Cloudmin will select a new IP address as part of the move process.
+
 =head1 Example usage
 
   cloudmin move-system --host xengtest.home --dest geylang.home
@@ -77,6 +81,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--shutdown") {
 		$shutdown = 1;
 		}
+	elsif ($a eq "--allocate-ip") {
+		$allocate = 1;
+		}
 	else {
 		&usage();
 		}
@@ -104,7 +111,7 @@ defined(&$cfunc) || &usage("Systems of type $desc cannot be moved");
 print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
 &obtain_lock_server($dest);
 &obtain_lock_server($server);
-$err = &move_system($server, $dest, $shutdown);
+$err = &move_system($server, $dest, $shutdown, $allocate);
 &release_lock_server($server);
 &release_lock_server($dest);
 if ($err) {
@@ -122,6 +129,7 @@ print "\n";
 print "cloudmin move-system --host name\n";
 print "                     --dest new-host-system-name\n";
 print "                    [--shutdown]\n";
+print "                    [--allocate-ip]\n";
 exit(1);
 }
 
