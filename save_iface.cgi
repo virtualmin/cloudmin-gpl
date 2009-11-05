@@ -102,12 +102,15 @@ else {
 	    $oldiface->{'address'} eq $oldip) {
 		&remote_finished();
 		$server->{'ip'} = $iface->{'address'};
+		&delete_ip_address($server, $oldip);
+		&add_ip_address($server, $ip);
 		&modify_primary_ip_address($server, $oldiface->{'address'},
 						    $iface->{'address'});
 		}
-
-	# Refresh IP cache
-	&compute_ip_addresses($server);
+	else {
+		# Refresh IP cache
+		&compute_ip_addresses($server);
+		}
 
 	&save_managed_server($server);
 	&release_lock_server($server);
