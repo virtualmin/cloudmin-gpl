@@ -6207,11 +6207,11 @@ else {
 	}
 }
 
-# show_host_server_field(label, name, manager)
+# show_host_server_field(label, name, manager, [host-change-function])
 # Returns HTML for selecting a host system, if the user is allowed to.
 sub show_host_server_field
 {
-my ($label, $name, $type) = @_;
+my ($label, $name, $type, $hostfunc) = @_;
 my @vhosts = &list_available_host_servers($type);
 my ($default) = grep { $_->{$type.'_default'} } @vhosts;
 $default ||= $vhosts[0];
@@ -6221,14 +6221,21 @@ $defloc ||= $locs[0] if (@locs);
 my $field;
 my $hostfield = &ui_select($name."_on", $default->{'id'},
 		[ map { [ $_->{'id'}, $_->{'host'}.
-		      &host_free_desc($_, $type) ] } @vhosts ]);
+		      &host_free_desc($_, $type) ] } @vhosts ],
+		1, 0, 0, 0,
+		$hostfunc ? "onChange='${hostfunc}(value)'" : "");
 my $locfield = &ui_select($name."_loc", $defloc->{'id'},
-		[ map { [ $_->{'id'}, $_->{'desc'} ] } @locs ]);
+		[ map { [ $_->{'id'}, $_->{'desc'} ] } @locs ],
+		1, 0, 0, 0,
+		$locfunc ? "onChange='${hostfunc}(\"loc\")'" : "");
 if (&can_select_host_server() && &can_select_host_location() && @locs) {
 	# Can choose explicit host, or location
 	$field = &ui_radio_table($name."_def", 1,
-			[ [ 1, $text{'locations_sel'}, $locfield ],
-			  [ 0, $text{'locations_host'}, $hostfield ] ], 1);
+			[ [ 1, $text{'locations_sel'}, $locfield,
+			    $hostfunc ? "onClick='${hostfunc}(\"loc\")'" : "" ],
+			  [ 0, $text{'locations_host'}, $hostfield,
+			    $hostfunc ? "onClick='${hostfunc}(form.${name}_on.value)'" : "" ],
+			], 1);
 	}
 elsif (&can_select_host_location() && @locs) {
 	# Can only choose location
@@ -6241,9 +6248,17 @@ elsif (&can_select_host_server()) {
 		 $hostfield;
 	}
 if ($field) {
-	return &ui_table_row($label, $field);
+	my $f = &ui_table_row($label, $field);
+	my $js;
+	if (&can_select_host_location() && @locs) {
+		$js .= "${hostfunc}('loc')\n";
+		}
+	elsif (&can_select_host_server()) {
+		$js .= "${hostfunc}($default->{'id'});\n";
+		}
+	return wantarray ? ( $f, $js) : $f;
 	}
-return undef;
+return wantarray ? ( ) : undef;
 }
 
 # parse_host_server_field(&server, name, manager, &in)
