@@ -2118,6 +2118,39 @@ if ($mounted) {
 	}
 }
 
+# modify_default_gateway(&server, gateway)
+# Change the default gateway IP of a system. It is assumed that the gateway can
+# be set in a network interface config.
+sub modify_default_gateway
+{
+my ($server, $gw) = @_;
+
+# Find first boot-time interface with a gateway, and change it
+my $boots = &list_boot_server_interfaces($server);
+if (ref($boots)) {
+	my ($iface) = grep { $_->{'gateway'} } @$boots;
+	if ($iface) {
+		my $oldiface = { %$iface };
+		$iface->{'gateway'} = $gw;
+		my $err = &modify_boot_server_interface(
+				$server, $iface, $oldiface);
+		return $err if ($err);
+		}
+	}
+
+# Updating routing table
+if (&can_ssh_status($server)) {
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"route delete default".
+		($gw ? " ; route add default gw $gw" : ""));
+	if ($ex || $err) {
+		return "Failed to activate new gateway : ".($err || $out);
+		}
+	}
+
+return undef;
+}
+
 # save_server_domains(&server, &domains)
 # Writes out the list of domains hosted by some server
 sub save_server_domains
@@ -5452,8 +5485,10 @@ my @ends = split(/\s+/, $ends);
 my @cidrs = split(/\s+/, $cidrs);
 my @ifaces = split(/\s+/, $ifaces);
 my @gws = map { $_ eq '*' ? '' : $_ } split(/\s+/, $gws);
-my @cols = ( $text{'range_start'}, $text{'range_end'}, $text{'range_cidr'},
-	     $text{'range_gw'} );
+my @cols = ( $text{'range_start'}, $text{'range_end'}, $text{'range_cidr'} );
+if (@_ >= 4) {
+	push(@cols, $text{'range_gw'});
+	}
 if ($poss) {
 	push(@cols, $text{'range_iface'});
 	}
@@ -5464,8 +5499,10 @@ my $table = &ui_columns_start(\@cols);
 for(my $i=0; $i<=@starts; $i++) {
 	my @cols = ( &ui_textbox("start_$i", $starts[$i], 15),
 		     &ui_textbox("end_$i", $ends[$i], 15),
-		     &ui_textbox("cidr_$i", $cidrs[$i], 5),
-		     &ui_textbox("gw_$i", $gws[$i], 15));
+		     &ui_textbox("cidr_$i", $cidrs[$i], 5) );
+	if (@_ >= 4) {
+		push(@cols, &ui_textbox("gw_$i", $gws[$i], 15));
+		}
 	if ($poss) {
 		push(@cols, &ui_select("iface_$i", $ifaces[$i] || '*',
 				       [ [ '*', $text{'range_any'} ], @$poss ],
@@ -5529,8 +5566,11 @@ for(my $i=0; defined($in->{"start_$i"}); $i++) {
 	}
 @starts || &error($text{'range_enone'});
 my @rv = (join(" ", @starts), join(" ", @ends), join(" ", @cidrs));
+if (@gws || @ifaces) {
+	push(@rv, join(" ", @gws));
+	}
 if (@ifaces) {
-	push(@rv, join(" ", @gws), join(" ", @ifaces));
+	push(@rv, join(" ", @ifaces));
 	}
 return @rv;
 }
@@ -6611,6 +6651,15 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	my @active = &remote_foreign_call(
 		$server, "net", "active_interfaces", 1);
 	return $last_remote_error if ($last_remote_error);
+
+	# Also add in gateways
+	my @routes = &remote_foreign_call($server, "net", "list_routes");
+	foreach my $r (@routes) {
+		my ($iface) = grep { $_->{'fullname'} eq $r->{'iface'}} @active;
+		if ($r->{'dest'} eq "0.0.0.0" && $iface) {
+			$iface->{'gateway'} = $r->{'gateway'};
+			}
+		}
 	return \@active;
 	}
 else {
@@ -6620,6 +6669,20 @@ else {
 	return $err if ($err);
 	return $out if ($ex);
 	my @active = &parse_ifconfig_output($out);
+
+	# Also add in gateways
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"netstat -rn");
+	return $err if ($err);
+	return $out if ($ex);
+	foreach my $l (split(/\r?\n/, $out)) {
+		my ($dest, $gw, undef, undef, undef, undef, undef, $i) =
+			split(/\s+/, $l);
+		my ($iface) = grep { $_->{'fullname'} eq $i } @active;
+		if ($dest eq "0.0.0.0" && $iface) {
+			$iface->{'gateway'} = $gw;
+			}
+		}
 	return \@active;
 	}
 }
@@ -6830,6 +6893,9 @@ elsif (&redhat_server_type($server)) {
 	$conf{'NETWORK'} = &net::compute_network($iface->{'address'},
 						 $iface->{'netmask'});
 	$conf{'BROADCAST'} = $iface->{'broadcast'};
+        if ($iface->{'gateway'}) {
+                $conf{'GATEWAY'} = $iface->{'gateway'};
+                }
 	$conf{'ONBOOT'} = 'yes';
 	$conf{'ONPARENT'} = 'yes' if ($iface->{'virtual'} ne '');
 	$conf{'BOOTPROTO'} = 'none';
@@ -6861,6 +6927,9 @@ elsif (&debian_server_type($server)) {
 	push(@$lref, "\t"."network ".$iface->{'network'});
 	if ($iface->{'broadcast'}) {
 		push(@$lref, "\t"."broadcast ".$iface->{'broadcast'});
+		}
+	if ($iface->{'gateway'}) {
+		push(@$lref, "\t"."gateway ".$iface->{'gateway'});
 		}
 	&flush_file_lines($temp);
 	my $err = &put_file_to_server($server, $temp, $ifile);
@@ -6972,6 +7041,7 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 		$boot->{'netmask'} = $iface->{'netmask'};
 		$boot->{'broadcast'} = $iface->{'broadcast'};
 		$boot->{'network'} = $iface->{'network'};
+		$boot->{'gateway'} = $iface->{'gateway'};
 		&remote_foreign_call($server, "net", "save_interface", $boot);
 		return $last_remote_error if ($last_remote_error);
 		}
@@ -6995,6 +7065,12 @@ elsif (&redhat_server_type($server)) {
 	$conf{'NETWORK'} = &net::compute_network($iface->{'address'},
 						 $iface->{'netmask'});
 	$conf{'BROADCAST'} = $iface->{'broadcast'};
+        if ($iface->{'gateway'}) {
+                $conf{'GATEWAY'} = $iface->{'gateway'};
+                }
+        else {
+                delete($conf{'GATEWAY'});
+                }
 	&write_env_file($temp, \%conf);
 	my $err = &put_file_to_server($server, $temp, $ifile);
 	&unlink_file($temp);
@@ -7015,8 +7091,7 @@ elsif (&debian_server_type($server)) {
 			# Start of interface, may be the one to edit
 			$iniface = $1 eq $iface->{'fullname'} ? 1 : 0;
 			}
-		elsif ($l =~ /^\s+(address|netmask|network|broadcast)\s+/ &&
-		       $iniface && $iface->{$1}) {
+		elsif ($l =~ /^\s+(address|netmask|network|broadcast|gateway)\s+/ && $iniface && $iface->{$1}) {
 			# Some interface parameter to edit
 			$l = "\t".$1." ".$iface->{$1};
 			}

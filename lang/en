@@ -2269,6 +2269,8 @@ smove_allocating=Allocating new IP address ..
 smove_allocated=.. new address will be $1
 smove_ipchanging=Changing primary IP address from $1 to $2 ..
 smove_eifaceip=No interface for primary IP found!
+smove_gwchanging=Changing default gateway from $1 to $2 ..
+smove_gwnone=nothing
 
 transfer_title2=Transfer File
 transfer_err=Failed to transfer file

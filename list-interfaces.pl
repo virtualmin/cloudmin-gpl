@@ -83,6 +83,9 @@ if ($multi) {
 		print "    Interface number: $i->{'virtual'}\n";
 		print "    IP address: $i->{'address'}\n";
 		print "    Netmask: $i->{'netmask'}\n";
+		if ($i->{'gateway'}) {
+			print "    Gateway: $i->{'gateway'}\n";
+			}
 		if ($use) {
 			print "    Use: ",&strip_html_tags($use),"\n";
 			print "    Use type: ",
