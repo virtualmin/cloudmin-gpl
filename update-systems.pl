@@ -119,6 +119,7 @@ print "                        [--group name]*\n";
 my $types = join("|", @server_management_types);
 print "                        [--type $types]*\n";
 print "                        [--os oscode]*\n";
+print "                        [--package name | --virtualmin]\n";
 exit(1);
 }
 
