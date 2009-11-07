@@ -157,6 +157,7 @@ if ($info && $info->{'kernel'}) {
 &$first_print("Creating temporary directory for image files ..");
 $pfunc = "type_".$server->{'manager'}."_parent";
 $vhost = &$pfunc($server);
+$image->{'dest'} = $vhost->{'image_default'};
 ($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
 if (!$tempok) {
 	&$second_print(".. failed : $temp");

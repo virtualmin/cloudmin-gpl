@@ -1297,6 +1297,9 @@ images_got=.. successfully downloaded $1 of system image data.
 images_getlocal=Image <i>$1</i> only exists locally and cannot be downloaded.
 images_getpartial=Image <i>$1</i> is already being downloaded.
 images_return=system images list
+images_dheader=Default image storage location
+images_modenone=Default directory on Cloudmin master
+images_def=Store images for hosted systems in
 
 xen_typedesc=Xen
 xen_createlink=Create Xen instance
@@ -1350,6 +1353,7 @@ xen_ezone=Missing or invalid-looking DNS domain
 xen_eiface=Missing or invalid-looking base network interface
 xen_egw=Missing or invalid gateway IP address
 xen_eresolv=Missing or non-existent resolv.conf file
+xen_nheader=Network options
 xen_header2=Hosted Xen systems
 xen_uhost=Hostname
 xen_udisk=Total virtual disk

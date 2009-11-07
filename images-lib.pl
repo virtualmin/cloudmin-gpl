@@ -904,25 +904,39 @@ return \@rv;
 }
 
 # fetch_image_files(&vhost, &image, tempdir, show-progress-dots?, &server)
-# Fetches from some host system the files that make up some image, and saves
-# them in the /var/webmin/server-manager directory on this system. Since this
-# can take some time, outputs progress dots.
+# Transfers from some host system the files that make up some image to
+# the destination defined in the image. Since this can take some time, outputs
+# progress dots.  
 sub fetch_image_files
 {
 my ($vhost, $image, $temp, $progress, $server) = @_;
 
-# Download each file in the image
+# Work out where to transfer the image to
+my $dest = &parse_backup_destination($image->{'dest'} || $server_images_dir);
+my $destserver;
+if ($dest->{'mode'} == 0) {
+	$destserver = &get_managed_server(0);
+	}
+elsif ($dest->{'mode'} == 1) {
+	$destserver = $vhost;
+	}
+elsif ($dest->{'mode'} == 2) {
+	$destserver = &get_managed_server_by("id", $dest->{'id'});
+	}
+
+# Transfer each file in the image
 my $totalsize = 0;
 my $oldsize;
 my @imgfiles = split(/\s+/, $image->{'files'});
 foreach my $f (@imgfiles) {
-	my $path = "$server_images_dir/$f";
+	my $path = "$dest->{'path'}/$f";
 	my @oldst = stat($path);
 	$oldsize += $st[7];
 	my $pid = fork();
 	my $outtemp = &tempname();
 	if (!$pid) {
-		my $err = &get_file_from_server($vhost, "$temp/$f", $path);
+		my $err = &transfer_file_between_servers($vhost, $destserver,
+				"$temp/$f", $path, 0, 1);
 		open(OUT, ">$outtemp");
 		print OUT $err;
 		close(OUT);
@@ -946,10 +960,11 @@ foreach my $f (@imgfiles) {
 	$totalsize += $st[7];
 	}
 
-# If caching is enabled, save in the cache too
+# If caching is enabled, save in the cache too .. unless the image was stored
+# locally anyway.
 my $prefix = $server->{'manager'};
 $prefix = "zone" if ($prefix eq "zones");
-if ($vhost->{$prefix.'_cachesize'}) {
+if ($vhost->{$prefix.'_cachesize'} && $vhost->{'id'} ne $destserver->{'id'}) {
 	# Create the cache dir if needed
 	my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
 	my $err = &make_dir_on_server($vhost, $cachedir, 0700, 1);
@@ -974,7 +989,6 @@ if ($vhost->{$prefix.'_cachesize'}) {
 			}
 		}
 	}
-my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
 
 return undef;
 }
@@ -1076,6 +1090,66 @@ else {
 	$server->{$prefix.'_cachedir'} = $in->{'cachedir'};
 	}
 }
+
+# show_default_image_dest_table(&server)
+# Output a table for a host system's page for selecting a default image
+# storage destination for instances on that host.
+sub show_default_image_dest_table
+{
+my ($server) = @_;
+print &ui_hidden_table_start($text{'images_dheader'}, "width=100%", 2,
+			     "images", 0);
+
+my $dstr = $server->{'image_default'};
+my $dest = &parse_backup_destination($dstr);
+
+my @servers = grep { $_->{'id'} ne '0' } &list_managed_servers_sorted();
+my $mode = $dest ? $dest->{'mode'} : -1;
+print &ui_table_row(&hlink($text{'images_def'}, "images_def"),
+    &ui_radio_table("image_mode", $mode,
+	[ [ -1, $text{'images_modenone'}, "<tt>$server_images_dir</tt>" ],
+	  [ 0, $text{'backups_mode0'},
+	       &ui_textbox("image_masterdir", $dest->{'mode'} == 0 ?
+						$dest->{'path'} : "", 40) ],
+	  [ 1, $text{'backups_mode1'},
+	       &ui_textbox("image_hostdir", $dest->{'mode'} == 1 ?
+						$dest->{'path'} : "", 40) ],
+	  [ 2, $text{'backups_mode2'},
+	       &ui_select("image_vm2", $dest->{'id'},
+			  [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]).
+	       " ".
+	       &ui_textbox("image_vm2dir", $dest->{'mode'} == 2 ?
+						$dest->{'path'} : "", 40) ],
+	]));
+
+print &ui_hidden_table_end("images");
+}
+
+# parse_default_image_dest_table(&server, &in)
+# Updates a server's image destination key with details of the default 
+# destination. Calls error on failure.
+sub parse_default_image_dest_table
+{
+my ($server, $in) = @_;
+my $mode = $in->{'image_mode'};
+my $dest = $mode == -1 ? undef : { 'mode' => $mode };
+if ($mode == 0) {
+	$dest->{'path'} = $in->{'image_masterdir'};
+	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode0'});
+	}
+elsif ($mode == 1) {
+	$dest->{'path'} = $in->{'image_hostdir'};
+	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode1'});
+	}
+elsif ($mode == 2) {
+	$dest->{'path'} = $in->{'image_vm2dir'};
+	$dest->{'id'} = $in->{'image_vm2'};
+	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode2'});
+	}
+$server->{'image_default'} = $dest ? &join_backup_destination($dest) : undef;
+}
+
+
 
 1;
 
