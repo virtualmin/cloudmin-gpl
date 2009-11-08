@@ -194,10 +194,10 @@ $img || return (0, "Could not find image with ID $server->{'image'}");
 my @files = split(/\s+/, $img->{'files'});
 
 # Check if the image is already on this host
-my ($destserver, $destpath) = &get_image_dest_path($image->{'dest'});
+my ($destserver, $destpath) = &get_image_dest_path($img->{'dest'});
 if ($destserver->{'id'} eq $vhost->{'id'}) {
 	# Already got it!
-	return ( 2, $dest->{'path'} );
+	return ( 2, $destpath );
 	}
 
 # Check if the host has image caching enabled, and if we have the image
@@ -1188,6 +1188,25 @@ elsif ($dest->{'mode'} == 2) {
 	$destserver = &get_managed_server_by("id", $dest->{'id'});
 	}
 return ( $destserver, $dest->{'path'} );
+}
+
+# set_image_location(&image, &host-system)
+# Sets an image's 'dest' field based on the host system's storage prefs
+sub set_image_location
+{
+my ($image, $vhost) = @_;
+if (!$vhost->{'image_default'}) {
+	$image->{'dest'} = '';
+	}
+else {
+	my $dest = &parse_backup_destination($vhost->{'image_default'});
+	if ($dest->{'mode'} == 1) {
+		# Convert to actual host system ID
+		$dest->{'mode'} = 2;
+		$dest->{'id'} = $vhost->{'id'};
+		}
+	$image->{'dest'} = &join_backup_destination($dest);
+	}
 }
 
 1;

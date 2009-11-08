@@ -60,7 +60,7 @@ if ($info && $info->{'kernel'}) {
 $pfunc = "type_".$server->{'manager'}."_parent";
 $vhost = &$pfunc($server);
 if (!$in{'onmaster'}) {
-	$image->{'dest'} = $vhost->{'image_default'};
+	&set_image_location($image, $vhost);
 	}
 ($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
 if (!$tempok) {
