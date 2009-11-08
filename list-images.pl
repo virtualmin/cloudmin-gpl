@@ -85,6 +85,9 @@ if ($multi) {
 		if ($i->{'rawsize'}) {
 			print "    Contents size: $i->{'rawsize'}\n";
 			}
+		if ($i->{'dest'}) {
+			print "    Location: $i->{'dest'}\n";
+			}
 		@md5s = split(/\s+/, $i->{'md5'});
 		if (@md5s && $md5s[0] ne "-" && $md5verify) {
 			print "    MD5 expected checksum: ",

@@ -19,21 +19,27 @@ foreach my $f (readdir(DIR)) {
 	next if (!$server_management_types{$img{'manager'}});	# Not supported
 	my $size = 0;
 	my $partialsize = 0;
-	foreach my $fl (split(/\s+/, $img{'files'})) {
-		my @st = stat("$server_images_dir/$fl");
-		if (@st) {
-			$size += $st[7];
-			}
-		else {
-			$img{'partial'} = 1;
-			my ($tmp) = glob("$server_images_dir/$fl.webmintmp.*");
-			if ($tmp) {
-				my @tst = stat($tmp);
-				$partialsize += $tst[7];
+	my $dest = &parse_backup_destination($img{'dest'} ||
+					     $server_images_dir);
+	if ($dest->{'mode'} == 0) {
+		# Only compute size if local
+		foreach my $fl (split(/\s+/, $img{'files'})) {
+			my @st = stat("$server_images_dir/$fl");
+			if (@st) {
+				$size += $st[7];
+				}
+			else {
+				$img{'partial'} = 1;
+				my ($tmp) = glob(
+					"$server_images_dir/$fl.webmintmp.*");
+				if ($tmp) {
+					my @tst = stat($tmp);
+					$partialsize += $tst[7];
+					}
 				}
 			}
+		$img{'size'} = $size;
 		}
-	$img{'size'} = $size;
 	$img{'partialsize'} = $partialsize;
 	$img{'longdesc'} = $img{'desc'};
 	if (@server_management_types > 1) {
@@ -187,9 +193,11 @@ my ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
 $img || return (0, "Could not find image with ID $server->{'image'}");
 my @files = split(/\s+/, $img->{'files'});
 
-# No need to transfer if the host is the Cloudmin master
-if ($vhost->{'manager'} eq 'this') {
-	return (2, $server_images_dir);
+# Check if the image is already on this host
+my ($destserver, $destpath) = &get_image_dest_path($image->{'dest'});
+if ($destserver->{'id'} eq $vhost->{'id'}) {
+	# Already got it!
+	return ( 2, $dest->{'path'} );
 	}
 
 # Check if the host has image caching enabled, and if we have the image
@@ -238,13 +246,14 @@ else {
 	$imagedir = $temp;
 	}
 
-# Copy files from my to that dir
+# Transfer files from image location to dir on host
 foreach my $f (@files) {
-	my $path = "$server_images_dir/$f";
+	my $path = "$destpath/$f";
 	my $pid = fork();
 	my $outtemp = &tempname();
 	if (!$pid) {
-		my $err = &put_file_to_server($vhost, $path, "$imagedir/$f");
+		my $err = &transfer_file_between_servers($destserver, $vhost,
+				$path, "$imagedir/$f", 0, 1);
 		open(OUT, ">$outtemp");
 		print OUT $err;
 		close(OUT);
@@ -340,8 +349,9 @@ my ($image) = @_;
 sub delete_server_image
 {
 my ($img) = @_;
+my ($destserver, $destpath) = &get_image_dest_path($img->{'dest'});
 foreach my $fl (split(/\s+/, $img->{'files'})) {
-	&unlink_file("$server_images_dir/$fl");
+	&delete_file_on_server($destserver, "$destpath/$fl");
 	}
 &unlink_logged("$server_images_dir/$img->{'id'}.img");
 }
@@ -355,18 +365,29 @@ my ($image) = @_;
 $image->{'md5'} = join(" ", &get_image_md5s($image));
 }
 
+# generate_image_size(&image)
+# Set the size key in the image hash to the size of all files
+sub generate_image_size
+{
+my ($image) = @_;
+my ($destserver, $destpath) = &get_image_dest_path($image->{'dest'});
+$image->{'size'} = 0;
+foreach my $f (split(/\s+/, $image->{'files'})) {
+	my @st = &stat_file_on_server($destserver, "$destpath/$f");
+	$image->{'size'} += $st[7];
+	}
+}
+
 # get_image_md5s(&image)
 # Generate MD5 checksums for image files, and return them as a list
 sub get_image_md5s
 {
 my ($image) = @_;
 my @rv;
+my ($destserver, $destpath) = &get_image_dest_path($image->{'dest'});
 foreach my $f (split(/\s+/, $image->{'files'})) {
-	my $out = &backquote_command("md5sum ".
-		quotemeta("$server_images_dir/$f")." 2>/dev/null </dev/null");
-	$out =~ s/\r|\n//g;
-	$out =~ s/^(\S+)\s+.*/$1/;
-	push(@rv, $out || "-");
+	my ($ok, $cs) = &checksum_file_on_server($destserver, $destpath."/".$f);
+	push(@rv, $ok ? $cs : "-");
 	}
 return @rv;
 }
@@ -912,24 +933,15 @@ sub fetch_image_files
 my ($vhost, $image, $temp, $progress, $server) = @_;
 
 # Work out where to transfer the image to
-my $dest = &parse_backup_destination($image->{'dest'} || $server_images_dir);
-my $destserver;
-if ($dest->{'mode'} == 0) {
-	$destserver = &get_managed_server(0);
-	}
-elsif ($dest->{'mode'} == 1) {
-	$destserver = $vhost;
-	}
-elsif ($dest->{'mode'} == 2) {
-	$destserver = &get_managed_server_by("id", $dest->{'id'});
-	}
+my ($destserver, $destpath) = &get_image_dest_path($image->{'dest'});
+&make_dir_on_server($destserver, $destpath, 0700, 1);
 
 # Transfer each file in the image
 my $totalsize = 0;
 my $oldsize;
 my @imgfiles = split(/\s+/, $image->{'files'});
 foreach my $f (@imgfiles) {
-	my $path = "$dest->{'path'}/$f";
+	my $path = "$destpath/$f";
 	my @oldst = stat($path);
 	$oldsize += $st[7];
 	my $pid = fork();
@@ -953,7 +965,7 @@ foreach my $f (@imgfiles) {
 	if ($err) {
 		return "Failed to copy $f : $err";
 		}
-	my @st = stat($path);
+	my @st = &stat_file_on_server($destserver, $path);
 	if (!@st) {
 		return "Copy of $f to $path failed";
 		}
@@ -1149,7 +1161,34 @@ elsif ($mode == 2) {
 $server->{'image_default'} = $dest ? &join_backup_destination($dest) : undef;
 }
 
+# nice_image_destination(string)
+# Convert a image storage string into a human-readable format. Can be empty,
+# indicating the cloudmin master.
+sub nice_image_destination
+{
+my ($str) = @_;
+return $str ? &nice_backup_destination($str) : $text{'images_tomaster'};
+}
 
+# get_image_dest_path(dest)
+# Returns the Cloudmin server object and path for an image destination. Assumes
+# the master system if blank.
+sub get_image_dest_path
+{
+my ($deststr) = @_;
+my $dest = &parse_backup_destination($deststr || $server_images_dir);
+my $destserver;
+if ($dest->{'mode'} == 0) {
+	$destserver = &get_managed_server(0);
+	}
+elsif ($dest->{'mode'} == 1) {
+	$destserver = $vhost;
+	}
+elsif ($dest->{'mode'} == 2) {
+	$destserver = &get_managed_server_by("id", $dest->{'id'});
+	}
+return ( $destserver, $dest->{'path'} );
+}
 
 1;
 

@@ -59,7 +59,9 @@ if ($info && $info->{'kernel'}) {
 &$first_print($text{'mkimage_temping'});
 $pfunc = "type_".$server->{'manager'}."_parent";
 $vhost = &$pfunc($server);
-$image->{'dest'} = $vhost->{'image_default'};
+if (!$in{'onmaster'}) {
+	$image->{'dest'} = $vhost->{'image_default'};
+	}
 ($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
 if (!$tempok) {
 	&$second_print(&text('mkimage_failed', $temp));
@@ -94,7 +96,8 @@ if (!&$ifunc($server, $image, $temp, $in{'munge'} ? 0 : 2)) {
 	}
 
 # Transfer the image file to the master
-&$first_print($text{'mkimage_fetching'});
+&$first_print(&text('mkimage_fetching',
+		    &nice_image_destination($image->{'dest'})));
 $err = &fetch_image_files($vhost, $image, $temp, 1, $server);
 if ($err) {
 	&$second_print(&text('mkimage_failed', $err));
@@ -104,6 +107,7 @@ else {
 
 	# Save the new image file
 	&generate_image_md5s($image);
+	&generate_image_size($image);
 	&save_server_image($image);
 	}
 

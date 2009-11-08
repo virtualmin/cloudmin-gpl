@@ -5,7 +5,7 @@
 Packages an existing system up as an image
 
 This command performs the complex process of converting an existing virtual
-system into a Cloudmin machine image. It has three required parameters : C<--host>
+system into a Cloudmin image. It has three required parameters : C<--host>
 followed by the hostname of the system to image, C<--desc> followed by a
 description of the image, and C<--id> followed by a new unique image ID. The
 ID is typically formatted like I<type-os-software>, such as
@@ -18,6 +18,12 @@ different instances of the same image.
 
 Creation takes several minutes, but the command will display each step in the
 process as it proceeds, and inform you of its final success or failure. 
+
+An image will be transferred to the destination defined on the host system,
+which is typically the /var/webmin/server-manager directory on the Cloudmin
+master - but may be on the host system or a completely different system instead.
+You can force saving the image on the master system with the C<--on-master>
+flag.
 
 =head1 Example usage
 
@@ -38,8 +44,8 @@ process as it proceeds, and inform you of its final success or failure.
   .. done
   Compressing filesystem image ..
   .. done
-  Fetching image files from host ..
-  .. fetched all files
+  Transferring image files to Cloudmin master ..
+  .. transferred all files
   Deleting compressed filesystem image ..
   .. done
   Mounting Xen instance filesystem ..
@@ -99,6 +105,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-compress") {
 		$nocompress = 1;
 		}
+	elsif ($a eq "--on-master") {
+		$onmaster = 1;
+		}
 	else {
 		&usage();
 		}
@@ -157,7 +166,9 @@ if ($info && $info->{'kernel'}) {
 &$first_print("Creating temporary directory for image files ..");
 $pfunc = "type_".$server->{'manager'}."_parent";
 $vhost = &$pfunc($server);
-$image->{'dest'} = $vhost->{'image_default'};
+if (!$onmaster) {
+	$image->{'dest'} = $vhost->{'image_default'};
+	}
 ($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
 if (!$tempok) {
 	&$second_print(".. failed : $temp");
@@ -192,16 +203,18 @@ if (!&$ifunc($server, $image, $temp, $munge ? 0 : 2)) {
 	}
 
 # Transfer the image file to the master
-&$first_print("Fetching image files from host ..");
+$dstr = &nice_image_destination($image->{'dest'});
+&$first_print("Transferring image files to $dstr ..");
 $err = &fetch_image_files($vhost, $image, $temp, 0, $server);
 if ($err) {
 	&$second_print(".. failed : $err");
 	}
 else {
-	&$second_print(".. fetched all files");
+	&$second_print(".. transferred all files");
 
 	# Save the new image file
 	&generate_image_md5s($image);
+	&generate_image_size($image);
 	&save_server_image($image);
 	}
 
@@ -250,6 +263,7 @@ print "                     [--overwrite]\n";
 print "                     [--version number | --inc-version]\n";
 print "                     [--no-serial]\n";
 print "                     [--no-compress]\n";
+print "                     [--on-master]\n";
 exit(1);
 }
 

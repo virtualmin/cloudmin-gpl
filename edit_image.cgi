@@ -47,6 +47,7 @@ elsif ($os) {
 $tfunc = "type_".$i->{'manager'}."_desc";
 print &ui_table_row($text{'eimage_type'}, &$tfunc());
 
+# Status (available or not)
 print &ui_table_row($text{'eimage_status'},
 		    $got && $got->{'partial'} ?
 			&text('images_partial',
@@ -58,9 +59,11 @@ print &ui_table_row($text{'eimage_status'},
 			  &text('images_new', $i->{'version'})."</font>" :
 			"<font color=#00aa00>$text{'images_avail'}</font>");
 
+# Compressed size
 print &ui_table_row($text{'eimage_size'},
 		    &nice_size($i->{'size'}));
 
+# Un-compressed size
 if ($i->{'rawsize'}) {
 	print &ui_table_row($text{'eimage_rawsize'},
 			    &nice_size($i->{'rawsize'}));
@@ -68,9 +71,15 @@ if ($i->{'rawsize'}) {
 
 # If we have downloaded the image, shown more details
 if ($got) {
+	# Files it contains
 	print &ui_table_row($text{'eimage_files'},
 			    "<tt>$got->{'files'}</tt>");
 
+	# Storage location
+	print &ui_table_row($text{'eimage_dest'},
+		&nice_image_destination($i->{'dest'}));
+
+	# Systems using it
 	@users = grep { $_->{'image'} eq $i->{'id'} } &list_managed_servers();
 	$users = @users == 0 ? $text{'keys_nousers'} :
 		 @users > 8 ? &text('keys_manyusers', scalar(@users)) :
