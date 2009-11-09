@@ -1497,6 +1497,27 @@ my @rv = grep { $_ ne "." && $_ ne ".." } split(/\r?\n/, $out);
 return \@rv;
 }
 
+# disk_usage_on_server(&server, dir)
+# Returns the size of a directory in bytes, or an error message.
+sub disk_usage_on_server
+{
+my ($server, $dir) = @_;
+my $dfunc = "type_".$server->{'manager'}."_disk_usage";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	my $rv = &$dfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to ssh
+	}
+
+# Run du via SSH
+my ($out, $ex, $err) = &execute_command_on_server($server,
+	"du -sk ".quotemeta($dir));
+return $err if ($err);
+return $out if ($ex);
+return $out =~ /^(\d+)\s/ ? $1*1024 : "Unknown du output : $out";
+}
+
 # list_processes_on_server(&server)
 # Returns a list of running processes, in a format similar to
 # proc::list_processes. Only the pid, user and args are guaranteed though.
@@ -4344,6 +4365,11 @@ if ($server_management_types{'xen'} ||
 	push(@glinks, "list_images.cgi");
 	push(@gtitles, $text{'images_title'});
 	push(@gicons, "images/images.gif");
+	push(@gcats, "settings");
+
+	push(@glinks, "list_storages.cgi");
+	push(@gtitles, $text{'storages_title'});
+	push(@gicons, "images/storages.gif");
 	push(@gcats, "settings");
 	}
 

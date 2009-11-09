@@ -34,6 +34,9 @@ push(@rv, $locations_file);
 # Syncs dir
 push(@rv, $vsyncs_dir);
 
+# Image storages dir
+push(@rv, $image_storages_dir);
+
 return &unique(@rv);
 }
 

@@ -76,8 +76,14 @@ if ($got) {
 			    "<tt>$got->{'files'}</tt>");
 
 	# Storage location
+	if ($i->{'dest'}) {
+		$dest = &parse_backup_destination($i->{'dest'});
+		if ($dest->{'mode'} != 0) {
+			$dbutton = " ".&ui_submit($text{'eimage_master'});
+			}
+		}
 	print &ui_table_row($text{'eimage_dest'},
-		&nice_image_destination($i->{'dest'}));
+		&nice_image_destination($i->{'dest'}).$dbutton);
 
 	# Systems using it
 	@users = grep { $_->{'image'} eq $i->{'id'} } &list_managed_servers();

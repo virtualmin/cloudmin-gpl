@@ -171,6 +171,7 @@ $server_images_url = "http://cloudmin.virtualmin.com/images/images.txt";
 $server_images_base = "http://cloudmin.virtualmin.com/images/";
 $server_images_cache = "$module_config_directory/server-images-cache";
 $images_cache_dir = "/var/cloudmin-images";
+$image_storages_dir = "$module_config_directory/storages";
 
 $vsyncs_dir = "$module_config_directory/vsyncs";
 $vsync_cron_cmd = "$module_config_directory/vsync.pl";

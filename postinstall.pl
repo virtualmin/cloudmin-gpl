@@ -164,6 +164,11 @@ if (&check_pid_file($miniserv{'pidfile'})) {
 	&restart_miniserv();
 	}
 
+# Save all storage locations to store sizes
+foreach my $s (&list_storages()) {
+	&save_storage($s);
+	}
+
 # Record the install time for this version
 my %itimes;
 &read_file($install_times_file, \%itimes);

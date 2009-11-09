@@ -1209,5 +1209,78 @@ else {
 	}
 }
 
+# list_storages()
+# Returns a list of image storage locations, each of which is a hash ref with
+# 'id', 'dest', 'desc' and 'location' fields.
+sub list_storages
+{
+my @rv;
+opendir(STORAGES, $image_storages_dir);
+foreach my $f (readdir(STORAGES)) {
+	next if ($f eq "." || $f eq "..");
+	my %storage;
+	&read_file("$image_storages_dir/$f", \%storage);
+	$storage{'id'} = $f;
+	push(@rv, \%storage);
+	}
+closedir(STORAGES);
+if (!@rv) {
+	# Create default storage
+	push(@rv, { 'id' => 1,
+		    'default' => 1,
+		    'desc' => $text{'storages_defstor'},
+		    'dest' => $server_images_dir });
+	}
+foreach my $s (@rv) {
+	if (!$s->{'size'}) {
+		&compute_storage_size($s);
+		}
+	}
+return @rv;
+}
+
+# get_storage(id)
+# Returns an image storage location looked up by ID
+sub get_storage
+{
+my ($id) = @_;
+my ($rv) = grep { $_->{'id'} eq $id } &list_storages();
+return $rv;
+}
+
+# save_storage(&storage)
+# Create or update an image storage location
+sub save_storage
+{
+my ($storage) = @_;
+if (!-d $owner_storages_dir) {
+	&make_dir($owner_storages_dir, 0700);
+	}
+$storage->{'id'} ||= &server_id();
+&lock_file("$owner_storages_dir/$storage->{'id'}");
+&write_file("$owner_storages_dir/$storage->{'id'}", $storage);
+&unlock_file("$owner_storages_dir/$storage->{'id'}");
+}
+
+# delete_storage(&delete)
+# Delete an existing image storage location (but not files in it)
+sub delete_storage
+{
+my ($storage) = @_;
+&unlink_logged("$owner_storages_dir/$storage->{'id'}");
+}
+
+# compute_storage_size(&storage)
+# Sets the size field to the size in bytes of a storage location
+sub compute_storage_size
+{
+my ($storage) = @_;
+my ($server, $path) = &get_image_dest_path($storage->{'dest'});
+my $size = &disk_usage_on_server($server, $path);
+if ($size =~ /^\d+$/) {
+	$storage->{'size'} = $size;
+	}
+}
+
 1;
 
