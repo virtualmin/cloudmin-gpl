@@ -3089,3 +3089,15 @@ storages_add=Add a new image storage location.
 storages_anyloc=Any
 storages_delete=Delete Selected Locations
 storages_defstor=Default location
+storages_return=image storage locations
+
+storage_title1=Create Storage Location
+storage_title2=Edit Storage Location
+storage_egone=The selected location no longer exists!
+storage_header=Image storage location details
+storage_desc=Location description
+storage_dest=Directory for images
+storage_location=For location groups
+storage_location1=Any group
+storage_location0=Only host systems in selected groups ..
+storage_size=Current size

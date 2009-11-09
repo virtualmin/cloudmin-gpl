@@ -51,6 +51,10 @@ foreach my $f (readdir(DIR)) {
 	if ($img{'rawsize'}) {
 		$img{'longdesc'} .= " - ".&nice_size($img{'rawsize'});
 		}
+	if (!$img{'dest'}) {
+		# Assume stored on master
+		$img{'dest'} = $server_images_dir;
+		}
 	push(@rv, \%img);
 	}
 closedir(DIR);
@@ -1192,11 +1196,12 @@ return ( $destserver, $dest->{'path'} );
 
 # set_image_location(&image, &host-system)
 # Sets an image's 'dest' field based on the host system's storage prefs
+# XXX use storage locations
 sub set_image_location
 {
 my ($image, $vhost) = @_;
 if (!$vhost->{'image_default'}) {
-	$image->{'dest'} = '';
+	$image->{'dest'} = $server_images_dir;
 	}
 else {
 	my $dest = &parse_backup_destination($vhost->{'image_default'});
