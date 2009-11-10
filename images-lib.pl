@@ -19,8 +19,11 @@ foreach my $f (readdir(DIR)) {
 	next if (!$server_management_types{$img{'manager'}});	# Not supported
 	my $size = 0;
 	my $partialsize = 0;
-	my $dest = &parse_backup_destination($img{'dest'} ||
-					     $server_images_dir);
+	if (!$img{'dest'}) {
+		# Assume stored on master
+		$img{'dest'} = $server_images_dir;
+		}
+	my $dest = &parse_backup_destination($img{'dest'});
 	if ($dest->{'mode'} == 0) {
 		# Only compute size if local
 		foreach my $fl (split(/\s+/, $img{'files'})) {
@@ -50,10 +53,6 @@ foreach my $f (readdir(DIR)) {
 		}
 	if ($img{'rawsize'}) {
 		$img{'longdesc'} .= " - ".&nice_size($img{'rawsize'});
-		}
-	if (!$img{'dest'}) {
-		# Assume stored on master
-		$img{'dest'} = $server_images_dir;
 		}
 	push(@rv, \%img);
 	}
@@ -931,56 +930,69 @@ return \@rv;
 # fetch_image_files(&vhost, &image, tempdir, show-progress-dots?, &server)
 # Transfers from some host system the files that make up some image to
 # the destination defined in the image. Since this can take some time, outputs
-# progress dots.  
+# progress dots.
+# May transfer to multiple destinations if defined
 sub fetch_image_files
 {
 my ($vhost, $image, $temp, $progress, $server) = @_;
-
-# Work out where to transfer the image to
-my ($destserver, $destpath) = &get_image_dest_path($image->{'dest'});
-&make_dir_on_server($destserver, $destpath, 0700, 1);
-
-# Transfer each file in the image
 my $totalsize = 0;
 my $oldsize;
-my @imgfiles = split(/\s+/, $image->{'files'});
-foreach my $f (@imgfiles) {
-	my $path = "$destpath/$f";
-	my @oldst = stat($path);
-	$oldsize += $st[7];
-	my $pid = fork();
-	my $outtemp = &tempname();
-	if (!$pid) {
-		my $err = &transfer_file_between_servers($vhost, $destserver,
-				"$temp/$f", $path, 0, 1);
-		open(OUT, ">$outtemp");
-		print OUT $err;
-		close(OUT);
-		exit($err ? 1 : 0);
+my $tohost = 0;
+
+foreach my $dest (split(/\s+/, $image->{'dest'})) {
+	# Work out where to transfer the image to
+	my ($destserver, $destpath) = &get_image_dest_path($dest);
+	&make_dir_on_server($destserver, $destpath, 0700, 1);
+	if ($destserver->{'id'} eq $vhost->{'id'}) {
+		$tohost = 1;
 		}
-	while(1) {
-		my $expid = waitpid($pid, WNOHANG);
-		last if ($expid == $pid);
-		print "." if ($progress);
-		sleep(1);
+
+	# Transfer each file in the image
+	my $i_totalsize = 0;
+	my $i_oldsize;
+	my @imgfiles = split(/\s+/, $image->{'files'});
+	foreach my $f (@imgfiles) {
+		my $path = "$destpath/$f";
+		my @oldst = &stat_file_on_server($destserver, $path);
+		$i_oldsize += $st[7];
+		my $pid = fork();
+		my $outtemp = &tempname();
+		if (!$pid) {
+			my $err = &transfer_file_between_servers(
+				$vhost, $destserver, "$temp/$f", $path, 0, 1);
+			open(OUT, ">$outtemp");
+			print OUT $err;
+			close(OUT);
+			exit($err ? 1 : 0);
+			}
+		while(1) {
+			my $expid = waitpid($pid, WNOHANG);
+			last if ($expid == $pid);
+			print "." if ($progress);
+			sleep(1);
+			}
+		my $err = &read_file_contents($outtemp);
+		&unlink_file($outtemp);
+		if ($err) {
+			return "Failed to copy $f : $err";
+			}
+		my @st = &stat_file_on_server($destserver, $path);
+		if (!@st) {
+			return "Copy of $f to $path failed";
+			}
+		$i_totalsize += $st[7];
 		}
-	my $err = &read_file_contents($outtemp);
-	&unlink_file($outtemp);
-	if ($err) {
-		return "Failed to copy $f : $err";
+	if (!$totalsize) {
+		$totalsize = $i_totalsize;
+		$oldsize = $i_oldsize;
 		}
-	my @st = &stat_file_on_server($destserver, $path);
-	if (!@st) {
-		return "Copy of $f to $path failed";
-		}
-	$totalsize += $st[7];
 	}
 
 # If caching is enabled, save in the cache too .. unless the image was stored
 # locally anyway.
 my $prefix = $server->{'manager'};
 $prefix = "zone" if ($prefix eq "zones");
-if ($vhost->{$prefix.'_cachesize'} && $vhost->{'id'} ne $destserver->{'id'}) {
+if ($vhost->{$prefix.'_cachesize'} && !$vhost) {
 	# Create the cache dir if needed
 	my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
 	my $err = &make_dir_on_server($vhost, $cachedir, 0700, 1);
@@ -1107,64 +1119,6 @@ else {
 	}
 }
 
-# show_default_image_dest_table(&server)
-# Output a table for a host system's page for selecting a default image
-# storage destination for instances on that host.
-sub show_default_image_dest_table
-{
-my ($server) = @_;
-print &ui_hidden_table_start($text{'images_dheader'}, "width=100%", 2,
-			     "images", 0);
-
-my $dstr = $server->{'image_default'};
-my $dest = &parse_backup_destination($dstr);
-
-my @servers = grep { $_->{'id'} ne '0' } &list_managed_servers_sorted();
-my $mode = $dest ? $dest->{'mode'} : -1;
-print &ui_table_row(&hlink($text{'images_def'}, "images_def"),
-    &ui_radio_table("image_mode", $mode,
-	[ [ -1, $text{'images_modenone'}, "<tt>$server_images_dir</tt>" ],
-	  [ 0, $text{'backups_mode0'},
-	       &ui_textbox("image_masterdir", $dest->{'mode'} == 0 ?
-						$dest->{'path'} : "", 40) ],
-	  [ 1, $text{'backups_mode1'},
-	       &ui_textbox("image_hostdir", $dest->{'mode'} == 1 ?
-						$dest->{'path'} : "", 40) ],
-	  [ 2, $text{'backups_mode2'},
-	       &ui_select("image_vm2", $dest->{'id'},
-			  [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]).
-	       " ".
-	       &ui_textbox("image_vm2dir", $dest->{'mode'} == 2 ?
-						$dest->{'path'} : "", 40) ],
-	]));
-
-print &ui_hidden_table_end("images");
-}
-
-# parse_default_image_dest_table(&server, &in)
-# Updates a server's image destination key with details of the default 
-# destination. Calls error on failure.
-sub parse_default_image_dest_table
-{
-my ($server, $in) = @_;
-my $mode = $in->{'image_mode'};
-my $dest = $mode == -1 ? undef : { 'mode' => $mode };
-if ($mode == 0) {
-	$dest->{'path'} = $in->{'image_masterdir'};
-	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode0'});
-	}
-elsif ($mode == 1) {
-	$dest->{'path'} = $in->{'image_hostdir'};
-	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode1'});
-	}
-elsif ($mode == 2) {
-	$dest->{'path'} = $in->{'image_vm2dir'};
-	$dest->{'id'} = $in->{'image_vm2'};
-	$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode2'});
-	}
-$server->{'image_default'} = $dest ? &join_backup_destination($dest) : undef;
-}
-
 # nice_image_destination(string)
 # Convert a image storage string into a human-readable format. Can be empty,
 # indicating the cloudmin master.
@@ -1195,23 +1149,36 @@ return ( $destserver, $dest->{'path'} );
 }
 
 # set_image_location(&image, &host-system)
-# Sets an image's 'dest' field based on the host system's storage prefs
-# XXX use storage locations
+# Sets an image's 'dest' field based on the global default image locations.
+# Returns undef on success or an error message on failure.
 sub set_image_location
 {
 my ($image, $vhost) = @_;
-if (!$vhost->{'image_default'}) {
-	$image->{'dest'} = $server_images_dir;
-	}
-else {
-	my $dest = &parse_backup_destination($vhost->{'image_default'});
+my @storages = &list_storages();
+my @dests;
+foreach my $storage (@storages) {
+	my $dest = &parse_backup_destination($storage->{'dest'});
 	if ($dest->{'mode'} == 1) {
 		# Convert to actual host system ID
 		$dest->{'mode'} = 2;
 		$dest->{'id'} = $vhost->{'id'};
 		}
-	$image->{'dest'} = &join_backup_destination($dest);
+	if ($storage->{'location'}) {
+		# Check if host is in one of the location groups
+		my @locs = split(/\s+/, $storage->{'location'});
+		next if (&indexof($vhost->{'location'}, @locs) < 0);
+		}
+	my $deststr = &join_backup_destination($dest);
+	my ($destserver, $destpath) = &get_image_dest_path($deststr);
+	if (&can_ssh_status($destserver)) {
+		push(@dests, $deststr);
+		}
 	}
+if (!@dests) {
+	return "All possible image storage systems are down";
+	}
+$image->{'dest'} = join(" ", @dests);
+return undef;
 }
 
 # list_storages()

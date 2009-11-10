@@ -19,12 +19,6 @@ different instances of the same image.
 Creation takes several minutes, but the command will display each step in the
 process as it proceeds, and inform you of its final success or failure. 
 
-An image will be transferred to the destination defined on the host system,
-which is typically the /var/webmin/server-manager directory on the Cloudmin
-master - but may be on the host system or a completely different system instead.
-You can force saving the image on the master system with the C<--on-master>
-flag.
-
 =head1 Example usage
 
   cloudmin create-image --host xenrails.home --desc "Image with rails" --id xen-centos5.0-rails
@@ -105,9 +99,6 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-compress") {
 		$nocompress = 1;
 		}
-	elsif ($a eq "--on-master") {
-		$onmaster = 1;
-		}
 	else {
 		&usage();
 		}
@@ -166,8 +157,10 @@ if ($info && $info->{'kernel'}) {
 &$first_print("Creating temporary directory for image files ..");
 $pfunc = "type_".$server->{'manager'}."_parent";
 $vhost = &$pfunc($server);
-if (!$onmaster) {
-	&set_image_location($image, $vhost);
+$err = &set_image_location($image, $vhost);
+if ($err) {
+	&$second_print(".. no suitable image locations found : $err");
+	exit(3);
 	}
 ($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
 if (!$tempok) {
@@ -263,7 +256,6 @@ print "                     [--overwrite]\n";
 print "                     [--version number | --inc-version]\n";
 print "                     [--no-serial]\n";
 print "                     [--no-compress]\n";
-print "                     [--on-master]\n";
 exit(1);
 }
 

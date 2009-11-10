@@ -65,10 +65,6 @@ print &ui_table_row($text{'newami_munge'},
 print &ui_table_row($text{'mkimage_compress'},
 		    &ui_yesno_radio("compress", 1));
 
-# Force save on master?
-print &ui_table_row($text{'mkimage_onmaster'},
-		    &ui_yesno_radio("onmaster", 0));
-
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'mkimage_ok'} ] ]);
 

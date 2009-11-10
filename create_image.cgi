@@ -59,8 +59,10 @@ if ($info && $info->{'kernel'}) {
 &$first_print($text{'mkimage_temping'});
 $pfunc = "type_".$server->{'manager'}."_parent";
 $vhost = &$pfunc($server);
-if (!$in{'onmaster'}) {
-	&set_image_location($image, $vhost);
+$err = &set_image_location($image, $vhost);
+if ($err) {
+	&$second_print(&text('mkimage_edest', $err));
+	goto FAILED;
 	}
 ($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
 if (!$tempok) {

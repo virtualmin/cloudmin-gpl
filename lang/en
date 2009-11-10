@@ -1476,6 +1476,7 @@ mkimage_descdef=Same as old image
 mkimage_ok=Create Image Now
 mkimage_temping=Creating temporary directory for image files ..
 mkimage_failed=.. failed : $1
+mkimage_edest=.. no suitable image locations found : $1
 mkimage_shutdown=Shutting down system ..
 mkimage_eshutdown=.. shutdown failed : $1
 mkimage_fetching=Fetching image files from host ..
