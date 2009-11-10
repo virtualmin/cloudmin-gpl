@@ -171,6 +171,15 @@ if (@servers) {
 	if (defined(&list_locations)) {
 		%lmap = map { $_->{'id'}, $_->{'desc'} } &list_locations();
 		}
+	if (defined(&list_system_owners)) {
+		%omap = ( );
+		foreach $o (&list_system_owners()) {
+			foreach $id (split(/\s+/, $o->{'acl'}->{'servers'})) {
+				$omap{$id} ||= [ ];
+				push(@{$omap{$id}}, $o->{'name'});
+				}
+			}
+		}
 
 	print &ui_form_start("mass.cgi", "post");
 	@tds = ( "width=5" );
@@ -246,6 +255,10 @@ if (@servers) {
 				elsif ($c eq "ip") {
 					$ip = &get_server_ip($s);
 					push(@cols, $ip);
+					}
+				elsif ($c eq "owner") {
+					push(@cols,
+					     join(" ", @{$omap{$s->{'id'}}}));
 					}
 				else {
 					push(@cols, $s->{$c});

@@ -9,6 +9,7 @@ index_status=Status
 index_desc=Description
 index_group=Group
 index_location=Location
+index_owner=Owners
 index_dereg=De-Register
 index_delete=Delete
 index_shutdown=Shutdown
