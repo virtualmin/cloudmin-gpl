@@ -211,6 +211,14 @@ elsif ($type eq "vsync") {
 				join(' ', @doms));
 		}
 	}
+elsif ($type eq "storage") {
+	# One image storage location
+	return &text('log_'.$action.'_storage', &html_escape($p->{'desc'}));
+	}
+elsif ($type eq "storages") {
+	# Multiple storage locations
+	return &text('log_'.$action.'_storages', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

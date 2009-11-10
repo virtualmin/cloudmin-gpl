@@ -1235,6 +1235,7 @@ if (!@rv) {
 		    'default' => 1,
 		    'desc' => $text{'storages_defstor'},
 		    'dest' => $server_images_dir });
+	&save_storage($rv[0]);
 	}
 foreach my $s (@rv) {
 	if (!$s->{'size'}) {
@@ -1258,13 +1259,13 @@ return $rv;
 sub save_storage
 {
 my ($storage) = @_;
-if (!-d $owner_storages_dir) {
-	&make_dir($owner_storages_dir, 0700);
+if (!-d $image_storages_dir) {
+	&make_dir($image_storages_dir, 0700);
 	}
 $storage->{'id'} ||= &server_id();
-&lock_file("$owner_storages_dir/$storage->{'id'}");
-&write_file("$owner_storages_dir/$storage->{'id'}", $storage);
-&unlock_file("$owner_storages_dir/$storage->{'id'}");
+&lock_file("$image_storages_dir/$storage->{'id'}");
+&write_file("$image_storages_dir/$storage->{'id'}", $storage);
+&unlock_file("$image_storages_dir/$storage->{'id'}");
 }
 
 # delete_storage(&delete)
@@ -1272,7 +1273,7 @@ $storage->{'id'} ||= &server_id();
 sub delete_storage
 {
 my ($storage) = @_;
-&unlink_logged("$owner_storages_dir/$storage->{'id'}");
+&unlink_logged("$image_storages_dir/$storage->{'id'}");
 }
 
 # compute_storage_size(&storage)

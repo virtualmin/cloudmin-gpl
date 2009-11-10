@@ -201,19 +201,23 @@ $ip ||= $s->{'host'};
 $s->{'ip'} = $ip;
 }
 
-# list_managed_servers_sorted()
+# list_managed_servers_sorted([force-mode])
 # Returns servers list, with sorting and possibly 'indent' fields
 sub list_managed_servers_sorted
 {
+my ($mode) = @_;
 my @rv = &list_managed_servers();
 foreach my $s (@rv) {
 	$s->{'indent'} = 0;
 	}
-if ($config{'sort_mode'} == 0) {
+if (!defined($mode)) {
+	$mode = $config{'sort_mode'};
+	}
+if ($mode == 0) {
 	# By hostname
 	@rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
 	}
-elsif ($config{'sort_mode'} == 1) {
+elsif ($mode == 1) {
 	# Under host systems
 	my @newrv;
 	@rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
@@ -229,7 +233,7 @@ elsif ($config{'sort_mode'} == 1) {
 		}
 	@rv = @newrv;
 	}
-elsif ($config{'sort_mode'} == 2) {
+elsif ($mode == 2) {
 	# By description
 	@rv = sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @rv;
 	}
