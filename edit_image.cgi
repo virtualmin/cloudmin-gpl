@@ -76,14 +76,15 @@ if ($got) {
 			    "<tt>$got->{'files'}</tt>");
 
 	# Storage location
-	if ($i->{'dest'}) {
-		$dest = &parse_backup_destination($i->{'dest'});
-		if ($dest->{'mode'} != 0) {
-			$dbutton = " ".&ui_submit($text{'eimage_master'});
-			}
+	@dests = sort { $a cmp $b } split(/\s+/, $i->{'dest'});
+	@stordests = sort { $a cmp $b } map { $_->{'dest'} } &list_storages();
+	if (join(" ", @dests) ne join(" ", @stordests)) {
+		# Not in all locations .. off to fix
+		$dbutton = " ".&ui_submit($text{'eimage_master'});
 		}
 	print &ui_table_row($text{'eimage_dest'},
-		&nice_image_destination($i->{'dest'}).$dbutton);
+		join("<br>\n", map { &nice_image_destination($_) } @dests).
+		$dbutton);
 
 	# Systems using it
 	@users = grep { $_->{'image'} eq $i->{'id'} } &list_managed_servers();

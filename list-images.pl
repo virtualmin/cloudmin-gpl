@@ -11,6 +11,9 @@ format, or C<--name-only> to just show image IDs. To limit the list to images
 for some virtualization type, use the C<--type> flag followed by a type code
 like C<xen> or C<vservers>.
 
+To limit the list to just specific images, use the C<--id> flag followed by
+an image ID. This can be given multiple times.
+
 =head1 Example usage
 
   cloudmin list-images.pl --type xen
@@ -57,14 +60,22 @@ while(@ARGV > 0) {
 	elsif ($a eq "--md5-verify") {
 		$md5verify = 1;
 		}
+	elsif ($a eq "--id") {
+		push(@ids, shift(@ARGV));
+		}
 	else {
 		&usage();
 		}
 	}
 
+# Get the images
 @images = sort { $b->{'priority'} <=> $a->{'priority'} ||
 		 $a->{'id'} cmp $b->{'id'} } &list_server_images($type);
 @avail = &list_available_server_images($type);
+if (@ids) {
+	@images = grep { &indexof($_->{'id'}, @ids) >= 0 } @images;
+	}
+
 if ($multi) {
 	# One block per image
 	foreach $i (@images) {
@@ -85,8 +96,10 @@ if ($multi) {
 		if ($i->{'rawsize'}) {
 			print "    Contents size: $i->{'rawsize'}\n";
 			}
-		if ($i->{'dest'}) {
-			print "    Location: $i->{'dest'}\n";
+		foreach $dstr (split(/\s+/, $i->{'dest'})) {
+			print "    Location: ",
+				&html_tags_to_text(
+				   &nice_backup_destination($dstr)),"\n";
 			}
 		@md5s = split(/\s+/, $i->{'md5'});
 		if (@md5s && $md5s[0] ne "-" && $md5verify) {
@@ -124,6 +137,7 @@ print "\n";
 print "cloudmin list-images [--multiline | --name-only]\n";
 print "                     [--type typename]\n";
 print "                     [--md5-verify]\n";
+print "                     [--id image-id]*\n";
 exit(1);
 }
 

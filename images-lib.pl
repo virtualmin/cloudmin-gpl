@@ -196,13 +196,6 @@ my ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
 $img || return (0, "Could not find image with ID $server->{'image'}");
 my @files = split(/\s+/, $img->{'files'});
 
-# Check if the image is already on this host
-my ($destserver, $destpath) = &get_image_dest_path($img->{'dest'});
-if ($destserver->{'id'} eq $vhost->{'id'}) {
-	# Already got it!
-	return ( 2, $destpath );
-	}
-
 # Check if the host has image caching enabled, and if we have the image
 # already
 my $prefix = $server->{'manager'};
@@ -242,12 +235,27 @@ if ($vhost->{$prefix.'_cachesize'}) {
 	return (0, $err) if ($err);
 	}
 else {
-	# Choose a temp dir
+	# Choose a temp dir that we transfer to
 	my ($tempok, $temp) = &create_image_files_tempdir(
 					$vhost, $img->{'id'});
 	return (0, $temp) if (!$tempok);
 	$imagedir = $temp;
 	}
+
+# Find all the image locations, check if any are on this host already
+my @dests;
+foreach my $dstr (split(/\s+/, $img->{'dest'})) {
+	my ($destserver, $destpath) = &get_image_dest_path($dstr);
+	if ($destserver->{'id'} eq $vhost->{'id'}) {
+		# Already got it!
+		return ( 2, $destpath );
+		}
+	push(@dests, [ $destserver, $destpath,
+			&distance_from_server($vhost, $destserver) ]);
+	}
+
+# Sort by distance, closest first
+# XXX
 
 # Transfer files from image location to dir on host
 foreach my $f (@files) {
@@ -373,11 +381,15 @@ $image->{'md5'} = join(" ", &get_image_md5s($image));
 sub generate_image_size
 {
 my ($image) = @_;
-my ($destserver, $destpath) = &get_image_dest_path($image->{'dest'});
-$image->{'size'} = 0;
-foreach my $f (split(/\s+/, $image->{'files'})) {
-	my @st = &stat_file_on_server($destserver, "$destpath/$f");
-	$image->{'size'} += $st[7];
+my @dests = split(/\s+/, $image->{'dest'});
+foreach my $dstr (@dests) {
+	my ($destserver, $destpath) = &get_image_dest_path($dstr);
+	$image->{'size'} = 0;
+	foreach my $f (split(/\s+/, $image->{'files'})) {
+		my @st = &stat_file_on_server($destserver, "$destpath/$f");
+		$image->{'size'} += $st[7];
+		}
+	last if ($image->{'size'});
 	}
 }
 
@@ -387,10 +399,18 @@ sub get_image_md5s
 {
 my ($image) = @_;
 my @rv;
-my ($destserver, $destpath) = &get_image_dest_path($image->{'dest'});
-foreach my $f (split(/\s+/, $image->{'files'})) {
-	my ($ok, $cs) = &checksum_file_on_server($destserver, $destpath."/".$f);
-	push(@rv, $ok ? $cs : "-");
+my @dests = split(/\s+/, $image->{'dest'});
+foreach my $dstr (@dests) {
+	my ($destserver, $destpath) = &get_image_dest_path($dstr);
+	@rv = ( );
+	my $failed;
+	foreach my $f (split(/\s+/, $image->{'files'})) {
+		my ($ok, $cs) = &checksum_file_on_server(
+					$destserver, $destpath."/".$f);
+		push(@rv, $ok ? $cs : "-");
+		$failed++ if (!$ok);
+		}
+	last if (!$failed);
 	}
 return @rv;
 }
@@ -1121,11 +1141,13 @@ else {
 
 # nice_image_destination(string)
 # Convert a image storage string into a human-readable format. Can be empty,
-# indicating the cloudmin master.
+# indicating the cloudmin master. Supports a space-separated list of dests.
 sub nice_image_destination
 {
 my ($str) = @_;
-return $str ? &nice_backup_destination($str) : $text{'images_tomaster'};
+return $text{'images_tomaster'} if (!$str);
+my @dests = split(/\s+/, $str);
+return join(", ", map { &nice_backup_destination($_) } @dests);
 }
 
 # get_image_dest_path(dest)

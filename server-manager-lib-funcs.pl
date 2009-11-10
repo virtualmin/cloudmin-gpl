@@ -7241,6 +7241,41 @@ foreach my $k ('mins', 'hours', 'days', 'months', 'weekdays', 'special') {
 	}
 }
 
+# distance_from_server(&server1, &server2)
+# Returns the distance between two systems, defined at :
+# 0=Same machine
+# 1=Same host system
+# 2=Same class C subnet
+# 3=Same location group
+# 4=Same class B
+# 5=Anything else
+sub distance_from_server
+{
+my ($a, $b) = @_;
+if ($a->{'id'} eq $b->{'id'}) {
+	return 0;
+	}
+my $vhosta = &get_parent_server($a);
+my $vhostb = &get_parent_server($b);
+if ($vhosta && $vhostb && $vhosta->{'id'} eq $vhostb->{'id'}) {
+	return 1;
+	}
+my @ipa = split(/\./, &get_server_ip($a));
+my @ipb = split(/\./, &get_server_ip($b));
+if ($ipa[0] == $ipb[0] && $ipa[1] == $ipb[1] && $ipa[2] == $ipb[2]) {
+	return 2;
+	}
+my $loca = $a->{'location'} || $vhosta->{'location'};
+my $locb = $b->{'location'} || $vhostb->{'location'};
+if ($loca eq $locb) {
+	return 3;
+	}
+if ($ipa[0] == $ipb[0] && $ipa[1] == $ipb[1]) {
+	return 4;
+	}
+return 5;
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server

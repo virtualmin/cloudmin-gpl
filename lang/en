@@ -1440,7 +1440,7 @@ dimage_egone=Image no longer exists!
 eimage_err=Failed to save image
 eimage_edesc=Missing description
 eimage_version=Image version
-eimage_master=Fetch to Cloudmin master
+eimage_master=Copy to default locations
 
 remote_eprogram=Invalid remote program name
 remote_eprogram2=Remote program $1 does not exist
