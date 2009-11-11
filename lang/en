@@ -1441,7 +1441,7 @@ dimage_egone=Image no longer exists!
 eimage_err=Failed to save image
 eimage_edesc=Missing description
 eimage_version=Image version
-eimage_master=Copy to default locations
+eimage_master=Copy to all Storage Locations
 
 remote_eprogram=Invalid remote program name
 remote_eprogram2=Remote program $1 does not exist
@@ -2928,6 +2928,7 @@ log_delete_key=Deleted SSH key $1
 log_delete_keys=Deleted $1 SSH keys
 log_delete_image=Deleted system image <tt>$1</tt>
 log_modify_image=Modified system image <tt>$1</tt>
+log_copy_image=Copied system image <tt>$1</tt>
 log_download_images=Downloaded $1 system images
 log_create_owner=Created system owner <tt>$1</tt>
 log_modify_owner=Modified system owner <tt>$1</tt>
@@ -3113,3 +3114,8 @@ storage_err3=Failed to delete storage locations
 storage_eclash=The location $1 has the same destination
 storage_enoneleft=At least one storage location must exist
 storage_enone=None selected
+
+icopy_title=Copy System Image
+icopy_copying=Copying to image storage location $1 ..
+icopy_failed=.. copy failed : $1
+icopy_tohost=.. cannot copy to host system, as it depends on the system being imaged

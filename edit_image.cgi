@@ -13,7 +13,7 @@ if ($got) {
 	print &ui_form_start("save_image.cgi");
 	print &ui_hidden("id", $in{'id'});
 	}
-print &ui_table_start($text{'eimage_header'}, undef, 2);
+print &ui_table_start($text{'eimage_header'}, undef, 2, [ "nowrap" ]);
 
 print &ui_table_row($text{'eimage_id'}, $i->{'id'});
 
@@ -76,11 +76,11 @@ if ($got) {
 			    "<tt>$got->{'files'}</tt>");
 
 	# Storage location
-	@dests = sort { $a cmp $b } split(/\s+/, $i->{'dest'});
+	@dests = sort { $a cmp $b } split(/\s+/, $got->{'dest'});
 	@stordests = sort { $a cmp $b } map { $_->{'dest'} } &list_storages();
 	if (join(" ", @dests) ne join(" ", @stordests)) {
 		# Not in all locations .. off to fix
-		$dbutton = " ".&ui_submit($text{'eimage_master'});
+		$dbutton = "<br>".&ui_submit($text{'eimage_master'}, "copy");
 		}
 	print &ui_table_row($text{'eimage_dest'},
 		join("<br>\n", map { &nice_image_destination($_) } @dests).

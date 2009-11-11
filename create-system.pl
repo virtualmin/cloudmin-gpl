@@ -296,7 +296,7 @@ if ($image) {
 	$img = &get_server_image($image);
 	$vhost = &get_parent_server($server);
 	print "Copying system image files to host system $vhost->{'host'} ..\n";
-	($imageok, $imagetemp) = &transfer_image_files($server);
+	($imageok, $imagetemp, $imagehost) = &transfer_image_files($server);
 	if ($imageok == 0) {
 		print ".. failed : $imagetemp\n";
 		exit(1);
@@ -304,10 +304,12 @@ if ($image) {
 	else {
 		$server->{'imagetemp'} = $imagetemp;
 		$server->{'imagelocal'} = ($imageok != 1);
-		print $imageok == 1 ? " .. done\n\n" :
+		$ih = $imagehost->{'host'};
+		print $imageok == 1 ? " .. transferred from $ih\n\n" :
 		      $imageok == 2 ? " .. already on host system\n\n" :
 		      $imageok == 3 ? " .. already in host cache\n\n" :
-				      " .. done, and added to host cache\n\n";
+				      " .. transferred from $ih, ".
+				      "and added to host cache\n\n";
 		}
 	}
 

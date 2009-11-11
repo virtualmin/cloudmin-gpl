@@ -21,7 +21,7 @@ foreach my $f (readdir(DIR)) {
 	my $partialsize = 0;
 	if (!$img{'dest'}) {
 		# Assume stored on master
-		$img{'dest'} = $server_images_dir;
+		$img{'dest'} = "master:".$server_images_dir;
 		}
 	my $dest = &parse_backup_destination($img{'dest'});
 	if ($dest->{'mode'} == 0) {
@@ -222,7 +222,7 @@ if ($vhost->{$prefix.'_cachesize'}) {
 			&execute_command_on_server(
 				$vhost, "touch ".quotemeta("$cachedir/$f"));
 			}
-		return (3, $cachedir);
+		return (3, $cachedir, $vhost);
 		}
 
 	# No, need to transfer to the cache
@@ -248,46 +248,67 @@ foreach my $dstr (split(/\s+/, $img->{'dest'})) {
 	my ($destserver, $destpath) = &get_image_dest_path($dstr);
 	if ($destserver->{'id'} eq $vhost->{'id'}) {
 		# Already got it!
-		return ( 2, $destpath );
+		my $missing = 0;
+		foreach my $f (@files) {
+			my @st = &stat_file_on_server($vhost, "$destpath/$f");
+			$missing++ if (!@st);
+			}
+		if (!$missing) {
+			return (2, $destpath, $destserver);
+			}
 		}
 	push(@dests, [ $destserver, $destpath,
 			&distance_from_server($vhost, $destserver) ]);
 	}
 
-# Sort by distance, closest first
-# XXX
-
-# Transfer files from image location to dir on host
-foreach my $f (@files) {
-	my $path = "$destpath/$f";
-	my $pid = fork();
-	my $outtemp = &tempname();
-	if (!$pid) {
-		my $err = &transfer_file_between_servers($destserver, $vhost,
-				$path, "$imagedir/$f", 0, 1);
-		open(OUT, ">$outtemp");
-		print OUT $err;
-		close(OUT);
-		exit($err ? 1 : 0);
+# Sort by distance, closest first, then try in that order
+@dests = sort { $a->[2] <=> $b->[2] } @dests;
+my $lasterr;
+my $lastserver;
+foreach my $sp (@dests) {
+	# Transfer files from image location to dir on host
+	$lasterr = undef;
+	foreach my $f (@files) {
+		my ($destserver, $destpath) = @$sp;
+		my $path = "$destpath/$f";
+		my $pid = fork();
+		my $outtemp = &tempname();
+		if (!$pid) {
+			my $err = &transfer_file_between_servers(
+					$destserver, $vhost,
+					$path, "$imagedir/$f", 0, 1);
+			open(OUT, ">$outtemp");
+			print OUT $err;
+			close(OUT);
+			exit($err ? 1 : 0);
+			}
+		while(1) {
+			my $expid = waitpid($pid, WNOHANG);
+			last if ($expid == $pid);
+			print "." if ($progress);
+			sleep(1);
+			}
+		my $err = &read_file_contents($outtemp);
+		&unlink_file($outtemp);
+		if ($err) {
+			$lasterr = "Failed to copy $f from ".
+				   "$destserver->{'host'} : $err";
+			last;
+			}
+		$lastserver = $destserver;
 		}
-	while(1) {
-		my $expid = waitpid($pid, WNOHANG);
-		last if ($expid == $pid);
-		print "." if ($progress);
-		sleep(1);
-		}
-	my $err = &read_file_contents($outtemp);
-	&unlink_file($outtemp);
-	if ($err) {
-		return (0, "Failed to copy $f : $err");
-		}
+	last if (!$lasterr);
 	}
 
-if ($cachedir eq $imagedir) {
-	return (4, $imagedir);
+# Return status and directory
+if ($lasterr) {
+	return (0, $lasterr);
+	}
+elsif ($cachedir eq $imagedir) {
+	return (4, $imagedir, $lastserver);
 	}
 else {
-	return (1, $imagedir);
+	return (1, $imagedir, $lastserver);
 	}
 }
 
@@ -356,7 +377,7 @@ my ($image) = @_;
 }
 
 # delete_server_image(&image)
-# Deletes a my image and all files
+# Deletes an image and all files
 sub delete_server_image
 {
 my ($img) = @_;
@@ -958,6 +979,7 @@ my ($vhost, $image, $temp, $progress, $server) = @_;
 my $totalsize = 0;
 my $oldsize;
 my $tohost = 0;
+my @stors = &list_storages();
 
 foreach my $dest (split(/\s+/, $image->{'dest'})) {
 	# Work out where to transfer the image to
@@ -1005,6 +1027,13 @@ foreach my $dest (split(/\s+/, $image->{'dest'})) {
 	if (!$totalsize) {
 		$totalsize = $i_totalsize;
 		$oldsize = $i_oldsize;
+		}
+
+	# Update size for this storage location
+	my ($stor) = grep { $_->{'dest'} eq $dest } @stors;
+	if ($stor) {
+		&compute_storage_size($stor);
+		&save_storage($stor);
 		}
 	}
 
@@ -1150,19 +1179,24 @@ my @dests = split(/\s+/, $str);
 return join(", ", map { &nice_backup_destination($_) } @dests);
 }
 
-# get_image_dest_path(dest)
+# get_image_dest_path(dest, [&vhost])
 # Returns the Cloudmin server object and path for an image destination. Assumes
 # the master system if blank.
 sub get_image_dest_path
 {
-my ($deststr) = @_;
+my ($deststr, $vhost) = @_;
 my $dest = &parse_backup_destination($deststr || $server_images_dir);
 my $destserver;
 if ($dest->{'mode'} == 0) {
 	$destserver = &get_managed_server(0);
 	}
 elsif ($dest->{'mode'} == 1) {
-	$destserver = $vhost;
+	if ($vhost) {
+		$destserver = $vhost;
+		}
+	else {
+		return ( );
+		}
 	}
 elsif ($dest->{'mode'} == 2) {
 	$destserver = &get_managed_server_by("id", $dest->{'id'});
@@ -1223,7 +1257,7 @@ if (!@rv) {
 	push(@rv, { 'id' => 1,
 		    'default' => 1,
 		    'desc' => $text{'storages_defstor'},
-		    'dest' => $server_images_dir });
+		    'dest' => "master:".$server_images_dir });
 	&save_storage($rv[0]);
 	}
 foreach my $s (@rv) {
@@ -1271,10 +1305,60 @@ sub compute_storage_size
 {
 my ($storage) = @_;
 my ($server, $path) = &get_image_dest_path($storage->{'dest'});
-my $size = &disk_usage_on_server($server, $path);
-if ($size =~ /^\d+$/) {
-	$storage->{'size'} = $size;
+if ($server) {
+	my $size = &disk_usage_on_server($server, $path);
+	if ($size =~ /^\d+$/) {
+		$storage->{'size'} = $size;
+		}
 	}
+}
+
+# transfer_image_files_to_storage(&image, &storage)
+# Transfer all files in some image to some storage location
+sub transfer_image_files_to_storage
+{
+my ($image, $stor) = @_;
+
+# Find the first usable source location
+my @imgfiles = split(/\s+/, $image->{'files'});
+my ($copyserver, $copypath);
+foreach my $src (split(/\s+/, $image->{'dest'})) {
+	my ($srcserver, $srcpath) = &get_image_dest_path($src);
+	my $missing = 0;
+	foreach my $f (@imgfiles) {
+		my @st = &stat_file_on_server($srcserver, "$srcpath/$f");
+		$missing++ if (!@st);
+		}
+	if (!$missing) {
+		($copyserver, $copypath) = ($srcserver, $srcpath);
+		last;
+		}
+	}
+if (!$copyserver) {
+	return "No source to copy from found!";
+	}
+
+# Copy to each of the destinations that are missing any files
+foreach my $dest (split(/\s+/, $stor->{'dest'})) {
+	foreach my $f (@imgfiles) {
+		my ($destserver, $destpath) =
+			&get_image_dest_path($stor->{'dest'});
+		my @st = &stat_file_on_server($destserver, "$destpath/$f");
+		next if (@st);		# Already got it
+		my $err = &transfer_file_between_servers(
+			$copyserver, $destserver,
+			"$copypath/$f", "$destpath/$f", 0, 1);
+		if ($err) {
+			return "Failed to copy from $copyserver->{'host'} to ".
+			       "$destserver->{'host'} : $err";
+			}
+		}
+	}
+
+# Re-compute size
+&compute_storage_size($stor);
+&save_storage($stor);
+return undef;
 }
 
 1;
