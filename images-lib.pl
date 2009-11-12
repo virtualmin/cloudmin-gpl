@@ -1417,5 +1417,29 @@ foreach my $dest (@dests) {
 return undef;
 }
 
+# image_storage_mismatches(&image, &storages)
+# Compares the locations an image is in with those defined in the given
+# storages, and returns the number of missing destinations, and the number
+# of extra.
+sub image_storage_mismatches
+{
+my ($image, $stors) = @_;
+my (%gotdests, %stordests, $onhost);
+foreach my $dstr (split(/\s+/, $image->{'dest'})) {
+	$gotdests{&normalize_backup_destination($dstr)} = 1;
+	}
+foreach my $stor (@$stors) {
+	$stordests{&normalize_backup_destination($stor->{'dest'})} = 1;
+	my $dest = &parse_backup_destination($stor->{'dest'});
+	if ($dest->{'mode'} == 1) {
+		# On-host, so can't really compare
+		$onhost++;
+		}
+	}
+my @missing = grep { !$gotdests{$_} } keys %stordests;
+my @extra = grep { !$stordests{$_} } keys %gotdests;
+return ( scalar(@missing)-$onhost, scalar(@extra) );
+}
+
 1;
 

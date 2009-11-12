@@ -81,19 +81,14 @@ if ($got) {
 			    "<tt>$got->{'files'}</tt>");
 
 	# Storage location
-	foreach $dstr (split(/\s+/, $got->{'dest'})) {
-		$gotdests{&normalize_backup_destination($dstr)} = 1;
-		}
-	@stordests = map { &normalize_backup_destination($_->{'dest'}) }
-			 &list_storages();
-	@missdests = grep { !$gotdests{$_} } @stordests;
-	if (@missdests) {
+	($missing_dests) = &image_storage_mismatches($got,[ &list_storages() ]);
+	if ($missing_dests) {
 		# Not in all locations .. off to fix
 		$dbutton = "<br>".&ui_submit($text{'eimage_master'}, "copy");
 		}
 	print &ui_table_row($text{'eimage_dest'},
 		join("<br>\n", map { &nice_image_destination($_) }
-				   (keys %gotdests)).
+				   split(/\s+/, $got->{'dest'})).
 		$dbutton);
 
 	# Systems using it

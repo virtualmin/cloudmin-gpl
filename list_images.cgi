@@ -48,11 +48,14 @@ elsif ($in{'mode'} eq 'virtualmin') {
 	@combined = grep { $got_avail{$_->{'id'}} } @combined;
 	}
 
+# Show table of images
 @links = ( &select_all_link("d"), &select_invert_link("d") );
 print &ui_form_start("get_images.cgi", "post");
 print &ui_hidden("mode", $in{'mode'});
 print &ui_links_row(\@links);
 @tds = ( "width=5" );
+$anymissing = 0;
+@stors = &list_storages();
 print &ui_columns_start([ "",
 			  $text{'images_desc'},
 			  $text{'images_manager'},
@@ -62,6 +65,13 @@ foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
 	$tfunc = "type_".$i->{'manager'}."_desc";
 	($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
 	($got) = grep { $_->{'id'} eq $i->{'id'} } @images;
+	if ($avail && !$got) {
+		$anymissing++;
+		}
+	if ($got) {
+		($missing_dests) = &image_storage_mismatches($got, \@stors);
+		$anymissing_dests += $missing_dests;
+		}
 	print &ui_checked_columns_row([
 		"<a href='edit_image.cgi?id=$i->{'id'}'>$i->{'desc'}</a>",
 		&$tfunc(),
@@ -81,7 +91,10 @@ foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
 	}
 print &ui_columns_end();
 print &ui_links_row(\@links);
-print &ui_form_end([ [ undef, $text{'images_get'} ] ]);
+print &ui_form_end([
+	$anymissing ? ( [ "get", $text{'images_get'} ] ) : ( ),
+	$anymissing_dests ? ( [ "copy", $text{'images_copy'} ] ) : ( ),
+	]);
 
 &ui_print_footer("", $text{'index_return'});
 
