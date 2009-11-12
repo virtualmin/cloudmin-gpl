@@ -141,18 +141,44 @@ sub download_server_image_files
 my ($img) = @_;
 my @files = split(/\s+/, $img->{'files'});
 my ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
+
+# Find storage location on the master, if any
+my $master_dir = $server_images_dir;
+foreach $stor (&list_storages()) {
+	($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
+	if ($destserver && $destserver->{'id'} == 0) {
+		$master_dir = $destpath;
+		last;
+		}
+	}
+
+# Fetch each one via HTTP
 my %serial;
 &read_file($licence_file, \%serial);
 foreach my $f (@files) {
 	$progress_callback_url = $server_images_base.$f;
-	&http_download($host, $port, "$page/$f", "$server_images_dir/$f",
+	&http_download($host, $port, "$page/$f", "$master_dir/$f",
 		       \$err, \&progress_callback, $ssl,
 		       $serial{'SerialNumber'}, $serial{'LicenseKey'});
 	if ($err) {
-		unlink("$server_images_dir/$f");
+		unlink("$master_dir/$f");
 		return $err;
 		}
 	}
+my @dests = ( "master:$master_dir" );
+
+# Copy to default locations
+foreach $stor (&list_storages()) {
+	($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
+	next if (!$destserver);
+	next if ($destserver->{'id'} == 0 && $destpath eq $master_dir);
+	my $err = &transfer_image_files_to_storage($img, $stor);
+	if (!$err) {
+		push(@dests, $stor->{'dest'});
+		}
+	}
+
+$img->{'dest'} = join(" ", @dests);
 return undef;
 }
 
@@ -1334,13 +1360,14 @@ my ($image, @dests) = @_;
 
 # Find the first usable source location
 my @imgfiles = split(/\s+/, $image->{'files'});
-my ($copyserver, $copypath);
+my ($copyserver, $copypath, %copysize);
 foreach my $src (split(/\s+/, $image->{'dest'})) {
 	my ($srcserver, $srcpath) = &get_image_dest_path($src);
 	my $missing = 0;
 	foreach my $f (@imgfiles) {
 		my @st = &stat_file_on_server($srcserver, "$srcpath/$f");
 		$missing++ if (!@st);
+		$copysize{$f} = $st[7] if (@st);
 		}
 	if (!$missing) {
 		($copyserver, $copypath) = ($srcserver, $srcpath);
@@ -1356,7 +1383,7 @@ foreach my $dest (@dests) {
 	my ($destserver, $destpath) = &get_image_dest_path($dest);
 	foreach my $f (@imgfiles) {
 		my @st = &stat_file_on_server($destserver, "$destpath/$f");
-		next if (@st);		# Already got it
+		next if (@st && $st[7] == $copysize{$f});	# Already got it
 		my $err = &transfer_file_between_servers(
 			$copyserver, $destserver,
 			"$copypath/$f", "$destpath/$f", 0, 1);

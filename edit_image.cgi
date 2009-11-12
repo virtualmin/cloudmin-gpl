@@ -26,9 +26,14 @@ else {
 	print &ui_table_row($text{'eimage_desc'}, $i->{'desc'});
 	}
 
-# Version, if any
+# Version we have locally, if any
 if ($got && $got->{'version'}) {
 	print &ui_table_row($text{'eimage_version'}, $got->{'version'});
+	}
+
+# Version available, if any
+if ($avail && $avail->{'version'}) {
+	print &ui_table_row($text{'eimage_aversion'}, $avail->{'version'});
 	}
 
 # OS type
@@ -54,9 +59,9 @@ print &ui_table_row($text{'eimage_status'},
                               &nice_size($got->{'partialsize'})) :
 		    $got && !$avail ? $text{'images_local'} :
 		    !$got && $avail ? $text{'images_down'} :
-		    $got->{'version'} < $i->{'version'} ?
+		    $got->{'version'} < $avail->{'version'} ?
 			"<font color=#aaaa00>".
-			  &text('images_new', $i->{'version'})."</font>" :
+			  &text('images_new', $avail->{'version'})."</font>" :
 			"<font color=#00aa00>$text{'images_avail'}</font>");
 
 # Compressed size
@@ -76,14 +81,19 @@ if ($got) {
 			    "<tt>$got->{'files'}</tt>");
 
 	# Storage location
-	@dests = sort { $a cmp $b } split(/\s+/, $got->{'dest'});
-	@stordests = sort { $a cmp $b } map { $_->{'dest'} } &list_storages();
-	if (join(" ", @dests) ne join(" ", @stordests)) {
+	foreach $dstr (split(/\s+/, $got->{'dest'})) {
+		$gotdests{&normalize_backup_destination($dstr)} = 1;
+		}
+	@stordests = map { &normalize_backup_destination($_->{'dest'}) }
+			 &list_storages();
+	@missdests = grep { !$gotdests{$_} } @stordests;
+	if (@missdests) {
 		# Not in all locations .. off to fix
 		$dbutton = "<br>".&ui_submit($text{'eimage_master'}, "copy");
 		}
 	print &ui_table_row($text{'eimage_dest'},
-		join("<br>\n", map { &nice_image_destination($_) } @dests).
+		join("<br>\n", map { &nice_image_destination($_) }
+				   (keys %gotdests)).
 		$dbutton);
 
 	# Systems using it

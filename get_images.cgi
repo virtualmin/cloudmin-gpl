@@ -67,6 +67,7 @@ foreach $id (@d) {
 			print &text('images_got',
 				    &nice_size($got->{'size'})),"<p>\n";
 			}
+		&save_server_image($got);
 		}
 	}
 &webmin_log("download", "images", scalar(@d));

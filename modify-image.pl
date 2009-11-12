@@ -9,7 +9,8 @@ add it to some storage location, or remove it from one.
 
 The image ID is specified with the C<--id> parameter. The new description is
 set with the C<--desc> flag followed by a description, and the new OS type
-with the C<--type> flag.
+with the C<--os> flag. Valid OS codes are like I<centos>, I<debian> and 
+I<solaris>.
 
 To add a new storage location for the image's files, use the C<--add-storage>
 flag followed by a storage spec, typically in host:path format. The spec can
@@ -54,7 +55,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--desc") {
 		$desc = shift(@ARGV);
 		}
-	elsif ($a eq "--type") {
+	elsif ($a eq "--os") {
 		$type = shift(@ARGV);
 		}
 	elsif ($a eq "--add-storage") {
@@ -80,6 +81,10 @@ if (defined($desc)) {
 	$changed++;
 	}
 if (defined($type)) {
+	($st) = grep { $_->[0] eq $type } @servers::server_types;
+	$st || &usage("Invalid value for --os. Known operating system ".
+		      "codes are : ".join(" ", map { $_->[0] }
+						@servers::server_types));
 	$image->{'type'} = $type;
 	$changed++;
 	}
@@ -152,7 +157,7 @@ print "Modify the details or location of an image.\n";
 print "\n";
 print "cloudmin modify-image --id image-id\n";
 print "                     [--desc new-description]\n";
-print "                     [--type os-code]\n";
+print "                     [--os os-code]\n";
 print "                     [--add-storage storagespec]\n";
 print "                     [--remove-storage storagespec]\n";
 exit(1);

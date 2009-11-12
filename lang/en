@@ -1441,6 +1441,7 @@ dimage_egone=Image no longer exists!
 eimage_err=Failed to save image
 eimage_edesc=Missing description
 eimage_version=Image version
+eimage_aversion=Latest version available
 eimage_master=Copy to all Storage Locations
 
 remote_eprogram=Invalid remote program name

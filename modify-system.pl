@@ -134,7 +134,7 @@ if (defined($desc)) {
 	}
 if (defined($type)) {
 	($st) = grep { $_->[0] eq $type } @servers::server_types;
-	$st || &usage("Invalid value for --os. Know operating system ".
+	$st || &usage("Invalid value for --os. Known operating system ".
 		      "codes are : ".join(" ", map { $_->[0] }
 						@servers::server_types));
 	}

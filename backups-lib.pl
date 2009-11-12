@@ -156,7 +156,12 @@ elsif ($dest =~ /^host:(\/\S*)$/) {
 	return { 'mode' => 1, 'path' => $1 };
 	}
 elsif ($dest =~ /^vm2:([^:]+):(\/\S*)$/) {
-	return { 'mode' => 2, 'id' => $1, 'path' => $2 };
+	if ($1 == 0) {
+		return { 'mode' => 0, 'path' => $2 };
+		}
+	else {
+		return { 'mode' => 2, 'id' => $1, 'path' => $2 };
+		}
 	}
 elsif ($dest =~ /^ssh:\/*([^:]+):([^:\/]+)\@([^:\/]*)(:(\d+))?(\/\S*)$/) {
 	return { 'mode' => 3, 'user' => $1, 'pass' => $2,
@@ -170,7 +175,12 @@ elsif ($dest =~ /^([a-zA-Z0-9\.\-\_]+):(\/\S*)$/) {
 	my ($hostname, $path) = ($1, $2);
 	my $server = &get_managed_server_by("host", $hostname);
 	$server || return undef;
-	return { 'mode' => 2, 'id' => $server->{'id'}, 'path' => $path };
+	if ($server->{'id'} == 0) {
+		return { 'mode' => 0, 'path' => $path };
+		}
+	else {
+		return { 'mode' => 2, 'id' => $server->{'id'},'path' => $path };
+		}
 	}
 else {
 	return undef;
@@ -204,6 +214,15 @@ elsif ($dest->{'mode'} == 4) {
 else {
 	return undef;
 	}
+}
+
+# normalize_backup_destination(deststr)
+# Converts a backup destination string into a standard format, if possible.
+sub normalize_backup_destination
+{
+my ($deststr) = @_;
+my $dest = &parse_backup_destination($deststr);
+return $dest ? &join_backup_destination($dest) : $deststr;
 }
 
 # nice_backup_destination(string|&dest)

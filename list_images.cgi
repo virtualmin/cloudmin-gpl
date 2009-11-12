@@ -36,9 +36,9 @@ foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
 		$got && !$avail ?
 			"<font color=#00aa00>$text{'images_local'}</font>" :
 		!$got ? $text{'images_down'} :
-		$got->{'version'} < $i->{'version'} ?
+		$avail && $got->{'version'} < $avail->{'version'} ?
 			"<font color=#aaaa00>".
-			  &text('images_new', $i->{'version'})."</font>" :
+			  &text('images_new', $avail->{'version'})."</font>" :
 			"<font color=#00aa00>$text{'images_avail'}</font>",
 		&nice_size($got && !$got->{'partial'} ? $got->{'size'}
 						      : $avail->{'size'}),
