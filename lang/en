@@ -1302,6 +1302,12 @@ images_dheader=Default image storage location
 images_modenone=Default directory on Cloudmin master
 images_def=Store images for hosted systems in
 images_tomaster=Cloudmin master
+images_mode=Images to show:
+images_mode_all=All
+images_mode_got=Usable
+images_mode_avail=Available for download
+images_mode_local=Created locally
+images_mode_virtualmin=Created by Virtualmin
 
 xen_typedesc=Xen
 xen_createlink=Create Xen instance

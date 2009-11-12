@@ -4,18 +4,53 @@
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ui_print_header(undef, $text{'images_title'}, "", "images");
+&ReadParse();
 
 # Get all the available and my images
 @avail = &list_available_server_images();
+%got_avail = map { $_->{'id'}, $_ } @avail;
 @images = &list_server_images();
+%got_images = map { $_->{'id'}, $_ } @images;
 @combined = @images;
 %incombined = map { $_->{'id'}, $_ } @combined;
 foreach $i (@avail) {
 	push(@combined, $i) if (!$incombined{$i->{'id'}});
 	}
 
+# Show links for display mode
+print "<b>$text{'images_mode'}</b>\n";
+@links = ( );
+$in{'mode'} ||= 'all';
+foreach $m ("all", "got", "avail", "local", "virtualmin") {
+	$msg = $text{'images_mode_'.$m};
+	if ($m ne $in{'mode'}) {
+		$msg = "<a href='list_images.cgi?mode=$m'>$msg</a>";
+		}
+	push(@links, $msg);
+	}
+print &ui_links_row(\@links),"<p>\n";
+
+# Apply mode
+if ($in{'mode'} eq 'got') {
+	# Only those we have downloaded
+	@combined = grep { $got_images{$_->{'id'}} } @combined;
+	}
+elsif ($in{'mode'} eq 'avail') {
+	# Only those we don't have yet
+	@combined = grep { !$got_images{$_->{'id'}} } @combined;
+	}
+elsif ($in{'mode'} eq 'local') {
+	# Only those made locally
+	@combined = grep { !$got_avail{$_->{'id'}} } @combined;
+	}
+elsif ($in{'mode'} eq 'virtualmin') {
+	# Only those supplied by Virtualmin
+	@combined = grep { $got_avail{$_->{'id'}} } @combined;
+	}
+
 @links = ( &select_all_link("d"), &select_invert_link("d") );
 print &ui_form_start("get_images.cgi", "post");
+print &ui_hidden("mode", $in{'mode'});
 print &ui_links_row(\@links);
 @tds = ( "width=5" );
 print &ui_columns_start([ "",
