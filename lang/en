@@ -1495,8 +1495,9 @@ mkimage_none=None
 mkimage_edesc=Missing description for image
 mkimage_eid=Missing or invalid image ID - no spaces are allowed
 mkimage_eclash=An image with the same ID already exists
-mkimage_einc=You can only choose to increment the version when an image to overwrite with a version is selected
-mkimage_edesc2=You can only choose to use an old image's description when an image to overwrite is selected
+mkimage_eclash2=No image with the selected ID exists!
+mkimage_einc=You can only choose to increment the version when an image to overwrite is selected, and that image has a version
+mkimage_edesc2=You can only choose to use an old image's description when an image to overwrite is selected, and that image has a description
 
 pass_title=Change Password
 pass_header=New system passwords

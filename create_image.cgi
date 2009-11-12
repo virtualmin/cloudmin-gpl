@@ -19,6 +19,8 @@ if (!$in{'imageid_def'} || !defined($in{'oldid'})) {
 else {
 	# Over-writing old
 	$imageid = $in{'oldid'};
+	($clash) = grep { $_->{'id'} eq $in{'oldid'} } &list_server_images();
+	$clash || &error($text{'mkimage_eclash2'});
 	}
 
 # Create initial image hash
