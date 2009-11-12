@@ -166,10 +166,11 @@ foreach my $f (@files) {
 		}
 	}
 my @dests = ( "master:$master_dir" );
+$img->{'dest'} = join(" ", @dests);
 
 # Copy to default locations
 foreach $stor (&list_storages()) {
-	($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
+	my ($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
 	next if (!$destserver);
 	next if ($destserver->{'id'} == 0 && $destpath eq $master_dir);
 	my $err = &transfer_image_files_to_storage($img, $stor);
