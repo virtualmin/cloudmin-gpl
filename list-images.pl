@@ -97,9 +97,10 @@ if ($multi) {
 			print "    Contents size: $i->{'rawsize'}\n";
 			}
 		foreach $dstr (split(/\s+/, $i->{'dest'})) {
-			print "    Location: ",
+			print "    Storage location: ",
 				&html_tags_to_text(
 				   &nice_backup_destination($dstr)),"\n";
+			print "    Storage spec: $dstr\n";
 			}
 		@md5s = split(/\s+/, $i->{'md5'});
 		if (@md5s && $md5s[0] ne "-" && $md5verify) {

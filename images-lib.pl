@@ -1318,6 +1318,19 @@ if ($server) {
 sub transfer_image_files_to_storage
 {
 my ($image, $stor) = @_;
+my $err = &transfer_image_files_to_dest($image, split(/\s+/, $stor->{'dest'}));
+if (!$err) {
+	&compute_storage_size($stor);
+	&save_storage($stor);
+	}
+return $err;
+}
+
+# transfer_image_files_to_dest(&image, dest, ...)
+# Transfer all files in some image to some list of destinations
+sub transfer_image_files_to_dest
+{
+my ($image, @dests) = @_;
 
 # Find the first usable source location
 my @imgfiles = split(/\s+/, $image->{'files'});
@@ -1339,10 +1352,9 @@ if (!$copyserver) {
 	}
 
 # Copy to each of the destinations that are missing any files
-foreach my $dest (split(/\s+/, $stor->{'dest'})) {
+foreach my $dest (@dests) {
+	my ($destserver, $destpath) = &get_image_dest_path($dest);
 	foreach my $f (@imgfiles) {
-		my ($destserver, $destpath) =
-			&get_image_dest_path($stor->{'dest'});
 		my @st = &stat_file_on_server($destserver, "$destpath/$f");
 		next if (@st);		# Already got it
 		my $err = &transfer_file_between_servers(
@@ -1355,9 +1367,25 @@ foreach my $dest (split(/\s+/, $stor->{'dest'})) {
 		}
 	}
 
-# Re-compute size
-&compute_storage_size($stor);
-&save_storage($stor);
+return undef;
+}
+
+# delete_image_files_from_dest(&image, dest, ...)
+# Delete all files in some image from some list of destinations
+sub delete_image_files_from_dest
+{
+my ($image, @dests) = @_;
+my @imgfiles = split(/\s+/, $image->{'files'});
+# Copy to each of the destinations that are missing any files
+foreach my $dest (@dests) {
+	my ($destserver, $destpath) = &get_image_dest_path($dest);
+        foreach my $f (@imgfiles) {
+		my @st = &stat_file_on_server($destserver, "$destpath/$f");
+		next if (!@st);		# Already gone
+		my $err = &delete_file_on_server($destserver, "$destpath/$f");
+		return $err if ($err);
+		}
+	}
 return undef;
 }
 
