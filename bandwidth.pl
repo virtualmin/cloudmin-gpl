@@ -28,7 +28,13 @@ while(@ARGV > 0) {
 @servers || &usage("No systems specified");
 
 # Skip any currently locked
-@servers = grep { !&test_lock_server($_) } @servers;
+@unlocked_servers = ( );
+foreach my $server (@servers) {
+	if (!&test_lock_server($server)) {
+		push(@unlocked_servers, $server);
+		}
+	}
+@servers = @unlocked_servers;
 
 # For each system, get it's current counts, compare to old counts, then up
 # the total for this hour
@@ -107,6 +113,7 @@ foreach $s (@servers) {
 $start = &bandwidth_period_start();
 $now = time();
 foreach $s (@servers) {
+	&obtain_lock_server($s);
 	my $bwinfo = &get_bandwidth($s);
 	next if (!$bwinfo->{'last_time'});	# Only do if bandwidth is
 						# supported by system type
@@ -172,6 +179,7 @@ foreach $s (@servers) {
 		}
 
 	&save_managed_server($s);
+	&release_lock_server($s);
 	}
 
 # For each system owner with a plan limit, sum up his usage

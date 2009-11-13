@@ -23,8 +23,11 @@ my ($dnsname, $ip, $zonename) = @_;
 
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
+my $rv = 0;
 if ($zone) {
 	&$first_print(&text('create_vserverdns', $dnsname, $ip));
+	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
+	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
 	my ($already) = grep { $_->{'name'} eq $dnsname } @recs;
 	if (!$already) {
@@ -37,6 +40,9 @@ if ($zone) {
 		my ($rfn, $rrecs, undef, $rzone) =
 			&get_reverse_dns_zone($ip);
 		if ($rfn) {
+			my $rlpath = &bind8::make_chroot(
+					&bind8::absolute_path($rfn));
+			&lock_file($rlpath);
 			my $arpa = &ip_address_to_arpa($ip, $rzone);
 			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
 					 @$rrecs;
@@ -45,17 +51,19 @@ if ($zone) {
 						      "IN", "PTR", $dnsname);
 				&bind8::bump_soa_record($rfn, $rrecs);
 				}
+			&unlock_file($rlpath);
 			}
 
 		&bind8::restart_bind();
 		&$second_print($text{'create_done'});
-		return 1;
+		$rv = 1;
 		}
 	else {
 		&$second_print($text{'create_vserverdnsalready'});
 		}
+	&unlock_file($lpath);
 	}
-return 0;
+return $rv;
 }
 
 # delete_bind8_record(dnsname, zonename, ip)
@@ -67,6 +75,8 @@ my ($dnsname, $zonename, $ip) = @_;
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 if ($zone && $dnsname) {
+	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
+	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
 	my @r = grep { $_->{'name'} eq $dnsname } @recs;
 	foreach my $r (reverse(@r)) {
@@ -76,18 +86,23 @@ if ($zone && $dnsname) {
 	if (@r) {
 		&bind8::bump_soa_record($zone->{'file'}, \@recs);
 		}
+	&unlock_file($lpath);
 
 	if (@r) {
 		# See if we can remove a reverse too
 		my ($rfn, $rrecs, undef, $rzone) =
 			&get_reverse_dns_zone($ip);
 		if ($ip && $rfn) {
+			my $rlpath = &bind8::make_chroot(
+					&bind8::absolute_path($rfn));
+			&lock_file($rlpath);
 			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
 					 @$rrecs;
 			if ($old) {
 				&bind8::delete_record($rfn, $old);
 				&bind8::bump_soa_record($rfn, $rrecs);
 				}
+			&unlock_file($rlpath);
 			}
 		}
 	if (@r) {
@@ -105,6 +120,8 @@ my ($dnsname, $zonename, $oldip, $ip) = @_;
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 if ($zone && $dnsname) {
+	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
+	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
         my @r = grep { $_->{'name'} eq $dnsname } @recs;
 	foreach my $r (@r) {
@@ -115,12 +132,16 @@ if ($zone && $dnsname) {
 	if (@r) {
                 &bind8::bump_soa_record($zone->{'file'}, \@recs);
                 }
+	&unlock_file($lpath);
 
 	if (@r) {
 		# See if we can update a reverse too
 		my ($rfn, $rrecs, undef, $rzone) =
 			&get_reverse_dns_zone($oldip);
 		if ($ip && $rfn) {
+			my $rlpath = &bind8::make_chroot(
+					&bind8::absolute_path($rfn));
+			&lock_file($rlpath);
 			my $arpa = &ip_address_to_arpa($ip, $rzone);
 			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
 					 @$rrecs;
@@ -131,6 +152,7 @@ if ($zone && $dnsname) {
 					$old->{'comment'});
 				&bind8::bump_soa_record($rfn, $rrecs);
 				}
+			&unlock_file($rlpath);
 			}
 		}
 	if (@r) {
