@@ -22,7 +22,8 @@ if (defined($in{'cpu'})) {
 		&error($text{'limits_ecpu'});
 	}
 if (defined($in{'weight'})) {
-	$in{'weight'} =~ /^\d+$/ || &error($text{'limits_eweight'});
+	$in{'weight'} =~ /^\d+$/ && $in{'weight'} > 0 ||
+		&error($text{'limits_eweight'});
 	}
 if (defined($in{'disk'})) {
 	$in{'disk_def'} || $in{'disk'} =~ /^\d+$/ ||
