@@ -3131,3 +3131,13 @@ icopy_title=Copy System Image
 icopy_copying=Copying to image storage location $1 ..
 icopy_failed=.. copy failed : $1
 icopy_tohost=.. cannot copy to host system, as it depends on the system being imaged
+
+oform_title=Change Password and Email
+oform_ecannot=This page can only be used by system owners
+oform_eowner=No system owner found!
+oform_header=System owner account details
+oform_pass=Cloudmin password
+oform_leave=Don't change
+oform_set=Set to
+oform_email=Contact email address
+oform_err=Failed to change password and email

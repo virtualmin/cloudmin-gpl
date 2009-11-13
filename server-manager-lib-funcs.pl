@@ -4501,6 +4501,14 @@ if (&can_action(undef, "backup") && defined(&list_backups)) {
 	push(@gcats, "backup");
 	}
 
+if ($access{'owner'}) {
+	# Change owner details
+	push(@glinks, "owner_form.cgi");
+	push(@gtitles, $text{'oform_title'});
+	push(@gicons, "images/oform.gif");
+	push(@gcats, "settings");
+	}
+
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
 }
 
