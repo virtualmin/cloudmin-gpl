@@ -14,39 +14,6 @@ if ($in{'delete'}) {
 	&webmin_log("delete", "image", $img->{'id'});
 	&redirect("list_images.cgi");
 	}
-elsif ($in{'copy'}) {
-	# Copy to all default storage locations
-	&ui_print_header(undef, $text{'icopy_title'}, "");
-	$vhost = $img->{'vhost'} ? &get_managed_server($img->{'vhost'}) : undef;
-
-	@dests = split(/\s+/, $img->{'dest'});
-	foreach $stor (&list_storages()) {
-		&$first_print(&text('icopy_copying',
-			&nice_backup_destination($stor->{'dest'})));
-		($destserver, $destpath) =
-			&get_image_dest_path($stor->{'dest'}, $vhost);
-		if (!$destserver) {
-			# Destination makes no sense
-			&$second_print($text{'icopy_tohost'});
-			}
-		else {
-			# Actually try to copy
-			$err = &transfer_image_files_to_storage($img, $stor);
-			if ($err) {
-				&$second_print(&text('icopy_failed', $err));
-				}
-			else {
-				&$second_print($text{'create_done'});
-				push(@dests, $stor->{'dest'});
-				}
-			}
-		}
-	$img->{'dest'} = join(' ', &unique(@dests));
-	&save_server_image($img);
-
-	&webmin_log("copy", "image", $img->{'id'});
-	&ui_print_footer("list_images.cgi", $text{'images_return'});
-	}
 else {
 	# Update description and OS
 	&error_setup($text{'eimage_err'});

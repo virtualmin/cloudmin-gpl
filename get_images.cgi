@@ -79,7 +79,8 @@ if ($in{'get'}) {
 	}
 elsif ($in{'copy'} || $in{'move'}) {
 	# Copying or moving images to all storages
-	&ui_print_header(undef, $text{'images_copytitle'}, "");
+	&ui_print_header(undef, $in{'move'} ? $text{'images_movetitle'}
+					    : $text{'images_copytitle'}, "");
 	&obtain_lock_anything();
 
 	@images = &list_server_images();
@@ -153,7 +154,7 @@ elsif ($in{'copy'} || $in{'move'}) {
 		&$outdent_print();
 		}
 
-	&webmin_log("copy", "images", scalar(@d));
+	&webmin_log($in{'move'} ? "move" : "copy", "images", scalar(@d));
 	&ui_print_footer("list_images.cgi?mode=$in{'mode'}",
 			 $text{'images_return'});
 	}

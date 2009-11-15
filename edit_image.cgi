@@ -80,16 +80,10 @@ if ($got) {
 	print &ui_table_row($text{'eimage_files'},
 			    "<tt>$got->{'files'}</tt>");
 
-	# Storage location
-	($missing_dests) = &image_storage_mismatches($got,[ &list_storages() ]);
-	if ($missing_dests) {
-		# Not in all locations .. off to fix
-		$dbutton = "<br>".&ui_submit($text{'eimage_master'}, "copy");
-		}
+	# Storage locations
 	print &ui_table_row($text{'eimage_dest'},
 		join("<br>\n", map { &nice_image_destination($_) }
-				   split(/\s+/, $got->{'dest'})).
-		$dbutton);
+				   split(/\s+/, $got->{'dest'})));
 
 	# Systems using it
 	@users = grep { $_->{'image'} eq $i->{'id'} } &list_managed_servers();
