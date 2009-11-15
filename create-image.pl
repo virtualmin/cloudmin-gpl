@@ -16,6 +16,12 @@ add the C<--overwrite> paramter to the command line. You should also use
 C<--version> followed by a version number, to make it easier to keep track of
 different instances of the same image.
 
+By default, files created as part of the image will be copied to the default
+storage locations. Typically this is just the /var/webmin/server-manager
+directory on the Cloudmin master. However, you can use the C<--storage>
+flag followed by a storage spec to use a different location. This is typically
+given in host:path format.
+
 Creation takes several minutes, but the command will display each step in the
 process as it proceeds, and inform you of its final success or failure. 
 
@@ -99,6 +105,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-compress") {
 		$nocompress = 1;
 		}
+	elsif ($a eq "--storage") {
+		$dest = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
@@ -157,10 +166,20 @@ if ($info && $info->{'kernel'}) {
 &$first_print("Creating temporary directory for image files ..");
 $pfunc = "type_".$server->{'manager'}."_parent";
 $vhost = &$pfunc($server);
-$err = &set_image_location($image, $vhost);
-if ($err) {
-	&$second_print(".. no suitable image locations found : $err");
-	exit(3);
+$image->{'vhost'} = $vhost->{'id'};
+if ($dest) {
+	if (!&parse_backup_destination($dest, $vhost)) {
+		&$second_print(".. storage location $dest is not valid");
+		exit(3);
+		}
+	$image->{'dest'} = $dest;
+	}
+else {
+	$err = &set_image_location($image, $vhost);
+	if ($err) {
+		&$second_print(".. no suitable image locations found : $err");
+		exit(3);
+		}
 	}
 ($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
 if (!$tempok) {
@@ -256,6 +275,7 @@ print "                     [--overwrite]\n";
 print "                     [--version number | --inc-version]\n";
 print "                     [--no-serial]\n";
 print "                     [--no-compress]\n";
+print "                     [--storage spec]\n";
 exit(1);
 }
 

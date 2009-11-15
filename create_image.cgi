@@ -61,6 +61,7 @@ if ($info && $info->{'kernel'}) {
 &$first_print($text{'mkimage_temping'});
 $pfunc = "type_".$server->{'manager'}."_parent";
 $vhost = &$pfunc($server);
+$image->{'vhost'} = $vhost->{'id'};
 $err = &set_image_location($image, $vhost);
 if ($err) {
 	&$second_print(&text('mkimage_edest', $err));

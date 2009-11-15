@@ -408,9 +408,11 @@ my ($image) = @_;
 sub delete_server_image
 {
 my ($img) = @_;
-my ($destserver, $destpath) = &get_image_dest_path($img->{'dest'});
-foreach my $fl (split(/\s+/, $img->{'files'})) {
-	&delete_file_on_server($destserver, "$destpath/$fl");
+foreach my $dest (split(/\s+/, $img->{'dest'})) {
+	my ($destserver, $destpath) = &get_image_dest_path($dest);
+	foreach my $fl (split(/\s+/, $img->{'files'})) {
+		&delete_file_on_server($destserver, "$destpath/$fl");
+		}
 	}
 &unlink_logged("$server_images_dir/$img->{'id'}.img");
 }

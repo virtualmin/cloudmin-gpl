@@ -20,6 +20,11 @@ master.
 To remove a storage location, use the C<--remove-storage> flag followed by
 a storage spec. All files in the image in the given directory will be removed.
 
+To copy an image to all the global default storage locations, use the
+C<--default-storage> flag. This is not recommended if you have images stored
+on the host system they were created on, as Cloudmin cannot necessarily
+determine which host an image is supposed to be on.
+
 =head1 Example usage
 
   cloudmin modify-image --id xen-centos-test1 --desc "My test image"
@@ -64,12 +69,18 @@ while(@ARGV > 0) {
 	elsif ($a eq "--remove-storage") {
 		push(@delstor, shift(@ARGV));
 		}
+	elsif ($a eq "--default-storage") {
+		$defstor = 1;
+		}
 	else {
 		&usage();
 		}
 	}
 &set_all_text_print();
 $id || &usage();
+if ($defstor) {
+	(@addstor || @delstor) && &usage("The --default-storage flag cannot be combined with --add-storage or --remove-storage");
+	}
 
 # Get the image
 ($image) = grep { $_->{'id'} eq $id } &list_server_images();
@@ -95,12 +106,30 @@ if ($changed) {
 
 @dests = split(/\s+/, $image->{'dest'});
 @stors = &list_storages();
+%stors = map { $_->{'dest'}, $_ } @stors;
+
+# Work out what needs to be added or remove to get the default storage locations
+if ($defstor) {
+	@addstor = ( );
+	@delstor = ( );
+	foreach $deststr (@dests) {
+		$deststr = &normalize_backup_destination($deststr);
+		push(@delstor, $deststr) if (!$stors{$deststr});
+		}
+	foreach $stor (@stors) {
+		$dest = &parse_backup_destination($stor->{'dest'});
+		if ($dest && &indexof($stor->{'dest'}, @dests) < 0) {
+			push(@addstor, $stor->{'dest'});
+			}
+		}
+	}
 
 # Copy to new locations
 foreach $deststr (@addstor) {
 	$dest = &parse_backup_destination($deststr);
 	$dest || &usage("Invalid image location $deststr");
-	&$first_print("Copying image files to $deststr ..");
+	&$first_print("Copying image files to ",
+		      &nice_backup_destination($deststr)," ..");
 	$deststr = &join_backup_destination($dest);
 	($stor) = grep { $_->{'dest'} eq $deststr } @stors;
 	if ($stor) {
@@ -122,11 +151,15 @@ foreach $deststr (@addstor) {
 foreach $deststr (@delstor) {
 	$dest = &parse_backup_destination($deststr);
         $dest || &usage("Invalid image location $deststr");
-	&$first_print("Removing image files from $deststr ..");
+	&$first_print("Removing image files from ",
+		      &nice_backup_destination($deststr)," ..");
 	$deststr = &join_backup_destination($dest);
 	$idx = &indexof($deststr, @dests);
 	if ($idx < 0) {
 		&$second_print(".. not at that location");
+		}
+	elsif (@dests == 1) {
+		&$second_print(".. cannot delete from only location!");
 		}
 	else {
 		$err = &delete_image_files_from_dest($image, $deststr);
@@ -160,6 +193,7 @@ print "                     [--desc new-description]\n";
 print "                     [--os os-code]\n";
 print "                     [--add-storage storagespec]\n";
 print "                     [--remove-storage storagespec]\n";
+print "                     [--default-storage]\n";
 exit(1);
 }
 
