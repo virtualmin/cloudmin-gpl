@@ -120,7 +120,8 @@ $name || &usage("Missing --name parameter");
 ($clash) = grep { lc($_->{'desc'}) eq lc($name) } &list_plans();
 $clash && &usage("A plan with the same name already exists");
 @types = @virtual_server_management_types if (!@types);
-@actions = @allactions if (!@actions);
+@actions = &list_safe_owner_actions() if (!@actions);
+@images = @imageids if (!@images);
 
 # Create the plan object
 $plan = { 'desc' => $name,

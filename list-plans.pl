@@ -45,14 +45,22 @@ while(@ARGV > 0) {
 	elsif ($a eq "--id-only") {
 		$idonly = 1;
 		}
+	elsif ($a eq "--name") {
+		$names{lc(shift(@ARGV))} = 1;
+		}
 	else {
 		&usage();
 		}
 	}
 &supports_plans() || &usage("This system does not support plans");
 
-# Print the the plans
+# Find the plans to show
 @plans = &list_plans();
+if (keys %names) {
+	@plans = grep { $names{lc($_->{'desc'})} } @plans;
+	}
+
+# Print the the plans
 if ($multi) {
 	# Full details
 	@owners = &list_system_owners();
