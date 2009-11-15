@@ -77,8 +77,8 @@ if ($in{'get'}) {
 	&ui_print_footer("list_images.cgi?mode=$in{'mode'}",
 			 $text{'images_return'});
 	}
-elsif ($in{'copy'}) {
-	# Copying images to all storages
+elsif ($in{'copy'} || $in{'move'}) {
+	# Copying or moving images to all storages
 	&ui_print_header(undef, $text{'images_copytitle'}, "");
 	&obtain_lock_anything();
 
@@ -87,6 +87,10 @@ elsif ($in{'copy'}) {
 	foreach $id (@d) {
 		($img) = grep { $_->{'id'} eq $id } @images;
 		next if (!$img);
+		$vhost = $img->{'vhost'} ? &get_managed_server($img->{'vhost'})
+					 : undef;
+
+		# Copy to storages the image is missing from
 		&$first_print(&text('images_copying', $img->{'desc'}));
 		&$indent_print();
 		@dests = split(/\s+/, $img->{'dest'});
@@ -94,7 +98,8 @@ elsif ($in{'copy'}) {
 			&$first_print(&text('icopy_copying',
 				&nice_backup_destination($stor->{'dest'})));
 			($destserver, $destpath) =
-				&get_image_dest_path($stor->{'dest'});
+				&get_image_dest_path($stor->{'dest'}, $vhost);
+			$should{$destserver->{'id'},$destpath} = 1;
 			if (!$destserver) {
 				# Destination makes no sense
 				&$second_print($text{'icopy_tohost'});
@@ -113,6 +118,36 @@ elsif ($in{'copy'}) {
 					}
 				}
 			}
+
+		# Delete from any storages that the image isn't supposed
+		# to be in
+		if ($in{'move'}) {
+			$dcount = scalar(@dests);
+			foreach $dest (@dests) {
+				($destserver, $destpath) =
+					&get_image_dest_path($dest);
+				next if (!$destserver);
+				next if ($should{$destserver->{'id'},
+						 $destpath});
+				&$first_print(&text('icopy_deleting',
+					&nice_backup_destination($dest)));
+				if ($dcount <= 1) {
+					&$second_print($text{'icopy_left'});
+					}
+				elsif ($err = &delete_image_files_from_dest(
+							$img, $dest)) {
+					&$second_print(&text('icopy_dfailed',
+							     $err));
+					}
+				else {
+					&$second_print($text{'create_done'});
+					$deldests{$dest} = 1;
+					$dcount--;
+					}
+				}
+			@dests = grep { !$deldests{$_} } @dests;
+			}
+
 		$img->{'dest'} = join(' ', &unique(@dests));
 		&save_server_image($img);
 		&$outdent_print();

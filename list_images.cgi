@@ -54,13 +54,15 @@ print &ui_form_start("get_images.cgi", "post");
 print &ui_hidden("mode", $in{'mode'});
 print &ui_links_row(\@links);
 @tds = ( "width=5" );
-$anymissing = 0;
+$anymissing = $anymissing_dests = $anyextra_dests = 0;
 @stors = &list_storages();
+$ss = scalar(@stors);
 print &ui_columns_start([ "",
 			  $text{'images_desc'},
 			  $text{'images_manager'},
 			  $text{'images_status'},
-			  $text{'images_size'} ]);
+			  $text{'images_size'},
+			  $text{'images_stors'} ]);
 foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
 	$tfunc = "type_".$i->{'manager'}."_desc";
 	($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
@@ -68,12 +70,25 @@ foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
 	if ($avail && !$got) {
 		$anymissing++;
 		}
+
+	# Work out destinations and if any are missing or extra
 	if ($got) {
-		($missing_dests) = &image_storage_mismatches($got, \@stors);
+		@dests = split(/\s+/, $got->{'dest'});
+		($missing_dests, $extra_dests) =
+			&image_storage_mismatches($got, \@stors);
 		$anymissing_dests += $missing_dests;
+		$anyextra_dests += $extra_dests;
+		$stormsg = &text('images_of', scalar(@dests), $ss);
+		if ($missing_dests) {
+			$stormsg = "<font color=#ff0000>$stormsg</font>";
+			}
+		}
+	else {
+		$stormsg = undef;
 		}
 	print &ui_checked_columns_row([
-		"<a href='edit_image.cgi?id=$i->{'id'}'>$i->{'desc'}</a>",
+		"<a href='edit_image.cgi?id=$i->{'id'}&mode=$in{'mode'}'>".
+		  "$i->{'desc'}</a>",
 		&$tfunc(),
 		$got && $got->{'partial'} ?
 			&text('images_partial',
@@ -87,6 +102,7 @@ foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
 			"<font color=#00aa00>$text{'images_avail'}</font>",
 		&nice_size($got && !$got->{'partial'} ? $got->{'size'}
 						      : $avail->{'size'}),
+		$stormsg,
 		], \@tds, "d", $i->{'id'});
 	}
 print &ui_columns_end();
@@ -94,6 +110,7 @@ print &ui_links_row(\@links);
 print &ui_form_end([
 	$anymissing ? ( [ "get", $text{'images_get'} ] ) : ( ),
 	$anymissing_dests ? ( [ "copy", $text{'images_copy'} ] ) : ( ),
+	$anyextra_dests ? ( [ "move", $text{'images_move'} ] ) : ( ),
 	]);
 
 &ui_print_footer("", $text{'index_return'});

@@ -141,11 +141,13 @@ sub download_server_image_files
 my ($img) = @_;
 my @files = split(/\s+/, $img->{'files'});
 my ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
+my $vhost = $img->{'vhost'} ? &get_managed_server($img->{'vhost'}) : undef;
 
 # Find storage location on the master, if any
 my $master_dir = $server_images_dir;
 foreach $stor (&list_storages()) {
-	($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
+	($destserver, $destpath) = &get_image_dest_path($stor->{'dest'},
+							$vhost);
 	if ($destserver && $destserver->{'id'} == 0) {
 		$master_dir = $destpath;
 		last;
@@ -170,7 +172,8 @@ $img->{'dest'} = join(" ", @dests);
 
 # Copy to default locations
 foreach $stor (&list_storages()) {
-	my ($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
+	my ($destserver, $destpath) = &get_image_dest_path($stor->{'dest'},
+							   $vhost);
 	next if (!$destserver);
 	next if ($destserver->{'id'} == 0 && $destpath eq $master_dir);
 	my $err = &transfer_image_files_to_storage($img, $stor);
@@ -1426,6 +1429,7 @@ return undef;
 sub image_storage_mismatches
 {
 my ($image, $stors) = @_;
+my $vhost = $image->{'vhost'} ? &get_managed_server($image->{'vhost'}) : undef;
 my (%gotdests, %stordests, $onhost);
 foreach my $dstr (split(/\s+/, $image->{'dest'})) {
 	$gotdests{&normalize_backup_destination($dstr)} = 1;
@@ -1433,8 +1437,8 @@ foreach my $dstr (split(/\s+/, $image->{'dest'})) {
 foreach my $stor (@$stors) {
 	$stordests{&normalize_backup_destination($stor->{'dest'})} = 1;
 	my $dest = &parse_backup_destination($stor->{'dest'});
-	if ($dest->{'mode'} == 1) {
-		# On-host, so can't really compare
+	if ($dest->{'mode'} == 1 && !$vhost) {
+		# On-host that we don't know, so can't really compare
 		$onhost++;
 		}
 	}

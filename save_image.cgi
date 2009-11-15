@@ -17,13 +17,14 @@ if ($in{'delete'}) {
 elsif ($in{'copy'}) {
 	# Copy to all default storage locations
 	&ui_print_header(undef, $text{'icopy_title'}, "");
+	$vhost = $img->{'vhost'} ? &get_managed_server($img->{'vhost'}) : undef;
 
 	@dests = split(/\s+/, $img->{'dest'});
 	foreach $stor (&list_storages()) {
 		&$first_print(&text('icopy_copying',
 			&nice_backup_destination($stor->{'dest'})));
 		($destserver, $destpath) =
-			&get_image_dest_path($stor->{'dest'});
+			&get_image_dest_path($stor->{'dest'}, $vhost);
 		if (!$destserver) {
 			# Destination makes no sense
 			&$second_print($text{'icopy_tohost'});

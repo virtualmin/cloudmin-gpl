@@ -1281,13 +1281,15 @@ images_title=New System Images
 images_desc=Description
 images_manager=System type
 images_size=Compressed size
+images_stors=Locations
 images_status=Status
 images_avail=Available
 images_down=Not downloaded
 images_partial=Downloaded $1 so far
 images_local=Local image
 images_get=Download Selected Images
-images_copy=Copy Selected To All Storage Locations
+images_copy=Copy To All Storage Locations
+images_move=Move To All Storage Locations
 images_new=Newer version $1 exists
 images_gettitle=Download Images
 images_copytitle=Copy Images
@@ -1311,6 +1313,7 @@ images_mode_got=Usable
 images_mode_avail=Available for download
 images_mode_local=Created locally
 images_mode_virtualmin=Created by Virtualmin
+images_of=$1 of $2
 
 xen_typedesc=Xen
 xen_createlink=Create Xen instance
@@ -3129,8 +3132,11 @@ storage_enone=None selected
 
 icopy_title=Copy System Image
 icopy_copying=Copying to image storage location $1 ..
+icopy_deleting=Deleting from image storage location $1 ..
 icopy_failed=.. copy failed : $1
+icopy_dfailed=.. deletion failed : $1
 icopy_tohost=.. cannot copy to host system, as it depends on the system being imaged
+icopy_left=.. cannot delete from only location
 
 oform_title=Change Password and Email
 oform_ecannot=This page can only be used by system owners
