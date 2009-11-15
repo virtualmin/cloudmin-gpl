@@ -50,6 +50,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--real") {
 		$real = shift(@ARGV);
 		}
+	elsif ($a eq "--mount") {
+		$mount = shift(@ARGV);
+		}
 	elsif ($a eq "--lv") {
 		$lv = shift(@ARGV);
 		}
@@ -68,7 +71,7 @@ while(@ARGV > 0) {
 	}
 
 # Validate parameters
-$real || $virt || $lv || &usage("The disk to modify must be identified by the --real, --virt or --lv parameters");
+$real || $virt || $lv || $mount || &usage("The disk to modify must be identified by the --real, --virt, --mount or --lv parameters");
 $newsize || $newvirt || &usage("Nothing to do");
 !$newsize || $newsize =~ /^\d*$/ || &usage("Invalid --new-size parameter - must be followed by a number of MB");
 !$newvirt || $virt =~ /^\/\S+$/ || &usage("Missing or invalid --new-virt parameter - should be like /dev/sda2");
@@ -97,6 +100,10 @@ if ($real) {
 elsif ($lv) {
 	($disk) = grep { $_->{'lv'} eq $lv } @$disks;
 	$disk || &usage("No disk for the LVM logical volume $lv was found");
+	}
+elsif ($mount) {
+	($disk) = grep { $_->{'mount'} eq $mount } @$disks;
+	$disk || &usage("No disk for the mount point $mount was found");
 	}
 else {
 	($disk) = grep { $_->{'virt'} eq $virt } @$disks;
