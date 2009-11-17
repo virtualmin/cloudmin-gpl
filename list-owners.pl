@@ -149,8 +149,14 @@ if ($multi) {
 		if ($mem) {
 			$gbh = sprintf("%.2f",
 				($mem / (3600*1024*1024*1024)));
+			$avgmem = int($mem / ($end - $start));
+			$upmem = int($mem / $up);
 			print "    Memory used over period: ",
 				$gbh," GB hours ($mem byte seconds)\n";
+			print "    Memory average over period: ",
+				$avgmem," bytes\n";
+			print "    Memory average while up: ",
+				$upmem," bytes\n";
 			}
 
 		# CPU allocation
@@ -168,9 +174,15 @@ if ($multi) {
 			\@allusage, $start, $end, 'load'));
 		if ($load) {
 			$loadh = sprintf("%.2f", ($load / 3600));
+			$avgcpu = int($load / ($end - $start));
+			$upcpu = int($load / $up);
 			print "    CPU used over period: ",
 				$loadh," percent hours ",
 				"($load percent seconds)\n";
+			print "    CPU used average over period: ",
+				$avgcpu," percent\n";
+			print "    CPU used average while up: ",
+				$upcpu," percent\n";
 			}
 
 		# Disk allocation
@@ -189,8 +201,11 @@ if ($multi) {
 		if ($space) {
 			$gbh = sprintf("%.2f",
 				($space / (3600*1024*1024*1024)));
+			$avgdisk = int($disk / ($end - $start));
 			print "    Disk used over period: ",
 			       $gbh," GB hours ($space byte seconds)\n";
+			print "    Disk average over period: ",
+				$avgdisk," bytes\n";
 			}
 		}
 	}
