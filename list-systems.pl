@@ -59,6 +59,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--name-only") {
 		$nameonly = 1;
 		}
+	elsif ($a eq "--id-only") {
+		$idonly = 1;
+		}
 	elsif ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
@@ -416,6 +419,12 @@ elsif ($nameonly) {
 		print $s->{'host'},"\n";
 		}
 	}
+elsif ($idonly) {
+	# Just IDs
+	foreach $s (@servers) {
+		print $s->{'id'},"\n";
+		}
+	}
 else {
 	# Show one server per line
 	$fmt = "%-30.30s %-15.15s %-30.30s\n";
@@ -432,7 +441,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all registered managed systems.\n";
 print "\n";
-print "cloudmin list-systems [--multiline | --name-only]\n";
+print "cloudmin list-systems [--multiline | --name-only | --id-only]\n";
 print "                      [--all-hosts] | [--host name]*\n";
 print "                      [--group name]*\n";
 my $types = join("|", @server_management_types);
