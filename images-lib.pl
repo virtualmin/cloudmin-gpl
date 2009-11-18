@@ -1447,5 +1447,38 @@ my @extra = grep { !$stordests{$_} } keys %gotdests;
 return ( scalar(@missing)-$onhost, scalar(@extra) );
 }
 
+# compute_image_dests(&image)
+# Updates the dest field of an image with the locations in which image files
+# actually exist.
+sub compute_image_dests
+{
+my ($image) = @_;
+my @okdests;
+foreach my $dest (split(/\s+/, $image->{'dest'})) {
+	my ($destserver, $destpath) = &get_image_dest_path($dest);
+	if (!$destserver) {
+		# Host no longer exists
+		}
+	elsif (!&can_ssh_status($destserver)) {
+		# If cannot connect right now, assume OK
+		push(@okdests, $dest);
+		}
+	else {
+		# Check each file
+		my $missing = 0;
+		foreach my $f (split(/\s+/, $image->{'files'})) {
+			my @st = &stat_file_on_server($destserver,
+						      "$destpath/$f");
+			$missing++ if (!@st);
+			}
+		if (!$missing) {
+			push(@okdests, $dest);
+			}
+		}
+	}
+$image->{'dest'} = join(" ", @okdests);
+return undef;
+}
+
 1;
 
