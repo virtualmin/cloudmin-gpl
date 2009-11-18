@@ -924,14 +924,14 @@ else {
 	}
 }
 
-# get_file_from_server(&server, remotefile, localfile, device-file)
+# get_file_from_server(&server, remotefile, localfile, device-file, force-ssh)
 # Transfers a file from the given server to this system. May use scp or some
 # type-specific method
 sub get_file_from_server
 {
-my ($server, $remotefile, $localfile, $device) = @_;
+my ($server, $remotefile, $localfile, $device, $forcessh) = @_;
 my $gfunc = "type_".$server->{'manager'}."_get_file";
-if (defined(&$gfunc)) {
+if (defined(&$gfunc) && !$forcessh) {
 	# Use type-specific function call
 	my $rv = &$gfunc(@_);
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
@@ -1016,27 +1016,27 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 	}
 }
 
-# get_file_data_from_server(&server, remotefile)
+# get_file_data_from_server(&server, remotefile, force-ssh)
 # Returns the contents of some file
 sub get_file_data_from_server
 {
-my ($server, $remotefile) = @_;
+my ($server, $remotefile, $forcessh) = @_;
 my $temp = &transname();
-my $err = &get_file_from_server($server, $remotefile, $temp);
+my $err = &get_file_from_server($server, $remotefile, $temp, 0, $forcessh);
 return undef if ($err);
 my $data = &read_file_contents($temp);
 &unlink_file($temp);
 return $data;
 }
 
-# put_file_to_server(&server, localfile, remotefile, device-file)
+# put_file_to_server(&server, localfile, remotefile, device-file, force-ssh)
 # Transfers a file from this system to the given server. May use scp or some
 # type-specific method
 sub put_file_to_server
 {
-my ($server, $localfile, $remotefile, $device) = @_;
+my ($server, $localfile, $remotefile, $device, $forcessh) = @_;
 my $pfunc = "type_".$server->{'manager'}."_put_file";
-if (defined(&$pfunc)) {
+if (defined(&$pfunc) && !$forcessh) {
 	# Use type-specific function call
 	my $rv = &$pfunc(@_);
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
@@ -1075,17 +1075,17 @@ else {
 	}
 }
 
-# put_file_data_to_server(&server, data, remotefile)
+# put_file_data_to_server(&server, data, remotefile, force-ssh)
 # Writes the given data to some remote file. Returns an error message on failure
 # or undef on success.
 sub put_file_data_to_server
 {
-my ($server, $data, $remotefile) = @_;
+my ($server, $data, $remotefile, $forcessh) = @_;
 my $temp = &transname();
 &open_tempfile(TEMP, ">$temp", 0, 1);
 &print_tempfile(TEMP, $data);
 &close_tempfile(TEMP);
-my $err = &put_file_to_server($server, $temp, $remotefile);
+my $err = &put_file_to_server($server, $temp, $remotefile, 0, $forcessh);
 &unlink_file($temp);
 return $err;
 }

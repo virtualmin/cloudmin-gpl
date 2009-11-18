@@ -14,6 +14,10 @@ parameter instead.
 If the source or destination file is block-special device (like an LVM logical
 volume), you must add the --device-file flag.
 
+For OpenVZ, Vservers and Zones systems, the file transfer will be done via the
+host system, which works even if the virtual system is down. However, you can
+force a transfer via SSH from the target system with the C<--force-ssh> flag.
+
 =head1 Example usage
 
   cloudmin download-file --host xencentos.home --source /etc/hosts --stdout
@@ -55,6 +59,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--device-file") {
 		$device = 1;
 		}
+	elsif ($a eq "--force-ssh") {
+		$forcessh = 1;
+		}
 	else {
 		&usage();
 		}
@@ -71,7 +78,7 @@ $dest || $stdout || &usage("Missing --dest or --stdout parameter");
 if ($stdout) {
 	$dest = &transname();
 	}
-$err = &get_file_from_server($server, $source, $dest, $device);
+$err = &get_file_from_server($server, $source, $dest, $device, $forcessh);
 if ($err) {
 	print "ERROR: $err\n";
 	exit(1);
@@ -100,6 +107,7 @@ print "cloudmin download-file --host name\n";
 print "                       --source sourcepath\n";
 print "                      [--dest destpath] | [--stdout]\n";
 print "                      [--device-file]\n";
+print "                      [--force-ssh]\n";
 exit(1);
 }
 

@@ -17,6 +17,10 @@ transfer completes.
 If the source or destination file is block-special device (like an LVM logical
 volume), you must add the --device-file flag.
 
+For OpenVZ, Vservers and Zones systems, the file transfer will be done via the
+host system, which works even if the virtual system is down. However, you can
+force a transfer via SSH to the target system with the C<--force-ssh> flag.
+
 =head1 Example usage
 
   cloudmin upload-file --host xencentos.home --host xenrails.home --host fedora.home --source /etc/hosts --dest /tmp/hosts
@@ -62,6 +66,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--device-file") {
 		$device = 1;
 		}
+	elsif ($a eq "--force-ssh") {
+		$forcessh = 1;
+		}
 	else {
 		&usage();
 		}
@@ -91,7 +98,8 @@ else {
 # Do the parallel upload
 print "Uploading file to ",scalar(@servers)," systems ..\n";
 &parallel_server_function(\@servers,
-	sub { $err = &put_file_to_server($_[0], $file, $dest, $device);
+	sub { $err = &put_file_to_server($_[0], $file, $dest,
+					 $device, $forcessh);
 	      if ($err) {
 	          print "$_[0]->{'host'}: ERROR: $err\n";
 	          }
@@ -115,6 +123,7 @@ print "                     [--owner name]*\n";
 print "                     [--source sourcepath] | [--stdin]\n";
 print "                      --dest destpath\n";
 print "                     [--device-file]\n";
+print "                     [--force-ssh]\n";
 exit(1);
 }
 
