@@ -31,6 +31,7 @@ push(@INC, $server_manager_root);
 # Load type-specific library functions
 @possible_server_management_types = ( "real",
 				      "xen",
+				      "kvm",
 				      "vserver",
 				      "zones",
 				      "openvz",
@@ -4363,6 +4364,7 @@ push(@gcats, "settings");
 
 # Server images
 if ($server_management_types{'xen'} ||
+    $server_management_types{'kvm'} ||
     $server_management_types{'vserver'} ||
     $server_management_types{'openvz'} ||
     $server_management_types{'zones'}) {
@@ -4379,6 +4381,7 @@ if ($server_management_types{'xen'} ||
 
 # Bandwidth monitoring
 if ($server_management_types{'xen'} ||
+    $server_management_types{'kvm'} ||
     $server_management_types{'vserver'} ||
     $server_management_types{'openvz'} ||
     $server_management_types{'zones'}) {
@@ -5470,7 +5473,7 @@ sub is_parent_server
 {
 my ($server) = @_;
 my @rv;
-foreach my $t ('xen', 'vserver', 'zone', 'openvz') {
+foreach my $t ('xen', 'kvm', 'vserver', 'zone', 'openvz') {
 	if ($server->{$t."_host"}) {
 		push(@rv, $t eq 'zone' ? 'zones' : $t);
 		}
