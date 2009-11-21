@@ -91,6 +91,94 @@ my ($server) = @_;
 return $server->{'manager'} eq 'this' || $server->{'manager'} eq 'real';
 }
 
+# type_kvm_add_form()
+# Returns inputs for adding an existing KVM instance. This is just a matter of
+# selecting the host and the server.
+sub type_kvm_add_form
+{
+my $rv;
+
+# Hosting system
+my @vhosts = grep { $_->{'kvm_host'} } &list_managed_servers();
+$rv .= &ui_table_row($text{'add_kvmhost'},
+		&ui_select("kvm_on", $vhosts[0]->{'id'},
+			[ map { [ $_->{'id'}, $_->{'host'} ] } @vhosts ]));
+
+if (@vhosts == 1) {
+	# Can just show a drop-down of existing kvm instances, except those we
+	# are already hosting)
+	my $instances = &list_kvm_instances($vhosts[0]);
+	my %already = map { $_->{'kvm'}, $_ }
+			     &list_managed_servers();
+	$rv .= &ui_table_row($text{'add_kvminstance'},
+	    &ui_select("kvm_instance", undef,
+		[ map { [ $_->{'instance'} ] }
+		      grep { !$already{$_->{'instance'}} } @$instances] ));
+	}
+else {
+	# Need to show kvm name field, with popup
+	$rv .= &ui_table_row($text{'add_kvminstance'},
+	     &ui_textbox("kvm_instance", undef, 20)." ".
+	     &kvm_instance_chooser_button("kvm_instance",
+					      "kvm_on"));
+	}
+
+# Configuration file on host
+# XXX is there such a thing?
+$rv .= &ui_table_row($text{'add_kvmconf'},
+		&ui_textbox("kvm_conf", undef, 60));
+
+return $rv;
+}
+
+# type_kvm_add_parse(&server, &in)
+# Parse inputs from type_kvm_add_form
+sub type_kvm_add_parse
+{
+my ($server, $in) = @_;
+
+# Save Xen host
+$server->{'kvm_on'} = $in->{'kvm_on'};
+my $vhost = &type_kvm_parent($server);
+
+# Check and save KVM instance
+my $instances = &list_kvm_instances($vhost);
+$in->{'kvm_instance'} || &error($text{'add_ekvminstance'});
+my ($got) = grep { $_->{'instance'} eq $in->{'kvm_instance'} } @$instances;
+$got || &error(&text('add_ekvminstance2', $vhost->{'host'}));
+$server->{'kvm'} = $in->{'kvm_instance'};
+
+# Check and save KVM config file
+# XXX
+$in->{'kvm_conf'} || &error($text{'add_ekvmconf'});
+my $temp = &transname();
+my $err = &get_file_from_server($vhost, $in->{'kvm_conf'}, $temp);
+$err && &error($text{'add_ekvmconf2'});
+my $conf = &parse_kvm_config($temp);
+my $kernel = &kvm_find_value("kernel", $conf);
+my $bootloader = &kvm_find_value("bootloader", $conf);
+if (!$bootloader && !$kernel) {
+	&error($text{'add_ekvmconf4'});
+	}
+if ($bootloader =~ /pygrub/) {
+	$server->{'kvm_pygrub'} = $bootloader;
+	$server->{'kvm_bootloader'} = $bootloader;
+	}
+elsif ($kernel =~ /pv-grub/) {
+	$server->{'kvm_pygrub'} = 1;
+	$server->{'kvm_bootloader'} = $kernel;
+	}
+my $cname = &kvm_find_value("name", $conf);
+!$cname || $cname eq $server->{'kvm'} || &error($text{'add_ekvmconf3'});
+$server->{'kvm_conf'} = $in->{'kvm_conf'};
+$server->{'ip_addresses'} = &kvm_find_value("address", $conf);
+
+# Get root disk from .cfg file
+# XXX
+&set_kvm_filesystem($server, $conf);
+}
+
+
 # check_kvm_host_software(&server)
 # Checks if some system has the Xen software installed, and the kernel
 # patch needed to use it.
@@ -106,6 +194,13 @@ return $text{'kvm_elinux'} if ($out !~ /linux/i);
 foreach my $cmd ("qemu-kvm", "qemu-img") {
 	my $full = &has_command_on_server($server, $cmd);
 	return &text('kvm_ewhich', "<tt>$cmd</tt>") if (!$full);
+	}
+
+# Check CPU
+my ($out, $ex, $err) = &execute_command_on_server($server,
+	"cat /proc/cpuinfo");
+if ($out !~ /flags\s*:\s*.*(vmx|svm)/) {
+	return $text{'kvm_ecpu'};
 	}
 
 # Check kernel

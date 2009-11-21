@@ -137,6 +137,7 @@ add_openvzhost=OpenVZ hosting system
 add_openvzinstance=OpenVZ container name
 add_eopenvzinstance=No OpenVZ container name entered
 add_eopenvzinstance2=The selected OpenVZ container does not exist on $1
+add_kvmhost=KVM hosting system
 
 create_title=Create New System
 create_header=Details of new virtual system
@@ -3200,6 +3201,7 @@ kvm_err=Failed to save KVM host
 kvm_elinux=KVM systems are only supported on Linux
 kvm_ewhich=The required command $1 does not exist. Perhaps the KVM software is not installed?
 kvm_ekernel=The device file <tt>/dev/kvm</tt> is missing. Perhaps your do not have the KVM kernel module loaded, or your system does not support it?
+kvm_ecpu=Your CPU does not have the VMX or SVM extensions needed for KVM
 kvm_edown=A system which cannot be contacted via SSH cannot be used for KVM hosting
 kvm_esoft=The selected system cannot support KVM instances : $1
 kvm_edir=The specified base directory does not exist
