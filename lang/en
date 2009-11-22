@@ -1073,6 +1073,13 @@ vtchooser_id=Template ID
 vtchooser_file=Filename
 vtchooser_size=Compressed size
 
+kchooser_title=Select KVM Instance
+kchooser_elogin=Failed to fetch KVM instances : $1
+kchooser_enone=The selected system has no KVM instances
+kchooser_mem=Memory
+kchooser_pid=PID
+kchooser_fs=Primary disk
+
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
 pkg_bind=BIND DNS server

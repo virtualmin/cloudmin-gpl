@@ -108,25 +108,19 @@ if (@vhosts == 1) {
 	# Can just show a drop-down of existing kvm instances, except those we
 	# are already hosting)
 	my $instances = &list_kvm_instances($vhosts[0]);
-	my %already = map { $_->{'kvm'}, $_ }
+	my %already = map { $_->{'kvm_filesystem'}, $_ }
 			     &list_managed_servers();
 	$rv .= &ui_table_row($text{'add_kvminstance'},
 	    &ui_select("kvm_instance", undef,
-		[ map { [ $_->{'instance'} ] }
-		      grep { !$already{$_->{'instance'}} } @$instances] ));
+		[ map { [ $_->{'pid'} ] }
+		      grep { !$already{$_->{'filesystem'}} } @$instances] ));
 	}
 else {
 	# Need to show kvm name field, with popup
 	$rv .= &ui_table_row($text{'add_kvminstance'},
 	     &ui_textbox("kvm_instance", undef, 20)." ".
-	     &kvm_instance_chooser_button("kvm_instance",
-					      "kvm_on"));
+	     &kvm_instance_chooser_button("kvm_instance", "kvm_on"));
 	}
-
-# Configuration file on host
-# XXX is there such a thing?
-$rv .= &ui_table_row($text{'add_kvmconf'},
-		&ui_textbox("kvm_conf", undef, 60));
 
 return $rv;
 }
@@ -254,6 +248,92 @@ if (!@rv) {
 		}
 	}
 return @rv;
+}
+
+# list_kvm_instances(&vhost)
+# Returns a list of running KVM processes as an array ref, or an error message
+sub list_kvm_instances
+{
+my ($vhost) = @_;
+my $procs = &list_processes_on_server($vhost);
+return $procs if (!ref($procs));
+my @rv;
+foreach my $p (@$procs) {
+	if ($p->{'args'} =~ /^(\S+\/|)(qemu-kvm|kvm)\s+(.*)/) {
+		# Found a candidate .. parse the args
+		my ($cmd, $args) = ($2, $3);
+		my @w = &split_quoted_string($args);
+		my $ah = { };
+		my $kvm = { 'pid' => $p->{'pid'},
+			    'args' => $ah };
+		my $lastarg;
+		while(@w) {
+			my $a = shift(@w);
+			if ($a =~ /^\-+(\S+)$/) {
+				# Start of a new arg
+				$lastarg = $1;
+				if ($ah->{$lastarg}) {
+					# Already seen .. convert to array
+					$ah->{$lastarg} = [ $ah->{$lastarg} ];
+					}
+				if (ref($ah->{$lastarg})) {
+					# Add to array
+					push(@{$ah->{$lastarg}}, "");
+					}
+				else {
+					# Start of a single value
+					$ah->{$lastarg} = "";
+					}
+				}
+			else {
+				# Value for an arg
+				if (ref($ah->{$lastarg})) {
+					# Add to end of list
+					my $v = $ah->{$lastarg};
+					$v[@$v-1] .= " " if ($v[@$v-1]);
+					$v[@$v-1] .= $a;
+					}
+				else {
+					# Add to single value
+					$ah->{$lastarg} .= " "
+						if ($ah->{$lastarg});
+					$ah->{$lastarg} .= $a;
+					}
+				}
+			}
+
+		# Work out main drive
+		if ($ah->{'hda'}) {
+			$kvm->{'filesystem'} = $ah->{'hda'};
+			}
+		elsif ($ah->{'drive'}) {
+			# Lowest-index disk set with -drive flag
+			my @d = ref($ah->{'drive'}) ? @{$ah->{'drive'}}
+						    : ( $ah->{'drive'} );
+			my $lowindex = 9999;
+			foreach my $d (@d) {
+				my %dinfo = map { split(/=/, $_) }
+						split(/,/, $d);
+				if ($dinfo{'file'} &&
+				    $dinfo{'media'} ne 'cdrom' &&
+				    $dinfo{'index'} < $lowindex) {
+					$kvm->{'filesystem'} = $dinfo{'file'};
+					$lowindex = $dinfo{'index'};
+					}
+				}
+			}
+		push(@rv, $kvm);
+		}
+	}
+return \@rv;
+}
+
+# kvm_instance_chooser_button(instance-field, host-field)
+# Returns HTML for a popup window for selecting a running KVM instance
+sub kvm_instance_chooser_button
+{
+my ($ifield, $hfield) = @_;
+return "<input type=button onClick='ifield = form.$ifield; chooser = window.open(\"kvm_chooser.cgi?host=\"+escape(form.$hfield.value), \"chooser\", \"toolbar=no,menubar=no,scrollbar=no,width=600,height=300\"); chooser.ifield = ifield; window.ifield = ifield' value=\"...\">\n";
 }
 
 1;
