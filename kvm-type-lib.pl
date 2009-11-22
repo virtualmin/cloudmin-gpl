@@ -137,39 +137,13 @@ my $vhost = &type_kvm_parent($server);
 
 # Check and save KVM instance
 my $instances = &list_kvm_instances($vhost);
-$in->{'kvm_instance'} || &error($text{'add_ekvminstance'});
-my ($got) = grep { $_->{'instance'} eq $in->{'kvm_instance'} } @$instances;
+$in->{'kvm_pid'} || &error($text{'add_ekvminstance'});
+my ($got) = grep { $_->{'pid'} eq $in->{'kvm_pid'} } @$instances;
 $got || &error(&text('add_ekvminstance2', $vhost->{'host'}));
-$server->{'kvm'} = $in->{'kvm_instance'};
+$server->{'kvm'} = $in->{'kvm_pid'};
 
-# Check and save KVM config file
-# XXX
-$in->{'kvm_conf'} || &error($text{'add_ekvmconf'});
-my $temp = &transname();
-my $err = &get_file_from_server($vhost, $in->{'kvm_conf'}, $temp);
-$err && &error($text{'add_ekvmconf2'});
-my $conf = &parse_kvm_config($temp);
-my $kernel = &kvm_find_value("kernel", $conf);
-my $bootloader = &kvm_find_value("bootloader", $conf);
-if (!$bootloader && !$kernel) {
-	&error($text{'add_ekvmconf4'});
-	}
-if ($bootloader =~ /pygrub/) {
-	$server->{'kvm_pygrub'} = $bootloader;
-	$server->{'kvm_bootloader'} = $bootloader;
-	}
-elsif ($kernel =~ /pv-grub/) {
-	$server->{'kvm_pygrub'} = 1;
-	$server->{'kvm_bootloader'} = $kernel;
-	}
-my $cname = &kvm_find_value("name", $conf);
-!$cname || $cname eq $server->{'kvm'} || &error($text{'add_ekvmconf3'});
-$server->{'kvm_conf'} = $in->{'kvm_conf'};
-$server->{'ip_addresses'} = &kvm_find_value("address", $conf);
-
-# Get root disk from .cfg file
-# XXX
-&set_kvm_filesystem($server, $conf);
+# Save KVM root disk
+$server->{'kvm_filesystem'} = $got->{'filesystem'};
 }
 
 
@@ -185,10 +159,13 @@ my ($out, $ex, $err) = &execute_command_on_server($server, "uname");
 return $text{'kvm_elinux'} if ($out !~ /linux/i);
 
 # Check commands
-foreach my $cmd ("qemu-kvm", "qemu-img") {
-	my $full = &has_command_on_server($server, $cmd);
-	return &text('kvm_ewhich', "<tt>$cmd</tt>") if (!$full);
+my $full = &has_command_on_server($server, "qemu-kvm");
+if (!$full) {
+	$full = &has_command_on_server($server, "kvm");
 	}
+return &text('kvm_ewhich2', "<tt>qemu-kvm</tt>", "<tt>kvm</tt>") if (!$full);
+&has_command_on_server($server, "qemu-img") ||
+	return &text('kvm_ewhich', "<tt>qemu-img</tt>");
 
 # Check CPU
 my ($out, $ex, $err) = &execute_command_on_server($server,
