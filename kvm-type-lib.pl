@@ -110,16 +110,16 @@ if (@vhosts == 1) {
 	my $instances = &list_kvm_instances($vhosts[0]);
 	my %already = map { $_->{'kvm_filesystem'}, $_ }
 			     &list_managed_servers();
-	$rv .= &ui_table_row($text{'add_kvminstance'},
-	    &ui_select("kvm_instance", undef,
-		[ map { [ $_->{'pid'} ] }
+	$rv .= &ui_table_row($text{'add_kvmpid'},
+	    &ui_select("kvm_pid", undef,
+		[ map { [ $_->{'pid'}, $_->{'cmd'} ] }
 		      grep { !$already{$_->{'filesystem'}} } @$instances] ));
 	}
 else {
 	# Need to show kvm name field, with popup
-	$rv .= &ui_table_row($text{'add_kvminstance'},
-	     &ui_textbox("kvm_instance", undef, 20)." ".
-	     &kvm_instance_chooser_button("kvm_instance", "kvm_on"));
+	$rv .= &ui_table_row($text{'add_kvmpid'},
+	     &ui_textbox("kvm_pid", undef, 20)." ".
+	     &kvm_instance_chooser_button("kvm_pid", "kvm_on"));
 	}
 
 return $rv;
@@ -265,7 +265,8 @@ foreach my $p (@$procs) {
 		my @w = &split_quoted_string($args);
 		my $ah = { };
 		my $kvm = { 'pid' => $p->{'pid'},
-			    'args' => $ah };
+			    'args' => $ah,
+			    'cmd' => $p->{'args'} };
 		my $lastarg;
 		while(@w) {
 			my $a = shift(@w);
@@ -322,10 +323,34 @@ foreach my $p (@$procs) {
 					}
 				}
 			}
+
+		if ($kvm->{'filesystem'} && $kvm->{'filesystem'} !~ /^\//) {
+			# Relative path used .. normalize
+			my $cwd = &get_kvm_process_dir($vhost, $p->{'pid'});
+			if ($cwd) {
+				$kvm->{'filesystem'} =
+					$cwd."/".$kvm->{'filesystem'};
+				}
+			}
 		push(@rv, $kvm);
 		}
 	}
 return \@rv;
+}
+
+# get_kvm_process_dir(&vhost, pid)
+# Find the curent directory of some kvm process, useful for resolving relative
+# disk paths.
+sub get_kvm_process_dir
+{
+my ($vhost, $pid) = @_;
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+				"readlink /proc/$pid/cwd");
+if (!$ex && !$err) {
+	$out =~ s/\r|\n//g;
+	return $out;
+	}
+return undef;
 }
 
 # kvm_instance_chooser_button(instance-field, host-field)

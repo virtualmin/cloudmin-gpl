@@ -138,6 +138,7 @@ add_openvzinstance=OpenVZ container name
 add_eopenvzinstance=No OpenVZ container name entered
 add_eopenvzinstance2=The selected OpenVZ container does not exist on $1
 add_kvmhost=KVM hosting system
+add_kvmpid=KVM process to manage
 
 create_title=Create New System
 create_header=Details of new virtual system
@@ -1076,9 +1077,9 @@ vtchooser_size=Compressed size
 kchooser_title=Select KVM Instance
 kchooser_elogin=Failed to fetch KVM instances : $1
 kchooser_enone=The selected system has no KVM instances
-kchooser_mem=Memory
 kchooser_pid=PID
-kchooser_fs=Primary disk
+kchooser_cmd=KVM command
+kchooser_nofs=Could not find disk image
 
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver

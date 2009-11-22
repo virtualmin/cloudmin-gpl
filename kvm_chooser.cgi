@@ -30,22 +30,20 @@ elsif (!@$instances) {
 	}
 else {
 	print &ui_columns_start([ $text{'kchooser_pid'},
-				  $text{'kchooser_fs'},
-				  $text{'kchooser_mem'},
+				  $text{'kchooser_cmd'},
 				  $text{'ichooser_state'} ], 100);
 	@servers = &list_managed_servers();
 	foreach my $i (@$instances) {
 		($s) = grep { $_->{'kvm_filesystem'} eq $i->{'filesystem'} }
 			    @servers;
-		$mem = $i->{'args'}->{'m'} * 1024 * 1024;
 		print &ui_columns_row([
-		    $s ? $i->{'pid'} :
+		    $s || !$i->{'filesystem'} ? $i->{'pid'} :
 			"<a href='' onClick='select(\"$i->{'pid'}\")'>".
 			"$i->{'pid'}</a>",
-		    $i->{'filesystem'},
-		    $mem ? &nice_size($mem) : $text{'kchooser_uk'},
+		    &html_escape($i->{'cmd'}),
 		    $s ? &text('ichooser_unuse', $s->{'host'})
-		       : $text{'ichooser_free'}
+		    $i->{'filesystem'} ? $text{'ichooser_free'}
+				       : $text{'kchooser_nofs'},
 		    ]);
 		}
 	print &ui_columns_end();
