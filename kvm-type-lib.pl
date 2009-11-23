@@ -144,8 +144,251 @@ $server->{'kvm'} = $in->{'kvm_pid'};
 
 # Save KVM root disk
 $server->{'kvm_filesystem'} = $got->{'filesystem'};
+
+# Save other disks
+my @drives;
+foreach my $dd ("a" .. "z") {
+	my $dfile = $got->{'args'}->{"hd".$dd};
+	if ($dfile) {
+		my $idx = ord($dd) - 97;
+		push(@drives, "file=$dfile,index=$idx,media=disk");
+		}
+	}
+if ($got->{'args'}->{'cdrom'}) {
+	push(@drives, "file=$got->{'args'}->{'cdrom'},index=2,media=cdrom");
+	}
+my @otherdrives = ref($got->{'args'}->{'drive'}) ?
+			@{$got->{'args'}->{'drive'}} :
+			( $got->{'args'}->{'drive'} );
+push(@drives, @otherdrives);
+$server->{'kvm_drives'} = join(" ", @drives);
+
+# Save memory
+$server->{'kvm_memory'} = $got->{'args'}->{'m'} || 128;
+
+# Save VNC settings
+# XXX
+
+# Save TAP network interfaces
+my @nets = ref($got->{'args'}->{'net'}) ? @{$got->{'args'}->{'net'}}
+					: ( $got->{'args'}->{'net'} );
+$server->{'kvm_net'} = join(" ", grep { /^tap/ } @nets);
 }
 
+# type_kvm_reboot(&server)
+# SSH in and reboot if possible, or kill and restart
+sub type_kvm_reboot
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+if (&can_ssh_status($server)) {
+	# Try reboot command
+	my ($out, $ex, $err) = &execute_command_on_server($server, "reboot");
+	return $err ? $err : $ex ? $out : undef;
+	}
+# Just kill and restart
+&type_xen_shutdown($server, 1);
+return &type_xen_startup($server);
+}
+
+# type_kvm_shutdown(&server, [force])
+# SSH in and shutdown, or kill
+sub type_kvm_shutdown
+{
+my ($server, $force) = @_;
+my $vhost = &type_kvm_parent($server);
+if (&can_ssh_status($server) && !$force) {
+	# Try poweroff command
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+							  "poweroff -f");
+	return $err ? $err : $ex ? $out : undef;
+	}
+my $proc = &get_server_kvm_instance($server);
+if ($proc) {
+	# Just kill it
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+					"kill $proc->{'pid'}");
+	return $err ? $err : $ex ? $out : undef;
+	}
+return "No KVM process found!";
+}
+
+# type_kvm_startup(&server)
+# Use the xm create command to start up, and wait till it looks like init
+# started OK. This has to be done in a pty, as the Xen console won't work
+# if it thinks it is writing to a pipe or file.
+sub type_kvm_startup
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+my $cmd = &get_kvm_start_command($server);
+my ($pinged, $sshed);
+
+# Run qemu-kvm to start it up, in the background
+my $temp = &tempname_on_server($vhost);
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+				"$cmd >$temp 2>&1 </dev/null &");
+return (0, $err) if ($err);
+return (0, $out) if ($ex);
+
+# Wait 5 seconds for it to start
+my $tries = 0;
+my $found = 0;
+while($tries++ < 5) {
+	my $proc = &get_server_kvm_instance($server);
+	if ($proc) {
+		$server->{'kvm'} = $proc->{'pid'};
+		$found++;
+		last;
+		}
+	sleep(1);
+	$tries++;
+	}
+
+# Read the output file
+my $out = &get_file_data_from_server($vhost, $temp);
+&delete_file_on_server($vhost, $temp);
+if (!$found) {
+	return (0, $out);
+	}
+
+# Wait up to 60 seconds for ping
+my $tries = 0;
+$pinged = 0;
+my $ip = &get_server_ip($server);
+while($tries++ < 60) {
+	sleep(1);
+	if (&ping_server_host($ip)) {
+		$pinged = 1;
+		last;
+		}
+	}
+
+# Wait for SSH to come up
+if ($pinged) {
+	my $sshtries = 0;
+	$sshed = 0;
+	while($sshtries++ < 60) {
+		sleep(1);
+		my $ssherr;
+		&open_socket($server->{'host'}, 22, SSHTEST,
+			     \$ssherr);
+		if (!$ssherr) {
+			close(SSHTEST);
+			$sshed = 1;
+			last;
+			}
+		}
+	}
+
+# Re-check which IPs are really active
+if ($sshed) {
+	&compute_ip_addresses($server);
+	}
+
+# Return an error if something went wrong
+if (defined($pinged) && !$pinged) {
+	return (2, &text('kvm_estartping', 60));
+	}
+if (defined($sshed) && !$sshed) {
+	return (3, &text('kvm_estartssh', 60));
+	}
+return (1, undef);
+}
+
+# get_kvm_start_command(&server)
+# Returns the full command line to start a KVM instance
+sub get_kvm_start_command
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+my $cmd = &has_command_on_server($vhost, "kvm") ? "kvm" : "qemu-kvm";
+$cmd .= " -name ".quotemeta($server->{'host'});
+
+# Memory flag
+$cmd .= " -m ".$server->{'kvm_memory'};
+
+# Add disks
+foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
+	$cmd .= " -drive $d";
+	}
+
+# Boot from disk
+$cmd .= " -boot c";
+
+# No graphical UI
+$cmd .= " -nographic";
+
+# Accept TCP connection for console
+my $inuse = &list_ports_in_use($vhost, "tcp");
+if (ref($inuse)) {
+	my $cport = 4444;
+	while(1) {
+		last if (&indexof($cport, @$inuse) < 0);
+		$cport++;
+		}
+	$server->{'kvm_cport'} = $cport;
+	$cmd .= " -serial tcp:127.0.0.1:$cport,server,nowait";
+	}
+
+# TAP networking, if enabled
+foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
+	$cmd .= " -net $net";
+	if ($net =~ /vlan=(\d+)/) {
+		$cmd .= " -net nic,vlan=$1";
+		}
+	else {
+		$cmd .= " -net nic";
+		}
+	}
+
+# VNC settings
+if (ref($inuse)) {
+	my $vport = 5900;
+	while(1) {
+		last if (&indexof($vport, @$inuse) < 0);
+		$vport++;
+		}
+	$server->{'kvm_vnc_display'} = $vport-5900;
+	my $masterip = &get_server_ip(&get_managed_server(0));
+	$cmd .= " -vnc ".$masterip.",".$server->{'kvm_vnc_display'};
+	}
+
+return $cmd;
+}
+
+# type_kvm_depends(&parent, &vserver)
+# Returns 1 if the Xen instance hosted by the given parent
+sub type_kvm_depends
+{
+my ($parent, $server) = @_;
+return $server->{'kvm_on'} eq $parent->{'id'};
+}
+
+# type_kvm_check_login(&server)
+# Check if the Xen instance is up, and if we can SSH in. Returns a status
+# code and error message
+sub type_kvm_check_login
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+if (!$vhost) {
+	return (5, "Xen host does not exist!");
+	}
+if ($vhost->{'status'} eq 'down' ||
+    $vhost->{'status'} eq 'nossh' ||
+    $vhost->{'status'} eq 'nohost' ||
+    $vhost->{'status'} eq 'nosshlogin') {
+	return (5, "Xen host $vhost->{'host'} is down");
+	}
+my $proc = &get_server_kvm_instance($server);
+if (!$proc) {
+	return (6, "Xen instance is down");
+	}
+
+# Tell check_server_ssh_login that we need to SSH
+return ( );
+}
 
 # check_kvm_host_software(&server)
 # Checks if some system has the Xen software installed, and the kernel
@@ -313,6 +556,18 @@ foreach my $p (@$procs) {
 		}
 	}
 return \@rv;
+}
+
+# get_server_kvm_instance(&server)
+# Returns details of the KVM process for some managed system
+sub get_server_kvm_instance
+{
+my ($server) = @_;
+my $vhost = &get_parent_server($server);
+my $procs = &list_kvm_instances($vhost);
+return undef if (!$procs);
+my ($proc) = grep { $_->{'filesystem'} eq $server->{'kvm_filesystem'} } @$procs;
+return $proc;
 }
 
 # get_kvm_process_dir(&vhost, pid)
