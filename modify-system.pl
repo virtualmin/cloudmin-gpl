@@ -233,7 +233,11 @@ if (defined($boot)) {
 	$bfunc = "type_".$server->{'manager'}."_set_atboot";
 	defined(&$bfunc) || &usage("This server type cannot be enabled or ".
 				   "disabled at host boot");
-	&$bfunc($server, $boot);
+	$err = &$bfunc($server, $boot);
+	if ($err) {
+		&usage("Failed to ".($boot ? "enable" : "disable").
+		       " at boot : $err");
+		}
 	}
 
 # Enable or disable package management

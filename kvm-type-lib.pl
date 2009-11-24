@@ -177,9 +177,6 @@ $server->{'kvm_drives'} = join(" ", @drives);
 # Save memory
 $server->{'kvm_memory'} = $got->{'args'}->{'m'} || 128;
 
-# Save VNC settings
-# XXX
-
 # Save TAP network interfaces
 my @nets = ref($got->{'args'}->{'net'}) ? @{$got->{'args'}->{'net'}}
 					: ( $got->{'args'}->{'net'} );
@@ -602,6 +599,122 @@ if (!$proc) {
 return ( );
 }
 
+# type_kvm_get_atboot(&server)
+# Returns 1 if some some KVM instance is started at boot time, by looking
+# for a line that starts it in /etc/init.d/cloudmin-kvm or /etc/rc.local
+sub type_kvm_get_atboot
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+my $bfile;
+if (&stat_file_on_server($vhost, "/etc/init.d")) {
+	# Use init script
+	$bfile = "/etc/init.d/cloudmin-kvm";
+	}
+else {
+	$bfile = "/etc/rc.local";
+	}
+my $data = &get_file_data_from_server($vhost, $bfile);
+foreach my $l (split(/\r?\n/, $data)) {
+	my $kvm = &parse_kvm_start_command($l);
+	if ($kvm && $kvm->{'filesystem'} eq $server->{'kvm_filesystem'}) {
+		return 1;
+		}
+	}
+return 0;
+}
+
+# type_kvm_set_atboot(&server, yesno)
+# Enable some KVM system at boot time, by adding a line to run it to
+# /etc/init.d/cloudmin-kvm or /etc/rc.local
+sub type_kvm_set_atboot
+{
+my ($server, $atboot) = @_;
+my $vhost = &type_kvm_parent($server);
+my $cmd = &get_kvm_start_command($server).
+	  " >>/var/log/cloudmin-kvm.log 2>&1 </dev/null &";
+my $temp = &transname();
+if (&stat_file_on_server($vhost, "/etc/init.d")) {
+	# Insert into init script
+	my $bfile = "/etc/init.d/cloudmin-kvm";
+	if (&stat_file_on_server($vhost, $bfile)) {
+		# File already exists
+		my $err = &get_file_from_server($vhost, $bfile, $temp);
+		return "Failed to read $bfile : $err" if ($err);
+		}
+	else {
+		# Use template init script
+		&copy_source_dest("$module_root_directory/cloudmin-kvm-init",
+				  $temp);
+		}
+
+	# Check if already in startup script
+	my $lref = &read_file_lines($temp);
+	my $lnum;
+	for(my $i=0; $i<@$lref; $i++) {
+		my $kvm = &parse_kvm_start_command($lref->[$i]);
+		if ($kvm &&
+		    $kvm->{'filesystem'} eq $server->{'kvm_filesystem'}) {
+			$lnum = $i;
+			last;
+			}
+		}
+
+	if ($atboot && !defined($lnum)) {
+		# Insert startup line into script
+		for(my $i=0; $i<@$lref; $i++) {
+			if ($lref->[$i] =~ /^(\s*);;/ ||
+			    $lref->[$i] =~ /^(\s*)RETVAL=/) {
+				# Found end of start section .. add it
+				splice(@$lref, $i, 0, $1.$cmd);
+				last;
+				}
+			}
+		}
+	elsif (!$atboot && defined($lnum)) {
+		# Delete line from script
+		splice(@$lref, $lnum, 1);
+		}
+	&flush_file_lines($temp);
+	$err = &put_file_to_server($vhost, $temp, $bfile);
+	return "Failed to save $bfile : $err" if ($err);
+
+	# Make sure it is started at boot
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	    "chkconfig cloudmin-kvm on || update-rc.d cloudmin-kvm defaults");
+	return $err ? $err : $ex ? $out : undef;
+	}
+else {
+	# Add to end of rc.local file
+	my $bfile = "/etc/rc.local";
+	my $err = &get_file_from_server($vhost, $bfile, $temp);
+	return $err if ($err);
+
+	# Check if already in rc.local file
+	my $lref = &read_file_lines($temp);
+	my $lnum;
+	for(my $i=0; $i<@$lref; $i++) {
+		my $kvm = &parse_kvm_start_command($lref->[$i]);
+		if ($kvm &&
+		    $kvm->{'filesystem'} eq $server->{'kvm_filesystem'}) {
+			$lnum = $i;
+			last;
+			}
+		}
+
+	# Add or remove if needed
+	if ($atboot && !defined($lnum)) {
+		push(@$lref, $cmd);
+		}
+	elsif (!$atboot && defined($lnum)) {
+		splice(@$lref, $lnum, 1);
+		}
+	&flush_file_lines($temp);
+	$err = &put_file_to_server($vhost, $temp, $bfile);
+	return $err;
+	}
+}
+
 # check_kvm_host_software(&server)
 # Checks if some system has the Xen software installed, and the kernel
 # patch needed to use it.
@@ -691,83 +804,96 @@ my $procs = &list_processes_on_server($vhost);
 return $procs if (!ref($procs));
 my @rv;
 foreach my $p (@$procs) {
-	if ($p->{'args'} =~ /^(\S+\/|)(qemu-kvm|kvm)\s+(.*)/) {
-		# Found a candidate .. parse the args
-		my ($cmd, $args) = ($2, $3);
-		my @w = &split_quoted_string($args);
-		my $ah = { };
-		my $kvm = { 'pid' => $p->{'pid'},
-			    'args' => $ah,
-			    'cmd' => $p->{'args'} };
-		my $lastarg;
-		while(@w) {
-			my $a = shift(@w);
-			if ($a =~ /^\-+(\S+)$/) {
-				# Start of a new arg
-				$lastarg = $1;
-				if ($ah->{$lastarg}) {
-					# Already seen .. convert to array
-					$ah->{$lastarg} = [ $ah->{$lastarg} ];
-					}
-				if (ref($ah->{$lastarg})) {
-					# Add to array
-					push(@{$ah->{$lastarg}}, "");
-					}
-				else {
-					# Start of a single value
-					$ah->{$lastarg} = "";
-					}
-				}
-			else {
-				# Value for an arg
-				if (ref($ah->{$lastarg})) {
-					# Add to end of list
-					my $v = $ah->{$lastarg};
-					$v[@$v-1] .= " " if ($v[@$v-1]);
-					$v[@$v-1] .= $a;
-					}
-				else {
-					# Add to single value
-					$ah->{$lastarg} .= " "
-						if ($ah->{$lastarg});
-					$ah->{$lastarg} .= $a;
-					}
-				}
-			}
-
-		# Work out main drive
-		if ($ah->{'hda'}) {
-			$kvm->{'filesystem'} = $ah->{'hda'};
-			}
-		elsif ($ah->{'drive'}) {
-			# Lowest-index disk set with -drive flag
-			my @d = ref($ah->{'drive'}) ? @{$ah->{'drive'}}
-						    : ( $ah->{'drive'} );
-			my $lowindex = 9999;
-			foreach my $d (@d) {
-				my %dinfo = map { split(/=/, $_) }
-						split(/,/, $d);
-				if ($dinfo{'file'} &&
-				    $dinfo{'media'} ne 'cdrom' &&
-				    $dinfo{'index'} < $lowindex) {
-					$kvm->{'filesystem'} = $dinfo{'file'};
-					$lowindex = $dinfo{'index'};
-					}
-				}
-			}
-
-		if ($kvm->{'filesystem'} && $kvm->{'filesystem'} !~ /^\//) {
-			# Relative path used .. normalize
-			my $cwd = &get_kvm_process_dir($vhost, $p->{'pid'});
-			if ($cwd) {
-				$kvm->{'filesystem'} =
-					$cwd."/".$kvm->{'filesystem'};
-				}
-			}
+	my $kvm = &parse_kvm_start_command($p->{'args'});
+	if ($kvm) {
+		$kvm->{'pid'} = $p->{'pid'};
 		push(@rv, $kvm);
 		}
 	}
 return \@rv;
+}
+
+# parse_kvm_start_command(command-line)
+# Converts a KVM command line into a hash ref with details of the flags
+sub parse_kvm_start_command
+{
+my ($line) = @_;
+if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm)\s+(.*)/) {
+	# Found a possible KVM line .. parse the args
+	my ($cmd, $args) = ($2, $3);
+	my @w = &split_quoted_string($args);
+	my $ah = { };
+	my $kvm = { 'args' => $ah,
+		    'binary' => $cmd,
+		    'cmd' => $line };
+	my $lastarg;
+	while(@w) {
+		my $a = shift(@w);
+		if ($a =~ /^\-+(\S+)$/) {
+			# Start of a new arg
+			$lastarg = $1;
+			if ($ah->{$lastarg}) {
+				# Already seen .. convert to array
+				$ah->{$lastarg} = [ $ah->{$lastarg} ];
+				}
+			if (ref($ah->{$lastarg})) {
+				# Add to array
+				push(@{$ah->{$lastarg}}, "");
+				}
+			else {
+				# Start of a single value
+				$ah->{$lastarg} = "";
+				}
+			}
+		else {
+			# Value for an arg
+			if (ref($ah->{$lastarg})) {
+				# Add to end of list
+				my $v = $ah->{$lastarg};
+				$v[@$v-1] .= " " if ($v[@$v-1]);
+				$v[@$v-1] .= $a;
+				}
+			else {
+				# Add to single value
+				$ah->{$lastarg} .= " "
+					if ($ah->{$lastarg});
+				$ah->{$lastarg} .= $a;
+				}
+			}
+		}
+
+	# Work out main drive
+	if ($ah->{'hda'}) {
+		$kvm->{'filesystem'} = $ah->{'hda'};
+		}
+	elsif ($ah->{'drive'}) {
+		# Lowest-index disk set with -drive flag
+		my @d = ref($ah->{'drive'}) ? @{$ah->{'drive'}}
+					    : ( $ah->{'drive'} );
+		my $lowindex = 9999;
+		foreach my $d (@d) {
+			my %dinfo = map { split(/=/, $_) }
+					split(/,/, $d);
+			if ($dinfo{'file'} &&
+			    $dinfo{'media'} ne 'cdrom' &&
+			    $dinfo{'index'} < $lowindex) {
+				$kvm->{'filesystem'} = $dinfo{'file'};
+				$lowindex = $dinfo{'index'};
+				}
+			}
+		}
+
+	if ($kvm->{'filesystem'} && $kvm->{'filesystem'} !~ /^\//) {
+		# Relative path used .. normalize
+		my $cwd = &get_kvm_process_dir($vhost, $p->{'pid'});
+		if ($cwd) {
+			$kvm->{'filesystem'} =
+				$cwd."/".$kvm->{'filesystem'};
+			}
+		}
+	return $kvm;
+	}
+return undef;
 }
 
 # get_server_kvm_instance(&server)

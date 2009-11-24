@@ -1,0 +1,32 @@
+#!/bin/sh
+# chkconfig: 235 99 10
+# description: Start KVM instances created by Cloudmin
+#
+### BEGIN INIT INFO
+# Provides: cloudmin-kvm
+# Required-Start: $network $syslog
+# Required-Stop: $network
+# Default-Start: 2 3 5
+# Default-Stop: 0 1 6
+# Description: Start KVM instances created by Cloudmin
+### END INIT INFO
+
+case "$1" in
+'start')
+	RETVAL=$?
+	;;
+'stop')
+	killall qemu-kvm kvm
+	RETVAL=$?
+	;;
+'restart')
+	$0 stop ; $0 start
+	RETVAL=$?
+	;;
+*)
+	echo "Usage: $0 { start | stop | restart }"
+	RETVAL=1
+	;;
+esac
+exit $RETVAL
+
