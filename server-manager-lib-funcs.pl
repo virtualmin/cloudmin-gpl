@@ -971,6 +971,33 @@ else {
 	}
 }
 
+# mount_filesystem_if_needed(&server)
+# Mount a virtual system's filesystem if needed to access files
+sub mount_filesystem_if_needed
+{
+my ($server) = @_;
+my $nfunc = "type_".$server->{'manager'}."_need_mount";
+if (defined(&$nfunc) && &$nfunc($server)) {
+	my $mfunc = "type_".$server->{'manager'}."_mount_filesystem";
+	my $err = &$mfunc($server);
+	return $err if ($err);
+	$mounted_filesystem{$server->{'id'}}++;
+	}
+return undef;
+}
+
+# umount_filesystem_if_needed(&server)
+# If a filesystem was mounted, un-mount it now
+sub umount_filesystem_if_needed
+{
+my ($server) = @_; 
+if ($mounted_filesystem{$server->{'id'}}--) {
+	my $ufunc = "type_".$server->{'manager'}."_umount_filesystem";
+	return &$ufunc($server);
+	}
+return undef;
+}
+
 # build_ssh_command(&server, [no-quiet])
 # Returns the base of an SSH comand for logging into some system
 sub build_ssh_command
@@ -2115,14 +2142,8 @@ if (defined(&$dfunc)) {
 	}
 
 # Mount filesystem if needed
-my $nfunc = "type_".$server->{'manager'}."_need_mount";
-my $mounted = 0;
-if (defined(&$nfunc) && &$nfunc($server)) {
-	my $mfunc = "type_".$server->{'manager'}."_mount_filesystem";
-	my $err = &$mfunc($server);
-	return $err if ($err);
-	$mounted = 1;
-	}
+my $err = &mount_filesystem_if_needed($server);
+return $err if ($err);
 
 # Update /etc/hosts
 my $temp = &transname();
@@ -2138,10 +2159,7 @@ if (!$err) {
 &unlink_file($temp);
 
 # Un-mount if mounted before
-if ($mounted) {
-	my $ufunc = "type_".$server->{'manager'}."_umount_filesystem";
-	&$ufunc($server);
-	}
+&umount_filesystem_if_needed($server);
 }
 
 # modify_default_gateway(&server, gateway)
@@ -3706,14 +3724,8 @@ if ($server->{'manager'} eq 'ec2') {
 	}
 
 # Mount filesystem if needed
-my $nfunc = "type_".$server->{'manager'}."_need_mount";
-my $mounted = 0;
-if (defined(&$nfunc) && &$nfunc($server)) {
-	my $mfunc = "type_".$server->{'manager'}."_mount_filesystem";
-	my $err = &$mfunc($server);
-	return $err if ($err);
-	$mounted = 1;
-	}
+my $err = &mount_filesystem_if_needed($server);
+return $err if ($err);
 
 my $shadow = &transname();
 my $passfile = "/etc/shadow";
@@ -3738,10 +3750,7 @@ if (!$err) {
 	}
 
 # Un-mount if mounted before
-if ($mounted) {
-	my $ufunc = "type_".$server->{'manager'}."_umount_filesystem";
-	&$ufunc($server);
-	}
+&umount_filesystem_if_needed($server);
 
 return $err;
 }

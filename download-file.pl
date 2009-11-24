@@ -75,15 +75,10 @@ $source || &usage("Missing --source parameter");
 $dest || $stdout || &usage("Missing --dest or --stdout parameter");
 
 # Mount if needed
-$nfunc = "type_".$server->{'manager'}."_need_mount";
-if (defined(&$nfunc) && &$nfunc($server)) {
-	$mfunc = "type_".$server->{'manager'}."_mount_filesystem";
-	$err = &$mfunc($server);
-	if ($err) {
-		print "ERROR: $err\n";
-		exit(2);
-		}
-	$mounted = 1;
+$err = &mount_filesystem_if_needed($server);
+if ($err) {
+	print "ERROR: $err\n";
+	exit(2);
 	}
 
 # Get the file
@@ -91,10 +86,7 @@ if ($stdout) {
 	$dest = &transname();
 	}
 $err = &get_file_from_server($server, $source, $dest, $device, $forcessh);
-if ($mounted) {
-	$ufunc = "type_".$server->{'manager'}."_umount_filesystem";
-	&$ufunc($server);
-	}
+&umount_filesystem_if_needed($server);
 if ($err) {
 	print "ERROR: $err\n";
 	exit(1);

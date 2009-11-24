@@ -30,7 +30,11 @@ $in{'dest'} =~ /^\// || &error($text{'upload_edest'});
 
 print &text('upload_doing', "<tt>$sourcename</tt>",
 			    "<tt>$in{'dest'}</tt>"),"<br>\n";
-$err = &put_file_to_server($server, $source, $in{'dest'});
+$err = &mount_filesystem_if_needed($server);
+if (!$err) {
+	$err = &put_file_to_server($server, $source, $in{'dest'});
+	}
+&umount_filesystem_if_needed($server);
 if ($err) {
 	print &text('upload_failed', $err),"<p>\n";
 	}

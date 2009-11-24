@@ -73,48 +73,28 @@ sub get_system_fstab
 {
 my ($server) = @_;
 my (@rv, $mounted);
-my $fstab;
-if ($server->{'status'} eq 'down' && $server->{'manager'} eq 'xen') {
-	# Fetch /etc/fstab from root filesystem
-	my $vhost = &type_xen_parent($server);
-	if (!$server->{'xen_mount'}) {
-		# Mount image on temp directory on vhost
-		my $err = &type_xen_mount_filesystem($server);
-		return $err if ($err);
-		$mounted++;
+
+# Download fstab file
+my $fstab = &transname();
+my $err = &mount_filesystem_if_needed($server);
+return $err if ($err);
+$err = &get_file_from_server($server, "/etc/fstab", $fstab);
+&umount_filesystem_if_needed($server);
+return "Failed to get /etc/fstab : $err" if ($err);
+
+# Parse the file
+open(FSTAB, $fstab);
+while(<FSTAB>) {
+	s/\r|\n//g;
+	s/#.*$//g;
+	my @r = split(/\s+/, $_);
+	if ($r[0] =~ /^dev\//) {
+		# Fix stupid dev/sdaX line
+		$r[0] = "/".$r[0];
 		}
-	$fstab = &transname();
-	my $err = &get_file_from_server($vhost,
-		"$server->{'xen_mount'}/etc/fstab", $fstab);
-	return "Failed to get $server->{'xen_mount'}/etc/fstab : $err"
-		if ($err);
+	push(@rv, \@r);
 	}
-elsif ($server->{'status'} ne 'nohost' && $server->{'status'} ne 'down') {
-	# Get from /etc/fstab on system directly
-	$fstab = &transname();
-	my $err = &get_file_from_server($server, "/etc/fstab", $fstab);
-	return "Failed to get /etc/fstab : $err" if ($err);
-	}
-else {
-	return "The /etc/fstab file cannot be fetched from systems in state ".
-	       $server->{'status'};
-	}
-if ($fstab) {
-	# Parse the file
-	open(FSTAB, $fstab);
-	while(<FSTAB>) {
-		s/\r|\n//g;
-		s/#.*$//g;
-		my @r = split(/\s+/, $_);
-		if ($r[0] =~ /^dev\//) {
-			# Fix stupid dev/sdaX line
-			$r[0] = "/".$r[0];
-			}
-		push(@rv, \@r);
-		}
-	close(FSTAB);
-	}
-&type_xen_umount_filesystem($server) if ($mounted);
+close(FSTAB);
 return \@rv;
 }
 
@@ -133,28 +113,12 @@ foreach my $f (@$fstab) {
 	}
 &close_tempfile(FSTAB);
 
-if ($server->{'status'} eq 'down' && $server->{'manager'} eq 'xen') {
-	# Mount temp filesystem to copy
-	my $mounted;
-	if (!$server->{'xen_mount'}) {
-		my $err = &type_xen_mount_filesystem($server);
-		return $err if ($err);
-		$mounted++;
-		}
-	my $err = &put_file_to_server($vhost, $file,
-		"$server->{'xen_mount'}/etc/fstab");
-	&type_xen_umount_filesystem($server) if ($mounted);
-	return "Failed to write /etc/fstab : $err" if ($err);
-	}
-elsif ($server->{'status'} ne 'nohost' && $server->{'status'} ne 'down') {
-	# Write to /etc/fstab on system directly
-	my $err = &put_file_to_server($server, $file, "/etc/fstab");
-	return "Failed to write /etc/fstab : $err" if ($err);
-	}
-else {
-	return "The /etc/fstab file cannot be updated on systems in state ".
-	       $server->{'status'};
-	}
+# Upload the file
+my $err = &mount_filesystem_if_needed($server);
+return $err if ($err);
+$err = &put_file_to_server($server, $file, "/etc/fstab");
+&umount_filesystem_if_needed($server);
+return "Failed to write /etc/fstab : $err" if ($err);
 return undef;
 }
 

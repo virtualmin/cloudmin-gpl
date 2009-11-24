@@ -99,18 +99,11 @@ else {
 print "Uploading file to ",scalar(@servers)," systems ..\n";
 &parallel_server_function(\@servers,
 	sub { my ($server) = @_;
-
-	      # Mount if needed
-	      $nfunc = "type_".$server->{'manager'}."_need_mount";
-	      if (defined(&$nfunc) && &$nfunc($server)) {
-		$mfunc = "type_".$server->{'manager'}."_mount_filesystem";
-		$err = &$mfunc($server);
-		if ($err) {
-		  print "$server->{'host'}: ERROR: $err\n";
-		  return;
-		  }
-		$mounted = 1;
-	        }
+	      my $err = &mount_filesystem_if_needed($server);
+	      if ($err) {
+		print "$server->{'host'}: ERROR: $err\n";
+		return;
+		}
 
 	      # Get the file
 	      $err = &put_file_to_server($server, $file, $dest,
@@ -121,12 +114,7 @@ print "Uploading file to ",scalar(@servers)," systems ..\n";
               else {
 	          print "$server->{'host'}: OK\n";
 	          }
-
-	      # Un-mount when done
-	      if ($mounted) {
-		$ufunc = "type_".$server->{'manager'}."_umount_filesystem";
-		&$ufunc($server);
-		}
+	      &umount_filesystem_if_needed($server);
 	    });
 &cloudmin_api_log(\@OLDARGV);
 

@@ -27,7 +27,12 @@ if ($in{'dest'} == 1) {
 				      "<tt>$dest</tt>"),"<br>\n";
 	}
 
-$err = &get_file_from_server($server, $in{'source'}, $dest);
+# Get the file
+$err = &mount_filesystem_if_needed($server);
+if (!$err) {
+	$err = &get_file_from_server($server, $in{'source'}, $dest);
+	}
+&umount_filesystem_if_needed($server);
 
 if ($in{'dest'} == 0) {
 	# Send to browser
