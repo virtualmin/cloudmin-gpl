@@ -140,7 +140,18 @@ my $instances = &list_kvm_instances($vhost);
 $in->{'kvm_pid'} || &error($text{'add_ekvminstance'});
 my ($got) = grep { $_->{'pid'} eq $in->{'kvm_pid'} } @$instances;
 $got || &error(&text('add_ekvminstance2', $vhost->{'host'}));
+$got->{'filesystem'} || &error($text{'add_ekvmfs'});
 $server->{'kvm'} = $in->{'kvm_pid'};
+
+# Make sure the filesystem is in usable raw format
+my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+			"qemu-img info ".quotemeta($got->{'filesystem'}));
+if ($ex || $err) {
+	&error(&text('add_ekvmfile', $got->{'filesystem'}, $err || $out));
+	}
+elsif ($out !~ /file\s+format:\s+(\S+)/i || $1 ne "raw") {
+	&error(&text('add_ekvmfile2', $got->{'filesystem'}, $1 || "unknown"));
+	}
 
 # Save KVM root disk
 $server->{'kvm_filesystem'} = $got->{'filesystem'};
@@ -357,8 +368,209 @@ if (ref($inuse)) {
 return $cmd;
 }
 
+# type_kvm_need_mount(&server)
+# Returns 1 if a mount call is needed before reading files from this system
+sub type_kvm_need_mount
+{
+my ($server) = @_;
+return $server->{'status'} eq 'down' && !$server->{'kvm_mount'};
+}
+
+# type_kvm_get_file(&server, remotefile, localfile)
+# If the filesystem for this KVM instance is locally mounted, get the file
+# directly from there
+sub type_kvm_get_file
+{
+my ($server, $remotefile, $localfile) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &get_file_from_server($vhost, $server->{'kvm_mount'}.$remotefile,
+					     $localfile);
+	}
+else {
+	return 'FALLBACK';
+	}
+}
+
+# type_kvm_put_file(&server, remotefile, localfile)
+# If the filesystem for this KVM instance is locally mounted, write the file
+# directly to there
+sub type_kvm_put_file
+{
+my ($server, $localfile, $remotefile) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &put_file_to_server($vhost, $localfile,
+				   $server->{'kvm_mount'}.$remotefile);
+	}
+else {
+	return 'FALLBACK';
+	}
+}
+
+# type_kvm_delete_file(&server, remotefile, noquote)
+# If the filesystem for this KVM instance is locally mounted, delete the file
+# directly from there
+sub type_kvm_delete_file
+{
+my ($server, $remotefile, $noquote) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &delete_file_on_server($vhost,
+			      $server->{'kvm_mount'}.$remotefile, $noquote);
+	}
+else {
+	return 'FALLBACK';
+	}
+}
+
+# type_kvm_checksum_file(&server, remotefile, noquote)
+# If the filesystem for this KVM instance is locally mounted, checksum the file
+# directly from there
+sub type_kvm_checksum_file
+{
+my ($server, $file) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &checksum_file_on_server($vhost,
+			      $server->{'kvm_mount'}.$file);
+	}
+else {
+	return ( 'FALLBACK' );
+	}
+}
+
+# type_kvm_stat_file(&server, remotefile, localfile)
+# If the filesystem for this KVM instance is locally mounted, stat the file
+# directly from there
+sub type_kvm_stat_file
+{
+my ($server, $remotefile) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &stat_file_on_server($vhost, $server->{'kvm_mount'}.$remotefile);
+	}
+else {
+	return 'FALLBACK';
+	}
+}
+
+# type_kvm_make_dir(&server, dir, perms, recur)
+# If the filesystem for this KVM instance is locally mounted, make the dir
+# directly from there
+sub type_kvm_make_dir
+{
+my ($server, $remotedir, $perms, $recur) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &make_dir_on_server($vhost, $server->{'kvm_mount'}.$remotedir,
+				   $perms, $recur);
+	}
+else {
+	return 'FALLBACK';
+	}
+}
+
+# type_kvm_list_dir(&server, dir)
+# If the filesystem for this KVM instance is locally mounted, list the dir
+# directly from there
+sub type_kvm_list_dir
+{
+my ($server, $remotedir) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &list_dir_on_server($vhost, $server->{'kvm_mount'}.$remotedir);
+	}
+else {
+	return 'FALLBACK';
+	}
+}
+
+# type_kvm_mount_filesystem(&server)
+# Mounts a down KVM image's root disk image on /mnt/something, and sets
+# kvm_mount in the server object
+sub type_kvm_mount_filesystem
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+
+# Create temp dir
+my $mp = "/mnt/kvm-".$server->{'kvm'};
+my $err = &make_dir_on_server($vhost, $mp, 0700, 1);
+return "Failed to create mount point $mp : $err" if ($err);
+my $fsfile = $server->{'kvm_filesystem'};
+if (!$fsfile) {
+	return &text('create_ekvmfsfile');
+	}
+
+# If we don't know which partition is the primary, try them in series
+if (!$server->{'kvm_filesystem_offset'}) {
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"fdisk -l -u ".quotemeta($fsfile));
+	if ($ex || $err) {
+		return &text('create_ekvmfsfdisk', $fsfile, $err || $out);
+		}
+
+	# Find Linux partitions and their offsets
+	my $secsize;
+	my @parts;
+	foreach my $l (split(/\r?\n/, $out)) {
+		if ($l =~ /=\s+(\d+)\s+bytes/i) {
+			$secsize = $1;
+			}
+		elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\s+([0-9a-f]+)\s+(\S+)/i &&
+		       $4 eq '83') {
+			push(@parts, $1 * $secsize);
+			}
+		}
+	@parts || return &text('create_ekvmfslinux', $fsfile);
+
+	# Try each offset
+	foreach my $o (@parts) {
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"mount -o loop,offset=$o ".quotemeta($fsfile)." ".
+					 quotemeta($mp));
+		next if ($ex || $err);
+		my @st = &stat_file_on_server($vhost, "$mp/etc");
+		if (@st) {
+			# Found it! Leave mounted
+			$server->{'kvm_mount'} = $mp;
+			$server->{'kvm_filesystem_offset'} = $o;
+			return undef;
+			}
+		else {
+			# Un-mount and try next one
+			&execute_command_on_server($vhost,
+				"umount ".quotemeta($mp));
+			}
+		}
+	return &text('create_ekvmfsnone', $fsfile);
+	}
+
+# Mount with the correct offset
+my $o = $server->{'kvm_filesystem_offset'};
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"mount -o loop,offset=$o ".quotemeta($fsfile)." ".
+				   quotemeta($mp));
+return "Failed to mount $fsfile on $mp : $out" if ($ex);
+$server->{'kvm_mount'} = $mp;
+return undef;
+}
+
+# type_kvm_umount_filesystem(&server)
+# Removes the mount for a system's disk image
+sub type_kvm_umount_filesystem
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"umount ".quotemeta($server->{'kvm_mount'}));
+delete($server->{'kvm_mount'});
+return undef;
+}
+
 # type_kvm_depends(&parent, &vserver)
-# Returns 1 if the Xen instance hosted by the given parent
+# Returns 1 if the KVM instance hosted by the given parent
 sub type_kvm_depends
 {
 my ($parent, $server) = @_;

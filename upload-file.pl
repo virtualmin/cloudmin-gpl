@@ -98,14 +98,35 @@ else {
 # Do the parallel upload
 print "Uploading file to ",scalar(@servers)," systems ..\n";
 &parallel_server_function(\@servers,
-	sub { $err = &put_file_to_server($_[0], $file, $dest,
+	sub { my ($server) = @_;
+
+	      # Mount if needed
+	      $nfunc = "type_".$server->{'manager'}."_need_mount";
+	      if (defined(&$nfunc) && &$nfunc($server)) {
+		$mfunc = "type_".$server->{'manager'}."_mount_filesystem";
+		$err = &$mfunc($server);
+		if ($err) {
+		  print "$server->{'host'}: ERROR: $err\n";
+		  return;
+		  }
+		$mounted = 1;
+	        }
+
+	      # Get the file
+	      $err = &put_file_to_server($server, $file, $dest,
 					 $device, $forcessh);
 	      if ($err) {
-	          print "$_[0]->{'host'}: ERROR: $err\n";
+	          print "$server->{'host'}: ERROR: $err\n";
 	          }
               else {
-	          print "$_[0]->{'host'}: OK\n";
+	          print "$server->{'host'}: OK\n";
 	          }
+
+	      # Un-mount when done
+	      if ($mounted) {
+		$ufunc = "type_".$server->{'manager'}."_umount_filesystem";
+		&$ufunc($server);
+		}
 	    });
 &cloudmin_api_log(\@OLDARGV);
 
