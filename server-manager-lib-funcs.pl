@@ -334,6 +334,7 @@ if ($server->{'id'} eq '0') {
 			'virtualmin_key' => $server->{'virtualmin_key'},
 			'backup_default' => $server->{'backup_default'},
 			'all_poss' => $server->{'all_poss'},
+			'location' => $server->{'location'},
 		      );
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone') {
