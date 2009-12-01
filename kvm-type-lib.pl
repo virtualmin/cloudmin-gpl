@@ -302,6 +302,55 @@ if (defined($sshed) && !$sshed) {
 return (1, undef);
 }
 
+# type_kvm_delete(&server)
+# Delete a KVM instance
+sub type_kvm_delete
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+
+# Force shutdown if needed
+my $proc = &get_server_kvm_instance($server);
+if ($proc) {
+	&type_kvm_shutdown($server, 1);
+	}
+
+# Delete virtual disks
+my $disks = &type_kvm_list_disks($server, 0);
+if (ref($disks)) {
+	foreach my $d (@$disks) {
+		my @st = &stat_file_on_server($vhost, $d->{'real'});
+		next if (!@st);		# Already gone
+		if (!$d->{'device'} && $d->{'real'} !~ /^\/dev\//) {
+			my ($out, $ex, $err) = &execute_command_on_server(
+				$vhost, "rm -f ".quotemeta($d->{'real'}));
+			return $err if ($err);
+			return $out if ($ex);
+			}
+		elsif ($d->{'lv'}) {
+			# Delete the logical volume
+			$last_remote_error = undef;
+			&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+			return $last_remote_error if ($last_remote_error);
+			&remote_foreign_call($vhost, "lvm",
+					     "delete_logical_volume",
+					     { 'device' => $d->{'real'} });
+			return "Failed to delete LV $d->{'real'} : ".
+			       "$last_remote_error" if ($last_remote_error);
+			}
+		}
+	}
+
+# Delete boot-time entry
+&type_kvm_set_atboot($server, 0);
+
+# Remove the DNS entry, if we created one
+&delete_bind8_record($server->{'kvm_dns'}, $vhost->{'kvm_zone'},
+		     &to_ipaddress($server->{'host'}));
+
+return undef;
+}
+
 # get_kvm_start_command(&server)
 # Returns the full command line to start a KVM instance
 sub get_kvm_start_command
@@ -525,6 +574,180 @@ my ($server, $mem) = @_;
 my $mbs = int($mem/(1024*1024));
 $server->{'kvm_memory'} = $mbs;
 &type_kvm_set_atboot($server, 2);
+return undef;
+}
+
+# type_kvm_can_interfaces(&server)
+# KVM interface management is via Webmin or via SSH, so it needs to be up.
+# The return value of 2 means that interfaces can also be 'real'
+sub type_kvm_can_interfaces
+{
+my ($server) = @_;
+if (&can_ssh_status($server)) {
+	# Can manage via Webmin or SSH
+	return 2;
+	}
+elsif ($server->{'status'} eq 'down' &&
+       (&redhat_server_type($server) || &debian_server_type($server))) {
+	# Can manage via direct file manipulation
+	return 2;
+	}
+else {
+	# Cannot edit
+	return 0;
+	}
+}
+
+# Regular interface IP allocation works for KVM
+sub type_kvm_can_allocate_address
+{
+return 1;
+}
+
+# type_kvm_list_interfaces(&server)
+# Returns a list of network interfaces on the system, or an error message
+sub type_kvm_list_interfaces
+{
+my ($server) = @_;
+my $rv;
+if ($server->{'status'} eq 'down') {
+	# Get from network config files
+	my $err = &type_kvm_mount_filesystem($server);
+	return "Failed to mount filesystem : $err" if ($err);
+	$rv = &list_boot_server_interfaces($server);
+	&type_kvm_umount_filesystem($server);
+	}
+else {
+	# Get active interfaces
+	$rv = &list_active_server_interfaces($server);
+	}
+if (ref($rv)) {
+	$rv = [ grep { $_->{'fullname'} =~ /^eth/ &&
+			 $_->{'address'} } @$rv ];
+	foreach my $iface (@$rv) {
+		$iface->{'nodelete'} = 1 if ($iface->{'virtual'} eq '');
+		}
+	}
+return $rv;
+}
+
+# type_kvm_list_parent_interfaces(&server)
+# Just lists non-virtual interfaces
+sub type_kvm_list_parent_interfaces
+{
+my ($server) = @_;
+my $rv = &type_kvm_list_interfaces($server);
+return [ grep { $_->{'virtual'} eq '' } @$rv ];
+}
+
+# type_kvm_create_interface(&server, &iface)
+# Add and activate a virtual interface
+sub type_kvm_create_interface
+{
+my ($server, $iface) = @_;
+
+# Find a free interface number
+my $vhost = &type_kvm_parent($server);
+my $ifaces = &type_kvm_list_interfaces($server);
+return $ifaces if (!ref($ifaces));
+my $n = 0;
+foreach my $oldiface (@$ifaces) {
+	if ($oldiface->{'virtual'} >= $n &&
+	    $oldiface->{'name'} eq $iface->{'name'}) {
+		$n = $oldiface->{'virtual'} + 1;
+		}
+	}
+$iface->{'virtual'} = $n;
+$iface->{'fullname'} = $iface->{'name'}.":".$n;
+
+# Allocate IP, if needed
+if (!$iface->{'address'}) {
+	my $cidr;
+	my @kvm_iface = split(/\s+/, $vhost->{'kvm_iface'});
+	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
+	($iface->{'address'}, $cidr) = &allocate_ip_address(
+	    $vhost->{'kvm_start'}, $vhost->{'kvm_end'}, $vhost->{'kvm_cidr'},
+	    $vhost->{'kvm_gws'}, $vhost->{'kvm_ifaces'}, $kvm_iface[$idx]);
+	$iface->{'address'} ||
+		return &text('create_ekvmalloc', $vhost->{'host'},
+			    &describe_ip_range($vhost->{'kvm_start'},
+					       $vhost->{'kvm_end'},
+					       $vhost->{'kvm_cidr'},
+					       $vhost->{'kvm_ifaces'},
+					       $kvm_iface[$idx]));
+	$iface->{'netmask'} = &net::prefix_to_mask($cidr);
+	}
+
+# Compute broadcast and network
+$iface->{'broadcast'} = &net::compute_broadcast($iface->{'address'},
+						$iface->{'netmask'});
+$iface->{'network'} = &net::compute_network($iface->{'address'},
+					    $iface->{'netmask'});
+
+# Activate now if possible
+if (&can_ssh_status($server)) {
+	my $err = &create_active_server_interface($server, $iface);
+	return $err if ($err);
+	}
+
+# Activate at boot
+my $err = &mount_filesystem_if_needed($server);
+return "Failed to mount filesystem : $err" if ($err);
+$err = &create_boot_server_interface($server, $iface);
+&umount_filesystem_if_needed($server);
+return $err if ($err);
+
+# Add to command line?
+# XXX
+
+&add_ip_address($server, $iface->{'address'});
+return undef;
+}
+
+# type_kvm_delete_interface(&server, &iface)
+# Delete and de-activate a virtual interface
+sub type_kvm_delete_interface
+{
+my ($server, $iface) = @_;
+
+# Delete boot interface
+my $err = &mount_filesystem_if_needed($server);
+return "Failed to mount filesystem : $err" if ($err);
+$err = &delete_boot_server_interface($server, $iface);
+&umount_filesystem_if_needed($server);
+return $err if ($err);
+
+# De-activate interface if possible
+if (&can_ssh_status($server)) {
+	my $err = &delete_active_server_interface($server, $iface);
+	return $err if ($err);
+	}
+
+&delete_ip_address($server, $iface->{'address'});
+return undef;
+}
+
+# type_kvm_modify_interface(&server, &iface, &oldiface)
+# Changes the active and boot-time IPs for an interface
+sub type_kvm_modify_interface
+{
+my ($server, $iface, $oldiface) = @_;
+
+# Modify boot interface
+my $err = &mount_filesystem_if_needed($server);
+return "Failed to mount filesystem : $err" if ($err);
+$err = &modify_boot_server_interface($server, $iface, $oldiface);
+&umount_filesystem_if_needed($server);
+return $err if ($err);
+
+# Change active interface if possible
+if (&can_ssh_status($server)) {
+	my $err = &modify_active_server_interface($server, $iface, $oldiface);
+	return $err if ($err);
+	}
+
+&delete_ip_address($server, $oldiface->{'address'});
+&add_ip_address($server, $iface->{'address'});
 return undef;
 }
 
