@@ -66,7 +66,7 @@ defined(&$dfunc) || &usage("System type $server->{'manager'} does not support ".
 $cfunc = "type_".$server->{'manager'}."_can_disks";
 defined(&$cfunc) && &$cfunc($server) ||
 	&usage("Disks cannot be managed on this system");
-$disks = &$dfunc($server, $multi);
+$disks = &$dfunc($server, $multi ? 2 : 0);
 ref($disks) || &usage("Failed to list disks : $disks");
 
 if ($multi) {
@@ -94,6 +94,17 @@ if ($multi) {
 		if ($d->{'size'}) {
 			print "    Size: $d->{'size'}\n";
 			print "    Nice size: ",&nice_size($d->{'size'}),"\n";
+			}
+		if ($d->{'df_size'}) {
+			print "    Filesystem size: $d->{'df_size'}\n";
+			print "    Filesystem used: $d->{'df_used'}\n";
+			print "    Filesystem free: $d->{'df_free'}\n";
+			print "    Nice filesystem size: ",
+				&nice_size($d->{'df_size'}),"\n";
+			print "    Nice filesystem used: ",
+				&nice_size($d->{'df_used'}),"\n";
+			print "    Nice filesystem free: ",
+				&nice_size($d->{'df_free'}),"\n";
 			}
 		if ($d->{'mount'}) {
 			print "    Mount point: $d->{'mount'}\n";

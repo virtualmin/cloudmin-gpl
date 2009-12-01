@@ -1485,6 +1485,7 @@ mkimage_mungeshadow=Resetting root password ..
 mkimage_mungelogs=Clearing log and history files ..
 mkimage_mungessh=Removing authorized SSH keys ..
 mkimage_xengzip=Compressing filesystem image ..
+mkimage_xengzip2=Copying filesystem image ..
 mkimage_exengzip=.. failed : $1
 mkimage_exenlink=Failed to link filesystem image for copying : $1
 mkimage_vserverdf=Computing filesystem size ..

@@ -208,7 +208,7 @@ my $vhost = &type_kvm_parent($server);
 if (&can_ssh_status($server) && !$force) {
 	# Try poweroff command
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-							  "poweroff -f");
+							  "poweroff -f", 30);
 	return $err ? $err : $ex ? $out : undef;
 	}
 my $proc = &get_server_kvm_instance($server);
@@ -384,8 +384,6 @@ sub type_kvm_list_disks
 {
 my ($server, $mounts) = @_;
 my $vhost = &type_kvm_parent($server);
-my $conf = &get_kvm_config($server, 1);
-return "Failed to get KVM config file" if (!ref($conf));
 
 # If LVM is in use, get LVs from the host system
 my @lvs;
@@ -402,38 +400,44 @@ if ($server->{'kvm_filesystem_vg'}) {
 	}
 
 # Parse disks from Cloudmin config
-# XXX
-
-# Parse disks in Xen config
-my $disks = &kvm_find_value("disk", $conf);
+my $idx = -1;
 my @rv;
-foreach my $d (@$disks) {
-	if ($d =~ /^(file|phy|tap:aio):(\S+),(\S+),(\S+)$/) {
-		# A regular file
-		my $disk = { 'real' => $2,
-			     'virt' => "/dev/$3",
-			     'virtdev' => $3,
-			     'suffix' => $1,
-			     'mode' => $4, };
-		$disk->{'device'} = $1 eq "phy";
-		if (!$disk->{'device'}) {
-			my @st = &stat_file_on_server($vhost, "$2");
-			$disk->{'size'} = $st[7];
-			}
-		if ($server->{'kvm_filesystem_vg'} &&
-		    $disk->{'real'} =~ /^\/dev\/(\S+)\/(\S+)$/ &&
-		    $1 eq $server->{'kvm_filesystem_vg'}) {
-			# Server has root on LVM .. check if this is too
-			$disk->{'vg'} = $1;
-			$disk->{'lv'} = $2;
-			my ($lv) = grep { $_->{'name'} eq $disk->{'lv'} } @lvs;
-			if ($lv) {
-				$disk->{'size'} = $lv->{'size'} * 1024;
-				}
-			}
-		$disk->{'index'} = scalar(@rv);
-		push(@rv, $disk);
+foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
+	$idx++;
+	my %drive = map { split(/=/, $_, 2) } split(/,/, $dstr);
+	next if (!$drive{'file'});
+	if ($drive{'if'} eq 'scsi') {
+		$dev = "sd".chr($drive{'index'}+97);
 		}
+	elsif ($drive{'if'} eq 'ide' || !$drive{'if'}) {
+		$dev = "hd".chr($drive{'index'}+97);
+		}
+	else {
+		# Only IDE and SCSI support, not floppies/etc
+		next;
+		}
+	my $disk = { 'real' => $drive{'file'},
+		     'virt' => "/dev/".$dev,
+		     'virtdev' => $dev,
+		     'drive_index' => $idx };
+	$disk->{'device'} = $drive{'file'} =~ /^\/dev\// ? 1 : 0;
+	if (!$disk->{'device'}) {
+		my @st = &stat_file_on_server($vhost, $drive{'file'});
+		$disk->{'size'} = $st[7];
+		}
+	if ($server->{'kvm_filesystem_vg'} &&
+	    $disk->{'real'} =~ /^\/dev\/(\S+)\/(\S+)$/ &&
+	    $1 eq $server->{'kvm_filesystem_vg'}) {
+		# Server has root on LVM .. check if this is too
+		$disk->{'vg'} = $1;
+		$disk->{'lv'} = $2;
+		my ($lv) = grep { $_->{'name'} eq $disk->{'lv'} } @lvs;
+		if ($lv) {
+			$disk->{'size'} = $lv->{'size'} * 1024;
+			}
+		}
+	$disk->{'index'} = scalar(@rv);
+	push(@rv, $disk);
 	}
 
 # If the caller asked for mounts, get them too
@@ -445,6 +449,7 @@ if ($mounts) {
 		my ($f) = grep { my $v = $d->{'virt'};
 				 $_->[0] =~ /^\Q$v\E(\d*)$/ } @$fstab;
 		if ($f) {
+			$d->{'virt_mount'} = $f->[0];
 			$d->{'mount'} = $f->[1];
 			$d->{'fs'} = $f->[2];
 			}
@@ -460,7 +465,8 @@ if ($mounts) {
 			$mounted{$dev} = $mp;
 			}
 		foreach my $d (@rv) {
-			$d->{'mounted'} = $mounted{$d->{'virt'}};
+			$d->{'mounted'} = $mounted{$d->{'virt'}} ||
+					  $mounted{$d->{'virt_mount'}};
 			}
 		}
 	}
@@ -472,7 +478,8 @@ if ($mounts == 2 && &can_ssh_status($server)) {
 	if (!$ex && !$err) {
 		foreach my $l (split(/\r?\n/, $out)) {
 			my ($fs, $size, $used, $free) = split(/\s+/, $l);
-			my ($disk) = grep { $_->{'virt'} eq $fs } @rv;
+			my ($disk) = grep { $_->{'virt'} eq $fs ||
+					    $_->{'virt_mount'} eq $fs } @rv;
 			if ($disk) {
 				$disk->{'df_size'} = $size*1024;
 				$disk->{'df_used'} = $used*1024;
@@ -856,12 +863,13 @@ my $vhost = &type_kvm_parent($server);
 
 # Mount the disk image
 &$first_print($text{'mkimage_kvmmount'});
+my $fsfile = $server->{'kvm_filesystem'};
 my $err = &type_kvm_mount_filesystem($server);
 if ($err) {
-	&$second_print(&text('create_ekvmmount', $err));
+	&$second_print(&text('create_exenmount', $err));
 	return 0;
 	}
-&$second_print(&text('create_kvmmounted', "<tt>$server->{'kvm_mount'}</tt>"));
+&$second_print(&text('create_xenmounted', "<tt>$server->{'kvm_mount'}</tt>"));
 
 if ($nomunge != 1) {
 	# Munge some or all files
@@ -876,7 +884,6 @@ if ($nomunge != 1) {
 &$second_print($text{'create_done'});
 
 # Get the size of the raw disk
-# XXX
 my $disks = &type_kvm_list_disks($server, 0);
 my $rawsize;
 if (ref($disks)) {
@@ -893,7 +900,7 @@ $image->{'rawsize'} = $rawsize;
 
 if (!$image->{'nocompress'}) {
 	# Compress disk image to a temp file
-	&$first_print($text{'mkimage_kvmgzip'});
+	&$first_print($text{'mkimage_xengzip'});
 	my $gzfile = $image->{'id'}.".ext3.gz";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	    ($server->{'kvm_filesystem_lv'} ?
@@ -910,6 +917,7 @@ if (!$image->{'nocompress'}) {
 	}
 else {
 	# Just use the image file as-is
+	&$first_print($text{'mkimage_xengzip2'});
 	my $imgfile = $image->{'id'}.".ext3";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		$server->{'kvm_filesystem_lv'} ?
@@ -921,6 +929,7 @@ else {
 		&$second_print(&text('mkimage_ekvmlink', "<pre>$out</pre>"));
 		}
 	else {
+		&$second_print($text{'create_done'});
 		$image->{'files'} = $imgfile;
 		}
 	}
@@ -957,7 +966,7 @@ if ($err) {
 	&$second_print(&text('create_ekvmmount', $err));
 	return 0;
 	}
-&$second_print(&text('create_kvmmounted', "<tt>$server->{'kvm_mount'}</tt>"));
+&$second_print(&text('create_xenmounted', "<tt>$server->{'kvm_mount'}</tt>"));
 
 # Undo all munged files
 &unmunge_all_files($server, $server->{'munged'});
