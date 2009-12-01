@@ -84,7 +84,9 @@ if ($multi) {
 		print $i->{'id'},"\n";
 		print "    Description: $i->{'desc'}\n";
 		print "    System type: ",&$tfunc(),"\n";
-		print "    Version: $i->{'version'}\n";
+		if ($i->{'version'}) {
+			print "    Version: $i->{'version'}\n";
+			}
 		if ($avail) {
 			print "    Available version: $avail->{'version'}\n";
 			print "    Source: Virtualmin\n";

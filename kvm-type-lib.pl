@@ -492,6 +492,45 @@ if ($mounts == 2 && &can_ssh_status($server)) {
 return \@rv;
 }
 
+# type_kvm_compute_disksize(&server)
+# Sets a server's kvm_disktotal field to the total size of virtual disks,
+# and returns it.
+sub type_kvm_compute_disksize
+{
+my ($server) = @_;
+if ($server->{'status'} ne 'nohost') {
+	my $disks = &type_kvm_list_disks($server, 0);
+	if (ref($disks)) {
+		$server->{'kvm_disktotal'} = 0;
+		foreach my $d (@$disks) {
+			$server->{'kvm_disktotal'} += $d->{'size'}
+				if (!$d->{'device'} || $d->{'lv'});
+			}
+		}
+	}
+return $server->{'kvm_disktotal'};
+}
+
+# type_kvm_get_disk_size(&server)
+# Returns the cached amount of disk space allocated to this KVM instance
+sub type_kvm_get_disk_size
+{
+my ($server) = @_;
+if (!$server->{'kvm_disktotal'}) {
+	&type_kvm_compute_disksize($server);
+	}
+return $server->{'kvm_disktotal'};
+}
+
+# type_kvm_get_disk_space(&server)
+# Returns the amount of disk space used on the host by this Xen instance, which
+# is the same as the disk allocated
+sub type_kvm_get_disk_space
+{
+my ($server) = @_;
+return &type_kvm_get_disk_size($server);
+}
+
 # type_kvm_need_mount(&server)
 # Returns 1 if a mount call is needed before reading files from this system
 sub type_kvm_need_mount
@@ -724,6 +763,44 @@ if (!$proc) {
 
 # Tell check_server_ssh_login that we need to SSH
 return ( );
+}
+
+# type_kvm_post_refresh(&server, regenerate)
+# Called after a refresh to compute total disk size, if needed
+sub type_kvm_post_refresh
+{
+my ($server, $regen) = @_;
+if ($server->{'kvm_disktotal'} eq '' || $regen) {
+	&type_kvm_compute_disksize($server);
+	}
+}
+
+# type_kvm_post_host_refresh(&server)
+# Called after a KVM host system is refreshed, to maybe get LVM info
+sub type_kvm_post_host_refresh
+{
+my ($server) = @_;
+
+# If using LVM, see how much space is free on the VG
+if ($server->{'kvm_vg'} &&
+    ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt')) {
+	&remote_foreign_require($server, "lvm", "lvm-lib.pl");
+	my ($vg) = grep { $_->{'name'} eq $server->{'kvm_vg'} }
+		   &remote_foreign_call($server, "lvm", "list_volume_groups");
+	if ($vg) {
+		$server->{'kvm_vg_total'} =
+			$vg->{'pe_total'}*$vg->{'pe_size'}*1024;
+		$server->{'kvm_vg_used'} =
+			$vg->{'pe_alloc'}*$vg->{'pe_size'}*1024;
+		$server->{'kvm_vg_free'} = $server->{'kvm_vg_total'} -
+					   $server->{'kvm_vg_used'};
+		}
+	}
+elsif (!$server->{'kvm_vg'}) {
+	delete($server->{'kvm_vg_total'});
+	delete($server->{'kvm_vg_used'});
+	delete($server->{'kvm_vg_free'});
+	}
 }
 
 # type_kvm_get_atboot(&server)
