@@ -21,7 +21,7 @@ else {
 
 sub type_kvm_must_image
 {
-return 1;			# Xen instances always come from an image
+return 1;			# KVM instances always come from an image
 }
 
 sub type_kvm_is_virtual
@@ -131,7 +131,7 @@ sub type_kvm_add_parse
 {
 my ($server, $in) = @_;
 
-# Save Xen host
+# Save KVM host
 $server->{'kvm_on'} = $in->{'kvm_on'};
 my $vhost = &type_kvm_parent($server);
 
@@ -222,9 +222,7 @@ return "No KVM process found!";
 }
 
 # type_kvm_startup(&server)
-# Use the xm create command to start up, and wait till it looks like init
-# started OK. This has to be done in a pty, as the Xen console won't work
-# if it thinks it is writing to a pipe or file.
+# Start the kvm or qemu-kvm process, and wait till it responds to ping and SSH
 sub type_kvm_startup
 {
 my ($server) = @_;
@@ -363,6 +361,128 @@ if (ref($inuse)) {
 	}
 
 return $cmd;
+}
+
+# type_kvm_can_disks(&server)
+# Returns 1, as we can manage disks for Xen instances. These are files or
+# devices mapped to virtual disks in the instance.
+sub type_kvm_can_disks
+{
+my ($server) = @_;
+return $server->{'status'} ne 'nohost';
+}
+
+# type_kvm_list_disks(&server, include-mounts)
+# Returns a list of hash refs, one per disk, with fields :
+# real - Real file on host system, like /kvm/foo.dsk
+# virt - Virtual device on instance, like /dev/sda
+# device - Set to 1 if this is a real device, like /dev/md1
+# size - Size in bytes, if a file
+# vg - LVM volume group, if any
+# lv - LVM logical volume
+sub type_kvm_list_disks
+{
+my ($server, $mounts) = @_;
+my $vhost = &type_kvm_parent($server);
+my $conf = &get_kvm_config($server, 1);
+return "Failed to get KVM config file" if (!ref($conf));
+
+# If LVM is in use, get LVs from the host system
+my @lvs;
+if ($server->{'kvm_filesystem_vg'}) {
+	if ($main::list_logical_cache{$vhost->{'id'}}) {
+		@lvs = @{$main::list_logical_cache{$vhost->{'id'}}};
+		}
+	else {
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+		@lvs = &remote_foreign_call($vhost, "lvm",
+			"list_logical_volumes", $server->{'kvm_filesystem_vg'});
+		$main::list_logical_cache{$vhost->{'id'}} = \@lvs;
+		}
+	}
+
+# Parse disks from Cloudmin config
+# XXX
+
+# Parse disks in Xen config
+my $disks = &kvm_find_value("disk", $conf);
+my @rv;
+foreach my $d (@$disks) {
+	if ($d =~ /^(file|phy|tap:aio):(\S+),(\S+),(\S+)$/) {
+		# A regular file
+		my $disk = { 'real' => $2,
+			     'virt' => "/dev/$3",
+			     'virtdev' => $3,
+			     'suffix' => $1,
+			     'mode' => $4, };
+		$disk->{'device'} = $1 eq "phy";
+		if (!$disk->{'device'}) {
+			my @st = &stat_file_on_server($vhost, "$2");
+			$disk->{'size'} = $st[7];
+			}
+		if ($server->{'kvm_filesystem_vg'} &&
+		    $disk->{'real'} =~ /^\/dev\/(\S+)\/(\S+)$/ &&
+		    $1 eq $server->{'kvm_filesystem_vg'}) {
+			# Server has root on LVM .. check if this is too
+			$disk->{'vg'} = $1;
+			$disk->{'lv'} = $2;
+			my ($lv) = grep { $_->{'name'} eq $disk->{'lv'} } @lvs;
+			if ($lv) {
+				$disk->{'size'} = $lv->{'size'} * 1024;
+				}
+			}
+		$disk->{'index'} = scalar(@rv);
+		push(@rv, $disk);
+		}
+	}
+
+# If the caller asked for mounts, get them too
+if ($mounts) {
+	# Get fstab mounts
+	my $fstab = &get_system_fstab($server);
+	return $fstab if (!ref($fstab));
+	foreach my $d (@rv) {
+		my ($f) = grep { my $v = $d->{'virt'};
+				 $_->[0] =~ /^\Q$v\E(\d*)$/ } @$fstab;
+		if ($f) {
+			$d->{'mount'} = $f->[1];
+			$d->{'fs'} = $f->[2];
+			}
+		}
+
+	# Check if actually mounted
+	if (&can_ssh_status($server)) {
+		my %mounted;
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, "mount");
+		foreach my $l (split(/\r?\n/, $out)) {
+			my ($dev, $on, $mp) = split(/\s+/, $l);
+			$mounted{$dev} = $mp;
+			}
+		foreach my $d (@rv) {
+			$d->{'mounted'} = $mounted{$d->{'virt'}};
+			}
+		}
+	}
+
+# If caller asked for disk usage, get it too if we can
+if ($mounts == 2 && &can_ssh_status($server)) {
+	my ($out, $ex, $err) = &execute_command_on_server(
+		$server, "df -k -l || df -k");
+	if (!$ex && !$err) {
+		foreach my $l (split(/\r?\n/, $out)) {
+			my ($fs, $size, $used, $free) = split(/\s+/, $l);
+			my ($disk) = grep { $_->{'virt'} eq $fs } @rv;
+			if ($disk) {
+				$disk->{'df_size'} = $size*1024;
+				$disk->{'df_used'} = $used*1024;
+				$disk->{'df_free'} = $free*1024;
+				}
+			}
+		}
+	}
+
+return \@rv;
 }
 
 # type_kvm_need_mount(&server)
@@ -575,24 +695,24 @@ return $server->{'kvm_on'} eq $parent->{'id'};
 }
 
 # type_kvm_check_login(&server)
-# Check if the Xen instance is up, and if we can SSH in. Returns a status
+# Check if the KVM instance is up, and if we can SSH in. Returns a status
 # code and error message
 sub type_kvm_check_login
 {
 my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
 if (!$vhost) {
-	return (5, "Xen host does not exist!");
+	return (5, "KVM host does not exist!");
 	}
 if ($vhost->{'status'} eq 'down' ||
     $vhost->{'status'} eq 'nossh' ||
     $vhost->{'status'} eq 'nohost' ||
     $vhost->{'status'} eq 'nosshlogin') {
-	return (5, "Xen host $vhost->{'host'} is down");
+	return (5, "KVM host $vhost->{'host'} is down");
 	}
 my $proc = &get_server_kvm_instance($server);
 if (!$proc) {
-	return (6, "Xen instance is down");
+	return (6, "KVM instance is down");
 	}
 
 # Tell check_server_ssh_login that we need to SSH
@@ -624,7 +744,7 @@ foreach my $l (split(/\r?\n/, $data)) {
 return 0;
 }
 
-# type_kvm_set_atboot(&server, yesno)
+# type_kvm_set_atboot(&server, 0=no, 1=yes, 2=update-if-there)
 # Enable some KVM system at boot time, by adding a line to run it to
 # /etc/init.d/cloudmin-kvm or /etc/rc.local
 sub type_kvm_set_atboot
@@ -660,7 +780,7 @@ if (&stat_file_on_server($vhost, "/etc/init.d")) {
 			}
 		}
 
-	if ($atboot && !defined($lnum)) {
+	if ($atboot == 1 && !defined($lnum)) {
 		# Insert startup line into script
 		for(my $i=0; $i<@$lref; $i++) {
 			if ($lref->[$i] =~ /^(\s*);;/ ||
@@ -671,9 +791,14 @@ if (&stat_file_on_server($vhost, "/etc/init.d")) {
 				}
 			}
 		}
-	elsif (!$atboot && defined($lnum)) {
+	elsif ($atboot == 0 && defined($lnum)) {
 		# Delete line from script
 		splice(@$lref, $lnum, 1);
+		}
+	elsif ($atboot == 2 && defined($lnum)) {
+		# Update line in script
+		$lref->[$lnum] =~ s/\S.*$//;
+		$lref->[$lnum] .= $cmd;
 		}
 	&flush_file_lines($temp);
 	$err = &put_file_to_server($vhost, $temp, $bfile);
@@ -703,11 +828,17 @@ else {
 		}
 
 	# Add or remove if needed
-	if ($atboot && !defined($lnum)) {
+	if ($atboot == 1 && !defined($lnum)) {
+		# Add at end
 		push(@$lref, $cmd);
 		}
-	elsif (!$atboot && defined($lnum)) {
+	elsif ($atboot == 0 && defined($lnum)) {
+		# Remove from script
 		splice(@$lref, $lnum, 1);
+		}
+	elsif ($atboot == 2 && defined($lnum)) {
+		# Update if there
+		$lref->[$lnum] = $cmd;
 		}
 	&flush_file_lines($temp);
 	$err = &put_file_to_server($vhost, $temp, $bfile);
@@ -715,8 +846,133 @@ else {
 	}
 }
 
+# type_kvm_create_image(&server, &image, tempdir, [nomunge])
+# Convert a KVM system into an image file, which is really just the KVM disk.
+# Outputs text, and returns 0 on failure.
+sub type_kvm_create_image
+{
+my ($server, $image, $tempdir, $nomunge) = @_;
+my $vhost = &type_kvm_parent($server);
+
+# Mount the disk image
+&$first_print($text{'mkimage_kvmmount'});
+my $err = &type_kvm_mount_filesystem($server);
+if ($err) {
+	&$second_print(&text('create_ekvmmount', $err));
+	return 0;
+	}
+&$second_print(&text('create_kvmmounted', "<tt>$server->{'kvm_mount'}</tt>"));
+
+if ($nomunge != 1) {
+	# Munge some or all files
+	my ($mok, $munged) = &munge_all_files($server, 0, $nomunge == 2);
+	return 0 if (!$mok);
+	$server->{'munged'} = $munged;
+	}
+
+# Un-mount
+&$first_print($text{'mkimage_kvmumount'});
+&type_kvm_umount_filesystem($server);
+&$second_print($text{'create_done'});
+
+# Get the size of the raw disk
+# XXX
+my $disks = &type_kvm_list_disks($server, 0);
+my $rawsize;
+if (ref($disks)) {
+	my ($d) = grep { $_->{'real'} eq $fsfile } @$disks;
+	if ($d) {
+		$rawsize = $d->{'size'};
+		}
+	}
+if (!$rawsize) {
+	my @st = &stat_file_on_server($vhost, $fsfile);
+	$rawsize = $st[7];
+	}
+$image->{'rawsize'} = $rawsize;
+
+if (!$image->{'nocompress'}) {
+	# Compress disk image to a temp file
+	&$first_print($text{'mkimage_kvmgzip'});
+	my $gzfile = $image->{'id'}.".ext3.gz";
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	    ($server->{'kvm_filesystem_lv'} ?
+		"dd if=".quotemeta($fsfile)." bs=32768 | gzip -c" :
+		"gzip -c ".quotemeta($fsfile)).
+	    " >".quotemeta("$tempdir/$gzfile"));
+	if ($ex) {
+		&$second_print(&text('mkimage_ekvmgzip', "<pre>$out</pre>"));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		$image->{'files'} = $gzfile;
+		}
+	}
+else {
+	# Just use the image file as-is
+	my $imgfile = $image->{'id'}.".ext3";
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		$server->{'kvm_filesystem_lv'} ?
+			"dd if=".quotemeta($fsfile).
+			  " of=".quotemeta("$tempdir/$imgfile")." bs=32768" :
+			"ln -s ".quotemeta($fsfile)." ".
+			  quotemeta("$tempdir/$imgfile"));
+	if ($ex) {
+		&$second_print(&text('mkimage_ekvmlink', "<pre>$out</pre>"));
+		}
+	else {
+		$image->{'files'} = $imgfile;
+		}
+	}
+
+return 1;
+}
+
+# type_kvm_cleanup_image(&server, &image, tempdir)
+# Delete all temp files created on the host system for an image, and reverse
+# any munge processes that were done to prepare the imaged system.
+sub type_kvm_cleanup_image
+{
+my ($server, $image, $tempdir) = @_;
+my $vhost = &type_kvm_parent($server);
+
+# Remove compressed image
+&$first_print($text{'mkimage_xendelete'});
+my $gzfile = $image->{'id'}.".ext3.gz";
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+				"rm -f ".quotemeta("$tempdir/$gzfile"));
+$err = $out if ($ex);
+if ($err) {
+	&$second_print(&text('mkimage_exendelete', $out));
+	return 0;
+	}
+else {
+	&$second_print($text{'create_done'});
+	}
+
+# Re-mount KVM filesystem
+&$first_print($text{'mkimage_kvmmount'});
+my $err = &type_kvm_mount_filesystem($server);
+if ($err) {
+	&$second_print(&text('create_ekvmmount', $err));
+	return 0;
+	}
+&$second_print(&text('create_kvmmounted', "<tt>$server->{'kvm_mount'}</tt>"));
+
+# Undo all munged files
+&unmunge_all_files($server, $server->{'munged'});
+delete($server->{'munged'});
+
+# Un-mount KVM filesystem
+&$first_print($text{'mkimage_kvmumount'});
+&type_kvm_umount_filesystem($server);
+&$second_print($text{'create_done'});
+
+return 1;
+}
+
 # check_kvm_host_software(&server)
-# Checks if some system has the Xen software installed, and the kernel
+# Checks if some system has the KVM software installed, and the kernel
 # patch needed to use it.
 sub check_kvm_host_software
 {
@@ -770,7 +1026,7 @@ return ( $server->{'kvm_dns'}, $vhost->{'kvm_zone'} );
 }
 
 # list_kvm_host_bridges(&vhost)
-# Returns the list of names of bridges on some Xen host system. Tries brctl 
+# Returns the list of names of bridges on some KVM host system. Tries brctl 
 # show first, then ifconfig
 sub list_kvm_host_bridges
 {
