@@ -492,6 +492,42 @@ if ($mounts == 2 && &can_ssh_status($server)) {
 return \@rv;
 }
 
+# Returns 2, indicating that memory can be changed but needs a reboot
+sub type_kvm_can_memory
+{
+return 2;
+}
+
+sub type_kvm_can_unlimited_memory
+{
+return 0;
+}
+
+# type_kvm_get_memory(&server)
+# Returns the amount of RAM in bytes this server is granted, or undef if
+# not available.
+sub type_kvm_get_memory
+{
+my ($server) = @_;
+my $proc = &get_server_kvm_instance($server);
+if ($proc && $proc->{'args'}->{'m'}) {
+	# Get from -m flag of running process
+	return $proc->{'args'}->{'m'} * 1024 * 1024;
+	}
+return $server->{'kvm_memory'} * 1024 * 1024;
+}
+
+# type_kvm_save_memory(&server, ram)
+# Updates the memory in the Cloudmin config, and in the boot-time script
+sub type_kvm_save_memory
+{
+my ($server, $mem) = @_;
+my $mbs = int($mem/(1024*1024));
+$server->{'kvm_memory'} = $mbs;
+&type_kvm_set_atboot($server, 2);
+return undef;
+}
+
 # type_kvm_compute_disksize(&server)
 # Sets a server's kvm_disktotal field to the total size of virtual disks,
 # and returns it.
