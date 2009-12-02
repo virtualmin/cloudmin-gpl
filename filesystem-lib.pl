@@ -33,15 +33,19 @@ else {
 	}
 }
 
-# create_device_filesystem(&server, device, fs)
+# create_device_filesystem(&server, device, fs, [size])
 # Creates a new filesystem on some device. Returns undef on success, or an
 # error message on failure.
 sub create_device_filesystem
 {
-my ($server, $device, $fs) = @_;
+my ($server, $device, $fs, $size) = @_;
 my $cmd;
 if ($fs =~ /^ext\d+$/) {
 	$cmd = "mkfs -t $fs -F ".quotemeta($device);
+	if ($size) {
+		$cmd .= " && resize2fs ".quotemeta($device)." ".
+			int($size/1024)."k";
+		}
 	}
 elsif ($fs eq 'reiserfs') {
 	$cmd = "yes | mkreiserfs -f ".quotemeta($device);
@@ -54,6 +58,9 @@ elsif ($fs eq 'jfs') {
 	}
 elsif ($fs eq 'swap') {
 	$cmd = "mkswap ".quotemeta($device);
+	if ($size) {
+		$cmd .= " ".int($size/1024);
+		}
 	}
 elsif ($fs eq 'ufs') {
 	$cmd = "newfs ".quotemeta($device);

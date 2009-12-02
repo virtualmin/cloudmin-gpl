@@ -318,7 +318,6 @@ if (!$server->{'kvm_console'}) {
 	}
 my $vhost = &type_kvm_parent($server);
 my $out = &get_file_data_from_server($vhost, $server->{'kvm_console'});
-$out =~ s/SERVER-MANAGER-COMPLETE\r?\n//;
 return $out ? (1, $out) : (0, "No console messages were found");
 }
 
@@ -571,7 +570,7 @@ return \@rv;
 sub type_kvm_need_disk_reboot
 {
 my ($server, $disk) = @_;
-return 1;
+return $server->{'status'} eq 'down' ? 0 : 1;
 }
 
 # type_kvm_new_disk(&server, &disks, real?)
@@ -651,15 +650,15 @@ else {
 		return "LVM logical volume creation failed : $err" if ($err);
 		}
 	elsif (!@st) {
-		# Create the file if missing
 		$disk->{'size'} || return "File $disk->{'real'} does not exist on $vhost->{'host'}, but no size to create it as was given";
-		my $cmd = "dd if=/dev/zero of=".quotemeta($disk->{'real'}).
-			     " bs=1024 count=".int($disk->{'size'}/1024);
-		my ($out, $ex, $err) = &execute_command_on_server(
-						$vhost,$cmd);
-		$err = $out if ($ex);
-		$err && return "Failed to create file $disk->{'real'} : $err";
 		}
+
+	# Call qemu-img to initialize it
+	my $cmd = "qemu-img create -f raw ".quotemeta($disk->{'real'})." ".
+				     int($disk->{'size'}/1024/1024)."M";
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
+	$err = $out if ($ex);
+	$err && return "Failed to create file $disk->{'real'} : $err";
 
 	# Create partition on it
 	my $fdisktemp = &transname();
@@ -675,20 +674,37 @@ else {
 	my $err = &put_file_to_server($vhost, $fdisktemp, $fdisktempdest);
 	$err && return "Failed to upload fdisk input file : $err";
 	&unlink_file($fdisktemp);
+	my $cyls = int($disk->{'size'} / 63 / 255 / 512);
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-				"fdisk -u -C 512 ".quotemeta($disk->{'real'}).
-				" <$fdisktempdest");
-	print STDERR "ex=$ex err=$err\n";
+		"fdisk -u -H 255 -S 63 -C $cyls ".quotemeta($disk->{'real'}).
+		" <$fdisktempdest");
 	&delete_file_on_server($vhost, $fdisktempdest);
 	if ($out !~ /has\s+been\s+altered/i) {
 		return "Failed to create partition : ".($err || $out);
 		}
 
-	# And make a filesystem on the new partition
-	# XXX
+	# And make a filesystem on the new partition, using a loopback device
 	if (!@st && $disk->{'fs'}) {
+		# Work out the size of the partition in blocks. This is needed
+		# because losetup doesn't properly detect the modified size!
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"fdisk -u -H 255 -S 63 -C $cyls -l ".
+			quotemeta($disk->{'real'}));
+		my $blocksize;
+		if ($out =~ /\s(\d+)\s+(\d+)\s+(\d+)\s+([0-9a-f]+)/) {
+			$blocksize = $3 * 1024;
+			}
+
+		# Create the filesystem
+		my $o = 63*512;
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"losetup -o $o /dev/loop9 ".quotemeta($disk->{'real'}));
+		if ($ex || $err) {
+			return "Failed to create loopback : ".($err || $out);
+			}
 		my $err = &create_device_filesystem(
-			$vhost, $disk->{'real'}, $disk->{'fs'});
+			$vhost, "/dev/loop9", $disk->{'fs'}, $blocksize);
+		&execute_command_on_server($vhost, "losetup -d /dev/loop9");
 		$err && return "Failed to create ".uc($disk->{'fs'}).
 			       " filesystem : $err";
 		}
@@ -727,7 +743,7 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 	my $fstab = &get_system_fstab($server);
 	$fserr = "Failed to read fstab file : $fstab" if (!ref($fstab));
 	if (!$fserr) {
-		push(@$fstab, [ $disk->{'virt'}, $disk->{'mount'},
+		push(@$fstab, [ $disk->{'virt_mount'}, $disk->{'mount'},
 				$disk->{'fs'}, 'defaults', 0, 1 ]);
 		my $err = &put_system_fstab($server, $fstab);
 		$fserr = "Failed to update fstab file : $err" if ($err);
@@ -804,15 +820,10 @@ my ($server, $disk, $olddisk) = @_;
 my $vhost = &type_kvm_parent($server);
 my $moderr;
 
-# Perform some basic validation
+# Disk resizing not supported yet
 if ($disk->{'size'} != $olddisk->{'size'}) {
-	$disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap' ||
- 	  $disk->{'fs'} eq '' ||
-	    return "The size of a disk with the ".uc($disk->{'fs'}).
-		   " filesystem cannot be changed";
+	return "The size of a KVM disk cannot be changed yet";
 	}
-my $conf = &get_kvm_config($server, 0);
-return "Failed to get Xen config file : $conf" if (!ref($conf));
 
 # If the system is up, un-mount the disk
 my $mounted = 0;
@@ -826,138 +837,41 @@ if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
 	$mounted = 1;
 	}
 
-# If the system is up, dis-connect the disk
-my $connected = 0;
-my $kvmid = &get_kvm_instance_id($server);
-if ($server->{'status'} ne 'down' && $kvmid && $olddisk->{'blockid'}) {
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"xm block-detach $kvmid $olddisk->{'blockid'}");
-	if ($ex || $err) {
-		return "Failed to detach Xen block device ".
-		       "$olddisk->{'blockid'} : ".($err || $out);
-		}
-	$connected = 1;
-	}
-
-# Apply a size change, if we can
-if ($disk->{'size'} != $olddisk->{'size'}) {
-	# Build the commands to run
-	my @cmds;
-	if ($disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
-		# Expand logical volume (before filesystem)
-		push(@cmds, "lvextend -L".int($disk->{'size'}/1024)."k ".
-			    quotemeta($disk->{'real'}));
-		}
-	if ($disk->{'fs'} eq 'swap') {
-		# Just re-make
-		push(@cmds, "dd if=/dev/zero of=".quotemeta($disk->{'real'}).
-			    " bs=1024 count=".int($disk->{'size'}/1024));
-		push(@cmds, "mkswap ".quotemeta($disk->{'real'}));
-		}
-	elsif ($disk->{'fs'} =~ /^ext\d+$/) {
-		# Expand the filesystem
-		push(@cmds, "e2fsck -f -p ".quotemeta($disk->{'real'}));
-		push(@cmds, "resize2fs ".quotemeta($disk->{'real'}).
-			    " ".int($disk->{'size'}/(1024*1024))."M");
-		}
-	elsif ($disk->{'fs'} eq '' && $disk->{'size'} > $olddisk->{'size'}) {
-		# Add blanks to the file, unless on LVM
-		if (!$disk->{'lv'}) {
-			push(@cmds, "dd if=/dev/zero bs=1024".
-			    " count=".
-			    int(($disk->{'size'}-$olddisk->{'size'})/1024).
-			    " >>".quotemeta($disk->{'real'}));
-			}
-		}
-	elsif ($disk->{'fs'} eq '' && $disk->{'size'} < $olddisk->{'size'}) {
-		# Truncate the file, unless on LVM
-		if (!$disk->{'lv'}) {
-			push(@cmds, "dd if=".quotemeta($disk->{'real'}).
-			    " of=".quotemeta($disk->{'real'}.".tmp")." bs=1024".
-			    " count=".int($disk->{'size'}/1024));
-			push(@cmds, "mv ".quotemeta($disk->{'real'}.".tmp").
-			    " ".quotemeta($disk->{'real'}));
-			}
-		}
-	else {
-		return "No idea now to resize!";
-		}
-	if ($disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
-		# Shrink logical volume (after resizing filesystem)
-		push(@cmds, "lvreduce -f -L".int($disk->{'size'}/1024)."k ".
-			    quotemeta($disk->{'real'}));
-		}
-
-	# Run them in turn
-	foreach my $cmd (@cmds) {
-		my ($out, $ex, $err) = &execute_command_on_server(
-			$vhost, $cmd);
-		if ($err) {
-			$moderr = $err;
-			last;
-			}
-		elsif ($ex) {
-			$moderr = "$cmd failed : $out";
-			last;
-			}
-		}
-
-	# Update total disk size
-	if (!$moderr &&
-	    $server->{'kvm_disktotal'} ne '' &&
-	    (!$disk->{'device'} || $disk->{'lv'})) {
-		$server->{'kvm_disktotal'} -= $olddisk->{'size'};
-		$server->{'kvm_disktotal'} += $disk->{'size'};
-		}
-	}
-
-if ($disk->{'virt'} ne $olddisk->{'virt'} && !$moderr) {
+if ($disk->{'virt'} ne $olddisk->{'virt'}) {
 	# Change the virtual device, both in the Xen config file and fstab
+	if ($olddisk->{'virt_mount'} =~ /(\d+)$/) {
+		$disk->{'virt_mount'} = $disk->{'virt'}.$1;
+		}
 
-	# Fix the Xen config
-	my $disks = &kvm_find_value("disk", $conf);
-	my $suffix = $disk->{'suffix'};
-	my $oldshort = $olddisk->{'virt'};
-	$oldshort =~ s/^\/dev\///;
-	foreach my $d (@$disks) {
-		if ($d =~ /^\Q$suffix\E:\Q$disk->{'real'}\E,\Q$oldshort\E,(.*)$/) {
-			my $short = $disk->{'virt'};
-			$short =~ s/^\/dev\///;
-			$d = "$suffix:$disk->{'real'},$short,$1";
-			}
+	# Fix disk in config
+	my @drives = split(/\s+/, $server->{'kvm_drives'});
+	my %drive = map { split(/=/, $_, 2) }
+			split(/,/, $drives[$disk->{'drive_index'}]);
+	if ($disk->{'virt'} =~ /([hs])d([a-z])$/) {
+		$drive{'index'} = ord($2)-97;
 		}
-	&kvm_save_directive($conf, "disk", $disks);
-	my $err = &put_kvm_config($server, $conf);
-	if ($err) {
-		$moderr = "Failed to save Xen config : $err";
-		}
+	$drives[$disk->{'drive_index'}] =
+		join(",", map { $_."=".$drive{$_} } keys %drive);
+	$server->{'kvm_drives'} = join(" ", @drives);
+	&save_managed_server($server);
+	&type_kvm_set_atboot($server, 2);
 
 	# Update fstab, if in there
-	if ($server->{'status'} ne 'alive' && !$moderr) {
+	if ($server->{'status'} ne 'alive') {
 		my $fstab = &get_system_fstab($server);
 		if (!ref($fstab)) {
 			$moderr = "Failed to read fstab file : $fstab";
 			}
 		else {
-			my ($f) = grep { $_->[0] eq $olddisk->{'virt'} }
+			my ($f) = grep { $_->[0] eq $olddisk->{'virt_mount'} }
 				       @$fstab;
 			if ($f) {
-				$f->[0] = $disk->{'virt'};
+				$f->[0] = $disk->{'virt_mount'};
 				my $err = &put_system_fstab($server, $fstab);
 				$moderr = "Failed to update fstab file : $err"
 					if ($err);
 				}
 			}
-		}
-	}
-
-# If it was connected before, re-connect it now
-if ($connected) {
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	    "xm block-attach $kvmid $disk->{'suffix'}:$disk->{'real'} ".
-	    "$disk->{'virt'} w");
-	if ($err || $ex) {
-		return "Failed to attach $disk->{'virt'} : ".($err || $out);
 		}
 	}
 
