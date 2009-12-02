@@ -319,21 +319,11 @@ if (&can_action(undef, "ips")) {
 		}
 	}
 
-# Warn the user if we have no DNS zone
-if (@vhosts == 1 && $module_info{'onehost'} eq 'kvm' &&
-    !$vhosts[0]->{'kvm_zone'}) {
-	$rv .= &ui_table_row(" ",
-		"<font color=#ff000>".
-		&text('create_xendnswarn',
-		      "../config.cgi?$module_name", "../bind8/").
-		"</font>");
-	}
-
 return $rv;
 }
 
 # type_kvm_limits_create_form()
-# Returns HTML for Xen-specific inputs related to CPU, RAM and disk limits
+# Returns HTML for KVM-specific inputs related to RAM and disk
 sub type_kvm_limits_create_form
 {
 my $rv;
@@ -355,6 +345,384 @@ $rv .= &ui_table_row($text{'create_xendisksize'},
 	&ui_opt_textbox("kvm_disk", undef, 8,$text{'create_xendiskdef'})." MB");
 
 return $rv;
+}
+
+# type_kvm_create_parse(&server, &in)
+# Parse inputs from type_kvm_create_form, and update the server object
+sub type_kvm_create_parse
+{
+my ($server, $in) = @_;
+
+# Select host system
+my $vhost = &parse_host_server_field($server, 'kvm', 'kvm', $in);
+$server->{'kvm_on'} = $vhost->{'id'};
+
+# Make sure the hostname doesn't contain a ., or clashes
+$in->{'host'} =~ /\./ && &error($text{'create_ekvmhost'});
+
+if (!$in->{'kvm_ip_def'} && &can_action(undef, "ips")) {
+	# Validate IP addresses
+	my @allhostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+	if (!@allhostifaces) {
+		# No host interfaces set, so just assume default
+		@allhostifaces = ( '*' );
+		}
+
+	# Work out prefix for inputs
+	my $pfx;
+	if ($in->{'kvm_max_hostifaces'} <= 1) {
+		$pfx = '';	# None needed
+		}
+	elsif ($in->{'kvm_def'} == 1) {
+		$pfx = 'loc_';
+		}
+	else {
+		$pfx = $vhost->{'id'}.'_';
+		}
+
+	my (@ips, @cidrs, @gws, @hostifaces);
+	for(my $i=0; defined($in->{$pfx."kvm_ip_$i"}); $i++) {
+		next if (!$in->{$pfx."kvm_ip_$i"});
+		&check_ipaddress($in->{$pfx."kvm_ip_$i"}) ||
+			&error($text{'create_ekvmip'});
+		push(@ips, $in{$pfx."kvm_ip_$i"});
+		&check_ipaddress($in->{$pfx."kvm_netmask_$i"}) ||
+			&error($text{'iface_enetmask'});
+		push(@cidrs, &net::mask_to_prefix(
+				$in->{$pfx."kvm_netmask_$i"}));
+		if ($in{$pfx."kvm_gw_${i}_def"}) {
+			push(@gws, "*");
+			}
+		else {
+			&check_ipaddress($in{$pfx."kvm_gw_$i"}) ||
+				 &error($text{'create_exengw'});
+			push(@gws, $in{$pfx."kvm_gw_$i"});
+			}
+		push(@hostifaces, $allhostifaces[$i]);
+		}
+	@ips || &error($text{'create_exenips'});
+	scalar(@ips) <= scalar(@allhostifaces) ||
+		&error(&text('create_exenifaces2', $vhost->{'host'},
+			     scalar(@allhostifaces), scalar(@ips)));
+	$server->{'kvm_hostifaces'} = join(' ', @hostifaces);
+	$server->{'kvm_ip'} = join(' ', @ips);
+	$server->{'kvm_cidr'} = join(' ', @cidrs);
+	$server->{'kvm_gw'} = join(' ', @gws);
+	}
+else {
+	# Allocate the IP now, by looking for one that isn't pingable or
+	# use by any system
+	my $err = &allocate_kvm_ip_addresses($server, $vhost);
+	&error($err) if ($err);
+	}
+
+# Validate memory parameters
+$in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
+$server->{'kvm_memory'} = $in{'kvm_memory'};
+
+# Validate disk size
+if (!$in{'kvm_disk_def'}) {
+	$in{'kvm_disk'} =~ /^\d+$/ || &error($text{'create_exendisksize'});
+	$server->{'kvm_disksize'} = $in{'kvm_disk'};
+	$server->{'kvm_disktotal'} = $in{'kvm_disk'}*1024*1024;
+	if ($img->{'rawsize'} &&
+	    $img->{'rawsize'} > $in{'kvm_disk'}*1024*1024) {
+		&error(&text('create_exendisksize2',
+			     &nice_size($img->{'rawsize'})));
+		}
+	}
+else {
+	my $img = &get_server_image($server->{'image'});
+	$server->{'kvm_disktotal'} = $img->{'rawsize'};
+	}
+
+# Append zone name
+my @zones = &list_bind_zones();
+my $zone;
+if ($vhost->{'kvm_zone'}) {
+	($zone) = grep { $_->{'name'} eq $vhost->{'kvm_zone'} } @zones;
+	}
+if ($zone) {
+	$server->{'host'} .= ".".$vhost->{'kvm_zone'};
+	}
+}
+
+# type_kvm_create_args()
+# Returns an array of parameters to type_kvm_create_args_parse
+sub type_kvm_create_args
+{
+return ( { 'name' => 'host', 'value' => 'host-system' },
+	 { 'name' => 'location', 'value' => 'name' },
+	 { 'name' => 'ip', 'value' => 'address[,address]', 'opt' => 1 },
+	 { 'name' => 'cidr', 'value' => 'number[,number]', 'opt' => 1 },
+	 { 'name' => 'netmask', 'value' => 'mask,[mask]', 'opt' => 1 },
+	 { 'name' => 'gw', 'value' => 'address[,address|*]', 'opt' => 1 },
+	 { 'name' => 'bridge', 'value' => 'name[,name]', 'opt' => 1 },
+	 { 'name' => 'disksize', 'value' => 'megabytes', 'opt' => 1 },
+	 { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
+       );
+}
+
+# type_kvm_create_args_parse(&args, &server)
+# Update a server object with parsed command-line args
+sub type_kvm_create_args_parse
+{
+my ($args, $server) = @_;
+
+# Hosting server
+my $vhost;
+if ($args->{'host'}) {
+	# Use a specific host
+	($vhost) = grep { $_->{'host'} eq $args->{'host'} }
+			      &list_managed_servers();
+	$vhost || return "KVM host system $args->{'host'} does not exist";
+	}
+elsif ($args->{'location'}) {
+	# Select a host from the location
+	my ($loc) = grep { $_->{'id'} eq $args->{'location'} ||
+			   $_->{'desc'} eq $args->{'location'} }
+			 &list_locations();
+	$loc || return "Location $args->{'location'} does not exist";
+	$vhost = &find_host_from_location($server, $loc, 'kvm');
+	$vhost || return "Failed to select host system from location";
+	}
+else {
+	# Use default host
+	($vhost) = grep { $_->{'kvm_default'} } &list_managed_servers();
+	$vhost || return "Missing --kvm-host";
+	}
+$vhost->{'kvm_host'} ||
+	return "System $args->{'host'} is not registered to host KVM instances";
+$server->{'kvm_on'} = $vhost->{'id'};
+
+# Xen instance name
+$server->{'host'} =~ /\./ && return "KVM hostnames cannot contain .";
+
+if ($args->{'ip'}) {
+	# Make sure IPs are valid
+	my @ips = split(/[, ]+/, $args->{'ip'});
+	foreach my $ip (@ips) {
+		&check_ipaddress($ip) || return "Invalid KVM IP address $ip";
+		}
+	my @cidrs;
+	if ($args->{'cidr'}) {
+		@cidrs = split(/[, ]+/, $args->{'cidr'});
+		foreach my $cidr (@cidrs) {
+			$cidr =~ /^\d+$/ && $cidr > 0 && $cidr <= 32 ||
+				return "Invalid KVM CIDR $cidr";
+			}
+		}
+	elsif ($args->{'netmask'}) {
+		foreach my $nm (split(/[, ]+/, $args->{'netmask'})) {
+			&check_ipaddress($nm) ||
+				return "Invalid KVM netmask $nm";
+			push(@cidrs, &net::mask_to_prefix($nm));
+			}
+		}
+	else {
+		return "Missing --kvm-cidr or --kvm-netmask flags";
+		}
+	scalar(@ips) == scalar(@cidrs) ||
+		return "The number of IPs must match the number of CIDRs";
+	if ($args->{'bridge'}) {
+		# Bridges set explicitly
+		my @hostifaces = split(/[, ]+/, $args->{'bridge'});
+		scalar(@ips) == scalar(@hostifaces) ||
+		    return "The number of IPs must match the number of bridges";
+		$server->{'kvm_hostifaces'} = join(' ', @hostifaces);
+		}
+	else {
+		# Automatically determine from host system
+		my @hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+		if (!@hostifaces) {
+			# No host interfaces set, so just assume default
+			$server->{'kvm_hostifaces'} = '*';
+			@ips == 1 ||
+			    return "Host system $vhost->{'host'} does not ".
+				   "have any bridges set, so only one IP ".
+				   "address can be specified";
+			}
+		else {
+			scalar(@ips) <= scalar(@hostifaces) ||
+			    return "Host system $vhost->{'host'} only has ".
+				   scalar(@hostifaces)." bridges set, but you ".
+				   "specified ".scalar(@ips)." IP addresses";
+			$server->{'kvm_hostifaces'} =
+				join(' ', @hostifaces[0..$#ips]);
+			}
+		}
+	$server->{'kvm_ip'} = join(' ', @ips);
+	$server->{'kvm_cidr'} = join(' ', @cidrs);
+
+	# Gateway IPs
+	if ($args->{'gw'}) {
+		# Set on command line
+		my @gws = split(/[, ]+/, $args->{'gw'});
+		foreach my $gw (@gws) {
+			$gw eq '*' || &check_ipaddress($gw) ||
+				return "Invalid gateway IP address $gw";
+			}
+		scalar(@ips) == scalar(@gws) ||
+		  return "The number of IPs must match the number of gateways";
+		$server->{'kvm_gw'} = join(' ', @gws);
+		}
+	else {
+		# Assume all are using default
+		$server->{'kvm_gw'} = join(' ', map { "*" } @ips);
+		}
+	}
+else {
+	# Allocate IP automatically
+	my $err = &allocate_kvm_ip_addresses($server, $vhost);
+	&error($err) if ($err);
+	}
+
+# Adjust hostname for DNS
+my @zones = &list_bind_zones();
+my $zone;
+if ($vhost->{'kvm_zone'}) {
+	($zone) = grep { $_->{'name'} eq $vhost->{'kvm_zone'} } @zones;
+	}
+if ($zone) {
+	$server->{'host'} .= ".".$vhost->{'kvm_zone'};
+	}
+
+# Validate memory flags
+if ($args->{'memory'}) {
+	$args->{'memory'} =~ /^\d+$/ || return "Non-numeric memory allocation";
+	$server->{'kvm_memory'} = $args->{'memory'};
+	}
+else {
+	$server->{'kvm_memory'} = $config{'kvm_mem'};
+	}
+
+# Validate filesystem size flag
+if ($args->{'disksize'}) {
+	$args->{'disksize'} =~ /^\d+$/ ||
+		return "Non-numeric disk size";
+	$server->{'kvm_disksize'} = $args->{'disksize'};
+	if ($img->{'rawsize'} &&
+	    $img->{'rawsize'} > $args->{'disksize'}*1024*1024) {
+		return "--kvm-disksize must be at least $img->{'rawsize'} ".
+		       "bytes, as that is the size of the selected image";
+		}
+	}
+else {
+	my $img = &get_server_image($server->{'image'});
+	$server->{'kvm_disktotal'} += $img->{'rawsize'};
+	}
+
+# Validate LVM flag
+if ($args->{'lvm'} =~ /true|yes/i) {
+	$vhost->{'kvm_vg'} ||
+		return "Host system $vhost->{'host'} does not use LVM";
+	}
+elsif ($args->{'lvm'} =~ /false|no/i) {
+	$server->{'kvm_nolvm'} = 1;
+	}
+
+return undef;
+}
+
+# type_kvm_create(&server, [serial, key], [reset])
+# Create a new KVM instance, by unzipping the filesystem image in the background
+sub type_kvm_create
+{
+my ($server, $serial, $key, $reset) = @_;
+my $vhost = &type_kvm_parent($server);
+my $img = &get_server_image($server->{'image'});
+
+# Create base dir if needed
+if (!-d $vhost->{'kvm_dir'}) {
+	&make_dir($vhost->{'kvm_dir'}, 0755, 1);
+	}
+
+# Work out the config and image file locations
+my ($fsfile, $swfile, $lvmsuffix);
+if ($reset) {
+	# Filesystem remains the same
+	$fsfile = $server->{'kvm_filesystem'};
+	}
+elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
+	# On LVM logical volumes
+	$server->{'kvm_filesystem_vg'} = $vhost->{'kvm_vg'};
+	$server->{'kvm_filesystem_lv'} = $server->{'host'}.'_img';
+	$server->{'kvm_filesystem_lv'} =~ s/\./_/g;
+	$fsfile = "/dev/".$server->{'kvm_filesystem_vg'}."/".
+		  $server->{'kvm_filesystem_lv'};
+	}
+else {
+	# On regular files
+	$fsfile = "$vhost->{'kvm_dir'}/$server->{'host'}.img";
+	}
+$server->{'kvm_filesystem'} = $fsfile;
+
+# Work out interface parameters, create networking config
+my @ips = split(/\s+/, $server->{'kvm_ip'});
+my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
+my @gws = split(/\s+/, $server->{'kvm_gw'});
+$server->{'kvm_net'} = join(" ", map { "tap" } @ips);
+
+# Set drive in config
+$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,if=ide";
+
+# If on an LVM, create it first
+$last_remote_error = undef;
+if ($server->{'kvm_filesystem_vg'}) {
+	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+	my $lv = { 'name' => $server->{'kvm_filesystem_lv'},
+		      'size' => int($server->{'kvm_disksize'}*1024) ||
+				int($img->{'rawsize'}/1024) ||
+				1024*1024,
+		      'perm' => 'rw',
+		      'alloc' => 'n',
+		      'vg' => $server->{'kvm_filesystem_vg'} };
+	if ($reset) {
+		# Delete the old LV
+		my $err = &remote_foreign_call($vhost, "lvm",
+				     "delete_logical_volume",
+				     { 'device' => $fsfile });
+		$err ||= $last_remote_error;
+		return "LVM logical volume deletion failed : $err" if ($err);
+		}
+	my $err = &remote_foreign_call($vhost, "lvm",
+					  "create_logical_volume", $lv);
+	$err ||= $last_remote_error;
+	return "LVM logical volume creation failed : $err" if ($err);
+	}
+
+# Put the image into place, in the background
+my @imgfiles = split(/\s+/, $img->{'files'});
+my $imgfile = "$server->{'imagetemp'}/$imgfiles[0]";
+my $temp = "/tmp/$$.$server->{'host'}.gunzip";
+$server->{'kvm_temp'} = $temp;
+if (!$img->{'nocompress'}) {
+	# Need to un-compress the image
+	my $writer = $fsfile =~ /^\/dev\// ?
+			"| dd of=".quotemeta($fsfile)." bs=32768" :
+			"> ".quotemeta($fsfile);
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
+		" echo SERVER-MANAGER-COMPLETE || echo SERVER-MANAGER-FAILED)".
+		" >$temp 2>&1 </dev/null &");
+	}
+else {
+	my $cmd;
+	if ($fsfile =~ /^\/dev\//) {
+		# DD directly into LVM
+		$cmd = "dd if=$imgfile of=$fsfile bs=32768";
+		}
+	else {
+		# Can just move or copy
+		$cmd = $server->{'imagelocal'} ? "cp" : "mv";
+		$cmd .= " ".quotemeta($imgfile);
+		$cmd .= " ".quotemeta($fsfile);
+		}
+	$cmd = "($cmd && echo SERVER-MANAGER-COMPLETE || echo SERVER-MANAGER-FAILED) >$temp 2>&1 </dev/null &";
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
+	}
+
+return undef;
 }
 
 # type_kvm_reboot(&server)
@@ -2116,6 +2484,48 @@ sub kvm_instance_chooser_button
 my ($ifield, $hfield) = @_;
 return "<input type=button onClick='ifield = form.$ifield; chooser = window.open(\"kvm_chooser.cgi?host=\"+escape(form.$hfield.value), \"chooser\", \"toolbar=no,menubar=no,scrollbar=no,width=600,height=300\"); chooser.ifield = ifield; window.ifield = ifield' value=\"...\">\n";
 }
+
+# allocate_kvm_ip_addresses(&server, &vhost)
+# Allocate one or more IP addresses for a KVM instance from the host's ranges.
+# On success, returns undef and sets kvm_ip, kvm_cidr and kvm_iface to space-
+# separated lists. On failure returns an error message.
+sub allocate_kvm_ip_addresses
+{
+my ($server, $vhost) = @_;
+
+# Work out interfaces on host system
+my @hostifaces;
+if ($vhost->{'kvm_iface'}) {
+	@hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+	}
+else {
+	@hostifaces = ( "*" );
+	}
+
+# For each, allocate an IP from a range
+foreach my $iface (@hostifaces) {
+	my ($ip, $cidr, $gw) = &allocate_ip_address(
+		$vhost->{'kvm_start'}, $vhost->{'kvm_end'},
+	        $vhost->{'kvm_cidr'}, $vhost->{'kvm_gws'},
+		$vhost->{'kvm_ifaces'}, $iface);
+	$ip || return &text('create_ekvmalloc', $vhost->{'host'},
+			    &describe_ip_range($vhost->{'kvm_start'},
+					       $vhost->{'kvm_end'},
+					       $vhost->{'kvm_cidr'},
+                                               $vhost->{'kvm_ifaces'},
+                                               $iface));
+	push(@ips, $ip);
+	push(@cidrs, $cidr);
+	push(@gws, $gw || "*");
+	}
+$server->{'kvm_ip'} = join(" ", @ips);
+$server->{'kvm_cidr'} = join(" ", @cidrs);
+$server->{'kvm_hostifaces'} = join(" ", @hostifaces);
+$server->{'kvm_gw'} = join(" ", @gws);
+return undef;
+}
+
+
 
 1;
 
