@@ -183,6 +183,180 @@ my @nets = ref($got->{'args'}->{'net'}) ? @{$got->{'args'}->{'net'}}
 $server->{'kvm_net'} = join(" ", grep { /^tap/ } @nets);
 }
 
+# type_kvm_create_form()
+# Returns HTML for KVM-specific inputs
+sub type_kvm_create_form
+{
+my $rv;
+
+# Check if any vhosts have more than one bridge
+my @vhosts = grep { $_->{'kvm_host'} && &can_host_server($_) }
+		     &list_managed_servers();
+my $max_hostifaces = 0;
+foreach my $vhost (@vhosts) {
+	my @hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+	if (scalar(@hostifaces) > $max_hostifaces) {
+		$max_hostifaces = scalar(@hostifaces);
+		}
+	}
+
+# KVM host system
+my ($hostf, $hostjs);
+if (@vhosts == 1 && $module_info{'onehost'} eq 'kvm') {
+	# Can only be hosted locally
+	$rv .= &ui_hidden("kvm_on", $vhosts[0]->{'id'});
+	}
+else {
+	($hostf, $hostjs) = &show_host_server_field($text{'add_kvmhost'},
+						   "kvm", "kvm", "host_change");
+	$rv .= $hostf;
+	}
+
+# IP addresses
+if (&can_action(undef, "ips")) {
+	my $nm = "255.255.255.0";
+	if ($max_hostifaces <= 1) {
+		# No host system has more than one bridge
+		$rv .= &ui_table_row($text{'create_kvmip'},
+			&ui_radio("kvm_ip_def", 1,
+			  [ [ 1, $text{'create_xenipauto'} ],
+			    [ 0, &text('create_xenipman',
+				       &ui_textbox("kvm_ip_0", undef, 20),
+				       &ui_textbox("kvm_netmask_0", $nm, 15))
+			    ] ]));
+
+		# Default gateway
+		$rv .= &ui_table_row($text{'create_xengw'},
+			&ui_opt_textbox("kvm_gw_0", undef, 20,
+					$text{'create_xengwdef'},
+					$text{'create_xengwip'}));
+		}
+	else {
+		# Some hosts have more than one .. need to make IP allocation
+		# section dynamic
+		my $itable;
+		$itable .= "<style>\n";
+		$itable .= ".opener_shown {display:inline}\n";
+		$itable .= ".opener_hidden {display:none}\n";
+		$itable .= "</style>\n";
+		$itable .= &ui_hidden("kvm_max_hostifaces", $max_hostifaces);
+
+		# Add a hidden section for each host, with a row for each
+		# of its interfaces
+		my @locs = &list_vhost_locations(\@vhosts);
+		my $style = @locs ? "opener_hidden" : "opener_shown";
+		foreach my $vhost (@vhosts) {
+			my $vtable = &ui_columns_start([
+				$text{'create_xenifacecol'},
+				$text{'create_xenipcol'},
+				$text{'create_xennetmaskcol'},
+				$text{'create_xengwcol'}]);
+			my @ifaces = split(/\s+/, $vhost->{'kvm_iface'});
+			if (!@ifaces) {
+				@ifaces = ( $text{'create_xenifacedef'} );
+				}
+			my $id = $vhost->{'id'};
+			for(my $i=0; $i<@ifaces; $i++) {
+				$vtable .= &ui_columns_row([
+				  $ifaces[$i],
+				  &ui_textbox("${id}_kvm_ip_$i", undef, 15),
+				  &ui_textbox("${id}_kvm_netmask_$i", $nm, 15),
+				  &ui_opt_textbox("${id}_kvm_gw_$i", undef, 15,
+						  $text{'create_xengwdef'}),
+				  ]);
+				}
+			$vtable .= &ui_columns_end();
+			$itable .= "<div style=$style ".
+				   "id=$vhost->{'id'}>".$vtable."</div>\n";
+			}
+
+		# Add a section for when a location group is chosen, if any.
+		# This has a row for every possible bridge.
+		if (&can_select_host_location() && @locs) {
+			my $vtable = &ui_columns_start([
+				$text{'create_xenifacecol'},
+				$text{'create_xenipcol'},
+				$text{'create_xennetmaskcol'},
+				$text{'create_xengwcol'}]);
+			for(my $i=0; $i<$max_hostifaces; $i++) {
+				$vtable .= &ui_columns_row([
+				  &text('create_xenbr', $i),
+				  &ui_textbox("loc_kvm_ip_$i", undef, 15),
+				  &ui_textbox("loc_kvm_netmask_$i", $nm, 15),
+				  &ui_opt_textbox("loc_kvm_gw_$i", undef, 15,
+						  $text{'create_xengwdef'}),
+				  ]);
+				}
+			$vtable .= &ui_columns_end();
+			$itable .= "<div style=opener_shown ".
+				   "id=loc>".$vtable."</div>\n";
+			}
+
+		$rv .= &ui_table_row($text{'create_kvmip2'},
+			&ui_radio("kvm_ip_def", 1,
+				  [ [ 1, $text{'create_xenipauto'} ],
+				    [ 0, $text{'create_xenipman2'}."<br>\n".
+					 $itable ] ]));
+
+		# Javascript for host change
+		$rv .= "<script>\n";
+		$rv .= "function host_change(id)\n";
+		$rv .= "{\n";
+		foreach my $vhost (@vhosts) {
+			$rv .= "var divobj = ".
+			       "document.getElementById('$vhost->{'id'}');\n";
+			$rv .= "divobj.className = id == '$vhost->{'id'}' ? ".
+			       "'opener_shown' : 'opener_hidden';\n";
+			}
+		$rv .= "var divobj = document.getElementById('loc');\n";
+		$rv .= "if (divobj) {\n";
+		$rv .= "    divobj.className = id == 'loc' ? 'opener_shown' : ".
+		       "'opener_hidden';\n";
+		$rv .= "    }\n";
+		$rv .= "}\n";
+		$rv .= $hostjs;
+		$rv .= "</script>\n";
+		}
+	}
+
+# Warn the user if we have no DNS zone
+if (@vhosts == 1 && $module_info{'onehost'} eq 'kvm' &&
+    !$vhosts[0]->{'kvm_zone'}) {
+	$rv .= &ui_table_row(" ",
+		"<font color=#ff000>".
+		&text('create_xendnswarn',
+		      "../config.cgi?$module_name", "../bind8/").
+		"</font>");
+	}
+
+return $rv;
+}
+
+# type_kvm_limits_create_form()
+# Returns HTML for Xen-specific inputs related to CPU, RAM and disk limits
+sub type_kvm_limits_create_form
+{
+my $rv;
+
+# Physical memory
+my $limits = defined(&get_owner_limits) ? &get_owner_limits() : undef;
+my $defmem = $config{'kvm_mem'}*1024*1024;
+my $mem = $defmem;
+if ($limits && $limits->{'max_ram'}) {
+	$mem = $limits->{'max_ram'} - $limits->{'ram'};
+	$mem = $defmem if ($mem > $defmem);
+	$mem = 128*1024*1024 if ($ram < 128*1024*1024);
+	}
+$rv .= &ui_table_row($text{'create_xenmemory'},
+	&ui_textbox("kvm_memory", int($mem/(1024*1024)), 8)." MB");
+
+# Filesystem size
+$rv .= &ui_table_row($text{'create_xendisksize'},
+	&ui_opt_textbox("kvm_disk", undef, 8,$text{'create_xendiskdef'})." MB");
+
+return $rv;
+}
+
 # type_kvm_reboot(&server)
 # SSH in and reboot if possible, or kill and restart
 sub type_kvm_reboot
@@ -1413,6 +1587,64 @@ elsif (!$server->{'kvm_vg'}) {
 	delete($server->{'kvm_vg_used'});
 	delete($server->{'kvm_vg_free'});
 	}
+}
+
+# type_kvm_edit_form(&server)
+# Show information about some Xen system
+sub type_kvm_edit_form
+{
+my ($server) = @_;
+my $rv;
+
+# Hosted on
+my $vhost = &type_kvm_parent($server);
+$rv .= &ui_table_row($text{'edit_kvmhost'},
+	&can_action($vhost, "view") ?
+	     "<a href='edit_serv.cgi?id=$vhost->{'id'}'>$vhost->{'host'}</a>" :
+	     $vhost->{'host'});
+
+# KVM process ID
+my $proc = &get_server_kvm_instance($server);
+if ($proc) {
+	$rv .= &ui_table_row($text{'edit_kvmpid'}, $proc->{'pid'});
+	}
+
+return $rv;
+}
+
+# type_kvm_server_info(&server)
+# Returns an array of information for list-systems.pl to display
+sub type_kvm_server_info
+{
+my ($server) = @_;
+my @rv;
+my $vhost = &type_kvm_parent($server);
+push(@rv, [ "Hosted on", $vhost->{'host'} ]);
+my $proc = &get_server_kvm_instance($server);
+if ($proc) {
+	push(@rv, [ "KVM process ID", $proc->{'pid'} ]);
+	}
+if ($server->{'kvm_disktotal'}) {
+	push(@rv, [ "KVM total disk size",
+		    &nice_size($server->{'kvm_disktotal'}) ]);
+	}
+return @rv;
+}
+
+# type_kvm_server_host_info(&server)
+# Returns an array of information for list-systems.pl to display, for a KVM
+# host system
+sub type_kvm_server_host_info
+{
+my ($server) = @_;
+my @rv;      
+if ($server->{'kvm_vg_total'}) {
+	push(@rv, [ "LVM disk space",
+		    &nice_size($server->{'kvm_vg_total'}) ]);
+	push(@rv, [ "LVM disk space free",
+		    &nice_size($server->{'kvm_vg_free'}) ]);
+	}
+return @rv;
 }
 
 # type_kvm_get_atboot(&server)
