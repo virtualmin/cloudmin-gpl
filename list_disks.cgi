@@ -11,7 +11,8 @@ if (&foreign_check("mount")) {
 	}
 
 # Get disks or die
-$disks = &type_xen_list_disks($server);
+$dfunc = "type_".$server->{'manager'}."_list_disks";
+$disks = &$dfunc($server);
 ref($disks) || &error(&text('disks_eget', $disks));
 
 &ui_print_header(&server_in($server), $text{'disks_title'}, "", "disks");

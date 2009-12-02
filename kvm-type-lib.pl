@@ -230,10 +230,16 @@ my $vhost = &type_kvm_parent($server);
 my $cmd = &get_kvm_start_command($server);
 my ($pinged, $sshed);
 
+# Create a console output file
+if (!$server->{'kvm_console'}) {
+	$server->{'kvm_console'} = $server->{'kvm_filesystem'};
+	$server->{'kvm_console'} =~ s/([^\/]+)$//;
+	$server->{'kvm_console'} .= $server->{'host'}.".console";
+	}
+
 # Run qemu-kvm to start it up, in the background
-my $temp = &tempname_on_server($vhost);
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-				"$cmd >$temp 2>&1 </dev/null &");
+			"$cmd >$server->{'kvm_console'} 2>&1 </dev/null &");
 return (0, $err) if ($err);
 return (0, $out) if ($ex);
 
@@ -252,8 +258,7 @@ while($tries++ < 5) {
 	}
 
 # Read the output file
-my $out = &get_file_data_from_server($vhost, $temp);
-&delete_file_on_server($vhost, $temp);
+my $out = &get_file_data_from_server($vhost, $server->{'kvm_console'});
 if (!$found) {
 	return (0, $out);
 	}
@@ -302,6 +307,21 @@ if (defined($sshed) && !$sshed) {
 return (1, undef);
 }
 
+# type_kvm_get_console_output(&server)
+# Returns a status code and text displayed during the KVM boot (if status is 1),
+# or an error message (if 0)
+sub type_kvm_get_console_output
+{
+my ($server) = @_;
+if (!$server->{'kvm_console'}) {
+	return (0, "No console messages were captured at boot time");
+	}
+my $vhost = &type_kvm_parent($server);
+my $out = &get_file_data_from_server($vhost, $server->{'kvm_console'});
+$out =~ s/SERVER-MANAGER-COMPLETE\r?\n//;
+return $out ? (1, $out) : (0, "No console messages were found");
+}
+
 # type_kvm_delete(&server)
 # Delete a KVM instance
 sub type_kvm_delete
@@ -343,6 +363,11 @@ if (ref($disks)) {
 
 # Delete boot-time entry
 &type_kvm_set_atboot($server, 0);
+
+# Delete console file
+if ($server->{'kvm_console'}) {
+	&delete_file_on_server($vhost, $server->{'kvm_console'});
+	}
 
 # Remove the DNS entry, if we created one
 &delete_bind8_record($server->{'kvm_dns'}, $vhost->{'kvm_zone'},
@@ -539,6 +564,420 @@ if ($mounts == 2 && &can_ssh_status($server)) {
 	}
 
 return \@rv;
+}
+
+# type_kvm_need_disk_reboot(&server, &disk)
+# A reboot is always needed, to apply the new command line
+sub type_kvm_need_disk_reboot
+{
+my ($server, $disk) = @_;
+return 1;
+}
+
+# type_kvm_new_disk(&server, &disks, real?)
+# Returns a structure for a new disk on some KVM system
+sub type_kvm_new_disk
+{
+my ($server, $disks, $device) = @_;
+my $rv = { };
+
+# Find which device files are used
+my %used;
+foreach my $d (@$disks) {
+	$used{$d->{'virt'}}++;
+	}
+
+# Pick a /dev/???? file that is free on the virtual system
+my $n;
+if ($disks->[0]->{'virt'} =~ /^(\/dev\/[sh]d)[a-z]$/) {
+	# System uses whole disks! Pick a free partition on the next disk
+	$prefix = $1;
+	for($n='a'; $used{$prefix.$n}; $n=chr(ord($n)+1)) { }
+	$prefix .= $n;
+	$rv->{'virt'} = $prefix;
+	}
+else {
+	# No idea .. just guess
+	$rv->{'virt'} = "/dev/hdb";
+	}
+$rv->{'virt_mount'} = $rv->{'virt'}."1";
+
+if (!$device) {
+	my $vhost = &type_kvm_parent($server);
+	if ($server->{'kvm_filesystem_vg'}) {
+		# Create an LVM name
+		$rv->{'vg'} = $server->{'kvm_filesystem_vg'};
+		$rv->{'lv'} = $server->{'kvm'}."_".(scalar(@$disks)+1)."_img";
+		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
+		}
+	else {
+		# Pick an image file
+		$rv->{'real'} = "$vhost->{'kvm_dir'}/$server->{'host'}.".
+				(scalar(@$disks)+1).".img";
+		}
+	}
+$rv->{'device'} = $device;
+return $rv;
+}
+
+# type_kvm_create_disk(&server, &disk)
+# Adds a new virtual disk to a KVM system's config.
+# If this is a real file that doesn't exist yet, create it and optionally mkfs
+# it. Also add to the /etc/fstab file, if requested.
+sub type_kvm_create_disk
+{
+my ($server, $disk) = @_;
+my $vhost = &type_kvm_parent($server);
+
+my @st = &stat_file_on_server($vhost, $disk->{'real'});
+if ($disk->{'device'} && !$disk->{'lv'}) {
+	# Check if the device exists
+	@st || return "Device $disk->{'real'} does not exist ".
+		      "on $vhost->{'host'}";
+	}
+else {
+	if ($disk->{'lv'}) {
+		# Create the logical volume
+		$last_remote_error = undef;
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+		my $lv = { 'name' => $disk->{'lv'},
+			      'size' => int($disk->{'size'}/1024),
+			      'perm' => 'rw',
+			      'alloc' => 'n',
+			      'vg' => $disk->{'vg'} };
+		my $err = &remote_foreign_call($vhost, "lvm",
+						  "create_logical_volume", $lv);
+		$err ||= $last_remote_error;
+		return "LVM logical volume creation failed : $err" if ($err);
+		}
+	elsif (!@st) {
+		# Create the file if missing
+		$disk->{'size'} || return "File $disk->{'real'} does not exist on $vhost->{'host'}, but no size to create it as was given";
+		my $cmd = "dd if=/dev/zero of=".quotemeta($disk->{'real'}).
+			     " bs=1024 count=".int($disk->{'size'}/1024);
+		my ($out, $ex, $err) = &execute_command_on_server(
+						$vhost,$cmd);
+		$err = $out if ($ex);
+		$err && return "Failed to create file $disk->{'real'} : $err";
+		}
+
+	# Create partition on it
+	my $fdisktemp = &transname();
+	&open_tempfile(FDISK, ">$fdisktemp");
+	&print_tempfile(FDISK, "n\n");	# New partition
+	&print_tempfile(FDISK, "p\n");	# Primary
+	&print_tempfile(FDISK, "1\n");	# First partition
+	&print_tempfile(FDISK, "\n");	# Default start
+	&print_tempfile(FDISK, "\n");	# Default size (whole disk)
+	&print_tempfile(FDISK, "w\n");	# Write out
+	&close_tempfile(FDISK);
+	my $fdisktempdest = &tempname_on_server($vhost);
+	my $err = &put_file_to_server($vhost, $fdisktemp, $fdisktempdest);
+	$err && return "Failed to upload fdisk input file : $err";
+	&unlink_file($fdisktemp);
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+				"fdisk -u -C 512 ".quotemeta($disk->{'real'}).
+				" <$fdisktempdest");
+	print STDERR "ex=$ex err=$err\n";
+	&delete_file_on_server($vhost, $fdisktempdest);
+	if ($out !~ /has\s+been\s+altered/i) {
+		return "Failed to create partition : ".($err || $out);
+		}
+
+	# And make a filesystem on the new partition
+	# XXX
+	if (!@st && $disk->{'fs'}) {
+		my $err = &create_device_filesystem(
+			$vhost, $disk->{'real'}, $disk->{'fs'});
+		$err && return "Failed to create ".uc($disk->{'fs'}).
+			       " filesystem : $err";
+		}
+	}
+
+# Add the disk to the KVM config
+my @drives = split(/\s+/, $server->{'kvm_drives'});
+my %drive = ( 'file' => $disk->{'real'},
+	      'media' => 'disk' );
+if ($disk->{'virt'} =~ /sd[a-z]+$/) {
+	$drive{'if'} = 'scsi';
+	}
+else {
+	$drive{'if'} = 'ide';
+	}
+if ($disk->{'virt'} =~ /([hs])d([a-z])$/) {
+	$drive{'index'} = ord($2)-97;
+	}
+push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
+$server->{'kvm_drives'} = join(" ", @drives);
+&save_managed_server($server);
+&type_kvm_set_atboot($server, 2);
+
+# Add to total disk size
+if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
+	$server->{'kvm_disktotal'} += $disk->{'size'};
+	}
+
+# Add to /etc/fstab, if a mount point was given
+my $fserr;
+if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
+	my $err = &mount_filesystem_if_needed($server);
+	return "Failed to mount filesystem : $err" if ($err);
+	$err = &make_dir_on_server($server, $disk->{'mount'}, 0755, 1);
+	return "Failed to create mount point : $err" if ($err);
+	my $fstab = &get_system_fstab($server);
+	$fserr = "Failed to read fstab file : $fstab" if (!ref($fstab));
+	if (!$fserr) {
+		push(@$fstab, [ $disk->{'virt'}, $disk->{'mount'},
+				$disk->{'fs'}, 'defaults', 0, 1 ]);
+		my $err = &put_system_fstab($server, $fstab);
+		$fserr = "Failed to update fstab file : $err" if ($err);
+		}
+	&umount_filesystem_if_needed($server);
+	}
+
+return $fserr;
+}
+
+# type_kvm_delete_disk(&server, &disk)
+# Removes a disk from the Xen configuration, the system's fstab file, and
+# deletes the underlying config file. The disk object must come from a call
+# to type_kvm_list_disks with the mount flag set to 1.
+sub type_kvm_delete_disk
+{
+my ($server, $disk) = @_;
+my $vhost = &type_kvm_parent($server);
+
+# Actually un-mount if mounted
+if (&can_ssh_status($server) && $disk->{'mounted'}) {
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"umount ".$disk->{'virt'});
+	if ($err || $ex) {
+		return "Failed to un-mount $disk->{'virt'} : ".
+		       ($err || $out);
+		}
+	}
+
+# Remove from the KVM config
+my @drives = split(/\s+/, $server->{'kvm_drives'});
+splice(@drives, $disk->{'drive_index'}, 1);
+$server->{'kvm_drives'} = join(" ", @drives);
+&save_managed_server($server);
+&type_kvm_set_atboot($server, 2);
+
+# Remove from total disk size
+if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
+	$server->{'kvm_disktotal'} -= $disk->{'size'};
+	}
+
+# Remove from fstab
+if ($server->{'status'} ne 'alive') {
+	my $fstab = &get_system_fstab($server);
+	return "Failed to read fstab file : $fstab" if (!ref($fstab));
+	my @newfstab = grep { $_->[0] ne $disk->{'virt_mount'} } @$fstab;
+	if (scalar(@newfstab) != scalar(@$fstab)) {
+		my $err = &put_system_fstab($server, \@newfstab);
+		$fserr = "Failed to update fstab file : $err" if ($err);
+		}
+	}
+
+if (!$disk->{'device'} && $disk->{'real'} !~ /^\/dev\//) {
+	# Delete the image file
+	&delete_file_on_server($vhost, $disk->{'real'});
+	}
+elsif ($disk->{'lv'}) {
+	# Delete the logical volume
+	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+	&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
+			     { 'device' => $disk->{'real'} });
+	}
+
+return undef;
+}
+
+# type_kvm_modify_disk(&server, &disk, &old-disk)
+# Modifies the virtual device and size of a disk. Returns undef if OK, or an
+# error message on failure.
+# The disk objects *must* have the mount and fs fields set, if mounted.
+sub type_kvm_modify_disk
+{
+my ($server, $disk, $olddisk) = @_;
+my $vhost = &type_kvm_parent($server);
+my $moderr;
+
+# Perform some basic validation
+if ($disk->{'size'} != $olddisk->{'size'}) {
+	$disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap' ||
+ 	  $disk->{'fs'} eq '' ||
+	    return "The size of a disk with the ".uc($disk->{'fs'}).
+		   " filesystem cannot be changed";
+	}
+my $conf = &get_kvm_config($server, 0);
+return "Failed to get Xen config file : $conf" if (!ref($conf));
+
+# If the system is up, un-mount the disk
+my $mounted = 0;
+if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"umount ".$olddisk->{'virt'});
+	if ($err || $ex) {
+		return "Failed to un-mount $olddisk->{'virt'} : ".
+		       ($err || $out);
+		}
+	$mounted = 1;
+	}
+
+# If the system is up, dis-connect the disk
+my $connected = 0;
+my $kvmid = &get_kvm_instance_id($server);
+if ($server->{'status'} ne 'down' && $kvmid && $olddisk->{'blockid'}) {
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"xm block-detach $kvmid $olddisk->{'blockid'}");
+	if ($ex || $err) {
+		return "Failed to detach Xen block device ".
+		       "$olddisk->{'blockid'} : ".($err || $out);
+		}
+	$connected = 1;
+	}
+
+# Apply a size change, if we can
+if ($disk->{'size'} != $olddisk->{'size'}) {
+	# Build the commands to run
+	my @cmds;
+	if ($disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
+		# Expand logical volume (before filesystem)
+		push(@cmds, "lvextend -L".int($disk->{'size'}/1024)."k ".
+			    quotemeta($disk->{'real'}));
+		}
+	if ($disk->{'fs'} eq 'swap') {
+		# Just re-make
+		push(@cmds, "dd if=/dev/zero of=".quotemeta($disk->{'real'}).
+			    " bs=1024 count=".int($disk->{'size'}/1024));
+		push(@cmds, "mkswap ".quotemeta($disk->{'real'}));
+		}
+	elsif ($disk->{'fs'} =~ /^ext\d+$/) {
+		# Expand the filesystem
+		push(@cmds, "e2fsck -f -p ".quotemeta($disk->{'real'}));
+		push(@cmds, "resize2fs ".quotemeta($disk->{'real'}).
+			    " ".int($disk->{'size'}/(1024*1024))."M");
+		}
+	elsif ($disk->{'fs'} eq '' && $disk->{'size'} > $olddisk->{'size'}) {
+		# Add blanks to the file, unless on LVM
+		if (!$disk->{'lv'}) {
+			push(@cmds, "dd if=/dev/zero bs=1024".
+			    " count=".
+			    int(($disk->{'size'}-$olddisk->{'size'})/1024).
+			    " >>".quotemeta($disk->{'real'}));
+			}
+		}
+	elsif ($disk->{'fs'} eq '' && $disk->{'size'} < $olddisk->{'size'}) {
+		# Truncate the file, unless on LVM
+		if (!$disk->{'lv'}) {
+			push(@cmds, "dd if=".quotemeta($disk->{'real'}).
+			    " of=".quotemeta($disk->{'real'}.".tmp")." bs=1024".
+			    " count=".int($disk->{'size'}/1024));
+			push(@cmds, "mv ".quotemeta($disk->{'real'}.".tmp").
+			    " ".quotemeta($disk->{'real'}));
+			}
+		}
+	else {
+		return "No idea now to resize!";
+		}
+	if ($disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
+		# Shrink logical volume (after resizing filesystem)
+		push(@cmds, "lvreduce -f -L".int($disk->{'size'}/1024)."k ".
+			    quotemeta($disk->{'real'}));
+		}
+
+	# Run them in turn
+	foreach my $cmd (@cmds) {
+		my ($out, $ex, $err) = &execute_command_on_server(
+			$vhost, $cmd);
+		if ($err) {
+			$moderr = $err;
+			last;
+			}
+		elsif ($ex) {
+			$moderr = "$cmd failed : $out";
+			last;
+			}
+		}
+
+	# Update total disk size
+	if (!$moderr &&
+	    $server->{'kvm_disktotal'} ne '' &&
+	    (!$disk->{'device'} || $disk->{'lv'})) {
+		$server->{'kvm_disktotal'} -= $olddisk->{'size'};
+		$server->{'kvm_disktotal'} += $disk->{'size'};
+		}
+	}
+
+if ($disk->{'virt'} ne $olddisk->{'virt'} && !$moderr) {
+	# Change the virtual device, both in the Xen config file and fstab
+
+	# Fix the Xen config
+	my $disks = &kvm_find_value("disk", $conf);
+	my $suffix = $disk->{'suffix'};
+	my $oldshort = $olddisk->{'virt'};
+	$oldshort =~ s/^\/dev\///;
+	foreach my $d (@$disks) {
+		if ($d =~ /^\Q$suffix\E:\Q$disk->{'real'}\E,\Q$oldshort\E,(.*)$/) {
+			my $short = $disk->{'virt'};
+			$short =~ s/^\/dev\///;
+			$d = "$suffix:$disk->{'real'},$short,$1";
+			}
+		}
+	&kvm_save_directive($conf, "disk", $disks);
+	my $err = &put_kvm_config($server, $conf);
+	if ($err) {
+		$moderr = "Failed to save Xen config : $err";
+		}
+
+	# Update fstab, if in there
+	if ($server->{'status'} ne 'alive' && !$moderr) {
+		my $fstab = &get_system_fstab($server);
+		if (!ref($fstab)) {
+			$moderr = "Failed to read fstab file : $fstab";
+			}
+		else {
+			my ($f) = grep { $_->[0] eq $olddisk->{'virt'} }
+				       @$fstab;
+			if ($f) {
+				$f->[0] = $disk->{'virt'};
+				my $err = &put_system_fstab($server, $fstab);
+				$moderr = "Failed to update fstab file : $err"
+					if ($err);
+				}
+			}
+		}
+	}
+
+# If it was connected before, re-connect it now
+if ($connected) {
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	    "xm block-attach $kvmid $disk->{'suffix'}:$disk->{'real'} ".
+	    "$disk->{'virt'} w");
+	if ($err || $ex) {
+		return "Failed to attach $disk->{'virt'} : ".($err || $out);
+		}
+	}
+
+# If it was mounted before, mount it now
+if ($mounted && $disk->{'mount'}) {
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"mount ".$disk->{'virt'}." ".$disk->{'mount'});
+	if ($err || $ex) {
+		return "Failed to mount $disk->{'virt'} : ".($err || $out);
+		}
+	}
+
+return $moderr;
+}
+
+# type_kvm_list_disk_filesystems(&server)
+# Returns supported filesystem types. Assumes Linux.
+sub type_kvm_list_disk_filesystems
+{
+return ('ext3', 'ext2', 'reiserfs', 'xfs', 'jfs', 'swap');
 }
 
 # Returns 2, indicating that memory can be changed but needs a reboot
