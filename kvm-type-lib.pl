@@ -1404,38 +1404,38 @@ else {
 		$last_remote_error = undef;
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		my $lv = { 'name' => $disk->{'lv'},
-			      'size' => int($disk->{'size'}/1024),
-			      'perm' => 'rw',
-			      'alloc' => 'n',
-			      'vg' => $disk->{'vg'} };
+			   'size' => int($disk->{'size'}/1024),
+			   'perm' => 'rw',
+			   'alloc' => 'n',
+			   'vg' => $disk->{'vg'} };
 		my $err = &remote_foreign_call($vhost, "lvm",
 						  "create_logical_volume", $lv);
 		$err ||= $last_remote_error;
 		return "LVM logical volume creation failed : $err" if ($err);
 		}
 	elsif (!@st) {
+		# Create empty file
 		$disk->{'size'} || return "File $disk->{'real'} does not exist on $vhost->{'host'}, but no size to create it as was given";
+		my $cmd = "dd if=/dev/zero of=".quotemeta($disk->{'real'}).
+			     " bs=1024 count=".int($disk->{'size'}/1024);
+		my ($out, $ex, $err) = &execute_command_on_server(
+						$vhost, $cmd);
+		$err = $out if ($ex);
+		$err && return "Failed to create file $disk->{'real'} : $err";
 		}
-
-	# Call qemu-img to initialize it
-	my $mbs = int($disk->{'size'}/1024/1024);
-	my $cmd = "qemu-img create -f raw ".
-		  quotemeta($disk->{'real'})." ".$mbs."M";
-	my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
-	$err = $out if ($ex);
-	$err && return "Failed to create file $disk->{'real'} : $err";
 
 	# Create the disk label with parted
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
-		"parted ".quotemeta($disk->{'real'})." mklabel msdos");
+		"parted -s ".quotemeta($disk->{'real'})." mklabel msdos");
 	if ($ex || $err) {
 		return "Failed to create disk label : ".($err || $out);
 		}
 
 	# Create a partition that uses all space
+	my $mbs = int($disk->{'size'}/1024/1024);
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-                "parted ".quotemeta($disk->{'real'}).
-		" mkpart primary ext2 0 ".$mbs);
+                "parted -s ".quotemeta($disk->{'real'}).
+		" mkpartfs primary ext2 1 ".$mbs);
 	if ($ex || $err) {
 		return "Failed to create partition : ".($err || $out);
 		}
@@ -1446,7 +1446,7 @@ else {
 		$fs = "ext2" if ($fs eq "ext3");
 		$fs = "linux-swap" if ($fs eq "swap");
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"parted ".quotemeta($disk->{'real'})." mkfs 1 $fs");
+			"parted -s ".quotemeta($disk->{'real'})." mkfs 1 $fs");
 		if ($ex || $err) {
 			return "Failed to create ".uc($disk->{'fs'}).
 			       " filesystem : ".($err || $out);
@@ -1488,7 +1488,7 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 	$fserr = "Failed to read fstab file : $fstab" if (!ref($fstab));
 	if (!$fserr) {
 		push(@$fstab, [ $disk->{'virt_mount'}, $disk->{'mount'},
-				$disk->{'fs'}, 'defaults', 0, 1 ]);
+				$disk->{'fs'}, 'defaults', 0, 0 ]);
 		my $err = &put_system_fstab($server, $fstab);
 		$fserr = "Failed to update fstab file : $err" if ($err);
 		}
@@ -1563,10 +1563,24 @@ sub type_kvm_modify_disk
 my ($server, $disk, $olddisk) = @_;
 my $vhost = &type_kvm_parent($server);
 my $moderr;
+my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
 
-# Disk resizing not supported yet
+# Validate disk resizing
 if ($disk->{'size'} != $olddisk->{'size'}) {
-	return "The size of a KVM disk cannot be changed yet";
+	# Only supported for ext and swap
+	$disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap' ||
+ 	  $disk->{'fs'} eq '' ||
+	    return "The size of a disk with the ".uc($disk->{'fs'}).
+		   " filesystem cannot be changed";
+
+	# Only possible if the filesystem being resized is the last one
+	ref($parts) || return "Failed to list partitions : $parts";
+	$disk->{'virt_mount'} =~ /\/[hs]d[a-z]+(\d+)$/ ||
+		return "Un-parsable mount device!";
+	my $partnum = $1;
+	if ($partnum != scalar(@$parts)) {
+		return "Only the last partition on a disk image can be resized";
+		}
 	}
 
 # If the system is up, un-mount the disk
@@ -1579,6 +1593,81 @@ if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
 		       ($err || $out);
 		}
 	$mounted = 1;
+	}
+
+# Apply a size change, if we can
+if ($disk->{'size'} != $olddisk->{'size'}) {
+	# Build the commands to run
+	my @cmds;
+	my $part = $parts->[@$parts - 1];
+	if ($disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
+		# Expand logical volume (before filesystem)
+		push(@cmds, "lvextend -L".int($disk->{'size'}/1024)."k ".
+			    quotemeta($disk->{'real'}));
+		}
+	elsif (!$disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
+		# Expand the disk image (before filesystem)
+		push(@cmds, "dd if=/dev/zero bs=1024".
+		    " count=".int(($disk->{'size'}-$olddisk->{'size'})/1024).
+		    " >>".quotemeta($disk->{'real'}));
+		}
+
+	if ($disk->{'fs'} && $disk->{'size'} < $olddisk->{'size'}) {
+		# Shrink the filesystem
+		# XXX to correct size for *partition*
+		}
+
+	# Delete the last partition, then re-create it
+	push(@cmds, "parted -s ".quotemeta($disk->{'real'})." rm ".
+		    $part->{'part'});
+	push(@cmds, "parted -s ".quotemeta($disk->{'real'})." mkpart ".
+		    $part->{'parted_type'}." ".
+		    $part->{'parted_start'}." ".
+		    int($disk->{'size'}/1024/1024)."M");
+
+	if ($disk->{'fs'} && $disk->{'size'} > $olddisk->{'size'}) {
+		# Expand the filesystem
+		push(@cmds, "losetup -o $part->{'offset'} /dev/loop9 ".
+			    quotemeta($disk->{'real'}));
+		push(@cmds, "e2fsck -f -p /dev/loop9");
+		push(@cmds, "resize2fs /dev/loop9");
+		}
+
+	if (!$disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
+		# Truncate the file (after resizing filesystem)
+		push(@cmds, "dd if=".quotemeta($disk->{'real'}).
+		    " of=".quotemeta($disk->{'real'}.".tmp")." bs=1024".
+		    " count=".int($disk->{'size'}/1024));
+		push(@cmds, "mv ".quotemeta($disk->{'real'}.".tmp").
+		    " ".quotemeta($disk->{'real'}));
+		}
+	elsif ($disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
+		# Shrink logical volume (after resizing filesystem)
+		push(@cmds, "lvreduce -f -L".int($disk->{'size'}/1024)."k ".
+			    quotemeta($disk->{'real'}));
+		}
+
+	# Run them in turn
+	foreach my $cmd (@cmds) {
+		my ($out, $ex, $err) = &execute_command_on_server(
+			$vhost, $cmd);
+		if ($err) {
+			$moderr = $err;
+			last;
+			}
+		elsif ($ex) {
+			$moderr = "$cmd failed : $out";
+			last;
+			}
+		}
+
+	# Update total disk size
+	if (!$moderr &&
+	    $server->{'xen_disktotal'} ne '' &&
+	    (!$disk->{'device'} || $disk->{'lv'})) {
+		$server->{'xen_disktotal'} -= $olddisk->{'size'};
+		$server->{'xen_disktotal'} += $disk->{'size'};
+		}
 	}
 
 if ($disk->{'virt'} ne $olddisk->{'virt'}) {
@@ -2024,34 +2113,22 @@ if (!$fsfile) {
 
 # If we don't know which partition is the primary, try them in series
 if (!$server->{'kvm_filesystem_offset'}) {
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"fdisk -l -u ".quotemeta($fsfile));
-	if ($ex || $err) {
-		return &text('create_ekvmfsfdisk', $fsfile, $err || $out);
+	my $parts = &list_disk_image_partitions($vhost, $fsfile);
+	if (!ref($parts)) {
+		return &text('create_ekvmfsfdisk', $fsfile, $parts);
 		}
 
 	# Find Linux partitions and their offsets
-	my $secsize;
-	my @parts;
-	my %partinfo;
-	my $p = 1;
-	foreach my $l (split(/\r?\n/, $out)) {
-		if ($l =~ /=\s+(\d+)\s+bytes/i) {
-			$secsize = $1;
-			}
-		elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?\s+([0-9a-f]+)\s+(\S+)/i) {
-			# Found a partition .. make sure it is Linux
-			my $o = $1 * $secsize;
-			$partinfo{$o} = [ $p++, $1, $2, $3 ];
-			if ($4 eq '83') {
-				push(@parts, $o);
-				}
+	my @offsets;
+	foreach my $p (@$parts) {
+		if ($p->{'type'} eq '83' && $p->{'offset'}) {
+			push(@offsets, $p->{'offset'});
 			}
 		}
-	@parts || return &text('create_ekvmfslinux', $fsfile);
+	@offsets || return &text('create_ekvmfslinux', $fsfile);
 
 	# Try each offset
-	foreach my $o (@parts) {
+	foreach my $o (@offsets) {
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			"mount -o loop,offset=$o ".quotemeta($fsfile)." ".
 					 quotemeta($mp));
@@ -2061,10 +2138,6 @@ if (!$server->{'kvm_filesystem_offset'}) {
 			# Found it! Leave mounted
 			$server->{'kvm_mount'} = $mp;
 			$server->{'kvm_filesystem_offset'} = $o;
-			my $info = $partinfo{$o};
-			$server->{'kvm_filesystem_part_num'} = $info[0];
-			$server->{'kvm_filesystem_part_start'} = $info[1];
-			$server->{'kvm_filesystem_part_end'} = $info[2];
 			return undef;
 			}
 		else {
@@ -2738,8 +2811,6 @@ $server->{'kvm_hostifaces'} = join(" ", @hostifaces);
 $server->{'kvm_gw'} = join(" ", @gws);
 return undef;
 }
-
-
 
 1;
 

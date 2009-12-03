@@ -108,6 +108,10 @@ if ($multi) {
 			}
 		if ($d->{'mount'}) {
 			print "    Mount point: $d->{'mount'}\n";
+			if ($d->{'virt_mount'}) {
+				print "    Mount device: ",
+				      $d->{'virt_mount'},"\n";
+				}
 			print "    Filesystem: $d->{'fs'}\n";
 			print "    Mounted: ",
 			      ($d->{'mounted'} ? "Yes" : "No"),"\n";

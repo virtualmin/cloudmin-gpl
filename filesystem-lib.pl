@@ -176,5 +176,54 @@ $err = $out if ($ex);
 return $err;
 }
 
+# list_disk_image_partitions(&server, file)
+# Returns an array ref of information about partitions in some disk image
+sub list_disk_image_partitions
+{
+my ($server, $fsfile) = @_;
+my ($out, $ex, $err) = &execute_command_on_server($server,
+	"fdisk -l -u ".quotemeta($fsfile));
+return $err if ($err);
+return $out if ($ex);
+my @rv;
+my $p = 1;
+my $secsize;
+foreach my $l (split(/\r?\n/, $out)) {
+	if ($l =~ /=\s+(\d+)\s+bytes/i) {
+		$secsize = $1;
+		}
+	elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?\s+([0-9a-f]+)\s+(\S+)/i) {
+		# Found a partition line
+		push(@rv, { 'part' => $p,
+			    'start' => $1,
+			    'end' => $2,
+			    'blocks' => $3,
+			    'type' => $4,
+			    'offset' => $1 * $secsize });
+		$p++;
+		}
+	}
+$secsize || return "Sector size not found in disk image";
+
+# Use parted to get offsets
+($out, $ex, $err) = &execute_command_on_server($server,
+	"parted -s ".quotemeta($fsfile)." print");
+foreach my $l (split(/\r?\n/, $out)) {
+	$l =~ s/^\s+//;
+	my ($n, $start, $end, $size, $type, $fs) = split(/\s+/, $l);
+	if ($n =~ /^\d+$/) {
+		my ($p) = grep { $_->{'part'} eq $n } @rv;
+		if ($p) {
+			$p->{'parted_start'} = $start;
+			$p->{'parted_end'} = $end;
+			$p->{'parted_size'} = $size;
+			$p->{'parted_type'} = $type;
+			$p->{'parted_fs'} = $fs;
+			}
+		}
+	}
+return \@rv;
+}
+
 1;
 
