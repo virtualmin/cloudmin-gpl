@@ -1418,59 +1418,39 @@ else {
 		}
 
 	# Call qemu-img to initialize it
-	my $cmd = "qemu-img create -f raw ".quotemeta($disk->{'real'})." ".
-				     int($disk->{'size'}/1024/1024)."M";
+	my $mbs = int($disk->{'size'}/1024/1024);
+	my $cmd = "qemu-img create -f raw ".
+		  quotemeta($disk->{'real'})." ".$mbs."M";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
 	$err = $out if ($ex);
 	$err && return "Failed to create file $disk->{'real'} : $err";
 
-	# Create partition on it
-	my $fdisktemp = &transname();
-	&open_tempfile(FDISK, ">$fdisktemp");
-	&print_tempfile(FDISK, "n\n");	# New partition
-	&print_tempfile(FDISK, "p\n");	# Primary
-	&print_tempfile(FDISK, "1\n");	# First partition
-	&print_tempfile(FDISK, "\n");	# Default start
-	&print_tempfile(FDISK, "\n");	# Default size (whole disk)
-	&print_tempfile(FDISK, "w\n");	# Write out
-	&close_tempfile(FDISK);
-	my $fdisktempdest = &tempname_on_server($vhost);
-	my $err = &put_file_to_server($vhost, $fdisktemp, $fdisktempdest);
-	$err && return "Failed to upload fdisk input file : $err";
-	&unlink_file($fdisktemp);
-	my $cyls = int($disk->{'size'} / 63 / 255 / 512);
+	# Create the disk label with parted
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+		"parted ".quotemeta($disk->{'real'})." mklabel msdos");
+	if ($ex || $err) {
+		return "Failed to create disk label : ".($err || $out);
+		}
+
+	# Create a partition that uses all space
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"fdisk -u -H 255 -S 63 -C $cyls ".quotemeta($disk->{'real'}).
-		" <$fdisktempdest");
-	&delete_file_on_server($vhost, $fdisktempdest);
-	if ($out !~ /has\s+been\s+altered/i) {
+                "parted ".quotemeta($disk->{'real'}).
+		" mkpart primary ext2 0 ".$mbs);
+	if ($ex || $err) {
 		return "Failed to create partition : ".($err || $out);
 		}
 
-	# And make a filesystem on the new partition, using a loopback device
+	# And make a filesystem on the new partition
 	if (!@st && $disk->{'fs'}) {
-		# Work out the size of the partition in blocks. This is needed
-		# because losetup doesn't properly detect the modified size!
+		my $fs = $disk->{'fs'};
+		$fs = "ext2" if ($fs eq "ext3");
+		$fs = "linux-swap" if ($fs eq "swap");
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"fdisk -u -H 255 -S 63 -C $cyls -l ".
-			quotemeta($disk->{'real'}));
-		my $blocksize;
-		if ($out =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?\s+([0-9a-f]+)/) {
-			$blocksize = $3 * 1024;
-			}
-
-		# Create the filesystem
-		my $o = 63*512;
-		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"losetup -o $o /dev/loop9 ".quotemeta($disk->{'real'}));
+			"parted ".quotemeta($disk->{'real'})." mkfs 1 $fs");
 		if ($ex || $err) {
-			return "Failed to create loopback : ".($err || $out);
+			return "Failed to create ".uc($disk->{'fs'}).
+			       " filesystem : ".($err || $out);
 			}
-		my $err = &create_device_filesystem(
-			$vhost, "/dev/loop9", $disk->{'fs'}, $blocksize);
-		&execute_command_on_server($vhost, "losetup -d /dev/loop9");
-		$err && return "Failed to create ".uc($disk->{'fs'}).
-			       " filesystem : $err";
 		}
 	}
 
@@ -1655,7 +1635,7 @@ return $moderr;
 # Returns supported filesystem types. Assumes Linux.
 sub type_kvm_list_disk_filesystems
 {
-return ('ext3', 'ext2', 'reiserfs', 'xfs', 'jfs', 'swap');
+return ('ext3', 'ext2', 'reiserfs', 'swap');
 }
 
 # Returns 2, indicating that memory can be changed but needs a reboot
