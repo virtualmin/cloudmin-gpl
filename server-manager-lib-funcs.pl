@@ -5638,6 +5638,7 @@ if ($server->{'status'} ne 'down' &&
 	print &ui_hidden("id", $in{'id'});
 	print &ui_hidden("reboot", 1);
 	print &ui_hidden("confirm", 1);
+	print &ui_hidden("updown", 1);
 	print "<b>$text{'disk_needreboot'}</b><p>\n";
 	print &ui_form_end([ [ undef, $text{'limits_reboot'} ] ]);
 	}

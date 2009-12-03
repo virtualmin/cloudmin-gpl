@@ -1348,6 +1348,7 @@ my %used;
 foreach my $d (@$disks) {
 	$used{$d->{'virt'}}++;
 	}
+$used{"/dev/hdc"}++;	# Typically for CD-ROM
 
 # Pick a /dev/???? file that is free on the virtual system
 my $n;
@@ -1454,7 +1455,7 @@ else {
 			"fdisk -u -H 255 -S 63 -C $cyls -l ".
 			quotemeta($disk->{'real'}));
 		my $blocksize;
-		if ($out =~ /\s(\d+)\s+(\d+)\s+(\d+)\s+([0-9a-f]+)/) {
+		if ($out =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?\s+([0-9a-f]+)/) {
 			$blocksize = $3 * 1024;
 			}
 
@@ -2052,13 +2053,19 @@ if (!$server->{'kvm_filesystem_offset'}) {
 	# Find Linux partitions and their offsets
 	my $secsize;
 	my @parts;
+	my %partinfo;
+	my $p = 1;
 	foreach my $l (split(/\r?\n/, $out)) {
 		if ($l =~ /=\s+(\d+)\s+bytes/i) {
 			$secsize = $1;
 			}
-		elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\s+([0-9a-f]+)\s+(\S+)/i &&
-		       $4 eq '83') {
-			push(@parts, $1 * $secsize);
+		elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?\s+([0-9a-f]+)\s+(\S+)/i) {
+			# Found a partition .. make sure it is Linux
+			my $o = $1 * $secsize;
+			$partinfo{$o} = [ $p++, $1, $2, $3 ];
+			if ($4 eq '83') {
+				push(@parts, $o);
+				}
 			}
 		}
 	@parts || return &text('create_ekvmfslinux', $fsfile);
@@ -2074,6 +2081,10 @@ if (!$server->{'kvm_filesystem_offset'}) {
 			# Found it! Leave mounted
 			$server->{'kvm_mount'} = $mp;
 			$server->{'kvm_filesystem_offset'} = $o;
+			my $info = $partinfo{$o};
+			$server->{'kvm_filesystem_part_num'} = $info[0];
+			$server->{'kvm_filesystem_part_start'} = $info[1];
+			$server->{'kvm_filesystem_part_end'} = $info[2];
 			return undef;
 			}
 		else {
@@ -2509,6 +2520,8 @@ if (!$full) {
 return &text('kvm_ewhich2', "<tt>qemu-kvm</tt>", "<tt>kvm</tt>") if (!$full);
 &has_command_on_server($server, "qemu-img") ||
 	return &text('kvm_ewhich', "<tt>qemu-img</tt>");
+&has_command_on_server($server, "parted") ||
+	return &text('kvm_ewhich', "<tt>parted</tt>");
 
 # Check CPU
 my ($out, $ex, $err) = &execute_command_on_server($server,
