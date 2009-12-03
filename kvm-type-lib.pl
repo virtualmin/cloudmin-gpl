@@ -725,6 +725,227 @@ else {
 return undef;
 }
 
+# type_kvm_create_done(&server)
+# Checks if the filesystem gunzip is complete, and returns OK if so.
+# Returns undef if still running, or an error message on failure.
+sub type_kvm_create_done
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+
+# Read the gzip output file
+my $data = &get_file_data_from_server($vhost, $server->{'kvm_temp'});
+if ($data =~ /SERVER-MANAGER-FAILED/) {
+	$data =~ s/SERVER-MANAGER-FAILED\n//;
+	&execute_command_on_server($vhost,
+		"rm -f ".quotemeta($server->{'kvm_temp'}));
+	return "Failed to extract filesystem : $data";
+	}
+elsif ($data =~ /SERVER-MANAGER-COMPLETE/) {
+	&execute_command_on_server($vhost,
+		"rm -f ".quotemeta($server->{'kvm_temp'}));
+	return "OK";
+	}
+else {
+	return undef;
+	}
+}
+
+# type_kvm_create_post(&server, [serial, key], [reset])
+# Called after creation is complete. Here we can mount and fix up config
+# files in the filesytem, then start the instance.
+sub type_kvm_create_post
+{
+my ($server, $serial, $key, $reset) = @_;
+my $vhost = &type_kvm_parent($server);
+my @ips = split(/\s+/, $server->{'kvm_ip'});
+my @cidrs = split(/\s+/, $server->{'kvm_cidr'});
+my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
+
+# Gateways can either be set per IP address, or copy from host system.
+# If none are set, assume the first IP uses the host system gateway.
+my $defgw = &get_server_default_gateway($vhost);
+my @gws = split(/\s+/, $server->{'kvm_gw'});
+my @setgws = grep { $_ ne "*" } @gws;
+if (!@setgws && $defgw) {
+	@gws = ( $defgw );
+	}
+
+# Expand the filesystem image, if needed
+# XXX
+my $fsfile = $server->{'kvm_filesystem'};
+if ($server->{'kvm_disksize'} && 0) {
+	my $dksize = $server->{'kvm_disksize'}*1024*1024;
+	&$first_print(&text('create_kvmresize', &nice_size($dksize)));
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"e2fsck -f -p ".quotemeta($fsfile)." ; ".
+		"resize2fs ".quotemeta($fsfile)." ".
+		$server->{'kvm_disksize'}."M");
+        if ($ex) {
+                &$second_print(&text('create_ekvmresize', $out));
+                }       
+        else {
+                &$second_print($text{'create_done'});
+                }
+	}
+
+# Mount the created filesystem
+&$first_print($text{'create_xenmount'});
+my $err = &type_kvm_mount_filesystem($server);
+if ($err) {
+	&$second_print(&text('create_ekvmmount', $err));
+	return;
+	}
+my $mp = $server->{'kvm_mount'};
+&$second_print(&text('create_xenmounted', "<tt>$mp</tt>"));
+
+# Set the root password, by directly editing /etc/shadow
+if ($server->{'ssh_pass'}) {
+	&$first_print($text{'create_xensetpass'});
+	my $err = &set_shadow_root_password($server, $server->{'ssh_pass'});
+        if ($err) {
+                &$second_print(&text('create_exensetpass', $err));
+                }       
+        else {
+                &$second_print($text{'create_done'});
+                }
+	}
+
+# Create authorized keys file
+if ($server->{'key'}) {
+	&$first_print($text{'create_xensetkey'});
+	my $err = &create_authorized_key($server);
+	&$second_print($err ? &text('create_exensetkey', $err)
+			    : $text{'create_done'});
+	}
+else {
+	&clear_authorized_key($server);
+	}
+
+# Add extra SSH keys
+if (&has_addnew_keys($server)) {
+	&$first_print($text{'create_xenaddnewkeys'});
+	my $err = &addnew_authorized_keys($server);
+	&$second_print($err ? &text('create_exenaddnewkeys', $err)
+			    : $text{'create_done'});
+	}
+
+# Fix other config files that refer to the hostname or IP
+&$first_print($text{'create_xenfix'});
+my $fullhost = $server->{'host'};
+my $shorthost = $fullhost;
+$shorthost =~ s/\..*$//;
+my $err = &fix_hostname_config_files($server, $ips[0],
+					$shorthost, $fullhost, $vhost,
+					$mp, $vhost->{'kvm_resolv'});
+if ($err) {
+	&$second_print(&text('create_exenfix', $err));
+	}       
+else {
+	&$second_print($text{'create_done'});
+	}
+
+# Setup networking config files to use the IP.
+&$first_print($text{'create_xennet'});
+my $err = &fix_network_config_files($server, $ips[0], $netmasks[0],
+				    $gws[0], $vhost, $mp);
+if ($err) {
+	&$second_print(&text('create_exennet', $err));
+	}       
+else {
+	&$second_print($text{'create_done'});
+	}
+
+# Add network configs for extra IPs
+if (@ips > 1) {
+	&$first_print($text{'create_xennet2'});
+	my $err = &fix_additional_network_interface_files($server,
+		[ @ips[1..$#ips] ], [ @netmasks[1..$#netmasks] ],
+		[ @gws[1..$#gws] ], $vhost, $mp);
+	if ($err) {
+		&$second_print(&text('create_exennet2', $err));
+		}       
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+# Fix Virtualmin licence files
+if ($serial) {
+	&$first_print($text{'create_xenlicence'});
+	my $err = &fix_virtualmin_licence_files($server, $serial, $key);
+	if ($err) {
+		&$second_print(&text('create_exenlicence', $err));
+		}       
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+# Configure SSH to allow logins by root
+&$first_print($text{'create_zonesrootssh'});
+my $err = &fix_ssh_root_login($server);
+if ($err eq "OK") {
+	&$second_print($text{'create_zonesrootsshok'});
+	}
+elsif ($err eq "NONE") {
+	&$second_print($text{'create_zonesrootsshnone'});
+	}
+elsif ($err) {
+	&$second_print($err);
+	}
+else {
+	&$second_print($text{'create_done'});
+	}
+
+# Un-mount
+&$first_print($text{'create_xenumount'});
+&type_kvm_umount_filesystem($server);
+&$second_print($text{'create_done'});
+
+# Compute total disk size
+&type_kvm_compute_disksize($server);
+
+# Register in DNS, if we can
+if ($vhost->{'kvm_zone'} && !$reset) {
+	my $dnsname = $server->{'host'}.".";
+	if (&add_bind8_record($dnsname, $ips[0],
+			      $vhost->{'kvm_zone'})) {
+		$server->{'kvm_dns'} = $dnsname;
+		}
+	}
+
+# Start up the instance
+&$first_print($text{'create_kvmstartup'});
+my ($ok, $err) = &type_kvm_startup($server);
+if (!$ok) {
+	&$second_print(&text('create_exenstartup', $err));
+	}       
+else {
+	&$second_print($text{'create_done'});
+	}
+
+# Import Virtualmin keys
+if ($serial) {
+	&$first_print($text{'create_xenvkeys'});
+	my $err = &fix_virtualmin_after_boot($server);
+	if ($err) {
+		&$second_print(&text('create_exenvkeys', $err));
+		}       
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+# Regenerate SSH host key
+&$first_print($text{'create_xenhostkey'});
+my $err = &regenerate_ssh_host_keys($server);
+&$second_print($err ? &text('create_exensetkey', $err)
+		    : $text{'create_done'});
+
+return undef;
+}
+
 # type_kvm_reboot(&server)
 # SSH in and reboot if possible, or kill and restart
 sub type_kvm_reboot
@@ -1812,7 +2033,7 @@ my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # Create temp dir
-my $mp = "/mnt/kvm-".$server->{'kvm'};
+my $mp = "/mnt/kvm-".$server->{'host'};
 my $err = &make_dir_on_server($vhost, $mp, 0700, 1);
 return "Failed to create mount point $mp : $err" if ($err);
 my $fsfile = $server->{'kvm_filesystem'};

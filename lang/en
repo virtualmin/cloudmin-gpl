@@ -403,6 +403,7 @@ create_kvmip=IP address for KVM instance
 create_kvmip2=IP addresses for KVM instance
 create_ekvmhost=The hostname for a KVM instance cannot contain a . , as the domain name is added automatically
 create_ekvmip=Missing or invalid Xen instance IP address
+create_kvmstartup=Starting up new KVM instance ..
 
 keys_title=SSH Keys
 keys_desc=Key description
