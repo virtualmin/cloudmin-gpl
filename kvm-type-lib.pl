@@ -1624,7 +1624,15 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	if ($disk->{'fs'} && $disk->{'size'} < $olddisk->{'size'}) {
 		# Shrink the filesystem
-		# XXX to correct size for *partition*
+		my $oldfs = $part->{'parted_end_bytes'} -
+			    $part->{'parted_start_bytes'};
+		my $newmbs = int(($oldfs - $olddisk->{'size'} +
+					   $disk->{'size'})/1024/1024);
+		push(@cmds, "losetup -o $part->{'offset'} /dev/loop9 ".
+			    quotemeta($disk->{'real'}));
+		push(@cmds, "e2fsck -f -p /dev/loop9");
+		push(@cmds, "resize2fs /dev/loop9 ".$newmbs."M");
+		push(@cmds, "losetup -d /dev/loop9");
 		}
 
 	# Delete the last partition, then re-create it
@@ -1641,6 +1649,7 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 			    quotemeta($disk->{'real'}));
 		push(@cmds, "e2fsck -f -p /dev/loop9");
 		push(@cmds, "resize2fs /dev/loop9");
+		push(@cmds, "losetup -d /dev/loop9");
 		}
 
 	if (!$disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {

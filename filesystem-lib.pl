@@ -219,10 +219,38 @@ foreach my $l (split(/\r?\n/, $out)) {
 			$p->{'parted_size'} = $size;
 			$p->{'parted_type'} = $type;
 			$p->{'parted_fs'} = $fs;
+			$p->{'parted_start_bytes'} = &parse_parted_size($start);
+			$p->{'parted_end_bytes'} = &parse_parted_size($end);
+			$p->{'parted_size_bytes'} = &parse_parted_size($size);
 			}
 		}
 	}
 return \@rv;
+}
+
+# parse_parted_size(string)
+# Converts a string like 16.4kb or 200M into bytes
+sub parse_parted_size
+{
+my ($str) = @_;
+if ($str =~ /^([0-9\.]+)k/) {
+	return int($1 * 1024);
+	}
+elsif ($str =~ /^([0-9\.]+)M/) {
+	return int($1 * 1024 * 1024);
+	}
+elsif ($str =~ /^([0-9\.]+)G/) {
+	return int($1 * 1024 * 1024 * 1024);
+	}
+elsif ($str =~ /^([0-9\.]+)T/) {
+	return int($1 * 1024 * 1024 * 1024 * 1024);
+	}
+elsif ($str =~ /^([0-9\.]+)P/) {
+	return int($1 * 1024 * 1024 * 1024 * 1024 * 1024);
+	}
+else {
+	return int($str);
+	}
 }
 
 1;
