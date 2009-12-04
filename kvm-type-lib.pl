@@ -772,21 +772,31 @@ if (!@setgws && $defgw) {
 	}
 
 # Expand the filesystem image, if needed
-# XXX
 my $fsfile = $server->{'kvm_filesystem'};
-if ($server->{'kvm_disksize'} && 0) {
+if ($server->{'kvm_disksize'}) {
 	my $dksize = $server->{'kvm_disksize'}*1024*1024;
-	&$first_print(&text('create_kvmresize', &nice_size($dksize)));
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"e2fsck -f -p ".quotemeta($fsfile)." ; ".
-		"resize2fs ".quotemeta($fsfile)." ".
-		$server->{'kvm_disksize'}."M");
-        if ($ex) {
-                &$second_print(&text('create_ekvmresize', $out));
-                }       
-        else {
-                &$second_print($text{'create_done'});
-                }
+	&$first_print(&text('create_xenresize', &nice_size($dksize)));
+	$server->{'status'} = 'down';
+	my $disks = &type_kvm_list_disks($server, 1);
+	my $disk;
+	if (ref($disks)) {
+		($disk) = grep { $_->{'real'} eq $server->{'kvm_filesystem'} }
+			       @$disks;
+		}
+	if (!$disk || !$disk->{'fs'}) {
+		&$second_print(&text('create_exenresize2'));
+		}
+	else {
+		my $olddisk = { %$disk };
+		$disk->{'size'} = $server->{'kvm_disksize'}*1024*1024;
+		my $err = &type_kvm_modify_disk($server, $disk, $olddisk);
+		if ($ex) {
+			&$second_print(&text('create_exenresize', $out));
+			}       
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
 	}
 
 # Mount the created filesystem
@@ -1587,9 +1597,9 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 my $mounted = 0;
 if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"umount ".$olddisk->{'virt'});
+		"umount ".$olddisk->{'virt_mount'});
 	if ($err || $ex) {
-		return "Failed to un-mount $olddisk->{'virt'} : ".
+		return "Failed to un-mount $olddisk->{'virt_mount'} : ".
 		       ($err || $out);
 		}
 	$mounted = 1;
@@ -1711,7 +1721,7 @@ if ($disk->{'virt'} ne $olddisk->{'virt'}) {
 # If it was mounted before, mount it now
 if ($mounted && $disk->{'mount'}) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"mount ".$disk->{'virt'}." ".$disk->{'mount'});
+		"mount ".$disk->{'virt_mount'}." ".$disk->{'mount'});
 	if ($err || $ex) {
 		return "Failed to mount $disk->{'virt'} : ".($err || $out);
 		}

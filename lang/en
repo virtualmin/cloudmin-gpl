@@ -332,6 +332,7 @@ create_xenswap=Creating swap file of $1 ..
 create_exenswap=.. creation failed : $1. The Xen instance may not start up
 create_xenresize=Expanding filesystem to $1 ..
 create_exenresize=.. expansion failed : $1
+create_exenresize2=.. failed to find primary disk
 create_xendisksize=Disk space allocated to instance
 create_xendiskdef=Image default (typically 1GB)
 create_exendisksize=Disk space must be a number
