@@ -3132,7 +3132,6 @@ vsync_fsubject=Failed replication of $1 virtual servers from $2
 vsync_fsubject2=Failed replication of global settings from $2
 
 storages_title=Image Storage Locations
-storages_add=Add a new image storage location
 storages_dest=Location
 storages_desc=Description
 storages_size=Current size
