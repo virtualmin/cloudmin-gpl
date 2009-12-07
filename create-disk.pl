@@ -151,6 +151,15 @@ if ($mount && $mount ne 'swap') {
 	$mclash && &usage("The filesystem $mount is already mounted from $mclash->{'virt'}");
 	}
 
+# Validate filesystem
+if ($fs) {
+	$fsfunc = "type_".$server->{'manager'}."_list_disk_filesystems";
+	@fslist = &$fsfunc($server);
+	&indexof($fs, @fslist) >= 0 ||
+		&usage("The filesystem type $fs is not supported - valid ".
+		       "types are : ".join(" ", @fslist));
+	}
+
 # Do it
 $disk->{'size'} = $size*1024*1024;
 $disk->{'device'} = $device;

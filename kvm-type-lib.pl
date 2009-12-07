@@ -1172,16 +1172,19 @@ $cmd .= " -boot c";
 $cmd .= " -nographic";
 
 # Accept TCP connection for console
-my $inuse = &list_ports_in_use($vhost, "tcp");
-if (ref($inuse)) {
-	my $cport = 4444;
-	while(1) {
-		last if (&indexof($cport, @$inuse) < 0);
-		$cport++;
-		}
-	$server->{'kvm_cport'} = $cport;
-	$cmd .= " -serial tcp:127.0.0.1:$cport,server,nowait";
-	}
+#my $inuse = &list_ports_in_use($vhost, "tcp");
+#if (ref($inuse)) {
+#	my $cport = 4444;
+#	while(1) {
+#		last if (&indexof($cport, @$inuse) < 0);
+#		$cport++;
+#		}
+#	$server->{'kvm_cport'} = $cport;
+#	$cmd .= " -serial tcp:127.0.0.1:$cport,server,nowait";
+#	}
+
+# Connect serial console to stdout
+$cmd .= " -serial stdio";
 
 # TAP networking, if enabled
 foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
@@ -1743,7 +1746,7 @@ return $moderr;
 # Returns supported filesystem types. Assumes Linux.
 sub type_kvm_list_disk_filesystems
 {
-return ('ext3', 'ext2', 'reiserfs', 'swap');
+return ('ext2', 'reiserfs', 'swap');
 }
 
 # Returns 2, indicating that memory can be changed but needs a reboot
