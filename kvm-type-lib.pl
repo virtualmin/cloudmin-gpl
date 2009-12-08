@@ -91,6 +91,26 @@ my ($server) = @_;
 return $server->{'manager'} eq 'this' || $server->{'manager'} eq 'real';
 }
 
+# type_kvm_server_actions(&server)
+# Returns extra links for KVM instances
+sub type_kvm_server_actions
+{
+my ($server) = @_;
+my @rv;
+if ($server->{'kvm_vnc_display'} &&
+    $server->{'status'} ne 'down' && $server->{'status'} ne 'nohost' &&
+    &can_action($server, "console")) {
+	# KVM VNC console access link
+	push(@rv, { 'id' => 'vnc',
+		    'desc' => $text{'edit_vnc'},
+		    'cat' => 'power',
+		    'link' => "kvnc.cgi?id=$server->{'id'}" });
+	}
+return @rv;
+}
+
+
+
 # type_kvm_add_form()
 # Returns inputs for adding an existing KVM instance. This is just a matter of
 # selecting the host and the server.
@@ -1154,6 +1174,7 @@ sub get_kvm_start_command
 {
 my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
+my $inuse = &list_ports_in_use($vhost, "tcp");
 my $cmd = &has_command_on_server($vhost, "kvm") ? "kvm" : "qemu-kvm";
 $cmd .= " -name ".quotemeta($server->{'host'});
 
@@ -1168,11 +1189,7 @@ foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 # Boot from disk
 $cmd .= " -boot c";
 
-# No graphical UI
-$cmd .= " -nographic";
-
 # Accept TCP connection for console
-#my $inuse = &list_ports_in_use($vhost, "tcp");
 #if (ref($inuse)) {
 #	my $cport = 4444;
 #	while(1) {
@@ -1197,16 +1214,22 @@ foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
 		}
 	}
 
-# VNC settings
+# VNC settings, on a free port
 if (ref($inuse)) {
-	my $vport = 5900;
+	push(@$inuse, map { $_->{'kvm_vnc_display'}+5900 }
+			  grep { $_->{'kvm_vnc_display'} &&
+				 $_->{'id'} ne $server->{'id'} }
+			       &list_managed_servers());
+	my $vport = 5901;
 	while(1) {
 		last if (&indexof($vport, @$inuse) < 0);
 		$vport++;
 		}
 	$server->{'kvm_vnc_display'} = $vport-5900;
-	my $masterip = &get_server_ip(&get_managed_server(0));
-	$cmd .= " -vnc ".$masterip.",".$server->{'kvm_vnc_display'};
+	$cmd .= " -vnc :".$server->{'kvm_vnc_display'};
+	}
+else {
+	$cmd .= " -nographic";
 	}
 
 return $cmd;
@@ -2502,7 +2525,7 @@ if (!$image->{'nocompress'}) {
 	    ($server->{'kvm_filesystem_lv'} ?
 		"dd if=".quotemeta($fsfile)." bs=32768 | gzip -c" :
 		"gzip -c ".quotemeta($fsfile)).
-	    " >".quotemeta("$tempdir/$gzfile"));
+	    	  " >".quotemeta("$tempdir/$gzfile"));
 	if ($ex) {
 		&$second_print(&text('mkimage_ekvmgzip', "<pre>$out</pre>"));
 		}
