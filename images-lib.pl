@@ -225,6 +225,7 @@ $vhost || return (0, "Could not find parent system");
 my ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
 $img || return (0, "Could not find image with ID $server->{'image'}");
 my @files = split(/\s+/, $img->{'files'});
+my @md5s = split(/\s+/, $img->{'md5'});
 
 # Check if the host has image caching enabled, and if we have the image
 # already
@@ -244,6 +245,11 @@ if ($vhost->{$prefix.'_cachesize'}) {
 	foreach my $f (@files) {
 		my @st = &stat_file_on_server($vhost, "$cachedir/$f");
 		$missing++ if (!@st);
+		}
+	if (!$missing &&
+	    !&verify_image_md5s($vhost, $cachedir, \@files, \@md5s)) {
+		# Failed MD5 check
+		$missing++;
 		}
 	if (!$missing) {
 		# We have them all, so no need to transfer. Touch the image
@@ -474,6 +480,21 @@ sub compare_md5_lists
 {
 my ($l1, $l2) = @_;
 return join(" ", map { lc($_) } @$l1) eq join(" ", map { lc($_) } @$l2);
+}
+
+# verify_image_md5s(&vhost, dir, &files, &expected-mds5)
+# Verify that a list of files have the expected MD5 checksums
+sub verify_image_md5s
+{
+my ($vhost, $dir, $files, $md5s) = @_;
+for(my $i=0; $i<scalar(@$files); $i++) {
+	if ($md5s->[$i]) {
+		my $realmd5 = &checksum_file_on_server(
+				$vhost, $dir."/".$files->[$i]);
+		return 0 if ($realmd5 ne $md5s->[$i]);
+		}
+	}
+return 1;
 }
 
 # fix_virtualmin_licence_files(&server, serial, key)
@@ -1454,6 +1475,7 @@ sub compute_image_dests
 {
 my ($image) = @_;
 my @okdests;
+my @files = split(/\s+/, $image->{'files'});
 foreach my $dest (split(/\s+/, $image->{'dest'})) {
 	my ($destserver, $destpath) = &get_image_dest_path($dest);
 	if (!$destserver) {
@@ -1466,7 +1488,7 @@ foreach my $dest (split(/\s+/, $image->{'dest'})) {
 	else {
 		# Check each file
 		my $missing = 0;
-		foreach my $f (split(/\s+/, $image->{'files'})) {
+		foreach my $f (@files) {
 			my @st = &stat_file_on_server($destserver,
 						      "$destpath/$f");
 			$missing++ if (!@st);
