@@ -1573,8 +1573,8 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 # Fall back to ps command, trying various options
 my ($out, $ex, $err);
 foreach my $cmd (
-	[ "ps --cols 500 -e -o pid,user,args", 3, [ 0, 1, 2 ] ],  # Linux
-	[ "ps -e -o pid,user,args", 3, [ 0, 1, 2 ] ],		  # Solaris
+	[ "ps --cols 2048 -e -o pid,user,args", 3, [ 0, 1, 2 ] ],  # Linux
+	[ "ps -e -o pid,user,args", 3, [ 0, 1, 2 ] ],		   # Solaris
 	) {
 	($out, $ex, $err) = &execute_command_on_server($server,$cmd->[0]);
 	if (!$ex && !$err) {

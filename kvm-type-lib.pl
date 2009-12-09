@@ -173,6 +173,16 @@ elsif ($out !~ /file\s+format:\s+(\S+)/i || $1 ne "raw") {
 	&error(&text('add_ekvmfile2', $got->{'filesystem'}, $1 || "unknown"));
 	}
 
+# Save root disk, RAM, disks and network
+&set_kvm_attributes($server, $vhost, $got);
+}
+
+# set_kvm_attributes(&server, &vhost, &process)
+# Update a KVM instance object's details from the args of a running process
+sub set_kvm_attributes
+{
+my ($server, $vhost, $got) = @_;
+
 # Save KVM root disk
 $server->{'kvm_filesystem'} = $got->{'filesystem'};
 
@@ -2257,6 +2267,12 @@ my ($server, $regen) = @_;
 if ($server->{'kvm_disktotal'} eq '' || $regen) {
 	&type_kvm_compute_disksize($server);
 	}
+if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
+	my $proc = &get_server_kvm_instance($server);
+	if ($proc) {
+		$server->{'kvm'} = $proc->{'pid'};
+		}
+	}
 }
 
 # type_kvm_post_host_refresh(&server)
@@ -2973,6 +2989,95 @@ sub type_kvm_get_dns_name
 {
 my $vhost = &get_parent_server($server);
 return ( $server->{'kvm_dns'}, $vhost->{'kvm_zone'} );
+}
+
+# type_kvm_find_servers(&vhost, &template-server, running-only, [basedir])
+# Searches a KVM host system for running instances, and adds them to Cloudmin's
+# control. Returns an array of server objects found. May print stuff.
+sub type_kvm_find_servers
+{
+my ($vhost, $tmplserver, $running, $dir) = @_;
+my @rv;
+
+# Find all the servers we currently know about, for dupe checking
+my (%alreadyip, %alreadykvm);
+foreach my $s (&list_managed_servers()) {
+	foreach my $ip (&get_server_ip($s)) {
+		$alreadyip{$ip} = $s;
+		}
+	if ($s->{'kvm_on'} eq $vhost->{'id'}) {
+		$alreadykvm{$s->{'kvm'}} = $s;
+		}
+	}
+
+# Find running KVM instances
+&$first_print($text{'find_kvmprocs'});
+my $instances = &list_kvm_instances($vhost);
+if (!ref($instances)) {
+	&$second_print(&text('find_ekvmprocs', $instances));
+	}
+elsif (!@$instances) {
+	&$second_print($text{'find_nokvmprocs'});
+	}
+else {
+	&$second_print(&text('find_gotkvmprocs', scalar(@$instances)));
+	}
+
+# Process each process
+foreach my $proc (@$instances) {
+	&$first_print(&text('find_kvmproc', "<tt>$proc->{'cmd'}</tt>"));
+
+	# Check for a PID clash
+	my $already = $alreadykvm{$proc->{'pid'}};
+	if ($already) {
+		&$second_print(&text('find_xenalready', $already->{'host'}));
+		next;
+		}
+
+	# Make sure we have a filesystem
+	if (!$proc->{'filesystem'}) {
+		&$second_print($text{'find_kvmfs'});
+		next;
+		}
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+			"qemu-img info ".quotemeta($proc->{'filesystem'}));
+	if ($out !~ /file\s+format:\s+(\S+)/i || $1 ne "raw") {
+		&$second_print(&text('find_kvmfsraw',
+				     "<tt>$proc->{'filesystem'}</tt>"));
+		next;
+		}
+
+	# Validate the name flag
+	my $host = $proc->{'args'}->{'name'};
+	if (!$host) {
+		&$second_print($text{'find_kvmname'});
+		next;
+		}
+
+	# Create the server object
+	my $revhost = gethostbyaddr(inet_aton($address), AF_INET);
+	my $server = { %$tmplserver,
+			  'id' => &server_id(),
+			  'desc' => "Automatically added KVM instance $name",
+			  'type' => 'unknown',
+			  'manager' => 'kvm',
+			  'kvm' => $proc->{'pid'},
+			  'kvm_on' => $vhost->{'id'},
+			  'host' => $host,
+			};
+	&set_kvm_attributes($server, $vhost, $proc);
+	&complete_managed_server($server);
+
+	# Get status one more time, and save the server object
+	&save_managed_server($server);
+	&check_server_status($server);
+	&save_managed_server($server);
+	&$second_print(&text('find_xendone', $server->{'host'},
+			     &describe_status($server, 1, 1)));
+	push(@rv, $server);
+	}
+
+return @rv;
 }
 
 # list_kvm_host_bridges(&vhost)

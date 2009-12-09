@@ -86,6 +86,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--same-login") {
 		$samelogin = 1;
 		}
+	elsif ($a eq "--ssh-user") {
+		$ssh_user = shift(@ARGV);
+		}
 	elsif ($a eq "--ssh-key") {
 		$ssh_key = shift(@ARGV);
 		($key) = grep { $_->{'id'} eq $ssh_key } @keys;
@@ -118,7 +121,7 @@ while(@ARGV > 0) {
 		$webmin_port = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown flag $a");
 		}
 	}
 @keys = &list_ssh_keys();
