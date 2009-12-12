@@ -2036,7 +2036,8 @@ return &type_kvm_get_disk_size($server);
 sub type_kvm_need_mount
 {
 my ($server) = @_;
-return $server->{'status'} eq 'down' && !$server->{'kvm_mount'};
+return ($server->{'status'} eq 'down' ||
+	$server->{'status'} eq 'create') && !$server->{'kvm_mount'};
 }
 
 # type_kvm_get_file(&server, remotefile, localfile)
