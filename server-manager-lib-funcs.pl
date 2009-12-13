@@ -5699,6 +5699,64 @@ if ($vinfo && $vinfo->{'mem'}) {
 return @rv ? " (".join(", ", @rv).")" : "";
 }
 
+# usable_host_system(&server, manager, extra-ram, extra-disk)
+# Checks if some host system is has enough RAM and disk free to host another
+# virtual system.
+sub usable_host_system
+{
+my ($vhost, $manager, $mem, $disk) = @_;
+
+# Check how much RAM and disk is free now
+my $vinfo = &get_server_collected($vhost);
+my ($memfree, $diskfree);
+if ($vhost->{$manager.'_vg_free'}) {
+	# Using LVM, check its free space
+	$diskfree = $vhost->{$manager.'_vg_free'};
+	}
+elsif ($vinfo && $vinfo->{'disk_free'}) {
+	# From collected info
+	$diskfree = $vinfo->{'disk_free'};
+	}
+$memfree = $vinfo->{'mem'}->[1]*1024;
+if ($vhost->{'floor_mem_down'}) {
+	# Take away RAM assigned to down systems
+	foreach my $s (&list_managed_servers()) {
+		next if ($s->{'status'} ne 'down');
+		my $v = &get_parent_server($s);
+		next if ($v->{'id'} ne $vhost->{'id'});
+		my $mfunc = "type_".$s->{'manager'}."_get_memory_size";
+		if (defined(&$mfunc)) {
+			$memfree -= &$mfunc($s);
+			}
+		}
+	}
+
+# See if we are under
+if (defined($diskfree) && $diskfree-$disk <= 0) {
+	# Would use up all the disk
+	return wantarray ? (0, &text('floor_nodisk2',
+				     &nice_size($disk-$diskfree))) : 0;
+	}
+if (defined($diskfree) && $diskfree-$disk < $vhost->{'floor_disk'}) {
+	# Not enough disk
+	return wantarray ?
+	    (0, &text('floor_nodisk', &nice_size($diskfree-$disk),
+				      &nice_size($vhost->{'floor_disk'}))) : 0;
+	}
+if (defined($memfree) && $memfree-$mem <= 0) {
+	# Would use up all the RAM
+	return wantarray ? (0, &text('floor_nomem2',
+				     &nice_size($mem-$memfree))) : 0;
+	}
+if (defined($memfree) && $memfree-$mem < $vhost->{'floor_mem'}) {
+	# Not enough RAM
+	return wantarray ?
+	    (0, &text('floor_nomem', &nice_size($memfree-$mem),
+				     &nice_size($vhost->{'floor_mem'}))) : 0;
+	}
+return wantarray ? ( 1 ) : 1;
+}
+
 # get_provider_link()
 # Returns HTML for the logo that should be displayed in the theme for the
 # Virtualmin hosting provider. In an array context, also returns the image
@@ -6271,28 +6329,29 @@ foreach my $f ('ssh_user', 'ssh_port', 'ssh_pass', 'ssh_nologin',
 	}
 }
 
-# list_available_host_servers(type)
+# list_available_host_servers(type, [extra-ram, extra-disk])
 # Returns a list of systems that can host some virtualization type, and
-# are up and running.
+# are up and running. Also takes RAM and disk needs into account.
 sub list_available_host_servers
 {
-my ($type) = @_;
+my ($type, $mem, $disk) = @_;
 my $alttype = $type eq "zones" ? "zone" : $type;
 my @vhosts = grep { ($_->{$type.'_host'} || $_->{$alttype.'_host'}) &&
                     &can_host_server($_) } &list_managed_servers();
 @vhosts = grep { $_->{'status'} eq 'nowebmin' ||
 		 $_->{'status'} eq 'novirt' ||
 		 $_->{'status'} eq 'virt' } @vhosts;
+@vhosts = grep { &usable_host_system($_, $type, $mem, $disk) } @vhosts;
 return @vhosts;
 }
 
-# find_host_server(&server, host-type)
+# find_host_server(&server, host-type, [extra-ram, extra-disk])
 # Returns a host system for some type (xen, vserver, zone), based on those
 # available to the system owner and available RAM / etc
 sub find_host_server
 {
-my ($server, $type) = @_;
-my @vhosts = &list_available_host_servers($type);
+my ($server, $type, $mem, $disk) = @_;
+my @vhosts = &list_available_host_servers($type, $mem, $disk);
 return undef if (!@vhosts);
 return &find_host_server_from_vhosts($server, \@vhosts, $access{'hostmode'});
 }
@@ -6359,7 +6418,11 @@ my $locfield = &ui_select($name."_loc", $defloc->{'id'},
 		[ map { [ $_->{'id'}, $_->{'desc'} ] } @locs ],
 		1, 0, 0, 0,
 		$locfunc ? "onChange='${hostfunc}(\"loc\")'" : "");
-if (&can_select_host_server() && &can_select_host_location() && @locs) {
+if (!@vhosts) {
+	# None available
+	$field = "<font color=red><b>$text{'create_novhost'}</b></font>";
+	}
+elsif (&can_select_host_server() && &can_select_host_location() && @locs) {
 	# Can choose explicit host, or location
 	$field = &ui_radio_table($name."_def", 1,
 			[ [ 1, $text{'locations_sel'}, $locfield,
@@ -6392,12 +6455,12 @@ if ($field) {
 return wantarray ? ( ) : undef;
 }
 
-# parse_host_server_field(&server, name, manager, &in)
+# parse_host_server_field(&server, name, manager, &in, extra-ram, extra-disk)
 # Returns a host system object parsed from the form by show_host_server_field,
 # or calls error
 sub parse_host_server_field
 {
-my ($server, $name, $type, $in) = @_;
+my ($server, $name, $type, $in, $mem, $disk) = @_;
 my @vhosts = &list_available_host_servers($type);
 @vhosts || &error($text{'create_exenvhostnone'});
 my @locs;
@@ -6428,31 +6491,56 @@ elsif (&can_select_host_server()) {
 	}
 else {
 	# Cannot choose any host - let plan decide
-	$vhost = &find_host_server($server, $type);
+	$vhost = &find_host_server($server, $type, $mem, $disk);
 	$vhost || &error($text{'create_exenvhostalloc'});
 	}
 if ($loc) {
 	# Have a location, need to pick host from it
-	$vhost = &find_host_from_location($server, $loc, $type);
+	$vhost = &find_host_from_location($server, $loc, $type, $mem, $disk);
 	$vhost || &error(&text('create_exenvhostalloc2', $loc->{'desc'}));
 	}
+my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $disk);
+$ok || &error(&text('create_ehostusable', $vhost->{'host'}, $err));
 return $vhost;
 }
 
-# show_host_floor_field(&server)
-# Show fields for minimum RAM and disk to keep free on a host system
-sub show_host_floor_field
+# show_host_floor_table(&server)
+# Show a section for minimum RAM and disk to keep free on a host system
+sub show_host_floor_table
 {
 my ($server) = @_;
-# XXX
+print &ui_hidden_table_start($text{'xen_header6'}, "width=100%", 4,
+			     "floor", 0);
+
+# Disk space to leave free
+print &ui_table_row($text{'floor_disk'},
+	&ui_bytesbox("floor_disk", int($server->{'floor_disk'})), 3);
+
+# Memory to leave free
+print &ui_table_row($text{'floor_mem'},
+	&ui_bytesbox("floor_mem", int($server->{'floor_mem'})));
+
+# Include down systems in memory use?
+print &ui_table_row($text{'floor_mem_down'},
+	&ui_yesno_radio("floor_mem_down", $server->{'floor_mem_down'}));
+
+print &ui_hidden_table_end("floor");
 }
 
-# parse_host_floor_field(&server, &in)
-# Parse inputs generated by show_host_floor_field
-sub parse_host_floor_field
+# parse_host_floor_table(&server, &in)
+# Parse inputs generated by show_host_floor_table
+sub parse_host_floor_table
 {
 my ($server, $in) = @_;
-# XXX
+
+# Parse disk space to free
+$in->{'floor_disk'} =~ /^[0-9\.]+$/ || &error($text{'floor_edisk'});
+$server->{'floor_disk'} = $in->{'floor_disk'} * $in->{'floor_disk_units'};
+
+# Parse memory to leave free
+$in->{'floor_mem'} =~ /^[0-9\.]+$/ || &error($text{'floor_emem'});
+$server->{'floor_mem'} = $in->{'floor_mem'} * $in->{'floor_mem_units'};
+$server->{'floor_mem_down'} = $in->{'floor_mem_down'};
 }
 
 # tempname_on_server(&server, [basename])
