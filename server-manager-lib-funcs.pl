@@ -5806,6 +5806,9 @@ if (!defined(&$cfunc) || !&$cfunc($server, $dest)) {
 	return "The $desc system $server->{'host'} cannot be moved to $dest->{'host'}";
 	}
 
+# Check for resource limits on the target
+# XXX
+
 # Do the actual move
 my $mfunc = "type_".$server->{'manager'}."_move_system";
 my $err = &$mfunc($server, $dest, $shutdown, $allocate);
