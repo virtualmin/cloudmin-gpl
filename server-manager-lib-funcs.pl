@@ -5807,7 +5807,23 @@ if (!defined(&$cfunc) || !&$cfunc($server, $dest)) {
 	}
 
 # Check for resource limits on the target
-# XXX
+my ($disk, $mem);
+my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
+if (defined(&$dfunc)) {
+	$disk = &$dfunc($server);
+	}
+my $sfunc = "type_".$server->{'manager'}."_get_disk_space";
+if (!$disk && defined(&$sfunc)) {
+	$disk = &$sfunc($server);
+	}
+my $mfunc = "type_".$server->{'manager'}."_get_memory";
+if (defined(&$mfunc)) {
+	$mem = &$mfunc($server);
+	}
+my ($ok, $err) = &usable_host_system($dest, $server->{'manager'}, $mem, $disk);
+if (!$ok) {
+	return "The host system $dest->{'host'} is not suitable : $err";
+	}
 
 # Do the actual move
 my $mfunc = "type_".$server->{'manager'}."_move_system";
