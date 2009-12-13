@@ -140,6 +140,9 @@ print &ui_table_row($text{'kvm_resolv'},
 
 print &ui_hidden_table_end("net");
 
+# Section for minimum resources
+&show_host_floor_table($kvm);
+
 # Section for caching
 &show_host_images_cache_table($kvm, "kvm");
 

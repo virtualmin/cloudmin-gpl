@@ -72,6 +72,9 @@ else {
 		&error($text{'kvm_eresolv'});
 	$kvm->{'kvm_resolv'} = $in{'resolv_def'} ? undef : $in{'resolv'};
 
+	# Parse minimum resources
+	&parse_host_floor_table($kvm, \%in);
+
 	# Cache directory
 	&parse_host_images_cache_table($kvm, \%in, "kvm");
 

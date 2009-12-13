@@ -383,8 +383,30 @@ sub type_kvm_create_parse
 {
 my ($server, $in) = @_;
 
+# Validate memory parameters
+$in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
+$server->{'kvm_memory'} = $in{'kvm_memory'};
+
+# Validate disk size
+if (!$in{'kvm_disk_def'}) {
+	$in{'kvm_disk'} =~ /^\d+$/ || &error($text{'create_exendisksize'});
+	$server->{'kvm_disksize'} = $in{'kvm_disk'};
+	$server->{'kvm_disktotal'} = $in{'kvm_disk'}*1024*1024;
+	if ($img->{'rawsize'} &&
+	    $img->{'rawsize'} > $in{'kvm_disk'}*1024*1024) {
+		&error(&text('create_exendisksize2',
+			     &nice_size($img->{'rawsize'})));
+		}
+	}
+else {
+	my $img = &get_server_image($server->{'image'});
+	$server->{'kvm_disktotal'} = $img->{'rawsize'};
+	}
+
 # Select host system
-my $vhost = &parse_host_server_field($server, 'kvm', 'kvm', $in);
+my $vhost = &parse_host_server_field($server, 'kvm', 'kvm', $in,
+				     $server->{'kvm_memory'}*1024*1024,
+				     $server->{'kvm_disktotal'});
 $server->{'kvm_on'} = $vhost->{'id'};
 
 # Make sure the hostname doesn't contain a ., or clashes
@@ -446,26 +468,6 @@ else {
 	&error($err) if ($err);
 	}
 
-# Validate memory parameters
-$in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
-$server->{'kvm_memory'} = $in{'kvm_memory'};
-
-# Validate disk size
-if (!$in{'kvm_disk_def'}) {
-	$in{'kvm_disk'} =~ /^\d+$/ || &error($text{'create_exendisksize'});
-	$server->{'kvm_disksize'} = $in{'kvm_disk'};
-	$server->{'kvm_disktotal'} = $in{'kvm_disk'}*1024*1024;
-	if ($img->{'rawsize'} &&
-	    $img->{'rawsize'} > $in{'kvm_disk'}*1024*1024) {
-		&error(&text('create_exendisksize2',
-			     &nice_size($img->{'rawsize'})));
-		}
-	}
-else {
-	my $img = &get_server_image($server->{'image'});
-	$server->{'kvm_disktotal'} = $img->{'rawsize'};
-	}
-
 # Append zone name
 my @zones = &list_bind_zones();
 my $zone;
@@ -499,6 +501,31 @@ sub type_kvm_create_args_parse
 {
 my ($args, $server) = @_;
 
+# Validate memory flags
+if ($args->{'memory'}) {
+	$args->{'memory'} =~ /^\d+$/ || return "Non-numeric memory allocation";
+	$server->{'kvm_memory'} = $args->{'memory'};
+	}
+else {
+	$server->{'kvm_memory'} = $config{'kvm_mem'};
+	}
+
+# Validate filesystem size flag
+if ($args->{'disksize'}) {
+	$args->{'disksize'} =~ /^\d+$/ ||
+		return "Non-numeric disk size";
+	$server->{'kvm_disksize'} = $args->{'disksize'};
+	if ($img->{'rawsize'} &&
+	    $img->{'rawsize'} > $args->{'disksize'}*1024*1024) {
+		return "--kvm-disksize must be at least $img->{'rawsize'} ".
+		       "bytes, as that is the size of the selected image";
+		}
+	}
+else {
+	my $img = &get_server_image($server->{'image'});
+	$server->{'kvm_disktotal'} += $img->{'rawsize'};
+	}
+
 # Hosting server
 my $vhost;
 if ($args->{'host'}) {
@@ -513,7 +540,9 @@ elsif ($args->{'location'}) {
 			   $_->{'desc'} eq $args->{'location'} }
 			 &list_locations();
 	$loc || return "Location $args->{'location'} does not exist";
-	$vhost = &find_host_from_location($server, $loc, 'kvm');
+	$vhost = &find_host_from_location($server, $loc, 'kvm',
+					  $server->{'kvm_memory'}*1024*1024,
+                                          $server->{'kvm_disktotal'});
 	$vhost || return "Failed to select host system from location";
 	}
 else {
@@ -523,6 +552,10 @@ else {
 	}
 $vhost->{'kvm_host'} ||
 	return "System $args->{'host'} is not registered to host KVM instances";
+my ($ok, $err) = &usable_host_system($vhost, "kvm",
+                                     $server->{'kvm_memory'}*1024*1024,
+                                     $server->{'kvm_disktotal'});
+$ok || return "Host system $vhost->{'host'} cannot be used : $err";
 $server->{'kvm_on'} = $vhost->{'id'};
 
 # Xen instance name
@@ -615,31 +648,6 @@ if ($vhost->{'kvm_zone'}) {
 	}
 if ($zone) {
 	$server->{'host'} .= ".".$vhost->{'kvm_zone'};
-	}
-
-# Validate memory flags
-if ($args->{'memory'}) {
-	$args->{'memory'} =~ /^\d+$/ || return "Non-numeric memory allocation";
-	$server->{'kvm_memory'} = $args->{'memory'};
-	}
-else {
-	$server->{'kvm_memory'} = $config{'kvm_mem'};
-	}
-
-# Validate filesystem size flag
-if ($args->{'disksize'}) {
-	$args->{'disksize'} =~ /^\d+$/ ||
-		return "Non-numeric disk size";
-	$server->{'kvm_disksize'} = $args->{'disksize'};
-	if ($img->{'rawsize'} &&
-	    $img->{'rawsize'} > $args->{'disksize'}*1024*1024) {
-		return "--kvm-disksize must be at least $img->{'rawsize'} ".
-		       "bytes, as that is the size of the selected image";
-		}
-	}
-else {
-	my $img = &get_server_image($server->{'image'});
-	$server->{'kvm_disktotal'} += $img->{'rawsize'};
 	}
 
 # Validate LVM flag
