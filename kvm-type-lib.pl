@@ -710,12 +710,11 @@ $last_remote_error = undef;
 if ($server->{'kvm_filesystem_vg'}) {
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 	my $lv = { 'name' => $server->{'kvm_filesystem_lv'},
-		      'size' => int($server->{'kvm_disksize'}*1024) ||
-				int($img->{'rawsize'}/1024) ||
-				1024*1024,
-		      'perm' => 'rw',
-		      'alloc' => 'n',
-		      'vg' => $server->{'kvm_filesystem_vg'} };
+		   'size' => int($img->{'rawsize'}/1024) ||
+			     int($server->{'kvm_disksize'}/1024) || 1024*1024,
+		   'perm' => 'rw',
+		   'alloc' => 'n',
+		   'vg' => $server->{'kvm_filesystem_vg'} };
 	if ($reset) {
 		# Delete the old LV
 		my $err = &remote_foreign_call($vhost, "lvm",
@@ -827,7 +826,7 @@ if ($server->{'kvm_disksize'}) {
 		}
 	else {
 		my $olddisk = { %$disk };
-		$disk->{'size'} = $server->{'kvm_disksize'}*1024*1024;
+		$disk->{'size'} = $dksize;
 		my $err = &type_kvm_modify_disk($server, $disk, $olddisk);
 		if ($ex) {
 			&$second_print(&text('create_exenresize', $out));
@@ -842,7 +841,7 @@ if ($server->{'kvm_disksize'}) {
 &$first_print($text{'create_xenmount'});
 my $err = &type_kvm_mount_filesystem($server);
 if ($err) {
-	&$second_print(&text('create_ekvmmount', $err));
+	&$second_print(&text('create_exenmount', $err));
 	return;
 	}
 my $mp = $server->{'kvm_mount'};
@@ -1140,31 +1139,20 @@ my $vhost = &type_kvm_parent($server);
 my $proc = &get_server_kvm_instance($server);
 if ($proc) {
 	&type_kvm_shutdown($server, 1);
+	$server->{'status'} = 'down';
 	}
 
 # Delete virtual disks
 my $disks = &type_kvm_list_disks($server, 0);
+print STDERR "disks=$disks\n";
 if (ref($disks)) {
 	foreach my $d (@$disks) {
+		print STDERR "disk=$d->{'real'}\n";
 		my @st = &stat_file_on_server($vhost, $d->{'real'});
 		next if (!@st);		# Already gone
-		if (!$d->{'device'} && $d->{'real'} !~ /^\/dev\//) {
-			my ($out, $ex, $err) = &execute_command_on_server(
-				$vhost, "rm -f ".quotemeta($d->{'real'}));
-			return $err if ($err);
-			return $out if ($ex);
-			}
-		elsif ($d->{'lv'}) {
-			# Delete the logical volume
-			$last_remote_error = undef;
-			&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-			return $last_remote_error if ($last_remote_error);
-			&remote_foreign_call($vhost, "lvm",
-					     "delete_logical_volume",
-					     { 'device' => $d->{'real'} });
-			return "Failed to delete LV $d->{'real'} : ".
-			       "$last_remote_error" if ($last_remote_error);
-			}
+		my $err = &type_kvm_delete_disk($server, $d);
+		print STDERR "err for $d->{'real'} = $err\n";
+		return $err if ($err);
 		}
 	}
 
@@ -1607,6 +1595,26 @@ if (!$disk->{'device'} && $disk->{'real'} !~ /^\/dev\//) {
 	&delete_file_on_server($vhost, $disk->{'real'});
 	}
 elsif ($disk->{'lv'}) {
+	# Delete mapper entries for LV, if any
+	my $mapper = "$disk->{'vg'}-$disk->{'lv'}";
+	my $files = &list_dir_on_server($vhost, "/dev/mapper");
+	print STDERR "files=$files mapper=$mapper\n";
+	if (ref($files)) {
+		my @delmaps;
+		foreach my $f (@$files) {
+			print STDERR "f=$f\n";
+			if ($f =~ /^\Q$mapper\Ep\d+$/) {
+				push(@delmaps, $f);
+				}
+			}
+		push(@delmaps, $mapper);
+		foreach my $f (@delmaps) {
+			print STDERR "deleting $f\n";
+			&execute_command_on_server($vhost,
+				"dmsetup remove /dev/mapper/$f");
+			}
+		}
+
 	# Delete the logical volume
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 	&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
@@ -1674,12 +1682,21 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		    " >>".quotemeta($disk->{'real'}));
 		}
 
+	# Work out the new filesystem size, taking into the new total disk
+	# size and any preceeding partitions.
+	# XXX still wrong
+	my $oldfs = $part->{'parted_end_bytes'} -
+		    $part->{'parted_start_bytes'};
+	#my $newmbs = int(($oldfs - $olddisk->{'size'} + $disk->{'size'} -
+	#		  $part->{'parted_start_bytes'})/1024/1024);
+	#$newmbs = int($newmbs / 8) * 8;
+	my $newmbs = int(($disk->{'size'} -
+			  $part->{'parted_start_bytes'})/1024/1024);
+	$newmbs = int($newmbs / 8) * 8;
+	print STDERR "oldfs=$oldfs end=$part->{'parted_end_bytes'} ($part->{'parted_end'}) start=$part->{'parted_start_bytes'} ($part->{'parted_start'}) size=$disk->{'size'} oldsize=$olddisk->{'size'}\n";
+
 	if ($disk->{'fs'} && $disk->{'size'} < $olddisk->{'size'}) {
 		# Shrink the filesystem
-		my $oldfs = $part->{'parted_end_bytes'} -
-			    $part->{'parted_start_bytes'};
-		my $newmbs = int(($oldfs - $olddisk->{'size'} +
-					   $disk->{'size'})/1024/1024);
 		push(@cmds, "losetup -o $part->{'offset'} /dev/loop9 ".
 			    quotemeta($disk->{'real'}));
 		push(@cmds, "e2fsck -f -p /dev/loop9");
@@ -1697,10 +1714,11 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	if ($disk->{'fs'} && $disk->{'size'} > $olddisk->{'size'}) {
 		# Expand the filesystem
+		# XXX size is wrong!
 		push(@cmds, "losetup -o $part->{'offset'} /dev/loop9 ".
 			    quotemeta($disk->{'real'}));
 		push(@cmds, "e2fsck -f -p /dev/loop9");
-		push(@cmds, "resize2fs /dev/loop9");
+		push(@cmds, "resize2fs /dev/loop9 ".$newmbs."M");
 		push(@cmds, "losetup -d /dev/loop9");
 		}
 
@@ -1720,8 +1738,10 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Run them in turn
 	foreach my $cmd (@cmds) {
+		print STDERR $cmd,"\n";
 		my ($out, $ex, $err) = &execute_command_on_server(
 			$vhost, $cmd);
+		print STDERR $out;
 		if ($err) {
 			$moderr = $err;
 			last;
@@ -1731,6 +1751,9 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 			last;
 			}
 		}
+
+	# Always remove loopback
+	&execute_command_on_server($vhost, "losetup -d /dev/loop9");
 
 	# Update total disk size
 	if (!$moderr &&

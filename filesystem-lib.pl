@@ -234,19 +234,19 @@ sub parse_parted_size
 {
 my ($str) = @_;
 if ($str =~ /^([0-9\.]+)k/) {
-	return int($1 * 1024);
+	return int($1 * 1000);
 	}
 elsif ($str =~ /^([0-9\.]+)M/) {
-	return int($1 * 1024 * 1024);
+	return int($1 * 1000 * 1000);
 	}
 elsif ($str =~ /^([0-9\.]+)G/) {
-	return int($1 * 1024 * 1024 * 1024);
+	return int($1 * 1000 * 1000 * 1000);
 	}
 elsif ($str =~ /^([0-9\.]+)T/) {
-	return int($1 * 1024 * 1024 * 1024 * 1024);
+	return int($1 * 1000 * 1000 * 1000 * 1000);
 	}
 elsif ($str =~ /^([0-9\.]+)P/) {
-	return int($1 * 1024 * 1024 * 1024 * 1024 * 1024);
+	return int($1 * 1000 * 1000 * 1000 * 1000 * 1000);
 	}
 else {
 	return int($str);
