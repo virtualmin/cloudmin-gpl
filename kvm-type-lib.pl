@@ -492,6 +492,7 @@ return ( { 'name' => 'host', 'value' => 'host-system' },
 	 { 'name' => 'bridge', 'value' => 'name[,name]', 'opt' => 1 },
 	 { 'name' => 'disksize', 'value' => 'megabytes', 'opt' => 1 },
 	 { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
+	 { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1 },
        );
 }
 
@@ -1257,7 +1258,6 @@ else {
 	$cmd .= " -nographic";
 	}
 
-print STDERR $cmd,"\n";
 return $cmd;
 }
 
@@ -1953,9 +1953,6 @@ return "Failed to mount filesystem : $err" if ($err);
 $err = &create_boot_server_interface($server, $iface);
 &umount_filesystem_if_needed($server);
 return $err if ($err);
-
-# Add to command line?
-# XXX
 
 &add_ip_address($server, $iface->{'address'});
 return undef;
@@ -3096,8 +3093,7 @@ if ($allocate && $dest->{'kvm_start'} &&
 my $was_up;
 if ($server->{'status'} ne 'down') {
 	# Shut down before moving
-	&$first_print($shutwhy ? &text('smove_shutting2', $shutwhy)
-			       : $text{'smove_shutting'});
+	&$first_print($text{'smove_shutting'});
 	$err = &shutdown_server($server);
 	if ($err) {
 		return &text('smove_shutfailed', $err);
@@ -3110,99 +3106,94 @@ if ($server->{'status'} ne 'down') {
 # Copy across all disk images, directly if possible
 my $count = 0;
 my $sz = 0;
-if (!$live) {
-	&$first_print($text{'smove_disks'});
-	&$indent_print();
-	foreach my $d (@$disks) {
-		&$first_print(&text('smove_onedisk', $d->{'real'}));
-		$d->{'newreal'} = $d->{'real'};
-		if ($d->{'device'} && !$d->{'lv'}) {
-			# A real device, which shouldn't be touched
-			&$second_print(&text('smove_devdisk'));
-			next;
-			}
-		my @sst = &stat_file_on_server($vhost, $d->{'real'});
-		my @dst = &stat_file_on_server($dest, $d->{'real'});
-		if (@dst && $dst[7] == $sst[7]) {
-			# Already there! Perhaps from shared LVM
-			&$second_print($text{'smove_alrdisk'});
-			next;
-			}
-
-		my $newreal;
-		if ($d->{'lv'}) {
-			# LVM logical volume .. transfer to LV of the same name
-			$dest->{'kvm_vg'} ||
-				return $text{'smove_errvg'};
-			$newreal = "/dev/".$dest->{'kvm_vg'}."/".$d->{'lv'};
-
-			# Create LV on target first
-			$last_remote_error = undef;
-			my $lv = { 'name' => $d->{'lv'},
-				      'size' => int($d->{'size'}/1024),
-				      'perm' => 'rw',
-				      'alloc' => 'n',
-				      'vg' => $dest->{'kvm_vg'} };
-			&remote_foreign_require($dest, "lvm", "lvm-lib.pl");
-			my $err = &remote_foreign_call($dest, "lvm",
-						  "create_logical_volume", $lv);
-			$err ||= $last_remote_error;
-			$err && return &text('smove_errlv', $err);
-
-			# Transfer over the data, using dd
-			my $err = &transfer_file_between_servers($vhost, $dest,
-				$d->{'real'}, $newreal, 1, 1);
-			if ($err) {
-				return &text('smove_errdisk', $err);
-				}
-			push(@dellvs, $d->{'real'});
-			}
-		else {
-			# Work out a new filename, and copy over the file
-			$newreal = $d->{'real'};
-			$newreal =~ s/^.*[\\\/]//;
-			$newreal = "$dest->{'kvm_dir'}/$newreal";
-			my $err = &transfer_file_between_servers($vhost, $dest,
-				$d->{'real'}, $newreal, 0, 1);
-			if ($err) {
-				return &text('smove_errdisk', $err);
-				}
-			push(@delfiles, $d->{'real'});
-			}
-
-		$d->{'newreal'} = $newreal;
-		&$second_print(&text('smove_donedisk',
-				     &nice_size($d->{'size'})));
-		$count++;
-		$sz += $d->{'size'};
+my $disks = &type_kvm_list_disks($server, 0);
+&$first_print($text{'smove_disks'});
+&$indent_print();
+foreach my $d (@$disks) {
+	&$first_print(&text('smove_onedisk', $d->{'real'}));
+	$d->{'newreal'} = $d->{'real'};
+	if ($d->{'device'} && !$d->{'lv'}) {
+		# A real device, which shouldn't be touched
+		&$second_print(&text('smove_devdisk'));
+		next;
 		}
-	&$outdent_print();
-	if ($count) {
-		&$second_print(&text('smove_disksdone', $count,
-				     &nice_size($sz)));
+	my @sst = &stat_file_on_server($vhost, $d->{'real'});
+	my @dst = &stat_file_on_server($dest, $d->{'real'});
+	if (@dst && $dst[7] == $sst[7]) {
+		# Already there! Perhaps from shared LVM
+		&$second_print($text{'smove_alrdisk'});
+		next;
+		}
+
+	my $newreal;
+	if ($d->{'lv'}) {
+		# LVM logical volume .. transfer to LV of the same name
+		$dest->{'kvm_vg'} ||
+			return $text{'smove_errvg'};
+		$newreal = "/dev/".$dest->{'kvm_vg'}."/".$d->{'lv'};
+
+		# Create LV on target first
+		$last_remote_error = undef;
+		my $lv = { 'name' => $d->{'lv'},
+			      'size' => int($d->{'size'}/1024),
+			      'perm' => 'rw',
+			      'alloc' => 'n',
+			      'vg' => $dest->{'kvm_vg'} };
+		&remote_foreign_require($dest, "lvm", "lvm-lib.pl");
+		my $err = &remote_foreign_call($dest, "lvm",
+					  "create_logical_volume", $lv);
+		$err ||= $last_remote_error;
+		$err && return &text('smove_errlv', $err);
+
+		# Transfer over the data, using dd
+		my $err = &transfer_file_between_servers($vhost, $dest,
+			$d->{'real'}, $newreal, 1, 1);
+		if ($err) {
+			return &text('smove_errdisk', $err);
+			}
+		push(@dellvs, $d->{'real'});
 		}
 	else {
-		&$second_print(&text('smove_disksnone'));
+		# Work out a new filename, and copy over the file
+		$newreal = $d->{'real'};
+		$newreal =~ s/^.*[\\\/]//;
+		$newreal = "$dest->{'kvm_dir'}/$newreal";
+		my $err = &transfer_file_between_servers($vhost, $dest,
+			$d->{'real'}, $newreal, 0, 1);
+		if ($err) {
+			return &text('smove_errdisk', $err);
+			}
+		push(@delfiles, $d->{'real'});
 		}
+
+	$d->{'newreal'} = $newreal;
+	&$second_print(&text('smove_donedisk',
+			     &nice_size($d->{'size'})));
+	$count++;
+	$sz += $d->{'size'};
+	}
+&$outdent_print();
+if ($count) {
+	&$second_print(&text('smove_disksdone', $count,
+			     &nice_size($sz)));
+	}
+else {
+	&$second_print(&text('smove_disksnone'));
 	}
 
 # Fix disk paths
-# XXX
-my @disklist;
+my @drives = split(/\s+/, $server->{'kvm_drives'});
 foreach my $d (@$disks) {
-	push(@disklist, $d->{'suffix'}.":".$d->{'newreal'}.",".
-			$d->{'virtdev'}.",".$d->{'mode'});
+	my %drive = map { split(/=/, $_, 2) }
+                        split(/,/, $drives[$disk->{'drive_index'}]);
+	$drive{'file'} = $d->{'real'};
+	$drives[$disk->{'drive_index'}] =
+		join(",", map { $_."=".$drive{$_} } keys %drive);
 	if ($server->{'kvm_filesystem'} eq $d->{'real'}) {
 		$server->{'kvm_filesystem'} = $d->{'newreal'};
 		}
-	if ($server->{'kvm_swap'} eq $d->{'real'}) {
-		$server->{'kvm_swap'} = $d->{'newreal'};
-		}
 	}
-&kvm_save_directive($conf, "disk", \@disklist);
-if ($server->{'kvm_conf'} =~ /^\Q$vhost->{'kvm_dir'}\/\E(.*)$/) {
-	$server->{'kvm_conf'} = "$dest->{'kvm_dir'}/$1";
-	}
+$server->{'kvm_drives'} = join(" ", @drives);
 $server->{'kvm_on'} = $dest->{'id'};
 
 # Delete the original disk images
