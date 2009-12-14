@@ -1042,11 +1042,7 @@ my $cmd = &get_kvm_start_command($server);
 my ($pinged, $sshed);
 
 # Create a console output file
-if (!$server->{'kvm_console'}) {
-	$server->{'kvm_console'} = $server->{'kvm_filesystem'};
-	$server->{'kvm_console'} =~ s/([^\/]+)$//;
-	$server->{'kvm_console'} .= $server->{'host'}.".console";
-	}
+$server->{'kvm_console'} ||= &get_kvm_console_file($server);
 
 # Run qemu-kvm to start it up, in the background
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
@@ -1194,14 +1190,25 @@ my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
 my $inuse = &list_ports_in_use($vhost, "tcp");
 my $cmd = &has_command_on_server($vhost, "kvm") ? "kvm" : "qemu-kvm";
-$cmd .= " -name ".quotemeta($server->{'host'});
+
+# Name flag, if supported
+my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd." --help");
+if ($out =~ /-name/) {
+	$cmd .= " -name ".quotemeta($server->{'host'});
+	}
 
 # Memory flag
 $cmd .= " -m ".$server->{'kvm_memory'};
 
 # Add disks
 foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
-	$cmd .= " -drive $d";
+	if ($d =~ /^file=(\S+),media=disk,index=(\d+),if=ide$/) {
+		my $n = chr($2+97);
+		$cmd .= " -hd".$n." ".$1;
+		}
+	else {
+		$cmd .= " -drive $d";
+		}
 	}
 
 # Boot from disk
@@ -1250,6 +1257,7 @@ else {
 	$cmd .= " -nographic";
 	}
 
+print STDERR $cmd,"\n";
 return $cmd;
 }
 
@@ -2402,8 +2410,9 @@ sub type_kvm_set_atboot
 {
 my ($server, $atboot) = @_;
 my $vhost = &type_kvm_parent($server);
+$server->{'kvm_console'} ||= &get_kvm_console_file($server);
 my $cmd = &get_kvm_start_command($server).
-	  " >>/var/log/cloudmin-kvm.log 2>&1 </dev/null &";
+	  " >$server->{'kvm_console'} 2>&1 </dev/null &";
 my $temp = &transname();
 if (&stat_file_on_server($vhost, "/etc/init.d")) {
 	# Insert into init script
@@ -2646,17 +2655,19 @@ return &text('kvm_ewhich2', "<tt>qemu-kvm</tt>", "<tt>kvm</tt>") if (!$full);
 &has_command_on_server($server, "parted") ||
 	return &text('kvm_ewhich', "<tt>parted</tt>");
 
-# Check CPU
-my ($out, $ex, $err) = &execute_command_on_server($server,
-	"cat /proc/cpuinfo");
-if ($out !~ /flags\s*:\s*.*(vmx|svm)/) {
-	return $text{'kvm_ecpu'};
-	}
+if (!$config{'kvm_qemu'}) {
+	# Check CPU
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"cat /proc/cpuinfo");
+	if ($out !~ /flags\s*:\s*.*(vmx|svm)/) {
+		return $text{'kvm_ecpu'};
+		}
 
-# Check kernel
-my ($out, $ex, $err) = &execute_command_on_server($server,
-				"test -e /dev/kvm");
-return $text{'kvm_ekernel'} if ($ex);
+	# Check kernel
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+					"test -e /dev/kvm");
+	return $text{'kvm_ekernel'} if ($ex);
+	}
 
 return undef;
 }
@@ -3000,6 +3011,238 @@ my $vhost = &get_parent_server($server);
 return ( $server->{'kvm_dns'}, $vhost->{'kvm_zone'} );
 }
 
+# type_kvm_can_move(&server, [&dest])
+# Check if moving a KVM instance is allowed. Only possible if target is up
+sub type_kvm_can_move
+{
+my ($server, $dest) = @_;
+if ($server->{'status'} eq 'nohost') {
+	return 0;	# Parent is down
+	}
+elsif (!$dest) {
+	return 1;	# Assume OK
+	}
+elsif ($dest->{'status'} eq 'virt' ||
+       $dest->{'status'} eq 'nowebmin' ||
+       $dest->{'status'} eq 'novirt') {
+	return 1;	# Dest is OK
+	}
+return 0;
+}
+
+# type_kvm_move_system(&server, &dest, [shutdown])
+# Actually move a KVM instance to a new host, printing messages as it goes.
+sub type_kvm_move_system
+{
+my ($server, $dest, $shutdown) = @_;
+my $vhost = &get_parent_server($server);
+my (@delfiles, @dellvs);
+
+# Check if need to allocate new IP
+my $ip = &get_server_ip($server);
+my @kvm_iface = split(/\s+/, $dest->{'kvm_iface'});
+if ($allocate && $dest->{'kvm_start'} &&
+    !&range_check_ip_address($ip, $dest->{'kvm_start'}, $dest->{'kvm_end'},
+				  $dest->{'kvm_cidr'}, $dest->{'kvm_gws'},
+				  $dest->{'kvm_ifaces'}, $kvm_iface[0])) {
+	# Allocate the primary IP
+	&$first_print($text{'smove_allocating'});
+	my ($newip, $newcidr, $newgw) = &allocate_ip_address(
+		$dest->{'kvm_start'}, $dest->{'kvm_end'},
+	        $dest->{'kvm_cidr'}, $dest->{'kvm_gws'},
+		$dest->{'kvm_ifaces'}, $kvm_iface[0]);
+	$newip || return &text('create_ekvmalloc', $dest->{'host'},
+			    &describe_ip_range($dest->{'kvm_start'},
+					       $dest->{'kvm_end'}));
+	&$second_print(&text('smove_allocated', $newip));
+
+	# Apply the IP change now
+	&$first_print(&text('smove_ipchanging', $ip, $newip));
+	$ifaces = &type_kvm_list_interfaces($server);
+	return $ifaces if (!ref($ifaces));
+	my ($iface) = grep { $_->{'address'} eq $ip } @$ifaces;
+	$iface || return $text{'smove_eifaceip'};
+	my $oldiface = { %$iface };
+	$iface->{'address'} = $newip;
+	$iface->{'netmask'} = &net::prefix_to_mask($newcidr);
+	&modify_primary_ip_address($server, $ip, $newip);
+	my $err = &type_kvm_modify_interface($server, $iface, $oldiface);
+	return $err if ($err);
+	$server->{'ip'} = $newip;
+	&delete_ip_address($server, $ip);
+	&add_ip_address($server, $newip);
+	&$second_print($text{'create_done'});
+
+	# Change the default gateway if needed
+	$newgw ||= &get_server_default_gateway($dest);
+	$newgw = "" if ($newgw eq "*");
+	my $defgw = &get_server_default_gateway($vhost);
+	my @gws = split(/\s+/, $server->{'kvm_gw'});
+	my $gw = $gws[0] eq "*" ? $defgw : $gws[0];
+	if ($newgw ne $gw) {
+		&$first_print(&text('smove_gwchanging',
+				    $gw || $text{'smove_gwnone'},
+				    $newgw || $text{'smove_gwnone'}));
+		my $err = &modify_default_gateway($server, $newgw);
+		return $err if ($err);
+		if ($server->{'kvm_gw'}) {
+			$gws[0] = $newgw;
+			$server->{'kvm_gw'} = join(" ", @gws);
+			}
+		&$second_print($text{'create_done'});
+		}
+	}
+
+my $was_up;
+if ($server->{'status'} ne 'down') {
+	# Shut down before moving
+	&$first_print($shutwhy ? &text('smove_shutting2', $shutwhy)
+			       : $text{'smove_shutting'});
+	$err = &shutdown_server($server);
+	if ($err) {
+		return &text('smove_shutfailed', $err);
+		}
+	$s->{'status'} = 'down';	# Assume it worked
+	$was_up = 1;
+	&$second_print($text{'create_done'});
+	}
+
+# Copy across all disk images, directly if possible
+my $count = 0;
+my $sz = 0;
+if (!$live) {
+	&$first_print($text{'smove_disks'});
+	&$indent_print();
+	foreach my $d (@$disks) {
+		&$first_print(&text('smove_onedisk', $d->{'real'}));
+		$d->{'newreal'} = $d->{'real'};
+		if ($d->{'device'} && !$d->{'lv'}) {
+			# A real device, which shouldn't be touched
+			&$second_print(&text('smove_devdisk'));
+			next;
+			}
+		my @sst = &stat_file_on_server($vhost, $d->{'real'});
+		my @dst = &stat_file_on_server($dest, $d->{'real'});
+		if (@dst && $dst[7] == $sst[7]) {
+			# Already there! Perhaps from shared LVM
+			&$second_print($text{'smove_alrdisk'});
+			next;
+			}
+
+		my $newreal;
+		if ($d->{'lv'}) {
+			# LVM logical volume .. transfer to LV of the same name
+			$dest->{'kvm_vg'} ||
+				return $text{'smove_errvg'};
+			$newreal = "/dev/".$dest->{'kvm_vg'}."/".$d->{'lv'};
+
+			# Create LV on target first
+			$last_remote_error = undef;
+			my $lv = { 'name' => $d->{'lv'},
+				      'size' => int($d->{'size'}/1024),
+				      'perm' => 'rw',
+				      'alloc' => 'n',
+				      'vg' => $dest->{'kvm_vg'} };
+			&remote_foreign_require($dest, "lvm", "lvm-lib.pl");
+			my $err = &remote_foreign_call($dest, "lvm",
+						  "create_logical_volume", $lv);
+			$err ||= $last_remote_error;
+			$err && return &text('smove_errlv', $err);
+
+			# Transfer over the data, using dd
+			my $err = &transfer_file_between_servers($vhost, $dest,
+				$d->{'real'}, $newreal, 1, 1);
+			if ($err) {
+				return &text('smove_errdisk', $err);
+				}
+			push(@dellvs, $d->{'real'});
+			}
+		else {
+			# Work out a new filename, and copy over the file
+			$newreal = $d->{'real'};
+			$newreal =~ s/^.*[\\\/]//;
+			$newreal = "$dest->{'kvm_dir'}/$newreal";
+			my $err = &transfer_file_between_servers($vhost, $dest,
+				$d->{'real'}, $newreal, 0, 1);
+			if ($err) {
+				return &text('smove_errdisk', $err);
+				}
+			push(@delfiles, $d->{'real'});
+			}
+
+		$d->{'newreal'} = $newreal;
+		&$second_print(&text('smove_donedisk',
+				     &nice_size($d->{'size'})));
+		$count++;
+		$sz += $d->{'size'};
+		}
+	&$outdent_print();
+	if ($count) {
+		&$second_print(&text('smove_disksdone', $count,
+				     &nice_size($sz)));
+		}
+	else {
+		&$second_print(&text('smove_disksnone'));
+		}
+	}
+
+# Fix disk paths
+# XXX
+my @disklist;
+foreach my $d (@$disks) {
+	push(@disklist, $d->{'suffix'}.":".$d->{'newreal'}.",".
+			$d->{'virtdev'}.",".$d->{'mode'});
+	if ($server->{'kvm_filesystem'} eq $d->{'real'}) {
+		$server->{'kvm_filesystem'} = $d->{'newreal'};
+		}
+	if ($server->{'kvm_swap'} eq $d->{'real'}) {
+		$server->{'kvm_swap'} = $d->{'newreal'};
+		}
+	}
+&kvm_save_directive($conf, "disk", \@disklist);
+if ($server->{'kvm_conf'} =~ /^\Q$vhost->{'kvm_dir'}\/\E(.*)$/) {
+	$server->{'kvm_conf'} = "$dest->{'kvm_dir'}/$1";
+	}
+$server->{'kvm_on'} = $dest->{'id'};
+
+# Delete the original disk images
+if (@delfiles) {
+	&$first_print(&text('smove_delfiles', scalar(@delfiles)));
+	push(@delfiles, $server->{'kvm_console'}) if ($server->{'kvm_console'});
+	foreach my $f (@delfiles) {
+		my $err = &delete_file_on_server($vhost, $f);
+		if ($err) {
+			&$second_print(&text('smove_delerr', $f, $err));
+			}
+		}
+	foreach my $f (@dellvs) {
+		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
+				     { 'device' => $f });
+		}
+	&$second_print($text{'create_done'});
+	}
+
+# Fix LVM volume group
+if ($server->{'kvm_filesystem_vg'}) {
+	$server->{'kvm_filesystem_vg'} = $dest->{'kvm_vg'};
+	}
+if ($server->{'kvm_swapfile_vg'}) {
+	$server->{'kvm_swapfile_vg'} = $dest->{'kvm_vg'};
+	}
+
+# Start on the new host, if it was up before
+if ($was_up) {
+	&$first_print($text{'smove_starting'});
+	my ($ok, $err) = &startup_server($server);
+	if (!$ok) {
+		return &text('smove_startfailed', $err);
+		}
+	&$second_print($text{'create_done'});
+	}
+
+return undef;
+}
+
 # type_kvm_find_servers(&vhost, &template-server, running-only, [basedir])
 # Searches a KVM host system for running instances, and adds them to Cloudmin's
 # control. Returns an array of server objects found. May print stuff.
@@ -3289,6 +3532,25 @@ $server->{'kvm_cidr'} = join(" ", @cidrs);
 $server->{'kvm_hostifaces'} = join(" ", @hostifaces);
 $server->{'kvm_gw'} = join(" ", @gws);
 return undef;
+}
+
+# get_kvm_console_file(&server)
+# Returns the filename to use for a KVM system's console file
+sub get_kvm_console_file
+{
+my ($server) = @_;
+my $dir;
+if ($server->{'kvm_filesystem_lv'}) {
+	# On LVM, use config dir for console file
+	my $vhost = &get_parent_server($server);
+	$dir = $vhost->{'kvm_dir'};
+	}
+else {
+	# Same dir as root disk
+	$dir = $server->{'kvm_filesystem'};
+	$dir =~ s/\/([^\/]+)$//;
+	}
+return $dir."/".$server->{'host'}.".console";
 }
 
 1;
