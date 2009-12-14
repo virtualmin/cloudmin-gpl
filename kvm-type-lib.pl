@@ -1432,7 +1432,7 @@ if (!$device) {
 	if ($server->{'kvm_filesystem_vg'}) {
 		# Create an LVM name
 		$rv->{'vg'} = $server->{'kvm_filesystem_vg'};
-		$rv->{'lv'} = $server->{'kvm'}."_".(scalar(@$disks)+1)."_img";
+		$rv->{'lv'} = $server->{'host'}."_".(scalar(@$disks)+1)."_img";
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
 	else {
