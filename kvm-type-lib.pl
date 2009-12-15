@@ -1144,14 +1144,11 @@ if ($proc) {
 
 # Delete virtual disks
 my $disks = &type_kvm_list_disks($server, 0);
-print STDERR "disks=$disks\n";
 if (ref($disks)) {
-	foreach my $d (@$disks) {
-		print STDERR "disk=$d->{'real'}\n";
+	foreach my $d (reverse(@$disks)) {
 		my @st = &stat_file_on_server($vhost, $d->{'real'});
 		next if (!@st);		# Already gone
 		my $err = &type_kvm_delete_disk($server, $d);
-		print STDERR "err for $d->{'real'} = $err\n";
 		return $err if ($err);
 		}
 	}
@@ -1598,18 +1595,15 @@ elsif ($disk->{'lv'}) {
 	# Delete mapper entries for LV, if any
 	my $mapper = "$disk->{'vg'}-$disk->{'lv'}";
 	my $files = &list_dir_on_server($vhost, "/dev/mapper");
-	print STDERR "files=$files mapper=$mapper\n";
 	if (ref($files)) {
 		my @delmaps;
 		foreach my $f (@$files) {
-			print STDERR "f=$f\n";
 			if ($f =~ /^\Q$mapper\Ep\d+$/) {
 				push(@delmaps, $f);
 				}
 			}
 		push(@delmaps, $mapper);
 		foreach my $f (@delmaps) {
-			print STDERR "deleting $f\n";
 			&execute_command_on_server($vhost,
 				"dmsetup remove /dev/mapper/$f");
 			}
@@ -1684,16 +1678,9 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Work out the new filesystem size, taking into the new total disk
 	# size and any preceeding partitions.
-	# XXX still wrong
-	my $oldfs = $part->{'parted_end_bytes'} -
-		    $part->{'parted_start_bytes'};
-	#my $newmbs = int(($oldfs - $olddisk->{'size'} + $disk->{'size'} -
-	#		  $part->{'parted_start_bytes'})/1024/1024);
-	#$newmbs = int($newmbs / 8) * 8;
 	my $newmbs = int(($disk->{'size'} -
 			  $part->{'parted_start_bytes'})/1024/1024);
 	$newmbs = int($newmbs / 8) * 8;
-	print STDERR "oldfs=$oldfs end=$part->{'parted_end_bytes'} ($part->{'parted_end'}) start=$part->{'parted_start_bytes'} ($part->{'parted_start'}) size=$disk->{'size'} oldsize=$olddisk->{'size'}\n";
 
 	if ($disk->{'fs'} && $disk->{'size'} < $olddisk->{'size'}) {
 		# Shrink the filesystem
@@ -1710,11 +1697,10 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 	push(@cmds, "parted -s ".quotemeta($disk->{'real'})." mkpart ".
 		    $part->{'parted_type'}." ".
 		    $part->{'parted_start'}." ".
-		    int($disk->{'size'}/1024/1024)."M");
+		    int($disk->{'size'}/1000000)."M");
 
 	if ($disk->{'fs'} && $disk->{'size'} > $olddisk->{'size'}) {
 		# Expand the filesystem
-		# XXX size is wrong!
 		push(@cmds, "losetup -o $part->{'offset'} /dev/loop9 ".
 			    quotemeta($disk->{'real'}));
 		push(@cmds, "e2fsck -f -p /dev/loop9");
@@ -1738,10 +1724,8 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Run them in turn
 	foreach my $cmd (@cmds) {
-		print STDERR $cmd,"\n";
 		my ($out, $ex, $err) = &execute_command_on_server(
 			$vhost, $cmd);
-		print STDERR $out;
 		if ($err) {
 			$moderr = $err;
 			last;
