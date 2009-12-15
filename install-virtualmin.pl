@@ -22,6 +22,8 @@ C<--key>. The former selects a free serial for each system you are installing
 on from the license pool, while the latter lets you manually select a serial
 number and key to be used on all systems. 
 
+To install Virtualmin GPL instead, use the C<--gpl-serial> command line flag.
+
 =head1 Example usage
 
 For each system that the install completes successfully on, a line starting
@@ -60,6 +62,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--key") { $key = shift(@ARGV); }
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
 	elsif ($a eq "--allocate-serial") { $allocate_serial = 1; }
+	elsif ($a eq "--gpl-serial") { $serial = $key = "GPL"; }
 	else {
 		&usage();
 		}
@@ -103,9 +106,11 @@ else {
 # Validate serials
 foreach $s (@servers) {
 	($tserial, $tkey) = @{$serialmap{$s->{'id'}}};
-	$tok = &check_virtualmin_serial($tserial, $tkey);
-	$tok || &usage("Serial $tserial or key $tkey for $s->{'host'} is not valid");
-	$tok > 0 || &usage("Could not validate serial for $s->{'host'}");
+	if ($tserial ne "GPL") {
+		$tok = &check_virtualmin_serial($tserial, $tkey);
+		$tok || &usage("Serial $tserial or key $tkey for $s->{'host'} is not valid");
+		$tok > 0 || &usage("Could not validate serial for $s->{'host'}");
+		}
 	}
 
 # Do the parallel refresh
@@ -151,8 +156,9 @@ print "                            [--group name]*\n";
 my $types = join("|", @server_management_types);
 print "                            [--type $types]*\n";
 print "                            [--os oscode]*\n";
-print "                            [--serial number --key number] |\n";
-print "                            [--same-serial] | [--allocate-serial]\n";
+print "                            [--serial number --key number |\n";
+print "                             --same-serial | --allocate-serial |\n";
+print "                             --gpl-serial]\n";
 print "                            [--owner name]*\n";
 exit(1);
 }
