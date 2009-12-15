@@ -839,7 +839,7 @@ if ($server->{'kvm_disksize'}) {
 
 # Mount the created filesystem
 &$first_print($text{'create_xenmount'});
-my $err = &type_kvm_mount_filesystem($server);
+my $err = &mount_filesystem_if_needed($server);
 if ($err) {
 	&$second_print(&text('create_exenmount', $err));
 	return;
@@ -948,7 +948,7 @@ else {
 
 # Un-mount
 &$first_print($text{'create_xenumount'});
-&type_kvm_umount_filesystem($server);
+&umount_filesystem_if_needed($server);
 &$second_print($text{'create_done'});
 
 # Compute total disk size
