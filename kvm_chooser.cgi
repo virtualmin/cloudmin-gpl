@@ -41,9 +41,9 @@ else {
 			"<a href='' onClick='select(\"$i->{'pid'}\")'>".
 			"$i->{'pid'}</a>",
 		    &html_escape($i->{'cmd'}),
-		    $s ? &text('ichooser_unuse', $s->{'host'})
-		    $i->{'filesystem'} ? $text{'ichooser_free'}
-				       : $text{'kchooser_nofs'},
+		    $s ? &text('ichooser_unuse', $s->{'host'}) :
+		        $i->{'filesystem'} ? $text{'ichooser_free'}
+				           : $text{'kchooser_nofs'},
 		    ]);
 		}
 	print &ui_columns_end();

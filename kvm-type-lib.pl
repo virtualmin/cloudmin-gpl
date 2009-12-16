@@ -3515,7 +3515,7 @@ foreach my $iface (@hostifaces) {
 		$vhost->{'kvm_start'}, $vhost->{'kvm_end'},
 	        $vhost->{'kvm_cidr'}, $vhost->{'kvm_gws'},
 		$vhost->{'kvm_ifaces'}, $iface);
-	$ip || return &text('create_ekvmalloc', $vhost->{'host'},
+	$ip || return &text('create_exenalloc', $vhost->{'host'},
 			    &describe_ip_range($vhost->{'kvm_start'},
 					       $vhost->{'kvm_end'},
 					       $vhost->{'kvm_cidr'},
