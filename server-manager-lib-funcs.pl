@@ -4168,10 +4168,11 @@ foreach my $sd (@sorted) {
 	}
 
 # Disable or delete requested domains
+my %disabled;
 foreach my $sd (@sorted) {
 	my ($server, $d) = @$sd;
 
-	# Skip if not done
+	# Skip if not backed up
 	next if (!$donebackup{$d->{'id'}});
 
 	# Skip if the parent has already been done, or has failed
@@ -4194,6 +4195,7 @@ foreach my $sd (@sorted) {
 			&$second_print(&text('move_disabled', $d->{'dom'}));
 			push(@refresh, $server)
 				if (!$refreshed{$server->{'id'}}++);
+			$disabled{$server->{'id'},$d->{'dom'}} = 1;
 			}
 		}
 	elsif ($delete == 1) {
@@ -4248,11 +4250,28 @@ foreach my $sd (@sorted) {
 		$err = $out;
 		}
 	if ($err) {
+		# Restore failed!!
 		&$block_print($out);
 		&$second_print(&text('move_erestore', $err));
 		if ($delete == 1) {
+			# Was deleted on the source already!
 			&$second_print(&text('move_ewarning', $d->{'dom'},
 					     $desttemp, $server->{'host'}));
+			}
+		elsif ($delete == 2 && $disabled{$server->{'id'},$d->{'dom'}}) {
+			# Was disabled on the source .. re-enable
+			&$first_print(&text('move_enable', $d->{'dom'},
+						    $server->{'host'}));
+			my @args = ( [ "domain", $d->{'dom'} ] );
+			my ($err, $out) = &call_virtualmin_api(
+					$server, "enable-domain", \@args);
+			if ($err) {
+				&$second_print(&text('move_eenable', $err));
+				}
+			else {
+				&$second_print(&text('move_enabled',
+						     $d->{'dom'}));
+				}
 			}
 		$failed{$d->{'id'}} = $sd;
 		next;
