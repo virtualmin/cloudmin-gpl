@@ -1016,13 +1016,28 @@ sub type_kvm_shutdown
 {
 my ($server, $force) = @_;
 my $vhost = &type_kvm_parent($server);
+my $proc = &get_server_kvm_instance($server);
 if (&can_ssh_status($server) && !$force) {
 	# Try poweroff command
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-							  "poweroff -f", 30);
-	return $err ? $err : $ex ? $out : undef;
+				  "poweroff -f >/dev/null 2>&1 </dev/null &");
+	return $err if ($err);
+	return $out if ($ex);
+
+	# Wait 30 seconds for shutdown
+	my $tries = 0;
+	while($tries < 30) {
+		my ($kout, $kex) = &execute_command_on_server(
+					$vhost, "kill -0 $proc->{'pid'}");
+		if ($kex) {
+			return undef;
+			}
+		sleep(1);
+		$tries++;
+		}
+	return "Failed to shut down after 30 seconds";
 	}
-my $proc = &get_server_kvm_instance($server);
+$proc = &get_server_kvm_instance($server);
 if ($proc) {
 	# Just kill it
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,

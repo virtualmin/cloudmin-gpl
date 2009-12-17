@@ -2601,16 +2601,30 @@ elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	&remote_foreign_require($server, "init", "init-lib.pl");
 	my $iconfig = &remote_foreign_config($server, "init");
 	&remote_foreign_call($server, "init", "execute_command",
-			     $iconfig->{'shutdown_command'});
-	return $last_remote_error;
+	     $iconfig->{'shutdown_command'}." >/dev/null 2>&1 </dev/null &");
+	return $last_remote_error if ($last_remote_error);
 	}
 else {
 	# Need to try SSHing in
 	my %iconfig = &foreign_config("init");
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"$iconfig{'shutdown_command'} || shutdown now || shutdown -i 5 -g 0 -y");
-	return $err ? $err : $ex ? $out : undef;
+		"($iconfig{'shutdown_command'} || shutdown now || ".
+		"shutdown -i 5 -g 0 -y) >/dev/null 2>&1 </dev/null &");
+	return $err if ($err);
+	return $out if ($ex);
 	}
+
+# Wait for clean shutdown
+my $tries = 0;
+while($tries < 60) {
+	my $p = &ping_server_host(&get_server_ip($server));
+	if (!$p) {
+		return undef;
+		}
+	sleep(1);
+	$tries++;
+	}
+return "Failed to shut down after 60 seconds";
 }
 
 # reboot_server(&server)
