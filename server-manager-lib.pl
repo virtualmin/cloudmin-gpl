@@ -114,9 +114,10 @@ $vm2_licence_prog = "/cgi-bin/slicence.cgi";
 $virtualmin_licence_prog = "/cgi-bin/vlicence.cgi";
 $virtualmin_licence_ssl = 0;
 $virtualmin_installer_prog = "/cgi-bin/install.cgi";
-$virtualmin_solaris_installer_prog = "/cgi-bin/install.cgi";
+$virtualmin_solaris_installer_prog = "/cgi-bin/solaris-install.cgi";
 $virtualmin_alllicences_prog = "/cgi-bin/alllicences.cgi";
 $virtualmin_gpl_installer_path = "/gpl/scripts/install.sh";
+$virtualmin_gpl_solaris_installer_path = "/gpl/scripts/solaris-install.sh";
 
 $virtualmin_licences_file = "$module_config_directory/virtualmin-licences";
 $serial_cache_file = "$module_config_directory/serial-cache";

@@ -3379,6 +3379,8 @@ my $itemp = &transname("virtualmin-install.sh");
 my $error;
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
+	       $serial eq "GPL" && $os eq "solaris" ?
+		$virtualmin_gpl_solaris_installer_path :
 	       $serial eq "GPL" ?
 		$virtualmin_gpl_installer_path :
 	       $os eq "solaris" ?
