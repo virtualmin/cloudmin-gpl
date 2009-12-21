@@ -152,6 +152,50 @@ print &ui_form_end([ [ undef, $text{'domains_cok'} ] ]);
 print &ui_hidden_end();
 print "<p>\n";
 
+# Form to restore a backup
+print &ui_hidden_start($text{'domains_rhidden'}, "restore",
+		       0, "list_domains.cgi");
+print $text{'domains_rdesc'},"<p>\n";
+print &ui_form_start("restore_domain.cgi", "post");
+print &ui_hidden("create", $in{'create'});
+print &ui_table_start($text{'domains_rheader'}, undef, 2);
+
+# File to restore from
+$master = &get_managed_server(0);
+@rtable = ( [ 0, $text{'domains_rfile0'}, &ui_upload("upload", 40) ] );
+if (&can_action($master, "transfer")) {
+	# File on cloudmin master
+	push(@rtable, [ 1, $text{'domains_rfile1'},
+		        &ui_filebox("file", undef, 40) ]);
+	}
+push(@rtable, [ 1, $text{'domains_rfile2'},
+		&ui_select("server", $in{'create'},
+		   [ map { [ $_->{'id'}, $_->{'host'} ] }
+			 &list_available_managed_servers_sorted() ])." ".
+		&ui_textbox("serverfile", undef, 40) ]);
+print &ui_table_row($text{'domains_rfile'},
+	&ui_radio_table("rfile_mode", 0, \@rtable));
+
+# System to restore on
+print &ui_table_row($text{'domains_rserver'},
+	&ui_select("server", $in{'create'} ? $in{'id'} : -1,
+		   [ [ -1, $text{'domains_cfewest'} ],
+		     [ -2, $text{'domains_cspace'} ],
+		     [ -3, $text{'domains_cload'} ],
+		     map { [ $_->{'id'}, $_->{'host'} ] } @vservers ]));
+
+# Domains to restore
+print &ui_table_row($text{'domains_rdoms'},
+	&ui_opt_textbox("dom", undef, 50, $text{'domains_rall'}));
+
+print &ui_table_end();
+print &ui_form_end([ [ undef, $text{'domains_rok'} ] ]);
+print &ui_hidden_end();
+print "<p>\n";
+
+# Form to migrate a domain
+# XXX
+
 if ($in{'create'}) {
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}&doms=1", $text{'edit_return'});
 	}

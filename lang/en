@@ -673,6 +673,17 @@ domains_delete=Delete Selected
 domains_disable=Disable Selected
 domains_enable=Enable Selected
 domains_move=Move Selected
+domains_rhidden=Restore Virtualmin backup
+domains_rdesc=This form can be used to restore a Virtualmin domain backup on one of your managed systems.
+domains_rheader=Virtual server restore details
+domains_rserver=Restore on system
+domains_rdoms=Domains to restore
+domains_rall=All in file
+domains_rfile=File to restore from
+domains_rfile0=Uploaded file
+domains_rfile1=File on Cloudmin master
+domains_rfile2=File on system
+domains_rok=Restore Now
 
 dcreate_title=Create Virtualmin Domain
 dcreate_err=Failed to create Virtualmin domain
@@ -3271,3 +3282,5 @@ floor_nodisk=Only $1 disk space would be free after creating this system, but th
 floor_nodisk2=An extra $1 free disk space is needed to create this system
 floor_nomem=Only $1 RAM would be free after creating this system, but the minimum is $2
 floor_nomem2=An extra $1 free RAM is needed to create this system
+
+drestore_err=Failed to restore Virtualmin backup
