@@ -153,7 +153,7 @@ print &ui_form_end([ [ undef, $text{'domains_cok'} ] ]);
 print &ui_hidden_end();
 print "<p>\n";
 
-# Form to restore a backup
+# Form to restore a backup or migrate a file
 print &ui_hidden_start($text{'domains_rhidden'}, "restore",
 		       0, "list_domains.cgi");
 print $text{'domains_rdesc'},"<p>\n";
@@ -170,12 +170,18 @@ if (&can_action($master, "transfer")) {
 		        &ui_filebox("file", undef, 40) ]);
 	}
 push(@rtable, [ 2, $text{'domains_rfile2'},
-		&ui_select("server", $in{'create'},
+		&ui_select("serverhost", $in{'create'},
 		   [ map { [ $_->{'id'}, $_->{'host'} ] }
 			 &list_available_managed_servers_sorted() ])." ".
 		&ui_textbox("serverfile", undef, 40) ]);
 print &ui_table_row($text{'domains_rfile'},
 	&ui_radio_table("rfile_mode", 0, \@rtable));
+
+# File format
+print &ui_table_row($text{'domains_rtype'},
+	&ui_select("type", undef,
+		   [ map { [ $_, $text{'domains_rtype_'.$_} ] }
+			 ( '', @virtualmin_migration_types ) ]));
 
 # System to restore on
 print &ui_table_row($text{'domains_rserver'},
@@ -188,15 +194,18 @@ print &ui_table_row($text{'domains_rserver'},
 
 # Domains to restore
 print &ui_table_row($text{'domains_rdoms'},
-	&ui_opt_textbox("dom", undef, 50, $text{'domains_rall'}));
+	&ui_opt_textbox("dom", undef, 50, $text{'domains_rall'},
+			$text{'domains_ronly'}));
+
+# Migration password
+print &ui_table_row($text{'domains_rpass'},
+	&ui_opt_textbox("rpass", undef, 20, $text{'domains_rsame'},
+			$text{'domains_rdiff'}));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'domains_rok'} ] ]);
 print &ui_hidden_end();
 print "<p>\n";
-
-# Form to migrate a domain
-# XXX
 
 if ($in{'create'}) {
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}&doms=1", $text{'edit_return'});

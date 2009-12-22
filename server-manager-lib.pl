@@ -74,6 +74,10 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 	  'enabled' => 1, 'default' => 1 },
 	);
 
+@virtualmin_migration_types = (
+	'cpanel', 'ensim', 'lxadmin', 'plesk', 'plesk9', 'psa',
+	);
+
 %webmin_download_source = (
 	'rpm' => 'http://www.webmin.com/download/rpm/webmin-current.rpm',
 	'dpkg' => 'http://www.webmin.com/download/deb/webmin-current.deb',
