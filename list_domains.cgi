@@ -117,6 +117,7 @@ print &ui_table_row($text{'domains_cserver'},
 		   [ [ -1, $text{'domains_cfewest'} ],
 		     [ -2, $text{'domains_cspace'} ],
 		     [ -3, $text{'domains_cload'} ],
+		     [ -4, $text{'domains_cmem'} ],
 		     map { [ $_->{'id'}, $_->{'host'} ] } @vservers ]));
 
 # Enabled features .. find those available across all servers
@@ -156,7 +157,7 @@ print "<p>\n";
 print &ui_hidden_start($text{'domains_rhidden'}, "restore",
 		       0, "list_domains.cgi");
 print $text{'domains_rdesc'},"<p>\n";
-print &ui_form_start("restore_domain.cgi", "post");
+print &ui_form_start("restore_domain.cgi", "form-data");
 print &ui_hidden("create", $in{'create'});
 print &ui_table_start($text{'domains_rheader'}, undef, 2);
 
@@ -168,7 +169,7 @@ if (&can_action($master, "transfer")) {
 	push(@rtable, [ 1, $text{'domains_rfile1'},
 		        &ui_filebox("file", undef, 40) ]);
 	}
-push(@rtable, [ 1, $text{'domains_rfile2'},
+push(@rtable, [ 2, $text{'domains_rfile2'},
 		&ui_select("server", $in{'create'},
 		   [ map { [ $_->{'id'}, $_->{'host'} ] }
 			 &list_available_managed_servers_sorted() ])." ".
@@ -182,6 +183,7 @@ print &ui_table_row($text{'domains_rserver'},
 		   [ [ -1, $text{'domains_cfewest'} ],
 		     [ -2, $text{'domains_cspace'} ],
 		     [ -3, $text{'domains_cload'} ],
+		     [ -4, $text{'domains_cmem'} ],
 		     map { [ $_->{'id'}, $_->{'host'} ] } @vservers ]));
 
 # Domains to restore

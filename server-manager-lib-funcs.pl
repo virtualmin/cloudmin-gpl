@@ -2269,6 +2269,59 @@ $get_server_collected_cache{$server->{'id'}} = $rv;
 return $rv;
 }
 
+# find_suitable_server(&servers, "doms"|"space"|"cpu"|"mem")
+# Finds a system for a new Virtualmin domain based on some criteria
+sub find_suitable_server
+{
+my ($vservers, $mode) = @_;
+my $server;
+if ($mode eq "doms") {
+	# Look for fewest domains
+	my $min_domains;
+	foreach my $s (@$vservers) {
+		my @doms = &get_server_domains($s);
+		if (scalar(@doms) < $min_domains || !$min_domains) {
+			$min_domains = scalar(@doms);
+			$server = $s;
+			}
+		}
+	}
+elsif ($mode eq "space") {
+	# Look for most free disk space
+	my $max_free;
+	foreach my $s (@$vservers) {
+		my $info = &get_server_collected($s);
+		if ($info->{'disk_free'} > $max_free) {
+			$max_free = $info->{'disk_free'};
+			$server = $s;
+			}
+		}
+	}
+elsif ($mode eq "cpu") {
+	# Look for lowest CPU load
+	ny $min_load;
+	foreach my $s (@$vservers) {
+		my $info = &get_server_collected($s);
+		if ($info->{'load'}->[0] < $min_load || !$min_load) {
+			$min_load = $info->{'load'}->[0];
+			$server = $s;
+			}
+		}
+	}
+elsif ($mode eq "mem") {
+	# Look for highest free RAM
+	my $max_free;
+	foreach my $s (@$vservers) {
+		my $info = &get_server_collected($s);
+		if ($info->{'mem'}->[1] > $max_free) {
+			$max_free = $info->{'mem'}->[1];
+			$server = $s;
+			}
+		}
+	}
+return $server;
+}
+
 # parallel_server_function(&servers, &function, [&args])
 # Calls some function on multiple servers, in 10 (by default) processes.
 # Returns an array of the return values from the functions in those processes.

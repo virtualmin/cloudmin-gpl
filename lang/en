@@ -662,6 +662,7 @@ domains_cserver=Create on system
 domains_cfewest=&lt;With fewest domains&gt;
 domains_cspace=&lt;With most free disk space&gt;
 domains_cload=&lt;With lowest CPU load&gt;
+domains_cmem=&lt;With most free RAM&gt;
 domains_cfeatures=Enabled features
 domains_cok=Create Virtual Server
 domains_cvirt=Assign virtual IP address

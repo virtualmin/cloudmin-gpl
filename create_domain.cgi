@@ -41,35 +41,11 @@ foreach $s (@vservers) {
 	}
 
 # Find the target server
-if ($in{'server'} == -1) {
-	# Look for fewest domains
-	foreach $s (@vservers) {
-		@doms = &get_server_domains($s);
-		if (scalar(@doms) < $min_domains || !$min_domains) {
-			$min_domains = scalar(@doms);
-			$server = $s;
-			}
-		}
-	}
-elsif ($in{'server'} == -2) {
-	# Look for most free space
-	foreach $s (@vservers) {
-		$info = &get_server_collected($s);
-		if ($info->{'disk_free'} > $max_free) {
-			$max_free = $info->{'disk_free'};
-			$server = $s;
-			}
-		}
-	}
-elsif ($in{'server'} == -3) {
-	# Look for lowest CPU load
-	foreach $s (@vservers) {
-		$info = &get_server_collected($s);
-		if ($info->{'load'}->[0] < $min_load || !$min_load) {
-			$min_load = $info->{'load'}->[0];
-			$server = $s;
-			}
-		}
+if ($in{'server'} < 0) {
+	$server = &find_suitable_server(\@vservers,
+		$in{'server'} == -1 ? "doms" :
+		$in{'server'} == -2 ? "space" :
+		$in{'server'} == -3 ? "cpu" : "mem");
 	}
 else {
 	($server) = grep { $_->{'id'} eq $in{'server'} } @vservers;
@@ -87,7 +63,7 @@ foreach $f (@features) {
 	}
 
 # Do it
-&ui_print_unbuffered_header(undef, $text{'dcreate_title'}, "");
+&ui_print_unbuffered_header(&server_in($server), $text{'dcreate_title'}, "");
 &obtain_lock_server($server);
 
 # If the target server type doesn't allow IPs to be brought up within itself,
