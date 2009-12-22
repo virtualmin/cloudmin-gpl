@@ -149,6 +149,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--key") { $key = shift(@ARGV); }
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
 	elsif ($a eq "--allocate-serial") { $allocate_serial = 1; }
+	elsif ($a eq "--no-check-serial") { $nocheck_serial = 1; }
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
 		$typeargs{$1}->{$2} = shift(@ARGV);
@@ -207,7 +208,7 @@ elsif ($allocate_serial) {
 	($serial, $key) = &allocate_virtualmin_serial(0);
 	$serial || &usage($key);
 	}
-elsif ($serial) {
+elsif ($serial && !$nocheck_serial) {
 	$tok = &check_virtualmin_serial($serial, $key);
 	$tok || &usage("Serial $serial or key $key is not valid");
 	$tok > 0 || &usage("Could not validate serial number and key");
@@ -553,6 +554,7 @@ print "                      [--image id]\n";
 print "                      [--no-update]\n";
 print "                      [--serial number --key number] |\n";
 print "                      [--same-serial] | [--allocate-serial]\n";
+print "                      [--no-check-serial]\n";
 print "                      [--id number]\n";
 if (defined(&list_system_owners)) {
 	print "                      [--owner name]\n";
