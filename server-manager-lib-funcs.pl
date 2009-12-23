@@ -1888,6 +1888,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			}
 		elsif (&remote_foreign_check($server, "system-status")) {
 			# Get info from new Webmin status module
+			&save_server_domains($server, [ ]);
 			$server->{'status'} = 'novirt';
 			goto SKIPINFO if ($skipinfo);
 			&remote_foreign_require($server, "system-status",

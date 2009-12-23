@@ -8,6 +8,7 @@ require './server-manager-lib.pl';
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
 @servers || &error($text{'mass_enone'});
 $ids = join("&", map { "d=".$_ } keys %d);
+$s0 = $servers[0]->{'host'};
 
 # Identify parent and virtual systems
 @pservers = grep { !&is_virtual_server($_) } @servers;
@@ -19,7 +20,12 @@ if ($in{'refresh'}) {
 	&can_action_error(\@servers, "refresh");
 	&ui_print_header(undef, $text{'mass_ftitle'}, "");
 
-	print &text('mass_fdoing', scalar(@servers)),"<br>\n";
+	if (@servers == 1) {
+		print &text('mass_fdoing2', "<tt>$s0</tt>"),"<br>\n";
+		}
+	else {
+		print &text('mass_fdoing', scalar(@servers)),"<br>\n";
+		}
 	print "<ul>\n";
 	&obtain_lock_server(\@servers);
 	@prv = &parallel_check_server_status(\@pservers, 0);
@@ -293,7 +299,12 @@ elsif ($in{'shutdown'}) {
 		}
 	else {
 		# Do it for real, in parallel. Virtual systems are done first.
-		print &text('mass_shutting', scalar(@servers)),"<br>\n";
+		if (@servers == 1) {
+			print &text('mass_shutting2', "<tt>$s0</tt>"),"<br>\n";
+			}
+		else {
+			print &text('mass_shutting', scalar(@servers)),"<br>\n";
+			}
 		&obtain_lock_server(\@servers);
 		foreach my $sl (\@oservers, \@pservers) {
 			&parallel_server_function($sl,
@@ -341,7 +352,12 @@ elsif ($in{'startup'}) {
 	&ui_print_unbuffered_header(undef, $text{'mass_starttitle'}, "");
 
 	# Do the startup, in parallel. Real systems are done first.
-	print &text('mass_starting', scalar(@servers)),"<br>\n";
+	if (@servers == 1) {
+		print &text('mass_starting2', "<tt>$s0</tt>"),"<br>\n";
+		}
+	else {
+		print &text('mass_starting', scalar(@servers)),"<br>\n";
+		}
 	&obtain_lock_server(\@servers);
 	foreach my $sl (\@pservers, \@oservers) {
 		&parallel_server_function($sl,
@@ -398,7 +414,12 @@ elsif ($in{'reboot'}) {
 		}
 	else {
 		# Do it for real, in parallel. Virtual systems are done first.
-		print &text('mass_rebooting', scalar(@servers)),"<br>\n";
+		if (@servers == 1) {
+			print &text('mass_rebooting2', "<tt>$s0</tt>"),"<br>\n";
+			}
+		else {
+			print &text('mass_rebooting',scalar(@servers)),"<br>\n";
+			}
 		&obtain_lock_server(\@servers);
 		foreach my $sl (\@oservers, \@pservers) {
 			&parallel_server_function($sl,
