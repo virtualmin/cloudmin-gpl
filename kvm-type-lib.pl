@@ -1001,9 +1001,8 @@ sub type_kvm_reboot
 my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
 if (&can_ssh_status($server)) {
-	# Try reboot command
-	my ($out, $ex, $err) = &execute_command_on_server($server, "reboot");
-	return $err ? $err : $ex ? $out : undef;
+	# Use reboot command
+	return 'FALLBACK';
 	}
 # Just kill and restart
 &type_xen_shutdown($server, 1);

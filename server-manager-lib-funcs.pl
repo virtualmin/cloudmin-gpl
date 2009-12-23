@@ -2647,9 +2647,10 @@ my ($server, $force) = @_;
 my $sfunc = "type_".$server->{'manager'}."_shutdown";
 if (defined(&$sfunc)) {
 	# Type provides a shutdown function
-	return &$sfunc($server, $force);
+	my $rv = &$sfunc($server, $force);
+	return $rv if ($rv ne 'FALLBACK');
 	}
-elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Can use Webmin API call
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "init", "init-lib.pl");
@@ -2688,26 +2689,53 @@ sub reboot_server
 {
 my ($server) = @_;
 my $rfunc = "type_".$server->{'manager'}."_reboot";
+my $oldping = &ping_server_host(&get_server_ip($server));
 if (defined(&$rfunc)) {
 	# Type provides a reboot function
-	return &$rfunc($server);
+	my $rv = &$rfunc($server);
+	return $rv if ($rv ne 'FALLBACK');
 	}
-elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Can use Webmin API call
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "init", "init-lib.pl");
 	my $iconfig = &remote_foreign_config($server, "init");
 	&remote_foreign_call($server, "init", "execute_command",
 			     $iconfig->{'reboot_command'});
-	return $last_remote_error;
+	return $last_remote_error if ($last_remote_error);
 	}
 else {
 	# Need to try SSHing in
 	my %iconfig = &foreign_config("init");
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"$iconfig{'reboot_command'} || shutdown -r now || reboot");
-	return $err ? $err : $ex ? $out : undef;
+	return $err if ($err);
+	return $out if ($ex);
 	}
+
+if ($oldping) {
+	# Wait for a shutdown
+	my $tries = 0;
+	while($tries < 60) {
+		my $p = &ping_server_host(&get_server_ip($server));
+		last if (!$p);
+		sleep(1);
+		$tries++;
+		}
+	return "Failed to shut down after 60 seconds" if ($tries >= 60);
+
+	# Wait for startup
+	$tries = 0;
+	while($tries < 60) {
+		my $p = &ping_server_host(&get_server_ip($server));
+		last if ($p);
+		sleep(1);
+		$tries++;
+		}
+	return "Failed to start up after 60 seconds" if ($tries >= 60);
+	}
+
+return undef;
 }
 
 # startup_server(&server)
