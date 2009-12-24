@@ -1899,8 +1899,25 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			if ($info->{'kernel'}) {
 				$got_kernel = 1;
 				}
-			$server->{'all_poss'} =
-				scalar(@{$info->{'poss'}});
+			if (&remote_foreign_check($server, "security-updates")){
+				# System has security-updates module, probably
+				# because it runs Cloudmin. Fetch updates that
+				# are specific to Cloudmin.
+				my @poss = &remote_foreign_call($server,
+					"security-updates",
+					"list_possible_updates", 2);
+				$info->{'allposs'} = $info->{'poss'};
+				$server->{'all_poss'} =
+					scalar(@{$info->{'allposs'}});
+				$info->{'poss'} = \@poss;
+				$server->{'virtualmin_poss'} =
+					scalar(@{$info->{'poss'}});
+				}
+			else {
+				$server->{'all_poss'} =
+					scalar(@{$info->{'poss'}});
+				delete($server->{'virtualmin_poss'});
+				}
 			}
 		else {
 			# Doesn't have Virtualmin
