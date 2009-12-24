@@ -1640,6 +1640,51 @@ my ($out, $timed_out) = &backquote_with_timeout(
 return !$timed_out && !$? ? 1 : 0;
 }
 
+# wait_for_ping(&server, [timeout])
+# Wait for some number of seconds for a system to be pingable. Returns 1 if OK,
+# 0 if failed.
+sub wait_for_ping
+{
+my ($server, $timeout) = @_;
+$timeout ||= 60;
+my $ip = &get_server_ip($server);
+my $pingstart = time();
+while(time() - $pingstart < $timeout) {
+	sleep(1);
+	if (&ping_server_host($ip)) {
+		return 1;
+		}
+	}
+return 0;
+}
+
+# wait_for_ssh(&server, [timeout])
+# Wait for some number of seconds for a system to be contactable on the SSH
+# port. Returns 1 if OK, 0 if failed.
+sub wait_for_ssh
+{
+my ($server, $timeout) = @_;
+$timeout ||= 60;
+my $ip = &get_server_ip($server);
+my $sshstart = time();
+while(time() - $sshstart < 60) {
+	sleep(1);
+	my $ssherr;
+	eval {
+		local $SIG{'ALRM'} = sub { die "timeout" };
+		alarm(5);
+		&open_socket($ip, $server->{'ssh_port'} || 22, SSHTEST,
+			     \$ssherr);
+		close(SSHTEST);
+		alarm(0);
+		};
+	if (!$ssherr && !$@) {
+		return 1;
+		}
+	}
+return 0;
+}
+
 # check_server_status(&server, [re-generate-collected], [skip-info], [time])
 # Checks the status of a managed server, and updates the server object. Checks
 # SSH login, Webmin login, Virtualmin status, number of domains, memory, disk
@@ -2742,14 +2787,12 @@ if ($oldping) {
 	return "Failed to shut down after 60 seconds" if ($tries >= 60);
 
 	# Wait for startup
-	$tries = 0;
-	while($tries < 60) {
-		my $p = &ping_server_host(&get_server_ip($server));
-		last if ($p);
-		sleep(1);
-		$tries++;
+	my $pinged = &wait_for_ping($server);
+	my $sshed;
+	if ($pinged) {
+		$sshed = &wait_for_ssh($server);
 		}
-	return "Failed to start up after 60 seconds" if ($tries >= 60);
+	return "Failed to start up after 60 seconds" if (!$sshed);
 	}
 
 return undef;

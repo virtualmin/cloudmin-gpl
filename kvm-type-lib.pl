@@ -1085,32 +1085,11 @@ if (!$found) {
 	}
 
 # Wait up to 60 seconds for ping
-my $tries = 0;
-$pinged = 0;
-my $ip = &get_server_ip($server);
-while($tries++ < 60) {
-	sleep(1);
-	if (&ping_server_host($ip)) {
-		$pinged = 1;
-		last;
-		}
-	}
+$pinged = &wait_for_ping($server);
 
 # Wait for SSH to come up
 if ($pinged) {
-	my $sshtries = 0;
-	$sshed = 0;
-	while($sshtries++ < 60) {
-		sleep(1);
-		my $ssherr;
-		&open_socket($server->{'host'}, 22, SSHTEST,
-			     \$ssherr);
-		if (!$ssherr) {
-			close(SSHTEST);
-			$sshed = 1;
-			last;
-			}
-		}
+	$sshed = &wait_for_ssh($server);
 	}
 
 # Re-check which IPs are really active
