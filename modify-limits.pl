@@ -333,14 +333,24 @@ foreach $s (@servers) {
 	if ($reboot && $s->{'status'} ne 'down') {
 		if ($do_reboot) {
 			# Yes .. do it now
-			print "Rebooting system $s->{'host'} to ",
+			print "Shutting down system $s->{'host'} to ",
 			      "apply limits ..\n";
-			my $err = &reboot_server($s);
+			my $err = &shutdown_server($s);
 			if ($err) {
 				print ".. failed : $err\n";
 				}
 			else {
 				print ".. done\n";
+
+				print "Starting up system $s->{'host'} with ",
+				      "new limits ..\n";
+				($ok, $err) = &startup_server($s);
+				if (!$ok) {
+					print ".. failed : $err\n";
+					}
+				else {
+					print ".. done\n";
+					}
 				}
 			&save_managed_server($s);
 			print "\n";
