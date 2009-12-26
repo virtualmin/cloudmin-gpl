@@ -181,6 +181,9 @@ $image_storages_dir = "$module_config_directory/storages";
 $vsyncs_dir = "$module_config_directory/vsyncs";
 $vsync_cron_cmd = "$module_config_directory/vsync.pl";
 
+$alerts_dir = "$module_config_directory/alerts";
+$alert_cron_cmd = "$module_config_directory/alert.pl";
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {
