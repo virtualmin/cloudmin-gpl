@@ -1948,6 +1948,9 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				# System has security-updates module, probably
 				# because it runs Cloudmin. Fetch updates that
 				# are specific to Cloudmin.
+				&remote_foreign_require($server,
+					"security-updates",
+					"security-updates-lib.pl");
 				my @poss = &remote_foreign_call($server,
 					"security-updates",
 					"list_possible_updates", 2);
