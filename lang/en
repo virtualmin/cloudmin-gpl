@@ -2534,6 +2534,7 @@ history_mode_average=Average
 history_label_total=Total over $1 systems
 history_label_average=Average of $1 systems
 history_search=Select systems to graph ..
+history_host=System to graph:
 
 scan_title=Find Existing Systems
 scan_header=System scan details

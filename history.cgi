@@ -3,6 +3,10 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
+if ($in{'id'}) {
+	$oneserver = &get_managed_server($in{'id'});
+	&can_action_error($oneserver, "graph");
+	}
 @allservers = &list_available_managed_servers_sorted();
 if (!%in) {
 	# Use default search, if any
@@ -27,16 +31,27 @@ if (!%in) {
 
 # Show inputs for selecting systems
 print &ui_form_start("history.cgi");
-print $text{'history_search'},"<br>\n";
-print &show_search_form(\%in, \@allservers);
-
-# Create input for graph mode
 @grid = ( );
-push(@grid, "<b>$text{'history_mode'}</b>");
-push(@grid, &ui_radio("mode", $in{'mode'},
-		[ [ "", $text{'history_mode_'} ],
-		  [ "total", $text{'history_mode_total'} ],
-		  [ "average", $text{'history_mode_average'} ] ]));
+if ($in{'id'}) {
+	# Always showing one system
+	push(@grid, "<b>$text{'history_host'}</b>");
+	push(@grid, $oneserver->{'host'});
+	$okbutton = " ".&ui_submit($text{'index_searchgok'}, "ok");
+	print &ui_hidden("search", $oneserver->{'host'});
+	print &ui_hidden("id", $in{'id'});
+	}
+else {
+	# Can select systems
+	print $text{'history_search'},"<br>\n";
+	print &show_search_form(\%in, \@allservers);
+
+	# Create input for graph mode
+	push(@grid, "<b>$text{'history_mode'}</b>");
+	push(@grid, &ui_radio("mode", $in{'mode'},
+			[ [ "", $text{'history_mode_'} ],
+			  [ "total", $text{'history_mode_total'} ],
+			  [ "average", $text{'history_mode_average'} ] ]));
+	}
 
 # And for stat to show
 push(@grid, "<b>$text{'history_showsel'}</b>");
@@ -44,10 +59,11 @@ push(@grid, &ui_select("stat", $in{'stat'},
 		[ map { [ $_, $text{'history_stat_'.$_} ] }
 		      sort { $text{'history_stat_'.$a} cmp
 			     $text{'history_stat_'.$b} }
-			   &list_historic_stats(\@allservers) ]));
+			   &list_historic_stats(\@allservers) ]).
+	    $okbutton);
 
 print &ui_grid_table(\@grid, 4, 100,
-	[ "width=10%", "width=40%", "width=10%", "width=40%" ]);
+	[ "width=10% nowrap", "width=40%", "width=10% nowrap", "width=40%" ]);
 
 print &ui_form_end();
 
