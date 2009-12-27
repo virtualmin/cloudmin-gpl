@@ -7,6 +7,7 @@
 # servers - List of server IDs to apply to
 # groups - List of group names to apply to
 # owners - List of owners whose systems to apply to
+# managers - List of system types to apply to
 # rules - Array ref of rule hash refs, each of which contains
 #	name - Variable to match on, like load, mem, space
 #	value - Cutoff value for alerting

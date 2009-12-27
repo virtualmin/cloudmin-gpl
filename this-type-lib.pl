@@ -2,7 +2,7 @@
 
 sub type_this_desc
 {
-return $text{'this_desc'};
+return $text{'this_typedesc'};
 }
 
 sub type_this_no_shutdown

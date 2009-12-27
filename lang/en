@@ -56,7 +56,7 @@ ec2_addlink=Add EC2 instance
 ec2_typeshort=EC2
 ec2_scan=Find EC2 instances
 
-real_desc=Physical
+real_typedesc=Physical
 real_add=Add physical system
 real_typeshort=physical
 real_scan=Find physical systems
@@ -616,7 +616,7 @@ mass_scdoms=Virtualmin domains
 mass_scnone=.. no required script updates were found.
 mass_scok=Update Selected Scripts
 
-this_desc=Cloudmin master
+this_typedesc=Cloudmin master
 this_this=This system
 
 ichooser_title=Select EC2 Instance
@@ -2519,7 +2519,7 @@ history_stat_spamcount=Spam per minute
 history_stat_viruscount=Viruses per minute
 history_stat_cputemp=CPU temperature
 history_stat_drivetemp=Drive temperature
-history_stat_memused=System up
+history_stat_up=System up
 history_range=$1 from $2 to $3
 history_showing=Showing historic values for : $1
 history_none=No historic system statistics have been recorded for the selected systems yet.
@@ -3328,3 +3328,13 @@ alerts_status=Current status
 alerts_delete=Delete Selected Alerts
 alerts_silence=Silence Alerts
 alerts_unsilence=Un-Silence Alerts
+alerts_return=alert list
+
+alert_ctitle=Create Alert
+alert_etitle=Edit Alert
+alert_header1=Systems to monitor for this alert
+alert_mode0=All managed systems
+alert_mode1=Selected systems
+alert_mode2=Systems in groups
+alert_mode3=Systems owned by
+alert_mode4=Systems of types
