@@ -62,6 +62,9 @@ if (scalar(@$first) > 1024) {
 		for($i=0; $i<scalar(@$first); $i+=$step) {
 			push(@newinfo, $infomap{$s->{'id'}}->[$i]);
 			}
+		if ($infomap{$s->{'id'}} eq $first) {
+			$first = \@newinfo;
+			}
 		$infomap{$s->{'id'}} = \@newinfo;
 		}
 	}
