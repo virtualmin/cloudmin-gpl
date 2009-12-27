@@ -34,11 +34,13 @@ if (!-d "$historic_info_dir/$server->{'id'}") {
 	&make_dir("$historic_info_dir/$server->{'id'}", 0700);
 	}
 my @stats;
+# Add CPU load
 if ($info->{'load'}) {
 	push(@stats, [ "load", $info->{'load'}->[0] ]);
 	push(@stats, [ "load5", $info->{'load'}->[1] ]);
 	push(@stats, [ "load15", $info->{'load'}->[2] ]);
 	}
+# Add memory usage
 if ($info->{'mem'}) {
         push(@stats, [ "memused",
                        ($info->{'mem'}->[0]-$info->{'mem'}->[1])*1024,
@@ -49,16 +51,19 @@ if ($info->{'mem'}) {
                               $info->{'mem'}->[2]*1024 ]);
                 }
         }
+# Add disk usage
 if ($info->{'disk_total'}) {
         push(@stats, [ "diskused",
                        $info->{'disk_total'}-$info->{'disk_free'},
                        $info->{'disk_total'} ]);
         }
+# Add virtualmin domains
 if ($info->{'fcount'}) {
 	push(@stats, [ "doms", int($info->{'fcount'}->{'doms'}) ]);
 	push(@stats, [ "users", int($info->{'fcount'}->{'users'}) ]);
 	push(@stats, [ "aliases", int($info->{'fcount'}->{'aliases'}) ]);
 	}
+# Add Virtualmin disk quotas
 if ($info->{'quota'}) {
 	my $qlimit = 0;
 	my $qused = 0;
@@ -69,6 +74,7 @@ if ($info->{'quota'}) {
 	push(@stats, [ "quotalimit", $qlimit ]);
 	push(@stats, [ "quotaused", $qused ]);
 	}
+# Add system temperatures
 foreach my $tt ("drive", "cpu") {
 	if ($info->{$tt.'temps'}) {
 		my ($temptotal, $tempcount);
@@ -80,6 +86,17 @@ foreach my $tt ("drive", "cpu") {
 			push(@stats, [ $tt."temp", $temptotal / $tempcount ]);
 			}
 		}
+	}
+# Add up/down status
+if ($server->{'status'} eq 'down') {
+	push(@stats, [ "up", 0 ]);
+	}
+elsif ($server->{'status'} eq 'nossh' ||
+       $server->{'status'} eq 'noping') {
+	push(@stats, [ "up", 0.5 ]);
+	}
+else {
+	push(@stats, [ "up", 1 ]);
 	}
 
 # Save historic stats

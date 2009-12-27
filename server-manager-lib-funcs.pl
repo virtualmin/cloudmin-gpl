@@ -4586,13 +4586,13 @@ if ($server_management_types{'xen'} ||
 	push(@glinks, "edit_bw.cgi");
 	push(@gtitles, $text{'bw_title'});
 	push(@gicons, "images/bw.gif");
-	push(@gcats, "settings");
+	push(@gcats, "monitor");
 
 	if ($config{'bw_enabled'}) {
 		push(@glinks, "bwgraph.cgi");
 		push(@gtitles, $text{'graph_title2'});
 		push(@gicons, "images/graph.gif");
-		push(@gcats, "settings");
+		push(@gcats, "monitor");
 		}
 	}
 
@@ -4600,7 +4600,13 @@ if ($server_management_types{'xen'} ||
 push(@glinks, "history.cgi");
 push(@gtitles, $text{'history_title'});
 push(@gicons, "images/hist.gif");
-push(@gcats, "settings");
+push(@gcats, "monitor");
+
+# Alert rules
+push(@glinks, "list_alerts.cgi");
+push(@gtitles, $text{'alerts_title'});
+push(@gicons, "images/alerts.gif");
+push(@gcats, "monitor");
 
 # System owners
 push(@glinks, "list_owners.cgi");
