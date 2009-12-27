@@ -72,7 +72,38 @@ print &ui_table_row(undef, &ui_radio_table("mode", $mode, \@stable), 2);
 print &ui_hidden_table_end("servers");
 
 # Section for rules
-# XXX
+print &ui_hidden_table_start($text{'alert_header2'}, "width=100%", 2,
+			     "rules", 1, \@tds);
+
+@rtable = ( );
+$i = 0;
+@forunits = &list_for_units();
+@names = map { [ $_, $text{'history_stat_'.$_} ] }
+             sort { $text{'history_stat_'.$a} cmp
+                    $text{'history_stat_'.$b} }
+                  &list_historic_stats(\@allservers);
+unshift(@names, [ undef, '&nbsp;' ]);
+foreach my $r (@{$alert->{'rules'}}, { 'for' => 60, 'count' => 1 },
+				     { 'for' => 60, 'count' => 1 }) {
+	($forunit, $for) = &split_for_units($r->{'for'});
+	push(@rtable, [ &ui_select("name_$i", $r->{'name'}, \@names),
+			&ui_select("over_$i", $r->{'over'} ? 1 : 0,
+				   [ [ 1, $text{'alert_over'} ],
+				     [ 0, $text{'alert_under'} ] ]),
+			&ui_textbox("value_$i", $r->{'value'}, 6),
+			&ui_textbox("for_$i", $for, 4).
+			 &ui_select("forunit_$i", $forunit, \@forunits),
+			&ui_textbox("count_$i", $r->{'count'}, 4),
+			]);
+	$i++;
+	}
+print &ui_table_row(undef,
+	&ui_columns_table([ $text{'alert_name'}, $text{'alert_comp'},
+			    $text{'alert_value'},
+			    $text{'alert_for'}, $text{'alert_count'} ],
+			  100, \@rtable, undef, 1), 2);
+
+print &ui_hidden_table_end("rules");
 
 # Section for notification
 # XXX

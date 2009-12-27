@@ -99,5 +99,53 @@ sub setup_alert_cron
 # XXX call from backup restore
 }
 
+# list_for_units()
+# Returns a list of array refs containing unit codes and strings
+sub list_for_units
+{
+return map { [ $_, $text{'alert_unit'.$_} ] } ('s', 'm', 'h', 'd');
+}
+
+# split_for_units(secs)
+# Converts a number of seconds into a units code and number, like 3600
+# into 'h' and 1
+sub split_for_units
+{
+my ($s) = @_;
+my @rv;
+if ($s < 60) {
+	@rv = ('s', $s);
+	}
+elsif ($s < 60*60) {
+	@rv = ('m', $s/60.0);
+	}
+elsif ($s < 24*60*60) {
+	@rv = ('h', $s/(24*60.0));
+	}
+else {
+	@rv = ('d', $s/(24*60*60.0));
+	}
+$rv[1] = sprintf("%.2f", $rv[1]);
+$rv[1] =~ s/\.00$//;
+return @rv;
+}
+
+# join_for_units(units, number)
+# Converts a units code and number into a count in seconds
+sub join_for_units
+{
+my ($u, $n) = @_;
+if ($u eq 'm') {
+	$n *= 60;
+	}
+elsif ($u eq 'h') {
+	$n *= 60*60;
+	}
+elsif ($u eq 'd') {
+	$n *= 24*60*60;
+	}
+return int($n);
+}
+
 1;
 
