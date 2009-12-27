@@ -1241,7 +1241,7 @@ my ($deststr, $vhost) = @_;
 my $dest = &parse_backup_destination($deststr || $server_images_dir);
 my $destserver;
 if ($dest->{'mode'} == 0) {
-	$destserver = &get_managed_server(0);
+	$destserver = &get_this_managed_server();
 	}
 elsif ($dest->{'mode'} == 1) {
 	if ($vhost) {

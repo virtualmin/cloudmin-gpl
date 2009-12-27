@@ -25,10 +25,10 @@ opendir(DIR, $alerts_dir);
 foreach my $f (readdir(DIR)) {
 	next if ($f =~ /^\./);
 	my %alert;
-	&read_file("$alerts_dir/$f", \%alert) || next;
+	&read_file_cached("$alerts_dir/$f", \%alert) || next;
 	my @rules;
 	for(my $i=0; defined($alert{"rule_$i"}); $i++) {
-		push(@rules, { split(/=/, $_)
+		push(@rules, { map { split(/=/, $_) }
 			       split(/\s+/, $alert{"rule_$i"}) });
 		delete($alert{"rule_$i"});
 		}
@@ -36,6 +36,15 @@ foreach my $f (readdir(DIR)) {
 	push(@rv, \%alert);
 	}
 return @rv;
+}
+
+# get_alert(id)
+# Returns just the alert with some ID
+sub get_alert
+{
+my ($id) = @_;
+my ($alert) = grep { $_->{'id'} eq $in } &list_alerts();
+return $alert;
 }
 
 # save_alert(&alert)

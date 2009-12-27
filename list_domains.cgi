@@ -162,7 +162,7 @@ print &ui_hidden("create", $in{'create'});
 print &ui_table_start($text{'domains_rheader'}, undef, 2);
 
 # File to restore from
-$master = &get_managed_server(0);
+$master = &get_this_managed_server();
 @rtable = ( [ 0, $text{'domains_rfile0'}, &ui_upload("upload", 40) ] );
 if (&can_action($master, "transfer")) {
 	# File on cloudmin master

@@ -179,7 +179,8 @@ else {
 	}
 @grid = map { "<font color=$_->[1]>$_->[0]</font>" } @labels;
 print &ui_grid_table(\@grid, 4, 100,
-	[ "width=25%", "width=25%", "width=25%", "width=25%" ]);
+	[ "width=25% nowrap", "width=25% nowrap",
+	  "width=25% nowrap", "width=25% nowrap" ]);
 print "<a href='history_data.cgi?$statsparams&start=$start&end=$end&nice=1'>".
       "$text{'history_rawdata'}</a><br>\n";
 

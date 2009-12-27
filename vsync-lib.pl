@@ -23,7 +23,7 @@ sub get_virtualmin_sync
 {
 my ($id, $jobs) = @_;
 my %vsync;
-&read_file("$vsyncs_dir/$id", \%vsync) || return undef;
+&read_file_cached("$vsyncs_dir/$id", \%vsync) || return undef;
 if (!$jobs) {
 	&foreign_require("cron", "cron-lib.pl");
 	$jobs = [ &cron::list_cron_jobs() ];
