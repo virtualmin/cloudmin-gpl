@@ -9,6 +9,7 @@ require './server-manager-lib.pl';
 # Get the alert being edited
 if (!$in{'new'}) {
 	$alert = &get_alert($in{'id'});
+	$alert || &error($text{'alert_egone'});
 	}
 
 if ($in{'delete'}) {

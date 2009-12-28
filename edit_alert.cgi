@@ -16,6 +16,7 @@ else {
 	# Editing an existing one
 	&ui_print_header(undef, $text{'alert_etitle'}, "");
 	$alert = &get_alert($in{'id'});
+	$alert || &error($text{'alert_egone'});
 	}
 
 print &ui_form_start("save_alert.cgi", "post");

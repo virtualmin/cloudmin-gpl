@@ -44,7 +44,7 @@ return @rv;
 sub get_alert
 {
 my ($id) = @_;
-my ($alert) = grep { $_->{'id'} eq $in } &list_alerts();
+my ($alert) = grep { $_->{'id'} eq $id } &list_alerts();
 return $alert;
 }
 
@@ -189,7 +189,20 @@ else {
 sub describe_alert_rules
 {
 my ($alert) = @_;
-# XXX
+my @descs;
+foreach my $r (@{$alert->{'rules'}}) {
+	my ($forunit, $for) = &split_for_units($r->{'for'});
+	my $desc = &text($r->{'over'} ? 'alert_rdescover'
+				      : 'alert_rdescunder',
+			$text{'history_stat_'.$r->{'name'}},
+			$r->{'value'},
+			$for.$forunit);
+	if ($r->{'count'} > 1) {
+		$desc .= " ".&rext('alert_cdesc', $r->{'count'});
+		}
+	push(@descs, $desc);
+	}
+return join(", ", @descs);
 }
 
 1;
