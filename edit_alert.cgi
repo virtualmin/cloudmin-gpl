@@ -8,7 +8,9 @@ require './server-manager-lib.pl';
 if ($in{'new'}) {
 	# Creating a new one
 	&ui_print_header(undef, $text{'alert_ctitle'}, "");
-	$alert = { 'all' => 1 };
+	$alert = { 'all' => 1,
+		   'and' => 1,
+		   'master' => 1 };
 	}
 else {
 	# Editing an existing one
@@ -17,7 +19,9 @@ else {
 	}
 
 print &ui_form_start("save_alert.cgi", "post");
-@tds = ( "width=30%" );
+print &ui_hidden("id", $in{'id'});
+print &ui_hidden("new", $in{'new'});
+@tds = ( "width=20% nowrap" );
 
 # Section for systems
 print &ui_hidden_table_start($text{'alert_header1'}, "width=100%", 2,
@@ -103,10 +107,32 @@ print &ui_table_row(undef,
 			    $text{'alert_for'}, $text{'alert_count'} ],
 			  100, \@rtable, undef, 1), 2);
 
+print &ui_table_row(undef,
+	&ui_radio("and", $alert->{'and'},
+		  [ [ 1, $text{'alert_and'} ], [ 0, $text{'alert_or'} ] ]), 2);
+
 print &ui_hidden_table_end("rules");
 
 # Section for notification
-# XXX
+print &ui_hidden_table_start($text{'alert_header3'}, "width=100%", 2,
+			     "notif", 1, \@tds);
+
+# Alert message
+print &ui_table_row($text{'alert_desc'},
+	&ui_opt_textbox("desc", $alert->{'desc'}, 50, $text{'alert_descdef'}));
+
+
+# Who to notify
+print &ui_table_row($text{'alert_notif'},
+	&ui_checkbox("master", 1, $text{'alert_master'}, $alert->{'master'}).
+	"<br>\n".
+	&ui_checkbox("owner", 1, $text{'alert_owner'}, $alert->{'owner'}).
+	"<br>\n".
+	&ui_checkbox("email", 1, $text{'alert_email'}, $alert->{'email'}).
+	" ".
+	&ui_textbox("emailto", $alert->{'email'}, 40));
+
+print &ui_hidden_table_end("notif");
 
 if ($in{'new'}) {
 	print &ui_form_end([ [ undef, $text{'create'} ] ]);

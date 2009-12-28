@@ -19,8 +19,8 @@ if (@alerts) {
 	foreach $a (@alerts) {
 		print &ui_checked_columns_row([
 			"<a href='edit_alert.cgi?id=$a->{'id'}'>".
-			  $adesc."</a>",
-			$rdesc,
+			  &describe_alert_servers($a)."</a>",
+			&describe_alert_rules($a),
 			"XXX",
 			], [ "width=5" ], "d", $a->{'id'});
 		}

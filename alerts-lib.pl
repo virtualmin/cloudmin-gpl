@@ -147,5 +147,50 @@ elsif ($u eq 'd') {
 return int($n);
 }
 
+# describe_alert_servers(&alert)
+# Returns a text string describing the systems checked in some alert
+sub describe_alert_servers
+{
+my ($alert) = @_;
+if ($alert->{'all'}) {
+	# All systems
+	return $text{'alertdesc_all'};
+	}
+elsif ($alert->{'servers'}) {
+	# Listed systems
+	my @users = map { &get_managed_server($_) }
+			split(/\s+/, $alert->{'servers'});
+	return @users > 4 ? &text('alertdesc_many', scalar(@users))
+			  : &text('alertdesc_servers',
+				  join(" ", map { "<tt>$_->{'host'}</tt>" }
+					        @servers));
+	}
+elsif ($alert->{'groups'}) {
+	# Members of groups
+	return &text('alertdesc_groups', "<tt>$alert->{'groups'}</tt>");
+	}
+elsif ($alert->{'owners'}) {
+	# Systems with owners
+	return &text('alertdesc_owners', "<tt>$alert->{'owners'}</tt>");
+	}
+elsif ($alert->{'managers'}) {
+	# Systems of types
+	return &text('alertdesc_types',
+		     join(", ", map { $text{$_.'_typedesc'} } 
+				    split(/\s+/, $alert->{'managers'})));
+	}
+else {
+	return "???";
+	}
+}
+
+# describe_alert_rules(&alert)
+# Returns a text string describing the rule(s) that trigger an alert
+sub describe_alert_rules
+{
+my ($alert) = @_;
+# XXX
+}
+
 1;
 
