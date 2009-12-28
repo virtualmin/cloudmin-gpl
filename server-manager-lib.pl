@@ -183,6 +183,7 @@ $vsync_cron_cmd = "$module_config_directory/vsync.pl";
 
 $alerts_dir = "$module_config_directory/alerts";
 $alert_cron_cmd = "$module_config_directory/alert.pl";
+$alert_status_file = "$module_config_directory/alert-status";
 
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});

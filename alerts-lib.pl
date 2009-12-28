@@ -19,6 +19,7 @@
 # master - Send email to master admin
 # owner - Send email to system owner
 # email - Send email to this address
+# interval - Period in seconds between sending alert emails
 sub list_alerts
 {
 my @rv;
@@ -92,11 +93,28 @@ my ($alert, $when) = @_;
 # XXX
 }
 
-# setup_alert_cron()
-# Create the cron job that checks for alerts, if missing
-sub setup_alert_cron
+# evaluate_all_alerts(&servers)
+# Check all alerts and send email if any are firing. Also update current
+# alert status file.
+sub evaluate_all_alerts
 {
-# XXX call from backup restore
+my ($servers) = @_;
+}
+
+# get_alert_statuses()
+# Returns a hash ref from alert IDs to their current statuses, each of which
+# is a hash ref.
+sub get_alert_statuses
+{
+# XXX
+# alert_status_file
+}
+
+# save_alert_statuses(&statuses)
+# Updates the file containing current alert statuses
+sub save_alert_status
+{
+# XXX
 }
 
 # list_for_units()
@@ -120,7 +138,7 @@ elsif ($s < 60*60) {
 	@rv = ('m', $s/60.0);
 	}
 elsif ($s < 24*60*60) {
-	@rv = ('h', $s/(24*60.0));
+	@rv = ('h', $s/(60*60.0));
 	}
 else {
 	@rv = ('d', $s/(24*60*60.0));
@@ -198,11 +216,12 @@ foreach my $r (@{$alert->{'rules'}}) {
 			$r->{'value'},
 			$for.$forunit);
 	if ($r->{'count'} > 1) {
-		$desc .= " ".&rext('alert_cdesc', $r->{'count'});
+		$desc .= " ".&text('alert_cdesc', $r->{'count'});
 		}
 	push(@descs, $desc);
 	}
-return join(", ", @descs);
+return join(", ".($alert->{'and'} ? $text{'alert_rand'}
+				  : $text{'alert_ror'})." ", @descs);
 }
 
 1;

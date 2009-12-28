@@ -3379,3 +3379,7 @@ alert_egone=Selected alert no longer exists!
 alert_rdescover=$1 over $2 for $3
 alert_rdescunder=$1 under $2 for $3
 alert_cdesc=on $1 systems
+alert_rand=and
+alert_ror=or
+alert_interval=Interval between messages
+alert_einterval=Missing or non-numeric interval between messages

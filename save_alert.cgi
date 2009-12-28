@@ -71,7 +71,6 @@ else {
 		$in{"count_$i"} =~ /^[0-9]+$/ ||
 			&error(&text('alert_ecount', $i+1));
 		$r->{'count'} = $in{"count_$i"};
-		$i++;
 		push(@rules, $r);
 		}
 	@rules || &error($text{'alert_erules'});
@@ -90,8 +89,8 @@ else {
 	else {
 		$alert->{'email'} = '';
 		}
-
-	# Parse notifications
+	$in{'int'} =~ /^\d+$/ || &error($text{'alert_einterval'});
+	$alert->{'interval'} = &join_for_units($in{'intunit'}, $in{'int'});
 
 	# Save or create
 	&save_alert($alert);

@@ -11,3 +11,4 @@ if (@ARGV) {
 	@servers = grep { $hosts{$_->{'host'}} } @servers;
 	}
 &parallel_check_server_status(\@servers, 0, 1);
+&evaluate_all_alerts(\@servers);

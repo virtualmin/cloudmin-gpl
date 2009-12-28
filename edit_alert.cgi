@@ -10,7 +10,8 @@ if ($in{'new'}) {
 	&ui_print_header(undef, $text{'alert_ctitle'}, "");
 	$alert = { 'all' => 1,
 		   'and' => 1,
-		   'master' => 1 };
+		   'master' => 1,
+		   'interval' => 3600 };
 	}
 else {
 	# Editing an existing one
@@ -118,11 +119,6 @@ print &ui_hidden_table_end("rules");
 print &ui_hidden_table_start($text{'alert_header3'}, "width=100%", 2,
 			     "notif", 1, \@tds);
 
-# Alert message
-print &ui_table_row($text{'alert_desc'},
-	&ui_opt_textbox("desc", $alert->{'desc'}, 50, $text{'alert_descdef'}));
-
-
 # Who to notify
 print &ui_table_row($text{'alert_notif'},
 	&ui_checkbox("master", 1, $text{'alert_master'}, $alert->{'master'}).
@@ -132,6 +128,16 @@ print &ui_table_row($text{'alert_notif'},
 	&ui_checkbox("email", 1, $text{'alert_email'}, $alert->{'email'}).
 	" ".
 	&ui_textbox("emailto", $alert->{'email'}, 40));
+
+# How often to send
+($intunit, $int) = &split_for_units($alert->{'interval'});
+print &ui_table_row($text{'alert_interval'},
+	&ui_textbox("int", $int, 4).
+	&ui_select("intunit", $intunit, \@forunits));
+
+# Alert message
+print &ui_table_row($text{'alert_desc'},
+	&ui_opt_textbox("desc", $alert->{'desc'}, 50, $text{'alert_descdef'}));
 
 print &ui_hidden_table_end("notif");
 
