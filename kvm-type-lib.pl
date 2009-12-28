@@ -1168,7 +1168,7 @@ sub get_kvm_start_command
 my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
 my $inuse = &list_ports_in_use($vhost, "tcp");
-my $cmd = &has_command_on_server($vhost, "kvm") ? "kvm" : "qemu-kvm";
+my $cmd = &find_qemu_kvm_command($vhost);
 
 # Name flag, if supported
 my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd." --help");
@@ -2646,10 +2646,7 @@ my ($out, $ex, $err) = &execute_command_on_server($server, "uname");
 return $text{'kvm_elinux'} if ($out !~ /linux/i);
 
 # Check commands
-my $full = &has_command_on_server($server, "qemu-kvm");
-if (!$full) {
-	$full = &has_command_on_server($server, "kvm");
-	}
+my $full = &find_qemu_kvm_command($server);
 return &text('kvm_ewhich2', "<tt>qemu-kvm</tt>", "<tt>kvm</tt>") if (!$full);
 &has_command_on_server($server, "qemu-img") ||
 	return &text('kvm_ewhich', "<tt>qemu-img</tt>");
@@ -2670,6 +2667,18 @@ if (!$config{'kvm_qemu'}) {
 	return $text{'kvm_ekernel'} if ($ex);
 	}
 
+return undef;
+}
+
+# find_qemu_kvm_command(&vhost)
+# Returns the command used for running qemu on some system
+sub find_qemu_kvm_command
+{
+my ($vhost) = @_;
+foreach my $c ("kvm", "qemu-kvm") {
+	my $path = &&has_command_on_server($vhost, $c);
+	return $path if ($path);
+	}
 return undef;
 }
 
