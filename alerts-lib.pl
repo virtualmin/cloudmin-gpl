@@ -84,37 +84,164 @@ my $file = $alerts_dir."/".$alert->{'id'};
 &unlock_file($file);
 }
 
-# evaluate_alert(&alert, [when])
+# evaluate_alert(&alert, &servers, [when])
 # Checks if an alert is active, and if so returns a hash ref with details of
-# how it matched and a message.
+# how it matched and a message. Returns undef if no servers were found.
 sub evaluate_alert
 {
-my ($alert, $when) = @_;
-# XXX
+my ($alert, $allservers) = @_;
+$when ||= time();
+my @servers = &get_alert_servers($alert, $allservers);
+return undef if (!@servers);
+
+# See which rules match
+my @firing;
+foreach my $r (@{$alert->{'rules'}}) {
+	my $start = $when - $r->{'for'};
+	my (@fservers, @fvalues);
+	foreach my $s (@servers) {
+		my @info = &list_historic_collected_info($r->{'name'}, $s,
+							 $start, $when);
+		my $icount = 0;
+		foreach my $i (@info) {
+			if ($r->{'over'} && $i->[1] > $r->{'value'} ||
+			    !$r->{'over'} && $i->[1] < $r->{'value'}) {
+				$icount++;
+				}
+			}
+		if (scalar(@info) && $icount == scalar(@info)) {
+			# All values matched for time range
+			push(@fservers, $s);
+			push(@fvalues, $info[$#info]->[1]);
+			}
+		}
+	if (@fservers >= $r->{'count'}) {
+		push(@firing, { 'name' => $r->{'name'},
+			        'servers' => \@fservers,
+				'values' => \@fvalues });
+		}
+	}
+
+# Create and return status object
+my $st = { };
+$st->{'firing'} =
+	$alert->{'or'} && scalar(@firing) > 0 ||
+	$alert->{'and'} && scalar(@firing) == scalar(@{$alert->{'rules'}});
+my (@stnames, @stvalues);
+foreach my $f (@firing) {
+	push(@stnames, $f->{'name'});
+	for(my $i=0; $i<@{$f->{'servers'}}; $i++) {
+		push(@stvalues, $f->{'servers'}->[$i]->{'id'}.":".
+				$f->{'values'}->[$i]);
+		}
+	}
+$st->{'names'} = join(" ", @stnames);
+$st->{'values'} = join(" ", @stvalues);
+
+return $st;
 }
 
-# evaluate_all_alerts(&servers)
+# evaluate_all_alerts([&only-servers])
 # Check all alerts and send email if any are firing. Also update current
 # alert status file.
 sub evaluate_all_alerts
 {
 my ($servers) = @_;
+$servers ||= [ &list_managed_servers() ];
+my $statuses = &get_alert_statuses();
+foreach my $alert (&list_alerts()) {
+	my $oldst = $statuses->{$alert->{'id'}};
+	my $st = &evaluate_alert($alert, $servers);
+	next if (!$st);
+	$statuses->{$alert->{'id'}} = $st;
+	if ($st->{'firing'}) {
+		# Send email or something
+		# XXX
+		# XXX email check interval
+		# XXX don't send if silenced
+		$st->{'start'} = $oldst->{'start'} || time();
+		}
+	}
+&save_alert_statuses($statuses);
+}
+
+# get_alert_servers(&alert, &allservers)
+# Returns the list of systems that some alert triggers on
+sub get_alert_servers
+{
+my ($alert, $allservers) = @_;
+my @rv;
+if ($alert->{'all'}) {
+	# Monitoring everyone
+	@rv = @$allservers;
+	}
+elsif ($alert->{'servers'}) {
+	# Get just ones we want
+	foreach my $id (split(/\s+/, $alert->{'servers'})) {
+		my ($s) = grep { $_->{'id'} eq $id } @$allservers;
+		push(@rv, $s) if ($s);
+		}
+	}
+elsif ($alert->{'groups'}) {
+	# Just members of some groups
+	my %want = map { $_, 1 } split(/\s+/, $alert->{'groups'});
+	foreach my $s (@$allservers) {
+		my ($ing) = grep { $want{$_} } split(/\t+/, $s->{'group'});
+		push(@rv, $s) if ($ing);
+		}
+	}
+elsif ($alert->{'owners'}) {
+	# Owned by some users
+	foreach my $o (split(/\s+/, $alert->{'owners'})) {
+		my $owner = &get_system_owner($o);
+		if ($owner) {
+			my %owned = map { $_, 1 }
+				split(/\s+/, $owner->{'acl'}->{'servers'});
+			push(@rv, grep { $owned{$_->{'id'}} } @$allservers);
+			}
+		}
+	}
+elsif ($alert->{'managers'}) {
+	# Of some virtual type
+	foreach my $t (split(/\s+/, $alert->{'managers'})) {
+		push(@rv, grep { $_->{'manager'} eq $t } @$allservers);
+		}
+	}
+# Filter out dupes
+my %done;
+return grep { !$done{$_->{'id'}}++ } @rv;
 }
 
 # get_alert_statuses()
 # Returns a hash ref from alert IDs to their current statuses, each of which
-# is a hash ref.
+# is a hash ref with the keys :
+# firing - Set to 1 if triggered, 0 if not
+# start - Time it started firing
+# names - Comma-separated list of triggering variables
+# values - Comma-separated list of triggering serverid:value for those variables
 sub get_alert_statuses
 {
-# XXX
-# alert_status_file
+my %stfile;
+&read_file_cached($alert_status_file, \%stfile);
+my $rv = { };
+foreach my $id (keys %stfile) {
+	my %st = map { split(/=/, $_, 2) } split(/\s+/, $stfile{$id});
+	$rv->{$id} = \%st;
+	}
+return \%rv;
 }
 
 # save_alert_statuses(&statuses)
 # Updates the file containing current alert statuses
-sub save_alert_status
+sub save_alert_statuses
 {
-# XXX
+my ($rv) = @_;
+my %stfile;
+foreach my $id (keys %$rv) {
+	my $st = $rv->{$id};
+	$stfile{$id} = join(" ", map { $_."=".$st->{$_} } keys %$st);
+	}
+&write_file($alert_status_file, \%stfile);
 }
 
 # list_for_units()
@@ -181,7 +308,7 @@ elsif ($alert->{'servers'}) {
 	return @users > 4 ? &text('alertdesc_many', scalar(@users))
 			  : &text('alertdesc_servers',
 				  join(" ", map { "<tt>$_->{'host'}</tt>" }
-					        @servers));
+					        @users));
 	}
 elsif ($alert->{'groups'}) {
 	# Members of groups

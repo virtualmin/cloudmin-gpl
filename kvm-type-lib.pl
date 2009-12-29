@@ -2676,7 +2676,7 @@ sub find_qemu_kvm_command
 {
 my ($vhost) = @_;
 foreach my $c ("kvm", "qemu-kvm") {
-	my $path = &&has_command_on_server($vhost, $c);
+	my $path = &has_command_on_server($vhost, $c);
 	return $path if ($path);
 	}
 return undef;
