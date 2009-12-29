@@ -228,7 +228,7 @@ foreach my $id (keys %stfile) {
 	my %st = map { split(/=/, $_, 2) } split(/\s+/, $stfile{$id});
 	$rv->{$id} = \%st;
 	}
-return \%rv;
+return $rv;
 }
 
 # save_alert_statuses(&statuses)
@@ -349,6 +349,48 @@ foreach my $r (@{$alert->{'rules'}}) {
 	}
 return join(", ".($alert->{'and'} ? $text{'alert_rand'}
 				  : $text{'alert_ror'})." ", @descs);
+}
+
+# describe_alert_status(&alert, &status)
+# Returns a string describing the firing status for some alert
+sub describe_alert_status
+{
+my ($alert, $st) = @_;
+if (!$st) {
+	return $text{'alert_stnone'};
+	}
+my @ids = map { ($id) = split(/:/, $_); $id } split(/\s+/, $st->{'values'});
+if ($st->{'firing'}) {
+	# Triggering now
+	if (@ids > 1) {
+		$msg = &text('alert_stfiring2', scalar(@ids));
+		}
+	else {
+		my $s = &get_managed_server($ids[0]);
+		$msg = &text('alert_stfiring', $s->{'host'});
+		}
+	$msg = "<font color=#ff0000>$msg</font>";
+	}
+else {
+	# Still OK
+	if (@ids == 0) {
+		$msg = $text{'alert_stquiet'};
+		}
+	elsif (@ids > 1) {
+		$msg = &text('alert_stbelow2', scalar(@ids));
+		}
+	else {
+		my $s = &get_managed_server($ids[0]);
+		$msg = &text('alert_stbelow', $s->{'host'});
+		}
+	$msg = "<font color=#00aa00>$msg</font>";
+	}
+if ($alert->{'silenced'}) {
+	$msg .= " ".$text{'alert_stsilenced'};
+	}
+# Add links to graphs
+# XXX
+return $msg;
 }
 
 1;

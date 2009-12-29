@@ -87,9 +87,6 @@ for($i=0; $i<scalar(@$first); $i++) {
 			elsif ($in{'stat'} eq 'diskused') {
 				$v /= 1024*1024*1024;
 				}
-			elsif ($in{'stat'} =~ /^load(|5|15)$/) {
-				$v *= 100;
-				}
 			}
 		if ($v ne '0' && $v ne int($v)) {
 			# Two decimal places only

@@ -110,13 +110,15 @@ elsif ($in{'stat'} eq 'diskused') {
 	}
 elsif ($in{'stat'} eq 'load' || $in{'stat'} eq 'load5' ||
        $in{'stat'} eq 'load15') {
-	$units = $text{'history_pc'};
+	$units = $text{'history_cores'};
 	}
 else {
 	$units = undef;
 	}
-print "<b>",&text('history_showing', $text{'history_stat_'.$in{'stat'}}.
-				     ($units ? " ($units)" : ""))."</b><p>\n";
+$sttxt = $text{'history_stat_'.$in{'stat'}};
+print "<b>",&text('history_showing',
+		  $units ? &text('history_units', $sttxt, $units) : $sttxt),
+      "</b><p>\n";
 
 # Move back links. The steps are 1, 2 and 4 times the period
 print "<table cellpadding=0 cellspacing=0 width=100%><tr>\n";

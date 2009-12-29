@@ -14,15 +14,17 @@ if (@alerts) {
 			&select_invert_link("d"));
 	print &ui_links_row(\@links);
 	@tds = ( "width=5" );
+	$statuses = &get_alert_statuses();
 	print &ui_columns_start([ "", $text{'alerts_servers'},
 				  $text{'alerts_rule'},
 				  $text{'alerts_status'} ], 100, 0, \@tds);
 	foreach $a (@alerts) {
+		$st = $statuses->{$a->{'id'}};
 		print &ui_checked_columns_row([
 			"<a href='edit_alert.cgi?id=$a->{'id'}'>".
 			  &describe_alert_servers($a)."</a>",
 			&describe_alert_rules($a),
-			"XXX",
+			&describe_alert_status($a, $st),
 			], \@tds, "d", $a->{'id'});
 		}
 	print &ui_columns_end();
