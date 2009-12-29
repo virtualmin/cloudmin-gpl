@@ -2675,7 +2675,7 @@ return undef;
 sub find_qemu_kvm_command
 {
 my ($vhost) = @_;
-foreach my $c ("kvm", "qemu-kvm") {
+foreach my $c ("kvm", "qemu-kvm", "/usr/libexec/qemu-kvm") {
 	my $path = &has_command_on_server($vhost, $c);
 	return $path if ($path);
 	}
