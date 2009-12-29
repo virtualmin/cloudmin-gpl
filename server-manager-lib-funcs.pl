@@ -1819,6 +1819,13 @@ if ($webminport && $server->{'id'} != 0) {
 		}
 	}
 
+if ($regen) {
+	# Force re-generation of all info
+	delete($server->{'virtualmin_poss'});
+	delete($server->{'all_poss'});
+	&save_server_collected($server, undef);
+	}
+
 # If we have a Webmin login, try it
 my ($got_memory, $got_disk, $got_kernel);
 if ($server->{'user'} || $server->{'id'} == 0) {
