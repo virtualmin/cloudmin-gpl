@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
 # Fetch bandwidth counts for all managed systems
 
+package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
 &foreign_require("mailboxes", "mailboxes-lib.pl");

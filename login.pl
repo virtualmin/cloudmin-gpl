@@ -2,6 +2,7 @@
 # This script is the shell for each system's special console user, and will
 # connect to the console on the host system
 
+package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
 

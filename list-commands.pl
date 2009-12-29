@@ -10,7 +10,7 @@ virtualmin --help command.
 
 =cut
 
-package virtual_server;
+package server_manager;
 if (!$module_name) {
 	$main::no_acl_check++;
 	$ENV{'WEBMIN_CONFIG'} ||= "/etc/webmin";

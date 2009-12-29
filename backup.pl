@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
 # Execute a single backup for multiple virtual systems
 
+package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
 

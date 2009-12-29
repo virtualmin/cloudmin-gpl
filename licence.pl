@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
 # Check licence validity, and save the status
 
+package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
 

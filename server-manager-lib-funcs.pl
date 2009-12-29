@@ -1605,6 +1605,7 @@ return "Failed to list processes : $msg";
 sub remote_error_handler
 {
 $last_remote_error = join("", @_);
+$server_manager::last_remote_error = $last_remote_error;
 }
 
 sub nice_error_status

@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
 # Refresh status of all managed servers
 
+package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
 

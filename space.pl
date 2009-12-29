@@ -2,6 +2,7 @@
 # Compute disk space used by system owners for backups, and storages.
 # Also updates files in images.
 
+package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
 &compute_backup_space();

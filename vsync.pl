@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
 # Run a replication and email the results
 
+package server_manager;
 $no_acl_check++;
 require './server-manager-lib.pl';
 
