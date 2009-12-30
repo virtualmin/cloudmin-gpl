@@ -31,7 +31,9 @@ if (@alerts) {
 	print &ui_links_row(\@links);
 	print &ui_form_end([ [ 'delete', $text{'alerts_delete'} ],
 			     [ 'silence', $text{'alerts_silence'} ],
-			     [ 'unsilence', $text{'alerts_unsilence'} ] ]);
+			     [ 'unsilence', $text{'alerts_unsilence'} ],
+			     [ 'refresh', $text{'alerts_refresh'} ],
+			   ]);
 	}
 else {
 	print "<b>$text{'alerts_none'}</b><p>\n";

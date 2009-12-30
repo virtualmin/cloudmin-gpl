@@ -5,7 +5,9 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 &error_setup($in{'delete'} ? $text{'dalerts_err1'} :
-	     $in{'silence'} ? $text{'dalerts_err2'} : $text{'dalerts_err3'});
+	     $in{'silence'} ? $text{'dalerts_err2'} :
+	     $in{'unsilence'} ? $text{'dalerts_err3'} :
+				$text{'dalerts_err4'});
 @d = split(/\s+/, $in{'d'});
 @d || &error($text{'dalerts_enone'});
 @alerts = grep { $_ } map { &get_alert($_) } @d;
@@ -36,6 +38,10 @@ elsif ($in{'unsilence'}) {
 			}
 		}
 	&webmin_log("unsilence", "alerts", scalar(@alerts));
+	}
+else {
+	# Refresh selected
+	&evaluate_all_alerts(undef, \@alerts);
 	}
 &redirect("list_alerts.cgi");
 

@@ -144,15 +144,15 @@ $st->{'values'} = join(" ", @stvalues);
 return $st;
 }
 
-# evaluate_all_alerts([&only-servers])
+# evaluate_all_alerts([&only-servers], [&only-alerts])
 # Check all alerts and send email if any are firing. Also update current
 # alert status file.
 sub evaluate_all_alerts
 {
-my ($servers) = @_;
+my ($servers, $alerts) = @_;
 $servers ||= [ &list_managed_servers() ];
 my $statuses = &get_alert_statuses();
-foreach my $alert (&list_alerts()) {
+foreach my $alert ($alerts ? @$alerts : &list_alerts()) {
 	my $oldst = $statuses->{$alert->{'id'}};
 	my $st = &evaluate_alert($alert, $servers);
 	next if (!$st);

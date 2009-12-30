@@ -91,13 +91,14 @@ if ($end > $last) {
 	}
 
 # Heading for stats being shown
-if ($in{'stat'} eq 'memused' || $in{'stat'} eq 'swapused') {
+if ($in{'stat'} eq 'memused' || $in{'stat'} eq 'swapused' ||
+    $in{'stat'} eq 'memfree' || $in{'stat'} eq 'swapfree') {
 	$units = "MB";
 	}
 elsif ($in{'stat'} eq 'quotalimit' || $in{'stat'} eq 'quotaused') {
 	$units = "MB";
 	}
-elsif ($in{'stat'} eq 'diskused') {
+elsif ($in{'stat'} eq 'diskused' || $in{'stat'} eq 'diskfree') {
 	$units = "GB";
 	}
 elsif ($in{'stat'} eq 'load' || $in{'stat'} eq 'load5' ||

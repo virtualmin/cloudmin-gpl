@@ -77,14 +77,17 @@ for($i=0; $i<scalar(@$first); $i++) {
 		if ($in{'nice'} && $v ne '0') {
 			# Scale to something more easily readable
 			if ($in{'stat'} eq 'memused' ||
-			    $in{'stat'} eq 'swapused') {
+			    $in{'stat'} eq 'swapused' ||
+			    $in{'stat'} eq 'memfree' ||
+			    $in{'stat'} eq 'swapfree') {
 				$v /= 1024*1024;
 				}
 			elsif ($in{'stat'} eq 'quotalimit' ||
 			       $in{'stat'} eq 'quotaused') {
 				$v /= 1024*1024;
 				}
-			elsif ($in{'stat'} eq 'diskused') {
+			elsif ($in{'stat'} eq 'diskused' ||
+			       $in{'stat'} eq 'diskfree') {
 				$v /= 1024*1024*1024;
 				}
 			}
