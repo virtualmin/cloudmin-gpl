@@ -50,6 +50,7 @@ else {
 		$alert->{'managers'} = join(" ", split(/\0/, $in{'managers'}));
 		$alert->{'managers'} || &error($text{'alert_emanagers'});
 		}
+	$alert->{'uponly'} = $in{'uponly'};
 
 	# Parse rules
 	@rules = ( );

@@ -75,6 +75,10 @@ push(@stable, [ 4, $text{'alert_mode4'},
 			      @server_management_types) ]);
 print &ui_table_row(undef, &ui_radio_table("mode", $mode, \@stable), 2);
 
+# Exclude down systems
+print &ui_table_row(undef,
+    &ui_checkbox("uponly", 1, $text{'alert_uponly'}, $alert->{'uponly'}), 1);
+
 print &ui_hidden_table_end("servers");
 
 # Section for rules

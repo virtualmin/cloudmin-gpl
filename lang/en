@@ -3405,6 +3405,7 @@ alert_stquiet=Quiet
 alert_stbelow=Active only on $1
 alert_stbelow2=Active only $1 systems
 alert_stsilenced=(Silenced)
+alert_uponly=Exclude down or un-managable systems
 
 dalerts_err1=Failed to delete alerts
 dalerts_err2=Failed to silence alerts

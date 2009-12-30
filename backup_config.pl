@@ -37,6 +37,9 @@ push(@rv, $vsyncs_dir);
 # Image storages dir
 push(@rv, $image_storages_dir);
 
+# Alerts dir
+push(@rv, $alerts_dir);
+
 return &unique(@rv);
 }
 

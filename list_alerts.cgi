@@ -65,8 +65,8 @@ foreach $a (@alerts) {
 		push(@table, [
 		    "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
 		    $text{'history_stat_'.$name},
-		    $value,
 		    $cutoff,
+		    $value,
 		    &ui_links_row(\@links, 1),
 		    ]);
 		}
@@ -75,7 +75,7 @@ if (@table) {
 	print &ui_subheading($text{'alerts_firing'});
 	print &ui_columns_table(
 		[ $text{'alerts_server'}, $text{'alerts_stat'},
-		  $text{'alerts_value'}, $text{'alerts_cutoff'},
+		  $text{'alerts_cutoff'}, $text{'alerts_value'},
 		  $text{'alerts_actions'} ], 100, \@table);
 	}
 

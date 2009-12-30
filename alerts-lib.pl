@@ -92,6 +92,9 @@ sub evaluate_alert
 my ($alert, $allservers) = @_;
 $when ||= time();
 my @servers = &get_alert_servers($alert, $allservers);
+if ($alert->{'uponly'}) {
+	@servers = grep { &can_ssh_status($_) } @servers;
+	}
 return undef if (!@servers);
 
 # See which rules match
