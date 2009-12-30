@@ -3106,6 +3106,12 @@ log_create_storage=Created image storage location <i>$1</i>
 log_modify_storage=Modified image storage location <i>$1</i>
 log_delete_storage=Deleted image storage location <i>$1</i>
 log_delete_storages=Deleted $1 image storage locations
+log_create_alert=Created alert for $1
+log_delete_alert=Deleted alert for $1
+log_modify_alert=Modified alert for $1
+log_delete_alerts=Deleted $1 alerts
+log_silence_alerts=Silenced $1 alerts
+log_unsilence_alerts=Un-silenced $1 alerts
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system

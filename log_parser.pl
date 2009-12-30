@@ -219,6 +219,14 @@ elsif ($type eq "storages") {
 	# Multiple storage locations
 	return &text('log_'.$action.'_storages', $object);
 	}
+elsif ($type eq "alert") {
+	# One system alert
+	return &text('log_'.$action.'_alert', $p->{'servers'});
+	}
+elsif ($type eq "alerts") {
+	# Multiple system alerts
+	return &text('log_'.$action.'_alerts', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),
