@@ -3331,6 +3331,13 @@ alerts_delete=Delete Selected Alerts
 alerts_silence=Silence Alerts
 alerts_unsilence=Un-Silence Alerts
 alerts_return=alert list
+alerts_firing=Active Alerts
+alerts_graph=Graph
+alerts_server=System
+alerts_stat=Variable
+alerts_value=Current value
+alerts_cutoff=Alert level
+alerts_actions=Actions
 
 alert_ctitle=Create Alert
 alert_etitle=Edit Alert
@@ -3392,3 +3399,9 @@ alert_stquiet=Quiet
 alert_stbelow=Active only on $1
 alert_stbelow2=Active only $1 systems
 alert_stsilenced=(Silenced)
+
+dalerts_err1=Failed to delete alerts
+dalerts_err2=Failed to silence alerts
+dalerts_err3=Failed to un-silence alerts
+dalerts_enone=None selected
+

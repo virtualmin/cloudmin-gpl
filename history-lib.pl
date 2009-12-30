@@ -20,6 +20,14 @@
 	"#ffa060",  "#ffa070",  "#ffc0c0",  "#ffff00",  "#ffff80",  "#ffffc0"   
 	);
 
+@history_periods = (
+	[ 'year', 365*24*60*60 ],
+	[ 'month', 31*24*60*60 ],
+	[ 'week', 7*24*60*60 ],
+	[ 'day', 24*60*60 ],
+	[ 'hour', 60*60 ],
+	);
+
 # add_historic_collected_info(&info, time, &server)
 # Log some historic data for a Cloudmin-monitored system
 sub add_historic_collected_info

@@ -17,14 +17,6 @@ if (!%in) {
 	%in = ( 'sok' => 1, 'ssearch' => 'up' );
 	}
 
-@history_periods = (
-	[ 'year', 365*24*60*60 ],
-	[ 'month', 31*24*60*60 ],
-	[ 'week', 7*24*60*60 ],
-	[ 'day', 24*60*60 ],
-	[ 'hour', 60*60 ],
-	);
-
 &ui_print_header(undef, $text{'history_title'}, "", undef, 0, 0, 0, undef,
 		 "<script src='timeplot/timeplot-api.js?local'></script>",
 		 "onload='onLoad();' onresize='onResize();'");

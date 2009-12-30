@@ -89,8 +89,9 @@ $i = 0;
                     $text{'history_stat_'.$b} }
                   &list_historic_stats(\@allservers);
 unshift(@names, [ undef, '&nbsp;' ]);
-foreach my $r (@{$alert->{'rules'}}, { 'for' => 60, 'count' => 1 },
-				     { 'for' => 60, 'count' => 1 }) {
+foreach my $r (@{$alert->{'rules'}},
+	       { 'for' => 60, 'count' => 1, 'over' => 1 },
+	       { 'for' => 60, 'count' => 1, 'over' => 1 }) {
 	($forunit, $for) = &split_for_units($r->{'for'});
 	push(@rtable, [ &ui_select("name_$i", $r->{'name'}, \@names),
 			&ui_select("over_$i", $r->{'over'} ? 1 : 0,

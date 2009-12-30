@@ -129,8 +129,8 @@ $st->{'firing'} =
 	$alert->{'and'} && scalar(@firing) == scalar(@{$alert->{'rules'}});
 my (@stnames, @stvalues);
 foreach my $f (@firing) {
-	push(@stnames, $f->{'name'});
 	for(my $i=0; $i<@{$f->{'servers'}}; $i++) {
+		push(@stnames, $f->{'name'});
 		push(@stvalues, $f->{'servers'}->[$i]->{'id'}.":".
 				$f->{'values'}->[$i]);
 		}
