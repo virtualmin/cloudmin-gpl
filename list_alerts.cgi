@@ -45,8 +45,8 @@ $statuses = &get_alert_statuses();
 foreach $a (@alerts) {
 	$st = $statuses->{$a->{'id'}};
 	next if (!$st);
-	@names = split(/\s+/, $st->{'names'});
-	@idvalues = split(/\s+/, $st->{'values'});
+	@names = split(/,/, $st->{'names'});
+	@idvalues = split(/,/, $st->{'values'});
 	for(my $i=0; $i<@names; $i++) {
 		$name = $names[$i];
 		($id, $value) = split(/:/, $idvalues[$i]);
@@ -64,6 +64,9 @@ foreach $a (@alerts) {
 		@links = ( "<a href='$hgraph'>$text{'alerts_graph'}</a>" );
 		$cutoff = ($r->{'over'} ? $text{'alert_over'}
 				: $text{'alert_under'})." ".$r->{'value'};
+		if ($r->{'value'} =~ /(K|M|G|T)B?$/) {
+			$value = &nice_size($value);
+			}
 		push(@table, [
 		    "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
 		    $text{'history_stat_'.$name},

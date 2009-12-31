@@ -3,7 +3,7 @@
 
 require './server-manager-lib.pl';
 &ReadParse();
-if ($in{'id'}) {
+if (defined($in{'id'})) {
 	$oneserver = &get_managed_server($in{'id'});
 	&can_action_error($oneserver, "graph");
 	}
@@ -24,7 +24,7 @@ if (!%in) {
 # Show inputs for selecting systems
 print &ui_form_start("history.cgi");
 @grid = ( );
-if ($in{'id'}) {
+if (defined($in{'id'})) {
 	# Always showing one system
 	push(@grid, "<b>$text{'history_host'}</b>");
 	push(@grid, $oneserver->{'host'});
@@ -234,7 +234,7 @@ function onResize() {
 </script>
 EOF
 
-if ($in{'id'}) {
+if (defined($in{'id'})) {
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 else {

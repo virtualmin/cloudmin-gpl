@@ -102,16 +102,24 @@ my @firing;
 foreach my $r (@{$alert->{'rules'}}) {
 	my $start = $when - $r->{'for'};
 	my (@fservers, @fvalues);
+	my $rvalue =
+		$r->{'value'} =~ /^([0-9\.]+)\s*KB?/i ? $1*1024 :
+		$r->{'value'} =~ /^([0-9\.]+)\s*MB?/i ? $1*1024*1024 :
+		$r->{'value'} =~ /^([0-9\.]+)\s*GB?/i ? $1*1024*1024*1024 :
+		$r->{'value'} =~ /^([0-9\.]+)\s*TB?/i ? $1*1024*1024*1024*1024 :
+						        $r->{'value'};
 	foreach my $s (@servers) {
 		my @info = &list_historic_collected_info($r->{'name'}, $s,
 							 $start, $when);
+		print STDERR "s=$s->{'host'} name=$r->{'name'} value=$rvalue info=",scalar(@info),"\n";
 		my $icount = 0;
 		foreach my $i (@info) {
-			if ($r->{'over'} && $i->[1] > $r->{'value'} ||
-			    !$r->{'over'} && $i->[1] < $r->{'value'}) {
+			if ($r->{'over'} && $i->[1] > $rvalue ||
+			    !$r->{'over'} && $i->[1] < $rvalue) {
 				$icount++;
 				}
 			}
+		print STDERR "icount=$icount\n";
 		if (scalar(@info) && $icount == scalar(@info)) {
 			# All values matched for time range
 			push(@fservers, $s);
@@ -138,8 +146,8 @@ foreach my $f (@firing) {
 				$f->{'values'}->[$i]);
 		}
 	}
-$st->{'names'} = join(" ", @stnames);
-$st->{'values'} = join(" ", @stvalues);
+$st->{'names'} = join(",", @stnames);
+$st->{'values'} = join(",", @stvalues);
 
 return $st;
 }
@@ -151,8 +159,9 @@ sub evaluate_all_alerts
 {
 my ($servers, $alerts) = @_;
 $servers ||= [ &list_managed_servers() ];
+$alerts ||= [ &list_alerts() ];
 my $statuses = &get_alert_statuses();
-foreach my $alert ($alerts ? @$alerts : &list_alerts()) {
+foreach my $alert (@$alerts) {
 	my $oldst = $statuses->{$alert->{'id'}};
 	my $st = &evaluate_alert($alert, $servers);
 	next if (!$st);

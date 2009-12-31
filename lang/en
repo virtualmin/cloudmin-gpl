@@ -3345,7 +3345,7 @@ alerts_graph=Graph
 alerts_server=System
 alerts_stat=Variable
 alerts_value=Current value
-alerts_cutoff=Alert level
+alerts_cutoff=Alert when
 alerts_actions=Actions
 alerts_refresh=Refresh Alerts
 
@@ -3367,8 +3367,8 @@ alert_value=Value
 alert_for=Time period
 alert_count=Minimum systems
 alert_comp=Comparison
-alert_over=At least
-alert_under=At most
+alert_over=Over
+alert_under=Under
 alert_and=Trigger alert when all conditions are true
 alert_or=Trigger alert when any condition is true
 alert_header3=Alert notifications
@@ -3414,5 +3414,6 @@ alert_uponly=Exclude down or un-managable systems
 dalerts_err1=Failed to delete alerts
 dalerts_err2=Failed to silence alerts
 dalerts_err3=Failed to un-silence alerts
+dalerts_err4=Failed to refresh alerts
 dalerts_enone=None selected
 
