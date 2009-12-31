@@ -14,7 +14,6 @@ foreach my $image (&list_server_images()) {
 	my $olddest = $image->{'dest'};
 	my $err = &compute_image_dests($image);
 	if (!$err && $image->{'dest'} && $image->{'dest'} ne $olddest) {
-		print STDERR "image=$image->{'id'} dest=$image->{'dest'}\n";
 		&save_server_image($image);
 		}
 	}

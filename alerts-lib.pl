@@ -116,7 +116,6 @@ foreach my $r (@{$alert->{'rules'}}) {
 	foreach my $s (@servers) {
 		my @info = &list_historic_collected_info($r->{'name'}, $s,
 							 $start, $when);
-		print STDERR "s=$s->{'host'} name=$r->{'name'} value=$rvalue info=",scalar(@info),"\n";
 		my $icount = 0;
 		foreach my $i (@info) {
 			if ($r->{'over'} && $i->[1] > $rvalue ||
@@ -124,7 +123,6 @@ foreach my $r (@{$alert->{'rules'}}) {
 				$icount++;
 				}
 			}
-		print STDERR "icount=$icount\n";
 		if (scalar(@info) && $icount == scalar(@info)) {
 			# All values matched for time range
 			push(@fservers, $s);
