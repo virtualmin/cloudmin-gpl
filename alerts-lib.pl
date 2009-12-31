@@ -74,7 +74,7 @@ foreach my $r (@{$alert->{'rules'}}) {
 }
 
 # delete_alert(&alert)
-# Delete one multi-system alert
+# Delete one multi-system alert, and its status
 sub delete_alert
 {
 my ($alert) = @_;
@@ -82,6 +82,11 @@ my $file = $alerts_dir."/".$alert->{'id'};
 &lock_file($file);
 &unlink_file($file);
 &unlock_file($file);
+&lock_file($alert_status_file);
+my $statuses = &get_alert_statuses();
+delete($statuses->{$alert->{'id'}});
+&save_alert_statuses($statuses);
+&unlock_file($alert_status_file);
 }
 
 # evaluate_alert(&alert, &servers, [when])
@@ -152,21 +157,22 @@ $st->{'values'} = join(",", @stvalues);
 return $st;
 }
 
-# evaluate_all_alerts([&only-servers], [&only-alerts])
+# evaluate_all_alerts([&only-servers], [&only-alerts], [no-email])
 # Check all alerts and send email if any are firing. Also update current
 # alert status file.
 sub evaluate_all_alerts
 {
-my ($servers, $alerts) = @_;
+my ($servers, $alerts, $noemail) = @_;
 $servers ||= [ &list_managed_servers() ];
 $alerts ||= [ &list_alerts() ];
+&lock_file($alert_status_file);
 my $statuses = &get_alert_statuses();
 foreach my $alert (@$alerts) {
 	my $oldst = $statuses->{$alert->{'id'}};
 	my $st = &evaluate_alert($alert, $servers);
 	next if (!$st);
 	$statuses->{$alert->{'id'}} = $st;
-	if ($st->{'firing'}) {
+	if ($st->{'firing'} && !$noemail) {
 		# Send email or something
 		# XXX
 		# XXX email check interval
@@ -175,6 +181,7 @@ foreach my $alert (@$alerts) {
 		}
 	}
 &save_alert_statuses($statuses);
+&unlock_file($alert_status_file);
 }
 
 # get_alert_servers(&alert, &allservers)

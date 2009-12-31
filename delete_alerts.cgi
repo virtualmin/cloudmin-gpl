@@ -8,7 +8,7 @@ require './server-manager-lib.pl';
 	     $in{'silence'} ? $text{'dalerts_err2'} :
 	     $in{'unsilence'} ? $text{'dalerts_err3'} :
 				$text{'dalerts_err4'});
-@d = split(/\s+/, $in{'d'});
+@d = split(/\0/, $in{'d'});
 @d || &error($text{'dalerts_enone'});
 @alerts = grep { $_ } map { &get_alert($_) } @d;
 
@@ -41,7 +41,7 @@ elsif ($in{'unsilence'}) {
 	}
 else {
 	# Refresh selected
-	&evaluate_all_alerts(undef, \@alerts);
+	&evaluate_all_alerts(undef, \@alerts, 1);
 	}
 &redirect("list_alerts.cgi");
 

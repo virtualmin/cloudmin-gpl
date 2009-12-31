@@ -63,6 +63,7 @@ else {
 		else {
 			$r->{'under'} = 1;
 			}
+		$in{"value_$i"} =~ s/\s//g;
 		$in{"value_$i"} =~ /^[0-9\.]+(K|M|G|T)B?$/i ||
 			&error(&text('alert_evalue', $i+1));
 		$r->{'value'} = $in{"value_$i"};
@@ -93,8 +94,9 @@ else {
 	$in{'int'} =~ /^\d+$/ || &error($text{'alert_einterval'});
 	$alert->{'interval'} = &join_for_units($in{'intunit'}, $in{'int'});
 
-	# Save or create
+	# Save or create, and evaluate now
 	&save_alert($alert);
+	&evaluate_all_alerts(undef, [ $alert ], 1);
 	&webmin_log($in{'new'} ? "create" : "modify", "alert", $alert->{'id'},
 		    { 'servers' => &describe_alert_servers($alert) });
 	}

@@ -9,7 +9,7 @@ require './server-manager-lib.pl';
 @links = ( "<a href='edit_alert.cgi?new=1'>$text{'alerts_add'}</a>" );
 @alerts = &list_alerts();
 if (@alerts) {
-	print &ui_form_start("delete_alerts.cgi", "post");
+	print &ui_form_start("delete_alerts.cgi", "get");
 	unshift(@links, &select_all_link("d"),
 			&select_invert_link("d"));
 	print &ui_links_row(\@links);
