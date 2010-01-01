@@ -64,7 +64,7 @@ else {
 			$r->{'under'} = 1;
 			}
 		$in{"value_$i"} =~ s/\s//g;
-		$in{"value_$i"} =~ /^[0-9\.]+(K|M|G|T)B?$/i ||
+		$in{"value_$i"} =~ /^[0-9\.]+((K|M|G|T)B?)?$/i ||
 			&error(&text('alert_evalue', $i+1));
 		$r->{'value'} = $in{"value_$i"};
 		$in{"for_$i"} =~ /^[0-9\.]+$/ ||

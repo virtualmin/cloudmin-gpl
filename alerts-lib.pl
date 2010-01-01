@@ -37,7 +37,7 @@ foreach my $f (readdir(DIR)) {
 	$alert{'rules'} = \@rules;
 	push(@rv, \%alert);
 	}
-return @rv;
+return sort { $a->{'id'} <=> $b->{'id'} } @rv;
 }
 
 # get_alert(id)
@@ -175,13 +175,14 @@ foreach my $alert (@$alerts) {
 		# Send email if not silenced, and if time since last email is
 		# greater than notification interval
 		my $sincelast = $now - $alert->{'lastemail'};
+		print STDERR "silenced=$alert->{'silenced'} sincelast=$sincelast interval=$alert->{'interval'}\n";
+		$st->{'start'} = $oldst->{'start'} || $now;
 		if (!$alert->{'silenced'} &&
 		    $sincelast > $alert->{'interval'}) {
 			&send_alert_email($alert, $st);
 			$alert->{'lastemail'} = $now;
 			&save_alert($alert);
 			}
-		$st->{'start'} = $oldst->{'start'} || time();
 		}
 	}
 &save_alert_statuses($statuses);
@@ -203,10 +204,11 @@ for(my $i=0; $i<@names; $i++) {
 	my ($id, $value) = split(/:/, $idvalues[$i]);
 	my $s = &get_managed_server($id);
 	next if (!$s);
-	my ($r) = grep { $_->{'name'} eq $name } @{$a->{'rules'}};
+	my ($r) = grep { $_->{'name'} eq $name } @{$alert->{'rules'}};
 	next if (!$r);
-	push(@problems, [ $s, $name, $value, $r->{'value'} ]);
+	push(@problems, [ $s, $name, $value, $r->{'value'}, $st->{'start'} ]);
 	}
+print STDERR "problems=",scalar(@problems),"\n";
 
 # Work out who to notify
 my @emails;
@@ -249,11 +251,31 @@ foreach my $ep (@emails) {
 		else {
 			$subject = &text($pfx.'2', $servers[0]->{'host'});
 			}
+		# XXX add variable to subject if possible
 		}
 
 	# Create message body listing systems, names, limits and values
-	# XXX
+	my $fmt = "%-30.30s %-10.10s %-10.10s %-10.10s %-15.15s\n";
+	my $msg = sprintf $fmt, $text{'alerts_server'},
+				$text{'alerts_stat'},
+				$text{'aemail_cutoff'},
+				$text{'aemail_value'},
+				$text{'aemail_started'};
+	$msg .= sprintf $fmt, ("-"  x 30), ("-" x 10), ("-" x 10),
+			      ("-" x 10), ("-" x 15);
+	foreach my $p (@$problems) {
+		$msg .= sprintf $fmt,
+			$p->[0]->{'host'},
+			$text{'history_stat_'.$p->[1]} || $p->[1],
+			$p->[3] =~ /(K|M|G|T)B?$/ ? &nice_size($p->[2])
+						  : $p->[2],
+			$p->[3],
+			&make_date($p->[4]);
+		}
 
+	print STDERR "sending to $email\n";
+	print STDERR "subject is $subject\n";
+	print STDERR $msg;
 	&mailboxes::send_text_mail(
 		&get_global_from_address($problems->[0]),
 		$email,
@@ -489,8 +511,6 @@ else {
 if ($alert->{'silenced'}) {
 	$msg .= " ".$text{'alert_stsilenced'};
 	}
-# Add links to graphs
-# XXX
 return $msg;
 }
 
