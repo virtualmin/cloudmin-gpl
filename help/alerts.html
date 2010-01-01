@@ -1,0 +1,29 @@
+<header>System Alerts</header>
+
+A Cloudmin system alert monitors one or more managed systems, and checks if
+a variable such as free memory, CPU load or free disk space is above or below
+some threshold. If so, it can send email to the master administrator, system
+owners or other addresses. <p>
+
+This page lists all existing alerts, and shows the systems on which any are
+firing. To create a new alert, click the <b>Add a new system alert</b> link,
+which will bring up a page for entering its details. To remove alerts, check the
+boxes next to them and click the <b>Delete Selected Alerts</b> button.
+
+<hr>
+
+The systems each alert monitors can be selected host by host, via group
+membership, by owner, or by virtualization type. Or you can create an alert
+that monitors all known systems. <p>
+
+Each alert contains one or more rules, each of which specifies a variable to
+monitor (like CPU load), a threshold (like 0.9), a period for which the variable
+must exceed the threshold, and a number of systems that this must happen on
+for the alert to fire. <p>
+
+When an alert fires, email can be sent to the Cloudmin master administrator,
+owners of the matching systems, or to other addresses of your choice. Each alert
+can also specify an interval between messages. <p>
+
+<footer>
+
