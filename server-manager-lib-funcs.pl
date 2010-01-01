@@ -4630,6 +4630,12 @@ if (&supports_plans()) {
 	push(@gcats, "settings");
 	}
 
+# Master admin email
+push(@glinks, "edit_email.cgi");
+push(@gtitles, $text{'email_title'});
+push(@gicons, "images/email.gif");
+push(@gcats, "settings");
+
 if ($virtcount) {
 	# Default Virtualmin features
 	push(@glinks, "list_features.cgi");
