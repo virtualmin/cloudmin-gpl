@@ -165,21 +165,105 @@ $servers ||= [ &list_managed_servers() ];
 $alerts ||= [ &list_alerts() ];
 &lock_file($alert_status_file);
 my $statuses = &get_alert_statuses();
+my $now = time();
 foreach my $alert (@$alerts) {
 	my $oldst = $statuses->{$alert->{'id'}};
 	my $st = &evaluate_alert($alert, $servers);
 	next if (!$st);
 	$statuses->{$alert->{'id'}} = $st;
 	if ($st->{'firing'} && !$noemail) {
-		# Send email or something
-		# XXX
-		# XXX email check interval
-		# XXX don't send if silenced
+		# Send email if not silenced, and if time since last email is
+		# greater than notification interval
+		my $sincelast = $now - $alert->{'lastemail'};
+		if (!$alert->{'silenced'} &&
+		    $sincelast > $alert->{'interval'}) {
+			&send_alert_email($alert, $st);
+			$alert->{'lastemail'} = $now;
+			&save_alert($alert);
+			}
 		$st->{'start'} = $oldst->{'start'} || time();
 		}
 	}
 &save_alert_statuses($statuses);
 &unlock_file($alert_status_file);
+}
+
+# send_alert_email(&alert, &status)
+# Send email about some alert firing to all relevant users
+sub send_alert_email
+{
+my ($alert, $st) = @_;
+
+# Find systems and values in the alert
+my @names = split(/,/, $st->{'names'});
+my @idvalues = split(/,/, $st->{'values'});
+my @problems;
+for(my $i=0; $i<@names; $i++) {
+	my $name = $names[$i];
+	my ($id, $value) = split(/:/, $idvalues[$i]);
+	my $s = &get_managed_server($id);
+	next if (!$s);
+	my ($r) = grep { $_->{'name'} eq $name } @{$a->{'rules'}};
+	next if (!$r);
+	push(@problems, [ $s, $name, $value, $r->{'value'} ]);
+	}
+
+# Work out who to notify
+my @emails;
+if ($config{'bw_email'} && $alert->{'master'}) {
+	# Master admin
+	push(@emails, [ $config{'bw_email'}, \@problems ]);
+	}
+if ($alert->{'owner'}) {
+	# Email owners, but only about their own systems
+	my @allowners = map { &get_server_owners($_->[0]) } @problems;
+	my %doneowners;
+	foreach my $owner (@allowners) {
+		next if ($doneowners{$owner->{'name'}}++);
+		next if (!$owner->{'acl'}->{'email'});
+		my %owned = map { $_, 1 }
+				split(/\s+/, $owner->{'acl'}->{'servers'});
+		my @ownerproblems = grep { $owner{$_->[0]->{'id'}} } @problems;
+		push(@emails, [ $owner->{'acl'}->{'email'}, \@ownerproblems ]);
+		}
+	}
+if ($alert->{'email'}) {
+	# Other addresses
+	push(@emails, map { [ $_, \@problems ] }
+			  split(/[ ,]+/, $alert->{'email'}));
+	}
+
+# For each email, construct the message based on its problems and send it
+foreach my $ep (@emails) {
+	my ($email, $problems) = @$ep;
+	next if (!@$problems);
+	my @servers = map { $_->[0] } @$problems;
+
+	my $subject = $alert->{'desc'};
+	if (!$subject) {
+		# Construct subject based on alert
+		my $pfx = "aemail_subject";
+		if (@servers > 1) {
+			$subject = &text($pfx.'1', scalar(@servers));
+			}
+		else {
+			$subject = &text($pfx.'2', $servers[0]->{'host'});
+			}
+		}
+
+	# Create message body listing systems, names, limits and values
+	# XXX
+
+	&mailboxes::send_text_mail(
+		&get_global_from_address($problems->[0]),
+		$email,
+		undef,
+		$subject,
+		$msg);
+	}
+
+# XXX
+# XXX desc is custom subject
 }
 
 # get_alert_servers(&alert, &allservers)

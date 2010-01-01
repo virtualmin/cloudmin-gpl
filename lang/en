@@ -3417,3 +3417,5 @@ dalerts_err3=Failed to un-silence alerts
 dalerts_err4=Failed to refresh alerts
 dalerts_enone=None selected
 
+aemail_subject1=$1 over $2 on $3 systems
+aemail_subject2=$1 over $2 on $3
