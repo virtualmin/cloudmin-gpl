@@ -193,6 +193,7 @@ foreach my $alert (@$alerts) {
 sub send_alert_email
 {
 my ($alert, $st) = @_;
+&foreign_require("mailboxes", "mailboxes-lib.pl");
 
 # Find systems and values in the alert
 my @names = split(/,/, $st->{'names'});
