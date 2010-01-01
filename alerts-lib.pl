@@ -175,7 +175,6 @@ foreach my $alert (@$alerts) {
 		# Send email if not silenced, and if time since last email is
 		# greater than notification interval
 		my $sincelast = $now - $alert->{'lastemail'};
-		print STDERR "silenced=$alert->{'silenced'} sincelast=$sincelast interval=$alert->{'interval'}\n";
 		$st->{'start'} = $oldst->{'start'} || $now;
 		if (!$alert->{'silenced'} &&
 		    $sincelast > $alert->{'interval'}) {
@@ -208,13 +207,12 @@ for(my $i=0; $i<@names; $i++) {
 	next if (!$r);
 	push(@problems, [ $s, $name, $value, $r->{'value'}, $st->{'start'} ]);
 	}
-print STDERR "problems=",scalar(@problems),"\n";
 
 # Work out who to notify
 my @emails;
 if ($config{'bw_email'} && $alert->{'master'}) {
 	# Master admin
-	push(@emails, [ $config{'bw_email'}, \@problems ]);
+	push(@emails, [ $config{'bw_email'}, \@problems, 1 ]);
 	}
 if ($alert->{'owner'}) {
 	# Email owners, but only about their own systems
@@ -226,12 +224,13 @@ if ($alert->{'owner'}) {
 		my %owned = map { $_, 1 }
 				split(/\s+/, $owner->{'acl'}->{'servers'});
 		my @ownerproblems = grep { $owner{$_->[0]->{'id'}} } @problems;
-		push(@emails, [ $owner->{'acl'}->{'email'}, \@ownerproblems ]);
+		push(@emails, [ $owner->{'acl'}->{'email'},
+				\@ownerproblems, 0 ]);
 		}
 	}
 if ($alert->{'email'}) {
 	# Other addresses
-	push(@emails, map { [ $_, \@problems ] }
+	push(@emails, map { [ $_, \@problems, 1 ] }
 			  split(/[ ,]+/, $alert->{'email'}));
 	}
 
@@ -251,31 +250,41 @@ foreach my $ep (@emails) {
 		else {
 			$subject = &text($pfx.'2', $servers[0]->{'host'});
 			}
-		# XXX add variable to subject if possible
+		if (@$problems == 1) {
+			$subject .= " : ".$text{'history_stat_'.
+						$problems->[0]->[1]};
+			}
 		}
 
 	# Create message body listing systems, names, limits and values
-	my $fmt = "%-30.30s %-10.10s %-10.10s %-10.10s %-15.15s\n";
-	my $msg = sprintf $fmt, $text{'alerts_server'},
+	my $fmt = "%-25.25s %-20.20s %-6.6s %-6.6s %-17.17s\n";
+	my $msg;
+	$msg .= "\n";
+	$msg .= $text{'aemail_desc'}."\n";
+	$msg .= "\n";
+	$msg .= sprintf $fmt, $text{'alerts_server'},
 				$text{'alerts_stat'},
 				$text{'aemail_cutoff'},
 				$text{'aemail_value'},
 				$text{'aemail_started'};
-	$msg .= sprintf $fmt, ("-"  x 30), ("-" x 10), ("-" x 10),
-			      ("-" x 10), ("-" x 15);
+	$msg .= sprintf $fmt, ("-"  x 25), ("-" x 20), ("-" x 6),
+			      ("-" x 6), ("-" x 17);
 	foreach my $p (@$problems) {
 		$msg .= sprintf $fmt,
 			$p->[0]->{'host'},
 			$text{'history_stat_'.$p->[1]} || $p->[1],
+			$p->[3],
 			$p->[3] =~ /(K|M|G|T)B?$/ ? &nice_size($p->[2])
 						  : $p->[2],
-			$p->[3],
 			&make_date($p->[4]);
 		}
 
-	print STDERR "sending to $email\n";
-	print STDERR "subject is $subject\n";
-	print STDERR $msg;
+	# Add link to Virtualmin's alerts page, except for owners
+	my $url = &get_server_manager_url()."/$module_name/list_alerts.cgi";
+	$msg .= "\n";
+	$msg .= $text{'aemail_link'}."\n";
+	$msg .= $url."\n";
+
 	&mailboxes::send_text_mail(
 		&get_global_from_address($problems->[0]),
 		$email,
@@ -283,9 +292,6 @@ foreach my $ep (@emails) {
 		$subject,
 		$msg);
 	}
-
-# XXX
-# XXX desc is custom subject
 }
 
 # get_alert_servers(&alert, &allservers)

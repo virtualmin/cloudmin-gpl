@@ -1,6 +1,7 @@
 #!/usr/local/bin/perl
 # Show a list of system alert rules
 
+$trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ui_print_header(undef, $text{'alerts_title'}, "", "alerts");
 &can_action_error(undef, "global");

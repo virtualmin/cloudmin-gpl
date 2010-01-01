@@ -7623,6 +7623,23 @@ if ($ipa[0] == $ipb[0] && $ipa[1] == $ipb[1]) {
 return 5;
 }
 
+# get_server_manager_url()
+# Returns the base URL for links to Cloudmin, like https://yourserver:10000
+sub get_server_manager_url
+{
+if ($config{'cloudmin_url'}) {
+	return $config{'cloudmin_url'};
+	}
+else {
+	my %miniserv;
+        &get_miniserv_config(\%miniserv);
+        my $proto = $miniserv{'ssl'} ? 'https' : 'http';
+	my $host = &get_system_hostname();
+        my $port = $miniserv{'port'};
+        return $proto."://$host:$port";
+	}
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server
