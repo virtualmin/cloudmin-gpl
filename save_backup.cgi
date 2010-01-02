@@ -74,14 +74,15 @@ else {
 	&virtualmin_ui_parse_cron_time("when", $backup, \%in);
 
 	# Parse email settings
-	if ($in{'email_def'}) {
-		delete($backup->{'email'});
-		}
-	else {
+	if ($in{'emailother'}) {
 		$in{'email'} =~ /^\S+\@\S+$/ ||
 			&error($text{'backup_eemail'});
 		$backup->{'email'} = $in{'email'};
 		}
+	else {
+		delete($backup->{'email'});
+		}
+	$backup->{'emailmaster'} = $in{'emailmaster'};
 	$backup->{'always'} = $in{'always'};
 	
 	# Update the backup

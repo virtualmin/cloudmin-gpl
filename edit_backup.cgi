@@ -89,8 +89,11 @@ print &ui_table_row($text{'backup_when'},
 
 # Who to notify
 print &ui_table_row($text{'backup_email'},
-	&ui_opt_textbox("email", $backup->{'email'}, 40,
-			$text{'backup_noemail'}));
+	&ui_checkbox("emailmaster", 1, $text{'backup_emailmaster'},
+		     $backup->{'emailmaster'})."<br>\n".
+	&ui_checkbox("emailother", 1, $text{'backup_emailother'},
+		     $backup->{'email'})." ".
+	&ui_textbox("email", $backup->{'email'}, 40));
 
 # When to send
 print &ui_table_row($text{'backup_always'},

@@ -36,3 +36,4 @@ login_timeout=60
 index_cols=manager,type,status,desc
 xen_pygrub=0
 kvm_qemu=0
+bw_emailmaster=1

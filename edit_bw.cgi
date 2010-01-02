@@ -41,8 +41,7 @@ if (&supports_plans()) {
 # Send to who
 print &ui_table_row($text{'bw_email'},
 	&ui_checkbox("email_admin", 1, $text{'bw_email_admin'},
-		     $config{'bw_email'})." ".
-	&ui_textbox("email", $config{'bw_email'}, 40)."<br>\n".
+		     $config{'bw_emailmaster'})."<br>\n".
 	&ui_checkbox("owner", 1, $text{'bw_owner'},
 		     $config{'bw_owner'}));
 

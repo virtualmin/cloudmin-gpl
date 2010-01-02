@@ -23,14 +23,8 @@ if (&supports_plans()) {
 	$in{'omsg'} =~ s/\r//g;
 	$in{'omsg'} =~ /\S/ || &error($text{'bw_eomsg'});
 	}
-if ($in{'email_admin'}) {
-	$in{'email'} =~ /^\S+\@\S+$/ || &error($text{'bw_eemail'});
-	$config{'bw_email'} = $in{'email'};
-	}
-else {
-	delete($config{'bw_email'});
-	}
 $config{'bw_owner'} = $in{'owner'};
+$config{'bw_emailmaster'} = $in{'email_admin'};
 $in{'notify'} =~ /^[1-9]\d*$/ || &error($text{'bw_enotify'});
 $config{'bw_notify'} = $in{'notify'};
 if ($in{'default_def'}) {

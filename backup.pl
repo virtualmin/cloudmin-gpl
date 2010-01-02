@@ -53,20 +53,25 @@ foreach $s (@servers) {
 	}
 
 # Send email with results
-if ($backup->{'email'} &&
-    ($failcount || $backup->{'always'})) {
+@emails = ( );
+push(@emails, $backup->{'email'}) if ($backup->{'email'});
+push(@emails, $config{'bw_email'}) if ($backup->{'emailmaster'} &&
+				       $config{'bw_email'});
+if (@emails && ($failcount || $backup->{'always'})) {
 	&foreign_require("mailboxes");
 	$dstr = $backup->{'dest'} ?
 			&nice_backup_destination($backup->{'dest'}) :
 			$text{'brun_hostdest'};
-	&mailboxes::send_text_mail(
-		&get_global_from_address($servers[0]),
-		$backup->{'email'},
-		undef,
-		&text($failcount ? 'brun_fsubject' : 'brun_subject',
-		      scalar(@servers), $dstr),
-		$report."\n".$capture_print,
-		);
+	foreach $email (@emails) {
+		&mailboxes::send_text_mail(
+			&get_global_from_address($servers[0]),
+			$email,
+			undef,
+			&text($failcount ? 'brun_fsubject' : 'brun_subject',
+			      scalar(@servers), $dstr),
+			$report."\n".$capture_print,
+			);
+		}
 	}
 
 sub usage
