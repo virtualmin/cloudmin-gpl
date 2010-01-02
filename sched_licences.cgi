@@ -49,13 +49,7 @@ if ($in{'now'}) {
 else {
 	# Validate and save inputs
 	$config{'licences_sched'} = $in{'sched'};
-	if ($in{'email_def'}) {
-		delete($config{'licences_email'});
-		}
-	else {
-		$in{'email'} =~ /^\S+\@\S+$/ || &error($text{'lsched_eemail'});
-		$config{'licences_email'} = $in{'email'};
-		}
+	$config{'licences_email'} = $in{'email'};
 	&lock_file($module_config_file);
 	&save_module_config();
 	&unlock_file($module_config_file);

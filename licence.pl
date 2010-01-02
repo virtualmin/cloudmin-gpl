@@ -12,7 +12,7 @@ require './server-manager-lib.pl';
 # Check for new Virtualmin licences
 if ($config{'licences_sched'}) {
 	$got = &fetch_virtualmin_licences();
-	if (ref($got) && @$got) {
+	if (ref($got) && @$got && $config{'licences_email'}) {
 		# Found some .. email to the user
 		&foreign_require("mailboxes", "mailboxes-lib.pl");
 		$msg = "The following Virtualmin licenses have been automaticallly added for\nuse by systems managed by Cloudmin :\n\n";
@@ -27,7 +27,7 @@ if ($config{'licences_sched'}) {
 			}
 		$msg .= "\n";
 		&mailboxes::send_text_mail(&mailboxes::get_from_address(),
-					   $config{'licences_email'},
+					   $config{'bw_email'},
 					   undef,
 					   "New Virtualmin licenses",
 					   $msg);

@@ -109,9 +109,8 @@ print &ui_table_row($text{'licences_enabled'},
 		    &ui_yesno_radio("sched", $config{'licences_sched'}));
 
 # Send email notification
-print &ui_table_row($text{'licences_email'},
-		    &ui_opt_textbox("email", $config{'licences_email'},
-				    40, $text{'licences_noemail'}));
+print &ui_table_row($text{'licences_emailmaster'},
+		    &ui_yesno_radio("email",$config{'licences_email'} ? 1 : 0));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'save'} ],
