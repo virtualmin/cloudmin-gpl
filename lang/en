@@ -3115,6 +3115,7 @@ log_modify_alert=Modified alert for $1
 log_delete_alerts=Deleted $1 alerts
 log_silence_alerts=Silenced $1 alerts
 log_unsilence_alerts=Un-silenced $1 alerts
+log_email=Changed email settings
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system
@@ -3443,3 +3444,9 @@ email_system1=Sendmail
 email_system0=Postfix
 email_sfromdef=System default $1
 email_sfromaddr=Address
+email_err=Failed to save email settings
+email_emaster=Missing master administrator's email address
+email_esmtp=Missing or invalid SMTP server
+email_esuser=Missing or invalid-looking SMTP username
+email_espass=Missing SMTP password
+email_esfrom=Missing or invalid from address
