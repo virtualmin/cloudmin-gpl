@@ -82,7 +82,9 @@ else {
 	else {
 		delete($backup->{'email'});
 		}
-	$backup->{'emailmaster'} = $in{'emailmaster'};
+	if (!$access{'owner'}) {
+		$backup->{'emailmaster'} = $in{'emailmaster'};
+		}
 	$backup->{'always'} = $in{'always'};
 	
 	# Update the backup

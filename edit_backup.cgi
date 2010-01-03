@@ -88,12 +88,23 @@ print &ui_table_row($text{'backup_when'},
 	&virtualmin_ui_show_cron_time("when", $backup, undef));
 
 # Who to notify
-print &ui_table_row($text{'backup_email'},
-	&ui_checkbox("emailmaster", 1, $text{'backup_emailmaster'},
-		     $backup->{'emailmaster'})."<br>\n".
-	&ui_checkbox("emailother", 1, $text{'backup_emailother'},
-		     $backup->{'email'})." ".
-	&ui_textbox("email", $backup->{'email'}, 40));
+if ($access{'owner'}) {
+	# Owners don't see master admin option
+	print &ui_table_row($text{'backup_email'},
+		&ui_radio("emailother", $backup->{'email'} ? 1 : 0,
+			  [ [ 0, $text{'backup_emailnone'} ],
+			    [ 1, $text{'backup_emailaddr'} ] ])." ".
+		&ui_textbox("email", $backup->{'email'}, 40));
+	}
+else {
+	# Master admin can choose to notify self
+	print &ui_table_row($text{'backup_email'},
+		&ui_checkbox("emailmaster", 1, $text{'backup_emailmaster'},
+			     $backup->{'emailmaster'})."<br>\n".
+		&ui_checkbox("emailother", 1, $text{'backup_emailother'},
+			     $backup->{'email'})." ".
+		&ui_textbox("email", $backup->{'email'}, 40));
+	}
 
 # When to send
 print &ui_table_row($text{'backup_always'},

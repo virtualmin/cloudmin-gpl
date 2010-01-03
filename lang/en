@@ -881,6 +881,8 @@ edit_link_limits=Resource Limits
 edit_link_view=System Details
 
 update_title=Update Packages
+update_hostlist=Packages will be updated on : $1
+update_more=$1 more ..
 update_doing=Updating $2 packages on $1 ..
 update_pkg=Updating $1 to version $2 ..
 update_donepkg=.. installed $1 packages.
@@ -2805,6 +2807,8 @@ backup_logs=Show Logs
 backup_email=Email results to
 backup_emailmaster=Cloudmin master administrator's address
 backup_emailother=Other address
+backup_emailnone=Nobody
+backup_emailaddr=Address
 backup_noemail=Nobody
 backup_always=Send email when
 backup_always1=Every time the backup completes
