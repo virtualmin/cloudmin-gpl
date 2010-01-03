@@ -28,7 +28,7 @@ print &ui_hidden_table_start($text{'vsync_header1'}, "width=100%", 2,
 
 # Source system
 print &ui_table_row($text{'vsync_src'},
-		&ui_select("src", $vsync->{'src'} || $servers[0]->{'id'},
+		&ui_select("src", $vsync->{'src'},
 			   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ],
 			   1, 0, 1));
 
