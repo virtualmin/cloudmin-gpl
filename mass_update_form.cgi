@@ -12,6 +12,11 @@ if (@servers == 1) {
 	}
 else {
 	&ui_print_header(undef, $text{'update_title'}, "");
+	@hosts = map { "<tt>$_->{'host'}</tt>" } @servers;
+	if (@hosts > 4) {
+		@hosts = (@hosts[0..3], &text('update_more', scalar(@hosts)-4));
+		}
+	print &text('update_hostlist', join(", ", @hosts)),"<p>\n";
 	}
 
 # Find all the updates
