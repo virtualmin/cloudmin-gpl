@@ -72,12 +72,16 @@ else {
 	&virtualmin_ui_parse_cron_time("when", $vsync, \%in);
 
 	# Parse email
-	if ($in{'email_def'}) {
-		delete($vsync->{'email'});
+	if ($in{'emailother'}) {
+		$in{'email'} =~ /^\S+\@\S+$/ ||
+			&error($text{'vsync_eemail'});
+		$vsync->{'email'} = $in{'email'};
 		}
 	else {
-		$in{'email'} =~ /^\S+$/ || &error($text{'vsync_eemail'});
-		$vsync->{'email'} = $in{'email'};
+		delete($vsync->{'email'});
+		}
+	if (!$access{'owner'}) {
+		$vsync->{'emailmaster'} = $in{'emailmaster'};
 		}
 
 	# Update or create sync

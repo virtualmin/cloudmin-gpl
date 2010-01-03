@@ -27,16 +27,22 @@ $capture_print = undef;
 $ok = &sync_virtualmin_domains($vsync);
 
 # Send email on failure
-if (!$ok && $vsync->{'email'}) {
+@emails = ( );
+push(@emails, $vsync->{'email'}) if ($vsync->{'email'});
+push(@emails, $config{'bw_email'}) if ($vsync->{'emailmaster'} &&
+				       $config{'bw_email'});
+if (!$ok && @emails) {
 	&foreign_require("mailboxes");
-	&mailboxes::send_text_mail(
-		&get_global_from_address($src),
-		$vsync->{'email'},
-		undef,
-		&text(@doms ? 'vsync_fsubject' : 'vsync_fsubject2',
-		      scalar(@doms), $src->{'host'}),
-		$capture_print,
-		);
+	foreach $email (@emails) {
+		&mailboxes::send_text_mail(
+			&get_global_from_address($src),
+			@emails,
+			undef,
+			&text(@doms ? 'vsync_fsubject' : 'vsync_fsubject2',
+			      scalar(@doms), $src->{'host'}),
+			$capture_print,
+			);
+		}
 	}
 
 sub usage

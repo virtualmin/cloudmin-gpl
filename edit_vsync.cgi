@@ -93,9 +93,23 @@ print &ui_table_row($text{'vsync_when'},
 	&virtualmin_ui_show_cron_time("when", $vsync, undef));
 
 # Who to notify
-print &ui_table_row($text{'vsync_email'},
-	&ui_opt_textbox("email", $vsync->{'email'}, 40,
-			$text{'backup_noemail'}));
+if ($access{'owner'}) {
+	# Owners don't see master admin option
+	print &ui_table_row($text{'vsync_email'},
+		&ui_radio("emailother", $vsync->{'email'} ? 1 : 0,
+			  [ [ 0, $text{'backup_emailnone'} ],
+			    [ 1, $text{'backup_emailaddr'} ] ])." ".
+		&ui_textbox("email", $vsync->{'email'}, 40));
+	}
+else {
+	# Master admin can choose to notify self
+	print &ui_table_row($text{'vsync_email'},
+		&ui_checkbox("emailmaster", 1, $text{'backup_emailmaster'},
+			     $vsync->{'emailmaster'})."<br>\n".
+		&ui_checkbox("emailother", 1, $text{'backup_emailother'},
+			     $vsync->{'email'})." ".
+		&ui_textbox("email", $vsync->{'email'}, 40));
+	}
 
 print &ui_hidden_table_end("sched");
 if ($in{'new'}) {
