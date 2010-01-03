@@ -489,7 +489,7 @@ my ($alert, $st) = @_;
 if (!$st) {
 	return $text{'alert_stnone'};
 	}
-my @ids = map { ($id) = split(/:/, $_); $id } split(/\s+/, $st->{'values'});
+my @ids = map { ($id) = split(/:/, $_); $id } split(/,/, $st->{'values'});
 if ($st->{'firing'}) {
 	# Triggering now
 	if (@ids > 1) {
