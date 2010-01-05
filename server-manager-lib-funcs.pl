@@ -6039,6 +6039,41 @@ my $err = &$mfunc($server, $dest, $shutdown, $allocate);
 return $err;
 }
 
+# manual_move_system(&system, &dest)
+# Updates the Cloudmin config to reflect an already-done manual move of some
+# system to a new host. May print stuff.
+sub manual_move_system
+{
+my ($server, $dest) = @_;
+my @pars = &is_parent_server($dest);
+my $dfunc = "type_".$server->{'manager'}."_desc";
+my $desc = &$dfunc($server);
+&indexof($server->{'manager'}, @pars) >= 0 ||
+	return "Destination system $dest->{'host'} cannot host $desc systems";
+my $vhost = &get_parent_server($server);
+$vhost->{'id'} ne $dest->{'id'} ||
+	return "Source and destination host systems are the same!";
+
+# Check if moving is supported
+my $cfunc = "type_".$server->{'manager'}."_can_move";
+if (!defined(&$cfunc) || &$cfunc($server, $dest) != 2) {
+	return "The $desc system $server->{'host'} cannot be manually moved to $dest->{'host'}";
+	}
+
+# Do the actual move
+my $mfunc = "type_".$server->{'manager'}."_manual_move_system";
+my $err = &$mfunc($server, $dest, $shutdown, $allocate);
+
+# Refresh status
+&$first_print($text{'save_refreshing'});
+&check_server_status($server, 0, 1);
+&save_managed_server($server);
+&$second_print(&text('save_refreshdone2',
+	&describe_status($server, 1, 1)));
+
+return $err;
+}
+
 # reset_system(&system)
 # Resets a virtual system to its original image. 
 sub reset_system

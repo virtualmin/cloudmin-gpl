@@ -3042,11 +3042,11 @@ elsif ($dest->{'status'} eq 'virt' ||
 return 0;
 }
 
-# type_kvm_move_system(&server, &dest, [shutdown])
+# type_kvm_move_system(&server, &dest, [shutdown], [allocate-ip])
 # Actually move a KVM instance to a new host, printing messages as it goes.
 sub type_kvm_move_system
 {
-my ($server, $dest, $shutdown) = @_;
+my ($server, $dest, $shutdown, $allocate) = @_;
 my $vhost = &get_parent_server($server);
 my (@delfiles, @dellvs);
 

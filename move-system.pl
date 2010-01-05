@@ -26,6 +26,9 @@ If the C<--allocate-ip> flag is given and the destination host system uses
 a different IP range to the source host (perhaps because it is on a different
 network), Cloudmin will select a new IP address as part of the move process.
 
+If a system has been already moved manually, the C<--manual> flag can be used
+to tell Cloudmin to simply update its configurations to reflect the new host.
+
 =head1 Example usage
 
   cloudmin move-system --host xengtest.home --dest geylang.home
@@ -84,6 +87,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--allocate-ip") {
 		$allocate = 1;
 		}
+	elsif ($a eq "--manual") {
+		$manual = 1;
+		}
 	else {
 		&usage();
 		}
@@ -107,11 +113,18 @@ $cfunc = "type_".$server->{'manager'}."_can_move";
 defined(&$cfunc) || &usage("Systems of type $desc cannot be moved");
 &$cfunc($server, $dest) || &usage("The selected system cannot be moved to the new host");
 
-# Do the transfer
-print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
 &obtain_lock_server($dest);
 &obtain_lock_server($server);
-$err = &move_system($server, $dest, $shutdown, $allocate);
+if ($manual) {
+	# Just update configs to reflect manual move
+	print "Updating configuration for $desc system $server->{'host'} to reflect move from $vhost->{'host'} to $dest->{'host'} ..\n\n";
+	$err = &manual_move_system($server, $dest, $shutdown, $allocate);
+	}
+else {
+	# Do the transfer
+	print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
+	$err = &move_system($server, $dest, $shutdown, $allocate);
+	}
 &release_lock_server($server);
 &release_lock_server($dest);
 if ($err) {
@@ -130,6 +143,7 @@ print "cloudmin move-system --host name\n";
 print "                     --dest new-host-system-name\n";
 print "                    [--shutdown]\n";
 print "                    [--allocate-ip]\n";
+print "                    [--manual]\n";
 exit(1);
 }
 
