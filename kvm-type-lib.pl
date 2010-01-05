@@ -2798,18 +2798,33 @@ if ($server->{'kvm_filesystem_lv'}) {
 		}
 
 	# Tar up temp dir
-	&$first_print(&text('brun_tarring3', $server->{'host'}));
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"cd ".quotemeta($tempdir)." && ".
-		"tar cf - . | gzip -c >".quotemeta($tarfile));
-	if ($ex || $err) {
-		$err = $out if ($ex);
-		$ddfail = &text('brun_etar',
-				"<tt>".&html_escape($out)."</tt>");
+	if (!$ddfail) {
+		&$first_print(&text('brun_tarring3', $server->{'host'}));
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"cd ".quotemeta($tempdir)." && ".
+			"tar cf - . | gzip -c >".quotemeta($tarfile));
+		if ($ex || $err) {
+			$err = $out if ($ex);
+			$ddfail = &text('brun_etar',
+					"<tt>".&html_escape($out)."</tt>");
+			}
 		}
 
 	# Remove temp dir of DD images
 	&delete_file_on_server($vhost, $tempdir);
+
+	# Close Webmin session, as it may have timed out
+	&remote_finished();
+
+	# Remove any snapshots we created
+	if (@snaps) {
+		&$first_print(&text('brun_unsnapshot', $server->{'host'}));
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+		foreach my $snaplv (@snaps) {
+			&remote_foreign_call($vhost, "lvm",
+					     "delete_logical_volume", $snaplv);
+			}
+		}
 
 	if ($ddfail) {
 		return { 'ok' => 0, 'msg' => $ddfail };
@@ -2841,19 +2856,6 @@ else {
 		return { 'ok' => 0,
 			 'msg' => &text('brun_etar',
 					"<tt>".&html_escape($out)."</tt>") };
-		}
-	}
-
-# Close Webmin session, as it may have timed out
-&remote_finished();
-
-# Remove any snapshots we created
-if (@snaps) {
-	&$first_print(&text('brun_unsnapshot', $server->{'host'}));
-	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-	foreach my $snaplv (@snaps) {
-		&remote_foreign_call($vhost, "lvm",
-				     "delete_logical_volume", $snaplv);
 		}
 	}
 
