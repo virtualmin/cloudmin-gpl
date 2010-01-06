@@ -130,7 +130,7 @@ my $up = $server->{'status'} ne 'down' &&
          $server->{'status'} ne 'nohost' ? 1 : 0;
 my ($mem, $cpu, $cores, $load, $loadtime, $disk, $space);
 if ($up) {
-	# Get memory allocated to system, or physcially installed
+	# Get memory allocated to system, or physically installed
 	my $mfunc = "type_".$server->{'manager'}."_get_memory";
 	if (defined(&$mfunc)) {
 		$mem = &$mfunc($server);
