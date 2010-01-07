@@ -497,7 +497,7 @@ foreach my $s (@servers) {
 			}
 		}
 	$destmap{$s->{'id'}} = &backup_strftime($destdir).
-				"/".$s->{'host'}.".tar.gz";
+				"/".$s->{'host'}.".".&get_backup_extension($s);
 	}
 
 # If backup is by an owner, check if he is over his backup space
@@ -616,6 +616,16 @@ if ($was_up) {
 return $rv;
 }
 
+# get_backup_extension(&server)
+# Returns an extension for backup files, defaulting to tar.gz
+sub get_backup_extension
+{
+my ($server) = @_;
+my $efunc = "type_".$server->{'manager'}."_backup_extension";
+return "tar.gz" if (!defined(&$efunc));
+return &$efunc($server);
+}
+
 # send_to_backup_dest(&server, file, &destination)
 # Send some file to a backup destination. Returns an error on failure, undef on
 # success.
@@ -718,7 +728,7 @@ foreach my $s (@servers) {
 @servers = grep { !$rv{$_->{'id'}} } @servers;
 &$second_print(&text('rrun_found', scalar(@servers)));
 
-# Work out the destination for each, based on the given destination spec
+# Work out the source for each, based on the given destination spec
 &$first_print($text{'rrun_findingdests'});
 my %destmap;
 foreach my $s (@servers) {
@@ -743,7 +753,8 @@ foreach my $s (@servers) {
 			}
 		}
 	$destmap{$s->{'id'}} = &backup_strftime($destdir).
-			        "/".$s->{'host'}.".tar.gz";
+			        "/".$s->{'host'}.".".&get_backup_extension($s);
+	# XXX use tar.gz if gz is missing
 	}
 
 # Exclude failures

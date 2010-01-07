@@ -2899,6 +2899,7 @@ brun_unsnapshot=Removing LVM snapshots for disks of $1 ..
 brun_emktemp=Failed to create temporary directory on $1 : $2
 brun_edd=Failed to create copy of LVM disk $1 : $2
 brun_dd=Creating copies of LVM disk for $1 ..
+brun_ddone=Compressing LVM disk for $1 ..
 brun_allok=Backups of $1 systems completed successfully.
 brun_somefailed=Backups of $1 systems completed, but $2 failed!
 brun_emkdir=Failed to create destination directory : $1
