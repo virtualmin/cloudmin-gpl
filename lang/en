@@ -237,7 +237,7 @@ create_ezoneiface=Could not find an Ethernet interface on the host system
 create_ezonecreate=Zone creation function failed!
 create_zonesstartup=Starting up Solaris Zone ..
 create_zonesvccfg=Waiting for system configuration to complete ..
-create_zonesvctimeout=.. gave up waiting after 10 minutes.
+create_zonesvctimeout=.. gave up waiting after 60 seconds
 create_zonesupgrade=Upgrading all Blastwave packages ..
 create_zonepkgget=Downloading and installing Blastwave install program ..
 create_ezonepkggetdown=.. download failed : $1
@@ -408,6 +408,7 @@ create_kvmip2=IP addresses for KVM instance
 create_ekvmhost=The hostname for a KVM instance cannot contain a . , as the domain name is added automatically
 create_ekvmip=Missing or invalid Xen instance IP address
 create_kvmstartup=Starting up new KVM instance ..
+create_zonesmemory=Memory limit for Zone
 
 keys_title=SSH Keys
 keys_desc=Key description

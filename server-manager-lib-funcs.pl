@@ -3874,7 +3874,12 @@ foreach my $l (split(/\r?\n/, $data)) {
 		last;
 		}
 	}
-$roothome ||= "/root";
+if ($server->{'type'} eq 'solaris') {
+	$roothome ||= "/";
+	}
+else {
+	$roothome ||= "/root";
+	}
 
 # Create .ssh dir if missing
 my $sshdir = "$roothome/.ssh";

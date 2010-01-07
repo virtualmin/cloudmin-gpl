@@ -572,6 +572,10 @@ if (!$err) {
 	$needs_localhost = $vconfig{'dns'};
 	}
 
+# Work out files we create regardless of whether the new system has them or not
+my @critcal = ( "/etc/resolv.conf" );
+push(@critical, "/etc/hosts") if ($server->{'manager'} ne 'zones');
+
 foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",
 		 "/etc/sysconfig/network", "/etc/postfix/main.cf",
@@ -582,8 +586,7 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	# Only do files that exist, apart from /etc/hosts and /etc/resolv.conf
 	# which should be everywhere
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
-	next if ($err && $fix ne "/etc/hosts" &&
-			 $fix ne "/etc/resolv.conf");
+	next if ($err && &indexof($fix, @critical) < 0);
 
 	my $data = &read_file_contents($temppath);
 	if ($fix eq "/etc/hosts") {
