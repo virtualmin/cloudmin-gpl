@@ -85,7 +85,10 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 	'tgz' => 'http://www.webmin.com/download/webmin-current.tar.gz',
 	);
 
-$pkgget_download_url = "http://www.blastwave.org/pkg_get.pkg";
+%pkgget_download_url = (
+	'sparc' => 'http://blastwave.network.com/csw/pkgutil_sparc.pkg',
+	'i86pc' => 'http://blastwave.network.com/csw/pkgutil_i386.pkg',
+	);
 
 @server_statuses = (
 	[ 'down' => 'ff0000' ],

@@ -235,6 +235,7 @@ create_ezonehost=The hostname for a Zone cannot contain a . , as the domain name
 create_ezoneclash=A Zone with the same name already exists
 create_ezoneiface=Could not find an Ethernet interface on the host system
 create_ezonecreate=Zone creation function failed!
+create_zonesstartup=Starting up Solaris Zone ..
 create_zonesvccfg=Waiting for system configuration to complete ..
 create_zonesvctimeout=.. gave up waiting after 10 minutes.
 create_zonesupgrade=Upgrading all Blastwave packages ..
