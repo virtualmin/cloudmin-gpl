@@ -2075,6 +2075,7 @@ else {
 my $info = &get_server_collected($server);
 my $got_more_info;
 if (!$got_memory) {
+	# Try Linux "free" command
 	my ($out, $ex, $err) = &execute_command_on_server($server, "free");
 	if (!$ex && !$err) {
 		my @mem;
@@ -2088,9 +2089,42 @@ if (!$got_memory) {
 			}
 		if (@mem) {
 			$info->{'mem'} = \@mem;
-			$got_more_info = 1;
+			$got_more_info = $got_memory = 1;
 			}
 		}
+
+	# Try Solaris kstat and swap commands
+	if (!$got_memory && &has_command_on_server($server, "kstat")) {
+		my %stat;
+		foreach my $s ("physmem", "freemem") {
+			my ($out) = &execute_command_on_server(
+					$server, "kstat -p -m unix -s $s");
+			if ($out =~ /\s+(\d+)/) {
+				$stat{$s} = $1;
+				}
+			}
+		my ($swaptotal, $swapfree);
+		my ($out) = &execute_command_on_server(
+				$server, "swap -l");
+		foreach my $line (split(/\r?\n/, $out)) {
+			if ($line =~ /^\S+\s+\d+,\d+\s+\d+\s+(\d+)\s+(\d+)/) {
+				$swaptotal += $1;
+				$swapfree += $2;
+				}
+			}
+		local ($pagesize) = &execute_command_on_server(
+					$server, "pagesize 2>/dev/null");
+		$pagesize = int($pagesize)/1024;
+		$pagesize ||= 8;	# Fallback
+		if ($stat{'physmem'}) {
+			$info->{'mem'} = [ $stat{'physmem'}*$pagesize,
+					   $stat{'freemem'}*$pagesize,
+					   $swaptotal/2, $swapfree/2 ];
+			$got_more_info = $got_memory = 1;
+			}
+		}
+
+	# Get CPU load from "uptime" command
 	my ($out, $ex, $err) = &execute_command_on_server($server, "uptime");
 	if (!$ex && !$err &&
 	    $out =~ /average:\s+([0-9\.]+),\s*([0-9\.]+),\s*([0-9\.]+)/i) {
@@ -2098,7 +2132,9 @@ if (!$got_memory) {
 		$got_more_info = 1;
 		}
 	}
+
 if (!$got_disk) {
+	# Get disk from df command
 	my ($out, $ex, $err) = &execute_command_on_server($server, "df -kl");
 	if (!$ex && !$err) {
 		my @lines = split(/\r?\n/, $out);
