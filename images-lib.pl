@@ -574,7 +574,9 @@ if (!$err) {
 
 # Work out files we create regardless of whether the new system has them or not
 my @critcal = ( "/etc/resolv.conf" );
-push(@critical, "/etc/hosts") if ($server->{'manager'} ne 'zones');
+if ($server->{'manager'} ne 'zones') {
+	push(@critical, "/etc/hosts");
+	}
 
 foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",

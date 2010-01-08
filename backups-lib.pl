@@ -754,7 +754,6 @@ foreach my $s (@servers) {
 		}
 	$destmap{$s->{'id'}} = &backup_strftime($destdir).
 			        "/".$s->{'host'}.".".&get_backup_extension($s);
-	# XXX use tar.gz if gz is missing
 	}
 
 # Exclude failures
