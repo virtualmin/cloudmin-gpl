@@ -144,7 +144,9 @@ print &ui_hidden_table_end("net");
 &show_host_floor_table($kvm);
 
 # Section for caching
-&show_host_images_cache_table($kvm, "kvm");
+if ($kvm->{'id'}) {
+	&show_host_images_cache_table($kvm, "kvm");
+	}
 
 # Section for default backup destination
 &show_default_backup_dest_table($kvm);
