@@ -102,7 +102,7 @@ elsif (!$serial && !$key) {
 		}
 	}
 
-# Validate resource limits
+# Validate owner resource limits
 $limits = &get_owner_limits();
 if ($limits) {
 	# Validate disk limit

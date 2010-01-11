@@ -17,6 +17,20 @@ $clash && &error($text{'add_eclash'});
 $server->{'host'} = $in{'host'};
 $server->{'desc'} = $in{'desc'};
 
+# Validate owner resource limits
+$limits = &get_owner_limits();
+if ($limits) {
+	# Validate IPs limit, assuming new system will have exactly 1
+	$incr = scalar(split(/\s+/, $server->{'ip_addresses'})) || 1;
+	if ($limits->{'max_ips'}) {
+		if ($limits->{'ips'} + $incr > $limits->{'max_ips'}) {
+			&error(&text('create_epulimit',
+			       $limits->{'max_ips'},
+			       $limits->{'ips'}));
+			}
+		}
+	}
+
 # SSH login (if there is one)
 $err = &parse_ssh_login_form(\%in, $server);
 &error($err) if ($err);
@@ -66,6 +80,13 @@ if ($server->{'user'}) {
 	}
 else {
 	$server->{'type'} ||= 'unknown';
+	}
+
+# If this is a system owner, add it to his list
+if ($access{'owner'}) {
+	$access{'servers'} = join(' ', split(/\s+/, $access{'servers'}),
+				       $server->{'id'});
+	&save_module_acl(\%access);
 	}
 
 # Get status one more time, and save the server object

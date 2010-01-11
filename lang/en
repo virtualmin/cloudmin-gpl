@@ -1080,7 +1080,7 @@ openvz_ezone=Missing or invalid-looking DNS domain
 openvz_eiface=Missing or invalid-looking base network interface
 
 vchooser_title=Select VServer Instance
-vchooser_elogin=Failed to fetch VServers : $1
+vchooser_elist=Failed to fetch VServers : $1
 vchooser_enone=The selected system has no VServer instances
 vchooser_name=Instance name
 vchooser_ctx=Context ID
@@ -1090,7 +1090,7 @@ vchooser_unuse=<font color=#ff0000>Managed host $1</font>
 vchooser_free=Not yet managed
 
 zchooser_title=Select Solaris Zone
-zchooser_elogin=Failed to fetch Zones : $1
+zchooser_elist=Failed to fetch Zones : $1
 zchooser_enone=The selected system has no Solaris Zones
 zchooser_name=Zone name
 zchooser_id=Zone ID
@@ -1100,7 +1100,7 @@ zchooser_unuse=<font color=#ff0000>Managed host $1</font>
 zchooser_free=Not yet managed
 
 xchooser_title=Select Xen Instance
-xchooser_elogin=Failed to fetch Xen instances : $1
+xchooser_elist=Failed to fetch Xen instances : $1
 xchooser_enone=The selected system has no Xen instances
 xchooser_name=Instance name
 xchooser_id=ID
@@ -1111,7 +1111,7 @@ xchooser_unuse=<font color=#ff0000>Managed host $1</font>
 xchooser_free=Not yet managed
 
 vzchooser_title=Select OpenVZ Container
-vzchooser_elogin=Failed to fetch containers : $1
+vzchooser_elist=Failed to fetch containers : $1
 vzchooser_enone=The selected system has no OpenVZ containers
 vzchooser_name=Hostname
 vzchooser_ctx=Context ID
@@ -1121,7 +1121,7 @@ vzchooser_unuse=<font color=#ff0000>Managed host $1</font>
 vzchooser_free=Not yet managed
 
 vtchooser_title=Select OpenVZ Template
-vtchooser_elogin=Failed to fetch templates : $1
+vtchooser_elist=Failed to fetch templates : $1
 vtchooser_enone=The selected system has no OpenVZ templates
 vtchooser_id=Template ID
 vtchooser_file=Filename

@@ -51,7 +51,7 @@ print &ui_table_row($text{'plan_actions'},
 
 # Allowed VPS types
 @cantypes = split(/\s+/, $plan->{'types'});
-foreach $t (@virtual_server_management_types) {
+foreach $t (grep { $_ ne 'this' } @server_management_types) {
 	$dfunc = "type_".$t."_desc";
 	push(@typesboxes, &ui_checkbox("types", $t, &$dfunc(),
 				       &indexof($t, @cantypes) >= 0));

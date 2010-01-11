@@ -6547,18 +6547,29 @@ my $no_ssh = defined(&$sfunc) && &$sfunc();
 return if ($no_ssh);
 
 # Root password / key
-print &ui_table_row($text{'add_auth'},
-	&ui_radio("auth_mode", !$server ? 0 :
-			       $server->{'ssh_nologin'} ? 2 :
-			       $server->{'key'} ? 1 : 0,
-	      [ [ 0, &text('add_auth0',
+my $must_pass = !&can_action(undef, "sshkeys") &&
+	        !$server->{'key'} &&
+		!$server->{'ssh_nologin'};
+if ($must_pass) {
+	# Cannot select SSH keys
+	print &ui_table_row($text{'add_authpass'},
+		&ui_textbox("upass", undef, 20));
+	}
+else {
+	# Can choose password, key or no SSH
+	print &ui_table_row($text{'add_auth'},
+		&ui_radio("auth_mode", !$server ? 0 :
+				       $server->{'ssh_nologin'} ? 2 :
+				       $server->{'key'} ? 1 : 0,
+		      [ [ 0, &text('add_auth0',
 			   &ui_textbox("upass", $server ? $server->{'ssh_pass'}
 							: undef, 20))."<br>" ],
-		[ 1, &text('add_auth1',
-			&ssh_key_menu("key", $type,
-				$server ? $server->{'key'}
-					: undef))."<br>" ],
-		[ 2, $text{'add_auth2'} ] ]));
+			[ 1, &text('add_auth1',
+				&ssh_key_menu("key", $type,
+					$server ? $server->{'key'}
+						: undef))."<br>" ],
+			[ 2, $text{'add_auth2'} ] ]));
+	}
 
 # SSH protocol version
 print &ui_table_row($text{'add_protocol'},
@@ -6583,6 +6594,9 @@ sub parse_ssh_login_form
 {
 my ($in, $server) = @_;
 return undef if (!defined($in->{'auth_mode'}));		# No SSH mode
+my $must_pass = !&can_action(undef, "sshkeys") &&
+	        !$server->{'key'} &&
+		!$server->{'ssh_nologin'};
 
 $in->{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i || return $text{'add_euuser'};
 $server->{'ssh_user'} = $in->{'uuser'};
@@ -6591,7 +6605,7 @@ if (!$in->{'uport_def'}) {
 	    $in->{'uport'} < 65536 || return $text{'add_euport'};
 	$server->{'ssh_port'} = $in->{'uport'};
 	}
-if ($in->{'auth_mode'} == 0) {
+if ($in->{'auth_mode'} == 0 || $must_pass) {
 	# Via password
 	$in->{'upass'} || return $text{'add_eupass'};
 	$server->{'ssh_pass'} = $in->{'upass'};
