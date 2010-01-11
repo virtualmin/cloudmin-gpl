@@ -2170,6 +2170,7 @@ owner_action_delete=Delete systems
 owner_action_limits=Edit RAM and CPU limits
 owner_action_disks=Manage disks
 owner_action_devices=Add files or devices as disks
+owner_action_add=Add existing systems
 owner_action_advanced=Use advanced system creation options
 owner_action_ips=Manually select IP addresses
 owner_action_ifaces=Manage network interfaces
@@ -2206,6 +2207,7 @@ can_eaction=You are not allowed to perform the action : $1
 can_ecreate=You are not allowed to create new $1 systems
 can_eadd=You are not allowed to add existing $1 systems
 can_ecreateany=You are not allowed to create new systems
+can_eaddany=You are not allowed to add new systems
 can_ecreatelimit=You have reached your limit of $1 systems
 can_ecreatelic=Cloudmin has reached its license limit of $1 systems
 

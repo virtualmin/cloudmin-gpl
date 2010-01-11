@@ -93,7 +93,7 @@ sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
-	 'create', 'delete', 'advanced', 'ips', 'ifaces', 'reverse', 'limits',
+	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'reverse', 'limits',
 	 'disks', 'devices', 'sshkeys', 'backup', 'webmin', 'virtualmin' );
 }
 
@@ -186,7 +186,7 @@ if (!$access{'owner'}) {
 	# Master admin can do anything
 	@rv = ( 1, undef );
 	}
-elsif ($actions{'actions'}) {
+elsif (!&can_action(undef, 'create')) {
 	# Creation not allowed at all
 	@rv = ( 0, $text{'can_ecreateany'} );
 	}
@@ -231,9 +231,32 @@ if ($licence{'servers'} > 0 && $type ne 'real') {
 		}
 	}
 
-# Only root can add
-my @rv = !$access{'owner'} ? ( 1, undef )
-			      : ( 0, &text('can_eadd', $tdesc) );
+if (!$access{'owner'}) {
+	# Master admin can do anything
+	@rv = ( 1, undef );
+	}
+elsif (!&can_action(undef, 'add')) {
+	# Creation not allowed at all
+	@rv = ( 0, $text{'can_eaddany'} );
+	}
+elsif ($access{'types'} && $access{'types'} !~ /\Q$type\E/) {
+	# Cannot create this type
+	@rv = ( 0, &text('can_eadd', $tdesc) );
+	}
+else {
+	# Check limits
+	my $limits = &get_owner_limits();
+	if (!$limits->{'max_servers'} ||
+	    $limits->{'max_servers'} > $limits->{'servers'}) {
+		# Under limit
+		@rv = ( 1, undef );
+		}
+	else {
+		# At limit
+		@rv = ( 0,  &text('can_ecreatelimit',
+				  $limits->{'max_servers'}) );
+		}
+	}
 return wantarray ? @rv : $rv[0];
 }
 
