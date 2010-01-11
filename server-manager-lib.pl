@@ -87,6 +87,7 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 
 %pkgget_download_url = (
 	'sparc' => 'http://blastwave.network.com/csw/pkgutil_sparc.pkg',
+	'sun4u' => 'http://blastwave.network.com/csw/pkgutil_sparc.pkg',
 	'i86pc' => 'http://blastwave.network.com/csw/pkgutil_i386.pkg',
 	);
 

@@ -1279,7 +1279,7 @@ else {
 	}
 
 # Checksum on target
-if (!$rv && $srccs_ok) {
+if (!$rv && $srccs_ok && &has_command_on_server($destserver, "md5sum")) {
 	my ($destcs_ok, $destcs) = &checksum_file_on_server($destserver, $dest);
 	if (!$destcs_ok) {
 		$rv = "Failed to checksum file on destination system : $destcs";
