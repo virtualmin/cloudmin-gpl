@@ -3966,6 +3966,37 @@ else {
 	}
 }
 
+# update_virtualmin_ips(&server)
+# Update the IPs for any domains on the old main shared IP
+sub update_virtualmin_ips
+{
+my ($server) = @_;
+my @doms = &get_server_domains($server);
+my %ipcount;
+foreach my $d (@doms) {
+	if (!$d->{'virt'}) {
+		$ipcount{$d->{'ip'}}++;
+		}
+	}
+my ($oldip) = sort { $ipcount{$b} <=> $ipcount{$a} } keys %ipcount;
+$oldip || return "No domains on old shared IP found";
+my $newip = &get_server_ip($server);
+foreach my $d (@doms) {
+	if (!$d->{'virt'} && $d->{'ip'} eq $oldip) {
+		my ($err, $out) = &call_virtualmin_api(
+			$server, "modify-domain", 
+			[ [ "domain", $d->{'dom'} ],
+			  [ "shared-ip", $newip ] ]);
+		if ($err) {
+			return "$d->{'dom'} failed : $err";
+			}
+		$d->{'ip'} = $newip;
+		}
+	}
+&save_server_domains($server, \@doms);
+return undef;
+}
+
 # get_interface_use(&server, &info, &domains, &iface)
 # Returns a code and string describing what some interface is for. Codes
 # are 0=none, 1=default IP for Virtualmin, 2=For domain

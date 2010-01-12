@@ -411,6 +411,8 @@ create_ekvmhost=The hostname for a KVM instance cannot contain a . , as the doma
 create_ekvmip=Missing or invalid Xen instance IP address
 create_kvmstartup=Starting up new KVM instance ..
 create_zonesmemory=Memory limit for Zone
+create_domips=Updating IPs in Virtualmin domains ..
+create_domipsfailed=.. failed : $1
 
 keys_title=SSH Keys
 keys_desc=Key description

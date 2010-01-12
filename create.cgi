@@ -420,6 +420,21 @@ if ($server->{'status'} eq 'virt') {
 	&save_managed_server($server);
 	}
 
+# If the system has Virtualmin, update any domains on the old default IP
+if ($server->{'status'} eq 'virt') {
+	@doms = &get_server_domains($server);
+	if (@doms) {
+		&$first_print($text{'create_domips'});
+		$err = &update_virtualmin_ips($server);
+		if ($err) {
+			&$second_print(&text('create_domipsfailed', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	}
+
 # Enable at boot time, if possible
 $bfunc = "type_".$in{'type'}."_set_atboot";
 if (defined(&$bfunc)) {

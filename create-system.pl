@@ -505,6 +505,21 @@ if ($server->{'status'} eq 'virt') {
 	&save_managed_server($server);
 	}
 
+# If the system has Virtualmin, update any domains on the old default IP
+if ($server->{'status'} eq 'virt') {
+	@doms = &get_server_domains($server);
+	if (@doms) {
+		print "Updating IPs in Virtualmin domains ..\n";
+		$err = &update_virtualmin_ips($server);
+		if ($err) {
+			print ".. failed : $err\n\n";
+			}
+		else {
+			print ".. done\n\n";
+			}
+		}
+	}
+
 # Enable at boot time, if possible
 $bfunc = "type_".$type."_set_atboot";
 if (defined(&$bfunc)) {
