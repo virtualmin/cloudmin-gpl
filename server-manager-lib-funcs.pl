@@ -1292,6 +1292,122 @@ if (!$rv && $srccs_ok && &has_command_on_server($destserver, "md5sum")) {
 return $rv;
 }
 
+# pipe_command_to_server(&source-server, &dest-server,source-command, dest-file)
+# Run a command on some system and pipe the output to a file on a remote system,
+# using SSH.
+sub pipe_command_to_server
+{
+my ($srcserver, $destserver, $srccmd, $dest) = @_;
+
+if ($srcserver->{'id'} eq $destserver->{'id'}) {
+	# Self to self - just run the command outputting to the file
+	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"($srccmd) >".quotemeta($dest));
+	$rv = $err ? $err : $ex ? $out : undef;
+	}
+elsif ($srcserver->{'id'} == 0) {
+	# Copying from Cloudmin master - run command piped into SSH
+	my $sshcmd = &build_ssh_command($destserver);
+	$sshcmd = $srccmd." | ".$sshcmd." ".quotemeta("dd of=$dest bs=32768");
+	my ($status, $out) = &run_ssh_command($sshcmd, $destserver->{'ssh_pass'});
+	return $status ? $text{'status_'.$status} : undef;
+	}
+elsif ($destserver->{'id'} == 0) {
+	# Copying to Cloudmin master - run SSH command outputting to file
+	my $sshcmd = &build_ssh_command($srcserver);
+	$sshcmd .= " ".quotemeta($srccmd).
+		   " | dd of=".quotemeta($dest)." bs=32768";
+	my ($status, $out) = &run_ssh_command($sshcmd, $srcserver->{'ssh_pass'});
+	return $status ? $text{'status_'.$status} : undef;
+	}
+else {
+	# Both are remote, or source is Cloudmin master. Run command piping
+	# into SSH into destination
+	my $rv;
+	my $keytemp;
+	if ($destserver->{'key'}) {
+		# A key is needed - copy it to the source system
+		my ($key) = grep { $_->{'id'} == $destserver->{'key'} }
+				    &list_ssh_keys();
+		$keytemp = $key->{'file'};
+		$keytemp =~ s/^.*[\\\/]//;
+		$keytemp = "/tmp/$keytemp";
+		&put_file_to_server($srcserver, $key->{'file'}, $keytemp);
+		}
+
+	# Build SSH command
+	$sshcmd = $srccmd." | ssh -q -x";
+	$sshcmd .= " -".$destserver->{'ssh_protocol'};
+	if ($keytemp) {
+		$sshcmd .= " -i ".quotemeta($keytemp);
+		}
+	if ($destserver->{'ssh_port'}) {
+		$sshcmd .= " -p ".$destserver->{'ssh_port'};
+		}
+	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
+	$sshcmd .= " dd of=".quotemeta($dest)." bs=32768";
+	if ($keytemp) {
+		$sshcmd .= " ; rm -f ".quotemeta($keytemp);
+		}
+
+	# Then execute on the source system
+	my ($out, $ex, $err, $status, $fh, $fpid) =
+		&execute_command_on_server($srcserver, $sshcmd, undef, 1);
+	if (!$err && !$ex) {
+		# Started OK .. wait for a password prompt
+		$out = undef;
+		my ($given_password, $wrong_password, $connect_failed);
+		while(1) {
+			my $wrv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
+			if ($wrv == 0) {
+				syswrite($fh, "$destserver->{'ssh_pass'}\n");
+				$given_password++;
+				}
+			elsif ($wrv == 1) {
+				syswrite($fh, "yes\n");
+				}
+			elsif ($wrv == 2) {
+				$wrong_password++;
+				$out .= $wait_for_input;
+				last;
+				}
+			elsif ($wrv == 3) {
+				$connect_failed++;
+				$out .= $wait_for_input;
+				}
+			elsif ($wrv < 0) {
+				last;
+				}
+			else {
+				$out .= $wait_for_input;
+				}
+			}
+		close($fh);
+		waitpid($fpid, 0);
+		$ex = $?;
+
+		# Check if it worked
+		if (!$wrong_password && $given_password < 3 &&
+		    !$connect_failed) {
+			# Looks like it did!
+			$rv = undef;
+			}
+		else {
+			# Failed .. record error
+			$out =~ s/^\s*\r?\n//;	# Remove empty line at start
+			$rv = $out;
+			}
+		}
+	else {
+		$rv = "SSH transfer failed : ".($err || $out);
+		}
+	if ($keytemp) {
+		&delete_file_on_server($srcserver, $keytemp);
+		}
+	return $rv;
+	}
+}
+
 # delete_file_on_server(&server, remotefile, [no-quote])
 # Deletes a file on a managed server. Returns undef on success, or an error
 # message on failure.

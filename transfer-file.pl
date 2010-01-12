@@ -4,8 +4,8 @@
 
 Transfer a file between two systems
 
-This command copies a file between two systems managed by Cloudmin, using a direct
-copy with C<scp> where possible. The source system is specified with the 
+This command copies a file between two systems managed by Cloudmin, using a
+direct copy with C<scp> where possible. The source system is specified with the 
 C<--source> flag, and the target with C<--dest>. The file or directory to
 copy is set with C<--file>. By default it will be copied to the same path
 on the target, unless the C<--destfile> parameter followed by a new filename
