@@ -88,6 +88,9 @@ if (@parents) {
 			   [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ],
 			   5, 1));
 	}
+else {
+	print &ui_hidden("hosts_def", 1);
+	}
 
 # Host system allocation mode
 print &ui_table_row($text{'plan_hostmode'},
@@ -115,6 +118,9 @@ if (@images) {
 				      &list_server_images() ], 10, 1));
 
 	print &ui_hidden_table_end();
+	}
+else {
+	print &ui_hidden("images_def", 1);
 	}
 
 print &ui_form_end(
