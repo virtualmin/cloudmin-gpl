@@ -2929,6 +2929,7 @@ rrun_failed=.. restore failed : $1
 rrun_untarring=Un-TARing filesystem for $1 under $2 ..
 rrun_untarring2=Un-TARing disk images for $1 under $2 ..
 rrun_untarring3=Un-TARing copies of LVM disks for $1 ..
+rrun_untarring4=Un-TARing filesystem for $1 under $2 via SSH from $3 ..
 rrun_dd=Restoring copies of LVM disks for $1 ..
 rrun_ddone=Un-compressing LVM disk for $1 ..
 rrun_edd=Failed to restore copy of LVM disk $1 : $2

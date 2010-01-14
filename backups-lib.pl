@@ -1110,7 +1110,29 @@ if ($tarfile) {
 	}
 else {
 	# Un-tar directly from the source system
-	# XXX
+	&$first_print(&text('rrun_untarring4', $server->{'host'}, $root,
+					       $destserver->{'host'}));
+	my $tarcmd = "cd ".quotemeta($root)." && ".
+		     "rm -rf * && ".
+		     (&tar_supports_gzip($vhost) ?
+			   "tar xpzf - " :
+			   "gunzip -c | tar xpf -");
+	my $err = &pipe_command_from_server($destserver, $vhost, $tarcmd,
+					    $dest->{'path'});
+	if ($err) {
+		return { 'ok' => 0,
+			 'msg' => &text('rrun_etar',
+					"<tt>".&html_escape($err)."</tt>") };
+		}
+	&remote_finished();
+
+	# Get the source file size
+	my @st = &stat_file_on_server($destserver, $dest->{'path'});
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_estat', $tarfile) };
+		}
+	$size = $st[7];
 	}
 
 # Return status
@@ -1118,7 +1140,7 @@ if ($tarerr) {
 	return { 'ok' => 0, 'msg' => $tarerr };
 	}
 else {
-	return { 'ok' => 1, 'size' => $st[7] };
+	return { 'ok' => 1, 'size' => $size };
 	}
 }
 
