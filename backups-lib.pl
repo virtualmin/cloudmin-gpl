@@ -626,6 +626,35 @@ return "tar.gz" if (!defined(&$efunc));
 return &$efunc($server);
 }
 
+# get_backup_dest_server(&dest, &vhost)
+# Given a backup destination hash ref, return a server object for it if
+# possible (which it isn't for FTP)
+sub get_backup_dest_server
+{
+my ($dest, $vhost) = @_;
+if ($dest->{'mode'} == 0) {
+	return &get_this_managed_server();
+	}
+elsif ($dest->{'mode'} == 1) {
+	return $vhost;
+	}
+elsif ($dest->{'mode'} == 2) {
+	return &get_managed_server_by("id", $dest->{'id'});
+	}
+elsif ($dest->{'mode'} == 3) {
+	return { 'id' => &server_id(),
+		 'ssh_protocol' => 2,
+		 'host' => $dest->{'host'},
+		 'ssh_user' => $dest->{'user'},
+		 'ssh_pass' => $dest->{'pass'},
+		 'ssh_port' => $dest->{'port'},
+		 'status' => 'nowebmin', };
+	}
+else {
+	return undef;
+	}
+}
+
 # send_to_backup_dest(&server, file, &destination)
 # Send some file to a backup destination. Returns an error on failure, undef on
 # success.
@@ -634,6 +663,7 @@ sub send_to_backup_dest
 my ($server, $file, $dest) = @_;
 my $destdir = $dest->{'path'};
 $destdir =~ s/\/([^\/]+)$//;
+my $destserver = &get_backup_dest_server($dest);
 if ($dest->{'mode'} == 0) {
 	# Download to Cloudmin master
 	if (!-d $destdir) {
@@ -648,7 +678,6 @@ elsif ($dest->{'mode'} == 1) {
 	}
 elsif ($dest->{'mode'} == 2) {
 	# To some other Cloudmin system
-	my $destserver = &get_managed_server_by("id", $dest->{'id'});
 	$destserver || return "No Cloudmin system with ID $dest->{'id'} exists";
 	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
 	return &text('brun_emkdir', $mkerr) if ($mkerr);
@@ -657,14 +686,6 @@ elsif ($dest->{'mode'} == 2) {
 	}
 elsif ($dest->{'mode'} == 3) {
 	# Send via SSH (using a fake server object)
-	my $destserver = { 'id' => &server_id(),
-			   'ssh_protocol' => 2,
-			   'host' => $dest->{'host'},
-			   'ssh_user' => $dest->{'user'},
-			   'ssh_pass' => $dest->{'pass'},
-			   'ssh_port' => $dest->{'port'},
-			   'status' => 'nowebmin',
-			  };
 	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
 	return &text('brun_emkdir', $mkerr) if ($mkerr);
 	return &transfer_file_between_servers($server, $destserver,
@@ -907,6 +928,10 @@ sub tar_backup_system
 my ($server, $deststr, $root, $owner) = @_;
 my $vhost = &get_parent_server($server);
 my $dest = &parse_backup_destination($deststr);
+my $destserver = &get_backup_dest_server($dest, $vhost);
+if ($destserver && $destserver->{'id'} eq $vhost->{'id'}) {
+	$dest->{'mode'} = 1;
+	}
 
 # Pick a temp file on the host system, if needed
 my $tarfile;
@@ -919,7 +944,15 @@ if ($dest->{'mode'} == 1) {
 			 'msg' => &text('brun_emkdir', $mkerr) };
 		}
 	}
+elsif ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+	# Transferring directly to dest host
+	if (!$destserver) {
+		return { 'ok' => 0, 'msg' => $text{'brun_edestserver'} };
+		}
+	$tarfile = undef;
+	}
 else {
+	# Pick temp file for tar
 	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
 	if (!$tarfile) {
 		return { 'ok' => 0,
@@ -927,54 +960,81 @@ else {
 		}
 	}
 
-# Tar up the filesystem
-&$first_print(&text('brun_tarring', $server->{'host'}, $root));
-my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"cd ".quotemeta($root)." && ".
-	(&tar_supports_gzip($vhost) ?
-		"tar czf ".quotemeta($tarfile)." ." :
-		"tar cf - . | gzip -c >".quotemeta($tarfile)));
-if ($ex || $err) {
-	$err = $out if ($ex);
-	return { 'ok' => 0,
-		 'msg' => &text('brun_etar',
-				"<tt>".&html_escape($out)."</tt>") };
-	}
-&remote_finished();
-
-# Get the size
-my @st = &stat_file_on_server($vhost, $tarfile);
-if (!@st || !$st[7]) {
-	return { 'ok' => 0,
-		 'msg' => &text('brun_estat', $tarfile) };
-	}
-my $size = $st[7];
-
-# Transfer to the destination, if needed
-if ($dest->{'mode'} != 1) {
-	# Check if size would exceed limits
-	my $err = &check_backup_dest_size($server, $dest, $size, $owner);
-
-	# Send via SCP or FTP
-	if (!$err) {
-		&$first_print(&text('brun_sending', $server->{'host'},
-					    &nice_backup_destination($dest)));
-		$err = &send_to_backup_dest($vhost, $tarfile, $dest);
+my $size;
+if ($tarfile) {
+	# Tar up the filesystem
+	&$first_print(&text('brun_tarring', $server->{'host'}, $root));
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"cd ".quotemeta($root)." && ".
+		(&tar_supports_gzip($vhost) ?
+			"tar czf ".quotemeta($tarfile)." ." :
+			"tar cf - . | gzip -c >".quotemeta($tarfile)));
+	if ($ex || $err) {
+		$err = $out if ($ex);
+		return { 'ok' => 0,
+			 'msg' => &text('brun_etar',
+					"<tt>".&html_escape($out)."</tt>") };
 		}
+	&remote_finished();
 
-	# Delete from host
-	&delete_file_on_server($vhost, $tarfile);
+	# Get the size
+	my @st = &stat_file_on_server($vhost, $tarfile);
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_estat', $tarfile) };
+		}
+	$size = $st[7];
 
+	# Transfer to the destination, if needed
+	if ($dest->{'mode'} != 1) {
+		# Check if size would exceed limits
+		my $err = &check_backup_dest_size($server, $dest,
+						  $size, $owner);
+
+		# Send via SCP or FTP
+		if (!$err) {
+			&$first_print(&text('brun_sending', $server->{'host'},
+					    &nice_backup_destination($dest)));
+			$err = &send_to_backup_dest($vhost, $tarfile, $dest);
+			}
+
+		# Delete from host
+		&delete_file_on_server($vhost, $tarfile);
+
+		if ($err) {
+			return { 'ok' => 0,
+				 'msg' => &text('brun_esend', $err) };
+			}
+		}
+	}
+else {
+	# Tar directly to dest system
+	&$first_print(&text('brun_tarring4', $server->{'host'}, $root,
+					     $destserver->{'host'}));
+	my $tarcmd = "cd ".quotemeta($root)." && ".
+		     (&tar_supports_gzip($vhost) ?
+		      "tar cz - ." : "tar cf - . | gzip -c");
+	my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
+					  $dest->{'path'});
 	if ($err) {
 		return { 'ok' => 0,
-			 'msg' => &text('brun_esend', $err) };
+			 'msg' => &text('brun_etar',
+					"<tt>".&html_escape($err)."</tt>") };
 		}
+	&remote_finished();
+
+	# Get the resulting size
+	my @st = &stat_file_on_server($destserver, $dest->{'path'});
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_estat', $tarfile) };
+		}
+	$size = $st[7];
 	}
 
 # Return status
 return { 'ok' => 1,
 	 'size' => $size };
-
 }
 
 # tar_restore_system(&server, dest, root-dir)
