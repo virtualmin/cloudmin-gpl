@@ -1433,13 +1433,13 @@ elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - run SSH command outputting file piped
 	# into command
 	my $sshcmd = &build_ssh_command($srcserver);
-	$sshcmd = $sshcmd." dd of=".quotemeta($src)." bs=32768 | ".$destcmd;
+	$sshcmd = $sshcmd." dd if=".quotemeta($src)." bs=32768 | ".$destcmd;
 	my ($status, $out) = &run_ssh_command($sshcmd, $srcserver->{'ssh_pass'});
 	return $status ? $text{'status_'.$status} : undef;
 	}
 else {
-	# Both are remote. Run command on dest whose input is SSH from source
-	# XXX
+	# Both are remote. Run command on the source system which is an SSH 
+	# to the dest, with the file as input.
 	my $rv;
 	my $keytemp;
 	if ($destserver->{'key'}) {
@@ -1453,7 +1453,7 @@ else {
 		}
 
 	# Build SSH command
-	$sshcmd = $srccmd." | ssh -q -x";
+	$sshcmd = "dd if=".quotemeta($src)." bs=32768 | ssh -q -x";
 	$sshcmd .= " -".$destserver->{'ssh_protocol'};
 	if ($keytemp) {
 		$sshcmd .= " -i ".quotemeta($keytemp);
@@ -1462,7 +1462,7 @@ else {
 		$sshcmd .= " -p ".$destserver->{'ssh_port'};
 		}
 	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
-	$sshcmd .= " dd of=".quotemeta($dest)." bs=32768";
+	$sshcmd .= " ".quotemeta($cmd);
 	if ($keytemp) {
 		$sshcmd .= " ; rm -f ".quotemeta($keytemp);
 		}
