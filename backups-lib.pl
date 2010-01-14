@@ -1045,13 +1045,23 @@ sub tar_restore_system
 my ($server, $deststr, $root) = @_;
 my $vhost = &get_parent_server($server);
 my $dest = &parse_backup_destination($deststr);
+my $destserver = &get_backup_dest_server($dest, $vhost);
+if ($destserver && $destserver->{'id'} eq $vhost->{'id'}) {
+	$dest->{'mode'} = 1;
+	}
 
 # Pick a temp file on the host system, if needed
 my $tarfile;
 if ($dest->{'mode'} == 1) {
+	# Source file is on host already
 	$tarfile = $dest->{'path'};
 	}
+elsif ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+	# Transferring directly from source host
+	$tarfile = undef;
+	}
 else {
+	# Pick temp file for tar
 	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
 	if (!$tarfile) {
 		return { 'ok' => 0,
@@ -1059,41 +1069,48 @@ else {
 		}
 	}
 
-# Copy in the tar.gz backup file, if needed
-if ($dest->{'mode'} != 1) {
-	&$first_print(&text('rrun_getting', $server->{'host'},
+my $size;
+my $tarerr;
+if ($tarfile) {
+	# Copy in the tar.gz backup file, if needed
+	if ($dest->{'mode'} != 1) {
+		&$first_print(&text('rrun_getting', $server->{'host'},
 					    &nice_backup_destination($dest)));
-	my $err = &get_from_backup_dest($vhost, $tarfile, $dest);
-	if ($err) {
+		my $err = &get_from_backup_dest($vhost, $tarfile, $dest);
+		if ($err) {
+			return { 'ok' => 0,
+				 'msg' => &text('rrun_eget', $err) };
+			}
+		}
+	my @st = &stat_file_on_server($vhost, $tarfile);
+	if (!@st || !$st[7]) {
 		return { 'ok' => 0,
-			 'msg' => &text('rrun_eget', $err) };
+			 'msg' => &text('rrun_estat', $tarfile) };
+		}
+	$size = $st[7];
+
+	# Un-tar the filesystem
+	&$first_print(&text('rrun_untarring', $server->{'host'}, $root));
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"cd ".quotemeta($root)." && ".
+		"rm -rf * && ".
+		(&tar_supports_gzip($vhost) ?
+			"tar xpzf ".quotemeta($tarfile) :
+			"gunzip -c ".quotemeta($tarfile)." | tar xpf -"));
+	if ($ex || $err) {
+		$err = $out if ($ex);
+		$tarerr = &text('rrun_etar', "<tt>".&html_escape($out)."</tt>");
+		}
+	&remote_finished();
+
+	# Remove the temp file if needed
+	if ($dest->{'mode'} != 1) {
+		&delete_file_on_server($vhost, $tarfile);
 		}
 	}
-my @st = &stat_file_on_server($vhost, $tarfile);
-if (!@st || !$st[7]) {
-	return { 'ok' => 0,
-		 'msg' => &text('rrun_estat', $tarfile) };
-	}
-my $size = $st[7];
-
-# Un-tar the filesystem
-my $tarerr;
-&$first_print(&text('rrun_untarring', $server->{'host'}, $root));
-my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"cd ".quotemeta($root)." && ".
-	"rm -rf * && ".
-	(&tar_supports_gzip($vhost) ?
-		"tar xpzf ".quotemeta($tarfile) :
-		"gunzip -c ".quotemeta($tarfile)." | tar xpf -"));
-if ($ex || $err) {
-	$err = $out if ($ex);
-	$tarerr = &text('rrun_etar', "<tt>".&html_escape($out)."</tt>");
-	}
-&remote_finished();
-
-# Remove the temp file if needed
-if ($dest->{'mode'} != 1) {
-	&delete_file_on_server($vhost, $tarfile);
+else {
+	# Un-tar directly from the source system
+	# XXX
 	}
 
 # Return status
