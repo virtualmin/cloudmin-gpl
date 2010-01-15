@@ -5,6 +5,7 @@ index_host=Hostname
 index_manager=Type
 index_type=OS
 index_ip=IP address
+index_ips=IP addresses
 index_status=Status
 index_desc=Description
 index_group=Group

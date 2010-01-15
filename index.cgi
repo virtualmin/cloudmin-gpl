@@ -256,6 +256,10 @@ if (@servers) {
 					$ip = &get_server_ip($s);
 					push(@cols, $ip);
 					}
+				elsif ($c eq "ips") {
+					@ips = &get_server_ip($s);
+					push(@cols, join(" , ", @ips));
+					}
 				elsif ($c eq "owner") {
 					push(@cols,
 					     join(" ", @{$omap{$s->{'id'}}}));
