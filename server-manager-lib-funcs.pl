@@ -1462,12 +1462,13 @@ else {
 		$sshcmd .= " -p ".$destserver->{'ssh_port'};
 		}
 	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
-	$sshcmd .= " ".quotemeta($cmd);
+	$sshcmd .= " ".quotemeta($destcmd);
 	if ($keytemp) {
 		$sshcmd .= " ; rm -f ".quotemeta($keytemp);
 		}
 
 	# Then execute on the source system
+	print STDERR "sshcmd=$sshcmd\n";
 	my ($out, $ex, $err, $status, $fh, $fpid) =
 		&execute_command_on_server($srcserver, $sshcmd, undef, 1);
 	if (!$err && !$ex) {

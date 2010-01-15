@@ -857,7 +857,6 @@ if ($was_up) {
 	}
 
 return $rv;
-
 }
 
 # list_backup_logs([&server])
