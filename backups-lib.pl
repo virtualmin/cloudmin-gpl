@@ -1012,7 +1012,7 @@ else {
 					     $destserver->{'host'}));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     (&tar_supports_gzip($vhost) ?
-		      "tar cz - ." : "tar cf - . | gzip -c");
+		      "tar czf - ." : "tar cf - . | gzip -c");
 	my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
 					  $dest->{'path'});
 	if ($err) {

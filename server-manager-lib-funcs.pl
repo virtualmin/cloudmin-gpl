@@ -1247,14 +1247,14 @@ else {
 
 		# Check if it worked
 		if (!$wrong_password && $given_password < 3 &&
-		    !$connect_failed) {
+		    !$connect_failed && !$ex) {
 			# Looks like it did!
 			$rv = undef;
 			}
 		else {
 			# Failed .. record error
 			$out =~ s/^\s*\r?\n//;	# Remove empty line at start
-			$rv = $out;
+			$rv = $out || "SSH failed";
 			}
 		}
 	else {
@@ -1302,22 +1302,39 @@ my ($srcserver, $destserver, $srccmd, $dest) = @_;
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just run the command outputting to the file
 	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
-		"($srccmd) | dd of=".quotemeta($dest)." bs=32768");
+		"( ($srccmd) ; echo EXIT_STATUS: \$? 1>&2 ) | ".
+		"dd of=".quotemeta($dest)." bs=32768");
+	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
+		# Catch death of dd command in pipeline
+		return $out;
+		}
 	$rv = $err ? $err : $ex ? $out : undef;
 	}
 elsif ($srcserver->{'id'} == 0) {
 	# Copying from Cloudmin master - run command piped into SSH
 	my $sshcmd = &build_ssh_command($destserver);
-	$sshcmd = $srccmd." | ".$sshcmd." ".quotemeta("dd of=$dest bs=32768");
-	my ($status, $out) = &run_ssh_command($sshcmd, $destserver->{'ssh_pass'});
+	$sshcmd = "( ( $srccmd ) ; echo EXIT_STATUS: \$? 1>&2 ) | ".
+		  $sshcmd." ".quotemeta("dd of=$dest bs=32768");
+	my ($status, $out) = &run_ssh_command($sshcmd,
+					      $destserver->{'ssh_pass'});
+	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
+		# Catch death of source command in pipeline
+		return $out;
+		}
 	return $status ? $text{'status_'.$status} : undef;
 	}
 elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - run SSH command outputting to file
 	my $sshcmd = &build_ssh_command($srcserver);
-	$sshcmd .= " ".quotemeta($srccmd).
-		   " | dd of=".quotemeta($dest)." bs=32768";
-	my ($status, $out) = &run_ssh_command($sshcmd, $srcserver->{'ssh_pass'});
+	$sshcmd = "( $sshcmd ".quotemeta($srccmd)." ; ".
+		  "  echo EXIT_STATUS: \$? 1>&2 ) ".
+		  "| dd of=".quotemeta($dest)." bs=32768";
+	my ($status, $out) = &run_ssh_command($sshcmd,
+					      $srcserver->{'ssh_pass'});
+	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
+		# Catch death of SSH in pipeline
+		return $out;
+		}
 	return $status ? $text{'status_'.$status} : undef;
 	}
 else {
@@ -1356,6 +1373,7 @@ else {
 		# Started OK .. wait for a password prompt
 		$out = undef;
 		my ($given_password, $wrong_password, $connect_failed);
+		$wait_for_input = undef;
 		while(1) {
 			my $wrv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", ".*\n");
 			if ($wrv == 0) {
@@ -1387,14 +1405,14 @@ else {
 
 		# Check if it worked
 		if (!$wrong_password && $given_password < 3 &&
-		    !$connect_failed) {
+		    !$connect_failed && !$ex) {
 			# Looks like it did!
 			$rv = undef;
 			}
 		else {
 			# Failed .. record error
 			$out =~ s/^\s*\r?\n//;	# Remove empty line at start
-			$rv = $out;
+			$rv = $out || "SSH failed";
 			}
 		}
 	else {
@@ -1417,24 +1435,40 @@ my ($srcserver, $destserver, $destcmd, $src) = @_;
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just run the command inputting from the file
 	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
-		"dd if=".quotemeta($src)." bs=32768 | ($destcmd)");
+		"(dd if=".quotemeta($src)." bs=32768 ; ".
+		" echo EXIT_STATUS: \$? 1>&2) | ($destcmd)");
+	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
+		# Catch death of dd command in pipeline
+		return $out;
+		}
 	$rv = $err ? $err : $ex ? $out : undef;
 	}
 elsif ($srcserver->{'id'} == 0) {
 	# Copying from Cloudmin master - run command with SSH piped in
 	my $sshcmd = &build_ssh_command($destserver);
-	$sshcmd = "dd if=".quotemeta($src)." bs=32768 | ".$sshcmd." ".
-		  quotemeta($destcmd);
+	$sshcmd = "(dd if=".quotemeta($src)." bs=32768 ; ".
+		  " echo EXIT_STATUS: \$? 1>&2) | ".
+		  $sshcmd." ".quotemeta($destcmd);
 	my ($status, $out) = &run_ssh_command(
 				$sshcmd, $destserver->{'ssh_pass'});
+	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
+		# Catch death of dd command in pipeline
+		return $out;
+		}
 	return $status ? $text{'status_'.$status} : undef;
 	}
 elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - run SSH command outputting file piped
 	# into command
 	my $sshcmd = &build_ssh_command($srcserver);
-	$sshcmd = $sshcmd." dd if=".quotemeta($src)." bs=32768 | ".$destcmd;
-	my ($status, $out) = &run_ssh_command($sshcmd, $srcserver->{'ssh_pass'});
+	$sshcmd = "( $sshcmd dd if=".quotemeta($src)." bs=32768 ; ".
+		  " echo EXIT_STATUS: \$? 1>&2) | ".$destcmd;
+	my ($status, $out) = &run_ssh_command($sshcmd,
+					      $srcserver->{'ssh_pass'});
+	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
+		# Catch death of dd command via SSH in pipeline
+		return $out;
+		}
 	return $status ? $text{'status_'.$status} : undef;
 	}
 else {
@@ -1505,14 +1539,14 @@ else {
 
 		# Check if it worked
 		if (!$wrong_password && $given_password < 3 &&
-		    !$connect_failed) {
+		    !$connect_failed && !$ex) {
 			# Looks like it did!
 			$rv = undef;
 			}
 		else {
 			# Failed .. record error
 			$out =~ s/^\s*\r?\n//;	# Remove empty line at start
-			$rv = $out;
+			$rv = $out || "SSH failed";
 			}
 		}
 	else {
