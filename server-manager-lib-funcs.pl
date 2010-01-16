@@ -5017,6 +5017,12 @@ if (defined(&list_locations)) {
 	push(@gcats, "hosts");
 	}
 
+# IP allocation overview
+push(@glinks, "list_ips.cgi");
+push(@gtitles, $text{'ips_title'});
+push(@gicons, "images/ips.gif");
+push(@gcats, "ips");
+
 # Plugin-defined icons
 foreach my $p (@plugins) {
 	if (&plugin_defined($p, "settings_links")) {

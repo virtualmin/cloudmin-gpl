@@ -3484,3 +3484,8 @@ email_esmtp=Missing or invalid SMTP server
 email_esuser=Missing or invalid-looking SMTP username
 email_espass=Missing SMTP password
 email_esfrom=Missing or invalid from address
+
+ips_title=IP Addresses
+ips_ip=Address
+ips_use=Used by
+ips_host=Host system
