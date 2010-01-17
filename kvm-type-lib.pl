@@ -966,15 +966,17 @@ if ($vhost->{'kvm_zone'} && !$reset) {
 # Start up the instance
 &$first_print($text{'create_kvmstartup'});
 my ($ok, $err) = &type_kvm_startup($server);
+my $started = 0;
 if (!$ok) {
 	&$second_print(&text('create_exenstartup', $err));
 	}       
 else {
 	&$second_print($text{'create_done'});
+	$started = 1;
 	}
 
 # Import Virtualmin keys
-if ($serial) {
+if ($serial && $started) {
 	&$first_print($text{'create_xenvkeys'});
 	my $err = &fix_virtualmin_after_boot($server);
 	if ($err) {
@@ -986,10 +988,12 @@ if ($serial) {
 	}
 
 # Regenerate SSH host key
-&$first_print($text{'create_xenhostkey'});
-my $err = &regenerate_ssh_host_keys($server);
-&$second_print($err ? &text('create_exensetkey', $err)
-		    : $text{'create_done'});
+if ($started) {
+	&$first_print($text{'create_xenhostkey'});
+	my $err = &regenerate_ssh_host_keys($server);
+	&$second_print($err ? &text('create_exensetkey', $err)
+			    : $text{'create_done'});
+	}
 
 return undef;
 }
