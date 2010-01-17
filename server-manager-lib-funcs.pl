@@ -1596,97 +1596,99 @@ if (defined(&$gfunc)) {
 	}
 
 if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
-	# If the remote system has Webmin, ask it to stat
+	# If the remote system has Webmin, ask it to stat. If this fails, fall
+	# back to using SSH
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
-	return ( $last_remote_error ) if ($last_remote_error);
-	my $st = &remote_eval($server, "webmin", "[ stat('$remotefile') ]");
-	return $st ? @$st : ("Stat via Webmin failed");
+	if (!$last_remote_error) {
+		my $st = &remote_eval($server, "webmin",
+				      "[ stat('$remotefile') ]");
+		return @$st if ($st);
+		}
+	}
+
+# Use stat command, perl, or in worst case ls -l
+my ($out, $ex, $err) = &execute_command_on_server($server,
+	"stat -t ".quotemeta($remotefile));
+return ( $err ) if ($err);
+if ($out =~ /No such file/i) {
+	return ( );
+	}
+elsif (!$ex && $out =~ /^\Q$remotefile\E\s/) {
+	# Parse stat command output
+	my @w = split(/\s+/, $out);
+	my @st;
+	$st[0] = hex($w[6]);		# Device
+	$st[1] = $w[7];			# Inode
+	$st[2] = hex($w[3]);		# Permissions
+	$st[3] = $w[8];			# Links
+	$st[4] = $w[4];			# UID
+	$st[5] = $w[5];			# GID
+	$st[6] = undef;			# Rdev .. don't know
+	$st[7] = $w[1];			# Size
+	$st[8] = $w[11];		# Last access time
+	$st[9] = $w[12];		# Modify time
+	$st[10] = $w[13];		# Inode change time
+	$st[11] = $w[14];		# Block size
+	$st[12] = $w[2];		# Number of blocks
+	return @st;
+	}
+
+# Next try perl, with script as an input file as passing a complex
+# command via -e doesn't work
+my $cmdtemp = &tempname_on_server($server);
+my $err = &put_file_data_to_server($server,
+		'print join(":", stat($ARGV[0]))."\n"', $cmdtemp);
+if (!$err) {
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"perl $cmdtemp ".quotemeta($remotefile));
+	&delete_file_on_server($server, $cmdtemp);
+	return ( $err ) if ($err);
+	if (!$ex) {
+		$out =~ s/\r|\n//g;
+		return split(/:/, $out);
+		}
+	}
+
+# Finally, use ls .. which gives less info :-(
+my ($out, $ex, $err) = &execute_command_on_server($server,
+	"ls -ldn ".quotemeta($remotefile));
+return ( $err ) if ($err);
+if ($out =~ /No such file/i) {
+	return ( );
+	}
+elsif ($ex || $out !~ /\s\Q$remotefile\E$/) {
+	return ( "ls -ldn $remotefile failed : $out" );
 	}
 else {
-	# Use stat command, perl, or in worst case ls -l
-	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"stat -t ".quotemeta($remotefile));
-	return ( $err ) if ($err);
-	if ($out =~ /No such file/i) {
-		return ( );
+	# Parse ls command output
+	my @now = localtime(time());
+	my @w = split(/\s+/, $out);
+	my @st;
+	$st[3] = $w[1];			# Links
+	$st[4] = $w[2];			# UID
+	$st[5] = $w[3];			# GID
+	$st[7] = $w[4];			# Size
+	if ($w[7] =~ /^(\d+):(\d+)$/) {
+		# Time is month day hour:minute
+		my @tm = ( 0, $2, $1, $w[6],
+			      &month_to_number($w[5]), $now[5] );
+		$st[8] = $st[9] = $st[10] = timelocal(@tm);
 		}
-	elsif (!$ex && $out =~ /^\Q$remotefile\E\s/) {
-		# Parse stat command output
-		my @w = split(/\s+/, $out);
-		my @st;
-		$st[0] = hex($w[6]);		# Device
-		$st[1] = $w[7];			# Inode
-		$st[2] = hex($w[3]);		# Permissions
-		$st[3] = $w[8];			# Links
-		$st[4] = $w[4];			# UID
-		$st[5] = $w[5];			# GID
-		$st[6] = undef;			# Rdev .. don't know
-		$st[7] = $w[1];			# Size
-		$st[8] = $w[11];		# Last access time
-		$st[9] = $w[12];		# Modify time
-		$st[10] = $w[13];		# Inode change time
-		$st[11] = $w[14];		# Block size
-		$st[12] = $w[2];		# Number of blocks
-		return @st;
+	elsif ($w[7] =~ /^\d+$/) {
+		# Time is month day year
+		my @tm = ( 0, 0, 0, $w[6],
+			      &month_to_number($w[5]), $w[7]-1900 );
+		$st[8] = $st[9] = $st[10] = timelocal(@tm);
 		}
-
-	# Next try perl, with script as an input file as passing a complex
-	# command via -e doesn't work
-	my $cmdtemp = &tempname_on_server($server);
-	my $err = &put_file_data_to_server($server,
-			'print join(":", stat($ARGV[0]))."\n"', $cmdtemp);
-	if (!$err) {
-		my ($out, $ex, $err) = &execute_command_on_server($server,
-			"perl $cmdtemp ".quotemeta($remotefile));
-		&delete_file_on_server($server, $cmdtemp);
-		return ( $err ) if ($err);
-		if (!$ex) {
-			$out =~ s/\r|\n//g;
-			return split(/:/, $out);
+	$st[2] = 0;			# Permissions
+	my @p = reverse(split(//, $w[0]));
+	for(my $i=0; $i<9; $i++) {
+		if ($p[$i] ne '-') {
+			$st[2] += (1<<$i);
 			}
 		}
-
-	# Finally, use ls .. which gives less info :-(
-	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"ls -ldn ".quotemeta($remotefile));
-	return ( $err ) if ($err);
-	if ($out =~ /No such file/i) {
-		return ( );
-		}
-	elsif ($ex || $out !~ /\s\Q$remotefile\E$/) {
-		return ( "ls -ldn $remotefile failed : $out" );
-		}
-	else {
-		# Parse ls command output
-		my @now = localtime(time());
-		my @w = split(/\s+/, $out);
-		my @st;
-		$st[3] = $w[1];			# Links
-		$st[4] = $w[2];			# UID
-		$st[5] = $w[3];			# GID
-		$st[7] = $w[4];			# Size
-		if ($w[7] =~ /^(\d+):(\d+)$/) {
-			# Time is month day hour:minute
-			my @tm = ( 0, $2, $1, $w[6],
-				      &month_to_number($w[5]), $now[5] );
-			$st[8] = $st[9] = $st[10] = timelocal(@tm);
-			}
-		elsif ($w[7] =~ /^\d+$/) {
-			# Time is month day year
-			my @tm = ( 0, 0, 0, $w[6],
-				      &month_to_number($w[5]), $w[7]-1900 );
-			$st[8] = $st[9] = $st[10] = timelocal(@tm);
-			}
-		$st[2] = 0;			# Permissions
-		my @p = reverse(split(//, $w[0]));
-		for(my $i=0; $i<9; $i++) {
-			if ($p[$i] ne '-') {
-				$st[2] += (1<<$i);
-				}
-			}
-		return @st;
-		}
+	return @st;
 	}
 }
 
