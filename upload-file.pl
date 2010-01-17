@@ -97,15 +97,16 @@ else {
 
 # Do the parallel upload
 print "Uploading file to ",scalar(@servers)," systems ..\n";
-&parallel_server_function(\@servers,
+@oks = &parallel_server_function(\@servers,
 	sub { my ($server) = @_;
 	      my $err = &mount_filesystem_if_needed($server);
 	      if ($err) {
 		print "$server->{'host'}: ERROR: $err\n";
-		return;
+		return 0;
 		}
 
 	      # Get the file
+	      my $ok = 0;
 	      $err = &put_file_to_server($server, $file, $dest,
 					 $device, $forcessh);
 	      if ($err) {
@@ -113,9 +114,13 @@ print "Uploading file to ",scalar(@servers)," systems ..\n";
 	          }
               else {
 	          print "$server->{'host'}: OK\n";
+		  $ok = 1;
 	          }
 	      &umount_filesystem_if_needed($server);
+	      return $ok;
 	    });
+@fails = grep { !$_->[0] } @oks;
+exit(scalar(@fails));
 &cloudmin_api_log(\@OLDARGV);
 
 sub usage

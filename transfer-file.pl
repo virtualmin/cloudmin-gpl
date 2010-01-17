@@ -79,6 +79,7 @@ $err = &transfer_file_between_servers($srcserver, $destserver, $src, $dest,
 				      0, $checksum);
 if ($err) {
 	print ".. copy failed : $err\n";
+	exit(1);
 	}
 else {
 	print ".. done\n";
