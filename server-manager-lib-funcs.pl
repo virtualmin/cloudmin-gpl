@@ -5021,7 +5021,7 @@ if (defined(&list_locations)) {
 push(@glinks, "list_ips.cgi");
 push(@gtitles, $text{'ips_title'});
 push(@gicons, "images/ips.gif");
-push(@gcats, "ips");
+push(@gcats, "hosts");
 
 # Plugin-defined icons
 foreach my $p (@plugins) {
