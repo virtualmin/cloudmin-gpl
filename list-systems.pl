@@ -114,7 +114,7 @@ if ($multi) {
 		if ($s->{'location'}) {
 			($loc) = grep { $_->{'id'} eq $s->{'location'} } @locs;
 			if ($loc) {
-				print "Location group: $loc->{'desc'}\n";
+				print "    Location group: $loc->{'desc'}\n";
 				}
 			}
 		print "    Status: ",$text{'status_'.$s->{'status'}},"\n";
