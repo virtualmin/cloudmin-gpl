@@ -33,6 +33,18 @@ foreach $m (@virtual_server_management_types) {
 		}
 	}
 
+# Find owners
+%ownermap = ( );
+$oc = 0;
+if (defined(&list_system_owners)) {
+	foreach $o (&list_system_owners()) {
+		foreach $id (split(/\s+/, $o->{'acl'}->{'servers'})) {
+			$ownermap{$id} = $o->{'name'};
+			$oc++;
+			}
+		}
+	}
+
 # Find IPs from systems
 foreach $s (@allservers) {
 	foreach $ip (&get_server_ip($s)) {
@@ -60,8 +72,11 @@ print &ui_tabs_start(\@tabs, "mode", $in{'mode'} || "ips", 1);
 print &ui_tabs_start_tab("mode", "ips");
 print $text{'ips_ipsdesc'},"<p>\n";
 %idmap = map { $_->{'id'}, $_ } @allservers;
-print &ui_columns_start([ $text{'ips_ip'}, $text{'ips_use'},
-			  $text{'ips_host'} ], 100);
+print &ui_columns_start([ $text{'ips_ip'},
+			  $text{'ips_use'},
+			  $oc ? ( $text{'ips_owner'} ) : ( ),
+			  $text{'ips_host'},
+			], 100);
 foreach $ip (@ips) {
 	$s = $ips{$ip}->{'server'};
 	@hosts = sort { $a cmp $b }
@@ -75,6 +90,9 @@ foreach $ip (@ips) {
 		$ip,
 		$s ? "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>"
 		   : $text{'ips_free'},
+		!$oc ? ( ) :
+		 !$s ? ( undef ) :
+		       ( $ownermap{$s->{'id'}} ),
 		&ui_links_row(\@hosts),
 		]);
 	}
