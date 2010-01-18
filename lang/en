@@ -1484,6 +1484,8 @@ xen_pygrub0=Use kernel from host system
 xen_pygrub1=Use kernel from Xen system (with PyGrub or Pv-Grub)
 xen_pygrub2=Host system default
 xen_header6=Virtual system resource limits
+xen_ecachesize=Missing or non-numeric image cache size
+xen_ecachedir=Missing or non-numeric image cache directory
 
 xens_title=Xen Host Systems
 xens_add=Register a system for Xen hosting.
