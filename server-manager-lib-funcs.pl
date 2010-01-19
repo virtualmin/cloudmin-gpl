@@ -5093,7 +5093,7 @@ foreach $t (@server_manager::server_management_types) {
 		foreach $l (&$lfunc()) {
 			$l->{'type'} = $t;
 			my $cfunc = $l->{'create'} ? \&can_create_server
-						      : \&can_add_server;
+						   : \&can_add_server;
 			my $can = &$cfunc($t);
 			if ($can) {
 				push(@rv, $l);

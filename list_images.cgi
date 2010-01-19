@@ -48,8 +48,18 @@ elsif ($in{'mode'} eq 'virtualmin') {
 	@combined = grep { $got_avail{$_->{'id'}} } @combined;
 	}
 
-# Show table of images
+# Build list of creation links
 @links = ( &select_all_link("d"), &select_invert_link("d") );
+foreach $t (@virtual_server_management_types) {
+	$mfunc = "type_".$t."_can_manual_image";
+	if (defined(&$mfunc) && &$mfunc()) {
+		push(@links, "<a href='manual_image_form.cgi?type=$t'>".
+			     &text('images_create', $text{$t.'_typedesc'}).
+			     "</a>");
+		}
+	}
+
+# Show table of images
 print &ui_form_start("get_images.cgi", "post");
 print &ui_hidden("mode", $in{'mode'});
 print &ui_links_row(\@links);
