@@ -2699,13 +2699,26 @@ sub type_kvm_backup_system
 my ($server, $deststr, $shutdown, $owner) = @_;
 my $vhost = &get_parent_server($server);
 my $dest = &parse_backup_destination($deststr);
+my $destserver = &get_backup_dest_server($dest, $vhost);
+if ($destserver && $destserver->{'id'} eq $vhost->{'id'}) {
+	$dest->{'mode'} = 1;
+	}
 
 # Pick a temp file on the host system, if needed
 my $tarfile;
 if ($dest->{'mode'} == 1) {
+	# Target is on host already
 	$tarfile = $dest->{'path'};
 	}
+elsif ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+	# Transferring directly to dest host
+	if (!$destserver) {
+		return { 'ok' => 0, 'msg' => $text{'brun_edestserver'} };
+		}
+	$tarfile = undef;
+	}
 else {
+	# Pick temp file for tar.gz
 	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
 	if (!$tarfile) {
 		return { 'ok' => 0,
@@ -2742,7 +2755,7 @@ if ($server->{'kvm_filesystem_lv'}) {
 my $clusterlvm;
 if ($server->{'kvm_filesystem_lv'} && $server->{'status'} ne 'down' &&
     @lvmdisks) {
-	my ($out, $ex, $err) = &execute_commmand_on_server($vhost,
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 				"vgdisplay ".$lvmdisks[0]->{'vg'});
 	if ($out =~ /Clustered\s+yes/i) {
 		$clusterlvm = 1;
@@ -2802,7 +2815,8 @@ if ($server->{'kvm_filesystem_lv'}) {
 		}
 
 	# Tar up temp dir
-	if (!$ddfail) {
+	if (!$ddfail && $tarfile) {
+		# To temp file
 		&$first_print(&text('brun_tarring3', $server->{'host'}));
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			"cd ".quotemeta($tempdir)." && ".
@@ -2811,6 +2825,20 @@ if ($server->{'kvm_filesystem_lv'}) {
 			$err = $out if ($ex);
 			$ddfail = &text('brun_etar',
 					"<tt>".&html_escape($out)."</tt>");
+			}
+		}
+	elsif (!$ddfail) {
+		# Via direct SSH
+		&$first_print(&text('brun_tarring6', $server->{'host'},
+					$destserver->{'host'}));
+		my $tarcmd = "cd ".quotemeta($tempdir)." && ".
+			     "tar cf - . | gzip -c";
+		my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
+                                                  $dest->{'path'});
+		if ($err) {
+			return { 'ok' => 0,
+				 'msg' => &text('brun_etar',
+					"<tt>".&html_escape($err)."</tt>") };
 			}
 		}
 
@@ -2849,30 +2877,57 @@ else {
 			}
 		}
 
-	# Run tar and gzip on all of them
-	&$first_print(&text('brun_tarring2', $server->{'host'}, $dir));
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"cd ".quotemeta($dir)." && ".
-		"tar cf - ".join(" ", map { quotemeta($_) } @paths).
-		" | gzip -c >".quotemeta($tarfile));
-	if ($ex || $err) {
-		$err = $out if ($ex);
-		return { 'ok' => 0,
-			 'msg' => &text('brun_etar',
+	if ($tarfile) {
+		# Run tar and gzip on all of them, into temp file
+		&$first_print(&text('brun_tarring2', $server->{'host'}, $dir));
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"cd ".quotemeta($dir)." && ".
+			"tar cf - ".join(" ", map { quotemeta($_) } @paths).
+			" | gzip -c >".quotemeta($tarfile));
+		if ($ex || $err) {
+			$err = $out if ($ex);
+			return { 'ok' => 0,
+				 'msg' => &text('brun_etar',
 					"<tt>".&html_escape($out)."</tt>") };
+			}
+		}
+	else {
+		# Run tar and gzip piped into SSH on the target system
+		&$first_print(&text('brun_tarring5', $server->{'host'}, $dir,
+						     $destserver->{'host'}));
+		my $tarcmd = "cd ".quotemeta($dir)." && ".
+                        "tar cf - ".join(" ", map { quotemeta($_) } @paths).
+                        " | gzip -c";
+		my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
+						  $dest->{'path'});
+		if ($err) {
+			return { 'ok' => 0,
+				 'msg' => &text('brun_etar',
+					"<tt>".&html_escape($err)."</tt>") };
+			}
 		}
 	}
 
 # Get the size
-my @st = &stat_file_on_server($vhost, $tarfile);
-if (!@st || !$st[7]) {
-	return { 'ok' => 0,
-		 'msg' => &text('brun_estat', $tarfile) };
+my @st;
+if ($tarfile) {
+	@st = &stat_file_on_server($vhost, $tarfile);
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_estat', $tarfile) };
+		}
+	}
+else {
+	@st = &stat_file_on_server($destserver, $dest->{'path'});
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_estat', $dest->{'path'}) };
+		}
 	}
 my $size = $st[7];
 
 # Transfer to the destination, if needed
-if ($dest->{'mode'} != 1) {
+if ($dest->{'mode'} != 1 && $tarfile) {
 	# Check if size would exceed limits
 	my $err = &check_backup_dest_size($server, $dest, $size, $owner);
 
@@ -2905,13 +2960,23 @@ sub type_kvm_restore_system
 my ($server, $deststr) = @_;
 my $vhost = &get_parent_server($server);
 my $dest = &parse_backup_destination($deststr);
+my $destserver = &get_backup_dest_server($dest, $vhost);
+if ($destserver && $destserver->{'id'} eq $vhost->{'id'}) {
+	$dest->{'mode'} = 1;
+	}
 
 # Pick a temp file on the host system, if needed
 my $tarfile;
 if ($dest->{'mode'} == 1) {
+	# Source file is on host already
 	$tarfile = $dest->{'path'};
 	}
+elsif ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+	# Transferring directly from source host
+	$tarfile = undef;
+	}
 else {
+	# Pick temp file for tar
 	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
 	if (!$tarfile) {
 		return { 'ok' => 0,
@@ -2941,7 +3006,7 @@ else {
 	}
 
 # Copy in the tar.gz backup file, if needed
-if ($dest->{'mode'} != 1) {
+if ($dest->{'mode'} != 1 && $tarfile) {
         &$first_print(&text('rrun_getting', $server->{'host'},
                                             &nice_backup_destination($dest)));
         my $err = &get_from_backup_dest($vhost, $tarfile, $dest);
@@ -2950,28 +3015,61 @@ if ($dest->{'mode'} != 1) {
                          'msg' => &text('rrun_eget', $err) };
                 }
         }
-my @st = &stat_file_on_server($vhost, $tarfile);
-if (!@st || !$st[7]) {
-        return { 'ok' => 0,
-                 'msg' => &text('rrun_estat', $tarfile) };
-        }
+
+# Get size, either from temp tar file or source
+my @st;
+if ($tarfile) {
+	@st = &stat_file_on_server($vhost, $tarfile);
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0,
+			 'msg' => &text('rrun_estat', $tarfile) };
+		}
+	}
+else {
+	@st = &stat_file_on_server($destserver, $dest->{'path'});
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0,
+			 'msg' => &text('rrun_estat', $dest->{'path'}) };
+		}
+	}
 my $size = $st[7];
 
 my $tarerr;
 if ($server->{'kvm_filesystem_lv'}) {
 	# Overwrite logical volumes with tar piped into DD
-	&$first_print(&text('rrun_dd', $server->{'host'}));
-	foreach my $d (@lvmdisks) {
-		my $devfile = $d->{'real'};
-		$devfile =~ s/^(.*)\///;
-		my ($out, $ex, $err) = &execute_command_on_server(
-			$vhost,
-			"gunzip -c ".quotemeta($tarfile).
-			" | tar Oxpf - $devfile ./$devfile".
-			" | dd of=$d->{'real'} bs=32768 2>&1");
-		if ($ex || $err) {
-			$tarerr = &text('rrun_edd', $dev, $err || $out);
-			last;
+	if ($tarfile) {
+		# From temp tar file
+		&$first_print(&text('rrun_dd', $server->{'host'}));
+		foreach my $d (@lvmdisks) {
+			my $devfile = $d->{'real'};
+			$devfile =~ s/^(.*)\///;
+			my ($out, $ex, $err) = &execute_command_on_server(
+				$vhost,
+				"gunzip -c ".quotemeta($tarfile).
+				" | tar Oxpf - $devfile ./$devfile".
+				" | dd of=$d->{'real'} bs=32768 2>&1");
+			if ($ex || $err) {
+				$tarerr = &text('rrun_edd', $dev, $err || $out);
+				last;
+				}
+			}
+		}
+	else {
+		# From tar via SSH
+		&$first_print(&text('rrun_dd2', $server->{'host'},
+				    $destserver->{'host'}));
+		foreach my $d (@lvmdisks) {
+			my $devfile = $d->{'real'};
+			$devfile =~ s/^(.*)\///;
+			my $tarcmd = "gunzip -c ".
+				     " | tar Oxpf - $devfile ./$devfile".
+				     " | dd of=$d->{'real'} bs=32768";
+			my $err = &pipe_command_from_server($destserver, $vhost,
+						    $tarcmd, $dest->{'path'});
+			if ($err) {
+				$tarerr = &text('rrun_edd', $dev, $err);
+				last;
+				}
 			}
 		}
 	}
@@ -2979,20 +3077,36 @@ else {
 	# Extract tar file of disk images in the disk base directory
 	my $dir = $filedisks[0]->{'real'};
         $dir =~ s/\/[^\/]+$//;
-	&$first_print(&text('rrun_untarring2', $server->{'host'}, $dir));
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"cd ".quotemeta($dir)." && ".
-		"gunzip -c ".quotemeta($tarfile)." | tar xpf -");
-	if ($ex || $err) {
-		$err = $out if ($ex);
-		$tarerr = &text('rrun_etar',
-				"<tt>".&html_escape($out)."</tt>");
+	if ($tarfile) {
+		&$first_print(&text('rrun_untarring2',
+				    $server->{'host'}, $dir));
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"cd ".quotemeta($dir)." && ".
+			"gunzip -c ".quotemeta($tarfile)." | tar xpf -");
+		if ($ex || $err) {
+			$err = $out if ($ex);
+			$tarerr = &text('rrun_etar',
+					"<tt>".&html_escape($out)."</tt>");
+			}
+		}
+	else {
+		# Fetch and extract tar file in one command
+		&$first_print(&text('rrun_untarring5',
+			    $server->{'host'}, $dir, $destserver->{'host'}));
+		my $tarcmd = "cd ".quotemeta($dir)." && ".
+			     "gunzip -c | tar xpf -";
+		my $err = &pipe_command_from_server($destserver, $vhost,
+						    $tarcmd, $dest->{'path'});
+		if ($err) {
+			$tarerr = &text('rrun_etar',
+					"<tt>".&html_escape($err)."</tt>");
+			}
 		}
 	}
 &remote_finished();
 
 # Remove the temp file if needed
-if ($dest->{'mode'} != 1) {
+if ($dest->{'mode'} != 1 && $tarfile) {
         &delete_file_on_server($vhost, $tarfile);
         }
 if ($tempdir) {
