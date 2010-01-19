@@ -76,9 +76,7 @@ else {
 	&parse_host_floor_table($kvm, \%in);
 
 	# Cache directory
-	if ($kvm->{'id'}) {
-		&parse_host_images_cache_table($kvm, \%in, "kvm");
-		}
+	&parse_host_images_cache_table($kvm, \%in, "kvm");
 
 	# Backup dir
 	&parse_default_backup_dest_table($kvm, \%in);
