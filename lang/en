@@ -3514,3 +3514,6 @@ mimage_part=Single partition
 mimage_file=Image source
 mimage_file0=File on Cloudmin master
 mimage_file1=File on managed system
+mimage_err=Failed to create image
+mimage_efile=Image file does not exist or is a directory
+mimage_eserverfile=Missing or non-absolute image path

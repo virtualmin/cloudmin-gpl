@@ -18,7 +18,13 @@ print &ui_table_row($text{'mimage_type'}, &$dfunc());
 print &ui_table_row($text{'mimage_format'},
 	&ui_radio("format", "cd", [ [ "cd", $text{'mimage_cd'} ],
 				    [ "disk", $text{'mimage_disk'} ],
-				    [ "part", $text{'mimage_part'} ] ]));
+				    [ "", $text{'mimage_part'} ] ]));
+
+# Operating system
+print &ui_table_row($text{'eimage_os'},
+	    &ui_select("type", 'unknown',
+	      [ map { [ $_->[0], $_->[1] ] }
+		sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
 
 # Location of file (local, or on some managed system)
 @servers = grep { $_->{'id'} ne '0' &&
