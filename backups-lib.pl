@@ -279,7 +279,7 @@ print &ui_table_row(&hlink($text{'backups_def'}, "backups_def"),
 						$dest->{'path'} : "", 40) ],
 	  [ 2, $text{'backups_mode2'},
 	       &ui_select("backup_vm2", $dest->{'id'},
-			  [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]).
+		  [ map { [ $_->{'id'}, $_->{'short_host'} ] } @servers ]).
 	       " ".
 	       &ui_textbox("backup_vm2dir", $dest->{'mode'} == 2 ?
 						$dest->{'path'} : "", 40) ],

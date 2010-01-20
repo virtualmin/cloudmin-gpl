@@ -7,22 +7,39 @@ require './server-manager-lib.pl';
 &ReadParse();
 
 print &ui_form_start("manual_image.cgi", "post");
+print &ui_hidden("type", $in{'type'});
 print &ui_table_start($text{'mimage_header'}, undef, 2);
 
 # Virtualization type
-# XXX
+$dfunc = "type_".$in{'type'}."_desc";
+print &ui_table_row($text{'mimage_type'}, &$dfunc());
 
 # Image type (CD or disk)
-# XXX
+print &ui_table_row($text{'mimage_format'},
+	&ui_radio("format", "cd", [ [ "cd", $text{'mimage_cd'} ],
+				    [ "disk", $text{'mimage_disk'} ],
+				    [ "part", $text{'mimage_part'} ] ]));
 
 # Location of file (local, or on some managed system)
-# XXX
-
-# Description
-# XXX
+@servers = grep { $_->{'id'} ne '0' &&
+		  &can_ssh_status($_) } &list_managed_servers_sorted();
+print &ui_table_row($text{'mimage_file'},
+	&ui_radio_table("file_mode", 0,
+		[ [ 0, $text{'mimage_file0'},
+		    &ui_filebox("file", undef, 40) ],
+		  [ 1, $text{'mimage_file1'},
+		    &ui_select("server", undef,
+		       [ map { [ $_->{'id'}, $_->{'short_host'} ] } @servers ]).
+		    " ".
+		    &ui_textbox("serverfile", undef, 40) ] ]));
 
 # Unique ID
-# XXX
+print &ui_table_row($text{'mkimage_id'},
+		    &ui_textbox("imageid", undef, 30));
+
+# Description
+print &ui_table_row($text{'mkimage_desc'},
+		    &ui_textbox("desc", undef, 60));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'create'} ] ]);

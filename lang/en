@@ -1383,7 +1383,7 @@ images_mode_avail=Available for download
 images_mode_local=Created locally
 images_mode_virtualmin=Created by Virtualmin
 images_of=$1 of $2
-images_create=Create image for $1
+images_create=Create image for $1.
 
 xen_typedesc=Xen
 xen_createlink=Create Xen instance
@@ -3503,3 +3503,14 @@ ips_range2=Range end
 ips_count=Addresses
 ips_used=Used
 ips_left=Left
+
+mimage_title=Manually Create Image
+mimage_header=New image details
+mimage_type=Virtual system type
+mimage_format=Image file format
+mimage_cd=CD or DVD ISO
+mimage_disk=Whole disk
+mimage_part=Single partition
+mimage_file=Image source
+mimage_file0=File on Cloudmin master
+mimage_file1=File on managed system
