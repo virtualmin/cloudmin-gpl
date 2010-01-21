@@ -13,7 +13,7 @@ $image = { 'manager' => 'xen',
 if ($in{'file_mode'} == 0) {
 	$srcserver = &get_this_managed_server();
 	$srcpath = $in{'file'};
-	-r $srcpath && !-d $srcpath || &error($text{'mimage_efile'};
+	-r $srcpath && !-d $srcpath || &error($text{'mimage_efile'});
 	}
 else {
 	$srcserver = &get_managed_server($in{'server'});
@@ -74,7 +74,7 @@ foreach $stor (&list_storages()) {
 			}
 		else {
 			&$first_print(&text('mimage_ecopy',
-				&nice_image_destination($stor->{'dest'}), $err);
+			    &nice_image_destination($stor->{'dest'}), $err));
 			$errcount++;
 			}
 		}
