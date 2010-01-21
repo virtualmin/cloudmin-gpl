@@ -29,23 +29,76 @@ $clash && &error($text{'mkimage_eclash'});
 $image->{'id'} = $in{'imageid'};
 $in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
 $image->{'desc'} = $in{'desc'};
+$img->{'files'} = $srcpath;
+$img->{'files'} =~ s/^.*\///;
+
+# Validate format
+if (&has_command_on_server($srcserver, "file")) {
+	$fout = &execute_command_on_server(
+		$srcserver, "file ".quotemeta($srcpath));
+	$fout =~ s/^\S+:\s+//;
+	$fout =~ s/\r|\n//g;
+	if ($fout =~ /gzip\s+compressed/) {
+		# Assume underlying format is OK
+		$image->{'nocompress'} = 0;
+		}
+	elsif ($in{'format'} eq "cd") {
+		# CD must have an iso 9660 filesystem
+		$fout =~ /iso\s+9660/i ||
+			&error(&text('mimage_ecd',
+				     "<tt>".&html_escape($fout)."</tt>"));
+		}
+	elsif ($in{'format'} eq '') {
+		# Partition image must be something Linux
+		# XXX
+		}
+	}
 
 &ui_print_unbuffered_header(undef, $text{'mimage_title'}, "");
 
-# Check if compressed
-# XXX
-
-# Validate format
-# XXX
-
 # Copy file to all storage locations
-# XXX
+&$first_print($text{'mimage_copying'});
+$okcount = $errcount = 0;
+@dests = ( );
+foreach $stor (&list_storages()) {
+	($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
+	if ($destserver) {
+		my $err = &transfer_file_between_servers(
+			$srcserver, $destserver,
+			$srcpath, $destpath."/".$img->{'files'}, 0, 1);
+		if (!$err) {
+			&compute_storage_size($stor);
+			&save_storage($stor);
+			push(@dests, $stor->{'dest'});
+			$okcount++;
+			}
+		else {
+			&$first_print(&text('mimage_ecopy',
+				&nice_image_destination($stor->{'dest'}), $err);
+			$errcount++;
+			}
+		}
+	}
+if (!$okcount) {
+	&$second_print($text{'mimage_nocopy'});
+	}
+elsif ($errcount) {
+	&$second_print($text{'mimage_somecopy'});
+	}
+else {
+	&$second_print($text{'mimage_allcopy'});
+	}
+$image->{'dest'} = join(" ", @dests);
 
 # Save image object
-&generate_image_size($image);
-get_image_md5s($image);
-&save_server_image($image);
+if ($okcount) {
+	&$first_print($text{'mimage_saving'});
+	&generate_image_size($image);
+	get_image_md5s($image);
+	&save_server_image($image);
+	&$second_print($text{'create_done'});
+	}
 
-# Update storage sizes
-# compute_storage_size(&storage)
+&ui_print_footer("list_images.cgi", $text{'images_return'},
+		 "", $text{'index_return'});
 

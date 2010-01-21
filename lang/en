@@ -3517,3 +3517,9 @@ mimage_file1=File on managed system
 mimage_err=Failed to create image
 mimage_efile=Image file does not exist or is a directory
 mimage_eserverfile=Missing or non-absolute image path
+mimage_copying=Copying image file to storage locations ..
+mimage_ecopy=.. copy to $1 failed : $2
+mimage_nocopy=.. could not copy to any locations!
+mimage_somecopy.. copied to only some locations
+mimage_allcopy=.. all copies completed successfully
+mimage_saving=Computing image checksum and saving details ..

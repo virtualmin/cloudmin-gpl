@@ -125,4 +125,3 @@ print &ui_form_end([
 
 &ui_print_footer("", $text{'index_return'});
 
-

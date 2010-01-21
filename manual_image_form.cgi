@@ -50,3 +50,6 @@ print &ui_table_row($text{'mkimage_desc'},
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'create'} ] ]);
 
+&ui_print_footer("list_images.cgi", $text{'images_return'},
+		 "", $text{'index_return'});
+
