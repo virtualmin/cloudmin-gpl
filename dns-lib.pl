@@ -34,33 +34,35 @@ if ($zone) {
 		# Need to add
 		&bind8::create_record($zone->{'file'}, $dnsname, undef,
 				      "IN", "A", $ip);
-		&bind8::bump_soa_record($zone->{'file'}, \@recs);
-
-		# See if we can add to a reverse too
-		my ($rfn, $rrecs, undef, $rzone) =
-			&get_reverse_dns_zone($ip);
-		if ($rfn) {
-			my $rlpath = &bind8::make_chroot(
-					&bind8::absolute_path($rfn));
-			&lock_file($rlpath);
-			my $arpa = &ip_address_to_arpa($ip, $rzone);
-			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
-					 @$rrecs;
-			if (!$old) {
-				&bind8::create_record($rfn, $arpa, undef,
-						      "IN", "PTR", $dnsname);
-				&bind8::bump_soa_record($rfn, $rrecs);
-				}
-			&unlock_file($rlpath);
-			}
-
-		&bind8::restart_bind();
-		&$second_print($text{'create_done'});
-		$rv = 1;
 		}
 	else {
-		&$second_print($text{'create_vserverdnsalready'});
+		# Update existing record
+		&bind8::modify_record($zone->{'file'}, $already, $dnsname,
+				      undef, "IN", "A", $ip);
 		}
+	&bind8::bump_soa_record($zone->{'file'}, \@recs);
+
+	# See if we can add to a reverse too
+	my ($rfn, $rrecs, undef, $rzone) =
+		&get_reverse_dns_zone($ip);
+	if ($rfn) {
+		my $rlpath = &bind8::make_chroot(
+				&bind8::absolute_path($rfn));
+		&lock_file($rlpath);
+		my $arpa = &ip_address_to_arpa($ip, $rzone);
+		my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
+				 @$rrecs;
+		if (!$old) {
+			&bind8::create_record($rfn, $arpa, undef,
+					      "IN", "PTR", $dnsname);
+			&bind8::bump_soa_record($rfn, $rrecs);
+			}
+		&unlock_file($rlpath);
+		}
+
+	&bind8::restart_bind();
+	&$second_print($text{'create_done'});
+	$rv = 1;
 	&unlock_file($lpath);
 	}
 return $rv;
