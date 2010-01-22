@@ -24,6 +24,11 @@ sub type_kvm_must_image
 return 1;			# KVM instances always come from an image
 }
 
+sub type_kvm_can_manual_image
+{
+return 1;			# An image can be created from a CD or raw disk
+}
+
 sub type_kvm_is_virtual
 {
 return 1;
@@ -3675,6 +3680,13 @@ else {
 	$dir =~ s/\/([^\/]+)$//;
 	}
 return $dir."/".$server->{'host'}.".console";
+}
+
+# type_kvm_image_formats()
+# KVM doesn't support partition images, as it always works with raw disks
+sub type_kvm_image_formats
+{
+return ( "cd", "disk" );
 }
 
 1;

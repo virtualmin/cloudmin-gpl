@@ -67,6 +67,21 @@ if (&has_command_on_server($srcserver, "file")) {
 
 &ui_print_unbuffered_header(undef, $text{'mimage_title'}, "");
 
+# Work out un-compressed size if needed
+if (!$image->{'nocompress'}) {
+	&$first_print($text{'mimage_rawsize'});
+	($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"gunzip -c ".quotemeta($srcpath)." | wc -c");
+	if ($out =~ /^(\d+)/) {
+		$image->{'rawsize'} = $1;
+		&$second_print(&text('mimage_rawsized',
+				     &nice_size($image->{'rawsize'})));
+		}
+	else {
+		&error(&text('mimage_erawsize', $err || $out));
+		}
+	}
+
 # Copy file to all storage locations
 @stors = &list_storages();
 &$first_print(&text('mimage_copying',
@@ -107,6 +122,9 @@ $image->{'dest'} = join(" ", @dests);
 if ($okcount) {
 	&$first_print($text{'mimage_saving'});
 	&generate_image_size($image);
+	if ($image->{'nocompress'}) {
+		$image->{'rawsize'} = $image->{'size'};
+		}
 	get_image_md5s($image);
 	&save_server_image($image);
 	&webmin_log("manual", "image", $image->{'id'});

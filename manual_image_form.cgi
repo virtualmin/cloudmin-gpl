@@ -12,14 +12,15 @@ print &ui_hidden("mode", $in{'mode'});
 print &ui_table_start($text{'mimage_header'}, undef, 2);
 
 # Virtualization type
-$dfunc = "type_".$in{'type'}."_desc";
+$dfunc = "type_".$in{'manager'}."_desc";
 print &ui_table_row($text{'mimage_type'}, &$dfunc());
 
 # Image type (CD or disk)
+$ffunc = "type_".$in{'manager'}."_image_formats";
+@formats = &$ffunc();
 print &ui_table_row($text{'mimage_format'},
-	&ui_radio("format", "cd", [ [ "cd", $text{'mimage_cd'} ],
-				    [ "disk", $text{'mimage_disk'} ],
-				    [ "", $text{'mimage_part'} ] ]));
+	&ui_radio("format", $formats[0],
+		  [ map { [ $_, $text{'mimage_fmt'.$_} ] } @formats ]));
 
 # Operating system
 print &ui_table_row($text{'eimage_os'},
@@ -51,6 +52,6 @@ print &ui_table_row($text{'mkimage_desc'},
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'create'} ] ]);
 
-&ui_print_footer("list_images.cgi", $text{'images_return'},
+&ui_print_footer("list_images.cgi?mode=$in{'mode'}", $text{'images_return'},
 		 "", $text{'index_return'});
 
