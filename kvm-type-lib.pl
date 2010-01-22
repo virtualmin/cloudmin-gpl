@@ -972,7 +972,7 @@ if ($vhost->{'kvm_zone'} && !$reset) {
 &$first_print($text{'create_kvmstartup'});
 my ($ok, $err) = &type_kvm_startup($server);
 my $started = 0;
-if (!$ok) {
+if ($ok != 1) {
 	&$second_print(&text('create_exenstartup', $err));
 	}       
 else {
