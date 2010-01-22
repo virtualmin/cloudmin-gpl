@@ -12,7 +12,6 @@ if ($in{'delete'}) {
 	# Just delete
 	&delete_server_image($img);
 	&webmin_log("delete", "image", $img->{'id'});
-	&redirect("list_images.cgi");
 	}
 else {
 	# Update description and OS
@@ -22,6 +21,5 @@ else {
 	$img->{'type'} = $in{'type'};
 	&save_server_image($img);
 	&webmin_log("modify", "image", $img->{'id'});
-	&redirect("list_images.cgi");
 	}
-
+&redirect("list_images.cgi?mode=$in{'mode'}");

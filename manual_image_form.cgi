@@ -7,7 +7,8 @@ require './server-manager-lib.pl';
 &ReadParse();
 
 print &ui_form_start("manual_image.cgi", "post");
-print &ui_hidden("type", $in{'type'});
+print &ui_hidden("manager", $in{'manager'});
+print &ui_hidden("mode", $in{'mode'});
 print &ui_table_start($text{'mimage_header'}, undef, 2);
 
 # Virtualization type

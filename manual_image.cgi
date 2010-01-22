@@ -7,7 +7,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 
 # Validate inputs and create object
-$image = { 'manager' => 'xen',
+$image = { 'manager' => $in{'manager'},
 	   'format' => $in{'format'},
 	   'type' => $in{'type'} };
 if ($in{'file_mode'} == 0) {
@@ -29,12 +29,12 @@ $clash && &error($text{'mkimage_eclash'});
 $image->{'id'} = $in{'imageid'};
 $in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
 $image->{'desc'} = $in{'desc'};
-$img->{'files'} = $srcpath;
-$img->{'files'} =~ s/^.*\///;
+$image->{'files'} = $srcpath;
+$image->{'files'} =~ s/^.*\///;
 
 # Validate format
 if (&has_command_on_server($srcserver, "file")) {
-	$fout = &execute_command_on_server(
+	($fout, $ex, $err) = &execute_command_on_server(
 		$srcserver, "file ".quotemeta($srcpath));
 	$fout =~ s/^\S+:\s+//;
 	$fout =~ s/\r|\n//g;
@@ -47,25 +47,38 @@ if (&has_command_on_server($srcserver, "file")) {
 		$fout =~ /iso\s+9660/i ||
 			&error(&text('mimage_ecd',
 				     "<tt>".&html_escape($fout)."</tt>"));
+		$image->{'nocompress'} = 1;
 		}
 	elsif ($in{'format'} eq '') {
 		# Partition image must be something Linux
-		# XXX
+		$fout =~ /(ext(\d+)|reiserfs|xfs|jfs)\s+filesystem/i ||
+			&error(&text('mimage_epart',
+				     "<tt>".&html_escape($fout)."</tt>"));
+		$image->{'nocompress'} = 1;
+		}
+	elsif ($in{'format'} eq 'disk') {
+		# Whole disk must have a boot sector
+		$fout =~ /boot\s+sector/i ||
+			&error(&text('mimage_edisk',
+				     "<tt>".&html_escape($fout)."</tt>"));
+		$image->{'nocompress'} = 1;
 		}
 	}
 
 &ui_print_unbuffered_header(undef, $text{'mimage_title'}, "");
 
 # Copy file to all storage locations
-&$first_print($text{'mimage_copying'});
+@stors = &list_storages();
+&$first_print(&text('mimage_copying',
+	join(" , ", map { &nice_image_destination($_->{'dest'}) } @stors)));
 $okcount = $errcount = 0;
 @dests = ( );
-foreach $stor (&list_storages()) {
+foreach $stor (@stors) {
 	($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
 	if ($destserver) {
 		my $err = &transfer_file_between_servers(
 			$srcserver, $destserver,
-			$srcpath, $destpath."/".$img->{'files'}, 0, 1);
+			$srcpath, $destpath."/".$image->{'files'}, 0, 1);
 		if (!$err) {
 			&compute_storage_size($stor);
 			&save_storage($stor);
@@ -96,9 +109,10 @@ if ($okcount) {
 	&generate_image_size($image);
 	get_image_md5s($image);
 	&save_server_image($image);
+	&webmin_log("manual", "image", $image->{'id'});
 	&$second_print($text{'create_done'});
 	}
 
-&ui_print_footer("list_images.cgi", $text{'images_return'},
+&ui_print_footer("list_images.cgi?mode=$in{'mode'}", $text{'images_return'},
 		 "", $text{'index_return'});
 

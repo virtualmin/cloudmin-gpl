@@ -53,7 +53,8 @@ elsif ($in{'mode'} eq 'virtualmin') {
 foreach $t (@virtual_server_management_types) {
 	$mfunc = "type_".$t."_can_manual_image";
 	if (defined(&$mfunc) && &$mfunc()) {
-		push(@links, "<a href='manual_image_form.cgi?type=$t'>".
+		push(@links, "<a href='manual_image_form.cgi?manager=$t&".
+			     "mode=$in{'mode'}'>".
 			     &text('images_create', $text{$t.'_typedesc'}).
 			     "</a>");
 		}
