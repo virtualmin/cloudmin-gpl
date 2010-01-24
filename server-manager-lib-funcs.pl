@@ -8043,6 +8043,40 @@ else {
 	}
 }
 
+# list_ip_pools()
+# Returns a list of IP allocation ranges, each of which is a hash ref with keys:
+#   id - A unique ID for this pool
+#   start - Starting IP
+#   end - Ending IP
+#   cidr - Network CIDR
+#   desc - Human-readable description
+sub list_ip_pools
+{
+my @rv;
+open(POOLS, $pools_file);
+while(<POOLS>) {
+	s/\r|\n//g;
+	my %l = map { my ($k, $v) = split(/=/, $_); ($k, &un_urlize($v)) }
+		    split(/\s+/, $_);
+	push(@rv, \%l);
+	}
+close(POOLS);
+return @rv;
+}
+
+# save_ip_pools(&pools)
+# Updates the file of IP pools
+sub save_ip_pools
+{
+my ($rv) = @_;
+&open_lock_tempfile(POOLS, ">$pools_file");
+foreach my $l (@$rv) {
+	&print_tempfile(POOLS,
+		join(" ", map { $_."=".&urlize($l->{$_}) } (keys %$l)),"\n");
+	}
+&close_tempfile(POOLS);
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server

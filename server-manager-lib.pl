@@ -175,6 +175,8 @@ $backup_space_cmd = "$module_config_directory/space.pl";
 
 $locations_file = "$module_config_directory/locations";
 
+$pools_file = "$module_config_directory/pools";
+
 $server_images_dir = "$ENV{'WEBMIN_VAR'}/$module_name";
 $server_images_url = "http://cloudmin.virtualmin.com/images/images.txt";
 $server_images_base = "http://cloudmin.virtualmin.com/images/";
