@@ -66,11 +66,14 @@ if ($format) {
 		print "Invalid format $format : $err\n";
 		exit(0);
 		}
+	&clean_environment();
 	$out = &backquote_command("$cmd 2>&1");
+	&reset_environment();
 	print &convert_remote_format($out, $?, $in{'program'}, \%in, $format);
 	}
 else {
 	# Stream output directly
+	&clean_environment();
 	&open_execute_command(OUT, "$cmd 2>&1", 1);
 	while(<OUT>) {
 		print $_;
@@ -78,5 +81,6 @@ else {
 	close(OUT);
 	print "\n";
 	print "Exit status: $?\n";
+	&reset_environment();
 	}
 
