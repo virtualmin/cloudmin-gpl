@@ -1064,7 +1064,7 @@ openvz_host=System hosting OpenVZ containers
 openvz_dir=Base directory for virtual systems
 openvz_domain=Add OpenVZ systems to DNS domain
 openvz_domain2=DNS domain for OpenVZ servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
-openvz_range=IP address allocation range
+openvz_range=IP address allocation ranges
 openvz_startend=$1 to $2 / $3
 openvz_iface=Base network interface
 openvz_ether=First ethernet interface
@@ -1298,7 +1298,7 @@ zone_host=System hosting zones
 zone_dir=Base directory for zones
 zone_domain=Add systems in zones to DNS domain
 zone_domain2=DNS domain for systems in zones<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
-zone_range=IP address allocation range
+zone_range=IP address allocation ranges
 zone_startend=$1 to $2 / $3
 zone_iface=Base network interface
 zone_ether=First ethernet interface
@@ -1406,7 +1406,7 @@ xen_nolvm=None - use regular files
 xen_lvmvg=Volume group named
 xen_domain=Add Xen systems to DNS domain
 xen_domain2=DNS domain for Xen servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
-xen_range=IP address allocation range
+xen_range=IP address allocation ranges
 xen_startend=$1 to $2 / $3
 xen_iface=Bridges on host system for Xen interfaces
 xen_iface1=Default bridge
@@ -3307,7 +3307,7 @@ kvm_nolvm=None - use regular files
 kvm_lvmvg=Volume group named
 kvm_domain=Add KVM systems to DNS domain
 kvm_domain2=DNS domain for KVM servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
-kvm_range=IP address allocation range
+kvm_range=IP address allocation ranges
 kvm_startend=$1 to $2 / $3
 kvm_iface=Bridges on host system for KVM interfaces
 kvm_iface1=Default bridge

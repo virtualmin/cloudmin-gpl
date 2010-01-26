@@ -56,8 +56,7 @@ else {
 	$kvm->{'kvm_zone'} = $in{'zone'};
 
 	# IP allocation ranges
-	($kvm->{'kvm_start'}, $kvm->{'kvm_end'}, $kvm->{'kvm_cidr'},
-	 $kvm->{'kvm_gws'}, $kvm->{'kvm_ifaces'}) = &parse_ip_range_input(\%in);
+	&parse_ip_range_input(\%in, $kvm, "kvm");
 
 	# Host system interfaces
 	if ($in{'iface_def'}) {

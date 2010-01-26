@@ -112,11 +112,7 @@ if (!@possifaces) {
 @hostifaces = split(/\s+/, $kvm->{'kvm_iface'});
 @allocifaces = &unique(@possifaces, @hostifaces);
 print &ui_table_row($text{'kvm_range'},
-	&show_ip_range_input($kvm->{'kvm_start'},
-			     $kvm->{'kvm_end'},
-			     $kvm->{'kvm_cidr'} || 24,
-			     $kvm->{'kvm_gws'},
-			     $kvm->{'kvm_ifaces'}, \@allocifaces));
+	&show_ip_range_input($kvm, "kvm", 1, \@allocifaces));
 
 # Network interfaces to use on host system
 if (@possifaces > 1 || @hostifaces > 1) {
