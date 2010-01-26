@@ -6088,11 +6088,72 @@ return @rv;
 sub show_ip_range_input
 {
 my ($server, $pfx, $show_gateways, $poss) = @_;
+my @pools = split(/\s+/, $server->{$pfx."_pool"});
 my @starts = split(/\s+/, $server->{$pfx."_start"});
 my @ends = split(/\s+/, $server->{$pfx."_end"});
 my @cidrs = split(/\s+/, $server->{$pfx."_cidr"});
 my @ifaces = split(/\s+/, $server->{$pfx."_ifaces"});
 my @gws = map { $_ eq '*' ? '' : $_ } split(/\s+/, $server->{$pfx."_gws"});
+
+# Table headings for pools
+my @cols = ( $text{'range_pool'} );
+if ($show_gateways) {
+	push(@cols, $text{'range_gw'});
+	}
+if ($poss) {
+	push(@cols, $text{'range_iface'});
+	}
+if (@starts) {
+	push(@cols, $text{'range_count'}, $text{'range_used'});
+	}
+
+# Add rows for IP pools, if any
+my $table .= &ui_columns_start(\@cols, 100, 0, [ "width=50%" ]);
+my @allpools = &list_ip_pools();
+if (@allpools) {
+	for(my $i=0; $i<=@pools; $i++) {
+		my @cols = (
+		    &ui_select("pool_$i", $pools[$i],
+			[ [ '', '&nbsp;' ],
+			   map { [ $_->{'id'},
+				   $_->{'start'}." - ".$_->{'end'}." / ".
+				    &net::prefix_to_mask($_->{'cidr'}).
+				    ($_->{'desc'} ? " (".$_->{'desc'}.")" : "")
+				 ] } @allpools ]),
+		    );
+		if ($show_gateways) {
+			push(@cols, &ui_textbox("pgw_$i",
+					$pools[$i] ? $gws[$i] : '', 15));
+			}
+		if ($poss) {
+			push(@cols, &ui_select("piface_$i",
+				       !$pools[$i] ? '*' : $ifaces[$i] || '*',
+				       [ [ '*', $text{'range_any'} ], @$poss ],
+				       1, 0, 1));
+			}
+		if ($starts[$i]) {
+			my ($count, $used) = &get_ip_range_usage($starts[$i],
+								 $ends[$i]);
+			push(@cols, $count, $used);
+			}
+		elsif (@starts) {
+			push(@cols, '', '');
+			}
+		$table .= &ui_columns_row(\@cols);
+		}
+	}
+$table .= &ui_columns_end();
+
+# Exclude ranges from pools in manual list
+foreach my $p (@pools) {
+	shift(@starts);
+	shift(@ends);
+	shift(@cidrs);
+	shift(@gws);
+	shift(@ifaces);
+	}
+
+# Table headings for manual ranges
 my @cols = ( $text{'range_start'}, $text{'range_end'}, $text{'range_cidr'} );
 if ($show_gateways) {
 	push(@cols, $text{'range_gw'});
@@ -6103,7 +6164,10 @@ if ($poss) {
 if (@starts) {
 	push(@cols, $text{'range_count'}, $text{'range_used'});
 	}
-my $table = &ui_columns_start(\@cols);
+
+# Add rows for manually entered IP ranges
+$table .= &ui_columns_start(\@cols, 100, 0,
+		[ "width=20%", "width=20%", "width=10%" ]);
 for(my $i=0; $i<=@starts; $i++) {
 	my @cols = ( &ui_textbox("start_$i", $starts[$i], 15),
 		     &ui_textbox("end_$i", $ends[$i], 15),
@@ -6120,7 +6184,7 @@ for(my $i=0; $i<=@starts; $i++) {
 		my ($count, $used) = &get_ip_range_usage($starts[$i],$ends[$i]);
 		push(@cols, $count, $used);
 		}
-	elsif ($starts) {
+	elsif (@starts) {
 		push(@cols, '', '');
 		}
 	$table .= &ui_columns_row(\@cols);
@@ -6136,7 +6200,35 @@ return $table;
 sub parse_ip_range_input
 {
 my ($in, $server, $pfx) = @_;
-my (@starts, @ends, @cidrs, @gws, @ifaces);
+my (@starts, @ends, @cidrs, @gws, @ifaces, @pools);
+
+# Parse IP pools table
+my %allpools = map { $_->{'id'}, $_ } &list_ip_pools();
+my $pid;
+for(my $i=0; defined($pid = $in->{"pool_$i"}); $i++) {
+	next if (!$pid);
+	my $p = $allpools{$pid};
+	next if (!$p);
+	push(@pools, $pid);
+	push(@starts, $p->{'start'});
+	push(@ends, $p->{'end'});
+	push(@cidrs, $p->{'cidr'});
+	if (defined($in->{"pgw_$i"})) {
+		if (!$in->{"pgw_$i"}) {
+			push(@gws, "*");
+			}
+		else {
+			&check_ipaddress($in->{"pgw_${i}"}) ||
+				&error(&text('range_egw', $i+1));
+			push(@gws, $in->{"pgw_${i}"});
+			}
+		}
+	if (defined($in->{"piface_$i"})) {
+		push(@ifaces, $in->{"piface_$i"});
+		}
+	}
+
+# Parse manual IPs table
 for(my $i=0; defined($in->{"start_$i"}); $i++) {
 	next if ($in->{"start_$i"} !~ /\S/);
 	&check_ipaddress($in->{"start_$i"}) ||
@@ -6173,7 +6265,10 @@ for(my $i=0; defined($in->{"start_$i"}); $i++) {
 		push(@ifaces, $in->{"iface_$i"});
 		}
 	}
+
+# Validate and store resulting lists
 @starts || &error($text{'range_enone'});
+$server->{$pfx."_pool"} = join(" ", @pools);
 $server->{$pfx."_start"} = join(" ", @starts);
 $server->{$pfx."_end"} = join(" ", @ends);
 $server->{$pfx."_cidr"} = join(" ", @cidrs);
