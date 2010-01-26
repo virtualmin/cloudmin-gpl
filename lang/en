@@ -3158,6 +3158,7 @@ log_delete_alerts=Deleted $1 alerts
 log_silence_alerts=Silenced $1 alerts
 log_unsilence_alerts=Un-silenced $1 alerts
 log_email=Changed email settings
+log_pools=Changed IP address pools
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system

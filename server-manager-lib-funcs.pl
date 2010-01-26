@@ -6108,7 +6108,8 @@ if (@starts) {
 	}
 
 # Add rows for IP pools, if any
-my $table .= &ui_columns_start(\@cols, 100, 0, [ "width=50%" ]);
+my $table .= &ui_columns_start(\@cols, 100, 0,
+	[ $show_gateways ? "width=50%" : "width=75%" ]);
 my @allpools = &list_ip_pools();
 if (@allpools) {
 	for(my $i=0; $i<=@pools; $i++) {
@@ -6165,31 +6166,34 @@ if (@starts) {
 	push(@cols, $text{'range_count'}, $text{'range_used'});
 	}
 
-# Add rows for manually entered IP ranges
-$table .= &ui_columns_start(\@cols, 100, 0,
-		[ "width=20%", "width=20%", "width=10%" ]);
-for(my $i=0; $i<=@starts; $i++) {
-	my @cols = ( &ui_textbox("start_$i", $starts[$i], 15),
-		     &ui_textbox("end_$i", $ends[$i], 15),
-		     &ui_textbox("cidr_$i", $cidrs[$i], 5) );
-	if ($show_gateways) {
-		push(@cols, &ui_textbox("gw_$i", $gws[$i], 15));
-		}
-	if ($poss) {
-		push(@cols, &ui_select("iface_$i", $ifaces[$i] || '*',
+# Add rows for manually entered IP ranges, if there are no pools
+if (!@allpools || @starts) {
+	$table .= &ui_columns_start(\@cols, 100, 0,
+			[ "width=20%", "width=20%", "width=10%" ]);
+	for(my $i=0; $i<=@starts; $i++) {
+		my @cols = ( &ui_textbox("start_$i", $starts[$i], 15),
+			     &ui_textbox("end_$i", $ends[$i], 15),
+			     &ui_textbox("cidr_$i", $cidrs[$i], 5) );
+		if ($show_gateways) {
+			push(@cols, &ui_textbox("gw_$i", $gws[$i], 15));
+			}
+		if ($poss) {
+			push(@cols, &ui_select("iface_$i", $ifaces[$i] || '*',
 				       [ [ '*', $text{'range_any'} ], @$poss ],
 				       1, 0, 1));
+			}
+		if ($starts[$i]) {
+			my ($count, $used) = &get_ip_range_usage($starts[$i],
+								 $ends[$i]);
+			push(@cols, $count, $used);
+			}
+		elsif (@starts) {
+			push(@cols, '', '');
+			}
+		$table .= &ui_columns_row(\@cols);
 		}
-	if ($starts[$i]) {
-		my ($count, $used) = &get_ip_range_usage($starts[$i],$ends[$i]);
-		push(@cols, $count, $used);
-		}
-	elsif (@starts) {
-		push(@cols, '', '');
-		}
-	$table .= &ui_columns_row(\@cols);
+	$table .= &ui_columns_end();
 	}
-$table .= &ui_columns_end();
 return $table;
 }
 
@@ -8170,7 +8174,8 @@ my ($rv) = @_;
 &open_lock_tempfile(POOLS, ">$pools_file");
 foreach my $l (@$rv) {
 	&print_tempfile(POOLS,
-		join(" ", map { $_."=".&urlize($l->{$_}) } (keys %$l)),"\n");
+		join(" ", map { $_."=".&urlize($l->{$_}) }
+			      (sort { $a cmp $b } keys %$l)),"\n");
 	}
 &close_tempfile(POOLS);
 }
