@@ -3513,6 +3513,7 @@ ips_left=Left
 ips_active=Active?
 ips_desc=Description
 ips_err=Failed to save IP pools
+ips_edelete=IP pool starting at $1 cannot be removed, as it is in use by the following host systems : $2
 
 mimage_title=Manually Create Image
 mimage_header=New image details
