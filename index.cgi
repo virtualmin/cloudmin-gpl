@@ -253,16 +253,66 @@ if (@servers) {
 						}
 					}
 				elsif ($c eq "ip") {
+					# Primary IP
 					$ip = &get_server_ip($s);
 					push(@cols, $ip);
 					}
 				elsif ($c eq "ips") {
+					# All IPs
 					@ips = &get_server_ip($s);
 					push(@cols, join(" , ", @ips));
 					}
 				elsif ($c eq "owner") {
+					# Owner names
 					push(@cols,
 					     join(" ", @{$omap{$s->{'id'}}}));
+					}
+				elsif ($c eq "disk") {
+					# Disk space assigned
+					$dfunc = "type_".$s->{'manager'}.
+						  "_get_disk_size";
+					if (defined(&$dfunc)) {
+						$disk = &$dfunc($s);
+						push(@cols, $disk ?
+						    &nice_size($disk) :
+						    $text{'domains_unlimited'})
+						}
+					else {
+                                                push(@cols, undef);
+                                                }
+					}
+				elsif ($c eq "mem") {
+					# Memory assigned
+					$mfunc = "type_".$s->{'manager'}.
+						  "_get_memory_size";
+					if (defined(&$mfunc)) {
+						$mem = &$mfunc($s);
+						push(@cols, $mem ?
+						    &nice_size($mem) :
+						    $text{'domains_unlimited'})
+						}
+					else {
+						push(@cols, undef);
+						}
+					}
+				elsif ($c eq "cpu") {
+					# CPU limit
+					$cfunc = "type_".$s->{'manager'}.
+						  "_get_cpu_size";
+					if (defined(&$cfunc)) {
+						$cpu = &$cfunc($s);
+						push(@cols, $cpu ? $cpu."%" :
+						    $text{'domains_unlimited'});
+						}
+					else {
+						push(@cols, undef);
+						}
+					}
+				elsif ($c eq "bw_usage") {
+					# Bandwidth used
+					$bw = $s->{'bw_usage'};
+					push(@cols, $bw ? &nice_size($bw)
+							: undef);
 					}
 				else {
 					push(@cols, $s->{$c});

@@ -11,6 +11,10 @@ index_desc=Description
 index_group=Group
 index_location=Location
 index_owner=Owners
+index_disk=Disk
+index_mem=Memory
+index_cpu=CPU
+index_bw_usage=Bandwidth
 index_dereg=De-Register
 index_delete=Delete
 index_shutdown=Shutdown
@@ -624,7 +628,7 @@ mass_scdoms=Virtualmin domains
 mass_scnone=.. no required script updates were found.
 mass_scok=Update Selected Scripts
 
-this_typedesc=Cloudmin master
+this_typedesc=Master
 this_this=This system
 
 ichooser_title=Select EC2 Instance

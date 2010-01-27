@@ -166,9 +166,15 @@ if ($s->{'manager'} eq 'ec2' && !$s->{'ec2_sgroup'}) {
 # Set short hostname
 my $shost = $s->{'host'};
 if ($config{'name_max'} && length($shost) > $config{'name_max'}) {
-	# Show first and last max/2 chars, with ... between
-	my $h = int($config{'name_max'} / 2);
-	$shost = substr($shost, 0, $h)."...".substr($shost, -$h);
+	if ($config{'name_mode'}) {
+		# Cut off chars at end, replace with ..
+		$shost = substr($shost, 0, $config{'name_max'}-3)."...";
+		}
+	else {
+		# Show first and last max/2 chars, with ... between
+		my $h = int($config{'name_max'} / 2);
+		$shost = substr($shost, 0, $h)."...".substr($shost, -$h);
+		}
 	}
 $s->{'short_host'} = $shost;
 

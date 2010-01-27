@@ -17,6 +17,7 @@ kvm_mem=256
 xen_dir=/xen
 kvm_dir=/kvm
 name_max=20
+name_mode=0
 cat_mode=0
 xen_mem_mode=0
 bw_period=month
