@@ -1,0 +1,23 @@
+<header>Manually Create Image</header>
+
+This page allows you to create a Cloudmin image for an existing file, typically
+a dump of a single partition (for Xen) or an entire disk (for KVM). Many
+websites like <a href=http://stacklet.com target=_new>stacklet.com</a> 
+provide pre-build images containing a variety of Linux distributions that you
+can use. <p>
+
+Be sure that the file you select is actually suitable for use as an image
+for Xen or KVM. A compressed tar file of a filesystem will not work, but 
+a copy of the disk or primary partition from a real system should. <p>
+
+To create an image, first enter the path to the source file in the
+<b>Image source</b> field. Then enter an ID like <tt>centos-5.5</tt> in the
+<b>Unique ID</b> field, and a human-readable description in the
+<b>Description for image</b> field. <p>
+
+When you click the <b>Create</b> button, Cloudmin will validate the image
+file and copy it from the specified source to all default storage locations.
+The image can then be used to create virtual systems. <p>
+
+<footer>
+
