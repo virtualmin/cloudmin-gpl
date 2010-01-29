@@ -3545,3 +3545,11 @@ mimage_edisk=Image file does not appear to be a bootable disk - format was detec
 mimage_rawsize=Calculating un-compressed image size ..
 mimage_rawsized=.. size is $1
 mimage_erawsize=Faield to get un-compressed size : $1
+
+repl_title=Cloudmin Replication
+repl_desc=Replication allows you to sychronize configuration changes made on this Cloudmin system with one or more backup systems, so that if this master goes down one of the replicas can take over. This page allows you to select if this system is a replication master, or a source of replicated changes from another master system.
+repl_mode0=Stand-alone Cloudmin system
+repl_mode1=Replica of another system
+repl_master=(Replicating from $1)
+repl_nomaster=(No master yet)
+repl_mode2=Replicate configuration to

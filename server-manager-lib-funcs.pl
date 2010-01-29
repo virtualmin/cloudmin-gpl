@@ -16,7 +16,8 @@ if (!$server_manager_root) {
 
 foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
-		 "bw", "usage", "backups", "locations", "vsync", "alerts") {
+		 "bw", "usage", "backups", "locations", "vsync", "alerts",
+		 "repl") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -5002,6 +5003,12 @@ push(@gcats, "virtualmin");
 push(@glinks, "list_plugins.cgi");
 push(@gtitles, $text{'plugins_title'});
 push(@gicons, "images/plugins.gif");
+push(@gcats, "settings");
+
+# Replication
+push(@glinks, "edit_repl.cgi");
+push(@gtitles, $text{'repl_title'});
+push(@gicons, "images/repl.gif");
 push(@gcats, "settings");
 
 # Type-defined icons
