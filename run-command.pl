@@ -63,6 +63,7 @@ while(@ARGV > 0) {
 # Build the command
 $cmd = join(" ", @cmd);
 $cmd || &usage("No command to run given");
+$cmd = "($cmd) </dev/null";	# Suppress stdin
 
 if (@servers == 1) {
 	# Just do one

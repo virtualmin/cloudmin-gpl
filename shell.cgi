@@ -59,7 +59,8 @@ if (!$in{'clear'}) {
 			}
 		if ($cmd) {
 			($out, $ex, $err) = &execute_command_on_server(
-				$server, "cd ".quotemeta($pwd)." ; $cmd");
+				$server,
+				"cd ".quotemeta($pwd)." ; ($cmd) </dev/null");
 			$out = "ERROR: $err\n" if ($err);
 			$out = &html_escape($out, 1);
 			$history .= $out;
