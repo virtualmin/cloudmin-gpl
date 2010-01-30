@@ -52,9 +52,54 @@ sub replicate_to_one_server
 my ($server) = @_;
 my $rv = { 'replica' => $server };
 
+foreach my $s (&list_managed_servers()) {
+	}
+
 # XXX call post-replication function to setup cron jobs / etc
 
 return $rv;
+}
+
+# get_last_modified_times()
+# Returns a list of files used by Cloudmin and their last modification times.
+# This is called on both the replication source and dest to compute what needs
+# to be sent over.
+sub get_last_modified_times
+{
+my (@files, @dirs);
+
+# Build list of dirs to recurse into
+push(@dirs, $ssh_keys_dir, $server_domains_dir, $server_collected_dir,
+	    $bandwidth_dir, $shell_previous_dir, $owner_plans_dir,
+	    $scheduled_backups_dir, $vsyncs_dir, $image_storages_dir,
+	    $alerts_dir);
+if ($ec2_accounts_dir) {
+        push(@dirs, $ec2_accounts_dir);
+        }
+
+# Search each one for files
+foreach my $dir (@dirs) {
+	push(@files, &recursive_search_dir($dir));
+	}
+
+# Add other config files
+push(@files, $virtualmin_licences_file, $locations_file, $pools_file,
+	     $module_config_file);
+
+# Add servers files
+push(@files, map { $_->{'file'} }
+		 grep { $_->{'file'} } &list_managed_servers());
+
+# Stat each file to get the time and size
+my @rv;
+foreach my $f (@files) {
+	next if ($f =~ /\.(lock|bak|rpmsave|rpmnew)$/);
+	my @st = stat($f);
+	if (@st) {
+		push(@rv, [ $f, $st[9], $st[7] ]);
+		}
+	}
+return @rv;
 }
 
 1;
