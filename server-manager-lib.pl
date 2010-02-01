@@ -45,7 +45,9 @@ $check_status_cmd = "$module_config_directory/status.pl";
 $check_licence_cmd = "$module_config_directory/licence.pl";
 $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 @cron_cmds = ( $check_status_cmd, $check_licence_cmd,
-	       $bandwidth_cron_cmd );
+	       $bandwidth_cron_cmd, $usage_cron_cmd,
+	       $backup_cron_cmd, $backup_space_cmd,
+	       $vsync_cron_cmd, $alert_cron_cmd );
 
 @standard_virtualmin_features = (
 	{ 'feature' => 'dir', 'desc' => 'Home directory',
