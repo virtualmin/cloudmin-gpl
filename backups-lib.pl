@@ -645,6 +645,7 @@ elsif ($dest->{'mode'} == 3) {
 	return { 'id' => &server_id(),
 		 'ssh_protocol' => 2,
 		 'host' => $dest->{'host'},
+		 'ip' => &to_ipaddress($dest->{'host'}) || $dest->{'host'},
 		 'ssh_user' => $dest->{'user'},
 		 'ssh_pass' => $dest->{'pass'},
 		 'ssh_port' => $dest->{'port'},
@@ -722,8 +723,6 @@ my ($server, $path) = @_;
 my $dir = $path;
 $dir =~ s/\/([^\/]+)$//;
 my $err = &make_dir_on_server($server, $dir, 0700, 1);
-my ($out, $ex, $err) = &execute_command_on_server($server,
-			"mkdir -p ".quotemeta($dir));
 return $err ? $err : $ex ? $out : undef;
 }
 
