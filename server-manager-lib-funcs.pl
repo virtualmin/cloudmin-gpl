@@ -2311,6 +2311,12 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				$server, "net", "active_interfaces") ];
 			}
 
+		# Get Webmin config dir, if not known yet
+		if (!$server->{'webmin_config_directory'}) {
+			$server->{'webmin_config_directory'} =
+			  &remote_eval($server, "webmin", "\$config_directory");
+			}
+
 		# Refresh software packages, if enabled
 		if (&get_server_cluster_software($server) > 0) {
 			&refresh_server_cluster_software($server);

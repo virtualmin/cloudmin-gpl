@@ -4,6 +4,7 @@
 package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
+&exit_if_cloudmin_replica();
 &foreign_require("mailboxes", "mailboxes-lib.pl");
 
 # Parse command line for hosts

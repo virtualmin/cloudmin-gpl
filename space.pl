@@ -5,6 +5,7 @@
 package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
+&exit_if_cloudmin_replica();
 &compute_backup_space();
 foreach my $stor (&list_storages()) {
 	&compute_storage_size($stor);

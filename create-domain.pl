@@ -59,6 +59,7 @@ $0 = "$pwd/create-domain.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 @OLDARGV = @ARGV;
+&usage_if_cloudmin_replica();
 
 # Build a list of all known feature names
 @vservers = grep { $_->{'status'} eq 'virt' } &list_managed_servers();

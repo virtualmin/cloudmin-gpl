@@ -4,6 +4,7 @@
 package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
+&exit_if_cloudmin_replica();
 
 @servers = &list_managed_servers();
 if (@ARGV) {

@@ -7,6 +7,21 @@ sub is_cloudmin_replica
 return $config{'repl_mode'} == 1 ? 1 : 0;
 }
 
+# exit_if_cloudmin_replica()
+# If this system is a replica, exit quietly. For calling from cron scripts.
+sub exit_if_cloudmin_replica
+{
+exit(0) if (&is_cloudmin_replica());
+}
+
+# usage_if_cloudmin_replica()
+# If a system is a replica, call &usage. For calling from API commands
+sub usage_if_cloudmin_replica
+{
+&usage("This system is a Cloudmin replica - no changes are allowed")
+	if (&is_cloudmin_replica());
+}
+
 # list_replica_servers()
 # Returns the list of system objects to replicate to
 sub list_replica_servers
@@ -36,7 +51,29 @@ elsif (@replicas == 1) {
 	}
 else {
 	# Do in parallel
-	return &parallel_server_function(\@replica, \&replicate_to_one_server);
+	return map { $_->[0] }
+		&parallel_server_function(\@replica, \&replicate_to_one_server);
+	}
+}
+
+# replicate_host_to_all_servers(&server)
+# Replicate changes to just one managed system to all replicas
+sub replicate_host_to_all_servers
+{
+my ($changed) = @_;
+my @replicas = &list_replica_servers();
+if (!@replicas) {
+	return ( );
+	}
+elsif (@replicas == 1) {
+	# Just do in this thread
+	return ( &replicate_host_to_one_server($replicas[0], $changed) );
+	}
+else {
+	# Do in parallel
+	return map { $_->[0] } 
+		&parallel_server_function(\@replica,
+			\&replicate_host_to_one_server, $changed);
 	}
 }
 
@@ -75,20 +112,6 @@ if (@rfiles <= 1 || $last_remote_error) {
 	}
 my %rfiles = map { $_->{'relfile'}, $_ } @rfiles;
 
-# Work out remote Webmin base dir
-my $rconfig;
-foreach my $r (@rfiles) {
-	if ($r->{'file'} ne $r->{'relfile'}) {
-		$rconfig = substr($r->{'file'}, 0, length($r->{'file'}) -
-						   length($r->{'relfile'}));
-		last;
-		}
-	}
-if (!$rconfig || $rconfig !~ /^\//) {
-	$rv->{'err'} = $text{'repl_norconfig'};
-	return $rv;
-	}
-
 # Get local files
 my @lfiles = &get_last_modified_times();
 my %lfiles = map { $_->{'relfile'}, $_ } @lfiles;
@@ -102,6 +125,7 @@ foreach my $r (@rfiles) {
 	}
 
 # For each local file that is newer, send it to the remote system
+my $rconfig = $server->{'webmin_config_directory'} || "/etc/webmin";
 my @copied;
 my @servers;
 foreach my $l (@lfiles) {
@@ -163,12 +187,33 @@ foreach my $r (@rfiles) {
 		}
 	}
 
-# XXX call post-replication function to setup cron jobs / etc
+# Call post-replication function to setup cron jobs / etc
+if (scalar(@copied) || scalar(@deleted)) {
+	&remote_foreign_call($server, "server-manager", "replication_done",
+			     \@copied, \@deleted);
+	}
 
 # Return success
 $rv->{'copied'} = \@copied;
 $rv->{'deleted'} = \@deleted;
 $rv->{'servers'} = \@servers;
+$rv->{'ok'} = 1;
+return $rv;
+}
+
+# replicate_host_to_one_server(&server, &changed)
+# Copy the details for just one managed system to a replica
+sub replicate_host_to_one_server
+{
+my ($server, $changed) = @_;
+my $rv = { 'replica' => $server,
+	   'ok' => 0 };
+my $rconfig = $server->{'webmin_config_directory'} || "/etc/webmin";
+
+# XXX to what directory though?
+# XXX copy main file
+# XXX copy bandwidth / etc too
+
 $rv->{'ok'} = 1;
 return $rv;
 }
@@ -250,6 +295,17 @@ foreach my $f (@files) {
 		}
 	}
 return @rv;
+}
+
+# replication_done(&copied-files, &deleted-files)
+# Called by the replication master after some 
+sub replication_done
+{
+my ($copied, $deleted) = @_;
+
+# XXX
+
+return undef;
 }
 
 1;

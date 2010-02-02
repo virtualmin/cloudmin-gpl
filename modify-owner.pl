@@ -42,6 +42,7 @@ require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &foreign_require("acl", "acl-lib.pl");
 @OLDARGV = @ARGV;
+&usage_if_cloudmin_replica();
 
 # Parse command line
 @allactions = &list_owner_actions();
