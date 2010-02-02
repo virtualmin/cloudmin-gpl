@@ -961,7 +961,7 @@ if ($device) {
 	}
 else {
 	# Just scp down
-	my $sshcmd = "scp -r";
+	my $sshcmd = "scp -r -p";
 	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
 	if ($server->{'key'}) {
 		my ($key) = grep { $_->{'id'} == $server->{'key'} }
@@ -1101,7 +1101,7 @@ if ($device) {
 	}
 else {
 	# Just scp up
-	my $sshcmd = "scp -r";
+	my $sshcmd = "scp -r -p";
 	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
 	if ($server->{'key'}) {
 		my ($key) = grep { $_->{'id'} == $server->{'key'} }
@@ -1200,7 +1200,7 @@ else {
 		}
 	else {
 		# Can use scp
-		$sshcmd = "scp -r";
+		$sshcmd = "scp -r -p";
 		$sshcmd .= " -o Protocol=".$destserver->{'ssh_protocol'};
 		if ($keytemp) {
 			$sshcmd .= " -i ".quotemeta($keytemp);

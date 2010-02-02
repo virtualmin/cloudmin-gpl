@@ -190,6 +190,11 @@ $vsync_cron_cmd = "$module_config_directory/vsync.pl";
 $alerts_dir = "$module_config_directory/alerts";
 $alert_status_file = "$module_config_directory/alert-status";
 
+$repl_cron_cmd = "$module_config_directory/replicate.pl";
+$repl_master_file = "$module_config_directory/replication-master";
+$repl_mode_file = "$module_config_directory/replication-mode";
+$repl_servers_file = "$module_config_directory/replication-servers";
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {
