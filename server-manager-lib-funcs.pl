@@ -354,13 +354,35 @@ if ($server->{'id'} eq '0') {
 	&write_file($this_server_status, \%this);
 	}
 else {
+	my $newserver;
 	if (!$server->{'id'}) {
 		my ($same) = grep { $_->{'host'} eq $server->{'host'} }
 				     &servers::list_servers();
 		$server->{'id'} = $same ? $same->{'id'} : time();
+		$newserver = 1;
 		}
 	$server->{'module'} = $module_name;
-	&servers::save_server($server);
+	my $changed = 1;
+	if (!$newserver) {
+		# Check if actually changed, don't write out to disk if not.
+		# This prevents un-necessary replication.
+		my $oldserver = &servers::get_server($server->{'id'});
+		my @oldkeys = keys %$oldserver;
+		my @keys = keys %$server;
+		if (scalar(@keys) == scalar(@oldkeys)) {
+			$changed = 0;
+			foreach my $k (@keys) {
+				if ($server->{$k} ne $oldserver->{$k} &&
+				    $k ne 'statustime') {
+					$changed = 1;
+					last;
+					}
+				}
+			}
+		}
+	if ($changed) {
+		&servers::save_server($server);
+		}
 	}
 }
 
@@ -2027,6 +2049,7 @@ if ($server->{'ssh_nologin'}) {
 my $rv = 0;
 my ($status, $err, $webminroot, $webminport, $webminssl) =
 	&check_server_ssh_login($server);
+$err =~ s/\r?\n/ /g;
 if ($status == 2) {
 	# Could not login via SSH
 	$server->{'status'} = 'nosshlogin';

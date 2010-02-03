@@ -122,7 +122,7 @@ if ($multi) {
 		if ($s->{'status_msg'}) {
 			print "    Status error: $s->{'status_msg'}\n";
 			}
-		print "    Status checked: ",
+		print "    Status changed: ",
 			&make_date($s->{'statustime'}),"\n";
 		if ($s->{'status'} eq 'virt' && $s->{'virtualmin_error'}) {
 			print "    Virtualmin config error: ",
