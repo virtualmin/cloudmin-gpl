@@ -2628,9 +2628,13 @@ my ($server, $doms) = @_;
 if (!-d $server_domains_dir) {
 	&make_dir($server_domains_dir, 0700);
 	}
-&open_tempfile(DOMS, ">$server_domains_dir/$server->{'id'}");
-&print_tempfile(DOMS, &serialise_variable($doms));
-&close_tempfile(DOMS);
+my $oldser = &read_file_contents("$server_domains_dir/$server->{'id'}");
+my $newser = &serialise_variable($doms);
+if ($oldser ne $newser) {
+	&open_tempfile(DOMS, ">$server_domains_dir/$server->{'id'}");
+	&print_tempfile(DOMS, $newser);
+	&close_tempfile(DOMS);
+	}
 $get_server_domains_cache{$server->{'id'}} = $doms;
 }
 
@@ -2659,9 +2663,14 @@ if (!-d $server_collected_dir) {
 	}
 if ($info) {
 	# Have info to write
-	&open_tempfile(DOMS, ">$server_collected_dir/$server->{'id'}");
-	&print_tempfile(DOMS, &serialise_variable($info));
-	&close_tempfile(DOMS);
+	my $oldser = &read_file_contents(
+		"$server_collected_dir/$server->{'id'}");
+	my $newser = &serialise_variable($info);
+	if ($oldser ne $newser) {
+		&open_tempfile(DOMS, ">$server_collected_dir/$server->{'id'}");
+		&print_tempfile(DOMS, $newser);
+		&close_tempfile(DOMS);
+		}
 	$get_server_collected_cache{$server->{'id'}} = $info;
 	}
 else {

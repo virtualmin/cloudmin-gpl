@@ -332,6 +332,10 @@ foreach my $s (&list_managed_servers()) {
 		}
 	}
 
+# Remove files for 'this' system
+@files = grep { $_ ne $server_collected_dir."/0" &&
+		$_ ne $server_domains_dir."/0" } @files;
+
 # Stat each file to get the time and size
 my @rv;
 foreach my $f (@files) {
