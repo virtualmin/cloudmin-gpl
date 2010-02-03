@@ -314,6 +314,12 @@ if (@servers) {
 					push(@cols, $bw ? &nice_size($bw)
 							: undef);
 					}
+				elsif ($c eq "hostsystem") {
+					# Host system
+					$p = &get_parent_server($s);
+					push(@cols, $p ? $p->{'short_host'}
+						       : undef);
+					}
 				else {
 					push(@cols, $s->{$c});
 					}
