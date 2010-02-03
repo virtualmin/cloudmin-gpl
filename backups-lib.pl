@@ -942,7 +942,7 @@ if ($dest->{'mode'} == 1) {
 			 'msg' => &text('brun_emkdir', $mkerr) };
 		}
 	}
-elsif ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+elsif (&can_transfer_directly($dest)) {
 	# Transferring directly to dest host
 	if (!$destserver) {
 		return { 'ok' => 0, 'msg' => $text{'brun_edestserver'} };
@@ -1054,7 +1054,7 @@ if ($dest->{'mode'} == 1) {
 	# Source file is on host already
 	$tarfile = $dest->{'path'};
 	}
-elsif ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+elsif (&can_transfer_directly($dest)) {
 	# Transferring directly from source host
 	$tarfile = undef;
 	}
@@ -1367,6 +1367,27 @@ local @tm = localtime(time());
 local $rv = strftime($_[0], @tm);
 &reset_time_locale();
 return $rv;
+}
+
+# can_transfer_directly(&dest)
+# Returns 1 if a direct transfer to the destination via SSH is possible
+sub can_transfer_directly
+{
+my ($dest) = @_;
+if ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+	# Cloudmin-managed system
+	return 1;
+	}
+elsif ($dest->{'mode'} == 3) {
+	# SSH server .. check if we can ssh in
+	my $destserver = &get_backup_dest_server($dest);
+	my ($out, $ex, $err) = &execute_command_on_server($destserver,
+							  "echo ok");
+	if (!$ex && !$err && $out =~ /ok/) {
+		return 1;
+		}
+	}
+return 0;
 }
 
 1;

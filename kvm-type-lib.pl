@@ -2715,7 +2715,7 @@ if ($dest->{'mode'} == 1) {
 	# Target is on host already
 	$tarfile = $dest->{'path'};
 	}
-elsif ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+elsif (&can_transfer_directly($dest)) {
 	# Transferring directly to dest host
 	if (!$destserver) {
 		return { 'ok' => 0, 'msg' => $text{'brun_edestserver'} };
@@ -2976,7 +2976,7 @@ if ($dest->{'mode'} == 1) {
 	# Source file is on host already
 	$tarfile = $dest->{'path'};
 	}
-elsif ($dest->{'mode'} == 2 || $dest->{'mode'} == 0) {
+elsif (&can_transfer_directly($dest)) {
 	# Transferring directly from source host
 	$tarfile = undef;
 	}
