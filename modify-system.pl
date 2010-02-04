@@ -101,12 +101,6 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-boot") {
 		$boot = 0;
 		}
-	elsif ($a eq "--packages") {
-		$packages = 1;
-		}
-	elsif ($a eq "--no-packages") {
-		$packages = 0;
-		}
 	elsif ($a eq "--location") {
 		$lname = shift(@ARGV);
 		($loc) = grep { $_->{'id'} eq $lname ||
@@ -238,17 +232,6 @@ if (defined($boot)) {
 	if ($err) {
 		&usage("Failed to ".($boot ? "enable" : "disable").
 		       " at boot : $err");
-		}
-	}
-
-# Enable or disable package management
-if (defined($packages)) {
-	$err = &save_server_cluster_software($server, $packages);
-	if ($err && $packages) {
-		&usage("Package management cannot be enabled : $err");
-		}
-	elsif ($err && !$packages) {
-		&usage("Package management cannot be disabled : $err");
 		}
 	}
 

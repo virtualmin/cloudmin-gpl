@@ -170,14 +170,6 @@ if ($status eq 'virt') {
 		}
 	}
 
-# Cluster package management
-$pkgs = &get_server_cluster_software($server);
-if ($pkgs >= 0) {
-	print &ui_table_row($text{'edit_managepackages'},
-		$view ? ($pkgs ? $text{'yes'} : $text{'no'})
-		      : &ui_yesno_radio("packages", $pkgs));
-	}
-
 # Read-only bandwidth limit
 $rfunc = "type_".$t."_real_interfaces";
 if ($view && defined(&$rfunc) && $config{'bw_enabled'}) {

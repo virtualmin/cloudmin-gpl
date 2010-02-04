@@ -28,7 +28,6 @@ sort_mode=0
 show_nf=master,owner
 xen_vnc=1
 kvm_vnc=1
-packages_def=0
 xen_consoled=1
 ping_timeout=1
 ssh_timeout=30

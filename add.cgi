@@ -123,18 +123,6 @@ if ($server->{'status'} eq 'virt') {
 	&save_managed_server($server);
 	}
 
-# Enable package management
-if ($config{'packages_def'}) {
-	print $text{'create_packages'},"<br>\n";
-	$err = &save_server_cluster_software($server, 1);
-	if ($err) {
-		print &text('create_epackages', $err),"<p>\n";
-		}
-	else {
-		print $text{'create_done'},"<p>\n";
-		}
-	}
-
 if (defined(&theme_select_server)) {
 	&theme_select_server($server);
 	}

@@ -538,14 +538,6 @@ if (defined(&$cfunc)) {
 	print $err ? ".. creation failed : $err\n\n" : ".. done\n\n";
 	}
 
-# Enable package management
-if ($config{'packages_def'} && ($server->{'status'} eq 'virt' ||
-			        $server->{'status'} eq 'novirt')) {
-	print "Enabling software package management ..\n";
-	$err = &save_server_cluster_software($server, 1);
-	print $err ? ".. failed : $err\n\n" : ".. done\n\n";
-	}
-
 # Run post-creation script
 &run_system_script($server, 'after', 'create');
 &release_lock_server($server);

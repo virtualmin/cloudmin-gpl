@@ -420,12 +420,6 @@ if ($multi) {
 					$info->{'serial'}->{'expiry'},"\n";
 				}
 			}
-	
-		# Show cluster packages status
-		$pkgs = &get_server_cluster_software($s);
-		print "    Package management: ",
-		      $pkgs < 0 ? "Not available" :
-		      $pkgs ? "Enabled" : "Disabled","\n";
 		}
 	}
 elsif ($nameonly) {
