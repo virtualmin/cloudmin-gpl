@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &error_setup($text{'oform_err'});
+&error_if_cloudmin_replica();
 $access{'owner'} || &error($text{'oform_ecannot'});
 $owner = &get_system_owner($base_remote_user);
 $owner || &error($text{'oform_eowner'});

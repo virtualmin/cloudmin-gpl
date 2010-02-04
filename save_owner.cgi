@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 &error_setup($text{'owner_err'});
+&error_if_cloudmin_replica();
 &foreign_require("acl", "acl-lib.pl");
 if (!$in{'new'}) {
 	$owner = &get_system_owner($in{'old'});

@@ -4,6 +4,7 @@
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &error_setup($text{'dsnapshots_err'});
+&error_if_cloudmin_replica();
 &ReadParse();
 
 # Get the accounts and snapshots

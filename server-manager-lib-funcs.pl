@@ -4040,6 +4040,8 @@ if (defined(&$pfunc)) {
 return "OK";
 }
 
+# licence_error_message()
+# Returns a message about a system's license, if needed
 sub licence_error_message
 {
 my ($lstatus, $lexpiry, $lerr, $lservers) = &check_server_manager_licence();
@@ -4054,6 +4056,22 @@ if (&can_licence()) {
 	}
 $rv .= "</td></tr></table>\n";
 return $rv;
+}
+
+# warning_messages()
+# Returns HTML for any warnings
+sub warning_messages
+{
+my $warns = &licence_error_message();
+if (&is_cloudmin_replica()) {
+	my $rv = "<table width=100%><tr bgcolor=#ffff88><td align=center>";
+	my $master = &get_replication_master();
+	$rv .= "<p><b>".($master ? &text('repl_warning', $master)
+				 : $text{'repl_warning2'})."</b><p>\n";
+	$rv .= "</td></tr></table>\n";
+	$warns .= $rv;
+	}
+return $warns;
 }
 
 # check_server_manager_licence()

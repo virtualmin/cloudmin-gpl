@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
+&error_if_cloudmin_replica();
 &ReadParse();
 ($img) = grep { $_->{'id'} eq $in{'id'} } &list_server_images();
 $img || &error($text{'dimage_egone'});

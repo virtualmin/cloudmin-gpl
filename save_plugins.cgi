@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &error_setup($text{'plugins_err'});
+&error_if_cloudmin_replica();
 &ReadParse();
 &can_action_error(undef, "global");
 

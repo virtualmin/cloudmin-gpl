@@ -20,8 +20,7 @@ else {
 	}
 
 # Check server manager licence, show an error if invalid
-$lerr = &licence_error_message();
-print $lerr if ($lerr);
+print &warning_messages();
 
 @allservers = &list_available_managed_servers_sorted();
 

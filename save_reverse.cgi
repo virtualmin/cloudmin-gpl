@@ -4,6 +4,7 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'reverse_err'});
+&error_if_cloudmin_replica();
 
 # Get and check system
 $server = &get_managed_server($in{'id'});

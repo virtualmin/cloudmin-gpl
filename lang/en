@@ -3573,3 +3573,6 @@ repl_mkdirfailed=Failed to create directory $1 : $2
 repl_norconfig=Could not work out Webmin base directory!
 repl_notreplica=Not configured as a Cloudmin replica
 repl_now=Replicate to selected systems after saving
+repl_isreplica=This system is a Cloudmin replica - no changes are allowed
+repl_warning=This system is a Cloudmin replica of $1. No changes to managed systems or global settings are allowed.
+repl_warning2=This system is a Cloudmin replica, but is not replicating from any master sytem yet. No changes to managed systems or global settings are allowed.

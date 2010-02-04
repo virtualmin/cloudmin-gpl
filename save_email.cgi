@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &error_setup($text{'email_err'});
+&error_if_cloudmin_replica();
 &can_action_error(undef, "global");
 &foreign_require("mailboxes", "mailboxes-lib.pl");
 &ReadParse();

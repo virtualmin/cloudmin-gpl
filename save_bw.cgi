@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 &error_setup($text{'bw_err'});
+&error_if_cloudmin_replica();
 
 # Validate and store inputs
 if ($in{'period'}) {

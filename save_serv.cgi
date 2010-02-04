@@ -2,6 +2,7 @@
 # Either update the details of some server, or perform some action
 
 require './server-manager-lib.pl';
+&error_if_cloudmin_replica();
 &ReadParse();
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});

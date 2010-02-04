@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &error_setup($text{'limits_err'});
+&error_if_cloudmin_replica();
 
 # Get the server
 &ReadParse();

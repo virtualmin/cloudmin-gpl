@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 &error_setup($text{'dkeys_err'});
+&error_if_cloudmin_replica();
 @d = split(/\0/, $in{'d'});
 @d || &error($text{'dkeys_enone'});
 

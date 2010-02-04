@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &error_setup($text{'backup_err'});
+&error_if_cloudmin_replica();
 &can_action_error(undef, "backup");
 &ReadParse();
 if (!$in{'new'}) {

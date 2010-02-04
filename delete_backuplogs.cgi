@@ -4,6 +4,7 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'dbackup_err'});
+&error_if_cloudmin_replica();
 @d = split(/\0/, $in{'d'});
 @d || &error($text{'dbackup_enone'});
 

@@ -6,6 +6,7 @@ require './server-manager-lib.pl';
 &foreign_require("net", "net-lib.pl");
 &ReadParse();
 &error_setup($text{'kvm_err'});
+&error_if_cloudmin_replica();
 $kvm = &get_managed_server($in{'id'});
 $kvm || &error($text{'kvm_egone'});
 &obtain_lock_server($kvm);

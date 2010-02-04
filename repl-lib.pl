@@ -65,6 +65,14 @@ sub usage_if_cloudmin_replica
 	if (&is_cloudmin_replica());
 }
 
+# error_if_cloudmin_replica()
+# If a system is a replica, call &error. For use by CGI scripts that would
+# otherwise modify systems.
+sub error_if_cloudmin_replica
+{
+&error($text{'repl_isreplica'}) if (&is_cloudmin_replica());
+}
+
 # list_replica_servers()
 # Returns the list of system objects to replicate to
 sub list_replica_servers

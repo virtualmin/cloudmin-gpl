@@ -4,6 +4,7 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'disk_err'});
+&error_if_cloudmin_replica();
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &check_server_status($server, 0, 1);	# In case state has changed

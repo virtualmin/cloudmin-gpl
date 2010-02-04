@@ -8,6 +8,7 @@ require './server-manager-lib.pl';
 	     $in{'silence'} ? $text{'dalerts_err2'} :
 	     $in{'unsilence'} ? $text{'dalerts_err3'} :
 				$text{'dalerts_err4'});
+&error_if_cloudmin_replica();
 @d = split(/\0/, $in{'d'});
 @d || &error($text{'dalerts_enone'});
 @alerts = grep { $_ } map { &get_alert($_) } @d;

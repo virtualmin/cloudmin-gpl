@@ -2,6 +2,7 @@
 # Update the default search file with current settings
 
 require './server-manager-lib.pl';
+&error_if_cloudmin_replica();
 &ReadParse();
 if ($in{'in'}) {
 	$ENV{'QUERY_STRING'} = $in{'in'};

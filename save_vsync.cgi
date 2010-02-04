@@ -4,6 +4,7 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'vsync_err'});
+&error_if_cloudmin_replica();
 &can_action_error(undef, "domains");
 
 if (!$in{'new'}) {

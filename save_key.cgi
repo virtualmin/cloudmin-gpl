@@ -9,6 +9,7 @@ if (!$in{'new'}) {
 	$key || &error($text{'key_egone'});
 	}
 &error_setup($text{'key_err'});
+&error_if_cloudmin_replica();
 
 if ($in{'delete'}) {
 	# Remove this SSH key

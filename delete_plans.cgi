@@ -3,6 +3,7 @@
 
 require './server-manager-lib.pl';
 &error_setup($text{'dplan_err'});
+&error_if_cloudmin_replica();
 &can_action_error(undef, "global");
 &ReadParse();
 @plans = &list_plans();
