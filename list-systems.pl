@@ -384,13 +384,13 @@ if ($multi) {
 				}
 			if ($info->{'mem'}) {
 				print "    Real memory: ",
-				      &nice_size($info->{'mem'}->[0]),"\n";
+				      &nice_size($info->{'mem'}->[0]*1024),"\n";
 				print "    Real memory free: ",
-				      &nice_size($info->{'mem'}->[1]),"\n";
+				      &nice_size($info->{'mem'}->[1]*1024),"\n";
 				print "    Virtual memory: ",
-				      &nice_size($info->{'mem'}->[2]),"\n";
+				      &nice_size($info->{'mem'}->[2]*1024),"\n";
 				print "    Virtual memory free: ",
-				      &nice_size($info->{'mem'}->[3]),"\n";
+				      &nice_size($info->{'mem'}->[3]*1024),"\n";
 				}
 			if ($info->{'disk_total'}) {
 				print "    Disk space: ",

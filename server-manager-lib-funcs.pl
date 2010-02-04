@@ -2505,14 +2505,14 @@ $rv = 1;
 DONECHECK:
 my $rfunc = "type_".$server->{'manager'}."_post_refresh";
 if (defined(&$rfunc)) {
-	&$rfunc($server, $regen);
+	&$rfunc($server, $regen, $info);
 	}
 
 # Call any host-type-specific post-refresh function
 foreach my $p (&is_parent_server($server)) {
 	my $rfunc = "type_".$p."_post_host_refresh";
 	if (defined(&$rfunc)) {
-		&$rfunc($server, $regen);
+		&$rfunc($server, $regen, $info);
 		}
 	}
 
@@ -6400,6 +6400,8 @@ my ($vhost, $manager) = @_;
 my $vinfo = &get_server_collected($vhost);
 return "" if (!can_action(undef, "global"));
 my @rv;
+
+# Get free disk, either from host LVM volume group or actual disk space
 if ($manager && $vhost->{$manager.'_vg_free'}) {
 	push(@rv, &text('create_hostdisk',
 			&nice_size($vhost->{$manager.'_vg_free'})));
@@ -6407,7 +6409,13 @@ if ($manager && $vhost->{$manager.'_vg_free'}) {
 elsif ($vinfo && $vinfo->{'disk_free'}) {
 	push(@rv, &text('create_hostdisk', &nice_size($vinfo->{'disk_free'})));
 	}
-if ($vinfo && $vinfo->{'mem'}) {
+
+# Get free memory, possibly taking actual host memory into account
+if ($manager && $vhost->{$manager.'_mem_free'}) {
+	push(@rv, &text('create_hostmem',
+			&nice_size($vhost->{$manager.'_mem_free'})));
+	}
+elsif ($vinfo && $vinfo->{'mem'}) {
 	push(@rv, &text('create_hostmem',
 			&nice_size($vinfo->{'mem'}->[1]*1024)));
 	}
@@ -6432,7 +6440,15 @@ elsif ($vinfo && $vinfo->{'disk_free'}) {
 	# From collected info
 	$diskfree = $vinfo->{'disk_free'};
 	}
-$memfree = $vinfo->{'mem'}->[1]*1024;
+
+if ($vhost->{$manager.'_mem_free'}) {
+	# From Xen host memory
+	$memfree = $vhost->{$manager.'_mem_free'};
+	}
+else {
+	# From collected info
+	$memfree = $vinfo->{'mem'}->[1]*1024;
+	}
 if ($vhost->{'floor_mem_down'}) {
 	# Take away RAM assigned to down systems
 	foreach my $s (&list_managed_servers()) {
@@ -7136,21 +7152,28 @@ sub find_host_server
 my ($server, $type, $mem, $disk) = @_;
 my @vhosts = &list_available_host_servers($type, $mem, $disk);
 return undef if (!@vhosts);
-return &find_host_server_from_vhosts($server, \@vhosts, $access{'hostmode'});
+return &find_host_server_from_vhosts($server, \@vhosts, $access{'hostmode'},
+				     $type);
 }
 
-# find_host_server_from_vhosts(&server, &vhosts, host-allocation-mode)
+# find_host_server_from_vhosts(&server, &vhosts, host-allocation-mode,
+# 			       host-type)
 # Finds the best host system from a list
 sub find_host_server_from_vhosts
 {
-my ($server, $vhosts, $hostmode) = @_;
+my ($server, $vhosts, $hostmode, $type) = @_;
 my @vhosts = @$vhosts;
 if ($hostmode eq 'mem') {
 	# Sort by free memory, get best
 	my %memmap;
 	foreach my $vhost (@vhosts) {
-		my $info = &get_server_collected($vhost);
-		if ($info->{'mem'}) {
+		if ($vhost->{$type.'_mem_free'}) {
+			# Special case for Xen hosts where free memory may
+			# not match the 'free' command
+			$memmap{$vhost->{'id'}} = $vhost->{$type.'_mem_free'};
+			}
+		else {
+			my $info = &get_server_collected($vhost);
 			$memmap{$vhost->{'id'}} = $info->{'mem'}->[1];
 			}
 		}
@@ -7161,9 +7184,9 @@ elsif ($hostmode eq 'disk') {
 	# Sort by free disk
 	my %diskmap;
 	foreach my $vhost (@vhosts) {
-		if ($vhost->{'xen_vg_free'}) {
-			# Special case for Xen on LVM
-			$diskmap{$vhost->{'id'}} = $vhost->{'xen_vg_free'};
+		if ($vhost->{$type.'_vg_free'}) {
+			# Special case for Xen or KVM on LVM
+			$diskmap{$vhost->{'id'}} = $vhost->{$type.'_vg_free'};
 			}
 		else {
 			my $info = &get_server_collected($vhost);
