@@ -14,3 +14,14 @@ if (@ARGV) {
 	}
 &parallel_check_server_status(\@servers, 0, 1);
 &evaluate_all_alerts(\@servers);
+if (&get_replication_mode() == 2) {
+	# Replicate changes if enabled
+	if (@ARGV) {
+		foreach $s (grep { $_->{'id'} ne '0' } @servers) {
+			&replicate_host_to_all_servers($s, 0);
+			}
+		}
+	else {
+		&replicate_to_servers(0);
+		}
+	}

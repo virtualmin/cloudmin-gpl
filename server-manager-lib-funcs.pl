@@ -153,6 +153,20 @@ else {
 return wantarray ? @rv : $rv[0];
 }
 
+# list_managed_server_files(&server)
+# Returns a list of files associated with some server
+sub list_managed_server_files
+{
+my ($server) = @_;
+my @rv = ( $server->{'file'},
+	   $server_collected_dir.'/'.$server->{'id'},
+	   $server_domains_dir.'/'.$server->{'id'},
+	   $usage_data_dir.'/'.$server->{'id'},
+	   # glob($historic_info_dir.'/'.$server->{'id'}.'/*'), # Too large
+	 );
+return grep { -r $_ } @rv;
+}
+
 # complete_managed_server(&server)
 # Fill in missing details for some virtual system
 sub complete_managed_server

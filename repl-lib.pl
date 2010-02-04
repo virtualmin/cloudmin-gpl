@@ -288,11 +288,21 @@ my ($server, $changed) = @_;
 my $rv = { 'replica' => $server,
 	   'ok' => 0 };
 my $rconfig = $server->{'webmin_config_directory'} || "/etc/webmin";
-
-# XXX to what directory though?
-# XXX copy main file
-# XXX copy bandwidth / etc too
-
+if ($changed->{'id'} eq '0') {
+	$rv->{'err'} = 'This system cannot be replicated';
+	return $rv;
+	}
+foreach my $lfile (&list_managed_server_files($changed)) {
+	my $relfile = $lfile;
+	$relfile =~ s/^\Q$config_directory\E\///;
+	my $rfile = $relfile =~ /^\// ? $relfile : $rconfig.'/'.$relfile;
+	my $err = &put_file_to_server($server, $lfile, $rfile);
+	if ($err) {
+		$rv->{'err'} = &text('repl_copyfailed',
+				     $lfile, $err);
+		return $rv;
+		}
+	}
 $rv->{'ok'} = 1;
 return $rv;
 }
@@ -307,6 +317,8 @@ my (@files, @dirs);
 
 # Build list of dirs to recurse into
 push(@dirs, $ssh_keys_dir, $server_domains_dir, $server_collected_dir,
+	    # $historic_info_dir,	# Too large to copy
+	    $usage_data_dir,
 	    $bandwidth_dir, $shell_previous_dir, $owner_plans_dir,
 	    $scheduled_backups_dir, $vsyncs_dir, $image_storages_dir,
 	    $alerts_dir);
@@ -334,7 +346,9 @@ foreach my $s (&list_managed_servers()) {
 
 # Remove files for 'this' system
 @files = grep { $_ ne $server_collected_dir."/0" &&
-		$_ ne $server_domains_dir."/0" } @files;
+		$_ ne $server_domains_dir."/0" &&
+		$_ ne $usage_data_dir."/0" &&
+		$_ !~ /\Q$historic_info_dir\E\/0\// } @files;
 
 # Stat each file to get the time and size
 my @rv;
