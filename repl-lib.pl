@@ -273,6 +273,27 @@ foreach my $r (@rfiles) {
 		}
 	}
 
+# Create missing system owners on the remote system
+my @rowners = &remote_foreign_call($server, "server-manager",
+				   "list_system_owners");
+my @lowners = &list_system_owners();
+foreach my $lowner (@lowners) {
+	my ($rowner) = grep { $_->{'name'} eq $lowner->{'name'} } @rowners;
+	if (!$rowner || &hash_ref_differences($lowner, $rowner)) {
+		&remote_foreign_call($server, "server-manager",
+			"save_system_owner", $lowner, $rowner);
+		}
+	}
+
+# Delete extra owners
+foreach my $rowner (@rowners) {
+	my ($lowner) = grep { $_->{'name'} eq $rowner->{'name'} } @lowners;
+	if (!$lowner) {
+		&remote_foreign_call($server, "server-manager",
+			"delete_system_owner", $rowner);
+		}
+	}
+
 # Call post-replication function to setup cron jobs / etc
 my $this = &get_this_managed_server();
 if ((scalar(@copied) || scalar(@deleted)) && !$dryrun) {

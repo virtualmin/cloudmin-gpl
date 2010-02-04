@@ -381,18 +381,9 @@ else {
 		# Check if actually changed, don't write out to disk if not.
 		# This prevents un-necessary replication.
 		my $oldserver = &servers::get_server($server->{'id'});
-		my @oldkeys = keys %$oldserver;
-		my @keys = keys %$server;
-		if (scalar(@keys) == scalar(@oldkeys)) {
-			$changed = 0;
-			foreach my $k (@keys) {
-				if ($server->{$k} ne $oldserver->{$k} &&
-				    $k ne 'statustime') {
-					$changed = 1;
-					last;
-					}
-				}
-			}
+		my @diffs = grep { $_ ne 'statustime' }
+				&hash_ref_differences($server, $oldserver);
+		$changed = scalar(@diffs);
 		}
 	if ($changed) {
 		&servers::save_server($server);
@@ -8284,6 +8275,46 @@ foreach my $l (@$rv) {
 			      (sort { $a cmp $b } keys %$l)),"\n");
 	}
 &close_tempfile(POOLS);
+}
+
+# hash_ref_differences(&h1, &h2)
+# Returns the list of keys that differ between two hash refs
+sub hash_ref_differences
+{
+my ($h1, $h2) = @_;
+my @k1 = keys %$h1;
+my @k2 = keys %$h2;
+my @rv;
+foreach my $k (@k1) {
+	if (!exists($h2->{$k})) {
+		push(@rv, $k);
+		}
+	else {
+		my $v1 = $h1->{$k};
+		my $v2 = $h2->{$k};
+		if (ref($v1) ne ref($v2)) {
+			push(@rv, $k);
+			}
+		elsif (ref($v1) eq 'ARRAY') {
+			my $a1 = join("\0", @$v1);
+			my $a2 = join("\0", @$v2);
+			push(@rv, $k) if ($a1 ne $a2);
+			}
+		elsif (ref($v1) eq 'HASH') {
+			push(@rv, map { $k.".".$_ }
+				&hash_ref_differences($v1, $v2));
+			}
+		else {
+			push(@rv, $k) if ($v1 ne $v2);
+			}
+		}
+	}
+foreach my $k (@k2) {
+	if (!exists($h1->{$k})) {
+		push(@rv, $k);
+		}
+	}
+return @rv;
 }
 
 # obtain_lock_server(&server|&servers, [readonly])
