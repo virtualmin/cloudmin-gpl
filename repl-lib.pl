@@ -322,6 +322,7 @@ if ($changed->{'id'} eq '0') {
 	return $rv;
 	}
 foreach my $lfile (&list_managed_server_files($changed)) {
+	next if ($lfile =~ /\d+\-\d+$/);	# Exclude old history
 	my $relfile = $lfile;
 	$relfile =~ s/^\Q$config_directory\E\///;
 	my $rfile = $relfile =~ /^\// ? $relfile : $rconfig.'/'.$relfile;
@@ -346,7 +347,7 @@ my (@files, @dirs);
 
 # Build list of dirs to recurse into
 push(@dirs, $ssh_keys_dir, $server_domains_dir, $server_collected_dir,
-	    # $historic_info_dir,	# Too large to copy
+	    $historic_info_dir,
 	    $usage_data_dir,
 	    $bandwidth_dir, $shell_previous_dir, $owner_plans_dir,
 	    $scheduled_backups_dir, $vsyncs_dir, $image_storages_dir,

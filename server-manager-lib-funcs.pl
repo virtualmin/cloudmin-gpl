@@ -162,7 +162,7 @@ my @rv = ( $server->{'file'},
 	   $server_collected_dir.'/'.$server->{'id'},
 	   $server_domains_dir.'/'.$server->{'id'},
 	   $usage_data_dir.'/'.$server->{'id'},
-	   # glob($historic_info_dir.'/'.$server->{'id'}.'/*'), # Too large
+	   glob($historic_info_dir.'/'.$server->{'id'}.'/*'),
 	 );
 return grep { -r $_ } @rv;
 }

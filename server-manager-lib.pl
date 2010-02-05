@@ -40,6 +40,7 @@ $server_collected_dir = "$module_config_directory/coll";
 $this_server_status = "$module_config_directory/this";
 
 $historic_info_dir = "$module_config_directory/history";
+$historic_rotation_time = 7*24*60*60;
 
 $check_status_cmd = "$module_config_directory/status.pl";
 $check_licence_cmd = "$module_config_directory/licence.pl";
@@ -138,7 +139,7 @@ $virtualmin_progress_file = "$module_config_directory/progress-licences";
 $virtualmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-virtualmin";
 $virtualmin_webmin_apt_package_key = "http://software.virtualmin.com/lib/RPM-GPG-KEY-webmin";
 
-$default_search_file = "$module_config_directory/defaultsearch.$remote_user";
+$default_search_file = "$module_config_directory/defaultsearch";
 
 @newfeatures_dirs = ( "$module_root_directory/newfeatures-all" );
 $newfeatures_seen_dir = "$module_config_directory/seenfeatures";

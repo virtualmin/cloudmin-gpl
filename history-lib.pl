@@ -116,6 +116,18 @@ foreach my $stat (@stats) {
         print HISTORY $time," ",$stat->[1],"\n";
         close(HISTORY);
 	}
+
+# If current file is now too old, rotate it
+foreach my $stat (@stats) {
+	my $statfile = "$historic_info_dir/$server->{'id'}/$stat->[0]";
+	open(HISTORY, $statfile);
+	my $first = <HISTORY>;
+	close(HISTORY);
+	my ($sfirsttime, undef) = split(" ", $first);
+	if ($time - $sfirsttime > $historic_rotation_time) {
+		rename($statfile, $statfile.".".$sfirsttime."-".$time);
+		}
+	}
 }
 
 # list_historic_collected_info(stat, &server, [start], [end])
@@ -125,19 +137,45 @@ sub list_historic_collected_info
 {
 my ($stat, $server, $start, $end) = @_;
 my @rv;
-open(HISTORY, "$historic_info_dir/$server->{'id'}/$stat");
-while(<HISTORY>) {
-        chop;
-        my ($time, $value) = split(" ", $_);
-        if ((!defined($start) || $time >= $start) &&
-            (!defined($end) || $time <= $end)) {
-                push(@rv, [ $time, $value ]);
-                }
-        if (defined($end) && $time > $end) {
-                last;   # Past the end point
-                }
-        }
-close(HISTORY);
+my $serverdir = "$historic_info_dir/$server->{'id'}";
+opendir(SERVERDIR, $serverdir);
+my @files = grep { $_ eq $stat ||
+		   substr($_, 0, length($stat)+1) eq $stat."." }
+		 readdir(SERVERDIR);
+closedir(SERVERDIR);
+my $now = time();
+@files = sort { my $ta = $a =~ /\-(\d+)$/ ? $1 : $now;
+	        my $tb = $b  =~ /\-(\d+)$/ ? $1 : $now;
+	 	$ta <=> $tb } @files;
+foreach my $f (@files) {
+	my $readfile = 0;
+	if ($f eq $stat) {
+		# Always read latest file
+		$readfile = 1;
+		}
+	elsif ($f =~ /^\Q$stat\E\.(\d+)\-(\d+)$/) {
+		# Maybe read this file, if in range
+		if ($1 >= $start && ($1 <= $end || !defined($end)) ||
+		    $2 >= $start && ($2 <= $end || !defined($end))) {
+			$readfile = 1;
+			}
+		}
+	if ($readfile) {
+		open(HISTORY, "$serverdir/$f");
+		while(<HISTORY>) {
+			chop;
+			my ($time, $value) = split(" ", $_);
+			if ((!defined($start) || $time >= $start) &&
+			    (!defined($end) || $time <= $end)) {
+				push(@rv, [ $time, $value ]);
+				}
+			if (defined($end) && $time > $end) {
+				last;   # Past the end point
+				}
+			}
+		close(HISTORY);
+		}
+	}
 return @rv;
 }
 
@@ -149,7 +187,22 @@ sub get_historic_first_last
 my ($stat, $servers) = @_;
 my ($firsttime, $lasttime);
 foreach my $s (@$servers) {
-	open(HISTORY, "$historic_info_dir/$s->{'id'}/$stat") || next;
+	# Check rotated files, which have the start and end in their filenames
+	my $serverdir = "$historic_info_dir/$s->{'id'}";
+	opendir(SERVERDIR, $serverdir);
+	foreach my $f (readdir(SERVERDIR)) {
+		if ($f =~ /^\Q$stat\E\.(\d+)\-(\d+)$/) {
+			my ($sfirsttime, $slasttime) = ($1, $2);
+			$firsttime = $sfirsttime if (!defined($firsttime) ||
+						     $sfirsttime < $firsttime);
+			$lasttime = $slasttime if (!defined($lasttime) ||
+						   $slasttime > $lasttime);
+			}
+		}
+	closedir(SERVERDIr);
+
+	# Check the latest file
+	open(HISTORY, "$serverdir/$stat") || next;
 	my $first = <HISTORY>;
 	if (!$first) {
 		close(HISTORY);
