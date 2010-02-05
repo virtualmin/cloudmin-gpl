@@ -374,6 +374,11 @@ foreach my $s (&list_managed_servers()) {
 		}
 	}
 
+# Add image meta-files
+foreach my $i (&list_server_images()) {
+	push(@files, $i->{'file'});
+	}
+
 # Remove files for 'this' system
 @files = grep { $_ ne $server_collected_dir."/0" &&
 		$_ ne $server_domains_dir."/0" &&

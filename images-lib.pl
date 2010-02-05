@@ -14,6 +14,7 @@ foreach my $f (readdir(DIR)) {
 	next if ($f !~ /^(\S+)\.img$/);
 	my %img;
 	&read_file_cached("$server_images_dir/$f", \%img);
+	$img{'file'} = "$server_images_dir/$f";
 	$img{'id'} = $1;
 	next if ($type && $img{'manager'} ne $type);	# Don't want this type
 	next if (!$server_management_types{$img{'manager'}});	# Not supported
@@ -410,9 +411,10 @@ sub save_server_image
 {
 my ($image) = @_;
 &make_dir($server_images_dir, 0700);
-&lock_file("$server_images_dir/$image->{'id'}.img");
-&write_file("$server_images_dir/$image->{'id'}.img", $image);
-&unlock_file("$server_images_dir/$image->{'id'}.img");
+$image->{'file'} = "$server_images_dir/$image->{'id'}.img";
+&lock_file($image->{'file'});
+&write_file($image->{'file'}, $image);
+&unlock_file($image->{'file'});
 }
 
 # delete_server_image(&image)
