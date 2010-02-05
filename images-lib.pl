@@ -23,25 +23,28 @@ foreach my $f (readdir(DIR)) {
 		# Assume stored on master
 		$img{'dest'} = "master:".$server_images_dir;
 		}
-	my $dest = &parse_backup_destination($img{'dest'});
-	if ($dest->{'mode'} == 0) {
-		# Only compute size if local
-		foreach my $fl (split(/\s+/, $img{'files'})) {
-			my @st = stat("$server_images_dir/$fl");
-			if (@st) {
-				$size += $st[7];
-				}
-			else {
-				$img{'partial'} = 1;
-				my ($tmp) = glob(
-					"$server_images_dir/$fl.webmintmp.*");
-				if ($tmp) {
-					my @tst = stat($tmp);
-					$partialsize += $tst[7];
+	foreach my $deststr (split(/\s+/, $img{'dest'})) {
+		my $dest = &parse_backup_destination($deststr);
+		if ($dest->{'mode'} == 0) {
+			# Only compute size if local
+			foreach my $fl (split(/\s+/, $img{'files'})) {
+				my @st = stat("$dest->{'path'}/$fl");
+				if (@st) {
+					$size += $st[7];
+					}
+				else {
+					$img{'partial'} = 1;
+					my ($tmp) = glob(
+						"$server_images_dir/$fl.webmintmp.*");
+					if ($tmp) {
+						my @tst = stat($tmp);
+						$partialsize += $tst[7];
+						}
 					}
 				}
+			$img{'size'} = $size;
+			last;
 			}
-		$img{'size'} = $size;
 		}
 	$img{'partialsize'} = $partialsize;
 	$img{'longdesc'} = $img{'desc'};
