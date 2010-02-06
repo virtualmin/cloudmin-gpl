@@ -3283,9 +3283,12 @@ foreach my $d (@$disks) {
 		$err ||= $last_remote_error;
 		$err && return &text('smove_errlv', $err);
 
-		# Transfer over the data, using dd
+		# Transfer over the data, using dd. The size for
+		# checksum purposes is rounded down to 1MB to account
+		# for differences in LVM block sizes
 		my $err = &transfer_file_between_servers($vhost, $dest,
-			$d->{'real'}, $newreal, 1, 1);
+			$d->{'real'}, $newreal, 1, 1,
+			int($d->{'size'}/(1024*1024))*1024*1024);
 		if ($err) {
 			return &text('smove_errdisk', $err);
 			}
