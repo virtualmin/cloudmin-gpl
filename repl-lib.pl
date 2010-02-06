@@ -309,7 +309,7 @@ foreach my $rowner (@rowners) {
 
 # Call post-replication function to setup cron jobs / etc
 my $this = &get_this_managed_server();
-if ((scalar(@copied) || scalar(@deleted)) && !$dryrun) {
+if (!$dryrun) {
 	&remote_foreign_call($server, "server-manager", "replication_done",
 			     $this->{'host'}, \@copied, \@deleted);
 	}
@@ -390,9 +390,18 @@ foreach my $s (&list_managed_servers()) {
 		}
 	}
 
-# Add image meta-files
+# Add image meta-files, and images stored on the cloudmin master
 foreach my $i (&list_server_images()) {
 	push(@files, $i->{'file'});
+	my @imgfiles = split(/\s+/, $img{'files'});
+	foreach my $deststr (split(/\s+/, $img{'dest'})) {
+		my $dest = &parse_backup_destination($deststr);
+		if ($dest->{'mode'} == 0) {
+			foreach my $fl (@imgfiles) {
+				#push(@files, "$dest->{'path'}/$fl");
+				}
+			}
+		}
 	}
 
 # Remove files for 'this' system
@@ -457,7 +466,7 @@ my ($master, $copied, $deleted) = @_;
 
 # Create or update cron jobs for backups
 my %backupids;
-foreach my $backup (&list_backups()) {
+foreach my $backup (&list_backups(1)) {
 	&save_backup_cron($backup);
 	if ($backup->{'enabled'}) {
 		$backupids{$backup->{'id'}} = $backup;

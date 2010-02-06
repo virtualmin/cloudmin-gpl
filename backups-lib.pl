@@ -1,9 +1,10 @@
 # Functions for virtual system backups
 
-# list_backups()
+# list_backups([keep-enabled-flag])
 # Returns a list of backups configured by root or system owners
 sub list_backups
 {
+my ($keepenabled) = @_;
 opendir(BACKUPS, $scheduled_backups_dir);
 foreach my $b (readdir(BACKUPS)) {
 	if ($b ne "." && $b ne "..") {
@@ -11,23 +12,28 @@ foreach my $b (readdir(BACKUPS)) {
 		&read_file("$scheduled_backups_dir/$b", \%backup);
 		$backup{'id'} = $b;
 		$backup{'file'} = "$scheduled_backups_dir/$b";
-		delete($backup{'enabled'});	# Worked out below
+		if (!$keepenabled) {
+			delete($backup{'enabled'});	# Worked out below
+			}
 		push(@rv, \%backup);
 		}
 	}
 closedir(BACKUPS);
 
-# Merge in cron jobs to see which are enabled
-&foreign_require("cron", "cron-lib.pl");
-my @jobs = &cron::list_cron_jobs();
-foreach my $j (@jobs) {
-	if ($j->{'user'} eq 'root' &&
-	    $j->{'command'} =~ /^\Q$backup_cron_cmd\E(\s+\-\-id\s+(\d+))?/) {
-		my $id = $2 || 1;
-		my ($backup) = grep { $_->{'id'} eq $id } @rv;
-		if ($backup) {
-			$backup->{'enabled'} = 1;
-			&copy_cron_sched_keys($j, $backup);
+if (!$keepenabled) {
+	# Merge in cron jobs to see which are enabled
+	&foreign_require("cron", "cron-lib.pl");
+	my @jobs = &cron::list_cron_jobs();
+	foreach my $j (@jobs) {
+		if ($j->{'user'} eq 'root' &&
+		    $j->{'command'} =~
+		      /^\Q$backup_cron_cmd\E(\s+\-\-id\s+(\d+))?/) {
+			my $id = $2 || 1;
+			my ($backup) = grep { $_->{'id'} eq $id } @rv;
+			if ($backup) {
+				$backup->{'enabled'} = 1;
+				&copy_cron_sched_keys($j, $backup);
+				}
 			}
 		}
 	}
