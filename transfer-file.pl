@@ -15,6 +15,10 @@ To double-check that the file was transferred correctly, use the
 C<--checksum> flag. This will trigger an md5 checksum on the source and
 destination files.
 
+If the file being copied is actually a device (such as a partition or LVM
+logical volume), use the C<--device> flag to have Cloudmin transfer it in the
+correct way.
+
 =head1 Example usage
 
   cloudmin transfer-file --source xencentos.home --dest xensendmail.home --file /etc/hosts --destfile /tmp/hosts
@@ -53,8 +57,14 @@ while(@ARGV > 0) {
 	elsif ($a eq "--destfile") {
 		$dest = shift(@ARGV);
 		}
+	elsif ($a eq "--device-file") {
+		$device = 1;
+		}
 	elsif ($a eq "--checksum") {
 		$checksum = 1;
+		}
+	elsif ($a eq "--checksum-size") {
+		$checksumsize = shift(@ARGV);
 		}
 	else {
 		&usage();
@@ -76,7 +86,7 @@ $destserver || &usage("No system named $desthost exists");
 # Do the transfer
 print "Copying $src on $srcserver->{'host'} to $dest on $destserver->{'host'} ..\n";
 $err = &transfer_file_between_servers($srcserver, $destserver, $src, $dest,
-				      0, $checksum);
+				      $device, $checksum, $checksumsize);
 if ($err) {
 	print ".. copy failed : $err\n";
 	exit(1);
@@ -95,7 +105,8 @@ print "cloudmin transfer-file --source hostname\n";
 print "                       --dest hostname\n";
 print "                       --file path\n";
 print "                      [--destfile path]\n";
-print "                      [--checksum]\n";
+print "                      [--device-file]\n";
+print "                      [--checksum [--checksum-size bytes]]\n";
 exit(1);
 }
 

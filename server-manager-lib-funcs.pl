@@ -1784,9 +1784,9 @@ if (defined(&$dfunc)) {
 # Run md5sum via SSH
 my $cmd;
 if ($size) {
-	my $count = int($size / 1024);
+	my $count = int($size / 32768);
 	$cmd = "dd if=".quotemeta($file).
-	       " bs=1024 count=$blocks 2>/dev/null | mdsum -";
+	       " bs=32768 count=$count 2>/dev/null | md5sum -";
 	}
 else {
 	$cmd = "md5sum ".quotemeta($file);
