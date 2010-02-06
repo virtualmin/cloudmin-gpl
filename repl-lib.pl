@@ -452,7 +452,27 @@ sub replication_done
 {
 my ($master, $copied, $deleted) = @_;
 
-# Update cron jobs
+# Flush any Webmin file caches, as files may have been over-written
+&flush_webmin_caches();
+
+# Create or update cron jobs for backups
+my %backupids;
+foreach my $backup (&list_backups()) {
+	&save_backup_cron($backup);
+	if ($backup->{'enabled'}) {
+		$backupids{$backup->{'id'}} = $backup;
+		}
+	}
+
+# Delete any backup.pl cron jobs that are no longer valid
+&foreign_require("cron", "cron-lib.pl");
+foreach my $job (&find_server_manager_cron_job($backup_cron_cmd)) {
+	if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$backupids{$1}) {
+		&cron::delete_cron_job($job);
+		}
+	}
+
+# Create or update cron jobs for vsyncs
 # XXX
 
 &save_replication_master($master);

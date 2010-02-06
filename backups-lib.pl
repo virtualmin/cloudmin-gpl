@@ -81,8 +81,15 @@ $backup->{'file'} = "$scheduled_backups_dir/$backup->{'id'}";
 &lock_file($backup->{'file'});
 &write_file($backup->{'file'}, $backup);
 &unlock_file($backup->{'file'});
+&save_backup_cron($backup, $wasnew);
+}
 
-# Update or delete cron job
+# save_backup_cron(&backup, was-new)
+# Create, update or delete the cron job for a backup, based on whether it is
+# enabled or not.
+sub save_backup_cron
+{
+my ($backup, $wasnew) = @_;
 &foreign_require("cron", "cron-lib.pl");
 my $cmd = $backup_cron_cmd." --id ".$backup->{'id'};
 my $job;
