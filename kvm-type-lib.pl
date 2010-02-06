@@ -2114,16 +2114,16 @@ else {
 	}
 }
 
-# type_kvm_checksum_file(&server, remotefile, noquote)
+# type_kvm_checksum_file(&server, remotefile, [data-size])
 # If the filesystem for this KVM instance is locally mounted, checksum the file
 # directly from there
 sub type_kvm_checksum_file
 {
-my ($server, $file) = @_;
+my ($server, $file, $size) = @_;
 if ($server->{'kvm_mount'}) {
 	my $vhost = &type_kvm_parent($server);
 	return &checksum_file_on_server($vhost,
-			      $server->{'kvm_mount'}.$file);
+			      $server->{'kvm_mount'}.$file, $size);
 	}
 else {
 	return ( 'FALLBACK' );

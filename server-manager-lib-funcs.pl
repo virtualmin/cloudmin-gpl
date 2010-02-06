@@ -1163,18 +1163,19 @@ return $err;
 
 # transfer_file_between_servers(&source-server, &dest-server,
 #				source-file, dest-file,
-#				[device-file?], [checksum?])
+#				[device-file?], [checksum?], [checksum-size])
 # Copy a file from one system to another, directly if possible. Returns undef
 # if OK, or an error message on failure.
 sub transfer_file_between_servers
 {
-my ($srcserver, $destserver, $src, $dest, $device, $checksum) = @_;
+my ($srcserver, $destserver, $src, $dest, $device, $checksum, $checksize) = @_;
 my $rv;
 my ($srccs_ok, $srccs);
 
 # Get checksum on source system, if possible
 if ($checksum) {
-	($srccs_ok, $srccs) = &checksum_file_on_server($srcserver, $src);
+	($srccs_ok, $srccs) = &checksum_file_on_server($srcserver, $src,
+						       $checksize);
 	}
 
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
@@ -1314,7 +1315,8 @@ else {
 
 # Checksum on target
 if (!$rv && $srccs_ok && &has_command_on_server($destserver, "md5sum")) {
-	my ($destcs_ok, $destcs) = &checksum_file_on_server($destserver, $dest);
+	my ($destcs_ok, $destcs) = &checksum_file_on_server($destserver, $dest,
+							    $checksize);
 	if (!$destcs_ok) {
 		$rv = "Failed to checksum file on destination system : $destcs";
 		}
@@ -1764,12 +1766,13 @@ $out =~ s/\r|\n//g;
 return $out;
 }
 
-# checksum_file_on_server(&server, file)
+# checksum_file_on_server(&server, file, [data-size])
 # Performs an MD5 checksum of a file on some system. Returns 1 and the checksum
-# on success, or 0 and an error message on failure.
+# on success, or 0 and an error message on failure. If a size is given, only
+# that many bytes are checksummed.
 sub checksum_file_on_server
 {
-my ($server, $file) = @_;
+my ($server, $file, $size) = @_;
 my $dfunc = "type_".$server->{'manager'}."_checksum_file";
 if (defined(&$dfunc)) {
 	# Use type-specific function call
@@ -1779,8 +1782,16 @@ if (defined(&$dfunc)) {
 	}
 
 # Run md5sum via SSH
-my ($out, $ex, $err) = &execute_command_on_server($server,
-			"md5sum ".quotemeta($file));
+my $cmd;
+if ($size) {
+	my $count = int($size / 1024);
+	$cmd = "dd if=".quotemeta($file).
+	       " bs=1024 count=$blocks 2>/dev/null | mdsum -";
+	}
+else {
+	$cmd = "md5sum ".quotemeta($file);
+	}
+my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 if ($err) {
 	return (0, $err);
 	}
