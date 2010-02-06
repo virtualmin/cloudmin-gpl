@@ -115,16 +115,29 @@ my @replicas = &list_replica_servers();
 if (!@replicas) {
 	return ( );
 	}
-elsif (@replicas == 1) {
+
+# Test replication lock
+if (&test_lock($repl_lock_file)) {
+	return map { { 'ok' => 0,
+		       'err' => $text{'repl_locked'},
+		       'replica' => $_ } } @replicas;
+	}
+&lock_file($repl_lock_file);
+
+my @rv;
+if (@replicas == 1) {
 	# Just do in this thread
-	return ( &replicate_to_one_server($replicas[0], $dryrun) );
+	@rv = ( &replicate_to_one_server($replicas[0], $dryrun) );
 	}
 else {
 	# Do in parallel
-	return map { $_->[0] }
+	@rv = map { $_->[0] }
 		&parallel_server_function(\@replica,
 			\&replicate_to_one_server, $dryrun);
 	}
+
+&unlock_file($repl_lock_file);
+return @rv;
 }
 
 # replicate_host_to_all_servers(&server, dry-run)
@@ -347,11 +360,10 @@ my (@files, @dirs);
 
 # Build list of dirs to recurse into
 push(@dirs, $ssh_keys_dir, $server_domains_dir, $server_collected_dir,
-	    $historic_info_dir,
-	    $usage_data_dir,
+	    $historic_info_dir, $newfeatures_seen_dir, $usage_data_dir,
 	    $bandwidth_dir, $shell_previous_dir, $owner_plans_dir,
 	    $scheduled_backups_dir, $vsyncs_dir, $image_storages_dir,
-	    $alerts_dir);
+	    $alerts_dir, $backup_log_dir);
 if ($ec2_accounts_dir) {
         push(@dirs, $ec2_accounts_dir);
         }
@@ -362,8 +374,12 @@ foreach my $dir (@dirs) {
 	}
 
 # Add other config files
-push(@files, $virtualmin_licences_file, $locations_file, $pools_file,
-	     $module_config_file, $default_search_file, $repl_servers_file);
+push(@files, $virtualmin_licences_file, $serial_cache_file,
+	     $virtualmin_progress_file, $install_times_file,
+	     $locations_file, $pools_file,
+	     $module_config_file, $default_search_file, $repl_servers_file,
+	     $alert_status_file, $xen_cpu_seconds_file,
+	     $server_images_cache);
 
 # Add servers files
 my %filemap;

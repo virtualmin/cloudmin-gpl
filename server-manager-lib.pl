@@ -195,6 +195,7 @@ $repl_cron_cmd = "$module_config_directory/replicate.pl";
 $repl_master_file = "$module_config_directory/replication-master";
 $repl_mode_file = "$module_config_directory/replication-mode";
 $repl_servers_file = "$module_config_directory/replication-servers";
+$repl_lock_file = "$module_config_directory/replication-status";
 
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
