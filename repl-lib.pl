@@ -219,7 +219,7 @@ foreach my $r (@rfiles) {
 
 # For each local file that is newer, send it to the remote system
 my $rconfig = $server->{'webmin_config_directory'} || "/etc/webmin";
-my @copied;
+my @tocopy;
 my @servers;
 foreach my $l (@lfiles) {
 	my $r = $rfiles{$l->{'relfile'}};
@@ -250,17 +250,8 @@ foreach my $l (@lfiles) {
 			$made{$dir}++;
 			}
 
-		# Copy the file
-		if (!$dryrun) {
-			my $err = &put_file_to_server(
-				$server, $l->{'file'}, $rfile);
-			if ($err) {
-				$rv->{'err'} = &text('repl_copyfailed',
-						     $l->{'file'}, $err);
-				return $rv;
-				}
-			}
-		push(@copied, $l->{'file'});
+		# Add the file to the list to copy
+		push(@tocopy, [ $l->{'file'}, $rfile ]);
 		if ($l->{'server'}) {
 			my $copiedserver = &get_managed_server($l->{'server'});
 			if ($copiedserver) {
@@ -269,6 +260,17 @@ foreach my $l (@lfiles) {
 			}
 		}
 	}
+
+# Actually copy all the files
+if (!$dryrun && @tocopy) {
+	my $err = &replicate_multiple_files($server, \@tocopy);
+	if ($err) {
+		$rv->{'err'} = &text('repl_copyfailed',
+				     $lfile, $err);
+		return $rv;
+		}
+	}
+my @copied = map { $_->[0] } @tocopy;
 
 # For any remote files that don't exist locally, delete them
 my @deleted;
@@ -343,25 +345,52 @@ if ($changed->{'id'} eq '0') {
 	$rv->{'err'} = $text{'repl_ethis'};
 	return $rv;
 	}
+my @tocopy;
 foreach my $lfile (&list_managed_server_files($changed)) {
 	next if ($lfile =~ /\d+\-\d+$/);	# Exclude old history
 	my $relfile = $lfile;
 	$relfile =~ s/^\Q$config_directory\E\///;
 	my $rfile = $relfile =~ /^\// ? $relfile : $rconfig.'/'.$relfile;
-	if (!$dryrun) {
-		my $err = &put_file_to_server($server, $lfile, $rfile);
-		if ($err) {
-			$rv->{'err'} = &text('repl_copyfailed',
-					     $lfile, $err);
-			return $rv;
-			}
-		}
-	push(@copied, $lfile);
+	push(@tocopy, [ $lfile, $rfile ]);
 	}
-$rv->{'copied'} = \@copied;
+if (!$dryrun && @tocopy) {
+	my $err = &replicate_multiple_files($server, \@tocopy);
+	if ($err) {
+		$rv->{'err'} = &text('repl_copyfailed',
+				     $lfile, $err);
+		return $rv;
+		}
+	}
+$rv->{'copied'} = [ map { $_->[0] } @tocopy ];
 $rv->{'deleted'} = [ ];
 $rv->{'ok'} = 1;
 return $rv;
+}
+
+# replicate_multiple_files(&server, &files)
+# Uploads multiple files to a Cloudmin replica, grouping them by directory
+# to allow multiple in one scp command
+sub replicate_multiple_files
+{
+my ($server, $files) = @_;
+
+# Classify by directory
+my %dirs;
+foreach my $f (@$files) {
+	my ($lfile, $rfile) = @$f;
+	my $rdir = $rfile;
+	$rdir =~ s/\/[^\/]+$//;
+	$dirs{$rdir} ||= [ ];
+	push(@{$dirs{$rdir}}, $f);
+	}
+
+# Issue scp commands
+foreach my $rdir (keys %dirs) {
+	my @files = map { $_->[0] } @{$dirs{$rdir}};
+	my $err = &put_multiple_files_to_server($server, \@files, $rdir);
+	return $err if ($err);
+	}
+return undef;
 }
 
 # get_last_modified_times()
