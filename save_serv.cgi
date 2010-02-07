@@ -40,6 +40,7 @@ if ($in{'shutdown'}) {
 				}
 			}
 		&release_lock_server($server);
+		&replicate_host_to_all_servers($server);
 		&webmin_log("shutdown", "server", $server->{'host'});
 		}
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
@@ -72,6 +73,7 @@ elsif ($in{'startup'}) {
 			}
 		}
 	&release_lock_server($server);
+	&replicate_host_to_all_servers($server);
 	&webmin_log("startup", "server", $server->{'host'});
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
@@ -129,6 +131,7 @@ elsif ($in{'reboot'}) {
 	&save_managed_server($server);
 	&release_lock_server($server);
 	if ($in{'confirm'}) {
+		&replicate_host_to_all_servers($server);
 		&webmin_log("reboot", "server", $server->{'host'});
 		}
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
@@ -251,6 +254,7 @@ elsif ($in{'installvirt'}) {
 		&check_server_status($server);
 		&save_managed_server($server);
 		print $text{'dcreate_statusok'},"<p>\n";
+		&replicate_host_to_all_servers($server);
 		&webmin_log("virt", "server", $server->{'host'});
 
 		if (defined(&theme_post_save_server)) {
@@ -289,6 +293,7 @@ elsif ($in{'installwebmin'}) {
 			}
 		}
 	&release_lock_server($server);
+	&replicate_host_to_all_servers($server);
 	&webmin_log("webmin", "server", $server->{'host'});
 
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
@@ -324,6 +329,7 @@ elsif ($in{'recheck'}) {
 		&theme_post_save_server($server);
 		}
 	&release_lock_server($server);
+	&replicate_host_to_all_servers($server);
 	&webmin_log("recheck", "server", $server->{'host'});
 
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
@@ -347,6 +353,7 @@ elsif ($in{'refresh'} || $in{'regen'}) {
 		&theme_post_save_server($server);
 		}
 	&release_lock_server($server);
+	&replicate_host_to_all_servers($server);
 	&webmin_log($in{'regen'} ? "regen" : "refresh",
 		    "server", $server->{'host'});
 
@@ -462,6 +469,7 @@ else {
 
 	&save_managed_server($server);
 	&release_lock_server($server);
+	&replicate_host_to_all_servers($server);
 	&webmin_log("modify", "server", $server->{'host'});
 	&redirect("index.cgi?refresh=$server->{'id'}");
 	}

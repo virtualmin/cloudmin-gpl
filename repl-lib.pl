@@ -151,13 +151,14 @@ if (!@replicas) {
 	}
 elsif (@replicas == 1) {
 	# Just do in this thread
-	return ( &replicate_host_to_one_server($replicas[0], $changed) );
+	return ( &replicate_host_to_one_server($replicas[0],
+			[ $changed, $dryrun ]) );
 	}
 else {
 	# Do in parallel
 	return map { $_->[0] } 
 		&parallel_server_function(\@replicas,
-			\&replicate_host_to_one_server, $changed);
+			\&replicate_host_to_one_server, [ $changed, $dryrun ]);
 	}
 }
 
@@ -322,16 +323,24 @@ $rv->{'ok'} = 1;
 return $rv;
 }
 
-# replicate_host_to_one_server(&server, &changed)
+# replicate_host_to_one_server(&server, &changed-dry-run)
 # Copy the details for just one managed system to a replica
 sub replicate_host_to_one_server
 {
-my ($server, $changed) = @_;
+my ($server, $cdr) = @_;
+my ($changed, $dryrun) = @$cdr;
 my $rv = { 'replica' => $server,
-	   'ok' => 0 };
+	   'ok' => 0,
+	   'servers' => [ $changed ],
+	 };
+if ($server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
+	# Currently down, so do nothing
+	$rv->{'err'} = $text{'repl_down'};
+	return $rv;
+	}
 my $rconfig = $server->{'webmin_config_directory'} || "/etc/webmin";
 if ($changed->{'id'} eq '0') {
-	$rv->{'err'} = 'This system cannot be replicated';
+	$rv->{'err'} = $text{'repl_ethis'};
 	return $rv;
 	}
 foreach my $lfile (&list_managed_server_files($changed)) {
@@ -339,13 +348,18 @@ foreach my $lfile (&list_managed_server_files($changed)) {
 	my $relfile = $lfile;
 	$relfile =~ s/^\Q$config_directory\E\///;
 	my $rfile = $relfile =~ /^\// ? $relfile : $rconfig.'/'.$relfile;
-	my $err = &put_file_to_server($server, $lfile, $rfile);
-	if ($err) {
-		$rv->{'err'} = &text('repl_copyfailed',
-				     $lfile, $err);
-		return $rv;
+	if (!$dryrun) {
+		my $err = &put_file_to_server($server, $lfile, $rfile);
+		if ($err) {
+			$rv->{'err'} = &text('repl_copyfailed',
+					     $lfile, $err);
+			return $rv;
+			}
 		}
+	push(@copied, $lfile);
 	}
+$rv->{'copied'} = \@copied;
+$rv->{'deleted'} = [ ];
 $rv->{'ok'} = 1;
 return $rv;
 }
@@ -393,14 +407,16 @@ foreach my $s (&list_managed_servers()) {
 	}
 
 # Add image meta-files, and images stored on the cloudmin master
-foreach my $i (&list_server_images()) {
-	push(@files, $i->{'file'});
-	my @imgfiles = split(/\s+/, $i->{'files'});
-	foreach my $deststr (split(/\s+/, $i->{'dest'})) {
-		my $dest = &parse_backup_destination($deststr);
-		if ($dest->{'mode'} == 0) {
-			foreach my $fl (@imgfiles) {
-				push(@files, "$dest->{'path'}/$fl");
+if (defined(&list_server_images)) {
+	foreach my $i (&list_server_images()) {
+		push(@files, $i->{'file'});
+		my @imgfiles = split(/\s+/, $i->{'files'});
+		foreach my $deststr (split(/\s+/, $i->{'dest'})) {
+			my $dest = &parse_backup_destination($deststr);
+			if ($dest->{'mode'} == 0) {
+				foreach my $fl (@imgfiles) {
+					push(@files, "$dest->{'path'}/$fl");
+					}
 				}
 			}
 		}
@@ -470,39 +486,45 @@ my ($master, $copied, $deleted) = @_;
 &read_file($module_config_file, \%config);
 
 # Create or update cron jobs for backups
-my %backupids;
-foreach my $backup (&list_backups(1)) {
-	&save_backup_cron($backup);
-	if ($backup->{'enabled'}) {
-		$backupids{$backup->{'id'}} = $backup;
+if (defined(&list_backups)) {
+	my %backupids;
+	foreach my $backup (&list_backups(1)) {
+		&save_backup_cron($backup);
+		if ($backup->{'enabled'}) {
+			$backupids{$backup->{'id'}} = $backup;
+			}
+		}
+
+	# Delete any backup.pl cron jobs that are no longer valid
+	foreach my $job (&find_server_manager_cron_job($backup_cron_cmd)) {
+		if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$backupids{$1}) {
+			&cron::delete_cron_job($job);
+			}
 		}
 	}
 
-# Delete any backup.pl cron jobs that are no longer valid
-foreach my $job (&find_server_manager_cron_job($backup_cron_cmd)) {
-	if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$backupids{$1}) {
-		&cron::delete_cron_job($job);
+if (defined(&list_virtualmin_syncs)) {
+	# Create or update cron jobs for vsyncs
+	my %vsyncids;
+	foreach my $vsync (&list_virtualmin_syncs(1)) {
+		&save_virtualmin_sync_cron($vsync);
+		if ($vsync->{'enabled'}) {
+			$vsyncids{$vsync->{'id'}} = $vsync;
+			}
+		}
+
+	# Delete any vsync.pl cron jobs that are no longer valid
+	foreach my $job (&find_server_manager_cron_job($vsync_cron_cmd)) {
+		if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$vsyncids{$1}) {
+			&cron::delete_cron_job($job);
+			}
 		}
 	}
 
-# Create or update cron jobs for vsyncs
-my %vsyncids;
-foreach my $vsync (&list_virtualmin_syncs(1)) {
-	&save_virtualmin_sync_cron($vsync);
-	if ($vsync->{'enabled'}) {
-		$vsyncids{$vsync->{'id'}} = $vsync;
-		}
+if (defined(&setup_bandwidth_cron)) {
+	# Setup or remove bandwidth cron job
+	&setup_bandwidth_cron();
 	}
-
-# Delete any vsync.pl cron jobs that are no longer valid
-foreach my $job (&find_server_manager_cron_job($vsync_cron_cmd)) {
-	if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$vsyncids{$1}) {
-		&cron::delete_cron_job($job);
-		}
-	}
-
-# Setup or remove bandwidth cron job
-&setup_bandwidth_cron();
 
 &save_replication_master($master);
 return undef;
