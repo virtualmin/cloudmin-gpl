@@ -16,7 +16,7 @@ return (
 			   "*-plan.pl", "*-plans.pl" ],
 	[ "Virtualmin domains", "*-domain.pl", "*-domains.pl" ],
 	[ "License management", "*-licence.pl", "*-licences.pl" ],
-	[ "File management", "*-file.pl" ],
+	[ "File management", "*-file.pl", "*-files.pl" ],
 	[ "Image management", "*-image.pl", "*-images.pl",
 			      "set-image-rawsize.pl" ],
 	[ "Other scripts", "*.pl" ],

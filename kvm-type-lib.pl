@@ -2098,6 +2098,22 @@ else {
 	}
 }
 
+# type_kvm_put_multiple_files(&server, &localfiles, remotedir)
+# If the filesystem for this Xen instance is locally mounted, write the file
+# directly to there
+sub type_kvm_put_multiple_files
+{
+my ($server, $localfiles, $remotedir) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &put_multiple_files_to_server($vhost, $localfiles,
+				   $server->{'kvm_mount'}.$remotedir);
+	}
+else {
+	return 'FALLBACK';
+	}
+}
+
 # type_kvm_delete_file(&server, remotefile, noquote)
 # If the filesystem for this KVM instance is locally mounted, delete the file
 # directly from there

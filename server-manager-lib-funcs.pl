@@ -1161,6 +1161,41 @@ my $err = &put_file_to_server($server, $temp, $remotefile, 0, $forcessh);
 return $err;
 }
 
+# put_multiple_files_to_server(&server, &localfiles, remotedir, force-ssh)
+# Transfers files from this system to the given server. May use scp or some
+# type-specific method
+sub put_multiple_files_to_server
+{
+my ($server, $localfiles, $remotedir, $forcessh) = @_;
+my $pfunc = "type_".$server->{'manager'}."_put_multiple_files";
+if (defined(&$pfunc) && !$forcessh) {
+	# Use type-specific function call
+	my $rv = &$pfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to scp
+	}
+if ($server->{'ssh_nologin'}) {
+	return "SSH logins are not available";
+	}
+
+# Build and run scp command
+my $sshcmd = "scp -r -p";
+$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+if ($server->{'key'}) {
+	my ($key) = grep { $_->{'id'} == $server->{'key'} }
+			    &list_ssh_keys();
+	$sshcmd .= " -i ".quotemeta($key->{'file'});
+	}
+if ($server->{'ssh_port'}) {
+	$sshcmd .= " -P ".$server->{'ssh_port'};
+	}
+$sshcmd .= " ".join(" ", map { quotemeta($_) } @$localfiles).
+	   " $server->{'ssh_user'}\@$server->{'ip'}:".
+	   quotemeta($remotedir)."/";
+my ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'});
+return $status ? $out : undef;
+}
+
 # transfer_file_between_servers(&source-server, &dest-server,
 #				source-file, dest-file,
 #				[device-file?], [checksum?], [checksum-size])
