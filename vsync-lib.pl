@@ -1,36 +1,39 @@
 # Functions for Virtualmin domain replication
 
-# list_virtualmin_syncs()
+# list_virtualmin_syncs([keep-enabled])
 # Returns a list of configured Virtualmin domain syncs
 sub list_virtualmin_syncs
 {
+my ($keepenabled) = @_;
 my @rv;
 &foreign_require("cron", "cron-lib.pl");
 my @jobs = &cron::list_cron_jobs();
 opendir(VSYNC, $vsyncs_dir);
 foreach my $f (readdir(VSYNC)) {
 	next if ($f =~ /^\./);
-	my $vsync = &get_virtualmin_sync($f, \@jobs);
+	my $vsync = &get_virtualmin_sync($f, \@jobs, $keepenabled);
 	push(@rv, $vsync) if ($vsync);
 	}
 closedir(VSYNC);
 return @rv;
 }
 
-# get_virtualmin_sync(id, [&cronjobs])
+# get_virtualmin_sync(id, [&cronjobs], [keep-enabled])
 # Looks up a sync by ID and returns a hash ref for it
 sub get_virtualmin_sync
 {
-my ($id, $jobs) = @_;
+my ($id, $jobs, $keepenabled) = @_;
 my %vsync;
 &read_file_cached("$vsyncs_dir/$id", \%vsync) || return undef;
 if (!$jobs) {
 	&foreign_require("cron", "cron-lib.pl");
 	$jobs = [ &cron::list_cron_jobs() ];
 	}
-my $cmd = $vsync_cron_cmd." --id ".$vsync{'id'};
-$job = &find_server_manager_cron_job($cmd, $jobs);
-$vsync{'enabled'} = $job ? 1 : 0;
+if (!$keepenabled) {
+	my $cmd = $vsync_cron_cmd." --id ".$vsync{'id'};
+	$job = &find_server_manager_cron_job($cmd, $jobs);
+	$vsync{'enabled'} = $job ? 1 : 0;
+	}
 return \%vsync;
 }
 
@@ -50,8 +53,14 @@ my $file = $vsyncs_dir."/".$vsync->{'id'};
 &lock_file($file);
 &write_file($file, $vsync);
 &unlock_file($file);
+&save_virtualmin_sync_cron($vsync, $wasnew);
+}
 
+# save_virtualmin_sync_cron(&vsync, [was-new])
 # Update or delete cron job
+sub save_virtualmin_sync_cron
+{
+my ($vsync, $wasnew) = @_;
 &foreign_require("cron", "cron-lib.pl");
 my $cmd = $vsync_cron_cmd." --id ".$vsync->{'id'};
 my $job;

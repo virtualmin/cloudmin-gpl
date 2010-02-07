@@ -41,13 +41,13 @@ sub save_replication_master
 {
 my ($master) = @_;
 if ($master) {
-&open_tempfile(MASTER, ">$repl_master_file");
-&print_tempfile(MASTER, $master);
-&close_tempfile(MASTER);
-}
+	&open_tempfile(MASTER, ">$repl_master_file");
+	&print_tempfile(MASTER, $master);
+	&close_tempfile(MASTER);
+	}
 else {	
-&unlink_file($repl_master_file);
-}
+	&unlink_file($repl_master_file);
+	}
 }
 
 # exit_if_cloudmin_replica()
@@ -125,14 +125,14 @@ if (&test_lock($repl_lock_file)) {
 &lock_file($repl_lock_file);
 
 my @rv;
-if (@replicas == 1) {
+if (@replicas == 1 && 0) {
 	# Just do in this thread
 	@rv = ( &replicate_to_one_server($replicas[0], $dryrun) );
 	}
 else {
 	# Do in parallel
 	@rv = map { $_->[0] }
-		&parallel_server_function(\@replica,
+		&parallel_server_function(\@replicas,
 			\&replicate_to_one_server, $dryrun);
 	}
 
@@ -156,7 +156,7 @@ elsif (@replicas == 1) {
 else {
 	# Do in parallel
 	return map { $_->[0] } 
-		&parallel_server_function(\@replica,
+		&parallel_server_function(\@replicas,
 			\&replicate_host_to_one_server, $changed);
 	}
 }
@@ -379,7 +379,9 @@ push(@files, $virtualmin_licences_file, $serial_cache_file,
 	     $locations_file, $pools_file,
 	     $module_config_file, $default_search_file, $repl_servers_file,
 	     $alert_status_file, $xen_cpu_seconds_file,
-	     $server_images_cache);
+	     $server_images_cache,
+	     "$module_config_directory/bw-template",
+	     "$module_root_directory/owner-bw-template");
 
 # Add servers files
 my %filemap;
@@ -393,12 +395,12 @@ foreach my $s (&list_managed_servers()) {
 # Add image meta-files, and images stored on the cloudmin master
 foreach my $i (&list_server_images()) {
 	push(@files, $i->{'file'});
-	my @imgfiles = split(/\s+/, $img{'files'});
-	foreach my $deststr (split(/\s+/, $img{'dest'})) {
+	my @imgfiles = split(/\s+/, $i->{'files'});
+	foreach my $deststr (split(/\s+/, $i->{'dest'})) {
 		my $dest = &parse_backup_destination($deststr);
 		if ($dest->{'mode'} == 0) {
 			foreach my $fl (@imgfiles) {
-				#push(@files, "$dest->{'path'}/$fl");
+				push(@files, "$dest->{'path'}/$fl");
 				}
 			}
 		}
@@ -460,9 +462,12 @@ return @rv;
 sub replication_done
 {
 my ($master, $copied, $deleted) = @_;
+&foreign_require("cron", "cron-lib.pl");
 
 # Flush any Webmin file caches, as files may have been over-written
 &flush_webmin_caches();
+%config = ( );
+&read_file($module_config_file, \%config);
 
 # Create or update cron jobs for backups
 my %backupids;
@@ -474,7 +479,6 @@ foreach my $backup (&list_backups(1)) {
 	}
 
 # Delete any backup.pl cron jobs that are no longer valid
-&foreign_require("cron", "cron-lib.pl");
 foreach my $job (&find_server_manager_cron_job($backup_cron_cmd)) {
 	if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$backupids{$1}) {
 		&cron::delete_cron_job($job);
@@ -482,7 +486,23 @@ foreach my $job (&find_server_manager_cron_job($backup_cron_cmd)) {
 	}
 
 # Create or update cron jobs for vsyncs
-# XXX
+my %vsyncids;
+foreach my $vsync (&list_virtualmin_syncs(1)) {
+	&save_virtualmin_sync_cron($vsync);
+	if ($vsync->{'enabled'}) {
+		$vsyncids{$vsync->{'id'}} = $vsync;
+		}
+	}
+
+# Delete any vsync.pl cron jobs that are no longer valid
+foreach my $job (&find_server_manager_cron_job($vsync_cron_cmd)) {
+	if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$vsyncids{$1}) {
+		&cron::delete_cron_job($job);
+		}
+	}
+
+# Setup or remove bandwidth cron job
+&setup_bandwidth_cron();
 
 &save_replication_master($master);
 return undef;

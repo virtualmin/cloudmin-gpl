@@ -224,6 +224,35 @@ if ($server->{'bw_limit'} &&
 return $umsg;
 }
 
+# setup_bandwidth_cron()
+# Create or delete the bandwidth monitoring cron job, based on the bw_enabled
+# config flag.
+sub setup_bandwidth_cron
+{
+my $job = &find_bw_cron_job();
+if (!$job && $config{'bw_enabled'}) {
+	# Create the job
+	$job = { 'command' => $bandwidth_cron_cmd,
+		 'user' => 'root',
+		 'mins' => '2,7,12,17,22,27,32,37,42,47,52,57',
+		 'hours' => '*',
+		 'days' => '*',
+		 'weekdays' => '*',
+		 'months' => '*',
+		 'active' => 1, };
+	&lock_file(&cron::cron_file($job));
+	&cron::create_cron_job($job);
+	&cron::create_wrapper($bandwidth_cron_cmd, $module_name,"bandwidth.pl");
+	&unlock_file(&cron::cron_file($job));
+	}
+elsif ($job && !$config{'bw_enabled'}) {
+	# Delete the job
+	&lock_file(&cron::cron_file($job));
+	&cron::delete_cron_job($job);
+	&unlock_file(&cron::cron_file($job));
+	}
+}
+
 
 1;
 
