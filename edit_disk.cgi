@@ -99,7 +99,15 @@ print &ui_table_row($text{'disk_virt'},
 # Get current disk used and free on host
 $freemsg = "";
 $vinfo = &get_server_collected($vhost);
-if ($vinfo->{'disk_total'}) {
+if ($server->{'xen_filesystem_vg'} &&
+    $vhost->{$server->{'manager'}.'_vg_free'}) {
+	# From host LV free
+	$freemsg = &text('disk_sizefree',
+			&nice_size($vhost->{$server->{'manager'}.'_vg_total'}),
+			&nice_size($vhost->{$server->{'manager'}.'_vg_free'}));
+	}
+elsif ($vinfo && $vinfo->{'disk_free'}) {
+	# Actual free space
 	$freemsg = &text('disk_sizefree',
 			&nice_size($vinfo->{'disk_total'}),
 			&nice_size($vinfo->{'disk_free'}));
