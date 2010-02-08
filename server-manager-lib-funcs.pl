@@ -6692,6 +6692,9 @@ else {
 			 	       $text{'create_addcache'});
 	}
 
+# Clear any custom SSH port, as the reset will revert to the default
+delete($server->{'ssh_port'});
+
 # Start creation process and wait for it to complete
 &$first_print($text{'reset_recreating'});
 my $cfunc = "type_".$server->{'manager'}."_create";
@@ -7070,6 +7073,9 @@ if (!$in->{'uport_def'}) {
 	$in->{'uport'} =~ /^\d+$/ && $in->{'uport'} > 0 &&
 	    $in->{'uport'} < 65536 || return $text{'add_euport'};
 	$server->{'ssh_port'} = $in->{'uport'};
+	}
+else {
+	delete($server->{'ssh_port'});
 	}
 if ($in->{'auth_mode'} == 0 || $must_pass) {
 	# Via password
