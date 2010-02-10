@@ -3705,7 +3705,7 @@ return $dir."/".$server->{'host'}.".console";
 # KVM doesn't support partition images, as it always works with raw disks
 sub type_kvm_image_formats
 {
-return ( "cd", "disk" );
+return ( "disk" );
 }
 
 1;
