@@ -66,6 +66,7 @@ require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &set_all_text_print();
 @OLDARGV = @ARGV;
+&can_action_usage(undef, "global");
 &usage_if_cloudmin_replica();
 
 # Parse command line

@@ -75,6 +75,16 @@ $backup = { 'dest' => &join_backup_destination($desthash),
 	    'shutdown' => $shutdown,
 	    'parallel' => $parallel };
 
+# Make sure source and dest can be managed by the user
+&can_action_usage(\@servers, "backup");
+if ($desthash->{'mode'} <= 2) {
+	foreach $s (@servers) {
+		$vhost = &get_parent_server($s);
+		$destserver = &get_backup_dest_server($desthash, $vhost);
+		&can_action_usage($destserver, "backup");
+		}
+	}
+
 # Do the backup
 if ($quiet) {
 	&set_all_null_print();

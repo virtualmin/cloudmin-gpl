@@ -76,6 +76,7 @@ $serial && $key || $same_serial || $allocate_serial ||
 # Work out who to install on
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "virtualmin");
 
 # Make sure servers are valid
 foreach $s (@servers) {
@@ -89,10 +90,14 @@ foreach $s (@servers) {
 
 # Work out the serial and key to use
 if ($same_serial) {
+	# Same as Cloudmin
+	&can_action_usage(\@servers, "licence");
 	%serialmap = map { $_->{'id'}, [ &get_server_manager_serial() ] }
 			 @servers;
 	}
 elsif ($allocate_serial) {
+	# Allocate from pool
+	&can_action_usage(\@servers, "licence");
 	foreach $s (@servers) {
 		($serial, $key) = &allocate_virtualmin_serial();
 		$serial || &usage("Could not allocate serial number ".
@@ -101,6 +106,7 @@ elsif ($allocate_serial) {
 		}
 	}
 else {
+	# Whatever was entered
 	%serialmap = map { $_->{'id'}, [ $serial, $key ] } @servers;
 	}
 

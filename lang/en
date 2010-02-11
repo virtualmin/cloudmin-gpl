@@ -1184,6 +1184,7 @@ virtualmin_efree=No available Virtualmin serial numbers were found in your licen
 virtualmin_ekey=Missing Virtualmin license key
 virtualmin_eserial=Missing Virtualmin serial number
 virtualmin_evalid=The entered Virtualmin serial number and key are not valid
+virtualmin_ecannot=You are not allowed to use Virtualmin licenses
 
 features_title=Default Virtualmin Features
 features_topdesc=Use the form below to select the features that will be enabled by default for new Virtualmin domains.

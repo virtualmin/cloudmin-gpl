@@ -72,15 +72,26 @@ while(@ARGV > 0) {
 	}
 
 # Get matching backup logs
+%servermap = map { $_->{'id'}, $_ } &list_managed_servers();
 if ($server) {
+	# One specific server
+	&can_action_usage($server, "backup");
 	@logs = &list_backup_logs($server);
 	}
 else {
+	# All servers the user can manage
+	&can_action_usage(undef, "backup");
 	@logs = &list_backup_logs();
 	if ($ownername) {
 		@logs = grep { $_->{'owner'} eq $ownername } @logs;
 		}
+	if ($access{'owner'}) {
+		@logs = grep { my $s = $servermap{$_->{'server'}};
+			       $s && &can_action($s, "backup") } @logs;
+		}
 	}
+
+# Limit by time range
 if ($start) {
 	@logs = grep { $_->{'time'} >= $start } @logs;
 	}
@@ -91,7 +102,6 @@ if ($end) {
 
 if ($multi) {
 	# Show in a parsable format
-	%servermap = map { $_->{'id'}, $_ } &list_managed_servers();
 	foreach $log (@logs) {
 		$server = $servermap{$log->{'server'}};
 		print $log->{'id'},"\n";

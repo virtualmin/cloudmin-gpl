@@ -106,6 +106,7 @@ $dest = &get_managed_server_by("host", $desthost);
 $vhost = &get_parent_server($server);
 $server->{'id'} eq $dest->{'id'} && &usage("A system cannot be transferred to itself");
 $vhost->{'id'} eq $dest->{'id'} && &usage("$dest->{'host'} is already hosting this system");
+&can_action_usage($server, "move");
 
 # Check if supported
 $dfunc = "type_".$server->{'manager'}."_desc";

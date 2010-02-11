@@ -32,6 +32,7 @@ $< == 0 || die "$0 must be run as root";
 &foreign_require("init", "init-lib.pl");
 &set_all_text_print();
 &usage_if_cloudmin_replica();
+&can_action_usage(undef, "global");
 
 # Parse command line
 while(@ARGV > 0) {

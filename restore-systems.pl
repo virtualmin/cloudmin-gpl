@@ -57,6 +57,16 @@ $backup = { 'dest' => $source,
 	    'servers' => join(' ', map { $_->{'id'} } @servers),
 	    'parallel' => $parallel };
 
+# Make sure source and dest can be managed by the user
+&can_action_usage(\@servers, "backup");
+if ($sourcehash->{'mode'} <= 2) {
+	foreach $s (@servers) {
+		$vhost = &get_parent_server($s);
+		$sourceserver = &get_backup_dest_server($sourcehash, $vhost);
+		&can_action_usage($sourceserver, "backup");
+		}
+	}
+
 # Do the restore
 if ($quiet) {
 	&set_all_null_print();

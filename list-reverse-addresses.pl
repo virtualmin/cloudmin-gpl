@@ -51,6 +51,7 @@ while(@ARGV > 0) {
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&can_action_usage($server, "reverse");
 
 # Get the addresses
 @revs = &get_server_reverse_records($server);

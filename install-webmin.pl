@@ -60,6 +60,7 @@ while(@ARGV > 0) {
 # Work out who to install on
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "webmin");
 
 # Make sure servers are valid
 foreach $s (@servers) {

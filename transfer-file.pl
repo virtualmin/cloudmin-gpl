@@ -82,6 +82,7 @@ $srcserver = &get_managed_server_by("host", $srchost);
 $destserver = &get_managed_server_by("host", $desthost);
 $srcserver || &usage("No system named $srchost exists");
 $destserver || &usage("No system named $desthost exists");
+&can_action_usage([ $srcserver, $destserver ], "transfer");
 
 # Do the transfer
 print "Copying $src on $srcserver->{'host'} to $dest on $destserver->{'host'} ..\n";

@@ -73,6 +73,7 @@ $server = &get_managed_server_by("host", $host);
 $server || &usage("No system with hostname $host exists");
 $source || &usage("Missing --source parameter");
 $dest || $stdout || &usage("Missing --dest or --stdout parameter");
+&can_action_usage($server, "transfer");
 
 # Mount if needed
 $err = &mount_filesystem_if_needed($server);

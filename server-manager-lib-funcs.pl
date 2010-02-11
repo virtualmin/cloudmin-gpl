@@ -5757,10 +5757,14 @@ elsif ($in->{$name} == 1) {
 	}
 elsif ($in->{$name} == 2 && &can_action(undef, "licence")) {
 	# Same as Cloudmin
+	&can_action(undef, "license") ||
+		return (undef, $text{'virtualmin_ecannot'});
 	return &get_server_manager_serial();
 	}
 elsif ($in->{$name} == 3 && &can_action(undef, "licence")) {
 	# Allocate from pool
+	&can_action(undef, "license") ||
+		return (undef, $text{'virtualmin_ecannot'});
 	my ($aserial, $akey) = &allocate_virtualmin_serial(0);
 	return ($aserial, $akey);
 	}

@@ -19,6 +19,7 @@ else {
 $0 = "$pwd/set-image-rawsize.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+&can_action_usage(undef, "global");
 
 @images = grep { !$_->{'rawsize'} } &list_server_images("xen");
 IMAGE: foreach $i (@images) {

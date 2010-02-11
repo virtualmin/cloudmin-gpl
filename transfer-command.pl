@@ -74,6 +74,7 @@ $srcserver = &get_managed_server_by("host", $srchost);
 $destserver = &get_managed_server_by("host", $desthost);
 $srcserver || &usage("No system named $srchost exists");
 $destserver || &usage("No system named $desthost exists");
+&can_action_usage([ $srcserver, $destserver ], "run");
 
 # Do the transfer
 if ($dest) {

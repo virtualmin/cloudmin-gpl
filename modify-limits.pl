@@ -139,6 +139,7 @@ defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "limits");
 
 # Check if we can do any of them
 foreach $s (@servers) {

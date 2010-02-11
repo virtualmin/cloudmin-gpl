@@ -51,6 +51,7 @@ require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 @OLDARGV = @ARGV;
 &usage_if_cloudmin_replica();
+&can_action_usage(undef, "global");
 
 # Parse command line
 while(@ARGV > 0) {

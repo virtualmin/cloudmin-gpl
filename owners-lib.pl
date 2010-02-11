@@ -278,6 +278,14 @@ my ($ok, $why) = &can_create_server($type);
 $ok || &error($why);
 }
 
+# Calls usage if the current user can't create a server
+sub can_create_server_usage
+{
+my ($type) = @_;
+my ($ok, $why) = &can_create_server($type);
+$ok || &usage($why);
+}
+
 # Calls error if the current user can't add a server
 sub can_add_server_error
 {
