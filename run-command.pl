@@ -59,6 +59,7 @@ while(@ARGV > 0) {
 # Work out who to run on
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "run");
 
 # Build the command
 $cmd = join(" ", @cmd);

@@ -2194,6 +2194,7 @@ owner_action_sshkeys=Can select SSH keys
 owner_action_webmin=Install Webmin
 owner_action_virtualmin=Install Virtualmin
 owner_action_backup=Backup and restore systems
+owner_action_api=Call remote API
 owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
 owner_egone=System owner no longer exists!

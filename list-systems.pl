@@ -91,6 +91,7 @@ if (keys %hosttypes) {
 		} @servers;
 	}
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers);
 
 if (defined(&list_locations)) {
 	@locs = &list_locations();

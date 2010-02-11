@@ -56,6 +56,7 @@ while(@ARGV > 0) {
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "shutdown"); 
 
 # Check if any cannot be shutdown
 foreach $s (@servers) {

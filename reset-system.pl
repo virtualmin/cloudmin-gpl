@@ -82,6 +82,7 @@ while(@ARGV > 0) {
 # Check for mandatory args, and get the system
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
+&can_action_usage($server, "reset"); 
 
 # Check if supported
 $dfunc = "type_".$server->{'manager'}."_desc";
@@ -97,6 +98,7 @@ if ($imageid) {
 	$img->{'manager'} eq $server->{'manager'} ||
 		&usage("The image with ID $imageid is for a different virtual ".
 		       "system type");
+	&can_image($img) || &usage("You are not allowed to use this image");
 	$server->{'image'} = $imageid;
 	$server->{'type'} = $img->{'type'};
 	}

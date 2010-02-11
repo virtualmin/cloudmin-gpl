@@ -54,6 +54,7 @@ while(@ARGV > 0) {
 # Work out who to list
 @servers = &find_managed_servers(0, \@hosts, [ ], [ ], [ ], \@owners);
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "delete"); 
 
 # Check if they can all be deleted
 foreach $s (@servers) {

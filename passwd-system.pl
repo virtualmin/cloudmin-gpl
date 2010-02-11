@@ -64,6 +64,7 @@ defined($ssh_pass) || defined($webmin_pass) || $webmin_same ||
 	&usage("No password changes specified");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&can_action_usage($server, "pass"); 
 
 # Check if same is possible
 if ($webmin_same && !$server->{'ssh_pass'} && !$ssh_pass) {

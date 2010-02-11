@@ -435,7 +435,8 @@ foreach my $vsync (&list_virtualmin_syncs()) {
 }
 
 # find_managed_servers(all, &hostnames, &groupnames, &managers, &types, &owners)
-# Finds all servers matching some selection criteria
+# Finds all servers matching some selection criteria. In 'all' mode, only
+# servers the user is allowed to access are returned.
 sub find_managed_servers
 {
 my ($all, $hosts, $groups, $managers, $types, $owners) = @_;
@@ -453,7 +454,7 @@ foreach my $oname (@$owners) {
 foreach my $s (&list_managed_servers()) {
 	my ($ingroup) = grep { $wantgroup{lc($_)} }
 				split(/\t/, $s->{'group'});
-	if ($all ||
+	if (($all && &can_action($s)) ||
 	    $ingroup ||
 	    &indexoflc($s->{'host'}, @$hosts) >= 0 ||
 	    &indexoflc($s->{'manager'}, @$managers) >= 0 ||

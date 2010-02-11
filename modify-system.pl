@@ -120,6 +120,7 @@ while(@ARGV > 0) {
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&can_action_usage($server, "edit");
 &obtain_lock_server($server);
 
 # Validate all options

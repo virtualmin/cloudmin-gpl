@@ -63,6 +63,7 @@ while(@ARGV > 0) {
 # Work out who to refresh
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "update"); 
 
 # Do the parallel update and print
 if ($testmode) {

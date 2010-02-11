@@ -93,8 +93,9 @@ sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
-	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'reverse', 'limits',
-	 'disks', 'devices', 'sshkeys', 'backup', 'webmin', 'virtualmin' );
+	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'reverse',
+	 'limits', 'disks', 'devices', 'sshkeys', 'backup', 'webmin',
+	 'virtualmin', 'api' );
 }
 
 # list_safe_owner_actions()
@@ -104,7 +105,7 @@ sub list_safe_owner_actions
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'domains', 'update', 'script', 'pause', 'reset',
          'create', 'delete', 'ifaces', 'reverse', 'limits', 'disks',
-	 'webmin', 'virtualmin' );
+	 'webmin', 'virtualmin', 'api' );
 }
 
 # can_action([&server|&servers], [action])
@@ -159,6 +160,15 @@ sub can_action_error
 my ($server, $action) = @_;
 my ($ok, $why) = &can_action($server, $action);
 $ok || &error($why);
+}
+
+# can_action_usage([&server|&servers], [action])
+# Check if some action is allowed, call usage if not
+sub can_action_usage
+{
+my ($server, $action) = @_;
+my ($ok, $why) = &can_action($server, $action);
+$ok || &usage($why);
 }
 
 # can_create_server(type)

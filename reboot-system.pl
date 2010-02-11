@@ -50,6 +50,7 @@ while(@ARGV > 0) {
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "reboot"); 
 
 # Check if any cannot be rebooted
 foreach $s (@servers) {

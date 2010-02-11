@@ -26,7 +26,7 @@ if (!$in{'program'}) {
 	print "All output from the command will be returned to the caller.\n";
 	exit;
 	}
-elsif (!&can_action(undef, "global")) {
+elsif (!&can_action(undef, "api")) {
 	print "Content-type: text/plain\n\n";
 	print "You are not allowed to call the remote API.\n";
 	exit(0);
@@ -46,7 +46,11 @@ $main::virtualmin_remote_api = 1;
 $ENV{'VIRTUALMIN_REMOTE_API'} = 1;
 $in{'program'} =~ /^[a-z0-9\.-]+$/i || &error($text{'remote_eprogram'});
 $cmd = "$module_root_directory/$in{'program'}.pl";
--x $cmd || &error(&text('remote_eprogram2', "<tt>$cmd</tt>"));
+if (!-x $cmd) {
+	print "Content-type: text/plain\n\n";
+	print "Remote program $cmd does not exist\n";
+	exit(0);
+	}
 foreach $i (keys %in) {
 	next if ($i eq "program" || $i eq $format);
 	if ($in{$i} eq "") {
@@ -67,6 +71,7 @@ if ($format) {
 		exit(0);
 		}
 	&clean_environment();
+	$ENV{'REMOTE_USER'} = $remote_user;
 	$out = &backquote_command("$cmd 2>&1");
 	&reset_environment();
 	print &convert_remote_format($out, $?, $in{'program'}, \%in, $format);
@@ -74,6 +79,7 @@ if ($format) {
 else {
 	# Stream output directly
 	&clean_environment();
+	$ENV{'REMOTE_USER'} = $remote_user;
 	&open_execute_command(OUT, "$cmd 2>&1", 1);
 	while(<OUT>) {
 		print $_;
