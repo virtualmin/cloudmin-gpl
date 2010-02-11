@@ -58,6 +58,7 @@ while(@ARGV > 0) {
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&can_action_usage($server, "disks");
 
 # Get the disks
 $dfunc = "type_".$server->{'manager'}."_list_disks";

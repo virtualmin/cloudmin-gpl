@@ -97,6 +97,7 @@ foreach $s (@sources) {
 			}
 		}
 	}
+&can_action_usage([ map { $_->[0] } @serverdoms ], "domains");
 foreach $dn (@dnames) {
 	$found{$dn} || &usage("Domain $dn was not found on any system running Virtualmin");
 	}

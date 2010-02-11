@@ -61,6 +61,7 @@ while(@ARGV > 0) {
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
+&can_action_usage(\@servers, "domains");
 
 # Get all the domains
 foreach $s (@servers) {

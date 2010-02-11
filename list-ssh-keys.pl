@@ -37,6 +37,7 @@ else {
 $0 = "$pwd/list-ssh-keys.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
+&can_action_usage(undef, "global");
 
 # Parse command line
 while(@ARGV > 0) {

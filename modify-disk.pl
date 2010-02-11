@@ -81,6 +81,7 @@ $newsize || $newvirt || &usage("Nothing to do");
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&can_action_usage($server, "disks");
 &obtain_lock_server($server);
 
 # Get the current disks

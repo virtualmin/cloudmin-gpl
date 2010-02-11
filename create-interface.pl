@@ -67,6 +67,7 @@ $address || $allocate || &usage("One of --address or --allocate must be given");
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+&can_action_usage($server, "ifaces");
 &obtain_lock_server($server);
 
 # Check the function and status

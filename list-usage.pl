@@ -70,6 +70,7 @@ while(@ARGV > 0) {
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
+&can_action(\@servers, "edit") || &can_action_usage(\@servers, "view");
 
 $fmt = " %-18.18s %-18.18s %-4.4s %-10.10s %-6.6s %-6.6s %-10.10s\n";
 $now = time();

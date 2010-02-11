@@ -102,6 +102,7 @@ $desthost || &usage("Missing --dest parameter");
 $dest = &get_managed_server_by("host", $desthost);
 $dest || &usage("System $desthost does not exist");
 $dest->{'status'} eq 'virt' || &usage("System $desthost is not running Virtualmin");
+&can_action_usage($dest, "domains");
 
 # Get the domains
 if ($host) {
@@ -127,6 +128,7 @@ foreach $s (@sources) {
 			}
 		}
 	}
+&can_action_usage([ map { $_->[0] } @serverdoms ], "domains");
 foreach $dn (@dnames) {
 	$found{$dn} || &usage("Domain $dn was not found on any system running Virtualmin");
 	}

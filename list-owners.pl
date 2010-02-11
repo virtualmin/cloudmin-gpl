@@ -39,6 +39,7 @@ $0 = "$pwd/list-owners.pl";
 require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 @allservers = &list_managed_servers();
+&can_action_usage(undef, "global");
 
 # Parse command line
 while(@ARGV > 0) {
