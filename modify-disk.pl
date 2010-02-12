@@ -115,10 +115,20 @@ else {
 # Change the object
 $olddisk = { %$disk };
 if ($newsize) {
+	$incr = $newsize*1024*1024 - $disk->{'size'};
 	$disk->{'size'} = $newsize*1024*1024;
 	}
 if ($newvirt) {
 	$disk->{'virt'} = $newvirt;
+	}
+
+# Validate the new size
+$limits = &get_owner_limits();
+if ($limits && $limits->{'max_disk'} && $incr > 0 &&
+    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {
+	&usage(&text('disk_elimit',
+	       &nice_size($limits->{'max_disk'}),
+	       &nice_size($limits->{'disk'})));
 	}
 
 # Do it

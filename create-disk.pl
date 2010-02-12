@@ -135,6 +135,9 @@ if ($format) {
 # Create a new disk object
 $nfunc = "type_".$server->{'manager'}."_new_disk";
 $disk = &$nfunc($server, $disks, $device);
+$real eq 'auto' || &can_action($server, "devices") ||
+	&usage("You are not allowed to select your own devices for disks - ".
+	       "the --auto-real flag must be used");
 $disk->{'real'} = $real if ($real ne 'auto');
 $disk->{'virt'} = $virt if ($virt ne 'auto');
 if ($lv) {
@@ -162,11 +165,22 @@ if ($fs) {
 		       "types are : ".join(" ", @fslist));
 	}
 
-# Do it
+# Create the disk object
 $disk->{'size'} = $size*1024*1024;
 $disk->{'device'} = $device;
 $disk->{'fs'} = $fs;
 $disk->{'mount'} = $mount;
+
+# Validate size increase
+$limits = &get_owner_limits();
+if ($limits && $limits->{'max_disk'} &&
+    $limits->{'disk'} + $disk->{'size'} > $limits->{'max_disk'}) {
+	&usage(&text('disk_elimit',
+	       &nice_size($limits->{'max_disk'}),
+	       &nice_size($limits->{'disk'})));
+	}
+
+# Do it
 &$first_print("Creating virtual disk for $disk->{'virt'} ..");
 $cfunc = "type_".$server->{'manager'}."_create_disk";
 $err = &$cfunc($server, $disk);
