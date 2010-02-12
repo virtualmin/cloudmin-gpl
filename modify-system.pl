@@ -156,6 +156,7 @@ $hasssh = !defined(&$sfunc) || !&$sfunc();
 defined($ssh_key) && defined($ssh_pass) &&
 	&usage("Only one of --ssh-pass or --ssh-key can be given");
 if (defined($ssh_key)) {
+	&can_action_usage(undef, "sshkeys");
 	$hasssh || &usage("This system type does not support SSH");
 	($key) = grep { $_->{'id'} eq $ssh_key } @keys;
 	$key || &usage("No SSH key with ID $ssh_key found");

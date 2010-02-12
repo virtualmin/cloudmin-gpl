@@ -70,6 +70,15 @@ $server || &usage("System with hostname $host does not exist");
 &can_action_usage($server, "ifaces");
 &obtain_lock_server($server);
 
+# Check if over limit
+$limits = &get_owner_limits();
+if ($limits && $limits->{'max_ips'}) {
+	if ($limits->{'ips'} + 1 > $limits->{'max_ips'}) {
+		&usage("Adding this interface would exceed your IP address ",
+		       "limit of ",$limits->{'max_ips'});
+		}
+	}
+
 # Check the function and status
 $ifunc = "type_".$server->{'manager'}."_create_interface";
 defined(&$ifunc) || &usage("System type $server->{'manager'} does not support ".

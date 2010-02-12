@@ -114,10 +114,12 @@ while(@ARGV > 0) {
 		$desc = shift(@ARGV);
 		}
 	elsif ($a eq "--ssh-key") {
+		&can_action_usage(undef, "sshkeys");
 		$ssh_key = shift(@ARGV);
 		($key) = grep { $_->{'id'} eq $ssh_key } @keys;
 		$key || &usage("No SSH key with ID $ssh_key found");
-		$key->{'public'} && &usage("The SSH key with ID $ssh_key is a public key only");
+		$key->{'public'} &&
+		  &usage("The SSH key with ID $ssh_key is a public key only");
 		}
 	elsif ($a eq "--ssh-pass") {
 		$ssh_pass = shift(@ARGV);
@@ -204,9 +206,11 @@ $can || &usage("Creation is not allowed : $canerr");
 
 # Work out serial and key
 if ($same_serial) {
+	&can_action_usage(\@servers, "licence");
 	($serial, $key) = &get_server_manager_serial();
 	}
 elsif ($allocate_serial) {
+	&can_action_usage(\@servers, "licence");
 	($serial, $key) = &allocate_virtualmin_serial(0);
 	$serial || &usage($key);
 	}
@@ -282,6 +286,67 @@ if (!$serial && !$key) {
 	if (defined(&$vfunc) && &$vfunc($server)) {
 		&usage("A Virtualmin license must be specified when ".
 		       "creating from an image that includes it");
+		}
+	}
+
+# Validate owner resource limits
+$limits = &get_owner_limits();
+if ($limits) {
+	# Validate disk limit
+	$dsfunc = "type_".$type."_get_disk_size";
+	$incr = defined(&$dsfunc) ? &$dsfunc($server) : undef;
+	if ($incr && $limits->{'max_disk'}) {
+		# May be over disk limit
+		if ($limits->{'disk'} + $incr > $limits->{'max_disk'}) {
+			&usage("Creating this system would exceed your disk ",
+			       "limit of ",&nice_size($limits->{'max_disk'}));
+			}
+		}
+	elsif (!$incr && $limits->{'max_disk'}) {
+		# System has no disk limits, but owner does
+		&usage("You cannot create a system with unlimited disk as ",
+		       "your limit is ",&nice_size($limits->{'max_disk'}));
+		}
+
+	# Validate RAM limit
+	$mfunc = "type_".$type."_get_memory_size";
+	$incr = defined(&$mfunc) ? &$mfunc($server) : undef;
+	if ($incr && $limits->{'max_ram'}) {
+		# May be over RAM limit
+		if ($limits->{'ram'} + $incr > $limits->{'max_ram'}) {
+			&usage("Creating this system would exceed your memory ",
+			       "limit of ",&nice_size($limits->{'max_ram'}));
+			}
+		}
+	elsif (!$incr && $limits->{'max_ram'}) {
+		# System has no RAM limits, but owner does
+		&usage("You cannot create a system with unlimited memory as ",
+		       "your limit is ",&nice_size($limits->{'max_ram'}));
+		}
+
+	# Validate CPU limit
+	$cfunc = "type_".$type."_get_cpu_size";
+	$incr = defined(&$cfunc) ? &$cfunc($server) : undef;
+	if ($incr && $limits->{'max_cpu'}) {
+		# May be over CPU limit
+		if ($limits->{'cpu'} + $incr > $limits->{'max_cpu'}) {
+			&usage("Creating this system would exceed your CPU ",
+			       "limit of ",$limits->{'max_cpu'});
+			}
+		}
+	elsif (!$incr && $limits->{'max_cpu'}) {
+		# System has no CPU limit, but owner does
+		&usage("You cannot create a system with unlimited CPU as ",
+		       "your limit is ",$limits->{'max_cpu'});
+		}
+
+	# Validate IPs limit, assuming new system will have exactly 1
+	$incr = scalar(split(/\s+/, $server->{'ip_addresses'})) || 1;
+	if ($limits->{'max_ips'}) {
+		if ($limits->{'ips'} + $incr > $limits->{'max_ips'}) {
+			&usage("Creating this system would exceed your IP ",
+			       "address limit of ",$limits->{'max_ips'});
+			}
 		}
 	}
 
@@ -549,7 +614,7 @@ exit(0);
 
 sub usage
 {
-print "$_[0]\n\n" if ($_[0]);
+print @_,"\n\n" if ($_[0]);
 print "Creates a new virtual system of some type.\n";
 print "\n";
 my $crtypes = join("|", @crtypes);
