@@ -569,6 +569,8 @@ $server->{'host'} =~ /\./ && return "KVM hostnames cannot contain .";
 
 if ($args->{'ip'}) {
 	# Make sure IPs are valid
+	&can_action(undef, "ips") ||
+		return "You are not allowed to specify IP addresses";
 	my @ips = split(/[, ]+/, $args->{'ip'});
 	foreach my $ip (@ips) {
 		&check_ipaddress($ip) || return "Invalid KVM IP address $ip";

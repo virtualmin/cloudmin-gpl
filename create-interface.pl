@@ -102,6 +102,9 @@ $piface || &usage("No real interface named $name found on parent system. ".
 # Create the interface object
 $iface = { 'name' => $name };
 if (!$allocate) {
+	&can_action($server, "ips") ||
+		&usage("You are not allowed to specify IP addresses - use ".
+		       "the --allocate flag instead");
 	$iface->{'address'} = $address;
 	}
 if ($netmask) {

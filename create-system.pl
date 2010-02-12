@@ -423,7 +423,14 @@ print ".. creation complete\n\n";
 &save_managed_server($server);
 
 # Add to system owner
-if ($owner) {
+if ($access{'owner'}) {
+	# This user
+	$access{'servers'} = join(' ', split(/\s+/, $access{'servers'}),
+				       $server->{'id'});
+	&save_module_acl(\%access);
+	}
+elsif ($owner) {
+	# Add to another owner
 	$owner->{'acl'}->{'servers'} =
 		join(' ', split(/\s+/, $owner->{'acl'}->{'servers'}),
 			  $server->{'id'});
