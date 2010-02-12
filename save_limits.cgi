@@ -157,7 +157,7 @@ if (defined($in{'disk'}) || defined($in{'disk_def'})) {
 		$incr = $d - $oldd;
 		if ($limits && $limits->{'max_disk'} &&
 		    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {
-			# Over RAM limit
+			# Over disk limit
 			&$second_print(&text('limits_edisklimit',
 				&nice_size($limits->{'max_disk'}),
 				&nice_size($limits->{'disk'})));

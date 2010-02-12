@@ -167,6 +167,7 @@ if (defined($vcpus)) {
 # Do each system
 &obtain_lock_server(\@servers);
 foreach $s (@servers) {
+	$limits = &get_owner_limits();
 	$t = $s->{'manager'};
 	$tfunc = "type_".$t."_desc";
 	$tdesc = &$tfunc();
@@ -182,15 +183,32 @@ foreach $s (@servers) {
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_memory";
 			$oldmemory = &$gfunc($s);
+			$incr = $memory - $oldmemory;
 			if ($oldmemory && $oldmemory == $memory) {
+				# No change
 				print ".. already set\n";
+				}
+			elsif ($limits && $limits->{'max_ram'} && $incr > 0 &&
+			       $limits->{'ram'} + $incr >
+				$limits->{'max_ram'}) {
+				# Over RAM limit
+				print ".. this would exceed your memory limit ",
+			          "of ",&nice_size($limits->{'max_ram'}),"\n";
+				}
+			elsif ($limits && $limits->{'max_ram'} && !$memory) {
+				# Set to unlimited but not allowed
+				print ".. you cannot set memory to unlimited ",
+				      "as your limit is ",
+				      &nice_size($limits->{'max_ram'}),"\n";
 				}
 			elsif ($memory == 0 && defined(&$ufunc) &&
 			       !&$ufunc($s)) {
+				# Doesn't support unlimited
 				print ".. this system does not support ".
 				      "unlimited memory\n";
 				}
 			else {
+				# Actually try it
 				$mfunc = "type_".$t."_save_memory";
 				$err = &$mfunc($s, $memory);
 				if ($err) {
@@ -213,15 +231,35 @@ foreach $s (@servers) {
 		print "Setting CPU limit on $tdesc system $s->{'host'} ..\n";
 		$cfunc = "type_".$t."_can_cpu";
 		if (defined(&$cfunc) && &$cfunc($s)) {
-			$sfunc = "type_".$t."_save_cpu";
-			$err = &$sfunc($s, $cpu, $weight);
-			if ($err) {
-				print ".. failed : $err\n";
+			$gfunc = "type_".$t."_get_cpu";
+			($oldcpu, $oldweight) = &$gfunc($s);
+			$incr = $cpu - $oldcpu;
+			if ($limits && $limits->{'max_cpu'} && $incr > 0 &&
+			    $limits->{'cpu'} + $incr > $limits->{'max_cpu'} &&
+			    defined($cpu)) {
+				# Over CPU limit
+				print ".. this would exceed your CPU limit ",
+				      "of ",$limits->{'max_cpu'},"\n";
+				}
+			elsif ($limits && $limits->{'max_cpu'} && !$cpu &&
+			       defined($cpu)) {
+				# Set to unlimited but not allowed
+				print ".. you cannot set CPU to unlimited ",
+				      "as your limit is ",
+				      $limits->{'max_cpu'},"\n";
 				}
 			else {
-				print ".. done\n";
-				$reboot++ if (&$cfunc($s) == 2 ||
-					      &$cfunc($s) == 4);
+				# Make the change
+				$sfunc = "type_".$t."_save_cpu";
+				$err = &$sfunc($s, $cpu, $weight);
+				if ($err) {
+					print ".. failed : $err\n";
+					}
+				else {
+					print ".. done\n";
+					$reboot++ if (&$cfunc($s) == 2 ||
+						      &$cfunc($s) == 4);
+					}
 				}
 			}
 		else {
@@ -234,7 +272,12 @@ foreach $s (@servers) {
 	if (defined($vcpus)) {
 		print "Setting virtual CPUs on $tdesc system $s->{'host'} ..\n";
 		$cfunc = "type_".$t."_can_vcpus";
-		if (defined(&$cfunc) && &$cfunc($s)) {
+		if (!&can_action($s, "vcpus")) {
+			# Not allowed
+			print ".. you are not allowed to manage virtual CPUs\n";
+			}
+		elsif (defined(&$cfunc) && &$cfunc($s)) {
+			# Make the change
 			$vfunc = "type_".$t."_save_vcpus";
 			$err = &$vfunc($s, \@vcpus);
 			if ($err) {
@@ -252,6 +295,7 @@ foreach $s (@servers) {
 		}
 
 	# Change disk, if we can
+	# XXX limits
 	if (defined($disk)) {
 		print "Setting disk limit on $tdesc system $s->{'host'} to ",
 		      ($disk ? &nice_size($disk) : "Unlimited")," ..\n";
@@ -259,10 +303,25 @@ foreach $s (@servers) {
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_disk";
 			$olddisk = &$gfunc($s);
+			$incr = $disk - $olddisk;
 			if ($olddisk && $olddisk == $disk) {
+				# No change
 				print ".. already set\n";
 				}
+			elsif ($limits && $limits->{'max_disk'} && $incr > 0 &&
+			    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {
+				# Over disk limit
+				print ".. this would exceed your disk limit ",
+			          "of ",&nice_size($limits->{'max_ram'}),"\n";
+				}
+			elsif ($limits && $limits->{'max_disk'} && !$disk) {
+				# Set to unlimited but not allowed
+				print ".. you cannot set disk to unlimited ",
+				      "as your limit is ",
+				      &nice_size($limits->{'max_ram'}),"\n";
+				}
 			else {
+				# Make the change
 				$dfunc = "type_".$t."_save_disk";
 				$err = &$dfunc($s, $disk);
 				if ($err) {
@@ -280,7 +339,7 @@ foreach $s (@servers) {
 		print "\n";
 		}
 
-	# Change disk, if we can
+	# Change network rate, if we can
 	if (defined($rate)) {
 		print "Setting network rate on $tdesc system $s->{'host'} to ",
 		      ($rate ? &nice_rate($rate) : "Unlimited")," ..\n";
