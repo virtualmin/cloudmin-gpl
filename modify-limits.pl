@@ -165,6 +165,7 @@ if (defined($vcpus)) {
 	}
 
 # Do each system
+$failed = 0;
 &obtain_lock_server(\@servers);
 foreach $s (@servers) {
 	$limits = &get_owner_limits();
@@ -194,18 +195,21 @@ foreach $s (@servers) {
 				# Over RAM limit
 				print ".. this would exceed your memory limit ",
 			          "of ",&nice_size($limits->{'max_ram'}),"\n";
+				$failed++;
 				}
 			elsif ($limits && $limits->{'max_ram'} && !$memory) {
 				# Set to unlimited but not allowed
 				print ".. you cannot set memory to unlimited ",
 				      "as your limit is ",
 				      &nice_size($limits->{'max_ram'}),"\n";
+				$failed++;
 				}
 			elsif ($memory == 0 && defined(&$ufunc) &&
 			       !&$ufunc($s)) {
 				# Doesn't support unlimited
 				print ".. this system does not support ".
 				      "unlimited memory\n";
+				$failed++;
 				}
 			else {
 				# Actually try it
@@ -213,6 +217,7 @@ foreach $s (@servers) {
 				$err = &$mfunc($s, $memory);
 				if ($err) {
 					print ".. failed : $err\n";
+					$failed++;
 					}
 				else {
 					print ".. done\n";
@@ -222,6 +227,7 @@ foreach $s (@servers) {
 			}
 		else {
 			print ".. not supported\n";
+			$failed++;
 			}
 		print "\n";
 		}
@@ -240,6 +246,7 @@ foreach $s (@servers) {
 				# Over CPU limit
 				print ".. this would exceed your CPU limit ",
 				      "of ",$limits->{'max_cpu'},"\n";
+				$failed++;
 				}
 			elsif ($limits && $limits->{'max_cpu'} && !$cpu &&
 			       defined($cpu)) {
@@ -247,6 +254,7 @@ foreach $s (@servers) {
 				print ".. you cannot set CPU to unlimited ",
 				      "as your limit is ",
 				      $limits->{'max_cpu'},"\n";
+				$failed++;
 				}
 			else {
 				# Make the change
@@ -254,6 +262,7 @@ foreach $s (@servers) {
 				$err = &$sfunc($s, $cpu, $weight);
 				if ($err) {
 					print ".. failed : $err\n";
+					$failed++;
 					}
 				else {
 					print ".. done\n";
@@ -264,6 +273,7 @@ foreach $s (@servers) {
 			}
 		else {
 			print ".. not supported\n";
+			$failed++;
 			}
 		print "\n";
 		}
@@ -275,6 +285,7 @@ foreach $s (@servers) {
 		if (!&can_action($s, "vcpus")) {
 			# Not allowed
 			print ".. you are not allowed to manage virtual CPUs\n";
+			$failed++;
 			}
 		elsif (defined(&$cfunc) && &$cfunc($s)) {
 			# Make the change
@@ -282,6 +293,7 @@ foreach $s (@servers) {
 			$err = &$vfunc($s, \@vcpus);
 			if ($err) {
 				print ".. failed : $err\n";
+				$failed++;
 				}
 			else {
 				print ".. done\n";
@@ -290,12 +302,12 @@ foreach $s (@servers) {
 			}
 		else {
 			print ".. not supported\n";
+			$failed++;
 			}
 		print "\n";
 		}
 
 	# Change disk, if we can
-	# XXX limits
 	if (defined($disk)) {
 		print "Setting disk limit on $tdesc system $s->{'host'} to ",
 		      ($disk ? &nice_size($disk) : "Unlimited")," ..\n";
@@ -313,12 +325,14 @@ foreach $s (@servers) {
 				# Over disk limit
 				print ".. this would exceed your disk limit ",
 			          "of ",&nice_size($limits->{'max_ram'}),"\n";
+				$failed++;
 				}
 			elsif ($limits && $limits->{'max_disk'} && !$disk) {
 				# Set to unlimited but not allowed
 				print ".. you cannot set disk to unlimited ",
 				      "as your limit is ",
 				      &nice_size($limits->{'max_ram'}),"\n";
+				$failed++;
 				}
 			else {
 				# Make the change
@@ -326,6 +340,7 @@ foreach $s (@servers) {
 				$err = &$dfunc($s, $disk);
 				if ($err) {
 					print ".. failed : $err\n";
+					$failed++;
 					}
 				else {
 					print ".. done\n";
@@ -335,6 +350,7 @@ foreach $s (@servers) {
 			}
 		else {
 			print ".. not supported\n";
+			$failed++;
 			}
 		print "\n";
 		}
@@ -355,6 +371,7 @@ foreach $s (@servers) {
 				$err = &$dfunc($s, $rate);
 				if ($err) {
 					print ".. failed : $err\n";
+					$failed++;
 					}
 				else {
 					print ".. done\n";
@@ -364,6 +381,7 @@ foreach $s (@servers) {
 			}
 		else {
 			print ".. not supported\n";
+			$failed++;
 			}
 		print "\n";
 		}
@@ -383,6 +401,7 @@ foreach $s (@servers) {
 			}
 		else {
 			print ".. not supported\n";
+			$failed++;
 			}
 		print "\n";
 		}
@@ -434,6 +453,7 @@ if (@need_reboot) {
 		}
 	}
 &cloudmin_api_log(\@OLDARGV);
+exit($failed);
 
 sub usage
 {

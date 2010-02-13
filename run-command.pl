@@ -51,6 +51,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
         elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
 	elsif ($a eq "--help") { &usage(); }
+	elsif ($a eq "--command") { push(@cmd, shift(@ARGV)); }
 	else {
 		push(@cmd, $a);
 		}
