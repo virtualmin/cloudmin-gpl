@@ -5100,7 +5100,7 @@ if ($virtcount) {
 push(@glinks, "list_licences.cgi");
 push(@gtitles, $text{'licences_title'});
 push(@gicons, "images/licences.gif");
-push(@gcats, "virtualmin");
+push(@gcats, $virtcount ? "virtualmin" : "settings");
 
 # Plugins
 push(@glinks, "list_plugins.cgi");
