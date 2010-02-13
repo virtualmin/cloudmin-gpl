@@ -488,17 +488,21 @@ if ($zone) {
 # Returns an array of parameters to type_kvm_create_args_parse
 sub type_kvm_create_args
 {
-return ( { 'name' => 'host', 'value' => 'host-system' },
-	 { 'name' => 'location', 'value' => 'name' },
-	 { 'name' => 'ip', 'value' => 'address[,address]', 'opt' => 1 },
-	 { 'name' => 'cidr', 'value' => 'number[,number]', 'opt' => 1 },
-	 { 'name' => 'netmask', 'value' => 'mask,[mask]', 'opt' => 1 },
-	 { 'name' => 'gw', 'value' => 'address[,address|*]', 'opt' => 1 },
-	 { 'name' => 'bridge', 'value' => 'name[,name]', 'opt' => 1 },
-	 { 'name' => 'disksize', 'value' => 'megabytes', 'opt' => 1 },
-	 { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
-	 { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1 },
-       );
+my @rv = ( { 'name' => 'host', 'value' => 'host-system' },
+	   { 'name' => 'location', 'value' => 'name' },
+	   { 'name' => 'ip', 'value' => 'address[,address]', 'opt' => 1 },
+	   { 'name' => 'cidr', 'value' => 'number[,number]', 'opt' => 1 },
+	   { 'name' => 'netmask', 'value' => 'mask,[mask]', 'opt' => 1 },
+	   { 'name' => 'gw', 'value' => 'address[,address|*]', 'opt' => 1 },
+	   { 'name' => 'bridge', 'value' => 'name[,name]', 'opt' => 1 },
+	   { 'name' => 'disksize', 'value' => 'megabytes', 'opt' => 1 },
+	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
+	 );
+if (&can_action(undef, "advanced")) {
+	push(@rv, { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1 },
+	    );
+	}
+return @rv;
 }
 
 # type_kvm_create_args_parse(&args, &server)
