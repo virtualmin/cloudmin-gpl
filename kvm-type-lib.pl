@@ -658,13 +658,15 @@ if ($zone) {
 	$server->{'host'} .= ".".$vhost->{'kvm_zone'};
 	}
 
-# Validate LVM flag
-if ($args->{'lvm'} =~ /true|yes/i) {
-	$vhost->{'kvm_vg'} ||
-		return "Host system $vhost->{'host'} does not use LVM";
-	}
-elsif ($args->{'lvm'} =~ /false|no/i) {
-	$server->{'kvm_nolvm'} = 1;
+if (&can_action(undef, "advanced")) {
+	# Validate LVM flag
+	if ($args->{'lvm'} =~ /true|yes/i) {
+		$vhost->{'kvm_vg'} ||
+			return "Host system $vhost->{'host'} does not use LVM";
+		}
+	elsif ($args->{'lvm'} =~ /false|no/i) {
+		$server->{'kvm_nolvm'} = 1;
+		}
 	}
 
 return undef;
