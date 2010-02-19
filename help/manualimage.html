@@ -8,7 +8,9 @@ can use. <p>
 
 Be sure that the file you select is actually suitable for use as an image
 for Xen or KVM. A compressed tar file of a filesystem will not work, but 
-a copy of the disk or primary partition from a real system should. <p>
+a copy of the disk or primary partition from a real system should. Be aware
+that image files from <a href=http://stacklet.com target=_new>stacklet.com</a>
+are packaged inside a bzipped tar file, and so must be extracted first. <p>
 
 To create an image, first enter the path to the source file in the
 <b>Image source</b> field. Then enter an ID like <tt>centos-5.5</tt> in the

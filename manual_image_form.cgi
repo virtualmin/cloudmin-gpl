@@ -28,7 +28,7 @@ print &ui_table_row($text{'eimage_os'},
 	      [ map { [ $_->[0], $_->[1] ] }
 		sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
 
-# Location of file (local, or on some managed system)
+# Location of file (local, on some managed system, or via HTTP)
 @servers = grep { $_->{'id'} ne '0' &&
 		  &can_ssh_status($_) } &list_managed_servers_sorted();
 print &ui_table_row($text{'mimage_file'},
@@ -39,7 +39,10 @@ print &ui_table_row($text{'mimage_file'},
 		    &ui_select("server", undef,
 		       [ map { [ $_->{'id'}, $_->{'short_host'} ] } @servers ]).
 		    " ".
-		    &ui_textbox("serverfile", undef, 40) ] ]));
+		    &ui_textbox("serverfile", undef, 40) ],
+		  [ 2, $text{'mimage_file2'},
+		    &ui_filebox("url", undef, 60) ],
+		]));
 
 # Unique ID
 print &ui_table_row($text{'mkimage_id'},

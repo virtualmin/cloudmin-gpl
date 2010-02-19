@@ -6,23 +6,12 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 
+&ui_print_unbuffered_header(undef, $text{'mimage_title'}, "");
+
 # Validate inputs and create object
 $image = { 'manager' => $in{'manager'},
 	   'format' => $in{'format'},
 	   'type' => $in{'type'} };
-if ($in{'file_mode'} == 0) {
-	$srcserver = &get_this_managed_server();
-	$srcpath = $in{'file'};
-	-r $srcpath && !-d $srcpath || &error($text{'mimage_efile'});
-	}
-else {
-	$srcserver = &get_managed_server($in{'server'});
-	$srcserver || &error($text{'mimage_eserver'});
-	$srcpath = $in{'serverfile'};
-	$srcpath =~ /^\/\S/ || &error($text{'mimage_eserverfile'});
-	}
-@st = &stat_file_on_server($srcserver, $srcpath);
-@st || &error($text{'mimage_efile'});
 $in{'imageid'} =~ /^\S+$/ || &error($text{'mkimage_eid'});
 ($clash) = grep { $_->{'id'} eq $in{'imageid'} } &list_server_images();
 $clash && &error($text{'mkimage_eclash'});
@@ -31,6 +20,38 @@ $in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
 $image->{'desc'} = $in{'desc'};
 $image->{'files'} = $srcpath;
 $image->{'files'} =~ s/^.*\///;
+
+# Get the file
+if ($in{'file_mode'} == 0) {
+	# On Cloudmin master
+	$srcserver = &get_this_managed_server();
+	$srcpath = $in{'file'};
+	-r $srcpath && !-d $srcpath || &error($text{'mimage_efile'});
+	}
+elsif ($in{'file_mode'} == 1) {
+	# On another system
+	$srcserver = &get_managed_server($in{'server'});
+	$srcserver || &error($text{'mimage_eserver'});
+	$srcpath = $in{'serverfile'};
+	$srcpath =~ /^\/\S/ || &error($text{'mimage_eserverfile'});
+	}
+else {
+	# Download from a URL
+	$in{'url'} =~ /^(http|https):\/\// ||
+		&error($text{'mimage_eurl'});
+	($host, $port, $page, $ssl) = &parse_http_url($in{'url'});
+	$host && $page || &error($text{'mimage_eurl'});
+	$srcserver = &get_this_managed_server();
+	$srcpage = $page;
+	$srcpage =~ s/^.*[\\\/]//;
+	$srcpath = &transname($srcpage);
+	$progress_callback_url = $in{'url'};
+	&http_download($host, $port, $page, $srcpath, undef,
+			\&progress_callback, $ssl);
+	$srcdelete = 1;
+	}
+@st = &stat_file_on_server($srcserver, $srcpath);
+@st || &error($text{'mimage_efile'});
 
 # Validate format
 if (&has_command_on_server($srcserver, "file")) {
@@ -64,8 +85,6 @@ if (&has_command_on_server($srcserver, "file")) {
 		$image->{'nocompress'} = 1;
 		}
 	}
-
-&ui_print_unbuffered_header(undef, $text{'mimage_title'}, "");
 
 # Work out un-compressed size if needed
 if (!$image->{'nocompress'}) {
@@ -129,6 +148,11 @@ if ($okcount) {
 	&save_server_image($image);
 	&webmin_log("manual", "image", $image->{'id'});
 	&$second_print($text{'create_done'});
+	}
+
+# Clean up downloaded file
+if ($srcdelete) {
+	&delete_file_on_server($srcserver, $srcpath);
 	}
 
 &ui_print_footer("list_images.cgi?mode=$in{'mode'}", $text{'images_return'},
