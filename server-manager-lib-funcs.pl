@@ -2180,7 +2180,7 @@ if ($regen) {
 	}
 
 # If we have a Webmin login, try it
-my ($got_memory, $got_disk, $got_kernel);
+my ($got_memory, $got_disk, $got_kernel, $got_io, $got_kernel);
 if ($server->{'user'} || $server->{'id'} == 0) {
 	my ($status, $err, $ostype, $real_ostype) =
 		&check_server_webmin_login($server);
@@ -2243,6 +2243,12 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			$got_disk = 1;
 			if ($info->{'kernel'}) {
 				$got_kernel = 1;
+				}
+			if ($info->{'io'}) {
+				$got_io = 1;
+				}
+			if ($info->{'cpu'}) {
+				$got_cpu = 1;
 				}
 
 			# Get and save serial number
@@ -2527,6 +2533,24 @@ if (!$got_kernel) {
 		$info->{'kernel'} = { 'version' => $r,
 				      'arch' => $m,
 				      'os' => $o };
+		}
+	}
+
+# Get IO stats via SSH
+if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i) {
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+							  "vmstat 1 2");
+	if (!$ex && !$err) {
+		local @lines = split(/\r?\n/, $out);
+		local @w = split(/\s+/, $lines[$#lines]);
+		shift(@w) if ($w[0] eq '');
+		if ($w[8] =~ /^\d+$/ && $w[9] =~ /^\d+$/) {
+			# Blocks in and out
+			$info->{'io'} = [ $w[8], $w[9] ];
+
+			# CPU user, kernel, idle, io, vm
+			$info->{'cpu'} = [ @w[12..16] ];
+			}
 		}
 	}
 

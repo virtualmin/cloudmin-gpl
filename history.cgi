@@ -46,12 +46,14 @@ else {
 	}
 
 # And for stat to show
+$in{'stat'} ||= "load";
 push(@grid, "<b>$text{'history_showsel'}</b>");
 push(@grid, &ui_select("stat", $in{'stat'},
 		[ map { [ $_, $text{'history_stat_'.$_} ] }
 		      sort { $text{'history_stat_'.$a} cmp
 			     $text{'history_stat_'.$b} }
-			   &list_historic_stats(\@allservers) ]).
+			   &list_historic_stats(\@allservers) ],
+		1, 0, 0, 0, "onChange='form.submit()'").
 	    $okbutton);
 
 print &ui_grid_table(\@grid, 4, 100,
@@ -68,7 +70,6 @@ if (!@servers) {
 &can_action_error(\@servers, "graph");
 
 # Build URL parameters
-$in{'stat'} ||= "load";
 $statsparams = "stat=$in{'stat'}";
 foreach my $i (keys %in) {
 	if ($i ne 'start' && $i ne 'period' && $i ne 'stat') {
@@ -104,6 +105,12 @@ elsif ($in{'stat'} eq 'diskused' || $in{'stat'} eq 'diskfree') {
 elsif ($in{'stat'} eq 'load' || $in{'stat'} eq 'load5' ||
        $in{'stat'} eq 'load15') {
 	$units = $text{'history_cores'};
+	}
+elsif ($in{'stat'} =~ /^cpu/) {
+	$units = $text{'history_pc'};
+	}
+elsif ($in{'stat'} eq 'bin' || $in{'stat'} eq 'bout') {
+	$units = $text{'history_bps'};
 	}
 else {
 	$units = undef;
@@ -187,7 +194,6 @@ print "  var eventSource = new Timeplot.DefaultEventSource();\n";
 print "  var valueGeometry = new Timeplot.DefaultValueGeometry({\n";
 print "        gridColor: '#B3B6B0',\n";
 print "        axisLabelsPlacement: 'left',\n";
-print "        $maxopt\n";	# XXX
 print "        min: 0\n";
 print "      });\n";
 print "  var timeGeometry = new Timeplot.DefaultTimeGeometry({\n";
