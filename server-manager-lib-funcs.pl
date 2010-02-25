@@ -8260,8 +8260,8 @@ else {
 # list_ip_pools()
 # Returns a list of IP allocation ranges, each of which is a hash ref with keys:
 #   id - A unique ID for this pool
-#   start - Starting IP
-#   end - Ending IP
+#   start - Starting IPs, comma-separated
+#   end - Ending IPs, comma-separated
 #   cidr - Network CIDR
 #   desc - Human-readable description
 sub list_ip_pools

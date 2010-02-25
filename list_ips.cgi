@@ -11,16 +11,20 @@ require './server-manager-lib.pl';
 # Find IPs from pools
 @pools = &list_ip_pools();
 foreach $p (@pools) {
-	$snum = &net::ip_to_integer($p->{'start'});
-	$enum = &net::ip_to_integer($p->{'end'});
-	for($j=$snum; $j<=$enum; $j++) {
-		$ip = &net::integer_to_ip($j);
-		$ips{$ip} ||= { 'hosts' => [ ] };
+	@starts = split(/,/, $p->{'start'});
+	@ends = split(/,/, $p->{'end'});
+	for($i=0; $i<@starts; $i++) {
+		$snum = &net::ip_to_integer($starts[$i]);
+		$enum = &net::ip_to_integer($ends[$i]);
+		for($j=$snum; $j<=$enum; $j++) {
+			$ip = &net::integer_to_ip($j);
+			$ips{$ip} ||= { 'hosts' => [ ] };
+			}
+		$r = $starts[$i]."-".$ends[$i];
+		$ranges{$r} ||= { 'hosts' => [ ],
+				  'snum' => $snum,
+				  'enum' => $enum };
 		}
-	$r = $p->{'start'}."-".$p->{'end'};
-	$ranges{$r} ||= { 'hosts' => [ ],
-			  'snum' => $snum,
-			  'enum' => $enum };
 	}
 
 # Find IPs from allocation ranges
@@ -162,14 +166,17 @@ print &ui_columns_start([ $text{'ips_active'},
 			  $text{'range_netmask'}, ], 100);
 $i = 0;
 foreach $p (@pools, { }) {
+	@starts = split(/,/, $p->{'start'});
+	@ends = split(/,/, $p->{'end'});
+	@netmasks = $p->{'cidr'} ? map { &net::prefix_to_mask($_) }
+				    split(/,/, $p->{'cidr'}) : ( );
 	print &ui_columns_row([
 		&ui_checkbox("active_$i", 1, "", $p->{'id'}),
 		&ui_textbox("desc_$i", $p->{'desc'}, 30),
-		&ui_textbox("start_$i", $p->{'start'}, 20),
-		&ui_textbox("end_$i", $p->{'end'}, 20),
-		&ui_textbox("netmask_$i",
-		    $p->{'cidr'} ? &net::prefix_to_mask($p->{'cidr'}) : "", 20),
-		]);
+		&ui_textarea("start_$i", join("\n", @starts), 3, 20),
+		&ui_textarea("end_$i", join("\n", @ends), 3, 20),
+		&ui_textarea("netmask_$i", join("\n", @netmasks), 3, 20),
+		], [ "valign=top", "valign=top" ]);
 	$i++;
 	}
 print &ui_columns_end();
