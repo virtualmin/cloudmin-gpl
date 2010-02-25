@@ -1910,6 +1910,19 @@ return $out if ($ex);
 return $out =~ /^(\d+)\s/ ? $1*1024 : "Unknown du output : $out";
 }
 
+# shared_dir_on_servers(&server1, &server2, dir)
+# Checks if some directory is shared between two machines (ie. via NFS)
+sub shared_dir_on_servers
+{
+my ($server1, $server2, $dir) = @_;
+my $movecheck = $dir."/cloudmin-move-test.txt";
+my $randstr = time().$$;
+&put_file_data_to_server($server1, $randstr, $movecheck);
+my $randback = &get_file_data_from_server($server2, $movecheck);
+&delete_file_on_server($server1, $movecheck);
+return $randback eq $randstr;
+}
+
 # list_processes_on_server(&server)
 # Returns a list of running processes, in a format similar to
 # proc::list_processes. Only the pid, user and args are guaranteed though.
