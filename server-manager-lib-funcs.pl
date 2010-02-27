@@ -3649,14 +3649,22 @@ for(my $i=0; $i<@startips; $i++) {
 	next if ($wantiface && $ifaces[$i] ne $wantiface &&
 		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
 
-	# Try each IP within the range
-	my $start = &net::ip_to_integer($startips[$i]);
-	my $end = &net::ip_to_integer($endips[$i]);
-	for(my $n=$start; $n<=$end; $n++) {
-		my $ip = &net::integer_to_ip($n);
-		push(@poss, { 'id' => $ip, 'ip' => $ip,
-			      'cidr' => $cidrs[$i], 'gw' => $gws[$i] })
-			if (!$used{$ip});
+	# Split into sub-ranges
+	my @sub_startips = split(/,/, $startips[$i]);
+	my @sub_endips = split(/,/, $endips[$i]);
+	my @sub_cidrs = split(/,/, $cidrs[$i]);
+	for(my $j=0; $j<@sub_startips; $j++) {
+		# Try each IP within the range
+		my $start = &net::ip_to_integer($sub_startips[$j]);
+		my $end = &net::ip_to_integer($sub_endips[$j]);
+		for(my $n=$start; $n<=$end; $n++) {
+			my $ip = &net::integer_to_ip($n);
+			push(@poss, { 'id' => $ip,
+				      'ip' => $ip,
+				      'cidr' => $sub_cidrs[$j],
+				      'gw' => $gws[$i] })
+				if (!$used{$ip});
+			}
 		}
 	}
 
@@ -3687,13 +3695,17 @@ for(my $i=0; $i<@startips; $i++) {
 	next if ($wantiface && $ifaces[$i] ne $wantiface &&
 		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
 
-	# Check if the IP falls within the range
-	my $start = &net::ip_to_integer($startips[$i]);
-	my $end = &net::ip_to_integer($endips[$i]);
-        for(my $n=$start; $n<=$end; $n++) {
-                my $rip = &net::integer_to_ip($n);
-		if ($rip eq $ip) {
-			return 1;
+	# Check if the IP falls within any sub-range
+	my @sub_startips = split(/,/, $startips[$i]);
+	my @sub_endips = split(/,/, $endips[$i]);
+	for(my $j=0; $j<@sub_startips; $j++) {
+		my $start = &net::ip_to_integer($sub_startips[$j]);
+		my $end = &net::ip_to_integer($sub_endips[$j]);
+		for(my $n=$start; $n<=$end; $n++) {
+			my $rip = &net::integer_to_ip($n);
+			if ($rip eq $ip) {
+				return 1;
+				}
 			}
 		}
 	}
@@ -3733,17 +3745,24 @@ for(my $i=0; $i<@startips; $i++) {
 	next if ($wantiface && $ifaces[$i] ne $wantiface &&
 		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
 
-	if ($startips[$i] eq $endips[$i]) {
-		push(@rv, $startips[$i]);
-		}
-	else {
-		my @so = split(/\./, $startips[$i]);
-		my @eo = split(/\./, $endips[$i]);
-		if ($so[0] == $eo[0] && $so[1] == $eo[1] && $so[2] == $eo[2]) {
-			push(@rv, "$so[0].$so[1].$so[2].$so[3]-$eo[3]");
+	# Split into sub-ranges
+	my @sub_startips = split(/,/, $startips[$i]);
+	my @sub_endips = split(/,/, $endips[$i]);
+	for(my $j=0; $j<@sub_startips; $j++) {
+		if ($sub_startips[$j] eq $sub_endips[$j]) {
+			push(@rv, $sub_startips[$j]);
 			}
 		else {
-			push(@rv, $startips[$i]."-".$endips[$i]);
+			my @so = split(/\./, $sub_startips[$j]);
+			my @eo = split(/\./, $sub_endips[$j]);
+			if ($so[0] == $eo[0] && $so[1] == $eo[1] &&
+			    $so[2] == $eo[2]) {
+				push(@rv, "$so[0].$so[1].$so[2].$so[3]-$eo[3]");
+				}
+			else {
+				push(@rv, $sub_startips[$j]."-".
+					  $sub_endips[$j]);
+				}
 			}
 		}
 	}
@@ -6265,10 +6284,12 @@ if (@allpools) {
 		my @cols = (
 		    &ui_select("pool_$i", $pools[$i],
 			[ [ '', '&nbsp;' ],
-			   map { [ $_->{'id'},
-				   $_->{'start'}." - ".$_->{'end'}." / ".
-				    &net::prefix_to_mask($_->{'cidr'}).
-				    ($_->{'desc'} ? " (".$_->{'desc'}.")" : "")
+			   map { my $desc = &describe_ip_range($_->{'start'},
+							       $_->{'end'},
+							       $_->{'cidr'});
+				 [ $_->{'id'},
+				   $desc." ".
+				   ($_->{'desc'} ? " (".$_->{'desc'}.")" : "")
 				 ] } @allpools ]),
 		    );
 		if ($show_gateways) {
