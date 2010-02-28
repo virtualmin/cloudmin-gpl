@@ -6265,9 +6265,6 @@ my @gws = map { $_ eq '*' ? '' : $_ } split(/\s+/, $server->{$pfx."_gws"});
 
 # Table headings for pools
 my @cols = ( $text{'range_pool'} );
-if ($show_gateways) {
-	push(@cols, $text{'range_gw'});
-	}
 if ($poss) {
 	push(@cols, $text{'range_iface'});
 	}
@@ -6276,8 +6273,8 @@ if (@starts) {
 	}
 
 # Add rows for IP pools, if any
-my $table .= &ui_columns_start(\@cols, 100, 0,
-	[ $show_gateways ? "width=50%" : "width=75%" ]);
+my $table = &ui_columns_start(\@cols, 100, 0, [ "width=75%" ]);
+$table .= &ui_hidden("show_gateways", $show_gateways);
 my @allpools = &list_ip_pools();
 if (@allpools) {
 	for(my $i=0; $i<=@pools; $i++) {
@@ -6292,10 +6289,6 @@ if (@allpools) {
 				   ($_->{'desc'} ? " (".$_->{'desc'}.")" : "")
 				 ] } @allpools ]),
 		    );
-		if ($show_gateways) {
-			push(@cols, &ui_textbox("pgw_$i",
-					$pools[$i] ? $gws[$i] : '', 15));
-			}
 		if ($poss) {
 			push(@cols, &ui_select("piface_$i",
 				       !$pools[$i] ? '*' : $ifaces[$i] || '*',
@@ -6387,15 +6380,8 @@ for(my $i=0; defined($pid = $in->{"pool_$i"}); $i++) {
 	push(@starts, $p->{'start'});
 	push(@ends, $p->{'end'});
 	push(@cidrs, $p->{'cidr'});
-	if (defined($in->{"pgw_$i"})) {
-		if (!$in->{"pgw_$i"}) {
-			push(@gws, "*");
-			}
-		else {
-			&check_ipaddress($in->{"pgw_${i}"}) ||
-				&error(&text('range_egw', $i+1));
-			push(@gws, $in->{"pgw_${i}"});
-			}
+	if ($in->{'show_gateways'}) {
+		push(@gws, $p->{'gateway'} || "*");
 		}
 	if (defined($in->{"piface_$i"})) {
 		push(@ifaces, $in->{"piface_$i"});

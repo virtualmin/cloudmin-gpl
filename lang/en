@@ -1913,6 +1913,7 @@ range_start=Start address
 range_end=End address
 range_cidr=CIDR
 range_netmask=Netmask
+range_gateway=Gateway (optional)
 range_pool=IP address pool
 range_gw=Gateway (optional)
 range_estart=Missing or invalid starting IP address for allocation in row $1
