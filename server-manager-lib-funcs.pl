@@ -3653,6 +3653,7 @@ for(my $i=0; $i<@startips; $i++) {
 	my @sub_startips = split(/,/, $startips[$i]);
 	my @sub_endips = split(/,/, $endips[$i]);
 	my @sub_cidrs = split(/,/, $cidrs[$i]);
+	my @sub_gws = split(/,/, $gws[$i]);
 	for(my $j=0; $j<@sub_startips; $j++) {
 		# Try each IP within the range
 		my $start = &net::ip_to_integer($sub_startips[$j]);
@@ -3662,7 +3663,7 @@ for(my $i=0; $i<@startips; $i++) {
 			push(@poss, { 'id' => $ip,
 				      'ip' => $ip,
 				      'cidr' => $sub_cidrs[$j],
-				      'gw' => $gws[$i] })
+				      'gw' => $sub_gws[$j] })
 				if (!$used{$ip});
 			}
 		}
