@@ -1086,6 +1086,46 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 	&flush_file_lines($f);
 	&unlock_file($f);
 	}
+return undef;
+}
+
+# clear_remote_ssh_host_key(&server, &source-server)
+# Remove the key for some system from .ssh/known_hosts on some other system
+sub clear_remote_ssh_host_key
+{
+my ($server, $srcserver) = @_;
+if ($srcserver->{'id'} eq '0') {
+	return &clear_ssh_host_key($server);
+	}
+else {
+	my $ip = &get_server_ip($server);
+	foreach my $f ("/.ssh/known_hosts",
+		       "/.ssh/known_hosts2",
+		       "/root/.ssh/known_hosts",
+		       "/root/.ssh/known_hosts2") {
+		my $data = &get_file_data_from_server($srcserver, $f);
+		next if (!$data);
+		my @lines = split(/\n/, $data);
+		my $changed;
+		for(my $i=0; $i<@lines; $i++) {
+			my @w = split(/\s+/, $lines[$i]);
+			my @h = split(/,/, $w[0]);
+			if (&indexof($server->{'host'}, @h) >= 0 ||
+			    &indexof($ip, @h) >= 0 ||
+			    &indexof($server->{'ip'}, @h) >= 0) {
+				splice(@lines, $i--, 1);
+				$changed++;
+				}
+			}
+		if ($changed) {
+			$data = join("\n", @lines)."\n";
+			my $err = &put_file_data_to_server($srcserver,
+							   $data, $f);
+			return $err if ($err);
+			}
+		}
+	return undef;
+	}
 }
 
 # get_file_data_from_server(&server, remotefile, force-ssh)

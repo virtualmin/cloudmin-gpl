@@ -234,7 +234,8 @@ foreach $s (@servers) {
 
 	# Change CPU and weight, if we can
 	if (defined($cpu) || defined($weight)) {
-		print "Setting CPU limit on $tdesc system $s->{'host'} ..\n";
+		print "Setting CPU limit on $tdesc system $s->{'host'} to ",
+		      ($cpu || "Unlimited")," ..\n";
 		$cfunc = "type_".$t."_can_cpu";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_cpu";

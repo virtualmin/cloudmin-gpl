@@ -89,6 +89,7 @@ else {
 	}
 if ($err) {
 	print ".. copy failed : $err\n";
+	exit(1);
 	}
 else {
 	print ".. done\n";

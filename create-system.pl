@@ -439,6 +439,9 @@ elsif ($owner) {
 
 # Remove old SSH keys for this system
 &clear_ssh_host_key($server);
+if ($vhost) {
+	&clear_remote_ssh_host_key($server, $vhost);
+	}
 
 # Call any post-creation function
 $dfunc = "type_".$type."_create_post";
