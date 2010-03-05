@@ -61,6 +61,14 @@ else {
 		# Use host system setting
 		delete($backup->{'dest'});
 		}
+	elsif ($in{'dest_mode'} == 2) {
+		# Some other system
+		$dest = { 'mode' => 2 };
+		$dest->{'path'} = $in{'vm2dir'};
+		$dest->{'id'} = $in{'vm2'};
+		$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode2'});
+		$backup->{'dest'} = &join_backup_destination($dest);
+		}
 	else {
 		# SSH or FTP
 		$dest = { 'mode' => $in{'dest_mode'} };

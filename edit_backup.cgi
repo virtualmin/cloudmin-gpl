@@ -26,8 +26,8 @@ print &ui_hidden_table_start($text{'backup_header'}, "width=100%", 2,
 			     "main", 1, [ "width=30%" ]);
 
 # Systems to backup
-@servers = grep { &supports_backup($_) }
-		&list_available_managed_servers_sorted();
+@canservers = &list_available_managed_servers_sorted();
+@servers = grep { &supports_backup($_) } @canservers;
 print &ui_table_row($text{'backup_servers'},
 	&ui_radio("servers_def", $backup->{'servers'} eq '*' ? 1 : 0,
 		  [ [ 1, $backup->{'owner'} ? 
@@ -69,6 +69,13 @@ $mode = !$backup->{'dest'} ? -1 : $dest->{'mode'};
 print &ui_table_row(&hlink($text{'backup_dest'}, "backup_dest"),
 	&ui_radio_table("dest_mode", $mode,
 		[ [ -1, $text{'backup_dest0'} ],
+		  [ 2, $text{'backups_mode2'},
+		       &ui_select("vm2", $dest->{'id'},
+			  [ map { [ $_->{'id'}, $_->{'short_host'} ] }
+			        @canservers ]).
+		       " ".
+		       &ui_textbox("vm2dir",
+			   $dest->{'mode'} == 2 ? $dest->{'path'} : "", 40) ],
 		  [ 3, $text{'backup_dest3'},
 			&show_backup_ssh_dest(
 			    $mode == 3 ? $dest : { }, "ssh", 22) ],

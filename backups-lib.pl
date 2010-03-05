@@ -586,7 +586,16 @@ return \%rv;
 # ref, with keys 'ok', 'msg', 'size'
 sub execute_system_backup
 {
-my ($server, $dest, $shutdown, $owner) = @_;
+my ($server, $deststr, $shutdown, $owner) = @_;
+
+# Check for backup to self
+my $vhost = &get_parent_server($server);
+my $dest = &parse_backup_destination($deststr);
+my $destserver = &get_backup_dest_server($dest, $vhost);
+if ($destserver && $destserver->{'id'} eq $server->{'id'}) {
+	return { 'ok' => 0,
+		 'msg' => $text{'brun_eself'} };
+	}
 
 # Check if running, and if so shut down
 my $was_up = 0;
@@ -605,10 +614,10 @@ if ($server->{'status'} ne 'down' && $shutdown) {
 
 # Call the type-specific backup function
 &$first_print(&text('brun_backing', $server->{'host'},
-		    &nice_backup_destination($dest)));
+		    &nice_backup_destination($deststr)));
 &$indent_print();
 my $bfunc = "type_".$server->{'manager'}."_backup_system";
-my $rv = &$bfunc($server, $dest, $shutdown, $owner);
+my $rv = &$bfunc($server, $deststr, $shutdown, $owner);
 &$outdent_print();
 if ($rv->{'ok'}) {
 	&$second_print(&text('brun_backed', &nice_size($rv->{'size'})));

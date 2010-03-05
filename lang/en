@@ -2941,6 +2941,7 @@ brun_somefailed=Backups of $1 systems completed, but $2 failed!
 brun_emkdir=Failed to create destination directory : $1
 brun_eover=You have used $1 of your backup space limit of $2, and this backup is $3 in size
 brun_edestserver=Could not work out destination backup server!
+brun_eself=A system cannot be backed up to itself!
 
 rrun_title=Restore Systems
 rrun_err=Restore failed
