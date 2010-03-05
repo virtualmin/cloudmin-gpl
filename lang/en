@@ -3379,7 +3379,7 @@ floor_nomem2=An extra $1 free RAM is needed to create this system
 
 drestore_err=Failed to restore domain backup
 drestore_title=Restore Domain Backup
-drestore_eupload=No backup file to upload selected
+drestore_euploadfile=No backup file to upload selected
 drestore_efile=No file to restore from selected
 drestore_eserver=System to restore on does not exist!
 drestore_eserverfile2=File to restore from does not exist
@@ -3390,7 +3390,6 @@ drestore_edoms=No domains to restore entered
 drestore_virtualmin=Restoring Virtualmin backup ..
 drestore_other=Migrating backup file in $1 format ..
 drestore_failed=.. failed : $1
-drestore_edoms=No domains to restore entered
 drestore_erpass=No migration password entered
 
 alerts_title=System Alerts
