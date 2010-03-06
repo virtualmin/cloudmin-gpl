@@ -3805,6 +3805,11 @@ for(my $i=0; $i<@startips; $i++) {
 					  $sub_endips[$j]);
 				}
 			}
+		if ($j == 1) {
+			# Only show 2 IPs
+			push(@rv, "...");
+			last;
+			}
 		}
 	}
 return join(", ", @rv);
