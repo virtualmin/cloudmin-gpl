@@ -38,3 +38,4 @@ xen_pygrub=1
 kvm_qemu=0
 bw_emailmaster=1
 xen_mem_max=4096
+backuplog_days=7

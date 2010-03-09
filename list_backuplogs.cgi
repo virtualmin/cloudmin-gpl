@@ -24,6 +24,7 @@ else {
 	&can_action_error(undef, "backup");
 	}
 &ui_print_header($subh, $text{'backuplogs_title'}, "");
+$days = $config{'backuplog_days'} || 7;
 
 # Show search form
 if (!$in{'log'}) {
@@ -32,7 +33,7 @@ if (!$in{'log'}) {
 	print "<b>$text{'backuplogs_find'}</b>\n",
 	      &ui_textbox("search", $in{'search'}, 30),"\n",
 	      &ui_submit($text{'backuplogs_ok'})," ",
-	      &ui_submit($text{'backuplogs_week'}, "week"),"\n";
+	      &ui_submit(&text('backuplogs_week', $days), "week"),"\n";
 	print &ui_form_end(),"<p>\n";
 	}
 
@@ -60,9 +61,9 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 	# Filter by search
 	if ($in{'week'}) {
 		# Limit to last 7 days
-		$cutoff = time()-(7*24*60*60);
+		$cutoff = time()-($days*24*60*60);
 		@backups = grep { $_->{'time'} >= $cutoff } @backups;
-		$msg = &text('backuplogs_weekdesc', 7);
+		$msg = &text('backuplogs_weekdesc', $days);
 		}
 	elsif ($in{'search'}) {
 		# Limit by search term
