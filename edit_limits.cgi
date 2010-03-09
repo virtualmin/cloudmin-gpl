@@ -8,6 +8,11 @@ require './server-manager-lib.pl';
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 $t = $server->{'manager'};
+$info = &get_server_collected($server);
+$vhost = &get_parent_server($server);
+if ($vhost) {
+	$vinfo = &get_server_collected($vhost);
+	}
 &can_action_error($server, "limits");
 
 &ui_print_header(&server_in($server), $text{'limits_title2'}, "", "limits");
@@ -33,6 +38,25 @@ if (defined($m)) {
 		print &ui_table_row($text{'edit_lmemory'},
 			&ui_bytesbox("memory", $m));
 		}
+
+	# Current memory usage in virtual system
+	if ($info && $info->{'mem'}) {
+		print &ui_table_row($text{'edit_umemory'},
+			    &nice_size(($info->{'mem'}->[0]-
+					$info->{'mem'}->[1])*1024));
+		}
+
+	# Memory usage on host system
+	if ($vhost && $vhost->{$t.'_mem_free'}) {
+		print &ui_table_row($text{'edit_vmemory'},
+			     &nice_size($vhost->{$t.'_mem_free'}));
+		}
+	elsif ($vinfo && $vinfo->{'mem'}) {
+		print &ui_table_row($text{'edit_vmemory'},
+			      &nice_size($vinfo->{'mem'}->[1]*1024));
+		}
+
+	print &ui_table_hr();
 	}
 
 # CPU limit
@@ -48,6 +72,8 @@ if (defined(&$cfunc)) {
 		print &ui_table_row($text{'edit_lweight'},
 			&ui_textbox("weight", $weight, 4));
 		}
+
+	print &ui_table_hr();
 	}
 
 # Disk limit
@@ -64,10 +90,22 @@ if (defined(&$dfunc)) {
 	if (defined(&$sfunc)) {
 		$space = &$sfunc($server);
 		if ($space) {
-			print &ui_table_row($text{'edit_lspace'},
+			print &ui_table_row($text{'edit_udisk'},
 				&nice_size($space));
 			}
 		}
+
+	# Free disk on host
+	if ($vhost && $vhost->{$t.'_vg_free'}) {
+		print &ui_table_row($text{'edit_vdisk'},
+			&nice_size($vhost->{$t.'_vg_free'}));
+		}
+	elsif ($vinfo && $vinfo->{'disk_free'}) {
+		print &ui_table_row($text{'edit_vdisk'},
+			&nice_size($vinfo->{'disk_free'}));
+		}
+
+	print &ui_table_hr();
 	}
 
 # Bandwidth limit
@@ -94,6 +132,8 @@ if (defined(&$rfunc) && $config{'bw_enabled'}) {
 	# Current usage
 	print &ui_table_row($text{'edit_lusage'},
 		&bandwidth_usage_message($server));
+
+	print &ui_table_hr();
 	}
 
 # Network rate limit
