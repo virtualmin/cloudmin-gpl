@@ -13,6 +13,7 @@ $vhost = &get_parent_server($server);
 if ($vhost) {
 	$vinfo = &get_server_collected($vhost);
 	}
+$limits = &get_owner_limits();
 &can_action_error($server, "limits");
 
 &ui_print_header(&server_in($server), $text{'limits_title2'}, "", "limits");
@@ -56,6 +57,12 @@ if (defined($m)) {
 			      &nice_size($vinfo->{'mem'}->[1]*1024));
 		}
 
+	# Owner memory limit
+	if ($limits && $limits->{'max_ram'}) {
+		print &ui_table_row($text{'edit_omemory'},
+			&nice_size($limits->{'max_ram'} - $limits->{'ram'}));
+		}
+
 	print &ui_table_hr();
 	}
 
@@ -71,6 +78,12 @@ if (defined(&$cfunc)) {
 	if (defined($weight)) {
 		print &ui_table_row($text{'edit_lweight'},
 			&ui_textbox("weight", $weight, 4));
+		}
+
+	# Owner CPU
+	if ($limits && $limits->{'max_cpu'}) {
+		print &ui_table_row($text{'edit_ocpu'},
+			($limits->{'max_cpu'} - $limits->{'cpu'})."%");
 		}
 
 	print &ui_table_hr();
@@ -103,6 +116,12 @@ if (defined(&$dfunc)) {
 	elsif ($vinfo && $vinfo->{'disk_free'}) {
 		print &ui_table_row($text{'edit_vdisk'},
 			&nice_size($vinfo->{'disk_free'}));
+		}
+
+	# Owner disk limit
+	if ($limits && $limits->{'max_disk'}) {
+		print &ui_table_row($text{'edit_odisk'},
+			&nice_size($limits->{'max_disk'} - $limits->{'disk'}));
 		}
 
 	print &ui_table_hr();
