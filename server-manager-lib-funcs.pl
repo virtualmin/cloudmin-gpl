@@ -3824,7 +3824,7 @@ foreach my $s (&list_managed_servers()) {
 	# Add IPs from VPS
 	$used{&to_ipaddress($s->{'host'})} = $s;
 	$used{$s->{'ip'}} = $s;
-	foreach my $ip (@{$s->{'ip_addresses'}}) {
+	foreach my $ip (split(/\s+/, $s->{'ip_addresses'})) {
 		$used{$ip}++;
 		}
 
