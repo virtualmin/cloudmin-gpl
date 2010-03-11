@@ -155,7 +155,7 @@ $login_home_base = $ENV{'WEBMIN_VAR'}."/login";
 $api_helper_command = "/usr/sbin/cloudmin";
 $old_api_helper_command = "/usr/sbin/vm2";
 
-$ping_host_timeout = 2;
+$ping_host_timeout = int($config{'ping_timeout'}) || 2;
 
 $xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
 $xen_migration_port = 8002;

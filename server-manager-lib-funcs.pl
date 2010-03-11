@@ -2033,15 +2033,15 @@ foreach my $s (@servers::server_types) {
 return $type;
 }
 
-# ping_server_host(hostname|ip)
+# ping_server_host(hostname|ip, [force_timeout])
 # Returns 1 if some host responds to a ping in 2 seconds
 sub ping_server_host
 {
-my ($host) = @_;
-my $timeout = int($config{'ping_timeout'}) || 1;
+my ($host, $force_timeout) = @_;
+my $timeout = $force_timeout || $ping_host_timeout;
 my $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c 1" : "ping";
 my ($out, $timed_out) = &backquote_with_timeout(
-	$pingcmd." ".$host." 2>&1", $ping_host_timeout, $timeout);
+	$pingcmd." ".$host." 2>&1", $timeout, 1);
 return !$timed_out && !$? ? 1 : 0;
 }
 
@@ -3805,7 +3805,7 @@ for(my $i=0; $i<@startips; $i++) {
 					  $sub_endips[$j]);
 				}
 			}
-		if ($j == 1) {
+		if ($j == 1 && @sub_startips > 2) {
 			# Only show 2 IPs
 			push(@rv, "...");
 			last;

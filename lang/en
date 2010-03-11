@@ -3524,6 +3524,7 @@ ips_use=Used by
 ips_owner=Owner
 ips_host=Host systems
 ips_free=Free
+ips_ping=In Use
 ips_tabips=IP addresses in use
 ips_tabranges=IP ranges in use
 ips_tabpools=Common IP pools

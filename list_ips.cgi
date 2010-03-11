@@ -32,9 +32,10 @@ foreach $p (@pools) {
 foreach $m (@virtual_server_management_types) {
 	$cfunc = "can_host_".$m;
 	next if (!defined(&$cfunc));
-	foreach $s (grep { &$cfunc($_) } @allservers) {
-		@starts = split(/\s+/, $s->{$m."_start"});
-		@ends = split(/\s+/, $s->{$m."_end"});
+	$mkey = $m eq 'zones' ? 'zone' : $m;
+	foreach $s (grep { &$cfunc($_) && $_->{$mkey.'_host'} } @allservers) {
+		@starts = split(/[ ,]+/, $s->{$mkey."_start"});
+		@ends = split(/[ ,]+/, $s->{$mkey."_end"});
 		for($i=0; $i<@starts; $i++) {
 			$snum = &net::ip_to_integer($starts[$i]);
 			$enum = &net::ip_to_integer($ends[$i]);
@@ -74,8 +75,18 @@ foreach $s (@allservers) {
 		}
 	}
 
-# Get IPs in sorted order
+# For IPs that might be free, parallel ping them
 @ips = keys %ips;
+@freeips = map { { 'id' => $_ } } grep { !$ips{$_}->{'server'} } @ips;
+local $config{'procs'} = 100;
+@pings = map { $_->[0] } &parallel_server_function(\@freeips,
+			sub { my $p = &ping_server_host($_[0]->{'id'}, 1);
+			      return $p });
+for($i=0; $i<@freeips; $i++) {
+	$ips{$freeips[$i]->{'id'}}->{'ping'} = $pings[$i];
+	}
+
+# Get IPs in sorted order
 foreach $ip (@ips) {
 	$ips{$ip}->{'integer'} = &net::ip_to_integer($ip);
 	}
@@ -99,6 +110,7 @@ print &ui_columns_start([ $text{'ips_ip'},
 			], 100);
 foreach $ip (@ips) {
 	$s = $ips{$ip}->{'server'};
+	$p = $ips{$ip}->{'ping'};
 	@hosts = sort { $a cmp $b }
 		      map { $idmap{$_}->{'host'} }
 			  &unique(@{$ips{$ip}->{'hosts'}});
@@ -108,8 +120,8 @@ foreach $ip (@ips) {
 		}
 	print &ui_columns_row([
 		$ip,
-		$s ? "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>"
-		   : $text{'ips_free'},
+		$s ? "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>" :
+		 $p ? $text{'ips_ping'} : $text{'ips_free'},
 		!$oc ? ( ) :
 		 !$s ? ( undef ) :
 		       ( $ownermap{$s->{'id'}} ),
