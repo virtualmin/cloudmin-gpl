@@ -4216,6 +4216,7 @@ return $warns;
 sub check_server_manager_licence
 {
 my %licence;
+return ( ) if (!$cloudmin_pro);
 &read_file_cached($licence_status, \%licence);
 if (time() - $licence{'last'} > 3*24*60*60) {
 	# Hasn't been checked from cron for 3 days .. do it now
@@ -4254,6 +4255,11 @@ my ($licence) = @_;
 $licence->{'expiry'} = undef;
 $licence->{'servers'} = 0;
 $licence->{'last'} = time();
+if (!$cloudmin_pro) {
+	# Free version, no check needed
+	$licence->{'status'} = 0;
+	return;
+	}
 
 # Do we have a licence file?
 my ($serial, $key) = &get_server_manager_serial();

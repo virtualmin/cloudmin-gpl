@@ -5,9 +5,12 @@ package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
 
-&read_file($licence_status, \%licence);
-&update_server_manager_licence(\%licence);
-&write_file($licence_status, \%licence);
+# Check Cloudmin's own licence
+if ($cloudmin_pro) {
+	&read_file($licence_status, \%licence);
+	&update_server_manager_licence(\%licence);
+	&write_file($licence_status, \%licence);
+	}
 
 # Check for new Virtualmin licences
 if ($config{'licences_sched'}) {

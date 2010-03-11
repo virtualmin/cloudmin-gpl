@@ -9,6 +9,7 @@ eval "use WebminCore;";
 &foreign_require("net", "net-lib.pl");
 &remote_error_setup(\&remote_error_handler);
 %access = &get_module_acl();
+$cloudmin_pro = $module_info{'vm2'} ne 'xen';
 
 if (!$done_server_manager_lib_funcs) {
 	do 'server-manager-lib-funcs.pl';
@@ -179,8 +180,14 @@ $locations_file = "$module_config_directory/locations";
 $pools_file = "$module_config_directory/pools";
 
 $server_images_dir = "$ENV{'WEBMIN_VAR'}/$module_name";
-$server_images_url = "http://cloudmin.virtualmin.com/images/images.txt";
-$server_images_base = "http://cloudmin.virtualmin.com/images/";
+if ($cloudmin_pro) {
+	$server_images_url = "http://cloudmin.virtualmin.com/images/images.txt";
+	$server_images_base = "http://cloudmin.virtualmin.com/images/";
+	}
+else {
+	$server_images_url = "http://cloudmin.virtualmin.com/xen/images/images.txt";
+	$server_images_base = "http://cloudmin.virtualmin.com/xen/images/";
+	}
 $server_images_cache = "$module_config_directory/server-images-cache";
 $images_cache_dir = "/var/cloudmin-images";
 $image_storages_dir = "$module_config_directory/storages";
