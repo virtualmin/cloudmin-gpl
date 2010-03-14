@@ -111,6 +111,7 @@ if ($lv) {
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+$vhost = &get_parent_server($server);
 &can_action_usage($server, "disks");
 &obtain_lock_server($server);
 
@@ -178,6 +179,11 @@ if ($limits && $limits->{'max_disk'} &&
 	&usage(&text('disk_elimit',
 	       &nice_size($limits->{'max_disk'}),
 	       &nice_size($limits->{'disk'})));
+	}
+$hostfree = &host_free_disk($vhost, $server->{'manager'}, $server);
+if ($hostfree && $disk->{'size'} > $hostfree) {
+	&usage("The host system $vhost->{'host'} has only ".
+	       &nice_size($hostfree)." disk space free");
 	}
 
 # Do it
