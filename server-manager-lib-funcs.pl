@@ -432,6 +432,14 @@ foreach my $vsync (&list_virtualmin_syncs()) {
 		&delete_virtualmin_sync($vsync);
 		}
 	}
+
+# Delete any scheduled changes for this system
+foreach my $sched (&list_scheduled_changes()) {
+	if ($sched->{'server'} eq $server->{'id'}) {
+		&save_scheduled_change($server, $sched->{'type'},
+				       $sched->{'id'}, undef);
+		}
+	}
 }
 
 # find_managed_servers(all, &hostnames, &groupnames, &managers, &types, &owners)
@@ -6540,29 +6548,52 @@ return $rv;
 sub host_free_desc
 {
 my ($vhost, $manager) = @_;
-my $vinfo = &get_server_collected($vhost);
 return "" if (!can_action(undef, "global"));
 my @rv;
-
-# Get free disk, either from host LVM volume group or actual disk space
-if ($manager && $vhost->{$manager.'_vg_free'}) {
-	push(@rv, &text('create_hostdisk',
-			&nice_size($vhost->{$manager.'_vg_free'})));
+my $freedisk = &host_free_disk($vhost, $manager);
+if ($freedisk) {
+	push(@rv, &text('create_hostdisk', &nice_size($freedisk)));
 	}
-elsif ($vinfo && $vinfo->{'disk_free'}) {
-	push(@rv, &text('create_hostdisk', &nice_size($vinfo->{'disk_free'})));
-	}
-
-# Get free memory, possibly taking actual host memory into account
-if ($manager && $vhost->{$manager.'_mem_free'}) {
-	push(@rv, &text('create_hostmem',
-			&nice_size($vhost->{$manager.'_mem_free'})));
-	}
-elsif ($vinfo && $vinfo->{'mem'}) {
-	push(@rv, &text('create_hostmem',
-			&nice_size($vinfo->{'mem'}->[1]*1024)));
+my $freemem = &host_free_memory($vhost, $manager);
+if ($freemem) {
+	push(@rv, &text('create_hostmem', &nice_size($freemem)));
 	}
 return @rv ? " (".join(", ", @rv).")" : "";
+}
+
+# host_free_disk(&host, manager, [&for-server])
+# Returns the amount of disk space free on some host system, perhaps in LVM.
+# In an array context, returns the total disk too.
+sub host_free_disk
+{
+my ($vhost, $manager, $server) = @_;
+my $vinfo = &get_server_collected($vhost);
+my @rv;
+my $lvm = $vhost->{$manager.'_vg_free'} &&
+	  (!$server || $server->{$manager.'_filesystem_vg'});
+if ($manager && $lvm) {
+	@rv = ( $vhost->{$manager.'_vg_free'}, $vhost->{$manager.'_vg_total'} );
+	}
+elsif ($vinfo && $vinfo->{'disk_free'}) {
+	@rv = ( $vinfo->{'disk_free'}, $vinfo->{'disk_total'} );
+	}
+return wantarray ? @rv : $rv[0];
+}
+
+# host_free_memory(&host, manager)
+# Returns the amount of RAM free on some host system, perhaps taking Xen host
+# memory into account
+sub host_free_memory
+{
+my ($vhost, $manager) = @_;
+my $vinfo = &get_server_collected($vhost);
+if ($manager && $vhost->{$manager.'_mem_free'}) {
+	return $vhost->{$manager.'_mem_free'};
+	}
+elsif ($vinfo && $vinfo->{'mem'}) {
+	return $vinfo->{'mem'}->[1]*1024;
+	}
+return undef;
 }
 
 # usable_host_system(&server, manager, extra-ram, extra-disk)
@@ -6573,27 +6604,11 @@ sub usable_host_system
 my ($vhost, $manager, $mem, $disk) = @_;
 
 # Check how much RAM and disk is free now
-my $vinfo = &get_server_collected($vhost);
-my ($memfree, $diskfree);
-if ($vhost->{$manager.'_vg_free'}) {
-	# Using LVM, check its free space
-	$diskfree = $vhost->{$manager.'_vg_free'};
-	}
-elsif ($vinfo && $vinfo->{'disk_free'}) {
-	# From collected info
-	$diskfree = $vinfo->{'disk_free'};
-	}
+my $diskfree = &host_free_disk($vhost, $manager);
+my $memfree = &host_free_memory($vhost, $manager);
 
-if ($vhost->{$manager.'_mem_free'}) {
-	# From Xen host memory
-	$memfree = $vhost->{$manager.'_mem_free'};
-	}
-else {
-	# From collected info
-	$memfree = $vinfo->{'mem'}->[1]*1024;
-	}
+# Take away RAM assigned to down systems
 if ($vhost->{'floor_mem_down'}) {
-	# Take away RAM assigned to down systems
 	foreach my $s (&list_managed_servers()) {
 		next if ($s->{'status'} ne 'down');
 		my $v = &get_parent_server($s);
@@ -8388,6 +8403,65 @@ foreach my $k (@k2) {
 		push(@rv, $k);
 		}
 	}
+return @rv;
+}
+
+# get_scheduled_change(&server, type, id)
+# Returns the hash ref for a scheduled change of some type, or undef
+sub get_scheduled_change
+{
+my ($server, $type, $id) = @_;
+my $idfile = $id;
+$idfile =~ s/^\/+//;
+$idfile =~ s/\//_/g;
+my $file = "$scheduled_changes_dir/$server->{'id'}-$type-$idfile";
+my %rv;
+&read_file_cached($file, \%rv) || return undef;
+return \%rv;
+}
+
+# save_scheduled_change(&server, type, id, [&change])
+# Creates, updates or deletes a scheduled change
+sub save_scheduled_change
+{
+my ($server, $type, $id, $sched) = @_;
+my $idfile = $id;
+$idfile =~ s/^\/+//;
+$idfile =~ s/\//_/g;
+my $file = "$scheduled_changes_dir/$server->{'id'}-$type-$idfile";
+if (!-d $scheduled_changes_dir) {
+	&make_dir($scheduled_changes_dir, 0700);
+	}
+if ($sched) {
+	# Create or update
+	$sched->{'id'} = $id;
+	$sched->{'type'} = $type;
+	$sched->{'server'} = $server->{'id'};
+	&lock_file($file);
+	&write_file($file, $sched);
+	&unlock_file($file);
+	}
+else {
+	# Delete
+	&unlink_logged($file);
+	}
+}
+
+# list_scheduled_changes()
+# Returns a list of all known scheduled changes
+sub list_scheduled_changes
+{
+my @rv;
+opendir(SCHEDS, $scheduled_changes_dir);
+foreach my $f (readdir(SCHEDS)) {
+	if ($f =~ /^(\d+)\-([^\-]+)-(\S+)$/) {
+		my %sched;
+		if (&read_file_cached("$scheduled_changes_dir/$f", \%sched)) {
+			push(@rv, \%sched);
+			}
+		}
+	}
+closedir(SCHEDS);
 return @rv;
 }
 

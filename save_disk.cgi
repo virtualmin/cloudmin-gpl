@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 &error_if_cloudmin_replica();
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
+$vhost = &get_parent_server($server);
 &check_server_status($server, 0, 1);	# In case state has changed
 &can_action_error($server, "disks");
 
@@ -118,7 +119,8 @@ else {
 	$in{'virt'} =~ /^\/\S+$/ || &error($text{'disk_evirt'});
 	$disk->{'virt'} = $in{'virt'};
 
-	# New or current size. Make sure it comes in under the owner's limit
+	# New or current size. Make sure it comes in under the owner's limit,
+	# and the host's free space.
 	if (defined($in{'size'})) {
 		$in{'size'} =~ /^\d+$/ || &error($text{'disk_esize'});
 		$incr = $in{'size'}*$in{'size_units'};
@@ -131,6 +133,12 @@ else {
 			&error(&text('disk_elimit',
 			       &nice_size($limits->{'max_disk'}),
 			       &nice_size($limits->{'disk'})));
+			}
+		$hostfree = &host_free_disk($vhost, $server->{'manager'},
+					    $server);
+		if ($hostfree && $incr > $hostfree) {
+			&error(&text('disk_ehostlimit',
+				     &nice_size($hostfree)));
 			}
 		$disk->{'size'} = $in{'size'}*$in{'size_units'};
 		}

@@ -98,19 +98,10 @@ print &ui_table_row($text{'disk_virt'},
 
 # Get current disk used and free on host
 $freemsg = "";
-$vinfo = &get_server_collected($vhost);
-if ($server->{'xen_filesystem_vg'} &&
-    $vhost->{$server->{'manager'}.'_vg_free'}) {
-	# From host LV free
-	$freemsg = &text('disk_sizefree',
-			&nice_size($vhost->{$server->{'manager'}.'_vg_total'}),
-			&nice_size($vhost->{$server->{'manager'}.'_vg_free'}));
-	}
-elsif ($vinfo && $vinfo->{'disk_free'}) {
-	# Actual free space
-	$freemsg = &text('disk_sizefree',
-			&nice_size($vinfo->{'disk_total'}),
-			&nice_size($vinfo->{'disk_free'}));
+($diskfree, $disktotal) = &host_free_disk($vhost, $server->{'manager'},$server);
+if ($diskfree) {
+	$freemsg = &text('disk_sizefree', &nice_size($disktotal),
+					  &nice_size($diskfree));
 	}
 
 # Size of file
@@ -174,6 +165,62 @@ print &ui_table_end();
 print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]
 		      : [ [ undef, $text{'save'} ],
 			  $root ? ( ) : ( [ 'delete', $text{'delete'} ] ) ]);
+
+# Scheduled expansion form
+if (!$in{'new'} && (!$disk->{'device'} || $disk->{'lv'})) {
+	$sched = &get_scheduled_change($server, "disk", $disk->{'real'});
+	print &ui_hr();
+	print &ui_form_start("save_disksched.cgi", "post");
+	print &ui_hidden("id", $in{'id'});
+	print &ui_hidden("real", $disk->{'real'});
+	print &ui_table_start($text{'disk_sheader'}, undef, 2);
+
+	if ($sched) {
+		# Already scheduled, show button to remove
+		print &ui_table_row(undef, $text{'disk_sdesc2'}, 2);
+
+		# When it will be run
+		@tm = localtime($sched->{'time'});
+		print &ui_table_row($text{'disk_sdate'},
+			&make_date($sched->{'time'}, 1));
+
+		print &ui_table_row($text{'disk_stime'},
+			sprintf("%2.2d:%2.2d", $tm[2], $tm[1]));
+
+		# New size
+		print &ui_table_row($text{'disk_ssize'},
+			&nice_size($sched->{'size'}));
+
+		$button = [ 'delete', $text{'disk_sdelete'} ];
+		}
+	else {
+		# Not scheduled yet, show form to add
+		print &ui_table_row(undef, $text{'disk_sdesc'}, 2);
+
+		# When to run
+		@now = localtime(time()+(24*60*60));
+		print &ui_table_row($text{'disk_sdate'},
+			&ui_textbox("day", $now[3], 2)."/".
+			&ui_select("month", $now[4],
+				   [ map { [ $_, $text{"smonth_".($_+1)} ] }
+					 ( 0 .. 11 ) ])."/".
+			&ui_textbox("year", $now[5]+1900, 4).
+			&date_chooser_button("day", "month", "year"));
+
+		print &ui_table_row($text{'disk_stime'},
+			&ui_textbox("hour", "03", 2).":".
+			&ui_textbox("min", "00", 2));
+
+		# New size
+		print &ui_table_row($text{'disk_ssize'},
+			&ui_bytesbox("size", $disk->{'size'}, 8)." ".$freemsg);
+
+		$button = [ 'save', $text{'disk_ssave'} ];
+		}
+
+	print &ui_table_end();
+	print &ui_form_end([ $button ]);
+	}
 
 &ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 		 "", $text{'index_return'});

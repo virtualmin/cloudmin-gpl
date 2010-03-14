@@ -204,6 +204,8 @@ $repl_mode_file = "$module_config_directory/replication-mode";
 $repl_servers_file = "$module_config_directory/replication-servers";
 $repl_lock_file = "$module_config_directory/replication-status";
 
+$scheduled_changes_dir = "$module_config_directory/scheduled";
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {

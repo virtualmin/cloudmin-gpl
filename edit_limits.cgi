@@ -48,13 +48,10 @@ if (defined($m)) {
 		}
 
 	# Memory usage on host system
-	if ($vhost && $vhost->{$t.'_mem_free'}) {
+	$freemem = &host_free_memory($vhost, $t);
+	if ($freemem) {
 		print &ui_table_row($text{'edit_vmemory'},
-			     &nice_size($vhost->{$t.'_mem_free'}));
-		}
-	elsif ($vinfo && $vinfo->{'mem'}) {
-		print &ui_table_row($text{'edit_vmemory'},
-			      &nice_size($vinfo->{'mem'}->[1]*1024));
+			     &nice_size($freemem));
 		}
 
 	# Owner memory limit
@@ -109,13 +106,10 @@ if (defined(&$dfunc)) {
 		}
 
 	# Free disk on host
-	if ($vhost && $vhost->{$t.'_vg_free'}) {
+	$freedisk = &host_free_disk($vhost, $t, $server);
+	if ($freedisk) {
 		print &ui_table_row($text{'edit_vdisk'},
-			&nice_size($vhost->{$t.'_vg_free'}));
-		}
-	elsif ($vinfo && $vinfo->{'disk_free'}) {
-		print &ui_table_row($text{'edit_vdisk'},
-			&nice_size($vinfo->{'disk_free'}));
+			&nice_size($freedisk));
 		}
 
 	# Owner disk limit
