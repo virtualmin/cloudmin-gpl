@@ -1948,6 +1948,7 @@ disks_add2=Add existing file or device as a disk.
 disks_delete=Remove Selected Disks
 disks_eget=Failed to fetch list of disks : $1
 disks_return=list of disks
+disks_sched=(changing to $1)
 
 disk_title1=Create Disk File
 disk_title2=Add Disk Device
@@ -3631,3 +3632,4 @@ schange_starting=Starting up system after disk resize ..
 schange_msg_disk=Executing scheduled disk size change on $1 ..
 schange_failed=.. scheduled change failed : $1 
 schange_subject=Cloudmin scheduled change on $1
+schange_allok=.. scheduled change complete

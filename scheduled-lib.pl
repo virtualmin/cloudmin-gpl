@@ -59,11 +59,16 @@ closedir(SCHEDS);
 return @rv;
 }
 
-# run_scheduled_changes()
+# run_scheduled_changes([&only-servers])
 # Finds any scheduled changes due to happen, runs them, sends email notifcation
 # and deletes them
 sub run_scheduled_changes
 {
+my ($onlyservers) = @_;
+my %onlymap;
+if ($onlyservers) {
+	%onlymap = map { $_->{'id'}, $_ } @$onlyservers;
+	}
 my $now = time();
 my $done = 0;
 foreach my $sched (&list_scheduled_changes()) {
@@ -74,6 +79,7 @@ foreach my $sched (&list_scheduled_changes()) {
 	if ($sched->{'owner'}) {
 		$owner = &get_system_owner($sched->{'owner'});
 		}
+	next if ($onlyservers && (!$server || !$onlymap{$server->{'id'}}));
 	if ($server) {
 		&obtain_lock_server($server);
 		}
@@ -114,7 +120,7 @@ foreach my $sched (&list_scheduled_changes()) {
 	# Send email to the appropriate people
 	my $msg = &text('schange_msg_'.$sched->{'type'},
 			$server ? $server->{'host'} : "Unknown system")."\n\n".
-		  join("", map { "    ".$_."\n" } split(/\n/, $out));
+		  join("", map { "    ".$_."\n" } split(/\n/, $out))."\n";
 	if ($err) {
 		$msg .= &text('schange_failed', $err)."\n\n";
 		}
@@ -130,7 +136,7 @@ foreach my $sched (&list_scheduled_changes()) {
 		&get_global_from_address($server),
 		join(", ", @to),
 		undef,
-		&text('schange_subject', $s->{'host'} || "Unknown system"),
+		&text('schange_subject', $server->{'host'} || "Unknown system"),
 		$msg);
 
 	# Delete it

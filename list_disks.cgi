@@ -43,6 +43,7 @@ if (@$disks) {
 				"<tt>$d->{'virt'}</tt>";
 		$canedit = !$d->{'device'} || $d->{'lv'} ||
 			   &can_action($server, 'devices');
+		$sched = &get_scheduled_change($server, "disk", $d->{'real'});
 		print &ui_checked_columns_row([
 		    $canedit ?
 		     "<a href='edit_disk.cgi?id=$in{'id'}&real=$d->{'real'}'>".
@@ -50,7 +51,9 @@ if (@$disks) {
 		    $vdesc,
 		    $d->{'lv'} ? $text{'disks_lvm'} :
 		      $d->{'device'} ? $text{'disks_dev'} : $text{'disks_file'},
-		    $d->{'size'} ? &nice_size($d->{'size'}) : undef,
+		    ($d->{'size'} ? &nice_size($d->{'size'}) : undef).
+		    ($sched ? " ".&text('disks_sched',
+					&nice_size($sched->{'size'})) : ""),
 		    ], \@tds, "d", $d->{'real'}, 0, !$canedit);
 		}
 	print &ui_columns_end();

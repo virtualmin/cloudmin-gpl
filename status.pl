@@ -28,7 +28,6 @@ if (!&is_cloudmin_replica()) {
 
 # Run any scheduled changes
 if (!&is_cloudmin_replica()) {
-	# XXX limit to given servers
 	$done = &run_scheduled_changes(\@servers);
 	if ($done) {
 		&cloudmin_api_log([])
