@@ -26,6 +26,15 @@ if (!&is_cloudmin_replica()) {
 	&evaluate_all_alerts(\@servers);
 	}
 
+# Run any scheduled changes
+if (!&is_cloudmin_replica()) {
+	# XXX limit to given servers
+	$done = &run_scheduled_changes(\@servers);
+	if ($done) {
+		&cloudmin_api_log([])
+		}
+	}
+
 if (&get_replication_mode() == 2) {
 	# Replicate changes if enabled
 	if (@ARGV) {

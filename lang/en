@@ -3618,3 +3618,16 @@ repl_isreplica=This system is a Cloudmin replica - no changes are allowed
 repl_warning=This system is a Cloudmin replica of $1. No changes to managed systems or global settings are allowed.
 repl_warning2=This system is a Cloudmin replica, but is not replicating from any master sytem yet. No changes to managed systems or global settings are allowed.
 repl_locked=Replication already in progress
+
+schange_eserver=Scheduled $1 change is for a non-existent system with ID $2
+schange_efunc=Scheduled $1 change for system $2 is not implemented!
+schange_eownername=Original system owner $1 no longer exists
+schange_eowner=System owner $2 is not allowed to make $1 changes on system $3
+schange_edisk=Disk using file $1 does not exist
+schange_shutting=Shutting down system prior to disk resize ..
+schange_disksize=Changing size of disk $1 from $2 to $3 ..
+smove_diskfailed=.. resize failed : $1
+schange_starting=Starting up system after disk resize ..
+schange_msg_disk=Executing scheduled disk size change on $1 ..
+schange_failed=.. scheduled change failed : $1 
+schange_subject=Cloudmin scheduled change on $1

@@ -24,7 +24,8 @@ if ($in{'delete'}) {
 	}
 else {
 	# Validate and save
-	$sched = { };
+	$sched = { 'type' => 'disk',
+		   'action' => 'disks' };
 	$sched->{'real'} = $disk->{'real'};
 	if ($access{'owner'}) {
 		$sched->{'owner'} = $base_remote_user;

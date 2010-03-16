@@ -153,6 +153,15 @@ if ($action && $access{'actions'} ne '*' && $rv[0]) {
 return wantarray ? @rv : $rv[0];
 }
 
+# can_owner_action(&owner, [&server|&servers], [action])
+# Returns 1 if some system owner can perform some action
+sub can_owner_action
+{
+my ($owner, $server, $action) = @_;
+local %access = %{$owner->{'acl'}};
+return &can_action($server, $action);
+}
+
 # can_action_error([&server|&servers], [action])
 # Check if some action is allowed, call error if not
 sub can_action_error
