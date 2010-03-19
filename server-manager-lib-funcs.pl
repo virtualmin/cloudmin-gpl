@@ -98,36 +98,16 @@ $this->{'desc'} = $text{'this_this'};
 splice(@rv, 0, 0, $this);
 
 # If this system can host Xen and we are in Xen-only mode, allow it to
-# be a host
+# be a host, and set some useful defaults for IP allocation
 if ($module_info{'onehost'} eq 'xen' &&
     $server_management_types{'xen'} &&
     ($config{'xen_checked'} || !&check_xen_host_software($this))) {
 	$this->{'xen_host'} = 1;
 	my $eth0 = &first_ethernet_iface();
-	if ($config{'xen_start'}) {
-		# Allocation range is set from module config
-		$this->{'xen_start'} = $config{'xen_start'};
-		$this->{'xen_end'} = $config{'xen_end'};
-		}
-	else {
-		# Range comes from primary interface.
-		($this->{'xen_start'}, $this->{'xen_end'}) =
-			&first_ethernet_range();
-		}
-	if ($config{'xen_cidr'}) {
-		# Set on Module Config page
-		$this->{'xen_cidr'} = $config{'xen_cidr'};
-		}
-	else {
-		# CIDR is same as primary interface
-		$this->{'xen_cidr'} = &net::mask_to_prefix(
-					$eth0->{'netmask'});
-		}
-	$this->{'xen_dir'} = $config{'xen_dir'};
+	($this->{'xen_start'}, $this->{'xen_end'}) = &first_ethernet_range();
+	$this->{'xen_cidr'} = &net::mask_to_prefix($eth0->{'netmask'});
+	$this->{'xen_dir'} = "/xen";
 	$this->{'xen_zone'} = $config{'xen_zone'};
-	$this->{'xen_vg'} = $config{'xen_vg'};
-	$this->{'backup_default'} = $config{'xen_backupdir'} ?
-			'host:'.$config{'xen_backupdir'} : undef;
 
 	# Save flag indicating that we have already checked out Xen
 	# on this machine, as doing so can be slow

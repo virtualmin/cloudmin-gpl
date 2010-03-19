@@ -1408,6 +1408,7 @@ xen_estartssh=Xen instance was started, but could not be accessed via SSH after 
 
 xen_create=Register Xen Host
 xen_edit=Edit Xen Host
+xen_editone=Xen Host Settings
 xen_editlink=Xen Host Settings
 xen_egone=The Xen host no longer exists!
 xen_header=Xen host system details
