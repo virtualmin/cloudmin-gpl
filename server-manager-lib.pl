@@ -185,8 +185,8 @@ if ($cloudmin_pro) {
 	$server_images_base = "http://cloudmin.virtualmin.com/images/";
 	}
 else {
-	$server_images_url = "http://cloudmin.virtualmin.com/xen/images/images.txt";
-	$server_images_base = "http://cloudmin.virtualmin.com/xen/images/";
+	$server_images_url = "http://cloudmin.virtualmin.com/gpl/images/images.txt";
+	$server_images_base = "http://cloudmin.virtualmin.com/gpl/images/";
 	}
 $server_images_cache = "$module_config_directory/server-images-cache";
 $images_cache_dir = "/var/cloudmin-images";

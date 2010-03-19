@@ -95,8 +95,11 @@ foreach $ip (@ips) {
 # Show tabs
 @tabs = ( [ "ips", $text{'ips_tabips'}, "list_ips.cgi?mode=ips" ],
 	  [ "ranges", $text{'ips_tabranges'}, "list_ranges.cgi?mode=ranges" ],
-	  [ "pools", $text{'ips_tabpools'}, "list_pools.cgi?mode=pools" ],
 	);
+if (!$module_info{'onehost'}) {
+	push(@tabs,
+	  [ "pools", $text{'ips_tabpools'}, "list_pools.cgi?mode=pools" ]);
+	}
 print &ui_tabs_start(\@tabs, "mode", $in{'mode'} || "ips", 1);
 
 # Show all the IPs we know about, in a tab
@@ -168,35 +171,37 @@ print &ui_columns_end();
 print &ui_tabs_end_tab();
 
 # Show IP pools
-print &ui_tabs_start_tab("mode", "pools");
-print $text{'ips_poolsdesc'},"<p>\n";
-print &ui_form_start("save_ips.cgi", "post");
-print &ui_columns_start([ $text{'ips_active'},
-			  $text{'ips_desc'},
-			  $text{'range_start'},
-			  $text{'range_end'},
-			  $text{'range_netmask'},
-			  $text{'range_gateway'} ], 100);
-$i = 0;
-foreach $p (@pools, { }) {
-	@starts = split(/,/, $p->{'start'});
-	@ends = split(/,/, $p->{'end'});
-	@netmasks = $p->{'cidr'} ? map { &net::prefix_to_mask($_) }
-				    split(/,/, $p->{'cidr'}) : ( );
-	@gateways = split(/,/, $p->{'gateway'});
-	print &ui_columns_row([
-		&ui_checkbox("active_$i", 1, "", $p->{'id'}),
-		&ui_textbox("desc_$i", $p->{'desc'}, 30),
-		&ui_textarea("start_$i", join("\n", @starts), 3, 20),
-		&ui_textarea("end_$i", join("\n", @ends), 3, 20),
-		&ui_textarea("netmask_$i", join("\n", @netmasks), 3, 20),
-		&ui_textarea("gateway_$i", join("\n", @gateways), 3, 20),
-		], [ "valign=top", "valign=top" ]);
-	$i++;
+if (!$module_info{'onehost'}) {
+	print &ui_tabs_start_tab("mode", "pools");
+	print $text{'ips_poolsdesc'},"<p>\n";
+	print &ui_form_start("save_ips.cgi", "post");
+	print &ui_columns_start([ $text{'ips_active'},
+				  $text{'ips_desc'},
+				  $text{'range_start'},
+				  $text{'range_end'},
+				  $text{'range_netmask'},
+				  $text{'range_gateway'} ], 100);
+	$i = 0;
+	foreach $p (@pools, { }) {
+		@starts = split(/,/, $p->{'start'});
+		@ends = split(/,/, $p->{'end'});
+		@netmasks = $p->{'cidr'} ? map { &net::prefix_to_mask($_) }
+					    split(/,/, $p->{'cidr'}) : ( );
+		@gateways = split(/,/, $p->{'gateway'});
+		print &ui_columns_row([
+			&ui_checkbox("active_$i", 1, "", $p->{'id'}),
+			&ui_textbox("desc_$i", $p->{'desc'}, 30),
+			&ui_textarea("start_$i", join("\n", @starts), 3, 20),
+			&ui_textarea("end_$i", join("\n", @ends), 3, 20),
+			&ui_textarea("netmask_$i", join("\n",@netmasks), 3, 20),
+			&ui_textarea("gateway_$i", join("\n",@gateways), 3, 20),
+			], [ "valign=top", "valign=top" ]);
+		$i++;
+		}
+	print &ui_columns_end();
+	print &ui_form_end([ [ undef, $text{'save'} ] ]);
+	print &ui_tabs_end_tab();
 	}
-print &ui_columns_end();
-print &ui_form_end([ [ undef, $text{'save'} ] ]);
-print &ui_tabs_end_tab();
 
 print &ui_tabs_end(1);
 

@@ -5127,10 +5127,12 @@ if ($server_management_types{'xen'} ||
 	push(@gicons, "images/images.gif");
 	push(@gcats, "settings");
 
-	push(@glinks, "list_storages.cgi");
-	push(@gtitles, $text{'storages_title'});
-	push(@gicons, "images/storages.gif");
-	push(@gcats, "settings");
+	if (!$module_info{'onehost'}) {
+		push(@glinks, "list_storages.cgi");
+		push(@gtitles, $text{'storages_title'});
+		push(@gicons, "images/storages.gif");
+		push(@gcats, "settings");
+		}
 	}
 
 # Bandwidth monitoring
@@ -5205,10 +5207,12 @@ push(@gicons, "images/plugins.gif");
 push(@gcats, "settings");
 
 # Replication
-push(@glinks, "edit_repl.cgi");
-push(@gtitles, $text{'repl_title'});
-push(@gicons, "images/repl.gif");
-push(@gcats, "settings");
+if (!$module_info{'onehost'}) {
+	push(@glinks, "edit_repl.cgi");
+	push(@gtitles, $text{'repl_title'});
+	push(@gicons, "images/repl.gif");
+	push(@gcats, "settings");
+	}
 
 # Type-defined icons
 foreach my $t (@server_management_types) {
@@ -6313,10 +6317,11 @@ if (@starts) {
 	}
 
 # Add rows for IP pools, if any
-my $table = &ui_columns_start(\@cols, 100, 0, [ "width=75%" ]);
-$table .= &ui_hidden("show_gateways", $show_gateways);
+my $table;
 my @allpools = &list_ip_pools();
+$table .= &ui_hidden("show_gateways", $show_gateways);
 if (@allpools) {
+	$table .= &ui_columns_start(\@cols, 100, 0, [ "width=75%" ]);
 	for(my $i=0; $i<=@pools; $i++) {
 		my @cols = (
 		    &ui_select("pool_$i", $pools[$i],
@@ -6345,8 +6350,8 @@ if (@allpools) {
 			}
 		$table .= &ui_columns_row(\@cols);
 		}
+	$table .= &ui_columns_end();
 	}
-$table .= &ui_columns_end();
 
 # Exclude ranges from pools in manual list
 foreach my $p (@pools) {
