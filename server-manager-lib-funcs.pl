@@ -5294,6 +5294,14 @@ if ($access{'owner'}) {
 	push(@gcats, "settings");
 	}
 
+if (!$cloudmin_pro) {
+	# Upgrade link
+	push(@glinks, "upgrade_form.cgi");
+	push(@gtitles, $text{'upgrade_title'});
+	push(@gicons, "images/upgrade.gif");
+	push(@gcats, "settings");
+	}
+
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
 }
 
