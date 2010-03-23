@@ -132,7 +132,7 @@ elsif ($itype eq "deb") {
 	&foreign_require("software", "software-lib.pl");
 	foreach $p (&software::update_system_available()) {
 		if ($p->{'name'} eq "webmin" || $p->{'name'} eq "usermin" ||
-		    $p->{'name'} =~ /^(webmin|usermin)-(virtualmin|server-manager|security-updates)/) {
+		    $p->{'name'} =~ /^(webmin|usermin)-(virtualmin|server-manager|security-updates|virtual-server-theme)/) {
 			if ($p->{'name'} eq 'webmin-server-manager') {
 				# For the Virtualmin package, select pro
 				# version explicitly so that the GPL is
