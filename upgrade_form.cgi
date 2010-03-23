@@ -2,7 +2,6 @@
 # Show a page for upgrading from the GPL version to Pro
 
 require './server-manager-lib.pl';
-&can_edit_templates() || &error($text{'upgrade_ecannot'});
 &ui_print_header(undef, $text{'upgrade_title'}, "");
 
 print $text{'upgrade_desc1'},"<br>\n";

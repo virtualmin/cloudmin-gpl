@@ -206,6 +206,11 @@ $repl_lock_file = "$module_config_directory/replication-status";
 
 $scheduled_changes_dir = "$module_config_directory/scheduled";
 
+$upgrade_cloudmin_host = "cloudmin.virtualmin.com";
+$upgrade_cloudmin_port = 80;
+$upgrade_cloudmin_testpage = "/licence-test.txt";
+$upgrade_cloudmin_updates = "/wbm/updates.txt";
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {

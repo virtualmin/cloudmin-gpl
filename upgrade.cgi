@@ -1,20 +1,17 @@
 #!/usr/local/bin/perl
-# Upgrade from Virtualmin GPL to Pro
+# Upgrade from Cloudmin GPL to Pro
 
-require './virtual-server-lib.pl';
+require './server-manager-lib.pl';
 &foreign_require("webmin", "webmin-lib.pl");
 &foreign_require("cron", "cron-lib.pl");
-&can_edit_templates() || &error($text{'upgrade_ecannot'});
 &error_setup($text{'upgrade_err'});
 &ReadParse();
 
 # Make sure the serial and key are valid, by trying a HTTP request
 $in{'serial'} =~ /^\S+$/ || &error($text{'upgrade_eserial'});
 $in{'key'} =~ /^\S+$/ || &error($text{'upgrade_ekey'});
-$in{'key'} eq 'AMAZON' && &error($text{'upgrade_eamazon'});
-$in{'key'} eq 'DEMO' && &error($text{'upgrade_eamazon'});
-&http_download($upgrade_virtualmin_host, $upgrade_virtualmin_port,
-	       $upgrade_virtualmin_testpage, \$out, \$error, undef, 0,
+&http_download($upgrade_cloudmin_host, $upgrade_cloudmin_port,
+	       $upgrade_cloudmin_testpage, \$out, \$error, undef, 0,
 	       $in{'serial'}, $in{'key'}, undef, 0, 1);
 if ($error =~ /401/) {
 	&error($text{'upgrade_elogin'});
@@ -30,15 +27,15 @@ if (&webmin::shared_root_directory()) {
 chop($itype = &read_file_contents("$module_root_directory/install-type"));
 if ($itype eq "rpm") {
 	# Check for repo file
-	-r $virtualmin_yum_repo || &error($text{'upgrade_eyumrepo'});
+	-r $cloudmin_yum_repo || &error($text{'upgrade_eyumrepo'});
 
 	# Make sure YUM works
 	&foreign_require("software", "software-lib.pl");
-	($wvs) = grep { $_->{'name'} eq 'wbm-virtual-server' }
+	($wvs) = grep { $_->{'name'} eq 'wbm-server-manager' }
 		      &software::update_system_available();
 	if (!$wvs) {
 		&error(&text('upgrade_eyumlist',
-		 	     '<tt>wbm-virtual-server</tt>'));
+		 	     '<tt>wbm-server-manager</tt>'));
 		}
 	}
 elsif ($itype eq "deb") {
@@ -46,7 +43,7 @@ elsif ($itype eq "deb") {
 	$lref = &read_file_lines($sources_list);
 	$found = 0;
 	foreach $l (@$lref) {
-		if ($l =~ /^deb\s+http:\/\/software\.virtualmin\.com/) {
+		if ($l =~ /^deb\s+http:\/\/cloudmin\.virtualmin\.com/) {
 			$found = 1;
 			}
 		}
@@ -59,34 +56,34 @@ $SIG{'TERM'} = 'IGNORE';	# Stop process from being killed on upgrade
 
 # Write out the licence file
 &$first_print($text{'upgrade_file'});
-&lock_file($virtualmin_license_file);
+&lock_file($licence_file);
 %lfile = ( 'SerialNumber' => $in{'serial'},
 	   'LicenseKey' => $in{'key'} );
-&write_env_file($virtualmin_license_file, \%lfile);
-&set_ownership_permissions(undef, undef, 0700, $virtualmin_license_file);
-&unlock_file($virtualmin_license_file);
-&$second_print($text{'setup_done'});
+&write_env_file($licence_file, \%lfile);
+&set_ownership_permissions(undef, undef, 0700, $licence_file);
+&unlock_file($licence_file);
+&$second_print($text{'create_done'});
 
 # Work out how we were installed. Possible sources are from the wbm.gz files,
 # from the GPL YUM repo, and from the GPL Debian repo
 if ($itype eq "rpm") {
 	# GPL YUM repo. Replace it with the Pro version
 	local $found;
-	local $lref = &read_file_lines($virtualmin_yum_repo);
+	local $lref = &read_file_lines($cloudmin_yum_repo);
 	foreach my $l (@$lref) {
 		if ($l =~ /^baseurl=.*\/gpl(\/.*)/) {
-			$l = "baseurl=http://$in{'serial'}:$in{'key'}\@$upgrade_virtualmin_host$1";
+			$l = "baseurl=http://$in{'serial'}:$in{'key'}\@$upgrade_cloudmin_host$1";
 			$found++;
 			}
 		}
-	&flush_file_lines($virtualmin_yum_repo);
+	&flush_file_lines($cloudmin_yum_repo);
 	$found || &error(&text('upgrade_eyumfile',
-			       "<tt>$virtualmin_yum_repo</tt>"));
+			       "<tt>$cloudmin_yum_repo</tt>"));
 
 	# Clear all YUM caches
 	&$first_print($text{'upgrade_yumclear'});
 	&execute_command("yum clean all");
-	&$second_print($text{'setup_done'});
+	&$second_print($text{'create_done'});
 
 	# Update all Virtualmin-related packages
 	&foreign_require("software", "software-lib.pl");
@@ -107,14 +104,15 @@ if ($itype eq "rpm") {
 	close(YUM);
 	$errors++ if ($?);
 	&reset_environment();
-	&$second_print($text{'setup_done'});
+	print "</pre>";
+	&$second_print($text{'create_done'});
 	}
 elsif ($itype eq "deb") {
 	# GPL APT repo .. change to use the Pro one
 	$lref = &read_file_lines($sources_list);
 	foreach $l (@$lref) {
-		if ($l =~ /^deb\s+http:\/\/software\.virtualmin\.com\/gpl(\/.*)/) {
-			$l = "deb http://$in{'serial'}:$in{'key'}\@software.virtualmin.com$1";
+		if ($l =~ /^deb\s+http:\/\/cloudmin\.virtualmin\.com\/gpl(\/.*)/) {
+			$l = "deb http://$in{'serial'}:$in{'key'}\@cloudmin.virtualmin.com$1";
 			}
 		}
 	&flush_file_lines($sources_list);
@@ -127,14 +125,15 @@ elsif ($itype eq "deb") {
 		print &html_escape($_);
 		}
 	close(YUM);
-	&$second_print($text{'setup_done'});
+	print "</pre>";
+	&$second_print($text{'create_done'});
 
 	# Update all Virtualmin-related packages
 	&foreign_require("software", "software-lib.pl");
 	foreach $p (&software::update_system_available()) {
 		if ($p->{'name'} eq "webmin" || $p->{'name'} eq "usermin" ||
-		    $p->{'name'} =~ /^(webmin|usermin)-(virtualmin|virtual-server|security-updates)/) {
-			if ($p->{'name'} eq 'webmin-virtual-server') {
+		    $p->{'name'} =~ /^(webmin|usermin)-(virtualmin|server-manager|security-updates)/) {
+			if ($p->{'name'} eq 'webmin-server-manager') {
 				# For the Virtualmin package, select pro
 				# version explicitly so that the GPL is
 				# replaced.
@@ -158,14 +157,15 @@ elsif ($itype eq "deb") {
 	close(YUM);
 	$errors++ if ($?);
 	&reset_environment();
-	&$second_print($text{'setup_done'});
+	print "</pre>";
+	&$second_print($text{'create_done'});
 	}
 else {
 	# Assume wbm.gz install. Download all the Pro modules, and install them
 	&$first_print($text{'upgrade_mods'});
 	&$indent_print();
-	&http_download($upgrade_virtualmin_host, $upgrade_virtualmin_port,
-		       $upgrade_virtualmin_updates, \$uout, undef, undef, 0,
+	&http_download($upgrade_cloudmin_host, $upgrade_cloudmin_port,
+		       $upgrade_cloudmin_updates, \$uout, undef, undef, 0,
 		       $in{'serial'}, $in{'key'}, undef, 0, 1);
 	foreach $line (split(/\r?\n/, $uout)) {
 		($mod, $ver, $path, $os_support, $desc) = split(/\t/, $line);
@@ -181,7 +181,7 @@ else {
 		if (%info) {
 			# Already installed .. but can we upgrade?
 			$can_upgrade = 0;
-			if ($mod eq "virtual-server" &&
+			if ($mod eq "server-manager" &&
 			    $info{'version'} =~ /gpl/i &&
 			    $ver !~ /gpl/i) {
 				# GPL upgrading to pro - always do it
@@ -195,7 +195,7 @@ else {
 			if (!$can_upgrade) {
 				&$second_print(&text('upgrade_gotver',
 						     $info{'version'}));
-				if ($mod eq "virtual-server") {
+				if ($mod eq "server-manager") {
 					$errors++;
 					goto PAGEEND;
 					}
@@ -205,9 +205,9 @@ else {
 
 		# Download the file
 		($mhost, $mport, $mpage, $mssl) =
-			&parse_http_url($path, $upgrade_virtualmin_host,
-					$upgrade_virtualmin_port,
-					$upgrade_virtualmin_updates, 0);
+			&parse_http_url($path, $upgrade_cloudmin_host,
+					$upgrade_cloudmin_port,
+					$upgrade_cloudmin_updates, 0);
 		($mfile = $mpage) =~ s/^(.*)\///;
 		$mtemp = &transname($mfile);
 		$merror = undef;
@@ -221,7 +221,7 @@ else {
 		if ($merror) {
 			&$second_print(&text('upgrade_moderr', $merror));
 			$errors++;
-			if ($mod eq "virtual-server") {
+			if ($mod eq "server-manager") {
 				goto PAGEEND;
 				}
 			next;
@@ -243,19 +243,19 @@ else {
 			# Install failed for some reason
 			&$second_print(&text('upgrade_modfailed', $irv));
 			$errors++;
-			if ($mod eq "virtual-server") {
+			if ($mod eq "server-manager") {
 				goto PAGEEND;
 				}
 			}
 		}
 	&$outdent_print();
-	&$second_print($text{'setup_done'});
+	&$second_print($text{'create_done'});
 
 	# Configure the Webmin updates service
 	&$first_print($text{'upgrade_sched'});
 	@upsource = split(/\t/, $webmin::config{'upsource'});
 	@upsource = &unique(@upsource,
-		"http://$upgrade_virtualmin_host:$upgrade_virtualmin_port$upgrade_virtualmin_updates",
+		"http://$upgrade_cloudmin_host:$upgrade_cloudmin_port$upgrade_cloudmin_updates",
 		"http://$webmin::update_host:$webmin::update_port$webmin::update_page");
 	&lock_file($webmin::module_config_file);
 	$webmin::config{'upsource'} = join("\t", @upsource);
@@ -292,7 +292,7 @@ else {
 			&put_miniserv_config(\%miniserv);
 			&unlock_file($ENV{'MINISERV_CONFIG'});
 			&reload_miniserv();
-			&$second_print($text{'setup_done'});
+			&$second_print($text{'create_done'});
 			}
 		}
 	}
