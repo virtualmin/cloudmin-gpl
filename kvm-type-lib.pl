@@ -1098,7 +1098,7 @@ while($tries++ < 5) {
 # Read the output file
 my $out = &get_file_data_from_server($vhost, $server->{'kvm_console'});
 if (!$found) {
-	return (0, $out);
+	return (0, $out || "No console output generated");
 	}
 
 # Wait up to 60 seconds for ping
