@@ -18,8 +18,6 @@ $clash && &error($text{'mkimage_eclash'});
 $image->{'id'} = $in{'imageid'};
 $in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
 $image->{'desc'} = $in{'desc'};
-$image->{'files'} = $srcpath;
-$image->{'files'} =~ s/^.*\///;
 
 # Get the file
 if ($in{'file_mode'} == 0) {
@@ -50,6 +48,8 @@ else {
 			\&progress_callback, $ssl);
 	$srcdelete = 1;
 	}
+$image->{'files'} = $srcpath;
+$image->{'files'} =~ s/^.*\///;
 @st = &stat_file_on_server($srcserver, $srcpath);
 @st || &error($text{'mimage_efile'});
 
