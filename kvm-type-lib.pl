@@ -1819,6 +1819,47 @@ sub type_kvm_list_disk_filesystems
 return ('ext2', 'reiserfs', 'swap');
 }
 
+# type_kvm_can_fsck(&server, &disk)
+# Returns 1 if some disk can have it's filesystem checked. Only true when
+# the system is down or the disk is not mounted.
+sub type_kvm_can_fsck
+{
+my ($server, $disk) = @_;
+return ($server->{'status'} eq 'down' || !$disk->{'mounted'}) &&
+       $disk->{'fs'};
+}
+
+# type_kvm_fsck_disk(&server, &disk)
+# Run fsck on a disk to validate and repair the filesystem. Returns 1 if 
+# all was OK to start with, 2 if fixes were made and 0 on failure, plus the
+# output from fsck
+sub type_kvm_fsck_disk
+{
+my ($server, $disk) = @_;
+my $vhost = &get_parent_server($server);
+my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
+ref($parts) || return (0, "Failed to list partitions : $parts");
+my $part = $parts->[@$parts - 1];
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"losetup -o $part->{'offset'} /dev/loop9 ".quotemeta($disk->{'real'}));
+if ($ex || $err) {
+	return (0, "losetup failed : ".($err || $out));
+	}
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"fsck -y ".quotemeta($disk->{'real'}));
+&execute_command_on_server($vhost,
+	"losetup -d /dev/loop9");
+if ($ex > 2 || $err) {
+	return (0, $out);
+	}
+elsif ($ex) {
+	return (2, $out);
+	}
+else {
+	return (1, $out);
+	}
+}
+
 # Returns 2, indicating that memory can be changed but needs a reboot
 sub type_kvm_can_memory
 {

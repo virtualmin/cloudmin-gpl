@@ -33,6 +33,8 @@ else {
 	($disk) = grep { $_->{'real'} eq $in{'real'} } @$disks;
 	$disk || &error($text{'disk_egone'});
 	&ui_print_header(&server_in($server), $text{'disk_title'}, "", "disk");
+	$ffunc = "type_".$server->{'manager'}."_can_fsck";
+	$fsck = &$ffunc($server, $disk);
 	}
 
 # Make sure owner can edit devices
@@ -164,6 +166,7 @@ $root = $disk->{'mount'} eq '/' ? 1 : 0;
 print &ui_table_end();
 print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]
 		      : [ [ undef, $text{'save'} ],
+			  $fsck ? ( [ 'fsck', $text{'disk_fsck'} ] ) : ( ),
 			  $root ? ( ) : ( [ 'delete', $text{'delete'} ] ) ]);
 
 # Scheduled expansion form

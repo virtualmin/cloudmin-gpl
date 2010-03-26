@@ -2013,6 +2013,12 @@ disk_sdate=Resize on date
 disk_stime=Resize at time
 disk_ssize=New size
 
+fsck_title=Check Disk
+fsck_doing=Checking $1 filesystem in $2 ..
+fsck_ok=.. no errors found
+fsck_fixed=.. filesystem errors found and corrected
+fsck_bad=.. un-fixable filesystem errors found!
+
 sdisk_err=Failed to save scheduled resize
 sdisk_edate=Invalid date or time to change
 sdisk_epast=Date to change is in the past!

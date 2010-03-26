@@ -73,6 +73,21 @@ if ($in{'delete'}) {
 	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 			 "", $text{'index_return'});
 	}
+elsif ($in{'fsck'}) {
+	# Check the disk
+	&ui_print_header(&server_in($server), $text{'fsck_title'}, "");
+
+	&$first_print(&text('fsck_doing', uc($disk->{'fs'}),
+					  "<tt>$disk->{'real'}</tt>"));
+	$ffunc = "type_".$server->{'manager'}."_fsck_disk";
+	($ok, $out) = &$ffunc($server, $disk);
+	&$block_print($out);
+	&$second_print($ok == 0 ? $text{'fsck_bad'} :
+		       $ok == 1 ? $text{'fsck_ok'} : $text{'fsck_fixed'});
+
+	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
+			 "", $text{'index_return'});
+	}
 else {
 	# Validate inputs, and update the disk hash
 	if ($in{'new'}) {
