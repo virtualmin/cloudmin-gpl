@@ -1846,7 +1846,7 @@ if ($ex || $err) {
 	return (0, "losetup failed : ".($err || $out));
 	}
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"fsck -y ".quotemeta($disk->{'real'}));
+	"fsck -y /dev/loop9");
 &execute_command_on_server($vhost,
 	"losetup -d /dev/loop9");
 if ($ex > 2 || $err) {
