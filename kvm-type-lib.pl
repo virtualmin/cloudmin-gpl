@@ -1826,7 +1826,7 @@ sub type_kvm_can_fsck
 {
 my ($server, $disk) = @_;
 return ($server->{'status'} eq 'down' || !$disk->{'mounted'}) &&
-       $disk->{'fs'};
+       $disk->{'fs'} && $disk->{'fs'} ne 'swap';
 }
 
 # type_kvm_fsck_disk(&server, &disk)
