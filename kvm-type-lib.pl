@@ -472,6 +472,7 @@ else {
 	my $err = &allocate_kvm_ip_addresses($server, $vhost);
 	&error($err) if ($err);
 	}
+$server->{'ip_addresses'} = $server->{'kvm_ip'};
 
 # Append zone name
 my @zones = &list_bind_zones();
@@ -651,6 +652,7 @@ else {
 	my $err = &allocate_kvm_ip_addresses($server, $vhost);
 	&error($err) if ($err);
 	}
+$server->{'ip_addresses'} = $server->{'kvm_ip'};
 
 # Adjust hostname for DNS
 my @zones = &list_bind_zones();
