@@ -216,6 +216,18 @@ $server->{'kvm_memory'} = $got->{'args'}->{'m'} || 128;
 my @nets = ref($got->{'args'}->{'net'}) ? @{$got->{'args'}->{'net'}}
 					: ( $got->{'args'}->{'net'} );
 $server->{'kvm_net'} = join(" ", grep { /^tap/ } @nets);
+
+# Extract MAC addresses from nic network configs
+my @macs;
+foreach my $n (grep { /^nic/ } @nets) {
+	if ($n =~ /macaddr=([0-9a-f:]+)/i) {
+		push(@macs, $1);
+		}
+	else {
+		push(@macs, "*");
+		}
+	}
+$server->{'mac'} = join(" ", @macs);
 }
 
 # type_kvm_create_form()
@@ -404,6 +416,7 @@ if (!$in{'kvm_disk_def'}) {
 		}
 	}
 else {
+	# XXX what if a CD image?
 	my $img = &get_server_image($server->{'image'});
 	$server->{'kvm_disktotal'} = $img->{'rawsize'};
 	}
@@ -533,6 +546,7 @@ if ($args->{'disksize'}) {
 		}
 	}
 else {
+	# XXX what if a CD image?
 	my $img = &get_server_image($server->{'image'});
 	$server->{'kvm_disktotal'} += $img->{'rawsize'};
 	}
@@ -823,6 +837,13 @@ my @setgws = grep { $_ ne "*" } @gws;
 if (!@setgws && $defgw) {
 	@gws = ( $defgw );
 	}
+
+# Generate MAC addresses
+my @macs;
+for(my $i=0; $i<@ips; $i++) {
+	push(@macs, &generate_mac_address($server, $i));
+	}
+$server->{'mac'} = join(" ", @macs);
 
 # Expand the filesystem image, if needed
 my $fsfile = $server->{'kvm_filesystem'};
@@ -1227,6 +1248,8 @@ $cmd .= " -boot c";
 $cmd .= " -serial stdio";
 
 # TAP networking, if enabled
+my @macs = split(/\s+/, $server->{'mac'});
+my $i = 0;
 foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
 	$cmd .= " -net $net";
 	if ($net =~ /vlan=(\d+)/) {
@@ -1235,6 +1258,10 @@ foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
 	else {
 		$cmd .= " -net nic";
 		}
+	if ($macs[$i] && $macs[$i] ne '*') {
+		$cmd .= ",macaddr=".$macs[$i];
+		}
+	$i++;
 	}
 
 # VNC settings, on a free port
@@ -3756,7 +3783,7 @@ return $dir."/".$server->{'host'}.".console";
 # KVM doesn't support partition images, as it always works with raw disks
 sub type_kvm_image_formats
 {
-return ( "disk" );
+return ( "disk", "cd" );
 }
 
 1;

@@ -17,7 +17,7 @@ if (!$server_manager_root) {
 foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
-		 "repl", "scheduled") {
+		 "repl", "scheduled", "dhcp") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -194,6 +194,11 @@ if (!$s->{'created'}) {
 if ($s->{'xen_host'} && !$s->{'xen_gws'} && $s->{'xen_gw'}) {
 	$s->{'xen_gws'} = $s->{'xen_gw'} || '*';
 	delete($s->{'xen_gw'});
+	}
+
+# For a Xen host with a MAC address, copy it to the mac field
+if ($s->{'xen_mac'}) {
+	$s->{'mac'} = $s->{'xen_mac'};
 	}
 
 # Fill in 'ip' convenience field
