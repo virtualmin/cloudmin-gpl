@@ -107,7 +107,7 @@ if (!$in{'new'}) {
 	}
 if (!@possifaces) {
 	# Don't know host yet, so just use fixed list
-	@possifaces = ( "eth0", "eth1" );
+	@possifaces = ( "br0", "br1" );
 	}
 @hostifaces = split(/\s+/, $kvm->{'kvm_iface'});
 @allocifaces = &unique(@possifaces, @hostifaces);
