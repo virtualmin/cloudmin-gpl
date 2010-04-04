@@ -99,6 +99,14 @@ else {
 		    &ui_textbox("netmask", $iface->{'netmask'}, 20));
 	}
 
+# MAC address (if non-virtual)
+$mfunc = "type_".$server->{'manager'}."_can_mac_address";
+if (defined(&$mfunc) && &$mfunc($server, $in{'new'} ? undef : $iface)) {
+	print &ui_table_row($text{'iface_mac'},
+		&ui_opt_textbox("mac", $iface->{'ether'}, 20,
+				$text{'iface_macdef'}));
+	}
+
 print &ui_table_end();
 if ($in{'new'}) {
 	print &ui_form_end([ [ undef, $text{'create'} ] ]);

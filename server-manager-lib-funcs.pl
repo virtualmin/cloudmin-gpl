@@ -3679,6 +3679,7 @@ my @poss;
 for(my $i=0; $i<@startips; $i++) {
 	# If this range is for some host system interface, skip if we aren't
 	# allocating for that interface
+	print STDERR "wantiface=$wantiface ifaces[$i]=$ifaces[$i]\n";
 	next if ($wantiface && $ifaces[$i] ne $wantiface &&
 		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
 

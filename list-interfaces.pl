@@ -84,6 +84,9 @@ if ($multi) {
 		print "    Interface number: $i->{'virtual'}\n";
 		print "    IP address: $i->{'address'}\n";
 		print "    Netmask: $i->{'netmask'}\n";
+		if ($i->{'ether'}) {
+			print "    Ethernet address: $i->{'ether'}\n";
+			}
 		if ($i->{'gateway'}) {
 			print "    Gateway: $i->{'gateway'}\n";
 			}

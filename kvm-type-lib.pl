@@ -1946,6 +1946,14 @@ else {
 	}
 }
 
+# type_kvm_can_mac_address(&server, [&iface])
+# Returns 1 if the MAC address for an interface can be edited
+sub type_kvm_can_mac_address
+{
+my ($server, $iface) = @_;
+return $iface && $iface->{'virtual'} eq '';
+}
+
 # Regular interface IP allocation works for KVM
 sub type_kvm_can_allocate_address
 {
@@ -1969,6 +1977,8 @@ else {
 	# Get active interfaces
 	$rv = &list_active_server_interfaces($server);
 	}
+
+# Mark non-virtual interfaces as readonly
 if (ref($rv)) {
 	$rv = [ grep { $_->{'fullname'} =~ /^eth/ &&
 			 $_->{'address'} } @$rv ];
@@ -1976,6 +1986,18 @@ if (ref($rv)) {
 		$iface->{'nodelete'} = 1 if ($iface->{'virtual'} eq '');
 		}
 	}
+
+# Set MAC field on real interfaces
+my @macs = split(/\s+/, $server->{'mac'});
+my $i = 0;
+foreach my $mac (@macs) {
+	my ($iface) = grep { $_->{'fullname'} eq "eth".$i } @$rv;
+	if ($iface) {
+		$iface->{'ether'} = $mac eq '*' || $mac eq '' ? undef : $mac;
+		}
+	$i++;
+	}
+
 return $rv;
 }
 
@@ -2093,6 +2115,15 @@ if (&can_ssh_status($server)) {
 
 &delete_ip_address($server, $oldiface->{'address'});
 &add_ip_address($server, $iface->{'address'});
+
+# Change MAC address if non-virtual
+if ($iface->{'virtual'} eq '') {
+	my @macs = split(/\s+/, $server->{'mac'});
+	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
+	$macs[$idx] = $iface->{'ether'} || '*';
+	$server->{'mac'} = join(" ", @macs);
+	}
+
 return undef;
 }
 

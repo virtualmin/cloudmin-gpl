@@ -160,7 +160,9 @@ $ping_host_timeout = int($config{'ping_timeout'}) || 2;
 
 $xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
 $xen_migration_port = 8002;
-$xen_mac_prefix = "00:16:3e";
+
+%type_mac_prefix = ( 'xen' => '00:16:3e',
+		     'kvm' => '02:54:00' );
 
 $owner_plans_dir = "$module_config_directory/plans";
 

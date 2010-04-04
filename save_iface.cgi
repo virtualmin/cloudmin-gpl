@@ -77,6 +77,13 @@ else {
 	&check_ipaddress($in{'netmask'}) || &error($text{'iface_enetmask'});
 	$iface->{'netmask'} = $in{'netmask'};
 
+	# Save ethernet address
+	if (defined($in{'mac'}) || defined($in{'mac_def'})) {
+		$in{'mac_def'} || $in{'mac'} =~ /^[A-Fa-f0-9:]+$/ ||
+			&error($text{'iface_emac'});
+		$iface->{'ether'} = $in{'mac_def'} ? undef : $in{'mac'};
+		}
+
 	# Check if over limit
 	$limits = &get_owner_limits();
 	if ($in{'new'} && $limits && $limits->{'max_ips'}) {

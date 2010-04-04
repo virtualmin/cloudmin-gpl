@@ -5,10 +5,11 @@
 sub generate_mac_address
 {
 my ($server, $ifacenum) = @_;
-my $dec = ($server->{'id'} & 0xffffff) + $ifacenum;
+my $dec = (int(substr($server->{'id'}, -10)) & 0xffffff) + $ifacenum;
 my $hex = sprintf("%6.6X", $dec);
 $hex =~ /^(..)(..)(..)$/;
-return $xen_mac_prefix.":".$1.":".$2.":".$3;
+return ($type_mac_prefix{$server->{'manager'}} || "00:1c:c0").
+       ":".$1.":".$2.":".$3;
 }
 
 1;

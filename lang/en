@@ -1219,6 +1219,8 @@ iface_parent2=Real interface
 iface_name=Network interface name
 iface_address=IP address
 iface_netmask=Netmask
+iface_mac=Ethernet address
+iface_macdef=Assign automatically
 iface_alloc=Allocate automatically
 iface_virt=Virtual interface number
 iface_eget=Failed to get list of network interfaces : $1
@@ -1242,6 +1244,7 @@ iface_eclash2=The IP address entered is already in use by some system on your ne
 iface_esupport=Interface management is not supported on this system
 iface_elimit=Adding this interface would exceed your IP address limit of $1. Currently you are using $2 IP addresses.
 iface_edelete=This interface cannot be deleted
+iface_emac=Missing or invalid ethernet address - must be formatted like 00:16:3E:37:91:2F
 
 dmass_err=Failed to update Virtualmin domains
 dmass_eserver=System with ID $1 was not found
