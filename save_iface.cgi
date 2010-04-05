@@ -44,6 +44,9 @@ if ($in{'delete'}) {
 		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_interface";
 		$err = &$dfunc($server, $iface);
+		if (&supports_dhcpd() && $iface->{'virtual'} eq '') {
+			&delete_iface_dhcpd($server, $iface);
+			}
 		&compute_ip_addresses($server);
 		&save_managed_server($server);
 		&release_lock_server($server);
@@ -103,6 +106,17 @@ else {
 	else {
 		$mfunc = "type_".$server->{'manager'}."_modify_interface";
 		$err = &$mfunc($server, $iface, $oldiface);
+		}
+
+	# Update DHCPd config, if enabled
+	if (($config{'dhcp_add'} || $oldiface) && &supports_dhcpd() &&
+	    $iface->{'virtual'} eq '') {
+		if ($iface->{'ether'}) {
+			&save_iface_dhcpd($server, $iface, $oldiface);
+			}
+		else {
+			&delete_iface_dhcpd($server, $oldiface);
+			}
 		}
 
 	# Check for change in main IP, which effects DNS
