@@ -74,6 +74,9 @@ $iface->{'nodelete'} && &usage("This interface cannot be deleted");
 # Call the deletion function
 $dfunc = "type_".$server->{'manager'}."_delete_interface";
 $err = &$dfunc($server, $iface);
+if (&supports_dhcpd(1) && $iface->{'virtual'} eq '') {
+	&delete_iface_dhcpd($server, $iface);
+	}
 if ($err) {
 	&usage("Interface deletion failed : $err");
 	}

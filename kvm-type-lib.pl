@@ -828,6 +828,7 @@ my $vhost = &type_kvm_parent($server);
 my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @cidrs = split(/\s+/, $server->{'kvm_cidr'});
 my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
+$server->{'status'} = 'down';
 
 # Gateways can either be set per IP address, or copy from host system.
 # If none are set, assume the first IP uses the host system gateway.
@@ -850,7 +851,6 @@ my $fsfile = $server->{'kvm_filesystem'};
 if ($server->{'kvm_disksize'}) {
 	my $dksize = $server->{'kvm_disksize'}*1024*1024;
 	&$first_print(&text('create_xenresize', &nice_size($dksize)));
-	$server->{'status'} = 'down';
 	my $disks = &type_kvm_list_disks($server, 1);
 	my $disk;
 	if (ref($disks)) {
@@ -980,6 +980,11 @@ elsif ($err) {
 	}
 else {
 	&$second_print($text{'create_done'});
+	}
+
+# Add DHCP entries
+if ($config{'dhcp_add'}) {
+	&add_all_iface_dhcpd($server);
 	}
 
 # Un-mount
@@ -1197,6 +1202,9 @@ if ($server->{'kvm_console'}) {
 # Remove the DNS entry, if we created one
 &delete_bind8_record($server->{'kvm_dns'}, $vhost->{'kvm_zone'},
 		     &to_ipaddress($server->{'host'}));
+
+# Remove DHCP entries
+&delete_all_iface_dhcpd($server);
 
 return undef;
 }

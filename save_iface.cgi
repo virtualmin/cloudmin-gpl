@@ -44,7 +44,7 @@ if ($in{'delete'}) {
 		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_interface";
 		$err = &$dfunc($server, $iface);
-		if (&supports_dhcpd() && $iface->{'virtual'} eq '') {
+		if (&supports_dhcpd(1) && $iface->{'virtual'} eq '') {
 			&delete_iface_dhcpd($server, $iface);
 			}
 		&compute_ip_addresses($server);
@@ -109,7 +109,7 @@ else {
 		}
 
 	# Update DHCPd config, if enabled
-	if (($config{'dhcp_add'} || $oldiface) && &supports_dhcpd() &&
+	if (($config{'dhcp_add'} || $oldiface) && &supports_dhcpd(1) &&
 	    $iface->{'virtual'} eq '') {
 		if ($iface->{'ether'}) {
 			&save_iface_dhcpd($server, $iface, $oldiface);
