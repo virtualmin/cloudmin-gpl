@@ -1976,10 +1976,10 @@ my ($server) = @_;
 my $rv;
 if ($server->{'status'} eq 'down') {
 	# Get from network config files
-	my $err = &type_kvm_mount_filesystem($server);
+	my $err = &mount_filesystem_if_needed($server);
 	return "Failed to mount filesystem : $err" if ($err);
 	$rv = &list_boot_server_interfaces($server);
-	&type_kvm_umount_filesystem($server);
+	&umount_filesystem_if_needed($server);
 	}
 else {
 	# Get active interfaces

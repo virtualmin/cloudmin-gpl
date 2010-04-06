@@ -94,7 +94,7 @@ foreach my $obj (@{$pconf->{'members'}}) {
 		return $obj;
 		}
 	elsif ($obj->{'name'} eq 'group' &&
-	       $ob->{'comment'} eq $config{'dhcp_subnet'}) {
+	       $obj->{'comment'} eq $config{'dhcp_subnet'}) {
 		# Found the group by description
 		return $obj;
 		}
