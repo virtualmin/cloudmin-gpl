@@ -124,8 +124,8 @@ else {
 	    $oldiface->{'address'} eq $oldip) {
 		&remote_finished();
 		$server->{'ip'} = $iface->{'address'};
-		&delete_ip_address($server, $oldip);
-		&add_ip_address($server, $ip);
+		&delete_ip_address($server, $oldiface->{'address'});
+		&add_ip_address($server, $iface->{'address'});
 		&modify_primary_ip_address($server, $oldiface->{'address'},
 						    $iface->{'address'});
 		}
