@@ -125,11 +125,11 @@ if ($err) {
 	}
 
 # Update DHCPd config, if enabled
-if (&supports_dhcpd(1) && $iface->{'virtual'} ne '') {
+if (&supports_dhcpd(1) && $iface->{'virtual'} eq '') {
 	if ($iface->{'ether'}) {
 		&save_iface_dhcpd($server, $iface, $oldiface);
 		}
-	else {
+	elsif ($oldiface->{'ether'}) {
 		&delete_iface_dhcpd($server, $oldiface);
 		}
 	}

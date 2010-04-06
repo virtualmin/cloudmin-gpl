@@ -42,11 +42,14 @@ while(@ARGV > 0) {
 	elsif ($a eq "--address") {
 		$address = shift(@ARGV);
 		}
+	elsif ($a eq "--name") {
+		$name = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
 	}
-$address || &usage("Missing --address parameter");
+$address || $name || &usage("Missing --address or --name parameter");
 
 # Get the server
 $host || &usage("Missing --host parameter");
@@ -67,8 +70,14 @@ $server->{'status'} eq 'nohost' && &usage("Host for system is down");
 # Get the interface
 $ifaces = &$ifunc($server);
 ref($ifaces) || &usage("Failed to list network interfaces : $ifaces");
-($iface) = grep { $_->{'address'} eq $address } @$ifaces;
-$iface || &usage("No interface with address $address found");
+if ($address) {
+	($iface) = grep { $_->{'address'} eq $address } @$ifaces;
+	$iface || &usage("No interface with address $address found");
+	}
+else {
+	($iface) = grep { $_->{'fullname'} eq $name } @$ifaces;
+	$iface || &usage("No interface named $name found");
+	}
 $iface->{'nodelete'} && &usage("This interface cannot be deleted");
 
 # Call the deletion function
@@ -94,7 +103,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Deletes a network interface from some virtual system.\n";
 print "\n";
 print "cloudmin delete-interface --host hostname\n";
-print "                          --address ip.address\n";
+print "                          --address ip.address | --name ethN\n";
 exit(1);
 }
 

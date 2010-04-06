@@ -114,7 +114,7 @@ else {
 		if ($iface->{'ether'}) {
 			&save_iface_dhcpd($server, $iface, $oldiface);
 			}
-		else {
+		elsif ($oldiface->{'ether'}) {
 			&delete_iface_dhcpd($server, $oldiface);
 			}
 		}

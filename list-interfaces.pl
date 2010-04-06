@@ -86,6 +86,11 @@ if ($multi) {
 		print "    Netmask: $i->{'netmask'}\n";
 		if ($i->{'ether'}) {
 			print "    Ethernet address: $i->{'ether'}\n";
+			if (&supports_dhcpd(1)) {
+				$d = &get_iface_dhcpd($server, $i);
+				print "    DHCP entry: ",
+				      ($d ? "Yes" : "No"),"\n";
+				}
 			}
 		if ($i->{'gateway'}) {
 			print "    Gateway: $i->{'gateway'}\n";
