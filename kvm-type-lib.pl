@@ -988,6 +988,7 @@ if ($config{'dhcp_add'}) {
 	for(my $i=0; $i<@ips; $i++) {
 		push(@fakeifaces,
 		     { 'name' => 'eth'.$i,
+		       'fullname' => 'eth'.$i,
 		       'address' => $ips[$i],
 		       'ether' => $macs[$i] eq '*' ?  '' : $macs[$i] });
 		}
