@@ -215,21 +215,23 @@ if ($host) {
 	}
 }
 
-# add_all_iface_dhcpd(&server)
+# add_all_iface_dhcpd(&server, [&interfaces])
 # Add a DHCPd entry for all interfaces with MAC addresses
 sub add_all_iface_dhcpd
 {
-my ($server) = @_;
+my ($server, $ifaces) = @_;
 &$first_print($text{'create_xendhcpsetup'});
-my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
-if (!defined(&$ifunc)) {
-	&$second_print($text{'create_exendhcpifaces'});
-	return 0;
-	}
-my $ifaces = &$ifunc($server);
-if (!ref($ifaces)) {
-	&$second_print(&text('create_xendhcperr', $ifaces));
-	return 0;
+if (!$ifaces) {
+	my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+	if (!defined(&$ifunc)) {
+		&$second_print($text{'create_exendhcpifaces'});
+		return 0;
+		}
+	$ifaces = &$ifunc($server);
+	if (!ref($ifaces)) {
+		&$second_print(&text('create_xendhcperr', $ifaces));
+		return 0;
+		}
 	}
 my ($ok, $err) = &supports_dhcpd();
 if (!$ok) {

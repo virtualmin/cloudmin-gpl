@@ -984,7 +984,14 @@ else {
 
 # Add DHCP entries
 if ($config{'dhcp_add'}) {
-	&add_all_iface_dhcpd($server);
+	my @fakeifaces;
+	for(my $i=0; $i<@ips; $i++) {
+		push(@fakeifaces,
+		     { 'name' => 'eth'.$i,
+		       'address' => $ips[$i],
+		       'ether' => $macs[$i] eq '*' ?  '' : $macs[$i] });
+		}
+	&add_all_iface_dhcpd($server, \@fakeifaces);
 	}
 
 # Un-mount
