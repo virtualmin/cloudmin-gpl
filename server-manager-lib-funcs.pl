@@ -2644,7 +2644,8 @@ if ($server->{'status'} ne 'nohost') {
 		my $ifaces = &$ifunc($server);
 		if (ref($ifaces)) {
 			$server->{'ip_addresses'} = join(" ",
-				map { $_->{'address'} } @$ifaces);
+				grep { !/^127\.0\./ }
+				     map { $_->{'address'} } @$ifaces);
 			}
 		}
 	}
@@ -4368,7 +4369,8 @@ return undef;
 sub get_interface_use
 {
 my ($server, $info, $doms, $iface) = @_;
-if ($iface->{'address'} eq $info->{'defip'}) {
+if ($iface->{'address'}  &&
+    $iface->{'address'} eq $info->{'defip'}) {
 	return (1, $text{'iface_default'});
 	}
 else {
