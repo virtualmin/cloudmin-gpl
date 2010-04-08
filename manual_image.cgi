@@ -11,7 +11,8 @@ require './server-manager-lib.pl';
 # Validate inputs and create object
 $image = { 'manager' => $in{'manager'},
 	   'format' => $in{'format'},
-	   'type' => $in{'type'} };
+	   'type' => $in{'type'},
+	   'nocompress' => 1 };
 $in{'imageid'} =~ /^\S+$/ || &error($text{'mkimage_eid'});
 ($clash) = grep { $_->{'id'} eq $in{'imageid'} } &list_server_images();
 $clash && &error($text{'mkimage_eclash'});
@@ -68,22 +69,53 @@ if (&has_command_on_server($srcserver, "file")) {
 		$fout =~ /iso\s+9660/i ||
 			&error(&text('mimage_ecd',
 				     "<tt>".&html_escape($fout)."</tt>"));
-		$image->{'nocompress'} = 1;
 		}
 	elsif ($in{'format'} eq '') {
 		# Partition image must be something Linux
 		$fout =~ /(ext(\d+)|reiserfs|xfs|jfs)\s+filesystem/i ||
 			&error(&text('mimage_epart',
 				     "<tt>".&html_escape($fout)."</tt>"));
-		$image->{'nocompress'} = 1;
 		}
 	elsif ($in{'format'} eq 'disk') {
 		# Whole disk must have a boot sector
 		$fout =~ /boot\s+sector/i ||
 			&error(&text('mimage_edisk',
 				     "<tt>".&html_escape($fout)."</tt>"));
-		$image->{'nocompress'} = 1;
 		}
+	elsif ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow') {
+		# Must be a QCOW2 or QCOW image
+		($qout, $qex, $qerr) = &execute_command_on_server(
+			$srcserver, "qemu-img info ".quotemeta($srcpath));
+		$qout =~ /format:\s+(\S+)/ && $1 eq $in{'format'} ||
+			&error(&text('mimage_efmt'.$in{'format'},
+				     "<tt>".&html_escape($qex ? $fout :
+						 $1 ? $1 : $qout)."</tt>"));
+		}
+	}
+
+# Convert to raw format first
+if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow') {
+	&$first_print($text{'mimage_'.$in{'format'}});
+	my $rawsrcpath = $srcpath.".raw";
+	my $rawfile = $image->{'files'}.".raw";
+	($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"qemu-img convert -f $in{'format'} ".quotemeta($srcpath).
+		" -O raw ".quotemeta($rawsrcpath));
+	if ($ex || $err) {
+		&$second_print(&text('mimage_eqcow2',
+				     &html_escape($err || $out)));
+		goto FAILED;
+		}
+	if ($srcdelete) {
+		&delete_file_on_server($srcserver, $srcpath);
+		}
+	$srcpath = $rawsrcpath;
+	$image->{'files'} = $rawfile;
+	$image->{'format'} = 'raw';
+	@st = &stat_file_on_server($srcserver, $srcpath);
+	$image->{'rawsize'} = $st[7];
+	$srcdelete = 1;
+	&$second_print(&text('mimage_qcow2done', &nice_size($st[7])));
 	}
 
 # Work out un-compressed size if needed
@@ -137,6 +169,7 @@ else {
 	}
 $image->{'dest'} = join(" ", @dests);
 
+
 # Save image object
 if ($okcount) {
 	&$first_print($text{'mimage_saving'});
@@ -151,6 +184,7 @@ if ($okcount) {
 	}
 
 # Clean up downloaded file
+FAILED:
 if ($srcdelete) {
 	&delete_file_on_server($srcserver, $srcpath);
 	}
