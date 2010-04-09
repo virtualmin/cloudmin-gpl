@@ -82,8 +82,9 @@ if (&has_command_on_server($srcserver, "file")) {
 			&error(&text('mimage_edisk',
 				     "<tt>".&html_escape($fout)."</tt>"));
 		}
-	elsif ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow') {
-		# Must be a QCOW2 or QCOW image
+	elsif ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
+	       $in{'format'} eq 'vmdk') {
+		# Must be a QCOW2, QCOW or VMware image
 		($qout, $qex, $qerr) = &execute_command_on_server(
 			$srcserver, "qemu-img info ".quotemeta($srcpath));
 		$qout =~ /format:\s+(\S+)/ && $1 eq $in{'format'} ||
@@ -93,8 +94,9 @@ if (&has_command_on_server($srcserver, "file")) {
 		}
 	}
 
-# Convert to raw format first
-if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow') {
+# Convert to raw format
+if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
+    $in{'format'} eq 'vmdk') {
 	&$first_print($text{'mimage_'.$in{'format'}});
 	my $rawsrcpath = $srcpath.".raw";
 	my $rawfile = $image->{'files'}.".raw";
@@ -110,16 +112,30 @@ if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow') {
 		&delete_file_on_server($srcserver, $srcpath);
 		}
 	$srcpath = $rawsrcpath;
+
+	# Now compress it
+	@st = &stat_file_on_server($srcserver, $rawsrcpath);
+	$image->{'rawsize'} = $st[7];
+	($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"gzip ".quotemeta($rawsrcpath));
+	if ($ex || $err) {
+		&$second_print(&text('mimage_eqcow2comp',
+				     &html_escape($err || $out)));
+		goto FAILED;
+		}
+	$rawsrcpath .= ".gz";
+	$rawfile .= ".gz";
+	$srcpath = $rawsrcpath;
+	$image->{'nocompress'} = 0;
 	$image->{'files'} = $rawfile;
 	$image->{'format'} = 'raw';
-	@st = &stat_file_on_server($srcserver, $srcpath);
-	$image->{'rawsize'} = $st[7];
 	$srcdelete = 1;
+	$skip_nocompress_size = 1;
 	&$second_print(&text('mimage_qcow2done', &nice_size($st[7])));
 	}
 
 # Work out un-compressed size if needed
-if (!$image->{'nocompress'}) {
+if (!$image->{'nocompress'} && !$skip_nocompress_size) {
 	&$first_print($text{'mimage_rawsize'});
 	($out, $ex, $err) = &execute_command_on_server($srcserver,
 		"gunzip -c ".quotemeta($srcpath)." | wc -c");
