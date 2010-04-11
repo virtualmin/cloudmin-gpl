@@ -6917,18 +6917,29 @@ my ($str, $hash) = @_;
 return &substitute_template($str, $hash);
 }
 
+# get_search_form_mode(&in)
+sub get_search_form_mode
+{
+my ($in) = @_;
+foreach my $i ('gok', 'pok', 'eok', 'sok', 'ok') {
+	return $i if ($in->{$i});
+	}
+return undef;
+}
+
 # show_search_form(&in, &candiate-servers)
 # Return a grid of inputs for searching for systems, with fields filled in
 sub show_search_form
 {
 my ($in, $servers) = @_;
 my @grid = ( );
+my $mode = &get_search_form_mode($in) || $in->{'oldmode'};
 
 sub highlight_field
 {
 my ($msg, $but) = @_;
 $msg = "<b>$msg</b>";
-$msg = "<i>$msg</i>" if ($in->{$but});
+$msg = "<i>$msg</i>" if ($mode eq $but);
 return $msg;
 }
 
@@ -6967,7 +6978,7 @@ push(@grid, &ui_select("ssearch", $in->{'ssearch'} || 'up',
 	    " ".&ui_submit($text{'index_searchsok'}, "sok"));
 
 # Search by EC2 account (normally hidden)
-if ($in->{'eok'}) {
+if ($mode eq 'eok') {
 	push(@grid, &highlight_field($text{'index_esearch'}, "eok"));
 	push(@grid, &ui_select("esearch", $in->{'esearch'},
 	    [ map { [ $_->{'id'}, $_->{'account'} ] }
@@ -6976,7 +6987,8 @@ if ($in->{'eok'}) {
 	}
 
 return &ui_grid_table(\@grid, 4, 100,
-	[ "width=10%", "width=40%", "width=10%", "width=40%" ]);
+	[ "width=10%", "width=40%", "width=10%", "width=40%" ]).
+       &ui_hidden("oldmode", $mode);
 }
 
 # apply_search_form(&in, &servers)
@@ -6985,24 +6997,26 @@ return &ui_grid_table(\@grid, 4, 100,
 sub apply_search_form
 { 
 my ($in, $servers) = @_;
-if ($in->{'gok'}) {
+my $mode = &get_search_form_mode($in) || $in->{'oldmode'};
+
+if ($mode eq 'gok') {
 	# Search by group
 	return grep { my @g = split(/\t/, $_->{'group'});
 			&indexof($in->{'gsearch'}, @g) >= 0 } @$servers;
 	}
-elsif ($in->{'pok'}) {
+elsif ($mode eq 'pok') {
 	# Search by parent
 	my ($parent) = grep { $_->{'id'} eq $in->{'psearch'} } @$servers;
 	return grep { my $p = &get_parent_server($_);
 		  $p && $p->{'id'} eq $parent->{'id'} } @$servers;
 	}
-elsif ($in->{'eok'}) {
+elsif ($mode eq 'eok') {
 	# Search by EC2 account
 	my ($ec2) = grep { $_->{'id'} == $in->{'esearch'} }
 		      &list_ec2_accounts();
 	return grep { $_->{'ec2'} == $in->{'esearch'} } @$servers;
 	}
-elsif ($in->{'sok'}) {
+elsif ($mode eq 'sok') {
 	# Search by status
 	my @sts;
 	if ($in->{'ssearch'} eq 'up') {
