@@ -984,11 +984,12 @@ my $size;
 if ($tarfile) {
 	# Tar up the filesystem
 	&$first_print(&text('brun_tarring', $server->{'host'}, $root));
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"cd ".quotemeta($root)." && ".
-		(&tar_supports_gzip($vhost) ?
+	my $tarcmd = "cd ".quotemeta($root)." && ".
+		     (&tar_supports_gzip($vhost) ?
 			"tar czf ".quotemeta($tarfile)." ." :
-			"tar cf - . | gzip -c >".quotemeta($tarfile)));
+			"tar cf - . | gzip -c >".quotemeta($tarfile));
+	$tarcmd = &niced_backup_command($vhost, $tarcmd);
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, $tarcmd);
 	if ($ex || $err) {
 		$err = $out if ($ex);
 		return { 'ok' => 0,
@@ -1034,6 +1035,7 @@ else {
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     (&tar_supports_gzip($vhost) ?
 		      "tar czf - ." : "tar cf - . | gzip -c");
+	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
 					  $dest->{'path'});
 	if ($err) {
@@ -1111,12 +1113,13 @@ if ($tarfile) {
 
 	# Un-tar the filesystem
 	&$first_print(&text('rrun_untarring', $server->{'host'}, $root));
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"cd ".quotemeta($root)." && ".
-		"rm -rf * && ".
-		(&tar_supports_gzip($vhost) ?
+	my $tarcmd = "cd ".quotemeta($root)." && ".
+		     "rm -rf * && ".
+		     (&tar_supports_gzip($vhost) ?
 			"tar xpzf ".quotemeta($tarfile) :
-			"gunzip -c ".quotemeta($tarfile)." | tar xpf -"));
+			"gunzip -c ".quotemeta($tarfile)." | tar xpf -");
+	$tarcmd = &niced_backup_command($vhost, $tarcmd);
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, $tarcmd);
 	if ($ex || $err) {
 		$err = $out if ($ex);
 		$tarerr = &text('rrun_etar', "<tt>".&html_escape($out)."</tt>");
@@ -1137,6 +1140,7 @@ else {
 		     (&tar_supports_gzip($vhost) ?
 			   "tar xpzf - " :
 			   "gunzip -c | tar xpf -");
+	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my $err = &pipe_command_from_server($destserver, $vhost, $tarcmd,
 					    $dest->{'path'});
 	if ($err) {
@@ -1410,6 +1414,25 @@ elsif ($dest->{'mode'} == 3) {
 		}
 	}
 return 0;
+}
+
+# niced_backup_command(&server, command)
+# Given a command that does a backup and will be run on some system, return
+# a new command using ionice to run it with the appropriate priorities
+sub niced_backup_command
+{
+my ($server, $cmd) = @_;
+return $cmd if ($config{'sclass'} eq '' && $config{'sprio'} eq '');
+return $cmd if (!&has_command_on_server($server, "ionice"));
+my $rv = "ionice";
+if ($config{'sclass'} ne '') {
+	$rv .= " -c ".int($config{'sclass'});
+	}
+if ($config{'sprio'} ne '') {
+	$rv .= " -n ".int($config{'sprio'});
+	}
+$rv .= " sh -c ".quotemeta($cmd);
+return $rv;
 }
 
 1;
