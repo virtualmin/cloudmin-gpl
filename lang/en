@@ -3615,8 +3615,15 @@ mimage_qcow2=Converting from QCOW2 to full disk format ..
 mimage_qcow=Converting from QCOW to full disk format ..
 mimage_vmdk=Converting from VMware to full disk format ..
 mimage_eqcow2=.. conversion failed : $1
-mimage_eqcow2comp=.. compression failed : $1
 mimage_qcow2done=.. converted image size is $1
+mimage_gzip=Compressing system image ..
+mimage_egzip=.. compression failed : $1
+mimage_gzipdone=.. compressed from $1 to $2
+mimage_part=Extracting biggest partition from full disk ..
+mimage_eparts=.. no partitions found : $1
+mimage_ebigp=.. no Linux partitions found
+mimage_epartdd=.. failed to extract partition : $1
+mimage_partdone=.. extracted partition image of $1
 
 repl_title=Cloudmin Replication
 repl_desc=Replication allows you to sychronize configuration changes made on this Cloudmin system with one or more backup systems, so that if this master goes down one of the replicas can take over. This page allows you to select if this system is a replication master, or a source of replicated changes from another master system.

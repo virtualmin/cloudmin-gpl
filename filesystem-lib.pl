@@ -207,7 +207,7 @@ $secsize || return "Sector size not found in disk image";
 
 # Use parted to get offsets
 ($out, $ex, $err) = &execute_command_on_server($server,
-	"parted -s ".quotemeta($fsfile)." print");
+	"parted -s ".quotemeta($fsfile)." unit B print");
 foreach my $l (split(/\r?\n/, $out)) {
 	$l =~ s/^\s+//;
 	my ($n, $start, $end, $size, $type, $fs) = split(/\s+/, $l);
@@ -233,7 +233,10 @@ return \@rv;
 sub parse_parted_size
 {
 my ($str) = @_;
-if ($str =~ /^([0-9\.]+)k/) {
+if ($str =~ /^([0-9]+)B/) {
+	return $1;
+	}
+elsif ($str =~ /^([0-9\.]+)k/) {
 	return int($1 * 1000);
 	}
 elsif ($str =~ /^([0-9\.]+)M/) {

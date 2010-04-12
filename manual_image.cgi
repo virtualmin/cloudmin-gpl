@@ -94,12 +94,11 @@ if (&has_command_on_server($srcserver, "file")) {
 		}
 	}
 
-# Convert to raw format
+# Convert from QCOW, QCOW2 or VMware to raw disk format
 if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
     $in{'format'} eq 'vmdk') {
 	&$first_print($text{'mimage_'.$in{'format'}});
 	my $rawsrcpath = $srcpath.".raw";
-	my $rawfile = $image->{'files'}.".raw";
 	($out, $ex, $err) = &execute_command_on_server($srcserver,
 		"qemu-img convert -f $in{'format'} ".quotemeta($srcpath).
 		" -O raw ".quotemeta($rawsrcpath));
@@ -112,30 +111,105 @@ if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
 		&delete_file_on_server($srcserver, $srcpath);
 		}
 	$srcpath = $rawsrcpath;
-
-	# Now compress it
-	@st = &stat_file_on_server($srcserver, $rawsrcpath);
-	$image->{'rawsize'} = $st[7];
-	($out, $ex, $err) = &execute_command_on_server($srcserver,
-		"gzip ".quotemeta($rawsrcpath));
-	if ($ex || $err) {
-		&$second_print(&text('mimage_eqcow2comp',
-				     &html_escape($err || $out)));
-		goto FAILED;
-		}
-	$rawsrcpath .= ".gz";
-	$rawfile .= ".gz";
-	$srcpath = $rawsrcpath;
-	$image->{'nocompress'} = 0;
-	$image->{'files'} = $rawfile;
+	$image->{'nocompress'} = 1;
+	$image->{'files'} .= ".raw";
 	$image->{'format'} = 'raw';
 	$srcdelete = 1;
-	$skip_nocompress_size = 1;
+	@st = &stat_file_on_server($srcserver, $srcpath);
 	&$second_print(&text('mimage_qcow2done', &nice_size($st[7])));
 	}
 
-# Work out un-compressed size if needed
-if (!$image->{'nocompress'} && !$skip_nocompress_size) {
+# Extract biggest partition from whole disk image
+if ($image->{'format'} eq 'raw' && $in{'manager'} eq 'xen') {
+	&$first_print($text{'mimage_part'});
+
+	# Find the biggest partition
+	my $parts = &list_disk_image_partitions($srcserver, $srcpath);
+	if (!ref($parts)) {
+		&$second_print(&text('mimage_eparts', $parts));
+		goto FAILED;
+		}
+	my $bigp;
+	foreach my $p (@$parts) {
+		if ($p->{'type'} eq '83' && $p->{'offset'} &&
+		    (!$bigp || $p->{'blocks'} > $bigp->{'blocks'})) {
+			$bigp = $p;
+			}
+		}
+	if (!$bigp) {
+		&$second_print($text{'mimage_ebigp'});
+		goto FAILED;
+		}
+
+	# Work out a good block size for dd
+	$partsrcpath = $srcpath.".part";
+	my $bs = 512;
+	if (($bigp->{'parted_start_bytes'} % 32256) == 0 &&
+	    ($bigp->{'parted_size_bytes'} % 32256) == 0) {
+		# This seems to be the default for most disks
+		$bs = 32256;
+		}
+	else {
+		# Get largest size starting at 512
+		for(my $bstry = 512;
+		    ($bigp->{'parted_start_bytes'} % $bstry == 0) &&
+		    ($bigp->{'parted_size_bytes'} % $bstry == 0);
+		    $bstry *= 2) {
+			$bs = $bstry;
+			}
+		}
+
+	# Extract the filesystem with dd
+	print "bs=$bs parted_start_bytes=$bigp->{'parted_start_bytes'} parted_size_bytes=$bigp->{'parted_size_bytes'}<br>\n";
+	$bstart = int($bigp->{'parted_start_bytes'} / $bs);
+	$bcount = int($bigp->{'parted_size_bytes'} / $bs);
+	($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"dd if=".quotemeta($srcpath)." ".
+		"of=".quotemeta($partsrcpath)." ".
+		"bs=$bs skip=$bstart count=$bcount");
+	if ($ex || $err) {
+		&$second_print(&text('mimage_epartdd',
+				     &html_escape($err || $out)));
+		goto FAILED;
+		}
+	if ($srcdelete) {
+		&delete_file_on_server($srcserver, $srcpath);
+		}
+	$srcpath = $partsrcpath;
+	$image->{'nocompress'} = 1;
+	$image->{'files'} .= ".part";
+	$image->{'format'} = '';
+	$srcdelete = 1;
+	@st = &stat_file_on_server($srcserver, $srcpath);
+	&$second_print(&text('mimage_partdone', &nice_size($st[7])));
+	}
+
+if ($image->{'nocompress'}) {
+	# Not currently compressed, compress it now
+	&$first_print($text{'mimage_gzip'});
+	@st = &stat_file_on_server($srcserver, $srcpath);
+	$image->{'rawsize'} = $st[7];
+	my $compsrcpath = $srcpath.".gz";
+	($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"gzip -c ".quotemeta($srcpath)." >".quotemeta($compsrcpath));
+	if ($ex || $err) {
+		&$second_print(&text('mimage_egzip',
+				     &html_escape($err || $out)));
+		goto FAILED;
+		}
+	if ($srcdelete) {
+		&delete_file_on_server($srcserver, $srcpath);
+		}
+	$srcpath = $compsrcpath;
+	$image->{'nocompress'} = 0;
+	$image->{'files'} .= ".gz";
+	$srcdelete = 1;
+	@st = &stat_file_on_server($srcserver, $srcpath);
+	&$second_print(&text('mimage_gzipdone', &nice_size($image->{'rawsize'}),
+						&nice_size($st[7])));
+	}
+else {
+	# Already compressed, work out un-compressed size
 	&$first_print($text{'mimage_rawsize'});
 	($out, $ex, $err) = &execute_command_on_server($srcserver,
 		"gunzip -c ".quotemeta($srcpath)." | wc -c");
