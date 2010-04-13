@@ -2952,8 +2952,10 @@ if ($server->{'kvm_filesystem_lv'}) {
 		my $devfile = $dev;
 		$devfile =~ s/^(.*)\///;
 		$devfile =~ s/_cloudmin_snap$//;
-		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"dd if=$dev of=$tempdir/$devfile bs=32768 2>&1");
+		my $ddcmd = "dd if=$dev of=$tempdir/$devfile bs=32768 2>&1";
+		$ddcmd = &niced_backup_command($vhost, $ddcmd);
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$vhost, $ddcmd);
 		if ($ex || $err) {
 			$ddfail = &text('brun_edd', $dev, $err || $out);
 			last;
@@ -2964,9 +2966,11 @@ if ($server->{'kvm_filesystem_lv'}) {
 	if (!$ddfail && $tarfile) {
 		# To temp file
 		&$first_print(&text('brun_tarring3', $server->{'host'}));
-		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"cd ".quotemeta($tempdir)." && ".
-			"tar cf - . | gzip -c >".quotemeta($tarfile));
+		my $tarcmd = "cd ".quotemeta($tempdir)." && ".
+			     "tar cf - . | gzip -c >".quotemeta($tarfile);
+		$tarcmd = &niced_backup_command($vhost, $tarcmd);
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$vhost, $tarcmd);
 		if ($ex || $err) {
 			$err = $out if ($ex);
 			$ddfail = &text('brun_etar',
@@ -2979,6 +2983,7 @@ if ($server->{'kvm_filesystem_lv'}) {
 					$destserver->{'host'}));
 		my $tarcmd = "cd ".quotemeta($tempdir)." && ".
 			     "tar cf - . | gzip -c";
+		$tarcmd = &niced_backup_command($vhost, $tarcmd);
 		my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
                                                   $dest->{'path'});
 		if ($err) {
@@ -3026,10 +3031,12 @@ else {
 	if ($tarfile) {
 		# Run tar and gzip on all of them, into temp file
 		&$first_print(&text('brun_tarring2', $server->{'host'}, $dir));
-		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"cd ".quotemeta($dir)." && ".
-			"tar cf - ".join(" ", map { quotemeta($_) } @paths).
-			" | gzip -c >".quotemeta($tarfile));
+		my $tarcmd = "cd ".quotemeta($dir)." && ".
+			    "tar cf - ".join(" ", map { quotemeta($_) } @paths).
+			    " | gzip -c >".quotemeta($tarfile);
+		$tarcmd = &niced_backup_command($vhost, $tarcmd);
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$vhost, $tarcmd);
 		if ($ex || $err) {
 			$err = $out if ($ex);
 			return { 'ok' => 0,
@@ -3044,6 +3051,7 @@ else {
 		my $tarcmd = "cd ".quotemeta($dir)." && ".
                         "tar cf - ".join(" ", map { quotemeta($_) } @paths).
                         " | gzip -c";
+		$tarcmd = &niced_backup_command($vhost, $tarcmd);
 		my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
 						  $dest->{'path'});
 		if ($err) {
@@ -3189,11 +3197,12 @@ if ($server->{'kvm_filesystem_lv'}) {
 		foreach my $d (@lvmdisks) {
 			my $devfile = $d->{'real'};
 			$devfile =~ s/^(.*)\///;
+			my $tarcmd = "gunzip -c ".quotemeta($tarfile).
+				     " | tar Oxpf - $devfile ./$devfile".
+				     " | dd of=$d->{'real'} bs=32768 2>&1";
+			$tarcmd = &niced_backup_command($vhost, $tarcmd);
 			my ($out, $ex, $err) = &execute_command_on_server(
-				$vhost,
-				"gunzip -c ".quotemeta($tarfile).
-				" | tar Oxpf - $devfile ./$devfile".
-				" | dd of=$d->{'real'} bs=32768 2>&1");
+						$vhost, $tarcmd);
 			if ($ex || $err) {
 				$tarerr = &text('rrun_edd', $dev, $err || $out);
 				last;
@@ -3210,6 +3219,7 @@ if ($server->{'kvm_filesystem_lv'}) {
 			my $tarcmd = "gunzip -c ".
 				     " | tar Oxpf - $devfile ./$devfile".
 				     " | dd of=$d->{'real'} bs=32768";
+			$tarcmd = &niced_backup_command($vhost, $tarcmd);
 			my $err = &pipe_command_from_server($destserver, $vhost,
 						    $tarcmd, $dest->{'path'});
 			if ($err) {
@@ -3226,9 +3236,11 @@ else {
 	if ($tarfile) {
 		&$first_print(&text('rrun_untarring2',
 				    $server->{'host'}, $dir));
-		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"cd ".quotemeta($dir)." && ".
-			"gunzip -c ".quotemeta($tarfile)." | tar xpf -");
+		my $tarcmd = "cd ".quotemeta($dir)." && ".
+			     "gunzip -c ".quotemeta($tarfile)." | tar xpf -";
+		$tarcmd = &niced_backup_command($vhost, $tarcmd);
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$vhost, $tarcmd);
 		if ($ex || $err) {
 			$err = $out if ($ex);
 			$tarerr = &text('rrun_etar',
@@ -3241,6 +3253,7 @@ else {
 			    $server->{'host'}, $dir, $destserver->{'host'}));
 		my $tarcmd = "cd ".quotemeta($dir)." && ".
 			     "gunzip -c | tar xpf -";
+		$tarcmd = &niced_backup_command($vhost, $tarcmd);
 		my $err = &pipe_command_from_server($destserver, $vhost,
 						    $tarcmd, $dest->{'path'});
 		if ($err) {
