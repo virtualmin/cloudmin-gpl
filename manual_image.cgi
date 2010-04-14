@@ -53,52 +53,77 @@ $image->{'files'} = $srcpath;
 $image->{'files'} =~ s/^.*\///;
 @st = &stat_file_on_server($srcserver, $srcpath);
 @st || &error($text{'mimage_efile'});
+&has_command_on_server($srcserver, "file") ||
+	&error(&text('mimage_efilecmd', 'file'));
 
 # Validate format
-if (&has_command_on_server($srcserver, "file")) {
+($fout, $ex, $err) = &execute_command_on_server(
+	$srcserver, "file ".quotemeta($srcpath));
+$fout =~ s/^\S+:\s+//;
+$fout =~ s/\r|\n//g;
+if ($fout =~ /(gzip|bzip2)\s+compressed/) {
+	# Compressed .. need to un-compress first to validate format
+	&$first_print($text{'mimage_gunzip'});
+	$cmd = $1 eq "bzip2" ? "bunzip2" : "gunzip";
+	my $uncompressedsrcpath = $srcpath.".uncompressed";
+	($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"$cmd -c ".quotemeta($srcpath).
+		" > ".quotemeta($uncompressedsrcpath));
+	if ($ex || $err) {
+		&$second_print(&text('mimage_egunzip',
+				     &html_escape($err || $out)));
+		goto FAILED;
+		}
+	if ($srcdelete) {
+		&delete_file_on_server($srcserver, $srcpath);
+		}
+	$srcpath = $uncompressedsrcpath;
+	$image->{'files'} .= ".uncompressed";
+	$srcdelete = 1;
+	@st = &stat_file_on_server($srcserver, $srcpath);
+	&$second_print(&text('mimage_gunzipdone', &nice_size($st[7])));
+
+	# Re-check format
 	($fout, $ex, $err) = &execute_command_on_server(
 		$srcserver, "file ".quotemeta($srcpath));
 	$fout =~ s/^\S+:\s+//;
 	$fout =~ s/\r|\n//g;
-	if ($fout =~ /gzip\s+compressed/) {
-		# Assume underlying format is OK
-		$image->{'nocompress'} = 0;
-		}
-	elsif ($in{'format'} eq "cd") {
-		# CD must have an iso 9660 filesystem
-		$fout =~ /iso\s+9660/i ||
-			&error(&text('mimage_ecd',
-				     "<tt>".&html_escape($fout)."</tt>"));
-		}
-	elsif ($in{'format'} eq '') {
-		# Partition image must be something Linux
-		$fout =~ /(ext(\d+)|reiserfs|xfs|jfs)\s+filesystem/i ||
-			&error(&text('mimage_epart',
-				     "<tt>".&html_escape($fout)."</tt>"));
-		}
-	elsif ($in{'format'} eq 'disk') {
-		# Whole disk must have a boot sector
-		$fout =~ /boot\s+sector/i ||
-			&error(&text('mimage_edisk',
-				     "<tt>".&html_escape($fout)."</tt>"));
-		}
-	elsif ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
-	       $in{'format'} eq 'vmdk') {
-		# Must be a QCOW2, QCOW or VMware image
-		($qout, $qex, $qerr) = &execute_command_on_server(
-			$srcserver, "qemu-img info ".quotemeta($srcpath));
-		$qout =~ /format:\s+(\S+)/ && $1 eq $in{'format'} ||
-			&error(&text('mimage_efmt'.$in{'format'},
-				     "<tt>".&html_escape($qex ? $fout :
-						 $1 ? $1 : $qout)."</tt>"));
-		}
+	}
+
+if ($in{'format'} eq "cd") {
+	# CD must have an iso 9660 filesystem
+	$fout =~ /iso\s+9660/i ||
+		&error(&text('mimage_ecd',
+			     "<tt>".&html_escape($fout)."</tt>"));
+	}
+elsif ($in{'format'} eq '') {
+	# Partition image must be something Linux
+	$fout =~ /(ext(\d+)|reiserfs|xfs|jfs)\s+filesystem/i ||
+		&error(&text('mimage_epart',
+			     "<tt>".&html_escape($fout)."</tt>"));
+	}
+elsif ($in{'format'} eq 'disk') {
+	# Whole disk must have a boot sector
+	$fout =~ /boot\s+sector/i ||
+		&error(&text('mimage_edisk',
+			     "<tt>".&html_escape($fout)."</tt>"));
+	}
+elsif ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
+       $in{'format'} eq 'vmdk') {
+	# Must be a QCOW2, QCOW or VMware image
+	($qout, $qex, $qerr) = &execute_command_on_server(
+		$srcserver, "qemu-img info ".quotemeta($srcpath));
+	$qout =~ /format:\s+(\S+)/ && $1 eq $in{'format'} ||
+		&error(&text('mimage_efmt'.$in{'format'},
+			     "<tt>".&html_escape($qex ? $fout :
+					 $1 ? $1 : $qout)."</tt>"));
 	}
 
 # Convert from QCOW, QCOW2 or VMware to raw disk format
 if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
     $in{'format'} eq 'vmdk') {
 	&$first_print($text{'mimage_'.$in{'format'}});
-	my $rawsrcpath = $srcpath.".raw";
+	my $rawsrcpath = $srcpath.".disk";
 	($out, $ex, $err) = &execute_command_on_server($srcserver,
 		"qemu-img convert -f $in{'format'} ".quotemeta($srcpath).
 		" -O raw ".quotemeta($rawsrcpath));
@@ -112,15 +137,15 @@ if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
 		}
 	$srcpath = $rawsrcpath;
 	$image->{'nocompress'} = 1;
-	$image->{'files'} .= ".raw";
-	$image->{'format'} = 'raw';
+	$image->{'files'} .= ".disk";
+	$image->{'format'} = 'disk';
 	$srcdelete = 1;
 	@st = &stat_file_on_server($srcserver, $srcpath);
 	&$second_print(&text('mimage_qcow2done', &nice_size($st[7])));
 	}
 
 # Extract biggest partition from whole disk image
-if ($image->{'format'} eq 'raw' && $in{'manager'} eq 'xen') {
+if ($image->{'format'} eq 'disk' && $in{'manager'} eq 'xen') {
 	&$first_print($text{'mimage_part'});
 
 	# Find the biggest partition
@@ -160,7 +185,6 @@ if ($image->{'format'} eq 'raw' && $in{'manager'} eq 'xen') {
 		}
 
 	# Extract the filesystem with dd
-	print "bs=$bs parted_start_bytes=$bigp->{'parted_start_bytes'} parted_size_bytes=$bigp->{'parted_size_bytes'}<br>\n";
 	$bstart = int($bigp->{'parted_start_bytes'} / $bs);
 	$bcount = int($bigp->{'parted_size_bytes'} / $bs);
 	($out, $ex, $err) = &execute_command_on_server($srcserver,

@@ -3594,6 +3594,7 @@ mimage_file1=File on managed system
 mimage_file2=Download from URL
 mimage_err=Failed to create image
 mimage_efile=Image file does not exist or is a directory
+mimage_efilecmd=The <tt>$1</tt> command is not installed on the source system
 mimage_eserverfile=Missing or non-absolute image path
 mimage_copying=Copying image file to storage locations $1 ..
 mimage_ecopy=.. copy to $1 failed : $2
@@ -3624,6 +3625,9 @@ mimage_eparts=.. no partitions found : $1
 mimage_ebigp=.. no Linux partitions found
 mimage_epartdd=.. failed to extract partition : $1
 mimage_partdone=.. extracted partition image of $1
+mimage_gunzip=Un-compressing image ..
+mimage_egunzip=.. un-compression failed : $1
+mimage_gunzipdone=.. new size is $1
 
 repl_title=Cloudmin Replication
 repl_desc=Replication allows you to sychronize configuration changes made on this Cloudmin system with one or more backup systems, so that if this master goes down one of the replicas can take over. This page allows you to select if this system is a replication master, or a source of replicated changes from another master system.
