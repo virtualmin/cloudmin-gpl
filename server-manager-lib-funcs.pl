@@ -8191,6 +8191,32 @@ else {
 	}
 }
 
+# list_host_bridges(&vhost)
+# Returns the list of names of bridges on some system. Tries brctl show first,
+# then ifconfig
+sub list_host_bridges
+{
+my ($vhost) = @_;
+my @rv;
+my ($out, $ex, $err) = &execute_command_on_server($vhost, "brctl show");
+if (!$ex && !$err) {
+	foreach my $l (split(/\r?\n/, $out)) {
+		if ($l !~ /^bridge\s+name/ && $l =~ /^(\S+)/) {
+			push(@rv, $1);
+			}
+		}
+	}
+if (!@rv) {
+	my $ifaces = &list_active_server_interfaces($vhost);
+	if (ref($ifaces)) {
+		@rv = map { $_->{'fullname'} }
+			  grep { $_->{'fullname'} =~ /^(xenbr|br)/ &&
+				 $_->{'virtual'} eq '' } @$ifaces;
+		}
+	}
+return @rv;
+}
+
 # redhat_server_type(&server)
 # Returns 1 if a system is some Redhat variant
 sub redhat_server_type
