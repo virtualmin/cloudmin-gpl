@@ -12,10 +12,18 @@ $server = { 'manager' => $in{'type'},
 # Validate inputs, starting with hostname
 $server->{'ip'} = $server->{'ip_addresses'} = &to_ipaddress($in{'host'});
 $server->{'ip'} || &error($text{'add_ehost'});
-($clash) = grep { $_->{'host'} eq $in{'host'} } @servers;
-$clash && &error($text{'add_eclash'});
 $server->{'host'} = $in{'host'};
 $server->{'desc'} = $in{'desc'};
+
+# Check for hostname and IP clashes
+($clash) = grep { $_->{'host'} eq $in{'host'} } @servers;
+$clash && &error($text{'add_eclash'});
+foreach $s (@servers) {
+	foreach $ip (split(/\s+/, $s->{'ip_addresses'})) {
+		$ip eq $server->{'ip'} && &error(&text('add_eipclash',
+						       $s->{'host'}, $ip));
+		}
+	}
 
 # Validate owner resource limits
 $limits = &get_owner_limits();

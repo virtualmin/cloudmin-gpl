@@ -94,6 +94,7 @@ add_ok=Add System
 add_err=Failed to add system
 add_ehost=Missing or invalid hostname
 add_eclash=A system with the same hostname is already registered
+add_eipclash=The system $1 is already using the IP address $2
 add_eupass=Missing SSH password
 add_euuser=Missing SSH username
 add_euport=Missing or invalid SSH port number - must be between 1 and 65535
