@@ -33,6 +33,7 @@ push(@INC, $server_manager_root);
 @possible_server_management_types = ( "real",
 				      "xen",
 				      "kvm",
+				      "citrix",
 				      "vserver",
 				      "zones",
 				      "openvz",

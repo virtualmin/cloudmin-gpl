@@ -3,6 +3,7 @@ show_this=1
 show_real=1
 show_xen=1
 show_kvm=1
+show_citrix=1
 show_vserver=1
 show_zones=1
 show_ec2=1
