@@ -92,7 +92,7 @@ if (defined(&list_backups)) {
 sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
-	 'domains', 'update', 'script', 'pause', 'reset',
+	 'pass', 'domains', 'update', 'script', 'pause', 'reset',
 	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'reverse',
 	 'limits', 'disks', 'devices', 'sshkeys', 'backup', 'webmin',
 	 'virtualmin', 'api' );
