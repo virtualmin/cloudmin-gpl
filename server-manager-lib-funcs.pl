@@ -282,7 +282,12 @@ sub get_server_ip
 {
 my ($server) = @_;
 my @ips = split(/\s+/, $server->{'ip_addresses'});
-@ips = ( &to_ipaddress($server->{'host'}) ) if (!@ips);
+my $resolvedip = &to_ipaddress($server->{'host'});
+@ips = ( $resolvedip ) if (!@ips);
+if (&indexof($resolvedip, @ips) >= 0 && scalar(@ips) > 1) {
+	# Always use IP that hostname resolves to first
+	@ips = ( $resolvedip, ( grep { $_ ne $resolvedip } @ips ) );
+	}
 return wantarray ? @ips : $ips[0];
 }
 
