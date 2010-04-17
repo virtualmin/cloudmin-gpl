@@ -281,9 +281,16 @@ return time().$$.($main::server_id_count++);
 sub get_server_ip
 {
 my ($server) = @_;
-my @ips = split(/\s+/, $server->{'ip_addresses'});
 my $resolvedip = &to_ipaddress($server->{'host'});
-@ips = ( $resolvedip ) if (!@ips);
+my @ips;
+if ($server->{'manager'} ne 'this' &&
+    $server->{'manager'} ne 'real') {
+	# Use IPs from interfaces for non-virtual systems
+	@ips = split(/\s+/, $server->{'ip_addresses'});
+	}
+if (!@ips) {
+	@ips = ( $resolvedip );
+	}
 if (&indexof($resolvedip, @ips) >= 0 && scalar(@ips) > 1) {
 	# Always use IP that hostname resolves to first
 	@ips = ( $resolvedip, ( grep { $_ ne $resolvedip } @ips ) );
@@ -6272,7 +6279,7 @@ sub is_parent_server
 {
 my ($server) = @_;
 my @rv;
-foreach my $t ('xen', 'kvm', 'vserver', 'zone', 'openvz') {
+foreach my $t ('xen', 'kvm', 'vserver', 'zone', 'openvz', 'citrix') {
 	if ($server->{$t."_host"}) {
 		push(@rv, $t eq 'zone' ? 'zones' : $t);
 		}
