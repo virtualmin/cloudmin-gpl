@@ -151,6 +151,10 @@ add_ekvminstance2=The selected KVM process does not exist on $1
 add_ekvmfs=Could not work out primary disk image for selected KVM instance
 add_ekvmfile=Primary disk image $1 for KVM instance is not in a known format : $2
 add_ekvmfile2=Primary disk image $1 for KVM instance is in the format $2, but only the <tt>raw</tt> format is supported by Cloudmin
+add_citrixhost=Citrix Xen hosting system
+add_citrixinstance=Citrix Xen VM
+add_ecitrixinstance=No Citrix Xen VM name entered
+add_ecitrixinstance2=The selected Citrix Xen VM does not exist on $1
 
 create_title=Create New System
 create_header=Details of new virtual system
@@ -1157,6 +1161,15 @@ kchooser_pid=PID
 kchooser_cmd=KVM command
 kchooser_nofs=Could not find disk image
 
+cchooser_title=Select Citrix Xen VM
+cchooser_elist=Failed to fetch Citrix Xen VMs : $1
+cchooser_enone=The selected system has no Citrix Xen VMs
+cchooser_name=VM name
+cchooser_id=UUID
+cchooser_state=State
+cchooser_unuse=<font color=#ff0000>Managed host $1</font>
+cchooser_free=Not yet managed
+
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
 pkg_bind=BIND DNS server
@@ -1164,6 +1177,9 @@ pkg_postfix=Postfix mail server
 
 zone_createlink=Create Zone.
 zone_addlink=Add existing Zone.
+
+citrix_state_halted=Halted
+citrix_state_running=Running
 
 licence_efile=No Cloudmin license file found!
 licence_eexpired=The license expired on $1
@@ -3751,3 +3767,6 @@ citrix_host=System hosting Citrix Xen VMs
 citrix_domain=Add Citrix Xen systems to DNS domain
 citrix_autoadd=Find existing Citrix Xen instances?
 citrix_iface=Bridges on host system for Citrix Xen interfaces
+citrix_err=Failed to save Citrix Xen host
+citrix_edown=A system which cannot be contacted via SSH cannot be used for Citrix Xen hosting
+citrix_esoft=The selected system cannot support Citrix Xen instances : $1
