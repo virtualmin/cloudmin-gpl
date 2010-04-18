@@ -15,6 +15,7 @@ openvz_conf=/etc/vz
 display_max=20
 xen_mem=256
 kvm_mem=256
+citrix_mem=256
 xen_dir=/xen
 kvm_dir=/kvm
 name_max=20
