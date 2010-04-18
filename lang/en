@@ -849,6 +849,9 @@ edit_xeninstance=Xen instance name
 edit_xenmem=Memory allocated now
 edit_xenstate=Xen status
 edit_xenconf=Xen instance config file
+edit_citrixhost=Citrix Xen host system
+edit_citrixname=Citrix Xen VM name
+edit_citrixuuid=Citrix Xen UUID
 edit_kvmhost=KVM host system
 edit_kvmpid=KVM process ID
 edit_iheader=Network Interfaces
@@ -3741,7 +3744,6 @@ citrix_typedesc=Citrix Xen
 citrix_createlink=Create Citrix Xen VM
 citrix_addlink=Add Citrix Xen VM
 citrix_typeshort=Citrix Xen
-citrix_estartxm=Citrix Xen VM is not running after $1 seconds
 citrix_estartping=Citrix Xen VM was started, but could not be pinged after $1 seconds
 citrix_estartssh=Citrix Xen VM was started, but could not be accessed via SSH after $1 seconds
 

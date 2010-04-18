@@ -10,5 +10,5 @@ $server || &error($text{'edit_egone'});
 &check_server_status($server);
 &save_managed_server($server);
 &webmin_log("hostkey", "server", $server->{'host'});
-&redirect("edit_serv.cgi?id=$server->{'id'}");
+&redirect("edit_serv.cgi?id=$server->{'id'}&refresh=1");
 

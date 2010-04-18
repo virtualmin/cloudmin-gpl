@@ -413,6 +413,9 @@ else {
 if (defined(&theme_select_server)) {
 	&theme_select_server($server);
 	}
+if ($in{'refresh'} && defined(&theme_post_save_server)) {
+	&theme_post_save_server($server);
+	}
 
 # bar_chart(total, used, blue-rest)
 # Returns HTML for a bar chart of a single value
