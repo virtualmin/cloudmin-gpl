@@ -1048,11 +1048,11 @@ if ($mounted_filesystem{$server->{'id'}} == 0) {
 return undef;
 }
 
-# build_ssh_command(&server, [no-quiet])
+# build_ssh_command(&server, [no-quiet], [extra-ssh-args])
 # Returns the base of an SSH comand for logging into some system
 sub build_ssh_command
 {
-my ($server, $loud) = @_;
+my ($server, $loud, $extra) = @_;
 my $sshcmd = "ssh".($loud ? "" : " -q")." -x -".$server->{'ssh_protocol'};
 if ($server->{'key'}) {
 	my ($key) = grep { $_->{'id'} == $server->{'key'} }
@@ -1062,6 +1062,7 @@ if ($server->{'key'}) {
 if ($server->{'ssh_port'}) {
 	$sshcmd .= " -p ".$server->{'ssh_port'};
 	}
+$sshcmd .= " ".$extra if ($extra);
 $sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}";
 return $sshcmd;
 }

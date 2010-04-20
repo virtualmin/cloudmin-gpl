@@ -2581,10 +2581,15 @@ vnc_title=Graphical Console
 vnc_ecannot=VNC console access is not enabled for this system
 vnc_edown=VNC console access is not available for down systems
 vnc_exen=Not a Xen system!
+vnc_ecitrix=Not a Citrix Xen system!
 vnc_ekvm=Not a KVM system!
 vnc_needreboot=The system must be rebooted for VNC access to be activated.
 vnc_nolisten=VNC has been configured on this system by Cloudmin, but the VNC server on port $1 on host system $2 is not accessible. If it was just enabled, the system will need to be rebooted before VNC is available.
 vnc_nojava=This page requires Java to display the VNC applet.
+vnc_essh=Failed to open SSH tunnel for VNC : $1
+vnc_edomid=No Xen domain ID found!
+vnc_eprocs=Failed to list running processes on host system : $1
+vnc_ecitrixport=No VNC console process found - maybe this Citrix Xen VM does not have VNC enabled?
 
 history_title=System Statistics Graphs
 history_ecannot=You are not allowed to view historic system statistics
