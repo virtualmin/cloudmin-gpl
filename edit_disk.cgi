@@ -53,7 +53,13 @@ print &ui_table_start($text{'disk_header'}, undef, 2);
 
 # Real file on host system
 $vhost = &get_parent_server($server);
-if ($in{'new'} == 2) {
+if ($disk->{'fixedreal'}) {
+	# Cannot be edited
+	$realsel = $disk->{'real'} ? &describe_disk($disk)
+				   : $text{'disk_auto'};
+	$txt = 'disk_real';
+	}
+elsif ($in{'new'} == 2) {
 	# Show device selector from host, if we can
 	if (($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') &&
 	    &remote_foreign_check($vhost, "raid")) {
@@ -112,7 +118,8 @@ if ($in{'new'} == 1) {
 	print &ui_table_row($text{'disk_size1'},
 		&ui_bytesbox("size", 1024*1024*1024, 8)." ".$freemsg);
 	}
-elsif (!$in{'new'} && (!$disk->{'device'} || $disk->{'lv'})) {
+elsif (!$in{'new'} &&
+       (!$disk->{'device'} || $disk->{'lv'} || $disk->{'storage'})) {
 	# Current size of the file, which can be changed
 	print &ui_table_row($text{'disk_size0'},
 		&ui_bytesbox("size", $disk->{'size'}, 8)." ".$freemsg);

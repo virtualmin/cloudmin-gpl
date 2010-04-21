@@ -516,6 +516,26 @@ if ($s->{'status'} eq 'virt' && $s->{'virtualmin_error'}) {
 return $msg;
 }
 
+# describe_disk(&disk)
+# Returns a human-readable string describing the real location of a disk
+sub describe_disk
+{
+my ($d) = @_;
+if ($d->{'storage'}) {
+	# Citrix storage
+	return &text('disks_storage', "<i>$d->{'storage'}</i>",
+				      "<tt>$d->{'real'}</tt>");
+	}
+elsif ($d->{'device'} && defined(&mount::device_name)) {
+	# Real or LVM device
+	return &mount::device_name($d->{'real'});
+	}
+else {
+	# Regular file
+	return "<tt>$d->{'real'}</tt>";
+	}
+}
+
 # can_ssh_status(&server)
 # Return 1 if Cloudmin can run commands on a system via SSH
 sub can_ssh_status

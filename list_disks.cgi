@@ -35,9 +35,7 @@ if (@$disks) {
 				  $text{'disks_type'}, $text{'disks_size'} ],
 				100, 0, \@tds);
 	foreach my $d (@$disks) {
-		$rdesc = $d->{'device'} && defined(&mount::device_name) ?
-				&mount::device_name($d->{'real'}) :
-				"<tt>$d->{'real'}</tt>";
+		$rdesc = &describe_disk($d);
 		$vdesc = defined(&mount::device_name) ?
 				&mount::device_name($d->{'virt'}) :
 				"<tt>$d->{'virt'}</tt>";

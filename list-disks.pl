@@ -73,7 +73,7 @@ ref($disks) || &usage("Failed to list disks : $disks");
 if ($multi) {
 	# Show one per block
 	foreach $d (@$disks) {
-		print "$d->{'real'}\n";
+		print $d->{'real'},"\n";
 		if (defined(&mount::device_name)) {
 			$rdesc = &mount::device_name($d->{'real'});
 			if ($rdesc && $rdesc ne $d->{'real'}) {
@@ -91,6 +91,10 @@ if ($multi) {
 		if ($d->{'lv'}) {
 			print "    LVM volume group: $d->{'vg'}\n";
 			print "    LVM logical volume: $d->{'lv'}\n";
+			}
+		elsif ($d->{'storage'}) {
+			print "    Storage name: $d->{'storage'}\n";
+			print "    Storage ID: $d->{'real'}\n";
 			}
 		if ($d->{'size'}) {
 			print "    Size: $d->{'size'}\n";
@@ -128,7 +132,8 @@ else {
 	printf $fmt, "Real file", "Device on system", "Type", "Size";
 	printf $fmt, ("-" x 30), ("-" x 20), ("-" x 10), ("-" x 10);
 	foreach $d (@$disks) {
-		printf $fmt, $d->{'real'}, $d->{'virt'},
+		printf $fmt, $d->{'real'},
+		             $d->{'virt'},
 			     $d->{'device'} ? "Device" : "File",
 			     $d->{'size'} ? &nice_size($d->{'size'}) : "";
 		}
