@@ -750,7 +750,7 @@ return $text;
 # set in the server object. Returns a status code (0=OK, 1=No connect, 2=No
 # login, 3=Unknown error, 4=Timeout, 5=Host down, 6=Virtual system down,
 # 7=user is not root, 8=Paused) and an error message, the Webmin root directory
-# (if installed), the Webmin port and the Webmin SSL flag.
+# (if installed), the Webmin port, the Webmin SSL flag, and the actual hostname.
 sub check_server_ssh_login
 {
 my ($server) = @_;
@@ -767,7 +767,7 @@ if (defined(&$sfunc)) {
 # Need to really SSH
 my $cmd = &build_ssh_command($server, 1);
 my $timeout = int($config{'ssh_timeout'}) || 30;
-$cmd .= " 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK'";
+$cmd .= " 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK ; hostname'";
 my ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, $timeout);
 if ($status == 0) {
 	# Connected OK .. check the output to see if we have Webmin
@@ -804,7 +804,12 @@ if ($status == 0) {
 					}
 				}
 			}
-		return (0, $out, $root, $port, $ssl);
+		my $hostname;
+		if ($out =~ /OK\r?\n(\S+)\r?\n/) {
+			# Parse out hostname
+			$hostname = $1;
+			}
+		return (0, $out, $root, $port, $ssl, $hostname);
 		}
 	}
 else {
@@ -2179,7 +2184,7 @@ if ($server->{'ssh_nologin'}) {
 
 # Check if we can login
 my $rv = 0;
-my ($status, $err, $webminroot, $webminport, $webminssl) =
+my ($status, $err, $webminroot, $webminport, $webminssl, $hostname) =
 	&check_server_ssh_login($server);
 $err =~ s/\r?\n/ /g;
 if ($status == 2) {
@@ -2250,6 +2255,11 @@ if ($webminport && $server->{'id'} != 0) {
 		$server->{'pass'} = $server->{'ssh_pass'};
 		$server->{'ssh_pass_same'} = $server->{'ssh_pass'} ? 1 : 0;
 		}
+	}
+
+# Save the hostname, if we got it
+if ($hostname) {
+	$server->{'unix_hostname'} = $hostname;
 	}
 
 if ($regen) {

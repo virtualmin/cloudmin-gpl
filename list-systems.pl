@@ -104,6 +104,9 @@ if ($multi) {
 		$tfunc = "type_".$s->{'manager'}."_desc";
 		print $s->{'host'},"\n";
 		print "    ID: $s->{'id'}\n";
+		if ($s->{'unix_hostname'}) {
+			print "    Unix hostname: $s->{'unix_hostname'}\n";
+			}
 		foreach $ip (&get_server_ip($s)) {
 			print "    IP address: $ip\n";
 			}

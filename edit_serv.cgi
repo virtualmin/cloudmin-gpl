@@ -39,6 +39,13 @@ else {
 	print &ui_table_row($text{'edit_host'}, "<tt>$server->{'host'}</tt>");
 	}
 
+# Unix hostname
+if ($server->{'unix_hostname'} &&
+    $server->{'unix_hostname'} ne $server->{'host'}) {
+	print &ui_table_row($text{'edit_unixhost'},
+			    "<tt>$server->{'unix_hostname'}</tt>");
+	}
+
 # IP address
 if (!&check_ipaddress($server->{'host'})) {
 	$ip = &get_server_ip($server);
