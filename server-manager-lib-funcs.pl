@@ -1704,6 +1704,22 @@ else {
 
 }
 
+# test_transfer_file_between_servers(&source, &dest)
+# Does a test file transfer between systems, and returns an error message
+# on failure, or undef on success.
+sub test_transfer_file_between_servers
+{
+my ($src, $dest) = @_;
+my $testfile = "/tmp/cloudmin-transfer-test-$$";
+my $rand = time().$$;
+my $err = &put_file_data_to_server($src, $rand, $testfile);
+return $err if ($err);
+$err = &transfer_file_between_servers($src, $dest, $testfile, $testfile, 0, 1);
+&delete_file_on_server($src, $testfile);
+&delete_file_on_server($dest, $testfile);
+return $err;
+}
+
 # delete_file_on_server(&server, remotefile, [no-quote])
 # Deletes a file on a managed server. Returns undef on success, or an error
 # message on failure.
@@ -6757,6 +6773,10 @@ my ($ok, $err) = &usable_host_system($dest, $server->{'manager'}, $mem, $disk);
 if (!$ok) {
 	return "The host system $dest->{'host'} is not suitable : $err";
 	}
+
+# Do a test transfer to ensure that later disk moves will work
+my $err = &test_transfer_file_between_servers($vhost, $dest);
+$err && return &text('smove_etest', $err);
 
 # Do the actual move
 my $mfunc = "type_".$server->{'manager'}."_move_system";

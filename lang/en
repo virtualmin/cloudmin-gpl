@@ -2469,6 +2469,7 @@ smove_checkdisksok=.. all disks found
 smove_checkconf=Checking for Xen configuration file on new host system ..
 smove_echeckconf=Expected file $1 was not found
 smove_checkconfok=.. found at $1
+smove_etest=Test file transfer between source and destination hosts failed : $1
 
 transfer_title2=Transfer File
 transfer_err=Failed to transfer file
