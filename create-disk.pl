@@ -139,6 +139,10 @@ $disk = &$nfunc($server, $disks, $device);
 $real eq 'auto' || &can_action($server, "devices") ||
 	&usage("You are not allowed to select your own devices for disks - ".
 	       "the --auto-real flag must be used");
+$disk->{'fixedreal'} && $real ne 'auto' &&
+	&usage("The device or file cannot be set for disks on this system");
+$disk->{'fixedreal'} && $lv &&
+	&usage("The LVM volume group cannot be set for disks on this system");
 $disk->{'real'} = $real if ($real ne 'auto');
 $disk->{'virt'} = $virt if ($virt ne 'auto');
 if ($lv) {

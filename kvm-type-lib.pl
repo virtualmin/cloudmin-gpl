@@ -1612,9 +1612,9 @@ my $vhost = &type_kvm_parent($server);
 # Actually un-mount if mounted
 if (&can_ssh_status($server) && $disk->{'mounted'}) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"umount ".$disk->{'virt'});
+		"umount ".$disk->{'virt_mount'});
 	if ($err || $ex) {
-		return "Failed to un-mount $disk->{'virt'} : ".
+		return "Failed to un-mount $disk->{'virt_mount'} : ".
 		       ($err || $out);
 		}
 	}

@@ -6630,7 +6630,8 @@ my ($vhost, $manager, $server) = @_;
 my $vinfo = &get_server_collected($vhost);
 my @rv;
 my $lvm = $vhost->{$manager.'_vg_free'} &&
-	  (!$server || $server->{$manager.'_filesystem_vg'});
+	  (!$server || $server->{$manager.'_filesystem_vg'} ||
+		       $manager eq 'citrix');
 if ($manager && $lvm) {
 	@rv = ( $vhost->{$manager.'_vg_free'}, $vhost->{$manager.'_vg_total'} );
 	}
