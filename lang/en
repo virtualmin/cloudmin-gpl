@@ -856,7 +856,7 @@ edit_citrixuuid=Citrix Xen UUID
 edit_kvmhost=KVM host system
 edit_kvmpid=KVM process ID
 edit_iheader=Network Interfaces
-edit_ifaceadd=Add a new interface.
+edit_ifaceadd=Add a virtual interface.
 edit_ifaceaddreal=Add a real interface.
 edit_ifaceaddress=Address
 edit_ifacename=Real device
@@ -1276,6 +1276,8 @@ iface_esupport=Interface management is not supported on this system
 iface_elimit=Adding this interface would exceed your IP address limit of $1. Currently you are using $2 IP addresses.
 iface_edelete=This interface cannot be deleted
 iface_emac=Missing or invalid ethernet address - must be formatted like 00:16:3E:37:91:2F
+iface_esupportreal=Real network interfaces are not supported on this system
+iface_ebridge=The selected network bridge does not exist!
 
 dmass_err=Failed to update Virtualmin domains
 dmass_eserver=System with ID $1 was not found

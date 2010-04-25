@@ -9,6 +9,9 @@ require './server-manager-lib.pl';
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "ifaces");
+$cfunc = "type_".$server->{'manager'}."_can_interfaces";
+$can = &$cfunc($server);
+$can || &error($text{'iface_esupport'});
 if (!$in{'new'}) {
 	$ifunc = "type_".$server->{'manager'}."_list_interfaces";
 	$ifaces = &$ifunc($server);
@@ -62,6 +65,17 @@ else {
 	if ($in{'new'}) {
 		$iface = { 'name' => $in{'name'} };
 		}
+	if ($in{'new'} == 2) {
+		# Check real interface
+		$can == 2 || &error($text{'iface_esupportreal'});
+		&can_action_error($server, "realifaces");
+		if ($in{'bridge'}) {
+			$vhost = &get_parent_server($server);
+			@bridges = &list_host_bridges($vhost);
+			&indexof($in{'bridge'}, @bridges) >= 0 ||
+				&error($text{'iface_ebridge'});
+			}
+		}
 	if ((!$in{'new'} || !$in{'address_def'}) &&
 	    &can_action($server, "ips")) {
 		&check_ipaddress($in{'address'}) ||
@@ -101,7 +115,7 @@ else {
 	$oldip = &get_server_ip($server);
 	if ($in{'new'}) {
 		$cfunc = "type_".$server->{'manager'}."_create_interface";
-		$err = &$cfunc($server, $iface);
+		$err = &$cfunc($server, $iface, $in{'new'} == 2, $in{'bridge'});
 		}
 	else {
 		$mfunc = "type_".$server->{'manager'}."_modify_interface";

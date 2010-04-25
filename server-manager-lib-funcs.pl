@@ -3879,7 +3879,7 @@ foreach my $s (&list_managed_servers()) {
 	$used{&to_ipaddress($s->{'host'})} = $s;
 	$used{$s->{'ip'}} = $s;
 	foreach my $ip (split(/\s+/, $s->{'ip_addresses'})) {
-		$used{$ip}++;
+		$used{$ip} = $s;
 		}
 
 	# Add IPs from last collected from Virtualmin

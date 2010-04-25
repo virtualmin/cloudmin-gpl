@@ -25,8 +25,8 @@ if (&can_action($server, "ifaces")) {
 		    "$text{'edit_ifaceadd'}</a>" );
 	if (&can_action($server, "realifaces") && $can == 2) {
 		# Link to real
-		@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=2'>".
-			    "$text{'edit_ifaceaddreal'}</a>" );
+		push(@ilinks, "<a href='edit_iface.cgi?id=$in{'id'}&new=2'>".
+			      "$text{'edit_ifaceaddreal'}</a>");
 		}
 	}
 print &ui_links_row(\@ilinks);

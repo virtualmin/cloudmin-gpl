@@ -68,7 +68,9 @@ elsif ($in{'new'} == 2) {
 	@bridges = &list_host_bridges($vhost);
 	if (@bridges) {
 		print &ui_table_row($text{'iface_bridge'},
-				    &ui_select("bridge", undef, \@bridges));
+				    &ui_select("bridge", undef,
+					       [ [ undef, $text{'default'} ],
+						 @bridges ]));
 		}
 	}
 else {
