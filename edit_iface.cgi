@@ -17,9 +17,15 @@ if (!$in{'new'}) {
 $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 $can = &$cfunc($server);
 $can || &error($text{'iface_esupport'});
+if ($in{'new'} == 2) {
+	$can == 2 || &error($text{'iface_esupportreal'});
+	&can_action_error($server, "realifaces");
+	}
 
-&ui_print_header(&server_in($server), $in{'new'} ? $text{'iface_create'}
-						 : $text{'iface_edit'},
+&ui_print_header(&server_in($server),
+		 $in{'new'} == 2 ? $text{'iface_createreal'} :
+		 $in{'new'} == 1 ? $text{'iface_create'} :
+				   $text{'iface_edit'},
 		 "", "iface");
 
 print &ui_form_start("save_iface.cgi", "post");
@@ -28,12 +34,16 @@ print &ui_hidden("idx", $in{'idx'});
 print &ui_hidden("new", $in{'new'});
 print &ui_table_start($text{'iface_header'}, undef, 2);
 
-# Parent interface
+# Get parent interfaces
 if ($in{'new'}) {
-	# New interface .. show parent chooser
 	$pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
 	$parents = &$pfunc($server);
 	ref($parents) || &error(&text('iface_egetparents', $parents));
+	}
+
+# Parent interface
+if ($in{'new'} == 1) {
+	# New virtual interface .. show parent chooser
 	$parents = [ grep { $_->{'virtual'} eq '' &&
 			    $_->{'name'} !~ /^lo/ &&
                             $_->{'address'} } @$parents ];
@@ -42,6 +52,24 @@ if ($in{'new'}) {
 		    &ui_select("name", $parents->[0]->{'fullname'},
 			[ map { [ $_->{'fullname'} ] } @$parents ]));
 	$iface->{'netmask'} = $parents->[0]->{'netmask'};
+	}
+elsif ($in{'new'} == 2) {
+	# New real interface .. show name and bridge chooser
+	$max = 1;
+	foreach $p (@$parents) {
+		if ($p->{'fullname'} =~ /^eth(\d+)$/ && $1 >= $max) {
+			$max++;
+			}
+		}
+	print &ui_table_row($text{'iface_name'},
+			    &ui_textbox("name", "eth$max", 20));
+
+	$vhost = &get_parent_server($server);
+	@bridges = &list_host_bridges($vhost);
+	if (@bridges) {
+		print &ui_table_row($text{'iface_bridge'},
+				    &ui_select("bridge", undef, \@bridges));
+		}
 	}
 else {
 	# Show details of existing interface

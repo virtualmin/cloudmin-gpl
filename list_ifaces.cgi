@@ -20,8 +20,14 @@ $ifunc = "type_".$t."_list_interfaces";
 $ifaces = &$ifunc($server);
 @ilinks = ( );
 if (&can_action($server, "ifaces")) {
+	# Link to add
 	@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".
 		    "$text{'edit_ifaceadd'}</a>" );
+	if (&can_action($server, "realifaces") && $can == 2) {
+		# Link to real
+		@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=2'>".
+			    "$text{'edit_ifaceaddreal'}</a>" );
+		}
 	}
 print &ui_links_row(\@ilinks);
 print &ui_columns_start([ $text{'edit_ifaceaddress'},
