@@ -7798,6 +7798,7 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	my @active = &remote_foreign_call(
 		$server, "net", "active_interfaces", 1);
 	return $last_remote_error if ($last_remote_error);
+	@active = grep { &check_ipaddress($_->{'address'}) } @active;
 
 	# Also add in gateways
 	my @routes = &remote_foreign_call($server, "net", "list_routes");

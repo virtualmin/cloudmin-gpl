@@ -2526,6 +2526,12 @@ if ($server->{'kvm_vg_total'}) {
 	push(@rv, [ "LVM disk space free",
 		    &nice_size($server->{'kvm_vg_free'}) ]);
 	}
+if (&can_ssh_status($server)) {
+	my @bridges = &list_host_bridges($server);
+	if (@bridges) {
+		push(@rv, [ "KVM network bridges", join(" ", @bridges) ]);
+		}
+	}
 return @rv;
 }
 

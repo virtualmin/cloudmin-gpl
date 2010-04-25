@@ -6,9 +6,15 @@ Adds a new network interface to some system
 
 This program adds a virtual interface to some Cloudmin-managed system. You must
 specify the system with the C<--host> parameter, and the base interface with
-C<--name>. The IP address can be either explitly set with C<--address>, or Cloudmin
-can allocate a free IP from the range defined for the host system with
+C<--name>. The IP address can be either explitly set with C<--address>, or
+Cloudmin can allocate a free IP from the range defined for the host system with
 C<--allocate>.
+
+On Xen and KVM systems an additional real network interface can be created
+with the C<--real> flag. In this case, the C<--name> parameter must be followed
+by an interface that does not exist yet, like I<eth1>. If the host system has
+multiple bridges, the C<--bridge> flag can be used to select a bridge, like
+I<xenbr0>.
 
 Either way, the full inteface name and IP address will be displayed if the
 command completes successfully.
@@ -54,6 +60,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--allocate") {
 		$allocate = 1;
 		}
+	elsif ($a eq "--real") {
+		$nonvirt = 1;
+		}
+	elsif ($a eq "--bridge") {
+		$bridge = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
@@ -87,6 +99,7 @@ $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 defined(&$cfunc) && &$cfunc($server) ||
 	&usage("Interfaces cannot be managed on this system");
 $server->{'status'} eq 'nohost' && &usage("Host for system is down");
+$can = &$cfunc($server);
 
 # Get the parent network interfaces
 $pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
@@ -94,10 +107,27 @@ $parents = &$pfunc($server);
 ref($parents) || &usage("Failed to get parent network interfaces : $parents");
 ($piface) = grep { $_->{'fullname'} eq $name &&
 		   $_->{'virtual'} eq '' } @$parents;
-$piface || &usage("No real interface named $name found on parent system. ".
-		  "Existing interfaces are : ".
-		  join(" ", map { $_->{'fullname'} }
+if ($nonvirt) {
+	&can_action_usage($server, "realifaces");
+	$can == 2 || &usage("Real interfaces cannot be added ".
+			    "to this virtual system");
+	$piface && &usage("A real interface named $name already exists");
+	if ($bridge) {
+		$vhost = &get_parent_server($server);
+		@bridges = &list_host_bridges($vhost);
+		&indexof($bridge, @bridges) >= 0 ||
+			&usage("Bridge $bridge does not exist on host system. ".
+			       "Available bridges are : ".join(" ", @bridges));
+		}
+	}
+else {
+	$bridge && &usage("The --bridge parameter can only be used ".
+			  "with --real");
+	$piface || &usage("No real interface named $name found. ".
+			  "Existing interfaces are : ".
+			  join(" ", map { $_->{'fullname'} }
 				grep { $_->{'virtual'} eq '' } @$parents));
+	}
 
 # Create the interface object
 $iface = { 'name' => $name };
@@ -115,7 +145,7 @@ else {
 	}
 
 # Call the create function
-$err = &$ifunc($server, $iface);
+$err = &$ifunc($server, $iface, $nonvirt, $bridge);
 if ($err) {
 	&usage("Interface creation failed : $err");
 	}
@@ -136,6 +166,7 @@ print "cloudmin create-interfaces --host hostname\n";
 print "                           --name interface\n";
 print "                           --address ip.address | --allocate\n";
 print "                          [--netmask ip.netmask]\n";
+print "                          [--real] [--bridge name]\n";
 exit(1);
 }
 

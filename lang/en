@@ -2262,6 +2262,7 @@ owner_action_add=Add existing systems
 owner_action_advanced=Use advanced system creation options
 owner_action_ips=Manually select IP addresses
 owner_action_ifaces=Manage network interfaces
+owner_action_realifaces=Add real network interfaces
 owner_action_reverse=Change reverse IP mappings
 owner_action_sshkeys=Select SSH keys
 owner_action_webmin=Install Webmin

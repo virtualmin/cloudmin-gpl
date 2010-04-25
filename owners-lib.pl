@@ -93,8 +93,8 @@ sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 	 'pass', 'domains', 'update', 'script', 'pause', 'reset',
-	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'reverse',
-	 'limits', 'disks', 'devices', 'sshkeys', 'backup', 'webmin',
+	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
+	 'reverse', 'limits', 'disks', 'devices', 'sshkeys', 'backup', 'webmin',
 	 'virtualmin', 'api' );
 }
 
