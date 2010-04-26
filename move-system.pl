@@ -102,7 +102,9 @@ $desthost || &usage("Missing --dest parameter");
 
 # Get the systems
 $server = &get_managed_server_by("host", $host);
+$server || &usage("No system named $host exists");
 $dest = &get_managed_server_by("host", $desthost);
+$dest || &usage("No destination system named $desthost exists");
 $vhost = &get_parent_server($server);
 $server->{'id'} eq $dest->{'id'} && &usage("A system cannot be transferred to itself");
 $vhost->{'id'} eq $dest->{'id'} && &usage("$dest->{'host'} is already hosting this system");

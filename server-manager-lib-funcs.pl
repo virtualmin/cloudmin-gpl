@@ -2645,7 +2645,7 @@ if (!$got_kernel) {
 # Get IO stats via SSH
 if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-							  "vmstat 1 2");
+							  "vmstat 1 2", 5);
 	if (!$ex && !$err) {
 		local @lines = split(/\r?\n/, $out);
 		local @w = split(/\s+/, $lines[$#lines]);
