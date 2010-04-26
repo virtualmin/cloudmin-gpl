@@ -78,6 +78,7 @@ else {
 		}
 	if ((!$in{'new'} || !$in{'address_def'}) &&
 	    &can_action($server, "ips")) {
+		# Validate manually entered address
 		&check_ipaddress($in{'address'}) ||
 			&error($text{'iface_eaddress'});
 		$iface->{'address'} = $in{'address'};
@@ -90,9 +91,12 @@ else {
 			&ping_server_host($iface->{'address'}) &&
 				&error(&text('iface_eclash2'));
 			}
+
+		# Validate manual netmask
+		&check_ipaddress($in{'netmask'}) ||
+			&error($text{'iface_enetmask'});
+		$iface->{'netmask'} = $in{'netmask'};
 		}
-	&check_ipaddress($in{'netmask'}) || &error($text{'iface_enetmask'});
-	$iface->{'netmask'} = $in{'netmask'};
 
 	# Save ethernet address
 	if (defined($in{'mac'}) || defined($in{'mac_def'})) {

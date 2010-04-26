@@ -1990,16 +1990,27 @@ if ($server->{'status'} eq 'down') {
 	&umount_filesystem_if_needed($server);
 	}
 else {
-	# Get active interfaces
+	# Get active and boot interfaces
 	$rv = &list_active_server_interfaces($server);
+	$bootrv = &list_boot_server_interfaces($server);
+	if (ref($rv) && ref($bootrv)) {
+		my %got = map { $_->{'fullname'}, $_ } @$rv;
+		push(@$rv, grep { !$got{$_->{'fullname'}} &&
+				  &check_ipaddress($_->{'address'}) }
+				@$bootrv);
+		}
 	}
 
-# Mark non-virtual interfaces as readonly
+# Set nodelete flag on first real interface, filter out interfaces
+# with no IP or non-ethernet
 if (ref($rv)) {
 	$rv = [ grep { $_->{'fullname'} =~ /^eth/ &&
-			 $_->{'address'} } @$rv ];
+		       $_->{'up'} &&
+		       $_->{'address'} } @$rv ];
 	foreach my $iface (@$rv) {
-		$iface->{'nodelete'} = 1 if ($iface->{'virtual'} eq '');
+		if ($iface->{'fullname'} eq 'eth0') {
+			$iface->{'nodelete'} = 1
+			}
 		}
 	}
 
@@ -2026,52 +2037,61 @@ my $rv = &type_kvm_list_interfaces($server);
 return [ grep { $_->{'virtual'} eq '' } @$rv ];
 }
 
-# type_kvm_create_interface(&server, &iface)
+# type_kvm_create_interface(&server, &iface, [non-virtual], [bridge])
 # Add and activate a virtual interface
 sub type_kvm_create_interface
 {
-my ($server, $iface) = @_;
+my ($server, $iface, $nonvirt, $bridge) = @_;
 
-# Find a free interface number
+# Find a free interface number, if needed
 my $vhost = &type_kvm_parent($server);
-my $ifaces = &type_kvm_list_interfaces($server);
-return $ifaces if (!ref($ifaces));
-my $n = 0;
-foreach my $oldiface (@$ifaces) {
-	if ($oldiface->{'virtual'} >= $n &&
-	    $oldiface->{'name'} eq $iface->{'name'}) {
-		$n = $oldiface->{'virtual'} + 1;
-		}
+if ($nonvirt) {
+	$iface->{'name'} =~ /^eth\d+$/ ||
+		return "Only Ethernet intefaces can be created";
+	$iface->{'fullname'} = $iface->{'name'};
 	}
-$iface->{'virtual'} = $n;
-$iface->{'fullname'} = $iface->{'name'}.":".$n;
+else {
+	my $ifaces = &type_kvm_list_interfaces($server);
+	return $ifaces if (!ref($ifaces));
+	my $n = 0;
+	foreach my $oldiface (@$ifaces) {
+		if ($oldiface->{'virtual'} >= $n &&
+		    $oldiface->{'name'} eq $iface->{'name'}) {
+			$n = $oldiface->{'virtual'} + 1;
+			}
+		}
+	$iface->{'virtual'} = $n;
+	$iface->{'fullname'} = $iface->{'name'}.":".$n;
+	}
 
 # Allocate IP, if needed
+my @kvm_iface = split(/\s+/, $vhost->{'kvm_iface'});
+my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
+$bridge ||= $xen_iface[$idx];
 if (!$iface->{'address'}) {
 	my $cidr;
-	my @kvm_iface = split(/\s+/, $vhost->{'kvm_iface'});
-	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
 	($iface->{'address'}, $cidr) = &allocate_ip_address(
 	    $vhost->{'kvm_start'}, $vhost->{'kvm_end'}, $vhost->{'kvm_cidr'},
-	    $vhost->{'kvm_gws'}, $vhost->{'kvm_ifaces'}, $kvm_iface[$idx]);
+	    $vhost->{'kvm_gws'}, $vhost->{'kvm_ifaces'}, $bridge);
 	$iface->{'address'} ||
 		return &text('create_ekvmalloc', $vhost->{'host'},
 			    &describe_ip_range($vhost->{'kvm_start'},
 					       $vhost->{'kvm_end'},
 					       $vhost->{'kvm_cidr'},
 					       $vhost->{'kvm_ifaces'},
-					       $kvm_iface[$idx]));
+					       $bridge));
 	$iface->{'netmask'} = &net::prefix_to_mask($cidr);
 	}
 
 # Compute broadcast and network
+$iface->{'up'} = 1;
 $iface->{'broadcast'} = &net::compute_broadcast($iface->{'address'},
 						$iface->{'netmask'});
 $iface->{'network'} = &net::compute_network($iface->{'address'},
 					    $iface->{'netmask'});
 
 # Activate now if possible
-if (&can_ssh_status($server)) {
+if (&can_ssh_status($server) && !$nonvirt) {
 	my $err = &create_active_server_interface($server, $iface);
 	return $err if ($err);
 	}
@@ -2082,6 +2102,17 @@ return "Failed to mount filesystem : $err" if ($err);
 $err = &create_boot_server_interface($server, $iface);
 &umount_filesystem_if_needed($server);
 return $err if ($err);
+
+# Add to list of interfaces to activate at start time
+if ($nonvirt) {
+	my @macs = split(/\s+/, $server->{'mac'});
+	my @nets = split(/\s+/, $server->{'kvm_net'});
+	push(@macs, &generate_mac_address($server, scalar(@nets)));
+	push(@nets, "tap,vlan=".scalar(@nets));
+	$server->{'mac'} = join(" ", @macs);
+	$server->{'kvm_net'} = join(" ", @nets);
+	$iface->{'reboot'} = 1;
+	}
 
 &add_ip_address($server, $iface->{'address'});
 return undef;
@@ -2104,6 +2135,18 @@ return $err if ($err);
 if (&can_ssh_status($server)) {
 	my $err = &delete_active_server_interface($server, $iface);
 	return $err if ($err);
+	}
+
+# Remove from KVM config
+my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : undef;
+if ($iface->{'virtual'} eq '' && defined($idx)) {
+	my @macs = split(/\s+/, $server->{'mac'});
+	my @nets = split(/\s+/, $server->{'kvm_net'});
+	splice(@macs, $idx, 1);
+	splice(@nets, $idx, 1);
+	$server->{'mac'} = join(" ", @macs);
+	$server->{'kvm_net'} = join(" ", @nets);
+	$iface->{'reboot'} = 1;
 	}
 
 &delete_ip_address($server, $iface->{'address'});
