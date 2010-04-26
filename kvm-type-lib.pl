@@ -1976,6 +1976,16 @@ sub type_kvm_can_allocate_address
 return 1;
 }
 
+# type_kvm_can_gateway(&server)
+# Returns 1 indicating that KVM instances can have their default gateway 
+# read and set.
+sub type_kvm_can_gateway
+{
+my ($server) = @_;
+return $server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt' ||
+       &redhat_server_type($server) || &debian_server_type($server);
+}
+
 # type_kvm_list_interfaces(&server)
 # Returns a list of network interfaces on the system, or an error message
 sub type_kvm_list_interfaces
