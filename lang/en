@@ -1238,7 +1238,7 @@ features_err=Failed to save default features
 features_enone=None selected
 
 ifaces_title=Network Interfaces
-ifaces_return=network intefaces
+ifaces_return=network interfaces
 ifaces_gwheader=Default gateway options
 ifaces_gw=Gateway IP address
 ifaces_gwnone=None set
