@@ -59,6 +59,28 @@ foreach $iface (@$ifaces) {
 print &ui_columns_end();
 print &ui_links_row(\@ilinks);
 
+# Show default gateway form if possible
+$gcfunc = "type_".$t."_can_gateway";
+if ($can && defined(&$gcfunc) && &$gcfunc($server)) {
+	($gw, $gwdev) = &get_server_default_gateway($server);
+
+	print $text{'ifaces_gwdesc'},"<p>\n";
+	print &ui_form_start("save_gateway.cgi", "post");
+	print &ui_table_start($text{'ifaces_gwheader'}, undef, 2);
+
+	print &ui_table_row($text{'ifaces_gw'},
+		&ui_opt_textbox("gw", $gw, 20, $text{'ifaces_gwnone'},
+				$text{'ifaces_gwset'}));
+
+	print &ui_table_row($text{'ifaces_gwdev'},
+		&ui_select("gwdev", $gwdev,
+			   [ map { $_->{'fullname'} }
+				grep { $_->{'virtual'} eq '' } @$ifaces ]));
+
+	print &ui_table_end();
+	print &ui_form_end([ [ undef, $text{'save'} ] ]);
+	}
+
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 
 if (defined(&theme_select_server)) {

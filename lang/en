@@ -1239,6 +1239,12 @@ features_enone=None selected
 
 ifaces_title=Network Interfaces
 ifaces_return=network intefaces
+ifaces_gwheader=Default gateway options
+ifaces_gw=Gateway IP address
+ifaces_gwnone=None set
+ifaces_gwset=Set to
+ifaces_gwdev=Gateway interface
+ifaces_gwdesc=This form allows you to change the default router for this virtual system. Be careful changing it though, as an incorrect setting may cut off network access to your system.
 
 iface_create=Add Network Interface
 iface_createreal=Add Real Network Interface
