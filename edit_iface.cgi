@@ -89,6 +89,10 @@ else {
 						    \@doms, $iface);
 		print &ui_table_row($text{'iface_use'}, $use);
 		}
+	if ($iface->{'bridge'}) {
+		print &ui_table_row($text{'iface_bridge'},
+				    "<tt>$iface->{'bridge'}</tt>");
+		}
 	}
 
 # Address

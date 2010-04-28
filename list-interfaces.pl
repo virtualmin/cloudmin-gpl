@@ -73,6 +73,19 @@ $info = &get_server_collected($server);
 @doms = &get_server_domains($server);
 
 if ($multi) {
+	# Get gateway if possible
+	$gcfunc = "type_".$server->{'manager'}."_can_gateway";
+	if (defined(&$gcfunc) && &$gcfunc($server)) {
+		($gwiface) = grep { $_->{'gateway'} } @$ifaces;
+		if ($gwiface) {
+			$gw = $gwiface->{'gateway'};
+			$gwdev = $gwiface->{'fullname'};
+			}
+		else {
+			($gw, $gwdev) = &get_server_default_gateway($server);
+			}
+		}
+
 	# Show one per block
 	foreach $i (@$ifaces) {
 		if ($info) {
@@ -81,7 +94,9 @@ if ($multi) {
 			}
 		print "$i->{'fullname'}\n";
 		print "    Physical interface: $i->{'name'}\n";
-		print "    Interface number: $i->{'virtual'}\n";
+		if ($i->{'virtual'} ne '') {
+			print "    Interface number: $i->{'virtual'}\n";
+			}
 		print "    IP address: $i->{'address'}\n";
 		print "    Netmask: $i->{'netmask'}\n";
 		if ($i->{'ether'}) {
@@ -92,8 +107,11 @@ if ($multi) {
 				      ($d ? "Yes" : "No"),"\n";
 				}
 			}
-		if ($i->{'gateway'}) {
-			print "    Gateway: $i->{'gateway'}\n";
+		if ($i->{'fullname'} eq $gwdev) {
+			print "    Gateway: $gw\n";
+			}
+		if ($i->{'bridge'}) {
+			print "    Bridge: $i->{'bridge'}\n";
 			}
 		if ($use) {
 			print "    Use: ",&strip_html_tags($use),"\n";

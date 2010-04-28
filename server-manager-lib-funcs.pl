@@ -2771,20 +2771,56 @@ if (!$err) {
 sub modify_default_gateway
 {
 my ($server, $gw, $gwdev) = @_;
+my ($oldgw, $oldgwdev) = &get_server_default_gateway($server);
+$gwdev ||= $oldgwdev;
 
-# XXX don't change device if gwdev is not set
-
-# Find first boot-time interface with a gateway, and change it
-my $boots = &list_boot_server_interfaces($server);
-if (ref($boots)) {
-	my ($iface) = grep { $_->{'gateway'} } @$boots;
-	if ($iface) {
-		my $oldiface = { %$iface };
-		$iface->{'gateway'} = $gw;
-		my $err = &modify_boot_server_interface(
-				$server, $iface, $oldiface);
-		return $err if ($err);
+# First try to change using Webmin
+my $done;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	if (!$last_remote_error) {
+		&remote_foreign_call($server, "net",
+			"set_default_gateway", $gw, $gwdev);
 		}
+	if (!$last_remote_error) {
+		$done = 1;
+		}
+	}
+
+if (!$done) {
+	# Find first boot-time interface with a gateway, and change it
+	my $err = &mount_filesystem_if_needed($server);
+	return $err if ($err);
+	my $boots = &list_boot_server_interfaces($server);
+	if (ref($boots)) {
+		my ($oldiface) = grep { $_->{'fullname'} eq $oldgwdev } @$boots;
+		my ($newiface) = grep { $_->{'fullname'} eq $gwdev } @$boots;
+		if ($oldiface && $oldiface eq $newiface) {
+			# Just change gateway on same interface
+			my $orig_oldiface = { %$oldiface };
+			$oldiface->{'gateway'} = $gw;
+			my $err = &modify_boot_server_interface(
+					$server, $oldiface, $orig_oldiface);
+			return $err if ($err);
+			}
+		elsif ($oldiface && $oldiface ne $newiface) {
+			# Remove from old interface
+			my $orig_oldiface = { %$oldiface };
+			delete($oldiface->{'gateway'});
+			my $err = &modify_boot_server_interface(
+					$server, $oldiface, $orig_oldiface);
+			return $err if ($err);
+
+			# Add to new interface
+			my $orig_newiface = { %$newiface };
+			$newiface->{'gateway'} = $gw;
+			my $err = &modify_boot_server_interface(
+					$server, $newiface, $orig_newiface);
+			return $err if ($err);
+			}
+		}
+	&umount_filesystem_if_needed($server);
 	}
 
 # Updating routing table
