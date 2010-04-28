@@ -20,9 +20,17 @@ if ($type eq "server") {
 			$typestr = ucfirst($p->{'type'});
 			}
 		}
-	return &text('log_'.$action.'_server', $object,
-		     &html_escape(&un_urlize($p->{'cmd'})),
-		     $typestr);
+	if ($action eq 'gateway' && $p->{'gw'}) {
+		return &text('log_gateway_server', $object, $p->{'gw'});
+		}
+	elsif ($action eq 'gateway') {
+		return &text('log_nogateway_server', $object);
+		}
+	else {
+		return &text('log_'.$action.'_server', $object,
+			     &html_escape(&un_urlize($p->{'cmd'})),
+			     $typestr);
+		}
 	}
 elsif ($type eq "servers") {
 	# Operation on multiple servers

@@ -64,8 +64,10 @@ $gcfunc = "type_".$t."_can_gateway";
 if ($can && defined(&$gcfunc) && &$gcfunc($server)) {
 	($gw, $gwdev) = &get_server_default_gateway($server);
 
+	print &ui_hr();
 	print $text{'ifaces_gwdesc'},"<p>\n";
 	print &ui_form_start("save_gateway.cgi", "post");
+	print &ui_hidden("id", $in{'id'});
 	print &ui_table_start($text{'ifaces_gwheader'}, undef, 2);
 
 	print &ui_table_row($text{'ifaces_gw'},

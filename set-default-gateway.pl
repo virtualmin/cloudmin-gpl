@@ -8,7 +8,8 @@ This command changes the default routing gateway IP address and device on
 some Cloudmin-managed system. You must specify the system with the C<--host>
 parameter, and the new gateway IP with the C<--gateway> flag. If changing
 the gateway interface, the C<--gateway-interface> parameter can be given
-as well.
+as well. To remove the default gateway from a system altogether, use the
+C<--no-gateway> flag instead.
 
 This function is only available on Xen and KVM systems. OpenVZ and Vservers
 virtualization does not allow virtual systems to have a different default
@@ -17,7 +18,7 @@ gateway from the host system.
 =head1 Example usage
 
   cloudmin set-default-gateway --host xensomething.home --gateway 193.9.101.1
-  XXX
+  Set default gateway to 193.9.101.1.
 
 =cut
 
@@ -46,6 +47,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--gateway") {
 		$gw = shift(@ARGV);
 		}
+	elsif ($a eq "--no-gateway") {
+		$nogw = 1;
+		}
 	elsif ($a eq "--gateway-interface") {
 		$gwdev = shift(@ARGV);
 		}
@@ -54,7 +58,7 @@ while(@ARGV > 0) {
 		}
 	}
 $host || &usage("Missing --host parameter");
-$gw && &check_ipaddress($gw) ||
+$nogw || $gw && &check_ipaddress($gw) ||
 	&usage("Missing or invalid --gateway parameter");
 
 # Get the server
@@ -78,9 +82,17 @@ if ($gwdev) {
 	}
 
 # Set the gateway
-$err = &modify_default_gateway($server, $gw, $gwdev);
+if ($nogw) {
+	$err = &modify_default_gateway($server, undef, undef);
+	}
+else {
+	$err = &modify_default_gateway($server, $gw, $gwdev);
+	}
 if ($err) {
-	&usage("Interface creation failed : $err");
+	&usage("Gateway change failed : $err");
+	}
+elsif ($nogw) {
+	print "Cleared default gateway.\n";
 	}
 else {
 	print "Set default gateway to $gw".
@@ -97,7 +109,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Changes the default network gateway on some system.\n";
 print "\n";
 print "cloudmin set-default-gateway --host hostname\n";
-print "                            [--gateway address]\n";
+print "                            [--gateway address | --no-gateway]\n";
 print "                            [--gateway-interface name]\n";
 exit(1);
 }

@@ -2773,6 +2773,7 @@ sub modify_default_gateway
 my ($server, $gw, $gwdev) = @_;
 my ($oldgw, $oldgwdev) = &get_server_default_gateway($server);
 $gwdev ||= $oldgwdev;
+$gwdev ||= "eth0";
 
 # First try to change using Webmin
 my $done;
@@ -2796,7 +2797,7 @@ if (!$done) {
 	if (ref($boots)) {
 		my ($oldiface) = grep { $_->{'fullname'} eq $oldgwdev } @$boots;
 		my ($newiface) = grep { $_->{'fullname'} eq $gwdev } @$boots;
-		if ($oldiface && $oldiface eq $newiface) {
+		if ($oldgwdev eq $gwdev && $oldiface) {
 			# Just change gateway on same interface
 			my $orig_oldiface = { %$oldiface };
 			$oldiface->{'gateway'} = $gw;
@@ -2804,20 +2805,24 @@ if (!$done) {
 					$server, $oldiface, $orig_oldiface);
 			return $err if ($err);
 			}
-		elsif ($oldiface && $oldiface ne $newiface) {
-			# Remove from old interface
-			my $orig_oldiface = { %$oldiface };
-			delete($oldiface->{'gateway'});
-			my $err = &modify_boot_server_interface(
+		else {
+			if ($oldgw && $oldiface) {
+				# Remove from old interface
+				my $orig_oldiface = { %$oldiface };
+				delete($oldiface->{'gateway'});
+				my $err = &modify_boot_server_interface(
 					$server, $oldiface, $orig_oldiface);
-			return $err if ($err);
+				return $err if ($err);
+				}
 
-			# Add to new interface
-			my $orig_newiface = { %$newiface };
-			$newiface->{'gateway'} = $gw;
-			my $err = &modify_boot_server_interface(
+			if ($gw && $newiface) {
+				# Add to new interface
+				my $orig_newiface = { %$newiface };
+				$newiface->{'gateway'} = $gw;
+				my $err = &modify_boot_server_interface(
 					$server, $newiface, $orig_newiface);
-			return $err if ($err);
+				return $err if ($err);
+				}
 			}
 		}
 	&umount_filesystem_if_needed($server);
