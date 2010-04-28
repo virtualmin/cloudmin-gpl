@@ -35,11 +35,13 @@ else {
 	$err = &modify_default_gateway($server, $in{'gw'}, $in{'gwdev'});
 	}
 &error($err) if ($err);
+
+&check_server_status($server, 0, 1);
 &save_managed_server($server);
 &release_lock_server($server);
 &webmin_log("gateway", "server", $server->{'host'},
 	    { 'gw' => $in{'gw_def'} ? undef : $in{'gw'},
 	      'gwdev' => $in{'gwdev'} });
 
-&redirect("list_ifaces.cgi?id=$in{'id'}");
+&redirect("list_ifaces.cgi?id=$in{'id'}&refresh=1");
 

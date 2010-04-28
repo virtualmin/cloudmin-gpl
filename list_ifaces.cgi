@@ -88,4 +88,7 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server)) {
 if (defined(&theme_select_server)) {
 	&theme_select_server($server);
 	}
+if ($in{'refresh'} && defined(&theme_post_save_server)) {
+	&theme_post_save_server($server);
+	}
 

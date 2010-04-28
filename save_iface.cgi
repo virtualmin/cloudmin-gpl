@@ -146,10 +146,13 @@ else {
 		&add_ip_address($server, $iface->{'address'});
 		&modify_primary_ip_address($server, $oldiface->{'address'},
 						    $iface->{'address'});
+		&check_server_status($server, 0, 1);
+		$refresh = 1;
 		}
 	else {
 		# Refresh IP cache
 		&compute_ip_addresses($server);
+		$refresh = 0;
 		}
 
 	&save_managed_server($server);
@@ -158,5 +161,5 @@ else {
 	&webmin_log($in{'new'} ? "create" : "modify",
 		    "iface", $server->{'host'},
 		    { 'address' => $iface->{'address'} });
-	&redirect("list_ifaces.cgi?id=$in{'id'}");
+	&redirect("list_ifaces.cgi?id=$in{'id'}&refresh=$refresh");
 	}
