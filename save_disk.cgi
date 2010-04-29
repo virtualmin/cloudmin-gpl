@@ -19,7 +19,7 @@ if (!ref($disks)) {
 	$disks = &$lfunc($server, 0);
 	}
 ref($disks) || &error($disks);
-if (!$in{'new'}) {
+if (!$in{'new'} && !$in{'fixedreal'}) {
 	($disk) = grep { $_->{'real'} eq $in{'oldreal'} } @$disks;
 	$disk || &error($text{'disk_egone'});
 	$olddisk = { %$disk };
@@ -101,7 +101,10 @@ else {
 		}
 
 	# Real disk device
-	if ($in{'new'} == 2) {
+	if ($disk->{'fixedreal'}) {
+		# Do nothing, as no real device is needed
+		}
+	elsif ($in{'new'} == 2) {
 		# From device menu
 		if ($in{'real'}) {
 			$disk->{'real'} = $in{'real'};
@@ -176,8 +179,13 @@ else {
 	if ($in{'new'}) {
 		# Create the disk
 		&ui_print_header(&server_in($server), $text{'disk_titlec'}, "");
-		&$first_print(&text('disk_creating',
-				    "<tt>$disk->{'real'}</tt>"));
+		if ($disk->{'fixedreal'}) {
+			&$first_print(&text('disk_creating2'));
+			}
+		else {
+			&$first_print(&text('disk_creating',
+					    "<tt>$disk->{'real'}</tt>"));
+			}
 		$cfunc = "type_".$server->{'manager'}."_create_disk";
 		$err = &$cfunc($server, $disk);
 		if ($err) {

@@ -1307,7 +1307,7 @@ return $cmd;
 sub type_kvm_can_disks
 {
 my ($server) = @_;
-return $server->{'status'} ne 'nohost';
+return $server->{'status'} ne 'nohost' ? 1 : 0;
 }
 
 # type_kvm_list_disks(&server, include-mounts)

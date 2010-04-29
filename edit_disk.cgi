@@ -56,8 +56,9 @@ $vhost = &get_parent_server($server);
 if ($disk->{'fixedreal'}) {
 	# Cannot be edited
 	$realsel = $disk->{'real'} ? &describe_disk($disk)
-				   : $text{'disk_auto'};
+				   : $text{'disk_autoreal'};
 	$txt = 'disk_real';
+	print &ui_hidden("fixedreal", 1);
 	}
 elsif ($in{'new'} == 2) {
 	# Show device selector from host, if we can

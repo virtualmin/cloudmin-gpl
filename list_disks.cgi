@@ -9,6 +9,8 @@ $server || &error($text{'edit_egone'});
 if (&foreign_check("mount")) {
 	&foreign_require("mount", "mount-lib.pl");
 	}
+$cfunc = "type_".$server->{'manager'}."_can_disks";
+$can = &$cfunc($server);
 
 # Get disks or die
 $dfunc = "type_".$server->{'manager'}."_list_disks";
@@ -20,7 +22,7 @@ ref($disks) || &error(&text('disks_eget', $disks));
 # Show a table
 @links = ( "<a href='edit_disk.cgi?new=1&id=$in{'id'}'>".
 	   "$text{'disks_add1'}</a>" );
-if (&can_action($server, "devices")) {
+if (&can_action($server, "devices") && $can != 2) {
 	push(@links, "<a href='edit_disk.cgi?new=2&id=$in{'id'}'>".
 		     "$text{'disks_add2'}</a>");
 	}
