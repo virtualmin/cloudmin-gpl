@@ -178,7 +178,8 @@ print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]
 			  $root ? ( ) : ( [ 'delete', $text{'delete'} ] ) ]);
 
 # Scheduled expansion form
-if (!$in{'new'} && (!$disk->{'device'} || $disk->{'lv'})) {
+if (!$in{'new'} &&
+    (!$disk->{'device'} || $disk->{'lv'} || $disk->{'storage'})) {
 	$sched = &get_scheduled_change($server, "disk", $disk->{'real'});
 	print &ui_hr();
 	print &ui_form_start("save_disksched.cgi", "post");
@@ -189,6 +190,10 @@ if (!$in{'new'} && (!$disk->{'device'} || $disk->{'lv'})) {
 	if ($sched) {
 		# Already scheduled, show button to remove
 		print &ui_table_row(undef, $text{'disk_sdesc2'}, 2);
+
+		# Current time
+		print &ui_table_row($text{'disk_snow'},
+			&make_date(time(), 0, "dd/mon/yyyy"));
 
 		# When it will be run
 		@tm = localtime($sched->{'time'});
@@ -207,6 +212,10 @@ if (!$in{'new'} && (!$disk->{'device'} || $disk->{'lv'})) {
 	else {
 		# Not scheduled yet, show form to add
 		print &ui_table_row(undef, $text{'disk_sdesc'}, 2);
+
+		# Current time
+		print &ui_table_row($text{'disk_snow'},
+			&make_date(time(), 0, "dd/mon/yyyy"));
 
 		# When to run
 		@now = localtime(time()+(24*60*60));
