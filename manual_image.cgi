@@ -169,24 +169,24 @@ if ($image->{'format'} eq 'disk' && $in{'manager'} eq 'xen') {
 	# Work out a good block size for dd
 	$partsrcpath = $srcpath.".part";
 	my $bs = 512;
-	if (($bigp->{'parted_start_bytes'} % 32256) == 0 &&
-	    ($bigp->{'parted_size_bytes'} % 32256) == 0) {
+	if (($bigp->{'start_bytes'} % 32256) == 0 &&
+	    ($bigp->{'size_bytes'} % 32256) == 0) {
 		# This seems to be the default for most disks
 		$bs = 32256;
 		}
 	else {
 		# Get largest size starting at 512
 		for(my $bstry = 512;
-		    ($bigp->{'parted_start_bytes'} % $bstry == 0) &&
-		    ($bigp->{'parted_size_bytes'} % $bstry == 0);
+		    ($bigp->{'start_bytes'} % $bstry == 0) &&
+		    ($bigp->{'size_bytes'} % $bstry == 0);
 		    $bstry *= 2) {
 			$bs = $bstry;
 			}
 		}
 
 	# Extract the filesystem with dd
-	$bstart = int($bigp->{'parted_start_bytes'} / $bs);
-	$bcount = int($bigp->{'parted_size_bytes'} / $bs);
+	$bstart = int($bigp->{'start_bytes'} / $bs);
+	$bcount = int($bigp->{'size_bytes'} / $bs);
 	($out, $ex, $err) = &execute_command_on_server($srcserver,
 		"dd if=".quotemeta($srcpath)." ".
 		"of=".quotemeta($partsrcpath)." ".

@@ -1734,7 +1734,7 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 	# Work out the new filesystem size, taking into the new total disk
 	# size and any preceeding partitions.
 	my $newmbs = int(($disk->{'size'} -
-			  $part->{'parted_start_bytes'})/1024/1024);
+			  $part->{'start_bytes'})/1024/1024);
 	$newmbs = int($newmbs / 8) * 8;
 
 	if ($disk->{'fs'} && $disk->{'size'} < $olddisk->{'size'}) {

@@ -196,8 +196,11 @@ foreach my $l (split(/\r?\n/, $out)) {
 		# Found a partition line
 		push(@rv, { 'part' => $p,
 			    'start' => $1,
+			    'start_bytes' => $1 * $secsize,
 			    'end' => $2,
+			    'end_bytes' => $2 * $secsize,
 			    'blocks' => $3,
+			    'size_bytes' => ($2 - $1 + 1) * $secsize,
 			    'type' => $4,
 			    'offset' => $1 * $secsize });
 		$p++;
@@ -219,9 +222,9 @@ foreach my $l (split(/\r?\n/, $out)) {
 			$p->{'parted_size'} = $size;
 			$p->{'parted_type'} = $type;
 			$p->{'parted_fs'} = $fs;
-			$p->{'parted_start_bytes'} = &parse_parted_size($start);
-			$p->{'parted_end_bytes'} = &parse_parted_size($end);
-			$p->{'parted_size_bytes'} = &parse_parted_size($size);
+			$p->{'start_bytes'} = &parse_parted_size($start);
+			$p->{'end_bytes'} = &parse_parted_size($end);
+			$p->{'size_bytes'} = &parse_parted_size($size);
 			}
 		}
 	}
