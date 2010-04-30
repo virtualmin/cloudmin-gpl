@@ -104,11 +104,14 @@ if ($module_info{'onehost'} eq 'xen' &&
     $server_management_types{'xen'} &&
     ($config{'xen_checked'} || !&check_xen_host_software($this))) {
 	$this->{'xen_host'} = 1;
-	my $eth0 = &first_ethernet_iface();
-	($this->{'xen_start'}, $this->{'xen_end'}) = &first_ethernet_range();
-	$this->{'xen_cidr'} = &net::mask_to_prefix($eth0->{'netmask'});
-	$this->{'xen_dir'} = "/xen";
-	$this->{'xen_zone'} = $config{'xen_zone'};
+	if (!$this->{'xen_start'}) {
+		my $eth0 = &first_ethernet_iface();
+		($this->{'xen_start'}, $this->{'xen_end'}) =
+			&first_ethernet_range();
+		$this->{'xen_cidr'} =
+			&net::mask_to_prefix($eth0->{'netmask'});
+		}
+	$this->{'xen_dir'} ||= "/xen";
 
 	# Save flag indicating that we have already checked out Xen
 	# on this machine, as doing so can be slow
