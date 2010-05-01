@@ -232,7 +232,7 @@ return \@rv;
 }
 
 # create_disk_image_partition(&server, file, number, [size], [make-label])
-# Creates a new partition on some disk image
+# Creates a new partition on some empty disk image
 sub create_disk_image_partition
 {
 my ($vhost, $real, $num, $size, $make_label) = @_;
@@ -264,7 +264,7 @@ else {
 	&print_tempfile(TEMP, "n\n");	 # New partition
 	&print_tempfile(TEMP, "p\n");	 # Primary
 	&print_tempfile(TEMP, "$num\n"); # First partition
-	&print_tempfile(TEMP, "1\n");	 # First cylinder
+	&print_tempfile(TEMP, "\n");	 # First cylinder
 	if ($mbs) {
 		&print_tempfile(TEMP, "+${mbs}M\n");	# Specific size
 		}
@@ -280,7 +280,7 @@ else {
 
 	# Create a partition with fdisk
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"fdisk $real <$vhosttemp");
+		"fdisk -u $real <$vhosttemp");
 	&delete_file_on_server($vhost, $vhosttemp);
 	if ($ex || $err) {
 		return "Failed to create partition : ".($out || $err);
@@ -313,8 +313,32 @@ if (&has_command_on_server($vhost, "parted")) {
 		}
 	}
 else {
-	# Delete and re-create in fdisk
-	# XXX
+	# Delete and re-create in fdisk .. create input file first
+	my $temp = &transname();
+	my $mbs = int($newsize/1024/1024);
+	&open_tempfile(TEMP, ">$temp");
+	&print_tempfile(TEMP, "d\n");	# Delete
+	&print_tempfile(TEMP, $part->{'part'}."\n");	# Partition number
+	&print_tempfile(TEMP, "n\n");	# New partition
+	&print_tempfile(TEMP, "p\n");   # Primary
+	&print_tempfile(TEMP, $part->{'part'}."\n");	# Same partition
+	&print_tempfile(TEMP, $part->{'start'}."\n");	# Same start
+	&print_tempfile(TEMP, "+${mbs}M\n");		# New size
+	&print_tempfile(TEMP, "w\n");	 # Write table
+	&print_tempfile(TEMP, "q\n");	 # Quit
+	&close_tempfile(TEMP);
+	my $vhosttemp = &tempname_on_server($vhost);
+	my $err = &put_file_to_server($vhost, $temp, $vhosttemp);
+	&unlink_file($temp);
+
+	# Run input file
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"fdisk -u ".quotemeta($real)." <$vhosttemp");
+	&delete_file_on_server($vhost, $vhosttemp);
+	if ($ex || $err) {
+		return "Failed to delete and re-create partition : ".
+		       ($out || $err);
+		}
 	}
 
 return undef;
