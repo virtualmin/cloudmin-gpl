@@ -137,7 +137,7 @@ if ($hostfree && $incr > $hostfree) {
 	}
 
 # Do it
-&$first_print("Modifying virtual disk for $disk->{'virt'} ..");
+&$first_print("Modifying virtual disk for $olddisk->{'virt'} ..");
 $cfunc = "type_".$server->{'manager'}."_modify_disk";
 $err = &$cfunc($server, $disk, $olddisk);
 &release_lock_server($server);
