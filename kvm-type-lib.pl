@@ -1526,21 +1526,10 @@ else {
 		$err && return "Failed to create file $disk->{'real'} : $err";
 		}
 
-	# Create the disk label with parted
-	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
-		"parted -s ".quotemeta($disk->{'real'})." mklabel msdos");
-	if ($ex || $err) {
-		return "Failed to create disk label : ".($err || $out);
-		}
-
-	# Create a partition that uses all space
-	my $mbs = int($disk->{'size'}/1024/1024);
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-                "parted -s ".quotemeta($disk->{'real'}).
-		" mkpartfs primary ext2 1 ".$mbs);
-	if ($ex || $err) {
-		return "Failed to create partition : ".($err || $out);
-		}
+	# Create the partiton
+	my $err = &create_disk_image_partition($vhost, $disk->{'real'},
+					       1, $disk->{'size'}, 1);
+	return $err if ($err);
 
 	# And make a filesystem on the new partition
 	if (!@st && $disk->{'fs'}) {

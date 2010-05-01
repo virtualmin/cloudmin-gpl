@@ -231,6 +231,95 @@ foreach my $l (split(/\r?\n/, $out)) {
 return \@rv;
 }
 
+# create_disk_image_partition(&server, file, number, [size], [make-label])
+# Creates a new partition on some disk image
+sub create_disk_image_partition
+{
+my ($vhost, $real, $num, $size, $make_label) = @_;
+
+if (&has_command_on_server($vhost, "parted")) {
+	# Create the disk label with parted
+	if ($make_label) {
+		my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+			"parted -s ".quotemeta($real)." mklabel msdos");
+		if ($ex || $err) {
+			return "Failed to create disk label : ".($err || $out);
+			}
+		}
+
+	# Create a partition
+	my $mbs = $size ? int($size/1000000) : undef;
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+                "parted -s ".quotemeta($real).
+		" mkpartfs primary ext2 1 ".$mbs);
+	if ($ex || $err) {
+		return "Failed to create partition : ".($err || $out);
+		}
+	}
+else {
+	# Create input file for fdisk
+	my $mbs = $size ? int($size/1024/1024) : undef;
+	my $temp = &transname();
+	&open_tempfile(TEMP, ">$temp");
+	&print_tempfile(TEMP, "n\n");	 # New partition
+	&print_tempfile(TEMP, "p\n");	 # Primary
+	&print_tempfile(TEMP, "$num\n"); # First partition
+	&print_tempfile(TEMP, "1\n");	 # First cylinder
+	if ($mbs) {
+		&print_tempfile(TEMP, "+${mbs}M\n");	# Specific size
+		}
+	else {
+		&print_tempfile(TEMP, "\n");		# Use full disk
+		}
+	&print_tempfile(TEMP, "w\n");	 # Write table
+	&print_tempfile(TEMP, "q\n");	 # Quit
+	&close_tempfile(TEMP);
+	my $vhosttemp = &tempname_on_server($vhost);
+	my $err = &put_file_to_server($vhost, $temp, $vhosttemp);
+	&unlink_file($temp);
+
+	# Create a partition with fdisk
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"fdisk $real <$vhosttemp");
+	&delete_file_on_server($vhost, $vhosttemp);
+	if ($ex || $err) {
+		return "Failed to create partition : ".($out || $err);
+		}
+	}
+
+return undef;
+}
+
+# resize_disk_image_partition(&server, file, &partition, new-size)
+# Expands the size of some partition by deleting and re-creating it
+sub resize_disk_image_partition
+{
+my ($vhost, $real, $part, $newsize) = @_;
+if (&has_command_on_server($vhost, "parted")) {
+	# Delete and re-create with parted
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+		"parted -s ".quotemeta($real)." rm ".$part->{'part'});
+	if ($ex || $err) {
+		return "Failed to delete old partition : ".($err || $out);
+		}
+
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"parted -s ".quotemeta($real)." mkpart ".
+		$part->{'parted_type'}." ".
+		$part->{'parted_start'}." ".
+		int($newsize/1000000)."M");
+	if ($ex || $err) {
+		return "Failed to create new partition : ".($err || $out);
+		}
+	}
+else {
+	# Delete and re-create in fdisk
+	# XXX
+	}
+
+return undef;
+}
+
 # parse_parted_size(string)
 # Converts a string like 16.4kb or 200M into bytes
 sub parse_parted_size
