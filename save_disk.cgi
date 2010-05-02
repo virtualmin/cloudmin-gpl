@@ -175,6 +175,7 @@ else {
 			}
 		}
 
+	$wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
 	&obtain_lock_server($server);
 	if ($in{'new'}) {
 		# Create the disk
@@ -188,6 +189,7 @@ else {
 			}
 		$cfunc = "type_".$server->{'manager'}."_create_disk";
 		$err = &$cfunc($server, $disk);
+		&save_managed_server($server);
 		if ($err) {
 			&$second_print(&text('disk_createfailed', $err));
 			}
@@ -198,6 +200,20 @@ else {
 				    { 'real' => $disk->{'real'} });
 			}
 		}
+	elsif (!$in{'force'} &&
+	       $disk->{'size'} != $olddisk->{'size'} &&
+	       defined(&$wfunc) &&
+	       ($err = &$wfunc($server, $disk))) {
+		# Show a warning before resizing
+		&ui_print_header(&server_in($server), $text{'disk_titlem'}, "");
+
+		print &ui_confirmation_form(
+			"save_disk.cgi",
+			$text{'disk_sizewarn'}."\n".$err,
+			[ map { [ $_, $in{$_} ] } keys %in ],
+			[ [ "force", $text{'disk_sizeok'} ] ],
+			);
+		}
 	else {
 		# Modify the size or devices, if we can
 		&ui_print_header(&server_in($server), $text{'disk_titlem'}, "");
@@ -205,6 +221,7 @@ else {
 				    "<tt>$disk->{'real'}</tt>"));
 		$cfunc = "type_".$server->{'manager'}."_modify_disk";
 		$err = &$cfunc($server, $disk, $olddisk);
+		&save_managed_server($server);
 		if ($err) {
 			&$second_print(&text('disk_modifyfailed', $err));
 			}
@@ -215,7 +232,6 @@ else {
 				    { 'real' => $disk->{'real'} });
 			}
 		}
-	&save_managed_server($server);
 	&release_lock_server($server);
 
 	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},

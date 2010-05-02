@@ -121,10 +121,11 @@ elsif ($in{'reboot'}) {
 			}
 		else {
 			print $text{'save_rebootdone'},"<p>\n";
-			if (defined(&theme_post_save_server)) {
-				&theme_post_save_server($server);
-				}
 			}
+		}
+	&check_server_status($server, 0, 1);
+	if (defined(&theme_post_save_server)) {
+		&theme_post_save_server($server);
 		}
 	&save_managed_server($server);
 	&release_lock_server($server);

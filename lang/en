@@ -2075,6 +2075,8 @@ disk_fsck=Check Disk
 disk_snow=Current date and time
 disk_eresizefs=Cloudmin does not know what type of filesystem this disk contains, and so cannot properly resize it. This is most likely because the disk is not mounted on the virtual system.
 disk_eresizefstype=This disk does not contain an EXT filesystem or a swap file, and so the filesystem cannot be resized by Cloudmin.
+disk_sizewarn=Warning - this disk cannot be safely resized.
+disk_sizeok=Resize Disk Anyway
 
 fsck_title=Check Disk
 fsck_doing=Checking $1 filesystem in $2 ..

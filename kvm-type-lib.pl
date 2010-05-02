@@ -1310,6 +1310,22 @@ my ($server) = @_;
 return $server->{'status'} ne 'nohost' ? 1 : 0;
 }
 
+# type_kvm_can_safely_resize_disk(&server, &disk)
+# Returns undef if some disk can be safely resized, or an error message if not
+sub type_kvm_can_safely_resize_disk
+{
+my ($server, $disk) = @_;
+if (!$disk->{'fs'}) {
+	return $text{'disk_eresizefs'};
+	}
+elsif ($disk->{'fs'} !~ /^ext\d+$/ && $disk->{'fs'} ne 'swap') {
+	return $text{'disk_eresizefstype'};
+	}
+else {
+	return undef;
+	}
+}
+
 # type_kvm_list_disks(&server, include-mounts)
 # Returns a list of hash refs, one per disk, with fields :
 # real - Real file on host system, like /kvm/foo.dsk
@@ -1388,6 +1404,9 @@ if ($mounts) {
 				 $_->[0] =~ /^\Q$v\E(\d*)$/ } @$fstab;
 		if ($f) {
 			$d->{'virt_mount'} = $f->[0];
+			if ($f->[0] =~ /(\d+)$/) {
+				$d->{'virt_part'} = $1;
+				}
 			$d->{'mount'} = $f->[1];
 			$d->{'fs'} = $f->[2];
 			}
@@ -1466,6 +1485,7 @@ else {
 	$rv->{'virt'} = "/dev/hdb";
 	}
 $rv->{'virt_mount'} = $rv->{'virt'}."1";
+$rv->{'virt_part'} = 1;
 
 if (!$device) {
 	my $vhost = &type_kvm_parent($server);
@@ -1675,6 +1695,8 @@ my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
 
 # Validate disk resizing
 if ($disk->{'size'} != $olddisk->{'size'}) {
+	# XXX allow, but resize destructively
+
 	# Only supported for ext and swap
 	$disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap' ||
  	  $disk->{'fs'} eq '' ||
