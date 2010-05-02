@@ -66,6 +66,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--new-virt") {
 		$newvirt = shift(@ARGV);
 		}
+	elsif ($a eq "--force") {
+		$force = 1;
+		}
 	else {
 		&usage();
 		}
@@ -136,6 +139,22 @@ if ($hostfree && $incr > $hostfree) {
 	       &nice_size($hostfree)." disk space free");
 	}
 
+# Check if resize is safe
+if ($disk->{'size'} != $olddisk->{'size'} && !$force) {
+	$wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
+	if (defined(&$wfunc)) {
+		$err = &$wfunc($server, $disk);
+		if ($err) {
+			print "This disk cannot be resized : $err\n";
+			print "\n";
+			print "Use the --force flag to override this warning ",
+			      "and resize the disk.\n";
+			print "However, data on the disk may be lost!\n";
+			exit(2);
+			}
+		}
+	}
+
 # Do it
 &$first_print("Modifying virtual disk for $olddisk->{'virt'} ..");
 $cfunc = "type_".$server->{'manager'}."_modify_disk";
@@ -159,6 +178,7 @@ print "cloudmin modify-disk --host hostname\n";
 print "                     --real device|file | --virt device | --lv name\n";
 print "                    [--new-size MB]\n";
 print "                    [--new-virt device]\n";
+print "                    [--force]\n";
 exit(1);
 }
 
