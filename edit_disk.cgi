@@ -9,6 +9,8 @@ $server || &error($text{'edit_egone'});
 if (&foreign_check("mount")) {
 	&foreign_require("mount", "mount-lib.pl");
 	}
+$cfunc = "type_".$server->{'manager'}."_can_disks";
+$can = &$cfunc($server);
 
 # Show title and get the disk
 $lfunc = "type_".$server->{'manager'}."_list_disks";
@@ -170,11 +172,18 @@ if ($in{'new'}) {
 		&ui_textbox("mount", undef, 30));
 	}
 
+# Work out if deletion and detaching is allowed. The root filesystem cannot
+# be removed, and disk can only be detached if the user is allowed to add them,
+# and the file is not a device (for which deletion does the same thing)
 $root = $disk->{'mount'} eq '/' ? 1 : 0;
+$detach = !$root && &can_action($server, "devices") &&
+	  !($disk->{'device'} && !$disk->{'lv'} && !$disk->{'storage'});
+
 print &ui_table_end();
 print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]
 		      : [ [ undef, $text{'save'} ],
 			  $fsck ? ( [ 'fsck', $text{'disk_fsck'} ] ) : ( ),
+			  $detach ? ( [ 'detach', $text{'disk_detach'} ] ) : (),
 			  $root ? ( ) : ( [ 'delete', $text{'delete'} ] ) ]);
 
 # Scheduled expansion form

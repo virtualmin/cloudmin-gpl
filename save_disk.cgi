@@ -55,7 +55,8 @@ if ($in{'delete'}) {
 		print &ui_hidden("oldreal", $in{'oldreal'});
 		print &ui_hidden("delete", 1);
 		$desc = "<tt>$disk->{'real'}</tt>";
-		if ($disk->{'device'}) {
+		if ($disk->{'device'} &&
+		    !$disk->{'lv'} && !$disk->{'storage'}) {
 			print &text('disk_rusure2', $desc),"<p>\n";
 			}
 		else {
@@ -72,6 +73,49 @@ if ($in{'delete'}) {
 		}
 	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 			 "", $text{'index_return'});
+	}
+elsif ($in{'detach'}) {
+	# Detach from system, after asking first
+	&ui_print_header(&server_in($server), $text{'disk_titledt'}, "");
+	if ($in{'confirm'}) {
+		# Do it
+		&$first_print(&text('disk_detaching',
+				    "<tt>$disk->{'real'}</tt>"));
+		&obtain_lock_server($server);
+		$dfunc = "type_".$server->{'manager'}."_delete_disk";
+		$err = &$dfunc($server, $disk, 1);
+		if ($err) {
+			&$second_print(&text('disk_detachfailed', $err));
+			}
+		else {
+			&$second_print(&text('disk_detachedok'));
+			&show_disk_reboot_message($server, $disk);
+			}
+		&save_managed_server($server);
+		&release_lock_server($server);
+		&webmin_log("detach", "disk", $server->{'host'},
+			    { 'real' => $disk->{'real'} });
+		}
+	else {
+		# Ask first
+		print "<center>\n";
+		print &ui_form_start("save_disk.cgi");
+		print &ui_hidden("id", $in{'id'});
+		print &ui_hidden("oldreal", $in{'oldreal'});
+		print &ui_hidden("detach", 1);
+		$desc = "<tt>$disk->{'real'}</tt>";
+		print &text('disk_rusure3', $desc),"<p>\n";
+		if ($disk->{'mount'} && $disk->{'fs'} ne 'swap') {
+			print &text('disk_rusuremount',
+				    "<tt>$disk->{'mount'}</tt>",
+				    uc($disk->{'fs'})),"<p>\n";
+			}
+		print &ui_form_end([ [ "confirm", $text{'disk_detachok'} ] ]);
+		print "</center>\n";
+		}
+	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
+			 "", $text{'index_return'});
+
 	}
 elsif ($in{'fsck'}) {
 	# Check the disk

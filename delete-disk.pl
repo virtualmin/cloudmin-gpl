@@ -11,9 +11,13 @@ either C<--real> followed by the real file (like C</xen/newdisk.img>),
 C<--virt> followed by the device on the virtual system (like C</dev/sda3>),
 or C<--lv> followed by the logical volume name.
 
-If the system is running, the disk will not be really deleted until it is 
+If the system is running, the disk may not be really deleted until it is 
 shutdown or restarted, and thus the disk space on the host system will not be
 immediately freed up.
+
+To simply detach a disk from a virtual system without deleting the underlying
+image file or logical volume, use the C<--detach> flag. The file or LV can be
+later attached to another system with the C<create-disk> API command.
 
 =head1 Example usage
 
@@ -57,6 +61,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--virt") {
 		$virt = shift(@ARGV);
+		}
+	elsif ($a eq "--detach") {
+		$detach = 1;
 		}
 	else {
 		&usage();
@@ -107,9 +114,14 @@ else {
 $disk->{'mount'} eq '/' && &usage("The disk mounted on / cannot be removed, as this will make the system un-bootable");
 
 # Do it
-&$first_print("Removing virtual disk for $disk->{'virt'} ..");
+if ($detach) {
+	&$first_print("Detaching virtual disk for $disk->{'virt'} ..");
+	}
+else {
+	&$first_print("Deleting virtual disk for $disk->{'virt'} ..");
+	}
 $cfunc = "type_".$server->{'manager'}."_delete_disk";
-$err = &$cfunc($server, $disk);
+$err = &$cfunc($server, $disk, $detach);
 if ($err) {
 	&$second_print(".. failed : $err");
 	}
@@ -134,6 +146,7 @@ print "Removes a disk device from some virtual system.\n";
 print "\n";
 print "cloudmin delete-disk --host hostname\n";
 print "                     --real device|file | --virt device | --lv name\n";
+print "                    [--detach]\n";
 exit(1);
 }
 

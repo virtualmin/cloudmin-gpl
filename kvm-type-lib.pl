@@ -1547,11 +1547,13 @@ else {
 		}
 
 	# Create the partiton
+	# XXX don't do if there already is one
 	my $err = &create_disk_image_partition($vhost, $disk->{'real'},
 					       1, $disk->{'size'}, 1);
 	return $err if ($err);
 
 	# And make a filesystem on the new partition
+	# XXX
 	if (!@st && $disk->{'fs'}) {
 		my $fs = $disk->{'fs'};
 		$fs = "ext2" if ($fs eq "ext3");
@@ -1609,13 +1611,13 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 return $fserr;
 }
 
-# type_kvm_delete_disk(&server, &disk)
+# type_kvm_delete_disk(&server, &disk, [detach-only])
 # Removes a disk from the Xen configuration, the system's fstab file, and
 # deletes the underlying config file. The disk object must come from a call
 # to type_kvm_list_disks with the mount flag set to 1.
 sub type_kvm_delete_disk
 {
-my ($server, $disk) = @_;
+my ($server, $disk, $detach) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # Actually un-mount if mounted
@@ -1651,32 +1653,34 @@ if ($server->{'status'} ne 'alive') {
 		}
 	}
 
-if (!$disk->{'device'} && $disk->{'real'} !~ /^\/dev\//) {
-	# Delete the image file
-	&delete_file_on_server($vhost, $disk->{'real'});
-	}
-elsif ($disk->{'lv'}) {
-	# Delete mapper entries for LV, if any
-	my $mapper = "$disk->{'vg'}-$disk->{'lv'}";
-	my $files = &list_dir_on_server($vhost, "/dev/mapper");
-	if (ref($files)) {
-		my @delmaps;
-		foreach my $f (@$files) {
-			if ($f =~ /^\Q$mapper\Ep\d+$/) {
-				push(@delmaps, $f);
+if (!$detach) {
+	if (!$disk->{'device'} && $disk->{'real'} !~ /^\/dev\//) {
+		# Delete the image file
+		&delete_file_on_server($vhost, $disk->{'real'});
+		}
+	elsif ($disk->{'lv'}) {
+		# Delete mapper entries for LV, if any
+		my $mapper = "$disk->{'vg'}-$disk->{'lv'}";
+		my $files = &list_dir_on_server($vhost, "/dev/mapper");
+		if (ref($files)) {
+			my @delmaps;
+			foreach my $f (@$files) {
+				if ($f =~ /^\Q$mapper\Ep\d+$/) {
+					push(@delmaps, $f);
+					}
+				}
+			push(@delmaps, $mapper);
+			foreach my $f (@delmaps) {
+				&execute_command_on_server($vhost,
+					"dmsetup remove /dev/mapper/$f");
 				}
 			}
-		push(@delmaps, $mapper);
-		foreach my $f (@delmaps) {
-			&execute_command_on_server($vhost,
-				"dmsetup remove /dev/mapper/$f");
-			}
-		}
 
-	# Delete the logical volume
-	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-	&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
-			     { 'device' => $disk->{'real'} });
+		# Delete the logical volume
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
+				     { 'device' => $disk->{'real'} });
+		}
 	}
 
 return undef;
