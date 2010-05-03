@@ -114,7 +114,7 @@ my ($server, $remotedir) = @_;
 opendir(LISTDIR, $remotedir) || return "$!";
 my @files = grep { $_ ne "." && $_ ne ".." } readdir(LISTDIR);
 closedir(LISTDIR);
-return \@rv;
+return \@files;
 }
 
 # type_this_open_shell(&server)
