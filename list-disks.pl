@@ -75,14 +75,14 @@ if ($multi) {
 	foreach $d (@$disks) {
 		print $d->{'real'},"\n";
 		if (defined(&mount::device_name)) {
-			$rdesc = &mount::device_name($d->{'real'});
+			$rdesc = &mount::device_name($d->{'real'}, 1);
 			if ($rdesc && $rdesc ne $d->{'real'}) {
 				print "    Description: $rdesc\n";
 				}
 			}
 		print "    Device on system: $d->{'virt'}\n";
 		if (defined(&mount::device_name)) {
-			$vdesc = &mount::device_name($d->{'virt'});
+			$vdesc = &mount::device_name($d->{'virt'}, 1);
 			if ($vdesc && $vdesc ne $d->{'virt'}) {
 				print "    Description on system: $vdesc\n";
 				}

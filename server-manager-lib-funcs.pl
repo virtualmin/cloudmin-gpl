@@ -531,7 +531,7 @@ if ($d->{'storage'}) {
 	}
 elsif ($d->{'device'} && defined(&mount::device_name)) {
 	# Real or LVM device
-	return &mount::device_name($d->{'real'});
+	return &mount::device_name($d->{'real'}, 1);
 	}
 else {
 	# Regular file

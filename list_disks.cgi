@@ -39,7 +39,7 @@ if (@$disks) {
 	foreach my $d (@$disks) {
 		$rdesc = &describe_disk($d);
 		$vdesc = defined(&mount::device_name) ?
-				&mount::device_name($d->{'virt'}) :
+				&mount::device_name($d->{'virt'}, 1) :
 				"<tt>$d->{'virt'}</tt>";
 		$canedit = !$d->{'device'} || $d->{'lv'} ||
 			   &can_action($server, 'devices');
