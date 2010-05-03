@@ -227,6 +227,10 @@ else {
 		if ($disk->{'fixedreal'}) {
 			&$first_print(&text('disk_creating2'));
 			}
+		elsif ($in{'new'} == 2) {
+			&$first_print(&text('disk_creating3',
+					    "<tt>$disk->{'real'}</tt>"));
+			}
 		else {
 			&$first_print(&text('disk_creating',
 					    "<tt>$disk->{'real'}</tt>"));

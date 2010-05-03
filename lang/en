@@ -2057,6 +2057,7 @@ disk_eswap=Only disks formatted as virtual memory can be mounted as virtual memo
 disk_titlec=Creating Disk
 disk_creating=Creating virtual disk on $1 ..
 disk_creating2=Creating virtual disk on automatically assigned storage ..
+disk_creating3=Attaching virtual disk on $1 ..
 disk_createfailed=.. creation failed : $1
 disk_createok=.. created successfully
 disk_rusure2=Are you sure you want to remove the virtual disk from the device $1? No data will be lost.
