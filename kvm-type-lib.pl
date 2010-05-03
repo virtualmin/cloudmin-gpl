@@ -1696,24 +1696,17 @@ my ($server, $disk, $olddisk) = @_;
 my $vhost = &type_kvm_parent($server);
 my $moderr;
 my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
+my $part = ref($parts) ? $parts->[@$parts - 1] : undef;
 
-# Validate disk resizing
+# Work out if we can resize the filesystem
+my $resizefs;
 if ($disk->{'size'} != $olddisk->{'size'}) {
-	# XXX allow, but resize destructively
-
-	# Only supported for ext and swap
-	$disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap' ||
- 	  $disk->{'fs'} eq '' ||
-	    return "The size of a disk with the ".uc($disk->{'fs'}).
-		   " filesystem cannot be changed";
-
-	# Only possible if the filesystem being resized is the last one
-	ref($parts) || return "Failed to list partitions : $parts";
-	$disk->{'virt_mount'} =~ /\/[hs]d[a-z]+(\d+)$/ ||
-		return "Un-parsable mount device!";
-	my $partnum = $1;
-	if ($partnum != scalar(@$parts)) {
-		return "Only the last partition on a disk image can be resized";
+	if ($disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap') {
+		$part || return "No partitions were found on the disk image!";
+		$disk->{'virt_part'} == scalar(@$parts) ||
+			return "Only the last partition on a disk image can ".
+			       "be resized";
+		$resizefs = 1;
 		}
 	}
 
@@ -1733,7 +1726,7 @@ if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
 if ($disk->{'size'} != $olddisk->{'size'}) {
 	# Build the commands to run
 	my @cmds;
-	my $part = $parts->[@$parts - 1];
+
 	if ($disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
 		# Expand logical volume (before filesystem)
 		push(@cmds, "lvextend -L".int($disk->{'size'}/1024)."k ".
@@ -1748,11 +1741,14 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Work out the new filesystem size, taking into the new total disk
 	# size and any preceeding partitions.
-	my $newmbs = int(($disk->{'size'} -
-			  $part->{'start_bytes'})/1024/1024);
-	$newmbs = int($newmbs / 8) * 8;
+	my $newmbs;
+	if ($resizefs) {
+		$newmbs = int(($disk->{'size'} -
+			       $part->{'start_bytes'})/1024/1024);
+		$newmbs = int($newmbs / 8) * 8;
+		}
 
-	if ($disk->{'fs'} && $disk->{'size'} < $olddisk->{'size'}) {
+	if ($disk->{'size'} < $olddisk->{'size'} && $resizefs) {
 		# Shrink the filesystem
 		push(@cmds, "losetup -o $part->{'offset'} /dev/loop9 ".
 			    quotemeta($disk->{'real'}));
@@ -1762,14 +1758,16 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		}
 
 	# Delete the last partition, then re-create it
-	push(@cmds, "parted -s ".quotemeta($disk->{'real'})." rm ".
-		    $part->{'part'});
-	push(@cmds, "parted -s ".quotemeta($disk->{'real'})." mkpart ".
-		    $part->{'parted_type'}." ".
-		    $part->{'parted_start'}." ".
-		    int($disk->{'size'}/1000000)."M");
+	if ($part) {
+		push(@cmds, "parted -s ".quotemeta($disk->{'real'})." rm ".
+			    $part->{'part'});
+		push(@cmds, "parted -s ".quotemeta($disk->{'real'})." mkpart ".
+			    $part->{'parted_type'}." ".
+			    $part->{'parted_start'}." ".
+			    int($disk->{'size'}/1000000)."M");
+		}
 
-	if ($disk->{'fs'} && $disk->{'size'} > $olddisk->{'size'}) {
+	if ($disk->{'size'} > $olddisk->{'size'} && $resizefs) {
 		# Expand the filesystem
 		push(@cmds, "losetup -o $part->{'offset'} /dev/loop9 ".
 			    quotemeta($disk->{'real'}));
