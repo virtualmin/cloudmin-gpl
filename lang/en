@@ -3181,6 +3181,7 @@ log_download_file=Downloaded file <tt>$2</tt> from $1
 log_transfer_file=Transferred file from $3 to <tt>$2</tt> on $1
 log_create_disk=Created disk <tt>$2</tt> for system $1
 log_delete_disk=Deleted disk <tt>$2</tt> for system $1
+log_detach_disk=Detached disk <tt>$2</tt> for system $1
 log_modify_disk=Modified disk <tt>$2</tt> for system $1
 log_schedule_disk=Scheduled resize of disk <tt>$2</tt> for system $1
 log_unschedule_disk=De-scheduled resize of disk <tt>$2</tt> for system $1

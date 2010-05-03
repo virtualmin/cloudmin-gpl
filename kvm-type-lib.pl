@@ -1547,13 +1547,13 @@ else {
 		}
 
 	# Create the partiton
-	# XXX don't do if there already is one
-	my $err = &create_disk_image_partition($vhost, $disk->{'real'},
-					       1, $disk->{'size'}, 1);
-	return $err if ($err);
+	if (!@st) {
+		my $err = &create_disk_image_partition($vhost, $disk->{'real'},
+						       1, $disk->{'size'}, 1);
+		return $err if ($err);
+		}
 
 	# And make a filesystem on the new partition
-	# XXX
 	if (!@st && $disk->{'fs'}) {
 		my $fs = $disk->{'fs'};
 		$fs = "ext2" if ($fs eq "ext3");
@@ -1601,7 +1601,7 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 	$fserr = "Failed to read fstab file : $fstab" if (!ref($fstab));
 	if (!$fserr) {
 		push(@$fstab, [ $disk->{'virt_mount'}, $disk->{'mount'},
-				$disk->{'fs'}, 'defaults', 0, 0 ]);
+				$disk->{'fs'} || "ext2", 'defaults', 0, 0 ]);
 		my $err = &put_system_fstab($server, $fstab);
 		$fserr = "Failed to update fstab file : $err" if ($err);
 		}
