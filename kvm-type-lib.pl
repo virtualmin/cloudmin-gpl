@@ -3681,6 +3681,13 @@ foreach my $proc (@$instances) {
 	# Get status one more time, and save the server object
 	&save_managed_server($server);
 	&check_server_status($server);
+	if ($server->{'type'} eq 'unknown' || !$server->{'type'}) {
+		my $guess = &guess_os_type($server);
+		if ($guess) {
+			$server->{'type'} = $guess;
+			&check_server_status($server, 0, 1);
+			}
+		}
 	&save_managed_server($server);
 	&$second_print(&text('find_xendone', $server->{'host'},
 			     &describe_status($server, 1, 1)));

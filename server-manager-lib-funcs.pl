@@ -8581,6 +8581,36 @@ foreach my $k (@k2) {
 return @rv;
 }
 
+# guess_os_type(&server)
+# Given a system, try to guess the OS type based on the presence of various
+# common files.
+sub guess_os_type
+{
+my ($server) = @_;
+my $rv;
+my $err = &mount_filesystem_if_needed($server);
+return undef if ($err);
+my $rhr = &get_file_data_from_server($server, "/etc/redhat-release");
+my $issue = &get_file_data_from_server($server, "/etc/issue");
+if ($rhr =~ /CentOS/i) {
+	$rv = "centos";
+	}
+elsif ($rhr =~ /Redhat/i) {
+	$rv = "redhat";
+	}
+elsif ($rhr =~ /Fedora/i) {
+	$rv = "fedora";
+	}
+elsif ($issue =~ /Ubuntu/i) {
+	$rv = "ubuntu";
+	}
+elsif ($issue =~ /Debian/i) {
+	$rv = "debian";
+	}
+&umount_filesystem_if_needed($server);
+return $rv;
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server
