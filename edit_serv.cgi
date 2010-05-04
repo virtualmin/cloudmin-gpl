@@ -73,10 +73,15 @@ if ($view) {
 	print &ui_table_row($text{'edit_type2'}, $os->[1]);
 	}
 else {
+	if ($server->{'type'} eq 'unknown' || !$server->{'type'}) {
+		$guessbutton = " ".&ui_button($text{'edit_guesstype'}, undef, 0,
+                                "onClick='document.location=\"guesstype.cgi?id=$server->{'id'}\"'");
+		}
 	print &ui_table_row($text{'edit_type2'},
 		    &ui_select("type", $server->{'type'} || 'unknown',
 		      [ map { [ $_->[0], $_->[1] ] }
-			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
+			sort { $a->[1] cmp $b->[1] } @servers::server_types ]).
+		    $guessbutton);
 	}
 
 # Kernel info

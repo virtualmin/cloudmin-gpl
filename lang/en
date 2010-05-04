@@ -762,6 +762,7 @@ edit_desc=Description or comment
 edit_status=Last status
 edit_statusmsg=Detailed status error
 edit_hostkey=Clear Host Key
+edit_guesstype=Guess System Type
 edit_configerr=Virtualmin configuration error
 edit_statustime=$1 (Last changed at $2)
 edit_atboot=Start at host boot time?

@@ -5,6 +5,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
+&can_action_error($server, "edit");
 
 &clear_ssh_host_key($server);
 &check_server_status($server);
