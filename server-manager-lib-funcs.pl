@@ -4868,6 +4868,7 @@ foreach my $sd (@sorted) {
 	my @args = ( [ "domain", $d->{'dom'} ],
 		     [ "all-features" ],
 		     [ "option", "mail mailfiles 1" ],
+		     [ "option", "virtualmin-mailman archive 1" ],
 		     [ "newformat" ],
 		      );
 	if ($direct) {
