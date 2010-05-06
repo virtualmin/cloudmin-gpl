@@ -306,6 +306,7 @@ create_xenmount=Mounting new instance's filesystem ..
 create_xenumount=Un-mounting instance's filesystem ..
 create_exenfsfile=Cloudmin does not know which file contains the Xen instance's filesystem
 create_exenmount=.. failed : $1
+create_exenmount2=.. not possible for a VM created from an installation template
 create_xenmounted=.. mounted on $1
 create_xenkernel=Configuring kernel for Xen instance ..
 create_xenkernelpv=.. setup to boot Xen system's kernel with Pv-Grub
@@ -437,6 +438,7 @@ create_citrixip2=IP addresses for Citrix Xen VM
 create_citrixdnswarn=Warning : No DNS zone for new Citrix Xen VMs has been configured on the <a href='$1'>Citrix Xen host</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.
 create_citrixtemplate=Citrix Xen template
 create_citrixnotemplate=&lt;None - use Cloudmin system image&gt;
+create_citrixrepo=Repository URL for template
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -1181,6 +1183,12 @@ cchooser_state=State
 cchooser_unuse=<font color=#ff0000>Managed host $1</font>
 cchooser_free=Not yet managed
 
+ctchooser_title=Select Citrix Xen Template
+ctchooser_elist=Failed to fetch templates : $1
+ctchooser_enone=The selected system has no Citrix Xen templates
+ctchooser_id=Template UUID
+ctchooser_name=Template name
+
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
 pkg_bind=BIND DNS server
@@ -1617,6 +1625,7 @@ mkimage_mungessh=Removing authorized SSH keys ..
 mkimage_xengzip=Compressing filesystem image ..
 mkimage_xengzip2=Copying filesystem image ..
 mkimage_exengzip=.. failed : $1
+mkimage_emount=.. failed to mount filesystem on host : $1
 mkimage_exenlink=Failed to link filesystem image for copying : $1
 mkimage_vserverdf=Computing filesystem size ..
 mkimage_vserverdfout=.. total size is $1
