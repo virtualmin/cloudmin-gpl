@@ -264,7 +264,7 @@ create_atbooting=Enabling system at host boot time ..
 create_consoleuser=Creating console access user ..
 create_packages=Enabling software package management ..
 create_epackages=.. failed : $1
-create_image=Initial system image
+create_image=Cloudmin system image
 create_noimage=&lt;None - base OS only&gt;
 create_copying=Copying $1 image file to host system $2 ..
 create_ecopy=.. copy failed : $1
@@ -2649,6 +2649,7 @@ vnc_essh=Failed to open SSH tunnel for VNC : $1
 vnc_edomid=No Xen domain ID found!
 vnc_eprocs=Failed to list running processes on host system : $1
 vnc_ecitrixport=No VNC console process found - maybe this Citrix Xen VM does not have VNC enabled?
+vnc_ecitrixport2=No port for VNC console process found
 
 history_title=System Statistics Graphs
 history_ecannot=You are not allowed to view historic system statistics
