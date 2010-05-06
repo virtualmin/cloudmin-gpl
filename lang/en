@@ -439,6 +439,11 @@ create_citrixdnswarn=Warning : No DNS zone for new Citrix Xen VMs has been confi
 create_citrixtemplate=Citrix Xen template
 create_citrixnotemplate=&lt;None - use Cloudmin system image&gt;
 create_citrixrepo=Repository URL for template
+create_citrixifaces=Adding virtual network interfaces ..
+create_ecitrixnetworks=.. failed to list networks on host system : $1
+create_ecitrixvif=.. failed to create VIF for bridge $1 : $2
+create_citrixifacesdone=.. created $1 interfaces
+create_ecitrixnetwork=.. count not find network for bridge
 
 keys_title=SSH Keys
 keys_desc=Key description
