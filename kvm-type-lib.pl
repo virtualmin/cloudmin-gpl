@@ -995,6 +995,16 @@ if ($config{'dhcp_add'}) {
 	&add_all_iface_dhcpd($server, \@fakeifaces);
 	}
 
+# Clean up /etc/fstab to remove non-existant devices
+&$first_print($text{'create_xencleanfstab'});
+my $err = &cleanup_server_fstab($server);
+if ($err) {
+	&$second_print(&text('create_exencleanfstab', $err));
+	}       
+else {
+	&$second_print($text{'create_done'});
+	}
+
 # Un-mount
 &$first_print($text{'create_xenumount'});
 &umount_filesystem_if_needed($server);

@@ -445,7 +445,10 @@ create_ecitrixvif=.. failed to create VIF for bridge $1 : $2
 create_citrixifacesdone=.. created $1 interfaces
 create_ecitrixnetwork=.. count not find network for bridge
 create_citrixmkswap=Creating swap disk of $1 ..
-create_ecitrixmkswap=.. failed : $1
+create_ecitrixmkswap=.. swap creation failed : $1
+create_xencleanfstab=Removing missing disks from fstab file ..
+create_exencleanfstab=.. cleanup failed : $1
+create_citrixstartup=Starting up new Citrix Xen instance ..
 
 keys_title=SSH Keys
 keys_desc=Key description

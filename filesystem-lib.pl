@@ -386,5 +386,31 @@ else {
 	}
 }
 
+# cleanup_server_fstab(&server)
+# Gets the fstab file for a virtual system, removes entries for disks that 
+# don't exist, and then writes it back out.
+sub cleanup_server_fstab
+{
+my ($server) = @_;
+my $dfunc = "type_".$server->{'manager'}."_list_disks";
+my $disks = &$dfunc($server);
+ref($disks) || return "Failed to list disks : $disks";
+my %virts = map { $_->{'virt'} } @$disks;
+
+my $fstab = &get_system_fstab($server);
+ref($fstab) || return "Failed to read fstab file : $fstab";
+my @newfstab;
+foreach my $f (@$fstab) {
+	my $ok = 1;
+	if ($f->[0] =~ /^(\/dev\/(s|d|xv)d[a-z])(\d*)$/ && $f->[1] ne "/") {
+		if (!$virts{$1} && !$virts{$f->[0]}) {
+			$ok = 0;
+			}
+		}
+	push(@newfstab, $f) if ($ok);
+	}
+return &put_system_fstab($server, \@newfstab);
+}
+
 1;
 
