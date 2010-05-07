@@ -244,6 +244,10 @@ if (!$in{'new'} &&
 		print &ui_table_row($text{'disk_ssize'},
 			&ui_bytesbox("size", $disk->{'size'}, 8)." ".$freemsg);
 
+		# Resize even if unsafe?
+		print &ui_table_row($text{'disk_sforce'},
+			&ui_yesno_radio("force", 0));
+
 		$button = [ 'save', $text{'disk_ssave'} ];
 		}
 

@@ -235,7 +235,7 @@ return \@rv;
 # Creates a new partition on some empty disk image
 sub create_disk_image_partition
 {
-my ($vhost, $real, $num, $size, $make_label) = @_;
+my ($vhost, $real, $num, $size, $make_label, $bootable) = @_;
 
 if (&has_command_on_server($vhost, "parted")) {
 	# Create the disk label with parted
@@ -255,6 +255,16 @@ if (&has_command_on_server($vhost, "parted")) {
 	if ($ex || $err) {
 		return "Failed to create partition : ".($err || $out);
 		}
+
+	# Make bootable
+	if ($bootable) {
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"parted -s ".quotemeta($real).
+			" set $num boot on");
+		if ($ex || $err) {
+			return "Failed to make bootable : ".($err || $out);
+			}
+		}
 	}
 else {
 	# Create input file for fdisk
@@ -270,6 +280,10 @@ else {
 		}
 	else {
 		&print_tempfile(TEMP, "\n");		# Use full disk
+		}
+	if ($bootable) {
+		&print_tempfile(TEMP, "a\n");		# Add bootable flag
+		&print_tempfile(TEMP, "$num\n");	# First partition
 		}
 	&print_tempfile(TEMP, "w\n");	 # Write table
 	&print_tempfile(TEMP, "q\n");	 # Quit

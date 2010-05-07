@@ -57,6 +57,7 @@ else {
 		&error(&text('disk_ehostlimit', &nice_size($hostfree)));
 		}
 	$sched->{'size'} = $in{'size'}*$in{'size_units'};
+	$sched->{'force'} = $in{'force'};
 
 	&save_scheduled_change($server, "disk", $disk->{'real'}, $sched);
 	&webmin_log("schedule", "disk", $server->{'host'},

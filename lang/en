@@ -444,6 +444,8 @@ create_ecitrixnetworks=.. failed to list networks on host system : $1
 create_ecitrixvif=.. failed to create VIF for bridge $1 : $2
 create_citrixifacesdone=.. created $1 interfaces
 create_ecitrixnetwork=.. count not find network for bridge
+create_citrixmkswap=Creating swap disk of $1 ..
+create_ecitrixmkswap=.. failed : $1
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -2098,6 +2100,7 @@ disk_sdesc2=A change in the size of this disk is already scheduled. Click the bu
 disk_sdate=Resize on date
 disk_stime=Resize at time
 disk_ssize=New size
+disk_sforce=Resize even if unsafe?
 disk_fsck=Check Disk
 disk_detach=Detach From System
 disk_snow=Current date and time
