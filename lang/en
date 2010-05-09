@@ -3781,6 +3781,7 @@ schange_msg_disk=Executing scheduled disk size change on $1 ..
 schange_failed=.. scheduled change failed : $1 
 schange_subject=Cloudmin scheduled change on $1
 schange_allok=.. scheduled change complete
+schange_ewarn=Disk cannot be safely resized : $1
 
 upgrade_title=Upgrade to Cloudmin Pro
 upgrade_desc1=If you have enjoyed using Cloudmin GPL and want to take the next step to the Pro version, this page can be used to perform the upgrade process automatically. The steps to do this are :

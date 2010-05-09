@@ -157,10 +157,23 @@ my $vhost = &get_parent_server($server);
 
 # Get the disk
 my $dfunc = "type_".$server->{'manager'}."_list_disks";
-my $disks = &$dfunc($server);
+my $disks = &$dfunc($server, 1);
+if (!ref($disks)) {
+	# Get without filesystems
+	$disks = &$dfunc($server, 0);
+	}
 ref($disks) || return ( &text('disks_eget', $disks), undef );
 my ($disk) = grep { $_->{'real'} eq $sched->{'real'} } @$disks;
 $disk || return ( &text('schange_edisk', $sched->{'real'}), undef );
+
+# Check if resize is safe
+my $wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
+if (!$sched->{'force'} && defined(&$wfunc)) {
+	my $err = &$wfunc($server, $disk);
+	if ($err) {
+		return &text('schange_ewarn', $err);
+		}
+	}
 
 # Check the size increment against limits
 my $incr = $sched->{'size'} - $disk->{'size'};
