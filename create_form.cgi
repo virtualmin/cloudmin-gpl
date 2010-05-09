@@ -33,10 +33,12 @@ print &ui_table_row($text{'add_desc'},
 if (@images) {
 	$ifunc = "type_".$in{'type'}."_must_image";
 	$mustimage = defined(&$ifunc) && &$ifunc();
+	$noimage = $text{'create_noimage_'.$in{'type'}} ||
+		   $text{'create_noimage'};
 	print &ui_table_row($text{'create_image'},
 		&ui_select("image", undef,
 			[ $mustimage || !&can_image(undef) ? ( )
-				     : ( [ undef, $text{'create_noimage'} ] ),
+				     : ( [ undef, $noimage ] ),
 			  map { [ $_->{'id'}, $_->{'desc'} ] }
 			      sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }
 				   @images ]));

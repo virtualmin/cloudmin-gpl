@@ -193,7 +193,7 @@ if ($hostfree && $disk->{'size'} > $hostfree) {
 # Do it
 &$first_print("Creating virtual disk for $disk->{'virt'} ..");
 $cfunc = "type_".$server->{'manager'}."_create_disk";
-$err = &$cfunc($server, $disk);
+$err = &$cfunc($server, $disk, scalar(@$disks) ? 0 : 1);
 if ($err) {
 	&$second_print(".. failed : $err");
 	}

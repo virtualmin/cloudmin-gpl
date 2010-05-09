@@ -15,6 +15,10 @@ $server || &error($text{'edit_egone'});
 # Get the disks
 $lfunc = "type_".$server->{'manager'}."_list_disks";
 $disks = &$lfunc($server, 1);
+if (!ref($disks)) {
+	# Try again without getting fstab
+	$disks = &$lfunc($server, 0);
+	}
 ref($disks) || &error($disks);
 %d = map { $_, 1 } @d;
 $disks = [ grep { $d{$_->{'real'}} } @$disks ];

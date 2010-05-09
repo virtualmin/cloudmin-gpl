@@ -19,7 +19,7 @@ if (!ref($disks)) {
 	$disks = &$lfunc($server, 0);
 	}
 ref($disks) || &error($disks);
-if (!$in{'new'} && !$in{'fixedreal'}) {
+if (!$in{'new'}) {
 	($disk) = grep { $_->{'real'} eq $in{'oldreal'} } @$disks;
 	$disk || &error($text{'disk_egone'});
 	$olddisk = { %$disk };
@@ -236,7 +236,7 @@ else {
 					    "<tt>$disk->{'real'}</tt>"));
 			}
 		$cfunc = "type_".$server->{'manager'}."_create_disk";
-		$err = &$cfunc($server, $disk);
+		$err = &$cfunc($server, $disk, scalar(@$disks) ? 0 : 1);
 		&save_managed_server($server);
 		if ($err) {
 			&$second_print(&text('disk_createfailed', $err));
