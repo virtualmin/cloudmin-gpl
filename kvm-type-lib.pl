@@ -983,7 +983,7 @@ else {
 	}
 
 # Add DHCP entries
-if ($config{'dhcp_add'}) {
+if ($config{'dhcp_add'} && !$reset) {
 	my @fakeifaces;
 	for(my $i=0; $i<@ips; $i++) {
 		push(@fakeifaces,

@@ -82,6 +82,7 @@ while(@ARGV > 0) {
 # Check for mandatory args, and get the system
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
+$server || &usage("No system named $host exists");
 &can_action_usage($server, "reset"); 
 
 # Check if supported
