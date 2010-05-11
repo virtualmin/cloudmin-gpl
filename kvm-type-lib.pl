@@ -3005,6 +3005,8 @@ if ($server->{'kvm_filesystem_lv'} && $server->{'status'} ne 'down' &&
 			       'alloc' => 'n', };
 		$snaplv->{'device'} = '/dev/'.$snaplv->{'vg'}.'/'.
 				      $snaplv->{'name'};
+		&remote_foreign_call($vhost, "lvm",
+				     "delete_logical_volume", $snaplv);
 		$last_remote_error = undef;
 		my $err = &remote_foreign_call($vhost, "lvm",
 					  "create_logical_volume", $snaplv);
