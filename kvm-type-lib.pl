@@ -168,14 +168,20 @@ $got || &error(&text('add_ekvminstance2', $vhost->{'host'}));
 $got->{'filesystem'} || &error($text{'add_ekvmfs'});
 $server->{'kvm'} = $in->{'kvm_pid'};
 
-# Make sure the filesystem is in usable raw format
-my ($out, $ex, $err) = &execute_command_on_server($vhost, 
-			"qemu-img info ".quotemeta($got->{'filesystem'}));
-if ($ex || $err) {
-	&error(&text('add_ekvmfile', $got->{'filesystem'}, $err || $out));
-	}
-elsif ($out !~ /file\s+format:\s+(\S+)/i || $1 ne "raw") {
-	&error(&text('add_ekvmfile2', $got->{'filesystem'}, $1 || "unknown"));
+# Make sure the filesystem is in usable raw format, by trying to list
+# partitions first, and then testing with qemu-img
+my $parts = &list_disk_image_partitions($got->{'filesystem'});
+if (!ref($parts) || !@$parts) {
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+				"qemu-img info ".quotemeta($got->{'filesystem'}));
+	if ($ex || $err) {
+		&error(&text('add_ekvmfile', $got->{'filesystem'},
+					     $err || $out));
+		}
+	elsif ($out !~ /file\s+format:\s+(\S+)/i || $1 ne "raw") {
+		&error(&text('add_ekvmfile2', $got->{'filesystem'},
+					      $1 || "unknown"));
+		}
 	}
 
 # Save root disk, RAM, disks and network
@@ -3656,17 +3662,20 @@ foreach my $proc (@$instances) {
 		next;
 		}
 
-	# Make sure we have a filesystem
+	# Make sure we have a disk image we can use
 	if (!$proc->{'filesystem'}) {
 		&$second_print($text{'find_kvmfs'});
 		next;
 		}
-	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+	my $parts = &list_disk_image_partitions($got->{'filesystem'});
+	if (!ref($parts) || !@$parts) {
+		my ($out, $ex, $err) = &execute_command_on_server($vhost, 
 			"qemu-img info ".quotemeta($proc->{'filesystem'}));
-	if ($out !~ /file\s+format:\s+(\S+)/i || $1 ne "raw") {
-		&$second_print(&text('find_kvmfsraw',
-				     "<tt>$proc->{'filesystem'}</tt>"));
-		next;
+		if ($out !~ /file\s+format:\s+(\S+)/i || $1 ne "raw") {
+			&$second_print(&text('find_kvmfsraw',
+					     "<tt>$proc->{'filesystem'}</tt>"));
+			next;
+			}
 		}
 
 	# Validate the name flag
