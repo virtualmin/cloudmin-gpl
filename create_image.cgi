@@ -29,7 +29,7 @@ $image = { 'id' => $imageid,
 	   'nocompress' => !$in{'compress'},
 	   'type' => $server->{'type'},
 	 };
-if ($in{'version_def'} == 0) {
+if ($in{'version_def'} == 1) {
 	$image->{'version'} = $in{'version'};
 	}
 elsif ($in{'version_def'} == 2) {
