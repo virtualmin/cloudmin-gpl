@@ -189,6 +189,7 @@ print "Creating Virtualmin domain $domain on $server->{'host'} ..\n";
 print $out;
 if ($err) {
 	print ".. failed : $err\n";
+	exit(1);
 	}
 else {
 	&check_server_status($server);
