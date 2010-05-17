@@ -1201,6 +1201,7 @@ ctchooser_elist=Failed to fetch templates : $1
 ctchooser_enone=The selected system has no Citrix Xen templates
 ctchooser_id=Template UUID
 ctchooser_name=Template name
+ctchooser_size=Disk size
 
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
