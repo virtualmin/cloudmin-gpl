@@ -5189,6 +5189,7 @@ my ($server) = @_;
 my ($gw, $gwdev, $got);
 if ($server->{'manager'} eq 'this') {
         # Just call own module
+	&foreign_require("net", "net-lib.pl");
         ($gw, $gwdev) = &net::get_default_gateway();
 	$got = 1;
         }
