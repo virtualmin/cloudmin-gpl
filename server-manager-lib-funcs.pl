@@ -8612,6 +8612,101 @@ elsif ($issue =~ /Debian/i) {
 return $rv;
 }
 
+# clone_system(&server, new-hostname, new-description)
+# Creates a clone of an existing virtual system, by calling the type-specific
+# clone function. Returns the new system hash and an error message or undef.
+# May print stuff.
+sub clone_system
+{
+my ($server, $newhost, $newdesc) = @_;
+
+# Create the new server object
+my $newserver = { %$server };
+if ($newdesc) {
+	$newserver->{'desc'} = $newdesc;
+	}
+elsif ($newserver->{'desc'}) {
+	$newserver->{'desc'} = "Clone of ".$newserver->{'desc'};
+	}
+$newserver->{'id'} = &server_id();
+$newserver->{'created'} = time();
+$newserver->{'cloneof'} = $server->{'id'};
+
+# Check resource limits on the host
+my ($disk, $mem);
+my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
+if (defined(&$dfunc)) {
+	$disk = &$dfunc($server);
+	}
+my $sfunc = "type_".$server->{'manager'}."_get_disk_space";
+if (!$disk && defined(&$sfunc)) {
+	$disk = &$sfunc($server);
+	}
+my $mfunc = "type_".$server->{'manager'}."_get_memory";
+if (defined(&$mfunc)) {
+	$mem = &$mfunc($server);
+	}
+my ($ok, $err) = &usable_host_system($dest, $server->{'manager'}, $mem, $disk);
+if (!$ok) {
+	return (undef, "The host system $dest->{'host'} is not suitable ".
+		       "for this clone : $err");
+	}
+
+# Owner limits
+# XXX
+
+# Shut the system down if running
+my $was_up = 0;
+if ($server->{'status'} ne 'down') {
+	&$first_print($text{'clone_shutting'});
+	my $err = &shutdown_server($server);
+	if ($err) {
+		return (undef, &text('smove_shutfailed', $err));
+		}
+	$server->{'status'} = 'down';	# Assume it worked
+	$was_up = 1;
+	&$second_print($text{'create_done'});
+	}
+
+# Call the clone function
+my $cfunc = "type_".$server->{'manager'}."_clone_system";
+my ($err, $totalfail) = &$cfunc($server, $newserver);
+
+# Start up if down before
+if ($was_up) {
+	&$first_print($text{'clone_starting'});
+	my ($ok, $err) = &startup_server($server);
+	if (!$ok) {
+		&$second_print(&text('smove_startfailed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+# Start up clone if original was up before
+if ($was_up && !$err) {
+	&$first_print($text{'clone_starting2'});
+	my ($ok, $err) = &startup_server($newserver);
+	if (!$ok) {
+		&$second_print(&text('smove_startfailed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+if ($totalfail) {
+	# Don't even bother to save the new system
+	return (undef, $err);
+	}
+else {
+	# May have partially worked
+	&save_managed_server($newserver);
+	return ($newserver, $err);
+	}
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server

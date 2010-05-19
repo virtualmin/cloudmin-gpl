@@ -3861,3 +3861,7 @@ citrix_iface=Bridges on host system for Citrix Xen interfaces
 citrix_err=Failed to save Citrix Xen host
 citrix_edown=A system which cannot be contacted via SSH cannot be used for Citrix Xen hosting
 citrix_esoft=The selected system cannot support Citrix Xen instances : $1
+
+clone_shutting=Shutting down original system before cloning ..
+clone_starting=Starting up original system before cloning ..
+clone_starting2=Starting up new system before cloning ..
