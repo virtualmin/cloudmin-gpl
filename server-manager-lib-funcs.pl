@@ -5509,6 +5509,8 @@ my $rsfunc = "type_".$server->{'manager'}."_can_reset";
 my $canreset = defined(&$rsfunc) && &$rsfunc($server);
 my $pfunc = "type_".$server->{'manager'}."_can_password";
 my $canpass = defined(&$pfunc) && &$pfunc($server);
+my $clonefunc = "type_".$server->{'manager'}."_can_clone";
+my $canclone = defined(&$clonefunc) && &$clonefunc($server);
 
 # Start with links to edit_serv.cgi
 my $ed = "edit_serv.cgi?id=$server->{'id'}";
@@ -5751,6 +5753,13 @@ if (!$noimage && &can_action($server, "image")) {
 		    'desc' => $text{'edit_image'},
 		    'cat' => 'manage',
 		    'link' => "image_form.cgi?id=$server->{'id'}" });
+	}
+if ($canclone && &can_create_server($server->{'manager'})) {
+	# Can clone a system
+	push(@rv, { 'id' => 'clone',
+		    'desc' => $text{'edit_clone'},
+		    'cat' => 'manage',
+		    'link' => "clone_form.cgi?id=$server->{'id'}" });
 	}
 if ($canmove && &can_action($server, "move")) {
 	# Can move to another host
@@ -8631,6 +8640,8 @@ elsif ($newserver->{'desc'}) {
 $newserver->{'id'} = &server_id();
 $newserver->{'created'} = time();
 $newserver->{'cloneof'} = $server->{'id'};
+$newserver->{'status'} = 'down';
+delete($newserver->{'status_err'});
 
 # Check resource limits on the host
 my ($disk, $mem);
@@ -8691,6 +8702,22 @@ if ($was_up && !$err) {
 	else {
 		&$second_print($text{'create_done'});
 		}
+	}
+
+# Refresh status of original
+&$first_print($text{'clone_refreshing'});
+&check_server_status($server, 0, 1);
+&save_managed_server($server);
+&$second_print(&text('save_refreshdone2',
+	&describe_status($server, 1, 1)));
+
+# Refresh status of clone
+if (!$totalfail) {
+	&$first_print($text{'clone_refreshing2'});
+	&check_server_status($newserver, 0, 1);
+	&save_managed_server($newserver);
+	&$second_print(&text('save_refreshdone2',
+		&describe_status($newserver, 1, 1)));
 	}
 
 if ($totalfail) {
