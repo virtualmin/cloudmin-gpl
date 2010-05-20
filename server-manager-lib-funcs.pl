@@ -8652,9 +8652,6 @@ if (!$ok) {
 		       "for this clone : $err");
 	}
 
-# Owner limits
-# XXX
-
 # Shut the system down if running
 my $was_up = 0;
 if ($server->{'status'} ne 'down') {
@@ -8670,7 +8667,7 @@ if ($server->{'status'} ne 'down') {
 
 # Call the clone function
 my $cfunc = "type_".$server->{'manager'}."_clone_system";
-my ($err, $totalfail) = &$cfunc($server, $newserver);
+my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost);
 
 # Start up if down before
 if ($was_up) {

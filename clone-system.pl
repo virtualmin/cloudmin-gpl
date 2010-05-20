@@ -53,6 +53,7 @@ while(@ARGV > 0) {
 $host || &usage("Missing --host parameter");
 $newhost || &usage("Missing --new-host parameter");
 $newhost =~ /^[a-z0-9\.\-]+$/ || &usage("Invalid new hostname");
+$newhost =~ /\./ && &usage("No . is needed in the new hostname - the domain will be automatically appended");
 
 # Get the system
 $server = &get_managed_server_by("host", $host);
@@ -130,14 +131,26 @@ if ($limits) {
 # Call the clone function
 &obtain_lock_server($server);
 print "Creating clone of $desc system $server->{'host'} named $newhost ..\n\n";
+&$indent_print();
 ($newserver, $err) = &clone_system($server, $newhost, $newdesc);
+&$outdent_print();
 &release_lock_server($server);
-if ($err) {
+if ($newserver && $err) {
 	print $err,"\n";
+	print ".. clone $newserver->{'host'} partially created.\n";
+	}
+elsif ($newserver && !$err) {
+	print ".. clone $newserver->{'host'} created.\n";
+	}
+elsif (!$newserver && $err) {
+	print $err,"\n";
+	}
+if ($newserver) {
+	&cloudmin_api_log(\@OLDARGV);
+	}
+if ($err) {
 	exit(1);
 	}
-print ".. all done\n";
-&cloudmin_api_log(\@OLDARGV);
 
 sub usage
 {
