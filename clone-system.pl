@@ -5,12 +5,43 @@
 
 Creates a new virtual system that is a copy of some existing one.
 
-XXX
+This command creates an exact duplicate of a existing virtual system, 
+specified using the C<--host> flag. The name of the new system is set
+with the C<--new-host> parameter, which only needs to be the first part of
+the hostname - a domain will be appended automatically. 
+
+To set a description for the new cloned system, use the C<--new-desc> flag - 
+otherwise, a description will be generated automatically.
+
+By default, the new system will have IP address(es) for it selected
+automatically based on the allocation ranges set on the host system. However,
+you can override this with the C<--address> parameter, which can be given
+multiple times for systems with more than one interface. This parameter is
+mandatory when the host system does not have IP allocation setup.
 
 =head1 Example usage
 
-  cloudmin clone-system --host xengtest.home --new-host xencopy
-  XXX
+  cloudmin clone-system --host citrixsrc.home --new-host citrixdest
+  Creating clone of Citrix Xen system citrixsrc.home named citrixdest ..
+      Allocating new IP addresses ..
+      .. allocated 193.9.101.213
+      Cloning Citrix Xen VM ..
+      .. done
+      Adding DNS entry citrixdest.home. for IP address 193.9.101.213 ..
+      .. done
+      Mounting new instance's filesystem ..
+      .. mounted on /mnt/citrix-0b1b8691-98c6-af92-8fe2-4b0e864bab33
+      Updating configuration files with hostname and IP address ..
+      .. done
+      Updating network configuration files ..
+      .. done
+      Un-mounting instance's filesystem ..
+      .. done
+      Refreshing status of original system ..
+      .. done. New status is : Down
+      Refreshing status of new system ..
+      .. done. New status is : Down
+  .. clone citrixdest.home created.
 
 =cut
 
@@ -44,6 +75,13 @@ while(@ARGV > 0) {
 	elsif ($a eq "--new-desc") {
 		$newdesc = shift(@ARGV);
 		}
+	elsif ($a eq "--address") {
+		$ips ||= [ ];
+		$ip = shift(@ARGV);
+		&check_ipaddress($ip) ||
+			&usage("$ip is not a valid IP address");
+		push(@$ips, $ip);
+		}
 	else {
 		&usage();
 		}
@@ -53,11 +91,13 @@ while(@ARGV > 0) {
 $host || &usage("Missing --host parameter");
 $newhost || &usage("Missing --new-host parameter");
 $newhost =~ /^[a-z0-9\.\-]+$/ || &usage("Invalid new hostname");
-$newhost =~ /\./ && &usage("No . is needed in the new hostname - the domain will be automatically appended");
 
 # Get the system
 $server = &get_managed_server_by("host", $host);
 $server || &usage("No system named $host exists");
+if ($ips) {
+	&can_action_usage($server, 'ips');
+	}
 
 # Check if supported
 $dfunc = "type_".$server->{'manager'}."_desc";
@@ -119,7 +159,8 @@ if ($limits) {
 		}
 
 	# Validate IPs limit
-	$incr = scalar(split(/\s+/, $server->{'ip_addresses'})) || 1;
+	$incr = $ips ? scalar(@$ips)
+		     : scalar(split(/\s+/, $server->{'ip_addresses'})) || 1;
 	if ($limits->{'max_ips'}) {
 		if ($limits->{'ips'} + $incr > $limits->{'max_ips'}) {
 			&usage("Cloning this system would exceed your IP ",
@@ -132,18 +173,18 @@ if ($limits) {
 &obtain_lock_server($server);
 print "Creating clone of $desc system $server->{'host'} named $newhost ..\n\n";
 &$indent_print();
-($newserver, $err) = &clone_system($server, $newhost, $newdesc);
+($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips);
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {
-	print $err,"\n";
+	print "Failed : ",$err,"\n";
 	print ".. clone $newserver->{'host'} partially created.\n";
 	}
 elsif ($newserver && !$err) {
 	print ".. clone $newserver->{'host'} created.\n";
 	}
 elsif (!$newserver && $err) {
-	print $err,"\n";
+	print "Failed : ",$err,"\n";
 	}
 if ($newserver) {
 	&cloudmin_api_log(\@OLDARGV);
@@ -160,6 +201,7 @@ print "\n";
 print "cloudmin clone-system --host name\n";
 print "                      --new-host new-name\n";
 print "                     [--new-desc new-description]\n";
+print "                     [--address ip]*\n";
 exit(1);
 }
 

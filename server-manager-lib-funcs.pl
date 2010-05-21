@@ -8621,13 +8621,13 @@ elsif ($issue =~ /Debian/i) {
 return $rv;
 }
 
-# clone_system(&server, new-hostname, new-description)
+# clone_system(&server, new-hostname, new-description, [&ips])
 # Creates a clone of an existing virtual system, by calling the type-specific
 # clone function. Returns the new system hash and an error message or undef.
 # May print stuff.
 sub clone_system
 {
-my ($server, $newhost, $newdesc) = @_;
+my ($server, $newhost, $newdesc, $ips) = @_;
 
 # Create the new server object
 my $newserver = { %$server };
@@ -8659,8 +8659,24 @@ if (defined(&$mfunc)) {
 	}
 my ($ok, $err) = &usable_host_system($dest, $server->{'manager'}, $mem, $disk);
 if (!$ok) {
-	return (undef, "The host system $dest->{'host'} is not suitable ".
-		       "for this clone : $err");
+	return (undef, &text('clone_ehostspace', $dest->{'host'}, $err));
+	}
+
+# If IPs were manually entered, make sure they are free
+if ($ips) {
+	my %used = &used_ip_addresses();
+	foreach my $ip (@$ips) {
+		if ($used{$ip} || &ping_server_host($ip)) {
+			return (undef, &text('clone_eipused', $ip));
+			}
+		}
+	}
+
+# Perform pre-cloning check
+my $ckfunc = "type_".$server->{'manager'}."_check_clone";
+if (defined(&$ckfunc)) {
+	my $err = &$ckfunc($server, $newserver, $newhost, $ips);
+	return (undef, $err) if ($err);
 	}
 
 # Shut the system down if running
@@ -8678,7 +8694,7 @@ if ($server->{'status'} ne 'down') {
 
 # Call the clone function
 my $cfunc = "type_".$server->{'manager'}."_clone_system";
-my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost);
+my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost, $ips);
 
 # Start up if down before
 if ($was_up) {
@@ -8702,6 +8718,21 @@ if ($was_up && !$err) {
 	else {
 		&$second_print($text{'create_done'});
 		}
+	}
+
+# Duplicate start at boot flag
+my $get_bfunc = "type_".$server->{'manager'}."_get_atboot";
+if (defined(&$get_bfunc)) {
+	my $boot = &$get_bfunc($server);
+	my $set_bfunc = "type_".$newserver->{'manager'}."_get_atboot";
+	if (defined(&$set_bfunc)) {
+		&$set_bfunc($newserver, $boot);
+		}
+	}
+
+# Grant to original's owners
+foreach my $owner (&get_server_owners($server)) {
+	&grant_to_system_owner($owner, $newserver);
 	}
 
 # Refresh status of original

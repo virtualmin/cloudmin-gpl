@@ -422,19 +422,13 @@ print ".. creation complete\n\n";
 &complete_managed_server($server);
 &save_managed_server($server);
 
-# Add to system owner
+# Add to system owner, either from command line or current user
 if ($access{'owner'}) {
 	# This user
-	$access{'servers'} = join(' ', split(/\s+/, $access{'servers'}),
-				       $server->{'id'});
-	&save_module_acl(\%access);
+	$owner = &get_system_owner($base_remote_user);
 	}
-elsif ($owner) {
-	# Add to another owner
-	$owner->{'acl'}->{'servers'} =
-		join(' ', split(/\s+/, $owner->{'acl'}->{'servers'}),
-			  $server->{'id'});
-	&save_system_owner($owner, $owner);
+if ($owner) {
+	&grant_to_system_owner($owner, $server);
 	}
 
 # Remove old SSH keys for this system

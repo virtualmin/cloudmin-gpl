@@ -245,21 +245,16 @@ if ($imageok == 1) {
 &complete_managed_server($server);
 &save_managed_server($server);
 
-# If this is a system owner, add it to his list
 if ($access{'owner'}) {
-	$access{'servers'} = join(' ', split(/\s+/, $access{'servers'}),
-				       $server->{'id'});
-	&save_module_acl(\%access);
+	# Adding to this user
+	$owner = &get_system_owner($base_remote_user);
 	}
 elsif ($in{'owner'}) {
 	# Add to another owner
 	$owner = &get_system_owner($in{'owner'});
-	if ($owner) {
-		$owner->{'acl'}->{'servers'} =
-			join(' ', split(/\s+/, $owner->{'acl'}->{'servers'}),
-				  $server->{'id'});
-		&save_system_owner($owner, $owner);
-		}
+	}
+if ($owner) {
+	&grant_to_system_owner($owner, $server);
 	}
 
 # Remove old SSH keys for this system

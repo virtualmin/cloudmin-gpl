@@ -578,5 +578,16 @@ foreach my $l (@plan_limit_types) {
 return join(', ', @rv) || $text{'owners_nolimits'};
 }
 
+# grant_to_system_owner(&owner, &server)
+# Add some system to the list of those managed by some owner, and save him
+sub grant_to_system_owner
+{
+my ($owner, $server) = @_;
+$owner->{'acl'}->{'servers'} =
+	join(' ', &unique(split(/\s+/, $owner->{'acl'}->{'servers'}),
+		  	  $server->{'id'}));
+&save_system_owner($owner, $owner);
+}
+
 1;
 
