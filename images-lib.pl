@@ -586,7 +586,7 @@ if ($server->{'manager'} ne 'zones') {
 foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",
 		 "/etc/sysconfig/network", "/etc/postfix/main.cf",
-		 "/etc/conf.d/hostname") {
+		 "/etc/conf.d/hostname", "/etc/mailman/mm_cfg.py") {
 	my $fixpath = "$dir/$fix";
 	my $temppath = &transname();
 
@@ -631,6 +631,13 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		$data =~ s/(HOSTNAME|hostname)="(.*)"/$1="$fullhost"/ ||
 		   $data =~ s/(HOSTNAME|hostname)='(.*)'/$1='$fullhost'/ ||
 		   $data =~ s/(HOSTNAME|hostname)=(\S+)/$1=$fullhost/;
+		}
+	elsif ($fix eq "/etc/mailman/mm_cfg.py") {
+		# Mailman config file
+		$data =~ s/DEFAULT_EMAIL_HOST\s*=\s*'(.*)'/DEFAULT_EMAIL_HOST = '$fullhost'/;
+		$data =~ s/DEFAULT_EMAIL_HOST\s*=\s*"(.*)"/DEFAULT_EMAIL_HOST = "$fullhost"/;
+		$data =~ s/DEFAULT_URL_HOST\s*=\s*'(.*)'/DEFAULT_URL_HOST = '$fullhost'/;
+		$data =~ s/DEFAULT_URL_HOST\s*=\s*"(.*)"/DEFAULT_URL_HOST = "$fullhost"/;
 		}
 	else {
 		# Other hostname file
