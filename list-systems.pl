@@ -14,6 +14,12 @@ To limit the display to only systems that can host virtual systems, use the
 C<--host-type> flag followed by a virtualization type like C<xen>, C<openvz>
 or C<zones>. Or if you want to get all host systems, use C<--host-type all>.
 
+Systems can also be selected by their current status, using the C<--status>
+flag followed by a code like C<virt> (Virtualmin) or C<down> (completely
+shut down). Special codes that cover a number of statuses are also supported,
+such as C<up> (running and usable) C<wm> (Webmin installed) and C<bad> (down
+or in-accessible).
+
 In mutiline mode, uptime, CPU and RAM usage is displayed for the current
 account period. To show the previous period instead, use the C<--last-period>
 flag. Or to select any period in the past, use the C<--period-ago> flag followed
@@ -71,17 +77,18 @@ while(@ARGV > 0) {
 	elsif ($a eq "--host-type") { $hosttypes{shift(@ARGV)} = 1; }
 	elsif ($a eq "--last-period") { $period_ago = 1; }
 	elsif ($a eq "--period-ago") { $period_ago = shift(@ARGV); }
+	elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	else {
 		&usage();
 		}
 	}
-if (!@hosts && !@groups && !@types && !@managers && !@owners) {
+if (!@hosts && !@groups && !@types && !@managers && !@owners && !@statuses) {
 	# If called with no selector, assume all
 	$all = 1;
 	}
 
 # Work out who to list
-@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
+@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 if (keys %hosttypes) {
 	@servers = grep {
@@ -465,6 +472,7 @@ my $types = join("|", @server_management_types);
 print "                      [--type $types]*\n";
 print "                      [--os oscode]*\n";
 print "                      [--owner name]*\n";
+print "                      [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                      [--host-type type|\"all\"]\n";
 print "                      [--last-period | --period-ago N]\n";
 exit(1);

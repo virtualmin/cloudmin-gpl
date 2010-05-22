@@ -443,12 +443,13 @@ foreach my $sched (&list_scheduled_changes()) {
 	}
 }
 
-# find_managed_servers(all, &hostnames, &groupnames, &managers, &types, &owners)
+# find_managed_servers(all, &hostnames, &groupnames, &managers, &types, &owners,
+# 		       &statuses)
 # Finds all servers matching some selection criteria. In 'all' mode, only
 # servers the user is allowed to access are returned.
 sub find_managed_servers
 {
-my ($all, $hosts, $groups, $managers, $types, $owners) = @_;
+my ($all, $hosts, $groups, $managers, $types, $owners, $statuses) = @_;
 my @rv;
 my %wantgroups = map { lc($_), 1 } @$groups;
 my %wantowned;
@@ -460,6 +461,12 @@ foreach my $oname (@$owners) {
 			}
 		}
 	}
+my $expstatuses = [ ];
+if ($statuses) {
+	foreach my $st (@$statuses) {
+		push(@$expstatuses, &expand_status_code($st));
+		}
+	}
 foreach my $s (&list_managed_servers()) {
 	my ($ingroup) = grep { $wantgroup{lc($_)} }
 				split(/\t/, $s->{'group'});
@@ -468,11 +475,34 @@ foreach my $s (&list_managed_servers()) {
 	    &indexoflc($s->{'host'}, @$hosts) >= 0 ||
 	    &indexoflc($s->{'manager'}, @$managers) >= 0 ||
 	    &indexoflc($s->{'type'}, @$types) >= 0 ||
+	    &indexoflc($s->{'status'}, @$expstatuses) >= 0 ||
 	    $wantowned{$s->{'id'}}) {
 		push(@rv, $s);
 		}
 	}
 return @rv;
+}
+
+# expand_status_code(code)
+# Given a real or psuedo status code (like up, wm or bad), return a list of
+# real status codes
+sub expand_status_code
+{
+my ($st) = @_;
+if ($st eq 'up') {
+	return ( 'nowebmin', 'novirt', 'virt', 'alive' );
+	}
+elsif ($st eq 'wm') {
+	return ( 'novirt', 'virt' );
+	}
+elsif ($st eq 'bad') {
+	return ( 'down', 'noping', 'nohost', 'nossh', 'nosshlogin',
+		 'downwebmin', 'nowebminlogin' );
+	}
+else {
+	return ( $st );
+	}
+
 }
 
 # describe_os(os)
@@ -7162,20 +7192,7 @@ elsif ($mode eq 'eok') {
 	}
 elsif ($mode eq 'sok') {
 	# Search by status
-	my @sts;
-	if ($in->{'ssearch'} eq 'up') {
-		@sts = ( 'nowebmin', 'novirt', 'virt', 'alive' );
-		}
-	elsif ($in->{'ssearch'} eq 'wm') {
-		@sts = ( 'novirt', 'virt' );
-		}
-	elsif ($in->{'ssearch'} eq 'bad') {
-		@sts = ( 'down', 'noping', 'nohost', 'nossh', 'nosshlogin',
-			 'downwebmin', 'nowebminlogin' );
-		}
-	else {
-		@sts = ( $in->{'ssearch'} );
-		}
+	my @sts = &expand_status_code($in->{'ssearch'});
 	if ($in->{'ssearch'} eq 'updates') {
 		# Search by updates
 		return grep { $_->{'virtualmin_poss'} ||
