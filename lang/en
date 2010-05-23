@@ -3905,3 +3905,13 @@ clone_tarring=TARing up original system ..
 clone_etar=.. TAR failed : $1
 clone_openvz=Creating new OpenVZ container ..
 clone_eopenvz=.. creation failed : $1
+clone_xencfg=Copying Xen configuration file to $1 ..
+clone_exencfg=.. copy failed : $1
+clone_copydisks=Copying virtual disks ..
+clone_ecopydisks=.. failed to copy disks : $1
+clone_copydisk=Copying disk $1 ..
+clone_copydiskdone=.. copied to $1
+clone_ecopydisk=.. copy failed : $1
+clone_ecopydiskfatal=Copy of critical disk failed : $1
+
+
