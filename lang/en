@@ -3913,5 +3913,8 @@ clone_copydisk=Copying disk $1 ..
 clone_copydiskdone=.. copied to $1
 clone_ecopydisk=.. copy failed : $1
 clone_ecopydiskfatal=Copy of critical disk failed : $1
-
+clone_vserver=Creating new empty VServer ..
+clone_evserver=.. creation failed : $1
+clone_copying=Copying files from original system ..
+clone_ecopy=.. copy failed : $1
 
