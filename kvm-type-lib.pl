@@ -3946,5 +3946,275 @@ sub type_kvm_image_formats
 return ( "disk", "qcow2", "qcow", "vmdk" );
 }
 
+# type_kvm_can_clone(&server)
+# Any Xen instance can be cloned, if the host system is up
+sub type_kvm_can_clone
+{
+my ($server) = @_;
+return $server->{'status'} ne 'nohost';
+}
+
+# type_kvm_check_clone(&oldserver, &newserver, new-hostname, &ips)
+# Checks if cloning of some system will work, before shutting it down. Returns
+# undef on success or an error message on failure.
+sub type_kvm_check_clone
+{
+my ($oldserver, $newserver, $newhost, $ips) = @_;
+my $vhost = &type_kvm_parent($newserver);
+
+# Make sure hostname is sensible
+if ($vhost->{'kvm_zone'}) {
+	return $text{'clone_ehost2'} if ($newhost =~ /\./);
+	}
+
+# Check for IPs if needed
+if (!$vhost->{'kvm_start'}) {
+	$ips && scalar(@$ips) || return &text('clone_eips', $vhost->{'host'});
+	}
+if ($ips) {
+	my @oldips = split(/\s+/, $oldserver->{'kvm_ip'});
+	scalar(@oldips) == scalar(@$ips) ||
+		return &text('clone_eips2', scalar(@oldips), scalar(@$ips));
+	}
+
+return undef;
+}
+
+# type_kvm_clone_system(&oldserver, &newserver, new-hostname, &ips)
+# Creates a clone of some KVM instance, updating the newserver hash.
+# Returns an error message and a flag indicating if the failure was total or
+# only partial.
+sub type_kvm_clone_system
+{
+my ($oldserver, $newserver, $newhost, $ips) = @_;
+my $vhost = &type_kvm_parent($newserver);
+
+# Generate the new full hostname
+if ($vhost->{'kvm_zone'}) {
+	$newserver->{'host'} = $newhost.".".$vhost->{'kvm_zone'};
+	}
+else {
+	$newserver->{'host'} = $newhost;
+	}
+my $clash = &get_managed_server_by("host", $newserver->{'host'});
+if ($clash) {
+	return (&text('clone_eclash', $newserver->{'host'}), 1);
+	}
+
+# Allocate new IP addresses
+if ($ips) {
+	# Use supplied list, keep old netmasks and gateways
+	$newserver->{'kvm_ip'} = join(" ", @$ips);
+	}
+else {
+	# Allocate new IPs
+	&$first_print($text{'clone_allocating'});
+	my $err = &allocate_kvm_ip_addresses($newserver, $vhost);
+	return ($err, 1) if ($err);
+	}
+my @ips = split(/\s+/, $newserver->{'kvm_ip'});
+my @cidrs = split(/\s+/, $newserver->{'kvm_cidr'});
+my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
+my $defgw = &get_server_default_gateway($vhost);
+my @gws = split(/\s+/, $newserver->{'kvm_gw'});
+my @setgws = grep { $_ ne "*" } @gws;
+if (!@setgws && $defgw) {
+	@gws = ( $defgw );
+	}
+$newserver->{'ip_addresses'} = join(" ", @ips);
+&complete_managed_server($newserver);
+if (!$ips) {
+	&$second_print(&text('clone_allocated', join(" ", @ips)));
+	}
+delete($newserver->{'kvm_console'});
+
+# Copy each of the disks and update the kvm_drives setting
+&$first_print(&text('clone_copydisks'));
+my $disks = &type_kvm_list_disks($newserver, 0);
+if (!ref($disks)) {
+	return (&text('clone_ecopydisks', $disks), 1);
+	}
+&$indent_print();
+my @disklist;
+my $oldkvm = $oldserver->{'host'};
+my $newkvm = $newserver->{'host'};
+my @olddrives = split(/\s+/, $newserver->{'kvm_drives'});
+my @drives;
+my $i = 0;
+foreach my $d (@$disks) {
+	&$first_print(&text('clone_copydisk', $d->{'real'}));
+	if ($d->{'device'} && !$d->{'lv'}) {
+		# A real device, which shouldn't be touched
+		push(@drives, $olddrives[$i]);
+		&$second_print(&text('smove_devdisk'));
+		$i++;
+		next;
+		}
+	my $err;
+	if ($d->{'lv'}) {
+		# Pick a new LV name
+		my $newlv = $d->{'lv'};
+		if ($newlv =~ /\Q$oldkvm\E/) {
+			$newlv =~ s/\Q$oldkvm\E/$newkvm/;
+			}
+		else {
+			$newlv .= "-".$newkvm;
+			}
+		$d->{'newreal'} = "/dev/".$d->{'vg'}."/".$newlv;
+
+		# Create the new LV
+		$last_remote_error = undef;
+		my $lv = { 'name' => $newlv,
+			   'size' => int($d->{'size'}/1024),
+			   'perm' => 'rw',
+			   'alloc' => 'n',
+			   'vg' => $d->{'vg'} };
+		&remote_finished();
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+		$err = &remote_foreign_call($vhost, "lvm",
+					  "create_logical_volume", $lv);
+		$err ||= $last_remote_error;
+
+		# Copy the data using dd
+		if (!$err) {
+			$err = &transfer_file_between_servers(
+			    $vhost, $vhost,
+			    $d->{'real'}, $d->{'newreal'}, 1, 1,
+			    int($d->{'size'}/(1024*1024))*1024*1024);
+			}
+		}
+	else {
+		# Pick a new filename
+		$d->{'newreal'} = $d->{'real'};
+		if ($d->{'newreal'} =~ /\Q$oldkvm\E/) {
+			$d->{'newreal'} =~ s/\Q$oldkvm\E/$newkvm/;
+			}
+		else {
+			$d->{'newreal'} .= "-".$newkvm;
+			}
+		# Copy the file
+		$err = &transfer_file_between_servers($vhost, $vhost,
+                                $d->{'real'}, $d->{'newreal'}, 0, 1);
+		}
+
+	if ($err) {
+		# Failed .. but may be skippable
+		&$second_print(&text('clone_ecopydisk', $err));
+		if ($newserver->{'kvm_filesystem'} eq $d->{'real'}) {
+			return (&text('clone_ecopydiskfatal', $err), 1);
+			}
+		}
+	else {
+		# Update list of Xen disk options for saving to .cfg file
+		my $drive = $olddrives[$i];
+		$drive =~ s/\Q$d->{'real'}\E/$d->{'newreal'}/;
+		push(@drives, $drive);
+		if ($newserver->{'kvm_filesystem'} eq $d->{'real'}) {
+			$newserver->{'kvm_filesystem'} = $d->{'newreal'};
+			}
+		if ($newserver->{'kvm_swap'} eq $d->{'real'}) {
+			$newserver->{'kvm_swap'} = $d->{'newreal'};
+			}
+		&$second_print(&text('clone_copydiskdone', $d->{'newreal'}));
+		$i++;
+		}
+	}
+&$outdent_print();
+$newserver->{'kvm_drives'} = join(" ", @drives);
+&$second_print($text{'create_done'});
+
+# Register in DNS
+if ($vhost->{'kvm_zone'}) {
+	my $dnsname = $newhost.".".$vhost->{'kvm_zone'}.".";
+	if (&add_bind8_record($dnsname, $ips[0],
+			      $vhost->{'kvm_zone'})) {
+		$newserver->{'kvm_dns'} = $dnsname;
+		}
+	else {
+		delete($newserver->{'kvm_dns'});
+		}
+	}
+
+# Mount the filesystem
+&$first_print($text{'create_xenmount'});
+my $err = &mount_filesystem_if_needed($newserver);
+my $mp = $newserver->{'kvm_mount'};
+if ($err || !$mp) {
+	$err ||= "No mount point found!";
+	&$second_print(&text('create_ekvmmount', $err));
+	return ($err, 0);
+	}
+&$second_print(&text('create_xenmounted', "<tt>$mp</tt>"));
+
+# Delete any virtual network interfaces if possible
+if (&type_kvm_can_interfaces($newserver)) {
+	my $ifaces = &type_kvm_list_interfaces($newserver);
+	if (ref($ifaces)) {
+		foreach my $i (@$ifaces) {
+			if ($i->{'virtual'} ne '' ||
+			    $i->{'fullname'} =~ /^eth(\d+)$/ &&
+			    $1 >= scalar(@ips)) {
+				&type_kvm_delete_interface($newserver, $i);
+				}
+			}
+		}
+	}
+
+# Fix other config files that refer to the hostname or IP
+&$first_print($text{'create_xenfix'});
+my $fullhost = $vhost->{'kvm_zone'} ? 
+		$newhost.".".$vhost->{'kvm_zone'} : $newhost;
+my $err = &fix_hostname_config_files($newserver, $ips[0],
+					$newserver->{'host'}, $fullhost, $vhost,
+					$mp, $vhost->{'kvm_resolv'});
+if ($err) {
+	&$second_print(&text('create_ekvmfix', $err));
+	}       
+else {
+	&$second_print($text{'create_done'});
+	}
+
+# Setup networking config files to use the IP.
+&$first_print($text{'create_xennet'});
+my $err = &fix_network_config_files($newserver, $ips[0], $netmasks[0],
+				    $gws[0], $vhost, $mp);
+if ($err) {
+	&$second_print(&text('create_ekvmnet', $err));
+	}       
+else {
+	&$second_print($text{'create_done'});
+	}
+
+# Add network configs for extra IPs
+if (@ips > 1) {
+	&$first_print($text{'create_xennet2'});
+	my $err = &fix_additional_network_interface_files($newserver,
+		[ @ips[1..$#ips] ], [ @netmasks[1..$#netmasks] ],
+		[ @gws[1..$#gws] ], $vhost, $mp);
+	if ($err) {
+		&$second_print(&text('create_ekvmnet2', $err));
+		}       
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+# Un-mount
+&$first_print($text{'create_xenumount'});
+&umount_filesystem_if_needed($newserver);
+&$second_print($text{'create_done'});
+
+# Add DHCP entries
+if ($config{'dhcp_add'}) {
+	# Get MAC addresses
+	my $fakeifaces = &type_kvm_list_interfaces($newserver, 1);
+	if (ref($fakeifaces)) {
+		&add_all_iface_dhcpd($newserver, $fakeifaces);
+		}
+	}
+
+return (undef, 0);
+}
+
 1;
 
