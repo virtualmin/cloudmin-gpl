@@ -122,8 +122,11 @@ else {
 	}
 $cfunc = "type_".$server->{'manager'}."_delete_disk";
 $err = &$cfunc($server, $disk, $detach);
+&save_managed_server($server);
+&release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");
+	exit(1);
 	}
 else {
 	# Tell the user about reboot
@@ -135,8 +138,6 @@ else {
 		&$second_print(".. done");
 		}
 	}
-&save_managed_server($server);
-&release_lock_server($server);
 &cloudmin_api_log(\@OLDARGV);
 
 sub usage

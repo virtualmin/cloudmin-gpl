@@ -162,6 +162,7 @@ $err = &$cfunc($server, $disk, $olddisk);
 &release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");
+	exit(1);
 	}
 else {
 	# Tell the user about reboot

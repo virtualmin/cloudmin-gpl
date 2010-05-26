@@ -194,8 +194,11 @@ if ($hostfree && $disk->{'size'} > $hostfree) {
 &$first_print("Creating virtual disk for $disk->{'virt'} ..");
 $cfunc = "type_".$server->{'manager'}."_create_disk";
 $err = &$cfunc($server, $disk, scalar(@$disks) ? 0 : 1);
+&save_managed_server($server);
+&release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");
+	exit(1);
 	}
 else {
 	# Tell the user about reboot
@@ -207,8 +210,6 @@ else {
 		&$second_print(".. done");
 		}
 	}
-&save_managed_server($server);
-&release_lock_server($server);
 &cloudmin_api_log(\@OLDARGV);
 
 sub usage
