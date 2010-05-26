@@ -4160,6 +4160,14 @@ if (&type_kvm_can_interfaces($newserver)) {
 		}
 	}
 
+# Generate new MAC addresses
+my @oldmacs = split(/\s+/, $newserver->{'mac'});
+my @macs;
+for(my $i=0; $i<@oldmacs; $i++) {
+	push(@macs, &generate_mac_address($newserver, $i));
+	}
+$newserver->{'mac'} = join(" ", @macs);
+
 # Fix other config files that refer to the hostname or IP
 &$first_print($text{'create_xenfix'});
 my $fullhost = $vhost->{'kvm_zone'} ? 
