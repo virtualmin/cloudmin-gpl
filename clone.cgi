@@ -39,7 +39,7 @@ if (!$in{'ips_def'} && &can_action($server, 'ips')) {
 $limits = &get_owner_limits();
 if ($limits) {
 	# Validate disk limit
-	$dsfunc = "type_".$in{'type'}."_get_disk_size";
+	$dsfunc = "type_".$server->{'manager'}."_get_disk_size";
 	$incr = defined(&$dsfunc) ? &$dsfunc($server) : undef;
 	if ($incr && $limits->{'max_disk'}) {
 		# May be over disk limit
@@ -56,7 +56,7 @@ if ($limits) {
 		}
 
 	# Validate RAM limit
-	$mfunc = "type_".$in{'type'}."_get_memory_size";
+	$mfunc = "type_".$server->{'manager'}."_get_memory_size";
 	$incr = defined(&$mfunc) ? &$mfunc($server) : undef;
 	if ($incr && $limits->{'max_ram'}) {
 		# May be over RAM limit
@@ -73,7 +73,7 @@ if ($limits) {
 		}
 
 	# Validate CPU limit
-	$cfunc = "type_".$in{'type'}."_get_cpu_size";
+	$cfunc = "type_".$server->{'manager'}."_get_cpu_size";
 	$incr = defined(&$cfunc) ? &$cfunc($server) : undef;
 	if ($incr && $limits->{'max_cpu'}) {
 		# May be over CPU limit
