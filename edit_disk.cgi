@@ -40,7 +40,7 @@ else {
 	}
 
 # Make sure owner can edit devices
-if ($disk->{'device'} && !$disk->{'lv'}) {
+if ($disk->{'device'} && !$disk->{'lv'} && !$disk->{'storage'}) {
 	&can_action_error($server, "devices");
 	}
 

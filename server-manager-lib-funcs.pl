@@ -2076,6 +2076,7 @@ foreach my $cmd (
 			$l =~ s/^\s+//;
 			my @w = split(/\s+/, $l, $cmd->[1]);
 			$p{'pid'} = $w[$cmd->[2]->[0]];
+			next if ($p{'pid'} !~ /^\-?\d+$/);
 			$p{'user'} = $w[$cmd->[2]->[1]];
 			$p{'args'} = $w[$cmd->[2]->[2]];
 			push(@procs, \%p);

@@ -41,7 +41,7 @@ if (@$disks) {
 		$vdesc = defined(&mount::device_name) ?
 				&mount::device_name($d->{'virt'}, 1) :
 				"<tt>$d->{'virt'}</tt>";
-		$canedit = !$d->{'device'} || $d->{'lv'} ||
+		$canedit = !$d->{'device'} || $d->{'lv'} || $d->{'storage'} ||
 			   &can_action($server, 'devices');
 		$sched = &get_scheduled_change($server, "disk", $d->{'real'});
 		print &ui_checked_columns_row([

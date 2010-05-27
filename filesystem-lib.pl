@@ -403,9 +403,14 @@ my @newfstab;
 foreach my $f (@$fstab) {
 	my $ok = 1;
 	if ($f->[0] =~ /^(\/dev\/(s|d|xv)d[a-z])(\d*)$/ && $f->[1] ne "/") {
+		# If device is /dev/xvdX and no disk for that exists, remove it
 		if (!$virts{$1} && !$virts{$f->[0]}) {
 			$ok = 0;
 			}
+		}
+	elsif ($f->[0] eq "LABEL=/" && $server->{'image'}) {
+		# Assume that first partition on first disk is /
+		$f->[0] = $disks->[0]->{'virt'}."1";
 		}
 	push(@newfstab, $f) if ($ok);
 	}
