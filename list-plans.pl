@@ -94,6 +94,12 @@ if ($multi) {
 
 		print "    Allowed images: ",
 			($p->{'images'} || "All"),"\n";
+
+		$hostlist = join(" ", map { $s = &get_managed_server($_);
+					    $s ? ( $s->{'host'} ) : ( ) }
+					  split(/\s+/, $p->{'hosts'}));
+		print "    Allowed hosts: ",
+			($hostlist || "All"),"\n";
 		}
 	}
 elsif ($nameonly) {

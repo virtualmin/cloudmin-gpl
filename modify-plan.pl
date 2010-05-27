@@ -123,6 +123,22 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-host-mode") {
 		$hostmode = '';
 		}
+	elsif ($a eq "--add-host") {
+		$hn = shift(@ARGV);
+		$h = &get_managed_server_by("host", $hn);
+		$h || &usage("$h is not a valid hostname");
+		&is_parent_server($h) || &usage("$h is not a host system");
+		push(@addhosts, $h->{'id'});
+		}
+	elsif ($a eq "--remove-host") {
+		$hn = shift(@ARGV);
+		$h = &get_managed_server_by("host", $hn);
+		$h || &usage("$h is not a valid hostname");
+		push(@remhosts, $h->{'id'});
+		}
+	elsif ($a eq "--all-hosts") {
+		$allhosts = 1;
+		}
 	else {
 		&usage("Unknown flag $a");
 		}
@@ -173,6 +189,20 @@ else {
 	$plan->{'images'} = join(" ", &unique(@images));
 	}
 
+# Apply host changes
+if ($allhosts) {
+	delete($plan->{'hosts'});
+	}
+else {
+	@hosts = split(/\s+/, $plan->{'hosts'});
+	push(@hosts, @addhosts);
+	foreach $a (@remhosts) {
+		@hosts = grep { $_ ne $a } @hosts;
+		}
+	@hosts || &usage("At least one host must be allowed");
+	$plan->{'hosts'} = join(" ", &unique(@hosts));
+	}
+
 # Apply host system changes
 if (defined($hostmode)) {
 	$plan->{'hostmode'} = $hostmode;
@@ -200,6 +230,9 @@ print "                    [--remove-type ".
 print "                    [--add-image id]*\n";
 print "                    [--remove-image id]*\n";
 print "                    [--all-images]\n";
+print "                    [--add-host hostname]*\n";
+print "                    [--remove-host hostname]*\n";
+print "                    [--all-hosts]\n";
 foreach $a (@allactions) {
 	print "                    [--can-$a | --cannot-$a]\n";
 	}
