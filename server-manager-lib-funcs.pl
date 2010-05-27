@@ -6753,18 +6753,20 @@ return wantarray ? @rv : $rv[0];
 
 # host_free_memory(&host, manager)
 # Returns the amount of RAM free on some host system, perhaps taking Xen host
-# memory into account
+# memory into account. In an array context, returns total memory too
 sub host_free_memory
 {
 my ($vhost, $manager) = @_;
 my $vinfo = &get_server_collected($vhost);
+my @rv;
 if ($manager && $vhost->{$manager.'_mem_free'}) {
-	return $vhost->{$manager.'_mem_free'};
+	@rv = ( $vhost->{$manager.'_mem_free'},
+		$vhost->{$manager.'_mem_total'} );
 	}
 elsif ($vinfo && $vinfo->{'mem'}) {
-	return $vinfo->{'mem'}->[1]*1024;
+	@rv = ( $vinfo->{'mem'}->[1]*1024, $vinfo->{'mem'}->[0]*1024 );
 	}
-return undef;
+return wantarray ? @rv : $rv[0];
 }
 
 # usable_host_system(&server, manager, extra-ram, extra-disk)

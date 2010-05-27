@@ -339,6 +339,34 @@ if (keys %$info) {
 					 $info->{'disk_free'})));
 		}
 
+	# Host memory used
+	foreach my $manager (&is_parent_server($server)) {
+		my ($memfree, $memtotal) = &host_free_memory($server, $manager);
+		if ($memfree && $memfree != $m[1]*1024) {
+			print &ui_table_hr();
+			print &ui_table_row($text{'edit_hmem'},
+				&bar_chart($memtotal, $memtotal-$memfree, 1).
+				" ".
+				&text('edit_outof',
+				      &nice_size($memtotal),
+				      &nice_size($memtotal-$memfree)));
+			}
+		}
+
+	# Host disk used
+	foreach my $manager (&is_parent_server($server)) {
+		my ($diskfree, $disktotal) = &host_free_disk($server, $manager);
+		if ($diskfree && $diskfree != $info->{'disk_free'}) {
+			print &ui_table_row($text{'edit_hdisk'},
+				&bar_chart($disktotal,
+					   $disktotal-$diskfree, 1)." ".
+				&text('edit_outof',
+				      &nice_size($disktotal),
+				      &nice_size($disktotal - $diskfree)));
+			last;
+			}
+		}
+
 	# Feature statuses
 	if ($info->{'startstop'} && @{$info->{'startstop'}}) {
 		@grid = ( );
