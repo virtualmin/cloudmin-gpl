@@ -179,7 +179,7 @@ $plan->{'types'} = join(" ", &unique(@types));
 if ($allimages) {
 	delete($plan->{'images'});
 	}
-else {
+elsif (@addimages || @remimages) {
 	@images = split(/\s+/, $plan->{'images'});
 	push(@images, @addimages);
 	foreach $a (@remimages) {
@@ -193,7 +193,7 @@ else {
 if ($allhosts) {
 	delete($plan->{'hosts'});
 	}
-else {
+elsif (@addhosts || @remhosts) {
 	@hosts = split(/\s+/, $plan->{'hosts'});
 	push(@hosts, @addhosts);
 	foreach $a (@remhosts) {
