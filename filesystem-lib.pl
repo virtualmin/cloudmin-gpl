@@ -395,7 +395,7 @@ my ($server) = @_;
 my $dfunc = "type_".$server->{'manager'}."_list_disks";
 my $disks = &$dfunc($server);
 ref($disks) || return "Failed to list disks : $disks";
-my %virts = map { $_->{'virt'} } @$disks;
+my %virts = map { $_->{'virt'}, $_ } @$disks;
 
 my $fstab = &get_system_fstab($server);
 ref($fstab) || return "Failed to read fstab file : $fstab";
