@@ -3867,7 +3867,7 @@ citrix_edown=A system which cannot be contacted via SSH cannot be used for Citri
 citrix_esoft=The selected system cannot support Citrix Xen instances : $1
 
 clone_title=Clone System
-clone_topdesc=This page allows you to create a duplicate of an existing system, with a new IP address, hostname and disks. The new system will initiall run on the same host system as the original.
+clone_topdesc=This page allows you to create a duplicate of an existing system, with a new IP address, hostname and disks. The new system will initial run on the same host system as the original.
 clone_host=New hostname prefix
 clone_desc=Description for new system
 clone_ok=Create Clone
