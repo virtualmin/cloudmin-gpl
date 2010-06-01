@@ -17,7 +17,7 @@ if (!$server_manager_root) {
 foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
-		 "repl", "scheduled", "dhcp") {
+		 "repl", "scheduled", "dhcp", "failover") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -1151,6 +1151,10 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 	&flush_file_lines($f);
 	&unlock_file($f);
 	}
+# Also delete using ssh-keygen, which can handle hashing
+&execute_command("ssh-keygen -R ".quotemeta($server->{'host'}));
+&execute_command("ssh-keygen -R ".quotemeta($server->{'ip'}));
+&execute_command("ssh-keygen -R ".quotemeta($ip));
 return undef;
 }
 
@@ -1189,6 +1193,13 @@ else {
 			return $err if ($err);
 			}
 		}
+	# Also delete using ssh-keygen, which can handle hashing
+	&execute_command_on_server($srcserver,
+		"ssh-keygen -R ".quotemeta($server->{'host'}));
+	&execute_command_on_server($srcserver,
+		"ssh-keygen -R ".quotemeta($server->{'ip'}));
+	&execute_command_on_server($srcserver,
+		"ssh-keygen -R ".quotemeta($ip));
 	return undef;
 	}
 }
@@ -5407,6 +5418,12 @@ if (defined(&list_locations)) {
 push(@glinks, "list_ips.cgi");
 push(@gtitles, $text{'ips_title'});
 push(@gicons, "images/ips.gif");
+push(@gcats, "hosts");
+
+# 
+push(@glinks, "list_failovers.cgi");
+push(@gtitles, $text{'failovers_title'});
+push(@gicons, "images/failovers.gif");
 push(@gcats, "hosts");
 
 # Plugin-defined icons
