@@ -5407,7 +5407,7 @@ foreach my $t (@server_management_types) {
 	}
 
 # Host locations
-if (defined(&list_locations)) {
+if (defined(&list_locations) && @virtual_server_management_types) {
 	push(@glinks, "list_locations.cgi");
 	push(@gtitles, $text{'locations_title'});
 	push(@gicons, "images/locations.gif");
@@ -5420,11 +5420,13 @@ push(@gtitles, $text{'ips_title'});
 push(@gicons, "images/ips.gif");
 push(@gcats, "hosts");
 
-# 
-push(@glinks, "list_failovers.cgi");
-push(@gtitles, $text{'failovers_title'});
-push(@gicons, "images/failovers.gif");
-push(@gcats, "hosts");
+# Failover groups
+if (@virtual_server_management_types) {
+	push(@glinks, "list_failovers.cgi");
+	push(@gtitles, $text{'failovers_title'});
+	push(@gicons, "images/failovers.gif");
+	push(@gcats, "hosts");
+	}
 
 # Plugin-defined icons
 foreach my $p (@plugins) {
@@ -6462,7 +6464,7 @@ return wantarray ? @rv : $rv[0];
 }
 
 # is_virtual_server(&server)
-# Returns the manager type of some system is virtual
+# Returns the manager type of some system if virtual
 sub is_virtual_server
 {
 my ($server) = @_;

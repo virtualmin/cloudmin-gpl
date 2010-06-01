@@ -3920,3 +3920,26 @@ clone_evserver=.. creation failed : $1
 clone_copying=Copying files from original system ..
 clone_ecopy=.. copy failed : $1
 
+failovers_title=Host Failover Groups
+failovers_add=Add a new failover group.
+failovers_desc=Description
+failovers_type=System type
+failovers_enabled=Enabled?
+failovers_hosts=Hosts in group
+failovers_none=No failover groups have been created yet.
+failovers_return=list of failover groups
+
+failover_title1=Create Failover Group
+failover_title2=Edit Failover Grou
+fail_egone=Failover group no longer exists!
+failover_header1=Failover group details
+failover_type=Virtual system type
+failover_desc=Group description
+failover_enabled=Automatic failovers enabled?
+failover_header2=Host systems in failover group
+failover_hmode0=Selected hosts
+failover_hmode1=Members of groups
+failover_hmode2=Hosts in location groups
+failover_header3=Virtual systems to failover
+failover_smode0=Any system on selected hosts
+failover_smode1=Only systems
