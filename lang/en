@@ -921,7 +921,7 @@ edit_vmemory=Free memory on host
 edit_omemory=Remaining memory in plan
 edit_lcpu=Maximum CPU use
 edit_ldisk=Maximum disk space
-edit_udisk=Disk space used
+edit_ludisk=Disk space used
 edit_vdisk=Free disk on host
 edit_odisk=Remaining disk in plan
 edit_lrate=Maximum network speed
@@ -3932,6 +3932,7 @@ failovers_enabled=Enabled?
 failovers_hosts=Hosts in group
 failovers_none=No failover groups have been created yet.
 failovers_return=list of failover groups
+failovers_delete=Delete Selected Failover Groups
 
 failover_title1=Create Failover Group
 failover_title2=Edit Failover Grou

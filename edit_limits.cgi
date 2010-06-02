@@ -100,7 +100,7 @@ if (defined(&$dfunc)) {
 	if (defined(&$sfunc)) {
 		$space = &$sfunc($server);
 		if ($space) {
-			print &ui_table_row($text{'edit_udisk'},
+			print &ui_table_row($text{'edit_ludisk'},
 				&nice_size($space));
 			}
 		}
