@@ -235,6 +235,14 @@ elsif ($type eq "alerts") {
 	# Multiple system alerts
 	return &text('log_'.$action.'_alerts', $object);
 	}
+elsif ($type eq "failover") {
+	# One failover group
+	return &text('log_'.$action.'_failover', &html_escape($p->{'desc'}));
+	}
+elsif ($type eq "failovers") {
+	# Multiple failover groups
+	return &text('log_'.$action.'_failovers', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),
