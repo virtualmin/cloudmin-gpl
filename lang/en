@@ -3955,3 +3955,6 @@ failover_ehosts=No host systems selected
 failover_egroups=No groups selected
 failover_elocations=No locations selected
 failover_eservers=No systems to failover selected
+failover_email=On failover send email to
+failover_email_master=Cloudmin master administrator
+failover_email_owner=System owners

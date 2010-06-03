@@ -407,6 +407,7 @@ if (!$keep) {
 	&unlink_file("$server_collected_dir/$server->{'id'}");
 	&unlink_file("$shell_previous_dir/$server->{'id'}");
 	&unlink_file("$historic_info_dir/$server->{'id'}");
+	&unlink_file("$failover_files_dir/$server->{'id'}");
 	if (defined(&delete_bandwidth)) {
 		&delete_bandwidth($server);
 		}
@@ -2730,6 +2731,19 @@ foreach my $p (&is_parent_server($server)) {
 # Cache IP addresses, if we don't have them yet
 if (!$server->{'ip_addresses'} || $regen) {
 	&compute_ip_addresses($server);
+	}
+
+# If this system is a failover candidate and we can fetch its config files,
+# do so now
+my $ffunc = "type_".$server->{'manager'}."_get_failover_files";
+if ($server->{'status'} ne 'nohost' &&
+    defined(&$ffunc) &&
+    defined(&server_failover_possible) &&
+    &server_failover_possible($server)) {
+	if (!-d $failover_files_dir) {
+		&make_dir($failover_files_dir, 0700);
+		}
+	&$ffunc($server, $failover_files_dir."/".$server->{'id'});
 	}
 
 &release_lock_server($server);

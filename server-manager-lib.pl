@@ -210,6 +210,7 @@ $repl_lock_file = "$module_config_directory/replication-status";
 $scheduled_changes_dir = "$module_config_directory/scheduled";
 
 $failover_groups_dir = "$module_config_directory/failovers";
+$failover_files_dir = "$module_config_directory/failover-files";
 
 $upgrade_cloudmin_host = "cloudmin.virtualmin.com";
 $upgrade_cloudmin_port = 80;

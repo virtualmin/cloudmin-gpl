@@ -406,7 +406,8 @@ push(@dirs, $ssh_keys_dir, $server_domains_dir, $server_collected_dir,
 	    $historic_info_dir, $newfeatures_seen_dir, $usage_data_dir,
 	    $bandwidth_dir, $shell_previous_dir, $owner_plans_dir,
 	    $scheduled_backups_dir, $vsyncs_dir, $image_storages_dir,
-	    $alerts_dir, $backup_log_dir, $scheduled_changes_dir);
+	    $alerts_dir, $backup_log_dir, $scheduled_changes_dir,
+	    $failover_groups_dir, $failover_files_dir);
 if ($ec2_accounts_dir) {
         push(@dirs, $ec2_accounts_dir);
         }
