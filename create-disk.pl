@@ -172,7 +172,6 @@ if ($fs) {
 
 # Create the disk object
 $disk->{'size'} = $size*1024*1024;
-$disk->{'device'} = $device;
 $disk->{'fs'} = $fs;
 $disk->{'mount'} = $mount;
 
