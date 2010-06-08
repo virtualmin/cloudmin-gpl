@@ -87,6 +87,11 @@ if ($multi) {
 				print "    Description on system: $vdesc\n";
 				}
 			}
+		if ($d->{'virt_onsystem'} &&
+		    $d->{'virt_onsystem'} ne $d->{'virt'}) {
+			print "    Device file on system: ",
+			      "$d->{'virt_onsystem'}\n";
+			}
 		print "    Type: ",($d->{'device'} ? "Device" : "File"),"\n";
 		if ($d->{'lv'}) {
 			print "    LVM volume group: $d->{'vg'}\n";
