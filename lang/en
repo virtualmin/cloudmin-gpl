@@ -1688,6 +1688,10 @@ mkimage_einc=You can only choose to increment the version when an image to overw
 mkimage_edesc2=You can only choose to use an old image's description when an image to overwrite is selected, and that image has a description
 mkimage_kvmmount=Mounting KVM instance filesystem ..
 mkimage_kvmumount=Un-mounting KVM instance filesystem ..
+mkimage_fsck=Checking filesystem on first disk ..
+mkimage_efsckdisks=.. failed to list disks : $1
+mkimage_efscknone=.. no disks found!
+mkimage_efsckcannot=.. not possible for the first disk
 
 pass_title=Change Password
 pass_header=New system passwords

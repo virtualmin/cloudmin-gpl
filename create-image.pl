@@ -210,6 +210,38 @@ if ($server->{'status'} ne 'down' && !$noshut) {
 	$shutdown = 1;
 	}
 
+# Validate first disk, if any
+$dfunc = "type_".$server->{'manager'}."_list_disks";
+$cffunc = "type_".$server->{'manager'}."_can_fsck";
+$ffunc = "type_".$server->{'manager'}."_fsck_disk";
+if (defined(&$dfunc) && defined(&$cffunc)) {
+	&$first_print("Checking filesystem on first disk ..");
+	$disks = &$dfunc($server, 1);
+	if (!ref($disks)) {
+		&$second_print(".. failed to list disks : $disks");
+		}
+	elsif (!@$disks) {
+		&$second_print(".. no disks found!");
+		}
+	elsif (!&$cffunc($server, $disks->[0])) {
+		&$second_print(".. not possible for the first disk");
+		}
+	else {
+		($ok, $out) = &$ffunc($server, $disks->[0]);
+		if ($ok == 2) {
+			&$second_print(".. filesystem errors corrected");
+			}
+		elsif ($ok == 1) {
+			&$second_print(".. filesystem is OK");
+			}
+		else {
+			&$block_print($out);
+			&$second_print(".. filesystem errors found!");
+			exit(3);
+			}
+		}
+	}
+
 # Convert the remote system into an image file - this will output progress
 $ifunc = "type_".$server->{'manager'}."_create_image";
 if (!&$ifunc($server, $image, $temp, $munge ? 0 : 2)) {
