@@ -791,6 +791,7 @@ edit_webmin=Webmin version
 edit_image=Create Image
 edit_clone=Clone System
 edit_move=Move System
+edit_fail=Force Failover
 edit_reset=Reset From Image
 edit_disks=Manage Disks
 edit_vcpus=Manage Virtual CPUs

@@ -5559,6 +5559,8 @@ my $noimage = defined(&$nfunc) && &$nfunc($server) ||
 		 $status eq 'nohost';
 my $mfunc = "type_".$server->{'manager'}."_can_move";
 my $canmove = defined(&$mfunc) && &$mfunc($server);
+my $ffunc = "type_".$server->{'manager'}."_can_failover";
+my $canfail = defined(&$ffunc) && &$ffunc($server);
 my $sfunc = "type_".$t."_no_shutdown";
 my $noshut = defined(&$sfunc) && &$sfunc($server);
 my $rfunc = "type_".$t."_no_reboot";
@@ -5831,6 +5833,15 @@ if ($canmove && &can_action($server, "move")) {
 		    'desc' => $text{'edit_move'},
 		    'cat' => 'manage',
 		    'link' => "move_form.cgi?id=$server->{'id'}" });
+	}
+if ($canfail && &can_action($server, "move") &&
+    $server->{'status'} eq 'nohost' &&
+    &server_failover_possible($server)) {
+	# Can trigger a failover
+	push(@rv, { 'id' => 'failover',
+		    'desc' => $text{'edit_failover'},
+		    'cat' => 'manage',
+		    'link' => "failover_form.cgi?id=$server->{'id'}" });
 	}
 if ($canreset && &can_action($server, "reset")) {
 	# Can reset to original image
