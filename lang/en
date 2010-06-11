@@ -3963,3 +3963,5 @@ failover_eservers=No systems to failover selected
 failover_email=On failover send email to
 failover_email_master=Cloudmin master administrator
 failover_email_owner=System owners
+
+fail_openvzconf=Copying OpenVZ configuration file ..
