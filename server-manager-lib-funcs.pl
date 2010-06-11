@@ -2048,6 +2048,8 @@ return $out =~ /^(\d+)\s/ ? $1*1024 : "Unknown du output : $out";
 sub shared_dir_on_servers
 {
 my ($server1, $server2, $dir) = @_;
+my @st = &stat_file_on_server($server2, $dir);
+return 0 if (!@st);
 my $movecheck = $dir."/cloudmin-move-test.txt";
 my $randstr = time().$$;
 &put_file_data_to_server($server1, $randstr, $movecheck);
@@ -2744,6 +2746,15 @@ if ($server->{'status'} ne 'nohost' &&
 		&make_dir($failover_files_dir, 0700);
 		}
 	&$ffunc($server, $failover_files_dir."/".$server->{'id'});
+
+	# Also get list of data files
+	my $dfunc = "type_".$server->{'manager'}."_get_data_files";
+	if (defined(&$dfunc)) {
+		my @dfiles = &$dfunc($server);
+		if (@dfiles) {
+			$server->{'data_files'} = join(" ", @dfiles);
+			}
+		}
 	}
 
 &release_lock_server($server);

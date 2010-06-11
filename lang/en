@@ -3941,8 +3941,8 @@ failovers_groups=Members of group $1
 failovers_locations=Hosts in location $1
 
 failover_title1=Create Failover Group
-failover_title2=Edit Failover Grou
-fail_egone=Failover group no longer exists!
+failover_title2=Edit Failover Group
+failover_egone=Failover group no longer exists!
 failover_header1=Failover group details
 failover_type=Virtual system type
 failover_desc=Group description
