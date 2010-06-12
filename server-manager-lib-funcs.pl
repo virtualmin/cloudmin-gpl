@@ -5864,7 +5864,7 @@ if ($canfail && &can_action($server, "move") &&
     &server_failover_possible($server)) {
 	# Can trigger a failover
 	push(@rv, { 'id' => 'failover',
-		    'desc' => $text{'edit_failover'},
+		    'desc' => $text{'edit_fail'},
 		    'cat' => 'manage',
 		    'link' => "failover_form.cgi?id=$server->{'id'}" });
 	}
