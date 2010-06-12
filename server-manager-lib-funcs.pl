@@ -2757,6 +2757,18 @@ if ($server->{'status'} ne 'nohost' &&
 		}
 	}
 
+# Save last status
+if ($server->{'status'} ne $server->{'statuslast'}) {
+	if ($server->{'statuslast'}) {
+		&save_status_history($server,
+			{ 'old' => $server->{'statuslast'},
+			  'new' => $server->{'status'},
+			  'time' => $server->{'statustime'} });
+		}
+	$server->{'statuslast'} = $server->{'status'};
+	$server->{'statuslasttime'} = $server->{'statustime'};
+	}
+
 &release_lock_server($server);
 return $rv;
 }
@@ -8835,6 +8847,35 @@ else {
 	&save_managed_server($newserver);
 	return ($newserver, $err);
 	}
+}
+
+# save_status_history(&server, &history)
+# Save a hash recording the change in status for some system
+sub save_status_history
+{
+my ($server, $history) = @_;
+if (!-d $status_history_dir) {
+	&make_dir($status_history_dir, 0700);
+	}
+&open_tempfile(STATUS, ">>$status_history_dir/$server->{'id'}", 0, 1);
+&print_tempfile(STATUS, join(" ", map { $_."=".$history->{$_} }
+				      (keys %$history))."\n");
+&close_tempfile(STATUS);
+}
+
+# list_status_history(&server)
+# Returns a list of hash refs for status changes for some system
+sub list_status_history
+{
+my ($server) = @_;
+my @rv;
+open(STATUS, "$status_history_dir/$server->{'id'}");
+while(<STATUS>) {
+	s/\r|\n//g;
+	my %history = map { split(/=/, $_) } split(/\s+/, $_);
+	push(@rv, \%history);
+	}
+return @rv;
 }
 
 # obtain_lock_server(&server|&servers, [readonly])

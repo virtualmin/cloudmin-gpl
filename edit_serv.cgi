@@ -383,6 +383,35 @@ if (keys %$info) {
 	print &ui_hidden_table_end();
 	}
 
+# Show status history, if any
+@history = &list_status_history($server);
+if (@history > 1) {
+	print &ui_hidden_table_start($text{'edit_hheader'},
+				     "width=100%", 2,
+				     "history", $in{'history'}, \@tds);
+	@history = reverse(@history);
+
+	$htable = &ui_columns_start([ $text{'edit_htime'},
+				      $text{'edit_hold'},
+				      $text{'edit_hnew'} ], 100);
+	$hcount = 0;
+	foreach $h (@history) {
+		$htable .= &ui_columns_row([
+			&make_date($h->{'time'}),
+			&describe_status({ 'status' => $h->{'old'} }, 1),
+			&describe_status({ 'status' => $h->{'new'} }, 1),
+			]);
+		last if ($hcount++ > 100);
+		}
+	$htable .= &ui_columns_end();
+	if ($hcount != scalar(@history)) {
+		$htable .= &text('edit_hcutoff', scalar(@history),100)."<br>\n";
+		}
+	print &ui_table_row(undef, $htable, 2);
+
+	print &ui_hidden_table_end();
+	}
+
 # Show authentication form (if needed)
 if ($view) {
 	# Cannot edit authentication options in view mode
