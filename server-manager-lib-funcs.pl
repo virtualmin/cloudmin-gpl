@@ -342,6 +342,19 @@ return ( &net::integer_to_ip($netstart),
 sub save_managed_server
 {
 my ($server) = @_;
+
+# If status has changed, log it
+if ($server->{'status'} ne $server->{'statuslast'}) {
+	if ($server->{'statuslast'}) {
+		&save_status_history($server,
+			{ 'old' => $server->{'statuslast'},
+			  'new' => $server->{'status'},
+			  'time' => $server->{'statustime'} });
+		}
+	$server->{'statuslast'} = $server->{'status'};
+	$server->{'statuslasttime'} = $server->{'statustime'};
+	}
+
 if ($server->{'id'} eq '0') {
 	# Special case - saving info about this system
 	my %this = ( 'status' => $server->{'status'},
@@ -408,6 +421,7 @@ if (!$keep) {
 	&unlink_file("$shell_previous_dir/$server->{'id'}");
 	&unlink_file("$historic_info_dir/$server->{'id'}");
 	&unlink_file("$failover_files_dir/$server->{'id'}");
+	&unlink_file("$status_history_dir/$server->{'id'}");
 	if (defined(&delete_bandwidth)) {
 		&delete_bandwidth($server);
 		}
@@ -2755,18 +2769,6 @@ if ($server->{'status'} ne 'nohost' &&
 			$server->{'data_files'} = join(" ", @dfiles);
 			}
 		}
-	}
-
-# Save last status
-if ($server->{'status'} ne $server->{'statuslast'}) {
-	if ($server->{'statuslast'}) {
-		&save_status_history($server,
-			{ 'old' => $server->{'statuslast'},
-			  'new' => $server->{'status'},
-			  'time' => $server->{'statustime'} });
-		}
-	$server->{'statuslast'} = $server->{'status'};
-	$server->{'statuslasttime'} = $server->{'statustime'};
 	}
 
 &release_lock_server($server);
