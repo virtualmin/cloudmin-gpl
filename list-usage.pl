@@ -92,6 +92,8 @@ foreach $s (@servers) {
 	if ($multi) {
 		# In multi-line format
 		foreach my $u (@usage) {
+			next if ($u->{'end'} < $mystart ||
+				 $u->{'start'} > $myend);
 			print "    Start: ",&make_date($u->{'start'}),"\n";
 			print "    End: ",&make_date($u->{'end'}),"\n";
 			print "    Status: ",($u->{'up'} ? "Up" : "Down"),"\n";
@@ -116,6 +118,8 @@ foreach $s (@servers) {
 		# As columns
 		printf $fmt, "Start", "End", "Up?", "Memory",
 			     "CPU", "Load", "Disk";
+		printf $fmt, ("-" x 18), ("-" x 18), ("-" x 4), ("-" x 10),
+			     ("-" x 6), ("-" x 6), ("-" x 10);
 		foreach my $u (@usage) {
 			next if ($u->{'end'} < $mystart ||
 				 $u->{'start'} > $myend);
