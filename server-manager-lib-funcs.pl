@@ -2751,17 +2751,19 @@ if (!$server->{'ip_addresses'} || $regen) {
 
 # If this system is a failover candidate and we can fetch its config files,
 # do so now
-my $ffunc = "type_".$server->{'manager'}."_get_failover_files";
 if ($server->{'status'} ne 'nohost' &&
-    defined(&$ffunc) &&
     defined(&server_failover_possible) &&
     &server_failover_possible($server)) {
-	if (!-d $failover_files_dir) {
-		&make_dir($failover_files_dir, 0700);
+	# Fetch config files
+	my $ffunc = "type_".$server->{'manager'}."_get_failover_files";
+	if (defined(&$ffunc)) {
+		if (!-d $failover_files_dir) {
+			&make_dir($failover_files_dir, 0700);
+			}
+		&$ffunc($server, $failover_files_dir."/".$server->{'id'});
 		}
-	&$ffunc($server, $failover_files_dir."/".$server->{'id'});
 
-	# Also get list of data files
+	# Also get list of data (disk) files
 	my $dfunc = "type_".$server->{'manager'}."_get_data_files";
 	if (defined(&$dfunc)) {
 		my @dfiles = &$dfunc($server);

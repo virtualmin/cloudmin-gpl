@@ -4224,5 +4224,47 @@ if ($config{'dhcp_add'}) {
 return (undef, 0);
 }
 
+# type_kvm_can_failover([&server, [&new-dest]])
+# Return 1 if this virtual system can be failed over to a new host
+sub type_kvm_can_failover
+{
+my ($server, $newvhost) = @_;
+if (!$server) {
+	# Failovers are supported for KVM, in theory
+	return 1;
+	}
+if ($server && $newvhost) {
+	# Make sure disks exist on target
+	return 0 if (!$server->{'data_files'});
+	foreach my $f (split(/\s+/, $server->{'data_files'})) {
+		my @st = &stat_file_on_server($newvhost, $f);
+		return 0 if (@st <= 1);
+		}
+	return 0;
+	}
+return 1;
+}
+
+# type_kvm_get_data_files(&server)
+# Returns a list of files/directories that this virtual system uses for
+# storage. Used when failing over to verify that storage is shared.
+sub type_kvm_get_data_files
+{
+my ($server) = @_;
+my $disks = &type_kvm_list_disks($server, 0);
+return ( ) if (!ref($disks));
+return map { $_->{'real'} } @$disks;
+}
+
+# type_kvm_failover_system(&server, &dest)
+# Has nothing to do really, as KVM has no config files to copy.
+sub type_kvm_failover_system
+{
+my ($server, $dest) = @_;
+my $vhost = &get_parent_server($server);
+$server->{'kvm_on'} = $dest->{'id'};
+return undef;
+}
+
 1;
 
