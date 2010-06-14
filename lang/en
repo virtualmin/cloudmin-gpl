@@ -3987,6 +3987,7 @@ fail_startup=Startup on new host system?
 fail_ok=Failover Now
 fail_notargets=No suitable failover host systems were found! The following possible hosts were rejected :
 fail_fhost=Possible host
+fail_fgroup=Failover group
 fail_fwhy=Reason for rejection
 fail_err=Failed to failover system
 fail_etarget=No suitable new host found!

@@ -4240,7 +4240,7 @@ if ($server && $newvhost) {
 		my @st = &stat_file_on_server($newvhost, $f);
 		return 0 if (@st <= 1);
 		}
-	return 0;
+	return 1;
 	}
 return 1;
 }
