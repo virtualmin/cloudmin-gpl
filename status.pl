@@ -34,6 +34,11 @@ if (!&is_cloudmin_replica()) {
 		}
 	}
 
+# Perform failovers based on new status
+if (!!&is_cloudmin_replica() && defined(&check_for_failovers)) {
+	&check_for_failovers(\@servers);
+	}
+
 if (&get_replication_mode() == 2) {
 	# Replicate changes if enabled
 	if (@ARGV) {

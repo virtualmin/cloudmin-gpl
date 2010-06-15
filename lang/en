@@ -3973,6 +3973,9 @@ failover_eservers=No systems to failover selected
 failover_email=On failover, send email to
 failover_email_master=Cloudmin master administrator
 failover_email_owner=System owners
+failover_mins=Host downtime before automatic failover
+failover_minssuffix=minutes
+failover_emins=Missing or invalid number of minutes before automatic failover
 
 fail_openvzconf=Copying OpenVZ configuration file ..
 fail_xenconf=Copying Xen configuration file ..
