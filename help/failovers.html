@@ -1,0 +1,25 @@
+<header>Host Failover Groups</header>
+
+A failover group is a collection of host systems that share storage for
+virtual systems, and so can act as backups for each other if one goes down.
+This allows a virtual system to be automatically re-started on another host
+with the same virtual disks or filesystem in the event of a hardware failure.
+<p>
+
+Each failover group is for a specific virtualization type (like OpenVZ or Xen),
+and must contain at least two host systems that support that virtualization
+method. For failovers to actually work, all virtual systems must share the
+directories containing their filesystems or disk images, either via NFS, 
+Cluster LVM or iSCSI. <p>
+
+When a failover group is set to automatic mode, Cloudmin will detect host
+systems that have failed and move virtual systems off them to new hosts in
+the group, where possible. This will only happen after a period of downtime
+that you can configure on a per-group basis. <p>
+
+Virtual systems can also be forcible failed off a down host using the 
+<b>Force Failover</b> item on the left menu, or the <tt>failover-system</tt>
+API command. <p>
+
+<footer>
+
