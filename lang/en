@@ -4000,4 +4000,8 @@ fail_etarget=No suitable new host found!
 fail_etarget2=The selected new host is not suitable
 fail_doing=Failing over from host system $1 to $2 ..
 fail_failed=.. process failed : $1
-
+fail_ssubject=Successful Cloudmin failover of $1
+fail_fsubject=Failed Cloudmin failover of $1
+fail_notargetsmsg=System $1 could not be failed over from host system $2, as no suitable failover targets were found :
+fail_fmsg=Failover of system $1 to new host $2 failed!
+fail_smsg=Failover of system $1 to new host $2 was completed successfully.
