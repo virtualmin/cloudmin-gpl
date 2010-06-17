@@ -35,7 +35,7 @@ if (!&is_cloudmin_replica()) {
 	}
 
 # Perform failovers based on new status
-if (!!&is_cloudmin_replica() && defined(&check_for_failovers)) {
+if (!&is_cloudmin_replica() && defined(&check_for_failovers)) {
 	&check_for_failovers(\@servers);
 	}
 

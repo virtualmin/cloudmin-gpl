@@ -4005,3 +4005,4 @@ fail_fsubject=Failed Cloudmin failover of $1
 fail_notargetsmsg=System $1 could not be failed over from host system $2, as no suitable failover targets were found :
 fail_fmsg=Failover of system $1 to new host $2 failed!
 fail_smsg=Failover of system $1 to new host $2 was completed successfully.
+fail_norepeat=The failover process will not be automatically repeated for this system.
