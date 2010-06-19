@@ -19,7 +19,14 @@ if (@ARGV) {
 	%hosts = map { $_, 1 } @ARGV;
 	@servers = grep { $hosts{$_->{'host'}} } @servers;
 	}
-&parallel_check_server_status(\@servers, 0, 1);
+
+# Identify parent and virtual systems
+@pservers = grep { !&is_virtual_server($_) } @servers;
+@oservers = grep { &is_virtual_server($_) } @servers;
+
+foreach $l (\@pservers, \@oservers) {
+	&parallel_check_server_status($l, 0, 1);
+	}
 
 # Once systems have been updated, re-check alerts based on new history
 if (!&is_cloudmin_replica()) {

@@ -343,16 +343,15 @@ sub save_managed_server
 {
 my ($server) = @_;
 
-# If status has changed, log it
-if ($server->{'status'} ne $server->{'statuslast'}) {
-	if ($server->{'statuslast'}) {
-		&save_status_history($server,
-			{ 'old' => $server->{'statuslast'},
-			  'new' => $server->{'status'},
-			  'time' => $server->{'statustime'} });
-		}
-	$server->{'statuslast'} = $server->{'status'};
-	$server->{'statuslasttime'} = $server->{'statustime'};
+# If status has changed, log it.
+# statushistory = Status at the last time we logged a change
+if ($server->{'status'} ne $server->{'statushistory'} &&
+    $server->{'statuslast'}) {
+	&save_status_history($server,
+		{ 'old' => $server->{'statuslast'},
+		  'new' => $server->{'status'},
+		  'time' => $server->{'statustime'} });
+	$server->{'statushistory'} = $server->{'status'};
 	}
 
 if ($server->{'id'} eq '0') {
@@ -2265,6 +2264,7 @@ my $rv = 0;
 my ($status, $err, $webminroot, $webminport, $webminssl, $hostname) =
 	&check_server_ssh_login($server);
 $err =~ s/\r?\n/ /g;
+my $oldstatus = $server->{'status'};
 if ($status == 2) {
 	# Could not login via SSH
 	$server->{'status'} = 'nosshlogin';
@@ -2771,6 +2771,12 @@ if ($server->{'status'} ne 'nohost' &&
 			$server->{'data_files'} = join(" ", @dfiles);
 			}
 		}
+	}
+
+# Record status change
+if ($oldstatus ne $server->{'status'}) {
+	$server->{'statuslast'} = $oldstatus;
+	$server->{'statuslasttime'} = $server->{'statustime'};
 	}
 
 &release_lock_server($server);
