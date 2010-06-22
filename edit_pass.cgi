@@ -14,10 +14,23 @@ print &ui_form_start("save_pass.cgi", "post");
 print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'pass_header'}, undef, 2);
 
-# SSH password
-print &ui_table_row($text{'pass_ssh'},
-	&ui_opt_textbox("ssh_pass", undef, 20, $text{'pass_leave'},
-			$text{'pass_set'}));
+@keys = &list_ssh_keys();
+if (&can_action(undef, "sshkeys") && @keys) {
+	# SSH password or key
+	print &ui_table_row($text{'pass_ssh2'},
+		&ui_radio_table("ssh_pass_def", 1,
+			[ [ 1, $text{'pass_leave'} ],
+			  [ 0, $text{'pass_set'},
+			    &ui_textbox("ssh_pass", undef, 20) ],
+			  [ 2, $text{'pass_sshkey'},
+			    &ssh_key_menu("ssh_key", undef, undef) ] ]));
+	}
+else {
+	# SSH password
+	print &ui_table_row($text{'pass_ssh'},
+		&ui_opt_textbox("ssh_pass", undef, 20, $text{'pass_leave'},
+				$text{'pass_set'}));
+	}
 
 # Webmin password
 if ($server->{'status'} eq 'virt' ||

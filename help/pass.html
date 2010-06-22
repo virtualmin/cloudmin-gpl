@@ -2,6 +2,11 @@
 
 This page can be used to change either a system's <tt>root</tt> password (used for SSH logins), its Webmin password, or both. This may be necessary when you are turning a system over to another user or customer, or if the original password is too weak or has been compromised. <p>
 
+You can also select to use an SSH key to login to this system, which Cloudmin
+will add to its <tt>/root/.ssh/authorized_keys</tt> file if necessary. This
+is only possible if keys have been added on the <b>SSH Keys</b> page though,
+and if you are allowed to use them. <p>
+
 When changing the Webmin password, you have an option to make it the same as the Unix <tt>root</tt> password. This is done by configuring Webmin on the system to use PAM or read the <tt>/etc/shadow</tt> file when <tt>root</tt> logs in,
 so that any future changes to the SSH password will match. <p>
 

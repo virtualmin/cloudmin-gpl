@@ -10,8 +10,15 @@ $server || &error($text{'edit_egone'});
 &can_action_error($server, "pass");
 
 # Validate inputs
-$in{'ssh_pass_def'} || $in{'ssh_pass'} =~ /\S/ ||
-	&error($text{'pass_essh_pass'});
+if ($in{'ssh_pass_def'} == 0) {
+	$in{'ssh_pass'} =~ /\S/ || &error($text{'pass_essh_pass'});
+	}
+elsif ($in{'ssh_pass_def'} == 2) {
+	&can_action_error(undef, "sshkeys");
+	@keys = &list_ssh_keys();
+	($key) = grep { $_->{'id'} eq $in{'ssh_key'} } @keys;
+	$key || &error($text{'pass_essh_key'});
+	}
 !defined($in{'webmin_pass_def'}) || $in{'webmin_pass_def'} != 0 ||
    $in{'webmin_pass'} =~ /\S/ || 
 	&error($text{'pass_ewebmin_pass'});
@@ -24,8 +31,8 @@ if ($in{'webmin_pass_def'} == 2 &&
 &ui_print_unbuffered_header(&server_in($server), $text{'pass_title'}, "");
 &obtain_lock_server($server);
 
-# Change SSH password, by updating /etc/shadow
-if (!$in{'ssh_pass_def'}) {
+if ($in{'ssh_pass_def'} == 0) {
+	# Change SSH password, by updating /etc/shadow
 	$done++;
 	&$first_print($text{'pass_sshing'});
 	$err = &set_shadow_root_password($server, $in{'ssh_pass'});
@@ -40,6 +47,23 @@ if (!$in{'ssh_pass_def'}) {
 			$server->{'pass'} = $in{'ssh_pass'};
 			}
 		delete($server->{'key'});
+		&save_managed_server($server);
+		}
+	}
+elsif ($in{'ssh_pass_def'} == 2) {
+	# Use SSH key
+	$done++;
+	&$first_print($text{'pass_sshkeying'});
+	$server->{'key'} = $key->{'id'};
+	$err = &create_authorized_key($server, 1);
+	if ($err) {
+		&$second_print(&text('pass_ewebmin', $err));
+		goto DONE;
+                }
+	else {
+		&$second_print($text{'pass_sshkeydone'});
+		$server->{'ssh_pass_same'} = 0;
+		delete($server->{'ssh_pass'});
 		&save_managed_server($server);
 		}
 	}

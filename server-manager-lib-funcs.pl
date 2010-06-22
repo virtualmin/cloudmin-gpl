@@ -4588,19 +4588,38 @@ else {
 	}
 }
 
-# create_authorized_key(&server)
-# Add the SSH key selected for this server to root's ~/.ssh/authorized_keys file
+# create_authorized_key(&server, [add-key])
+# Add or replace the SSH key selected for this server in root's
+# ~/.ssh/authorized_keys file
 sub create_authorized_key
 {
-my ($server) = @_;
+my ($server, $add) = @_;
 my ($key) = grep { $_->{'id'} eq $server->{'key'} } &list_ssh_keys();
 my $authkeys = &setup_authorized_keys($server);
 my $temp = &transname();
-&open_tempfile(AUTH, ">$temp");
-&print_tempfile(AUTH, &generate_public_key($key),"\n");
-&close_tempfile(AUTH);
-&set_ownership_permissions(undef, undef, 0700, $temp);
-return &put_file_to_server($server, $temp, $authkeys);
+if ($add) {
+	my @st = &stat_file_on_server($server, $authkeys);
+	if (@st == 1) {
+		# Could not stat
+		return $st[0];
+		}
+	my $err = &get_file_from_server($server, $authkeys, $temp);
+	return $err if ($err);
+	}
+my $lref = &read_file_lines($temp);
+my $keyline = &generate_public_key($key);
+my $idx = &indexof($keyline, @$lref);
+if ($idx < 0) {
+	push(@$lref, $keyline);
+	&flush_file_lines($temp);
+	&set_ownership_permissions(undef, undef, 0700, $temp);
+	return &put_file_to_server($server, $temp, $authkeys);
+	}
+else {
+	# Already in the file
+	&unflush_file_lines($temp);
+	return undef;
+	}
 }
 
 # setup_authorized_keys(&server)

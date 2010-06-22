@@ -12,7 +12,13 @@ parameter.
 
 When the command is run, it will update C</etc/shadow> and
 C</etc/webmin/miniserv.users> on the selected machine to make the changes.
-Cloudmin's authentication information for the system will also be updated to match.
+Cloudmin's authentication information for the system will also be updated to
+match.
+
+Alternately, you can configure the system to accept root logins via an SSH
+key setup in Cloudmin with the C<--ssh-key> flag, followed by a key ID.
+Registered keys can be fetched from the C<list-ssh-keys> API command. This will
+update the C</root/.ssh/authorized_keys> file on the virtual system.
 
 If you have created a virtual system for a customer, changing the root
 password when you are ready to hand it over is a good idea. Be aware that 
@@ -39,6 +45,7 @@ $< == 0 || die "$0 must be run as root";
 &usage_if_cloudmin_replica();
 
 # Parse command line
+@keys = &list_ssh_keys();
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--host") {
@@ -46,6 +53,14 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--ssh-pass") {
 		$ssh_pass = shift(@ARGV);
+		}
+	elsif ($a eq "--ssh-key") {
+		&can_action_usage(undef, "sshkeys");
+		$ssh_key = shift(@ARGV);
+		($key) = grep { $_->{'id'} eq $ssh_key } @keys;
+		$key || &usage("No SSH key with ID $ssh_key found");
+		$key->{'public'} &&
+		  &usage("The SSH key with ID $ssh_key is a public key only");
 		}
 	elsif ($a eq "--webmin-pass") {
 		$webmin_pass = shift(@ARGV);
@@ -60,8 +75,9 @@ while(@ARGV > 0) {
 
 # Check for required inputs
 $host || &usage("Missing --host parameter");
-defined($ssh_pass) || defined($webmin_pass) || $webmin_same ||
+defined($ssh_pass) || defined($key) || defined($webmin_pass) || $webmin_same ||
 	&usage("No password changes specified");
+$ssh_pass && $key && &usage("Only one of --ssh-pass or --ssh-key can be used");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
 &can_action_usage($server, "pass"); 
@@ -88,6 +104,22 @@ if (defined($ssh_pass)) {
 			$server->{'pass'} = $ssh_pass;
 			}
 		delete($server->{'key'});
+		&save_managed_server($server);
+		}
+	}
+elsif (defined($key)) {
+	# Set SSH key
+	print "Setting SSH key ..\n";
+	$server->{'key'} = $key->{'id'};
+	$err = &create_authorized_key($server, 1);
+	if ($err) {
+		print ".. failed : $err\n\n";
+                $failed++;
+                }
+	else {
+		print ".. configured to allow login with key\n\n";
+		$server->{'ssh_pass_same'} = 0;
+		delete($server->{'ssh_pass'});
 		&save_managed_server($server);
 		}
 	}
@@ -128,7 +160,7 @@ elsif ($webmin_same) {
 print "Re-checking system status..\n";
 &check_server_status($server, 0, 1);
 &save_managed_server($server);
-print ".. done\n\n";
+print ".. done, new status is ",&describe_status($server),"\n\n";
 
 &release_lock_server($server);
 if (!$failed) {
@@ -142,7 +174,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Changes the SSH or Webmin passwords for a managed system.\n";
 print "\n";
 print "cloudmin passwd-systems --host name\n";
-print "                       [--ssh-pass password]\n";
+print "                       [--ssh-pass password | --ssh-key id]\n";
 print "                       [--webmin-pass password | --webmin-same]\n";
 exit(1);
 }
