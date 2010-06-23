@@ -23,6 +23,14 @@ if (!defined(&$hfunc) || !&$hfunc()) {
 			    &ui_textbox("host", undef, 40));
 	}
 
+# Unix hostname
+$chfunc = "type_".$in{'type'}."_can_custom_hostname";
+if (defined(&$chfunc) && &$chfunc()) {
+	print &ui_table_row($text{'create_unixhost'},
+			    &ui_opt_textbox("unixhost", undef, 40,
+					    $text{'create_unixsame'}));
+	}
+
 # Description
 print &ui_table_row($text{'add_desc'},
 	&ui_textbox("desc", undef, 60));

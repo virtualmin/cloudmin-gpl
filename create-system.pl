@@ -19,6 +19,11 @@ the C<--image> parameter, followed by an image ID. To see the full list of
 available and required options for a particular system type, run
 C<create-system.pl> with the C<--type> and C<--help> flags.
 
+By default the new system's Unix hostname will be the same as the external
+name set with the C<--host> flag, but you can modify this with the
+C<--unix-host> option. For example, for a customer's system you might set it
+to I<www.something.com>.
+
 If you are creating a system from an image that includes Virtualmin Pro, you
 will need to specify a license using either the C<--allocate-serial> parameter,
 or C<--serial> and C<--key>. The former will select an available license from
@@ -110,6 +115,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--host") {
 		$host = shift(@ARGV);
 		}
+	elsif ($a eq "--unix-host") {
+		$unixhost = shift(@ARGV);
+		}
 	elsif ($a eq "--desc") {
 		$desc = shift(@ARGV);
 		}
@@ -172,6 +180,13 @@ if (!defined(&$hfunc) || !&$hfunc()) {
 	$host =~ /^[a-z0-9\.\-]+$/ || &usage("Invalid hostname");
 	($clash) = grep { $_->{'host'} eq $host } @servers;
 	$clash && &usage("A system with the same hostname already exists");
+	}
+if ($unixhost) {
+	$unixhost =~ /^[a-z0-9\.\-]+$/ || &usage("Invalid Unix hostname");
+	$chfunc = "type_".$type."_can_custom_hostname";
+	defined(&$chfunc) && &$chfunc() ||
+		&usage("This system type does not support setting the ".
+		       "Unix hostname");
 	}
 $sfunc = "type_".$type."_no_ssh";
 $no_ssh = defined(&$sfunc) && &$sfunc();
@@ -236,6 +251,9 @@ if ($image && $img->{'type'}) {
 	}
 if (!defined(&$hfunc) || !&$hfunc()) {
 	$server->{'host'} = $host;
+	}
+if ($unixhost) {
+	$server->{'unix_hostname'} = $unixhost;
 	}
 if (!$no_ssh) {
 	$server->{'ssh_user'} = 'root';
@@ -623,6 +641,7 @@ print "Creates a new virtual system of some type.\n";
 print "\n";
 my $crtypes = join("|", @crtypes);
 print "cloudmin create-system --host name\n";
+print "                      [--unix-host name]\n";
 print "                       --type $crtypes\n" if ($crtypes);
 print "                      [--desc \"system description\"]\n";
 print "                       --ssh-key keyid | --ssh-pass password\n";

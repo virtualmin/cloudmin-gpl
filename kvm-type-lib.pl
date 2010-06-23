@@ -54,6 +54,12 @@ return $server->{'status'} ne 'nohost' &&
        $server->{'status'} ne 'nosshlogin';
 }
 
+# KVM instances can have a hostname separate from the DNS name
+sub type_kvm_can_custom_hostname
+{
+return 1;
+}
+
 # Can reset, if the host is up
 sub type_kvm_can_reset
 {
@@ -922,7 +928,7 @@ if (&has_addnew_keys($server)) {
 
 # Fix other config files that refer to the hostname or IP
 &$first_print($text{'create_xenfix'});
-my $fullhost = $server->{'host'};
+my $fullhost = $server->{'unix_hostname'} || $server->{'host'};
 my $shorthost = $fullhost;
 $shorthost =~ s/\..*$//;
 my $err = &fix_hostname_config_files($server, $ips[0],

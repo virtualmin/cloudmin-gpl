@@ -20,6 +20,11 @@ if (defined($in{'host'})) {
 	$clash && &error($text{'add_eclash'});
 	$server->{'host'} = $in{'host'};
 	}
+if (defined($in{'unixhost'}) && !$in{'unixhost_def'}) {
+	$in{'unixhost'} =~ /^[a-z0-9\.\-]+$/ ||
+		&error($text{'create_eunixhost'});
+	$server->{'unix_hostname'} = $in{'unixhost'};
+	}
 $server->{'desc'} = $in{'desc'};
 
 # SSH login
