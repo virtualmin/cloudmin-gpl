@@ -448,11 +448,13 @@ foreach my $vsync (&list_virtualmin_syncs()) {
 		}
 	}
 
-# Delete any scheduled changes for this system
-foreach my $sched (&list_scheduled_changes()) {
-	if ($sched->{'server'} eq $server->{'id'}) {
-		&save_scheduled_change($server, $sched->{'type'},
-				       $sched->{'id'}, undef);
+if (defined(&list_scheduled_changes)) {
+	# Delete any scheduled changes for this system
+	foreach my $sched (&list_scheduled_changes()) {
+		if ($sched->{'server'} eq $server->{'id'}) {
+			&save_scheduled_change($server, $sched->{'type'},
+					       $sched->{'id'}, undef);
+			}
 		}
 	}
 }
