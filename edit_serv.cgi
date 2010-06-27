@@ -419,7 +419,8 @@ if ($view) {
 	}
 else {
 	$haswebmin = ($status eq 'nowebminlogin' || $status eq 'novirt' ||
-		      $status eq 'downwebmin' || $status eq 'virt') &&
+		      $status eq 'downwebmin' || $status eq 'virt' ||
+		      $status eq 'nowebmin' && $server->{'no_webmin_login'}) &&
 		     $server->{'id'} != 0;
 	$sfunc = "type_".$t."_no_ssh";
 	$hasssh = !defined(&$sfunc) || !&$sfunc();
