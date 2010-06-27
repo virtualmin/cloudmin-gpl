@@ -816,7 +816,7 @@ if (defined(&$sfunc)) {
 # Need to really SSH
 my $cmd = &build_ssh_command($server, 1);
 my $timeout = int($config{'ssh_timeout'}) || 30;
-$cmd .= " 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo OK ; hostname'";
+$cmd .= " 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo HOSTNAME ; hostname ; echo OK'";
 my ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, $timeout);
 if ($status == 0) {
 	# Connected OK .. check the output to see if we have Webmin
@@ -854,7 +854,7 @@ if ($status == 0) {
 				}
 			}
 		my $hostname;
-		if ($out =~ /OK\r?\n(\S+)\r?\n/) {
+		if ($out =~ /HOSTNAME\r?\n(\S+)\r?\n/) {
 			# Parse out hostname
 			$hostname = $1;
 			}
@@ -1946,8 +1946,8 @@ if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 		return undef;
 		}
 	}
-$out =~ s/\r|\n//g;
-return $out;
+my @lines = split(/\r?\n/, $out);
+return $lines[0];
 }
 
 # checksum_file_on_server(&server, file, [data-size])
@@ -5631,6 +5631,8 @@ my $pfunc = "type_".$server->{'manager'}."_can_password";
 my $canpass = defined(&$pfunc) && &$pfunc($server);
 my $clonefunc = "type_".$server->{'manager'}."_can_clone";
 my $canclone = defined(&$clonefunc) && &$clonefunc($server);
+my $bootfunc = "type_".$server->{'manager'}."_list_boot_modes";
+my $canboot = defined(&$bootfunc) && ref(&$bootfunc($server));
 
 # Start with links to edit_serv.cgi
 my $ed = "edit_serv.cgi?id=$server->{'id'}";
@@ -5903,6 +5905,13 @@ if ($canreset && &can_action($server, "reset")) {
 		    'desc' => $text{'edit_reset'},
 		    'cat' => 'manage',
 		    'link' => "reset_form.cgi?id=$server->{'id'}" });
+	}
+if ($canboot && &can_action($server, "boot")) {
+	# Can edit boot mode
+	push(@rv, { 'id' => 'boot',
+		    'desc' => $text{'edit_boot'},
+		    'cat' => 'power',
+		    'link' => "clone_form.cgi?id=$server->{'id'}" });
 	}
 
 # Pause/un-pause link
