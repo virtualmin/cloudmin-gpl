@@ -20,8 +20,8 @@ foreach $i (@avail) {
 # Show links for display mode
 print "<b>$text{'images_mode'}</b>\n";
 @links = ( );
-$in{'mode'} ||= 'all';
-foreach $m ("all", "got", "avail", "local", "virtualmin") {
+$in{'mode'} ||= 'suitable';
+foreach $m ("all", "suitable", "got", "avail", "local", "virtualmin") {
 	$msg = $text{'images_mode_'.$m};
 	if ($m ne $in{'mode'}) {
 		$msg = "<a href='list_images.cgi?mode=$m'>$msg</a>";
@@ -31,7 +31,12 @@ foreach $m ("all", "got", "avail", "local", "virtualmin") {
 print &ui_links_row(\@links),"<p>\n";
 
 # Apply mode
-if ($in{'mode'} eq 'got') {
+if ($in{'mode'} eq 'suitable') {
+	# Only those for configured system types
+	@combines = grep { $server_management_types{$_->{'manager'}} } 
+			 @combined;
+	}
+elsif ($in{'mode'} eq 'got') {
 	# Only those we have downloaded
 	@combined = grep { $got_images{$_->{'id'}} } @combined;
 	}
