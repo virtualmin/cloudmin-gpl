@@ -3787,7 +3787,7 @@ if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm)\s+(.*)/) {
 		if ($a =~ /^\-+(\S+)$/) {
 			# Start of a new arg
 			$lastarg = $1;
-			if ($ah->{$lastarg}) {
+			if ($ah->{$lastarg} && !ref($ah->{$lastarg})) {
 				# Already seen .. convert to array
 				$ah->{$lastarg} = [ $ah->{$lastarg} ];
 				}
