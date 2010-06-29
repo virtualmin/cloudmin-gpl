@@ -5911,7 +5911,7 @@ if ($canboot && &can_action($server, "boot")) {
 	push(@rv, { 'id' => 'boot',
 		    'desc' => $text{'edit_boot'},
 		    'cat' => 'power',
-		    'link' => "clone_form.cgi?id=$server->{'id'}" });
+		    'link' => "boot_form.cgi?id=$server->{'id'}" });
 	}
 
 # Pause/un-pause link

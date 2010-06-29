@@ -91,8 +91,8 @@ if (defined(&list_backups)) {
 # Returns a list of all possible actions
 sub list_owner_actions
 {
-return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
-	 'pass', 'domains', 'update', 'script', 'pause', 'reset',
+return ( 'startup', 'shutdown', 'reboot', 'boot', 'console', 'graph', 'view',
+	 'run', 'pass', 'domains', 'update', 'script', 'pause', 'reset',
 	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
 	 'reverse', 'limits', 'disks', 'devices', 'sshkeys', 'backup', 'webmin',
 	 'virtualmin', 'api' );
@@ -102,8 +102,8 @@ return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
 # Returns a set of actions that are reasonable for system owners
 sub list_safe_owner_actions
 {
-return ( 'startup', 'shutdown', 'reboot', 'console', 'graph', 'view', 'run',
-	 'pass', 'domains', 'update', 'script', 'pause', 'reset',
+return ( 'startup', 'shutdown', 'reboot', 'console', 'boot', 'graph', 'view',
+	 'run', 'pass', 'domains', 'update', 'script', 'pause', 'reset',
          'create', 'delete', 'ifaces', 'reverse', 'limits', 'disks',
 	 'webmin', 'virtualmin', 'api' );
 }
