@@ -25,6 +25,9 @@ Changes the password Cloudmin will use to login, *not* the system's actual root 
 C<--boot> or C<--no-boot>
 Either enables the system at host boot time, or disables it.
 
+C<--boot-mode> I<mode>
+Changes the way the system boots, which typically determines which kernel it uses.
+
 C<--location> I<name> or C<--no-location>
 Sets the location group for a host system, or removes it from a group.
 
@@ -101,6 +104,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-boot") {
 		$boot = 0;
 		}
+	elsif ($a eq "--boot-mode") {
+		$bootmode = shift(@ARGV);
+		}
 	elsif ($a eq "--location") {
 		$lname = shift(@ARGV);
 		($loc) = grep { $_->{'id'} eq $lname ||
@@ -167,6 +173,19 @@ if (defined($ssh_key)) {
 	}
 elsif (defined($ssh_pass)) {
 	$hasssh || &usage("This system type does not support SSH");
+	}
+
+# Validate boot mode
+if ($bootmode) {
+	&can_action_usage($server, "boot");
+	$mfunc = "type_".$server->{'manager'}."_list_boot_modes";
+	defined(&$mfunc) || &usage("This virtual system type does not support ".
+				   "changing the boot mode");
+	$modes = &$mfunc($server);
+	$modes || &usage("Failed to check boot methods : $modes");
+	($canmode) = grep { $_->{'id'} eq $bootmode } @$modes;
+	$canmode || &usage("Invalid boot mode - possible options are : ".
+			   join(" ", map { $_->{'id'} } @$modes));
 	}
 
 # Make all the changes
@@ -237,6 +256,13 @@ if (defined($boot)) {
 		}
 	}
 
+# Change boot mode
+if ($bootmode) {
+	$mfunc = "type_".$server->{'manager'}."_set_boot_mode";
+	$err = &$mfunc($server, $bootmode);
+	$err && &usage("Failed to change boot mode to $bootmode : $err");
+	}
+
 # Update status if needed
 if ($recheck) {
 	&check_server_status($server);
@@ -268,6 +294,7 @@ print "                      [--webmin-user user]\n";
 print "                      [--webmin-pass password]\n";
 print "                      [--webmin-same]\n";
 print "                      [--boot | --no-boot]\n";
+print "                      [--boot-mode mode]\n";
 if (defined(&list_locations)) {
 	print "                      [--location id | --no-location]\n";
 	}

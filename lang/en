@@ -4027,3 +4027,5 @@ boot_kernelmsg=$3 version $1 for $2
 boot_vkernel=Host system's kernel
 boot_mode=Boot method
 boot_reboot=Reboot after changing?
+boot_moding=Changing boot method to $1 ..
+boot_modefailed=.. change failed : $1

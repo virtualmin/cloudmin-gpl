@@ -161,6 +161,12 @@ if ($multi) {
 			print "    Start at boot: ",
 			      (&$bfunc($s) ? "Yes" : "No"),"\n";
 			}
+		$mfunc = "type_".$s->{'manager'}."_get_boot_mode";
+		if (defined(&$mfunc)) {
+			($mok, $mode) = &$mfunc($s);
+			print "    Boot method: ",
+				(!$mok ? "Unknown : $mode" : $mode),"\n";
+			}
 
 		# Login information
 		$sfunc = "type_".$s->{'manager'}."_no_ssh";

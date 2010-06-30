@@ -54,8 +54,10 @@ print &ui_table_row($text{'boot_mode'},
 		   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$modes ]));
 
 # Reboot after changing?
-print &ui_table_row($text{'boot_reboot'},
-	&ui_yesno_radio("reboot", 0));
+if ($server->{'status'} ne 'down') {
+	print &ui_table_row($text{'boot_reboot'},
+		&ui_yesno_radio("reboot", 0));
+	}
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'clone_ok'} ] ]);
