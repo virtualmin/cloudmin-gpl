@@ -30,15 +30,22 @@ else {
 	# Reboot if requested
 	if ($in{'reboot'}) {
 		&$first_print($text{'mkimage_shutdown'});
-		$err = &shutdown_system($server);
+		$err = &shutdown_server($server);
 		if ($err) {
 			&$second_print(&text('mkimage_eshutdown', $err));
 			}
 		else {
+			&$second_print($text{'create_done'});
 			}
-		# XXX
 
-		# XXX down and up again
+		&$first_print($text{'mkimage_startup'});
+		$err = &startup_server($server);
+		if ($err) {
+			&$second_print(&text('mkimage_estartup', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
 		}
 
 	# Refresh status
@@ -51,7 +58,7 @@ else {
 &release_lock_server($server);
 &webmin_log("boot", "server", $server->{'host'});
 if (defined(&theme_select_server)) {
-	&theme_select_server($newserver);
+	&theme_select_server($server);
 	}
 
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
