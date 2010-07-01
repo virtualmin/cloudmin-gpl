@@ -71,6 +71,8 @@ if (defined(&$ifunc) && &$ifunc($server) && !$in{'image'}) {
 $server->{'image'} = $in{'image'};
 if ($in{'image'}) {
 	$img = &get_server_image($in{'image'});
+	$img || &error($text{'create_eimagewrong'});
+	&can_image($img) || &error($text{'create_eimagecannot'});
 	if ($img->{'type'}) {
 		$server->{'type'} = $img->{'type'};
 		}

@@ -248,10 +248,11 @@ foreach my $n (grep { /^nic/ } @nets) {
 $server->{'mac'} = join(" ", @macs);
 }
 
-# type_kvm_create_form()
+# type_kvm_create_form([empty-flag])
 # Returns HTML for KVM-specific inputs
 sub type_kvm_create_form
 {
+my ($empty) = @_;
 my $rv;
 
 # Check if any vhosts have more than one bridge
@@ -387,10 +388,11 @@ if (&can_action(undef, "ips")) {
 return $rv;
 }
 
-# type_kvm_limits_create_form()
+# type_kvm_limits_create_form([empty-flag])
 # Returns HTML for KVM-specific inputs related to RAM and disk
 sub type_kvm_limits_create_form
 {
+my ($empty) = @_;
 my $rv;
 
 # Physical memory
@@ -407,35 +409,37 @@ $rv .= &ui_table_row($text{'create_xenmemory'},
 
 # Filesystem size
 $rv .= &ui_table_row($text{'create_xendisksize'},
-	&ui_opt_textbox("kvm_disk", undef, 8,$text{'create_xendiskdef'})." MB");
+	$empty ? &ui_textbox("kvm_disk", 2048, 8)."MB" :
+		 &ui_opt_textbox("kvm_disk", undef, 8,
+				 $text{'create_xendiskdef'})." MB");
 
 return $rv;
 }
 
-# type_kvm_create_parse(&server, &in)
+# type_kvm_create_parse(&server, &in, [empty-flag])
 # Parse inputs from type_kvm_create_form, and update the server object
 sub type_kvm_create_parse
 {
-my ($server, $in) = @_;
+my ($server, $in, $empty) = @_;
+my $img = $empty ? undef : &get_server_image($server->{'image'});
 
 # Validate memory parameters
 $in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
 $server->{'kvm_memory'} = $in{'kvm_memory'};
 
 # Validate disk size
-if (!$in{'kvm_disk_def'}) {
+if (!$in{'kvm_disk_def'} || $empty) {
 	$in{'kvm_disk'} =~ /^\d+$/ || &error($text{'create_exendisksize'});
 	$server->{'kvm_disksize'} = $in{'kvm_disk'};
 	$server->{'kvm_disktotal'} = $in{'kvm_disk'}*1024*1024;
-	if ($img->{'rawsize'} &&
+	if (!$empty &&
+	    $img->{'rawsize'} &&
 	    $img->{'rawsize'} > $in{'kvm_disk'}*1024*1024) {
 		&error(&text('create_exendisksize2',
 			     &nice_size($img->{'rawsize'})));
 		}
 	}
 else {
-	# XXX what if a CD image?
-	my $img = &get_server_image($server->{'image'});
 	$server->{'kvm_disktotal'} = $img->{'rawsize'};
 	}
 
@@ -537,11 +541,12 @@ if (&can_action(undef, "advanced")) {
 return @rv;
 }
 
-# type_kvm_create_args_parse(&args, &server)
+# type_kvm_create_args_parse(&args, &server, [empty-flag])
 # Update a server object with parsed command-line args
 sub type_kvm_create_args_parse
 {
-my ($args, $server) = @_;
+my ($args, $server, $empty) = @_;
+my $img = $empty ? undef : &get_server_image($server->{'image'});
 
 # Validate memory flags
 if ($args->{'memory'}) {
@@ -553,19 +558,19 @@ else {
 	}
 
 # Validate filesystem size flag
-if ($args->{'disksize'}) {
+if ($args->{'disksize'} || $empty) {
+	$args->{'disksize'} || return "Missing disk size parameter";
 	$args->{'disksize'} =~ /^\d+$/ ||
 		return "Non-numeric disk size";
 	$server->{'kvm_disksize'} = $args->{'disksize'};
-	if ($img->{'rawsize'} &&
+	if (!$empty &&
+            $img->{'rawsize'} &&
 	    $img->{'rawsize'} > $args->{'disksize'}*1024*1024) {
 		return "--kvm-disksize must be at least $img->{'rawsize'} ".
 		       "bytes, as that is the size of the selected image";
 		}
 	}
 else {
-	# XXX what if a CD image?
-	my $img = &get_server_image($server->{'image'});
 	$server->{'kvm_disktotal'} += $img->{'rawsize'};
 	}
 
@@ -710,13 +715,13 @@ if (&can_action(undef, "advanced")) {
 return undef;
 }
 
-# type_kvm_create(&server, [serial, key], [reset])
+# type_kvm_create(&server, [serial, key], [reset], [empty])
 # Create a new KVM instance, by unzipping the filesystem image in the background
 sub type_kvm_create
 {
-my ($server, $serial, $key, $reset) = @_;
+my ($server, $serial, $key, $reset, $empty) = @_;
 my $vhost = &type_kvm_parent($server);
-my $img = &get_server_image($server->{'image'});
+my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
 
 # Create base dir if needed
 if (!-d $vhost->{'kvm_dir'}) {
@@ -757,7 +762,7 @@ $last_remote_error = undef;
 if ($server->{'kvm_filesystem_vg'}) {
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 	my $lv = { 'name' => $server->{'kvm_filesystem_lv'},
-		   'size' => int($img->{'rawsize'}/1024) ||
+		   'size' => ($img ? int($img->{'rawsize'}/1024) : 0) ||
 			     int($server->{'kvm_disksize'}/1024) || 1024*1024,
 		   'perm' => 'rw',
 		   'alloc' => 'n',
@@ -776,35 +781,75 @@ if ($server->{'kvm_filesystem_vg'}) {
 	return "LVM logical volume creation failed : $err" if ($err);
 	}
 
-# Put the image into place, in the background
-my @imgfiles = split(/\s+/, $img->{'files'});
-my $imgfile = "$server->{'imagetemp'}/$imgfiles[0]";
-my $temp = "/tmp/$$.$server->{'host'}.gunzip";
-$server->{'kvm_temp'} = $temp;
-if (!$img->{'nocompress'}) {
-	# Need to un-compress the image
-	my $writer = $fsfile =~ /^\/dev\// ?
-			"| dd of=".quotemeta($fsfile)." bs=32768" :
-			"> ".quotemeta($fsfile);
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
-		" echo SERVER-MANAGER-COMPLETE || echo SERVER-MANAGER-FAILED)".
-		" >$temp 2>&1 </dev/null &");
+# Create disk file and partition
+if ($empty) {
+	my $dksize = $server->{'kvm_disksize'}*1024*1024;
+	if (!$server->{'kvm_filesystem_vg'}) {
+		my $cmd = "dd if=/dev/zero of=".quotemeta($fsfile).
+			  " bs=1024 count=".int($dksize/1024);
+		my ($out, $ex, $err) = &execute_command_on_server(
+						$vhost, $cmd);
+		$err = $out if ($ex);
+		$err && return "Failed to create file $disk->{'real'} : $err";
+		}
+	my $err = &create_disk_image_partition($vhost, $fsfile,
+					       1, $dksize, 1);
+	return $err if ($err);
+	}
+
+# Add CD to list of disks
+my $imgdestfile;
+if ($empty && $server->{'image'}) {
+	# CD will be copied to a new file
+	$imgdestfile = "$vhost->{'kvm_dir'}/$server->{'host'}.cd";
+	$server->{'kvm_drives'} .=
+		" file=$imgdestfile,media=cdrom,index=1,if=ide";
+	}
+elsif ($empty && !$server->{'image'}) {
+	# CD is in an existing file
+	&stat_file_on_server($vhost, $server->{'imagefile'}) ||
+		return "CD image on host system $server->{'imagefile'} does ".
+		       "not exist";
+	$server->{'kvm_drives'} .=
+		" file=$server->{'imagefile'},media=cdrom,index=1,if=ide";
 	}
 else {
-	my $cmd;
-	if ($fsfile =~ /^\/dev\//) {
-		# DD directly into LVM
-		$cmd = "dd if=$imgfile of=$fsfile bs=32768";
+	$imgdestfile = $fsfile;
+	}
+
+# Put the image into place, in the background
+if ($imgdestfile) {
+	my @imgfiles = split(/\s+/, $img->{'files'});
+	my $imgfile = "$server->{'imagetemp'}/$imgfiles[0]";
+	my $temp = "/tmp/$$.$server->{'host'}.gunzip";
+	$server->{'kvm_temp'} = $temp;
+	if (!$img->{'nocompress'}) {
+		# Need to un-compress the image
+		my $writer = $imgdestfile =~ /^\/dev\// ?
+				"| dd of=".quotemeta($imgdestfile)." bs=32768" :
+				"> ".quotemeta($imgdestfile);
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
+			" echo SERVER-MANAGER-COMPLETE ||".
+			" echo SERVER-MANAGER-FAILED)".
+			" >$temp 2>&1 </dev/null &");
 		}
 	else {
-		# Can just move or copy
-		$cmd = $server->{'imagelocal'} ? "cp" : "mv";
-		$cmd .= " ".quotemeta($imgfile);
-		$cmd .= " ".quotemeta($fsfile);
+		my $cmd;
+		if ($imgdestfile =~ /^\/dev\//) {
+			# DD directly into LVM
+			$cmd = "dd if=$imgfile of=$imgdestfile bs=32768";
+			}
+		else {
+			# Can just move or copy
+			$cmd = $server->{'imagelocal'} ? "cp" : "mv";
+			$cmd .= " ".quotemeta($imgfile);
+			$cmd .= " ".quotemeta($imgdestfile);
+			}
+		$cmd = "($cmd && echo SERVER-MANAGER-COMPLETE || ".
+		       "echo SERVER-MANAGER-FAILED) >$temp 2>&1 </dev/null &";
+		my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
 		}
-	$cmd = "($cmd && echo SERVER-MANAGER-COMPLETE || echo SERVER-MANAGER-FAILED) >$temp 2>&1 </dev/null &";
-	my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
 	}
 
 return undef;
@@ -817,6 +862,11 @@ sub type_kvm_create_done
 {
 my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
+if (!$server->{'kvm_temp'}) {
+	# No image creation was needed (as we are using a CD already on
+	# the host)
+	return "OK";
+	}
 
 # Read the gzip output file
 my $data = &get_file_data_from_server($vhost, $server->{'kvm_temp'});
@@ -836,12 +886,12 @@ else {
 	}
 }
 
-# type_kvm_create_post(&server, [serial, key], [reset])
+# type_kvm_create_post(&server, [serial, key], [reset], [empty])
 # Called after creation is complete. Here we can mount and fix up config
 # files in the filesytem, then start the instance.
 sub type_kvm_create_post
 {
-my ($server, $serial, $key, $reset) = @_;
+my ($server, $serial, $key, $reset, $empty) = @_;
 my $vhost = &type_kvm_parent($server);
 my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @cidrs = split(/\s+/, $server->{'kvm_cidr'});

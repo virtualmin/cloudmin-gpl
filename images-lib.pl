@@ -226,7 +226,7 @@ my ($server, $progress) = @_;
 my $pfunc = "type_".$server->{'manager'}."_parent";
 my $vhost = &$pfunc($server);
 $vhost || return (0, "Could not find parent system");
-my ($img) = grep { $_->{'id'} eq $server->{'image'} } &list_server_images();
+my $img = &get_server_image($server->{'image'});
 $img || return (0, "Could not find image with ID $server->{'image'}");
 my @files = split(/\s+/, $img->{'files'});
 my @md5s = split(/\s+/, $img->{'md5'});

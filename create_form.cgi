@@ -122,7 +122,7 @@ if (!$access{'owner'} && scalar(@owners)) {
 # Type-specific options
 $ffunc = "type_".$in{'type'}."_create_form";
 if (defined(&$ffunc)) {
-	print &$ffunc();
+	print &$ffunc(0);
 	}
 
 print &ui_hidden_table_end();
@@ -132,7 +132,7 @@ $afunc = "type_".$in{'type'}."_limits_create_form";
 if (defined(&$afunc)) {
 	print &ui_hidden_table_start($text{'create_lheader'}, "width=100%", 2,
 				     "limits", 0, [ "width=30%" ]);
-	print &$afunc();
+	print &$afunc(0);
 	print &ui_hidden_table_end();
 	}
 
@@ -141,7 +141,7 @@ $afunc = "type_".$in{'type'}."_advanced_create_form";
 if (defined(&$afunc) && &can_action(undef, "advanced")) {
 	print &ui_hidden_table_start($text{'create_aheader'}, "width=100%", 2,
 				     "advanced", 0, [ "width=30%" ]);
-	print &$afunc();
+	print &$afunc(0);
 	print &ui_hidden_table_end();
 	}
 
@@ -177,7 +177,7 @@ if ($empty) {
 	print &ui_form_start("empty.cgi", "post");
 	print &ui_hidden("type", $in{'type'});
 	print &ui_hidden_table_start($text{'create_header2'}, "width=100%", 2,
-				     "main", 1, [ "width=30%" ]);
+				     "main2", 1, [ "width=30%" ]);
 
 	# Type of system
 	$tfunc = "type_".$in{'type'}."_desc";
@@ -212,6 +212,7 @@ if ($empty) {
 		}
 	elsif (@opts > 0) {
 		print &ui_table_row($opts[0]->[1], $opts[0]->[2]);
+		print &ui_hidden("cdmode", $opts[0]->[0]);
 		}
 	else {
 		print &ui_table_row($text{'create_cd'},
@@ -229,33 +230,30 @@ if ($empty) {
 		}
 
 	# Type-specific options
-	# XXX
 	$ffunc = "type_".$in{'type'}."_create_form";
 	if (defined(&$ffunc)) {
-		print &$ffunc();
+		print &$ffunc(1);
 		}
 
 	print &ui_hidden_table_end();
 
 	# Type-specific limit options
-	# XXX
 	$afunc = "type_".$in{'type'}."_limits_create_form";
 	if (defined(&$afunc)) {
 		print &ui_hidden_table_start($text{'create_lheader'},
 					     "width=100%", 2,
-					     "limits", 0, [ "width=30%" ]);
-		print &$afunc();
+					     "limits2", 0, [ "width=30%" ]);
+		print &$afunc(1);
 		print &ui_hidden_table_end();
 		}
 
 	# Type-specific advanced options
-	# XXX
 	$afunc = "type_".$in{'type'}."_advanced_create_form";
 	if (defined(&$afunc) && &can_action(undef, "advanced")) {
 		print &ui_hidden_table_start($text{'create_aheader'},
 					     "width=100%", 2,
-					     "advanced", 0, [ "width=30%" ]);
-		print &$afunc();
+					     "advanced2", 0, [ "width=30%" ]);
+		print &$afunc(1);
 		print &ui_hidden_table_end();
 		}
 
