@@ -7,6 +7,19 @@ require './server-manager-lib.pl';
 &can_create_server_error($in{'type'});
 &ui_print_header(undef, $text{'create_title'}, "", "new".$in{'type'});
 
+# Check if 'empty' creation is supported
+$efunc = "type_".$in{'type'}."_can_create_empty";
+$empty = defined(&$efunc) && &$efunc();
+if ($empty) {
+	# Yes, so show tabs
+	$prog = "create_form.cgi?type=$in{'type'}&mode=";
+	@tabs = ( [ "full", $text{'create_tabfull'}, $prog."full" ],
+		  [ "empty", $text{'create_tabempty'}, $prog."empty" ] );
+	print &ui_tabs_start(\@tabs, "mode", $in{'mode'} || "full", 1);
+	print &ui_tabs_start_tab("mode", "full");
+	print $text{'create_descfull'},"<p>\n";
+	}
+
 print &ui_form_start("create.cgi", "post");
 print &ui_hidden("type", $in{'type'});
 print &ui_hidden_table_start($text{'create_header'}, "width=100%", 2,
@@ -153,6 +166,104 @@ if (&can_action(undef, "virtualmin")) {
 	}
 
 print &ui_form_end([ [ undef, $text{'create_ok'} ] ]);
+
+if ($empty) {
+	# Show form for empty system creation, in a new tab
+	print &ui_tabs_end_tab();
+
+	print &ui_tabs_start_tab("mode", "empty");
+	print $text{'create_descempty'},"<p>\n";
+
+	print &ui_form_start("empty.cgi", "post");
+	print &ui_hidden("type", $in{'type'});
+	print &ui_hidden_table_start($text{'create_header2'}, "width=100%", 2,
+				     "main", 1, [ "width=30%" ]);
+
+	# Type of system
+	$tfunc = "type_".$in{'type'}."_desc";
+	print &ui_table_row($text{'add_type'}, &$tfunc());
+
+	# Hostname
+	print &ui_table_row($text{'create_host'},
+			    &ui_textbox("host", undef, 40));
+
+	# Description
+	print &ui_table_row($text{'add_desc'},
+		&ui_textbox("desc", undef, 60));
+
+	# CD image or file (on host)
+	@images = &list_server_images($in{'type'});
+	@images = grep { &can_image($_) && $_->{'format'} eq 'cd' } @images;
+	@opts = ( );
+	if (@images) {
+		push(@opts, [ 0, $text{'create_cdimage'},
+			      &ui_select("image", undef,
+			        [ map { [ $_->{'id'}, $_->{'desc'} ] }
+			      	 sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }
+				   @images ]) ]);
+		}
+	if (&can_action(undef, "global")) {
+		push(@opts, [ 1, $text{'create_cdfile'},
+			      &ui_filebox("file", undef, 40) ]);
+		}
+	if (@opts > 1) {
+		print &ui_table_row($text{'create_cd'},
+				    &ui_radio_table("cdmode", 0, \@opts));
+		}
+	elsif (@opts > 0) {
+		print &ui_table_row($opts[0]->[1], $opts[0]->[2]);
+		}
+	else {
+		print &ui_table_row($text{'create_cd'},
+			"<font color=red>$text{'create_nocd'}</font>");
+		}
+
+	# Owner, if any
+	@owners = defined(&list_system_owners) ? &list_system_owners() : ( );
+	if (!$access{'owner'} && scalar(@owners)) {
+		@owners = sort { $a->{'name'} cmp $b->{'name'} } @owners;
+		print &ui_table_row($text{'create_owner'},
+			&ui_select("owner", undef,
+				   [ [ '', "&lt;$text{'create_noowner'}&gt;" ],
+				     map { $_->{'name'} } @owners ]));
+		}
+
+	# Type-specific options
+	# XXX
+	$ffunc = "type_".$in{'type'}."_create_form";
+	if (defined(&$ffunc)) {
+		print &$ffunc();
+		}
+
+	print &ui_hidden_table_end();
+
+	# Type-specific limit options
+	# XXX
+	$afunc = "type_".$in{'type'}."_limits_create_form";
+	if (defined(&$afunc)) {
+		print &ui_hidden_table_start($text{'create_lheader'},
+					     "width=100%", 2,
+					     "limits", 0, [ "width=30%" ]);
+		print &$afunc();
+		print &ui_hidden_table_end();
+		}
+
+	# Type-specific advanced options
+	# XXX
+	$afunc = "type_".$in{'type'}."_advanced_create_form";
+	if (defined(&$afunc) && &can_action(undef, "advanced")) {
+		print &ui_hidden_table_start($text{'create_aheader'},
+					     "width=100%", 2,
+					     "advanced", 0, [ "width=30%" ]);
+		print &$afunc();
+		print &ui_hidden_table_end();
+		}
+
+	print &ui_form_end([ [ undef, $text{'create_ok'} ] ]);
+
+	print &ui_tabs_end_tab();
+	print &ui_tabs_end(1);
+	}
 
 &ui_print_footer("", $text{'index_return'});
 

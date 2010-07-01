@@ -67,6 +67,12 @@ my ($server) = @_;
 return $server->{'status'} ne 'nohost';
 }
 
+# Empty KVM instances can be created
+sub type_kvm_can_create_empty
+{
+return 1;
+}
+
 # Returns links for creating and adding kvms (if this system supports
 # them, or remote systems do)
 sub type_kvm_create_links

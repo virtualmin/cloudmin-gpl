@@ -454,6 +454,14 @@ create_ecitrixmkswap=.. swap creation failed : $1
 create_xencleanfstab=Removing missing disks from fstab file ..
 create_exencleanfstab=.. cleanup failed : $1
 create_citrixstartup=Starting up new Citrix Xen instance ..
+create_tabfull=Create working system
+create_tabempty=Create empty system
+create_descfull=A working system is one that is created from an image and configured to be fully usable as soon as the creation process completes.
+create_descempty=An empty system is one that has no contents on its disk initially, but can be used to install a new operating system from a CD or image.
+create_cd=Installation CD image
+create_cdimage=Cloudmin image
+create_cdfile=File or device on host
+create_nocd=You are not allowed to install from a file on the host, and there are no CD images available!
 
 keys_title=SSH Keys
 keys_desc=Key description
