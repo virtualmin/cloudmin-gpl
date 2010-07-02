@@ -68,6 +68,10 @@ $cfunc = "type_".$server->{'manager'}."_can_disks";
 defined(&$cfunc) && &$cfunc($server) ||
 	&usage("Disks cannot be managed on this system");
 $disks = &$dfunc($server, $multi ? 2 : 0);
+if (!ref($disks) && $multi) {
+	# Try again without filesystems
+	$disks = &$dfunc($server, 0);
+	}
 ref($disks) || &usage("Failed to list disks : $disks");
 
 if ($multi) {

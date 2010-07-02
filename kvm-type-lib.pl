@@ -804,6 +804,7 @@ if ($empty && $server->{'image'}) {
 	$imgdestfile = "$vhost->{'kvm_dir'}/$server->{'host'}.cd";
 	$server->{'kvm_drives'} .=
 		" file=$imgdestfile,media=cdrom,index=2";
+	$server->{'kvm_bootdevice'} = 'd';
 	}
 elsif ($empty && !$server->{'image'}) {
 	# CD is in an existing file
@@ -812,9 +813,11 @@ elsif ($empty && !$server->{'image'}) {
 		       "not exist";
 	$server->{'kvm_drives'} .=
 		" file=$server->{'imagefile'},media=cdrom,index=1,if=ide";
+	$server->{'kvm_bootdevice'} = 'd';
 	}
 else {
 	$imgdestfile = $fsfile;
+	$server->{'kvm_bootdevice'} = 'c';
 	}
 
 # Put the image into place, in the background
@@ -1323,7 +1326,6 @@ if ($out =~ /-name/) {
 $cmd .= " -m ".$server->{'kvm_memory'};
 
 # Add disks
-my $hascd;
 foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 	if ($d =~ /^file=(\S+),media=disk,index=(\d+),if=ide$/) {
 		my $n = chr($2+97);
@@ -1332,18 +1334,10 @@ foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 	else {
 		$cmd .= " -drive $d";
 		}
-	if ($d =~ /media=cdrom/) {
-		$hascd = 1;
-		}
 	}
 
-# Boot from disk
-if ($hascd) {
-	$cmd .= " -boot d";
-	}
-else {
-	$cmd .= " -boot c";
-	}
+# Boot device
+$cmd .= " -boot ".($server->{'kvm_bootdevice'} || 'c');
 
 # Accept TCP connection for console
 #if (ref($inuse)) {
@@ -3879,8 +3873,8 @@ if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm)\s+(.*)/) {
 			if (ref($ah->{$lastarg})) {
 				# Add to end of list
 				my $v = $ah->{$lastarg};
-				$v[@$v-1] .= " " if ($v[@$v-1]);
-				$v[@$v-1] .= $a;
+				$v->[@$v-1] .= " " if ($v->[@$v-1]);
+				$v->[@$v-1] .= $a;
 				}
 			else {
 				# Add to single value
@@ -4344,6 +4338,41 @@ my ($server, $dest) = @_;
 my $vhost = &get_parent_server($server);
 $server->{'kvm_on'} = $dest->{'id'};
 return undef;
+}
+
+# type_kvm_list_boot_devices(&server)
+# Returns an array ref of available boot devices for some system, or an error
+# message. Each entry is a hash ref with keys :
+# id - Unique ID for this mode
+# desc - Human-readable description
+sub type_kvm_list_boot_devices
+{
+my ($server) = @_;
+return [ { 'id' => 'a',
+	   'desc' => 'Floppy disk' },
+	 { 'id' => 'c',
+	   'desc' => 'Hard disk' },
+	 { 'id' => 'd',
+	   'desc' => 'CD or DVD drive' },
+	 { 'id' => 'n',
+	   'desc' => 'Network' } ];
+}
+
+# type_kvm_get_boot_device(&server)
+# Returns a status code (1 or 0) and either the boot dev ID or an error message
+sub type_kvm_get_boot_device
+{
+my ($server) = @_;
+return (1, $server->{'kvm_bootdevice'} || 'c');
+}
+
+# type_kvm_set_boot_device(&server, mode)
+# Sets the boot device based on some ID. Returns undef on success, or an error
+# message on failure.
+sub type_kvm_set_boot_device
+{
+my ($server, $mode) = @_;
+$server->{'kvm_bootdevice'} = $mode;
 }
 
 1;

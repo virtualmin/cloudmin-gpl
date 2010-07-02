@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Show a form for changing a system's boot mode
+# Show a form for changing a system's boot mode or boot device
 
 require './server-manager-lib.pl';
 &ReadParse();

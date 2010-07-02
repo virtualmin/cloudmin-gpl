@@ -5631,8 +5631,10 @@ my $pfunc = "type_".$server->{'manager'}."_can_password";
 my $canpass = defined(&$pfunc) && &$pfunc($server);
 my $clonefunc = "type_".$server->{'manager'}."_can_clone";
 my $canclone = defined(&$clonefunc) && &$clonefunc($server);
-my $bootfunc = "type_".$server->{'manager'}."_list_boot_modes";
-my $canboot = defined(&$bootfunc) && ref(&$bootfunc($server));
+my $bootmodefunc = "type_".$server->{'manager'}."_list_boot_modes";
+my $bootdevicefunc = "type_".$server->{'manager'}."_list_boot_devices";
+my $canboot = defined(&$bootmodefunc) && ref(&$bootmodefunc($server)) ||
+	      defined(&$bootdevicefunc) && ref(&$bootdevicefunc($server));
 
 # Start with links to edit_serv.cgi
 my $ed = "edit_serv.cgi?id=$server->{'id'}";
