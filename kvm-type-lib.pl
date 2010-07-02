@@ -803,7 +803,7 @@ if ($empty && $server->{'image'}) {
 	# CD will be copied to a new file
 	$imgdestfile = "$vhost->{'kvm_dir'}/$server->{'host'}.cd";
 	$server->{'kvm_drives'} .=
-		" file=$imgdestfile,media=cdrom,index=1,if=ide";
+		" file=$imgdestfile,media=cdrom,index=2";
 	}
 elsif ($empty && !$server->{'image'}) {
 	# CD is in an existing file
@@ -914,140 +914,145 @@ for(my $i=0; $i<@ips; $i++) {
 	}
 $server->{'mac'} = join(" ", @macs);
 
-# Expand the filesystem image, if needed
-my $fsfile = $server->{'kvm_filesystem'};
-if ($server->{'kvm_disksize'}) {
-	my $dksize = $server->{'kvm_disksize'}*1024*1024;
-	&$first_print(&text('create_xenresize', &nice_size($dksize)));
-	my $disks = &type_kvm_list_disks($server, 1);
-	my $disk;
-	if (ref($disks)) {
-		($disk) = grep { $_->{'real'} eq $server->{'kvm_filesystem'} }
-			       @$disks;
+my $mp;
+if (!$empty) {
+	# Expand the filesystem image, if needed
+	my $fsfile = $server->{'kvm_filesystem'};
+	if ($server->{'kvm_disksize'}) {
+		my $dksize = $server->{'kvm_disksize'}*1024*1024;
+		&$first_print(&text('create_xenresize', &nice_size($dksize)));
+		my $disks = &type_kvm_list_disks($server, 1);
+		my $disk;
+		if (ref($disks)) {
+			($disk) = grep { $_->{'real'} eq
+					 $server->{'kvm_filesystem'} } @$disks;
+			}
+		if (!$disk || !$disk->{'fs'}) {
+			&$second_print(&text('create_exenresize2'));
+			}
+		else {
+			my $olddisk = { %$disk };
+			$disk->{'size'} = $dksize;
+			my $err = &type_kvm_modify_disk($server, $disk,
+							$olddisk);
+			if ($ex) {
+				&$second_print(&text('create_exenresize',$out));
+				}       
+			else {
+				&$second_print($text{'create_done'});
+				}
+			}
 		}
-	if (!$disk || !$disk->{'fs'}) {
-		&$second_print(&text('create_exenresize2'));
+
+	# Mount the created filesystem
+	&$first_print($text{'create_xenmount'});
+	my $err = &mount_filesystem_if_needed($server);
+	if ($err) {
+		&$second_print(&text('create_exenmount', $err));
+		return;
 		}
-	else {
-		my $olddisk = { %$disk };
-		$disk->{'size'} = $dksize;
-		my $err = &type_kvm_modify_disk($server, $disk, $olddisk);
-		if ($ex) {
-			&$second_print(&text('create_exenresize', $out));
+	$mp = $server->{'kvm_mount'};
+	&$second_print(&text('create_xenmounted', "<tt>$mp</tt>"));
+
+	# Set the root password, by directly editing /etc/shadow
+	if ($server->{'ssh_pass'}) {
+		&$first_print($text{'create_xensetpass'});
+		my $err = &set_shadow_root_password($server,
+						    $server->{'ssh_pass'});
+		if ($err) {
+			&$second_print(&text('create_exensetpass', $err));
 			}       
 		else {
 			&$second_print($text{'create_done'});
 			}
 		}
-	}
 
-# Mount the created filesystem
-&$first_print($text{'create_xenmount'});
-my $err = &mount_filesystem_if_needed($server);
-if ($err) {
-	&$second_print(&text('create_exenmount', $err));
-	return;
-	}
-my $mp = $server->{'kvm_mount'};
-&$second_print(&text('create_xenmounted', "<tt>$mp</tt>"));
+	# Create authorized keys file
+	if ($server->{'key'}) {
+		&$first_print($text{'create_xensetkey'});
+		my $err = &create_authorized_key($server);
+		&$second_print($err ? &text('create_exensetkey', $err)
+				    : $text{'create_done'});
+		}
+	else {
+		&clear_authorized_key($server);
+		}
 
-# Set the root password, by directly editing /etc/shadow
-if ($server->{'ssh_pass'}) {
-	&$first_print($text{'create_xensetpass'});
-	my $err = &set_shadow_root_password($server, $server->{'ssh_pass'});
-        if ($err) {
-                &$second_print(&text('create_exensetpass', $err));
-                }       
-        else {
-                &$second_print($text{'create_done'});
-                }
-	}
+	# Add extra SSH keys
+	if (&has_addnew_keys($server)) {
+		&$first_print($text{'create_xenaddnewkeys'});
+		my $err = &addnew_authorized_keys($server);
+		&$second_print($err ? &text('create_exenaddnewkeys', $err)
+				    : $text{'create_done'});
+		}
 
-# Create authorized keys file
-if ($server->{'key'}) {
-	&$first_print($text{'create_xensetkey'});
-	my $err = &create_authorized_key($server);
-	&$second_print($err ? &text('create_exensetkey', $err)
-			    : $text{'create_done'});
-	}
-else {
-	&clear_authorized_key($server);
-	}
-
-# Add extra SSH keys
-if (&has_addnew_keys($server)) {
-	&$first_print($text{'create_xenaddnewkeys'});
-	my $err = &addnew_authorized_keys($server);
-	&$second_print($err ? &text('create_exenaddnewkeys', $err)
-			    : $text{'create_done'});
-	}
-
-# Fix other config files that refer to the hostname or IP
-&$first_print($text{'create_xenfix'});
-my $fullhost = $server->{'unix_hostname'} || $server->{'host'};
-my $shorthost = $fullhost;
-$shorthost =~ s/\..*$//;
-my $err = &fix_hostname_config_files($server, $ips[0],
-					$shorthost, $fullhost, $vhost,
-					$mp, $vhost->{'kvm_resolv'});
-if ($err) {
-	&$second_print(&text('create_exenfix', $err));
-	}       
-else {
-	&$second_print($text{'create_done'});
-	}
-
-# Setup networking config files to use the IP.
-&$first_print($text{'create_xennet'});
-my $err = &fix_network_config_files($server, $ips[0], $netmasks[0],
-				    $gws[0], $vhost, $mp);
-if ($err) {
-	&$second_print(&text('create_exennet', $err));
-	}       
-else {
-	&$second_print($text{'create_done'});
-	}
-
-# Add network configs for extra IPs
-if (@ips > 1) {
-	&$first_print($text{'create_xennet2'});
-	my $err = &fix_additional_network_interface_files($server,
-		[ @ips[1..$#ips] ], [ @netmasks[1..$#netmasks] ],
-		[ @gws[1..$#gws] ], $vhost, $mp);
+	# Fix other config files that refer to the hostname or IP
+	&$first_print($text{'create_xenfix'});
+	my $fullhost = $server->{'unix_hostname'} || $server->{'host'};
+	my $shorthost = $fullhost;
+	$shorthost =~ s/\..*$//;
+	my $err = &fix_hostname_config_files($server, $ips[0],
+						$shorthost, $fullhost, $vhost,
+						$mp, $vhost->{'kvm_resolv'});
 	if ($err) {
-		&$second_print(&text('create_exennet2', $err));
+		&$second_print(&text('create_exenfix', $err));
 		}       
 	else {
 		&$second_print($text{'create_done'});
 		}
-	}
 
-# Fix Virtualmin licence files
-if ($serial) {
-	&$first_print($text{'create_xenlicence'});
-	my $err = &fix_virtualmin_licence_files($server, $serial, $key);
+	# Setup networking config files to use the IP.
+	&$first_print($text{'create_xennet'});
+	my $err = &fix_network_config_files($server, $ips[0], $netmasks[0],
+					    $gws[0], $vhost, $mp);
 	if ($err) {
-		&$second_print(&text('create_exenlicence', $err));
+		&$second_print(&text('create_exennet', $err));
 		}       
 	else {
 		&$second_print($text{'create_done'});
 		}
-	}
 
-# Configure SSH to allow logins by root
-&$first_print($text{'create_zonesrootssh'});
-my $err = &fix_ssh_root_login($server);
-if ($err eq "OK") {
-	&$second_print($text{'create_zonesrootsshok'});
-	}
-elsif ($err eq "NONE") {
-	&$second_print($text{'create_zonesrootsshnone'});
-	}
-elsif ($err) {
-	&$second_print($err);
-	}
-else {
-	&$second_print($text{'create_done'});
+	# Add network configs for extra IPs
+	if (@ips > 1) {
+		&$first_print($text{'create_xennet2'});
+		my $err = &fix_additional_network_interface_files($server,
+			[ @ips[1..$#ips] ], [ @netmasks[1..$#netmasks] ],
+			[ @gws[1..$#gws] ], $vhost, $mp);
+		if ($err) {
+			&$second_print(&text('create_exennet2', $err));
+			}       
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+
+	# Fix Virtualmin licence files
+	if ($serial) {
+		&$first_print($text{'create_xenlicence'});
+		my $err = &fix_virtualmin_licence_files($server, $serial, $key);
+		if ($err) {
+			&$second_print(&text('create_exenlicence', $err));
+			}       
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+
+	# Configure SSH to allow logins by root
+	&$first_print($text{'create_zonesrootssh'});
+	my $err = &fix_ssh_root_login($server);
+	if ($err eq "OK") {
+		&$second_print($text{'create_zonesrootsshok'});
+		}
+	elsif ($err eq "NONE") {
+		&$second_print($text{'create_zonesrootsshnone'});
+		}
+	elsif ($err) {
+		&$second_print($err);
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 	}
 
 # Add DHCP entries
@@ -1063,20 +1068,22 @@ if ($config{'dhcp_add'} && !$reset) {
 	&add_all_iface_dhcpd($server, \@fakeifaces);
 	}
 
-# Clean up /etc/fstab to remove non-existant devices
-&$first_print($text{'create_xencleanfstab'});
-my $err = &cleanup_server_fstab($server);
-if ($err) {
-	&$second_print(&text('create_exencleanfstab', $err));
-	}       
-else {
+if (!$empty) {
+	# Clean up /etc/fstab to remove non-existant devices
+	&$first_print($text{'create_xencleanfstab'});
+	my $err = &cleanup_server_fstab($server);
+	if ($err) {
+		&$second_print(&text('create_exencleanfstab', $err));
+		}       
+	else {
+		&$second_print($text{'create_done'});
+		}
+
+	# Un-mount
+	&$first_print($text{'create_xenumount'});
+	&umount_filesystem_if_needed($server);
 	&$second_print($text{'create_done'});
 	}
-
-# Un-mount
-&$first_print($text{'create_xenumount'});
-&umount_filesystem_if_needed($server);
-&$second_print($text{'create_done'});
 
 # Compute total disk size
 &type_kvm_compute_disksize($server);
@@ -1092,7 +1099,7 @@ if ($vhost->{'kvm_zone'} && !$reset) {
 
 # Start up the instance
 &$first_print($text{'create_kvmstartup'});
-my ($ok, $err) = &type_kvm_startup($server);
+my ($ok, $err) = &type_kvm_startup($server, $empty);
 my $started = 0;
 if ($ok != 1) {
 	&$second_print(&text('create_exenstartup', $err));
@@ -1103,7 +1110,7 @@ else {
 	}
 
 # Import Virtualmin keys
-if ($serial && $started) {
+if ($serial && $started && !$empty) {
 	&$first_print($text{'create_xenvkeys'});
 	my $err = &fix_virtualmin_after_boot($server);
 	if ($err) {
@@ -1115,7 +1122,7 @@ if ($serial && $started) {
 	}
 
 # Regenerate SSH host key
-if ($started) {
+if ($started && !$empty) {
 	&$first_print($text{'create_xenhostkey'});
 	my $err = &regenerate_ssh_host_keys($server);
 	&$second_print($err ? &text('create_exensetkey', $err)
@@ -1177,11 +1184,11 @@ if ($proc) {
 return "No KVM process found!";
 }
 
-# type_kvm_startup(&server)
+# type_kvm_startup(&server, [no-ping])
 # Start the kvm or qemu-kvm process, and wait till it responds to ping and SSH
 sub type_kvm_startup
 {
-my ($server) = @_;
+my ($server, $noping) = @_;
 my $vhost = &type_kvm_parent($server);
 my $cmd = &get_kvm_start_command($server);
 my ($pinged, $sshed);
@@ -1216,10 +1223,12 @@ if (!$found) {
 	}
 
 # Wait up to 60 seconds for ping
-$pinged = &wait_for_ping($server);
+if (!$noping) {
+	$pinged = &wait_for_ping($server);
+	}
 
 # Wait for SSH to come up
-if ($pinged) {
+if ($pinged && !$server->{'no_sshlogin'}) {
 	$sshed = &wait_for_ssh($server);
 	}
 
@@ -1314,6 +1323,7 @@ if ($out =~ /-name/) {
 $cmd .= " -m ".$server->{'kvm_memory'};
 
 # Add disks
+my $hascd;
 foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 	if ($d =~ /^file=(\S+),media=disk,index=(\d+),if=ide$/) {
 		my $n = chr($2+97);
@@ -1322,10 +1332,18 @@ foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 	else {
 		$cmd .= " -drive $d";
 		}
+	if ($d =~ /media=cdrom/) {
+		$hascd = 1;
+		}
 	}
 
 # Boot from disk
-$cmd .= " -boot c";
+if ($hascd) {
+	$cmd .= " -boot d";
+	}
+else {
+	$cmd .= " -boot c";
+	}
 
 # Accept TCP connection for console
 #if (ref($inuse)) {

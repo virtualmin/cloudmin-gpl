@@ -3466,7 +3466,7 @@ if ($oldping) {
 	# Wait for startup
 	my $pinged = &wait_for_ping($server);
 	my $sshed;
-	if ($pinged) {
+	if ($pinged && !$server->{'no_sshlogin'}) {
 		$sshed = &wait_for_ssh($server);
 		}
 	return "Failed to start up after 60 seconds" if (!$sshed);
