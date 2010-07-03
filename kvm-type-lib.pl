@@ -405,13 +405,13 @@ if ($limits && $limits->{'max_ram'}) {
 	$mem = 128*1024*1024 if ($ram < 128*1024*1024);
 	}
 $rv .= &ui_table_row($text{'create_xenmemory'},
-	&ui_textbox("kvm_memory", int($mem/(1024*1024)), 8)." MB");
+	&ui_bytesbox("kvm_memory", $mem, 8));
 
 # Filesystem size
 $rv .= &ui_table_row($text{'create_xendisksize'},
-	$empty ? &ui_textbox("kvm_disk", 2048, 8)."MB" :
-		 &ui_opt_textbox("kvm_disk", undef, 8,
-				 $text{'create_xendiskdef'})." MB");
+	$empty ? &ui_bytesbox("kvm_disk", 2048, 8) :
+		 &ui_opt_bytesbox("kvm_disk", undef, 8,
+				  $text{'create_xendiskdef'}));
 
 return $rv;
 }
@@ -425,13 +425,15 @@ my $img = $empty ? undef : &get_server_image($server->{'image'});
 
 # Validate memory parameters
 $in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
-$server->{'kvm_memory'} = $in{'kvm_memory'};
+$server->{'kvm_memory'} = ($in{'kvm_memory'} * $in{'kvm_memory_units'}) /
+			  (1024*1024);
 
 # Validate disk size
 if (!$in{'kvm_disk_def'} || $empty) {
 	$in{'kvm_disk'} =~ /^\d+$/ || &error($text{'create_exendisksize'});
-	$server->{'kvm_disksize'} = $in{'kvm_disk'};
-	$server->{'kvm_disktotal'} = $in{'kvm_disk'}*1024*1024;
+	$server->{'kvm_disksize'} = ($in{'kvm_disk'} * $in{'kvm_disk_units'}) /
+				    (1024*1024);
+	$server->{'kvm_disktotal'} =  $server->{'kvm_disksize'}*1024*1024;
 	if (!$empty &&
 	    $img->{'rawsize'} &&
 	    $img->{'rawsize'} > $in{'kvm_disk'}*1024*1024) {
@@ -3664,6 +3666,10 @@ if (@delfiles) {
 		if ($err) {
 			&$second_print(&text('smove_delerr', $f, $err));
 			}
+		}
+	if (@dellvs) {
+		&remote_finished();
+		&remote_foreign_require($dest, "lvm", "lvm-lib.pl");
 		}
 	foreach my $f (@dellvs) {
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
