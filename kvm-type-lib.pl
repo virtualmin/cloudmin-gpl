@@ -246,6 +246,11 @@ foreach my $n (grep { /^nic/ } @nets) {
 		}
 	}
 $server->{'mac'} = join(" ", @macs);
+
+# Save boot mode
+if ($got->{'args'}->{'boot'}) {
+	$server->{'kvm_bootdevice'} = $got->{'args'}->{'boot'};
+	}
 }
 
 # type_kvm_create_form([empty-flag])
@@ -4379,6 +4384,7 @@ sub type_kvm_set_boot_device
 {
 my ($server, $mode) = @_;
 $server->{'kvm_bootdevice'} = $mode;
+return undef;
 }
 
 1;

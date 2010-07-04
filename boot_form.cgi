@@ -10,11 +10,23 @@ $server || &error($text{'edit_egone'});
 
 # Get the current boot mode
 $lfunc = "type_".$server->{'manager'}."_list_boot_modes";
-$modes = &$lfunc($server);
-ref($modes) || &error($modes);
-$gfunc = "type_".$server->{'manager'}."_get_boot_mode";
-($ok, $mode) = &$gfunc($server);
-$ok || &error($mode);
+if (defined(&$lfunc)) {
+	$modes = &$lfunc($server);
+	ref($modes) || &error($modes);
+	$gfunc = "type_".$server->{'manager'}."_get_boot_mode";
+	($ok, $mode) = &$gfunc($server);
+	$ok || &error($mode);
+	}
+
+# Get the current boot device
+$lfunc = "type_".$server->{'manager'}."_list_boot_devices";
+if (defined(&$lfunc)) {
+	$devices = &$lfunc($server);
+	ref($devices) || &error($devices);
+	$gfunc = "type_".$server->{'manager'}."_get_boot_device";
+	($ok, $device) = &$gfunc($server);
+	$ok || &error($device);
+	}
 
 &ui_print_header(&server_in($server), $text{'boot_title'}, "", "boot");
 
@@ -49,9 +61,18 @@ if ($vinfo && $vinfo->{'kernel'}->{'version'}) {
 	}
 
 # Boot mode
-print &ui_table_row($text{'boot_mode'},
-	&ui_select("mode", $mode,
-		   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$modes ]));
+if ($mode) {
+	print &ui_table_row($text{'boot_mode'},
+		&ui_select("mode", $mode,
+			   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$modes ]));
+	}
+
+# Boot device
+if ($device) {
+	print &ui_table_row($text{'boot_device'},
+		&ui_select("device", $device,
+			   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$devices ]));
+	}
 
 # Reboot after changing?
 if ($server->{'status'} ne 'down') {
@@ -60,6 +81,6 @@ if ($server->{'status'} ne 'down') {
 	}
 
 print &ui_table_end();
-print &ui_form_end([ [ undef, $text{'clone_ok'} ] ]);
+print &ui_form_end([ [ undef, $text{'boot_ok'} ] ]);
 
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});

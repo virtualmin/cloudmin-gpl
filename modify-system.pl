@@ -28,6 +28,9 @@ Either enables the system at host boot time, or disables it.
 C<--boot-mode> I<mode>
 Changes the way the system boots, which typically determines which kernel it uses.
 
+C<--boot-device> I<id>
+Changes the device the system boots from. For KVM, device codes are I<c> (hard dsk) or I<d> (CDROM).
+
 C<--location> I<name> or C<--no-location>
 Sets the location group for a host system, or removes it from a group.
 
@@ -107,6 +110,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--boot-mode") {
 		$bootmode = shift(@ARGV);
 		}
+	elsif ($a eq "--boot-device") {
+		$bootdevice = shift(@ARGV);
+		}
 	elsif ($a eq "--location") {
 		$lname = shift(@ARGV);
 		($loc) = grep { $_->{'id'} eq $lname ||
@@ -182,10 +188,23 @@ if ($bootmode) {
 	defined(&$mfunc) || &usage("This virtual system type does not support ".
 				   "changing the boot mode");
 	$modes = &$mfunc($server);
-	$modes || &usage("Failed to check boot methods : $modes");
+	$modes || &usage("Failed to check boot modes : $modes");
 	($canmode) = grep { $_->{'id'} eq $bootmode } @$modes;
 	$canmode || &usage("Invalid boot mode - possible options are : ".
 			   join(" ", map { $_->{'id'} } @$modes));
+	}
+
+# Validate boot device
+if ($bootdevice) {
+	&can_action_usage($server, "boot");
+	$mfunc = "type_".$server->{'manager'}."_list_boot_devices";
+	defined(&$mfunc) || &usage("This virtual system type does not support ".
+				   "changing the boot device");
+	$devices = &$mfunc($server);
+	$devices || &usage("Failed to check boot devices : $devices");
+	($candevice) = grep { $_->{'id'} eq $bootdevice } @$devices;
+	$candevice || &usage("Invalid boot device - possible options are : ".
+			   join(" ", map { $_->{'id'} } @$devices));
 	}
 
 # Make all the changes
@@ -263,6 +282,13 @@ if ($bootmode) {
 	$err && &usage("Failed to change boot mode to $bootmode : $err");
 	}
 
+# Change boot device
+if ($bootdevice) {
+	$mfunc = "type_".$server->{'manager'}."_set_boot_device";
+	$err = &$mfunc($server, $bootdevice);
+	$err && &usage("Failed to change boot device to $bootdevice : $err");
+	}
+
 # Update status if needed
 if ($recheck) {
 	&check_server_status($server);
@@ -295,6 +321,7 @@ print "                      [--webmin-pass password]\n";
 print "                      [--webmin-same]\n";
 print "                      [--boot | --no-boot]\n";
 print "                      [--boot-mode mode]\n";
+print "                      [--boot-device device]\n";
 if (defined(&list_locations)) {
 	print "                      [--location id | --no-location]\n";
 	}

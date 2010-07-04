@@ -9,24 +9,51 @@ $server || &error($text{'mkimage_egone'});
 &can_action_error($server, "boot");
 
 # Validate inputs
-$lfunc = "type_".$server->{'manager'}."_list_boot_modes";
-$modes = &$lfunc($server);
-ref($modes) || &error($modes);
-($canmode) = grep { $_->{'id'} eq $in{'mode'} } @$modes;
-$canmode || &error($text{'boot_emode'});
+if ($in{'mode'}) {
+	$lfunc = "type_".$server->{'manager'}."_list_boot_modes";
+	$modes = &$lfunc($server);
+	ref($modes) || &error($modes);
+	($canmode) = grep { $_->{'id'} eq $in{'mode'} } @$modes;
+	$canmode || &error($text{'boot_emode'});
+	}
+if ($in{'device'}) {
+	$lfunc = "type_".$server->{'manager'}."_list_boot_devices";
+	$devices = &$lfunc($server);
+	ref($devices) || &error($devices);
+	($candevice) = grep { $_->{'id'} eq $in{'device'} } @$devices;
+	$candevice || &error($text{'boot_edevice'});
+	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'boot_title'}, "");
 &obtain_lock_server($server);
 
-&$first_print(&text('boot_moding', $canmode->{'desc'}));
-$mfunc = "type_".$server->{'manager'}."_set_boot_mode";
-$err = &$mfunc($server, $in{'mode'});
-if ($err) {
-	&$second_print(&text('boot_modefailed', $err));
+# Change boot method
+if ($in{'mode'}) {
+	&$first_print(&text('boot_moding', $canmode->{'desc'}));
+	$mfunc = "type_".$server->{'manager'}."_set_boot_mode";
+	$err = &$mfunc($server, $in{'mode'});
+	if ($err) {
+		&$second_print(&text('boot_modefailed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 	}
-else {
-	&$second_print($text{'create_done'});
 
+# Change boot device
+if ($in{'device'} && !$err) {
+	&$first_print(&text('boot_devicing', $candevice->{'desc'}));
+	$dfunc = "type_".$server->{'manager'}."_set_boot_device";
+	$err = &$dfunc($server, $in{'device'});
+	if ($err) {
+		&$second_print(&text('boot_devicefailed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+if (!$err) {
 	# Reboot if requested
 	if ($in{'reboot'}) {
 		&$first_print($text{'mkimage_shutdown'});
@@ -59,6 +86,9 @@ else {
 &webmin_log("boot", "server", $server->{'host'});
 if (defined(&theme_select_server)) {
 	&theme_select_server($server);
+	}
+if (defined(&theme_post_save_server)) {
+	&theme_post_save_server($server);
 	}
 
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
