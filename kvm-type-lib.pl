@@ -3669,7 +3669,7 @@ if (@delfiles) {
 		}
 	if (@dellvs) {
 		&remote_finished();
-		&remote_foreign_require($dest, "lvm", "lvm-lib.pl");
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		}
 	foreach my $f (@dellvs) {
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
