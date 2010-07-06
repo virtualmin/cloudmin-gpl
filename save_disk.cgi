@@ -205,6 +205,16 @@ else {
 		$disk->{'size'} = $in{'size'}*$in{'size_units'};
 		}
 
+	# Disk media
+	$mfunc = "type_".$server->{'manager'}."_list_disk_medias";
+	if (defined(&$mfunc) && defined($in{'media'})) {
+		$medias = &$mfunc($server, $disk);
+		ref($medias) || &error($medias);
+		($gotmedia) = grep { $_->{'id'} eq $in{'media'} } @$medias;
+		$gotmedia || &error($text{'disk_emedia'});
+		$disk->{'media'} = $in{'media'};
+		}
+
 	# New filesystem and mount point
 	if ($in{'new'}) {
 		$disk->{'fs'} = $in{'fs'};

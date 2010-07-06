@@ -19,6 +19,15 @@ ref($disks) || &error(&text('disks_eget', $disks));
 
 &ui_print_header(&server_in($server), $text{'disks_title'}, "", "disks");
 
+# Find possible medias
+$mfunc = "type_".$server->{'manager'}."_list_disk_medias";
+if (defined(&$mfunc)) {
+	$medias = &$mfunc($server, $disk);
+	if (ref($medias)) {
+		%mediamap = map { $_->{'id'}, $_->{'desc'} } @$medias;
+		}
+	}
+
 # Show a table
 @links = ( "<a href='edit_disk.cgi?new=1&id=$in{'id'}'>".
 	   "$text{'disks_add1'}</a>" );
@@ -33,8 +42,12 @@ if (@$disks) {
 	print &ui_form_start("delete_disks.cgi", "post");
 	print &ui_hidden("id", $in{'id'});
 	print &ui_links_row(\@links);
-	print &ui_columns_start([ "", $text{'disks_real'}, $text{'disks_virt'},
-				  $text{'disks_type'}, $text{'disks_size'} ],
+	print &ui_columns_start([ "",
+				  $text{'disks_real'},
+				  $text{'disks_virt'},
+				  $text{'disks_type'},
+				  %mediamap ? ( $text{'disks_media'} ) : ( ),
+				  $text{'disks_size'} ],
 				100, 0, \@tds);
 	foreach my $d (@$disks) {
 		$rdesc = &describe_disk($d);
@@ -50,7 +63,10 @@ if (@$disks) {
 		      "$rdesc</a>" : $rdesc,
 		    $vdesc,
 		    $d->{'lv'} ? $text{'disks_lvm'} :
+		     $d->{'storage'} ? $text{'disks_storage'} :
 		      $d->{'device'} ? $text{'disks_dev'} : $text{'disks_file'},
+		    %mediamap ? ( $mediamap{$d->{'media'}} || $d->{'media'})
+			      : ( ),
 		    ($d->{'size'} ? &nice_size($d->{'size'}) : undef).
 		    ($sched ? " ".&text('disks_sched',
 					&nice_size($sched->{'size'})) : ""),

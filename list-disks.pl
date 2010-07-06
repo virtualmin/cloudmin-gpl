@@ -105,6 +105,9 @@ if ($multi) {
 			print "    Storage name: $d->{'storage'}\n";
 			print "    Storage ID: $d->{'real'}\n";
 			}
+		if ($d->{'media'}) {
+			print "    Media: $d->{'media'}\n";
+			}
 		if ($d->{'size'}) {
 			print "    Size: $d->{'size'}\n";
 			print "    Nice size: ",&nice_size($d->{'size'}),"\n";

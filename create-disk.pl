@@ -29,6 +29,11 @@ filesystem, use the C<--format> flag followed by a type like C<ext3>. To have
 it mounted on the virtual system, use C<--mount> flag followed by a mount
 point like C</mnt/disk2>.
 
+For some virtualization types, you can specify if the disk is a hard disk or
+CD-ROM with the C<--media> flag. This allows you to attach an existing ISO
+image as a CD, which will appear as a actual CD-ROM drive within the virtual
+system. On KVM the supported media types are I<disk> and I<cdrom>.
+
 =head1 Example usage
 
   cloudmin create-disk --host xencentos.home --auto-virt --auto-real --size 500
@@ -87,6 +92,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--mount") {
 		$mount = shift(@ARGV);
 		}
+	elsif ($a eq "--media") {
+		$media = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
@@ -133,6 +141,18 @@ if ($format) {
 		&usage("Specified filesystem is not valid. Types supported are : ".join(" ", @fs));
 	}
 
+# Validate media
+if ($media) {
+	$mfunc = "type_".$server->{'manager'}."_list_disk_medias";
+	defined(&$mfunc) || &usage("Disk media cannot be specified for this ".
+				   "virtual system type");
+	$medias = &$mfunc($server, $disk);
+	ref($medias) || &usage("Failed to list media types : $medias");
+	($gotmedia) = grep { $_->{'id'} eq $media } @$medias;
+	$gotmedia || &usage("Invalid media type - supported types are : ".
+			    join(" ", map { $_->{'id'} } @$medias));
+	}
+
 # Create a new disk object
 $nfunc = "type_".$server->{'manager'}."_new_disk";
 $disk = &$nfunc($server, $disks, $device);
@@ -149,6 +169,9 @@ if ($lv) {
 	$disk->{'lv'} = $lv;
 	$disk->{'real'} = '/dev/'.$disk->{'vg'}.'/'.$disk->{'lv'};
 	$device = 1;
+	}
+if ($media) {
+	$disk->{'media'} = $media;
 	}
 
 # Check for clashes
@@ -223,6 +246,7 @@ print "                    [--size MB]\n";
 print "                    [--device]\n";
 print "                    [--format filesystem]\n";
 print "                    [--mount directory|\"swap\"]\n";
+print "                    [--media type]\n";
 exit(1);
 }
 

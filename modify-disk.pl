@@ -17,6 +17,9 @@ consumed by files on the filesystem, the resize will fail.
 To change the device on the virtual system that the disk is mapped to, use
 the C<--new-virt> flag followed by a device like I</dev/sda3>.
 
+To change the media type of a disk, use the C<--new-media> flag followed by
+a type such as I<disk> or I<cdrom>.
+
 =head1 Example usage
 
   cloudmin modify-disk --host xencentos.home --virt /dev/sda3 --new-size 2048
@@ -69,6 +72,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--force") {
 		$force = 1;
 		}
+	elsif ($a eq "--new-media") {
+		$media = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
@@ -76,7 +82,7 @@ while(@ARGV > 0) {
 
 # Validate parameters
 $real || $virt || $lv || $mount || &usage("The disk to modify must be identified by the --real, --virt, --mount or --lv parameters");
-$newsize || $newvirt || &usage("Nothing to do");
+$newsize || $newvirt || $media || &usage("Nothing to do");
 !$newsize || $newsize =~ /^\d*$/ || &usage("Invalid --new-size parameter - must be followed by a number of MB");
 !$newvirt || $virt =~ /^\/\S+$/ || &usage("Missing or invalid --new-virt parameter - should be like /dev/sda2");
 
@@ -86,6 +92,18 @@ $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
 &can_action_usage($server, "disks");
 &obtain_lock_server($server);
+
+# Validate media
+if ($media) {
+	$mfunc = "type_".$server->{'manager'}."_list_disk_medias";
+	defined(&$mfunc) || &usage("Disk media cannot be specified for this ".
+				   "virtual system type");
+	$medias = &$mfunc($server, $disk);
+	ref($medias) || &usage("Failed to list media types : $medias");
+	($gotmedia) = grep { $_->{'id'} eq $media } @$medias;
+	$gotmedia || &usage("Invalid media type - supported types are : ".
+			    join(" ", map { $_->{'id'} } @$medias));
+	}
 
 # Get the current disks
 $dfunc = "type_".$server->{'manager'}."_list_disks";
@@ -123,6 +141,9 @@ if ($newsize) {
 	}
 if ($newvirt) {
 	$disk->{'virt'} = $newvirt;
+	}
+if ($media) {
+	$disk->{'media'} = $media;
 	}
 
 # Validate the new size
@@ -179,6 +200,7 @@ print "cloudmin modify-disk --host hostname\n";
 print "                     --real device|file | --virt device | --lv name\n";
 print "                    [--new-size MB]\n";
 print "                    [--new-virt device]\n";
+print "                    [--new-media type]\n";
 print "                    [--force]\n";
 exit(1);
 }

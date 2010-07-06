@@ -133,6 +133,16 @@ elsif (!$in{'new'} && $disk->{'size'}) {
 		&nice_size($disk->{'size'}));
 	}
 
+# Media type, if supported
+$mfunc = "type_".$server->{'manager'}."_list_disk_medias";
+if (defined(&$mfunc)) {
+	$medias = &$mfunc($server, $disk);
+	ref($medias) || &error($medias);
+	print &ui_table_row($text{'disk_media'},
+		&ui_select("media", $disk->{'media'},
+			   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$medias ]));
+	}
+
 # Current use on virtual system
 if (!$in{'new'} && $disk->{'fs'} eq 'swap') {
 	# Virtual memory

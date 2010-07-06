@@ -1429,6 +1429,7 @@ else {
 # virt - Virtual device on instance, like /dev/sda
 # device - Set to 1 if this is a real device, like /dev/md1
 # size - Size in bytes, if a file
+# media - disk or cdrom
 # vg - LVM volume group, if any
 # lv - LVM logical volume
 sub type_kvm_list_disks
@@ -1470,7 +1471,8 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 	my $disk = { 'real' => $drive{'file'},
 		     'virt' => "/dev/".$dev,
 		     'virtdev' => $dev,
-		     'drive_index' => $idx };
+		     'drive_index' => $idx,
+		     'media' => $drive{'media'} || 'disk' };
 	$disk->{'device'} = $drive{'file'} =~ /^\/dev\// ? 1 : 0;
 	if (!$disk->{'device'}) {
 		my @st = &stat_file_on_server($vhost, $drive{'file'});
@@ -1599,6 +1601,7 @@ if (!$device) {
 		}
 	}
 $rv->{'device'} = $device;
+$rv->{'media'} = 'disk';
 return $rv;
 }
 
@@ -1667,7 +1670,7 @@ else {
 # Add the disk to the KVM config
 my @drives = split(/\s+/, $server->{'kvm_drives'});
 my %drive = ( 'file' => $disk->{'real'},
-	      'media' => 'disk' );
+	      'media' => $disk->{'media'} || 'disk' );
 if ($disk->{'virt'} =~ /sd[a-z]+$/) {
 	$drive{'if'} = 'scsi';
 	}
@@ -1917,8 +1920,21 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		}
 	}
 
+if ($disk->{'media'} && $disk->{'media'} ne $olddisk->{'media'}) {
+	# Change the disk media
+	my @drives = split(/\s+/, $server->{'kvm_drives'});
+	my %drive = map { split(/=/, $_, 2) }
+			split(/,/, $drives[$disk->{'drive_index'}]);
+	$drive{'media'} = $disk->{'media'};
+	$drives[$disk->{'drive_index'}] =
+		join(",", map { $_."=".$drive{$_} } keys %drive);
+	$server->{'kvm_drives'} = join(" ", @drives);
+	&save_managed_server($server);
+	&type_kvm_set_atboot($server, 2);
+	}
+
 if ($disk->{'virt'} ne $olddisk->{'virt'}) {
-	# Change the virtual device, both in the Xen config file and fstab
+	# Change the virtual device, both in the KVM config file and fstab
 	if ($olddisk->{'virt_mount'} =~ /(\d+)$/) {
 		$disk->{'virt_mount'} = $disk->{'virt'}.$1;
 		}
@@ -2013,6 +2029,16 @@ elsif ($ex) {
 else {
 	return (1, $out);
 	}
+}
+
+# type_kvm_list_disk_medias(&server)
+# Returns a list of possible media types for disks on some system. Each is a
+# hash ref with id and desc field
+sub type_kvm_list_disk_medias
+{
+my ($server) = @_;
+return [ { 'id' => 'disk', 'desc' => 'Hard disk' },
+	 { 'id' => 'cdrom', 'desc' => 'CD or DVD drive' } ];
 }
 
 # Returns 2, indicating that memory can be changed but needs a reboot
