@@ -1690,6 +1690,11 @@ if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
 	$server->{'kvm_disktotal'} += $disk->{'size'};
 	}
 
+# If mounting a CD, there are no partitions
+if ($disk->{'media'} eq 'cdrom') {
+	$disk->{'virt_mount'} = $disk->{'virt'};
+	}
+
 # Add to /etc/fstab, if a mount point was given
 my $fserr;
 if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
@@ -1700,8 +1705,10 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 	my $fstab = &get_system_fstab($server);
 	$fserr = "Failed to read fstab file : $fstab" if (!ref($fstab));
 	if (!$fserr) {
+		my $fs = $disk->{'fs'} ? $disk->{'fs'} :
+			  $disk->{'media'} eq 'cdrom' ? 'iso9660' : 'ext2';
 		push(@$fstab, [ $disk->{'virt_mount'}, $disk->{'mount'},
-				$disk->{'fs'} || "ext2", 'defaults', 0, 0 ]);
+				$fs, 'defaults', 0, 0 ]);
 		my $err = &put_system_fstab($server, $fstab);
 		$fserr = "Failed to update fstab file : $err" if ($err);
 		}
@@ -1920,20 +1927,8 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		}
 	}
 
-if ($disk->{'media'} && $disk->{'media'} ne $olddisk->{'media'}) {
-	# Change the disk media
-	my @drives = split(/\s+/, $server->{'kvm_drives'});
-	my %drive = map { split(/=/, $_, 2) }
-			split(/,/, $drives[$disk->{'drive_index'}]);
-	$drive{'media'} = $disk->{'media'};
-	$drives[$disk->{'drive_index'}] =
-		join(",", map { $_."=".$drive{$_} } keys %drive);
-	$server->{'kvm_drives'} = join(" ", @drives);
-	&save_managed_server($server);
-	&type_kvm_set_atboot($server, 2);
-	}
-
-if ($disk->{'virt'} ne $olddisk->{'virt'}) {
+if ($disk->{'virt'} ne $olddisk->{'virt'} ||
+    $disk->{'media'} ne $olddisk->{'media'}) {
 	# Change the virtual device, both in the KVM config file and fstab
 	if ($olddisk->{'virt_mount'} =~ /(\d+)$/) {
 		$disk->{'virt_mount'} = $disk->{'virt'}.$1;
@@ -1945,6 +1940,9 @@ if ($disk->{'virt'} ne $olddisk->{'virt'}) {
 			split(/,/, $drives[$disk->{'drive_index'}]);
 	if ($disk->{'virt'} =~ /([hs])d([a-z])$/) {
 		$drive{'index'} = ord($2)-97;
+		}
+	if ($disk->{'media'}) {
+		$drive{'media'} = $disk->{'media'};
 		}
 	$drives[$disk->{'drive_index'}] =
 		join(",", map { $_."=".$drive{$_} } keys %drive);
