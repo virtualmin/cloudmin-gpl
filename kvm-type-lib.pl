@@ -415,7 +415,7 @@ $rv .= &ui_table_row($text{'create_xenmemory'},
 # Filesystem size
 $rv .= &ui_table_row($text{'create_xendisksize'},
 	$empty ? &ui_bytesbox("kvm_disk", 2048, 8) :
-		 &ui_opt_bytesbox("kvm_disk", undef, 8,
+		 &vui_opt_bytesbox("kvm_disk", undef, 8,
 				  $text{'create_xendiskdef'}));
 
 return $rv;
@@ -438,10 +438,10 @@ if (!$in{'kvm_disk_def'} || $empty) {
 	$in{'kvm_disk'} =~ /^\d+$/ || &error($text{'create_exendisksize'});
 	$server->{'kvm_disksize'} = ($in{'kvm_disk'} * $in{'kvm_disk_units'}) /
 				    (1024*1024);
-	$server->{'kvm_disktotal'} =  $server->{'kvm_disksize'}*1024*1024;
+	$server->{'kvm_disktotal'} = $server->{'kvm_disksize'}*1024*1024;
 	if (!$empty &&
 	    $img->{'rawsize'} &&
-	    $img->{'rawsize'} > $in{'kvm_disk'}*1024*1024) {
+	    $img->{'rawsize'} > $server->{'kvm_disksize'}*1024*1024) {
 		&error(&text('create_exendisksize2',
 			     &nice_size($img->{'rawsize'})));
 		}
