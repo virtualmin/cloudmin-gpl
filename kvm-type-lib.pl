@@ -1295,10 +1295,11 @@ my $disks = &type_kvm_list_disks($server, 0);
 if (ref($disks)) {
 	foreach my $d (reverse(@$disks)) {
 		my @st = &stat_file_on_server($vhost, $d->{'real'});
-		next if (!@st);		# Already gone
+		next if (!@st);			# Already gone
 		next if ($d->{'media'} eq 'cdrom' &&
 			 !$d->{'device'});	# CD image in file
-		# XXX don't delete device files
+		next if ($d->{'device'} &&	# Attached real device
+			 !$d->{'lv'}):
 		my $err = &type_kvm_delete_disk($server, $d);
 		return $err if ($err);
 		}
