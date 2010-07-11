@@ -527,10 +527,11 @@ if ($zone) {
 	}
 }
 
-# type_kvm_create_args()
+# type_kvm_create_args([empty])
 # Returns an array of parameters to type_kvm_create_args_parse
 sub type_kvm_create_args
 {
+my ($empty) = @_;
 my @rv = ( { 'name' => 'host', 'value' => 'host-system' },
 	   { 'name' => 'location', 'value' => 'name' },
 	   { 'name' => 'ip', 'value' => 'address[,address]', 'opt' => 1 },
@@ -538,7 +539,7 @@ my @rv = ( { 'name' => 'host', 'value' => 'host-system' },
 	   { 'name' => 'netmask', 'value' => 'mask,[mask]', 'opt' => 1 },
 	   { 'name' => 'gw', 'value' => 'address[,address|*]', 'opt' => 1 },
 	   { 'name' => 'bridge', 'value' => 'name[,name]', 'opt' => 1 },
-	   { 'name' => 'disksize', 'value' => 'megabytes', 'opt' => 1 },
+	   { 'name' => 'disksize', 'value' => 'megabytes', 'opt' => !$empty },
 	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
 	 );
 if (&can_action(undef, "advanced")) {
@@ -735,6 +736,13 @@ if (!-d $vhost->{'kvm_dir'}) {
 	&make_dir($vhost->{'kvm_dir'}, 0755, 1);
 	}
 
+# Validate CD image on host
+if ($empty && !$server->{'image'}) {
+	&stat_file_on_server($vhost, $server->{'imagefile'}) ||
+		return "CD image $server->{'imagefile'} on host system ".
+		       "$vhost->{'host'} does not exist";
+	}
+
 # Work out the config and image file locations
 my ($fsfile, $swfile, $lvmsuffix);
 if ($reset) {
@@ -815,9 +823,6 @@ if ($empty && $server->{'image'}) {
 	}
 elsif ($empty && !$server->{'image'}) {
 	# CD is in an existing file
-	&stat_file_on_server($vhost, $server->{'imagefile'}) ||
-		return "CD image on host system $server->{'imagefile'} does ".
-		       "not exist";
 	$server->{'kvm_drives'} .=
 		" file=$server->{'imagefile'},media=cdrom,index=1,if=ide";
 	$server->{'kvm_bootdevice'} = 'd';
@@ -1291,6 +1296,9 @@ if (ref($disks)) {
 	foreach my $d (reverse(@$disks)) {
 		my @st = &stat_file_on_server($vhost, $d->{'real'});
 		next if (!@st);		# Already gone
+		next if ($d->{'media'} eq 'cdrom' &&
+			 !$d->{'device'});	# CD image in file
+		# XXX don't delete device files
 		my $err = &type_kvm_delete_disk($server, $d);
 		return $err if ($err);
 		}

@@ -87,35 +87,9 @@ $host =~ /^[a-z0-9\.\-]+$/ || &usage("Invalid hostname");
 ($clash) = grep { $_->{'host'} eq $host } @servers;
 $clash && &usage("A system with the same hostname already exists");
 
-# 
-
-if ($image) {
-	# Validate image ID
-	@images = &list_server_images($type);
-	($img) = grep { $_->{'id'} eq $image } @images;
-	$img || &usage("Image ID does not exist or in not valid for the ".
-		       "specified system type");
-	}
-
 # Check if can create
 ($can, $canerr) = &can_create_server($type);
 $can || &usage("Creation is not allowed : $canerr");
-
-# Work out serial and key
-if ($same_serial) {
-	&can_action_usage(\@servers, "licence");
-	($serial, $key) = &get_server_manager_serial();
-	}
-elsif ($allocate_serial) {
-	&can_action_usage(\@servers, "licence");
-	($serial, $key) = &allocate_virtualmin_serial(0);
-	$serial || &usage($key);
-	}
-elsif ($serial && !$nocheck_serial) {
-	$tok = &check_virtualmin_serial($serial, $key);
-	$tok || &usage("Serial $serial or key $key is not valid");
-	$tok > 0 || &usage("Could not validate serial number and key");
-	}
 
 # Create initial server object
 $server = { 'id' => $newid || &server_id(),
@@ -133,6 +107,29 @@ if ($image && $img->{'type'}) {
 	}
 $server->{'host'} = $host;
 
+# Validate CD image
+if ($image) {
+	# Cloudmin CD image
+	@images = &list_server_images($type);
+	($img) = grep { $_->{'id'} eq $image } @images;
+	$img || &usage("Image ID does not exist or in not valid for the ".
+		       "specified system type");
+	&can_image($img) || &usage("You are not allowed to use this image");
+	$img->{'format'} eq 'cd' || &usage("Selected image is not a CD");
+	$server->{'image'} = $image;
+	$server->{'type'} = $img->{'type'};
+	}
+elsif ($imagefile) {
+	# Regular file
+	&can_action_usage(undef, "global");
+	$imagefile =~ /^\/\S+$/ ||
+		&usage("--imagefile must be followed by a full path");
+	$server->{'imagefile'} = $imagefile;
+	}
+else {
+	&usage("One of --image or --imagefile must be given");
+	}
+
 # Disable logins
 $server->{'ssh_user'} = 'root';
 $server->{'ssh_nologin'} = 1;
@@ -142,7 +139,6 @@ $server->{'port'} = 10000;
 $server->{'type'} = 'unknown';
 
 # Call type-specific create parse function
-# XXX
 $pfunc = "type_".$type."_create_args_parse";
 if (defined(&$pfunc)) {
 	$err = &$pfunc($typeargs{$type}, $server, 1);
@@ -221,11 +217,9 @@ if ($limits) {
 &obtain_lock_server($server);
 
 # If there is an image file, copy to the server (if needed)
-# XXX
-if ($image) {
-	$img = &get_server_image($image);
+if ($img) {
 	$vhost = &get_parent_server($server);
-	print "Copying system image files to host system $vhost->{'host'} ..\n";
+	print "Copying CD image file to host system $vhost->{'host'} ..\n";
 	($imageok, $imagetemp, $imagehost) = &transfer_image_files($server);
 	if ($imageok == 0) {
 		print ".. failed : $imagetemp\n";
