@@ -192,31 +192,34 @@ if ($empty) {
 		&ui_textbox("desc", undef, 60));
 
 	# CD image or file (on host)
-	@images = &list_server_images($in{'type'});
-	@images = grep { &can_image($_) && $_->{'format'} eq 'cd' } @images;
-	@opts = ( );
-	if (@images) {
-		push(@opts, [ 0, $text{'create_cdimage'},
+	if ($empty != 2) {
+		@images = &list_server_images($in{'type'});
+		@images = grep { &can_image($_) && $_->{'format'} eq 'cd' }
+			       @images;
+		@opts = ( );
+		if (@images) {
+			push(@opts, [ 0, $text{'create_cdimage'},
 			      &ui_select("image", undef,
-			        [ map { [ $_->{'id'}, $_->{'desc'} ] }
-			      	 sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }
+				[ map { [ $_->{'id'}, $_->{'desc'} ] }
+				 sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }
 				   @images ]) ]);
-		}
-	if (&can_action(undef, "global")) {
-		push(@opts, [ 1, $text{'create_cdfile'},
-			      &ui_filebox("file", undef, 40) ]);
-		}
-	if (@opts > 1) {
-		print &ui_table_row($text{'create_cd'},
+			}
+		if (&can_action(undef, "global")) {
+			push(@opts, [ 1, $text{'create_cdfile'},
+				      &ui_filebox("file", undef, 40) ]);
+			}
+		if (@opts > 1) {
+			print &ui_table_row($text{'create_cd'},
 				    &ui_radio_table("cdmode", 0, \@opts));
-		}
-	elsif (@opts > 0) {
-		print &ui_table_row($opts[0]->[1], $opts[0]->[2]);
-		print &ui_hidden("cdmode", $opts[0]->[0]);
-		}
-	else {
-		print &ui_table_row($text{'create_cd'},
-			"<font color=red>$text{'create_nocd'}</font>");
+			}
+		elsif (@opts > 0) {
+			print &ui_table_row($opts[0]->[1], $opts[0]->[2]);
+			print &ui_hidden("cdmode", $opts[0]->[0]);
+			}
+		else {
+			print &ui_table_row($text{'create_cd'},
+				"<font color=red>$text{'create_nocd'}</font>");
+			}
 		}
 
 	# Owner, if any

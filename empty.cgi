@@ -13,6 +13,8 @@ $server = { 'id' => &server_id(),
 	    'bw_limit' => $config{'bw_def'},
 	    'created' => time(),
 	  };
+$efunc = "type_".$in{'type'}."_can_create_empty";
+$empty = &$efunc();
 
 # Validate inputs, starting with hostname
 if (defined($in{'host'})) {
@@ -32,21 +34,23 @@ $server->{'port'} = 10000;
 $server->{'type'} = 'unknown';
 
 # Validate CD image
-if ($in{'cdmode'} == 0) {
-	# Cloudmin image
-	$in{'image'} || &error($text{'create_eimage'});
-	$img = &get_server_image($in{'image'});
-	$img || &error($text{'create_eimagewrong'});
-	&can_image($img) || &error($text{'create_eimagecannot'});
-	$img->{'format'} eq 'cd' || &error($text{'create_eimagecd'});
-	$server->{'image'} = $in{'image'};
-	$server->{'type'} = $img->{'type'};
-	}
-else {
-	# Regular file
-	&can_action_error(undef, "global");
-	$in{'file'} =~ /^\/\S+$/ || &error($text{'create_eimagefile'});
-	$server->{'imagefile'} = $in{'file'};
+if ($empty != 2) {
+	if ($in{'cdmode'} == 0) {
+		# Cloudmin image
+		$in{'image'} || &error($text{'create_eimage'});
+		$img = &get_server_image($in{'image'});
+		$img || &error($text{'create_eimagewrong'});
+		&can_image($img) || &error($text{'create_eimagecannot'});
+		$img->{'format'} eq 'cd' || &error($text{'create_eimagecd'});
+		$server->{'image'} = $in{'image'};
+		$server->{'type'} = $img->{'type'};
+		}
+	else {
+		# Regular file
+		&can_action_error(undef, "global");
+		$in{'file'} =~ /^\/\S+$/ || &error($text{'create_eimagefile'});
+		$server->{'imagefile'} = $in{'file'};
+		}
 	}
 
 # Parse type-specific inputs
