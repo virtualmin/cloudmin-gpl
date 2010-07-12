@@ -901,6 +901,7 @@ edit_citrixname=Citrix Xen VM name
 edit_citrixuuid=Citrix Xen UUID
 edit_kvmhost=KVM host system
 edit_kvmpid=KVM process ID
+edit_kvmargs=Additional KVM parameters
 edit_iheader=Network Interfaces
 edit_ifaceadd=Add a virtual interface.
 edit_ifaceaddreal=Add a real interface.

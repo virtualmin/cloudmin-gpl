@@ -212,23 +212,27 @@ $server->{'kvm_filesystem'} = $got->{'filesystem'};
 # Save other disks
 my @drives;
 foreach my $dd ("a" .. "z") {
-	my $dfile = $got->{'args'}->{"hd".$dd};
+	my $dfile = $got->{'args'}->{'hd'.$dd};
 	if ($dfile) {
 		my $idx = ord($dd) - 97;
 		push(@drives, "file=$dfile,index=$idx,media=disk");
 		}
+	delete($got->{'args'}->{'hd'.$dd});
 	}
 if ($got->{'args'}->{'cdrom'}) {
 	push(@drives, "file=$got->{'args'}->{'cdrom'},index=2,media=cdrom");
 	}
+delete($got->{'args'}->{'cdrom'});
 my @otherdrives = ref($got->{'args'}->{'drive'}) ?
 			@{$got->{'args'}->{'drive'}} :
 			( $got->{'args'}->{'drive'} );
 push(@drives, @otherdrives);
 $server->{'kvm_drives'} = join(" ", @drives);
+delete($got->{'args'}->{'drive'});
 
 # Save memory
 $server->{'kvm_memory'} = $got->{'args'}->{'m'} || 128;
+delete($got->{'args'}->{'m'});
 
 # Save TAP network interfaces
 my @nets = ref($got->{'args'}->{'net'}) ? @{$got->{'args'}->{'net'}}
@@ -246,11 +250,30 @@ foreach my $n (grep { /^nic/ } @nets) {
 		}
 	}
 $server->{'mac'} = join(" ", @macs);
+delete($got->{'args'}->{'net'});
 
 # Save boot mode
 if ($got->{'args'}->{'boot'}) {
 	$server->{'kvm_bootdevice'} = $got->{'args'}->{'boot'};
 	}
+delete($got->{'args'}->{'boot'});
+
+# Delete args we don't need to save
+delete($got->{'args'}->{'name'});
+delete($got->{'args'}->{'serial'});
+delete($got->{'args'}->{'vnc'});
+delete($got->{'args'}->{'nographic'});
+
+# Save other unknown args
+my @args;
+foreach my $a (keys %{$got->{'args'}}) {
+	my $v = $got->{'args'}->{$a};
+	my @v = ref($v) ? @$v : ( $v );
+	foreach my $vv (@v) {
+		push(@args, "-".$a." ".$vv);
+		}
+	}
+$server->{'kvm_args'} = join(" ", @args);
 }
 
 # type_kvm_create_form([empty-flag])
@@ -1402,6 +1425,11 @@ if (ref($inuse)) {
 	}
 else {
 	$cmd .= " -nographic";
+	}
+
+# Add other imported flags
+if ($server->{'kvm_args'}) {
+	$cmd .= " ".$server->{'kvm_args'};
 	}
 
 return $cmd;
@@ -2687,6 +2715,12 @@ if ($proc) {
 	$rv .= &ui_table_row($text{'edit_kvmpid'}, $proc->{'pid'});
 	}
 
+# Additional command line args
+if ($server->{'kvm_args'}) {
+	$rv .= &ui_table_row($text{'edit_kvmargs'},
+		"<tt>".&html_escape($server->{'kvm_args'})."</tt>");
+	}
+
 return $rv;
 }
 
@@ -2705,6 +2739,9 @@ if ($proc) {
 if ($server->{'kvm_disktotal'}) {
 	push(@rv, [ "KVM total disk size",
 		    &nice_size($server->{'kvm_disktotal'}) ]);
+	}
+if ($server->{'kvm_args'}) {
+	push(@rv, [ "KVM command line args", $server->{'kvm_args'} ]);
 	}
 return @rv;
 }
