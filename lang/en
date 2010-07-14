@@ -445,9 +445,12 @@ create_domipsfailed=.. failed : $1
 create_citrixip=IP address for Citrix Xen VM
 create_citrixip2=IP addresses for Citrix Xen VM
 create_citrixdnswarn=Warning : No DNS zone for new Citrix Xen VMs has been configured on the <a href='$1'>Citrix Xen host</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.
-create_citrixtemplate=Citrix Xen template
+create_citrixtemplate=Citrix Xen install source
+create_citrixtemplate0=Template
+create_citrixtemplate1=CD image
 create_citrixnotemplate=&lt;None - use Cloudmin system image&gt;
 create_ecitrixtemplate=A Citrix Xen template must be selected
+create_ecitrixcd=A Citrix Xen CD image must be selected
 create_citrixrepo=Repository URL for template
 create_citrixifaces=Adding virtual network interfaces ..
 create_ecitrixnetworks=.. failed to list networks on host system : $1
