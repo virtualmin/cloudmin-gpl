@@ -29,7 +29,7 @@ if ($in{'device'}) {
 
 # Change boot method
 if ($in{'mode'}) {
-	&$first_print(&text('boot_moding', $canmode->{'desc'}));
+	&$first_print(&text('boot_moding', "<i>$canmode->{'desc'}</i>"));
 	$mfunc = "type_".$server->{'manager'}."_set_boot_mode";
 	$err = &$mfunc($server, $in{'mode'});
 	if ($err) {
@@ -42,7 +42,7 @@ if ($in{'mode'}) {
 
 # Change boot device
 if ($in{'device'} && !$err) {
-	&$first_print(&text('boot_devicing', $candevice->{'desc'}));
+	&$first_print(&text('boot_devicing', "<i>$candevice->{'desc'}</i>"));
 	$dfunc = "type_".$server->{'manager'}."_set_boot_device";
 	$err = &$dfunc($server, $in{'device'});
 	if ($err) {
