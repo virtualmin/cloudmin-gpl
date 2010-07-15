@@ -572,8 +572,9 @@ sub describe_disk
 my ($d) = @_;
 if ($d->{'storage'}) {
 	# Citrix storage
+	my $r = $d->{'realdesc'} || $d->{'real'};
 	return &text('disks_storage', "<i>$d->{'storage'}</i>",
-				      "<tt>$d->{'real'}</tt>");
+				      "<tt>$r</tt>");
 	}
 elsif ($d->{'device'} && defined(&mount::device_name)) {
 	# Real or LVM device

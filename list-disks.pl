@@ -78,7 +78,10 @@ if ($multi) {
 	# Show one per block
 	foreach $d (@$disks) {
 		print $d->{'real'},"\n";
-		if (defined(&mount::device_name)) {
+		if ($d->{'realdesc'}) {
+			print "    Description: $d->{'realdesc'}\n";
+			}
+		elsif (defined(&mount::device_name)) {
 			$rdesc = &mount::device_name($d->{'real'}, 1);
 			if ($rdesc && $rdesc ne $d->{'real'}) {
 				print "    Description: $rdesc\n";
@@ -144,7 +147,7 @@ else {
 	printf $fmt, "Real file", "Device on system", "Type", "Size";
 	printf $fmt, ("-" x 30), ("-" x 20), ("-" x 10), ("-" x 10);
 	foreach $d (@$disks) {
-		printf $fmt, $d->{'real'},
+		printf $fmt, $d->{'realdesc'} || $d->{'real'},
 		             $d->{'virt'},
 			     $d->{'device'} ? "Device" : "File",
 			     $d->{'size'} ? &nice_size($d->{'size'}) : "";
