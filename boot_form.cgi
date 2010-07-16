@@ -12,20 +12,24 @@ $server || &error($text{'edit_egone'});
 $lfunc = "type_".$server->{'manager'}."_list_boot_modes";
 if (defined(&$lfunc)) {
 	$modes = &$lfunc($server);
-	ref($modes) || &error($modes);
-	$gfunc = "type_".$server->{'manager'}."_get_boot_mode";
-	($ok, $mode) = &$gfunc($server);
-	$ok || &error($mode);
+	if ($modes) {
+		ref($modes) || &error($modes);
+		$gfunc = "type_".$server->{'manager'}."_get_boot_mode";
+		($ok, $mode) = &$gfunc($server);
+		$ok || &error($mode);
+		}
 	}
 
 # Get the current boot device
 $lfunc = "type_".$server->{'manager'}."_list_boot_devices";
 if (defined(&$lfunc)) {
 	$devices = &$lfunc($server);
-	ref($devices) || &error($devices);
-	$gfunc = "type_".$server->{'manager'}."_get_boot_device";
-	($ok, $device) = &$gfunc($server);
-	$ok || &error($device);
+	if ($devices) {
+		ref($devices) || &error($devices);
+		$gfunc = "type_".$server->{'manager'}."_get_boot_device";
+		($ok, $device) = &$gfunc($server);
+		$ok || &error($device);
+		}
 	}
 
 &ui_print_header(&server_in($server), $text{'boot_title'}, "", "boot");
@@ -68,7 +72,19 @@ if ($mode) {
 	}
 
 # Boot device
-if ($device) {
+if ($device && ref($device)) {
+	# Multiple in order
+	for(my $i=0; $i<scalar(@$devices); $i++) {
+		push(@dfields, &ui_select("device", $device->[$i],
+				[ [ '', '&nbsp;' ],
+				  map { [ $_->{'id'}, $_->{'desc'} ] }
+				      @$devices ]));
+		}
+	print &ui_table_row($text{'boot_devices'}, join("<br>\n", @dfields));
+	print &ui_hidden("device_multi", 1);
+	}
+elsif ($device && !ref($device)) {
+	# Only one
 	print &ui_table_row($text{'boot_device'},
 		&ui_select("device", $device,
 			   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$devices ]));

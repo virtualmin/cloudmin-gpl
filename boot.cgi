@@ -20,8 +20,11 @@ if ($in{'device'}) {
 	$lfunc = "type_".$server->{'manager'}."_list_boot_devices";
 	$devices = &$lfunc($server);
 	ref($devices) || &error($devices);
-	($candevice) = grep { $_->{'id'} eq $in{'device'} } @$devices;
-	$candevice || &error($text{'boot_edevice'});
+	foreach $d (split(/\0/, $in{'device'})) {
+		($candevice) = grep { $_->{'id'} eq $d } @$devices;
+		$candevice || &error($text{'boot_edevice'});
+		push(@candevices, $candevice);
+		}
 	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'boot_title'}, "");
@@ -40,11 +43,13 @@ if ($in{'mode'}) {
 		}
 	}
 
-# Change boot device
+# Change boot device(s)
 if ($in{'device'} && !$err) {
-	&$first_print(&text('boot_devicing', "<i>$candevice->{'desc'}</i>"));
+	&$first_print(&text('boot_devicing',
+		join(", ", map { "<i>$_->{'desc'}</i>" } @candevices)));
 	$dfunc = "type_".$server->{'manager'}."_set_boot_device";
-	$err = &$dfunc($server, $in{'device'});
+	$err = &$dfunc($server, $in{'device_multi'} ?
+				[ split(/\0/, $in{'device'}) ] : $in{'device'});
 	if ($err) {
 		&$second_print(&text('boot_devicefailed', $err));
 		}
@@ -79,7 +84,8 @@ if (!$err) {
 	&$first_print($text{'save_refreshing'});
 	&check_server_status($server, 0, 1);
 	&save_managed_server($server);
-	&$second_print(&text('save_refreshdone2', &describe_status($server)));
+	&$second_print(&text('save_refreshdone2',
+			     &describe_status($server, 1)));
 	}
 
 &release_lock_server($server);

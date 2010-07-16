@@ -188,23 +188,37 @@ if ($bootmode) {
 	defined(&$mfunc) || &usage("This virtual system type does not support ".
 				   "changing the boot mode");
 	$modes = &$mfunc($server);
-	$modes || &usage("Failed to check boot modes : $modes");
+	$modes || &usage("This virtual system type does not support ".
+                         "changing the boot mode");
+	ref($modes) || &usage("Failed to check boot modes : $modes");
 	($canmode) = grep { $_->{'id'} eq $bootmode } @$modes;
 	$canmode || &usage("Invalid boot mode - possible options are : ".
 			   join(" ", map { $_->{'id'} } @$modes));
 	}
 
-# Validate boot device
+# Validate boot device(s)
 if ($bootdevice) {
 	&can_action_usage($server, "boot");
 	$mfunc = "type_".$server->{'manager'}."_list_boot_devices";
 	defined(&$mfunc) || &usage("This virtual system type does not support ".
 				   "changing the boot device");
 	$devices = &$mfunc($server);
-	$devices || &usage("Failed to check boot devices : $devices");
-	($candevice) = grep { $_->{'id'} eq $bootdevice } @$devices;
-	$candevice || &usage("Invalid boot device - possible options are : ".
+	$devices || &usage("This virtual system type does not support ".
+                           "changing the boot device");
+	ref($devices) || &usage("Failed to check boot devices : $devices");
+	$gfunc = "type_".$server->{'manager'}."_get_boot_device";
+	($ok, $olddevice) = &$gfunc($server);
+	@bootdevices = split(/\s+/, $bootdevice);
+	foreach $d (@bootdevices) {
+		($candevice) = grep { $_->{'id'} eq $d } @$devices;
+		$candevice ||
+		    &usage("Invalid boot device $d - possible options are : ".
 			   join(" ", map { $_->{'id'} } @$devices));
+		}
+	@bootdevices || &usage("Missing boot device");
+	if (!ref($olddevice)) {
+		@bootdevices == 1 || &usage("Only one boot device may be set");
+		}
 	}
 
 # Make all the changes
@@ -285,7 +299,8 @@ if ($bootmode) {
 # Change boot device
 if ($bootdevice) {
 	$mfunc = "type_".$server->{'manager'}."_set_boot_device";
-	$err = &$mfunc($server, $bootdevice);
+	$err = &$mfunc($server, ref($olddevice) ? \@bootdevices
+						: $bootdevices[0]);
 	$err && &usage("Failed to change boot device to $bootdevice : $err");
 	}
 
