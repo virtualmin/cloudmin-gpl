@@ -167,6 +167,14 @@ if ($multi) {
 			print "    Boot method: ",
 				(!$mok ? "Unknown : $mode" : $mode),"\n";
 			}
+		$dfunc = "type_".$s->{'manager'}."_get_boot_device";
+		if (defined(&$dfunc)) {
+			($dok, $device) = &$dfunc($s);
+			print "    Boot device: ",
+				(!$dok ? "Unknown : $device" :
+				 ref($device) ? join(" ", @$device)
+					      : $device),"\n";
+			}
 
 		# Login information
 		$sfunc = "type_".$s->{'manager'}."_no_ssh";

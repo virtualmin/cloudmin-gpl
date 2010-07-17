@@ -208,7 +208,7 @@ if ($bootdevice) {
 	ref($devices) || &usage("Failed to check boot devices : $devices");
 	$gfunc = "type_".$server->{'manager'}."_get_boot_device";
 	($ok, $olddevice) = &$gfunc($server);
-	@bootdevices = split(/\s+/, $bootdevice);
+	@bootdevices = split(/[ ,]+/, $bootdevice);
 	foreach $d (@bootdevices) {
 		($candevice) = grep { $_->{'id'} eq $d } @$devices;
 		$candevice ||
