@@ -7347,7 +7347,7 @@ print &ui_table_row($text{'add_webmin'},
 		[ 2, &text('add_webmin2',
 			  &ui_textbox("wuser", $server ? $server->{'user'}
 						       : "root", 20),
-			  &ui_textbox("wpass", $server ? $server->{'pass'}
+			  &ui_password("wpass", $server ? $server->{'pass'}
 						       : "", 20)) ] ])."<br>".
 	&ui_checkbox("ssl", 1, $text{'add_ssl'},
 		     $server ? $server->{'ssl'} : 1));
@@ -7435,7 +7435,7 @@ else {
 				       $server->{'ssh_nologin'} ? 2 :
 				       $server->{'key'} ? 1 : 0,
 		      [ [ 0, &text('add_auth0',
-			   &ui_textbox("upass", $server ? $server->{'ssh_pass'}
+			   &ui_password("upass", $server ? $server->{'ssh_pass'}
 							: undef, 20))."<br>" ],
 			[ 1, &text('add_auth1',
 				&ssh_key_menu("key", $type,
