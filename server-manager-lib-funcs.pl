@@ -3639,7 +3639,7 @@ elsif ($type eq "dpkg" && $src eq "apt") {
 				"apt-get -y --force-yes -f install webmin");
 	return (undef, $werr) if ($werr);
 	return (undef, "APT failed : $wout") if ($wex);
-	$rootdir = "/usr/libexec/webmin";
+	$rootdir = "/usr/share/webmin";
 	$out .= $wout;
 	}
 
