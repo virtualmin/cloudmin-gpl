@@ -119,7 +119,7 @@ if (!$access{'owner'}) {
 	}
 my @rv = ( 1, undef );
 if ($server && $access{'servers'} ne '*') {
-	if (!defined(%can_servers_cache)) {
+	if (!%can_servers_cache) {
 		foreach my $id (split(/\s+/, $access{'servers'})) {
 			$can_servers_cache{$id} = 1;
 			}
@@ -139,7 +139,7 @@ if ($server && $access{'servers'} ne '*') {
 		}
 	}
 if ($action && $access{'actions'} ne '*' && $rv[0]) {
-	if (!defined(%can_actions_cache)) {
+	if (!%can_actions_cache) {
 		foreach my $a (split(/\s+/, $access{'actions'})) {
 			$can_actions_cache{$a} = 1;
 			}
