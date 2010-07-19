@@ -23,6 +23,7 @@ if (!$in{'new'}) {
 	($disk) = grep { $_->{'real'} eq $in{'oldreal'} } @$disks;
 	$disk || &error($text{'disk_egone'});
 	$olddisk = { %$disk };
+	$r = $disk->{'realdesc'} || $disk->{'real'};
 	}
 
 if ($in{'delete'}) {
@@ -30,8 +31,7 @@ if ($in{'delete'}) {
 	&ui_print_header(&server_in($server), $text{'disk_titled'}, "");
 	if ($in{'confirm'}) {
 		# Do it
-		&$first_print(&text('disk_deleting',
-				    "<tt>$disk->{'real'}</tt>"));
+		&$first_print(&text('disk_deleting', "<tt>$r</tt>"));
 		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_disk";
 		$err = &$dfunc($server, $disk);
@@ -54,7 +54,7 @@ if ($in{'delete'}) {
 		print &ui_hidden("id", $in{'id'});
 		print &ui_hidden("oldreal", $in{'oldreal'});
 		print &ui_hidden("delete", 1);
-		$desc = "<tt>$disk->{'real'}</tt>";
+		$desc = "<tt>$r</tt>";
 		if ($disk->{'device'} &&
 		    !$disk->{'lv'} && !$disk->{'storage'}) {
 			print &text('disk_rusure2', $desc),"<p>\n";
@@ -80,7 +80,7 @@ elsif ($in{'detach'}) {
 	if ($in{'confirm'}) {
 		# Do it
 		&$first_print(&text('disk_detaching',
-				    "<tt>$disk->{'real'}</tt>"));
+				    "<tt>$r</tt>"));
 		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_disk";
 		$err = &$dfunc($server, $disk, 1);
@@ -103,7 +103,7 @@ elsif ($in{'detach'}) {
 		print &ui_hidden("id", $in{'id'});
 		print &ui_hidden("oldreal", $in{'oldreal'});
 		print &ui_hidden("detach", 1);
-		$desc = "<tt>$disk->{'real'}</tt>";
+		$desc = "<tt>$r</tt>";
 		print &text('disk_rusure3', $desc),"<p>\n";
 		if ($disk->{'mount'} && $disk->{'fs'} ne 'swap') {
 			print &text('disk_rusuremount',
@@ -122,7 +122,7 @@ elsif ($in{'fsck'}) {
 	&ui_print_header(&server_in($server), $text{'fsck_title'}, "");
 
 	&$first_print(&text('fsck_doing', uc($disk->{'fs'}),
-					  "<tt>$disk->{'real'}</tt>"));
+					  "<tt>$r</tt>"));
 	$ffunc = "type_".$server->{'manager'}."_fsck_disk";
 	($ok, $out) = &$ffunc($server, $disk);
 	&$block_print($out);

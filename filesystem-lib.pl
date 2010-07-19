@@ -422,15 +422,17 @@ return &put_system_fstab($server, \@newfstab);
 sub get_label_map
 {
 my ($server) = @_;
-return () if (!&can_ssh_status($server));
-my $data = &get_file_data_from_server($server, "/proc/partitions");
+my %defrv = map { split(/=/, $_) } split(/\s+/, $server->{'label_map'});
+return %defrv if (!&can_ssh_status($server));
+my ($data, $ex, $err) = &execute_command_on_server($server,
+						   "cat /proc/partitions");
+return %defrv if ($ex || $er);
 foreach my $l (split(/\r?\n/, $data)) {
 	if ($l =~ /\d+\s+\d+\s+\d+\s+([a-z]+)(\d+)/) {
 		push(@parts, "/dev/$1$2");
 		}
 	}
 if (!@parts) {
-	# XXX
 	return ();
 	}
 my @cmds = map { "e2label $_ 2>/dev/null || echo NONE" } @parts;
@@ -443,6 +445,24 @@ for(my $i=0; $i<@parts; $i++) {
 		}
 	}
 return %rv;
+}
+
+# generate_label_map(&server)
+# Set the label_map field on a server based on disks
+sub generate_label_map
+{
+my ($server) = @_;
+my $dfunc = "type_".$server->{'manager'}."_list_disks";
+return if (!defined(&$dfunc));
+my $disks = &$dfunc($server, 1);
+return if (!ref($disks));
+my %rv;
+foreach my $d (@$disks) {
+	if ($d->{'virt_label'}) {
+		$rv{$d->{'virt_label'}} = $d->{'virt_mount'};
+		}
+	}
+$server->{'label_map'} = join(" ", map { $_."=".$rv{$_} } keys %rv);
 }
 
 1;

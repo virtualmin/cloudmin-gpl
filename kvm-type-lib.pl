@@ -1535,16 +1535,43 @@ if ($mounts) {
 	# Get fstab mounts
 	my $fstab = &get_system_fstab($server);
 	return $fstab if (!ref($fstab));
+	my %label_to_part;
+	my $got_label_to_part = 0;
 	foreach my $d (@rv) {
-		my ($f) = grep { my $v = $d->{'virt'};
-				 $_->[0] =~ /^\Q$v\E(\d*)$/ } @$fstab;
+		my ($f) = grep { &same_xen_virt($d->{'virt'}, $_->[0], 1) }
+			       @$fstab;
+		if (!$f) {
+			# Check if a partition has an ext label
+			if (!$got_label_to_part) {
+				%label_to_part = &get_label_map($server);
+				$got_label_to_part = 1;
+				}
+			my $label;
+			foreach my $l (keys %label_to_part) {
+				my $p = $label_to_part{$l};
+				if (&same_xen_virt($p, $d->{'virt'}, 1)) {
+					$label = $l;
+					last;
+					}
+				}
+			if ($label) {
+				($f) = grep { $_->[0] eq 'LABEL='.$label }
+					    @$fstab;
+				if ($f) {
+					$f->[0] = $label_to_part{$label};
+					$d->{'virt_label'} = $label;
+					}
+				}
+			}
 		if ($f) {
 			$d->{'virt_mount'} = $f->[0];
+			$d->{'virt_onsystem'} = $f->[0];
+			$d->{'virt_onsystem'} =~ s/\d+$//;
+			$d->{'mount'} = $f->[1];
+			$d->{'fs'} = $f->[2];
 			if ($f->[0] =~ /(\d+)$/) {
 				$d->{'virt_part'} = $1;
 				}
-			$d->{'mount'} = $f->[1];
-			$d->{'fs'} = $f->[2];
 			}
 		}
 
@@ -2664,6 +2691,11 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 	if ($proc) {
 		$server->{'kvm'} = $proc->{'pid'};
 		}
+	}
+
+# Cache label->partition map, for use when the system is down
+if (&can_ssh_status($server) && (!defined($server->{'label_map'}) || $regen)) {
+	&generate_label_map($server);
 	}
 }
 
