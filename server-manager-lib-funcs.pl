@@ -8921,6 +8921,21 @@ while(<STATUS>) {
 return @rv;
 }
 
+# same_xen_virt(device, device, [ignore-partition])
+# Compares two device names, treating /dev/sdN and /dev/xvdN the same. Assumes
+# that a virtual system will only have one type of disk.
+sub same_xen_virt
+{
+my ($d1, $d2, $nopart) = @_;
+$d1 =~ s/\/(xvd|hd)/\/sd/g;
+$d2 =~ s/\/(xvd|hd)/\/sd/g;
+if ($nopart) {
+	$d1 =~ s/\d+$//g;
+	$d2 =~ s/\d+$//g;
+	}
+return lc($d1) eq lc($d2);
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server
