@@ -32,13 +32,9 @@ $< == 0 || die "$0 must be run as root";
 
 # Work out possible creation types
 foreach $t (@server_management_types) {
-	$lfunc = "type_".$t."_create_links";
-	if (defined(&$lfunc)) {
-		foreach $l (&$lfunc()) {
-			if ($l->{'create'}) {
-				push(@crtypes, $t);
-				}
-			}
+	$lfunc = "type_".$t."_can_create_empty";
+	if (defined(&$lfunc) && &$lfunc()) {
+		push(@crtypes, $t);
 		}
 	}
 @crtypes || &usage("No system types are available for creation!");
@@ -107,27 +103,42 @@ if ($image && $img->{'type'}) {
 	}
 $server->{'host'} = $host;
 
-# Validate CD image
-if ($image) {
-	# Cloudmin CD image
-	@images = &list_server_images($type);
-	($img) = grep { $_->{'id'} eq $image } @images;
-	$img || &usage("Image ID does not exist or in not valid for the ".
-		       "specified system type");
-	&can_image($img) || &usage("You are not allowed to use this image");
-	$img->{'format'} eq 'cd' || &usage("Selected image is not a CD");
-	$server->{'image'} = $image;
-	$server->{'type'} = $img->{'type'};
-	}
-elsif ($imagefile) {
-	# Regular file
-	&can_action_usage(undef, "global");
-	$imagefile =~ /^\/\S+$/ ||
-		&usage("--imagefile must be followed by a full path");
-	$server->{'imagefile'} = $imagefile;
+# Check if any image is needed
+$efunc = "type_".$type."_can_create_empty";
+$empty = defined(&$efunc) && &$efunc();
+$empty || &usage("Virtual system type $type does not support empty ".
+		 "system creation");
+
+if ($empty != 2) {
+	# Validate CD image
+	if ($image) {
+		# Cloudmin CD image
+		@images = &list_server_images($type);
+		($img) = grep { $_->{'id'} eq $image } @images;
+		$img || &usage("Image ID does not exist or in not valid for ".
+			       "the specified system type");
+		&can_image($img) ||
+			&usage("You are not allowed to use this image");
+		$img->{'format'} eq 'cd' ||
+			&usage("Selected image is not a CD");
+		$server->{'image'} = $image;
+		$server->{'type'} = $img->{'type'};
+		}
+	elsif ($imagefile) {
+		# Regular file
+		&can_action_usage(undef, "global");
+		$imagefile =~ /^\/\S+$/ ||
+			&usage("--imagefile must be followed by a full path");
+		$server->{'imagefile'} = $imagefile;
+		}
+	else {
+		&usage("One of --image or --imagefile must be given");
+		}
 	}
 else {
-	&usage("One of --image or --imagefile must be given");
+	# No image needed
+	($image || $imagefile) &&
+		&usage("No CD image can be specified for a $type system");
 	}
 
 # Disable logins
