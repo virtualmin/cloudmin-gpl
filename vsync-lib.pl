@@ -186,8 +186,7 @@ my $srctemp = $tempdir{$src->{'id'}};
 
 # Backup all domains to the temp dir
 &$first_print($text{'vsync_backup'});
-my @args = ( [ "newformat" ],
-	     [ "dest", $srctemp ] );
+my @args = ( [ "dest", $srctemp ] );
 my @doms = split(/\s+/, $vsync->{'doms'});
 push(@args, map { [ "domain", $_ ] } @doms);
 my @tmpls = split(/\s+/, $vsync->{'tmpls'});
@@ -195,9 +194,12 @@ push(@args, map { [ "virtualmin", $_ ] } @tmpls);
 my @feats = split(/\s+/, $vsync->{'feats'});
 if (@feats) {
 	push(@args, map { [ "feature", $_ ] } @feats);
+	push(@args, [ &indexof("dir", @feats) >= 0 ? "newformat"
+						   : "separate" ]);
 	}
 else {
 	push(@args, [ "all-features" ]);
+	push(@args, [ "newformat" ]);
 	}
 my ($err, $out) = &call_virtualmin_api($src, "backup-domain", \@args);
 if ($err || $out !~ /Final\s+size\s+was\s+([0-9\.]+\s*\S+)/) {
