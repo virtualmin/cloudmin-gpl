@@ -233,7 +233,7 @@ foreach my $dname (@doms) {
 
 # Transfer each to the targets, in parallel
 &$first_print($text{'vsync_transfer'});
-my @rargs = grep { $_->[0] ne "dest" && $_->[0] ne "newformat" } @args;
+my @rargs = grep { $_->[0] ne "dest" && $_->[0] ne "newformat" && $_->[0] ne "separate" } @args;
 my $args = [ $src, \@doms, \%dompath, \%tempdir, \@rargs ];
 my @transouts = &parallel_server_function(
 			\@dests, \&transfer_virtualmin_domains, $args);
