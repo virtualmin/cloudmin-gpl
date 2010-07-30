@@ -75,7 +75,8 @@ print &ui_table_row($text{'vsync_feats'},
 		    [ 0, $text{'vsync_feats0'} ] ])."<br>\n".
 	&ui_select("feats",
 		   [ split(/\s+/, $vsync->{'feats'}) ],
-		   [ map { [ $_->{'feature'}, $_->{'desc'} ] }
+		   [ [ 'virtualmin', 'Virtual server configuration' ],
+		     map { [ $_->{'feature'}, $_->{'desc'} ] }
 			 @standard_virtualmin_features ],
 		   scalar(@standard_virtualmin_features), 1));
 
