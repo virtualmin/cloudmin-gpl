@@ -885,6 +885,7 @@ edit_auth=SSH login mode
 edit_authuser=SSH username
 edit_authport=SSH port number
 edit_wauth=Webmin login mode
+edit_nheader=System notes
 edit_vserverhost=VServer host system
 edit_vserverinstance=VServer instance name
 edit_vserverctx=Context ID

@@ -447,6 +447,14 @@ if ($haswebmin || $hasssh) {
 	print &ui_hidden_table_end("auth");
 	}
 
+# Section for notes
+print &ui_hidden_table_start($text{'edit_nheader'},
+			     "width=100%", 2, "notes", $in{'notes'}, \@tds);
+print &ui_table_row(undef,
+	&ui_textarea("notes", join("\n", split(/\t/, $server->{'notes'})),
+		     5, 80), 2);
+print &ui_hidden_table_end("notes");
+
 # Action buttons at end of form (depends on status)
 $down = $status eq 'down' || $status eq 'nossh' || $status eq 'nohost';
 if ($view) {
