@@ -13,6 +13,9 @@ and the most commonly used ones are :
 C<--desc> I<new description>
 Sets a new human-readable description for this system.
 
+C<--notes> I<text>
+Sets the notes for some system. Use \n to indicate a newline in the text.
+
 C<--newhost> I<hostname>
 Changes the hostname used by Cloudmin. This must resolve to the same IP address as the old name, unless the C<--force-host> flag is given.
 
@@ -68,6 +71,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--desc") {
 		$desc = shift(@ARGV);
+		}
+	elsif ($a eq "--notes") {
+		$notes = shift(@ARGV);
 		}
 	elsif ($a eq "--os") {
 		$type = shift(@ARGV);
@@ -225,6 +231,10 @@ if ($bootdevice) {
 if (defined($desc)) {
 	$server->{'desc'} = $desc;
 	}
+if (defined($notes)) {
+	$notes =~ s/\\n/\t/g;
+	$server->{'notes'} = $notes;
+	}
 if (defined($type)) {
 	$server->{'type'} = $type;
 	}
@@ -325,6 +335,7 @@ print "\n";
 print "cloudmin modify-system --host name\n";
 print "                      [--force-host]\n";
 print "                      [--desc \"new description\"]\n";
+print "                      [--notes \"new notes text\"]\n";
 print "                      [--newhost name]\n";
 print "                      [--os code]\n";
 print "                      [--virt | --novirt]\n";

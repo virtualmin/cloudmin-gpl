@@ -411,6 +411,8 @@ else {
 		$server->{'desc'} = $in{'desc'};
 		}
 	$server->{'type'} = $in{'type'};
+	$in{'notes'} =~ s/\r//g;
+	$server->{'notes'} = join("\t", split(/\n/, $in{'notes'}));
 	@groups = split(/\0/, $in{'group'});
 	if ($in{'newgroup'}) {
 		$in{'newgroup'} =~ /^\S+$/ || &error($text{'save_egroup2'});

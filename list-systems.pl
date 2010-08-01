@@ -161,6 +161,9 @@ if ($multi) {
 			print "    Start at boot: ",
 			      (&$bfunc($s) ? "Yes" : "No"),"\n";
 			}
+		if ($s->{'notes'}) {
+			print "    Notes: ",join("\\n", split(/\t/, $s->{'notes'})),"\n";
+			}
 		$mfunc = "type_".$s->{'manager'}."_get_boot_mode";
 		if (defined(&$mfunc)) {
 			($mok, $mode) = &$mfunc($s);

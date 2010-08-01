@@ -15,6 +15,7 @@ $view = !&can_action($server, "edit");
 # Heading and form start
 @tds = ( "width=30%" );
 $in{'basic'} = 1 if (!defined($in{'basic'}));
+$in{'notes'} = 1 if (!defined($in{'notes'}) && $server->{'notes'});
 if ($view) {
 	&ui_print_header(&server_in($server), $text{'view_title'}, "");
 
@@ -452,7 +453,7 @@ print &ui_hidden_table_start($text{'edit_nheader'},
 			     "width=100%", 2, "notes", $in{'notes'}, \@tds);
 print &ui_table_row(undef,
 	&ui_textarea("notes", join("\n", split(/\t/, $server->{'notes'})),
-		     5, 80), 2);
+		     10, 80, undef, 0, "style='width:100%'"), 2);
 print &ui_hidden_table_end("notes");
 
 # Action buttons at end of form (depends on status)
