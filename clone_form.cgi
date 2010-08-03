@@ -32,11 +32,11 @@ print &ui_table_row($text{'clone_desc'},
 # IP addresses for non-virtual interfaces
 if (&can_action($server, 'ips')) {
 	$cfunc = "type_".$server->{'manager'}."_can_interfaces";
+	@grid = ( );
 	if (defined(&$cfunc) && &$cfunc($server)) {
 		# Can show list of interfaces
 		$ifunc = "type_".$server->{'manager'}."_list_interfaces";
 		$i = 0;
-		@grid = ( );
 		$ifaces = &$ifunc($server);
 		foreach my $iface (grep { $_->{'virtual'} eq '' } @$ifaces) {
 			push(@grid, [ $iface->{'name'},
@@ -47,9 +47,9 @@ if (&can_action($server, 'ips')) {
 			[ $text{'clone_iface'}, $text{'clone_ip'} ],
 			undef, \@grid);
 		}
-	else {
+	if (!@grid) {
 		# One text box
-		$ipsfield = &ui_textarea("ips", undef, 20, 3);
+		$ipsfield = &ui_textarea("ips", undef, 3, 20);
 		}
 	print &ui_table_row($text{'clone_ips'},
 		&ui_radio("ips_def", 1, [ [ 1, $text{'clone_ips1'} ],
