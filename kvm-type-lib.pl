@@ -4408,6 +4408,13 @@ if ($config{'dhcp_add'}) {
 		}
 	}
 
+# Fix up other config entries using the old name
+foreach my $f ('kvm_filesystem', 'kvm_filesystem_lv',
+	       'kvm_swapfile', 'kvm_swapfile_lv',
+	       'kvm_dns', 'kvm_console', 'login_user', 'data_files') {
+	$newserver->{$f} =~ s/\Q$oldkvm\E/$newkvm/g;
+	}
+
 return (undef, 0);
 }
 
