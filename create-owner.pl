@@ -110,7 +110,7 @@ foreach $n (@hosts) {
 	$s || &usage("No system named $n exists");
 	push(@ids, $s->{'id'});
 	}
-$name =~ /^[a-z0-9\.\-\_]+$/i || &usage("Invalid system owner login");
+$name =~ /^[a-z0-9\.\-\_\@]+$/i || &usage("Invalid system owner login");
 ($clash) = grep { $_->{'name'} eq $name } &acl::list_users();
 $clash && &usage("A user named $name already exists");
 if (&supports_plans() && !$plan) {

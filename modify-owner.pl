@@ -129,7 +129,7 @@ $name || &usage("Missing --name parameter");
 ($owner) = grep { $_->{'name'} eq $name } &list_system_owners();
 $owner || &usage("No system owner named $name exists");
 if (defined($newname)) {
-	$newname =~ /^[a-z0-9\.\-\_]+$/i ||
+	$newname =~ /^[a-z0-9\.\-\_\@]+$/i ||
 		&usage("Invalid new system owner login");
 	($clash) = grep { $_->{'name'} eq $newname } &acl::list_users();
 	$clash && &usage("A user named $newname already exists");

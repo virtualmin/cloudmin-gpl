@@ -41,7 +41,7 @@ elsif ($in{'delete'}) {
 	}
 else {
 	# Validate inputs, starting with login
-	$in{'oname'} =~ /^[a-z0-9\.\-\_]+$/i ||
+	$in{'oname'} =~ /^[a-z0-9\.\-\_\@]+$/i ||
 		&error($text{'owner_ename'});
 	if ($in{'new'} || $in{'oname'} ne $owner->{'name'}) {
 		($clash) = grep { $_->{'name'} eq $in{'oname'} }
