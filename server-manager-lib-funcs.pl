@@ -1568,7 +1568,8 @@ else {
 	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
 	$sshcmd .= " dd of=".quotemeta($dest)." bs=32768";
 	if ($keytemp) {
-		$sshcmd .= " ; rm -f ".quotemeta($keytemp);
+		$sshcmd .= " ; ex=\$? ; rm -f ".quotemeta($keytemp).
+			   " ; exit \$ex";
 		}
 
 	# Then execute on the source system
@@ -1703,7 +1704,8 @@ else {
 	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
 	$sshcmd .= " ".quotemeta($destcmd);
 	if ($keytemp) {
-		$sshcmd .= " ; rm -f ".quotemeta($keytemp);
+		$sshcmd .= " ; ex=\$? ; rm -f ".quotemeta($keytemp).
+			   " ; exit \$ex";
 		}
 
 	# Then execute on the source system
