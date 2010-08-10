@@ -34,7 +34,7 @@ if (!&is_cloudmin_replica()) {
 	}
 
 # Run any scheduled changes
-if (!&is_cloudmin_replica()) {
+if (!&is_cloudmin_replica() && defined(&run_scheduled_changes)) {
 	$done = &run_scheduled_changes(\@servers);
 	if ($done) {
 		&cloudmin_api_log([])
