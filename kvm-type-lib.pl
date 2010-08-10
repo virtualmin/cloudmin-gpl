@@ -1322,7 +1322,7 @@ if (ref($disks)) {
 		next if ($d->{'media'} eq 'cdrom' &&
 			 !$d->{'device'});	# CD image in file
 		next if ($d->{'device'} &&	# Attached real device
-			 !$d->{'lv'}):
+			 !$d->{'lv'});
 		my $err = &type_kvm_delete_disk($server, $d);
 		return $err if ($err);
 		}
