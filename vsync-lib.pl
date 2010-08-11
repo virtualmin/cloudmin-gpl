@@ -163,7 +163,13 @@ if (!@dests) {
 	&$second_print($text{'vsync_efinddest'});
 	return 0;
 	}
-&$second_print(&text('vsync_found', $src->{'host'}, scalar(@dests)));
+if (@dests == 1) {
+	&$second_print(&text('vsync_foundone', $src->{'host'},
+					       $dests[0]->{'host'}));
+	}
+else {
+	&$second_print(&text('vsync_found', $src->{'host'}, scalar(@dests)));
+	}
 
 # Create temp dirs on the source and dests
 &$first_print($text{'vsync_temp'});
@@ -185,9 +191,19 @@ my $srctemp = $tempdir{$src->{'id'}};
 &$second_print($text{'create_done'});
 
 # Backup all domains to the temp dir
-&$first_print($text{'vsync_backup'});
 my @args = ( [ "dest", $srctemp ] );
-my @doms = split(/\s+/, $vsync->{'doms'});
+my @doms;
+if ($vsync->{'doms_all'}) {
+	@doms = map { $_->{'dom'} } &get_server_domains($src);
+	}
+else {
+	@doms = split(/\s+/, $vsync->{'doms'});
+	}
+&$first_print(&text('vsync_backup', scalar(@doms)));
+if (!@doms) {
+	&$second_print($text{'vsync_ebackupdoms'});
+	return 0;
+	}
 push(@args, map { [ "domain", $_ ] } @doms);
 my @tmpls = split(/\s+/, $vsync->{'tmpls'});
 push(@args, map { [ "virtualmin", $_ ] } @tmpls);
@@ -325,6 +341,10 @@ my ($err, $out) = &call_virtualmin_api($dest, "restore-domain", \@rargs);
 if ($err) {
 	return ( 0, $err, $dest->{'host'} );
 	}
+
+# Re-read domains list
+&check_server_status($dest);
+&save_managed_server($dest);
 return ( 1 );
 }
 

@@ -21,7 +21,8 @@ if (@vsyncs) {
                          @users > 4 ? &text('keys_manyusers', scalar(@users)) :
                            join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
 		@doms = split(/\s+/, $v->{'doms'});
-		$what = @doms == 0 ? $text{'vsyncs_templates'} :
+		$what = $v->{'doms_all'} ? $text{'vsyncs_domsall'} :
+		        @doms == 0 ? $text{'vsyncs_templates'} :
 			@doms > 4 ? &text('vsyncs_manydoms', scalar(@doms)) :
 			  join(", ", map { "<tt>$_</tt>" } @doms);
 		print &ui_columns_row([

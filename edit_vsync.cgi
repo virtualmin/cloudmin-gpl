@@ -30,7 +30,7 @@ print &ui_hidden_table_start($text{'vsync_header1'}, "width=100%", 2,
 print &ui_table_row($text{'vsync_src'},
 		&ui_select("src", $vsync->{'src'},
 			   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ],
-			   1, 0, 1));
+			   1, 0, 0));
 
 # Destination systems
 @dests = &get_virtualmin_sync_dests($vsync);
@@ -50,6 +50,10 @@ foreach $s (@servers) {
 @doms = sort { $a cmp $b } @doms;
 @alldoms = sort { $a->{'dom'} cmp $b->{'dom'} } @alldoms;
 print &ui_table_row($text{'vsync_doms'},
+	&ui_checkbox("doms_all", 1, $text{'vsync_doms_all'},
+		     $vsync->{'doms_all'})."\n".
+	&ui_checkbox("doms_delete", 1, $text{'vsync_doms_delete'},
+		     $vsync->{'doms_delete'})."\n".
 	&ui_multi_select("doms",
 		[ map { [ $_, &show_domain_name($_) ] } @doms ],
 		[ map { [ $_->{'dom'}, &show_domain_name($_) ] } @alldoms ],
@@ -68,6 +72,23 @@ print &ui_table_row($text{'vsync_tmpls'},
 				    &indexof($_, @tmpls) >= 0)."<br>\n" }
 		     &list_virtualmin_globals(\@servers) ], 2, 100));
 
+# Work out what features exist
+if ($in{'new'}) {
+	$fhost = $servers[0];
+	}
+else {
+	$fhost = &get_managed_server($vsync->{'src'});
+	}
+if ($fhost) {
+	$finfo = &get_server_collected($fhost);
+	if ($finfo) {
+		@features = @{$finfo->{'features'}};
+		}
+	}
+if (!@features) {
+	@features = @standard_virtualmin_features;
+	}
+
 # Domain features to sync
 print &ui_table_row($text{'vsync_feats'},
 	&ui_radio("feats_def", $vsync->{'feats'} ? 0 : 1,
@@ -77,8 +98,8 @@ print &ui_table_row($text{'vsync_feats'},
 		   [ split(/\s+/, $vsync->{'feats'}) ],
 		   [ [ 'virtualmin', 'Virtual server configuration' ],
 		     map { [ $_->{'feature'}, $_->{'desc'} ] }
-			 @standard_virtualmin_features ],
-		   scalar(@standard_virtualmin_features), 1));
+			 @features ],
+		   scalar(@features), 1));
 
 print &ui_hidden_table_end("doms");
 

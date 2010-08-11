@@ -53,10 +53,14 @@ else {
 		$srcdoms{$dname} ||
 		    &error(&text('vsync_edomon', &show_domain_name($dname)));
 		}
+	$vsync->{'doms_all'} = $in{'doms_all'};
+	$vsync->{'doms_delete'} = $in{'doms_delete'};
+	# XXX check for conflict?
 
 	# Parse global settings
 	$vsync->{'tmpls'} = join(" ", split(/\0/, $in{'tmpl'}));
-	$vsync->{'doms'} || $vsync->{'tmpls'} || &error($text{'vsync_edoms'});
+	$vsync->{'doms'} || $vsync->{'tmpls'} || $vsync->{'doms_all'} ||
+		&error($text{'vsync_edoms'});
 	
 	# Parse features
 	if ($in{'feats_def'}) {
