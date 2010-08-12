@@ -55,7 +55,7 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--new-netmask") {
 		$newnetmask = shift(@ARGV);
-		&check_ipnetmask($newnetmask) ||
+		&check_ipaddress($newnetmask) ||
 		    &usage("--new-netmask must be followed by an IP netmask");
 		}
 	elsif ($a eq "--new-ether") {
