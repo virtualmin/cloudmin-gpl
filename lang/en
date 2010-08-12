@@ -3397,7 +3397,7 @@ vsyncs_add=Add a new replication configuration.
 vsyncs_return=replication list
 
 vsync_title1=Add Virtual Server Replication
-vsyncs_title2=Edit Virtual Server Replication
+vsync_title2=Edit Virtual Server Replication
 vsync_ecannot=You are not allowed to edit this replication config
 vsync_egone=Replication config does not exist!
 vsync_header1=Replicated systems and domains
@@ -3440,6 +3440,7 @@ vsync_efindsrc=.. source no longer exists!
 vsync_efinddest=.. no destinations exist!
 vsync_found=.. found source $1 and $2 destinations
 vsync_foundone=.. found source $1 and destination $2
+vsync_refreshing=Refreshing domains on source system ..
 vsync_temp=Creating temporary directories ..
 vsync_etemp=.. failed to get temporary directory on $1
 vsync_emktemp=.. failed to create temporary directory on $1 : $2
@@ -3460,6 +3461,10 @@ vsync_erestore=.. $1 restores succeeded, $2 failed
 vsync_erestore2=Failed to restore on $1 : $2
 vsync_fsubject=Failed replication of $1 virtual servers from $2
 vsync_fsubject2=Failed replication of global settings from $2
+vsync_deleting=Removing excess virtual servers on destinations ..
+vsync_deletedfailed=.. deletion on $1 of $3 domains failed : $2
+vsync_deleted=.. deletion on $1 of $2 domains succeeded
+vsync_deletednone=.. no domains need deletion on $1
 
 storages_title=Image Storage Locations
 storages_dest=Location

@@ -171,6 +171,12 @@ else {
 	&$second_print(&text('vsync_found', $src->{'host'}, scalar(@dests)));
 	}
 
+# Refresh status of source system, to ensure domains list is up to date
+&$first_print($text{'vsync_refreshing'});
+&check_server_status($src);
+&save_managed_server($src);
+&$second_print($text{'create_done'});
+
 # Create temp dirs on the source and dests
 &$first_print($text{'vsync_temp'});
 my %tempdir;
@@ -193,8 +199,9 @@ my $srctemp = $tempdir{$src->{'id'}};
 # Backup all domains to the temp dir
 my @args = ( [ "dest", $srctemp ] );
 my @doms;
+my @srcdoms = map { $_->{'dom'} } &get_server_domains($src);
 if ($vsync->{'doms_all'}) {
-	@doms = map { $_->{'dom'} } &get_server_domains($src);
+	@doms = @srcdoms;
 	}
 else {
 	@doms = split(/\s+/, $vsync->{'doms'});
@@ -306,6 +313,31 @@ foreach my $dest (@dests) {
 		}
 	}
 
+# On each target, find additonal Virtualmin domains and remove them
+if ($vsync->{'doms_delete'}) {
+	&$first_print($text{'vsync_deleting'});
+	my $args = [ \@srcdoms ];
+	my @deleteouts = &parallel_server_function(
+		\@okdests, \&delete_virtualmin_domains, $args);
+	foreach my $t (@deleteouts) {
+		if (!$t->[0]) {
+			# Deletion failed
+			&$second_print(&text('vsync_deletedfailed',
+					$t->[2], $t->[1], scalar(@{$t->[3]})));
+			}
+		elsif ($t->[0] && $t->[3]) {
+			# Deleted OK
+			&$second_print(&text('vsync_deleted',
+					$t->[2], scalar(@{$t->[3]})));
+			}
+		else {
+			# Nothing to do
+			&$second_print(&text('vsync_deletednone',
+					$t->[2]));
+			}
+		}
+	}
+
 return $ok;
 }
 
@@ -348,6 +380,27 @@ if ($err) {
 return ( 1 );
 }
 
+# delete_virtualmin_domains(&dest, &args)
+# Delete from a virtual system any domains that aren't on the source
+sub delete_virtualmin_domains
+{
+my $dest = $_[0];
+my ($srcdoms) = @{$_[1]};
+my @ddoms = map { $_->{'dom'} } &get_server_domains($dest);
+my %srcmap = map { $_, 1 } @$srcdoms;
+my @ddelete = grep { !$srcmap{$_} } @ddoms;
+if (@ddelete) {
+	my @dargs = ( map { [ "domain", $_ ] } @ddelete );
+	my ($err, $out) = &call_virtualmin_api($dest, "delete-domain", \@dargs);
+	if ($err) {
+		return ( 0, $err, $dest->{'host'}, \@ddelete );
+		}
+	&check_server_status($dest);
+	&save_managed_server($dest);
+	return ( 1, undef, $dest->{'host'}, \@ddelete );
+	}
+return ( 1, undef, $dest->{'host'}, undef );
+}
 
 
 1;
