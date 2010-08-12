@@ -2465,7 +2465,7 @@ ec2addr_asserr=.. association failed : $1
 ec2addr_assdone=Waiting for IP address association to be assigned ..
 
 login_title=Console Login
-login_title2=Root Login
+login_title2=Root Shell
 login_euser=Failed to create console access user : $1
 login_esupport=This system does not support console access at this time
 login_desc=The console can also be accessed by SSHing to <tt>$1</tt> port $2 and logging in as <tt>$3</tt> with password <tt>$4</tt> . Example command :
