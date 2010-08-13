@@ -51,8 +51,10 @@ if ($server->{'unix_hostname'} &&
 if (!&check_ipaddress($server->{'host'})) {
 	$ip = &get_server_ip($server);
 	print &ui_table_row($text{'edit_ipaddr'},
-		$ip ? "<tt>$ip</tt>"
-		    : "<font color=#ff0000>$text{'edit_ipfailed'}</font>");
+		&ui_opt_textbox("ip", $server->{'ip_force'}, 20,
+			$text{'edit_ipaddrauto'}.
+			($server->{'ip_force'} ? "" : " (<tt>$ip</tt>)"),
+			$text{'edit_ipaddrset'}));
 	}
 
 # System type

@@ -298,6 +298,11 @@ if (&indexof($resolvedip, @ips) >= 0 && scalar(@ips) > 1) {
 	# Always use IP that hostname resolves to first
 	@ips = ( $resolvedip, ( grep { $_ ne $resolvedip } @ips ) );
 	}
+if ($server->{'ip_force'}) {
+	# Use forced IP by default
+	unshift(@ips, $server->{'ip_force'});
+	}
+@ips = &unique(@ips);
 return wantarray ? @ips : $ips[0];
 }
 

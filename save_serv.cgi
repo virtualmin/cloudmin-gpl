@@ -410,6 +410,17 @@ else {
 		$server->{'host'} = $in{'host'};
 		$server->{'desc'} = $in{'desc'};
 		}
+	if (defined($in{'ip_def'}) || defined($in{'ip'})) {
+		# Validate custom IP
+		if ($in{'ip_def'}) {
+			delete($server->{'ip_force'});
+			}
+		else {
+			&check_ipaddress($in{'ip'}) ||
+				&error($text{'edit_eip'});
+			$server->{'ip_force'} = $in{'ip'};
+			}
+		}
 	$server->{'type'} = $in{'type'};
 	$in{'notes'} =~ s/\r//g;
 	$server->{'notes'} = join("\t", split(/\n/, $in{'notes'}));
@@ -459,7 +470,8 @@ else {
 	    $oldserver->{'user'} ne $server->{'user'} ||
 	    $oldserver->{'pass'} ne $server->{'pass'} ||
 	    $oldserver->{'port'} != $server->{'port'} ||
-	    $oldserver->{'ssl'} != $server->{'ssl'}) {
+	    $oldserver->{'ssl'} != $server->{'ssl'} ||
+	    $oldserver->{'ip_force'} != $server->{'ip_force'}) {
 		&check_server_status($server);
 		}
 
