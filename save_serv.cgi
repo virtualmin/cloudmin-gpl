@@ -420,6 +420,7 @@ else {
 				&error($text{'edit_eip'});
 			$server->{'ip_force'} = $in{'ip'};
 			}
+		&complete_managed_server($server);	# To refresh 'ip' field
 		}
 	$server->{'type'} = $in{'type'};
 	$in{'notes'} =~ s/\r//g;

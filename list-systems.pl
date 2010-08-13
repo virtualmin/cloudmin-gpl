@@ -114,6 +114,9 @@ if ($multi) {
 		if ($s->{'unix_hostname'}) {
 			print "    Unix hostname: $s->{'unix_hostname'}\n";
 			}
+		if ($s->{'ip_force'}) {
+			print "    Forced IP address: $s->{'ip_force'}\n";
+			}
 		foreach $ip (&get_server_ip($s)) {
 			print "    IP address: $ip\n";
 			}

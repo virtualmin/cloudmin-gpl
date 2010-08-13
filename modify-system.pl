@@ -37,6 +37,9 @@ Changes the device the system boots from. For KVM, device codes are I<c> (hard d
 C<--location> I<name> or C<--no-location>
 Sets the location group for a host system, or removes it from a group.
 
+C<--force-ip> I<address> or C<--no-force-ip>
+Forces Cloudmin to use a specific IP address to contact this system, or just uses the default.
+
 =head1 Example usage
 
   cloudmin modify-system --host xencentos.home --desc "CentOS 5 on Xen"
@@ -128,6 +131,14 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--no-location") {
 		$loc = '';
+		}
+	elsif ($a eq "--force-ip") {
+		$force_ip = shift(@ARGV);
+		&check_ipaddress($force_ip) ||
+			&usage("--force-ip must be followed by an address");
+		}
+	elsif ($a eq "--no-force-ip") {
+		$force_ip = "";
 		}
 	else {
 		&usage();
@@ -265,6 +276,11 @@ if (defined($ssh_port)) {
 	$server->{'ssh_port'} = $ssh_port;
 	$recheck = 1;
 	}
+if (defined($force_ip)) {
+	$server->{'ip_force'} = $force_ip;
+	$recheck = 1;
+	&complete_managed_server($server);	# To refresh 'ip' field
+	}
 if ($webmin_same) {
 	$server->{'ssh_pass_same'} = 1;
 	$server->{'user'} = 'root';
@@ -351,6 +367,7 @@ print "                      [--boot-device device]\n";
 if (defined(&list_locations)) {
 	print "                      [--location id | --no-location]\n";
 	}
+print "                      [--force-ip address | --no-force-ip]\n";
 exit(1);
 }
 
