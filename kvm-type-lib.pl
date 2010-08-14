@@ -4130,7 +4130,7 @@ return $dir."/".$server->{'host'}.".console";
 # KVM doesn't support partition images, as it always works with raw disks
 sub type_kvm_image_formats
 {
-return ( "disk", "qcow2", "qcow", "vmdk" );
+return ( "disk", "qcow2", "qcow", "vmdk", "cd" );
 }
 
 # type_kvm_can_clone(&server)

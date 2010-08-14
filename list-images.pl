@@ -95,6 +95,11 @@ if ($multi) {
 		else {
 			print "    Source: Local\n";
 			}
+		if ($i->{'format'}) {
+			print "    Format: $i->{'format'}\n";
+			}
+		print "    Compressed: ",
+		      ($i->{'nocompress'} ? "No" : "Yes"),"\n";
 		print "    Compressed size: $i->{'size'}\n";
 		if ($i->{'rawsize'}) {
 			print "    Contents size: $i->{'rawsize'}\n";
@@ -104,6 +109,9 @@ if ($multi) {
 				&html_tags_to_text(
 				   &nice_backup_destination($dstr)),"\n";
 			print "    Storage spec: $dstr\n";
+			}
+		foreach $file (split(/\s+/, $i->{'files'})) {
+			print "    Filename: $file\n";
 			}
 		@md5s = split(/\s+/, $i->{'md5'});
 		if (@md5s && $md5s[0] ne "-" && $md5verify) {

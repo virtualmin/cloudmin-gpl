@@ -36,6 +36,7 @@ elsif ($in{'file_mode'} == 1) {
 	}
 else {
 	# Download from a URL
+	$in{'upload'} || &error($text{'mimage_eupload'});
 	$in{'url'} =~ /^(http|https):\/\// ||
 		&error($text{'mimage_eurl'});
 	($host, $port, $page, $ssl) = &parse_http_url($in{'url'});
@@ -208,7 +209,7 @@ if ($image->{'format'} eq 'disk' && $in{'manager'} eq 'xen') {
 	&$second_print(&text('mimage_partdone', &nice_size($st[7])));
 	}
 
-if ($image->{'nocompress'}) {
+if ($image->{'nocompress'} && $in{'compress'}) {
 	# Not currently compressed, compress it now
 	&$first_print($text{'mimage_gzip'});
 	@st = &stat_file_on_server($srcserver, $srcpath);
@@ -232,7 +233,7 @@ if ($image->{'nocompress'}) {
 	&$second_print(&text('mimage_gzipdone', &nice_size($image->{'rawsize'}),
 						&nice_size($st[7])));
 	}
-else {
+elsif (!$image->{'nocompress'} && $in{'compress'}) {
 	# Already compressed, work out un-compressed size
 	&$first_print($text{'mimage_rawsize'});
 	($out, $ex, $err) = &execute_command_on_server($srcserver,
@@ -246,43 +247,80 @@ else {
 		&error(&text('mimage_erawsize', $err || $out));
 		}
 	}
+elsif ($image->{'nocompress'} && !$in{'compress'}) {
+	# Not compressed and doesn't need to be .. raw size is just size
+	$image->{'rawsize'} = $image->{'size'};
+	}
+elsif (!$image->{'nocompress'} && !$in{'compress'}) {
+	# Already compressed, but user doesn't want it to be .. uncompress
+	&$first_print($text{'mimage_gunzip'});
+	my $compsrcpath = $srcpath;
+	($srcpath =~ s/\.gz$//) || ($srcpath .= ".nogz");
+	($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"gunzip -c ".quotemeta($srcpath)." >".quotemeta($compsrcpath));
+	if ($ex || $err) {
+		&$second_print(&text('mimage_egunzip',
+				     &html_escape($err || $out)));
+		goto FAILED;
+		}
+	if ($srcdelete) {
+		&delete_file_on_server($srcserver, $srcpath);
+		}
+	$srcpath = $compsrcpath;
+	$image->{'nocompress'} = 1;
+	($image->{'files'} =~ s/\.gz$//) || ($image->{'files'} .= ".nogz");
+	$srcdelete = 1;
+	@st = &stat_file_on_server($srcserver, $srcpath);
+	$image->{'rawsize'} = $st[7];
+	&$second_print(&text('mimage_gunzipdone', &nice_size($st[7])));
+	}
 
 # Copy file to all storage locations
-@stors = &list_storages();
-&$first_print(&text('mimage_copying',
-	join(" , ", map { &nice_image_destination($_->{'dest'}) } @stors)));
-$okcount = $errcount = 0;
-@dests = ( );
-foreach $stor (@stors) {
-	($destserver, $destpath) = &get_image_dest_path($stor->{'dest'});
-	if ($destserver) {
-		my $err = &transfer_file_between_servers(
-			$srcserver, $destserver,
-			$srcpath, $destpath."/".$image->{'files'}, 0, 1);
-		if (!$err) {
-			&compute_storage_size($stor);
-			&save_storage($stor);
-			push(@dests, $stor->{'dest'});
-			$okcount++;
-			}
-		else {
-			&$first_print(&text('mimage_ecopy',
-			    &nice_image_destination($stor->{'dest'}), $err));
-			$errcount++;
+if ($in{'upload'}) {
+	@stors = &list_storages();
+	&$first_print(&text('mimage_copying',
+		join(" , ", map { &nice_image_destination($_->{'dest'}) }
+				@stors)));
+	$okcount = $errcount = 0;
+	@dests = ( );
+	foreach $stor (@stors) {
+		($destserver, $destpath) =
+			&get_image_dest_path($stor->{'dest'});
+		if ($destserver) {
+			my $err = &transfer_file_between_servers(
+				$srcserver, $destserver,
+				$srcpath, $destpath."/".$image->{'files'}, 0,1);
+			if (!$err) {
+				&compute_storage_size($stor);
+				&save_storage($stor);
+				push(@dests, $stor->{'dest'});
+				$okcount++;
+				}
+			else {
+				&$first_print(&text('mimage_ecopy',
+				    &nice_image_destination($stor->{'dest'}),
+				    $err));
+				$errcount++;
+				}
 			}
 		}
-	}
-if (!$okcount) {
-	&$second_print($text{'mimage_nocopy'});
-	}
-elsif ($errcount) {
-	&$second_print($text{'mimage_somecopy'});
+	if (!$okcount) {
+		&$second_print($text{'mimage_nocopy'});
+		}
+	elsif ($errcount) {
+		&$second_print($text{'mimage_somecopy'});
+		}
+	else {
+		&$second_print($text{'mimage_allcopy'});
+		}
+	$image->{'dest'} = join(" ", @dests);
 	}
 else {
-	&$second_print($text{'mimage_allcopy'});
+	# Just save current location as storage
+	$image->{'dest'} = "vm2:".$srcserver->{'id'}.":".$srcpath;
+	$srcdelete = 0;
+	$okcount = 1;
 	}
-$image->{'dest'} = join(" ", @dests);
-
 
 # Save image object
 if ($okcount) {

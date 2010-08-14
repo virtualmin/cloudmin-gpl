@@ -53,6 +53,12 @@ elsif ($os) {
 $tfunc = "type_".$i->{'manager'}."_desc";
 print &ui_table_row($text{'eimage_type'}, &$tfunc());
 
+# Format
+if ($i->{'format'}) {
+	print &ui_table_row($text{'eimage_format'},
+		$text{'mimage_fmt'.$i->{'format'}});
+	}
+
 # Status (available or not)
 print &ui_table_row($text{'eimage_status'},
 		    $got && $got->{'partial'} ?

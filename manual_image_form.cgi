@@ -44,6 +44,10 @@ print &ui_table_row($text{'mimage_file'},
 		    &ui_filebox("url", undef, 60) ],
 		]));
 
+# Leave in place?
+print &ui_table_row($text{'mimage_upload'},
+	&ui_yesno_radio("upload", 1));
+
 # Unique ID
 print &ui_table_row($text{'mkimage_id'},
 		    &ui_textbox("imageid", undef, 30));
@@ -51,6 +55,10 @@ print &ui_table_row($text{'mkimage_id'},
 # Description
 print &ui_table_row($text{'mkimage_desc'},
 		    &ui_textbox("desc", undef, 60));
+
+# Compress image
+print &ui_table_row($text{'mkimage_compress'},
+		    &ui_yesno_radio("compress", 1));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'create'} ] ]);
