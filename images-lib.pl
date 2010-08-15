@@ -422,10 +422,13 @@ $image->{'file'} = "$server_images_dir/$image->{'id'}.img";
 sub delete_server_image
 {
 my ($img) = @_;
-foreach my $dest (split(/\s+/, $img->{'dest'})) {
-	my ($destserver, $destpath) = &get_image_dest_path($dest);
-	foreach my $fl (split(/\s+/, $img->{'files'})) {
-		&delete_file_on_server($destserver, "$destpath/$fl");
+if (!$img->{'nodelete'}) {
+	# Only delete actual files if image doesn't have flag set to keep them
+	foreach my $dest (split(/\s+/, $img->{'dest'})) {
+		my ($destserver, $destpath) = &get_image_dest_path($dest);
+		foreach my $fl (split(/\s+/, $img->{'files'})) {
+			&delete_file_on_server($destserver, "$destpath/$fl");
+			}
 		}
 	}
 &unlink_logged("$server_images_dir/$img->{'id'}.img");

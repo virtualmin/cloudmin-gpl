@@ -318,6 +318,9 @@ if ($in{'upload'}) {
 else {
 	# Just save current location as storage
 	$image->{'dest'} = "vm2:".$srcserver->{'id'}.":".$srcpath;
+	$image->{'dest'} =~ s/[^\/]+$//;
+	$image->{'dest'} =~ s/\/$// if ($image->{'dest'} ne '/');
+	$image->{'nodelete'} = 1;
 	$srcdelete = 0;
 	$okcount = 1;
 	}

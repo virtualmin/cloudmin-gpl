@@ -79,7 +79,7 @@ print &ui_columns_start([ "",
 			  $text{'images_status'},
 			  $text{'images_size'},
 			  $text{'images_stors'} ]);
-foreach $i (sort { $a->{'desc'} cmp $b->{'desc'} } @combined) {
+foreach $i (sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @combined) {
 	$tfunc = "type_".$i->{'manager'}."_desc";
 	($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
 	($got) = grep { $_->{'id'} eq $i->{'id'} } @images;

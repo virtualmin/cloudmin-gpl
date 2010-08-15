@@ -437,7 +437,7 @@ $rv .= &ui_table_row($text{'create_xenmemory'},
 
 # Filesystem size
 $rv .= &ui_table_row($text{'create_xendisksize'},
-	$empty ? &ui_bytesbox("kvm_disk", 2048, 8) :
+	$empty ? &ui_bytesbox("kvm_disk", 2048*1024*1024, 8) :
 		 &vui_opt_bytesbox("kvm_disk", undef, 8,
 				  $text{'create_xendiskdef'}));
 
@@ -795,7 +795,7 @@ $server->{'kvm_net'} = join(" ", map { "tap" } @ips);
 # Set drive in config
 $server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,if=ide";
 
-# If on an LVM, create it first
+# If on LVM, create an LV first
 $last_remote_error = undef;
 if ($server->{'kvm_filesystem_vg'}) {
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
@@ -819,7 +819,7 @@ if ($server->{'kvm_filesystem_vg'}) {
 	return "LVM logical volume creation failed : $err" if ($err);
 	}
 
-# Create disk file and partition
+# Create empty disk file and partition
 if ($empty) {
 	my $dksize = $server->{'kvm_disksize'}*1024*1024;
 	if (!$server->{'kvm_filesystem_vg'}) {
