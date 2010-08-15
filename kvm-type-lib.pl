@@ -1814,7 +1814,8 @@ if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
 	}
 
 # Remove from fstab
-if ($server->{'status'} ne 'alive') {
+if (($server->{'status'} eq 'down' || &can_ssh_status($server)) &&
+    $disk->{'virt_mount'} && $disk->{'virt_mount'} ne '/') {
 	my $fstab = &get_system_fstab($server);
 	return "Failed to read fstab file : $fstab" if (!ref($fstab));
 	my @newfstab = grep { $_->[0] ne $disk->{'virt_mount'} } @$fstab;

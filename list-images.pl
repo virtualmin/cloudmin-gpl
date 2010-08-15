@@ -113,6 +113,8 @@ if ($multi) {
 		foreach $file (split(/\s+/, $i->{'files'})) {
 			print "    Filename: $file\n";
 			}
+		print "    Keep data files when deleting: ",
+			($i->{'nodelete'} ? "Yes" : "No"),"\n";
 		@md5s = split(/\s+/, $i->{'md5'});
 		if (@md5s && $md5s[0] ne "-" && $md5verify) {
 			print "    MD5 expected checksum: ",

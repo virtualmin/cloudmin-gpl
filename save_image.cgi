@@ -20,6 +20,9 @@ else {
 	$in{'desc'} =~ /\S/ || &error($text{'eimage_edesc'});
 	$img->{'desc'} = $in{'desc'};
 	$img->{'type'} = $in{'type'};
+	if (defined($in{'nodelete'})) {
+		$img->{'nodelete'} = !$in{'nodelete'};
+		}
 	&save_server_image($img);
 	&webmin_log("modify", "image", $img->{'id'});
 	}

@@ -92,6 +92,10 @@ if ($got) {
 		join("<br>\n", map { &nice_image_destination($_) }
 				   split(/\s+/, $got->{'dest'})));
 
+	# Delete files when removing?
+	print &ui_table_row($text{'eimage_nodelete'},
+		&ui_yesno_radio("nodelete", !$i->{'nodelete'}));
+
 	# Systems using it
 	@users = grep { $_->{'image'} eq $i->{'id'} } &list_managed_servers();
 	$users = @users == 0 ? $text{'keys_nousers'} :

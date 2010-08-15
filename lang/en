@@ -1658,6 +1658,7 @@ eimage_dest=Image storage location
 eimage_delete=Delete Image
 eimage_users=Used to create systems
 eimage_md5=Expected MD5	checksum
+eimage_nodelete=Delete data files when removing image?
 dimage_egone=Image no longer exists!
 eimage_err=Failed to save image
 eimage_edesc=Missing description
