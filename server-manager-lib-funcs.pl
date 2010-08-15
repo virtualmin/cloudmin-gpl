@@ -3490,6 +3490,16 @@ return undef;
 sub startup_server
 {
 my ($server) = @_;
+
+# If configured, check all disks first
+if ($config{'fsck_boot'}) {
+	my ($ok, $out) = &fsck_all_disks($server);
+	if ($ok == 0) {
+		return "Disk check failed : $out";
+		}
+	}
+
+# Call type-specific startup function
 my $sfunc = "type_".$server->{'manager'}."_startup";
 my ($ok, $err) = &$sfunc($server);
 return ($ok, $err) if (!$ok);
@@ -9187,7 +9197,36 @@ $dest->{'path'} = $in->{$pfx."_path"};
 return undef;
 }
 
-
+# fsck_all_disks(&server)
+# Checks all the possible disks on some virtual system, and returns the same
+# output as type_*_fsck_disk
+sub fsck_all_disks
+{
+my ($server) = @_;
+my $dfunc = "type_".$server->{'manager'}."_list_disks";
+my $cfunc = "type_".$server->{'manager'}."_can_fsck";
+my $ffunc = "type_".$server->{'manager'}."_fsck_disk";
+return (1, undef) if (!defined(&$dfunc) || !defined(&$cfunc));
+my $disks = &$dfunc($server, 1);
+return (1, undef) if (!ref($disks));
+my ($allok, $allout) = (1, undef);
+foreach my $d (@$disks) {
+	if (&$cfunc($server, $d)) {
+		my ($ok, $out) = &$ffunc($server, $d);
+		$allout .= $out;
+		if ($ok == 0) {
+			# Failed on this disk
+			$allok = 0;
+			last;
+			}
+		elsif ($ok == 2) {
+			# Work done on this disk
+			$allok = 2;
+			}
+		}
+	}
+return ($allok, $allout);
+}
 
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
