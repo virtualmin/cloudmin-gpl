@@ -133,6 +133,8 @@ if ($multi) {
 				      $d->{'virt_mount'},"\n";
 				}
 			print "    Filesystem: $d->{'fs'}\n";
+			}
+		if ($d->{'mount'} || $d->{'mounted'}) {
 			print "    Mounted: ",
 			      ($d->{'mounted'} ? "Yes" : "No"),"\n";
 			}
