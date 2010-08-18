@@ -358,6 +358,44 @@ else {
 return undef;
 }
 
+# delete_disk_image_partition(&server, file, partition-num)
+# Deletes a single partition from a disk image
+sub delete_disk_image_partition
+{
+my ($vhost, $real, $part) = @_;
+if (&has_command_on_server($vhost, "parted")) {
+	# Delete with parted
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+		"parted -s ".quotemeta($real)." rm ".$part);
+	if ($ex || $err) {
+		return "Failed to delete old partition : ".($err || $out);
+		}
+	}
+else {
+	# Delete with fdisk
+	my $temp = &transname();
+	&open_tempfile(TEMP, ">$temp");
+	&print_tempfile(TEMP, "d\n");	# Delete
+	&print_tempfile(TEMP, $part->{'part'}."\n");	# Partition number
+	&print_tempfile(TEMP, "w\n");	 # Write table
+	&print_tempfile(TEMP, "q\n");	 # Quit
+	&close_tempfile(TEMP);
+	my $vhosttemp = &tempname_on_server($vhost);
+	my $err = &put_file_to_server($vhost, $temp, $vhosttemp);
+	&unlink_file($temp);
+
+	# Run input file
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"fdisk -u ".quotemeta($real)." <$vhosttemp");
+	&delete_file_on_server($vhost, $vhosttemp);
+	if ($ex || $err) {
+		return "Failed to delete and re-create partition : ".
+		       ($out || $err);
+		}
+	}
+return undef;
+}
+
 # create_disk_image_filesystem(&server, device, filesystem, [partition])
 # Creates a filesystem on a partition using parted
 sub create_disk_image_filesystem
@@ -367,7 +405,7 @@ $part ||= 1;
 $fs = "ext2" if ($fs eq "ext3");
 $fs = "linux-swap" if ($fs eq "swap");
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"parted -s ".quotemeta($reak)." mkfs $part $fs");
+	"parted -s ".quotemeta($real)." mkfs $part $fs");
 return $err ? $err : $ex ? $out : undef;
 }
 
