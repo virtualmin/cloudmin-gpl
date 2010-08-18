@@ -843,6 +843,7 @@ if ($empty && $server->{'image'}) {
 	$server->{'kvm_drives'} .=
 		" file=$imgdestfile,media=cdrom,index=2";
 	$server->{'kvm_bootdevice'} = 'd';
+	$server->{'kvm_cdimage'} = $imgdestfile;
 	}
 elsif ($empty && !$server->{'image'}) {
 	# CD is in an existing file
@@ -1320,6 +1321,7 @@ if (ref($disks)) {
 		my @st = &stat_file_on_server($vhost, $d->{'real'});
 		next if (!@st);			# Already gone
 		next if ($d->{'media'} eq 'cdrom' &&
+			 $d->{'real'} ne $server->{'kvm_cdimage'} &&
 			 !$d->{'device'});	# CD image in file
 		next if ($d->{'device'} &&	# Attached real device
 			 !$d->{'lv'});
@@ -1719,15 +1721,10 @@ else {
 
 	# And make a filesystem on the new partition
 	if (!@st && $disk->{'fs'}) {
-		my $fs = $disk->{'fs'};
-		$fs = "ext2" if ($fs eq "ext3");
-		$fs = "linux-swap" if ($fs eq "swap");
-		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"parted -s ".quotemeta($disk->{'real'})." mkfs 1 $fs");
-		if ($ex || $err) {
-			return "Failed to create ".uc($disk->{'fs'}).
-			       " filesystem : ".($err || $out);
-			}
+		my $err = &create_disk_image_filesystem($vhost, $disk->{'real'},
+							$disk->{'fs'}, 1);
+		return "Failed to create ".uc($disk->{'fs'}).
+		       " filesystem : $err" if ($err);
 		}
 	}
 
@@ -4300,8 +4297,8 @@ foreach my $d (@$disks) {
 		if ($newserver->{'kvm_filesystem'} eq $d->{'real'}) {
 			$newserver->{'kvm_filesystem'} = $d->{'newreal'};
 			}
-		if ($newserver->{'kvm_swap'} eq $d->{'real'}) {
-			$newserver->{'kvm_swap'} = $d->{'newreal'};
+		if ($newserver->{'kvm_swapfile'} eq $d->{'real'}) {
+			$newserver->{'kvm_swapfile'} = $d->{'newreal'};
 			}
 		&$second_print(&text('clone_copydiskdone', $d->{'newreal'}));
 		$i++;
@@ -4410,9 +4407,8 @@ if ($config{'dhcp_add'}) {
 	}
 
 # Fix up other config entries using the old name
-foreach my $f ('kvm_filesystem', 'kvm_filesystem_lv',
-	       'kvm_swapfile', 'kvm_swapfile_lv',
-	       'kvm_dns', 'kvm_console', 'login_user', 'data_files') {
+foreach my $f ('kvm_filesystem_lv', 'kvm_swapfile_lv',
+	       'kvm_console', 'login_user', 'data_files') {
 	$newserver->{$f} =~ s/\Q$oldkvm\E/$newkvm/g;
 	}
 

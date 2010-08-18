@@ -735,6 +735,11 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 	$err = &put_file_to_server($vhost, $temppath, $fixpath);
 	return "Failed to save network config $fix : $err" if ($err);
 	}
+
+# Remove Debian network config file that is specific to MAC address
+&delete_file_on_server($vhost,
+	"$dir/etc/udev/rules.d/70-persistent-net.rules");
+
 return undef;
 }
 

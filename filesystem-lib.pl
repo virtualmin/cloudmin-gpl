@@ -358,6 +358,19 @@ else {
 return undef;
 }
 
+# create_disk_image_filesystem(&server, device, filesystem, [partition])
+# Creates a filesystem on a partition using parted
+sub create_disk_image_filesystem
+{
+my ($vhost, $real, $fs, $part) = @_;
+$part ||= 1;
+$fs = "ext2" if ($fs eq "ext3");
+$fs = "linux-swap" if ($fs eq "swap");
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"parted -s ".quotemeta($reak)." mkfs $part $fs");
+return $err ? $err : $ex ? $out : undef;
+}
+
 # parse_parted_size(string)
 # Converts a string like 16.4kb or 200M into bytes
 sub parse_parted_size
