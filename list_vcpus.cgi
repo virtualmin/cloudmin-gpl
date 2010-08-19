@@ -27,7 +27,11 @@ print &ui_columns_start([ $text{'vcpus_enabled'},
 			  $text{'vcpus_num'},
 			  $text{'vcpus_pin'} ], undef, 0, \@tds);
 $i = 0;
-foreach $cpu (@$cpus, { }) {
+@cpuslist = @$cpus;
+while(scalar(@cpuslist) < scalar(@pinsel)) {
+	push(@cpuslist, {});
+	}
+foreach $cpu (@cpuslist) {
 	@cpins = $cpu->{'pin'} =~ /^(\d+)\-(\d+)$/ ? ($1..$2) :
 		 $cpu->{'pin'} =~ /^\d+$/ ? ( $cpu->{'pin'} ) : ( );
 	print &ui_checked_columns_row([
