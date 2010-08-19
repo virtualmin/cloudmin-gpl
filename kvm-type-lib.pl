@@ -1834,6 +1834,14 @@ if (($server->{'status'} eq 'down' || &can_ssh_status($server)) &&
 	}
 
 if (!$detach) {
+	my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
+	if (ref($parts)) {
+		# Delete all partitions so that the LV can be removed
+		foreach my $p (reverse(@$parts)) {
+			&delete_disk_image_partition($vhost, $disk->{'real'},
+						     $p->{'part'});
+			}
+		}
 	if (!$disk->{'device'} && $disk->{'real'} !~ /^\/dev\//) {
 		# Delete the image file
 		&delete_file_on_server($vhost, $disk->{'real'});
