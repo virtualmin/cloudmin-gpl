@@ -218,6 +218,9 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 	&$first_print("Checking filesystem on first disk ..");
 	$disks = &$dfunc($server, 1);
 	if (!ref($disks)) {
+		$disks = &$dfunc($server, 0);
+		}
+	if (!ref($disks)) {
 		&$second_print(".. failed to list disks : $disks");
 		}
 	elsif (!@$disks) {

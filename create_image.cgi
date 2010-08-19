@@ -102,6 +102,9 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 	&$first_print($text{'mkimage_fsck'});
 	$disks = &$dfunc($server, 1);
 	if (!ref($disks)) {
+		$disks = &$dfunc($server, 0);
+		}
+	if (!ref($disks)) {
 		&$second_print(&text('mkimage_efsckdisks', $disks));
 		}
 	elsif (!@$disks) {

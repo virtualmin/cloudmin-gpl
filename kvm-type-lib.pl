@@ -986,13 +986,17 @@ if (!$empty) {
 	# Mount the created filesystem
 	&$first_print($text{'create_xenmount'});
 	my $err = &mount_filesystem_if_needed($server);
-	if ($err) {
-		&$second_print(&text('create_exenmount', $err));
-		return;
-		}
 	$mp = $server->{'kvm_mount'};
-	&$second_print(&text('create_xenmounted', "<tt>$mp</tt>"));
+	if ($err || !$mp) {
+		&$second_print(&text('create_exenmount', $err));
+		$mp = undef;
+		}
+	else {
+		&$second_print(&text('create_xenmounted', "<tt>$mp</tt>"));
+		}
+	}
 
+if (!$empty && $mp) {
 	# Set the root password, by directly editing /etc/shadow
 	if ($server->{'ssh_pass'}) {
 		&$first_print($text{'create_xensetpass'});
@@ -1107,7 +1111,7 @@ if ($config{'dhcp_add'} && !$reset) {
 	&add_all_iface_dhcpd($server, \@fakeifaces);
 	}
 
-if (!$empty) {
+if (!$empty && $mp) {
 	# Clean up /etc/fstab to remove non-existant devices
 	&$first_print($text{'create_xencleanfstab'});
 	my $err = &cleanup_server_fstab($server);
@@ -2947,21 +2951,23 @@ my $fsfile = $server->{'kvm_filesystem'};
 my $err = &type_kvm_mount_filesystem($server);
 if ($err) {
 	&$second_print(&text('create_exenmount', $err));
-	return 0;
 	}
-&$second_print(&text('create_xenmounted', "<tt>$server->{'kvm_mount'}</tt>"));
+else {
+	&$second_print(&text('create_xenmounted',
+			     "<tt>$server->{'kvm_mount'}</tt>"));
 
-if ($nomunge != 1) {
-	# Munge some or all files
-	my ($mok, $munged) = &munge_all_files($server, 0, $nomunge == 2);
-	return 0 if (!$mok);
-	$server->{'munged'} = $munged;
+	if ($nomunge != 1) {
+		# Munge some or all files
+		my ($mok, $munged) = &munge_all_files($server, 0, $nomunge == 2);
+		return 0 if (!$mok);
+		$server->{'munged'} = $munged;
+		}
+
+	# Un-mount
+	&$first_print($text{'mkimage_kvmumount'});
+	&type_kvm_umount_filesystem($server);
+	&$second_print($text{'create_done'});
 	}
-
-# Un-mount
-&$first_print($text{'mkimage_kvmumount'});
-&type_kvm_umount_filesystem($server);
-&$second_print($text{'create_done'});
 
 # Get the size of the raw disk
 my $disks = &type_kvm_list_disks($server, 0);
@@ -3044,18 +3050,20 @@ else {
 my $err = &type_kvm_mount_filesystem($server);
 if ($err) {
 	&$second_print(&text('create_ekvmmount', $err));
-	return 0;
 	}
-&$second_print(&text('create_xenmounted', "<tt>$server->{'kvm_mount'}</tt>"));
+else {
+	&$second_print(&text('create_xenmounted',
+			     "<tt>$server->{'kvm_mount'}</tt>"));
 
-# Undo all munged files
-&unmunge_all_files($server, $server->{'munged'});
-delete($server->{'munged'});
+	# Undo all munged files
+	&unmunge_all_files($server, $server->{'munged'});
+	delete($server->{'munged'});
 
-# Un-mount KVM filesystem
-&$first_print($text{'mkimage_kvmumount'});
-&type_kvm_umount_filesystem($server);
-&$second_print($text{'create_done'});
+	# Un-mount KVM filesystem
+	&$first_print($text{'mkimage_kvmumount'});
+	&type_kvm_umount_filesystem($server);
+	&$second_print($text{'create_done'});
+	}
 
 return 1;
 }
