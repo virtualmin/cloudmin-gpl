@@ -5639,8 +5639,9 @@ my $rfunc = "type_".$t."_no_reboot";
 my $noreboot = defined(&$rfunc) && &$rfunc($server);
 my $tfunc = "type_".$t."_can_transfer";
 my $cantransfer = defined(&$tfunc) && &$tfunc($server);
+my $ccfunc = "type_".$t."_can_get_console_output";
 my $cfunc = "type_".$t."_get_console_output";
-my $canconsole = defined(&$cfunc);
+my $canconsole = defined(&$ccfunc) && &$ccfunc($server);
 my $clfunc = "type_".$t."_supports_console_login";
 my $canlogin = defined(&$clfunc) && &$clfunc($server);
 my $rsfunc = "type_".$server->{'manager'}."_can_reset";
@@ -8929,10 +8930,14 @@ sub list_status_history
 {
 my ($server) = @_;
 my @rv;
+my $lasthistory;
 open(STATUS, "$status_history_dir/$server->{'id'}");
 while(<STATUS>) {
 	s/\r|\n//g;
 	my %history = map { split(/=/, $_) } split(/\s+/, $_);
+	next if ($lasthistory &&
+		 $lasthistory->{'old'} eq $history{'old'} &&
+		 $lasthistory->{'new'} eq $history{'new'});
 	push(@rv, \%history);
 	}
 return @rv;

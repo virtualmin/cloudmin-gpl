@@ -1286,6 +1286,13 @@ if (defined($sshed) && !$sshed) {
 return (1, undef);
 }
 
+# type_kvm_can_get_console_output(&server)
+sub type_kvm_can_get_console_output
+{
+my ($server) = @_;
+return $server->{'kvm_console'} ? 1 : 0;
+}
+
 # type_kvm_get_console_output(&server)
 # Returns a status code and text displayed during the KVM boot (if status is 1),
 # or an error message (if 0)
