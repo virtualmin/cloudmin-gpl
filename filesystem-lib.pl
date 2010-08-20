@@ -184,7 +184,7 @@ my ($server, $fsfile) = @_;
 my ($out, $ex, $err) = &execute_command_on_server($server,
 	"fdisk -l -u ".quotemeta($fsfile));
 return $err if ($err);
-return $out if ($ex);
+return $out if ($ex || $out =~ /valid\s+partition\s+table/i);
 my @rv;
 my $p = 1;
 my $secsize;
