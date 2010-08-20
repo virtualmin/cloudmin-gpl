@@ -156,6 +156,9 @@ while(@ARGV > 0) {
 		$owner = &get_system_owner($ownername);
 		$owner || &usage("No system owner named $ownername exists");
 		}
+	elsif ($a eq "--manual-status") {
+		$manual_status = 1;
+		}
 	elsif ($a eq "--serial") { $serial = shift(@ARGV); }
 	elsif ($a eq "--key") { $key = shift(@ARGV); }
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
@@ -244,6 +247,7 @@ $server = { 'id' => $newid || &server_id(),
 	    'image' => $image,
 	    'bw_limit' => $config{'bw_def'},
 	    'created' => time(),
+	    'manual_status' => $manual_status,
 	  };
 $server->{'desc'} = $desc;
 if ($image && $img->{'type'}) {

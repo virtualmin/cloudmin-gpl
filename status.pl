@@ -20,6 +20,9 @@ if (@ARGV) {
 	@servers = grep { $hosts{$_->{'host'}} } @servers;
 	}
 
+# Exclude servers whose status only gets updated manually
+@servers = grep { !$_->{'manual_status'} } @servers;
+
 # Identify parent and virtual systems
 @pservers = grep { !&is_virtual_server($_) } @servers;
 @oservers = grep { &is_virtual_server($_) } @servers;
