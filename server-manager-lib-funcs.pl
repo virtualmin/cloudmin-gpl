@@ -8841,6 +8841,9 @@ if ($server->{'status'} ne 'down') {
 my $cfunc = "type_".$server->{'manager'}."_clone_system";
 my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost, $ips);
 
+# Clear SSH host key for the clone
+&clear_ssh_host_key($newserver);
+
 # Start up if down before
 if ($was_up) {
 	&$first_print($text{'clone_starting'});
