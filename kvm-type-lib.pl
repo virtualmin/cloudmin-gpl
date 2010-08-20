@@ -973,8 +973,8 @@ if (!$empty) {
 			$disk->{'size'} = $dksize;
 			my $err = &type_kvm_modify_disk($server, $disk,
 							$olddisk);
-			if ($ex) {
-				&$second_print(&text('create_exenresize',$out));
+			if ($err) {
+				&$second_print(&text('create_exenresize',$err));
 				}       
 			else {
 				&$second_print($text{'create_done'});
