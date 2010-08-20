@@ -4,11 +4,40 @@
 
 Creates a new empty virtual system of some type
 
-XXX
+This command creates a new system that is initially empty, but can be
+setup by installing an operating system from a CD. The required parameters are :
+
+C<--host> I<hostname> A short hostname for the system to create, which will also be used as the Xen or VServers instance name.
+C<--desc> I<description> A human-readable name for the system, which you will typically have to quote.
+C<--type> I<code> The virtualization type code, like ''xen'' , ''zones''  or ''vservers''
+
+The CD image to install from can either be specified with the C<--imagefile>
+flag followed by a filename on the host system, or the C<--image> flag followed
+by the ID of a system image in ISO format.
+
+Once creation completes, you will need to use the Graphical Console page
+in the Cloudmin UI to complete the installation process.
 
 =head1 Example usage
 
-  XXX
+  cloudmin create-empty-system.pl --type xen --host functest --desc 'Empty host' --xen-disksize 1024 --image xen-lenny-cd
+  Copying CD image file to host system sentosa.home ..
+  .. already in host cache
+  Starting creation of empty Xen system ..
+  .. creation started
+  Waiting for creation to complete ..
+  .. creation complete
+  Adding DNS entry functest.home. for IP address 193.9.101.60 ..
+  .. done
+  Configuring Xen instance for VNC console access ..
+  .. added on dynamic port
+  Starting up new Xen instance ..
+.. failed to start : Xen instance was started, but could not be accessed via SSH after 60 seconds
+  Refreshing status ..
+  .. done (noping)
+  Enabling at hosting system boot ..
+  .. done
+  Creation of empty Xen system functest.home is complete
 
 =cut
 
