@@ -1067,8 +1067,8 @@ if ($server->{'ssh_nologin'}) {
 if ($device) {
 	# Run dd on the server and capture output
 	my $sshcmd = &build_ssh_command($server);
-	$sshcmd .= " dd if=".quotemeta($remotefile)." bs=32768 |".
-		   " dd of=".quotemeta($localfile)." bs=32768";
+	$sshcmd .= &dd_command($remotefile, undef)." | ".
+		   &dd_command(undef, $localfile);
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1259,8 +1259,8 @@ if ($server->{'ssh_nologin'}) {
 if ($device) {
 	# Run dd piped into SSH
 	my $sshcmd = &build_ssh_command($server);
-	$sshcmd .= " dd of=".quotemeta($remotefile)." bs=32768";
-	$sshcmd = "dd if=".quotemeta($localfile)." bs=32768 | ".$sshcmd;
+	$sshcmd .= &dd_command(undef, $remotefile);
+	$sshcmd = &dd_command($localfile, undef)." | ".$sshcmd;
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1355,9 +1355,8 @@ if ($checksum) {
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just copy
 	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
-		$device ?
-		  "dd if=".quotemeta($src)." of=".quotemeta($dest)." bs=32768" :
-		  "cp ".quotemeta($src)." ".quotemeta($dest));
+		$device ? &dd_command($src, $dest) :
+		          "cp ".quotemeta($src)." ".quotemeta($dest));
 	$rv = $err ? $err : $ex ? $out : undef;
 	}
 elsif ($srcserver->{'id'} == 0) {
@@ -1389,7 +1388,7 @@ else {
 	my $sshcmd;
 	if ($device) {
 		# Use dd piped into SSH
-		$sshcmd = "dd if=".quotemeta($src)." bs=32768 | ssh -q -x";
+		$sshcmd = &dd_command($src, undef)." | ssh -q -x";
 		$sshcmd .= " -".$destserver->{'ssh_protocol'};
 		if ($keytemp) {
 			$sshcmd .= " -i ".quotemeta($keytemp);
@@ -1398,7 +1397,7 @@ else {
 			$sshcmd .= " -p ".$destserver->{'ssh_port'};
 			}
 		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
-		$sshcmd .= " dd of=".quotemeta($dest)." bs=32768";
+		$sshcmd .= &dd_command(undef, $dest);
 		}
 	else {
 		# Can use scp
@@ -1513,7 +1512,7 @@ if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just run the command outputting to the file
 	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
 		"( ($srccmd) ; echo EXIT_STATUS: \$? 1>&2 ) | ".
-		"dd of=".quotemeta($dest)." bs=32768");
+		&dd_command(undef, $dest));
 	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
 		# Catch death of dd command in pipeline
 		return $out;
@@ -1524,7 +1523,7 @@ elsif ($srcserver->{'id'} == 0) {
 	# Copying from Cloudmin master - run command piped into SSH
 	my $sshcmd = &build_ssh_command($destserver);
 	$sshcmd = "( ( $srccmd ) ; echo EXIT_STATUS: \$? 1>&2 ) | ".
-		  $sshcmd." ".quotemeta("dd of=$dest bs=32768");
+		  $sshcmd." ".quotemeta(&dd_command(undef, $dest));
 	my ($status, $out) = &run_ssh_command($sshcmd,
 					      $destserver->{'ssh_pass'});
 	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
@@ -1538,7 +1537,7 @@ elsif ($destserver->{'id'} == 0) {
 	my $sshcmd = &build_ssh_command($srcserver);
 	$sshcmd = "( $sshcmd ".quotemeta($srccmd)." ; ".
 		  "  echo EXIT_STATUS: \$? 1>&2 ) ".
-		  "| dd of=".quotemeta($dest)." bs=32768";
+		  "| ".&dd_command(undef, $dest);
 	my ($status, $out) = &run_ssh_command($sshcmd,
 					      $srcserver->{'ssh_pass'});
 	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
@@ -1571,7 +1570,7 @@ else {
 		$sshcmd .= " -p ".$destserver->{'ssh_port'};
 		}
 	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
-	$sshcmd .= " dd of=".quotemeta($dest)." bs=32768";
+	$sshcmd .= " ".&dd_command(undef, $dest);
 	if ($keytemp) {
 		$sshcmd .= " ; ex=\$? ; rm -f ".quotemeta($keytemp).
 			   " ; exit \$ex";
@@ -1646,7 +1645,7 @@ my ($srcserver, $destserver, $destcmd, $src) = @_;
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Self to self - just run the command inputting from the file
 	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
-		"(dd if=".quotemeta($src)." bs=32768 ; ".
+		"(".&dd_command($src, undef)." ; ".
 		" echo EXIT_STATUS: \$? 1>&2) | ($destcmd)");
 	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
 		# Catch death of dd command in pipeline
@@ -1657,7 +1656,7 @@ if ($srcserver->{'id'} eq $destserver->{'id'}) {
 elsif ($srcserver->{'id'} == 0) {
 	# Copying from Cloudmin master - run command with SSH piped in
 	my $sshcmd = &build_ssh_command($destserver);
-	$sshcmd = "(dd if=".quotemeta($src)." bs=32768 ; ".
+	$sshcmd = "(".&dd_command($src, undef)." ; ".
 		  " echo EXIT_STATUS: \$? 1>&2) | ".
 		  $sshcmd." ".quotemeta($destcmd);
 	my ($status, $out) = &run_ssh_command(
@@ -1672,7 +1671,7 @@ elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - run SSH command outputting file piped
 	# into command
 	my $sshcmd = &build_ssh_command($srcserver);
-	$sshcmd = "( $sshcmd dd if=".quotemeta($src)." bs=32768 ; ".
+	$sshcmd = "( $sshcmd ".&dd_command($src, undef)." ; ".
 		  " echo EXIT_STATUS: \$? 1>&2) | ".$destcmd;
 	my ($status, $out) = &run_ssh_command($sshcmd,
 					      $srcserver->{'ssh_pass'});
@@ -1698,7 +1697,7 @@ else {
 		}
 
 	# Build SSH command
-	$sshcmd = "dd if=".quotemeta($src)." bs=32768 | ssh -q -x";
+	$sshcmd = &dd_command($src, undef)." | ssh -q -x";
 	$sshcmd .= " -".$destserver->{'ssh_protocol'};
 	if ($keytemp) {
 		$sshcmd .= " -i ".quotemeta($keytemp);
@@ -1976,9 +1975,7 @@ if (defined(&$dfunc)) {
 # Run md5sum via SSH
 my $cmd;
 if ($size) {
-	my $count = int($size / 32768);
-	$cmd = "dd if=".quotemeta($file).
-	       " bs=32768 count=$count 2>/dev/null | md5sum -";
+	$cmd = &dd_command($file, undef, $size)." | md5sum -";
 	}
 else {
 	$cmd = "md5sum ".quotemeta($file);
@@ -9231,6 +9228,37 @@ foreach my $d (@$disks) {
 		}
 	}
 return ($allok, $allout);
+}
+
+# dd_command(in, out, [size], [block-size])
+# Returns a DD command, using a 32768 block size
+sub dd_command
+{
+my ($in, $out, $size, $bs) = @_;
+if (!$bs) {
+	# Choose a block size - 32768 if possible
+	if (!$size || $size % 32768 == 0) {
+		$bs = 32768;
+		}
+	else {
+		$bs = 1024;
+		}
+	}
+my $blocks;
+if ($size) {
+	# Choose number of blocks - round up if needed
+	if ($size % $bs == 0) {
+		$blocks = $size / $bs;
+		}
+	else {
+		$blocks = int($size / $bs) + 1;
+		}
+	}
+my $cmd = "dd".($in ? " if=".quotemeta($in) : "").
+	       ($out ? " of=".quotemeta($out) : "").
+	       " bs=$bs".
+	       ($size ? " count=$blocks" : "");
+return $cmd;
 }
 
 # obtain_lock_server(&server|&servers, [readonly])

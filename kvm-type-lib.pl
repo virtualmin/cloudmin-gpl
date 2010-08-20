@@ -823,8 +823,7 @@ if ($server->{'kvm_filesystem_vg'}) {
 if ($empty) {
 	my $dksize = $server->{'kvm_disksize'}*1024*1024;
 	if (!$server->{'kvm_filesystem_vg'}) {
-		my $cmd = "dd if=/dev/zero of=".quotemeta($fsfile).
-			  " bs=1024 count=".int($dksize/1024);
+		my $cmd = &dd_command("/dev/zero", $fsfile, $dksize);
 		my ($out, $ex, $err) = &execute_command_on_server(
 						$vhost, $cmd);
 		$err = $out if ($ex);
@@ -865,8 +864,8 @@ if ($imgdestfile) {
 	if (!$img->{'nocompress'}) {
 		# Need to un-compress the image
 		my $writer = $imgdestfile =~ /^\/dev\// ?
-				"| dd of=".quotemeta($imgdestfile)." bs=32768" :
-				"> ".quotemeta($imgdestfile);
+			"| ".&dd_command(undef, $imgdestfile) :
+			"> ".quotemeta($imgdestfile);
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
 			" echo SERVER-MANAGER-COMPLETE ||".
@@ -877,7 +876,7 @@ if ($imgdestfile) {
 		my $cmd;
 		if ($imgdestfile =~ /^\/dev\//) {
 			# DD directly into LVM
-			$cmd = "dd if=$imgfile of=$imgdestfile bs=32768";
+			$cmd = &dd_command($imgfile, $imgdestfile);
 			}
 		else {
 			# Can just move or copy
@@ -1719,8 +1718,8 @@ else {
 	elsif (!@st) {
 		# Create empty file
 		$disk->{'size'} || return "File $disk->{'real'} does not exist on $vhost->{'host'}, but no size to create it as was given";
-		my $cmd = "dd if=/dev/zero of=".quotemeta($disk->{'real'}).
-			     " bs=1024 count=".int($disk->{'size'}/1024);
+		my $cmd = &dd_command("/dev/zero", $disk->{'real'},
+				      $disk->{'size'});
 		my ($out, $ex, $err) = &execute_command_on_server(
 						$vhost, $cmd);
 		$err = $out if ($ex);
@@ -1926,9 +1925,9 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		}
 	elsif (!$disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
 		# Expand the disk image (before filesystem)
-		push(@cmds, "dd if=/dev/zero bs=1024".
-		    " count=".int(($disk->{'size'}-$olddisk->{'size'})/1024).
-		    " >>".quotemeta($disk->{'real'}));
+		push(@cmds, &dd_command("/dev/zero", undef,
+					$disk->{'size'}-$olddisk->{'size'}).
+			    " >>".quotemeta($disk->{'real'}));
 		}
 
 	# Work out the new filesystem size, taking into the new total disk
@@ -1970,9 +1969,9 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	if (!$disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
 		# Truncate the file (after resizing filesystem)
-		push(@cmds, "dd if=".quotemeta($disk->{'real'}).
-		    " of=".quotemeta($disk->{'real'}.".tmp")." bs=1024".
-		    " count=".int($disk->{'size'}/1024));
+		push(@cmd, &dd_command($disk->{'real'},
+				       $disk->{'real'}.".tmp",
+				       $disk->{'size'}));
 		push(@cmds, "mv ".quotemeta($disk->{'real'}.".tmp").
 		    " ".quotemeta($disk->{'real'}));
 		}
@@ -3002,7 +3001,7 @@ if (!$image->{'nocompress'}) {
 	my $gzfile = $image->{'id'}.".ext3.gz";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	    ($server->{'kvm_filesystem_lv'} ?
-		"dd if=".quotemeta($fsfile)." bs=32768 | gzip -c" :
+		&dd_command($fsfile, undef)." | gzip -c" :
 		"gzip -c ".quotemeta($fsfile)).
 	    	  " >".quotemeta("$tempdir/$gzfile"));
 	if ($ex) {
@@ -3019,8 +3018,7 @@ else {
 	my $imgfile = $image->{'id'}.".ext3";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		$server->{'kvm_filesystem_lv'} ?
-			"dd if=".quotemeta($fsfile).
-			  " of=".quotemeta("$tempdir/$imgfile")." bs=32768" :
+			&dd_command($fsfile, "$tempdir/$imgfile") :
 			"ln -s ".quotemeta($fsfile)." ".
 			  quotemeta("$tempdir/$imgfile"));
 	if ($ex) {
@@ -3250,7 +3248,7 @@ if ($server->{'kvm_filesystem_lv'}) {
 		my $devfile = $dev;
 		$devfile =~ s/^(.*)\///;
 		$devfile =~ s/_cloudmin_snap$//;
-		my $ddcmd = "dd if=$dev of=$tempdir/$devfile bs=32768 2>&1";
+		my $ddcmd = &dd_command($dev, "$tempdir/$devfile")." 2>&1";
 		$ddcmd = &niced_backup_command($vhost, $ddcmd);
 		my ($out, $ex, $err) = &execute_command_on_server(
 					$vhost, $ddcmd);
@@ -3497,7 +3495,8 @@ if ($server->{'kvm_filesystem_lv'}) {
 			$devfile =~ s/^(.*)\///;
 			my $tarcmd = "gunzip -c ".quotemeta($tarfile).
 				     " | tar Oxpf - $devfile ./$devfile".
-				     " | dd of=$d->{'real'} bs=32768 2>&1";
+				     " | ".&dd_command(undef, $d->{'real'}).
+				     "2>&1";
 			$tarcmd = &niced_backup_command($vhost, $tarcmd);
 			my ($out, $ex, $err) = &execute_command_on_server(
 						$vhost, $tarcmd);
@@ -3516,7 +3515,7 @@ if ($server->{'kvm_filesystem_lv'}) {
 			$devfile =~ s/^(.*)\///;
 			my $tarcmd = "gunzip -c ".
 				     " | tar Oxpf - $devfile ./$devfile".
-				     " | dd of=$d->{'real'} bs=32768";
+				     " | ".&dd_command(undef, $d->{'real'});
 			$tarcmd = &niced_backup_command($vhost, $tarcmd);
 			my $err = &pipe_command_from_server($destserver, $vhost,
 						    $tarcmd, $dest->{'path'});
