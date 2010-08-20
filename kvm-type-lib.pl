@@ -1196,6 +1196,10 @@ sub type_kvm_shutdown
 {
 my ($server, $force) = @_;
 my $vhost = &type_kvm_parent($server);
+if (&can_ssh_status($server)) {
+	# Sync filesystems first, to avoid corruption
+	&execute_command_on_server($server, "sync ; sync ; sync");
+	}
 my $proc = &get_server_kvm_instance($server);
 if (&can_ssh_status($server) && !$force) {
 	# Try poweroff command
