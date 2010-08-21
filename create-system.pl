@@ -216,6 +216,8 @@ if ($image) {
 	($img) = grep { $_->{'id'} eq $image } @images;
 	$img || &usage("Image ID does not exist or in not valid for the ".
 		       "specified system type");
+	$img->{'format'} eq 'cd' &&
+		&usage("Selected image is a CD");
 	}
 
 # Check if can create

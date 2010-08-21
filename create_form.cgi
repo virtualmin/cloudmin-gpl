@@ -50,7 +50,7 @@ print &ui_table_row($text{'add_desc'},
 
 # System image, if any are available for the server type
 @images = &list_server_images($in{'type'});
-@images = grep { &can_image($_) } @images;
+@images = grep { &can_image($_) && $_->{'format'} ne 'cd' } @images;
 if (@images) {
 	$ifunc = "type_".$in{'type'}."_must_image";
 	$mustimage = defined(&$ifunc) && &$ifunc();
