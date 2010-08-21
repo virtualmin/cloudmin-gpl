@@ -143,6 +143,10 @@ if (defined(&$mfunc)) {
 			   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$medias ]));
 	}
 
+# Disk format
+print &ui_table_row($text{'disk_format'},
+	$text{'mimage_fmt'.$disk->{'format'}});
+
 # Current use on virtual system
 if (!$in{'new'} && $disk->{'fs'} eq 'swap') {
 	# Virtual memory

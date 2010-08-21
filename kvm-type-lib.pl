@@ -1525,7 +1525,8 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		     'virt' => "/dev/".$dev,
 		     'virtdev' => $dev,
 		     'drive_index' => $idx,
-		     'media' => $drive{'media'} || 'disk' };
+		     'media' => $drive{'media'} || 'disk',
+		     'format' => 'disk' };
 	$disk->{'device'} = $drive{'file'} =~ /^\/dev\// ? 1 : 0;
 	if (!$disk->{'device'}) {
 		my @st = &stat_file_on_server($vhost, $drive{'file'});
@@ -1680,6 +1681,7 @@ if (!$device) {
 				(scalar(@$disks)+1).".img";
 		}
 	}
+$rv->{'format'} = 'disk';
 $rv->{'device'} = $device;
 $rv->{'media'} = 'disk';
 return $rv;
@@ -2994,6 +2996,7 @@ if (!$rawsize) {
 	$rawsize = $st[7];
 	}
 $image->{'rawsize'} = $rawsize;
+$image->{'format'} = 'disk';
 
 if (!$image->{'nocompress'}) {
 	# Compress disk image to a temp file

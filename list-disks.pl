@@ -94,6 +94,7 @@ if ($multi) {
 				print "    Description on system: $vdesc\n";
 				}
 			}
+		print "    Format: ",($d->{'format'} || 'partition'),"\n";
 		if ($d->{'virt_onsystem'} &&
 		    $d->{'virt_onsystem'} ne $d->{'virt'}) {
 			print "    Device file on system: ",
