@@ -9264,6 +9264,24 @@ my $cmd = "dd".($in ? " if=".quotemeta($in) : "").
 return $cmd;
 }
 
+# random_password([len])
+# Returns a random password of the specified length, or the configured default
+sub random_password
+{
+&seed_random();
+&foreign_require("useradmin");
+local $random_password;
+local $len = $_[0] || $config{'passwd_length'} || 15;
+local @passwd_chars = split(//, $config{'passwd_chars'});
+if (!@passwd_chars) {
+        @passwd_chars = @useradmin::random_password_chars;
+        }
+foreach (1 .. $len) {
+        $random_password .= $passwd_chars[rand(scalar(@passwd_chars))];
+        }
+return $random_password;
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server
