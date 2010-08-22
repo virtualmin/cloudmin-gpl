@@ -60,6 +60,10 @@ print &ui_table_row($text{'mkimage_desc'},
 print &ui_table_row($text{'mkimage_compress'},
 		    &ui_yesno_radio("compress", 1));
 
+# Needs full virtualization?
+print &ui_table_row($text{'mkimage_hvm'},
+	 	    &ui_yesno_radio("hvm", 0));
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'create'} ] ]);
 

@@ -19,6 +19,7 @@ $clash && &error($text{'mkimage_eclash'});
 $image->{'id'} = $in{'imageid'};
 $in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
 $image->{'desc'} = $in{'desc'};
+$image->{$in{'manager'}.'_hvm'} = $in{'hvm'};
 
 # Get the file
 if ($in{'file_mode'} == 0) {

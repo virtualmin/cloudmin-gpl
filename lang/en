@@ -1729,6 +1729,7 @@ mkimage_fsck=Checking filesystem on first disk ..
 mkimage_efsckdisks=.. failed to list disks : $1
 mkimage_efscknone=.. no disks found!
 mkimage_efsckcannot=.. not possible for the first disk
+mkimage_hvm=HVM virtualization required?
 
 pass_title=Change Password
 pass_header=New system passwords
