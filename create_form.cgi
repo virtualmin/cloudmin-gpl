@@ -214,7 +214,8 @@ if ($empty) {
 				    &ui_radio_table("cdmode", 0, \@opts));
 			}
 		elsif (@opts > 0) {
-			print &ui_table_row($opts[0]->[1], $opts[0]->[2]);
+			print &ui_table_row($text{'create_cd'},
+				$opts[0]->[1]." ".$opts[0]->[2]);
 			print &ui_hidden("cdmode", $opts[0]->[0]);
 			}
 		else {
