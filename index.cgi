@@ -142,7 +142,7 @@ if (@servers) {
 			my @intype = grep { $_->{'cat_manager'} eq $t }@servers;
 			$dfunc = "type_".$t."_desc";
 			push(@cats, [ \@intype, &text('index_cattype',
-						      &$dfunc()) ]);
+				      $text{$t.'_typedesc'} || &$dfunc()) ]);
 			}
 		}
 	elsif ($config{'cat_mode'} == 2) {
