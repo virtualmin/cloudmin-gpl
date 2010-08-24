@@ -157,6 +157,7 @@ add_ecitrixinstance=No Citrix Xen VM name entered
 add_ecitrixinstance2=The selected Citrix Xen VM does not exist on $1
 
 create_title=Create New System
+create_title2=Create Empty System
 create_header=Details of new virtual system
 create_type=System type
 create_host=Internet hostname

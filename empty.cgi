@@ -130,7 +130,7 @@ if ($limits) {
 		}
 	}
 
-&ui_print_unbuffered_header(undef, $text{'create_title'}, "");
+&ui_print_unbuffered_header(undef, $text{'create_title2'}, "");
 &obtain_lock_server($server);
 
 # Run pre-creation script
