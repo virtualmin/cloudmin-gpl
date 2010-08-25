@@ -150,6 +150,7 @@ if (defined($pass)) {
 	$pass =~ /:/ && &usage("The password set with --pass cannot contain :");
 	$oldlock = $owner->{'pass'} =~ /^\!/ ? "!" : "";
 	$owner->{'pass'} = $oldlock.&acl::encrypt_password($pass);
+	$owner->{'acl'}->{'plainpass'} = $pass;
 	}
 if (defined($lock)) {
 	$owner->{'pass'} =~ s/^\!//;
