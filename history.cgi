@@ -92,29 +92,7 @@ if ($end > $last) {
 	}
 
 # Heading for stats being shown
-if ($in{'stat'} eq 'memused' || $in{'stat'} eq 'swapused' ||
-    $in{'stat'} eq 'memfree' || $in{'stat'} eq 'swapfree') {
-	$units = "MB";
-	}
-elsif ($in{'stat'} eq 'quotalimit' || $in{'stat'} eq 'quotaused') {
-	$units = "MB";
-	}
-elsif ($in{'stat'} eq 'diskused' || $in{'stat'} eq 'diskfree') {
-	$units = "GB";
-	}
-elsif ($in{'stat'} eq 'load' || $in{'stat'} eq 'load5' ||
-       $in{'stat'} eq 'load15') {
-	$units = $text{'history_cores'};
-	}
-elsif ($in{'stat'} =~ /^cpu/) {
-	$units = $text{'history_pc'};
-	}
-elsif ($in{'stat'} eq 'bin' || $in{'stat'} eq 'bout') {
-	$units = $text{'history_bps'};
-	}
-else {
-	$units = undef;
-	}
+(undef, $units) = &make_value_nice($in{'stat'});
 $sttxt = $text{'history_stat_'.$in{'stat'}};
 print "<b>",&text('history_showing',
 		  $units ? &text('history_units', $sttxt, $units) : $sttxt),

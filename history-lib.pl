@@ -266,5 +266,41 @@ foreach my $s (@$servers) {
 return @rv;
 }
 
+# make_value_nice(stat, value)
+# Converts a value of some stat type into a more human-friendly format.
+# In an array context returns units too.
+sub make_value_nice
+{
+my ($stat, $v) = @_;
+my $u;
+if ($stat eq 'memused' || $stat eq 'swapused' ||
+    $stat eq 'memfree' || $stat eq 'swapfree') {
+	$v /= 1024*1024;
+	$u = "MB";
+	}
+elsif ($stat eq 'quotalimit' || $stat eq 'quotaused') {
+	$v /= 1024*1024;
+	$u = "MB";
+	}
+elsif ($stat eq 'diskused' || $stat eq 'diskfree') {
+	$v /= 1024*1024*1024;
+	$u = "GB";
+	}
+elsif ($stat eq 'load' || $stat eq 'load5' || $stat eq 'load15') {
+	$u = $text{'history_cores'};
+	}
+elsif ($stat =~ /^cpu/) {
+	$u = $text{'history_pc'};
+	}
+elsif ($stat eq 'bin' || $stat eq 'bout') {
+	$u = $text{'history_bps'};
+	}
+if ($v ne '0' && $v ne int($v)) {
+	# Two decimal places only
+	$v = sprintf("%.2f", $v);
+	}
+return wantarray ? ($v, $u) : $v;
+}
+
 1;
 
