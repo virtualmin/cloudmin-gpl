@@ -4,12 +4,31 @@
 
 Lists the values of some statistic on one or more systems.
 
-XXX
+Cloudmin collects numerous statistics about each system that it manages, such
+as CPU load, memory used and disk space free. This command outputs some or all
+data samples for one or more systems, selected using the standard flags like
+C<--host> or C<--type>. You must use the C<--stat> flag followed by a statistic
+name to select the information to display.
+
+By default all historic stats are shown, but you can select a different 
+ime range with the C<--start> and C<--end> flags. Each must be followed
+by either a date in I<yyyy-mm-dd> format, or a number of days into the
+past from the current date like I<-5>. To switch the output to a more easily
+parsed format, use the C<--multiline> flag.
 
 =head1 Example usage
 
   cloudmin list-system-history --host xencentos.home
-  XXX
+  xencentos.home
+  Time                 Value                                   
+  -------------------- ----------------------------------------
+  06/Oct/2008 13:55    0.25 cores used                         
+  06/Oct/2008 14:00    0.07 cores used                         
+  06/Oct/2008 14:01    0.10 cores used                         
+  06/Oct/2008 14:05    0.01 cores used                         
+  06/Oct/2008 14:10    0.49 cores used                         
+  06/Oct/2008 14:15    0.01 cores used                         
+  06/Oct/2008 14:20    0.01 cores used                     
 
 =cut
 
