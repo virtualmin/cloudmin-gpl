@@ -715,16 +715,17 @@ if ($dest->{'mode'} == 1) {
 	# Target is on host already
 	$tarfile = $dest->{'path'};
 	my $mkerr = &create_backup_dest_dir($vhost, $tarfile);
-	if ($mkerr) {
-		return { 'ok' => 0,
-			 'msg' => &text('brun_emkdir', $mkerr) };
-		}
+	return { 'ok' => 0,
+		 'msg' => &text('brun_emkdir', $mkerr) } if ($mkerr);
 	}
 elsif (&can_transfer_directly($dest)) {
 	# Transferring directly to dest host
 	if (!$destserver) {
 		return { 'ok' => 0, 'msg' => $text{'brun_edestserver'} };
 		}
+	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
+	return { 'ok' => 0,
+		 'msg' => &text('brun_emkdir', $mkerr) } if ($mkerr);
 	$tarfile = undef;
 	}
 else {
