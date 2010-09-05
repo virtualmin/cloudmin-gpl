@@ -103,7 +103,9 @@ if ($in{'new'} && defined(&$afunc) && &$afunc($server)) {
 		# Can allocate or enter
 		print &ui_table_row($text{'iface_address'},
 			    &ui_opt_textbox("address", undef, 20,
-					    $text{'iface_alloc'}));
+					    $text{'iface_alloc'},
+					    $text{'iface_man'})." ".
+			    &ip_address_chooser_button("address", $server));
 		}
 	else {
 		# Always allocated

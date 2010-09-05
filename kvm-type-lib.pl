@@ -4141,6 +4141,18 @@ $server->{'kvm_gw'} = join(" ", @gws);
 return undef;
 }
 
+# type_kvm_available_ip_addresses(&server)
+# Returns a list of hash refs for IPs available on some system
+sub type_kvm_available_ip_addresses
+{
+my ($server) = @_;
+my $vhost = &get_parent_server($server);
+return &available_ip_addresses($vhost->{'kvm_start'},
+			       $vhost->{'kvm_end'},
+			       $vhost->{'kvm_cidr'},
+			       $vhost->{'kvm_gws'});
+}
+
 # get_kvm_console_file(&server)
 # Returns the filename to use for a KVM system's console file
 sub get_kvm_console_file

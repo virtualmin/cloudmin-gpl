@@ -1243,6 +1243,12 @@ ctchooser_id=Template UUID
 ctchooser_name=Template name
 ctchooser_size=Disk size
 
+ipchooser_title=Select Free IP Address
+ipchooser_ealloc=IP address allocation is not available for this system type
+ipchooser_enone=No free IP addresses are available
+ipchooser_ip=IP Address
+ipchooser_netmask=Netmask
+
 pkg_openssh=OpenSSH
 pkg_apache=Apache webserver
 pkg_bind=BIND DNS server
@@ -1331,6 +1337,7 @@ iface_netmask=Netmask
 iface_mac=Ethernet address
 iface_macdef=Assign automatically
 iface_alloc=Allocate automatically
+iface_man=Entered address
 iface_virt=Virtual interface number
 iface_eget=Failed to get list of network interfaces : $1
 iface_egetparents=Failed to get a list of host system interfaces : $1

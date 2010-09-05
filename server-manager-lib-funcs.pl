@@ -3875,10 +3875,11 @@ foreach my $server (@_) {
 return @rv;
 }
 
-# allocate_ip_address(start-ips, end-ips, cidrs, [gateways, ifaces, want-iface])
-# Returns an IP address from the given range that is not in use or pingable,
-# and a CIDR. If not IP could be allocated, returns undef.
-sub allocate_ip_address
+# available_ip_addresses(start-ips, end-ips, cidrs,
+# 			 [gateways, ifaces, want-iface])
+# Returns a list of hash refs, one for each IP address available for allocation,
+# with 'ip', 'cidr' and 'gateway' keys.
+sub available_ip_addresses
 {
 my ($startips, $endips, $cidrs, $gws, $ifaces, $wantiface) = @_;
 my @startips = split(/\s+/, $startips);
@@ -3916,12 +3917,21 @@ for(my $i=0; $i<@startips; $i++) {
 		}
 	}
 
-# Parallel ping them all
+# Parallel ping them all to work out which are free
 my @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss, 
 	sub { my $p = &ping_server_host($_[0]->{'ip'});
 	      return $p ? undef : $_[0] });
 @rvs = sort { &net::ip_to_integer($a->{'ip'}) <=>
 	      &net::ip_to_integer($b->{'ip'}) } @rvs;
+return @rvs;
+}
+
+# allocate_ip_address(start-ips, end-ips, cidrs, [gateways, ifaces, want-iface])
+# Returns an IP address from the given range that is not in use or pingable,
+# and a CIDR. If not IP could be allocated, returns undef.
+sub allocate_ip_address
+{
+my @rvs = &available_ip_addresses(@_);
 return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gw'} ) : ( );
 }
 
@@ -4046,6 +4056,14 @@ foreach my $s (&list_managed_servers()) {
 		}
 	}
 return %used;
+}
+
+# ip_address_chooser_button(field, &server)
+# Returns HTML for a popup button for choosing a free IP
+sub ip_address_chooser_button
+{
+my ($ifield, $server) = @_;
+return "<input type=button onClick='ifield = form.$ifield; chooser = window.open(\"ip_chooser.cgi?id=$server->{'id'}\", \"chooser\", \"toolbar=no,menubar=no,scrollbar=yes,width=300,height=600\"); chooser.ifield = ifield; window.ifield = ifield' value=\"...\">\n";
 }
 
 # get_server_package_system(&server)
