@@ -122,13 +122,16 @@ if ($info->{'cpu'}) {
 # Add up/down status
 if ($server->{'status'} eq 'down') {
 	push(@stats, [ "up", 0 ]);
+	push(@stats, [ "down", 1 ]);
 	}
 elsif ($server->{'status'} eq 'nossh' ||
        $server->{'status'} eq 'noping') {
 	push(@stats, [ "up", 0.5 ]);
+	push(@stats, [ "down", 0.5 ]);
 	}
 else {
 	push(@stats, [ "up", 1 ]);
+	push(@stats, [ "down", 0 ]);
 	}
 
 # Save historic stats

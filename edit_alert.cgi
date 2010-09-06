@@ -85,16 +85,17 @@ print &ui_hidden_table_end("servers");
 print &ui_hidden_table_start($text{'alert_header2'}, "width=100%", 2,
 			     "rules", 1, \@tds);
 
+# Rules-based alerts
 @rtable = ( );
 $i = 0;
 @forunits = &list_for_units();
+@stats = sort { $text{'history_stat_'.$a} cmp
+                $text{'history_stat_'.$b} }
+              &list_historic_stats(\@allservers);
 @names = map { [ $_, $text{'history_stat_'.$_} ] }
-             sort { $text{'history_stat_'.$a} cmp
-                    $text{'history_stat_'.$b} }
-                  &list_historic_stats(\@allservers);
+	     grep { !&is_binary_alert($_) } @stats;
 unshift(@names, [ undef, '&nbsp;' ]);
-foreach my $r (@{$alert->{'rules'}},
-	       { 'for' => 60, 'count' => 1, 'over' => 1 },
+foreach my $r ((grep { !&is_binary_alert($_->{'name'}) } @{$alert->{'rules'}}),
 	       { 'for' => 60, 'count' => 1, 'over' => 1 }) {
 	($forunit, $for) = &split_for_units($r->{'for'});
 	push(@rtable, [ &ui_select("name_$i", $r->{'name'}, \@names),
@@ -108,12 +109,29 @@ foreach my $r (@{$alert->{'rules'}},
 			]);
 	$i++;
 	}
+
+# Binary alerts
+@names = map { [ $_, $text{'history_stat_'.$_} ] }
+	     grep { &is_binary_alert($_) } @stats;
+unshift(@names, [ undef, '&nbsp;' ]);
+foreach my $r ((grep { &is_binary_alert($_->{'name'}) } @{$alert->{'rules'}}),
+	       { 'for' => 60, 'count' => 1 }) {
+	($forunit, $for) = &split_for_units($r->{'for'});
+	push(@rtable, [ &ui_select("name_$i", $r->{'name'}, \@names),
+			"", "",
+			&ui_textbox("for_$i", $for, 4).
+			 &ui_select("forunit_$i", $forunit, \@forunits),
+			&ui_textbox("count_$i", $r->{'count'}, 4),
+			]);
+	$i++;
+	}
 print &ui_table_row(undef,
 	&ui_columns_table([ $text{'alert_name'}, $text{'alert_comp'},
 			    $text{'alert_value'},
 			    $text{'alert_for'}, $text{'alert_count'} ],
 			  100, \@rtable, undef, 1), 2);
 
+# And / or mode
 print &ui_table_row(undef,
 	&ui_radio("and", $alert->{'and'},
 		  [ [ 1, $text{'alert_and'} ], [ 0, $text{'alert_or'} ] ]), 2);

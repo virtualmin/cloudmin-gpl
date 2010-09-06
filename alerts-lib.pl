@@ -105,7 +105,6 @@ return undef if (!@servers);
 # See which rules match
 my @firing;
 foreach my $r (@{$alert->{'rules'}}) {
-	my $start = $when - $r->{'for'};
 	my (@fservers, @fvalues);
 	my $rvalue =
 		$r->{'value'} =~ /^([0-9\.]+)\s*KB?/i ? $1*1024 :
@@ -114,8 +113,18 @@ foreach my $r (@{$alert->{'rules'}}) {
 		$r->{'value'} =~ /^([0-9\.]+)\s*TB?/i ? $1*1024*1024*1024*1024 :
 						        $r->{'value'};
 	foreach my $s (@servers) {
+		# Get time of most recent record of this stat, and use that as
+		# the end time for calculation purposes, unless it is > 1 hour
+		# old. This is needed so that short 'for' times actually have
+		# some data.
+		my ($sfirst, $slast) = &get_historic_first_last($r->{'name'},
+								[ $s ]);
+		my $swhen = $when - $slast > 60*60 ? $when :
+			    $slast < $when ? $slast : $when;
+		my $sstart = $swhen - $r->{'for'};
+
 		my @info = &list_historic_collected_info($r->{'name'}, $s,
-							 $start, $when);
+							 $sstart, $swhen);
 		my $icount = 0;
 		foreach my $i (@info) {
 			if ($r->{'over'} && $i->[1] > $rvalue ||
@@ -274,9 +283,11 @@ foreach my $ep (@emails) {
 		$msg .= sprintf $fmt,
 			$p->[0]->{'host'},
 			$text{'history_stat_'.$p->[1]} || $p->[1],
-			$p->[3],
-			$p->[3] =~ /(K|M|G|T)B?$/ ? &nice_size($p->[2])
-						  : $p->[2],
+			&is_binary_alert($p->[1]) ?
+			  ( "", "" ) :
+			  ( $p->[3],
+			    $p->[3] =~ /(K|M|G|T)B?$/ ? &nice_size($p->[2])
+						      : $p->[2] ),
 			&make_date($p->[4]);
 		}
 
@@ -467,11 +478,21 @@ my ($alert) = @_;
 my @descs;
 foreach my $r (@{$alert->{'rules'}}) {
 	my ($forunit, $for) = &split_for_units($r->{'for'});
-	my $desc = &text($r->{'over'} ? 'alert_rdescover'
-				      : 'alert_rdescunder',
-			$text{'history_stat_'.$r->{'name'}},
-			$r->{'value'},
-			$for.$forunit);
+	my $desc;
+	if (&is_binary_alert($r->{'name'})) {
+		# Yes / no condition
+		$desc = &text('alert_rdescbinary',
+			      $text{'history_stat_'.$r->{'name'}},
+			      $for.$forunit);
+		}
+	else {
+		# Compared to some value
+		$desc = &text($r->{'over'} ? 'alert_rdescover'
+					   : 'alert_rdescunder',
+			      $text{'history_stat_'.$r->{'name'}},
+			      $r->{'value'},
+			      $for.$forunit);
+		}
 	if ($r->{'count'} > 1) {
 		$desc .= " ".&text('alert_cdesc', $r->{'count'});
 		}
@@ -519,6 +540,14 @@ if ($alert->{'silenced'}) {
 	$msg .= " ".$text{'alert_stsilenced'};
 	}
 return $msg;
+}
+
+# is_binary_alert(name)
+# Returns 1 if some stat is binary (0=bad, 1=ok)
+sub is_binary_alert
+{
+my ($stat) = @_;
+return $stat eq "up" || $stat eq "down" ? 1 : 0;
 }
 
 1;

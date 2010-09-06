@@ -58,16 +58,24 @@ else {
 	for(my $i=0; defined($in{"name_$i"}); $i++) {
 		next if (!$in{"name_$i"});
 		my $r = { 'name' => $in{"name_$i"} };
-		if ($in{"over_$i"}) {
+		if (&is_binary_alert($r->{'name'})) {
+			# Just compared to 1
 			$r->{'over'} = 1;
+			$r->{'value'} = 0;
 			}
 		else {
-			$r->{'under'} = 1;
+			# Compared to some value
+			if ($in{"over_$i"}) {
+				$r->{'over'} = 1;
+				}
+			else {
+				$r->{'under'} = 1;
+				}
+			$in{"value_$i"} =~ s/\s//g;
+			$in{"value_$i"} =~ /^[0-9\.]+((K|M|G|T)B?)?$/i ||
+				&error(&text('alert_evalue', $i+1));
+			$r->{'value'} = $in{"value_$i"};
 			}
-		$in{"value_$i"} =~ s/\s//g;
-		$in{"value_$i"} =~ /^[0-9\.]+((K|M|G|T)B?)?$/i ||
-			&error(&text('alert_evalue', $i+1));
-		$r->{'value'} = $in{"value_$i"};
 		$in{"for_$i"} =~ /^[0-9\.]+$/ ||
 			&error(&text('alert_efor', $i+1));
 		$r->{'for'} = &join_for_units($in{"forunit_$i"}, $in{"for_$i"});

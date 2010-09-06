@@ -60,14 +60,23 @@ foreach $a (@alerts) {
 				$p = $hp->[1];
 				}
 			}
+		if (&is_binary_alert($name)) {
+			# Yes / no alert
+			$cutoff = $text{'alerts_met'};
+			$value = "";
+			}
+		else {
+			# Compared to some value
+			$cutoff = ($r->{'over'} ? $text{'alert_over'}
+						: $text{'alert_under'})." ".
+						   $r->{'value'};
+			if ($r->{'value'} =~ /(K|M|G|T)B?$/) {
+				$value = &nice_size($value);
+				}
+			}
 		$hgraph = "history.cgi?id=$s->{'id'}&stat=$name&".
 			  "search=$s->{'host'}&period=$p";
 		@links = ( "<a href='$hgraph'>$text{'alerts_graph'}</a>" );
-		$cutoff = ($r->{'over'} ? $text{'alert_over'}
-				: $text{'alert_under'})." ".$r->{'value'};
-		if ($r->{'value'} =~ /(K|M|G|T)B?$/) {
-			$value = &nice_size($value);
-			}
 		push(@table, [
 		    "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
 		    $text{'history_stat_'.$name},
