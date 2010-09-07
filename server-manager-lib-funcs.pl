@@ -1882,6 +1882,7 @@ if (!$err) {
 my ($out, $ex, $err) = &execute_command_on_server($server,
 	"ls -ldn ".quotemeta($remotefile));
 return ( $err ) if ($err);
+$out =~ s/\r?\n$//;
 if ($out =~ /No such file/i) {
 	return ( );
 	}
@@ -1903,6 +1904,15 @@ else {
 			      &month_to_number($w[5]), $now[5] );
 		$st[8] = $st[9] = $st[10] = timelocal(@tm);
 		}
+	elsif ($w[5] =~ /^(\d{4})\-(\d+)\-(\d+)$/) {
+		# Time is year-month-day hour:minute
+		local @tm = ( 0, 0, 0, $3, $2-1, $1-1900 );
+		if ($w[6] =~ /^(\d+):(\d+)$/) {
+			$tm[1] = $2;
+			$tm[2] = $1;
+			$st[8] = $st[9] = $st[10] = timelocal(@tm);
+			}
+		}
 	elsif ($w[7] =~ /^\d+$/) {
 		# Time is month day year
 		my @tm = ( 0, 0, 0, $w[6],
@@ -1915,6 +1925,9 @@ else {
 		if ($p[$i] ne '-') {
 			$st[2] += (1<<$i);
 			}
+		}
+	if ($p[9] eq "d") {
+		$st[2] += 040000;
 		}
 	return @st;
 	}
