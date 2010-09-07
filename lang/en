@@ -1960,6 +1960,7 @@ download_title=Download File
 download_doing=Downloading file $1 to $2 ..
 download_failed=.. download failed : $1
 download_done=.. download completed successfully.
+download_estdout=A directory cannot be downloaded in the browser
 
 mupload_title=Mass Upload File
 mupload_err=Failed to upload file to multiple systems

@@ -66,9 +66,13 @@ sub type_this_get_file
 {
 my ($server, $remotefile, $localfile, $device) = @_;
 my $out = &backquote_command(
-	$device ? &dd_command($remotefile, $localfile)." 2>&1" :
-		  "cp -r -H ".quotemeta($remotefile)." ".
-		   quotemeta($localfile)." 2>&1");
+	$device ?
+		&dd_command($remotefile, $localfile)." 2>&1" :
+	-d $localfile && -d remotefile ?
+		"cp -r -H ".quotemeta($remotefile)."/* ".
+		  quotemeta($localfile)." 2>&1" :
+		"cp -r -H ".quotemeta($remotefile)." ".
+		  quotemeta($localfile)." 2>&1");
 return $? ? $out : undef;
 }
 

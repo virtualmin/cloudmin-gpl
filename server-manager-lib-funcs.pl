@@ -1087,7 +1087,11 @@ else {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}:".
-		   quotemeta($remotefile)." ".quotemeta($localfile);
+		   quotemeta($remotefile);
+	if (-d $localfile && &is_dir_on_server($server, $remotefile)) {
+		$sshcmd .= "/\\*";
+		}
+	$sshcmd .= " ".quotemeta($localfile);
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1278,8 +1282,11 @@ else {
 	if ($server->{'ssh_port'}) {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
-	$sshcmd .= " ".quotemeta($localfile).
-		   " $server->{'ssh_user'}\@$server->{'ip'}:".
+	$sshcmd .= " ".quotemeta($localfile);
+	if (-d $localfile && &is_dir_on_server($server, $remotefile)) {
+		$sshcmd .= "/*";
+		}
+	$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}:".
 		   quotemeta($remotefile);
 	my ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1352,12 +1359,16 @@ if ($checksum) {
 	($srccs_ok, $srccs) = &checksum_file_on_server($srcserver, $src,
 						       $checksize);
 	}
+my $srcisdir = &is_dir_on_server($srcserver, $src);
+my $destisdir = &is_dir_on_server($destserver, $dest);
 
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
-	# Self to self - just copy
+	# Some system to itself - just copy
 	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
 		$device ? &dd_command($src, $dest) :
-		          "cp ".quotemeta($src)." ".quotemeta($dest));
+	        $srcisdir && $destisdir ?
+		          "cp -r -H ".quotemeta($src)."/* ".quotemeta($dest) :
+		          "cp -r -H ".quotemeta($src)." ".quotemeta($dest));
 	$rv = $err ? $err : $ex ? $out : undef;
 	}
 elsif ($srcserver->{'id'} == 0) {
@@ -1411,6 +1422,9 @@ else {
 			$sshcmd .= " -P ".$destserver->{'ssh_port'};
 			}
 		$sshcmd .= " ".quotemeta($src);
+		if ($srcisdir && $destisdir) {
+			$sshcmd .= "/\\*";
+			}
 		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}:".
 			   quotemeta($dest);
 		}
@@ -1931,6 +1945,16 @@ else {
 		}
 	return @st;
 	}
+}
+
+# is_dir_on_server(&server, path)
+# Returns 1 if some path is a directory, 0 if a file or missing
+sub is_dir_on_server
+{
+my ($server, $file) = @_;
+my @st = &stat_file_on_server($server, $file);
+return 0 if (@st <= 1);
+return $st[2] & 040000 ? 1 : 0;
 }
 
 # has_command_on_server(&server, command)

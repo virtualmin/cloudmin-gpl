@@ -86,7 +86,13 @@ if ($err) {
 if ($stdout) {
 	$dest = &transname();
 	}
-$err = &get_file_from_server($server, $source, $dest, $device, $forcessh);
+if (&is_dir_on_server($server, $source) && $stdout) {
+	$err = A directory cannot be written to stdout";
+	}
+else {
+	$err = &get_file_from_server($server, $source, $dest, $device,
+				     $forcessh);
+	}
 &umount_filesystem_if_needed($server);
 if ($err) {
 	print "ERROR: $err\n";

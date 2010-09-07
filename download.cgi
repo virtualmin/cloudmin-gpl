@@ -29,6 +29,10 @@ if ($in{'dest'} == 1) {
 
 # Get the file
 $err = &mount_filesystem_if_needed($server);
+if (&is_directory_on_server($server, $in{'source'}) && $in{'dest'} == 0 &&
+    !$err) {
+	$err = $text{'download_estdout'});
+	}
 if (!$err) {
 	$err = &get_file_from_server($server, $in{'source'}, $dest);
 	}
