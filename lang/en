@@ -175,6 +175,7 @@ create_ec2other=Other image ID ..
 create_ec2kimage=EC2 kernel image
 create_ec2kimagedef=Amazon's default
 create_ec2size=EC2 instance size
+create_ec2t1.micro=Micro (1 core, 613MB RAM, 32-bit, 1 compute unit)
 create_ec2m1.small=Small (1 core, 1.7GB RAM, 32-bit, 1 compute unit)
 create_ec2m1.large=Large (4 cores, 7.5GB RAM, 64-bit, 4 compute units)
 create_ec2m1.xlarge=Extra-large (8 cores, 15GB RAM, 64-bit, 8 compute units)
