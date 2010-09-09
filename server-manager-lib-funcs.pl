@@ -4674,7 +4674,7 @@ if ($add) {
 	my @st = &stat_file_on_server($server, $authkeys);
 	if (@st == 1) {
 		# Could not stat
-		return $st[0];
+		return "Error reading $authkeys : $st[0]";
 		}
 	my $err = &get_file_from_server($server, $authkeys, $temp);
 	return $err if ($err);
