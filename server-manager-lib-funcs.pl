@@ -4676,8 +4676,10 @@ if ($add) {
 		# Could not stat
 		return "Error reading $authkeys : $st[0]";
 		}
-	my $err = &get_file_from_server($server, $authkeys, $temp);
-	return $err if ($err);
+	elsif (@st > 0) {
+		my $err = &get_file_from_server($server, $authkeys, $temp);
+		return $err if ($err);
+		}
 	}
 my $lref = &read_file_lines($temp);
 my $keyline = &generate_public_key($key);
