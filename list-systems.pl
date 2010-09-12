@@ -14,6 +14,9 @@ To limit the display to only systems that can host virtual systems, use the
 C<--host-type> flag followed by a virtualization type like C<xen>, C<openvz>
 or C<zones>. Or if you want to get all host systems, use C<--host-type all>.
 
+To select virtual systems based on their host system, use the C<--host-on>
+flag followed by a hostname.
+
 Systems can also be selected by their current status, using the C<--status>
 flag followed by a code like C<virt> (Virtualmin) or C<down> (completely
 shut down). Special codes that cover a number of statuses are also supported,
@@ -75,6 +78,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
 	elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
 	elsif ($a eq "--host-type") { $hosttypes{shift(@ARGV)} = 1; }
+	elsif ($a eq "--host-on") { $hostons{shift(@ARGV)} = 1; }
 	elsif ($a eq "--last-period") { $period_ago = 1; }
 	elsif ($a eq "--period-ago") { $period_ago = shift(@ARGV); }
 	elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
@@ -95,6 +99,12 @@ if (keys %hosttypes) {
 		my @pt = &is_parent_server($_);
 		scalar(@pt) && ($hosttypes{'all'} ||
 				scalar(grep { $hosttypes{$_} } @pt));
+		} @servers;
+	}
+if (keys %hostons) {
+	@servers = grep {
+		my $parent = &get_parent_server($_);
+		$parent && $hostons{$parent->{'host'}};
 		} @servers;
 	}
 @servers || &usage("No systems specified");
@@ -494,6 +504,7 @@ print "                      [--os oscode]*\n";
 print "                      [--owner name]*\n";
 print "                      [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                      [--host-type type|\"all\"]\n";
+print "                      [--host-on name]\n";
 print "                      [--last-period | --period-ago N]\n";
 exit(1);
 }
