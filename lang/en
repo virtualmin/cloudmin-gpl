@@ -2550,6 +2550,7 @@ smove_doing=Moving $1 system from $2 to $3 ..
 smove_doing2=Updating configuration for $1 system to reflect move from $2 to $3 ..
 smove_egone=Destination system no longer exists
 smove_emove=This system cannot be moved to the selected host system
+smove_emove2=Only a manual move is current possible for this system
 smove_copying=Copying $1 TAR file to new host system ..
 smove_copyfailed=.. copy failed : $1
 smove_copypartial=.. copy was not complete. Original file was $1 bytes, but file on destination is $2 bytes.

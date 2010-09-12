@@ -115,7 +115,9 @@ $dfunc = "type_".$server->{'manager'}."_desc";
 $desc = &$dfunc();
 $cfunc = "type_".$server->{'manager'}."_can_move";
 defined(&$cfunc) || &usage("Systems of type $desc cannot be moved");
-&$cfunc($server, $dest) || &usage("The selected system cannot be moved to the new host");
+$can = &$cfunc($server, $dest);
+$can || &usage("The selected system cannot be moved to the new host");
+$can == 3 && !$manual && &usage("Only a manual move is possible");
 
 &obtain_lock_server($dest);
 &obtain_lock_server($server);
