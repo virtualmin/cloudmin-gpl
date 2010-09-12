@@ -3609,19 +3609,23 @@ return ( $server->{'kvm_dns'}, $vhost->{'kvm_zone'} );
 
 # type_kvm_can_move(&server, [&dest])
 # Check if moving a KVM instance is allowed. Only possible if target is up
+# Returns 2 indicating than manual moves are supported too, or 3 indicating
+# that only manual moves are possible.
 sub type_kvm_can_move
 {
 my ($server, $dest) = @_;
-if ($server->{'status'} eq 'nohost') {
-	return 0;	# Parent is down
-	}
-elsif (!$dest) {
-	return 1;	# Assume OK
-	}
-elsif ($dest->{'status'} eq 'virt' ||
-       $dest->{'status'} eq 'nowebmin' ||
-       $dest->{'status'} eq 'novirt') {
-	return 1;	# Dest is OK
+if (!$dest ||
+    $dest->{'status'} eq 'virt' ||
+    $dest->{'status'} eq 'nowebmin' ||
+    $dest->{'status'} eq 'novirt') {
+	# Dest is OK
+	if ($server->{'status'} eq 'nohost') {
+		# Parent is down, only manual moves possible
+		return 3;
+		}
+	else {
+		return 2;
+		}
 	}
 return 0;
 }
@@ -3836,6 +3840,29 @@ if ($was_up) {
 		}
 	&$second_print($text{'create_done'});
 	}
+
+return undef;
+}
+
+# type_kvm_manual_move_system(&server, &dest)
+# Update the configs to reflect a system move already done
+sub type_kvm_manual_move_system
+{
+my ($server, $dest) = @_;
+my $vhost = &get_parent_server($server);
+$server->{'kvm_on'} = $dest->{'id'};
+
+# Check if disks exist on target
+&$first_print($text{'smove_checkdisks'});
+my $disks = &type_kvm_list_disks($server, 0);
+return $disks if (!ref($disks));
+foreach my $d (@$disks) {
+	my @dst = &stat_file_on_server($dest, $d->{'real'});
+	if (!@dst) {
+		return &text('smove_echeckdisk', $d->{'real'});
+		}
+	}
+&$second_print($text{'smove_checkdisksok'});
 
 return undef;
 }
