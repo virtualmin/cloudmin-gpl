@@ -953,6 +953,18 @@ for(my $i=0; $i<@ips; $i++) {
 	}
 $server->{'mac'} = join(" ", @macs);
 
+if (!$empty) {
+	# Clean up /etc/fstab to remove non-existant devices
+	&$first_print($text{'create_xencleanfstab'});
+	my $err = &cleanup_server_fstab($server);
+	if ($err) {
+		&$second_print(&text('create_exencleanfstab', $err));
+		}       
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
 my $mp;
 if (!$empty) {
 	# Expand the filesystem image, if needed
@@ -1111,17 +1123,7 @@ if ($config{'dhcp_add'} && !$reset) {
 	&add_all_iface_dhcpd($server, \@fakeifaces);
 	}
 
-if (!$empty && $mp) {
-	# Clean up /etc/fstab to remove non-existant devices
-	&$first_print($text{'create_xencleanfstab'});
-	my $err = &cleanup_server_fstab($server);
-	if ($err) {
-		&$second_print(&text('create_exencleanfstab', $err));
-		}       
-	else {
-		&$second_print($text{'create_done'});
-		}
-
+if ($mp) {
 	# Un-mount
 	&$first_print($text{'create_xenumount'});
 	&umount_filesystem_if_needed($server);
