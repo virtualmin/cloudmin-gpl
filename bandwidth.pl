@@ -151,6 +151,8 @@ foreach $s (@servers) {
 				    'bw_usage_in', 'bw_usage_out') {
 				$hash{$n} = &nice_size($hash{$n});
 				}
+			$hash{'bw_over'} = &nice_size($s->{'bw_usage'} -
+						      $s->{'bw_limit'});
 			$msg = &substitute_template($msg, \%hash);
 			&mailboxes::send_text_mail(
 				&get_global_from_address($server),
