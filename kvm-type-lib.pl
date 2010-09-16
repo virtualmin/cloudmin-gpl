@@ -2087,13 +2087,14 @@ return ($server->{'status'} eq 'down' || !$disk->{'mounted'}) &&
        $disk->{'fs'} && $disk->{'fs'} ne 'swap';
 }
 
-# type_kvm_fsck_disk(&server, &disk)
+# type_kvm_fsck_disk(&server, &disk, [only-if-unclean])
 # Run fsck on a disk to validate and repair the filesystem. Returns 1 if 
 # all was OK to start with, 2 if fixes were made and 0 on failure, plus the
 # output from fsck
 sub type_kvm_fsck_disk
 {
-my ($server, $disk) = @_;
+my ($server, $disk, $noforce) = @_;
+my $flag = $noforce ? "" : "-f";
 my $vhost = &get_parent_server($server);
 my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
 ref($parts) || return (0, "Failed to list partitions : $parts");
@@ -2104,7 +2105,7 @@ if ($ex || $err) {
 	return (0, "losetup failed : ".($err || $out));
 	}
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"fsck -y -f /dev/loop9");
+	"fsck -y $flag /dev/loop9");
 &execute_command_on_server($vhost,
 	"losetup -d /dev/loop9");
 if ($ex > 2 || $err) {

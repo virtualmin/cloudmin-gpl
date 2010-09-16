@@ -3528,7 +3528,7 @@ my ($server) = @_;
 
 # If configured, check all disks first
 if ($config{'fsck_boot'}) {
-	my ($ok, $out) = &fsck_all_disks($server);
+	my ($ok, $out) = &fsck_all_disks($server, $config{'fsck_boot'} == 2);
 	if ($ok == 0) {
 		return "Disk check failed : $out";
 		}
@@ -9260,12 +9260,12 @@ $dest->{'path'} = $in->{$pfx."_path"};
 return undef;
 }
 
-# fsck_all_disks(&server)
+# fsck_all_disks(&server, [only-if-unclean])
 # Checks all the possible disks on some virtual system, and returns the same
 # output as type_*_fsck_disk
 sub fsck_all_disks
 {
-my ($server) = @_;
+my ($server, $noforce) = @_;
 my $dfunc = "type_".$server->{'manager'}."_list_disks";
 my $cfunc = "type_".$server->{'manager'}."_can_fsck";
 my $ffunc = "type_".$server->{'manager'}."_fsck_disk";
@@ -9275,7 +9275,7 @@ return (1, undef) if (!ref($disks));
 my ($allok, $allout) = (1, undef);
 foreach my $d (@$disks) {
 	if (&$cfunc($server, $d)) {
-		my ($ok, $out) = &$ffunc($server, $d);
+		my ($ok, $out) = &$ffunc($server, $d, $noforce);
 		$allout .= $out;
 		if ($ok == 0) {
 			# Failed on this disk
