@@ -1592,6 +1592,9 @@ if ($mounts) {
 			if ($f->[0] =~ /(\d+)$/) {
 				$d->{'virt_part'} = $1;
 				}
+			if ($d->{'fs'} eq 'swap') {
+				$d->{'swap'} = 1;
+				}
 			}
 		}
 
