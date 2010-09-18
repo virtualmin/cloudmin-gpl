@@ -102,9 +102,11 @@ foreach $i (sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @combined) {
 	else {
 		$stormsg = undef;
 		}
+	$dstr = $i->{'desc'};
+	$dstr = "<b>$dstr</b>" if ($i->{'default'});
 	print &ui_checked_columns_row([
 		"<a href='edit_image.cgi?id=$i->{'id'}&mode=$in{'mode'}'>".
-		  "$i->{'desc'}</a>",
+		  "$dstr</a>",
 		&$tfunc(),
 		$got && $got->{'partial'} ?
 			&text('images_partial',

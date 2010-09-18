@@ -5,7 +5,8 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &error_if_cloudmin_replica();
 &ReadParse();
-($img) = grep { $_->{'id'} eq $in{'id'} } &list_server_images();
+@images = &list_server_images();
+($img) = grep { $_->{'id'} eq $in{'id'} } @images;
 $img || &error($text{'dimage_egone'});
 &obtain_lock_anything();
 
@@ -23,7 +24,19 @@ else {
 	if (defined($in{'nodelete'})) {
 		$img->{'nodelete'} = !$in{'nodelete'};
 		}
+	$img->{'default'} = $in{'default'};
 	&save_server_image($img);
+	if ($in{'default'}) {
+		# Nobody else can be the default
+		foreach $i (@images) {
+			if ($i->{'manager'} eq $img->{'manager'} &&
+			    $i->{'id'} ne $img->{'id'} &&
+			    $i->{'default'}) {
+				$i->{'default'} = 0;
+				&save_server_image($i);
+				}
+			}
+		}
 	&webmin_log("modify", "image", $img->{'id'});
 	}
 &redirect("list_images.cgi?mode=$in{'mode'}");

@@ -56,8 +56,9 @@ if (@images) {
 	$mustimage = defined(&$ifunc) && &$ifunc();
 	$noimage = $text{'create_noimage_'.$in{'type'}} ||
 		   $text{'create_noimage'};
+	($defimage) = grep { $_->{'default'} } @images;
 	print &ui_table_row($text{'create_image'},
-		&ui_select("image", undef,
+		&ui_select("image", $defimage ? $defimage->{'id'} : undef,
 			[ $mustimage || !&can_image(undef) ? ( )
 				     : ( [ undef, $noimage ] ),
 			  map { [ $_->{'id'}, $_->{'desc'} ] }
