@@ -1409,7 +1409,7 @@ else {
 			$sshcmd .= " -p ".$destserver->{'ssh_port'};
 			}
 		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
-		$sshcmd .= &dd_command(undef, $dest);
+		$sshcmd .= " ".&dd_command(undef, $dest);
 		}
 	else {
 		# Can use scp
@@ -1429,7 +1429,8 @@ else {
 			   quotemeta($dest);
 		}
 	if ($keytemp) {
-		$sshcmd .= " ; rm -f ".quotemeta($keytemp);
+		$sshcmd .= " ; ex=\$? ; rm -f ".quotemeta($keytemp).
+			   " ; exit \$ex";
 		}
 
 	# Then execute on the source system
@@ -2013,7 +2014,7 @@ if (defined(&$dfunc)) {
 # Run md5sum via SSH
 my $cmd;
 if ($size) {
-	$cmd = &dd_command($file, undef, $size)." | md5sum -";
+	$cmd = &dd_command($file, undef, $size)." 2>/dev/null | md5sum -";
 	}
 else {
 	$cmd = "md5sum ".quotemeta($file);
