@@ -324,6 +324,20 @@ else {
 		}
 	}
 
+# Purge old date-based backups
+if ($backup->{'purge'} && $backup->{'dest'}) {
+	&$first_print(&text('brun_purging', $backup->{'purge'}));
+	&$indent_print();
+	my $err = &purge_old_backups($backup->{'dest'}, $backup->{'purge'});
+	&$outdent_print();
+	if ($err) {
+		&$second_print(&text('brun_purgefailed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
 # If backup was by a system owner, re-compute his usage
 if ($backup->{'owner'}) {
 	&compute_backup_space();
@@ -1190,6 +1204,65 @@ if ($config{'sprio'} ne '') {
 	}
 $rv .= " sh -c ".quotemeta($cmd);
 return $rv;
+}
+
+# purge_old_backups(dest, days)
+# Delete from the parent dir of some destination date-based backups that are
+# older than some number of days
+sub purge_old_backups
+{
+my ($deststr, $days) = @_;
+my $dest = &parse_backup_destination($deststr);
+
+# Extract the base path
+my ($base, $re) = &extract_purge_path($deststr);
+$base && $re || return $text{'purge_edatepath'};
+my $cutoff = time() - $days*24*60*60;
+
+# Find old files
+my $destserver = &get_backup_dest_server($dest);
+if ($dest->{'mode'} == 4) {
+	# List on FTP server
+	# XXX
+	}
+else {
+	# List on some managed system
+	my $files = &list_dir_on_server($destserver, $base);
+	ref($files) || return &text('purge_els', $base, $files);
+	foreach my $f (@$files) {
+		next if ($f !~ /^$re$/);
+		my @st = &stat_file_on_server($destserver, $base."/".$f);
+		next if (!@st || @st == 1);
+		print STDERR "f=$f date=$st[9]\n";
+		if ($st[9] < $cutoff) {
+			# Found deletion candidate
+			push(@delfiles, $f);
+			}
+		}
+	}
+
+# Delete old backups
+# XXX
+
+return undef;
+}
+
+# extract_purge_path(dest)
+# Given a backup URL with a path like /backup/%d-%m-%Y, return the base
+# directory (like /backup) and the regexp matching the date-based filename
+# (like .*-.*-.*)
+sub extract_purge_path
+{
+my ($deststr) = @_;
+my $dest = &parse_backup_destination($deststr);
+if ($dest->{'path'} =~ /^(\S+)\/([^%]*%.*)$/) {
+	my ($base, $date) = ($1, $2);
+	$date =~ s/%[_\-0\^\#]*\d*[A-Za-z]/\.\*/g;
+	return ($base, $date);
+	}
+else {
+	return ( );
+	}
 }
 
 1;

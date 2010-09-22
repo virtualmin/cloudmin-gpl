@@ -95,6 +95,7 @@ elsif ($in{'delete'}) {
 			@sdoms = &get_server_domains($s);
 			print "<tr>\n";
 			print "<td><tt>$s->{'host'}</tt></td>\n";
+			print "<td>&nbsp;</td>\n";
 			print "<td>(",&$tfunc(),")</td>\n";
 			if (@servers > 1) {
 				print "<td>",@sdoms ? &text('mass_ddoms',

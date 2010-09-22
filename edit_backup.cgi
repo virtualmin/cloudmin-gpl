@@ -59,12 +59,17 @@ print &ui_table_row($text{'backup_parallel'},
 
 print &ui_hidden_table_end("main");
 
-print &ui_hidden_table_start($text{'backup_sched'}, "width=100%", 2,
-                             "sched", 0, [ "width=30%" ]);
+print &ui_hidden_table_start($text{'backup_destsect'}, "width=100%", 2,
+                             "destsect", 0, [ "width=30%" ]);
 
 # Destination
 $dest = $backup->{'dest'} ? &parse_backup_destination($backup->{'dest'})
 			  : undef;
+if ($dest && $dest->{'mode'} == 0) {
+	# On master, convert to on-host mode
+	$dest->{'mode'} = 2;
+	$dest->{'id'} = '0';
+	}
 $mode = !$backup->{'dest'} ? -1 : $dest->{'mode'};
 print &ui_table_row(&hlink($text{'backup_dest'}, "backup_dest"),
 	&ui_radio_table("dest_mode", $mode,
@@ -84,7 +89,10 @@ print &ui_table_row(&hlink($text{'backup_dest'}, "backup_dest"),
 			    $mode == 4 ? $dest : { }, "ftp", 21) ],
 	 	]));
 
-print &ui_table_hr();
+print &ui_hidden_table_end("destsect");
+
+print &ui_hidden_table_start($text{'backup_sched'}, "width=100%", 2,
+                             "sched", 0, [ "width=30%" ]);
 
 # Backup on scheduled enabled?
 print &ui_table_row($text{'backup_enabled'},
@@ -118,6 +126,12 @@ print &ui_table_row($text{'backup_always'},
 	&ui_radio("always", int($backup->{'always'}),
 		  [ [ 1, $text{'backup_always1'} ],
 		    [ 0, $text{'backup_always0'} ] ]));
+
+# Purge old backups?
+print &ui_table_row($text{'backup_purge'},
+	&ui_opt_textbox("purge", $backup->{'purge'}, 5, $text{'backup_purgeno'},
+			$text{'backup_purgeafter'})." ".
+	$text{'backup_purgedays'});
 
 print &ui_hidden_table_end("sched");
 

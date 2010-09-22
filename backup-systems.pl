@@ -57,6 +57,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--shutdown") { $shutdown = 1; }
 	elsif ($a eq "--parallel") { $parallel = 1; }
 	elsif ($a eq "--quiet") { $quiet = 1; }
+	elsif ($a eq "--purge") { $purge = shift(@ARGV); }
 	else {
 		&usage();
 		}
@@ -66,6 +67,13 @@ while(@ARGV > 0) {
 $dest || &usage("Missing --dest parameter");
 $desthash = &parse_backup_destination($dest);
 $desthash ||  &usage("Invalid --dest specification $dest");
+if (defined($purge)) {
+	$purge =~ /^[0-9\.]+$/ && $purge > 0 ||
+		&usage("--purge must be followed by a non-zero number of days");
+	($base, $date) = &extract_purge_path($dest);
+	$base || &usage("--purge can only be used when the backup destination ".
+			"contains date codes");
+	}
 
 # Work out who to backup
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
@@ -73,7 +81,8 @@ $desthash ||  &usage("Invalid --dest specification $dest");
 $backup = { 'dest' => &join_backup_destination($desthash),
 	    'servers' => join(' ', map { $_->{'id'} } @servers),
 	    'shutdown' => $shutdown,
-	    'parallel' => $parallel };
+	    'parallel' => $parallel,
+	    'purge' => $purge, };
 
 # Make sure source and dest can be managed by the user
 &can_action_usage(\@servers, "backup");

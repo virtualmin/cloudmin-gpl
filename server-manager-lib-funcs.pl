@@ -9040,7 +9040,7 @@ elsif ($dest =~ /^host:(\/\S*)$/) {
 	return { 'mode' => 1, 'path' => $1 };
 	}
 elsif ($dest =~ /^vm2:([^:]+):(\/\S*)$/) {
-	if ($1 == 0) {
+	if ($1 eq '0') {
 		return { 'mode' => 0, 'path' => $2 };
 		}
 	else {

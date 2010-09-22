@@ -95,6 +95,16 @@ else {
 		$backup->{'emailmaster'} = $in{'emailmaster'};
 		}
 	$backup->{'always'} = $in{'always'};
+	if ($in{'purge_def'}) {
+		delete($backup->{'purge'});
+		}
+	else {
+		$backup->{'dest'} || &error($text{'backup_epurgehost'});
+		($base, $date) = &extract_purge_path($backup->{'dest'});
+		$base || &error($text{'backup_epurgedate'});
+		$in{'purge'} =~ /^[0-9\.]+$/ && $in{'purge'} > 0 ||
+			&error($text{'backup_epurge'});
+		}
 	
 	# Update the backup
 	&save_backup($backup);
