@@ -1362,6 +1362,17 @@ if ($server->{'kvm_console'}) {
 # Remove DHCP entries
 &delete_all_iface_dhcpd($server);
 
+# Delete bridge scripts
+my @nets = split(/\s+/, $server->{'kvm_net'});
+foreach my $net (@nets) {
+	if ($net =~ /script=([^,]+)/) {
+		my $script = $1;
+                if ($script =~ /^\Q$vhost->{'kvm_dir'}\/\E/) {
+                        &delete_file_on_server($vhost, $script);
+                        }
+		}
+	}
+
 return undef;
 }
 
@@ -1452,6 +1463,20 @@ if ($server->{'kvm_args'}) {
 	}
 
 return $cmd;
+}
+
+# generate_kvm_bridge_script(&server, &iface, bridge)
+# Returns the contents of and path to a script to connect the right bridge
+# for a virtual interface
+sub generate_kvm_bridge_script
+{
+my ($server, $iface, $bridge) = @_;
+my $vhost = &type_kvm_parent($server);
+my $data = "#!/bin/sh\n".
+	   "brctl addif $bridge \$1\n".
+	   "ifconfig \$1 up\n";
+return ($data,
+	$vhost->{'kvm_dir'}."/".$server->{'host'}."-".$iface->{'name'}.".sh");
 }
 
 # type_kvm_can_disks(&server)
@@ -2251,15 +2276,18 @@ if (ref($rv)) {
 		}
 	}
 
-# Set MAC field on real interfaces
+# Set MAC and bridges field on real interfaces
 my @macs = split(/\s+/, $server->{'mac'});
-my $i = 0;
-foreach my $mac (@macs) {
+my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
+for(my $i=0; $i<@macs; $i++) {
+	my $mac = $macs[$i];
+	my $bridge = $bridges[$i];
 	my ($iface) = grep { $_->{'fullname'} eq "eth".$i } @$rv;
 	if ($iface) {
 		$iface->{'ether'} = $mac eq '*' || $mac eq '' ? undef : $mac;
+		$iface->{'bridge'} = $bridge eq '*' || $bridge eq '' ? undef
+								     : $bridge;
 		}
-	$i++;
 	}
 
 return $rv;
@@ -2304,7 +2332,7 @@ else {
 # Allocate IP, if needed
 my @kvm_iface = split(/\s+/, $vhost->{'kvm_iface'});
 my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
-$bridge ||= $xen_iface[$idx];
+$bridge ||= $kvm_iface[$idx];
 if (!$iface->{'address'}) {
 	my $cidr;
 	($iface->{'address'}, $cidr) = &allocate_ip_address(
@@ -2344,10 +2372,23 @@ return $err if ($err);
 if ($nonvirt) {
 	my @macs = split(/\s+/, $server->{'mac'});
 	my @nets = split(/\s+/, $server->{'kvm_net'});
-	push(@macs, &generate_mac_address($server, scalar(@nets)));
-	push(@nets, "tap,vlan=".scalar(@nets));
+	my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
+	my $num = scalar(@nets);
+	push(@macs, &generate_mac_address($server, $num));
+	push(@nets, "tap,vlan=".$num);
+	push(@ifaces, $bridge || '*');
+	if ($bridge) {
+		# Create script to attach correct bridge
+		my ($data, $script) = &generate_kvm_bridge_script(
+					$server, $iface, $bridge);
+		my $err = &put_file_data_to_server($vhost, $data, $script);
+		return "Failed to create script $script : $err" if ($err);
+		&execute_command_on_server($vhost, "chmod +x $script");
+		$nets[$#nets] .= ",script=$script";
+		}
 	$server->{'mac'} = join(" ", @macs);
 	$server->{'kvm_net'} = join(" ", @nets);
+	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	$iface->{'reboot'} = 1;
 	}
 
@@ -2360,6 +2401,7 @@ return undef;
 sub type_kvm_delete_interface
 {
 my ($server, $iface) = @_;
+my $vhost = &type_kvm_parent($server);
 
 # Delete boot interface
 my $err = &mount_filesystem_if_needed($server);
@@ -2379,10 +2421,20 @@ my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : undef;
 if ($iface->{'virtual'} eq '' && defined($idx)) {
 	my @macs = split(/\s+/, $server->{'mac'});
 	my @nets = split(/\s+/, $server->{'kvm_net'});
+	my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
+	if ($nets[$idx] =~ /script=([^,]+)/) {
+		# Has a custom script .. delete if under kvm dir
+		my $script = $1;
+		if ($script =~ /^\Q$vhost->{'kvm_dir'}\/\E/) {
+			&delete_file_on_server($vhost, $script);
+			}
+		}
 	splice(@macs, $idx, 1);
 	splice(@nets, $idx, 1);
+	splice(@ifaces, $idx, 1);
 	$server->{'mac'} = join(" ", @macs);
 	$server->{'kvm_net'} = join(" ", @nets);
+	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	$iface->{'reboot'} = 1;
 	}
 
@@ -3807,6 +3859,23 @@ foreach my $d (@$disks) {
 	}
 $server->{'kvm_drives'} = join(" ", @drives);
 $server->{'kvm_on'} = $dest->{'id'};
+
+# Copy across bridge scripts
+my @nets = split(/\s+/, $server->{'kvm_net'});
+foreach my $net (@nets) {
+	if ($net =~ /script=([^,]+)/) {
+		my $script = $1;
+		my @st = &stat_file_on_server($dest, $script);
+		if ($script =~ /^\Q$vhost->{'kvm_dir'}\/\E/ && !@st) {
+			my $err = &transfer_file_between_servers($vhost, $dest,
+					$script, $script, 0, 1);
+			if ($err) {
+				return &text('smove_ebridge', $script, $err);
+				}
+			&delete_file_on_server($vhost, $script);
+			}
+		}
+	}
 
 # Delete the original disk images
 if (@delfiles) {
