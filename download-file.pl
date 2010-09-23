@@ -87,7 +87,7 @@ if ($stdout) {
 	$dest = &transname();
 	}
 if (&is_dir_on_server($server, $source) && $stdout) {
-	$err = A directory cannot be written to stdout";
+	$err = "A directory cannot be written to stdout";
 	}
 else {
 	$err = &get_file_from_server($server, $source, $dest, $device,
