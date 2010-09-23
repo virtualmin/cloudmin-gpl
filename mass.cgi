@@ -288,7 +288,9 @@ elsif ($in{'shutdown'}) {
 			@sdoms = &get_server_domains($s);
 			print "<tr>\n";
 			print "<td><tt>$s->{'host'}</tt></td>\n";
+			print "<td>&nbsp;</td>\n";
 			print "<td>(",&$tfunc(),")</td>\n";
+			print "<td>&nbsp;</td>\n";
 			print "<td>",@sdoms ? &text('mass_ddoms',
 					scalar(@sdoms)) : undef,"</td>\n";
 			print "</tr>\n";
