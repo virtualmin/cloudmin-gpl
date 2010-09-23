@@ -790,7 +790,23 @@ $server->{'kvm_filesystem'} = $fsfile;
 my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 my @gws = split(/\s+/, $server->{'kvm_gw'});
-$server->{'kvm_net'} = join(" ", map { "tap" } @ips);
+my @nets;
+print STDERR "ips=",join(" ", @ips),"\n";
+print STDERR "ifaces=",join(" ", @ifaces),"\n";
+for(my $i=0; $i<@ips; $i++) {
+	my $net = "tap,vlan=$i";
+	if ($ifaces[$i] && $ifaces[$i] ne '*') {
+		# Create bridge script
+		my ($data, $script) = &generate_kvm_bridge_script(
+				$server, { 'name' => 'eth'.$i }, $ifaces[$i]);
+		my $err = &put_file_data_to_server($vhost, $data, $script);
+		return "Failed to create script $script : $err" if ($err);
+		&execute_command_on_server($vhost, "chmod +x $script");
+		$net .= ",script=$script";
+		}
+	push(@nets, $net);
+	}
+$server->{'kvm_net'} = join(" ", @nets);
 
 # Set drive in config
 $server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,if=ide";
@@ -1251,10 +1267,10 @@ my ($out, $ex, $err) = &execute_command_on_server($vhost,
 return (0, $err) if ($err);
 return (0, $out) if ($ex);
 
-# Wait 5 seconds for it to start
+# Wait 20 seconds for it to start
 my $tries = 0;
 my $found = 0;
-while($tries++ < 5) {
+while($tries++ < 20) {
 	my $proc = &get_server_kvm_instance($server);
 	if ($proc) {
 		$server->{'kvm'} = $proc->{'pid'};
@@ -2311,8 +2327,11 @@ my ($server, $iface, $nonvirt, $bridge) = @_;
 # Find a free interface number, if needed
 my $vhost = &type_kvm_parent($server);
 if ($nonvirt) {
-	$iface->{'name'} =~ /^eth\d+$/ ||
+	$iface->{'name'} =~ /^eth(\d+)$/ ||
 		return "Only Ethernet intefaces can be created";
+	my @nets = split(/\s+/, $server->{'kvm_net'});
+	$1 == scalar(@nets) ||
+		return "A new real interface must be named eth".scalar(@nets);
 	$iface->{'fullname'} = $iface->{'name'};
 	}
 else {
