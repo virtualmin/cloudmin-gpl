@@ -2769,7 +2769,19 @@ if ($vhost->{'status'} eq 'down' ||
     $vhost->{'status'} eq 'nosshlogin') {
 	return (5, "KVM host $vhost->{'host'} is down");
 	}
-my $proc = &get_server_kvm_instance($server);
+my $procs = &list_kvm_instances($vhost);
+if (!ref($procs)) {
+	# Host may be down .. ping to see
+	my $vping = &ping_server_host($vhost->{'ip'});
+	if ($vping) {
+		return (1, "Could not fetch KVM instances : $procs");
+		}
+	else {
+		return (5, "Could not fetch KVM instances, host is probably ".
+			   "down : $procs");
+		}
+	}
+my ($proc) = grep { $_->{'filesystem'} eq $server->{'kvm_filesystem'} } @$procs;
 if (!$proc) {
 	return (6, "KVM instance is down");
 	}
@@ -4194,7 +4206,7 @@ sub get_server_kvm_instance
 my ($server) = @_;
 my $vhost = &get_parent_server($server);
 my $procs = &list_kvm_instances($vhost);
-return undef if (!$procs);
+return undef if (!ref($procs));
 my ($proc) = grep { $_->{'filesystem'} eq $server->{'kvm_filesystem'} } @$procs;
 return $proc;
 }
