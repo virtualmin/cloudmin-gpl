@@ -3166,8 +3166,11 @@ brun_emkdir=Failed to create destination directory : $1
 brun_eover=You have used $1 of your backup space limit of $2, and this backup is $3 in size
 brun_edestserver=Could not work out destination backup server!
 brun_eself=A system cannot be backed up to itself!
-brun_purging=Purging backups older than $1 days ..
+brun_purging=Purging backups older than $1 days under $2 ..
 brun_purgefailed=.. purge failed : $1
+brun_purgedone=.. purged $1 of old backups
+brun_purgenone=.. no old backups to purge found
+brun_purgeskip=.. skipping purge because some backups failed
 
 rrun_title=Restore Systems
 rrun_err=Restore failed
@@ -4114,3 +4117,7 @@ boot_edevice=Selected boot device does not exist!
 
 purge_edatepath=Purging of old backups is only possible for date-based destinations
 purge_els=Failed to list directory $1 : $2
+purge_deleting=Deleting directory $1 ..
+purge_deletingftp=Deleting FTP directory $1 ..
+purge_edelete=.. deletion failed : $1
+purge_elstimes=FTP directory listing of $1 does not contain timestamps

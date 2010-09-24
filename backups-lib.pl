@@ -225,6 +225,7 @@ sub execute_backup
 {
 my ($backup) = @_;
 my $start = time();
+my $failed = 0;
 
 # Find the systems, and make sure their hosts are up
 my %rv;
@@ -236,6 +237,7 @@ foreach my $s (@servers) {
 			'ok' => 0,
 			'msg' => &text('brun_ehostdown'),
 			};
+		$failed++;
 		}
 	}
 @servers = grep { !$rv{$_->{'id'}} } @servers;
@@ -259,6 +261,7 @@ foreach my $s (@servers) {
 				'ok' => 0,
 				'msg' => &text('brun_evhost', $vhost->{'host'}),
 				};
+			$failed++;
 			next;
 			}
 		if ($backup->{'owner'}) {
@@ -280,6 +283,7 @@ if ($backup->{'owner'}) {
 				'msg' => &text('brun_espace',
 					    &nice_size($limits->{'max_space'})),
 				};
+			$failed++;
 			}
 		}
 	}
@@ -307,6 +311,7 @@ if ($backup->{'parallel'}) {
 	for(my $i=0; $i<@prv; $i++) {
 		my $s = $servers[$i];
 		$rv{$s->{'id'}} = $prv[$i]->[0];
+		$failed++ if (!$prv[$i]->[0]->{'ok'});
 		if ($capture_print && $prv[$i]->[0]) {
 			$capture_print .= $prv[$i]->[0]->{'capture'};
 			}
@@ -319,6 +324,7 @@ else {
 						 $backup->{'shutdown'},
 						 $backup->{'owner'});
 		$rv{$s->{'id'}} = $srv;
+		$failed++ if (!$srv->{'ok'});
 		&save_backup_log($s, $destmap{$s->{'id'}}, $srv,
 				 $backup, $start);
 		}
@@ -326,15 +332,28 @@ else {
 
 # Purge old date-based backups
 if ($backup->{'purge'} && $backup->{'dest'}) {
-	&$first_print(&text('brun_purging', $backup->{'purge'}));
-	&$indent_print();
-	my $err = &purge_old_backups($backup->{'dest'}, $backup->{'purge'});
-	&$outdent_print();
-	if ($err) {
-		&$second_print(&text('brun_purgefailed', $err));
+	my ($base, $re) = &extract_purge_path($backup->{'dest'});
+	&$first_print(&text('brun_purging', $backup->{'purge'}, $base));
+	if ($failed) {
+		# Skip because some backups failed
+		&$second_print($text{'brun_purgeskip'});
 		}
 	else {
-		&$second_print($text{'create_done'});
+		# Do the purge
+		&$indent_print();
+		my $err = &purge_old_backups($backup->{'dest'},
+					     $backup->{'purge'});
+		&$outdent_print();
+		if ($err !~ /^\d+$/) {
+			&$second_print(&text('brun_purgefailed', $err));
+			}
+		elsif ($err) {
+			&$second_print(&text('brun_purgedone',
+					     &nice_size($err)));
+			}
+		else {
+			&$second_print($text{'brun_purgenone'});
+			}
 		}
 	}
 
@@ -491,6 +510,10 @@ elsif ($dest->{'mode'} == 4) {
 	if ($err) {
 		return "Failed to copy ftpupload.pl : $err";
 		}
+	my $dir = $dest->{'path'};
+	$dir =~ s/\/([^\/]+)$//;
+	&ftp_onecommand($dest->{'host'}, "MKD $dir", \$err,
+			$dest->{'user'}, $dest->{'pass'},$dest->{'port'} || 21);
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"perl /tmp/ftpupload.pl ".
 		quotemeta($dest->{'user'})." ".
@@ -1223,7 +1246,24 @@ my $cutoff = time() - $days*24*60*60;
 my $destserver = &get_backup_dest_server($dest);
 if ($dest->{'mode'} == 4) {
 	# List on FTP server
-	# XXX
+	my $err;
+	my $files = &ftp_listdir($dest->{'host'}, $base, \$err, $dest->{'user'},
+			         $dest->{'pass'}, $dest->{'port'} || 21, 1);
+	if ($err) {
+		return &text('purge_els', $base, $err);
+		}
+	$files = [ grep { $_->[13] ne "." && $_->[13] ne ".." } @$files ];
+	if (@$files && !$files->[0]->[9]) {
+		return &text('purge_elstimes', $base);
+		return 0;
+		}
+	foreach my $f (@$files) {
+		next if ($f->[13] !~ /^$re$/);
+		if ($f->[9] && $f->[9] < $cutoff) {
+			# Found deletion candidate
+			push(@delfiles, $base."/".$f->[13]);
+			}
+		}
 	}
 else {
 	# List on some managed system
@@ -1233,18 +1273,50 @@ else {
 		next if ($f !~ /^$re$/);
 		my @st = &stat_file_on_server($destserver, $base."/".$f);
 		next if (!@st || @st == 1);
-		print STDERR "f=$f date=$st[9]\n";
 		if ($st[9] < $cutoff) {
 			# Found deletion candidate
-			push(@delfiles, $f);
+			push(@delfiles, $base."/".$f);
 			}
 		}
 	}
 
 # Delete old backups
-# XXX
+my $sz = 0;
+if (@delfiles && $dest->{'mode'} == 4) {
+	# Delete via FTP
+	foreach my $f (@delfiles) {
+		&$first_print(&text('purge_deletingftp', $f));
+		my $err;
+		$sz += &ftp_deletefile($dest->{'host'}, $f, \$err,
+				       $dest->{'user'}, $dest->{'pass'},
+				       $dest->{'port'} || 21);
+		if ($err) {
+			&$second_print(&text('purge_edelete', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	}
+elsif (@delfiles) {
+	# Delete via SSH
+	foreach my $f (@delfiles) {
+		&$first_print(&text('purge_deleting', $f));
+		my $fsz = &disk_usage_on_server($destserver, $f);
+		if ($fsz =~ /^\d+$/) {
+			$sz += $fsz;
+			}
+		my $err = &delete_file_on_server($destserver, $f);
+		if ($err) {
+			&$second_print(&text('purge_edelete', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	}
 
-return undef;
+return $sz;
 }
 
 # extract_purge_path(dest)

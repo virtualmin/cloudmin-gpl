@@ -17,7 +17,7 @@ if (!$server_manager_root) {
 foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
-		 "repl", "scheduled", "dhcp", "failover", "vui") {
+		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";

@@ -17,6 +17,11 @@ Systems will be left running during the backup, which may lead to filesystem
 or database inconsistencies. To have them shut down (if running) during the
 backup, use the C<--shutdown> flag.
 
+To have Cloudmin delete backup old destinations under the same directory as
+this backup's destination, use the C<--purge> flag followed by a number of
+days. This will only work if the backup is to a date-based directory, like
+I</backup/%d-%m-%Y>.
+
 =head1 Example usage
 
   cloudmin backup-systems --host openvzgpl.home
@@ -136,6 +141,7 @@ print "                        [--owner name]*\n";
 print "                        --dest destination-directory\n";
 print "                        [--shutdown]\n";
 print "                        [--parallel]\n";
+print "                        [--purge days]\n";
 print "\n";
 print "The destination can be one of :\n";
 print " - A dir on the VM2 master, like /backup\n";
