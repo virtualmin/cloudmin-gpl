@@ -150,7 +150,7 @@ print &ui_table_row($text{'alert_notif'},
 	"<br>\n".
 	&ui_checkbox("email", 1, $text{'alert_email'}, $alert->{'email'}).
 	" ".
-	&ui_textbox("emailto", $alert->{'email'}, 40));
+	&ui_textbox("emailto", $alert->{'email'}, 60));
 
 # How often to send
 ($intunit, $int) = &split_for_units($alert->{'interval'});
