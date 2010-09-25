@@ -4,6 +4,7 @@
 package server_manager;
 $main::no_acl_check++;
 require './server-manager-lib.pl';
+$override_webmin_script_type = 'status';
 
 # For a replica, only update self
 if (&is_cloudmin_replica()) {

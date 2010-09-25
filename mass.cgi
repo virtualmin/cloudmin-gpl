@@ -19,6 +19,7 @@ if ($in{'refresh'}) {
 	# Fetch the status of selected servers, in 10 processes
 	&can_action_error(\@servers, "refresh");
 	&ui_print_header(undef, $text{'mass_ftitle'}, "");
+	$override_webmin_script_type = 'status';
 
 	if (@servers == 1) {
 		print &text('mass_fdoing2', "<tt>$s0</tt>"),"<br>\n";

@@ -335,6 +335,7 @@ elsif ($in{'refresh'} || $in{'regen'}) {
 	&can_action_error($server, "refresh");
 	&ui_print_header(&server_in($server), $text{'save_refreshtitle'}, "");
 	&obtain_lock_server($server);
+	$override_webmin_script_type = 'status';
 
 	print $in{'regen'} ? $text{'save_refreshing2'}
 			   : $text{'save_refreshing'};

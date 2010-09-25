@@ -396,13 +396,16 @@ if (@history > 1) {
 
 	$htable = &ui_columns_start([ $text{'edit_htime'},
 				      $text{'edit_hold'},
-				      $text{'edit_hnew'} ], 100);
+				      $text{'edit_hnew'},
+				      $text{'edit_hby'} ], 100);
 	$hcount = 0;
 	foreach $h (@history) {
 		$htable .= &ui_columns_row([
 			&make_date($h->{'time'}),
 			&describe_status({ 'status' => $h->{'old'} }, 1),
 			&describe_status({ 'status' => $h->{'new'} }, 1),
+			$text{'status_by_'.$h->{'by'}}.
+			  ($h->{'user'} ? " (<tt>$h->{'user'}</tt>)" : ""),
 			]);
 		last if ($hcount++ > 100);
 		}

@@ -350,12 +350,24 @@ my ($server) = @_;
 
 # If status has changed, log it.
 # statushistory = Status at the last time we logged a change
+my $by;
+if ($override_webmin_script_type) {
+	$by = $override_webmin_script_type;
+	}
+elsif ($ENV{'VM2_REMOTE_API'}) {
+	$by = 'remote';
+	}
+else {
+	$by = $main::webmin_script_type;
+	}
 if ($server->{'status'} ne $server->{'statushistory'} &&
     $server->{'statuslast'}) {
 	&save_status_history($server,
 		{ 'old' => $server->{'statuslast'},
 		  'new' => $server->{'status'},
-		  'time' => $server->{'statustime'} });
+		  'time' => $server->{'statustime'},
+		  'by' => $by,
+		  'user' => $remote_user });
 	$server->{'statushistory'} = $server->{'status'};
 	}
 
@@ -8998,6 +9010,7 @@ while(<STATUS>) {
 		 $lasthistory->{'old'} eq $history{'old'} &&
 		 $lasthistory->{'new'} eq $history{'new'});
 	push(@rv, \%history);
+	$lasthistory = \%history;
 	}
 return @rv;
 }
