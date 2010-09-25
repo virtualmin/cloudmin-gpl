@@ -9005,7 +9005,7 @@ my $lasthistory;
 open(STATUS, "$status_history_dir/$server->{'id'}");
 while(<STATUS>) {
 	s/\r|\n//g;
-	my %history = map { split(/=/, $_) } split(/\s+/, $_);
+	my %history = map { split(/=/, $_, 2) } split(/\s+/, $_);
 	next if ($lasthistory &&
 		 $lasthistory->{'old'} eq $history{'old'} &&
 		 $lasthistory->{'new'} eq $history{'new'});
