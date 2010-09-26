@@ -30,8 +30,7 @@ if ($in{'shutdown'}) {
 			print &text('save_shutfailed', $err),"<p>\n";
 			}
 		else {
-			#&check_server_status($server);
-			$server->{'status'} = 'down';        # Assume it worked
+			&check_server_status($server, 0, 1);
 			&refresh_server_usage($server);
 			&save_managed_server($server);
 			print $text{'save_shutdone'},"<p>\n";

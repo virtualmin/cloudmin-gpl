@@ -623,7 +623,7 @@ status_title=Detailed System Status
 status_by_web=Web UI
 status_by_cmd=API
 status_by_cron=Background
-status_by_status=Detected
+status_by_status=Monitoring
 status_by_remote=Remote API
 
 mass_enone=No systems selected to operate on

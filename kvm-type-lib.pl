@@ -3790,7 +3790,7 @@ if ($server->{'status'} ne 'down') {
 	if ($err) {
 		return &text('smove_shutfailed', $err);
 		}
-	$s->{'status'} = 'down';	# Assume it worked
+	&check_server_status($server, 0, 1);
 	$was_up = 1;
 	&$second_print($text{'create_done'});
 	}

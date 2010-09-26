@@ -7160,7 +7160,7 @@ if ($server->{'status'} ne 'down') {
 	if ($err) {
 		return &text('smove_shutfailed', $err);
 		}
-	$server->{'status'} = 'down';	# Assume it worked
+	&check_server_status($server, 0, 1);
 	$was_up = 1;
 	&$second_print($text{'create_done'});
 	}
@@ -8905,7 +8905,7 @@ if ($server->{'status'} ne 'down') {
 	if ($err) {
 		return (undef, &text('smove_shutfailed', $err));
 		}
-	$server->{'status'} = 'down';	# Assume it worked
+	&check_server_status($server, 0, 1);
 	$was_up = 1;
 	&$second_print($text{'create_done'});
 	}
