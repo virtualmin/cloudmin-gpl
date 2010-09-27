@@ -816,9 +816,10 @@ $last_remote_error = undef;
 if ($server->{'kvm_filesystem_vg'}) {
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 	my $lv = { 'name' => $server->{'kvm_filesystem_lv'},
-		   'size' => ($img ? int($img->{'rawsize'}/1024) : 0) ||
-			     int($server->{'kvm_disksize'}/1024) ||
-			     1024*1024,
+		   'size' =>
+			($img && !$empty ? int($img->{'rawsize'}/1024) : 0) ||
+			int($server->{'kvm_disksize'}/1024) ||
+			1024*1024,
 		   'perm' => 'rw',
 		   'alloc' => 'n',
 		   'vg' => $server->{'kvm_filesystem_vg'} };
