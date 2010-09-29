@@ -49,7 +49,7 @@ if ($leave) {
 	# Open the command in a new pty
 	&foreign_require("proc", "proc-lib.pl");
 	my ($fh, $fpid) = &proc::pty_process_exec($cmd);
-	return (undef, 0, 0, $fh, $fpid);
+	return (undef, 0, undef, 0, $fh, $fpid);
 	}
 else {
 	# Just run the command, and get the output
