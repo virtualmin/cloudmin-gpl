@@ -354,7 +354,7 @@ my $by;
 if ($override_webmin_script_type) {
 	$by = $override_webmin_script_type;
 	}
-elsif ($ENV{'VM2_REMOTE_API'}) {
+elsif ($ENV{'VIRTUALMIN_REMOTE_API'}) {
 	$by = 'remote';
 	}
 else {

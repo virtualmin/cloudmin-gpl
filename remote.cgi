@@ -72,7 +72,6 @@ if ($format) {
 		}
 	&clean_environment();
 	$ENV{'REMOTE_USER'} = $remote_user;
-	$ENV{'VM2_REMOTE_API'} = 1;
 	$out = &backquote_command("$cmd 2>&1");
 	&reset_environment();
 	print &convert_remote_format($out, $?, $in{'program'}, \%in, $format);
@@ -81,7 +80,6 @@ else {
 	# Stream output directly
 	&clean_environment();
 	$ENV{'REMOTE_USER'} = $remote_user;
-	$ENV{'VM2_REMOTE_API'} = 1;
 	&open_execute_command(OUT, "$cmd 2>&1", 1);
 	while(<OUT>) {
 		print $_;
