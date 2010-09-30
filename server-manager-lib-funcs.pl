@@ -9356,6 +9356,26 @@ foreach (1 .. $len) {
 return $random_password;
 }
 
+# nice_hour_mins_secs(unixtime)
+# Convert a number of seconds into an HH hours, MM minutes, SS seconds format
+sub nice_hour_mins_secs
+{
+my ($time) = @_;
+my $days = int($time / (24*60*60));
+my $hours = int($time / (60*60)) % 24;
+my $mins = sprintf("%2.2d", int($time / 60) % 60);
+my $secs = sprintf("%2.2d", int($time) % 60);
+if ($days) {
+	return &text('nicetime_days', $days, $hours, $mins, $secs);
+	}
+elsif ($days || $hours) {
+	return &text('nicetime_hours', $hours, $mins, $secs);
+	}
+else {
+	return &text('nicetime_mins', $mins, $secs);
+	}
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server

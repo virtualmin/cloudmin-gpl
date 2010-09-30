@@ -162,6 +162,11 @@ if ($multi) {
 			print "    Virtualmin version: ",
 			      $info->{'minfo'}->{'version'},"\n";
 			}
+		if ($s->{'created'}) {
+			print "    Created: ",&make_date($s->{'created'}),"\n";
+			print "    Age: ",&nice_hour_mins_secs(
+						time() - $s->{'created'}),"\n";
+			}
 		$k = $info->{'kernel'};
 		if ($k->{'version'}) {
 			print "    Kernel version: $k->{'os'} $k->{'version'}\n";

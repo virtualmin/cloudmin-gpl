@@ -207,19 +207,22 @@ if (defined(&get_server_usage)) {
 		     "width=100%", 2, "usage", defined($in{'ago'}), \@tds);
 
 	# System owner
-	if (defined(&list_system_owners)) {
-		foreach $o (&list_system_owners()) {
-			@ids = split(/\s+/, $o->{'acl'}->{'servers'});
-			if (&indexof($server->{'id'}, @ids) >= 0) {
-				print &ui_table_row($text{'edit_owner'},
-				    &can_action(undef, 'global') ?
-					"<a href='edit_owner.cgi?name=".
-					  &urlize($o->{'name'})."'>".
-					  &html_escape($o->{'name'})."</a>" :
-					&html_escape($o->{'name'}));
-				}
+	if (defined(&get_server_owners)) {
+		foreach $o (&get_server_owners($server)) {
+			print &ui_table_row($text{'edit_owner'},
+			    &can_action(undef, 'global') ?
+				"<a href='edit_owner.cgi?name=".
+				  &urlize($o->{'name'})."'>".
+				  &html_escape($o->{'name'})."</a>" :
+				&html_escape($o->{'name'}));
 			}
 		}
+
+	# Created on
+	print &ui_table_row($text{'edit_created'},
+		&make_date($server->{'created'}));
+	print &ui_table_row($text{'edit_age'},
+		&nice_hour_mins_secs(time() - $server->{'created'}));
 
 	# Accounting period
 	print &ui_table_row($text{'edit_uperiod'},
