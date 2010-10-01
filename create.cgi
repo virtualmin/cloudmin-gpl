@@ -78,6 +78,17 @@ if ($in{'image'}) {
 		}
 	}
 
+# Validate owner
+&foreign_require("acl", "acl-lib.pl");
+if ($in{'omode'} == 2) {
+	$in{'newowner'} =~ /^[a-z0-9\.\-\_\@]+$/i ||
+                &error($text{'owner_ename'});
+	($clash) = grep { $_->{'name'} eq $in{'newowner'} } &acl::list_users();
+	$clash && &error($text{'owner_eclash'});
+	$in{'newownerpass'} =~ /\S/ || &error($text{'owner_epass'});
+	$in{'newownerpass'} =~ /:/ && &error($text{'owner_epass'});
+	}
+
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_create_parse";
 if (defined(&$pfunc)) {
@@ -265,9 +276,27 @@ if ($access{'owner'}) {
 	# Adding to this user
 	$owner = &get_system_owner($base_remote_user);
 	}
-elsif ($in{'owner'}) {
+elsif ($in{'omode'} == 1) {
 	# Add to another owner
 	$owner = &get_system_owner($in{'owner'});
+	}
+elsif ($in{'omode'} == 2) {
+	# Create an owner for the system
+	$owner = { 'name' => $in{'newowner'},
+		   'pass' => &acl::encrypt_password($in{'newownerpass'}),
+		   'real' => 'Owner of '.$server->{'host'},
+		   'acl' => { 'email' => 'root\@'.$server->{'host'},
+			      'actions' => join(" ", @actions),
+			      'plainpass' => $in{'newownerpass'}, },
+		 };
+	if ($in{'newownerplan'}) {
+		$plan = &get_plan($in{'newownerplan'});
+		if ($plan) {
+			&apply_plan_to_owner($plan, $owner);
+			$owner->{'acl'}->{'plan'} = $in{'newownerplan'};
+			}
+		}
+	&save_system_owner($owner);
 	}
 if ($owner) {
 	&grant_to_system_owner($owner, $server);
