@@ -135,6 +135,21 @@ if (defined(&$afunc)) {
 	print &ui_hidden_table_start($text{'create_lheader'}, "width=100%", 2,
 				     "limits", 0, [ "width=30%" ]);
 	print &$afunc(0);
+
+	# Bandwidth limit
+	$rfunc = "type_".$in{'type'}."_real_interfaces";
+	if (defined(&$rfunc) && $config{'bw_enabled'} &&
+	    &can_action(undef, "bw")) {
+		$db = $config{'defbwlimit'} ?
+			$config{'defbwlimit'}*1024*1024*1024 : undef;
+		print &ui_table_row($text{'edit_lbw'},
+			&ui_radio("bw_def", $db ? 0 : 1,
+				  [ [ 1, $text{'bw_unlimited'} ],
+				    [ 0, $text{'bw_setto'} ] ])."\n".
+			&ui_bytesbox("bw", $db, 8)."\n".
+			&describe_bandwidth_period(0));
+		}
+
 	print &ui_hidden_table_end();
 	}
 

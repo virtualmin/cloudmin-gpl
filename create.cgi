@@ -174,6 +174,15 @@ if ($limits) {
 		}
 	}
 
+# Save bandwidth limit
+if (defined($in{'bw_def'}) && $config{'bw_enabled'} &&
+    &can_action($server, "bw")) {
+	if (!$in{'bw_def'}) {
+		$in{'bw'} =~ /^[1-9]\d*$/ || &error($text{'limits_ebw'});
+		$server->{'bw_limit'} = $in{'bw'}*$in{'bw_units'};
+		}
+	}
+
 &ui_print_unbuffered_header(undef, $text{'create_title'}, "");
 &obtain_lock_server($server);
 
