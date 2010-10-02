@@ -50,6 +50,8 @@ while(@ARGV > 0) {
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
         elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
+        elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
+        elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--help") { &usage(); }
 	elsif ($a eq "--command") { push(@cmd, shift(@ARGV)); }
 	else {
@@ -58,7 +60,7 @@ while(@ARGV > 0) {
 	}
 
 # Work out who to run on
-@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners);
+@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hostons);
 @servers || &usage("No systems specified");
 &can_action_usage(\@servers, "run");
 
@@ -108,6 +110,8 @@ my $types = join("|", @server_management_types);
 print "                     [--type $types]*\n";
 print "                     [--os oscode]*\n";
 print "                     [--owner name]*\n";
+print "                     [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
+print "                     [--host-on name]\n";
 print "                     command arg ...\n";
 exit(1);
 }

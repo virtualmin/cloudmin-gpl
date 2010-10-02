@@ -478,12 +478,13 @@ if (defined(&list_scheduled_changes)) {
 }
 
 # find_managed_servers(all, &hostnames, &groupnames, &managers, &types, &owners,
-# 		       &statuses)
+# 		       &statuses, &hosted-on-names)
 # Finds all servers matching some selection criteria. In 'all' mode, only
 # servers the user is allowed to access are returned.
 sub find_managed_servers
 {
-my ($all, $hosts, $groups, $managers, $types, $owners, $statuses) = @_;
+my ($all, $hosts, $groups, $managers, $types, $owners, $statuses,
+    $hostedon) = @_;
 my @rv;
 my %wantgroups = map { lc($_), 1 } @$groups;
 my %wantowned;
@@ -501,16 +502,25 @@ if ($statuses) {
 		push(@$expstatuses, &expand_status_code($st));
 		}
 	}
+my %wanthost;
+foreach my $name (@$hostedon) {
+	my $h = &get_managed_server_by("host", $name);
+	if ($h) {
+		$wanthost{$h->{'id'}} = 1;
+		}
+	}
 foreach my $s (&list_managed_servers()) {
 	my ($ingroup) = grep { $wantgroups{lc($_)} }
 				split(/\t/, $s->{'group'});
+	my $p = @$hostedon ? &get_parent_server($s) : undef;
 	if (($all && &can_action($s)) ||
 	    $ingroup ||
 	    &indexoflc($s->{'host'}, @$hosts) >= 0 ||
 	    &indexoflc($s->{'manager'}, @$managers) >= 0 ||
 	    &indexoflc($s->{'type'}, @$types) >= 0 ||
 	    &indexoflc($s->{'status'}, @$expstatuses) >= 0 ||
-	    $wantowned{$s->{'id'}}) {
+	    $wantowned{$s->{'id'}} ||
+	    $p && $wanthost{$p->{'id'}}) {
 		push(@rv, $s);
 		}
 	}

@@ -78,33 +78,28 @@ while(@ARGV > 0) {
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
 	elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
 	elsif ($a eq "--host-type") { $hosttypes{shift(@ARGV)} = 1; }
-	elsif ($a eq "--host-on") { $hostons{shift(@ARGV)} = 1; }
+	elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
+	elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--last-period") { $period_ago = 1; }
 	elsif ($a eq "--period-ago") { $period_ago = shift(@ARGV); }
-	elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	else {
 		&usage();
 		}
 	}
-if (!@hosts && !@groups && !@types && !@managers && !@owners && !@statuses) {
+if (!@hosts && !@groups && !@types && !@managers && !@owners && !@statuses &&
+    !@hostons) {
 	# If called with no selector, assume all
 	$all = 1;
 	}
 
 # Work out who to list
-@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses);
+@servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hostons);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 if (keys %hosttypes) {
 	@servers = grep {
 		my @pt = &is_parent_server($_);
 		scalar(@pt) && ($hosttypes{'all'} ||
 				scalar(grep { $hosttypes{$_} } @pt));
-		} @servers;
-	}
-if (keys %hostons) {
-	@servers = grep {
-		my $parent = &get_parent_server($_);
-		$parent && $hostons{$parent->{'host'}};
 		} @servers;
 	}
 @servers || &usage("No systems specified");

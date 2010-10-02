@@ -58,6 +58,8 @@ while(@ARGV > 0) {
 	elsif ($a eq "--os") { push(@types, shift(@ARGV)); }
 	elsif ($a eq "--type") { push(@managers, shift(@ARGV)); }
         elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
+	elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
+	elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--dest") { $dest = shift(@ARGV); }
 	elsif ($a eq "--shutdown") { $shutdown = 1; }
 	elsif ($a eq "--parallel") { $parallel = 1; }
@@ -81,7 +83,7 @@ if (defined($purge)) {
 	}
 
 # Work out who to backup
-@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners);
+@servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hostons);
 @servers || &usage("No systems specified");
 $backup = { 'dest' => &join_backup_destination($desthash),
 	    'servers' => join(' ', map { $_->{'id'} } @servers),
@@ -138,6 +140,8 @@ my $types = join("|", @server_management_types);
 print "                        [--type $types]*\n";
 print "                        [--os oscode]*\n";
 print "                        [--owner name]*\n";
+print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
+print "                        [--host-on name]\n";
 print "                        --dest destination-directory\n";
 print "                        [--shutdown]\n";
 print "                        [--parallel]\n";
