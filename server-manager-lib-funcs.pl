@@ -502,7 +502,7 @@ if ($statuses) {
 		}
 	}
 foreach my $s (&list_managed_servers()) {
-	my ($ingroup) = grep { $wantgroup{lc($_)} }
+	my ($ingroup) = grep { $wantgroups{lc($_)} }
 				split(/\t/, $s->{'group'});
 	if (($all && &can_action($s)) ||
 	    $ingroup ||
