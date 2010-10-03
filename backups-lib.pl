@@ -247,29 +247,15 @@ foreach my $s (@servers) {
 &$first_print($text{'brun_findingdests'});
 my %destmap;
 foreach my $s (@servers) {
-	my $destdir;
-	if ($backup->{'dest'}) {
-		# Use dir in backup
-		$destdir = $backup->{'dest'};
+	my ($ok, $destfile) = &compute_backup_destination($s, $backup);
+	if ($ok) {
+		$destmap{$s->{'id'}} = $destfile;
 		}
 	else {
-		# From host system, if we can find it
-		my $vhost = &get_parent_server($s);
-		$destdir = $vhost->{'backup_default'};
-		if (!$destdir) {
-			$rv{$s->{'id'}} = {
-				'ok' => 0,
-				'msg' => &text('brun_evhost', $vhost->{'host'}),
-				};
-			$failed++;
-			next;
-			}
-		if ($backup->{'owner'}) {
-			$destdir .= '/'.$backup->{'owner'};
-			}
+		$rv{$s->{'id'}} = { 'ok' => 0, 'msg' => $destfile, };
+		$failed++;
+		next;
 		}
-	$destmap{$s->{'id'}} = &backup_strftime($destdir).
-				"/".$s->{'host'}.".".&get_backup_extension($s);
 	}
 
 # If backup is by an owner, check if he is over his backup space
@@ -368,6 +354,32 @@ foreach my $s (@servers) {
 	}
 
 return \%rv;
+}
+
+# compute_backup_destination(&server, &backup)
+# For some system returns a status code (0=failed, 1=ok) and either a backup
+# destination or an error message
+sub compute_backup_destination
+{
+my ($s, $backup) = @_;
+my $destdir;
+if ($backup->{'dest'}) {
+	# Use dir in backup
+	$destdir = $backup->{'dest'};
+	}
+else {
+	# From host system, if we can find it
+	my $vhost = &get_parent_server($s);
+	$destdir = $vhost->{'backup_default'};
+	if (!$destdir) {
+		return ( 0, &text('brun_evhost', $vhost->{'host'}) );
+		}
+	if ($backup->{'owner'}) {
+		$destdir .= '/'.$backup->{'owner'};
+		}
+	}
+return ( 1, &backup_strftime($destdir)."/".$s->{'host'}.".".
+            &get_backup_extension($s) );
 }
 
 # execute_system_backup(&server, destination, shutdown?, owner-name)

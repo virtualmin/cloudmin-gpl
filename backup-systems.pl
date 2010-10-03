@@ -22,6 +22,10 @@ this backup's destination, use the C<--purge> flag followed by a number of
 days. This will only work if the backup is to a date-based directory, like
 I</backup/%d-%m-%Y>.
 
+To just show which systems will be backed up and to where, use the C<--test>
+flag. This is useful when selecting systems by group or host, or when using
+a date-based backup destination spec.
+
 =head1 Example usage
 
   cloudmin backup-systems --host openvzgpl.home
@@ -65,6 +69,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--parallel") { $parallel = 1; }
 	elsif ($a eq "--quiet") { $quiet = 1; }
 	elsif ($a eq "--purge") { $purge = shift(@ARGV); }
+	elsif ($a eq "--test") { $test = 1; }
 	else {
 		&usage();
 		}
@@ -99,6 +104,22 @@ if ($desthash->{'mode'} <= 2) {
 		$destserver = &get_backup_dest_server($desthash, $vhost);
 		&can_action_usage($destserver, "backup");
 		}
+	}
+
+# In test mode, just show what would be done
+if ($test) {
+	foreach $s (@servers) {
+		$r = $rv->{$s->{'id'}};
+		($ok, $destfile) = &compute_backup_destination($s, $backup);
+		print $s->{'host'},": ";
+		if ($ok) {
+			print "OK $destfile\n";
+			}
+		else {
+			print "ERROR $destfile\n";
+			}
+		}
+	exit;
 	}
 
 # Do the backup
@@ -146,6 +167,7 @@ print "                        --dest destination-directory\n";
 print "                        [--shutdown]\n";
 print "                        [--parallel]\n";
 print "                        [--purge days]\n";
+print "                        [--test]\n";
 print "\n";
 print "The destination can be one of :\n";
 print " - A dir on the VM2 master, like /backup\n";
