@@ -34,7 +34,6 @@ foreach $s (@servers) {
 		}
 	}
 
-&obtain_lock_server(\@upservers);
 if (@servers == 1) {
 	# Show each update in series
 	$s = $servers[0];
@@ -63,9 +62,11 @@ if (@servers == 1) {
 	print $text{'update_done'},"<p>\n";
 
 	print $text{'update_statusing'},"<br>\n";
+	&obtain_lock_server($s);
         &refresh_server_updates($s, \@allgot);
         &check_server_status($s);
         &save_managed_server($s);
+	&release_lock_server($s);
 	print $text{'update_statusok'},"<p>\n";
 	}
 else {
@@ -107,7 +108,6 @@ else {
 	print "</ul>\n";
 	print $text{'mass_updone'},"<p>\n";
 	}
-&release_lock_server(\@upservers);
 &webmin_log("update", "servers", scalar(@servers),
 	    { 'hosts' => \@hostnames });
 

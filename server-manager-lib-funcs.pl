@@ -3250,9 +3250,11 @@ return &parallel_server_function($servers,
                     }
                   push(@allgot, $status);
 	          }
+	      &obtain_lock_server($_[0]);
               &refresh_server_updates($_[0], \@allgot);
 	      &check_server_status($_[0]);
 	      &save_managed_server($_[0]);
+	      &release_lock_server($_[0]);
               return @allgot;
 	    }, $packages ? \%want : undef);
 }
