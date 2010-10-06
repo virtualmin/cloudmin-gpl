@@ -105,33 +105,77 @@ print &ui_tabs_start(\@tabs, "mode", $in{'mode'} || "ips", 1);
 # Show all the IPs we know about, in a tab
 print &ui_tabs_start_tab("mode", "ips");
 print $text{'ips_ipsdesc'},"<p>\n";
+
+# Show search form to limit list
+print &ui_form_start("list_ips.cgi");
+print "<b>$text{'ips_ipsearch'}</b>\n",
+      &ui_textbox("search", $in{'search'}, 30),"\n",
+      &ui_submit($text{'ips_ipok'}),"\n";
+print &ui_form_end();
+
+# Limit the list
 %idmap = map { $_->{'id'}, $_ } @allservers;
-print &ui_columns_start([ $text{'ips_ip'},
-			  $text{'ips_use'},
-			  $oc ? ( $text{'ips_owner'} ) : ( ),
-			  $text{'ips_host'},
-			], 100);
-foreach $ip (@ips) {
-	$s = $ips{$ip}->{'server'};
-	$p = $ips{$ip}->{'ping'};
-	@hosts = sort { $a cmp $b }
-		      map { $idmap{$_}->{'host'} }
-			  &unique(@{$ips{$ip}->{'hosts'}});
-	if (@hosts > 4) {
-		@hosts = ( @hosts[0..3],
-			   &text('update_more',scalar(@hosts-4)) );
+if ($in{'search'}) {
+	@sips = ( );
+	foreach $ip (@ips) {
+		$s = $ips{$ip}->{'server'};
+		if ($ip =~ /\Q$in{'search'}\E/i) {
+			# Match on IP
+			push(@sips, $ip);
+			}
+		elsif ($s && $s->{'host'} =~ /\Q$in{'search'}\E/i) {
+			# Match on allocated server
+			push(@sips, $ip);
+			}
+		else {
+			# Match on host
+		        foreach $h (map { $idmap{$_} }
+				        &unique(@{$ips{$ip}->{'hosts'}})) {
+				if ($h->{'host'} =~ /\Q$in{'search'}\E/i) {
+					push(@sips, $ip);
+					last;
+					}
+				}
+			}
 		}
-	print &ui_columns_row([
-		$ip,
-		$s ? "<a href='edit_serv.cgi?id=$s->{'id'}'>$s->{'host'}</a>" :
-		 $p ? $text{'ips_ping'} : $text{'ips_free'},
-		!$oc ? ( ) :
-		 !$s ? ( undef ) :
-		       ( $ownermap{$s->{'id'}} ),
-		&ui_links_row(\@hosts),
-		]);
+	@ips = &unique(@sips);
 	}
-print &ui_columns_end();
+
+if ($in{'search'} && !@ips) {
+	print "<p><b>$text{'ips_searchnone'}</b><p>\n";
+	}
+elsif (!@ips) {
+	print "<p><b>$text{'ips_none'}</b><p>\n";
+	}
+else {
+	print &ui_columns_start([ $text{'ips_ip'},
+				  $text{'ips_use'},
+				  $oc ? ( $text{'ips_owner'} ) : ( ),
+				  $text{'ips_host'},
+				], 100);
+	foreach $ip (@ips) {
+		$s = $ips{$ip}->{'server'};
+		$p = $ips{$ip}->{'ping'};
+		@hosts = sort { $a cmp $b }
+			      map { $idmap{$_}->{'host'} }
+				  &unique(@{$ips{$ip}->{'hosts'}});
+		if (@hosts > 4) {
+			@hosts = ( @hosts[0..3],
+				   &text('update_more',scalar(@hosts-4)) );
+			}
+		print &ui_columns_row([
+			$ip,
+			$s ? "<a href='edit_serv.cgi?id=$s->{'id'}'>".
+			     "$s->{'host'}</a>" :
+			 $p ? $text{'ips_ping'} : $text{'ips_free'},
+			!$oc ? ( ) :
+			 !$s ? ( undef ) :
+			       ( $ownermap{$s->{'id'}} ),
+			&ui_links_row(\@hosts),
+			]);
+		}
+	print &ui_columns_end();
+	}
 print &ui_tabs_end_tab();
 
 # Show all the ranges from hosts

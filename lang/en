@@ -3803,6 +3803,10 @@ ips_desc=Description
 ips_err=Failed to save IP pools
 ips_edelete=IP pool starting at $1 cannot be removed, as it is in use by the following host systems : $2
 ips_estarts=No starting IP addresses entered in row $1
+ips_ipsearch=Only show IPs for systems matching
+ips_ipok=Search
+ips_searchnone=No IP addresses or systems matched your search.
+ips_none=No IP addresses have been allocated yet.
 range_eends=The number of starting and ending addresses does not match in row $1
 range_enetmasks=The number of starting addresses and netmasks does not match in row $1
 
