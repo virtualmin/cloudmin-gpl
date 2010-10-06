@@ -9033,8 +9033,8 @@ return @rv;
 sub same_xen_virt
 {
 my ($d1, $d2, $nopart) = @_;
-$d1 =~ s/\/(xvd|hd)/\/sd/g;
-$d2 =~ s/\/(xvd|hd)/\/sd/g;
+$d1 =~ s/\/(xvd|hd|vd)/\/sd/g;
+$d2 =~ s/\/(xvd|hd|vd)/\/sd/g;
 if ($nopart) {
 	$d1 =~ s/\d+$//g;
 	$d2 =~ s/\d+$//g;

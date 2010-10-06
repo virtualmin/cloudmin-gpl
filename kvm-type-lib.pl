@@ -444,6 +444,32 @@ $rv .= &ui_table_row($text{'create_xendisksize'},
 return $rv;
 }
 
+# type_kvm_advanced_create_form([empty-mode])
+# Returns HTML for Xen-specific inputs
+sub type_kvm_advanced_create_form
+{
+my ($empty) = @_;
+my $rv;
+
+# LVM / local files option
+my @lvmhosts = grep { $_->{'kvm_host'} && $_->{'kvm_vg'} }
+		    &list_managed_servers();
+if (@lvmhosts) {
+	$rv .= &ui_table_row($text{'xen_onlvm'},
+		&ui_radio("kvm_lvm", -1,
+			  [ [ -1, $text{'xen_onlvmdef'} ],
+			    [ 0, $text{'xen_onlvm0'} ],
+			    [ 1, $text{'xen_onlvm1'} ] ]));
+	}
+
+# VirtIO option
+# XXX
+
+return $rv;
+}
+
+
+
 # type_kvm_create_parse(&server, &in, [empty-flag])
 # Parse inputs from type_kvm_create_form, and update the server object
 sub type_kvm_create_parse
@@ -539,6 +565,19 @@ else {
 	}
 $server->{'ip_addresses'} = $server->{'kvm_ip'};
 
+# LVM setting
+if ($in{'kvm_lvm'} == -1 || !defined($in{'kvm_lvm'})) {
+	# Use host system default
+	}
+elsif ($in{'kvm_lvm'} == 0) {
+	# Force not on LVM
+	$server->{'kvm_nolvm'} = 1;
+	}
+elsif ($in{'kvm_lvm'} == 1) {
+	# Must be on LVM
+	$vhost->{'kvm_vg'} || &error(&text('xen_eonlvm', $vhost->{'host'}));
+	}
+
 # Append zone name
 my @zones = &list_bind_zones();
 my $zone;
@@ -567,6 +606,7 @@ my @rv = ( { 'name' => 'host', 'value' => 'host-system' },
 	 );
 if (&can_action(undef, "advanced")) {
 	push(@rv, { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1 },
+		  { 'name' => 'virtio', 'value' => 'true|false', 'opt' => 1 },
 	    );
 	}
 return @rv;
@@ -791,8 +831,6 @@ my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 my @gws = split(/\s+/, $server->{'kvm_gw'});
 my @nets;
-print STDERR "ips=",join(" ", @ips),"\n";
-print STDERR "ifaces=",join(" ", @ifaces),"\n";
 for(my $i=0; $i<@ips; $i++) {
 	my $net = "tap,vlan=$i";
 	if ($ifaces[$i] && $ifaces[$i] ne '*') {
