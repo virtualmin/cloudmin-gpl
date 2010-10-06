@@ -104,6 +104,7 @@ else {
 		$base || &error($text{'backup_epurgedate'});
 		$in{'purge'} =~ /^[0-9\.]+$/ && $in{'purge'} > 0 ||
 			&error($text{'backup_epurge'});
+		$backup->{'purge'} = $in{'purge'};
 		}
 	
 	# Update the backup
