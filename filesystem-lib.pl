@@ -453,7 +453,7 @@ ref($fstab) || return "Failed to read fstab file : $fstab";
 my @newfstab;
 foreach my $f (@$fstab) {
 	my $ok = 1;
-	if ($f->[0] =~ /^(\/dev\/(s|d|xv)d[a-z])(\d*)$/ && $f->[1] ne "/") {
+	if ($f->[0] =~ /^(\/dev\/(s|d|xv|v)d[a-z])(\d*)$/ && $f->[1] ne "/") {
 		# If device is /dev/xvdX and no disk for that exists, remove it
 		if (!$virts{$1} && !$virts{$f->[0]}) {
 			$ok = 0;

@@ -3557,7 +3557,7 @@ my ($server) = @_;
 if ($config{'fsck_boot'}) {
 	my ($ok, $out) = &fsck_all_disks($server, $config{'fsck_boot'} == 2);
 	if ($ok == 0) {
-		return "Disk check failed : $out";
+		return (0, "Disk check failed : $out");
 		}
 	}
 

@@ -44,3 +44,4 @@ backuplog_days=7
 dhcp_add=0
 fsck_boot=0
 passwd_mode=0
+kvm_virtio=0

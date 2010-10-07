@@ -480,6 +480,11 @@ create_cd=Installation CD image
 create_cdimage=Cloudmin image
 create_cdfile=File or device on host
 create_nocd=You are not allowed to install from a file on the host, and there are no CD images available!
+create_kvmvirtio=Fixing root disk device in fstab file ..
+create_ekvmvirtio=.. device fix failed : $1
+create_kvmgrub=Fixing root disk device in Grub configuration file ..
+create_ekvmgrubget=.. no Grub configuration file found!
+create_ekvmgrub=.. Grub fix failed : $1
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -3632,6 +3637,8 @@ kvm_autoadd2=All instances with config files
 kvm_autologin=Login for found instances
 kvm_autologin0=Select before searching
 kvm_autologin1=Same as KVM host system
+kvm_virtio=Use VirtIO disk driver?
+kvm_virtiodef=Based on image
 
 floor_disk=Disk space to leave free
 floor_edisk=Missing or non-numeric disk space to leave free

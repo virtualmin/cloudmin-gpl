@@ -228,6 +228,9 @@ my @otherdrives = ref($got->{'args'}->{'drive'}) ?
 			( $got->{'args'}->{'drive'} );
 push(@drives, @otherdrives);
 $server->{'kvm_drives'} = join(" ", @drives);
+if ($drives[0] =~ /if=virtio/) {
+	$server->{'kvm_virtio'} = 1;
+	}
 delete($got->{'args'}->{'drive'});
 
 # Save memory
@@ -463,12 +466,15 @@ if (@lvmhosts) {
 	}
 
 # VirtIO option
-# XXX
+$rv .= &ui_table_row($text{'kvm_virtio'},
+	&ui_radio("kvm_virtio", $config{'kvm_virtio'} ? 1 :
+				$emtpy ? 0 : -1,
+		  [ $empty ? ( ) : ( [ -1, $text{'kvm_virtiodef'} ] ),
+		    [ 0, $text{'yes'} ],
+		    [ 1, $text{'no'} ] ]));
 
 return $rv;
 }
-
-
 
 # type_kvm_create_parse(&server, &in, [empty-flag])
 # Parse inputs from type_kvm_create_form, and update the server object
@@ -576,6 +582,17 @@ elsif ($in{'kvm_lvm'} == 0) {
 elsif ($in{'kvm_lvm'} == 1) {
 	# Must be on LVM
 	$vhost->{'kvm_vg'} || &error(&text('xen_eonlvm', $vhost->{'host'}));
+	}
+
+# VirtIO setting
+if (!defined($in{'kvm_virtio'}) || $in{'kvm_virtio'} == -1) {
+	# Use image or global default
+	$server->{'kvm_virtio'} = $empty ? $config{'kvm_virtio'}
+					 : $img->{'kvm_virtio'};
+	}
+else {
+	# User selection
+	$server->{'kvm_virtio'} = $in{'kvm_virtio'};
 	}
 
 # Append zone name
@@ -781,6 +798,14 @@ if (&can_action(undef, "advanced")) {
 	elsif ($args->{'lvm'} =~ /false|no/i) {
 		$server->{'kvm_nolvm'} = 1;
 		}
+
+	# Validate virtio flag
+	if ($args->{'virtio'} =~ /true|yes/i) {
+		$server->{'kvm_virtio'} = 1;
+		}
+	elsif ($img && $img->{'kvm_virtio'}) {
+		$server->{'kvm_virtio'} = 1;
+		}
 	}
 
 return undef;
@@ -847,7 +872,8 @@ for(my $i=0; $i<@ips; $i++) {
 $server->{'kvm_net'} = join(" ", @nets);
 
 # Set drive in config
-$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,if=ide";
+$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,".
+		  ($server->{'kvm_virtio'} ? "if=virtio,boot=on" : "if=ide");
 
 # If on LVM, create an LV first
 $last_remote_error = undef;
@@ -1007,6 +1033,63 @@ for(my $i=0; $i<@ips; $i++) {
 	push(@macs, &generate_mac_address($server, $i));
 	}
 $server->{'mac'} = join(" ", @macs);
+
+# Fix root disk device to match virtio mode
+my $wantdev = $server->{'kvm_virtio'} ? "/dev/vda" : "/dev/hda";
+if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
+	&$first_print($text{'create_kvmvirtio'});
+	my $fstab = &get_system_fstab($server);
+	if (!ref($fstab)) {
+		&$second_print(&text('create_ekvmvirtio', $fstab));
+		}
+	else {
+		my $changed = 0;
+		foreach my $f (@$fstab) {
+			if ($f->[1] eq "/" && $f->[0] !~ /^\Q$wantdev\E/ &&
+			    $f->[0] =~ /(\d+)$/) {
+				my $part = $1;
+				$f->[0] = $wantdev.$part;
+				$changed++;
+				}
+			}
+		my $err = $changed ? &put_system_fstab($server, $fstab) : undef;
+		if ($err) {
+			&$second_print(&text('create_ekvmvirtio', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	}
+
+# Fix grub config to match virtio mode
+if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
+	&$first_print($text{'create_kvmgrub'});
+	&mount_filesystem_if_needed($server);
+	my $grubconf;
+	my $data;
+	foreach my $g ("/boot/grub/menu.lst", "/boot/grub/grub.conf") {
+		$data = &get_file_data_from_server($server, $g);
+		if ($data) {
+			$grubconf = $g;
+			last;
+			}
+		}
+	if (!$data) {
+		&$second_print(&text('create_ekvmgrubget'));
+		}
+	else {
+		$data =~ s/ root=(\S+)(\d+)/ root=$wantdev$2/g;
+		my $err = &put_file_data_to_server($server, $data, $grubconf);
+		if ($err) {
+			&$second_print(&text('create_ekvmgrub', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	&umount_filesystem_if_needed($server);
+	}
 
 if (!$empty) {
 	# Clean up /etc/fstab to remove non-existant devices
@@ -1304,7 +1387,7 @@ $server->{'kvm_console'} ||= &get_kvm_console_file($server);
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			"$cmd >$server->{'kvm_console'} 2>&1 </dev/null &");
 return (0, $err) if ($err);
-return (0, $out) if ($ex);
+return (0, $out || "Unknown error") if ($ex);
 
 # Wait 20 seconds for it to start
 my $tries = 0;
@@ -1597,6 +1680,9 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 	if ($drive{'if'} eq 'scsi') {
 		$dev = "sd".chr($drive{'index'}+97);
 		}
+	elsif ($drive{'if'} eq 'virtio') {
+		$dev = "vd".chr($drive{'index'}+97);
+		}
 	elsif ($drive{'if'} eq 'ide' || !$drive{'if'}) {
 		$dev = "hd".chr($drive{'index'}+97);
 		}
@@ -1739,7 +1825,7 @@ $used{"/dev/hdc"}++;	# Typically for CD-ROM
 
 # Pick a /dev/???? file that is free on the virtual system
 my $n;
-if ($disks->[0]->{'virt'} =~ /^(\/dev\/[sh]d)[a-z]$/) {
+if ($disks->[0]->{'virt'} =~ /^(\/dev\/[shx]d)[a-z]$/) {
 	# Pick a free partition on the next disk
 	$prefix = $1;
 	for($n='a'; $used{$prefix.$n}; $n=chr(ord($n)+1)) { }
@@ -1837,10 +1923,13 @@ my %drive = ( 'file' => $disk->{'real'},
 if ($disk->{'virt'} =~ /sd[a-z]+$/) {
 	$drive{'if'} = 'scsi';
 	}
+elsif ($disk->{'virt'} =~ /vd[a-z]+$/) {
+	$drive{'if'} = 'virtio';
+	}
 else {
 	$drive{'if'} = 'ide';
 	}
-if ($disk->{'virt'} =~ /([hs])d([a-z])$/) {
+if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
 	$drive{'index'} = ord($2)-97;
 	}
 push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
@@ -2110,7 +2199,7 @@ if ($disk->{'virt'} ne $olddisk->{'virt'} ||
 	my @drives = split(/\s+/, $server->{'kvm_drives'});
 	my %drive = map { split(/=/, $_, 2) }
 			split(/,/, $drives[$disk->{'drive_index'}]);
-	if ($disk->{'virt'} =~ /([hs])d([a-z])$/) {
+	if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
 		$drive{'index'} = ord($2)-97;
 		}
 	if ($disk->{'media'}) {
@@ -2167,7 +2256,8 @@ sub type_kvm_can_fsck
 {
 my ($server, $disk) = @_;
 return ($server->{'status'} eq 'down' || !$disk->{'mounted'}) &&
-       $disk->{'fs'} && $disk->{'fs'} ne 'swap';
+       $disk->{'fs'} && $disk->{'fs'} ne 'swap' &&
+       $disk->{'media'} ne 'cdrom';
 }
 
 # type_kvm_fsck_disk(&server, &disk, [only-if-unclean])
@@ -3126,6 +3216,7 @@ if (!$rawsize) {
 	}
 $image->{'rawsize'} = $rawsize;
 $image->{'format'} = 'disk';
+$image->{'kvm_virtio'} = $server->{'kvm_virtio'};
 
 if (!$image->{'nocompress'}) {
 	# Compress disk image to a temp file
