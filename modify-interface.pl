@@ -13,6 +13,11 @@ with the C<--new-ether> flag, or the new netmask with the C<--new-netmask>
 parameter. Alternately you can have Cloudmin tell the system to generate a MAC
 address automatically with the C<--no-ether> flag.
 
+For real network interfaces on KVM or Xen systems using HVM, you can set
+the type of network card that is emulated on the virtual system with the
+C<--new-model> flag followed by a model name. Or you can revert to the default
+with the C<--no-model> flag.
+
 =head1 Example usage
 
   cloudmin modify-interface --host vvirtualmin.home --address 193.9.101.250 --new-mac 02:54:00:50:DE:44
@@ -66,12 +71,19 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-ether") {
 		$noether = 1;
 		}
+	elsif ($a eq "--new-model") {
+		$newmodel = shift(@ARGV);
+		}
+	elsif ($a eq "--no-model") {
+		$nomodel = 1;
+		}
 	else {
 		&usage();
 		}
 	}
 $address || $name || &usage("Missing --address or --name parameter");
-$newaddress || $newnetmask || $newether || $noether || &usage("Nothing to do");
+$newaddress || $newnetmask || $newether || $noether || $newmodel || $nomodel ||
+	&usage("Nothing to do");
 
 # Get the server
 $host || &usage("Missing --host parameter");
@@ -89,6 +101,22 @@ $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 defined(&$cfunc) && &$cfunc($server) ||
 	&usage("Interfaces cannot be managed on this system");
 $server->{'status'} eq 'nohost' && &usage("Host for system is down");
+
+# Validate the model
+if ($newmodel) {
+	$iface->{'virtual'} eq '' ||
+		&usage("The --new-model parameter can only be used with ".
+		       "real interfaces");
+	$lfunc = "type_".$server->{'manager'}."_list_models";
+	defined(&$lfunc) || &usage("This virtual system type does not support ".
+				   "setting the network interface model");
+	$models = &$lfunc($server);
+	ref($models) || &usage("Failed to list models : $models");
+	($model) = grep { $_->[0] eq $newmodel } @$models;
+	$model || &usage("Model $newmodel is not valid - options are : ".
+			 join(" ", map { $_->[0] } @$models));
+	$iface->{'model'} = $newmodel;
+	}
 
 # Get the interface
 $ifaces = &$ifunc($server);
@@ -115,6 +143,12 @@ if ($newether) {
 	}
 elsif ($noether) {
 	$iface->{'ether'} = '';
+	}
+if ($newmodel) {
+	$iface->{'model'} = $newmodel;
+	}
+elsif ($nomodel) {
+	$iface->{'model'} = '';
 	}
 
 # Call the modify function
@@ -163,6 +197,7 @@ print "                          --address ip.address | --name ethN\n";
 print "                         [--new-address ip.address]\n";
 print "                         [--new-netmask mask]\n";
 print "                         [--new-ether mac-address | --no-ether]\n";
+print "                         [--new-model type | --no-model]\n";
 exit(1);
 }
 

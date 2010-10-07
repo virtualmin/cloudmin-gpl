@@ -143,6 +143,18 @@ if (defined(&$mfunc) && &$mfunc($server, $in{'new'} ? undef : $iface)) {
 				$text{'iface_macdef'}));
 	}
 
+# Interface model (if non-virtual)
+$lfunc = "type_".$server->{'manager'}."_list_models";
+if (($in{'new'} == 2 || $iface->{'virtual'} eq '') && defined(&$lfunc)) {
+	$models = &$lfunc($server);
+	if (ref($models)) {
+		print &ui_table_row($text{'iface_model'},
+			&ui_select("model", $iface->{'model'},
+				   [ [ '', "&lt;$text{'default'}&gt;" ],
+				     @$models ]));
+		}
+	}
+
 print &ui_table_end();
 if ($in{'new'}) {
 	print &ui_form_end([ [ undef, $text{'create'} ] ]);

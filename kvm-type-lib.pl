@@ -243,7 +243,7 @@ my @nets = ref($got->{'args'}->{'net'}) ? @{$got->{'args'}->{'net'}}
 $server->{'kvm_net'} = join(" ", grep { /^tap/ } @nets);
 
 # Extract MAC addresses from nic network configs
-my @macs;
+my (@macs, @models);
 foreach my $n (grep { /^nic/ } @nets) {
 	if ($n =~ /macaddr=([0-9a-f:]+)/i) {
 		push(@macs, $1);
@@ -251,8 +251,15 @@ foreach my $n (grep { /^nic/ } @nets) {
 	else {
 		push(@macs, "*");
 		}
+	if ($n =~ /model=([^, ]+)/i) {
+		push(@models, $1);
+		}
+	else {
+		push(@models, "*");
+		}
 	}
 $server->{'mac'} = join(" ", @macs);
+$server->{'model'} = join(" ", @models);
 delete($got->{'args'}->{'net'});
 
 # Save boot mode
@@ -468,10 +475,10 @@ if (@lvmhosts) {
 # VirtIO option
 $rv .= &ui_table_row($text{'kvm_virtio'},
 	&ui_radio("kvm_virtio", $config{'kvm_virtio'} ? 1 :
-				$emtpy ? 0 : -1,
+				$empty ? 0 : -1,
 		  [ $empty ? ( ) : ( [ -1, $text{'kvm_virtiodef'} ] ),
-		    [ 0, $text{'yes'} ],
-		    [ 1, $text{'no'} ] ]));
+		    [ 1, $text{'yes'} ],
+		    [ 0, $text{'no'} ] ]));
 
 return $rv;
 }
@@ -1036,8 +1043,10 @@ $server->{'mac'} = join(" ", @macs);
 
 # Fix root disk device to match virtio mode
 my $wantdev = $server->{'kvm_virtio'} ? "/dev/vda" : "/dev/hda";
+my $hasbootfs = 0;
 if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
 	&$first_print($text{'create_kvmvirtio'});
+	&mount_filesystem_if_needed($server);
 	my $fstab = &get_system_fstab($server);
 	if (!ref($fstab)) {
 		&$second_print(&text('create_ekvmvirtio', $fstab));
@@ -1045,11 +1054,17 @@ if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
 	else {
 		my $changed = 0;
 		foreach my $f (@$fstab) {
-			if ($f->[1] eq "/" && $f->[0] !~ /^\Q$wantdev\E/ &&
+			if ($f->[0] =~ /^\/dev\/[hsv]da/ &&
+			    $f->[0] !~ /^\Q$wantdev\E/ &&
 			    $f->[0] =~ /(\d+)$/) {
 				my $part = $1;
 				$f->[0] = $wantdev.$part;
 				$changed++;
+				}
+			if ($f->[1] eq "/boot") {
+				# If /boot is mounted separate, the path to
+				# grub.conf below changes
+				$hasbootfs = 1;
 				}
 			}
 		my $err = $changed ? &put_system_fstab($server, $fstab) : undef;
@@ -1060,15 +1075,17 @@ if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
 			&$second_print($text{'create_done'});
 			}
 		}
+	&umount_filesystem_if_needed($server);
 	}
 
 # Fix grub config to match virtio mode
 if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
 	&$first_print($text{'create_kvmgrub'});
-	&mount_filesystem_if_needed($server);
+	my $grubdir = $hasbootfs ? "/grub" : "/boot/grub";
+	&mount_filesystem_if_needed($server, $grubdir);
 	my $grubconf;
 	my $data;
-	foreach my $g ("/boot/grub/menu.lst", "/boot/grub/grub.conf") {
+	foreach my $g ("$grubdir/menu.lst", "$grubdir/grub.conf") {
 		$data = &get_file_data_from_server($server, $g);
 		if ($data) {
 			$grubconf = $g;
@@ -1326,8 +1343,8 @@ if (&can_ssh_status($server)) {
 	return 'FALLBACK';
 	}
 # Just kill and restart
-&type_xen_shutdown($server, 1);
-return &type_xen_startup($server);
+&type_kvm_shutdown($server, 1);
+return &type_kvm_startup($server);
 }
 
 # type_kvm_shutdown(&server, [force])
@@ -1562,6 +1579,7 @@ $cmd .= " -serial stdio";
 
 # TAP networking, if enabled
 my @macs = split(/\s+/, $server->{'mac'});
+my @models = split(/\s+/, $server->{'kvm_model'});
 my $i = 0;
 foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
 	$cmd .= " -net $net";
@@ -1573,6 +1591,9 @@ foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
 		}
 	if ($macs[$i] && $macs[$i] ne '*') {
 		$cmd .= ",macaddr=".$macs[$i];
+		}
+	if ($models[$i] && $models[$i] ne '*') {
+		$cmd .= ",model=".$models[$i];
 		}
 	$i++;
 	}
@@ -2421,17 +2442,19 @@ if (ref($rv)) {
 		}
 	}
 
-# Set MAC and bridges field on real interfaces
+# Set MAC, bridges and model field on real interfaces
 my @macs = split(/\s+/, $server->{'mac'});
 my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
+my @models = split(/\s+/, $server->{'kvm_model'});
 for(my $i=0; $i<@macs; $i++) {
 	my $mac = $macs[$i];
-	my $bridge = $bridges[$i];
+	my $b = $bridges[$i];
+	my $m = $models[$i];
 	my ($iface) = grep { $_->{'fullname'} eq "eth".$i } @$rv;
 	if ($iface) {
 		$iface->{'ether'} = $mac eq '*' || $mac eq '' ? undef : $mac;
-		$iface->{'bridge'} = $bridge eq '*' || $bridge eq '' ? undef
-								     : $bridge;
+		$iface->{'bridge'} = $b eq '*' || $b eq '' ? undef : $b;
+		$iface->{'model'} = $m eq '*' || $m eq '' ? undef : $m;
 		}
 	}
 
@@ -2519,10 +2542,15 @@ return $err if ($err);
 # Add to list of interfaces to activate at start time
 if ($nonvirt) {
 	my @macs = split(/\s+/, $server->{'mac'});
+	my @models = split(/\s+/, $server->{'kvm_model'});
+	while(scalar(@models) < scalar(@macs)) {
+		push(@models, "*");
+		}
 	my @nets = split(/\s+/, $server->{'kvm_net'});
 	my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 	my $num = scalar(@nets);
 	push(@macs, &generate_mac_address($server, $num));
+	push(@models, $iface->{'model'} || "*");
 	push(@nets, "tap,vlan=".$num);
 	push(@ifaces, $bridge || '*');
 	if ($bridge) {
@@ -2535,6 +2563,7 @@ if ($nonvirt) {
 		$nets[$#nets] .= ",script=$script";
 		}
 	$server->{'mac'} = join(" ", @macs);
+	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	$iface->{'reboot'} = 1;
@@ -2568,6 +2597,10 @@ if (&can_ssh_status($server)) {
 my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : undef;
 if ($iface->{'virtual'} eq '' && defined($idx)) {
 	my @macs = split(/\s+/, $server->{'mac'});
+	my @models = split(/\s+/, $server->{'kvm_model'});
+	while(scalar(@models) < scalar(@macs)) {
+		push(@models, "*");
+		}
 	my @nets = split(/\s+/, $server->{'kvm_net'});
 	my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 	if ($nets[$idx] =~ /script=([^,]+)/) {
@@ -2578,9 +2611,11 @@ if ($iface->{'virtual'} eq '' && defined($idx)) {
 			}
 		}
 	splice(@macs, $idx, 1);
+	splice(@models, $idx, 1);
 	splice(@nets, $idx, 1);
 	splice(@ifaces, $idx, 1);
 	$server->{'mac'} = join(" ", @macs);
+	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	$iface->{'reboot'} = 1;
@@ -2612,15 +2647,45 @@ if (&can_ssh_status($server)) {
 &delete_ip_address($server, $oldiface->{'address'});
 &add_ip_address($server, $iface->{'address'});
 
-# Change MAC address if non-virtual
+# Change MAC and model address if non-virtual
 if ($iface->{'virtual'} eq '') {
 	my @macs = split(/\s+/, $server->{'mac'});
+	my @models = split(/\s+/, $server->{'kvm_model'});
+	while(scalar(@models) < scalar(@macs)) {
+		push(@models, "*");
+		}
 	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
 	$macs[$idx] = $iface->{'ether'} || '*';
+	$models[$idx] = $iface->{'model'} || '*';
 	$server->{'mac'} = join(" ", @macs);
+	$server->{'kvm_model'} = join(" ", @models);
 	}
 
 return undef;
+}
+
+# type_kvm_list_models([&server])
+# Returns a list of supported emulated network interface card models
+# for some virtual system.
+sub type_kvm_list_models
+{
+my ($server) = @_;
+if ($server) {
+	# How to get this?
+	# XXX
+	}
+return [ [ "rtl8139", "Realtak 8139" ],
+	 [ "i82551", "Intel 82551" ],
+	 [ "i82557b", "Intel 82557b" ],
+	 [ "i82559er", "Intel 82559er" ],
+         [ "ne2k_pci", "NE2000 on PCI" ],
+	 [ "ne2k_isa", "NE2000 on ISA" ],
+	 [ "e1000", "Intel Gigabit Ethernet" ],
+	 [ "smc91c111", "SMC 91C111" ],
+         [ "virtio", "VirtIO" ],
+	 [ "pcnet", "PC-Net" ],
+	 [ "lance", "Lance" ],
+	 [ "mcf_fec", "MCF FEC" ] ];
 }
 
 # type_kvm_compute_disksize(&server)
@@ -2797,12 +2862,12 @@ else {
 	}
 }
 
-# type_kvm_mount_filesystem(&server)
+# type_kvm_mount_filesystem(&server, [wantfile])
 # Mounts a down KVM image's root disk image on /mnt/something, and sets
 # kvm_mount in the server object
 sub type_kvm_mount_filesystem
 {
-my ($server) = @_;
+my ($server, $wantfile) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # Create temp dir
@@ -2815,7 +2880,7 @@ if (!$fsfile) {
 	}
 
 # If we don't know which partition is the primary, try them in series
-if (!$server->{'kvm_filesystem_offset'}) {
+if (!$server->{'kvm_filesystem_offset'} || $wantfile) {
 	my $parts = &list_disk_image_partitions($vhost, $fsfile);
 	if (!ref($parts)) {
 		return &text('create_ekvmfsfdisk', $fsfile, $parts);
@@ -2836,11 +2901,14 @@ if (!$server->{'kvm_filesystem_offset'}) {
 			"mount -o loop,offset=$o ".quotemeta($fsfile)." ".
 					 quotemeta($mp));
 		next if ($ex || $err);
-		my @st = &stat_file_on_server($vhost, "$mp/etc");
+		my @st = &stat_file_on_server($vhost,
+					      $mp.($wantfile || "/etc"));
 		if (@st) {
 			# Found it! Leave mounted
 			$server->{'kvm_mount'} = $mp;
-			$server->{'kvm_filesystem_offset'} = $o;
+			if (!$wantfile) {
+				$server->{'kvm_filesystem_offset'} = $o;
+				}
 			return undef;
 			}
 		else {
@@ -2994,6 +3062,10 @@ if ($server->{'kvm_args'}) {
 		"<tt>".&html_escape($server->{'kvm_args'})."</tt>");
 	}
 
+# Disk mode
+$rv .= &ui_table_row($text{'edit_kvmdriver'},
+	$server->{'kvm_virtio'} ? "VirtIO" : "IDE");
+
 return $rv;
 }
 
@@ -3016,6 +3088,7 @@ if ($server->{'kvm_disktotal'}) {
 if ($server->{'kvm_args'}) {
 	push(@rv, [ "KVM command line args", $server->{'kvm_args'} ]);
 	}
+push(@rv, [ "KVM disk driver", $server->{'kvm_virtio'} ? "VirtIO" : "IDE" ]);
 return @rv;
 }
 

@@ -1120,11 +1120,11 @@ else {
 	}
 }
 
-# mount_filesystem_if_needed(&server)
+# mount_filesystem_if_needed(&server, [wantfile])
 # Mount a virtual system's filesystem if needed to access files
 sub mount_filesystem_if_needed
 {
-my ($server) = @_;
+my ($server, $wantfile) = @_;
 if ($mounted_filesystem{$server->{'id'}}) {
 	# Already mounted, so just up the count
 	$mounted_filesystem{$server->{'id'}}++;
@@ -1134,7 +1134,7 @@ else {
 	my $nfunc = "type_".$server->{'manager'}."_need_mount";
 	if (defined(&$nfunc) && &$nfunc($server)) {
 		my $mfunc = "type_".$server->{'manager'}."_mount_filesystem";
-		my $err = &$mfunc($server);
+		my $err = &$mfunc($server, $wantfile);
 		return $err if ($err);
 		$mounted_filesystem{$server->{'id'}}++;
 		}

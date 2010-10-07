@@ -16,7 +16,11 @@ by an interface that does not exist yet, like I<eth1>. If the host system has
 multiple bridges, the C<--bridge> flag can be used to select a bridge, like
 I<xenbr0>.
 
-Either way, the full inteface name and IP address will be displayed if the
+For KVM and Xen systems using HVM, the C<--model> flag can be used to set
+the type of network card that is emulated on the virtual system. This is
+only possible for real interfaces though.
+
+Either way, the full interface name and IP address will be displayed if the
 command completes successfully.
 
 =head1 Example usage
@@ -65,6 +69,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--bridge") {
 		$bridge = shift(@ARGV);
+		}
+	elsif ($a eq "--model") {
+		$model = shift(@ARGV);
 		}
 	else {
 		&usage();
@@ -123,10 +130,25 @@ if ($nonvirt) {
 else {
 	$bridge && &usage("The --bridge parameter can only be used ".
 			  "with --real");
+	$model && &usage("The --model parameter can only be used ".
+			 "with --real");
 	$piface || &usage("No real interface named $name found. ".
 			  "Existing interfaces are : ".
 			  join(" ", map { $_->{'fullname'} }
 				grep { $_->{'virtual'} eq '' } @$parents));
+	}
+
+# Validate the model
+if ($model) {
+	$lfunc = "type_".$server->{'manager'}."_list_models";
+	defined(&$lfunc) || &usage("This virtual system type does not support ".
+				   "setting the network interface model");
+	$models = &$lfunc($server);
+	ref($models) || &usage("Failed to list models : $models");
+	($model) = grep { $_->[0] eq $model } @$models;
+	$model || &usage("Model $model is not valid - options are : ".
+			 join(" ", map { $_->[0] } @$models));
+	$iface->{'model'} = $model;
 	}
 
 # Create the interface object
@@ -169,7 +191,7 @@ print "cloudmin create-interfaces --host hostname\n";
 print "                           --name interface\n";
 print "                           --address ip.address | --allocate\n";
 print "                          [--netmask ip.netmask]\n";
-print "                          [--real] [--bridge name]\n";
+print "                          [--real [--bridge name] [--model type]]\n";
 exit(1);
 }
 

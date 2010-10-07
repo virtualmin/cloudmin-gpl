@@ -105,6 +105,21 @@ else {
 		$iface->{'ether'} = $in{'mac_def'} ? undef : $in{'mac'};
 		}
 
+	# Save device model
+	$lfunc = "type_".$server->{'manager'}."_list_models";
+	if (defined($in{'model'}) && defined(&$lfunc)) {
+		if ($in{'model'} eq '') {
+			delete($iface->{'model'});
+			}
+		else {
+			$models = &$lfunc($server);
+			ref($models) || &error($models);
+			($model) = grep { $_->[0] eq $in{'model'} } @$models;
+			$model || &error($text{'iface_emodel'});
+			$iface->{'model'} = $in{'model'};
+			}
+		}
+
 	# Check if over limit
 	$limits = &get_owner_limits();
 	if ($in{'new'} && $limits && $limits->{'max_ips'}) {

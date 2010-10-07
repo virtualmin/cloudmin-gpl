@@ -113,6 +113,9 @@ if ($multi) {
 		if ($i->{'bridge'}) {
 			print "    Bridge: $i->{'bridge'}\n";
 			}
+		if ($i->{'model'}) {
+			print "    Device model: $i->{'model'}\n";
+			}
 		if ($use) {
 			print "    Use: ",&strip_html_tags($use),"\n";
 			print "    Use type: ",
