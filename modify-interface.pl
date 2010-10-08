@@ -112,9 +112,9 @@ if ($newmodel) {
 				   "setting the network interface model");
 	$models = &$lfunc($server);
 	ref($models) || &usage("Failed to list models : $models");
-	($model) = grep { $_->[0] eq $newmodel } @$models;
-	$model || &usage("Model $newmodel is not valid - options are : ".
-			 join(" ", map { $_->[0] } @$models));
+	($m) = grep { $_->[0] eq $newmodel } @$models;
+	$m || &usage("Model $newmodel is not valid - options are : ".
+		     join(" ", map { $_->[0] } @$models));
 	$iface->{'model'} = $newmodel;
 	}
 

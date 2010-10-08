@@ -151,7 +151,7 @@ if (($in{'new'} == 2 || $iface->{'virtual'} eq '') && defined(&$lfunc)) {
 		print &ui_table_row($text{'iface_model'},
 			&ui_select("model", $iface->{'model'},
 				   [ [ '', "&lt;$text{'default'}&gt;" ],
-				     @$models ]));
+				     @$models ], 1, 0, 1));
 		}
 	}
 

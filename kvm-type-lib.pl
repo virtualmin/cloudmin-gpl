@@ -480,6 +480,13 @@ $rv .= &ui_table_row($text{'kvm_virtio'},
 		    [ 1, $text{'yes'} ],
 		    [ 0, $text{'no'} ] ]));
 
+# Network interface type
+my $models = &type_kvm_list_models();
+$rv .= &ui_table_row($text{'create_kvmmodel'},
+	&ui_select("kvm_model", undef,
+		   [ [ undef, $text{'default'} ],
+		     @$models ]));
+
 return $rv;
 }
 
@@ -602,6 +609,14 @@ else {
 	$server->{'kvm_virtio'} = $in{'kvm_virtio'};
 	}
 
+# Interface model setting
+if ($in{'kvm_model'}) {
+	my $models = &type_kvm_list_models();
+	my ($m) = grep { $_->[0] eq $in{'kvm_model'} } @$models;
+	$m || &error($text{'create_ekvmmodel'});
+	$server->{'kvm_model'} = $in{'kvm_model'};
+	}
+
 # Append zone name
 my @zones = &list_bind_zones();
 my $zone;
@@ -629,8 +644,10 @@ my @rv = ( { 'name' => 'host', 'value' => 'host-system' },
 	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
 	 );
 if (&can_action(undef, "advanced")) {
+	my $models = join('|', map { $_->[0] } @{&type_kvm_list_models()});
 	push(@rv, { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'virtio', 'value' => 'true|false', 'opt' => 1 },
+		  { 'name' => 'model', 'value' => $models, 'opt' => 1 },
 	    );
 	}
 return @rv;
@@ -813,6 +830,14 @@ if (&can_action(undef, "advanced")) {
 	elsif ($img && $img->{'kvm_virtio'}) {
 		$server->{'kvm_virtio'} = 1;
 		}
+
+	# Validate model flag
+	if ($args->{'model'}) {
+		my $models = &type_kvm_list_models();
+		my ($m) = grep { $_->[0] eq $args->{'model'} } @$models;
+		$m || &usage("Invalid network interface model");
+		$server->{'kvm_model'} = $args->{'model'};
+		}
 	}
 
 return undef;
@@ -877,6 +902,14 @@ for(my $i=0; $i<@ips; $i++) {
 	push(@nets, $net);
 	}
 $server->{'kvm_net'} = join(" ", @nets);
+
+# Set all interfaces to use the same model
+if ($server->{'kvm_model'}) {
+	my @models = split(/\s+/, $server->{'kvm_model'});
+	while(@models < @nets) {
+		push(@models, $models[0]);
+		}
+	}
 
 # Set drive in config
 $server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,".
@@ -1395,6 +1428,7 @@ sub type_kvm_startup
 my ($server, $noping) = @_;
 my $vhost = &type_kvm_parent($server);
 my $cmd = &get_kvm_start_command($server);
+print STDERR $cmd,"\n";
 my ($pinged, $sshed);
 
 # Create a console output file
@@ -2670,18 +2704,13 @@ return undef;
 sub type_kvm_list_models
 {
 my ($server) = @_;
-if ($server) {
-	# How to get this?
-	# XXX
-	}
-return [ [ "rtl8139", "Realtak 8139" ],
+return [ [ "rtl8139", "Realtek 8139" ],
 	 [ "i82551", "Intel 82551" ],
 	 [ "i82557b", "Intel 82557b" ],
 	 [ "i82559er", "Intel 82559er" ],
          [ "ne2k_pci", "NE2000 on PCI" ],
 	 [ "ne2k_isa", "NE2000 on ISA" ],
 	 [ "e1000", "Intel Gigabit Ethernet" ],
-	 [ "smc91c111", "SMC 91C111" ],
          [ "virtio", "VirtIO" ],
 	 [ "pcnet", "PC-Net" ],
 	 [ "lance", "Lance" ],

@@ -138,19 +138,6 @@ else {
 				grep { $_->{'virtual'} eq '' } @$parents));
 	}
 
-# Validate the model
-if ($model) {
-	$lfunc = "type_".$server->{'manager'}."_list_models";
-	defined(&$lfunc) || &usage("This virtual system type does not support ".
-				   "setting the network interface model");
-	$models = &$lfunc($server);
-	ref($models) || &usage("Failed to list models : $models");
-	($model) = grep { $_->[0] eq $model } @$models;
-	$model || &usage("Model $model is not valid - options are : ".
-			 join(" ", map { $_->[0] } @$models));
-	$iface->{'model'} = $model;
-	}
-
 # Create the interface object
 $iface = { 'name' => $name };
 if (!$allocate) {
@@ -164,6 +151,19 @@ if ($netmask) {
 	}
 else {
 	$iface->{'netmask'} = $piface->{'netmask'};
+	}
+
+# Validate and store the model
+if ($model) {
+	$lfunc = "type_".$server->{'manager'}."_list_models";
+	defined(&$lfunc) || &usage("This virtual system type does not support ".
+				   "setting the network interface model");
+	$models = &$lfunc($server);
+	ref($models) || &usage("Failed to list models : $models");
+	($m) = grep { $_->[0] eq $model } @$models;
+	$m || &usage("Model $model is not valid - options are : ".
+		     join(" ", map { $_->[0] } @$models));
+	$iface->{'model'} = $model;
 	}
 
 # Call the create function
