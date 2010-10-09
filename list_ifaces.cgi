@@ -61,7 +61,7 @@ print &ui_links_row(\@ilinks);
 
 # Show default gateway form if possible
 $gcfunc = "type_".$t."_can_gateway";
-if ($can && defined(&$gcfunc) && &$gcfunc($server)) {
+if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 	($gw, $gwdev) = &get_server_default_gateway($server);
 
 	print &ui_hr();
