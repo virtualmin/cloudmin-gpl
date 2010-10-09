@@ -841,7 +841,7 @@ if (&can_action(undef, "advanced")) {
 		# Selection from arg
 		my $models = &type_kvm_list_models();
 		my ($m) = grep { $_->[0] eq $args->{'model'} } @$models;
-		$m || &usage("Invalid network interface model");
+		$m || return "Invalid network interface model";
 		$server->{'kvm_model'} = $args->{'model'};
 		}
 	else {
