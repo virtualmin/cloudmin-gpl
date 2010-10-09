@@ -473,17 +473,17 @@ if (@lvmhosts) {
 	}
 
 # VirtIO option
-$rv .= &ui_table_row($text{'kvm_virtio'},
+$rv .= &ui_table_row($text{'create_kvmvirtio'},
 	&ui_radio("kvm_virtio", $config{'kvm_virtio'} ? 1 :
 				$empty ? 0 : -1,
-		  [ $empty ? ( ) : ( [ -1, $text{'kvm_virtiodef'} ] ),
+		  [ $empty ? ( ) : ( [ -1, $text{'create_kvmvirtiodef'} ] ),
 		    [ 1, $text{'yes'} ],
 		    [ 0, $text{'no'} ] ]));
 
 # Network interface type
 my $models = &type_kvm_list_models();
 $rv .= &ui_table_row($text{'create_kvmmodel'},
-	&ui_select("kvm_model", undef,
+	&ui_select("kvm_model", $config{'kvm_model'},
 		   [ [ undef, $text{'default'} ],
 		     @$models ]));
 
@@ -610,7 +610,12 @@ else {
 	}
 
 # Interface model setting
-if ($in{'kvm_model'}) {
+if (!defined($in{'kvm_model'})) {
+	# Configured default
+	$server->{'kvm_model'} = $config{'kvm_model'};
+	}
+elsif ($in{'kvm_model'}) {
+	# User selection
 	my $models = &type_kvm_list_models();
 	my ($m) = grep { $_->[0] eq $in{'kvm_model'} } @$models;
 	$m || &error($text{'create_ekvmmodel'});
@@ -833,11 +838,22 @@ if (&can_action(undef, "advanced")) {
 
 	# Validate model flag
 	if ($args->{'model'}) {
+		# Selection from arg
 		my $models = &type_kvm_list_models();
 		my ($m) = grep { $_->[0] eq $args->{'model'} } @$models;
 		$m || &usage("Invalid network interface model");
 		$server->{'kvm_model'} = $args->{'model'};
 		}
+	else {
+		# Use configured default
+		$server->{'kvm_model'} = $config{'kvm_model'};
+		}
+	}
+else {
+	# Use defaults
+	$server->{'kvm_virtio'} = $empty ? $config{'kvm_virtio'}
+					 : $img->{'kvm_virtio'};
+	$server->{'kvm_model'} = $config{'kvm_model'};
 	}
 
 return undef;
