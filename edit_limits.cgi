@@ -26,6 +26,7 @@ print &ui_table_start($text{'edit_lheader'}, undef, 2);
 $mfunc = "type_".$t."_get_memory";
 $m = defined(&$mfunc) ? &$mfunc($server) : undef;
 if (defined($m)) {
+	print &ui_table_hr() if ($donehr++);
 	$ufunc =  "type_".$t."_can_unlimited_memory";
 	if (defined(&$ufunc) && &$ufunc($server)) {
 		# Unlimited option
@@ -59,13 +60,12 @@ if (defined($m)) {
 		print &ui_table_row($text{'edit_omemory'},
 			&nice_size($limits->{'max_ram'} - $limits->{'ram'}));
 		}
-
-	print &ui_table_hr();
 	}
 
 # CPU limit
 $cfunc = "type_".$t."_get_cpu";
 if (defined(&$cfunc)) {
+	print &ui_table_hr() if ($donehr++);
 	($cpu, $weight) = &$cfunc($server);
 	if (defined($cpu)) {
 		print &ui_table_row($text{'edit_lcpu'},
@@ -82,13 +82,12 @@ if (defined(&$cfunc)) {
 		print &ui_table_row($text{'edit_ocpu'},
 			($limits->{'max_cpu'} - $limits->{'cpu'})."%");
 		}
-
-	print &ui_table_hr();
 	}
 
 # Disk limit
 $dfunc = "type_".$t."_get_disk";
 if (defined(&$dfunc)) {
+	print &ui_table_hr() if ($donehr++);
 	$disk = &$dfunc($server);
 	print &ui_table_row($text{'edit_ldisk'},
 		&ui_radio("disk_def", $disk ? 0 : 1,
@@ -117,13 +116,12 @@ if (defined(&$dfunc)) {
 		print &ui_table_row($text{'edit_odisk'},
 			&nice_size($limits->{'max_disk'} - $limits->{'disk'}));
 		}
-
-	print &ui_table_hr();
 	}
 
 # Bandwidth limit
 $rfunc = "type_".$t."_real_interfaces";
 if (defined(&$rfunc) && $config{'bw_enabled'}) {
+	print &ui_table_hr() if ($donehr++);
 	if (&can_action($server, "bw")) {
 		# Edit limit
 		print &ui_table_row($text{'edit_lbw'},
@@ -145,8 +143,6 @@ if (defined(&$rfunc) && $config{'bw_enabled'}) {
 	# Current usage
 	print &ui_table_row($text{'edit_lusage'},
 		&bandwidth_usage_message($server));
-
-	print &ui_table_hr();
 	}
 
 # Network rate limit

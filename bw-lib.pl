@@ -14,7 +14,7 @@ sub get_server_traffic
 {
 my ($server) = @_;
 my $vhost = &get_parent_server($server);
-return ( ) if (!$vhost);
+return ( ) if (!$vhost && $server->{'manager'} ne 'real');
 my $ifunc = "type_".$server->{'manager'}."_real_interfaces";
 if (defined(&$ifunc)) {
 	my $ifaces = &$ifunc($server, $vhost);
@@ -188,18 +188,18 @@ else {
 	my $start = &bandwidth_period_start($ago);
 	if ($config{'bw_period'} eq 'week') {
 		# 7 days after start
-		return $day + 7*24*60*60 - 1;
+		$rv = $start + 7*24*60*60 - 1;
 		}
 	elsif ($config{'bw_period'} eq 'month') {
 		# End of the month
-		return &bandwidth_period_start($ago-1)-1;
+		$rv = &bandwidth_period_start($ago-1)-1;
 		}
 	elsif ($config{'bw_period'} eq 'year') {
 		# End of the year
-		return &bandwidth_period_start($ago-1)-1;
+		$rv = &bandwidth_period_start($ago-1)-1;
 		}
 	else {
-		return $day + $config{'bw_days'}*24*60*60 - 1;
+		$rv = $start + $config{'bw_days'}*24*60*60 - 1;
 		}
 	}
 return $rv;

@@ -74,7 +74,7 @@ $oldest = undef;
 foreach $s (@showservers) {
 	$oldest = $s->{'created'}
 		if ($s->{'created'} &&
-		    (!defined($oldest) || $s->{'created'} < $oldtest));
+		    (!defined($oldest) || $s->{'created'} < $oldest));
 	}
 
 # Work out time range to show
@@ -427,7 +427,11 @@ my $w3 = int($bar_width*$used3/$total);
 if ($w1) { $w1++; }
 elsif ($w2) { $w2++; }
 elsif ($w3) { $w3++; }
+$w1 = 100 if ($w1 > 100);
+$w2 = 100 if ($w2 > 100);
+$w3 = 100 if ($w3 > 100);
 my $w4 = int($bar_width - $w1 - $w2 - $w3);
+$w4 = 100 if ($w4 > 100);
 $rv .= "<div class='barchart' nowrap='nowrap'>";
 if ($w1) {$rv .= sprintf "<img src=images/red.gif width=%s%% height=12px>", $w1;}
 if ($w2) {$rv .= sprintf "<img src=images/purple.gif width=%s%% height=12px>", $w2;}
