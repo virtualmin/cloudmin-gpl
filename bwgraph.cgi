@@ -45,6 +45,10 @@ elsif ($mode eq 'host') {
 else {
 	# Servers with bandwidth
 	@showservers = grep { $rfunc = "type_".$_->{'manager'}."_real_interfaces"; defined(&$rfunc) } @servers;
+	if ($mode eq 'total') {
+		# Limit to virtual systems
+		@showservers = grep { &get_parent_server($_) } @showservers;
+		}
 	}
 &can_action_error(\@showservers, "graph");
 
