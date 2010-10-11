@@ -7309,7 +7309,7 @@ return &substitute_template($str, $hash);
 sub get_search_form_mode
 {
 my ($in) = @_;
-foreach my $i ('gok', 'pok', 'eok', 'sok', 'ok') {
+foreach my $i ('gok', 'pok', 'eok', 'sok', 'ook', 'ok') {
 	return $i if ($in->{$i});
 	}
 return undef;
@@ -7365,6 +7365,16 @@ push(@grid, &ui_select("ssearch", $in->{'ssearch'} || 'up',
 		      @server_statuses ]).
 	    " ".&ui_submit($text{'index_searchsok'}, "sok"));
 
+# Search by owner, if any
+my @owners = defined(&list_system_owners) ? &list_system_owners() : ();
+if (@owners && !$access{'owner'}) {
+	@owners = sort { $a->{'name'} cmp $b->{'name'} } @owners;
+	push(@grid, &highlight_field($text{'index_osearch'}, "ook"));
+	push(@grid, &ui_select("osearch", $in->{'osearch'},
+			       [ map { $_->{'name'} } @owners ]).
+		    " ".&ui_submit($text{'index_searchook'}, "ook"));
+	}
+
 # Search by EC2 account (normally hidden)
 if ($mode eq 'eok') {
 	push(@grid, &highlight_field($text{'index_esearch'}, "eok"));
@@ -7417,6 +7427,16 @@ elsif ($mode eq 'sok') {
 		return grep { &indexof($_->{'status'}, @sts) >= 0 }
 				@$servers;
 		}
+	}
+elsif ($mode eq 'ook') {
+	# Search by owner
+	my $owner = &get_system_owner($in->{'osearch'});
+	if ($owner) {
+		my %owned = map { $_, 1 }
+			split(/\s+/, $owner->{'acl'}->{'servers'});
+		return grep { $owned{$_->{'id'}} } @$servers;
+		}
+	return ( );
 	}
 else {
 	# By hostname
