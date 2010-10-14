@@ -3452,6 +3452,12 @@ if (!$config{'kvm_qemu'}) {
 	return $text{'kvm_ekernel'} if ($ex);
 	}
 
+# Make sure /dev/loop9 exists
+my @st = &stat_file_on_server($server, "/dev/loop9");
+if (!@st) {
+	&execute_command_on_server($server, "mknod /dev/loop9 b 7 9");
+	}
+
 return undef;
 }
 
