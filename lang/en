@@ -3630,6 +3630,7 @@ kvm_elinux=KVM systems are only supported on Linux
 kvm_ewhich=The required command $1 does not exist. Perhaps the KVM software is not installed?
 kvm_ewhich2=The required command $1 or $2 does not exist. Perhaps the KVM software is not installed?
 kvm_ekernel=The device file <tt>/dev/kvm</tt> is missing. Perhaps your do not have the KVM kernel module loaded, or your system does not support it?
+kvm_eloop=The loopback mount device $1 does not exist. Perhaps your kernel does not support loopback devices?
 kvm_ecpu=Your CPU does not have the VMX or SVM extensions needed for KVM
 kvm_edown=A system which cannot be contacted via SSH cannot be used for KVM hosting
 kvm_esoft=The selected system cannot support KVM instances : $1
