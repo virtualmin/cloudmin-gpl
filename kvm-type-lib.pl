@@ -1444,7 +1444,6 @@ sub type_kvm_startup
 my ($server, $noping) = @_;
 my $vhost = &type_kvm_parent($server);
 my $cmd = &get_kvm_start_command($server);
-print STDERR $cmd,"\n";
 my ($pinged, $sshed);
 
 # Create a console output file
