@@ -2165,6 +2165,7 @@ if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
 if ($disk->{'size'} != $olddisk->{'size'}) {
 	# Build the commands to run
 	my @cmds;
+	my $loop = &get_loop_device($vhost);
 
 	if ($disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
 		# Expand logical volume (before filesystem)
@@ -2189,11 +2190,11 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	if ($disk->{'size'} < $olddisk->{'size'} && $resizefs) {
 		# Shrink the filesystem
-		push(@cmds, "losetup -o $part->{'offset'} /dev/loop7 ".
+		push(@cmds, "losetup -o $part->{'offset'} $loop ".
 			    quotemeta($disk->{'real'}));
-		push(@cmds, "e2fsck -f -p /dev/loop7");
-		push(@cmds, "resize2fs /dev/loop7 ".$newmbs."M");
-		push(@cmds, "losetup -d /dev/loop7");
+		push(@cmds, "e2fsck -f -p $loop");
+		push(@cmds, "resize2fs $loop ".$newmbs."M");
+		push(@cmds, "losetup -d $loop");
 		}
 
 	# Delete the last partition, then re-create it
@@ -2208,11 +2209,11 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	if ($disk->{'size'} > $olddisk->{'size'} && $resizefs) {
 		# Expand the filesystem
-		push(@cmds, "losetup -o $part->{'offset'} /dev/loop7 ".
+		push(@cmds, "losetup -o $part->{'offset'} $loop ".
 			    quotemeta($disk->{'real'}));
-		push(@cmds, "e2fsck -f -p /dev/loop7");
-		push(@cmds, "resize2fs /dev/loop7 ".$newmbs."M");
-		push(@cmds, "losetup -d /dev/loop7");
+		push(@cmds, "e2fsck -f -p $loop");
+		push(@cmds, "resize2fs $loop ".$newmbs."M");
+		push(@cmds, "losetup -d $loop");
 		}
 
 	if (!$disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
@@ -2248,7 +2249,7 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		}
 
 	# Always remove loopback
-	&execute_command_on_server($vhost, "losetup -d /dev/loop7");
+	&execute_command_on_server($vhost, "losetup -d $loop");
 
 	# Update total disk size
 	if (!$moderr &&
@@ -2343,15 +2344,16 @@ my $vhost = &get_parent_server($server);
 my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
 ref($parts) || return (0, "Failed to list partitions : $parts");
 my $part = $parts->[@$parts - 1];
+my $loop = &get_loop_device($vhost);
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"losetup -o $part->{'offset'} /dev/loop7 ".quotemeta($disk->{'real'}));
+	"losetup -o $part->{'offset'} $loop ".quotemeta($disk->{'real'}));
 if ($ex || $err) {
 	return (0, "losetup failed : ".($err || $out));
 	}
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"fsck -y $flag /dev/loop7");
+	"fsck -y $flag $loop");
 &execute_command_on_server($vhost,
-	"losetup -d /dev/loop7");
+	"losetup -d $loop");
 if ($ex > 2 || $err) {
 	return (0, $out);
 	}
@@ -3452,9 +3454,9 @@ if (!$config{'kvm_qemu'}) {
 	return $text{'kvm_ekernel'} if ($ex);
 	}
 
-# Make sure /dev/loop7 exists
-my @st = &stat_file_on_server($server, "/dev/loop7");
-@st || return &text('kvm_eloop', "<tt>/dev/loop7</tt>");
+# Make sure /dev/loop1 exists
+my @st = &stat_file_on_server($server, "/dev/loop1");
+@st || return &text('kvm_eloop', "<tt>/dev/loop1</tt>");
 
 return undef;
 }

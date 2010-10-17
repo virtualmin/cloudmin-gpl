@@ -9409,6 +9409,27 @@ else {
 	}
 }
 
+# get_loop_device(&vhost)
+# Returns a free /dev/loop* device on some host system
+sub get_loop_device
+{
+my ($vhost) = @_;
+my ($out, $ex, $err) = &execute_command_on_server($vhost, "losetup -a");
+if ($ex || $err) {
+	# Take a guess
+	return "/dev/loop7";
+	}
+my %used;
+foreach my $l (split(/\r?\n/, $out)) {
+	if ($l =~ /^(\/dev\/loop(\d+))/) {
+		$used{$2} = 1;
+		}
+	}
+my $i;
+for($i=1; $used{$i}; $i++) { }
+return "/dev/loop".$i;
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server
