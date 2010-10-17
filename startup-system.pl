@@ -42,6 +42,7 @@ while(@ARGV > 0) {
         elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
         elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
+	elsif ($a eq "--wait-for-ssh") { $waitssh = 1; }
 	elsif ($a eq "--help") { &usage(); }
 	else {
 		&usage();
@@ -85,8 +86,25 @@ foreach $s (@servers) {
 			}
 		}
 
-	print "Refreshing status of $s->{'host'} ..\n";
-	&check_server_status($s, 0, 1);
+	if ($waitssh) {
+		# Wait for system to be SSH able
+		print "Waiting for SSH login to $s->{'host'} ..\n";
+		$start = time();
+		while(1) {
+			&check_server_status($s, 0, 1);
+			last if (&can_ssh_status($s));
+			$diff = time() - $start;
+			last if ($diff > $startup_ssh_timeout);
+			$desc = $text{'status_'.$s->{'status'}};
+			print "  .. status after $diff seconds is : ",
+			      "($s->{'status'} ($desc)\n";
+			}
+		}
+	else {
+		# Just check once
+		print "Refreshing status of $s->{'host'} ..\n";
+		&check_server_status($s, 0, 1);
+		}
 	&refresh_server_usage($s);
 	&save_managed_server($s);
 	$desc = $text{'status_'.$s->{'status'}};
@@ -108,6 +126,7 @@ print "                        [--os oscode]*\n";
 print "                        [--owner name]*\n";
 print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                        [--host-on name]\n";
+print "                        [--wait-for-ssh]\n";
 exit(1);
 }
 

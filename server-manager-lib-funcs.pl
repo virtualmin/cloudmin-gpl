@@ -2249,7 +2249,7 @@ my ($server, $timeout) = @_;
 $timeout ||= 60;
 my $ip = &get_server_ip($server);
 my $sshstart = time();
-while(time() - $sshstart < 60) {
+while(time() - $sshstart < $timeout) {
 	sleep(1);
 	my $ssherr;
 	eval {

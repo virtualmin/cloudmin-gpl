@@ -158,6 +158,8 @@ $old_api_helper_command = "/usr/sbin/vm2";
 
 $ping_host_timeout = int($config{'ping_timeout'}) || 2;
 
+$startup_ssh_timeout = int($config{'startup_ssh_timeout'}) || 5*60;
+
 $xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
 $xen_migration_port = 8002;
 
