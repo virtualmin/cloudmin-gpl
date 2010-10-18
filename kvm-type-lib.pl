@@ -2217,9 +2217,9 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	if (!$disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
 		# Truncate the file (after resizing filesystem)
-		push(@cmd, &dd_command($disk->{'real'},
-				       $disk->{'real'}.".tmp",
-				       $disk->{'size'}));
+		push(@cmds, &dd_command($disk->{'real'},
+				        $disk->{'real'}.".tmp",
+				        $disk->{'size'}));
 		push(@cmds, "mv ".quotemeta($disk->{'real'}.".tmp").
 		    " ".quotemeta($disk->{'real'}));
 		}
@@ -2231,8 +2231,10 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Run them in turn
 	foreach my $cmd (@cmds) {
+		print STDERR "cmd=$cmd\n";
 		my ($out, $ex, $err) = &execute_command_on_server(
 			$vhost, $cmd);
+		print STDERR "out=$out\n";
 		if ($cmd =~ /fsck/ && $ex == 1) {
 			# Safe to ignore filesystem fixes
 			$ex = 0;
