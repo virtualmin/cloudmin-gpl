@@ -97,7 +97,8 @@ foreach $s (@servers) {
 			last if ($diff > $startup_ssh_timeout);
 			$desc = $text{'status_'.$s->{'status'}};
 			print "  .. status after $diff seconds is : ",
-			      "($s->{'status'} ($desc)\n";
+			      "$s->{'status'} ($desc)\n";
+			sleep(1);
 			}
 		}
 	else {
