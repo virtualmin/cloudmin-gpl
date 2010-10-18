@@ -53,7 +53,8 @@ if ($in{'refresh'}) {
 	&webmin_log("refresh", "servers", scalar(@servers),
 		    { 'hosts' => \@hostnames });
 
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
+			 $text{'index_return'});
 	}
 
 elsif ($in{'delete'}) {
@@ -86,6 +87,7 @@ elsif ($in{'delete'}) {
 		print "<center>\n";
 		print &ui_form_start("mass.cgi", "post");
 		print &ui_hidden("delete", 1);
+		print &ui_hidden("referer", $ENV{'HTTP_REFERER'});
 		foreach $s (@servers) {
 			print &ui_hidden("d", $s->{'id'});
 			}
@@ -146,7 +148,8 @@ elsif ($in{'delete'}) {
 		&webmin_log("delete", "servers", scalar(@servers),
 			    { 'hosts' => \@hostnames });
 		}
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
+			 $text{'index_return'});
 	}
 
 elsif ($in{'dereg'}) {
@@ -167,6 +170,7 @@ elsif ($in{'dereg'}) {
 		print "<center>\n";
 		print &ui_form_start("mass.cgi", "post");
 		print &ui_hidden("dereg", 1);
+		print &ui_hidden("referer", $ENV{'HTTP_REFERER'});
 		foreach $s (@servers) {
 			print &ui_hidden("d", $s->{'id'});
 			}
@@ -189,7 +193,8 @@ elsif ($in{'dereg'}) {
 		&webmin_log("dereg", "servers", scalar(@servers),
 			    { 'hosts' => \@hostnames });
 		}
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
+			 $text{'index_return'});
 	}
 
 elsif ($in{'update'}) {
@@ -249,7 +254,8 @@ elsif ($in{'script'}) {
 		print $text{'mass_scnone'},"<p>\n";
 		}
 
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
+			 $text{'index_return'});
 	}
 
 elsif ($in{'shutdown'}) {
@@ -279,6 +285,7 @@ elsif ($in{'shutdown'}) {
 		print "<center>\n";
 		print &ui_form_start("mass.cgi", "post");
 		print &ui_hidden("shutdown", 1);
+		print &ui_hidden("referer", $ENV{'HTTP_REFERER'});
 		foreach $s (@servers) {
 			print &ui_hidden("d", $s->{'id'});
 			}
@@ -329,7 +336,8 @@ elsif ($in{'shutdown'}) {
 		&webmin_log("shutdown", "servers", scalar(@servers),
 			    { 'hosts' => \@hostnames });
 		}
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
+			 $text{'index_return'});
 	}
 
 elsif ($in{'startup'}) {
@@ -382,7 +390,8 @@ elsif ($in{'startup'}) {
 	&webmin_log("startup", "servers", scalar(@servers),
 		    { 'hosts' => \@hostnames });
 
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
+			 $text{'index_return'});
 	}
 
 elsif ($in{'reboot'}) {
@@ -396,6 +405,7 @@ elsif ($in{'reboot'}) {
 		print "<center>\n";
 		print &ui_form_start("mass.cgi", "post");
 		print &ui_hidden("reboot", 1);
+		print &ui_hidden("referer", $ENV{'HTTP_REFERER'});
 		foreach $s (@servers) {
 			print &ui_hidden("d", $s->{'id'});
 			}
@@ -442,7 +452,8 @@ elsif ($in{'reboot'}) {
 		&webmin_log("reboot", "servers", scalar(@servers),
 			    { 'hosts' => \@hostnames });
 		}
-	&ui_print_footer("", $text{'index_return'});
+	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
+			 $text{'index_return'});
 	}
 
 elsif ($in{'upload'}) {
