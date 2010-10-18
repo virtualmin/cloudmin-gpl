@@ -945,6 +945,7 @@ if ($server->{'kvm_filesystem_vg'}) {
 		   'vg' => $server->{'kvm_filesystem_vg'} };
 	if ($reset) {
 		# Delete the old LV
+		&delete_all_disk_image_partitions($vhost, $fsfile);
 		my $err = &remote_foreign_call($vhost, "lvm",
 				     "delete_logical_volume",
 				     { 'device' => $fsfile });
@@ -2084,14 +2085,7 @@ if (($server->{'status'} eq 'down' || &can_ssh_status($server)) &&
 	}
 
 if (!$detach) {
-	my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
-	if (ref($parts)) {
-		# Delete all partitions so that the LV can be removed
-		foreach my $p (reverse(@$parts)) {
-			&delete_disk_image_partition($vhost, $disk->{'real'},
-						     $p->{'part'});
-			}
-		}
+	&delete_all_disk_image_partitions($vhost, $disk->{'real'});
 	if (!$disk->{'device'} && $disk->{'real'} !~ /^\/dev\//) {
 		# Delete the image file
 		&delete_file_on_server($vhost, $disk->{'real'});
@@ -2231,10 +2225,8 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Run them in turn
 	foreach my $cmd (@cmds) {
-		print STDERR "cmd=$cmd\n";
 		my ($out, $ex, $err) = &execute_command_on_server(
 			$vhost, $cmd);
-		print STDERR "out=$out\n";
 		if ($cmd =~ /fsck/ && $ex == 1) {
 			# Safe to ignore filesystem fixes
 			$ex = 0;
@@ -3571,6 +3563,7 @@ if ($server->{'kvm_filesystem_lv'} && $server->{'status'} ne 'down' &&
 			       'alloc' => 'n', };
 		$snaplv->{'device'} = '/dev/'.$snaplv->{'vg'}.'/'.
 				      $snaplv->{'name'};
+		&delete_all_disk_image_partitions($vhost, $snaplv);
 		&remote_foreign_call($vhost, "lvm",
 				     "delete_logical_volume", $snaplv);
 		$last_remote_error = undef;
@@ -3654,6 +3647,7 @@ if ($server->{'kvm_filesystem_lv'}) {
 		&$first_print(&text('brun_unsnapshot', $server->{'host'}));
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		foreach my $snaplv (@snaps) {
+			&delete_all_disk_image_partitions($vhost, $snaplv);
 			&remote_foreign_call($vhost, "lvm",
 					     "delete_logical_volume", $snaplv);
 			}
@@ -4178,6 +4172,7 @@ if (@delfiles) {
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		}
 	foreach my $f (@dellvs) {
+		&delete_all_disk_image_partitions($vhost, $f);
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
 				     { 'device' => $f });
 		}

@@ -363,6 +363,7 @@ return undef;
 sub delete_disk_image_partition
 {
 my ($vhost, $real, $part) = @_;
+$real || return "Missing device to delete partition from";
 if (&has_command_on_server($vhost, "parted")) {
 	# Delete with parted
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
@@ -394,6 +395,23 @@ else {
 		}
 	}
 return undef;
+}
+
+# delete_all_disk_image_partitions(&vhost, real)
+# Delete all partitions from some disk
+sub delete_all_disk_image_partitions
+{
+my ($vhost, $real) = @_;
+my $parts = &list_disk_image_partitions($vhost, $real);
+if (ref($parts)) {
+	my $err;
+	foreach my $p (reverse(@$parts)) {
+		$err ||= &delete_disk_image_partition($vhost, $real,
+						      $p->{'part'});
+		}
+	return $err;
+	}
+return $parts;
 }
 
 # create_disk_image_filesystem(&server, device, filesystem, [partition])
