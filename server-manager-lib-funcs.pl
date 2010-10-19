@@ -4790,7 +4790,8 @@ if (!$err) {
 		my @w = split(/:/, $l, -1);
 		if ($w[0] eq "root") {
 			my $salt = substr(time(), -2);
-			$w[1] = &unix_crypt($pass, $salt);
+			$w[1] = defined($pass) ? &unix_crypt($pass, $salt)
+					       : "*LK*";
 			$l = join(':', @w);
 			}
 		}

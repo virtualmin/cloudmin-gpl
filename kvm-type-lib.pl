@@ -1232,6 +1232,10 @@ if (!$empty && $mp) {
 			&$second_print($text{'create_done'});
 			}
 		}
+	else {
+		# Using key, so clear password
+		&set_shadow_root_password($server, undef);
+		}
 
 	# Create authorized keys file
 	if ($server->{'key'}) {
