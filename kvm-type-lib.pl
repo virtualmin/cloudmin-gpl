@@ -268,6 +268,12 @@ if ($got->{'args'}->{'boot'}) {
 	}
 delete($got->{'args'}->{'boot'});
 
+# Save keymap
+if ($got->{'args'}->{'k'}) {
+	$server->{'kvm_keymap'} = $got->{'args'}->{'k'};
+	}
+delete($got->{'args'}->{'k'});
+
 # Delete args we don't need to save
 delete($got->{'args'}->{'name'});
 delete($got->{'args'}->{'serial'});
@@ -1664,6 +1670,11 @@ if (ref($inuse)) {
 	}
 else {
 	$cmd .= " -nographic";
+	}
+
+# Add keymap flag
+if ($server->{'kvm_keymap'}) {
+	$cmd .= " -k ".$server->{'kvm_keymap'};
 	}
 
 # Add other imported flags
@@ -3106,7 +3117,30 @@ if ($server->{'kvm_args'}) {
 $rv .= &ui_table_row($text{'edit_kvmdriver'},
 	$server->{'kvm_virtio'} ? "VirtIO" : "IDE");
 
+# Console keymap
+$rv .= &ui_table_row($text{'edit_kvmkeymap'},
+	&ui_select('kvm_keymap', $server->{'kvm_keymap'},
+		   [ [ '', "&lt;$text{'default'}&gt;" ],
+		     sort { $a->[1] cmp $b->[1] }
+			  &list_kvm_keymaps($server) ]));
+
 return $rv;
+}
+
+# type_kvm_edit_parse(&server, &in)
+# Update a server based on inputs from type_kvm_edit_form
+sub type_kvm_edit_parse
+{
+my ($server, $in) = @_;
+if ($in->{'kvm_keymap'} eq '') {
+	delete($server->{'kvm_keymap'});
+	}
+else {
+	my @keymaps = &list_kvm_keymaps($server);
+	my ($k) = grep { $_->[0] eq $in->{'kvm_keymap'} } @keymaps;
+	$k || &error($text{'edit_ekvmkeymap'});
+	$server->{'kvm_keymap'} = $k->[0];
+	}
 }
 
 # type_kvm_server_info(&server)
@@ -3129,6 +3163,9 @@ if ($server->{'kvm_args'}) {
 	push(@rv, [ "KVM command line args", $server->{'kvm_args'} ]);
 	}
 push(@rv, [ "KVM disk driver", $server->{'kvm_virtio'} ? "VirtIO" : "IDE" ]);
+if ($server->{'kvm_keymap'}) {
+	push(@rv, [ "KVM console keyboard type", $server->{'kvm_keymap'} ]);
+	}
 return @rv;
 }
 
@@ -4364,6 +4401,47 @@ foreach my $p (@$procs) {
 		}
 	}
 return \@rv;
+}
+
+# list_kvm_keymaps([&server])
+# Returns a list of array refs, each containing a keymap code and description
+sub list_kvm_keymaps
+{
+return (
+	[ "ar", "Arabic" ],
+	[ "de-ch", "German (Switzerland)" ],
+        [ "es", "Spanish" ],
+	[ "fo", "Faeroese" ],
+        [ "fr-ca", "French (Canada)" ],
+	[ "hu", "Hungarian" ],
+	[ "ja", "Japanese" ],
+	[ "mk", "FYRO Macedonian" ],
+	[ "no", "Norwegian" ],
+	[ "pt-br", "Portuguese (Brazil)" ],
+	[ "sv", "Swedish" ],
+	[ "da", "Danish" ],
+	[ "en-gb", "English (United Kingdom)" ],
+	[ "et", "Estonian" ],
+	[ "fr", "French" ],
+	[ "fr-ch", "French (Switzerland)" ],
+	[ "is", "Icelandic" ],
+	[ "lt", "Lithuanian" ],
+	[ "nl", "Dutch" ],
+	[ "pl", "Polish" ],
+	[ "ru", "Russian" ],
+	[ "th", "Thai" ],
+	[ "de", "German" ],
+	[ "en-us", "English (United States)" ],
+	[ "fi", "Finnish" ],
+	[ "fr-be", "French (Belgium)" ],
+	[ "hr", "Croatian" ],
+	[ "it", "Italian" ],
+	[ "lv", "Latvian" ],
+	[ "nl-be", "Dutch (Belgium)" ],
+	[ "pt", "Portuguese" ],
+	[ "sl", "Slovenian" ],
+	[ "tr", "Turkish" ],
+	);
 }
 
 # parse_kvm_start_command(command-line)
