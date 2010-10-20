@@ -2244,7 +2244,7 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 	foreach my $cmd (@cmds) {
 		my ($out, $ex, $err) = &execute_command_on_server(
 			$vhost, $cmd);
-		if ($cmd =~ /fsck/ && $ex == 1) {
+		if ($cmd =~ /fsck/ && ($ex == 1 || $ex == 256)) {
 			# Safe to ignore filesystem fixes
 			$ex = 0;
 			}
