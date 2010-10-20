@@ -4861,6 +4861,23 @@ foreach my $t ('', 'dsa', 'rsa') {
 	my $hkf = "/etc/ssh/".($t ? "ssh_host_${t}_key" : "ssh_host_key");
 	my @st = &stat_file_on_server($server, $hkf);
 	next if (!@st);
+
+	# Try to generate key locally, as it can be slow on a remote host
+	# due to lack of entropy
+	my $temp = &transname();
+	my $out = &backquote_command(
+		"ssh-keygen".($t ? " -t $t" : "")." -f $temp -N '' ".
+		"-C root\@$server->{'host'} </dev/null");
+	if (!$? && -s $temp) {
+		my $err = &put_file_to_server($server, $temp, $hkf);
+		&unlink_file($temp);
+		if (!$err) {
+			$found++;
+			next;
+			}
+		}
+	
+	# Try generation on the server
 	my $err = &delete_file_on_server($server, $hkf);
 	if ($err) {
 		return "Failed to delete $hkf : $err";
