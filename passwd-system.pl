@@ -130,7 +130,7 @@ if (defined($webmin_pass)) {
 	($sshstatus, $ssherr, $wroot, $wport, $wssl) =
 		&check_server_ssh_login($server);
 	$err = &set_server_webmin_password($server, $wroot,
-					   'root', $webmin_pass);
+				   $server->{'user'} || 'root', $webmin_pass);
 	if ($err) {
 		print ".. failed : $err\n\n";
 		$failed++;
