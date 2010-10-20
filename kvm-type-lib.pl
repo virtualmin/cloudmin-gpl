@@ -933,9 +933,11 @@ if ($server->{'kvm_model'}) {
 		}
 	}
 
-# Set drive in config
-$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,".
+# Set drive in config, unless resetting in which case they stay the same
+if (!$reset) {
+	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,".
 		  ($server->{'kvm_virtio'} ? "if=virtio,boot=on" : "if=ide");
+	}
 
 # If on LVM, create an LV first
 $last_remote_error = undef;
