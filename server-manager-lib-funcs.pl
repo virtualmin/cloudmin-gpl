@@ -1108,6 +1108,7 @@ else {
 	if ($server->{'ssh_port'}) {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
+	$sshcmd .= &ssh_command_args();
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}:".
 		   quotemeta($remotefile);
 	if (-d $localfile && &is_dir_on_server($server, $remotefile)) {
@@ -1170,8 +1171,26 @@ if ($server->{'ssh_port'}) {
 	$sshcmd .= " -p ".$server->{'ssh_port'};
 	}
 $sshcmd .= " ".$extra if ($extra);
+$sshcmd .= &ssh_command_args();
 $sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}";
 return $sshcmd;
+}
+
+# ssh_command_args()
+# Returns extra args for the ssh command for compression and/or encryption
+sub ssh_command_args
+{
+my $rv;
+if ($config{'ssh_compress'}) {
+	$rv .= " -C";
+	}
+my $ciphers = $config{'ssh_ciphers'};
+if ($ciphers && $ciphers ne '*') {
+	$ciphers =~ s/_/-/g;
+	$rv .= " -c ".quotemeta($ciphers);
+	}
+$rv .= " " if ($rv);
+return $rv;
 }
 
 # clear_ssh_host_key(&server)
@@ -1304,6 +1323,7 @@ else {
 	if ($server->{'ssh_port'}) {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
+	$sshcmd .= &ssh_command_args();
 	$sshcmd .= " ".quotemeta($localfile);
 	if (-d $localfile && &is_dir_on_server($server, $remotefile)) {
 		$sshcmd .= "/*";
@@ -1358,6 +1378,7 @@ if ($server->{'key'}) {
 if ($server->{'ssh_port'}) {
 	$sshcmd .= " -P ".$server->{'ssh_port'};
 	}
+$sshcmd .= &ssh_command_args();
 $sshcmd .= " ".join(" ", map { quotemeta($_) } @$localfiles).
 	   " $server->{'ssh_user'}\@$server->{'ip'}:".
 	   quotemeta($remotedir)."/";
@@ -1430,6 +1451,7 @@ else {
 		if ($destserver->{'ssh_port'}) {
 			$sshcmd .= " -p ".$destserver->{'ssh_port'};
 			}
+		$sshcmd .= &ssh_command_args();
 		$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
 		$sshcmd .= " ".&dd_command(undef, $dest);
 		}
@@ -1443,6 +1465,7 @@ else {
 		if ($destserver->{'ssh_port'}) {
 			$sshcmd .= " -P ".$destserver->{'ssh_port'};
 			}
+		$sshcmd .= &ssh_command_args();
 		$sshcmd .= " ".quotemeta($src);
 		if ($srcisdir && $destisdir) {
 			$sshcmd .= "/\\*";
@@ -1607,6 +1630,7 @@ else {
 	if ($destserver->{'ssh_port'}) {
 		$sshcmd .= " -p ".$destserver->{'ssh_port'};
 		}
+	$sshcmd .= &ssh_command_args();
 	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
 	$sshcmd .= " ".&dd_command(undef, $dest);
 	if ($keytemp) {
@@ -1743,6 +1767,7 @@ else {
 	if ($destserver->{'ssh_port'}) {
 		$sshcmd .= " -p ".$destserver->{'ssh_port'};
 		}
+	$sshcmd .= &ssh_command_args();
 	$sshcmd .= " $destserver->{'ssh_user'}\@$destserver->{'ip'}";
 	$sshcmd .= " ".quotemeta($destcmd);
 	if ($keytemp) {
