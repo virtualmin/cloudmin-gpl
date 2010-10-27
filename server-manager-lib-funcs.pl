@@ -6090,7 +6090,9 @@ if (defined(&$dfunc) && &$dfunc($server) && $status ne 'paused' &&
 
 # Virtual CPUs
 my $vfunc = "type_".$t."_can_vcpus";
-if (defined(&$vfunc) && &$vfunc($server) &&
+my $sfunc = "type_".$t."_can_smp";
+if ((defined(&$vfunc) && &$vfunc($server) ||
+     defined(&$sfunc) && &$sfunc($server)) &&
     &can_action($server, "vcpus")) {
 	push(@rv, { 'id' => 'vcpus',
 		    'desc' => $text{'edit_vcpus'},
@@ -9471,6 +9473,43 @@ foreach my $l (split(/\r?\n/, $out)) {
 my $i;
 for($i=1; $used{$i}; $i++) { }
 return "/dev/loop".$i;
+}
+
+# list_server_cpus(&server)
+# Returns array ref list of CPUs on system. Each is a hash ref with 'num' and
+# 'desc' fields.
+sub list_server_cpus
+{
+my ($server) = @_;
+my ($info, $ex, $err) = &execute_command_on_server($server,
+				"cat /proc/cpuinfo");
+return "Failed to get CPUs" if ($ex || $err);
+my @rv;
+my $cpu;
+foreach my $l (split(/\r?\n/, $info)) {
+	if ($l =~ /^processor\s*:\s*(\d+)/i) {
+		# Start of new CPU
+		$cpu = { 'num' => $1 };
+		push(@rv, $cpu);
+		}
+	elsif ($l =~ /^model\s+name\s*:\s*(\S.*)/) {
+		$cpu->{'desc'} = $1;
+		}
+	elsif ($l =~ /^physical\s+id\s*:\s*(\d+)/) {
+		$cpu->{'physical'} = $1;
+		}
+	elsif ($l =~ /^core\s+id\s*:\s*(\d+)/) {
+		$cpu->{'core'} = $1;
+		}
+	}
+# Add core info to descriptions
+foreach my $cpu (@rv) {
+	if (defined($cpu->{'physical'}) && defined($cpu->{'core'})) {
+		$cpu->{'desc'} .=
+			", IC $cpu->{'physical'}, core $cpu->{'core'}";
+		}
+	}
+return \@rv;
 }
 
 # obtain_lock_server(&server|&servers, [readonly])

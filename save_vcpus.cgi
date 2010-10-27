@@ -9,45 +9,67 @@ $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "vcpus");
 
-# Get the CPUs
-$vfunc = "type_".$server->{'manager'}."_get_vcpus";
-$cpus = &$vfunc($server);
-ref($cpus) || &error(&text('vcpus_eget', $cpus));
+# Work out if we support just a number of VCPUs, or arbitrary pinning
+$canvfunc = "type_".$server->{'manager'}."_can_vcpus";
+$cansfunc = "type_".$server->{'manager'}."_can_smp";
 
-# Parse inputs
-@vcpus = ( );
-@nums = split(/\0/, $in{'num'});
-$n = 0;
-foreach $i (@nums) {
-	$cpu = { 'num' => $n++ };
-	if (!$in{"pin_def_$i"}) {
-		@pins = sort { $a <=> $b } split(/\0/, $in{"pin_$i"});
-		@pins || &error(&text('vcpus_epinnone', $i));
-		if (@pins == 1) {
-			$cpu->{'pin'} = $pins[0];
-			}
-		else {
-			# Must be in a range
-			for($j=1; $j<@pins; $j++) {
-				$pins[$j] == $pins[$j-1]+1 ||
-					&error(&text('vcpus_epinrange', $i));
+if (defined(&$canvfunc) && &$canvfunc($server)) {
+        # Arbitrary pinning supported
+	# Get the CPUs
+	$vfunc = "type_".$server->{'manager'}."_get_vcpus";
+	$cpus = &$vfunc($server);
+	ref($cpus) || &error(&text('vcpus_eget', $cpus));
+
+	# Parse inputs
+	@vcpus = ( );
+	@nums = split(/\0/, $in{'num'});
+	$n = 0;
+	foreach $i (@nums) {
+		$cpu = { 'num' => $n++ };
+		if (!$in{"pin_def_$i"}) {
+			@pins = sort { $a <=> $b } split(/\0/, $in{"pin_$i"});
+			@pins || &error(&text('vcpus_epinnone', $i));
+			if (@pins == 1) {
+				$cpu->{'pin'} = $pins[0];
 				}
-			$cpu->{'pin'} = $pins[0]."-".$pins[$#pins];
+			else {
+				# Must be in a range
+				for($j=1; $j<@pins; $j++) {
+					$pins[$j] == $pins[$j-1]+1 ||
+					  &error(&text('vcpus_epinrange', $i));
+					}
+				$cpu->{'pin'} = $pins[0]."-".$pins[$#pins];
+				}
 			}
+		push(@vcpus, $cpu);
 		}
-	push(@vcpus, $cpu);
+	@vcpus || &error($text{'vcpus_nonesel'});
 	}
-@vcpus || &error($text{'vcpus_nonesel'});
+elsif (defined(&$cansfunc) && &$cansfunc($server)) {
+	# Only CPU count supported
+	$in{'smp'} =~ /^\d+$/ && $in{'smp'} > 0 ||
+		&error($text{'vcpus_esmp'});
+	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'vcpus_title'}, "");
 &obtain_lock_server($server);
 
 # Apply on system
 &$first_print($text{'vcpus_applying'});
-$vfunc = "type_".$server->{'manager'}."_save_vcpus";
-$err = &$vfunc($server, \@vcpus);
+
+if (defined(&$canvfunc) && ($can = &$canvfunc($server))) {
+	# Apply pinning
+	$vfunc = "type_".$server->{'manager'}."_save_vcpus";
+	$err = &$vfunc($server, \@vcpus);
+	}
+elsif (defined(&$cansfunc) && ($can = &$cansfunc($server))) {
+	# Apply CPU count
+	$sfunc = "type_".$server->{'manager'}."_save_smp";
+	$err = &$sfunc($server, $in{'smp'});
+	}
 &save_managed_server($server);
 &release_lock_server($server);
+
 if ($err) {
 	&$second_print(&text('vcpus_failed', $err));
 	}
@@ -55,8 +77,7 @@ else {
 	&$second_print($text{'create_done'});
 
 	# Offer to reboot if needed
-	$cfunc = "type_".$server->{'manager'}."_can_vcpus";
-	if (&$cfunc($server) == 2 && $server->{'status'} ne 'down') {
+	if ($can == 2 && $server->{'status'} ne 'down') {
 		print &ui_form_start("save_serv.cgi");
 		print &ui_hidden("id", $in{'id'});
 		print &ui_hidden("reboot", 1);

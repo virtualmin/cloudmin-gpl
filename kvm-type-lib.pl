@@ -274,6 +274,12 @@ if ($got->{'args'}->{'k'}) {
 	}
 delete($got->{'args'}->{'k'});
 
+# Save SMP
+if ($got->{'args'}->{'smp'}) {
+	$server->{'kvm_smp'} = $got->{'args'}->{'smp'};
+	}
+delete($got->{'args'}->{'smp'});
+
 # Delete args we don't need to save
 delete($got->{'args'}->{'name'});
 delete($got->{'args'}->{'serial'});
@@ -1683,6 +1689,11 @@ if ($server->{'kvm_keymap'}) {
 	$cmd .= " -k ".$server->{'kvm_keymap'};
 	}
 
+# Add SMP flag
+if ($server->{'kvm_smp'}) {
+	$cmd .= " -smp ".$server->{'kvm_smp'};
+	}
+
 # Add other imported flags
 if ($server->{'kvm_args'}) {
 	$cmd .= " ".$server->{'kvm_args'};
@@ -2421,6 +2432,33 @@ $server->{'kvm_memory'} = $mbs;
 return undef;
 }
 
+# type_kvm_can_smp(&server)
+# Returns 2, indicating the number of virtual CPUs can be changed with a reboot
+sub type_kvm_can_smp
+{
+return 2;
+}
+
+# type_kvm_get_smp(&server)
+# Returns the number of virtual CPUs 
+sub type_kvm_get_smp
+{
+my ($server) = @_;
+return $server->{'kvm_smp'} || 1;
+}
+
+# type_kvm_save_smp(&server, cpus)
+# Sets the number of virtual CPUs
+sub type_kvm_save_smp
+{
+my ($server, $smp) = @_;
+$smp > 0 || return "KVM virtual CPUs must be at least 1";
+$smp < 256 || return "KVM virtual CPUs must be less than 256";
+$server->{'kvm_smp'} = $smp;
+&type_kvm_set_atboot($server, 2);
+return undef;
+}
+
 # type_kvm_can_interfaces(&server)
 # KVM interface management is via Webmin or via SSH, so it needs to be up.
 # The return value of 2 means that interfaces can also be 'real'
@@ -3146,6 +3184,7 @@ else {
 	my ($k) = grep { $_->[0] eq $in->{'kvm_keymap'} } @keymaps;
 	$k || &error($text{'edit_ekvmkeymap'});
 	$server->{'kvm_keymap'} = $k->[0];
+	&type_kvm_set_atboot($server, 2);
 	}
 }
 
