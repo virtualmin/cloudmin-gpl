@@ -275,6 +275,14 @@ if ($multi) {
 				}
 			}
 
+		# Virtual CPU count
+		$cfunc = "type_".$s->{'manager'}."_can_smp";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$mfunc = "type_".$s->{'manager'}."_get_smp";
+			$smp = &$mfunc($s);
+			print "    Virtual CPUs: ",$smp,"\n";
+			}
+
 		# Disk space limit
 		$cfunc = "type_".$s->{'manager'}."_can_disk";
 		if (defined(&$cfunc) && &$cfunc($s)) {

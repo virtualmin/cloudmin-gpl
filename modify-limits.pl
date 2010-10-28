@@ -101,6 +101,7 @@ while(@ARGV > 0) {
 		$vcpus = shift(@ARGV);
 		if ($vcpus =~ /^\d+$/) {
 			# Just a number of CPUs
+			$vcpus_count = $vcpus;
 			$vcpus || &usage("Number of virtual CPUs cannot be 0");
 			$vcpus = join(",", (0..($vcpus-1)));
 			}
@@ -284,14 +285,15 @@ foreach $s (@servers) {
 	# Change virtual CPUs
 	if (defined($vcpus)) {
 		print "Setting virtual CPUs on $tdesc system $s->{'host'} ..\n";
-		$cfunc = "type_".$t."_can_vcpus";
+		$canvfunc = "type_".$t."_can_vcpus";
+		$cansfunc = "type_".$t."_can_smp";
 		if (!&can_action($s, "vcpus")) {
 			# Not allowed
 			print ".. you are not allowed to manage virtual CPUs\n";
 			$failed++;
 			}
-		elsif (defined(&$cfunc) && &$cfunc($s)) {
-			# Make the change
+		elsif (defined(&$canvfunc) && &$canvfunc($s)) {
+			# Make the change to CPU pinning
 			$vfunc = "type_".$t."_save_vcpus";
 			$err = &$vfunc($s, \@vcpus);
 			if ($err) {
@@ -300,7 +302,27 @@ foreach $s (@servers) {
 				}
 			else {
 				print ".. done\n";
-				$reboot++ if (&$cfunc($s) == 2);
+				$reboot++ if (&$canvfunc($s) == 2);
+				}
+			}
+		elsif (defined(&$cansfunc) && &$cansfunc($s)) {
+			# Make the change to CPU count only
+			$sfunc = "type_".$t."_save_smp";
+			if (!$vcpus_count) {
+				$err = "This virtual system type only ".
+				       "supports setting a number of virtual ".
+				       "CPUs";
+				}
+			else {
+				$err = &$sfunc($s, $vcpus_count);
+				}
+			if ($err) {
+				print ".. failed : $err\n";
+				$failed++;
+				}
+			else {
+				print ".. done\n";
+				$reboot++ if (&$cansfunc($s) == 2);
 				}
 			}
 		else {
