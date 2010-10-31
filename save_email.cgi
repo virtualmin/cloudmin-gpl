@@ -19,7 +19,9 @@ if ($in{'smtp_def'}) {
 	delete($mailboxes::config{'send_mode'});
 	}
 else {
-	gethostbyname($in{'smtp'}) || &error($text{'email_esmtp'});
+	&to_ipaddress($in{'smtp'}) ||
+	    defined(&to_ip6address) && &to_ip6address($in{'smtp'}) ||
+		&error($text{'email_esmtp'});
 	$mailboxes::config{'send_mode'} = $in{'smtp'};
 	}
 

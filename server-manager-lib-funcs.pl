@@ -4170,7 +4170,7 @@ if ($cache) {
 	# Use last checked values
 	return @$cache;
 	}
-if ($server->{'pass'} && gethostbyname($server->{'host'})) {
+if ($server->{'pass'} && &to_ipaddress($server->{'host'})) {
 	# Ask Webmin first
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "software", "software-lib.pl");
@@ -9332,7 +9332,9 @@ sub parse_backup_ssh_dest
 {
 my ($dest, $pfx, $in) = @_;
 $in->{$pfx."_host"} =~ /^\S+$/ || return $text{'backups_e'.$pfx.'host'};
-gethostbyname($in->{$pfx."_host"}) || return $text{'backups_e'.$pfx.'host2'};
+&to_ipaddress($in->{$pfx."_host"}) ||
+    defined(&to_ip6address) && &to_ip6address($in->{$pfx."_host"}) ||
+	return $text{'backups_e'.$pfx.'host2'};
 $dest->{'host'} = $in->{$pfx."_host"};
 
 $in->{$pfx."_port_def"} || $in->{$pfx."_port"} =~ /^\d+$/ ||
