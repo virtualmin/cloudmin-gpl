@@ -2362,6 +2362,7 @@ if ($status == 2) {
 	# Could not login via SSH
 	$server->{'status'} = 'nosshlogin';
 	$server->{'status_msg'} = $err;
+	$server->{'status_msg'} =~ s/\r?\n/ /g;
 	goto DONECHECK;
 	}
 elsif ($status == 7) {
@@ -3153,12 +3154,12 @@ elsif ($mode eq "mem") {
 return $server;
 }
 
-# parallel_server_function(&servers, &function, [&args])
+# parallel_server_function(&servers, &function, [&args], [max-time])
 # Calls some function on multiple servers, in 10 (by default) processes.
 # Returns an array of the return values from the functions in those processes.
 sub parallel_server_function
 {
-my ($servers, $func, $args) = @_;
+my ($servers, $func, $args, $maxtime) = @_;
 
 # Build 10 buckets
 my @buckets;
@@ -3189,9 +3190,24 @@ for(my $i=0; $i<$procs; $i++) {
 	}
 
 # Wait for them all
-while(@pids) {
-	my $pid = wait();
-	@pids = grep { $_ ne $pid } @pids;
+eval {
+	alarm($maxtime) if ($maxtime);
+	local $SIG{'ALRM'} = sub { die "timeout\n" };
+	while(@pids) {
+		my $pid = wait();
+		@pids = grep { $_ ne $pid } @pids;
+		}
+	alarm(0);
+	};
+if ($@ =~ /timeout/) {
+	# Took too long - kill all subprocesses!
+	foreach my $pid (@pids) {
+		kill('KILL', $pid);
+		}
+	&error("Parallel function took longer than $maxtime seconds!");
+	}
+elsif ($@) {
+	die $@;
 	}
 
 # Read back result files, and return as list
@@ -3210,25 +3226,32 @@ return @rv;
 }
 
 # parallel_check_server_status(&servers, [re-generate], [skip-locked])
-# Checks the status of multiple servers in 10 (by default) processes
+# Checks the status of multiple servers in 10 (by default) processes.
+# Allow at most 1 minute per server on average.
 sub parallel_check_server_status
 {
 my ($servers, $regen, $skiplock) = @_;
 my $time = time();
+my $maxtime = scalar(@$servers)/$config{'procs'}*60;
+if ($maxtime > 60*60) {
+	$maxtime = 60*60;
+	}
+elsif ($maxtime < 5*60) {
+	$maxtime = 5*60;
+	}
 return &parallel_server_function($servers,
 	sub { if (!$skiplock || !&test_lock_server($_[0])) {
-		&obtain_lock_server($_[0]);
 	        &check_server_status($_[0], $regen, 0, $time);
 	        &save_managed_server($_[0]);
 	        if (defined(&refresh_server_usage)) {
 		  &refresh_server_usage($_[0], $time);
 	        }
-		&release_lock_server($_[0]);
 	      }
 	      return ( $_[0]->{'status'}, $_[0]->{'status_msg'},
 		       $_[0]->{'virtualmin_domains'},
 		       $_[0]->{'virtualmin_error'} );
-	    });
+	    },
+	undef, $maxtime);
 }
 
 # parallel_install_package_updates(&servers, [&packages])
