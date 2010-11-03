@@ -3232,12 +3232,17 @@ sub parallel_check_server_status
 {
 my ($servers, $regen, $skiplock) = @_;
 my $time = time();
-my $maxtime = scalar(@$servers)/$config{'procs'}*60;
+my $perproc = scalar(@$servers) * 1.0 / $config{'procs'};
+$perproc = 1 if ($perproc < 1);
+my $maxtime = $perproc * 60;
 if ($maxtime > 60*60) {
 	$maxtime = 60*60;
 	}
 elsif ($maxtime < 5*60) {
 	$maxtime = 5*60;
+	}
+else {
+	$maxtime = int($maxtime);
 	}
 return &parallel_server_function($servers,
 	sub { if (!$skiplock || !&test_lock_server($_[0])) {

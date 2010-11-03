@@ -4227,17 +4227,24 @@ my @nets = split(/\s+/, $server->{'kvm_net'});
 foreach my $net (@nets) {
 	if ($net =~ /script=([^,]+)/) {
 		my $script = $1;
-		my @st = &stat_file_on_server($dest, $script);
+		my $newscript = $script;
+		$newscript =~ s/^.*[\\\/]//;
+		$newscript = "$dest->{'kvm_dir'}/$newscript";
+		my @st = &stat_file_on_server($dest, $newscript);
 		if ($script =~ /^\Q$vhost->{'kvm_dir'}\/\E/ && !@st) {
 			my $err = &transfer_file_between_servers($vhost, $dest,
-					$script, $script, 0, 1);
+					$script, $newscript, 0, 1);
 			if ($err) {
 				return &text('smove_ebridge', $script, $err);
 				}
 			&delete_file_on_server($vhost, $script);
+			if ($script ne $newscript) {
+				$net =~ s/net=\Q$script\E/new=$newscript/;
+				}
 			}
 		}
 	}
+$server->{'kvm_net'} = join(" ", @nets);
 
 # Delete the original disk images
 if (@delfiles) {
