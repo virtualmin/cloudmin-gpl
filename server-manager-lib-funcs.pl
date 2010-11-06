@@ -1090,7 +1090,7 @@ if ($server->{'ssh_nologin'}) {
 if ($device) {
 	# Run dd on the server and capture output
 	my $sshcmd = &build_ssh_command($server);
-	$sshcmd .= &dd_command($remotefile, undef)." | ".
+	$sshcmd .= " ".&dd_command($remotefile, undef)." | ".
 		   &dd_command(undef, $localfile);
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
@@ -1305,7 +1305,7 @@ if ($server->{'ssh_nologin'}) {
 if ($device) {
 	# Run dd piped into SSH
 	my $sshcmd = &build_ssh_command($server);
-	$sshcmd .= &dd_command(undef, $remotefile);
+	$sshcmd .= " ".&dd_command(undef, $remotefile);
 	$sshcmd = &dd_command($localfile, undef)." | ".$sshcmd;
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
