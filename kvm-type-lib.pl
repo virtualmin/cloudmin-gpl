@@ -359,7 +359,8 @@ if (&can_action(undef, "ips")) {
 
 		# Add a hidden section for each host, with a row for each
 		# of its interfaces
-		my @locs = &list_vhost_locations(\@vhosts);
+		my @locs = defined(&list_vhost_locations) ?
+				&list_vhost_locations(\@vhosts) : ( );
 		my $style = @locs ? "opener_hidden" : "opener_shown";
 		foreach my $vhost (@vhosts) {
 			my $vtable = &ui_columns_start([
