@@ -36,8 +36,8 @@ if (@owners) {
 			"<a href='edit_owner.cgi?name=".&urlize($o->{'name'}).
 			 "'>$name</a>",
 			$o->{'real'},
-			$plan ? ( $plan->{'desc'}, &owner_limits_desc($o, 1) )
-			      : ( ),
+			$plan ? ( $plan->{'desc'}, &owner_limits_desc($o, 1) ) :
+			&supports_plans() ? ( "", "" ) : ( ),
 			$users,
 			], \@tds, "d", $o->{'name'});
 		}

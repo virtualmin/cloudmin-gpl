@@ -80,12 +80,15 @@ print &ui_hidden_table_start($text{'plan_header3'}, "width=100%", 2, "hosts", 0,
 @parents = grep { &is_parent_server($_) } &list_managed_servers();
 if (@parents) {
 	@parents = sort { $a->{'host'} cmp $b->{'host'} } @parents;
+	@groups = &unique(map { split(/\t/, $_->{'group'}) } @parents);
 	print &ui_table_row($text{'plan_hosts'},
 		&ui_radio("hosts_def", $plan->{'hosts'} ? 0 : 1,
 			  [ [ 1, $text{'plan_hosts1'} ],
 			    [ 0, $text{'plan_hosts0'} ] ])."<br>\n".
 		&ui_select("hosts", [ split(/\s+/, $plan->{'hosts'}) ],
-			   [ map { [ $_->{'id'}, $_->{'host'} ] } @parents ],
+			   [ (map { [ $_->{'id'}, $_->{'host'} ] } @parents),
+			     (map { [ "group_".$_, &text('plan_mems', $_) ] }
+				  @groups) ],
 			   5, 1));
 	}
 else {

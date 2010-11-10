@@ -3002,6 +3002,7 @@ plan_etypes=No virtual system types selected
 plan_hosts=Allowed host systems
 plan_hosts1=Any system
 plan_hosts0=Selected below ..
+plan_mems=Members of group $1
 plan_hostmode=Host system selection
 plan_hostmodefree=By system owner
 plan_hostmodemem=Automatically select system with most free RAM

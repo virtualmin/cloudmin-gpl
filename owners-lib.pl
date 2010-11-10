@@ -315,8 +315,16 @@ sub can_host_server
 {
 my ($vhost) = @_;
 return 1 if (!$access{'hosts'});
-my %can = map { $_, 1 } split(/\s+/, $access{'hosts'});
-return $can{$vhost->{'id'}};
+my @vgroups = split(/\t/, $vhost->{'group'});
+foreach my $h (split(/\s+/, $access{'hosts'})) {
+	if ($h =~ /^group_(\S+)$/) {
+		return 1 if (&indexof($1, @vgroups) >= 0);
+		}
+	else {
+		return 1 if ($vhost->{'id'} eq $h);
+		}
+	}
+return 0;
 }
 
 # can_select_host_server()
