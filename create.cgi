@@ -89,6 +89,13 @@ if ($in{'omode'} == 2) {
 	$in{'newownerpass'} =~ /:/ && &error($text{'owner_epass'});
 	}
 
+# Validate plan
+if ($in{'omode'} == 2 && &supports_plans()) {
+	$in{'newownerplan'} || &error($text{'create_eplan'});
+	$plan = &get_plan($in{'newownerplan'});
+	$plan || &error($text{'create_eplan2'});
+	}
+
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_create_parse";
 if (defined(&$pfunc)) {
@@ -194,7 +201,7 @@ if (defined($in{'bw_def'}) && $config{'bw_enabled'} &&
 		}
 	}
 
-&ui_print_unbuffered_header(undef, $text{'create_title'}, "");
+&ui_print_unbuffered_header(&server_in($server), $text{'create_title'}, "");
 &obtain_lock_server($server);
 
 # Run pre-creation script
@@ -285,7 +292,7 @@ elsif ($in{'omode'} == 2) {
 	$owner = { 'name' => $in{'newowner'},
 		   'pass' => &acl::encrypt_password($in{'newownerpass'}),
 		   'real' => 'Owner of '.$server->{'host'},
-		   'acl' => { 'email' => 'root\@'.$server->{'host'},
+		   'acl' => { 'email' => 'root@'.$server->{'host'},
 			      'actions' => join(" ", @actions),
 			      'plainpass' => $in{'newownerpass'}, },
 		 };

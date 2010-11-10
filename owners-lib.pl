@@ -39,6 +39,7 @@ my ($u, $oldu, $aclonly) = @_;
 &foreign_require("acl", "acl-lib.pl");
 my $acl = $u->{'acl'};
 if (!$aclonly) {
+	my $oldacl = $u->{'acl'};
 	delete($u->{'acl'});
 	$u->{'readonly'} = $module_name;
 	$u->{'modules'} = [ $module_name, "servers" ];
@@ -49,6 +50,7 @@ if (!$aclonly) {
 		&acl::create_user($u);
 		}
 	&reload_miniserv();
+	$u->{'acl'} = $oldacl;
 	}
 $acl->{'owner'} = 1;
 $acl->{'noconfig'} = 1;
