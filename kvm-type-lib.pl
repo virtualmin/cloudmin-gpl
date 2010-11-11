@@ -182,7 +182,7 @@ $server->{'kvm'} = $in->{'kvm_pid'};
 
 # Make sure the filesystem is in usable raw format, by trying to list
 # partitions first, and then testing with qemu-img
-my $parts = &list_disk_image_partitions($got->{'filesystem'});
+my $parts = &list_disk_image_partitions($vhost, $got->{'filesystem'});
 if (!ref($parts) || !@$parts) {
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
 				"qemu-img info ".quotemeta($got->{'filesystem'}));
@@ -4361,7 +4361,7 @@ foreach my $proc (@$instances) {
 		&$second_print($text{'find_kvmfs'});
 		next;
 		}
-	my $parts = &list_disk_image_partitions($got->{'filesystem'});
+	my $parts = &list_disk_image_partitions($vhost, $got->{'filesystem'});
 	if (!ref($parts) || !@$parts) {
 		my ($out, $ex, $err) = &execute_command_on_server($vhost, 
 			"qemu-img info ".quotemeta($proc->{'filesystem'}));
