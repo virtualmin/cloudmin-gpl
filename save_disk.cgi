@@ -215,6 +215,16 @@ else {
 		$disk->{'media'} = $in{'media'};
 		}
 
+	# Storage location
+	$sfunc = "type_".$server->{'manager'}."_list_storages";
+	if (defined(&$sfunc) && defined($in{'storage'})) {
+		$storages = &$sfunc($vhost);
+		ref($storages) || &error($storages);
+		($gotstorage) = grep { $_->{'id'} eq $in{'storage'}} @$storages;
+		$gotstorage || &error($text{'disk_estorage'});
+		$disk->{'storage_id'} = $in{'storage'};
+		}
+
 	# New filesystem and mount point
 	if ($in{'new'}) {
 		$disk->{'fs'} = $in{'fs'};

@@ -95,6 +95,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--media") {
 		$media = shift(@ARGV);
 		}
+	elsif ($a eq "--storage") {
+		$storage = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
@@ -153,6 +156,20 @@ if ($media) {
 			    join(" ", map { $_->{'id'} } @$medias));
 	}
 
+# Validate storage
+if ($storage) {
+	$sfunc = "type_".$server->{'manager'}."_list_disk_storages";
+	defined(&$mfunc) || &usage("Disk storage location cannot be specified ".
+				   "for this virtual system type");
+	$storages = &$sfunc($vhost);
+	ref($storages) || &usage("Failed to list disk storage ".
+				 "locations : $storages");
+	($gotstorage) = grep { $_->{'id'} eq $storage ||
+			       lc($_->{'desc'}) eq lc($storage) } @$storages;
+	$gotstorage || &usage("Invalid storage location - choices are : ".
+			    join(" ", map { "\"$_->{'desc'}\"" } @$storages));
+	}
+
 # Create a new disk object
 $nfunc = "type_".$server->{'manager'}."_new_disk";
 $disk = &$nfunc($server, $disks, $device);
@@ -172,6 +189,9 @@ if ($lv) {
 	}
 if ($media) {
 	$disk->{'media'} = $media;
+	}
+if ($storage) {
+	$disk->{'storage_id'} = $gotstorage->{'id'};
 	}
 
 # Check for clashes
@@ -247,6 +267,7 @@ print "                    [--device]\n";
 print "                    [--format filesystem]\n";
 print "                    [--mount directory|\"swap\"]\n";
 print "                    [--media type]\n";
+print "                    [--storage id|\"name\"]\n";
 exit(1);
 }
 

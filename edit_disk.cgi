@@ -143,6 +143,16 @@ if (defined(&$mfunc)) {
 			   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$medias ]));
 	}
 
+# Storage location, if supported
+$sfunc = "type_".$server->{'manager'}."_list_storages";
+if (defined(&$sfunc) && $in{'new'}) {
+	$storages = &$sfunc($vhost);
+	ref($storages) || &error($storages);
+	print &ui_table_row($text{'disk_storage'},
+		&ui_select("storage", $disk->{'storage_id'},
+			  [ map { [ $_->{'id'}, $_->{'desc'} ] } @$storages ]));
+	}
+
 # Disk format
 print &ui_table_row($text{'disk_format'},
 	$text{'mimage_fmt'.$disk->{'format'}});
