@@ -21,7 +21,9 @@ require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 &can_action_usage(undef, "global");
 
-@images = grep { !$_->{'rawsize'} } &list_server_images("xen");
+@images = grep { !$_->{'rawsize'} } (&list_server_images("xen"),
+				     &list_server_images("kvm"),
+				     &list_server_images("citrix"));
 IMAGE: foreach $i (@images) {
 	print "Doing $i->{'id'}\n";
 	$i->{'rawsize'} = 0;
