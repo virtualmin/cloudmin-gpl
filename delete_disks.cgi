@@ -37,8 +37,7 @@ if ($in{'confirm'}) {
 	# Do it
 	&obtain_lock_server($server);
 	foreach $disk (@$disks) {
-		&$first_print(&text('disk_deleting',
-				    "<tt>$disk->{'real'}</tt>"));
+		&$first_print(&text('disk_deleting', &describe_disk($disk)));
 		$dfunc = "type_".$server->{'manager'}."_delete_disk";
 		$err = &$dfunc($server, $disk);
 		if ($err) {

@@ -145,7 +145,7 @@ if (defined(&$mfunc)) {
 
 # Storage location, if supported
 $sfunc = "type_".$server->{'manager'}."_list_storages";
-if (defined(&$sfunc) && $in{'new'}) {
+if (defined(&$sfunc) && $in{'new'} && &can_action($server, "advanced")) {
 	$storages = &$sfunc($vhost);
 	ref($storages) || &error($storages);
 	print &ui_table_row($text{'disk_storage'},
