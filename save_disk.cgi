@@ -218,7 +218,7 @@ else {
 	# Storage location
 	$sfunc = "type_".$server->{'manager'}."_list_storages";
 	if (defined(&$sfunc) && defined($in{'storage'}) &&
-	    &can_action($server, "advanced")) {
+	    &can_action($server, "storage")) {
 		$storages = &$sfunc($vhost);
 		ref($storages) || &error($storages);
 		($gotstorage) = grep { $_->{'id'} eq $in{'storage'}} @$storages;

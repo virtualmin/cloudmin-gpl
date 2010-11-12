@@ -158,8 +158,7 @@ if ($media) {
 
 # Validate storage
 if ($storage) {
-	&can_action($server, "advanced") ||
-		&usage("You are not allowed to select a storage location");
+	&can_action_usage($server, "storage");
 	$sfunc = "type_".$server->{'manager'}."_list_storages";
 	defined(&$sfunc) || &usage("Disk storage location cannot be specified ".
 				   "for this virtual system type");

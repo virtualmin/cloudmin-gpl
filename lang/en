@@ -494,6 +494,8 @@ create_ekvmgrub=.. Grub fix failed : $1
 create_exenmodelhvm=An network interface device type can only be selected for HVM Xen instances
 create_eplan=No plan for new system owner selected
 create_eplan2=Selected plan does not exist!
+create_storage=Disk storage location
+create_storagedef=Host system default
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -2437,6 +2439,7 @@ owner_action_virtualmin=Install Virtualmin
 owner_action_backup=Backup and restore systems
 owner_action_pass=Change system passwords
 owner_action_api=Call remote API
+owner_action_storage=Select disk storages
 owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
 owner_egone=System owner no longer exists!
