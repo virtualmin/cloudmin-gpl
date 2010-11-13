@@ -8,7 +8,7 @@ return (
 	[ "Virtual systems", "*-system.pl", "*-systems.pl",
 			     "modify-limits.pl", "get-console.pl",
 			     "modify-reverse-address.pl", ],
-	[ "Virtual disks", "*-disk.pl", "*-disks.pl" ],
+	[ "Virtual disks", "*-disk.pl", "*-disks.pl", "*-disk-storages.pl" ],
 	[ "Amazon EC2", "*-ec2-*.pl" ],
 	[ "Network interfaces", "*-interface.pl", "*-interfaces.pl",
 				"set-default-gateway.pl" ],
