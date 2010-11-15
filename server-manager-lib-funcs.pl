@@ -9542,6 +9542,22 @@ foreach my $cpu (@rv) {
 return \@rv;
 }
 
+# binary_address_to_ip(binary-address, [ipv6])
+# Given a sockaddr object returned by accept, convert to a binary address,
+# text address and port
+sub binary_address_to_ip
+{
+local ($sn, $ipv6) = @_;
+if ($ipv6) {
+	local ($p, $b) = unpack_sockaddr_in6($sn);
+	return ($b, inet_ntop(Socket6::AF_INET6(), $b), $p);
+	}
+else {
+	local ($p, $b) = unpack_sockaddr_in($sn);
+	return ($b, inet_ntoa($b), $p);
+	}
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server

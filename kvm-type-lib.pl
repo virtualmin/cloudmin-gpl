@@ -1466,12 +1466,15 @@ my $vhost = &type_kvm_parent($server);
 my $cmd = &get_kvm_start_command($server);
 my ($pinged, $sshed);
 
-# Create a console output file
+# Create a console output file and monitor input file
 $server->{'kvm_console'} ||= &get_kvm_console_file($server);
+my $err = &create_kvm_monitor_file($server);
+return (0, "Failed to create monitor input file : $err") if ($err);
 
 # Run qemu-kvm to start it up, in the background
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"$cmd >$server->{'kvm_console'} 2>&1 </dev/null &");
+	"/tmp/pty.pl --sleep 2 $cmd >$server->{'kvm_console'} 2>&1 ".
+	"<$server->{'kvm_monitor'} &");
 return (0, $err) if ($err);
 return (0, $out || "Unknown error") if ($ex);
 
@@ -1578,6 +1581,9 @@ if (ref($disks)) {
 if ($server->{'kvm_console'}) {
 	&delete_file_on_server($vhost, $server->{'kvm_console'});
 	}
+if ($server->{'kvm_monitor'}) {
+	&delete_file_on_server($vhost, $server->{'kvm_monitor'});
+	}
 
 # Remove the DNS entry, if we created one
 &delete_bind8_record($server->{'kvm_dns'}, $vhost->{'kvm_zone'},
@@ -1643,8 +1649,8 @@ $cmd .= " -boot ".($server->{'kvm_bootdevice'} || 'c');
 #	$cmd .= " -serial tcp:127.0.0.1:$cport,server,nowait";
 #	}
 
-# Connect serial console to stdout
-$cmd .= " -serial stdio";
+# Connect monitor to stdout
+$cmd .= " -monitor stdio";
 
 # TAP networking, if enabled
 my @macs = split(/\s+/, $server->{'mac'});
@@ -1679,7 +1685,7 @@ if (ref($inuse)) {
 		$vport++;
 		}
 	$server->{'kvm_vnc_display'} = $vport-5900;
-	$cmd .= " -vnc :".$server->{'kvm_vnc_display'};
+	$cmd .= " -vnc :".$server->{'kvm_vnc_display'}.",password";
 	}
 else {
 	$cmd .= " -nographic";
@@ -3254,6 +3260,7 @@ else {
 	}
 my $data = &get_file_data_from_server($vhost, $bfile);
 foreach my $l (split(/\r?\n/, $data)) {
+	$l =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
 	my $kvm = &parse_kvm_start_command($l);
 	if ($kvm && $kvm->{'filesystem'} eq $server->{'kvm_filesystem'}) {
 		return 1;
@@ -3270,8 +3277,9 @@ sub type_kvm_set_atboot
 my ($server, $atboot) = @_;
 my $vhost = &type_kvm_parent($server);
 $server->{'kvm_console'} ||= &get_kvm_console_file($server);
-my $cmd = &get_kvm_start_command($server).
-	  " >$server->{'kvm_console'} 2>&1 </dev/null &";
+&create_kvm_monitor_file($server);
+my $cmd = "/tmp/pty.pl --sleep 2 ".&get_kvm_start_command($server).
+	  " >$server->{'kvm_console'} 2>&1 <$server->{'kvm_monitor'} &";
 my $temp = &transname();
 if (&stat_file_on_server($vhost, "/etc/init.d")) {
 	# Insert into init script
@@ -3291,7 +3299,9 @@ if (&stat_file_on_server($vhost, "/etc/init.d")) {
 	my $lref = &read_file_lines($temp);
 	my $lnum;
 	for(my $i=0; $i<@$lref; $i++) {
-		my $kvm = &parse_kvm_start_command($lref->[$i]);
+		my $line = $lref->[$i];
+		$line =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
+		my $kvm = &parse_kvm_start_command($line);
 		if ($kvm &&
 		    $kvm->{'filesystem'} eq $server->{'kvm_filesystem'}) {
 			$lnum = $i;
@@ -5053,6 +5063,38 @@ sub type_kvm_set_boot_device
 my ($server, $mode) = @_;
 $server->{'kvm_bootdevice'} = $mode;
 return undef;
+}
+
+# create_kvm_monitor_file(&server)
+# Create a file on the host system for KVM monitor input, and uploads pty.pl
+sub create_kvm_monitor_file
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+
+# Work out monitor input location
+if (!$server->{'kvm_monitor'}) {
+	my $mon = $server->{'kvm_console'} || &get_kvm_console_file($server);
+	if ($mon !~ s/\.console$/\.monitor/) {
+		$mon .= ".monitor";
+		}
+	$server->{'kvm_monitor'} = $mon;
+	}
+my @mlines;
+
+# Copy pty.pl
+my $perr = &put_file_to_server($vhost,
+		"$module_root_directory/pty.pl", "/tmp/pty.pl");
+return $perr if ($perr);
+
+$server->{'kvm_vnc_passwd'} ||= $server->{'ssh_pass'} ||
+			        &generate_random_password();
+push(@mlines, "change vnc password");
+push(@mlines, $server->{'kvm_vnc_passwd'});
+
+# Write out monitor input
+return &put_file_data_to_server($vhost, join("", map { $_."\n" } @mlines),
+			 	$server->{'kvm_monitor'});
 }
 
 1;

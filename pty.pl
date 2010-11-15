@@ -4,6 +4,12 @@
 
 use POSIX;
 
+# Delay before each input line
+if ($ARGV[0] eq "--sleep") {
+	shift(@ARGV);
+	$sleeptime = shift(@ARGV);
+	}
+
 ($ptyfh, $ttyfh, $pty, $tty) = &get_new_pty();
 $ptyfh || die "Failed to create new PTY";
 $pid = fork();
@@ -30,14 +36,58 @@ if (!$pid) {
 print "PTY PID: $pid\n";
 $| = 1;
 select($ptyfh); $| = 1; select(STDOUT);
-while(<STDIN>) {
-	print $ptyfh $_;
-	}
-while(<$ptyfh>) {
-	print;
-	}
+&forward_connection_sockets(STDIN, STDOUT, $ptyfh, $ptyfh);
 waitpid($pid, 0);
 exit($? / 256);
+
+sub forward_connection_sockets
+{
+my ($in1, $out1, $in2, $out2) = @_;
+my ($closed1, $closed2);
+while(1) {
+	my $rmask = undef;
+	vec($rmask, fileno($in1), 1) = 1 if (!$closed1);
+	vec($rmask, fileno($in2), 1) = 1 if (!$closed2);
+	my $sel = select($rmask, undef, undef, 10);
+	if (vec($rmask, fileno($in1), 1)) {
+		# Got something from stdin
+		my $buf;
+		$ok = sysread($in1, $buf, 1024);
+		if ($ok <= 0) {
+			$closed1 = 1;
+			}
+		else {
+			if ($sleeptime) {
+				# Split into lines, sleep between each one
+				sleep($sleeptime);
+				my @lines = split(/\n/, $buf);
+				foreach my $l (@lines) {
+					sleep($sleeptime);
+					syswrite($out2, $l."\n", length($l)+1)
+						|| last;
+					}
+				}
+			else {
+				syswrite($out2, $buf, length($buf)) || last;
+				}
+			}
+		}
+	if (vec($rmask, fileno($in2), 1)) {
+		# Got something from command
+		my $buf;
+		$ok = sysread($in2, $buf, 1024);
+		if ($ok <= 0) {
+			$closed2 = 1;
+			}
+		else {
+			syswrite($out1, $buf, length($buf)) || last;
+			}
+		}
+	last if ($closed1 && $closed2);
+	}
+}
+
+
 
 # get_new_pty()
 # Returns the filehandles and names for a pty and tty
