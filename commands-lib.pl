@@ -5,6 +5,8 @@ sub list_api_categories
 return (
 	[ "Backup and restore", "backup-systems.pl", "restore-systems.pl",
 				"list-backup-logs.pl" ],
+	[ "File management", "*-file.pl", "*-files.pl", "mount-system.pl",
+			     "umount-system.pl" ],
 	[ "Virtual systems", "*-system.pl", "*-systems.pl",
 			     "modify-limits.pl", "get-console.pl",
 			     "modify-reverse-address.pl", ],
@@ -17,7 +19,6 @@ return (
 			   "*-plan.pl", "*-plans.pl" ],
 	[ "Virtualmin domains", "*-domain.pl", "*-domains.pl" ],
 	[ "License management", "*-licence.pl", "*-licences.pl" ],
-	[ "File management", "*-file.pl", "*-files.pl" ],
 	[ "Image management", "*-image.pl", "*-images.pl",
 			      "set-image-rawsize.pl" ],
 	[ "Other scripts", "*.pl" ],

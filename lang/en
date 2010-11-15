@@ -2440,6 +2440,7 @@ owner_action_backup=Backup and restore systems
 owner_action_pass=Change system passwords
 owner_action_api=Call remote API
 owner_action_storage=Select disk storages
+owner_action_mount=Mount virtual disks on host
 owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
 owner_egone=System owner no longer exists!

@@ -2964,16 +2964,16 @@ else {
 	}
 }
 
-# type_kvm_mount_filesystem(&server, [wantfile])
+# type_kvm_mount_filesystem(&server, [wantfile], [mount-point])
 # Mounts a down KVM image's root disk image on /mnt/something, and sets
 # kvm_mount in the server object
 sub type_kvm_mount_filesystem
 {
-my ($server, $wantfile) = @_;
+my ($server, $wantfile, $mp) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # Create temp dir
-my $mp = "/mnt/kvm-".$server->{'host'};
+$mp ||= "/mnt/kvm-".$server->{'host'};
 my $err = &make_dir_on_server($vhost, $mp, 0700, 1);
 return "Failed to create mount point $mp : $err" if ($err);
 my $fsfile = $server->{'kvm_filesystem'};

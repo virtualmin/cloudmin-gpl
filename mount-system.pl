@@ -67,9 +67,8 @@ defined(&$nfunc) || &usage("This virtual system type does not have a ".
 	&usage("This virtual system does not need its filesystem mounted");
 
 # Mount now
-# XXX specify dir
 print "Mounting filesystem for $server->{'host'} ..\n";
-$err = &$mfunc($server);
+$err = &$mfunc($server, undef, $mountdir);
 if ($err) {
 	print ".. failed : $err\n";
 	exit(2);
