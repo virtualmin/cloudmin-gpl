@@ -1544,11 +1544,11 @@ my $out = &get_file_data_from_server($vhost, $server->{'kvm_console'});
 return $out ? (1, $out) : (0, "No console messages were found");
 }
 
-# type_kvm_delete(&server)
+# type_kvm_delete(&server, [keep-disks])
 # Delete a KVM instance
 sub type_kvm_delete
 {
-my ($server) = @_;
+my ($server, $keep) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # Force shutdown if needed
@@ -1559,18 +1559,20 @@ if ($proc) {
 	}
 
 # Delete virtual disks
-my $disks = &type_kvm_list_disks($server, 0);
-if (ref($disks)) {
-	foreach my $d (reverse(@$disks)) {
-		my @st = &stat_file_on_server($vhost, $d->{'real'});
-		next if (!@st);			# Already gone
-		next if ($d->{'media'} eq 'cdrom' &&
-			 $d->{'real'} ne $server->{'kvm_cdimage'} &&
-			 !$d->{'device'});	# CD image in file
-		next if ($d->{'device'} &&	# Attached real device
-			 !$d->{'lv'});
-		my $err = &type_kvm_delete_disk($server, $d);
-		return $err if ($err);
+if (!$keep) {
+	my $disks = &type_kvm_list_disks($server, 0);
+	if (ref($disks)) {
+		foreach my $d (reverse(@$disks)) {
+			my @st = &stat_file_on_server($vhost, $d->{'real'});
+			next if (!@st);			# Already gone
+			next if ($d->{'media'} eq 'cdrom' &&
+				 $d->{'real'} ne $server->{'kvm_cdimage'} &&
+				 !$d->{'device'});	# CD image in file
+			next if ($d->{'device'} &&	# Attached real device
+				 !$d->{'lv'});
+			my $err = &type_kvm_delete_disk($server, $d);
+			return $err if ($err);
+			}
 		}
 	}
 

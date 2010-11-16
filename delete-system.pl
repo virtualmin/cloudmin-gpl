@@ -9,6 +9,15 @@ with extreme care, as you will not get any confirmation before deletion
 happens, and all data on the system will be lost forever. The system to
 destroy is specified with the C<--host> parameter.
 
+If the C<--keep> flag is given, collected information about the system such
+as bandwidth and memory usage will be preserved by Cloudmin. If a new system
+is later created with the same ID, the collected information will be associated
+with it.
+
+If the C<--keep-disks> flag is given, any virtual disks or filesystem associated
+with the system will be preserved on its host until manually removed or
+connected to another system.
+
 =head1 Example usage
 
   cloudmin delete-system --host xennoupdate.home
@@ -45,6 +54,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--keep") {
 		$keep = 1;
+		}
+	elsif ($a eq "--keep-disks") {
+		$keepdisks = 1;
 		}
 	else {
 		&usage();
@@ -87,7 +99,7 @@ foreach $s (@servers) {
 
 	print "Deleting $tdesc system $s->{'host'} ..\n";
 	$dfunc = "type_".$s->{'manager'}."_delete";
-	$err = &$dfunc($s);
+	$err = &$dfunc($s, $keepdisks);
 	if ($err) {
 		print ".. deletion failed : $err\n\n";
 		}
@@ -111,6 +123,7 @@ print "\n";
 print "cloudmin delete-system [--host name]*\n";
 print "                       [--owner name]*\n";
 print "                       [--keep]\n";
+print "                       [--keep-disks]\n";
 exit(1);
 }
 
