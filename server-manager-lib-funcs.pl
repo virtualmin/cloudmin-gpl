@@ -904,8 +904,8 @@ sub check_server_webmin_login
 {
 my ($server) = @_;
 my $fast_try = 0;
-if (!defined($server->{'fast'})) {
-	# Try fast mode first
+if (!$server->{'fast'}) {
+	# Try fast mode if not currently
 	$fast_try = 1;
 	$server->{'fast'} = 1;
 	}
@@ -925,7 +925,7 @@ if ($last_remote_error) {
 if ($@) {
 	if ($@ =~ /timeout|Connection refused/i) {
 		# A fast mode failure will look like a timeout or connection
-		# refused .. try in slow mode, if we don't know yet
+		# refused .. try in slow mode instead
 		if ($fast_try) {
 			$server->{'fast'} = 0;
 			return &check_server_webmin_login($server);
