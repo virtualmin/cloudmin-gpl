@@ -113,6 +113,10 @@ elsif ($in{'delete'}) {
 			      &text('mass_ddeldoms', $dtotal),
 			      "</font></b><p>\n";
 			}
+		if (&can_action(\@servers, "devices")) {
+		        print &ui_checkbox("keep", 1, $text{'save_deletekeep'},
+					   0),"<p>\n";
+			}
 		print &ui_form_end([ [ "confirm", $text{'mass_dok'} ] ]);
 		print "</center>\n";
 		}
@@ -127,7 +131,8 @@ elsif ($in{'delete'}) {
 			print &text('mass_deleting', &$tfunc(),
 				    "<tt>$s->{'host'}</tt>"),"<br>\n";
 			$dfunc = "type_".$s->{'manager'}."_delete";
-			$err = &$dfunc($s);
+			$err = &$dfunc($s,
+				&can_action($s, "devices") && $in{'keep'});
 			if ($err) {
 				print &text('mass_edelete', $err),"<p>\n";
 				}

@@ -154,7 +154,10 @@ elsif ($in{'delete'}) {
 		&show_confirm_form(
 		    &text('save_deleterusure', "<tt>$server->{'host'}</tt>").
 		    (@doms ? "<p>".&text('save_deleterusure2',
-					 scalar(@doms)) : ""),
+					 scalar(@doms)) : "").
+		    (&can_action($server, "devices") ?
+		        "<p>".&ui_checkbox("keep", 1,
+					   $text{'save_deletekeep'}, 0) : ""),
 		    "save_serv.cgi", [ [ "id", $in{'id'} ],
 				       [ "delete", 1 ] ],
 		    $text{'save_deleteok'});
@@ -167,7 +170,8 @@ elsif ($in{'delete'}) {
 		print &text('save_deleteing',
 			    "<tt>$server->{'host'}</tt>"),"<br>\n";
 		$dfunc = "type_".$server->{'manager'}."_delete";
-		$err = &$dfunc($server);
+		$err = &$dfunc($server,
+			       &can_action($server, "devices") && $in{'keep'});
 		if ($err) {
 			print &text('save_deletefailed', $err),"<p>\n";
 			}

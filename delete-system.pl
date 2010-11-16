@@ -88,6 +88,12 @@ if (@deps) {
 	       "deleted : ".join(" ", map { $_->{'host'} } @deps));
 	}
 
+# Check if leaving disks is allowed
+if ($keepdisks) {
+	&can_action(\@servers, "devices") ||
+		&usage("You are not allowed to use the --keep-disks flag");
+	}
+
 # Do it!
 foreach $s (@servers) {
 	&obtain_lock_server($server);
