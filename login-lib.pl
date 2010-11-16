@@ -11,10 +11,23 @@ if (&foreign_check("useradmin")) {
 	&foreign_require("cron", "cron-lib.pl");
 	my $uname = $server->{'manager'}."-".$server->{'host'}."-console";
 	&useradmin::lock_user_files();
+	my $home = $login_home_base.'/'.$server->{'host'};
+	my $pass = $server->{'ssh_pass'} || &random_password(16);
 	my @users = &useradmin::list_users();
 	my ($clash) = grep { $_->{'user'} eq $uname } @users;
-	return "A user named $uname already exists" if ($clash);
-	my $pass = $server->{'ssh_pass'} || &random_password(16);
+	if ($clash) {
+		# User exists .. can we use him?
+		if ($clash->{'uid'} == 0 && $clash->{'gid'} == 0 &&
+		    $clash->{'shell'} eq $login_shell_cmd &&
+		    $clash->{'home'} eq $home &&
+		    $clash->{'pass'} eq &useradmin::encrypt_password($pass)) {
+			# Yes .. record the user
+			$server->{'login_user'} = $uname;
+			$server->{'login_pass'} = $pass;
+			return undef;
+			}
+		return "A user named $uname already exists";
+		}
 	&cron::create_wrapper($login_shell_cmd, $module_name, "login.pl");
 	my $uinfo = { 'user' => $uname,
 			 'uid' => 0,
@@ -24,7 +37,7 @@ if (&foreign_check("useradmin")) {
 			 'plainpass' => $pass,
 			 'real' => 'Console user for '.$server->{'host'},
 			 'shell' => $login_shell_cmd,
-			 'home' => $login_home_base.'/'.$server->{'host'} };
+			 'home' => $home };
 	&useradmin::set_user_envs($user, 'CREATE_USER', $pass);
 	&useradmin::making_changes();
 	&useradmin::create_user($uinfo);
