@@ -1473,7 +1473,7 @@ return (0, "Failed to create monitor input file : $err") if ($err);
 
 # Run qemu-kvm to start it up, in the background
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"/tmp/pty.pl --sleep 2 $cmd >$server->{'kvm_console'} 2>&1 ".
+	"/usr/bin/pty.pl --sleep 2 $cmd >$server->{'kvm_console'} 2>&1 ".
 	"<$server->{'kvm_monitor'} &");
 return (0, $err) if ($err);
 return (0, $out || "Unknown error") if ($ex);
@@ -3278,7 +3278,7 @@ my ($server, $atboot) = @_;
 my $vhost = &type_kvm_parent($server);
 $server->{'kvm_console'} ||= &get_kvm_console_file($server);
 &create_kvm_monitor_file($server);
-my $cmd = "/tmp/pty.pl --sleep 2 ".&get_kvm_start_command($server).
+my $cmd = "/usr/bin/pty.pl --sleep 2 ".&get_kvm_start_command($server).
 	  " >$server->{'kvm_console'} 2>&1 <$server->{'kvm_monitor'} &";
 my $temp = &transname();
 if (&stat_file_on_server($vhost, "/etc/init.d")) {
@@ -5086,7 +5086,7 @@ my @mlines;
 
 # Copy pty.pl
 my $perr = &put_file_to_server($vhost,
-		"$module_root_directory/pty.pl", "/tmp/pty.pl");
+		"$module_root_directory/pty.pl", "/usr/bin/pty.pl");
 return $perr if ($perr);
 
 $server->{'kvm_vnc_passwd'} ||= $server->{'ssh_pass'} ||
