@@ -4173,6 +4173,8 @@ foreach my $d (@$disks) {
 			      'perm' => 'rw',
 			      'alloc' => 'n',
 			      'vg' => $dest->{'kvm_vg'} };
+		&remote_finished();
+		$last_remote_error = undef;
 		&remote_foreign_require($dest, "lvm", "lvm-lib.pl");
 		my $err = &remote_foreign_call($dest, "lvm",
 					  "create_logical_volume", $lv);
