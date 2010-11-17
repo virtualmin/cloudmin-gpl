@@ -2142,28 +2142,11 @@ if (!$detach) {
 		}
 	if ($disk->{'lv'} && $disk->{'lv_snap_of'}) {
 		# LV is a snapshot .. does any existing system use it?
-		my $user;
-		foreach my $s (&list_managed_servers()) {
-			next if ($s->{'manager'} ne 'kvm' ||
-				 $s->{'id'} eq $server->{'id'});
-			my $sdisks = &type_kvm_list_disks($s);
-			if (!ref($sdisks)) {
-				# Cannot be sure
-				$user = $s;
-				last;
-				}
-			my ($sd) = grep { $_->{'vg'} eq $disk->{'vg'} &&
-					  $_->{'lv'} eq $disk->{'lv_snap_of'} }
-					@$sdisks;
-			if ($sd) {
-				$user = $s;
-                                last;
-                                }
-			}
-		if (!$user) {
+		my $srcreal = &find_snapshot_source_logical_volume(
+				$server, $disk->{'vg'}, $disk->{'lv_snap_of'});
+		if ($srcreal) {
 			# Source of snapshot is un-used, likely because it was
 			# deleted before this clone. Delete the LV.
-			my $srcreal ="/dev/$disk->{'vg'}/$disk->{'lv_snap_of'}";
 			&delete_all_disk_image_partitions($vhost, $srcreal);
 			my $mapper = "$disk->{'vg'}-$disk->{'lv_snap_of'}";
 			&delete_mapper_entries($vhost, $mapper);
@@ -2761,6 +2744,7 @@ return undef;
 sub type_kvm_modify_interface
 {
 my ($server, $iface, $oldiface) = @_;
+my %oldserver = %$server;
 
 # Modify boot interface
 my $err = &mount_filesystem_if_needed($server);
@@ -4276,7 +4260,7 @@ foreach my $net (@nets) {
 				}
 			&delete_file_on_server($vhost, $script);
 			if ($script ne $newscript) {
-				$net =~ s/net=\Q$script\E/new=$newscript/;
+				$net =~ s/script=\Q$script\E/script=$newscript/;
 				}
 			}
 		}
@@ -4301,6 +4285,17 @@ if (@delfiles) {
 		&delete_all_disk_image_partitions($vhost, $f);
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
 				     { 'device' => $f });
+		my ($vg, $lv) = &split_lvm_device($f);
+		my $srcf = &find_snapshot_source_logical_volume(
+				\%oldserver, $vg, $lv);
+		if ($srcf) {
+			# Delete snapshot source if no longer in use
+			&delete_all_disk_image_partitions($vhost, $srcf);
+			&delete_mapper_entries($vhost, "$vg-$lv");
+			&remote_foreign_call($vhost, "lvm",
+					     "delete_logical_volume",
+					     { 'device' => $srcf });
+			}
 		}
 	&$second_print($text{'create_done'});
 	}
@@ -4849,6 +4844,7 @@ foreach my $d (@$disks) {
 		next;
 		}
 	my $err;
+	my $snapped = 0;
 	if ($d->{'lv'}) {
 		# Pick a new LV name
 		my $newlv = $d->{'lv'};
@@ -4873,6 +4869,7 @@ foreach my $d (@$disks) {
 		if ($snapshot) {
 			$lv->{'is_snap'} = 1;
 			$lv->{'snapof'} = $d->{'lv'};
+			$snapped = 1;
 			}
 		&remote_finished();
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
@@ -5041,7 +5038,7 @@ foreach my $net (@nets) {
 			&$second_print(&text('smove_ebridge', $script, $err));
 			}
 		if ($script ne $newscript) {
-			$net =~ s/net=\Q$script\E/new=$newscript/;
+			$net =~ s/script=\Q$script\E/script=$newscript/;
 			}
 		}
 	}

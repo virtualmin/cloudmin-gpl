@@ -560,5 +560,45 @@ else {
 return $err;
 }
 
+# find_snapshot_source_logical_volume(&server, vg, lv)
+# Checks for an LV on the same host as some system with the given volume
+# group and name, but which is not owned by any system. If one is found, returns
+# the device path to it.
+sub find_snapshot_source_logical_volume
+{
+my ($server, $vg, $lv) = @_;
+my $user;
+my $t = $server->{'manager'};
+foreach my $s (&list_managed_servers()) {
+	next if ($s->{'manager'} ne $t ||
+		 $s->{'id'} eq $server->{'id'} ||
+		 $s->{$t.'_on'} ne $server->{$t.'_on'});
+	my $dfunc = "type_".$t."_list_disks";
+	my $sdisks = defined(&$dfunc) ? &$dfunc($s) : undef;
+	if (!ref($sdisks)) {
+		# Cannot be sure
+		$user = $s;
+		last;
+		}
+	my ($sd) = grep { $_->{'vg'} eq $vg && $_->{'lv'} eq $lv } @$sdisks;
+	if ($sd) {
+		$user = $s;
+		last;
+		}
+	}
+return $user ? undef : "/dev/$vg/$lv";
+}
+
+# split_lvm_device(path)
+# Given an LVM device path like /dev/vg/lv , return vg and lv
+sub split_lvm_device
+{
+my ($path) = @_;
+if ($path =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
+	return ($1, $2);
+	}
+return ( );
+}
+
 1;
 
