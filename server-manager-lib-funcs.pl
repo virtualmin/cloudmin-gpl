@@ -8945,13 +8945,13 @@ elsif ($issue =~ /Debian/i) {
 return $rv;
 }
 
-# clone_system(&server, new-hostname, new-description, [&ips])
+# clone_system(&server, new-hostname, new-description, [&ips], snapshot)
 # Creates a clone of an existing virtual system, by calling the type-specific
 # clone function. Returns the new system hash and an error message or undef.
 # May print stuff.
 sub clone_system
 {
-my ($server, $newhost, $newdesc, $ips) = @_;
+my ($server, $newhost, $newdesc, $ips, $snapshot) = @_;
 
 # Create the new server object
 my $newserver = { %$server };
@@ -8999,32 +8999,34 @@ if ($ips) {
 # Perform pre-cloning check
 my $ckfunc = "type_".$server->{'manager'}."_check_clone";
 if (defined(&$ckfunc)) {
-	my $err = &$ckfunc($server, $newserver, $newhost, $ips);
+	my $err = &$ckfunc($server, $newserver, $newhost, $ips, $snapshot);
 	return (undef, $err) if ($err);
 	}
 
 # Shut the system down if running
 my $was_up = 0;
 if ($server->{'status'} ne 'down') {
-	&$first_print($text{'clone_shutting'});
-	my $err = &shutdown_server($server);
-	if ($err) {
-		return (undef, &text('smove_shutfailed', $err));
-		}
-	&check_server_status($server, 0, 1);
 	$was_up = 1;
-	&$second_print($text{'create_done'});
+	if (!$snapshot) {
+		&$first_print($text{'clone_shutting'});
+		my $err = &shutdown_server($server);
+		if ($err) {
+			return (undef, &text('smove_shutfailed', $err));
+			}
+		&check_server_status($server, 0, 1);
+		&$second_print($text{'create_done'});
+		}
 	}
 
 # Call the clone function
 my $cfunc = "type_".$server->{'manager'}."_clone_system";
-my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost, $ips);
+my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost, $ips, $snapshot);
 
 # Clear SSH host key for the clone
 &clear_ssh_host_key($newserver);
 
-# Start up if down before
-if ($was_up) {
+# Start up if down before and we did shut it down
+if ($was_up && !$snapshot) {
 	&$first_print($text{'clone_starting'});
 	my ($ok, $err) = &startup_server($server);
 	if (!$ok) {

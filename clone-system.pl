@@ -19,6 +19,13 @@ you can override this with the C<--address> parameter, which can be given
 multiple times for systems with more than one interface. This parameter is
 mandatory when the host system does not have IP allocation setup.
 
+By default the virtual system will be shut down if running. However, for
+KVM and Xen instances with disks on LVM can use the C<--live> flag to
+perform an online copy using a LVM snapshot. However, the filesystem may
+not be in a fully consistent state when this method is used. This flag
+can also be used to force use of a snapshot when the virtual system is down.
+If not given, a regular copy of the LVM logical volumes will be made.
+
 =head1 Example usage
 
   cloudmin clone-system --host citrixsrc.home --new-host citrixdest
@@ -82,6 +89,9 @@ while(@ARGV > 0) {
 			&usage("$ip is not a valid IP address");
 		push(@$ips, $ip);
 		}
+	elsif ($a eq "--live") {
+		$live = 1;
+		}
 	else {
 		&usage();
 		}
@@ -104,7 +114,9 @@ $dfunc = "type_".$server->{'manager'}."_desc";
 $desc = &$dfunc();
 $cfunc = "type_".$server->{'manager'}."_can_clone";
 defined(&$cfunc) || &usage("Systems of type $desc cannot be cloned");
-&$cfunc($server) || &usage("The selected system cannot be cloned");
+$can = &$cfunc($server);
+$can || &usage("The selected system cannot be cloned");
+!$live || $can == 2 || &usage("The selected system cannot be cloned live");
 
 # Validate owner resource limits
 &can_create_server_usage($server->{'manager'});
@@ -173,7 +185,7 @@ if ($limits) {
 &obtain_lock_server($server);
 print "Creating clone of $desc system $server->{'host'} named $newhost ..\n\n";
 &$indent_print();
-($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips);
+($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips, $live);
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {
@@ -202,6 +214,7 @@ print "cloudmin clone-system --host name\n";
 print "                      --new-host new-name\n";
 print "                     [--new-desc new-description]\n";
 print "                     [--address ip]*\n";
+print "                     [--live]\n";
 exit(1);
 }
 

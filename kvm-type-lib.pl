@@ -1066,11 +1066,13 @@ if ($data =~ /SERVER-MANAGER-FAILED/) {
 	$data =~ s/SERVER-MANAGER-FAILED\n//;
 	&execute_command_on_server($vhost,
 		"rm -f ".quotemeta($server->{'kvm_temp'}));
+	delete($server->{'kvm_temp'});
 	return "Failed to extract filesystem : $data";
 	}
 elsif ($data =~ /SERVER-MANAGER-COMPLETE/) {
 	&execute_command_on_server($vhost,
 		"rm -f ".quotemeta($server->{'kvm_temp'}));
+	delete($server->{'kvm_temp'});
 	return "OK";
 	}
 else {
@@ -4708,19 +4710,21 @@ return ( "disk", "qcow2", "qcow", "vmdk", "cd" );
 }
 
 # type_kvm_can_clone(&server)
-# Any Xen instance can be cloned, if the host system is up
+# Any KVM instance can be cloned, if the host system is up.
+# Returns 2 if on LVM, which allows cloning without shutdown
 sub type_kvm_can_clone
 {
 my ($server) = @_;
-return $server->{'status'} ne 'nohost';
+return $server->{'status'} eq 'nohost' ? 0 :
+       $server->{'kvm_filesystem_vg'} ? 2 : 1;
 }
 
-# type_kvm_check_clone(&oldserver, &newserver, new-hostname, &ips)
+# type_kvm_check_clone(&oldserver, &newserver, new-hostname, &ips, snapshot)
 # Checks if cloning of some system will work, before shutting it down. Returns
 # undef on success or an error message on failure.
 sub type_kvm_check_clone
 {
-my ($oldserver, $newserver, $newhost, $ips) = @_;
+my ($oldserver, $newserver, $newhost, $ips, $snapshot) = @_;
 my $vhost = &type_kvm_parent($newserver);
 
 # Make sure hostname is sensible
@@ -4738,16 +4742,25 @@ if ($ips) {
 		return &text('clone_eips2', scalar(@oldips), scalar(@$ips));
 	}
 
+# Make sure all disks are on LVM if snapshotting
+if ($snapshot) {
+	my $disks = &type_kvm_list_disks($newserver, 0);
+	foreach my $d (@$disks) {
+		next if ($d->{'device'} && !$d->{'lv'});
+		$d->{'lv'} || return &text('clone_elvm', $d->{'real'});
+		}
+	}
+
 return undef;
 }
 
-# type_kvm_clone_system(&oldserver, &newserver, new-hostname, &ips)
+# type_kvm_clone_system(&oldserver, &newserver, new-hostname, &ips, snapshot)
 # Creates a clone of some KVM instance, updating the newserver hash.
 # Returns an error message and a flag indicating if the failure was total or
 # only partial.
 sub type_kvm_clone_system
 {
-my ($oldserver, $newserver, $newhost, $ips) = @_;
+my ($oldserver, $newserver, $newhost, $ips, $snapshot) = @_;
 my $vhost = &type_kvm_parent($newserver);
 
 # Generate the new full hostname
@@ -4798,7 +4811,11 @@ if (!ref($disks)) {
 &$indent_print();
 my @disklist;
 my $oldkvm = $oldserver->{'host'};
+my $oldkvm_us = $oldkvm;
+$oldkvm_us =~ s/\./_/g;
 my $newkvm = $newserver->{'host'};
+my $newkvm_us = $newkvm;
+$newkvm_us =~ s/\./_/g;
 my @olddrives = split(/\s+/, $newserver->{'kvm_drives'});
 my @drives;
 my $i = 0;
@@ -4818,8 +4835,11 @@ foreach my $d (@$disks) {
 		if ($newlv =~ /\Q$oldkvm\E/) {
 			$newlv =~ s/\Q$oldkvm\E/$newkvm/;
 			}
+		elsif ($newlv =~ /\Q$oldkvm_us\E/) {
+			$newlv =~ s/\Q$oldkvm_us\E/$newkvm_us/;
+			}
 		else {
-			$newlv .= "-".$newkvm;
+			$newlv .= "-".$newkvm_us;
 			}
 		$d->{'newreal'} = "/dev/".$d->{'vg'}."/".$newlv;
 
@@ -4830,6 +4850,10 @@ foreach my $d (@$disks) {
 			   'perm' => 'rw',
 			   'alloc' => 'n',
 			   'vg' => $d->{'vg'} };
+		if ($snapshot) {
+			$lv->{'is_snap'} = 1;
+			$lv->{'snapof'} = $d->{'lv'};
+			}
 		&remote_finished();
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		$err = &remote_foreign_call($vhost, "lvm",
@@ -4837,7 +4861,7 @@ foreach my $d (@$disks) {
 		$err ||= $last_remote_error;
 
 		# Copy the data using dd
-		if (!$err) {
+		if (!$err && !$snapshot) {
 			$err = &transfer_file_between_servers(
 			    $vhost, $vhost,
 			    $d->{'real'}, $d->{'newreal'}, 1, 1,
@@ -4866,7 +4890,7 @@ foreach my $d (@$disks) {
 			}
 		}
 	else {
-		# Update list of Xen disk options for saving to .cfg file
+		# Fix drive paths
 		my $drive = $olddrives[$i];
 		$drive =~ s/\Q$d->{'real'}\E/$d->{'newreal'}/;
 		push(@drives, $drive);
@@ -4876,7 +4900,9 @@ foreach my $d (@$disks) {
 		if ($newserver->{'kvm_swapfile'} eq $d->{'real'}) {
 			$newserver->{'kvm_swapfile'} = $d->{'newreal'};
 			}
-		&$second_print(&text('clone_copydiskdone', $d->{'newreal'}));
+		&$second_print(&text($snapped ? 'clone_snapdiskdone'
+					      : 'clone_copydiskdone',
+				     $d->{'newreal'}));
 		$i++;
 		}
 	}
@@ -4982,9 +5008,29 @@ if ($config{'dhcp_add'}) {
 		}
 	}
 
+# Copy network bridge scripts
+my @nets = split(/\s+/, $newserver->{'kvm_net'});
+foreach my $net (@nets) {
+	if ($net =~ /script=([^,]+)/) {
+		my $script = $1;
+		my $newscript = $script;
+		$newscript =~ s/\Q$oldkvm\E/$newkvm/g;
+		my $err = &transfer_file_between_servers($vhost, $vhost,
+				$script, $newscript);
+		if ($err) {
+			&$second_print(&text('smove_ebridge', $script, $err));
+			}
+		if ($script ne $newscript) {
+			$net =~ s/net=\Q$script\E/new=$newscript/;
+			}
+		}
+	}
+$newserver->{'kvm_net'} = join(" ", @nets);
+
 # Fix up other config entries using the old name
 foreach my $f ('kvm_filesystem_lv', 'kvm_swapfile_lv',
-	       'kvm_console', 'login_user', 'data_files') {
+	       'kvm_console', 'kvm_monitor', 'login_user', 'data_files') {
+	$newserver->{$f} =~ s/\Q$oldkvm_us\E/$newkvm_us/g;
 	$newserver->{$f} =~ s/\Q$oldkvm\E/$newkvm/g;
 	}
 

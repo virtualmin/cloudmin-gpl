@@ -6,6 +6,8 @@ require './server-manager-lib.pl';
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_create_server_error($server->{'manager'});
+$cfunc = "type_".$server->{'manager'}."_can_clone";
+$can = &$cfunc($server); 
 
 &ui_print_header(&server_in($server), $text{'clone_title'}, "", "clone");
 
@@ -28,6 +30,13 @@ print &ui_table_row($text{'clone_host'},
 print &ui_table_row($text{'clone_desc'},
 	&ui_textbox("desc", $server->{'desc'} ? "Clone of ".$server->{'desc'}
 					      : "", 40));
+
+# Do live snapshot if supported
+$down = $server->{'status'} eq 'down';
+if ($can == 2) {
+	print &ui_table_row($down ? $text{'clone_snap'} : $text{'clone_live'},
+		&ui_yesno_radio("live", !$down));
+	}
 
 # IP addresses for non-virtual interfaces
 if (&can_action($server, 'ips')) {
