@@ -561,9 +561,10 @@ return $err;
 }
 
 # find_snapshot_source_logical_volume(&server, vg, lv)
-# Checks for an LV on the same host as some system with the given volume
-# group and name, but which is not owned by any system. If one is found, returns
-# the device path to it.
+# Checks for an LV with the given volume group and name, but which is not
+# owned by any system. If one is found, returns the device path to it.
+# Used when deleting the source of a snapshot when the original system has
+# been removed.
 sub find_snapshot_source_logical_volume
 {
 my ($server, $vg, $lv) = @_;
@@ -571,8 +572,7 @@ my $user;
 my $t = $server->{'manager'};
 foreach my $s (&list_managed_servers()) {
 	next if ($s->{'manager'} ne $t ||
-		 $s->{'id'} eq $server->{'id'} ||
-		 $s->{$t.'_on'} ne $server->{$t.'_on'});
+		 $s->{'id'} eq $server->{'id'});
 	my $dfunc = "type_".$t."_list_disks";
 	my $sdisks = defined(&$dfunc) ? &$dfunc($s) : undef;
 	if (!ref($sdisks)) {
