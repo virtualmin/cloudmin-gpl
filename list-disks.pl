@@ -105,6 +105,10 @@ if ($multi) {
 			print "    LVM volume group: $d->{'vg'}\n";
 			print "    LVM logical volume: $d->{'lv'}\n";
 			}
+		if ($d->{'lv_snap_of'}) {
+			print "    LVM logical volume snapshot of: ",
+			      "$d->{'lv_snap_of'}\n";
+			}
 		elsif ($d->{'storage'}) {
 			print "    Storage name: $d->{'storage'}\n";
 			print "    Storage ID: $d->{'real'}\n";

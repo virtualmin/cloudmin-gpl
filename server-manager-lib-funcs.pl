@@ -9016,6 +9016,10 @@ if ($server->{'status'} ne 'down') {
 		&check_server_status($server, 0, 1);
 		&$second_print($text{'create_done'});
 		}
+	elsif (&can_ssh_status($server)) {
+		# Flush buffers to disk to ensure LVM snapshot gets everything
+		&execute_command_on_server($server, "sync ; sync ; sync");
+		}
 	}
 
 # Call the clone function

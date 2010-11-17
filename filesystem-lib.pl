@@ -534,5 +534,31 @@ foreach my $d (@$disks) {
 $server->{'label_map'} = join(" ", map { $_."=".$rv{$_} } keys %rv);
 }
 
+# delete_mapper_entries(&vhost, mapper-name)
+# Calls dmsetup remove on all mappers for partitions on a disk
+sub delete_mapper_entries
+{
+my ($vhost, $mapper) = @_;
+my $files = &list_dir_on_server($vhost, "/dev/mapper");
+my $err;
+if (ref($files)) {
+	my @delmaps;
+	foreach my $f (@$files) {
+		if ($f =~ /^\Q$mapper\Ep\d+$/) {
+			push(@delmaps, $f);
+			}
+		}
+	push(@delmaps, $mapper);
+	foreach my $f (@delmaps) {
+		$err ||= &execute_command_on_server($vhost,
+			"dmsetup remove /dev/mapper/$f");
+		}
+	}
+else {
+	$err = $files;
+	}
+return $err;
+}
+
 1;
 

@@ -1820,6 +1820,7 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		my ($lv) = grep { $_->{'name'} eq $disk->{'lv'} } @lvs;
 		if ($lv) {
 			$disk->{'size'} = $lv->{'size'} * 1024;
+			$disk->{'lv_snap_of'} = $lv->{'snap_of'};
 			}
 		}
 	$disk->{'index'} = scalar(@rv);
@@ -2132,25 +2133,44 @@ if (!$detach) {
 	elsif ($disk->{'lv'}) {
 		# Delete mapper entries for LV, if any
 		my $mapper = "$disk->{'vg'}-$disk->{'lv'}";
-		my $files = &list_dir_on_server($vhost, "/dev/mapper");
-		if (ref($files)) {
-			my @delmaps;
-			foreach my $f (@$files) {
-				if ($f =~ /^\Q$mapper\Ep\d+$/) {
-					push(@delmaps, $f);
-					}
-				}
-			push(@delmaps, $mapper);
-			foreach my $f (@delmaps) {
-				&execute_command_on_server($vhost,
-					"dmsetup remove /dev/mapper/$f");
-				}
-			}
+		&delete_mapper_entries($vhost, $mapper);
 
 		# Delete the logical volume
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
 				     { 'device' => $disk->{'real'} });
+		}
+	if ($disk->{'lv'} && $disk->{'lv_snap_of'}) {
+		# LV is a snapshot .. does any existing system use it?
+		my $user;
+		foreach my $s (&list_managed_servers()) {
+			next if ($s->{'manager'} ne 'kvm' ||
+				 $s->{'id'} eq $server->{'id'});
+			my $sdisks = &type_kvm_list_disks($s);
+			if (!ref($sdisks)) {
+				# Cannot be sure
+				$user = $s;
+				last;
+				}
+			my ($sd) = grep { $_->{'vg'} eq $disk->{'vg'} &&
+					  $_->{'lv'} eq $disk->{'lv_snap_of'} }
+					@$sdisks;
+			if ($sd) {
+				$user = $s;
+                                last;
+                                }
+			}
+		if (!$user) {
+			# Source of snapshot is un-used, likely because it was
+			# deleted before this clone. Delete the LV.
+			my $srcreal ="/dev/$disk->{'vg'}/$disk->{'lv_snap_of'}";
+			&delete_all_disk_image_partitions($vhost, $srcreal);
+			my $mapper = "$disk->{'vg'}-$disk->{'lv_snap_of'}";
+			&delete_mapper_entries($vhost, $mapper);
+			&remote_foreign_call($vhost, "lvm",
+					     "delete_logical_volume",
+					     { 'device' => $srcreal });
+			}
 		}
 	}
 
