@@ -4035,6 +4035,7 @@ clone_ecitrixclone=VM cloning failed : $1
 clone_allocating=Allocating new IP addresses ..
 clone_allocated=.. allocated $1
 clone_citrixcloning=Cloning Citrix Xen VM ..
+clone_citrixfsck=Checking disks ..
 clone_refreshing=Refreshing status of original system ..
 clone_refreshing2=Refreshing status of new system ..
 clone_err=Failed to clone system

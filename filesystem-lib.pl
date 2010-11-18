@@ -572,7 +572,8 @@ my $user;
 my $t = $server->{'manager'};
 foreach my $s (&list_managed_servers()) {
 	next if ($s->{'manager'} ne $t ||
-		 $s->{'id'} eq $server->{'id'});
+		 $s->{'id'} eq $server->{'id'} ||
+		 $s->{$t.'_filesystem_vg'} ne $server->{$t.'_filesystem_vg'});
 	my $dfunc = "type_".$t."_list_disks";
 	my $sdisks = defined(&$dfunc) ? &$dfunc($s) : undef;
 	if (!ref($sdisks)) {

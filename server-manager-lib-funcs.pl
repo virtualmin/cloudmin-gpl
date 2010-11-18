@@ -475,6 +475,11 @@ if (defined(&list_scheduled_changes)) {
 			}
 		}
 	}
+
+# Delete again, just in case it was re-created by any previous steps
+if ($server->{'id'}) {
+	&servers::delete_server($server->{'id'});
+	}
 }
 
 # find_managed_servers(all, &hostnames, &groupnames, &managers, &types, &owners,

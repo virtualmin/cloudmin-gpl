@@ -1581,7 +1581,7 @@ if (!$keep) {
 # Delete boot-time entry
 &type_kvm_set_atboot($server, 0);
 
-# Delete console file
+# Delete console and monitor input files
 if ($server->{'kvm_console'}) {
 	&delete_file_on_server($vhost, $server->{'kvm_console'});
 	}
@@ -4819,7 +4819,10 @@ delete($newserver->{'kvm_console'});
 
 # Copy each of the disks and update the kvm_drives setting
 &$first_print(&text('clone_copydisks'));
-my $disks = &type_kvm_list_disks($newserver, 0);
+my $disks = &type_kvm_list_disks($newserver, 1);
+if (!ref($disks)) {
+	$disks = &type_kvm_list_disks($newserver, 0);
+	}
 if (!ref($disks)) {
 	return (&text('clone_ecopydisks', $disks), 1);
 	}
@@ -4877,12 +4880,20 @@ foreach my $d (@$disks) {
 					  "create_logical_volume", $lv);
 		$err ||= $last_remote_error;
 
-		# Copy the data using dd
 		if (!$err && !$snapshot) {
+			# Copy the data using dd
 			$err = &transfer_file_between_servers(
 			    $vhost, $vhost,
 			    $d->{'real'}, $d->{'newreal'}, 1, 1,
 			    int($d->{'size'}/(1024*1024))*1024*1024);
+			}
+		elsif (!$err && !$d->{'swap'} && $snapshot &&
+		       &type_kvm_can_fsck($server, $d)) {
+			# Fsck the disk after snapshotting
+			my $newd = { %$d };
+			$newd->{'real'} = $d->{'newreal'};
+			$newd->{'lv'} = $newlv;
+			my ($ok, $out) = &type_kvm_fsck_disk($server, $newd, 0);
 			}
 		}
 	else {
