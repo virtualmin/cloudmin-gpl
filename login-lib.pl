@@ -20,7 +20,8 @@ if (&foreign_check("useradmin")) {
 		if ($clash->{'uid'} == 0 && $clash->{'gid'} == 0 &&
 		    $clash->{'shell'} eq $login_shell_cmd &&
 		    $clash->{'home'} eq $home &&
-		    $clash->{'pass'} eq &useradmin::encrypt_password($pass)) {
+		    $clash->{'pass'} eq
+		     &useradmin::encrypt_password($pass, $clash->{'pass'})) {
 			# Yes .. record the user
 			$server->{'login_user'} = $uname;
 			$server->{'login_pass'} = $pass;
