@@ -946,6 +946,16 @@ if (!$reset) {
 		  ($server->{'kvm_virtio'} ? "if=virtio,boot=on" : "if=ide");
 	}
 
+# Find existing LV if resetting
+my (@lvs, $fslv);
+if ($reset && $server->{'xen_filesystem_vg'}) {
+	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+	@lvs = &remote_foreign_call($vhost, "lvm",
+		"list_logical_volumes", $server->{'kvm_filesystem_vg'});
+	($fslv) = grep { $_->{'vg'} eq $server->{'kvm_filesystem_vg'} &&
+			 $_->{'name'} eq $server->{'kvm_filesystem_lv'} } @lvs;
+	}
+
 # If on LVM, create an LV first
 $last_remote_error = undef;
 if ($server->{'kvm_filesystem_vg'}) {
@@ -958,19 +968,25 @@ if ($server->{'kvm_filesystem_vg'}) {
 		   'perm' => 'rw',
 		   'alloc' => 'n',
 		   'vg' => $server->{'kvm_filesystem_vg'} };
-	if ($reset) {
-		# Delete the old LV
-		&delete_all_disk_image_partitions($vhost, $fsfile);
+	if (!($fslv && $fslv->{'size'} > $lv->{'size'} &&
+		       $fslv->{'size'}-$lv->{'size'} < 100*1024)) {
+		# Only delete and re-create if an old LV with close enough to
+		# the same size doesn't exist
+		if ($reset) {
+			# Delete the old LV
+			&delete_all_disk_image_partitions($vhost, $fsfile);
+			my $err = &remote_foreign_call($vhost, "lvm",
+					     "delete_logical_volume",
+					     { 'device' => $fsfile });
+			$err ||= $last_remote_error;
+			return "LVM logical volume deletion failed : $err"
+				if ($err);
+			}
 		my $err = &remote_foreign_call($vhost, "lvm",
-				     "delete_logical_volume",
-				     { 'device' => $fsfile });
+					       "create_logical_volume", $lv);
 		$err ||= $last_remote_error;
-		return "LVM logical volume deletion failed : $err" if ($err);
+		return "LVM logical volume creation failed : $err" if ($err);
 		}
-	my $err = &remote_foreign_call($vhost, "lvm",
-					  "create_logical_volume", $lv);
-	$err ||= $last_remote_error;
-	return "LVM logical volume creation failed : $err" if ($err);
 	}
 
 # Create empty disk file and partition
