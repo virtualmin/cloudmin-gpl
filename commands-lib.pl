@@ -107,5 +107,71 @@ my ($pwd) = @_;
 return ( $pwd );
 }
 
+# create_api_helper_command([&extra-dirs])
+# Creates the API helper command. Returns either 1 and the path, or 0 and
+# an error message.
+sub create_api_helper_command
+{
+local ($extradirs) = @_;
+local @dirs = ( $module_root_directory );
+push(@dirs, @$extradirs) if ($extradirs);
+local $dirstr = join(" ", @dirs);
+local $bash = &has_command("bash") || &has_command("sh");
+if ($bash) {
+	&open_tempfile(HELPER, ">$api_helper_command", 1, 0) ||
+		return (0, "Failed to write to $api_helper_command : $!");
+	&print_tempfile(HELPER, <<EOF);
+#!$bash
+WEBMIN_CONFIG=$config_directory
+WEBMIN_VAR=$var_directory
+PERLLIB=$root_directory
+export WEBMIN_CONFIG WEBMIN_VAR PERLLIB
+cd $module_root_directory
+id -a | grep uid=0 >/dev/null
+if [ "\$?" != 0 ]; then
+	echo "$api_helper_command must be run as root"
+	exit 2
+fi
+if [ "\$1" = "" -o "\$1" = "help" -a "\$2" = "" -o "\$1" = "--help" -a "\$2" = "" -o "\$1" = "-help" -a "\$2" = "" ]; then
+	echo "usage: $api_helper_command <command> [args..]"
+	echo "   or: $api_helper_command help <command>"
+	echo ""
+	echo "Available commands :"
+	echo ""
+	COMMAND=list-commands
+else
+	COMMAND=\$1
+fi
+shift
+if [ "\$COMMAND" = "help" ]; then
+	help=1
+	COMMAND=\$1
+	shift
+fi
+echo \$COMMAND | fgrep .pl >/dev/null
+if [ "\$?" != "0" ]; then
+	COMMAND="\$COMMAND.pl"
+fi
+for dir in $dirstr; do
+	if [ -x "\$dir/\$COMMAND" ]; then
+		if [ "\$help" = "1" ]; then
+			exec perldoc \$dir/\$COMMAND
+		else
+			exec \$dir/\$COMMAND "\$@"
+		fi
+	fi
+done
+echo Command \$COMMAND was not found
+exit 1
+EOF
+	&close_tempfile(HELPER);
+	&set_ownership_permissions(undef, undef, 0755, $api_helper_command);
+	return (1, $api_helper_command);
+	}
+else {
+	return (0, "bash was not found");
+	}
+}
+
 1;
 

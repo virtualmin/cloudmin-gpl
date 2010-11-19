@@ -24,6 +24,11 @@ $config{'plugins'} = join(" ", @newplugins);
 &lock_file($module_config_file);
 &save_module_config();
 &unlock_file($module_config_file);
+
+# Re-write helper command with new plugins list
+local @plugindirs = map { &module_root_directory($_) } @newplugins;
+&create_api_helper_command(\@plugindirs);
+
 &webmin_log("plugins");
 &redirect("index.cgi?refresh=all");
 

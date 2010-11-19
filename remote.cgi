@@ -45,10 +45,18 @@ delete($ENV{'MINISERV_CONFIG'});
 $main::virtualmin_remote_api = 1;
 $ENV{'VIRTUALMIN_REMOTE_API'} = 1;
 $in{'program'} =~ /^[a-z0-9\.-]+$/i || &error($text{'remote_eprogram'});
-$cmd = "$module_root_directory/$in{'program'}.pl";
-if (!-x $cmd) {
+$cmd = $dir = undef;
+foreach $m ($module_name, @plugins) {
+	$mdir = &module_root_directory($m);
+	$mcmd = "$mdir/$in{'program'}.pl";
+	if (-x $mcmd) {
+		$cmd = $mcmd;
+		$dir = $mdir;
+		}
+	}
+if (!$cmd) {
 	print "Content-type: text/plain\n\n";
-	print "Remote program $cmd does not exist\n";
+	print "Remote program $in{'program'} does not exist\n";
 	exit(0);
 	}
 foreach $i (keys %in) {

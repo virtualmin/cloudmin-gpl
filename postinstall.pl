@@ -60,45 +60,8 @@ if ($config{'show_this'}) {
 	}
 
 # Create API helper script /usr/bin/cloudmin
-my $bash = &has_command("bash");
-if ($bash) {
-        &open_tempfile(HELPER, ">$api_helper_command", 1, 0);
-        &print_tempfile(HELPER, <<EOF);
-#!$bash
-WEBMIN_CONFIG=$config_directory
-WEBMIN_VAR=$var_directory
-PERLLIB=$root_directory
-export WEBMIN_CONFIG WEBMIN_VAR PERLLIB
-cd $module_root_directory
-if [ "\$1" = "" -o "\$1" = "help" -a "\$2" = "" -o "\$1" = "--help" -a "\$2" = "" -o "\$1" = "-help" -a "\$2" = "" ]; then
-        echo "usage: $api_helper_command <command> [args..]"
-        echo "   or: $api_helper_command help <command>"
-	echo ""
-	echo "Available commands :"
-	echo ""
-	COMMAND=list-commands
-else
-	COMMAND=\$1
-fi
-shift
-if [ "\$COMMAND" = "help" ]; then
-        help=1
-        COMMAND=\$1
-        shift
-fi
-echo \$COMMAND | fgrep .pl >/dev/null
-if [ "\$?" != "0" ]; then
-        COMMAND="\$COMMAND.pl"
-fi
-if [ "\$help" = "1" ]; then
-        perldoc $module_root_directory/\$COMMAND
-else
-        exec $module_root_directory/\$COMMAND "\$@"
-fi
-EOF
-        &close_tempfile(HELPER);
-        &set_ownership_permissions(undef, undef, 0755, $api_helper_command);
-        }
+local @plugindirs = map { &module_root_directory($_) } @plugins;
+&create_api_helper_command(\@plugindirs);
 
 # Link vm2 command as well
 &unlink_file($old_api_helper_command);

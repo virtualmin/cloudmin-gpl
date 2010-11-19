@@ -1572,7 +1572,7 @@ if (!$keep) {
 				 !$d->{'device'});	# CD image in file
 			next if ($d->{'device'} &&	# Attached real device
 				 !$d->{'lv'});
-			my $err = &type_kvm_delete_disk($server, $d);
+			my $err = &type_kvm_delete_disk($server, $d, 0, 1);
 			return $err if ($err);
 			}
 		}
@@ -2081,13 +2081,13 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 return $fserr;
 }
 
-# type_kvm_delete_disk(&server, &disk, [detach-only])
+# type_kvm_delete_disk(&server, &disk, [detach-only], [leave-fstab])
 # Removes a disk from the Xen configuration, the system's fstab file, and
 # deletes the underlying config file. The disk object must come from a call
 # to type_kvm_list_disks with the mount flag set to 1.
 sub type_kvm_delete_disk
 {
-my ($server, $disk, $detach) = @_;
+my ($server, $disk, $detach, $nofstab) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # Actually un-mount if mounted
@@ -2114,7 +2114,7 @@ if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
 
 # Remove from fstab
 if (($server->{'status'} eq 'down' || &can_ssh_status($server)) &&
-    $disk->{'virt_mount'} && $disk->{'virt_mount'} ne '/') {
+    $disk->{'virt_mount'} && $disk->{'virt_mount'} ne '/' && !$nofstab) {
 	my $fstab = &get_system_fstab($server);
 	return "Failed to read fstab file : $fstab" if (!ref($fstab));
 	my @newfstab = grep { $_->[0] ne $disk->{'virt_mount'} } @$fstab;
