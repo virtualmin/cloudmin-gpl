@@ -38,3 +38,22 @@ sub settings_links
 {
 }
 
+# owner_modules(&owner)
+# Returns a list of additional modules this owner should be granted access to
+sub owner_modules
+{
+}
+
+# show_owner_inputs(&owner, new)
+# Returns HTML for fields on the Edit System Owner page for additional
+# restrictions this plugin defines
+sub show_owner_inputs
+{
+}
+
+# parse_owner_inputs(&owner, new, &in)
+# Updates an owner object with inputs from show_owner_inputs. May call error
+# if something invalid was entered.
+sub parse_owner_inputs
+{
+}

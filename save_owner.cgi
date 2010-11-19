@@ -115,6 +115,14 @@ else {
 			}
 		}
 
+	# Plugin defined limits
+	foreach $p (@plugins) {
+		if (&plugin_defined($p, "parse_owner_inputs")) {
+			&plugin_call($p, "parse_owner_inputs",
+				     $owner, $in{'new'}, \%in);
+			}
+		}
+
 	# Create or update
 	if (&supports_plans()) {
                 $plan = &get_plan($in{'plan'});
@@ -126,4 +134,3 @@ else {
 	}
 
 &redirect("list_owners.cgi");
-

@@ -108,6 +108,17 @@ if (&supports_plans()) {
 
 print &ui_hidden_table_end();
 
+# Section for plugin-defined limits
+@iplugins = grep { &plugin_defined($_, "show_owner_inputs") } @plugins;
+if (@iplugins) {
+	print &ui_hidden_table_start($text{'owner_header6'}, "width=100%", 2,
+				     "plugins", 0, [ 'width=30%' ]);
+	foreach $p (@iplugins) {
+		print &plugin_call($p, "show_owner_inputs", $owner, $in{'new'});
+		}
+	print &ui_hidden_table_end();
+	}
+
 # Section for usage data, if we have it
 if (defined(&get_server_usage) && !$in{'new'}) {
 	print &ui_hidden_table_start($text{'owner_header2'}, "width=100%", 2,
