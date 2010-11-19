@@ -43,6 +43,12 @@ if (!$aclonly) {
 	delete($u->{'acl'});
 	$u->{'readonly'} = $module_name;
 	$u->{'modules'} = [ $module_name, "servers" ];
+	foreach my $p (@plugins) {
+		if (&plugin_defined($p, "owner_modules")) {
+			push(@{$u->{'modules'}},
+			     &plugin_call($p, "owner_modules", $u));
+			}
+		}
 	if ($oldu) {
 		&acl::modify_user($oldu->{'name'}, $u);
 		}
