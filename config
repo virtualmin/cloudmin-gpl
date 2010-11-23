@@ -47,3 +47,4 @@ passwd_mode=0
 kvm_virtio=0
 ssh_compress=0
 ssh_ciphers=*
+citrix_unsafe=0
