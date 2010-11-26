@@ -605,5 +605,16 @@ $owner->{'acl'}->{'servers'} =
 &save_system_owner($owner, $owner);
 }
 
+# revoke_from_system_owner(&owner, &server)
+# Remove some system from the list of those managed by some owner, and save him
+sub revoke_from_system_owner
+{
+my ($owner, $server) = @_;
+$owner->{'acl'}->{'servers'} =
+	join(' ', grep { $_ ne $server->{'id'} }
+		       split(/\s+/, $owner->{'acl'}->{'servers'}));
+&save_system_owner($owner, $owner);
+}
+
 1;
 

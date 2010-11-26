@@ -438,10 +438,30 @@ else {
 	if (defined($in{'canvirt'})) {
 		$server->{'novirt'} = $in{'canvirt'} ? 0 : 1;
 		}
+
+	# Save boot-time flag
 	$bfunc = "type_".$t."_set_atboot";
 	if (defined(&$bfunc)) {
 		&$bfunc($server, $in{'atboot'});
 		}
+
+	# Save owner
+	@allowners = &list_system_owners();
+	if (@allowners && !$access{'owner'}) {
+		# Take away from old owners
+		foreach my $owner (&get_server_owners($server)) {
+			&revoke_from_system_owner($owner, $server);
+			}
+
+		if ($in{'owner'}) {
+			# Grant to selected owner
+			my ($owner) = grep { $_->{'name'} eq $in{'owner'} }
+					   @allowners;
+			&grant_to_system_owner($owner, $server) if ($owner);
+			}
+		}
+
+	# Save type-specific options
 	$pfunc = "type_".$t."_edit_parse";
 	if (defined(&$pfunc)) {
 		&$pfunc($server, \%in);

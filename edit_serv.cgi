@@ -130,6 +130,23 @@ if (!$view) {
 		}
 	}
 
+@allowners = &list_system_owners();
+if (!$view && !$access{'owner'} && @allowners) {
+	# System owner(s)
+	my @owners = &get_server_owners($server);
+	if (@owners > 1) {
+		print &ui_table_row($text{'edit_owners'},
+			join(" ", map { "<tt>$_->{'name'}</tt>" } @owners));
+		}
+	else {
+		print &ui_table_row($text{'edit_owner'},
+			&ui_select("owner",
+				   @owners ? $owners[0]->{'name'} : undef,
+				   [ [ undef, $text{'edit_noowner'} ],
+				     map { $_->{'name'} } @allowners ]));
+		}
+	}
+
 # Last status
 print &ui_table_row($text{'edit_status'},
 		    &text('edit_statustime', &describe_status($server, 1, 0),
