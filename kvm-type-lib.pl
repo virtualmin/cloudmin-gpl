@@ -486,7 +486,7 @@ if (@lvmhosts) {
 	}
 
 # VirtIO option
-$rv .= &ui_table_row($text{'create_kvmvirtio'},
+$rv .= &ui_table_row($text{'create_kvmusevirtio'},
 	&ui_radio("kvm_virtio", $config{'kvm_virtio'} ? 1 :
 				$empty ? 0 : -1,
 		  [ $empty ? ( ) : ( [ -1, $text{'create_kvmvirtiodef'} ] ),
