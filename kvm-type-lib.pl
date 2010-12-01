@@ -4259,6 +4259,14 @@ foreach my $d (@$disks) {
 $server->{'kvm_drives'} = join(" ", @drives);
 $server->{'kvm_on'} = $dest->{'id'};
 
+# Fix monitoring and console paths
+if ($dest->{'kvm_dir'} ne $vhost->{'kvm_dir'}) {
+	$server->{'kvm_monitor'} =~
+		s/\Q$vhost->{'kvm_dir'}\E/$dest->{'kvm_dir'}/;
+	$server->{'kvm_console'} =~
+		s/\Q$vhost->{'kvm_dir'}\E/$dest->{'kvm_dir'}/;
+	}
+
 # Copy across bridge scripts
 my @nets = split(/\s+/, $server->{'kvm_net'});
 foreach my $net (@nets) {
