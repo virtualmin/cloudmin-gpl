@@ -151,11 +151,13 @@ elsif ($in{'delete'}) {
 	&ui_print_header(&server_in($server), $text{'save_deletetitle'}, "");
 	if (!$in{'confirm'}) {
 		@doms = &get_server_domains($server);
+		$cfunc = "type_".$server->{'manager'}."_can_disks";
 		&show_confirm_form(
 		    &text('save_deleterusure', "<tt>$server->{'host'}</tt>").
 		    (@doms ? "<p>".&text('save_deleterusure2',
 					 scalar(@doms)) : "").
-		    (&can_action($server, "devices") ?
+		    (&can_action($server, "devices") &&
+		     defined(&$cfunc) && &$cfunc($server) ?
 		        "<p>".&ui_checkbox("keep", 1,
 					   $text{'save_deletekeep'}, 0) : ""),
 		    "save_serv.cgi", [ [ "id", $in{'id'} ],
