@@ -89,25 +89,51 @@ if (@st && $st[9] > time()-3600) {
 	return @$rv;
 	}
 
-# Need to download actual list
-my ($host, $port, $page, $ssl) = &parse_http_url($server_images_url);
-my ($out, $err);
+# Download the list of mirrors
+my ($mhost, $mport, $mpage, $mssl) = &parse_http_url($server_images_mirror);
 my %serial;
 &read_file($licence_file, \%serial);
-&http_download($host, $port, $page, \$out, \$err, undef, $ssl,
+my ($mout, $merr);
+&http_download($mhost, $mport, $mpage, \$mout, \$merr, undef, $ssl,
 	       $serial{'SerialNumber'}, $serial{'LicenseKey'});
-&error("Failed to get server images : $err") if ($err);
-my @rv;
-foreach my $l (split(/\r?\n/, $out)) {
-	my ($id, $manager, $desc, $version, $size) = split(/\t+/, $l);
-	if ($server_management_types{$manager}) {
-		push(@rv, { 'id' => $id,
-			    'manager' => $manager,
-			    'desc' => $desc,
-			    'version' => $version,
-			    'size' => $size });
-		}
+my @mirrors;
+if (!$merr) {
+	@mirrors = split(/\r?\n/, $mout);
 	}
+@mirrors = grep { /^http/ } @mirrors;
+if (!@mirrors) {
+	@mirrors = ( $server_images_url );
+	}
+
+# Try each mirror until a working one is found
+my @rv;
+my $err;
+while(@mirrors) {
+	my $idx = int(rand(scalar(@mirrors)));
+	my $url = $mirrors[$idx];
+	splice(@mirrors, $idx, 1);
+	my ($host, $port, $page, $ssl) = &parse_http_url($url);
+	my $out;
+	$err = undef;
+	&http_download($host, $port, $page, \$out, \$err, undef, $ssl,
+		       $serial{'SerialNumber'}, $serial{'LicenseKey'});
+	next if ($err);
+	my $base = $url;
+	$base =~ s/[^\/]+$//;
+	foreach my $l (split(/\r?\n/, $out)) {
+		my ($id, $manager, $desc, $version, $size) = split(/\t+/, $l);
+		if ($server_management_types{$manager}) {
+			push(@rv, { 'id' => $id,
+				    'manager' => $manager,
+				    'desc' => $desc,
+				    'version' => $version,
+				    'size' => $size,
+				    'base' => $base });
+			}
+		}
+	last if (@rv);
+	}
+&error("Failed to get server images : $err") if ($err);
 
 # Save to cache and return
 &open_tempfile(CACHE, ">$server_images_cache");
@@ -122,7 +148,7 @@ return @rv;
 sub download_server_image
 {
 my ($img) = @_;
-my ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
+my ($host, $port, $page, $ssl) = &parse_http_url($img->{'base'});
 my %serial;
 &read_file($licence_file, \%serial);
 my $temp = &transname();
@@ -133,6 +159,7 @@ my %got;
 &read_file($temp, \%got);
 $got{'id'} ||= $img->{'id'};
 $got{'size'} = $img->{'size'};
+$got{'base'} = $img->{'base'};
 &save_server_image(\%got);
 return \%got;
 }
@@ -144,7 +171,7 @@ sub download_server_image_files
 {
 my ($img) = @_;
 my @files = split(/\s+/, $img->{'files'});
-my ($host, $port, $page, $ssl) = &parse_http_url($server_images_base);
+my ($host, $port, $page, $ssl) = &parse_http_url($img->{'base'});
 my $vhost = $img->{'vhost'} ? &get_managed_server($img->{'vhost'}) : undef;
 
 # Find storage location on the master, if any
@@ -162,7 +189,7 @@ foreach $stor (&list_storages()) {
 my %serial;
 &read_file($licence_file, \%serial);
 foreach my $f (@files) {
-	$progress_callback_url = $server_images_base.$f;
+	$progress_callback_url = $img->{'base'}.$f;
 	&http_download($host, $port, "$page/$f", "$master_dir/$f",
 		       \$err, \&progress_callback, $ssl,
 		       $serial{'SerialNumber'}, $serial{'LicenseKey'});
