@@ -4307,15 +4307,17 @@ if (@delfiles) {
 		}
 	foreach my $f (@dellvs) {
 		&delete_all_disk_image_partitions($vhost, $f);
+		my ($vg, $lv) = &split_lvm_device($f);
+		&delete_mapper_entries($vhost, "$vg-$lv");
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
 				     { 'device' => $f });
-		my ($vg, $lv) = &split_lvm_device($f);
 		my $srcf = &find_snapshot_source_logical_volume(
 				\%oldserver, $vg, $lv);
 		if ($srcf) {
 			# Delete snapshot source if no longer in use
 			&delete_all_disk_image_partitions($vhost, $srcf);
-			&delete_mapper_entries($vhost, "$vg-$lv");
+			my ($srcvg, $srclv) = &split_lvm_device($srcf);
+			&delete_mapper_entries($vhost, "$srcvg-$srclv");
 			&remote_foreign_call($vhost, "lvm",
 					     "delete_logical_volume",
 					     { 'device' => $srcf });
