@@ -57,3 +57,17 @@ sub show_owner_inputs
 sub parse_owner_inputs
 {
 }
+
+# replication_dirs()
+# Returns a list of directories that should be replicated to other Cloudmin
+# master systems. Any files within those directories will also be copied.
+sub replication_dirs
+{
+}
+
+# replication_files()
+# Returns a list of files that should be replicated to other Cloudmin master
+# systems.
+sub replication_files
+{
+}

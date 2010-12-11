@@ -411,6 +411,11 @@ push(@dirs, $ssh_keys_dir, $server_domains_dir, $server_collected_dir,
 if ($ec2_accounts_dir) {
         push(@dirs, $ec2_accounts_dir);
         }
+foreach my $p (@plugins) {
+	if (&plugin_defined($p, "replication_dirs")) {
+		push(@dirs, &plugin_call($p, "replication_dirs"));
+		}
+	}
 
 # Search each one for files
 foreach my $dir (@dirs) {
@@ -426,6 +431,11 @@ push(@files, $virtualmin_licences_file, $serial_cache_file,
 	     $server_images_cache,
 	     "$module_config_directory/bw-template",
 	     "$module_root_directory/owner-bw-template");
+foreach my $p (@plugins) {
+	if (&plugin_defined($p, "replication_files")) {
+		push(@dirs, &plugin_call($p, "replication_files"));
+		}
+	}
 
 # Add servers files
 my %filemap;
