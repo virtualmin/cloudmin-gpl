@@ -18,7 +18,7 @@ under C</mnt>, but you can change this with the C<--dir> flag.
 
   cloudmin mount-system --host xencentos.home
   Mounting filesystem for xencentos.home ..
-  .. mounted on /mnt/xen-xencentos.home
+  .. mounted at /mnt/xen-xencentos.home on host sentosa.home
 
 =cut
 
@@ -74,7 +74,9 @@ if ($err) {
 	exit(2);
 	}
 else {
-	print ".. mounted on ",$server->{$server->{'manager'}.'_mount'},"\n";
+	$vhost = &get_parent_server($server);
+	print ".. mounted at ",$server->{$server->{'manager'}.'_mount'},
+	      " on host ",$vhost->{'host'},"\n";
 	}
 &save_managed_server($server);
 

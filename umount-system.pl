@@ -13,7 +13,7 @@ can be booted.
 
   cloudmin umount-system --host xencentos.home
   Un-mounting filesystem for xencentos.home ..
-  .. unmounted from /mnt/xen-xencentos.home
+  .. unmounted from /mnt/xen-xencentos.home on host sentosa.home
 
 =cut
 
@@ -65,7 +65,8 @@ if ($err) {
 	exit(2);
 	}
 else {
-	print ".. unmounted from $mp\n";
+	$vhost = &get_parent_server($server);
+	print ".. unmounted from $mp on host $vhost->{'host'}\n";
 	}
 &save_managed_server($server);
 
