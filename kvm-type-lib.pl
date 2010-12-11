@@ -963,7 +963,7 @@ if ($server->{'kvm_filesystem_vg'}) {
 	my $lv = { 'name' => $server->{'kvm_filesystem_lv'},
 		   'size' =>
 			($img && !$empty ? int($img->{'rawsize'}/1024) : 0) ||
-			int($server->{'kvm_disksize'}/1024) ||
+			int($server->{'kvm_disksize'}*1024) ||
 			1024*1024,
 		   'perm' => 'rw',
 		   'alloc' => 'n',
