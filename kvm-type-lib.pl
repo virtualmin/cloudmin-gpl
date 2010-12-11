@@ -948,6 +948,7 @@ if (!$reset) {
 
 # Find existing LV if resetting
 my (@lvs, $fslv);
+&remote_finished();
 if ($reset && $server->{'xen_filesystem_vg'}) {
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 	@lvs = &remote_foreign_call($vhost, "lvm",
