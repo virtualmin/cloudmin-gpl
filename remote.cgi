@@ -71,6 +71,7 @@ foreach $i (keys %in) {
 		}
 	}
 print "Content-type: text/plain\n\n";
+$remote_addr = $ENV{'REMOTE_ADDR'} || &to_ipaddress($ENV{'REMOTE_HOST'});
 if ($format) {
 	# Convert to selected format
 	$err = &check_remote_format($format);
@@ -80,6 +81,7 @@ if ($format) {
 		}
 	&clean_environment();
 	$ENV{'REMOTE_USER'} = $remote_user;
+	$ENV{'REMOTE_ADDR'} = $remote_addr;
 	$out = &backquote_command("$cmd 2>&1");
 	&reset_environment();
 	print &convert_remote_format($out, $?, $in{'program'}, \%in, $format);
@@ -88,6 +90,7 @@ else {
 	# Stream output directly
 	&clean_environment();
 	$ENV{'REMOTE_USER'} = $remote_user;
+	$ENV{'REMOTE_ADDR'} = $remote_addr;
 	&open_execute_command(OUT, "$cmd 2>&1", 1);
 	while(<OUT>) {
 		print $_;
