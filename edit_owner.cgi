@@ -65,7 +65,8 @@ print &ui_hidden_table_start($text{'owner_header3'}, "width=100%", 2,
 if (&supports_plans()) {
 	print &ui_table_row($text{'owner_plan'},
 		&ui_select("plan", $owner->{'acl'}->{'plan'},
-		   [ map { [ $_->{'id'}, &describe_plan($_) ] } @plans ]));
+		   [ sort { lc($a->[1]) cmp lc($b->[1]) }
+		          map { [ $_->{'id'}, &describe_plan($_) ] } @plans ]));
 	}
 
 # Allowed actions
