@@ -6357,7 +6357,7 @@ else {
 sub list_virtualmin_licences
 {
 # Use cache if possible
-if (length(@list_virtualmin_licences_cache)) {
+if (scalar(@list_virtualmin_licences_cache)) {
 	return @list_virtualmin_licences_cache;
 	}
 
