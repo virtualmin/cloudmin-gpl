@@ -226,7 +226,10 @@ if ($config{'bw_email'} && $alert->{'master'}) {
 	}
 if ($alert->{'owner'}) {
 	# Email owners, but only about their own systems
-	my @allowners = map { &get_server_owners($_->[0]) } @problems;
+	my @allowners;
+	foreach my $p (@problems) {
+		push(@allowners, &get_server_owners($p->[0]));
+		}
 	my %doneowners;
 	foreach my $owner (@allowners) {
 		next if ($doneowners{$owner->{'name'}}++);
