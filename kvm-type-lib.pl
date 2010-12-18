@@ -4680,6 +4680,7 @@ return "<input type=button onClick='ifield = form.$ifield; chooser = window.open
 sub allocate_kvm_ip_addresses
 {
 my ($server, $vhost) = @_;
+$vhost->{'kvm_start'} || return &text('create_exenalloc', $vhost->{'host'});
 
 # Work out interfaces on host system
 my @hostifaces;
