@@ -58,6 +58,27 @@ $image->{'files'} =~ s/^.*\///;
 &has_command_on_server($srcserver, "file") ||
 	&error(&text('mimage_efilecmd', 'file'));
 
+# Copy device (like /dev/cdrom) to temp file
+if ($srcpath =~ /^\/dev\//) {
+	my $regularsrcpath = &tempname_on_server(
+				$srcserver, $in{'manager'}."-image-$$");
+	&$first_print(&text('mimage_regular', $regularsrcpath));
+	my $err = &transfer_file_between_servers($srcserver, $srcserver,
+			$srcpath, $regularsrcpath, 1);
+	if ($err) {
+		&$second_print(&text('mimage_eregular', &html_escape($err)));
+		goto FAILED;
+		}
+	if ($srcdelete) {
+		&delete_file_on_server($srcserver, $srcpath);
+		}
+	$srcpath = $regularsrcpath;
+	$image->{'files'} = $in{'manager'}."-image-$$";
+	$srcdelete = 1;
+	@st = &stat_file_on_server($srcserver, $srcpath);
+	&$second_print(&text('mimage_regulardone', &nice_size($st[7])));
+	}
+
 # Validate format
 ($fout, $ex, $err) = &execute_command_on_server(
 	$srcserver, "file ".quotemeta($srcpath));

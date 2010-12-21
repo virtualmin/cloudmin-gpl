@@ -3898,6 +3898,9 @@ mimage_gunzip=Un-compressing image ..
 mimage_egunzip=.. un-compression failed : $1
 mimage_gunzipdone=.. new size is $1
 mimage_eupload=An image download from a URL must be copied to Cloudmin's storage
+mimage_regular=Copying from device file to regular file $1 ..
+mimage_eregular=.. copy failed : $1
+mimage_regulardone=.. copied $1
 
 repl_title=Cloudmin Replication
 repl_desc=Replication allows you to sychronize configuration changes made on this Cloudmin system with one or more backup systems, so that if this master goes down one of the replicas can take over. This page allows you to select if this system is a replication master, or a source of replicated changes from another master system.
