@@ -8750,9 +8750,10 @@ $flags{'argv'} = &urlize(join(" ", @qargv));
 # Log it
 local $script = $0;
 $script =~ s/^.*\///;
-local $remote_user = "root";
-local $WebminCore::remote_user = "root";
-local $rh = $ENV{'REMOTE_HOST'};
+my $ru = $remote_user;
+local $remote_user = $ru || "root";
+local $WebminCore::remote_user = $ru || "root";
+my $rh = $ENV{'REMOTE_HOST'};
 local $ENV{'REMOTE_HOST'} = $rh || "127.0.0.1";
 &webmin_log($main::virtualmin_remote_api ||
 	    $ENV{'VIRTUALMIN_REMOTE_API'} ? "remote" : "cmd",

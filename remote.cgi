@@ -59,48 +59,48 @@ if (!$cmd) {
 	print "Remote program $in{'program'} does not exist\n";
 	exit(0);
 	}
+$program = $cmd;
+
+# Build list of command-line args
+@args = ();
 foreach $i (keys %in) {
 	next if ($i eq "program" || $i eq $format);
 	if ($in{$i} eq "") {
 		$cmd .= " --".quotemeta($i);
+		push(@args, "--$i");
 		}
 	else {
 		foreach $v (split(/\0/, $in{$i})) {
 			$cmd .= " --".quotemeta($i)." ".quotemeta($v);
+			push(@args, "--$i", $v);
 			}
 		}
 	}
+
 print "Content-type: text/plain\n\n";
 $remote_addr = $ENV{'REMOTE_ADDR'} || &to_ipaddress($ENV{'REMOTE_HOST'});
 $remote_host = $ENV{'REMOTE_HOST'};
+
+# Execute the command within the same perl interpreter
+pipe(SUBr, SUBw);
+$pid = &execute_webmin_script($program, $mod, \@args, SUBw);
 if ($format) {
-	# Convert to selected format
-	$err = &check_remote_format($format);
-	if ($err) {
-		print "Invalid format $format : $err\n";
-		exit(0);
+	# Capture and convert to selected format
+	my $out;
+	while(<SUBr>) {
+		$out .= $_;
 		}
-	&clean_environment();
-	$ENV{'REMOTE_USER'} = $remote_user;
-	$ENV{'REMOTE_ADDR'} = $remote_addr;
-	$ENV{'REMOTE_HOST'} = $remote_host;
-	$out = &backquote_command("$cmd 2>&1");
-	&reset_environment();
-	print &convert_remote_format($out, $?, $in{'program'}, \%in, $format);
+	waitpid($pid, 0);
+	print &convert_remote_format($out, $?, $in{'program'},
+				     \%in, $format);
 	}
 else {
-	# Stream output directly
-	&clean_environment();
-	$ENV{'REMOTE_USER'} = $remote_user;
-	$ENV{'REMOTE_ADDR'} = $remote_addr;
-	$ENV{'REMOTE_HOST'} = $remote_host;
-	&open_execute_command(OUT, "$cmd 2>&1", 1);
-	while(<OUT>) {
+	# Stream output
+	while(<SUBr>) {
 		print $_;
 		}
-	close(OUT);
+	close(SUBr);
+	waitpid($pid, 0);
 	print "\n";
 	print "Exit status: $?\n";
-	&reset_environment();
 	}
-
