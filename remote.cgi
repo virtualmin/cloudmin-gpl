@@ -59,33 +59,33 @@ if (!$cmd) {
 	print "Remote program $in{'program'} does not exist\n";
 	exit(0);
 	}
-$program = $cmd;
 
 # Build list of command-line args
 @args = ();
 foreach $i (keys %in) {
 	next if ($i eq "program" || $i eq $format);
 	if ($in{$i} eq "") {
-		$cmd .= " --".quotemeta($i);
 		push(@args, "--$i");
 		}
 	else {
 		foreach $v (split(/\0/, $in{$i})) {
-			$cmd .= " --".quotemeta($i)." ".quotemeta($v);
 			push(@args, "--$i", $v);
 			}
 		}
 	}
 
 print "Content-type: text/plain\n\n";
-$remote_addr = $ENV{'REMOTE_ADDR'} || &to_ipaddress($ENV{'REMOTE_HOST'});
-$remote_host = $ENV{'REMOTE_HOST'};
 
 # Execute the command within the same perl interpreter
 pipe(SUBr, SUBw);
-$pid = &execute_webmin_script($program, $mod, \@args, SUBw);
+$pid = &execute_webmin_script($cmd, $mod, \@args, SUBw);
 if ($format) {
 	# Capture and convert to selected format
+        $err = &check_remote_format($format);
+        if ($err) {
+                print "Invalid format $format : $err\n";
+                exit(0);
+                }
 	my $out;
 	while(<SUBr>) {
 		$out .= $_;
