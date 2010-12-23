@@ -66,6 +66,7 @@ if ($srcpath =~ /^\/dev\//) {
 	my $err = &transfer_file_between_servers($srcserver, $srcserver,
 			$srcpath, $regularsrcpath, 1);
 	if ($err) {
+		&delete_file_on_server($srcserver, $regularsrcpath);
 		&$second_print(&text('mimage_eregular', &html_escape($err)));
 		goto FAILED;
 		}
@@ -75,6 +76,7 @@ if ($srcpath =~ /^\/dev\//) {
 	$srcpath = $regularsrcpath;
 	$image->{'files'} = $in{'manager'}."-image-$$";
 	$srcdelete = 1;
+	&remote_finished();	# In case of timeout
 	@st = &stat_file_on_server($srcserver, $srcpath);
 	&$second_print(&text('mimage_regulardone', &nice_size($st[7])));
 	}
@@ -103,6 +105,7 @@ if ($fout =~ /(gzip|bzip2)\s+compressed/) {
 	$srcpath = $uncompressedsrcpath;
 	$image->{'files'} .= ".uncompressed";
 	$srcdelete = 1;
+	&remote_finished();	# In case of timeout
 	@st = &stat_file_on_server($srcserver, $srcpath);
 	&$second_print(&text('mimage_gunzipdone', &nice_size($st[7])));
 
@@ -163,6 +166,7 @@ if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
 	$image->{'files'} .= ".disk";
 	$image->{'format'} = 'disk';
 	$srcdelete = 1;
+	&remote_finished();	# In case of timeout
 	@st = &stat_file_on_server($srcserver, $srcpath);
 	&$second_print(&text('mimage_qcow2done', &nice_size($st[7])));
 	}
@@ -187,6 +191,7 @@ if ($image->{'nocompress'} && $in{'compress'}) {
 	$image->{'nocompress'} = 0;
 	$image->{'files'} .= ".gz";
 	$srcdelete = 1;
+	&remote_finished();	# In case of timeout
 	@st = &stat_file_on_server($srcserver, $srcpath);
 	&$second_print(&text('mimage_gzipdone', &nice_size($image->{'rawsize'}),
 						&nice_size($st[7])));
@@ -204,6 +209,7 @@ elsif (!$image->{'nocompress'} && $in{'compress'}) {
 	else {
 		&error(&text('mimage_erawsize', $err || $out));
 		}
+	&remote_finished();	# In case of timeout
 	}
 elsif ($image->{'nocompress'} && !$in{'compress'}) {
 	# Not compressed and doesn't need to be .. raw size is just size
@@ -228,6 +234,7 @@ elsif (!$image->{'nocompress'} && !$in{'compress'}) {
 	$image->{'nocompress'} = 1;
 	($image->{'files'} =~ s/\.gz$//) || ($image->{'files'} .= ".nogz");
 	$srcdelete = 1;
+	&remote_finished();	# In case of timeout
 	@st = &stat_file_on_server($srcserver, $srcpath);
 	$image->{'rawsize'} = $st[7];
 	&$second_print(&text('mimage_gunzipdone', &nice_size($st[7])));
