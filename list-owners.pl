@@ -75,6 +75,7 @@ if ($access{'owner'}) {
 # Print them
 if ($multi) {
 	# Full details
+	@oplugins = grep { &plugin_defined($_, "list_owner_fields") } @plugins;
 	foreach $o (@owners) {
 		print $o->{'name'},"\n";
 		print "    Real name: $o->{'real'}\n";
@@ -119,6 +120,13 @@ if ($multi) {
 		%actions = map { $_, 1 } split(/\s+/, $o->{'acl'}->{'actions'});
 		print "    Allowed actions: ",
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";
+
+		# Limits from plans
+		foreach $p (@oplugins) {
+			foreach $f (&plugin_call($p, "list_owner_fields", $o, 0)) {
+				print "    ".$f->{'desc'}.": ".$f->{'value'}."\n";
+				}
+			}
 
 		# Find all usage for managed systems
 		@allusage = ( );

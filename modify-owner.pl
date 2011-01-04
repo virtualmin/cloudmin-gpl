@@ -45,6 +45,14 @@ $< == 0 || die "$0 must be run as root";
 &usage_if_cloudmin_replica();
 &can_action_usage(undef, "global");
 
+# Find possible fields from plugins
+@oplugins = grep { &plugin_defined($_, "list_owner_fields") } @plugins;
+foreach $p (@oplugins) {
+	foreach $f (&plugin_call($p, "list_owner_fields", { }, 1)) {
+		$pfields{$f->{'id'}} = $f;
+		}
+	}
+
 # Parse command line
 @allactions = &list_owner_actions();
 while(@ARGV > 0) {
@@ -119,8 +127,11 @@ while(@ARGV > 0) {
 			&usage("Unknown limit type $w");
 		$maxes{$w} = -1;
 		}
+	elsif ($a =~ /^\-\-(\S+)$/ && $pfields{$1}) {
+		push(@pset, { 'id' => $1, 'value' => shift(@ARGV) });
+		}
 	else {
-		&usage();
+		&usage("Unknown option $a");
 		}
 	}
 
@@ -196,6 +207,12 @@ foreach $m (keys %maxes) {
 		}
 	}
 
+# Apply plugin fields
+foreach $p (@oplugins) {
+	$err = &plugin_call($p, "save_owner_fields", $owner, 1, \@pset);
+	&usage($err) if ($err);
+	}
+
 # Update plan
 if ($plan) {
 	$owner->{'acl'}->{'plan'} = $plan->{'id'};
@@ -230,6 +247,11 @@ print "                     [--add-host hostname]*\n";
 print "                     [--remove-host hostname]*\n";
 foreach $a (@allactions) {
 	print "                     [--can-$a | --cannot-$a]\n";
+	}
+foreach $p (@oplugins) {
+	foreach $f (&plugin_call($p, "list_owner_fields", { }, 1)) {
+		print "                     [--$f->{'id'} $f->{'vdesc'}]\n";
+		}
 	}
 exit(1);
 }
