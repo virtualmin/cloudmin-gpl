@@ -145,7 +145,8 @@ if (defined(&$mfunc) && &$mfunc($server, $in{'new'} ? undef : $iface)) {
 
 # Interface model (if non-virtual)
 $lfunc = "type_".$server->{'manager'}."_list_models";
-if (($in{'new'} == 2 || $iface->{'virtual'} eq '') && defined(&$lfunc)) {
+if (($in{'new'} == 2 || !$in{'new'} && $iface->{'virtual'} eq '') &&
+    defined(&$lfunc)) {
 	$models = &$lfunc($server);
 	if (ref($models)) {
 		print &ui_table_row($text{'iface_model'},
