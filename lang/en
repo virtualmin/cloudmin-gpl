@@ -3029,6 +3029,7 @@ plan_images=Allowed images for new systems
 plan_images1=All available
 plan_images0=Selected below ..
 plan_noimage=&lt;None - create from base OS&gt;
+plan_header5=Additional owner limits and capabilities
 
 dplan_err=Failed to delete plans
 dplan_enone=None selected!

@@ -70,6 +70,14 @@ $< == 0 || die "$0 must be run as root";
 &can_action_usage(undef, "global");
 &usage_if_cloudmin_replica();
 
+# Find possible fields from plugins
+@oplugins = grep { &plugin_defined($_, "list_plan_fields") } @plugins;
+foreach $p (@oplugins) {
+	foreach $f (&plugin_call($p, "list_plan_fields", { }, 1)) {
+		$pfields{$f->{'id'}} = $f;
+		}
+	}
+
 # Parse command line
 @allactions = &list_owner_actions();
 if (defined(&list_server_images)) {
@@ -112,6 +120,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-host-mode") {
 		$hostmode = '';
 		}
+	elsif ($a =~ /^\-\-(\S+)$/ && $pfields{$1}) {
+		push(@pset, { 'id' => $1, 'value' => shift(@ARGV) });
+		}
 	else {
 		&usage("Unknown flag $a");
 		}
@@ -134,6 +145,10 @@ $plan = { 'desc' => $name,
 	};
 foreach $m (keys %maxes) {
 	$plan->{'max_'.$m} = $maxes{$m};
+	}
+foreach $p (@oplugins) {
+	$err = &plugin_call($p, "save_plan_fields", $plan, 1, \@pset);
+	&usage($err) if ($err);
 	}
 
 &save_plan($plan);
@@ -158,6 +173,11 @@ foreach $a (@allactions) {
 	}
 print "                    [--host-mode ",
 	join("|", @plan_hostmodes)," | --no-host-mode]\n";
+foreach $p (@oplugins) {
+	foreach $f (&plugin_call($p, "list_plan_fields", { }, 1)) {
+		print "                    [--$f->{'id'} $f->{'vdesc'}]\n";
+		}
+	}
 exit(1);
 }
 

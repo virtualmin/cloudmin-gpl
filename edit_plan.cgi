@@ -38,7 +38,7 @@ foreach $l (@plan_limit_types) {
 
 print &ui_hidden_table_end();
 
-print &ui_hidden_table_start($text{'plan_header2'}, "width=100%", 2, "acts", 1,
+print &ui_hidden_table_start($text{'plan_header2'}, "width=100%", 2, "acts", 0,
 			     [ "width=30%" ]);
 
 # Allowed actions
@@ -124,6 +124,17 @@ if (@images) {
 	}
 else {
 	print &ui_hidden("images_def", 1);
+	}
+
+# Section for plugin-defined limits
+@iplugins = grep { &plugin_defined($_, "show_plan_inputs") } @plugins;
+if (@iplugins) {
+	print &ui_hidden_table_start($text{'plan_header5'}, "width=100%", 2,
+				     "plugins", 0, [ 'width=30%' ]);
+	foreach $p (@iplugins) {
+		print &plugin_call($p, "show_plan_inputs", $plan, $in{'new'});
+		}
+	print &ui_hidden_table_end();
 	}
 
 print &ui_form_end(

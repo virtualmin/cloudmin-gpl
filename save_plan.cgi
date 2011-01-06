@@ -84,6 +84,14 @@ else {
 	# Allocation mode
 	$plan->{'hostmode'} = $in{'hostmode'};
 
+	# Plugin defined limits
+	foreach $p (@plugins) {
+		if (&plugin_defined($p, "parse_plan_inputs")) {
+			&plugin_call($p, "parse_plan_inputs",
+				     $plan, $in{'new'}, \%in);
+			}
+		}
+
 	# Save and apply
 	&save_plan($plan);
 	&apply_plan($plan) if (!$in{'new'});

@@ -566,6 +566,9 @@ if ($o->{'acl'}->{'actions_def'}) {
 $o->{'acl'}->{'hosts'} = $plan->{'hosts'};
 $o->{'acl'}->{'hostmode'} = $plan->{'hostmode'};
 $o->{'acl'}->{'images'} = $plan->{'images'};
+foreach my $p (grep { &plugin_defined($_, "apply_owner_plan") } @plugins) {
+	&plugin_call($p, "apply_owner_plan", $plan, $o);
+	}
 }
 
 # owner_limits_desc(&owner, [only-over])

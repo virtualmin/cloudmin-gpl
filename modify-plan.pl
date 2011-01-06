@@ -58,6 +58,14 @@ $< == 0 || die "$0 must be run as root";
 &usage_if_cloudmin_replica();
 &can_action_usage(undef, "global");
 
+# Find possible fields from plugins
+@oplugins = grep { &plugin_defined($_, "list_plan_fields") } @plugins;
+foreach $p (@oplugins) {
+	foreach $f (&plugin_call($p, "list_plan_fields", { }, 1)) {
+		$pfields{$f->{'id'}} = $f;
+		}
+	}
+
 # Parse command line
 @allactions = &list_owner_actions();
 if (defined(&list_server_images)) {
@@ -139,6 +147,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--all-hosts") {
 		$allhosts = 1;
 		}
+	elsif ($a =~ /^\-\-(\S+)$/ && $pfields{$1}) {
+		push(@pset, { 'id' => $1, 'value' => shift(@ARGV) });
+		}
 	else {
 		&usage("Unknown flag $a");
 		}
@@ -208,6 +219,12 @@ if (defined($hostmode)) {
 	$plan->{'hostmode'} = $hostmode;
 	}
 
+# Apply plugin fields
+foreach $p (@oplugins) {
+	$err = &plugin_call($p, "save_plan_fields", $plan, 0, \@pset);
+	&usage($err) if ($err);
+	}
+
 &save_plan($plan);
 &apply_plan($plan);
 print "Updated Cloudmin account plan $plan->{'desc'}\n";
@@ -238,6 +255,11 @@ foreach $a (@allactions) {
 	}
 print "                    [--host-mode ",
 	join("|", @plan_hostmodes)," | --no-host-mode]\n";
+foreach $p (@oplugins) {
+	foreach $f (&plugin_call($p, "list_owner_fields", { }, 1)) {
+		print "                    [--$f->{'id'} $f->{'vdesc'}]\n";
+		}
+	}
 exit(1);
 }
 

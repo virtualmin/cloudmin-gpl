@@ -65,6 +65,7 @@ if (keys %names) {
 if ($multi) {
 	# Full details
 	@owners = &list_system_owners();
+	@oplugins = grep { &plugin_defined($_, "list_plan_fields") } @plugins;
 	foreach $p (@plans) {
 		print $p->{'desc'},"\n";
 		print "    Plan ID: $p->{'id'}\n";
@@ -100,6 +101,15 @@ if ($multi) {
 					  split(/\s+/, $p->{'hosts'}));
 		print "    Allowed hosts: ",
 			($hostlist || "All"),"\n";
+
+		# Limits from plugins
+		foreach $pg (@oplugins) {
+			foreach $f (&plugin_call($pg, "list_plan_fields",
+						 $p, 0)) {
+				print "    ".$f->{'desc'}.": ".
+					     $f->{'value'}."\n";
+				}
+			}
 		}
 	}
 elsif ($nameonly) {

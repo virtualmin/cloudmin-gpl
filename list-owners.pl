@@ -121,10 +121,12 @@ if ($multi) {
 		print "    Allowed actions: ",
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";
 
-		# Limits from plans
+		# Limits from plugins
 		foreach $p (@oplugins) {
-			foreach $f (&plugin_call($p, "list_owner_fields", $o, 0)) {
-				print "    ".$f->{'desc'}.": ".$f->{'value'}."\n";
+			foreach $f (&plugin_call($p, "list_owner_fields",
+						 $o, 0)) {
+				print "    ".$f->{'desc'}.": ".
+					     $f->{'value'}."\n";
 				}
 			}
 

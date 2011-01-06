@@ -209,7 +209,7 @@ foreach $m (keys %maxes) {
 
 # Apply plugin fields
 foreach $p (@oplugins) {
-	$err = &plugin_call($p, "save_owner_fields", $owner, 1, \@pset);
+	$err = &plugin_call($p, "save_owner_fields", $owner, 0, \@pset);
 	&usage($err) if ($err);
 	}
 
@@ -249,7 +249,7 @@ foreach $a (@allactions) {
 	print "                     [--can-$a | --cannot-$a]\n";
 	}
 foreach $p (@oplugins) {
-	foreach $f (&plugin_call($p, "list_owner_fields", { }, 1)) {
+	foreach $f (&plugin_call($p, "list_plan_fields", { }, 1)) {
 		print "                     [--$f->{'id'} $f->{'vdesc'}]\n";
 		}
 	}
