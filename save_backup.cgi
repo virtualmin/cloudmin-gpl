@@ -106,6 +106,15 @@ else {
 			&error($text{'backup_epurge'});
 		$backup->{'purge'} = $in{'purge'};
 		}
+
+	# Save pre and post commands
+	$master = &get_managed_server(0);
+	if (&can_action($master, "run")) {
+		$backup->{'pre'} = $in{'pre'};
+		$backup->{'pre_host'} = $in{'pre_host'};
+		$backup->{'post'} = $in{'post'};
+		$backup->{'post_host'} = $in{'post_host'};
+		}
 	
 	# Update the backup
 	&save_backup($backup);

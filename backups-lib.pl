@@ -278,6 +278,25 @@ if ($backup->{'owner'}) {
 @servers = grep { !$rv{$_->{'id'}} } @servers;
 &$second_print(&text('brun_founddests', scalar(@servers)));
 
+# Run pre-backup command
+if ($backup->{'pre'} =~ /\S/ && @servers) {
+	&$first_print($text{'brun_pre'});
+	($ok, $out) = &execute_prepost_command(
+		$backup->{'pre'}, $backup->{'pre_host'}, \@servers);
+	&$block_print($out);
+	if ($ok) {
+		&$second_print($text{'brun_predone'});
+		}
+	else {
+		foreach my $s (@servers) {
+			$rv{$s_>{'id'}} = { 'ok' => 0,
+					    'msg' => $text{'brun_preskip'} };
+			}
+		&$second_print($text{'brun_prefailed'});
+		return \%rv;
+		}
+	}
+
 if ($backup->{'parallel'}) {
 	# Run each of them in parallel. If capturing output, add it all
 	# from the sub-processes when they complete.
@@ -348,12 +367,65 @@ if ($backup->{'owner'}) {
 	&compute_backup_space();
 	}
 
+# Run post-backup command
+if ($backup->{'post'} =~ /\S/ && @servers) {
+	&$first_print($text{'brun_post'});
+	($ok, $out) = &execute_prepost_command(
+		$backup->{'post'}, $backup->{'post_host'}, \@servers);
+	&$block_print($out);
+	if ($ok) {
+		&$second_print($text{'brun_predone'});
+		}
+	else {
+		&$second_print($text{'brun_prefailed'});
+		}
+	}
+
 # Add in destinations to results
 foreach my $s (@servers) {
 	$rv{$s->{'id'}}->{'dest'} = $destmap{$s->{'id'}};
 	}
 
 return \%rv;
+}
+
+# execute_prepost_command(command, on-host, &servers)
+# Executes a pre or post-backup command. Returns an OK flag and the output.
+# May run multiple times if running on the host and there is more than one.
+sub execute_prepost_command
+{
+my ($cmd, $onhost, $servers) = @_;
+my @runon;
+my @rv;
+if ($onhost) {
+	my %done;
+	foreach my $s (@$servers) {
+		my $vhost = &get_parent_server($s);
+		push(@runon, $vhost) if ($vhost && !$done{$vhost->{'id'}}++);
+		}
+	}
+else {
+	push(@runon, &get_managed_server(0));
+	}
+foreach my $s (@runon) {
+	my ($out, $ex, $err) = &execute_command_on_server($s, $cmd);
+	push(@rv, [ $s, $ex || $err ? 0 : 1, $out ]);
+	}
+if (@rv == 1) {
+	# Just one machine
+	return ( $rv[0]->[1], $rv[0]->[2] );
+	}
+else {
+	# Concatenate results from all hosts
+	my $ok = 1;
+	my $out;
+	foreach my $r (@rv) {
+		$ok = 0 if (!$r->[1]);
+		$r->[2] =~ s/\n\s*$//;
+		$out .= $r->[0]->{'host'}.": ".$r->[2]."\n";
+		}
+	return ( $ok, $out );
+	}
 }
 
 # compute_backup_destination(&server, &backup)

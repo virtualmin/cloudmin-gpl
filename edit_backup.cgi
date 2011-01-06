@@ -133,6 +133,20 @@ print &ui_table_row($text{'backup_purge'},
 			$text{'backup_purgeafter'})." ".
 	$text{'backup_purgedays'});
 
+# Pre and post backup commands
+$master = &get_managed_server(0);
+if (&can_action($master, "run")) {
+	print &ui_table_row($text{'backup_pre'},
+		&ui_textbox("pre", $backup->{'pre'}, 60)."<br>\n".
+		&ui_checkbox("pre_host", 1, $text{'backup_pre_host'},
+			     $backup->{'pre_host'}));
+
+	print &ui_table_row($text{'backup_post'},
+		&ui_textbox("post", $backup->{'post'}, 60)."<br>\n".
+		&ui_checkbox("post_host", 1, $text{'backup_pre_host'},
+			     $backup->{'post_host'}));
+	}
+
 print &ui_hidden_table_end("sched");
 
 if ($in{'new'}) {

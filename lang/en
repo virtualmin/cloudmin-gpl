@@ -3131,6 +3131,9 @@ backup_purgedays=days
 backup_epurge=Days to purge after must be a number greater than zero
 backup_epurgehost=Purging of old backups is not possible when backing up to host systems
 backup_epurgedate=Purging of old backups is only possible when a destination containing date codes is entered
+backup_pre=Pre-backup command
+backup_pre_host=Run on host system
+backup_post=Post-backup command
 
 bdest_mode0=<tt>$1</tt> on Cloudmin master
 bdest_mode1=<tt>$1</tt> on host system
@@ -3221,6 +3224,11 @@ brun_purgefailed=.. purge failed : $1
 brun_purgedone=.. purged $1 of old backups
 brun_purgenone=.. no old backups to purge found
 brun_purgeskip=.. skipping purge because some backups failed
+brun_pre=Running pre-backup command ..
+brun_predone=.. completed OK
+brun_prefailed=.. command failed!
+brun_post=Running post-backup command ..
+brun_preskip=Skipped due to pre-backup command failure
 
 rrun_title=Restore Systems
 rrun_err=Restore failed
