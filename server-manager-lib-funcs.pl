@@ -389,9 +389,9 @@ if ($server->{'id'} eq '0') {
 			'ip_force' => $server->{'ip_force'},
 		      );
 	# Save all Cloudmin type-specific details
-	foreach my $t (@server_management_types, 'zone') {
+	foreach my $t (@server_management_types, 'zone', 'provision') {
 		foreach my $k (keys %$server) {
-			if ($k =~ /^\Q$t\E_/) {
+			if ($k =~ /^\Q$t\E_/ || $k eq $t) {
 				$this{$k} = $server->{$k};
 				}
 			}
