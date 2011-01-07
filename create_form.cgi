@@ -51,9 +51,10 @@ print &ui_table_row($text{'add_desc'},
 # System image, if any are available for the server type
 @images = &list_server_images($in{'type'});
 @images = grep { &can_image($_) && $_->{'format'} ne 'cd' } @images;
+$ifunc = "type_".$in{'type'}."_must_image";
+$mustimage = defined(&$ifunc) && &$ifunc();
 if (@images) {
-	$ifunc = "type_".$in{'type'}."_must_image";
-	$mustimage = defined(&$ifunc) && &$ifunc();
+	# Can select an image
 	$noimage = $text{'create_noimage_'.$in{'type'}} ||
 		   $text{'create_noimage'};
 	($defimage) = grep { $_->{'default'} } @images;
@@ -64,6 +65,11 @@ if (@images) {
 			  map { [ $_->{'id'}, $_->{'desc'} ] }
 			      sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }
 				   @images ]));
+	}
+elsif ($mustimages) {
+	# No images available, but none are needed
+	print &ui_table_row($text{'create_image'},
+		"<font color=red>$text{'create_noimage'}</font>");
 	}
 
 # Root password / SSH key (if possible)

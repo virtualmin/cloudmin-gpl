@@ -487,6 +487,7 @@ create_cd=Installation CD image
 create_cdimage=Cloudmin image
 create_cdfile=File or device on host
 create_nocd=You are not allowed to install from a file on the host, and there are no CD images available!
+create_noimage=No Cloudmin images for this system type have been downloaded yet!
 create_kvmvirtio=Fixing root disk device in fstab file ..
 create_ekvmvirtio=.. device fix failed : $1
 create_kvmgrub=Fixing root disk device in Grub configuration file ..
