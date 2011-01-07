@@ -82,11 +82,8 @@ my @rv;
 if (@vhosts) {
 	push(@rv, { 'create' => 0,
 		    'desc' => $text{'kvm_addlink'} });
-	my @images = &list_server_images('kvm');
-	if (@images) {
-		push(@rv, { 'create' => 1,
-			    'desc' => $text{'kvm_createlink'} });
-		}
+	push(@rv, { 'create' => 1,
+		    'desc' => $text{'kvm_createlink'} });
 	}
 return @rv;
 }
