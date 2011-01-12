@@ -59,15 +59,15 @@ index_savesearch=Set default search
 index_nosearch=Clear default search
 
 ec2_typedesc=Amazon EC2
-ec2_createlink=Create EC2 instance
-ec2_addlink=Add EC2 instance
+ec2_createlink=Create EC2 Instance
+ec2_addlink=Add EC2 Instance
 ec2_typeshort=EC2
-ec2_scan=Find EC2 instances
+ec2_scan=Find EC2 Instances
 
 real_typedesc=Physical
-real_add=Add physical system
+real_add=Add Physical System
 real_typeshort=physical
-real_scan=Find physical systems
+real_scan=Find Physical Systems
 
 zones_typedesc=Solaris Zone
 zones_createlink=Create Solaris Zone
@@ -1562,8 +1562,8 @@ images_of=$1 of $2
 images_create=Create image for $1.
 
 xen_typedesc=Xen
-xen_createlink=Create Xen instance
-xen_addlink=Add Xen instance
+xen_createlink=Create Xen Instance
+xen_addlink=Add Xen Instance
 xen_typeshort=Xen
 xen_estartxm=Xen instance is not running after $1 seconds
 xen_estartping=Xen instance was started, but could not be pinged after $1 seconds
@@ -3037,8 +3037,8 @@ dplan_enone=None selected!
 dplan_eall=You cannot delete all account plans
 dplan_eusers=The plan $1 is still being used by $2 system owners
 
-openvz_createlink=Create OpenVZ container
-openvz_addlink=Add OpenVZ container
+openvz_createlink=Create OpenVZ Container
+openvz_addlink=Add OpenVZ Container
 
 backups_title=System Backups
 backups_add=Add a new system backup.
@@ -3609,8 +3609,8 @@ oform_email=Contact email address
 oform_err=Failed to change password and email
 
 kvm_typedesc=KVM
-kvm_createlink=Create KVM instance
-kvm_addlink=Add KVM instance
+kvm_createlink=Create KVM Instance
+kvm_addlink=Add KVM Instance
 kvm_typeshort=KVM
 
 kvms_title=KVM Host Systems
