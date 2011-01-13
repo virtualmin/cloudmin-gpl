@@ -69,7 +69,7 @@ if (@images) {
 elsif ($mustimages) {
 	# No images available, but none are needed
 	print &ui_table_row($text{'create_image'},
-		"<font color=red>$text{'create_noimage'}</font>");
+		"<font color=red>$text{'create_noimagedownloaded'}</font>");
 	}
 
 # Root password / SSH key (if possible)
