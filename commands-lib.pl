@@ -110,7 +110,9 @@ return ( "upload-api-docs.pl",
 sub list_api_directories
 {
 my ($pwd) = @_;
-return ( $pwd );
+local $par = $pwd;
+$par =~ s/\/([^\/]+)$//;
+return ( $pwd, glob("$par/cloudmin-*") );
 }
 
 # create_api_helper_command([&extra-dirs])
