@@ -64,7 +64,8 @@ elsif ($in{'mode'} eq 'virtualmin') {
 
 # Apply search
 if ($in{'search'}) {
-	@combined = grep { $_->{'desc'} =~ /\Q$in{'search'}\E/i } @combined;
+	@combined = grep { $_->{'desc'} =~ /\Q$in{'search'}\E/i ||
+			   $_->{'id'} =~ /\Q$in{'search'}\E/i } @combined;
 	}
 
 # Build list of creation links
