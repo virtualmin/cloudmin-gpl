@@ -21,6 +21,9 @@ return (
 	[ "License management", "*-licence.pl", "*-licences.pl" ],
 	[ "Image management", "*-image.pl", "*-images.pl",
 			      "set-image-rawsize.pl" ],
+	[ "Provisioning", "*provision*.pl", "*-dns-zone.pl",
+			  "*-mysql-database.pl", "*-mysql-login.pl",
+			  "*-dns-records.pl" ],
 	[ "Other scripts", "*.pl" ],
 	);
 }
@@ -86,6 +89,9 @@ commands defined in this category.",
 "Image management",
 "An image is a template from which a virtual system can be created. Commands in
 this category can be used to create, list and remove images.",
+
+"Provisioning",
+"These commands are part of the Cloudmin provisioning server plugin, and can be used to create DNS zones, MySQL databases and other services on host systems.",
 
 "Other scripts",
 "Programs in this section don't fall into any of the other categories.",
