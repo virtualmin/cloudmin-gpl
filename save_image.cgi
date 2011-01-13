@@ -39,4 +39,4 @@ else {
 		}
 	&webmin_log("modify", "image", $img->{'id'});
 	}
-&redirect("list_images.cgi?mode=$in{'mode'}");
+&redirect("list_images.cgi?mode=$in{'mode'}&search=".&urlize($in{'search'}));

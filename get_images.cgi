@@ -74,7 +74,8 @@ if ($in{'get'}) {
 			}
 		}
 	&webmin_log("download", "images", scalar(@d));
-	&ui_print_footer("list_images.cgi?mode=$in{'mode'}",
+	&ui_print_footer("list_images.cgi?mode=$in{'mode'}&search=".
+			 &urlize($in{'search'}),
 			 $text{'images_return'});
 	}
 elsif ($in{'copy'} || $in{'move'}) {
@@ -155,7 +156,8 @@ elsif ($in{'copy'} || $in{'move'}) {
 		}
 
 	&webmin_log($in{'move'} ? "move" : "copy", "images", scalar(@d));
-	&ui_print_footer("list_images.cgi?mode=$in{'mode'}",
+	&ui_print_footer("list_images.cgi?mode=$in{'mode'}&search=".
+			 &urlize($in{'search'}),
 			 $text{'images_return'});
 	}
 

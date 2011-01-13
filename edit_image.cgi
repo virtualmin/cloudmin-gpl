@@ -13,6 +13,7 @@ if ($got) {
 	print &ui_form_start("save_image.cgi");
 	print &ui_hidden("id", $in{'id'});
 	print &ui_hidden("mode", $in{'mode'});
+	print &ui_hidden("search", $in{'search'});
 	}
 print &ui_table_start($text{'eimage_header'}, undef, 2, [ "nowrap" ]);
 
@@ -123,4 +124,5 @@ if ($got) {
 			     [ "delete", $text{'eimage_delete'} ] ]);
 	}
 
-&ui_print_footer("list_images.cgi?mode=$in{'mode'}", $text{'images_return'});
+&ui_print_footer("list_images.cgi?mode=$in{'mode'}&search=".
+		 &urlize($in{'search'}), $text{'images_return'});

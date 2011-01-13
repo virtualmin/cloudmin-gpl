@@ -9,6 +9,7 @@ require './server-manager-lib.pl';
 print &ui_form_start("manual_image.cgi", "post");
 print &ui_hidden("manager", $in{'manager'});
 print &ui_hidden("mode", $in{'mode'});
+print &ui_hidden("search", $in{'search'});
 print &ui_table_start($text{'mimage_header'}, undef, 2);
 
 # Virtualization type
@@ -69,6 +70,7 @@ if ($in{'manager'} eq 'xen' || $in{'manager'} eq 'citrix') {
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'create'} ] ]);
 
-&ui_print_footer("list_images.cgi?mode=$in{'mode'}", $text{'images_return'},
+&ui_print_footer("list_images.cgi?mode=$in{'mode'}&search=".
+		 &urlize($in{'search'}), $text{'images_return'},
 		 "", $text{'index_return'});
 

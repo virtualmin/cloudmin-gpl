@@ -24,16 +24,25 @@ $in{'mode'} ||= 'suitable';
 foreach $m ("all", "suitable", "got", "avail", "local", "virtualmin") {
 	$msg = $text{'images_mode_'.$m};
 	if ($m ne $in{'mode'}) {
-		$msg = "<a href='list_images.cgi?mode=$m'>$msg</a>";
+		$msg = "<a href='list_images.cgi?mode=$m&search=".
+		       &urlize($in{'search'})."'>$msg</a>";
 		}
 	push(@links, $msg);
 	}
 print &ui_links_row(\@links),"<p>\n";
 
+# Show search form
+print &ui_form_start("list_images.cgi");
+print &ui_hidden("mode", $in{'mode'});
+print "<b>$text{'images_search'}</b>\n";
+print &ui_textbox("search", $in{'search'}, 40)," ",
+      &ui_submit($text{'images_ok'});
+print &ui_form_end(),"<p>\n";
+
 # Apply mode
 if ($in{'mode'} eq 'suitable') {
 	# Only those for configured system types
-	@combines = grep { $server_management_types{$_->{'manager'}} } 
+	@combined = grep { $server_management_types{$_->{'manager'}} } 
 			 @combined;
 	}
 elsif ($in{'mode'} eq 'got') {
@@ -53,13 +62,19 @@ elsif ($in{'mode'} eq 'virtualmin') {
 	@combined = grep { $got_avail{$_->{'id'}} } @combined;
 	}
 
+# Apply search
+if ($in{'search'}) {
+	@combined = grep { $_->{'desc'} =~ /\Q$in{'search'}\E/i } @combined;
+	}
+
 # Build list of creation links
 @links = ( &select_all_link("d"), &select_invert_link("d") );
 foreach $t (@virtual_server_management_types) {
 	$mfunc = "type_".$t."_can_manual_image";
 	if (defined(&$mfunc) && &$mfunc()) {
 		push(@links, "<a href='manual_image_form.cgi?manager=$t&".
-			     "mode=$in{'mode'}'>".
+			     "mode=$in{'mode'}&search=".
+			     &urlize($in{'search'})."'>".
 			     &text('images_create', $text{$t.'_typedesc'}).
 			     "</a>");
 		}
@@ -68,6 +83,7 @@ foreach $t (@virtual_server_management_types) {
 # Show table of images
 print &ui_form_start("get_images.cgi", "post");
 print &ui_hidden("mode", $in{'mode'});
+print &ui_hidden("search", $in{'search'});
 print &ui_links_row(\@links);
 @tds = ( "width=5" );
 $anymissing = $anymissing_dests = $anyextra_dests = 0;
@@ -105,8 +121,8 @@ foreach $i (sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @combined) {
 	$dstr = $i->{'desc'};
 	$dstr = "<b>$dstr</b>" if ($i->{'default'});
 	print &ui_checked_columns_row([
-		"<a href='edit_image.cgi?id=$i->{'id'}&mode=$in{'mode'}'>".
-		  "$dstr</a>",
+		"<a href='edit_image.cgi?id=$i->{'id'}&mode=$in{'mode'}".
+		  "&search=".&urlize($in{'search'})."'>$dstr</a>",
 		&$tfunc(),
 		$got && $got->{'partial'} ?
 			&text('images_partial',

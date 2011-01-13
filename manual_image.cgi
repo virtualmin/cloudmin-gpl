@@ -309,6 +309,7 @@ if ($srcdelete) {
 	&delete_file_on_server($srcserver, $srcpath);
 	}
 
-&ui_print_footer("list_images.cgi?mode=$in{'mode'}", $text{'images_return'},
+&ui_print_footer("list_images.cgi?mode=$in{'mode'}&search=".
+		 &urlize($in{'search'}), $text{'images_return'},
 		 "", $text{'index_return'});
 

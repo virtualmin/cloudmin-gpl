@@ -1560,6 +1560,8 @@ images_mode_local=Created locally
 images_mode_virtualmin=Created by Virtualmin
 images_of=$1 of $2
 images_create=Create image for $1.
+images_search=Find images matching:
+images_ok=Search
 
 xen_typedesc=Xen
 xen_createlink=Create Xen Instance
