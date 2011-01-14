@@ -113,10 +113,18 @@ elsif ($in{'delete'}) {
 			      &text('mass_ddeldoms', $dtotal),
 			      "</font></b><p>\n";
 			}
-		if (&can_action(\@servers, "devices")) {
+
+		# Ask if disks should be kept, if appropriate
+		$anydisks = 0;
+		foreach $s (@servers) {
+			$cfunc = "type_".$s->{'manager'}."_can_disks";
+			$anydisks++ if (defined(&$cfunc) && &$cfunc($s));
+			}
+		if (&can_action(\@servers, "devices") && $anydisks) {
 		        print &ui_checkbox("keep", 1, $text{'save_deletekeep'},
 					   0),"<p>\n";
 			}
+
 		print &ui_form_end([ [ "confirm", $text{'mass_dok'} ] ]);
 		print "</center>\n";
 		}
