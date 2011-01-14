@@ -541,6 +541,10 @@ my ($st) = @_;
 if ($st eq 'up') {
 	return ( 'nowebmin', 'novirt', 'virt', 'alive' );
 	}
+elsif ($st eq 'notdown') {
+	return ( 'noping', 'nossh', 'nosshlogin', 'downwebmin',
+		 'nowebminlogin', 'nowebmin', 'novirt', 'virt', 'alive' );
+	}
 elsif ($st eq 'wm') {
 	return ( 'novirt', 'virt' );
 	}
@@ -7436,6 +7440,7 @@ if (@parents) {
 push(@grid, &highlight_field($text{'index_ssearch'}, "sok"));
 push(@grid, &ui_select("ssearch", $in->{'ssearch'} || 'up',
 		[ [ 'up', "&lt;$text{'status_up'}&gt;" ],
+		  [ 'notdown', "&lt;$text{'status_notdown'}&gt;" ],
 		  [ 'wm', "&lt;$text{'status_wm'}&gt;" ],
 		  [ 'bad', "&lt;$text{'status_bad'}&gt;" ],
 		  [ 'updates', "&lt;$text{'status_updates'}&gt;" ],
