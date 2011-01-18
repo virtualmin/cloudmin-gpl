@@ -149,6 +149,7 @@ while(@ARGV > 0) {
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+$oldserver = { %$server };
 &can_action_usage($server, "edit");
 &obtain_lock_server($server);
 
@@ -328,6 +329,13 @@ if ($bootdevice) {
 	$err = &$mfunc($server, ref($olddevice) ? \@bootdevices
 						: $bootdevices[0]);
 	$err && &usage("Failed to change boot device to $bootdevice : $err");
+	}
+
+# Call post-save function
+$psfunc = "type_".$server->{'manager'}."_post_save";
+if (defined(&$psfunc)) {
+	$err = &$psfunc($server, $oldserver);
+	&error($err) if ($err);
 	}
 
 # Update status if needed
