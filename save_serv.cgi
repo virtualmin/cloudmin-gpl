@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 $t = $server->{'manager'};
+$oldserver = { %$server };
 
 if ($in{'shutdown'}) {
 	# Shut down this system, after asking for confirmation
@@ -470,7 +471,6 @@ else {
 		}
 
 	# Validate authentication inputs
-	$oldserver = { %$server };
 	if (defined($in{'auth_mode'})) {
 		$err = &parse_ssh_login_form(\%in, $server);
 		&error($err) if ($err);
