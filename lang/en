@@ -2570,6 +2570,7 @@ smove_diffdir=Xen base directory is different
 smove_shutfailed=.. shutdown failed : $1
 smove_disks=Copying disk images to new host system ..
 smove_onedisk=Copying disk $1 ..
+smove_newswap=Re-creating swap disk $1 ..
 smove_devdisk=.. not a disk image, so cannot be copied
 smove_alrdisk=.. already available on the new host system
 smove_errdisk=.. copy failed : $1
