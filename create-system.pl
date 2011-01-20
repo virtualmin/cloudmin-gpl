@@ -132,6 +132,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ssh-pass") {
 		$ssh_pass = shift(@ARGV);
 		}
+	elsif ($a eq "--no-ssh") {
+		$no_sshlogin = 1;
+		}
 	elsif ($a eq "--webmin") {
 		$webmin_mode = 1;
 		}
@@ -169,7 +172,7 @@ while(@ARGV > 0) {
 		$typeargs{$1}->{$2} = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown flag $a");
 		}
 	}
 
@@ -194,7 +197,7 @@ if ($unixhost) {
 $sfunc = "type_".$type."_no_ssh";
 $no_ssh = defined(&$sfunc) && &$sfunc();
 if (!$no_ssh) {
-	$ssh_pass || $ssh_key ||
+	$ssh_pass || $ssh_key || $no_sshlogin ||
 		&usage("One of --ssh-pass or --ssh-key must be given");
 	}
 $pfunc = "type_".$type."_no_create_pass";
@@ -202,7 +205,7 @@ if (defined(&$pfunc) && &$pfunc()) {
 	$ssh_key || &usage("The specified system type can only use ".
 			   "the --ssh-key parameter, not --ssh-pass");
 	}
-if (($no_ssh || !$ssh_pass) && $webmin_mode == 1) {
+if (($no_ssh || $no_sshlogin || !$ssh_pass) && $webmin_mode == 1) {
 	&usage("--webmin-pass must be given to specify the Webmin password ".
 	       "when no SSH password is available");
 	}
@@ -266,8 +269,11 @@ if (!$no_ssh) {
 	if ($ssh_pass) {
 		$server->{'ssh_pass'} = $ssh_pass;
 		}
-	else {
+	elsif ($ssh_key) {
 		$server->{'key'} = $ssh_key;
+		}
+	else {
+		$server->{'ssh_nologin'} = 1;
 		}
 	$server->{'ssh_protocol'} = 2;
 	}
@@ -467,7 +473,7 @@ if (defined(&$dfunc)) {
 	&$dfunc($server, $serial, $key);
 	}
 
-if (!$no_ssh) {
+if (!$no_ssh && !$no_sshlogin) {
 	# Wait at most 120 seconds for SSH to come up (indicating that booting
 	# is done), if need be
 	$bfunc = "type_".$type."_needs_boot";
@@ -650,7 +656,7 @@ print "cloudmin create-system --host name\n";
 print "                      [--unix-host name]\n";
 print "                       --type $crtypes\n" if ($crtypes);
 print "                      [--desc \"system description\"]\n";
-print "                       --ssh-key keyid | --ssh-pass password\n";
+print "                       --ssh-key keyid | --ssh-pass password | --no-ssh\n";
 print "                      [--webmin | --webmin-pass password]\n";
 print "                      [--novirt]\n";
 print "                      [--image id]\n";

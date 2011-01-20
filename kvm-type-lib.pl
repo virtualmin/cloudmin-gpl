@@ -1189,7 +1189,7 @@ if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
 	&umount_filesystem_if_needed($server);
 	}
 
-if (!$empty) {
+if (!$empty && &mountable_filesystem($server)) {
 	# Clean up /etc/fstab to remove non-existant devices
 	&$first_print($text{'create_xencleanfstab'});
 	my $err = &cleanup_server_fstab($server);
@@ -1520,7 +1520,7 @@ if (!$noping) {
 	}
 
 # Wait for SSH to come up
-if ($pinged && !$server->{'no_sshlogin'}) {
+if ($pinged && !$server->{'ssh_nologin'}) {
 	$sshed = &wait_for_ssh($server);
 	}
 

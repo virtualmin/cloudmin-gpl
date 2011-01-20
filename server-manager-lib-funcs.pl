@@ -1135,7 +1135,11 @@ else {
 sub mount_filesystem_if_needed
 {
 my ($server, $wantfile) = @_;
-if ($mounted_filesystem{$server->{'id'}}) {
+if (!&mountable_filesystem($server)) {
+	# Cannot mount windows / etc
+	return $text{'create_enomount'};
+	}
+elsif ($mounted_filesystem{$server->{'id'}}) {
 	# Already mounted, so just up the count
 	$mounted_filesystem{$server->{'id'}}++;
 	}
@@ -1163,6 +1167,16 @@ if ($mounted_filesystem{$server->{'id'}} == 0) {
 	return &$ufunc($server);
 	}
 return undef;
+}
+
+# mountable_filesystem(&server)
+# Returns 1 if some virtual system has a filesystem type that Cloudmin can mount
+sub mountable_filesystem
+{
+my ($server) = @_;
+return $server->{'type'} eq 'windows' ||
+       $server->{'type'} =~ /bsd$/ ||
+       $server->{'type'} eq 'solaris' ? 0 : 1;
 }
 
 # build_ssh_command(&server, [no-quiet], [extra-ssh-args])
@@ -3598,7 +3612,7 @@ if ($oldping) {
 	# Wait for startup
 	my $pinged = &wait_for_ping($server);
 	my $sshed;
-	if ($pinged && !$server->{'no_sshlogin'}) {
+	if ($pinged && !$server->{'ssh_nologin'}) {
 		$sshed = &wait_for_ssh($server);
 		}
 	return "Failed to start up after 60 seconds" if (!$sshed);
@@ -7324,7 +7338,7 @@ if (defined(&$dfunc)) {
 # Wait for SSH login
 my ($sshstatus, $ssherr, $webmindir, $webminport, $webminssl);
 my $bfunc = "type_".$server->{'manager'}."_needs_boot";
-if ($server->{'no_sshlogin'} && defined(&$bfunc) && &$bfunc($server)) {
+if (!$server->{'ssh_nologin'} && defined(&$bfunc) && &$bfunc($server)) {
 	&$first_print($text{'create_sshing'});
 	my $sshcount = 0;
 	while(1) {

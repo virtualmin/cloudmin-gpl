@@ -33,12 +33,18 @@ $no_ssh = defined(&$sfunc) && &$sfunc();
 if (!$no_ssh) {
 	$server->{'ssh_user'} = 'root';
 	if ($in{'auth_mode'} == 0) {
+		# Via password
 		$in{'upass'} || &error($text{'add_eupass'});
 		$server->{'ssh_pass'} = $in{'upass'};
 		}
 	elsif ($in{'auth_mode'} == 1) {
+		# Via key
 		$in{'key'} || &error($text{'add_ekey'});
 		$server->{'key'} = $in{'key'};
+		}
+	elsif ($in{'auth_mode'} == 2) {
+		# No SSH login needed
+		$server->{'ssh_nologin'} = 1;
 		}
 	$server->{'ssh_protocol'} = 2;	# Nobody uses 1 anymore!
 	}
@@ -321,7 +327,7 @@ if (defined(&$dfunc)) {
 	&$dfunc($server, $serial, $key);
 	}
 
-if (!$no_ssh && !$server->{'no_sshlogin'}) {
+if (!$no_ssh && !$server->{'ssh_nologin'}) {
 	# Wait at most 120 seconds for SSH to come up (indicating that booting
 	# is done), if need be
 	$bfunc = "type_".$in{'type'}."_needs_boot";

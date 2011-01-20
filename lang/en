@@ -327,6 +327,7 @@ create_exenfsfile=Cloudmin does not know which file contains the Xen instance's 
 create_exenmount=.. failed : $1
 create_exenmount2=.. not possible for a VM created from an installation template
 create_xenmounted=.. mounted on $1
+create_enomount=Filesystem not supported for this system type
 create_xenkernel=Configuring kernel for Xen instance ..
 create_xenkernelpv=.. setup to boot Xen system's kernel with Pv-Grub
 create_xenkernelpy=.. setup to boot Xen system's kernel with PyGrub
