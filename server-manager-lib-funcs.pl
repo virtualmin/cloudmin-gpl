@@ -3907,10 +3907,6 @@ if (!@st) {
 	}
 my ($out, $ex, $err) = &execute_command_on_server($server,
 	"/etc/webmin/system-status/enable-collection.pl 5");
-if (!$ex && !$err) {
-	($out, $ex, $err) = &execute_command_on_server($server,
-		"/etc/webmin/system-status/systeminfo.pl");
-	}
 return $err ? $err : $ex ? $out : undef;
 }
 
