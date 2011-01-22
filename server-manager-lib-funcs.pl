@@ -1161,8 +1161,12 @@ return undef;
 sub umount_filesystem_if_needed
 {
 my ($server) = @_; 
-$mounted_filesystem{$server->{'id'}}--;
+if ($mounted_filesystem{$server->{'id'}}) {
+	# Current mounted, decrease mount count
+	$mounted_filesystem{$server->{'id'}}--;
+	}
 if ($mounted_filesystem{$server->{'id'}} == 0) {
+	# Count has now hit zero, actually un-mount
 	my $ufunc = "type_".$server->{'manager'}."_umount_filesystem";
 	return &$ufunc($server);
 	}
