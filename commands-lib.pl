@@ -6,7 +6,7 @@ return (
 	[ "Backup and restore", "backup-systems.pl", "restore-systems.pl",
 				"list-backup-logs.pl" ],
 	[ "File management", "*-file.pl", "*-files.pl", "mount-system.pl",
-			     "umount-system.pl" ],
+			     "umount-system.pl", "list-directory.pl" ],
 	[ "Virtual systems", "*-system.pl", "*-systems.pl",
 			     "modify-limits.pl", "get-console.pl",
 			     "modify-reverse-address.pl", ],
