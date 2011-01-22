@@ -1165,6 +1165,10 @@ if ($mounted_filesystem{$server->{'id'}}) {
 	# Current mounted, decrease mount count
 	$mounted_filesystem{$server->{'id'}}--;
 	}
+else {
+	# Wasn't mounted in the first place
+	return undef;
+	}
 if ($mounted_filesystem{$server->{'id'}} == 0) {
 	# Count has now hit zero, actually un-mount
 	my $ufunc = "type_".$server->{'manager'}."_umount_filesystem";
