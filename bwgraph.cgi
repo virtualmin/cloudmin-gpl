@@ -66,11 +66,12 @@ if ($mode ne "server" && $mode ne "owner") {
 			}
 		else {
 			push(@links, "<a href='bwgraph.cgi?mode=$m&".
-				     "ago=$in{'ago'}'>".
+				     "ago=$in{'ago'}&units=$in{'units'}&".
+				     "empty=$in{'empty'}'>".
 				     $text{'graph_mode_'.$m}."</a>");
 			}
 		}
-	print $text{'graph_mode'}," ",&ui_links_row(\@links),"<br>\n";
+	print $text{'graph_mode'}," ",&ui_links_row(\@links);
 	}
 
 # Work out age of oldest server
@@ -116,6 +117,8 @@ print &ui_hidden("owner", $in{'owner'});
 print &ui_hidden("dir", $dir);
 print &ui_hidden("id", $in{'id'});
 print &ui_hidden("log", $in{'log'});
+print &ui_hidden("units", $in{'units'});
+print &ui_hidden("empty", $in{'empty'});
 @agos = ( [ -1, $text{'graph_lasthour'} ],
 	  [ -2, $text{'graph_lastday'} ] );
 for($ago=0; $ago<24; $ago++) {
@@ -262,9 +265,29 @@ else {
 	print "<table width=100%>\n";
 	foreach $s (@showservers) {
 		$b = $bwmap->{$s->{'id'}};
+		if ($in{'empty'} && !$b->{$dir}) {
+			# No usage, so skip
+			next;
+			}
+
+		# System name
 		print "<tr>\n";
-		print "<td width=20%><a href='edit_serv.cgi?id=$s->{'id'}'>",
-		      $s->{'short_host'}."</a></td>\n";
+		print "<td width=20%><a href='bwgraph.cgi?id=$s->{'id'}&",
+		      "ago=$in{'ago'}'>$s->{'short_host'}</a></td>\n";
+
+		# Usage and limit
+		print "<td width=5% nowrap>",
+		      &nice_size_units($b->{$dir}),"</td>\n";
+		if ($mode ne 'host') {
+			# Only show limit for specific hosts
+			print "<td>&nbsp;/&nbsp;</td>\n";
+			print "<td width=5% nowrap>",
+			  ($s->{'bw_limit'} ? &nice_size_units($s->{'bw_limit'})
+			  	            : $text{'graph_unlimit'}),"</td>\n";
+			}
+
+		# Bar chart
+		print "<td>&nbsp;&nbsp;</td>\n";
 		print "<td width=70%>";
 		if ($max_total && ($b->{$dir} || $s->{'bw_limit'})) {
 			if ($s->{'bw_limit'} && $b->{$dir} > $s->{'bw_limit'}) {
@@ -285,52 +308,72 @@ else {
 				}
 			}
 		print "</td>\n";
-		print "<td width=5% nowrap>",&nice_size($b->{$dir}),"</td>\n";
-		if ($mode ne 'host') {
-			# Only show limit for specific hosts
-			print "<td>/</td>\n";
-			print "<td width=5% nowrap>",
-				($s->{'bw_limit'} ? &nice_size($s->{'bw_limit'})
-					  : $text{'graph_unlimit'}),"</td>\n";
-			}
+
 		print "</tr>\n";
 		}
-	print "</table>\n";
+	print "</table><br>\n";
 	}
 
-@dirsel = ( );
-if ($mode ne 'systems') {
-	push(@dirsel, [ "inout", $text{'graph_inout'} ]);
-	}
-push(@dirsel, [ "in", $text{'graph_in'} ],
-	      [ "out", $text{'graph_out'} ] );
-if ($config{'bw_dir_in'} && $config{'bw_dir_out'}) {
-	push(@dirsel, [ "total", $text{'graph_total'} ]);
-	}
-print &ui_form_start("bwgraph.cgi");
-print &ui_hidden("mode", $mode);
-print &ui_hidden("owner", $in{'owner'});
-print &ui_hidden("ago", $in{'ago'});
-print &ui_hidden("id", $in{'id'});
-print "<table>\n";
+if ($mode ne "systems" && $mode ne "host") {
+	# Form to change direction and axis scaling
+	@dirsel = ( );
+	if ($mode ne 'systems') {
+		push(@dirsel, [ "inout", $text{'graph_inout'} ]);
+		}
+	push(@dirsel, [ "in", $text{'graph_in'} ],
+		      [ "out", $text{'graph_out'} ] );
+	if ($config{'bw_dir_in'} && $config{'bw_dir_out'}) {
+		push(@dirsel, [ "total", $text{'graph_total'} ]);
+		}
+	print &ui_form_start("bwgraph.cgi");
+	print &ui_hidden("mode", $mode);
+	print &ui_hidden("owner", $in{'owner'});
+	print &ui_hidden("ago", $in{'ago'});
+	print &ui_hidden("id", $in{'id'});
+	print &ui_hidden("units", $in{'units'});
+	print &ui_hidden("empty", $in{'empty'});
+	print &ui_table_start(undef, undef, 2);
 
-# Direction mode
-print "<tr> <td><b>$text{'graph_dir'}</b></td> <td>",
-      &ui_select("dir", $dir, \@dirsel, 1, 0, 0, 0,
-		 "onChange='form.submit()'"),"\n",
-      &ui_submit($text{'graph_ok'}),"</td> </tr>\n";
+	# Direction mode
+	print &ui_table_row($text{'graph_dir'},
+	      &ui_select("dir", $dir, \@dirsel, 1, 0, 0, 0,
+			 "onChange='form.submit()'")." ".
+	      &ui_submit($text{'graph_ok'}));
 
-# Log or integer mode
-if ($mode ne "system") {
-	print "<tr> <td><b>$text{'graph_log'}</b></td> <td>";
-	print &ui_radio("log", int($in{'log'}),
-			[ [ 0, $text{'graph_log0'} ],
-			  [ 1, $text{'graph_log1'} ] ]);
-	print "</td> </tr>\n";
+	# Log or integer mode
+	if ($mode ne "system") {
+		print &ui_table_row($text{'graph_log'},
+		      &ui_radio("log", int($in{'log'}),
+				[ [ 0, $text{'graph_log0'} ],
+				  [ 1, $text{'graph_log1'} ] ]));
+		}
+
+	print &ui_table_end();
+	print &ui_form_end();
 	}
+else {
+	# Form to change units
+	print &ui_form_start("bwgraph.cgi");
+	print &ui_hidden("mode", $mode);
+	print &ui_hidden("owner", $in{'owner'});
+	print &ui_hidden("ago", $in{'ago'});
+	print &ui_table_start(undef, undef, 2);
 
-print "<table>\n";
-print &ui_form_end();
+	# Units
+	print &ui_table_row($text{'graph_units'},
+		&ui_select("units", $in{'units'},
+			   [ [ "", $text{'graph_unitsauto'} ],
+			     map { [ $_, $text{'graph_units'.$_} ] }
+				 ( 1, 1024, 1024*1024, 1024*1024*1024 ) ])." ".
+		&ui_submit($text{'graph_ok'}));
+
+	# Show systems with no traffic?
+	print &ui_table_row($text{'graph_empty'},
+		&ui_yesno_radio("empty", $in{'empty'}));
+
+	print &ui_table_end();
+	print &ui_form_end();
+	}
 
 # Generic javascript start
 if ($mode ne "system") {
@@ -394,6 +437,9 @@ function onResize() {
 EOF
 
 if ($in{'id'}) {
+	if ($server && defined(&theme_select_server)) {
+		&theme_select_server($server);
+		}
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 else {
@@ -445,3 +491,15 @@ $rv .= "</div>";
 return $rv;
 }
 
+# nice_size_units(num)
+# Convert some number into the selected units, or a nice size
+sub nice_size_units
+{
+local ($n) = @_;
+if (!$in{'units'}) {
+	return &nice_size($n);
+	}
+else {
+	return int($n / $in{'units'})." ".$text{'graph_units'.$in{'units'}};
+	}
+}

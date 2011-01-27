@@ -2359,6 +2359,13 @@ graph_log1=Logarithmic
 graph_raw=Download raw data..
 graph_eserver=System to graph does not exist!
 graph_eowner=Owner to graph does not exist!
+graph_units=Units for bandwidth usage
+graph_unitsauto=Automatic
+graph_units1=Bytes
+graph_units1024=kB
+graph_units1048576=MB
+graph_units1073741824=GB
+graph_empty=Hide systems with no traffic?
 
 cat_system=System Configuration
 cat_res=Resources
