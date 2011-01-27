@@ -182,9 +182,10 @@ if ($mode ne 'systems' && $mode ne 'host') {
 		$ufield = $dir eq 'in' ? 'bw_usage_in' :
 			  $dir eq 'out' ? 'bw_usage_out' : 'bw_usage';
 		foreach $s (@showservers) {
-			$utotal += $s->{$ufield} / $step;
+			$utotal += $s->{$ufield};
 			}
 		}
+
 	# Convert to average
 	$utotal /= scalar(@showservers) if ($mode ne 'total');
 	if ($utotal > 10*1024*1024*1024) {
