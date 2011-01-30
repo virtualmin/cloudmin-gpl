@@ -274,7 +274,6 @@ elsif ($in{'installwebmin'}) {
 	# Install Webmin
 	&can_action_error($server, "webmin");
 	&ui_print_header(&server_in($server), $text{'save_webmintitle'}, "");
-	&obtain_lock_server($server);
 
 	($src, $type, $err) = &get_install_webmin_source($server);
 	$err && &error(&text('save_webminerr', $err));
@@ -287,15 +286,16 @@ elsif ($in{'installwebmin'}) {
 		print &text('save_webminfailed', $err),"<p>\n";
 		}
 	else {
+		&obtain_lock_server($server);
 		&check_server_status($server);
 		&save_managed_server($server);
+		&release_lock_server($server);
 		print $text{'save_webmindone'},"<p>\n";
 
 		if (defined(&theme_post_save_server)) {
 			&theme_post_save_server($server);
 			}
 		}
-	&release_lock_server($server);
 	&webmin_log("webmin", "server", $server->{'host'});
 
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
