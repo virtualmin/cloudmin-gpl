@@ -135,4 +135,29 @@ chdir($pwd);
 return (undef, $fh);
 }
 
+# type_this_real_interfaces(&server)
+# Returns a list of interfaces on the master system. Each is a hash ref with
+# keys name, bytes_in, bytes_out, packets_in, packets_out
+sub type_this_real_interfaces
+{
+my ($server) = @_;
+my $out = &read_file_contents("/proc/net/dev");
+my @rv;
+foreach my $dev (split(/\r?\n/, $out)) {
+	$dev =~ s/^\s+//;
+        my @w = split(/[ \t:]+/, $dev);
+	if ($w[0] =~ /^eth\d+/) {
+		my $iface = { 'name' => $w[0],
+			      'bytes_in' => $w[1],
+			      'packets_in' => $w[2],
+			      'bytes_out' => $w[9],
+			      'packets_out' => $w[10] };
+		push(@rv, $iface);
+		}
+	}
+return \@rv;
+}
+
+1;
+
 

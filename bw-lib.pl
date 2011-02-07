@@ -14,7 +14,8 @@ sub get_server_traffic
 {
 my ($server) = @_;
 my $vhost = &get_parent_server($server);
-return ( ) if (!$vhost && $server->{'manager'} ne 'real');
+return ( ) if (!$vhost && $server->{'manager'} ne 'real' &&
+			  $server->{'manager'} ne 'this');
 my $ifunc = "type_".$server->{'manager'}."_real_interfaces";
 if (defined(&$ifunc)) {
 	my $ifaces = &$ifunc($server, $vhost);
