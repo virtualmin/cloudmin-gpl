@@ -68,6 +68,11 @@ if (@servers == 1) {
         &save_managed_server($s);
 	&release_lock_server($s);
 	print $text{'update_statusok'},"<p>\n";
+
+	if (defined(&theme_post_save_server)) {
+		&theme_post_save_server($s);
+		&theme_select_server($s);
+		}
 	}
 else {
 	# Run them in parallel, and report on updates done at the end
@@ -107,14 +112,13 @@ else {
 		}
 	print "</ul>\n";
 	print $text{'mass_updone'},"<p>\n";
+
+	if (defined(&theme_post_save_server)) {
+		&theme_post_save_server();
+		}
 	}
 &webmin_log("update", "servers", scalar(@servers),
 	    { 'hosts' => \@hostnames });
-
-if (defined(&theme_post_save_server)) {
-	&theme_post_save_server();
-	&theme_select_server($servers[0]) if (@servers == 1);
-	}
 
 &ui_print_footer("", $text{'index_return'});
 
