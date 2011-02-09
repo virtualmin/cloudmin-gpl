@@ -23,6 +23,10 @@ print &ui_table_row($text{'add_host'},
 print &ui_table_row($text{'add_desc'},
 	&ui_textbox("desc", undef, 60));
 
+# In groups
+print &ui_table_row($text{'edit_groups'},
+	&show_groups_form($server, \@servers));
+
 # SSH login details
 print &ui_table_hr();
 &show_ssh_login_form(undef, $in{'type'});

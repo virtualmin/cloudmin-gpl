@@ -24,6 +24,7 @@ if (defined($in{'host'})) {
 	$server->{'host'} = $in{'host'};
 	}
 $server->{'desc'} = $in{'desc'};
+&parse_groups_form($server, \%in);
 
 # Disable logins
 $server->{'ssh_user'} = 'root';

@@ -14,6 +14,7 @@ $server->{'ip'} = $server->{'ip_addresses'} = &to_ipaddress($in{'host'});
 $server->{'ip'} || &error($text{'add_ehost'});
 $server->{'host'} = $in{'host'};
 $server->{'desc'} = $in{'desc'};
+&parse_groups_form($server, \%in);
 
 # Check for hostname and IP clashes
 ($clash) = grep { $_->{'host'} eq $in{'host'} } @servers;

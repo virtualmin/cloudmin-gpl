@@ -9594,6 +9594,35 @@ else {
 	}
 }
 
+# show_groups_form(&server, &all-servers)
+# Returns HTML for a field for selecting groups for a system
+sub show_groups_form
+{
+my ($server, $allservers) = @_;
+my @groups = &unique(map { split(/\t/, $_->{'group'}) } @$allservers);
+my %ingroups = map { $_, 1 } split(/\t/, $server->{'group'});
+my @grid = ( );
+foreach my $g (@groups) {
+	push(@grid, &ui_checkbox("group", $g, $g, $ingroups{$g}));
+	}
+push(@grid, (@grid ? "&nbsp;&nbsp;&nbsp;" : "").
+	    &text('edit_newgroup', &ui_textbox("newgroup", undef, 10)));
+return &ui_grid_table(\@grid, 4);
+}
+
+# parse_groups_form(&server, &in)
+# Updates the list of groups a system is in. May call &error
+sub parse_groups_form
+{
+my ($server, $in) = @_;
+my @groups = split(/\0/, $in->{'group'});
+if ($in->{'newgroup'}) {
+	$in->{'newgroup'} =~ /^\S+$/ || &error($text{'save_egroup2'});
+	push(@groups, $in->{'newgroup'})
+	}
+$server->{'group'} = join("\t", @groups);
+}
+
 # obtain_lock_server(&server|&servers, [readonly])
 # Lock a server for some update. May re-read it from disk if changed.
 sub obtain_lock_server

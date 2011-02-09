@@ -6,6 +6,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 &can_create_server_error($in{'type'});
 &ui_print_header(undef, $text{'create_title'}, "", "new".$in{'type'});
+@servers = &list_managed_servers();
 
 # Check if 'empty' creation is supported
 $efunc = "type_".$in{'type'}."_can_create_empty";
@@ -47,6 +48,10 @@ if (defined(&$chfunc) && &$chfunc()) {
 # Description
 print &ui_table_row($text{'add_desc'},
 	&ui_textbox("desc", undef, 60));
+
+# In groups
+print &ui_table_row($text{'edit_groups'},
+	&show_groups_form($server, \@servers));
 
 # System image, if any are available for the server type
 @images = &list_server_images($in{'type'});
@@ -236,6 +241,10 @@ if ($empty) {
 	# Description
 	print &ui_table_row($text{'add_desc'},
 		&ui_textbox("desc", undef, 60));
+
+	# In groups
+	print &ui_table_row($text{'edit_groups'},
+		&show_groups_form($server, \@servers));
 
 	# CD image or file (on host)
 	if ($empty != 2) {

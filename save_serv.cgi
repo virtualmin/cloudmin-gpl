@@ -432,12 +432,7 @@ else {
 	$server->{'type'} = $in{'type'};
 	$in{'notes'} =~ s/\r//g;
 	$server->{'notes'} = join("\t", split(/\n/, $in{'notes'}));
-	@groups = split(/\0/, $in{'group'});
-	if ($in{'newgroup'}) {
-		$in{'newgroup'} =~ /^\S+$/ || &error($text{'save_egroup2'});
-		push(@groups, $in{'newgroup'})
-		}
-	$server->{'group'} = join("\t", @groups);
+	&parse_groups_form($server, \%in);
 	if (defined($in{'canvirt'})) {
 		$server->{'novirt'} = $in{'canvirt'} ? 0 : 1;
 		}

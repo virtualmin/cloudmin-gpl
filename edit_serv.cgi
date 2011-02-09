@@ -111,16 +111,8 @@ if ($server->{'image'}) {
 
 if (!$view) {
 	# Groups
-	@groups = &unique(map { split(/\t/, $_->{'group'}) } @servers);
-	%ingroups = map { $_, 1 } split(/\t/, $server->{'group'});
-	@grid = ( );
-	foreach $g (@groups) {
-		push(@grid, &ui_checkbox("group", $g, $g, $ingroups{$g}));
-		}
-	push(@grid, (@grid ? "&nbsp;&nbsp;&nbsp;" : "").
-		    &text('edit_newgroup', &ui_textbox("newgroup", undef, 10)));
-	$gtable = &ui_grid_table(\@grid, 4);
-	print &ui_table_row($text{'edit_groups'}, $gtable);
+	print &ui_table_row($text{'edit_groups'},
+		&show_groups_form($server, \@servers));
 
 	# Start at boot
 	$bfunc = "type_".$t."_get_atboot";
