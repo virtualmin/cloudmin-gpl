@@ -1485,18 +1485,36 @@ my ($pinged, $sshed);
 my @nets = split(/\s+/, $server->{'kvm_net'});
 my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
 my $i = 0;
+my $changed_net = 0;
 foreach my $net (@nets) {
-        if ($net =~ /script=(([^,]+-(eth\d+))\.sh)/) {
+	my $bridge = $bridges[$i];
+        if ($net =~ /script=([^,]+-(eth\d+)\.sh)/) {
+		# Update the existing bridge script
 		my $script = $1;
 		my $eth = $2;
-		my $bridge = $bridges[$i];
 		$bridge = undef if ($bridge eq '*');
 		my ($data, undef) = &generate_kvm_bridge_script(
 			$server, { 'name' => $eth }, $bridge);
 		&put_file_data_to_server($vhost, $data, $script);
 		&execute_command_on_server($vhost, "chmod +x $script");
 		}
+	else {
+		# Create a bridge script, so that the tap device is recorded
+		my $eth = "eth".$i;
+		my ($data, $script) = &generate_kvm_bridge_script(
+			$server, { 'name' => $eth }, $bridge);
+		if (!&put_file_data_to_server($vhost, $data, $script)) {
+			&execute_command_on_server($vhost, "chmod +x $script");
+			$net .= ",script=".$script;
+			$changed_net++;
+			}
+		}
 	$i++;
+	}
+if ($changed_net) {
+	# Re-save after setting up script
+	$server->{'kvm_net'} = join(" ", @nets);
+	&save_managed_server($server);
 	}
 
 # Create a console output file and monitor input file
