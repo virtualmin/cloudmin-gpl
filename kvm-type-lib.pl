@@ -915,16 +915,14 @@ my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 my @gws = split(/\s+/, $server->{'kvm_gw'});
 my @nets;
 for(my $i=0; $i<@ips; $i++) {
+	# Create bridge script
 	my $net = "tap,vlan=$i";
-	if ($ifaces[$i] && $ifaces[$i] ne '*') {
-		# Create bridge script
-		my ($data, $script) = &generate_kvm_bridge_script(
-				$server, { 'name' => 'eth'.$i }, $ifaces[$i]);
-		my $err = &put_file_data_to_server($vhost, $data, $script);
-		return "Failed to create script $script : $err" if ($err);
-		&execute_command_on_server($vhost, "chmod +x $script");
-		$net .= ",script=$script";
-		}
+	my ($data, $script) = &generate_kvm_bridge_script(
+			$server, { 'name' => 'eth'.$i }, $ifaces[$i]);
+	my $err = &put_file_data_to_server($vhost, $data, $script);
+	return "Failed to create script $script : $err" if ($err);
+	&execute_command_on_server($vhost, "chmod +x $script");
+	$net .= ",script=$script";
 	push(@nets, $net);
 	}
 $server->{'kvm_net'} = join(" ", @nets);
@@ -1610,13 +1608,17 @@ if ($server->{'kvm_monitor'}) {
 # Remove DHCP entries
 &delete_all_iface_dhcpd($server);
 
-# Delete bridge scripts
+# Delete bridge scripts, and files containing tap interface names
 my @nets = split(/\s+/, $server->{'kvm_net'});
 foreach my $net (@nets) {
 	if ($net =~ /script=([^,]+)/) {
 		my $script = $1;
                 if ($script =~ /^\Q$vhost->{'kvm_dir'}\/\E/) {
                         &delete_file_on_server($vhost, $script);
+			local $tapfile = $script;
+			if ($tapfile =~ s/\.sh$/\.tap/) {
+				&delete_file_on_server($vhost, $tapfile);
+				}
                         }
 		}
 	}
@@ -1727,7 +1729,7 @@ if ($server->{'kvm_args'}) {
 return $cmd;
 }
 
-# generate_kvm_bridge_script(&server, &iface, bridge)
+# generate_kvm_bridge_script(&server, &iface, [bridge])
 # Returns the contents of and path to a script to connect the right bridge
 # for a virtual interface
 sub generate_kvm_bridge_script
@@ -1735,8 +1737,12 @@ sub generate_kvm_bridge_script
 my ($server, $iface, $bridge) = @_;
 my $vhost = &type_kvm_parent($server);
 my $data = "#!/bin/sh\n".
-	   "brctl addif $bridge \$1\n".
-	   "ifconfig \$1 up\n";
+	   "echo \$1 >".$vhost->{'kvm_dir'}."/".
+	     $server->{'host'}."-".$iface->{'name'}.".tap\n";
+if ($bridge) {
+	$data .= "brctl addif $bridge \$1\n";
+	}
+$data .= "ifconfig \$1 up\n";
 return ($data,
 	$vhost->{'kvm_dir'}."/".$server->{'host'}."-".$iface->{'name'}.".sh");
 }
@@ -2487,6 +2493,58 @@ $server->{'kvm_smp'} = $smp;
 return undef;
 }
 
+# type_kvm_real_interfaces(&server, &vhost)
+# Returns a list of interfaces on the KVM host system associated with some
+# virtual system. Each is a hash ref with keys name, bytes_in, bytes_out,
+# packets_in, packets_out
+sub type_kvm_real_interfaces
+{
+my ($server, $vhost) = @_;
+
+# Get network stats on the host, with caching
+my ($out, $ex, $err);
+$out = $proc_net_dev_cache{$vhost->{'id'}};
+if (!$out) {
+	($out, $ex, $err) = &execute_command_on_server($vhost,
+				"cat /proc/net/dev");
+	return $out if ($ex);
+	return $err if ($err);
+	$proc_net_dev_cache{$vhost->{'id'}} = $out;
+	}
+
+# Find the tap interfaces used by this KVM instance
+my %taps;
+my @nets = split(/\s+/, $server->{'kvm_net'});
+foreach my $net (@nets) {
+	if ($net =~ /script=(([^,]+)-(eth\d+))\.sh/) {
+		my $scriptbase = $1;
+		my $eth = $2;
+		my $tapfile = $scriptbase.".tap";
+		my $tap = &get_file_data_from_server($vhost, $tapfile);
+		$tap =~ s/\r|\n//g;
+		$taps{$tap} = 1;
+		}
+	}
+
+# Extract stats for this host
+my @rv;
+foreach my $dev (split(/\r?\n/, $out)) {
+	$dev =~ s/^\s+//;
+	my @w = split(/[ \t:]+/, $dev);
+	if ($taps{$w[0]}) {
+		# Directions are reversed, as we are looking at a virtual
+		# interface that talks *to* the host
+		my $iface = { 'name' => $w[0],
+			      'bytes_in' => $w[9],
+			      'packets_in' => $w[10],
+			      'bytes_out' => $w[1],
+			      'packets_out' => $w[2] };
+		push(@rv, $iface);
+		}
+	}
+return \@rv;
+}
+
 # type_kvm_can_interfaces(&server)
 # KVM interface management is via Webmin or via SSH, so it needs to be up.
 # The return value of 2 means that interfaces can also be 'real'
@@ -2549,7 +2607,13 @@ else {
 	# Get active and boot interfaces
 	$rv = &list_active_server_interfaces($server);
 	$bootrv = &list_boot_server_interfaces($server);
+	if (ref($rv)) {
+		foreach my $iface (@$rv) {
+			$iface->{'active'} = 1;
+			}
+		}
 	if (ref($rv) && ref($bootrv)) {
+		# Add boot-time interfaces that aren't active yet
 		my %got = map { $_->{'fullname'}, $_ } @$rv;
 		push(@$rv, grep { !$got{$_->{'fullname'}} &&
 				  &check_ipaddress($_->{'address'}) }
@@ -2681,15 +2745,14 @@ if ($nonvirt) {
 	push(@models, $iface->{'model'} || "*");
 	push(@nets, "tap,vlan=".$num);
 	push(@ifaces, $bridge || '*');
-	if ($bridge) {
-		# Create script to attach correct bridge
-		my ($data, $script) = &generate_kvm_bridge_script(
-					$server, $iface, $bridge);
-		my $err = &put_file_data_to_server($vhost, $data, $script);
-		return "Failed to create script $script : $err" if ($err);
-		&execute_command_on_server($vhost, "chmod +x $script");
-		$nets[$#nets] .= ",script=$script";
-		}
+
+	# Create script to attach correct bridge and record tap
+	my ($data, $script) = &generate_kvm_bridge_script(
+				$server, $iface, $bridge);
+	my $err = &put_file_data_to_server($vhost, $data, $script);
+	return "Failed to create script $script : $err" if ($err);
+	&execute_command_on_server($vhost, "chmod +x $script");
+	$nets[$#nets] .= ",script=$script";
 	$server->{'mac'} = join(" ", @macs);
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
@@ -2716,7 +2779,7 @@ $err = &delete_boot_server_interface($server, $iface);
 return $err if ($err);
 
 # De-activate interface if possible
-if (&can_ssh_status($server)) {
+if (&can_ssh_status($server) && $iface->{'active'}) {
 	my $err = &delete_active_server_interface($server, $iface);
 	return $err if ($err);
 	}
@@ -2768,7 +2831,7 @@ $err = &modify_boot_server_interface($server, $iface, $oldiface);
 return $err if ($err);
 
 # Change active interface if possible
-if (&can_ssh_status($server)) {
+if (&can_ssh_status($server) && $iface->{'active'}) {
 	my $err = &modify_active_server_interface($server, $iface, $oldiface);
 	return $err if ($err);
 	}

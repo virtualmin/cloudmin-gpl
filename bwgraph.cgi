@@ -266,8 +266,13 @@ else {
 	print "<table width=100%>\n";
 	foreach $s (@showservers) {
 		$b = $bwmap->{$s->{'id'}};
-		if ($in{'empty'} && !$b->{$dir}) {
+		if ($in{'empty'} == 1 && !$b->{$dir}) {
 			# No usage, so skip
+			next;
+			}
+		if ($in{'empty'} == 2 && (!$s->{'bw_limit'} ||
+					  $b->{$dir} <= $s->{'bw_limit'})) {
+			# Under limit, so skip
 			next;
 			}
 
@@ -368,9 +373,12 @@ else {
 				 ( 1, 1024, 1024*1024, 1024*1024*1024 ) ])." ".
 		&ui_submit($text{'graph_ok'}));
 
-	# Show systems with no traffic?
+	# Filter by traffic?
 	print &ui_table_row($text{'graph_empty'},
-		&ui_yesno_radio("empty", $in{'empty'}));
+		&ui_radio("empty", $in{'empty'} || 0,
+			  [ [ 0, $text{'graph_empty0'} ],
+			    [ 1, $text{'graph_empty1'} ],
+			    [ 2, $text{'graph_empty2'} ] ]));
 
 	print &ui_table_end();
 	print &ui_form_end();

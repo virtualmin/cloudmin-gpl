@@ -2365,7 +2365,10 @@ graph_units1=Bytes
 graph_units1024=kB
 graph_units1048576=MB
 graph_units1073741824=GB
-graph_empty=Hide systems with no traffic?
+graph_empty=Systems to show
+graph_empty0=All systems
+graph_empty1=Systems with traffic
+graph_empty2=Systems over their limit
 
 cat_system=System Configuration
 cat_res=Resources
