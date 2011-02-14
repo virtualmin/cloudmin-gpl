@@ -1480,6 +1480,25 @@ my $vhost = &type_kvm_parent($server);
 my $cmd = &get_kvm_start_command($server);
 my ($pinged, $sshed);
 
+# Re-generate interface scripts
+# XXX also add if missing
+my @nets = split(/\s+/, $server->{'kvm_net'});
+my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
+my $i = 0;
+foreach my $net (@nets) {
+        if ($net =~ /script=(([^,]+-(eth\d+))\.sh)/) {
+		my $script = $1;
+		my $eth = $2;
+		my $bridge = $bridges[$i];
+		$bridge = undef if ($bridge eq '*');
+		my ($data, undef) = &generate_kvm_bridge_script(
+			$server, { 'name' => $eth }, $bridge);
+		&put_file_data_to_server($vhost, $data, $script);
+		&execute_command_on_server($vhost, "chmod +x $script");
+		}
+	$i++;
+	}
+
 # Create a console output file and monitor input file
 $server->{'kvm_console'} ||= &get_kvm_console_file($server);
 my $err = &create_kvm_monitor_file($server);
