@@ -19,6 +19,9 @@ $clash && &error($text{'mkimage_eclash'});
 $image->{'id'} = $in{'imageid'};
 $in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
 $image->{'desc'} = $in{'desc'};
+if ($in{'format'} eq 'cd' && defined($in{'hvm'}) && !$in{'hvm'}) {
+	&error($text{'mkimage_ehvmcd'});
+	}
 $image->{$in{'manager'}.'_hvm'} = $in{'hvm'};
 
 # Get the file
