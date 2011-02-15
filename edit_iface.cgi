@@ -61,6 +61,9 @@ elsif ($in{'new'} == 2) {
 			$max++;
 			}
 		}
+	if (@$parents) {
+		$iface->{'netmask'} = $parents->[0]->{'netmask'};
+		}
 	print &ui_table_row($text{'iface_name'},
 			    &ui_textbox("name", "eth$max", 20));
 
@@ -154,6 +157,12 @@ if (($in{'new'} == 2 || !$in{'new'} && $iface->{'virtual'} eq '') &&
 				   [ [ '', "&lt;$text{'default'}&gt;" ],
 				     @$models ], 1, 0, 1));
 		}
+	}
+
+# Current status
+if (defined($iface->{'active'}) && &can_ssh_status($server)) {
+	print &ui_table_row($text{'iface_active'},
+		$iface->{'active'} ? $text{'yes'} : $text{'iface_activeno'});
 	}
 
 print &ui_table_end();

@@ -956,6 +956,7 @@ edit_iheader=Network Interfaces
 edit_ifaceadd=Add a virtual interface.
 edit_ifaceaddreal=Add a real interface.
 edit_ifaceaddress=Address
+edit_ifaceactive=Active now?
 edit_ifacename=Real device
 edit_ifacereal=Real interface
 edit_ifacename2=Interface name
@@ -1406,6 +1407,8 @@ iface_edelete=This interface cannot be deleted
 iface_emac=Missing or invalid ethernet address - must be formatted like 00:16:3E:37:91:2F
 iface_esupportreal=Real network interfaces are not supported on this system
 iface_ebridge=The selected network bridge does not exist!
+iface_active=Currently active on system?
+iface_activeno=No - may require a reboot to enable
 
 dmass_err=Failed to update Virtualmin domains
 dmass_eserver=System with ID $1 was not found

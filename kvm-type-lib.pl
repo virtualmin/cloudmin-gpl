@@ -1481,7 +1481,6 @@ my $cmd = &get_kvm_start_command($server);
 my ($pinged, $sshed);
 
 # Re-generate interface scripts
-# XXX also add if missing
 my @nets = split(/\s+/, $server->{'kvm_net'});
 my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
 my $i = 0;
@@ -2665,6 +2664,7 @@ if (ref($rv)) {
 		       $_->{'up'} &&
 		       $_->{'address'} } @$rv ];
 	foreach my $iface (@$rv) {
+		$iface->{'active'} ||= 0;
 		if ($iface->{'fullname'} eq 'eth0') {
 			$iface->{'nodelete'} = 1
 			}

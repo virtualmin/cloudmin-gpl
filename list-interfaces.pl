@@ -116,6 +116,10 @@ if ($multi) {
 		if ($i->{'model'}) {
 			print "    Device model: $i->{'model'}\n";
 			}
+		if (defined($i->{'active'})) {
+			print "    Active: ",
+			      ($i->{'active'} ? "Yes" : "No"),"\n";
+			}
 		if ($use) {
 			print "    Use: ",&strip_html_tags($use),"\n";
 			print "    Use type: ",

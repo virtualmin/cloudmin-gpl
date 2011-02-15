@@ -15,7 +15,7 @@ $can || &error($text{'iface_esupport'});
 
 &ui_print_header(&server_in($server), $text{'ifaces_title'}, "", "ifaces");
 
-# IP addresses, if we can manage them
+# Get list of interfaces, build top and buttom links
 $ifunc = "type_".$t."_list_interfaces";
 $ifaces = &$ifunc($server);
 @ilinks = ( );
@@ -30,7 +30,17 @@ if (&can_action($server, "ifaces")) {
 		}
 	}
 print &ui_links_row(\@ilinks);
+
+# Check if any interfaces have an active status
+$anyactive = 0;
+if ($server->{'status'} ne 'down') {
+	foreach $iface (@$ifaces) {
+		$anyactive++ if (defined($iface->{'active'}));
+		}
+	}
+
 print &ui_columns_start([ $text{'edit_ifaceaddress'},
+			  $anyactive ? ( $text{'edit_ifaceactive'} ) : ( ),
 			  $can == 1 ? $text{'edit_ifacename'}
 				    : $text{'edit_ifacename2'},
 			  $text{'edit_ifacenumber'},
@@ -48,6 +58,10 @@ foreach $iface (@$ifaces) {
 		    $iface->{'address'} :
 		    "<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>".
 		    "$iface->{'address'}</a>",
+		!$anyactive ? ( ) :
+		  !defined($iface->{'active'}) ? ( "&nbsp;" ) :
+		  $iface->{'active'} ? ( $text{'yes'} ) :
+				       ( "<font color=red>$text{'no'}</font>" ),
 		$iface->{'name'},
 		$iface->{'virtual'} eq '' ?
 		 "<i>$text{'edit_ifacereal'}</i>" : $iface->{'virtual'},
@@ -82,6 +96,9 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 	print &ui_table_end();
 	print &ui_form_end([ [ undef, $text{'save'} ] ]);
 	}
+
+# Show selector for interfaces to collect bandwidth stats for, if real
+# XXX
 
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 
