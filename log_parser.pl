@@ -26,6 +26,12 @@ if ($type eq "server") {
 	elsif ($action eq 'gateway') {
 		return &text('log_nogateway_server', $object);
 		}
+	elsif ($action eq 'bwifaces' && $p->{'ifaces'}) {
+		return &text('log_bwifaces_server', $object, $p->{'ifaces'});
+		}
+	elsif ($action eq 'bwifaces') {
+		return &text('log_nobwifaces_server', $object);
+		}
 	else {
 		return &text('log_'.$action.'_server', $object,
 			     &html_escape(&un_urlize($p->{'cmd'})),

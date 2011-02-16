@@ -63,6 +63,8 @@ if (@servers == 1) {
 
 	print $text{'update_statusing'},"<br>\n";
 	&obtain_lock_server($s);
+	delete($s->{'virtualmin_poss'});
+	delete($s->{'all_poss'});
         &refresh_server_updates($s, \@allgot);
         &check_server_status($s);
         &save_managed_server($s);

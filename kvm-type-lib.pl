@@ -1775,9 +1775,11 @@ my $vhost = &type_kvm_parent($server);
 my $data = "#!/bin/sh\n".
 	   "echo \$1 >".$vhost->{'kvm_dir'}."/".
 	     $server->{'host'}."-".$iface->{'name'}.".tap\n";
-if ($bridge) {
-	$data .= "brctl addif $bridge \$1\n";
+if (!$bridge) {
+	($bridge) = &list_host_bridges($vhost);
+	$bridge ||= "br0";
 	}
+$data .= "brctl addif $bridge \$1\n";
 $data .= "ifconfig \$1 up\n";
 return ($data,
 	$vhost->{'kvm_dir'}."/".$server->{'host'}."-".$iface->{'name'}.".sh");
@@ -2552,24 +2554,27 @@ if (!$out) {
 my %taps;
 my @nets = split(/\s+/, $server->{'kvm_net'});
 foreach my $net (@nets) {
-	if ($net =~ /script=(([^,]+)-(eth\d+))\.sh/) {
+	if ($net =~ /script=([^,]+-(eth\d+))\.sh/) {
 		my $scriptbase = $1;
 		my $eth = $2;
 		my $tapfile = $scriptbase.".tap";
 		my $tap = &get_file_data_from_server($vhost, $tapfile);
 		$tap =~ s/\r|\n//g;
-		$taps{$tap} = 1;
+		$taps{$tap} = $eth;
 		}
 	}
 
 # Extract stats for this host
 my @rv;
+my %bwifaces = map { $_, 1 } split(/\s+/, $server->{'bw_ifaces'});
 foreach my $dev (split(/\r?\n/, $out)) {
 	$dev =~ s/^\s+//;
 	my @w = split(/[ \t:]+/, $dev);
-	if ($taps{$w[0]}) {
+	my $eth = $taps{$w[0]};
+	if ($eth && (!%bwifaces || $bwifaces{$eth})) {
 		# Directions are reversed, as we are looking at a virtual
 		# interface that talks *to* the host
+		print STDERR "name=$w[0] in=$w[9] out=$w[1] eth=$eth\n";
 		my $iface = { 'name' => $w[0],
 			      'bytes_in' => $w[9],
 			      'packets_in' => $w[10],
@@ -2815,10 +2820,11 @@ $err = &delete_boot_server_interface($server, $iface);
 &umount_filesystem_if_needed($server);
 return $err if ($err);
 
-# De-activate interface if possible
+# De-activate interface if possible. Ignore errors for non-virtual interfaces,
+# as they generally can't be taken down without a reboot anyway
 if (&can_ssh_status($server) && $iface->{'active'}) {
 	my $err = &delete_active_server_interface($server, $iface);
-	return $err if ($err);
+	return $err if ($err && $iface->{'virtual'} ne '');
 	}
 
 # Remove from KVM config

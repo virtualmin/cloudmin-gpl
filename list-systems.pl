@@ -338,6 +338,10 @@ if ($multi) {
 				print "    Bandwidth notification sent: ",
 				      &make_date($s->{'bw_notify'}),"\n";
 				}
+			if ($s->{'bw_ifaces'}) {
+				print "    Bandwidth collection interfaces: ",
+				      $s->{'bw_ifaces'},"\n";
+				}
 			}
 
 		# Show resource usage

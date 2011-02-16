@@ -26,6 +26,11 @@ used to set the maximum bandwidth this system is allowed to consume per
 accounting period. It must be followed by a number in MB. To remove the limit,
 use the C<--bw-unlimited> flag.
 
+The network interfaces to collect bandwidth usage statistics on can be set
+by the C<--bw-interfaces> flag, followed by a quoted list of interface names
+like "eth0 eth1". To collect stats on all interfaces, use C<--bw-all-interfaces>
+instead.
+
 By default, the command will inform you if a reboot is needed to apply any
 CPU or memory limit changes. However, you can force an immediate shutdown
 and restart with the C<--reboot> flag, if needed.
@@ -118,6 +123,19 @@ while(@ARGV > 0) {
 	elsif ($a eq "--bw-unlimited") {
 		$bw = '';
 		}
+	elsif ($a eq '--bw-interfaces') {
+		@bw_ifaces = shift(@ARGV);
+		@bw_ifaces || &usage("--bw-interfaces must be followed by ".
+				     "a list of interfaces");
+		foreach $i (@bw_ifaces) {
+			$i =~ /^[a-z]+\d+$/ ||
+				&usage("--bw-interfaces must be followed by ".
+				       "interfaces named like eth1");
+			}
+		}
+	elsif ($a eq '--bw-all-interfaces') {
+		@bw_ifaces = ( undef );
+		}
 	elsif ($a eq "--rate-limit") {
 		$rate = shift(@ARGV);
 		$rate =~ /^[1-9]\d*$/ ||
@@ -136,13 +154,16 @@ while(@ARGV > 0) {
 		}
 	}
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
-   defined($bw) || defined($rate) || defined($disk) ||
+   defined($bw) || defined($rate) || defined($disk) || defined(@bw_ifaces) ||
    &usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hoston);
 @servers || &usage("No systems specified");
 &can_action_usage(\@servers, "limits");
+if (defined($bw) || defined(@bw_ifaces)) {
+	&can_action_usage(\@servers, "bw");
+	}
 
 # Check if we can do any of them
 foreach $s (@servers) {
@@ -431,6 +452,11 @@ foreach $s (@servers) {
 		print "\n";
 		}
 
+	# Change bandwidth interfaces
+	if (defined(@bw_ifaces)) {
+		$s->{'bw_ifaces'} = join(" ", @bw_ifaces);
+		}
+
 	# Update and changed parameters
 	&save_managed_server($s);
 
@@ -500,6 +526,7 @@ print "                       [--disk MB | --no-disk]\n";
 print "                       [--reboot]\n";
 print "                       [--vcpus N | --vcpus list]\n";
 print "                       [--bw-limit MB | --bw-unlimited]\n";
+print "                       [--bw-interfaces iface | --bw-all-interfaces]\n";
 print "                       [--rate-limit Mb/s | --rate-unlimited]\n";
 exit(1);
 }

@@ -8419,7 +8419,9 @@ elsif (&debian_server_type($server)) {
 			# Start of a new interface
 			$b = { 'name' => $1,
 			       'fullname' => $1 };
-			$b->{'name'} =~ s/:\d+$//;
+			if ($b->{'name'} =~ s/:(\d+)$//) {
+				$b->{'virtual'} = $1;
+				}
 			push(@boot, $b);
 			}
 		elsif ($l =~ /^\s+(address|netmask|network|broadcast|gateway)\s+(\S+)/ && $b) {

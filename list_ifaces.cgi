@@ -98,7 +98,31 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 	}
 
 # Show selector for interfaces to collect bandwidth stats for, if real
-# XXX
+$rfunc = "type_".$server->{'manager'}."_real_interfaces";
+@realifaces = grep { $_->{'virtual'} eq '' } @$ifaces;
+if (defined(&$rfunc) && $config{'bw_enabled'} &&
+    &can_action($server, "bw")) {
+	print &ui_hr();
+	print $text{'ifaces_bwdesc'},"\n";
+
+	print &ui_form_start("save_bwifaces.cgi", "post");
+	print &ui_hidden("id", $in{'id'});
+	print &ui_table_start($text{'ifaces_bwheader'}, undef, 2);
+
+	@bwifaces = split(/\s+/, $server->{'bw_ifaces'});
+	print &ui_table_row($text{'ifaces_bw'},
+		&ui_radio("bw_all", @bwifaces ? 0 : 1,
+			  [ [ 1, $text{'ifaces_bw1'} ],
+			    [ 0, $text{'ifaces_bw0'} ] ])."<br>\n".
+		&ui_select("bw_ifaces", \@bwifaces,
+			   [ map { [ $_->{'fullname'},
+				     $_->{'fullname'}." - ".$_->{'address'} ] }
+				 @realifaces ], 5, 1, 1));
+
+	print &ui_table_end();
+	print &ui_form_end([ [ undef, $text{'save'} ] ]);
+
+	}
 
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 
