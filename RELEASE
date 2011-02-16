@@ -1,0 +1,25 @@
+ - Build kvm RPM
+        ssh root@fudu "cd /usr/local/webadmin ; ./makemodulerpm.pl --sign --dir server-manager server-manager-kvm"
+
+ - Upload kvm RPM
+        scp /usr/src/redhat/RPMS/noarch/wbm-server-manager-$ver.kvm-1.noarch.rpm virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/universal/
+        ssh virtualmin@virtualmin.com "cd domains/vm2.virtualmin.com/public_html/kvm/universal ; createrepo ."
+
+ - Build kvm tar.gz
+	./create-module.pl --dir server-manager virtualmin/server-manager-$ver.kvm.wbm.gz server-manager-kvm
+
+ - Upload kvm tar.gz
+	scp virtualmin/server-manager-$ver.kvm.wbm.gz virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/wbm/
+
+ - Fix updates.txt
+        ssh virtualmin@virtualmin.com
+        vi domains/vm2.virtualmin.com/public_html/kvm/wbm/updates.txt
+
+ - Build kvm DEB
+	ssh lentor "cd /usr/local/webadmin ; ./makemoduledeb.pl --dir server-manager server-manager-kvm ; cp /tmp/webmin-server-manager_${ver}.kvm_all.deb /usr/local/download/deb/cloudmin-kvm/binary"
+
+ - Build APT repository
+	ssh lentor "cd /usr/local/download/deb/cloudmin-kvm ; ./make-repo.sh"
+	( cd /usr/local/download/deb/cloudmin-kvm ; rsync --rsh=ssh -r -v * virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/debian/ )
+
+

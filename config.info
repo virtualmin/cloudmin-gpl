@@ -1,0 +1,57 @@
+line0=User interface settings,11
+procs=Number of systems to check concurrently,0,5
+display_max=Number of systems to show on main page,0,5
+link_mode=Link to other Webmin servers via,1,1-Regular link,0-HTTP tunnel (no login required)
+name_max=Maximum hostname length to display,3,Unlimited
+name_mode=Shorten long hostnames at,1,1-End,0-Middle
+cat_mode=Categorize systems by,1,2-Group,1-Sytem type,0-Don't categorize
+sort_mode=Sort systems by,1,2-Description,1-Host system,0-Hostname
+index_cols=Columns to display,2,ip-IP address,ips-All IP addresses,manager-Type,type-OS,status-Status,desc-Description,group-Groups,owner-Owners,disk-Disk space,mem-Memory,cpu-CPU assigned,bw_usage-Bandwidth
+xen_mem_mode=Change Xen memory allocations,1,1-At next boot,0-Immediately
+show_nf=Show new features to,2,master-Master administrator,owner-System owners
+theme_image=URL for company logo image,3,None or default,50
+theme_link=Link destination for company logo,3,None,50
+
+line3.5=Virtual system settings,11
+fsck_boot=Check disks for errors before booting?,1,1-Yes,0-No,2-Only if dirty
+passwd_mode=Randomly generate root SSH password?,1,1-Yes,0-No
+passwd_length=Length of randomly generated password,3,Default (15 characters),5
+passwd_chars=Characters for random passwords,3,Default (A-Z&#44; a-z&#44; 0-9)
+
+line4.5=KVM settings,11
+kvm_mem=Default KVM memory allocation,0,10,,MB
+kvm_manual=Default additional command line options,0
+kvm_vnc=Add VNC console to new KVM instances?,1,1-Yes,0-No
+kvm_qemu=Allow KVM host systems without kernel support?,1,1-Yes,0-No
+kvm_virtio=Use VirtIO disk driver by default?,1,1-Yes,0-No
+kvm_model=Default network device model,4,-KVM default,rtl8139-Realtek 8139,i82551-Intel 82551,i82557b-Intel 82557b,i82559er-Intel 82559er,ne2k_pci-NE2000 on PCI,ne2k_isa-NE2000 on ISA,e1000-Intel Gigabit Ethernet,virtio-VirtIO,pcnet-PCNet,lance-Lance,mcf_fec-MCF FEC
+
+line2=Webmin install URLs,11
+download_rpm=Download URL for Webmin RPM package,3,From www.webmin.com
+download_deb=Download URL for Webmin Debian package,3,From www.webmin.com
+download_tgz=Download URL for Webmin tar.gz package,3,From www.webmin.com
+
+line3=Post-modification scripts,11
+before_create_cmd=Command to run before creating a system,0,60
+after_create_cmd=Command to run after creating a system,0,60
+before_delete_cmd=Command to run before deleting a system,0,60
+after_delete_cmd=Command to run after deleting a system,0,60
+
+line6=Timeouts,11
+ping_timeout=Ping timeout,0,5,,seconds
+ssh_timeout=SSH status check timeout,0,5,,seconds
+webmin_timeout=Webmin status collection timeout,0,5,,seconds
+login_timeout=Text console timeout,0,5,,seconds
+
+line7=DHCP settings,11
+dhcp_add=Add DHCPd host for virtual systems?,1,1-Yes,0-No
+dhcp_subnet=Add DHCPd hosts to subnet or group,3,At top level
+
+line8=Backup options,11
+backuplog_days=Number of days to show backup logs for,0,5
+sclass=Linux IO scheduling class for backups,1,-Default,1-Real time,2-Best effort,3-Idle
+sprio=Linux IO scheduling priority,3,Default,5,,,Range 0 to 7
+
+line9=SSH settings,11
+ssh_compress=Compress data transferred via SSH?,1,1-Yes,0-No
+ssh_ciphers=SSH encryption cipher,4,*-Default,blowfish_cbc-Blowfish (fast),3des_cbc-3DES CBC,aes128_cbc-AES128 CBC,aes192_cbc-AES192 CBC,aes256_cbc-AES256 CBC,aes128_ctr-AES128 CTR,aes192_ctr-AES192 CTR,aes256_ctr-AES256 CTR,arcfour128-ARCFour128,arcfour256-ARCFour256,arcfour-ARCFour,cast128_cbc-CAST128 CBC,-Others
