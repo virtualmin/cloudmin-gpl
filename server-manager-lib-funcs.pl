@@ -118,6 +118,24 @@ if ($module_info{'onehost'} eq 'xen' &&
 	$config{'xen_checked'} = 1;
 	&save_module_config();
 	}
+
+# Do the same for KVM
+if ($module_info{'onehost'} eq 'kvm' &&
+    $server_management_types{'kvm'} &&
+    ($config{'kvm_checked'} || !&check_kvm_host_software($this))) {
+	$this->{'kvm_host'} = 1;
+	if (!$this->{'kvm_start'}) {
+		my $eth0 = &first_ethernet_iface();
+		($this->{'kvm_start'}, $this->{'kvm_end'}) =
+			&first_ethernet_range();
+		$this->{'kvm_cidr'} =
+			&net::mask_to_prefix($eth0->{'netmask'});
+		}
+	$this->{'kvm_dir'} ||= "/kvm";
+	$config{'kvm_checked'} = 1;
+	&save_module_config();
+	}
+
 return $this;
 }
 

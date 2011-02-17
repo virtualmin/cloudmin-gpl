@@ -383,6 +383,7 @@ create_aheader=Advanced options
 create_lheader=Resource limit options
 create_eimagevirt=You have selected a system image with Virtualmin Pro, but have not entered license details
 create_xendnswarn=Warning : No DNS zone for new Xen instances has been configured on the <a href='$1'>Xen host</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.
+create_kvmdnswarn=Warning : No DNS zone for new KVM instances has been configured on the <a href='$1'>KVM host</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.
 create_xenmac=MAC address for primary interface
 create_xenmacauto=Choose automatically
 create_xenmacether=Ethernet address
@@ -3641,6 +3642,7 @@ kvm_typedesc=KVM
 kvm_createlink=Create KVM Instance
 kvm_addlink=Add KVM Instance
 kvm_typeshort=KVM
+kvm_editone=KVM Host Settings
 
 kvms_title=KVM Host Systems
 kvms_add=Register a system for KVM hosting.
@@ -3658,6 +3660,7 @@ kvms_default=Make Selected the Default Host System
 
 kvm_create=Register KVM Host
 kvm_edit=Edit KVM Host
+kvm_editone=KVM Host Settings
 kvm_editlink=KVM Host Settings
 kvm_egone=The KVM host no longer exists!
 kvm_header=KVM host system details

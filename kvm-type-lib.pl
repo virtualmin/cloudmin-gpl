@@ -91,10 +91,20 @@ return @rv;
 # Returns a link to the page list kvm-capable systems
 sub type_kvm_global_links
 {
-return ( { 'link' => 'list_kvms.cgi',
-	   'icon' => 'images/kvms.gif',
-	   'title' => $text{'kvms_title'},
-	   'cat' => 'hosts' } );
+if ($module_info{'onehost'} eq 'kvm') {
+	# Page for just this KVM host
+        return ( { 'link' => 'edit_kvm.cgi?id=0',
+                   'icon' => 'images/kvms.gif',
+                   'title' => $text{'kvm_editone'},
+                   'cat' => 'hosts' } );
+	}
+else {
+	# List of KVM hosts
+	return ( { 'link' => 'list_kvms.cgi',
+		   'icon' => 'images/kvms.gif',
+		   'title' => $text{'kvms_title'},
+		   'cat' => 'hosts' } );
+	}
 }
 
 # can_host_kvm(&server)
@@ -433,6 +443,15 @@ if (&can_action(undef, "ips")) {
 		}
 	}
 
+# Warn the user if we have no DNS zone
+if (@vhosts == 1 && $module_info{'onehost'} eq 'kvm' &&
+    !$vhosts[0]->{'kvm_zone'}) {
+        $rv .= &ui_table_row(" ",
+                "<font color=#ff000>".
+                &text('create_kvmdnswarn', "edit_kvm.cgi?id=0", "../bind8/").
+                "</font>");
+        }
+
 return $rv;
 }
 
@@ -648,8 +667,9 @@ if ($zone) {
 sub type_kvm_create_args
 {
 my ($empty) = @_;
-my @rv = ( { 'name' => 'host', 'value' => 'host-system' },
-	   { 'name' => 'location', 'value' => 'name' },
+my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
+	   	( { 'name' => 'host', 'value' => 'host-system' },
+	   	  { 'name' => 'location', 'value' => 'name' } ),
 	   { 'name' => 'ip', 'value' => 'address[,address]', 'opt' => 1 },
 	   { 'name' => 'cidr', 'value' => 'number[,number]', 'opt' => 1 },
 	   { 'name' => 'netmask', 'value' => 'mask,[mask]', 'opt' => 1 },
@@ -703,7 +723,11 @@ else {
 
 # Hosting server
 my $vhost;
-if ($args->{'host'}) {
+if ($module_info{'onehost'} eq 'kvm') {
+	# KVM host is always this box
+	($vhost) = grep { $_->{'manager'} eq 'this' } &list_managed_servers();
+	}
+elsif ($args->{'host'}) {
 	# Use a specific host
 	($vhost) = grep { $_->{'host'} eq $args->{'host'} }
 			      &list_managed_servers();

@@ -1,1 +1,0 @@
-../server-manager/setup-xen-kernel.pl

@@ -5,7 +5,8 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 &ui_print_header(undef, $in{'new'} ? $text{'kvm_create'}
-				   : $text{'kvm_edit'}, "",
+		        $module_info{'onehost'} ? $text{'kvm_editone'} :
+				   		: $text{'kvm_edit'}, "",
 		 $in{'new'} ? "createkvm" : "editkvm");
 @allservers = &list_managed_servers();
 if (!$in{'new'}) {
@@ -30,12 +31,16 @@ if ($in{'new'}) {
 	}
 else {
 	print &ui_hidden("id", $in{'id'});
-	print &ui_table_row($text{'kvm_host'},
-			    $kvm->{'host'});
+	if (!$module_info{'onehost'}) {
+		print &ui_table_row($text{'kvm_host'},
+				    $kvm->{'host'});
+		}
 	}
 
-# Location group
-&show_host_location_field($kvm);
+if (!$module_info{'onehost'}) {
+	# Location group
+	&show_host_location_field($kvm);
+	}
 
 # KVM directory
 print &ui_table_row($text{'kvm_dir'},
@@ -139,8 +144,10 @@ print &ui_hidden_table_end("net");
 # Section for minimum resources
 &show_host_floor_table($kvm);
 
-# Section for caching
-&show_host_images_cache_table($kvm, "kvm");
+if (!$module_info{'onehost'}) {
+	# Section for caching
+	&show_host_images_cache_table($kvm, "kvm");
+	}
 
 # Section for default backup destination
 &show_default_backup_dest_table($kvm);
@@ -149,5 +156,9 @@ print &ui_form_end($in{'new'} ? [ [ undef, $text{'kvm_reg'} ] ]
 			      : [ [ undef, $text{'save'} ],
 				  [ "delete", $text{'kvm_unreg'} ] ]);
 
-&ui_print_footer("list_kvms.cgi", $text{'kvms_return'});
-
+if ($module_info{'onehost'}) {
+        &ui_print_footer("", $text{'index_return'});
+        }
+else {
+	&ui_print_footer("list_kvms.cgi", $text{'kvms_return'});
+	}

@@ -1,1 +1,0 @@
-../server-manager/save_xen.cgi

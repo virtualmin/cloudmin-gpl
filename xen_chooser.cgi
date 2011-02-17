@@ -1,1 +1,0 @@
-../server-manager/xen_chooser.cgi

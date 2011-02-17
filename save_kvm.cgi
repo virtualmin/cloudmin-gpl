@@ -30,8 +30,10 @@ else {
 		$err && &error(&text('kvm_esoft', $err));
 		}
 
-	# Save location group
-	&parse_host_location_field($kvm, \%in);
+	if (!$module_info{'onehost'}) {
+		# Save location group
+		&parse_host_location_field($kvm, \%in);
+		}
 
 	# Validate and save other inputs, starting with the directory
 	$kvm->{'kvm_dir'} = $in{'dir'};
@@ -75,8 +77,10 @@ else {
 	# Parse minimum resources
 	&parse_host_floor_table($kvm, \%in);
 
-	# Cache directory
-	&parse_host_images_cache_table($kvm, \%in, "kvm");
+	if (!$module_info{'onehost'}) {
+		# Cache directory
+		&parse_host_images_cache_table($kvm, \%in, "kvm");
+		}
 
 	# Backup dir
 	&parse_default_backup_dest_table($kvm, \%in);
@@ -99,5 +103,10 @@ else {
 &release_lock_server($kvm);
 &webmin_log($in{'delete'} ? "unhost" : "host", "server", $kvm->{'host'},
 	    { 'type' => 'kvm' });
-&redirect("list_kvms.cgi");
+if ($module_info{'onehost'}) {
+        &redirect("");
+        }
+else {
+	&redirect("list_kvms.cgi");
+	}
 
