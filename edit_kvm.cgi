@@ -4,9 +4,9 @@
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
-&ui_print_header(undef, $in{'new'} ? $text{'kvm_create'}
+&ui_print_header(undef, $in{'new'} ? $text{'kvm_create'} :
 		        $module_info{'onehost'} ? $text{'kvm_editone'} :
-				   		: $text{'kvm_edit'}, "",
+				   		  $text{'kvm_edit'}, "",
 		 $in{'new'} ? "createkvm" : "editkvm");
 @allservers = &list_managed_servers();
 if (!$in{'new'}) {
@@ -55,6 +55,7 @@ if (!$in{'new'} && $kvm->{'status'} ne 'down' &&
 	if (!$last_remote_error) {
 		@pvs = &remote_foreign_call($kvm, "lvm",
 					    "list_volume_groups");
+		$no_lvm = 1 if (!@pvs && !$last_remote_error);
 		}
 	}
 if (@pvs) {
@@ -66,11 +67,13 @@ else {
 	$lvfield = &ui_textbox("lvm", $kvm->{'kvm_vg'}, 40);
 	}
 
-# LVM volume group for disks
-print &ui_table_row($text{'kvm_lvm'},
-	&ui_radio("lvm_def", $kvm->{'kvm_vg'} ? 0 : 1,
-		  [ [ 1, $text{'kvm_nolvm'}."<br>" ],
-		    [ 0, $text{'kvm_lvmvg'}." ".$lvfield ] ]));
+if (!$no_lvm) {
+	# LVM volume group for disks
+	print &ui_table_row($text{'kvm_lvm'},
+		&ui_radio("lvm_def", $kvm->{'kvm_vg'} ? 0 : 1,
+			  [ [ 1, $text{'kvm_nolvm'}."<br>" ],
+			    [ 0, $text{'kvm_lvmvg'}." ".$lvfield ] ]));
+	}
 
 # DNS domain name to add under (if we host any)
 @zones = &list_bind_zones();

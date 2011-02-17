@@ -43,15 +43,17 @@ else {
 	$ex && &error($text{'kvm_edir'});
 
 	# Save and check LVM
-	if ($in{'lvm_def'}) {
-		delete($kvm->{'kvm_vg'});
-		}
-	else {
-		$in{'lvm'} =~ /^[A-Za-z0-9\.\-\_]+$/ ||
-			&error($text{'kvm_elvm'});
-		$err = &check_xen_host_lvm($kvm, $in{'lvm'});
-		&error(&text('kvm_elvmerr', $err)) if ($err);
-		$kvm->{'kvm_vg'} = $in{'lvm'};
+	if (defined($in{'lvm_def'})) {
+		if ($in{'lvm_def'}) {
+			delete($kvm->{'kvm_vg'});
+			}
+		else {
+			$in{'lvm'} =~ /^[A-Za-z0-9\.\-\_]+$/ ||
+				&error($text{'kvm_elvm'});
+			$err = &check_xen_host_lvm($kvm, $in{'lvm'});
+			&error(&text('kvm_elvmerr', $err)) if ($err);
+			$kvm->{'kvm_vg'} = $in{'lvm'};
+			}
 		}
 
 	# DNS zone

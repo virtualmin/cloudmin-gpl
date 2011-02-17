@@ -9,7 +9,8 @@ eval "use WebminCore;";
 &foreign_require("net", "net-lib.pl");
 &remote_error_setup(\&remote_error_handler);
 %access = &get_module_acl();
-$cloudmin_pro = $module_info{'vm2'} ne 'xen';
+$cloudmin_pro = $module_info{'vm2'} ne 'xen' &&
+	        $module_info{'vm2'} ne 'kvm';
 
 if (!$done_server_manager_lib_funcs) {
 	do 'server-manager-lib-funcs.pl';
