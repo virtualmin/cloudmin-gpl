@@ -24,6 +24,7 @@ if (@kvms) {
 				  $text{'kvms_host'},
 				  $text{'kvms_os'},
 				  $text{'kvms_dir'},
+				  $text{'index_status'},
 				  $text{'kvms_users'} ]);
 	foreach $s (@kvms) {
 		@users = grep { $_->{'kvm_on'} eq $s->{'id'} }
@@ -36,6 +37,7 @@ if (@kvms) {
 		    "<a href='edit_kvm.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
 		    &describe_os($s->{'type'}),
 		    "<tt>$s->{'kvm_dir'}</tt>",
+		    &describe_status($s, 1, 0),
 		    "<a href='index.cgi?psearch=$s->{'id'}&pok=1'>$users</a>",
 		    ], \@tds);
 		}
