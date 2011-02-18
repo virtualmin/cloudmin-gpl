@@ -187,13 +187,27 @@ $pools_file = "$module_config_directory/pools";
 
 $server_images_dir = "$ENV{'WEBMIN_VAR'}/$module_name";
 if ($cloudmin_pro) {
-	$server_images_mirror = "http://cloudmin.virtualmin.com/images/mirrors.txt";
-	$server_images_url = "http://cloudmin.virtualmin.com/images/images.txt";
+	# Use full set of commerical images
+	$server_images_mirror =
+		"http://cloudmin.virtualmin.com/images/mirrors.txt";
+	$server_images_url =
+		"http://cloudmin.virtualmin.com/images/images.txt";
 	}
-else {
-	$server_images_mirror = "http://cloudmin.virtualmin.com/gpl/images/mirrors.txt";
-	$server_images_url = "http://cloudmin.virtualmin.com/gpl/images/images.txt";
+elsif ($module_info{'onehost'} eq 'xen') {
+	# Use GPL images for Xen
+	$server_images_mirror =
+		"http://cloudmin.virtualmin.com/gpl/images/mirrors.txt";
+	$server_images_url =
+		"http://cloudmin.virtualmin.com/gpl/images/images.txt";
 	}
+elsif ($module_info{'onehost'} eq 'kvm') {
+	# Use GPL images for KVM
+	$server_images_mirror =
+		"http://cloudmin.virtualmin.com/kvm/images/mirrors.txt";
+	$server_images_url =
+		"http://cloudmin.virtualmin.com/kvm/images/images.txt";
+	}
+$server_images_cache = "$module_config_directory/server-images-cache";
 $server_images_cache = "$module_config_directory/server-images-cache";
 $images_cache_dir = "/var/cloudmin-images";
 $image_storages_dir = "$module_config_directory/storages";
