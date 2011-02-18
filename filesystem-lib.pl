@@ -110,7 +110,7 @@ return \@rv;
 sub put_system_fstab
 {
 my ($server, $fstab) = @_;
-my $vhost = &type_xen_parent($server);
+my $vhost = &get_parent_server($server);
 
 # Create a temp file first
 my $file = &transname();
