@@ -302,7 +302,7 @@ return time().$$.($main::server_id_count++);
 sub get_server_ip
 {
 my ($server) = @_;
-my $resolvedip = &to_ipaddress($server->{'host'});
+my $resolvedip;
 my @ips;
 if ($server->{'manager'} ne 'this' &&
     $server->{'manager'} ne 'real') {
@@ -310,11 +310,15 @@ if ($server->{'manager'} ne 'this' &&
 	@ips = split(/\s+/, $server->{'ip_addresses'});
 	}
 if (!@ips) {
+	my $resolvedip = &to_ipaddress($server->{'host'});
 	@ips = ( $resolvedip );
 	}
-if (&indexof($resolvedip, @ips) >= 0 && scalar(@ips) > 1) {
-	# Always use IP that hostname resolves to first
-	@ips = ( $resolvedip, ( grep { $_ ne $resolvedip } @ips ) );
+elsif (scalar(@ips) > 1) {
+	my $resolvedip = &to_ipaddress($server->{'host'});
+	if (&indexof($resolvedip, @ips) >= 0) {
+		# Always use IP that hostname resolves to first
+		@ips = ( $resolvedip, ( grep { $_ ne $resolvedip } @ips ) );
+		}
 	}
 if ($server->{'ip_force'}) {
 	# Use forced IP by default
