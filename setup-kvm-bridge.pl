@@ -91,7 +91,7 @@ if ($gconfig{'os_type'} eq 'redhat-linux') {
 
 	# Manually change eth0 to use br0 as a bridge
 	&read_env_file("$net::net_scripts_dir/ifcfg-$eth_name", \%ethconf);
-	$ethconf{'BRIDGE'} = $br0_name;
+	$ethconf{'BRIDGE'} = $br_name;
 	foreach $f ('IPADDR', 'NETMASK', 'NETWORK', 'GATEWAY', 'BROADCAST',
 		    'MTU', 'BOOTPROTO', 'IPV6ADDR', 'IPV6ADDR_SECONDARIES',
 		    'IPV6INIT', 'IPV6_DEFAULTGW') {
@@ -104,16 +104,16 @@ if ($gconfig{'os_type'} eq 'redhat-linux') {
 elsif ($gconfig{'os_type'} eq 'debian-linux') {
 	# Add pre-up commands to bridge interface
 	@defs = &net::get_interface_defs();
-	($br0_def) = grep { $_->[0] eq $br0_name &&
+	($br0_def) = grep { $_->[0] eq $br_name &&
 			    $_->[1] eq 'inet' } @defs;
-	push(@{$br0_def->[3]}},
+	push(@{$br0_def->[3]},
              [ 'pre-up', 'brctl addbr '.$br_name ],
 	     [ 'pre-up', 'brctl addif '.$br_name.' '.$eth_name ]);
 	&net::modify_interface_def($br0_def->[0], $br0_def->[1],
 				   $br0_def->[2], $br0_def->[3]);
 
 	# Make eth0 manual with no other options
-	($eth0_def) = grep { $_->[0] eq $eth0_name &&
+	($eth0_def) = grep { $_->[0] eq $eth_name &&
 			     $_->[1] eq 'inet' } @defs;
 	$eth0_def->[2] = 'manual';
 	$eth0_def->[3] = [ ];
