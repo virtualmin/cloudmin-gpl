@@ -232,13 +232,15 @@ if (!$module_info{'onehost'}) {
 		@netmasks = $p->{'cidr'} ? map { &net::prefix_to_mask($_) }
 					    split(/,/, $p->{'cidr'}) : ( );
 		@gateways = split(/,/, $p->{'gateway'});
+		$r = scalar(@starts) + 1;
+		$r = 3 if ($rows < 3);
 		print &ui_columns_row([
 			&ui_checkbox("active_$i", 1, "", $p->{'id'}),
 			&ui_textbox("desc_$i", $p->{'desc'}, 30),
-			&ui_textarea("start_$i", join("\n", @starts), 3, 20),
-			&ui_textarea("end_$i", join("\n", @ends), 3, 20),
-			&ui_textarea("netmask_$i", join("\n",@netmasks), 3, 20),
-			&ui_textarea("gateway_$i", join("\n",@gateways), 3, 20),
+			&ui_textarea("start_$i", join("\n", @starts), $r, 20),
+			&ui_textarea("end_$i", join("\n", @ends), $r, 20),
+			&ui_textarea("netmask_$i", join("\n",@netmasks), $r,20),
+			&ui_textarea("gateway_$i", join("\n",@gateways), $r,20),
 			], [ "valign=top", "valign=top" ]);
 		$i++;
 		}
