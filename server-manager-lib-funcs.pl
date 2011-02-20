@@ -107,9 +107,9 @@ if ($module_info{'onehost'} eq 'xen' &&
 	if (!$this->{'xen_start'}) {
 		my $eth0 = &first_ethernet_iface();
 		($this->{'xen_start'}, $this->{'xen_end'}) =
-			&first_ethernet_range($eth0);
+		  &first_ethernet_range($eth0);
 		$this->{'xen_cidr'} =
-			&net::mask_to_prefix($eth0->{'netmask'});
+		  &net::mask_to_prefix($eth0->{'netmask'} || "255.255.255.0");
 		}
 	$this->{'xen_dir'} ||= "/xen";
 
@@ -127,9 +127,9 @@ if ($module_info{'onehost'} eq 'kvm' &&
 	if (!$this->{'kvm_start'}) {
 		my $eth0 = &first_bridge_iface();
 		($this->{'kvm_start'}, $this->{'kvm_end'}) =
-			&first_ethernet_range($eth0);
+		  &first_ethernet_range($eth0);
 		$this->{'kvm_cidr'} =
-			&net::mask_to_prefix($eth0->{'netmask'});
+		  &net::mask_to_prefix($eth0->{'netmask'} || "255.255.255.0");
 		}
 	$this->{'kvm_dir'} ||= "/kvm";
 	$config{'kvm_checked'} = 1;
