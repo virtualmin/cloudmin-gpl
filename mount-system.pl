@@ -67,11 +67,11 @@ defined(&$nfunc) || &usage("This virtual system type does not have a ".
 	&usage("This virtual system does not need its filesystem mounted");
 
 # Mount now
+&obtain_lock_server($server);
 print "Mounting filesystem for $server->{'host'} ..\n";
 $err = &$mfunc($server, undef, $mountdir);
 if ($err) {
 	print ".. failed : $err\n";
-	exit(2);
 	}
 else {
 	$vhost = &get_parent_server($server);
@@ -79,6 +79,8 @@ else {
 	      " on host ",$vhost->{'host'},"\n";
 	}
 &save_managed_server($server);
+&release_lock_server($server);
+exit(2) if ($err);
 
 &cloudmin_api_log(\@OLDARGV);
 

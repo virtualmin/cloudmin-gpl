@@ -58,17 +58,19 @@ $mp = $server->{$server->{'manager'}.'_mount'};
 $mp || &usage("This system's filesystem is not currently mounted");
 
 # Un-mount now
+&obtain_lock_server($server);
 print "Un-mounting filesystem for $server->{'host'} ..\n";
 $err = &$ufunc($server);
 if ($err) {
 	print ".. failed : $err\n";
-	exit(2);
 	}
 else {
 	$vhost = &get_parent_server($server);
 	print ".. unmounted from $mp on host $vhost->{'host'}\n";
 	}
 &save_managed_server($server);
+&release_lock_server($server);
+exit(2) if ($err);
 
 &cloudmin_api_log(\@OLDARGV);
 
