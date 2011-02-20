@@ -102,13 +102,14 @@ if ($gconfig{'os_type'} eq 'redhat-linux') {
 	exit(1);
 	}
 elsif ($gconfig{'os_type'} eq 'debian-linux') {
+	# Get old default gateway
+	($gw, $gwdev) = &net::get_default_gateway();
+
 	# Add pre-up commands to bridge interface
 	@defs = &net::get_interface_defs();
 	($br0_def) = grep { $_->[0] eq $br_name &&
 			    $_->[1] eq 'inet' } @defs;
-	push(@{$br0_def->[3]},
-             [ 'pre-up', 'brctl addbr '.$br_name ],
-	     [ 'pre-up', 'brctl addif '.$br_name.' '.$eth_name ]);
+	push(@{$br0_def->[3]}, [ 'bridge_ports', $eth_name ]);
 	&net::modify_interface_def($br0_def->[0], $br0_def->[1],
 				   $br0_def->[2], $br0_def->[3]);
 
@@ -119,6 +120,12 @@ elsif ($gconfig{'os_type'} eq 'debian-linux') {
 	$eth0_def->[3] = [ ];
 	&net::modify_interface_def($eth0_def->[0], $eth0_def->[1],
 				   $eth0_def->[2], $eth0_def->[3]);
+
+	# Change default gateway to bridge
+	if ($gw && $gwdev eq $eth_name) {
+		&net::set_default_gateway($gw, $br_name);
+		}
+
 	print "Created bridge $br_name connected to $eth_name\n";
 	exit(1);
 	}
