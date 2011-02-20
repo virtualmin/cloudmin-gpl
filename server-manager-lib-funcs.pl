@@ -107,7 +107,7 @@ if ($module_info{'onehost'} eq 'xen' &&
 	if (!$this->{'xen_start'}) {
 		my $eth0 = &first_ethernet_iface();
 		($this->{'xen_start'}, $this->{'xen_end'}) =
-			&first_ethernet_range();
+			&first_ethernet_range($eth0);
 		$this->{'xen_cidr'} =
 			&net::mask_to_prefix($eth0->{'netmask'});
 		}
@@ -125,9 +125,9 @@ if ($module_info{'onehost'} eq 'kvm' &&
     ($config{'kvm_checked'} || !&check_kvm_host_software($this))) {
 	$this->{'kvm_host'} = 1;
 	if (!$this->{'kvm_start'}) {
-		my $eth0 = &first_ethernet_iface();
+		my $eth0 = &first_bridge_iface();
 		($this->{'kvm_start'}, $this->{'kvm_end'}) =
-			&first_ethernet_range();
+			&first_ethernet_range($eth0);
 		$this->{'kvm_cidr'} =
 			&net::mask_to_prefix($eth0->{'netmask'});
 		}
@@ -302,7 +302,10 @@ return time().$$.($main::server_id_count++);
 sub get_server_ip
 {
 my ($server) = @_;
-my $resolvedip;
+if ($server->{'ip_force'} && !wantarray) {
+	# An IP is forced and the caller only wants one, so just use it
+	return $server->{'ip_force'};
+	}
 my @ips;
 if ($server->{'manager'} ne 'this' &&
     $server->{'manager'} ne 'real') {
@@ -329,11 +332,14 @@ return wantarray ? @ips : $ips[0];
 }
 
 # first_ethernet_iface()
-# Returns the object for the first active ethernet interface
+# Returns the object for the first active ethernet or bonded interface
 sub first_ethernet_iface
 {
+# Try real ethernet first
 foreach my $a (&net::active_interfaces()) {
-	if ($a->{'up'} && $a->{'virtual'} eq '' &&
+	if ($a->{'up'} &&
+	    $a->{'virtual'} eq '' &&
+	    $a->{'address'} &&
 	    (&net::iface_type($a->{'name'}) =~ /ethernet/i ||
 	     $a->{'name'} =~ /^bond/)) {
 		return $a;
@@ -342,12 +348,29 @@ foreach my $a (&net::active_interfaces()) {
 return undef;
 }
 
-# first_ethernet_range()
+# first_bridge_iface()
+# Returns the object for the first active bridged interface
+sub first_bridge_iface
+{
+foreach my $a (&net::active_interfaces()) {
+	if ($a->{'up'} &&
+	    $a->{'virtual'} eq '' &&
+	    $a->{'address'} &&
+	    (&net::iface_type($a->{'name'}) =~ /bridge/i ||
+	     $a->{'name'} =~ /^br/)) {
+		return $a;
+		}
+	}
+return undef;
+}
+
+# first_ethernet_range([iface])
 # Returns the starting and ending IPs for the network that the first
-# ethernet interface is on
+# ethernet interface (or provided interface) is on
 sub first_ethernet_range
 {
-my $eth0 = &first_ethernet_iface();
+my ($eth0) = @_;
+$eth0 ||= &first_ethernet_iface();
 if (!$eth0) {
 	# Fake it
 	$eth0 = { 'address' => &to_ipaddress(&get_system_hostname()) ||
