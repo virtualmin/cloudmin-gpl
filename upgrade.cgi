@@ -71,8 +71,8 @@ if ($itype eq "rpm") {
 	local $found;
 	local $lref = &read_file_lines($cloudmin_yum_repo);
 	foreach my $l (@$lref) {
-		if ($l =~ /^baseurl=.*\/gpl(\/.*)/) {
-			$l = "baseurl=http://$in{'serial'}:$in{'key'}\@$upgrade_cloudmin_host$1";
+		if ($l =~ /^baseurl=.*\/(gpl|kvm)(\/.*)/) {
+			$l = "baseurl=http://$in{'serial'}:$in{'key'}\@$upgrade_cloudmin_host$2";
 			$found++;
 			}
 		}
@@ -111,8 +111,8 @@ elsif ($itype eq "deb") {
 	# GPL APT repo .. change to use the Pro one
 	$lref = &read_file_lines($sources_list);
 	foreach $l (@$lref) {
-		if ($l =~ /^deb\s+http:\/\/cloudmin\.virtualmin\.com\/gpl(\/.*)/) {
-			$l = "deb http://$in{'serial'}:$in{'key'}\@cloudmin.virtualmin.com$1";
+		if ($l =~ /^deb\s+http:\/\/cloudmin\.virtualmin\.com\/(gpl|kvm)(\/.*)/) {
+			$l = "deb http://$in{'serial'}:$in{'key'}\@cloudmin.virtualmin.com$2";
 			}
 		}
 	&flush_file_lines($sources_list);
@@ -137,7 +137,7 @@ elsif ($itype eq "deb") {
 				# For the Virtualmin package, select pro
 				# version explicitly so that the GPL is
 				# replaced.
-				local ($ver) = grep { !/\.gpl/ }
+				local ($ver) = grep { !/\.(gpl|kvm)/ }
 					&apt_package_versions($p->{'name'});
                                 push(@packages, $p->{'name'}."=".$ver);
 				}
@@ -182,8 +182,8 @@ else {
 			# Already installed .. but can we upgrade?
 			$can_upgrade = 0;
 			if ($mod eq "server-manager" &&
-			    $info{'version'} =~ /gpl/i &&
-			    $ver !~ /gpl/i) {
+			    $info{'version'} =~ /(gpl|kvm)/i &&
+			    $ver !~ /(gpl|kvm)/i) {
 				# GPL upgrading to pro - always do it
 				$can_upgrade = 1;
 				}
