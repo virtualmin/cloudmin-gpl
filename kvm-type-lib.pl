@@ -266,7 +266,7 @@ foreach my $n (grep { /^nic/ } @nets) {
 		}
 	}
 $server->{'mac'} = join(" ", @macs);
-$server->{'model'} = join(" ", @models);
+$server->{'kvm_model'} = join(" ", @models);
 delete($got->{'args'}->{'net'});
 
 # Save boot mode
@@ -292,6 +292,7 @@ delete($got->{'args'}->{'name'});
 delete($got->{'args'}->{'serial'});
 delete($got->{'args'}->{'vnc'});
 delete($got->{'args'}->{'nographic'});
+delete($got->{'args'}->{'monitor'});
 
 # Save other unknown args
 my @args;
