@@ -293,6 +293,7 @@ delete($got->{'args'}->{'serial'});
 delete($got->{'args'}->{'vnc'});
 delete($got->{'args'}->{'nographic'});
 delete($got->{'args'}->{'monitor'});
+delete($got->{'args'}->{'S'});
 
 # Save other unknown args
 my @args;
