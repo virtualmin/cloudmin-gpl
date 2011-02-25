@@ -1720,20 +1720,6 @@ foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 # Boot device
 $cmd .= " -boot ".($server->{'kvm_bootdevice'} || 'c');
 
-# Accept TCP connection for console
-#if (ref($inuse)) {
-#	my $cport = 4444;
-#	while(1) {
-#		last if (&indexof($cport, @$inuse) < 0);
-#		$cport++;
-#		}
-#	$server->{'kvm_cport'} = $cport;
-#	$cmd .= " -serial tcp:127.0.0.1:$cport,server,nowait";
-#	}
-
-# Connect monitor to stdout
-$cmd .= " -monitor stdio";
-
 # TAP networking, if enabled
 my @macs = split(/\s+/, $server->{'mac'});
 my @models = split(/\s+/, $server->{'kvm_model'});
@@ -1757,6 +1743,7 @@ foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
 
 # VNC settings, on a free port
 if (ref($inuse)) {
+	# Add VNC flag with random port
 	push(@$inuse, map { $_->{'kvm_vnc_display'}+5900 }
 			  grep { $_->{'kvm_vnc_display'} &&
 				 $_->{'id'} ne $server->{'id'} }
@@ -1768,8 +1755,12 @@ if (ref($inuse)) {
 		}
 	$server->{'kvm_vnc_display'} = $vport-5900;
 	$cmd .= " -vnc :".$server->{'kvm_vnc_display'}.",password";
+
+	# Connect monitor to stdout
+	$cmd .= " -monitor stdio";
 	}
 else {
+	# Disable graphics
 	$cmd .= " -nographic";
 	}
 
@@ -3679,6 +3670,8 @@ return &text('kvm_ewhich2', "<tt>qemu-kvm</tt>", "<tt>kvm</tt>") if (!$full);
 	return &text('kvm_ewhich', "<tt>qemu-img</tt>");
 &has_command_on_server($server, "parted") ||
 	return &text('kvm_ewhich', "<tt>parted</tt>");
+&has_command_on_server($server, "lsof") ||
+	return &text('kvm_ewhich', "<tt>lsof</tt>");
 
 if (!$config{'kvm_qemu'}) {
 	# Check CPU
