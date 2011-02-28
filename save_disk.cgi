@@ -10,6 +10,7 @@ $server || &error($text{'edit_egone'});
 $vhost = &get_parent_server($server);
 &check_server_status($server, 0, 1);	# In case state has changed
 &can_action_error($server, "disks");
+&obtain_lock_server($server);
 
 # Get the disk
 $lfunc = "type_".$server->{'manager'}."_list_disks";
@@ -32,7 +33,6 @@ if ($in{'delete'}) {
 	if ($in{'confirm'}) {
 		# Do it
 		&$first_print(&text('disk_deleting', "<tt>$r</tt>"));
-		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_disk";
 		$err = &$dfunc($server, $disk);
 		if ($err) {
@@ -43,7 +43,6 @@ if ($in{'delete'}) {
 			&show_disk_reboot_message($server, $disk);
 			}
 		&save_managed_server($server);
-		&release_lock_server($server);
 		&webmin_log("delete", "disk", $server->{'host'},
 			    { 'real' => $disk->{'real'} });
 		}
@@ -81,7 +80,6 @@ elsif ($in{'detach'}) {
 		# Do it
 		&$first_print(&text('disk_detaching',
 				    "<tt>$r</tt>"));
-		&obtain_lock_server($server);
 		$dfunc = "type_".$server->{'manager'}."_delete_disk";
 		$err = &$dfunc($server, $disk, 1);
 		if ($err) {
@@ -92,7 +90,6 @@ elsif ($in{'detach'}) {
 			&show_disk_reboot_message($server, $disk);
 			}
 		&save_managed_server($server);
-		&release_lock_server($server);
 		&webmin_log("detach", "disk", $server->{'host'},
 			    { 'real' => $disk->{'real'} });
 		}
@@ -243,7 +240,6 @@ else {
 		}
 
 	$wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
-	&obtain_lock_server($server);
 	if ($in{'new'}) {
 		# Create the disk
 		&ui_print_header(&server_in($server), $text{'disk_titlec'}, "");
@@ -303,10 +299,10 @@ else {
 				    { 'real' => $disk->{'real'} });
 			}
 		}
-	&release_lock_server($server);
 
 	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 			 "", $text{'index_return'});
 	}
 
+&release_lock_server($server);
 

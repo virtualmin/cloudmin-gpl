@@ -970,7 +970,7 @@ if (!$reset) {
 # Find existing LV if resetting
 my (@lvs, $fslv);
 &remote_finished();
-if ($reset && $server->{'xen_filesystem_vg'}) {
+if ($reset && $server->{'kvm_filesystem_vg'}) {
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 	@lvs = &remote_foreign_call($vhost, "lvm",
 		"list_logical_volumes", $server->{'kvm_filesystem_vg'});
@@ -1898,6 +1898,14 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 			$disk->{'lv_snap_of'} = $lv->{'snap_of'};
 			}
 		}
+	if ($disk->{'vg'}) {
+		$disk->{'storage_id'} = 'lvm_'.$disk->{'vg'};
+		$disk->{'storage'} = &text('storage_lvm',$disk->{'vg'});
+		}
+	else {
+		$disk->{'storage_id'} = 'files';
+		$disk->{'storage'} = $text{'storage_files'};
+		}
 	$disk->{'index'} = scalar(@rv);
 	push(@rv, $disk);
 	}
@@ -1995,11 +2003,11 @@ my ($server, $disk) = @_;
 return $server->{'status'} eq 'down' ? 0 : 1;
 }
 
-# type_kvm_new_disk(&server, &disks, real?)
+# type_kvm_new_disk(&server, &disks, real?, [&storage])
 # Returns a structure for a new disk on some KVM system
 sub type_kvm_new_disk
 {
-my ($server, $disks, $device) = @_;
+my ($server, $disks, $device, $storage) = @_;
 my $rv = { };
 
 # Find which device files are used
@@ -2027,9 +2035,18 @@ $rv->{'virt_part'} = 1;
 
 if (!$device) {
 	my $vhost = &type_kvm_parent($server);
-	if ($server->{'kvm_filesystem_vg'}) {
+	my $vg;
+	if ($storage) {
+		$vg = $storage->{'id'} =~ /^lvm_(\S+)/ ? $1 : undef;
+		$rv->{'storage_id'} = $storage->{'id'};
+		}
+	else {
+		$vg = $server->{'kvm_filesystem_vg'};
+		$rv->{'storage_id'} = $vg ? 'lvm_'.$vg : 'files';
+		}
+	if ($vg) {
 		# Create an LVM name
-		$rv->{'vg'} = $server->{'kvm_filesystem_vg'};
+		$rv->{'vg'} = $vg;
 		$rv->{'lv'} = $server->{'host'}."_".(scalar(@$disks)+1)."_img";
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
@@ -2429,6 +2446,37 @@ return $moderr;
 sub type_kvm_list_disk_filesystems
 {
 return ('ext2', 'reiserfs', 'swap');
+}
+
+# type_kvm_list_storages(&vhost)
+# Returns a list of possible storage locations on some host system. Each is a
+# hash ref with a id and desc fields. Example storages include local files and
+# LVM volume groups.
+sub type_kvm_list_storages
+{
+my ($vhost) = @_;
+my @rv;
+push(@rv, { 'id' => 'files',
+	    'desc' => $text{'storage_files'},
+	    'adddesc' => $text{'storage_addfiles'} });
+if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
+	# Check for and add LVM volume groups
+	if (&remote_foreign_check($vhost, "lvm")) {
+		$last_remote_error = undef;
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+		local @vgs;
+		if (!$last_remote_error) {
+			@vgs = &remote_foreign_call($vhost, "lvm",
+						    "list_volume_groups");
+			}
+		push(@rv, map {
+			{ 'id' => 'lvm_'.$_->{'name'},
+			  'desc' => &text('storage_lvm', $_->{'name'}),
+			  'adddesc' => &text('storage_addlvm', $_->{'name'}) }
+				} @vgs);
+		}
+	}
+return \@rv;
 }
 
 # type_kvm_can_fsck(&server, &disk)

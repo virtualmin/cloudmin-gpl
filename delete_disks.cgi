@@ -11,6 +11,7 @@ $server || &error($text{'edit_egone'});
 &check_server_status($server, 0, 1);	# In case state has changed
 &can_action_error($server, "disks");
 @d = split(/\0/, $in{'d'});
+&obtain_lock_server($server);
 
 # Get the disks
 $lfunc = "type_".$server->{'manager'}."_list_disks";
@@ -35,7 +36,6 @@ foreach $disk (@$disks) {
 &ui_print_header(&server_in($server), $text{'ddisk_title'}, "");
 if ($in{'confirm'}) {
 	# Do it
-	&obtain_lock_server($server);
 	foreach $disk (@$disks) {
 		&$first_print(&text('disk_deleting',
 				    &describe_disk($server, $disk)));
@@ -49,7 +49,6 @@ if ($in{'confirm'}) {
 			}
 		}
 	&show_disk_reboot_message($server, $disks->[0]);
-	&release_lock_server($server);
 	&save_managed_server($server);
 	&webmin_log("delete", "disks", $server->{'host'},
 		    { 'real' => [ map { $_->{'real'} } @$disks ] });
@@ -74,6 +73,8 @@ else {
 	print &ui_form_end([ [ "confirm", $text{'ddisk_deleteok'} ] ]);
 	print "</center>\n";
 	}
+
+&release_lock_server($server);
 &ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 		 "", $text{'index_return'});
 
