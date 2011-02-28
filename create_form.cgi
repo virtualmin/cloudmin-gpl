@@ -261,7 +261,7 @@ if ($empty) {
 			}
 		if (&can_action(undef, "global")) {
 			push(@opts, [ 1, $text{'create_cdfile'},
-				      &ui_filebox("file", undef, 40) ]);
+				      &ui_textbox("file", undef, 40) ]);
 			}
 		if (@opts > 1) {
 			print &ui_table_row($text{'create_cd'},
