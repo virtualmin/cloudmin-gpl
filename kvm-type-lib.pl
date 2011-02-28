@@ -2461,7 +2461,7 @@ push(@rv, { 'id' => 'files',
 	    'adddesc' => $text{'storage_addfiles'} });
 if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	# Check for and add LVM volume groups
-	if (&remote_foreign_check($vhost, "lvm")) {
+	if ($vhost->{'kvm_vg'} && &remote_foreign_check($vhost, "lvm")) {
 		$last_remote_error = undef;
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		local @vgs;
