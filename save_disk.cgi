@@ -134,10 +134,23 @@ elsif ($in{'fsck'}) {
 	}
 else {
 	# Validate inputs, and update the disk hash
+
+	# Storage location
+	$sfunc = "type_".$server->{'manager'}."_list_storages";
+	if (defined(&$sfunc) && defined($in{'storage'}) &&
+	    &can_action($server, "storage")) {
+		$storages = &$sfunc($vhost);
+		ref($storages) || &error($storages);
+		($gotstorage) = grep { $_->{'id'} eq $in{'storage'}} @$storages;
+		$gotstorage || &error($text{'disk_estorage'});
+		}
+
+	# Create initial disk object
 	if ($in{'new'}) {
 		$nfunc = "type_".$server->{'manager'}."_new_disk";
 		if (defined(&$nfunc)) {
-			$disk = &$nfunc($server, $disks, $in{'new'} == 2);
+			$disk = &$nfunc($server, $disks, $in{'new'} == 2,
+					$gotstorage);
 			}
 		else {
 			$disk = { };
@@ -159,7 +172,7 @@ else {
 			}
 		}
 	elsif ($in{'new'} == 1 && &can_action($server, "devices")) {
-		if ($disk->{'lv'}) {
+		if ($disk->{'vg'}) {
 			# From LV name text box
 			$in{'lv'} =~ /^[A-Za-z0-9\.\-\_]+$/ ||
 				&error($text{'disk_elv'});
@@ -213,17 +226,6 @@ else {
 		($gotmedia) = grep { $_->{'id'} eq $in{'media'} } @$medias;
 		$gotmedia || &error($text{'disk_emedia'});
 		$disk->{'media'} = $in{'media'};
-		}
-
-	# Storage location
-	$sfunc = "type_".$server->{'manager'}."_list_storages";
-	if (defined(&$sfunc) && defined($in{'storage'}) &&
-	    &can_action($server, "storage")) {
-		$storages = &$sfunc($vhost);
-		ref($storages) || &error($storages);
-		($gotstorage) = grep { $_->{'id'} eq $in{'storage'}} @$storages;
-		$gotstorage || &error($text{'disk_estorage'});
-		$disk->{'storage_id'} = $in{'storage'};
 		}
 
 	# New filesystem and mount point

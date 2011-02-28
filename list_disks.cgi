@@ -11,6 +11,7 @@ if (&foreign_check("mount")) {
 	}
 $cfunc = "type_".$server->{'manager'}."_can_disks";
 $can = &$cfunc($server);
+$vhost = &get_parent_server($server);
 
 # Get disks or die
 $dfunc = "type_".$server->{'manager'}."_list_disks";
@@ -28,13 +29,28 @@ if (defined(&$mfunc)) {
 		}
 	}
 
-# Show a table
-@links = ( "<a href='edit_disk.cgi?new=1&id=$in{'id'}'>".
-	   "$text{'disks_add1'}</a>" );
+# Build disk creation links, with storages
+$sfunc = "type_".$server->{'manager'}."_list_storages";
+if (&can_action($server, "storage") && defined(&$sfunc)) {
+	$storages = &$sfunc($vhost);
+	if (ref($storages) && @$storages > 1) {
+		foreach $s (@$storages) {
+			push(@links, "<a href='edit_disk.cgi?new=1&".
+				     "id=$in{'id'}&storage=$s->{'id'}'>".
+				     "$s->{'adddesc'}</a>");
+			}
+		}
+	}
+if (!@links) {
+	# Default storage only
+	@links = ( "<a href='edit_disk.cgi?new=1&id=$in{'id'}'>".
+		   "$text{'disks_add1'}</a>" );
+	}
 if (&can_action($server, "devices") && $can != 2) {
 	push(@links, "<a href='edit_disk.cgi?new=2&id=$in{'id'}'>".
 		     "$text{'disks_add2'}</a>");
 	}
+
 if (@$disks) {
 	# We have some to show
 	unshift(@links, &select_all_link("d"), &select_invert_link("d"));
@@ -50,7 +66,7 @@ if (@$disks) {
 				  $text{'disks_size'} ],
 				100, 0, \@tds);
 	foreach my $d (@$disks) {
-		$rdesc = &describe_disk($d);
+		$rdesc = &describe_disk($server, $d);
 		$vdesc = defined(&mount::device_name) ?
 				&mount::device_name($d->{'virt'}, 1) :
 				"<tt>$d->{'virt'}</tt>";

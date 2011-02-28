@@ -109,9 +109,9 @@ if ($multi) {
 			print "    LVM logical volume snapshot of: ",
 			      "$d->{'lv_snap_of'}\n";
 			}
-		elsif ($d->{'storage'}) {
+		if ($d->{'storage'}) {
 			print "    Storage name: $d->{'storage'}\n";
-			print "    Storage ID: $d->{'real'}\n";
+			print "    Storage ID: $d->{'storage_id'}\n";
 			}
 		if ($d->{'media'}) {
 			print "    Media: $d->{'media'}\n";

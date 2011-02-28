@@ -173,7 +173,7 @@ if ($storage) {
 
 # Create a new disk object
 $nfunc = "type_".$server->{'manager'}."_new_disk";
-$disk = &$nfunc($server, $disks, $device);
+$disk = &$nfunc($server, $disks, $device, $gotstorage);
 $real eq 'auto' || &can_action($server, "devices") ||
 	&usage("You are not allowed to select your own devices for disks - ".
 	       "the --auto-real flag must be used");
@@ -190,9 +190,6 @@ if ($lv) {
 	}
 if ($media) {
 	$disk->{'media'} = $media;
-	}
-if ($storage) {
-	$disk->{'storage_id'} = $gotstorage->{'id'};
 	}
 
 # Check for clashes

@@ -11,6 +11,17 @@ if (&foreign_check("mount")) {
 	}
 $cfunc = "type_".$server->{'manager'}."_can_disks";
 $can = &$cfunc($server);
+$vhost = &get_parent_server($server);
+
+# Get the storage location
+$sfunc = "type_".$server->{'manager'}."_list_storages";
+if (defined(&$sfunc) && $in{'new'} && &can_action($server, "storage") &&
+    $in{'storage'}) {
+	$storages = &$sfunc($vhost);
+	ref($storages) || &error($storages);
+	($gotstorage) = grep { $_->{'id'} eq $in{'storage'} } @$storages;
+	$gotstorage || &error($text{'disk_estorage'});
+	}
 
 # Show title and get the disk
 $lfunc = "type_".$server->{'manager'}."_list_disks";
@@ -25,7 +36,8 @@ if ($in{'new'}) {
 			 "", "disk".$in{'new'});
 	$nfunc = "type_".$server->{'manager'}."_new_disk";
 	if (defined(&$nfunc)) {
-		$disk = &$nfunc($server, $disks, $in{'new'} == 2);
+		$disk = &$nfunc($server, $disks, $in{'new'} == 2,
+				$gotstorage);
 		}
 	else {
 		$disk = { };
@@ -54,10 +66,9 @@ if (!$in{'new'}) {
 print &ui_table_start($text{'disk_header'}, undef, 2);
 
 # Real file on host system
-$vhost = &get_parent_server($server);
 if ($disk->{'fixedreal'}) {
 	# Cannot be edited
-	$realsel = $disk->{'real'} ? &describe_disk($disk)
+	$realsel = $disk->{'real'} ? &describe_disk($server, $disk)
 				   : $text{'disk_autoreal'};
 	$txt = 'disk_real';
 	print &ui_hidden("fixedreal", 1);
@@ -144,13 +155,9 @@ if (defined(&$mfunc)) {
 	}
 
 # Storage location, if supported
-$sfunc = "type_".$server->{'manager'}."_list_storages";
-if (defined(&$sfunc) && $in{'new'} && &can_action($server, "storage")) {
-	$storages = &$sfunc($vhost);
-	ref($storages) || &error($storages);
-	print &ui_table_row($text{'disk_storage'},
-		&ui_select("storage", $disk->{'storage_id'},
-			  [ map { [ $_->{'id'}, $_->{'desc'} ] } @$storages ]));
+if ($gotstorage) {
+	print &ui_table_row($text{'disk_storage'}, $gotstorage->{'desc'});
+	print &ui_hidden("storage", $in{'storage'});
 	}
 
 # Disk format

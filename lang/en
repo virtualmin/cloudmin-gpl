@@ -2152,8 +2152,9 @@ disks_dev=Disk device
 disks_lvm=LVM
 disks_storage=Storage $1 ID $2
 disks_none=No virtual disks were found on this system!
-disks_add1=Create a new virtual disk.
+disks_add1=Create a new disk.
 disks_add2=Add existing file or device as a disk.
+disks_add3=Create a new disk in storage $1.
 disks_delete=Remove Selected Disks
 disks_eget=Failed to fetch list of disks : $1
 disks_return=list of disks
@@ -3619,6 +3620,12 @@ storage_err3=Failed to delete storage locations
 storage_eclash=The location $1 has the same destination
 storage_enoneleft=At least one storage location must exist
 storage_enone=None selected
+
+storage_files=Regular files
+storage_addfiles=Create a new disk in a regular file.
+storage_lvm=LVM volume group $1
+storage_addlvm=Create a new disk in a volume group $1.
+storage_addcitrix=Create a new disk in $1.
 
 icopy_title=Copy System Image
 icopy_copying=Copying to image storage location $1 ..

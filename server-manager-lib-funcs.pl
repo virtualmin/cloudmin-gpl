@@ -647,12 +647,12 @@ if ($s->{'status'} eq 'virt' && $s->{'virtualmin_error'}) {
 return $msg;
 }
 
-# describe_disk(&disk)
+# describe_disk(&server, &disk)
 # Returns a human-readable string describing the real location of a disk
 sub describe_disk
 {
-my ($d) = @_;
-if ($d->{'storage'}) {
+my ($server, $d) = @_;
+if ($server->{'manager'} eq 'citrix' && $d->{'storage'}) {
 	# Citrix storage
 	my $r = $d->{'realdesc'} || $d->{'real'};
 	return &text('disks_storage', "<i>$d->{'storage'}</i>",
