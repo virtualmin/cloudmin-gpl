@@ -4420,7 +4420,7 @@ my @drives = split(/\s+/, $server->{'kvm_drives'});
 foreach my $d (@$disks) {
 	my %drive = map { split(/=/, $_, 2) }
                         split(/,/, $drives[$disk->{'drive_index'}]);
-	$drive{'file'} = $d->{'real'};
+	$drive{'file'} = $d->{'newreal'};
 	$drives[$disk->{'drive_index'}] =
 		join(",", map { $_."=".$drive{$_} } keys %drive);
 	if ($server->{'kvm_filesystem'} eq $d->{'real'}) {
@@ -4463,9 +4463,10 @@ foreach my $net (@nets) {
 $server->{'kvm_net'} = join(" ", @nets);
 
 # Delete the original disk images
-if (@delfiles) {
-	&$first_print(&text('smove_delfiles', scalar(@delfiles)));
-	push(@delfiles, $server->{'kvm_console'}) if ($server->{'kvm_console'});
+push(@delfiles, $server->{'kvm_console'}) if ($server->{'kvm_console'});
+if (@delfiles || @dellvs) {
+	&$first_print(&text('smove_delfiles',
+			    scalar(@delfiles)+scalar(@dellvs)));
 	foreach my $f (@delfiles) {
 		my $err = &delete_file_on_server($vhost, $f);
 		if ($err) {
@@ -4477,9 +4478,11 @@ if (@delfiles) {
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		}
 	foreach my $f (@dellvs) {
-		&delete_all_disk_image_partitions($vhost, $f);
+		my $err = &delete_all_disk_image_partitions($vhost, $f);
+		print STDERR "failed to delete partitions on $f : $err\n" if ($err && !ref($err));
 		my ($vg, $lv) = &split_lvm_device($f);
-		&delete_mapper_entries($vhost, "$vg-$lv");
+		$err = &delete_mapper_entries($vhost, "$vg-$lv");
+		print STDERR "failed to delete mappers for $f : $err\n" if ($err);
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
 				     { 'device' => $f });
 		my $srcf = &find_snapshot_source_logical_volume(
