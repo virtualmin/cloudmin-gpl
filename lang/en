@@ -2913,6 +2913,10 @@ ec2scan_failed=.. failed to list instances : $1
 
 find_title_xen=Find Xen Instances
 find_title_openvz=Find OpenVZ Containers
+find_title_kvm=Find KVM Instances
+find_title_citrix=Find Citrix Xen VMs
+find_title_zones=Find Solaris Zones
+find_title_vserver=Find Linux VServers
 find_header=Existing virtual system search options
 find_type=Find systems of type
 find_dir=Search under directory
