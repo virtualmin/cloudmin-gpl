@@ -99,7 +99,6 @@ if ($gconfig{'os_type'} eq 'redhat-linux') {
 		}
 	&write_env_file("$net::net_scripts_dir/ifcfg-$eth_name", \%ethconf);
 	print "Created bridge $br_name connected to $eth_name\n";
-	exit(1);
 	}
 elsif ($gconfig{'os_type'} eq 'debian-linux') {
 	# Get old default gateway
@@ -125,9 +124,24 @@ elsif ($gconfig{'os_type'} eq 'debian-linux') {
 	if ($gw && $gwdev eq $eth_name) {
 		&net::set_default_gateway($gw, $br_name);
 		}
-
 	print "Created bridge $br_name connected to $eth_name\n";
-	exit(1);
+	}
+else {
+	print "Unknown OS type $gconfig{'os_type'}\n";
+	exit(2);
+	}
+
+# Rename any alias interfaces on eth0 to br0
+foreach $b (&net::boot_interfaces()) {
+	if ($b->{'name'} eq $eth_name && $b->{'virtual'} ne '') {
+		$oldb = { %$b };
+		$oldname = $b->{'fullname'};
+		$b->{'name'} = $br_name;
+		$b->{'fullname'} = $b->{'name'}.":".$b->{'virtual'};
+		print "Renamed $oldname to $b->{'fullname'}\n";
+		&net::delete_interface($oldb);
+		&net::save_interface($b);
+		}
 	}
 
 sub usage
