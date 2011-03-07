@@ -1688,11 +1688,11 @@ foreach my $net (@nets) {
 return undef;
 }
 
-# get_kvm_start_command(&server)
+# get_kvm_start_command(&server, [for-boot])
 # Returns the full command line to start a KVM instance
 sub get_kvm_start_command
 {
-my ($server) = @_;
+my ($server, $forboot) = @_;
 my $vhost = &type_kvm_parent($server);
 my $inuse = &list_ports_in_use($vhost, "tcp");
 my $cmd = &find_qemu_kvm_command($vhost);
@@ -1743,17 +1743,21 @@ foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
 
 # VNC settings, on a free port
 if (ref($inuse)) {
-	# Add VNC flag with random port
-	push(@$inuse, map { $_->{'kvm_vnc_display'}+5900 }
-			  grep { $_->{'kvm_vnc_display'} &&
-				 $_->{'id'} ne $server->{'id'} }
-			       &list_managed_servers());
-	my $vport = 5901;
-	while(1) {
-		last if (&indexof($vport, @$inuse) < 0);
-		$vport++;
+	# Add VNC flag with random port. Don't re-select a port if we are
+	# generating the command for use at boot time and a port has already
+	# been chosen.
+	if (!$forboot || !$server->{'kvm_vnc_display'}) {
+		push(@$inuse, map { $_->{'kvm_vnc_display'}+5900 }
+				  grep { $_->{'kvm_vnc_display'} &&
+					 $_->{'id'} ne $server->{'id'} }
+				       &list_managed_servers());
+		my $vport = 5901;
+		while(1) {
+			last if (&indexof($vport, @$inuse) < 0);
+			$vport++;
+			}
+		$server->{'kvm_vnc_display'} = $vport-5900;
 		}
-	$server->{'kvm_vnc_display'} = $vport-5900;
 	$cmd .= " -vnc :".$server->{'kvm_vnc_display'}.",password";
 
 	# Connect monitor to stdout
