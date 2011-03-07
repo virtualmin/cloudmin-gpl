@@ -101,7 +101,7 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 $rfunc = "type_".$server->{'manager'}."_real_interfaces";
 @realifaces = grep { $_->{'virtual'} eq '' } @$ifaces;
 if (defined(&$rfunc) && $config{'bw_enabled'} &&
-    &can_action($server, "bw")) {
+    &can_action($server, "bw") && @realifaces) {
 	print &ui_hr();
 	print $text{'ifaces_bwdesc'},"\n";
 
