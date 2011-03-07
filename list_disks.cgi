@@ -79,7 +79,8 @@ if (@$disks) {
 		      "$rdesc</a>" : $rdesc,
 		    $vdesc,
 		    $d->{'lv'} ? $text{'disks_lvm'} :
-		     $d->{'storage'} ? $text{'disks_storagetype'} :
+		     $d->{'storage'} && $server->{'manager'} eq 'citrix' ?
+			$text{'disks_storagetype'} :
 		      $d->{'device'} ? $text{'disks_dev'} : $text{'disks_file'},
 		    %mediamap ? ( $mediamap{$d->{'media'}} || $d->{'media'})
 			      : ( ),
