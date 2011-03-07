@@ -5367,7 +5367,7 @@ my $perr = &put_file_to_server($vhost,
 return $perr if ($perr);
 
 $server->{'kvm_vnc_passwd'} ||= $server->{'ssh_pass'} ||
-			        &generate_random_password();
+			        &generate_random_password(4);
 push(@mlines, "change vnc password");
 push(@mlines, $server->{'kvm_vnc_passwd'});
 
