@@ -1634,6 +1634,9 @@ if ($proc) {
 	$server->{'status'} = 'down';
 	}
 
+# Delete boot-time entry
+&type_kvm_set_atboot($server, 0);
+
 # Delete virtual disks
 if (!$keep) {
 	my $disks = &type_kvm_list_disks($server, 0);
@@ -1651,9 +1654,6 @@ if (!$keep) {
 			}
 		}
 	}
-
-# Delete boot-time entry
-&type_kvm_set_atboot($server, 0);
 
 # Delete console and monitor input files
 if ($server->{'kvm_console'}) {
@@ -2643,7 +2643,6 @@ foreach my $dev (split(/\r?\n/, $out)) {
 	if ($eth && (!%bwifaces || $bwifaces{$eth})) {
 		# Directions are reversed, as we are looking at a virtual
 		# interface that talks *to* the host
-		print STDERR "name=$w[0] in=$w[9] out=$w[1] eth=$eth\n";
 		my $iface = { 'name' => $w[0],
 			      'bytes_in' => $w[9],
 			      'packets_in' => $w[10],
@@ -4483,10 +4482,8 @@ if (@delfiles || @dellvs) {
 		}
 	foreach my $f (@dellvs) {
 		my $err = &delete_all_disk_image_partitions($vhost, $f);
-		print STDERR "failed to delete partitions on $f : $err\n" if ($err && !ref($err));
 		my ($vg, $lv) = &split_lvm_device($f);
 		$err = &delete_mapper_entries($vhost, "$vg-$lv");
-		print STDERR "failed to delete mappers for $f : $err\n" if ($err);
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
 				     { 'device' => $f });
 		my $srcf = &find_snapshot_source_logical_volume(
