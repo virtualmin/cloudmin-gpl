@@ -81,6 +81,7 @@ $br0->{'mtu'} = $eth0->{'mtu'};
 $br0->{'address6'} = $eth0->{'address6'};
 $br0->{'netmask6'} = $eth0->{'netmask6'};
 $br0->{'gateway6'} = $eth0->{'gateway6'};
+$br0->{'auto6'} = $eth0->{'auto6'};
 &net::save_interface($br0);
 
 if ($gconfig{'os_type'} eq 'redhat-linux') {
