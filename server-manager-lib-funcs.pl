@@ -2408,7 +2408,6 @@ else {
 $server->{'statustime'} = time();
 $server->{'status_hostkey'} = 0;
 my $clfunc = "type_".$server->{'manager'}."_check_login";
-my $ping = &ping_server_host($server->{'ip'});
 
 # If SSH logins are disabled, go no further
 if ($server->{'ssh_nologin'}) {
@@ -2421,6 +2420,7 @@ if ($server->{'ssh_nologin'}) {
 	if (!$status) {
 		# Only if the Xen status function didn't report any further
 		# error do we use the result of the ping
+		my $ping = &ping_server_host($server->{'ip'});
 		$server->{'status'} = $ping ? "alive" : "noping";
 		$server->{'status_msg'} = $ping ? undef : "Ping failed";
 		&save_server_collected($server, undef);
@@ -2465,7 +2465,8 @@ elsif ($status == 6) {
 	$server->{'status_msg'} = $err;
 	goto DONECHECK;
 	}
-elsif ($status && !$ping && !defined(&$clfunc)) {
+my $ping = &ping_server_host($server->{'ip'});
+if ($status && !$ping && !defined(&$clfunc)) {
 	# Could not SSH or ping, so assume totally down (for real systems)
 	$server->{'status'} = 'down';
 	$server->{'status_msg'} = $err;
@@ -3982,11 +3983,15 @@ while(time() - $start < $timeout) {
 return $err;
 }
 
+# generate_random_password([length])
+# Returns a password of the specified length (default 8 chars)
 sub generate_random_password
 {
+my ($len) = @_;
+$len ||= 8;
 &seed_random();
 my $pass;
-while(length($pass) < 8) {
+while(length($pass) < $len) {
 	$pass .= chr(int(rand()*26)+97);
 	}
 return $pass;
@@ -5964,8 +5969,8 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
 			    'cat' => 'manage',
 			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
 		}
-	if ($status ne 'paused' && !$nostart &&
-	    &can_action($server, "startup")) {
+	if ($status ne 'paused' && $status ne 'noping' && $status ne 'nossh' &&
+	    !$nostart && &can_action($server, "startup")) {
 		push(@rv, { 'id' => 'startup',
 			    'desc' => $text{'edit_startup'},
 			    'cat' => 'power' });
