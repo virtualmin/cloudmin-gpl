@@ -1506,6 +1506,16 @@ my $vhost = &type_kvm_parent($server);
 my $cmd = &get_kvm_start_command($server);
 my ($pinged, $sshed);
 
+# Double-check if already running
+my $instances = &list_kvm_instances($vhost);
+if (ref($instances)) {
+	my ($already) = grep { $server->{'kvm_filesystem'} eq
+			       $_->{'filesystem'} } @$instances;
+	if ($already) {
+		return (0, "Already running with process ID $already->{'pid'}");
+		}
+	}
+
 # Re-generate interface scripts
 my @nets = split(/\s+/, $server->{'kvm_net'});
 my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
