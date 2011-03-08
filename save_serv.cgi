@@ -186,8 +186,10 @@ elsif ($in{'delete'}) {
 			# Run post-deletion script
 			&run_system_script($server, 'after', 'delete');
 
-			if (defined(&theme_post_save_server)) {
-				&theme_post_save_server($server);
+			$newdef = &get_parent_server($server) ||
+				  &get_managed_server(0);
+			if (defined(&theme_select_server) && $newdef) {
+				&theme_select_server($newdef);
 				}
 			}
 		FAILED:

@@ -152,10 +152,13 @@ elsif ($in{'delete'}) {
 				# Run post-deletion script
 				&run_system_script($s, 'after', 'delete');
 
-				if (defined(&theme_post_save_server)) {
-					&theme_post_save_server($server);
-					}
+				$vhost = &get_parent_server($server);
+				$newdef ||= $vhost;
 				}
+			}
+		$newdef ||= &get_managed_server(0);
+		if (defined(&theme_select_server) && $newdef) {
+			&theme_select_server($newdef);
 			}
 		&release_lock_server(\@servers);
 		&webmin_log("delete", "servers", scalar(@servers),
