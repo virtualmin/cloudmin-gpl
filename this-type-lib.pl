@@ -56,7 +56,7 @@ else {
 	my $out = $timeout ?
 		&backquote_with_timeout("($cmd) 2>&1 </dev/null", $timeout) :
 		&backquote_command("($cmd) 2>&1 </dev/null");
-	return ($out, $?);
+	return ($out, $?/256);
 	}
 }
 
