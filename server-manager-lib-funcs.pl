@@ -8478,13 +8478,21 @@ elsif (&debian_server_type($server)) {
 				}
 			push(@boot, $b);
 			}
+		elsif ($l =~ /^iface\s+(\S+)\s+inet6\s+(static|loopback)/) {
+			# Start of a new IPv6 interface .. ignore for now
+			$b = undef;
+			}
+		elsif ($l =~ /^iface\s+(\S+)\s+/) {
+			# Some other unknown interface type .. ignore
+			$b = undef;
+			}
 		elsif ($l =~ /^\s+(address|netmask|network|broadcast|gateway)\s+(\S+)/ && $b) {
 			# Some parameter of an interface
 			$b->{$1} = $2;
 			}
-		elsif ($l =~ /^auto\s+(.*)/) {
+		elsif ($l =~ /^\s*(auto|allow-hotplug)\s+(.*)/) {
 			# Auto line - save to apply later
-			foreach my $a (split(/\s+/, $1)) {
+			foreach my $a (split(/\s+/, $2)) {
 				$auto{$a}++;
 				}
 			}
