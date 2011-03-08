@@ -2524,8 +2524,7 @@ if ($ex || $err) {
 	}
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"fsck -y $flag $loop");
-&execute_command_on_server($vhost,
-	"losetup -d $loop");
+&execute_command_on_server($vhost, "losetup -d $loop");
 if ($ex > 2 || $err) {
 	return (0, $out);
 	}

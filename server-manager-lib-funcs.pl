@@ -96,7 +96,6 @@ $this->{'manager'} = 'this';
 $this->{'host'} = &get_system_hostname();
 $this->{'desc'} = $text{'this_this'};
 &read_file($this_server_status, $this);
-splice(@rv, 0, 0, $this);
 
 # If this system can host Xen and we are in Xen-only mode, allow it to
 # be a host, and set some useful defaults for IP allocation
@@ -221,6 +220,11 @@ if ($s->{'xen_host'} && !$s->{'xen_gws'} && $s->{'xen_gw'}) {
 # For a Xen host with a MAC address, copy it to the mac field
 if ($s->{'xen_mac'}) {
 	$s->{'mac'} = $s->{'xen_mac'};
+	}
+
+# For a Xen system, assume that only HVM instances use whole-disk format
+if (!defined($s->{'xen_wholedisk'})) {
+	$s->{'xen_wholedisk'} = $s->{'xen_hvm'} ? 1 : 0;
 	}
 
 # Fill in 'ip' convenience field
