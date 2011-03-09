@@ -1,3 +1,4 @@
 ---- Changes since 5.2 ----
 First version of Cloudmin GPL for KVM.
 When adding a disk to a virtual system that uses LVM for storage, you can now select which volume group to create the disk in (or use a regular file).
+Added the wait-for-system API command, for delaying until one or more systems are usable.
