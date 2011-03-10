@@ -3034,6 +3034,14 @@ my ($server) = @_;
 return &type_kvm_get_disk_size($server);
 }
 
+# type_kvm_get_memory_size(&server)
+# Returns the memory allocated to this KVM instance, from a cache
+sub type_kvm_get_memory_size
+{
+my ($server) = @_;
+return $server->{'kvm_memory'}*1024*1024;
+}
+
 # type_kvm_need_mount(&server)
 # Returns 1 if a mount call is needed before reading files from this system
 sub type_kvm_need_mount
