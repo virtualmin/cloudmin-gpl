@@ -2363,7 +2363,6 @@ graph_total=Sum of incoming and outgoing data
 graph_inout=Incoming and outgoing
 graph_lasthour=&lt;Last hour&gt;
 graph_lastday=&lt;Last day&gt;
-graph_units=Graph units
 graph_unlimit=Unlimited
 graph_limit=Bandwidth limit
 graph_log=Vertical axis scaling
@@ -3653,7 +3652,6 @@ kvm_typedesc=KVM
 kvm_createlink=Create KVM Instance
 kvm_addlink=Add KVM Instance
 kvm_typeshort=KVM
-kvm_editone=KVM Host Settings
 kvm_estartping=KVM instance was started, but could not be pinged after $1 seconds
 kvm_estartssh=KVM instance was started, but could not be accessed via SSH after $1 seconds
 
