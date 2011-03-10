@@ -7184,6 +7184,38 @@ if (defined($memfree) && $memfree-$mem < $vhost->{'floor_mem'}) {
 return wantarray ? ( 1 ) : 1;
 }
 
+# check_host_lvm(&server, vg-name)
+# Checks if some host system has LVM working, and the given volume group
+sub check_host_lvm
+{
+my ($server, $vg) = @_;
+
+# First check for Webmin
+$server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt' ||
+	return $text{'xen_elvmwebmin'};
+
+# Must have workable LVM module
+$last_remote_error = undef;
+if (!&remote_foreign_check($server, "lvm")) {
+	return $text{'xen_elvmmod'};
+	}
+&remote_foreign_require($server, "lvm", "lvm-lib.pl");
+if ($last_remote_error) {
+	return $text{'xen_elvmmod2'};
+	}
+if (!&remote_foreign_call($server, "lvm", "foreign_installed", "lvm")) {
+	return $text{'xen_elvmmod3'};
+	}
+
+# Verify that the volume group exists
+my @vgs = map { $_->{'name'} } 
+		 &remote_foreign_call($server, "lvm", "list_volume_groups");
+@vgs || return $text{'xen_elvmvgs'};
+&indexof($vg, @vgs) >= 0 || return &text('xen_elvmvg', join(' ', @vgs));
+
+return undef;
+}
+
 # get_provider_link()
 # Returns HTML for the logo that should be displayed in the theme for the
 # Virtualmin hosting provider. In an array context, also returns the image
