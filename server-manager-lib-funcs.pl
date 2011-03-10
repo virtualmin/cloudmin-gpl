@@ -5741,7 +5741,7 @@ push(@gicons, "images/ips.gif");
 push(@gcats, "hosts");
 
 # Failover groups
-if (@virtual_server_management_types) {
+if (@virtual_server_management_types && !$module_info{'onehost'}) {
 	push(@glinks, "list_failovers.cgi");
 	push(@gtitles, $text{'failovers_title'});
 	push(@gicons, "images/failovers.gif");
@@ -6233,7 +6233,8 @@ if (&can_action($server, "graph") &&
 my @par = &is_parent_server($server);
 foreach my $p (@par) {
 	if (-r "$module_root_directory/list_${p}s.cgi" &&
-	    &can_action(undef, "global")) {
+	    &can_action(undef, "global") &&
+	    !$module_info{'onehost'}) {
 		# Edit Xen/whatever host details
 		push(@rv, { 'id' => 'host',
 			    'desc' => $text{$p.'_editlink'} ||
