@@ -902,6 +902,7 @@ sub type_kvm_create
 my ($server, $serial, $key, $reset, $empty) = @_;
 my $vhost = &type_kvm_parent($server);
 my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
+delete($server->{'kvm_filesystem_offset'});
 
 # Create base dir if needed
 if (!-d $vhost->{'kvm_dir'}) {
