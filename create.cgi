@@ -303,9 +303,11 @@ elsif ($in{'omode'} == 2) {
 			      'actions' => join(" ", @actions),
 			      'plainpass' => $in{'newownerpass'}, },
 		 };
+	use Data::Dumper;
 	if ($in{'newownerplan'}) {
 		$plan = &get_plan($in{'newownerplan'});
 		if ($plan) {
+			$owner->{'acl'}->{'actions_def'} = 1;
 			&apply_plan_to_owner($plan, $owner);
 			$owner->{'acl'}->{'plan'} = $in{'newownerplan'};
 			}
