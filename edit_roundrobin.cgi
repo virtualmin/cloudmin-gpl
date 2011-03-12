@@ -8,7 +8,8 @@ require './server-manager-lib.pl';
 if ($in{'new'}) {
 	# Creating a new one
 	&ui_print_header(undef, $text{'roundrobin_ctitle'}, "");
-	$roundrobin = { 'master' => 1, 'interval' => 3600, 'min' => 2 };
+	$roundrobin = { 'master' => 1, 'interval' => 3600, 'min' => 2,
+			'status' => 'nowebmin novirt virt alive' };
 	}
 else {
 	# Editing an existing one
@@ -84,15 +85,46 @@ print &ui_hidden_table_end("dns");
 
 # Section for conditions
 print &ui_hidden_table_start($text{'roundrobin_header3'}, "width=100%", 2,
-			     "cond", 1, \@tds);
+			     "cond", 0, \@tds);
 
-# XXX
+# By status
+%selst = map { $_, 1 } split(/\s+/, $roundrobin->{'status'});
+@grid = ( );
+foreach my $st ('noping', 'nossh', 'nosshlogin', 'downwebmin',
+                'nowebminlogin', 'nowebmin', 'novirt', 'virt', 'alive') {
+	$sdesc = &describe_status({ 'status' => $st }, 1, 0);
+	push(@grid, &ui_checkbox("status", $st, $sdesc, $selst{$st}));
+	}
+print &ui_table_row($text{'roundrobin_status'},
+	&ui_grid_table(\@grid, 5));
+
+# By TCP ports open
+@ports = split(/\s+/, $roundrobin->{'ports'});
+print &ui_table_row($text{'roundrobin_ports'},
+	&ui_opt_textbox("ports", join(" ", @ports), 40,
+		$text{'roundrobin_portsdef'}, $text{'roundrobin_portssel'}));
+
+# By URL
+print &ui_table_row($text{'roundrobin_url'},
+	&ui_opt_textbox("url", $roundrobin->{'url'}, 60,
+			$text{'roundrobin_urldef'}, $text{'roundrobin_urlsel'}).
+	"<br>\n".$text{'roundrobin_urldesc'});
+
+# By firing alerts
+@alerts = &list_alerts();
+if (@alerts) {
+	print &ui_table_row($text{'roundrobin_alerts'},
+		&ui_select("alerts",
+			   [ split(/\s+/, $roundrobin->{'alerts'}) ],
+			   [ map { [ $_->{'id'}, &describe_alert_rules($_) ] }
+				 @alerts ], 5, 1));
+	}
 
 print &ui_hidden_table_end("cond");
 
 # Section for notification
 print &ui_hidden_table_start($text{'roundrobin_header4'}, "width=100%", 2,
-			     "notif", 1, \@tds);
+			     "notif", 0, \@tds);
 
 # Minimum hosts in group to alert at
 print &ui_table_row($text{'roundrobin_min'},

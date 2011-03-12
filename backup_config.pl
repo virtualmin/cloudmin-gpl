@@ -43,6 +43,9 @@ push(@rv, $image_storages_dir);
 # Alerts dir
 push(@rv, $alerts_dir);
 
+# DNS roundrobins dir
+push(@rv, $roundrobins_dir);
+
 return &unique(@rv);
 }
 

@@ -1,7 +1,7 @@
 # Functions for managing virtual system DNS records
 
 # list_bind_zones()
-# Returns a list of BIND master zones that we can add vserver hostnames to
+# Returns a list of BIND master zones that we can add virtual system hostnames
 sub list_bind_zones
 {
 if (&foreign_installed("bind8")) {

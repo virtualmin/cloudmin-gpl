@@ -4259,6 +4259,15 @@ roundrobin_dom=DNS zone
 roundrobin_header3=Conditions for systems to include
 roundrobin_header4=Email notification
 roundrobin_min=Send email if usable systems is below
+roundrobin_status=Acceptable statuses for systems
+roundrobin_ports=TCP ports that must be open
+roundrobin_portsdef=None
+roundrobin_portssel=Listed
+roundrobin_url=URL that must be accessible
+roundrobin_urldesc=($HOST will be replaced with each system's hostname)
+roundrobin_urldef=None
+roundrobin_urlsel=URL template
+roundrobin_alerts=Alerts that must not be firing
 
 __norefs=1
 
