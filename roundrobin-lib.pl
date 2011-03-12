@@ -70,5 +70,152 @@ my $file = "$roundrobins_dir/$rr->{'id'}";
 &unlock_file($file);
 }
 
+# get_roundrobin_servers(&roundrobin, &all-servers)
+# Returns a list of server objects that some roundrobin may include
+sub get_roundrobin_servers
+{
+my ($rr, $allservers) = @_;
+my @rv;
+if ($rr->{'servers'}) {
+	# Get just ones we want
+	foreach my $id (split(/\s+/, $rr->{'servers'})) {
+		my ($s) = grep { $_->{'id'} eq $id } @$allservers;
+		push(@rv, $s) if ($s);
+		}
+	}
+elsif ($rr->{'groups'}) {
+	# Just members of some groups
+	my %want = map { $_, 1 } split(/\s+/, $rr->{'groups'});
+	foreach my $s (@$allservers) {
+		my ($ing) = grep { $want{$_} } split(/\t+/, $s->{'group'});
+		push(@rv, $s) if ($ing);
+		}
+	}
+elsif ($rr->{'owners'}) {
+	# Owned by some users
+	foreach my $o (split(/\s+/, $rr->{'owners'})) {
+		my $owner = &get_system_owner($o);
+		if ($owner) {
+			my %owned = map { $_, 1 }
+				split(/\s+/, $owner->{'acl'}->{'servers'});
+			push(@rv, grep { $owned{$_->{'id'}} } @$allservers);
+			}
+		}
+	}
+# Filter out dupes
+my %done;
+return grep { !$done{$_->{'id'}}++ } @rv;
+}
+
+# evaluate_roundrobin(&roundrobin, &servers)
+# Update the DNS record for some roundrobin, and set the include field with
+# server IDs that were used
+sub evaluate_roundrobin
+{
+my ($rr, $allservers) = @_;
+my @servers = &get_roundrobin_servers($rr, $allservers);
+my @whynot;
+
+# Acceptable statuses
+my %selst = map { $_, 1 } split(/\s+/, $rr->{'status'});
+my @ports = split(/\s+/, $rr->{'ports'});
+
+# Get alerts to check, and their statuses and systems
+my $astatus = &get_alert_statuses();
+my %afiring;
+foreach my $aid (split(/\s+/, $rr->{'alerts'})) {
+	my $st = $astatus{$aid};
+	if ($st && $st->{'firing'}) {
+		# Alert is firing .. but for which systems?
+		my $a = &get_alert($aid);
+		foreach my $av (split(/,/, $st->{'values'})) {
+			my ($avid, $avv) = split(/:/, $av);
+			$afiring{$avid} ||= [ ];
+			push(@{$afiring{$avid}}, $a);
+			}
+		}
+	}
+
+# Find usable servers
+my @inc;
+SERVER: foreach my $s (@servers) {
+	# Check acceptable status
+	if (!$selst{$s->{'status'}}) {
+		push(@whynot, [ $s->{'id'}, 'status', $s->{'status'} ]);
+		next;
+		}
+
+	# Filter by firing alerts
+	my $firing = $afiring{$s->{'id'}};
+	if (@$firing) {
+		push(@whynot, [ $s->{'id'}, 'alert',
+			join(",", map { $_->{'id'} } @$firing) ]);
+		next;
+		}
+
+	# Filter by open ports
+	foreach my $p (@ports) {
+		alarm(5);
+		my $err;
+		eval {
+			local $SIG{'CHLD'} = die { "timeout" };
+			my $ip = &get_server_ip($s);
+			&open_socket($ip, $p, TESTSOCK, \$err);
+			close(TESTSOCK);
+			};
+		alarm(0);
+		if ($@) {
+			push(@whynot, [ $s->{'id'}, 'timeout', $p ]);
+			next SERVER;
+			}
+		elsif ($err) {
+			push(@whynot, [ $s->{'id'}, 'port', $p ]);
+			next SERVER;
+			}
+		}
+
+	# Filter by URLs
+
+	push(@inc, $c);
+	}
+
+# Find DNS record and update
+
+# Record list of systems to include
+
+# Record rejection reasons
+}
+
+# evaluate_all_roundrobins([&only-servers], [&only-rrs], [no-email])
+# Check all roundrobins, and send email if any have too few hosts.
+sub evaluate_all_roundrobins
+{
+my ($servers, $roundrobins, $noemail) = @_;
+$servers ||= [ &list_managed_servers() ];
+$roundrobins ||= [ &list_roundrobins() ];
+my $now = time();
+foreach my $rr (@$roundrobins) {
+	&evaluate_roundrobin($rr, $servers);
+	my @inc = split(/\s+/, $rr->{'include'});
+	if (@inc < $rr->{'min'}) {
+		# Time to email?
+		my $sincelast = $now - $rr->{'lastemail'};
+		if ($sincelast > $rr->{'interval'}) {
+			&send_roundrobin_email($rr);
+			$rr->{'lastemail'} = $now;
+			}
+		}
+	&save_roundrobin($rr);
+	}
+}
+
+# send_roundrobin_email(&rr)
+# Send email when a roundrobin's systems are too few 
+sub send_roundrobin_email
+{
+my ($rr) = @_;
+# XXX
+}
+
 1;
 
