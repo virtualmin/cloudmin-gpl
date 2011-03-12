@@ -1,0 +1,128 @@
+#!/usr/local/bin/perl
+# Show a form for creating or editing a single DNS roundrobin
+
+require './server-manager-lib.pl';
+&can_action_error(undef, "global");
+&ReadParse();
+
+if ($in{'new'}) {
+	# Creating a new one
+	&ui_print_header(undef, $text{'roundrobin_ctitle'}, "");
+	$roundrobin = { 'master' => 1, 'interval' => 3600, 'min' => 2 };
+	}
+else {
+	# Editing an existing one
+	&ui_print_header(undef, $text{'roundrobin_etitle'}, "");
+	$roundrobin = &get_roundrobin($in{'id'});
+	$roundrobin || &error($text{'roundrobin_egone'});
+	}
+
+print &ui_form_start("save_roundrobin.cgi", "post");
+print &ui_hidden("id", $in{'id'});
+print &ui_hidden("new", $in{'new'});
+@tds = ( "width=20% nowrap" );
+
+# Section for systems
+print &ui_hidden_table_start($text{'roundrobin_header1'}, "width=100%", 2,
+			     "servers", 1, \@tds);
+
+$mode = $roundrobin->{'servers'} ? 1 :
+	$roundrobin->{'groups'} ? 2 :
+	$roundrobin->{'owners'} ? 3 : 1;
+@allservers = &list_managed_servers_sorted();
+@allgroups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
+@allowners = &list_system_owners();
+if ($mode == 1) {
+	%sids = map { $_, 1 } split(/\s+/, $roundrobin->{'servers'});
+	@servers = grep { $sids{$_->{'id'}} } @allservers;
+	}
+@stable = ( [ 1, $text{'alert_mode1'},
+	      &ui_multi_select("servers",
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ],
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @allservers ],
+		       10, 1, 0, $text{'alert_serveropts'},
+				 $text{'alert_servervals'}) ],
+	  );
+if (@allgroups) {
+	# Selection by group
+	push(@stable, [ 2, $text{'alert_mode2'},
+		&ui_multi_select("groups",
+		   [ map { [ $_, $_ ] } split(/\s+/, $roundrobin->{'groups'}) ],
+		   [ map { [ $_, $_ ] } @allgroups ],
+		   5, 1, 0, $text{'alert_groupopts'},
+			    $text{'alert_groupvals'}) ]);
+	}
+if (@allowners) {
+	# Selection by system owner
+	push(@stable, [ 3, $text{'alert_mode3'},
+		&ui_multi_select("owners",
+		  [ map { [ $_, $_ ] } split(/\s+/, $roundrobin->{'owners'}) ],
+		  [ map { [ $_->{'name'}, $_->{'name'} ] } @allowners ],
+		  5, 1, 0, $text{'alert_owneropts'},
+			   $text{'alert_ownervals'}) ]);
+	}
+print &ui_table_row(undef, &ui_radio_table("mode", $mode, \@stable), 2);
+
+print &ui_hidden_table_end("servers");
+
+# Section for DNS name and zone
+print &ui_hidden_table_start($text{'roundrobin_header2'}, "width=100%", 2,
+			     "dns", 1, \@tds);
+
+print &ui_table_row($text{'roundrobin_desc'},
+	&ui_textbox("desc", $roundrobin->{'desc'}, 60));
+
+print &ui_table_row($text{'roundrobin_name'},
+	&ui_textbox("name", $roundrobin->{'name'}, 20));
+
+@zones = &list_bind_zones();
+print &ui_table_row($text{'roundrobin_dom'},
+	&ui_select("dom", $roundrobin->{'dom'}, [ map { $_->{'name'} } @zones ],
+		   1, 0, $roundrobin->{'dom'} ? 1 : 0));
+
+print &ui_hidden_table_end("dns");
+
+# Section for conditions
+print &ui_hidden_table_start($text{'roundrobin_header3'}, "width=100%", 2,
+			     "cond", 1, \@tds);
+
+# XXX
+
+print &ui_hidden_table_end("cond");
+
+# Section for notification
+print &ui_hidden_table_start($text{'roundrobin_header4'}, "width=100%", 2,
+			     "notif", 1, \@tds);
+
+# Minimum hosts in group to alert at
+print &ui_table_row($text{'roundrobin_min'},
+	&ui_textbox("min", $roundrobin->{'min'}, 5));
+
+# Who to notify
+print &ui_table_row($text{'alert_notif'},
+	&ui_checkbox("master", 1, $text{'alert_master'},
+		     $roundrobin->{'master'}).
+	"<br>\n".
+	&ui_checkbox("email", 1, $text{'alert_email'},
+		     $roundrobin->{'email'}).
+	" ".
+	&ui_textbox("emailto", $roundrobin->{'email'}, 60));
+
+# How often to send
+($intunit, $int) = &split_for_units($roundrobin->{'interval'});
+print &ui_table_row($text{'alert_interval'},
+	&ui_textbox("int", $int, 4).
+	&ui_select("intunit", $intunit, \@forunits));
+
+print &ui_hidden_table_end("notif");
+
+if ($in{'new'}) {
+	print &ui_form_end([ [ undef, $text{'create'} ] ]);
+	}
+else {
+	print &ui_form_end([ [ undef, $text{'save'} ],
+			     [ 'delete', $text{'delete'} ] ]);
+	}
+
+&ui_print_footer("list_roundrobins.cgi", $text{'roundrobins_return'});
+

@@ -4238,6 +4238,27 @@ purge_edelete=.. deletion failed : $1
 purge_elstimes=FTP directory listing of $1 does not contain timestamps
 
 roundrobins_title=Roundrobin DNS Records
+roundrobins_none=No DNS roundrobins have been defined yet.
+roundrobins_add=Add a new DNS roundrobin.
+roundrobins_dom=Domain name
+roundrobins_servers=Resolve to systems
+roundrobins_status=Current status
+roundrobins_delete=Delete Selected Roundrobins
+roundrobins_refresh=Refresh Roundrobins
+roundrobins_return=roundrobins list
+roundrobins_ezones=Cloudmin has not found any DNS zones on your system, so no roundrobin DNS records can be added.
+
+roundrobin_ctitle=Create DNS Roundrobin
+roundrobin_etitle=Edit DNS Roundrobin
+roundrobin_egone=The selected roundrobin no longer exists!
+roundrobin_header1=Systems to include
+roundrobin_desc=Roundrobin description
+roundrobin_header2=DNS record to update
+roundrobin_name=Record name
+roundrobin_dom=DNS zone
+roundrobin_header3=Conditions for systems to include
+roundrobin_header4=Email notification
+roundrobin_min=Send email if usable systems is below
 
 __norefs=1
 
