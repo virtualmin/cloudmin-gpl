@@ -4236,4 +4236,8 @@ purge_deleting=Deleting directory $1 ..
 purge_deletingftp=Deleting FTP directory $1 ..
 purge_edelete=.. deletion failed : $1
 purge_elstimes=FTP directory listing of $1 does not contain timestamps
+
+roundrobins_title=Roundrobin DNS Records
+
 __norefs=1
+

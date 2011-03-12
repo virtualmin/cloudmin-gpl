@@ -17,7 +17,8 @@ if (!$server_manager_root) {
 foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
-		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp") {
+		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp",
+		 "roundrobin") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -5712,6 +5713,12 @@ if (!$module_info{'onehost'}) {
 	push(@gicons, "images/repl.gif");
 	push(@gcats, "settings");
 	}
+
+# DNS roundrobin
+push(@glinks, "list_roundrobins.cgi");
+push(@gtitles, $text{'roundrobins_title'});
+push(@gicons, "images/roundrobins.gif");
+push(@gcats, "monitor");
 
 # Type-defined icons
 foreach my $t (@server_management_types) {
