@@ -174,12 +174,27 @@ SERVER: foreach my $s (@servers) {
 			}
 		}
 
-	# Filter by URLs
+	# Filter by URL
+	if ($rr->{'url'}) {
+		my $url = &substitute_template($rr->{'url'}, $s);
+		my ($host, $port, $page, $ssl) = &parse_http_url($url);
+		if ($host && $page) {
+			my ($err, $out);
+			&http_download($host, $port, $page, \$out, \$err, $ssl,
+				       undef, undef, 5, 0, 1);
+			if ($err) {
+				push(@whynot, [ $s->{'id'}, 'url', $url ]);
+				next SERVER;
+				}
+			}
+		}
 
 	push(@inc, $c);
 	}
 
 # Find DNS record and update
+if (@inc) {
+	}
 
 # Record list of systems to include
 

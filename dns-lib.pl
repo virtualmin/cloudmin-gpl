@@ -163,6 +163,61 @@ if ($zone && $dnsname) {
 	}
 }
 
+# set_bind_dns_addresses(dnsname, zonename, &old-ips, &new-ips, &new-comments)
+# Create or update multiple A records for a name
+sub set_bind_dns_addresses
+{
+my ($dnsname, $zonename, $oldips, $ips, $cmts) = @_;
+&foreign_require("bind8", "bind8-lib.pl");
+my @zones = &list_bind_zones();
+my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
+if ($zone && $dnsname) {
+	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
+	&lock_file($lpath);
+	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
+	my @oldr = grep { $_->{'name'} eq $dnsname } @recs;
+	my $changed = 0;
+	for(my $i=0; $i<@$ips || $i<@oldr; $i++) {
+		my $r = $i<@oldr ? $oldr[$i] : undef;
+		if ($i < @$ips && $i < @oldr) {
+			# Update record
+			if ($r->{'values'}->[0] ne $ips->[$i]) {
+				&bind8::modify_record(
+					$zone->{'file'}, $r, $r->{'name'},
+					$r->{'ttl'}, $r->{'class'},
+					$r->{'type'}, $ips->[$i], $cmts->[$i]);
+				$changed++;
+				}
+			}
+		elsif ($i < @oldr) {
+			# Add record
+			&bind8::create_record(
+				$zone->{'file'}, $r->{'name'},
+				$r->{'ttl'}, $r->{'class'},
+				$r->{'type'}, $ips->[$i], $cmts->[$i]);
+			$changed++;
+			}
+		elsif ($i < @$ips) {
+			# Delete record
+			&bind8::delete_record($zone->{'file'}, $r);
+			$changed++;
+			}
+		}
+	if ($changed) {
+		&bind8::bump_soa_record($zone->{'file'}, \@recs);
+		if (defined(&bind8::restart_zone)) {
+			&bind8::restart_zone($zonename);
+			}
+		else {
+			&bind8::restart_bind();
+			}
+		}
+	&unlock_file($lpath);
+	return (1, $changed);
+	}
+return (0, "DNS domain $zonename not found");
+}
+
 # get_reverse_dns_zone(ip)
 # Returns the records file and list of records for the domain for some IP
 sub get_reverse_dns_zone
