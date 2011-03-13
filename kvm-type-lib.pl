@@ -518,6 +518,10 @@ $rv .= &ui_table_row($text{'create_kvmmodel'},
 		   [ [ undef, $text{'default'} ],
 		     @$models ]));
 
+# Start after creation?
+$rv .= &ui_table_row($text{'create_xenstart'},
+	&ui_yesno_radio("kvm_start", 1));
+
 return $rv;
 }
 
@@ -653,6 +657,9 @@ elsif ($in{'kvm_model'}) {
 	$server->{'kvm_model'} = $in{'kvm_model'};
 	}
 
+# Start at creation
+$server->{'kvm_start'} = defined($in{'kvm_start'}) ? $in{'kvm_start'} : 1;
+
 # Append zone name
 my @zones = &list_bind_zones();
 my $zone;
@@ -685,6 +692,7 @@ if (&can_action(undef, "advanced")) {
 	push(@rv, { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'virtio', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'model', 'value' => $models, 'opt' => 1 },
+		  { 'name' => 'start', 'value' => 'true|false', 'opt' => 1 },
 	    );
 	}
 return @rv;
@@ -884,12 +892,21 @@ if (&can_action(undef, "advanced")) {
 		# Use configured default
 		$server->{'kvm_model'} = $config{'kvm_model'};
 		}
+
+	# Validate start at creation flag
+	if ($args->{'start'} =~ /false|no/i) {
+		$server->{'kvm_start'} = 0;
+		}
+	else {
+		$server->{'kvm_start'} = 1;
+		}
 	}
 else {
 	# Use defaults
 	$server->{'kvm_virtio'} = $empty ? $config{'kvm_virtio'}
 					 : $img->{'kvm_virtio'};
 	$server->{'kvm_model'} = $config{'kvm_model'};
+	$server->{'kvm_start'} = 1;
 	}
 
 return undef;
@@ -903,6 +920,7 @@ my ($server, $serial, $key, $reset, $empty) = @_;
 my $vhost = &type_kvm_parent($server);
 my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
 delete($server->{'kvm_filesystem_offset'});
+$server->{'kvm_start'} = 1 if ($reset);
 
 # Create base dir if needed
 if (!-d $vhost->{'kvm_dir'}) {
@@ -1408,15 +1426,17 @@ if ($vhost->{'kvm_zone'} && !$reset) {
 	}
 
 # Start up the instance
-&$first_print($text{'create_kvmstartup'});
-my ($ok, $err) = &type_kvm_startup($server, $empty);
 my $started = 0;
-if ($ok != 1) {
-	&$second_print(&text('create_exenstartup', $err));
-	}       
-else {
-	&$second_print($text{'create_done'});
-	$started = 1;
+if ($server->{'kvm_start'}) {
+	&$first_print($text{'create_kvmstartup'});
+	my ($ok, $err) = &type_kvm_startup($server, $empty);
+	if ($ok != 1) {
+		&$second_print(&text('create_exenstartup', $err));
+		}       
+	else {
+		&$second_print($text{'create_done'});
+		$started = 1;
+		}
 	}
 
 # Import Virtualmin keys

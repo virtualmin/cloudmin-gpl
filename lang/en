@@ -479,6 +479,7 @@ create_ecitrixnetwork=.. count not find network for bridge
 create_citrixmkswap=Creating swap disk of $1 ..
 create_ecitrixmkswap=.. swap creation failed : $1
 create_xencleanfstab=Removing missing disks from fstab file ..
+create_xenstart=Startup new system after creation?
 create_exencleanfstab=.. cleanup failed : $1
 create_citrixstartup=Starting up new Citrix Xen instance ..
 create_tabfull=Create working system
