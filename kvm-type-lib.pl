@@ -939,6 +939,9 @@ my ($fsfile, $swfile, $lvmsuffix);
 if ($reset) {
 	# Filesystem remains the same
 	$fsfile = $server->{'kvm_filesystem'};
+	if (!$fsfile) {
+		return "A system with no primary disk cannot be reset";
+		}
 	}
 elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
 	# On LVM logical volumes
@@ -1530,8 +1533,7 @@ my ($pinged, $sshed);
 # Double-check if already running
 my $instances = &list_kvm_instances($vhost);
 if (ref($instances)) {
-	my ($already) = grep { $server->{'kvm_filesystem'} eq
-			       $_->{'filesystem'} } @$instances;
+	my ($already) = grep { &match_kvm_instance($server, $_) } @$instances;
 	if ($already) {
 		return (0, "Already running with process ID $already->{'pid'}");
 		}
@@ -2172,6 +2174,12 @@ if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
 	}
 push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
 $server->{'kvm_drives'} = join(" ", @drives);
+if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
+	# This is the new root disk
+	$server->{'kvm_filesystem'} = $drive{'file'};
+	$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
+	$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
+	}
 &save_managed_server($server);
 &type_kvm_set_atboot($server, 2);
 
@@ -2231,6 +2239,10 @@ if (&can_ssh_status($server) && $disk->{'mounted'}) {
 my @drives = split(/\s+/, $server->{'kvm_drives'});
 splice(@drives, $disk->{'drive_index'}, 1);
 $server->{'kvm_drives'} = join(" ", @drives);
+if ($server->{'kvm_filesystem'} eq $disk->{'real'}) {
+	# Main drive has been removed, so remove reference to it in config
+	delete($server->{'kvm_filesystem'});
+	}
 &save_managed_server($server);
 &type_kvm_set_atboot($server, 2);
 
@@ -3314,7 +3326,7 @@ if (!ref($procs)) {
 			   "down : $procs");
 		}
 	}
-my ($proc) = grep { $_->{'filesystem'} eq $server->{'kvm_filesystem'} } @$procs;
+my ($proc) = grep { &match_kvm_instance($server, $_) } @$procs;
 if (!$proc) {
 	return (6, "KVM instance is down");
 	}
@@ -3496,7 +3508,7 @@ my $data = &get_file_data_from_server($vhost, $bfile);
 foreach my $l (split(/\r?\n/, $data)) {
 	$l =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
 	my $kvm = &parse_kvm_start_command($l);
-	if ($kvm && $kvm->{'filesystem'} eq $server->{'kvm_filesystem'}) {
+	if ($kvm && &match_kvm_instance($server, $kvm)) {
 		return 1;
 		}
 	}
@@ -3536,8 +3548,7 @@ if (&stat_file_on_server($vhost, "/etc/init.d")) {
 		my $line = $lref->[$i];
 		$line =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
 		my $kvm = &parse_kvm_start_command($line);
-		if ($kvm &&
-		    $kvm->{'filesystem'} eq $server->{'kvm_filesystem'}) {
+		if ($kvm && &match_kvm_instance($server, $kvm)) {
 			$lnum = $i;
 			last;
 			}
@@ -3583,8 +3594,7 @@ else {
 	my $lnum;
 	for(my $i=0; $i<@$lref; $i++) {
 		my $kvm = &parse_kvm_start_command($lref->[$i]);
-		if ($kvm &&
-		    $kvm->{'filesystem'} eq $server->{'kvm_filesystem'}) {
+		if ($kvm && &match_kvm_instance($server, $kvm)) {
 			$lnum = $i;
 			last;
 			}
@@ -3620,6 +3630,10 @@ my $vhost = &type_kvm_parent($server);
 # Mount the disk image
 &$first_print($text{'mkimage_kvmmount'});
 my $fsfile = $server->{'kvm_filesystem'};
+if (!$fsfile) {
+	&$second_print($text{'mkimage_nofilesystem'});
+	return 0;
+	}
 my $err = &type_kvm_mount_filesystem($server);
 if ($err) {
 	&$second_print(&text('create_exenmount', $err));
@@ -4858,8 +4872,17 @@ my ($server) = @_;
 my $vhost = &get_parent_server($server);
 my $procs = &list_kvm_instances($vhost);
 return undef if (!ref($procs));
-my ($proc) = grep { $_->{'filesystem'} eq $server->{'kvm_filesystem'} } @$procs;
+my ($proc) = grep { &match_kvm_instance($server, $_) } @$procs;
 return $proc;
+}
+
+# match_kvm_instance(&server, &instance)
+# Returns 1 if some KVM instance details match a system
+sub match_kvm_instance
+{
+my ($server, $instance) = @_;
+return $server->{'kvm_filesystem'} eq $_->{'filesystem'} ||
+       $server->{'host'} eq $_->{'args'}->{'name'};
 }
 
 # get_kvm_process_dir(&vhost, pid)
@@ -4944,7 +4967,7 @@ sub get_kvm_console_file
 {
 my ($server) = @_;
 my $dir;
-if ($server->{'kvm_filesystem_lv'}) {
+if ($server->{'kvm_filesystem_lv'} || !$server->{'kvm_filesystem'}) {
 	# On LVM, use config dir for console file
 	my $vhost = &get_parent_server($server);
 	$dir = $vhost->{'kvm_dir'};
