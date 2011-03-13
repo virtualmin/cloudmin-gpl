@@ -233,7 +233,7 @@ if (!$module_info{'onehost'}) {
 					    split(/,/, $p->{'cidr'}) : ( );
 		@gateways = split(/,/, $p->{'gateway'});
 		$r = scalar(@starts) + 1;
-		$r = 3 if ($rows < 3);
+		$r = 3 if ($r < 3);
 		print &ui_columns_row([
 			&ui_checkbox("active_$i", 1, "", $p->{'id'}),
 			&ui_textbox("desc_$i", $p->{'desc'}, 30),
