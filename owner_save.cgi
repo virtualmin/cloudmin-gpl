@@ -19,6 +19,12 @@ if (!$in{'opass_def'}) {
 	}
 $in{'email'} =~ /^\S+\@\S+$/ || &error($text{'owner_eemail'});
 $owner->{'acl'}->{'email'} = $in{'email'};
+if ($in{'lang'}) {
+	$owner->{'lang'} = $in{'lang'};
+	}
+else {
+	delete($owner->{'lang'});
+	}
 
 # Save him
 &save_system_owner($owner, $old);

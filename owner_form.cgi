@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Show a form for an owner to change his password and email
+# Show a form for an owner to change his password, email and language
 
 require './server-manager-lib.pl';
 &error_setup($text{'oform_err'});
@@ -20,6 +20,15 @@ print &ui_table_row($text{'oform_pass'},
 # Contact email
 print &ui_table_row($text{'oform_email'},
 	&ui_textbox("email", $owner->{'acl'}->{'email'}, 40));
+
+# Language
+@langs = &list_languages();
+$glang = $gconfig{"lang"} || $default_lang;
+($linfo) = grep { $_->{'lang'} eq $glang } @langs;
+print &ui_table_row($text{'oform_lang'},
+	&ui_select("lang", $owner->{'lang'},
+		   [ [ "", &text('oform_langdef', $linfo->{'desc'}) ],
+		     map { [ $_->{'lang'}, $_->{'desc'} ] } @langs ]));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'save'} ] ]);

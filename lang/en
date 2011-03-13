@@ -3650,6 +3650,8 @@ oform_leave=Don't change
 oform_set=Set to
 oform_email=Contact email address
 oform_err=Failed to change password and email
+oform_lang=UI language
+oform_langdef=System default - $1
 
 kvm_typedesc=KVM
 kvm_createlink=Create KVM Instance
