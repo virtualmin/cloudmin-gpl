@@ -287,6 +287,12 @@ if ($got->{'args'}->{'smp'}) {
 	}
 delete($got->{'args'}->{'smp'});
 
+# Same VGA mode
+if (defined($got->{'args'}->{'std-vga'})) {
+	$server->{'kvm_vga'} = 1;
+	}
+delete($got->{'args'}->{'std-vga'});
+
 # Delete args we don't need to save
 delete($got->{'args'}->{'name'});
 delete($got->{'args'}->{'serial'});
@@ -1795,6 +1801,11 @@ if (ref($inuse)) {
 
 	# Connect monitor to stdout
 	$cmd .= " -monitor stdio";
+
+	# Enable high-resolution mode
+	if ($server->{'kvm_vga'}) {
+		$cmd .= " -std-vga";
+		}
 	}
 else {
 	# Disable graphics
