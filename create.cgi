@@ -50,26 +50,13 @@ if (!$no_ssh) {
 	$server->{'ssh_protocol'} = 2;	# Nobody uses 1 anymore!
 	}
 
-# Webmin login
-if (&can_action(undef, "webmin")) {
-	if ($in{'webmin_mode'} == 1) {
-		# Same as SSH root
-		$in{'auth_mode'} == 0 || &error($text{'add_emode1'});
-		$server->{'user'} = $server->{'ssh_user'};
-		$server->{'pass'} = $server->{'ssh_pass'};
-		$server->{'ssh_pass_same'} = 1;
-		}
-	elsif ($in{'webmin_mode'} == 2) {
-		# Password specified for Webmin root
-		$server->{'user'} = 'root';
-		$in{'wpass'} =~ /\S/ || &error($text{'add_ewpass'});
-		$server->{'pass'} = $in{'wpass'};
-		}
-	if ($in{'webmin_mode'}) {
-		$server->{'port'} = 10000;
-		}
-	}
+# Assume webmin login is same as root
+$server->{'user'} = $server->{'ssh_user'};
+$server->{'pass'} = $server->{'ssh_pass'};
+$server->{'ssh_pass_same'} = 1;
+$server->{'port'} = 10000;
 $server->{'novirt'} = !$in{'canvirt'};
+
 $server->{'type'} = 'unknown';
 $ifunc = "type_".$in{'type'}."_must_image";
 if (defined(&$ifunc) && &$ifunc($server) && !$in{'image'}) {

@@ -112,17 +112,6 @@ else {
 	$has_root_password = 0;
 	}
 
-# Webmin login
-if (&can_action(undef, "webmin")) {
-	print &ui_table_row($text{'create_webmin'},
-	   &ui_radio("webmin_mode", 0,
-	      [ [ 0, $text{'create_webmin0'}."<br>" ],
-		$has_root_password ? ( [ 1, $text{'create_webmin1'}."<br>" ] )
-				   : ( ),
-		[ 2, &text('create_webmin2', "<tt>root</tt>",
-			   &ui_textbox("wpass", undef, 20)) ] ]));
-	}
-
 # Type-specific options
 $ffunc = "type_".$in{'type'}."_create_form";
 if (defined(&$ffunc)) {
@@ -170,8 +159,14 @@ if (&can_action(undef, "virtualmin")) {
 				     "virtualmin", 0, [ "width=30%" ]);
 
 	# Virtualmin licence
-	print &ui_table_row($text{'create_vlicence'},
-		&virtualmin_licence_form("licence", 0));
+	@proimages = grep { $_->{'virtualmin'} eq 'pro' } @images;
+	if (@proimages) {
+		print &ui_table_row($text{'create_vlicence'},
+			&virtualmin_licence_form("licence", 0));
+		}
+	else {
+		print &ui_hidden("licence", 0);
+		}
 
 	# Can add domains?
 	print &ui_table_row($text{'add_canvirt'},
