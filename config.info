@@ -9,6 +9,7 @@ sort_mode=Sort systems by,1,2-Description,1-Host system,0-Hostname
 index_cols=Columns to display,2,ip-IP address,ips-All IP addresses,manager-Type,type-OS,status-Status,desc-Description,group-Groups,owner-Owners,disk-Disk space,mem-Memory,cpu-CPU assigned,bw_usage-Bandwidth
 xen_mem_mode=Change Xen memory allocations,1,1-At next boot,0-Immediately
 show_nf=Show new features to,2,master-Master administrator,owner-System owners
+show_unix=Show Unix hostname field on creation form?,1,1-Yes,0-No
 theme_image=URL for company logo image,3,None or default,50
 theme_link=Link destination for company logo,3,None,50
 

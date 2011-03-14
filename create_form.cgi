@@ -39,7 +39,7 @@ if (!defined(&$hfunc) || !&$hfunc()) {
 
 # Unix hostname
 $chfunc = "type_".$in{'type'}."_can_custom_hostname";
-if (defined(&$chfunc) && &$chfunc()) {
+if (defined(&$chfunc) && &$chfunc() && $config{'show_unix'}) {
 	print &ui_table_row($text{'create_unixhost'},
 			    &ui_opt_textbox("unixhost", undef, 40,
 					    $text{'create_unixsame'}));
@@ -111,20 +111,13 @@ if (!$no_ssh) {
 else {
 	$has_root_password = 0;
 	}
-
-# Type-specific options
-$ffunc = "type_".$in{'type'}."_create_form";
-if (defined(&$ffunc)) {
-	print &$ffunc(0);
-	}
-
 print &ui_hidden_table_end();
 
 # Type-specific limit options
 $afunc = "type_".$in{'type'}."_limits_create_form";
 if (defined(&$afunc)) {
 	print &ui_hidden_table_start($text{'create_lheader'}, "width=100%", 2,
-				     "limits", 0, [ "width=30%" ]);
+				     "limits", 1, [ "width=30%" ]);
 	print &$afunc(0);
 
 	# Bandwidth limit
@@ -141,6 +134,15 @@ if (defined(&$afunc)) {
 			&describe_bandwidth_period(0));
 		}
 
+	print &ui_hidden_table_end();
+	}
+
+# Type-specific options
+$ffunc = "type_".$in{'type'}."_create_form";
+if (defined(&$ffunc)) {
+	print &ui_hidden_table_start($text{'create_nheader'}, "width=100%", 2,
+				     "net", 0, [ "width=30%" ]);
+	print &$ffunc(0);
 	print &ui_hidden_table_end();
 	}
 
@@ -282,13 +284,6 @@ if ($empty) {
 				   [ [ '', "&lt;$text{'create_noowner'}&gt;" ],
 				     map { $_->{'name'} } @owners ]));
 		}
-
-	# Type-specific options
-	$ffunc = "type_".$in{'type'}."_create_form";
-	if (defined(&$ffunc)) {
-		print &$ffunc(1);
-		}
-
 	print &ui_hidden_table_end();
 
 	# Type-specific limit options
@@ -296,8 +291,18 @@ if ($empty) {
 	if (defined(&$afunc)) {
 		print &ui_hidden_table_start($text{'create_lheader'},
 					     "width=100%", 2,
-					     "limits2", 0, [ "width=30%" ]);
+					     "limits2", 1, [ "width=30%" ]);
 		print &$afunc(1);
+		print &ui_hidden_table_end();
+		}
+
+	# Type-specific options
+	$ffunc = "type_".$in{'type'}."_create_form";
+	if (defined(&$ffunc)) {
+		print &ui_hidden_table_start($text{'create_nheader'},
+					     "width=100%", 2,
+					     "net2", 0, [ "width=30%" ]);
+		print &$ffunc(1);
 		print &ui_hidden_table_end();
 		}
 

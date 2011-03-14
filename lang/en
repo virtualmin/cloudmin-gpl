@@ -160,7 +160,8 @@ add_ecitrixinstance2=The selected Citrix Xen VM does not exist on $1
 
 create_title=Create New System
 create_title2=Create Empty System
-create_header=Details of new virtual system
+create_header=Details of new working virtual system
+create_header2=Details of new empty virtual system
 create_type=System type
 create_host=Internet hostname
 create_unixhost=Unix hostname
@@ -380,6 +381,7 @@ create_vlicence=License for Virtualmin Pro from image
 create_vheader=Virtualmin options
 create_oheader=Owner options
 create_aheader=Advanced options
+create_nheader=Host and networking options
 create_lheader=Resource limit options
 create_eimagevirt=You have selected a system image with Virtualmin Pro, but have not entered license details
 create_xendnswarn=Warning : No DNS zone for new Xen instances has been configured on the <a href='$1'>Xen host</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.
@@ -2815,8 +2817,8 @@ vnc_edomid=No Xen domain ID found!
 vnc_eprocs=Failed to list running processes on host system : $1
 vnc_ecitrixport=No VNC console process found - maybe this Citrix Xen VM does not have VNC enabled?
 vnc_ecitrixport2=No port for VNC console process found
-vnc_direct=If the Java VNC applet does not run or cannot connect, you can use a separate VNC client to connect to $1 port $2 instead, and login with password $3 .
-vnc_directnopass=If the Java VNC applet does not run or cannot connect, you can use a separate VNC client to connect to $1 port $2 instead.
+vnc_direct=If the Java VNC applet does not run or cannot connect, you can use a separate VNC client to connect to <tt>$1</tt> port <tt>$2</tt> instead, and login with password <tt>$3</tt> .
+vnc_directnopass=If the Java VNC applet does not run or cannot connect, you can use a separate VNC client to connect to <tt>$1</tt> port <tt>$2</tt> instead.
 
 history_title=System Statistics Graphs
 history_ecannot=You are not allowed to view historic system statistics
