@@ -163,11 +163,11 @@ if ($zone && $dnsname) {
 	}
 }
 
-# set_bind_dns_addresses(dnsname, zonename, &old-ips, &new-ips, &new-comments)
+# set_bind_dns_addresses(dnsname, zonename, &old-ips, &new-comments)
 # Create or update multiple A records for a name
 sub set_bind_dns_addresses
 {
-my ($dnsname, $zonename, $oldips, $ips, $cmts) = @_;
+my ($dnsname, $zonename, $ips, $cmts) = @_;
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;

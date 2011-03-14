@@ -193,12 +193,34 @@ SERVER: foreach my $s (@servers) {
 	}
 
 # Find DNS record and update
+my ($ok, $msg);
 if (@inc) {
+	my @ips;
+	my @cmts;
+	my %done;
+	foreach my $s (@inc) {
+		my $ip = &get_server_ip($s);
+		if ($done{$ip}++) {
+			push(@ips, $ip);
+			push(@cmts, $s->{'host'});
+			}
+		}
+	($ok, $msg) = &set_bind_dns_addresses(
+	    $rr->{'name'}.".".$rr->{'dom'}.".", $rr->{'dom'}, \@ips, \@cmts);
+	}
+else {
+	$ok = 0;
+	$msg = "No usable systems found - leaving DNS record un-changed";
 	}
 
 # Record list of systems to include
+$rr->{'include'} = join(" ", map { $_->{'id'} } @inc);
 
 # Record rejection reasons
+$rr->{'whynot'} = join("\t", map { join(",", @$_) } @whynot);
+
+# Return status code
+return ($ok, $msg);
 }
 
 # evaluate_all_roundrobins([&only-servers], [&only-rrs], [no-email])
