@@ -241,6 +241,14 @@ elsif ($type eq "alerts") {
 	# Multiple system alerts
 	return &text('log_'.$action.'_alerts', $object);
 	}
+elsif ($type eq "roundrobin") {
+	# One DNS roundrobin
+	return &text('log_'.$action.'_roundrobin', $p->{'name'};
+	}
+elsif ($type eq "roundrobins") {
+	# Multiple DNS roundrobins
+	return &text('log_'.$action.'_roundrobins', $object);
+	}
 elsif ($type eq "failover") {
 	# One failover group
 	return &text('log_'.$action.'_failover', &html_escape($p->{'desc'}));

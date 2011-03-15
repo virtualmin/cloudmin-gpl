@@ -3518,6 +3518,10 @@ log_create_failover=Created failover group <i>$1</i>
 log_modify_failover=Modified failover group <i>$1</i>
 log_delete_failover=Deleted failover group <i>$1</i>
 log_delete_failovers=Deleted $1 failover groups
+log_create_roundrobin=Created DNS roundrobin for $1
+log_delete_roundrobin=Deleted DNS roundrobin for $1
+log_modify_roundrobin=Modified DNS roundrobin for $1
+log_delete_roundrobins=Deleted $1 roundrobins
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system
@@ -4275,6 +4279,8 @@ roundrobin_urldesc=($HOST will be replaced with each system's hostname)
 roundrobin_urldef=None
 roundrobin_urlsel=URL template
 roundrobin_alerts=Alerts that must not be firing
+roundrobin_err=Failed to save DNS roundrobin
+roundrobin_egone=Roundrobin no longer exists!
 
 __norefs=1
 
