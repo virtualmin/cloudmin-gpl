@@ -1521,7 +1521,7 @@ $proc = &get_server_kvm_instance($server);
 if ($proc) {
 	# Just kill it
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-					"kill $proc->{'pid'}");
+					"kill -9 $proc->{'pid'}");
 	return $err ? $err : $ex ? $out : undef;
 	}
 return "No KVM process found!";
