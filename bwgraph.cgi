@@ -320,17 +320,19 @@ else {
 	print "</table><br>\n";
 	}
 
+# Build direction options
+@dirsel = ( );
+if ($mode ne 'systems') {
+	push(@dirsel, [ "inout", $text{'graph_inout'} ]);
+	}
+push(@dirsel, [ "in", $text{'graph_in'} ],
+	      [ "out", $text{'graph_out'} ] );
+if ($config{'bw_dir_in'} && $config{'bw_dir_out'}) {
+	push(@dirsel, [ "total", $text{'graph_total'} ]);
+	}
+
 if ($mode ne "systems" && $mode ne "host") {
 	# Form to change direction and axis scaling
-	@dirsel = ( );
-	if ($mode ne 'systems') {
-		push(@dirsel, [ "inout", $text{'graph_inout'} ]);
-		}
-	push(@dirsel, [ "in", $text{'graph_in'} ],
-		      [ "out", $text{'graph_out'} ] );
-	if ($config{'bw_dir_in'} && $config{'bw_dir_out'}) {
-		push(@dirsel, [ "total", $text{'graph_total'} ]);
-		}
 	print &ui_form_start("bwgraph.cgi");
 	print &ui_hidden("mode", $mode);
 	print &ui_hidden("owner", $in{'owner'});
@@ -364,6 +366,12 @@ else {
 	print &ui_hidden("owner", $in{'owner'});
 	print &ui_hidden("ago", $in{'ago'});
 	print &ui_table_start(undef, undef, 2);
+
+	# Direction mode
+	print &ui_table_row($text{'graph_dir'},
+	      &ui_select("dir", $dir, \@dirsel, 1, 0, 0, 0,
+			 "onChange='form.submit()'")." ".
+	      &ui_submit($text{'graph_ok'}));
 
 	# Units
 	print &ui_table_row($text{'graph_units'},
