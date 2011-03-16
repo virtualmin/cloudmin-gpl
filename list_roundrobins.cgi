@@ -24,7 +24,6 @@ if (@roundrobins) {
 			&select_invert_link("d"));
 	print &ui_links_row(\@links);
 	@tds = ( "width=5" );
-	$statuses = &get_roundrobin_statuses();
 	print &ui_columns_start([ "", $text{'roundrobins_dom'},
 				  $text{'roundrobins_servers'},
 				  $text{'roundrobins_status'} ], 100, 0, \@tds);
@@ -34,7 +33,7 @@ if (@roundrobins) {
 			"<a href='edit_roundrobin.cgi?id=$a->{'id'}'>".
 			  $a->{'name'}.".".$a->{'dom'}."</a>",
 			&describe_alert_servers($a),
-			&describe_roundrobin_status($a, $st),
+			&describe_roundrobin_status($a),
 			], \@tds, "d", $a->{'id'});
 		}
 	print &ui_columns_end();

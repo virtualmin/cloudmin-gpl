@@ -69,6 +69,7 @@ else {
 			    &error(&text('roundrobin_eport', $p));
 			}
 		@ports || &error($text{'roundrobin_eports'});
+		$roundrobin->{'ports'} = join(" ", @ports);
 		}
 	if ($in{'url_def'}) {
 		delete($roundrobin->{'url'});
@@ -82,6 +83,7 @@ else {
 
 	# Parse email notification
 	$in{'min'} =~ /^\d+$/ || &error($text{'roundrobin_emin'});
+	$roundrobin->{'min'} = $in{'min'};
 	$roundrobin->{'master'} = $in{'master'};
 	if ($in{'email'}) {
 		$in{'emailto'} =~ /\S/ || &error($text{'alert_eemail'});

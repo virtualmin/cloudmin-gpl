@@ -254,5 +254,23 @@ my ($rr) = @_;
 # XXX
 }
 
+# describe_roundrobin_status(&roundrobin)
+# Returns a string describing systems included in the roundrobin
+sub describe_roundrobin_status
+{
+my ($rr) = @_;
+my @inc = split(/\s+/, $rr->{'include'});
+my @whynot = split(/\s+/, $rr->{'whynot'});
+if (@whynot) {
+	return &text('roundrobins_stbad', scalar(@inc), scalar(@whynot));
+	}
+elsif (@inc) {
+	return &text('roundrobins_stok', scalar(@inc));
+	}
+else {
+	return $text{'roundrobins_stnot'};
+	}
+}
+
 1;
 

@@ -175,7 +175,8 @@ if ($zone && $dnsname) {
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
-	my @oldr = grep { $_->{'name'} eq $dnsname } @recs;
+	my @oldr = grep { $_->{'name'} eq $dnsname &&
+			  $_->{'type'} eq 'A' } @recs;
 	my $changed = 0;
 	for(my $i=0; $i<@$ips || $i<@oldr; $i++) {
 		my $r = $i<@oldr ? $oldr[$i] : undef;

@@ -141,6 +141,7 @@ print &ui_table_row($text{'alert_notif'},
 	&ui_textbox("emailto", $roundrobin->{'email'}, 60));
 
 # How often to send
+@forunits = &list_for_units();
 ($intunit, $int) = &split_for_units($roundrobin->{'interval'});
 print &ui_table_row($text{'alert_interval'},
 	&ui_textbox("int", $int, 4).
