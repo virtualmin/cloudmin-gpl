@@ -243,7 +243,7 @@ elsif ($type eq "alerts") {
 	}
 elsif ($type eq "roundrobin") {
 	# One DNS roundrobin
-	return &text('log_'.$action.'_roundrobin', $p->{'name'};
+	return &text('log_'.$action.'_roundrobin', $p->{'name'});
 	}
 elsif ($type eq "roundrobins") {
 	# Multiple DNS roundrobins
