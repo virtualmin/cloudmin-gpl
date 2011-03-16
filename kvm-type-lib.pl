@@ -927,6 +927,7 @@ my $vhost = &type_kvm_parent($server);
 my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
 delete($server->{'kvm_filesystem_offset'});
 $server->{'kvm_start'} = 1 if ($reset);
+$server->{'kvm_args'} = $config{'kvm_manual'} if (!$reset);
 
 # Create base dir if needed
 if (!-d $vhost->{'kvm_dir'}) {
