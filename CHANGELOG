@@ -4,3 +4,4 @@ When adding a disk to a virtual system that uses LVM for storage, you can now se
 Added the wait-for-system API command, for delaying until one or more systems are usable.
 ---- Changes since 5.3 ----
 System owners can now change their UI language on the Change Password and Email page.
+High resolution VGA graphics can now be enabled for new or editing KVM virtual systems.

@@ -524,6 +524,10 @@ $rv .= &ui_table_row($text{'create_kvmmodel'},
 		   [ [ undef, $text{'default'} ],
 		     @$models ]));
 
+# High-res graphics?
+$rv .= &ui_table_row($text{'create_kvmvga'},
+	&ui_yesno_radio("kvm_vga", 0));
+
 # Start after creation?
 $rv .= &ui_table_row($text{'create_xenstart'},
 	&ui_yesno_radio("kvm_start", 1));
@@ -666,6 +670,9 @@ elsif ($in{'kvm_model'}) {
 # Start at creation
 $server->{'kvm_start'} = defined($in{'kvm_start'}) ? $in{'kvm_start'} : 1;
 
+# High-res graphics
+$server->{'kvm_vga'} = defined($in{'kvm_vga'}) ? $in{'kvm_vga'} : 0;
+
 # Append zone name
 my @zones = &list_bind_zones();
 my $zone;
@@ -699,6 +706,7 @@ if (&can_action(undef, "advanced")) {
 		  { 'name' => 'virtio', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'model', 'value' => $models, 'opt' => 1 },
 		  { 'name' => 'start', 'value' => 'true|false', 'opt' => 1 },
+		  { 'name' => 'vga', 'value' => 'true|false', 'opt' => 1 },
 	    );
 	}
 return @rv;
@@ -906,6 +914,14 @@ if (&can_action(undef, "advanced")) {
 	else {
 		$server->{'kvm_start'} = 1;
 		}
+
+	# Validate VGA
+	if ($args->{'vga'} =~ /true|yes/i) {
+		$server->{'kvm_vga'} = 1;
+		}
+	else {
+		$server->{'kvm_vga'} = 0;
+		}
 	}
 else {
 	# Use defaults
@@ -913,6 +929,7 @@ else {
 					 : $img->{'kvm_virtio'};
 	$server->{'kvm_model'} = $config{'kvm_model'};
 	$server->{'kvm_start'} = 1;
+	$server->{'kvm_vga'} = 0;
 	}
 
 return undef;
@@ -3433,6 +3450,10 @@ $rv .= &ui_table_row($text{'edit_kvmkeymap'},
 		     sort { $a->[1] cmp $b->[1] }
 			  &list_kvm_keymaps($server) ]));
 
+# High-res graphics?
+$rv .= &ui_table_row($text{'create_kvmvga'},
+	&ui_yesno_radio("kvm_vga", $server->{'kvm_vga'}));
+
 return $rv;
 }
 
@@ -3451,6 +3472,8 @@ else {
 	$server->{'kvm_keymap'} = $k->[0];
 	&type_kvm_set_atboot($server, 2);
 	}
+
+$server->{'kvm_vga'} = $in->{'kvm_vga'};
 }
 
 # type_kvm_server_info(&server)

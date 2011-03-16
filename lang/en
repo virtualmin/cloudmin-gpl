@@ -459,6 +459,7 @@ create_kvmusevirtio=Use VirtIO disk driver?
 create_kvmvirtiodef=Based on image
 create_kvmmodel=Network device model
 create_ekvmmodel=Invalid network device model
+create_kvmvga=Enable high resolution graphics?
 create_kvmstartup=Starting up new KVM instance ..
 create_zonesmemory=Memory limit for Zone
 create_domips=Updating IPs in Virtualmin domains ..
@@ -4258,6 +4259,9 @@ roundrobins_delete=Delete Selected Roundrobins
 roundrobins_refresh=Refresh Roundrobins
 roundrobins_return=roundrobins list
 roundrobins_ezones=Cloudmin has not found any DNS zones on your system, so no roundrobin DNS records can be added.
+roundrobins_stbad=$1 up, $2 down
+roundrobins_stok=All $1 up
+roundrobins_stnot=Not checked yet
 
 roundrobin_ctitle=Create DNS Roundrobin
 roundrobin_etitle=Edit DNS Roundrobin
