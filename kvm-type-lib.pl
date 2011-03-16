@@ -3499,6 +3499,8 @@ push(@rv, [ "KVM disk driver", $server->{'kvm_virtio'} ? "VirtIO" : "IDE" ]);
 if ($server->{'kvm_keymap'}) {
 	push(@rv, [ "KVM console keyboard type", $server->{'kvm_keymap'} ]);
 	}
+push(@rv, [ "KVM high resolution graphics?",
+	    $server->{'kvm_vga'} ? "Yes" : "No" ]);
 return @rv;
 }
 
