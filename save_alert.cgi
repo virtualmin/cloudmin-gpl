@@ -22,7 +22,7 @@ if ($in{'delete'}) {
 else {
 	# Validate inputs
 	$alert ||= { };
-	foreach my $f ('all', 'servrers', 'groups', 'owners', 'managers') {
+	foreach my $f ('all', 'servers', 'groups', 'owners', 'managers') {
 		delete($alert->{$f});
 		}
 
