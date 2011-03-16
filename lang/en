@@ -4281,6 +4281,14 @@ roundrobin_urlsel=URL template
 roundrobin_alerts=Alerts that must not be firing
 roundrobin_err=Failed to save DNS roundrobin
 roundrobin_egone=Roundrobin no longer exists!
+roundrobin_ename=Missing or invalid DNS record name
+roundrobin_ename2=DNS record name cannot start or end with a dot
+roundrobin_edom=Missing DNS zone name
+roundrobin_estatus=No acceptable statuses selected
+roundrobin_eports=No ports entered
+roundrobin_eport=Port $1 is not a number
+roundrobin_eurl=Missing or invalid URL
+roundrobin_emin=Missing or non-numeric minimum number of systems
 
 __norefs=1
 

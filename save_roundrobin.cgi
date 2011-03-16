@@ -46,8 +46,42 @@ else {
 		$roundrobin->{'owners'} || &error($text{'alert_eowners'});
 		}
 
-	# Parse message
-	$roundrobin->{'desc'} = $in{'desc_def'} ? undef : $in{'desc'};
+	# Parse DNS record
+	$roundrobin->{'desc'} = $in{'desc'};
+	$in{'name'} =~ /^[a-zA-Z0-9\.\_\-]+$/ ||
+		&error($text{'roundrobin_ename'});
+	$in{'name'} !~ /^\./ && $in{'name'} !~ /\.$/ ||
+		&error($text{'roundrobin_ename2'});
+	$roundrobin->{'name'} = $in{'name'};
+	$in{'dom'} || &error($text{'roundrobin_edom'});
+	$roundrobin->{'dom'} = $in{'dom'};
+
+	# Parse conditions
+	$in{'status'} || &error($text{'roundrobin_estatus'});
+	$roundrobin->{'status'} = join(" ", split(/\0/, $in{'status'}));
+	if ($in{'ports_def'}) {
+		delete($roundrobin->{'ports'});
+		}
+	else {
+		@ports = split(/\s+/, $in{'ports'});
+		foreach $p (@ports) {
+			$p =~ /^[1-9][0-9]*$/ ||
+			    &error(&text('roundrobin_eport', $p));
+			}
+		@ports || &error($text{'roundrobin_eports'});
+		}
+	if ($in{'url_def'}) {
+		delete($roundrobin->{'url'});
+		}
+	else {
+		$in{'url'} =~ /^(http|https):\/\// ||
+			&error($text{'roundrobin_eurl'});
+		$roundrobin->{'url'} = $in{'url'};
+		}
+	$roundrobin->{'alerts'} = join(" ", split(/\0/, $in{'alerts'}));
+
+	# Parse email notification
+	$in{'min'} =~ /^\d+$/ || &error($text{'roundrobin_emin'});
 	$roundrobin->{'master'} = $in{'master'};
 	if ($in{'email'}) {
 		$in{'emailto'} =~ /\S/ || &error($text{'alert_eemail'});

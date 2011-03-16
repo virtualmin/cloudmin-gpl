@@ -39,7 +39,7 @@ my ($id) = @_;
 my %rr;
 &read_file_cached("$roundrobins_dir/$id", \%rr) || return undef;
 $rr{'id'} = $id;
-return $rr;
+return \%rr;
 }
 
 # save_roundrobin(&roundrobin)

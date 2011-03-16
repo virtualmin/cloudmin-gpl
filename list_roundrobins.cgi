@@ -33,7 +33,7 @@ if (@roundrobins) {
 		print &ui_checked_columns_row([
 			"<a href='edit_roundrobin.cgi?id=$a->{'id'}'>".
 			  $a->{'name'}.".".$a->{'dom'}."</a>",
-			&describe_roundrobin_servers($a),
+			&describe_alert_servers($a),
 			&describe_roundrobin_status($a, $st),
 			], \@tds, "d", $a->{'id'});
 		}
