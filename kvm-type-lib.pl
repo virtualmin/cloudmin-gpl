@@ -655,9 +655,10 @@ else {
 	}
 
 # Interface model setting
-if (!defined($in{'kvm_model'})) {
-	# Configured default
-	$server->{'kvm_model'} = $config{'kvm_model'};
+if (!$in{'kvm_model'}) {
+	# Use image or global default
+	$server->{'kvm_model'} = $empty ? $config{'kvm_model'} :
+				  $img->{'kvm_virtio'} ? 'virtio' : undef;
 	}
 elsif ($in{'kvm_model'}) {
 	# User selection
@@ -904,7 +905,8 @@ if (&can_action(undef, "advanced")) {
 		}
 	else {
 		# Use configured default
-		$server->{'kvm_model'} = $config{'kvm_model'};
+		$server->{'kvm_model'} = $empty ? $config{'kvm_model'} :
+				  $img->{'kvm_virtio'} ? 'virtio' : undef;
 		}
 
 	# Validate start at creation flag
