@@ -163,11 +163,11 @@ if ($zone && $dnsname) {
 	}
 }
 
-# set_bind_dns_addresses(dnsname, zonename, &new-ips, &new-comments)
+# set_bind_dns_addresses(dnsname, zonename, &new-ips, &new-comments, ttl)
 # Create or update multiple A records for a name
 sub set_bind_dns_addresses
 {
-my ($dnsname, $zonename, $ips, $cmts) = @_;
+my ($dnsname, $zonename, $ips, $cmts, $ttl) = @_;
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
@@ -179,14 +179,16 @@ if ($zone && $dnsname) {
 	my @oldr = grep { $_->{'name'} eq $dnsname &&
 			  $_->{'type'} eq 'A' } @recs;
 	my $changed = 0;
+	my @delr;
 	for(my $i=0; $i<@$ips || $i<@oldr; $i++) {
 		my $r = $i<@oldr ? $oldr[$i] : undef;
 		if ($i < @$ips && $i < @oldr) {
 			# Update record
-			if ($r->{'values'}->[0] ne $ips->[$i]) {
+			if ($r->{'values'}->[0] ne $ips->[$i] ||
+			    $r->{'ttl'} ne $ttl) {
 				&bind8::modify_record(
 					$zone->{'file'}, $r, $r->{'name'},
-					$r->{'ttl'}, $r->{'class'},
+					$ttl, $r->{'class'},
 					$r->{'type'}, $ips->[$i], $cmts->[$i]);
 				$changed++;
 				}
@@ -195,23 +197,20 @@ if ($zone && $dnsname) {
 			# Add record
 			&bind8::create_record(
 				$zone->{'file'}, $dnsname,
-				undef, "IN", "A", $ips->[$i], $cmts->[$i]);
+				$ttl, "IN", "A", $ips->[$i], $cmts->[$i]);
 			$changed++;
 			}
 		elsif ($i < @oldr) {
 			# Delete record
-			&bind8::delete_record($zone->{'file'}, $r);
+			push(@delr, $r);
 			$changed++;
 			}
 		}
+	foreach my $r (reverse(@delr)) {
+		&bind8::delete_record($zone->{'file'}, $r);
+		}
 	if ($changed) {
-		&bind8::bump_soa_record($zone->{'file'}, \@recs);
-		if (defined(&bind8::restart_zone)) {
-			&bind8::restart_zone($zonename);
-			}
-		else {
-			&bind8::restart_bind();
-			}
+		&post_records_change(\@recs, $zone->{'file'}, $zone);
 		}
 	&unlock_file($lpath);
 	return (1, $changed);
@@ -343,6 +342,32 @@ else {
 	my @o = split(/\./, $ip);
 	return $o[3].".".$zone.".";
 	}
+}
+
+# post_records_change(&recs, file, &zone)
+# Called after some records in a domain are changed, to bump to SOA
+# and possibly re-sign
+sub post_records_change
+{
+local ($recs, $fn, $zone) = @_;
+&bind8::bump_soa_record($fn, $recs);
+if (&bind8::supports_dnssec()) {
+	# Re-sign too
+	eval {
+		local $main::error_must_die = 1;
+		&bind8::sign_dnssec_zone_if_key($zone, $recs, 0);
+		};
+	if ($@) {
+		return "DNSSEC signing failed : $@";
+		}
+	}
+if (defined(&bind8::restart_zone)) {
+	&bind8::restart_zone($zone->{'name'});
+	}
+else {
+	&bind8::restart_bind();
+	}
+return undef;
 }
 
 sub bind_module_link
