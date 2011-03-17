@@ -15,6 +15,7 @@ if (!$in{'new'}) {
 
 if ($in{'delete'}) {
 	# Just delete the roundrobin
+	&delete_roundrobin_dns($roundrobin);
 	&delete_roundrobin($roundrobin);
 	&webmin_log("delete", "roundrobin", $roundrobin->{'id'},
 	    { 'name' => $roundrobin->{'name'}.".".$roundrobin->{'dom'} });
@@ -55,6 +56,8 @@ else {
 	$roundrobin->{'name'} = $in{'name'};
 	$in{'dom'} || &error($text{'roundrobin_edom'});
 	$roundrobin->{'dom'} = $in{'dom'};
+	$in{'ttl'} =~ /^\d+[smhdw]?$/ || &error($text{'roundrobin_ettl'});
+	$roundrobin->{'ttl'} = $in{'ttl'};
 
 	# Parse conditions
 	$in{'status'} || &error($text{'roundrobin_estatus'});

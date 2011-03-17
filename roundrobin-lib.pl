@@ -23,6 +23,7 @@ return sort { $a->{'id'} <=> $b->{'id'} } @rv;
 # desc - Human-readable description for this roundrobin
 # dom - Domain name the record is in
 # name - Record name within the domain
+# ttl - TTL for DNS record, in seconds
 # servers - IDs of servers to include
 # groups - Names of groups of servers to include
 # status - List of acceptable status codes
@@ -133,7 +134,7 @@ my @ports = split(/\s+/, $rr->{'ports'});
 my $astatus = &get_alert_statuses();
 my %afiring;
 foreach my $aid (split(/\s+/, $rr->{'alerts'})) {
-	my $st = $astatus{$aid};
+	my $st = $astatus->{$aid};
 	if ($st && $st->{'firing'}) {
 		# Alert is firing .. but for which systems?
 		my $a = &get_alert($aid);
@@ -215,7 +216,8 @@ if (@inc) {
 			}
 		}
 	($ok, $msg) = &set_bind_dns_addresses(
-	    $rr->{'name'}.".".$rr->{'dom'}.".", $rr->{'dom'}, \@ips, \@cmts);
+	    $rr->{'name'}.".".$rr->{'dom'}.".", $rr->{'dom'}, \@ips, \@cmts,
+	    $rr->{'ttl'});
 	}
 else {
 	$ok = 0;

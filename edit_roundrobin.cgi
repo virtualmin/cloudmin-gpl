@@ -9,7 +9,7 @@ if ($in{'new'}) {
 	# Creating a new one
 	&ui_print_header(undef, $text{'roundrobin_ctitle'}, "");
 	$roundrobin = { 'master' => 1, 'interval' => 3600, 'min' => 2,
-			'status' => 'nowebmin novirt virt alive' };
+			'ttl' => 60, 'status' => 'nowebmin novirt virt alive' };
 	}
 else {
 	# Editing an existing one
@@ -80,6 +80,10 @@ print &ui_table_row($text{'roundrobin_name'},
 print &ui_table_row($text{'roundrobin_dom'},
 	&ui_select("dom", $roundrobin->{'dom'}, [ map { $_->{'name'} } @zones ],
 		   1, 0, $roundrobin->{'dom'} ? 1 : 0));
+
+print &ui_table_row($text{'roundrobin_ttl'},
+	&ui_textbox("ttl", $roundrobin->{'ttl'}, 6)." ".
+	$text{'roundrobin_secs'});
 
 print &ui_hidden_table_end("dns");
 
