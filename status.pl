@@ -37,6 +37,11 @@ if (!&is_cloudmin_replica()) {
 	&evaluate_all_alerts(\@servers);
 	}
 
+# Also update any DNS load balancers
+if (!&is_cloudmin_replica()) {
+	&evaluate_all_roundrobins(\@servers);
+	}
+
 # Run any scheduled changes
 if (!&is_cloudmin_replica() && defined(&run_scheduled_changes)) {
 	$done = &run_scheduled_changes(\@servers);

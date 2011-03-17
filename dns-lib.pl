@@ -172,6 +172,7 @@ my ($dnsname, $zonename, $ips, $cmts) = @_;
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 if ($zone && $dnsname) {
+	use Data::Dumper;
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
@@ -190,15 +191,14 @@ if ($zone && $dnsname) {
 				$changed++;
 				}
 			}
-		elsif ($i < @oldr) {
+		elsif ($i < @$ips) {
 			# Add record
 			&bind8::create_record(
-				$zone->{'file'}, $r->{'name'},
-				$r->{'ttl'}, $r->{'class'},
-				$r->{'type'}, $ips->[$i], $cmts->[$i]);
+				$zone->{'file'}, $dnsname,
+				undef, "IN", "A", $ips->[$i], $cmts->[$i]);
 			$changed++;
 			}
-		elsif ($i < @$ips) {
+		elsif ($i < @oldr) {
 			# Delete record
 			&bind8::delete_record($zone->{'file'}, $r);
 			$changed++;

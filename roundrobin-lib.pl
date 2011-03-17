@@ -158,13 +158,14 @@ SERVER: foreach my $s (@servers) {
 		alarm(5);
 		my $err;
 		eval {
-			local $SIG{'CHLD'} = die { "timeout" };
-			my $ip = &get_server_ip($s);
-			&open_socket($ip, $p, TESTSOCK, \$err);
-			close(TESTSOCK);
+			#local $SIG{'CHLD'} = die { "timeout" };
+			#my $ip = &get_server_ip($s);
+			#&open_socket($ip, $p, TESTSOCK, \$err);
+			#close(TESTSOCK);
 			};
 		alarm(0);
 		if ($@) {
+			print STDERR $@,"\n";
 			push(@whynot, [ $s->{'id'}, 'timeout', $p ]);
 			next SERVER;
 			}
@@ -189,7 +190,7 @@ SERVER: foreach my $s (@servers) {
 			}
 		}
 
-	push(@inc, $c);
+	push(@inc, $s);
 	}
 
 # Find DNS record and update
@@ -200,7 +201,7 @@ if (@inc) {
 	my %done;
 	foreach my $s (@inc) {
 		my $ip = &get_server_ip($s);
-		if ($done{$ip}++) {
+		if (!$done{$ip}++) {
 			push(@ips, $ip);
 			push(@cmts, $s->{'host'});
 			}
