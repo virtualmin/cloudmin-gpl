@@ -149,6 +149,52 @@ print &ui_table_row($text{'alert_interval'},
 
 print &ui_hidden_table_end("notif");
 
+# Show servers and current status
+if ($roundrobin->{'include'} || $roundrobin->{'whynot'}) {
+	print &ui_hidden_table_start($text{'roundrobin_header5'}, "width=100%",
+		     2, "status", $roundrobin->{'whynot'} ? 1 : 0, \@tds);
+
+	$rtable = &ui_columns_start([ $text{'roundrobin_host'},
+				      $text{'roundrobin_ip'},
+				      $text{'roundrobin_cstatus'} ], 100);
+	%inc = map { $_, 1 } split(/\s+/, $roundrobin->{'include'});
+	%whynot = map { my ($id, $r, $msg) = split(",", $_, 3);
+			($id, [ $r, $msg ]) }
+		      split(/\s+/, $roundrobin->{'whynot'});
+	foreach $s (&get_roundrobin_servers($roundrobin, \@allservers)) {
+		$ip = &get_server_ip($s);
+		@row = ( "<a href='edit_serv.cgi?id=$s->{'id'}'>".
+			 $s->{'host'}."</a>", $ip );
+		if ($inc{$s->{'id'}}) {
+			push(@row, "<font color=green>".
+				   $text{'roundrobin_ok'}."</font>");
+			}
+		elsif ($whynot{$s->{'id'}}) {
+			($r, $msg) = @{$whynot{$s->{'id'}}};
+			if ($r eq 'status') {
+				$msg = &describe_status({ 'status' => $msg });
+				}
+			elsif ($r eq 'alert') {
+				@alerts = grep { $_ } map { &get_alert($_) }
+					       split(",", $msg);
+				$msg = join(" ",
+				    map { &describe_alert_rules($_) } @alerts);
+				}
+			push(@row, "<font color=red>".
+				   &text('roundrobin_status_'.$r, $msg).
+				   "</font>");
+			}
+		else {
+			push(@row, $text{'roundrobin_stnot'});
+			}
+		$rtable .= &ui_columns_row(\@row);
+		}
+	$rtable .= &ui_columns_end();
+	print &ui_table_row(undef, $rtable, 2);
+
+	print &ui_hidden_table_end("status");
+	}
+
 if ($in{'new'}) {
 	print &ui_form_end([ [ undef, $text{'create'} ] ]);
 	}

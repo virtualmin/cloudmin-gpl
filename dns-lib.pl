@@ -163,7 +163,7 @@ if ($zone && $dnsname) {
 	}
 }
 
-# set_bind_dns_addresses(dnsname, zonename, &old-ips, &new-comments)
+# set_bind_dns_addresses(dnsname, zonename, &new-ips, &new-comments)
 # Create or update multiple A records for a name
 sub set_bind_dns_addresses
 {

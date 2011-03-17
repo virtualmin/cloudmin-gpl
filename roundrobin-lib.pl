@@ -70,6 +70,15 @@ my $file = "$roundrobins_dir/$rr->{'id'}";
 &unlock_file($file);
 }
 
+# delete_roundrobin_dns(&roundrobin)
+# Deletes a DNS roundrobin's DNS record
+sub delete_roundrobin_dns
+{
+my ($rr) = @_;
+&set_bind_dns_addresses($rr->{'name'}.".".$rr->{'dom'}.".", $rr->{'dom'},
+			[ ], [ ]);
+}
+
 # get_roundrobin_servers(&roundrobin, &all-servers)
 # Returns a list of server objects that some roundrobin may include
 sub get_roundrobin_servers
@@ -158,14 +167,13 @@ SERVER: foreach my $s (@servers) {
 		alarm(5);
 		my $err;
 		eval {
-			#local $SIG{'CHLD'} = die { "timeout" };
-			#my $ip = &get_server_ip($s);
-			#&open_socket($ip, $p, TESTSOCK, \$err);
-			#close(TESTSOCK);
+			local $SIG{'CHLD'} = sub { die "timeout" };
+			my $ip = &get_server_ip($s);
+			&open_socket($ip, $p, TESTSOCK, \$err);
+			close(TESTSOCK);
 			};
 		alarm(0);
 		if ($@) {
-			print STDERR $@,"\n";
 			push(@whynot, [ $s->{'id'}, 'timeout', $p ]);
 			next SERVER;
 			}
@@ -263,7 +271,9 @@ my ($rr) = @_;
 my @inc = split(/\s+/, $rr->{'include'});
 my @whynot = split(/\s+/, $rr->{'whynot'});
 if (@whynot) {
-	return &text('roundrobins_stbad', scalar(@inc), scalar(@whynot));
+	return "<font color=red>".
+	       &text('roundrobins_stbad', scalar(@inc), scalar(@whynot)).
+	       "</font>";
 	}
 elsif (@inc) {
 	return &text('roundrobins_stok', scalar(@inc));
