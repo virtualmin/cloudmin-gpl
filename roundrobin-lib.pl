@@ -262,7 +262,58 @@ foreach my $rr (@$roundrobins) {
 sub send_roundrobin_email
 {
 my ($rr) = @_;
-# XXX
+&foreign_require("mailboxes", "mailboxes-lib.pl");
+
+# Work out who to notify
+my @emails;
+if ($config{'bw_email'} && $rr->{'master'}) {
+	# Master admin
+	push(@emails, $config{'bw_email'});
+	}
+if ($alert->{'email'}) {
+	# Other addresses
+	push(@emails, split(/[ ,]+/, $alert->{'email'}));
+	}
+
+# Construct email message
+my $fmt = "%-25.25s %-15.15s %-35.35s\n";
+my @inc = split(/\s+/, $rr->{'include'});
+my @whynot = map { [ split(",", $_, 3) ] } split(/\s+/, $rr->{'whynot'});
+my $msg = &text('remail_desc',
+		$rr->{'name'}.".".$rr->{'dom'},
+		scalar(@inc), $rr->{'min'})."\n";
+$msg = join("\n", &mailboxes::wrap_lines($msg, 75))."\n";
+$msg .= "\n";
+$msg .= $text{'rmail_whynot'}."\n";
+$msg .= "\n";
+$msg .= sprintf $fmt, $text{'roundrobin_host'},
+		      $text{'roundrobin_ip'},
+		      $text{'remail_reason'};
+$msg .= sprintf $fmt, ("-" x 25), ("-" x 15), ("-" x 35);
+my $from;
+foreach my $w (@whynot) {
+	my $s = &get_managed_server($w->[0]);
+	next if (!$s);
+	my $ip = &get_server_ip($s);
+	$from ||= &get_global_from_address($s);
+	my ($r, $m) = ($w->[1], $w->[2]);
+	if ($r eq 'status') {
+		$m = &describe_status({ 'status' => $m });
+		}
+	elsif ($r eq 'alert') {
+		my @alerts = grep { $_ } map { &get_alert($_) }
+			          split(",", $m);
+		$m = &describe_alert_rules($alerts[0]);
+		}
+	$msg .= sprintf $fmt, $s->{'host'}, $ip,
+			      &text('remail_status_'.$r, $m);
+	}
+
+# Send the email
+my $email = join(", ", @emails);
+my $subject = &text('remail_subject', $rr->{'name'}.".".$rr->{'dom'},
+				      scalar(@inc));
+&mailboxes::send_text_mail($from, $email, undef, $subject, $msg);
 }
 
 # describe_roundrobin_status(&roundrobin)

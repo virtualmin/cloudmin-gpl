@@ -4306,5 +4306,15 @@ roundrobin_eport=Port $1 is not a number
 roundrobin_eurl=Missing or invalid URL
 roundrobin_emin=Missing or non-numeric minimum number of systems
 
+remail_desc=DNS roundrobin $1 has only $2 systems included, which is below the configured minimum of $3.
+rmail_whynot=The following systems have been excluded from the roundrobin :
+remail_reason=Reason for exclusion
+remail_status_status=Status is $1
+remail_status_alert=Alert $1 active
+remail_status_timeout=Port $1 timeout
+remail_status_port=Port $1 down
+remail_status_url=URL $1 failed
+remail_subject=Cloudmin DNS roundrobin $1 failure
+
 __norefs=1
 
