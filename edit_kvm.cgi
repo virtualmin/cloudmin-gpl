@@ -82,7 +82,7 @@ $link = " ".&bind_module_link();
 if (@zones) {
 	print &ui_table_row($text{'kvm_domain'},
 		&ui_select("zone", $zonename,
-		    [ map { [ $_->{'name'} ] } @zones ]).$link);
+		    [ map { [ $_->{'name'}, $_->{'desc'} ] } @zones ]).$link);
 	}
 else {
 	print &ui_table_row($text{'kvm_domain2'},

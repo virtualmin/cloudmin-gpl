@@ -1,17 +1,42 @@
 # Functions for managing virtual system DNS records
 
 # list_bind_zones()
-# Returns a list of BIND master zones that we can add virtual system hostnames
+# Returns a list of BIND master zones that we can add virtual system hostnames.
+# May include those from the cloudmin services plugin.
 sub list_bind_zones
 {
+my @rv;
+my $hasprov = &indexof("cloudmin-services", @plugins) >= 0 ? 1 : 0;
 if (&foreign_installed("bind8")) {
+	# Local local DNS zones
 	&foreign_require("bind8", "bind8-lib.pl");
-	return sort { $a->{'name'} cmp $b->{'name'} }
+	@rv = sort { $a->{'name'} cmp $b->{'name'} }
 		 grep { $_->{'type'} eq 'master' &&
 		        $_->{'name'} !~ /in-addr|ip6.arpa/i }
 		      &bind8::list_zone_names();
+	foreach my $z (@rv) {
+		$z->{'local'} = 1;
+		$z->{'desc'} = &show_domain_name($z->{'name'}).
+			       ($hasprov ? " ".$text{'xen_localdns'} : "");
+		}
 	}
-return ( );
+if ($hasprov) {
+	# From services plugin
+	my @history = grep { $_->{'feature'} eq 'dns' }
+			   &cloudmin_services::list_provisioned_features();
+	foreach my $h (@history) {
+		my $hserver = &get_managed_server($h->{'server'});
+		next if (!$hserver);	# Host doesn't exist?!
+		push(@rv, { 'name' => $h->{'domain'},
+			    'type' => 'master',
+			    'desc' => &show_domain_name($h->{'domain'})." ".
+				      $text{'xen_provisiondns'},
+			    'provision' => 1,
+			    'server' => $hserver,
+			    'history' => $h });
+		}
+	}
+return @rv;
 }
 
 # add_bind8_record(dnsname, ip, zonename)
@@ -23,8 +48,8 @@ my ($dnsname, $ip, $zonename) = @_;
 
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
-my $rv = 0;
-if ($zone) {
+if ($zone && $zone->{'local'}) {
+	# Add to local DNS zone
 	&$first_print(&text('create_vserverdns', $dnsname, $ip));
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
@@ -40,7 +65,7 @@ if ($zone) {
 		&bind8::modify_record($zone->{'file'}, $already, $dnsname,
 				      undef, "IN", "A", $ip);
 		}
-	&bind8::bump_soa_record($zone->{'file'}, \@recs);
+	&post_records_change(\@recs, $zone->{'file'}, $zone);
 
 	# See if we can add to a reverse too
 	my ($rfn, $rrecs, undef, $rzone) =
@@ -55,17 +80,58 @@ if ($zone) {
 		if (!$old) {
 			&bind8::create_record($rfn, $arpa, undef,
 					      "IN", "PTR", $dnsname);
-			&bind8::bump_soa_record($rfn, $rrecs);
+			&post_records_change($rrecs, $rzone->{'file'}, $rzone);
 			}
 		&unlock_file($rlpath);
 		}
 
-	&bind8::restart_bind();
 	&$second_print($text{'create_done'});
-	$rv = 1;
 	&unlock_file($lpath);
+	return 1;
 	}
-return $rv;
+elsif ($zone && $zone->{'provision'}) {
+	# Add on provisioning host
+	&$first_print(&text('create_vserverdnsprov', $dnsname, $ip,
+			    $zone->{'server'}->{'host'}));
+	my $recs = &cloudmin_services::list_dns_records(
+			$h->{'server'}, $zone->{'name'});
+	if (!ref($recs)) {
+		&$second_print(&text('create_vserverdnseget', $recs));
+		return 0;
+		}
+	my ($already) = grep { $_->{'name'} eq $dnsname } @$recs;
+	if ($already) {
+		# Just change the IP
+		$already->{'values'}->[0] = $ip;
+		}
+	else {
+		# Create a record
+		push(@$recs, { 'name' => $dnsname,
+			       'class' => 'IN',
+			       'type' => 'A',
+			       'values' => [ $ip ] });
+		}
+	&post_records_change($recs, $zone->{'file'}, $zone);
+	my $err = &cloudmin_services::validate_dns_records($zone->{'name'},
+							   $recs);
+	if ($err) {
+		&$second_print(&text('create_vserverdnsevalid', $err));
+		return 0;
+		}
+	my $err = &cloudmin_services::save_dns_records($zone->{'server'},
+						       $zone->{'name'}, $recs);
+	if ($err) {
+		&$second_print(&text('create_vserverdnseset', $err));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		return 1;
+		}
+	}
+else {
+	return 0;
+	}
 }
 
 # delete_bind8_record(dnsname, zonename, ip)
@@ -349,23 +415,36 @@ else {
 # and possibly re-sign
 sub post_records_change
 {
-local ($recs, $fn, $zone) = @_;
-&bind8::bump_soa_record($fn, $recs);
-if (&bind8::supports_dnssec()) {
-	# Re-sign too
-	eval {
-		local $main::error_must_die = 1;
-		&bind8::sign_dnssec_zone_if_key($zone, $recs, 0);
-		};
-	if ($@) {
-		return "DNSSEC signing failed : $@";
+my ($recs, $fn, $zone) = @_;
+if ($zone->{'local'}) {
+	# Update the SOA record, locally and on disk
+	&bind8::bump_soa_record($fn, $recs);
+	if (&bind8::supports_dnssec()) {
+		# Re-sign too
+		eval {
+			local $main::error_must_die = 1;
+			&bind8::sign_dnssec_zone_if_key($zone, $recs, 0);
+			};
+		if ($@) {
+			return "DNSSEC signing failed : $@";
+			}
+		}
+	if (defined(&bind8::restart_zone)) {
+		&bind8::restart_zone($zone->{'name'});
+		}
+	else {
+		&bind8::restart_bind();
 		}
 	}
-if (defined(&bind8::restart_zone)) {
-	&bind8::restart_zone($zone->{'name'});
-	}
 else {
-	&bind8::restart_bind();
+	# Just find SOA and bump serial in memory
+	my ($soa) = grep { $_->{'type'} eq 'SOA' } @$recs;
+	if ($soa) {
+		$soa->{'values'}->[2]++;
+		}
+	else {
+		return "No SOA record found!";
+		}
 	}
 return undef;
 }
