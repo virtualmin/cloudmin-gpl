@@ -4322,5 +4322,11 @@ remail_status_port=Port $1 down
 remail_status_url=URL $1 failed
 remail_subject=Cloudmin DNS roundrobin $1 failure
 
+droundrobins_err1=Failed to delete roundrobins
+droundrobins_err2=Failed to refresh roundrobins
+droundrobins_enone=None selected
+droundrobins_title=Refresh DNS Roundrobins
+droundrobins_fail=Failed to refresh $1 : $2
+
 __norefs=1
 

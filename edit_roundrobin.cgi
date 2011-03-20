@@ -78,7 +78,8 @@ print &ui_table_row($text{'roundrobin_name'},
 
 @zones = &list_bind_zones();
 print &ui_table_row($text{'roundrobin_dom'},
-	&ui_select("dom", $roundrobin->{'dom'}, [ map { $_->{'name'} } @zones ],
+	&ui_select("dom", $roundrobin->{'dom'},
+		   [ map { [ $_->{'name'}, $_->{'desc'} ] } @zones ],
 		   1, 0, $roundrobin->{'dom'} ? 1 : 0));
 
 print &ui_table_row($text{'roundrobin_ttl'},

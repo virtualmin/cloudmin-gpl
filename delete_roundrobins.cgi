@@ -21,7 +21,19 @@ if ($in{'delete'}) {
 	}
 else {
 	# Refresh selected
-	&evaluate_all_roundrobins(undef, \@roundrobins, 1);
+	@errs = &evaluate_all_roundrobins(undef, \@roundrobins, 1);
+	if (@errs) {
+		# Some failed .. tell the user
+		&ui_print_header(undef, $text{'droundrobins_title'}, "");
+		foreach $e (@errs) {
+			print &text('droundrobins_fail',
+				$e->[0]->{'name'}.".".$e->[0]->{'dom'},
+				$e->[1]),"<p>\n";
+			}
+		&ui_print_footer("list_roundrobins.cgi",
+				 $text{'roundrobins_return'});
+		return;
+		}
 	}
 &redirect("list_roundrobins.cgi");
 

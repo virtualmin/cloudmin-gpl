@@ -242,8 +242,9 @@ my ($servers, $roundrobins, $noemail) = @_;
 $servers ||= [ &list_managed_servers() ];
 $roundrobins ||= [ &list_roundrobins() ];
 my $now = time();
+my @errs;
 foreach my $rr (@$roundrobins) {
-	&evaluate_roundrobin($rr, $servers);
+	my ($ok, $msg) = &evaluate_roundrobin($rr, $servers);
 	my @inc = split(/\s+/, $rr->{'include'});
 	if (@inc < $rr->{'min'}) {
 		# Time to email?
@@ -254,7 +255,9 @@ foreach my $rr (@$roundrobins) {
 			}
 		}
 	&save_roundrobin($rr);
+	push(@errs, [ $rr, $msg ]) if (!$ok);
 	}
+return @errs;
 }
 
 # send_roundrobin_email(&rr)

@@ -94,7 +94,7 @@ elsif ($zone && $zone->{'provision'}) {
 	&$first_print(&text('create_vserverdnsprov', $dnsname, $ip,
 			    $zone->{'server'}->{'host'}));
 	my $recs = &cloudmin_services::list_dns_records(
-			$h->{'server'}, $zone->{'name'});
+			$zone->{'server'}, $zone->{'name'});
 	if (!ref($recs)) {
 		&$second_print(&text('create_vserverdnseget', $recs));
 		return 0;
@@ -139,10 +139,12 @@ else {
 sub delete_bind8_record
 {
 my ($dnsname, $zonename, $ip) = @_;
+return 0 if (!$dnsname);
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
-if ($zone && $dnsname) {
+if ($zone && $zone->{'local'}) {
+	# Remove from local DNS zone
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
@@ -152,7 +154,7 @@ if ($zone && $dnsname) {
 		&bind8::delete_record($zone->{'file'}, $r);
 		}
 	if (@r) {
-		&bind8::bump_soa_record($zone->{'file'}, \@recs);
+		&post_records_change(\@recs, $zone->{'file'}, $zone);
 		}
 	&unlock_file($lpath);
 
@@ -168,14 +170,29 @@ if ($zone && $dnsname) {
 					 @$rrecs;
 			if ($old) {
 				&bind8::delete_record($rfn, $old);
-				&bind8::bump_soa_record($rfn, $rrecs);
+				&post_records_change($rrecs, $rfn, $rzone);
 				}
 			&unlock_file($rlpath);
 			}
 		}
-	if (@r) {
-		&bind8::restart_bind();
+	return undef;
+	}
+elsif ($zone && $zone->{'provision'}) {
+	# Delete from provisioning host
+	my $recs = &cloudmin_services::list_dns_records(
+			$zone->{'server'}, $zone->{'name'});
+	return $recs if (!ref($recs));
+	my ($r) = grep { $_->{'name'} eq $dnsname } @$recs;
+	if ($r) {
+		$recs = [ grep { $_ ne $r } @$recs ];
+		&post_records_change($recs, $zone->{'file'}, $zone);
+		return &cloudmin_services::save_dns_records($zone->{'server'},
+						       $zone->{'name'}, $recs);
 		}
+	return "Record not found";
+	}
+else {
+	return "DNS zone not found";
 	}
 }
 
@@ -184,10 +201,12 @@ if ($zone && $dnsname) {
 sub modify_bind_dns_record
 {
 my ($dnsname, $zonename, $oldip, $ip) = @_;
+return undef if (!$dnsname);
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
-if ($zone && $dnsname) {
+if ($zone && $zone->{'local'}) {
+	# Update in local DNS zone
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
@@ -198,7 +217,7 @@ if ($zone && $dnsname) {
 				      $ip, $r->{'comment'});
 		}
 	if (@r) {
-                &bind8::bump_soa_record($zone->{'file'}, \@recs);
+		&post_records_change(\@recs, $zone->{'file'}, $zone);
                 }
 	&unlock_file($lpath);
 
@@ -218,14 +237,28 @@ if ($zone && $dnsname) {
 					$old->{'ttl'}, $old->{'class'},
 					$old->{'type'}, $dnsname,
 					$old->{'comment'});
-				&bind8::bump_soa_record($rfn, $rrecs);
+				&post_records_change($rrecs, $rfn, $rzone);
 				}
 			&unlock_file($rlpath);
 			}
 		}
-	if (@r) {
-		&bind8::restart_bind();
+	}
+elsif ($zone && $zone->{'provision'}) {
+	# Update on from provisioning host
+	my $recs = &cloudmin_services::list_dns_records(
+			$zone->{'server'}, $zone->{'name'});
+	return $recs if (!ref($recs));
+	my ($r) = grep { $_->{'name'} eq $dnsname } @$recs;
+	if ($r) {
+		$r->{'values'}->[0] = $ip;
+		&post_records_change($recs, $zone->{'file'}, $zone);
+		return &cloudmin_services::save_dns_records($zone->{'server'},
+						       $zone->{'name'}, $recs);
 		}
+	return "Record not found";
+	}
+else {
+	return "Zone not found";
 	}
 }
 
@@ -237,8 +270,8 @@ my ($dnsname, $zonename, $ips, $cmts, $ttl) = @_;
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
-if ($zone && $dnsname) {
-	use Data::Dumper;
+if ($zone && $zone->{'local'}) {
+	# Update local zone
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
@@ -281,7 +314,40 @@ if ($zone && $dnsname) {
 	&unlock_file($lpath);
 	return (1, $changed);
 	}
-return (0, "DNS domain $zonename not found");
+elsif ($zone && $zone->{'provision'}) {
+	# Update provisioned zone
+	my $recs = &cloudmin_services::list_dns_records(
+			$zone->{'server'}, $zone->{'name'});
+	return (0, "Failed to fetch records : $recs") if (!ref($recs));
+	my @oldips = sort { $a cmp $b }
+			  map { $_->{'values'}->[0] }
+			      grep { $_->{'name'} eq $dnsname &&
+				     $_->{'type'} eq 'A' } @$recs;
+	my @newips = sort { $a cmp $b } @$ips;
+	if (join(" ", @oldips) ne join(" ", @newips)) {
+		$recs = [ grep { $_->{'name'} ne $dnsname ||
+				 $_->{'type'} ne 'A' } @$recs ];
+		for(my $i=0; $i<@$ips; $i++) {
+			push(@$recs, { 'name' => $dnsname,
+				       'class' => 'IN',
+				       'type' => 'A',
+				       'ttl' => $ttl,
+				       'values' => [ $ips->[$i] ],
+				       'cmt' => $cmts->[$i] });
+			}
+		&post_records_change($recs, $zone->{'file'}, $zone);
+		my $err = &cloudmin_services::validate_dns_records(
+				$zone->{'name'}, $recs);
+		return (0, "New records are invalid : $err") if ($err);
+		my $err = &cloudmin_services::save_dns_records(
+				$zone->{'server'}, $zone->{'name'}, $recs);
+		return (0, "Failed to save records : $err") if ($err);
+		return (1, scalar(@newips));
+		}
+	}
+else {
+	return (0, "DNS domain $zonename not found");
+	}
 }
 
 # get_reverse_dns_zone(ip)
