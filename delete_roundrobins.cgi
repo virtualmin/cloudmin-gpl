@@ -14,7 +14,8 @@ require './server-manager-lib.pl';
 if ($in{'delete'}) {
 	# Delete selected roundrobins
 	foreach $a (@roundrobins) {
-		&delete_roundrobin_dns($a);
+		$err = &delete_roundrobin_dns($a);
+		&error($err) if ($err);
 		&delete_roundrobin($a);
 		}
 	&webmin_log("delete", "roundrobins", scalar(@roundrobins));

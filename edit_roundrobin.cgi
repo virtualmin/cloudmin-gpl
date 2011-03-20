@@ -156,8 +156,19 @@ print &ui_hidden_table_end("notif");
 
 # Show servers and current status
 if ($roundrobin->{'include'} || $roundrobin->{'whynot'}) {
-	print &ui_hidden_table_start($text{'roundrobin_header5'}, "width=100%",
-		     2, "status", $roundrobin->{'whynot'} ? 1 : 0, \@tds);
+	print &ui_hidden_table_start(
+		&text('roundrobin_header5',
+		      &make_date($roundrobin->{'lastcheck'})), "width=100%",
+		2, "status",
+		$roundrobin->{'whynot'} || $roundrobin->{'msg'} ? 1 : 0, \@tds);
+
+	# Show reason for update failure
+	if ($roundrobin->{'msg'}) {
+		print &ui_table_row(undef,
+			"<font color=red><b>".
+			&text('roundrobin_fail', $roundrobin->{'msg'}).
+			"</b></font>", 2);
+		}
 
 	$rtable = &ui_columns_start([ $text{'roundrobin_host'},
 				      $text{'roundrobin_ip'},

@@ -72,12 +72,13 @@ my $file = "$roundrobins_dir/$rr->{'id'}";
 }
 
 # delete_roundrobin_dns(&roundrobin)
-# Deletes a DNS roundrobin's DNS record
+# Deletes a DNS roundrobin's DNS record. Returns an error message on failure.
 sub delete_roundrobin_dns
 {
 my ($rr) = @_;
-&set_bind_dns_addresses($rr->{'name'}.".".$rr->{'dom'}.".", $rr->{'dom'},
-			[ ], [ ]);
+my ($ok, $msg) = &set_bind_dns_addresses($rr->{'name'}.".".$rr->{'dom'}.".",
+					 $rr->{'dom'}, [ ], [ ]);
+return $ok ? undef : $msg;
 }
 
 # get_roundrobin_servers(&roundrobin, &all-servers)
@@ -230,6 +231,15 @@ $rr->{'include'} = join(" ", map { $_->{'id'} } @inc);
 # Record rejection reasons
 $rr->{'whynot'} = join("\t", map { join(",", @$_) } @whynot);
 
+# Record failure reason
+if (!$ok) {
+	$msg =~ s/\r|\n/ /g;
+	$rr->{'msg'} = $msg;
+	}
+else {
+	delete($rr->{'msg'});
+	}
+
 # Return status code
 return ($ok, $msg);
 }
@@ -246,25 +256,26 @@ my @errs;
 foreach my $rr (@$roundrobins) {
 	my ($ok, $msg) = &evaluate_roundrobin($rr, $servers);
 	my @inc = split(/\s+/, $rr->{'include'});
-	if (@inc < $rr->{'min'}) {
+	if (@inc < $rr->{'min'} || !$ok) {
 		# Time to email?
 		my $sincelast = $now - $rr->{'lastemail'};
 		if ($sincelast > $rr->{'interval'}) {
-			&send_roundrobin_email($rr);
+			&send_roundrobin_email($rr, $ok, $msg);
 			$rr->{'lastemail'} = $now;
 			}
 		}
+	$rr->{'lastcheck'} = $now;
 	&save_roundrobin($rr);
 	push(@errs, [ $rr, $msg ]) if (!$ok);
 	}
 return @errs;
 }
 
-# send_roundrobin_email(&rr)
+# send_roundrobin_email(&rr, updated-ok, error-message)
 # Send email when a roundrobin's systems are too few 
 sub send_roundrobin_email
 {
-my ($rr) = @_;
+my ($rr, $ok, $emsg) = @_;
 &foreign_require("mailboxes", "mailboxes-lib.pl");
 
 # Work out who to notify
@@ -278,16 +289,28 @@ if ($alert->{'email'}) {
 	push(@emails, split(/[ ,]+/, $alert->{'email'}));
 	}
 
-# Construct email message
+# Construct email message about status
 my $fmt = "%-25.25s %-15.15s %-35.35s\n";
 my @inc = split(/\s+/, $rr->{'include'});
 my @whynot = map { [ split(",", $_, 3) ] } split(/\s+/, $rr->{'whynot'});
-my $msg = &text('remail_desc',
-		$rr->{'name'}.".".$rr->{'dom'},
-		scalar(@inc), $rr->{'min'})."\n";
-$msg = join("\n", &mailboxes::wrap_lines($msg, 75))."\n";
-$msg .= "\n";
-$msg .= $text{'rmail_whynot'}."\n";
+my $msg;
+if ($ok) {
+	# Start email about system failures
+	$msg = &text('remail_desc',
+		     $rr->{'name'}.".".$rr->{'dom'},
+		     scalar(@inc), $rr->{'min'});
+	$msg = join("\n", &mailboxes::wrap_lines($msg, 75))."\n";
+	$msg .= "\n";
+	$msg .= $text{'rmail_whynot'}."\n";
+	}
+else {
+	# Start email about update errors
+	$msg = &text('remail_desc2',
+		     $rr->{'name'}.".".$rr->{'dom'}, $emsg);
+	$msg = join("\n", &mailboxes::wrap_lines($msg, 75))."\n";
+	$msg .= "\n";
+	$msg .= $text{'rmail_whynot2'}."\n";
+	}
 $msg .= "\n";
 $msg .= sprintf $fmt, $text{'roundrobin_host'},
 		      $text{'roundrobin_ip'},
@@ -311,6 +334,16 @@ foreach my $w (@whynot) {
 	$msg .= sprintf $fmt, $s->{'host'}, $ip,
 			      &text('remail_status_'.$r, $m);
 	}
+if (!$ok) {
+	foreach my $i (@inc) {
+		my $s = &get_managed_server($i);
+		next if (!$s);
+		my $ip = &get_server_ip($s);
+		$from ||= &get_global_from_address($s);
+		$msg .= sprintf $fmt, $s->{'host'}, $ip,
+				      &text('remail_status_ok');
+		}
+	}
 
 # Send the email
 my $email = join(", ", @emails);
@@ -326,17 +359,23 @@ sub describe_roundrobin_status
 my ($rr) = @_;
 my @inc = split(/\s+/, $rr->{'include'});
 my @whynot = split(/\s+/, $rr->{'whynot'});
+my $rv;
 if (@whynot) {
-	return "<font color=red>".
-	       &text('roundrobins_stbad', scalar(@inc), scalar(@whynot)).
-	       "</font>";
+	$rv = "<font color=red>".
+	      &text('roundrobins_stbad', scalar(@inc), scalar(@whynot)).
+	      "</font>";
 	}
 elsif (@inc) {
-	return &text('roundrobins_stok', scalar(@inc));
+	$rv = &text('roundrobins_stok', scalar(@inc));
 	}
 else {
-	return $text{'roundrobins_stnot'};
+	$rv = $text{'roundrobins_stnot'};
 	}
+if ($rr->{'msg'}) {
+	$rv .= " (<font color=red>".
+               &text('roundrobins_fail', $rr->{'msg'})."</font>)";
+	}
+return $rv;
 }
 
 1;

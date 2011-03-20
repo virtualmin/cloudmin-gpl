@@ -99,6 +99,10 @@ elsif ($zone && $zone->{'provision'}) {
 		&$second_print(&text('create_vserverdnseget', $recs));
 		return 0;
 		}
+	elsif (!@$recs) {
+		&$second_print(&text('create_vserverdnseget2'));
+		return 0;
+		}
 	my ($already) = grep { $_->{'name'} eq $dnsname } @$recs;
 	if ($already) {
 		# Just change the IP
@@ -248,6 +252,7 @@ elsif ($zone && $zone->{'provision'}) {
 	my $recs = &cloudmin_services::list_dns_records(
 			$zone->{'server'}, $zone->{'name'});
 	return $recs if (!ref($recs));
+	return "No records found in zone $zone->{'name'}" if (!@$recs);
 	my ($r) = grep { $_->{'name'} eq $dnsname } @$recs;
 	if ($r) {
 		$r->{'values'}->[0] = $ip;
@@ -319,6 +324,8 @@ elsif ($zone && $zone->{'provision'}) {
 	my $recs = &cloudmin_services::list_dns_records(
 			$zone->{'server'}, $zone->{'name'});
 	return (0, "Failed to fetch records : $recs") if (!ref($recs));
+	return (0, "No records found in zone $zone->{'name'}")
+		if (!@$recs);
 	my @oldips = sort { $a cmp $b }
 			  map { $_->{'values'}->[0] }
 			      grep { $_->{'name'} eq $dnsname &&
@@ -344,6 +351,7 @@ elsif ($zone && $zone->{'provision'}) {
 		return (0, "Failed to save records : $err") if ($err);
 		return (1, scalar(@newips));
 		}
+	return (1, 0);	# No changes needed
 	}
 else {
 	return (0, "DNS domain $zonename not found");

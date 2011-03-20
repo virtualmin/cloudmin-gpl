@@ -4,7 +4,8 @@
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
-&error_setup($text{'roundrobin_err'});
+&error_setup($in{'delete'} ? $text{'roundrobin_err2'}
+			   : $text{'roundrobin_err'});
 &error_if_cloudmin_replica();
 
 # Get the roundrobin being edited
@@ -15,7 +16,8 @@ if (!$in{'new'}) {
 
 if ($in{'delete'}) {
 	# Just delete the roundrobin
-	&delete_roundrobin_dns($roundrobin);
+	$err = &delete_roundrobin_dns($roundrobin);
+	&error($err) if ($err);
 	&delete_roundrobin($roundrobin);
 	&webmin_log("delete", "roundrobin", $roundrobin->{'id'},
 	    { 'name' => $roundrobin->{'name'}.".".$roundrobin->{'dom'} });
