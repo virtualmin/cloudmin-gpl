@@ -64,6 +64,16 @@ if ($info->{'mem'}) {
                 }
         }
 
+# Add memory usage for hosting
+foreach my $manager (&is_parent_server($server)) {
+	if ($server->{$manager.'_mem_free'}) {
+		push(@stats, [ "hostmemused",$server->{$manager.'_mem_total'} -
+					     $server->{$manager.'_mem_free'} ]);
+		push(@stats, [ "hostmemfree",$server->{$manager.'_mem_free'} ]);
+		last;
+		}
+	}
+
 # Add disk usage
 if ($info->{'disk_total'}) {
         push(@stats, [ "diskused",
@@ -71,6 +81,16 @@ if ($info->{'disk_total'}) {
                        $info->{'disk_total'} ]);
         push(@stats, [ "diskfree", $info->{'disk_free'} ]);
         }
+
+# Add disk usage for hosting
+foreach my $manager (&is_parent_server($server)) {
+	if ($server->{$manager.'_vg_free'}) {
+		push(@stats, [ "hostdiskused",$server->{$manager.'_vg_total'} -
+					      $server->{$manager.'_vg_free'} ]);
+		push(@stats, [ "hostdiskfree",$server->{$manager.'_vg_free'} ]);
+		last;
+		}
+	}
 
 # Add virtualmin domains
 if ($info->{'fcount'}) {
@@ -276,8 +296,8 @@ sub make_value_nice
 {
 my ($stat, $v) = @_;
 my $u;
-if ($stat eq 'memused' || $stat eq 'swapused' ||
-    $stat eq 'memfree' || $stat eq 'swapfree') {
+if ($stat eq 'memused' || $stat eq 'swapused' || $stat eq 'hostmemused' ||
+    $stat eq 'memfree' || $stat eq 'swapfree' || $stat eq 'hostmemfree') {
 	$v /= 1024*1024;
 	$u = "MB";
 	}
@@ -285,7 +305,8 @@ elsif ($stat eq 'quotalimit' || $stat eq 'quotaused') {
 	$v /= 1024*1024;
 	$u = "MB";
 	}
-elsif ($stat eq 'diskused' || $stat eq 'diskfree') {
+elsif ($stat eq 'diskused' || $stat eq 'diskfree' ||
+       $stat eq 'hostdiskused' || $stat eq 'hostdiskfree') {
 	$v /= 1024*1024*1024;
 	$u = "GB";
 	}
