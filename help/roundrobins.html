@@ -1,0 +1,26 @@
+<header>DNS Roundrobins</header>
+
+This page allows you to create and manage DNS entries that are automatically
+updated to resolve to the IP addresses of multiple systems, selected based
+on their health or other criteria. These can be used to balance web traffic
+between several servers, while automatically removing those systems that have
+failed. <p>
+
+To create a new roundrobin, click the <b>Add a new DNS roundrobin</b> link
+on this page. On the form that appears you will need to select one or more
+managed systems that the roundrobin DNS entry will resolve to, which can be
+done on a per-system basis, by group or by owner. You will also need to select
+the DNS zone to add the roundrobin record to, and enter a hostname within the
+zone. <p>
+
+After a roundrobin has been created, it can be edited from this page by
+clicking on the domain name. One or more roundrobins can also be removed by
+checking the boxes next to the name and clicking <b>Delete Selected
+Roundrobins</b>. This will also remove the DNS record. <p>
+
+Roundrobins will be updated after each of Cloudmin's background status checks,
+which by default happen every 5 minutes. You can also force an immediate
+update with the <b>Refresh Roundrobins</b> button. <p>
+
+<footer>
+
