@@ -1,19 +1,18 @@
 # Functions for managing virtual system DNS records
 
-# list_bind_zones()
+# list_bind_zones([reverse-only])
 # Returns a list of BIND master zones that we can add virtual system hostnames.
 # May include those from the cloudmin services plugin.
 sub list_bind_zones
 {
+my ($rev) = @_;
 my @rv;
 my $hasprov = &indexof("cloudmin-services", @plugins) >= 0 ? 1 : 0;
 if (&foreign_installed("bind8")) {
 	# Local local DNS zones
 	&foreign_require("bind8", "bind8-lib.pl");
 	@rv = sort { $a->{'name'} cmp $b->{'name'} }
-		 grep { $_->{'type'} eq 'master' &&
-		        $_->{'name'} !~ /in-addr|ip6.arpa/i }
-		      &bind8::list_zone_names();
+		 grep { $_->{'type'} eq 'master' } &bind8::list_zone_names();
 	foreach my $z (@rv) {
 		$z->{'local'} = 1;
 		$z->{'desc'} = &show_domain_name($z->{'name'}).
@@ -36,6 +35,12 @@ if ($hasprov) {
 			    'history' => $h });
 		}
 	}
+if ($rev) {
+	@rv = grep { $_->{'name'} =~ /in-addr|ip6.arpa/i } @rv;
+	}
+else {
+	@rv = grep { $_->{'name'} !~ /in-addr|ip6.arpa/i } @rv;
+	}
 return @rv;
 }
 
@@ -48,6 +53,7 @@ my ($dnsname, $ip, $zonename) = @_;
 
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
+my ($rfn, $rrecs, undef, $rzone) = &get_reverse_dns_zone($ip);
 if ($zone && $zone->{'local'}) {
 	# Add to local DNS zone
 	&$first_print(&text('create_vserverdns', $dnsname, $ip));
@@ -66,28 +72,7 @@ if ($zone && $zone->{'local'}) {
 				      undef, "IN", "A", $ip);
 		}
 	&post_records_change(\@recs, $zone->{'file'}, $zone);
-
-	# See if we can add to a reverse too
-	my ($rfn, $rrecs, undef, $rzone) =
-		&get_reverse_dns_zone($ip);
-	if ($rfn) {
-		my $rlpath = &bind8::make_chroot(
-				&bind8::absolute_path($rfn));
-		&lock_file($rlpath);
-		my $arpa = &ip_address_to_arpa($ip, $rzone);
-		my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
-				 @$rrecs;
-		if (!$old) {
-			&bind8::create_record($rfn, $arpa, undef,
-					      "IN", "PTR", $dnsname);
-			&post_records_change($rrecs, $rzone->{'file'}, $rzone);
-			}
-		&unlock_file($rlpath);
-		}
-
-	&$second_print($text{'create_done'});
 	&unlock_file($lpath);
-	return 1;
 	}
 elsif ($zone && $zone->{'provision'}) {
 	# Add on provisioning host
@@ -128,14 +113,56 @@ elsif ($zone && $zone->{'provision'}) {
 		&$second_print(&text('create_vserverdnseset', $err));
 		return 0;
 		}
-	else {
-		&$second_print($text{'create_done'});
-		return 1;
-		}
 	}
 else {
+	# Zone not found
 	return 0;
 	}
+
+# See if we can add to a reverse too
+print STDERR "rfn=$rfn rzone=$rzone\n";
+if ($rzone && $rzone->{'local'}) {
+	# Add reverse locally
+	my $rlpath = &bind8::make_chroot(&bind8::absolute_path($rfn));
+	&lock_file($rlpath);
+	my $arpa = &ip_address_to_arpa($ip, $rzone->{'name'});
+	my ($old) = grep { $_->{'values'}->[0] eq $dnsname } @$rrecs;
+	print STDERR "old=$old rfn=$rfn\n";
+	if (!$old) {
+		&bind8::create_record($rfn, $arpa, undef,
+				      "IN", "PTR", $dnsname);
+		&post_records_change($rrecs, $rzone->{'file'}, $rzone);
+		}
+	&unlock_file($rlpath);
+	}
+elsif ($rzone && $rzone->{'provision'}) {
+	# Add reverse on provisioning host
+	my $recs = &cloudmin_services::list_dns_records(
+			$rzone->{'server'}, $rzone->{'name'});
+	if (!ref($recs)) {
+		&$second_print(&text('create_vserverrdnseget', $recs));
+		return 0;
+		}
+	elsif (!@$recs) {
+		&$second_print(&text('create_vserverrdnseget2'));
+		return 0;
+		}
+	my ($old) = grep { $_->{'values'}->[0] eq $dnsname } @$rrecs;
+	if (!$old) {
+		push(@$recs, { 'name' => $arpa,
+			       'class' => 'IN',
+			       'type' => 'PTR',
+			       'values' => [ $dnsname ]});
+		my $err = &cloudmin_services::save_dns_records(
+			$rzone->{'server'}, $rzone->{'name'}, $recs);
+		if ($err) {
+			&$second_print(&text('create_vserverrdnseset', $err));
+			return 0;
+			}
+		}
+	}
+
+&$second_print($text{'create_done'});
 }
 
 # delete_bind8_record(dnsname, zonename, ip)
@@ -147,6 +174,7 @@ return 0 if (!$dnsname);
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
+my ($rfn, $rrecs, undef, $rzone) = &get_reverse_dns_zone($ip);
 if ($zone && $zone->{'local'}) {
 	# Remove from local DNS zone
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
@@ -161,43 +189,63 @@ if ($zone && $zone->{'local'}) {
 		&post_records_change(\@recs, $zone->{'file'}, $zone);
 		}
 	&unlock_file($lpath);
-
-	if (@r) {
-		# See if we can remove a reverse too
-		my ($rfn, $rrecs, undef, $rzone) =
-			&get_reverse_dns_zone($ip);
-		if ($ip && $rfn) {
-			my $rlpath = &bind8::make_chroot(
-					&bind8::absolute_path($rfn));
-			&lock_file($rlpath);
-			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
-					 @$rrecs;
-			if ($old) {
-				&bind8::delete_record($rfn, $old);
-				&post_records_change($rrecs, $rfn, $rzone);
-				}
-			&unlock_file($rlpath);
-			}
+	if (!@r) {
+		return "Record not found";
 		}
-	return undef;
 	}
 elsif ($zone && $zone->{'provision'}) {
 	# Delete from provisioning host
 	my $recs = &cloudmin_services::list_dns_records(
 			$zone->{'server'}, $zone->{'name'});
 	return $recs if (!ref($recs));
+	return "No records found in $zone->{'name'}" if (!@$recs);
 	my ($r) = grep { $_->{'name'} eq $dnsname } @$recs;
 	if ($r) {
 		$recs = [ grep { $_ ne $r } @$recs ];
 		&post_records_change($recs, $zone->{'file'}, $zone);
-		return &cloudmin_services::save_dns_records($zone->{'server'},
+		$err = &cloudmin_services::save_dns_records($zone->{'server'},
 						       $zone->{'name'}, $recs);
+		return $err if ($err);
 		}
-	return "Record not found";
+	else {
+		return "Record not found";
+		}
 	}
 else {
 	return "DNS zone not found";
 	}
+
+# See if we can remove a reverse too
+if ($ip && $rzone && $rzone->{'local'}) {
+	# From local DNS server
+	my $rlpath = &bind8::make_chroot(
+			&bind8::absolute_path($rfn));
+	&lock_file($rlpath);
+	my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
+			 @$rrecs;
+	if ($old) {
+		&bind8::delete_record($rfn, $old);
+		&post_records_change($rrecs, $rfn, $rzone);
+		}
+	&unlock_file($rlpath);
+	}
+elsif ($ip && $rzone && $rzone->{'provision'}) {
+	# From provisioning server
+	my $recs = &cloudmin_services::list_dns_records(
+			$rzone->{'server'}, $rzone->{'name'});
+	return $recs if (!ref($recs));
+	return "No records found in $rzone->{'name'}" if (!@$recs);
+	my ($r) = grep { $_->{'values'}->[0] eq $dnsname } @$recs;
+	if ($r) {
+		$recs = [ grep { $_ ne $r } @$recs ];
+		&post_records_change($recs, $rzone->{'file'}, $rzone);
+		$err = &cloudmin_services::save_dns_records($rzone->{'server'},
+						       $rzone->{'name'}, $recs);
+		return $err if ($err);
+		}
+	}
+
+return undef;
 }
 
 # modify_bind_dns_record(dnsname, zonename, old-ip, new-ip)
@@ -209,6 +257,7 @@ return undef if (!$dnsname);
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
+my ($rfn, $rrecs, undef, $rzone) = &get_reverse_dns_zone($oldip);
 if ($zone && $zone->{'local'}) {
 	# Update in local DNS zone
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
@@ -224,27 +273,8 @@ if ($zone && $zone->{'local'}) {
 		&post_records_change(\@recs, $zone->{'file'}, $zone);
                 }
 	&unlock_file($lpath);
-
-	if (@r) {
-		# See if we can update a reverse too
-		my ($rfn, $rrecs, undef, $rzone) =
-			&get_reverse_dns_zone($oldip);
-		if ($ip && $rfn) {
-			my $rlpath = &bind8::make_chroot(
-					&bind8::absolute_path($rfn));
-			&lock_file($rlpath);
-			my $arpa = &ip_address_to_arpa($ip, $rzone);
-			my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
-					 @$rrecs;
-			if ($old) {
-				&bind8::modify_record($rfn, $old, $arpa,
-					$old->{'ttl'}, $old->{'class'},
-					$old->{'type'}, $dnsname,
-					$old->{'comment'});
-				&post_records_change($rrecs, $rfn, $rzone);
-				}
-			&unlock_file($rlpath);
-			}
+	if (!@r) {
+		return "Record not found";
 		}
 	}
 elsif ($zone && $zone->{'provision'}) {
@@ -257,14 +287,52 @@ elsif ($zone && $zone->{'provision'}) {
 	if ($r) {
 		$r->{'values'}->[0] = $ip;
 		&post_records_change($recs, $zone->{'file'}, $zone);
-		return &cloudmin_services::save_dns_records($zone->{'server'},
-						       $zone->{'name'}, $recs);
+		my $err = &cloudmin_services::save_dns_records(
+				$zone->{'server'}, $zone->{'name'}, $recs);
+		return $err if ($err);
 		}
-	return "Record not found";
+	else {
+		return "Record not found";
+		}
 	}
 else {
 	return "Zone not found";
 	}
+
+# See if we can update a reverse too
+if ($ip && $rzone && $rzone->{'local'}) {
+	# On local DNS server
+	my $rlpath = &bind8::make_chroot(
+			&bind8::absolute_path($rfn));
+	&lock_file($rlpath);
+	my $arpa = &ip_address_to_arpa($ip, $rzone->{'name'});
+	my ($old) = grep { $_->{'values'}->[0] eq $dnsname } @$rrecs;
+	if ($old) {
+		&bind8::modify_record($rfn, $old, $arpa,
+			$old->{'ttl'}, $old->{'class'},
+			$old->{'type'}, $dnsname,
+			$old->{'comment'});
+		&post_records_change($rrecs, $rfn, $rzone);
+		}
+	&unlock_file($rlpath);
+	}
+elsif ($ip && $rzone && $rzone->{'provision'}) {
+	# On provisioning server
+	my $recs = &cloudmin_services::list_dns_records(
+			$rzone->{'server'}, $rzone->{'name'});
+	return $recs if (!ref($recs));
+	return "No records found in $rzone->{'name'}" if (!@$recs);
+	my ($r) = grep { $_->{'values'}->[0] eq $dnsname } @$recs;
+	if ($r) {
+		$r->{'name'} = $arpa;
+		&post_records_change($recs, $rzone->{'file'}, $rzone);
+		$err = &cloudmin_services::save_dns_records($rzone->{'server'},
+						       $rzone->{'name'}, $recs);
+		return $err if ($err);
+		}
+	}
+
+return undef;
 }
 
 # set_bind_dns_addresses(dnsname, zonename, &new-ips, &new-comments, ttl)
@@ -363,22 +431,18 @@ else {
 sub get_reverse_dns_zone
 {
 my ($ip) = @_;
-&foreign_require("bind8", "bind8-lib.pl");
-my $conf = &bind8::get_config();
-my @zones = &bind8::find("zone", $conf);
-foreach my $v (&bind8::find("view", $conf)) {
-	push(@zones, &bind8::find("zone", $v->{'members'}));
-	}
+my @zones = &list_bind_zones(1);
 my $arpa = &bind8::ip_to_arpa($ip);
 $arpa =~ s/\.$//;
-my ($z) = grep { $arpa =~ /\.$_->{'value'}$/i } @zones;
+print STDERR "arpa=$arpa\n";
+my ($z) = grep { $arpa =~ /\.$_->{'name'}$/i } @zones;
 if (!$z) {
 	# Look for a partial zone that could contain the IP. For example,
 	# 1.2.3.4 could be in 0-10.2.3.4.in-addr-arpa
 	my @o = split(/\./, $ip);
 	foreach my $pz (@zones) {
-		my $pip = &bind8::arpa_to_ip($pz->{'value'});
-		next if ($pip eq $pz->{'value'});
+		my $pip = &bind8::arpa_to_ip($pz->{'name'});
+		next if ($pip eq $pz->{'name'});
 		my @po = split(/\./, $pip);
 		if ($po[0] == $o[0] && $po[1] == $o[1] && $po[2] == $o[2] &&
 		    $po[3] =~ /^(\d+)\-(\d+)$/ &&
@@ -392,10 +456,8 @@ if (!$z) {
 return ( ) if (!$z);
 
 # Return details of the matching domain
-my $file = &bind8::find("file", $z->{'members'});
-my $fn = $file->{'values'}->[0];
-my @recs = &bind8::read_zone_file($fn, $z->{'value'});
-return ( $fn, \@recs, $arpa, $z->{'value'} );
+my @recs = &bind8::read_zone_file($z->{'file'}, $z->{'name'});
+return ( $z->{'file'}, \@recs, $arpa, $z );
 }
 
 # get_server_reverse_records(&server, [&ips])
