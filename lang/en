@@ -429,6 +429,7 @@ create_xendhcperr=.. failed to list network interfaces : $1
 create_exendhcpsupport=.. DHCP server cannot be configured : $1
 create_xendhcpdone=.. all done
 create_exenpygrub=Kernel loading with PyGrub or Pv-Grub was requested, but neither were found on $1
+create_exenhvmloader=The Xen HVM loader command <tt>hvmloader</tt> was not found on $1
 create_edisklimit=Creating this system would exceed your total disk limit of $1. Currently you are using $2 of disk space.
 create_edisklimit2=Creating this system would exceed your total disk limit of $1, as it does not have any limits on disk usage.
 create_eramlimit=Creating this system would exceed your total memory limit of $1. Currently you are using $2 of memory.
