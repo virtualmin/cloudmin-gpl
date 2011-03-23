@@ -7651,6 +7651,12 @@ my $sfunc = "type_".$type."_no_ssh";
 my $no_ssh = defined(&$sfunc) && &$sfunc();
 my $newserver = !$server || !$server->{'id'};
 
+# Current password popup
+my $passpop;
+if ($server && $server->{'pass'}) {
+	$passpop = &show_password_popup($server, "webmin");
+	}
+
 # Webmin login
 print &ui_hidden("webmin_newserver", $newserver);
 print &ui_table_row($text{'add_webmin'},
@@ -7664,7 +7670,8 @@ print &ui_table_row($text{'add_webmin'},
 			  &ui_textbox("wuser", $server ? $server->{'user'}
 						       : "root", 20),
 			  &ui_password("wpass", $server ? $server->{'pass'}
-						       : "", 20)) ] ])."<br>".
+						       : "", 20)) ] ]).
+		     $passpop."<br>".
 	&ui_checkbox("ssl", 1, $text{'add_ssl'},
 		     $server ? $server->{'ssl'} : 1));
 
@@ -7735,6 +7742,12 @@ my $sfunc = "type_".$type."_no_ssh";
 my $no_ssh = defined(&$sfunc) && &$sfunc();
 return if ($no_ssh);
 
+# Current password popup
+my $passpop;
+if ($server && $server->{'ssh_pass'}) {
+	$passpop = &show_password_popup($server, "ssh");
+	}
+
 # Root password / key
 my $must_pass = !&can_action(undef, "sshkeys") &&
 	        !$server->{'key'} &&
@@ -7752,7 +7765,8 @@ else {
 				       $server->{'key'} ? 1 : 0,
 		      [ [ 0, &text('add_auth0',
 			   &ui_password("upass", $server ? $server->{'ssh_pass'}
-							: undef, 20))."<br>" ],
+							: undef, 20)).
+			   $passpop."<br>" ],
 			[ 1, &text('add_auth1',
 				&ssh_key_menu("key", $type,
 					$server ? $server->{'key'}
@@ -7828,6 +7842,15 @@ foreach my $f ('ssh_user', 'ssh_port', 'ssh_pass', 'ssh_nologin',
 	       'ssh_protocol') {
 	$dst->{$f} = $src->{$f};
 	}
+}
+
+# show_password_popup(&server, mode)
+# Returns HTML for popping up a window showing a password
+sub show_password_popup
+{
+my ($server, $mode) = @_;
+my $link = "showpass.cgi?id=$server->{'id'}&mode=$mode";
+return "(<a href='$link' onClick='window.open(\"$link\", \"showpass\", \"toolbar=no,menubar=no,scrollbar=no,width=500,height=70,resizable=yes\"); return false'>$text{'edit_showpass'}</a>)";
 }
 
 # list_available_host_servers(type, [extra-ram, extra-disk])

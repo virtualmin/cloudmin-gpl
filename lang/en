@@ -835,6 +835,7 @@ dcreate_ifaced=.. created with address $1
 
 edit_title=Edit System
 edit_bheader=System details
+edit_wheader=Webmin information
 edit_eheader=Advanced $1 details
 edit_host=Internet hostname
 edit_unixhost=Unix hostname on system
@@ -1031,6 +1032,7 @@ edit_link_ifaces=Network Interfaces
 edit_link_reverse=Reverse Addresses
 edit_link_limits=Resource Limits
 edit_link_view=System Details
+edit_showpass=Show..
 
 update_title=Update Packages
 update_hostlist=Packages will be updated on : $1
@@ -4342,6 +4344,12 @@ droundrobins_err2=Failed to refresh roundrobins
 droundrobins_enone=None selected
 droundrobins_title=Refresh DNS Roundrobins
 droundrobins_fail=Failed to refresh $1 : $2
+
+showpass_title=System Password
+showpass_wuser=Webmin login
+showpass_wpass=Webmin password
+showpass_suser=SSH login
+showpass_spass=SSH password
 
 __norefs=1
 

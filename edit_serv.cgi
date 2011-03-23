@@ -69,11 +69,18 @@ if ($server->{'id'} != 0) {
 		      : &ui_textbox("desc", $server->{'desc'}, 50), 3);
 	}
 
+# Kernel info
+$k = $info->{'kernel'};
+if ($k->{'version'}) {
+	$kfield = " ".&text('edit_kernelon', $k->{'os'},
+		            $k->{'version'}, $k->{'arch'});
+	}
+
 # OS type
 if ($view) {
 	($os) = grep { $_->[0] eq $server->{'type'} }
 		     @servers::server_types;
-	print &ui_table_row($text{'edit_type2'}, $os->[1]);
+	print &ui_table_row($text{'edit_type2'}, $os->[1].$kfield);
 	}
 else {
 	if ($server->{'type'} eq 'unknown' || !$server->{'type'}) {
@@ -84,15 +91,7 @@ else {
 		    &ui_select("type", $server->{'type'} || 'unknown',
 		      [ map { [ $_->[0], $_->[1] ] }
 			sort { $a->[1] cmp $b->[1] } @servers::server_types ]).
-		    $guessbutton);
-	}
-
-# Kernel info
-$k = $info->{'kernel'};
-if ($k->{'version'}) {
-	print &ui_table_row($text{'edit_kernel'},
-		&text('edit_kernelon', $k->{'os'},
-		       $k->{'version'}, $k->{'arch'}));
+		    $guessbutton.$kfield);
 	}
 
 # Original image
@@ -153,47 +152,6 @@ if ($server->{'status_msg'}) {
 			    $server->{'status_msg'}.$clearkey);
 	}
 
-# Virtualmin config error
-if ($status eq 'virt' && $server->{'virtualmin_error'}) {
-	print &ui_table_row($text{'edit_configerr'},
-	      "<font color=#ff0000>$server->{'virtualmin_error'}</font>");
-	}
-
-# Webmin version
-if ($status eq 'virt' || $status eq 'novirt') {
-	print &ui_table_row($text{'edit_webmin'},
-			    $info->{'general'}->{'version'});
-	}
-
-if ($status eq 'virt') {
-	# Virtualmin version
-	print &ui_table_row($text{'edit_vversion'},
-	    $info->{'minfo'}->{'version'}.' ('.
-	    ($info->{'minfo'}->{'virtualmin'} eq 'gpl' ? 'GPL' : 'Pro').')');
-
-	if (!$view) {
-		# Enabled for Virtualmin domain creation
-		print &ui_table_row($text{'add_canvirt'},
-		    &ui_yesno_radio("canvirt", $server->{'novirt'} ? 0 : 1));
-		}
-
-	# Virtualmin licence
-	if ($info->{'serial'}) {
-		$exp = $info->{'serial'}->{'expiry'};
-		$expired = &check_licence_expiry($exp);
-		if ($expired == 2) {
-			$exp = "<font color=red>$exp</font>";
-			}
-		elsif ($expired == 1) {
-			$exp = "<font color=orange>$exp</font>";
-			}
-		print &ui_table_row($text{'edit_vlicence'},
-		    &text('edit_vsk', "<tt>$info->{'serial'}->{'serial'}</tt>",
-				      "<tt>$info->{'serial'}->{'key'}</tt>",
-				      $exp));
-		}
-	}
-
 # Read-only bandwidth limit
 $rfunc = "type_".$t."_real_interfaces";
 if ($view && defined(&$rfunc) && $config{'bw_enabled'}) {
@@ -209,6 +167,54 @@ if ($view && defined(&$rfunc) && $config{'bw_enabled'}) {
 	}
 
 print &ui_hidden_table_end("basic");
+
+if ($status eq 'virt' || $status eq 'novirt') {
+	print &ui_hidden_table_start($text{'edit_wheader'}, "width=100%", 2,
+				     "webmin", $in{'webmin'}, \@tds);
+
+	# Virtualmin config error
+	if ($status eq 'virt' && $server->{'virtualmin_error'}) {
+		print &ui_table_row($text{'edit_configerr'},
+	          "<font color=#ff0000>$server->{'virtualmin_error'}</font>");
+		}
+
+	# Webmin version
+	print &ui_table_row($text{'edit_webmin'},
+			    $info->{'general'}->{'version'});
+
+	if ($status eq 'virt') {
+		# Virtualmin version
+		print &ui_table_row($text{'edit_vversion'},
+		    $info->{'minfo'}->{'version'}.' ('.
+		    ($info->{'minfo'}->{'virtualmin'} eq 'gpl' ?
+		     'GPL' : 'Pro').')');
+
+		if (!$view) {
+			# Enabled for Virtualmin domain creation
+			print &ui_table_row($text{'add_canvirt'},
+			    &ui_yesno_radio("canvirt",
+					    $server->{'novirt'} ? 0 : 1));
+			}
+
+		# Virtualmin licence
+		if ($info->{'serial'}) {
+			$exp = $info->{'serial'}->{'expiry'};
+			$expired = &check_licence_expiry($exp);
+			if ($expired == 2) {
+				$exp = "<font color=red>$exp</font>";
+				}
+			elsif ($expired == 1) {
+				$exp = "<font color=orange>$exp</font>";
+				}
+			print &ui_table_row($text{'edit_vlicence'},
+			    &text('edit_vsk',
+				  "<tt>$info->{'serial'}->{'serial'}</tt>",
+				  "<tt>$info->{'serial'}->{'key'}</tt>", $exp));
+			}
+		}
+
+	print &ui_hidden_table_end("webmin");
+	}
 
 # Resource usage, if supported
 if (defined(&get_server_usage)) {
