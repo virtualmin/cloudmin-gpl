@@ -2091,6 +2091,9 @@ return $st[2] & 040000 ? 1 : 0;
 sub has_command_on_server
 {
 my ($server, $cmd) = @_;
+if ($server->{'manager'} eq 'this') {
+	return &has_command($cmd);
+	}
 my ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd");
 if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 	# Failed .. but maybe we don't even have the which command??
