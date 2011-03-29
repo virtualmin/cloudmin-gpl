@@ -4305,7 +4305,6 @@ roundrobin_urlsel=URL template
 roundrobin_alerts=Alerts that must not be firing
 roundrobin_err=Failed to save DNS roundrobin
 roundrobin_err2=Failed to delete DNS roundrobin
-roundrobin_egone=Roundrobin no longer exists!
 roundrobin_ename=Missing or invalid DNS record name
 roundrobin_ename2=DNS record name cannot start or end with a dot
 roundrobin_edom=Missing DNS zone name
