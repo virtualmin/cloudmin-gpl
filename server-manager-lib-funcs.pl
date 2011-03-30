@@ -7853,7 +7853,7 @@ sub show_password_popup
 {
 my ($server, $mode) = @_;
 my $link = "showpass.cgi?id=$server->{'id'}&mode=$mode";
-return "(<a href='$link' onClick='window.open(\"$link\", \"showpass\", \"toolbar=no,menubar=no,scrollbar=no,width=500,height=70,resizable=yes\"); return false'>$text{'edit_showpass'}</a>)";
+return " (<a href='$link' onClick='window.open(\"$link\", \"showpass\", \"toolbar=no,menubar=no,scrollbar=no,width=500,height=70,resizable=yes\"); return false'>$text{'edit_showpass'}</a>)";
 }
 
 # list_available_host_servers(type, [extra-ram, extra-disk])

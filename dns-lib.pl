@@ -120,14 +120,12 @@ else {
 	}
 
 # See if we can add to a reverse too
-print STDERR "rfn=$rfn rzone=$rzone\n";
 if ($rzone && $rzone->{'local'}) {
 	# Add reverse locally
 	my $rlpath = &bind8::make_chroot(&bind8::absolute_path($rfn));
 	&lock_file($rlpath);
 	my $arpa = &ip_address_to_arpa($ip, $rzone->{'name'});
 	my ($old) = grep { $_->{'values'}->[0] eq $dnsname } @$rrecs;
-	print STDERR "old=$old rfn=$rfn\n";
 	if (!$old) {
 		&bind8::create_record($rfn, $arpa, undef,
 				      "IN", "PTR", $dnsname);
@@ -434,7 +432,6 @@ my ($ip) = @_;
 my @zones = &list_bind_zones(1);
 my $arpa = &bind8::ip_to_arpa($ip);
 $arpa =~ s/\.$//;
-print STDERR "arpa=$arpa\n";
 my ($z) = grep { $arpa =~ /\.$_->{'name'}$/i } @zones;
 if (!$z) {
 	# Look for a partial zone that could contain the IP. For example,
