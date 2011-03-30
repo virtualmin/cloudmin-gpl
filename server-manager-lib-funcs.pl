@@ -6303,7 +6303,7 @@ if (defined($serialcache{$shk})) {
 my ($out, $error);
 &http_download($virtualmin_licence_host,
 	       $virtualmin_licence_port,
-	       "$virtualmin_licence_prog?id=$id&serial=$key",
+	       "$virtualmin_licence_prog?id=$id&serial=$key&cloudmin=1",
 	       \$out, \$error, undef, $virtualmin_licence_ssl,
 	       undef, undef, 30);
 my @rv;
