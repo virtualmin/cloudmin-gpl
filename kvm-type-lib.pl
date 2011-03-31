@@ -3841,7 +3841,8 @@ return undef;
 sub find_qemu_kvm_command
 {
 my ($vhost) = @_;
-foreach my $c ("kvm", "qemu-kvm", "/usr/libexec/qemu-kvm") {
+foreach my $c ("kvm", "qemu-kvm", "/usr/libexec/qemu-kvm",
+	       $config{'kvm_qemu'} ? ( "qemu" ) : ( )) {
 	my $path = &has_command_on_server($vhost, $c);
 	return $path if ($path);
 	}
@@ -4825,7 +4826,7 @@ return (
 sub parse_kvm_start_command
 {
 my ($line) = @_;
-if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm)\s+(.*)/) {
+if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm|qemu)\s+(.*)/) {
 	# Found a possible KVM line .. parse the args
 	my ($cmd, $args) = ($2, $3);
 	my @w = &split_quoted_string($args);
