@@ -49,3 +49,4 @@ ssh_compress=0
 ssh_ciphers=*
 citrix_unsafe=0
 show_unix=0
+openvz_ctx=10000
