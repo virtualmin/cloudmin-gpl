@@ -38,6 +38,7 @@ push(@INC, $server_manager_root);
 				      "vserver",
 				      "zones",
 				      "openvz",
+				      "lxc",
 				      "ec2",
 				      "this",
 				    );
@@ -258,11 +259,19 @@ elsif ($mode == 1) {
 	foreach my $s (grep { $_->{'manager'} eq 'this' ||
 			      $_->{'manager'} eq 'real' ||
 			      $_->{'manager'} eq 'ec2' } @rv) {
+		# First level (real or EC2)
 		push(@newrv, $s);
 		foreach my $cs (&list_child_servers($s, \@rv)) {
+			# Second level (xen, kvm, etc)
 			$cs->{'indent'} = 1;
 			$cs->{'indent_host'} = $s->{'id'};
 			push(@newrv, $cs);
+			foreach my $ccs (&list_child_servers($cs, \@rv)) {
+				# Third level (lxc or openvz on xen)
+				$ccs->{'indent'} = 2;
+				$ccs->{'indent_host'} = $cs->{'id'};
+				push(@newrv, $ccs);
+				}
 			}
 		}
 	@rv = @newrv;
@@ -5624,6 +5633,7 @@ if ($server_management_types{'xen'} ||
     $server_management_types{'kvm'} ||
     $server_management_types{'vserver'} ||
     $server_management_types{'openvz'} ||
+    $server_management_types{'lxc'} ||
     $server_management_types{'zones'}) {
 	push(@glinks, "list_images.cgi");
 	push(@gtitles, $text{'images_title'});
@@ -5643,6 +5653,7 @@ if ($server_management_types{'xen'} ||
     $server_management_types{'kvm'} ||
     $server_management_types{'vserver'} ||
     $server_management_types{'openvz'} ||
+    $server_management_types{'lxc'} ||
     $server_management_types{'zones'}) {
 	push(@glinks, "edit_bw.cgi");
 	push(@gtitles, $text{'bw_title'});
@@ -6812,7 +6823,7 @@ sub is_parent_server
 {
 my ($server) = @_;
 my @rv;
-foreach my $t ('xen', 'kvm', 'vserver', 'zone', 'openvz', 'citrix') {
+foreach my $t ('xen', 'kvm', 'vserver', 'zone', 'openvz', 'lxc', 'citrix') {
 	if ($server->{$t."_host"}) {
 		push(@rv, $t eq 'zone' ? 'zones' : $t);
 		}

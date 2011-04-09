@@ -34,6 +34,10 @@ CD-ROM with the C<--media> flag. This allows you to attach an existing ISO
 image as a CD, which will appear as a actual CD-ROM drive within the virtual
 system. On KVM the supported media types are I<disk> and I<cdrom>.
 
+By default disk creation will fail if the specified file or logical volume
+already exists on the host system. You can instead force deletion of any
+existing file with the C<--overwrite> flag.
+
 =head1 Example usage
 
   cloudmin create-disk --host xencentos.home --auto-virt --auto-real --size 500
