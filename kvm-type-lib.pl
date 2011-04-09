@@ -2146,6 +2146,20 @@ if ($disk->{'device'} && !$disk->{'lv'}) {
 		      "on $vhost->{'host'}";
 	}
 else {
+	if ($disk->{'lv'} && $disk->{'overwrite'}) {
+		# Delete existing LV
+		&delete_all_disk_image_partitions($vhost, $disk->{'real'});
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+		&remote_foreign_call($vhost, "lvm",
+				     "delete_logical_volume",
+				     { 'device' => $disk->{'real'} });
+		}
+	elsif (@st && $disk->{'overwrite'}) {
+		# Delete existing file
+		&delete_file_on_server($vhost, $disk->{'real'});
+		@st = ( );
+		}
+
 	if ($disk->{'lv'}) {
 		# Create the logical volume
 		$last_remote_error = undef;

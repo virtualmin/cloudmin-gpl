@@ -100,6 +100,9 @@ elsif ($in{'new'} == 1 && &can_action($server, "devices")) {
 		$realsel = &ui_textbox("real", $disk->{'real'}, 50);
 		$txt = 'disk_real2';
 		}
+	$realsel .= " ".&ui_checkbox("overwrite", 1,
+			     $disk->{'lv'} ? $text{'disk_overwrite2'}
+					   : $text{'disk_overwrite'}, 0);
 	}
 else {
 	# Cannot edit real file for existing disks

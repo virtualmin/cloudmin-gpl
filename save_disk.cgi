@@ -182,6 +182,7 @@ else {
 			$in{'real'} =~ /^\/\S+$/ || &error($text{'disk_ereal'});
 			$disk->{'real'} = $in{'real'};
 			}
+		$disk->{'overwrite'} = $in{'overwrite'};
 		}
 	if ($in{'new'}) {
 		$disk->{'device'} = ($disk->{'real'} =~ /^\/dev\//);

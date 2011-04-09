@@ -98,6 +98,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--storage") {
 		$storage = shift(@ARGV);
 		}
+	elsif ($a eq "--overwrite") {
+		$overwrite = 1;
+		}
 	else {
 		&usage();
 		}
@@ -191,6 +194,7 @@ if ($lv) {
 if ($media) {
 	$disk->{'media'} = $media;
 	}
+$disk->{'overwrite'} = $overwrite;
 
 # Check for clashes
 ($rclash) = grep { $_->{'real'} eq $disk->{'real'} } @$disks;
@@ -266,6 +270,7 @@ print "                    [--format filesystem]\n";
 print "                    [--mount directory|\"swap\"]\n";
 print "                    [--media type]\n";
 print "                    [--storage id|\"name\"]\n";
+print "                    [--overwrite]\n";
 exit(1);
 }
 
