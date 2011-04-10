@@ -483,6 +483,7 @@ foreach $s (@servers) {
 					print ".. done\n";
 					}
 				}
+			&check_server_status($s, 0, 1);
 			&save_managed_server($s);
 			print "\n";
 			}
