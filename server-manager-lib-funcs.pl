@@ -977,6 +977,22 @@ if (!$server->{'fast'}) {
 	$fast_try = 1;
 	$server->{'fast'} = 1;
 	}
+if ($server->{'fast'}) {
+	# Quickly check if port 10001 is open
+	my $rpcport = $server->{'port'}+1;
+	my $ip = &get_server_ip($server);
+	eval {
+		local $SIG{'ALRM'} = sub { die "timeout\n" };
+		local $main::error_must_die = 1;
+		alarm(2);
+		my $err;
+		&open_socket($ip, $rpcport, TRYPORT, \$err);
+		close(TRYPORT);
+		};
+	if ($@ =~ /timeout/) {
+		return (1, "Port $rpcport is firewalled");
+		}
+	}
 my $rfc;
 eval {
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
