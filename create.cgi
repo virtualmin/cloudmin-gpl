@@ -403,6 +403,11 @@ elsif ($in{'webmin_mode'}) {
 			}
 		}
 	}
+else {
+	# No webmin, so clear user and pass fields
+	delete($server->{'user'});
+	delete($server->{'pass'});
+	}
 
 # If we do have Webmin, wait for it to start
 if ($webmindir) {

@@ -6,6 +6,7 @@ require './server-manager-lib.pl';
 &ReadParse();
 &can_add_server_error($in{'type'});
 &ui_print_header(undef, $text{'add_title'}, "", "add".$in{'type'});
+@servers = &list_managed_servers();
 
 print &ui_form_start("add.cgi", "post");
 print &ui_hidden("type", $in{'type'});
