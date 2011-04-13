@@ -381,6 +381,7 @@ create_xencpu=Maximum CPU use
 create_exencpu=Maximum CPU use must be a number
 create_xenrate=Maximum network speed
 create_exenmemory=Memory allocated must be a number
+create_elxcmemory=LXC host system does not support memory limits
 create_exenswapsize=Swap file size must be a number
 create_xenstartup=Starting up new Xen instance ..
 create_exenstartup=.. failed to start : $1
@@ -4259,6 +4260,8 @@ clone_vserver=Creating new empty VServer ..
 clone_evserver=.. creation failed : $1
 clone_copying=Copying files from original system ..
 clone_ecopy=.. copy failed : $1
+clone_lxcconfig=Updating LXC configuration file ..
+clone_elxcconfig=.. update failed : $1
 
 failovers_title=Host Failover Groups
 failovers_add=Add a new failover group.
