@@ -102,39 +102,63 @@ $this->{'desc'} = $text{'this_this'};
 # If this system can host Xen and we are in Xen-only mode, allow it to
 # be a host, and set some useful defaults for IP allocation
 if ($module_info{'onehost'} eq 'xen' &&
-    $server_management_types{'xen'} &&
-    ($config{'xen_checked'} || !&check_xen_host_software($this))) {
-	$this->{'xen_host'} = 1;
-	if (!$this->{'xen_start'}) {
-		my $eth0 = &first_ethernet_iface();
-		($this->{'xen_start'}, $this->{'xen_end'}) =
-		  &first_ethernet_range($eth0);
-		$this->{'xen_cidr'} =
-		  &net::mask_to_prefix($eth0->{'netmask'} || "255.255.255.0");
+    $server_management_types{'xen'}) {
+	my $err = $config{'xen_checked'} ? undef
+					 : &check_xen_host_software($this);
+	if ($err) {
+		# Cannot be a host - record why not
+		$this->{'xen_host_err'} = $err;
 		}
-	$this->{'xen_dir'} ||= "/xen";
+	else {
+		# This system can be a Xen host
+		$this->{'xen_host'} = 1;
+		if (!$this->{'xen_start'}) {
+			my $eth0 = &first_ethernet_iface();
+			($this->{'xen_start'}, $this->{'xen_end'}) =
+			  &first_ethernet_range($eth0);
+			$this->{'xen_cidr'} =
+			  &net::mask_to_prefix($eth0->{'netmask'} ||
+					       "255.255.255.0");
+			}
+		$this->{'xen_dir'} ||= "/xen";
+		delete($this->{'xen_host_err'});
 
-	# Save flag indicating that we have already checked out Xen
-	# on this machine, as doing so can be slow
-	$config{'xen_checked'} = 1;
-	&save_module_config();
+		# Save flag indicating that we have already checked out Xen
+		# on this machine, as doing so can be slow
+		$config{'xen_checked'} = 1;
+		&save_module_config();
+		}
 	}
 
 # Do the same for KVM
 if ($module_info{'onehost'} eq 'kvm' &&
-    $server_management_types{'kvm'} &&
-    ($config{'kvm_checked'} || !&check_kvm_host_software($this))) {
-	$this->{'kvm_host'} = 1;
-	if (!$this->{'kvm_start'}) {
-		my $eth0 = &first_bridge_iface();
-		($this->{'kvm_start'}, $this->{'kvm_end'}) =
-		  &first_ethernet_range($eth0);
-		$this->{'kvm_cidr'} =
-		  &net::mask_to_prefix($eth0->{'netmask'} || "255.255.255.0");
+    $server_management_types{'kvm'}) {
+	my $err = $config{'xen_checked'} ? undef
+					 : &check_kvm_host_software($this);
+	my $br0 = &first_bridge_iface();
+	if ($err) {
+		# Cannot be KVM host .. record why not
+		$this->{'kvm_host_err'} = $err;
 		}
-	$this->{'kvm_dir'} ||= "/kvm";
-	$config{'kvm_checked'} = 1;
-	&save_module_config();
+	elsif (!$br0) {
+		# No bridge found
+		$this->{'kvm_host_err'} = $text{'onehost_nobridge'};
+		}
+	else {
+		# This system can be a KVM host
+		$this->{'kvm_host'} = 1;
+		if (!$this->{'kvm_start'}) {
+			($this->{'kvm_start'}, $this->{'kvm_end'}) =
+			  &first_ethernet_range($br0);
+			$this->{'kvm_cidr'} =
+			  &net::mask_to_prefix($br0->{'netmask'} ||
+					       "255.255.255.0");
+			}
+		$this->{'kvm_dir'} ||= "/kvm";
+		delete($this->{'kvm_host_err'});
+		$config{'kvm_checked'} = 1;
+		&save_module_config();
+		}
 	}
 
 return $this;
@@ -4649,14 +4673,31 @@ return $rv;
 # Returns HTML for any warnings
 sub warning_messages
 {
+# Licence expiry
 my $warns = &licence_error_message();
 if (&is_cloudmin_replica()) {
+	# System is a replica
 	my $rv = "<table width=100%><tr bgcolor=#ffff88><td align=center>";
 	my $master = &get_replication_master();
 	$rv .= "<p><b>".($master ? &text('repl_warning', $master)
 				 : $text{'repl_warning2'})."</b><p>\n";
 	$rv .= "</td></tr></table>\n";
 	$warns .= $rv;
+	}
+my $one = $module_info{'onehost'};
+if ($one) {
+	my $this = &get_this_managed_server();
+	my $err = $this->{$one.'_host_err'};
+	if (!$this->{$one.'_host'} && $err) {
+		# System cannot be a host in single-host mode
+		my $rv = "<table width=100%>".
+			 "<tr bgcolor=#ffff88><td align=center>";
+		$rv .= "<p><b>".&text('onehost_err',
+				      $text{$one.'_typedesc'}, $err)."</b><p>";
+		$rv .= "<b>".$text{'onehost_err2'}."</b><p>\n";
+		$rv .= "</td></tr></table>\n";
+		$warns .= $rv;
+		}
 	}
 return $warns;
 }

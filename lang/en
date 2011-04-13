@@ -1305,6 +1305,7 @@ lxc_esoft=The selected system cannot support LXC containers : $1
 lxc_edir=The specified base directory does not exist
 lxc_ezone=Missing or invalid-looking DNS domain
 lxc_eiface=Missing or invalid-looking base network interface
+lxc_bridge=Bridge on host system for LXC interfaces
 
 vchooser_title=Select VServer Instance
 vchooser_elist=Failed to fetch VServers : $1
@@ -4445,6 +4446,10 @@ showpass_wuser=Webmin login
 showpass_wpass=Webmin password
 showpass_suser=SSH login
 showpass_spass=SSH password
+
+onehost_err=This system cannot be a $1 host : $2
+onehost_err2=Virtual systems cannot be created or added until this is fixed.
+onehost_nobridge=No bridge interfaces like <tt>br0</tt> were found
 
 __norefs=1
 

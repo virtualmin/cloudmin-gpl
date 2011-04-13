@@ -8,3 +8,4 @@ High resolution VGA graphics can now be enabled for new or editing KVM virtual s
 Added the Roundrobin DNS Records page, for creating DNS entries that are automatically updated to point to only managed systems that are alive.
 The SSH and Webmin passwords for a virtual system can now be viewed by clicking on the Show link on the Edit System page.
 Added an option on the disk creation page to overwrite an existing file or LV, and an equivalent --overwrite flag to the create-disk command.
+If the Cloudmin system cannot be a KVM host due to running the wrong kernel or missing KVM tools, a warning message is now shown after logging in.
