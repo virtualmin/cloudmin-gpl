@@ -695,6 +695,14 @@ $iface ||= "eth0";
 my $broadcast = &net::compute_broadcast($ip, $netmask);
 my $network = &net::compute_network($ip, $netmask);
 
+# Work out mandatory files .. on redhat-ish systems, always create ifcfg- file
+# for primary interface.
+my %mand;
+if (&stat_file_on_server($vhost,
+			 $dir."/etc/sysconfig/network-scripts/ifcfg-lo")) {
+	$mand{"/etc/sysconfig/network-scripts/ifcfg-$iface"} = 1;
+	}
+
 # Fix relevant files
 foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/network/interfaces",
@@ -702,7 +710,7 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 	my $fixpath = "$dir/$fix";
 	my $temppath = &transname();
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
-	next if ($err);
+	next if ($err && !$mand{$fix});
 	my $data = &read_file_contents($temppath);
 	if ($fix =~ /ifcfg-$iface/) {
 		# Redhat config file
