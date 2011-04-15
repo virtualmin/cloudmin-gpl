@@ -43,7 +43,8 @@ foreach my $server (@servers) {
 # For each system, get it's current counts, compare to old counts, then up
 # the total for this hour
 foreach $s (@servers) {
-	next if ($s->{'status'} eq 'nohost');
+	next if ($s->{'status'} eq 'nohost' ||
+		 $s->{'status'} eq 'down');
 	my $bwinfo = &get_bandwidth($s);
 	$now = time();
 	($in, $out, $inp, $outp) = &get_server_traffic($s);
