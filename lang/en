@@ -3065,6 +3065,7 @@ find_lxcalready=.. already managed by Cloudmin as $1
 find_lxcalready2=.. the system $1 is already using IP address $2
 find_lxcnotrunning=.. container $1 is not currently running
 find_lxcdone=.. added system $1 with status $2
+find_lxcnoip=.. could not work out IP address
 find_citrixinstances=Finding running Citrix Xen VMs ..
 find_citrixinstancesdone=.. found $1 VMs
 find_citrixinstanceserr=.. failed : $1
