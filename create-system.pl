@@ -568,6 +568,12 @@ if (defined(&$dfunc)) {
 print "Refreshing status ..\n";
 &save_managed_server($server);
 &check_server_status($server, 1);
+if (!$server->{'type'}) {
+	$server->{'type'} = &guess_os_type($server);
+	if ($server->{'type'}) {
+		&check_server_status($server);
+		}
+	}
 &save_managed_server($server);
 print ".. done ($server->{'status'})\n\n";
 
