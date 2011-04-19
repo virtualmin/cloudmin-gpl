@@ -100,8 +100,10 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 # Show selector for interfaces to collect bandwidth stats for, if real
 $rfunc = "type_".$server->{'manager'}."_real_interfaces";
 @realifaces = grep { $_->{'virtual'} eq '' } @$ifaces;
+@bwifaces = split(/\s+/, $server->{'bw_ifaces'});
 if (defined(&$rfunc) && $config{'bw_enabled'} &&
-    &can_action($server, "bw") && @realifaces) {
+    &can_action($server, "bw") && @realifaces &&
+    (@bwifaces || @realifaces > 1)) {
 	print &ui_hr();
 	print $text{'ifaces_bwdesc'},"\n";
 
@@ -109,7 +111,6 @@ if (defined(&$rfunc) && $config{'bw_enabled'} &&
 	print &ui_hidden("id", $in{'id'});
 	print &ui_table_start($text{'ifaces_bwheader'}, undef, 2);
 
-	@bwifaces = split(/\s+/, $server->{'bw_ifaces'});
 	print &ui_table_row($text{'ifaces_bw'},
 		&ui_radio("bw_all", @bwifaces ? 0 : 1,
 			  [ [ 1, $text{'ifaces_bw1'} ],
