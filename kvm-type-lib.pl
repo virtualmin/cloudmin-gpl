@@ -3385,7 +3385,8 @@ return ( );
 sub type_kvm_post_refresh
 {
 my ($server, $regen) = @_;
-if ($server->{'kvm_disktotal'} eq '' || $regen) {
+if ($server->{'kvm_disktotal'} eq '' ||
+    $server->{'kvm_disktotal'} < 0 || $regen) {
 	&type_kvm_compute_disksize($server);
 	}
 if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
