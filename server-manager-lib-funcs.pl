@@ -1044,7 +1044,8 @@ if ($@) {
 		return (3, $@);
 		}
 	}
-return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'});
+return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'},
+	$rfc->{'os_version'}, $rfc->{'real_os_version'});
 }
 
 # run_ssh_command(command, password, timeout, [leave-open])
@@ -2578,7 +2579,7 @@ if ($regen) {
 # If we have a Webmin login, try it
 my ($got_memory, $got_disk, $got_kernel, $got_io, $got_kernel);
 if ($server->{'user'} || $server->{'id'} == 0) {
-	my ($status, $err, $ostype, $real_ostype) =
+	my ($status, $err, $ostype, $real_ostype, $osver, $real_osver) =
 		&check_server_webmin_login($server);
 	if ($status == 2) {
 		# Webmin replied, but it rejected our login
@@ -2778,6 +2779,12 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		$info->{'general'}->{'tinfo'} =
 			&remote_eval($server, "webmin",
 				 "\%t=get_theme_info(\$current_theme); \\\%t");
+
+		# Save Webmin OS info
+		$info->{'general'}->{'os_type'} = $ostype;
+		$info->{'general'}->{'os_version'} = $osver;
+		$info->{'general'}->{'real_os_type'} = $real_ostype;
+		$info->{'general'}->{'real_os_version'} = $real_osver;
 
 		# Get network interfaces, as seen by the system
 		my $ifunc = "type_".$server->{'manager'}."_list_interfaces";

@@ -887,6 +887,7 @@ edit_statustime=$1 (Last changed at $2)
 edit_atboot=Start at host boot time?
 edit_os=Operating system
 edit_webmin=Webmin version
+edit_webminos=Operating system from Webmin
 edit_image=Create Image
 edit_clone=Clone System
 edit_move=Move System

@@ -159,6 +159,10 @@ if ($multi) {
 			print "    OS code: ",$s->{'type'},"\n";
 			print "    Webmin version: ",
 			      $info->{'general'}->{'version'},"\n";
+			print "    Webmin OS type: ",
+			      $info->{'general'}->{'real_os_type'},"\n";
+			print "    Webmin OS version: ",
+			      $info->{'general'}->{'real_os_version'},"\n";
 			}
 		if ($s->{'status'} eq 'virt') {
 			print "    Virtualmin version: ",

@@ -182,6 +182,13 @@ if ($status eq 'virt' || $status eq 'novirt') {
 	print &ui_table_row($text{'edit_webmin'},
 			    $info->{'general'}->{'version'});
 
+	# OS according to Webmin
+	if ($info->{'general'}->{'real_os_type'}) {
+		print &ui_table_row($text{'edit_webminos'},
+			$info->{'general'}->{'real_os_type'}." ".
+			$info->{'general'}->{'real_os_version'});
+		}
+
 	if ($status eq 'virt') {
 		# Virtualmin version
 		print &ui_table_row($text{'edit_vversion'},
