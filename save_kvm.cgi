@@ -64,6 +64,8 @@ else {
 	&parse_ip_range_input(\%in, $kvm, "kvm");
 
 	# Host system interfaces
+	@bridges = &list_kvm_host_bridges($kvm);
+	@bridges || &error($text{'kvm_ebridges'});
 	if ($in{'iface_def'}) {
 		$kvm->{'kvm_iface'} = undef;
 		}
