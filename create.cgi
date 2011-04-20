@@ -431,7 +431,7 @@ if (defined(&$dfunc)) {
 print $text{'add_statusing'},"<br>\n";
 &save_managed_server($server);
 &check_server_status($server, 1);
-if (!$server->{'type'}) {
+if (!$server->{'type'} || $server->{'type'} eq 'unknown') {
 	$server->{'type'} = &guess_os_type($server);
 	if ($server->{'type'}) {
 		&check_server_status($server);
