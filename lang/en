@@ -1300,6 +1300,7 @@ lxc_find=Find Hosted LXC Containers
 lxc_err=Failed to save LXC host
 lxc_elinux=LXC containers are only supported on Linux
 lxc_ekernel=The system's Linux kernel does not appear to include LXC support
+lxc_ecgroup=The /cgroup filesystem is not mounted
 lxc_ewhich=The required command $1 does not exist. Perhaps the LXC software is not installed?
 lxc_ekernel=The kernel does not include LXC support. Perhaps it not been compiled with the required patch?
 lxc_edown=A system which cannot be contacted via SSH cannot be used for LXC hosting
@@ -1382,6 +1383,13 @@ ctchooser_enone=The selected system has no Citrix Xen templates
 ctchooser_id=Template UUID
 ctchooser_name=Template name
 ctchooser_size=Disk size
+
+ltchooser_title=Select LXC Template
+ltchooser_elist=Failed to fetch templates : $1
+ltchooser_enone=The selected system has no LXC templates
+ltchooser_id=Template name
+ltchooser_file=Filename
+ltchooser_size=Size
 
 ipchooser_title=Select Free IP Address
 ipchooser_ealloc=IP address allocation is not available for this system type
