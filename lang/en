@@ -2499,6 +2499,7 @@ cat_power=System State
 cat_manage=System Operations
 cat_ec2=Amazon EC2
 cat_settings=Cloudmin Settings
+cat_owners=System Owners
 cat_virtualmin=Virtualmin Settings
 cat_hosts=Host Systems
 cat_backup=Backup and Restore

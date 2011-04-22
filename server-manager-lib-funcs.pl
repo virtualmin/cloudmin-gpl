@@ -5748,14 +5748,14 @@ push(@gcats, "monitor");
 push(@glinks, "list_owners.cgi");
 push(@gtitles, $text{'owners_title'});
 push(@gicons, "images/owners.gif");
-push(@gcats, "settings");
+push(@gcats, "owners");
 
 # Account plans
 if (&supports_plans()) {
 	push(@glinks, "list_plans.cgi");
 	push(@gtitles, $text{'plans_title'});
 	push(@gicons, "images/plans.gif");
-	push(@gcats, "settings");
+	push(@gcats, "owners");
 	}
 
 # Master admin email
