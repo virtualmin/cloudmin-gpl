@@ -55,6 +55,9 @@ if (!&is_cloudmin_replica() && defined(&check_for_failovers)) {
 	&check_for_failovers(\@servers);
 	}
 
+# Check Virtualmin licences for the account, to prevent delays in the UI
+&list_virtualmin_licences();
+
 if (&get_replication_mode() == 2) {
 	# Replicate changes if enabled
 	if (@ARGV) {
