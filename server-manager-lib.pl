@@ -165,7 +165,8 @@ $xen_cpu_seconds_file = "$module_config_directory/xen-cpu-seconds";
 $xen_migration_port = 8002;
 
 %type_mac_prefix = ( 'xen' => '00:16:3e',
-		     'kvm' => '02:54:00' );
+		     'kvm' => '02:54:00',
+		     'lxc' => '4e:a9:5e', );
 
 $owner_plans_dir = "$module_config_directory/plans";
 
