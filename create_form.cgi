@@ -111,6 +111,37 @@ if (!$no_ssh) {
 else {
 	$has_root_password = 0;
 	}
+
+# System owner
+if (&can_action(undef, "global") && defined(&list_system_owners) &&
+    !$access{'owner'}) {
+	@owners = sort { $a->{'name'} cmp $b->{'name'} } &list_system_owners();
+	@otable = ( [ 0, $text{'create_noowner'} ] );
+	if (@owners) {
+		push(@otable, [ 1, $text{'create_oexist'},
+				&ui_select("owner", undef,
+				  [ map { $_->{'name'} } @owners ]) ]);
+		}
+	@plans = &supports_plans() ? &list_plans() : ( );
+	if (@plans) {
+		push(@otable, [ 2, $text{'create_onew'},
+			&ui_textbox("newowner", undef, 20)." ".
+			$text{'create_onewpass'}." ".
+		        &ui_password("newownerpass", undef, 20)."<br>".
+			$text{'create_onewplan'}." ".
+		  	&ui_select("newownerplan", $plans[0]->{'id'},
+			    [ map { [ $_->{'id'}, &describe_plan($_) ] }
+				  @plans ]) ]);
+		}
+	if (@otable > 1) {
+		print &ui_table_row($text{'create_owner'},
+			&ui_radio_table("omode", 0, \@otable, 1));
+		}
+	else {
+		print &ui_hidden("omode", 0);
+		}
+	}
+
 print &ui_hidden_table_end();
 
 # Type-specific limit options
@@ -177,38 +208,6 @@ if (&can_action(undef, "virtualmin")) {
 	# Update Virtualmin package?
 	print &ui_table_row($text{'create_update'},
 		&ui_yesno_radio("update", 1));
-
-	print &ui_hidden_table_end();
-	}
-
-# Start of section for new owner
-if (&can_action(undef, "global") && defined(&list_system_owners) &&
-    !$access{'owner'}) {
-	print &ui_hidden_table_start($text{'create_oheader'}, "width=100%", 2,
-				     "owner", 0, [ "width=30%" ]);
-
-	@owners = sort { $a->{'name'} cmp $b->{'name'} } &list_system_owners();
-	@otable = ( [ 0, $text{'create_noowner'} ] );
-	if (@owners) {
-		push(@otable, [ 1, $text{'create_oexist'},
-				&ui_select("owner", undef,
-				  [ map { $_->{'name'} } @owners ]) ]);
-		}
-	@plans = &supports_plans() ? &list_plans() : ( );
-	@ogrid = ( );
-	push(@ogrid, "<b>".$text{'owner_name'}."</b>",
-		     &ui_textbox("newowner", undef, 20));
-	push(@ogrid, "<b>".$text{'owner_pass'}."</b>",
-		     &ui_password("newownerpass", undef, 20));
-	if (@plans) {
-		push(@ogrid, "<b>".$text{'owner_plan'}."</b>",
-		  &ui_select("newownerplan", $plans[0]->{'id'},
-		    [ map { [ $_->{'id'}, &describe_plan($_) ] } @plans ]));
-		}
-	push(@otable, [ 2, $text{'create_onew'},
-			&ui_grid_table(\@ogrid, 2, 100) ]);
-	print &ui_table_row($text{'create_owner'},
-		&ui_radio_table("omode", 0, \@otable));
 
 	print &ui_hidden_table_end();
 	}
