@@ -56,7 +56,10 @@ if (!&is_cloudmin_replica() && defined(&check_for_failovers)) {
 	}
 
 # Check Virtualmin licences for the account, to prevent delays in the UI
-&list_virtualmin_licences();
+@proimages = grep { $_->{'virtualmin'} eq 'pro' } &list_server_images();
+if (@proimages && !&test_lock($virtualmin_licences_file)) {
+	&list_virtualmin_licences();
+	}
 
 if (&get_replication_mode() == 2) {
 	# Replicate changes if enabled
