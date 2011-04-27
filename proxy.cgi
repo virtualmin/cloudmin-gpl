@@ -3,7 +3,7 @@
 
 BEGIN { push(@INC, ".."); };
 use WebminCore;
-&init_config();
+#&init_config();
 
 # Parse out port
 $ENV{'PATH_INFO'} =~ /^\/(\d+)(.*)$/ ||
@@ -14,12 +14,12 @@ $| = 1;
 $meth = $ENV{'REQUEST_METHOD'};
 
 # Validate owner from status file
-$statusdir = $ENV{'WEBMIN_VAR'}."/".$module_name."-login";
+$statusdir = $ENV{'WEBMIN_VAR'}."/"."cloudmin-login";
 $statusfile = "$statusdir/$port";
 $real_user = &read_file_contents($statusfile);
 $real_user =~ s/\r|\n//g;
-if ($real_user ne $base_remote_user) {
-	&error($text{'login_euser2'});
+if ($real_user ne $ENV{'REMOTE_USER'}) {
+	&error("Username mismatch");
 	}
 
 # Connect to the Ajaxterm server, send HTTP request
@@ -55,11 +55,10 @@ while($buf = &read_http_connection($con, 1024)) {
 &close_http_connection($con);
 
 # Touch status file to indicate it is still running
-@st = stat($statusfile);
-if (time() - $st[9] > $config{'login_timeout'} / 2) {
-	unlink($statusfile);
-	open(TOUCH, ">$statusfile");
-	print TOUCH $remote_user,"\n";
-	close(TOUCH);
+if (!-d $statusdir) {
+	&make_dir($statusdir, 0700);
 	}
+open(TOUCH, ">$statusfile");
+print TOUCH $ENV{'REMOTE_USER'},"\n";
+close(TOUCH);
 

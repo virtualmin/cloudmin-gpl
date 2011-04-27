@@ -68,13 +68,13 @@ while(1) {
 close(TEST2);
 
 # Record owner of this login
-$statusdir = $ENV{'WEBMIN_VAR'}."/".$module_name."-login";
+$statusdir = $ENV{'WEBMIN_VAR'}."/cloudmin-login";
 if (!-d $statusdir) {
 	&make_dir($statusdir, 0700);
 	}
 $statusfile = "$statusdir/$port";
 &open_tempfile(STATUS, ">$statusfile");
-&print_tempfile(STATUS, $remote_user,"\n");
+&print_tempfile(STATUS, $ENV{'REMOTE_USER'},"\n");
 &close_tempfile(STATUS);
 
 # Show the iframe
