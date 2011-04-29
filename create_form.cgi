@@ -128,7 +128,6 @@ if (&can_action(undef, "global") && defined(&list_system_owners) &&
 			&ui_textbox("newowner", undef, 20)." ".
 			$text{'create_onewpass'}." ".
 		        &ui_password("newownerpass", undef, 20)."<br>".
-			$text{'create_onewplan'}." ".
 		  	&ui_select("newownerplan", $plans[0]->{'id'},
 			    [ map { [ $_->{'id'}, &describe_plan($_) ] }
 				  @plans ]) ]);
