@@ -46,6 +46,9 @@ push(@rv, $alerts_dir);
 # DNS roundrobins dir
 push(@rv, $roundrobins_dir);
 
+# Auto-scaling dir
+push(@rv, $scalegroups_dir);
+
 return &unique(@rv);
 }
 

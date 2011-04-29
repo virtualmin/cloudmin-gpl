@@ -238,6 +238,7 @@ $upgrade_cloudmin_testpage = "/licence-test.txt";
 $upgrade_cloudmin_updates = "/wbm/updates.txt";
 
 $roundrobins_dir = "$module_config_directory/roundrobins";
+$scalegroups_dir = "$module_config_directory/scalegroups";
 
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
