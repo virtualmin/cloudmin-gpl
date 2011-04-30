@@ -288,7 +288,8 @@ if ($got->{'args'}->{'smp'}) {
 delete($got->{'args'}->{'smp'});
 
 # Same VGA mode
-if (defined($got->{'args'}->{'std-vga'})) {
+if (defined($got->{'args'}->{'std-vga'}) ||
+    $got->{'args'}->{'vga'} eq 'std') {
 	$server->{'kvm_vga'} = 1;
 	}
 delete($got->{'args'}->{'std-vga'});
@@ -1824,7 +1825,12 @@ if (ref($inuse)) {
 
 	# Enable high-resolution mode
 	if ($server->{'kvm_vga'}) {
-		$cmd .= " -std-vga";
+		if ($out =~ /-std-vga/) {
+			$cmd .= " -std-vga";
+			}
+		elsif ($out =~ /-vga.*std/) {
+			$cmd .= " -vga std";
+			}
 		}
 	}
 else {
