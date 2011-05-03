@@ -5,6 +5,18 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 
+# Build list of possible systems to clone
+# XXX exclude auto-scaled
+my @servers;
+foreach my $s (grep { &is_virtual_server() }
+		&list_available_managed_servers_sorted()) {
+	my $cfunc = "type_".$s->{'manager'}."_can_clone";
+	if (defined(&$cfunc) && &$cfunc($s)) {
+		push(@servers, $s);
+		}
+	}
+@servers || &error($text{'scalegroup_eservers'});
+
 if ($in{'new'}) {
 	# Creating a new one
 	&ui_print_header(undef, $text{'scalegroup_ctitle'}, "");
@@ -31,9 +43,6 @@ print &ui_hidden_table_start($text{'scalegroup_header1'}, "width=100%", 2,
 print &ui_table_row($text{'scalegroup_desc'},
 	&ui_textbox("desc", $scalegroup->{'desc'}, 60));
 
-print &ui_table_row($text{'scalegroup_host'},
-	&ui_textbox("host", $scalegroup->{'host'}, 40));
-
 print &ui_table_row($text{'scalegroup_min'},
 	&ui_textbox("min", $scalegroup->{'min'}, 5));
 
@@ -45,6 +54,17 @@ print &ui_hidden_table_end("host");
 # Section for new system details
 print &ui_hidden_table_start($text{'scalegroup_header2'}, "width=100%", 2,
 			     "system", 1, \@tds);
+
+# New hostname template
+print &ui_table_row($text{'scalegroup_host'},
+	&ui_textbox("host", $scalegroup->{'host'}, 40));
+
+# System to clone
+print &ui_table_row($text{'scalegroup_clone'},
+	&ui_select("clone", undef, 
+		   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]));
+
+# Host system
 
 print &ui_hidden_table_end("system");
 

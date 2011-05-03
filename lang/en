@@ -4468,7 +4468,7 @@ onehost_nobridge=No bridge interfaces like <tt>br0</tt> were found
 
 scalegroups_title=Auto-Scaling Groups
 scalegroups_none=No auto-scaling groups have been defined yet.
-scalegroups_add=Add a new auto-scaling group.
+scalegroups_add=Add Auto-Scaling Group For:
 scalegroups_host=Hostname template
 scalegroups_manager=System type
 scalegroups_cond=Scaling conditions
@@ -4488,6 +4488,7 @@ scalegroup_max=Maximum systems in group
 scalegroup_header2=New virtual system details
 scalegroup_header3=Auto-scaling conditions
 scalegroup_header4=Email notification settings
+scalegroup_eservers=A scaling group cannot be created unless at least one virtual system to clone exists
 
 __norefs=1
 

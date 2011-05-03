@@ -21,8 +21,7 @@ return sort { $a->{'id'} <=> $b->{'id'} } @rv;
 # Returns the hash ref for a single auto-scaling group. Keys are :
 # id - A unique ID
 # desc - Human-readable description for this scalegroup
-# manager - Virtualization type to create
-# image - Image to create systems from
+# clone - ID of virtual system to clone
 # host - Hostname pattern, including ${NUM}
 # conds - Array ref of rule hash refs, each of which contains
 #	name - Variable to match on, like load, mem, space
