@@ -4471,6 +4471,7 @@ scalegroups_none=No auto-scaling groups have been defined yet.
 scalegroups_add=Add a new auto-scaling group.
 scalegroups_host=Hostname template
 scalegroups_manager=System type
+scalegroups_cond=Scaling conditions
 scalegroups_status=Current status
 scalegroups_delete=Delete Selected Groups
 scalegroups_refresh=Refresh Groups

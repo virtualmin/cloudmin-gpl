@@ -5681,6 +5681,12 @@ sub get_global_links
 {
 my ($virtcount) = @_;
 my (@glinks, @gtitles, @gicons, @gcats);
+my $anyvirt = $server_management_types{'xen'} ||
+	      $server_management_types{'kvm'} ||
+	      $server_management_types{'vserver'} ||
+	      $server_management_types{'openvz'} ||
+	      $server_management_types{'lxc'} ||
+	      $server_management_types{'zones'};
 
 if (!&can_action(undef, "global")) {
 	goto NOGLOBAL;
@@ -5693,12 +5699,7 @@ push(@gicons, "images/keys.gif");
 push(@gcats, "settings");
 
 # Server images
-if ($server_management_types{'xen'} ||
-    $server_management_types{'kvm'} ||
-    $server_management_types{'vserver'} ||
-    $server_management_types{'openvz'} ||
-    $server_management_types{'lxc'} ||
-    $server_management_types{'zones'}) {
+if ($anyvirt) {
 	push(@glinks, "list_images.cgi");
 	push(@gtitles, $text{'images_title'});
 	push(@gicons, "images/images.gif");
@@ -5713,12 +5714,7 @@ if ($server_management_types{'xen'} ||
 	}
 
 # Bandwidth monitoring
-if ($server_management_types{'xen'} ||
-    $server_management_types{'kvm'} ||
-    $server_management_types{'vserver'} ||
-    $server_management_types{'openvz'} ||
-    $server_management_types{'lxc'} ||
-    $server_management_types{'zones'}) {
+if ($anyvirt) {
 	push(@glinks, "edit_bw.cgi");
 	push(@gtitles, $text{'bw_title'});
 	push(@gicons, "images/bw.gif");
@@ -5797,6 +5793,14 @@ push(@glinks, "list_roundrobins.cgi");
 push(@gtitles, $text{'roundrobins_title'});
 push(@gicons, "images/roundrobins.gif");
 push(@gcats, "monitor");
+
+# Auto-scaling groups
+if ($anyvirt || $server_management_types{'ec2'}) {
+	push(@glinks, "list_scalegroups.cgi");
+	push(@gtitles, $text{'scalegroups_title'});
+	push(@gicons, "images/scalegroups.gif");
+	push(@gcats, "monitor");
+	}
 
 # Type-defined icons
 foreach my $t (@server_management_types) {
