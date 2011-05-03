@@ -8,7 +8,9 @@ require './server-manager-lib.pl';
 if ($in{'new'}) {
 	# Creating a new one
 	&ui_print_header(undef, $text{'scalegroup_ctitle'}, "");
-	$scalegroup = { };
+	$scalegroup = { 'host' => 'system${NUM}',
+			'min' => 1,
+			'max' => 5 };
 	}
 else {
 	# Editing an existing one
@@ -24,15 +26,39 @@ print &ui_hidden("new", $in{'new'});
 
 # Section for host system details
 print &ui_hidden_table_start($text{'scalegroup_header1'}, "width=100%", 2,
-			     "hosts", 1, \@tds);
+			     "host", 1, \@tds);
 
-print &ui_hidden_table_end("hosts");
+print &ui_table_row($text{'scalegroup_desc'},
+	&ui_textbox("desc", $scalegroup->{'desc'}, 60));
+
+print &ui_table_row($text{'scalegroup_host'},
+	&ui_textbox("host", $scalegroup->{'host'}, 40));
+
+print &ui_table_row($text{'scalegroup_min'},
+	&ui_textbox("min", $scalegroup->{'min'}, 5));
+
+print &ui_table_row($text{'scalegroup_max'},
+	&ui_textbox("max", $scalegroup->{'max'}, 5));
+
+print &ui_hidden_table_end("host");
+
+# Section for new system details
+print &ui_hidden_table_start($text{'scalegroup_header2'}, "width=100%", 2,
+			     "system", 1, \@tds);
+
+print &ui_hidden_table_end("system");
 
 # Section for scaling conditions
-print &ui_hidden_table_start($text{'scalegroup_header2'}, "width=100%", 2,
-			     "cond", 1, \@tds);
+print &ui_hidden_table_start($text{'scalegroup_header3'}, "width=100%", 2,
+			     "cond", 0, \@tds);
 
 print &ui_hidden_table_end("cond");
+
+# Section for email notification
+print &ui_hidden_table_start($text{'scalegroup_header4'}, "width=100%", 2,
+			     "email", 0, \@tds);
+
+print &ui_hidden_table_end("email");
 
 if ($in{'new'}) {
 	print &ui_form_end([ [ undef, $text{'create'} ] ]);

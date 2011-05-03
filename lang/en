@@ -4477,5 +4477,17 @@ scalegroups_delete=Delete Selected Groups
 scalegroups_refresh=Refresh Groups
 scalegroups_return=auto-scaling groups list
 
+scalegroup_ctitle=Create Auto-Scaling Group
+scalegroup_etitle=Edit Auto-Scaling Group
+scalegroup_egone=Group no longer exists!
+scalegroup_header1=Auto-scaling group details
+scalegroup_desc=Scaling group description
+scalegroup_host=Hostname template
+scalegroup_min=Minimum systems in group
+scalegroup_max=Maximum systems in group
+scalegroup_header2=New virtual system details
+scalegroup_header3=Auto-scaling conditions
+scalegroup_header4=Email notification settings
+
 __norefs=1
 
