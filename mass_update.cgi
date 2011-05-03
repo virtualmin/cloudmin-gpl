@@ -51,7 +51,8 @@ if (@servers == 1) {
 			foreach my $g (@$got) {
 				$donedep{$g}++;
 				}
-			print &text('update_donepkg', scalar(@$got)),"<p>\n";
+			print &text('update_donepkg2',
+				join(" ", map { "<tt>$_</tt>" } @$got)),"<p>\n";
 			push(@allgot, @$got);
 			}
 		else {

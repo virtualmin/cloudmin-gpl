@@ -1069,6 +1069,7 @@ update_more=$1 more ..
 update_doing=Updating $2 packages on $1 ..
 update_pkg=Updating $1 to version $2 ..
 update_donepkg=.. installed $1 packages.
+update_donepkg2=.. installed packages $1
 update_pkgerr=.. update failed! Try an update on the system directly to see more information.
 update_pkgerr2=.. update failed : $1
 update_done=.. all updates complete.
@@ -4464,6 +4465,16 @@ showpass_spass=SSH password
 onehost_err=This system cannot be a $1 host : $2
 onehost_err2=Virtual systems cannot be created or added until this is fixed.
 onehost_nobridge=No bridge interfaces like <tt>br0</tt> were found
+
+scalegroups_title=Auto-Scaling Groups
+scalegroups_none=No auto-scaling groups have been defined yet.
+scalegroups_add=Add a new auto-scaling group.
+scalegroups_host=Hostname template
+scalegroups_manager=System type
+scalegroups_status=Current status
+scalegroups_delete=Delete Selected Groups
+scalegroups_refresh=Refresh Groups
+scalegroups_return=auto-scaling groups list
 
 __norefs=1
 
