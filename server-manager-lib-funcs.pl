@@ -9184,13 +9184,16 @@ elsif ($issue =~ /Debian/i) {
 return $rv;
 }
 
-# clone_system(&server, new-hostname, new-description, [&ips], snapshot)
+# clone_system(&server, new-hostname, new-description, [&ips], snapshot,
+# 	       [&dest-host])
 # Creates a clone of an existing virtual system, by calling the type-specific
 # clone function. Returns the new system hash and an error message or undef.
 # May print stuff.
 sub clone_system
 {
-my ($server, $newhost, $newdesc, $ips, $snapshot) = @_;
+my ($server, $newhost, $newdesc, $ips, $snapshot, $dest) = @_;
+my $vhost = &get_parent_server($server);
+$dest ||= $vhost;
 
 # Create the new server object
 my $newserver = { %$server };
@@ -9238,7 +9241,8 @@ if ($ips) {
 # Perform pre-cloning check
 my $ckfunc = "type_".$server->{'manager'}."_check_clone";
 if (defined(&$ckfunc)) {
-	my $err = &$ckfunc($server, $newserver, $newhost, $ips, $snapshot);
+	my $err = &$ckfunc($server, $newserver, $newhost, $ips, $snapshot,
+			   $dest);
 	return (undef, $err) if ($err);
 	}
 
@@ -9263,7 +9267,8 @@ if ($server->{'status'} ne 'down') {
 
 # Call the clone function
 my $cfunc = "type_".$server->{'manager'}."_clone_system";
-my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost, $ips, $snapshot);
+my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost, $ips, $snapshot,
+				$dest);
 
 # Clear SSH host key for the clone
 &clear_ssh_host_key($newserver);

@@ -5058,13 +5058,22 @@ return $server->{'status'} eq 'nohost' ? 0 :
        $server->{'kvm_filesystem_vg'} ? 2 : 1;
 }
 
-# type_kvm_check_clone(&oldserver, &newserver, new-hostname, &ips, snapshot)
+# type_kvm_can_clone_remote(&server)
+# KVM instances can be cloned to a another host system. Always possible.
+sub type_kvm_can_clone_remote
+{
+return 1;
+}
+
+# type_kvm_check_clone(&oldserver, &newserver, new-hostname, &ips, snapshot,
+# 		       [&new-host])
 # Checks if cloning of some system will work, before shutting it down. Returns
 # undef on success or an error message on failure.
 sub type_kvm_check_clone
 {
-my ($oldserver, $newserver, $newhost, $ips, $snapshot) = @_;
+my ($oldserver, $newserver, $newhost, $ips, $snapshot, $dest) = @_;
 my $vhost = &type_kvm_parent($newserver);
+$dest ||= $vhost;
 
 # Make sure hostname is sensible
 if ($vhost->{'kvm_zone'}) {
@@ -5090,21 +5099,34 @@ if ($snapshot) {
 		}
 	}
 
+# Prevent snapshotting when cloning remotely
+if ($snapshot && $dest->{'id'} ne $vhost->{'id'}) {
+	return $text{'clone_esnapremote'};
+	}
+
+# If cloning a system on LVM, make sure the dest also has LVM
+if ($server->{'kvm_filesystem_vg'} && !$dest->{'kvm_filesystem_vg'} &&
+    $dest->{'id'} ne $vhost->{'id'}) {
+	return $text{'clone_elvmremote'};
+	}
+
 return undef;
 }
 
-# type_kvm_clone_system(&oldserver, &newserver, new-hostname, &ips, snapshot)
+# type_kvm_clone_system(&oldserver, &newserver, new-hostname, &ips, snapshot,
+# 			[&new-host])
 # Creates a clone of some KVM instance, updating the newserver hash.
 # Returns an error message and a flag indicating if the failure was total or
 # only partial.
 sub type_kvm_clone_system
 {
-my ($oldserver, $newserver, $newhost, $ips, $snapshot) = @_;
+my ($oldserver, $newserver, $newhost, $ips, $snapshot, $dest) = @_;
 my $vhost = &type_kvm_parent($newserver);
+$dest ||= $vhost;
 
 # Generate the new full hostname
-if ($vhost->{'kvm_zone'}) {
-	$newserver->{'host'} = $newhost.".".$vhost->{'kvm_zone'};
+if ($dest->{'kvm_zone'}) {
+	$newserver->{'host'} = $newhost.".".$dest->{'kvm_zone'};
 	}
 else {
 	$newserver->{'host'} = $newhost;
@@ -5122,13 +5144,13 @@ if ($ips) {
 else {
 	# Allocate new IPs
 	&$first_print($text{'clone_allocating'});
-	my $err = &allocate_kvm_ip_addresses($newserver, $vhost);
+	my $err = &allocate_kvm_ip_addresses($newserver, $dest);
 	return ($err, 1) if ($err);
 	}
 my @ips = split(/\s+/, $newserver->{'kvm_ip'});
 my @cidrs = split(/\s+/, $newserver->{'kvm_cidr'});
 my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
-my $defgw = &get_server_default_gateway($vhost);
+my $defgw = &get_server_default_gateway($dest);
 my @gws = split(/\s+/, $newserver->{'kvm_gw'});
 my @setgws = grep { $_ ne "*" } @gws;
 if (!@setgws && $defgw) {
@@ -5184,6 +5206,9 @@ foreach my $d (@$disks) {
 		else {
 			$newlv .= "-".$newkvm_us;
 			}
+		if ($dest->{'kvm_vg'} ne $vhost->{'kvm_vg'}) {
+			$d->{'vg'} = $dest->{'kvm_vg'};
+			}
 		$d->{'newreal'} = "/dev/".$d->{'vg'}."/".$newlv;
 
 		# Create the new LV
@@ -5199,15 +5224,15 @@ foreach my $d (@$disks) {
 			$snapped = 1;
 			}
 		&remote_finished();
-		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-		$err = &remote_foreign_call($vhost, "lvm",
+		&remote_foreign_require($dest, "lvm", "lvm-lib.pl");
+		$err = &remote_foreign_call($dest, "lvm",
 					  "create_logical_volume", $lv);
 		$err ||= $last_remote_error;
 
 		if (!$err && !$snapshot) {
 			# Copy the data using dd
 			$err = &transfer_file_between_servers(
-			    $vhost, $vhost,
+			    $vhost, $dest,
 			    $d->{'real'}, $d->{'newreal'}, 1, 1,
 			    int($d->{'size'}/(1024*1024))*1024*1024);
 			}
@@ -5229,8 +5254,12 @@ foreach my $d (@$disks) {
 		else {
 			$d->{'newreal'} .= "-".$newkvm;
 			}
+		if ($dest->{'kvm_dir'} ne $vhost->{'kvm_dir'}) {
+			$d->{'newreal'} =~ s/^.*[\\\/]//;
+			$d->{'newreal'} = "$dest->{'kvm_dir'}/$d->{'newreal'}";
+			}
 		# Copy the file
-		$err = &transfer_file_between_servers($vhost, $vhost,
+		$err = &transfer_file_between_servers($vhost, $dest,
                                 $d->{'real'}, $d->{'newreal'}, 0, 1);
 		}
 
@@ -5260,13 +5289,14 @@ foreach my $d (@$disks) {
 	}
 &$outdent_print();
 $newserver->{'kvm_drives'} = join(" ", @drives);
+$newserver->{'kvm_on'} = $dest->{'id'};
 &$second_print($text{'create_done'});
 
 # Register in DNS
-if ($vhost->{'kvm_zone'}) {
-	my $dnsname = $newhost.".".$vhost->{'kvm_zone'}.".";
+if ($dest->{'kvm_zone'}) {
+	my $dnsname = $newhost.".".$dest->{'kvm_zone'}.".";
 	if (&add_bind8_record($dnsname, $ips[0],
-			      $vhost->{'kvm_zone'})) {
+			      $dest->{'kvm_zone'})) {
 		$newserver->{'kvm_dns'} = $dnsname;
 		}
 	else {
@@ -5309,11 +5339,11 @@ $newserver->{'mac'} = join(" ", @macs);
 
 # Fix other config files that refer to the hostname or IP
 &$first_print($text{'create_xenfix'});
-my $fullhost = $vhost->{'kvm_zone'} ? 
-		$newhost.".".$vhost->{'kvm_zone'} : $newhost;
+my $fullhost = $dest->{'kvm_zone'} ? 
+		$newhost.".".$dest->{'kvm_zone'} : $newhost;
 my $err = &fix_hostname_config_files($newserver, $ips[0],
-					$newserver->{'host'}, $fullhost, $vhost,
-					$mp, $vhost->{'kvm_resolv'});
+					$newserver->{'host'}, $fullhost, $dest,
+					$mp, $dest->{'kvm_resolv'});
 if ($err) {
 	&$second_print(&text('create_ekvmfix', $err));
 	}       
@@ -5324,7 +5354,7 @@ else {
 # Setup networking config files to use the IP.
 &$first_print($text{'create_xennet'});
 my $err = &fix_network_config_files($newserver, $ips[0], $netmasks[0],
-				    $gws[0], $vhost, $mp);
+				    $gws[0], $dest, $mp);
 if ($err) {
 	&$second_print(&text('create_ekvmnet', $err));
 	}       
@@ -5337,7 +5367,7 @@ if (@ips > 1) {
 	&$first_print($text{'create_xennet2'});
 	my $err = &fix_additional_network_interface_files($newserver,
 		[ @ips[1..$#ips] ], [ @netmasks[1..$#netmasks] ],
-		[ @gws[1..$#gws] ], $vhost, $mp);
+		[ @gws[1..$#gws] ], $dest, $mp);
 	if ($err) {
 		&$second_print(&text('create_ekvmnet2', $err));
 		}       
@@ -5367,7 +5397,7 @@ foreach my $net (@nets) {
 		my $script = $1;
 		my $newscript = $script;
 		$newscript =~ s/\Q$oldkvm\E/$newkvm/g;
-		my $err = &transfer_file_between_servers($vhost, $vhost,
+		my $err = &transfer_file_between_servers($vhost, $dest,
 				$script, $newscript);
 		if ($err) {
 			&$second_print(&text('smove_ebridge', $script, $err));

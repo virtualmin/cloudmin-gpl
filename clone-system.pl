@@ -92,6 +92,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--live") {
 		$live = 1;
 		}
+	elsif ($a eq "--dest") {
+		$desthost = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
@@ -108,6 +111,10 @@ $server || &usage("No system named $host exists");
 if ($ips) {
 	&can_action_usage($server, 'ips');
 	}
+if ($desthost) {
+	$dest = &get_managed_server_by("host", $desthost);
+	$dest || &usage("No destination system named $desthost exists");
+	}
 
 # Check if supported
 $dfunc = "type_".$server->{'manager'}."_desc";
@@ -117,6 +124,14 @@ defined(&$cfunc) || &usage("Systems of type $desc cannot be cloned");
 $can = &$cfunc($server);
 $can || &usage("The selected system cannot be cloned");
 !$live || $can == 2 || &usage("The selected system cannot be cloned live");
+$vhost = &get_parent_server($server);
+if ($dest) {
+	$rcfunc = "type_".$server->{'manager'}."_can_clone_remote";
+	$rcan = defined(&$rcfunc) && &$rcfunc($server, $dest);
+	$rcan || &usage("The --dest flag cannot be used with this ".
+			"virtualization type");
+	&can_action_usage($server, "move");
+	}
 
 # Validate owner resource limits
 &can_create_server_usage($server->{'manager'});
@@ -185,7 +200,8 @@ if ($limits) {
 &obtain_lock_server($server);
 print "Creating clone of $desc system $server->{'host'} named $newhost ..\n\n";
 &$indent_print();
-($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips, $live);
+($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips, $live,
+				   $dest);
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {
@@ -215,6 +231,7 @@ print "                      --new-host new-name\n";
 print "                     [--new-desc new-description]\n";
 print "                     [--address ip]*\n";
 print "                     [--live]\n";
+print "                     [--dest new-host-system-name]\n";
 exit(1);
 }
 
