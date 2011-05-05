@@ -34,6 +34,9 @@ if (!$in{'ips_def'} && &can_action($server, 'ips')) {
 			&error(&text('clone_eipcheck', $ip));
 		}
 	}
+if ($in{'dest'}) {
+	$dest = &get_managed_server($in{'dest'});
+	}
 
 # Validate owner resource limits
 $limits = &get_owner_limits();
@@ -106,7 +109,7 @@ if ($limits) {
 &$first_print(&text('clone_doing', $desc, $server->{'host'}, $in{'host'}));
 &$indent_print();
 ($newserver, $err) = &clone_system($server, $in{'host'}, $in{'desc'}, $ips,
-				   $in{'live'});
+				   $in{'live'}, $dest);
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {

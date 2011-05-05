@@ -9209,6 +9209,14 @@ $newserver->{'cloneof'} = $server->{'id'};
 $newserver->{'status'} = 'down';
 delete($newserver->{'status_err'});
 
+# Make sure dest supports virtualization type
+if (&indexof($server->{'manager'}, &is_parent_server($dest)) < 0) {
+	return &text('clone_ehosttype', $dest->{'host'});
+	}
+if (!&can_ssh_status($dest)) {
+	return &text('clone_ehostdown', $dest->{'host'});
+	}
+
 # Check resource limits on the host
 my ($disk, $mem);
 my $dfunc = "type_".$server->{'manager'}."_get_disk_size";

@@ -5059,7 +5059,7 @@ return $server->{'status'} eq 'nohost' ? 0 :
 }
 
 # type_kvm_can_clone_remote(&server)
-# KVM instances can be cloned to a another host system. Always possible.
+# KVM instances can be cloned to a another host system.
 sub type_kvm_can_clone_remote
 {
 return 1;
@@ -5105,7 +5105,7 @@ if ($snapshot && $dest->{'id'} ne $vhost->{'id'}) {
 	}
 
 # If cloning a system on LVM, make sure the dest also has LVM
-if ($server->{'kvm_filesystem_vg'} && !$dest->{'kvm_filesystem_vg'} &&
+if ($server->{'kvm_filesystem_vg'} && !$dest->{'kvm_vg'} &&
     $dest->{'id'} ne $vhost->{'id'}) {
 	return $text{'clone_elvmremote'};
 	}
@@ -5206,7 +5206,7 @@ foreach my $d (@$disks) {
 		else {
 			$newlv .= "-".$newkvm_us;
 			}
-		if ($dest->{'kvm_vg'} ne $vhost->{'kvm_vg'}) {
+		if ($dest->{'kvm_vg'} ne $d->{'vg'}) {
 			$d->{'vg'} = $dest->{'kvm_vg'};
 			}
 		$d->{'newreal'} = "/dev/".$d->{'vg'}."/".$newlv;

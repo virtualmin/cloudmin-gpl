@@ -26,6 +26,11 @@ not be in a fully consistent state when this method is used. This flag
 can also be used to force use of a snapshot when the virtual system is down.
 If not given, a regular copy of the LVM logical volumes will be made.
 
+If your Cloudmin system manages multiple Xen or KVM hosts, you can specify
+an different host system for the clone to be created on with the C<--dest>
+flag. This must be followed by the hostname of a system that can host virtual
+systems of the type being cloned.
+
 =head1 Example usage
 
   cloudmin clone-system --host citrixsrc.home --new-host citrixdest

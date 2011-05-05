@@ -66,6 +66,23 @@ if (&can_action($server, 'ips')) {
 		"<br>\n".$ipsfield);
 	}
 
+# New host system, if allowed
+$rcfunc = "type_".$server->{'manager'}."_can_clone_remote";
+if (&can_action($server, "move") && defined(&$rcfunc) && &$rcfunc($server)) {
+	$vhost = &get_parent_server($server);
+	@dests = grep { $_->{'id'} ne $vhost->{'id'} &&
+			&indexof($server->{'manager'},
+			         &is_parent_server($_)) >= 0 &&
+			&can_host_server($_)
+		      } &list_managed_servers();
+	if (@dests) {
+		print &ui_table_row($text{'clone_dest'},
+			&ui_select("dest", undef,
+			[ [ undef, &text('clone_leave', $vhost->{'host'}) ],
+			  map { [ $_->{'id'}, $_->{'host'} ] } @dests ]));
+		}
+	}
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'clone_ok'} ] ]);
 
