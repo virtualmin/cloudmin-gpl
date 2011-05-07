@@ -468,6 +468,13 @@ elsif ($alert->{'managers'}) {
 		     join(", ", map { $text{$_.'_typedesc'} } 
 				    split(/\s+/, $alert->{'managers'})));
 	}
+elsif ($alert->{'scalegroups'}) {
+	# Systems in scaling groups
+	return &text('alertdesc_scalegroups',
+		     join(" ", map { my $s = &get_scalegroup($_);
+				     $s ? ( $s->{'host'} ) : ( ) }
+				   split(/\s+/, $alert->{'scalegroups'})));
+	}
 else {
 	return "???";
 	}

@@ -28,7 +28,8 @@ else {
 # Build list of possible systems to clone
 # XXX exclude auto-scaled
 my @servers;
-foreach my $s (grep { $_->{'manager'} eq $scalegroup->{'manager'} }
+foreach my $s (grep { $_->{'manager'} eq $scalegroup->{'manager'} &&
+		      !$_->{'scalegroup'} }
 		&list_available_managed_servers_sorted()) {
 	my $cfunc = "type_".$s->{'manager'}."_can_clone";
 	if (defined(&$cfunc)) {

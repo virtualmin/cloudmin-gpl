@@ -29,13 +29,19 @@ print &ui_hidden_table_start($text{'roundrobin_header1'}, "width=100%", 2,
 
 $mode = $roundrobin->{'servers'} ? 1 :
 	$roundrobin->{'groups'} ? 2 :
-	$roundrobin->{'owners'} ? 3 : 1;
+	$roundrobin->{'owners'} ? 3 :
+	$roundrobin->{'scalegroups'} ? 5 : 1;
 @allservers = &list_managed_servers_sorted();
 @allgroups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 @allowners = &list_system_owners();
+@allscalegroups = &list_scalegroups();
 if ($mode == 1) {
 	%sids = map { $_, 1 } split(/\s+/, $roundrobin->{'servers'});
 	@servers = grep { $sids{$_->{'id'}} } @allservers;
+	}
+elsif ($mode == 5) {
+	%sids = map { $_, 1 } split(/\s+/, $roundrobin->{'scalegroups'});
+	@scalegroups = grep { $sids{$_->{'id'}} } @allscalegroups;
 	}
 @stable = ( [ 1, $text{'alert_mode1'},
 	      &ui_multi_select("servers",
@@ -61,6 +67,15 @@ if (@allowners) {
 		  [ map { [ $_->{'name'}, $_->{'name'} ] } @allowners ],
 		  5, 1, 0, $text{'alert_owneropts'},
 			   $text{'alert_ownervals'}) ]);
+	}
+if (@allscalegroups) {
+	# Selection by auto-scaling group
+	push(@stable, [ 5, $text{'alert_mode5'},
+		      &ui_multi_select("scalegroups",
+			       [ map { [ $_->{'id'}, $_->{'host'} ] } @scalegroups ],
+			       [ map { [ $_->{'id'}, $_->{'host'} ] } @allscalegroups ],
+			       10, 1, 0, $text{'alert_scalegroupopts'},
+					 $text{'alert_scalegroupvals'}) ]);
 	}
 print &ui_table_row(undef, &ui_radio_table("mode", $mode, \@stable), 2);
 

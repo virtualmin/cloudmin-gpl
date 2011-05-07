@@ -48,6 +48,12 @@ else {
 			join(" ", split(/\r?\n/, $in{'owners'}));
 		$roundrobin->{'owners'} || &error($text{'alert_eowners'});
 		}
+	elsif ($in{'mode'} == 4) {
+		# Selected auto-scaling groups
+		$roundrobin->{'scalegroups'} =
+			join(" ", split(/\r?\n/, $in{'scalegroups'}));
+		$roundrobin->{'scalegroups'} || &error($text{'alert_escalegroups'});
+		}
 
 	# Parse DNS record
 	$roundrobin->{'desc'} = $in{'desc'};
