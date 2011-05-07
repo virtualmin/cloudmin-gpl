@@ -1693,6 +1693,53 @@ if (!$rv && $srccs_ok && &has_command_on_server($destserver, "md5sum")) {
 return $rv;
 }
 
+# transfer_directory_between_servers(&source-server, &dest-server,
+#                                    source-dir, dest-dir)
+# Copy a whole directory from one system to another using tar
+sub transfer_directory_between_servers
+{
+my ($srcserver, $destserver, $src, $dest) = @_;
+if ($srcserver->{'id'} eq $destserver->{'id'}) {
+	# Some system to itself - just use tar pipeline
+	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"cd ".quotemeta($src)." && ".
+		"tar cf - . | ".
+		"(cd ".quotemeta($dest)." && ".
+		" tar xpf -)");
+	return $err if ($err);
+	return $out if ($ex);
+	return undef;
+	}
+else {
+	# Tar up to temp file on source
+	my $base = $src;
+	$base =~ s/^.*\///;
+	my $temp = &tempname_on_server($srcserver, $base.'.tar.gz');
+	$temp || return "Failed to allocate temp file on $srcserver->{'host'}";
+	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
+		"cd ".quotemeta($src)." && ".
+		(&tar_supports_gzip($srcserver) ?
+                        "tar czf ".quotemeta($temp)." ." :
+                        "tar cf - . | gzip -c >".quotemeta($temp)));
+	if ($ex || $err) {
+		&delete_file_on_server($src, $temp);
+		return $err || $out;
+		}
+
+	# Pipe into tar on dest
+	my $err = &pipe_command_from_server($srcserver, $destserver,
+		"cd ".quotemeta($dest)." && ".
+		(&tar_supports_gzip($destserver) ?
+                        "tar xzf -" :
+                        "gunzip -c | tar xf -"),
+		$temp);
+	&delete_file_on_server($src, $temp);
+	return $err;
+	}
+
+return undef;
+}
+
 # pipe_command_to_server(&source-server, &dest-server,source-command, dest-file)
 # Run a command on some system and pipe the output to a file on a remote system,
 # using SSH.

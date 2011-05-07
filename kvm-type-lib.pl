@@ -5076,13 +5076,13 @@ my $vhost = &type_kvm_parent($newserver);
 $dest ||= $vhost;
 
 # Make sure hostname is sensible
-if ($vhost->{'kvm_zone'}) {
+if ($dest->{'kvm_zone'}) {
 	return $text{'clone_ehost2'} if ($newhost =~ /\./);
 	}
 
 # Check for IPs if needed
-if (!$vhost->{'kvm_start'}) {
-	$ips && scalar(@$ips) || return &text('clone_eips', $vhost->{'host'});
+if (!$dest->{'kvm_start'}) {
+	$ips && scalar(@$ips) || return &text('clone_eips', $dest->{'host'});
 	}
 if ($ips) {
 	my @oldips = split(/\s+/, $oldserver->{'kvm_ip'});
