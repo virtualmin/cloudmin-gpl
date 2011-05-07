@@ -31,11 +31,16 @@ my @servers;
 foreach my $s (grep { $_->{'manager'} eq $scalegroup->{'manager'} }
 		&list_available_managed_servers_sorted()) {
 	my $cfunc = "type_".$s->{'manager'}."_can_clone";
-	if (defined(&$cfunc) && &$cfunc($s)) {
+	if (defined(&$cfunc)) {
 		push(@servers, $s);
 		}
 	}
 @servers || &error($text{'scalegroup_eservers'});
+
+# Find host systems
+@vhosts = &list_available_host_servers($scalegroup->{'manager'}, 0, 0, 1);
+@locs = &list_vhost_locations(\@vhosts);
+@vhosts || &error($text{'scalegroup_evhosts'});
 
 print &ui_form_start("save_scalegroup.cgi", "post");
 print &ui_hidden("id", $in{'id'});
@@ -74,8 +79,6 @@ print &ui_table_row($text{'scalegroup_clone'},
 		   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]));
 
 # Host systems to create on
-@vhosts = &list_available_host_servers($scalegroup->{'manager'});
-@locs = &list_vhost_locations(\@vhosts);
 $dmode = $scalegroup->{'dest_location'} ? 2 :
 	 $scalegroup->{'dest_hosts'} ? 1 : 0;
 @dtable = ( [ 0, $text{'scalegroup_dests0'} ],
