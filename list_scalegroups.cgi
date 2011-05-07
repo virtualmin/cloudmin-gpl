@@ -5,8 +5,6 @@ $trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ui_print_header(undef, $text{'scalegroups_title'}, "", "scalegroups");
 &can_action_error(undef, "global");
-@links = ( "<a href='edit_scalegroup.cgi?new=1'>".
-	   "$text{'scalegroups_add'}</a>" );
 
 # Find existing alerts and list them
 @scalegroups = &list_scalegroups();
@@ -37,7 +35,15 @@ if (@scalegroups) {
 	}
 else {
 	print "<b>$text{'scalegroups_none'}</b><p>\n";
-	print &ui_links_row(\@links);
 	}
+
+# Show form to add
+print &ui_form_start("edit_scalegroup.cgi");
+print &ui_hidden("new", 1);
+print &ui_submit($text{'scalegroups_add'});
+print &ui_select("type", undef,
+		 [ map { [ $_, $text{$_.'_typedesc'} ] }
+		       @virtual_server_management_types ]);
+print &ui_form_end();
 
 &ui_print_footer("", $text{'index_return'});

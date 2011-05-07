@@ -4492,12 +4492,24 @@ scalegroup_egone=Group no longer exists!
 scalegroup_header1=Auto-scaling group details
 scalegroup_desc=Scaling group description
 scalegroup_host=Hostname template
+scalegroup_clone=Source system to clone
+scalegroup_dests=Host systems to create on
+scalegroup_dests0=Any available host
+scalegroup_dests1=Only selected
+scalegroup_dests2=Only members of group
 scalegroup_min=Minimum systems in group
 scalegroup_max=Maximum systems in group
 scalegroup_header2=New virtual system details
 scalegroup_header3=Auto-scaling conditions
 scalegroup_header4=Email notification settings
 scalegroup_eservers=A scaling group cannot be created unless at least one virtual system to clone exists
+scalegroup_notifwhen=Send email notification when
+scalegroup_notify_inc=Group increases in size
+scalegroup_notify_dec=Group decreases in size
+scalegroup_notify_over=Required increase fails
+scalegroup_manager=Virtual system type
+scalegroup_and=Increase group size when all conditions are true
+scalegroup_or=Increase group size when any condition is true
 
 __norefs=1
 
