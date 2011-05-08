@@ -29,10 +29,10 @@ print &ui_hidden("new", $in{'new'});
 print &ui_hidden_table_start($text{'alert_header1'}, "width=100%", 2,
 			     "servers", 1, \@tds);
 
-$mode = $alert->{'servers'} ? 1 :
-	$alert->{'groups'} ? 2 :
-	$alert->{'owners'} ? 3 :
-	$alert->{'managers'} ? 4 : 0;
+$mode = $alert->{'servers'} ne '' ? 1 :
+	$alert->{'groups'} ne '' ? 2 :
+	$alert->{'owners'} ne '' ? 3 :
+	$alert->{'managers'} ne '' ? 4 : 0;
 @allservers = &list_managed_servers_sorted();
 @allgroups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 @allowners = &list_system_owners();

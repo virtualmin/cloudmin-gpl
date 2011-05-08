@@ -22,7 +22,7 @@ if ($in{'delete'}) {
 	}
 else {
 	# Validate inputs
-	$scalegroup ||= { };
+	$scalegroup ||= { 'manager' => $in{'manager'} };
 
 	# Group description
 	$scalegroup->{'desc'} = $in{'desc'};
@@ -50,7 +50,8 @@ else {
 	delete($scalegroup->{'dest_location'});
 	delete($scalegroup->{'dest_hosts'});
 	if ($in{'dest_mode'} == 1) {
-		$in{'dest_hosts'} || &error($text{'scalegroup_edesthosts'});
+		$in{'dest_hosts'} eq '' &&
+			&error($text{'scalegroup_edesthosts'});
 		$scalegroup->{'dest_hosts'} =
 			join(" ", split(/\0/, $in{'dest_hosts'}));
 		}
@@ -76,9 +77,14 @@ else {
 		$in{"for_$i"} =~ /^[0-9\.]+$/ ||
 			&error(&text('alert_efor', $i+1));
 		$r->{'for'} = &join_for_units($in{"forunit_$i"}, $in{"for_$i"});
-		$in{"count_$i"} =~ /^[0-9]+$/ ||
-			&error(&text('alert_ecount', $i+1));
-		$r->{'count'} = $in{"count_$i"};
+		if ($in{"count_${i}_def"}) {
+			$r->{'count'} = 0;
+			}
+		else {
+			$in{"count_$i"} =~ /^[0-9]+$/ && $in{"count_$i"} > 0 ||
+				&error(&text('alert_ecount', $i+1));
+			$r->{'count'} = $in{"count_$i"};
+			}
 		push(@conds, $r);
 		}
 	@conds || &error($text{'scalegroup_econds'});

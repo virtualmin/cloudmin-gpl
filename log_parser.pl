@@ -249,6 +249,10 @@ elsif ($type eq "roundrobins") {
 	# Multiple DNS roundrobins
 	return &text('log_'.$action.'_roundrobins', $object);
 	}
+elsif ($type eq "scalegroup") {
+	# Auto-scaling group
+	return &text('log_'.$action.'_scalegroup', $p->{'name'});
+	}
 elsif ($type eq "failover") {
 	# One failover group
 	return &text('log_'.$action.'_failover', &html_escape($p->{'desc'}));

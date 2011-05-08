@@ -27,10 +27,10 @@ print &ui_hidden("new", $in{'new'});
 print &ui_hidden_table_start($text{'roundrobin_header1'}, "width=100%", 2,
 			     "servers", 1, \@tds);
 
-$mode = $roundrobin->{'servers'} ? 1 :
-	$roundrobin->{'groups'} ? 2 :
-	$roundrobin->{'owners'} ? 3 :
-	$roundrobin->{'scalegroups'} ? 5 : 1;
+$mode = $roundrobin->{'servers'} ne '' ? 1 :
+	$roundrobin->{'groups'} ne '' ? 2 :
+	$roundrobin->{'owners'} ne '' ? 3 :
+	$roundrobin->{'scalegroups'} ne '' ? 5 : 1;
 @allservers = &list_managed_servers_sorted();
 @allgroups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 @allowners = &list_system_owners();

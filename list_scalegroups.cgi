@@ -23,7 +23,7 @@ if (@scalegroups) {
 			"<a href='edit_scalegroup.cgi?id=$s->{'id'}'>".
 			  $s->{'host'}."</a>",
 			$text{$s->{'manager'}.'_typedesc'},
-			&describe_scalegroup_cond($s),
+			&describe_alert_rules($s),
 			&describe_scalegroup_status($s),
 			], \@tds, "d", $a->{'id'});
 		}
@@ -41,7 +41,7 @@ else {
 print &ui_form_start("edit_scalegroup.cgi");
 print &ui_hidden("new", 1);
 print &ui_submit($text{'scalegroups_add'});
-print &ui_select("type", undef,
+print &ui_select("manager", undef,
 		 [ map { [ $_, $text{$_.'_typedesc'} ] }
 		       @virtual_server_management_types ]);
 print &ui_form_end();

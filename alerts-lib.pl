@@ -104,7 +104,8 @@ return undef if (!@servers);
 
 # See which rules match
 my @firing;
-foreach my $r (@{$alert->{'rules'}}) {
+foreach my $r ($alert->{'rules'} ? @{$alert->{'rules'}}
+				 : @{$alert->{'conds'}}) {
 	my (@fservers, @fvalues);
 	my $rvalue =
 		$r->{'value'} =~ /^([0-9\.]+)\s*KB?/i ? $1*1024 :
@@ -486,7 +487,8 @@ sub describe_alert_rules
 {
 my ($alert) = @_;
 my @descs;
-foreach my $r (@{$alert->{'rules'}}) {
+foreach my $r ($alert->{'rules'} ? @{$alert->{'rules'}}
+				 : @{$alert->{'conds'}}) {
 	my ($forunit, $for) = &split_for_units($r->{'for'});
 	my $desc;
 	if (&is_binary_alert($r->{'name'})) {

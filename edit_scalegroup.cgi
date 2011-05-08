@@ -9,7 +9,7 @@ if ($in{'new'}) {
 	# Creating a new one
 	&ui_print_header(undef, $text{'scalegroup_ctitle'}, "");
 	$scalegroup = { 'host' => 'system${NUM}',
-			'manager' => $in{'type'},
+			'manager' => $in{'manager'},
 			'min' => 1,
 			'max' => 5,
 			'notify_inc' => 1,
@@ -46,6 +46,7 @@ foreach my $s (grep { $_->{'manager'} eq $scalegroup->{'manager'} &&
 print &ui_form_start("save_scalegroup.cgi", "post");
 print &ui_hidden("id", $in{'id'});
 print &ui_hidden("new", $in{'new'});
+print &ui_hidden("manager", $in{'manager'});
 @tds = ( "width=20% nowrap" );
 
 # Section for host system details
@@ -80,8 +81,8 @@ print &ui_table_row($text{'scalegroup_clone'},
 		   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]));
 
 # Host systems to create on
-$dmode = $scalegroup->{'dest_location'} ? 2 :
-	 $scalegroup->{'dest_hosts'} ? 1 : 0;
+$dmode = $scalegroup->{'dest_location'} ne '' ? 2 :
+	 $scalegroup->{'dest_hosts'} ne '' ? 1 : 0;
 @dtable = ( [ 0, $text{'scalegroup_dests0'} ],
 	    [ 1, $text{'scalegroup_dests1'},
 	      &ui_select("dest_hosts",
@@ -98,7 +99,7 @@ if (@locs) {
 					 @locs ]) ]);
 	}
 print &ui_table_row($text{'scalegroup_dests'},
-	&ui_radio_table("dests_mode", $dmode, \@dtable));
+	&ui_radio_table("dest_mode", $dmode, \@dtable));
 
 print &ui_hidden_table_end("system");
 
@@ -116,7 +117,7 @@ $i = 0;
 	     grep { !&is_binary_alert($_) } @stats;
 unshift(@names, [ undef, '&nbsp;' ]);
 foreach my $r (@{$scalegroup->{'conds'}},
-	       { 'for' => 60, 'count' => 1, 'over' => 1 }) {
+	       { 'for' => 60, 'over' => 1 }) {
 	($forunit, $for) = &split_for_units($r->{'for'});
 	push(@rtable, [ &ui_select("name_$i", $r->{'name'}, \@names),
 			&ui_select("over_$i", $r->{'over'} ? 1 : 0,
@@ -125,7 +126,9 @@ foreach my $r (@{$scalegroup->{'conds'}},
 			&ui_textbox("value_$i", $r->{'value'}, 6),
 			&ui_textbox("for_$i", $for, 4).
 			 &ui_select("forunit_$i", $forunit, \@forunits),
-			&ui_textbox("count_$i", $r->{'count'}, 4),
+			&ui_opt_textbox("count_$i", $r->{'count'} || "", 4,
+					$text{'scalegroup_allin'},
+					$text{'scalegroup_atleast'}),
 			]);
 	$i++;
 	}

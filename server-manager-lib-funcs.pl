@@ -7982,18 +7982,20 @@ my $link = "showpass.cgi?id=$server->{'id'}&mode=$mode";
 return " (<a href='$link' onClick='window.open(\"$link\", \"showpass\", \"toolbar=no,menubar=no,scrollbar=no,width=500,height=70,resizable=yes\"); return false'>$text{'edit_showpass'}</a>)";
 }
 
-# list_available_host_servers(type, [extra-ram, extra-disk])
+# list_available_host_servers(type, [extra-ram, extra-disk], [include-down])
 # Returns a list of systems that can host some virtualization type, and
 # are up and running. Also takes RAM and disk needs into account.
 sub list_available_host_servers
 {
-my ($type, $mem, $disk) = @_;
+my ($type, $mem, $disk, $incdown) = @_;
 my $alttype = $type eq "zones" ? "zone" : $type;
 my @vhosts = grep { ($_->{$type.'_host'} || $_->{$alttype.'_host'}) &&
                     &can_host_server($_) } &list_managed_servers();
-@vhosts = grep { $_->{'status'} eq 'nowebmin' ||
-		 $_->{'status'} eq 'novirt' ||
-		 $_->{'status'} eq 'virt' } @vhosts;
+if (!$incdown) {
+	@vhosts = grep { $_->{'status'} eq 'nowebmin' ||
+			 $_->{'status'} eq 'novirt' ||
+			 $_->{'status'} eq 'virt' } @vhosts;
+	}
 @vhosts = grep { &usable_host_system($_, $type, $mem, $disk) } @vhosts;
 return @vhosts;
 }

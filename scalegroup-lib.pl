@@ -79,11 +79,157 @@ foreach my $r (@{$rr->{'conds'}}) {
 # Deletes an auto-scaling group (but not the systems)
 sub delete_scalegroup
 {
-my ($rr) = @_;
-my $file = "$scalegroups_dir/$rr->{'id'}";
+my ($scalegroup) = @_;
+my @ingroup = &get_scalegroup_systems($scalegroup);
+&obtain_lock_servers(\@ingroup);
+foreach my $s (@ingroup) {
+	delete($s->{'scalegroup'});
+	&save_managed_server($s);
+	}
+&release_lock_servers(\@ingroup);
+my $file = "$scalegroups_dir/$scalegroup->{'id'}";
 &lock_file($file);
 &unlink_file($file);
 &unlock_file($file);
 }
 
+# get_scalegroup_systems(&scalegroup)
+# Returns a list of virtual systems created by some scaling group
+sub get_scalegroup_systems
+{
+my ($scalegroup) = @_;
+return &get_managed_server_by("scalegroup", $scalegroup->{'id'});
+}
+
+# describe_scalegroup_status(&group)
+# Return number of systems currently in the group
+sub describe_scalegroup_status
+{
+my ($scalegroup) = @_;
+my @ingroup = &get_scalegroup_systems($scalegroup);
+if (!@ingroup) {
+	return $text{'scalegroups_empty'};
+	}
+my @users = map { $_->{'host'} } @ingroup;
+if (@users > 3) {
+	@users = ( @users[0..2], "..." );
+	}
+return &text('scalegroups_users', join(" ", @users));
+}
+
+# evaluate_scalegroup(&scalegroup, [&all-servers])
+# Check if an auto-scaling group needs more or fewer systems, and create or 
+# delete then if needed. Returns a hash ref with details of what was done.
+# May print output when creating or deleting.
+sub evaluate_scalegroup
+{
+my ($scalegroup, $allservers) = @_;
+$allservers ||= [ &list_managed_servers() ];
+my @ingroup = &get_scalegroup_systems($scalegroup);
+
+# Evaluate scale-up conditions to see if any are firing
+my $upst = &evaluate_alert($scalegroup, $servers);
+
+# Evaluate scale-down conditions, if any
+# XXX
+my $downst = { };
+
+if ($upst->{'firing'}) {
+	# Need another sytem
+	if (@ingroup < $scalegroup->{'max'}) {
+		# Create it
+		my $err = &create_scalegroup_system($scalegroup);
+		return { 'action' => 'inc',
+			 'error' => $err,
+			 'why' => $upst };
+		}
+	else {
+		# Group is full, cannot create
+		return { 'action' => 'over',
+			 'why' => $upst };
+		}
+	}
+elsif ($downst->{'firing'}) {
+	# Need less systems
+	if (@ingroup > $scalegroup->{'min'}) {
+		# Delete one
+		my $err = &delete_scalegroup_system($scalegroup);
+		return { 'action' => 'dec',
+			 'error' => $err,
+			 'why' => $downst };
+		}
+	else {
+		# System count is low enough, so do nothing
+		return { 'action' => 'ok',
+			 'why' => $downst };
+		}
+	}
+
+return { 'action' => 'ok' };
+}
+
+# create_scalegroup_system(&scalegroup)
+# Create a new virtual system based on specifications in a scaling group,
+# by cloning a source system. Returns an error message on failure.
+sub create_scalegroup_system
+{
+my ($scalegroup) = @_;
+my $srcserver = &get_managed_server($scalegroup->{'clone'});
+$srcserver || return $text{'scaleup_esource'};
+my $srcvhost = &get_parent_server($srcserver);
+
+# Find all possible host systems
+# XXX
+my @vhosts;
+my $type = $scalegroup->{'manager'};
+my $alttype = $type eq "zones" ? "zone" : $type;
+my @allvhosts = grep { ($_->{$type.'_host'} || $_->{$alttype.'_host'}) &&
+		       &can_host_server($_) } &list_managed_servers();
+if ($scalegroup->{'dest_hosts'}) {
+	# Only selected hosts
+	my %vids = map { $_, 1 } split(/\s+/, $scalegroup->{'dest_hosts'});
+	@vhosts = grep { $vids{$_->{'id'}} } @allvhosts;
+	}
+elsif ($scalegroup->{'dest_location'}) {
+	# All hosts in location group
+	@vhosts = grep { $_->{'location'} eq $scalegroup->{'dest_location'} }
+		       @allvhosts;
+	}
+else {
+	# All for type
+	@vhosts = @allvhosts;
+	}
+@vhosts || return $text{'scaleup_evhosts'};
+
+# Is remote cloning supported?
+my $rfunc = "type_".$type."_can_clone_remote";
+my $canremote = defined(&$rfunc) && &$rfunc();
+if ($canremote) {
+	# Pick a host system based on memory / etc
+	# XXX
+	}
+else {
+	# Can only clone to same system
+	my ($inlist) = grep { $_->{'id'} eq $srcvhost->{'id'} } @vhosts;
+	$inlist || return &text('scaleup_elocalvhost', $srcvhost->{'host'},
+						       $srcserver->{'host'});
+	$vhost = $srcvhost;
+
+	# XXX verify resources
+	}
+
+# Allocate new IPs
+# XXX
+
+# Call the clone function
+# XXX
+
+# Set scalegroup parameter and re-save
+# XXX
+
+# Start up the clone if down
+# XXX
+}
+
+1;
 

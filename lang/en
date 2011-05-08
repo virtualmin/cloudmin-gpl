@@ -4488,8 +4488,10 @@ scalegroups_manager=System type
 scalegroups_cond=Scaling conditions
 scalegroups_status=Current status
 scalegroups_delete=Delete Selected Groups
-scalegroups_refresh=Refresh Groups
+scalegroups_refresh=Update Systems In Selected Groups
 scalegroups_return=auto-scaling groups list
+scalegroups_empty=No systems created yet
+scalegroups_users=Created $1
 
 scalegroup_ctitle=Create Auto-Scaling Group
 scalegroup_etitle=Edit Auto-Scaling Group
@@ -4501,11 +4503,13 @@ scalegroup_clone=Source system to clone
 scalegroup_dests=Host systems to create on
 scalegroup_dests0=Any available host
 scalegroup_dests1=Only selected
-scalegroup_dests2=Only members of group
+scalegroup_dests2=Members of location group
 scalegroup_min=Minimum systems in group
 scalegroup_max=Maximum systems in group
 scalegroup_header2=New virtual system details
 scalegroup_header3=Conditions for scaling up
+scalegroup_allin=All in group
+scalegroup_atleast=At least
 scalegroup_header4=Email notification settings
 scalegroup_eservers=A scaling group cannot be created unless at least one virtual system to clone exists
 scalegroup_evhosts=A scaling group cannot be created unless at least one host system for the selected virtualization type exists
@@ -4524,6 +4528,10 @@ scalegroup_ehost=Missing or invalid hostname template
 scalegroup_ehostnum=Hostname template must contain <tt>${NUM}</tt> , which will be replaced by the a counter when a system is created
 scalegroup_edesthosts=No host systems selected
 scalegroup_econds=No conditions for scaling up selected
+
+scaleup_evhosts=No usable host systems were found
+scaleup_esource=System to clone for new systems in scaling group no longer exists
+scaleup_elocalvhost=Host system $1 for system to clone $2 is not usable
 
 __norefs=1
 
