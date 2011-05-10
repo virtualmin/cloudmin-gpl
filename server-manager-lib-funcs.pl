@@ -7456,7 +7456,7 @@ $vhost->{'id'} ne $dest->{'id'} ||
 
 # Check if moving is supported
 my $cfunc = "type_".$server->{'manager'}."_can_move";
-if (!defined(&$cfunc) || &$cfunc($server, $dest) != 2) {
+if (!defined(&$cfunc) || &$cfunc($server, $dest) < 2) {
 	return "The $desc system $server->{'host'} cannot be manually moved to $dest->{'host'}";
 	}
 
