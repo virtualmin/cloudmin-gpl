@@ -31,8 +31,10 @@ elsif ($in{'up'}) {
                 $scalegroup = &get_scalegroup($id);
 		next if (!$scalegroup);
 		&$first_print(&text('scaleup_doing', $scalegroup->{'host'}));
+		&obtain_lock_scalegroup($scalegroup);
 		&$indent_print();
 		my ($err, $newserver) = &create_scalegroup_system($scalegroup);
+		&release_lock_scalegroup($scalegroup);
 		&$outdent_print();
 		if ($err) {
 			&$second_print(&text('scaleup_failed', $err));

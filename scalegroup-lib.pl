@@ -7,7 +7,7 @@ sub list_scalegroups
 my @rv;
 opendir(RR, $scalegroups_dir);
 foreach my $f (readdir(RR)) {
-	next if ($f =~ /^\./);
+	next if ($f =~ /^\./ || $f =~ /\.lock/);
 	my $rr = &get_scalegroup($f);
 	if ($rr) {
 		push(@rv, $rr);
@@ -252,6 +252,7 @@ return $err if ($err);
 # Set scalegroup parameter and re-save
 &obtain_lock_server($newserver);
 $newserver->{'scalegroup'} = $scalegroup->{'id'};
+$newserver->{'scalegroup_index'} = $num;
 &check_server_status($newserver, 0, 1);
 &save_managed_server($newserver);
 
@@ -276,6 +277,53 @@ if ($newserver->{'status'} eq 'down') {
 &release_lock_server($newserver);
 
 return ( $err ? &text('scaleup_estart', $err) : undef, $newserver );
+}
+
+# delete_scalegroup_system(&server)
+# Remove the highest-numbered system from an auto-scaling group
+sub delete_scalegroup_system
+{
+my ($scalegroup) = @_;
+my @ingroup = &get_scalegroup_servers($scalegroup);
+@ingroup = sort { $a->{'scalegroup_index'} <=> $b->{'scalegroup_index'} }
+		@ingroup;
+if (@ingroup) {
+	my $server = pop(@ingroup);
+	&run_system_script($server, 'before', 'delete');
+	my $dfunc = "type_".$server->{'manager'}."_delete";
+	$err = &$dfunc($server);
+	return &text('scaledown_edelete', $err) if ($err);
+	&clear_ssh_host_key($server);
+	&delete_managed_server($server);
+	&run_system_script($server, 'after', 'delete');
+	return undef;
+	}
+else {
+	return $text{'scaledown_empty'};
+	}
+}
+
+# obtain_lock_scalegroup(&scalegroup)
+# Lock a scaling group for update or evaluation
+sub obtain_lock_scalegroup
+{
+my ($scalegroup) = @_;
+if ($main::got_lock_scalegroup{$scalegroup->{'id'}} == 0) {
+	&lock_file($scalegroups_dir."/".$scalegroup->{'id'});
+	}
+$main::got_lock_scalegroup{$scalegroup->{'id'}}++;
+}
+
+# release_lock_scalegroup(&scalegroup)
+# Give up the lock created by obtain_lock_scalegroup
+sub release_lock_scalegroup
+{
+my ($scalegroup) = @_;
+if ($main::got_lock_scalegroup{$scalegroup->{'id'}} == 1) {
+	&unlock_file($scalegroups_dir."/".$scalegroup->{'id'});
+	}
+$main::got_lock_scalegroup{$scalegroup->{'id'}}--
+	if ($main::got_lock_scalegroup{$scalegroup->{'id'}});
 }
 
 1;

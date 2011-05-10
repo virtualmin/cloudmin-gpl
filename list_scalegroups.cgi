@@ -32,7 +32,7 @@ if (@scalegroups) {
 	print &ui_form_end([ [ 'delete', $text{'scalegroups_delete'} ],
 			     [ 'refresh', $text{'scalegroups_refresh'} ],
 			     [ 'up', $text{'scalegroups_up'} ],
-			     [ 'down', $text{'scalegrodowns_down'} ],
+			     [ 'down', $text{'scalegroups_down'} ],
 			   ]);
 	}
 else {

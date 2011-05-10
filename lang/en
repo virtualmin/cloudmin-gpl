@@ -4493,7 +4493,7 @@ scalegroups_up=Scale Up Groups
 scalegroups_down=Scale Down Groups
 scalegroups_return=auto-scaling groups list
 scalegroups_empty=No systems created yet
-scalegroups_users=Created $1
+scalegroups_users=Contains $1
 
 scalegroup_ctitle=Create Auto-Scaling Group
 scalegroup_etitle=Edit Auto-Scaling Group
