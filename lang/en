@@ -4543,6 +4543,9 @@ scaleup_doing=Creating a new system for scaling group $1 ..
 scaleup_failed=.. creation failed : $1
 scaleup_done=.. successfully created $1
 
+scaledown_edelete=Failed to delete $1 : $2
+scaledown_empty=Group does not contain any systems
+
 dscalegroups_err=Failed to delete selected groups
 dscalegroups_enone=None selected
 

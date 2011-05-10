@@ -284,22 +284,25 @@ return ( $err ? &text('scaleup_estart', $err) : undef, $newserver );
 sub delete_scalegroup_system
 {
 my ($scalegroup) = @_;
-my @ingroup = &get_scalegroup_servers($scalegroup);
+my @ingroup = &get_scalegroup_systems($scalegroup);
 @ingroup = sort { $a->{'scalegroup_index'} <=> $b->{'scalegroup_index'} }
 		@ingroup;
 if (@ingroup) {
 	my $server = pop(@ingroup);
+	&obtain_lock_server($server);
 	&run_system_script($server, 'before', 'delete');
 	my $dfunc = "type_".$server->{'manager'}."_delete";
 	$err = &$dfunc($server);
-	return &text('scaledown_edelete', $err) if ($err);
+	return (&text('scaledown_edelete', $server->{'host'}, $err), undef)
+		if ($err);
 	&clear_ssh_host_key($server);
 	&delete_managed_server($server);
 	&run_system_script($server, 'after', 'delete');
-	return undef;
+	&release_lock_server($server);
+	return (undef, $server);
 	}
 else {
-	return $text{'scaledown_empty'};
+	return ($text{'scaledown_empty'}, undef);
 	}
 }
 
