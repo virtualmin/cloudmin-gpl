@@ -138,7 +138,7 @@ if ($upst->{'firing'}) {
 	# Need another sytem
 	if (@ingroup < $scalegroup->{'max'}) {
 		# Create it
-		my $err = &create_scalegroup_system($scalegroup);
+		my ($err) = &create_scalegroup_system($scalegroup);
 		return { 'action' => 'inc',
 			 'error' => $err,
 			 'why' => $upst };
@@ -179,7 +179,6 @@ $srcserver || return $text{'scaleup_esource'};
 my $srcvhost = &get_parent_server($srcserver);
 
 # Find all possible host systems
-# XXX
 my @vhosts;
 my $type = $scalegroup->{'manager'};
 my $alttype = $type eq "zones" ? "zone" : $type;
@@ -201,12 +200,23 @@ else {
 	}
 @vhosts || return $text{'scaleup_evhosts'};
 
+# Get resources neeeded
+my $dsfunc = "type_".$srcserver->{'manager'}."_get_disk_size";
+my $disk = defined(&$dsfunc) ? &$dsfunc($srcserver) : 0;
+my $mfunc = "type_".$newserver->{'manager'}."_get_memory_size";
+my $mem = defined(&$mfunc) ? &$mfunc($newserver) : undef;
+my $cfunc = "type_".$newserver->{'manager'}."_get_cpu_size";
+my $cpu = defined(&$cfunc) ? &$cfunc($newserver) : undef;
+
 # Is remote cloning supported?
 my $rfunc = "type_".$type."_can_clone_remote";
 my $canremote = defined(&$rfunc) && &$rfunc();
 if ($canremote) {
 	# Pick a host system based on memory / etc
-	# XXX
+	$vhost = &find_host_server_from_vhosts($srcserver, \@vhosts, "mem",
+					       $srcserver->{'manager'});
+	$vhost || return &text('scaleup_evresources',
+			       &nice_size($mem), &nice_size($disk));
 	}
 else {
 	# Can only clone to same system
@@ -214,21 +224,58 @@ else {
 	$inlist || return &text('scaleup_elocalvhost', $srcvhost->{'host'},
 						       $srcserver->{'host'});
 	$vhost = $srcvhost;
+	}
+&usable_host_system($vhost, $newserver->{'manager'}, $mem, $disk) ||
+	return &text('scaleup_evhostresources', $vhost->{'host'},
+		     &nice_size($mem), &nice_size($disk));
 
-	# XXX verify resources
+# Pick a new hostname
+my $newhost;
+my $num = 0;
+my @allservers = &list_managed_servers();
+while(1) {
+	$newhost = &substitute_template($scalegroup->{'host'},
+					{ 'num' => $num });
+	my ($clash) = grep { $_->{'host'} =~ /\Q$newhost\E/i } @allservers;
+	last if (!$clash);
+	$num++;
 	}
 
-# Allocate new IPs
-# XXX
-
 # Call the clone function
-# XXX
+&obtain_lock_server($srcserver);
+my $newdesc = $scalegroup->{'desc'}." system ".$num;
+my ($newserver, $err) = &clone_system($srcserver, $newhost, $newdesc, undef, 0,
+				      $vhost);
+&release_lock_server($srcserver);
+return $err if ($err);
 
 # Set scalegroup parameter and re-save
-# XXX
+&obtain_lock_server($newserver);
+$newserver->{'scalegroup'} = $scalegroup->{'id'};
+&check_server_status($newserver, 0, 1);
+&save_managed_server($newserver);
 
 # Start up the clone if down
-# XXX
+my ($ok, $err);
+if ($newserver->{'status'} eq 'down') {
+	&$first_print($text{'clone_starting2'});
+	($ok, $err) = &startup_server($newserver);
+	if (!$ok) {
+		&$second_print(&text('smove_startfailed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+
+	&$first_print($text{'clone_refreshing2'});
+	&check_server_status($newserver, 0, 1);
+	&save_managed_server($newserver);
+	&$second_print(&text('save_refreshdone2',
+		&describe_status($newserver, 1, 1)));
+	}
+&release_lock_server($newserver);
+
+return ( $err ? &text('scaleup_estart', $err) : undef, $newserver );
 }
 
 1;

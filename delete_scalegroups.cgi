@@ -1,0 +1,53 @@
+#!/usr/local/bin/perl
+# Delete, evaluate or re-scale selected groups
+
+$trust_unknown_referers = 1;
+require './server-manager-lib.pl';
+&ReadParse();
+&can_action_error(undef, "global");
+@d = split(/\0/, $in{'id'});
+
+if ($in{'delete'}) {
+	# Remove selected groups
+	&error_setup($text{'dscalegroups_err'});
+	@d || &error($text{'dscalegroups_enone'});
+	foreach $id (@d) {
+		$scalegroup = &get_scalegroup($id);
+		&delete_scapegroup($scalegroup) if ($scalegroup);
+		}
+	&webmin_log("delete", "scalegroups", scalar(@d));
+	}
+elsif ($in{'refresh'}) {
+	# Evaluate selected groups
+	# XXX
+	}
+elsif ($in{'up'}) {
+	# Scale up selected groups
+	&error_setup($text{'scaleup_err'});
+	@d || &error($text{'dscalegroups_enone'});
+	&ui_print_header(undef, $text{'scaleup_title'}, "");
+
+	foreach $id (@d) {
+                $scalegroup = &get_scalegroup($id);
+		next if (!$scalegroup);
+		&$first_print(&text('scaleup_doing', $scalegroup->{'host'}));
+		&$indent_print();
+		my ($err, $newserver) = &create_scalegroup_system($scalegroup);
+		&$outdent_print();
+		if ($err) {
+			&$second_print(&text('scaleup_failed', $err));
+			}
+		else {
+			&$second_print(&text('scaleup_done',
+					     $newserver->{'host'}));
+			}
+		}
+
+	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
+	}
+elsif ($in{'down'}) {
+	# Scale down selected groups
+	# XXX
+	}
+
+
