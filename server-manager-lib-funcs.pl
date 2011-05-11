@@ -1163,6 +1163,11 @@ else {
 		$sshcmd .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
+	if ($server->{'root_shell'} &&
+	    $server->{'root_shell'} !~ /^(\S+\/)?(sh|bash|dash)$/) {
+		# Shell is not bash .. force use of sh
+		$cmd = "exec /bin/sh -c ".quotemeta($cmd);
+		}
 	$sshcmd .= " ".quotemeta($cmd);
 	my ($status, $out, $fh, $fpid) =
 	    &run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout,
@@ -2621,6 +2626,16 @@ if ($regen) {
 	delete($server->{'virtualmin_poss'});
 	delete($server->{'all_poss'});
 	&save_server_collected($server, undef);
+	}
+
+# Work out the root shell
+if (!$server->{'root_shell'} || $regen) {
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+							  'echo $SHELL');
+	if (!$ex && !$err) {
+		$out =~ s/\s//g;
+		$server->{'root_shell'} = $out;
+		}
 	}
 
 # If we have a Webmin login, try it
