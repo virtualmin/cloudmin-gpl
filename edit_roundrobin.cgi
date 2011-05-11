@@ -74,7 +74,7 @@ if (@allscalegroups) {
 		      &ui_multi_select("scalegroups",
 			       [ map { [ $_->{'id'}, $_->{'host'} ] } @scalegroups ],
 			       [ map { [ $_->{'id'}, $_->{'host'} ] } @allscalegroups ],
-			       10, 1, 0, $text{'alert_scalegroupopts'},
+			       3, 1, 0, $text{'alert_scalegroupopts'},
 					 $text{'alert_scalegroupvals'}) ]);
 	}
 print &ui_table_row(undef, &ui_radio_table("mode", $mode, \@stable), 2);

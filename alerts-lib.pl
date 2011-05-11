@@ -473,7 +473,7 @@ elsif ($alert->{'scalegroups'}) {
 	# Systems in scaling groups
 	return &text('alertdesc_scalegroups',
 		     join(" ", map { my $s = &get_scalegroup($_);
-				     $s ? ( $s->{'host'} ) : ( ) }
+				     $s ? ( "<tt>$s->{'host'}</tt>" ) : ( ) }
 				   split(/\s+/, $alert->{'scalegroups'})));
 	}
 else {

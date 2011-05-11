@@ -444,6 +444,14 @@ if ($multi) {
 				}
 			}
 
+		# Show auto-scaling info
+		if ($s->{'scalegroup'}) {
+			$scalegroup = &get_scalegroup($s->{'scalegroup'});
+			print "    Auto-scaling group: $scalegroup->{'host'}\n";
+			print "    Auto-scaling reason: ",
+			      "$s->{'scalegroup_reason'}\n";
+			}
+
 		# Show collected info
 		if ($info && scalar(keys %$info) > 1) {
 			if ($info->{'load'}) {

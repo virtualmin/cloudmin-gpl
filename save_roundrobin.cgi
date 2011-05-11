@@ -48,7 +48,7 @@ else {
 			join(" ", split(/\r?\n/, $in{'owners'}));
 		$roundrobin->{'owners'} || &error($text{'alert_eowners'});
 		}
-	elsif ($in{'mode'} == 4) {
+	elsif ($in{'mode'} == 5) {
 		# Selected auto-scaling groups
 		$roundrobin->{'scalegroups'} =
 			join(" ", split(/\r?\n/, $in{'scalegroups'}));

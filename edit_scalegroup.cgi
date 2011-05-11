@@ -178,6 +178,35 @@ print &ui_table_row($text{'alert_interval'},
 
 print &ui_hidden_table_end("email");
 
+if (!$in{'new'}) {
+	# Section for current status
+	print &ui_hidden_table_start($text{'scalegroup_header5'},
+				     "width=100%", 2, "status", 0, \@tds);
+	@ingroup = &get_scalegroup_systems($scalegroup);
+	if (@ingroup) {
+		$stable = &ui_columns_start([ $text{'scalegroup_host'},
+					      $text{'scalegroup_when'},
+					      $text{'scalegroup_parent'},
+					      $text{'scalegroup_why'} ], 100);
+		foreach $s (@ingroup) {
+			$parent = &get_parent_server($s);
+			$stable .= &ui_columns_row([
+				"<a href='edit_serv.cgi?id=$s->{'id'}'>".
+				  $s->{'host'}."</a>",
+				&make_date($s->{'created'}),
+				$parent->{'host'},
+				&describe_scalegroup_reason($s),
+				]);
+			}
+		$stable .= &ui_columns_end();
+		}
+	else {
+		$stable = $text{'scalegroup_empty'};
+		}
+	print &ui_table_row(undef, $stable, 2);
+	print &ui_hidden_table_end("status");
+	}
+
 if ($in{'new'}) {
 	print &ui_form_end([ [ undef, $text{'create'} ] ]);
 	}

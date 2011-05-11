@@ -40,6 +40,8 @@ elsif ($in{'up'}) {
 			&$second_print(&text('scaleup_failed', $err));
 			}
 		else {
+			$newserver->{'scalegroup_reason'} = 'web';
+			&save_managed_server($newserver);
 			&$second_print(&text('scaleup_done',
 					     $newserver->{'host'}));
 			}

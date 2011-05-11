@@ -114,7 +114,7 @@ my @users = map { $_->{'host'} } @ingroup;
 if (@users > 3) {
 	@users = ( @users[0..2], "..." );
 	}
-return &text('scalegroups_users', join(" ", @users));
+return &text('scalegroups_users', join(", ", @users));
 }
 
 # evaluate_scalegroup(&scalegroup, [&all-servers])
@@ -138,9 +138,11 @@ if ($upst->{'firing'}) {
 	# Need another sytem
 	if (@ingroup < $scalegroup->{'max'}) {
 		# Create it
-		my ($err) = &create_scalegroup_system($scalegroup);
+		my ($err, $newserver) = &create_scalegroup_system($scalegroup);
+		$newserver->{'scalegroup_reason'} = 'scaleup '.$upst->{'names'};
 		return { 'action' => 'inc',
 			 'error' => $err,
+			 'server' => $newserver,
 			 'why' => $upst };
 		}
 	else {
@@ -326,6 +328,25 @@ if ($main::got_lock_scalegroup{$scalegroup->{'id'}} == 1) {
 	}
 $main::got_lock_scalegroup{$scalegroup->{'id'}}--
 	if ($main::got_lock_scalegroup{$scalegroup->{'id'}});
+}
+
+# describe_scalegroup_reason(&server)
+# Returns text describing why a system was added to a scaling group
+sub describe_scalegroup_reason
+{
+my ($s) = @_;
+my $r = $s->{'scalegroup_reason'};
+if (!$r) {
+	return $text{'scalegroup_runknown'};
+	}
+elsif ($r =~ /^scaleup\s+(.*)/) {
+	return &text('scalegroup_rup',
+		     join(", ", map { $text{'history_stat_'.$_} }
+				   split(/\s+/, $1)));
+	}
+else {
+	return $text{'scalegroup_r'.$r};
+	}
 }
 
 1;
