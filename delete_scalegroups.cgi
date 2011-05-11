@@ -5,7 +5,7 @@ $trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
 &can_action_error(undef, "global");
-@d = split(/\0/, $in{'id'});
+@d = split(/\0/, $in{'d'});
 
 if ($in{'delete'}) {
 	# Remove selected groups
@@ -44,12 +44,32 @@ elsif ($in{'up'}) {
 					     $newserver->{'host'}));
 			}
 		}
-
+	&webmin_log("scaleup", "scalegroups", scalar(@d));
 	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
 	}
 elsif ($in{'down'}) {
 	# Scale down selected groups
-	# XXX
+	&error_setup($text{'scaledown_err'});
+	@d || &error($text{'dscalegroups_enone'});
+	&ui_print_header(undef, $text{'scaledown_title'}, "");
+
+	foreach $id (@d) {
+                $scalegroup = &get_scalegroup($id);
+		next if (!$scalegroup);
+		&$first_print(&text('scaledown_doing', $scalegroup->{'host'}));
+		&obtain_lock_scalegroup($scalegroup);
+		my ($err, $server) = &delete_scalegroup_system($scalegroup);
+		&release_lock_scalegroup($scalegroup);
+		if ($err) {
+			&$second_print(&text('scaledown_failed', $err));
+			}
+		else {
+			&$second_print(&text('scaledown_done',
+					     $server->{'host'}));
+			}
+		}
+	&webmin_log("scaledown", "scalegroups", scalar(@d));
+	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
 	}
 
 

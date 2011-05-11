@@ -3649,6 +3649,9 @@ log_delete_roundrobins=Deleted $1 roundrobins
 log_create_scalegroup=Created auto-scaling group with hostname $1
 log_delete_scalegroup=Deleted auto-scaling group with hostname $1
 log_modify_scalegroup=Modified auto-scaling group with hostname $1
+log_delete_scalegroups=Deleted $1 auto-scaling groups
+log_scaleup_scalegroups=Added systems to $1 auto-scaling groups
+log_scaledown_scalegroups=Removed systems from $1 auto-scaling groups
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system
@@ -4545,6 +4548,10 @@ scaleup_done=.. successfully created $1
 
 scaledown_edelete=Failed to delete $1 : $2
 scaledown_empty=Group does not contain any systems
+scaledown_title=Scaling Down Groups
+scaledown_doing=Removing a system from scaling group $1 ..
+scaledown_failed=.. removal failed : $1
+scaledown_done=.. successfully removed $1
 
 dscalegroups_err=Failed to delete selected groups
 dscalegroups_enone=None selected

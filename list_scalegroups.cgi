@@ -25,7 +25,7 @@ if (@scalegroups) {
 			$text{$s->{'manager'}.'_typedesc'},
 			&describe_alert_rules($s),
 			&describe_scalegroup_status($s),
-			], \@tds, "d", $a->{'id'});
+			], \@tds, "d", $s->{'id'});
 		}
 	print &ui_columns_end();
 	print &ui_links_row(\@links);

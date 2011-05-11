@@ -178,12 +178,18 @@ my $srcserver = &get_managed_server($scalegroup->{'clone'});
 $srcserver || return $text{'scaleup_esource'};
 my $srcvhost = &get_parent_server($srcserver);
 
+# Get resources neeeded
+my $dsfunc = "type_".$srcserver->{'manager'}."_get_disk_size";
+my $disk = defined(&$dsfunc) ? &$dsfunc($srcserver) : 0;
+my $mfunc = "type_".$newserver->{'manager'}."_get_memory_size";
+my $mem = defined(&$mfunc) ? &$mfunc($newserver) : undef;
+my $cfunc = "type_".$newserver->{'manager'}."_get_cpu_size";
+my $cpu = defined(&$cfunc) ? &$cfunc($newserver) : undef;
+
 # Find all possible host systems
+my @allvhosts = &list_available_host_servers(
+			$scalegroup->{'manager'}, $mem, $disk);
 my @vhosts;
-my $type = $scalegroup->{'manager'};
-my $alttype = $type eq "zones" ? "zone" : $type;
-my @allvhosts = grep { ($_->{$type.'_host'} || $_->{$alttype.'_host'}) &&
-		       &can_host_server($_) } &list_managed_servers();
 if ($scalegroup->{'dest_hosts'}) {
 	# Only selected hosts
 	my %vids = map { $_, 1 } split(/\s+/, $scalegroup->{'dest_hosts'});
@@ -200,16 +206,8 @@ else {
 	}
 @vhosts || return $text{'scaleup_evhosts'};
 
-# Get resources neeeded
-my $dsfunc = "type_".$srcserver->{'manager'}."_get_disk_size";
-my $disk = defined(&$dsfunc) ? &$dsfunc($srcserver) : 0;
-my $mfunc = "type_".$newserver->{'manager'}."_get_memory_size";
-my $mem = defined(&$mfunc) ? &$mfunc($newserver) : undef;
-my $cfunc = "type_".$newserver->{'manager'}."_get_cpu_size";
-my $cpu = defined(&$cfunc) ? &$cfunc($newserver) : undef;
-
 # Is remote cloning supported?
-my $rfunc = "type_".$type."_can_clone_remote";
+my $rfunc = "type_".$srcserver->{'manager'}."_can_clone_remote";
 my $canremote = defined(&$rfunc) && &$rfunc();
 if ($canremote) {
 	# Pick a host system based on memory / etc

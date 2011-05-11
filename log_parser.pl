@@ -253,6 +253,10 @@ elsif ($type eq "scalegroup") {
 	# Auto-scaling group
 	return &text('log_'.$action.'_scalegroup', $p->{'name'});
 	}
+elsif ($type eq "scalegroups") {
+	# Multiple auto-scaling groups
+	return &text('log_'.$action.'_scalegroups', $object);
+	}
 elsif ($type eq "failover") {
 	# One failover group
 	return &text('log_'.$action.'_failover', &html_escape($p->{'desc'}));
