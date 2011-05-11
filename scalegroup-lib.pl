@@ -176,6 +176,7 @@ sub create_scalegroup_system
 my ($scalegroup) = @_;
 my $srcserver = &get_managed_server($scalegroup->{'clone'});
 $srcserver || return $text{'scaleup_esource'};
+$srcserver->{'host'} eq 'nohost' && return $text{'scaleup_enohost'};
 my $srcvhost = &get_parent_server($srcserver);
 
 # Get resources neeeded

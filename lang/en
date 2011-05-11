@@ -4497,6 +4497,7 @@ scalegroups_down=Scale Down Groups
 scalegroups_return=auto-scaling groups list
 scalegroups_empty=No systems created yet
 scalegroups_users=Contains $1
+scalegroups_clone=Source system
 
 scalegroup_ctitle=Create Auto-Scaling Group
 scalegroup_etitle=Edit Auto-Scaling Group
@@ -4536,6 +4537,7 @@ scalegroup_econds=No conditions for scaling up selected
 
 scaleup_evhosts=No usable host systems were found
 scaleup_esource=System to clone for new systems in scaling group no longer exists
+scaleup_enohost=System to clone is on an in-accessible host
 scaleup_elocalvhost=Host system $1 for system to clone $2 is not usable
 scaleup_evresources=No host system with free resources was found!
 scaleup_evhostresources=Host system $1 does not have enough resources for new system using $1 RAM and $2 disk

@@ -16,13 +16,16 @@ if (@scalegroups) {
 	@tds = ( "width=5" );
 	print &ui_columns_start([ "", $text{'scalegroups_host'},
 				  $text{'scalegroups_manager'},
+				  $text{'scalegroups_clone'},
 				  $text{'scalegroups_cond'},
 				  $text{'scalegroups_status'} ], 100, 0, \@tds);
 	foreach $s (@scalegroups) {
+		my $clone = &get_managed_server($s->{'clone'});
 		print &ui_checked_columns_row([
 			"<a href='edit_scalegroup.cgi?id=$s->{'id'}'>".
 			  $s->{'host'}."</a>",
 			$text{$s->{'manager'}.'_typedesc'},
+			$clone->{'host'},
 			&describe_alert_rules($s),
 			&describe_scalegroup_status($s),
 			], \@tds, "d", $s->{'id'});
