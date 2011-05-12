@@ -138,11 +138,17 @@ if ($upst->{'firing'}) {
 	# Need another sytem
 	if (@ingroup < $scalegroup->{'max'}) {
 		# Create it
-		my ($err, $newserver) = &create_scalegroup_system($scalegroup);
-		$newserver->{'scalegroup_reason'} = 'scaleup '.$upst->{'names'};
+		my ($err, $newserver);
+		if ($scalegroup->{'enabled'}) {
+			($err, $newserver) =
+				&create_scalegroup_system($scalegroup);
+			$newserver->{'scalegroup_reason'} =
+				'scaleup '.$upst->{'names'};
+			}
 		return { 'action' => 'inc',
 			 'error' => $err,
 			 'server' => $newserver,
+			 'enabled' => $scalegroup->{'enabled'},
 			 'why' => $upst };
 		}
 	else {
@@ -155,8 +161,13 @@ elsif ($downst->{'firing'}) {
 	# Need less systems
 	if (@ingroup > $scalegroup->{'min'}) {
 		# Delete one
-		my $err = &delete_scalegroup_system($scalegroup);
+		my ($err, $server);
+		if ($scalegroup->{'enabled'}) {
+			($err, $server) =
+				&delete_scalegroup_system($scalegroup);
+			}
 		return { 'action' => 'dec',
+			 'enabled' => $scalegroup->{'enabled'},
 			 'error' => $err,
 			 'why' => $downst };
 		}

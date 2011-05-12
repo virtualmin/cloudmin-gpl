@@ -15,6 +15,7 @@ if (@scalegroups) {
 	print &ui_links_row(\@links);
 	@tds = ( "width=5" );
 	print &ui_columns_start([ "", $text{'scalegroups_host'},
+				  $text{'scalegroups_enabled'},
 				  $text{'scalegroups_manager'},
 				  $text{'scalegroups_clone'},
 				  $text{'scalegroups_cond'},
@@ -24,6 +25,8 @@ if (@scalegroups) {
 		print &ui_checked_columns_row([
 			"<a href='edit_scalegroup.cgi?id=$s->{'id'}'>".
 			  $s->{'host'}."</a>",
+			$s->{'enabled'} ? $text{'yes'} :
+				"<font color=red>$text{'no'}</font>",
 			$text{$s->{'manager'}.'_typedesc'},
 			$clone->{'host'},
 			&describe_alert_rules($s),

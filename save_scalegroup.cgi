@@ -37,6 +37,8 @@ else {
 		&error($text{'scalegroup_emax'});
 	$scalegroup->{'max'} = $in{'max'};
 
+	$scalegroup->{'enabled'} = $in{'enabled'};
+
 	# Hostname template
 	$in{'host'} =~ /^\S+$/ || &error($text{'scalegroup_ehost'});
 	$in{'host'} =~ /\$NUM/ || $in{'host'} =~ /\$\{NUM\}/ ||

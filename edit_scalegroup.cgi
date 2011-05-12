@@ -12,6 +12,7 @@ if ($in{'new'}) {
 			'manager' => $in{'manager'},
 			'min' => 1,
 			'max' => 5,
+			'enabled' => 1,
 			'notify_inc' => 1,
 			'notify_over' => 1,
 		 	'interval' => 3600,
@@ -64,6 +65,9 @@ print &ui_table_row($text{'scalegroup_min'},
 
 print &ui_table_row($text{'scalegroup_max'},
 	&ui_textbox("max", $scalegroup->{'max'}, 5));
+
+print &ui_table_row($text{'scalegroup_enabled'},
+	&ui_yesno_radio("enabled", $scalegroup->{'enabled'}));
 
 print &ui_hidden_table_end("host");
 

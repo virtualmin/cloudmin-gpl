@@ -20,7 +20,53 @@ if ($in{'delete'}) {
 	}
 elsif ($in{'refresh'}) {
 	# Evaluate selected groups
-	# XXX
+	&error_setup($text{'scaleeval_err'});
+	@d || &error($text{'dscalegroups_enone'});
+	&ui_print_header(undef, $text{'scaleeval_title'}, "");
+
+	foreach $id (@d) {
+                $scalegroup = &get_scalegroup($id);
+                next if (!$scalegroup);
+                &$first_print(&text('scaleeval_doing',
+                                    "<tt>$scalegroup->{'host'}</tt>"));
+		&obtain_lock_scalegroup($scalegroup);
+		# XXX set $why
+		my $rv = &evaluate_scalegroup($scalegroup);
+		if ($rv->{'action'} eq 'ok') {
+			&$second_print($text{'scaleeval_ok'});
+			}
+		elsif ($rv->{'action'} eq 'inc' && $rv->{'error'}) {
+			&$second_print(&text('scaleeval_finc',
+				$why, $rv->{'error'}));
+			}
+		elsif ($rv->{'action'} eq 'inc' && $rv->{'enabled'}) {
+			&$second_print(&text('scaleeval_inc',
+				$rv->{'server'}->{'host'}, $why));
+			}
+		elsif ($rv->{'action'} eq 'inc') {
+			&$second_print(&text('scaleeval_noinc', $why));
+			}
+		elsif ($rv->{'action'} eq 'over') {
+			&$second_print(&text('scaleeval_over', $why));
+			}
+		elsif ($rv->{'action'} eq 'dec' && $rv->{'error'}) {
+			&$second_print(&text('scaleeval_fdec',
+				$why, $rv->{'error'}));
+			}
+		elsif ($rv->{'action'} eq 'dec' && $rv->{'enabled'}) {
+			&$second_print(&text('scaleeval_dec',
+				$rv->{'server'}->{'host'}, $why));
+			}
+		elsif ($rv->{'action'} eq 'dec') {
+			&$second_print(&text('scaleeval_nodec', $why));
+			}
+		else {
+			&$second_print($text{'scaleeval_unknown'});
+			}
+		&release_lock_scalegroup($scalegroup);
+		}
+	&webmin_log("scaleup", "scalegroups", scalar(@d));
+	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
 	}
 elsif ($in{'up'}) {
 	# Scale up selected groups

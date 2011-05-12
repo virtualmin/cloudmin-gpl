@@ -60,6 +60,7 @@ if ($multi) {
 		print "    Description: $s->{'desc'}\n";
 		print "    Minimum systems: $s->{'min'}\n";
 		print "    Maximum systems: $s->{'max'}\n";
+		print "    Enabled: ",($s->{'enabled'} ? "Yes" : "No"),"\n";
 		my $clone = &get_managed_server($s->{'clone'});
 		print "    Source system: $clone->{'host'}\n";
 
