@@ -318,27 +318,32 @@ else {
 	$msg .= $text{'rmail_whynot2'}."\n";
 	}
 $msg .= "\n";
-$msg .= sprintf $fmt, $text{'roundrobin_host'},
-		      $text{'roundrobin_ip'},
-		      $text{'remail_reason'};
-$msg .= sprintf $fmt, ("-" x 25), ("-" x 15), ("-" x 35);
 my $from;
-foreach my $w (@whynot) {
-	my $s = &get_managed_server($w->[0]);
-	next if (!$s);
-	my $ip = &get_server_ip($s);
-	$from ||= &get_global_from_address($s);
-	my ($r, $m) = ($w->[1], $w->[2]);
-	if ($r eq 'status') {
-		$m = &describe_status({ 'status' => $m });
+if (@whynot) {
+	$msg .= sprintf $fmt, $text{'roundrobin_host'},
+			      $text{'roundrobin_ip'},
+			      $text{'remail_reason'};
+	$msg .= sprintf $fmt, ("-" x 25), ("-" x 15), ("-" x 35);
+	foreach my $w (@whynot) {
+		my $s = &get_managed_server($w->[0]);
+		next if (!$s);
+		my $ip = &get_server_ip($s);
+		$from ||= &get_global_from_address($s);
+		my ($r, $m) = ($w->[1], $w->[2]);
+		if ($r eq 'status') {
+			$m = &describe_status({ 'status' => $m });
+			}
+		elsif ($r eq 'alert') {
+			my @alerts = grep { $_ } map { &get_alert($_) }
+					  split(",", $m);
+			$m = &describe_alert_rules($alerts[0]);
+			}
+		$msg .= sprintf $fmt, $s->{'host'}, $ip,
+				      &text('remail_status_'.$r, $m);
 		}
-	elsif ($r eq 'alert') {
-		my @alerts = grep { $_ } map { &get_alert($_) }
-			          split(",", $m);
-		$m = &describe_alert_rules($alerts[0]);
-		}
-	$msg .= sprintf $fmt, $s->{'host'}, $ip,
-			      &text('remail_status_'.$r, $m);
+	}
+else {
+	$msg .= $text{'remail_empty'}."\n";
 	}
 if (!$ok) {
 	foreach my $i (@inc) {
@@ -350,6 +355,7 @@ if (!$ok) {
 				      &text('remail_status_ok');
 		}
 	}
+$from ||= &get_global_from_address();
 
 # Send the email
 my $email = join(", ", @emails);
