@@ -13,9 +13,10 @@ if ($in{'delete'}) {
 	@d || &error($text{'dscalegroups_enone'});
 	foreach $id (@d) {
 		$scalegroup = &get_scalegroup($id);
-		&delete_scapegroup($scalegroup) if ($scalegroup);
+		&delete_scalegroup($scalegroup) if ($scalegroup);
 		}
 	&webmin_log("delete", "scalegroups", scalar(@d));
+	&redirect("list_scalegroups.cgi");
 	}
 elsif ($in{'refresh'}) {
 	# Evaluate selected groups
@@ -30,7 +31,8 @@ elsif ($in{'up'}) {
 	foreach $id (@d) {
                 $scalegroup = &get_scalegroup($id);
 		next if (!$scalegroup);
-		&$first_print(&text('scaleup_doing', $scalegroup->{'host'}));
+		&$first_print(&text('scaleup_doing',
+				    "<tt>$scalegroup->{'host'}</tt>"));
 		&obtain_lock_scalegroup($scalegroup);
 		&$indent_print();
 		my ($err, $newserver) = &create_scalegroup_system($scalegroup);
@@ -58,7 +60,8 @@ elsif ($in{'down'}) {
 	foreach $id (@d) {
                 $scalegroup = &get_scalegroup($id);
 		next if (!$scalegroup);
-		&$first_print(&text('scaledown_doing', $scalegroup->{'host'}));
+		&$first_print(&text('scaledown_doing',
+				    "<tt>$scalegroup->{'host'}</tt>"));
 		&obtain_lock_scalegroup($scalegroup);
 		my ($err, $server) = &delete_scalegroup_system($scalegroup);
 		&release_lock_scalegroup($scalegroup);

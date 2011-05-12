@@ -87,7 +87,7 @@ else {
 			}
 		push(@conds, $r);
 		}
-	@conds || &error($text{'scalegroup_econds'});
+	#@conds || &error($text{'scalegroup_econds'});
 	$scalegroup->{'conds'} = \@conds;
 	$alert->{'and'} = $in{'and'};
 	$alert->{'or'} = !$in{'and'};

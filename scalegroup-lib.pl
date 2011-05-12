@@ -81,12 +81,12 @@ sub delete_scalegroup
 {
 my ($scalegroup) = @_;
 my @ingroup = &get_scalegroup_systems($scalegroup);
-&obtain_lock_servers(\@ingroup);
+&obtain_lock_server(\@ingroup);
 foreach my $s (@ingroup) {
 	delete($s->{'scalegroup'});
 	&save_managed_server($s);
 	}
-&release_lock_servers(\@ingroup);
+&release_lock_server(\@ingroup);
 my $file = "$scalegroups_dir/$scalegroup->{'id'}";
 &lock_file($file);
 &unlink_file($file);
