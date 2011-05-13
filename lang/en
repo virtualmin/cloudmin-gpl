@@ -4467,6 +4467,7 @@ remail_status_port=Port $1 down
 remail_status_url=URL $1 failed
 remail_status_ok=OK
 remail_subject=Cloudmin DNS roundrobin $1 failure
+remail_empty=Not enough candidate systems were found to meet the roundrobin's requirements.
 
 droundrobins_err1=Failed to delete roundrobins
 droundrobins_err2=Failed to refresh roundrobins
@@ -4515,7 +4516,8 @@ scalegroup_dests2=Members of location group
 scalegroup_min=Minimum systems in group
 scalegroup_max=Maximum systems in group
 scalegroup_header2=New virtual system details
-scalegroup_header3=Conditions for scaling up
+scalegroup_header3conds=Conditions for scaling up
+scalegroup_header3downconds=Conditions for scaling down
 scalegroup_allin=All in group
 scalegroup_atleast=At least
 scalegroup_header4=Email notification settings
@@ -4580,6 +4582,7 @@ scaleeval_dec=.. deleted system $1 due to $2
 scaleeval_nodec=.. system deletion needed due to $1, but group is disabled
 scaleeval_fdec=.. system deletion needed due to $1, but failed : $2
 scaleeval_unknown=.. unknown status code!
+scaleeval_why=$1 at $3 on $2
 
 dscalegroups_err=Failed to delete selected groups
 dscalegroups_enone=None selected

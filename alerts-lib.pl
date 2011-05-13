@@ -104,8 +104,7 @@ return undef if (!@servers);
 
 # See which rules match
 my @firing;
-foreach my $r ($alert->{'rules'} ? @{$alert->{'rules'}}
-				 : @{$alert->{'conds'}}) {
+foreach my $r (@{$alert->{'rules'}}) {
 	my (@fservers, @fvalues);
 	my $rvalue =
 		$r->{'value'} =~ /^([0-9\.]+)\s*KB?/i ? $1*1024 :
@@ -139,7 +138,8 @@ foreach my $r ($alert->{'rules'} ? @{$alert->{'rules'}}
 			push(@fvalues, $info[$#info]->[1]);
 			}
 		}
-	if (@fservers >= $r->{'count'}) {
+	my $count = $r->{'count'} || scalar(@servers);
+	if (@fservers >= $count) {
 		push(@firing, { 'name' => $r->{'name'},
 			        'servers' => \@fservers,
 				'values' => \@fvalues });

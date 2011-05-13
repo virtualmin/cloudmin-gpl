@@ -29,6 +29,7 @@ return sort { $a->{'id'} <=> $b->{'id'} } @rv;
 #	over/under - Match if variable is over or under the value
 #	for - Optional period is seconds that this must be true for
 #	count - Optional number of systems that this must be true for
+# downconds - Same as conds, but for downscaling
 # rate - Period in seconds between changing group size
 # min - Minimum systems in the group
 # max - Maximum systems in the group
@@ -128,7 +129,12 @@ $allservers ||= [ &list_managed_servers() ];
 my @ingroup = &get_scalegroup_systems($scalegroup);
 
 # Evaluate scale-up conditions to see if any are firing
-my $upst = &evaluate_alert($scalegroup, $servers);
+my $fakealert = { 'servers' => join(" ", map { $_->{'id'} } @ingroup),
+		  'rules' => $scalegroup->{'conds'},
+		  'and' => $scalegroup->{'conds_and'},
+		  'or' => $scalegroup->{'conds_or'},
+		};
+my $upst = &evaluate_alert($fakealert, $allservers);
 
 # Evaluate scale-down conditions, if any
 # XXX
@@ -204,7 +210,7 @@ my $cpu = defined(&$cfunc) ? &$cfunc($newserver) : undef;
 my @allvhosts = &list_available_host_servers(
 			$scalegroup->{'manager'}, $mem, $disk);
 my @vhosts;
-if ($scalegroup->{'dest_hosts'}) {
+if ($scalegroup->{'dest_hosts'} ne '') {
 	# Only selected hosts
 	my %vids = map { $_, 1 } split(/\s+/, $scalegroup->{'dest_hosts'});
 	@vhosts = grep { $vids{$_->{'id'}} } @allvhosts;
@@ -287,6 +293,18 @@ if ($newserver->{'status'} eq 'down') {
 		&describe_status($newserver, 1, 1)));
 	}
 &release_lock_server($newserver);
+
+# Find and eval roundrobins for this scalegroup
+my @rrs;
+foreach my $rr (&list_roundrobins()) {
+	my @sc = split(/\s+/, $rr->{'scalegroups'});
+	if (&indexof($scalegroup->{'id'}, @sc) >= 0) {
+		push(@rrs, $rr);
+		}
+	}
+if (@rrs) {
+	&evaluate_all_roundrobins(undef, \@rrs);
+	}
 
 return ( $err ? &text('scaleup_estart', $err) : undef, $newserver );
 }

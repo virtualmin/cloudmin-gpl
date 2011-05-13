@@ -30,8 +30,26 @@ elsif ($in{'refresh'}) {
                 &$first_print(&text('scaleeval_doing',
                                     "<tt>$scalegroup->{'host'}</tt>"));
 		&obtain_lock_scalegroup($scalegroup);
-		# XXX set $why
+		&$indent_print();
 		my $rv = &evaluate_scalegroup($scalegroup);
+		&$outdent_print();
+
+		# Generate reason for scaling
+		my $st = $rv->{'why'};
+		my @names = split(/,/, $st->{'names'});
+		my @values = split(/,/, $st->{'values'});
+		my @why;
+		for(my $i=0; $i<@names; $i++) {
+			my ($id, $v) = split(/:/, $values[$i], 2);
+			my $s = &get_managed_server($id);
+			push(@why, &text('scaleeval_why',
+					 $text{'history_stat_'.$names[$i]} ||
+					   $names[$i],
+					 $s->{'host'}, $v));
+			}
+		my $why = join(", ", @why);
+
+		# Print message about what happened
 		if ($rv->{'action'} eq 'ok') {
 			&$second_print($text{'scaleeval_ok'});
 			}

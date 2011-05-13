@@ -62,37 +62,44 @@ else {
 		}
 
 	# Parse scaling conditions
-	@conds = ( );
-	for(my $i=0; defined($in{"name_$i"}); $i++) {
-		next if (!$in{"name_$i"});
-		my $r = { 'name' => $in{"name_$i"} };
-		if ($in{"over_$i"}) {
-			$r->{'over'} = 1;
+	foreach $sect ("conds", "downconds") {
+		@conds = ( );
+		for(my $i=0; defined($in{$sect."_name_$i"}); $i++) {
+			next if (!$in{$sect."_name_$i"});
+			my $r = { 'name' => $in{$sect."_name_$i"} };
+			if ($in{$sect."_over_$i"}) {
+				$r->{'over'} = 1;
+				}
+			else {
+				$r->{'under'} = 1;
+				}
+			$in{$sect."_value_$i"} =~ s/\s//g;
+			$in{$sect."_value_$i"} =~ /^[0-9\.]+((K|M|G|T)B?)?$/i ||
+				&error(&text('alert_evalue', $i+1));
+			$r->{'value'} = $in{$sect."_value_$i"};
+			$in{$sect."_for_$i"} =~ /^[0-9\.]+$/ ||
+				&error(&text('alert_efor', $i+1));
+			$r->{'for'} = &join_for_units(
+				$in{$sect."_forunit_$i"}, $in{$sect."_for_$i"});
+			if ($in{$sect."_count_${i}_def"}) {
+				$r->{'count'} = 0;
+				}
+			else {
+				$in{$sect."_count_$i"} =~ /^[0-9]+$/ &&
+				    $in{$sect."_count_$i"} > 0 ||
+					&error(&text('alert_ecount', $i+1));
+				$r->{'count'} = $in{$sect."_count_$i"};
+				}
+			push(@conds, $r);
 			}
-		else {
-			$r->{'under'} = 1;
-			}
-		$in{"value_$i"} =~ s/\s//g;
-		$in{"value_$i"} =~ /^[0-9\.]+((K|M|G|T)B?)?$/i ||
-			&error(&text('alert_evalue', $i+1));
-		$r->{'value'} = $in{"value_$i"};
-		$in{"for_$i"} =~ /^[0-9\.]+$/ ||
-			&error(&text('alert_efor', $i+1));
-		$r->{'for'} = &join_for_units($in{"forunit_$i"}, $in{"for_$i"});
-		if ($in{"count_${i}_def"}) {
-			$r->{'count'} = 0;
-			}
-		else {
-			$in{"count_$i"} =~ /^[0-9]+$/ && $in{"count_$i"} > 0 ||
-				&error(&text('alert_ecount', $i+1));
-			$r->{'count'} = $in{"count_$i"};
-			}
-		push(@conds, $r);
+		#@conds || &error($text{'scalegroup_econds'});
+		$scalegroup->{$sect} = \@conds;
+		$scalegroup->{$sect.'_and'} = $in{$sect.'_and'};
+		$scalegroup->{$sect.'_or'} = !$in{$sect.'_and'};
 		}
-	#@conds || &error($text{'scalegroup_econds'});
-	$scalegroup->{'conds'} = \@conds;
-	$alert->{'and'} = $in{'and'};
-	$alert->{'or'} = !$in{'and'};
+	delete($scalegroup->{'conds'});
+	delete($scalegroup->{'and'});
+	delete($scalegroup->{'or'});
 
 	# Parse email notification
 	$scalegroup->{'notify_inc'} = $in{'notify_inc'};

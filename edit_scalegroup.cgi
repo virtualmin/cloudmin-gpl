@@ -17,7 +17,8 @@ if ($in{'new'}) {
 			'notify_over' => 1,
 		 	'interval' => 3600,
 			'master' => 1,
-			'and' => 1, };
+			'conds_and' => 1,
+			'downconds_and' => 1, };
 	}
 else {
 	# Editing an existing one
@@ -81,7 +82,7 @@ print &ui_table_row($text{'scalegroup_host'},
 
 # System to clone
 print &ui_table_row($text{'scalegroup_clone'},
-	&ui_select("clone", undef, 
+	&ui_select("clone", $scalegroup->{'clone'},
 		   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]));
 
 # Host systems to create on
@@ -108,47 +109,51 @@ print &ui_table_row($text{'scalegroup_dests'},
 print &ui_hidden_table_end("system");
 
 # Section for scaling conditions
-print &ui_hidden_table_start($text{'scalegroup_header3'}, "width=100%", 2,
-			     "cond", 0, \@tds);
+foreach $sect ("conds", "downconds") {
+	print &ui_hidden_table_start($text{'scalegroup_header3'.$sect},
+				     "width=100%", 2, $sect, 0, \@tds);
 
-@rtable = ( );
-$i = 0;
-@forunits = &list_for_units();
-@stats = sort { $text{'history_stat_'.$a} cmp
-                $text{'history_stat_'.$b} }
-              &list_historic_stats(\@servers);
-@names = map { [ $_, $text{'history_stat_'.$_} ] }
-	     grep { !&is_binary_alert($_) } @stats;
-unshift(@names, [ undef, '&nbsp;' ]);
-foreach my $r (@{$scalegroup->{'conds'}},
-	       { 'for' => 60, 'over' => 1 }) {
-	($forunit, $for) = &split_for_units($r->{'for'});
-	push(@rtable, [ &ui_select("name_$i", $r->{'name'}, \@names),
-			&ui_select("over_$i", $r->{'over'} ? 1 : 0,
+	@rtable = ( );
+	$i = 0;
+	@forunits = &list_for_units();
+	@stats = sort { $text{'history_stat_'.$a} cmp
+			$text{'history_stat_'.$b} }
+		      &list_historic_stats(\@servers);
+	@names = map { [ $_, $text{'history_stat_'.$_} ] }
+		     grep { !&is_binary_alert($_) } @stats;
+	unshift(@names, [ undef, '&nbsp;' ]);
+	foreach my $r (@{$scalegroup->{$sect}},
+		       { 'for' => 60, 'over' => 1 }) {
+		($forunit, $for) = &split_for_units($r->{'for'});
+		push(@rtable, [
+			&ui_select($sect."_name_$i", $r->{'name'}, \@names),
+			&ui_select($sect."_over_$i", $r->{'over'} ? 1 : 0,
 				   [ [ 1, $text{'alert_over'} ],
 				     [ 0, $text{'alert_under'} ] ]),
-			&ui_textbox("value_$i", $r->{'value'}, 6),
-			&ui_textbox("for_$i", $for, 4).
-			 &ui_select("forunit_$i", $forunit, \@forunits),
-			&ui_opt_textbox("count_$i", $r->{'count'} || "", 4,
+			&ui_textbox($sect."_value_$i", $r->{'value'}, 6),
+			&ui_textbox($sect."_for_$i", $for, 4).
+			 &ui_select($sect."_forunit_$i", $forunit, \@forunits),
+			&ui_opt_textbox($sect."_count_$i",
+					$r->{'count'} || "", 4,
 					$text{'scalegroup_allin'},
 					$text{'scalegroup_atleast'}),
 			]);
-	$i++;
+		$i++;
+		}
+	print &ui_table_row(undef,
+		&ui_columns_table([ $text{'alert_name'}, $text{'alert_comp'},
+				    $text{'alert_value'},
+				    $text{'alert_for'}, $text{'alert_count'} ],
+				  100, \@rtable, undef, 1), 2);
+
+	# And / or mode
+	print &ui_table_row(undef,
+		&ui_radio($sect."_and", $scalegroup->{$sect.'_and'},
+			  [ [ 1, $text{'scalegroup_and'} ],
+			    [ 0, $text{'scalegroup_or'} ] ]), 2);
+
+	print &ui_hidden_table_end($sect);
 	}
-print &ui_table_row(undef,
-	&ui_columns_table([ $text{'alert_name'}, $text{'alert_comp'},
-			    $text{'alert_value'},
-			    $text{'alert_for'}, $text{'alert_count'} ],
-			  100, \@rtable, undef, 1), 2);
-
-# And / or mode
-print &ui_table_row(undef,
-	&ui_radio("and", $alert->{'and'},
-		  [ [ 1, $text{'scalegroup_and'} ],
-		    [ 0, $text{'scalegroup_or'} ] ]), 2);
-
-print &ui_hidden_table_end("cond");
 
 # Section for email notification
 print &ui_hidden_table_start($text{'scalegroup_header4'}, "width=100%", 2,
