@@ -41,7 +41,7 @@ else {
 
 	# Hostname template
 	$in{'host'} =~ /^\S+$/ || &error($text{'scalegroup_ehost'});
-	$in{'host'} =~ /\$NUM/ || $in{'host'} =~ /\$\{NUM\}/ ||
+	$in{'host'} =~ /\$NUM/i || $in{'host'} =~ /\$\{NUM\}/i ||
 		&error($text{'scalegroup_ehostnum'});
 	$scalegroup->{'host'} = $in{'host'};
 
@@ -63,7 +63,7 @@ else {
 
 	# Parse scaling conditions
 	foreach $sect ("conds", "downconds") {
-		@conds = ( );
+		my @conds = ( );
 		for(my $i=0; defined($in{$sect."_name_$i"}); $i++) {
 			next if (!$in{$sect."_name_$i"});
 			my $r = { 'name' => $in{$sect."_name_$i"} };
@@ -97,7 +97,6 @@ else {
 		$scalegroup->{$sect.'_and'} = $in{$sect.'_and'};
 		$scalegroup->{$sect.'_or'} = !$in{$sect.'_and'};
 		}
-	delete($scalegroup->{'conds'});
 	delete($scalegroup->{'and'});
 	delete($scalegroup->{'or'});
 

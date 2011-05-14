@@ -36,7 +36,9 @@ if (@scalegroups) {
 	print &ui_columns_end();
 	print &ui_links_row(\@links);
 	print &ui_form_end([ [ 'delete', $text{'scalegroups_delete'} ],
+			     undef,
 			     [ 'refresh', $text{'scalegroups_refresh'} ],
+			     undef,
 			     [ 'up', $text{'scalegroups_up'} ],
 			     [ 'down', $text{'scalegroups_down'} ],
 			   ]);

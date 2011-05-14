@@ -100,8 +100,10 @@ if ($err) {
 	&$second_print(".. creation failed : $err");
 	}
 else {
+	&obtain_lock_server($newserver);
 	$newserver->{'scalegroup_reason'} = 'api';
 	&save_managed_server($newserver);
+	&release_lock_server($newserver);
 	&$second_print(".. created system $newserver->{'host'}");
 	}
 &release_lock_scalegroup($scalegroup);

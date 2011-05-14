@@ -6,17 +6,34 @@ require './server-manager-lib.pl';
 &ReadParse();
 &can_action_error(undef, "global");
 @d = split(/\0/, $in{'d'});
+foreach $id (@d) {
+	$scalegroup = &get_scalegroup($id);
+	push(@scalegroups, $scalegroup) if ($scalegroup);
+	}
 
-if ($in{'delete'}) {
+if ($in{'delete'} && $in{'confirm'}) {
 	# Remove selected groups
 	&error_setup($text{'dscalegroups_err'});
 	@d || &error($text{'dscalegroups_enone'});
-	foreach $id (@d) {
-		$scalegroup = &get_scalegroup($id);
-		&delete_scalegroup($scalegroup) if ($scalegroup);
+	foreach $scalegroup (@scalegroups) {
+		&delete_scalegroup($scalegroup);
 		}
 	&webmin_log("delete", "scalegroups", scalar(@d));
 	&redirect("list_scalegroups.cgi");
+	}
+elsif ($in{'delete'} && !$in{'confirm'}) {
+	# Ask for confirmation before deleting
+	&ui_print_header(undef, $text{'dscalegroups_title'}, "");
+
+	print &ui_confirmation_form("delete_scalegroups.cgi",
+		&text('dscalegroups_rusure',
+		      join(" ", map { "<tt>$_->{'host'}</tt>" } @scalegroups)),
+		[ [ 'delete', 1 ],
+		  map { [ "d", $_ ] } @d ],
+		[ [ 'confirm', $text{'dscalegroups_ok'} ] ],
+		);
+
+	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
 	}
 elsif ($in{'refresh'}) {
 	# Evaluate selected groups
@@ -24,9 +41,7 @@ elsif ($in{'refresh'}) {
 	@d || &error($text{'dscalegroups_enone'});
 	&ui_print_header(undef, $text{'scaleeval_title'}, "");
 
-	foreach $id (@d) {
-                $scalegroup = &get_scalegroup($id);
-                next if (!$scalegroup);
+	foreach $scalegroup (@scalegroups) {
                 &$first_print(&text('scaleeval_doing',
                                     "<tt>$scalegroup->{'host'}</tt>"));
 		&obtain_lock_scalegroup($scalegroup);
@@ -42,6 +57,7 @@ elsif ($in{'refresh'}) {
 		for(my $i=0; $i<@names; $i++) {
 			my ($id, $v) = split(/:/, $values[$i], 2);
 			my $s = &get_managed_server($id);
+			next if (!$s);
 			push(@why, &text('scaleeval_why',
 					 $text{'history_stat_'.$names[$i]} ||
 					   $names[$i],
@@ -92,9 +108,7 @@ elsif ($in{'up'}) {
 	@d || &error($text{'dscalegroups_enone'});
 	&ui_print_header(undef, $text{'scaleup_title'}, "");
 
-	foreach $id (@d) {
-                $scalegroup = &get_scalegroup($id);
-		next if (!$scalegroup);
+	foreach $scalegroup (@scalegroups) {
 		&$first_print(&text('scaleup_doing',
 				    "<tt>$scalegroup->{'host'}</tt>"));
 		&obtain_lock_scalegroup($scalegroup);
@@ -106,7 +120,9 @@ elsif ($in{'up'}) {
 			&$second_print(&text('scaleup_failed', $err));
 			}
 		else {
+			&obtain_lock_server($newserver);
 			$newserver->{'scalegroup_reason'} = 'web';
+			&release_lock_server($newserver);
 			&save_managed_server($newserver);
 			&$second_print(&text('scaleup_done',
 					     $newserver->{'host'}));
@@ -121,14 +137,14 @@ elsif ($in{'down'}) {
 	@d || &error($text{'dscalegroups_enone'});
 	&ui_print_header(undef, $text{'scaledown_title'}, "");
 
-	foreach $id (@d) {
-                $scalegroup = &get_scalegroup($id);
-		next if (!$scalegroup);
+	foreach $scalegroup (@scalegroups) {
 		&$first_print(&text('scaledown_doing',
 				    "<tt>$scalegroup->{'host'}</tt>"));
+		&$indent_print();
 		&obtain_lock_scalegroup($scalegroup);
 		my ($err, $server) = &delete_scalegroup_system($scalegroup);
 		&release_lock_scalegroup($scalegroup);
+		&$outdent_print();
 		if ($err) {
 			&$second_print(&text('scaledown_failed', $err));
 			}

@@ -42,13 +42,15 @@ my ($id) = @_;
 my %rr;
 &read_file_cached("$scalegroups_dir/$id", \%rr) || return undef;
 $rr{'id'} = $id;
-my @conds;
-for(my $i=0; defined($rr{"cond_$i"}); $i++) {
-	push(@conds, { map { split(/=/, $_) }
-		       split(/\s+/, $rr{"cond_$i"}) });
-	delete($rr{"cond_$i"});
+foreach my $sect ("conds", "downconds") {
+	my @conds;
+	for(my $i=0; defined($rr{$sect.'_'.$i}); $i++) {
+		push(@conds, { map { split(/=/, $_) }
+			       split(/\s+/, $rr{$sect.'_'.$i}) });
+		delete($rr{$sect.'_'.$i});
+		}
+	$rr{$sect} = \@conds;
 	}
-$rr{'conds'} = \@conds;
 return \%rr;
 }
 
@@ -66,11 +68,14 @@ $rr->{'id'} ||= &server_id();
 my $file = "$scalegroups_dir/$rr->{'id'}";
 &lock_file($file);
 my %rsave = %$rr;
-delete($rsave{'conds'});
-my $i = 0;
-foreach my $r (@{$rr->{'conds'}}) {
-	$rsave{'cond_'.$i} = join(" ", map { $_."=".$r->{$_} } keys %$r);
-	$i++;
+foreach my $sect ("conds", "downconds") {
+	delete($rsave{$sect});
+	my $i = 0;
+	foreach my $r (@{$rr->{$sect}}) {
+		$rsave{$sect.'_'.$i} =
+			join(" ", map { $_."=".$r->{$_} } keys %$r);
+		$i++;
+		}
 	}
 &write_file($file, \%rsave);
 &unlock_file($file);
@@ -137,8 +142,15 @@ my $fakealert = { 'servers' => join(" ", map { $_->{'id'} } @ingroup),
 my $upst = &evaluate_alert($fakealert, $allservers);
 
 # Evaluate scale-down conditions, if any
-# XXX
-my $downst = { };
+my $fakealert = { 'servers' => join(" ", map { $_->{'id'} } @ingroup),
+		  'rules' => $scalegroup->{'downconds'},
+		  'and' => $scalegroup->{'downconds_and'},
+		  'or' => $scalegroup->{'downconds_or'},
+		};
+my $downst = &evaluate_alert($fakealert, $allservers);
+use Data::Dumper;
+print STDERR Dumper($downst);
+print STDERR Dumper($fakealert);
 
 if ($upst->{'firing'}) {
 	# Need another sytem
@@ -148,8 +160,13 @@ if ($upst->{'firing'}) {
 		if ($scalegroup->{'enabled'}) {
 			($err, $newserver) =
 				&create_scalegroup_system($scalegroup);
+			}
+		if ($newserver) {
+			&obtain_lock_server($newserver);
 			$newserver->{'scalegroup_reason'} =
 				'scaleup '.$upst->{'names'};
+			&save_managed_server($newserver);
+			&release_lock_server($newserver);
 			}
 		return { 'action' => 'inc',
 			 'error' => $err,
@@ -207,6 +224,7 @@ my $cfunc = "type_".$newserver->{'manager'}."_get_cpu_size";
 my $cpu = defined(&$cfunc) ? &$cfunc($newserver) : undef;
 
 # Find all possible host systems
+&$first_print($text{'scaleup_pickhost'});
 my @allvhosts = &list_available_host_servers(
 			$scalegroup->{'manager'}, $mem, $disk);
 my @vhosts;
@@ -246,8 +264,10 @@ else {
 &usable_host_system($vhost, $newserver->{'manager'}, $mem, $disk) ||
 	return &text('scaleup_evhostresources', $vhost->{'host'},
 		     &nice_size($mem), &nice_size($disk));
+&$second_print(&text('scaleup_pickedhost', $vhost->{'host'}));
 
 # Pick a new hostname
+&$first_print($text{'scaleup_pickname'});
 my $newhost;
 my $num = 0;
 my @allservers = &list_managed_servers();
@@ -258,6 +278,7 @@ while(1) {
 	last if (!$clash);
 	$num++;
 	}
+&$second_print(&text('scaleup_pickedhost', $newhost));
 
 # Call the clone function
 &obtain_lock_server($srcserver);
@@ -314,12 +335,16 @@ return ( $err ? &text('scaleup_estart', $err) : undef, $newserver );
 sub delete_scalegroup_system
 {
 my ($scalegroup) = @_;
+&$first_print($text{'scaledown_pickserver'});
 my @ingroup = &get_scalegroup_systems($scalegroup);
 @ingroup = sort { $a->{'scalegroup_index'} <=> $b->{'scalegroup_index'} }
 		@ingroup;
 if (@ingroup) {
 	my $server = pop(@ingroup);
+	&$second_print(&text('scaledown_pickedserver', $server->{'host'}));
+
 	&obtain_lock_server($server);
+	&$first_print(&text('scaledown_deleting', $server->{'host'}));
 	&run_system_script($server, 'before', 'delete');
 	my $dfunc = "type_".$server->{'manager'}."_delete";
 	$err = &$dfunc($server);
@@ -328,6 +353,7 @@ if (@ingroup) {
 	&clear_ssh_host_key($server);
 	&delete_managed_server($server);
 	&run_system_script($server, 'after', 'delete');
+	&$second_print($text{'create_done'});
 	&release_lock_server($server);
 	return (undef, $server);
 	}

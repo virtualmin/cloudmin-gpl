@@ -4562,6 +4562,9 @@ scaleup_title=Scaling Up Groups
 scaleup_doing=Creating a new system for scaling group $1 ..
 scaleup_failed=.. creation failed : $1
 scaleup_done=.. successfully created $1
+scaleup_pickhost=Finding a host system ..
+scaleup_pickedhost=.. selected $1
+scaleup_pickname=Finding a free hostname ..
 
 scaledown_edelete=Failed to delete $1 : $2
 scaledown_empty=Group does not contain any systems
@@ -4569,6 +4572,9 @@ scaledown_title=Scaling Down Groups
 scaledown_doing=Removing a system from scaling group $1 ..
 scaledown_failed=.. removal failed : $1
 scaledown_done=.. successfully removed $1
+scaledown_pickserver=Finding a system to remove ..
+scaledown_pickedserver=.. selected $1 for deletion
+scaledown_deleting=Deleting system $1 ..
 
 scaleeval_err=Failed to update auto-scaling groups
 scaleeval_title=Updating Auto-Scaling Groups
@@ -4586,6 +4592,9 @@ scaleeval_why=$1 at $3 on $2
 
 dscalegroups_err=Failed to delete selected groups
 dscalegroups_enone=None selected
+dscalegroups_title=Delete Auto-Scaling Groups
+dscalegroups_rusure=Are you sure you want to delete the auto-scaling groups for $1 ? Systems created from these groups will not be deleted.
+dscalegroups_ok=Delete Groups
 
 __norefs=1
 
