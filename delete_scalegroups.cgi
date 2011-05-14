@@ -18,7 +18,7 @@ if ($in{'delete'} && $in{'confirm'}) {
 	foreach $scalegroup (@scalegroups) {
 		&delete_scalegroup($scalegroup);
 		}
-	&webmin_log("delete", "scalegroups", scalar(@d));
+	$action = "delete";
 	&redirect("list_scalegroups.cgi");
 	}
 elsif ($in{'delete'} && !$in{'confirm'}) {
@@ -99,7 +99,13 @@ elsif ($in{'refresh'}) {
 			}
 		&release_lock_scalegroup($scalegroup);
 		}
-	&webmin_log("scaleup", "scalegroups", scalar(@d));
+	if (scalar(@scalegroups) == 1) {
+		&webmin_log("eval", "scalegroup", $scalegroups[0]->{'host'});
+		}
+	else {
+		&webmin_log("eval", "scalegroups", scalar(@scalegroups));
+		}
+	$action = "eval";
 	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
 	}
 elsif ($in{'up'}) {
@@ -128,7 +134,7 @@ elsif ($in{'up'}) {
 					     $newserver->{'host'}));
 			}
 		}
-	&webmin_log("scaleup", "scalegroups", scalar(@d));
+	$action = "scaleup";
 	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
 	}
 elsif ($in{'down'}) {
@@ -153,8 +159,17 @@ elsif ($in{'down'}) {
 					     $server->{'host'}));
 			}
 		}
-	&webmin_log("scaledown", "scalegroups", scalar(@d));
+	$action = "scaledown";
 	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
 	}
 
-
+# Log what was done
+if ($action) {
+	if (scalar(@scalegroups) == 1) {
+		&webmin_log($action, "scalegroup",
+			    { 'name' => $scalegroups[0]->{'host'} });
+		}
+	else {
+		&webmin_log($action, "scalegroups", scalar(@scalegroups));
+		}
+	}

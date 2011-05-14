@@ -3649,8 +3649,13 @@ log_delete_roundrobins=Deleted $1 roundrobins
 log_create_scalegroup=Created auto-scaling group with hostname $1
 log_delete_scalegroup=Deleted auto-scaling group with hostname $1
 log_modify_scalegroup=Modified auto-scaling group with hostname $1
+log_scaleup_scalegroup=Added a system to auto-scaling group with hostname $1
+log_scaledown_scalegroup=Removed a system from auto-scaling group with hostname $1
+log_eval_scalegroup=Updated systems in auto-scaling group with hostname $1
 log_delete_scalegroups=Deleted $1 auto-scaling groups
 log_scaleup_scalegroups=Added systems to $1 auto-scaling groups
+log_scaledown_scalegroups=Removed systems from $1 auto-scaling groups
+log_eval_scalegroups=Updated systems in $1 auto-scaling groups
 log_scaledown_scalegroups=Removed systems from $1 auto-scaling groups
 
 vsyncs_title=Virtual Server Replication
