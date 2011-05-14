@@ -4554,6 +4554,8 @@ scalegroup_rup=Auto-scaled due to $1
 scalegroup_rapi=Manually scaled up by API call
 scalegroup_rweb=Manually scaled up from web UI
 scalegroup_enabled=Auto-scaling enabled?
+scalegroup_drusure=Are you sure you want to delete the auto-scaling group for $1 ? Systems created from this group will not be deleted.
+scalegroup_dok=Delete Group
 
 scaleup_evhosts=No usable host systems were found
 scaleup_esource=System to clone for new systems in scaling group no longer exists

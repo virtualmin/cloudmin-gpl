@@ -14,11 +14,25 @@ if (!$in{'new'}) {
 	$scalegroup || &error($text{'scalegroup_egone'});
 	}
 
-if ($in{'delete'}) {
+if ($in{'delete'} && $in{'confirm'}) {
 	# Just delete the scalegroup
 	&delete_scalegroup($scalegroup);
 	&webmin_log("delete", "scalegroup", $scalegroup->{'id'},
 		    { 'name' => $scalegroup->{'host'} });
+	&redirect("list_scalegroups.cgi");
+	}
+elsif ($in{'delete'} && !$in{'confirm'}) {
+	# Ask for confirmation first before deleting
+	&ui_print_header(undef, $text{'dscalegroups_title'}, "");
+
+	print &ui_confirmation_form("save_scalegroup.cgi",
+		&text('scalegroup_drusure', "<tt>$scalegroup->{'host'}</tt>"),
+		[ [ 'delete', 1 ],
+		  [ 'id', $in{'id'} ] ],
+		[ [ 'confirm', $text{'scalegroup_dok'} ] ],
+		);
+
+	&ui_print_footer("list_scalegroups.cgi", $text{'scalegroups_return'});
 	}
 else {
 	# Validate inputs
@@ -120,7 +134,7 @@ else {
 	&webmin_log($in{'new'} ? "create" : "modify", "scalegroup",
 		    $scalegroup->{'id'},
 		    { 'name' => $scalegroup->{'host'} });
+	&redirect("list_scalegroups.cgi");
 	}
 
-&redirect("list_scalegroups.cgi");
 
