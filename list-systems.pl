@@ -448,6 +448,8 @@ if ($multi) {
 		if ($s->{'scalegroup'}) {
 			$scalegroup = &get_scalegroup($s->{'scalegroup'});
 			print "    Auto-scaling group: $scalegroup->{'host'}\n";
+			}
+		if ($s->{'scalegroup_reason'}) {
 			print "    Auto-scaling reason: ",
 			      "$s->{'scalegroup_reason'}\n";
 			}

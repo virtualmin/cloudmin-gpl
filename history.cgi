@@ -219,6 +219,9 @@ function onResize() {
 EOF
 
 if (defined($in{'id'})) {
+	if ($oneserver && defined(&theme_select_server)) {
+		&theme_select_server($oneserver);
+		}
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 else {

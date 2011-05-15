@@ -65,15 +65,14 @@ if ($multi) {
 		print "    Source system: $clone->{'host'}\n";
 
 		# Host systems
-		if ($scalegroup->{'dest_location'}) {
-			($loc) = grep { $_->{'id'} eq
-					$scalegroup->{'dest_location'} }
+		if ($s->{'dest_location'}) {
+			($loc) = grep { $_->{'id'} eq $s->{'dest_location'} }
 				      &list_locations();
 			print "    Host location group: $loc->{'desc'}\n";
 			}
-		elsif ($scalegroup->{'dest_hosts'}) {
+		elsif ($s->{'dest_hosts'}) {
 			foreach my $id (
-				  split(/\s+/, $scalegroup->{'dest_hosts'})) {
+				  split(/\s+/, $s->{'dest_hosts'})) {
 				my $vhost = &get_managed_server($id);
 				print "    Host system: $vhost->{'host'}\n"
 					if ($vhost);
@@ -102,9 +101,37 @@ if ($multi) {
 		print "    Also email: $s->{'email'}\n" if ($s->{'email'});
 		print "    Email interval: $s->{'interval'}\n";
 
+		# Current status for scaling
+		my @ingroup = &get_scalegroup_systems($s);
+		my $upst = &evaluate_scalegroup_conditions(
+				$s, \@ingroup, "conds");
+		my $downst = &evaluate_scalegroup_conditions(
+				$s, \@ingroup, "downconds");
+		my $status;
+		if ($upst->{'firing'} && $upst->{'soon'}) {
+			$status = "Scale up pending";
+			}
+		elsif ($upst->{'firing'}) {
+			$status = "Scale up now";
+			}
+		elsif ($downst->{'firing'} && $downst->{'soon'}) {
+			$status = "Scale down pending";
+			}
+		elsif ($downst->{'firing'}) {
+			$status = "Scale down now";
+			}
+		else {
+			$status = "No change needed";
+			}
+		print "    Scaling recommendation: $status\n";
+
 		# Current systems
-		foreach $sg (&get_scalegroup_systems($s)) {
+		foreach $sg (@ingroup) {
 			print "    System in group: $sg->{'host'}\n";
+			$desc = &describe_scalegroup_system_status(
+				$s, $sg, $upst, $downst);
+			$desc = &strip_html_tags($desc);
+			print "    System recommendation: $desc\n";
 			}
 		}
 	}

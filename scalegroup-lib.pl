@@ -440,9 +440,9 @@ my $fakealert = { 'servers' => join(" ", map { $_->{'id'} } @ingroup),
 		  'or' => $scalegroup->{$mode.'_or'},
 		};
 my $rv = &evaluate_alert($fakealert, $allservers, undef, 0);
-if (!$rv) {
+if (!$rv || !$rv->{'firing'}) {
 	$rv = &evaluate_alert($fakealert, $allservers, undef, 1);
-	$rv->{'soon'} = 1 if ($rv);
+	$rv->{'soon'} = 1 if ($rv && $rv->{'firing'});
 	}
 return $rv;
 }
