@@ -22,6 +22,16 @@ if (@scalegroups) {
 				  $text{'scalegroups_status'} ], 100, 0, \@tds);
 	foreach $s (@scalegroups) {
 		my $clone = &get_managed_server($s->{'clone'});
+		my @ingroup = &get_scalegroup_systems($s);
+		my $upst = &evaluate_scalegroup_conditions(
+				$s, \@ingroup, "conds");
+		my $desc = &describe_alert_rules($s);
+		if ($upst->{'firing'} && $upst->{'soon'}) {
+			$desc = "<font color=orange>$desc</font>";
+			}
+		elsif ($upst->{'firing'}) {
+			$desc = "<font color=red>$desc</font>";
+			}
 		print &ui_checked_columns_row([
 			"<a href='edit_scalegroup.cgi?id=$s->{'id'}'>".
 			  $s->{'host'}."</a>",
@@ -29,7 +39,7 @@ if (@scalegroups) {
 				"<font color=red>$text{'no'}</font>",
 			$text{$s->{'manager'}.'_typedesc'},
 			$clone->{'host'},
-			&describe_alert_rules($s),
+			$desc,
 			&describe_scalegroup_status($s),
 			], \@tds, "d", $s->{'id'});
 		}

@@ -94,7 +94,7 @@ $dmode = $scalegroup->{'dest_location'} ne '' ? 2 :
 		 [ split(/\s+/, $scalegroup->{'dest_hosts'}) ],
 		 [ map { [ $_->{'id'}, $_->{'host'}.
 			    &host_free_desc($_, $scalegroup->{'manager'}) ] }
-		       @vhosts ], 10, 1) ],
+		       @vhosts ], 5, 1) ],
 	  );
 if (@locs) {
 	push(@dtable, [ 2, $text{'scalegroup_dests2'},
@@ -193,10 +193,15 @@ if (!$in{'new'}) {
 				     "width=100%", 2, "status", 0, \@tds);
 	@ingroup = &get_scalegroup_systems($scalegroup);
 	if (@ingroup) {
+		my $upst = &evaluate_scalegroup_conditions(
+				$scalegroup, \@ingroup, "conds");
+		my $downst = &evaluate_scalegroup_conditions(
+				$scalegroup, \@ingroup, "downconds");
 		$stable = &ui_columns_start([ $text{'scalegroup_host'},
 					      $text{'scalegroup_when'},
 					      $text{'scalegroup_parent'},
-					      $text{'scalegroup_why'} ], 100);
+					      $text{'scalegroup_why'},
+					      $text{'scalegroup_status'}, ], 100);
 		foreach $s (@ingroup) {
 			$parent = &get_parent_server($s);
 			$stable .= &ui_columns_row([
@@ -205,6 +210,8 @@ if (!$in{'new'}) {
 				&make_date($s->{'created'}),
 				$parent->{'host'},
 				&describe_scalegroup_reason($s),
+				&describe_scalegroup_system_status(
+					$scalegroup, $s, $upst, $downst),
 				]);
 			}
 		$stable .= &ui_columns_end();

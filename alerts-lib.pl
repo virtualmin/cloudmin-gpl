@@ -89,12 +89,12 @@ delete($statuses->{$alert->{'id'}});
 &unlock_file($alert_status_file);
 }
 
-# evaluate_alert(&alert, &servers, [when])
+# evaluate_alert(&alert, &servers, [when], [last-sample])
 # Checks if an alert is active, and if so returns a hash ref with details of
 # how it matched and a message. Returns undef if no servers were found.
 sub evaluate_alert
 {
-my ($alert, $allservers) = @_;
+my ($alert, $allservers, $when, $lastsample) = @_;
 $when ||= time();
 my @servers = &get_alert_servers($alert, $allservers);
 if ($alert->{'uponly'}) {
@@ -126,13 +126,19 @@ foreach my $r (@{$alert->{'rules'}}) {
 		my @info = &list_historic_collected_info($r->{'name'}, $s,
 							 $sstart, $swhen);
 		my $icount = 0;
+		my $ilast = 0;
 		foreach my $i (@info) {
 			if ($r->{'over'} && $i->[1] > $rvalue ||
 			    !$r->{'over'} && $i->[1] < $rvalue) {
 				$icount++;
+				$ilast = 1;
+				}
+			else {
+				$ilast = 0;
 				}
 			}
-		if (scalar(@info) && $icount == scalar(@info)) {
+		if (scalar(@info) && ($icount == scalar(@info) ||
+				      $ilast && $lastsample)) {
 			# All values matched for time range
 			push(@fservers, $s);
 			push(@fvalues, $info[$#info]->[1]);

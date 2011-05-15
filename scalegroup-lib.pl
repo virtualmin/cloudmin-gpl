@@ -123,6 +123,39 @@ if (@users > 3) {
 return &text('scalegroups_users', join(", ", @users));
 }
 
+# describe_scalegroup_system_status(&scalegroup, &server, &upst, &downst)
+# Returns text describing if a system is due to be scaled up or down
+sub describe_scalegroup_system_status
+{
+my ($scalegroup, $server, $upst, $downst) = @_;
+foreach my $st ($upst, $downst) {
+	my @names = split(/,/, $st->{'names'});
+	my @values = map { [ split(/:/, $_, 2) ] } split(/,/, $st->{'values'});
+	for(my $i=0; $i<@names; $i++) {
+		if ($values[$i]->[0] eq $server->{'id'}) {
+			# Found trigger for this system
+			my $msg = $st eq $upst ? 'scalegroup_willup'
+					       : 'scalegroup_willdown';
+			$msg .= 'soon' if ($st->{'soon'});
+			my $st = $text{'history_stat_'.$names[$i]};
+			my $hgraph = "history.cgi?id=$server->{'id'}&".
+				     "stat=$names[$i]&".
+				     "search=$server->{'host'}&period=3600";
+			my $rv = &text($msg, "<a href='$hgraph'>$st</a>",
+					     $values[$i]->[1]);
+			if ($st->{'soon'}) {
+				$rv = "<font color=orange>$rv</font>";
+				}
+			else {
+				$rv = "<font color=red>$rv</font>";
+				}
+			return $rv;
+			}
+		}
+	}
+return $text{'scalegroup_nochange'};
+}
+
 # evaluate_scalegroup(&scalegroup, [&all-servers])
 # Check if an auto-scaling group needs more or fewer systems, and create or 
 # delete then if needed. Returns a hash ref with details of what was done.
@@ -133,26 +166,13 @@ my ($scalegroup, $allservers) = @_;
 $allservers ||= [ &list_managed_servers() ];
 my @ingroup = &get_scalegroup_systems($scalegroup);
 
-# Evaluate scale-up conditions to see if any are firing
-my $fakealert = { 'servers' => join(" ", map { $_->{'id'} } @ingroup),
-		  'rules' => $scalegroup->{'conds'},
-		  'and' => $scalegroup->{'conds_and'},
-		  'or' => $scalegroup->{'conds_or'},
-		};
-my $upst = &evaluate_alert($fakealert, $allservers);
+# Evaluate scale-up and down conditions to see if any are firing
+my $upst = &evaluate_scalegroup_conditions(
+		$scalegroup, \@ingroup, "conds");
+my $downst = &evaluate_scalegroup_conditions(
+		$scalegroup, \@ingroup, "downconds");
 
-# Evaluate scale-down conditions, if any
-my $fakealert = { 'servers' => join(" ", map { $_->{'id'} } @ingroup),
-		  'rules' => $scalegroup->{'downconds'},
-		  'and' => $scalegroup->{'downconds_and'},
-		  'or' => $scalegroup->{'downconds_or'},
-		};
-my $downst = &evaluate_alert($fakealert, $allservers);
-use Data::Dumper;
-print STDERR Dumper($downst);
-print STDERR Dumper($fakealert);
-
-if ($upst->{'firing'}) {
+if ($upst->{'firing'} && !$upst->{'soon'}) {
 	# Need another sytem
 	if (@ingroup < $scalegroup->{'max'}) {
 		# Create it
@@ -180,7 +200,7 @@ if ($upst->{'firing'}) {
 			 'why' => $upst };
 		}
 	}
-elsif ($downst->{'firing'}) {
+elsif ($downst->{'firing'} && !$downst->{'soon'}) {
 	# Need less systems
 	if (@ingroup > $scalegroup->{'min'}) {
 		# Delete one
@@ -402,6 +422,29 @@ elsif ($r =~ /^scaleup\s+(.*)/) {
 else {
 	return $text{'scalegroup_r'.$r};
 	}
+}
+
+# evaluate_scalegroup_conditions(&scalegroup, &allservers,
+# 				 [conds|downconds])
+# Checks if a scalegroup should be scaled up or down, and returns
+# a status object like evaluate_alert, but with the field 'soon' set
+# if the alert condition hasn't triggered for long enough yet.
+sub evaluate_scalegroup_conditions
+{
+my ($scalegroup, $allservers, $mode) = @_;
+$allservers ||= [ &list_managed_servers() ];
+my @ingroup = &get_scalegroup_systems($scalegroup);
+my $fakealert = { 'servers' => join(" ", map { $_->{'id'} } @ingroup),
+		  'rules' => $scalegroup->{$mode},
+		  'and' => $scalegroup->{$mode.'_and'},
+		  'or' => $scalegroup->{$mode.'_or'},
+		};
+my $rv = &evaluate_alert($fakealert, $allservers, undef, 0);
+if (!$rv) {
+	$rv = &evaluate_alert($fakealert, $allservers, undef, 1);
+	$rv->{'soon'} = 1 if ($rv);
+	}
+return $rv;
 }
 
 1;
