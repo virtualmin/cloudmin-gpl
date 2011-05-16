@@ -36,7 +36,8 @@ elsif ($in{'delete'} && !$in{'confirm'}) {
 	}
 else {
 	# Validate inputs
-	$scalegroup ||= { 'manager' => $in{'manager'} };
+	$scalegroup ||= { 'manager' => $in{'manager'},
+			  'id' => &server_id() };
 
 	# Group description
 	$scalegroup->{'desc'} = $in{'desc'};
@@ -129,7 +130,33 @@ else {
 	$in{'int'} =~ /^\d+$/ || &error($text{'alert_einterval'});
 	$scalegroup->{'interval'} = &join_for_units($in{'intunit'}, $in{'int'});
 
-	# Save or create, and evaluate now
+	# Manually added systems
+	@oldmanual = grep { $_->{'scalegroup_reason'} eq 'manual' }
+		  &get_managed_server_by("scalegroup", $scalegroup->{'id'});
+	@newmanualids = split(/\s+/, $in{'manual'});
+	foreach $oldmember (@oldmanual) {
+		if (&indexof($oldmember->{'id'}, @newmanual) < 0) {
+			&obtain_lock_server($oldmember);
+			delete($oldmember->{'scalegroup'});
+			delete($oldmember->{'scalegroup_reason'});
+			delete($oldmember->{'scalegroup_index'});
+			&save_managed_server($oldmember);
+			&release_lock_server($oldmember);
+			}
+		}
+	foreach $id (@newmanualids) {
+		my $newmember = &get_managed_server($id);
+		if ($newmember && !$newmember->{'scalegroup'}) {
+			&obtain_lock_server($newmember);
+			$newmember->{'scalegroup'} = $scalegroup->{'id'};
+			$newmember->{'scalegroup_reason'} = 'manual';
+			&save_managed_server($newmember);
+			&release_lock_server($newmember);
+			}
+		}
+	$scalegroup->{'manual'} = join(" ", @newmanualids);
+
+	# Save or create
 	&save_scalegroup($scalegroup);
 	&webmin_log($in{'new'} ? "create" : "modify", "scalegroup",
 		    $scalegroup->{'id'},

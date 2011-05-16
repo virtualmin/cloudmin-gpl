@@ -29,13 +29,15 @@ else {
 
 # Build list of possible systems to clone
 my @servers;
+my @nonscale;
 foreach my $s (grep { $_->{'manager'} eq $scalegroup->{'manager'} &&
 		      !$_->{'scalegroup'} }
-		&list_available_managed_servers()) {
+		&list_available_managed_servers_sorted()) {
 	my $cfunc = "type_".$s->{'manager'}."_can_clone";
 	if (defined(&$cfunc)) {
 		push(@servers, $s);
 		}
+	push(@nonscale, $s);
 	}
 @servers || &error($text{'scalegroup_eservers'});
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
@@ -55,8 +57,8 @@ print &ui_hidden("manager", $in{'manager'});
 print &ui_hidden_table_start($text{'scalegroup_header1'}, "width=100%", 2,
 			     "host", 1, \@tds);
 
-print &ui_table_row($text{'scalegroup_manager'},
-	$text{$scalegroup->{'manager'}.'_typedesc'});
+$tdesc = $text{$scalegroup->{'manager'}.'_typedesc'};
+print &ui_table_row($text{'scalegroup_manager'}, $tdesc);
 
 print &ui_table_row($text{'scalegroup_desc'},
 	&ui_textbox("desc", $scalegroup->{'desc'}, 60));
@@ -107,6 +109,27 @@ print &ui_table_row($text{'scalegroup_dests'},
 	&ui_radio_table("dest_mode", $dmode, \@dtable));
 
 print &ui_hidden_table_end("system");
+
+print &ui_hidden_table_start($text{'scalegroup_header6'},
+                             "width=100%", 2, "manual", 0, \@tds);
+
+# Manually added systems
+@manual = ( );
+foreach $id (split(/\s+/, $scalegroup->{'manual'})) {
+	$m = &get_managed_server($id);
+	push(@manual, $m) if ($m);
+	}
+print &ui_table_row(undef,
+	&ui_multi_select("manual",
+		[ map { [ $_->{'id'}, $_->{'host'} ] } @manual ],
+		[ map { [ $_->{'id'}, $_->{'host'} ] } @nonscale ],
+		10, 0, 0,
+		&text('scalegroup_mall', $tdesc),
+		$text{'scalegroup_msel'}, 400), 2);
+
+print &ui_table_row(undef, $text{'scalegroup_manualdesc'}, 2);
+
+print &ui_hidden_table_end("manual");
 
 # Section for scaling conditions
 foreach $sect ("conds", "downconds") {

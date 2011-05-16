@@ -357,6 +357,7 @@ sub delete_scalegroup_system
 my ($scalegroup) = @_;
 &$first_print($text{'scaledown_pickserver'});
 my @ingroup = &get_scalegroup_systems($scalegroup);
+@ingroup = grep { $_->{'scalegroup_reason'} ne 'manual' } @ingroup;
 @ingroup = sort { $a->{'scalegroup_index'} <=> $b->{'scalegroup_index'} }
 		@ingroup;
 if (@ingroup) {
