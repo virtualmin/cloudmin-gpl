@@ -25,12 +25,20 @@ if (@scalegroups) {
 		my @ingroup = &get_scalegroup_systems($s);
 		my $upst = &evaluate_scalegroup_conditions(
 				$s, \@ingroup, "conds");
+		my $downst = &evaluate_scalegroup_conditions(
+				$s, \@ingroup, "downconds");
 		my $desc = &describe_alert_rules($s);
 		if ($upst->{'firing'} && $upst->{'soon'}) {
 			$desc = "<font color=orange>$desc</font>";
 			}
 		elsif ($upst->{'firing'}) {
 			$desc = "<font color=red>$desc</font>";
+			}
+		elsif ($downst->{'firing'} && $downst->{'soon'}) {
+			$desc = "<font color=pink>$desc</font>";
+			}
+		elsif ($downst->{'firing'}) {
+			$desc = "<font color=purple>$desc</font>";
 			}
 		print &ui_checked_columns_row([
 			"<a href='edit_scalegroup.cgi?id=$s->{'id'}'>".

@@ -4614,5 +4614,16 @@ dscalegroups_title=Delete Auto-Scaling Groups
 dscalegroups_rusure=Are you sure you want to delete the auto-scaling groups for $1 ? Systems created from these groups will not be deleted.
 dscalegroups_ok=Delete Groups
 
+scaleemail_subject_inc=Cloudmin scaling group $1 increased
+scaleemail_subject_dec=Cloudmin scaling group $1 decreased
+scaleemail_subject_over=Cloudmin scaling group $1 overloaded
+scaleemail_subject_inc_error=Cloudmin scaling group $1 increase failed
+scaleemail_subject_dec_error=Cloudmin scaling group $1 decrease failed
+scaleemail_body_inc=The system $1 has been added to auto-scaling group $2 due to : $3
+scaleemail_body_inc_error=Addition of a system to auto-scaling group $1 failed : $2. A new system was needed due to : $3
+scaleemail_body_dec=The system $1 has been deleted from auto-scaling group $2 due to : $3
+scaleemail_body_dec_error=Deletion of a system from auto-scaling group $1 failed : $2. Removal of a system was needed due to : $3
+scaleemail_body_over=Auto-scaling group $1 has reached its system limit of $2, but needs a new system due to : $3
+
 __norefs=1
 

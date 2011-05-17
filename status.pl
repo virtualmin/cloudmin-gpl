@@ -55,6 +55,11 @@ if (!&is_cloudmin_replica() && defined(&check_for_failovers)) {
 	&check_for_failovers(\@servers);
 	}
 
+# Evaluate auto-scaling groups
+if (defined(&evaluate_all_scalegroups)) {
+	&evaluate_all_scalegroups();
+	}
+
 # Check Virtualmin licences for the account, to prevent delays in the UI
 @proimages = grep { $_->{'virtualmin'} eq 'pro' } &list_server_images();
 if (@proimages && !&test_lock($virtualmin_licences_file)) {

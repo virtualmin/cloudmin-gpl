@@ -137,11 +137,11 @@ foreach my $st ($upst, $downst) {
 			my $msg = $st eq $upst ? 'scalegroup_willup'
 					       : 'scalegroup_willdown';
 			$msg .= 'soon' if ($st->{'soon'});
-			my $st = $text{'history_stat_'.$names[$i]};
+			my $stat = $text{'history_stat_'.$names[$i]};
 			my $hgraph = "history.cgi?id=$server->{'id'}&".
 				     "stat=$names[$i]&".
 				     "search=$server->{'host'}&period=3600";
-			my $rv = &text($msg, "<a href='$hgraph'>$st</a>",
+			my $rv = &text($msg, "<a href='$hgraph'>$stat</a>",
 					     $values[$i]->[1]);
 			if ($st->{'soon'}) {
 				$rv = "<font color=orange>$rv</font>";
@@ -154,6 +154,86 @@ foreach my $st ($upst, $downst) {
 		}
 	}
 return $text{'scalegroup_nochange'};
+}
+
+# evaluate_all_scalegroups()
+# Perform background evaluation of all auto-scaling groups, and send email
+# when something was done.
+sub evaluate_all_scalegroups
+{
+my $now = time();
+&foreign_require("mailboxes");
+&push_all_print();
+&set_all_capture_text_print();
+foreach my $scalegroup (&list_scalegroups()) {
+	next if (!$scalegroup->{'enabled'});
+	next if (&test_lock_scalegroup($scalegroup));
+	&obtain_lock_scalegroup($scalegroup);
+	$capture_print = undef;
+	my $rv = &evaluate_scalegroup($scalegroup);
+	my $subject;
+	my $msg;
+	if ($rv->{'action'} ne 'ok' &&
+	    $scalegroup->{'notify_'.$rv->{'action'}}) {
+		my $smsg = 'scaleemail_subject_'.$rv->{'action'};
+		$smsg .= '_error' if ($rv->{'error'});
+		my $why = &describe_scalegroup_eval($rv->{'why'});
+		if ($rv->{'action'} eq 'inc' && !$rv->{'error'}) {
+			# Has been scaled up
+			$msg = &text('scaleemail_body_inc',
+				     $rv->{'server'}->{'host'},
+				     $scalegroup->{'host'}, $why);
+			}
+		elsif ($rv->{'action'} eq 'inc' && $rv->{'error'}) {
+			# Scale up failed
+			$msg = &text('scaleemail_body_inc_error',
+				     $scalegroup->{'host'},
+				     $rv->{'error'}, $why);
+			}
+		elsif ($rv->{'action'} eq 'dec' && !$rv->{'error'}) {
+			# Has been scaled down
+			$msg = &text('scaleemail_body_dec',
+				     $rv->{'server'}->{'host'},
+				     $scalegroup->{'host'}, $why);
+			}
+		elsif ($rv->{'action'} eq 'dec' && $rv->{'error'}) {
+			# Scale down failed
+			$msg = &text('scaleemail_body_dec_error',
+				     $scalegroup->{'host'},
+				     $rv->{'error'}, $why);
+			}
+		elsif ($rv->{'action'} eq 'over') {
+			# Cannot be scaled up
+			$msg = &text('scaleemail_body_over',
+				     $scalegroup->{'host'},
+				     $scalegroup->{'max'}, $why);
+			}
+		$msg = join("\n", &mailboxes::wrap_lines($msg, 75));
+		$msg .= "\n";
+		$msg .= "\n".$capture_print."\n";
+		$subject = &text($smsg, $scalegroup->{'host'});
+		}
+	if ($subject) {
+		# Send email
+		my @emails;
+		push(@emails, $config{'bw_email'}) if ($scalegroup->{'master'});
+		push(@emails, split(/\s+/, $scalegroup->{'email'}));
+		my $sincelast = $now - $scalegroup->{'lastemail'};
+		if ($sincelast > $scalegroup->{'interval'}) {
+			&mailboxes::send_text_mail(
+				&get_global_from_address(),
+				join(", ", @emails),
+				undef,
+				$subject,
+				$msg,
+				);
+			$scalegroup->{'lastemail'} = $now;
+			&save_scalegroup($scalegroup);
+			}
+		}
+	&release_lock_scalegroup($scalegroup);
+	}
+&pop_all_print();
 }
 
 # evaluate_scalegroup(&scalegroup, [&all-servers])
@@ -406,6 +486,18 @@ $main::got_lock_scalegroup{$scalegroup->{'id'}}--
 	if ($main::got_lock_scalegroup{$scalegroup->{'id'}});
 }
 
+# test_lock_scalegroup(&scalegroup)
+# Return 1 if some scaling group is already locked by another process
+sub test_lock_scalegroup
+{
+my ($scalegroup) = @_;
+if ($main::got_lock_scalegroup{$scalegroup->{'id'}} > 0) {
+	# We have the lock
+	return 0;
+	}
+return &test_lock($scalegroups_dir."/".$scalegroup->{'id'});
+}
+
 # describe_scalegroup_reason(&server)
 # Returns text describing why a system was added to a scaling group
 sub describe_scalegroup_reason
@@ -446,6 +538,27 @@ if (!$rv || !$rv->{'firing'}) {
 	$rv->{'soon'} = 1 if ($rv && $rv->{'firing'});
 	}
 return $rv;
+}
+
+# describe_scalegroup_eval(&status)
+# Given a status from the 'why' field returned by evaluate_scalegroup, return
+# human-readable text explaining why the action was taken.
+sub describe_scalegroup_eval
+{
+my ($st) = @_;
+my @names = split(/,/, $st->{'names'});
+my @values = split(/,/, $st->{'values'});
+my @why;
+for(my $i=0; $i<@names; $i++) {
+	my ($id, $v) = split(/:/, $values[$i], 2);
+	my $s = &get_managed_server($id);
+	next if (!$s);
+	push(@why, &text('scaleeval_why',
+			 $text{'history_stat_'.$names[$i]} ||
+			   $names[$i],
+			 $s->{'host'}, $v));
+	}
+return join(", ", @why);
 }
 
 1;

@@ -49,23 +49,8 @@ elsif ($in{'refresh'}) {
 		my $rv = &evaluate_scalegroup($scalegroup);
 		&$outdent_print();
 
-		# Generate reason for scaling
-		my $st = $rv->{'why'};
-		my @names = split(/,/, $st->{'names'});
-		my @values = split(/,/, $st->{'values'});
-		my @why;
-		for(my $i=0; $i<@names; $i++) {
-			my ($id, $v) = split(/:/, $values[$i], 2);
-			my $s = &get_managed_server($id);
-			next if (!$s);
-			push(@why, &text('scaleeval_why',
-					 $text{'history_stat_'.$names[$i]} ||
-					   $names[$i],
-					 $s->{'host'}, $v));
-			}
-		my $why = join(", ", @why);
-
 		# Print message about what happened
+		my $why = &describe_scalegroup_eval($rv->{'why'});
 		if ($rv->{'action'} eq 'ok') {
 			&$second_print($text{'scaleeval_ok'});
 			}

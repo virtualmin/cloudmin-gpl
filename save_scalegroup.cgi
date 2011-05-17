@@ -48,7 +48,7 @@ else {
 	$scalegroup->{'min'} = $in{'min'};
 
 	# Max systems in group
-	$in{'max'} =~ /^\d+$/ && $in{'max'} > $in{'min'} ||
+	$in{'max'} =~ /^\d+$/ && $in{'max'} >= $in{'min'} ||
 		&error($text{'scalegroup_emax'});
 	$scalegroup->{'max'} = $in{'max'};
 
