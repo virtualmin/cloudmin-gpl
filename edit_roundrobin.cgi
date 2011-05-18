@@ -72,10 +72,10 @@ if (@allscalegroups) {
 	# Selection by auto-scaling group
 	push(@stable, [ 5, $text{'alert_mode5'},
 		      &ui_multi_select("scalegroups",
-			       [ map { [ $_->{'id'}, $_->{'host'} ] } @scalegroups ],
-			       [ map { [ $_->{'id'}, $_->{'host'} ] } @allscalegroups ],
-			       3, 1, 0, $text{'alert_scalegroupopts'},
-					 $text{'alert_scalegroupvals'}) ]);
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @scalegroups ],
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @allscalegroups ],
+		       3, 1, 0, $text{'alert_scalegroupopts'},
+				 $text{'alert_scalegroupvals'}) ]);
 	}
 print &ui_table_row(undef, &ui_radio_table("mode", $mode, \@stable), 2);
 

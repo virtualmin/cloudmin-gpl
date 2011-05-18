@@ -358,6 +358,12 @@ elsif ($alert->{'managers'}) {
 		push(@rv, grep { $_->{'manager'} eq $t } @$allservers);
 		}
 	}
+elsif ($alert->{'scalegroups'}) {
+	# In some auto-scaling groups
+	foreach my $id (split(/\s+/, $alert->{'scalegroups'})) {
+		push(@rv, grep { $_->{'scalegroup'} eq $id } @$allservers);
+		}
+	}
 # Filter out dupes
 my %done;
 return grep { !$done{$_->{'id'}}++ } @rv;

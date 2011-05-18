@@ -70,7 +70,7 @@ foreach $a (@alerts) {
 			$cutoff = ($r->{'over'} ? $text{'alert_over'}
 						: $text{'alert_under'})." ".
 						   $r->{'value'};
-			if ($r->{'value'} =~ /(K|M|G|T)B?$/) {
+			if ($r->{'value'} =~ /(K|M|G|T)B?$/i) {
 				$value = &nice_size($value);
 				}
 			}

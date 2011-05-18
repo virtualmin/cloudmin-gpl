@@ -51,6 +51,13 @@ else {
 		$alert->{'managers'} = join(" ", split(/\0/, $in{'managers'}));
 		$alert->{'managers'} || &error($text{'alert_emanagers'});
 		}
+	elsif ($in{'mode'} == 5) {
+		# Selected auto-scaling groups
+		$alert->{'scalegroups'} =
+			join(" ", split(/\r?\n/, $in{'scalegroups'}));
+		$alert->{'scalegroups'} ||
+			&error($text{'alert_escalegroups'});
+		}
 	$alert->{'uponly'} = $in{'uponly'};
 
 	# Parse rules

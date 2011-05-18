@@ -32,16 +32,22 @@ print &ui_hidden_table_start($text{'alert_header1'}, "width=100%", 2,
 $mode = $alert->{'servers'} ne '' ? 1 :
 	$alert->{'groups'} ne '' ? 2 :
 	$alert->{'owners'} ne '' ? 3 :
-	$alert->{'managers'} ne '' ? 4 : 0;
+	$alert->{'managers'} ne '' ? 4 :
+	$alert->{'scalegroups'} ne '' ? 5 : 0;
 @allservers = &list_managed_servers_sorted();
 @allgroups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 @allowners = &list_system_owners();
+@allscalegroups = &list_scalegroups() if (defined(&list_scalegroups));
 if ($mode == 1) {
 	%sids = map { $_, 1 } split(/\s+/, $alert->{'servers'});
 	@servers = grep { $sids{$_->{'id'}} } @allservers;
 	}
 elsif ($mode == 4) {
 	%mans = map { $_, 1 } split(/\s+/, $alert->{'managers'});
+	}
+elsif ($mode == 5) {
+	%sids = map { $_, 1 } split(/\s+/, $alert->{'scalegroups'});
+	@scalegroups = grep { $sids{$_->{'id'}} } @allscalegroups;
 	}
 @stable = ( [ 0, $text{'alert_mode0'} ],
 	    [ 1, $text{'alert_mode1'},
@@ -73,6 +79,15 @@ push(@stable, [ 4, $text{'alert_mode4'},
 		join(" ", map { &ui_checkbox("managers", $_,
 				     $text{$_.'_typedesc'} || $_, $mans{$_}) }
 			      @server_management_types) ]);
+if (@allscalegroups) {
+	# Selection by auto-scaling group
+	push(@stable, [ 5, $text{'alert_mode5'},
+		      &ui_multi_select("scalegroups",
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @scalegroups ],
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @allscalegroups ],
+		       3, 1, 0, $text{'alert_scalegroupopts'},
+				 $text{'alert_scalegroupvals'}) ]);
+	}
 print &ui_table_row(undef, &ui_radio_table("mode", $mode, \@stable), 2);
 
 # Exclude down systems

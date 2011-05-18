@@ -52,7 +52,8 @@ else {
 		# Selected auto-scaling groups
 		$roundrobin->{'scalegroups'} =
 			join(" ", split(/\r?\n/, $in{'scalegroups'}));
-		$roundrobin->{'scalegroups'} || &error($text{'alert_escalegroups'});
+		$roundrobin->{'scalegroups'} ||
+			&error($text{'alert_escalegroups'});
 		}
 
 	# Parse DNS record
