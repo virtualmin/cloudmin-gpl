@@ -9810,6 +9810,22 @@ else {
 	}
 }
 
+# nice_period(secs)
+# Converts a number of seconds into a time in seconds, minutes or hours
+sub nice_period
+{
+my ($time) = @_;
+if ($time > 7200) {
+	return &text('nicetime_hours_only', int($time/3600));
+	}
+elsif ($time > 120) {
+	return &text('nicetime_mins_only', int($time/60));
+	}
+else {
+	return &text('nicetime_secs_only', $time);
+	}
+}
+
 # get_loop_device(&vhost)
 # Returns a free /dev/loop* device on some host system
 sub get_loop_device

@@ -127,28 +127,37 @@ foreach my $r (@{$alert->{'rules'}}) {
 							 $sstart, $swhen);
 		my $icount = 0;
 		my $ilast = 0;
+		my $iperiod = 0;
+		my $lastinfo;
 		foreach my $i (@info) {
 			if ($r->{'over'} && $i->[1] > $rvalue ||
 			    !$r->{'over'} && $i->[1] < $rvalue) {
 				$icount++;
+				if ($lastinfo) {
+					$iperiod += ($i->[0] - $lastinfo->[0]);
+					}
 				$ilast = 1;
 				}
 			else {
 				$ilast = 0;
+				$iperiod = 0;
 				}
+			$lastinfo = $i;
 			}
 		if (scalar(@info) && ($icount == scalar(@info) ||
 				      $ilast && $lastsample)) {
 			# All values matched for time range
 			push(@fservers, $s);
 			push(@fvalues, $info[$#info]->[1]);
+			push(@fperiods, $iperiod);
 			}
 		}
 	my $count = $r->{'count'} || scalar(@servers);
 	if (@fservers >= $count) {
 		push(@firing, { 'name' => $r->{'name'},
 			        'servers' => \@fservers,
-				'values' => \@fvalues });
+				'values' => \@fvalues,
+				'periods' => \@fperiods, });
 		}
 	}
 
@@ -163,10 +172,13 @@ foreach my $f (@firing) {
 		push(@stnames, $f->{'name'});
 		push(@stvalues, $f->{'servers'}->[$i]->{'id'}.":".
 				$f->{'values'}->[$i]);
+		push(@stperiods, $f->{'servers'}->[$i]->{'id'}.":".
+				 $f->{'periods'}->[$i]);
 		}
 	}
 $st->{'names'} = join(",", @stnames);
 $st->{'values'} = join(",", @stvalues);
+$st->{'periods'} = join(",", @stperiods);
 
 return $st;
 }

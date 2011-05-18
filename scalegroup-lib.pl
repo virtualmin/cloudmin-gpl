@@ -130,7 +130,10 @@ sub describe_scalegroup_system_status
 my ($scalegroup, $server, $upst, $downst) = @_;
 foreach my $st ($upst, $downst) {
 	my @names = split(/,/, $st->{'names'});
-	my @values = map { [ split(/:/, $_, 2) ] } split(/,/, $st->{'values'});
+	my @values = map { [ split(/:/, $_, 2) ] }
+			 split(/,/, $st->{'values'});
+	my @periods = map { [ split(/:/, $_, 2) ] }
+			  split(/,/, $st->{'periods'});
 	for(my $i=0; $i<@names; $i++) {
 		if ($values[$i]->[0] eq $server->{'id'}) {
 			# Found trigger for this system
@@ -142,7 +145,8 @@ foreach my $st ($upst, $downst) {
 				     "stat=$names[$i]&".
 				     "search=$server->{'host'}&period=3600";
 			my $rv = &text($msg, "<a href='$hgraph'>$stat</a>",
-					     $values[$i]->[1]);
+					     $values[$i]->[1],
+					     &nice_period($periods[$i]->[1]));
 			if ($st->{'soon'}) {
 				$rv = "<font color=orange>$rv</font>";
 				}
