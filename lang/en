@@ -620,6 +620,7 @@ ec2_egone=This EC2 account no longer exists!
 ec2_err=Failed to save EC2 account
 ec2_derr=Failed to delete EC2 account
 ec2_eused=This account is being used by $1 managed servers. It cannot be removed unless they are delete or de-registered.
+ec2_eused2=This account is being used by auto-scaling group $1. It cannot be removed until the group is deleted.
 ec2_edesc=Missing account description
 ec2_eaccount=Missing or invalid account ID. This must be a number like 094537821629
 ec2_ecert=Missing or invalid-looking EC2 certificate
@@ -656,6 +657,7 @@ dec2s_err=Failed to delete EC2 accounts
 dec2s_enone=None selected
 dec2s_egone=One of the accounts no longer exists!
 dec2s_eusers=The account $1 is being used by $2 managed servers. It cannot be removed unless they are delete or de-registered.
+dec2s_eusers2=The account $1 is being used by auto-scaling group $2. It cannot be removed unless the group is deleted.
 dec2s_edefault=No new default account selected
 
 status_0=OK
