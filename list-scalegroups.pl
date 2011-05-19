@@ -61,8 +61,20 @@ if ($multi) {
 		print "    Minimum systems: $s->{'min'}\n";
 		print "    Maximum systems: $s->{'max'}\n";
 		print "    Enabled: ",($s->{'enabled'} ? "Yes" : "No"),"\n";
-		my $clone = &get_managed_server($s->{'clone'});
-		print "    Source system: $clone->{'host'}\n";
+		if ($s->{'clone'}) {
+			my $clone = &get_managed_server($s->{'clone'});
+			print "    Source system: $clone->{'host'}\n";
+			}
+		elsif ($s->{'manager'} eq 'ec2') {
+			my ($account) =
+				grep { $_->{'id'} eq $s->{'ec2_account'} }
+				&list_ec2_accounts();
+			print "    EC2 account: $account->{'account'}\n";
+			print "    EC2 AMI: $s->{'ec2_image'}\n";
+			print "    SSH key ID: $s->{'ec2_key'}\n";
+			print "    EC2 instance size: $s->{'ec2_size'}\n";
+			print "    EC2 availability zone: $s->{'ec2_azone'}\n";
+			}
 
 		# Host systems
 		if ($s->{'dest_location'}) {
