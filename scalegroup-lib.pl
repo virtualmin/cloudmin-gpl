@@ -323,7 +323,9 @@ my @allservers = &list_managed_servers();
 while(1) {
 	$newhost = &substitute_template($scalegroup->{'host'},
 					{ 'num' => $num });
-	my ($clash) = grep { $_->{'host'} =~ /\Q$newhost\E/i }
+	my ($clash) = grep { $_->{'host'} =~ /\Q$newhost\E/i ||
+			     $_->{'scalegroup'} eq $scalegroup->{'id'} &&
+			     $_->{'scalegroup_index'} == $num }
 			   @allservers;
 	last if (!$clash);
 	$num++;
@@ -648,6 +650,10 @@ else {
 sub evaluate_scalegroup_conditions
 {
 my ($scalegroup, $allservers, $mode) = @_;
+if (!@{$scalegroup->{$mode}}) {
+	# No rules, so definately false
+	return { };
+	}
 $allservers ||= [ &list_managed_servers() ];
 my @ingroup = &get_scalegroup_systems($scalegroup);
 my $fakealert = { 'servers' => join(" ", map { $_->{'id'} } @ingroup),
