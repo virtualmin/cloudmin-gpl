@@ -34,18 +34,29 @@ foreach my $s (grep { $_->{'manager'} eq $scalegroup->{'manager'} &&
 		      !$_->{'scalegroup'} }
 		&list_available_managed_servers_sorted()) {
 	my $cfunc = "type_".$s->{'manager'}."_can_clone";
-	if (defined(&$cfunc)) {
+	if (defined(&$cfunc) && &$cfunc($s)) {
 		push(@servers, $s);
 		}
 	push(@nonscale, $s);
 	}
-@servers || &error($text{'scalegroup_eservers'});
-@servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
+
+my @accounts;
+if ($scalegroup->{'manager'} eq 'ec2') {
+	@accounts = &list_ec2_accounts();
+	@accounts || &error($text{'scalegroup_eaccounts'});
+	}
+else {
+	@servers || &error($text{'scalegroup_eservers'});
+	@servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
+	}
 
 # Find host systems
-@vhosts = &list_available_host_servers($scalegroup->{'manager'}, 0, 0, 1);
-@locs = &list_vhost_locations(\@vhosts);
-@vhosts || &error($text{'scalegroup_evhosts'});
+if ($scalegroup->{'manager'} ne 'ec2') {
+	@vhosts = &list_available_host_servers(
+			$scalegroup->{'manager'}, 0, 0, 1);
+	@locs = &list_vhost_locations(\@vhosts);
+	@vhosts || &error($text{'scalegroup_evhosts'});
+	}
 
 print &ui_form_start("save_scalegroup.cgi", "post");
 print &ui_hidden("id", $in{'id'});
@@ -79,34 +90,71 @@ print &ui_hidden_table_start($text{'scalegroup_header2'}, "width=100%", 2,
 			     "system", 1, \@tds);
 
 # New hostname template
-print &ui_table_row($text{'scalegroup_host'},
+print &ui_table_row($text{'scalegroup_hosttmpl'},
 	&ui_textbox("host", $scalegroup->{'host'}, 40));
 
-# System to clone
-print &ui_table_row($text{'scalegroup_clone'},
-	&ui_select("clone", $scalegroup->{'clone'},
-		   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]));
+if ($scalegroup->{'manager'} eq 'ec2') {
+	# EC2 account
+	my $defaccount = &get_default_ec2_account(1);
+	$defaccount ||= $accounts[0];
+	print &ui_table_row($text{'add_ec2account'},
+	     &ui_select("ec2_account", $scalegroup->{'ec2_account'} ||
+				       $defaccount->{'id'},
+		[ map { [ $_->{'id'}, "$_->{'desc'} ($_->{'account'})" ] }
+		      sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) }
+		   @accounts ]));
 
-# Host systems to create on
-$dmode = $scalegroup->{'dest_location'} ne '' ? 2 :
-	 $scalegroup->{'dest_hosts'} ne '' ? 1 : 0;
-@dtable = ( [ 0, $text{'scalegroup_dests0'} ],
-	    [ 1, $text{'scalegroup_dests1'},
-	      &ui_select("dest_hosts",
-		 [ split(/\s+/, $scalegroup->{'dest_hosts'}) ],
-		 [ map { [ $_->{'id'}, $_->{'host'}.
-			    &host_free_desc($_, $scalegroup->{'manager'}) ] }
-		       @vhosts ], 5, 1) ],
-	  );
-if (@locs) {
-	push(@dtable, [ 2, $text{'scalegroup_dests2'},
-			&ui_select("dest_location",
-				   $scalegroup->{'dest_location'},
-			           [ map { [ $_->{'id'}, $_->{'desc'} ] }
-					 @locs ]) ]);
+	# AMI to create from
+	print &ui_table_row($text{'create_ec2image'},
+		&ui_textbox("ec2_image", $scalegroup->{'ec2_image'}, 20)." ".
+		&ec2_image_chooser_button("ec2_image", "ec2_account"));
+
+	# SSH key
+	print &ui_table_row($text{'create_sshkey'},
+		&ssh_key_menu("ec2_key", "ec2", $scalegroup->{'ec2_key'}));
+
+	# Instance size
+	print &ui_table_row($text{'create_ec2size'},
+		&ui_select("ec2_size",
+		   $scalegroup->{'ec2_size'} || "m1.small",
+		   [ map { [ $_, $text{'create_ec2'.$_} ] }
+			 @ec2_instance_sizes ]));
+
+	# Availability zone
+	my $azones = &list_ec2_availability_zones($accounts[0]);
+	print &ui_table_row($text{'create_ec2azone'},
+	    &ui_select("ec2_azone", $scalegroup->{'ec2_azone'},
+		[ [ "", $text{'create_ec2azoneauto'} ],
+		  map { $_->{'zoneName'} }
+		      grep { $_->{'zoneState'} eq 'available' } @$azones ]));
 	}
-print &ui_table_row($text{'scalegroup_dests'},
-	&ui_radio_table("dest_mode", $dmode, \@dtable));
+else {
+	# System to clone
+	print &ui_table_row($text{'scalegroup_clone'},
+		&ui_select("clone", $scalegroup->{'clone'},
+			   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ]));
+
+	# Host systems to create on
+	$dmode = $scalegroup->{'dest_location'} ne '' ? 2 :
+		 $scalegroup->{'dest_hosts'} ne '' ? 1 : 0;
+	@dtable = ( [ 0, $text{'scalegroup_dests0'} ],
+		    [ 1, $text{'scalegroup_dests1'},
+		      &ui_select("dest_hosts",
+			 [ split(/\s+/, $scalegroup->{'dest_hosts'}) ],
+			 [ map { [ $_->{'id'}, $_->{'host'}.
+			    &host_free_desc($_, $scalegroup->{'manager'}) ] }
+			       @vhosts ], 5, 1) ],
+		  );
+	if (@locs) {
+		push(@dtable, [ 2, $text{'scalegroup_dests2'},
+				&ui_select("dest_location",
+				   $scalegroup->{'dest_location'},
+				   [ map { [ $_->{'id'}, $_->{'desc'} ] }
+					 @locs ]) ]);
+		}
+	print &ui_table_row($text{'scalegroup_dests'},
+		&ui_radio_table("dest_mode", $dmode, \@dtable));
+	}
 
 print &ui_hidden_table_end("system");
 
@@ -132,6 +180,8 @@ print &ui_table_row(undef, $text{'scalegroup_manualdesc'}, 2);
 print &ui_hidden_table_end("manual");
 
 # Section for scaling conditions
+@statservers = @servers;
+push(@statservers, &get_this_managed_server()) if (!@statservers);
 foreach $sect ("conds", "downconds") {
 	print &ui_hidden_table_start($text{'scalegroup_header3'.$sect},
 				     "width=100%", 2, $sect, 0, \@tds);
@@ -141,7 +191,7 @@ foreach $sect ("conds", "downconds") {
 	@forunits = &list_for_units();
 	@stats = sort { $text{'history_stat_'.$a} cmp
 			$text{'history_stat_'.$b} }
-		      &list_historic_stats(\@servers);
+		      &list_historic_stats(\@statservers);
 	@names = map { [ $_, $text{'history_stat_'.$_} ] }
 		     grep { !&is_binary_alert($_) } @stats;
 	unshift(@names, [ undef, '&nbsp;' ]);

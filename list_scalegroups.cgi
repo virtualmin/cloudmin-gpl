@@ -21,7 +21,8 @@ if (@scalegroups) {
 				  $text{'scalegroups_cond'},
 				  $text{'scalegroups_status'} ], 100, 0, \@tds);
 	foreach $s (@scalegroups) {
-		my $clone = &get_managed_server($s->{'clone'});
+		my $clone = $s->{'clone'} ? &get_managed_server($s->{'clone'})
+					  : undef;
 		my @ingroup = &get_scalegroup_systems($s);
 		my $upst = &evaluate_scalegroup_conditions(
 				$s, \@ingroup, "conds");
@@ -46,7 +47,7 @@ if (@scalegroups) {
 			$s->{'enabled'} ? $text{'yes'} :
 				"<font color=red>$text{'no'}</font>",
 			$text{$s->{'manager'}.'_typedesc'},
-			$clone->{'host'},
+			$s->{'ec2_image'} || $clone->{'host'},
 			$desc,
 			&describe_scalegroup_status($s),
 			], \@tds, "d", $s->{'id'});

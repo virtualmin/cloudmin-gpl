@@ -60,20 +60,40 @@ else {
 		&error($text{'scalegroup_ehostnum'});
 	$scalegroup->{'host'} = $in{'host'};
 
-	# System to clone
-	$scalegroup->{'clone'} = $in{'clone'};
+	if ($scalegroup->{'manager'} eq 'ec2') {
+		# EC2 account
+		$scalegroup->{'ec2_account'} = $in{'ec2_account'};
 
-	# Possible host systems
-	delete($scalegroup->{'dest_location'});
-	delete($scalegroup->{'dest_hosts'});
-	if ($in{'dest_mode'} == 1) {
-		$in{'dest_hosts'} eq '' &&
-			&error($text{'scalegroup_edesthosts'});
-		$scalegroup->{'dest_hosts'} =
-			join(" ", split(/\0/, $in{'dest_hosts'}));
+		# AMI to create system from
+		$in{'ec2_image'} =~ /^ami-(\S+)$/ ||
+			&error($text{'ec2_eimage'});
+		$scalegroup->{'ec2_image'} = $in{'ec2_image'};
+
+		# SSH key
+		$scalegroup->{'ec2_key'} = $in{'ec2_key'};
+
+		# Instance size
+		$scalegroup->{'ec2_size'} = $in{'ec2_size'};
+
+		# Availability zone
+		$scalegroup->{'ec2_azone'} = $in{'ec2_azone'};
 		}
-	elsif ($in{'dest_mode'} == 2) {
-		$scalegroup->{'dest_location'} = $in{'dest_location'};
+	else {
+		# System to clone
+		$scalegroup->{'clone'} = $in{'clone'};
+
+		# Possible host systems
+		delete($scalegroup->{'dest_location'});
+		delete($scalegroup->{'dest_hosts'});
+		if ($in{'dest_mode'} == 1) {
+			$in{'dest_hosts'} eq '' &&
+				&error($text{'scalegroup_edesthosts'});
+			$scalegroup->{'dest_hosts'} =
+				join(" ", split(/\0/, $in{'dest_hosts'}));
+			}
+		elsif ($in{'dest_mode'} == 2) {
+			$scalegroup->{'dest_location'} = $in{'dest_location'};
+			}
 		}
 
 	# Parse scaling conditions

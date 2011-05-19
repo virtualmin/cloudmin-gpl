@@ -153,9 +153,11 @@ else {
 	printf $fmt, "Hostname template", "Source system", "Status";
 	printf $fmt, ("-" x 30), ("-" x 33), ("-" x 10);
 	foreach $s (@scalegroups) {
-		my $clone = &get_managed_server($s->{'clone'});
+		my $clone = $s->{'clone'} ? &get_managed_server($s->{'clone'})
+					  : undef;
 		my @ingroup = &get_scalegroup_systems($s);
-		printf $fmt, $s->{'host'}, $clone->{'host'},
+		printf $fmt, $s->{'host'},
+			     $s->{'ec2_image'} || $clone->{'host'},
 			     @ingroup ? scalar(@ingroup)." systems" : "Empty";
 		}
 	}

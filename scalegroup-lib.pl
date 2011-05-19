@@ -314,61 +314,6 @@ return { 'action' => 'ok' };
 sub create_scalegroup_system
 {
 my ($scalegroup) = @_;
-my $srcserver = &get_managed_server($scalegroup->{'clone'});
-$srcserver || return $text{'scaleup_esource'};
-$srcserver->{'host'} eq 'nohost' && return $text{'scaleup_enohost'};
-my $srcvhost = &get_parent_server($srcserver);
-
-# Get resources neeeded
-my $dsfunc = "type_".$srcserver->{'manager'}."_get_disk_size";
-my $disk = defined(&$dsfunc) ? &$dsfunc($srcserver) : 0;
-my $mfunc = "type_".$newserver->{'manager'}."_get_memory_size";
-my $mem = defined(&$mfunc) ? &$mfunc($newserver) : undef;
-my $cfunc = "type_".$newserver->{'manager'}."_get_cpu_size";
-my $cpu = defined(&$cfunc) ? &$cfunc($newserver) : undef;
-
-# Find all possible host systems
-&$first_print($text{'scaleup_pickhost'});
-my @allvhosts = &list_available_host_servers(
-			$scalegroup->{'manager'}, $mem, $disk);
-my @vhosts;
-if ($scalegroup->{'dest_hosts'} ne '') {
-	# Only selected hosts
-	my %vids = map { $_, 1 } split(/\s+/, $scalegroup->{'dest_hosts'});
-	@vhosts = grep { $vids{$_->{'id'}} } @allvhosts;
-	}
-elsif ($scalegroup->{'dest_location'}) {
-	# All hosts in location group
-	@vhosts = grep { $_->{'location'} eq $scalegroup->{'dest_location'} }
-		       @allvhosts;
-	}
-else {
-	# All for type
-	@vhosts = @allvhosts;
-	}
-@vhosts || return $text{'scaleup_evhosts'};
-
-# Is remote cloning supported?
-my $rfunc = "type_".$srcserver->{'manager'}."_can_clone_remote";
-my $canremote = defined(&$rfunc) && &$rfunc();
-if ($canremote) {
-	# Pick a host system based on memory / etc
-	$vhost = &find_host_server_from_vhosts($srcserver, \@vhosts, "mem",
-					       $srcserver->{'manager'});
-	$vhost || return &text('scaleup_evresources',
-			       &nice_size($mem), &nice_size($disk));
-	}
-else {
-	# Can only clone to same system
-	my ($inlist) = grep { $_->{'id'} eq $srcvhost->{'id'} } @vhosts;
-	$inlist || return &text('scaleup_elocalvhost', $srcvhost->{'host'},
-						       $srcserver->{'host'});
-	$vhost = $srcvhost;
-	}
-&usable_host_system($vhost, $newserver->{'manager'}, $mem, $disk) ||
-	return &text('scaleup_evhostresources', $vhost->{'host'},
-		     &nice_size($mem), &nice_size($disk));
-&$second_print(&text('scaleup_pickedhost', $vhost->{'host'}));
 
 # Pick a new hostname
 &$first_print($text{'scaleup_pickname'});
@@ -378,19 +323,177 @@ my @allservers = &list_managed_servers();
 while(1) {
 	$newhost = &substitute_template($scalegroup->{'host'},
 					{ 'num' => $num });
-	my ($clash) = grep { $_->{'host'} =~ /\Q$newhost\E/i } @allservers;
+	my ($clash) = grep { $_->{'host'} =~ /\Q$newhost\E/i }
+			   @allservers;
 	last if (!$clash);
 	$num++;
 	}
 &$second_print(&text('scaleup_pickedhost', $newhost));
 
-# Call the clone function
-&obtain_lock_server($srcserver);
-my $newdesc = $scalegroup->{'desc'}." system ".$num;
-my ($newserver, $err) = &clone_system($srcserver, $newhost, $newdesc, undef, 0,
-				      $vhost);
-&release_lock_server($srcserver);
-return $err if ($err);
+my $newserver;
+if ($scalegroup->{'manager'} eq 'ec2') {
+	# Creating an EC2 instance from an AMI
+	$newserver = { 'id' => &server_id(),
+		       'manager' => $scalegroup->{'manager'},
+		       'type' => 'unknown',
+		       'status' => 'create',
+		       'bw_limit' => $config{'bw_def'},
+		       'created' => time(),
+		       'desc' => $scalegroup->{'desc'}." system ".$num,
+		       'unix_hostname' => $newhost,
+		       'ssh_user' => 'root',
+		       'key' => $scalegroup->{'ec2_key'},
+		       'ssh_protocol' => 2,
+		       'ec2' => $scalegroup->{'ec2_account'},
+		       'ec2_azone' => $scalegroup->{'ec2_azone'},
+		       'ec2_image' => $scalegroup->{'ec2_image'},
+		       'ec2_size' => $scalegroup->{'ec2_size'},
+		     };
+
+	# Call create function
+	my $tfunc = "type_ec2_desc";
+	&$first_print(&text('create_creating', &$tfunc()));
+	my $cfunc = "type_ec2_create";
+	my $err = &$cfunc($newserver);
+	if ($err) {
+		return &text('create_ecreate', $err);
+		}
+	&$second_print($text{'create_created'});
+
+	# Wait for completion
+	&$first_print($text{'create_waiting'});
+	my $dfunc = "type_ec2_create_done";
+	while(1) {
+		my $err = &$dfunc($newserver);
+		if ($err eq "OK") {
+			last;
+			}
+		elsif ($err) {
+			return &text('create_ewait', $err);
+			}
+		sleep(1);
+		}
+	&$second_print($text{'create_waited'});
+	&complete_managed_server($newserver);
+	&save_managed_server($newserver);
+
+	# Remove old SSH keys for this system
+	&clear_ssh_host_key($newserver);
+
+	# Wait for SSH
+	&$first_print($text{'create_sshing'});
+	my $ok = &wait_for_ssh($newserver, 120);
+	my ($sshstatus, $ssherr, $webmindir, $webminport, $webminssl) =
+		&check_server_ssh_login($newserver);
+	if ($ok) {
+		&$second_print($text{'create_sshdone'});
+		}
+	else {
+		&$second_print(&text('create_sshfailed', 120, $ssherr));
+		}
+
+	# Check for Webmin, set root directory, user and pass
+	if ($webmindir) {
+		$newserver->{'user'} = "root";
+		$newserver->{'pass'} ||= &generate_random_password();
+		$newserver->{'port'} = $webminport;
+		$newserver->{'ssl'} = $webminssl;
+		&$first_print($text{'create_passing'});
+		my $perr = &set_server_webmin_password(
+			$newserver, $webmindir, "root", $newserver->{'pass'});
+		if ($perr) {
+			&$second_print(&text('create_passfailed', $perr));
+			}
+		else {
+			&$second_print($text{'create_passdone'});
+			}
+
+		# Start Webmin in case it hasn't been
+		&execute_command_on_server($newserver,
+			"/etc/webmin/start >/dev/null 2>&1 </dev/null &");
+
+		# Wait for Webmin to start
+		&$first_print($text{'create_webminstarting'});
+		my $err = &wait_webmin_server($newserver, 60);
+		if (!$err) {
+			&$second_print($text{'create_webminstarted'});
+			}
+		else {
+			&$second_print(&text('create_webminnostart', 60, $err));
+			}
+		}
+
+	# Call final post-creation ready function
+	my $dfunc = "type_ec2_create_ready";
+	&$dfunc($newserver);
+	}
+else {
+	# Creating a regular virtual system by cloning
+	my $srcserver = &get_managed_server($scalegroup->{'clone'});
+	$srcserver || return $text{'scaleup_esource'};
+	$srcserver->{'host'} eq 'nohost' && return $text{'scaleup_enohost'};
+	my $srcvhost = &get_parent_server($srcserver);
+
+	# Get resources neeeded
+	my $dsfunc = "type_".$srcserver->{'manager'}."_get_disk_size";
+	my $disk = defined(&$dsfunc) ? &$dsfunc($srcserver) : 0;
+	my $mfunc = "type_".$newserver->{'manager'}."_get_memory_size";
+	my $mem = defined(&$mfunc) ? &$mfunc($newserver) : undef;
+	my $cfunc = "type_".$newserver->{'manager'}."_get_cpu_size";
+	my $cpu = defined(&$cfunc) ? &$cfunc($newserver) : undef;
+
+	# Find all possible host systems
+	&$first_print($text{'scaleup_pickhost'});
+	my @allvhosts = &list_available_host_servers(
+				$scalegroup->{'manager'}, $mem, $disk);
+	my @vhosts;
+	if ($scalegroup->{'dest_hosts'} ne '') {
+		# Only selected hosts
+		my %vids = map { $_, 1 }
+			split(/\s+/, $scalegroup->{'dest_hosts'});
+		@vhosts = grep { $vids{$_->{'id'}} } @allvhosts;
+		}
+	elsif ($scalegroup->{'dest_location'}) {
+		# All hosts in location group
+		@vhosts = grep { $_->{'location'} eq
+				 $scalegroup->{'dest_location'} } @allvhosts;
+		}
+	else {
+		# All for type
+		@vhosts = @allvhosts;
+		}
+	@vhosts || return $text{'scaleup_evhosts'};
+
+	# Is remote cloning supported?
+	my $rfunc = "type_".$srcserver->{'manager'}."_can_clone_remote";
+	my $canremote = defined(&$rfunc) && &$rfunc();
+	if ($canremote) {
+		# Pick a host system based on memory / etc
+		$vhost = &find_host_server_from_vhosts(
+			$srcserver, \@vhosts, "mem", $srcserver->{'manager'});
+		$vhost || return &text('scaleup_evresources',
+				       &nice_size($mem), &nice_size($disk));
+		}
+	else {
+		# Can only clone to same system
+		my ($inlist) = grep { $_->{'id'} eq $srcvhost->{'id'} } @vhosts;
+		$inlist || return &text('scaleup_elocalvhost',
+				$srcvhost->{'host'}, $srcserver->{'host'});
+		$vhost = $srcvhost;
+		}
+	&usable_host_system($vhost, $newserver->{'manager'}, $mem, $disk) ||
+		return &text('scaleup_evhostresources', $vhost->{'host'},
+			     &nice_size($mem), &nice_size($disk));
+	&$second_print(&text('scaleup_pickedhost', $vhost->{'host'}));
+
+	# Call the clone function
+	&obtain_lock_server($srcserver);
+	my $newdesc = $scalegroup->{'desc'}." system ".$num;
+	my ($newserver, $err) = &clone_system($srcserver, $newhost, $newdesc,
+					      undef, 0, $vhost);
+	&release_lock_server($srcserver);
+	return $err if ($err);
+	}
 
 # Set scalegroup parameter and re-save
 &obtain_lock_server($newserver);
@@ -410,26 +513,24 @@ if ($newserver->{'status'} eq 'down') {
 	else {
 		&$second_print($text{'create_done'});
 		}
-
-	&$first_print($text{'clone_refreshing2'});
-	&check_server_status($newserver, 0, 1);
-	&save_managed_server($newserver);
-	&$second_print(&text('save_refreshdone2',
-		&describe_status($newserver, 1, 1)));
 	}
+
+# Check status again
+&$first_print($text{'clone_refreshing2'});
+&check_server_status($newserver, 1);
+if (!$newserver->{'type'} || $newserver->{'type'} eq 'unknown') {
+        $newserver->{'type'} = &guess_os_type($newserver);
+        if ($newserver->{'type'}) {
+                &check_server_status($newserver);
+                }
+        }
+&save_managed_server($newserver);
+&$second_print(&text('save_refreshdone2',
+	&describe_status($newserver, 1, 1)));
 &release_lock_server($newserver);
 
 # Find and eval roundrobins for this scalegroup
-my @rrs;
-foreach my $rr (&list_roundrobins()) {
-	my @sc = split(/\s+/, $rr->{'scalegroups'});
-	if (&indexof($scalegroup->{'id'}, @sc) >= 0) {
-		push(@rrs, $rr);
-		}
-	}
-if (@rrs) {
-	&evaluate_all_roundrobins(undef, \@rrs);
-	}
+&evaluate_scalegroup_roundrobins($scalegroup);
 
 return ( $err ? &text('scaleup_estart', $err) : undef, $newserver );
 }
@@ -459,11 +560,29 @@ if (@ingroup) {
 	&delete_managed_server($server);
 	&run_system_script($server, 'after', 'delete');
 	&$second_print($text{'create_done'});
+	&evaluate_scalegroup_roundrobins($scalegroup);
 	&release_lock_server($server);
 	return (undef, $server);
 	}
 else {
 	return ($text{'scaledown_empty'}, undef);
+	}
+}
+
+# evaluate_scalegroup_roundrobins(&scalegroup)
+# Evaluate all roundrobins that refer to a scalegroup
+sub evaluate_scalegroup_roundrobins
+{
+my ($scalegroup) = @_;
+my @rrs;
+foreach my $rr (&list_roundrobins()) {
+	my @sc = split(/\s+/, $rr->{'scalegroups'});
+	if (&indexof($scalegroup->{'id'}, @sc) >= 0) {
+		push(@rrs, $rr);
+		}
+	}
+if (@rrs) {
+	&evaluate_all_roundrobins(undef, \@rrs);
 	}
 }
 
