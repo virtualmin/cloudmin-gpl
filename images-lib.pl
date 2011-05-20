@@ -682,6 +682,76 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 return undef;
 }
 
+# fix_unix_hostname(&server, hostname)
+# Set the hostname for some system
+sub fix_unix_hostname
+{
+my ($server, $fullhost) = @_;
+my $ip = &get_server_ip($server);
+my $host = $server->{'host'};
+
+foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
+		 "/etc/mailname", "/etc/nodename",
+		 "/etc/sysconfig/network", "/etc/postfix/main.cf",
+		 "/etc/conf.d/hostname", "/etc/mailman/mm_cfg.py") {
+	my $temppath = &transname();
+
+	# Only do files that exist
+	my $err = &get_file_from_server($server, $fix, $temppath);
+	next if ($err);
+	print STDERR "fix=$fix\n";
+
+	my $data = &read_file_contents($temppath);
+	if ($fix eq "/etc/hosts") {
+		if ($data !~ s/\s+\Q$host\E/ $host $fullhost/) {
+			$data .= "\n".$ip." ".$fullhost."\n";
+			}
+		}
+	elsif ($fix eq "/etc/sysconfig/network") {
+		if ($data !~ s/HOSTNAME=(\S+)/HOSTNAME=$fullhost/) {
+			$data .= "HOSTNAME=$fullhost\n";
+			}
+		}
+	elsif ($fix eq "/etc/postfix/main.cf") {
+		if ($data !~ s/myhostname\s*=.*/myhostname = $fullhost/) {
+			$data .= "myhostname = $fullhost\n";
+			}
+		$data =~ s/mydestination\s*=.*/mydestination = $fullhost, $host, localhost/;
+		}
+	elsif ($fix eq "/etc/conf.d/hostname") {
+		# Gentoo hostname file
+		$data =~ s/(HOSTNAME|hostname)="(.*)"/$1="$fullhost"/ ||
+		   $data =~ s/(HOSTNAME|hostname)='(.*)'/$1='$fullhost'/ ||
+		   $data =~ s/(HOSTNAME|hostname)=(\S+)/$1=$fullhost/;
+		}
+	elsif ($fix eq "/etc/mailman/mm_cfg.py") {
+		# Mailman config file
+		$data =~ s/DEFAULT_EMAIL_HOST\s*=\s*'(.*)'/DEFAULT_EMAIL_HOST = '$fullhost'/;
+		$data =~ s/DEFAULT_EMAIL_HOST\s*=\s*"(.*)"/DEFAULT_EMAIL_HOST = "$fullhost"/;
+		$data =~ s/DEFAULT_URL_HOST\s*=\s*'(.*)'/DEFAULT_URL_HOST = '$fullhost'/;
+		$data =~ s/DEFAULT_URL_HOST\s*=\s*"(.*)"/DEFAULT_URL_HOST = "$fullhost"/;
+		}
+	else {
+		# Other hostname file
+		$data = $fullhost."\n";
+		}
+	&open_tempfile(FIXED, ">$temppath");
+	&print_tempfile(FIXED, $data);
+	&close_tempfile(FIXED);
+	print STDERR "new data=$data\n";
+	$err = &put_file_to_server($server, $temppath, $fix);
+	return "Failed to save fixed $fix : $err" if ($err);
+	}
+
+# Set live hostname
+my ($out, $ex, $err) = &execute_command_on_server(
+			$server, "hostname ".quotemeta($fullhost));
+return $err if ($err);
+return $out if ($ex);
+
+return undef;
+}
+
 # fix_network_config_files(&server, ip, netmask, gateway, vhost, dir, [iface])
 # Update network config files like /etc/sysconfig/network-scripts/ifcfg-eth0 or
 # /etc/network/interfaces to use the given static IP.
