@@ -439,10 +439,10 @@ else {
 	# Get resources neeeded
 	my $dsfunc = "type_".$srcserver->{'manager'}."_get_disk_size";
 	my $disk = defined(&$dsfunc) ? &$dsfunc($srcserver) : 0;
-	my $mfunc = "type_".$newserver->{'manager'}."_get_memory_size";
-	my $mem = defined(&$mfunc) ? &$mfunc($newserver) : undef;
-	my $cfunc = "type_".$newserver->{'manager'}."_get_cpu_size";
-	my $cpu = defined(&$cfunc) ? &$cfunc($newserver) : undef;
+	my $mfunc = "type_".$srcserver->{'manager'}."_get_memory_size";
+	my $mem = defined(&$mfunc) ? &$mfunc($srcserver) : undef;
+	my $cfunc = "type_".$srcserver->{'manager'}."_get_cpu_size";
+	my $cpu = defined(&$cfunc) ? &$cfunc($srcserver) : undef;
 
 	# Find all possible host systems
 	&$first_print($text{'scaleup_pickhost'});
@@ -483,7 +483,7 @@ else {
 				$srcvhost->{'host'}, $srcserver->{'host'});
 		$vhost = $srcvhost;
 		}
-	&usable_host_system($vhost, $newserver->{'manager'}, $mem, $disk) ||
+	&usable_host_system($vhost, $srcserver->{'manager'}, $mem, $disk) ||
 		return &text('scaleup_evhostresources', $vhost->{'host'},
 			     &nice_size($mem), &nice_size($disk));
 	&$second_print(&text('scaleup_pickedhost', $vhost->{'host'}));
@@ -491,7 +491,8 @@ else {
 	# Call the clone function
 	&obtain_lock_server($srcserver);
 	my $newdesc = $scalegroup->{'desc'}." system ".$num;
-	my ($newserver, $err) = &clone_system($srcserver, $newhost, $newdesc,
+	my $err;
+	($newserver, $err) = &clone_system($srcserver, $newhost, $newdesc,
 					      undef, 0, $vhost);
 	&release_lock_server($srcserver);
 	return $err if ($err);
