@@ -10,3 +10,4 @@ The SSH and Webmin passwords for a virtual system can now be viewed by clicking 
 Added an option on the disk creation page to overwrite an existing file or LV, and an equivalent --overwrite flag to the create-disk command.
 If the Cloudmin system cannot be a KVM host due to running the wrong kernel or missing KVM tools, a warning message is now shown after logging in.
 ---- Changes since 5.4 ----
+The new auto-scaling groups feature allows virtual systems to be created and destroyed in response to CPU load or other factors. This can be used to scale up a service like a website or replicated database to handle higher traffic, by cloning and configuring new virtual systems automatically.
