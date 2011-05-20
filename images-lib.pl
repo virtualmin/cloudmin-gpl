@@ -699,7 +699,6 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	# Only do files that exist
 	my $err = &get_file_from_server($server, $fix, $temppath);
 	next if ($err);
-	print STDERR "fix=$fix\n";
 
 	my $data = &read_file_contents($temppath);
 	if ($fix eq "/etc/hosts") {
@@ -738,7 +737,6 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
-	print STDERR "new data=$data\n";
 	$err = &put_file_to_server($server, $temppath, $fix);
 	return "Failed to save fixed $fix : $err" if ($err);
 	}

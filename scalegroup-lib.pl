@@ -379,6 +379,10 @@ if ($scalegroup->{'manager'} eq 'ec2') {
 	&complete_managed_server($newserver);
 	&save_managed_server($newserver);
 
+	# Call post-creation function
+	my $pfunc = "type_ec2_create_post";
+	&$pfunc($newserver);
+
 	# Remove old SSH keys for this system
 	&clear_ssh_host_key($newserver);
 
@@ -389,9 +393,11 @@ if ($scalegroup->{'manager'} eq 'ec2') {
 		&check_server_ssh_login($newserver);
 	if ($ok) {
 		&$second_print($text{'create_sshdone'});
+		$newserver->{'status'} = 'nowebmin';
 		}
 	else {
 		&$second_print(&text('create_sshfailed', 120, $ssherr));
+		$newserver->{'status'} = 'nossh';
 		}
 
 	# Check for Webmin, set root directory, user and pass
@@ -408,6 +414,7 @@ if ($scalegroup->{'manager'} eq 'ec2') {
 			}
 		else {
 			&$second_print($text{'create_passdone'});
+			$newserver->{'status'} = 'webmin';
 			}
 
 		# Start Webmin in case it hasn't been
