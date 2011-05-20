@@ -1,0 +1,33 @@
+<header>Auto-Scaling Groups</header>
+
+Auto-scaling groups are Cloudmin's way of scaling up the number of systems
+that provide some service in response to load. They are typically used when
+you have multiple virtual systems with identical configurations providing
+the same service, such as a website, mail server or database replicas. When
+CPU load or some other metric exceeds a configurable threshold on some or
+all systems, additional systems are created to handle the load. Conversely,
+a group can be reduced in size when a second set of thresholds is reached. <p>
+
+This page lists all existing auto-scaling groups, and allows you to create
+a new one for virtual systems of some type. When adding a group, you can
+select the maximum and minimum systems in the group, a template for the
+hostname of new systems, and one or more conditions that control when the
+group is scaled up (by adding a system) or scaled down. <p>
+
+Each new system in the group is created by cloning an existing template
+system, in the same way that systems can be manually cloned from within
+Cloudmin. The exception is Amazon EC2 auto-scaling groups, which create
+systems from AMIs. <p>
+
+Once a group is created, it will be evaluated periodically by Cloudmin to
+determine if more or fewer systems are needed. For each group you can control
+who is notified about group changes, and how often. <p>
+
+Once one or more groups exist, this page can be used to manually scale them
+up or down, or force immediate evaluation of their scaling rules. For a new
+group you should typically add at least one system to it with the <b>Scale
+Up Groups</b> button after creation, so that the rules have a system to work
+on. <p>
+
+<footer>
+
