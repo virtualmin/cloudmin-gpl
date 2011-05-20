@@ -144,9 +144,12 @@ foreach my $st ($upst, $downst) {
 			my $hgraph = "history.cgi?id=$server->{'id'}&".
 				     "stat=$names[$i]&".
 				     "search=$server->{'host'}&period=3600";
+			my $nv = $values[$i]->[1];
+			if ($nv > 1024) {
+				$nv = &nice_size($nv);
+				}
 			my $rv = &text($msg, "<a href='$hgraph'>$stat</a>",
-					     $values[$i]->[1],
-					     &nice_period($periods[$i]->[1]));
+				       $nv, &nice_period($periods[$i]->[1]));
 			if ($st->{'soon'}) {
 				$rv = "<font color=orange>$rv</font>";
 				}
