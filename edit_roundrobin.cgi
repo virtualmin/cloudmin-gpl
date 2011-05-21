@@ -34,7 +34,7 @@ $mode = $roundrobin->{'servers'} ne '' ? 1 :
 @allservers = &list_managed_servers_sorted();
 @allgroups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 @allowners = &list_system_owners();
-@allscalegroups = defined(&list_scalegroups) : &list_scalegroups() : ( );
+@allscalegroups = defined(&list_scalegroups) ? &list_scalegroups() : ( );
 if ($mode == 1) {
 	%sids = map { $_, 1 } split(/\s+/, $roundrobin->{'servers'});
 	@servers = grep { $sids{$_->{'id'}} } @allservers;
