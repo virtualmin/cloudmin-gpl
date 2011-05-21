@@ -4528,6 +4528,7 @@ scalegroup_dests1=Only selected
 scalegroup_dests2=Members of location group
 scalegroup_min=Minimum systems in group
 scalegroup_max=Maximum systems in group
+scalegroup_gap=Interval between system changes
 scalegroup_header2=New virtual system details
 scalegroup_header3conds=Conditions for scaling up
 scalegroup_header3downconds=Conditions for scaling down
@@ -4576,6 +4577,7 @@ scalegroup_header6=Additional manually added systems
 scalegroup_mall=All $1 systems
 scalegroup_msel=Systems in scaling group
 scalegroup_manualdesc=Systems selected here will be included in scaling group condition evaluations and will count towards the maximum system limit, but will never been deleted.
+scalegroup_egap=Missing or non-numeric interval between system changes
 
 scaleup_evhosts=No usable host systems were found
 scaleup_esource=System to clone for new systems in scaling group no longer exists

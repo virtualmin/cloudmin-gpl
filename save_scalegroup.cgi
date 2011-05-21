@@ -54,6 +54,10 @@ else {
 
 	$scalegroup->{'enabled'} = $in{'enabled'};
 
+	# Gap between changes
+	$in{'gap'} =~ /^\d+$/ || &error($text{'scalegroup_egap'});
+	$scalegroup->{'gap'} = &join_for_units($in{'gapunit'}, $in{'gap'});
+
 	# Hostname template
 	$in{'host'} =~ /^\S+$/ || &error($text{'scalegroup_ehost'});
 	$in{'host'} =~ /\$NUM/i || $in{'host'} =~ /\$\{NUM\}/i ||

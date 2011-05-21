@@ -16,6 +16,7 @@ if ($in{'new'}) {
 			'notify_inc' => 1,
 			'notify_over' => 1,
 		 	'interval' => 3600,
+			'gap' => 300,
 			'master' => 1,
 			'conds_and' => 1,
 			'downconds_and' => 1, };
@@ -82,6 +83,12 @@ print &ui_table_row($text{'scalegroup_max'},
 
 print &ui_table_row($text{'scalegroup_enabled'},
 	&ui_yesno_radio("enabled", $scalegroup->{'enabled'}));
+
+@forunits = &list_for_units();
+($gapunit, $gap) = &split_for_units($scalegroup->{'gap'});
+print &ui_table_row($text{'scalegroup_gap'},
+	&ui_textbox("gap", $gap, 4).
+	&ui_select("gapunit", $gapunit, \@forunits));
 
 print &ui_hidden_table_end("host");
 
@@ -252,7 +259,6 @@ print &ui_table_row($text{'alert_notif'},
 	&ui_textbox("emailto", $scalegroup->{'email'}, 60));
 
 # How often to send
-@forunits = &list_for_units();
 ($intunit, $int) = &split_for_units($scalegroup->{'interval'});
 print &ui_table_row($text{'alert_interval'},
 	&ui_textbox("int", $int, 4).

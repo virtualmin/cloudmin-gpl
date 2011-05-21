@@ -173,8 +173,12 @@ my $now = time();
 &push_all_print();
 &set_all_capture_text_print();
 foreach my $scalegroup (&list_scalegroups()) {
+	# Skip if not enabled, locked, or something was done recently
 	next if (!$scalegroup->{'enabled'});
 	next if (&test_lock_scalegroup($scalegroup));
+	my $sincelast = $now - $scalegroup->{'lastaction'};
+	next if ($sincelast < $scalegroup->{'gap'});
+
 	&obtain_lock_scalegroup($scalegroup);
 	$capture_print = undef;
 	my $rv = &evaluate_scalegroup($scalegroup);
@@ -269,6 +273,8 @@ if ($upst->{'firing'} && !$upst->{'soon'}) {
 				&create_scalegroup_system($scalegroup);
 			}
 		if ($newserver) {
+			$scalegroup->{'lastaction'} = $now;
+			&save_scalegroup($scalegroup);
 			&obtain_lock_server($newserver);
 			$newserver->{'scalegroup_reason'} =
 				'scaleup '.$upst->{'names'};
@@ -296,8 +302,13 @@ elsif ($downst->{'firing'} && !$downst->{'soon'}) {
 			($err, $server) =
 				&delete_scalegroup_system($scalegroup);
 			}
+		if ($server) {
+			$scalegroup->{'lastaction'} = $now;
+			&save_scalegroup($scalegroup);
+			}
 		return { 'action' => 'dec',
 			 'enabled' => $scalegroup->{'enabled'},
+			 'server' => $server,
 			 'error' => $err,
 			 'why' => $downst };
 		}
