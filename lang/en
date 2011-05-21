@@ -358,6 +358,7 @@ create_xenaddnewkeys=Adding extra authorized SSH keys ..
 create_exenaddnewkeys=.. some failed : $1
 create_xenhostkey=Regenerating SSH host keys ..
 create_xenfix=Updating configuration files with hostname and IP address ..
+create_xenfixhost=Updating configuration files with hostname ..
 create_exenfix= .. failed : $1
 create_xenlicence=Updating Virtualmin license files ..
 create_exenlicence=.. failed : $1
@@ -4578,6 +4579,7 @@ scalegroup_mall=All $1 systems
 scalegroup_msel=Systems in scaling group
 scalegroup_manualdesc=Systems selected here will be included in scaling group condition evaluations and will count towards the maximum system limit, but will never been deleted.
 scalegroup_egap=Missing or non-numeric interval between system changes
+scalegroup_ago=Last action $1 ago
 
 scaleup_evhosts=No usable host systems were found
 scaleup_esource=System to clone for new systems in scaling group no longer exists
