@@ -86,9 +86,13 @@ print &ui_table_row($text{'scalegroup_enabled'},
 
 @forunits = &list_for_units();
 ($gapunit, $gap) = &split_for_units($scalegroup->{'gap'});
+if ($scalegroup->{'lastaction'}) {
+	$gapwhen = &text('scalegroup_ago',
+		&nice_hour_mins_secs(time() - $scalegroup->{'lastaction'}));
+	}
 print &ui_table_row($text{'scalegroup_gap'},
 	&ui_textbox("gap", $gap, 4).
-	&ui_select("gapunit", $gapunit, \@forunits));
+	&ui_select("gapunit", $gapunit, \@forunits)." ".$gapwhen);
 
 print &ui_hidden_table_end("host");
 

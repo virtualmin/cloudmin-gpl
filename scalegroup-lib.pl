@@ -273,8 +273,6 @@ if ($upst->{'firing'} && !$upst->{'soon'}) {
 				&create_scalegroup_system($scalegroup);
 			}
 		if ($newserver) {
-			$scalegroup->{'lastaction'} = $now;
-			&save_scalegroup($scalegroup);
 			&obtain_lock_server($newserver);
 			$newserver->{'scalegroup_reason'} =
 				'scaleup '.$upst->{'names'};
@@ -301,10 +299,6 @@ elsif ($downst->{'firing'} && !$downst->{'soon'}) {
 		if ($scalegroup->{'enabled'}) {
 			($err, $server) =
 				&delete_scalegroup_system($scalegroup);
-			}
-		if ($server) {
-			$scalegroup->{'lastaction'} = $now;
-			&save_scalegroup($scalegroup);
 			}
 		return { 'action' => 'dec',
 			 'enabled' => $scalegroup->{'enabled'},
@@ -556,6 +550,10 @@ if (!$newserver->{'type'} || $newserver->{'type'} eq 'unknown') {
 # Find and eval roundrobins for this scalegroup
 &evaluate_scalegroup_roundrobins($scalegroup);
 
+# Record last action time
+$scalegroup->{'lastaction'} = time();
+&save_scalegroup($scalegroup);
+
 return ( $err ? &text('scaleup_estart', $err) : undef, $newserver );
 }
 
@@ -584,8 +582,15 @@ if (@ingroup) {
 	&delete_managed_server($server);
 	&run_system_script($server, 'after', 'delete');
 	&$second_print($text{'create_done'});
-	&evaluate_scalegroup_roundrobins($scalegroup);
 	&release_lock_server($server);
+
+	# Update relevant roundrobins
+	&evaluate_scalegroup_roundrobins($scalegroup);
+
+	# Record last action time
+	$scalegroup->{'lastaction'} = time();
+	&save_scalegroup($scalegroup);
+
 	return (undef, $server);
 	}
 else {
