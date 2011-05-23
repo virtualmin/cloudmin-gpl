@@ -5237,12 +5237,13 @@ foreach my $d (@$disks) {
 			    int($d->{'size'}/(1024*1024))*1024*1024);
 			}
 		elsif (!$err && !$d->{'swap'} && $snapshot &&
-		       &type_kvm_can_fsck($server, $d)) {
+		       &type_kvm_can_fsck($oldserver, $d)) {
 			# Fsck the disk after snapshotting
 			my $newd = { %$d };
 			$newd->{'real'} = $d->{'newreal'};
 			$newd->{'lv'} = $newlv;
-			my ($ok, $out) = &type_kvm_fsck_disk($server, $newd, 0);
+			my ($ok, $out) = &type_kvm_fsck_disk(
+					$oldserver, $newd, 0);
 			}
 		}
 	else {
