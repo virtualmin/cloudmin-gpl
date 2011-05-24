@@ -4480,10 +4480,10 @@ foreach my $d (@$disks) {
 		# Create LV on target first
 		$last_remote_error = undef;
 		my $lv = { 'name' => $d->{'lv'},
-			      'size' => int($d->{'size'}/1024),
-			      'perm' => 'rw',
-			      'alloc' => 'n',
-			      'vg' => $dest->{'kvm_vg'} };
+			   'size' => int($d->{'size'}/1024),
+			   'perm' => 'rw',
+			   'alloc' => 'n',
+			   'vg' => $dest->{'kvm_vg'} };
 		&remote_finished();
 		$last_remote_error = undef;
 		&remote_foreign_require($dest, "lvm", "lvm-lib.pl");
@@ -4535,9 +4535,9 @@ else {
 my @drives = split(/\s+/, $server->{'kvm_drives'});
 foreach my $d (@$disks) {
 	my %drive = map { split(/=/, $_, 2) }
-                        split(/,/, $drives[$disk->{'drive_index'}]);
+                        split(/,/, $drives[$d->{'drive_index'}]);
 	$drive{'file'} = $d->{'newreal'};
-	$drives[$disk->{'drive_index'}] =
+	$drives[$d->{'drive_index'}] =
 		join(",", map { $_."=".$drive{$_} } keys %drive);
 	if ($server->{'kvm_filesystem'} eq $d->{'real'}) {
 		$server->{'kvm_filesystem'} = $d->{'newreal'};
