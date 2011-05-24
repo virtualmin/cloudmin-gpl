@@ -3665,7 +3665,6 @@ log_delete_scalegroups=Deleted $1 auto-scaling groups
 log_scaleup_scalegroups=Added systems to $1 auto-scaling groups
 log_scaledown_scalegroups=Removed systems from $1 auto-scaling groups
 log_eval_scalegroups=Updated systems in $1 auto-scaling groups
-log_scaledown_scalegroups=Removed systems from $1 auto-scaling groups
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system
