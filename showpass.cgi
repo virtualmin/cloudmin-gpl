@@ -13,12 +13,16 @@ $server || &error($text{'edit_egone'});
 print "<center>\n";
 print &ui_table_start(undef, undef, 2);
 if ($in{'mode'} eq 'webmin') {
-	print &ui_table_row($text{'showpass_wuser'}, $server->{'user'});
-	print &ui_table_row($text{'showpass_wpass'}, $server->{'pass'});
+	print &ui_table_row($text{'showpass_wuser'},
+		&html_escape($server->{'user'}));
+	print &ui_table_row($text{'showpass_wpass'},
+		&html_escape($server->{'pass'}));
 	}
 else {
-	print &ui_table_row($text{'showpass_suser'}, $server->{'ssh_user'});
-	print &ui_table_row($text{'showpass_spass'}, $server->{'ssh_pass'});
+	print &ui_table_row($text{'showpass_suser'},
+		&html_escape($server->{'ssh_user'}));
+	print &ui_table_row($text{'showpass_spass'},
+		&html_escape($server->{'ssh_pass'}));
 	}
 print &ui_table_end();
 print "</center>\n";
