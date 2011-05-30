@@ -2478,10 +2478,10 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Update total disk size
 	if (!$moderr &&
-	    $server->{'xen_disktotal'} ne '' &&
+	    $server->{'kvm_disktotal'} ne '' &&
 	    (!$disk->{'device'} || $disk->{'lv'})) {
-		$server->{'xen_disktotal'} -= $olddisk->{'size'};
-		$server->{'xen_disktotal'} += $disk->{'size'};
+		$server->{'kvm_disktotal'} -= $olddisk->{'size'};
+		$server->{'kvm_disktotal'} += $disk->{'size'};
 		}
 	}
 
