@@ -107,6 +107,10 @@ if ($multi) {
 				      ($d ? "Yes" : "No"),"\n";
 				}
 			}
+		for(my $n=0; $n<@{$i->{'address6'}}; $n++) {
+			print "    IPv6 address: $i->{'address6'}->[$n]\n";
+			print "    IPv6 netmask: $i->{'netmask6'}->[$n]\n";
+			}
 		if ($i->{'fullname'} eq $gwdev) {
 			print "    Gateway: $gw\n";
 			}

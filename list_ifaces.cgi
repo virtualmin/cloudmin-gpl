@@ -39,12 +39,18 @@ if ($server->{'status'} ne 'down') {
 		}
 	}
 
+# Check for IPv6 addresses
+foreach $iface (@$ifaces) {
+	$anyv6++ if ($iface->{'address6'} && @{$iface->{'address6'}});
+	}
+
 print &ui_columns_start([ $text{'edit_ifaceaddress'},
 			  $anyactive ? ( $text{'edit_ifaceactive'} ) : ( ),
 			  $can == 1 ? $text{'edit_ifacename'}
 				    : $text{'edit_ifacename2'},
 			  $text{'edit_ifacenumber'},
 			  $text{'edit_ifacenetmask'},
+			  $anyv6 ? ( $text{'edit_ifaceaddress6'} ) : ( ),
 			  $info ? ( $text{'edit_ifaceuse'} ) : ( ) ],
 			100);
 $n = 0;
@@ -66,6 +72,7 @@ foreach $iface (@$ifaces) {
 		$iface->{'virtual'} eq '' ?
 		 "<i>$text{'edit_ifacereal'}</i>" : $iface->{'virtual'},
 		$iface->{'netmask'},
+		$anyv6 ? ( join("<br>\n", @{$iface->{'address6'}}) ) : ( ),
 		$info ? ( $use ) : ( ),
 		]);
 	$n++;

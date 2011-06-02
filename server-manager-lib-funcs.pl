@@ -8463,6 +8463,14 @@ foreach my $l (@lines) {
 	if ($l =~ /P-t-P:(\S+)/) { $ifc{'ptp'} = $1; }
 	$ifc{'up'}++ if ($l =~ /\sUP\s/);
 	$ifc{'promisc'}++ if ($l =~ /\sPROMISC\s/);
+        my (@address6, @netmask6);
+        while($l =~ s/inet6 addr:\s*(\S+)\/(\d+)\s+Scope:(Global)//i) {
+                my ($address6, $netmask6, $scope6) = ($1, $2, $3);
+                push(@address6, $address6);
+                push(@netmask6, $netmask6);
+                }
+        $ifc{'address6'} = \@address6;
+        $ifc{'netmask6'} = \@netmask6;
 	$ifc{'edit'} = ($ifc{'name'} !~ /^ppp/);
 	$ifc{'index'} = scalar(@rv);
 	push(@ifaces, \%ifc);
@@ -8553,6 +8561,16 @@ else {
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err if ($err);
 	return $out if ($ex);
+
+	# Activate IPv6 addresses with ifconfig command
+	for(my $n=0; $i<@{$iface->{'address6'}}; $n++) {
+		my $cmd = "ifconfig ".quotemeta($iface->{'fullname'}).
+			  " inet6 add ".$a->{'address6'}->[$n]."/".
+					$a->{'netmask6'}->[$n];
+		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		return $err if ($err);
+		return $out if ($ex);
+		}
 	}
 return undef;
 }
@@ -8586,9 +8604,10 @@ sub modify_active_server_interface
 {
 my ($server, $iface, $oldiface) = @_;
 my $oldip = &get_server_ip($server);
-my $primary = $oldip eq $oldiface->{'address'} ? 1 : 0;
+my $changing_primary = $oldip eq $oldiface->{'address'} &&
+	      	       $iface->{'address'} ne $oldiface->{'address'} ? 1 : 0;
 if (($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') &&
-    !$primary) {
+    !$changing_primary) {
 	# Change it using Webmin
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
@@ -8602,13 +8621,45 @@ else {
 		     quotemeta($iface->{'address'})." ".
 		     "netmask ".quotemeta($iface->{'netmask'})." ".
 		     "broadcast ".quotemeta($iface->{'broadcast'});
-	if ($primary) {
+	if ($changing_primary) {
 		# Will hang, so background it
 		$cmd = "(sleep 2 ; $cmd >/dev/null 2>&1 </dev/null) &";
 		}
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err if ($err);
 	return $out if ($ex);
+
+	if ($iface->{'virtual'} eq '') {
+		# Remove old v6 addresses that are no longer active
+		for(my $n=0; $n<@{$oldiface->{'address6'}}; $n++) {
+			if (&indexof($oldiface->{'address6'}->[$n], 
+				     @{$iface->{'address6'}}) < 0) {
+				my $cmd = "ifconfig $iface->{'fullname'} ".
+					  "inet6 del ".
+					  $oldiface->{'address6'}->[$n]."/".
+					  $oldiface->{'netmask6'}->[$n];
+				my ($out, $ex, $err) =
+				    &execute_command_on_server($server, $cmd);
+				return $err if ($err);
+				return $out if ($ex);
+				}
+			}
+
+		# Add new ones that are now active
+		for(my $n=0; $n<@{$iface->{'address6'}}; $n++) {
+			if (&indexof($iface->{'address6'}->[$n], 
+				     @{$oldiface->{'address6'}}) < 0) {
+				my $cmd = "ifconfig $iface->{'fullname'} ".
+					  "inet6 add ".
+					  $iface->{'address6'}->[$n]."/".
+					  $iface->{'netmask6'}->[$n];
+				my ($out, $ex, $err) =
+				    &execute_command_on_server($server, $cmd);
+				return $err if ($err);
+				return $out if ($ex);
+				}
+			}
+		}
 	}
 return undef;
 }
@@ -8895,6 +8946,8 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 		$boot->{'broadcast'} = $iface->{'broadcast'};
 		$boot->{'network'} = $iface->{'network'};
 		$boot->{'gateway'} = $iface->{'gateway'};
+		$boot->{'address6'} = $iface->{'address6'};
+		$boot->{'netmask6'} = $iface->{'netmask6'};
 		&remote_foreign_call($server, "net", "save_interface", $boot);
 		return $last_remote_error if ($last_remote_error);
 		}
@@ -8959,6 +9012,19 @@ else {
 	return "Modifying boot-time network interfaces on systems of type ".
                $server->{'type'}." is not supported";
 	}
+}
+
+# clone_interface(&iface)
+# Deep-copy an interface object
+sub clone_interface
+{
+my ($src) = @_;
+my $dest = { %$src };
+if ($src->{'address6'}) {
+	$dest->{'address6'} = [ @{$src->{'address6'}} ];
+	$dest->{'netmask6'} = [ @{$src->{'netmask6'}} ];
+	}
+return $dest;
 }
 
 # list_host_bridges(&vhost)

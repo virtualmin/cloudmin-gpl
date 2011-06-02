@@ -77,13 +77,27 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-model") {
 		$nomodel = 1;
 		}
+	elsif ($a eq "--add-address6") {
+		$address6 = shift(@ARGV);
+		&check_ip6address($address6) ||
+			&usage("--add-address6 must be followed by an ".
+			       "IPv6 address");
+		push(@add6, $address6);
+		}
+	elsif ($a eq "--remove-address6") {
+		$address6 = shift(@ARGV);
+		&check_ip6address($address6) ||
+			&usage("--remove-address6 must be followed by an ".
+			       "IPv6 address");
+		push(@del6, $address6);
+		}
 	else {
 		&usage();
 		}
 	}
 $address || $name || &usage("Missing --address or --name parameter");
 $newaddress || $newnetmask || $newether || $noether || $newmodel || $nomodel ||
-	&usage("Nothing to do");
+	@add6 || @del6 || &usage("Nothing to do");
 
 # Get the server
 $host || &usage("Missing --host parameter");
@@ -130,8 +144,18 @@ else {
 	$iface || &usage("No interface named $name found");
 	}
 
+# Check if we can manage IPv6
+if (@add6 || @del6) {
+	$iface->{'virtual'} eq '' ||
+		&usage("IPv6 addresses can only be added to or remove from ".
+		       "real interfaces");
+	$cfunc = "type_".$server->{'manager'}."_can_ipv6";
+	defined(&$cfunc) && &$cfunc($server) ||
+		&usage("IPv6 interfaces cannot be managed on this system");
+	}
+
 # Update the object
-$oldiface = { %$iface };
+$oldiface = &clone_interface($iface);
 if ($newaddress) {
 	$iface->{'address'} = $newaddress;
 	}
@@ -149,6 +173,22 @@ if ($newmodel) {
 	}
 elsif ($nomodel) {
 	$iface->{'model'} = '';
+	}
+
+# Add and remove IPv6 addresses
+foreach my $a (@add6) {
+	my ($ip, $nm) = split(/\//, $a);
+	$nm ||= 64;
+	push(@{$iface->{'address6'}}, $ip);
+	push(@{$iface->{'netmask6'}}, $nm);
+	}
+foreach my $a (@del6) {
+	my ($ip, $nm) = split(/\//, $a);
+	my $idx = &indexof($ip, @{$iface->{'address6'}});
+	if ($idx >= 0) {
+		splice(@{$iface->{'address6'}}, $idx, 1);
+		splice(@{$iface->{'netmask6'}}, $idx, 1);
+		}
 	}
 
 # Call the modify function
@@ -198,6 +238,8 @@ print "                         [--new-address ip.address]\n";
 print "                         [--new-netmask mask]\n";
 print "                         [--new-ether mac-address | --no-ether]\n";
 print "                         [--new-model type | --no-model]\n";
+print "                         [--add-address6 ipv6-address]*\n";
+print "                         [--remove-address6 ipv6-address]*\n";
 exit(1);
 }
 
