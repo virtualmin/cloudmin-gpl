@@ -224,7 +224,8 @@ if (!$module_info{'onehost'}) {
 				  $text{'range_start'},
 				  $text{'range_end'},
 				  $text{'range_netmask'},
-				  $text{'range_gateway'} ], 100);
+				  $text{'range_gateway'},
+				  $text{'ips_count'}, ], 100);
 	$i = 0;
 	foreach $p (@pools, { }) {
 		@starts = split(/,/, $p->{'start'});
@@ -234,6 +235,12 @@ if (!$module_info{'onehost'}) {
 		@gateways = split(/,/, $p->{'gateway'});
 		$r = scalar(@starts) + 1;
 		$r = 3 if ($r < 3);
+		my $ipcount;
+		for(my $i=0; $i<@starts; $i++) {
+			$snum = &net::ip_to_integer($starts[$i]);
+			$enum = &net::ip_to_integer($ends[$i]);
+			$ipcount += $enum - $snum + 1;
+			}
 		print &ui_columns_row([
 			&ui_checkbox("active_$i", 1, "", $p->{'id'}),
 			&ui_textbox("desc_$i", $p->{'desc'}, 30),
@@ -241,6 +248,7 @@ if (!$module_info{'onehost'}) {
 			&ui_textarea("end_$i", join("\n", @ends), $r, 20),
 			&ui_textarea("netmask_$i", join("\n",@netmasks), $r,20),
 			&ui_textarea("gateway_$i", join("\n",@gateways), $r,20),
+			$ipcount,
 			], [ "valign=top", "valign=top" ]);
 		$i++;
 		}
