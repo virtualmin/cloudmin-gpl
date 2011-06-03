@@ -97,6 +97,7 @@ else {
 				    "<tt>$iface->{'bridge'}</tt>");
 		}
 	}
+$non_virtual = $in{'new'} == 2 || !$in{'new'} && $iface->{'virtual'} eq '';
 
 # Address
 $afunc = "type_".$server->{'manager'}."_can_allocate_address";
@@ -138,6 +139,23 @@ else {
 		    &ui_textbox("netmask", $iface->{'netmask'}, 20));
 	}
 
+# IPv6 addresses, if supported
+$cfunc = "type_".$server->{'manager'}."_can_ipv6";
+if ($non_virtual && defined(&$cfunc) && &$cfunc($server)) {
+	$itable = &ui_columns_start([ $text{'iface_address6'},
+				      $text{'iface_netmask6'} ]);
+	for(my $n=0; $n<=@{$iface->{'address6'}}; $n++) {
+		$itable .= &ui_columns_row([
+			&ui_textbox("address6_$n",
+				    $iface->{'address6'}->[$n], 40),
+			&ui_textbox("netmask6_$n",
+				    $iface->{'netmask6'}->[$n] || 64, 5),
+			]);
+		}
+	$itable .= &ui_columns_end();
+	print &ui_table_row($text{'iface_ipv6'}, $itable);
+	}
+
 # MAC address (if non-virtual)
 $mfunc = "type_".$server->{'manager'}."_can_mac_address";
 if (defined(&$mfunc) && &$mfunc($server, $in{'new'} ? undef : $iface)) {
@@ -148,8 +166,7 @@ if (defined(&$mfunc) && &$mfunc($server, $in{'new'} ? undef : $iface)) {
 
 # Interface model (if non-virtual)
 $lfunc = "type_".$server->{'manager'}."_list_models";
-if (($in{'new'} == 2 || !$in{'new'} && $iface->{'virtual'} eq '') &&
-    defined(&$lfunc)) {
+if ($non_virtual && defined(&$lfunc)) {
 	$models = &$lfunc($server);
 	if (ref($models)) {
 		print &ui_table_row($text{'iface_model'},

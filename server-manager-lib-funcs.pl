@@ -258,6 +258,10 @@ my $ip = &get_server_ip($s);
 $ip ||= &to_ipaddress($s->{'host'});
 $ip ||= $s->{'host'};
 $s->{'ip'} = $ip;
+
+# Fill in 'ip6' field
+my $ip6 = &get_server_ip6($s);
+$s->{'ip6'} = $ip6;
 }
 
 # list_managed_servers_sorted([force-mode])
@@ -364,6 +368,35 @@ elsif (scalar(@ips) > 1) {
 if ($server->{'ip_force'}) {
 	# Use forced IP by default
 	unshift(@ips, $server->{'ip_force'});
+	}
+@ips = &unique(@ips);
+return wantarray ? @ips : $ips[0];
+}
+
+# get_server_ip6(&server)
+# Returns the IPv6 address (or addresses in an array context) for a system
+sub get_server_ip6
+{
+my ($server) = @_;
+if ($server->{'ip6_force'} && !wantarray) {
+	# An IP is forced and the caller only wants one, so just use it
+	return $server->{'ip6_force'};
+	}
+my @ips = split(/\s+/, $server->{'ip6_addresses'});
+if (!@ips) {
+	my $resolvedip = &to_ip6address($server->{'host'});
+        @ips = ( $resolvedip );
+	}
+elsif (scalar(@ips) > 1) {
+	my $resolvedip = &to_ip6address($server->{'host'});
+	if (&indexof($resolvedip, @ips) >= 0) {
+		# Always use IP that hostname resolves to first
+		@ips = ( $resolvedip, ( grep { $_ ne $resolvedip } @ips ) );
+		}
+	}
+if ($server->{'ip6_force'}) {
+	# Use forced IP by default
+	unshift(@ips, $server->{'ip6_force'});
 	}
 @ips = &unique(@ips);
 return wantarray ? @ips : $ips[0];
@@ -3096,18 +3129,31 @@ if ($server->{'status'} ne 'nohost') {
 			$server->{'ip_addresses'} = join(" ",
 				grep { !/^127\.0\./ }
 				     map { $_->{'address'} } @$ifaces);
+			my @addr6;
+			foreach my $iface (@$ifaces) {
+				if ($iface->{'address6'}) {
+					push(@addr6, @{$iface->{'address6'}});
+					}
+				}
+			$server->{'ip6_addresses'} = join(" ", @addr6);
 			}
 		}
 	}
 }
 
 # add_ip_address(&server, ip)
-# Adds to the cached list of IP addresses
+# Adds to the cached list of IP addresses (v4 or v6)
 sub add_ip_address
 {
 my ($server, $ip) = @_;
-$server->{'ip_addresses'} = join(" ",
-	&unique(split(/\s+/, $server->{'ip_addresses'}), $ip));
+if (&check_ip6address($ip)) {
+	$server->{'ip6_addresses'} = join(" ",
+		&unique(split(/\s+/, $server->{'ip6_addresses'}), $ip));
+	}
+else {
+	$server->{'ip_addresses'} = join(" ",
+		&unique(split(/\s+/, $server->{'ip_addresses'}), $ip));
+	}
 }
 
 # delete_ip_address(&server, ip)
@@ -3115,8 +3161,14 @@ $server->{'ip_addresses'} = join(" ",
 sub delete_ip_address
 {
 my ($server, $ip) = @_;
-$server->{'ip_addresses'} = join(" ",
-	grep { $_ ne $ip } split(/\s+/, $server->{'ip_addresses'}));
+if (&check_ip6address($ip)) {
+	$server->{'ip6_addresses'} = join(" ",
+		grep { $_ ne $ip } split(/\s+/, $server->{'ip6_addresses'}));
+	}
+else {
+	$server->{'ip_addresses'} = join(" ",
+		grep { $_ ne $ip } split(/\s+/, $server->{'ip_addresses'}));
+	}
 }
 
 # modify_primary_ip_address(&server, old-ip, new-ip)

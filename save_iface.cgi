@@ -98,6 +98,24 @@ else {
 		$iface->{'netmask'} = $in{'netmask'};
 		}
 
+	# Save IPv6 addresses
+	if (defined($in{'address6_0'})) {
+		my (@address6, @netmask6);
+		for(my $n=0; defined($in{'address6_'.$n}); $n++) {
+			next if (!$in{'address6_'.$n});
+			&check_ip6address($in{'address6_'.$n}) ||
+				&error(&text('iface_eaddress6', $n+1));
+			$in{'netmask6_'.$n} =~ /^\d+$/ &&
+                            $in{'netmask6_'.$n} > 0 &&
+                            $in{'netmask6_'.$n} <= 128 ||
+                                &error(&text('iface_enetmask6', $n+1));
+			push(@address6, $in{'address6_'.$n});
+			push(@netmask6, $in{'netmask6_'.$n});
+			}
+		$iface->{'address6'} = \@address6;
+		$iface->{'netmask6'} = \@netmask6;
+		}
+
 	# Save ethernet address
 	if (defined($in{'mac'}) || defined($in{'mac_def'})) {
 		$in{'mac_def'} || $in{'mac'} =~ /^[A-Fa-f0-9:]+$/ ||

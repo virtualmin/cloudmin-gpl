@@ -132,6 +132,12 @@ if ($multi) {
 		foreach $ip (&get_server_ip($s)) {
 			print "    IP address: $ip\n";
 			}
+		if ($s->{'ip6_force'}) {
+			print "    Forced IPv6 address: $s->{'ip6_force'}\n";
+			}
+		foreach $ip (&get_server_ip6($s)) {
+			print "    IPv6 address: $ip\n";
+			}
 		if ($s->{'id'} != 0) {
 			print "    Description: $s->{'desc'}\n";
 			}
