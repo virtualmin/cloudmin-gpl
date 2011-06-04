@@ -3171,6 +3171,27 @@ else {
 	}
 }
 
+# add_delete_ip6_addresses(&server, &old-list, &new-list)
+# Update the list of IPv6 addresses for some system
+sub add_delete_ip6_addresses
+{
+my ($server, $oldlist, $newlist) = @_;
+$oldlist ||= [ ];
+$newlist ||= [ ];
+my %oldhash = map { $_, 1 } @$oldlist;
+my %newhash = map { $_, 1 } @$newlist;
+foreach my $ip (@$oldlist) {
+	if (!$newhash{$ip}) {
+		&delete_ip_address($server, $ip);
+		}
+	}
+foreach my $ip (@$newlist) {
+	if (!$oldhash{$ip}) {
+		&add_ip_address($server, $ip);
+		}
+	}
+}
+
 # modify_primary_ip_address(&server, old-ip, new-ip)
 # Update DNS, reverse DNS and on-host files when a primary IP is changed
 sub modify_primary_ip_address
@@ -8901,6 +8922,10 @@ elsif (&redhat_server_type($server)) {
 	my $err = &put_file_to_server($server, $temp,
 				      $idir."/ifcfg-".$iface->{'fullname'});
 	&unlink_file($temp);
+	if ($iface->{'address6'} && @{$iface->{'address6'}}) {
+		# Make sure IPv6 is enabled globally at boot too
+		&enable_ipv6_redhat($server);
+		}
 	return $err;
 	}
 elsif (&debian_server_type($server)) {
@@ -9104,6 +9129,10 @@ elsif (&redhat_server_type($server)) {
 	&write_env_file($temp, \%conf);
 	my $err = &put_file_to_server($server, $temp, $ifile);
 	&unlink_file($temp);
+	if ($iface->{'address6'} && @{$iface->{'address6'}}) {
+		# Make sure IPv6 is enabled globally at boot too
+		&enable_ipv6_redhat($server);
+		}
 	return $err;
 	}
 elsif (&debian_server_type($server)) {
@@ -9197,6 +9226,26 @@ if ($src->{'address6'}) {
 	$dest->{'netmask6'} = [ @{$src->{'netmask6'}} ];
 	}
 return $dest;
+}
+
+# enable_ipv6_redhat(&server)
+# On a redhat-derived system, make sure IPv6 is enabled at boot
+sub enable_ipv6_redhat
+{
+my ($server) = @_;
+my $temp = &transname();
+my $network_config = "/etc/sysconfig/network";
+my $err = &get_file_from_server($server, $network_config, $temp);
+return undef if ($err);
+my %conf;
+&read_env_file($temp, \%conf);
+if (lc($conf{'NETWORKING_IPV6'}) ne 'yes') {
+	$conf{'NETWORKING_IPV6'} = 'yes';
+	&write_env_file($temp, \%conf);
+	$err = &put_file_to_server($server, $temp, $network_config);
+	}
+&unlink_file($temp);
+return $err;
 }
 
 # list_host_bridges(&vhost)

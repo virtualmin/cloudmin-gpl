@@ -2971,6 +2971,7 @@ if ($nonvirt) {
 	}
 
 &add_ip_address($server, $iface->{'address'});
+&add_delete_ip6_addresses($server, undef, $iface->{'address6'});
 return undef;
 }
 
@@ -3024,6 +3025,7 @@ if ($iface->{'virtual'} eq '' && defined($idx)) {
 	}
 
 &delete_ip_address($server, $iface->{'address'});
+&add_delete_ip6_addresses($server, $iface->{'address6'}, undef);
 return undef;
 }
 
@@ -3049,6 +3051,8 @@ if (&can_ssh_status($server) && $iface->{'active'}) {
 
 &delete_ip_address($server, $oldiface->{'address'});
 &add_ip_address($server, $iface->{'address'});
+&add_delete_ip6_addresses($server, $oldiface->{'address6'},
+				   $iface->{'address6'});
 
 # Change MAC and model address if non-virtual
 if ($iface->{'virtual'} eq '') {
