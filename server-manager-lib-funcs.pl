@@ -8764,6 +8764,16 @@ elsif (&redhat_server_type($server)) {
                 $b->{'mtu'} = $conf{'MTU'};
                 $b->{'dhcp'} = ($conf{'BOOTPROTO'} eq 'dhcp');
                 $b->{'bootp'} = ($conf{'BOOTPROTO'} eq 'bootp');
+		local @ip6s;
+                push(@ip6s, [ split(/\//, $conf{'IPV6ADDR'}) ])
+                        if ($conf{'IPV6ADDR'});
+                push(@ip6s, map { [ split(/\//, $_) ] }
+                                split(/\s+/, $conf{'IPV6ADDR_SECONDARIES'}));
+                if (@ip6s) {
+                        # Static IPv6 addresses
+                        $b->{'address6'} = [ map { $_->[0] } @ip6s ];
+                        $b->{'netmask6'} = [ map { $_->[1] } @ip6s ];
+			}
                 $b->{'edit'} = 1;
                 $b->{'desc'} = $conf{'NAME'};
                 $b->{'file'} = $idir."/".$f;
@@ -8781,6 +8791,7 @@ elsif (&debian_server_type($server)) {
 	my $lref = &read_file_lines($temp, 1);
 	my @boot;
 	my %auto;
+	my ($b, $v6);
 	foreach my $l (@$lref) {
 		if ($l =~ /^iface\s+(\S+)\s+inet\s+(static|loopback)/) {
 			# Start of a new interface
@@ -8789,19 +8800,35 @@ elsif (&debian_server_type($server)) {
 			if ($b->{'name'} =~ s/:(\d+)$//) {
 				$b->{'virtual'} = $1;
 				}
+			$v6 = 0;
 			push(@boot, $b);
 			}
 		elsif ($l =~ /^iface\s+(\S+)\s+inet6\s+(static|loopback)/) {
-			# Start of a new IPv6 interface .. ignore for now
-			$b = undef;
+			# Start of a new IPv6 interface .. find the matching
+			# v4 interface
+			($b) = grep { $_->{'name'} eq $1 } @boot;
+			if ($b) {
+				$b->{'address6'} = [ ];
+				$b->{'netmask6'} = [ ];
+				$v6 = 1;
+				}
 			}
 		elsif ($l =~ /^iface\s+(\S+)\s+/) {
 			# Some other unknown interface type .. ignore
 			$b = undef;
 			}
-		elsif ($l =~ /^\s+(address|netmask|network|broadcast|gateway)\s+(\S+)/ && $b) {
-			# Some parameter of an interface
+		elsif ($l =~ /^\s+(address|netmask|network|broadcast|gateway)\s+(\S+)/ && $b && !$v6) {
+			# Some parameter of an IPv4 interface
 			$b->{$1} = $2;
+			}
+		elsif ($l =~ /^\s+(address|netmask)\s+(\S+)/ && $b && $v6) {
+			# Some parameter of an IPv6 interface
+			push(@{$b->{$1.'6'}}, $2);
+			}
+		elsif ($l =~ /^\s+up\s+ifconfig\s+(\S+)\s+inet6\s+add\s+([a-f0-9:]+)\/(\d+)/ && $b && $v6) {
+			# Additional address ifconfig on an IPv6 interface
+			push(@{$b->{'address6'}}, $2);
+			push(@{$b->{'netmask6'}}, $3);
 			}
 		elsif ($l =~ /^\s*(auto|allow-hotplug)\s+(.*)/) {
 			# Auto line - save to apply later
@@ -8855,6 +8882,18 @@ elsif (&redhat_server_type($server)) {
 	$conf{'ONBOOT'} = 'yes';
 	$conf{'ONPARENT'} = 'yes' if ($iface->{'virtual'} ne '');
 	$conf{'BOOTPROTO'} = 'none';
+        my @ip6s;
+        for(my $i=0; $i<@{$iface->{'address6'}}; $i++) {
+                push(@ip6s, $iface->{'address6'}->[$i]."/".
+                            $iface->{'netmask6'}->[$i]);
+                }
+        if (@ip6s) {
+                $conf{'IPV6INIT'} = 'yes';
+                }
+        if (@ip6s) {
+                $conf{'IPV6ADDR'} = shift(@ip6s);
+                $conf{'IPV6ADDR_SECONDARIES'} = join(" ", @ip6s);
+                }
 	$conf{'NAME'} = $iface->{'desc'};
 	my $temp = &transname();
 	&write_env_file($temp, \%conf);
@@ -8886,6 +8925,21 @@ elsif (&debian_server_type($server)) {
 		}
 	if ($iface->{'gateway'}) {
 		push(@$lref, "\t"."gateway ".$iface->{'gateway'});
+		}
+	if ($iface->{'address6'} && @{$iface->{'address6'}}) {
+		# Also add interface for IPv6
+		push(@$lref, "");
+		push(@$lref, "iface ".$iface->{'fullname'}." inet6 static");
+		push(@$lref, "\t"."pre-up /sbin/modprobe -q ipv6 ; /bin/true");
+		my ($a6, @address6) = @{$iface->{'address6'}};
+		my ($n6, @netmask6) = @{$iface->{'netmask6'}};
+		push(@$lref, "\t"."address ".$a6);
+		push(@$lref, "\t"."netmask ".$n6);
+		for(my $i=0; $i<@address6; $i++) {
+			push(@$lref, "\t"."up ifconfig ".$iface->{'fullname'}.
+				     " inet6 add ".$address6[$i]."/".
+				     $netmask6[$i]);
+			}
 		}
 	&flush_file_lines($temp);
 	my $err = &put_file_to_server($server, $temp, $ifile);
@@ -8935,25 +8989,29 @@ elsif (&debian_server_type($server)) {
 	return $err if ($err);
 	my $lref = &read_file_lines($temp);
 	my $lnum = 0;
-	my ($startline, $endline);
+	my (%startline, %endline, $proto);
 	foreach my $l (@$lref) {
-		if ($l =~ /^iface\s+(\S+)/ && $1 eq $iface->{'fullname'}) {
+		if ($l =~ /^iface\s+(\S+)\s+(inet|inet6)\s/ &&
+		    $1 eq $iface->{'fullname'}) {
 			# Start of interface to remove
-			$startline = $endline = $lnum;
+			$proto = $2;
+			$startline{$proto} = $endline{$proto} = $lnum;
 			}
-		elsif ($l =~ /\S/ && defined($startline)) {
+		elsif ($l =~ /\S/ && defined($startline{$proto})) {
 			# Still in interface to remove
-			$endline = $lnum;
+			$endline{$proto} = $lnum;
 			}
 		$lnum++;
 		}
-	if (defined($startline)) {
+	foreach $proto (sort { $startline{$b} <=> $startline{$a} }
+			     keys %startline) {
 		# Remove interface definition
-		if ($startline && $lref->[$startline-1] !~ /\S/) {
+		if ($lref->[$startline{$proto}-1] !~ /\S/) {
 			# Take out blank line before too
-			$startline--;
+			$startline{$proto}--;
 			}
-		splice(@$lref, $startline, $endline-$startline+1);
+		splice(@$lref, $startline{$proto},
+		       $endline{$proto}-$startline{$proto}+1);
 		}
 	$lnum = 0;
 	foreach my $l (@$lref) {
@@ -9029,13 +9087,27 @@ elsif (&redhat_server_type($server)) {
         else {
                 delete($conf{'GATEWAY'});
                 }
+        delete($conf{'IPV6ADDR'});
+        delete($conf{'IPV6ADDR_SECONDARIES'});
+        my @ip6s;
+        for(my $i=0; $i<@{$iface->{'address6'}}; $i++) {
+                push(@ip6s, $iface->{'address6'}->[$i]."/".
+                            $iface->{'netmask6'}->[$i]);
+                }
+        if (@ip6s) {
+                $conf{'IPV6INIT'} = 'yes';
+                }
+        if (@ip6s) {
+                $conf{'IPV6ADDR'} = shift(@ip6s);
+                $conf{'IPV6ADDR_SECONDARIES'} = join(" ", @ip6s);
+                }
 	&write_env_file($temp, \%conf);
 	my $err = &put_file_to_server($server, $temp, $ifile);
 	&unlink_file($temp);
 	return $err;
 	}
 elsif (&debian_server_type($server)) {
-	# Update in from /etc/network/interfaces
+	# Update in /etc/network/interfaces
 	my $ifile = "/etc/network/interfaces";
 	my $temp = &transname();
 	my $err = &get_file_from_server($server, $ifile, $temp);
@@ -9045,13 +9117,61 @@ elsif (&debian_server_type($server)) {
 	$iface->{'network'} = &net::compute_network($iface->{'address'},
                                                     $iface->{'netmask'});
 	foreach my $l (@$lref) {
-		if ($l =~ /^iface\s+(\S+)/) {
+		if ($l =~ /^iface\s+(\S+)\s+inet\s+/) {
 			# Start of interface, may be the one to edit
 			$iniface = $1 eq $iface->{'fullname'} ? 1 : 0;
 			}
 		elsif ($l =~ /^\s+(address|netmask|network|broadcast|gateway)\s+/ && $iniface && $iface->{$1}) {
 			# Some interface parameter to edit
 			$l = "\t".$1." ".$iface->{$1};
+			}
+		elsif ($l !~ /\S/) {
+			# End of interface
+			$iniface = 0;
+			}
+		}
+	if ($iface->{'virtual'} eq '') {
+		# Find and fix IPv6 section for the interface
+		my ($startline, $endline);
+		my $lnum = 0;
+		foreach my $l (@$lref) {
+			if ($l =~ /^iface\s+(\S+)\s+inet6\s+/ &&
+			    $1 eq $iface->{'fullname'}) {
+				# Found start of IPv6 interface to edit
+				$startline = $endline = $lnum;
+				}
+			elsif ($l =~ /\S/ && defined($startline)) {
+				# Still in IPv6 interface
+				$endline = $lnum;
+				}
+			$lnum++;
+			}
+		# Build inet6 block lines
+		my ($a6, @address6) = @{$iface->{'address6'}};
+		my ($n6, @netmask6) = @{$iface->{'netmask6'}};
+		my @v6lines = (
+		    "iface ".$iface->{'fullname'}." inet6 static",
+		    "\t"."pre-up /sbin/modprobe -q ipv6 ; /bin/true",
+		    "\t"."address ".$a6,
+		    "\t"."netmask ".$n6,
+		    );
+		for(my $i=0; $i<@address6; $i++) {
+			push(@v6lines, "\t"."up ifconfig ".$iface->{'fullname'}.
+				       " inet6 add ".$address6[$i]."/".
+				       $netmask6[$i]);
+			}
+		if (defined($startline) && $a6) {
+			# Update existing interface block
+			splice(@$lref, $startline, $endline-$startline+1,
+			       @v6lines);
+			}
+		elsif (defined($startline) && !$a6) {
+			# No more IPv6, so take out block
+			splice(@$lref, $startline, $endline-$startline+1);
+			}
+		else {
+			# Add block at end
+			push(@$lref, "", @v6lines);
 			}
 		}
 	&flush_file_lines($temp);

@@ -13,6 +13,11 @@ with the C<--new-ether> flag, or the new netmask with the C<--new-netmask>
 parameter. Alternately you can have Cloudmin tell the system to generate a MAC
 address automatically with the C<--no-ether> flag.
 
+Xen, KVM and physical systems running Linux can also have IPv6 addresses
+added and removed using this command. To add an address, use the
+C<--add-address6> flag followed by an IPv6 address or address/netmask. To
+delete an existing v6 address, use the C<--remove-address6> flag.
+
 For real network interfaces on KVM or Xen systems using HVM, you can set
 the type of network card that is emulated on the virtual system with the
 C<--new-model> flag followed by a model name. Or you can revert to the default
@@ -80,6 +85,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--add-address6") {
 		$address6 = shift(@ARGV);
 		&check_ip6address($address6) ||
+		    $address6 =~ /^(\S+)\/\d+$/ && &check_ip6address("$1") ||
 			&usage("--add-address6 must be followed by an ".
 			       "IPv6 address");
 		push(@add6, $address6);
@@ -152,6 +158,8 @@ if (@add6 || @del6) {
 	$cfunc = "type_".$server->{'manager'}."_can_ipv6";
 	defined(&$cfunc) && &$cfunc($server) ||
 		&usage("IPv6 interfaces cannot be managed on this system");
+	&can_action($server, "ips") ||
+		&usage("You are not allowed to add or remove IPv6 addresses");
 	}
 
 # Update the object

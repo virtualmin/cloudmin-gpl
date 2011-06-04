@@ -142,18 +142,39 @@ else {
 # IPv6 addresses, if supported
 $cfunc = "type_".$server->{'manager'}."_can_ipv6";
 if ($non_virtual && defined(&$cfunc) && &$cfunc($server)) {
-	$itable = &ui_columns_start([ $text{'iface_address6'},
-				      $text{'iface_netmask6'} ]);
-	for(my $n=0; $n<=@{$iface->{'address6'}}; $n++) {
-		$itable .= &ui_columns_row([
-			&ui_textbox("address6_$n",
+	my $itable;
+	if (&can_action($server, "ips")) {
+		# Can edit v6 addresses
+		$itable = &ui_columns_start([ $text{'iface_address6'},
+					      $text{'iface_netmask6'} ]);
+		for(my $n=0; $n<=@{$iface->{'address6'}}; $n++) {
+			$itable .= &ui_columns_row([
+				&ui_textbox("address6_$n",
 				    $iface->{'address6'}->[$n], 40),
-			&ui_textbox("netmask6_$n",
+				&ui_textbox("netmask6_$n",
 				    $iface->{'netmask6'}->[$n] || 64, 5),
-			]);
+				]);
+			}
 		}
-	$itable .= &ui_columns_end();
-	print &ui_table_row($text{'iface_ipv6'}, $itable);
+	elsif (@{$iface->{'address6'}}) {
+		# Just show v6 addresses
+		$itable = &ui_columns_start([ $text{'iface_address6'},
+					      $text{'iface_netmask6'} ]);
+		for(my $n=0; $n<@{$iface->{'address6'}}; $n++) {
+			$itable .= &ui_columns_row([
+				$iface->{'address6'}->[$n],
+				$iface->{'netmask6'}->[$n],
+				]);
+			}
+		$itable .= &ui_columns_end();
+		}
+	else {
+		# None yet
+		}
+	# XXX allocation??
+	if ($itable) {
+		print &ui_table_row($text{'iface_ipv6'}, $itable);
+		}
 	}
 
 # MAC address (if non-virtual)

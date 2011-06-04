@@ -16,6 +16,10 @@ by an interface that does not exist yet, like I<eth1>. If the host system has
 multiple bridges, the C<--bridge> flag can be used to select a bridge, like
 I<xenbr0>.
 
+Xen, KVM and physical systems running Linux can also have IPv6 addresses
+added to new real interfaces using this command. To add an address, use the
+C<--add-address6> flag followed by an IPv6 address or address/netmask.
+
 For KVM and Xen systems using HVM, the C<--model> flag can be used to set
 the type of network card that is emulated on the virtual system. This is
 only possible for real interfaces though.
@@ -72,6 +76,14 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--model") {
 		$model = shift(@ARGV);
+		}
+	elsif ($a eq "--address6") {
+		$address6 = shift(@ARGV);
+		&check_ip6address($address6) ||
+		    $address6 =~ /^(\S+)\/\d+$/ && &check_ip6address("$1") ||
+			&usage("--address6 must be followed by an ".
+			       "IPv6 address");
+		push(@add6, $address6);
 		}
 	else {
 		&usage();
@@ -166,6 +178,23 @@ if ($model) {
 	$iface->{'model'} = $model;
 	}
 
+# Add IPv6 interfaces
+if (@add6) {
+	$iface->{'virtual'} eq '' ||
+		&usage("IPv6 addresses can only be added to real interfaces");
+	$cfunc = "type_".$server->{'manager'}."_can_ipv6";
+	defined(&$cfunc) && &$cfunc($server) ||
+		&usage("IPv6 interfaces cannot be managed on this system");
+	&can_action($server, "ips") ||
+		&usage("You are not allowed to add IPv6 addresses");
+	foreach my $a (@add6) {
+		my ($ip, $nm) = split(/\//, $a);
+		$nm ||= 64;
+		push(@{$iface->{'address6'}}, $ip);
+		push(@{$iface->{'netmask6'}}, $nm);
+		}
+	}
+
 # Call the create function
 $err = &$ifunc($server, $iface, $nonvirt, $bridge);
 if ($err) {
@@ -192,6 +221,7 @@ print "                           --name interface\n";
 print "                           --address ip.address | --allocate\n";
 print "                          [--netmask ip.netmask]\n";
 print "                          [--real [--bridge name] [--model type]]\n";
+print "                          [--address6 ipv6-address]*\n";
 exit(1);
 }
 

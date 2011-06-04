@@ -99,7 +99,7 @@ else {
 		}
 
 	# Save IPv6 addresses
-	if (defined($in{'address6_0'})) {
+	if (defined($in{'address6_0'}) && &can_action($server, "ips")) {
 		my (@address6, @netmask6);
 		for(my $n=0; defined($in{'address6_'.$n}); $n++) {
 			next if (!$in{'address6_'.$n});
