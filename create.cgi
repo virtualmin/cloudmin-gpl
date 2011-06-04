@@ -290,7 +290,6 @@ elsif ($in{'omode'} == 2) {
 			      'actions' => join(" ", @actions),
 			      'plainpass' => $in{'newownerpass'}, },
 		 };
-	use Data::Dumper;
 	if ($in{'newownerplan'}) {
 		$plan = &get_plan($in{'newownerplan'});
 		if ($plan) {

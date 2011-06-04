@@ -155,6 +155,7 @@ if ($non_virtual && defined(&$cfunc) && &$cfunc($server)) {
 				    $iface->{'netmask6'}->[$n] || 64, 5),
 				]);
 			}
+		$itable .= &ui_columns_end();
 		}
 	elsif (@{$iface->{'address6'}}) {
 		# Just show v6 addresses

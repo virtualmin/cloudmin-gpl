@@ -19,6 +19,7 @@ if (!$in{'new'}) {
 	$iface = $ifaces->[$in{'idx'}];
 	$oldiface = { %$iface };
 	}
+%used = &used_ip_addresses();
 
 if ($in{'delete'}) {
 	# Delete it, but ask first as this may render some site inaccessible
@@ -85,7 +86,6 @@ else {
 		if ($in{'new'} ||
 		    $iface->{'address'} ne $oldiface->{'address'}) {
 			# New or changed .. check for clash
-			%used = &used_ip_addresses();
 			$u = $used{$iface->{'address'}};
 			$u && &error(&text('iface_eclash', $u->{'host'}));
 			&ping_server_host($iface->{'address'}) &&
@@ -101,6 +101,7 @@ else {
 	# Save IPv6 addresses
 	if (defined($in{'address6_0'}) && &can_action($server, "ips")) {
 		my (@address6, @netmask6);
+		my %oldips = map { $_, 1 } @{$iface->{'address6'}};
 		for(my $n=0; defined($in{'address6_'.$n}); $n++) {
 			next if (!$in{'address6_'.$n});
 			&check_ip6address($in{'address6_'.$n}) ||
@@ -109,6 +110,16 @@ else {
                             $in{'netmask6_'.$n} > 0 &&
                             $in{'netmask6_'.$n} <= 128 ||
                                 &error(&text('iface_enetmask6', $n+1));
+			if (!$oldips{$in{'address6_'.$n}}) {
+				# Check for clash
+			    	$u = $used{$in{'address6_'.$n}};
+				$u && &error(&text('iface_ev6clash',
+					$u->{'host'}, $in{'address6_'.$n}));
+				&ping_server_host($in{'address6_'.$n}) &&
+					&error(&text('iface_ev6clash2',
+						     $in{'address6_'.$n}));
+				}
+			$used{$in{'address6_'.$n}} = $server;
 			push(@address6, $in{'address6_'.$n});
 			push(@netmask6, $in{'netmask6_'.$n});
 			}

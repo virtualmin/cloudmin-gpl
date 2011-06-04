@@ -2461,7 +2461,9 @@ sub ping_server_host
 {
 my ($host, $force_timeout) = @_;
 my $timeout = $force_timeout || $ping_host_timeout;
-my $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? "ping -c 1" : "ping";
+my $pinger = &check_ip6address($host) ? "ping6" : "ping";
+&has_command($pinger) || return 0;
+my $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? $pinger." -c 1" : $pinger;
 my ($out, $timed_out) = &backquote_with_timeout(
 	$pingcmd." ".$host." 2>&1", $timeout, 1);
 return !$timed_out && !$? ? 1 : 0;
@@ -4427,7 +4429,7 @@ return join(", ", @rv);
 }
 
 # used_ip_addresses()
-# Returns a hash of all IP addresses used by managed systems
+# Returns a hash of all IPv4 and v6 addresses used by managed systems
 sub used_ip_addresses
 {
 my %used;
@@ -4437,6 +4439,13 @@ foreach my $s (&list_managed_servers()) {
 	$used{$s->{'ip'}} = $s;
 	foreach my $ip (split(/\s+/, $s->{'ip_addresses'})) {
 		$used{$ip} = $s;
+		}
+
+	# Add IPv6 addresses
+	my $ip6 = &to_ip6address($s->{'host'});
+	$used{$ip6} = $s if ($ip6);
+	foreach my $ip6 (split(/\s+/, $s->{'ip6_addresses'})) {
+		$used{$ip6} = $s;
 		}
 
 	# Add IPs from last collected from Virtualmin
