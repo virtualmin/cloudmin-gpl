@@ -150,6 +150,23 @@ else {
 				grep { $_->{'virtual'} eq '' } @$parents));
 	}
 
+# Check for clashes
+%used = &used_ip_addresses();
+if ($address) {
+	$u = $used{$address};
+	$u && &usage("The IP address $address is already in use by $u->{'host'}");
+	&ping_server_host($address) &&
+		&usage("The IP address $address is being used by another ".
+		       "system on your network");
+	}
+foreach $ip (@add6) {
+	$u = $used{$ip};
+	$u && &usage("The IPv6 address $ip is already in use by $u->{'host'}");
+	&ping_server_host($ip) &&
+		&usage("The IPv6 address $ip is being used by another ".
+		       "system on your network");
+	}
+
 # Create the interface object
 $iface = { 'name' => $name };
 if (!$allocate) {
