@@ -162,6 +162,23 @@ if (@add6 || @del6) {
 		&usage("You are not allowed to add or remove IPv6 addresses");
 	}
 
+# Check for clashes
+%used = &used_ip_addresses();
+if ($newaddress) {
+	$u = $used{$newaddress};
+	$u && &usage("The IP address $newaddress is already in use by $u->{'host'}");
+	&ping_server_host($newaddress) &&
+		&usage("The IP address $newaddress is being used by another ".
+		       "system on your network");
+	}
+foreach $ip (@add6) {
+	$u = $used{$ip};
+	$u && &usage("The IPv6 address $ip is already in use by $u->{'host'}");
+	&ping_server_host($ip) &&
+		&usage("The IPv6 address $ip is being used by another ".
+		       "system on your network");
+	}
+
 # Update the object
 $oldiface = &clone_interface($iface);
 if ($newaddress) {
