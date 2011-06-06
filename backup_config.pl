@@ -33,6 +33,7 @@ push(@rv, $locations_file);
 
 # IP pools file
 push(@rv, $pools_file);
+push(@rv, $pools6_file);
 
 # Syncs dir
 push(@rv, $vsyncs_dir);

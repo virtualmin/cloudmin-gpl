@@ -426,7 +426,7 @@ foreach my $dir (@dirs) {
 # Add other config files
 push(@files, $virtualmin_licences_file, $serial_cache_file,
 	     $virtualmin_progress_file, $install_times_file,
-	     $locations_file, $pools_file,
+	     $locations_file, $pools_file, $pools6_file,
 	     $module_config_file, $default_search_file, $repl_servers_file,
 	     $alert_status_file, $xen_cpu_seconds_file,
 	     $server_images_cache,

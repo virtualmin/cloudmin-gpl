@@ -62,6 +62,7 @@ else {
 
 	# IP allocation ranges
 	&parse_ip_range_input(\%in, $kvm, "kvm");
+	&parse_ip6_range_input(\%in, $kvm, "kvm");
 
 	# Host system interfaces
 	@bridges = &list_kvm_host_bridges($kvm);

@@ -122,6 +122,10 @@ if (!@possifaces) {
 print &ui_table_row($text{'kvm_range'},
 	&show_ip_range_input($kvm, "kvm", 1, \@allocifaces));
 
+# Show IPv6 allocation ranges, if any
+$input6 = &show_ip6_range_input($kvm, "kvm", 1, \@allocifaces);
+print &ui_table_row($text{'kvm_range6'}, $input6) if ($input6);
+
 # Network interfaces to use on host system
 if (@possifaces > 1 || @hostifaces > 1) {
 	print &ui_table_row($text{'kvm_iface'},

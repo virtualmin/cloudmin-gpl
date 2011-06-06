@@ -27,6 +27,9 @@ foreach $p (@pools) {
 		}
 	}
 
+# Find IPv6 pools
+@pools6 = &list_ip6_pools();
+
 # Find IPs from allocation ranges
 @allservers = &list_managed_servers();
 foreach $m (@virtual_server_management_types) {
@@ -94,12 +97,13 @@ foreach $ip (@ips) {
 
 # Show tabs
 @tabs = ( [ "ips", $text{'ips_tabips'}, "list_ips.cgi?mode=ips" ],
-	  [ "ranges", $text{'ips_tabranges'}, "list_ranges.cgi?mode=ranges" ],
+	  [ "ranges", $text{'ips_tabranges'}, "list_ips.cgi?mode=ranges" ],
 	);
 if (!$module_info{'onehost'}) {
 	push(@tabs,
-	  [ "pools", $text{'ips_tabpools'}, "list_pools.cgi?mode=pools" ]);
+	  [ "pools", $text{'ips_tabpools'}, "list_ips.cgi?mode=pools" ]);
 	}
+push(@tabs, [ "pools6", $text{'ips_tabpools6'}, "list_ips.cgi?mode=pools6" ]);
 print &ui_tabs_start(\@tabs, "mode", $in{'mode'} || "ips", 1);
 
 # Show all the IPs we know about, in a tab
@@ -256,6 +260,39 @@ if (!$module_info{'onehost'}) {
 	print &ui_form_end([ [ undef, $text{'save'} ] ]);
 	print &ui_tabs_end_tab();
 	}
+
+# Show IPv6 pools
+print &ui_tabs_start_tab("mode", "pools6");
+print $text{'ips_pools6desc'},"<p>\n";
+print &ui_form_start("save_ips6.cgi", "post");
+print &ui_columns_start([ $text{'ips_active'},
+			  $text{'ips_desc'},
+			  $text{'range_start'},
+			  $text{'range_end'},
+			  $text{'range_netmask'},
+			  $text{'range_gateway'}, ], 100);
+$i = 0;
+foreach $p (@pools6, { }) {
+	@starts = split(/,/, $p->{'start'});
+	@ends = split(/,/, $p->{'end'});
+	@netmasks = split(/,/, $p->{'cidr'});
+	@gateways = split(/,/, $p->{'gateway'});
+	$r = scalar(@starts) + 1;
+	$r = 3 if ($r < 3);
+	print &ui_columns_row([
+		&ui_checkbox("active_$i", 1, "", $p->{'id'}),
+		&ui_textbox("desc_$i", $p->{'desc'}, 30),
+		&ui_textarea("start_$i", join("\n", @starts), $r, 30),
+		&ui_textarea("end_$i", join("\n", @ends), $r, 30),
+		&ui_textarea("netmask_$i", join("\n", @netmasks) || 64, $r, 10),
+		&ui_textarea("gateway_$i", join("\n", @gateways), $r, 30),
+		$ipcount,
+		], [ "valign=top", "valign=top" ]);
+	$i++;
+	}
+print &ui_columns_end();
+print &ui_form_end([ [ undef, $text{'save'} ] ]);
+print &ui_tabs_end_tab();
 
 print &ui_tabs_end(1);
 
