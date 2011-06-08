@@ -16,19 +16,33 @@ foreach $p (@pools) {
 	for($i=0; $i<@starts; $i++) {
 		$snum = &net::ip_to_integer($starts[$i]);
 		$enum = &net::ip_to_integer($ends[$i]);
-		for($j=$snum; $j<=$enum; $j++) {
-			$ip = &net::integer_to_ip($j);
+		foreach my $ip (&expand_ip_range($starts[$i], $ends[$i])) {
 			$ips{$ip} ||= { 'hosts' => [ ] };
 			}
 		$r = $starts[$i]."-".$ends[$i];
 		$ranges{$r} ||= { 'hosts' => [ ],
-				  'snum' => $snum,
-				  'enum' => $enum };
+				  'pool' => $p->{'id'},
+				  'start' => $starts[$i],
+				  'end' => $ends[$i] };
 		}
 	}
 
-# Find IPv6 pools
+# Find IPv6 pools and IPs from them
 @pools6 = &list_ip6_pools();
+foreach $p (@pools6) {
+	@starts = split(/,/, $p->{'start'});
+	@ends = split(/,/, $p->{'end'});
+	for($i=0; $i<@starts; $i++) {
+		foreach my $ip (&expand_ip_range($starts[$i], $ends[$i])) {
+			$ips{$ip} ||= { 'hosts' => [ ] };
+			}
+		$r = $starts[$i]."-".$ends[$i];
+		$ranges{$r} ||= { 'hosts' => [ ],
+				  'pool' => $p->{'id'},
+				  'start' => $starts[$i],
+				  'end' => $ends[$i] };
+		}
+	}
 
 # Find IPs from allocation ranges
 @allservers = &list_managed_servers();
@@ -48,10 +62,29 @@ foreach $m (@virtual_server_management_types) {
 				push(@{$ips{$ip}->{'hosts'}}, $s->{'id'});
 				}
 			$r = $starts[$i]."-".$ends[$i];
-			$ranges{$r} ||= { 'hosts' => [ ],
-					  'snum' => $snum,
-					  'enum' => $enum };
+			$ranges{$r} ||= { 'hosts' => [ ], };
 			push(@{$ranges{$r}->{'hosts'}}, $s->{'id'});
+			}
+
+		# Add host to IPv6 pools
+		@hpools6 = split(/\s+/, $s->{$mkey."_pool6"});
+		foreach $pid (@hpools6) {
+			my ($r) = grep { $_->{'pool'} eq $pid } values %ranges;
+			if ($r) {
+				push(@{$r->{'hosts'}}, $s->{'id'});
+				}
+			my ($p) = grep { $_->{'id'} eq $pid } @pools6;
+			if ($p) {
+				@starts = split(/,/, $p->{'start'});
+				@ends = split(/,/, $p->{'end'});
+				for($i=0; $i<@starts; $i++) {
+					foreach my $ip (&expand_ip_range(
+						    $starts[$i], $ends[$i])) {
+						push(@{$ips{$ip}->{'hosts'}},
+						     $s->{'id'});
+						}
+					}
+				}
 			}
 		}
 	}
@@ -76,11 +109,18 @@ foreach $s (@allservers) {
 			$ips{$ip}->{'server'} = $s;
 			}
 		}
+	foreach $ip (&get_server_ip6($s)) {
+		if (&check_ip6address($ip)) {
+			$ips{$ip} ||= { 'hosts' => [ ] };
+			$ips{$ip}->{'server'} = $s;
+			}
+		}
 	}
 
 # For IPs that might be free, parallel ping them
 @ips = keys %ips;
-@freeips = map { { 'id' => $_ } } grep { !$ips{$_}->{'server'} } @ips;
+@freeips = map { { 'id' => $_ } } grep { &check_ipaddress($_) &&
+				         !$ips{$_}->{'server'} } @ips;
 local $config{'procs'} = 100;
 @pings = map { $_->[0] } &parallel_server_function(\@freeips,
 			sub { my $p = &ping_server_host($_[0]->{'id'}, 1);
@@ -91,7 +131,9 @@ for($i=0; $i<@freeips; $i++) {
 
 # Get IPs in sorted order
 foreach $ip (@ips) {
-	$ips{$ip}->{'integer'} = &net::ip_to_integer($ip);
+	$ips{$ip}->{'integer'} = &check_ipaddress($ip) ?
+					&net::ip_to_integer($ip) :
+					&ip6_to_integer($ip);
 	}
 @ips = sort { $ips{$a}->{'integer'} <=> $ips{$b}->{'integer'} } @ips;
 
@@ -167,6 +209,11 @@ else {
 			@hosts = ( @hosts[0..3],
 				   &text('update_more',scalar(@hosts-4)) );
 			}
+		if (!&check_ipaddress($ip) && !$s) {
+			# Don't show un-used IPv6 addresses, as there are
+			# likely to be too many.
+			next;
+			}
 		print &ui_columns_row([
 			$ip,
 			$s ? "<a href='edit_serv.cgi?id=$s->{'id'}'>".
@@ -192,10 +239,11 @@ print &ui_columns_start([ $text{'ips_range1'}, $text{'ips_range2'},
 @ranges = sort { $a cmp $b } keys %ranges;
 foreach $r (@ranges) {
 	$range = $ranges{$r};
-	$count = $range->{'enum'}-$range->{'snum'}+1;
+	@ips = &expand_ip_range($range->{'start'}, $range->{'end'});
+	$count = scalar(@ips);
 	$used = 0;
-	for($i=$range->{'snum'}; $i<=$range->{'enum'}; $i++) {
-		$used++ if ($ips{&net::integer_to_ip($i)}->{'server'});
+	foreach $ip (@ips) {
+		$used++ if ($ips{$ip}->{'server'});
 		}
 	@hosts = sort { $a cmp $b }
 		      map { "<a href='edit_serv.cgi?id=".
@@ -207,14 +255,15 @@ foreach $r (@ranges) {
 			   &text('update_more',scalar(@hosts-4)) );
 		}
 	print &ui_columns_row([
-		&net::integer_to_ip($range->{'snum'}),
-		&net::integer_to_ip($range->{'enum'}),
+		$range->{'start'},
+		$range->{'end'},
 		$count,
 		$used,
 		$count-$used,
 		&ui_links_row(\@hosts),
 		]);
 	}
+
 print &ui_columns_end();
 print &ui_tabs_end_tab();
 
@@ -270,7 +319,8 @@ print &ui_columns_start([ $text{'ips_active'},
 			  $text{'range_start'},
 			  $text{'range_end'},
 			  $text{'range_netmask'},
-			  $text{'range_gateway'}, ], 100);
+			  $text{'range_gateway'},
+			  $text{'ips_count'}, ], 100);
 $i = 0;
 foreach $p (@pools6, { }) {
 	@starts = split(/,/, $p->{'start'});
@@ -279,13 +329,17 @@ foreach $p (@pools6, { }) {
 	@gateways = split(/,/, $p->{'gateway'});
 	$r = scalar(@starts) + 1;
 	$r = 3 if ($r < 3);
+	my $ipcount;
+	for(my $i=0; $i<@starts; $i++) {
+		$ipcount += scalar(&expand_ip_range($starts[$i], $ends[$i]));
+		}
 	print &ui_columns_row([
 		&ui_checkbox("active_$i", 1, "", $p->{'id'}),
 		&ui_textbox("desc_$i", $p->{'desc'}, 30),
-		&ui_textarea("start_$i", join("\n", @starts), $r, 30),
-		&ui_textarea("end_$i", join("\n", @ends), $r, 30),
+		&ui_textarea("start_$i", join("\n", @starts), $r, 25),
+		&ui_textarea("end_$i", join("\n", @ends), $r, 25),
 		&ui_textarea("netmask_$i", join("\n", @netmasks) || 64, $r, 10),
-		&ui_textarea("gateway_$i", join("\n", @gateways), $r, 30),
+		&ui_textarea("gateway_$i", join("\n", @gateways), $r, 25),
 		$ipcount,
 		], [ "valign=top", "valign=top" ]);
 	$i++;

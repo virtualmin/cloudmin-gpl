@@ -61,6 +61,11 @@ for($i=0; defined($in{"start_$i"}) || $i < scalar(@pools); $i++) {
 			&error(&text('range_enetmask6', $i+1));
 		$gateways[$j] eq '' || &check_ip6address($gateways[$j]) ||
 			&error(&text('range_egateway', $i+1));
+		$ss = $starts[$i];
+		$es = $ends[$i];
+		$ss =~ s/:[^:]+$//;
+		$es =~ s/:[^:]+$//;
+		$ss eq $es || &error(&text('range_esame6', $i+1, $ss, $es));
 		}
 
 	$p->{'desc'} = $in{"desc_$i"};

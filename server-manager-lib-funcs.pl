@@ -4477,6 +4477,36 @@ foreach my $s (&list_managed_servers()) {
 return %used;
 }
 
+# expand_ip_range(start, end)
+# Return a list of all IPs between two (v4 or v6)
+sub expand_ip_range
+{
+my ($start, $end) = @_;
+my @rv;
+if (&check_ipaddress($start)) {
+	# Convert IPv4 to integers, expand to all numbers between
+	my $snum = &net::ip_to_integer($start);
+	my $enum = &net::ip_to_integer($end);
+	for($j=$snum; $j<=$enum; $j++) {
+		push(@rv, &net::integer_to_ip($j));
+		}
+	}
+elsif (&check_ip6address($start)) {
+	# Loop over range in last word
+	my @sw = split(/:/, $start);
+	my @ew = split(/:/, $end);
+	my $slw = hex(pop(@sw));
+	my $elw = hex(pop(@ew));
+	for(my $i=$slw; $i<=$elw; $i++) {
+		push(@rv, join(":", @sw).":".sprintf("%x", $i));
+		}
+	}
+else {
+	&error("Address $start is neither v4 or v6");
+	}
+return @rv;
+}
+
 # ip_address_chooser_button(field, &server)
 # Returns HTML for a popup button for choosing a free IP
 sub ip_address_chooser_button
@@ -7340,13 +7370,13 @@ my (@ifaces, @pools);
 # Parse IP pools table
 my %allpools = map { $_->{'id'}, $_ } &list_ip6_pools();
 my $pid;
-for(my $i=0; defined($pid = $in->{"pool_$i"}); $i++) {
+for(my $i=0; defined($pid = $in->{"pool6_$i"}); $i++) {
 	next if (!$pid);
 	my $p = $allpools{$pid};
 	next if (!$p);
 	push(@pools, $pid);
-	if (defined($in->{"piface_$i"})) {
-		push(@ifaces, $in->{"piface_$i"});
+	if (defined($in->{"piface6_$i"})) {
+		push(@ifaces, $in->{"piface6_$i"});
 		}
 	}
 
@@ -7355,6 +7385,48 @@ $server->{$pfx."_pool6"} = join(" ", @pools);
 if (@ifaces) {
 	$server->{$pfx."_ifaces6"} = join(" ", @ifaces);
 	}
+}
+
+# canonicalize_ip6(address)
+# Converts an address to its full long form. Ie. 2001:db8:0:f101::20 to
+# 2001:0db8:0000:f101:0000:0000:0000:0020
+sub canonicalize_ip6
+{
+my ($addr) = @_;
+return $addr if (!&check_ip6address($addr));
+my @w = split(/:/, $addr);
+my $idx = &indexof("", @w);
+if ($idx >= 0) {
+	# Expand ::
+	my $mis = 8 - scalar(@w);
+	my @nw = @w[0..$idx];
+	for(my $i=0; $i<$mis; $i++) {
+		push(@nw, 0);
+		}
+	push(@nw, @w[$idx+1 .. $#w]);
+	@w = @nw;
+	}
+foreach my $w (@w) {
+	while(length($w) < 4) {
+		$w = "0".$w;
+		}
+	}
+return lc(join(":", @w));
+}
+
+# ip6_to_integer(ip6-address)
+# Converts an IPv6 address to an integer for sorting
+sub ip6_to_integer
+{
+my ($ip) = @_;
+my @w = split(/:/, $ip);
+my $rv = 0;
+my $m = 1;
+foreach my $w (reverse(@w)) {
+	$rv += hex($w) + $m;
+	$m *= 65536;
+	}
+return $rv;
 }
 
 # show_disk_reboot_message(&server, &disk)
