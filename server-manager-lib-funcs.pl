@@ -4300,10 +4300,8 @@ for(my $i=0; $i<@startips; $i++) {
 	my @sub_gws = split(/,/, $gws[$i]);
 	for(my $j=0; $j<@sub_startips; $j++) {
 		# Try each IP within the range
-		my $start = &net::ip_to_integer($sub_startips[$j]);
-		my $end = &net::ip_to_integer($sub_endips[$j]);
-		for(my $n=$start; $n<=$end; $n++) {
-			my $ip = &net::integer_to_ip($n);
+		foreach my $ip (&expand_ip_range($sub_startips[$j],
+						 $sub_endips[$j])) {
 			push(@poss, { 'id' => $ip,
 				      'ip' => $ip,
 				      'cidr' => $sub_cidrs[$j],
@@ -4329,6 +4327,63 @@ sub allocate_ip_address
 {
 my @rvs = &available_ip_addresses(@_);
 return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gw'} ) : ( );
+}
+
+# available_ip6_addresses(pool-ids, [ifaces, want-iface])
+# Returns a list of hash refs, one for each IPv6 address available for
+# allocation, with 'ip', 'netmask' and 'gateway' keys.
+sub available_ip6_addresses
+{
+my ($poolids, $ifaces, $wantiface) = @_;
+my @poolids = split(/\s+/, $poolids);
+my @ifaces = split(/\s+/, $ifaces);
+my %used = &used_ip_addresses();
+
+my %pools = map { $_->{'id'}, $_ } &list_ip6_pools();
+for(my $i=0; $i<@poolids; $i++) {
+	# Get the pool
+	my $p = $pools{$poolids[$i]};
+	$p || next;
+
+	# If this range is for some host system interface, skip if we aren't
+	# allocating for that interface
+	next if ($wantiface && $ifaces[$i] ne $wantiface &&
+		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
+
+	# Split pool into ranges
+	my @sub_startips = split(/,/, $p->{'start'});
+	my @sub_endips = split(/,/, $p->{'end'});
+	my @sub_netmasks = split(/,/, $p->{'netmask'});
+	my @sub_gws = split(/,/, $p->{'gateway'});
+	for(my $j=0; $j<@sub_startips; $j++) {
+		# Try each IP within the range
+		foreach my $ip (&expand_ip_range($sub_startips[$j],
+						 $sub_endips[$j])) {
+			push(@poss, { 'id' => $ip,
+				      'ip' => $ip,
+				      'netmask' => $sub_netmasks[$j],
+				      'gw' => $sub_gws[$j] })
+				if (!$used{$ip});
+			}
+		}
+	}
+
+# Parallel ping them all to work out which are free
+my @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss, 
+	sub { my $p = &ping_server_host($_[0]->{'ip'});
+	      return $p ? undef : $_[0] });
+@rvs = sort { &ip6_to_integer($a->{'ip'}) <=>
+	      &ip6_to_integer($b->{'ip'}) } @rvs;
+return @rvs;
+}
+
+# allocate_ip6_address(pool-ids, [ifaces, want-iface])
+# Returns an IPv6 address from the given pools that is not in use or pingable,
+# and a netmask and gateway. If no IP could be allocated, returns undef.
+sub allocate_ip6_address
+{
+my @rvs = &available_ip6_addresses(@_);
+return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'netmask'}, $rvs[0]->{'gw'} ) : ( );
 }
 
 # range_check_ip_address(ip, start-ips, end-ips, cidrs,
