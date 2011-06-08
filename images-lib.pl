@@ -917,6 +917,52 @@ for(my $i=0; $i<@$ips; $i++) {
 return undef;
 }
 
+# apply_ipv6_addresses(&server, &addresses, &netmasks)
+# Updates the interfaces on a system to use the given IPv6 addresses
+# and netmasks.
+sub apply_ipv6_addresses
+{
+my ($server, $ips, $netmasks) = @_;
+
+# Check if interface management is possible
+my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
+if (!defined(&$cfunc) || &$cfunc($server) != 2) {
+	return $text{'create_exenipv6cannot'};
+	}
+$cfunc = "type_".$server->{'manager'}."_can_ipv6";
+if (!defined(&$cfunc) || !&$cfunc($server)) {
+	return $text{'create_exenipv6cannot2'};
+	}
+
+# Get all existing interfaces
+my $lfunc = "type_".$server->{'manager'}."_list_interfaces";
+my $ifaces = &$lfunc($server);
+return $iface if (!ref($ifaces));
+
+# For each real interface, remove existing addresses and set new ones
+my $i = 0;
+my $mfunc = "type_".$server->{'manager'}."_modify_interface";
+foreach my $iface (@$ifaces) {
+	my $oldiface = &clone_interface($iface);
+	if ($iface->{'address6'} && @{$iface->{'address6'}} ||
+	    $ips->[$i]) {
+		if ($ips->[$i]) {
+			$iface->{'address6'} = [ $ips->[$i] ];
+			$iface->{'netmask6'} = [ $netmasks->[$i] ];
+			}
+		else {
+			$iface->{'address6'} = [ ];
+			$iface->{'netmask6'} = [ ];
+			}
+		my $err = &$mfunc($server, $iface, $oldiface);
+		return &text('create_exenipv6iface', $iface->{'fullname'},
+			     $err) if ($err);
+		}
+	$i++;
+	}
+return undef;
+}
+
 # fix_ssh_root_login(&server)
 # Configure a server to allow SSH logins by root. Returns undef if it was done,
 # OK if already allowed, NONE if no SSH config was found, or an error message

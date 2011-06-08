@@ -4498,6 +4498,24 @@ for(my $i=0; $i<@startips; $i++) {
 return join(", ", @rv);
 }
 
+# describe_ip6_pool(pool-ids, [ifaces, want-iface])
+# Returns a string describing the IP ranges from some pools
+sub describe_ip6_pool
+{
+my ($poolids, $ifaces, $wantiface) = @_;
+my @pools6 = &list_ip6_pools();
+my @poolids = split(/\s+/, $poolids);
+my (@startips, @endips);
+foreach my $pid (@poolids) {
+	my ($p) = grep { $_->{'id'} eq $pid } @pools6;
+	next if (!$p);
+	push(@startips, $p->{'start'});
+	push(@endips, $p->{'end'});
+	}
+return &describe_ip_range(join(" ", @startips), join(" ", @endips),
+			  $ifaces, $wantiface);
+}
+
 # used_ip_addresses()
 # Returns a hash of all IPv4 and v6 addresses used by managed systems
 sub used_ip_addresses

@@ -18,6 +18,7 @@ fsck_boot=Check disks for errors before booting?,1,1-Yes,0-No,2-Only if dirty
 passwd_mode=Randomly generate root SSH password?,1,1-Yes,0-No
 passwd_length=Length of randomly generated password,3,Default (15 characters),5
 passwd_chars=Characters for random passwords,3,Default (A-Z&#44; a-z&#44; 0-9)
+alloc_ipv6=Allocate an IPv6 address for new systems?,1,1-Yes,0-No
 
 line4.5=KVM settings,11
 kvm_mem=Default KVM memory allocation,0,10,,MB

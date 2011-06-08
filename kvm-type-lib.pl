@@ -452,6 +452,9 @@ if (&can_action(undef, "ips")) {
 		}
 	}
 
+# IPv6 address
+# XXX
+
 # Warn the user if we have no DNS zone
 if (@vhosts == 1 && $module_info{'onehost'} eq 'kvm' &&
     !$vhosts[0]->{'kvm_zone'}) {
@@ -701,6 +704,9 @@ my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
 	   { 'name' => 'bridge', 'value' => 'name[,name]', 'opt' => 1 },
 	   { 'name' => 'disksize', 'value' => 'megabytes', 'opt' => !$empty },
 	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
+	   { 'name' => 'ip6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
+	   { 'name' => 'netmask6', 'value' => 'mask,[mask]', 'opt' => 1 },
+	   { 'name' => 'allocate-ip6', 'value' => 'true|false', 'opt' => 1 },
 	 );
 if (&can_action(undef, "advanced")) {
 	my $models = join('|', map { $_->[0] } @{&type_kvm_list_models()});
@@ -864,9 +870,21 @@ if ($args->{'ip'}) {
 else {
 	# Allocate IP automatically
 	my $err = &allocate_kvm_ip_addresses($server, $vhost);
-	&error($err) if ($err);
+	return $err if ($err);
 	}
 $server->{'ip_addresses'} = $server->{'kvm_ip'};
+
+# Validate IPv6 flags
+if ($args->{'ip6'}) {
+	# Use specified addresses
+	# XXX
+	}
+elsif ($args->{'allocate-ip6'} =~ /true|yes/ ||
+       !$args->{'allocate-ip6'} && $config{'alloc_ipv6'}) {
+	# Allocate addresses
+	my $err = &allocate_kvm_ip6_addresses($server, $vhost);
+	return $err if ($err);
+	}
 
 # Adjust hostname for DNS
 my @zones = &list_bind_zones();
@@ -1178,6 +1196,8 @@ my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @cidrs = split(/\s+/, $server->{'kvm_cidr'});
 my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
 $server->{'status'} = 'down';
+my @ips6 = split(/\s+/, $server->{'kvm_ip6'});
+my @netmasks6 = split(/\s+/, $server->{'kvm_netmask6'});
 
 # Gateways can either be set per IP address, or copy from host system.
 # If none are set, assume the first IP uses the host system gateway.
@@ -1388,6 +1408,18 @@ if (!$empty && $mp) {
 			[ @gws[1..$#gws] ], $vhost, $mp);
 		if ($err) {
 			&$second_print(&text('create_exennet2', $err));
+			}       
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+
+	# Apply IPv6 addresses to interfaces
+	if (@ips6) {
+		&$first_print($text{'create_xenipv6'});
+		my $err = &apply_ipv6_addresses($server, \@ips6, \@netmasks6);
+		if ($err) {
+			&$second_print(&text('create_exenipv6', $err));
 			}       
 		else {
 			&$second_print($text{'create_done'});
@@ -4987,7 +5019,7 @@ return "<input type=button onClick='ifield = form.$ifield; chooser = window.open
 sub allocate_kvm_ip_addresses
 {
 my ($server, $vhost) = @_;
-$vhost->{'kvm_start'} || return &text('create_exenalloc', $vhost->{'host'});
+$vhost->{'kvm_start'} || return &text('create_exenallocnone', $vhost->{'host'});
 
 # Work out interfaces on host system
 my @hostifaces;
@@ -4999,6 +5031,7 @@ else {
 	}
 
 # For each, allocate an IP from a range
+my (@ips, @cidrs, @gws);
 foreach my $iface (@hostifaces) {
 	my ($ip, $cidr, $gw) = &allocate_ip_address(
 		$vhost->{'kvm_start'}, $vhost->{'kvm_end'},
@@ -5031,6 +5064,44 @@ return &available_ip_addresses($vhost->{'kvm_start'},
 			       $vhost->{'kvm_end'},
 			       $vhost->{'kvm_cidr'},
 			       $vhost->{'kvm_gws'});
+}
+
+# allocate_kvm_ip6_addresses(&server, &vhost)
+# Allocate one or more IPv6 addresses for a KVM instance from the host's ranges.
+# On success, returns undef and sets kvm_ip6, kvm_netmask6 and kvm_iface6 to
+# space-separated lists. On failure returns an error message.
+sub allocate_kvm_ip6_addresses
+{
+my ($server, $vhost) = @_;
+$vhost->{'kvm_pool6'} || return &text('create_exenallocnone6',$vhost->{'host'});
+
+# Work out interfaces on host system
+my @hostifaces;
+if ($vhost->{'kvm_iface'}) {
+	@hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+	}
+else {
+	@hostifaces = ( "*" );
+	}
+
+# For each, allocate an IP from a range
+my (@ips, @netmasks, @gws);
+foreach my $iface (@hostifaces) {
+	my ($ip, $netmask, $gw) = &allocate_ip6_address(
+		$vhost->{'kvm_pool6'}, $vhost->{'kvm_ifaces'}, $iface);
+	$ip || return &text('create_exenalloc6', $vhost->{'host'},
+			    &describe_ip6_pool($vhost->{'kvm_pool6'},
+                                               $vhost->{'kvm_ifaces'},
+                                               $iface));
+	push(@ips, $ip);
+	push(@netmasks, $netmask);
+	push(@gws, $gw || "*");
+	}
+$server->{'kvm_ip6'} = join(" ", @ips);
+$server->{'kvm_netmask6'} = join(" ", @netmasks);
+$server->{'kvm_hostifaces6'} = join(" ", @hostifaces);
+$server->{'kvm_gw6'} = join(" ", @gws);
+return undef;
 }
 
 # get_kvm_console_file(&server)

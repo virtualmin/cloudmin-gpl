@@ -52,3 +52,4 @@ ssh_ciphers=*
 citrix_unsafe=0
 show_unix=0
 openvz_ctx=10000
+alloc_ipv6=1
