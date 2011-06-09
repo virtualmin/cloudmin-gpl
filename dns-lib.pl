@@ -50,6 +50,7 @@ sub add_bind8_record
 {
 my ($dnsname, $ip, $zonename) = @_;
 &foreign_require("bind8", "bind8-lib.pl");
+my $rtype = &check_ipaddress($ip) ? "A" : "AAAA";
 
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
@@ -60,16 +61,17 @@ if ($zone && $zone->{'local'}) {
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
-	my ($already) = grep { $_->{'name'} eq $dnsname } @recs;
+	my ($already) = grep { $_->{'name'} eq $dnsname &&
+			       $_->{'type'} eq $rtype } @recs;
 	if (!$already) {
 		# Need to add
 		&bind8::create_record($zone->{'file'}, $dnsname, undef,
-				      "IN", "A", $ip);
+				      "IN", $rtype, $ip);
 		}
 	else {
 		# Update existing record
 		&bind8::modify_record($zone->{'file'}, $already, $dnsname,
-				      undef, "IN", "A", $ip);
+				      undef, "IN", $rtype, $ip);
 		}
 	&post_records_change(\@recs, $zone->{'file'}, $zone);
 	&unlock_file($lpath);
@@ -88,7 +90,8 @@ elsif ($zone && $zone->{'provision'}) {
 		&$second_print(&text('create_vserverdnseget2'));
 		return 0;
 		}
-	my ($already) = grep { $_->{'name'} eq $dnsname } @$recs;
+	my ($already) = grep { $_->{'name'} eq $dnsname &&
+			       $_->{'type'} eq $rtype } @$recs;
 	if ($already) {
 		# Just change the IP
 		$already->{'values'}->[0] = $ip;
@@ -97,7 +100,7 @@ elsif ($zone && $zone->{'provision'}) {
 		# Create a record
 		push(@$recs, { 'name' => $dnsname,
 			       'class' => 'IN',
-			       'type' => 'A',
+			       'type' => $rtype,
 			       'values' => [ $ip ] });
 		}
 	&post_records_change($recs, $zone->{'file'}, $zone);
@@ -120,12 +123,12 @@ else {
 	}
 
 # See if we can add to a reverse too
+my $arpa = $rzone ? &ip_address_to_arpa($ip, $rzone->{'name'}) : undef;
 if ($rzone && $rzone->{'local'}) {
 	# Add reverse locally
 	my $rlpath = &bind8::make_chroot(&bind8::absolute_path($rfn));
 	&lock_file($rlpath);
-	my $arpa = &ip_address_to_arpa($ip, $rzone->{'name'});
-	my ($old) = grep { $_->{'values'}->[0] eq $dnsname } @$rrecs;
+	my ($old) = grep { $_->{'name'} eq $arpa } @$rrecs;
 	if (!$old) {
 		&bind8::create_record($rfn, $arpa, undef,
 				      "IN", "PTR", $dnsname);
@@ -145,7 +148,7 @@ elsif ($rzone && $rzone->{'provision'}) {
 		&$second_print(&text('create_vserverrdnseget2'));
 		return 0;
 		}
-	my ($old) = grep { $_->{'values'}->[0] eq $dnsname } @$rrecs;
+	my ($old) = grep { $_->{'name'} eq $arpa } @$rrecs;
 	if (!$old) {
 		push(@$recs, { 'name' => $arpa,
 			       'class' => 'IN',
@@ -173,12 +176,15 @@ return 0 if (!$dnsname);
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 my ($rfn, $rrecs, undef, $rzone) = &get_reverse_dns_zone($ip);
+my $rtype = &check_ipaddress($ip) ? "A" : "AAAA";
+
 if ($zone && $zone->{'local'}) {
 	# Remove from local DNS zone
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
-	my @r = grep { $_->{'name'} eq $dnsname } @recs;
+	my @r = grep { $_->{'name'} eq $dnsname &&
+		       $_->{'type'} eq $rtype } @recs;
 	foreach my $r (reverse(@r)) {
 		# Can remove
 		&bind8::delete_record($zone->{'file'}, $r);
@@ -197,7 +203,8 @@ elsif ($zone && $zone->{'provision'}) {
 			$zone->{'server'}, $zone->{'name'});
 	return $recs if (!ref($recs));
 	return "No records found in $zone->{'name'}" if (!@$recs);
-	my ($r) = grep { $_->{'name'} eq $dnsname } @$recs;
+	my ($r) = grep { $_->{'name'} eq $dnsname &&
+			 $_->{'type'} eq $rtype } @$recs;
 	if ($r) {
 		$recs = [ grep { $_ ne $r } @$recs ];
 		&post_records_change($recs, $zone->{'file'}, $zone);
@@ -214,13 +221,13 @@ else {
 	}
 
 # See if we can remove a reverse too
+my $arpa = $rzone ? &ip_address_to_arpa($ip, $rzone->{'name'}) : undef;
 if ($ip && $rzone && $rzone->{'local'}) {
 	# From local DNS server
 	my $rlpath = &bind8::make_chroot(
 			&bind8::absolute_path($rfn));
 	&lock_file($rlpath);
-	my ($old) = grep { $_->{'values'}->[0] eq $dnsname }
-			 @$rrecs;
+	my ($old) = grep { $_->{'name'} eq $arpa } @$rrecs;
 	if ($old) {
 		&bind8::delete_record($rfn, $old);
 		&post_records_change($rrecs, $rfn, $rzone);
@@ -233,7 +240,7 @@ elsif ($ip && $rzone && $rzone->{'provision'}) {
 			$rzone->{'server'}, $rzone->{'name'});
 	return $recs if (!ref($recs));
 	return "No records found in $rzone->{'name'}" if (!@$recs);
-	my ($r) = grep { $_->{'values'}->[0] eq $dnsname } @$recs;
+	my ($r) = grep { $_->{'name'} eq $arpa } @$recs;
 	if ($r) {
 		$recs = [ grep { $_ ne $r } @$recs ];
 		&post_records_change($recs, $rzone->{'file'}, $rzone);
@@ -256,12 +263,15 @@ return undef if (!$dnsname);
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 my ($rfn, $rrecs, undef, $rzone) = &get_reverse_dns_zone($oldip);
+my $rtype = &check_ipaddress($ip) ? "A" : "AAAA";
+
 if ($zone && $zone->{'local'}) {
 	# Update in local DNS zone
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
-        my @r = grep { $_->{'name'} eq $dnsname } @recs;
+        my @r = grep { $_->{'name'} eq $dnsname &&
+		       $_->{'type'} eq $rtype } @recs;
 	foreach my $r (@r) {
 		&bind8::modify_record($zone->{'file'}, $r, $r->{'name'},
 				      $r->{'ttl'}, $r->{'class'}, $r->{'type'},
@@ -281,7 +291,8 @@ elsif ($zone && $zone->{'provision'}) {
 			$zone->{'server'}, $zone->{'name'});
 	return $recs if (!ref($recs));
 	return "No records found in zone $zone->{'name'}" if (!@$recs);
-	my ($r) = grep { $_->{'name'} eq $dnsname } @$recs;
+	my ($r) = grep { $_->{'name'} eq $dnsname &&
+		         $_->{'type'} eq $rtype } @$recs;
 	if ($r) {
 		$r->{'values'}->[0] = $ip;
 		&post_records_change($recs, $zone->{'file'}, $zone);
@@ -298,13 +309,16 @@ else {
 	}
 
 # See if we can update a reverse too
+my $arpa = $ip && $rzone ? &ip_address_to_arpa($ip, $rzone->{'name'})
+			 : undef;
+my $oldarpa = $oldip && $rzone ? &ip_address_to_arpa($oldip, $rzone->{'name'})
+			       : undef;
 if ($ip && $rzone && $rzone->{'local'}) {
 	# On local DNS server
 	my $rlpath = &bind8::make_chroot(
 			&bind8::absolute_path($rfn));
 	&lock_file($rlpath);
-	my $arpa = &ip_address_to_arpa($ip, $rzone->{'name'});
-	my ($old) = grep { $_->{'values'}->[0] eq $dnsname } @$rrecs;
+	my ($old) = grep { $_->{'name'} eq $oldarpa } @$rrecs;
 	if ($old) {
 		&bind8::modify_record($rfn, $old, $arpa,
 			$old->{'ttl'}, $old->{'class'},
@@ -320,7 +334,7 @@ elsif ($ip && $rzone && $rzone->{'provision'}) {
 			$rzone->{'server'}, $rzone->{'name'});
 	return $recs if (!ref($recs));
 	return "No records found in $rzone->{'name'}" if (!@$recs);
-	my ($r) = grep { $_->{'values'}->[0] eq $dnsname } @$recs;
+	my ($r) = grep { $_->{'name'} eq $oldarpa } @$recs;
 	if ($r) {
 		$r->{'name'} = $arpa;
 		&post_records_change($recs, $rzone->{'file'}, $rzone);
@@ -430,7 +444,8 @@ sub get_reverse_dns_zone
 {
 my ($ip) = @_;
 my @zones = &list_bind_zones(1);
-my $arpa = &bind8::ip_to_arpa($ip);
+my $arpa = &check_ipaddress($ip) ? &bind8::ip_to_arpa($ip)
+				 : &bind8::net_to_ip6int($ip);
 $arpa =~ s/\.$//;
 my ($z) = grep { $arpa =~ /\.$_->{'name'}$/i } @zones;
 if (!$z) {
@@ -532,7 +547,11 @@ return undef;
 sub ip_address_to_arpa
 {
 my ($ip, $zone) = @_;
-if ($zone =~ /^([0-9\.]+)\.in-addr\.arpa$/) {
+if (&check_ip6address($ip)) {
+	# IPv6 address
+	return &bind8::net_to_ip6int($ip);
+	}
+elsif ($zone =~ /^([0-9\.]+)\.in-addr\.arpa$/) {
 	# Normal class C
 	return &bind8::ip_to_arpa($ip);
 	}
@@ -551,6 +570,7 @@ sub post_records_change
 my ($recs, $fn, $zone) = @_;
 if ($zone->{'local'}) {
 	# Update the SOA record, locally and on disk
+	sleep(1);	# Give BIND time to detect file time change
 	&bind8::bump_soa_record($fn, $recs);
 	if (&bind8::supports_dnssec()) {
 		# Re-sign too

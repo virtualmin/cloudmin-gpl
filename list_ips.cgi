@@ -325,7 +325,7 @@ $i = 0;
 foreach $p (@pools6, { }) {
 	@starts = split(/,/, $p->{'start'});
 	@ends = split(/,/, $p->{'end'});
-	@netmasks = split(/,/, $p->{'cidr'});
+	@netmasks = split(/,/, $p->{'netmask'});
 	@gateways = split(/,/, $p->{'gateway'});
 	$r = scalar(@starts) + 1;
 	$r = 3 if ($r < 3);

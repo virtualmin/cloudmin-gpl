@@ -4310,14 +4310,7 @@ for(my $i=0; $i<@startips; $i++) {
 			}
 		}
 	}
-
-# Parallel ping them all to work out which are free
-my @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss, 
-	sub { my $p = &ping_server_host($_[0]->{'ip'});
-	      return $p ? undef : $_[0] });
-@rvs = sort { &net::ip_to_integer($a->{'ip'}) <=>
-	      &net::ip_to_integer($b->{'ip'}) } @rvs;
-return @rvs;
+return &parallel_ping_free(@poss);
 }
 
 # allocate_ip_address(start-ips, end-ips, cidrs, [gateways, ifaces, want-iface])
@@ -4367,14 +4360,45 @@ for(my $i=0; $i<@poolids; $i++) {
 			}
 		}
 	}
+return &parallel_ping_free(@poss);
+}
 
-# Parallel ping them all to work out which are free
-my @rvs = grep { $_ } map { $_->[0] } &parallel_server_function(\@poss, 
-	sub { my $p = &ping_server_host($_[0]->{'ip'});
-	      return $p ? undef : $_[0] });
-@rvs = sort { &ip6_to_integer($a->{'ip'}) <=>
-	      &ip6_to_integer($b->{'ip'}) } @rvs;
-return @rvs;
+# parallel_ping_free(ip, ...)
+# Parallel ping in groups of config{'procs'} (usually 10) at a time,
+# until we find at least one free
+sub parallel_ping_free
+{
+my @poss = @_;
+while(@poss) {
+	# Get the first 10
+	my @tocheck;
+	if (@poss > $config{'procs'}) {
+		@tocheck = @poss[0 .. $config{'procs'}-1];
+		@poss = @poss[$config{'procs'} .. $#poss];
+		}
+	else {
+		@tocheck = @poss;
+		@poss = ( );
+		}
+	# Ping them
+	my @rvs = grep { $_ } map { $_->[0] }
+		&parallel_server_function(\@tocheck, 
+		sub { my $p = &ping_server_host($_[0]->{'ip'});
+		      return $p ? undef : $_[0] });
+	if (@rvs) {
+		# Found at least one free
+		if (&check_ipaddress($rvs[0]->{'ip'})) {
+			@rvs = sort { &net::ip_to_integer($a->{'ip'}) <=>
+				      &net::ip_to_integer($b->{'ip'}) } @rvs;
+			}
+		else {
+			@rvs = sort { &ip6_to_integer($a->{'ip'}) <=>
+				      &ip6_to_integer($b->{'ip'}) } @rvs;
+			}
+		return @rvs;
+		}
+	}
+return ( );
 }
 
 # allocate_ip6_address(pool-ids, [ifaces, want-iface])

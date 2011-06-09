@@ -877,7 +877,28 @@ $server->{'ip_addresses'} = $server->{'kvm_ip'};
 # Validate IPv6 flags
 if ($args->{'ip6'}) {
 	# Use specified addresses
-	# XXX
+	&can_action(undef, "ips") ||
+		return "You are not allowed to specify IPv6 addresses";
+	my @ips = split(/[, ]+/, $args->{'ip6'});
+	foreach my $ip (@ips) {
+		&check_ip6address($ip) || return "Invalid KVM IPv6 address $ip";
+		}
+	my @netmasks;
+	if ($args->{'netmask6'}) {
+		@netmasks = split(/[, ]+/, $args->{'netmask6'});
+		foreach my $n (@netmasks) {
+			$n =~ /^\d+$/ && $n > 0 ||
+				return "Invalid KVM IPv6 netmask $n";
+			}
+		}
+	else {
+		@netmasks = map { 64 } @ips;
+		}
+	scalar(@ips) == scalar(@netmasks) ||
+		return "The number of IPv6 addresses must match the number ".
+		       "of netmasks";
+	$server->{'kvm_ip6'} = join(' ', @ips);
+	$server->{'kvm_netmask6'} = join(' ', @netmasks);
 	}
 elsif ($args->{'allocate-ip6'} =~ /true|yes/ ||
        !$args->{'allocate-ip6'} && $config{'alloc_ipv6'}) {
@@ -885,6 +906,7 @@ elsif ($args->{'allocate-ip6'} =~ /true|yes/ ||
 	my $err = &allocate_kvm_ip6_addresses($server, $vhost);
 	return $err if ($err);
 	}
+$server->{'ip6_addresses'} = $server->{'kvm_ip6'};
 
 # Adjust hostname for DNS
 my @zones = &list_bind_zones();
@@ -1485,6 +1507,9 @@ if ($vhost->{'kvm_zone'} && !$reset) {
 			      $vhost->{'kvm_zone'})) {
 		$server->{'kvm_dns'} = $dnsname;
 		}
+	if ($ips6[0]) {
+		&add_bind8_record($dnsname, $ips6[0], $vhost->{'kvm_zone'});
+		}
 	}
 
 # Start up the instance
@@ -1758,6 +1783,10 @@ if ($server->{'kvm_monitor'}) {
 # Remove the DNS entry, if we created one
 &delete_bind8_record($server->{'kvm_dns'}, $vhost->{'kvm_zone'},
 		     &to_ipaddress($server->{'host'}));
+if ($server->{'kvm_ip6'}) {
+	&delete_bind8_record($server->{'kvm_dns'}, $vhost->{'kvm_zone'},
+			     &to_ip6address($server->{'host'}));
+	}
 
 # Remove DHCP entries
 &delete_all_iface_dhcpd($server);

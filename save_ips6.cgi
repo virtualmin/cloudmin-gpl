@@ -71,7 +71,7 @@ for($i=0; defined($in{"start_$i"}) || $i < scalar(@pools); $i++) {
 	$p->{'desc'} = $in{"desc_$i"};
 	$p->{'start'} = join(",", @starts);
 	$p->{'end'} = join(",", @ends);
-	$p->{'cidr'} = join(",", @netmasks);
+	$p->{'netmask'} = join(",", @netmasks);
 	$p->{'gateway'} = join(",", @gateways);
 	push(@newpools, $p);
 	}
