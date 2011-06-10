@@ -498,6 +498,7 @@ create_kvmip2=IP addresses for KVM instance
 create_ekvmhost=The hostname for a KVM instance cannot contain a . , as the domain name is added automatically
 create_ekvmip=Missing or invalid KVM instance IP address
 create_kvmip6=IPv6 address for KVM instance
+create_xenip6=IPv6 address for Xen instance
 create_kvmip6no=None - use IPv4 only
 create_kvmip6alloc=Allocate automatically
 create_kvmip6manual=Use address
