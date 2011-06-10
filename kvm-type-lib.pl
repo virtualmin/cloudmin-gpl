@@ -331,6 +331,7 @@ foreach my $vhost (@vhosts) {
 		$max_hostifaces = scalar(@hostifaces);
 		}
 	}
+my @v6vhosts = grep { $_->{'kvm_pool6'} } @vhosts;
 
 # KVM host system
 my ($hostf, $hostjs);
@@ -453,7 +454,16 @@ if (&can_action(undef, "ips")) {
 	}
 
 # IPv6 address
-# XXX
+if (&can_action(undef, "ips") && @v6vhosts) {
+	print &ui_table_row($text{'create_kvmip6'},
+		&ui_radio_table("kvm_ip6_mode", $config{'alloc_ipv6'} || 0,
+				[ [ 0, $text{'create_kvmip6no'} ],
+				  [ 1, $text{'create_kvmip6alloc'} ],
+				  [ 2, $text{'create_kvmip6manual'},
+				       &ui_textbox("kvm_ip6", undef, 30)." ".
+				       $text{'create_kvmip6netmask'}." ".
+				       &ui_textbox("kvm_netmask6", 64, 5) ] ]));
+	}
 
 # Warn the user if we have no DNS zone
 if (@vhosts == 1 && $module_info{'onehost'} eq 'kvm' &&
@@ -633,6 +643,22 @@ else {
 	&error($err) if ($err);
 	}
 $server->{'ip_addresses'} = $server->{'kvm_ip'};
+
+if ($in->{'kvm_ip6_mode'} == 2 && &can_action(undef, "ips")) {
+	# Validate manually entered IPv6 address
+	&check_ip6address($in{'kvm_ip6'}) || &error($text{'create_ekvmip6'});
+	$in{'kvm_netmask6'} =~ /^\d+$/ && $in{'kvm_netmask6'} > 0 ||
+		&error($text{'create_ekvmnetmask6'});
+	$server->{'kvm_ip6'} = $in{'kvm_ip6'};
+	$server->{'kvm_netmask6'} = $in{'kvm_netmask6'};
+	}
+elsif ($in->{'kvm_ip6_mode'} == 1 && &can_action(undef, "ips") ||
+       $config{'alloc_ipv6'}) {
+	# Allocate automatically
+	my $err = &allocate_kvm_ip6_addresses($server, $vhost);
+	&error($err) if ($err);
+	}
+$server->{'ip6_addresses'} = $server->{'kvm_ip6'};
 
 # LVM setting
 if ($in{'kvm_lvm'} == -1 || !defined($in{'kvm_lvm'})) {
