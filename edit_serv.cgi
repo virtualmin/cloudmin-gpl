@@ -57,6 +57,12 @@ if (!&check_ipaddress($server->{'host'})) {
 			$text{'edit_ipaddrset'}));
 	}
 
+# IPv6 address
+$ip6 = &get_server_ip6($server);
+if ($ip6) {
+	print &ui_table_row($text{'edit_ipaddr6'}, "<tt>$ip6</tt>");
+	}
+
 # System type
 $t = $server->{'manager'};
 $tfunc = "type_".$t."_desc";

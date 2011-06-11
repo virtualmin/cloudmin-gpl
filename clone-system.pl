@@ -19,6 +19,10 @@ you can override this with the C<--address> parameter, which can be given
 multiple times for systems with more than one interface. This parameter is
 mandatory when the host system does not have IP allocation setup.
 
+Similarly, you can specify and IPv6 address for the clone with the
+C<--address6> flag, which can also be given multiple times. If omitted, the
+clone will have new IPv6 addresses allocated if the original system had any.
+
 By default the virtual system will be shut down if running. However, for
 KVM and Xen instances with disks on LVM can use the C<--live> flag to
 perform an online copy using a LVM snapshot. However, the filesystem may
@@ -94,6 +98,13 @@ while(@ARGV > 0) {
 			&usage("$ip is not a valid IP address");
 		push(@$ips, $ip);
 		}
+	elsif ($a eq "--address6") {
+		$ips6 ||= [ ];
+		$ip6 = shift(@ARGV);
+		&check_ip6address($ip6) ||
+			&usage("$ip6 is not a valid IPv6 address");
+		push(@$ips6, $ip6);
+		}
 	elsif ($a eq "--live") {
 		$live = 1;
 		}
@@ -113,7 +124,7 @@ $newhost =~ /^[a-z0-9\.\-]+$/ || &usage("Invalid new hostname");
 # Get the system
 $server = &get_managed_server_by("host", $host);
 $server || &usage("No system named $host exists");
-if ($ips) {
+if ($ips || $ips6) {
 	&can_action_usage($server, 'ips');
 	}
 if ($desthost) {
@@ -206,7 +217,7 @@ if ($limits) {
 print "Creating clone of $desc system $server->{'host'} named $newhost ..\n\n";
 &$indent_print();
 ($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips, $live,
-				   $dest);
+				   $dest, $ips6);
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {
@@ -235,6 +246,7 @@ print "cloudmin clone-system --host name\n";
 print "                      --new-host new-name\n";
 print "                     [--new-desc new-description]\n";
 print "                     [--address ip]*\n";
+print "                     [--address6 ip]*\n";
 print "                     [--live]\n";
 print "                     [--dest new-host-system-name]\n";
 exit(1);

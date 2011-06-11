@@ -1243,9 +1243,9 @@ my $vhost = &type_kvm_parent($server);
 my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @cidrs = split(/\s+/, $server->{'kvm_cidr'});
 my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
-$server->{'status'} = 'down';
 my @ips6 = split(/\s+/, $server->{'kvm_ip6'});
 my @netmasks6 = split(/\s+/, $server->{'kvm_netmask6'});
+$server->{'status'} = 'down';
 
 # Gateways can either be set per IP address, or copy from host system.
 # If none are set, assume the first IP uses the host system gateway.
@@ -3059,6 +3059,10 @@ if ($nonvirt) {
 
 &add_ip_address($server, $iface->{'address'});
 &add_delete_ip6_addresses($server, undef, $iface->{'address6'});
+if ($iface->{'address6'} && @{$iface->{'address6'}}) {
+	$server->{'kvm_ip6'} ||= $iface->{'address6'}->[0];
+	$server->{'kvm_netmask6'} ||= $iface->{'netmask6'}->[0];
+	}
 return undef;
 }
 
@@ -3140,6 +3144,10 @@ if (&can_ssh_status($server) && $iface->{'active'}) {
 &add_ip_address($server, $iface->{'address'});
 &add_delete_ip6_addresses($server, $oldiface->{'address6'},
 				   $iface->{'address6'});
+if ($iface->{'address6'} && @{$iface->{'address6'}}) {
+	$server->{'kvm_ip6'} ||= $iface->{'address6'}->[0];
+	$server->{'kvm_netmask6'} ||= $iface->{'netmask6'}->[0];
+	}
 
 # Change MAC and model address if non-virtual
 if ($iface->{'virtual'} eq '') {
@@ -5203,12 +5211,12 @@ return 1;
 }
 
 # type_kvm_check_clone(&oldserver, &newserver, new-hostname, &ips, snapshot,
-# 		       [&new-host])
+# 		       [&new-host], [&ips-v6])
 # Checks if cloning of some system will work, before shutting it down. Returns
 # undef on success or an error message on failure.
 sub type_kvm_check_clone
 {
-my ($oldserver, $newserver, $newhost, $ips, $snapshot, $dest) = @_;
+my ($oldserver, $newserver, $newhost, $ips, $snapshot, $dest, $ips6) = @_;
 my $vhost = &type_kvm_parent($newserver);
 $dest ||= $vhost;
 
@@ -5225,6 +5233,16 @@ if ($ips) {
 	my @oldips = split(/\s+/, $oldserver->{'kvm_ip'});
 	scalar(@oldips) == scalar(@$ips) ||
 		return &text('clone_eips2', scalar(@oldips), scalar(@$ips));
+	}
+
+# Check for IPv6 addresses
+if (!$dest->{'kvm_pool6'} && $oldserver->{'kvm_ip6'}) {
+	$ips && scalar(@$ips) || return &text('clone_eips6', $dest->{'host'});
+	}
+if ($ips6) {
+	my @oldips6 = split(/\s+/, $oldserver->{'kvm_ip6'});
+	scalar(@oldips6) == scalar(@$ips6) ||
+		return &text('clone_eips62', scalar(@oldips), scalar(@$ips));
 	}
 
 # Make sure all disks are on LVM if snapshotting
@@ -5251,13 +5269,13 @@ return undef;
 }
 
 # type_kvm_clone_system(&oldserver, &newserver, new-hostname, &ips, snapshot,
-# 			[&new-host])
+# 			[&new-host], [&ips-v6])
 # Creates a clone of some KVM instance, updating the newserver hash.
 # Returns an error message and a flag indicating if the failure was total or
 # only partial.
 sub type_kvm_clone_system
 {
-my ($oldserver, $newserver, $newhost, $ips, $snapshot, $dest) = @_;
+my ($oldserver, $newserver, $newhost, $ips, $snapshot, $dest, $ips6) = @_;
 my $vhost = &type_kvm_parent($newserver);
 $dest ||= $vhost;
 
@@ -5273,7 +5291,7 @@ if ($clash) {
 	return (&text('clone_eclash', $newserver->{'host'}), 1);
 	}
 
-# Allocate new IP addresses
+# Allocate new IPv4 addresses
 if ($ips) {
 	# Use supplied list, keep old netmasks and gateways
 	$newserver->{'kvm_ip'} = join(" ", @$ips);
@@ -5298,6 +5316,26 @@ $newserver->{'ip_addresses'} = join(" ", @ips);
 if (!$ips) {
 	&$second_print(&text('clone_allocated', join(" ", @ips)));
 	}
+
+# Allocate new IPv6 addresses
+if ($ips6) {
+	# Use supplied list, keep old netmasks
+	$newserver->{'kvm_ip6'} = join(" ", @$ips6);
+	}
+elsif ($oldserver->{'kvm_ip6'}) {
+	# Need to allocate new ones
+	&$first_print($text{'clone_allocating6'});
+	my $err = &allocate_kvm_ip6_addresses($newserver, $dest);
+	return ($err, 1) if ($err);
+	}
+my @ips6 = split(/\s+/, $newserver->{'kvm_ip6'});
+my @netmasks6 = split(/\s+/, $newserver->{'kvm_netmask6'});
+$newserver->{'ip_addresses6'} = join(" ", @ips6);
+&complete_managed_server($newserver);
+if (!$ips6 && @ips6) {
+	&$second_print(&text('clone_allocated', join(" ", @ips6)));
+	}
+
 delete($newserver->{'kvm_console'});
 
 # Copy each of the disks and update the kvm_drives setting
@@ -5436,6 +5474,10 @@ if ($dest->{'kvm_zone'}) {
 	if (&add_bind8_record($dnsname, $ips[0],
 			      $dest->{'kvm_zone'})) {
 		$newserver->{'kvm_dns'} = $dnsname;
+		if (@ips6) {
+			&add_bind8_record($dnsname, $ips6[0],
+					  $dest->{'kvm_zone'});
+			}
 		}
 	else {
 		delete($newserver->{'kvm_dns'});
@@ -5508,6 +5550,18 @@ if (@ips > 1) {
 		[ @gws[1..$#gws] ], $dest, $mp);
 	if ($err) {
 		&$second_print(&text('create_ekvmnet2', $err));
+		}       
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+# Apply IPv6 addresses to interfaces
+if (@ips6) {
+	&$first_print($text{'create_xenipv6'});
+	my $err = &apply_ipv6_addresses($newserver, \@ips6, \@netmasks6);
+	if ($err) {
+		&$second_print(&text('create_exenipv6', $err));
 		}       
 	else {
 		&$second_print($text{'create_done'});

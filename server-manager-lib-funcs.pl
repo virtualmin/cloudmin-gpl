@@ -9837,15 +9837,22 @@ return $rv;
 }
 
 # clone_system(&server, new-hostname, new-description, [&ips], snapshot,
-# 	       [&dest-host])
+# 	       [&dest-host], [&ips-v6])
 # Creates a clone of an existing virtual system, by calling the type-specific
 # clone function. Returns the new system hash and an error message or undef.
 # May print stuff.
 sub clone_system
 {
-my ($server, $newhost, $newdesc, $ips, $snapshot, $dest) = @_;
+my ($server, $newhost, $newdesc, $ips, $snapshot, $dest, $ips6) = @_;
 my $vhost = &get_parent_server($server);
 $dest ||= $vhost;
+
+# Check if IPv6 is even supported
+if ($ips6) {
+	my $cfunc = "type_".$server->{'manager'}."_can_ipv6";
+	defined(&$cfunc) && &$cfunc($server) ||
+		return (undef, $text{'clone_eips6support'});
+	}
 
 # Create the new server object
 my $newserver = { %$server };
@@ -9866,10 +9873,10 @@ delete($newserver->{'status_err'});
 
 # Make sure dest supports virtualization type
 if (&indexof($server->{'manager'}, &is_parent_server($dest)) < 0) {
-	return &text('clone_ehosttype', $dest->{'host'});
+	return (undef, &text('clone_ehosttype', $dest->{'host'}));
 	}
 if (!&can_ssh_status($dest)) {
-	return &text('clone_ehostdown', $dest->{'host'});
+	return (undef, &text('clone_ehostdown', $dest->{'host'}));
 	}
 
 # Check resource limits on the host
@@ -9892,11 +9899,18 @@ if (!$ok) {
 	}
 
 # If IPs were manually entered, make sure they are free
+my %used = &used_ip_addresses();
 if ($ips) {
-	my %used = &used_ip_addresses();
 	foreach my $ip (@$ips) {
 		if ($used{$ip} || &ping_server_host($ip)) {
 			return (undef, &text('clone_eipused', $ip));
+			}
+		}
+	}
+if ($ips6) {
+	foreach my $ip6 (@$ips6) {
+		if ($used{$ip6} || &ping_server_host($ip6)) {
+			return (undef, &text('clone_eipused', $ip6));
 			}
 		}
 	}
@@ -9905,7 +9919,7 @@ if ($ips) {
 my $ckfunc = "type_".$server->{'manager'}."_check_clone";
 if (defined(&$ckfunc)) {
 	my $err = &$ckfunc($server, $newserver, $newhost, $ips, $snapshot,
-			   $dest);
+			   $dest, $ips6);
 	return (undef, $err) if ($err);
 	}
 
@@ -9931,7 +9945,7 @@ if ($server->{'status'} ne 'down') {
 # Call the clone function
 my $cfunc = "type_".$server->{'manager'}."_clone_system";
 my ($err, $totalfail) = &$cfunc($server, $newserver, $newhost, $ips, $snapshot,
-				$dest);
+				$dest, $ips6);
 
 # Clear SSH host key for the clone
 &clear_ssh_host_key($newserver);
