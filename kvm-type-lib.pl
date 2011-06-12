@@ -3059,10 +3059,6 @@ if ($nonvirt) {
 
 &add_ip_address($server, $iface->{'address'});
 &add_delete_ip6_addresses($server, undef, $iface->{'address6'});
-if ($iface->{'address6'} && @{$iface->{'address6'}}) {
-	$server->{'kvm_ip6'} ||= $iface->{'address6'}->[0];
-	$server->{'kvm_netmask6'} ||= $iface->{'netmask6'}->[0];
-	}
 return undef;
 }
 
@@ -3144,10 +3140,6 @@ if (&can_ssh_status($server) && $iface->{'active'}) {
 &add_ip_address($server, $iface->{'address'});
 &add_delete_ip6_addresses($server, $oldiface->{'address6'},
 				   $iface->{'address6'});
-if ($iface->{'address6'} && @{$iface->{'address6'}}) {
-	$server->{'kvm_ip6'} ||= $iface->{'address6'}->[0];
-	$server->{'kvm_netmask6'} ||= $iface->{'netmask6'}->[0];
-	}
 
 # Change MAC and model address if non-virtual
 if ($iface->{'virtual'} eq '') {
@@ -3511,6 +3503,13 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 # Cache label->partition map, for use when the system is down
 if (&can_ssh_status($server) && (!defined($server->{'label_map'}) || $regen)) {
 	&generate_label_map($server);
+	}
+
+if ((!defined($server->{'kvm_ip6'}) || $regen) &&
+    ($server->{'status'} eq 'down' || &can_ssh_status($server))) {
+	# Fetch IPv6 addresses from interfaces
+	$server->{'kvm_ip6'} =
+		join(" ", &list_interface_ip6_addresses($server));
 	}
 }
 

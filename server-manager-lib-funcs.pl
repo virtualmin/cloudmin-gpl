@@ -3182,16 +3182,37 @@ $oldlist ||= [ ];
 $newlist ||= [ ];
 my %oldhash = map { $_, 1 } @$oldlist;
 my %newhash = map { $_, 1 } @$newlist;
+my @initips = split(/\s+/, $server->{$server->{'manager'}.'_ip6'});
 foreach my $ip (@$oldlist) {
 	if (!$newhash{$ip}) {
 		&delete_ip_address($server, $ip);
+		@initips = grep { $_ ne $ip } @initips;
 		}
 	}
 foreach my $ip (@$newlist) {
 	if (!$oldhash{$ip}) {
 		&add_ip_address($server, $ip);
+		@initips = &unique(@initips, $ip);
 		}
 	}
+$server->{$server->{'manager'}.'_ip6'} = join(" ", @initips);
+}
+
+# list_interface_ip6_addresses(&server)
+# Returns a list of all IPv6 addresses, taken from interfaces
+sub list_interface_ip6_addresses
+{
+my ($server) = @_;
+my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
+return () if (!defined(&$cfunc) || !&$cfunc($server));
+my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+my $ifaces = &$ifunc($server);
+return () if (!ref($ifaces));
+my @rv;
+foreach my $i (@$ifaces) {
+	push(@rv, @{$i->{'address6'}}) if ($i->{'address6'});
+	}
+return @rv;
 }
 
 # modify_primary_ip_address(&server, old-ip, new-ip)
