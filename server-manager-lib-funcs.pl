@@ -3210,7 +3210,8 @@ my $ifaces = &$ifunc($server);
 return () if (!ref($ifaces));
 my @rv;
 foreach my $i (@$ifaces) {
-	push(@rv, @{$i->{'address6'}}) if ($i->{'address6'});
+	push(@rv, @{$i->{'address6'}}) if ($i->{'address6'} &&
+					   $i->{'virtual'} eq '');
 	}
 return @rv;
 }
