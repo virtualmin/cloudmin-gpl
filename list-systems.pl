@@ -29,8 +29,8 @@ flag. Or to select any period in the past, use the C<--period-ago> flag followed
 by a number of weeks or months.
 
 To limit output to the unique IDs of selected systems, use the C<--id-only>
-flag. To get just hostnames use C<--name-only>, or C<--address-only> to print
-just IP addresses.
+flag. To get just hostnames use C<--name-only>, C<--address-only> to print
+just IP addresses, or C<--address6-only> to print only IPv6 addresses.
 
 =head1 Example usage
 
@@ -77,6 +77,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--address-only") {
 		$addressonly = 1;
+		}
+	elsif ($a eq "--address6-only") {
+		$addressonly = 2;
 		}
 	elsif ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
@@ -521,7 +524,8 @@ elsif ($idonly) {
 elsif ($addressonly) {
 	# Just IPs
 	foreach $s (@servers) {
-		$ip = &get_server_ip($s);
+		$ip = $addressonly == 1 ? &get_server_ip($s)
+					: &get_server_ip6($s);
 		print $ip,"\n" if ($ip);
 		}
 	}
