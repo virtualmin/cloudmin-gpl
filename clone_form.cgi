@@ -39,12 +39,12 @@ if ($can == 2) {
 	}
 
 # IP addresses for non-virtual interfaces
+$cfunc = "type_".$server->{'manager'}."_can_interfaces";
+$ifunc = "type_".$server->{'manager'}."_list_interfaces";
 if (&can_action($server, 'ips')) {
-	$cfunc = "type_".$server->{'manager'}."_can_interfaces";
 	@grid = ( );
 	if (defined(&$cfunc) && &$cfunc($server)) {
 		# Can show list of interfaces
-		$ifunc = "type_".$server->{'manager'}."_list_interfaces";
 		$i = 0;
 		$ifaces = &$ifunc($server);
 		foreach my $iface (grep { $_->{'virtual'} eq '' } @$ifaces) {
@@ -62,6 +62,34 @@ if (&can_action($server, 'ips')) {
 		}
 	print &ui_table_row($text{'clone_ips'},
 		&ui_radio("ips_def", 1, [ [ 1, $text{'clone_ips1'} ],
+					  [ 0, $text{'clone_ips0'} ] ]).
+		"<br>\n".$ipsfield);
+	}
+
+# IPv6 addresses, if allowed and VM type supports IPv6 and the system has v6
+# addresses currently
+$c6func = "type_".$server->{'manager'}."_can_ipv6";
+if (&can_action($server, 'ips') && defined(&$c6func) && &$c6func($server) &&
+    $server->{'ip6_addresses'}) {
+	@grid = ( );
+	if (defined(&$cfunc) && &$cfunc($server)) {
+		# Can show list of interfaces
+		$i = 0;
+		foreach my $iface (grep { $_->{'virtual'} eq '' } @$ifaces) {
+			push(@grid, [ $iface->{'name'},
+				      &ui_textbox("ip6_$i", undef, 20) ]);
+			$i++;
+			}
+		$ipsfield = &ui_columns_table(
+			[ $text{'clone_iface'}, $text{'clone_ip6'} ],
+			undef, \@grid);
+		}
+	if (!@grid) {
+		# One text box
+		$ipsfield = &ui_textarea("ips6", undef, 3, 20);
+		}
+	print &ui_table_row($text{'clone_ips6'},
+		&ui_radio("ips6_def", 1, [ [ 1, $text{'clone_ips1'} ],
 					  [ 0, $text{'clone_ips0'} ] ]).
 		"<br>\n".$ipsfield);
 	}

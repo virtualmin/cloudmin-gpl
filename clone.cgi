@@ -34,6 +34,23 @@ if (!$in{'ips_def'} && &can_action($server, 'ips')) {
 			&error(&text('clone_eipcheck', $ip));
 		}
 	}
+if (!$in{'ips6_def'} && &can_action($server, 'ips')) {
+	if (defined($in{'ips6'})) {
+		$ips6 = [ split(/\s+/, $in{'ips6'}) ];
+		}
+	elsif (defined($in{'ip6_0'})) {
+		$ips6 = [ ];
+		for(my $i=0; defined($in{"ip6_$i"}); $i++) {
+			$in{"ip6_$i"} =~ /\S/ ||
+				&error(&text('clone_eip6row', $i+1));
+			push(@$ips6, $in{"ip6_$i"});
+			}
+		}
+	foreach $ip6 (@$ips6) {
+		&check_ip6address($ip6) ||
+			&error(&text('clone_eipcheck6', $ip6));
+		}
+	}
 if ($in{'dest'}) {
 	$dest = &get_managed_server($in{'dest'});
 	}
@@ -109,7 +126,7 @@ if ($limits) {
 &$first_print(&text('clone_doing', $desc, $server->{'host'}, $in{'host'}));
 &$indent_print();
 ($newserver, $err) = &clone_system($server, $in{'host'}, $in{'desc'}, $ips,
-				   $in{'live'}, $dest);
+				   $in{'live'}, $dest, $ips6);
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {
