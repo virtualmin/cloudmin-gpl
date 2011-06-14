@@ -289,7 +289,9 @@ elsif ($mode == 1) {
 			      $_->{'manager'} eq 'ec2' } @rv) {
 		# First level (real or EC2)
 		push(@newrv, $s);
+		print STDERR "host=$s->{'host'}\n";
 		foreach my $cs (&list_child_servers($s, \@rv)) {
+			print STDERR "parent=$s->{'host'} child=$cs->{'host'}\n";
 			# Second level (xen, kvm, etc)
 			$cs->{'indent'} = 1;
 			$cs->{'indent_host'} = $s->{'id'};
@@ -631,7 +633,7 @@ foreach my $name (@$hostedon) {
 		$wanthost{$h->{'id'}} = 1;
 		}
 	}
-foreach my $s (&list_managed_servers()) {
+foreach my $s (&list_managed_servers_sorted()) {
 	my ($ingroup) = grep { $wantgroups{lc($_)} }
 				split(/\t/, $s->{'group'});
 	my $p = @$hostedon ? &get_parent_server($s) : undef;
@@ -10573,6 +10575,9 @@ else {
 			    $server->{'id'}.".serv";
 		my @stbefore = stat($sfile);
 		&lock_file($sfile, $ro);
+		if ($server->{'id'} eq '0') {
+			&lock_file($this_server_status);
+			}
 		my @stafter = stat($sfile);
 		if (@stbefore && !@stafter) {
 			# No longer exists .. must have been deleted during
@@ -10606,6 +10611,9 @@ if (ref($server) eq 'ARRAY') {
 else {
 	# Un-lock one
 	if ($main::got_lock_server{$server->{'id'}} == 1) {
+		if ($server->{'id'} eq '0') {
+			&unlock_file($this_server_status);
+			}
 		&unlock_file("$servers::module_config_directory/".
 			     "$server->{'id'}.serv");
 		}

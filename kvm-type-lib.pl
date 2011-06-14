@@ -2156,6 +2156,19 @@ if ($mounts == 2 && &can_ssh_status($server)) {
 return \@rv;
 }
 
+# type_kvm_list_disk_devices(&server)
+# Quick function to return just the list of disk files a KVM instances uses
+sub type_kvm_list_disk_devices
+{
+my ($server) = @_;
+my @rv;
+foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
+	my %drive = map { split(/=/, $_, 2) } split(/,/, $dstr);
+	push(@rv, $drive{'file'}) if ($drive{'file'});
+	}
+return @rv;
+}
+
 # type_kvm_need_disk_reboot(&server, &disk)
 # A reboot is always needed, to apply the new command line
 sub type_kvm_need_disk_reboot
@@ -4461,6 +4474,7 @@ return ( $server->{'kvm_dns'}, $vhost->{'kvm_zone'} );
 sub type_kvm_can_move
 {
 my ($server, $dest) = @_;
+return 0 if ($module_info{'onehost'} eq 'kvm');
 if (!$dest ||
     $dest->{'status'} eq 'virt' ||
     $dest->{'status'} eq 'nowebmin' ||

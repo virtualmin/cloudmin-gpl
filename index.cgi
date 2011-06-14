@@ -330,6 +330,8 @@ if (@servers) {
 			    ], \@tds, "d", $s->{'id'});
 			$virtcount++ if ($s->{'status'} eq 'virt');
 			$procount++ if ($s->{'virtualmin_serial'});
+			$cmfunc = "type_".$s->{'manager'}."_can_move";
+			$movecount++ if (defined(&$cmfunc) && &$cmfunc($s));
 			}
 		print &ui_columns_end();
 		}
@@ -349,6 +351,9 @@ if (@servers) {
 		     undef,
 		     [ "upload", $text{'index_upload'} ],
 		     [ "run", $text{'index_run'} ],
+		     undef,
+		     $movecount ? ( [ "move", $text{'index_move'} ] )
+				: ( ),
 		 );
 	@buts = grep { !$_ || &can_action(undef, $_->[0]) } @buts;
 	while(@buts && !$buts[0]) { shift(@buts); }	# Strip leading spacers

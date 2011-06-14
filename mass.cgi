@@ -482,6 +482,17 @@ elsif ($in{'run'}) {
 	&redirect("massshell.cgi?$ids");
 	}
 
+elsif ($in{'move'}) {
+	# Redirect to single or mass move form
+	if (scalar(keys %d) == 1) {
+		&redirect("move_form.cgi?id=$in{'d'}");
+		}
+	else {
+		$ids2 = join("&", map { "id=".$_ } keys %d);
+		&redirect("mass_move_form.cgi?$ids2");
+		}
+	}
+
 else {
 	&error($text{'mass_ebutton'});
 	}
