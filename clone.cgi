@@ -46,9 +46,11 @@ if (!$in{'ips6_def'} && &can_action($server, 'ips')) {
 			push(@$ips6, $in{"ip6_$i"});
 			}
 		}
-	foreach $ip6 (@$ips6) {
-		&check_ip6address($ip6) ||
-			&error(&text('clone_eipcheck6', $ip6));
+	if ($ips6) {
+		foreach $ip6 (@$ips6) {
+			&check_ip6address($ip6) ||
+				&error(&text('clone_eipcheck6', $ip6));
+			}
 		}
 	}
 if ($in{'dest'}) {
