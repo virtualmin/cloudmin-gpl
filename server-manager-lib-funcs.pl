@@ -289,9 +289,7 @@ elsif ($mode == 1) {
 			      $_->{'manager'} eq 'ec2' } @rv) {
 		# First level (real or EC2)
 		push(@newrv, $s);
-		print STDERR "host=$s->{'host'}\n";
 		foreach my $cs (&list_child_servers($s, \@rv)) {
-			print STDERR "parent=$s->{'host'} child=$cs->{'host'}\n";
 			# Second level (xen, kvm, etc)
 			$cs->{'indent'} = 1;
 			$cs->{'indent_host'} = $s->{'id'};

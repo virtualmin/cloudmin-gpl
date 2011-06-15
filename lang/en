@@ -1961,7 +1961,11 @@ pass_sameing=Setting Webmin password to be the same as Unix ..
 pass_esame=.. failed : $1
 pass_webmining=Changing Webmin password ..
 pass_ewebmin=.. failed : $1
+pass_vnc=Graphical console password
+pass_vnone=None chosen yet
 pass_evlength=The graphical console password cannot be more than $1 characters long.
+pass_needreboot=A reboot is needed to apply the new graphical console password.
+pass_evcomma=The graphical console password cannot contain a comma
 
 licences_title=Virtualmin Pro Licenses
 licences_serial=Serial number
@@ -4548,6 +4552,7 @@ showpass_wuser=Webmin login
 showpass_wpass=Webmin password
 showpass_suser=SSH login
 showpass_spass=SSH password
+showpass_vpass=Graphical console password
 
 onehost_err=This system cannot be a $1 host : $2
 onehost_err2=Virtual systems cannot be created or added until this is fixed.

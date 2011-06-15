@@ -26,6 +26,11 @@ for Xen systems, if the password is changed on the system directly (perhaps
 using the passwd command), Cloudmin will be no longer able to login via SSH to
 change it, or even to check the system's status.
 
+For Xen and KVM systems, the password used for access to the graphical console
+can be changed with the C<--graphical-pass> flag followed by a new password.
+By default this is the same as the SSH password, or a random string if no 
+password was set at creation time.
+
 =cut
 
 package server_manager;
@@ -68,6 +73,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--webmin-same") {
 		$webmin_same = 1;
 		}
+	elsif ($a eq "--graphical-pass") {
+		$vnc_pass = shift(@ARGV);
+		$vnc_pass =~ /^\S+$/ ||
+			&usage("--graphical-pass must be followed by a ".
+			       "password without spaces");
+		}
 	else {
 		&usage();
 		}
@@ -76,7 +87,7 @@ while(@ARGV > 0) {
 # Check for required inputs
 $host || &usage("Missing --host parameter");
 defined($ssh_pass) || defined($key) || defined($webmin_pass) || $webmin_same ||
-	&usage("No password changes specified");
+    defined($vnc_pass) || &usage("No password changes specified");
 $ssh_pass && $key && &usage("Only one of --ssh-pass or --ssh-key can be used");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
@@ -86,6 +97,15 @@ $server || &usage("System with hostname $host does not exist");
 if ($webmin_same && !$server->{'ssh_pass'} && !$ssh_pass) {
 	&usage("The current Unix password is not known, so --webmin-same cannot be used");
 	}
+
+# Check if graphical pass can be set
+if ($vnc_pass) {
+	$cfunc = "type_".$server->{'manager'}."_can_graphical_password";
+	$vcan = defined(&$cfunc) && &$cfunc($server);
+	$vcan || &usage("The graphical console password cannot be set ".
+			"for this system");
+	}
+
 &obtain_lock_server($server);
 $failed = 0;
 
@@ -156,11 +176,31 @@ elsif ($webmin_same) {
 		}
 	}
 
+if ($vnc_pass) {
+	# Set VNC password
+	print "Setting graphical console password ..\n";
+	$sfunc = "type_".$server->{'manager'}."_set_graphical_password";
+	$err = &$sfunc($server, $vnc_pass);
+	if ($err) {
+		print ".. failed : $err\n\n";
+		$failed++;
+		}
+	else {
+		print ".. done\n\n";
+		$need_reboot++ if ($vcan == 2);
+		}
+	}
+
 # Refresh status
 print "Re-checking system status..\n";
 &check_server_status($server, 0, 1);
 &save_managed_server($server);
 print ".. done, new status is ",&describe_status($server),"\n\n";
+
+if ($need_reboot) {
+	print "To apply the graphical console password change, the system must be shut down\n";
+	print "and started up again.\n\n";
+	}
 
 &release_lock_server($server);
 if (!$failed) {
@@ -173,9 +213,10 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Changes the SSH or Webmin passwords for a managed system.\n";
 print "\n";
-print "cloudmin passwd-systems --host name\n";
-print "                       [--ssh-pass password | --ssh-key id]\n";
-print "                       [--webmin-pass password | --webmin-same]\n";
+print "cloudmin passwd-system --host name\n";
+print "                      [--ssh-pass password | --ssh-key id]\n";
+print "                      [--webmin-pass password | --webmin-same]\n";
+print "                      [--graphical-pass password]\n";
 exit(1);
 }
 

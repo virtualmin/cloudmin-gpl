@@ -27,6 +27,18 @@ if ($in{'webmin_pass_def'} == 2 &&
 	&error($text{'pass_enosame'});
 	}
 
+# Set VNC password
+$cfunc = "type_".$server->{'manager'}."_can_graphical_password";
+$vcan = defined(&$cfunc) && &$cfunc($server);
+if ($vcan && !$in{'vnc_def'}) {
+	$in{'vnc_pass'} =~ /^\S+$/ || &error($text{'pass_evnc'});
+	$sfunc = "type_".$server->{'manager'}."_set_graphical_password";
+	$err = &$sfunc($server, $in{'vnc_pass'});
+	&error($err) if ($err);
+	$need_reboot = 1 if ($vcan == 2);
+	$done++;
+	}
+
 # Actually make the changes
 &ui_print_unbuffered_header(&server_in($server), $text{'pass_title'}, "");
 &obtain_lock_server($server);
@@ -109,6 +121,17 @@ if ($done) {
 	&check_server_status($server, 0, 1);
 	&save_managed_server($server);
 	&$second_print($text{'create_done'});
+
+	if ($need_reboot) {
+		# Tell user that a reboot is needed
+		print &ui_form_start("save_serv.cgi");
+		print &ui_hidden("id", $in{'id'});
+		print &ui_hidden("reboot", 1);
+		print &ui_hidden("confirm", 1);
+		print &ui_hidden("updown", 1);
+		print "<b>$text{'pass_needreboot'}</b><p>\n";
+		print &ui_form_end([ [ undef, $text{'limits_reboot'} ] ]);
+		}
 
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server($server);

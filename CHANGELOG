@@ -12,3 +12,4 @@ If the Cloudmin system cannot be a KVM host due to running the wrong kernel or m
 ---- Changes since 5.4 ----
 The new auto-scaling groups feature allows virtual systems to be created and destroyed in response to CPU load or other factors. This can be used to scale up a service like a website or replicated database to handle higher traffic, by cloning and configuring new virtual systems automatically.
 ---- Changes since 5.5 ----
+The Change Password page and passwd-system API command can now be used to set the VNC password for the graphical console of a system.

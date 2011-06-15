@@ -15,20 +15,23 @@ print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'pass_header'}, undef, 2);
 
 @keys = &list_ssh_keys();
+$passpop = $server->{'ssh_pass'} ? &show_password_popup($server, "ssh")
+				 : undef;
 if (&can_action(undef, "sshkeys") && @keys) {
 	# SSH password or key
 	print &ui_table_row($text{'pass_ssh2'},
 		&ui_radio_table("ssh_pass_def", 1,
-			[ [ 1, $text{'pass_leave'} ],
+			[ [ 1, $text{'pass_leave'}.$passpop ],
 			  [ 0, $text{'pass_set'},
 			    &ui_textbox("ssh_pass", undef, 20) ],
 			  [ 2, $text{'pass_sshkey'},
-			    &ssh_key_menu("ssh_key", undef, undef) ] ]));
+			    &ssh_key_menu("ssh_key", undef, undef) ] ], 1));
 	}
 else {
 	# SSH password
 	print &ui_table_row($text{'pass_ssh'},
-		&ui_opt_textbox("ssh_pass", undef, 20, $text{'pass_leave'},
+		&ui_opt_textbox("ssh_pass", undef, 20,
+				$text{'pass_leave'}.$passpop,
 				$text{'pass_set'}));
 	}
 
@@ -36,10 +39,12 @@ else {
 if ($server->{'status'} eq 'virt' ||
     $server->{'status'} eq 'novirt' ||
     $server->{'status'} eq 'nowebminlogin') {
+	$passpop = $server->{'pass'} ? &show_password_popup($server, "webmin")
+				     : undef;
 	print &ui_table_row(&text('pass_webmin', $server->{'user'}),
 		&ui_radio("webmin_pass_def",
 			  $server->{'ssh_pass_same'} ? 2 : 1,
-			  [ [ 1, $text{'pass_leave'} ],
+			  [ [ 1, $text{'pass_leave'}.$passpop ],
 			    $server->{'user'} eq 'root' ? 
 				( [ 2, $text{'pass_same'} ] ) : ( ),
 			    [ 0, $text{'pass_set'} ] ])." ".
@@ -51,12 +56,13 @@ $cfunc = "type_".$server->{'manager'}."_can_graphical_password";
 if (defined(&$cfunc) && &$cfunc($server)) {
 	$gfunc = "type_".$server->{'manager'}."_get_graphical_password";
 	$pass = &$gfunc($server);
+	$passpop = $pass ? &show_password_popup($server, "vnc") : undef;
 	print &ui_table_row($text{'pass_vnc'},
 		&ui_radio("vnc_def", 1,
-		  [ [ 1, $pass ? $text{'pass_vleave'}
+		  [ [ 1, $pass ? $text{'pass_leave'}.$passpop
 			       : $text{'pass_vnone'} ],
-		    [ 0, &text('pass_vset',
-				&ui_textbox("vnc_pass", undef, 20)) ] ]));
+		    [ 0, $text{'pass_set'}." ".
+			 &ui_textbox("vnc_pass", undef, 20) ] ]));
 	}
 
 print &ui_table_end();

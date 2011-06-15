@@ -18,11 +18,17 @@ if ($in{'mode'} eq 'webmin') {
 	print &ui_table_row($text{'showpass_wpass'},
 		&html_escape($server->{'pass'}));
 	}
-else {
+elsif ($in{'mode'} eq 'ssh') {
 	print &ui_table_row($text{'showpass_suser'},
 		&html_escape($server->{'ssh_user'}));
 	print &ui_table_row($text{'showpass_spass'},
 		&html_escape($server->{'ssh_pass'}));
+	}
+elsif ($in{'mode'} eq 'vnc') {
+	$gfunc = "type_".$server->{'manager'}."_get_graphical_password";
+	$pass = &$gfunc($server);
+	print &ui_table_row($text{'showpass_vpass'},
+		&html_escape($pass));
 	}
 print &ui_table_end();
 print "</center>\n";

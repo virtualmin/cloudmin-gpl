@@ -5730,8 +5730,8 @@ return $server->{'kvm_vnc_passwd'};
 sub type_kvm_set_graphical_password
 {
 my ($server, $pass) = @_;
-if (length($pass) > 6) {
-	return &text('pass_evlength', 6);
+if (length($pass) > 7) {
+	return &text('pass_evlength', 7);
 	}
 $server->{'kvm_vnc_passwd'} = $pass;
 return undef;
@@ -5760,7 +5760,7 @@ my $perr = &put_file_to_server($vhost,
 return $perr if ($perr);
 
 $server->{'kvm_vnc_passwd'} ||= $server->{'ssh_pass'} ||
-			        &generate_random_password(6);
+			        &generate_random_password(7);
 push(@mlines, "change vnc password");
 push(@mlines, $server->{'kvm_vnc_passwd'});
 
