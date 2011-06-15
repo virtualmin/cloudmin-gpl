@@ -46,6 +46,19 @@ if ($server->{'status'} eq 'virt' ||
 		&ui_textbox("webmin_pass", undef, 20));
 	}
 
+# VNC password
+$cfunc = "type_".$server->{'manager'}."_can_graphical_password";
+if (defined(&$cfunc) && &$cfunc($server)) {
+	$gfunc = "type_".$server->{'manager'}."_get_graphical_password";
+	$pass = &$gfunc($server);
+	print &ui_table_row($text{'pass_vnc'},
+		&ui_radio("vnc_def", 1,
+		  [ [ 1, $pass ? $text{'pass_vleave'}
+			       : $text{'pass_vnone'} ],
+		    [ 0, &text('pass_vset',
+				&ui_textbox("vnc_pass", undef, 20)) ] ]));
+	}
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'pass_ok'} ] ]);
 

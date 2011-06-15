@@ -454,15 +454,16 @@ if (&can_action(undef, "ips")) {
 	}
 
 # IPv6 address
-if (&can_action(undef, "ips") && @v6vhosts) {
-	print &ui_table_row($text{'create_kvmip6'},
+if (&can_action(undef, "ips") && @v6vhosts && !$empty) {
+	$rv .= &ui_table_row($text{'create_kvmip6'},
 		&ui_radio_table("kvm_ip6_mode", $config{'alloc_ipv6'} || 0,
 				[ [ 0, $text{'create_kvmip6no'} ],
 				  [ 1, $text{'create_kvmip6alloc'} ],
 				  [ 2, $text{'create_kvmip6manual'},
 				       &ui_textbox("kvm_ip6", undef, 30)." ".
 				       $text{'create_kvmip6netmask'}." ".
-				       &ui_textbox("kvm_netmask6", 64, 5) ] ]));
+				       &ui_textbox("kvm_netmask6", 64, 5) ] ],
+				1));
 	}
 
 # Warn the user if we have no DNS zone
@@ -644,21 +645,24 @@ else {
 	}
 $server->{'ip_addresses'} = $server->{'kvm_ip'};
 
-if ($in->{'kvm_ip6_mode'} == 2 && &can_action(undef, "ips")) {
-	# Validate manually entered IPv6 address
-	&check_ip6address($in{'kvm_ip6'}) || &error($text{'create_ekvmip6'});
-	$in{'kvm_netmask6'} =~ /^\d+$/ && $in{'kvm_netmask6'} > 0 ||
-		&error($text{'create_ekvmnetmask6'});
-	$server->{'kvm_ip6'} = $in{'kvm_ip6'};
-	$server->{'kvm_netmask6'} = $in{'kvm_netmask6'};
+if (!$empty) {
+	if ($in->{'kvm_ip6_mode'} == 2 && &can_action(undef, "ips")) {
+		# Validate manually entered IPv6 address
+		&check_ip6address($in{'kvm_ip6'}) ||
+			&error($text{'create_ekvmip6'});
+		$in{'kvm_netmask6'} =~ /^\d+$/ && $in{'kvm_netmask6'} > 0 ||
+			&error($text{'create_ekvmnetmask6'});
+		$server->{'kvm_ip6'} = $in{'kvm_ip6'};
+		$server->{'kvm_netmask6'} = $in{'kvm_netmask6'};
+		}
+	elsif ($in->{'kvm_ip6_mode'} == 1 && &can_action(undef, "ips") ||
+	       $config{'alloc_ipv6'}) {
+		# Allocate automatically
+		my $err = &allocate_kvm_ip6_addresses($server, $vhost);
+		&error($err) if ($err);
+		}
+	$server->{'ip6_addresses'} = $server->{'kvm_ip6'};
 	}
-elsif ($in->{'kvm_ip6_mode'} == 1 && &can_action(undef, "ips") ||
-       $config{'alloc_ipv6'}) {
-	# Allocate automatically
-	my $err = &allocate_kvm_ip6_addresses($server, $vhost);
-	&error($err) if ($err);
-	}
-$server->{'ip6_addresses'} = $server->{'kvm_ip6'};
 
 # LVM setting
 if ($in{'kvm_lvm'} == -1 || !defined($in{'kvm_lvm'})) {
@@ -5702,6 +5706,37 @@ $server->{'kvm_bootdevice'} = $mode;
 return undef;
 }
 
+# type_kvm_can_graphical_password(&server)
+# Returns 2, indicating that the VNC password can be set with a reboot
+sub type_kvm_can_graphical_password
+{
+my ($server) = @_;
+if ($server->{'kvm_vnc_display'}) {
+	return 2;
+	}
+return 0;
+}
+
+# type_kvm_get_graphical_password(&server)
+# Returns the VNC password
+sub type_kvm_get_graphical_password
+{
+my ($server) = @_;
+return $server->{'kvm_vnc_passwd'};
+}
+
+# type_kvm_set_graphical_password(&server, pass)
+# Updates the VNC password to use at next boot
+sub type_kvm_set_graphical_password
+{
+my ($server, $pass) = @_;
+if (length($pass) > 6) {
+	return &text('pass_evlength', 6);
+	}
+$server->{'kvm_vnc_passwd'} = $pass;
+return undef;
+}
+
 # create_kvm_monitor_file(&server)
 # Create a file on the host system for KVM monitor input, and uploads pty.pl
 sub create_kvm_monitor_file
@@ -5725,7 +5760,7 @@ my $perr = &put_file_to_server($vhost,
 return $perr if ($perr);
 
 $server->{'kvm_vnc_passwd'} ||= $server->{'ssh_pass'} ||
-			        &generate_random_password(4);
+			        &generate_random_password(6);
 push(@mlines, "change vnc password");
 push(@mlines, $server->{'kvm_vnc_passwd'});
 

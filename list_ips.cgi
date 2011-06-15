@@ -121,7 +121,7 @@ foreach $s (@allservers) {
 @ips = keys %ips;
 @freeips = map { { 'id' => $_ } } grep { &check_ipaddress($_) &&
 				         !$ips{$_}->{'server'} } @ips;
-local $config{'procs'} = 100;
+local $config{'procs'} = 20;
 @pings = map { $_->[0] } &parallel_server_function(\@freeips,
 			sub { my $p = &ping_server_host($_[0]->{'id'}, 1);
 			      return $p });

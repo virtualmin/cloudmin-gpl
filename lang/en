@@ -1961,6 +1961,7 @@ pass_sameing=Setting Webmin password to be the same as Unix ..
 pass_esame=.. failed : $1
 pass_webmining=Changing Webmin password ..
 pass_ewebmin=.. failed : $1
+pass_evlength=The graphical console password cannot be more than $1 characters long.
 
 licences_title=Virtualmin Pro Licenses
 licences_serial=Serial number
