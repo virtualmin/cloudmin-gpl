@@ -132,6 +132,9 @@ foreach my $s (&list_storages()) {
 	&save_storage($s);
 	}
 
+# Pre-create the images dir
+&make_dir($server_images_dir, 0700);
+
 # Record the install time for this version
 my %itimes;
 &read_file($install_times_file, \%itimes);
