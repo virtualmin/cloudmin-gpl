@@ -4820,6 +4820,18 @@ if (!$serial) {
 	return $text{'virtualmin_elicence'};
 	}
 
+# Check that hostname is usable
+if ($os ne "solaris") {
+	my ($hout, $hex, $herr) = &execute_command_on_server(
+					$server, "hostname -f");
+	if ($hex || $herr) {
+		return &text('virtualmin_ehostname', $herr || $hout);
+		}
+	if ($hout !~ /\./ && $server->{'host'} !~ /\./) {
+		return &text('virtualmin_ehostnamedot', $hout);
+		}
+	}
+
 # Download the installer
 my $itemp = &transname("virtualmin-install.sh");
 my $error;
