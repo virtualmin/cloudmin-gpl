@@ -94,7 +94,7 @@ if (!$no_ssh) {
 		# Cannot select SSH keys
 		$has_root_password = 1;
 		print &ui_table_row($text{'add_authpass'},
-			&ui_textbox("upass", undef, 20));
+			&ui_password("upass", undef, 20));
 		}
 	else {
 		# Can enter password or key or neither
@@ -103,7 +103,7 @@ if (!$no_ssh) {
 		print &ui_table_row($text{'add_auth'},
 		    &ui_radio("auth_mode", 0,
 		      [ [ 0, &text('add_auth0',
-			   &ui_textbox("upass", $randpass, 20))."<br>" ],
+			   &ui_password("upass", $randpass, 20))."<br>" ],
 			[ 1, &text('add_auth1', &ssh_key_menu("key"))."<br>" ],
 			[ 2, $text{'add_auth2'} ] ]));
 		}

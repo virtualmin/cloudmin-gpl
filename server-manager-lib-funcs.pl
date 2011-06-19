@@ -8335,7 +8335,7 @@ my $must_pass = !&can_action(undef, "sshkeys") &&
 if ($must_pass) {
 	# Cannot select SSH keys
 	print &ui_table_row($text{'add_authpass'},
-		&ui_textbox("upass", undef, 20));
+		&ui_password("upass", undef, 20));
 	}
 else {
 	# Can choose password, key or no SSH
