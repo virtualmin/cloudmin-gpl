@@ -500,6 +500,7 @@ create_ekvmhost=The hostname for a KVM instance cannot contain a . , as the doma
 create_ekvmip=Missing or invalid KVM instance IP address
 create_kvmip6=IPv6 address for KVM instance
 create_xenip6=IPv6 address for Xen instance
+create_citrixip6=IPv6 address for Citrix Xen VM
 create_kvmip6no=None - use IPv4 only
 create_kvmip6alloc=Allocate automatically
 create_kvmip6manual=Use address
