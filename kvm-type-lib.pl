@@ -736,6 +736,7 @@ my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
 	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
 	   { 'name' => 'ip6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
 	   { 'name' => 'netmask6', 'value' => 'mask,[mask]', 'opt' => 1 },
+	   { 'name' => 'gw6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
 	   { 'name' => 'allocate-ip6', 'value' => 'true|false', 'opt' => 1 },
 	 );
 if (&can_action(undef, "advanced")) {

@@ -27,6 +27,16 @@ if (!$in{'gw_def'}) {
 	$iface || &error($text{'ifaces_egwdev'});
 	}
 
+# Check inputs for IPv6 gateway
+$c6func = "type_".$server->{'manager'}."_can_ipv6";
+if (defined(&$cfunc) && &$c6func($server)) {
+	if (!$in{'gw6_def'}) {
+		&check_ip6address($in{'gw6'}) || &error($text{'ifaces_egw6'});
+		($iface) = grep { $_->{'fullname'} eq $in{'gwdev6'} } @$ifaces;
+		$iface || &error($text{'ifaces_egwdev6'});
+		}
+	}
+
 # Apply the change
 if ($in{'gw_def'}) {
 	$err = &modify_default_gateway($server, undef, undef);
@@ -35,6 +45,19 @@ else {
 	$err = &modify_default_gateway($server, $in{'gw'}, $in{'gwdev'});
 	}
 &error($err) if ($err);
+
+# Apply the change for IPv6
+if (defined(&$cfunc) && &$c6func($server)) {
+	if ($in{'gw6_def'}) {
+		$err = &modify_default_ipv6_gateway(
+			$server, undef, undef);
+		}
+	else {
+		$err = &modify_default_ipv6_gateway(
+			$server, $in{'gw6'}, $in{'gwdev6'});
+		}
+	&error($err) if ($err);
+	}
 
 &check_server_status($server, 0, 1);
 &save_managed_server($server);

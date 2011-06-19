@@ -5997,6 +5997,69 @@ if (!$got) {
 return wantarray ? ( $gw, $gwdev ) : $gw;
 }
 
+# get_server_default_ipv6_gateway(&server)
+# Returns the default gateway IPv6 address for some system. Uses Webmin if
+# possible, netstat otherwise. In an array content, returns the interface too.
+sub get_server_default_ipv6_gateway
+{
+my ($server) = @_;
+my ($gw, $gwdev, $got);
+if ($server->{'manager'} eq 'this') {
+        # Just call own module
+	&foreign_require("net", "net-lib.pl");
+	if (defined(&net::get_default_ipv6_gateway)) {
+		($gw, $gwdev) = &net::get_default_ipv6_gateway();
+		}
+	$got = 1;
+        }
+elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Get from Webmin
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	if (!$last_remote_error) {
+		($gw, $gwdev) = &remote_foreign_call($server, "net",
+					     "get_default_ipv6_gateway");
+		if ($last_remote_error) {
+			$gw = $gwdev = undef;
+			}
+		$got = 1;
+		}
+	}
+if (!$got) {
+	if (&can_ssh_status($server)) {
+		# Get from netstat command
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$server, "netstat -rn -6");
+		foreach my $l (split(/\r?\n/, $out)) {
+			my @w = split(/\s+/, $l);
+			if ($w[0] eq "::/0" && $w[1] ne "::") {
+				$gw = $w[1];
+				$gwdev = $w[6];
+				last;
+				}
+			}
+		}
+	else {
+		# Get from boot interfaces
+		my $err = &mount_filesystem_if_needed($server);
+		return undef if ($err);
+		my $ifaces = &list_boot_server_interfaces($server);
+		&umount_filesystem_if_needed($server);
+		if (!ref($ifaces)) {
+			return undef;
+			}
+		my ($gwiface) = grep { $_->{'gateway6'} } @$ifaces;
+		if ($gwiface) {
+			$gw = $gwiface->{'gateway6'};
+			$gwdev = $gwiface->{'name'};
+			}
+		}
+	}
+return wantarray ? ( $gw, $gwdev ) : $gw;
+}
+
+
+
 # get_global_links(system-count)
 # Returns 4 array refs, for links, titles, icons and categories
 sub get_global_links

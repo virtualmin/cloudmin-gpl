@@ -100,6 +100,21 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 			   [ map { $_->{'fullname'} }
 				grep { $_->{'virtual'} eq '' } @$ifaces ]));
 
+	$c6func = "type_".$t."_can_ipv6";
+	if (defined(&$cfunc) && &$c6func($server)) {
+		($gw6, $gwdev6) = &get_server_default_ipv6_gateway($server);
+
+		print &ui_table_row($text{'ifaces_gw6'},
+			&ui_opt_textbox("gw6", $gw6, 20, $text{'ifaces_gwnone'},
+					$text{'ifaces_gwset'}));
+
+		print &ui_table_row($text{'ifaces_gwdev6'},
+			&ui_select("gwdev6", $gwdev6,
+				   [ map { $_->{'fullname'} }
+					grep { $_->{'virtual'} eq '' } @$ifaces
+				   ]));
+		}
+
 	print &ui_table_end();
 	print &ui_form_end([ [ undef, $text{'save'} ] ]);
 	}
