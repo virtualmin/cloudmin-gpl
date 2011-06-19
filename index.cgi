@@ -261,6 +261,16 @@ if (@servers) {
 					@ips = &get_server_ip($s);
 					push(@cols, join(" , ", @ips));
 					}
+				elsif ($c eq "ip6") {
+					# Primary IPv6 address
+					$ip6 = &get_server_ip6($s);
+					push(@cols, $ip6);
+					}
+				elsif ($c eq "ips6") {
+					# All IPv6 addresses
+					@ips6 = &get_server_ip6($s);
+					push(@cols, join(" , ", @ips6));
+					}
 				elsif ($c eq "owner") {
 					# Owner names
 					push(@cols,
