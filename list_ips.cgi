@@ -62,7 +62,9 @@ foreach $m (@virtual_server_management_types) {
 				push(@{$ips{$ip}->{'hosts'}}, $s->{'id'});
 				}
 			$r = $starts[$i]."-".$ends[$i];
-			$ranges{$r} ||= { 'hosts' => [ ], };
+			$ranges{$r} ||= { 'hosts' => [ ],
+					  'start' => $starts[$i],
+					  'end' => $ends[$i] };
 			push(@{$ranges{$r}->{'hosts'}}, $s->{'id'});
 			}
 
@@ -239,7 +241,8 @@ print &ui_columns_start([ $text{'ips_range1'}, $text{'ips_range2'},
 @ranges = sort { $a cmp $b } keys %ranges;
 foreach $r (@ranges) {
 	$range = $ranges{$r};
-	@ips = &expand_ip_range($range->{'start'}, $range->{'end'});
+	@ips = $range->{'start'} ? 
+		&expand_ip_range($range->{'start'}, $range->{'end'}) : ( );
 	$count = scalar(@ips);
 	$used = 0;
 	foreach $ip (@ips) {

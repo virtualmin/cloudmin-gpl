@@ -453,8 +453,8 @@ if (&can_action(undef, "ips")) {
 		}
 	}
 
-# IPv6 address
 if (&can_action(undef, "ips") && @v6vhosts && !$empty) {
+	# IPv6 address
 	$rv .= &ui_table_row($text{'create_kvmip6'},
 		&ui_radio_table("kvm_ip6_mode", $config{'alloc_ipv6'} || 0,
 				[ [ 0, $text{'create_kvmip6no'} ],
@@ -464,6 +464,12 @@ if (&can_action(undef, "ips") && @v6vhosts && !$empty) {
 				       $text{'create_kvmip6netmask'}." ".
 				       &ui_textbox("kvm_netmask6", 64, 5) ] ],
 				1));
+
+	# Default IPv6 gateway
+	$rv .= &ui_table_row($text{'create_xengw6'},
+		&ui_opt_textbox("kvm_gw6", undef, 20,
+				$text{'create_xengwdef'},
+				$text{'create_xengwip6'}));
 	}
 
 # Warn the user if we have no DNS zone
@@ -654,6 +660,16 @@ if (!$empty) {
 			&error($text{'create_ekvmnetmask6'});
 		$server->{'kvm_ip6'} = $in{'kvm_ip6'};
 		$server->{'kvm_netmask6'} = $in{'kvm_netmask6'};
+
+		# Validate gateway
+		if ($in{'kvm_gw6_def'}) {
+			$server->{'kvm_gw6'} = '*';
+			}
+		else {
+			&check_ip6address($in{'kvm_gw6'}) ||
+				&error($text{'create_exengw6'});
+			$server->{'kvm_gw6'} = $in{'kvm_gw6'};
+			}
 		}
 	elsif ($in->{'kvm_ip6_mode'} == 1 && &can_action(undef, "ips") ||
 	       $config{'alloc_ipv6'}) {
@@ -930,6 +946,24 @@ if ($args->{'ip6'}) {
 		       "of netmasks";
 	$server->{'kvm_ip6'} = join(' ', @ips);
 	$server->{'kvm_netmask6'} = join(' ', @netmasks);
+
+	# Gateway IPs
+	if ($args->{'gw6'}) {
+		# Set on command line
+		my @gws6 = split(/[, ]+/, $args->{'gw6'});
+		foreach my $gw6 (@gws6) {
+			$gw6 eq '*' || &check_ip6address($gw6) ||
+				return "Invalid gateway IPv6 address $gw6";
+			}
+		scalar(@ips) == scalar(@gws6) ||
+			return "The number of IPv6 addresses must match the ".
+			       "number of gateways";
+		$server->{'kvm_gw6'} = join(' ', @gws6);
+		}
+	else {
+		# Assume all are using default
+		$server->{'kvm_gw6'} = join(' ', map { "*" } @ips6);
+		}
 	}
 elsif ($args->{'allocate-ip6'} =~ /true|yes/ ||
        !$args->{'allocate-ip6'} && $config{'alloc_ipv6'}) {
@@ -1260,6 +1294,12 @@ my @setgws = grep { $_ ne "*" } @gws;
 if (!@setgws && $defgw) {
 	@gws = ( $defgw );
 	}
+my $defgw6 = &get_server_default_ipv6_gateway($vhost);
+my @gws6 = split(/\s+/, $server->{'kvm_gw6'});
+my @setgws6 = grep { $_ ne "*" } @gws6;
+if (!@setgws6 && $defgw6) {
+	@gws6 = ( $defgw6 );
+	}
 
 # Generate MAC addresses
 my @macs;
@@ -1470,7 +1510,8 @@ if (!$empty && $mp) {
 	# Apply IPv6 addresses to interfaces
 	if (@ips6) {
 		&$first_print($text{'create_xenipv6'});
-		my $err = &apply_ipv6_addresses($server, \@ips6, \@netmasks6);
+		my $err = &apply_ipv6_addresses($server, \@ips6, \@netmasks6,
+						\@gws6);
 		if ($err) {
 			&$second_print(&text('create_exenipv6', $err));
 			}       

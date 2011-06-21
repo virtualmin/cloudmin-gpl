@@ -917,12 +917,12 @@ for(my $i=0; $i<@$ips; $i++) {
 return undef;
 }
 
-# apply_ipv6_addresses(&server, &addresses, &netmasks)
+# apply_ipv6_addresses(&server, &addresses, &netmasks, &gateways)
 # Updates the interfaces on a system to use the given IPv6 addresses
 # and netmasks.
 sub apply_ipv6_addresses
 {
-my ($server, $ips, $netmasks) = @_;
+my ($server, $ips, $netmasks, $gws) = @_;
 
 # Check if interface management is possible
 my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
@@ -949,10 +949,17 @@ foreach my $iface (@$ifaces) {
 		if ($ips->[$i]) {
 			$iface->{'address6'} = [ $ips->[$i] ];
 			$iface->{'netmask6'} = [ $netmasks->[$i] ];
+			if ($gws->[$i] && $gws->[$i] ne '*') {
+				$iface->{'gateway6'} = $gws->[$i];
+				}
+			else {
+				delete($iface->{'gateway6'});
+				}
 			}
 		else {
 			$iface->{'address6'} = [ ];
 			$iface->{'netmask6'} = [ ];
+			delete($iface->{'gateway6'});
 			}
 		my $err = &$mfunc($server, $iface, $oldiface);
 		return &text('create_exenipv6iface', $iface->{'fullname'},
