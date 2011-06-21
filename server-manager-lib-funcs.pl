@@ -489,24 +489,32 @@ if ($server->{'status'} ne $server->{'statushistory'} &&
 
 if ($server->{'id'} eq '0') {
 	# Special case - saving info about this system
-	my %this = ( 'status' => $server->{'status'},
-		     'statustime' => $server->{'statustime'},
-		     'status_msg' => $server->{'status_msg'},
-		     'group' => $server->{'group'},
-		     'virtualmin_checked' => $server->{'virtualmin_checked'},
-		     'virtualmin_err' => $server->{'virtualmin_err'},
-		     'virtualmin_poss' => $server->{'virtualmin_poss'},
-		     'virtualmin_domains' => $server->{'virtualmin_domains'},
-		     'virtualmin_serial' => $server->{'virtualmin_serial'},
-		     'virtualmin_key' => $server->{'virtualmin_key'},
-		     'backup_default' => $server->{'backup_default'},
-		     'all_poss' => $server->{'all_poss'},
-		     'location' => $server->{'location'},
-		     'ip_force' => $server->{'ip_force'},
-		   );
+	my %this;
+	&write_file($this_server_status, \%this);
+	%this = (%this, 
+		 'status' => $server->{'status'},
+		 'statustime' => $server->{'statustime'},
+		 'status_msg' => $server->{'status_msg'},
+		 'group' => $server->{'group'},
+		 'virtualmin_checked' => $server->{'virtualmin_checked'},
+		 'virtualmin_err' => $server->{'virtualmin_err'},
+		 'virtualmin_poss' => $server->{'virtualmin_poss'},
+		 'virtualmin_domains' => $server->{'virtualmin_domains'},
+		 'virtualmin_serial' => $server->{'virtualmin_serial'},
+		 'virtualmin_key' => $server->{'virtualmin_key'},
+		 'backup_default' => $server->{'backup_default'},
+		 'all_poss' => $server->{'all_poss'},
+		 'location' => $server->{'location'},
+		 'ip_force' => $server->{'ip_force'},
+		);
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone', 'provision',
 		       'scalegroup') {
+		foreach my $k (keys %this) {
+			if ($k =~ /^\Q$t\E_/ || $k eq $t) {
+				delete($this{$k});
+				}
+			}
 		foreach my $k (keys %$server) {
 			if ($k =~ /^\Q$t\E_/ || $k eq $t) {
 				$this{$k} = $server->{$k};
