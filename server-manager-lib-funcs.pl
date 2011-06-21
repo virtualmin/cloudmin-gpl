@@ -3328,6 +3328,84 @@ if (&can_ssh_status($server)) {
 return undef;
 }
 
+# modify_default_ipv6_gateway(&server, gateway, [gateway-device])
+# Change the default gateway IPv6 address of a system. It is assumed that the
+# gateway can be set in a network interface config.
+sub modify_default_ipv6_gateway
+{
+my ($server, $gw, $gwdev) = @_;
+my ($oldgw, $oldgwdev) = &get_server_default_ipv6_gateway($server);
+$gwdev ||= $oldgwdev;
+$gwdev ||= "eth0";
+
+# First try to change using Webmin
+my $done;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "net", "net-lib.pl");
+	if (!$last_remote_error) {
+		&remote_foreign_call($server, "net",
+			"set_default_ipv6_gateway", $gw, $gwdev);
+		}
+	if (!$last_remote_error) {
+		$done = 1;
+		}
+	}
+
+if (!$done) {
+	# Find first boot-time interface with a gateway, and change it
+	my $err = &mount_filesystem_if_needed($server);
+	return $err if ($err);
+	my $boots = &list_boot_server_interfaces($server);
+	if (ref($boots)) {
+		my ($oldiface) = grep { $_->{'fullname'} eq $oldgwdev } @$boots;
+		my ($newiface) = grep { $_->{'fullname'} eq $gwdev } @$boots;
+		if ($oldgwdev eq $gwdev && $oldiface) {
+			# Just change gateway on same interface
+			my $orig_oldiface = { %$oldiface };
+			$oldiface->{'gateway6'} = $gw;
+			my $err = &modify_boot_server_interface(
+					$server, $oldiface, $orig_oldiface);
+			return $err if ($err);
+			}
+		else {
+			if ($oldgw && $oldiface) {
+				# Remove from old interface
+				my $orig_oldiface = { %$oldiface };
+				delete($oldiface->{'gateway6'});
+				my $err = &modify_boot_server_interface(
+					$server, $oldiface, $orig_oldiface);
+				return $err if ($err);
+				}
+
+			if ($gw && $newiface) {
+				# Add to new interface
+				my $orig_newiface = { %$newiface };
+				$newiface->{'gateway6'} = $gw;
+				my $err = &modify_boot_server_interface(
+					$server, $newiface, $orig_newiface);
+				return $err if ($err);
+				}
+			}
+		}
+	&umount_filesystem_if_needed($server);
+	}
+
+# Updating routing table
+if (&can_ssh_status($server)) {
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"route -A inet6 delete default".
+		($gw ? " ; route -A inet6 add default gw $gw" : ""));
+	if ($ex || $err) {
+		return "Failed to activate new IPv6 gateway : ".($err || $out);
+		}
+	}
+
+return undef;
+}
+
+
+
 # save_server_domains(&server, &domains)
 # Writes out the list of domains hosted by some server
 sub save_server_domains
@@ -6029,7 +6107,7 @@ if (!$got) {
 	if (&can_ssh_status($server)) {
 		# Get from netstat command
 		my ($out, $ex, $err) = &execute_command_on_server(
-					$server, "netstat -rn -6");
+					$server, "netstat -rn -A inet6");
 		foreach my $l (split(/\r?\n/, $out)) {
 			my @w = split(/\s+/, $l);
 			if ($w[0] eq "::/0" && $w[1] ne "::") {
@@ -9157,6 +9235,7 @@ elsif (&redhat_server_type($server)) {
                         $b->{'address6'} = [ map { $_->[0] } @ip6s ];
                         $b->{'netmask6'} = [ map { $_->[1] } @ip6s ];
 			}
+		$b->{'gateway6'} = $conf{'IPV6_DEFAULTGW'};
                 $b->{'edit'} = 1;
                 $b->{'desc'} = $conf{'NAME'};
                 $b->{'file'} = $idir."/".$f;
@@ -9277,6 +9356,9 @@ elsif (&redhat_server_type($server)) {
                 $conf{'IPV6ADDR'} = shift(@ip6s);
                 $conf{'IPV6ADDR_SECONDARIES'} = join(" ", @ip6s);
                 }
+	if ($iface->{'gateway6'}) {
+		$conf{'IPV6_DEFAULTGW'} = $iface->{'gateway6'};
+		}
 	$conf{'NAME'} = $iface->{'desc'};
 	my $temp = &transname();
 	&write_env_file($temp, \%conf);
@@ -9322,6 +9404,9 @@ elsif (&debian_server_type($server)) {
 		my ($n6, @netmask6) = @{$iface->{'netmask6'}};
 		push(@$lref, "\t"."address ".$a6);
 		push(@$lref, "\t"."netmask ".$n6);
+		if ($iface->{'gateway6'}) {
+			push(@$lref, "\t"."gateway ".$iface->{'gateway6'});
+			}
 		for(my $i=0; $i<@address6; $i++) {
 			push(@$lref, "\t"."up ifconfig ".$iface->{'fullname'}.
 				     " inet6 add ".$address6[$i]."/".
@@ -9445,6 +9530,7 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 		$boot->{'gateway'} = $iface->{'gateway'};
 		$boot->{'address6'} = $iface->{'address6'};
 		$boot->{'netmask6'} = $iface->{'netmask6'};
+		$boot->{'gateway6'} = $iface->{'gateway6'};
 		&remote_foreign_call($server, "net", "save_interface", $boot);
 		return $last_remote_error if ($last_remote_error);
 		}
@@ -9488,6 +9574,12 @@ elsif (&redhat_server_type($server)) {
                 $conf{'IPV6ADDR'} = shift(@ip6s);
                 $conf{'IPV6ADDR_SECONDARIES'} = join(" ", @ip6s);
                 }
+	if ($iface->{'gateway6'}) {
+		$conf{'IPV6_DEFAULTGW'} = $iface->{'gateway6'};
+		}
+	else {
+		delete($conf{'IPV6_DEFAULTGW'});
+		}
 	&write_env_file($temp, \%conf);
 	my $err = &put_file_to_server($server, $temp, $ifile);
 	&unlink_file($temp);
@@ -9546,6 +9638,9 @@ elsif (&debian_server_type($server)) {
 		    "\t"."address ".$a6,
 		    "\t"."netmask ".$n6,
 		    );
+		if ($iface->{'gateway6'}) {
+			push(@v6lines, "\t"."gateway ".$iface->{'gateway6'});
+			}
 		for(my $i=0; $i<@address6; $i++) {
 			push(@v6lines, "\t"."up ifconfig ".$iface->{'fullname'}.
 				       " inet6 add ".$address6[$i]."/".

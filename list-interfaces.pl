@@ -76,6 +76,7 @@ if ($multi) {
 	# Get gateway if possible
 	$gcfunc = "type_".$server->{'manager'}."_can_gateway";
 	if (defined(&$gcfunc) && &$gcfunc($server)) {
+		# IPv4 gateway
 		($gwiface) = grep { $_->{'gateway'} } @$ifaces;
 		if ($gwiface) {
 			$gw = $gwiface->{'gateway'};
@@ -83,6 +84,20 @@ if ($multi) {
 			}
 		else {
 			($gw, $gwdev) = &get_server_default_gateway($server);
+			}
+
+		# IPv6 gateway, if supported
+		$icfunc = "type_".$server->{'manager'}."_can_ipv6";
+		if (defined(&$icfunc) && &$icfunc($server)) {
+			($gwiface6) = grep { $_->{'gateway6'} } @$ifaces;
+			if ($gwiface6) {
+				$gw6 = $gwiface6->{'gateway6'};
+				$gwdev6 = $gwiface6->{'fullname'};
+				}
+			else {
+				($gw6, $gwdev6) =
+				    &get_server_default_ipv6_gateway($server);
+				}
 			}
 		}
 
@@ -113,6 +128,9 @@ if ($multi) {
 			}
 		if ($i->{'fullname'} eq $gwdev) {
 			print "    Gateway: $gw\n";
+			}
+		if ($i->{'fullname'} eq $gwdev6) {
+			print "    Gateway for IPv6: $gw6\n";
 			}
 		if ($i->{'bridge'}) {
 			print "    Bridge: $i->{'bridge'}\n";
