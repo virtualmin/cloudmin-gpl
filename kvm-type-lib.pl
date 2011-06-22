@@ -591,9 +591,6 @@ my $vhost = &parse_host_server_field($server, 'kvm', 'kvm', $in,
 				     $server->{'kvm_disktotal'});
 $server->{'kvm_on'} = $vhost->{'id'};
 
-# Make sure the hostname doesn't contain a ., or clashes
-$in->{'host'} =~ /\./ && &error($text{'create_ekvmhost'});
-
 if (!$in->{'kvm_ip_def'} && &can_action(undef, "ips")) {
 	# Validate IP addresses
 	my @allhostifaces = split(/\s+/, $vhost->{'kvm_iface'});
@@ -731,6 +728,8 @@ if ($vhost->{'kvm_zone'}) {
 	($zone) = grep { $_->{'name'} eq $vhost->{'kvm_zone'} } @zones;
 	}
 if ($zone) {
+	# Append zone name, but disallow dots in entered name
+	$in->{'host'} =~ /\./ && &error($text{'create_ekvmhost'});
 	$server->{'host'} .= ".".$vhost->{'kvm_zone'};
 	}
 }
@@ -835,9 +834,6 @@ my ($ok, $err) = &usable_host_system($vhost, "kvm",
                                      $server->{'kvm_disktotal'});
 $ok || return "Host system $vhost->{'host'} cannot be used : $err";
 $server->{'kvm_on'} = $vhost->{'id'};
-
-# Xen instance name
-$server->{'host'} =~ /\./ && return "KVM hostnames cannot contain .";
 
 if ($args->{'ip'}) {
 	# Make sure IPs are valid
@@ -980,6 +976,7 @@ if ($vhost->{'kvm_zone'}) {
 	($zone) = grep { $_->{'name'} eq $vhost->{'kvm_zone'} } @zones;
 	}
 if ($zone) {
+	$server->{'host'} =~ /\./ && return "KVM hostnames cannot contain .";
 	$server->{'host'} .= ".".$vhost->{'kvm_zone'};
 	}
 
