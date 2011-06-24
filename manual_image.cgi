@@ -93,7 +93,13 @@ if ($fout =~ /(gzip|bzip2)\s+compressed/) {
 	# Compressed .. need to un-compress first to validate format
 	&$first_print($text{'mimage_gunzip'});
 	$cmd = $1 eq "bzip2" ? "bunzip2" : "gunzip";
-	my $uncompressedsrcpath = $srcpath.".uncompressed";
+	my $uncompressedsrcpath;
+	if ($srcpath =~ /^(.*)\.gz$/) {
+		$uncompressedsrcpath = $1;
+		}
+	else {
+		$uncompressedsrcpath = $srcpath.".uncompressed";
+		}
 	($out, $ex, $err) = &execute_command_on_server($srcserver,
 		"$cmd -c ".quotemeta($srcpath).
 		" > ".quotemeta($uncompressedsrcpath));
@@ -106,7 +112,9 @@ if ($fout =~ /(gzip|bzip2)\s+compressed/) {
 		&delete_file_on_server($srcserver, $srcpath);
 		}
 	$srcpath = $uncompressedsrcpath;
-	$image->{'files'} .= ".uncompressed";
+	if ($image->{'files'} !~ s/\.gz$//) {
+		$image->{'files'} .= ".uncompressed";
+		}
 	$srcdelete = 1;
 	&remote_finished();	# In case of timeout
 	@st = &stat_file_on_server($srcserver, $srcpath);
@@ -119,6 +127,7 @@ if ($fout =~ /(gzip|bzip2)\s+compressed/) {
 	$fout =~ s/\r|\n//g;
 	}
 
+&$first_print($text{'mimage_validating'});
 if ($in{'format'} eq "cd") {
 	# CD must have an iso 9660 filesystem
 	$fout =~ /iso\s+9660/i ||
@@ -147,6 +156,14 @@ elsif ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
 			     "<tt>".&html_escape($qex ? $fout :
 					 $1 ? $1 : $qout)."</tt>"));
 	}
+elsif ($in{'format'} eq 'tar') {
+	# Must be a tar file now
+	$fout =~ /tar\s+archive/i ||
+		&error(&text('mimage_etar',
+			     "<tt>".&html_escape($fout)."</tt>"));
+	}
+&$second_print(&text('mimage_validated', $text{'mimage_fmt'.$in{'format'}} ||
+					 uc($in{'format'})));
 
 # Convert from QCOW, QCOW2 or VMware to raw disk format
 if ($in{'format'} eq 'qcow2' || $in{'format'} eq 'qcow' ||
@@ -308,6 +325,10 @@ if ($okcount) {
 
 # Clean up downloaded file
 FAILED:
+if ($srcpath eq $in{'file'} && $in{'file_mode'} == 0) {
+	# Was converted back to original filename, so don't delete
+	$srcdelete = 0;
+	}
 if ($srcdelete) {
 	&delete_file_on_server($srcserver, $srcpath);
 	}
