@@ -41,11 +41,20 @@ $gconfig{'os_type'} eq 'redhat-linux' ||
      &usage("The Network Configuration module is not installed");
 &foreign_require("net", "net-lib.pl");
 
-# Find relevant interfaces
+# Check if any bridge is already active
 @boot = &net::boot_interfaces();
+@active = &net::active_interfaces();
+($br_any) = grep { $_->{'fullname'} =~ /^br\d+$/ } @boot;
+($br_any_active) = grep { $_->{'fullname'} =~ /^br\d+$/ } @active;
+if ($br_any && $br_any_active) {
+	# Already active!
+	print "Bridge $br_any->{'fullname'} is already active\n";
+	exit(0);
+	}
+
+# Find relevant interfaces
 ($eth0) = grep { $_->{'fullname'} eq $eth_name } @boot;
 ($br0) = grep { $_->{'fullname'} eq $br_name } @boot;
-@active = &net::active_interfaces();
 ($eth0_active) = grep { $_->{'fullname'} eq $eth_name } @active;
 ($br0_active) = grep { $_->{'fullname'} eq $br_name } @active;
 if ($br0 && $br0_active) {
