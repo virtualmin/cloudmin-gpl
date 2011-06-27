@@ -1719,6 +1719,7 @@ images_of=$1 of $2
 images_create=Create image for $1.
 images_search=Find images matching:
 images_ok=Search
+images_nosearch=No images matched your search.
 
 xen_typedesc=Xen
 xen_createlink=Create Xen Instance
@@ -4724,12 +4725,13 @@ cimage_id=New image ID
 cimage_ok=Convert Now
 cimage_err=Failed to convert image
 cimage_edesc=Missing new image description
-cimage_copying=Duplicating image files ..
-cimage_copying=Copying $1 to $2 on $3 ..
+cimage_starting=Duplicating image files ..
+cimage_copying=Copying $1 to $2 in $3 ..
 cimage_copyfailed=.. copy failed : $1
 cimage_copydone=.. copied $1
 cimage_failed=.. no image files were successfully copied!
 cimage_saving=Saving new image ..
+cimage_type=New system type
 
 __norefs=1
 

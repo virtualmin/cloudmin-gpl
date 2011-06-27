@@ -81,72 +81,79 @@ foreach $t (@virtual_server_management_types) {
 		}
 	}
 
-# Show table of images
-print &ui_form_start("get_images.cgi", "post");
-print &ui_hidden("mode", $in{'mode'});
-print &ui_hidden("search", $in{'search'});
-print &ui_links_row(\@links);
-@tds = ( "width=5" );
-$anymissing = $anymissing_dests = $anyextra_dests = 0;
-@stors = &list_storages();
-$ss = scalar(@stors);
-print &ui_columns_start([ "",
-			  $text{'images_desc'},
-			  $text{'images_manager'},
-			  $text{'images_status'},
-			  $text{'images_size'},
-			  $text{'images_stors'} ]);
-foreach $i (sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @combined) {
-	$tfunc = "type_".$i->{'manager'}."_desc";
-	($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
-	($got) = grep { $_->{'id'} eq $i->{'id'} } @images;
-	if ($avail && !$got) {
-		$anymissing++;
-		}
-
-	# Work out destinations and if any are missing or extra
-	if ($got) {
-		@dests = split(/\s+/, $got->{'dest'});
-		($missing_dests, $extra_dests) =
-			&image_storage_mismatches($got, \@stors);
-		$anymissing_dests += $missing_dests;
-		$anyextra_dests += $extra_dests;
-		$stormsg = &text('images_of', scalar(@dests), $ss);
-		if ($missing_dests) {
-			$stormsg = "<font color=#ff0000>$stormsg</font>";
+if (@combined) {
+	# Show table of images
+	print &ui_form_start("get_images.cgi", "post");
+	print &ui_hidden("mode", $in{'mode'});
+	print &ui_hidden("search", $in{'search'});
+	print &ui_links_row(\@links);
+	@tds = ( "width=5" );
+	$anymissing = $anymissing_dests = $anyextra_dests = 0;
+	@stors = &list_storages();
+	$ss = scalar(@stors);
+	print &ui_columns_start([ "",
+				  $text{'images_desc'},
+				  $text{'images_manager'},
+				  $text{'images_status'},
+				  $text{'images_size'},
+				  $text{'images_stors'} ]);
+	foreach $i (sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @combined) {
+		$tfunc = "type_".$i->{'manager'}."_desc";
+		($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
+		($got) = grep { $_->{'id'} eq $i->{'id'} } @images;
+		if ($avail && !$got) {
+			$anymissing++;
 			}
+
+		# Work out destinations and if any are missing or extra
+		if ($got) {
+			@dests = split(/\s+/, $got->{'dest'});
+			($missing_dests, $extra_dests) =
+				&image_storage_mismatches($got, \@stors);
+			$anymissing_dests += $missing_dests;
+			$anyextra_dests += $extra_dests;
+			$stormsg = &text('images_of', scalar(@dests), $ss);
+			if ($missing_dests) {
+				$stormsg =
+				    "<font color=#ff0000>$stormsg</font>";
+				}
+			}
+		else {
+			$stormsg = undef;
+			}
+		$dstr = $i->{'desc'};
+		$dstr = "<b>$dstr</b>" if ($i->{'default'});
+		print &ui_checked_columns_row([
+		    "<a href='edit_image.cgi?id=$i->{'id'}&mode=$in{'mode'}".
+		      "&search=".&urlize($in{'search'})."'>$dstr</a>",
+		    &$tfunc(),
+		    $got && $got->{'partial'} ?
+			    &text('images_partial',
+			          &nice_size($got->{'partialsize'})) :
+		    $got && !$avail ?
+			    "<font color=#00aa00>$text{'images_local'}</font>" :
+		    !$got ? $text{'images_down'} :
+		    $avail && $got->{'version'} < $avail->{'version'} ?
+			    "<font color=#aaaa00>".
+			      &text('images_new',
+				    $avail->{'version'})."</font>" :
+			    "<font color=#00aa00>$text{'images_avail'}</font>",
+		    &nice_size($got && !$got->{'partial'} ? $got->{'size'}
+						          : $avail->{'size'}),
+		    $stormsg,
+		    ], \@tds, "d", $i->{'id'});
 		}
-	else {
-		$stormsg = undef;
-		}
-	$dstr = $i->{'desc'};
-	$dstr = "<b>$dstr</b>" if ($i->{'default'});
-	print &ui_checked_columns_row([
-		"<a href='edit_image.cgi?id=$i->{'id'}&mode=$in{'mode'}".
-		  "&search=".&urlize($in{'search'})."'>$dstr</a>",
-		&$tfunc(),
-		$got && $got->{'partial'} ?
-			&text('images_partial',
-			      &nice_size($got->{'partialsize'})) :
-		$got && !$avail ?
-			"<font color=#00aa00>$text{'images_local'}</font>" :
-		!$got ? $text{'images_down'} :
-		$avail && $got->{'version'} < $avail->{'version'} ?
-			"<font color=#aaaa00>".
-			  &text('images_new', $avail->{'version'})."</font>" :
-			"<font color=#00aa00>$text{'images_avail'}</font>",
-		&nice_size($got && !$got->{'partial'} ? $got->{'size'}
-						      : $avail->{'size'}),
-		$stormsg,
-		], \@tds, "d", $i->{'id'});
+	print &ui_columns_end();
+	print &ui_links_row(\@links);
+	print &ui_form_end([
+		$anymissing ? ( [ "get", $text{'images_get'} ] ) : ( ),
+		$anymissing_dests ? ( [ "copy", $text{'images_copy'} ] ) : ( ),
+		$anyextra_dests ? ( [ "move", $text{'images_move'} ] ) : ( ),
+		]);
 	}
-print &ui_columns_end();
-print &ui_links_row(\@links);
-print &ui_form_end([
-	$anymissing ? ( [ "get", $text{'images_get'} ] ) : ( ),
-	$anymissing_dests ? ( [ "copy", $text{'images_copy'} ] ) : ( ),
-	$anyextra_dests ? ( [ "move", $text{'images_move'} ] ) : ( ),
-	]);
+else {
+	print "<b>$text{'images_nosearch'}</b><p>\n";
+	}
 
 &ui_print_footer("", $text{'index_return'});
 
