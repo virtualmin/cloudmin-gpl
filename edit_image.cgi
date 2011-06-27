@@ -118,10 +118,23 @@ if (@md5s && $md5s[0] ne "-") {
 		"<tt>".join(" ", @md5s)."</tt>");
 	}
 
+# Check if can convert
+if ($got) {
+	$cfunc = "type_".$i->{'manager'}."_can_convert_image";
+	@convs = defined(&$cfunc) ? &$cfunc($i) : ();
+	@convs = grep { $server_management_types{$_->{'manager'}} } @convs;
+	@copts = map { [ $_->{'manager'}, $text{$_->{'manager'}.'_typedesc'} ] }
+		     @convs;
+	}
+
 print &ui_table_end();
 if ($got) {
 	print &ui_form_end([ [ '', $text{'save'} ],
-			     [ "delete", $text{'eimage_delete'} ] ]);
+			     [ 'delete', $text{'eimage_delete'} ],
+			     @convs ? ( [ 'convert', $text{'eimage_convert'},
+					  &ui_select("convto", undef, \@copts) ]
+				      ) : ( ),
+			   ]);
 	}
 
 &ui_print_footer("list_images.cgi?mode=$in{'mode'}&search=".

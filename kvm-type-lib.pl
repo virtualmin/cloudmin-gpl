@@ -5249,6 +5249,14 @@ sub type_kvm_image_formats
 return ( "disk", "qcow2", "qcow", "vmdk", "cd" );
 }
 
+# type_kvm_can_convert_image(&image)
+# KVM images can be converted to Xen, with HVM
+sub type_kvm_can_convert_image
+{
+return ( { 'manager' => 'xen',
+	   'xen_hvm' => 1 } );
+}
+
 # type_kvm_can_clone(&server)
 # Any KVM instance can be cloned, if the host system is up.
 # Returns 2 if on LVM, which allows cloning without shutdown

@@ -1870,6 +1870,7 @@ eimage_rawsize=Size on host system
 eimage_files=Component files
 eimage_dest=Image storage location
 eimage_delete=Delete Image
+eimage_convert=Convert To:
 eimage_users=Used to create systems
 eimage_md5=Expected MD5	checksum
 eimage_nodelete=Delete data files when removing image?

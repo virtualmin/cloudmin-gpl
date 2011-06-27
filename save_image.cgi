@@ -14,6 +14,13 @@ if ($in{'delete'}) {
 	# Just delete
 	&delete_server_image($img);
 	&webmin_log("delete", "image", $img->{'id'});
+	&redirect("list_images.cgi?mode=$in{'mode'}&search=".
+		  &urlize($in{'search'}));
+	}
+elsif ($in{'convert'}) {
+	# Redirect to conversion form
+	&redirect("convert_image_form.cgi?id=$img->{'id'}&convto=$in{'convto'}".
+		  "&search=".&urlize($in{'search'}));
 	}
 else {
 	# Update description and OS
@@ -38,5 +45,6 @@ else {
 			}
 		}
 	&webmin_log("modify", "image", $img->{'id'});
+	&redirect("list_images.cgi?mode=$in{'mode'}&search=".
+		  &urlize($in{'search'}));
 	}
-&redirect("list_images.cgi?mode=$in{'mode'}&search=".&urlize($in{'search'}));
