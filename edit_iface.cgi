@@ -185,6 +185,10 @@ if (defined(&$mfunc) && &$mfunc($server, $in{'new'} ? undef : $iface)) {
 		&ui_opt_textbox("mac", $iface->{'ether'}, 20,
 				$text{'iface_macdef'}));
 	}
+elsif (!$in{'new'} && $iface->{'ether'}) {
+	print &ui_table_row($text{'iface_mac'},
+		"<tt>$iface->{'ether'}</tt>");
+	}
 
 # Interface model (if non-virtual)
 $lfunc = "type_".$server->{'manager'}."_list_models";
