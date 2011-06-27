@@ -2864,6 +2864,7 @@ if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 			@vgs = &remote_foreign_call($vhost, "lvm",
 						    "list_volume_groups");
 			}
+		@vgs = grep { $_->{'name'} ne 'gpt_vg' } @vgs;
 		push(@rv, map {
 			{ 'id' => 'lvm_'.$_->{'name'},
 			  'desc' => &text('storage_lvm', $_->{'name'}),
