@@ -231,11 +231,13 @@ foreach my $l (split(/\r?\n/, $out)) {
 return \@rv;
 }
 
-# create_disk_image_partition(&server, file, number, [size], [make-label])
+# create_disk_image_partition(&server, file, number, [size], [make-label],
+#			      [bootable], [parted-type])
 # Creates a new partition on some empty disk image
 sub create_disk_image_partition
 {
-my ($vhost, $real, $num, $size, $make_label, $bootable) = @_;
+my ($vhost, $real, $num, $size, $make_label, $bootable, $ptype) = @_;
+$ptype ||= "ext2";
 
 if (&has_command_on_server($vhost, "parted")) {
 	# Create the disk label with parted
@@ -251,7 +253,7 @@ if (&has_command_on_server($vhost, "parted")) {
 	my $mbs = $size ? int($size/1000000) : undef;
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
                 "parted -s ".quotemeta($real).
-		" mkpartfs primary ext2 1 ".$mbs);
+		" mkpartfs primary $ptype 1 ".$mbs);
 	if ($ex || $err) {
 		return "Failed to create partition : ".($err || $out);
 		}
@@ -599,6 +601,24 @@ if ($path =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
 	return ($1, $2);
 	}
 return ( );
+}
+
+# get_mounted_map(&server)
+# Returns hash ref from mount device to mount point
+sub get_mounted_map
+{
+my %mounted;
+my ($out, $ex, $err) = &execute_command_on_server($server, "mount");
+foreach my $l (split(/\r?\n/, $out)) {
+	my ($dev, $on, $mp) = split(/\s+/, $l);
+	$mounted{$dev} = $mp;
+	}
+($out, $ex, $err) = &execute_command_on_server($server, "cat /proc/swaps");
+foreach my $l (split(/\r?\n/, $out)) {
+	my ($dev) = split(/\s+/, $l);
+	$mounted{$dev} = 'swap';
+	}
+return \%mounted;
 }
 
 1;

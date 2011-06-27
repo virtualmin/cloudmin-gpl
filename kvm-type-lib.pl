@@ -509,6 +509,14 @@ $rv .= &ui_table_row($text{'create_xendisksize'},
 		 &vui_opt_bytesbox("kvm_disk", undef, 8,
 				  $text{'create_xendiskdef'}));
 
+# Swap space
+if (!$empty) {
+	$rv .= &ui_table_row($text{'create_xenswapsize'},
+		&vui_opt_bytesbox("kvm_swap",
+				  $config{'kvm_swap'}*1024*1024 || undef, 8,
+				  $text{'create_xennoswap'}));
+	}
+
 return $rv;
 }
 
@@ -567,13 +575,22 @@ my $img = $empty ? undef : &get_server_image($server->{'image'});
 $in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
 $server->{'kvm_memory'} = ($in{'kvm_memory'} * $in{'kvm_memory_units'}) /
 			  (1024*1024);
+$server->{'kvm_disktotal'} = 0;
+
+# Validate swap file
+if (!$in{'kvm_swap_def'} && !$empty) {
+	$in{'kvm_swap'} =~ /^\d+$/ || &error($text{'create_exenswapsize'});
+	$server->{'kvm_swap'} = ($in{'kvm_swap'} * $in{'kvm_swap_units'}) /
+				(1024*1024);
+	$server->{'kvm_disktotal'} += $server->{'kvm_swap'}*1024*1024;
+	}
 
 # Validate disk size
 if (!$in{'kvm_disk_def'} || $empty) {
 	$in{'kvm_disk'} =~ /^\d+$/ || &error($text{'create_exendisksize'});
 	$server->{'kvm_disksize'} = ($in{'kvm_disk'} * $in{'kvm_disk_units'}) /
 				    (1024*1024);
-	$server->{'kvm_disktotal'} = $server->{'kvm_disksize'}*1024*1024;
+	$server->{'kvm_disktotal'} += $server->{'kvm_disksize'}*1024*1024;
 	if (!$empty &&
 	    $img->{'rawsize'} &&
 	    $img->{'rawsize'} > $server->{'kvm_disksize'}*1024*1024) {
@@ -582,7 +599,7 @@ if (!$in{'kvm_disk_def'} || $empty) {
 		}
 	}
 else {
-	$server->{'kvm_disktotal'} = $img->{'rawsize'};
+	$server->{'kvm_disktotal'} += $img->{'rawsize'};
 	}
 
 # Select host system
@@ -748,6 +765,9 @@ my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
 	   { 'name' => 'gw', 'value' => 'address[,address|*]', 'opt' => 1 },
 	   { 'name' => 'bridge', 'value' => 'name[,name]', 'opt' => 1 },
 	   { 'name' => 'disksize', 'value' => 'megabytes', 'opt' => !$empty },
+	   $empty ? ( ) : ( { 'name' => 'swap',
+                              'value' => 'megabytes',
+                              'opt' => 1 } ),
 	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
 	   { 'name' => 'ip6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
 	   { 'name' => 'netmask6', 'value' => 'mask,[mask]', 'opt' => 1 },
@@ -782,12 +802,26 @@ else {
 	$server->{'kvm_memory'} = $config{'kvm_mem'};
 	}
 
+# Validate swap flag
+$server->{'kvm_disktotal'} = 0;
+if (!$empty) {
+        if ($args->{'swap'}) {
+                $args->{'swap'} =~ /^\d+$/ ||
+                        return "Non-numeric swap allocation";
+                $server->{'kvm_swap'} = $args->{'swap'};
+                }
+        else {
+                $server->{'kvm_swap'} = $config{'kvm_swap'};
+                }
+        $server->{'kvm_disktotal'} += $args->{'swap'}*1024*1024;
+        }
+
 # Validate filesystem size flag
 if ($args->{'disksize'} || $empty) {
 	$args->{'disksize'} || return "Missing disk size parameter";
 	$args->{'disksize'} =~ /^\d+$/ ||
 		return "Non-numeric disk size";
-	$server->{'kvm_disksize'} = $args->{'disksize'};
+	$server->{'kvm_disksize'} += $args->{'disksize'};
 	if (!$empty &&
             $img->{'rawsize'} &&
 	    $img->{'rawsize'} > $args->{'disksize'}*1024*1024) {
@@ -1068,6 +1102,7 @@ my ($fsfile, $swfile, $lvmsuffix);
 if ($reset) {
 	# Filesystem remains the same
 	$fsfile = $server->{'kvm_filesystem'};
+	$swfile = $server->{'kvm_swapfile'};
 	if (!$fsfile) {
 		return "A system with no primary disk cannot be reset";
 		}
@@ -1079,12 +1114,23 @@ elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
 	$server->{'kvm_filesystem_lv'} =~ s/\./_/g;
 	$fsfile = "/dev/".$server->{'kvm_filesystem_vg'}."/".
 		  $server->{'kvm_filesystem_lv'};
+        if ($server->{'kvm_swap'}) {
+                $server->{'kvm_swapfile_vg'} = $vhost->{'kvm_vg'};
+                $server->{'kvm_swapfile_lv'} = $server->{'host'}.'_swap';
+		$server->{'kvm_swapfile_lv'} =~ s/\./_/g;
+                $swfile = "/dev/".$server->{'kvm_swapfile_vg'}."/".
+                          $server->{'kvm_swapfile_lv'};
+                }
 	}
 else {
 	# On regular files
 	$fsfile = "$vhost->{'kvm_dir'}/$server->{'host'}.img";
+        if ($server->{'kvm_swap'}) {
+                $swfile = "$vhost->{'kvm_dir'}/$server->{'host'}.swap";
+                }
 	}
 $server->{'kvm_filesystem'} = $fsfile;
+$server->{'kvm_swapfile'} = $swfile;
 
 # Work out interface parameters, create networking config
 my @ips = split(/\s+/, $server->{'kvm_ip'});
@@ -1116,6 +1162,11 @@ if ($server->{'kvm_model'}) {
 if (!$reset) {
 	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,".
 		  ($server->{'kvm_virtio'} ? "if=virtio,boot=on" : "if=ide");
+	if ($swfile) {
+		$server->{'kvm_drives'} .=
+			" file=$swfile,media=disk,index=1,cache=off,".
+			($server->{'kvm_virtio'} ? "if=virtio" : "if=ide");
+		}
 	}
 
 # Find existing LV if resetting
@@ -1127,6 +1178,8 @@ if ($reset && $server->{'kvm_filesystem_vg'}) {
 		"list_logical_volumes", $server->{'kvm_filesystem_vg'});
 	($fslv) = grep { $_->{'vg'} eq $server->{'kvm_filesystem_vg'} &&
 			 $_->{'name'} eq $server->{'kvm_filesystem_lv'} } @lvs;
+	($swlv) = grep { $_->{'vg'} eq $server->{'kvm_swapfile_vg'} &&
+			 $_->{'name'} eq $server->{'kvm_swapfile_lv'} } @lvs;
 	}
 
 # If on LVM, create an LV first
@@ -1161,6 +1214,35 @@ if ($server->{'kvm_filesystem_vg'}) {
 		return "LVM logical volume creation failed : $err" if ($err);
 		}
 	}
+
+# Create swap LV
+if ($server->{'kvm_swapfile_vg'}) {
+        my $lv = { 'name' => $server->{'kvm_swapfile_lv'},
+                   'size' => int($server->{'kvm_swap'}*1024),
+                   'perm' => 'rw',
+                   'alloc' => 'n',
+                   'vg' => $server->{'kvm_swapfile_vg'} };
+        if (!($fslv && $swaplv->{'size'} > $lv->{'size'} &&
+                       $swaplv->{'size'}-$lv->{'size'} < 100*1024)) {
+                # Only delete and re-create if an old LV with close enough to
+                # the same size doesn't exist
+                if ($reset) {
+                        # Delete the old LV
+                        &delete_all_disk_image_partitions($vhost, $swfile);
+                        my $err = &remote_foreign_call($vhost, "lvm",
+                                             "delete_logical_volume",
+                                             { 'device' => $swfile });
+                        $err ||= $last_remote_error;
+                        return "LVM logical volume deletion failed : $err"
+                                if ($err);
+                        }
+                my $err = &remote_foreign_call($vhost, "lvm",
+                                                "create_logical_volume", $lv);
+                $err ||= $last_remote_error;
+                return "LVM logical volume creation for swap failed : $err"
+                        if ($err);
+                }
+        }
 
 # Create empty disk file and partition
 if ($empty) {
@@ -1372,6 +1454,31 @@ if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
 	&umount_filesystem_if_needed($server);
 	}
 
+my ($fsfile, $swfile, $swsize);
+if (!$empty && $server->{'kvm_swapfile'}) {
+        # Create the swap file, if needed
+	$swsize = $server->{'kvm_swap'}*1024*1024;
+	$swfile = $server->{'kvm_swapfile'};
+	my @st = &stat_file_on_server($vhost, $swfile);
+	if (!@st || $server->{'kvm_swapfile_vg'}) {
+		&$first_print(&text('create_xenswap',
+				    &nice_size($swsize)));
+		my ($out, $ex, $err) = &execute_command_on_server(
+			$vhost, &dd_command("/dev/zero", $swfile, $swsize));
+		if (!$err) {
+			$err = &create_disk_image_partition($vhost, $swfile,
+							    1, $swsize, 1, 0,
+							    "linux-swap");
+			}
+		if ($err) {
+			&$second_print(&text('create_exenswap', $out));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	}
+
 if (!$empty && &mountable_filesystem($server)) {
 	# Clean up /etc/fstab to remove non-existant devices
 	&$first_print($text{'create_xencleanfstab'});
@@ -1387,7 +1494,7 @@ if (!$empty && &mountable_filesystem($server)) {
 my $mp;
 if (!$empty) {
 	# Expand the filesystem image, if needed
-	my $fsfile = $server->{'kvm_filesystem'};
+	$fsfile = $server->{'kvm_filesystem'};
 	if ($server->{'kvm_disksize'}) {
 		my $dksize = $server->{'kvm_disksize'}*1024*1024;
 		&$first_print(&text('create_xenresize', &nice_size($dksize)));
@@ -1503,6 +1610,40 @@ if (!$empty && $mp) {
 			&$second_print($text{'create_done'});
 			}
 		}
+
+        # Add the swap file to /etc/fstab, if any
+        &$first_print($text{'create_xenfstab'});
+        my $fstab = &get_system_fstab($server);
+	my $wantdev = $server->{'kvm_virtio'} ? "/dev/vdb" : "/dev/hdb";
+        if (!ref($fstab)) {
+                &$second_print(&text('create_exenswaptab', $fstab));
+                }
+        else {
+                my $changed_fstab;
+                if ($server->{'kvm_swapfile'}) {
+                        # Add swap device
+                        my ($sw) = grep { $_->[0] eq $wantdev.'1' } @$fstab;
+                        if (!$sw) {
+                                push(@$fstab, [ $wantdev.'1', 'swap', 'swap',
+                                                'defaults', 0, 0, ]);
+                                $changed_fstab++;
+                                }
+                        }
+                if ($changed_fstab) {
+                        # Write out again
+                        my $err = &put_system_fstab($server, $fstab);
+                        if ($err) {
+                                &$second_print(
+                                        &text('create_exenswaptab', $err));
+                                }
+                        else {
+                                &$second_print($text{'create_done'});
+                                }
+                        }
+                else {
+                        &$second_print(&text('create_xenswaptabok'));
+                        }
+                }
 
 	# Apply IPv6 addresses to interfaces
 	if (@ips6) {
@@ -2111,6 +2252,9 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		$disk->{'storage'} = $text{'storage_files'};
 		}
 	$disk->{'index'} = scalar(@rv);
+	if ($disk->{'real'} eq $server->{'kvm_swapfile'}) {
+		$disk->{'swap'} = 1;
+		}
 	push(@rv, $disk);
 	}
 
@@ -2122,8 +2266,8 @@ if ($mounts) {
 	my %label_to_part;
 	my $got_label_to_part = 0;
 	foreach my $d (@rv) {
-		my ($f) = grep { &same_xen_virt($d->{'virt'}, $_->[0], 1) &&
-				 $_->[2] ne 'swap' } @$fstab;
+		my ($f) = grep { &same_xen_virt($d->{'virt'}, $_->[0], 1) }
+			       @$fstab;
 		if (!$f) {
 			# Check if a partition has an ext label
 			if (!$got_label_to_part) {
@@ -2164,16 +2308,10 @@ if ($mounts) {
 
 	# Check if actually mounted
 	if (&can_ssh_status($server)) {
-		my %mounted;
-		my ($out, $ex, $err) =
-			&execute_command_on_server($server, "mount");
-		foreach my $l (split(/\r?\n/, $out)) {
-			my ($dev, $on, $mp) = split(/\s+/, $l);
-			$mounted{$dev} = $mp;
-			}
+		my $mounted = &get_mounted_map($server);
 		foreach my $d (@rv) {
-			$d->{'mounted'} = $mounted{$d->{'virt'}} ||
-					  $mounted{$d->{'virt_mount'}};
+			$d->{'mounted'} = $mounted->{$d->{'virt'}} ||
+					  $mounted->{$d->{'virt_mount'}};
 			}
 		}
 	}
@@ -2366,6 +2504,10 @@ else {
 if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
 	$drive{'index'} = ord($2)-97;
 	}
+if ($disk->{'mount'} && $disk->{'fs'} eq 'swap') {
+	# Turn off caching for swapfiles
+	$drive{'cache'} = 'off';
+	}
 push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
 $server->{'kvm_drives'} = join(" ", @drives);
 if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
@@ -2373,6 +2515,13 @@ if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
 	$server->{'kvm_filesystem'} = $drive{'file'};
 	$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
 	$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
+	}
+if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
+    $disk->{'mount'} && $disk->{'fs'} eq 'swap') {
+	# This is the new swap disk
+	$server->{'kvm_swapfile'} = $drive{'file'};
+	$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
+	$server->{'kvm_swapfile_lv'} = $disk->{'lv'};
 	}
 &save_managed_server($server);
 &type_kvm_set_atboot($server, 2);
@@ -2433,10 +2582,15 @@ if (&can_ssh_status($server) && $disk->{'mounted'}) {
 my @drives = split(/\s+/, $server->{'kvm_drives'});
 splice(@drives, $disk->{'drive_index'}, 1);
 $server->{'kvm_drives'} = join(" ", @drives);
+
+# Main drive has been removed, so remove reference to it in config
 if ($server->{'kvm_filesystem'} eq $disk->{'real'}) {
-	# Main drive has been removed, so remove reference to it in config
 	delete($server->{'kvm_filesystem'});
 	}
+if ($server->{'kvm_swapfile'} eq $disk->{'real'}) {
+	delete($server->{'kvm_swapfile'});
+	}
+
 &save_managed_server($server);
 &type_kvm_set_atboot($server, 2);
 
@@ -5750,6 +5904,7 @@ sub type_kvm_set_boot_device
 {
 my ($server, $mode) = @_;
 $server->{'kvm_bootdevice'} = $mode;
+&type_kvm_set_atboot($server, 2);
 return undef;
 }
 
