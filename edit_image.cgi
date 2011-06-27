@@ -93,6 +93,8 @@ if ($got) {
 		join("<br>\n", map { &nice_image_destination($_) }
 				   split(/\s+/, $got->{'dest'})));
 
+	# Delete files when removing?
+	print &ui_table_row($text{'eimage_nodelete'},
 		&ui_yesno_radio("nodelete", !$i->{'nodelete'}));
 
 	# Default image
