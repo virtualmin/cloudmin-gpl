@@ -4722,6 +4722,14 @@ cimage_header=Converted image options
 cimage_desc=New image description
 cimage_id=New image ID
 cimage_ok=Convert Now
+cimage_err=Failed to convert image
+cimage_edesc=Missing new image description
+cimage_copying=Duplicating image files ..
+cimage_copying=Copying $1 to $2 on $3 ..
+cimage_copyfailed=.. copy failed : $1
+cimage_copydone=.. copied $1
+cimage_failed=.. no image files were successfully copied!
+cimage_saving=Saving new image ..
 
 __norefs=1
 
