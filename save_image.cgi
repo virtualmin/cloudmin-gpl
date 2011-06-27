@@ -20,7 +20,7 @@ if ($in{'delete'}) {
 elsif ($in{'convert'}) {
 	# Redirect to conversion form
 	&redirect("convert_image_form.cgi?id=$img->{'id'}&convto=$in{'convto'}".
-		  "&search=".&urlize($in{'search'}));
+		  "&search=".&urlize($in{'search'})."&mode=$in{'mode'}");
 	}
 else {
 	# Update description and OS

@@ -4715,5 +4715,13 @@ scaleemail_body_dec=The system $1 has been deleted from auto-scaling group $2 du
 scaleemail_body_dec_error=Deletion of a system from auto-scaling group $1 failed : $2. Removal of a system was needed due to : $3
 scaleemail_body_over=Auto-scaling group $1 has reached its system limit of $2, but needs a new system due to : $3
 
+cimage_title=Convert Image
+cimage_egone=The original image no longer exists!
+cimage_help=This form allows you to create a new image by converting an existing one to a different virtualization type. No actual changes are made to the filesystem or disks contained within the image, so the new image is not guaranteed to be usable if it conflicts with some requirements of the target virtualization type.
+cimage_header=Converted image options
+cimage_desc=New image description
+cimage_id=New image ID
+cimage_ok=Convert Now
+
 __norefs=1
 
