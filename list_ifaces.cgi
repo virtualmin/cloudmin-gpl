@@ -59,7 +59,10 @@ foreach $iface (@$ifaces) {
 		($ucode, $use) = &get_interface_use($server, $info,
 						    \@doms, $iface);
 		}
-	$adesc = &html_escape($iface->{'address'}) || $text{'ifaces_noaddress'};
+	$adesc = $iface->{'dhcp'} ? $text{'ifaces_dhcp'} :
+		 $iface->{'bootp'} ? $text{'ifaces_bootp'} :
+		 &html_escape($iface->{'address'}) ||
+		  $text{'ifaces_noaddress'};
 	print &ui_columns_row([
 		$iface->{'noedit'} || !&can_action($server, "ifaces") ?
 		    $adesc :

@@ -1511,6 +1511,8 @@ ifaces_bw0=Only selected
 ifaces_bwerr=Failed to save network interfaces for bandwidth monitoring
 ifaces_bwnone=None selected
 ifaces_noaddress=No address configured
+ifaces_dhcp=From DHCP
+faces_bootp=From BOOTP
 
 iface_create=Add Network Interface
 iface_createreal=Add Real Network Interface
@@ -1562,6 +1564,7 @@ iface_esupportreal=Real network interfaces are not supported on this system
 iface_ebridge=The selected network bridge does not exist!
 iface_active=Currently active on system?
 iface_activeno=No - may require a reboot to enable
+iface_noedit=This network interface cannot be edited
 
 dmass_err=Failed to update Virtualmin domains
 dmass_eserver=System with ID $1 was not found

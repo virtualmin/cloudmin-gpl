@@ -17,6 +17,7 @@ if (!$in{'new'}) {
 	$ifaces = &$ifunc($server);
 	ref($ifaces) || &error(&text('iface_eget', $ifaces));
 	$iface = $ifaces->[$in{'idx'}];
+	$iface->{'noedit'} && &error($text{'iface_enoedit'});
 	$oldiface = { %$iface };
 	}
 %used = &used_ip_addresses();

@@ -112,9 +112,19 @@ if ($multi) {
 		if ($i->{'virtual'} ne '') {
 			print "    Interface number: $i->{'virtual'}\n";
 			}
-		if ($i->{'address'}) {
+		if ($i->{'dhcp'}) {
+			print "    Address method: DHCP\n";
+			}
+		elsif ($i->{'bootp'}) {
+			print "    Address method: BOOTP\n";
+			}
+		elsif ($i->{'address'}) {
+			print "    Address method: Static\n";
 			print "    IP address: $i->{'address'}\n";
 			print "    Netmask: $i->{'netmask'}\n";
+			}
+		else {
+			print "    Address method: None\n";
 			}
 		if ($i->{'ether'}) {
 			print "    Ethernet address: $i->{'ether'}\n";
@@ -168,7 +178,11 @@ else {
 			($ucode, $use) = &get_interface_use($server, $info,
 							    \@doms, $i);
 			}
-		printf $fmt, $i->{'fullname'}, $i->{'address'}, $i->{'netmask'},
+		printf $fmt, $i->{'fullname'},
+			     $i->{'dhcp'} ? "DHCP" :
+			       $i->{'bootp'} ? "BOOTP" :
+			       $i->{'address'} || "None",
+			     $i->{'netmask'} || "None",
 			     &strip_html_tags($use);
 		}
 	}

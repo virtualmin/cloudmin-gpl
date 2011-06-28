@@ -149,6 +149,7 @@ else {
 	($iface) = grep { $_->{'fullname'} eq $name } @$ifaces;
 	$iface || &usage("No interface named $name found");
 	}
+$iface->{'noedit'} && &usage("This interface cannot be edited");
 
 # Check if we can manage IPv6
 if (@add6 || @del6) {

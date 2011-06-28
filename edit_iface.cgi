@@ -13,6 +13,7 @@ if (!$in{'new'}) {
 	$ifaces = &$ifunc($server);
 	ref($ifaces) || &error(&text('iface_eget', $ifaces));
 	$iface = $ifaces->[$in{'idx'}];
+	$iface->{'noedit'} && &error($text{'iface_enoedit'});
 	}
 $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 $can = &$cfunc($server);

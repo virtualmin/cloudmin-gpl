@@ -3138,6 +3138,7 @@ if (ref($rv)) {
 		if ($iface->{'fullname'} eq 'eth0') {
 			$iface->{'nodelete'} = 1
 			}
+		$iface->{'noedit'} = 1 if (!$iface->{'address'});
 		}
 	}
 
