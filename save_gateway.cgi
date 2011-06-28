@@ -21,19 +21,22 @@ $ifaces = &$ifunc($server);
 ref($ifaces) || &error(&text('iface_eget', $ifaces));
 
 # Check inputs
+($oldgw, $oldgwdev) = &get_server_default_gateway($server);
 if (!$in{'gw_def'}) {
 	&check_ipaddress($in{'gw'}) || &error($text{'ifaces_egw'});
 	($iface) = grep { $_->{'fullname'} eq $in{'gwdev'} } @$ifaces;
-	$iface || &error($text{'ifaces_egwdev'});
+	$iface || $in{'gwdev'} eq $oldgwdev || &error($text{'ifaces_egwdev'});
 	}
 
 # Check inputs for IPv6 gateway
 $c6func = "type_".$server->{'manager'}."_can_ipv6";
 if (defined(&$cfunc) && &$c6func($server)) {
+	($oldgw6, $oldgwdev6) = &get_server_default_ipv6_gateway($server);
 	if (!$in{'gw6_def'}) {
 		&check_ip6address($in{'gw6'}) || &error($text{'ifaces_egw6'});
 		($iface) = grep { $_->{'fullname'} eq $in{'gwdev6'} } @$ifaces;
-		$iface || &error($text{'ifaces_egwdev6'});
+		$iface || $in{'gwdev6'} eq $oldgwdev6 ||
+			&error($text{'ifaces_egwdev6'});
 		}
 	}
 

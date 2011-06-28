@@ -105,7 +105,8 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 	print &ui_table_row($text{'ifaces_gwdev'},
 		&ui_select("gwdev", $gwdev,
 			   [ map { $_->{'fullname'} }
-				grep { $_->{'virtual'} eq '' } @$ifaces ]));
+				grep { $_->{'virtual'} eq '' } @$ifaces ],
+			   1, 0, $gwdev ? 1 : 0));
 
 	$c6func = "type_".$t."_can_ipv6";
 	if (defined(&$cfunc) && &$c6func($server)) {
@@ -119,7 +120,7 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 			&ui_select("gwdev6", $gwdev6,
 				   [ map { $_->{'fullname'} }
 					grep { $_->{'virtual'} eq '' } @$ifaces
-				   ]));
+				   ], 1, 0, $gwdev6 ? 1 : 0));
 		}
 
 	print &ui_table_end();
