@@ -68,6 +68,7 @@ defined(&$cfunc) && &$cfunc($server) ||
 $server->{'status'} eq 'nohost' && &usage("Host for system is down");
 $ifaces = &$ifunc($server);
 ref($ifaces) || &usage("Failed to list interfaces : $ifaces");
+$ifaces = [ sort { $a->{'fullname'} cmp $b->{'fullname'} } @$ifaces ];
 
 $info = &get_server_collected($server);
 @doms = &get_server_domains($server);

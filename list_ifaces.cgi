@@ -54,7 +54,7 @@ print &ui_columns_start([ $text{'edit_ifaceaddress'},
 			  $info ? ( $text{'edit_ifaceuse'} ) : ( ) ],
 			100);
 $n = 0;
-foreach $iface (@$ifaces) {
+foreach $iface (sort { $a->{'fullname'} cmp $b->{'fullname'} } @$ifaces) {
 	if ($info) {
 		($ucode, $use) = &get_interface_use($server, $info,
 						    \@doms, $iface);
@@ -63,6 +63,10 @@ foreach $iface (@$ifaces) {
 		 $iface->{'bootp'} ? $text{'ifaces_bootp'} :
 		 &html_escape($iface->{'address'}) ||
 		  $text{'ifaces_noaddress'};
+	$ndesc = $iface->{'dhcp'} ? $text{'ifaces_dhcp'} :
+		 $iface->{'bootp'} ? $text{'ifaces_bootp'} :
+		 &html_escape($iface->{'netmask'}) ||
+		  $text{'ifaces_nonetmask'};
 	print &ui_columns_row([
 		$iface->{'noedit'} || !&can_action($server, "ifaces") ?
 		    $adesc :
@@ -74,7 +78,7 @@ foreach $iface (@$ifaces) {
 		$iface->{'name'},
 		$iface->{'virtual'} eq '' ?
 		 "<i>$text{'edit_ifacereal'}</i>" : $iface->{'virtual'},
-		$iface->{'netmask'},
+		$ndesc,
 		$anyv6 ? ( join("<br>\n", @{$iface->{'address6'}}) ) : ( ),
 		$info ? ( $use ) : ( ),
 		]);
