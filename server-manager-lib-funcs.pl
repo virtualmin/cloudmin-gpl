@@ -9264,7 +9264,7 @@ elsif (&debian_server_type($server)) {
 	my %auto;
 	my ($b, $v6);
 	foreach my $l (@$lref) {
-		if ($l =~ /^iface\s+(\S+)\s+inet\s+(static|loopback)/) {
+		if ($l =~ /^iface\s+(\S+)\s+inet\s+(static|loopback|manual)/) {
 			# Start of a new interface
 			$b = { 'name' => $1,
 			       'fullname' => $1 };
