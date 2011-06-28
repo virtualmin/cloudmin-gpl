@@ -3123,7 +3123,8 @@ else {
 		# Add boot-time interfaces that aren't active yet
 		my %got = map { $_->{'fullname'}, $_ } @$rv;
 		push(@$rv, grep { !$got{$_->{'fullname'}} &&
-				  &check_ipaddress($_->{'address'}) }
+				  (&check_ipaddress($_->{'address'}) ||
+				   $_->{'address'} eq '') }
 				@$bootrv);
 		}
 	}
