@@ -2374,7 +2374,7 @@ $used{"/dev/hdc"}++;	# Typically for CD-ROM
 
 # Pick a /dev/???? file that is free on the virtual system
 my $n;
-if ($disks->[0]->{'virt'} =~ /^(\/dev\/[shx]d)[a-z]$/) {
+if ($disks->[0]->{'virt'} =~ /^(\/dev\/[shxv]d)[a-z]$/) {
 	# Pick a free partition on the next disk
 	$prefix = $1;
 	for($n='a'; $used{$prefix.$n}; $n=chr(ord($n)+1)) { }
