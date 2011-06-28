@@ -3132,8 +3132,7 @@ else {
 # with no IP or non-ethernet
 if (ref($rv)) {
 	$rv = [ grep { $_->{'fullname'} =~ /^eth/ &&
-		       $_->{'up'} &&
-		       $_->{'address'} } @$rv ];
+		       $_->{'up'} } @$rv ];
 	foreach my $iface (@$rv) {
 		$iface->{'active'} ||= 0;
 		if ($iface->{'fullname'} eq 'eth0') {

@@ -59,11 +59,11 @@ foreach $iface (@$ifaces) {
 		($ucode, $use) = &get_interface_use($server, $info,
 						    \@doms, $iface);
 		}
+	$adesc = &html_escape($iface->{'address'}) || $text{'ifaces_noaddress'};
 	print &ui_columns_row([
 		$iface->{'noedit'} || !&can_action($server, "ifaces") ?
-		    $iface->{'address'} :
-		    "<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>".
-		    "$iface->{'address'}</a>",
+		    $adesc :
+		    "<a href='edit_iface.cgi?id=$in{'id'}&idx=$n'>$adesc</a>",
 		!$anyactive ? ( ) :
 		  !defined($iface->{'active'}) ? ( "&nbsp;" ) :
 		  $iface->{'active'} ? ( $text{'yes'} ) :

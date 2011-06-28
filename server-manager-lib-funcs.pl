@@ -9341,11 +9341,13 @@ elsif (&redhat_server_type($server)) {
 			$iface->{'name'}.":".$iface->{'virtual'} :
 			$iface->{'name'};
 	$conf{'DEVICE'} = $name;
-	$conf{'IPADDR'} = $iface->{'address'};
-	$conf{'NETMASK'} = $iface->{'netmask'};
-	$conf{'NETWORK'} = &net::compute_network($iface->{'address'},
-						 $iface->{'netmask'});
-	$conf{'BROADCAST'} = $iface->{'broadcast'};
+	if ($iface->{'address'}) {
+		$conf{'IPADDR'} = $iface->{'address'};
+		$conf{'NETMASK'} = $iface->{'netmask'};
+		$conf{'NETWORK'} = &net::compute_network($iface->{'address'},
+							 $iface->{'netmask'});
+		$conf{'BROADCAST'} = $iface->{'broadcast'};
+		}
         if ($iface->{'gateway'}) {
                 $conf{'GATEWAY'} = $iface->{'gateway'};
                 }
@@ -9392,11 +9394,13 @@ elsif (&debian_server_type($server)) {
 	push(@$lref, "auto ".$iface->{'fullname'});
 	push(@$lref, "");
 	push(@$lref, "iface ".$iface->{'fullname'}." inet static");
-	push(@$lref, "\t"."address ".$iface->{'address'});
-	push(@$lref, "\t"."netmask ".$iface->{'netmask'});
-	$iface->{'network'} = &net::compute_network($iface->{'address'},
-                                                    $iface->{'netmask'});
-	push(@$lref, "\t"."network ".$iface->{'network'});
+	if ($iface->{'address'}) {
+		push(@$lref, "\t"."address ".$iface->{'address'});
+		push(@$lref, "\t"."netmask ".$iface->{'netmask'});
+		$iface->{'network'} = &net::compute_network(
+			$iface->{'address'}, $iface->{'netmask'});
+		push(@$lref, "\t"."network ".$iface->{'network'});
+		}
 	if ($iface->{'broadcast'}) {
 		push(@$lref, "\t"."broadcast ".$iface->{'broadcast'});
 		}
@@ -9557,11 +9561,19 @@ elsif (&redhat_server_type($server)) {
 	my $err = &get_file_from_server($server, $ifile, $temp);
 	return $err if ($err);
 	&read_env_file($temp, \%conf);
-	$conf{'IPADDR'} = $iface->{'address'};
-	$conf{'NETMASK'} = $iface->{'netmask'};
-	$conf{'NETWORK'} = &net::compute_network($iface->{'address'},
-						 $iface->{'netmask'});
-	$conf{'BROADCAST'} = $iface->{'broadcast'};
+	if ($iface->{'address'}) {
+		$conf{'IPADDR'} = $iface->{'address'};
+		$conf{'NETMASK'} = $iface->{'netmask'};
+		$conf{'NETWORK'} = &net::compute_network($iface->{'address'},
+							 $iface->{'netmask'});
+		$conf{'BROADCAST'} = $iface->{'broadcast'};
+		}
+	else {
+		delete($conf{'IPADDR'});
+		delete($conf{'NETMASK'});
+		delete($conf{'NETWORK'});
+		delete($conf{'BROADCAST'});
+		}
         if ($iface->{'gateway'}) {
                 $conf{'GATEWAY'} = $iface->{'gateway'};
                 }

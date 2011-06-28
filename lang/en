@@ -1510,6 +1510,7 @@ ifaces_bw1=All on system
 ifaces_bw0=Only selected
 ifaces_bwerr=Failed to save network interfaces for bandwidth monitoring
 ifaces_bwnone=None selected
+ifaces_noaddress=No address configured
 
 iface_create=Add Network Interface
 iface_createreal=Add Real Network Interface

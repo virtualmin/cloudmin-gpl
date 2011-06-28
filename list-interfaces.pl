@@ -112,8 +112,10 @@ if ($multi) {
 		if ($i->{'virtual'} ne '') {
 			print "    Interface number: $i->{'virtual'}\n";
 			}
-		print "    IP address: $i->{'address'}\n";
-		print "    Netmask: $i->{'netmask'}\n";
+		if ($i->{'address'}) {
+			print "    IP address: $i->{'address'}\n";
+			print "    Netmask: $i->{'netmask'}\n";
+			}
 		if ($i->{'ether'}) {
 			print "    Ethernet address: $i->{'ether'}\n";
 			if (&supports_dhcpd(1)) {
