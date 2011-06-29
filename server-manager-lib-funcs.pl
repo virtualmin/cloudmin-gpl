@@ -4245,6 +4245,18 @@ if (defined(&$wfunc)) {
 
 &enable_webmin_status_collection($server);
 
+$out .= "\nOpening firewall port $wport for Webmin ..\n";
+my ($pok, $pout) = &open_webmin_firewall_port($server, $wport, $wroot);
+my $pmsg = $pok == 0 ? "already open" :
+	   $pok == 1 ? "done" :
+	   $pok == 2 ? "IPtables is not installed" :
+	   $pok == 3 ? "IPtables is not active" :
+	   $pok == 4 ? "done, but failed to apply configuration : $pout" :
+	   $pok == 5 ? "command failed : $pout" :
+	   $pok == 6 ? "not supported by this Webmin version" :
+		       "unknown exit code $pok : $pout";
+$out .= ".. ".$pmsg."\n";
+
 # Make sure Webmin is running OK, and get the OS
 my ($wstatus, $werr, $wos, $wrealos) = &check_server_webmin_login($server);
 if ($wstatus == 0) {
@@ -4256,6 +4268,51 @@ else {
 	}
 
 return ($out, undef, $wroot);
+}
+
+# open_webmin_firewall_port(&server, port, root-dir)
+# If possible, calls the open-ports.pl command on a remote system to open
+# firewall ports for Webmin. Returns a status code and error message :
+# 0 - Nothing needed to be done
+# 1 - Given ports were opened up
+# 2 - IPtables is not installed or supported
+# 3 - No firewall is active
+# 4 - Could not apply configuration
+# 5 - Command failed for some other reason
+# 6 - open-ports command was not found
+sub open_webmin_firewall_port
+{
+my ($server, $port, $root) = @_;
+if (!&has_command_on_server("$root/firewall/open-ports.pl")) {
+	return (6);
+	}
+my $portrange = join(":", $port, $port+10);
+my $cmd = "cd $root/firewall && ".
+	  "$root/firewall/open-ports.pl $portrange 2>&1";
+my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+if ($err) {
+	return (5, $err);
+	}
+else {
+	return ($ex, $out);
+	}
+}
+
+# open_webmin_firewall_port_and_print(&webmin, port, root-dir)
+# Calls open_webmin_firewall_port, while printing progress messages
+sub open_webmin_firewall_port_and_print
+{
+my ($server, $port, $root) = @_;
+&$first_print($text{'create_webminport'});
+my ($pok, $pout) = &open_webmin_firewall_port($server, $wport, $wroot);
+if ($pok <= 6) {
+	&$second_print(&text('create_ewebminport'.$pok,
+			     "<tt>".&html_escape($pout)."</tt>"));
+	}
+else {
+	&$second_print(&text('create_ewebminportother', $pok,
+			     "<tt>".&html_escape($pout)."</tt>"));
+	}
 }
 
 # enable_webmin_status_collection(&server)

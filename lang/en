@@ -561,6 +561,15 @@ create_eplan=No plan for new system owner selected
 create_eplan2=Selected plan does not exist!
 create_storage=Disk storage location
 create_storagedef=Host system default
+create_webminport=Opening firewall ports for Webmin ..
+create_ewebminport0=.. already open
+create_ewebminport1=.. done
+create_ewebminport2=.. IPtables firewall is not installed
+create_ewebminport3=.. IPtables firewall is not active
+create_ewebminport4=.. done, but failed to apply configuration : $1
+create_ewebminport5=.. command failed : $1
+create_ewebminport6=.. not supported by this version of Webmin
+create_ewebminportother=.. unknown exit code $1 : $2
 
 keys_title=SSH Keys
 keys_desc=Key description
