@@ -16,6 +16,13 @@ reduced. Lowering it too much may cause the virtual system to crash though.
 On system types that support it (like Vservers and Zones), the memory limit
 can be completed removed with the C<--no-memory> flag.
 
+On virtualization types like OpenVZ, you can also set a separate memory
+limit with the C<--guaranteed-memory> flag followed by a number in MB. If
+the host system is over-comitted, this specifies the amount of memory that
+the virtual system is certain to have available, while the C<--memory> flag
+sets the upper limit. On other virtualization types both limits are always
+the same, and are set by the C<--memory> flag.
+
 The percentage of the host system's CPU that is assigned to the instance
 is set with the C<--cpu> flag, which must be followed by a number. This can be
 greater than 100 for host systems with more than one CPU. To remove CPU limits
@@ -79,6 +86,13 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--no-memory") {
 		$memory = 0;
+		}
+	elsif ($a eq "--guarenteed-memory") {
+		$gmemory = shift(@ARGV);
+		$gmemory =~ /^[1-9][0-9]*$/ ||
+			&usage("--guaranteed-memory must be followed by ".
+			       "a number in MB");
+		$gmemory *= 1024*1024;
 		}
 	elsif ($a eq "--disk") {
 		$disk = shift(@ARGV);
@@ -155,7 +169,7 @@ while(@ARGV > 0) {
 	}
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
    defined($bw) || defined($rate) || defined($disk) || defined(@bw_ifaces) ||
-   &usage("Nothing to modify!");
+   defined($gmemory) || &usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hoston);
@@ -239,6 +253,55 @@ foreach $s (@servers) {
 				# Actually try it
 				$mfunc = "type_".$t."_save_memory";
 				$err = &$mfunc($s, $memory);
+				if ($err) {
+					print ".. failed : $err\n";
+					$failed++;
+					}
+				else {
+					print ".. done\n";
+					$reboot++ if (&$cfunc($s) == 2);
+					}
+				}
+			}
+		else {
+			print ".. not supported\n";
+			$failed++;
+			}
+		print "\n";
+		}
+
+	# Change guaranteed memory
+	if (defined($gmemory)) {
+		print "Setting guaranteed memory on $tdesc system ",
+		      "$s->{'host'} to ",&nice_size($gmemory)," ..\n";
+		$cfunc = "type_".$t."_can_guaranteed_memory";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$gfunc = "type_".$t."_get_guaranteed_memory";
+			$oldmemory = &$gfunc($s);
+			$incr = $memory - $oldmemory;
+			$rgfunc = "type_".$t."_get_memory";
+			$rmemory = &$rgfunc($server);
+			if ($oldmemory && $oldmemory == $memory) {
+				# No change
+				print ".. already set\n";
+				}
+			elsif ($rmemory && $gmemory > $rmemory) {
+				# Over upper limit
+				print ".. this would exceed the regular ",
+				      "memory limit of ",
+			              &nice_size($rmemory),"\n";
+				$failed++;
+				}
+			elsif ($gmemory == 0) {
+				# Doesn't support unlimited
+				print ".. guaranteed memory cannot be set ",
+				      "to zero\n";
+				$failed++;
+				}
+			else {
+				# Actually try it
+				$mfunc = "type_".$t."_save_guaranteed_memory";
+				$err = &$mfunc($s, $gmemory);
 				if ($err) {
 					print ".. failed : $err\n";
 					$failed++;
@@ -523,6 +586,7 @@ print "                       [--host-on name]\n";
 print "                       [--cpu percentage | --no-cpu]\n";
 print "                       [--weight number]\n";
 print "                       [--memory MB | --no-memory]\n";
+print "                       [--guaranteed-memory MB]\n";
 print "                       [--disk MB | --no-disk]\n";
 print "                       [--reboot]\n";
 print "                       [--vcpus N | --vcpus list]\n";

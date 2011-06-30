@@ -266,6 +266,16 @@ if ($multi) {
 					    : "Unlimited"),"\n";
 				}
 			}
+		$cfunc = "type_".$s->{'manager'}."_can_guaranteed_memory";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$mfunc = "type_".$s->{'manager'}.
+				 "_get_guaranteed_memory";
+			$mem = &$mfunc($s);
+			if (defined($mem)) {
+				print "    Guaranteed memory limit: ",
+				      &nice_size($mem),"\n";
+				}
+			}
 
 		# CPU limit
 		$cfunc = "type_".$s->{'manager'}."_can_cpu";

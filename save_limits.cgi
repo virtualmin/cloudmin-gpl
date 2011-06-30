@@ -88,6 +88,46 @@ if (defined($in{'memory'}) || defined($in{'memory_def'})) {
 		}
 	}
 
+# Update guaranteed memory
+if (defined($in{'gmemory'})) {
+	$m = $in{'gmemory'}*$in{'gmemory_units'};
+	&$first_print(&text('limits_settingg', &nice_size($m)));
+	$gfunc = "type_".$t."_get_guaranteed_memory";
+	$rgfunc = "type_".$t."_get_guaranteed_memory";
+	$oldm = &$gfunc($server);
+	$rm = &$rgfunc($server);
+	if ($m == $oldm) {
+		# No need to change
+		&$second_print($text{'limits_already'});
+		}
+	else {
+		# Check limits
+		$incr = $m - $oldm;
+		if (!$m) {
+			# Set to unlimited but not allowed
+			&$second_print($text{'limits_eramlimit3'});
+			}
+		elsif ($rm && $m > $rm) {
+			# Cannot be more that regular memory limit
+			&$second_print(&text('limits_eramlimit4',
+					     &nice_size($rm)));
+			}
+		else {
+			# Call set function and check
+			$mfunc = "type_".$t."_save_guaranteed_memory";
+			$err = &$mfunc($server, $m);
+			if ($err) {
+				&$second_print(&text('limits_failed', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				$cfunc = "type_".$t."_can_guaranteed_memory";
+				$reboot++ if (&$cfunc($server) == 2);
+				}
+			}
+		}
+	}
+
 # Update CPU and weight
 if (defined($in{'cpu'}) || defined($in{'weight'}) || defined($in{'cpu_def'})) {
 	$cpudesc = $in{'cpu_def'} ? $text{'edit_lunlimit'} : $in{'cpu'}."%";
