@@ -456,13 +456,16 @@ else {
 	my $disk = defined(&$dsfunc) ? &$dsfunc($srcserver) : 0;
 	my $mfunc = "type_".$srcserver->{'manager'}."_get_memory_size";
 	my $mem = defined(&$mfunc) ? &$mfunc($srcserver) : undef;
+	my $gmfunc = "type_".$srcserver->{'manager'}.
+		     "_get_guaranteed_memory_size";
+	my $gmem = defined(&$gmfunc) ? &$gmfunc($srcserver) : undef;
 	my $cfunc = "type_".$srcserver->{'manager'}."_get_cpu_size";
 	my $cpu = defined(&$cfunc) ? &$cfunc($srcserver) : undef;
 
 	# Find all possible host systems
 	&$first_print($text{'scaleup_pickhost'});
 	my @allvhosts = &list_available_host_servers(
-				$scalegroup->{'manager'}, $mem, $disk);
+				$scalegroup->{'manager'}, $mem, $gmem, $disk);
 	my @vhosts;
 	if ($scalegroup->{'dest_hosts'} ne '') {
 		# Only selected hosts
@@ -498,7 +501,8 @@ else {
 				$srcvhost->{'host'}, $srcserver->{'host'});
 		$vhost = $srcvhost;
 		}
-	&usable_host_system($vhost, $srcserver->{'manager'}, $mem, $disk) ||
+	&usable_host_system($vhost, $srcserver->{'manager'},
+			    $mem, $gmem, $disk) ||
 		return &text('scaleup_evhostresources', $vhost->{'host'},
 			     &nice_size($mem), &nice_size($disk));
 	&$second_print(&text('scaleup_pickedhost', $vhost->{'host'}));

@@ -62,6 +62,14 @@ if (defined($m)) {
 		}
 	}
 
+# Guaranteed memory limit
+$gmfunc = "type_".$t."_get_guaranteed_memory";
+$m = defined(&$gmfunc) ? &$gmfunc($server) : undef;
+if (defined($m)) {
+	print &ui_table_row($text{'edit_gmemory'},
+		&ui_bytesbox("gmemory", $m));
+	}
+
 # CPU limit
 $cfunc = "type_".$t."_get_cpu";
 if (defined(&$cfunc)) {

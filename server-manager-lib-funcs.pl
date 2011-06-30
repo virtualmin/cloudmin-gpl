@@ -4245,6 +4245,18 @@ if (defined(&$wfunc)) {
 
 &enable_webmin_status_collection($server);
 
+$out .= "\nOpening firewall port $wport for Webmin ..\n";
+my ($pok, $pout) = &open_webmin_firewall_port($server, $wport, $wroot);
+my $pmsg = $pok == 0 ? "already open" :
+	   $pok == 1 ? "done" :
+	   $pok == 2 ? "IPtables is not installed" :
+	   $pok == 3 ? "IPtables is not active" :
+	   $pok == 4 ? "done, but failed to apply configuration : $pout" :
+	   $pok == 5 ? "command failed : $pout" :
+	   $pok == 6 ? "not supported by this Webmin version" :
+		       "unknown exit code $pok : $pout";
+$out .= ".. ".$pmsg."\n";
+
 # Make sure Webmin is running OK, and get the OS
 my ($wstatus, $werr, $wos, $wrealos) = &check_server_webmin_login($server);
 if ($wstatus == 0) {
@@ -4256,6 +4268,51 @@ else {
 	}
 
 return ($out, undef, $wroot);
+}
+
+# open_webmin_firewall_port(&server, port, root-dir)
+# If possible, calls the open-ports.pl command on a remote system to open
+# firewall ports for Webmin. Returns a status code and error message :
+# 0 - Nothing needed to be done
+# 1 - Given ports were opened up
+# 2 - IPtables is not installed or supported
+# 3 - No firewall is active
+# 4 - Could not apply configuration
+# 5 - Command failed for some other reason
+# 6 - open-ports command was not found
+sub open_webmin_firewall_port
+{
+my ($server, $port, $root) = @_;
+if (!&has_command_on_server("$root/firewall/open-ports.pl")) {
+	return (6);
+	}
+my $portrange = join(":", $port, $port+10);
+my $cmd = "cd $root/firewall && ".
+	  "$root/firewall/open-ports.pl $portrange 2>&1";
+my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+if ($err) {
+	return (5, $err);
+	}
+else {
+	return ($ex, $out);
+	}
+}
+
+# open_webmin_firewall_port_and_print(&webmin, port, root-dir)
+# Calls open_webmin_firewall_port, while printing progress messages
+sub open_webmin_firewall_port_and_print
+{
+my ($server, $port, $root) = @_;
+&$first_print($text{'create_webminport'});
+my ($pok, $pout) = &open_webmin_firewall_port($server, $wport, $wroot);
+if ($pok <= 6) {
+	&$second_print(&text('create_ewebminport'.$pok,
+			     "<tt>".&html_escape($pout)."</tt>"));
+	}
+else {
+	&$second_print(&text('create_ewebminportother', $pok,
+			     "<tt>".&html_escape($pout)."</tt>"));
+	}
 }
 
 # enable_webmin_status_collection(&server)
@@ -7808,18 +7865,21 @@ elsif ($vinfo && $vinfo->{'mem'}) {
 return wantarray ? @rv : $rv[0];
 }
 
-# usable_host_system(&server, manager, extra-ram, extra-disk)
+# usable_host_system(&server, manager, extra-ram, extra-guaranteed-ram,
+#		     extra-disk)
 # Checks if some host system is has enough RAM and disk free to host another
 # virtual system.
 sub usable_host_system
 {
-my ($vhost, $manager, $mem, $disk) = @_;
+my ($vhost, $manager, $mem, $gmem, $disk) = @_;
+my $omanager = $manager eq "zones" ? "zone" : $manager;
 
 # Check how much RAM and disk is free now
 my $diskfree = &host_free_disk($vhost, $manager);
 my $memfree = &host_free_memory($vhost, $manager);
 
-# Take away RAM assigned to down systems
+# Take away RAM assigned to down systems, so that it cannot be used even though
+# it is not currently in use
 if ($vhost->{'floor_mem_down'}) {
 	foreach my $s (&list_managed_servers()) {
 		next if ($s->{'status'} ne 'down');
@@ -7832,29 +7892,52 @@ if ($vhost->{'floor_mem_down'}) {
 		}
 	}
 
-# See if we are under
-if (defined($diskfree) && $diskfree-$disk <= 0) {
-	# Would use up all the disk
-	return wantarray ? (0, &text('floor_nodisk2',
-				     &nice_size($disk-$diskfree))) : 0;
-	}
-if (defined($diskfree) && $diskfree-$disk < $vhost->{'floor_disk'}) {
-	# Not enough disk
-	return wantarray ?
-	    (0, &text('floor_nodisk', &nice_size($diskfree-$disk),
+# See if we are under for disk, unless over-allocation is allowed
+if (!$vhost->{$omanager.'_overdisk'}) {
+	if (defined($diskfree) && $diskfree-$disk <= 0) {
+		# Would use up all the disk
+		return wantarray ? (0, &text('floor_nodisk2',
+					     &nice_size($disk-$diskfree))) : 0;
+		}
+	if (defined($diskfree) && $diskfree-$disk < $vhost->{'floor_disk'}) {
+		# Not enough disk
+		return wantarray ?
+		    (0, &text('floor_nodisk', &nice_size($diskfree-$disk),
 				      &nice_size($vhost->{'floor_disk'}))) : 0;
+		}
 	}
-if (defined($memfree) && $memfree-$mem <= 0) {
-	# Would use up all the RAM
-	return wantarray ? (0, &text('floor_nomem2',
-				     &nice_size($mem-$memfree))) : 0;
-	}
-if (defined($memfree) && $memfree-$mem < $vhost->{'floor_mem'}) {
-	# Not enough RAM
-	return wantarray ?
-	    (0, &text('floor_nomem', &nice_size($memfree-$mem),
+
+# See if we are under for memory, unless over-allocation is allowed
+if (!$vhost->{$omanager.'_overmemory'}) {
+	if (defined($memfree) && $memfree-$mem <= 0) {
+		# Would use up all the RAM
+		return wantarray ? (0, &text('floor_nomem2',
+					     &nice_size($mem-$memfree))) : 0;
+		}
+	if (defined($memfree) && $memfree-$mem < $vhost->{'floor_mem'}) {
+		# Not enough RAM
+		return wantarray ?
+		    (0, &text('floor_nomem', &nice_size($memfree-$mem),
 				     &nice_size($vhost->{'floor_mem'}))) : 0;
+		}
 	}
+
+if ($gmem) {
+	# See if we are under for guaranteed memory, which can never be
+	# over-committed
+	if (defined($memfree) && $memfree-$gmem <= 0) {
+		# Would use up all the RAM
+		return wantarray ? (0, &text('floor_nogmem2',
+					     &nice_size($gmem-$memfree))) : 0;
+		}
+	if (defined($memfree) && $memfree-$gmem < $vhost->{'floor_mem'}) {
+		# Not enough RAM
+		return wantarray ?
+		    (0, &text('floor_nogmem', &nice_size($memfree-$gmem),
+				     &nice_size($vhost->{'floor_mem'}))) : 0;
+		}
+	}
+
 return wantarray ? ( 1 ) : 1;
 }
 
@@ -7940,7 +8023,7 @@ if (!defined(&$cfunc) || !&$cfunc($server, $dest)) {
 	}
 
 # Check for resource limits on the target
-my ($disk, $mem);
+my ($disk, $mem, $gmem);
 my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
 if (defined(&$dfunc)) {
 	$disk = &$dfunc($server);
@@ -7953,7 +8036,12 @@ my $mfunc = "type_".$server->{'manager'}."_get_memory";
 if (defined(&$mfunc)) {
 	$mem = &$mfunc($server);
 	}
-my ($ok, $err) = &usable_host_system($dest, $server->{'manager'}, $mem, $disk);
+my $gmfunc = "type_".$server->{'manager'}."_get_guaranteed_memory";
+if (defined(&$gmfunc)) {
+	$gmem = &$gmfunc($server);
+	}
+my ($ok, $err) = &usable_host_system($dest, $server->{'manager'},
+				     $mem, $gmem, $disk);
 if (!$ok) {
 	return "The host system $dest->{'host'} is not suitable : $err";
 	}
@@ -8519,12 +8607,13 @@ my $link = "showpass.cgi?id=$server->{'id'}&mode=$mode";
 return " (<a href='$link' onClick='window.open(\"$link\", \"showpass\", \"toolbar=no,menubar=no,scrollbar=no,width=500,height=70,resizable=yes\"); return false'>$text{'edit_showpass'}</a>)";
 }
 
-# list_available_host_servers(type, [extra-ram, extra-disk], [include-down])
+# list_available_host_servers(type, [extra-ram, extra-guaranteed-ram,
+#			      extra-disk], [include-down])
 # Returns a list of systems that can host some virtualization type, and
 # are up and running. Also takes RAM and disk needs into account.
 sub list_available_host_servers
 {
-my ($type, $mem, $disk, $incdown) = @_;
+my ($type, $mem, $gmem, $disk, $incdown) = @_;
 my $alttype = $type eq "zones" ? "zone" : $type;
 my @vhosts = grep { ($_->{$type.'_host'} || $_->{$alttype.'_host'}) &&
                     &can_host_server($_) } &list_managed_servers();
@@ -8533,7 +8622,7 @@ if (!$incdown) {
 			 $_->{'status'} eq 'novirt' ||
 			 $_->{'status'} eq 'virt' } @vhosts;
 	}
-@vhosts = grep { &usable_host_system($_, $type, $mem, $disk) } @vhosts;
+@vhosts = grep { &usable_host_system($_, $type, $mem, $gmem, $disk) } @vhosts;
 return @vhosts;
 }
 
@@ -8654,12 +8743,13 @@ if ($field) {
 return wantarray ? ( ) : undef;
 }
 
-# parse_host_server_field(&server, name, manager, &in, extra-ram, extra-disk)
+# parse_host_server_field(&server, name, manager, &in, extra-ram,
+#			  extra-guaranteed-ram, extra-disk)
 # Returns a host system object parsed from the form by show_host_server_field,
 # or calls error
 sub parse_host_server_field
 {
-my ($server, $name, $type, $in, $mem, $disk) = @_;
+my ($server, $name, $type, $in, $mem, $gmem, $disk) = @_;
 my @vhosts = &list_available_host_servers($type);
 @vhosts || &error($text{'create_exenvhostnone'});
 my @locs;
@@ -8698,7 +8788,7 @@ if ($loc) {
 	$vhost = &find_host_from_location($server, $loc, $type, $mem, $disk);
 	$vhost || &error(&text('create_exenvhostalloc2', $loc->{'desc'}));
 	}
-my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $disk);
+my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $gmem, $disk);
 $ok || &error(&text('create_ehostusable', $vhost->{'host'}, $err));
 return $vhost;
 }
@@ -10093,7 +10183,7 @@ if (!&can_ssh_status($dest)) {
 	}
 
 # Check resource limits on the host
-my ($disk, $mem);
+my ($disk, $mem, $gmem);
 my $dfunc = "type_".$server->{'manager'}."_get_disk_size";
 if (defined(&$dfunc)) {
 	$disk = &$dfunc($server);
@@ -10106,7 +10196,12 @@ my $mfunc = "type_".$server->{'manager'}."_get_memory";
 if (defined(&$mfunc)) {
 	$mem = &$mfunc($server);
 	}
-my ($ok, $err) = &usable_host_system($dest, $server->{'manager'}, $mem, $disk);
+my $gmfunc = "type_".$server->{'manager'}."_get_guaranteed_memory";
+if (defined(&$gmfunc)) {
+	$gmem = &$gmfunc($server);
+	}
+my ($ok, $err) = &usable_host_system($dest, $server->{'manager'},
+				     $mem, $gmem, $disk);
 if (!$ok) {
 	return (undef, &text('clone_ehostspace', $dest->{'host'}, $err));
 	}

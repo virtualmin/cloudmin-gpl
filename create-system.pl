@@ -546,6 +546,12 @@ elsif ($webmin_mode) {
 		}
 	}
 
+# If we have Webmin, try to open its firewall port
+if ($webmindir) {
+	&open_webmin_firewall_port_and_print(
+		$server, $server->{'port'}, $webmindir);
+	}
+
 # If we do have Webmin, wait for it to start
 if ($webmindir) {
 	print "Waiting for Webmin to start ..\n";
