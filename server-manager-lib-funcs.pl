@@ -4051,8 +4051,19 @@ if (!$type || $type eq "pkgadd") {
 	}
 
 # Work out download URL
-my $source = $update eq "yum" || $update eq "apt" ? $update :
-		$config{'download_'.$type} || $webmin_download_source{$type};
+my $source;
+if ($config{'download_'.$type}) {
+	# Download URL set on config, so use it
+	$source = $config{'download_'.$type};
+	}
+elsif ($update eq "yum" || $update eq "apt") {
+	# Use YUM or APT when supported
+	$source = $update;
+	}
+else {
+	# Use hard-coded install sources
+	$source = $webmin_download_source{$type};
+	}
 return ($source, $type, undef);
 }
 
@@ -4283,7 +4294,7 @@ return ($out, undef, $wroot);
 sub open_webmin_firewall_port
 {
 my ($server, $port, $root) = @_;
-if (!&has_command_on_server("$root/firewall/open-ports.pl")) {
+if (!&has_command_on_server($server, "$root/firewall/open-ports.pl")) {
 	return (6);
 	}
 my $portrange = join(":", $port, $port+10);

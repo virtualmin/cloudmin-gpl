@@ -54,6 +54,7 @@ while(@ARGV > 0) {
         elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
         elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
+	elsif ($a eq "--output") { $show_output = 1 }
 	else {
 		&usage();
 		}
@@ -90,6 +91,9 @@ print "Installing Webmin on ",scalar(@servers)," systems ..\n";
 		  &save_managed_server($_[0]);
 	          print "$_[0]->{'host'}: OK $type $src\n";
 	      }
+	      if ($show_output) {
+		print $out;
+	      }
 	    });
 &release_lock_server(\@servers);
 &cloudmin_api_log(\@OLDARGV);
@@ -107,6 +111,7 @@ print "                        [--os oscode]*\n";
 print "                        [--owner name]*\n";
 print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                        [--host-on name]\n";
+print "                        [--output]\n";
 exit(1);
 }
 
