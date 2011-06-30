@@ -1286,6 +1286,8 @@ openvz_egone=The OpenVZ host no longer exists!
 openvz_header=OpenVZ host system details
 openvz_host=System hosting OpenVZ containers
 openvz_dir=Base directory for virtual systems
+overvz_overmemory=Allow over-allocation of memory?
+overvz_overdisk=Allow over-allocation of disk space?
 openvz_domain=Add OpenVZ systems to DNS domain
 openvz_domain2=DNS domain for OpenVZ servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
 openvz_range=IP address allocation ranges
@@ -3970,6 +3972,8 @@ floor_nodisk=Only $1 disk space would be free after creating this system, but th
 floor_nodisk2=An extra $1 free disk space is needed to create this system
 floor_nomem=Only $1 RAM would be free after creating this system, but the minimum is $2
 floor_nomem2=An extra $1 free RAM is needed to create this system
+floor_nogmem=Only $1 guaranteed RAM would be free after creating this system, but the minimum is $2
+floor_nogmem2=An extra $1 free guaranteed RAM is needed to create this system
 
 drestore_err=Failed to restore domain backup
 drestore_title=Restore Domain Backup

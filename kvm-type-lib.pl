@@ -605,6 +605,7 @@ else {
 # Select host system
 my $vhost = &parse_host_server_field($server, 'kvm', 'kvm', $in,
 				     $server->{'kvm_memory'}*1024*1024,
+				     0,
 				     $server->{'kvm_disktotal'});
 $server->{'kvm_on'} = $vhost->{'id'};
 
@@ -853,6 +854,7 @@ elsif ($args->{'location'}) {
 	$loc || return "Location $args->{'location'} does not exist";
 	$vhost = &find_host_from_location($server, $loc, 'kvm',
 					  $server->{'kvm_memory'}*1024*1024,
+					  0,
                                           $server->{'kvm_disktotal'});
 	$vhost || return "Failed to select host system from location";
 	}
@@ -865,6 +867,7 @@ $vhost->{'kvm_host'} ||
 	return "System $args->{'host'} is not registered to host KVM instances";
 my ($ok, $err) = &usable_host_system($vhost, "kvm",
                                      $server->{'kvm_memory'}*1024*1024,
+				     0,
                                      $server->{'kvm_disktotal'});
 $ok || return "Host system $vhost->{'host'} cannot be used : $err";
 $server->{'kvm_on'} = $vhost->{'id'};
