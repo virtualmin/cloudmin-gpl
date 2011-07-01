@@ -31,14 +31,16 @@ if (defined($m)) {
 	if (defined(&$ufunc) && &$ufunc($server)) {
 		# Unlimited option
 		print &ui_table_row($text{'edit_lmemory'},
-			&ui_radio("memory_def", $m ? 0 : 1,
-				  [ [ 1, $text{'edit_lunlimit'} ],
-				    [ 0, &ui_bytesbox("memory", $m || '') ] ]));
+			&vui_opt_bytesbox("memory", $m || undef, undef,
+					  $text{'edit_lunlimit'}, undef,
+					  0, undef, undef, undef,
+					  1024*1024));
 		}
 	else {
 		# Memory limit must exist
 		print &ui_table_row($text{'edit_lmemory'},
-			&ui_bytesbox("memory", $m));
+			&ui_bytesbox("memory", $m, undef, 0, undef,
+				     1024*1024));
 		}
 
 	# Current memory usage in virtual system
@@ -64,10 +66,12 @@ if (defined($m)) {
 
 # Guaranteed memory limit
 $gmfunc = "type_".$t."_get_guaranteed_memory";
-$m = defined(&$gmfunc) ? &$gmfunc($server) : undef;
-if (defined($m)) {
+$gm = defined(&$gmfunc) ? &$gmfunc($server) : undef;
+if (defined($gm)) {
 	print &ui_table_row($text{'edit_gmemory'},
-		&ui_bytesbox("gmemory", $m));
+		&vui_opt_bytesbox("gmemory", $gm == $m ? undef : $gm, undef,
+				  $text{'edit_gmemory_same'}, undef,
+                                  0, undef, undef, undef, 1024*1024));
 	}
 
 # CPU limit
@@ -98,9 +102,9 @@ if (defined(&$dfunc)) {
 	print &ui_table_hr() if ($donehr++);
 	$disk = &$dfunc($server);
 	print &ui_table_row($text{'edit_ldisk'},
-		&ui_radio("disk_def", $disk ? 0 : 1,
-			  [ [ 1, $text{'edit_lunlimit'} ],
-			    [ 0, &ui_bytesbox("disk", $disk || undef) ] ]));
+		&vui_opt_bytesbox("disk", $disk || undef, undef,
+				  $text{'edit_lunlimit'}, undef,
+				  0, undef, undef, undef, 1024*1024*1024));
 
 	# Current usage
 	$sfunc = "type_".$t."_get_disk_space";
@@ -136,7 +140,8 @@ if (defined(&$rfunc) && $config{'bw_enabled'}) {
 			&ui_radio("bw_def", $server->{'bw_limit'} ? 0 : 1,
 				  [ [ 1, $text{'bw_unlimited'} ],
 				    [ 0, $text{'bw_setto'} ] ])."\n".
-			&ui_bytesbox("bw", $server->{'bw_limit'}, 8)."\n".
+			&ui_bytesbox("bw", $server->{'bw_limit'}, undef, 0,
+				     undef, 1024*1024)."\n".
 			&describe_bandwidth_period(0));
 		}
 	else {

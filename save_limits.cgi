@@ -89,25 +89,27 @@ if (defined($in{'memory'}) || defined($in{'memory_def'})) {
 	}
 
 # Update guaranteed memory
-if (defined($in{'gmemory'})) {
-	$m = $in{'gmemory'}*$in{'gmemory_units'};
-	&$first_print(&text('limits_settingg', &nice_size($m)));
+if (defined($in{'gmemory'}) || defined($in{'gmemory_def'})) {
+	$gm = $in{'gmemory_def'} ? $m :
+		$in{'gmemory'}*$in{'gmemory_units'};
+	&$first_print(&text('limits_settingg', $gm ? &nice_size($gm) :
+						$text{'edit_lunlimit'}));
 	$gfunc = "type_".$t."_get_guaranteed_memory";
 	$rgfunc = "type_".$t."_get_memory";
 	$oldm = &$gfunc($server);
 	$rm = &$rgfunc($server);
-	if ($m == $oldm) {
+	if ($gm == $oldm) {
 		# No need to change
 		&$second_print($text{'limits_already'});
 		}
 	else {
 		# Check limits
-		$incr = $m - $oldm;
-		if (!$m) {
+		$incr = $gm - $oldm;
+		if (!$gm) {
 			# Set to unlimited but not allowed
 			&$second_print($text{'limits_eramlimit3'});
 			}
-		elsif ($rm && $m > $rm) {
+		elsif ($rm && $gm > $rm) {
 			# Cannot be more that regular memory limit
 			&$second_print(&text('limits_eramlimit4',
 					     &nice_size($rm)));
@@ -115,7 +117,7 @@ if (defined($in{'gmemory'})) {
 		else {
 			# Call set function and check
 			$mfunc = "type_".$t."_save_guaranteed_memory";
-			$err = &$mfunc($server, $m);
+			$err = &$mfunc($server, $gm);
 			if ($err) {
 				&$second_print(&text('limits_failed', $err));
 				}
