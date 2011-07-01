@@ -87,7 +87,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-memory") {
 		$memory = 0;
 		}
-	elsif ($a eq "--guarenteed-memory") {
+	elsif ($a eq "--guaranteed-memory") {
 		$gmemory = shift(@ARGV);
 		$gmemory =~ /^[1-9][0-9]*$/ ||
 			&usage("--guaranteed-memory must be followed by ".
@@ -164,7 +164,7 @@ while(@ARGV > 0) {
 		$do_reboot = 1;
 		}
 	else {
-		&usage();
+		&usage("Unknown flag $a");
 		}
 	}
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
@@ -280,7 +280,7 @@ foreach $s (@servers) {
 			$oldmemory = &$gfunc($s);
 			$incr = $memory - $oldmemory;
 			$rgfunc = "type_".$t."_get_memory";
-			$rmemory = &$rgfunc($server);
+			$rmemory = &$rgfunc($s);
 			if ($oldmemory && $oldmemory == $memory) {
 				# No change
 				print ".. already set\n";

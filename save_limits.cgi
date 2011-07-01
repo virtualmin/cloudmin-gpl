@@ -93,7 +93,7 @@ if (defined($in{'gmemory'})) {
 	$m = $in{'gmemory'}*$in{'gmemory_units'};
 	&$first_print(&text('limits_settingg', &nice_size($m)));
 	$gfunc = "type_".$t."_get_guaranteed_memory";
-	$rgfunc = "type_".$t."_get_guaranteed_memory";
+	$rgfunc = "type_".$t."_get_memory";
 	$oldm = &$gfunc($server);
 	$rm = &$rgfunc($server);
 	if ($m == $oldm) {
