@@ -373,7 +373,7 @@ if (keys %$info) {
 					 $info->{'disk_free'})));
 		}
 
-	# Host memory used
+	# Host memory and disk used
 	foreach my $manager (&is_parent_server($server)) {
 		my ($memfree, $memtotal) = &host_free_memory($server, $manager);
 		if ($memfree && $memfree != $m[1]*1024) {
@@ -386,10 +386,7 @@ if (keys %$info) {
 				      &nice_size($memtotal),
 				      &nice_size($memtotal-$memfree)));
 			}
-		}
 
-	# Host disk used
-	foreach my $manager (&is_parent_server($server)) {
 		my ($diskfree, $disktotal) = &host_free_disk($server, $manager);
 		if ($diskfree && $diskfree != $info->{'disk_free'}) {
 			print &ui_table_row(
@@ -399,7 +396,6 @@ if (keys %$info) {
 				&text('edit_outof',
 				      &nice_size($disktotal),
 				      &nice_size($disktotal - $diskfree)));
-			last;
 			}
 		}
 
