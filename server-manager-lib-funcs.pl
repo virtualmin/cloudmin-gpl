@@ -7850,10 +7850,26 @@ my $lvm = $vhost->{$manager.'_vg_free'} &&
 	  (!$server || $server->{$manager.'_filesystem_vg'} ||
 		       $manager eq 'citrix');
 if ($manager && $lvm) {
+	# Host is using LVM, and free space has been collected in the
+	# post_refresh function
 	@rv = ( $vhost->{$manager.'_vg_free'}, $vhost->{$manager.'_vg_total'} );
 	}
 elsif ($vinfo && $vinfo->{'disk_free'}) {
-	@rv = ( $vinfo->{'disk_free'}, $vinfo->{'disk_total'} );
+	# Get disk space from filesystem. Free space has to exclude amount
+	# allocated to each VM on the host, even if not used yet.
+	my $free = $vinfo->{'disk_free'};
+	foreach my $child (&get_managed_server_by($manager."_on",
+						  $vhost->{'id'})) {
+		my $szfunc = "type_".$manager."_get_disk_size";
+		my $spfunc = "type_".$manager."_get_disk_space";
+		next if (!defined(&$szfunc) || !defined(&$spfunc));
+		my $size = &$szfunc($child);
+		my $space = &$spfunc($child);
+		next if (!$size);	# Unlimited
+		$free += $space;
+		$free -= $size;
+		}
+	@rv = ( $free, $vinfo->{'disk_total'} );
 	}
 return wantarray ? @rv : $rv[0];
 }
@@ -7867,11 +7883,41 @@ my ($vhost, $manager) = @_;
 my $vinfo = &get_server_collected($vhost);
 my @rv;
 if ($manager && $vhost->{$manager.'_mem_free'}) {
+	# Host has a separate memory space for VMs, not visible to the
+	# host kernel.
 	@rv = ( $vhost->{$manager.'_mem_free'},
 		$vhost->{$manager.'_mem_total'} );
 	}
 elsif ($vinfo && $vinfo->{'mem'}) {
-	@rv = ( $vinfo->{'mem'}->[1]*1024, $vinfo->{'mem'}->[0]*1024 );
+	# Get free memory from OS. Free memory has to exclude amount allocated
+	# to each VM on the host, even if not used yet.
+	my $free = $vinfo->{'mem'}->[1]*1024;
+	foreach my $child (&get_managed_server_by($manager."_on",
+						  $vhost->{'id'})) {
+		# Skip down VMs, unless the user wants them included
+		next if (($child->{'status'} eq 'down' ||
+			  $child->{'status'} eq 'nohost') &&
+			 !$vhost->{'floor_mem_down'});
+		my $szfunc = "type_".$manager."_get_memory_size";
+		next if (!defined(&$szfunc));
+		my $size = &$szfunc($child);
+		next if (!$size);	# Unlimited
+		if ($child->{'status'} eq 'down' ||
+                    $child->{'status'} eq 'nohost') {
+			# VM is down, so just subtract memory limit from free
+			$free -= $size;
+			}
+		else {
+			# Up, so take current usage and limit into account
+			my $info = &get_server_collected($child);
+			if ($info->{'mem'}) {
+				$free += ($info->{'mem'}->[0] -
+					  $info->{'mem'}->[1])*1024;
+				$free -= $size;
+				}
+			}
+		}
+	@rv = ( $free, $vinfo->{'mem'}->[0]*1024 );
 	}
 return wantarray ? @rv : $rv[0];
 }
@@ -7888,20 +7934,6 @@ my $omanager = $manager eq "zones" ? "zone" : $manager;
 # Check how much RAM and disk is free now
 my $diskfree = &host_free_disk($vhost, $manager);
 my $memfree = &host_free_memory($vhost, $manager);
-
-# Take away RAM assigned to down systems, so that it cannot be used even though
-# it is not currently in use
-if ($vhost->{'floor_mem_down'}) {
-	foreach my $s (&list_managed_servers()) {
-		next if ($s->{'status'} ne 'down');
-		my $v = &get_parent_server($s);
-		next if ($v->{'id'} ne $vhost->{'id'});
-		my $mfunc = "type_".$s->{'manager'}."_get_memory_size";
-		if (defined(&$mfunc)) {
-			$memfree -= &$mfunc($s);
-			}
-		}
-	}
 
 # See if we are under for disk, unless over-allocation is allowed
 if (!$vhost->{$omanager.'_overdisk'}) {

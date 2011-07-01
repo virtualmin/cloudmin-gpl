@@ -3854,12 +3854,6 @@ sub type_kvm_server_host_info
 {
 my ($server) = @_;
 my @rv;      
-if ($server->{'kvm_vg_total'}) {
-	push(@rv, [ "LVM disk space",
-		    &nice_size($server->{'kvm_vg_total'}) ]);
-	push(@rv, [ "LVM disk space free",
-		    &nice_size($server->{'kvm_vg_free'}) ]);
-	}
 if (&can_ssh_status($server)) {
 	my @bridges = &list_host_bridges($server);
 	if (@bridges) {
