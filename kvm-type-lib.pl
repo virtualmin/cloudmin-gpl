@@ -2942,6 +2942,11 @@ sub type_kvm_can_unlimited_memory
 return 0;
 }
 
+sub type_kvm_shared_memory
+{
+return 0;
+}
+
 # type_kvm_get_memory(&server)
 # Returns the amount of RAM in bytes this server is granted, or undef if
 # not available.

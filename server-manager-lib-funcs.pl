@@ -7874,13 +7874,17 @@ elsif ($vinfo && $vinfo->{'disk_free'}) {
 return wantarray ? @rv : $rv[0];
 }
 
-# host_free_memory(&host, manager)
+# host_free_memory(&host, manager, [guaranteed-memory-flag])
 # Returns the amount of RAM free on some host system, perhaps taking Xen host
-# memory into account. In an array context, returns total memory too
+# memory into account. In an array context, returns total memory too.
+# If the guaranteed flag is set, returns the amount of guaranteed memory
+# available. This will only differ for virtualization types that support 
+# separate guaranteed and upper limits.
 sub host_free_memory
 {
-my ($vhost, $manager) = @_;
+my ($vhost, $manager, $guaranteed) = @_;
 my $vinfo = &get_server_collected($vhost);
+my $sfunc = "type_".$manager."_shared_memory";
 my @rv;
 if ($manager && $vhost->{$manager.'_mem_free'}) {
 	# Host has a separate memory space for VMs, not visible to the
@@ -7888,19 +7892,26 @@ if ($manager && $vhost->{$manager.'_mem_free'}) {
 	@rv = ( $vhost->{$manager.'_mem_free'},
 		$vhost->{$manager.'_mem_total'} );
 	}
-elsif ($vinfo && $vinfo->{'mem'}) {
+elsif ($vinfo && $vinfo->{'mem'} && &$sfunc()) {
 	# Get free memory from OS. Free memory has to exclude amount allocated
 	# to each VM on the host, even if not used yet.
 	my $free = $vinfo->{'mem'}->[1]*1024;
 	foreach my $child (&get_managed_server_by($manager."_on",
 						  $vhost->{'id'})) {
-		# Skip down VMs, unless the user wants them included
-		next if (($child->{'status'} eq 'down' ||
-			  $child->{'status'} eq 'nohost') &&
-			 !$vhost->{'floor_mem_down'});
+		# Skip down VMs (may be included below)
+		next if ($child->{'status'} eq 'down' ||
+			 $child->{'status'} eq 'nohost');
 		my $szfunc = "type_".$manager."_get_memory_size";
 		next if (!defined(&$szfunc));
-		my $size = &$szfunc($child);
+		my $gszfunc = "type_".$manager."_get_guaranteed_memory_size";
+		my $size;
+		if ($guaranteed && defined(&$gszfunc)) {
+			# Separate guaranteed size exists
+			$size = &$gszfunc($child);
+			}
+		else {
+			$size = &$szfunc($child);
+			}
 		next if (!$size);	# Unlimited
 		if ($child->{'status'} eq 'down' ||
                     $child->{'status'} eq 'nohost') {
@@ -7908,16 +7919,48 @@ elsif ($vinfo && $vinfo->{'mem'}) {
 			$free -= $size;
 			}
 		else {
-			# Up, so take current usage and limit into account
+			# VM is up, so take current usage and limit into account
 			my $info = &get_server_collected($child);
 			if ($info->{'mem'}) {
-				$free += ($info->{'mem'}->[0] -
-					  $info->{'mem'}->[1])*1024;
-				$free -= $size;
+				my $used = ($info->{'mem'}->[0] -
+                                            $info->{'mem'}->[1])*1024;
+				if ($used <= $size) {
+					# Using less than the limit - subtract
+					# the difference from free memory
+					$free += $used;
+					$free -= $size;
+					}
+				else {
+					# Over limit, presumably due to
+					# exceeding guarnateed memory but
+					# under upper limit - add the difference
+					# to free memory
+					$free += $size;
+					$free -= $used;
+					}
 				}
 			}
 		}
 	@rv = ( $free, $vinfo->{'mem'}->[0]*1024 );
+	}
+elsif ($vinfo && $vinfo->{'mem'} && !&$sfunc()) {
+	# Get free memory from OS. Because any running VM will have all its
+	# memory allocated to it, there is no need to calculate how much is
+	# actually free.
+	@rv = ( $vinfo->{'mem'}->[1]*1024, $vinfo->{'mem'}->[0]*1024 );
+	}
+if (@rv && $vhost->{'floor_mem_down'}) {
+	# Subtract memory allocated to down VMs
+	foreach my $child (&get_managed_server_by($manager."_on",
+						  $vhost->{'id'})) {
+		next if ($child->{'status'} ne 'down' &&
+			 $child->{'status'} ne 'nohost');
+		my $szfunc = "type_".$manager."_get_memory_size";
+		next if (!defined(&$szfunc));
+		my $size = &$szfunc($child);
+		next if (!$size);
+		$rv[0] -= $size;
+		}
 	}
 return wantarray ? @rv : $rv[0];
 }
@@ -7934,6 +7977,7 @@ my $omanager = $manager eq "zones" ? "zone" : $manager;
 # Check how much RAM and disk is free now
 my $diskfree = &host_free_disk($vhost, $manager);
 my $memfree = &host_free_memory($vhost, $manager);
+my $gmemfree = &host_free_memory($vhost, $manager, 1);
 
 # See if we are under for disk, unless over-allocation is allowed
 if (!$vhost->{$omanager.'_overdisk'}) {
