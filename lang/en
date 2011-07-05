@@ -2287,13 +2287,16 @@ limits_ememory=Missing or invalid memory limit
 limits_edisk=Missing or invalid disk space limit
 limits_erate=Missing or invalid network rate
 limits_eramlimit=.. this would exceed your total memory limit of $1. Currently you are using $2 of memory.
+limits_ehostramlimit=.. this memory increase of $1 would exceed the host's free memory of $2.
 limits_eramlimit2=.. this would exceed your total memory limit of $1, as it removes any limits on memory usage.
 limits_eramlimit3=.. guaranteed memory cannot be set to unlimited.
 limits_eramlimit4=.. guaranteed memory cannot be set to more than the maximum memory limit of $1.
+limits_ehostgramlimit=.. this guaranteed memory increase of $1 would exceed the host's free memory of $2.
 limits_ecpulimit=.. this would exceed your total CPU limit of $1%. Currently you are using $2% of CPU.
 limits_ecpulimit2=.. this would exceed your total CPU limit of $1%, as it removes any limits on CPU usage.
 limits_edisklimit=.. this would exceed your disk space limit of $1. Currently you are using $2 of disk space.
 limits_edisklimit2=.. this would exceed your disk space limit of $1, as it removes any limits on disk usage.
+limits_ehostdisklimit=.. this disk space increase of $1 would exceed the host's free disk space of $2.
 
 run_before_create=Running pre-creation script ..
 run_after_create=Running post-creation script ..

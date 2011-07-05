@@ -211,6 +211,7 @@ foreach $s (@servers) {
 	$tfunc = "type_".$t."_desc";
 	$tdesc = &$tfunc();
 	&check_server_status($s, 0, 1);
+	$vhost = &get_parent_server($s);
 
 	# Change memory, if we can
 	$reboot = 0;
@@ -219,6 +220,10 @@ foreach $s (@servers) {
 		      ($memory ? &nice_size($memory) : "Unlimited")," ..\n";
 		$cfunc = "type_".$t."_can_memory";
 		$ufunc = "type_".$t."_can_unlimited_memory";
+		$memfree = &host_free_memory($vhost, $s->{'manager'});
+		$checkmem = ($s->{'status'} ne 'down' &&
+			     $s->{'status'} ne 'host') ||
+			    $vhost->{'floor_mem_down'};
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_memory";
 			$oldmemory = &$gfunc($s);
@@ -230,10 +235,15 @@ foreach $s (@servers) {
 			elsif ($limits && $limits->{'max_ram'} && $incr > 0 &&
 			       $limits->{'ram'} + $incr >
 				$limits->{'max_ram'}) {
-				# Over RAM limit
+				# Over RAM limit for owner
 				print ".. this would exceed your memory limit ",
 			          "of ",&nice_size($limits->{'max_ram'}),"\n";
 				$failed++;
+				}
+			elsif ($incr > $memfree && $checkmem) {
+				# Over RAM limit for host
+				 print ".. this would exceed the host's free ",
+				  "memory of ",&nice_size($memfree),"\n";
 				}
 			elsif ($limits && $limits->{'max_ram'} && !$memory) {
 				# Set to unlimited but not allowed
@@ -275,6 +285,10 @@ foreach $s (@servers) {
 		print "Setting guaranteed memory on $tdesc system ",
 		      "$s->{'host'} to ",&nice_size($gmemory)," ..\n";
 		$cfunc = "type_".$t."_can_guaranteed_memory";
+		$memfree = &host_free_memory($vhost, $s->{'manager'}, 1);
+		$checkmem = ($s->{'status'} ne 'down' &&
+			     $s->{'status'} ne 'host') ||
+			    $vhost->{'floor_mem_down'};
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_guaranteed_memory";
 			$oldmemory = &$gfunc($s);
@@ -291,6 +305,11 @@ foreach $s (@servers) {
 				      "memory limit of ",
 			              &nice_size($rmemory),"\n";
 				$failed++;
+				}
+			elsif ($incr > $memfree && $checkmem) {
+				# Over RAM limit for host
+				 print ".. this would exceed the host's free ",
+				  "memory of ",&nice_size($memfree),"\n";
 				}
 			elsif ($gmemory == 0) {
 				# Doesn't support unlimited
@@ -421,6 +440,7 @@ foreach $s (@servers) {
 		print "Setting disk limit on $tdesc system $s->{'host'} to ",
 		      ($disk ? &nice_size($disk) : "Unlimited")," ..\n";
 		$cfunc = "type_".$t."_can_disk";
+		$diskfree = &host_free_disk($vhost, $s->{'manager'});
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_disk";
 			$olddisk = &$gfunc($s);
@@ -431,10 +451,15 @@ foreach $s (@servers) {
 				}
 			elsif ($limits && $limits->{'max_disk'} && $incr > 0 &&
 			    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {
-				# Over disk limit
+				# Over owner disk limit
 				print ".. this would exceed your disk limit ",
 			          "of ",&nice_size($limits->{'max_ram'}),"\n";
 				$failed++;
+				}
+			elsif ($disk && $incr > $diskfree) {
+				# Over disk limit for host
+				 print ".. this would exceed the host's free ",
+				  "disk space of ",&nice_size($diskfree),"\n";
 				}
 			elsif ($limits && $limits->{'max_disk'} && !$disk) {
 				# Set to unlimited but not allowed

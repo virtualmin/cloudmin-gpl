@@ -12,6 +12,7 @@ $server || &error($text{'edit_egone'});
 &can_action_error($server, "limits");
 $t = $server->{'manager'};
 $limits = &get_owner_limits();
+$vhost = &get_parent_server($server);
 
 # Validate inputs
 if (defined($in{'memory'})) {
@@ -60,12 +61,22 @@ if (defined($in{'memory'}) || defined($in{'memory_def'})) {
 	else {
 		# Check limits
 		$incr = $m - $oldm;
+		$memfree = &host_free_memory($vhost, $server->{'manager'});
+		$checkmem = ($server->{'status'} ne 'down' &&
+			     $server->{'status'} ne 'host') ||
+			    $vhost->{'floor_mem_down'};
 		if ($limits && $limits->{'max_ram'} &&
 		    $limits->{'ram'} + $incr > $limits->{'max_ram'}) {
 			# Over RAM limit
 			&$second_print(&text('limits_eramlimit',
 				&nice_size($limits->{'max_ram'}),
 				&nice_size($limits->{'ram'})));
+			}
+		elsif ($incr > $memfree && $checkmem) {
+			# Over host limit
+			&$second_print(&text('limits_ehostramlimit',
+					&nice_size($incr),
+					&nice_size($memfree)));
 			}
 		elsif ($limits && $limits->{'max_ram'} && !$m) {
 			# Set to unlimited but not allowed
@@ -105,6 +116,10 @@ if (defined($in{'gmemory'}) || defined($in{'gmemory_def'})) {
 	else {
 		# Check limits
 		$incr = $gm - $oldm;
+		$memfree = &host_free_memory($vhost, $server->{'manager'}, 1);
+		$checkmem = ($server->{'status'} ne 'down' &&
+			     $server->{'status'} ne 'host') ||
+			    $vhost->{'floor_mem_down'};
 		if (!$gm) {
 			# Set to unlimited but not allowed
 			&$second_print($text{'limits_eramlimit3'});
@@ -113,6 +128,12 @@ if (defined($in{'gmemory'}) || defined($in{'gmemory_def'})) {
 			# Cannot be more that regular memory limit
 			&$second_print(&text('limits_eramlimit4',
 					     &nice_size($rm)));
+			}
+		elsif ($incr > $memfree && $checkmem) {
+			# Over host limit
+			&$second_print(&text('limits_ehostgramlimit',
+					&nice_size($incr),
+					&nice_size($memfree)));
 			}
 		else {
 			# Call set function and check
@@ -197,6 +218,7 @@ if (defined($in{'disk'}) || defined($in{'disk_def'})) {
 	else {
 		# Check limits
 		$incr = $d - $oldd;
+		$diskfree = &host_free_disk($vhost, $server->{'manager'});
 		if ($limits && $limits->{'max_disk'} &&
 		    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {
 			# Over disk limit
@@ -208,6 +230,12 @@ if (defined($in{'disk'}) || defined($in{'disk_def'})) {
 			# Set to unlimited but not allowed
 			&$second_print(&text('limits_edisklimit2',
 				&nice_size($limits->{'max_disk'})));
+			}
+		elsif ($disk && $incr > $diskfree) {
+			# Over disk limit for host
+			&$second_print(&text('limits_ediskhostlimit',
+				       &nice_size($incr),
+				       &nice_size($diskfree)));
 			}
 		else {
 			# Call set function and check
