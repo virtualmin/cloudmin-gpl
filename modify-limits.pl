@@ -221,9 +221,10 @@ foreach $s (@servers) {
 		$cfunc = "type_".$t."_can_memory";
 		$ufunc = "type_".$t."_can_unlimited_memory";
 		$memfree = &host_free_memory($vhost, $s->{'manager'});
-		$checkmem = ($s->{'status'} ne 'down' &&
-			     $s->{'status'} ne 'host') ||
-			    $vhost->{'floor_mem_down'};
+		$checkmem = (($s->{'status'} ne 'down' &&
+			      $s->{'status'} ne 'host') ||
+			     $vhost->{'floor_mem_down'}) &&
+			    !$vhost->{$s->{'manager'}.'_overmemory'};
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_memory";
 			$oldmemory = &$gfunc($s);
@@ -240,7 +241,7 @@ foreach $s (@servers) {
 			          "of ",&nice_size($limits->{'max_ram'}),"\n";
 				$failed++;
 				}
-			elsif ($incr > $memfree && $checkmem) {
+			elsif ($incr > $memfree && $incr > 0 && $checkmem) {
 				# Over RAM limit for host
 				 print ".. this would exceed the host's free ",
 				  "memory of ",&nice_size($memfree),"\n";
@@ -306,7 +307,7 @@ foreach $s (@servers) {
 			              &nice_size($rmemory),"\n";
 				$failed++;
 				}
-			elsif ($incr > $memfree && $checkmem) {
+			elsif ($incr > $memfree && $incr > 0 && $checkmem) {
 				# Over RAM limit for host
 				 print ".. this would exceed the host's free ",
 				  "memory of ",&nice_size($memfree),"\n";
@@ -441,6 +442,7 @@ foreach $s (@servers) {
 		      ($disk ? &nice_size($disk) : "Unlimited")," ..\n";
 		$cfunc = "type_".$t."_can_disk";
 		$diskfree = &host_free_disk($vhost, $s->{'manager'});
+		$checkdisk = !$vhost->{$s->{'manager'}.'_overdisk'};
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_disk";
 			$olddisk = &$gfunc($s);
@@ -456,7 +458,8 @@ foreach $s (@servers) {
 			          "of ",&nice_size($limits->{'max_ram'}),"\n";
 				$failed++;
 				}
-			elsif ($disk && $incr > $diskfree) {
+			elsif ($disk && $incr > 0 && $incr > $diskfree &&
+			       $checkdisk) {
 				# Over disk limit for host
 				 print ".. this would exceed the host's free ",
 				  "disk space of ",&nice_size($diskfree),"\n";

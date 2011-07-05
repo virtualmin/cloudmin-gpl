@@ -51,10 +51,15 @@ if (defined($m)) {
 		}
 
 	# Memory usage on host system
-	$freemem = &host_free_memory($vhost, $t);
+	$freemem = &host_free_memory($vhost, $t, 0);
 	if ($freemem) {
 		print &ui_table_row($text{'edit_vmemory'},
 			     &nice_size($freemem));
+		}
+	$freegmem = &host_free_memory($vhost, $t, 1);
+	if ($freegmem && $freegmem != $freemem) {
+		print &ui_table_row($text{'edit_vgmemory'},
+			     &nice_size($freegmem));
 		}
 
 	# Owner memory limit

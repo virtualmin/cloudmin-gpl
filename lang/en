@@ -1087,6 +1087,7 @@ edit_gmemory=Guaranteed memory allocation
 edit_gmemory_same=Same as maximum memory
 edit_umemory=Memory used
 edit_vmemory=Free memory on host
+edit_vgmemory=Free guaranteed memory on host
 edit_omemory=Remaining memory in plan
 edit_lcpu=Maximum CPU use
 edit_ldisk=Maximum disk space

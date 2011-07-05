@@ -62,9 +62,10 @@ if (defined($in{'memory'}) || defined($in{'memory_def'})) {
 		# Check limits
 		$incr = $m - $oldm;
 		$memfree = &host_free_memory($vhost, $server->{'manager'});
-		$checkmem = ($server->{'status'} ne 'down' &&
+		$checkmem = (($server->{'status'} ne 'down' &&
 			     $server->{'status'} ne 'host') ||
-			    $vhost->{'floor_mem_down'};
+			     $vhost->{'floor_mem_down'}) &&
+			    !$vhost->{$server->{'manager'}.'_overmemory'};
 		if ($limits && $limits->{'max_ram'} &&
 		    $limits->{'ram'} + $incr > $limits->{'max_ram'}) {
 			# Over RAM limit
@@ -72,7 +73,7 @@ if (defined($in{'memory'}) || defined($in{'memory_def'})) {
 				&nice_size($limits->{'max_ram'}),
 				&nice_size($limits->{'ram'})));
 			}
-		elsif ($incr > $memfree && $checkmem) {
+		elsif ($incr > $memfree && $incr > 0 && $checkmem) {
 			# Over host limit
 			&$second_print(&text('limits_ehostramlimit',
 					&nice_size($incr),
@@ -129,7 +130,7 @@ if (defined($in{'gmemory'}) || defined($in{'gmemory_def'})) {
 			&$second_print(&text('limits_eramlimit4',
 					     &nice_size($rm)));
 			}
-		elsif ($incr > $memfree && $checkmem) {
+		elsif ($incr > $memfree && $incr > 0 && $checkmem) {
 			# Over host limit
 			&$second_print(&text('limits_ehostgramlimit',
 					&nice_size($incr),
@@ -219,6 +220,7 @@ if (defined($in{'disk'}) || defined($in{'disk_def'})) {
 		# Check limits
 		$incr = $d - $oldd;
 		$diskfree = &host_free_disk($vhost, $server->{'manager'});
+		$checkdisk = !$vhost->{$server->{'manager'}.'_overdisk'};
 		if ($limits && $limits->{'max_disk'} &&
 		    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {
 			# Over disk limit
@@ -231,7 +233,7 @@ if (defined($in{'disk'}) || defined($in{'disk_def'})) {
 			&$second_print(&text('limits_edisklimit2',
 				&nice_size($limits->{'max_disk'})));
 			}
-		elsif ($disk && $incr > $diskfree) {
+		elsif ($disk && $incr > 0 && $incr > $diskfree && $checkdisk) {
 			# Over disk limit for host
 			&$second_print(&text('limits_ediskhostlimit',
 				       &nice_size($incr),
