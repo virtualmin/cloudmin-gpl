@@ -3755,9 +3755,21 @@ if ($server->{'kvm_vg'} &&
 		}
 	}
 elsif (!$server->{'kvm_vg'}) {
-	delete($server->{'kvm_vg_total'});
-	delete($server->{'kvm_vg_used'});
-	delete($server->{'kvm_vg_free'});
+	# LVM definately not in use .. check disk space on the /kvm directory
+	if (&can_ssh_status($server)) {
+		my ($out, $ex, $err) = &execute_command_on_server(
+			$server, "df -k ".quotemeta($server->{'kvm_dir'}));
+		if (!$ex && !$err && $out =~ /\s(\d+)\s+(\d+)\s+(\d+)/) {
+			$server->{'kvm_vg_total'} = $1*1024;
+			$server->{'kvm_vg_used'} = $2*1024;
+			$server->{'kvm_vg_free'} = $3*1024;
+			}
+		else {
+			delete($server->{'kvm_vg_total'});
+			delete($server->{'kvm_vg_used'});
+			delete($server->{'kvm_vg_free'});
+			}
+		}
 	}
 }
 

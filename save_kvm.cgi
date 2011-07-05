@@ -91,6 +91,7 @@ else {
 	&parse_default_backup_dest_table($kvm, \%in);
 
 	$kvm->{'kvm_host'} = 1;
+	&check_server_status($kvm);
 	&save_managed_server($kvm);
 
 	if ($in{'autoadd'} && $in{'autologin'}) {
