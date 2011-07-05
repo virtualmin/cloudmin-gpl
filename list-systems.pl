@@ -257,11 +257,21 @@ if ($multi) {
 
 		# Show host-type free resources
 		foreach my $p (&is_parent_server($s)) {
-			($memfree, $memtotal) = &host_free_memory($s, $p);
+			($memfree, $memtotal) = &host_free_memory($s, $p, 0);
 			print "    Host memory for $p: ",
 			      &nice_size($memtotal),"\n";
 			print "    Host memory free for $p: ",
 			      &nice_size($memfree),"\n";
+
+			($gmemfree, $gmemtotal) = &host_free_memory($s, $p, 1);
+			if ($gmemfree != $memfree) {
+				print "    Host guaranteed memory for $p: ",
+				      &nice_size($gmemtotal),"\n";
+				print "    Host guaranteed memory free ",
+				      "for $p: ",
+				      &nice_size($gmemfree),"\n";
+				}
+
 			($diskfree, $disktotal) = &host_free_disk($s, $p);
 			print "    Host disk for $p: ",
 			      &nice_size($disktotal),"\n";

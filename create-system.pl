@@ -390,9 +390,9 @@ if ($serial) {
 	}
 
 # If there is an image file, copy to the server (if needed)
+$vhost = &get_parent_server($server);
 if ($image) {
 	$img = &get_server_image($image);
-	$vhost = &get_parent_server($server);
 	print "Copying system image files to host system $vhost->{'host'} ..\n";
 	($imageok, $imagetemp, $imagehost) = &transfer_image_files($server);
 	if ($imageok == 0) {
@@ -582,6 +582,16 @@ if (!$server->{'type'} || $server->{'type'} eq 'unknown') {
 	}
 &save_managed_server($server);
 print ".. done ($server->{'status'})\n\n";
+
+# Re-check status of host
+if ($vhost) {
+	print "Refreshing status of host system $vhost->{'host'} ..\n";
+	&obtain_lock_server($vhost);
+	&check_server_status($vhost);
+	&save_managed_server($vhost);
+	&release_lock_server($vhost);
+	print ".. done ($vhost->{'status'})\n\n";
+	}
 
 # Enable Webmin status collection
 if ($server->{'status'} eq 'novirt') {

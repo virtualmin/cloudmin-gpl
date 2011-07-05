@@ -209,8 +209,8 @@ if ($serial) {
 	}
 
 # If there is an image file, copy to the server
+$vhost = &get_parent_server($server);
 if ($in{'image'}) {
-	$vhost = &get_parent_server($server);
 	print &text('create_copying', &nice_size($img->{'size'}),
 				      $vhost->{'host'});
 	($imageok, $imagetemp) = &transfer_image_files($server, 1);
@@ -444,6 +444,16 @@ if (!$server->{'type'} || $server->{'type'} eq 'unknown') {
 	}
 &save_managed_server($server);
 print &text('add_statusok', &describe_status($server, 1)),"<p>\n";
+
+if ($vhost) {
+	# Re-check and save the host status
+	print &text('add_statusing2', $vhost->{'host'}),"<br>\n";
+	&obtain_lock_server($vhost);
+	&check_server_status($vhost);
+	&save_managed_server($vhost);
+	&release_lock_server($vhost);
+	print &text('add_statusok', &describe_status($vhost, 1)),"<p>\n";
+	}
 
 # Enable Webmin status collection
 if ($server->{'status'} eq 'novirt') {

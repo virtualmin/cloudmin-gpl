@@ -8148,6 +8148,21 @@ my $err = &$mfunc($server, $dest, $shutdown, $allocate);
 &$second_print(&text('save_refreshdone2',
 	&describe_status($server, 1, 1)));
 
+# Refresh status of source and destination hosts
+&$first_print(&text('smove_refreshinghost', $vhost->{'host'}));
+&obtain_lock_server($vhost);
+&check_server_status($vhost);
+&save_managed_server($vhost);
+&release_lock_server($vhost);
+&$second_print(&text('save_refreshdone2', &describe_status($vhost, 1, 1)));
+
+&$first_print(&text('smove_refreshinghost', $dest->{'host'}));
+&obtain_lock_server($dest);
+&check_server_status($dest);
+&save_managed_server($dest);
+&release_lock_server($dest);
+&$second_print(&text('save_refreshdone2', &describe_status($dest, 1, 1)));
+
 return $err;
 }
 
@@ -8328,6 +8343,14 @@ if (defined(&$dfunc)) {
 &save_managed_server($server);
 &$second_print(&text('save_refreshdone2',
 	&describe_status($server, 1, 1)));
+
+# Refresh status of host system
+&$first_print(&text('add_statusing2', $vhost->{'host'}));
+&obtain_lock_server($vhost);
+&check_server_status($vhost);
+&save_managed_server($vhost);
+&release_lock_server($vhost);
+&$second_print(&text('save_refreshdone2', &describe_status($vhost, 1, 1)));
 
 return undef;
 }
@@ -10391,13 +10414,32 @@ foreach my $owner (&get_server_owners($server)) {
 &$second_print(&text('save_refreshdone2',
 	&describe_status($server, 1, 1)));
 
-# Refresh status of clone
 if (!$totalfail) {
+	# Refresh status of clone
 	&$first_print($text{'clone_refreshing2'});
 	&check_server_status($newserver, 0, 1);
 	&save_managed_server($newserver);
 	&$second_print(&text('save_refreshdone2',
 		&describe_status($newserver, 1, 1)));
+
+	# Refresh status of host system(s)
+	&$first_print(&text('add_statusing2', $vhost->{'host'}));
+	&obtain_lock_server($vhost);
+	&check_server_status($vhost);
+	&save_managed_server($vhost);
+	&release_lock_server($vhost);
+	&$second_print(&text('save_refreshdone2',
+		       &describe_status($vhost, 1, 1)));
+
+	if ($vhost->{'id'} ne $dest->{'id'}) {
+		&$first_print(&text('add_statusing2', $dest->{'host'}));
+		&obtain_lock_server($dest);
+		&check_server_status($dest);
+		&save_managed_server($dest);
+		&release_lock_server($dest);
+		&$second_print(&text('save_refreshdone2',
+			       &describe_status($dest, 1, 1)));
+		}
 	}
 
 if ($totalfail) {

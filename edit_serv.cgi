@@ -375,7 +375,9 @@ if (keys %$info) {
 
 	# Host memory and disk used
 	foreach my $manager (&is_parent_server($server)) {
-		my ($memfree, $memtotal) = &host_free_memory($server, $manager);
+		# Memory used
+		my ($memfree, $memtotal) = &host_free_memory(
+						$server, $manager, 0);
 		if ($memfree && $memfree != $m[1]*1024) {
 			print &ui_table_hr();
 			print &ui_table_row(
@@ -387,6 +389,20 @@ if (keys %$info) {
 				      &nice_size($memtotal-$memfree)));
 			}
 
+		# Guaranteed memory used
+		my ($gmemfree, $gmemtotal) = &host_free_memory(
+						$server, $manager, 1);
+		if ($gmemfree && $gmemfree != $memfree) {
+			print &ui_table_row(
+				&text('edit_hgmem',$text{$manager.'_typedesc'}),
+				&bar_chart($gmemtotal, $gmemtotal-$gmemfree, 1).
+				" ".
+				&text('edit_outof',
+				      &nice_size($gmemtotal),
+				      &nice_size($gmemtotal-$gmemfree)));
+			}
+
+		# Disk used
 		my ($diskfree, $disktotal) = &host_free_disk($server, $manager);
 		if ($diskfree && $diskfree != $info->{'disk_free'}) {
 			print &ui_table_row(
@@ -535,6 +551,7 @@ if ($in{'refresh'} && defined(&theme_post_save_server)) {
 sub bar_chart
 {
 my ($total, $used, $blue) = @_;
+$used = $total-1 if ($used > $total);
 return undef if (!int($total));
 my $bar_width = 100;
 my $rv = "<div class='barchart'>";
