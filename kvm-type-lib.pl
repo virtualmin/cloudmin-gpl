@@ -2377,18 +2377,25 @@ $used{"/dev/hdc"}++;	# Typically for CD-ROM
 
 # Pick a /dev/???? file that is free on the virtual system
 my $n;
-if ($disks->[0]->{'virt'} =~ /^(\/dev\/[shxv]d)[a-z]$/) {
+if ($disks->[0]->{'virt'} =~ /^(\/dev\/(s|h|v)d)[a-z]$/) {
 	# Pick a free partition on the next disk
 	$prefix = $1;
 	for($n='a'; $used{$prefix.$n}; $n=chr(ord($n)+1)) { }
 	$prefix .= $n;
 	$rv->{'virt'} = $prefix;
+	if ($disks->[0]->{'virt_onsystem'} =~ /^(\/dev\/(s|h|v)d)[a-z]$/) {
+		$rv->{'virt_onsystem'} = $1.$n;
+		}
+	else {
+		$rv->{'virt_onsystem'} = $rv->{'virt'};
+		}
+	$rv->{'virt_mount'} = $rv->{'virt_onsystem'}."1";
 	}
 else {
 	# No idea .. just guess
-	$rv->{'virt'} = "/dev/hdb";
+	$rv->{'virt_onsystem'} = $rv->{'virt'} = "/dev/hdb";
+	$rv->{'virt_mount'} = $rv->{'virt_onsystem'}."1";
 	}
-$rv->{'virt_mount'} = $rv->{'virt'}."1";
 $rv->{'virt_part'} = 1;
 
 if (!$device) {
@@ -2436,6 +2443,7 @@ if ($disk->{'device'} && !$disk->{'lv'}) {
 		      "on $vhost->{'host'}";
 	}
 else {
+	@st || $disk->{'size'} || return "Missing size for new disk";
 	if ($disk->{'lv'} && $disk->{'overwrite'}) {
 		# Delete existing LV
 		&delete_all_disk_image_partitions($vhost, $disk->{'real'});
@@ -2550,7 +2558,7 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 	$fserr = "Failed to read fstab file : $fstab" if (!ref($fstab));
 	if (!$fserr) {
 		my $fs = $disk->{'fs'} ? $disk->{'fs'} :
-			  $disk->{'media'} eq 'cdrom' ? 'iso9660' : 'ext2';
+			  $disk->{'media'} eq 'cdrom' ? 'iso9660' : 'ext3';
 		push(@$fstab, [ $disk->{'virt_mount'}, $disk->{'mount'},
 				$fs, 'defaults', 0, 0 ]);
 		my $err = &put_system_fstab($server, $fstab);
@@ -2843,7 +2851,7 @@ return $moderr;
 # Returns supported filesystem types. Assumes Linux.
 sub type_kvm_list_disk_filesystems
 {
-return ('ext2', 'reiserfs', 'swap');
+return ('ext3', 'ext4', 'ext2', 'reiserfs', 'swap');
 }
 
 # type_kvm_list_storages(&vhost)
@@ -2898,18 +2906,11 @@ sub type_kvm_fsck_disk
 my ($server, $disk, $noforce) = @_;
 my $flag = $noforce ? "" : "-f";
 my $vhost = &get_parent_server($server);
-my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
-ref($parts) || return (0, "Failed to list partitions : $parts");
-my $part = $parts->[@$parts - 1];
-my $loop = &get_loop_device($vhost);
-my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"losetup -o $part->{'offset'} $loop ".quotemeta($disk->{'real'}));
-if ($ex || $err) {
-	return (0, "losetup failed : ".($err || $out));
-	}
+my ($ok, $loop) = &loopback_mount_partition($vhost, $disk->{'real'});
+$ok || return $loop;
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"fsck -y $flag $loop");
-&execute_command_on_server($vhost, "losetup -d $loop");
+&loopback_unmount_partition($vhost, $loop);
 if ($ex > 2 || $err) {
 	return (0, $out);
 	}

@@ -422,11 +422,11 @@ sub create_disk_image_filesystem
 {
 my ($vhost, $real, $fs, $part) = @_;
 $part ||= 1;
-$fs = "ext2" if ($fs eq "ext3");
-$fs = "linux-swap" if ($fs eq "swap");
-my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"parted -s ".quotemeta($real)." mkfs $part $fs");
-return $err ? $err : $ex ? $out : undef;
+my ($ok, $loop) = &loopback_mount_partition($vhost, $real, $part);
+$ok || return $loop;
+my $err = &create_device_filesystem($vhost, $loop, $fs);
+&loopback_unmount_partition($vhost, $loop);
+return $err;
 }
 
 # parse_parted_size(string)
@@ -619,6 +619,35 @@ foreach my $l (split(/\r?\n/, $out)) {
 	$mounted{$dev} = 'swap';
 	}
 return \%mounted;
+}
+
+# loopback_mount_partition(host, disk-image, partition-number)
+# Finds a free loopback device and maps it to a particular partition in a disk
+# image, then returns an OK flag and the device path or error message.
+sub loopback_mount_partition
+{
+my ($vhost, $real, $pnum) = @_;
+my $parts = &list_disk_image_partitions($vhost, $real);
+ref($parts) || return (0, "Failed to list partitions : $parts");
+if (!defined($pnum)) {
+	$pnum = scalar(@$parts);
+	}
+my $part = $parts->[$pnum-1];
+my $loop = &get_loop_device($vhost);
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"losetup -o $part->{'offset'} $loop ".quotemeta($real));
+if ($ex || $err) {
+	return (0, "losetup failed : ".($err || $out));
+	}
+return (1, $loop);
+}
+
+# loopback_unmount_partition(host, loopback-device)
+# Removes a previously setup loopback device
+sub loopback_unmount_partition
+{
+my ($vhost, $loop) = @_;
+&execute_command_on_server($vhost, "losetup -d $loop");
 }
 
 1;

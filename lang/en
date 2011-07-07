@@ -3872,7 +3872,7 @@ storage_enone=None selected
 storage_files=Regular files
 storage_addfiles=Create a new disk in a regular file.
 storage_lvm=LVM volume group $1
-storage_addlvm=Create a new disk in a volume group $1.
+storage_addlvm=Create a new disk in volume group $1.
 storage_addcitrix=Create a new disk in $1.
 
 icopy_title=Copy System Image

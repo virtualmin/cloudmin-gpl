@@ -16,3 +16,4 @@ The Change Password page and passwd-system API command can now be used to set th
 IPv6 addresses can now be managed on KVM instances and assigned at creation time. The IP Addresses page also allows entering of IPv6 allocation ranges for use by new systems.
 New KVM instances can now have virtual memory added at creation time, using a separate virtual disk.
 ---- Changes since 5.6 ----
+Added support for creating virtual disks with ext3 and ext4 filesystems.
