@@ -46,6 +46,10 @@ if (!$module_info{'onehost'}) {
 print &ui_table_row($text{'kvm_dir'},
 	&ui_textbox("dir", $kvm->{'kvm_dir'} || "/kvm", 60));
 
+# Allow memory over-committing?
+print &ui_table_row($text{'openvz_overmemory'},
+	&ui_yesno_radio("overmemory", $kvm->{'kvm_overmemory'}));
+
 # Find volume groups on host, if we can
 @pvs = ( );
 if (!$in{'new'} && $kvm->{'status'} ne 'down' &&

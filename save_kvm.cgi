@@ -56,6 +56,9 @@ else {
 			}
 		}
 
+	# Over-allocation settings
+	$kvm->{'kvm_overmemory'} = $in{'overmemory'};
+
 	# DNS zone
 	$in{'zone'} =~ /^[a-z0-9\.\-\_]+$/i || &error($text{'kvm_ezone'});
 	$kvm->{'kvm_zone'} = $in{'zone'};
