@@ -385,7 +385,9 @@ if ($server->{'ip6_force'} && !wantarray) {
 my @ips = split(/\s+/, $server->{'ip6_addresses'});
 if (!@ips) {
 	my $resolvedip = &to_ip6address($server->{'host'});
-        @ips = ( $resolvedip );
+	if ($resolvedip) {
+		@ips = ( $resolvedip );
+		}
 	}
 elsif (scalar(@ips) > 1) {
 	my $resolvedip = &to_ip6address($server->{'host'});
@@ -6524,7 +6526,10 @@ my $canlogin = defined(&$clfunc) && &$clfunc($server);
 my $rsfunc = "type_".$server->{'manager'}."_can_reset";
 my $canreset = defined(&$rsfunc) && &$rsfunc($server);
 my $pfunc = "type_".$server->{'manager'}."_can_password";
-my $canpass = defined(&$pfunc) && &$pfunc($server);
+my $canpass = defined(&$pfunc) && &$pfunc($server) &&
+	      $server->{'status'} ne 'alive' &&
+	      $server->{'status'} ne 'noping' &&
+	      $server->{'type'} ne 'windows';
 my $clonefunc = "type_".$server->{'manager'}."_can_clone";
 my $canclone = defined(&$clonefunc) && &$clonefunc($server);
 my $bootmodefunc = "type_".$server->{'manager'}."_list_boot_modes";
