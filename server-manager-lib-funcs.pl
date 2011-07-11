@@ -402,6 +402,15 @@ if ($server->{'ip6_force'}) {
 return wantarray ? @ips : $ips[0];
 }
 
+# get_server_mac(&server)
+# Returns the MAC address or addresses of a system
+sub get_server_mac
+{
+my ($server) = @_;
+my @macs = split(/\s+/, $server->{'mac_addresses'});
+return wantarray ? @macs : $macs[0];
+}
+
 # first_ethernet_iface()
 # Returns the object for the first active ethernet or bonded interface
 sub first_ethernet_iface
@@ -3086,7 +3095,8 @@ foreach my $p (&is_parent_server($server)) {
 &add_historic_collected_info($info, $time || $server->{'statustime'}, $server);
 
 # Cache IP addresses, if we don't have them yet
-if (!$server->{'ip_addresses'} || $regen) {
+if (!$server->{'ip_addresses'} ||
+    !defined($server->{'mac_addresses'}) || $regen) {
 	&compute_ip_addresses($server);
 	}
 
@@ -3139,6 +3149,11 @@ if ($server->{'status'} ne 'nohost') {
 			$server->{'ip_addresses'} = join(" ",
 				grep { !/^127\.0\./ }
 				     map { $_->{'address'} } @$ifaces);
+			my @ethers = &unique(grep { $_ }
+					map { $_->{'ether'} } @$ifaces);
+			if (@ethers || !$server->{'mac_addresses'}) {
+				$server->{'mac_addresses'} = join(" ", @ethers);
+				}
 			my @addr6;
 			foreach my $iface (@$ifaces) {
 				if ($iface->{'address6'}) {

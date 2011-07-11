@@ -141,6 +141,9 @@ if ($multi) {
 		foreach $ip (&get_server_ip6($s)) {
 			print "    IPv6 address: $ip\n";
 			}
+		foreach $ip (&get_server_mac($s)) {
+			print "    MAC address: $ip\n";
+			}
 		if ($s->{'id'} != 0) {
 			print "    Description: $s->{'desc'}\n";
 			}

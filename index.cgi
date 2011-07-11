@@ -271,6 +271,16 @@ if (@servers) {
 					@ips6 = &get_server_ip6($s);
 					push(@cols, join(" , ", @ips6));
 					}
+				elsif ($c eq "mac") {
+					# First MAC address
+					$mac = &get_server_mac($s);
+					push(@cols, $mac);
+					}
+				elsif ($c eq "macs") {
+					# All MAC addresses
+					@macs = &get_server_mac($s);
+					push(@cols, join(" , ", @macs));
+					}
 				elsif ($c eq "owner") {
 					# Owner names
 					push(@cols,
