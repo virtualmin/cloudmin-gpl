@@ -2289,7 +2289,8 @@ if ($mounts) {
 					}
 				}
 			if ($label) {
-				($f) = grep { $_->[0] eq 'LABEL='.$label }
+				($f) = grep { $_->[0] eq 'LABEL='.$label ||
+					     uc($_->[0]) eq 'UUID='.uc($label) }
 					    @$fstab;
 				if ($f) {
 					$f->[0] = $label_to_part{$label};

@@ -493,8 +493,12 @@ return &put_system_fstab($server, \@newfstab);
 sub get_label_map
 {
 my ($server) = @_;
+
+# Use cached label map if down
 my %defrv = map { split(/=/, $_) } split(/\s+/, $server->{'label_map'});
 return %defrv if (!&can_ssh_status($server));
+
+# Find all partitions
 my ($data, $ex, $err) = &execute_command_on_server($server,
 						   "cat /proc/partitions");
 return %defrv if ($ex || $er);
@@ -506,6 +510,8 @@ foreach my $l (split(/\r?\n/, $data)) {
 if (!@parts) {
 	return ();
 	}
+
+# For each partition, get the label
 my @cmds = map { "e2label $_ 2>/dev/null || echo NONE" } @parts;
 my ($out, $ex, $err) = &execute_command_on_server($server, join(" ; ", @cmds));
 my @lines = split(/\r?\n/, $out);
@@ -515,6 +521,20 @@ for(my $i=0; $i<@parts; $i++) {
 		$rv{$lines[$i]} = $parts[$i];
 		}
 	}
+
+# Also get the disk UUIDs
+my ($out, $ex, $err) = &execute_command_on_server($server,
+						  "ls -l /dev/disk/by-uuid");
+if (!$ex && !$err) {
+	foreach my $line (split(/\r?\n/, $out)) {
+		if ($line =~ /(\S+)\s+\-\>\s+(\S+)/) {
+			my ($uuid, $dev) = ($1, $2);
+			$dev = &simplify_path("/dev/disk/by-uuid/$dev");
+			$rv{$uuid} = $dev;
+			}
+		}
+	}
+
 return %rv;
 }
 
