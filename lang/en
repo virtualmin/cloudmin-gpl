@@ -87,6 +87,7 @@ add_sshport=SSH port number
 add_auth0=Using password $1
 add_auth1=Using SSH key $1
 add_auth2=Do not attempt SSH login
+add_noping=Do not attempt to ping either
 add_authpass=SSH root password
 add_webmin=Webmin login mode
 add_webmin0=Webmin is not installed yet

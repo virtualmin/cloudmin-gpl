@@ -2585,9 +2585,16 @@ if ($server->{'ssh_nologin'}) {
 	if (!$status) {
 		# Only if the Xen status function didn't report any further
 		# error do we use the result of the ping
-		my $ping = &ping_server_host($server->{'ip'});
-		$server->{'status'} = $ping ? "alive" : "noping";
-		$server->{'status_msg'} = $ping ? undef : "Ping failed";
+		if ($server->{'ssh_noping'}) {
+			# Ping disabled too .. just assume alive
+			$server->{'status'} = "alive";
+			$server->{'status_msg'} = undef;
+			}
+		else {
+			my $ping = &ping_server_host($server->{'ip'});
+			$server->{'status'} = $ping ? "alive" : "noping";
+			$server->{'status_msg'} = $ping ? undef : "Ping failed";
+			}
 		&save_server_collected($server, undef);
 		goto DONECHECK;
 		}
@@ -8655,7 +8662,10 @@ else {
 				&ssh_key_menu("key", $type,
 					$server ? $server->{'key'}
 						: undef))."<br>" ],
-			[ 2, $text{'add_auth2'} ] ]));
+			[ 2, $text{'add_auth2'}."<br>".
+			     "&nbsp;&nbsp;&nbsp;".
+			     &ui_checkbox("noping", 1, $text{'add_noping'},
+					  $server->{'ssh_noping'}) ] ]));
 	}
 
 # SSH protocol version
@@ -8712,6 +8722,7 @@ elsif ($in->{'auth_mode'} == 1) {
 elsif ($in->{'auth_mode'} == 2) {
 	# No SSH login should be tried
 	$server->{'ssh_nologin'} = 1;
+	$server->{'ssh_noping'} = $in->{'noping'};
 	}
 $server->{'ssh_protocol'} = $in->{'protocol'};
 return undef;

@@ -216,29 +216,39 @@ if ($multi) {
 			}
 
 		# Login information
-		$sfunc = "type_".$s->{'manager'}."_no_ssh";
-		$hasssh = !defined(&$sfunc) || !&$sfunc();
-		if ($hasssh) {
-			print "    SSH login: $s->{'ssh_user'}\n";
-			if ($s->{'ssh_pass'}) {
-				print "    SSH password: $s->{'ssh_pass'}\n";
+		if ($server->{'ssh_nologin'}) {
+			print "    Attempt SSH login: No\n";
+			print "    Attempt ping: ",
+			      ($server->{'ssh_noping'} ? "No" : "Yes"),"\n";
+			}
+		else {
+			print "    Attempt SSH login: Yes\n";
+			$sfunc = "type_".$s->{'manager'}."_no_ssh";
+			$hasssh = !defined(&$sfunc) || !&$sfunc();
+			if ($hasssh) {
+				print "    SSH login: $s->{'ssh_user'}\n";
+				if ($s->{'ssh_pass'}) {
+					print "    SSH password: ",
+					      $s->{'ssh_pass'},"\n";
+					}
+				else {
+					print "    SSH key ID: $s->{'key'}\n";
+					}
 				}
-			else {
-				print "    SSH key ID: $s->{'key'}\n";
+			print "    SSH version: $s->{'ssh_protocol'}\n";
+			if ($s->{'ssh_port'}) {
+				print "    SSH port: $s->{'ssh_port'}\n";
 				}
+			print "    Webmin same as SSH: ",
+				($s->{'ssh_pass_same'} ? "Yes" : "No"),"\n";
+			if (!$s->{'ssh_pass_same'}) {
+				print "    Webmin login: $s->{'user'}\n";
+				print "    Webmin password: $s->{'pass'}\n";
+				}
+			print "    Webmin port: $s->{'port'}\n";
+			print "    Webmin SSL: ",
+			      ($s->{'ssl'} ? "Yes" : "No"),"\n";
 			}
-		print "    SSH version: $s->{'ssh_protocol'}\n";
-		if ($s->{'ssh_port'}) {
-			print "    SSH port: $s->{'ssh_port'}\n";
-			}
-		print "    Webmin same as SSH: ",
-			($s->{'ssh_pass_same'} ? "Yes" : "No"),"\n";
-		if (!$s->{'ssh_pass_same'}) {
-			print "    Webmin login: $s->{'user'}\n";
-			print "    Webmin password: $s->{'pass'}\n";
-			}
-		print "    Webmin port: $s->{'port'}\n";
-		print "    Webmin SSL: ",($s->{'ssl'} ? "Yes" : "No"),"\n";
 
 		# Show type-specific info
 		$ifunc = "type_".$s->{'manager'}."_server_info";
