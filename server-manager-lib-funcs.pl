@@ -4028,7 +4028,7 @@ if ($config{'fsck_boot'}) {
 # Call type-specific startup function
 my $sfunc = "type_".$server->{'manager'}."_startup";
 my ($ok, $err) = &$sfunc($server);
-return ($ok, $err) if (!$ok);
+return ($ok, $err) if ($ok != 1);
 
 # If the server has Webmin, wait for it to come up
 if ($server->{'user'} && $ok != 2) {

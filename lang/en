@@ -71,6 +71,8 @@ real_typedesc=Physical
 real_add=Add Physical System
 real_typeshort=physical
 real_scan=Find Physical Systems
+real_estartping=System did not respond to ping after $1 seconds. Perhaps wake-on-LAN is not supported by the BIOS or network card?
+real_estartssh=System did not respond to SSH after $1 seconds.
 
 zones_typedesc=Solaris Zone
 zones_createlink=Create Solaris Zone

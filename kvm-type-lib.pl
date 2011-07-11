@@ -1823,6 +1823,9 @@ return "No KVM process found!";
 sub type_kvm_startup
 {
 my ($server, $noping) = @_;
+if ($server->{'ssh_nologin'} && $server->{'ssh_noping'}) {
+	$noping = 1;
+	}
 my $vhost = &type_kvm_parent($server);
 my $cmd = &get_kvm_start_command($server);
 my ($pinged, $sshed);
