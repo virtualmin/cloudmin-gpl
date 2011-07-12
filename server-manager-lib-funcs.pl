@@ -6129,8 +6129,10 @@ my ($gw, $gwdev, $got);
 if ($server->{'manager'} eq 'this') {
         # Just call own module
 	&foreign_require("net", "net-lib.pl");
-        ($gw, $gwdev) = &net::get_default_gateway();
-	$got = 1;
+	if (defined(&net::get_default_gateway)) {
+		($gw, $gwdev) = &net::get_default_gateway();
+		$got = 1;
+		}
         }
 elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Get from Webmin
