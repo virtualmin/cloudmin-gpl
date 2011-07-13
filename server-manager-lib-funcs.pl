@@ -3151,26 +3151,32 @@ sub compute_ip_addresses
 my ($server) = @_;
 if ($server->{'status'} ne 'nohost') {
 	my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
+	my $ifaces;
 	if (defined(&$cfunc) && &$cfunc($server)) {
+		# Call type-specific function
 		my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
-		my $ifaces = &$ifunc($server);
-		if (ref($ifaces)) {
-			$server->{'ip_addresses'} = join(" ",
-				grep { !/^127\.0\./ }
-				     map { $_->{'address'} } @$ifaces);
-			my @ethers = &unique(grep { $_ }
-					map { $_->{'ether'} } @$ifaces);
-			if (@ethers || !$server->{'mac_addresses'}) {
-				$server->{'mac_addresses'} = join(" ", @ethers);
-				}
-			my @addr6;
-			foreach my $iface (@$ifaces) {
-				if ($iface->{'address6'}) {
-					push(@addr6, @{$iface->{'address6'}});
-					}
-				}
-			$server->{'ip6_addresses'} = join(" ", @addr6);
+		$ifaces = &$ifunc($server);
+		}
+	elsif (&can_ssh_status($server)) {
+		# Fall back to getting from ifconfig output
+		$ifaces = &list_active_server_interfaces($server);
+		}
+	if (ref($ifaces)) {
+		$server->{'ip_addresses'} = join(" ",
+			grep { !/^127\.0\./ }
+			     map { $_->{'address'} } @$ifaces);
+		my @ethers = &unique(grep { $_ }
+				map { $_->{'ether'} } @$ifaces);
+		if (@ethers || !$server->{'mac_addresses'}) {
+			$server->{'mac_addresses'} = join(" ", @ethers);
 			}
+		my @addr6;
+		foreach my $iface (@$ifaces) {
+			if ($iface->{'address6'}) {
+				push(@addr6, @{$iface->{'address6'}});
+				}
+			}
+		$server->{'ip6_addresses'} = join(" ", @addr6);
 		}
 	}
 }
