@@ -3904,6 +3904,7 @@ kvm_addlink=Add KVM Instance
 kvm_typeshort=KVM
 kvm_estartping=KVM instance was started, but could not be pinged after $1 seconds
 kvm_estartssh=KVM instance was started, but could not be accessed via SSH after $1 seconds
+kvm_estartpass=KVM instance was started OK, but the graphical console password could not be set : $1
 
 kvms_title=KVM Host Systems
 kvms_add=Register a system for KVM hosting.

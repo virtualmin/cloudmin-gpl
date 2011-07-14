@@ -25,8 +25,8 @@ $| = 1;
 
 # Feed input
 while(<STDIN>) {
-	print $fh $_;
 	sleep($delay) if ($delay);
+	print $fh $_;
 	}
 shutdown($fh, 1);
 

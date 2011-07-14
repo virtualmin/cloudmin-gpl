@@ -1875,6 +1875,10 @@ if ($changed_net) {
 	&save_managed_server($server);
 	}
 
+# Make sure we have nc.pl
+my $ncerr = &upload_nc_script($vhost);
+return (0, "Failed to create nc.pl : $ncerr") if ($ncerr);
+
 # Create a console output file and monitor input file
 $server->{'kvm_console'} ||= &get_kvm_console_file($server);
 my $err = &create_kvm_monitor_file($server);
@@ -1882,8 +1886,7 @@ return (0, "Failed to create monitor input file : $err") if ($err);
 
 # Run qemu-kvm to start it up, in the background
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"/usr/bin/pty.pl --sleep 2 $cmd >$server->{'kvm_console'} 2>&1 ".
-	"<$server->{'kvm_monitor'} &");
+	"$cmd >$server->{'kvm_console'} 2>&1 </dev/null &");
 return (0, $err) if ($err);
 return (0, $out || "Unknown error") if ($ex);
 
@@ -1899,6 +1902,14 @@ while($tries++ < 20) {
 		}
 	sleep(1);
 	$tries++;
+	}
+
+# Set the VNC password
+my ($pok, $perr);
+if ($found) {
+	($pok, $perr) = &run_kvm_monitor_command($server,
+			[ "change vnc password",
+			  $server->{'kvm_vnc_passwd'} ], 3);
 	}
 
 # Read the output file
@@ -1928,6 +1939,10 @@ if (defined($pinged) && !$pinged) {
 	}
 if (defined($sshed) && !$sshed) {
 	return (3, &text('kvm_estartssh', 60));
+	}
+
+if ($perr) {
+	return (0, &text('kvm_estartpass', $perr));
 	}
 return (1, undef);
 }
@@ -2115,6 +2130,25 @@ else {
 	$cmd .= " -nographic";
 	}
 
+# Allocate a free port for the monitor
+if (!$server->{'kvm_monitor_port'}) {
+	my $mport = 40000;
+	my @minuse;
+	push(@minuse, @$inuse) if (ref($inuse));
+	push(@minuse, map { $_->{'kvm_vnc_display'}+5900 }
+			  grep { $_->{'kvm_vnc_display'} }
+			       &list_managed_servers());
+	push(@minuse, map { $_->{'kvm_monitor_port'} }
+			  grep { $_->{'kvm_monitor_port'} }
+			       &list_managed_servers());
+	while(1) {
+		last if (&indexof($mport, @minuse) < 0);
+		$mport++;
+		}
+	$server->{'kvm_monitor_port'} = $mport;
+	}
+$cmd .= " -monitor tcp:127.0.0.1:$server->{'kvm_monitor_port'},server";
+
 # Add keymap flag
 if ($server->{'kvm_keymap'}) {
 	$cmd .= " -k ".$server->{'kvm_keymap'};
@@ -2140,6 +2174,8 @@ sub generate_kvm_bridge_script
 {
 my ($server, $iface, $bridge) = @_;
 my $vhost = &type_kvm_parent($server);
+my $brctl = &has_command_on_server($vhost, "brctl") || "brctl";
+my $ifconfig = &has_command_on_server($vhost, "ifconfig") || "ifconfig";
 my $data = "#!/bin/sh\n".
 	   "echo \$1 >".$vhost->{'kvm_dir'}."/".
 	     $server->{'host'}."-".$iface->{'name'}.".tap\n";
@@ -2147,8 +2183,8 @@ if (!$bridge) {
 	($bridge) = &list_host_bridges($vhost);
 	$bridge ||= "br0";
 	}
-$data .= "brctl addif $bridge \$1\n";
-$data .= "ifconfig \$1 up\n";
+$data .= "$brctl addif $bridge \$1\n";
+$data .= "$ifconfig \$1 up\n";
 return ($data,
 	$vhost->{'kvm_dir'}."/".$server->{'host'}."-".$iface->{'name'}.".sh");
 }
@@ -3918,10 +3954,19 @@ sub type_kvm_set_atboot
 {
 my ($server, $atboot) = @_;
 my $vhost = &type_kvm_parent($server);
+
+# Create monitor input file and command to write it to socket
 $server->{'kvm_console'} ||= &get_kvm_console_file($server);
+my $ncerr = upload_nc_script($vhost);
+return $ncerr if ($ncerr);
 &create_kvm_monitor_file($server);
-my $cmd = "/usr/bin/pty.pl --sleep 2 ".&get_kvm_start_command($server).
-	  " >$server->{'kvm_console'} 2>&1 <$server->{'kvm_monitor'} &";
+
+my $cmd = &get_kvm_start_command($server).
+          " >$server->{'kvm_console'} 2>&1 </dev/null &";
+$cmd .= " sleep 3 ;";
+$cmd .= " /usr/bin/nc.pl --sleep 3 localhost $server->{'kvm_monitor_port'} ".
+	"<$server->{'kvm_monitor'} >>$server->{'kvm_console'} 2>&1";
+
 my $temp = &transname();
 if (&stat_file_on_server($vhost, "/etc/init.d")) {
 	# Insert into init script
@@ -5184,6 +5229,7 @@ return (
 sub parse_kvm_start_command
 {
 my ($line) = @_;
+while($cmd =~ s/(\d*)(<|>)((\/\S+)|&\d+)\s*$//) { }
 if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm|qemu)\s+(.*)/) {
 	# Found a possible KVM line .. parse the args
 	my ($cmd, $args) = ($2, $3);
@@ -5279,8 +5325,8 @@ return $proc;
 sub match_kvm_instance
 {
 my ($server, $instance) = @_;
-return $server->{'kvm_filesystem'} eq $_->{'filesystem'} ||
-       $server->{'host'} eq $_->{'args'}->{'name'};
+return $server->{'kvm_filesystem'} eq $instance->{'filesystem'} ||
+       $server->{'host'} eq $instance->{'args'}->{'name'};
 }
 
 # get_kvm_process_dir(&vhost, pid)
@@ -5429,7 +5475,10 @@ return ( "disk", "qcow2", "qcow", "vmdk", "cd" );
 sub type_kvm_can_convert_image
 {
 return ( { 'manager' => 'xen',
-	   'xen_hvm' => 1 } );
+	   'xen_hvm' => 1 },
+	 { 'manager' => 'citrix',
+	   'citrix_hvm' => 1 },
+       );
 }
 
 # type_kvm_can_clone(&server)
@@ -5977,11 +6026,6 @@ if (!$server->{'kvm_monitor'}) {
 	}
 my @mlines;
 
-# Copy pty.pl
-my $perr = &put_file_to_server($vhost,
-		"$module_root_directory/pty.pl", "/usr/bin/pty.pl");
-return $perr if ($perr);
-
 $server->{'kvm_vnc_passwd'} ||= $server->{'ssh_pass'} ||
 			        &generate_random_password(7);
 push(@mlines, "change vnc password");
@@ -5990,6 +6034,44 @@ push(@mlines, $server->{'kvm_vnc_passwd'});
 # Write out monitor input
 return &put_file_data_to_server($vhost, join("", map { $_."\n" } @mlines),
 			 	$server->{'kvm_monitor'});
+}
+
+# upload_nc_script(&vhost)
+# Ensure that /usr/bin/nc.pl exists
+sub upload_nc_script
+{
+my ($vhost) = @_;
+return &put_file_to_server($vhost,
+	"$module_root_directory/nc.pl", "/usr/bin/nc.pl");
+}
+
+# run_kvm_monitor_command(&server, &command, command-delay)
+# Runs some command by connecting to the KVM monitor port for a system,
+# and returns an OK flag and the output.
+sub run_kvm_monitor_command
+{
+my ($server, $cmds, $delay) = @_;
+$server->{'kvm_monitor_port'} ||
+	return (0, "This system was not started with a monitor port");
+my $vhost = &type_kvm_parent($server);
+&has_command_on_server($vhost, "/usr/bin/nc.pl") ||
+	return (0, "The nc.pl command is needed on $vhost->{'host'} to run ".
+		   "KVM monitor commands");
+@$cmds || return (0, "No monitor commands given");
+
+# Run nc with echo into it
+foreach my $c (@$cmds) {
+	push(@echos, "echo ".quotemeta($c));
+	}
+my $sleep = $delay ? "--sleep $delay" : "";
+my ($out, $ex, $err) = &execute_command_on_server($vhost,
+	"(".join(" ; ", @echos).") | ".
+	"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}");
+if ($ex || $err) {
+	return (0, $err || $out);
+	}
+
+return (1, $out);
 }
 
 1;
