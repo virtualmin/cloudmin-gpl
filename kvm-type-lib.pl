@@ -1806,8 +1806,25 @@ if (&can_ssh_status($server) && !$force) {
 		sleep(1);
 		$tries++;
 		}
-	return "Failed to shut down after 30 seconds";
+	#return "Failed to shut down after 30 seconds";
 	}
+
+# Next try shutdown monitor command
+my ($mok, $merr) = &run_kvm_monitor_command($server, [ "system_powerdown" ]);
+if ($mok) {
+	# Wait for it to work
+	my $tries = 0;
+	while($tries < 30) {
+		my ($kout, $kex) = &execute_command_on_server(
+					$vhost, "kill -0 $proc->{'pid'}");
+		if ($kex) {
+			return undef;
+			}
+		sleep(1);
+		$tries++;
+		}
+	}
+
 $proc = &get_server_kvm_instance($server);
 if ($proc) {
 	# Just kill it
