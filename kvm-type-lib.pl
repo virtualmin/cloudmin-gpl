@@ -1941,7 +1941,7 @@ if (defined($sshed) && !$sshed) {
 	return (3, &text('kvm_estartssh', 60));
 	}
 
-if ($perr) {
+if (!$pok) {
 	return (0, &text('kvm_estartpass', $perr));
 	}
 return (1, undef);
@@ -5241,6 +5241,7 @@ if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm|qemu)\s+(.*)/) {
 	my $lastarg;
 	while(@w) {
 		my $a = shift(@w);
+		$a =~ s/\\(.)/$1/g;	# un-escape
 		if ($a =~ /^\-+(\S+)$/) {
 			# Start of a new arg
 			$lastarg = $1;
