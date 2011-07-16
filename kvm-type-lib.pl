@@ -2593,7 +2593,8 @@ if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
 
 # Add block device on server now
 my $attacherr;
-if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'}) {
+if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
+    $drive{'if'} ne 'ide') {
 	my $str = join(",", map { $_."=".$drive{$_} } keys %drive);
 	my ($aok, $aout) = &run_kvm_monitor_command($server,
 		[ "pci_add 0 storage $str" ]);
