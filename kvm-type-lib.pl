@@ -1835,11 +1835,11 @@ if ($proc) {
 return "No KVM process found!";
 }
 
-# type_kvm_startup(&server, [no-ping])
+# type_kvm_startup(&server, [no-ping], [extra-args])
 # Start the kvm or qemu-kvm process, and wait till it responds to ping and SSH
 sub type_kvm_startup
 {
-my ($server, $noping) = @_;
+my ($server, $noping, $extra) = @_;
 if ($server->{'ssh_nologin'} && $server->{'ssh_noping'}) {
 	$noping = 1;
 	}
@@ -1903,7 +1903,7 @@ return (0, "Failed to create monitor input file : $err") if ($err);
 
 # Run qemu-kvm to start it up, in the background
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"$cmd >$server->{'kvm_console'} 2>&1 </dev/null &");
+	"$cmd $extra >$server->{'kvm_console'} 2>&1 </dev/null &");
 return (0, $err) if ($err);
 return (0, $out || "Unknown error") if ($ex);
 
@@ -3781,6 +3781,10 @@ if (!ref($procs)) {
 	}
 my ($proc) = grep { &match_kvm_instance($server, $_) } @$procs;
 if (!$proc) {
+	if ($server->{'kvm_pause'}) {
+		# Pause file exists, must be paused
+		return (8, "KVM instance is paused");
+		}
 	return (6, "KVM instance is down");
 	}
 
@@ -3814,6 +3818,15 @@ if ((!defined($server->{'kvm_ip6'}) || $regen) &&
 	# Fetch IPv6 addresses from interfaces
 	$server->{'kvm_ip6'} =
 		join(" ", &list_interface_ip6_addresses($server));
+	}
+
+# If paused, make sure pause file still exists
+if ($server->{'kvm_pause'} && $server->{'status'} ne 'nohost') {
+	my $vhost = &get_parent_server($server);
+	my @st = &stat_file_on_server($vhost, $server->{'kvm_pause'});
+	if (!@st) {
+		delete($server->{'kvm_pause'});
+		}
 	}
 }
 
@@ -4771,6 +4784,73 @@ sub type_kvm_get_dns_name
 {
 my $vhost = &get_parent_server($server);
 return ( $server->{'kvm_dns'}, $vhost->{'kvm_zone'} );
+}
+
+# type_kvm_can_pause(&server)
+# Returns 1 if a system can be paused, 2 if it can be resumed, 0 if neither
+sub type_kvm_can_pause
+{
+my ($server) = @_;
+if ($server->{'status'} eq 'nohost' || $server->{'status'} eq 'down') {
+	# Down, so neither can be done
+	return 0;
+	}
+elsif ($server->{'status'} eq 'paused') {
+	# Currently paused, can resume
+	return 2;
+	}
+else {
+	# Now running, can cause
+	return 1;
+	}
+}
+
+# type_kvm_pause_system(&server)
+# Pauses a KVM instance by stopping it, writing memory to a pause file, then
+# shutting it down
+sub type_kvm_pause_system
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+my $cmd = &find_qemu_kvm_command($vhost);
+my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd." --help");
+if ($out !~ /-migrate/) {
+	return "KVM on $vhost->{'host'} does not support the -migrate flag ".
+	       "which is needed to un-pause a KVM instance";
+	}
+if (!$server->{'kvm_pause'}) {
+	my $pause = $server->{'kvm_console'} || &get_kvm_console_file($server);
+	if ($pause !~ s/\.console$/\.pause/) {
+		$pause .= ".pause";
+		}
+	$server->{'kvm_pause'} = $pause;
+	}
+my ($ok, $out) = &run_kvm_monitor_command($server,
+			[ "stop",
+			  "migrate_set_speed 4095m",
+			  "migrate \"exec:cat >$server->{'kvm_pause'}\"",
+			  "quit" ],
+			3);
+return $out if (!$ok);
+return undef;
+}
+
+# type_kvm_unpause_system(&server)
+# Resumes a Xen instance. Returns undef on success or an error message
+# on failure.
+sub type_kvm_unpause_system
+{
+my ($server) = @_;
+my $vhost = &get_parent_server($server);
+$server->{'kvm_pause'} || return "Not currently paused";
+my @st = &stat_file_on_server($vhost, $server->{'kvm_pause'});
+@st || return "Pause file $server->{'kvm_pause'} does not ".
+	      "exist on $vhost->{'host'}";
+my ($ok, $err) = &type_kvm_startup($server, 0,
+			"-incoming \"exec:cat $server->{'kvm_pause'}\"");
+&delete_file_on_server($vhost, $server->{'kvm_pause'});
+delete($server->{'kvm_pause'});
+return $ok == 1 ? undef : $err;
 }
 
 # type_kvm_can_move(&server, [&dest])

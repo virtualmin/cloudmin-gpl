@@ -78,7 +78,7 @@ foreach $s (@servers) {
 		}
 	else {
 		&check_server_status($s, 0, 1);
-		print ".. un-pause successfully\n\n";
+		print ".. un-paused successfully\n\n";
 		}
 	&save_managed_server($s);
 	}
