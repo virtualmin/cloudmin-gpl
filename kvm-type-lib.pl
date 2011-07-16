@@ -2129,9 +2129,6 @@ if (ref($inuse)) {
 		}
 	$cmd .= " -vnc :".$server->{'kvm_vnc_display'}.",password";
 
-	# Connect monitor to stdout
-	$cmd .= " -monitor stdio";
-
 	# Enable high-resolution mode
 	if ($server->{'kvm_vga'}) {
 		if ($out =~ /-std-vga/) {
@@ -2594,6 +2591,16 @@ if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
 &save_managed_server($server);
 &type_kvm_set_atboot($server, 2);
 
+# Add block device on server now
+my $attacherr;
+if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'}) {
+	my $str = join(",", map { $_."=".$drive{$_} } keys %drive);
+	my ($aok, $aout) = &run_kvm_monitor_command($server,
+		[ "pci_add 0 storage $str" ]);
+	$attacherr = !$aok ? $aout :
+		      $aout =~ /OK/ ? undef : $aout;
+	}
+
 # Add to total disk size
 if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
 	$server->{'kvm_disktotal'} += $disk->{'size'};
@@ -2624,7 +2631,25 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 	&umount_filesystem_if_needed($server);
 	}
 
-return $fserr;
+# Actually mount if possible
+if ($disk->{'mount'} && &can_ssh_status($server) && !$attacherr) {
+	my $cmd;
+	my $virt = $disk->{'virt_mount'} || $disk->{'virt'};
+	if ($disk->{'fs'} eq 'swap') {
+		$cmd = "swapon ".quotemeta($virt);
+		}
+	else {
+		$cmd = "mount ".quotemeta($virt)." ".
+			 	quotemeta($disk->{'mount'});
+		}
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	if ($ex || $err) {
+		return "Failed to mount $virt on $disk->{'mount'} : ".
+		       ($err || $out);
+		}
+	}
+
+return $attacherr || $fserr;
 }
 
 # type_kvm_delete_disk(&server, &disk, [detach-only], [leave-fstab])
