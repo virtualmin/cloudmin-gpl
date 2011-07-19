@@ -8,7 +8,8 @@ This command creates backups of one or more Cloudmin systems to the specified
 backup destination. The systems to include are selected using standard
 flags like C<--host> or C<--owner>, and the destination by the C<--dest>
 flag followed by a destination specification like I</backup/cloudmin> or
-I<backupserver:/cloudmin>.
+I<backupserver:/cloudmin>. To use the default backup destination for each
+system's host, use the C<--default-dest> flag instead of C<--dest>.
 
 By default, systems are backed up one by one. However, you can have them
 done in parallel with the C<--parallel> flag.
@@ -65,6 +66,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
 	elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--dest") { $dest = shift(@ARGV); }
+	elsif ($a eq "--default-dest") { $defaultdest = 1 };
 	elsif ($a eq "--shutdown") { $shutdown = 1; }
 	elsif ($a eq "--parallel") { $parallel = 1; }
 	elsif ($a eq "--quiet") { $quiet = 1; }
@@ -76,9 +78,11 @@ while(@ARGV > 0) {
 	}
 
 # Validate args
-$dest || &usage("Missing --dest parameter");
-$desthash = &parse_backup_destination($dest);
-$desthash ||  &usage("Invalid --dest specification $dest");
+$dest || $defaultdest || &usage("Missing --dest or --default-dest parameter");
+if ($dest) {
+	$desthash = &parse_backup_destination($dest);
+	$desthash ||  &usage("Invalid --dest specification $dest");
+	}
 if (defined($purge)) {
 	$purge =~ /^[0-9\.]+$/ && $purge > 0 ||
 		&usage("--purge must be followed by a non-zero number of days");
@@ -90,7 +94,8 @@ if (defined($purge)) {
 # Work out who to backup
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hostons);
 @servers || &usage("No systems specified");
-$backup = { 'dest' => &join_backup_destination($desthash),
+$backup = { 'dest' => $desthash ? &join_backup_destination($desthash)
+				: undef,
 	    'servers' => join(' ', map { $_->{'id'} } @servers),
 	    'shutdown' => $shutdown,
 	    'parallel' => $parallel,
@@ -98,7 +103,7 @@ $backup = { 'dest' => &join_backup_destination($desthash),
 
 # Make sure source and dest can be managed by the user
 &can_action_usage(\@servers, "backup");
-if ($desthash->{'mode'} <= 2) {
+if ($desthash && $desthash->{'mode'} <= 2) {
 	foreach $s (@servers) {
 		$vhost = &get_parent_server($s);
 		$destserver = &get_backup_dest_server($desthash, $vhost);
@@ -163,7 +168,7 @@ print "                        [--os oscode]*\n";
 print "                        [--owner name]*\n";
 print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                        [--host-on name]\n";
-print "                        --dest destination-directory\n";
+print "                        --dest destination-directory | --default-dest\n";
 print "                        [--shutdown]\n";
 print "                        [--parallel]\n";
 print "                        [--purge days]\n";
