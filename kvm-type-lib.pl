@@ -287,12 +287,17 @@ if ($got->{'args'}->{'smp'}) {
 	}
 delete($got->{'args'}->{'smp'});
 
-# Same VGA mode
+# Save VGA mode
 if (defined($got->{'args'}->{'std-vga'}) ||
     $got->{'args'}->{'vga'} eq 'std') {
 	$server->{'kvm_vga'} = 1;
 	}
 delete($got->{'args'}->{'std-vga'});
+
+# Save monitor port, if any
+if ($got->{'args'}->{'monitor'} =~ /tcp:(localhost|127.0.0.1):(\d+),server/) {
+	$server->{'kvm_monitor_port'} = $2;
+	}
 
 # Delete args we don't need to save
 delete($got->{'args'}->{'name'});
@@ -1783,6 +1788,12 @@ sub type_kvm_shutdown
 {
 my ($server, $force) = @_;
 my $vhost = &type_kvm_parent($server);
+if ($server->{'status'} eq 'paused') {
+	# A paused VM is actually down already .. just clear file
+	&delete_file_on_server($vhost, $server->{'kvm_pause'});
+	delete($server->{'kvm_pause'});
+	return undef;
+	}
 if (&can_ssh_status($server)) {
 	# Sync filesystems first, to avoid corruption
 	&execute_command_on_server($server, "sync ; sync ; sync");
@@ -2067,8 +2078,7 @@ my $inuse = &list_ports_in_use($vhost, "tcp");
 my $cmd = &find_qemu_kvm_command($vhost);
 
 # Name flag, if supported
-my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd." --help");
-if ($out =~ /-name/) {
+if (&kvm_host_supports_flag($vhost, "name")) {
 	$cmd .= " -name ".quotemeta($server->{'host'});
 	}
 
@@ -2131,10 +2141,10 @@ if (ref($inuse)) {
 
 	# Enable high-resolution mode
 	if ($server->{'kvm_vga'}) {
-		if ($out =~ /-std-vga/) {
+		if (&kvm_host_supports_flag($vhost, "std-vga")) {
 			$cmd .= " -std-vga";
 			}
-		elsif ($out =~ /-vga.*std/) {
+		elsif (&kvm_host_supports_flag($vhost, "vga.*std")) {
 			$cmd .= " -vga std";
 			}
 		}
@@ -4860,6 +4870,7 @@ return $ok == 1 ? undef : $err;
 sub type_kvm_can_move
 {
 my ($server, $dest) = @_;
+return 0 if ($server->{'status'} eq 'paused');
 return 0 if ($module_info{'onehost'} eq 'kvm');
 if (!$dest ||
     $dest->{'status'} eq 'virt' ||
@@ -4884,6 +4895,19 @@ sub type_kvm_move_system
 my ($server, $dest, $shutdown, $allocate) = @_;
 my $vhost = &get_parent_server($server);
 my (@delfiles, @dellvs);
+
+# Check if a shutdown is needed, if kvm on the dest doesn't support -incoming,
+my $shutwhy;
+if (!$shutdown) {
+	if (!&kvm_host_supports_flag($dest, "incoming")) {
+		$shutdown = 1;
+		$shutwhy = $text{'smove_incoming'};
+		}
+	elsif (!$server->{'kvm_monitor_port'}) {
+		$shutdown = 1;
+		$shutwhy = $text{'smove_monitor'};
+		}
+	}
 
 # Check if need to allocate new IP
 my $ip = &get_server_ip($server);
@@ -4940,10 +4964,11 @@ if ($allocate && $dest->{'kvm_start'} &&
 		}
 	}
 
-my $was_up;
-if ($server->{'status'} ne 'down') {
+my ($dumpsrc, $dumpdest, $was_up);
+if ($server->{'status'} ne 'down' && $shutdown) {
 	# Shut down before moving
-	&$first_print($text{'smove_shutting'});
+	&$first_print($shutwhy ? &text('smove_shutting2', $shutwhy)
+			       : $text{'smove_shutting'});
 	$err = &shutdown_server($server);
 	if ($err) {
 		return &text('smove_shutfailed', $err);
@@ -4951,6 +4976,36 @@ if ($server->{'status'} ne 'down') {
 	&check_server_status($server, 0, 1);
 	$was_up = 1;
 	&$second_print($text{'create_done'});
+	}
+elsif ($server->{'status'} ne 'down') {
+	# Save memory to a state file, if running - this also shuts down the VM
+	&$first_print($text{'smove_dumping'});
+	$dumpsrc = &tempname_on_server($vhost, $server->{'host'}.".state");
+	if (!$dumpsrc) {
+		return $text{'smove_etemp'};
+		}
+	my ($ok, $out) = &run_kvm_monitor_command($server,
+				[ "stop",
+				  "migrate_set_speed 4095m",
+				  "migrate \"exec:cat >$dumpsrc\"",
+				  "quit" ],
+				3);
+	if (!$ok) {
+		return &text('smove_edump', $out);
+		}
+	&$second_print($text{'create_done'});
+
+	# Transfer state file
+        &$first_print($text{'smove_dumpsend'});
+        $dumpdest = &tempname_on_server($dest, $server->{'host'}.".state");
+	if (!$dumpdest) {
+		return $text{'smove_etemp'};
+		}
+        my $err = &transfer_file_between_servers(
+                        $vhost, $dest, $dumpsrc, $dumpdest, 0, 1);
+        &delete_file_on_server($vhost, $dumpsrc);
+	return $err if ($err);
+        &$second_print($text{'create_done'});
 	}
 
 # Copy across all disk images, directly if possible
@@ -5127,8 +5182,19 @@ if ($server->{'kvm_swapfile_vg'}) {
 	$server->{'kvm_swapfile_vg'} = $dest->{'kvm_vg'};
 	}
 
-# Start on the new host, if it was up before
-if ($was_up) {
+if ($dumpsrc) {
+	# Restore dump on the new host
+        &$first_print($text{'smove_undumping'});
+	my ($ok, $err) = &type_kvm_startup($server, 0,
+			"-incoming \"exec:cat $dumpdest\"");
+	&delete_file_on_server($dest, $dumpdest);
+        if (!$ok) {
+                return &text('smove_eundump', $err);
+                }
+        &$second_print($text{'create_done'});
+        }
+elsif ($was_up) {
+	# Start on the new host, if it was up before
 	&$first_print($text{'smove_starting'});
 	my ($ok, $err) = &startup_server($server);
 	if (!$ok) {
@@ -6196,6 +6262,22 @@ if ($ex || $err) {
 	}
 
 return (1, $out);
+}
+
+# kvm_host_supports_flag(&vhost, flag)
+# Checks if KVM on some host system supports a flag
+sub kvm_host_supports_flag
+{
+my ($vhost, $flag) = @_;
+my $out = $kvm_host_supports_flag_cache{$vhost->{'id'}};
+if (!$out) {
+	my $cmd = &find_qemu_kvm_command($vhost);
+	($out) = &execute_command_on_server($vhost, $cmd." --help");
+	if (!$ex && !$err) {
+		$kvm_host_supports_flag_cache{$vhost->{'id'}} = $out;
+		}
+	}
+return $out =~ /-$flag/ ? 1 : 0;
 }
 
 1;
