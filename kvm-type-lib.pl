@@ -2408,11 +2408,20 @@ return @rv;
 }
 
 # type_kvm_need_disk_reboot(&server, &disk)
-# A reboot is always needed, to apply the new command line
+# A reboot is needed unless hot-adding is possible, to apply the new
+# command line
 sub type_kvm_need_disk_reboot
 {
 my ($server, $disk) = @_;
-return $server->{'status'} eq 'down' ? 0 : 1;
+if ($server->{'status'} eq 'down') {
+	return 0;
+	}
+elsif ($server->{'kvm_monitor_port'} && $disk->{'virt'} !~ /\/hd/) {
+	return 0;
+	}
+else {
+	return 1;
+	}
 }
 
 # type_kvm_new_disk(&server, &disks, real?, [&storage])
@@ -2467,6 +2476,7 @@ if (!$device) {
 		# Create an LVM name
 		$rv->{'vg'} = $vg;
 		$rv->{'lv'} = $server->{'host'}."_".(scalar(@$disks)+1)."_img";
+		$rv->{'lv'} =~ s/\./_/g;
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
 	else {
@@ -2595,11 +2605,21 @@ if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
 my $attacherr;
 if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
     $drive{'if'} ne 'ide') {
+	# Force load of PCI hot-add modules
+	if (&can_ssh_status($server)) {
+		&execute_command_on_server($server, "modprobe acpiphp");
+		&execute_command_on_server($server, "modprobe pci_hotplug");
+		}
+
+	# Connect to KVM monitor
+	delete($drive{'index'});
 	my $str = join(",", map { $_."=".$drive{$_} } keys %drive);
+	print STDERR "pci_add 0 storage $str\n";
 	my ($aok, $aout) = &run_kvm_monitor_command($server,
 		[ "pci_add 0 storage $str" ]);
 	$attacherr = !$aok ? $aout :
 		      $aout =~ /OK/ ? undef : $aout;
+	print STDERR "aok=$aok aout=$aout\n";
 	}
 
 # Add to total disk size
