@@ -3374,15 +3374,24 @@ if ($nonvirt) {
 			}
 
 		# Connect to KVM monitor
+		my $oldactive = &list_active_server_interfaces($server);
 		my $str = "model=$model,mac=$mac,vlan=$num";
 		my ($aok, $aout) = &run_kvm_monitor_command($server,
 			[ "pci_add 0 nic $str" ]);
-		print STDERR "str=$str\n";
-
-		# XXX wait for ethN to show up
-
 		return $aout if (!$aok || $aout !~ /OK/);
-		$canactivate = 1;
+
+		# Wait for new interface to appear
+		if (ref($oldactive)) {
+			for(my $try=0; $try<5; $try++) {
+				sleep(1);
+				my $active = &list_active_server_interfaces(
+						$server);
+				if (ref($active) && @$active > @$oldactive) {
+					$canactivate = 1;
+					last;
+					}
+				}
+			}
 		}
 	$iface->{'reboot'} = !$canactivate;
 	}
