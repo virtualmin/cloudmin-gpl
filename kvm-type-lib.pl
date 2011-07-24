@@ -1763,17 +1763,11 @@ return undef;
 }
 
 # type_kvm_reboot(&server)
-# SSH in and reboot if possible, or kill and restart
+# Shut down and then re-start
 sub type_kvm_reboot
 {
 my ($server) = @_;
-my $vhost = &type_kvm_parent($server);
-if (&can_ssh_status($server)) {
-	# Use reboot command
-	return 'FALLBACK';
-	}
-# Just kill and restart
-&type_kvm_shutdown($server, 1);
+&type_kvm_shutdown($server, !&can_ssh_status($server));
 return &type_kvm_startup($server);
 }
 
@@ -2614,12 +2608,10 @@ if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
 	# Connect to KVM monitor
 	delete($drive{'index'});
 	my $str = join(",", map { $_."=".$drive{$_} } keys %drive);
-	print STDERR "pci_add 0 storage $str\n";
 	my ($aok, $aout) = &run_kvm_monitor_command($server,
 		[ "pci_add 0 storage $str" ]);
 	$attacherr = !$aok ? $aout :
 		      $aout =~ /OK/ ? undef : $aout;
-	print STDERR "aok=$aok aout=$aout\n";
 	}
 
 # Add to total disk size
@@ -3339,21 +3331,9 @@ $iface->{'broadcast'} = &net::compute_broadcast($iface->{'address'},
 $iface->{'network'} = &net::compute_network($iface->{'address'},
 					    $iface->{'netmask'});
 
-# Activate now if possible
-if (&can_ssh_status($server) && !$nonvirt) {
-	my $err = &create_active_server_interface($server, $iface);
-	return $err if ($err);
-	}
-
-# Activate at boot
-my $err = &mount_filesystem_if_needed($server);
-return "Failed to mount filesystem : $err" if ($err);
-$err = &create_boot_server_interface($server, $iface);
-&umount_filesystem_if_needed($server);
-return $err if ($err);
-
-# Add to list of interfaces to activate at start time
+my $canactivate;
 if ($nonvirt) {
+	# Add to list of interfaces to activate at start time
 	my @macs = split(/\s+/, $server->{'mac'});
 	my @models = split(/\s+/, $server->{'kvm_model'});
 	while(scalar(@models) < scalar(@macs)) {
@@ -3362,7 +3342,8 @@ if ($nonvirt) {
 	my @nets = split(/\s+/, $server->{'kvm_net'});
 	my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 	my $num = scalar(@nets);
-	push(@macs, &generate_mac_address($server, $num));
+	my $mac = &generate_mac_address($server, $num);
+	push(@macs, $mac);
 	push(@models, $iface->{'model'} || "*");
 	push(@nets, "tap,vlan=".$num);
 	push(@ifaces, $bridge || '*');
@@ -3378,8 +3359,50 @@ if ($nonvirt) {
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
-	$iface->{'reboot'} = 1;
+
+	# Add the PCI device if possible
+	my $model = $iface->{'model'} || "ne2k_pci";
+	if ($server->{'status'} ne 'down' &&
+	    $server->{'kvm_monitor_port'} &&
+	    $model =~ /virtio|e1000|rtl8139|ne2k_pci/) {
+		# Force load of PCI hot-add modules
+		if (&can_ssh_status($server)) {
+			&execute_command_on_server($server,
+						   "modprobe acpiphp");
+			&execute_command_on_server($server,
+						   "modprobe pci_hotplug");
+			}
+
+		# Connect to KVM monitor
+		my $str = "model=$model,mac=$mac,vlan=$num";
+		my ($aok, $aout) = &run_kvm_monitor_command($server,
+			[ "pci_add 0 nic $str" ]);
+		print STDERR "str=$str\n";
+
+		# XXX wait for ethN to show up
+
+		return $aout if (!$aok || $aout !~ /OK/);
+		$canactivate = 1;
+		}
+	$iface->{'reboot'} = !$canactivate;
 	}
+else {
+	# Virtual interfaces can always be activated immediately
+	$canactivate = 1;
+	}
+
+# Activate now if possible
+if (&can_ssh_status($server) && $canactivate) {
+	my $err = &create_active_server_interface($server, $iface);
+	return $err if ($err);
+	}
+
+# Activate at boot
+my $err = &mount_filesystem_if_needed($server);
+return "Failed to mount filesystem : $err" if ($err);
+$err = &create_boot_server_interface($server, $iface);
+&umount_filesystem_if_needed($server);
+return $err if ($err);
 
 &add_ip_address($server, $iface->{'address'});
 &add_delete_ip6_addresses($server, undef, $iface->{'address6'});
@@ -3433,6 +3456,24 @@ if ($iface->{'virtual'} eq '' && defined($idx)) {
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	$iface->{'reboot'} = 1;
+	}
+
+# Remove PCI device if possible
+if ($iface->{'virtual'} eq '' &&
+    $server->{'status'} ne 'down' &&
+    $server->{'kvm_monitor_port'}) {
+	my $pcis = &list_kvm_pci_devices($server);
+	if (ref($pcis)) {
+		my @eths = grep { $_->{'type'} =~ /ethernet/i } @$pcis;
+		my $eth = $eths[$idx];
+		if ($eth) {
+			my ($ok, $out) = &run_kvm_monitor_command($server,
+				[ "pci_del $eth->{'bus'} $eth->{'device'}" ]);
+			if ($ok) {
+				$iface->{'reboot'} = 0;
+				}
+			}
+		}
 	}
 
 &delete_ip_address($server, $iface->{'address'});
@@ -6216,6 +6257,32 @@ if ($ex || $err) {
 	}
 
 return (1, $out);
+}
+
+# list_kvm_pci_devices(&server)
+# Returns a list of hash refs with the following keys
+# bus - PCI bus number
+# device - Device number on the bus
+# type - PCI device type (Ethernet controller, Storage controller)
+sub list_kvm_pci_devices
+{
+my ($ok, $out) = &run_kvm_monitor_command($server, [ "info pci" ]);
+return $out if (!$ok);
+my @rv;
+my $pci;
+foreach my $l (split(/\r?\n/, $out)) {
+	if ($l =~ /Bus\s+(\d+),\s+device\s+(\d+)/i) {
+		$pci = { 'bus' => $1,
+			 'device' => $2, };
+		push(@rv, $pci);
+		}
+	elsif ($l =~ /^\s+(\S.*):\s+PCI\s+device\s+(\S+):(\S+)/i && $pci) {
+		$pci->{'type'} = $1;
+		$pci->{'major'} = $2;
+		$pci->{'minor'} = $3;
+		}
+	}
+return \@rv;
 }
 
 1;

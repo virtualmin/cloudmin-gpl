@@ -6,6 +6,7 @@ sub generate_mac_address
 {
 my ($server, $ifacenum) = @_;
 my $dec = (int(substr($server->{'id'}, -8)) & 0xffffff) + $ifacenum;
+$dec += time() & 0xffffff;
 my $hex = sprintf("%6.6X", $dec);
 $hex =~ /^(..)(..)(..)$/;
 return ($type_mac_prefix{$server->{'manager'}} || "00:1c:c0").
