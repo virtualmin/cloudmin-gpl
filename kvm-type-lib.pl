@@ -2600,10 +2600,7 @@ my $attacherr;
 if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
     $drive{'if'} ne 'ide') {
 	# Force load of PCI hot-add modules
-	if (&can_ssh_status($server)) {
-		&execute_command_on_server($server, "modprobe acpiphp");
-		&execute_command_on_server($server, "modprobe pci_hotplug");
-		}
+	&load_kvm_hotplug_modules($server);
 
 	# Connect to KVM monitor
 	delete($drive{'index'});
@@ -2681,6 +2678,22 @@ if (&can_ssh_status($server) && $disk->{'mounted'}) {
 	if ($err || $ex) {
 		return "Failed to un-mount $disk->{'virt_mount'} : ".
 		       ($err || $out);
+		}
+	}
+
+# Disconnect PCI device, if not IDE
+if ($server->{'status'} ne 'down' &&
+    $server->{'kvm_monitor_port'} &&
+    $disk->{'virt'} !~ /\/hd/) {
+	my $pcis = &list_kvm_pci_devices($server);
+	if (ref($pcis)) {
+		my @stors = grep { $_->{'type'} =~ /storage/i } @$pcis;
+		my $stor = $stors[$disk->{'drive_index'}];
+		if ($stor) {
+			&load_kvm_hotplug_modules($server);
+			my ($ok, $out) = &run_kvm_monitor_command($server,
+				[ "pci_del $stor->{'bus'} $stor->{'device'}" ]);
+			}
 		}
 	}
 
@@ -3366,12 +3379,7 @@ if ($nonvirt) {
 	    $server->{'kvm_monitor_port'} &&
 	    $model =~ /virtio|e1000|rtl8139|ne2k_pci/) {
 		# Force load of PCI hot-add modules
-		if (&can_ssh_status($server)) {
-			&execute_command_on_server($server,
-						   "modprobe acpiphp");
-			&execute_command_on_server($server,
-						   "modprobe pci_hotplug");
-			}
+		&load_kvm_hotplug_modules($server);
 
 		# Connect to KVM monitor
 		my $oldactive = &list_active_server_interfaces($server);
@@ -3468,14 +3476,17 @@ if ($iface->{'virtual'} eq '' && defined($idx)) {
 	}
 
 # Remove PCI device if possible
+my $model = $iface->{'model'} || "ne2k_pci";
 if ($iface->{'virtual'} eq '' &&
     $server->{'status'} ne 'down' &&
+    $model =~ /virtio|e1000|rtl8139|ne2k_pci/ &&
     $server->{'kvm_monitor_port'}) {
 	my $pcis = &list_kvm_pci_devices($server);
 	if (ref($pcis)) {
 		my @eths = grep { $_->{'type'} =~ /ethernet/i } @$pcis;
 		my $eth = $eths[$idx];
 		if ($eth) {
+			&load_kvm_hotplug_modules($server);
 			my ($ok, $out) = &run_kvm_monitor_command($server,
 				[ "pci_del $eth->{'bus'} $eth->{'device'}" ]);
 			if ($ok) {
@@ -6292,6 +6303,17 @@ foreach my $l (split(/\r?\n/, $out)) {
 		}
 	}
 return \@rv;
+}
+
+# load_kvm_hotplug_modules(&server)
+# Load kernel modules needed for hotplug support
+sub load_kvm_hotplug_modules
+{
+my ($server) = @_;
+if (&can_ssh_status($server)) {
+	&execute_command_on_server($server, "modprobe acpiphp");
+	&execute_command_on_server($server, "modprobe pci_hotplug");
+	}
 }
 
 1;
