@@ -6271,7 +6271,8 @@ foreach my $c (@$cmds) {
 my $sleep = $delay ? "--sleep $delay" : "";
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"(".join(" ; ", @echos).") | ".
-	"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}");
+	"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}",
+	10);
 if ($ex || $err) {
 	return (0, $err || $out);
 	}
