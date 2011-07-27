@@ -223,7 +223,7 @@ else {
 &compute_ip_addresses($server);
 &save_managed_server($server);
 &release_lock_server($server);
-if ($iface->{'reboot'}) {
+if ($iface->{'reboot'} && $server->{'status'} ne 'down') {
 	print "The virtual system must be rebooted before the new interface will be active.\n";
 	}
 &cloudmin_api_log(\@OLDARGV);

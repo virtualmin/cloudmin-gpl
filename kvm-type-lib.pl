@@ -3389,7 +3389,8 @@ if ($nonvirt) {
 		my $str = "model=$model,mac=$mac,vlan=$num";
 		my ($aok, $aout) = &run_kvm_monitor_command($server,
 			[ "pci_add 0 nic $str" ]);
-		return $aout if (!$aok || $aout !~ /OK/);
+		return ($aout || "No response to pci_add command")
+			if (!$aok || $aout !~ /OK/);
 
 		# Wait for new interface to appear
 		if (ref($oldactive)) {
@@ -6266,6 +6267,7 @@ if ($vhost->{'id'} eq '0') {
 	# Make a direct local connection
 	my $err;
 	alarm(10);
+	my $out;
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout" };
 		&open_socket("localhost", $server->{'kvm_monitor_port'},
@@ -6276,7 +6278,6 @@ if ($vhost->{'id'} eq '0') {
 			print MON $c,"\n";
 			}
 		shutdown(MON, 1);
-		my $out;
 		while(<MON>) {
 			$out .= $_;
 			}
