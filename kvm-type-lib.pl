@@ -1779,7 +1779,7 @@ my ($server, $force) = @_;
 my $vhost = &type_kvm_parent($server);
 if (&can_ssh_status($server)) {
 	# Sync filesystems first, to avoid corruption
-	&execute_command_on_server($server, "sync ; sync ; sync");
+	&execute_command_on_server($server, "sync ; sync ; sync", 5);
 	}
 my $proc = &get_server_kvm_instance($server);
 if (&can_ssh_status($server) && !$force) {
@@ -1804,18 +1804,21 @@ if (&can_ssh_status($server) && !$force) {
 	}
 
 # Next try shutdown monitor command
-my ($mok, $merr) = &run_kvm_monitor_command($server, [ "system_powerdown" ]);
-if ($mok) {
-	# Wait for it to work
-	my $tries = 0;
-	while($tries < 30) {
-		my ($kout, $kex) = &execute_command_on_server(
+if (!$force) {
+	my ($mok, $merr) = &run_kvm_monitor_command($server,
+				[ "system_powerdown" ]);
+	if ($mok) {
+		# Wait for it to work
+		my $tries = 0;
+		while($tries < 30) {
+			my ($kout, $kex) = &execute_command_on_server(
 					$vhost, "kill -0 $proc->{'pid'}");
-		if ($kex) {
-			return undef;
+			if ($kex) {
+				return undef;
+				}
+			sleep(1);
+			$tries++;
 			}
-		sleep(1);
-		$tries++;
 		}
 	}
 
@@ -6259,25 +6262,59 @@ my ($server, $cmds, $delay) = @_;
 $server->{'kvm_monitor_port'} ||
 	return (0, "This system was not started with a monitor port");
 my $vhost = &type_kvm_parent($server);
-&has_command_on_server($vhost, "/usr/bin/nc.pl") ||
-	return (0, "The nc.pl command is needed on $vhost->{'host'} to run ".
-		   "KVM monitor commands");
-@$cmds || return (0, "No monitor commands given");
-
-# Run nc with echo into it
-foreach my $c (@$cmds) {
-	push(@echos, "echo ".quotemeta($c));
+if ($vhost->{'id'} eq '0') {
+	# Make a direct local connection
+	my $err;
+	alarm(10);
+	eval {
+		local $SIG{'ALRM'} = sub { die "timeout" };
+		&open_socket("localhost", $server->{'kvm_monitor_port'},
+			     MON, \$err);
+		return (0, $err) if ($err);
+		foreach my $c (@$cmds) {
+			sleep($delay) if ($delay);
+			print MON $c,"\n";
+			}
+		shutdown(MON, 1);
+		my $out;
+		while(<MON>) {
+			$out .= $_;
+			}
+		close(MON);
+		};
+	alarm(0);
+	if ($@ =~ /timeout/) {
+		return (0, "Monitor command timed out after 10 seconds");
+		}
+	elsif ($@) {
+		return (0, $@);
+		}
+	else {
+		return (1, $out);
+		}
 	}
-my $sleep = $delay ? "--sleep $delay" : "";
-my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"(".join(" ; ", @echos).") | ".
-	"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}",
-	10);
-if ($ex || $err) {
-	return (0, $err || $out);
-	}
+else {
+	# Connect via nc.pl
+	&has_command_on_server($vhost, "/usr/bin/nc.pl") ||
+	  return (0, "The nc.pl command is needed on $vhost->{'host'} to run ".
+		     "KVM monitor commands");
+	@$cmds || return (0, "No monitor commands given");
 
-return (1, $out);
+	# Run nc with echo into it
+	foreach my $c (@$cmds) {
+		push(@echos, "echo ".quotemeta($c));
+		}
+	my $sleep = $delay ? "--sleep $delay" : "";
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"(".join(" ; ", @echos).") | ".
+		"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}",
+		10);
+	if ($ex || $err) {
+		return (0, $err || $out);
+		}
+
+	return (1, $out);
+	}
 }
 
 # list_kvm_pci_devices(&server)
