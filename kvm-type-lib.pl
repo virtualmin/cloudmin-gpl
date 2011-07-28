@@ -5073,7 +5073,7 @@ elsif ($server->{'status'} ne 'down') {
 				  "migrate_set_speed 4095m",
 				  "migrate \"exec:cat >$dumpsrc\"",
 				  "quit" ],
-				3);
+				3, -1);
 	if (!$ok) {
 		return &text('smove_edump', $out);
 		}
