@@ -1777,6 +1777,13 @@ sub type_kvm_shutdown
 {
 my ($server, $force) = @_;
 my $vhost = &type_kvm_parent($server);
+
+# If paused, delete any pause file
+if ($server->{'kvm_pause'}) {
+	&delete_file_on_server($vhost, $server->{'kvm_pause'});
+	delete($server->{'kvm_pause'});
+	}
+
 if (&can_ssh_status($server)) {
 	# Sync filesystems first, to avoid corruption
 	&execute_command_on_server($server, "sync ; sync ; sync", 5);
@@ -4885,7 +4892,7 @@ elsif ($server->{'status'} eq 'paused') {
 	return 2;
 	}
 else {
-	# Now running, can cause
+	# Now running, can pause
 	return 1;
 	}
 }
@@ -4899,8 +4906,8 @@ my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
 my $cmd = &find_qemu_kvm_command($vhost);
 my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd." --help");
-if ($out !~ /-migrate/) {
-	return "KVM on $vhost->{'host'} does not support the -migrate flag ".
+if ($out !~ /-incoming/) {
+	return "KVM on $vhost->{'host'} does not support the -incoming flag ".
 	       "which is needed to un-pause a KVM instance";
 	}
 if (!$server->{'kvm_pause'}) {
@@ -4915,7 +4922,7 @@ my ($ok, $out) = &run_kvm_monitor_command($server,
 			  "migrate_set_speed 4095m",
 			  "migrate \"exec:cat >$server->{'kvm_pause'}\"",
 			  "quit" ],
-			3);
+			3, -1);
 return $out if (!$ok);
 return undef;
 }
@@ -6254,19 +6261,20 @@ return &put_file_to_server($vhost,
 	"$module_root_directory/nc.pl", "/usr/bin/nc.pl");
 }
 
-# run_kvm_monitor_command(&server, &command, command-delay)
+# run_kvm_monitor_command(&server, &command, command-delay, [timeout])
 # Runs some command by connecting to the KVM monitor port for a system,
 # and returns an OK flag and the output.
 sub run_kvm_monitor_command
 {
-my ($server, $cmds, $delay) = @_;
+my ($server, $cmds, $delay, $timeout) = @_;
+$timeout ||= 10;
 $server->{'kvm_monitor_port'} ||
 	return (0, "This system was not started with a monitor port");
 my $vhost = &type_kvm_parent($server);
 if ($vhost->{'id'} eq '0') {
 	# Make a direct local connection
 	my $err;
-	alarm(10);
+	alarm($timeout) if ($timeout > 0);
 	my $out;
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout" };
@@ -6285,7 +6293,7 @@ if ($vhost->{'id'} eq '0') {
 		};
 	alarm(0);
 	if ($@ =~ /timeout/) {
-		return (0, "Monitor command timed out after 10 seconds");
+		return (0, "Monitor command timed out after $timeout seconds");
 		}
 	elsif ($@) {
 		return (0, $@);
@@ -6309,7 +6317,7 @@ else {
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"(".join(" ; ", @echos).") | ".
 		"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}",
-		10);
+		$timeout > 0 ? $timeout : undef);
 	if ($ex || $err) {
 		return (0, $err || $out);
 		}
