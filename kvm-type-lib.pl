@@ -4909,11 +4909,9 @@ sub type_kvm_pause_system
 my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
 my $cmd = &find_qemu_kvm_command($vhost);
-my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd." --help");
-if ($out !~ /-incoming/) {
+&kvm_host_supports_flag($vhost, "incoming") ||
 	return "KVM on $vhost->{'host'} does not support the -incoming flag ".
 	       "which is needed to un-pause a KVM instance";
-	}
 if (!$server->{'kvm_pause'}) {
 	my $pause = $server->{'kvm_console'} || &get_kvm_console_file($server);
 	if ($pause !~ s/\.console$/\.pause/) {
