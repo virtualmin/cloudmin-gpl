@@ -1768,17 +1768,11 @@ return undef;
 }
 
 # type_kvm_reboot(&server)
-# SSH in and reboot if possible, or kill and restart
+# Shut down and then re-start
 sub type_kvm_reboot
 {
 my ($server) = @_;
-my $vhost = &type_kvm_parent($server);
-if (&can_ssh_status($server)) {
-	# Use reboot command
-	return 'FALLBACK';
-	}
-# Just kill and restart
-&type_kvm_shutdown($server, 1);
+&type_kvm_shutdown($server, !&can_ssh_status($server));
 return &type_kvm_startup($server);
 }
 
@@ -1788,15 +1782,16 @@ sub type_kvm_shutdown
 {
 my ($server, $force) = @_;
 my $vhost = &type_kvm_parent($server);
-if ($server->{'status'} eq 'paused') {
-	# A paused VM is actually down already .. just clear file
+
+# If paused, delete any pause file
+if ($server->{'kvm_pause'}) {
 	&delete_file_on_server($vhost, $server->{'kvm_pause'});
 	delete($server->{'kvm_pause'});
-	return undef;
 	}
+
 if (&can_ssh_status($server)) {
 	# Sync filesystems first, to avoid corruption
-	&execute_command_on_server($server, "sync ; sync ; sync");
+	&execute_command_on_server($server, "sync ; sync ; sync", 5);
 	}
 my $proc = &get_server_kvm_instance($server);
 if (&can_ssh_status($server) && !$force) {
@@ -1821,18 +1816,21 @@ if (&can_ssh_status($server) && !$force) {
 	}
 
 # Next try shutdown monitor command
-my ($mok, $merr) = &run_kvm_monitor_command($server, [ "system_powerdown" ]);
-if ($mok) {
-	# Wait for it to work
-	my $tries = 0;
-	while($tries < 30) {
-		my ($kout, $kex) = &execute_command_on_server(
+if (!$force) {
+	my ($mok, $merr) = &run_kvm_monitor_command($server,
+				[ "system_powerdown" ]);
+	if ($mok) {
+		# Wait for it to work
+		my $tries = 0;
+		while($tries < 30) {
+			my ($kout, $kex) = &execute_command_on_server(
 					$vhost, "kill -0 $proc->{'pid'}");
-		if ($kex) {
-			return undef;
+			if ($kex) {
+				return undef;
+				}
+			sleep(1);
+			$tries++;
 			}
-		sleep(1);
-		$tries++;
 		}
 	}
 
@@ -2418,11 +2416,20 @@ return @rv;
 }
 
 # type_kvm_need_disk_reboot(&server, &disk)
-# A reboot is always needed, to apply the new command line
+# A reboot is needed unless hot-adding is possible, to apply the new
+# command line
 sub type_kvm_need_disk_reboot
 {
 my ($server, $disk) = @_;
-return $server->{'status'} eq 'down' ? 0 : 1;
+if ($server->{'status'} eq 'down') {
+	return 0;
+	}
+elsif ($server->{'kvm_monitor_port'} && $disk->{'virt'} !~ /\/hd/) {
+	return 0;
+	}
+else {
+	return 1;
+	}
 }
 
 # type_kvm_new_disk(&server, &disks, real?, [&storage])
@@ -2477,6 +2484,7 @@ if (!$device) {
 		# Create an LVM name
 		$rv->{'vg'} = $vg;
 		$rv->{'lv'} = $server->{'host'}."_".(scalar(@$disks)+1)."_img";
+		$rv->{'lv'} =~ s/\./_/g;
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
 	else {
@@ -2605,6 +2613,11 @@ if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
 my $attacherr;
 if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
     $drive{'if'} ne 'ide') {
+	# Force load of PCI hot-add modules
+	&load_kvm_hotplug_modules($server);
+
+	# Connect to KVM monitor
+	delete($drive{'index'});
 	my $str = join(",", map { $_."=".$drive{$_} } keys %drive);
 	my ($aok, $aout) = &run_kvm_monitor_command($server,
 		[ "pci_add 0 storage $str" ]);
@@ -2679,6 +2692,22 @@ if (&can_ssh_status($server) && $disk->{'mounted'}) {
 	if ($err || $ex) {
 		return "Failed to un-mount $disk->{'virt_mount'} : ".
 		       ($err || $out);
+		}
+	}
+
+# Disconnect PCI device, if not IDE
+if ($server->{'status'} ne 'down' &&
+    $server->{'kvm_monitor_port'} &&
+    $disk->{'virt'} !~ /\/hd/) {
+	my $pcis = &list_kvm_pci_devices($server);
+	if (ref($pcis)) {
+		my @stors = grep { $_->{'type'} =~ /storage/i } @$pcis;
+		my $stor = $stors[$disk->{'drive_index'}];
+		if ($stor) {
+			&load_kvm_hotplug_modules($server);
+			my ($ok, $out) = &run_kvm_monitor_command($server,
+				[ "pci_del $stor->{'bus'} $stor->{'device'}" ]);
+			}
 		}
 	}
 
@@ -3329,21 +3358,9 @@ $iface->{'broadcast'} = &net::compute_broadcast($iface->{'address'},
 $iface->{'network'} = &net::compute_network($iface->{'address'},
 					    $iface->{'netmask'});
 
-# Activate now if possible
-if (&can_ssh_status($server) && !$nonvirt) {
-	my $err = &create_active_server_interface($server, $iface);
-	return $err if ($err);
-	}
-
-# Activate at boot
-my $err = &mount_filesystem_if_needed($server);
-return "Failed to mount filesystem : $err" if ($err);
-$err = &create_boot_server_interface($server, $iface);
-&umount_filesystem_if_needed($server);
-return $err if ($err);
-
-# Add to list of interfaces to activate at start time
+my $canactivate;
 if ($nonvirt) {
+	# Add to list of interfaces to activate at start time
 	my @macs = split(/\s+/, $server->{'mac'});
 	my @models = split(/\s+/, $server->{'kvm_model'});
 	while(scalar(@models) < scalar(@macs)) {
@@ -3352,7 +3369,8 @@ if ($nonvirt) {
 	my @nets = split(/\s+/, $server->{'kvm_net'});
 	my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 	my $num = scalar(@nets);
-	push(@macs, &generate_mac_address($server, $num));
+	my $mac = &generate_mac_address($server, $num);
+	push(@macs, $mac);
 	push(@models, $iface->{'model'} || "*");
 	push(@nets, "tap,vlan=".$num);
 	push(@ifaces, $bridge || '*');
@@ -3368,8 +3386,55 @@ if ($nonvirt) {
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
-	$iface->{'reboot'} = 1;
+
+	# Add the PCI device if possible
+	my $model = $iface->{'model'} || "ne2k_pci";
+	if ($server->{'status'} ne 'down' &&
+	    $server->{'kvm_monitor_port'} &&
+	    $model =~ /virtio|e1000|rtl8139|ne2k_pci/) {
+		# Force load of PCI hot-add modules
+		&load_kvm_hotplug_modules($server);
+
+		# Connect to KVM monitor
+		my $oldactive = &list_active_server_interfaces($server);
+		my $str = "model=$model,mac=$mac,vlan=$num";
+		my ($aok, $aout) = &run_kvm_monitor_command($server,
+			[ "pci_add 0 nic $str" ]);
+		return ($aout || "No response to pci_add command")
+			if (!$aok || $aout !~ /OK/);
+
+		# Wait for new interface to appear
+		if (ref($oldactive)) {
+			for(my $try=0; $try<5; $try++) {
+				sleep(1);
+				my $active = &list_active_server_interfaces(
+						$server);
+				if (ref($active) && @$active > @$oldactive) {
+					$canactivate = 1;
+					last;
+					}
+				}
+			}
+		}
+	$iface->{'reboot'} = !$canactivate;
 	}
+else {
+	# Virtual interfaces can always be activated immediately
+	$canactivate = 1;
+	}
+
+# Activate now if possible
+if (&can_ssh_status($server) && $canactivate) {
+	my $err = &create_active_server_interface($server, $iface);
+	return $err if ($err);
+	}
+
+# Activate at boot
+my $err = &mount_filesystem_if_needed($server);
+return "Failed to mount filesystem : $err" if ($err);
+$err = &create_boot_server_interface($server, $iface);
+&umount_filesystem_if_needed($server);
+return $err if ($err);
 
 &add_ip_address($server, $iface->{'address'});
 &add_delete_ip6_addresses($server, undef, $iface->{'address6'});
@@ -3423,6 +3488,27 @@ if ($iface->{'virtual'} eq '' && defined($idx)) {
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	$iface->{'reboot'} = 1;
+	}
+
+# Remove PCI device if possible
+my $model = $iface->{'model'} || "ne2k_pci";
+if ($iface->{'virtual'} eq '' &&
+    $server->{'status'} ne 'down' &&
+    $model =~ /virtio|e1000|rtl8139|ne2k_pci/ &&
+    $server->{'kvm_monitor_port'}) {
+	my $pcis = &list_kvm_pci_devices($server);
+	if (ref($pcis)) {
+		my @eths = grep { $_->{'type'} =~ /ethernet/i } @$pcis;
+		my $eth = $eths[$idx];
+		if ($eth) {
+			&load_kvm_hotplug_modules($server);
+			my ($ok, $out) = &run_kvm_monitor_command($server,
+				[ "pci_del $eth->{'bus'} $eth->{'device'}" ]);
+			if ($ok) {
+				$iface->{'reboot'} = 0;
+				}
+			}
+		}
 	}
 
 &delete_ip_address($server, $iface->{'address'});
@@ -4810,7 +4896,7 @@ elsif ($server->{'status'} eq 'paused') {
 	return 2;
 	}
 else {
-	# Now running, can cause
+	# Now running, can pause
 	return 1;
 	}
 }
@@ -4824,8 +4910,8 @@ my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
 my $cmd = &find_qemu_kvm_command($vhost);
 my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd." --help");
-if ($out !~ /-migrate/) {
-	return "KVM on $vhost->{'host'} does not support the -migrate flag ".
+if ($out !~ /-incoming/) {
+	return "KVM on $vhost->{'host'} does not support the -incoming flag ".
 	       "which is needed to un-pause a KVM instance";
 	}
 if (!$server->{'kvm_pause'}) {
@@ -4840,7 +4926,7 @@ my ($ok, $out) = &run_kvm_monitor_command($server,
 			  "migrate_set_speed 4095m",
 			  "migrate \"exec:cat >$server->{'kvm_pause'}\"",
 			  "quit" ],
-			3);
+			3, -1);
 return $out if (!$ok);
 return undef;
 }
@@ -6235,33 +6321,106 @@ return &put_file_to_server($vhost,
 	"$module_root_directory/nc.pl", "/usr/bin/nc.pl");
 }
 
-# run_kvm_monitor_command(&server, &command, command-delay)
+# run_kvm_monitor_command(&server, &command, command-delay, [timeout])
 # Runs some command by connecting to the KVM monitor port for a system,
 # and returns an OK flag and the output.
 sub run_kvm_monitor_command
 {
-my ($server, $cmds, $delay) = @_;
+my ($server, $cmds, $delay, $timeout) = @_;
+$timeout ||= 10;
 $server->{'kvm_monitor_port'} ||
 	return (0, "This system was not started with a monitor port");
 my $vhost = &type_kvm_parent($server);
-&has_command_on_server($vhost, "/usr/bin/nc.pl") ||
-	return (0, "The nc.pl command is needed on $vhost->{'host'} to run ".
-		   "KVM monitor commands");
-@$cmds || return (0, "No monitor commands given");
-
-# Run nc with echo into it
-foreach my $c (@$cmds) {
-	push(@echos, "echo ".quotemeta($c));
+if ($vhost->{'id'} eq '0') {
+	# Make a direct local connection
+	my $err;
+	alarm($timeout) if ($timeout > 0);
+	my $out;
+	eval {
+		local $SIG{'ALRM'} = sub { die "timeout" };
+		&open_socket("localhost", $server->{'kvm_monitor_port'},
+			     MON, \$err);
+		return (0, $err) if ($err);
+		foreach my $c (@$cmds) {
+			sleep($delay) if ($delay);
+			print MON $c,"\n";
+			}
+		shutdown(MON, 1);
+		while(<MON>) {
+			$out .= $_;
+			}
+		close(MON);
+		};
+	alarm(0);
+	if ($@ =~ /timeout/) {
+		return (0, "Monitor command timed out after $timeout seconds");
+		}
+	elsif ($@) {
+		return (0, $@);
+		}
+	else {
+		return (1, $out);
+		}
 	}
-my $sleep = $delay ? "--sleep $delay" : "";
-my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"(".join(" ; ", @echos).") | ".
-	"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}");
-if ($ex || $err) {
-	return (0, $err || $out);
-	}
+else {
+	# Connect via nc.pl
+	&has_command_on_server($vhost, "/usr/bin/nc.pl") ||
+	  return (0, "The nc.pl command is needed on $vhost->{'host'} to run ".
+		     "KVM monitor commands");
+	@$cmds || return (0, "No monitor commands given");
 
-return (1, $out);
+	# Run nc with echo into it
+	foreach my $c (@$cmds) {
+		push(@echos, "echo ".quotemeta($c));
+		}
+	my $sleep = $delay ? "--sleep $delay" : "";
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"(".join(" ; ", @echos).") | ".
+		"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}",
+		$timeout > 0 ? $timeout : undef);
+	if ($ex || $err) {
+		return (0, $err || $out);
+		}
+
+	return (1, $out);
+	}
+}
+
+# list_kvm_pci_devices(&server)
+# Returns a list of hash refs with the following keys
+# bus - PCI bus number
+# device - Device number on the bus
+# type - PCI device type (Ethernet controller, Storage controller)
+sub list_kvm_pci_devices
+{
+my ($ok, $out) = &run_kvm_monitor_command($server, [ "info pci" ]);
+return $out if (!$ok);
+my @rv;
+my $pci;
+foreach my $l (split(/\r?\n/, $out)) {
+	if ($l =~ /Bus\s+(\d+),\s+device\s+(\d+)/i) {
+		$pci = { 'bus' => $1,
+			 'device' => $2, };
+		push(@rv, $pci);
+		}
+	elsif ($l =~ /^\s+(\S.*):\s+PCI\s+device\s+(\S+):(\S+)/i && $pci) {
+		$pci->{'type'} = $1;
+		$pci->{'major'} = $2;
+		$pci->{'minor'} = $3;
+		}
+	}
+return \@rv;
+}
+
+# load_kvm_hotplug_modules(&server)
+# Load kernel modules needed for hotplug support
+sub load_kvm_hotplug_modules
+{
+my ($server) = @_;
+if (&can_ssh_status($server)) {
+	&execute_command_on_server($server, "modprobe acpiphp");
+	&execute_command_on_server($server, "modprobe pci_hotplug");
+	}
 }
 
 # kvm_host_supports_flag(&vhost, flag)

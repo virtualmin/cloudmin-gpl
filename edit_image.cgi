@@ -55,9 +55,9 @@ $tfunc = "type_".$i->{'manager'}."_desc";
 print &ui_table_row($text{'eimage_type'}, &$tfunc());
 
 # Format
-if ($i->{'format'}) {
+if ($got && $got->{'format'}) {
 	print &ui_table_row($text{'eimage_format'},
-		$text{'mimage_fmt'.$i->{'format'}});
+		$text{'mimage_fmt'.$got->{'format'}});
 	}
 
 # Status (available or not)
@@ -121,7 +121,7 @@ if (@md5s && $md5s[0] ne "-") {
 # Check if can convert
 if ($got) {
 	$cfunc = "type_".$i->{'manager'}."_can_convert_image";
-	@convs = defined(&$cfunc) ? &$cfunc($i) : ();
+	@convs = defined(&$cfunc) ? &$cfunc($got) : ();
 	@convs = grep { $server_management_types{$_->{'manager'}} } @convs;
 	@copts = map { [ $_->{'manager'}, $text{$_->{'manager'}.'_typedesc'} ] }
 		     @convs;

@@ -2451,6 +2451,7 @@ sdisk_edate=Invalid date or time to change
 sdisk_epast=Date to change is in the past!
 
 fs_ext3=Linux EXT3
+fs_ext4=Linux EXT4 (new)
 fs_ext2=Linux EXT2 (old)
 fs_reiserfs=ReiserFS
 fs_xfs=SGI XFS
