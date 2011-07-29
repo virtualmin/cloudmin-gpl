@@ -66,7 +66,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
 	elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--dest") { $dest = shift(@ARGV); }
-	elsif ($a eq "--default-dest") { $defaultdest = 1 };
+	elsif ($a eq "--default-dest") { $defaultdest = 1; }
 	elsif ($a eq "--shutdown") { $shutdown = 1; }
 	elsif ($a eq "--parallel") { $parallel = 1; }
 	elsif ($a eq "--quiet") { $quiet = 1; }
