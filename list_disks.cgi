@@ -53,7 +53,6 @@ if (&can_action($server, "devices") && $can != 2) {
 
 if (@$disks) {
 	# We have some to show
-	unshift(@links, &select_all_link("d"), &select_invert_link("d"));
 	@tds = ( "width=5" );
 	print &ui_form_start("delete_disks.cgi", "post");
 	print &ui_hidden("id", $in{'id'});
