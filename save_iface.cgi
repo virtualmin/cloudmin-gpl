@@ -12,10 +12,10 @@ $server || &error($text{'edit_egone'});
 $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 $can = &$cfunc($server);
 $can || &error($text{'iface_esupport'});
+$ifunc = "type_".$server->{'manager'}."_list_interfaces";
+$ifaces = &$ifunc($server);
+ref($ifaces) || &error(&text('iface_eget', $ifaces));
 if (!$in{'new'}) {
-	$ifunc = "type_".$server->{'manager'}."_list_interfaces";
-	$ifaces = &$ifunc($server);
-	ref($ifaces) || &error(&text('iface_eget', $ifaces));
 	$iface = $ifaces->[$in{'idx'}];
 	$iface->{'noedit'} && &error($text{'iface_enoedit'});
 	$oldiface = { %$iface };
@@ -88,7 +88,20 @@ else {
 		    $iface->{'address'} ne $oldiface->{'address'}) {
 			# New or changed .. check for clash
 			$u = $used{$iface->{'address'}};
-			$u && &error(&text('iface_eclash', $u->{'host'}));
+			if ($u && $u->{'id'} eq $server->{'id'}) {
+				# Maybe in use by self? Double-check
+				foreach $ii (@$ifaces) {
+					if ($ii->{'address'} eq
+					    $iface->{'address'} &&
+					    $ii ne $iface) {
+						&error(&text('iface_eclash',
+							     $u->{'host'}));
+						}
+					}
+				}
+			elsif ($u) {
+				&error(&text('iface_eclash', $u->{'host'}));
+				}
 			&ping_server_host($iface->{'address'}) &&
 				&error(&text('iface_eclash2'));
 			}

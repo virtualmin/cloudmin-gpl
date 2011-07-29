@@ -2790,6 +2790,7 @@ smove_shutting2=Shutting down on original host system (because $1) ..
 smove_diffvg=LVM volume group is different
 smove_incoming=KVM does not support the -incoming flag
 smove_monitor=KVM instance does not have a monitor port
+smove_gwchange=The default network gateway has changed
 smove_diffdir=Xen base directory is different
 smove_shutfailed=.. shutdown failed : $1
 smove_disks=Copying disk images to new host system ..

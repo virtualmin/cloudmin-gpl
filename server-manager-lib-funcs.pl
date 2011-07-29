@@ -9382,11 +9382,13 @@ else {
 		     quotemeta($iface->{'address'})." ".
 		     "netmask ".quotemeta($iface->{'netmask'})." ".
 		     "broadcast ".quotemeta($iface->{'broadcast'});
-	if ($changing_primary) {
-		# Will hang, so background it
-		$cmd = "(sleep 2 ; $cmd >/dev/null 2>&1 </dev/null) &";
+	my ($out, $ex, $err, $status) =
+		&execute_command_on_server($server, $cmd,
+			$changing_primary ? 5 : undef);
+	if ($changing_primary && $status == 4) {
+		# Changing main IP timed out, but that's expected
+		$err = $ex = undef;
 		}
-	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err if ($err);
 	return $out if ($ex);
 

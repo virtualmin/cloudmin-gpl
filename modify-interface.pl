@@ -167,7 +167,19 @@ if (@add6 || @del6) {
 %used = &used_ip_addresses();
 if ($newaddress) {
 	$u = $used{$newaddress};
-	$u && &usage("The IP address $newaddress is already in use by $u->{'host'}");
+	if ($u && $u->{'id'} eq $server->{'id'}) {
+		foreach $ii (@$ifaces) {
+			if ($ii->{'address'} eq $newaddress &&
+			    $ii ne $iface) {
+				&usage("The IP address $newaddress is already ".
+				       "in use by $u->{'host'}");
+				}
+			}
+		}
+	elsif ($u) {
+		&usage("The IP address $newaddress is already in use ".
+		       "by $u->{'host'}");
+		}
 	&ping_server_host($newaddress) &&
 		&usage("The IP address $newaddress is being used by another ".
 		       "system on your network");

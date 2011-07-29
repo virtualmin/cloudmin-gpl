@@ -4996,55 +4996,31 @@ if (!$shutdown) {
 # Check if need to allocate new IP
 my $ip = &get_server_ip($server);
 my @kvm_iface = split(/\s+/, $dest->{'kvm_iface'});
+my ($newip, $newcidr, $newgw);
+my $defgw = &get_server_default_gateway($vhost);
+my @gws = split(/\s+/, $server->{'kvm_gw'});
+my $gw = $gws[0] eq "*" ? $defgw : $gws[0];
 if ($allocate && $dest->{'kvm_start'} &&
     !&range_check_ip_address($ip, $dest->{'kvm_start'}, $dest->{'kvm_end'},
 				  $dest->{'kvm_cidr'}, $dest->{'kvm_gws'},
 				  $dest->{'kvm_ifaces'}, $kvm_iface[0])) {
 	# Allocate the primary IP
 	&$first_print($text{'smove_allocating'});
-	my ($newip, $newcidr, $newgw) = &allocate_ip_address(
+	($newip, $newcidr, $newgw) = &allocate_ip_address(
 		$dest->{'kvm_start'}, $dest->{'kvm_end'},
 	        $dest->{'kvm_cidr'}, $dest->{'kvm_gws'},
 		$dest->{'kvm_ifaces'}, $kvm_iface[0]);
 	$newip || return &text('create_ekvmalloc', $dest->{'host'},
 			    &describe_ip_range($dest->{'kvm_start'},
 					       $dest->{'kvm_end'}));
-	&$second_print(&text('smove_allocated', $newip));
-
-	# Apply the IP change now
-	&$first_print(&text('smove_ipchanging', $ip, $newip));
-	$ifaces = &type_kvm_list_interfaces($server);
-	return $ifaces if (!ref($ifaces));
-	my ($iface) = grep { $_->{'address'} eq $ip } @$ifaces;
-	$iface || return $text{'smove_eifaceip'};
-	my $oldiface = { %$iface };
-	$iface->{'address'} = $newip;
-	$iface->{'netmask'} = &net::prefix_to_mask($newcidr);
-	&modify_primary_ip_address($server, $ip, $newip);
-	my $err = &type_kvm_modify_interface($server, $iface, $oldiface);
-	return $err if ($err);
-	$server->{'ip'} = $newip;
-	&delete_ip_address($server, $ip);
-	&add_ip_address($server, $newip);
-	&$second_print($text{'create_done'});
-
-	# Change the default gateway if needed
 	$newgw ||= &get_server_default_gateway($dest);
 	$newgw = "" if ($newgw eq "*");
-	my $defgw = &get_server_default_gateway($vhost);
-	my @gws = split(/\s+/, $server->{'kvm_gw'});
-	my $gw = $gws[0] eq "*" ? $defgw : $gws[0];
+	&$second_print(&text('smove_allocated', $newip));
+
+	# If gateway has changed, we need to shut down
 	if ($newgw ne $gw) {
-		&$first_print(&text('smove_gwchanging',
-				    $gw || $text{'smove_gwnone'},
-				    $newgw || $text{'smove_gwnone'}));
-		my $err = &modify_default_gateway($server, $newgw);
-		return $err if ($err);
-		if ($server->{'kvm_gw'}) {
-			$gws[0] = $newgw;
-			$server->{'kvm_gw'} = join(" ", @gws);
-			}
-		&$second_print($text{'create_done'});
+		$shutdown = 1;
+                $shutwhy = $text{'smove_gwchange'};
 		}
 	}
 
@@ -5061,7 +5037,27 @@ if ($server->{'status'} ne 'down' && $shutdown) {
 	$was_up = 1;
 	&$second_print($text{'create_done'});
 	}
-elsif ($server->{'status'} ne 'down') {
+
+if ($newip) {
+	# Apply the IP change now
+	&$first_print(&text('smove_ipchanging', $ip, $newip));
+	$ifaces = &type_kvm_list_interfaces($server);
+	return $ifaces if (!ref($ifaces));
+	my ($iface) = grep { $_->{'address'} eq $ip } @$ifaces;
+	$iface || return $text{'smove_eifaceip'};
+	my $oldiface = { %$iface };
+	$iface->{'address'} = $newip;
+	$iface->{'netmask'} = &net::prefix_to_mask($newcidr);
+	&modify_primary_ip_address($server, $ip, $newip);
+	my $err = &type_kvm_modify_interface($server, $iface, $oldiface);
+	return $err if ($err);
+	$server->{'ip'} = $newip;
+	&delete_ip_address($server, $ip);
+	&add_ip_address($server, $newip);
+	&$second_print($text{'create_done'});
+	}
+
+if ($server->{'status'} ne 'down' && !$shutdown) {
 	# Save memory to a state file, if running - this also shuts down the VM
 	&$first_print($text{'smove_dumping'});
 	$dumpsrc = &tempname_on_server($vhost, $server->{'host'}.".state");
@@ -5090,6 +5086,20 @@ elsif ($server->{'status'} ne 'down') {
         &delete_file_on_server($vhost, $dumpsrc);
 	return $err if ($err);
         &$second_print($text{'create_done'});
+	}
+
+# Change the default gateway if needed
+if ($newip && $newgw ne $gw) {
+	&$first_print(&text('smove_gwchanging',
+			    $gw || $text{'smove_gwnone'},
+			    $newgw || $text{'smove_gwnone'}));
+	my $err = &modify_default_gateway($server, $newgw);
+	return $err if ($err);
+	if ($server->{'kvm_gw'}) {
+		$gws[0] = $newgw;
+		$server->{'kvm_gw'} = join(" ", @gws);
+		}
+	&$second_print($text{'create_done'});
 	}
 
 # Copy across all disk images, directly if possible
