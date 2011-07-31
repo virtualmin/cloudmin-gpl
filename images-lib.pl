@@ -1093,20 +1093,24 @@ if ($err) {
 	$err = &get_file_from_server($server, $passfile, $shadow);
 	}
 if (!$err) {
-	# Fix password in first column for root
+	# Fix password in first column for root, unless it is * (locked)
 	my $data = &read_file_contents($shadow);
-	push(@rv, [ $passfile, $data ]);
 	my $lref = &read_file_lines($shadow);
+	my $changed_root = 0;
 	foreach my $l (@$lref) {
 		my @w = split(/:/, $l, -1);
-		if ($w[0] eq "root") {
+		if ($w[0] eq "root" && $w[1] ne "*" && $w[1] ne "*LK*") {
 			$w[1] = &unix_crypt("changeme", $salt);
 			$l = join(':', @w);
+			$changed_root = 1;
 			}
 		}
 	&flush_file_lines($shadow);
-	$err = &put_file_to_server($server, $shadow, $passfile);
-	return "Failed to save munged $passfile : $err" if ($err);
+	if ($changed_root) {
+		push(@rv, [ $passfile, $data ]);
+		$err = &put_file_to_server($server, $shadow, $passfile);
+		return "Failed to save munged $passfile : $err" if ($err);
+		}
 	}
 
 # Do /etc/webmin/miniserv.users for root or admin
