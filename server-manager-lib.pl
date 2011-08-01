@@ -20,14 +20,21 @@ if (!$done_server_manager_lib_funcs) {
 @server_management_types = ( );
 %server_management_types = ( );
 @virtual_server_management_types = ( );
+@hosted_server_management_types = ( );
 foreach my $smt (@possible_server_management_types) {
 	if ($config{'show_'.$smt} &&
 	    -r $module_root_directory."/".$smt."-type-lib.pl") {
 		push(@server_management_types, $smt);
 		$server_management_types{$smt} = 1;
 		my $vfunc = "type_".$smt."_is_virtual";
-		if (defined(&$vfunc) && &$vfunc()) {
-			push(@virtual_server_management_types, $smt);
+		if (defined(&$vfunc)) {
+			my $v = &$vfunc();
+			if ($v) {
+				push(@virtual_server_management_types, $smt);
+				}
+			if ($v != 2) {
+				push(@hosted_server_management_types, $smt);
+				}
 			}
 		my $ifunc = "type_".$smt."_init";
 		if (defined(&$ifunc)) {

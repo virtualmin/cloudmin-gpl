@@ -459,7 +459,7 @@ return grep { $owned{$_->{'id'}} } &list_managed_servers();
 # Returns non-zero if this Cloudmin install supports plans
 sub supports_plans
 {
-return scalar(@virtual_server_management_types);
+return scalar(@hosted_server_management_types);
 }
 
 # list_plans()

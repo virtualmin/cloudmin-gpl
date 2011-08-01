@@ -6397,13 +6397,15 @@ if (defined(&list_locations) && @virtual_server_management_types) {
 	}
 
 # IP allocation overview
-push(@glinks, "list_ips.cgi");
-push(@gtitles, $text{'ips_title'});
-push(@gicons, "images/ips.gif");
-push(@gcats, "hosts");
+if ($module_infp{'vm2'} ne 'ec2') {
+	push(@glinks, "list_ips.cgi");
+	push(@gtitles, $text{'ips_title'});
+	push(@gicons, "images/ips.gif");
+	push(@gcats, "hosts");
+	}
 
 # Failover groups
-if (@virtual_server_management_types && !$module_info{'onehost'}) {
+if (@hosted_server_management_types && !$module_info{'onehost'}) {
 	push(@glinks, "list_failovers.cgi");
 	push(@gtitles, $text{'failovers_title'});
 	push(@gicons, "images/failovers.gif");
