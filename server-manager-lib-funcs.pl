@@ -3103,9 +3103,11 @@ foreach my $p (&is_parent_server($server)) {
 # Add disk usage, CPU and memory to historic stats, if we got them
 &add_historic_collected_info($info, $time || $server->{'statustime'}, $server);
 
-# Cache IP addresses, if we don't have them yet
-if (!$server->{'ip_addresses'} ||
-    !defined($server->{'mac_addresses'}) || $regen) {
+# Cache IP addresses, if we don't have them yet - except for EC2, where ifconfig
+# returns internal IPs
+if ((!$server->{'ip_addresses'} ||
+     !defined($server->{'mac_addresses'}) || $regen) &&
+    $server->{'manager'} ne 'ec2') {
 	&compute_ip_addresses($server);
 	}
 
@@ -8649,6 +8651,7 @@ if ($server && $server->{'ssh_pass'}) {
 
 # Root password / key
 my $must_pass = !&can_action(undef, "sshkeys") &&
+		$server &&
 	        !$server->{'key'} &&
 		!$server->{'ssh_nologin'};
 if ($must_pass) {
