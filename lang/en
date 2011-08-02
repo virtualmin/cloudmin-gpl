@@ -3592,6 +3592,7 @@ log_shell_server=Ran command <tt>$2</tt> on $1
 log_move_server=Moved system $1 to $2
 log_failover_server=Failed over system $1 to $2
 log_newami_server=Created AMI of system $1 with ID $2
+log_failami_server=Partially created AMI of system $1
 log_image_server=Created image of system $1 with ID $2
 log_clone_server=Created clone of system $1 with hostname $2
 log_boot_server=Changed boot method for system $1
