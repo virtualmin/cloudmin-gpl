@@ -23,10 +23,10 @@ shut down). Special codes that cover a number of statuses are also supported,
 such as C<up> (running and usable) C<wm> (Webmin installed) and C<bad> (down
 or in-accessible).
 
-In mutiline mode, uptime, CPU and RAM usage is displayed for the current
-account period. To show the previous period instead, use the C<--last-period>
-flag. Or to select any period in the past, use the C<--period-ago> flag followed
-by a number of weeks or months.
+In mutiline mode, uptime, bandwidth, CPU and RAM usage is displayed for the
+current account period. To show the previous period instead, use the
+C<--last-period> flag. Or to select any period in the past, use the
+C<--period-ago> flag followed by a number of weeks or months.
 
 To limit output to the unique IDs of selected systems, use the C<--id-only>
 flag. To get just hostnames use C<--name-only>, C<--address-only> to print
@@ -394,12 +394,36 @@ if ($multi) {
 			      ($config{'bw_period'} ?
 				"Current ".$config{'bw_period'} :
 				"Last ".$config{'bw_days'}." days"),"\n";
-			print "    Bandwidth usage towards limit: ",
-				&nice_size($s->{'bw_usage'}),"\n";
-			print "    Bandwidth usage incoming: ",
-				&nice_size($s->{'bw_usage_in'}),"\n";
-			print "    Bandwidth usage outgoing: ",
-				&nice_size($s->{'bw_usage_out'}),"\n";
+			if ($period_ago ne '') {
+				# Work out usage for some period ago
+				$bwinfo = &get_bandwidth($s);
+				$start = &bandwidth_period_start($period_ago);
+				$end = &bandwidth_period_end($period_ago);
+				for($hh=$start; $hh<$end; $hh+=3600) {
+					$bwin += $bwinfo->{'hour_in_'.$hh};
+					$bwout += $bwinfo->{'hour_out_'.$hh};
+					}
+				$bwtotal = $bwin + $bwout;
+				print "    Bandwidth usage for: ",
+					"$period_ago periods ago\n";
+				print "    Bandwidth usage towards limit: ",
+					&nice_size($bwtotal),"\n";
+				print "    Bandwidth usage incoming: ",
+					&nice_size($bwin),"\n";
+				print "    Bandwidth usage outgoing: ",
+					&nice_size($bwout),"\n";
+				}
+			else {
+				# Show current period's usage
+				print "    Bandwidth usage for: ",
+					"Current period\n";
+				print "    Bandwidth usage towards limit: ",
+					&nice_size($s->{'bw_usage'}),"\n";
+				print "    Bandwidth usage incoming: ",
+					&nice_size($s->{'bw_usage_in'}),"\n";
+				print "    Bandwidth usage outgoing: ",
+					&nice_size($s->{'bw_usage_out'}),"\n";
+				}
 			if ($s->{'bw_usage'} > $s->{'bw_limit'} &&
 			    $s->{'bw_limit'} && $s->{'bw_notify'}) {
 				print "    Bandwidth notification sent: ",
