@@ -2110,6 +2110,7 @@ amis_id=Image ID
 amis_path=Path in S3
 amis_owner=Owner
 amis_public=Public?
+amis_pcode=Product code
 amis_users=Used by systems
 amis_ours=Your account
 amis_delete=Delete Selected Images

@@ -40,6 +40,7 @@ if (@amis) {
 				  $text{'amis_path'},
 				  $text{'amis_owner'},
 				  $text{'amis_public'},
+				  $text{'amis_pcode'},
 				  $text{'amis_users'} ], 100, 0, \@tds);
 	foreach $ami (@amis) {
 		$ec2 = $ami->{'ec2'};
@@ -51,8 +52,11 @@ if (@amis) {
 		$public = $ami->{'isPublic'} eq 'true' ?
 			"<font color=#00aa00>$text{'yes'}</font>" :
 			"<font color=#ff0000>$text{'no'}</font>";
-		$ami->{'imageLocation'} =~ s/\.manifest\.xml$//;
+		$ami->{'imageLocation'} =~ s/(image)?\.manifest\.xml$//;
 		$ami->{'imageLocation'} =~ s/\.img$//;
+		$ami->{'imageLocation'} =~ s/\///;
+		$pcode = join(" ", map { $_->{'productCode'} }
+				       @{$ami->{'productCodes'}->{'item'}});
 		if ($myaccounts{$ami->{'imageOwnerId'}}) {
 			# Our image
 			print &ui_checked_columns_row([
@@ -60,8 +64,10 @@ if (@amis) {
 				 "id=$ami->{'imageId'}&ec2=$ec2->{'id'}'>".
 				 "$ami->{'imageId'}</a>",
 				$ami->{'imageLocation'},
-				"<i>$text{'amis_ours'}</i>",
+				$ami->{'imageOwnerId'}." (".
+				  $text{'amis_ours'}.")",
 				$public,
+				$pcode,
 				$users,
 				], \@tds, "d",
 				$ami->{'imageId'}."/".$ec2->{'id'});
@@ -74,6 +80,7 @@ if (@amis) {
 				$ami->{'imageLocation'},
 				$ami->{'imageOwnerId'},
 				$public,
+				$pcode,
 				$users
 				], \@tds);
 			}
