@@ -6397,7 +6397,7 @@ if (defined(&list_locations) && @virtual_server_management_types) {
 	}
 
 # IP allocation overview
-if ($module_infp{'vm2'} ne 'ec2') {
+if ($module_info{'vm2'} ne 'ec2') {
 	push(@glinks, "list_ips.cgi");
 	push(@gtitles, $text{'ips_title'});
 	push(@gicons, "images/ips.gif");
