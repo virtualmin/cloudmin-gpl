@@ -14,6 +14,11 @@ It must be currently down, and the filesystem must be un-mounted before it
 can be started up again. By default the virtual disk is mounted in a directory
 under C</mnt>, but you can change this with the C<--dir> flag.
 
+On a system that uses whole-disk images with multiple partitions, Cloudmin will
+by default mount the partition containing the C</etc> directory. However,
+you can select a different partition with the C<--want-dir> flag followed by
+a path that must exist on the partition, like C</grub>.
+
 =head1 Example usage
 
   cloudmin mount-system --host xencentos.home
@@ -46,6 +51,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--dir") {
 		$mountdir = shift(@ARGV);
 		}
+	elsif ($a eq "--want-dir") {
+		$wantdir = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
@@ -69,7 +77,7 @@ defined(&$nfunc) || &usage("This virtual system type does not have a ".
 # Mount now
 &obtain_lock_server($server);
 print "Mounting filesystem for $server->{'host'} ..\n";
-$err = &$mfunc($server, undef, $mountdir);
+$err = &$mfunc($server, $wantdir, $mountdir);
 if ($err) {
 	print ".. failed : $err\n";
 	}
@@ -91,6 +99,7 @@ print "Mounts the filesystem on the host for some system.\n";
 print "\n";
 print "cloudmin mount-system --host name\n";
 print "                     [--dir mount-point]\n";
+print "                     [--want-dir directory]\n";
 exit(1);
 }
 
