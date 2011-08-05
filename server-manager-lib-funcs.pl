@@ -7718,8 +7718,8 @@ if ($poss) {
 # Add rows for IP pools, if any
 my $table;
 my @allpools = &list_ip6_pools();
-$table .= &ui_hidden("show_gateways6", $show_gateways);
 if (@allpools) {
+	$table .= &ui_hidden("show_gateways6", $show_gateways);
 	$table .= &ui_columns_start(\@cols, 100, 0, [ "width=75%" ]);
 	for(my $i=0; $i<=@pools; $i++) {
 		my @cols = (
