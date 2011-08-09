@@ -4527,7 +4527,8 @@ return &parallel_ping_free(@poss);
 sub allocate_ip_address
 {
 my @rvs = &available_ip_addresses(@_);
-return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gw'} ) : ( );
+return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gateway'} )
+	    : ( );
 }
 
 # available_ip6_addresses(pool-ids, [ifaces, want-iface])
@@ -4563,7 +4564,7 @@ for(my $i=0; $i<@poolids; $i++) {
 			push(@poss, { 'id' => $ip,
 				      'ip' => $ip,
 				      'netmask' => $sub_netmasks[$j],
-				      'gw' => $sub_gws[$j] })
+				      'gateway' => $sub_gws[$j] })
 				if (!$used{$ip});
 			}
 		}
@@ -4615,7 +4616,8 @@ return ( );
 sub allocate_ip6_address
 {
 my @rvs = &available_ip6_addresses(@_);
-return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'netmask'}, $rvs[0]->{'gw'} ) : ( );
+return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'netmask'}, $rvs[0]->{'gateway'} )
+	    : ( );
 }
 
 # range_check_ip_address(ip, start-ips, end-ips, cidrs,
