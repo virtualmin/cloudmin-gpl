@@ -4513,7 +4513,7 @@ for(my $i=0; $i<@startips; $i++) {
 			push(@poss, { 'id' => $ip,
 				      'ip' => $ip,
 				      'cidr' => $sub_cidrs[$j],
-				      'gw' => $sub_gws[$j] })
+				      'gateway' => $sub_gws[$j] })
 				if (!$used{$ip});
 			}
 		}
