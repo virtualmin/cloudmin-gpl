@@ -8358,6 +8358,12 @@ if (!$webmindir) {
 		&check_server_ssh_login($server);
 	}
 
+# If we have Webmin, try to open its firewall port
+if ($webmindir) {
+	&open_webmin_firewall_port_and_print(
+		$server, $server->{'port'}, $webmindir);
+	}
+
 # Wait for Webmin to start, if we have it
 if ($webmindir) {
         &$first_print($text{'create_webminstarting'});
