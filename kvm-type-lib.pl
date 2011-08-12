@@ -954,7 +954,9 @@ if ($args->{'ip'}) {
 	}
 else {
 	# Allocate IP automatically
-	my $err = &allocate_kvm_ip_addresses($server, $vhost);
+	my $err = &allocate_kvm_ip_addresses($server, $vhost,
+			$args->{'bridge'} ? [ split(/,/, $args->{'bridge'}) ]
+					  : undef);
 	return $err if ($err);
 	}
 $server->{'ip_addresses'} = $server->{'kvm_ip'};
@@ -1006,7 +1008,9 @@ if ($args->{'ip6'}) {
 elsif ($args->{'allocate-ip6'} =~ /true|yes/ ||
        !$args->{'allocate-ip6'} && $config{'alloc_ipv6'}) {
 	# Allocate addresses
-	my $err = &allocate_kvm_ip6_addresses($server, $vhost);
+	my $err = &allocate_kvm_ip6_addresses($server, $vhost,
+			$args->{'bridge'} ? [ split(/,/, $args->{'bridge'}) ]
+					  : undef);
 	return $err if ($err);
 	}
 $server->{'ip6_addresses'} = $server->{'kvm_ip6'};
@@ -5636,18 +5640,21 @@ my ($ifield, $hfield) = @_;
 return "<input type=button onClick='ifield = form.$ifield; chooser = window.open(\"kvm_chooser.cgi?host=\"+escape(form.$hfield.value), \"chooser\", \"toolbar=no,menubar=no,scrollbar=no,width=600,height=300\"); chooser.ifield = ifield; window.ifield = ifield' value=\"...\">\n";
 }
 
-# allocate_kvm_ip_addresses(&server, &vhost)
+# allocate_kvm_ip_addresses(&server, &vhost, [&bridges])
 # Allocate one or more IP addresses for a KVM instance from the host's ranges.
 # On success, returns undef and sets kvm_ip, kvm_cidr and kvm_iface to space-
 # separated lists. On failure returns an error message.
 sub allocate_kvm_ip_addresses
 {
-my ($server, $vhost) = @_;
+my ($server, $vhost, $bridges) = @_;
 $vhost->{'kvm_start'} || return &text('create_exenallocnone', $vhost->{'host'});
 
 # Work out interfaces on host system
 my @hostifaces;
-if ($vhost->{'kvm_iface'}) {
+if ($bridges) {
+	@hostifaces = @$bridges;
+	}
+elsif ($vhost->{'kvm_iface'}) {
 	@hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
 	}
 else {
@@ -5690,18 +5697,21 @@ return &available_ip_addresses($vhost->{'kvm_start'},
 			       $vhost->{'kvm_gws'});
 }
 
-# allocate_kvm_ip6_addresses(&server, &vhost)
+# allocate_kvm_ip6_addresses(&server, &vhost, [&bridges])
 # Allocate one or more IPv6 addresses for a KVM instance from the host's ranges.
 # On success, returns undef and sets kvm_ip6, kvm_netmask6 and kvm_iface6 to
 # space-separated lists. On failure returns an error message.
 sub allocate_kvm_ip6_addresses
 {
-my ($server, $vhost) = @_;
+my ($server, $vhost, $bridges) = @_;
 $vhost->{'kvm_pool6'} || return &text('create_exenallocnone6',$vhost->{'host'});
 
 # Work out interfaces on host system
 my @hostifaces;
-if ($vhost->{'kvm_iface'}) {
+if ($bridges) {
+	@hostifaces = @$bridges;
+	}
+elsif ($vhost->{'kvm_iface'}) {
 	@hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
 	}
 else {
