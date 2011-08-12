@@ -384,6 +384,7 @@ if (&can_action(undef, "ips")) {
 		my @locs = defined(&list_vhost_locations) ?
 				&list_vhost_locations(\@vhosts) : ( );
 		my $style = @locs ? "opener_hidden" : "opener_shown";
+		my @allifaces;
 		foreach my $vhost (@vhosts) {
 			my $vtable = &ui_columns_start([
 				$text{'create_xenifacecol'},
@@ -391,6 +392,7 @@ if (&can_action(undef, "ips")) {
 				$text{'create_xennetmaskcol'},
 				$text{'create_xengwcol'}]);
 			my @ifaces = split(/\s+/, $vhost->{'kvm_iface'});
+			push(@allifaces, @ifaces);
 			if (!@ifaces) {
 				@ifaces = ( $text{'create_xenifacedef'} );
 				}
@@ -408,6 +410,7 @@ if (&can_action(undef, "ips")) {
 			$itable .= "<div style=$style ".
 				   "id=$vhost->{'id'}>".$vtable."</div>\n";
 			}
+		@allifaces = &unique(@allifaces);
 
 		# Add a section for when a location group is chosen, if any.
 		# This has a row for every possible bridge.
@@ -431,11 +434,22 @@ if (&can_action(undef, "ips")) {
 				   "id=loc>".$vtable."</div>\n";
 			}
 
+		# Build bridge selector
+		my $bsel;
+		if (@allifaces > 1) {
+			$bsel = $text{'create_xenipbridges'};
+			foreach my $b (@allifaces) {
+				$bsel .= " ".&ui_checkbox("kvm_bridge",
+							  $b, $b, 1);
+				}
+			}
+
 		$rv .= &ui_table_row($text{'create_kvmip2'},
 			&ui_radio("kvm_ip_def", 1,
-				  [ [ 1, $text{'create_xenipauto'} ],
-				    [ 0, $text{'create_xenipman2'}."<br>\n".
-					 $itable ] ]));
+			  [ [ 1, $text{'create_xenipauto'}."<br>" ],
+			    $bsel ? ( [ 2, $bsel."<br>" ] ) : ( ),
+			    [ 0, $text{'create_xenipman2'}."<br>\n".
+				 $itable ] ]));
 
 		# Javascript for host change
 		$rv .= "<script>\n";
@@ -614,7 +628,8 @@ my $vhost = &parse_host_server_field($server, 'kvm', 'kvm', $in,
 				     $server->{'kvm_disktotal'});
 $server->{'kvm_on'} = $vhost->{'id'};
 
-if (!$in->{'kvm_ip_def'} && &can_action(undef, "ips")) {
+my $bridges;
+if ($in->{'kvm_ip_def'} == 0 && &can_action(undef, "ips")) {
 	# Validate IP addresses
 	my @allhostifaces = split(/\s+/, $vhost->{'kvm_iface'});
 	if (!@allhostifaces) {
@@ -666,7 +681,10 @@ if (!$in->{'kvm_ip_def'} && &can_action(undef, "ips")) {
 else {
 	# Allocate the IP now, by looking for one that isn't pingable or
 	# use by any system
-	my $err = &allocate_kvm_ip_addresses($server, $vhost);
+	if ($in{'kvm_ip_def'} == 2) {
+		$bridges = [ split(/\0/, $in->{'kvm_bridge'}) ];
+		}
+	my $err = &allocate_kvm_ip_addresses($server, $vhost, $bridges);
 	&error($err) if ($err);
 	}
 $server->{'ip_addresses'} = $server->{'kvm_ip'};
@@ -694,7 +712,7 @@ if (!$empty) {
 	elsif ($in->{'kvm_ip6_mode'} == 1 && &can_action(undef, "ips") ||
 	       $config{'alloc_ipv6'}) {
 		# Allocate automatically
-		my $err = &allocate_kvm_ip6_addresses($server, $vhost);
+		my $err = &allocate_kvm_ip6_addresses($server, $vhost,$bridges);
 		&error($err) if ($err);
 		}
 	$server->{'ip6_addresses'} = $server->{'kvm_ip6'};

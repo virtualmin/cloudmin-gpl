@@ -20,3 +20,5 @@ Added support for creating virtual disks with ext3 and ext4 filesystems.
 The monitor for new and newly restarted KVM instances can now be accessed via a TCP port, which allows Cloudmin to perform some configuration changes without requiring a reboot.
 Virtual disks and network interfaces can now be added to and removed from running KVM instances without a reboot, assuming they support PCI hot-plugging.
 KVM virtual systems can now be paused and resumed, and live migrated to another host without requiring a shutdown.
+---- Changes since 5.7 ----
+When creating a KVM instance on a host system with multiple bridges, you can now select which bridges to automatically allocate IP addresses.

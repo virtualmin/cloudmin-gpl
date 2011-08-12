@@ -315,6 +315,7 @@ create_webminstarted=.. started successfully
 create_webminnostart=.. failed to start in $1 seconds. Last error was : $2
 create_xenip=IP address for Xen instance
 create_xenipauto=Assign automatically
+create_xenipbridges=Assign only on bridges :
 create_xenipman=Address $1 netmask $2
 create_xenip2=IP addresses for Xen instance
 create_xenifacecol=Host bridge
