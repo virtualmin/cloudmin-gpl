@@ -337,6 +337,7 @@ create_exenalloc=Failed to allocate an IP address on $1 from the range $2
 create_exenalloc6=Failed to allocate an IPv6 address on $1 from the range $2
 create_exenallocnone=No IP allocation ranges have been defined on $1
 create_exenallocnone6=No IPv6 allocation ranges have been defined on $1
+create_exennoifaces=No host system interfaces available for allocation
 create_exenifaces=Host system $1 does not have any bridges set, so only one IP address can be specified
 create_exenifaces2=Host system $1 only has $2 bridges set, but you specified $3 IP addresses
 create_exenips=No IP addresses entered

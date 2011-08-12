@@ -5678,6 +5678,7 @@ elsif ($vhost->{'kvm_iface'}) {
 else {
 	@hostifaces = ( "*" );
 	}
+@hostifaces || return $text{'create_exennoifaces'};
 
 # For each, allocate an IP from a range
 my (@ips, @cidrs, @gws);
