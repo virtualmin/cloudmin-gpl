@@ -258,10 +258,6 @@ my $ip = &get_server_ip($s);
 $ip ||= &to_ipaddress($s->{'host'});
 $ip ||= $s->{'host'};
 $s->{'ip'} = $ip;
-
-# Fill in 'ip6' field
-my $ip6 = &get_server_ip6($s);
-$s->{'ip6'} = $ip6;
 }
 
 # list_managed_servers_sorted([force-mode])
@@ -351,18 +347,18 @@ if ($server->{'ip_force'} && !wantarray) {
 my @ips;
 if ($server->{'manager'} ne 'this' &&
     $server->{'manager'} ne 'real') {
-	# Use IPs from interfaces for non-virtual systems
+	# Use IPs from interfaces for virtual systems
 	@ips = split(/\s+/, $server->{'ip_addresses'});
 	}
 if (!@ips) {
 	my $resolvedip = &to_ipaddress($server->{'host'});
 	@ips = ( $resolvedip );
 	}
-elsif (scalar(@ips) > 1) {
+elsif (scalar(@ips) > 1 && !$server->{'ip_force'}) {
 	my $resolvedip = &to_ipaddress($server->{'host'});
 	if (&indexof($resolvedip, @ips) >= 0) {
 		# Always use IP that hostname resolves to first
-		@ips = ( $resolvedip, ( grep { $_ ne $resolvedip } @ips ) );
+		@ips = ( $resolvedip, @ips );
 		}
 	}
 if ($server->{'ip_force'}) {
