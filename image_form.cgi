@@ -57,9 +57,13 @@ print &ui_table_row($text{'mkimage_version'},
 				[ 1, $text{'mkimage_ver'} ] ])." ".
 		    &ui_textbox("version", undef, 5));
 
-# Clear serials?
-print &ui_table_row($text{'newami_munge'},
-		    &ui_yesno_radio("munge", 1));
+# Clear Virtualmin serials?
+$info = &get_server_collected($server);
+if ($info->{'minfo'}->{'virtualmin'} &&
+    $info->{'minfo'}->{'virtualmin'} ne 'gpl') {
+	print &ui_table_row($text{'newami_munge'},
+			    &ui_yesno_radio("munge", 1));
+	}
 
 # Compress image
 print &ui_table_row($text{'mkimage_compress'},
