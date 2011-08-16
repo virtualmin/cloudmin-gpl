@@ -2940,7 +2940,9 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		$server->{'type'} = &os_to_server_type($ostype, $real_ostype);
 		}
 
-	&save_server_collected($server, $info);
+	if ($info) {
+		&save_server_collected($server, $info);
+		}
 	}
 elsif ($server->{'no_webmin_login'}) {
 	# Webmin login disabled
