@@ -8693,7 +8693,8 @@ else {
 			[ 2, $text{'add_auth2'}."<br>".
 			     "&nbsp;&nbsp;&nbsp;".
 			     &ui_checkbox("noping", 1, $text{'add_noping'},
-					  $server->{'ssh_noping'}) ] ]));
+					  $server ? $server->{'ssh_noping'} : 0)
+		       ] ]));
 	}
 
 # SSH protocol version
