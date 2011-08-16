@@ -4329,8 +4329,12 @@ return ($out, undef, $wroot);
 sub open_webmin_firewall_port
 {
 my ($server, $port, $root) = @_;
-if (!&has_command_on_server($server, "$root/firewall/open-ports.pl")) {
+my @st = &stat_file_on_server($server, "$root/firewall/open-ports.pl");
+if (!@st) {
 	return (6);
+	}
+elsif (@st == 1) {
+	return (5, $st[0]);
 	}
 my $portrange = join(":", $port, $port+10);
 my $cmd = "cd $root/firewall && ".
@@ -4350,7 +4354,7 @@ sub open_webmin_firewall_port_and_print
 {
 my ($server, $port, $root) = @_;
 &$first_print($text{'create_webminport'});
-my ($pok, $pout) = &open_webmin_firewall_port($server, $wport, $wroot);
+my ($pok, $pout) = &open_webmin_firewall_port($server, $port, $root);
 if ($pok <= 6) {
 	&$second_print(&text('create_ewebminport'.$pok,
 			     "<tt>".&html_escape($pout)."</tt>"));
