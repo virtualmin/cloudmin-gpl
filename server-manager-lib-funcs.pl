@@ -3058,6 +3058,7 @@ if (!$got_kernel) {
 		$info->{'kernel'} = { 'version' => $r,
 				      'arch' => $m,
 				      'os' => $o };
+		$got_more_info = 1;
 		}
 	}
 
@@ -3075,11 +3076,15 @@ if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i) {
 
 			# CPU user, kernel, idle, io, vm
 			$info->{'cpu'} = [ @w[12..16] ];
+
+			$got_more_info = 1;
 			}
 		}
 	}
 
-&save_server_collected($server, $info);
+if ($got_more_info) {
+	&save_server_collected($server, $info);
+	}
 
 $rv = 1;
 
