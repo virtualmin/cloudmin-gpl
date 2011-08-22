@@ -109,7 +109,7 @@ if ($can && defined(&$gcfunc) && &$gcfunc($server) && @$ifaces) {
 			   1, 0, $gwdev ? 1 : 0));
 
 	$c6func = "type_".$t."_can_ipv6";
-	if (defined(&$cfunc) && &$c6func($server)) {
+	if (defined(&$cfunc) && &$c6func($server) && $anyv6) {
 		($gw6, $gwdev6) = &get_server_default_ipv6_gateway($server);
 
 		print &ui_table_row($text{'ifaces_gw6'},

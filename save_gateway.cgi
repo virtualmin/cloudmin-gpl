@@ -30,7 +30,7 @@ if (!$in{'gw_def'}) {
 
 # Check inputs for IPv6 gateway
 $c6func = "type_".$server->{'manager'}."_can_ipv6";
-if (defined(&$cfunc) && &$c6func($server)) {
+if (defined(&$cfunc) && &$c6func($server) && defined($in{'gw6_def'})) {
 	($oldgw6, $oldgwdev6) = &get_server_default_ipv6_gateway($server);
 	if (!$in{'gw6_def'}) {
 		&check_ip6address($in{'gw6'}) || &error($text{'ifaces_egw6'});
@@ -50,7 +50,7 @@ else {
 &error($err) if ($err);
 
 # Apply the change for IPv6
-if (defined(&$cfunc) && &$c6func($server)) {
+if (defined(&$cfunc) && &$c6func($server) && defined($in{'gw6_def'})) {
 	if ($in{'gw6_def'}) {
 		$err = &modify_default_ipv6_gateway(
 			$server, undef, undef);
