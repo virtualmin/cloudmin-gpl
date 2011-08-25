@@ -306,6 +306,7 @@ delete($got->{'args'}->{'vnc'});
 delete($got->{'args'}->{'nographic'});
 delete($got->{'args'}->{'monitor'});
 delete($got->{'args'}->{'S'});
+delete($got->{'args'}->{'usbdevice'});
 
 # Save other unknown args
 my @args;
@@ -2167,6 +2168,11 @@ if (ref($inuse)) {
 		elsif (&kvm_host_supports_flag($vhost, "vga.*std")) {
 			$cmd .= " -vga std";
 			}
+		}
+
+	# Enable tablet USB device, to fix mouse pointer
+	if (&kvm_host_supports_flag($vhost, "usbdevice")) {
+		$cmd .= " -usbdevice tablet";
 		}
 	}
 else {
