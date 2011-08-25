@@ -551,12 +551,12 @@ else {
 	}
 }
 
-# send_to_backup_dest(&server, file, &destination)
+# send_to_backup_dest(&server, file, &destination, [extension])
 # Send some file to a backup destination. Returns an error on failure, undef on
 # success.
 sub send_to_backup_dest
 {
-my ($server, $file, $dest) = @_;
+my ($server, $file, $dest, $ext) = @_;
 my $destdir = $dest->{'path'};
 $destdir =~ s/\/([^\/]+)$//;
 my $destserver = &get_backup_dest_server($dest);
@@ -566,7 +566,7 @@ if ($dest->{'mode'} == 0) {
 		&make_dir($destdir, 0700, 1) ||
 			return &text('brun_emkdir', "$!");
 		}
-	return &get_file_from_server($server, $file, $dest->{'path'});
+	return &get_file_from_server($server, $file, $dest->{'path'}.$ext);
 	}
 elsif ($dest->{'mode'} == 1) {
 	# To host system, which makes no sense!
@@ -578,14 +578,14 @@ elsif ($dest->{'mode'} == 2) {
 	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
 	return &text('brun_emkdir', $mkerr) if ($mkerr);
 	return &transfer_file_between_servers($server, $destserver,
-					      $file, $dest->{'path'}, 0, 1);
+				      $file, $dest->{'path'}.$ext, 0, 1);
 	}
 elsif ($dest->{'mode'} == 3) {
 	# Send via SSH (using a fake server object)
 	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
 	return &text('brun_emkdir', $mkerr) if ($mkerr);
 	return &transfer_file_between_servers($server, $destserver,
-					      $file, $dest->{'path'}, 0);
+					      $file, $dest->{'path'}.$ext, 0);
 	}
 elsif ($dest->{'mode'} == 4) {
 	# Send via FTP, using our little FTP uploader
@@ -604,7 +604,7 @@ elsif ($dest->{'mode'} == 4) {
 		quotemeta($dest->{'pass'})." ".
 		quotemeta($dest->{'host'})." ".
 		($dest->{'port'} || 21)." ".
-		quotemeta($dest->{'path'})." ".
+		quotemeta($dest->{'path'}.$ext)." ".
 		quotemeta($file)." 2>&1");
 	return $err ? $err : $ex ? "FTP upload failed : $out" : undef;
 	}

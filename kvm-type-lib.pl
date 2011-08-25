@@ -4444,11 +4444,11 @@ if ($destserver && $destserver->{'id'} eq $vhost->{'id'}) {
 	}
 
 # Pick a temp file on the host system, if needed
-my $tarfile;
+my $gzfile;
 if ($dest->{'mode'} == 1) {
 	# Target is on host already
-	$tarfile = $dest->{'path'};
-	my $mkerr = &create_backup_dest_dir($vhost, $tarfile);
+	$gzfile = $dest->{'path'};
+	my $mkerr = &create_backup_dest_dir($vhost, $gzfile);
 	return { 'ok' => 0,
 		 'msg' => &text('brun_emkdir', $mkerr) } if ($mkerr);
 	}
@@ -4460,12 +4460,12 @@ elsif (&can_transfer_directly($dest)) {
 	my $mkerr = &create_backup_dest_dir($destserver, $dest->{'path'});
 	return { 'ok' => 0,
 		 'msg' => &text('brun_emkdir', $mkerr) } if ($mkerr);
-	$tarfile = undef;
+	$gzfile = undef;
 	}
 else {
-	# Pick temp file for tar.gz
-	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
-	if (!$tarfile) {
+	# Pick temp file for compressed disks
+	$gzfile = &tempname_on_server($vhost, $server->{'host'}.'.gz');
+	if (!$gzfile) {
 		return { 'ok' => 0,
 			 'msg' => &text('brun_etemp', $vhost->{'host'}) };
 		}
@@ -4479,22 +4479,6 @@ if (!ref($disks)) {
 	}
 my @lvmdisks = grep { $_->{'lv'} } @$disks;
 my @filedisks = grep { !$_->{'device'} } @$disks;
-
-# Create temp dir for LVM images, if needed
-my $tempdir;
-if ($server->{'kvm_filesystem_lv'}) {
-	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-	$tempdir = &tempname_on_server($vhost);
-	if (!$tempdir) {
-		return { 'ok' => 0,
-			 'msg' => &text('brun_etemp', $vhost->{'host'}) };
-		}
-	my $err = &make_dir_on_server($vhost, $tempdir, 0700, 1);
-	if ($err) {
-		return { 'ok' => 0, 'msg' => &text('brun_emktemp',
-					$vhost->{'host'}, $err) };
-		}
-	}
 
 # Check if LVM on source is clustered
 my $clusterlvm;
@@ -4538,153 +4522,97 @@ if ($server->{'kvm_filesystem_lv'} && $server->{'status'} ne 'down' &&
 		}
 	}
 
+# XXX handle different disk types
+my @devs;
 if ($server->{'kvm_filesystem_lv'}) {
-	# On LVM, copy each disk into temp files and then tar up
-	my @lvmdevs;
+	# Use LVM snapshots if possible, disk devices otherwise
 	if (@snaps) {
-		@lvmdevs = map { $_->{'device'} } @snaps;
+		@devs = map { $_->{'device'} } @snaps;
 		}
 	else {
-		@lvmdevs = map { $_->{'real'} } @lvmdisks;
+		@devs = map { $_->{'real'} } @lvmdisks;
 		}
+	}
+else {
+	# Use disk image files
+	@devs = map { $_->{'real'} } @filedisks;
+	}
 
-	# DD into temp dir
-	&$first_print(&text('brun_dd', $server->{'host'}));
-	foreach my $dev (@lvmdevs) {
-		my $devfile = $dev;
-		$devfile =~ s/^(.*)\///;
-		$devfile =~ s/_cloudmin_snap$//;
-		my $ddcmd = &dd_command($dev, "$tempdir/$devfile")." 2>&1";
+my @gzfiles;
+if ($gzfile) {
+	# Need to write to local files
+	my $i = 0;
+	foreach my $dev (@devs) {
+		my $ext = $i ? ".$i" : "";
+		my $ddcmd = "(".&dd_command($dev, undef).
+			    " | gzip -c >".$gzfile.$ext.") 2>&1";
 		$ddcmd = &niced_backup_command($vhost, $ddcmd);
+		push(@gzfiles, $gzfile.$ext);
 		my ($out, $ex, $err) = &execute_command_on_server(
 					$vhost, $ddcmd);
 		if ($ex || $err) {
 			$ddfail = &text('brun_edd', $dev, $err || $out);
 			last;
 			}
-		}
-
-	# Tar up temp dir
-	if (!$ddfail && $tarfile) {
-		# To temp file
-		&$first_print(&text('brun_tarring3', $server->{'host'}));
-		my $tarcmd = "cd ".quotemeta($tempdir)." && ".
-			     "tar cf - . | gzip -c >".quotemeta($tarfile);
-		$tarcmd = &niced_backup_command($vhost, $tarcmd);
-		my ($out, $ex, $err) = &execute_command_on_server(
-					$vhost, $tarcmd);
-		if ($ex || $err) {
-			$err = $out if ($ex);
-			$ddfail = &text('brun_etar',
-					"<tt>".&html_escape($out)."</tt>");
-			}
-		}
-	elsif (!$ddfail) {
-		# Via direct SSH
-		&$first_print(&text('brun_tarring6', $server->{'host'},
-					$destserver->{'host'}));
-		my $tarcmd = "cd ".quotemeta($tempdir)." && ".
-			     "tar cf - . | gzip -c";
-		$tarcmd = &niced_backup_command($vhost, $tarcmd);
-		my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
-                                                  $dest->{'path'});
-		if ($err) {
-			return { 'ok' => 0,
-				 'msg' => &text('brun_etar',
-					"<tt>".&html_escape($err)."</tt>") };
-			}
-		}
-
-	# Remove temp dir of DD images
-	&delete_file_on_server($vhost, $tempdir);
-
-	# Close Webmin session, as it may have timed out
-	&remote_finished();
-
-	# Remove any snapshots we created
-	if (@snaps) {
-		&$first_print(&text('brun_unsnapshot', $server->{'host'}));
-		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-		foreach my $snaplv (@snaps) {
-			&delete_all_disk_image_partitions($vhost, $snaplv);
-			&remote_foreign_call($vhost, "lvm",
-					     "delete_logical_volume", $snaplv);
-			}
-		}
-
-	if ($ddfail) {
-		return { 'ok' => 0, 'msg' => $ddfail };
+		$i++;
 		}
 	}
 else {
-	# Work out which disks are regular files, and get relative paths
-	if (!@filedisks) {
-		return { 'ok' => 0,
-			 'msg' => &text('brun_efiledisks') };
-		}
-	my $dir = $filedisks[0]->{'real'};
-	$dir =~ s/\/[^\/]+$//;
-	my @paths;
-	foreach my $d (@filedisks) {
-		if ($d->{'real'} =~ /^\Q$dir\E\/(\S+)$/) {
-			push(@paths, $1);
-			}
-		}
-
-	if ($tarfile) {
-		# Run tar and gzip on all of them, into temp file
-		&$first_print(&text('brun_tarring2', $server->{'host'}, $dir));
-		my $tarcmd = "cd ".quotemeta($dir)." && ".
-			    "tar cf - ".join(" ", map { quotemeta($_) } @paths).
-			    " | gzip -c >".quotemeta($tarfile);
-		$tarcmd = &niced_backup_command($vhost, $tarcmd);
-		my ($out, $ex, $err) = &execute_command_on_server(
-					$vhost, $tarcmd);
-		if ($ex || $err) {
-			$err = $out if ($ex);
-			return { 'ok' => 0,
-				 'msg' => &text('brun_etar',
-					"<tt>".&html_escape($out)."</tt>") };
-			}
-		}
-	else {
-		# Run tar and gzip piped into SSH on the target system
-		&$first_print(&text('brun_tarring5', $server->{'host'}, $dir,
-						     $destserver->{'host'}));
-		my $tarcmd = "cd ".quotemeta($dir)." && ".
-                        "tar cf - ".join(" ", map { quotemeta($_) } @paths).
-                        " | gzip -c";
-		$tarcmd = &niced_backup_command($vhost, $tarcmd);
-		my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
-						  $dest->{'path'});
+	# Can write directly to target system
+	my $i = 0;
+        foreach my $dev (@devs) {
+                my $ext = $i ? ".$i" : "";
+		my $ddcmd = &dd_command($dev, undef)." | gzip -c";
+		$ddcmd = &niced_backup_command($vhost, $ddcmd);
+		my $err = &pipe_command_to_server($vhost, $destserver, $ddcmd,
+                                                  $dest->{'path'}.$ext);
+		push(@gzfiles, $dest->{'path'}.$ext);
 		if ($err) {
-			return { 'ok' => 0,
-				 'msg' => &text('brun_etar',
-					"<tt>".&html_escape($err)."</tt>") };
+			$ddfail = &text('brun_edd', $lvmdevs[0], $err);
+			last;
+			}
+		$i++;
+		}
+	}
+
+# Close Webmin session, as it may have timed out
+&remote_finished();
+
+# Remove any LVM snapshots we created
+if (@snaps) {
+	&$first_print(&text('brun_unsnapshot', $server->{'host'}));
+	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+	foreach my $snaplv (@snaps) {
+		&delete_all_disk_image_partitions($vhost, $snaplv);
+		&remote_foreign_call($vhost, "lvm",
+				     "delete_logical_volume", $snaplv);
+		}
+	}
+
+# Clean up and exit if DDing failed
+if ($ddfail) {
+	if ($gzfile) {
+		foreach my $g (@gzfiles) {
+			&delete_file_on_server($vhost, $g);
 			}
 		}
+	return { 'ok' => 0, 'msg' => $ddfail };
 	}
 
 # Get the size
-my @st;
-if ($tarfile) {
-	@st = &stat_file_on_server($vhost, $tarfile);
+my $size = 0;
+my $staton = $gzfile ? $vhost : $destserver;
+foreach my $g (@gzfiles) {
+	my @st = &stat_file_on_server($staton, $g);
 	if (!@st || !$st[7]) {
 		return { 'ok' => 0,
-			 'msg' => &text('brun_estat', $tarfile) };
+			 'msg' => &text('brun_estat', $g) };
 		}
+	$size += $st[7];
 	}
-else {
-	@st = &stat_file_on_server($destserver, $dest->{'path'});
-	if (!@st || !$st[7]) {
-		return { 'ok' => 0,
-			 'msg' => &text('brun_estat', $dest->{'path'}) };
-		}
-	}
-my $size = $st[7];
 
 # Transfer to the destination, if needed
-if ($dest->{'mode'} != 1 && $tarfile) {
+if ($dest->{'mode'} != 1 && $gzfile) {
 	# Check if size would exceed limits
 	my $err = &check_backup_dest_size($server, $dest, $size, $owner);
 
@@ -4692,11 +4620,17 @@ if ($dest->{'mode'} != 1 && $tarfile) {
 		# Send via SCP or FTP
 		&$first_print(&text('brun_sending', $server->{'host'},
 					    &nice_backup_destination($dest)));
-		$err = &send_to_backup_dest($vhost, $tarfile, $dest);
+		foreach my $g (@gzfiles) {
+			my ($ext) = ($g =~ /(\.\d+)$/ ? $1 : undef);
+			$err = &send_to_backup_dest($vhost, $g, $dest, $ext);
+			last if ($err);
+			}
 		}
 
 	# Delete from host
-	&delete_file_on_server($vhost, $tarfile);
+	foreach my $g (@gzfiles) {
+		&delete_file_on_server($vhost, $g);
+		}
 
 	if ($err) {
 		return { 'ok' => 0,
@@ -4707,6 +4641,14 @@ if ($dest->{'mode'} != 1 && $tarfile) {
 # Return status
 return { 'ok' => 1,
 	 'size' => $size };
+}
+
+# type_kvm_backup_extension(&server)
+# Always returns .gz, as even multi-disk systems are backed up as separate files
+sub type_kvm_backup_extension
+{
+my ($server) = @_;
+return "gz";
 }
 
 # type_kvm_restore_system(&server, dest, shutdown)
