@@ -107,6 +107,11 @@ if ($multi) {
 		print $log->{'id'},"\n";
 		print "    Date and time: ",&make_date($log->{'time'}),"\n";
 		print "    Destination: ",$log->{'dest'},"\n";
+		@dests = split(/\s+/, $log->{'dests'});
+		@dests = ( $log->{'dest'} ) if (!@dests);
+		foreach $d (@dests) {
+			print "    File: $d\n";
+			}
 		if ($log->{'base_dest'}) {
 			print "    Base destination: ",
 			      $log->{'base_dest'},"\n";

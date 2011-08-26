@@ -91,7 +91,7 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 			$candelete = $dest->{'mode'} <= 2 &&
 				     $b->{'ok'};
 			print &ui_checked_columns_row([
-				"<a href='restore_form.cgi?log=$b->{'id'}'>".
+				"<a href='view_backuplog.cgi?log=$b->{'id'}'>".
 				 &nice_backup_destination($b->{'dest'}).
 				 "</a>",
 				&make_date($b->{'time'}),
