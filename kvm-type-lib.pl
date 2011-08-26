@@ -716,6 +716,12 @@ if (!$empty) {
 		my $err = &allocate_kvm_ip6_addresses($server, $vhost,$bridges);
 		&error($err) if ($err);
 		}
+	else {
+		# IPv6 not in use .. clear
+		$server->{'kvm_ip6'} = undef;
+		$server->{'kvm_netmask6'} = undef;
+		$server->{'kvm_gw6'} = undef;
+		}
 	$server->{'ip6_addresses'} = $server->{'kvm_ip6'};
 	}
 
@@ -1031,6 +1037,12 @@ elsif ($args->{'allocate-ip6'} =~ /true|yes/ ||
 			$args->{'bridge'} ? [ split(/,/, $args->{'bridge'}) ]
 					  : undef);
 	return $err if ($err);
+	}
+else {
+	# IPv6 not in use .. clear
+	$server->{'kvm_ip6'} = undef;
+	$server->{'kvm_netmask6'} = undef;
+	$server->{'kvm_gw6'} = undef;
 	}
 $server->{'ip6_addresses'} = $server->{'kvm_ip6'};
 
