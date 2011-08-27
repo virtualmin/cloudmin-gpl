@@ -36,6 +36,8 @@ if (!$in{'log'}) {
 	      &ui_submit(&text('backuplogs_week', $days), "week"),"\n";
 	print &ui_form_end(),"<p>\n";
 	}
+$params = "id=".&urlize($in{'id'})."&log=".&urlize($in{'log'}).
+	  "&search=".&urlize($in{'search'});
 
 if ($in{'search'} || $in{'week'} || $in{'log'}) {
 	# Show matching backups (that the user is allowed to see)
@@ -91,7 +93,8 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 			$candelete = $dest->{'mode'} <= 2 &&
 				     $b->{'ok'};
 			print &ui_checked_columns_row([
-				"<a href='view_backuplog.cgi?log=$b->{'id'}'>".
+				"<a href='view_backuplog.cgi?".
+				 "bid=$b->{'id'}&$params'>".
 				 &nice_backup_destination($b->{'dest'}).
 				 "</a>",
 				&make_date($b->{'time'}),
