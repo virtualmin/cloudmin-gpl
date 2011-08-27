@@ -4656,8 +4656,16 @@ if ($dest->{'mode'} != 1 && $gzfile) {
 		}
 	}
 
+# Build list of destination files
+my @dests;
+foreach my $g (@gzfiles) {
+	my ($ext) = ($g =~ /(\.\d+)$/ ? $1 : undef);
+	push(@dests, &join_backup_destination($dest).$ext);
+	}
+
 # Return status
 return { 'ok' => 1,
+	 'dests' => join(' ', @dests),
 	 'size' => $size };
 }
 
