@@ -37,7 +37,7 @@ if (!$in{'log'}) {
 	print &ui_form_end(),"<p>\n";
 	}
 $params = "id=".&urlize($in{'id'})."&log=".&urlize($in{'log'}).
-	  "&search=".&urlize($in{'search'});
+	  "&search=".&urlize($in{'search'})."&week=".($in{'week'} ? 1 : '');
 
 if ($in{'search'} || $in{'week'} || $in{'log'}) {
 	# Show matching backups (that the user is allowed to see)

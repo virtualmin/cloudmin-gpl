@@ -4480,6 +4480,7 @@ sub type_kvm_backup_system
 my ($server, $deststr, $shutdown, $owner) = @_;
 my $vhost = &get_parent_server($server);
 my $dest = &parse_backup_destination($deststr);
+my $origdest = { %$dest };
 my $destserver = &get_backup_dest_server($dest, $vhost);
 if ($destserver && $destserver->{'id'} eq $vhost->{'id'}) {
 	$dest->{'mode'} = 1;
@@ -4684,7 +4685,7 @@ if ($dest->{'mode'} != 1 && $gzfile) {
 my @dests;
 foreach my $g (@gzfiles) {
 	my ($ext) = ($g =~ /(\.\d+)$/ ? $1 : undef);
-	push(@dests, &join_backup_destination($dest).$ext);
+	push(@dests, &join_backup_destination($origdest).$ext);
 	}
 
 # Return status
