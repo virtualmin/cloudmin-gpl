@@ -2670,6 +2670,22 @@ if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
 	$server->{'kvm_disktotal'} += $disk->{'size'};
 	}
 
+# Set as primary disk
+if (!$server->{'kvm_filesystem'} &&
+    ($disk->{'media'} eq 'disk' || $disk->{'media'} eq '')) {
+	$server->{'kvm_filesystem'} = $disk->{'real'};
+	$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
+	$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
+	$server->{'kvm_disksize'} = $disk->{'size'} / (1024*1024);
+	}
+if (!$server->{'kvm_swapfile'} &&
+    ($disk->{'media'} eq 'disk' || $disk->{'media'} eq '')) {
+	$server->{'kvm_swapfile'} = $disk->{'real'};
+	$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
+	$server->{'kvm_swapfile_lv'} = $disk->{'lv'};
+	$server->{'kvm_swap'} = $disk->{'size'} / (1024*1024);
+	}
+
 # If mounting a CD, there are no partitions
 if ($disk->{'media'} eq 'cdrom') {
 	$disk->{'virt_mount'} = $disk->{'virt'};
@@ -2952,6 +2968,14 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 	    (!$disk->{'device'} || $disk->{'lv'})) {
 		$server->{'kvm_disktotal'} -= $olddisk->{'size'};
 		$server->{'kvm_disktotal'} += $disk->{'size'};
+		}
+
+	# If this was the primary disk, adjust initial size
+	if ($disk->{'real'} eq $server->{'kvm_filesystem'}) {
+		$server->{'kvm_disksize'} = $disk->{'size'} / (1024*1024);
+		}
+	if ($disk->{'real'} eq $server->{'kvm_swapfile'}) {
+		$server->{'kvm_swap'} = $disk->{'size'} / (1024*1024);
 		}
 	}
 
