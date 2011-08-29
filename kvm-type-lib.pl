@@ -4565,7 +4565,7 @@ if ($server->{'kvm_filesystem_lv'} && $server->{'status'} ne 'down' &&
 		}
 	}
 
-# XXX handle different disk types
+# XXX handle different disk types on same system
 my @devs;
 if ($server->{'kvm_filesystem_lv'}) {
 	# Use LVM snapshots if possible, disk devices otherwise
@@ -4715,20 +4715,36 @@ if ($destserver && $destserver->{'id'} eq $vhost->{'id'}) {
 	$dest->{'mode'} = 1;
 	}
 
+# Work out original backup format - either a tar.gz of disks, or one gz file
+# per disk
+my $gzip_format;
+if ($dest->{'path'} =~ /\.tar\.gz$/) {
+	$gzip_format = 0;
+	}
+elsif ($dest->{'path'} =~ /\.gz$/) {
+	$gzip_format = 1;
+	}
+else {
+	return { 'ok' => 0,
+		 'msg' => &text('brun_eformat', $dest->{'path'})
+	       };
+	}
+
 # Pick a temp file on the host system, if needed
-my $tarfile;
+my $localfile;
 if ($dest->{'mode'} == 1) {
 	# Source file is on host already
-	$tarfile = $dest->{'path'};
+	$localfile = $dest->{'path'};
 	}
 elsif (&can_transfer_directly($dest)) {
 	# Transferring directly from source host
-	$tarfile = undef;
+	$localfile = undef;
 	}
 else {
-	# Pick temp file for tar
-	$tarfile = &tempname_on_server($vhost, $server->{'host'}.'.tar.gz');
-	if (!$tarfile) {
+	# Pick temp file for tar.gz or gz file
+	$localfile = &tempname_on_server($vhost,
+		$server->{'host'}.($gzip_format ? '.gz' : '.tar.gz'));
+	if (!$localfile) {
 		return { 'ok' => 0,
 			 'msg' => &text('brun_etemp', $vhost->{'host'}) };
 		}
@@ -4742,37 +4758,57 @@ if (!ref($disks)) {
         }
 my @lvmdisks = grep { $_->{'lv'} } @$disks;
 my @filedisks = grep { !$_->{'device'} } @$disks;
+my @devs;
 if ($server->{'kvm_filesystem_lv'}) {
 	if (!@lvmdisks) {
 		return { 'ok' => 0,
 			 'msg' => &text('brun_elvmdisks') };
 		}
+	@devs = map { $_->{'real'} } @lvmdisks;
 	}
 else {
 	if (!@filedisks) {
 		return { 'ok' => 0,
 			 'msg' => &text('brun_efiledisks') };
 		}
+	@devs = map { $_->{'real'} } @filedisks;
 	}
 
-# Copy in the tar.gz backup file, if needed
-if ($dest->{'mode'} != 1 && $tarfile) {
+# Copy in the tar.gz or gz backup files, if needed
+my @gzfiles;
+if ($dest->{'mode'} != 1 && $localfile) {
         &$first_print(&text('rrun_getting', $server->{'host'},
                                             &nice_backup_destination($dest)));
-        my $err = &get_from_backup_dest($vhost, $tarfile, $dest);
+        my $err = &get_from_backup_dest($vhost, $localfile, $dest);
         if ($err) {
                 return { 'ok' => 0,
                          'msg' => &text('rrun_eget', $err) };
                 }
+	if ($gzip_format) {
+		# Also load in additional .gz.* files
+		push(@gzfiles, $localfile);
+		my $i = 1;
+		while(1) {
+			my $err = &get_from_backup_dest(
+				$vhost, $localfile.".".$i, $dest, ".".$i);
+			last if ($err);
+			$i++;
+			}
+		}
         }
+elsif ($gzip_format) {
+	# Build list of .gz.* files to restore
+	# XXX
+	}
 
 # Get size, either from temp tar file or source
+# XXX include all files
 my @st;
-if ($tarfile) {
-	@st = &stat_file_on_server($vhost, $tarfile);
+if ($localfile) {
+	@st = &stat_file_on_server($vhost, $localfile);
 	if (!@st || !$st[7]) {
 		return { 'ok' => 0,
-			 'msg' => &text('rrun_estat', $tarfile) };
+			 'msg' => &text('rrun_estat', $localfile) };
 		}
 	}
 else {
@@ -4785,15 +4821,51 @@ else {
 my $size = $st[7];
 
 my $tarerr;
-if ($server->{'kvm_filesystem_lv'}) {
+if ($gzip_format) {
+	# Un-zip each .gz.* file over a disk
+	if ($localfile) {
+		# Just extract from local files
+		my $i = 0;
+		foreach my $dev (@devs) {
+			my $ext = $i ? ".$i" : "";
+			my $ddcmd = "(gunzip -c ".quotemeta($localfile.$ext).
+				    " | ".&dd_command(undef, $dev).") 2>&1";
+			$ddcmd = &niced_backup_command($vhost, $ddcmd);
+			my ($out, $ex, $err) = &execute_command_on_server(
+						$vhost, $ddcmd);
+			if ($ex || $err) {
+				$tarerr = &text('rrun_edd', $dev, $err || $out);
+				last;
+				}
+			$i++;
+			}
+		}
+	else {
+		# Pipe in from remote system and extract
+		my $i = 0;
+		foreach my $dev (@devs) {
+			my $ext = $i ? ".$i" : "";
+			my $ddcmd = "(gunzip -c | ".
+				    &dd_command(undef, $dev).") 2>&1";
+			$ddcmd = &niced_backup_command($vhost, $ddcmd);
+			my $err = &pipe_command_from_server($destserver, $vhost,
+					    $ddcmd, $dest->{'path'}.$ext);
+			if ($err) {
+				$tarerr = &text('rrun_edd', $dev, $err);
+				last;
+				}
+			}
+		}
+	}
+elsif ($server->{'kvm_filesystem_lv'}) {
 	# Overwrite logical volumes with tar piped into DD
-	if ($tarfile) {
+	if ($localfile) {
 		# From temp tar file
 		&$first_print(&text('rrun_dd', $server->{'host'}));
 		foreach my $d (@lvmdisks) {
 			my $devfile = $d->{'real'};
 			$devfile =~ s/^(.*)\///;
-			my $tarcmd = "gunzip -c ".quotemeta($tarfile).
+			my $tarcmd = "gunzip -c ".quotemeta($localfile).
 				     " | tar Oxpf - $devfile ./$devfile".
 				     " | ".&dd_command(undef, $d->{'real'}).
 				     "2>&1";
@@ -4830,11 +4902,11 @@ else {
 	# Extract tar file of disk images in the disk base directory
 	my $dir = $filedisks[0]->{'real'};
         $dir =~ s/\/[^\/]+$//;
-	if ($tarfile) {
+	if ($localfile) {
 		&$first_print(&text('rrun_untarring2',
 				    $server->{'host'}, $dir));
 		my $tarcmd = "cd ".quotemeta($dir)." && ".
-			     "gunzip -c ".quotemeta($tarfile)." | tar xpf -";
+			     "gunzip -c ".quotemeta($localfile)." | tar xpf -";
 		$tarcmd = &niced_backup_command($vhost, $tarcmd);
 		my ($out, $ex, $err) = &execute_command_on_server(
 					$vhost, $tarcmd);
@@ -4861,9 +4933,12 @@ else {
 	}
 &remote_finished();
 
-# Remove the temp file if needed
-if ($dest->{'mode'} != 1 && $tarfile) {
-        &delete_file_on_server($vhost, $tarfile);
+# Remove the temp files if needed
+if ($dest->{'mode'} != 1 && $localfile) {
+	my @tempfiles = $gzip_format ? @gzfiles : ( $localfile );
+	foreach my $g (@tempfiles) {
+		&delete_file_on_server($vhost, $g);
+		}
         }
 if ($tempdir) {
 	&delete_file_on_server($vhost, $tempdir);

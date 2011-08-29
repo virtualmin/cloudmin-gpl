@@ -3501,6 +3501,7 @@ brun_predone=.. completed OK
 brun_prefailed=.. command failed!
 brun_post=Running post-backup command ..
 brun_preskip=Skipped due to pre-backup command failure
+brun_eformat=Could not work out format from filename $1
 
 rrun_title=Restore Systems
 rrun_err=Restore failed

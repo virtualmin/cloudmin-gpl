@@ -1047,15 +1047,15 @@ else {
 	}
 }
 
-# get_from_backup_dest(&server, file, &destination)
+# get_from_backup_dest(&server, file, &destination, [extension])
 # Get some file from a backup destination and put it on the given server.
 # Returns an error on failure, undef on success.
 sub get_from_backup_dest
 {
-my ($server, $file, $dest) = @_;
+my ($server, $file, $dest, $ext) = @_;
 if ($dest->{'mode'} == 0) {
 	# Upload from Cloudmin master
-	return &put_file_to_server($server, $dest->{'path'}, $file);
+	return &put_file_to_server($server, $dest->{'path'}.$ext, $file);
 	}
 elsif ($dest->{'mode'} == 1) {
 	# From host system, which makes no sense!
@@ -1067,7 +1067,7 @@ elsif ($dest->{'mode'} == 2) {
 	$destserver ||
 		return "No Cloudmin system with ID $dest->{'id'} exists";
 	return &transfer_file_between_servers($destserver, $server,
-					      $dest->{'path'}, $file, 0, 1);
+				      $dest->{'path'}.$ext, $file, 0, 1);
 	}
 elsif ($dest->{'mode'} == 3) {
 	# Get via SSH (using a fake server object)
@@ -1080,7 +1080,7 @@ elsif ($dest->{'mode'} == 3) {
 			   'status' => 'nowebmin',
 			  };
 	return &transfer_file_between_servers($destserver, $server,
-					      $dest->{'path'}, $file, 0);
+					      $dest->{'path'}.$ext, $file, 0);
 	}
 elsif ($dest->{'mode'} == 4) {
 	# Download via FTP, using wget command
@@ -1091,7 +1091,7 @@ elsif ($dest->{'mode'} == 4) {
 		  "ftp://".quotemeta($dest->{'user'}).":".
 		  	   quotemeta($dest->{'pass'})."\@".
 		  $dest->{'host'}.($dest->{'port'} ? ":$dest->{'port'}" : "").
-		  "/".quotemeta($dest->{'path'});
+		  "/".quotemeta($dest->{'path'}.$ext);
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err ? $err : $ex ? "FTP download failed : $out" : undef;
 	}
