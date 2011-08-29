@@ -4715,6 +4715,21 @@ if ($destserver && $destserver->{'id'} eq $vhost->{'id'}) {
 	$dest->{'mode'} = 1;
 	}
 
+# Check for an old tar.gz format backup if gz format is missing
+if ($dest->{'mode'} == 0 || $dest->{'mode'} == 2) {
+	my @dst = &stat_file_on_server($destserver, $dest->{'path'});
+	if (!@dst) {
+                my $altpath = $dest->{'path'};
+		if ($altpath =~ /\.gz$/ && $altpath !~ /\.tar\.gz$/) {
+			$altpath =~ s/\.gz$/\.tar\.gz/;
+			}
+		@dst = &stat_file_on_server($destserver, $altpath);
+		if (@dst) {
+			$dest->{'path'} = $altpath;
+			}
+		}
+	}
+
 # Work out original backup format - either a tar.gz of disks, or one gz file
 # per disk
 my $gzip_format;
@@ -4729,6 +4744,7 @@ else {
 		 'msg' => &text('brun_eformat', $dest->{'path'})
 	       };
 	}
+print STDERR "path=$dest->{'path'} gzip=$gzip_format\n";
 
 # Pick a temp file on the host system, if needed
 my $localfile;
@@ -4776,7 +4792,10 @@ else {
 
 # Copy in the tar.gz or gz backup files, if needed
 my @gzfiles;
+my ($staton, @statfiles);
 if ($dest->{'mode'} != 1 && $localfile) {
+	# Files are not on the host already, and need to be downloaded via
+	# FTP or SSH
         &$first_print(&text('rrun_getting', $server->{'host'},
                                             &nice_backup_destination($dest)));
         my $err = &get_from_backup_dest($vhost, $localfile, $dest);
@@ -4784,6 +4803,7 @@ if ($dest->{'mode'} != 1 && $localfile) {
                 return { 'ok' => 0,
                          'msg' => &text('rrun_eget', $err) };
                 }
+	$staton = $vhost;
 	if ($gzip_format) {
 		# Also load in additional .gz.* files
 		push(@gzfiles, $localfile);
@@ -4792,33 +4812,47 @@ if ($dest->{'mode'} != 1 && $localfile) {
 			my $err = &get_from_backup_dest(
 				$vhost, $localfile.".".$i, $dest, ".".$i);
 			last if ($err);
+			push(@gzfiles, $localfile.".".$i);
 			$i++;
 			}
+		@statfiles = @gzfiles;
+		}
+	else {
+		# Only one tar.gz file
+		@statfiles = ( $localfile );
 		}
         }
-elsif ($gzip_format) {
-	# Build list of .gz.* files to restore
-	# XXX
-	}
-
-# Get size, either from temp tar file or source
-# XXX include all files
-my @st;
-if ($localfile) {
-	@st = &stat_file_on_server($vhost, $localfile);
-	if (!@st || !$st[7]) {
-		return { 'ok' => 0,
-			 'msg' => &text('rrun_estat', $localfile) };
+elsif ($dest->{'mode'} == 1 && $localfile) {
+	# Files are on the host already
+	$staton = $vhost;
+	@statfiles = ( $dest->{'path'} );
+	if ($gzip_format) {
+		my $glob = &glob_on_server($vhost,
+					   $dest->{'path'}.".[0-9]");
+		push(@statfiles, @$glob) if (ref($glob));
 		}
 	}
 else {
-	@st = &stat_file_on_server($destserver, $dest->{'path'});
-	if (!@st || !$st[7]) {
-		return { 'ok' => 0,
-			 'msg' => &text('rrun_estat', $dest->{'path'}) };
+	# Files are on another Cloudmin-managed system
+	$staton = $destserver;
+	@statfiles = ( $dest->{'path'} );
+	if ($gzip_format) {
+		my $glob = &glob_on_server($destserver,
+					   $dest->{'path'}.".[0-9]");
+		push(@statfiles, @$glob) if (ref($glob));
 		}
 	}
-my $size = $st[7];
+
+# Get size, either from temp tar file or source
+my $size;
+foreach my $g (@statfiles) {
+	print STDERR "staton=$staton->{'host'} g=$g\n";
+	@st = &stat_file_on_server($staton, $g);
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0, 'msg' => &text('rrun_estat', $g) };
+		}
+	$size += $st[7];
+	}
 
 my $tarerr;
 if ($gzip_format) {
@@ -4854,6 +4888,7 @@ if ($gzip_format) {
 				$tarerr = &text('rrun_edd', $dev, $err);
 				last;
 				}
+			$i++;
 			}
 		}
 	}
@@ -4949,7 +4984,7 @@ if ($tarerr) {
         return { 'ok' => 0, 'msg' => $tarerr };
         }
 else {
-        return { 'ok' => 1, 'size' => $st[7] };
+        return { 'ok' => 1, 'size' => $size };
         }
 }
 
