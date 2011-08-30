@@ -32,35 +32,59 @@ foreach $id (@d) {
 # Do it, showing progress to the user
 &ui_print_unbuffered_header($subh, $text{'dbackup_title'}, "");
 
-@dest = ( );
-foreach $log (@logs) {
-	$server = $servermap{$log->{'server'}};
-	&$first_print(&text('dbackup_deleting', $server->{'host'},
-			    &nice_backup_destination($log->{'dest'})));
-	$err = &delete_backup_dest(&parse_backup_destination($log->{'dest'}),
-				   $server);
-	if ($err) {
-		&$second_print(&text('dbackup_failed', $err));
-		}
-	else {
-		&$second_print(&text('dbackup_done',
-				     &nice_size($log->{'size'})));
-
-		# Also remove other logs for this dest
-		@samelogs = grep { $_->{'dest'} eq $log->{'dest'} }
-				 &list_backup_logs($server);
-		foreach $samelog (@samelogs) {
-			&delete_backup_log($samelog);
+if ($in{'confirm'}) {
+	# Do i
+	@dest = ( );
+	foreach $log (@logs) {
+		$server = $servermap{$log->{'server'}};
+		&$first_print(&text('dbackup_deleting', $server->{'host'},
+				    &nice_backup_destination($log->{'dest'})));
+		$err = &delete_backup_dest(
+			&parse_backup_destination($log->{'dest'}), $server);
+		if ($err) {
+			&$second_print(&text('dbackup_failed', $err));
 			}
-		push(@dest, $log->{'dest'});
+		else {
+			&$second_print(&text('dbackup_done',
+					     &nice_size($log->{'size'})));
+
+			# Also remove other logs for this dest
+			@samelogs = grep { $_->{'dest'} eq $log->{'dest'} }
+					 &list_backup_logs($server);
+			foreach $samelog (@samelogs) {
+				&delete_backup_log($samelog);
+				}
+			push(@dest, $log->{'dest'});
+			}
+		}
+	&compute_backup_space();
+	@dest = &unique(@dest);
+	if (@dest) {
+		&webmin_log("delete", "backuplog", scalar(@dest),
+			    { 'dest' => join(' ', @dest) });
 		}
 	}
-&compute_backup_space();
-@dest = &unique(@dest);
-if (@dest) {
-	&webmin_log("delete", "backuplog", scalar(@dest),
-		    { 'dest' => join(' ', @dest) });
+else {
+	# Ask for confirmation first
+	$totalsize = 0;
+	foreach $log (@logs) {
+		$totalsize += $log->{'size'};
+		}
+	print &ui_confirmation_form("delete_backuplogs.cgi",
+		&text('dbackup_rusure', scalar(@logs), &nice_size($totalsize)),
+		[ [ 'search', $in{'search'} ],
+		  [ 'id', $in{'id'} ],
+		  [ 'log', $in{'log'} ],
+		  [ 'week', $in{'week'} ],
+		  (map { [ 'd', $_ ] } @d) ],
+		[ [ 'confirm', $text{'dbackup_ok'} ] ],
+		"<b>$text{'dbackup_list'}</b><br>\n".
+		join("<br>",
+		   map { &nice_backup_destination($log->{'dest'}) } @logs),
+		);
 	}
 
-&ui_print_footer("list_backuplogs.cgi?id=$in{'id'}",
+&ui_print_footer("list_backuplogs.cgi?search=".&urlize($in{'search'}).
+                 "&id=".&urlize($in{'id'})."&log=".&urlize($in{'log'}).
+                 "&week=".&urlize($in{'week'}),
 		 $text{'backuplogs_return'});

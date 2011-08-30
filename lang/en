@@ -3573,6 +3573,9 @@ dbackup_title=Delete Backups
 dbackup_deleting=Deleting backup of $1 from $2 ..
 dbackup_failed=.. deletion failed : $1
 dbackup_done=.. deleted backup of $1
+dbackup_rusure=Are you sure you want to delete the $1 selected backups, totalling $2 of data?
+dbackup_ok=Delete Backups
+dbackup_list=Backup destinations to delete :
 
 log_cmd=Ran API command $1
 log_cmd_l=Ran API command $1 $2

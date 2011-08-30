@@ -81,6 +81,9 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 		@tds = ( "width=5" );
 		print &ui_form_start("delete_backuplogs.cgi", "post");
 		print &ui_hidden("id", $in{'id'});
+		print &ui_hidden("log", $in{'log'});
+		print &ui_hidden("week", $in{'week'} ? 1 : "");
+		print &ui_hidden("search", $in{'search'});
 		print &ui_columns_start([
 			"",
 			$text{'backuplogs_dest'},
