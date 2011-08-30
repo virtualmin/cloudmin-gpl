@@ -2363,6 +2363,25 @@ my @rv = grep { $_ ne "." && $_ ne ".." } split(/\r?\n/, $out);
 return \@rv;
 }
 
+# glob_on_server(&server, glob-path)
+# Returns all filenames matching some glob
+sub glob_on_server
+{
+my ($server, $glob) = @_;
+my $dfunc = "type_".$server->{'manager'}."_glob";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	my $rv = &$dfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to ssh
+	}
+my ($out, $ex, $err) = &execute_command_on_server($server, "echo $glob");
+return $err if ($err);
+return $out if ($ex);
+$out =~ s/\r|\n//g;
+return [ split(/\s+/, $out) ];
+}
+
 # disk_usage_on_server(&server, dir)
 # Returns the size of a directory in bytes, or an error message.
 sub disk_usage_on_server

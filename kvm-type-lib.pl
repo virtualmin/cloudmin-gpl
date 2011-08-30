@@ -4744,7 +4744,6 @@ else {
 		 'msg' => &text('brun_eformat', $dest->{'path'})
 	       };
 	}
-print STDERR "path=$dest->{'path'} gzip=$gzip_format\n";
 
 # Pick a temp file on the host system, if needed
 my $localfile;
@@ -4846,7 +4845,6 @@ else {
 # Get size, either from temp tar file or source
 my $size;
 foreach my $g (@statfiles) {
-	print STDERR "staton=$staton->{'host'} g=$g\n";
 	@st = &stat_file_on_server($staton, $g);
 	if (!@st || !$st[7]) {
 		return { 'ok' => 0, 'msg' => &text('rrun_estat', $g) };

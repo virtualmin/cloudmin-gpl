@@ -1101,26 +1101,46 @@ else {
 }
 
 # delete_backup_dest(&dest, &server)
-# Delete the file at some backup destination, return undef if OK, or an error
-# message on failure.
+# Delete all the files at some backup destination, return undef if OK, or an
+# error message on failure.
 sub delete_backup_dest
 {
 my ($dest, $server) = @_;
+my $err = &delete_one_backup_dest($dest, $server);
+return $err if ($err);
+if ($dest->{'path'} =~ /\.gz$/ && $dest->{'path'} !~ /\.tar\.gz$/) {
+	# Also delete .1, .2, etc.. files
+	my $i = 1;
+	while(1) {
+		$err = &delete_one_backup_dest($dest, $server, ".".$i);
+		last if ($err);
+		$i++;
+		}
+	}
+return undef;
+}
+
+# delete_one_backup_dest(&dest, &server, [extension])
+# Delete the file at some backup destination, return undef if OK, or an error
+# message on failure.
+sub delete_one_backup_dest
+{
+my ($dest, $server, $ext) = @_;
 if ($dest->{'mode'} == 0) {
 	# Just remove locally
-	return &unlink_file($dest->{'path'}) ? undef : "$!";
+	return &unlink_file($dest->{'path'}.$ext) ? undef : "$!";
 	}
 elsif ($dest->{'mode'} == 1) {
 	# From host system
 	my $vhost = &get_parent_server($server);
 	$vhost || return "No host system for $server->{'host'} found";
-	return &delete_file_on_server($vhost, $dest->{'path'});
+	return &delete_file_on_server($vhost, $dest->{'path'}.$ext);
 	}
 elsif ($dest->{'mode'} == 2) {
 	# From other Cloudmin system
 	my $destserver = &get_managed_server_by("id", $dest->{'id'});
 	$destserver || return "No Cloudmin system with ID $dest->{'id'} found";
-	return &delete_file_on_server($destserver, $dest->{'path'});
+	return &delete_file_on_server($destserver, $dest->{'path'}.$ext);
 	}
 elsif ($dest->{'mode'} == 3) {
 	# From SSH server
@@ -1132,22 +1152,23 @@ elsif ($dest->{'mode'} == 3) {
 			   'ssh_port' => $dest->{'port'},
 			   'status' => 'nowebmin',
 			  };
-	return &delete_file_on_server($destserver, $dest->{'path'});
+	return &delete_file_on_server($destserver, $dest->{'path'}.$ext);
 	}
 elsif ($dest->{'mode'} == 4) {
 	# From FTP server
-	my $err = &put_file_to_server($server,
+	my $vhost = &get_parent_server($server);
+	my $err = &put_file_to_server($vhost,
 		"$module_root_directory/ftpupload.pl", "/tmp/ftpupload.pl");
 	if ($err) {
 		return "Failed to copy ftpupload.pl : $err";
 		}
-	my ($out, $ex, $err) = &execute_command_on_server($server,
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"perl /tmp/ftpupload.pl ".
 		quotemeta($dest->{'user'})." ".
 		quotemeta($dest->{'pass'})." ".
 		quotemeta($dest->{'host'})." ".
 		($dest->{'port'} || 21)." ".
-		quotemeta($dest->{'path'})." ".
+		quotemeta($dest->{'path'}.$ext)." ".
 		"--delete 2>&1");
 	return $err ? $err : $ex ? "FTP deletion failed : $out" : undef;
 	}
