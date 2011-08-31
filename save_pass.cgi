@@ -122,7 +122,7 @@ if ($done) {
 	&save_managed_server($server);
 	&$second_print($text{'create_done'});
 
-	if ($need_reboot) {
+	if ($need_reboot && $server->{'status'} ne 'down') {
 		# Tell user that a reboot is needed
 		print &ui_form_start("save_serv.cgi");
 		print &ui_hidden("id", $in{'id'});
