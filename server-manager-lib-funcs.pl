@@ -2379,7 +2379,7 @@ my ($out, $ex, $err) = &execute_command_on_server($server, "echo $glob");
 return $err if ($err);
 return $out if ($ex);
 $out =~ s/\r|\n//g;
-return [ split(/\s+/, $out) ];
+return [ grep { $_ ne $glob } split(/\s+/, $out) ];
 }
 
 # disk_usage_on_server(&server, dir)

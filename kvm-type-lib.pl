@@ -1067,12 +1067,16 @@ if (&can_action(undef, "advanced")) {
 		$server->{'kvm_nolvm'} = 1;
 		}
 
-	# Validate virtio flag
+	# Validate virtio flag, or use image or configured default
 	if ($args->{'virtio'} =~ /true|yes/i) {
 		$server->{'kvm_virtio'} = 1;
 		}
-	elsif ($img && $img->{'kvm_virtio'}) {
-		$server->{'kvm_virtio'} = 1;
+	elsif ($args->{'virtio'} =~ /no|false/i) {
+		$server->{'kvm_virtio'} = 0;
+		}
+	else {
+		$server->{'kvm_virtio'} = $empty ? $config{'kvm_virtio'}
+						 : $img->{'kvm_virtio'};
 		}
 
 	# Validate model flag
