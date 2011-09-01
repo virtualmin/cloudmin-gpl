@@ -9957,7 +9957,7 @@ elsif (&debian_server_type($server)) {
 			# No more IPv6, so take out block
 			splice(@$lref, $startline, $endline-$startline+1);
 			}
-		else {
+		elsif ($a6) {
 			# Add block at end
 			push(@$lref, "", @v6lines);
 			}
