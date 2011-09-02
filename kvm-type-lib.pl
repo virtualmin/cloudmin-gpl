@@ -4041,13 +4041,6 @@ sub type_kvm_edit_form
 my ($server) = @_;
 my $rv;
 
-# Hosted on
-my $vhost = &type_kvm_parent($server);
-$rv .= &ui_table_row($text{'edit_kvmhost'},
-	&can_action($vhost, "view") ?
-	     "<a href='edit_serv.cgi?id=$vhost->{'id'}'>$vhost->{'host'}</a>" :
-	     $vhost->{'host'});
-
 # KVM process ID
 my $proc = &get_server_kvm_instance($server);
 if ($proc) {

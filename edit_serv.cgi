@@ -114,6 +114,15 @@ if ($server->{'image'}) {
 	print &ui_table_row($text{'edit_imagefrom'}, $imgid);
 	}
 
+# Host system
+$vhost = &get_parent_server($server);
+if ($vhost) {
+	print &ui_table_row($text{'edit_parent'},
+	  &can_action($vhost, "view") ?
+	    "<a href='edit_serv.cgi?id=$vhost->{'id'}'>$vhost->{'host'}</a>" :
+            $vhost->{'host'});
+	}
+
 if (!$view) {
 	# Groups
 	print &ui_table_row($text{'edit_groups'},
