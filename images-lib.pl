@@ -58,6 +58,10 @@ foreach my $f (readdir(DIR)) {
 	if ($img{'rawsize'}) {
 		$img{'longdesc'} .= " - ".&nice_size($img{'rawsize'});
 		}
+	if (!$img{'created'}) {
+		my @st = stat("$server_images_dir/$f");
+		$img{'created'} = $st[9];
+		}
 	push(@rv, \%img);
 	}
 closedir(DIR);
@@ -439,6 +443,7 @@ sub save_server_image
 my ($image) = @_;
 &make_dir($server_images_dir, 0700);
 $image->{'file'} = "$server_images_dir/$image->{'id'}.img";
+$image->{'created'} ||= time();
 &lock_file($image->{'file'});
 &write_file($image->{'file'}, $image);
 &unlock_file($image->{'file'});

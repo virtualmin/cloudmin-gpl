@@ -921,6 +921,7 @@ edit_type2=Operating system
 edit_kernel=Kernel and CPU
 edit_kernelon=$1 $2 on $3
 edit_imagefrom=Created from image
+edit_parent=Host system
 edit_desc=Description or comment
 edit_status=Last status
 edit_statusmsg=Detailed status error
@@ -1912,6 +1913,8 @@ eimage_version=Image version
 eimage_aversion=Latest version available
 eimage_master=Copy to all Storage Locations
 eimage_default=Default image for $1?
+eimage_dtime=Image downloaded at
+eimage_ctime=Image created at
 
 remote_eprogram=Invalid remote program name
 remote_eprogram2=Remote program $1 does not exist

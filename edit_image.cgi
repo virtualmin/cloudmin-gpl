@@ -38,6 +38,13 @@ if ($avail && $avail->{'version'}) {
 	print &ui_table_row($text{'eimage_aversion'}, $avail->{'version'});
 	}
 
+# Creation date
+if ($got && $got->{'created'}) {
+	print &ui_table_row($avail ? $text{'eimage_dtime'}
+				   : $text{'eimage_ctime'},
+			    &make_date($got->{'created'}));
+	}
+
 # OS type
 ($os) = grep { $_->[0] eq $i->{'type'} } @servers::server_types;
 if ($got) {
