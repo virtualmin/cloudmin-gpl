@@ -171,9 +171,8 @@ if ($non_virtual && defined(&$cfunc) && &$cfunc($server)) {
 		$itable .= &ui_columns_end();
 		}
 	else {
-		# None yet
+		# None yet, and cannot edit
 		}
-	# XXX allocation??
 	if ($itable) {
 		print &ui_table_row($text{'iface_ipv6'}, $itable);
 		}
