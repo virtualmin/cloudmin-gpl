@@ -8693,7 +8693,8 @@ my $must_pass = !&can_action(undef, "sshkeys") &&
 if ($must_pass) {
 	# Cannot select SSH keys
 	print &ui_table_row($text{'add_authpass'},
-		&ui_password("upass", undef, 20));
+		&ui_password("upass", undef, 20, 0, undef,
+			     "autocomplete=off"));
 	}
 else {
 	# Can choose password, key or no SSH
@@ -8703,7 +8704,8 @@ else {
 				       $server->{'key'} ? 1 : 0,
 		      [ [ 0, &text('add_auth0',
 			   &ui_password("upass", $server ? $server->{'ssh_pass'}
-							: undef, 20)).
+							: undef, 20, 0, undef,
+					"autocomplete=off")).
 			   $passpop."<br>" ],
 			[ 1, &text('add_auth1',
 				&ssh_key_menu("key", $type,
@@ -8723,8 +8725,8 @@ print &ui_table_row($text{'add_protocol'},
 
 # Root login
 print &ui_table_row($text{'add_user'},
-	&ui_textbox("uuser", $server ? $server->{'ssh_user'}
-				     : "root", 20));
+	&ui_textbox("uuser", $server ? $server->{'ssh_user'} : "root",
+		    20, 0, undef, "autocomplete=off"));
 
 # SSH port number
 print &ui_table_row($text{'add_sshport'},
@@ -11031,7 +11033,8 @@ foreach my $g (@groups) {
 	push(@grid, &ui_checkbox("group", $g, $g, $ingroups{$g}));
 	}
 push(@grid, (@grid ? "&nbsp;&nbsp;&nbsp;" : "").
-	    &text('edit_newgroup', &ui_textbox("newgroup", undef, 10)));
+	    &text('edit_newgroup', &ui_textbox("newgroup", undef, 10, 0, undef,
+					       "autocomplete=off")));
 return &ui_grid_table(\@grid, 4);
 }
 
