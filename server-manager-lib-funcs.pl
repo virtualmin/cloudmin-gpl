@@ -351,14 +351,14 @@ if ($server->{'manager'} ne 'this' &&
 	@ips = split(/\s+/, $server->{'ip_addresses'});
 	}
 if (!@ips) {
-	my $resolvedip = &to_ipaddress($server->{'host'});
+	my $pref = &compute_preferred_ip($server);
 	@ips = ( $resolvedip );
 	}
 elsif (scalar(@ips) > 1 && !$server->{'ip_force'}) {
-	my $resolvedip = &to_ipaddress($server->{'host'});
-	if (&indexof($resolvedip, @ips) >= 0) {
+	my $pref = &compute_preferred_ip($server, @ips);
+	if (&indexof($pref, @ips) >= 0) {
 		# Always use IP that hostname resolves to first
-		@ips = ( $resolvedip, @ips );
+		@ips = ( $pref, @ips );
 		}
 	}
 if ($server->{'ip_force'}) {
@@ -367,6 +367,25 @@ if ($server->{'ip_force'}) {
 	}
 @ips = &unique(@ips);
 return wantarray ? @ips : $ips[0];
+}
+
+# compute_preferred_ip(&server, ip, ...)
+# Returns the preferred IP for a system
+sub compute_preferred_ip
+{
+my ($server, @ips) = @_;
+my ($vip) = split(/\s+/, $server->{$server->{'manager'}.'_ip'});
+if ($vip && &indexof($vip, @ips) >= 0) {
+	# IP is from virtualization type config
+	return $vip;
+	}
+my ($netip) = grep { !/127\./ && !/^224\./ } @ips;
+if ($netip) {
+	# Use first non-localhost IP
+	return $netip;
+	}
+my $resolvedip = &to_ipaddress($server->{'host'});
+return $resolvedip;
 }
 
 # get_server_ip6(&server)
