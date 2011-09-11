@@ -31,6 +31,14 @@ while(@ARGV > 0) {
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
 @servers || &usage("No systems specified");
 
+# Prevent concurrent runs
+$pid = &test_lock($bandwidth_dir);
+if ($pid) {
+	print STDERR "$0 is already running with PID $pid\n";
+	exit(0);
+	}
+&lock_file($bandwidth_dir);
+
 # Skip any currently locked
 @unlocked_servers = ( );
 foreach my $server (@servers) {
@@ -237,6 +245,8 @@ if (&supports_plans()) {
 			}
 		}
 	}
+
+&unlock_file($bandwidth_dir);
 
 sub usage
 {
