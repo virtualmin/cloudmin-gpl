@@ -352,7 +352,7 @@ if ($server->{'manager'} ne 'this' &&
 	}
 if (!@ips) {
 	my $pref = &compute_preferred_ip($server);
-	@ips = ( $resolvedip );
+	@ips = ( $pref );
 	}
 elsif (scalar(@ips) > 1 && !$server->{'ip_force'}) {
 	my $pref = &compute_preferred_ip($server, @ips);
