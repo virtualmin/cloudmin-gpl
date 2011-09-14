@@ -48,11 +48,12 @@ foreach my $smt (@possible_server_management_types) {
 		}
 	}
 
-# list_managed_servers()
+# list_managed_servers([skip-completion])
 # Returns a list of all servers managed by this module. These are actually
 # just a subset of those from the Webmin Servers Index module
 sub list_managed_servers
 {
+my ($nocomplete) = @_;
 my @rv = grep { $_->{'module'} eq $module_name } &servers::list_servers();
 @rv = grep { $server_management_types{$_->{'manager'}} } @rv;
 @rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
@@ -64,8 +65,10 @@ if ($config{'show_this'}) {
 	}
 
 # Fill in missing details
-foreach my $s (@rv) {
-	&complete_managed_server($s);
+if (!$nocomplete) {
+	foreach my $s (@rv) {
+		&complete_managed_server($s);
+		}
 	}
 
 return @rv;
@@ -175,7 +178,10 @@ if ($key eq "id") {
 	push(@rv, $s) if ($s);
 	}
 else {
-	@rv = grep { $_->{$key} eq $value } &list_managed_servers();
+	@rv = grep { $_->{$key} eq $value } &list_managed_servers(1);
+	foreach my $s (@rv) {
+		&complete_managed_server($s);
+		}
 	}
 return wantarray ? @rv : $rv[0];
 }
@@ -260,12 +266,12 @@ $ip ||= $s->{'host'};
 $s->{'ip'} = $ip;
 }
 
-# list_managed_servers_sorted([force-mode])
+# list_managed_servers_sorted([force-mode], [skip-complete])
 # Returns servers list, with sorting and possibly 'indent' fields
 sub list_managed_servers_sorted
 {
-my ($mode) = @_;
-my @rv = &list_managed_servers();
+my ($mode, $nocomplete) = @_;
+my @rv = &list_managed_servers($nocomplete);
 foreach my $s (@rv) {
 	$s->{'indent'} = 0;
 	}
@@ -665,7 +671,7 @@ foreach my $name (@$hostedon) {
 		$wanthost{$h->{'id'}} = 1;
 		}
 	}
-foreach my $s (&list_managed_servers_sorted()) {
+foreach my $s (&list_managed_servers_sorted(undef, 1)) {
 	my ($ingroup) = grep { $wantgroups{lc($_)} }
 				split(/\t/, $s->{'group'});
 	my $p = @$hostedon ? &get_parent_server($s) : undef;
@@ -677,6 +683,7 @@ foreach my $s (&list_managed_servers_sorted()) {
 	    &indexoflc($s->{'status'}, @$expstatuses) >= 0 ||
 	    $wantowned{$s->{'id'}} ||
 	    $p && $wanthost{$p->{'id'}}) {
+		&complete_managed_server($s);
 		push(@rv, $s);
 		}
 	}
