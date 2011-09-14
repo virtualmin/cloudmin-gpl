@@ -1003,6 +1003,47 @@ if (!&get_file_from_server($server, $sshd_config, $sc)) {
 return "NONE";
 }
 
+# set_ssh_port(&server)
+# Adjusts the SSH server config to listen on the port set for this system
+sub set_ssh_port
+{
+my ($server) = @_; 
+my $port = $server->{'ssh_port'} || 22;
+my $sc = &transname();
+my $sshd_config = "/etc/ssh/sshd_config";
+my $err = &get_file_from_server($server, $sshd_config, $sc);
+return $err if ($err);
+my $changed = 0;
+my $lref = &read_file_lines($sc);
+foreach my $l (@$lref) {
+	if ($l =~ /^Port\s+(\d+)/) {
+		push(@ports, $1);
+		}
+	}
+if (&indexof($port, @ports) >= 0 || !@ports && $port == 22) {
+	# Already listening .. nothing to do
+	&unlink_file($sc);
+	return undef;
+	}
+elsif (!@ports && $port != 22) {
+	# No ports set, need to add this one
+	push(@$lref, "Port $port");
+	}
+else {
+	# Change first port to given one
+	foreach my $l (@$lref) {
+		if ($l =~ /^Port\s+(\d+)/) {
+			$l = "Port $port";
+			last;
+			}
+		}
+	}
+&flush_file_lines($sc);
+my $err = &put_file_to_server($server, $sc, $sshd_config);
+&unlink_file($sc);
+return $err;
+}
+
 # update_virtualmin_packages(&server)
 # On a server created from an image with Virtualmin installed, update all
 # packages that need it May call the print functions.

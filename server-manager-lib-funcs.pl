@@ -1404,6 +1404,7 @@ sub clear_ssh_host_key
 my ($server) = @_;
 my $ip = &get_server_ip($server);
 my @uinfo = getpwnam("root");
+my $port = $server->{'ssh_port'} || 22;
 foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 	       "$uinfo[7]/.ssh/known_hosts2",
 	       "$ENV{'HOME'}/.ssh/known_hosts",
@@ -1416,7 +1417,9 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 		my @h = split(/,/, $w[0]);
 		if (&indexof($server->{'host'}, @h) >= 0 ||
 		    &indexof($ip, @h) >= 0 ||
-		    &indexof($server->{'ip'}, @h) >= 0) {
+		    &indexof($server->{'ip'}, @h) >= 0 ||
+		    &indexof("[".$ip."]:".$port, @h) >= 0 ||
+		    &indexof("[".$server->{'ip'}."]:".$port, @h) >= 0) {
 			splice(@$lref, $i--, 1);
 			}
 		}
@@ -1427,6 +1430,8 @@ foreach my $f ("$uinfo[7]/.ssh/known_hosts",
 &execute_command("ssh-keygen -R ".quotemeta($server->{'host'}));
 &execute_command("ssh-keygen -R ".quotemeta($server->{'ip'}));
 &execute_command("ssh-keygen -R ".quotemeta($ip));
+&execute_command("ssh-keygen -R ".quotemeta("[".$server->{'ip'}."]:".$port));
+&execute_command("ssh-keygen -R ".quotemeta("[".$ip."]:".$port));
 return undef;
 }
 
@@ -8331,9 +8336,6 @@ else {
 		       $imageok == 3 ? $text{'create_incache'} :
 			 	       $text{'create_addcache'});
 	}
-
-# Clear any custom SSH port, as the reset will revert to the default
-delete($server->{'ssh_port'});
 
 # Start creation process and wait for it to complete
 &$first_print($text{'reset_recreating'});

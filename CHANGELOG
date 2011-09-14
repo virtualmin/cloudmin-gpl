@@ -23,3 +23,4 @@ KVM virtual systems can now be paused and resumed, and live migrated to another 
 ---- Changes since 5.7 ----
 When creating a KVM instance on a host system with multiple bridges, you can now select which bridges to automatically allocate IP addresses.
 KVM systems with multiple disks now use a new backup format that stores each disk image in a separate file. This allows backups to be created and restored without consuming any temporary disk space on the host system.
+The SSH port for new virtual systems can now be set on the Cloudmin Configuration page, and via the --ssh-port flag to the create-system API command.

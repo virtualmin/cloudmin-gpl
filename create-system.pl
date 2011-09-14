@@ -132,6 +132,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ssh-pass") {
 		$ssh_pass = shift(@ARGV);
 		}
+	elsif ($a eq "--ssh-port") {
+		$ssh_port = shift(@ARGV);
+		}
 	elsif ($a eq "--no-ssh") {
 		$no_sshlogin = 1;
 		}
@@ -276,6 +279,7 @@ if (!$no_ssh) {
 		$server->{'ssh_nologin'} = 1;
 		}
 	$server->{'ssh_protocol'} = 2;
+	$server->{'ssh_port'} = $ssh_port || $config{'ssh_port'};
 	}
 if ($webmin_mode == 1) {
 	# Same as SSH root

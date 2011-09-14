@@ -1732,6 +1732,16 @@ if (!$empty && $mp) {
 	else {
 		&$second_print($text{'create_done'});
 		}
+
+	# Set SSH port
+	&$first_print($text{'create_sshport'});
+	my $err = &set_ssh_port($server);
+	if ($err) {
+		&$second_print(&text('create_esshport', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 	}
 
 # Add DHCP entries

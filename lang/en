@@ -580,6 +580,8 @@ create_ewebminport4=.. done, but failed to apply configuration : $1
 create_ewebminport5=.. command failed : $1
 create_ewebminport6=.. not supported by this version of Webmin
 create_ewebminportother=.. unknown exit code $1 : $2
+create_sshport=Setting SSH server port ..
+create_esshport=.. failed : $1
 
 keys_title=SSH Keys
 keys_desc=Key description
