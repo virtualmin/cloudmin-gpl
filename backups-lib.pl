@@ -864,9 +864,7 @@ if ($tarfile) {
 	# Tar up the filesystem
 	&$first_print(&text('brun_tarring', $server->{'host'}, $root));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
-		     (&tar_supports_gzip($vhost) ?
-			"tar czf ".quotemeta($tarfile)." ." :
-			"tar cf - . | gzip -c >".quotemeta($tarfile));
+		     &tar_gzip_command($vhost, ".", $tarfile);
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, $tarcmd);
 	if ($ex || $err) {
@@ -912,8 +910,7 @@ else {
 	&$first_print(&text('brun_tarring4', $server->{'host'}, $root,
 					     $destserver->{'host'}));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
-		     (&tar_supports_gzip($vhost) ?
-		      "tar czf - ." : "tar cf - . | gzip -c");
+		     &tar_gzip_command($vhost, ".");
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
 					  $dest->{'path'});
@@ -994,9 +991,7 @@ if ($tarfile) {
 	&$first_print(&text('rrun_untarring', $server->{'host'}, $root));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     "rm -rf * && ".
-		     (&tar_supports_gzip($vhost) ?
-			"tar xpzf ".quotemeta($tarfile) :
-			"gunzip -c ".quotemeta($tarfile)." | tar xpf -");
+		     &tar_gunzip_command($vhost, $tarfile);
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, $tarcmd);
 	if ($ex || $err) {
@@ -1016,9 +1011,7 @@ else {
 					       $destserver->{'host'}));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     "rm -rf * && ".
-		     (&tar_supports_gzip($vhost) ?
-			   "tar xpzf - " :
-			   "gunzip -c | tar xpf -");
+		     &tar_gunzip_command($vhost, undef);
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my $err = &pipe_command_from_server($destserver, $vhost, $tarcmd,
 					    $dest->{'path'});
@@ -1164,7 +1157,8 @@ if ($gzfile) {
 	foreach my $dev (@devs) {
 		my $ext = $i ? ".$i" : "";
 		my $ddcmd = "(".&dd_command($dev, undef).
-			    " | gzip -c >".$gzfile.$ext.") 2>&1";
+			    " | gzip $config{'zip_args'} -c >".
+			    $gzfile.$ext.") 2>&1";
 		$ddcmd = &niced_backup_command($vhost, $ddcmd);
 		push(@gzfiles, $gzfile.$ext);
 		my ($out, $ex, $err) = &execute_command_on_server(
@@ -1181,7 +1175,8 @@ else {
 	my $i = 0;
         foreach my $dev (@devs) {
                 my $ext = $i ? ".$i" : "";
-		my $ddcmd = &dd_command($dev, undef)." | gzip -c";
+		my $ddcmd = &dd_command($dev, undef).
+			    " | gzip -c $config{'zip_args'}";
 		$ddcmd = &niced_backup_command($vhost, $ddcmd);
 		my $err = &pipe_command_to_server($vhost, $destserver, $ddcmd,
                                                   $dest->{'path'}.$ext);
@@ -1950,6 +1945,37 @@ if ($dest->{'path'} =~ /^(\S+)\/([^%]*%.*)$/) {
 	}
 else {
 	return ( );
+	}
+}
+
+# tar_gzip_command(&vhost, directory, [file])
+# Returns a command to create a tar.gz file of some directory, and optionally
+# write to some file (otherwise stdout)
+sub tar_gzip_command
+{
+my ($vhost, $dir, $file) = @_;
+my $use_tar = !$config{'zip_args'} && &tar_supports_gzip($vhost);
+if ($use_tar) {
+	return "tar czf ".$dir.($file ? quotemeta($file) : "-");
+	}
+else {
+	return "tar cf ".$dir." | gzip -c ".$config{'zip_args'}.
+	       ($file ? " >".quotemeta($file) : "");
+	}
+}
+
+# tar_gunzip_command(&vhost, [file])
+# Returns a command to extract a tar.gz file (or stdin) into the current
+# directory
+sub tar_gunzip_command
+{
+my ($vhost, $file) = @_;
+my $use_tar = &tar_supports_gzip($vhost);
+if ($use_tar) {
+	return "tar xpzf ".($file ? quotemeta($file) : "-");
+	}
+else {
+	return "gunzip -c ".quotemeta($file)." | tar xpf -";
 	}
 }
 
