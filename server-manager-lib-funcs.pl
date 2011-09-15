@@ -3211,14 +3211,20 @@ if ($server->{'status'} ne 'nohost') {
 		# Call type-specific function
 		my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
 		$ifaces = &$ifunc($server);
+		if (ref($ifaces)) {
+			# But ignore interfaces with no IP
+			$ifaces = [ grep { $_->{'address'} &&
+					   $_->{'address'} !~ /^127\.0\./ } 
+					 @$ifaces ];
+			}
 		}
-	elsif (&can_ssh_status($server)) {
+	if ((!ref($ifaces) || !@$ifaces) && &can_ssh_status($server)) {
 		# Fall back to getting from ifconfig output
 		$ifaces = &list_active_server_interfaces($server);
 		}
 	if (ref($ifaces)) {
 		$server->{'ip_addresses'} = join(" ",
-			grep { !/^127\.0\./ }
+			grep { !/^127\.0\./ && $_ }
 			     map { $_->{'address'} } @$ifaces);
 		my @ethers = &unique(grep { $_ }
 				map { $_->{'ether'} } @$ifaces);
