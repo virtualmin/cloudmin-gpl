@@ -574,7 +574,19 @@ else {
 		$changed = scalar(@diffs);
 		}
 	if ($changed) {
-		&servers::save_server($server);
+		# Need to write out - cannot use servers module, as it does
+		# separate locking
+		my $newserver = !$server->{'id'};
+		$server->{'id'} ||= time().$$;
+		my $f = $servers::module_config_directory."/".
+		        $server->{'id'}.".serv";
+		&write_file($f, $server);
+		if ($newserver) {
+			&set_ownership_permissions(undef, undef, 0600, $f);
+			}
+		$main::remote_servers_cache{$server->{'host'}} =
+		   $main::remote_servers_cache{$server->{'host'}.":".
+					      $server->{'port'}} = $server;
 		}
 	}
 }
@@ -587,7 +599,12 @@ my ($server, $keep) = @_;
 &clear_ssh_host_key($server);
 &delete_console_user($server);
 if ($server->{'id'}) {
-	&servers::delete_server($server->{'id'});
+	# Delete file - cannot use servers module, as it does separate locking
+	&unlink_file($servers::module_config_directory."/".
+		     $server->{'id'}.".serv");
+	delete($main::remote_servers_cache{$server->{'host'}});
+	delete($main::remote_servers_cache{$server->{'host'}.":".
+					   $server->{'port'}});
 	}
 if (!$keep) {
 	&unlink_file("$server_domains_dir/$server->{'id'}");
@@ -2806,17 +2823,6 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					"virtual-server", "get_template", 0);
 			$info->{'defip'} = &remote_foreign_call($server,
 					"virtual-server", "get_default_ip");
-			$got_memory = 1;
-			$got_disk = 1;
-			if ($info->{'kernel'}) {
-				$got_kernel = 1;
-				}
-			if ($info->{'io'}) {
-				$got_io = 1;
-				}
-			if ($info->{'cpu'}) {
-				$got_cpu = 1;
-				}
 
 			# Get and save serial number
 			delete($info->{'serial'});
@@ -2874,9 +2880,6 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			$info = &remote_foreign_call($server, "system-status",
 			     $regen ? "collect_system_info"
 				    : "get_collected_info");
-			if ($info->{'kernel'}) {
-				$got_kernel = 1;
-				}
 			if (&remote_foreign_check($server, "security-updates")){
 				# System has security-updates module, probably
 				# because it runs Cloudmin. Fetch updates that
@@ -2933,6 +2936,21 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 						$got_memory = 1;
 						}
 					}
+				}
+			}
+
+		# Set flags to indicate collected info
+		if ($info) {
+			$got_memory = 1;
+			$got_disk = 1;
+			if ($info->{'kernel'}) {
+				$got_kernel = 1;
+				}
+			if ($info->{'io'}) {
+				$got_io = 1;
+				}
+			if ($info->{'cpu'}) {
+				$got_cpu = 1;
 				}
 			}
 
