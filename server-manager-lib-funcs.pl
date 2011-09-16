@@ -2700,7 +2700,10 @@ elsif ($status == 6) {
 	$server->{'status_msg'} = $err;
 	goto DONECHECK;
 	}
-my $ping = &ping_server_host($server->{'ip'});
+my $ping;
+if ($status) {
+	$ping = &ping_server_host($server->{'ip'});
+	}
 if ($status && !$ping && !defined(&$clfunc)) {
 	# Could not SSH or ping, so assume totally down (for real systems)
 	$server->{'status'} = 'down';
