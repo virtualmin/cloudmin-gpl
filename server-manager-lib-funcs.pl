@@ -3131,7 +3131,7 @@ if (!$got_kernel) {
 	}
 
 # Get IO stats via SSH
-if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i) {
+if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i && !$got_io) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 							  "vmstat 1 2", 5);
 	if (!$ex && !$err) {
