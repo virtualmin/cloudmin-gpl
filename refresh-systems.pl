@@ -70,6 +70,7 @@ while(@ARGV > 0) {
 
 # Do the parallel refresh and print
 print "Refreshing status of ",scalar(@servers)," systems ..\n";
+$serial = 1 if (@servers <= 1);
 &obtain_lock_server(\@servers);
 if ($serial) {
 	# In one process
