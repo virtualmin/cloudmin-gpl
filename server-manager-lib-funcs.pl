@@ -652,7 +652,8 @@ if (defined(&list_scheduled_changes)) {
 
 # Delete again, just in case it was re-created by any previous steps
 if ($server->{'id'}) {
-	&servers::delete_server($server->{'id'});
+	&unlink_file($servers::module_config_directory."/".
+		     $server->{'id'}.".serv");
 	}
 }
 
