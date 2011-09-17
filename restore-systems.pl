@@ -4,12 +4,26 @@
 
 Restores one or more Cloudmin-managed virtual systems.
 
-XXX
+This command restores backups of one or more Cloudmin systems from the
+specified backup destination. The systems to include are selected using standard
+flags like C<--host> or C<--owner>, and the destination by the C<--source>
+flag followed by a destination specification like I</backup/cloudmin> or
+I<backupserver:/cloudmin>.
+
+By default, systems are restored one by one. However, you can have them
+done in parallel with the C<--parallel> flag.
 
 =head1 Example usage
 
-  cloudmin restore-systems --host openvzgpl.home
-  XXX
+  cloudmin restore-systems --host functest.home --source /tmp
+  Finding systems to restore ..
+  .. found 1 systems
+  Working out backup sources ..
+  .. found 1 usable sources
+  Restoring functest.home from /tmp/functest.home.tar.gz on Cloudmin master ..
+    Un-TARing filesystem for functest.home under /vz/private/10016 via SSH from fudu.home ..
+  .. restore failed : Failed to extract TAR file : Unknown error
+  functest.home: FAILED Failed to extract TAR file : Unknown error
 
 =cut
 
@@ -79,6 +93,7 @@ else {
 $rv = &execute_restore($backup);
 
 # Show results
+$allok = 1;
 foreach $s (@servers) {
 	$r = $rv->{$s->{'id'}};
 	print $s->{'host'},": ";
@@ -88,14 +103,17 @@ foreach $s (@servers) {
 			}
 		else {
 			print "FAILED ",$r->{'msg'};
+			$allok = 0;
 			}
 		}
 	else {
 		print "UNKNOWN";
+		$allok = 0;
 		}
 	print "\n";
 	}
 &cloudmin_api_log(\@OLDARGV);
+exit($allok ? 0 : 1);
 
 sub usage
 {

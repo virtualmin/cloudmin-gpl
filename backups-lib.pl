@@ -992,6 +992,7 @@ if ($tarfile) {
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     "rm -rf * && ".
 		     &tar_gunzip_command($vhost, $tarfile);
+	print STDERR $tarcmd,"\n";
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, $tarcmd);
 	if ($ex || $err) {
@@ -1956,10 +1957,10 @@ sub tar_gzip_command
 my ($vhost, $dir, $file) = @_;
 my $use_tar = !$config{'zip_args'} && &tar_supports_gzip($vhost);
 if ($use_tar) {
-	return "tar czf ".$dir.($file ? quotemeta($file) : "-");
+	return "tar czf ".($file ? quotemeta($file) : "-")." ".$dir;
 	}
 else {
-	return "tar cf ".$dir." | gzip -c ".$config{'zip_args'}.
+	return "tar cf - ".$dir." | gzip -c ".$config{'zip_args'}.
 	       ($file ? " >".quotemeta($file) : "");
 	}
 }

@@ -137,6 +137,7 @@ else {
 $rv = &execute_backup($backup);
 
 # Show results
+$allok = 1;
 foreach $s (@servers) {
 	$r = $rv->{$s->{'id'}};
 	print $s->{'host'},": ";
@@ -146,14 +147,17 @@ foreach $s (@servers) {
 			}
 		else {
 			print "FAILED ",$r->{'msg'};
+			$allok = 0;
 			}
 		}
 	else {
 		print "UNKNOWN";
+		$allok = 0;
 		}
 	print "\n";
 	}
 &cloudmin_api_log(\@OLDARGV);
+exit($allok ? 0 : 1);
 
 sub usage
 {
