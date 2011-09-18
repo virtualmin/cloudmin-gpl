@@ -1846,7 +1846,7 @@ my $proc = &get_server_kvm_instance($server);
 if (&can_ssh_status($server) && !$force) {
 	# Try poweroff command
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-				  "poweroff -f >/dev/null 2>&1 </dev/null &");
+		  "poweroff -f >/dev/null 2>&1 </dev/null &", 5);
 	return $err if ($err);
 	return $out if ($ex);
 
