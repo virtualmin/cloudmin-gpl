@@ -40,9 +40,6 @@ $format = defined($in{'json'}) ? 'json' :
 	  defined($in{'perl'}) ? 'perl' :
 		undef;
 
-# Prevent executed programs from doing referer checks
-delete($ENV{'MINISERV_CONFIG'});
-
 # Run the program
 $main::virtualmin_remote_api = 1;
 $ENV{'VIRTUALMIN_REMOTE_API'} = 1;
