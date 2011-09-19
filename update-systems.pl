@@ -92,11 +92,10 @@ else {
 		  push(@allgot, map { $_->{'name'} } @poss);
 	          }
 	      else {
-		  # Do them one by one
-	          foreach $p (&sort_package_updates(@poss)) {
-	              my $got = &install_package_update($_[0], $p);
-		      push(@allgot, @$got) if (ref($got));
-	              }
+		  # Do them all at once
+		  my $got = &install_multiple_package_updates($_[0],
+				[ &sort_package_updates(@poss) ]);
+		  push(@allgot, @$got) if (ref($got));
 		  }
 	      if (@allgot) {
 		  if (!$testmode) {
@@ -127,7 +126,7 @@ print "                        [--owner name]*\n";
 print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                        [--host-on name]\n";
 print "                        [--os oscode]*\n";
-print "                        [--package name | --virtualmin]\n";
+print "                        [--package name]* | [--virtualmin]\n";
 exit(1);
 }
 

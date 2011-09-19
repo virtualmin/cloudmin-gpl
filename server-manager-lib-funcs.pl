@@ -3775,7 +3775,6 @@ if ($packages) {
 return &parallel_server_function($servers,
 	sub { my ($server, $want) = @_;
 	      my $info = &get_server_collected($server);
-	      my @allgot;
 	      @poss = @{$info->{'allposs'}};
 	      @poss = @{$info->{'poss'}} if (!@poss);
 	      if ($want) {
@@ -3783,32 +3782,27 @@ return &parallel_server_function($servers,
 		@poss = grep { $want{$_->{'name'},$_->{'system'}} } @poss;
 	      }
 	      my %donedep;
-	      foreach my $p (&sort_package_updates(@poss)) {
-		  next if ($donedep{$p->{'name'}});
-	          my $got = &install_package_update($_[0], $p);
-		  my $status = { 'name' => $p->{'name'},
-				 'version' => $p->{'version'} };
-		  if (ref($got)) {
-		    # Installed something
-                    $status->{'status'} = 1;
-                    $status->{'updates'} = $got;
-		    foreach my $g (@$got) {
-			$donedep{$g}++;
-		        }
-		    }
-		  else {
-		    # Install failed
-                    $status->{'status'} = 0;
-                    $status->{'error'} = $got;
-                    }
-                  push(@allgot, $status);
-	          }
-	      &obtain_lock_server($_[0]);
-              &refresh_server_updates($_[0], \@allgot);
-	      &check_server_status($_[0]);
-	      &save_managed_server($_[0]);
-	      &release_lock_server($_[0]);
-              return @allgot;
+	      my $got = &install_multiple_package_updates($server,
+				[ &sort_package_updates(@poss) ]);
+	      my $status;
+	      if (ref($got)) {
+		# Installed something
+		$status = { 'want' => \@poss,
+			    'status' => 1,
+			    'updates' => $got };
+		}
+	      else {
+		# Failed
+		$status = { 'want' => \@poss,
+			    'status' => 0,
+			    'error' => $got };
+	      }
+	      &obtain_lock_server($server);
+              &refresh_server_updates($server, \@allgot);
+	      &check_server_status($server);
+	      &save_managed_server($server);
+	      &release_lock_server($server);
+              return $status;
 	    }, $packages ? \%want : undef);
 }
 
@@ -3982,6 +3976,52 @@ elsif (ref($rv) && @$rv == 0 || $out =~ /install\s+failed/i) {
 else {
 	return $rv;
 	}
+}
+
+# install_multiple_package_updates(&server, &packages)
+# Installs several updated packages on some system, and returns the array ref
+# of new packages installed, or an error message
+sub install_multiple_package_updates
+{
+my ($server, $packs) = @_;
+my @allrv;
+$last_remote_error = undef;
+my $mod = $server->{'status'} eq 'virt' ? 'security-updates'
+					: 'package-updates';
+my $pkg = $mod;
+$pkg =~ s/-/_/g;
+&remote_foreign_require($server, $mod, $mod."-lib.pl");
+if (!&remote_eval($server, $mod, 'defined(&package_install_multiple)')) {
+	# Need to install one by one
+	foreach my $p (@$packs) {
+		my $rv = &install_package_update($server, $p);
+		return $rv if (!ref($rv));
+		push(@allrv, @$rv);
+		}
+	return \@allrv;
+	}
+my $func = &remote_eval($server, $mod,
+			   'defined(&capture_function_output_tempfile)') ?
+				"capture_function_output_tempfile" :
+				"capture_function_output";
+my @systems = &unique(map { $_->{'system'} } @$packs);
+foreach my $system (@systems) {
+	my @spacks = grep { $_->{'system'} eq $system } @$packs;
+	my @names = map { $_->{'update'} || $_->{'name'} } @spacks;
+	my ($out, $rv) = &remote_foreign_call($server, $mod,
+			$func, $pkg."::package_install_multiple",
+			\@names, $system, 1);
+	if ($last_remote_error) {
+		return $last_remote_error;
+		}
+	elsif (ref($rv) && @$rv == 0 || $out =~ /install\s+failed/i) {
+		return $out;
+		}
+	else {
+		push(@allrv, @$rv);
+		}
+	}
+return \@allrv;
 }
 
 # show_confirm_form(message, cgi, &hiddens, ok-message, post-message)

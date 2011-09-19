@@ -41,23 +41,18 @@ if (@servers == 1) {
 	print "<ul>\n";
 	%donedep = ( );
 	@allgot = ( );
-	foreach $pkg (@poss) {
-		next if ($donedep{$pkg->{'name'}});
-		print &text('update_pkg', "<tt>$pkg->{'name'}</tt>",
-					  $pkg->{'version'}),"<br>\n";
-	        my $got = &install_package_update($s, $pkg);
-		if (ref($got)) {
-			# Worked OK
-			foreach my $g (@$got) {
-				$donedep{$g}++;
-				}
-			print &text('update_donepkg2',
-				join(" ", map { "<tt>$_</tt>" } @$got)),"<p>\n";
-			push(@allgot, @$got);
-			}
-		else {
-			print &text('update_pkgerr2', $got),"<p>\n";
-			}
+	print &text('update_pkgs',
+	  join(", ", map { &text('update_ver', $_->{'name'}, $_->{'version'}) }
+		         @poss)),"<br>\n";
+	$got = &install_multiple_package_updates($s, \@poss);
+	if (ref($got)) {
+		# Worked OK
+		print &text('update_donepkg2',
+			join(" ", map { "<tt>$_</tt>" } @$got)),"<p>\n";
+		push(@allgot, @$got);
+		}
+	else {
+		print &text('update_pkgerr2', $got),"<p>\n";
 		}
 	print "</ul>\n";
 	print $text{'update_done'},"<p>\n";
@@ -88,24 +83,25 @@ else {
 			print &text('mass_upserver',
 				"<tt>$s->{'host'}</tt>"),"<br>\n";
 			print "<ul>\n";
-			foreach $p (@{$rv[$i]}) {
-				print &text('update_pkg',
-					    "<tt>$p->{'name'}</tt>",
-					    $p->{'version'}),"<br>\n";
-				if (!$p->{'status'}) {
-					print &text('mass_upfailed',
-						    $p->{'error'});
-					}
-				elsif (@{$p->{'updates'}}) {
-					print &text('mass_uplist', 
-						join(" ", map { "<tt>$_</tt>" }
-							@{$p->{'updates'}}));
-					}
-				else {
-					print $text{'mass_upnone'};
-					}
-				print "<br>\n";
+			$p = $rv[$i]->[0];
+			print &text('update_pkgs',
+			  join(", ", map { &text('update_ver',
+						 $_->{'name'},
+					         $_->{'version'}) }
+					 @{$p->{'want'}})),"<br>\n";
+			if (!$p->{'status'}) {
+				print &text('mass_upfailed',
+					    $p->{'error'});
 				}
+			elsif (@{$p->{'updates'}}) {
+				print &text('mass_uplist', 
+					join(" ", map { "<tt>$_</tt>" }
+						@{$p->{'updates'}}));
+				}
+			else {
+				print $text{'mass_upnone'};
+				}
+			print "<br>\n";
 			print "</ul>\n";
 			}
 		else {
