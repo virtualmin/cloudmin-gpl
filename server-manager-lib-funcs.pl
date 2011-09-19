@@ -9124,14 +9124,15 @@ $server->{'floor_mem_down'} = $in->{'floor_mem_down'};
 sub tempname_on_server
 {
 my ($server, $base) = @_;
+my $rv;
 if ($server->{'manager'} eq 'this') {
 	# Use my function
-	return &tempname($base);
+	$rv = &tempname($base);
 	}
 elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Ask the remote Webmin
 	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
-	return &remote_foreign_call($vhost, "webmin", "tempname", $base);
+	$rv = &remote_foreign_call($vhost, "webmin", "tempname", $base);
 	}
 else {
 	# Use the configured dir
@@ -9139,15 +9140,21 @@ else {
 	my $tempdir = $config{'img_temp'} || $ostemp;
 	if ($base) {
 		$base =~ s/^(.*)\///;
-		return $tempdir.'/'.$base;
+		$rv = $tempdir.'/'.$base;
 		}
 	else {
 		$main::tempfilecount++;
 		&seed_random();
-		return $tempdir.'/'.int(rand(1000000))."_".
-		       $main::tempfilecount."_".$scriptname;
+		$rv = $tempdir.'/'.int(rand(1000000))."_".
+		      $main::tempfilecount."_".$scriptname;
 		}
 	}
+if ($rv =~ /^(\/.*)\/[^\/]+$/) {
+	# Make sure dir exists
+	my $dir = $1;
+	&make_dir_on_server($vhost, $dir, 0700, 1);
+	}
+return $rv;
 }
 
 # plugin_call(module, function, [arg, ...])
