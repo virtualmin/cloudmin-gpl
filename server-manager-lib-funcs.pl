@@ -9131,12 +9131,12 @@ if ($server->{'manager'} eq 'this') {
 	}
 elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Ask the remote Webmin
-	&remote_foreign_require($vhost, "webmin", "webmin-lib.pl");
-	$rv = &remote_foreign_call($vhost, "webmin", "tempname", $base);
+	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
+	$rv = &remote_foreign_call($server, "webmin", "tempname", $base);
 	}
 else {
 	# Use the configured dir
-	my $ostemp = $vhost->{'type'} eq 'solaris' ? '/var/tmp' : '/tmp';
+	my $ostemp = $server->{'type'} eq 'solaris' ? '/var/tmp' : '/tmp';
 	my $tempdir = $config{'img_temp'} || $ostemp;
 	if ($base) {
 		$base =~ s/^(.*)\///;
@@ -9152,7 +9152,7 @@ else {
 if ($rv =~ /^(\/.*)\/[^\/]+$/) {
 	# Make sure dir exists
 	my $dir = $1;
-	&make_dir_on_server($vhost, $dir, 0700, 1);
+	&make_dir_on_server($server, $dir, 0700, 1);
 	}
 return $rv;
 }

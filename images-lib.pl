@@ -1055,17 +1055,19 @@ if ($server->{'status'} eq 'virt' && $info && @{$info->{'poss'}}) {
 	&$first_print(&text('update_ipackages', scalar(@{$info->{'poss'}})));
 	my @allgot;
 	&$indent_print();
-	foreach $p (&sort_package_updates(@{$info->{'poss'}})) {
-		&$first_print(&text('update_ipkg', $p->{'name'},
-						   $p->{'version'}));
-		my $got = &install_package_update($server, $p);
-		push(@allgot, @$got) if (ref($got));
-		if (ref($got)) {
-			&$second_print($text{'update_idone'});
-			}
-		else {
-			&$second_print(&text('update_ipkgerr', $got));
-			}
+	print &text('update_pkgs',
+          join(", ", map { &text('update_ver', $_->{'name'}, $_->{'version'}) }
+                         @{$info->{'poss'}})),"<br>\n";
+	$got = &install_multiple_package_updates($server,
+		[ &sort_package_updates(@{$info->{'poss'}}) ]);
+	if (ref($got)) {
+		# Worked OK
+		print &text('update_donepkg2',
+			join(" ", map { "<tt>$_</tt>" } @$got)),"<p>\n";
+		push(@allgot, @$got);
+		}
+	else {
+		print &text('update_pkgerr2', $got),"<p>\n";
 		}
 	&$outdent_print();
 	&$second_print(&text('update_itotal', scalar(@allgot)));
