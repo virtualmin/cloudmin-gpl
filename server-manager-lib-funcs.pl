@@ -2558,6 +2558,7 @@ return !$timed_out && !$? ? 1 : 0;
 sub wait_for_ping
 {
 my ($server, $timeout) = @_;
+$timeout ||= $config{'ping_wait_timeout'};
 $timeout ||= 60;
 my $ip = &get_server_ip($server);
 my $pingstart = time();

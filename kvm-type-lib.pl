@@ -2010,10 +2010,10 @@ if ($sshed) {
 
 # Return an error if something went wrong
 if (defined($pinged) && !$pinged) {
-	return (2, &text('kvm_estartping', 60));
+	return (2, &text('kvm_estartping', $config{'ping_wait_timeout'}));
 	}
 if (defined($sshed) && !$sshed) {
-	return (3, &text('kvm_estartssh', 60));
+	return (3, &text('kvm_estartssh', $config{'ping_wait_timeout'}));
 	}
 
 if (!$pok) {

@@ -46,6 +46,7 @@ ping_timeout=Ping timeout,0,5,,seconds
 ssh_timeout=SSH status check timeout,0,5,,seconds
 webmin_timeout=Webmin status collection timeout,0,5,,seconds
 login_timeout=Text console timeout,0,5,,seconds
+ping_wait_timeout=Time to wait for ping on startup,0,5,,seconds
 
 line7=DHCP settings,11
 dhcp_add=Add DHCPd host for virtual systems?,1,1-Yes,0-No
