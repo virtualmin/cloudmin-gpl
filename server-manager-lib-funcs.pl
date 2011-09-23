@@ -7259,6 +7259,9 @@ else {
 		push(@rv, \%vm2cache);
 		&write_file($licence_cache_file, \%vm2cache);
 		}
+	else {
+		&unlink_file($licence_cache_file);
+		}
 	}
 
 # Read the licence pool
