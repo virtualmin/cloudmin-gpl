@@ -43,8 +43,8 @@ my $cmd;
 if ($fs =~ /^ext\d+$/) {
 	$cmd = "mkfs -t $fs -F ".quotemeta($device);
 	if ($size) {
-		$cmd .= " && resize2fs ".quotemeta($device)." ".
-			int($size/1024)."k";
+		$cmd .= " && ".&get_resize_command($server, $fs).
+			" ".quotemeta($device)." ".int($size/1024)."k";
 		}
 	}
 elsif ($fs eq 'reiserfs') {
@@ -304,6 +304,18 @@ else {
 	}
 
 return undef;
+}
+
+# get_resize_command(&vhost, fs-type)
+# Returns the appropriate command to resize an EXT filesystem of some type
+sub get_resize_command
+{
+my ($vhost, $fs) = @_;
+my $cmd = $fs =~ /ext(\d+)$/ ? "resize".$1."fs" : undef;
+if (!$cmd || !&has_command_on_server($vhost, $cmd)) {
+	$cmd = "resize2fs";
+	}
+return $cmd;
 }
 
 # resize_disk_image_partition(&server, file, &partition, new-size)
