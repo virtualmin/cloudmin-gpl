@@ -1120,6 +1120,7 @@ if ($server->{$manager.'_filesystem_lv'} && $server->{'status'} ne 'down' &&
 		$snaplv->{'device'} = '/dev/'.$snaplv->{'vg'}.'/'.
 				      $snaplv->{'name'};
 		&delete_all_disk_image_partitions($vhost, $snaplv);
+		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		&remote_foreign_call($vhost, "lvm",
 				     "delete_logical_volume", $snaplv);
 		$last_remote_error = undef;
