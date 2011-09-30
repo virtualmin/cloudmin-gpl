@@ -6112,6 +6112,7 @@ foreach my $sd (@sorted) {
 
 # Re-create all domains from backups. This has to be done after deleting from
 # the source (if requested), so that we don't get clashes.
+my $info = &get_server_collected($dest);
 foreach my $sd (@sorted) {
 	my ($server, $d) = @$sd;
 
@@ -6130,6 +6131,9 @@ foreach my $sd (@sorted) {
 			[ "domain", $d->{'dom'} ] );
 	if ($realloc && $d->{'virt'}) {
 		push(@args, [ "allocate-ip" ]);
+		}
+	if ($info->{'minfo'}->{'version'} >= 3.89) {
+		push(@args, [ "skip-warnings" ]);
 		}
 	my ($err, $out) = &call_virtualmin_api($dest,
 			"restore-domain", \@args);
