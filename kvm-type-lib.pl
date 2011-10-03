@@ -2917,7 +2917,8 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		# Shrink the filesystem
 		push(@cmds, "losetup -o $part->{'offset'} $loop ".
 			    quotemeta($disk->{'real'}));
-		push(@cmds, "e2fsck -f -p $loop");
+		push(@cmds, &get_fsck_command($vhost, $disk->{'fs'}).
+			    " -f -p $loop");
 		push(@cmds, &get_resize_command($vhost, $disk->{'fs'}).
 			    " ".$loop." ".$newmbs."M");
 		push(@cmds, "losetup -d $loop");
@@ -2937,7 +2938,8 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		# Expand the filesystem
 		push(@cmds, "losetup -o $part->{'offset'} $loop ".
 			    quotemeta($disk->{'real'}));
-		push(@cmds, "e2fsck -f -p $loop");
+		push(@cmds, &get_fsck_command($vhost, $disk->{'fs'}).
+			    " -f -p $loop");
 		push(@cmds, &get_resize_command($vhost, $disk->{'fs'}).
 			    " ".$loop." ".$newmbs."M");
 		push(@cmds, "losetup -d $loop");

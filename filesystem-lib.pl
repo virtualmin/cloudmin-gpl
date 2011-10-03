@@ -318,6 +318,18 @@ if (!$cmd || !&has_command_on_server($vhost, $cmd)) {
 return $cmd;
 }
 
+# get_fsck_command(&vhost, fs-type)
+# Returns a command to fsck an EXT filesystem of some type
+sub get_fsck_command
+{
+my ($vhost, $fs) = @_;
+my $cmd = $fs =~ /ext(\d+)$/ ? "e".$1."fsck" : undef;
+if (!$cmd || !&has_command_on_server($vhost, $cmd)) {
+	$cmd = "e2fsck";
+	}
+return $cmd;
+}
+
 # resize_disk_image_partition(&server, file, &partition, new-size)
 # Expands the size of some partition by deleting and re-creating it
 sub resize_disk_image_partition
