@@ -81,9 +81,11 @@ elsif ($in{'new'} == 2) {
 		@rdisks = &remote_foreign_call($vhost, "raid",
 				"find_free_partitions", [ ], 1, 1);
 		if (@rdisks) {
+			$js = "onChange='form.other.disabled = this.value != \"\"'";
 			$realsel = &ui_select("real", $rdisks[0]->[0],
-				[ @rdisks, [ "", $text{'disk_other'} ] ])." ".
-				&ui_textbox("other", undef, 30);
+				[ @rdisks, [ "", $text{'disk_other'} ] ],
+				1, 0, 0, 0, $js)." ".
+				&ui_textbox("other", undef, 30, 1);
 			}
 		}
 	$realsel ||= &ui_textbox("real", $disk->{'real'}, 50);
