@@ -3,7 +3,7 @@
 
  - Upload kvm RPM
         scp /usr/src/redhat/RPMS/noarch/wbm-server-manager-$ver.kvm-1.noarch.rpm virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/universal/
-        ssh virtualmin@virtualmin.com "cd domains/vm2.virtualmin.com/public_html/kvm/universal ; createrepo ."
+        ssh virtualmin@virtualmin.com "cd domains/vm2.virtualmin.com/public_html/kvm/universal ; createrepo -s sha ."
 
  - Build kvm tar.gz
 	./create-module.pl --dir server-manager virtualmin/server-manager-$ver.kvm.wbm.gz server-manager-kvm
