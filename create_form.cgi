@@ -170,10 +170,12 @@ if (defined(&$afunc)) {
 # Type-specific options
 $ffunc = "type_".$in{'type'}."_create_form";
 if (defined(&$ffunc)) {
-	print &ui_hidden_table_start($text{'create_nheader'}, "width=100%", 2,
-				     "net", 0, [ "width=30%" ]);
-	print &$ffunc(0);
-	print &ui_hidden_table_end();
+	$nhtml = &ui_hidden_table_start($text{'create_nheader'}, "width=100%",
+				        2, "net", 0, [ "width=30%" ]);
+	$nbody = &$ffunc(0);
+	$nhtml .= $nbody;
+	$nhtml .= &ui_hidden_table_end();
+	print $nhtml if ($nbody);
 	}
 
 # Type-specific advanced options
@@ -297,11 +299,13 @@ if ($empty) {
 	# Type-specific options
 	$ffunc = "type_".$in{'type'}."_create_form";
 	if (defined(&$ffunc)) {
-		print &ui_hidden_table_start($text{'create_nheader'},
+		$nhtml = &ui_hidden_table_start($text{'create_nheader'},
 					     "width=100%", 2,
 					     "net2", 0, [ "width=30%" ]);
-		print &$ffunc(1);
-		print &ui_hidden_table_end();
+		$nbody = &$ffunc(1);
+		$nhtml .= $nbody;
+		$nhtml .= &ui_hidden_table_end();
+		print $nhtml if ($nbody);
 		}
 
 	# Type-specific advanced options
