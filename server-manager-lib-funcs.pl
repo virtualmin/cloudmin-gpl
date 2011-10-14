@@ -8921,13 +8921,14 @@ if (!$incdown) {
 return @vhosts;
 }
 
-# find_host_server(&server, host-type, [extra-ram, extra-disk])
+# find_host_server(&server, host-type,
+# 		   [extra-ram, extra-guaranteed-ram, extra-disk])
 # Returns a host system for some type (xen, vserver, zone), based on those
 # available to the system owner and available RAM / etc
 sub find_host_server
 {
-my ($server, $type, $mem, $disk) = @_;
-my @vhosts = &list_available_host_servers($type, $mem, $disk);
+my ($server, $type, $mem, $gmem, $disk) = @_;
+my @vhosts = &list_available_host_servers($type, $mem, $gmem, $disk);
 return undef if (!@vhosts);
 return &find_host_server_from_vhosts($server, \@vhosts, $access{'hostmode'},
 				     $type);
@@ -9075,7 +9076,7 @@ elsif (&can_select_host_server()) {
 	}
 else {
 	# Cannot choose any host - let plan decide
-	$vhost = &find_host_server($server, $type, $mem, $disk);
+	$vhost = &find_host_server($server, $type, $mem, $gmem, $disk);
 	$vhost || &error($text{'create_exenvhostalloc'});
 	}
 if ($loc) {
