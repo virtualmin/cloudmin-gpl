@@ -7481,8 +7481,7 @@ sub list_all_script_updates
 {
 my ($servers) = @_;
 my @rv;
-my @canservers = grep { $_->{'status'} eq 'virt' &&
-			   $_->{'virtualmin_serial'} } @$servers;
+my @canservers = grep { $_->{'status'} eq 'virt' } @$servers;
 my $temp = &transname();
 &parallel_server_function(\@canservers, \&fetch_all_script_updates, $temp);
 foreach my $s (@canservers) {
