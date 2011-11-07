@@ -97,7 +97,7 @@ else {
 if ($in{'new'}) {
 	# Auto-detect?
 	print &ui_table_row($text{'kvm_autoadd'},
-		&ui_radio("autoadd", 1,
+		&ui_radio("autoadd", 0,
 			  [ [ 0, $text{'no'} ],
 			    [ 1, $text{'kvm_autoadd1'} ],
 			    [ 2, $text{'kvm_autoadd2'} ] ]));
