@@ -15,6 +15,7 @@ $can || &error($text{'iface_esupport'});
 $ifunc = "type_".$server->{'manager'}."_list_interfaces";
 $ifaces = &$ifunc($server);
 ref($ifaces) || &error(&text('iface_eget', $ifaces));
+$ifaces = [ sort { $a->{'fullname'} cmp $b->{'fullname'} } @$ifaces ];
 if (!$in{'new'}) {
 	$iface = $ifaces->[$in{'idx'}];
 	$iface->{'noedit'} && &error($text{'iface_enoedit'});

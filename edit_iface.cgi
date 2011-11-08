@@ -12,6 +12,7 @@ if (!$in{'new'}) {
 	$ifunc = "type_".$server->{'manager'}."_list_interfaces";
 	$ifaces = &$ifunc($server);
 	ref($ifaces) || &error(&text('iface_eget', $ifaces));
+	$ifaces = [ sort { $a->{'fullname'} cmp $b->{'fullname'} } @$ifaces ];
 	$iface = $ifaces->[$in{'idx'}];
 	$iface->{'noedit'} && &error($text{'iface_enoedit'});
 	}
