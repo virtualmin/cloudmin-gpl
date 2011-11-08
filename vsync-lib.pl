@@ -207,7 +207,7 @@ else {
 	@doms = split(/\s+/, $vsync->{'doms'});
 	}
 &$first_print(&text('vsync_backup', scalar(@doms)));
-if (!@doms) {
+if (!@doms && !$vsync->{'tmpls'}) {
 	&$second_print($text{'vsync_ebackupdoms'});
 	return 0;
 	}
