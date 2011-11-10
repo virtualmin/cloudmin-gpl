@@ -6,3 +6,5 @@ version=5.8.kvm
 onehost=kvm
 vm2=kvm
 gpl=1
+desc_cz=Cloudmin GPL pro KVM
+desc_cz.UTF-8=Cloudmin GPL pro KVM
