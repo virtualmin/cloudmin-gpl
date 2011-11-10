@@ -7450,9 +7450,9 @@ elsif ($out =~ /^OK\s+(\d+)/) {
 		else {
 			# Add to list
 			my $lic = { 'serial' => $vserial,
-				       'key' => $vkey,
-				       'domains' => $vdoms,
-				       'servers' => $vservers };
+				    'key' => $vkey,
+				    'domains' => $vdoms,
+				    'servers' => $vservers };
 			push(@rv, $lic);
 			push(@lics, $lic);
 			}
