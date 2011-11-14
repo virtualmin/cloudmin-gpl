@@ -3847,7 +3847,7 @@ else {
 	    $info->{'general'}->{'tinfo'}->{'version'} >= 4.01) {
 		# Can link using theme's domain display mode
 		$path = "/?dom=$d->{'id'}";
-		$target = "_new";
+		$target = "_blank";
 		}
 	else {
 		# Need to link to edit_domain.cgi
