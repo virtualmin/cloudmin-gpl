@@ -13,6 +13,12 @@ opendir(DIR, $server_images_dir);
 foreach my $f (readdir(DIR)) {
 	next if ($f !~ /^(\S+)\.img$/);
 	my %img;
+	my @imgst = stat("$server_images_dir/$f");
+	if ($imgst[7] >= 1024*1024) {
+		# .img file is > 1MB .. probably actually a badly named
+		# disk image! Skip it
+		next;
+		}
 	&read_file_cached("$server_images_dir/$f", \%img);
 	$img{'file'} = "$server_images_dir/$f";
 	$img{'id'} = $1;
