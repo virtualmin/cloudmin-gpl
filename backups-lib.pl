@@ -1156,6 +1156,7 @@ my @gzfiles;
 if ($gzfile) {
 	# Need to write to local files
 	my $i = 0;
+	&$first_print(&text('brun_ddone', $server->{'host'}));
 	foreach my $dev (@devs) {
 		my $ext = $i ? ".$i" : "";
 		my $ddcmd = "(".&dd_command($dev, undef).
@@ -1175,6 +1176,8 @@ if ($gzfile) {
 else {
 	# Can write directly to target system
 	my $i = 0;
+	&$first_print(&text('brun_ddone2', $server->{'host'},
+					   $destserver->{'host'}));
         foreach my $dev (@devs) {
                 my $ext = $i ? ".$i" : "";
 		my $ddcmd = &dd_command($dev, undef).
@@ -1425,6 +1428,7 @@ if ($gzip_format) {
 	if ($localfile) {
 		# Just extract from local files
 		my $i = 0;
+		&$first_print(&text('rrun_dd', $server->{'host'}));
 		foreach my $dev (@devs) {
 			my $ext = $i ? ".$i" : "";
 			my $ddcmd = "(gunzip -c ".quotemeta($localfile.$ext).
@@ -1442,6 +1446,8 @@ if ($gzip_format) {
 	else {
 		# Pipe in from remote system and extract
 		my $i = 0;
+		&$first_print(&text('rrun_dd2', $server->{'host'},
+				    $destserver->{'host'}));
 		foreach my $dev (@devs) {
 			my $ext = $i ? ".$i" : "";
 			my $ddcmd = "(gunzip -c | ".
