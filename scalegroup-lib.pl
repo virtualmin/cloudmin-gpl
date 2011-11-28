@@ -359,6 +359,7 @@ if ($scalegroup->{'manager'} eq 'ec2') {
 		       'ec2_image' => $scalegroup->{'ec2_image'},
 		       'ec2_size' => $scalegroup->{'ec2_size'},
 		     };
+	&run_system_script($newserver, 'before', 'create');
 
 	# Call create function
 	my $tfunc = "type_ec2_desc";
@@ -443,6 +444,8 @@ if ($scalegroup->{'manager'} eq 'ec2') {
 	# Call final post-creation ready function
 	my $dfunc = "type_ec2_create_ready";
 	&$dfunc($newserver);
+
+	&run_system_script($newserver, 'after', 'create');
 	}
 else {
 	# Creating a regular virtual system by cloning
