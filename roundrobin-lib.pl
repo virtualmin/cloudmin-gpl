@@ -216,7 +216,7 @@ if (@inc) {
 	my @cmts;
 	my %done;
 	foreach my $s (@inc) {
-		my $ip = &get_server_ip($s);
+		my $ip = $s->{'external_ip'} || &get_server_ip($s);
 		if (!$done{$ip}++) {
 			push(@ips, $ip);
 			push(@cmts, $s->{'host'});
