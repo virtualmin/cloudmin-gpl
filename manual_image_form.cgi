@@ -36,11 +36,14 @@ print &ui_table_row($text{'mimage_file'},
 	&ui_radio_table("file_mode", 0,
 		[ [ 0, $text{'mimage_file0'},
 		    &ui_filebox("file", undef, 40) ],
-		  [ 1, $text{'mimage_file1'},
-		    &ui_select("server", undef,
-		       [ map { [ $_->{'id'}, $_->{'short_host'} ] } @servers ]).
-		    " ".
-		    &ui_textbox("serverfile", undef, 40) ],
+		  @servers ? (
+		    [ 1, $text{'mimage_file1'},
+		      &ui_select("server", undef,
+		         [ map { [ $_->{'id'}, $_->{'short_host'} ] }
+				 @servers ]).
+		      " ".
+		      &ui_textbox("serverfile", undef, 40)
+		    ] ) : ( ),
 		  [ 2, $text{'mimage_file2'},
 		    &ui_filebox("url", undef, 60) ],
 		]));
