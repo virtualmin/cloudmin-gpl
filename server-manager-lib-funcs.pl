@@ -3632,7 +3632,7 @@ elsif ($mode eq "space") {
 	}
 elsif ($mode eq "cpu") {
 	# Look for lowest CPU load
-	ny $min_load;
+	my $min_load;
 	foreach my $s (@$vservers) {
 		my $info = &get_server_collected($s);
 		if ($info->{'load'}->[0] < $min_load || !$min_load) {
