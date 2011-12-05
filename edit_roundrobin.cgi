@@ -101,6 +101,11 @@ print &ui_table_row($text{'roundrobin_ttl'},
 	&ui_textbox("ttl", $roundrobin->{'ttl'}, 6)." ".
 	$text{'roundrobin_secs'});
 
+print &ui_table_row($text{'roundrobin_dnscount'},
+	&ui_opt_textbox("dnscount", $roundrobin->{'dnscount'}, 6,
+			$text{'roundrobin_dnscount_max'},
+			$text{'roundrobin_dnscount_most'}));
+
 print &ui_hidden_table_end("dns");
 
 # Section for conditions
@@ -192,11 +197,16 @@ if ($roundrobin->{'include'} || $roundrobin->{'whynot'}) {
 	%whynot = map { my ($id, $r, $msg) = split(",", $_, 3);
 			($id, [ $r, $msg ]) }
 		      split(/\s+/, $roundrobin->{'whynot'});
+	%dnsover = map { $_, 1 } split(/\s+/, $roundrobin->{'dnsover'});
 	foreach $s (&get_roundrobin_servers($roundrobin, \@allservers)) {
 		$ip = &get_server_ip($s);
 		@row = ( "<a href='edit_serv.cgi?id=$s->{'id'}'>".
 			 $s->{'host'}."</a>", $ip );
-		if ($inc{$s->{'id'}}) {
+		if ($dnsover{$s->{'id'}}) {
+			push(@row, "<font color=orange>".
+				   $text{'roundrobin_dnsover'}."</font>");
+			}
+		elsif ($inc{$s->{'id'}}) {
 			push(@row, "<font color=green>".
 				   $text{'roundrobin_ok'}."</font>");
 			}

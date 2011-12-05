@@ -24,6 +24,7 @@ return sort { $a->{'id'} <=> $b->{'id'} } @rv;
 # dom - Domain name the record is in
 # name - Record name within the domain
 # ttl - TTL for DNS record, in seconds
+# dnscount - Number of systems to create A records for
 # servers - IDs of servers to include
 # groups - Names of groups of servers to include
 # status - List of acceptable status codes
@@ -221,6 +222,14 @@ if (@inc) {
 			push(@ips, $ip);
 			push(@cmts, $s->{'host'});
 			}
+		}
+	if ($rr->{'dnscount'} && @inc > $rr->{'dnscount'}) {
+		# Limit to first N IPs
+		@ips = @ips[0 .. $rr->{'dnscount'}-1];
+		@cmts = @cmts[0 .. $rr->{'dnscount'}-1];
+		$rr->{'dnsover'} =
+			join(" ", map { $_->{'id'} }
+			     @inc[$rr->{'dnscount'} .. $#inc]);
 		}
 	($ok, $msg) = &set_bind_dns_addresses(
 	    $rr->{'name'}.".".$rr->{'dom'}.".", $rr->{'dom'}, \@ips, \@cmts,

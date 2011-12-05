@@ -25,3 +25,5 @@ When creating a KVM instance on a host system with multiple bridges, you can now
 KVM systems with multiple disks now use a new backup format that stores each disk image in a separate file. This allows backups to be created and restored without consuming any temporary disk space on the host system.
 The SSH port for new virtual systems can now be set on the Cloudmin Configuration page, and via the --ssh-port flag to the create-system API command.
 Package updates are now installed via a single YUM or APT command, if the system being updated has Webmin 1.580 or Virtualmin 3.89 or later.
+---- Changes since 5.8 ----
+The DNS roundrobin page now has an option to limit the number of IP addresses to include in the resulting DNS entries, to allow the simple configuration of DNS-based failover.

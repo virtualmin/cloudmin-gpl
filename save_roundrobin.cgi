@@ -67,6 +67,10 @@ else {
 	$roundrobin->{'dom'} = $in{'dom'};
 	$in{'ttl'} =~ /^\d+[smhdw]?$/ || &error($text{'roundrobin_ettl'});
 	$roundrobin->{'ttl'} = $in{'ttl'};
+	$in{'dnscount_def'} || $in{'dnscount'} =~ /^[1-9][0-9]*$/ ||
+		&error($text{'roundrobin_ednscount'});
+	$roundrobin->{'dnscount'} = $in{'dnscount_def'} ? undef
+							: $in{'dnscount'};
 
 	# Parse conditions
 	$in{'status'} || &error($text{'roundrobin_estatus'});
