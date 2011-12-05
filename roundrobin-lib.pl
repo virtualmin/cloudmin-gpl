@@ -250,8 +250,19 @@ if (@inc) {
 	my @ips;
 	my @cmts;
 	my %done;
+	my @iplist = split(/\s+/, $rr->{'iplist'});
 	foreach my $s (@inc) {
 		my $ip = $s->{'external_ip'} || &get_server_ip($s);
+		if (@iplist && !$s->{'fake'}) {
+			# If using an specific list of IP addresses and this
+			# managed system has an IP in the list, use that instead
+			# of the primary IP.
+			foreach my $sip (&get_server_ip($s)) {
+				if (&indexof($sip, @iplist) >= 0) {
+					$ip = $sip;
+					}
+				}
+			}
 		if (!$done{$ip}++) {
 			push(@ips, $ip);
 			push(@cmts, $s->{'host'});
