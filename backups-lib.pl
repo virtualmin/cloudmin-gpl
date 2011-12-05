@@ -1085,7 +1085,10 @@ else {
 
 # Get disk list
 my $dfunc = "type_".$manager."_list_disks";
-my $disks = &$dfunc($server, 0);
+my $disks = &$dfunc($server, 1);
+if (!ref($disks)) {
+	$disks = &$dfunc($server, 0);
+	}
 if (!ref($disks)) {
 	return { 'ok' => 0,
 		 'msg' => &text('brun_edisks', $disks) };
@@ -1336,7 +1339,10 @@ else {
 
 # Get disk list
 my $dfunc = "type_".$manager."_list_disks";
-my $disks = &$dfunc($server, 0);
+my $disks = &$dfunc($server, 1);
+if (!ref($disks)) {
+	$disks = &$dfunc($server, 0);
+	}
 if (!ref($disks)) {
         return { 'ok' => 0,
                  'msg' => &text('brun_edisks', $disks) };
@@ -1985,6 +1991,25 @@ if ($use_tar) {
 else {
 	return "gunzip -c ".quotemeta($file)." | tar xpf -";
 	}
+}
+
+# get_disk_include(&server, &disk)
+# Returns 1 if some disk should be included in backups, 0 if not
+sub get_disk_include
+{
+my ($server, $disk) = @_;
+my $id = $disk->{'lv'} || $disk->{'real'};
+return !$server->{'disk_exclude_'.$id};
+}
+
+# save_disk_include(&server, &disk, flag)
+# Change the server-level setting that controls if  some disk should be
+# included in backups
+sub save_disk_include
+{
+my ($server, $disk, $inc) = @_;
+my $id = $disk->{'lv'} || $disk->{'real'};
+$server->{'disk_exclude_'.$id} = !$inc;
 }
 
 1;

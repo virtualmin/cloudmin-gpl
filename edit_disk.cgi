@@ -188,6 +188,13 @@ if (!$in{'new'} && $disk->{'df_size'}) {
 				      &nice_size($disk->{'df_used'})));
 	}
 
+# Include in backups?
+if (!$disk->{'swap'}) {
+	$inc = $in{'new'} ? 1 : &get_include_disk($server, $disk);
+	print &ui_table_row($text{'disk_include'},
+			    &ui_yesno_radio("include", $inc));
+	}
+
 # Offer to mkfs
 if ($in{'new'}) {
 	$ffunc = "type_".$server->{'manager'}."_list_disk_filesystems";

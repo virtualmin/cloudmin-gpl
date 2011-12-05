@@ -2452,6 +2452,7 @@ disk_sizewarn=Warning - this disk cannot be safely resized.
 disk_sizeok=Resize Disk Anyway
 disk_overwrite=Overwrite existing file?
 disk_overwrite2=Overwrite existing volume?
+disk_include=Include disk in backups?
 
 fsck_title=Check Disk
 fsck_doing=Checking $1 filesystem in $2 ..

@@ -146,6 +146,9 @@ if ($multi) {
 		if ($d->{'blockid'}) {
 			print "    Xen block ID: $d->{'blockid'}\n";
 			}
+		print "    Include in backups: ",
+		      ($d->{'swap'} ? "No (swap)" :
+		       &get_disk_include($server, $d) ? "Yes" : "No"),"\n";
 		}
 	}
 else {

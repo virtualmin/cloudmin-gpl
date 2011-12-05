@@ -258,6 +258,7 @@ else {
 			}
 		$cfunc = "type_".$server->{'manager'}."_create_disk";
 		$err = &$cfunc($server, $disk, scalar(@$disks) ? 0 : 1);
+		&save_include_disk($server, $disk, $in{'include'});
 		&save_managed_server($server);
 		if ($err) {
 			&$second_print(&text('disk_createfailed', $err));
@@ -290,6 +291,7 @@ else {
 				    "<tt>$disk->{'real'}</tt>"));
 		$cfunc = "type_".$server->{'manager'}."_modify_disk";
 		$err = &$cfunc($server, $disk, $olddisk);
+		&save_include_disk($server, $disk, $in{'include'});
 		&save_managed_server($server);
 		if ($err) {
 			&$second_print(&text('disk_modifyfailed', $err));

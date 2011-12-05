@@ -75,6 +75,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--new-media") {
 		$media = shift(@ARGV);
 		}
+	elsif ($a eq "--backup-include") {
+		$include = 1;
+		}
+	elsif ($a eq "--backup-exclude") {
+		$include = 0;
+		}
 	else {
 		&usage();
 		}
@@ -180,6 +186,10 @@ if ($disk->{'size'} != $olddisk->{'size'} && !$force) {
 &$first_print("Modifying virtual disk for $olddisk->{'virt'} ..");
 $cfunc = "type_".$server->{'manager'}."_modify_disk";
 $err = &$cfunc($server, $disk, $olddisk);
+if (defined($include)) {
+	&save_disk_include($server, $disk, $include);
+	}
+&save_managed_server($server);
 &release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");
