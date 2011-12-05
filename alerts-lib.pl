@@ -500,6 +500,10 @@ elsif ($alert->{'scalegroups'}) {
 				     $s ? ( "<tt>$s->{'host'}</tt>" ) : ( ) }
 				   split(/\s+/, $alert->{'scalegroups'})));
 	}
+elsif ($alert->{'iplist'}) {
+	# Systems with IPs
+	return &text('alertdesc_iplist', "<tt>".$alert->{'iplist'}."</tt>");
+	}
 else {
 	return "???";
 	}

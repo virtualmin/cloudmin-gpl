@@ -30,7 +30,8 @@ print &ui_hidden_table_start($text{'roundrobin_header1'}, "width=100%", 2,
 $mode = $roundrobin->{'servers'} ne '' ? 1 :
 	$roundrobin->{'groups'} ne '' ? 2 :
 	$roundrobin->{'owners'} ne '' ? 3 :
-	$roundrobin->{'scalegroups'} ne '' ? 5 : 1;
+	$roundrobin->{'scalegroups'} ne '' ? 5 :
+	$roundrobin->{'iplist'} ne '' ? 6 : 1;
 @allservers = &list_managed_servers_sorted();
 @allgroups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 @allowners = &list_system_owners();
@@ -77,6 +78,11 @@ if (@allscalegroups) {
 		       3, 1, 0, $text{'alert_scalegroupopts'},
 				 $text{'alert_scalegroupvals'}) ]);
 	}
+# Selection by arbitrary IPs
+push(@stable, [ 6, $text{'alert_mode6'},
+		&ui_textarea("iplist",
+			     join("\n", split(/\s+/, $roundrobin->{'iplist'})),
+			     5, 40) ]);
 print &ui_table_row(undef, &ui_radio_table("mode", $mode, \@stable), 2);
 
 print &ui_hidden_table_end("servers");

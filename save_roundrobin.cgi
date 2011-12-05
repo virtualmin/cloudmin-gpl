@@ -55,6 +55,16 @@ else {
 		$roundrobin->{'scalegroups'} ||
 			&error($text{'alert_escalegroups'});
 		}
+	elsif ($in{'mode'} == 6) {
+		# Entered IPs
+		@iplist = split(/\s+/, $in{'iplist'});
+		@iplist || &error($text{'roundrobin_eiplist'});
+		foreach $ip (@iplist) {
+			&check_ipaddress($ip) ||
+				&error(&text('roundrobin_eip', $ip));
+			}
+		$roundrobin->{'iplist'} = join(" ", @iplist);
+		}
 
 	# Parse DNS record
 	$roundrobin->{'desc'} = $in{'desc'};

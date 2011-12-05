@@ -27,6 +27,7 @@ return sort { $a->{'id'} <=> $b->{'id'} } @rv;
 # dnscount - Number of systems to create A records for
 # servers - IDs of servers to include
 # groups - Names of groups of servers to include
+# iplist - IPs of servers to include
 # status - List of acceptable status codes
 # alerts - IDs of alerts that must not be firing
 # ports - TCP ports that must be open
@@ -120,9 +121,36 @@ elsif ($rr->{'scalegroups'}) {
 		push(@rv, grep { $_->{'scalegroup'} eq $id } @$allservers);
 		}
 	}
+elsif ($rr->{'iplist'}) {
+	# With some IPs
+	foreach my $ip (split(/\s+/, $rr->{'iplist'})) {
+		push(@rv, &make_server_from_ip($ip, $allservers));
+		}
+	}
 # Filter out dupes
 my %done;
 return grep { !$done{$_->{'id'}}++ } @rv;
+}
+
+# make_server_from_ip(ip, &all-servers)
+# If some system has the given IP, return it. Otherwise return a system with
+# an 'alive' status only.
+sub make_server_from_ip
+{
+my ($ip, $allservers) = @_;
+foreach my $s (@$allservers) {
+	return $s if ($s->{'ip'} eq $ip);
+	foreach my $i (split(/\s+/, $s->{'ip_addresses'})) {
+		return $s if ($i eq $ip);
+		}
+	}
+return { 'id' => $ip,
+	 'host' => $ip,
+	 'ip' => $ip,
+	 'ip_addresses' => $ip,
+	 'ssh_nologin' => 1,
+	 'status' => 'alive',
+	 'fake' => 1 };
 }
 
 # evaluate_roundrobin(&roundrobin, &servers)
@@ -157,6 +185,12 @@ foreach my $aid (split(/\s+/, $rr->{'alerts'})) {
 # Find usable servers
 my @inc;
 SERVER: foreach my $s (@servers) {
+	# Work out status for fake systems
+	if ($s->{'fake'}) {
+		$s->{'status'} = &ping_server_host($s->{'ip'}) ? 'alive'
+							       : 'down';
+		}
+
 	# Check acceptable status
 	if (!$selst{$s->{'status'}}) {
 		push(@whynot, [ $s->{'id'}, 'status', $s->{'status'} ]);
