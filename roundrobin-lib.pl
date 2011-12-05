@@ -337,6 +337,7 @@ sub send_roundrobin_email
 {
 my ($rr, $ok, $emsg) = @_;
 &foreign_require("mailboxes", "mailboxes-lib.pl");
+my @rrservers = &get_roundrobin_servers($rr, \@allservers);
 
 # Work out who to notify
 my @emails;
@@ -379,7 +380,8 @@ if (@whynot) {
 			      $text{'remail_reason'};
 	$msg .= sprintf $fmt, ("-" x 25), ("-" x 15), ("-" x 35);
 	foreach my $w (@whynot) {
-		my $s = &get_managed_server($w->[0]);
+		my ($s) = grep { $_->{'id'} eq $w->[0] } @rrservers;
+		$s ||= &get_managed_server($w->[0]);
 		next if (!$s);
 		my $ip = &get_server_ip($s);
 		$from ||= &get_global_from_address($s);
@@ -401,7 +403,8 @@ else {
 	}
 if (!$ok) {
 	foreach my $i (@inc) {
-		my $s = &get_managed_server($i);
+		my ($s) = grep { $_->{'id'} eq $i } @rrservers;
+		$s ||= &get_managed_server($i);
 		next if (!$s);
 		my $ip = &get_server_ip($s);
 		$from ||= &get_global_from_address($s);
