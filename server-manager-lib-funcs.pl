@@ -7151,7 +7151,7 @@ sub virtualmin_licence_form
 {
 my ($name, $nonone, $gpl) = @_;
 my @opts;
-my ($cansame, $canalloc);
+my ($canalloc);
 if (!$nonone) {
 	push(@opts, [ 0, $text{'virtualmin_smode0'}."<br>" ]);
 	}
@@ -7159,12 +7159,6 @@ push(@opts, [ 1, &text('virtualmin_smode1',
 		       &ui_textbox($name."_serial", undef, 20),
 		       &ui_textbox($name."_key", undef, 20))."<br>" ]);
 if (&can_action(undef, "licence")) {
-	my ($vaserial, $vakey) = &allocate_virtualmin_serial(1);
-	if ($vaserial) {
-		$cansame = 1;
-		push(@opts, [ 2, $text{'virtualmin_smode2'}."<br>" ]);
-		}
-	my ($aserial, $akey) = &allocate_virtualmin_serial(0);
 	if ($aserial) {
 		push(@opts, [ 3, $text{'virtualmin_smode3'}."<br>" ]);
 		$canalloc = 1;
@@ -7175,8 +7169,7 @@ if ($gpl) {
 	push(@opts, [ 4, $text{'virtualmin_smode4'}."<br>" ]);
 	}
 if (@opts > 1) {
-	return &ui_radio($name, $cansame ? 2 :
-				$canalloc ? 3 :
+	return &ui_radio($name, $canalloc ? 3 :
 				$nonone ? 1 : 0, \@opts);
 	}
 else {
