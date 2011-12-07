@@ -1180,6 +1180,8 @@ if ($gzfile) {
 		if ($skipdisks{$dev}) {
 			# Create empty file indicating skip
 			&execute_command_on_server($vhost,
+				"rm -f ".quotemeta($gzfile.$ext));
+			&execute_command_on_server($vhost,
 				"touch ".quotemeta($gzfile.$ext));
 			}
 		else {
@@ -1208,6 +1210,8 @@ else {
 		my $ext = $i ? ".$i" : "";
 		if ($skipdisks{$dev}) {
 			# Create empty file indicating skip
+			&execute_command_on_server($vhost,
+				"rm -f ".quotemeta($dest->{'path'}.$ext));
 			&execute_command_on_server($vhost,
 				"touch ".quotemeta($dest->{'path'}.$ext));
 			}

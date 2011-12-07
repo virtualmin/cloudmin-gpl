@@ -27,3 +27,4 @@ The SSH port for new virtual systems can now be set on the Cloudmin Configuratio
 Package updates are now installed via a single YUM or APT command, if the system being updated has Webmin 1.580 or Virtualmin 3.89 or later.
 ---- Changes since 5.8 ----
 The DNS roundrobin page now has an option to limit the number of IP addresses to include in the resulting DNS entries, to allow the simple configuration of DNS-based failover. DNS roundrobins can also include an arbitrary list of IP addresses, which do not necessarily have to be Cloudmin managed systems.
+Disks on virtual systems can now be excluded from backups on the Edit Disk page, and using the modify-disk API command. Swap disks are now also automatically excluded.

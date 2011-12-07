@@ -88,7 +88,7 @@ while(@ARGV > 0) {
 
 # Validate parameters
 $real || $virt || $lv || $mount || &usage("The disk to modify must be identified by the --real, --virt, --mount or --lv parameters");
-$newsize || $newvirt || $media || &usage("Nothing to do");
+$newsize || $newvirt || $media || defined($include) || &usage("Nothing to do");
 !$newsize || $newsize =~ /^\d*$/ || &usage("Invalid --new-size parameter - must be followed by a number of MB");
 !$newvirt || $virt =~ /^\/\S+$/ || &usage("Missing or invalid --new-virt parameter - should be like /dev/sda2");
 
@@ -212,6 +212,7 @@ print "                    [--new-size MB]\n";
 print "                    [--new-virt device]\n";
 print "                    [--new-media type]\n";
 print "                    [--force]\n";
+print "                    [--backup-exclude | --backup-include]\n";
 exit(1);
 }
 
