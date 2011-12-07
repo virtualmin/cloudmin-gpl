@@ -1173,44 +1173,59 @@ if (!@do_devs) {
 my @gzfiles;
 if ($gzfile) {
 	# Need to write to local files
-	my $i = -1;
+	my $i = 0;
 	&$first_print(&text('brun_ddone', $server->{'host'}));
 	foreach my $dev (@devs) {
-		$i++;
-		next if ($skipdisks{$dev});
 		my $ext = $i ? ".$i" : "";
-		my $ddcmd = "(".&dd_command($dev, undef).
-			    " | gzip $config{'zip_args'} -c >".
-			    $gzfile.$ext.") 2>&1";
-		$ddcmd = &niced_backup_command($vhost, $ddcmd);
-		push(@gzfiles, $gzfile.$ext);
-		my ($out, $ex, $err) = &execute_command_on_server(
-					$vhost, $ddcmd);
-		if ($ex || $err) {
-			$ddfail = &text('brun_edd', $dev, $err || $out);
-			last;
+		if ($skipdisks{$dev}) {
+			# Create empty file indicating skip
+			&execute_command_on_server($vhost,
+				"touch ".quotemeta($gzfile.$ext));
 			}
+		else {
+			# Create gzip file from dd of disk
+			my $ddcmd = "(".&dd_command($dev, undef).
+				    " | gzip $config{'zip_args'} -c >".
+				    $gzfile.$ext.") 2>&1";
+			$ddcmd = &niced_backup_command($vhost, $ddcmd);
+			my ($out, $ex, $err) = &execute_command_on_server(
+						$vhost, $ddcmd);
+			if ($ex || $err) {
+				$ddfail = &text('brun_edd', $dev, $err || $out);
+				last;
+				}
+			}
+		push(@gzfiles, $gzfile.$ext);
+		$i++;
 		}
 	}
 else {
 	# Can write directly to target system
-	my $i = -1;
+	my $i = 0;
 	&$first_print(&text('brun_ddone2', $server->{'host'},
 					   $destserver->{'host'}));
         foreach my $dev (@devs) {
-		$i++;
-		next if ($skipdisks{$dev});
-                my $ext = $i ? ".$i" : "";
-		my $ddcmd = &dd_command($dev, undef).
-			    " | gzip -c $config{'zip_args'}";
-		$ddcmd = &niced_backup_command($vhost, $ddcmd);
-		my $err = &pipe_command_to_server($vhost, $destserver, $ddcmd,
-                                                  $dest->{'path'}.$ext);
-		push(@gzfiles, $dest->{'path'}.$ext);
-		if ($err) {
-			$ddfail = &text('brun_edd', $lvmdevs[0], $err);
-			last;
+		my $ext = $i ? ".$i" : "";
+		if ($skipdisks{$dev}) {
+			# Create empty file indicating skip
+			&execute_command_on_server($vhost,
+				"touch ".quotemeta($dest->{'path'}.$ext));
 			}
+		else {
+			# Create gzip file from dd of disk
+			my $ddcmd = &dd_command($dev, undef).
+				    " | gzip -c $config{'zip_args'}";
+			$ddcmd = &niced_backup_command($vhost, $ddcmd);
+			my $err = &pipe_command_to_server(
+					$vhost, $destserver, $ddcmd,
+					$dest->{'path'}.$ext);
+			if ($err) {
+				$ddfail = &text('brun_edd', $lvmdevs[0], $err);
+				last;
+				}
+			}
+		push(@gzfiles, $dest->{'path'}.$ext);
+		$i++;
 		}
 	}
 
@@ -1245,7 +1260,7 @@ my $size = 0;
 my $staton = $gzfile ? $vhost : $destserver;
 foreach my $g (@gzfiles) {
 	my @st = &stat_file_on_server($staton, $g);
-	if (!@st || !$st[7]) {
+	if (!@st) {
 		return { 'ok' => 0,
 			 'msg' => &text('brun_estat', $g) };
 		}
@@ -1441,7 +1456,7 @@ else {
 my $size;
 foreach my $g (@statfiles) {
 	@st = &stat_file_on_server($staton, $g);
-	if (!@st || !$st[7]) {
+	if (!@st) {
 		return { 'ok' => 0, 'msg' => &text('rrun_estat', $g) };
 		}
 	$size += $st[7];
@@ -1456,14 +1471,19 @@ if ($gzip_format) {
 		&$first_print(&text('rrun_dd', $server->{'host'}));
 		foreach my $dev (@devs) {
 			my $ext = $i ? ".$i" : "";
-			my $ddcmd = "(gunzip -c ".quotemeta($localfile.$ext).
+			my @st = &stat_file_on_server($vhost, $localfile.$ext);
+			if ($st[7]) {
+				my $ddcmd =
+				    "(gunzip -c ".quotemeta($localfile.$ext).
 				    " | ".&dd_command(undef, $dev).") 2>&1";
-			$ddcmd = &niced_backup_command($vhost, $ddcmd);
-			my ($out, $ex, $err) = &execute_command_on_server(
-						$vhost, $ddcmd);
-			if ($ex || $err) {
-				$tarerr = &text('rrun_edd', $dev, $err || $out);
-				last;
+				$ddcmd = &niced_backup_command($vhost, $ddcmd);
+				my ($out, $ex, $err) =
+				    &execute_command_on_server($vhost, $ddcmd);
+				if ($ex || $err) {
+					$tarerr = &text('rrun_edd', $dev,
+							$err || $out);
+					last;
+					}
 				}
 			$i++;
 			}
@@ -1475,14 +1495,19 @@ if ($gzip_format) {
 				    $destserver->{'host'}));
 		foreach my $dev (@devs) {
 			my $ext = $i ? ".$i" : "";
-			my $ddcmd = "(gunzip -c | ".
-				    &dd_command(undef, $dev).") 2>&1";
-			$ddcmd = &niced_backup_command($vhost, $ddcmd);
-			my $err = &pipe_command_from_server($destserver, $vhost,
-					    $ddcmd, $dest->{'path'}.$ext);
-			if ($err) {
-				$tarerr = &text('rrun_edd', $dev, $err);
-				last;
+			my @st = &stat_file_on_server($destserver,
+						      $dest->{'path'}.$ext);
+			if ($st[7]) {
+				my $ddcmd = "(gunzip -c | ".
+					    &dd_command(undef, $dev).") 2>&1";
+				$ddcmd = &niced_backup_command($vhost, $ddcmd);
+				my $err = &pipe_command_from_server(
+					$destserver, $vhost, $ddcmd,
+					$dest->{'path'}.$ext);
+				if ($err) {
+					$tarerr = &text('rrun_edd', $dev, $err);
+					last;
+					}
 				}
 			$i++;
 			}
