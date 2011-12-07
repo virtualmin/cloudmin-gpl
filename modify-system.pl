@@ -40,6 +40,9 @@ Sets the location group for a host system, or removes it from a group.
 C<--force-ip> I<address> or C<--no-force-ip>
 Forces Cloudmin to use a specific IP address to contact this system, or just uses the default.
 
+C<--virt> I<address> or C<--novirt>
+Determines if Cloudmin will create Virtualmin domains on this system or not.
+
 =head1 Example usage
 
   cloudmin modify-system --host xencentos.home --desc "CentOS 5 on Xen"
