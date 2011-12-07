@@ -1095,6 +1095,8 @@ if (!ref($disks)) {
 	}
 my @lvmdisks = grep { $_->{'lv'} } @$disks;
 my @filedisks = grep { !$_->{'device'} } @$disks;
+my %skipdisks = map { $_->{'real'}, !&should_include_disk($server, $_) }
+		    @$disks;
 
 # Check if LVM on source is clustered
 my $clusterlvm;
@@ -1122,18 +1124,26 @@ if ($server->{$manager.'_filesystem_lv'} && $server->{'status'} ne 'down' &&
 			       'alloc' => 'n', };
 		$snaplv->{'device'} = '/dev/'.$snaplv->{'vg'}.'/'.
 				      $snaplv->{'name'};
-		&delete_all_disk_image_partitions($vhost, $snaplv);
-		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-		&remote_foreign_call($vhost, "lvm",
-				     "delete_logical_volume", $snaplv);
-		$last_remote_error = undef;
-		my $err = &remote_foreign_call($vhost, "lvm",
+		if ($skipdisks{$d->{'real'}}) {
+			# Skipping this LV, but save the snapshot device we
+			# would have used in order to preserve the size of
+			# @snaps
+			$skipdisks{$snaplv->{'device'}} = 1;
+			}
+		else {
+			&delete_all_disk_image_partitions($vhost, $snaplv);
+			&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+			&remote_foreign_call($vhost, "lvm",
+					     "delete_logical_volume", $snaplv);
+			$last_remote_error = undef;
+			my $err = &remote_foreign_call($vhost, "lvm",
 					  "create_logical_volume", $snaplv);
-		$err ||= $last_remote_error;
-		if ($err) {
-			return { 'ok' => 0,
-				 'msg' => &text('brun_esnap',
-						$d->{'real'}, $err) };
+			$err ||= $last_remote_error;
+			if ($err) {
+				return { 'ok' => 0,
+					 'msg' => &text('brun_esnap',
+							$d->{'real'}, $err) };
+				}
 			}
 		push(@snaps, $snaplv);
 		}
@@ -1154,13 +1164,20 @@ else {
 	# Use disk image files
 	@devs = map { $_->{'real'} } @filedisks;
 	}
+my @do_devs = grep { !$skipdisks{$_} } @devs;
+if (!@do_devs) {
+	return { 'ok' => 0,
+		 'msg' => $text{'brun_allskip'} };
+	}
 
 my @gzfiles;
 if ($gzfile) {
 	# Need to write to local files
-	my $i = 0;
+	my $i = -1;
 	&$first_print(&text('brun_ddone', $server->{'host'}));
 	foreach my $dev (@devs) {
+		$i++;
+		next if ($skipdisks{$dev});
 		my $ext = $i ? ".$i" : "";
 		my $ddcmd = "(".&dd_command($dev, undef).
 			    " | gzip $config{'zip_args'} -c >".
@@ -1173,15 +1190,16 @@ if ($gzfile) {
 			$ddfail = &text('brun_edd', $dev, $err || $out);
 			last;
 			}
-		$i++;
 		}
 	}
 else {
 	# Can write directly to target system
-	my $i = 0;
+	my $i = -1;
 	&$first_print(&text('brun_ddone2', $server->{'host'},
 					   $destserver->{'host'}));
         foreach my $dev (@devs) {
+		$i++;
+		next if ($skipdisks{$dev});
                 my $ext = $i ? ".$i" : "";
 		my $ddcmd = &dd_command($dev, undef).
 			    " | gzip -c $config{'zip_args'}";
@@ -1193,7 +1211,6 @@ else {
 			$ddfail = &text('brun_edd', $lvmdevs[0], $err);
 			last;
 			}
-		$i++;
 		}
 	}
 
@@ -1205,9 +1222,11 @@ if (@snaps) {
 	&$first_print(&text('brun_unsnapshot', $server->{'host'}));
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 	foreach my $snaplv (@snaps) {
-		&delete_all_disk_image_partitions($vhost, $snaplv);
-		&remote_foreign_call($vhost, "lvm",
-				     "delete_logical_volume", $snaplv);
+		if (!$skipdisks{$snaplv->{'device'}}) {
+			&delete_all_disk_image_partitions($vhost, $snaplv);
+			&remote_foreign_call($vhost, "lvm",
+					     "delete_logical_volume", $snaplv);
+			}
 		}
 	}
 
@@ -2010,6 +2029,16 @@ sub save_disk_include
 my ($server, $disk, $inc) = @_;
 my $id = $disk->{'lv'} || $disk->{'real'};
 $server->{'disk_exclude_'.$id} = !$inc;
+}
+
+# should_include_disk(&server, &disk)
+# Returns 1 if some disk should be included in backups
+sub should_include_disk
+{
+my ($server, $disk) = @_;
+return 0 if ($disk->{'swap'});
+return 0 if (!&get_disk_include($server, $disk));
+return 1;
 }
 
 1;

@@ -3491,6 +3491,7 @@ brun_elvmdisks=No disks using LVM found
 brun_snapshot=Creating LVM snapshots for disks of $1 ..
 brun_esnap=Snapshot of $1 failed : $2
 brun_unsnapshot=Removing LVM snapshots for disks of $1 ..
+brun_allskip=All disks have been either excluded from the backup or are for swap
 brun_emktemp=Failed to create temporary directory on $1 : $2
 brun_edd=Failed to create copy of LVM disk $1 : $2
 brun_dd=Creating copy of LVM disk for $1 ..

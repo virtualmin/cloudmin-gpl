@@ -190,7 +190,7 @@ if (!$in{'new'} && $disk->{'df_size'}) {
 
 # Include in backups?
 if (!$disk->{'swap'}) {
-	$inc = $in{'new'} ? 1 : &get_include_disk($server, $disk);
+	$inc = $in{'new'} ? 1 : &get_disk_include($server, $disk);
 	print &ui_table_row($text{'disk_include'},
 			    &ui_yesno_radio("include", $inc));
 	}
