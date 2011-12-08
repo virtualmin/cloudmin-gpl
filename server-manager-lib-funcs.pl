@@ -538,6 +538,7 @@ if ($server->{'id'} eq '0') {
 		 'all_poss' => $server->{'all_poss'},
 		 'location' => $server->{'location'},
 		 'ip_force' => $server->{'ip_force'},
+		 'novirt' => $server->{'novirt'},
 		);
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone', 'provision',
