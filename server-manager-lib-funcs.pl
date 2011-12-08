@@ -6262,6 +6262,45 @@ my ($iface) = grep { $_->{'address'} eq $d->{'ip'} } @$ifaces;
 return $iface;
 }
 
+# delete_all_domains(&server)
+# If a system is running Virtualmin and is up, delete all virtual servers first
+# so that DNS slaves are cleaned up properly
+sub delete_all_domains
+{
+my ($server) = @_;
+
+# Make sure it is running Virtualmin and is using provisioning
+return 0 if ($server->{'status'} ne 'virt');
+my $info = &get_server_collected($server);
+return 0 if (!$info || !$info->{'config'});
+my $found = 0;
+foreach my $k ('dns', 'mysql') {
+	$found++ if ($info->{'config'}->{'provision_'.$k});
+	}
+return 0 if (!$found);
+
+# Get all top-level domains
+my ($err, $out) = &call_virtualmin_api($server, "list-domains",
+				       [ [ "name-only" ],
+					 [ "toplevel" ] ]);
+return 0 if ($err);
+
+# Delete them
+my @dnames = split(/\r?\n/, $out);
+return 1 if (!@dnames);
+&$first_print(&text('mass_ddomains', scalar(@dnames)));
+my ($err, $out) = &call_virtualmin_api($server, "delete-domain",
+				       [ map { [ "domain", $_ ] } @dnames ]);
+if ($err) {
+	&$second_print(&text('mass_eddomains', $err));
+	}
+else {
+	&$second_print($text{'create_done'});
+	}
+
+return 1;
+}
+
 # get_server_default_gateway(&server)
 # Returns the default gateway IP address for some system. Uses Webmin if
 # possible, netstat otherwise. In an array content, returns the interface too.

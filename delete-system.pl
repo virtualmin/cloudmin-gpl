@@ -103,6 +103,8 @@ foreach $s (@servers) {
 	# Run pre-deletion script
 	&run_system_script($s, 'before', 'delete') || next;
 
+	&delete_all_domains($s);
+
 	print "Deleting $tdesc system $s->{'host'} ..\n";
 	$dfunc = "type_".$s->{'manager'}."_delete";
 	$err = &$dfunc($s, $keepdisks);

@@ -578,6 +578,10 @@ if (@ingroup) {
 	my $server = pop(@ingroup);
 	&$second_print(&text('scaledown_pickedserver', $server->{'host'}));
 
+	# Virtualmin domains are intentionally NOT deleted, as they are likely
+	# to have shared storage or DBs
+	#&delete_all_domains($server);
+
 	&obtain_lock_server($server);
 	&$first_print(&text('scaledown_deleting', $server->{'host'}));
 	&run_system_script($server, 'before', 'delete');

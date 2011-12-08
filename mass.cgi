@@ -135,6 +135,8 @@ elsif ($in{'delete'}) {
 			# Run pre-deletion script
 			&run_system_script($s, 'before', 'delete') || next;
 
+			&delete_all_domains($s);
+
 			$tfunc = "type_".$s->{'manager'}."_desc";
 			print &text('mass_deleting', &$tfunc(),
 				    "<tt>$s->{'host'}</tt>"),"<br>\n";

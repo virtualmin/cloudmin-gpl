@@ -170,6 +170,8 @@ elsif ($in{'delete'}) {
 		&obtain_lock_server($server);
 		&run_system_script($server, 'before', 'delete') || goto FAILED;
 
+		&delete_all_domains($server);
+
 		print &text('save_deleteing',
 			    "<tt>$server->{'host'}</tt>"),"<br>\n";
 		$dfunc = "type_".$server->{'manager'}."_delete";
