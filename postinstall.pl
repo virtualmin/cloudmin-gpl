@@ -15,6 +15,11 @@ if (&indexof("/$module_name/remote.cgi", @sa) < 0) {
 	&reload_miniserv();
 	}
 
+# Remember the first version we installed, to avoid showing new features
+# from before it
+$config{'first_version'} ||= &get_base_module_version();
+&save_module_config();
+
 # Setup Cron job to check managed server statuses
 &foreign_require("cron", "cron-lib.pl");
 my ($job) = grep { $_->{'user'} eq 'root' &&
