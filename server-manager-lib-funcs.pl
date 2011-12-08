@@ -6647,6 +6647,12 @@ if (!$cloudmin_pro) {
 	push(@gcats, "settings");
 	}
 
+# New feature log
+push(@glinks, "edit_newchangelog.cgi");
+push(@gtitles, $text{'newchangelog_title'});
+push(@gicons, "images/newchangelog.gif");
+push(@gcats, "settings");
+
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
 }
 

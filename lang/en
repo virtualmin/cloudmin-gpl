@@ -2491,6 +2491,7 @@ nf_date=(installed $1)
 nf_and=$1 and $2
 nf_seen=Hide New Features
 nf_try=Try it ..
+nf_ver=(Version $1)
 
 vcpus_title=Manage Virtual CPUs
 vcpus_header=Virtual CPU options
@@ -4819,6 +4820,10 @@ viewlog_id=Backup ID
 viewlog_status=Final status
 viewlog_owner=Created by system owner
 viewlog_restore=Restore This Backup
+
+newchangelog_title=New Feature Log
+newchangelog_ecannot=You are not allowed to view the new feature log
+newchangelog_desc=This page lists all major changes in all Cloudmin versions installed on your system, up to the current release.
 
 __norefs=1
 
