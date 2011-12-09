@@ -293,23 +293,53 @@ if (@inc && $rr->{'bhost'} ne '') {
 		$msg = "Proxy balancer system was not found";
 		}
 	else {
-		# Delete existing proxy .. failure doesn't matter
-		my ($err, $out) = &call_virtualmin_api($bserver, "delete-proxy",
-			[ [ "domain", $rr->{'bdomain'} ],
-			  [ "path", $rr->{'burl'} ] ]);
-
-		# Create a new one
+		# Work out URLs
 		my $sfx = $rr->{'burl'} =~ /\/$/ ? "/" : "";
 		my $port = $rr->{'bport'} == 80 ? "" : ":".$rr->{'bport'};
 		my @urls = map { "http://".$_->{'host'}.$port.$sfx } @inc;
-		my ($err, $out) = &call_virtualmin_api($bserver, "create-proxy",
+
+		# Get existing proxy, if possible
+		my ($err, $out) = &call_virtualmin_api($bserver, "list-proxies",
 			[ [ "domain", $rr->{'bdomain'} ],
-			  [ "path", $rr->{'burl'} ],
-			  map { [ "url", $_ ] } @urls ]);
-		if ($err) {
-			$ok = 0;
-			$msg = "Proxy balancer update failed on ".
-			       "$bserver->{'host'} in $rr->{'bdomain'} : $err";
+			  [ "multiline" ] ]);
+		my @lines = split(/\r?\n/, $out);
+		my $idx = &indexof($rr->{'burl'}, @lines);
+		my $same = 0;
+		my @oldurls;
+		my $existing = 0;
+		if ($idx >= 0) {
+			$existing = 1;
+			for(my $i=$idx+1; $i<@lines &&
+					  $lines[$i] !~ /^\//; $i++) {
+				if ($lines[$i] =~ /URL:\s+(\S+)/) {
+					push(@oldurls, $1);
+					}
+				}
+			if (scalar(@oldurls) == scalar(@urls) &&
+			    join(" ", @oldurls) eq join(" ", @urls)) {
+				$same = 1;
+				}
+			}
+
+		if (!$same) {
+			# Delete existing proxy .. failure doesn't matter
+			my ($err, $out) = &call_virtualmin_api(
+				$bserver, "delete-proxy",
+				[ [ "domain", $rr->{'bdomain'} ],
+				  [ "path", $rr->{'burl'} ] ]);
+
+			# Create a new one
+			my ($err, $out) = &call_virtualmin_api(
+				$bserver, "create-proxy",
+				[ [ "domain", $rr->{'bdomain'} ],
+				  [ "path", $rr->{'burl'} ],
+				  map { [ "url", $_ ] } @urls ]);
+			if ($err) {
+				$ok = 0;
+				$msg = "Proxy balancer update failed on ".
+				       "$bserver->{'host'} in ".
+				       "$rr->{'bdomain'} : $err";
+				}
 			}
 		}
 	}
