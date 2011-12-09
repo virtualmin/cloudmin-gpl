@@ -321,25 +321,38 @@ if (@inc && $rr->{'bhost'} ne '') {
 				}
 			}
 
-		if (!$same) {
-			# Delete existing proxy .. failure doesn't matter
-			my ($err, $out) = &call_virtualmin_api(
-				$bserver, "delete-proxy",
+		my $info = &get_server_collected($bserver);
+		my ($err, $out);
+		if (!$same && $info && $info->{'minfo'}->{'version'} > 3.89 &&
+		    $existing) {
+			# Update existing proxy
+			&call_virtualmin_api(
+				$bserver, "modify-proxy",
 				[ [ "domain", $rr->{'bdomain'} ],
-				  [ "path", $rr->{'burl'} ] ]);
+				  [ "path", $rr->{'burl'} ],
+				  map { [ "url", $_ ] } @urls ]);
+			}
+		elsif (!$same) {
+			# Delete existing proxy .. failure doesn't matter
+			if ($existing) {
+				&call_virtualmin_api(
+					$bserver, "delete-proxy",
+					[ [ "domain", $rr->{'bdomain'} ],
+					  [ "path", $rr->{'burl'} ] ]);
+				}
 
 			# Create a new one
-			my ($err, $out) = &call_virtualmin_api(
+			&call_virtualmin_api(
 				$bserver, "create-proxy",
 				[ [ "domain", $rr->{'bdomain'} ],
 				  [ "path", $rr->{'burl'} ],
 				  map { [ "url", $_ ] } @urls ]);
-			if ($err) {
-				$ok = 0;
-				$msg = "Proxy balancer update failed on ".
-				       "$bserver->{'host'} in ".
-				       "$rr->{'bdomain'} : $err";
-				}
+			}
+		if ($err) {
+			$ok = 0;
+			$msg = "Proxy balancer update failed on ".
+			       "$bserver->{'host'} in ".
+			       "$rr->{'bdomain'} : $err";
 			}
 		}
 	}
