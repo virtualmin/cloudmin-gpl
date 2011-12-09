@@ -285,6 +285,35 @@ else {
 	$msg = "No usable systems found - leaving DNS record un-changed";
 	}
 
+# Update proxy balancer, if any
+if (@inc && $rr->{'bhost'} ne '') {
+	my $bserver = &get_managed_server($rr->{'bhost'});
+	if (!$bserver) {
+		$ok = 0;
+		$msg = "Proxy balancer system was not found";
+		}
+	else {
+		# Delete existing proxy .. failure doesn't matter
+		my ($err, $out) = &call_virtualmin_api($bserver, "delete-proxy",
+			[ [ "domain", $rr->{'bdomain'} ],
+			  [ "path", $rr->{'burl'} ] ]);
+
+		# Create a new one
+		my $sfx = $rr->{'burl'} =~ /\/$/ ? "/" : "";
+		my $port = $rr->{'bport'} == 80 ? "" : ":".$rr->{'bport'};
+		my @urls = map { "http://".$_->{'host'}.$port.$sfx } @inc;
+		my ($err, $out) = &call_virtualmin_api($bserver, "create-proxy",
+			[ [ "domain", $rr->{'bdomain'} ],
+			  [ "path", $rr->{'burl'} ],
+			  map { [ "url", $_ ] } @urls ]);
+		if ($err) {
+			$ok = 0;
+			$msg = "Proxy balancer update failed on ".
+			       "$bserver->{'host'} in $rr->{'bdomain'} : $err";
+			}
+		}
+	}
+
 # Record list of systems to include
 $rr->{'include'} = join(" ", map { $_->{'id'} } @inc);
 

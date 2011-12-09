@@ -4621,6 +4621,15 @@ roundrobin_status_url=Excluded due to failure of URL $1
 roundrobin_fail=Last DNS update failed : $1
 roundrobin_eiplist=No IP addresses entered
 roundrobin_eip=Invalid IP address : $1
+roundrobin_header6=Proxy balancer configuration
+roundrobin_bhost=System to update proxy on
+roundrobin_bdomain=Domain to create proxy in
+roundrobin_burl=URL path under domain
+roundrobin_bport=Destination HTTP port
+roundrobin_bnone=Don't update any proxy
+roundrobin_ebdomain=Missing or invalid-looking Virtualmin domain name
+roundrobin_eburl=URL for proxy path must start with /
+roundrobin_ebport=Destination HTTP port for proxy must be a number
 
 remail_desc=DNS roundrobin $1 has only $2 systems included, which is below the configured minimum of $3.
 remail_desc2=DNS roundrobin $1 could not be updated : $2

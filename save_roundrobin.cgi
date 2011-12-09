@@ -107,6 +107,22 @@ else {
 		}
 	$roundrobin->{'alerts'} = join(" ", split(/\0/, $in{'alerts'}));
 
+	# Parse proxy update
+	if ($in{'bhost'} ne '') {
+		$roundrobin->{'bhost'} = $in{'bhost'};
+		$in{'bdomain'} =~ /^[a-z0-9\.\_\-]+$i/ ||
+			&error($text{'roundrobin_ebdomain'});
+		$roundrobin->{'bdomain'} = $in{'bdomain'};
+		$in{'burl'} =~ /^\/\S*$/ || &error($text{'roundrobin_eburl'});
+		$roundrobin->{'burl'} = $in{'burl'};
+		$in{'bport'} =~ /^\d+$/ && $in{'bport'} > 0 &&
+		    $in{'bport'} < 65536 || &error($text{'roundrobin_ebport'});
+		$roundrobin->{'bport'} = $in{'bport'};
+		}
+	else {
+		delete($roundrobin->{'bhost'});
+		}
+
 	# Parse email notification
 	$in{'min'} =~ /^\d+$/ || &error($text{'roundrobin_emin'});
 	$roundrobin->{'min'} = $in{'min'};

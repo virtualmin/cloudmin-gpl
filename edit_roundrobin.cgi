@@ -33,6 +33,7 @@ $mode = $roundrobin->{'servers'} ne '' ? 1 :
 	$roundrobin->{'scalegroups'} ne '' ? 5 :
 	$roundrobin->{'iplist'} ne '' ? 6 : 1;
 @allservers = &list_managed_servers_sorted();
+@virtservers = grep { $_->{'status'} eq 'virt' } @allservers;
 @allgroups = &unique(map { split(/\t/, $_->{'group'}) } @allservers);
 @allowners = &list_system_owners();
 @allscalegroups = defined(&list_scalegroups) ? &list_scalegroups() : ( );
@@ -152,6 +153,33 @@ if (@alerts) {
 	}
 
 print &ui_hidden_table_end("cond");
+
+# Section for proxy balancer domain to update
+if (@virtservers) {
+	print &ui_hidden_table_start($text{'roundrobin_header6'},
+				     "width=100%", 2, "balancer", 0, \@tds);
+
+	# System hosting domain to update
+	print &ui_table_row($text{'roundrobin_bhost'},
+		&ui_select("bhost", $roundrobin->{'bhost'},
+			   [ [ "", "&lt;$text{'roundrobin_bnone'}&gt;" ],
+			     map { [ $_->{'id'}, $_->{'host'} ] }
+				 @virtservers ]));
+
+	# Domain name
+	print &ui_table_row($text{'roundrobin_bdomain'},
+		&ui_textbox("bdomain", $roundrobin->{'bdomain'}, 40));
+
+	# URL path
+	print &ui_table_row($text{'roundrobin_burl'},
+		&ui_textbox("burl", $roundrobin->{'burl'} || "/", 20));
+
+	# Destination port number
+	print &ui_table_row($text{'roundrobin_bport'},
+		&ui_textbox("bport", $roundrobin->{'bport'} || 80, 6));
+
+	print &ui_hidden_table_end("balancer");
+	}
 
 # Section for notification
 print &ui_hidden_table_start($text{'roundrobin_header4'}, "width=100%", 2,
