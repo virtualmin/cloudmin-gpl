@@ -16,11 +16,13 @@ if (!$in{'new'}) {
 
 if ($in{'delete'}) {
 	# Just delete the roundrobin
-	$err = &delete_roundrobin_dns($roundrobin);
-	&error($err) if ($err);
+	$proxyerr = &delete_roundrobin_balancer($roundrobin);
+	$dnserr = &delete_roundrobin_dns($roundrobin);
 	&delete_roundrobin($roundrobin);
 	&webmin_log("delete", "roundrobin", $roundrobin->{'id'},
 	    { 'name' => $roundrobin->{'name'}.".".$roundrobin->{'dom'} });
+	&error(&text('roundrobins_edns', $dnserr)) if ($dnserr);
+	&error(&text('roundrobins_eproxy', $proxyerr)) if ($proxyerr);
 	}
 else {
 	# Validate inputs

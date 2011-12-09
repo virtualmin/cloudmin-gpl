@@ -13,12 +13,15 @@ require './server-manager-lib.pl';
 
 if ($in{'delete'}) {
 	# Delete selected roundrobins
+	my ($dnserr, $proxyerr);
 	foreach $a (@roundrobins) {
-		$err = &delete_roundrobin_dns($a);
-		&error($err) if ($err);
+		$dnserr ||= &delete_roundrobin_dns($a);
+		$proxyerr ||= &delete_roundrobin_balancer($a);
 		&delete_roundrobin($a);
 		}
 	&webmin_log("delete", "roundrobins", scalar(@roundrobins));
+	&error(&text('droundrobins_edns', $dnserr)) if ($dnserr);
+	&error(&text('droundrobins_eproxy', $proxyerr)) if ($proxyerr);
 	}
 else {
 	# Refresh selected

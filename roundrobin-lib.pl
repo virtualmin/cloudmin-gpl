@@ -83,6 +83,29 @@ my ($ok, $msg) = &set_bind_dns_addresses($rr->{'name'}.".".$rr->{'dom'}.".",
 return $ok ? undef : $msg;
 }
 
+# delete_roundrobin_balancer(&roundrobin)
+# Deletes the proxy balancer created for a roundrobin. Returns an error message
+# on failure.
+sub delete_roundrobin_balancer
+{
+my ($rr) = @_;
+return undef if ($rr->{'bhost'} eq '');
+my $bserver = &get_managed_server($rr->{'bhost'});
+return "Proxy balancer system was not found" if (!$bserver);
+my ($err, $out) = &call_virtualmin_api($bserver, "list-proxies",
+		     [ [ "domain", $rr->{'bdomain'} ],
+		       [ "name-only" ] ]);
+return $err if ($err);
+my @paths = split(/\r?\n/, $out);
+if (&indexof($rr->{'burl'}, @paths) >= 0) {
+	my ($err, $out) = &call_virtualmin_api($bserver, "delete-proxy",
+			     [ [ "domain", $rr->{'bdomain'} ],
+			       [ "path", $rr->{'burl'} ] ]);
+	return $err;
+	}
+return undef;
+}
+
 # get_roundrobin_servers(&roundrobin, &all-servers)
 # Returns a list of server objects that some roundrobin may include
 sub get_roundrobin_servers

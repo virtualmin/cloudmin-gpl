@@ -4577,6 +4577,8 @@ roundrobins_stbad=$1 up, $2 down
 roundrobins_stok=All $1 up
 roundrobins_stnot=Not checked yet
 roundrobins_fail=DNS error : $1
+roundrobins_edns=Roundrobins was deleted, but an error occurred deleting its DNS entry : $1
+roundrobins_eproxy=Roundrobin was deleted, but an error occurred deleting its proxy balancer : $1
 
 roundrobin_ctitle=Create DNS Roundrobin
 roundrobin_etitle=Edit DNS Roundrobin
@@ -4651,6 +4653,8 @@ droundrobins_err2=Failed to refresh roundrobins
 droundrobins_enone=None selected
 droundrobins_title=Refresh DNS Roundrobins
 droundrobins_fail=Failed to refresh $1 : $2
+droundrobins_edns=Roundrobins were deleted, but an error occurred deleting their DNS entries : $1
+droundrobins_eproxy=Roundrobins were deleted, but an error occurred deleting their proxy balancers : $1
 
 showpass_title=System Password
 showpass_wuser=Webmin login
