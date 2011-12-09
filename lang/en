@@ -1807,6 +1807,7 @@ xen_err=Failed to save Xen host
 xen_elinux=Xen hosting is only supported on Linux
 xen_ewhich=The required command $1 does not exist. Perhaps the Xen software is not installed?
 xen_ekernel=The kernel does not include Xen support. Perhaps your do not have the Xen-specific kernel installed?
+xen_ebridges=No network bridges were found on the system. Perhaps the Xen global configuration is missing the <tt>(network-script network-bridge)</tt> line.
 xen_evibr=The QEMU interface $1 is active, which can break networking for Xen instances. On Redhat-derived systems, remove the file $2 and then reboot.
 xen_edown=A system which cannot be contacted via SSH cannot be used for Xen hosting
 xen_esoft=The selected system cannot support Xen instances : $1
