@@ -9,16 +9,10 @@ require './server-manager-lib.pl';
 @allservers = &list_managed_servers();
 @canservers = grep { &can_host_kvm($_) } @allservers;
 @kvms = grep { $_->{'kvm_host'} } @canservers;
-@links = ( "<a href='edit_kvm.cgi?new=1'>$text{'kvms_add'}</a>" );
 if (@kvms) {
 	# Show table of systems configured to host kvms
-	if (scalar(@canservers) <= scalar(@kvms)) {
-		$addmsg = $text{'kvms_doneall'};
-		@links = ( );
-		}
 	print &ui_form_start("set_default.cgi");
 	print &ui_hidden("type", "kvm");
-	print &ui_links_row(\@links);
 	@tds = ( "width=5" );
 	print &ui_columns_start([ "",
 				  $text{'kvms_host'},
@@ -42,19 +36,19 @@ if (@kvms) {
 		    ], \@tds);
 		}
 	print &ui_columns_end();
-	print &ui_links_row(\@links);
 	print &ui_form_end([ [ undef, $text{'kvms_default'} ] ]);
-	print "<b>$addmsg</b><p>\n" if ($addmsg);
 	}
 elsif (@canservers) {
 	# Just show link to add
 	print "<b>$text{'kvms_none'}</b><p>\n";
-	print &ui_links_row(\@links);
 	}
 else {
 	# Cannot do anything!
 	print "<b>$text{'kvms_none2'}</b><p>\n";
 	}
+
+# Show form to start adding a new host
+&show_host_add_form("edit_kvm.cgi", \@canservers, \@kvms);
 
 &ui_print_footer("", $text{'index_return'});
 

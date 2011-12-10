@@ -9169,6 +9169,35 @@ $server->{'floor_mem'} = $in->{'floor_mem'} * $in->{'floor_mem_units'};
 $server->{'floor_mem_down'} = $in->{'floor_mem_down'};
 }
 
+# show_host_add_form(cgi, &possible-servers, &current-servers)
+# Show a form to start the process of adding a new host system
+sub show_host_add_form
+{
+my ($cgi, $canservers, $servers) = @_;
+my %currmap = map { $_->{'id'}, $_ } @$servers;
+my @leftservers = grep { !$currmap{$_->{'id'}} &&
+			 &can_ssh_status($_) } @$canservers;
+if (!@leftservers) {
+	if (@$servers) {
+		print "<b>",&text('kvms_alladded',
+				  'add_form.cgi?type=real'),"</b><p>\n";
+		}
+	return;
+	}
+
+print &ui_form_start($cgi);
+print &ui_hidden("new", 1);
+print &ui_table_start($text{'kvms_startheader'}, undef, 2);
+
+print &ui_table_row($text{'kvms_starthost'},
+		    &ui_select("id", undef,
+			       [ map { [ $_->{'id'}, $_->{'host'} ] }
+				     @leftservers ]));
+
+print &ui_table_end();
+print &ui_form_end([ [ undef, $text{'kvms_start'} ] ]);
+}
+
 # tempname_on_server(&server, [basename])
 # Returns a temporary file name on a remote system
 sub tempname_on_server

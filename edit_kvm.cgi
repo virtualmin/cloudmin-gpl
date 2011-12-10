@@ -9,32 +9,18 @@ require './server-manager-lib.pl';
 				   		  $text{'kvm_edit'}, "",
 		 $in{'new'} ? "createkvm" : "editkvm");
 @allservers = &list_managed_servers();
-if (!$in{'new'}) {
-	($kvm) = grep { $_->{'id'} eq $in{'id'} } @allservers;
-	$kvm || &error($text{'kvm_egone'});
-	}
-else {
-	$kvm = { 'kvm_pkgs' => join(' ', @kvm_default_packages) };
-	}
+($kvm) = grep { $_->{'id'} eq $in{'id'} } @allservers;
+$kvm || &error($text{'kvm_egone'});
 
 print &ui_form_start("save_kvm.cgi", "post");
 print &ui_hidden("new", $in{'new'});
 print &ui_hidden_table_start($text{'kvm_header'}, "width=100%", 2, "main", 1);
 
 # System to register
-if ($in{'new'}) {
-	@canservers = grep { &can_host_kvm($_) &&
-			     !$_->{'kvm_host'} } @allservers;
+print &ui_hidden("id", $in{'id'});
+if (!$module_info{'onehost'}) {
 	print &ui_table_row($text{'kvm_host'},
-		&ui_select("id", undef,
-			[ map { [ $_->{'id'}, $_->{'host'} ] } @canservers ]));
-	}
-else {
-	print &ui_hidden("id", $in{'id'});
-	if (!$module_info{'onehost'}) {
-		print &ui_table_row($text{'kvm_host'},
-				    $kvm->{'host'});
-		}
+			    $kvm->{'host'});
 	}
 
 if (!$module_info{'onehost'}) {
@@ -52,7 +38,7 @@ print &ui_table_row($text{'openvz_overmemory'},
 
 # Find volume groups on host, if we can
 @pvs = ( );
-if (!$in{'new'} && $kvm->{'status'} ne 'down' &&
+if ($kvm->{'status'} ne 'down' &&
     &remote_foreign_check($kvm, "lvm")) {
 	$last_remote_error = undef;
 	&remote_foreign_require($kvm, "lvm", "lvm-lib.pl");
@@ -114,9 +100,7 @@ print &ui_hidden_table_end("main");
 print &ui_hidden_table_start($text{'kvm_nheader'}, "width=100%", 2, "net", 0);
 
 # IP allocation range and CIDR
-if (!$in{'new'}) {
-	@possifaces = &list_kvm_host_bridges($kvm);
-	}
+@possifaces = &list_kvm_host_bridges($kvm);
 if (!@possifaces) {
 	# Don't know host yet, so just use fixed list
 	@possifaces = ( "br0", "br1" );
