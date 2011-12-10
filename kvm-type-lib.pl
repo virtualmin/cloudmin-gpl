@@ -2692,7 +2692,7 @@ if (!$server->{'kvm_filesystem'} &&
 	$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
 	$server->{'kvm_disksize'} = $disk->{'size'} / (1024*1024);
 	}
-if (!$server->{'kvm_swapfile'} &&
+if (!$server->{'kvm_swapfile'} && $disk->{'fs'} eq 'swap' &&
     ($disk->{'media'} eq 'disk' || $disk->{'media'} eq '')) {
 	$server->{'kvm_swapfile'} = $disk->{'real'};
 	$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
