@@ -1109,6 +1109,11 @@ if ($server->{$manager.'_filesystem_lv'} && $server->{'status'} ne 'down' &&
 		}
 	}
 
+if (&can_ssh_status($server)) {
+	# Flush buffers to disk to ensure disk copy gets everything
+	&execute_command_on_server($server, "sync ; sync ; sync");
+	}
+
 # If on LVM and we are not shutting down, take an LVM snapshot of each disk
 my @snaps;
 if ($server->{$manager.'_filesystem_lv'} && $server->{'status'} ne 'down' &&
