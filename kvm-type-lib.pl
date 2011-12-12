@@ -2629,7 +2629,12 @@ else {
 my @drives = split(/\s+/, $server->{'kvm_drives'});
 my %drive = ( 'file' => $disk->{'real'},
 	      'media' => $disk->{'media'} || 'disk' );
-if ($disk->{'virt'} =~ /sd[a-z]+$/) {
+if ($disk->{'media'} eq 'cdrom') {
+	# CDs must be on IDE
+	$drive{'if'} = 'ide';
+	$disk->{'virt'} =~ s/\/(s|v)d([a-z]+)$/\/hd$2/;
+	}
+elsif ($disk->{'virt'} =~ /sd[a-z]+$/) {
 	$drive{'if'} = 'scsi';
 	}
 elsif ($disk->{'virt'} =~ /vd[a-z]+$/) {
