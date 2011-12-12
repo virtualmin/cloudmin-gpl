@@ -6,8 +6,12 @@ Creates a new virtualmin domain on one system
 
 This command creates a Virtualmin top-level domain on a specified managed
 system. You must specify the C<--host> parameter, followed by the name of a
-host to create on (which of course must have Virtualmin installed). Other
-required parameters are C<--domain> and C<--pass>, followed by the domain
+host to create on (which of course must have Virtualmin installed). Alternately,
+you can use the C<--host-selector> flag followed by either C<mem>, C<cpu>,
+C<space> or C<domains> to have Cloudmin selector a host based on free
+resources.
+
+Other required parameters are C<--domain> and C<--pass>, followed by the domain
 name and password respectively. You also need to choose features, either with
 the C<--default-features> option, or multiple uses of C<--feature> followed by
 a feature code like C<web> or C<dir>.
@@ -81,6 +85,13 @@ while(@ARGV > 0) {
 	elsif ($a eq "--host") {
 		$host = shift(@ARGV);
 		}
+	elsif ($a eq "--host-selector") {
+		$hostmode = shift(@ARGV);
+		@valid_hostmodes = ( "doms", "space", "cpu", "mem" );
+		&indexof($hostmode, @valid_hostmodes) >= 0 ||
+			&usage("--host-selector must be followed by one of : ".
+			       join(" ", @valid_hostmodes));
+		}
 	elsif ($a eq "--desc") {
 		$desc = shift(@ARGV);
 		}
@@ -108,15 +119,28 @@ while(@ARGV > 0) {
 	}
 
 # Check for citical parameters
-$host || &usage("Missing --host parameter");
+$host || $hostmode || &usage("Missing --host or --host-selector parameter");
 $domain || &usage("Missing --domain parameter");
 $pass || &usage("Missing --pass parameter");
 $dfeatures || @features || &usage("Either the --default-features or several --feature parameters must be given");
 
 # Get destinaton system
-$server = &get_managed_server_by("host", $host);
-$server || &usage("No system with hostname $host was found");
-$server->{'status'} eq 'virt' || &usage("System $host is not running Virtualmin");
+if ($host) {
+	# Explicitly given
+	$server = &get_managed_server_by("host", $host);
+	$server || &usage("No system with hostname $host was found");
+	}
+else {
+	# Find candidate system
+	@vservers = grep { $_->{'status'} eq 'virt' &&
+			   !$_->{'novirt'} &&
+			   $_->{'virtualmin_checked'} }
+			 &list_available_managed_servers();
+	$server = &find_suitable_server(\@vservers, $hostmode);
+	$server || &usage("No system found for host selection mode $hostmode");
+	}
+$server->{'status'} eq 'virt' ||
+	&usage("System $server->{'host'} is not running Virtualmin");
 &can_action_usage($server, "domains");
 &obtain_lock_server($server);
 
@@ -135,7 +159,8 @@ else {
 	foreach $f (@features) {
 		($sf) = grep { $_->{'feature'} eq $f } @sfeatures;
 		$sf && $sf->{'enabled'} ||
-			&usage("Feature $f is not available on $host");
+			&usage("Feature $f is not available on ".
+			       $server->{'host'});
 		}
 	}
 
@@ -204,7 +229,7 @@ sub usage
 print "$_[0]\n\n" if ($_[0]);
 print "Creates a new top-level Virtualmin domain on a managed system.\n";
 print "\n";
-print "cloudmin create-domain --host hostname\n";
+print "cloudmin create-domain --host hostname | --host-selector mode\n";
 print "                       --domain name\n";
 print "                      [--desc \"domain description\"]\n";
 print "                       --pass password\n";
