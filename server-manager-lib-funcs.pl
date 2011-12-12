@@ -3997,8 +3997,21 @@ if (!&remote_eval($server, $mod, 'defined(&package_install_multiple)')) {
 	# Need to install one by one
 	foreach my $p (@$packs) {
 		my $rv = &install_package_update($server, $p);
-		return $rv if (!ref($rv));
-		push(@allrv, @$rv);
+		if (!ref($rv)) {
+			# Failed .. but why?
+			if ($rv =~ /already\s+installed/ ||
+			    $rv =~ /already\s+the\s+newest/) {
+				# Already got it, perhaps as a dependency
+				push(@allrv, $p->{'name'});
+				}
+			else {
+				return $rv;
+				}
+			}
+		else {
+			# Save all packages that worked
+			push(@allrv, @$rv);
+			}
 		}
 	return \@allrv;
 	}
@@ -10269,7 +10282,7 @@ while(@argv) {
 		push(@qargv, "'$a'");
 		}
 	else {
-		push(@qargv, quotameta($a));
+		push(@qargv, quotemeta($a));
 		}
 	}
 $flags{'argv'} = &urlize(join(" ", @qargv));
