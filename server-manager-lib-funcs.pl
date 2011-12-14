@@ -8330,6 +8330,7 @@ my $desc = &$dfunc($server);
 my $vhost = &get_parent_server($server);
 $vhost->{'id'} ne $dest->{'id'} ||
 	return "Source and destination host systems are the same!";
+my $oldip = &get_server_ip($server);
 
 # Check if moving is supported
 my $cfunc = "type_".$server->{'manager'}."_can_move";
@@ -8375,6 +8376,20 @@ my $err = &$mfunc($server, $dest, $shutdown, $allocate);
 &save_managed_server($server);
 &$second_print(&text('save_refreshdone2',
 	&describe_status($server, 1, 1)));
+
+# If IP changed and the system has Virtualmin and is up, modify all domain IPs
+my $newip = &get_server_ip($server);
+if ($server->{'status'} eq 'virt' &&
+    $oldip ne $newip) {
+	&$first_print(&text('smove_virtip', $oldip, $newip));
+	my $err = &update_virtualmin_ips($server);
+	if ($err) {
+		&$second_print(&text('smove_evirtip', $err));
+		}
+	else {
+		&$second_print($text{'setup_done'});
+		}
+	}
 
 # Refresh status of source and destination hosts
 &$first_print(&text('smove_refreshinghost', $vhost->{'host'}));

@@ -2902,6 +2902,8 @@ smove_checkconfok=.. found at $1
 smove_etest=Test file transfer between source and destination hosts failed : $1
 smove_ebridge=Failed to copy bridge script $1 : $2
 smove_refreshinghost=Refreshing status of host system $1 ..
+smove_virtip=Changing Virtualmin IP addresses from $1 to $2 ..
+smove_evirtip=.. IP changed failed : $1. Some or all domains may still be on the old IP address.
 
 transfer_title2=Transfer File
 transfer_err=Failed to transfer file
