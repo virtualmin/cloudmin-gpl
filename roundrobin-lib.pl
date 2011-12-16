@@ -280,7 +280,8 @@ if (@inc) {
 			# If using an specific list of IP addresses and this
 			# managed system has an IP in the list, use that instead
 			# of the primary IP.
-			foreach my $sip (&get_server_ip($s)) {
+			foreach my $sip (&get_server_ip($s),
+					 split(/\s+/, $s->{'ip_addresses'})) {
 				if (&indexof($sip, @iplist) >= 0) {
 					$ip = $sip;
 					}
