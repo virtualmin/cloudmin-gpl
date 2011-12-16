@@ -1089,6 +1089,10 @@ else {
 sub check_server_webmin_login
 {
 my ($server) = @_;
+if ($server->{'id'} == 0) {
+	# Can always access Webmin locally!
+	return 0;
+	}
 my $fast_try = 0;
 if (!$server->{'fast'}) {
 	# Try fast mode if not currently
