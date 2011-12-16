@@ -5970,7 +5970,7 @@ foreach my $sd (@sorted) {
 	if ($direct) {
 		# Backup to dest via SSH directly
 		my $pa = $dest->{'ssh_port'} ? ":".$dest->{'ssh_port'} : "";
-		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}$pa\@$dest->{'ip'}$desttemp" ]);
+		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}\@$dest->{'ip'}$pa$desttemp" ]);
 		}
 	else {
 		# Backup to a temp file on the target
