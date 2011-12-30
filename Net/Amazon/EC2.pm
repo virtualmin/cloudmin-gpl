@@ -419,6 +419,7 @@ sub run_instances {
 								AddressingType	=> { type => SCALAR, optional => 1 },
 								InstanceType	=> { type => SCALAR, optional => 1 },
 								Placement	=> { type => HASHREF, optional => 1 },
+								SubnetId	=> { type => SCALAR, optional => 1 },
 	});
 	
 	# If we have a array ref of instances lets split them out into their SecurityGroup.n format
@@ -889,7 +890,7 @@ sub create_security_group {
 		return undef;
 	}
 	else {
-		return $xml->{return};
+		return $xml->{return} ? $xml->{groupId} : undef;
 	}	
 }
 
@@ -974,6 +975,10 @@ This method deletes a security group.  It takes the following parameter:
 
 The name of the security group to delete.
 
+=item GroupId (required)
+
+The ID of the security group to delete.
+
 =back
 
 Returns 1 if the delete succeeded.
@@ -983,7 +988,8 @@ Returns 1 if the delete succeeded.
 sub delete_security_group {
 	my $self = shift;
 	my %args = validate( @_, {
-								GroupName => { type => SCALAR },
+				GroupName => { type => SCALAR },
+				GroupId => { type => SCALAR },
 	});
 	
 	
@@ -1009,6 +1015,10 @@ This method adds permissions to a security group.  It takes the following parame
 =item GroupName (required)
 
 The name of the group to add security rules to.
+
+=item GroupId (required)
+
+The ID of the group to add security rules to.
 
 =item SourceSecurityGroupName (requred when authorizing a user and group together)
 
@@ -1045,21 +1055,22 @@ Returns 1 if rule is added successfully.
 sub authorize_security_group_ingress {
 	my $self = shift;
 	my %args = validate( @_, {
-								GroupName					=> { type => SCALAR },
-								SourceSecurityGroupName 	=> { 
-																	type => SCALAR,
-																	depends => ['SourceSecurityGroupOwnerId'],
-																	optional => 1 ,
-								},
-								SourceSecurityGroupOwnerId	=> { type => SCALAR, optional => 1 },
-								IpProtocol 					=> { 
-																	type => SCALAR,
-																	depends => ['FromPort', 'ToPort'],
-																	optional => 1 
-								},
-								FromPort 					=> { type => SCALAR, optional => 1 },
-								ToPort 						=> { type => SCALAR, optional => 1 },
-								CidrIp						=> { type => SCALAR, optional => 1 },
+			GroupName					=> { type => SCALAR },
+			GroupId					=> { type => SCALAR },
+			SourceSecurityGroupName 	=> { 
+												type => SCALAR,
+												depends => ['SourceSecurityGroupOwnerId'],
+												optional => 1 ,
+			},
+			SourceSecurityGroupOwnerId	=> { type => SCALAR, optional => 1 },
+			IpProtocol 					=> { 
+												type => SCALAR,
+												depends => ['FromPort', 'ToPort'],
+												optional => 1 
+			},
+			FromPort 					=> { type => SCALAR, optional => 1 },
+			ToPort 						=> { type => SCALAR, optional => 1 },
+			CidrIp						=> { type => SCALAR, optional => 1 },
 	});
 	
 	
