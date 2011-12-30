@@ -99,7 +99,7 @@ sub _init {
 	my $ts = time2isoz();
 
 	$self->{signature_version} = 1;
-	$self->{version} = '2008-12-01';
+	$self->{version} = '2011-12-01';
 	$self->{base_url} = 'http://ec2.amazonaws.com';
 	$self->{AWSAccessKeyId} = $args{AWSAccessKeyId};
 	$self->{SecretAccessKey} = $args{SecretAccessKey};
@@ -1619,6 +1619,28 @@ sub delete_snapshot {
 	}
 	else {
 		return $xml->{return};
+	}
+}
+
+=head2 describe_subnets()
+
+Returns a list of VPC subnets
+
+=cut
+
+sub describe_subnets {
+	my $self = shift;
+	
+	my $xml = $self->_sign(Action  => 'DescribeSubnets');
+	
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{subnetSet}{item} || [];
 	}
 }
 
