@@ -415,6 +415,7 @@ sub run_instances {
 								MaxCount		=> { type => SCALAR },
 								KeyName			=> { type => SCALAR, optional => 1 },
 								SecurityGroup	=> { type => SCALAR | ARRAYREF, optional => 1 },
+								SecurityGroupId	=> { type => SCALAR | ARRAYREF, optional => 1 },
 								UserData		=> { type => SCALAR, optional => 1 },
 								AddressingType	=> { type => SCALAR, optional => 1 },
 								InstanceType	=> { type => SCALAR, optional => 1 },
@@ -428,6 +429,14 @@ sub run_instances {
 		my $count = 1;
 		foreach my $security_group (@{$security_groups}) {
 			$args{"SecurityGroup." . $count} = $security_group;
+			$count++;
+		}
+	}
+	if (ref ($args{SecurityGroupId}) eq 'ARRAY') {
+		my $security_groups = delete $args{SecurityGroupId};
+		my $count = 1;
+		foreach my $security_group (@{$security_groups}) {
+			$args{"SecurityGroupId." . $count} = $security_group;
 			$count++;
 		}
 	}
@@ -876,8 +885,9 @@ Returns 1 if the group creation succeeds.
 sub create_security_group {
 	my $self = shift;
 	my %args = validate( @_, {
-								GroupName				=> { type => SCALAR },
-								GroupDescription 		=> { type => SCALAR },
+		GroupName => { type => SCALAR },
+		GroupDescription => { type => SCALAR },
+		VpcId => { type => SCALAR, optional => 1 },
 	});
 	
 	
@@ -971,11 +981,11 @@ This method deletes a security group.  It takes the following parameter:
 
 =over
 
-=item GroupName (required)
+=item GroupName (optional)
 
 The name of the security group to delete.
 
-=item GroupId (required)
+=item GroupId (optional)
 
 The ID of the security group to delete.
 
@@ -988,8 +998,8 @@ Returns 1 if the delete succeeded.
 sub delete_security_group {
 	my $self = shift;
 	my %args = validate( @_, {
-				GroupName => { type => SCALAR },
-				GroupId => { type => SCALAR },
+			GroupName => { type => SCALAR, optional => 1 },
+			GroupId => { type => SCALAR, optional => 1 },
 	});
 	
 	
@@ -1012,11 +1022,11 @@ This method adds permissions to a security group.  It takes the following parame
 
 =over
 
-=item GroupName (required)
+=item GroupName (optional)
 
 The name of the group to add security rules to.
 
-=item GroupId (required)
+=item GroupId (optional)
 
 The ID of the group to add security rules to.
 
@@ -1054,25 +1064,7 @@ Returns 1 if rule is added successfully.
 
 sub authorize_security_group_ingress {
 	my $self = shift;
-	my %args = validate( @_, {
-			GroupName					=> { type => SCALAR },
-			GroupId					=> { type => SCALAR },
-			SourceSecurityGroupName 	=> { 
-												type => SCALAR,
-												depends => ['SourceSecurityGroupOwnerId'],
-												optional => 1 ,
-			},
-			SourceSecurityGroupOwnerId	=> { type => SCALAR, optional => 1 },
-			IpProtocol 					=> { 
-												type => SCALAR,
-												depends => ['FromPort', 'ToPort'],
-												optional => 1 
-			},
-			FromPort 					=> { type => SCALAR, optional => 1 },
-			ToPort 						=> { type => SCALAR, optional => 1 },
-			CidrIp						=> { type => SCALAR, optional => 1 },
-	});
-	
+	my %args = @_;
 	
 	my $xml = $self->_sign(Action  => 'AuthorizeSecurityGroupIngress', %args);
 	
@@ -1093,9 +1085,13 @@ This method revoke permissions to a security group.  It takes the following para
 
 =over
 
-=item GroupName (required)
+=item GroupName (optional)
 
 The name of the group to revoke security rules from.
+
+=item GroupId (optional)
+
+The ID of the group to revoke security rules from.
 
 =item SourceSecurityGroupName (requred when authorizing a user and group together)
 
@@ -1131,24 +1127,7 @@ Returns 1 if rule is revoked successfully.
 
 sub revoke_security_group_ingress {
 	my $self = shift;
-	my %args = validate( @_, {
-								GroupName					=> { type => SCALAR },
-								SourceSecurityGroupName 	=> { 
-																	type => SCALAR,
-																	depends => ['SourceSecurityGroupOwnerId'],
-																	optional => 1 ,
-								},
-								SourceSecurityGroupOwnerId	=> { type => SCALAR, optional => 1 },
-								IpProtocol 					=> { 
-																	type => SCALAR,
-																	depends => ['FromPort', 'ToPort'],
-																	optional => 1 
-								},
-								FromPort 					=> { type => SCALAR, optional => 1 },
-								ToPort 						=> { type => SCALAR, optional => 1 },
-								CidrIp						=> { type => SCALAR, optional => 1 },
-	});
-	
+	my %args = @_;
 	
 	my $xml = $self->_sign(Action  => 'RevokeSecurityGroupIngress', %args);
 	
@@ -1652,6 +1631,28 @@ sub describe_subnets {
 	}
 	else {
 		return $xml->{subnetSet}{item} || [];
+	}
+}
+
+=head2 describe_vpcs()
+
+Returns a list of VPCs
+
+=cut
+
+sub describe_vpcs {
+	my $self = shift;
+	
+	my $xml = $self->_sign(Action  => 'DescribeVpcs');
+	
+	if ( grep { defined && length } $xml->{Errors} ) {
+		$self->_debug("ERROR: $xml->{Errors}{Error}{Message}");
+		$self->{error} = $xml->{Errors}{Error}{Message};
+		
+		return undef;
+	}
+	else {
+		return $xml->{vpcSet}{item} || [];
 	}
 }
 

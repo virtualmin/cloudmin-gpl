@@ -484,7 +484,7 @@ if (!$no_ssh && !$no_sshlogin) {
 	if (defined(&$bfunc) && &$bfunc($server)) {
 		# Check in a loop until SSH is available
 		print "Waiting for SSH server ..\n";
-		$sshcount = 0;
+		$sshstart = time();
 		while(1) {
 			($sshstatus, $ssherr, $webmindir, $webminport,
 			 $webminssl) = &check_server_ssh_login($server);
@@ -492,11 +492,10 @@ if (!$no_ssh && !$no_sshlogin) {
 				print ".. SSH server ready\n\n";
 				last;
 				}
-			elsif ($sshcount > 120) {
+			elsif (time() - $sshstart < 120) {
 				print ".. SSH server took too long\n\n";
 				last;
 				}
-			$sshcount++;
 			sleep(1);
 			}
 		}

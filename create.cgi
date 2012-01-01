@@ -324,7 +324,7 @@ if (!$no_ssh && !$server->{'ssh_nologin'}) {
 	if (defined(&$bfunc) && &$bfunc($server)) {
 		# Check in a loop until SSH is available
 		print $text{'create_sshing'};
-		$sshcount = 0;
+		$sshstart = time();
 		while(1) {
 			($sshstatus, $ssherr, $webmindir, $webminport,
 			 $webminssl) = &check_server_ssh_login($server);
@@ -340,7 +340,7 @@ if (!$no_ssh && !$server->{'ssh_nologin'}) {
 				print "<p>\n";
 				last;
 				}
-			elsif ($sshcount > 120) {
+			elsif (time() - $sshstart < 120) {
 				print "<br>\n";
 				print &text('create_sshfailed', 120, $ssherr),"<p>\n";
 				last;
@@ -348,7 +348,6 @@ if (!$no_ssh && !$server->{'ssh_nologin'}) {
 			else {
 				print ".";
 				}
-			$sshcount++;
 			sleep(1);
 			}
 		}
