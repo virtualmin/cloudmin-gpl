@@ -832,6 +832,13 @@ achooser_path=Path in S3
 achooser_owner=Owner ID
 achooser_region=Region
 
+schooser_title=Select EC2 Subnet
+schooser_enone=The selected account does not have access to any VPC subnets
+schooser_id=Subnet ID
+schooser_vpc=VPC ID
+schooser_zone=Zone
+schooser_cidr=Network
+
 domains_title=Virtualmin Domains
 domains_find=Find domains containing:
 domains_ok=Search
@@ -1008,6 +1015,8 @@ edit_ec2image=Started from EC2 image
 edit_ec2sgroup=EC2 security groups
 edit_ec2azone=EC2 availability zone
 edit_ec2pass=Windows password
+edit_ec2subnet=EC2 subnet
+edit_ec2subnetid=ID $1 in VPC $2
 edit_ec2newami=Create EC2 Image
 edit_ec2address=Assign EC2 Address
 edit_ec2attach=Attached EC2 Volumes
