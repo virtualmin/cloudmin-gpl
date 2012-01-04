@@ -17,7 +17,7 @@ I<dovecot>.
 
   cloudmin update-systems --host xennoupdate.home
   Updating packages on 1 systems ..
-  xennoupdate.home: spamassassin mod_perl
+  xennoupdate.home: OK spamassassin mod_perl
 
 =cut
 
@@ -86,16 +86,17 @@ else {
 		@poss = grep { &indexof($_->{'name'}, @pkgnames) >= 0 } @poss;
 	      }
 
-	      my @allgot;
+	      my (@allgot, @allerrs);
 	      if ($testmode) {
 	          # Assume all would be done
 		  push(@allgot, map { $_->{'name'} } @poss);
 	          }
 	      else {
 		  # Do them all at once
-		  my $got = &install_multiple_package_updates($_[0],
+		  my ($got, $errs) = &install_multiple_package_updates($_[0],
 				[ &sort_package_updates(@poss) ]);
-		  push(@allgot, @$got) if (ref($got));
+		  push(@allgot, @$got);
+		  push(@allerrs, map { s/\r|\n//g; &strip_html_tags($_); } @$errs);
 		  }
 	      if (@allgot) {
 		  if (!$testmode) {
@@ -103,9 +104,12 @@ else {
 	              &check_server_status($_[0]);
 	              &save_managed_server($_[0]);
 		  }
-	          print "$_[0]->{'host'}: ".join(" ", @allgot)."\n"
+	          print "$_[0]->{'host'}: OK ".join(" ", @allgot)."\n";
 	          }
-              else {
+	      if (@allerrs) {
+	          print "$_[0]->{'host'}: ERROR ".join(" ", @allerrs)."\n";
+                  }
+	      if (!@allgot && !@allerrs) {
 	          print "$_[0]->{'host'}: NONE\n"
                   }
 	      });

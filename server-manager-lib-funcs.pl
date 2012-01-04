@@ -3788,10 +3788,10 @@ return &parallel_server_function($servers,
 		@poss = grep { $want{$_->{'name'},$_->{'system'}} } @poss;
 	      }
 	      my %donedep;
-	      my $got = &install_multiple_package_updates($server,
-				[ &sort_package_updates(@poss) ]);
+	      my ($got, $errs) = &install_multiple_package_updates($server,
+					[ &sort_package_updates(@poss) ]);
 	      my $status;
-	      if (ref($got)) {
+	      if (@$got) {
 		# Installed something
 		$status = { 'want' => \@poss,
 			    'status' => 1,
@@ -3801,7 +3801,8 @@ return &parallel_server_function($servers,
 		# Failed
 		$status = { 'want' => \@poss,
 			    'status' => 0,
-			    'error' => $got };
+			    'error' => join(" ", @$errs) ||
+				       "Nothing installed" };
 	      }
 	      &obtain_lock_server($server);
               &refresh_server_updates($server, \@allgot);
@@ -3986,7 +3987,7 @@ else {
 
 # install_multiple_package_updates(&server, &packages)
 # Installs several updated packages on some system, and returns the array ref
-# of new packages installed, or an error message
+# of new packages installed, and an array ref of error messages
 sub install_multiple_package_updates
 {
 my ($server, $packs) = @_;
@@ -3999,6 +4000,7 @@ $pkg =~ s/-/_/g;
 &remote_foreign_require($server, $mod, $mod."-lib.pl");
 if (!&remote_eval($server, $mod, 'defined(&package_install_multiple)')) {
 	# Need to install one by one
+	my @allerrs;
 	foreach my $p (@$packs) {
 		my $rv = &install_package_update($server, $p);
 		if (!ref($rv)) {
@@ -4009,7 +4011,7 @@ if (!&remote_eval($server, $mod, 'defined(&package_install_multiple)')) {
 				push(@allrv, $p->{'name'});
 				}
 			else {
-				return $rv;
+				push(@allerrs, $rv);
 				}
 			}
 		else {
@@ -4017,7 +4019,7 @@ if (!&remote_eval($server, $mod, 'defined(&package_install_multiple)')) {
 			push(@allrv, @$rv);
 			}
 		}
-	return \@allrv;
+	return (\@allrv, \@allerrs);
 	}
 my $func = &remote_eval($server, $mod,
 			   'defined(&capture_function_output_tempfile)') ?
@@ -4031,16 +4033,16 @@ foreach my $system (@systems) {
 			$func, $pkg."::package_install_multiple",
 			\@names, $system, 1);
 	if ($last_remote_error) {
-		return $last_remote_error;
+		return ([ ], [ $last_remote_error ]);
 		}
 	elsif (ref($rv) && @$rv == 0 || $out =~ /install\s+failed/i) {
-		return $out;
+		return ([ ], [ $out ]);
 		}
 	else {
 		push(@allrv, @$rv);
 		}
 	}
-return \@allrv;
+return (\@allrv, [ ]);
 }
 
 # show_confirm_form(message, cgi, &hiddens, ok-message, post-message)

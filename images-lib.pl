@@ -1064,16 +1064,24 @@ if ($server->{'status'} eq 'virt' && $info && @{$info->{'poss'}}) {
 	print &text('update_pkgs',
           join(", ", map { &text('update_ver', $_->{'name'}, $_->{'version'}) }
                          @{$info->{'poss'}})),"<br>\n";
-	$got = &install_multiple_package_updates($server,
-		[ &sort_package_updates(@{$info->{'poss'}}) ]);
-	if (ref($got)) {
+	my ($got, $errs) = &install_multiple_package_updates($server,
+				[ &sort_package_updates(@{$info->{'poss'}}) ]);
+	if (@$got && !@$errs) {
 		# Worked OK
 		print &text('update_donepkg2',
 			join(" ", map { "<tt>$_</tt>" } @$got)),"<p>\n";
 		push(@allgot, @$got);
 		}
+	elsif (@$got && @$errs) {
+		# Partially worked
+		print &text('update_donepkg3',
+			join(" ", map { "<tt>$_</tt>" } @$got),
+			join(" ", @$errs)),"<p>\n";
+		push(@allgot, @$got);
+		}
 	else {
-		print &text('update_pkgerr2', $got),"<p>\n";
+		# Totally failed
+		print &text('update_pkgerr2', join(" ", @$errs)),"<p>\n";
 		}
 	&$outdent_print();
 	&$second_print(&text('update_itotal', scalar(@allgot)));

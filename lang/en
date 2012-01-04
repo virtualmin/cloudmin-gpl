@@ -1145,6 +1145,7 @@ update_pkgs=Updating to $1 ..
 update_ver=<tt>$1</tt> version <tt>$2</tt>
 update_donepkg=.. installed $1 packages.
 update_donepkg2=.. installed packages $1
+update_donepkg3=.. installed packages $1. However, some updates failed : $2
 update_pkgerr=.. update failed! Try an update on the system directly to see more information.
 update_pkgerr2=.. update failed : $1
 update_done=.. all updates complete.
