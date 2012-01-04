@@ -492,7 +492,7 @@ if (!$no_ssh && !$no_sshlogin) {
 				print ".. SSH server ready\n\n";
 				last;
 				}
-			elsif (time() - $sshstart < 120) {
+			elsif (time() - $sshstart > 120) {
 				print ".. SSH server took too long\n\n";
 				last;
 				}

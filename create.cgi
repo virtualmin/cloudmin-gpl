@@ -340,7 +340,7 @@ if (!$no_ssh && !$server->{'ssh_nologin'}) {
 				print "<p>\n";
 				last;
 				}
-			elsif (time() - $sshstart < 120) {
+			elsif (time() - $sshstart > 120) {
 				print "<br>\n";
 				print &text('create_sshfailed', 120, $ssherr),"<p>\n";
 				last;
