@@ -2247,6 +2247,8 @@ sgroups_noports=None
 sgroups_add=Create an EC2 security group.
 sgroups_add2=Create group for <i>$1</i>.
 sgroups_return=security groups
+sgroups_in=in $1
+sgroups_all=All traffic
 
 egroup_title1=Create Security Group
 egroup_title2=Edit Security Group
