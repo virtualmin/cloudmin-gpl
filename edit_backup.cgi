@@ -11,6 +11,7 @@ if ($in{'new'}) {
 	if ($access{'owner'}) {
 		$owner = &get_system_owner($base_remote_user);
 		$backup->{'email'} = $owner->{'acl'}->{'email'};
+		$backup->{'owner'} = $base_remote_user;
 		}
 	}
 else {
@@ -26,17 +27,65 @@ print &ui_hidden_table_start($text{'backup_header'}, "width=100%", 2,
 			     "main", 1, [ "width=30%" ]);
 
 # Systems to backup
-@canservers = &list_available_managed_servers_sorted();
-@servers = grep { &supports_backup($_) } @canservers;
+@allservers = &list_available_managed_servers_sorted();
+@canservers = grep { &supports_backup($_) } @allservers;
+$mode = $backup->{'servers'} eq '*' ? 0 :
+	$backup->{'servers'} ne '' ? 1 :
+	$backup->{'groups'} ne '' ? 2 :
+	$backup->{'owners'} ne '' ? 3 :
+	$backup->{'managers'} ne '' ? 4 :
+	$backup->{'scalegroups'} ne '' ? 5 : 0;
+@allgroups = &unique(map { split(/\t/, $_->{'group'}) } @canservers);
+@allowners = &list_system_owners();
+@allscalegroups = &list_scalegroups() if (defined(&list_scalegroups));
+if ($mode == 1) {
+	%sids = map { $_, 1 } split(/\s+/, $backup->{'servers'});
+	@servers = grep { $sids{$_->{'id'}} } @canservers;
+	}
+elsif ($mode == 4) {
+	%mans = map { $_, 1 } split(/\s+/, $backup->{'managers'});
+	}
+elsif ($mode == 5) {
+	%sids = map { $_, 1 } split(/\s+/, $backup->{'scalegroups'});
+	@scalegroups = grep { $sids{$_->{'id'}} } @allscalegroups;
+	}
+@stable = ( [ 0, $text{'alert_mode0'} ],
+	    [ 1, $text{'alert_mode1'},
+	      &ui_multi_select("servers",
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ],
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @allservers ],
+		       10, 1, 0, $text{'alert_serveropts'},
+				 $text{'alert_servervals'}) ],
+	  );
+if (@allgroups) {
+	# Selection by group
+	push(@stable, [ 2, $text{'alert_mode2'},
+		&ui_multi_select("groups",
+		   [ map { [ $_, $_ ] } split(/\s+/, $backup->{'groups'}) ],
+		   [ map { [ $_, $_ ] } @allgroups ],
+		   5, 1, 0, $text{'alert_groupopts'},
+			    $text{'alert_groupvals'}) ]);
+	}
+if (@allowners && !$backup->{'owner'}) {
+	# Selection by system owner
+	push(@stable, [ 3, $text{'alert_mode3'},
+		&ui_multi_select("owners",
+			[ map { [ $_,$_ ] } split(/\s+/, $backup->{'owners'}) ],
+			[ map { [ $_->{'name'}, $_->{'name'} ] } @allowners ],
+			5, 1, 0, $text{'alert_owneropts'},
+				 $text{'alert_ownervals'}) ]);
+	}
+%allmans = map { $_->{'manager'}, 1 } @canservers;
+@backup_server_management_types = grep {
+	my $cfunc = "type_".$_."_can_backup";
+	defined(&$cfunc) && &$cfunc() && ($mans{$_} || $allmans{$_})
+	} @virtual_server_management_types;
+push(@stable, [ 4, $text{'alert_mode4'},
+		join(" ", map { &ui_checkbox("managers", $_,
+				     $text{$_.'_typedesc'} || $_, $mans{$_}) }
+			      @backup_server_management_types) ]);
 print &ui_table_row($text{'backup_servers'},
-	&ui_radio("servers_def", $backup->{'servers'} eq '*' ? 1 : 0,
-		  [ [ 1, $backup->{'owner'} ? 
-				&text('backup_servers1a', $backup->{'owner'}) :
-				$text{'backup_servers1'} ],
-		    [ 0, $text{'backup_servers0'} ] ])."<br>\n".
-	&ui_select("servers", [ split(/\s+/, $backup->{'servers'}) ],
-		   [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ],
-		   10, 1));
+		    &ui_radio_table("mode", $mode, \@stable), 2);
 
 # Owner, if logged in as root
 if (!$access{'owner'} && $backup->{'owner'}) {
@@ -77,7 +126,7 @@ print &ui_table_row(&hlink($text{'backup_dest'}, "backup_dest"),
 		  [ 2, $text{'backups_mode2'},
 		       &ui_select("vm2", $dest->{'id'},
 			  [ map { [ $_->{'id'}, $_->{'short_host'} ] }
-			        @canservers ]).
+			        @allservers ]).
 		       " ".
 		       &ui_textbox("vm2dir",
 			   $dest->{'mode'} == 2 ? $dest->{'path'} : "", 40) ],

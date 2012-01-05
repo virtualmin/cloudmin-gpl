@@ -334,7 +334,7 @@ sub get_alert_servers
 {
 my ($alert, $allservers) = @_;
 my @rv;
-if ($alert->{'all'}) {
+if ($alert->{'all'} || $alert->{'servers'} eq '*') {
 	# Monitoring everyone
 	@rv = @$allservers;
 	}
@@ -466,16 +466,17 @@ return int($n);
 sub describe_alert_servers
 {
 my ($alert) = @_;
-if ($alert->{'all'}) {
+if ($alert->{'all'} || $alert->{'servers'} eq '*') {
 	# All systems
 	return $text{'alertdesc_all'};
 	}
 elsif ($alert->{'servers'}) {
 	# Listed systems
-	my @users = map { &get_managed_server($_) }
+	my @users = map { my $s = &get_managed_server($_); $s ? ( $s ) : ( ) }
 			split(/\s+/, $alert->{'servers'});
-	return @users > 4 ? &text('alertdesc_many', scalar(@users))
-			  : &text('alertdesc_servers',
+	return @users == 0 ? $text{'alertdesc_none'} :
+	       @users > 4 ? &text('alertdesc_many', scalar(@users)) :
+			    &text('alertdesc_servers',
 				  join(" ", map { "<tt>$_->{'host'}</tt>" }
 					        @users));
 	}

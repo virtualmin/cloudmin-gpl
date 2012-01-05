@@ -17,15 +17,7 @@ if (@backups) {
 		$text{'backups_sched'},
 		], 100);
 	foreach $b (@backups) {
-		if ($b->{'servers'} eq '*') {
-			$servs = "<i>$text{'backups_all'}</i>";
-			}
-		else {
-			@users = &get_backup_servers($b);
-			$servs = @users == 0 ? $text{'keys_nousers'} :
-			 @users > 4 ? &text('keys_manyusers', scalar(@users)) :
-			   join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
-			}
+		$servs = &describe_alert_servers($b);
 		$dest = $b->{'dest'} ? &nice_backup_destination($b->{'dest'})
 				     : "<i>$text{'backups_fromhost'}</i>";
 		$when = $b->{'enabled'} ? &cron::when_text($b, 1)

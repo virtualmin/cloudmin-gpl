@@ -4107,6 +4107,7 @@ alert_ecount=Missing or non-numeric system count in row $1
 alert_erules=No alert rules entered
 alert_eemail=Missing other email address to notify
 alertdesc_all=All systems
+alertdesc_none=No systems
 alertdesc_many=$1 systems
 alertdesc_servers=Systems $1
 alertdesc_groups=Systems in groups $1

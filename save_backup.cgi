@@ -41,18 +41,37 @@ elsif ($in{'logs'}) {
 	}
 else {
 	# Validate and store inputs
-	@allservers = grep { &supports_backup($_) }
+	@canservers = grep { &supports_backup($_) }
                 &list_available_managed_servers_sorted();
-	if ($in{'servers_def'}) {
+	foreach $f ('servers', 'groups', 'owners', 'managers') {
+		delete($backup->{$f});
+		}
+	if ($in{'mode'} == 0) {
+		# All systems
 		$backup->{'servers'} = '*';
 		}
-	else {
-		%sids = map { $_, 1 } split(/\0/, $in{'servers'});
-		@servers = grep { $sids{$_->{'id'}} } @allservers;
+	elsif ($in{'mode'} == 1) {
+		# Selected systems
+		%sids = map { $_, 1 } split(/\r?\n/,$in{'servers'});
+		@servers = grep { $sids{$_->{'id'}} } @canservers;
 		@servers || &error($text{'backup_eservers'});
 		$backup->{'servers'} = join(' ', map { $_->{'id'} } @servers);
 		}
-	
+	elsif ($in{'mode'} == 2) {
+		# Selected groups
+		$backup->{'groups'} = join(" ", split(/\r?\n/, $in{'groups'}));
+		$backup->{'groups'} || &error($text{'alert_egroups'});
+		}
+	elsif ($in{'mode'} == 3) {
+		# Selected owners
+		$backup->{'owners'} = join(" ", split(/\r?\n/, $in{'owners'}));
+		$backup->{'owners'} || &error($text{'alert_eowners'});
+		}
+	elsif ($in{'mode'} == 4) {
+		# Checked system types
+		$backup->{'managers'} = join(" ", split(/\0/, $in{'managers'}));
+		$backup->{'managers'} || &error($text{'alert_emanagers'});
+		}
 	$backup->{'shutdown'} = $in{'shutdown'};
 	$backup->{'parallel'} = $in{'parallel'};
 

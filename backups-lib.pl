@@ -58,21 +58,16 @@ return @backups;
 sub get_backup_servers
 {
 my ($backup) = @_;
-my @servers = grep { &supports_backup($_) } &list_managed_servers();
-if ($backup->{'servers'} eq '*') {
-	if ($backup->{'owner'}) {
-		# Limit to backup's owner
-		my $owner = &get_system_owner($backup->{'owner'});
-		my %osys = map { $_, 1 }
-				split(/\s+/, $owner->{'acl'}->{'servers'});
-		@servers = grep { $osys{$_->{'id'}} } @servers;
-		}
-	return @servers;
+my @canservers = grep { &supports_backup($_) } &list_managed_servers();
+my @servers = &get_alert_servers($backup, \@canservers);
+if ($backup->{'owner'}) {
+	# Limit to backup's owner
+	my $owner = &get_system_owner($backup->{'owner'});
+	my %osys = map { $_, 1 }
+			split(/\s+/, $owner->{'acl'}->{'servers'});
+	@servers = grep { $osys{$_->{'id'}} } @servers;
 	}
-else {
-	my %sids = map { $_, 1 } split(/\s+/, $backup->{'servers'});
-	return grep { $sids{$_->{'id'}} } @servers;
-	}
+return @servers;
 }
 
 # save_backup(&backup)
