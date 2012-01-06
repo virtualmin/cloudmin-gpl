@@ -694,5 +694,60 @@ my ($vhost, $loop) = @_;
 &execute_command_on_server($vhost, "losetup -d $loop");
 }
 
+# list_directories()
+# Returns a list of common directories for storing disk images. Fields for each
+# are :
+#   dir - Full path to the directory
+#   desc - Human-readable description
+#   managers - Space-separated list of virtualization types (empty for all)
+#   plans - IDs of plans whose owners can use this directory (empty for all,
+#   	    "none" for root only)
+#   hosts - Host system IDs this directory is for (empty for all)
+sub list_directories
+{
+my @rv;
+opendir(STORAGES, $image_directories_dir);
+foreach my $f (readdir(STORAGES)) {
+	next if ($f eq "." || $f eq "..");
+	my %directory;
+	&read_file("$disk_directories_dir/$f", \%directory);
+	$directory{'id'} = $f;
+	push(@rv, \%directory);
+	}
+closedir(STORAGES);
+return @rv;
+}
+
+# get_directory(id)
+# Returns a disk file directory, looked up by ID
+sub get_directory
+{
+my ($id) = @_;
+my ($rv) = grep { $_->{'id'} eq $id } &list_directories();
+return $rv;
+}
+
+# save_directory(&directory)
+# Create or update a disk file directory
+sub save_directory
+{
+my ($directory) = @_;
+if (!-d $disk_directories_dir) {
+	&make_dir($disk_directories_dir, 0700);
+	}
+$directory->{'id'} ||= &server_id();
+&lock_file("$disk_directories_dir/$directory->{'id'}");
+&write_file("$disk_directories_dir/$directory->{'id'}", $directory);
+&unlock_file("$disk_directories_dir/$directory->{'id'}");
+}
+
+# delete_directory(&delete)
+# Delete an existing disk file directory (but not files in it)
+sub delete_directory
+{
+my ($directory) = @_;
+&unlink_logged("$disk_directories_dir/$directory->{'id'}");
+}
+
 1;
 

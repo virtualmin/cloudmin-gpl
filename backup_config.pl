@@ -50,6 +50,9 @@ push(@rv, $roundrobins_dir);
 # Auto-scaling dir
 push(@rv, $scalegroups_dir);
 
+# Disk directories dir
+push(@rv, $disk_directories_dir);
+
 return &unique(@rv);
 }
 

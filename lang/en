@@ -4850,5 +4850,34 @@ newchangelog_title=New Feature Log
 newchangelog_ecannot=You are not allowed to view the new feature log
 newchangelog_desc=This page lists all major changes in all Cloudmin versions installed on your system, up to the current release.
 
+directories_title=Disk Image Directories
+directories_add=Add a new disk image directory.
+directories_dir=Directory
+directories_desc=Description
+directories_managers=For system types
+directories_plans=For owners on plans
+directories_mall=All types
+directories_pnone=Master admin only
+directories_pall=All plans
+directories_delete=Remove Selected Directories
+directories_none=No disk image directories have been defined yet.
+
+directory_title1=Create Disk Image Directory
+directory_title2=Edit Disk Image Directory
+directory_egone=Selected directory no longer exists!
+directory_header=Disk image directory options
+directory_dir=Directory path on host
+directory_desc=Description
+directory_hosts=For use on host systems
+directory_hosts1=All hosts
+directory_hosts0=Selected below ..
+directory_managers=For use by virtualization types
+directory_managers1=All types
+directory_managers0=Selected below ..
+directory_plans=For use by system owners
+directory_plans2=Only master admin
+directory_plans1=All system owners
+directory_plans0=Owners on selected plans ..
+
 __norefs=1
 

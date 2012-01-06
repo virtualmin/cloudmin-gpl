@@ -6590,6 +6590,14 @@ if (defined(&list_locations) && @virtual_server_management_types) {
 	push(@gcats, "hosts");
 	}
 
+# Disk image storage directories
+if (defined(&list_directories) && @hosted_server_management_types) {
+	push(@glinks, "list_directories.cgi");
+	push(@gtitles, $text{'directories_title'});
+	push(@gicons, "images/directories.gif");
+	push(@gcats, "hosts");
+	}
+
 # IP allocation overview
 if ($module_info{'vm2'} ne 'ec2') {
 	push(@glinks, "list_ips.cgi");
