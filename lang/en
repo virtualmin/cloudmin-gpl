@@ -4881,11 +4881,13 @@ directory_plans1=All system owners
 directory_plans0=Owners on selected plans ..
 directory_err=Failed to save disk image directory
 directory_err2=Failed to delete disk image directory
+directory_err3=Failed to delete disk image directories
 directory_edir=Missing or non-absolute directory path
 directory_edesc=No description entered
 directory_ehosts=No host systems selected
 directory_emanagers=No virtualization types checked
 directory_eplans=No plans selected
+directory_enone=None selected
 
 __norefs=1
 
