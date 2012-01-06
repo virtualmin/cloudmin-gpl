@@ -4861,6 +4861,7 @@ directories_pnone=Master admin only
 directories_pall=All plans
 directories_delete=Remove Selected Directories
 directories_none=No disk image directories have been defined yet.
+directories_return=disk image directories
 
 directory_title1=Create Disk Image Directory
 directory_title2=Edit Disk Image Directory
@@ -4878,6 +4879,13 @@ directory_plans=For use by system owners
 directory_plans2=Only master admin
 directory_plans1=All system owners
 directory_plans0=Owners on selected plans ..
+directory_err=Failed to save disk image directory
+directory_err2=Failed to delete disk image directory
+directory_edir=Missing or non-absolute directory path
+directory_edesc=No description entered
+directory_ehosts=No host systems selected
+directory_emanagers=No virtualization types checked
+directory_eplans=No plans selected
 
 __norefs=1
 

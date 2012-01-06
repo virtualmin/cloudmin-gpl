@@ -30,7 +30,7 @@ print &ui_table_row($text{'directory_desc'},
 
 # Can use on host systems
 # XXX location groups
-@allvhosts = grep { &is_parent_server($_) } &list_managed_servers();
+@allhosts = grep { &is_parent_server($_) } &list_managed_servers();
 @hosts = map { $s = &get_managed_server($_); $s ? ( $s ) : ( ) }
 	     split(/\s+/, $directory->{'hosts'});
 print &ui_table_row($text{'directory_hosts'},

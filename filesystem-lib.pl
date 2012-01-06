@@ -706,7 +706,7 @@ my ($vhost, $loop) = @_;
 sub list_directories
 {
 my @rv;
-opendir(STORAGES, $image_directories_dir);
+opendir(STORAGES, $disk_directories_dir);
 foreach my $f (readdir(STORAGES)) {
 	next if ($f eq "." || $f eq "..");
 	my %directory;

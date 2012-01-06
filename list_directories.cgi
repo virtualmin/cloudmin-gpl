@@ -18,7 +18,7 @@ if (@directories) {
 				  $text{'directories_desc'},
 				  $text{'directories_managers'},
 				  $text{'directories_plans'}, ], 100, 0, \@tds);
-	foreach $s (sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @directories) {
+	foreach $s (sort { lc($a->{'dir'}) cmp lc($b->{'dir'}) } @directories) {
 		if ($s->{'managers'}) {
 			$mdesc = join(" ", map { $text{$_.'_typedesc'} }
 					    split(/\s+/, $s->{'managers'}));
@@ -30,7 +30,7 @@ if (@directories) {
 			$pdesc = "<i>$text{'directories_pnone'}</i>";
 			}
 		elsif ($s->{'plans'}) {
-			$mdesc = join(", ", map { $p = &get_plan($_);
+			$pdesc = join(", ", map { $p = &get_plan($_);
 						  $p ? ( $p->{'desc'} ) : ( ) }
 					    split(/\s+/, $s->{'plans'}));
 			}
