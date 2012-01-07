@@ -28,5 +28,6 @@ Package updates are now installed via a single YUM or APT command, if the system
 ---- Changes since 5.8 ----
 The DNS roundrobin page now has an option to limit the number of IP addresses to include in the resulting DNS entries, to allow the simple configuration of DNS-based failover. DNS roundrobins can also include an arbitrary list of IP addresses, which do not necessarily have to be Cloudmin managed systems.
 Disks on virtual systems can now be excluded from backups on the Edit Disk page, and using the modify-disk API command. Swap disks are now also automatically excluded.
+---- Changes since 5.9 ----
 Proxy balancers can now also be configured on the DNS roundrobins page, if you have a system running Virtualmin. This allows a single website to be served by multiple backend systems, which get updated depending on their status.
 Systems to backup can now be selected by group, owner or virtualization type, as wells as by hostname.
