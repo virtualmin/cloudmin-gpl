@@ -233,6 +233,14 @@ elsif ($type eq "storages") {
 	# Multiple storage locations
 	return &text('log_'.$action.'_storages', $object);
 	}
+elsif ($type eq "directory") {
+	# One disk image directory
+	return &text('log_'.$action.'_directory', &html_escape($p->{'dir'}));
+	}
+elsif ($type eq "directories") {
+	# Multiple disk image directories
+	return &text('log_'.$action.'_directories', $object);
+	}
 elsif ($type eq "alert") {
 	# One system alert
 	return &text('log_'.$action.'_alert', $p->{'servers'});

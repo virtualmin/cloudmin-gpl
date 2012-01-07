@@ -165,6 +165,11 @@ while(@ARGV > 0) {
 	elsif ($a eq "--manual-status") {
 		$manual_status = 1;
 		}
+	elsif ($a eq "--disk-directory") {
+		$directory = shift(@ARGV);
+		$directory =~ /^\/\S+$/ ||
+		    &usage("--disk-directory must be followed by a full path");
+		}
 	elsif ($a eq "--serial") { $serial = shift(@ARGV); }
 	elsif ($a eq "--key") { $key = shift(@ARGV); }
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
@@ -256,6 +261,7 @@ $server = { 'id' => $newid || &server_id(),
 	    'bw_limit' => $config{'bw_def'},
 	    'created' => time(),
 	    'manual_status' => $manual_status,
+	    'directory' => $directory,
 	  };
 $server->{'desc'} = $desc;
 if ($image && $img->{'type'}) {
@@ -383,6 +389,10 @@ if ($limits) {
 			}
 		}
 	}
+
+# Validate directory
+$err = &validate_directory($server);
+$err && &usage("--disk-directory is invalid : $err");
 
 # Run pre-creation script
 &run_system_script($server, 'before', 'create') || exit(2);
@@ -693,6 +703,7 @@ print "                      [--serial number --key number] |\n";
 print "                      [--same-serial] | [--allocate-serial]\n";
 print "                      [--no-check-serial]\n";
 print "                      [--id number]\n";
+print "                      [--disk-directory dir]\n";
 if (defined(&list_system_owners)) {
 	print "                      [--owner name]\n";
 	}

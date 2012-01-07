@@ -3775,6 +3775,10 @@ log_create_storage=Created image storage location <i>$1</i>
 log_modify_storage=Modified image storage location <i>$1</i>
 log_delete_storage=Deleted image storage location <i>$1</i>
 log_delete_storages=Deleted $1 image storage locations
+log_create_directory=Created disk image directory <i>$1</i>
+log_modify_directory=Modified disk image directory <i>$1</i>
+log_delete_directory=Deleted disk image directory <i>$1</i>
+log_delete_directories=Deleted $1 disk image directories
 log_create_alert=Created alert for $1
 log_delete_alert=Deleted alert for $1
 log_modify_alert=Modified alert for $1
@@ -4888,6 +4892,10 @@ directory_ehosts=No host systems selected
 directory_emanagers=No virtualization types checked
 directory_eplans=No plans selected
 directory_enone=None selected
+directory_evdir=Not in list of disk image directories
+directory_evdir2=You are not allowed to use this disk image directories
+directory_evhost=Cannot be used on host system $1
+directory_evtype=Cannot be used for $1 virtual systems
 
 __norefs=1
 

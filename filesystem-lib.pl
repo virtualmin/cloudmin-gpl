@@ -718,6 +718,33 @@ closedir(STORAGES);
 return @rv;
 }
 
+# list_available_directories()
+# Returns directories the current user can use
+sub list_available_directories
+{
+my @rv;
+foreach my $dir (&list_directories()) {
+	if (!$access{'owner'}) {
+		# Root can access everything
+		push(@rv, $dir);
+		}
+	elsif ($dir->{'plans'} eq '') {
+		# Dir is available to all
+		push(@rv, $dir);
+		}
+	elsif ($dir->{'plans'} ne 'none') {
+		# Check owner's plan
+		foreach my $pid (split(/\s+/, $dir->{'plans'})) {
+			if ($pid eq $access{'plan'}) {
+				push(@rv, $dir);
+				last;
+				}
+			}
+		}
+	}
+return @rv;
+}
+
 # get_directory(id)
 # Returns a disk file directory, looked up by ID
 sub get_directory
@@ -747,6 +774,41 @@ sub delete_directory
 {
 my ($directory) = @_;
 &unlink_logged("$disk_directories_dir/$directory->{'id'}");
+}
+
+# validate_directory(&server)
+# Checks if the directory field of the server object is usable by the current
+# user and on the selected host system. Returns an error message if not.
+sub validate_directory
+{
+my ($server) = @_;
+if (!$server->{'directory'}) {
+	return undef;	# Using host system default
+	}
+
+# Does this directory exist at all, and can it be used?
+my @dirs = &list_directories();
+my ($dir) = grep { $_->{'dir'} eq $server->{'directory'} } @dirs;
+$dir || return $text{'directory_evdir'};
+@dirs = &list_available_directories();
+($dir) = grep { $_->{'dir'} eq $server->{'directory'} } @dirs;
+$dir || return $text{'directory_evdir2'};
+
+# Ok for host?
+my $vhost = &get_parent_server($server);
+if ($dir->{'hosts'}) {
+	&indexof($vhost->{'id'}, split(/\s+/, $dir->{'hosts'})) >= 0 ||
+		return &text('directory_evhost', $vhost->{'host'});
+	}
+
+# Ok for virtualization type?
+if ($dir->{'managers'}) {
+	&indexof($server->{'manager'}, split(/\s+/, $dir->{'managers'})) >= 0 ||
+		return &text('directory_evmanager',
+			     $text{$server->{'manager'}.'_typedesc'});
+	}
+
+return undef;
 }
 
 1;

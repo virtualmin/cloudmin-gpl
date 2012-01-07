@@ -6,7 +6,6 @@ sub list_system_owners
 {
 &foreign_require("acl", "acl-lib.pl");
 my @rv;
-my @plans = &list_plans();
 foreach my $u (&acl::list_users()) {
 	next if (&indexof($module_name, @{$u->{'modules'}}) < 0);
 	my %acl = &get_module_acl($u->{'name'});

@@ -220,7 +220,7 @@ $server_images_cache = "$module_config_directory/server-images-cache";
 $server_images_cache = "$module_config_directory/server-images-cache";
 $images_cache_dir = "/var/cloudmin-images";
 $image_storages_dir = "$module_config_directory/storages";
-$disk_directories_dir = "$module_config_directory/storages";
+$disk_directories_dir = "$module_config_directory/directories";
 
 $vsyncs_dir = "$module_config_directory/vsyncs";
 $vsync_cron_cmd = "$module_config_directory/vsync.pl";

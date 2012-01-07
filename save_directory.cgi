@@ -37,7 +37,8 @@ else {
 		}
 	else {
 		$directory->{'hosts'} = join(" ", split(/\r?\n/, $in{'hosts'}));
-		$directory->{'hosts'} || &error($text{'directory_ehosts'});
+		$directory->{'hosts'} eq '' &&
+			&error($text{'directory_ehosts'});
 		}
 
 	# Save types
