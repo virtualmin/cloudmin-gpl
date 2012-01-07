@@ -727,7 +727,10 @@ if (!$empty) {
 
 # LVM setting
 if ($in{'kvm_lvm'} == -1 || !defined($in{'kvm_lvm'})) {
-	# Use host system default
+	# Use host system default, unless a directory was set
+	if ($server->{'directory'}) {
+		$server->{'kvm_nolvm'} = 1;
+		}
 	}
 elsif ($in{'kvm_lvm'} == 0) {
 	# Force not on LVM
@@ -736,6 +739,7 @@ elsif ($in{'kvm_lvm'} == 0) {
 elsif ($in{'kvm_lvm'} == 1) {
 	# Must be on LVM
 	$vhost->{'kvm_vg'} || &error(&text('xen_eonlvm', $vhost->{'host'}));
+	$server->{'directory'} && &error($text{'xen_eonlvmdir'});
 	}
 
 # VirtIO setting
@@ -1062,8 +1066,14 @@ if (&can_action(undef, "advanced")) {
 	if ($args->{'lvm'} =~ /true|yes/i) {
 		$vhost->{'kvm_vg'} ||
 			return "Host system $vhost->{'host'} does not use LVM";
+		$server->{'directory'} &&
+			return "LVM cannot be enabled when a disk directory ".
+			       "is specified";
 		}
 	elsif ($args->{'lvm'} =~ /false|no/i) {
+		$server->{'kvm_nolvm'} = 1;
+		}
+	elsif ($server->{'directory'}) {
 		$server->{'kvm_nolvm'} = 1;
 		}
 

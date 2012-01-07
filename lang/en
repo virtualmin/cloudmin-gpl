@@ -588,6 +588,9 @@ create_ewebminport6=.. not supported by this version of Webmin
 create_ewebminportother=.. unknown exit code $1 : $2
 create_sshport=Setting SSH server port ..
 create_esshport=.. failed : $1
+create_directory=Disk image directory
+create_defdirectory=Host system default
+create_edirectory=Invalid disk image directory : $1
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -1873,6 +1876,7 @@ xen_onlvmdef=Host system default
 xen_onlvm0=Regular file
 xen_onlvm1=LVM logical volume
 xen_eonlvm=Host system $1 does not use LVM for Xen disk images
+xen_eonlvmdir=LVM cannot be enabled when a disk image directory is selected
 xen_imagedir=Directory for Xen disk image
 xen_imagedirdef=Host system default
 xen_imagedirset=Directory
@@ -4896,6 +4900,8 @@ directory_evdir=Not in list of disk image directories
 directory_evdir2=You are not allowed to use this disk image directories
 directory_evhost=Cannot be used on host system $1
 directory_evtype=Cannot be used for $1 virtual systems
+directory_eclash=A directory with the same path already exists
+directory_uheader=Systems using this directory
 
 __norefs=1
 

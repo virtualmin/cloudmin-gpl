@@ -259,6 +259,12 @@ if (!defined($s->{'xen_wholedisk'})) {
 	$s->{'xen_wholedisk'} = $s->{'xen_hvm'} ? 1 : 0;
 	}
 
+# Convert the old xen_imagedir parameter to directory
+if ($s->{'xen_imagedir'} && !$s->{'directory'}) {
+	$s->{'directory'} = $s->{'xen_imagedir'};
+	delete($s->{'xen_imagedir'});
+	}
+
 # Fill in 'ip' convenience field
 my $ip = &get_server_ip($s);
 $ip ||= &to_ipaddress($s->{'host'});
@@ -6591,7 +6597,7 @@ if (defined(&list_locations) && @virtual_server_management_types) {
 	}
 
 # Disk image storage directories
-if (defined(&list_directories) && @hosted_server_management_types) {
+if (defined(&list_directories) && @diskfile_server_management_types) {
 	push(@glinks, "list_directories.cgi");
 	push(@gtitles, $text{'directories_title'});
 	push(@gicons, "images/directories.gif");

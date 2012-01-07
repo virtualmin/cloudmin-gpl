@@ -155,6 +155,9 @@ if ($multi) {
 				print "    Location group: $loc->{'desc'}\n";
 				}
 			}
+		if ($s->{'directory'}) {
+			print "    Disk directory: $s->{'directory'}\n";
+			}
 		print "    Status: ",$text{'status_'.$s->{'status'}},"\n";
 		print "    Status code: $s->{'status'}\n";
 		if ($s->{'status_msg'}) {

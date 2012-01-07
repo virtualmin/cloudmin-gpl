@@ -21,6 +21,7 @@ if (!$done_server_manager_lib_funcs) {
 %server_management_types = ( );
 @virtual_server_management_types = ( );
 @hosted_server_management_types = ( );
+@diskfile_server_management_types = ( );
 foreach my $smt (@possible_server_management_types) {
 	if ($config{'show_'.$smt} &&
 	    -r $module_root_directory."/".$smt."-type-lib.pl") {
@@ -34,6 +35,10 @@ foreach my $smt (@possible_server_management_types) {
 				}
 			if ($v != 2) {
 				push(@hosted_server_management_types, $smt);
+				if ($smt ne 'citrix') {
+					push(@diskfile_server_management_types,
+					     $smt);
+					}
 				}
 			}
 		my $ifunc = "type_".$smt."_init";

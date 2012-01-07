@@ -811,5 +811,29 @@ if ($dir->{'managers'}) {
 return undef;
 }
 
+# directory_selector(type)
+# Returns a field for choosing a disk image directory chooser for some system
+# type. May return undef if there are no choices.
+sub directory_selector
+{
+my ($manager) = @_;
+my @dirs;
+foreach my $dir (&list_available_directories()) {
+	if ($dir->{'managers'} &&
+	    &indexof($manager, split(/\s+/, $dir->{'managers'})) < 0) {
+		next;
+		}
+	push(@dirs, $dir);
+	}
+if (@dirs) {
+	return &ui_select("directory", "",
+			  [ [ "", "&lt;$text{'create_defdirectory'}&gt;" ],
+			    map { [ $_->{'dir'},
+				    $_->{'dir'}." (".$_->{'desc'}.")" ] }
+				@dirs ]);
+	}
+return undef;
+}
+
 1;
 

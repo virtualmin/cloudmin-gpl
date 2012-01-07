@@ -196,6 +196,13 @@ if (defined($in{'bw_def'}) && $config{'bw_enabled'} &&
 		}
 	}
 
+# Save disk image directory
+if ($in{'directory'}) {
+	$server->{'directory'} = $in{'directory'};
+	$err = &validate_directory($server);
+	$err && &usage(&text('create_edirectory', $err));
+	}
+
 &ui_print_unbuffered_header(&server_in($server), $text{'create_title'}, "");
 &obtain_lock_server($server);
 

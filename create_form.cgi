@@ -164,6 +164,14 @@ if (defined(&$afunc)) {
 			&describe_bandwidth_period(0));
 		}
 
+	# Disk image directory, if appropriate
+	if (&indexof($in{'type'}, @diskfile_server_management_types) >= 0) {
+		$sel = &directory_selector($in{'type'});
+		if ($sel) {
+			print &ui_table_row($text{'create_directory'}, $sel);
+			}
+		}
+
 	print &ui_hidden_table_end();
 	}
 

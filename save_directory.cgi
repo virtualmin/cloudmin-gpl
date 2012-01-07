@@ -25,9 +25,15 @@ if ($in{'delete'}) {
 		    { 'dir' => $directory->{'dir'} });
 	}
 else {
-	# Validate and store path and desc
+	# Validate and store path
 	$in{'dir'} =~ /^\/\S+$/ || &error($text{'directory_edir'});
+	if ($in{'new'} || $directory->{'dir'} ne $in{'dir'}) {
+		($clash) = grep { $_->{'dir'} eq $in{'dir'} } @directories;
+		$clash && &error($text{'directory_eclash'});
+		}
 	$directory->{'dir'} = $in{'dir'};
+
+	# Save mandatory description
 	$in{'desc'} =~ /\S/ || &error($text{'directory_edesc'});
 	$directory->{'desc'} = $in{'desc'};
 

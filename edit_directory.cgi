@@ -51,7 +51,7 @@ print &ui_table_row($text{'directory_managers'},
 		    [ 0, $text{'directory_managers0'} ] ])."<br>\n".
 	join(" ", map { &ui_checkbox("managers", $_,
                                      $text{$_.'_typedesc'} || $_, $mans{$_}) }
-                        @hosted_server_management_types));
+                        @diskfile_server_management_types));
 
 # Owner plans
 @plans = defined(&list_plans) ? &list_plans() : ( );
@@ -68,6 +68,44 @@ print &ui_table_row($text{'directory_plans'},
 		   5, 1));
 
 print &ui_table_end();
+
+# Find existing users
+if (!$in{'new'}) {
+	@users = &get_managed_server_by("directory", $directory->{'dir'});
+	}
+if (@users) {
+	print &ui_hidden_table_start($text{'directory_uheader'}, "width=100%",
+				     2, "users", 0);
+	$table = &ui_columns_start([
+			$text{'index_host'},
+			$text{'index_desc'},
+			$text{'index_manager'},
+			$text{'index_disk'},
+			$text{'index_status'},
+			], 100, 0);
+	foreach my $s (@users) {
+		$shost = $s->{'short_host'};
+		$dfunc = "type_".$s->{'manager'}."_get_disk_size";
+		if (defined(&$dfunc)) {
+			$disk = &$dfunc($s);
+			$disk = $disk ? &nice_size($disk)
+				      : $text{'domains_unlimited'};
+			}
+		else {
+			$disk = "";
+			}
+		$table .= &ui_columns_row([
+			"<a href='edit_serv.cgi?id=$s->{'id'}'>$shost</a>",
+			$s->{'desc'},
+			$text{$s->{'manager'}.'_typedesc'},
+			$disk,
+			&describe_status($s, 1, 0),
+			]);
+		}
+	$table .= &ui_columns_end();
+	print &ui_table_row(undef, $table, 2);
+	print &ui_hidden_table_end("users");
+	}
 
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
