@@ -1131,10 +1131,11 @@ my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
 delete($server->{'kvm_filesystem_offset'});
 $server->{'kvm_start'} = 1 if ($reset);
 $server->{'kvm_args'} = $config{'kvm_manual'} if (!$reset);
+my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 
 # Create base dir if needed
-if (!-d $vhost->{'kvm_dir'}) {
-	&make_dir($vhost->{'kvm_dir'}, 0755, 1);
+if (!-d $kvm_dir) {
+	&make_dir($kvm_dir, 0755, 1);
 	}
 
 # Validate CD image on host
@@ -1171,9 +1172,9 @@ elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
 	}
 else {
 	# On regular files
-	$fsfile = "$vhost->{'kvm_dir'}/$server->{'host'}.img";
+	$fsfile = "$kvm_dir/$server->{'host'}.img";
         if ($server->{'kvm_swap'}) {
-                $swfile = "$vhost->{'kvm_dir'}/$server->{'host'}.swap";
+                $swfile = "$kvm_dir/$server->{'host'}.swap";
                 }
 	}
 $server->{'kvm_filesystem'} = $fsfile;
@@ -1310,7 +1311,7 @@ if ($empty) {
 my $imgdestfile;
 if ($empty && $server->{'image'}) {
 	# CD will be copied to a new file
-	$imgdestfile = "$vhost->{'kvm_dir'}/$server->{'host'}.cd";
+	$imgdestfile = "$kvm_dir/$server->{'host'}.cd";
 	$server->{'kvm_drives'} .=
 		" file=$imgdestfile,media=cdrom,index=2";
 	$server->{'kvm_bootdevice'} = 'd';
@@ -2049,6 +2050,7 @@ sub type_kvm_delete
 {
 my ($server, $keep) = @_;
 my $vhost = &type_kvm_parent($server);
+my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 
 # Force shutdown if needed
 my $proc = &get_server_kvm_instance($server);
@@ -2102,7 +2104,7 @@ my @nets = split(/\s+/, $server->{'kvm_net'});
 foreach my $net (@nets) {
 	if ($net =~ /script=([^,]+)/) {
 		my $script = $1;
-                if ($script =~ /^\Q$vhost->{'kvm_dir'}\/\E/) {
+                if ($script =~ /^\Q$kvm_dir\/\E/) {
                         &delete_file_on_server($vhost, $script);
 			local $tapfile = $script;
 			if ($tapfile =~ s/\.sh$/\.tap/) {
@@ -2252,8 +2254,9 @@ my ($server, $iface, $bridge) = @_;
 my $vhost = &type_kvm_parent($server);
 my $brctl = &has_command_on_server($vhost, "brctl") || "brctl";
 my $ifconfig = &has_command_on_server($vhost, "ifconfig") || "ifconfig";
+my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 my $data = "#!/bin/sh\n".
-	   "echo \$1 >".$vhost->{'kvm_dir'}."/".
+	   "echo \$1 >".$kvm_dir."/".
 	     $server->{'host'}."-".$iface->{'name'}.".tap\n";
 if (!$bridge || $bridge eq "*") {
 	($bridge) = &list_host_bridges($vhost);
@@ -2262,7 +2265,7 @@ if (!$bridge || $bridge eq "*") {
 $data .= "$brctl addif $bridge \$1\n";
 $data .= "$ifconfig \$1 up\n";
 return ($data,
-	$vhost->{'kvm_dir'}."/".$server->{'host'}."-".$iface->{'name'}.".sh");
+	$kvm_dir."/".$server->{'host'}."-".$iface->{'name'}.".sh");
 }
 
 # type_kvm_can_disks(&server)
@@ -2525,6 +2528,7 @@ $rv->{'virt_part'} = 1;
 
 if (!$device) {
 	my $vhost = &type_kvm_parent($server);
+	my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 	my $vg;
 	if ($storage) {
 		$vg = $storage->{'id'} =~ /^lvm_(\S+)/ ? $1 : undef;
@@ -2543,7 +2547,7 @@ if (!$device) {
 		}
 	else {
 		# Pick an image file
-		$rv->{'real'} = "$vhost->{'kvm_dir'}/$server->{'host'}.".
+		$rv->{'real'} = "$kvm_dir/$server->{'host'}.".
 				(scalar(@$disks)+1).".img";
 		}
 	}
@@ -3534,6 +3538,7 @@ sub type_kvm_delete_interface
 {
 my ($server, $iface) = @_;
 my $vhost = &type_kvm_parent($server);
+my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 
 # Delete boot interface
 my $err = &mount_filesystem_if_needed($server);
@@ -3562,7 +3567,7 @@ if ($iface->{'virtual'} eq '' && defined($idx)) {
 	if ($nets[$idx] =~ /script=([^,]+)/) {
 		# Has a custom script .. delete if under kvm dir
 		my $script = $1;
-		if ($script =~ /^\Q$vhost->{'kvm_dir'}\/\E/) {
+		if ($script =~ /^\Q$kvm_dir\/\E/) {
 			&delete_file_on_server($vhost, $script);
 			}
 		}
@@ -5395,7 +5400,7 @@ my $dir;
 if ($server->{'kvm_filesystem_lv'} || !$server->{'kvm_filesystem'}) {
 	# On LVM, use config dir for console file
 	my $vhost = &get_parent_server($server);
-	$dir = $vhost->{'kvm_dir'};
+	$dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 	}
 else {
 	# Same dir as root disk
