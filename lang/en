@@ -2382,6 +2382,11 @@ disks_delete=Remove Selected Disks
 disks_eget=Failed to fetch list of disks : $1
 disks_return=list of disks
 disks_sched=(changing to $1)
+disks_dheader=Default disk image directory
+disks_dold=Current directory
+disks_dnew=New directory
+disks_ddef=Host system default $1
+disks_ddeflvm=Host system volume group $1
 
 disk_title1=Create Disk
 disk_title2=Add Disk

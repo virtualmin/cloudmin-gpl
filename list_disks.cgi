@@ -98,5 +98,41 @@ else {
 	print &ui_links_row(\@links);
 	}
 
+# Show form for default directory for new disks
+if (&indexof($server->{'manager'}, @diskfile_server_management_types) >= 0 &&
+    defined(&list_directories)) {
+	$sel = &directory_selector($server->{'manager'},
+				   $server->{'directory'});
+	if ($sel) {
+		@dirs = &list_directories();
+		print &ui_form_start("save_diskdir.cgi");
+		print &ui_hidden("id", $in{'id'});
+		print &ui_table_start($text{'disks_dheader'}, undef, 2);
+
+		# Current dir, if set
+		if ($server->{'directory'}) {
+			($dir) = grep { $_->{'dir'} eq $server->{'directory'} }
+				      @dirs;
+			$dmesg = $dir ? $dir->{'dir'}." (".$dir->{'desc'}.")"
+				      : $server->{'directory'};
+			}
+		elsif ($vhost->{$server->{'manager'}.'_vg'}) {
+			$dmesg = &text('disks_ddeflvm',
+				       $vhost->{$server->{'manager'}.'_vg'});
+			}
+		else {
+			$dmesg = &text('disks_ddef',
+				       $vhost->{$server->{'manager'}.'_dir'});
+			}
+		print &ui_table_row($text{'disks_dold'}, $dmesg);
+
+		# New dir
+		print &ui_table_row($text{'disks_dnew'}, $sel);
+
+		print &ui_table_end();
+		print &ui_form_end([ [ undef, $text{'save'} ] ]);
+		}
+	}
+
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 
