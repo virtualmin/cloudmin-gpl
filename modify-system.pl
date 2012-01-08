@@ -43,6 +43,9 @@ Forces Cloudmin to use a specific IP address to contact this system, or just use
 C<--virt> I<address> or C<--novirt>
 Determines if Cloudmin will create Virtualmin domains on this system or not.
 
+C<--disk-directory> I<path> or C<--no-disk-directory>
+Sets the default image directory for new virtual disks.
+
 =head1 Example usage
 
   cloudmin modify-system --host xencentos.home --desc "CentOS 5 on Xen"
@@ -143,6 +146,14 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-force-ip") {
 		$force_ip = "";
 		}
+	elsif ($a eq "--disk-directory") {
+		$directory = shift(@ARGV);
+		$directory =~ /^\/\S+$/ ||
+		    &usage("--disk-directory must be followed by a full path");
+		}
+	elsif ($a eq "--no-disk-directory") {
+		$directory = "";
+		}
 	else {
 		&usage();
 		}
@@ -240,6 +251,13 @@ if ($bootdevice) {
 	if (!ref($olddevice)) {
 		@bootdevices == 1 || &usage("Only one boot device may be set");
 		}
+	}
+
+# Validate and save disk directory
+if (defined($directory)) {
+	$server->{'directory'} = $directory;
+	$err = &validate_directory($server);
+	$err && &usage("--disk-directory is invalid : $err");
 	}
 
 # Make all the changes
@@ -379,6 +397,8 @@ if (defined(&list_locations)) {
 	print "                      [--location id | --no-location]\n";
 	}
 print "                      [--force-ip address | --no-force-ip]\n";
+print "                      [--disk-directory path |\n";
+print"                        --no-disk-directory]\n";
 exit(1);
 }
 
