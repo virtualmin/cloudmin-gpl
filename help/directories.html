@@ -1,0 +1,17 @@
+<header>Disk Image Directories</header>
+
+This page allows you to define host system directories that can be selected
+when creating a virtual system. Virtual disk images (for Xen and KVM) or
+filesystem contents (for LXC, OpenVZ, VServers and Zones) will be stored under
+the directory chosen, rather than the host system's default. <p>
+
+This feature can be used to divide virtual system storage between different
+drives or storage types, such as local disk vs NFS, fast vs slow hard drives,
+or filesystems mounted over RAID vs mounted with no redundancy. <p>
+
+Each directory can be limited to use by selected host systems, virtualization
+types and system owners. This allows you to define directories on faster and
+more expensive disks that are only usable by <tt>root</tt>. <p>
+
+<footer>
+
