@@ -830,7 +830,7 @@ if (@dirs) {
 			  [ [ "", "&lt;$text{'create_defdirectory'}&gt;" ],
 			    map { [ $_->{'dir'},
 				    $_->{'dir'}." (".$_->{'desc'}.")" ] }
-				@dirs ]);
+				@dirs ], 1, 0, $value ? 1 : 0);
 	}
 return undef;
 }

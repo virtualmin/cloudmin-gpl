@@ -126,6 +126,19 @@ if (&indexof($server->{'manager'}, @diskfile_server_management_types) >= 0 &&
 			}
 		print &ui_table_row($text{'disks_dold'}, $dmesg);
 
+		# Host default location
+		if ($server->{'directory'}) {
+			if ($vhost->{$server->{'manager'}.'_vg'}) {
+				$hmesg = &text('disks_hdeflvm',
+					       $vhost->{$server->{'manager'}.'_vg'});
+				}
+			else {
+				$hmesg = &text('disks_hdef',
+					       $vhost->{$server->{'manager'}.'_dir'});
+				}
+			print &ui_table_row($text{'disks_dhost'}, $hmesg);
+			}
+
 		# New dir
 		print &ui_table_row($text{'disks_dnew'}, $sel);
 

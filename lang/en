@@ -2387,6 +2387,9 @@ disks_dold=Current directory
 disks_dnew=New directory
 disks_ddef=Host system default $1
 disks_ddeflvm=Host system volume group $1
+disks_hdef=Directory $1
+disks_hdeflvm=LVM volume group $1
+disks_dhost=Host system default
 
 disk_title1=Create Disk
 disk_title2=Add Disk
@@ -3656,6 +3659,7 @@ log_nobwifaces_server=Cleared interfaces for bandwidth monitoring on system $1
 log_undefault_server=Removed system $1 as default host for $3
 log_host_server=Saved $3 host system $1
 log_unhost_server=Un-registered $3 host system $1
+log_diskdir_server=Changed default disk directory for system $1
 log_refresh_servers=Refreshed $1 systems
 log_refresh_servers_l=Refreshed $1 systems : $2
 log_delete_servers=Deleted $1 systems
