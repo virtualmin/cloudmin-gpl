@@ -1144,8 +1144,9 @@ $server->{'kvm_args'} = $config{'kvm_manual'} if (!$reset);
 my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 
 # Create base dir if needed
-if (!-d $kvm_dir) {
-	&make_dir($kvm_dir, 0755, 1);
+my @st = &stat_file_on_server($vhost, $kvm_dir);
+if (!@st) {
+	&make_dir_on_server($vhost, $kvm_dir, 0755, 1);
 	}
 
 # Validate CD image on host
@@ -3995,6 +3996,8 @@ return ( );
 sub type_kvm_post_refresh
 {
 my ($server, $regen) = @_;
+my $vhost = &get_parent_server($server);
+
 if ($server->{'kvm_disktotal'} eq '' ||
     $server->{'kvm_disktotal'} < 0 || $regen) {
 	&type_kvm_compute_disksize($server);
@@ -4020,10 +4023,21 @@ if ((!defined($server->{'kvm_ip6'}) || $regen) &&
 
 # If paused, make sure pause file still exists
 if ($server->{'kvm_pause'} && $server->{'status'} ne 'nohost') {
-	my $vhost = &get_parent_server($server);
 	my @st = &stat_file_on_server($vhost, $server->{'kvm_pause'});
 	if (!@st) {
 		delete($server->{'kvm_pause'});
+		}
+	}
+
+# Re-get the VNC port from the command line
+if ($server->{'status'} ne 'down') {
+	my $proc;
+	my $procs = &list_kvm_instances($vhost);
+	if (ref($procs)) {
+		($proc) = grep { &match_kvm_instance($server, $_) } @$procs;
+		}
+	if ($proc && $proc->{'args'}->{'vnc'} =~ /^[a-z0-9\.\_\-]*:(\d+)/) {
+		$server->{'kvm_vnc_display'} = $1;
 		}
 	}
 }
