@@ -8415,7 +8415,7 @@ $err && return &text('smove_etest', $err);
 
 # Do the actual move
 my $mfunc = "type_".$server->{'manager'}."_move_system";
-my $err = &$mfunc($server, $dest, $shutdown, $allocate);
+my $err = &$mfunc($server, $dest, $shutdown, $allocate, $directory);
 
 # Refresh status
 &$first_print($text{'save_refreshing'});
