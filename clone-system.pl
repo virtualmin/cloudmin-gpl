@@ -80,6 +80,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 $shutdown = 0;
+$directory = undef;
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--host") {
@@ -110,6 +111,14 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--dest") {
 		$desthost = shift(@ARGV);
+		}
+	elsif ($a eq "--disk-directory") {
+		$directory = shift(@ARGV);
+		$directory =~ /^\/\S+$/ ||
+		    &usage("--disk-directory must be followed by a full path");
+		}
+	elsif ($a eq "--no-disk-directory") {
+		$directory = "";
 		}
 	else {
 		&usage();
@@ -217,7 +226,7 @@ if ($limits) {
 print "Creating clone of $desc system $server->{'host'} named $newhost ..\n\n";
 &$indent_print();
 ($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips, $live,
-				   $dest, $ips6);
+				   $dest, $ips6, $directory);
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {
@@ -249,6 +258,7 @@ print "                     [--address ip]*\n";
 print "                     [--address6 ip]*\n";
 print "                     [--live]\n";
 print "                     [--dest new-host-system-name]\n";
+print "                     [--disk-directory path | --no-disk-directory]\n";
 exit(1);
 }
 

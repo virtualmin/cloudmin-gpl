@@ -5537,6 +5537,8 @@ sub type_kvm_clone_system
 my ($oldserver, $newserver, $newhost, $ips, $snapshot, $dest, $ips6) = @_;
 my $vhost = &type_kvm_parent($newserver);
 $dest ||= $vhost;
+my $old_kvm_dir = $oldserver->{'directory'} || $vhost->{'kvm_dir'};
+my $new_kvm_dir = $newserver->{'directory'} || $dest->{'kvm_dir'};
 
 # Generate the new full hostname
 if ($dest->{'kvm_zone'}) {
@@ -5689,9 +5691,9 @@ foreach my $d (@$disks) {
 		else {
 			$d->{'newreal'} .= "-".$newkvm;
 			}
-		if ($dest->{'kvm_dir'} ne $vhost->{'kvm_dir'}) {
+		if ($old_kvm_dir ne $new_kvm_dir) {
 			$d->{'newreal'} =~ s/^.*[\\\/]//;
-			$d->{'newreal'} = "$dest->{'kvm_dir'}/$d->{'newreal'}";
+			$d->{'newreal'} = "$new_kvm_dir/$d->{'newreal'}";
 			}
 		# Copy the file
 		$err = &transfer_file_between_servers($vhost, $dest,

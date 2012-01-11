@@ -11,6 +11,7 @@ $server = { 'id' => &server_id(),
 	    'status' => 'create',
 	    'bw_limit' => $config{'bw_def'},
 	    'created' => time(),
+	    'directory' => $in{'directory'},
 	  };
 
 # Validate inputs, starting with hostname
@@ -196,9 +197,8 @@ if (defined($in{'bw_def'}) && $config{'bw_enabled'} &&
 		}
 	}
 
-# Save disk image directory
-if ($in{'directory'}) {
-	$server->{'directory'} = $in{'directory'};
+# Validate disk image directory
+if ($server->{'directory'}) {
 	$err = &validate_directory($server);
 	$err && &usage(&text('create_edirectory', $err));
 	}

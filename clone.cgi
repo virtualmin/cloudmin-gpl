@@ -128,7 +128,7 @@ if ($limits) {
 &$first_print(&text('clone_doing', $desc, $server->{'host'}, $in{'host'}));
 &$indent_print();
 ($newserver, $err) = &clone_system($server, $in{'host'}, $in{'desc'}, $ips,
-				   $in{'live'}, $dest, $ips6);
+				   $in{'live'}, $dest, $ips6, $in{'directory'});
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {

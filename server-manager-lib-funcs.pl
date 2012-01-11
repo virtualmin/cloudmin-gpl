@@ -1813,6 +1813,15 @@ return $rv;
 sub transfer_directory_between_servers
 {
 my ($srcserver, $destserver, $src, $dest) = @_;
+
+# Create target dir if missing
+my @sst = &stat_file_on_server($srcserver, $src);
+my @dst = &stat_file_on_server($destserver, $dest);
+if (!@dst) {
+	my $err = &make_dir_on_server($destserver, $dest, $sst[2]&0777 || 0755);
+	return $err if ($err);
+	}
+
 if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	# Some system to itself - just use tar pipeline
 	my ($out, $ex, $err) = &execute_command_on_server($srcserver,
@@ -10563,13 +10572,14 @@ return $rv;
 }
 
 # clone_system(&server, new-hostname, new-description, [&ips], snapshot,
-# 	       [&dest-host], [&ips-v6])
+# 	       [&dest-host], [&ips-v6], [new-directory])
 # Creates a clone of an existing virtual system, by calling the type-specific
 # clone function. Returns the new system hash and an error message or undef.
 # May print stuff.
 sub clone_system
 {
-my ($server, $newhost, $newdesc, $ips, $snapshot, $dest, $ips6) = @_;
+my ($server, $newhost, $newdesc, $ips, $snapshot, $dest, $ips6,
+    $directory) = @_;
 my $vhost = &get_parent_server($server);
 $dest ||= $vhost;
 
@@ -10596,6 +10606,7 @@ delete($newserver->{'scalegroup'});
 delete($newserver->{'scalegroup_reason'});
 delete($newserver->{'scalegroup_index'});
 delete($newserver->{'status_err'});
+$newserver->{'directory'} = $directory if (defined($directory));
 
 # Make sure dest supports virtualization type
 if (&indexof($server->{'manager'}, &is_parent_server($dest)) < 0) {
@@ -10644,6 +10655,12 @@ if ($ips6) {
 			return (undef, &text('clone_eipused', $ip6));
 			}
 		}
+	}
+
+# Make sure directory on new system is usable
+if ($directory || $newserver->{'directory'} && $dest) {
+	$err = &validate_directory($newserver, $dest);
+	$err && return (undef, &text('create_edirectory', $err));
 	}
 
 # Perform pre-cloning check

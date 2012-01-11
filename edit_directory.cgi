@@ -34,7 +34,7 @@ print &ui_table_row($text{'directory_desc'},
 @hosts = map { $s = &get_managed_server($_); $s ? ( $s ) : ( ) }
 	     split(/\s+/, $directory->{'hosts'});
 print &ui_table_row($text{'directory_hosts'},
-	&ui_radio("hosts_def", $directory->{'hosts'} eq '' ? 0 : 1,
+	&ui_radio("hosts_def", $directory->{'hosts'} eq '' ? 1 : 0,
 		  [ [ 1, $text{'directory_hosts1'} ],
 		    [ 0, $text{'directory_hosts0'} ] ])."<br>\n".
 	      &ui_multi_select("hosts",

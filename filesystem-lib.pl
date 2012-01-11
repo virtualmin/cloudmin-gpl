@@ -776,14 +776,23 @@ my ($directory) = @_;
 &unlink_logged("$disk_directories_dir/$directory->{'id'}");
 }
 
-# validate_directory(&server)
+# validate_directory(&server, [&for-vhost])
 # Checks if the directory field of the server object is usable by the current
 # user and on the selected host system. Returns an error message if not.
 sub validate_directory
 {
-my ($server) = @_;
+my ($server, $vhost) = @_;
 if (!$server->{'directory'}) {
 	return undef;	# Using host system default
+	}
+if ($server->{'force_directory'} && &can_action($server, "global")) {
+	return undef;	# Assume OK
+	}
+
+# If the directory is the virtualization type default for the host, just use it
+$vhost ||= &get_parent_server($server);
+if ($server->{'directory'} eq $vhost->{$server->{'manager'}.'_dir'}) {
+	return undef;
 	}
 
 # Does this directory exist at all, and can it be used?
@@ -795,7 +804,6 @@ $dir || return $text{'directory_evdir'};
 $dir || return $text{'directory_evdir2'};
 
 # Ok for host?
-my $vhost = &get_parent_server($server);
 if ($dir->{'hosts'}) {
 	&indexof($vhost->{'id'}, split(/\s+/, $dir->{'hosts'})) >= 0 ||
 		return &text('directory_evhost', $vhost->{'host'});

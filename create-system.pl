@@ -165,10 +165,11 @@ while(@ARGV > 0) {
 	elsif ($a eq "--manual-status") {
 		$manual_status = 1;
 		}
-	elsif ($a eq "--disk-directory") {
+	elsif ($a eq "--disk-directory" || $a eq "--force-disk-directory") {
 		$directory = shift(@ARGV);
 		$directory =~ /^\/\S+$/ ||
 		    &usage("--disk-directory must be followed by a full path");
+		$force_directory = $a eq "--force-disk-directory" ? 1 : 0;
 		}
 	elsif ($a eq "--serial") { $serial = shift(@ARGV); }
 	elsif ($a eq "--key") { $key = shift(@ARGV); }
@@ -262,6 +263,7 @@ $server = { 'id' => $newid || &server_id(),
 	    'created' => time(),
 	    'manual_status' => $manual_status,
 	    'directory' => $directory,
+	    'force_directory' => $force_directory,
 	  };
 $server->{'desc'} = $desc;
 if ($image && $img->{'type'}) {

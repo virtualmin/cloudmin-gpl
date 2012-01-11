@@ -4453,6 +4453,7 @@ clone_ips1=Allocate automatically
 clone_ips0=Entered below ..
 clone_dest=New host system for clone
 clone_leave=&lt;Same host as source - $1&gt;
+clone_directory=Disk image directory
 clone_ehosttype=The destination host system $1 does not support the source system's virtualization type
 clone_ehostdown=The destination host system $1 is down or un-usable
 clone_ehostspace=The host system $1 is not suitable for this clone : $2

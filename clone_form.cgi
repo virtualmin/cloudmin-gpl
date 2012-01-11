@@ -111,6 +111,15 @@ if (&can_action($server, "move") && defined(&$rcfunc) && &$rcfunc($server)) {
 		}
 	}
 
+# New directory
+if (&indexof($server->{'manager'}, @diskfile_server_management_types) >= 0) {
+	$sel = &directory_selector($server->{'manager'},
+				   $server->{'directory'});
+	if ($sel) {
+		print &ui_table_row($text{'clone_directory'}, $sel);
+		}
+	}
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'clone_ok'} ] ]);
 
