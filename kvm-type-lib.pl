@@ -4652,13 +4652,16 @@ if (!$dest ||
 return 0;
 }
 
-# type_kvm_move_system(&server, &dest, [shutdown], [allocate-ip])
+# type_kvm_move_system(&server, &dest, [shutdown], [allocate-ip], [directory])
 # Actually move a KVM instance to a new host, printing messages as it goes.
 sub type_kvm_move_system
 {
-my ($server, $dest, $shutdown, $allocate) = @_;
+my ($server, $dest, $shutdown, $allocate, $directory) = @_;
 my $vhost = &get_parent_server($server);
 my (@delfiles, @dellvs);
+my $old_kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
+my $new_kvm_dir = (defined($directory) ? $directory : $server->{'directory'}) ||
+		  $dest->{'kvm_dir'};
 
 # Check if a shutdown is needed, if kvm on the dest doesn't support -incoming,
 my $shutwhy;
@@ -4672,6 +4675,10 @@ if (!$shutdown) {
 		$shutwhy = $text{'smove_monitor'};
 		}
 	}
+
+# Check if KVM disks dir is shared
+my $shared = $old_kvm_dir eq $new_kvm_dir &&
+	     &shared_dir_on_servers($vhost, $dest, $old_kvm_dir);
 
 # Check if need to allocate new IP
 my $ip = &get_server_ip($server);
@@ -4796,10 +4803,14 @@ foreach my $d (@$disks) {
 		&$second_print(&text('smove_devdisk'));
 		next;
 		}
+
+	# Check if disk file exists on the target system already, and
+	# that the KVM directory isn't being changed
 	my @sst = &stat_file_on_server($vhost, $d->{'real'});
 	my @dst = &stat_file_on_server($dest, $d->{'real'});
-	if (@dst && $dst[7] == $sst[7]) {
-		# Already there! Perhaps from shared LVM
+	if (@dst && $dst[7] == $sst[7] &&
+	    ($old_kvm_dir eq $new_kvm_dir || $d->{'lv'})) {
+		# Already there! Perhaps from shared LVM or directory
 		&$second_print($text{'smove_alrdisk'});
 		next;
 		}
@@ -4841,7 +4852,7 @@ foreach my $d (@$disks) {
 		# Work out a new filename, and copy over the file
 		$newreal = $d->{'real'};
 		$newreal =~ s/^.*[\\\/]//;
-		$newreal = "$dest->{'kvm_dir'}/$newreal";
+		$newreal = "$new_kvm_dir/$newreal";
 		my $err = &transfer_file_between_servers($vhost, $dest,
 			$d->{'real'}, $newreal, 0, 1);
 		if ($err) {
@@ -4879,13 +4890,15 @@ foreach my $d (@$disks) {
 	}
 $server->{'kvm_drives'} = join(" ", @drives);
 $server->{'kvm_on'} = $dest->{'id'};
+$server->{'directory'} = $directory if (defined($directory));
 
 # Fix monitoring and console paths
-if ($dest->{'kvm_dir'} ne $vhost->{'kvm_dir'}) {
-	$server->{'kvm_monitor'} =~
-		s/\Q$vhost->{'kvm_dir'}\E/$dest->{'kvm_dir'}/;
-	$server->{'kvm_console'} =~
-		s/\Q$vhost->{'kvm_dir'}\E/$dest->{'kvm_dir'}/;
+push(@delfiles, $server->{'kvm_console'})
+	if ($server->{'kvm_console'} && !$shared);
+push(@delfiles, $server->{'kvm_monitor'})
+	if ($server->{'kvm_monitor'} && !$shared);
+foreach my $f ('kvm_monitor', 'kvm_console') {
+	$server->{$f} =~ s/^\Q$old_kvm_dir\/\E/$new_kvm_dir\//;
 	}
 
 # Copy across bridge scripts
@@ -4895,15 +4908,19 @@ foreach my $net (@nets) {
 		my $script = $1;
 		my $newscript = $script;
 		$newscript =~ s/^.*[\\\/]//;
-		$newscript = "$dest->{'kvm_dir'}/$newscript";
+		$newscript = "$new_kvm_dir/$newscript";
 		my @st = &stat_file_on_server($dest, $newscript);
-		if ($script =~ /^\Q$vhost->{'kvm_dir'}\/\E/ && !@st) {
+		if ($script =~ /^\Q$old_kvm_dir\/\E/ && !@st) {
 			my $err = &transfer_file_between_servers($vhost, $dest,
 					$script, $newscript, 0, 1);
 			if ($err) {
 				return &text('smove_ebridge', $script, $err);
 				}
 			&delete_file_on_server($vhost, $script);
+			my $tap = $script;
+			if ($tap =~ s/\.sh$/\.tap/) {
+				&delete_file_on_server($vhost, $tap);
+				}
 			if ($script ne $newscript) {
 				$net =~ s/script=\Q$script\E/script=$newscript/;
 				}
@@ -4913,7 +4930,6 @@ foreach my $net (@nets) {
 $server->{'kvm_net'} = join(" ", @nets);
 
 # Delete the original disk images
-push(@delfiles, $server->{'kvm_console'}) if ($server->{'kvm_console'});
 if (@delfiles || @dellvs) {
 	&$first_print(&text('smove_delfiles',
 			    scalar(@delfiles)+scalar(@dellvs)));
@@ -5846,13 +5862,14 @@ if ($config{'dhcp_add'}) {
 		}
 	}
 
-# Copy network bridge scripts
+# Copy network bridge scripts, with new paths and filename
 my @nets = split(/\s+/, $newserver->{'kvm_net'});
 foreach my $net (@nets) {
 	if ($net =~ /script=([^,]+)/) {
 		my $script = $1;
 		my $newscript = $script;
 		$newscript =~ s/\Q$oldkvm\E/$newkvm/g;
+		$newscript =~ s/\Q$old_kvm_dir\E/$new_kvm_dir/g;
 		my $err = &transfer_file_between_servers($vhost, $dest,
 				$script, $newscript);
 		if ($err) {
@@ -5867,10 +5884,19 @@ $newserver->{'kvm_net'} = join(" ", @nets);
 
 # Fix up other config entries using the old name
 foreach my $f ('kvm_filesystem_lv', 'kvm_swapfile_lv',
-	       'kvm_console', 'kvm_monitor', 'login_user', 'data_files') {
+	       'kvm_console', 'kvm_monitor', 'login_user', 'data_files',
+	       'kvm_net') {
 	$newserver->{$f} =~ s/\Q$oldkvm_us\E/$newkvm_us/g;
 	$newserver->{$f} =~ s/\Q$oldkvm\E/$newkvm/g;
 	}
+
+# Fix monitoring and console paths
+foreach my $f ('kvm_monitor', 'kvm_console') {
+	$server->{$f} =~ s/^\Q$old_kvm_dir\/\E/$new_kvm_dir\//;
+	}
+
+# Force re-generation of monitor port
+delete($server->{'kvm_monitor_port'});
 
 return (undef, 0);
 }
