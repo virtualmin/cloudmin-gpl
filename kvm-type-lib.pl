@@ -4980,11 +4980,11 @@ elsif ($was_up) {
 return undef;
 }
 
-# type_kvm_manual_move_system(&server, &dest)
+# type_kvm_manual_move_system(&server, &dest, [directory])
 # Update the configs to reflect a system move already done
 sub type_kvm_manual_move_system
 {
-my ($server, $dest) = @_;
+my ($server, $dest, $directory) = @_;
 my $vhost = &get_parent_server($server);
 $server->{'kvm_on'} = $dest->{'id'};
 
@@ -4999,6 +4999,9 @@ foreach my $d (@$disks) {
 		}
 	}
 &$second_print($text{'smove_checkdisksok'});
+
+# Update disk directory if changed
+$server->{'directory'} = $directory if (defined($directory));
 
 return undef;
 }

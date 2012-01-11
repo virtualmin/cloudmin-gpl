@@ -74,6 +74,7 @@ $< == 0 || die "$0 must be run as root";
 
 # Parse command line
 $shutdown = 0;
+$directory = undef;
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--host") {
@@ -90,6 +91,14 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--manual") {
 		$manual = 1;
+		}
+	elsif ($a eq "--disk-directory") {
+		$directory = shift(@ARGV);
+		$directory =~ /^\/\S+$/ ||
+		    &usage("--disk-directory must be followed by a full path");
+		}
+	elsif ($a eq "--no-disk-directory") {
+		$directory = "";
 		}
 	else {
 		&usage();
@@ -124,12 +133,12 @@ $can == 3 && !$manual && &usage("Only a manual move is possible");
 if ($manual) {
 	# Just update configs to reflect manual move
 	print "Updating configuration for $desc system $server->{'host'} to reflect move from $vhost->{'host'} to $dest->{'host'} ..\n\n";
-	$err = &manual_move_system($server, $dest, $shutdown, $allocate);
+	$err = &manual_move_system($server, $dest, $directory);
 	}
 else {
 	# Do the transfer
 	print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
-	$err = &move_system($server, $dest, $shutdown, $allocate);
+	$err = &move_system($server, $dest, $shutdown, $allocate, $directory);
 	}
 &release_lock_server($server);
 &release_lock_server($dest);
@@ -150,6 +159,7 @@ print "                     --dest new-host-system-name\n";
 print "                    [--shutdown]\n";
 print "                    [--allocate-ip]\n";
 print "                    [--manual]\n";
+print "                    [--disk-directory path | --no-disk-directory]\n";
 exit(1);
 }
 

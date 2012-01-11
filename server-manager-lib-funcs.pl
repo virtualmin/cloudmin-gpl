@@ -2487,6 +2487,16 @@ my $randback = &get_file_data_from_server($server2, $movecheck);
 return $randback eq $randstr;
 }
 
+# shared_file_on_servers(&server1, &server2, file)
+# Checks if the dir containing some file is shared between two machines
+sub shared_file_on_servers
+{
+my ($server1, $server2, $file) = @_;
+my $dir = $file;
+$dir =~ s/\/[^\/]+$//;
+return &shared_dir_on_servers($server1, $server2, $dir);
+}
+
 # list_processes_on_server(&server)
 # Returns a list of running processes, in a format similar to
 # proc::list_processes. Only the pid, user and args are guaranteed though.
@@ -8343,14 +8353,14 @@ else {
         }
 }
 
-# move_system(&system, &dest, [shutdown], [reallocate-ip])
+# move_system(&system, &dest, [shutdown], [reallocate-ip], [directory])
 # Moves a virtual system to a host hosting server, which is assumed to be
 # able to support it. Calls the appropriate type-specific move function to
 # do most of the work. Returns undef on success or an error message on failure.
 # May print stuff.
 sub move_system
 {
-my ($server, $dest, $shutdown, $allocate) = @_;
+my ($server, $dest, $shutdown, $allocate, $directory) = @_;
 my @pars = &is_parent_server($dest);
 my $dfunc = "type_".$server->{'manager'}."_desc";
 my $desc = &$dfunc($server);
@@ -8389,6 +8399,14 @@ my ($ok, $err) = &usable_host_system($dest, $server->{'manager'},
 				     $mem, $gmem, $disk);
 if (!$ok) {
 	return "The host system $dest->{'host'} is not suitable : $err";
+	}
+
+# Make sure directory on new system is usable
+my $newserver = { %$server };
+$newserver->{'directory'} = $directory if (defined($directory));
+if ($directory || $newserver->{'directory'}) {
+	$err = &validate_directory($newserver, $dest);
+	$err && return &text('create_edirectory', $err);
 	}
 
 # Do a test transfer to ensure that later disk moves will work
@@ -8438,12 +8456,12 @@ if ($server->{'status'} eq 'virt' &&
 return $err;
 }
 
-# manual_move_system(&system, &dest)
+# manual_move_system(&system, &dest, [directory])
 # Updates the Cloudmin config to reflect an already-done manual move of some
 # system to a new host. May print stuff.
 sub manual_move_system
 {
-my ($server, $dest) = @_;
+my ($server, $dest, $directory) = @_;
 my @pars = &is_parent_server($dest);
 my $dfunc = "type_".$server->{'manager'}."_desc";
 my $desc = &$dfunc($server);
@@ -8461,7 +8479,7 @@ if (!defined(&$cfunc) || &$cfunc($server, $dest) < 2) {
 
 # Do the actual move
 my $mfunc = "type_".$server->{'manager'}."_manual_move_system";
-my $err = &$mfunc($server, $dest, $shutdown, $allocate);
+my $err = &$mfunc($server, $dest, $directory);
 
 # Refresh status
 &$first_print($text{'save_refreshing'});
