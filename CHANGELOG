@@ -31,3 +31,4 @@ Disks on virtual systems can now be excluded from backups on the Edit Disk page,
 ---- Changes since 5.9 ----
 Proxy balancers can now also be configured on the DNS roundrobins page, if you have a system running Virtualmin. This allows a single website to be served by multiple backend systems, which get updated depending on their status.
 Systems to backup can now be selected by group, owner or virtualization type, as wells as by hostname.
+Additional directories for virtual system disk images can now be defined, and one selected when creating, cloning or moving a system. Access to directories can be limited by system owner plan, virtualization type and host system.
