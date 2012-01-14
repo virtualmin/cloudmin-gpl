@@ -158,6 +158,9 @@ if ($multi) {
 		if ($s->{'directory'}) {
 			print "    Disk directory: $s->{'directory'}\n";
 			}
+		if ($s->{'new_directory'}) {
+			print "    New disk directory: $s->{'new_directory'}\n";
+			}
 		print "    Status: ",$text{'status_'.$s->{'status'}},"\n";
 		print "    Status code: $s->{'status'}\n";
 		if ($s->{'status_msg'}) {

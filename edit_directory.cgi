@@ -21,8 +21,16 @@ print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'directory_header'}, "width=100%", 2);
 
 # Directory path
-print &ui_table_row($text{'directory_dir'},
-	&ui_textbox("dir", $directory->{'dir'}, 60));
+if ($directory->{'default'}) {
+	print &ui_table_row($text{'directory_dir'},
+		 	    "<i>$text{'directories_ddef'}</i>");
+	}
+else {
+	print &ui_table_row($text{'directory_dir'},
+		&ui_opt_textbox("dir", $directory->{'dir'}, 60,
+				$text{'directories_ddef'}."<br>",
+				$text{'directories_dhost'}));
+	}
 
 # Disk directory description
 print &ui_table_row($text{'directory_desc'},
@@ -70,7 +78,7 @@ print &ui_table_row($text{'directory_plans'},
 print &ui_table_end();
 
 # Find existing users
-if (!$in{'new'}) {
+if (!$in{'new'} && $directory->{'dir'}) {
 	@users = &get_managed_server_by("directory", $directory->{'dir'});
 	}
 if (@users) {
@@ -110,7 +118,8 @@ if (@users) {
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
 	       : [ [ undef, $text{'save'} ],
-		   [ 'delete', $text{'delete'} ] ]); 
+		   $directory->{'default'} ? ( ) :
+			( [ 'delete', $text{'delete'} ] ) ]); 
 
 &ui_print_footer("list_directories.cgi", $text{'directories_return'});
 

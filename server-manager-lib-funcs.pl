@@ -265,6 +265,11 @@ if ($s->{'xen_imagedir'} && !$s->{'directory'}) {
 	delete($s->{'xen_imagedir'});
 	}
 
+# By default, the new disk directory is the same as the base directory
+if ($s->{'directory'} && !$s->{'new_directory'}) {
+	$s->{'new_directory'} = $s->{'directory'};
+	}
+
 # Fill in 'ip' convenience field
 my $ip = &get_server_ip($s);
 $ip ||= &to_ipaddress($s->{'host'});
@@ -8404,7 +8409,8 @@ if (!$ok) {
 # Make sure directory on new system is usable
 my $newserver = { %$server };
 $newserver->{'directory'} = $directory if (defined($directory));
-if ($directory || $newserver->{'directory'}) {
+if (($directory || $newserver->{'directory'}) &&
+    $newserver->{'directory'} ne $server->{'directory'}) {
 	$err = &validate_directory($newserver, $dest);
 	$err && return &text('create_edirectory', $err);
 	}
@@ -10625,6 +10631,7 @@ delete($newserver->{'scalegroup_reason'});
 delete($newserver->{'scalegroup_index'});
 delete($newserver->{'status_err'});
 $newserver->{'directory'} = $directory if (defined($directory));
+delete($newserver->{'new_directory'}) if (defined($directory));
 
 # Make sure dest supports virtualization type
 if (&indexof($server->{'manager'}, &is_parent_server($dest)) < 0) {
@@ -10676,7 +10683,8 @@ if ($ips6) {
 	}
 
 # Make sure directory on new system is usable
-if ($directory || $newserver->{'directory'} && $dest) {
+if (($directory || $newserver->{'directory'} && $dest) &&
+    $newserver->{'directory'} ne $server->{'directory'}) {
 	$err = &validate_directory($newserver, $dest);
 	$err && return (undef, &text('create_edirectory', $err));
 	}

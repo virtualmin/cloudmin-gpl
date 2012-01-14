@@ -706,6 +706,9 @@ my ($vhost, $loop) = @_;
 sub list_directories
 {
 my @rv;
+my $got_def;
+
+# Get directories users have created
 opendir(STORAGES, $disk_directories_dir);
 foreach my $f (readdir(STORAGES)) {
 	next if ($f eq "." || $f eq "..");
@@ -713,8 +716,23 @@ foreach my $f (readdir(STORAGES)) {
 	&read_file("$disk_directories_dir/$f", \%directory);
 	$directory{'id'} = $f;
 	push(@rv, \%directory);
+	if (!$directory{'dir'}) {
+		$got_def = \%directory;
+		}
 	}
 closedir(STORAGES);
+
+# Fake up entry for defaults
+if (!$got_def) {
+	unshift(@rv, { 'dir' => '',
+		       'id' => 1,
+		       'default' => 1,
+		       'desc' => 'Default directory or LV on host',
+		       'managers' => '',
+		       'plans' => '',
+		       'hosts' => '' });
+	}
+
 return @rv;
 }
 
@@ -741,6 +759,22 @@ foreach my $dir (&list_directories()) {
 				}
 			}
 		}
+	}
+return @rv;
+}
+
+# list_available_directories_for_manager(manager)
+# Returns directories usable by some virtualization type
+sub list_available_directories_for_manager
+{
+my ($manager) = @_;
+my @rv;
+foreach my $dir (&list_available_directories()) {
+	if ($dir->{'managers'} &&
+	    &indexof($manager, split(/\s+/, $dir->{'managers'})) < 0) {
+		next;
+		}
+	push(@rv, $dir);
 	}
 return @rv;
 }
@@ -776,47 +810,53 @@ my ($directory) = @_;
 &unlink_logged("$disk_directories_dir/$directory->{'id'}");
 }
 
-# validate_directory(&server, [&for-vhost])
+# validate_directory(&server, [&for-vhost], [field])
 # Checks if the directory field of the server object is usable by the current
 # user and on the selected host system. Returns an error message if not.
 sub validate_directory
 {
-my ($server, $vhost) = @_;
-if (!$server->{'directory'}) {
-	return undef;	# Using host system default
-	}
+my ($server, $vhost, $field) = @_;
+$field ||= 'directory';
 if ($server->{'force_directory'} && &can_action($server, "global")) {
 	return undef;	# Assume OK
 	}
 
 # If the directory is the virtualization type default for the host, just use it
 $vhost ||= &get_parent_server($server);
-if ($server->{'directory'} eq $vhost->{$server->{'manager'}.'_dir'}) {
+if ($server->{$field} eq $vhost->{$server->{'manager'}.'_dir'}) {
 	return undef;
 	}
 
 # Does this directory exist at all, and can it be used?
 my @dirs = &list_directories();
-my ($dir) = grep { $_->{'dir'} eq $server->{'directory'} } @dirs;
-$dir || return $text{'directory_evdir'};
+my @matchdirs = grep { $_->{'dir'} eq $server->{$field} } @dirs;
+@matchdirs || return $text{'directory_evdir'};
 @dirs = &list_available_directories();
-($dir) = grep { $_->{'dir'} eq $server->{'directory'} } @dirs;
-$dir || return $text{'directory_evdir2'};
+my @availdirs = grep { $_->{'dir'} eq $server->{$field} } @dirs;
+@availdirs || return $text{'directory_evdir2'};
 
-# Ok for host?
-if ($dir->{'hosts'}) {
-	&indexof($vhost->{'id'}, split(/\s+/, $dir->{'hosts'})) >= 0 ||
-		return &text('directory_evhost', $vhost->{'host'});
+# Check each possible dir
+my $lasterr;
+foreach my $dir (@availdirs) {
+	# Ok for host?
+	if ($dir->{'hosts'} &&
+	    &indexof($vhost->{'id'}, split(/\s+/, $dir->{'hosts'})) < 0) {
+		$lasterr = &text('directory_evhost', $vhost->{'host'});
+		next;
+		}
+
+	# Ok for virtualization type?
+	if ($dir->{'managers'} &&
+	    &indexof($server->{'manager'},
+		     split(/\s+/, $dir->{'managers'})) < 0) {
+		$lasterr = &text('directory_evmanager',
+				 $text{$server->{'manager'}.'_typedesc'});
+		next;
+		}
+
+	return undef;
 	}
-
-# Ok for virtualization type?
-if ($dir->{'managers'}) {
-	&indexof($server->{'manager'}, split(/\s+/, $dir->{'managers'})) >= 0 ||
-		return &text('directory_evmanager',
-			     $text{$server->{'manager'}.'_typedesc'});
-	}
-
-return undef;
+return $lasterr;
 }
 
 # directory_selector(type, [value])
@@ -825,22 +865,26 @@ return undef;
 sub directory_selector
 {
 my ($manager, $value) = @_;
-my @dirs;
-foreach my $dir (&list_available_directories()) {
-	if ($dir->{'managers'} &&
-	    &indexof($manager, split(/\s+/, $dir->{'managers'})) < 0) {
-		next;
-		}
-	push(@dirs, $dir);
+my @dirs = &list_available_directories_for_manager($manager);
+if (@dirs == 1 && $dirs[0]->{'dir'} eq '') {
+	# Just one directory, and it is for the host system default .. so no
+	# need for a selector
+	return undef;
 	}
-if (@dirs) {
+elsif (@dirs) {
+	# Possibly multiple directories to choose from
+	@dirs = sort { $a->{'dir'} cmp $b->{'dir'} } @dirs;
 	return &ui_select("directory", $value,
-			  [ [ "", "&lt;$text{'create_defdirectory'}&gt;" ],
-			    map { [ $_->{'dir'},
-				    $_->{'dir'}." (".$_->{'desc'}.")" ] }
-				@dirs ], 1, 0, $value ? 1 : 0);
+		  [ map { [ $_->{'dir'},
+			    $_->{'dir'} ?
+				$_->{'dir'}." (".$_->{'desc'}.")" :
+				$_->{'desc'} ] }
+			@dirs ], 1, 0, $value ? 1 : 0);
 	}
-return undef;
+else {
+	# No directories available
+	return "<i>$text{'create_nodirectory'}</i>";
+	}
 }
 
 1;

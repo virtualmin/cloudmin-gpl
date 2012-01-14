@@ -2539,7 +2539,7 @@ $rv->{'virt_part'} = 1;
 
 if (!$device) {
 	my $vhost = &type_kvm_parent($server);
-	my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
+	my $kvm_dir = $server->{'new_directory'} || $vhost->{'kvm_dir'};
 	my $vg;
 	if ($storage) {
 		$vg = $storage->{'id'} =~ /^lvm_(\S+)/ ? $1 : undef;
@@ -4891,6 +4891,7 @@ foreach my $d (@$disks) {
 $server->{'kvm_drives'} = join(" ", @drives);
 $server->{'kvm_on'} = $dest->{'id'};
 $server->{'directory'} = $directory if (defined($directory));
+delete($server->{'new_directory'}) if (defined($directory));
 
 # Fix monitoring and console paths
 push(@delfiles, $server->{'kvm_console'})
@@ -5018,6 +5019,7 @@ foreach my $d (@$disks) {
 
 # Update disk directory if changed
 $server->{'directory'} = $directory if (defined($directory));
+delete($server->{'new_directory'}) if (defined($directory));
 
 return undef;
 }
@@ -5710,7 +5712,7 @@ foreach my $d (@$disks) {
 		else {
 			$d->{'newreal'} .= "-".$newkvm;
 			}
-		if ($old_kvm_dir ne $new_kvm_dir) {
+		if ($d->{'real'} !~ /^\Q$new_kvm_dir\E\//) {
 			$d->{'newreal'} =~ s/^.*[\\\/]//;
 			$d->{'newreal'} = "$new_kvm_dir/$d->{'newreal'}";
 			}

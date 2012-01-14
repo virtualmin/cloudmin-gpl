@@ -37,13 +37,19 @@ if (@directories) {
 		else {
 			$pdesc = "<i>$text{'directories_pall'}</i>";
 			}
+		if ($s->{'dir'}) {
+			$ddesc = &html_escape($s->{'dir'});
+			}
+		else {
+			$ddesc = "<i>$text{'directories_ddef'}</i>";
+			}
 		print &ui_checked_columns_row([
 			"<a href='edit_directory.cgi?id=$s->{'id'}'>".
-			 &html_escape($s->{'dir'})."</a>",
+			  $ddesc."</a>",
 			&html_escape($s->{'desc'}),
 			$mdesc,
 			$pdesc,
-			], \@tds, "d", $s->{'id'});
+			], \@tds, "d", $s->{'id'}, 0, $s->{'default'});
 		}
 	print &ui_columns_end();
 	print &ui_links_row(\@links);

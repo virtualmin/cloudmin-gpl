@@ -101,20 +101,22 @@ else {
 # Show form for default directory for new disks
 if (&indexof($server->{'manager'}, @diskfile_server_management_types) >= 0 &&
     defined(&list_directories)) {
+	@dirs = &list_available_directories_for_manager($server->{'manager'});
 	$sel = &directory_selector($server->{'manager'},
-				   $server->{'directory'});
-	if ($sel) {
+				   $server->{'new_directory'});
+	if ($sel && (@dirs > 1 ||
+		     $dirs[0]->{'dir'} ne $server->{'new_directory'})) {
 		@dirs = &list_directories();
 		print &ui_form_start("save_diskdir.cgi");
 		print &ui_hidden("id", $in{'id'});
 		print &ui_table_start($text{'disks_dheader'}, undef, 2);
 
 		# Current dir, if set
-		if ($server->{'directory'}) {
-			($dir) = grep { $_->{'dir'} eq $server->{'directory'} }
-				      @dirs;
+		if ($server->{'new_directory'}) {
+			($dir) = grep { $_->{'dir'} eq
+					  $server->{'new_directory'} } @dirs;
 			$dmesg = $dir ? $dir->{'dir'}." (".$dir->{'desc'}.")"
-				      : $server->{'directory'};
+				      : $server->{'new_directory'};
 			}
 		elsif ($vhost->{$server->{'manager'}.'_vg'}) {
 			$dmesg = &text('disks_ddeflvm',
@@ -127,14 +129,14 @@ if (&indexof($server->{'manager'}, @diskfile_server_management_types) >= 0 &&
 		print &ui_table_row($text{'disks_dold'}, $dmesg);
 
 		# Host default location
-		if ($server->{'directory'}) {
+		if ($server->{'new_directory'}) {
 			if ($vhost->{$server->{'manager'}.'_vg'}) {
 				$hmesg = &text('disks_hdeflvm',
-					       $vhost->{$server->{'manager'}.'_vg'});
+				       $vhost->{$server->{'manager'}.'_vg'});
 				}
 			else {
 				$hmesg = &text('disks_hdef',
-					       $vhost->{$server->{'manager'}.'_dir'});
+				       $vhost->{$server->{'manager'}.'_dir'});
 				}
 			print &ui_table_row($text{'disks_dhost'}, $hmesg);
 			}

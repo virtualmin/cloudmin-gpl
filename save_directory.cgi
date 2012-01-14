@@ -26,12 +26,17 @@ if ($in{'delete'}) {
 	}
 else {
 	# Validate and store path
-	$in{'dir'} =~ /^\/\S+$/ || &error($text{'directory_edir'});
-	if ($in{'new'} || $directory->{'dir'} ne $in{'dir'}) {
-		($clash) = grep { $_->{'dir'} eq $in{'dir'} } @directories;
-		$clash && &error($text{'directory_eclash'});
+	if (!$directory->{'default'}) {
+		$in{'dir_def'} || $in{'dir'} =~ /^\/\S+$/ ||
+			&error($text{'directory_edir'});
+		if (!$in{'dir_def'} &&
+		    ($in{'new'} || $directory->{'dir'} ne $in{'dir'})) {
+			($clash) = grep { $_->{'dir'} eq $in{'dir'} }
+					@directories;
+			$clash && &error($text{'directory_eclash'});
+			}
+		$directory->{'dir'} = $in{'dir_def'} ? '' : $in{'dir'};
 		}
-	$directory->{'dir'} = $in{'dir'};
 
 	# Save mandatory description
 	$in{'desc'} =~ /\S/ || &error($text{'directory_edesc'});

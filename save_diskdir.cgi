@@ -10,10 +10,10 @@ $vhost = &get_parent_server($server);
 &obtain_lock_server($server);
 
 # Save disk directory
-if ($server->{'directory'} ne $in{'directory'}) {
-	$server->{'directory'} = $in{'directory'};
+if ($server->{'new_directory'} ne $in{'directory'}) {
+	$server->{'new_directory'} = $in{'directory'};
 	if ($server->{'directory'} ne '') {
-		$err = &validate_directory($server);
+		$err = &validate_directory($server, undef, 'new_directory');
 		&error($err) if ($err);
 		}
 	}

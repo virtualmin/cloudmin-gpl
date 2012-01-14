@@ -254,9 +254,9 @@ if ($bootdevice) {
 	}
 
 # Validate and save disk directory
-if (defined($directory)) {
-	$server->{'directory'} = $directory;
-	$err = &validate_directory($server);
+if (defined($directory) && $server->{'new_directory'} ne $directory) {
+	$server->{'new_directory'} = $directory;
+	$err = &validate_directory($server, undef, 'new_directory');
 	$err && &usage("--disk-directory is invalid : $err");
 	}
 

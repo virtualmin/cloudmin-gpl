@@ -590,6 +590,7 @@ create_sshport=Setting SSH server port ..
 create_esshport=.. failed : $1
 create_directory=Disk image directory
 create_defdirectory=Host system default
+create_nodirectory=None available!
 create_edirectory=Invalid disk image directory : $1
 
 keys_title=SSH Keys
@@ -4878,6 +4879,8 @@ directories_plans=For owners on plans
 directories_mall=All types
 directories_pnone=Master admin only
 directories_pall=All plans
+directories_ddef=Host system default
+directories_dhost=Directory on host
 directories_delete=Remove Selected Directories
 directories_none=No disk image directories have been defined yet.
 directories_return=disk image directories
