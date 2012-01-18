@@ -35,7 +35,8 @@ foreach my $smt (@possible_server_management_types) {
 				}
 			if ($v != 2) {
 				push(@hosted_server_management_types, $smt);
-				if ($smt ne 'citrix') {
+				if ($smt ne 'citrix' && $smt ne 'vserver' &&
+				    $smt ne 'zones') {
 					push(@diskfile_server_management_types,
 					     $smt);
 					}
