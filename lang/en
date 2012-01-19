@@ -2893,6 +2893,7 @@ smove_dumping=Saving state of running processes ..
 smove_edump=.. process dump failed : $1
 smove_dumpsend=Sending process state file to new host system ..
 smove_openvzconf=Copying OpenVZ config file $1 ..
+smove_openvzconf2=Fixing OpenVZ config file $1 ..
 smove_lxcconf=Copying LXC config file $1 ..
 smove_lxcnew=Creating empty LXC container on new host system ..
 smove_sharecheck=Checking if filesystem is shared ..
@@ -4913,7 +4914,7 @@ directory_enone=None selected
 directory_evdir=Not in list of disk image directories
 directory_evdir2=You are not allowed to use this disk image directories
 directory_evhost=Cannot be used on host system $1
-directory_evtype=Cannot be used for $1 virtual systems
+directory_evmanager=Cannot be used for $1 virtual systems
 directory_eclash=A directory with the same path already exists
 directory_uheader=Systems using this directory
 
