@@ -472,41 +472,6 @@ if (@history > 1) {
 	print &ui_hidden_table_end();
 	}
 
-# Show authentication form (if needed)
-if ($view) {
-	# Cannot edit authentication options in view mode
-	$haswebmin = $hasssh = 0;
-	}
-else {
-	$haswebmin = ($status eq 'nowebminlogin' || $status eq 'novirt' ||
-		      $status eq 'downwebmin' || $status eq 'virt' ||
-		      $status eq 'nowebmin' && $server->{'no_webmin_login'}) &&
-		     $server->{'id'} != 0;
-	$sfunc = "type_".$t."_no_ssh";
-	$hasssh = !defined(&$sfunc) || !&$sfunc();
-	}
-if ($haswebmin || $hasssh) {
-	print &ui_hidden_table_start($text{'edit_aheader'},
-				     "width=100%", 2,
-				     "auth", $in{'auth'}, \@tds,
-				     &hlink($text{'edit_help'}, "editauth"));
-	}
-
-# SSH login details
-if ($hasssh) {
-	&show_ssh_login_form($server);
-	print &ui_table_hr() if ($haswebmin);
-	}
-
-# Webmin login details
-if ($haswebmin) {
-	&show_webmin_login_form($server);
-	}
-
-if ($haswebmin || $hasssh) {
-	print &ui_hidden_table_end("auth");
-	}
-
 # Section for notes
 print &ui_hidden_table_start($text{'edit_nheader'},
 			     "width=100%", 2, "notes", $in{'notes'}, \@tds);

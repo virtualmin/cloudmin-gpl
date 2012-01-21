@@ -10,5 +10,11 @@ and if you are allowed to use them. <p>
 When changing the Webmin password, you have an option to make it the same as the Unix <tt>root</tt> password. This is done by configuring Webmin on the system to use PAM or read the <tt>/etc/shadow</tt> file when <tt>root</tt> logs in,
 so that any future changes to the SSH password will match. <p>
 
+KVM and Xen virtual systems have a remotely accessible graphical console
+that is protected by a password which can also be changed using this page. By
+default the password is the same as whatever was assigned to the <tt>root</tt>
+user when the system was created, but you may want to modify this to further
+lock down access to the system. <p>
+
 <footer>
 

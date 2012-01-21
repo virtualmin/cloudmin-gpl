@@ -9,22 +9,46 @@ $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "pass");
 
-# Validate inputs
-if ($in{'ssh_pass_def'} == 0) {
-	$in{'ssh_pass'} =~ /\S/ || &error($text{'pass_essh_pass'});
+if ($in{'mode'}) {
+	# Validate inputs for passwords to set
+	if ($in{'ssh_pass_def'} == 0) {
+		$in{'ssh_pass'} =~ /\S/ || &error($text{'pass_essh_pass'});
+		}
+	elsif ($in{'ssh_pass_def'} == 2) {
+		&can_action_error(undef, "sshkeys");
+		@keys = &list_ssh_keys();
+		($key) = grep { $_->{'id'} eq $in{'ssh_key'} } @keys;
+		$key || &error($text{'pass_essh_key'});
+		}
+	!defined($in{'webmin_pass_def'}) || $in{'webmin_pass_def'} != 0 ||
+	   $in{'webmin_pass'} =~ /\S/ || 
+		&error($text{'pass_ewebmin_pass'});
+	if ($in{'webmin_pass_def'} == 2 &&
+	    !$server->{'ssh_pass'} && $in{'ssh_pass_def'}) {
+		&error($text{'pass_enosame'});
+		}
 	}
-elsif ($in{'ssh_pass_def'} == 2) {
-	&can_action_error(undef, "sshkeys");
-	@keys = &list_ssh_keys();
-	($key) = grep { $_->{'id'} eq $in{'ssh_key'} } @keys;
-	$key || &error($text{'pass_essh_key'});
-	}
-!defined($in{'webmin_pass_def'}) || $in{'webmin_pass_def'} != 0 ||
-   $in{'webmin_pass'} =~ /\S/ || 
-	&error($text{'pass_ewebmin_pass'});
-if ($in{'webmin_pass_def'} == 2 &&
-    !$server->{'ssh_pass'} && $in{'ssh_pass_def'}) {
-	&error($text{'pass_enosame'});
+else {
+	# Validate and store inputs for passwords Cloudmin uses
+	if (defined($in{'auth_mode'})) {
+		$err = &parse_ssh_login_form(\%in, $server);
+		&error($err) if ($err);
+		}
+	if (defined($in{'webmin_mode'})) {
+		$err = &parse_webmin_login_form(\%in, $server);
+		&error($err) if ($err);
+
+		# Fill in Webmin connection details if we don't have them yet
+		if (!$server->{'port'} || $server->{'ssl'} eq '') {
+			my ($sok, $serr, $webminroot, $webminport,
+			       $webminssl) = &check_server_ssh_login($server);
+			if ($webminport) {
+				$server->{'port'} = $webminport;
+				$server->{'ssl'} = $webminssl;
+				}
+			}
+		}
+	$done = 1;
 	}
 
 # Set VNC password
@@ -43,75 +67,77 @@ if ($vcan && !$in{'vnc_def'}) {
 &ui_print_unbuffered_header(&server_in($server), $text{'pass_title'}, "");
 &obtain_lock_server($server);
 
-if ($in{'ssh_pass_def'} == 0) {
-	# Change SSH password, by updating /etc/shadow
-	$done++;
-	&$first_print($text{'pass_sshing'});
-	$err = &set_shadow_root_password($server, $in{'ssh_pass'});
-	if ($err) {
-		&$second_print(&text('pass_essh', $err));
-		goto DONE;
-		}
-	else {
-		&$second_print($text{'create_done'});
-		$server->{'ssh_pass'} = $in{'ssh_pass'};
-		if ($server->{'ssh_pass_same'}) {
-			$server->{'pass'} = $in{'ssh_pass'};
+if ($in{'mode'}) {
+	if ($in{'ssh_pass_def'} == 0) {
+		# Change SSH password, by updating /etc/shadow
+		$done++;
+		&$first_print($text{'pass_sshing'});
+		$err = &set_shadow_root_password($server, $in{'ssh_pass'});
+		if ($err) {
+			&$second_print(&text('pass_essh', $err));
+			goto DONE;
 			}
-		delete($server->{'key'});
-		&save_managed_server($server);
+		else {
+			&$second_print($text{'create_done'});
+			$server->{'ssh_pass'} = $in{'ssh_pass'};
+			if ($server->{'ssh_pass_same'}) {
+				$server->{'pass'} = $in{'ssh_pass'};
+				}
+			delete($server->{'key'});
+			&save_managed_server($server);
+			}
 		}
-	}
-elsif ($in{'ssh_pass_def'} == 2) {
-	# Use SSH key
-	$done++;
-	&$first_print($text{'pass_sshkeying'});
-	$server->{'key'} = $key->{'id'};
-	$err = &create_authorized_key($server, 1);
-	if ($err) {
-		&$second_print(&text('pass_ewebmin', $err));
-		goto DONE;
-                }
-	else {
-		&$second_print($text{'pass_sshkeydone'});
-		$server->{'ssh_pass_same'} = 0;
-		delete($server->{'ssh_pass'});
-		&save_managed_server($server);
+	elsif ($in{'ssh_pass_def'} == 2) {
+		# Use SSH key
+		$done++;
+		&$first_print($text{'pass_sshkeying'});
+		$server->{'key'} = $key->{'id'};
+		$err = &create_authorized_key($server, 1);
+		if ($err) {
+			&$second_print(&text('pass_ewebmin', $err));
+			goto DONE;
+			}
+		else {
+			&$second_print($text{'pass_sshkeydone'});
+			$server->{'ssh_pass_same'} = 0;
+			delete($server->{'ssh_pass'});
+			&save_managed_server($server);
+			}
 		}
-	}
 
-# Change Webmin password, or force to sync with Unix
-if (defined($in{'webmin_pass_def'}) && $in{'webmin_pass_def'} == 0) {
-	# Set specific password
-	&$first_print($text{'pass_webmining'});
-	($sshstatus, $ssherr, $wroot, $wport, $wssl) =
-		&check_server_ssh_login($server);
-	$err = &set_server_webmin_password($server, $wroot,
-					   'root', $in{'webmin_pass'});
-	if ($err) {
-		&$second_print(&text('pass_ewebmin', $err));
-		goto DONE;
+	# Change Webmin password, or force to sync with Unix
+	if (defined($in{'webmin_pass_def'}) && $in{'webmin_pass_def'} == 0) {
+		# Set specific password
+		&$first_print($text{'pass_webmining'});
+		($sshstatus, $ssherr, $wroot, $wport, $wssl) =
+			&check_server_ssh_login($server);
+		$err = &set_server_webmin_password($server, $wroot,
+						   'root', $in{'webmin_pass'});
+		if ($err) {
+			&$second_print(&text('pass_ewebmin', $err));
+			goto DONE;
+			}
+		else {
+			&$second_print($text{'create_done'});
+			$server->{'pass'} = $in{'webmin_pass'};
+			$server->{'ssh_pass_same'} = 0;
+			}
+		$done++;
 		}
-	else {
-		&$second_print($text{'create_done'});
-		$server->{'pass'} = $in{'webmin_pass'};
-		$server->{'ssh_pass_same'} = 0;
-		}
-	$done++;
-	}
-elsif ($in{'webmin_pass_def'} == 2) {
-	# Same as Unix
-	$done++;
-	&$first_print($text{'pass_sameing'});
-	$err = &set_server_webmin_password_crypt($server, 'root', 'x');
-	if ($err) {
-		&$second_print(&text('pass_esame', $err));
-		goto DONE;
-		}
-	else {
-		&$second_print($text{'create_done'});
-		$server->{'pass'} = $server->{'ssh_pass'};
-		$server->{'ssh_pass_same'} = 1;
+	elsif ($in{'webmin_pass_def'} == 2) {
+		# Same as Unix
+		$done++;
+		&$first_print($text{'pass_sameing'});
+		$err = &set_server_webmin_password_crypt($server, 'root', 'x');
+		if ($err) {
+			&$second_print(&text('pass_esame', $err));
+			goto DONE;
+			}
+		else {
+			&$second_print($text{'create_done'});
+			$server->{'pass'} = $server->{'ssh_pass'};
+			$server->{'ssh_pass_same'} = 1;
+			}
 		}
 	}
 

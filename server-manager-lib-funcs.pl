@@ -6782,11 +6782,8 @@ my $clfunc = "type_".$t."_supports_console_login";
 my $canlogin = defined(&$clfunc) && &$clfunc($server);
 my $rsfunc = "type_".$server->{'manager'}."_can_reset";
 my $canreset = defined(&$rsfunc) && &$rsfunc($server);
-my $pfunc = "type_".$server->{'manager'}."_can_password";
-my $canpass = defined(&$pfunc) && &$pfunc($server) &&
-	      $server->{'status'} ne 'alive' &&
-	      $server->{'status'} ne 'noping' &&
-	      $server->{'type'} ne 'windows';
+my $canpass = $server->{'type'} ne 'windows' &&
+	      !$server->{'ssh_nologin'};
 my $clonefunc = "type_".$server->{'manager'}."_can_clone";
 my $canclone = defined(&$clonefunc) && &$clonefunc($server);
 my $bootmodefunc = "type_".$server->{'manager'}."_list_boot_modes";
@@ -7004,7 +7001,6 @@ else {
 if (&can_action($server, "pass") && $canpass) {
 	push(@rv, { 'id' => 'pass',
 		    'desc' => $text{'edit_setpass'},
-		    'cat' => 'manage',
 		    'link' => "edit_pass.cgi?id=$server->{'id'}" });
 	}
 if ($status ne 'nohost') {

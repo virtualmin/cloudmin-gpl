@@ -469,26 +469,6 @@ else {
 		&$pfunc($server, \%in);
 		}
 
-	# Validate authentication inputs
-	if (defined($in{'auth_mode'})) {
-		$err = &parse_ssh_login_form(\%in, $server);
-		&error($err) if ($err);
-		}
-	if (defined($in{'webmin_mode'})) {
-		$err = &parse_webmin_login_form(\%in, $server);
-		&error($err) if ($err);
-
-		# Fill in Webmin connection details if we don't have them yet
-		if (!$server->{'port'} || $server->{'ssl'} eq '') {
-			my ($sok, $serr, $webminroot, $webminport,
-			       $webminssl) = &check_server_ssh_login($server);
-			if ($webminport) {
-				$server->{'port'} = $webminport;
-				$server->{'ssl'} = $webminssl;
-				}
-			}
-		}
-
 	# Call type-specific post-save function
 	$psfunc = "type_".$t."_post_save";
 	if (defined(&$psfunc)) {

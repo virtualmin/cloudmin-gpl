@@ -2031,6 +2031,7 @@ pass_vnone=None chosen yet
 pass_evlength=The graphical console password cannot be more than $1 characters long.
 pass_needreboot=A reboot is needed to apply the new graphical console password.
 pass_evcomma=The graphical console password cannot contain a comma
+pass_force=Change login used by Cloudmin
 
 licences_title=Virtualmin Pro Licenses
 licences_serial=Serial number
