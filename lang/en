@@ -2010,7 +2010,8 @@ pass_sshkey=Use SSH key
 pass_webmin=Webmin password for <tt>$1</tt>
 pass_same=Same as SSH
 pass_ok=Change Now
-pass_desc=This page allows you to actually change the SSH and Webmin passwords for this system. It will also update the passwords Cloudmin uses to login to it, so that the system can still be managed.
+pass_desc=This page allows you to change the actual SSH and Webmin passwords for this system. The passwords Cloudmin uses to login will also be updated, so that the system can still be managed.
+pass_desc2=This page allows you to change the passwords that Cloudmin uses to login to SSH and Webmin on the system. These should match the passwords that the system has been actually configured to use.
 pass_err=Failed to change password
 pass_essh_pass=Missing new password for SSH
 pass_essh_key=SSH key does not exist!
@@ -2032,6 +2033,7 @@ pass_evlength=The graphical console password cannot be more than $1 characters l
 pass_needreboot=A reboot is needed to apply the new graphical console password.
 pass_evcomma=The graphical console password cannot contain a comma
 pass_force=Change login used by Cloudmin
+pass_saving=Updating passwords used by Cloudmin ..
 
 licences_title=Virtualmin Pro Licenses
 licences_serial=Serial number

@@ -8,18 +8,36 @@ $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "pass");
 
+# Work out if password can be changed
 $pfunc = "type_".$server->{'manager'}."_can_password";
 $canpass = !$in{'force'} && defined(&$pfunc) && &$pfunc($server);
+
+# Work out if Cloudmin logs into the system or not
+$haswebmin = ($server->{'status'} eq 'nowebminlogin' ||
+	      $server->{'status'} eq 'novirt' ||
+	      $server->{'status'} eq 'downwebmin' ||
+	      $server->{'status'} eq 'virt' ||
+	      $server->{'status'} eq 'nowebmin' &&
+		$server->{'no_webmin_login'}) &&
+	     $server->{'id'} != 0;
+$sfunc = "type_".$server->{'manager'}."_no_ssh";
+$hasssh = !defined(&$sfunc) || !&$sfunc();
 
 &ui_print_header(&server_in($server), $text{'pass_title'}, "",
 		 $canpass ? "pass" : "pass2");
 
-print $text{'pass_desc'},"<p>\n";
+if ($canpass) {
+	print $text{'pass_desc'},"<p>\n";
+	}
+else {
+	print $text{'pass_desc2'},"<p>\n";
+	}
 
 print &ui_form_start("save_pass.cgi", "post");
 print &ui_hidden("id", $in{'id'});
-$right = $canpass ? "<a href='edit_pass.cgi?id=$in{'id'}&force=1'>".
-		    "$text{'pass_force'}</a>" : "";
+$right = $canpass && ($haswebmin || $hasssh) ?
+	"<a href='edit_pass.cgi?id=$in{'id'}&force=1'>$text{'pass_force'}</a>" :
+	undef;
 print &ui_table_start($text{'pass_header'}, undef, 2, undef, $right);
 
 if ($canpass) {
@@ -66,12 +84,6 @@ if ($canpass) {
 else {
 	# Can only change password used to login
 	print &ui_hidden("mode", 0);
-	$haswebmin = ($status eq 'nowebminlogin' || $status eq 'novirt' ||
-		      $status eq 'downwebmin' || $status eq 'virt' ||
-		      $status eq 'nowebmin' && $server->{'no_webmin_login'}) &&
-		     $server->{'id'} != 0;
-	$sfunc = "type_".$t."_no_ssh";
-	$hasssh = !defined(&$sfunc) || !&$sfunc();
 
 	if ($hasssh) {
 		&show_ssh_login_form($server);

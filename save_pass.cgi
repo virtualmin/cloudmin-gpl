@@ -140,13 +140,19 @@ if ($in{'mode'}) {
 			}
 		}
 	}
+else {
+	&$first_print($text{'pass_saving'});
+	&save_managed_server($server);
+	&$second_print($text{'create_done'});
+	}
 
 if ($done) {
 	# Refresh status
 	&$first_print($text{'pass_refreshing'});
 	&check_server_status($server, 0, 1);
 	&save_managed_server($server);
-	&$second_print($text{'create_done'});
+	print &text('save_refreshdone2',
+		    describe_status($server, 1, 1)),"<p>\n";
 
 	if ($need_reboot && $server->{'status'} ne 'down') {
 		# Tell user that a reboot is needed
