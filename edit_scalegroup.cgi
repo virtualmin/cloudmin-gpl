@@ -138,6 +138,11 @@ if ($scalegroup->{'manager'} eq 'ec2') {
 		[ [ "", $text{'create_ec2azoneauto'} ],
 		  map { $_->{'zoneName'} }
 		      grep { $_->{'zoneState'} eq 'available' } @$azones ]));
+
+	# VPC subnet
+	print &ui_table_row($text{'create_ec2subnet'},
+             &ui_textbox("ec2_subnet", undef, 20)." ".
+             &ec2_subnet_chooser_button("ec2_subnet", "ec2_account"));
 	}
 else {
 	# System to clone

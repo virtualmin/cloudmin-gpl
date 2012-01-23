@@ -359,6 +359,20 @@ if ($scalegroup->{'manager'} eq 'ec2') {
 		       'ec2_image' => $scalegroup->{'ec2_image'},
 		       'ec2_size' => $scalegroup->{'ec2_size'},
 		     };
+	if ($scalegroup->{'ec2_subnet'}) {
+		# Find and apply selected subnet
+		my ($ec2) = grep { $_->{'id'} eq $newserver->{'ec2'} }
+				   &list_ec2_accounts();
+		my $subnets = &list_ec2_subnets($ec2);
+		ref($subnets) ||
+			return "Failed to get list of subnets : $subnets";
+		my ($subnet) = grep {
+			$_->{'subnetId'} eq $scalegroup->{'ec2_subnet'} &&
+			$_->{'state'} eq 'available' } @$subnets;
+		$subnet || return "Subnet does not exist or cannot be used";
+		$newserver->{'ec2_subnet'} = $subnet->{'subnetId'};
+		$newserver->{'ec2_network'} = $subnet->{'cidrBlock'};
+		}
 	&run_system_script($newserver, 'before', 'create');
 
 	# Call create function

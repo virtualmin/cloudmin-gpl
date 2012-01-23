@@ -81,6 +81,9 @@ else {
 
 		# Availability zone
 		$scalegroup->{'ec2_azone'} = $in{'ec2_azone'};
+
+		# VPC subnet
+		$scalegroup->{'ec2_subnet'} = $in{'ec2_subnet'};
 		}
 	else {
 		# System to clone
