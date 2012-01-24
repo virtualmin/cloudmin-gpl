@@ -6480,6 +6480,7 @@ my ($virtcount) = @_;
 my (@glinks, @gtitles, @gicons, @gcats);
 my $anyvirt = $server_management_types{'xen'} ||
 	      $server_management_types{'kvm'} ||
+	      $server_management_types{'citrix'} ||
 	      $server_management_types{'vserver'} ||
 	      $server_management_types{'openvz'} ||
 	      $server_management_types{'lxc'} ||
