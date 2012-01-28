@@ -28,11 +28,11 @@
 	[ 'hour', 60*60 ],
 	);
 
-# add_historic_collected_info(&info, time, &server)
+# add_historic_collected_info(&info, time, &server, [&only-stats])
 # Log some historic data for a Cloudmin-monitored system
 sub add_historic_collected_info
 {
-my ($info, $time, $server) = @_;
+my ($info, $time, $server, $only) = @_;
 
 # Add disk usage, CPU and memory to historic stats, if we got them
 if (!-d $historic_info_dir) {
@@ -152,6 +152,24 @@ elsif ($server->{'status'} eq 'nossh' ||
 else {
 	push(@stats, [ "up", 1 ]);
 	push(@stats, [ "down", 0 ]);
+	}
+
+# Add network traffic in and out in bytes / second, taken from the last minute
+# sample (unless more than 1 hour old)
+if ($config{'bw_enabled'}) {
+	my $bwinfo = &get_bandwidth($server);
+	if ($bwinfo->{'new_min'} &&
+	    $time - $bwinfo->{'new_min'} < 3600) {
+		push(@stats, [ "bwin",
+			int($bwinfo->{'min_in_'.$bwinfo->{'new_min'}} / 60) ]);
+		push(@stats, [ "bwout",
+			int($bwinfo->{'min_out_'.$bwinfo->{'new_min'}} / 60) ]);
+		}
+	}
+
+# Limit to selected stats, if requested
+if ($only) {
+	@stats = grep { $only->{$_->[0]} } @stats;
 	}
 
 # Save historic stats

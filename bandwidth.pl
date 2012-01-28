@@ -77,10 +77,11 @@ foreach $s (@servers) {
 	# Spread over period between last poll and now
 	if ($bwinfo->{'last_time'}) {
 		# By hour
-		$hours = ($now - $bwinfo->{'last_time'}) / 3600.0;
+		$hnow = int($now/3600)*3600;
+		$hlast = int($bwinfo->{'last_time'}/3600)*3600;
+		$hours = ($hnow - $hlast) / 3600.0;
 		$hours = 1 if ($hours < 1);
-		for(my $h=$bwinfo->{'last_time'}; $h<$now; $h+=3600) {
-			$hh = int($h/3600) * 3600;
+		for($hh=$hlast; $hh<$hlast+$hours*3600; $hh+=3600) {
 			$bwinfo->{'hour_in_'.$hh} += $in_diff / $hours;
 			$bwinfo->{'hour_out_'.$hh} += $out_diff / $hours;
 			$bwinfo->{'hour_inp_'.$hh} += $inp_diff / $hours;
@@ -90,17 +91,18 @@ foreach $s (@servers) {
 		$bwinfo->{'old_hour'} ||= int($bwinfo->{'last_time'}/3600)*3600;
 
 		# By minute
-		$mins = ($now - $bwinfo->{'last_time'}) / 60.0;
+		$mnow = int($now/60)*60;
+		$mlast = int($bwinfo->{'last_time'}/60)*60;
+		$mins = ($mnow - $mlast) / 60.0;
 		$mins = 1 if ($mins < 1);
-		for(my $m=$bwinfo->{'last_time'}; $m<$now; $m+=60) {
-			$mm = int($m/60) * 60;
+		for($mm=$mlast; $mm<($mlast+$mins*60); $mm+=60) {
 			$bwinfo->{'min_in_'.$mm} += $in_diff / $mins;
 			$bwinfo->{'min_out_'.$mm} += $out_diff / $mins;
 			$bwinfo->{'min_inp_'.$mm} += $inp_diff / $mins;
 			$bwinfo->{'min_outp_'.$mm} += $outp_diff / $mins;
+			$bwinfo->{'new_min'} = $mm;
 			}
-		$bwinfo->{'old_min'} ||= int($bwinfo->{'last_time'}/60)*60;
-		$bwinfo->{'new_min'} = $mm;
+		$bwinfo->{'old_min'} ||= $mlast;
 
 		# Get rid of per-minute stats more than 1 week old
 		$weekago = $now - 7*24*60*60;
@@ -119,6 +121,10 @@ foreach $s (@servers) {
 
 	# Write out
 	&save_bandwidth($s, $bwinfo);
+
+	# Also save as history
+	&add_historic_collected_info({ }, $now, $s, { 'bwin' => 1,
+						      'bwout' => 1 });
 	}
 
 # For each server, sum up usage over the relevant accounting period, and
