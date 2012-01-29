@@ -238,8 +238,8 @@ foreach $sect ("conds", "downconds") {
 	# And / or mode
 	print &ui_table_row(undef,
 		&ui_radio($sect."_and", $scalegroup->{$sect.'_and'},
-			  [ [ 1, $text{'scalegroup_and'} ],
-			    [ 0, $text{'scalegroup_or'} ] ]), 2);
+			  [ [ 1, $text{'scalegroup_and'.$sect} ],
+			    [ 0, $text{'scalegroup_or'.$sect} ] ]), 2);
 
 	print &ui_hidden_table_end($sect);
 	}
