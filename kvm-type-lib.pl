@@ -1868,6 +1868,7 @@ if (&can_ssh_status($server) && !$force) {
 		my ($kout, $kex) = &execute_command_on_server(
 					$vhost, "kill -0 $proc->{'pid'}");
 		if ($kex) {
+			&delete_kvm_cgroup($server, $vhost);
 			return undef;
 			}
 		sleep(1);
@@ -1887,6 +1888,7 @@ if (!$force) {
 			my ($kout, $kex) = &execute_command_on_server(
 					$vhost, "kill -0 $proc->{'pid'}");
 			if ($kex) {
+				&delete_kvm_cgroup($server, $vhost);
 				return undef;
 				}
 			sleep(1);
@@ -1900,7 +1902,10 @@ if ($proc) {
 	# Just kill it
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 					"kill -9 $proc->{'pid'}");
-	return $err ? $err : $ex ? $out : undef;
+	return $err if ($err);
+	return $out if ($ex);
+	&delete_kvm_cgroup($server, $vhost);
+	return undef;
 	}
 return "No KVM process found!";
 }
@@ -2069,6 +2074,7 @@ if ($proc) {
 	&type_kvm_shutdown($server, 1);
 	$server->{'status'} = 'down';
 	}
+&delete_kvm_cgroup($server, $vhost);
 
 # Delete boot-time entry
 &type_kvm_set_atboot($server, 0);
@@ -2251,6 +2257,18 @@ if ($server->{'kvm_smp'}) {
 # Add other imported flags
 if ($server->{'kvm_args'}) {
 	$cmd .= " ".$server->{'kvm_args'};
+	}
+
+# If cgroups are supported, run kvm command in one
+if ($vhost->{'kvm_cgroup_support'}) {
+	my @cmds = ( "cgcreate -g cpu:$server->{'id'}" );
+	if ($server->{'kvm_cpu'}) {
+		my $n = $server->{'kvm_cpu'} == 0 ? 1024 :
+				int($server->{'kvm_cpu'} * 1024 / 100);
+		push(@cmds, "echo $n >/mnt/cgroups/cpu/$server->{'id'}/cpu.shares");
+		}
+	push(@cmds, "exec cgexec -g cpu:$server->{'id'} $cmd");
+	$cmd = "(".join(" ; ", @cmds).")";
 	}
 
 return $cmd;
@@ -3156,6 +3174,54 @@ return [ { 'id' => 'disk', 'desc' => 'Hard disk' },
 	 { 'id' => 'cdrom', 'desc' => 'CD or DVD drive' } ];
 }
 
+# type_kvm_can_cpu(&server)
+# Checks if the host of some KVM system supports cgroups
+sub type_kvm_can_cpu
+{
+my ($server) = @_;
+my $vhost = &get_parent_server($server);
+return $vhost->{'kvm_cgroup_support'} ? 3 : 0;
+}
+
+# type_kvm_get_cpu(&server)
+# Returns the percentage of a CPU granted to this server, or 0 for unlimited
+sub type_kvm_get_cpu
+{
+my ($server) = @_;
+if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
+	# Get actual live value
+	my $vhost = &type_kvm_parent($server);
+	my ($out, $ex, $err) = &execute_command_on_server(
+		$vhost, "cat /mnt/cgroups/cpu/$server->{'id'}/cpu.shares");
+	if (!$ex && !$err && $out =~ /^(\d+)/) {
+		return $1 == 1024 ? 0 : int($1 * 100 / 1024);
+		}
+	}
+# Use cached value
+return $server->{'kvm_cpu'};
+}
+
+# type_kvm_save_cpu(&server, cpu)
+# Updates the CPU limit in the local config file, and applies it
+sub type_kvm_save_cpu
+{
+my ($server, $cpu) = @_;
+if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
+	# Update live value
+	my $vhost = &type_kvm_parent($server);
+	&execute_command_on_server($vhost, "cgcreate -g cpu:$server->{'id'}");
+	my $n = $cpu == 0 ? 1024 : int($cpu * 1024 / 100);
+	my ($out, $ex, $err) = &execute_command_on_server(
+		$vhost, "echo $n >/mnt/cgroups/cpu/$server->{'id'}/cpu.shares");
+	return $err if ($err);
+	return $out if ($ex);
+	}
+# Update boot-time config
+&type_kvm_set_atboot($server, 2);
+$server->{'kvm_cpu'} = $cpu;
+return undef;
+}
+
 # Returns 2, indicating that memory can be changed but needs a reboot
 sub type_kvm_can_memory
 {
@@ -3727,6 +3793,14 @@ my ($server) = @_;
 return $server->{'kvm_memory'}*1024*1024;
 }
 
+# type_kvm_get_cpu_size(&server)
+# Returns the cached percentage of CPU allocated to this Xen instance
+sub type_kvm_get_cpu_size
+{
+my ($server) = @_;
+return $server->{'kvm_cpu'} || 0;
+}
+
 # type_kvm_need_mount(&server)
 # Returns 1 if a mount call is needed before reading files from this system
 sub type_kvm_need_mount
@@ -4078,6 +4152,17 @@ elsif (!$server->{'kvm_vg'}) {
 			delete($server->{'kvm_vg_used'});
 			delete($server->{'kvm_vg_free'});
 			}
+		}
+	}
+
+# Check if cgroups are supported
+if (&can_ssh_status($server) && !defined($server->{'kvm_cgroup_support'})) {
+	my @st = &stat_file_on_server($server, "/etc/cgconfig.conf");
+	if (@st > 1 && &has_command_on_server($server, "cgcreate")) {
+		$server->{'kvm_cgroup_support'} = 1;
+		}
+	else {
+		$server->{'kvm_cgroup_support'} = 0;
 		}
 	}
 }
@@ -6165,6 +6250,17 @@ if (!$out) {
 		}
 	}
 return $out =~ /-$flag/ ? 1 : 0;
+}
+
+# delete_kvm_cgroup(&server, [&vhost])
+# Delete the cgroup for a VM on it's host
+sub delete_kvm_cgroup
+{
+my ($server, $vhost) = @_;
+$vhost ||= &type_kvm_parent($server);
+if ($vhost->{'kvm_cgroup_support'} && &can_ssh_status($vhost)) {
+	&execute_command_on_server($vhost, "cpu:$server->{'id'}");
+	}
 }
 
 1;
