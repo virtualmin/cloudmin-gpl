@@ -48,7 +48,7 @@ if ($server->{'unix_hostname'} &&
 	}
 
 # IP address
-if (!&check_ipaddress($server->{'host'})) {
+if ($server->{'ip_force'} || !&check_ipaddress($server->{'host'})) {
 	$ip = &get_server_ip($server);
 	print &ui_table_row($text{'edit_ipaddr'},
 		&ui_opt_textbox("ip", $server->{'ip_force'}, 20,
