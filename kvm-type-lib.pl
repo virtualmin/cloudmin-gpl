@@ -2265,7 +2265,7 @@ if ($vhost->{'kvm_cgroup_support'}) {
 	my @cmds = ( "cgcreate -g cpu:$server->{'id'}" );
 	if ($server->{'kvm_cpu'}) {
 		my $n = int($server->{'kvm_cpu'} * 1024 / 100);
-		push(@cmds, "echo $n >/mnt/cgroups/cpu/$server->{'id'}/cpu.shares");
+		push(@cmds, "echo $n >$vhost->{'kvm_cgroup_dir'}/cpu/$server->{'id'}/cpu.shares");
 		}
 	push(@cmds, "exec cgexec -g cpu:$server->{'id'} $cmd");
 	$cmd = "(".join(" ; ", @cmds).")";
@@ -3192,7 +3192,7 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 	# Get actual live value
 	my $vhost = &type_kvm_parent($server);
 	my ($out, $ex, $err) = &execute_command_on_server(
-		$vhost, "cat /mnt/cgroups/cpu/$server->{'id'}/cpu.shares");
+		$vhost, "cat $vhost->{'kvm_cgroup_dir'}/cpu/$server->{'id'}/cpu.shares");
 	if (!$ex && !$err && $out =~ /^(\d+)/) {
 		return $1 == 1024 ? 0 : int($1 * 100 / 1024);
 		}
@@ -3215,7 +3215,7 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 		"cgclassify -g cpu:$server->{'id'} $server->{'kvm'}");
 	my $n = $cpu == 0 ? 1024 : int($cpu * 1024 / 100);
 	my ($out, $ex, $err) = &execute_command_on_server(
-		$vhost, "echo $n >/mnt/cgroups/cpu/$server->{'id'}/cpu.shares");
+		$vhost, "echo $n >$vhost->{'kvm_cgroup_dir'}/cpu/$server->{'id'}/cpu.shares");
 	return $err if ($err);
 	return $out if ($ex);
 	}
@@ -4160,12 +4160,20 @@ elsif (!$server->{'kvm_vg'}) {
 
 # Check if cgroups are supported
 if (&can_ssh_status($server) && !defined($server->{'kvm_cgroup_support'})) {
-	my @st = &stat_file_on_server($server, "/etc/cgconfig.conf");
-	if (@st > 1 && &has_command_on_server($server, "cgcreate")) {
-		$server->{'kvm_cgroup_support'} = 1;
-		}
-	else {
-		$server->{'kvm_cgroup_support'} = 0;
+	$server->{'kvm_cgroup_support'} = 0;
+	if (&has_command_on_server($server, "cgcreate")) {
+		my $cpath;
+		foreach my $c ("/mnt/cgroups", "/cgroup") {
+			my @st = &stat_file_on_server($server, $c);
+			if (@st > 1) {
+				$cpath = $c;
+				last;
+				}
+			}
+		if ($cpath) {
+			$server->{'kvm_cgroup_support'} = 1;
+			$server->{'kvm_cgroup_dir'} = $cpath;
+			}
 		}
 	}
 }
