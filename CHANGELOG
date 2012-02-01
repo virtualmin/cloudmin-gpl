@@ -35,3 +35,4 @@ Additional directories for virtual system disk images can now be defined, and on
 ---- Changes since 6.0 ----
 The Change Password page can now be used to set the password Cloudmin uses to login to a system, as well as changing the actual password. It has also been moved to the top of the left menu.
 System alerts can now be triggered by the amount of incoming our outgoing network bytes / second on managed systems.
+CPU usage for KVM instances can now be limited on host systems that support cgroups.
