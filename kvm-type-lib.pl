@@ -3198,7 +3198,7 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 		}
 	}
 # Use cached value
-return $server->{'kvm_cpu'};
+return $server->{'kvm_cpu'} || 0;
 }
 
 # type_kvm_save_cpu(&server, cpu)
@@ -4119,11 +4119,11 @@ if ($server->{'status'} ne 'down') {
 	}
 }
 
-# type_kvm_post_host_refresh(&server)
+# type_kvm_post_host_refresh(&server, regenerate?)
 # Called after a KVM host system is refreshed, to maybe get LVM info
 sub type_kvm_post_host_refresh
 {
-my ($server) = @_;
+my ($server, $regen) = @_;
 
 # If using LVM, see how much space is free on the VG
 if ($server->{'kvm_vg'} &&
@@ -4159,7 +4159,8 @@ elsif (!$server->{'kvm_vg'}) {
 	}
 
 # Check if cgroups are supported
-if (&can_ssh_status($server) && !defined($server->{'kvm_cgroup_support'})) {
+if (&can_ssh_status($server) &&
+    (!defined($server->{'kvm_cgroup_support'}) || $regen)) {
 	$server->{'kvm_cgroup_support'} = 0;
 	if (&has_command_on_server($server, "cgcreate")) {
 		my $cpath;
