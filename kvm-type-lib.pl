@@ -1919,7 +1919,7 @@ if ($server->{'ssh_nologin'} && $server->{'ssh_noping'}) {
 	$noping = 1;
 	}
 my $vhost = &type_kvm_parent($server);
-my $cmd = &get_kvm_start_command($server);
+my $cmd = &get_kvm_start_command($server, undef, $extra);
 my ($pinged, $sshed);
 
 # Double-check if already running
@@ -1978,7 +1978,7 @@ return (0, "Failed to create monitor input file : $err") if ($err);
 
 # Run qemu-kvm to start it up, in the background
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"$cmd $extra >$server->{'kvm_console'} 2>&1 </dev/null &");
+	"$cmd >$server->{'kvm_console'} 2>&1 </dev/null &");
 return (0, $err) if ($err);
 return (0, $out || "Unknown error") if ($ex);
 
@@ -2134,11 +2134,11 @@ foreach my $net (@nets) {
 return undef;
 }
 
-# get_kvm_start_command(&server, [for-boot])
+# get_kvm_start_command(&server, [for-boot], [extra-args])
 # Returns the full command line to start a KVM instance
 sub get_kvm_start_command
 {
-my ($server, $forboot) = @_;
+my ($server, $forboot, $extra) = @_;
 my $vhost = &type_kvm_parent($server);
 my $inuse = &list_ports_in_use($vhost, "tcp");
 my $cmd = &find_qemu_kvm_command($vhost);
@@ -2258,13 +2258,13 @@ if ($server->{'kvm_smp'}) {
 if ($server->{'kvm_args'}) {
 	$cmd .= " ".$server->{'kvm_args'};
 	}
+$cmd .= " ".$extra if ($extra);
 
 # If cgroups are supported, run kvm command in one
 if ($vhost->{'kvm_cgroup_support'}) {
 	my @cmds = ( "cgcreate -g cpu:$server->{'id'}" );
 	if ($server->{'kvm_cpu'}) {
-		my $n = $server->{'kvm_cpu'} == 0 ? 1024 :
-				int($server->{'kvm_cpu'} * 1024 / 100);
+		my $n = int($server->{'kvm_cpu'} * 1024 / 100);
 		push(@cmds, "echo $n >/mnt/cgroups/cpu/$server->{'id'}/cpu.shares");
 		}
 	push(@cmds, "exec cgexec -g cpu:$server->{'id'} $cmd");
@@ -3207,9 +3207,12 @@ sub type_kvm_save_cpu
 {
 my ($server, $cpu) = @_;
 if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
-	# Update live value
+	# Update live value, creating group if needed
 	my $vhost = &type_kvm_parent($server);
-	&execute_command_on_server($vhost, "cgcreate -g cpu:$server->{'id'}");
+	&execute_command_on_server($vhost,
+		"cgcreate -g cpu:$server->{'id'}");
+	&execute_command_on_server($vhost,
+		"cgclassify -g cpu:$server->{'id'} $server->{'kvm'}");
 	my $n = $cpu == 0 ? 1024 : int($cpu * 1024 / 100);
 	my ($out, $ex, $err) = &execute_command_on_server(
 		$vhost, "echo $n >/mnt/cgroups/cpu/$server->{'id'}/cpu.shares");
@@ -4285,6 +4288,7 @@ else {
 my $data = &get_file_data_from_server($vhost, $bfile);
 foreach my $l (split(/\r?\n/, $data)) {
 	$l =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
+	$l =~ s/^.*cgexec\s+\-g\s+(\S+)\s+//;
 	my $kvm = &parse_kvm_start_command($l);
 	if ($kvm && &match_kvm_instance($server, $kvm)) {
 		return 1;
@@ -4334,6 +4338,7 @@ if (&stat_file_on_server($vhost, "/etc/init.d")) {
 	for(my $i=0; $i<@$lref; $i++) {
 		my $line = $lref->[$i];
 		$line =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
+		$line =~ s/^.*cgexec\s+\-g\s+(\S+)\s+//;
 		my $kvm = &parse_kvm_start_command($line);
 		if ($kvm && &match_kvm_instance($server, $kvm)) {
 			$lnum = $i;
@@ -4755,6 +4760,10 @@ if (!$shutdown) {
 		$shutdown = 1;
 		$shutwhy = $text{'smove_incoming'};
 		}
+	elsif (!&kvm_host_supports_flag($vhost, "incoming")) {
+		$shutdown = 1;
+		$shutwhy = $text{'smove_incoming2'};
+		}
 	elsif (!$server->{'kvm_monitor_port'}) {
 		$shutdown = 1;
 		$shutwhy = $text{'smove_monitor'};
@@ -4961,6 +4970,10 @@ else {
 	&$second_print(&text('smove_disksnone'));
 	}
 
+# Delete boot script on old host
+my $oldboot = &type_kvm_get_atboot($server);
+&type_kvm_set_atboot($server, 0);
+
 # Fix disk paths
 my @drives = split(/\s+/, $server->{'kvm_drives'});
 foreach my $d (@$disks) {
@@ -4977,6 +4990,9 @@ $server->{'kvm_drives'} = join(" ", @drives);
 $server->{'kvm_on'} = $dest->{'id'};
 $server->{'directory'} = $directory if (defined($directory));
 delete($server->{'new_directory'}) if (defined($directory));
+
+# Enable at boot on new system
+&type_kvm_set_atboot($server, $oldboot);
 
 # Fix monitoring and console paths
 push(@delfiles, $server->{'kvm_console'})
@@ -5705,6 +5721,9 @@ if (!$ips6 && @ips6) {
 
 delete($newserver->{'kvm_console'});
 
+# Get old boot flag
+my $oldboot = &type_kvm_get_atboot($oldserver);
+
 # Copy each of the disks and update the kvm_drives setting
 &$first_print(&text('clone_copydisks'));
 my $disks = &type_kvm_list_disks($newserver, 1);
@@ -5834,6 +5853,9 @@ foreach my $d (@$disks) {
 $newserver->{'kvm_drives'} = join(" ", @drives);
 $newserver->{'kvm_on'} = $dest->{'id'};
 &$second_print($text{'create_done'});
+
+# Enable at boot for new VM
+&type_kvm_save_atboot($newserver, $oldboot);
 
 # Register in DNS
 if ($dest->{'kvm_zone'}) {
@@ -6259,7 +6281,7 @@ sub delete_kvm_cgroup
 my ($server, $vhost) = @_;
 $vhost ||= &type_kvm_parent($server);
 if ($vhost->{'kvm_cgroup_support'} && &can_ssh_status($vhost)) {
-	&execute_command_on_server($vhost, "cpu:$server->{'id'}");
+	&execute_command_on_server($vhost, "cgdelete cpu:$server->{'id'}");
 	}
 }
 
