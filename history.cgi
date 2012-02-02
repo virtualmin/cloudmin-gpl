@@ -114,7 +114,8 @@ print "</td>\n";
 # Time period links
 @plinks = ( );
 print "<td align=middle width=33%>";
-foreach $p (map { [ $text{'history_'.$_->[0]}, $_->[1] ] } @history_periods) {
+foreach $p (map { [ $text{'history_'.$_->[0]}, $_->[1] ] }
+	        &get_history_periods()) {
 	if ($period == $p->[1]) {
 		push(@plinks, "<b>$p->[0]</b>");
 		}
@@ -146,6 +147,7 @@ print "<div id='history' style='height: 300px;'></div>\n";
 
 # Systems shown, with colours
 @labels = ( );
+@historic_graph_colors = &get_historic_graph_colors();
 if ($in{'mode'} eq 'total' || $in{'mode'} eq 'average') {
 	push(@labels, [ &text('history_label_'.$in{'mode'}, scalar(@servers)),
 			$historic_graph_colors[0] ]);
@@ -231,7 +233,7 @@ else {
 sub period_to_name
 {
 my ($p) = @_;
-foreach my $hp (@history_periods) {
+foreach my $hp (&get_history_periods()) {
 	return $hp->[0] if ($p == $hp->[1]);
 	}
 return undef;

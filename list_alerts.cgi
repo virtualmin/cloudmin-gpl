@@ -55,7 +55,7 @@ foreach $a (@alerts) {
 		next if (!$s);
 		($r) = grep { $_->{'name'} eq $name } @{$a->{'rules'}};
 		$p = 60*60;
-		foreach $hp (@history_periods) {
+		foreach $hp (&get_history_periods()) {
 			if ($r->{'for'} < $hp->[1]) {
 				$p = $hp->[1];
 				}
