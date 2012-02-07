@@ -3491,7 +3491,7 @@ if ($nonvirt) {
 	}
 else {
 	my $ifaces = &type_kvm_list_interfaces($server);
-	return $ifaces if (!ref($ifaces));
+	return "Failed to list interfaces : $ifaces" if (!ref($ifaces));
 	my $n = 0;
 	foreach my $oldiface (@$ifaces) {
 		if ($oldiface->{'virtual'} >= $n &&
@@ -3513,7 +3513,7 @@ if (!$iface->{'address'}) {
 	    $vhost->{'kvm_start'}, $vhost->{'kvm_end'}, $vhost->{'kvm_cidr'},
 	    $vhost->{'kvm_gws'}, $vhost->{'kvm_ifaces'}, $bridge);
 	$iface->{'address'} ||
-		return &text('create_ekvmalloc', $vhost->{'host'},
+		return &text('create_exenalloc', $vhost->{'host'},
 			    &describe_ip_range($vhost->{'kvm_start'},
 					       $vhost->{'kvm_end'},
 					       $vhost->{'kvm_cidr'},
@@ -3571,6 +3571,13 @@ if ($nonvirt) {
 		my $str = "model=$model,mac=$mac,vlan=$num";
 		my ($aok, $aout) = &run_kvm_monitor_command($server,
 			[ "pci_add 0 nic $str" ]);
+		if (!$aok || $aout !~ /OK/) {
+			# Try again without mac=, as some KVM instances don't
+			# support it
+			$str =~ s/,mac=([^,]+)//;
+			($aok, $aout) = &run_kvm_monitor_command($server,
+				[ "pci_add auto nic $str" ]);
+			}
 		return ($aout || "No response to pci_add command")
 			if (!$aok || $aout !~ /OK/);
 
@@ -3717,14 +3724,20 @@ if (&can_ssh_status($server) && $iface->{'active'}) {
 if ($iface->{'virtual'} eq '') {
 	my @macs = split(/\s+/, $server->{'mac'});
 	my @models = split(/\s+/, $server->{'kvm_model'});
+	my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 	while(scalar(@models) < scalar(@macs)) {
 		push(@models, "*");
+		}
+	while(scalar(@ifaces) < scalar(@macs)) {
+		push(@ifaces, "*");
 		}
 	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
 	$macs[$idx] = $iface->{'ether'} || '*';
 	$models[$idx] = $iface->{'model'} || '*';
+	$ifaces[$idx] = $iface->{'bridge'} || '*';
 	$server->{'mac'} = join(" ", @macs);
 	$server->{'kvm_model'} = join(" ", @models);
+	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	}
 
 return undef;
@@ -4800,7 +4813,7 @@ if ($allocate && $dest->{'kvm_start'} &&
 		$dest->{'kvm_start'}, $dest->{'kvm_end'},
 	        $dest->{'kvm_cidr'}, $dest->{'kvm_gws'},
 		$dest->{'kvm_ifaces'}, $kvm_iface[0]);
-	$newip || return &text('create_ekvmalloc', $dest->{'host'},
+	$newip || return &text('create_exenalloc', $dest->{'host'},
 			    &describe_ip_range($dest->{'kvm_start'},
 					       $dest->{'kvm_end'}));
 	$newgw ||= &get_server_default_gateway($dest);
@@ -5015,11 +5028,9 @@ foreach my $f ('kvm_monitor', 'kvm_console') {
 # Copy across bridge scripts
 my @nets = split(/\s+/, $server->{'kvm_net'});
 foreach my $net (@nets) {
-	if ($net =~ /script=([^,]+)/) {
+	if ($net =~ /script=([^,]+-(eth\d+)\.sh)/) {
 		my $script = $1;
-		my $newscript = $script;
-		$newscript =~ s/^.*[\\\/]//;
-		$newscript = "$new_kvm_dir/$newscript";
+		my $newscript = "$new_kvm_dir/$server->{'host'}-${2}.sh";
 		my @st = &stat_file_on_server($dest, $newscript);
 		if ($script =~ /^\Q$old_kvm_dir\/\E/ && !@st) {
 			my $err = &transfer_file_between_servers($vhost, $dest,
@@ -5983,11 +5994,9 @@ if ($config{'dhcp_add'}) {
 # Copy network bridge scripts, with new paths and filename
 my @nets = split(/\s+/, $newserver->{'kvm_net'});
 foreach my $net (@nets) {
-	if ($net =~ /script=([^,]+)/) {
+	if ($net =~ /script=([^,]+-(eth\d+)\.sh)/) {
 		my $script = $1;
-		my $newscript = $script;
-		$newscript =~ s/\Q$oldkvm\E/$newkvm/g;
-		$newscript =~ s/\Q$old_kvm_dir\E/$new_kvm_dir/g;
+		my $newscript = "$new_kvm_dir/${newkvm}-${2}.sh";
 		my $err = &transfer_file_between_servers($vhost, $dest,
 				$script, $newscript);
 		if ($err) {
@@ -6010,11 +6019,11 @@ foreach my $f ('kvm_filesystem_lv', 'kvm_swapfile_lv',
 
 # Fix monitoring and console paths
 foreach my $f ('kvm_monitor', 'kvm_console') {
-	$server->{$f} =~ s/^\Q$old_kvm_dir\/\E/$new_kvm_dir\//;
+	$newserver->{$f} =~ s/^\Q$old_kvm_dir\/\E/$new_kvm_dir\//;
 	}
 
 # Force re-generation of monitor port
-delete($server->{'kvm_monitor_port'});
+delete($newserver->{'kvm_monitor_port'});
 
 return (undef, 0);
 }
