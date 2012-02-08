@@ -3473,11 +3473,11 @@ my $rv = &type_kvm_list_interfaces($server);
 return [ grep { $_->{'virtual'} eq '' } @$rv ];
 }
 
-# type_kvm_create_interface(&server, &iface, [non-virtual], [bridge])
+# type_kvm_create_interface(&server, &iface, [non-virtual])
 # Add and activate a virtual interface
 sub type_kvm_create_interface
 {
-my ($server, $iface, $nonvirt, $bridge) = @_;
+my ($server, $iface, $nonvirt) = @_;
 
 # Find a free interface number, if needed
 my $vhost = &type_kvm_parent($server);
@@ -3506,19 +3506,19 @@ else {
 # Allocate IP, if needed
 my @kvm_iface = split(/\s+/, $vhost->{'kvm_iface'});
 my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
-$bridge ||= $kvm_iface[$idx];
+$iface->{'bridge'} ||= $kvm_iface[$idx];
 if (!$iface->{'address'}) {
 	my $cidr;
 	($iface->{'address'}, $cidr) = &allocate_ip_address(
 	    $vhost->{'kvm_start'}, $vhost->{'kvm_end'}, $vhost->{'kvm_cidr'},
-	    $vhost->{'kvm_gws'}, $vhost->{'kvm_ifaces'}, $bridge);
+	    $vhost->{'kvm_gws'}, $vhost->{'kvm_ifaces'}, $iface->{'bridge'});
 	$iface->{'address'} ||
 		return &text('create_exenalloc', $vhost->{'host'},
 			    &describe_ip_range($vhost->{'kvm_start'},
 					       $vhost->{'kvm_end'},
 					       $vhost->{'kvm_cidr'},
 					       $vhost->{'kvm_ifaces'},
-					       $bridge));
+					       $iface->{'bridge'}));
 	$iface->{'netmask'} = &net::prefix_to_mask($cidr);
 	}
 
@@ -3544,19 +3544,15 @@ if ($nonvirt) {
 	push(@macs, $mac);
 	push(@models, $iface->{'model'} || "*");
 	push(@nets, "tap,vlan=".$num);
-	push(@ifaces, $bridge || '*');
+	push(@ifaces, $iface->{'bridge'} || '*');
 
 	# Create script to attach correct bridge and record tap
 	my ($data, $script) = &generate_kvm_bridge_script(
-				$server, $iface, $bridge);
+				$server, $iface, $iface->{'bridge'});
 	my $err = &put_file_data_to_server($vhost, $data, $script);
 	return "Failed to create script $script : $err" if ($err);
 	&execute_command_on_server($vhost, "chmod +x $script");
 	$nets[$#nets] .= ",script=$script";
-	$server->{'mac'} = join(" ", @macs);
-	$server->{'kvm_model'} = join(" ", @models);
-	$server->{'kvm_net'} = join(" ", @nets);
-	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 
 	# Add the PCI device if possible
 	my $model = $iface->{'model'} || "ne2k_pci";
@@ -3595,6 +3591,12 @@ if ($nonvirt) {
 			}
 		}
 	$iface->{'reboot'} = !$canactivate;
+
+	# Add to lists of interfaces on the system
+	$server->{'mac'} = join(" ", @macs);
+	$server->{'kvm_model'} = join(" ", @models);
+	$server->{'kvm_net'} = join(" ", @nets);
+	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	}
 else {
 	# Virtual interfaces can always be activated immediately
@@ -3701,6 +3703,7 @@ sub type_kvm_modify_interface
 {
 my ($server, $iface, $oldiface) = @_;
 my %oldserver = %$server;
+my $vhost = &type_kvm_parent($server);
 
 # Modify boot interface
 my $err = &mount_filesystem_if_needed($server);
@@ -3740,6 +3743,31 @@ if ($iface->{'virtual'} eq '') {
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	}
 
+# If bridge changed, updating connection between tapN and new bridge
+if ($iface->{'virtual'} eq '' && $iface->{'bridge'} ne $oldiface->{'bridge'}) {
+	# If running, re-connect the tap interface to the new bridge
+	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
+	my @nets = split(/\s+/, $server->{'kvm_net'});
+	if ($server->{'status'} ne 'down' &&
+	    $nets[$idx] =~ /script=([^,]+-(eth\d+))\.sh/) {
+		my $tapfile = $1.".tap";
+		my $tap = &get_file_data_from_server($vhost, $tapfile);
+		$tap =~ s/\r|\n//g;
+		if ($tap) {
+			&execute_command_on_server($vhost,
+				"brctl delif $oldiface->{'bridge'} $tap");
+			&execute_command_on_server($vhost,
+				"brctl addif $iface->{'bridge'} $tap");
+			}
+		}
+
+	# Also update bridge creation script
+	my ($data, $script) = &generate_kvm_bridge_script(
+				$server, $iface, $iface->{'bridge'});
+	my $err = &put_file_data_to_server($vhost, $data, $script);
+	return "Failed to create script $script : $err" if ($err);
+	}
+
 return undef;
 }
 
@@ -3760,6 +3788,17 @@ return [ [ "rtl8139", "Realtek 8139" ],
 	 [ "pcnet", "PC-Net" ],
 	 [ "lance", "Lance" ],
 	 [ "mcf_fec", "MCF FEC" ] ];
+}
+
+# type_kvm_get_default_model(&server)
+# Returns the preferred default model for a system
+sub type_kvm_get_default_model
+{
+my ($server) = @_;
+my @models = grep { $_ ne '*' } split(/\s+/, $server->{'kvm_model'});
+return $models[0] if (@models);
+return 'virtio' if ($server->{'kvm_virtio'});
+return undef;
 }
 
 # type_kvm_compute_disksize(&server)
@@ -5875,7 +5914,7 @@ $newserver->{'kvm_on'} = $dest->{'id'};
 &$second_print($text{'create_done'});
 
 # Enable at boot for new VM
-&type_kvm_save_atboot($newserver, $oldboot);
+&type_kvm_set_atboot($newserver, $oldboot);
 
 # Register in DNS
 if ($dest->{'kvm_zone'}) {

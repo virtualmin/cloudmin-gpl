@@ -72,12 +72,6 @@ else {
 		# Check real interface
 		$can == 2 || &error($text{'iface_esupportreal'});
 		&can_action_error($server, "realifaces");
-		if ($in{'bridge'}) {
-			$vhost = &get_parent_server($server);
-			@bridges = &list_host_bridges($vhost);
-			&indexof($in{'bridge'}, @bridges) >= 0 ||
-				&error($text{'iface_ebridge'});
-			}
 		}
 	if ((!$in{'new'} || !$in{'address_def'}) &&
 	    &can_action($server, "ips")) {
@@ -111,6 +105,15 @@ else {
 		&check_ipaddress($in{'netmask'}) ||
 			&error($text{'iface_enetmask'});
 		$iface->{'netmask'} = $in{'netmask'};
+		}
+
+	# Save bridge on host
+	if ($in{'bridge'}) {
+		$vhost = &get_parent_server($server);
+		@bridges = &list_host_bridges($vhost);
+		&indexof($in{'bridge'}, @bridges) >= 0 ||
+			&error($text{'iface_ebridge'});
+		$iface->{'bridge'} = $in{'bridge'};
 		}
 
 	# Save IPv6 addresses
@@ -178,7 +181,7 @@ else {
 	$oldip = &get_server_ip($server);
 	if ($in{'new'}) {
 		$cfunc = "type_".$server->{'manager'}."_create_interface";
-		$err = &$cfunc($server, $iface, $in{'new'} == 2, $in{'bridge'});
+		$err = &$cfunc($server, $iface, $in{'new'} == 2);
 		}
 	else {
 		$mfunc = "type_".$server->{'manager'}."_modify_interface";

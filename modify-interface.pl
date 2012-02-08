@@ -23,6 +23,12 @@ the type of network card that is emulated on the virtual system with the
 C<--new-model> flag followed by a model name. Or you can revert to the default
 with the C<--no-model> flag.
 
+For real network interfaces on Xen or KVM systems, you can change the host
+network bridge the interface is connected to with the C<--new-bridge> 
+flag, followed by a bridge name like C<br1> or C<xenbr1>. Alternately the
+C<--no-bridge> flag can be used to revert the interface to the host's
+default bridge.
+
 =head1 Example usage
 
   cloudmin modify-interface --host vvirtualmin.home --address 193.9.101.250 --new-mac 02:54:00:50:DE:44
@@ -97,13 +103,16 @@ while(@ARGV > 0) {
 			       "IPv6 address");
 		push(@del6, $address6);
 		}
+	elsif ($a eq "--new-bridge") {
+		$newbridge = shift(@ARGV);
+		}
 	else {
 		&usage();
 		}
 	}
 $address || $name || &usage("Missing --address or --name parameter");
 $newaddress || $newnetmask || $newether || $noether || $newmodel || $nomodel ||
-	@add6 || @del6 || &usage("Nothing to do");
+	$newbridge || $nobridge || @add6 || @del6 || &usage("Nothing to do");
 
 # Get the server
 $host || &usage("Missing --host parameter");
@@ -135,7 +144,18 @@ if ($newmodel) {
 	($m) = grep { $_->[0] eq $newmodel } @$models;
 	$m || &usage("Model $newmodel is not valid - options are : ".
 		     join(" ", map { $_->[0] } @$models));
-	$iface->{'model'} = $newmodel;
+	}
+
+# Validate the bridge
+if ($newbridge) {
+	$vhost = &get_parent_server($server);
+	$iface->{'virtual'} eq '' ||
+		&usage("The --new-bridge parameter can only be used with ".
+		       "real interfaces");
+	@bridges = &list_host_bridges($vhost);
+	&indexof($newbridge, @bridges) >= 0 ||
+		&usage("Bridge $newbridge is not valid - options are : ".
+		       join(" ", @bridges));
 	}
 
 # Get the interface
@@ -212,6 +232,12 @@ if ($newmodel) {
 elsif ($nomodel) {
 	$iface->{'model'} = '';
 	}
+if ($newbridge) {
+	$iface->{'bridge'} = $newbridge;
+	}
+elsif ($nobridge) {
+	$iface->{'bridge'} = '';
+	}
 
 # Add and remove IPv6 addresses
 foreach my $a (@add6) {
@@ -276,6 +302,7 @@ print "                         [--new-address ip.address]\n";
 print "                         [--new-netmask mask]\n";
 print "                         [--new-ether mac-address | --no-ether]\n";
 print "                         [--new-model type | --no-model]\n";
+print "                         [--new-bridge interface]\n";
 print "                         [--add-address6 ipv6-address]*\n";
 print "                         [--remove-address6 ipv6-address]*\n";
 exit(1);

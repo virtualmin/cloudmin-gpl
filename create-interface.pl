@@ -181,6 +181,9 @@ if ($netmask) {
 else {
 	$iface->{'netmask'} = $piface->{'netmask'};
 	}
+if ($bridge) {
+	$iface->{'bridge'} = $bridge;
+	}
 
 # Validate and store the model
 if ($model) {
@@ -193,6 +196,11 @@ if ($model) {
 	$m || &usage("Model $model is not valid - options are : ".
 		     join(" ", map { $_->[0] } @$models));
 	$iface->{'model'} = $model;
+	}
+else {
+	# Use default model
+	$dmfunc = "type_".$server->{'manager'}."_get_default_model";
+	$iface->{'model'} = defined(&$dmfunc) ? &$dmfunc($server) : undef;
 	}
 
 # Add IPv6 interfaces
@@ -213,7 +221,7 @@ if (@add6) {
 	}
 
 # Call the create function
-$err = &$ifunc($server, $iface, $nonvirt, $bridge);
+$err = &$ifunc($server, $iface, $nonvirt);
 if ($err) {
 	&usage("Interface creation failed : $err");
 	}

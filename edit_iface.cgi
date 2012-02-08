@@ -7,6 +7,8 @@ require './server-manager-lib.pl';
 # Get the server and interface
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
+$vhost = &get_parent_server($server);
+@bridges = &list_host_bridges($vhost);
 &can_action_error($server, "ifaces");
 if (!$in{'new'}) {
 	$ifunc = "type_".$server->{'manager'}."_list_interfaces";
@@ -68,15 +70,6 @@ elsif ($in{'new'} == 2) {
 		}
 	print &ui_table_row($text{'iface_name'},
 			    &ui_textbox("name", "eth$max", 20));
-
-	$vhost = &get_parent_server($server);
-	@bridges = &list_host_bridges($vhost);
-	if (@bridges) {
-		print &ui_table_row($text{'iface_bridge'},
-				    &ui_select("bridge", undef,
-					       [ [ undef, $text{'default'} ],
-						 @bridges ]));
-		}
 	}
 else {
 	# Show details of existing interface
@@ -94,12 +87,16 @@ else {
 						    \@doms, $iface);
 		print &ui_table_row($text{'iface_use'}, $use);
 		}
-	if ($iface->{'bridge'}) {
-		print &ui_table_row($text{'iface_bridge'},
-				    "<tt>$iface->{'bridge'}</tt>");
-		}
 	}
 $non_virtual = $in{'new'} == 2 || !$in{'new'} && $iface->{'virtual'} eq '';
+
+# Show bridge if not virtual
+if ($non_virtual && (@bridges || $iface->{'bridge'})) {
+	print &ui_table_row($text{'iface_bridge'},
+			    &ui_select("bridge", $iface->{'bridge'},
+				       [ [ undef, $text{'default'} ],
+					 @bridges ], 1, 0, 1));
+	}
 
 # Address
 $afunc = "type_".$server->{'manager'}."_can_allocate_address";
@@ -195,9 +192,11 @@ elsif (!$in{'new'} && $iface->{'ether'}) {
 $lfunc = "type_".$server->{'manager'}."_list_models";
 if ($non_virtual && defined(&$lfunc)) {
 	$models = &$lfunc($server);
+	$dmfunc = "type_".$server->{'manager'}."_get_default_model";
+	$defmodel = defined(&$dmfunc) ? &$dmfunc($server) : undef;
 	if (ref($models)) {
 		print &ui_table_row($text{'iface_model'},
-			&ui_select("model", $iface->{'model'},
+			&ui_select("model", $iface->{'model'} || $defmodel,
 				   [ [ '', "&lt;$text{'default'}&gt;" ],
 				     @$models ], 1, 0, 1));
 		}
