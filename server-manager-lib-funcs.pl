@@ -6784,7 +6784,6 @@ my $canlogin = defined(&$clfunc) && &$clfunc($server);
 my $rsfunc = "type_".$server->{'manager'}."_can_reset";
 my $canreset = defined(&$rsfunc) && &$rsfunc($server);
 my $canpass = $server->{'type'} ne 'windows' &&
-	      !$server->{'ssh_nologin'} &&
 	      $server->{'id'} ne '0';
 my $clonefunc = "type_".$server->{'manager'}."_can_clone";
 my $canclone = defined(&$clonefunc) && &$clonefunc($server);

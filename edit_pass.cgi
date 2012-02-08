@@ -10,7 +10,9 @@ $server || &error($text{'edit_egone'});
 
 # Work out if password can be changed
 $pfunc = "type_".$server->{'manager'}."_can_password";
-$canpass = !$in{'force'} && defined(&$pfunc) && &$pfunc($server);
+$canpass = !$in{'force'} &&
+	   !$server->{'ssh_nologin'} &&
+	   defined(&$pfunc) && &$pfunc($server);
 
 # Work out if Cloudmin logs into the system or not
 $haswebmin = ($server->{'status'} eq 'nowebminlogin' ||
