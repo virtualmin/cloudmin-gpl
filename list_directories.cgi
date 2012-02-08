@@ -12,7 +12,6 @@ if (@directories) {
 	print &ui_form_start("delete_directories.cgi", "post");
 	print &ui_links_row(\@links);
 	@tds = ( "width=5" );
-	%locmap = map { $_->{'id'}, $_->{'desc'} } &list_locations();
 	print &ui_columns_start([ "",
 				  $text{'directories_dir'},
 				  $text{'directories_desc'},
