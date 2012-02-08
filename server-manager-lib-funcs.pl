@@ -9673,10 +9673,14 @@ my $changing_primary = $oldip eq $oldiface->{'address'} &&
 if (($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') &&
     !$changing_primary) {
 	# Change it using Webmin
+	my $webmin_iface = { %$iface };
+	delete($webmin_iface->{'ether'})
+		if ($iface->{'ether'} eq $oldiface->{'ether'});
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
 	return $last_remote_error if ($last_remote_error);
-	&remote_foreign_call($server, "net", "activate_interface", $iface);
+	&remote_foreign_call($server, "net", "activate_interface",
+			     $webmin_iface);
 	return $last_remote_error if ($last_remote_error);
 	}
 else {

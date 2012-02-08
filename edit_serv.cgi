@@ -425,7 +425,8 @@ if (keys %$info) {
 		}
 
 	# Feature statuses
-	if ($info->{'startstop'} && @{$info->{'startstop'}}) {
+	if ($info->{'startstop'} && @{$info->{'startstop'}} &&
+	    &can_ssh_status($server)) {
 		@grid = ( );
 		foreach $ss (@{$info->{'startstop'}}) {
 			push(@grid, $ss->{'name'});
