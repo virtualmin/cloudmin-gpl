@@ -537,6 +537,16 @@ if (!$empty) {
 				  $text{'create_xennoswap'}));
 	}
 
+# CPU allocation
+my $cpu;
+if ($limits && $limits->{'max_cpu'}) {
+	$cpu = $limits->{'max_cpu'} - $limits->{'cpu'};
+	$cpu = 100 if ($cpu > 100);
+	$cpu = 1 if ($cpu < 1);
+	}
+$rv .= &ui_table_row($text{'create_xencpu'},
+	&ui_opt_textbox("kvm_cpu", $cpu, 4, $text{'domains_unlimited'})."%");
+
 return $rv;
 }
 
@@ -620,6 +630,12 @@ if (!$in{'kvm_disk_def'} || $empty) {
 	}
 else {
 	$server->{'kvm_disktotal'} += $img->{'rawsize'};
+	}
+
+# Validate CPU
+if (!$in{'kvm_cpu_def'}) {
+	$in{'kvm_cpu'} =~ /^[1-9]\d*$/ || &error($text{'create_ekvmcpu'});
+	$server->{'kvm_cpu'} = $in{'kvm_cpu'};
 	}
 
 # Select host system
@@ -804,6 +820,7 @@ my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
                               'value' => 'megabytes',
                               'opt' => 1 } ),
 	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
+	   { 'name' => 'cpu', 'value' => 'percent', 'opt' => 1 },
 	   { 'name' => 'ip6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
 	   { 'name' => 'netmask6', 'value' => 'mask,[mask]', 'opt' => 1 },
 	   { 'name' => 'gw6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
@@ -866,6 +883,12 @@ if ($args->{'disksize'} || $empty) {
 	}
 else {
 	$server->{'kvm_disktotal'} += $img->{'rawsize'};
+	}
+
+# Validate CPU flag
+if ($args->{'cpu'}) {
+	$args->{'cpu'} =~ /^[1-9]\d*$/ || return "Non-numeric CPU percentage";
+	$server->{'kvm_cpu'} = $args->{'cpu'};
 	}
 
 # Hosting server
@@ -3188,17 +3211,20 @@ return $vhost->{'kvm_cgroup_support'} ? 3 : 0;
 sub type_kvm_get_cpu
 {
 my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+if (!$vhost->{'kvm_cgroup_support'}) {
+	return ( );
+	}
 if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 	# Get actual live value
-	my $vhost = &type_kvm_parent($server);
 	my ($out, $ex, $err) = &execute_command_on_server(
 		$vhost, "cat $vhost->{'kvm_cgroup_dir'}/cpu/$server->{'id'}/cpu.shares");
 	if (!$ex && !$err && $out =~ /^(\d+)/) {
-		return $1 == 1024 ? 0 : int($1 * 100 / 1024);
+		return ( $1 == 1024 ? 0 : int($1 * 100 / 1024) );
 		}
 	}
 # Use cached value
-return $server->{'kvm_cpu'} || 0;
+return ( $server->{'kvm_cpu'} || 0 );
 }
 
 # type_kvm_save_cpu(&server, cpu)

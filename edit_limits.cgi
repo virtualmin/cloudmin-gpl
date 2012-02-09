@@ -82,8 +82,9 @@ if (defined($gm)) {
 # CPU limit
 $cfunc = "type_".$t."_get_cpu";
 if (defined(&$cfunc)) {
-	print &ui_table_hr() if ($donehr++);
 	($cpu, $weight) = &$cfunc($server);
+	print &ui_table_hr() if ((defined($cpu) || defined($weight)) &&
+				 $donehr++);
 	if (defined($cpu)) {
 		print &ui_table_row($text{'edit_lcpu'},
 			&ui_opt_textbox("cpu", $cpu == 0 ? undef : $cpu,
