@@ -265,8 +265,11 @@ if ($empty) {
 				   @images ]) ]);
 			}
 		if (&can_action(undef, "global")) {
+			$chooser = $module_info{'onehost'} ?
+				&file_chooser_button("file", 0, 1) : "";
 			push(@opts, [ 1, $text{'create_cdfile'},
-				      &ui_textbox("file", undef, 40) ]);
+				      &ui_textbox("file", undef, 40).
+				      $chooser ]);
 			}
 		if (@opts > 1) {
 			print &ui_table_row($text{'create_cd'},
