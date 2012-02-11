@@ -3388,6 +3388,10 @@ elsif ($server->{'status'} eq 'down' &&
 	# Can manage via direct file manipulation
 	return 2;
 	}
+elsif ($server->{'status'} ne 'nohost') {
+	# Can manage, but only create or delete and not set IPs
+	return 3;
+	}
 else {
 	# Cannot edit
 	return 0;
@@ -3431,7 +3435,17 @@ sub type_kvm_list_interfaces
 {
 my ($server) = @_;
 my $rv;
-if ($server->{'status'} eq 'down') {
+my $can = &type_kvm_can_interfaces($server);
+
+if ($can == 3) {
+	# Cannot manage IPs, like on a Windows VM
+	my @net = split(/\s+/, $server->{'kvm_net'});
+	$rv = [ map { { 'name' => 'eth'.$_,
+		        'fullname' => 'eth'.$_,
+			'unknown' => 1,
+		        'up' => 1 } } (0 .. scalar(@net)-1) ];
+	}
+elsif ($server->{'status'} eq 'down') {
 	# Get from network config files
 	my $err = &mount_filesystem_if_needed($server);
 	return "Failed to mount filesystem : $err" if ($err);
@@ -3467,7 +3481,8 @@ if (ref($rv)) {
 		if ($iface->{'fullname'} eq 'eth0') {
 			$iface->{'nodelete'} = 1
 			}
-		$iface->{'noedit'} = 1 if (!$iface->{'address'});
+		$iface->{'noedit'} = 1 if (!$iface->{'address'} &&
+					   !$iface->{'unknown'});
 		}
 	}
 
@@ -3504,6 +3519,7 @@ return [ grep { $_->{'virtual'} eq '' } @$rv ];
 sub type_kvm_create_interface
 {
 my ($server, $iface, $nonvirt) = @_;
+my $can = &type_kvm_can_interfaces($server);
 
 # Find a free interface number, if needed
 my $vhost = &type_kvm_parent($server);
@@ -3514,6 +3530,7 @@ if ($nonvirt) {
 	$1 == scalar(@nets) ||
 		return "A new real interface must be named eth".scalar(@nets);
 	$iface->{'fullname'} = $iface->{'name'};
+	$iface->{'unknown'} = 1 if ($can == 3);
 	}
 else {
 	my $ifaces = &type_kvm_list_interfaces($server);
@@ -3533,7 +3550,7 @@ else {
 my @kvm_iface = split(/\s+/, $vhost->{'kvm_iface'});
 my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
 $iface->{'bridge'} ||= $kvm_iface[$idx];
-if (!$iface->{'address'}) {
+if (!$iface->{'address'} && !$iface->{'unknown'}) {
 	my $cidr;
 	($iface->{'address'}, $cidr) = &allocate_ip_address(
 	    $vhost->{'kvm_start'}, $vhost->{'kvm_end'}, $vhost->{'kvm_cidr'},
@@ -3550,10 +3567,12 @@ if (!$iface->{'address'}) {
 
 # Compute broadcast and network
 $iface->{'up'} = 1;
-$iface->{'broadcast'} = &net::compute_broadcast($iface->{'address'},
-						$iface->{'netmask'});
-$iface->{'network'} = &net::compute_network($iface->{'address'},
-					    $iface->{'netmask'});
+if (!$iface->{'unknown'}) {
+	$iface->{'broadcast'} = &net::compute_broadcast($iface->{'address'},
+							$iface->{'netmask'});
+	$iface->{'network'} = &net::compute_network($iface->{'address'},
+						    $iface->{'netmask'});
+	}
 
 my $canactivate;
 if ($nonvirt) {
@@ -3636,14 +3655,18 @@ if (&can_ssh_status($server) && $canactivate) {
 	}
 
 # Activate at boot
-my $err = &mount_filesystem_if_needed($server);
-return "Failed to mount filesystem : $err" if ($err);
-$err = &create_boot_server_interface($server, $iface);
-&umount_filesystem_if_needed($server);
-return $err if ($err);
+if (!$iface->{'unknown'}) {
+	my $err = &mount_filesystem_if_needed($server);
+	return "Failed to mount filesystem : $err" if ($err);
+	$err = &create_boot_server_interface($server, $iface);
+	&umount_filesystem_if_needed($server);
+	return $err if ($err);
+	}
 
-&add_ip_address($server, $iface->{'address'});
-&add_delete_ip6_addresses($server, undef, $iface->{'address6'});
+if (!$iface->{'unknown'}) {
+	&add_ip_address($server, $iface->{'address'});
+	&add_delete_ip6_addresses($server, undef, $iface->{'address6'});
+	}
 return undef;
 }
 
@@ -3656,11 +3679,13 @@ my $vhost = &type_kvm_parent($server);
 my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 
 # Delete boot interface
-my $err = &mount_filesystem_if_needed($server);
-return "Failed to mount filesystem : $err" if ($err);
-$err = &delete_boot_server_interface($server, $iface);
-&umount_filesystem_if_needed($server);
-return $err if ($err);
+if (!$iface->{'unknown'}) {
+	my $err = &mount_filesystem_if_needed($server);
+	return "Failed to mount filesystem : $err" if ($err);
+	$err = &delete_boot_server_interface($server, $iface);
+	&umount_filesystem_if_needed($server);
+	return $err if ($err);
+	}
 
 # De-activate interface if possible. Ignore errors for non-virtual interfaces,
 # as they generally can't be taken down without a reboot anyway
@@ -3718,8 +3743,10 @@ if ($iface->{'virtual'} eq '' &&
 		}
 	}
 
-&delete_ip_address($server, $iface->{'address'});
-&add_delete_ip6_addresses($server, $iface->{'address6'}, undef);
+if (!$iface->{'unknown'}) {
+	&delete_ip_address($server, $iface->{'address'});
+	&add_delete_ip6_addresses($server, $iface->{'address6'}, undef);
+	}
 return undef;
 }
 
@@ -3732,11 +3759,13 @@ my %oldserver = %$server;
 my $vhost = &type_kvm_parent($server);
 
 # Modify boot interface
-my $err = &mount_filesystem_if_needed($server);
-return "Failed to mount filesystem : $err" if ($err);
-$err = &modify_boot_server_interface($server, $iface, $oldiface);
-&umount_filesystem_if_needed($server);
-return $err if ($err);
+if (!$iface->{'unknown'}) {
+	my $err = &mount_filesystem_if_needed($server);
+	return "Failed to mount filesystem : $err" if ($err);
+	$err = &modify_boot_server_interface($server, $iface, $oldiface);
+	&umount_filesystem_if_needed($server);
+	return $err if ($err);
+	}
 
 # Change active interface if possible
 if (&can_ssh_status($server) && $iface->{'active'}) {
@@ -3744,10 +3773,12 @@ if (&can_ssh_status($server) && $iface->{'active'}) {
 	return $err if ($err);
 	}
 
-&delete_ip_address($server, $oldiface->{'address'});
-&add_ip_address($server, $iface->{'address'});
-&add_delete_ip6_addresses($server, $oldiface->{'address6'},
-				   $iface->{'address6'});
+if (!$iface->{'unknown'}) {
+	&delete_ip_address($server, $oldiface->{'address'});
+	&add_ip_address($server, $iface->{'address'});
+	&add_delete_ip6_addresses($server, $oldiface->{'address6'},
+					   $iface->{'address6'});
+	}
 
 # Change MAC and model address if non-virtual
 if ($iface->{'virtual'} eq '') {
@@ -6052,6 +6083,7 @@ if ($config{'dhcp_add'}) {
 	# Get MAC addresses
 	my $fakeifaces = &type_kvm_list_interfaces($newserver, 1);
 	if (ref($fakeifaces)) {
+		$fakeifaces->[0]->{'address'} ||= $ips[0];
 		&add_all_iface_dhcpd($newserver, $fakeifaces);
 		}
 	}

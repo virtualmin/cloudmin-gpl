@@ -3265,7 +3265,7 @@ my ($server) = @_;
 if ($server->{'status'} ne 'nohost') {
 	my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 	my $ifaces;
-	if (defined(&$cfunc) && &$cfunc($server)) {
+	if (defined(&$cfunc) && &$cfunc($server) && &$cfunc($server) != 3) {
 		# Call type-specific function
 		my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
 		$ifaces = &$ifunc($server);
@@ -6814,7 +6814,7 @@ elsif (&can_action($server, "view")) {
 my $ifunc = "type_".$t."_list_interfaces";
 my $cfunc = "type_".$t."_can_interfaces";
 if (defined(&$ifunc) && &$cfunc($server) &&
-    $status ne 'paused' && $status ne 'alive' && $status ne 'nohost' &&
+    $status ne 'paused' && $status ne 'nohost' &&
     &can_action($server, "ifaces")) {
 	push(@rv, { 'id' => 'ifaces',
 		    'desc' => $text{'edit_link_ifaces'},

@@ -173,6 +173,9 @@ $iface->{'noedit'} && &usage("This interface cannot be edited");
 
 # Check if we can manage IPv6
 if (@add6 || @del6) {
+	$iface->{'unknown'} &&
+		&usage("Network interface addresses cannot be changed on ".
+		       "this system");
 	$iface->{'virtual'} eq '' ||
 		&usage("IPv6 addresses can only be added to or remove from ".
 		       "real interfaces");
@@ -186,6 +189,9 @@ if (@add6 || @del6) {
 # Check for clashes
 %used = &used_ip_addresses();
 if ($newaddress) {
+	$iface->{'unknown'} &&
+		&usage("Network interface addresses cannot be changed on ".
+		       "this system");
 	$u = $used{$newaddress};
 	if ($u && $u->{'id'} eq $server->{'id'}) {
 		foreach $ii (@$ifaces) {
@@ -273,7 +279,8 @@ if (&supports_dhcpd(1) && $iface->{'virtual'} eq '') {
 	}
 
 # Check for change in main IP, which effects DNS
-if ($iface->{'address'} ne $oldiface->{'address'} &&
+if (!$iface->{'unknown'} &&
+    $iface->{'address'} ne $oldiface->{'address'} &&
     $oldiface->{'address'} eq $oldip) {
 	&remote_finished();
 	$server->{'ip'} = $iface->{'address'};

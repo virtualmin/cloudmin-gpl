@@ -124,6 +124,9 @@ if ($multi) {
 			print "    IP address: $i->{'address'}\n";
 			print "    Netmask: $i->{'netmask'}\n";
 			}
+		elsif ($i->{'unknown'}) {
+			print "    Address method: Set by VM\n";
+			}
 		else {
 			print "    Address method: None\n";
 			}
@@ -180,7 +183,8 @@ else {
 							    \@doms, $i);
 			}
 		printf $fmt, $i->{'fullname'},
-			     $i->{'dhcp'} ? "DHCP" :
+			     $i->{'unknown'} ? "Set by VM" :
+			       $i->{'dhcp'} ? "DHCP" :
 			       $i->{'bootp'} ? "BOOTP" :
 			       $i->{'address'} || "None",
 			     $i->{'netmask'} || "None",

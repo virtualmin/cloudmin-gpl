@@ -66,13 +66,14 @@ sub recursive_dhcpd_search_host
 my ($pconf, $server, $iface) = @_;
 my $hostname = $iface->{'name'} eq 'eth0' ?
 		$server->{'host'} : $iface->{'name'}.'-'.$server->{'host'};
+my $address = $iface->{'address'} || &get_server_ip($server);
 foreach my $obj (@{$pconf->{'members'}}) {
 	if ($obj->{'name'} eq 'host' &&
 	    $obj->{'type'} &&
 	    $obj->{'values'}->[0] eq $hostname) {
 		# Matches the host .. check the IP and MAC address too
 		my $fixed = &dhcpd::find("fixed-address", $obj->{'members'});
-		if ($fixed->{'values'}->[0] eq $iface->{'address'}) {
+		if ($fixed->{'values'}->[0] eq $address) {
 			return ( $obj, $pconf );
 			}
 		}
@@ -243,7 +244,7 @@ if (!$ok) {
 &$indent_print();
 my $ok = 0;
 foreach my $iface (@$ifaces) {
-	if ($iface->{'ether'}) {
+	if ($iface->{'ether'} && $iface->{'address'}) {
 		&$first_print(&text('create_xendhcp', $iface->{'address'},
 						      $iface->{'ether'}));
 		my $err = &save_iface_dhcpd($server, $iface);

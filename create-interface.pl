@@ -90,15 +90,30 @@ while(@ARGV > 0) {
 		}
 	}
 $name || &usage("Missing --name parameter");
-$address || $allocate || &usage("One of --address or --allocate must be given");
-!$address || &check_ipaddress($address) || &usage("Invalid IP address");
-!$netmask || &check_ipaddress($netmask) || &usage("Invalid netmask");
 
 # Get the server
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
+$cfunc = "type_".$server->{'manager'}."_can_interfaces";
+defined(&$cfunc) && &$cfunc($server) ||
+	&usage("Interfaces cannot be managed on this system");
+$can = &$cfunc($server);
+$can || &usage("Network interfaces cannot be managed on this system");
+
+# Validate params against server
+if ($can == 3) {
+	($address || $allocate || $netmask) &&
+	    &usage("No address can be for network interfaces on this system");
+	}
+else {
+	$address || $allocate ||
+		&usage("One of --address or --allocate must be given");
+	!$address || &check_ipaddress($address) || &usage("Invalid IP address");
+	!$netmask || &check_ipaddress($netmask) || &usage("Invalid netmask");
+	}
 &can_action_usage($server, "ifaces");
+
 &obtain_lock_server($server);
 
 # Check if over limit
@@ -114,11 +129,7 @@ if ($limits && $limits->{'max_ips'}) {
 $ifunc = "type_".$server->{'manager'}."_create_interface";
 defined(&$ifunc) || &usage("System type $server->{'manager'} does not support ".
 			   "network interface management");
-$cfunc = "type_".$server->{'manager'}."_can_interfaces";
-defined(&$cfunc) && &$cfunc($server) ||
-	&usage("Interfaces cannot be managed on this system");
 $server->{'status'} eq 'nohost' && &usage("Host for system is down");
-$can = &$cfunc($server);
 
 # Get the parent network interfaces
 $pfunc = "type_".$server->{'manager'}."_list_parent_interfaces";
@@ -128,7 +139,7 @@ ref($parents) || &usage("Failed to get parent network interfaces : $parents");
 		   $_->{'virtual'} eq '' } @$parents;
 if ($nonvirt) {
 	&can_action_usage($server, "realifaces");
-	$can == 2 || &usage("Real interfaces cannot be added ".
+	$can >= 2 || &usage("Real interfaces cannot be added ".
 			    "to this virtual system");
 	$piface && &usage("A real interface named $name already exists");
 	if ($bridge) {
@@ -140,6 +151,8 @@ if ($nonvirt) {
 		}
 	}
 else {
+	$can == 3 && &usage("Only real interfaces can be created on ".
+			    "this system");
 	$bridge && &usage("The --bridge parameter can only be used ".
 			  "with --real");
 	$model && &usage("The --model parameter can only be used ".
@@ -169,17 +182,19 @@ foreach $ip (@add6) {
 
 # Create the interface object
 $iface = { 'name' => $name };
-if (!$allocate) {
-	&can_action($server, "ips") ||
-		&usage("You are not allowed to specify IP addresses - use ".
-		       "the --allocate flag instead");
-	$iface->{'address'} = $address;
-	}
-if ($netmask) {
-	$iface->{'netmask'} = $netmask;
-	}
-else {
-	$iface->{'netmask'} = $piface->{'netmask'};
+if ($can != 3) {
+	if (!$allocate) {
+		&can_action($server, "ips") ||
+			&usage("You are not allowed to specify IP addresses - ".
+			       "use the --allocate flag instead");
+		$iface->{'address'} = $address;
+		}
+	if ($netmask) {
+		$iface->{'netmask'} = $netmask;
+		}
+	else {
+		$iface->{'netmask'} = $piface->{'netmask'};
+		}
 	}
 if ($bridge) {
 	$iface->{'bridge'} = $bridge;
@@ -225,8 +240,11 @@ $err = &$ifunc($server, $iface, $nonvirt);
 if ($err) {
 	&usage("Interface creation failed : $err");
 	}
-else {
+elsif ($iface->{'address'}) {
 	print "Created interface $iface->{'fullname'} with address $iface->{'address'}\n";
+	}
+else {
+	print "Created interface $iface->{'fullname'}\n";
 	}
 &compute_ip_addresses($server);
 &save_managed_server($server);
