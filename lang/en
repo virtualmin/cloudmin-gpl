@@ -1559,7 +1559,8 @@ ifaces_bwnone=None selected
 ifaces_noaddress=No address configured
 ifaces_nonetmask=None
 ifaces_dhcp=From DHCP
-faces_bootp=From BOOTP
+ifaces_bootp=From BOOTP
+ifaces_unknown=Set by virtual system
 
 iface_create=Add Network Interface
 iface_createreal=Add Real Network Interface

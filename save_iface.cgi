@@ -73,7 +73,8 @@ else {
 		$can == 2 || &error($text{'iface_esupportreal'});
 		&can_action_error($server, "realifaces");
 		}
-	if ((!$in{'new'} || !$in{'address_def'}) &&
+	if ($can != 3 &&
+	    (!$in{'new'} || !$in{'address_def'}) &&
 	    &can_action($server, "ips")) {
 		# Validate manually entered address
 		&check_ipaddress($in{'address'}) ||
@@ -117,7 +118,8 @@ else {
 		}
 
 	# Save IPv6 addresses
-	if (defined($in{'address6_0'}) && &can_action($server, "ips")) {
+	if ($can != 3 && defined($in{'address6_0'}) &&
+	    &can_action($server, "ips")) {
 		my (@address6, @netmask6);
 		my %oldips = map { $_, 1 } @{$iface->{'address6'}};
 		for(my $n=0; defined($in{'address6_'.$n}); $n++) {

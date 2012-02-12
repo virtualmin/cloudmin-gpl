@@ -66,14 +66,21 @@ sub recursive_dhcpd_search_host
 my ($pconf, $server, $iface) = @_;
 my $hostname = $iface->{'name'} eq 'eth0' ?
 		$server->{'host'} : $iface->{'name'}.'-'.$server->{'host'};
-my $address = $iface->{'address'} || &get_server_ip($server);
 foreach my $obj (@{$pconf->{'members'}}) {
 	if ($obj->{'name'} eq 'host' &&
 	    $obj->{'type'} &&
 	    $obj->{'values'}->[0] eq $hostname) {
-		# Matches the host .. check the IP and MAC address too
+		# Matches the host .. check the IP or MAC address too
 		my $fixed = &dhcpd::find("fixed-address", $obj->{'members'});
-		if ($fixed->{'values'}->[0] eq $address) {
+		if ($iface->{'address'} &&
+		    $fixed &&
+		    $fixed->{'values'}->[0] eq $iface->{'address'}) {
+			return ( $obj, $pconf );
+			}
+		my $hardware = &dhcpd::find("hardware", $obj->{'members'});
+		if ($iface->{'ether'} &&
+	            $hardware &&
+		    $hardware->{'values'}->[1] eq $iface->{'ether'}) {
 			return ( $obj, $pconf );
 			}
 		}
@@ -133,6 +140,7 @@ return @rv;
 # save_iface_dhcpd(&server, &iface, &old-iface)
 # Updates the DHCP server configuration for some system and network interface,
 # perhaps for a MAC or IP change
+# XXX what if no address?
 sub save_iface_dhcpd
 {
 my ($server, $iface, $oldiface) = @_;

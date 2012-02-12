@@ -22,7 +22,7 @@ $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 $can = &$cfunc($server);
 $can || &error($text{'iface_esupport'});
 if ($in{'new'} == 2) {
-	$can == 2 || &error($text{'iface_esupportreal'});
+	$can >= 2 || &error($text{'iface_esupportreal'});
 	&can_action_error($server, "realifaces");
 	}
 
@@ -58,7 +58,7 @@ if ($in{'new'} == 1) {
 	$iface->{'netmask'} = $parents->[0]->{'netmask'};
 	}
 elsif ($in{'new'} == 2) {
-	# New real interface .. show name and bridge chooser
+	# New real interface .. show name
 	$max = 1;
 	foreach $p (@$parents) {
 		if ($p->{'fullname'} =~ /^eth(\d+)$/ && $1 >= $max) {
@@ -93,86 +93,88 @@ $non_virtual = $in{'new'} == 2 || !$in{'new'} && $iface->{'virtual'} eq '';
 # Show bridge if not virtual
 if ($non_virtual && (@bridges || $iface->{'bridge'})) {
 	print &ui_table_row($text{'iface_bridge'},
-			    &ui_select("bridge", $iface->{'bridge'},
-				       [ [ undef, $text{'default'} ],
-					 @bridges ], 1, 0, 1));
+		    &ui_select("bridge", $iface->{'bridge'},
+			       [ [ undef, "&lt;".$text{'default'}."&gt;" ],
+				 @bridges ], 1, 0, 1));
 	}
 
 # Address
-$afunc = "type_".$server->{'manager'}."_can_allocate_address";
-if ($in{'new'} && defined(&$afunc) && &$afunc($server)) {
-	# Show auto-allocate option
-	if (&can_action($server, "ips")) {
-		# Can allocate or enter
+if ($can != 3) {
+	$afunc = "type_".$server->{'manager'}."_can_allocate_address";
+	if ($in{'new'} && defined(&$afunc) && &$afunc($server)) {
+		# Show auto-allocate option
+		if (&can_action($server, "ips")) {
+			# Can allocate or enter
+			print &ui_table_row($text{'iface_address'},
+				    &ui_opt_textbox("address", undef, 20,
+						    $text{'iface_alloc'},
+						    $text{'iface_man'})." ".
+				    &ip_address_chooser_button("address", $server));
+			}
+		else {
+			# Always allocated
+			print &ui_table_row($text{'iface_address'},
+					    "<i>$text{'iface_alloc'}</i>");
+			}
+		}
+	elsif (!&can_action($server, "ips")) {
+		# Show existing IP
 		print &ui_table_row($text{'iface_address'},
-			    &ui_opt_textbox("address", undef, 20,
-					    $text{'iface_alloc'},
-					    $text{'iface_man'})." ".
-			    &ip_address_chooser_button("address", $server));
+			"<tt>$iface->{'address'}</tt>");
 		}
 	else {
-		# Always allocated
+		# Must enter
 		print &ui_table_row($text{'iface_address'},
-				    "<i>$text{'iface_alloc'}</i>");
+			    &ui_textbox("address", $iface->{'address'}, 20));
 		}
-	}
-elsif (!&can_action($server, "ips")) {
-	# Show existing IP
-	print &ui_table_row($text{'iface_address'},
-		"<tt>$iface->{'address'}</tt>");
-	}
-else {
-	# Must enter
-	print &ui_table_row($text{'iface_address'},
-		    &ui_textbox("address", $iface->{'address'}, 20));
-	}
 
-# Netmask
-$nfunc = "type_".$server->{'manager'}."_force_netmask";
-if (defined(&$nfunc) && ($forcemask = &$nfunc($server))) {
-	print &ui_hidden("netmask", $forcemask);
-	print &ui_table_row($text{'iface_netmask'}, "<tt>$forcemask</tt>");
-	}
-else {
-	print &ui_table_row($text{'iface_netmask'},
-		    &ui_textbox("netmask", $iface->{'netmask'}, 20));
-	}
-
-# IPv6 addresses, if supported
-$cfunc = "type_".$server->{'manager'}."_can_ipv6";
-if ($non_virtual && defined(&$cfunc) && &$cfunc($server)) {
-	my $itable;
-	if (&can_action($server, "ips")) {
-		# Can edit v6 addresses
-		$itable = &ui_columns_start([ $text{'iface_address6'},
-					      $text{'iface_netmask6'} ]);
-		for(my $n=0; $n<=@{$iface->{'address6'}}; $n++) {
-			$itable .= &ui_columns_row([
-				&ui_textbox("address6_$n",
-				    $iface->{'address6'}->[$n], 40),
-				&ui_textbox("netmask6_$n",
-				    $iface->{'netmask6'}->[$n] || 64, 5),
-				]);
-			}
-		$itable .= &ui_columns_end();
-		}
-	elsif (@{$iface->{'address6'}}) {
-		# Just show v6 addresses
-		$itable = &ui_columns_start([ $text{'iface_address6'},
-					      $text{'iface_netmask6'} ]);
-		for(my $n=0; $n<@{$iface->{'address6'}}; $n++) {
-			$itable .= &ui_columns_row([
-				$iface->{'address6'}->[$n],
-				$iface->{'netmask6'}->[$n],
-				]);
-			}
-		$itable .= &ui_columns_end();
+	# Netmask
+	$nfunc = "type_".$server->{'manager'}."_force_netmask";
+	if (defined(&$nfunc) && ($forcemask = &$nfunc($server))) {
+		print &ui_hidden("netmask", $forcemask);
+		print &ui_table_row($text{'iface_netmask'}, "<tt>$forcemask</tt>");
 		}
 	else {
-		# None yet, and cannot edit
+		print &ui_table_row($text{'iface_netmask'},
+			    &ui_textbox("netmask", $iface->{'netmask'}, 20));
 		}
-	if ($itable) {
-		print &ui_table_row($text{'iface_ipv6'}, $itable);
+
+	# IPv6 addresses, if supported
+	$cfunc = "type_".$server->{'manager'}."_can_ipv6";
+	if ($non_virtual && defined(&$cfunc) && &$cfunc($server)) {
+		my $itable;
+		if (&can_action($server, "ips")) {
+			# Can edit v6 addresses
+			$itable = &ui_columns_start([ $text{'iface_address6'},
+						      $text{'iface_netmask6'} ]);
+			for(my $n=0; $n<=@{$iface->{'address6'}}; $n++) {
+				$itable .= &ui_columns_row([
+					&ui_textbox("address6_$n",
+					    $iface->{'address6'}->[$n], 40),
+					&ui_textbox("netmask6_$n",
+					    $iface->{'netmask6'}->[$n] || 64, 5),
+					]);
+				}
+			$itable .= &ui_columns_end();
+			}
+		elsif (@{$iface->{'address6'}}) {
+			# Just show v6 addresses
+			$itable = &ui_columns_start([ $text{'iface_address6'},
+						      $text{'iface_netmask6'} ]);
+			for(my $n=0; $n<@{$iface->{'address6'}}; $n++) {
+				$itable .= &ui_columns_row([
+					$iface->{'address6'}->[$n],
+					$iface->{'netmask6'}->[$n],
+					]);
+				}
+			$itable .= &ui_columns_end();
+			}
+		else {
+			# None yet, and cannot edit
+			}
+		if ($itable) {
+			print &ui_table_row($text{'iface_ipv6'}, $itable);
+			}
 		}
 	}
 

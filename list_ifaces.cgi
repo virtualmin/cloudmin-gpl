@@ -21,9 +21,12 @@ $ifaces = &$ifunc($server);
 @ilinks = ( );
 if (&can_action($server, "ifaces")) {
 	# Link to add
-	@ilinks = ( "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".
-		    "$text{'edit_ifaceadd'}</a>" );
-	if (&can_action($server, "realifaces") && $can == 2) {
+	@ilinks = ( );
+	if ($can != 3) {
+		push(@ilinks, "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".
+			      "$text{'edit_ifaceadd'}</a>");
+		}
+	if (&can_action($server, "realifaces") && $can >= 2) {
 		# Link to real
 		push(@ilinks, "<a href='edit_iface.cgi?id=$in{'id'}&new=2'>".
 			      "$text{'edit_ifaceaddreal'}</a>");
@@ -59,7 +62,8 @@ foreach $iface (sort { $a->{'fullname'} cmp $b->{'fullname'} } @$ifaces) {
 		($ucode, $use) = &get_interface_use($server, $info,
 						    \@doms, $iface);
 		}
-	$adesc = $iface->{'dhcp'} ? $text{'ifaces_dhcp'} :
+	$adesc = $iface->{'unknown'} ? $text{'ifaces_unknown'} :
+		 $iface->{'dhcp'} ? $text{'ifaces_dhcp'} :
 		 $iface->{'bootp'} ? $text{'ifaces_bootp'} :
 		 &html_escape($iface->{'address'}) ||
 		  $text{'ifaces_noaddress'};
@@ -147,7 +151,9 @@ if (defined(&$rfunc) && $config{'bw_enabled'} &&
 			    [ 0, $text{'ifaces_bw0'} ] ])."<br>\n".
 		&ui_select("bw_ifaces", \@bwifaces,
 			   [ map { [ $_->{'fullname'},
-				     $_->{'fullname'}." - ".$_->{'address'} ] }
+				     $_->{'address'} ?
+					$_->{'fullname'}." - ".$_->{'address'} :
+					$_->{'fullname'} ] }
 				 @realifaces ], 5, 1, 1));
 
 	print &ui_table_end();
