@@ -37,3 +37,4 @@ The Change Password page can now be used to set the password Cloudmin uses to lo
 System alerts can now be triggered by the amount of incoming our outgoing network bytes / second on managed systems.
 CPU usage for KVM instances can now be limited on host systems that support cgroups.
 When editing a real network interface (like eth1) on a virtual system, the bridge it is connected to on the host system can now be changed.
+Network interfaces on non-Linux virtual systems can now be managed, although their IP addresses must be configured inside the VM.
