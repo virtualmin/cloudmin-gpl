@@ -3447,7 +3447,15 @@ if ($can == 3) {
 	if ($server->{'status'} ne 'down') {
 		# Assume active
 		foreach my $iface (@$rv) {
-			$iface->{'active'} = 1;
+			if ($iface->{'name'} eq 'eth0') {
+				# We know the IP, so ping it
+				$iface->{'active'} =
+					$server->{'status'} eq 'noping' ? 0 : 1;
+				}
+			else {
+				# Assume OK
+				$iface->{'active'} = 1;
+				}
 			}
 		}
 	}
