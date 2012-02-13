@@ -3444,6 +3444,12 @@ if ($can == 3) {
 		        'fullname' => 'eth'.$_,
 			'unknown' => 1,
 		        'up' => 1 } } (0 .. scalar(@net)-1) ];
+	if ($server->{'status'} ne 'down') {
+		# Assume active
+		foreach my $iface (@$rv) {
+			$iface->{'active'} = 1;
+			}
+		}
 	}
 elsif ($server->{'status'} eq 'down') {
 	# Get from network config files
@@ -4646,7 +4652,7 @@ else {
 &$first_print($text{'mkimage_kvmmount'});
 my $err = &type_kvm_mount_filesystem($server);
 if ($err) {
-	&$second_print(&text('create_ekvmmount', $err));
+	&$second_print(&text('create_exenmount', $err));
 	}
 else {
 	&$second_print(&text('create_xenmounted',

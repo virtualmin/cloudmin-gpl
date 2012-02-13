@@ -4789,6 +4789,19 @@ while(@poss) {
 return ( );
 }
 
+# set_interface_active_from_ping(&interfaces)
+# Parallel ping a bunch of interfaces to see which are active, and set the
+# active flag.
+sub set_interface_active_from_ping
+{
+my ($ifaces) = @_;
+&parallel_server_function(
+	[ map { { 'id' => $_->{'fullname'},
+		  'iface' => $_ } } @$ifaces ],
+	sub { my $p = &ping_server_host($_[0]->{'iface'}->{'address'});
+	      $_[0]->{'iface'}->{'active'} = $p ? 1 : 0 });
+}
+
 # allocate_ip6_address(pool-ids, [ifaces, want-iface])
 # Returns an IPv6 address from the given pools that is not in use or pingable,
 # and a netmask and gateway. If no IP could be allocated, returns undef.
