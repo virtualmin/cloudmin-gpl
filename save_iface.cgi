@@ -70,7 +70,7 @@ else {
 		}
 	if ($in{'new'} == 2) {
 		# Check real interface
-		$can == 2 || &error($text{'iface_esupportreal'});
+		$can >= 2 || &error($text{'iface_esupportreal'});
 		&can_action_error($server, "realifaces");
 		}
 	if ($can != 3 &&
@@ -109,10 +109,10 @@ else {
 		}
 
 	# Save bridge on host
-	if ($in{'bridge'}) {
+	if (defined($in{'bridge'})) {
 		$vhost = &get_parent_server($server);
 		@bridges = &list_host_bridges($vhost);
-		&indexof($in{'bridge'}, @bridges) >= 0 ||
+		!$in{'bridge'} || &indexof($in{'bridge'}, @bridges) >= 0 ||
 			&error($text{'iface_ebridge'});
 		$iface->{'bridge'} = $in{'bridge'};
 		}

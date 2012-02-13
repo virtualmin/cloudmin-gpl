@@ -22,7 +22,7 @@ $ifaces = &$ifunc($server);
 if (&can_action($server, "ifaces")) {
 	# Link to add
 	@ilinks = ( );
-	if ($can != 3) {
+	if ($can < 3) {
 		push(@ilinks, "<a href='edit_iface.cgi?id=$in{'id'}&new=1'>".
 			      "$text{'edit_ifaceadd'}</a>");
 		}

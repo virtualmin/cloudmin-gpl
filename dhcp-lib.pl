@@ -140,7 +140,6 @@ return @rv;
 # save_iface_dhcpd(&server, &iface, &old-iface)
 # Updates the DHCP server configuration for some system and network interface,
 # perhaps for a MAC or IP change
-# XXX what if no address?
 sub save_iface_dhcpd
 {
 my ($server, $iface, $oldiface) = @_;
@@ -155,6 +154,16 @@ my $changed = 0;
 my $hostname = $iface->{'name'} =~ /(\d+)$/ && $1 == 0 ? 
 			$server->{'host'} :
 			$iface->{'name'}.'-'.$server->{'host'};
+my $address = $iface->{'address'};
+if (!$address && $iface->{'fullname'} eq 'eth0') {
+	# If interface has no address and is the first on the system,
+	# use primary IP instead
+	$address = &get_server_ip($server);
+	}
+if (!$address) {
+	# Don't know the address for this interface
+	return undef;
+	}
 if (!$host) {
 	# Add new host object
 	$host = { 'name' => 'host',
@@ -164,7 +173,7 @@ if (!$host) {
 		  'values' => [ $hostname ],
 		  'members' => [
 			{ 'name' => 'fixed-address',
-                          'values' => [ $iface->{'address'} ] },
+                          'values' => [ $address ] },
 			{ 'name' => 'hardware',
                           'values' => [ 'ethernet', $iface->{'ether'} ] },
 			]
@@ -188,7 +197,7 @@ else {
 	    $fixed->{'values'}->[0] ne $iface->{'address'}) {
 		&dhcpd::save_directive($host, 'fixed-address',
 			[ { 'name' => 'fixed-address',
-			    'values' => [ $iface->{'address'} ] } ]);
+			    'values' => [ $address ] } ]);
 		$changed = 1;
 		}
 	my $hard = &dhcpd::find("hardware", $host->{'members'});

@@ -151,7 +151,7 @@ if ($nonvirt) {
 		}
 	}
 else {
-	$can == 3 && &usage("Only real interfaces can be created on ".
+	$can >= 3 && &usage("Only real interfaces can be created on ".
 			    "this system");
 	$bridge && &usage("The --bridge parameter can only be used ".
 			  "with --real");
@@ -246,6 +246,13 @@ elsif ($iface->{'address'}) {
 else {
 	print "Created interface $iface->{'fullname'}\n";
 	}
+
+# Update DHCPd config, if enabled
+if ($config{'dhcp_add'} && &supports_dhcpd(1) &&
+    $iface->{'virtual'} eq '' && $iface->{'ether'}) {
+	&save_iface_dhcpd($server, $iface, undef);
+	}
+
 &compute_ip_addresses($server);
 &save_managed_server($server);
 &release_lock_server($server);
