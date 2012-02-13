@@ -3445,7 +3445,7 @@ if ($can == 3) {
 			'unknown' => 1,
 		        'up' => 1 } } (0 .. scalar(@net)-1) ];
 	if ($server->{'status'} ne 'down') {
-		# Assume active
+		# Set active field
 		foreach my $iface (@$rv) {
 			if ($iface->{'name'} eq 'eth0') {
 				# We know the IP, so ping it
