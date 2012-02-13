@@ -207,7 +207,7 @@ $sfunc = "type_".$type."_no_ssh";
 $no_ssh = defined(&$sfunc) && &$sfunc();
 if (!$no_ssh) {
 	$ssh_pass || $ssh_key || $no_sshlogin ||
-		&usage("One of --ssh-pass or --ssh-key must be given");
+	    &usage("One of --ssh-pass, --ssh-key or --no-ssh must be given");
 	}
 $pfunc = "type_".$type."_no_create_pass";
 if (defined(&$pfunc) && &$pfunc()) {
