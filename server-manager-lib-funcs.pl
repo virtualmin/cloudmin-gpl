@@ -9625,7 +9625,10 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	&remote_foreign_require($server, "net", "net-lib.pl");
 	return $last_remote_error if ($last_remote_error);
 	$iface->{'up'} = 1;
-	&remote_foreign_call($server, "net", "activate_interface", $iface);
+	my $webmin_iface = { %$iface };
+	delete($webmin_iface->{'ether'});
+	&remote_foreign_call($server, "net", "activate_interface",
+			     $webmin_iface);
 	return $last_remote_error if ($last_remote_error);
 	}
 else {

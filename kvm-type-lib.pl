@@ -3814,7 +3814,7 @@ if ($iface->{'virtual'} eq '') {
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	}
 
-# If bridge changed, updating connection between tapN and new bridge
+# If bridge changed, update connection between tapN and new bridge
 if ($iface->{'virtual'} eq '' && $iface->{'bridge'} ne $oldiface->{'bridge'}) {
 	# If running, re-connect the tap interface to the new bridge
 	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
