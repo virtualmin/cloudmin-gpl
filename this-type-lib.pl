@@ -48,14 +48,18 @@ my ($server, $cmd, $timeout, $leave) = @_;
 if ($leave) {
 	# Open the command in a new pty
 	&foreign_require("proc", "proc-lib.pl");
+	&clean_environment();
 	my ($fh, $fpid) = &proc::pty_process_exec($cmd);
+	&reset_environment();
 	return (undef, 0, undef, 0, $fh, $fpid);
 	}
 else {
 	# Just run the command, and get the output
+	&clean_environment();
 	my $out = $timeout ?
 		&backquote_with_timeout("($cmd) 2>&1 </dev/null", $timeout) :
 		&backquote_command("($cmd) 2>&1 </dev/null");
+	&reset_environment();
 	return ($out, $?/256);
 	}
 }

@@ -1272,6 +1272,13 @@ else {
 		$sshcmd .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
+	# Force all output to be in english
+	if ($cmd =~ /^\((.*)/) {
+		$cmd = "(LANG=C $1";
+		}
+	else {
+		$cmd = "LANG=C $cmd";
+		}
 	if ($server->{'root_shell'} &&
 	    $server->{'root_shell'} !~ /^(\S+\/)?(sh|bash|dash)$/) {
 		# Shell is not bash .. force use of sh
