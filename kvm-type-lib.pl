@@ -2531,10 +2531,13 @@ sub type_kvm_need_disk_reboot
 {
 my ($server, $disk) = @_;
 if ($server->{'status'} eq 'down') {
-	return 0;
+	return 0;	# Already down, no need to reboot
+	}
+elsif ($disk->{'reboot'}) {
+	return 1;	# Attaching while running failed
 	}
 elsif ($server->{'kvm_monitor_port'} && $disk->{'virt'} !~ /\/hd/) {
-	return 0;
+	return 0;	# Can live attach non-IDE disk
 	}
 else {
 	return 1;
@@ -2738,6 +2741,7 @@ if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
 		[ "pci_add 0 storage $str" ]);
 	$attacherr = !$aok ? $aout :
 		      $aout =~ /OK/ ? undef : $aout;
+	$disk->{'reboot'} = 1 if ($attacherr);
 	}
 
 # Add to total disk size
@@ -2804,7 +2808,7 @@ if ($disk->{'mount'} && &can_ssh_status($server) && !$attacherr) {
 		}
 	}
 
-return $attacherr || $fserr;
+return $fserr;
 }
 
 # type_kvm_delete_disk(&server, &disk, [detach-only], [leave-fstab])
