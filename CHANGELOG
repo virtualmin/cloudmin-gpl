@@ -38,3 +38,4 @@ System alerts can now be triggered by the amount of incoming our outgoing networ
 CPU usage for KVM instances can now be limited on host systems that support cgroups.
 When editing a real network interface (like eth1) on a virtual system, the bridge it is connected to on the host system can now be changed.
 Network interfaces on non-Linux virtual systems can now be managed, although their IP addresses must be configured inside the VM.
+The master administrator can now define custom links that appear on the left menu for some or all virtual systems, for linking to site-specific applications or documentation.

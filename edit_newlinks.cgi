@@ -1,12 +1,10 @@
 #!/usr/local/bin/perl
 # Display all custom links for domains, and link categories
 
-require './virtual-server-lib.pl';
+require './server-manager-lib.pl';
 &ReadParse();
-&can_edit_templates() || &error($text{'newlinks_ecannot'});
+&can_action_error(undef, "global");
 &ui_print_header(undef, $text{'newlinks_title'}, "", "custom_links");
-@tmpls = &list_templates();
-@ctmpls = grep { !$_->{'standard'} } @tmpls;
 
 # Make the table data
 @links = &list_custom_links();
@@ -87,8 +85,8 @@ print &ui_form_columns_table(
 
 if ($in{'refresh'}) {
 	# Update left frame after changing custom links
-	if (defined(&theme_post_save_domain)) {
-		&theme_post_save_domain($d, 'modify');
+	if (defined(&theme_post_save_server)) {
+		&theme_post_save_server();
 		}
 	}
 

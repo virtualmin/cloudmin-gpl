@@ -1,8 +1,8 @@
 #!/usr/local/bin/perl
 # Update custom link categories
 
-require './virtual-server-lib.pl';
-&can_edit_templates() || &error($text{'newlinks_ecannot'});
+require './server-manager-lib.pl';
+&can_action_error(undef, "global");
 &ReadParse();
 &error_setup($text{'newcats_err'});
 
@@ -14,7 +14,6 @@ for($i=0; defined($in{"desc_$i"}); $i++) {
 		   });
 	}
 &save_custom_link_categories(\@rv);
-&run_post_actions_silently();
 &webmin_log("save", "linkcats");
 &redirect("edit_newlinks.cgi?refresh=1");
 

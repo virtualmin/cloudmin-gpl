@@ -273,6 +273,14 @@ elsif ($type eq "failovers") {
 	# Multiple failover groups
 	return &text('log_'.$action.'_failovers', $object);
 	}
+elsif ($type eq "link") {
+	# One custom link
+        return &text('log_'.$action.'_link', &html_escape($p->{'desc'}));
+        }
+elsif ($type eq "links" || $type eq "linkcats") {
+	# Multiple custom links
+        return $text{'log_'.$action.'_'.$type};
+        }
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

@@ -53,6 +53,9 @@ push(@rv, $scalegroups_dir);
 # Disk directories dir
 push(@rv, $disk_directories_dir);
 
+# Custom links
+push(@rv, $custom_links_file, $custom_link_categories_file);
+
 return &unique(@rv);
 }
 

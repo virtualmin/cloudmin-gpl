@@ -255,6 +255,9 @@ $upgrade_cloudmin_updates = "/wbm/updates.txt";
 $roundrobins_dir = "$module_config_directory/roundrobins";
 $scalegroups_dir = "$module_config_directory/scalegroups";
 
+$custom_links_file = "$module_config_directory/custom-links";
+$custom_link_categories_file = "$module_config_directory/custom-link-cats";
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {

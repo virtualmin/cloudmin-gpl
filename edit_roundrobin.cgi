@@ -122,8 +122,7 @@ print &ui_hidden_table_start($text{'roundrobin_header3'}, "width=100%", 2,
 # By status
 %selst = map { $_, 1 } split(/\s+/, $roundrobin->{'status'});
 @grid = ( );
-foreach my $st ('noping', 'nossh', 'nosshlogin', 'downwebmin',
-                'nowebminlogin', 'nowebmin', 'novirt', 'virt', 'alive') {
+foreach my $st (grep { $_ ne 'down' } map { $_->[0] } @server_statuses) {
 	$sdesc = &describe_status({ 'status' => $st }, 1, 0);
 	push(@grid, &ui_checkbox("status", $st, $sdesc, $selst{$st}));
 	}

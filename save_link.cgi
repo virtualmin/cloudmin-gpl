@@ -1,10 +1,10 @@
 #!/usr/local/bin/perl
 # Create, update or delete a custom link
 
-require './virtual-server-lib.pl';
+require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'elink_err'});
-&can_edit_templates() || &error($text{'newlinks_ecannot'});
+&can_action_error(undef, "global");
 
 # Get the link
 @links = &list_custom_links();
@@ -32,13 +32,16 @@ else {
 	foreach $w (split(/\0/, $in{'who'})) {
 		$link->{'who'}->{$w} = 1;
 		}
-	$link->{'tmpl'} = $in{'tmpl'};
-	$link->{'feature'} = $in{'feature'};
+	$link->{'manager'} = $in{'manager'};
+	$link->{'status'} = $in{'status_def'} ? undef :
+		join(" ", split(/\0/, $in{'status'}));
+	$link->{'plans'} = $in{'plans_def'} == 2 ? '' :
+			   $in{'plans_def'} == 1 ? '*' :
+				join(" ", split(/\0/, $in{'plans'}));
 	}
 
 # Save custom links
 &save_custom_links(\@links);
-&run_post_actions_silently();
 &webmin_log($in{'new'} ? 'create' : $in{'delete'} ? 'delete' : 'modify',
 	    'link', undef, $link);
 &redirect("edit_newlinks.cgi?refresh=1");

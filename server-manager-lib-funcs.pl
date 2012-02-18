@@ -6665,6 +6665,12 @@ if (@hosted_server_management_types && !$module_info{'onehost'}) {
 	push(@gcats, "hosts");
 	}
 
+# Custom links
+push(@glinks, "edit_newlinks.cgi");
+push(@gtitles, $text{'newlinks_title'});
+push(@gicons, "images/newlinks.gif");
+push(@gcats, "settings");
+
 # Plugin-defined icons
 foreach my $p (@plugins) {
 	if (&plugin_defined($p, "settings_links")) {
@@ -7185,6 +7191,35 @@ foreach my $p (@plugins) {
 	if (&plugin_defined($p, "server_actions")) {
 		push(@rv, &plugin_call($p, "server_actions", $server));
 		}
+	}
+
+# Add custom links
+my %catmap = map { $text{'cat_'.$_->{'cat'}} || $_->{'catname'},
+		   $_->{'cat'} } @rv;
+foreach my $l (&list_visible_custom_links($server)) {
+	$l->{'title'} = $l->{'desc'};
+	delete($l->{'desc'});
+	$l->{'target'} = $l->{'open'} ? "_new" : "right";
+	delete($l->{'open'});
+	if (!$l->{'icon'}) {
+		# Make a unique ID
+		$l->{'icon'} = lc($l->{'title'});
+		$l->{'icon'} =~ s/\s/_/g;
+		}
+	push(@rv, $l);
+
+	# Pick a category code, based on a match by name with an
+	# existing category or a lower-cased version of the category
+	if ($l->{'catname'}) {
+		$l->{'cat'} = $catmap{$l->{'catname'}} ||
+			      lc($l->{'catname'});
+		$l->{'cat'} =~ s/\s/_/g;
+		}
+	else {
+		# No category, so place at top level
+		$l->{'cat'} = '';
+		}
+	$l->{'nosort'} = 1;
 	}
 
 return @rv;
@@ -11346,6 +11381,133 @@ if ($in->{'newgroup'}) {
 	push(@groups, $in->{'newgroup'})
 	}
 $server->{'group'} = join("\t", @groups);
+}
+
+# list_custom_links()
+# Returns a list of structures containing custom link details
+sub list_custom_links
+{
+local @rv;
+local $_;
+open(LINKS, $custom_links_file);
+while(<LINKS>) {
+	s/\r|\n//g;
+	local @a = split(/\t/, $_);
+	push(@rv, { 'desc' => $a[0],
+		    'url' => $a[1],
+		    'who' => { map { $_ => 1 } split(/:/, $a[2]) },
+		    'open' => $a[3],
+		    'cat' => $a[4],
+		    'manager' => $a[5] eq '-' ? undef : $a[5],
+		    'status' => $a[6] eq '-' ? undef : $a[6],
+		    'plans' => $a[7] eq '-' ? undef : $a[7],
+		  });
+	}
+close(LINKS);
+return @rv;
+}
+
+# save_custom_links(&links)
+# Write out the given list of custom links to a file
+sub save_custom_links
+{
+&open_lock_tempfile(LINKS, ">$custom_links_file");
+foreach my $a (@{$_[0]}) {
+	&print_tempfile(LINKS,
+		$a->{'desc'}."\t".$a->{'url'}."\t".
+		join(":", keys %{$a->{'who'}})."\t".
+		int($a->{'open'})."\t".$a->{'cat'}."\t".
+		($a->{'manager'} eq "" ? "-" : $a->{'manager'})."\t".
+		($a->{'status'} eq "" ? "-" : $a->{'status'})."\t".
+		($a->{'plans'} eq "" ? "-" : $a->{'plans'})."\t".
+		"\n");
+	}
+&close_tempfile(LINKS);
+}
+
+# list_custom_link_categories()
+# Returns a list of all custom link category hash refs
+sub list_custom_link_categories
+{
+local @rv;
+open(LINKCATS, $custom_link_categories_file);
+while(<LINKCATS>) {
+	s/\r|\n//g;
+	local @a = split(/\t/, $_);
+	push(@rv, { 'id' => $a[0], 'desc' => $a[1] });
+	}
+close(LINKCATS);
+return @rv;
+}
+
+# save_custom_link_categories(&cats)
+# Write out the given list of link categories to a file
+sub save_custom_link_categories
+{
+&open_lock_tempfile(LINKCATS, ">$custom_link_categories_file");
+foreach my $a (@{$_[0]}) {
+	&print_tempfile(LINKCATS, $a->{'id'}."\t".$a->{'desc'}."\n");
+	}
+&close_tempfile(LINKCATS);
+}
+
+# list_visible_custom_links(&server)
+# Returns a list of descriptions and URLs for custom links in the given server,
+# for the current user type. Category names are also include.
+sub list_visible_custom_links
+{
+local ($server) = @_;
+local @rv;
+local $me = $access{'owner'} ? 'owner' : 'master';
+local %cats = map { $_->{'id'}, $_->{'desc'} } &list_custom_link_categories();
+foreach my $l (&list_custom_links()) {
+	if (!$l->{'who'}->{$me}) {
+		# Not for you
+		next;
+		}
+	if ($l->{'manager'} && $server->{'manager'} ne $l->{'manager'}) {
+		# Not for this VM type
+		next;
+		}
+	if ($l->{'status'} &&
+	    &indexof($server->{'status'}, split(/\s+/, $l->{'status'})) < 0) {
+		# Not for this status
+		next;
+		}
+	if ($l->{'plans'} eq '') {
+		# Root only
+		next if ($access{'owner'});
+		}
+	elsif ($l->{'plans'} ne '*' && $access{'owner'}) {
+		# Only owners on some plans
+		next if (&indexof($access{'plan'},
+				  split(/\s+/, $l->{'plans'})) < 0);
+		}
+	local $nl = {
+		'desc' => &substitute_template($l->{'desc'}, $server),
+		'link' => &substitute_template($l->{'url'}, $server),
+		'open' => $l->{'open'},
+		'catname' => $cats{$l->{'cat'}},
+		'cat' => $l->{'cat'}, 
+		};
+	if ($nl->{'desc'} && $nl->{'link'}) {
+		push(@rv, $nl);
+		}
+	}
+return @rv;
+}
+
+# print_subs_table(sub, ...)
+# Output a table showing some allowed template substitutions
+sub print_subs_table
+{
+print "<table>\n";
+foreach $k (@_) {
+        print "<tr> <td><tt><b>\${$k}</b></td>\n";
+        print "<td>",$text{"sub_".$k},"</td> </tr>\n";
+        }
+print "</table>\n";
+print "$text{'sub_if'}<p>\n";
 }
 
 # obtain_lock_server(&server|&servers, [readonly])
