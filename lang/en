@@ -4212,6 +4212,7 @@ ips_owner=Owner
 ips_host=Host systems
 ips_free=Free
 ips_ping=In Use
+ips_unalloc=Unallocated
 ips_tabips=IP addresses in use
 ips_tabranges=IP ranges in use
 ips_tabpools=Common IPv4 pools

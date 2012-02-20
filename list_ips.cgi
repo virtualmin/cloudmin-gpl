@@ -119,16 +119,24 @@ foreach $s (@allservers) {
 		}
 	}
 
-# For IPs that might be free, parallel ping them
+# For IPs that might be free, parallel ping them. Unless
+# there are more than 1024
 @ips = keys %ips;
 @freeips = map { { 'id' => $_ } } grep { &check_ipaddress($_) &&
 				         !$ips{$_}->{'server'} } @ips;
-local $config{'procs'} = 20;
-@pings = map { $_->[0] } &parallel_server_function(\@freeips,
-			sub { my $p = &ping_server_host($_[0]->{'id'}, 1);
-			      return $p });
-for($i=0; $i<@freeips; $i++) {
-	$ips{$freeips[$i]->{'id'}}->{'ping'} = $pings[$i];
+if (@freeips <= 1024 && $config{'show_ping'}) {
+	local $config{'procs'} = 20;
+	@pings = map { $_->[0] } &parallel_server_function(\@freeips,
+				sub { my $p = &ping_server_host($_[0]->{'id'}, 1);
+				      return $p });
+	for($i=0; $i<@freeips; $i++) {
+		$ips{$freeips[$i]->{'id'}}->{'ping'} = $pings[$i];
+		}
+	}
+else {
+	foreach $ip (@ips) {
+		$ips{$ip}->{'ping'} = -1;
+		}
 	}
 
 # Get IPs in sorted order
@@ -220,7 +228,9 @@ else {
 			$ip,
 			$s ? "<a href='edit_serv.cgi?id=$s->{'id'}'>".
 			     "$s->{'host'}</a>" :
-			 $p ? $text{'ips_ping'} : $text{'ips_free'},
+			 $p > 0 ? $text{'ips_ping'} :
+			 $p < 0 ? $text{'ips_unalloc'} :
+				  $text{'ips_free'},
 			!$oc ? ( ) :
 			 !$s ? ( undef ) :
 			       ( $ownermap{$s->{'id'}} ),
