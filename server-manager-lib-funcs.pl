@@ -1273,8 +1273,9 @@ else {
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
 	# Force all output to be in english
-	if ($cmd =~ /^\((.*)/) {
-		$cmd = "(LANG=C $1";
+	if ($cmd =~ /^(\(+)(.*)/) {
+		# Command is like (foo)
+		$cmd = $1."LANG=C ".$2;
 		}
 	else {
 		$cmd = "LANG=C $cmd";
