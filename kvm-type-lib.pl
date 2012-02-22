@@ -2284,6 +2284,9 @@ if ($server->{'kvm_args'}) {
 $cmd .= " ".$extra if ($extra);
 
 # If cgroups are supported, run kvm command in one
+if ($server->{'kvm_ioclass'} ne '') {
+	$cmd = "ionice -n$server->{'kvm_ioclass'} $cmd";
+	}
 if ($vhost->{'kvm_cgroup_support'}) {
 	my @cmds = ( "cgcreate -g cpu:$server->{'id'}" );
 	if ($server->{'kvm_cpu'}) {
@@ -3250,8 +3253,8 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 	return $out if ($ex);
 	}
 # Update boot-time config
-&type_kvm_set_atboot($server, 2);
 $server->{'kvm_cpu'} = $cpu;
+&type_kvm_set_atboot($server, 2);
 return undef;
 }
 
@@ -3319,6 +3322,50 @@ my ($server, $smp) = @_;
 $smp > 0 || return "KVM virtual CPUs must be at least 1";
 $smp < 256 || return "KVM virtual CPUs must be less than 256";
 $server->{'kvm_smp'} = $smp;
+&type_kvm_set_atboot($server, 2);
+return undef;
+}
+
+# type_kvm_can_ioclass(&server)
+# Returns 1, as the IO class can be set for KVM instances without a reboot
+sub type_kvm_can_ioclass
+{
+return 1;
+}
+
+# type_kvm_get_ioclass(&server)
+# Returns the IO class of a running KVM instance, or -1 if not set
+sub type_kvm_get_ioclass
+{
+my ($server) = @_;
+if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
+	# Get live value of process
+	my $vhost = &type_kvm_parent($server);
+	my ($out, $ex, $err) = &execute_command_on_server(
+		$vhost, "ionice -p$server->{'kvm'}");
+	if (!$ex && !$err && $out =~ /\S+:\s+\S+\s+(\d+)/) {
+		return $1;
+		}
+	}
+# Use cached value
+return ( $server->{'kvm_ioclass'} || 0 );
+}
+
+# type_kvm_save_ioclass(&server, class)
+# Sets the IO class (a number from 0 to 7) of a KVM instance
+sub type_kvm_save_ioclass
+{
+my ($server, $ioclass) = @_;
+if ($server->{'status'} ne 'down') {
+	# Update live value
+	my $vhost = &type_kvm_parent($server);
+	my ($out, $ex, $err) = &execute_command_on_server(
+		$vhost, "ionice -n$ioclass -p$server->{'kvm'}");
+	return $err if ($err);
+	return $out if ($ex);
+	}
+# Update boot-time config
+$server->{'kvm_ioclass'} = $ioclass;
 &type_kvm_set_atboot($server, 2);
 return undef;
 }
@@ -4425,6 +4472,7 @@ my $data = &get_file_data_from_server($vhost, $bfile);
 foreach my $l (split(/\r?\n/, $data)) {
 	$l =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
 	$l =~ s/^.*cgexec\s+\-g\s+(\S+)\s+//;
+	$l =~ s/^.*ionice\s+\-n\d+\s+//;
 	my $kvm = &parse_kvm_start_command($l);
 	if ($kvm && &match_kvm_instance($server, $kvm)) {
 		return 1;
@@ -4475,6 +4523,7 @@ if (&stat_file_on_server($vhost, "/etc/init.d")) {
 		my $line = $lref->[$i];
 		$line =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
 		$line =~ s/^.*cgexec\s+\-g\s+(\S+)\s+//;
+		$line =~ s/^.*ionice\s+\-n\d+\s+//;
 		my $kvm = &parse_kvm_start_command($line);
 		if ($kvm && &match_kvm_instance($server, $kvm)) {
 			$lnum = $i;

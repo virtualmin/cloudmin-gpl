@@ -38,6 +38,10 @@ by the C<--bw-interfaces> flag, followed by a quoted list of interface names
 like "eth0 eth1". To collect stats on all interfaces, use C<--bw-all-interfaces>
 instead.
 
+For virtual system types that support changing the IO scheduling class,
+the C<--ioclass> flag can be given followed by a number from 0 (highest
+priority) to 7 (lowest).
+
 By default, the command will inform you if a reboot is needed to apply any
 CPU or memory limit changes. However, you can force an immediate shutdown
 and restart with the C<--reboot> flag, if needed.
@@ -159,6 +163,11 @@ while(@ARGV > 0) {
 	elsif ($a eq "--rate-unlimited") {
 		$rate = 0;
 		}
+	elsif ($a eq "--ioclass") {
+		$ioclass = shift(@ARGV);
+		$ioclass =~ /^[0-7]$/ ||
+			&usage("--ioclass must be followed by a number from 0 (high priority) to 7 (low)");
+		}
 	elsif ($a eq "--reboot") {
 		# Reboot after
 		$do_reboot = 1;
@@ -169,7 +178,7 @@ while(@ARGV > 0) {
 	}
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
    defined($bw) || defined($rate) || defined($disk) || defined(@bw_ifaces) ||
-   defined($gmemory) || &usage("Nothing to modify!");
+   defined($gmemory) || defined($ioclass) || &usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hoston);
@@ -523,6 +532,37 @@ foreach $s (@servers) {
 		print "\n";
 		}
 
+	# Change IO class, if we can
+	if (defined($ioclass)) {
+		print "Setting IO class on $tdesc system $s->{'host'} to ",
+		      "$opclass ..\n";
+		$cfunc = "type_".$t."_can_ioclass";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$gfunc = "type_".$t."_get_ioclass";
+			$oldioclass = &$gfunc($s);
+			if (defined($oldioclass) && $oldioclass == $ioclass) {
+				print ".. already set\n";
+				}
+			else {
+				$dfunc = "type_".$t."_save_ioclass";
+				$err = &$dfunc($s, $ioclass);
+				if ($err) {
+					print ".. failed : $err\n";
+					$failed++;
+					}
+				else {
+					print ".. done\n";
+					$reboot++ if (&$cfunc($s) == 2);
+					}
+				}
+			}
+		else {
+			print ".. not supported\n";
+			$failed++;
+			}
+		print "\n";
+		}
+
 	# Change bandwidth limit
 	if (defined($bw)) {
 		print "Setting bandwidth limit on $tdesc system $s->{'host'} ..\n";
@@ -621,6 +661,7 @@ print "                       [--vcpus N | --vcpus list]\n";
 print "                       [--bw-limit MB | --bw-unlimited]\n";
 print "                       [--bw-interfaces iface | --bw-all-interfaces]\n";
 print "                       [--rate-limit Mb/s | --rate-unlimited]\n";
+print "                       [--ioclass number]\n";
 exit(1);
 }
 

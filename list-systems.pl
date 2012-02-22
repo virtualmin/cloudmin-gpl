@@ -390,6 +390,14 @@ if ($multi) {
 				}
 			}
 
+		# IO class
+		$cfunc = "type_".$s->{'manager'}."_can_ioclass";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$mfunc = "type_".$s->{'manager'}."_get_ioclass";
+			$ioclass = &$mfunc($s);
+			print "    IO class: $ioclass\n";
+			}
+
 		# Show bandwidth limit and usage
 		$rfunc = "type_".$s->{'manager'}."_real_interfaces";
 		if (defined(&$rfunc) && $config{'bw_enabled'}) {
