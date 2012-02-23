@@ -4339,7 +4339,7 @@ if (&can_ssh_status($server) &&
 	if (&has_command_on_server($server, "cgcreate")) {
 		my $cpath;
 		foreach my $c ("/mnt/cgroups", "/cgroup") {
-			my @st = &stat_file_on_server($server, $c);
+			my @st = &stat_file_on_server($server, $c."/cpu");
 			if (@st > 1) {
 				$cpath = $c;
 				last;
