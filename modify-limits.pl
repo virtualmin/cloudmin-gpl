@@ -187,6 +187,9 @@ defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
 if (defined($bw) || defined(@bw_ifaces)) {
 	&can_action_usage(\@servers, "bw");
 	}
+if (defined($ioclass)) {
+	&can_action_usage(\@servers, "ioclass");
+	}
 
 # Check if we can do any of them
 foreach $s (@servers) {

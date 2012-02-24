@@ -60,3 +60,4 @@ ping_wait_timeout=60
 ping_wait_timeout=60
 ping_wait_timeout=60
 show_ping=1
+kvm_ioclass=0

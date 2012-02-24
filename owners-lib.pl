@@ -101,8 +101,8 @@ sub list_owner_actions
 return ( 'startup', 'shutdown', 'reboot', 'boot', 'console', 'graph', 'view',
 	 'run', 'pass', 'domains', 'update', 'script', 'pause', 'reset',
 	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
-	 'reverse', 'limits', 'disks', 'devices', 'sshkeys', 'backup', 'webmin',
-	 'virtualmin', 'api', 'storage', 'mount' );
+	 'reverse', 'limits', 'ioclass', 'disks', 'devices', 'sshkeys',
+	 'backup', 'webmin', 'virtualmin', 'api', 'storage', 'mount' );
 }
 
 # list_safe_owner_actions()

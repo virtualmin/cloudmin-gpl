@@ -39,6 +39,10 @@ if (defined($in{'bw'})) {
 	$in{'bw_def'} || $in{'bw'} =~ /^[1-9]\d*$/ ||
 		&error($text{'limits_ebw'});
 	}
+if (defined($in{'ioclass'})) {
+	$in{'ioclass'} =~ /^[0-7]$/ ||
+		&error($text{'limits_eioclass'});
+	}
 
 # Apply them, telling the user
 &ui_print_unbuffered_header(&server_in($server), $text{'limits_title'}, "");
@@ -251,6 +255,31 @@ if (defined($in{'disk'}) || defined($in{'disk_def'})) {
 				$cfunc = "type_".$t."_can_disk";
 				$reboot++ if (&$cfunc($server) == 2);
 				}
+			}
+		}
+	}
+
+# Update IO class
+if (defined($in{'ioclass'}) && &can_action($server, "ioclass")) {
+	$c = $in{'ioclass'};
+	&$first_print(&text('limits_settingioclass', $c));
+	$gfunc = "type_".$t."_get_ioclass";
+	$oldc = &$gfunc($server);
+	if ($c == $oldc) {
+		# No need to change
+		&$second_print($text{'limits_already'});
+		}
+	else {
+		# Call set function and check
+		$ifunc = "type_".$t."_save_ioclass";
+		$err = &$ifunc($server, $c);
+		if ($err) {
+			&$second_print(&text('limits_failed', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			$cfunc = "type_".$t."_can_ioclass";
+			$reboot++ if (&$cfunc($server) == 2);
 			}
 		}
 	}

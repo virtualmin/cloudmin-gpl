@@ -30,6 +30,7 @@ kvm_vnc=Add VNC console to new KVM instances?,1,1-Yes,0-No
 kvm_qemu=Allow KVM host systems without kernel support?,1,1-Yes,0-No
 kvm_virtio=Use VirtIO disk driver by default?,1,1-Yes,0-No
 kvm_model=Default network device model,4,-KVM default,rtl8139-Realtek 8139,i82551-Intel 82551,i82557b-Intel 82557b,i82559er-Intel 82559er,ne2k_pci-NE2000 on PCI,ne2k_isa-NE2000 on ISA,e1000-Intel Gigabit Ethernet,virtio-VirtIO,pcnet-PCNet,lance-Lance,mcf_fec-MCF FEC
+kvm_ioclass=Default IO class,4,0-0 (best),1-1,2-2,3-3,4-4,5-5,6-6,7-7 (worst)
 
 line2=Webmin install URLs,11
 download_rpm=Download URL for Webmin RPM package,3,From www.webmin.com

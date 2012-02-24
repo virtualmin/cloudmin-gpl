@@ -136,6 +136,18 @@ if (defined(&$dfunc)) {
 		}
 	}
 
+# IO class
+$ifunc = "type_".$t."_get_ioclass";
+if (defined(&$ifunc) && &can_action($server, "ioclass")) {
+	print &ui_table_hr() if ($donehr++);
+	$ioclass = &$ifunc($server);
+	print &ui_table_row($text{'edit_lioclass'},
+		&ui_select("ioclass", $ioclass,
+			[ [ 0, $text{'edit_lioclass0'} ],
+			  1 .. 6,
+			  [ 7, $text{'edit_lioclass7'} ] ]));
+	}
+
 # Bandwidth limit
 $rfunc = "type_".$t."_real_interfaces";
 if (defined(&$rfunc) && $config{'bw_enabled'}) {

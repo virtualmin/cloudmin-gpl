@@ -547,6 +547,15 @@ if ($limits && $limits->{'max_cpu'}) {
 $rv .= &ui_table_row($text{'create_xencpu'},
 	&ui_opt_textbox("kvm_cpu", $cpu, 4, $text{'domains_unlimited'})."%");
 
+# IO class
+if (&can_action(undef, "ioclass")) {
+	$rv .= &ui_table_row($text{'edit_lioclass'},
+		&ui_select("kvm_ioclass", $config{'kvm_ioclass'},
+			[ [ 0, $text{'edit_lioclass0'} ],
+			  1 .. 6,
+			  [ 7, $text{'edit_lioclass7'} ] ]));
+	}
+
 return $rv;
 }
 
@@ -634,8 +643,18 @@ else {
 
 # Validate CPU
 if (!$in{'kvm_cpu_def'}) {
-	$in{'kvm_cpu'} =~ /^[1-9]\d*$/ || &error($text{'create_ekvmcpu'});
+	$in{'kvm_cpu'} =~ /^[1-9]\d*$/ || &error($text{'create_exencpu'});
 	$server->{'kvm_cpu'} = $in{'kvm_cpu'};
+	}
+
+# Validate IO class
+if (&can_action(undef, "ioclass")) {
+	$in{'kvm_ioclass'} =~ /^[0-7]$/ ||
+		&error($text{'create_ekvmioclass'});
+	$server->{'kvm_ioclass'} = $in{'kvm_ioclass'};
+	}
+else {
+	$server->{'kvm_ioclass'} = $config{'kvm_ioclass'};
 	}
 
 # Select host system
@@ -821,6 +840,7 @@ my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
                               'opt' => 1 } ),
 	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
 	   { 'name' => 'cpu', 'value' => 'percent', 'opt' => 1 },
+	   { 'name' => 'ioclass', 'value' => 'priority', 'opt' => 1 },
 	   { 'name' => 'ip6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
 	   { 'name' => 'netmask6', 'value' => 'mask,[mask]', 'opt' => 1 },
 	   { 'name' => 'gw6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
@@ -889,6 +909,18 @@ else {
 if ($args->{'cpu'}) {
 	$args->{'cpu'} =~ /^[1-9]\d*$/ || return "Non-numeric CPU percentage";
 	$server->{'kvm_cpu'} = $args->{'cpu'};
+	}
+
+# Validate IO class flag
+if ($args->{'ioclass'}) {
+	&can_action(undef, "ioclass") ||
+	    return "You are not allowed to set the IO class for new systems";
+	$args->{'ioclass'} =~ /^[0-7]$/ ||
+	    return "IO class must be a number from 0 to 7";
+	$server->{'kvm_ioclass'} = $args->{'ioclass'};
+	}
+else {
+	$server->{'kvm_ioclass'} = $config{'kvm_ioclass'};
 	}
 
 # Hosting server
