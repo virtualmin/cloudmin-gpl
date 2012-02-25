@@ -104,7 +104,7 @@ $can || &usage("Network interfaces cannot be managed on this system");
 # Validate params against server
 if ($can == 3) {
 	($address || $allocate || $netmask) &&
-	    &usage("No address can be for network interfaces on this system");
+	    &usage("No address can be set for network interfaces on this system");
 	}
 else {
 	$address || $allocate ||
