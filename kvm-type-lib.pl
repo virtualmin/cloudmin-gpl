@@ -912,7 +912,7 @@ if ($args->{'cpu'}) {
 	}
 
 # Validate IO class flag
-if ($args->{'ioclass'}) {
+if ($args->{'ioclass'} ne '') {
 	&can_action(undef, "ioclass") ||
 	    return "You are not allowed to set the IO class for new systems";
 	$args->{'ioclass'} =~ /^[0-7]$/ ||

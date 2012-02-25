@@ -538,7 +538,7 @@ foreach $s (@servers) {
 	# Change IO class, if we can
 	if (defined($ioclass)) {
 		print "Setting IO class on $tdesc system $s->{'host'} to ",
-		      "$opclass ..\n";
+		      "$ioclass ..\n";
 		$cfunc = "type_".$t."_can_ioclass";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_ioclass";
