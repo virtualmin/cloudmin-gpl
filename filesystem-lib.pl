@@ -129,6 +129,15 @@ return "Failed to write /etc/fstab : $err" if ($err);
 return undef;
 }
 
+# sort_system_fstab(@fstab)
+# Give a list of fstab entries, sort them so that the shortest mount point
+# (like /) comes first
+sub sort_system_fstab
+{
+my @fstab = @_;
+return sort { length($a->[1]) <=> length($b->[1]) } @fstab;
+}
+
 # mount_device_filesystem(&server, directory, device, filesystem)
 # Mounts a filesystem on some virtual system. Returns undef on success, or an
 # error message on failure.
