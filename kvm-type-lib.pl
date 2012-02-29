@@ -2475,7 +2475,7 @@ if ($mounts) {
 	my $got_label_to_part = 0;
 	foreach my $d (@rv) {
 		my ($f) = grep { &same_xen_virt($d->{'virt'}, $_->[0], 1) }
-			       @$fstab;
+			       &sort_system_fstab(@$fstab));
 		if (!$f) {
 			# Check if a partition has an ext label
 			if (!$got_label_to_part) {
