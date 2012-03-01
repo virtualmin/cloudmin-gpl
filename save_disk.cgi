@@ -160,7 +160,7 @@ else {
 		}
 	elsif ($in{'new'} == 2) {
 		# From device menu
-		if ($in{'real'}) {
+		if ($in{'real_mode'} == 0) {
 			$disk->{'real'} = $in{'real'};
 			}
 		else {
