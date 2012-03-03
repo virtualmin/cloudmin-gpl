@@ -10365,7 +10365,8 @@ sub redhat_server_type
 my ($server) = @_;
 return $server->{'type'} eq 'centos' ||
        $server->{'type'} eq 'redhat' ||
-       $server->{'type'} eq 'fedora';
+       $server->{'type'} eq 'fedora' ||
+       $server->{'type'} eq 'amazon';
 }
 
 # debian_server_type(&server)
@@ -10650,6 +10651,9 @@ elsif ($issue =~ /Ubuntu/i) {
 	}
 elsif ($issue =~ /Debian/i) {
 	$rv = "debian";
+	}
+elsif ($issue =~ /Amazon/i) {
+	$rv = "amazon";
 	}
 &umount_filesystem_if_needed($server);
 return $rv;
