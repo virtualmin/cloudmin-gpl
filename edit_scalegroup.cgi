@@ -55,7 +55,9 @@ else {
 if ($scalegroup->{'manager'} ne 'ec2') {
 	@vhosts = &list_available_host_servers(
 			$scalegroup->{'manager'}, 0, 0, 0, 1);
-	@locs = &list_vhost_locations(\@vhosts);
+	if (defined(&list_vhost_locations)) {
+		@locs = &list_vhost_locations(\@vhosts);
+		}
 	@vhosts || &error($text{'scalegroup_evhosts'});
 	}
 
