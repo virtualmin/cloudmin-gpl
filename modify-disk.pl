@@ -17,6 +17,9 @@ consumed by files on the filesystem, the resize will fail.
 To change the device on the virtual system that the disk is mapped to, use
 the C<--new-virt> flag followed by a device like I</dev/sda3>.
 
+For disks that support changing the underlying file (like CDs), you can
+use the C<--new-real> flag followed by a new path on the host system.
+
 To change the media type of a disk, use the C<--new-media> flag followed by
 a type such as I<disk> or I<cdrom>.
 
@@ -69,6 +72,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--new-virt") {
 		$newvirt = shift(@ARGV);
 		}
+	elsif ($a eq "--new-real") {
+		$newreal = shift(@ARGV);
+		}
 	elsif ($a eq "--force") {
 		$force = 1;
 		}
@@ -87,10 +93,17 @@ while(@ARGV > 0) {
 	}
 
 # Validate parameters
-$real || $virt || $lv || $mount || &usage("The disk to modify must be identified by the --real, --virt, --mount or --lv parameters");
-$newsize || $newvirt || $media || defined($include) || &usage("Nothing to do");
-!$newsize || $newsize =~ /^\d*$/ || &usage("Invalid --new-size parameter - must be followed by a number of MB");
-!$newvirt || $virt =~ /^\/\S+$/ || &usage("Missing or invalid --new-virt parameter - should be like /dev/sda2");
+$real || $virt || $lv || $mount ||
+	&usage("The disk to modify must be identified by the ".
+	       "--real, --virt, --mount or --lv parameters");
+$newsize || $newvirt || $media || $newreal || defined($include) ||
+	&usage("Nothing to do");
+!$newsize || $newsize =~ /^\d*$/ ||
+	&usage("Invalid --new-size parameter - must be followed by a ".
+	       "number of MB");
+!$newvirt || $virt =~ /^\/\S+$/ ||
+	&usage("Missing or invalid --new-virt parameter - ".
+	       "should be like /dev/sda2");
 
 # Get the server
 $host || &usage("Missing --host parameter");
@@ -142,6 +155,8 @@ else {
 # Change the object
 $olddisk = { %$disk };
 if ($newsize) {
+	$disk->{'fixedsize'} ||
+		&usage("The size of this disk cannot be changed");
 	$incr = $newsize*1024*1024 - $disk->{'size'};
 	$disk->{'size'} = $newsize*1024*1024;
 	}
@@ -150,6 +165,15 @@ if ($newvirt) {
 	}
 if ($media) {
 	$disk->{'media'} = $media;
+	}
+if ($newreal) {
+	$disk->{'change'} ||
+		&usage("The disk image cannot be changed for this disk");
+	$newreal =~ /^\/\S+$/ ||
+		&usage("--new-real must be followed by an absolute path");
+	&can_action($server, "devices") ||
+		&usage("You are not allowed to select your own devices for disks");
+	$disk->{'real'} = $newreal;
 	}
 
 # Validate the new size
@@ -197,7 +221,13 @@ if ($err) {
 	}
 else {
 	# Tell the user about reboot
-	&$second_print(".. done");
+	$rfunc = "type_".$server->{'manager'}."_need_disk_reboot";
+	if (defined(&$rfunc) && &$rfunc($server, $disk, $olddisk)) {
+		&$second_print(".. done. However, the disk will not be fully updated until the system is rebooted");
+		}
+	else {
+		&$second_print(".. done");
+		}
 	&cloudmin_api_log(\@OLDARGV);
 	}
 
@@ -211,6 +241,7 @@ print "                     --real device|file | --virt device | --lv name\n";
 print "                    [--new-size MB]\n";
 print "                    [--new-virt device]\n";
 print "                    [--new-media type]\n";
+print "                    [--new-real file]\n";
 print "                    [--force]\n";
 print "                    [--backup-exclude | --backup-include]\n";
 exit(1);

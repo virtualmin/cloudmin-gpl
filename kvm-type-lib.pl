@@ -2438,6 +2438,11 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		     'drive_index' => $idx,
 		     'media' => $drive{'media'} || 'disk',
 		     'format' => 'disk' };
+	if ($disk->{'media'} eq 'cdrom') {
+		# Can change device, but not size
+		$disk->{'change'} = 1;
+		$disk->{'fixedsize'} = 1;
+		}
 	$disk->{'device'} = $drive{'file'} =~ /^\/dev\// ? 1 : 0;
 	if (!$disk->{'device'}) {
 		my @st = &stat_file_on_server($vhost, $drive{'file'});
@@ -2563,7 +2568,7 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 return @rv;
 }
 
-# type_kvm_need_disk_reboot(&server, &disk)
+# type_kvm_need_disk_reboot(&server, &disk, &old-disk)
 # A reboot is needed unless hot-adding is possible, to apply the new
 # command line
 sub type_kvm_need_disk_reboot
@@ -2572,11 +2577,19 @@ my ($server, $disk) = @_;
 if ($server->{'status'} eq 'down') {
 	return 0;	# Already down, no need to reboot
 	}
-elsif ($disk->{'reboot'}) {
+elsif ($disk && $disk->{'reboot'}) {
 	return 1;	# Attaching while running failed
 	}
-elsif ($server->{'kvm_monitor_port'} && $disk->{'virt'} !~ /\/hd/) {
+elsif ($olddisk && $olddisk->{'reboot'}) {
+	return 1;	# Detaching while running failed
+	}
+elsif ($server->{'kvm_monitor_port'} && $disk && $disk->{'virt'} !~ /\/hd/) {
 	return 0;	# Can live attach non-IDE disk
+	}
+elsif ($server->{'kvm_monitor_port'} && $disk && $olddisk &&
+       $disk->{'media'} eq 'cdrom' &&
+       $disk->{'virt'} eq $olddisk->{'virt'}) {
+	return 0;	# Can change real device of CD-ROM live
 	}
 else {
 	return 1;
@@ -2881,6 +2894,9 @@ if ($server->{'status'} ne 'down' &&
 			&load_kvm_hotplug_modules($server);
 			my ($ok, $out) = &run_kvm_monitor_command($server,
 				[ "pci_del $stor->{'bus'} $stor->{'device'}" ]);
+			if (!$ok || $out !~ /OK/) {
+				$disk->{'reboot'} = 1;
+				}
 			}
 		}
 	}
@@ -3102,7 +3118,8 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 	}
 
 if ($disk->{'virt'} ne $olddisk->{'virt'} ||
-    $disk->{'media'} ne $olddisk->{'media'}) {
+    $disk->{'media'} ne $olddisk->{'media'} ||
+    $disk->{'real'} ne $olddisk->{'real'}) {
 	# Change the virtual device, both in the KVM config file and fstab
 	if ($olddisk->{'virt_mount'} =~ /(\d+)$/) {
 		$disk->{'virt_mount'} = $disk->{'virt'}.$1;
@@ -3118,6 +3135,9 @@ if ($disk->{'virt'} ne $olddisk->{'virt'} ||
 	if ($disk->{'media'}) {
 		$drive{'media'} = $disk->{'media'};
 		}
+	if ($disk->{'real'}) {
+		$drive{'file'} = $disk->{'real'};
+		}
 	$drives[$disk->{'drive_index'}] =
 		join(",", map { $_."=".$drive{$_} } keys %drive);
 	$server->{'kvm_drives'} = join(" ", @drives);
@@ -3125,7 +3145,8 @@ if ($disk->{'virt'} ne $olddisk->{'virt'} ||
 	&type_kvm_set_atboot($server, 2);
 
 	# Update fstab, if in there
-	if ($server->{'status'} ne 'alive') {
+	if ($server->{'status'} ne 'alive' &&
+	    $disk->{'virt'} ne $olddisk->{'virt'}) {
 		my $fstab = &get_system_fstab($server);
 		if (!ref($fstab)) {
 			$moderr = "Failed to read fstab file : $fstab";
@@ -3140,6 +3161,36 @@ if ($disk->{'virt'} ne $olddisk->{'virt'} ||
 					if ($err);
 				}
 			}
+		}
+	}
+
+# If real device changed and VM is up and it was a CD, try to change it
+if ($disk->{'real'} ne $olddisk->{'real'} &&
+    $server->{'status'} ne 'down' &&
+    $disk->{'media'} eq 'cdrom' &&
+    $server->{'kvm_monitor_port'}) {
+	# Find the block device for this CD
+	my ($ok, $out) = &run_kvm_monitor_command($server,
+						  [ "info block" ]);
+	my $block;
+	if ($ok) {
+		foreach my $l (split(/\r?\n/, $out)) {
+			if ($l =~ /^(\S+):.*file=(\S+)/ &&
+			    $2 eq $olddisk->{'real'}) {
+				$block = $1;
+				}
+			}
+		}
+
+	# Change it live
+	if ($block) {
+		my ($ok, $out) = &run_kvm_monitor_command($server,
+			[ "change $block $disk->{'real'}" ]);
+		$disk->{'reboot'} = $ok ? 0 : 1;
+		}
+	else {
+		# Cannot find block device to change live
+		$disk->{'reboot'} = 1;
 		}
 	}
 

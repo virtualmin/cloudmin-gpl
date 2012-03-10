@@ -48,7 +48,7 @@ if ($in{'confirm'}) {
 			&$second_print(&text('disk_deletedok'));
 			}
 		}
-	&show_disk_reboot_message($server, $disks->[0]);
+	&show_disk_reboot_message($server, undef, $disks->[0]);
 	&save_managed_server($server);
 	&webmin_log("delete", "disks", $server->{'host'},
 		    { 'real' => [ map { $_->{'real'} } @$disks ] });

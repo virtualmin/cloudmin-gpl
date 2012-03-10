@@ -251,7 +251,7 @@ if ($err) {
 else {
 	# Tell the user about reboot
 	$rfunc = "type_".$server->{'manager'}."_need_disk_reboot";
-	if (defined(&$rfunc) && &$rfunc($server, $disk)) {
+	if (defined(&$rfunc) && &$rfunc($server, $disk, undef)) {
 		&$second_print(".. done. However, the disk will not be visible until the system is rebooted");
 		}
 	else {

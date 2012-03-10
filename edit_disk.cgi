@@ -75,6 +75,10 @@ if ($disk->{'fixedreal'}) {
 	}
 elsif ($in{'new'} == 2) {
 	# Show device selector from host, if we can
+	if ($vhost->{'id'} eq '0') {
+		# Can select file locally
+		$b = &file_chooser_button("other");
+		}
 	if (($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') &&
 	    &remote_foreign_check($vhost, "raid")) {
 		&remote_foreign_require($vhost, "raid", "raid-lib.pl");
@@ -87,10 +91,13 @@ elsif ($in{'new'} == 2) {
 					       \@rdisks,
 					       1, 0, 0, 0, $js) ],
 				  [ 1, $text{'disk_other'},
-				       &ui_textbox("other", undef, 50) ] ]);
+				       &ui_textbox("other", undef, 50).$b ] ]);
 			}
 		}
-	$realsel ||= &ui_textbox("real", $disk->{'real'}, 50);
+	if (!$realsel) {
+		$realsel = &ui_hidden("real_mode", 1).
+			   &ui_textbox("other", $disk->{'real'}, 50).$b;
+		}
 	$txt = 'disk_real1';
 	}
 elsif ($in{'new'} == 1 && &can_action($server, "devices")) {
@@ -107,6 +114,15 @@ elsif ($in{'new'} == 1 && &can_action($server, "devices")) {
 	$realsel .= " ".&ui_checkbox("overwrite", 1,
 			     $disk->{'lv'} ? $text{'disk_overwrite2'}
 					   : $text{'disk_overwrite'}, 0);
+	}
+elsif ($disk->{'change'} && &can_action($server, "devices")) {
+	# Real file can be changed, like for a CD
+	if ($vhost->{'id'} eq '0') {
+		# Can select file locally
+		$b = &file_chooser_button("real");
+		}
+	$realsel = &ui_textbox("real", $disk->{'real'}, 50).$b;
+	$txt = 'disk_real';
 	}
 else {
 	# Cannot edit real file for existing disks
@@ -140,7 +156,8 @@ if ($in{'new'} == 1) {
 		&ui_bytesbox("size", 1024*1024*1024, 8)." ".$freemsg);
 	}
 elsif (!$in{'new'} &&
-       (!$disk->{'device'} || $disk->{'lv'} || $disk->{'storage'})) {
+       (!$disk->{'device'} || $disk->{'lv'} || $disk->{'storage'}) &&
+       !$disk->{'fixedsize'}) {
 	# Current size of the file, which can be changed
 	print &ui_table_row($text{'disk_size0'},
 		&ui_bytesbox("size", $disk->{'size'}, 8)." ".$freemsg);
@@ -232,7 +249,7 @@ print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]
 			  $root ? ( ) : ( [ 'delete', $text{'delete'} ] ) ]);
 
 # Scheduled expansion form
-if (!$in{'new'} &&
+if (!$in{'new'} && !$disk->{'fixedsize'} && 
     (!$disk->{'device'} || $disk->{'lv'} || $disk->{'storage'})) {
 	$sched = &get_scheduled_change($server, "disk", $disk->{'real'});
 	print &ui_hr();

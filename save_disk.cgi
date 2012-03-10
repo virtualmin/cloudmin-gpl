@@ -40,7 +40,7 @@ if ($in{'delete'}) {
 			}
 		else {
 			&$second_print(&text('disk_deletedok'));
-			&show_disk_reboot_message($server, $disk);
+			&show_disk_reboot_message($server, undef, $disk);
 			}
 		&save_managed_server($server);
 		&webmin_log("delete", "disk", $server->{'host'},
@@ -87,7 +87,7 @@ elsif ($in{'detach'}) {
 			}
 		else {
 			&$second_print(&text('disk_detachedok'));
-			&show_disk_reboot_message($server, $disk);
+			&show_disk_reboot_message($server, undef, $disk);
 			}
 		&save_managed_server($server);
 		&webmin_log("detach", "disk", $server->{'host'},
@@ -155,6 +155,7 @@ else {
 		}
 
 	# Real disk device
+	$changed_real = 0;
 	if ($disk->{'fixedreal'}) {
 		# Do nothing, as no real device is needed
 		}
@@ -167,6 +168,7 @@ else {
 			$in{'other'} =~/^\/\S+$/ || &error($text{'disk_ereal'});
 			$disk->{'real'} = $in{'other'};
 			}
+		$changed_real = 1;
 		}
 	elsif ($in{'new'} == 1 && &can_action($server, "devices")) {
 		if ($disk->{'vg'}) {
@@ -183,8 +185,17 @@ else {
 			$disk->{'real'} = $in{'real'};
 			}
 		$disk->{'overwrite'} = $in{'overwrite'};
+		$changed_real = 1;
 		}
-	if ($in{'new'}) {
+	elsif ($in{'new'} == 0 &&
+	       $disk->{'change'} && &can_action($server, "devices")) {
+		# Can select a new ISO
+		$in{'real'} =~ /^\/\S+$/ ||
+			&error($text{'disk_ereal'});
+		$changed_real = $disk->{'real'} eq $in{'real'} ? 0 : 1;
+		$disk->{'real'} = $in{'real'};
+		}
+	if ($changed_real) {
 		$disk->{'device'} = ($disk->{'real'} =~ /^\/dev\//);
 		}
 
@@ -194,7 +205,7 @@ else {
 
 	# New or current size. Make sure it comes in under the owner's limit,
 	# and the host's free space.
-	if (defined($in{'size'})) {
+	if (defined($in{'size'}) && !$disk->{'fixedsize'}) {
 		$in{'size'} =~ /^\d+$/ || &error($text{'disk_esize'});
 		$incr = $in{'size'}*$in{'size_units'};
 		if (!$in{'new'}) {
@@ -265,7 +276,7 @@ else {
 			}
 		else {
 			&$second_print(&text('disk_createok'));
-			&show_disk_reboot_message($server, $disk);
+			&show_disk_reboot_message($server, $disk, undef);
 			&webmin_log("create", "disk", $server->{'host'},
 				    { 'real' => $disk->{'real'} });
 			}
@@ -298,7 +309,7 @@ else {
 			}
 		else {
 			&$second_print(&text('disk_modifyok'));
-			&show_disk_reboot_message($server, $disk);
+			&show_disk_reboot_message($server, $disk, $olddisk);
 			&webmin_log("modify", "disk", $server->{'host'},
 				    { 'real' => $disk->{'real'} });
 			}

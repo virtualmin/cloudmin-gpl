@@ -8102,14 +8102,14 @@ foreach my $w (reverse(@w)) {
 return $rv;
 }
 
-# show_disk_reboot_message(&server, &disk)
+# show_disk_reboot_message(&server, &disk, &old-disk)
 # Prints a form prompting for a reboot if needed after some disk change
 sub show_disk_reboot_message
 {
-my ($server, $disk) = @_;
+my ($server, $disk, $olddisk) = @_;
 my $rfunc = "type_".$server->{'manager'}."_need_disk_reboot";
 if ($server->{'status'} ne 'down' &&
-    defined(&$rfunc) && &$rfunc($server, $disk)) {
+    defined(&$rfunc) && &$rfunc($server, $disk, $olddisk)) {
 	print &ui_form_start("save_serv.cgi");
 	print &ui_hidden("id", $in{'id'});
 	print &ui_hidden("reboot", 1);
