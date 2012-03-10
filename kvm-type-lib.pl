@@ -2994,6 +2994,13 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		}
 	}
 
+# Make sure new disk file exists
+if ($disk->{'real'} ne $olddisk->{'real'}) {
+	my @st = &stat_file_on_server($vhost, $disk->{'real'});
+	@st || return "Device $disk->{'real'} does not exist ".
+		      "on $vhost->{'host'}";
+	}
+
 # If the system is up, un-mount the disk
 my $mounted = 0;
 if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
