@@ -190,6 +190,7 @@ if (@servers) {
 			$text{'index_host'},
 			(map { $text{'index_'.$_} } @colnames),
 			], 100, 0, \@tds);
+		next if (!@$cat);
 		foreach my $s (@{$cat->[0]}) {
 			$t = $s->{'manager'};
 			$tfunc = "type_".$t."_desc";
