@@ -494,6 +494,20 @@ else {
 	&$second_print(&text('brun_failed', $rv->{'msg'}));
 	}
 
+# Save system details, for use when restoring
+my $server_deststr = $deststr.".serv";
+my $server_dest = &parse_backup_destination($server_deststr);
+&$first_print(&text('brun_server', $server->{'host'},
+                    &nice_backup_destination($server_deststr)));
+my $err = &put_file_to_server($destserver, $server->{'file'},
+					   $server_dest->{'path'});
+if ($err) {
+	&$second_print(&text('brun_serverfailed', $err));
+	}
+else {
+	&$second_print($text{'create_done'});
+	}
+
 # Start up again
 if ($was_up) {
 	&$first_print(&text('brun_startup', $server->{'host'}));
