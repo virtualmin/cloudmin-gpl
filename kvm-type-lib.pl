@@ -1190,15 +1190,16 @@ else {
 return undef;
 }
 
-# type_kvm_create(&server, [serial, key], [reset], [empty])
+# type_kvm_create(&server, [serial, key], [reset], [empty], [no-start])
 # Create a new KVM instance, by unzipping the filesystem image in the background
 sub type_kvm_create
 {
-my ($server, $serial, $key, $reset, $empty) = @_;
+my ($server, $serial, $key, $reset, $empty, $nostart) = @_;
 my $vhost = &type_kvm_parent($server);
 my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
 delete($server->{'kvm_filesystem_offset'});
 $server->{'kvm_start'} = 1 if ($reset);
+$server->{'kvm_start'} = 0 if ($nostart);
 $server->{'kvm_args'} = $config{'kvm_manual'} if (!$reset);
 my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 
@@ -1469,12 +1470,12 @@ else {
 	}
 }
 
-# type_kvm_create_post(&server, [serial, key], [reset], [empty])
+# type_kvm_create_post(&server, [serial, key], [reset], [empty], [no-start])
 # Called after creation is complete. Here we can mount and fix up config
 # files in the filesytem, then start the instance.
 sub type_kvm_create_post
 {
-my ($server, $serial, $key, $reset, $empty) = @_;
+my ($server, $serial, $key, $reset, $empty, $nostart) = @_;
 my $vhost = &type_kvm_parent($server);
 my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @cidrs = split(/\s+/, $server->{'kvm_cidr'});

@@ -270,6 +270,9 @@ if ($s->{'directory'} && !$s->{'new_directory'}) {
 	$s->{'new_directory'} = $s->{'directory'};
 	}
 
+# Missing flag is never saved
+$s->{'missing'} = 0;
+
 # Fill in 'ip' convenience field
 my $ip = &get_server_ip($s);
 $ip ||= &to_ipaddress($s->{'host'});

@@ -188,7 +188,8 @@ $ok || &usage($why);
 }
 
 # can_create_server(type)
-# Returns 1 if creating a virtual system of some type is allowed.
+# Returns 1 if creating a virtual system of some type is allowed, or 0
+# and an error message
 sub can_create_server
 {
 my ($type) = @_;

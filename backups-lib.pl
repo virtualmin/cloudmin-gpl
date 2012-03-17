@@ -60,6 +60,11 @@ sub get_backup_servers
 my ($backup) = @_;
 my @canservers = grep { &supports_backup($_) } &list_managed_servers();
 my @servers = &get_alert_servers($backup, \@canservers);
+foreach my $h (split(/\s+/, $backup->{'missing'})) {
+	# Read .serv files for systems that need to be re-created
+	my $server = &get_missing_backup_server($h, $backup->{'dest'});
+	push(@servers, $server) if ($server);
+	}
 if ($backup->{'owner'}) {
 	# Limit to backup's owner
 	my $owner = &get_system_owner($backup->{'owner'});
@@ -495,7 +500,9 @@ else {
 	}
 
 # Save system details, for use when restoring
-my $server_deststr = $deststr.".serv";
+my $server_deststr = $deststr;
+$server_deststr =~ s/\/[^\/]+$/\//;
+$server_deststr .= $server->{'host'}.".serv";
 my $server_dest = &parse_backup_destination($server_deststr);
 &$first_print(&text('brun_server', $server->{'host'},
                     &nice_backup_destination($server_deststr)));
@@ -652,6 +659,12 @@ foreach my $s (@servers) {
 			'msg' => &text('brun_ehostdown'),
 			};
 		}
+	if (&indexof($s->{'manager'}, @server_management_types) < 0) {
+		$rv{$s->{'id'}} = {
+			'ok' => 0,
+			'msg' => &text('brun_emanager', $s->{'manager'}),
+			};
+		}
 	}
 @servers = grep { !$rv{$_->{'id'}} } @servers;
 &$second_print(&text('rrun_found', scalar(@servers)));
@@ -687,6 +700,32 @@ foreach my $s (@servers) {
 # Exclude failures
 @servers = grep { !$rv{$_->{'id'}} } @servers;
 &$second_print(&text('rrun_founddests', scalar(@servers)));
+
+# Re-create missing systems
+foreach my $s (grep { $_->{'missing'} } @servers) {
+	&$first_print(&text('rrun_recreate', $s->{'host'}));
+	my $err = &can_create_missing_backup_server($s);
+	if ($err) {
+		&$second_print(&text('rrun_erecreate', $err));
+		$rv{$s->{'id'}} = { 'ok' => 0, 'msg' => $err, };
+		}
+	else {
+		&$indent_print();
+		my $ok = &create_missing_backup_server($s);
+		&$outdent_print();
+		if (!$ok) {
+			&$second_print($text{'rrun_erecreate2'});
+			$rv{$s->{'id'}} = { 'ok' => 0,
+					    'msg' => $text{'rrun_erecreate2'} };
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	}
+
+# Exclude re-create failures
+@servers = grep { !$rv{$_->{'id'}} } @servers;
 
 if ($backup->{'parallel'}) {
 	# Run each of them in parallel
@@ -2081,6 +2120,271 @@ sub should_include_disk
 my ($server, $disk) = @_;
 return 0 if ($disk->{'swap'});
 return 0 if (!&get_disk_include($server, $disk));
+return 1;
+}
+
+# get_missing_backup_server(hostname, dest-str)
+# If a deleted server was backed up to some destination, read it's .serv file
+# and return
+sub get_missing_backup_server
+{
+my ($hostname, $deststr) = @_;
+my $dest = &parse_backup_destination($deststr);
+my $destserver = &get_backup_dest_server($dest);
+return undef if (!$destserver);
+my $temp = &transname();
+my $err = &get_file_from_server($destserver,
+		$dest->{'path'}."/".$hostname.".serv", $temp);
+return undef if ($err);
+my $server = { };
+&read_file($temp, $server);
+return undef if (!$server->{'id'} || !$server->{'host'});
+&unlink_file($temp);
+$server->{'missing'} = 1;
+my $vhost = &get_parent_server($server);
+$server->{'status'} = $vhost ? 'down' : 'nohost';
+return $server;
+}
+
+# can_create_missing_backup_server(&server)
+# Checks if some system being re-created from a backup can actually be created
+sub can_create_missing_backup_server
+{
+my ($server) = @_;
+
+# Check licence and system count limits
+my ($ok, $err) = &can_create_server($server->{'manager'});
+return $err if (!$ok);
+
+# Check for ID clash
+my $clash = &get_managed_server($server->{'id'});
+$clash && return &text('rrun_eidclash', $server->{'id'}, $clash->{'host'});
+
+# Check owner resource limits
+my $limits = &get_owner_limits();
+if ($limits) {
+	# Validate disk limit
+	my $dsfunc = "type_".$server->{'manager'}."_get_disk_size";
+	my $incr = defined(&$dsfunc) ? &$dsfunc($server) : undef;
+	if ($incr && $limits->{'max_disk'}) {
+		# May be over disk limit
+		if ($limits->{'disk'} + $incr > $limits->{'max_disk'}) {
+			return &text('create_edisklimit',
+			       &nice_size($limits->{'max_disk'}),
+			       &nice_size($limits->{'disk'}));
+			}
+		}
+	elsif (!$incr && $limits->{'max_disk'}) {
+		# System has no disk limits, but owner does
+		return &text('create_edisklimit2',
+		       &nice_size($limits->{'max_disk'}));
+		}
+
+	# Validate RAM limit
+	my $mfunc = "type_".$server->{'manager'}."_get_memory_size";
+	$incr = defined(&$mfunc) ? &$mfunc($server) : undef;
+	if ($incr && $limits->{'max_ram'}) {
+		# May be over RAM limit
+		if ($limits->{'ram'} + $incr > $limits->{'max_ram'}) {
+			return &text('create_eramlimit',
+			       &nice_size($limits->{'max_ram'}),
+			       &nice_size($limits->{'ram'}));
+			}
+		}
+	elsif (!$incr && $limits->{'max_ram'}) {
+		# System has no RAM limits, but owner does
+		return &text('create_eramlimit2',
+		       &nice_size($limits->{'max_ram'}));
+		}
+
+	# Validate CPU limit
+	$cfunc = "type_".$in{'type'}."_get_cpu_size";
+	$incr = defined(&$cfunc) ? &$cfunc($server) : undef;
+	if ($incr && $limits->{'max_cpu'}) {
+		# May be over CPU limit
+		if ($limits->{'cpu'} + $incr > $limits->{'max_cpu'}) {
+			return &text('create_ecpulimit',
+			       $limits->{'max_cpu'},
+			       $limits->{'cpu'});
+			}
+		}
+	elsif (!$incr && $limits->{'max_cpu'}) {
+		# System has no CPU limit, but owner does
+		return &text('create_ecpulimit2',
+		       $limits->{'max_cpu'});
+		}
+
+	# Validate IPs limit, assuming new system will have exactly 1
+	$incr = scalar(split(/\s+/, $server->{'ip_addresses'})) || 1;
+	if ($limits->{'max_ips'}) {
+		if ($limits->{'ips'} + $incr > $limits->{'max_ips'}) {
+			return &text('create_eipslimit',
+			       $limits->{'max_ips'},
+			       $limits->{'ips'});
+			}
+		}
+	}
+
+# Check disk image directory
+if ($server->{'directory'}) {
+	my $err = &validate_directory($server);
+	return &text('create_edirectory', $err) if ($err);
+	}
+
+# Must have an image
+# XXX isn't really needed, but makes code below simpler
+my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
+return $text{'rrun_erecreateimage'} if (!$img);
+
+return undef;
+}
+
+# create_missing_backup_server(&server)
+# Actually perform the process of creating a missing system. Returns 0 on
+# failure, 1 on success
+sub create_missing_backup_server
+{
+my ($server) = @_;
+$server->{'status'} = 'create';
+
+&obtain_lock_server($server);
+
+# Run pre-creation script
+if (!&run_system_script($server, 'before', 'create')) {
+	return 0;
+	}
+
+# If there is an image file, copy to the server
+my $vhost = &get_parent_server($server);
+my $img = &get_server_image($server->{'image'});
+if ($img) {
+	&$first_print(&text('create_copying', &nice_size($img->{'size'}),
+			    $vhost->{'host'}));
+	($imageok, $imagetemp) = &transfer_image_files($server, 0);
+	if ($imageok == 0) {
+		# Copy failed
+		print &text('create_ecopy', $imagetemp),"<p>\n";
+		return 0;
+		}
+	else {
+		$server->{'imagetemp'} = $imagetemp;
+		$server->{'imagelocal'} = ($imageok != 1);
+		&$second_print($imageok == 1 ? $text{'create_done'} :
+			       $imageok == 2 ? $text{'create_nocopy'} :
+			       $imageok == 3 ? $text{'create_incache'} :
+					       $text{'create_addcache'});
+		}
+	}
+
+# Call the server type's creation function, then wait for it to be come ready
+my $tfunc = "type_".$server->{'manager'}."_desc";
+&$first_print(&text('create_creating', &$tfunc()));
+my $cfunc = "type_".$server->{'manager'}."_create";
+my $err = &$cfunc($server, undef, undef, 0, 0, 1);
+if ($err) {
+	&$second_print(&text('create_ecreate', $err));
+	return 0;
+	}
+my $dfunc = "type_".$server->{'manager'}."_create_done";
+if (defined(&$dfunc)) {
+	&$second_print($text{'create_created'});
+	&$first_print($text{'create_waiting'});
+	while(1) {
+		$err = &$dfunc($server);
+		if ($err eq "OK") {
+			last;
+			}
+		elsif ($err) {
+			if ($imageok == 1) {
+				&cleanup_image_files($server, $imagetemp);
+				}
+			&$first_print(&text('create_ewait', $err));
+			return 0;
+			}
+		sleep(1);
+		}
+	&$second_print($text{'create_waited'});
+	}
+else {
+	&$second_print($text{'create_created2'});
+	}
+if ($imageok == 1) {
+	&cleanup_image_files($server, $imagetemp);
+	}
+&complete_managed_server($server);
+&save_managed_server($server);
+
+# Remove old SSH keys for this system
+&clear_ssh_host_key($server);
+if ($vhost) {
+	&clear_remote_ssh_host_key($server, $vhost);
+	}
+
+# Call any post-creation function
+my $dfunc = "type_".$server->{'manager'}."_create_post";
+if (defined(&$dfunc)) {
+	&$dfunc($server, undef, undef, 0, 0, 1);
+	}
+
+# Call any really final post-creation function
+my $dfunc = "type_".$server->{'manager'}."_create_ready";
+if (defined(&$dfunc)) {
+	&$dfunc($server);
+	}
+
+# Re-check and save the status
+&$first_print($text{'add_statusing'});
+&save_managed_server($server);
+&check_server_status($server, 1);
+&save_managed_server($server);
+&$second_print(&text('add_statusok', &describe_status($server, 1)));
+
+if ($vhost) {
+	# Re-check and save the host status
+	&$first_print(&text('add_statusing2', $vhost->{'host'}));
+	&obtain_lock_server($vhost);
+	&check_server_status($vhost);
+	&save_managed_server($vhost);
+	&release_lock_server($vhost);
+	&$second_print(&text('add_statusok', &describe_status($vhost, 1)));
+	}
+
+# Forcibly shut down if running (shouldn't be, due to flag to create func)
+if ($server->{'status'} ne 'down') {
+	&$first_print(&text('brun_shutdown', $server->{'host'}));
+	&shutdown_server($server, 1);
+	&check_server_status($server, 0, 1);
+	&save_managed_server($server);
+	&$second_print($text{'create_done'});
+	}
+
+# Enable at boot time, if possible
+my $bfunc = "type_".$server->{'manager'}."_set_atboot";
+if (defined(&$bfunc)) {
+	&$first_print($text{'create_atbooting'});
+	&$bfunc($server, 1);
+	&$second_print($text{'create_done'});
+	}
+
+# Create console user
+$cfunc = "type_".$server->{'manager'}."_supports_console_login";
+if (defined(&$cfunc)) {
+	&$first_print($text{'create_consoleuser'});
+	my $err = &create_console_user($server);
+	if ($err) {
+		&$second_print(&text('create_ecreate', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	&save_managed_server($server);
+	}
+
+# Run post-creation script
+&run_system_script($server, 'after', 'create');
+
+$server->{'missing'} = 0;
+
 return 1;
 }
 

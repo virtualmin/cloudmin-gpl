@@ -56,6 +56,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--source") { $source = shift(@ARGV); }
 	elsif ($a eq "--parallel") { $parallel = 1; }
 	elsif ($a eq "--quiet") { $quiet = 1; }
+	elsif ($a eq "--recreate") { $recreate = 1; }
 	else {
 		&usage();
 		}
@@ -68,9 +69,34 @@ $sourcehash ||  &usage("Invalid --source specification $source");
 
 # Work out who to restore
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hostons);
-@servers || &usage("No systems specified");
+
+# For hostnames that don't exist, check if they have .serv files at
+# the source
+foreach $h (@hosts) {
+	($server) = grep { $_->{'host'} eq $h } @servers;
+	if (!$server) {
+		$server = &get_missing_backup_server($h, $source);
+		if ($server) {
+			push(@missing, $server);
+			}
+		else {
+			push(@badhosts, $h);
+			}
+		}
+	}
+
+if (!@servers && !@missing) {
+	if (@badhosts) {
+		&usage("No systems with hostnames ".
+		       join(" ", @badhosts)." were found");
+		}
+	else {
+		&usage("No systems specified");
+		}
+	}
 $backup = { 'dest' => $source,
 	    'servers' => join(' ', map { $_->{'id'} } @servers),
+	    'missing' => join(' ', map { $_->{'host'} } @missing),
 	    'parallel' => $parallel };
 
 # Make sure source and dest can be managed by the user

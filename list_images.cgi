@@ -96,6 +96,7 @@ if (@combined) {
 				  $text{'images_manager'},
 				  $text{'images_status'},
 				  $text{'images_size'},
+				  $text{'images_rawsize'},
 				  $text{'images_stors'} ]);
 	foreach $i (sort { lc($a->{'desc'}) cmp lc($b->{'desc'}) } @combined) {
 		$tfunc = "type_".$i->{'manager'}."_desc";
@@ -140,6 +141,8 @@ if (@combined) {
 			    "<font color=#00aa00>$text{'images_avail'}</font>",
 		    &nice_size($got && !$got->{'partial'} ? $got->{'size'}
 						          : $avail->{'size'}),
+		    $got && $got->{'rawsize'} ?
+			&nice_size($got->{'rawsize'}) : "",
 		    $stormsg,
 		    ], \@tds, "d", $i->{'id'});
 		}
