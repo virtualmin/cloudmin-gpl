@@ -515,6 +515,32 @@ else {
 	&$second_print($text{'create_done'});
 	}
 
+# If more than one disk, save dump of disk details in a separate file
+my $dfunc = "type_".$server->{'manager'}."_list_disks";
+if (defined(&$dfunc)) {
+	my $disks = &$dfunc($server);
+	if (ref($disks) && @$disks > 1) {
+		my $dtemp = &transname();
+		my $disks_deststr = $deststr;
+		$disks_deststr =~ s/\/[^\/]+$/\//;
+		$disks_deststr .= $server->{'host'}.".disks";
+		my $disks_dest = &parse_backup_destination($disks_deststr);
+		&$first_print(&text('brun_disks', $server->{'host'},
+				    &nice_backup_destination($disks_deststr)));
+		&open_tempfile(DTEMP, ">$dtemp", 0, 1);
+		&print_tempfile(DTEMP, &serialise_variable($disks));
+		&close_tempfile(DTEMP);
+		my $err = &put_file_to_server($destserver,
+				$dtemp, $disks_dest->{'path'});
+		if ($err) {
+			&$second_print(&text('brun_serverfailed', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	}
+
 # Start up again
 if ($was_up) {
 	&$first_print(&text('brun_startup', $server->{'host'}));
@@ -653,10 +679,12 @@ my %rv;
 &$first_print($text{'rrun_finding'});
 my @servers = &get_backup_servers($backup);
 foreach my $s (@servers) {
-	if ($s->{'status'} eq 'nohost') {
+	my $vhost = &get_parent_server($s);
+	if ($s->{'status'} eq 'nohost' ||
+	    !&can_ssh_status($vhost)) {
 		$rv{$s->{'id'}} = {
 			'ok' => 0,
-			'msg' => &text('brun_ehostdown'),
+			'msg' => &text('brun_ehostdown', $vhost->{'host'}),
 			};
 		}
 	if (&indexof($s->{'manager'}, @server_management_types) < 0) {
@@ -720,6 +748,23 @@ foreach my $s (grep { $_->{'missing'} } @servers) {
 			}
 		else {
 			&$second_print($text{'create_done'});
+
+			# Re-create any disks on the original systems
+			my $disks = &get_missing_backup_server_disks(
+					$s->{'host'}, $backup->{'dest'});
+			if ($disks && ref($disks) && @$disks > 1) {
+				&$first_print(&text('rrun_redisks',
+					$s->{'host'}, scalar(@$disks)-1));
+				my $err = create_missing_backup_server_disks(
+						$s, $disks);
+				if ($err) {
+					&$second_print(
+						&text('rrun_eredisks', $err));
+					}
+				else {
+					&$second_print($text{'create_done'});
+					}
+				}
 			}
 		}
 	}
@@ -755,7 +800,6 @@ foreach my $s (@servers) {
 	}
 
 return \%rv;
-
 }
 
 # execute_system_restore(&server, dest)
@@ -1737,6 +1781,11 @@ if ($dest->{'path'} =~ /\.gz$/ && $dest->{'path'} !~ /\.tar\.gz$/) {
 		$i++;
 		}
 	}
+# Also delete .serv file (may be missing)
+my $serv_dest = { %$dest };
+$serv_dest->{'path'} =~ s/\/[^\/]+$/\//;
+$serv_dest->{'path'} .= $server->{'host'}.".serv";
+&delete_one_backup_dest($serv_dest, $server);
 return undef;
 }
 
@@ -2144,6 +2193,21 @@ $server->{'missing'} = 1;
 my $vhost = &get_parent_server($server);
 $server->{'status'} = $vhost ? 'down' : 'nohost';
 return $server;
+}
+
+# get_missing_backup_server_disks(hostname, dest-str)
+# Returns an array ref of disks that belonged to some system when it was
+# backed up
+sub get_missing_backup_server_disks
+{
+my ($hostname, $deststr) = @_;
+my $dest = &parse_backup_destination($deststr);
+my $destserver = &get_backup_dest_server($dest);
+my $out = &get_file_data_from_server($destserver,
+	 $dest->{'path'}."/".$hostname.".disks");
+return undef if (!$out);
+my $disks = &unserialise_variable($out);
+return ref($disks) ? $disks : undef;
 }
 
 # can_create_missing_backup_server(&server)

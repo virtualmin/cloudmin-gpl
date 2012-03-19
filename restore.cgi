@@ -11,9 +11,24 @@ if ($in{'log'}) {
 	# From backup log, for one system
 	$backuplog = &get_backup_log($in{'log'});
 	$backuplog || &error($text{'restore_egone'});
-	$server = &get_managed_server_by("id", $backuplog->{'server'});
-	@servers = ( $server );
-	$backup = { 'servers' => $server->{'id'},
+	$server = &get_managed_server($backuplog->{'server'}) ||
+		  &get_managed_server_by("host", $backuplog->{'host'});
+	if ($server) {
+		# Restoring existing system
+		@servers = ( $server );
+		}
+	elsif ($backuplog->{'host'}) {
+		# Restoring a specific hostname that doesn't exist anymore
+		$server = &get_missing_backup_server($backuplog->{'host'},
+						     $backuplog->{'base_dest'});
+		$server || &error($text{'restore_egone3'});
+		@missing = ( $server );
+		}
+	else {
+		&error($text{'restore_egone4'});
+		}
+	$backup = { 'servers' => join(' ', map { $_->{'id'} } @servers),
+		    'missing' => join(' ', map { $_->{'host'} } @missing),
 		    'dest' => $backuplog->{'dest'},
 		    'parallel' => 0 };
 	$backup->{'dest'} =~ s/\/([^\/]+)$//;	# Remove host.tar.gz
@@ -52,12 +67,13 @@ foreach $s (@servers) {
 &ui_print_unbuffered_header(undef, $text{'restore_title'}, "");
 
 # Show what is being done
+$rcount = scalar(@servers) + scalar(@missing);
 if ($backup->{'dest'}) {
-	print "<b>",&text('rrun_destdesc', scalar(@servers),
+	print "<b>",&text('rrun_destdesc', $rcount,
 		    &nice_backup_destination($backup->{'dest'})),"</b><p>\n";
 	}
 else {
-	print "<b>",&text('rrun_destdesc2', scalar(@servers)),"</b><p>\n";
+	print "<b>",&text('rrun_destdesc2', $rcount),"</b><p>\n";
 	}
 
 # Run the restore
@@ -67,10 +83,10 @@ $rv = &execute_restore($backup);
 
 # Print a summary line
 @ok = grep { $rv->{$_->{'id'}} &&
-	     $rv->{$_->{'id'}}->{'ok'} } @servers;
+	     $rv->{$_->{'id'}}->{'ok'} } (@servers, @missing);
 @bad = grep { !$rv->{$_->{'id'}} ||
-	      !$rv->{$_->{'id'}}->{'ok'} } @servers;
-if (scalar(@ok) == scalar(@servers)) {
+	      !$rv->{$_->{'id'}}->{'ok'} } (@servers, @missing);
+if (scalar(@ok) == $rcount) {
 	print "<b>",&text('rrun_allok', scalar(@ok)),"</b><p>\n";
 	}
 else {
@@ -80,14 +96,20 @@ else {
 	}
 
 # Show failure reasons
-print "<table>\n";
-foreach $s (@bad) {
-	print "<tr> <td>$s->{'host'}</td> <td>:</td> <td>$rv->{$s->{'id'}}->{'msg'}</td> </tr>\n";
+if (@bad) {
+	print &ui_columns_start([ $text{'rrun_failhost'},
+				  $text{'rrun_failreason'} ]);
+	foreach $s (@bad) {
+		print &ui_columns_row([
+			$s->{'host'},
+			$rv->{$s->{'id'}}->{'msg'},
+			]);
+		}
+	print &ui_columns_end();
 	}
-print "</table>\n";
 &webmin_log("restore", "backup", $backup->{'id'},
 	    { 'dest' => $backup->{'dest'},
-	      'host' => join(' ', map { $_->{'host'} } @servers) });
+	      'host' => join(' ', map { $_->{'host'} } (@servers, @missing)) });
 
 &ui_print_footer("", $text{'return'});
 

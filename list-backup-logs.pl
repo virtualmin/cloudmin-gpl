@@ -116,8 +116,11 @@ if ($multi) {
 			print "    Base destination: ",
 			      $log->{'base_dest'},"\n";
 			}
-		print "    System: ",$server ? $server->{'host'}
-					     : "UNKNOWN","\n";
+		print "    System: ",($server ? $server->{'host'} :
+				      $log->{'host'} ? $log->{'host'} :
+						       "UNKNOWN"),"\n";
+		print "    System state: ",
+		      ($server ? "Exists" : "Deleted"),"\n";
 		if ($log->{'owner'}) {
 			print "    Owner: ",$log->{'owner'},"\n";
 			}

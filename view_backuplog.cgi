@@ -42,10 +42,12 @@ if ($log->{'size'}) {
 	}
 
 # System
-$server = &get_managed_server($log->{'server'});
+$server = &get_managed_server($log->{'server'}) ||
+	  &get_managed_server_by("host", $log->{'host'});
 print &ui_table_row($text{'viewlog_host'},
 		$server ? "<a href='edit_serv.cgi?id=$server->{'id'}'>".
-			  "$server->{'host'}</a>" : "UNKNOWN");
+			  "$server->{'host'}</a>"
+			: &text('viewlog_deleted', $log->{'host'}));
 
 # System owner
 if ($log->{'owner'}) {

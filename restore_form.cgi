@@ -8,8 +8,22 @@ if ($in{'log'}) {
 	# From backup log, for one system
 	$backuplog = &get_backup_log($in{'log'});
 	$backuplog || &error($text{'restore_egone'});
-	$server = &get_managed_server_by("id", $backuplog->{'server'});
-	@servers = ( $server );
+	$server = &get_managed_server($backuplog->{'server'}) ||
+		  &get_managed_server_by("host", $backuplog->{'host'});
+	if ($server) {
+		# Restoring existing system
+		@servers = ( $server );
+		}
+	elsif ($backuplog->{'host'}) {
+		# Check if we have details to restore
+		$server = &get_missing_backup_server($backuplog->{'host'},
+						     $backuplog->{'base_dest'});
+		$server || &error($text{'restore_egone3'});
+		@servers = ( $server );
+		}
+	else {
+		&error($text{'restore_egone4'});
+		}
 	$dest = $backuplog->{'dest'};
 	$dest =~ s/\/([^\/]+)$//;	# Remove host.tar.gz
 	}
@@ -40,7 +54,9 @@ print &ui_table_start($text{'restore_header'}, "width=100%", 2);
 if ($in{'log'}) {
 	# Exactly one system
 	print &ui_table_row($text{'restore_servers'},
-		"<tt>$servers[0]->{'host'}</tt>");
+		"<tt>$servers[0]->{'host'}</tt>".
+		($servers[0]->{'missing'} ? " (".$text{'restore_missing'}.")"
+					  : ""));
 	print &ui_hidden("servers", $servers[0]->{'id'});
 	}
 else {

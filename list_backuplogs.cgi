@@ -57,7 +57,7 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 		@backups = &list_backup_logs();
 		%servermap = map { $_->{'id'}, $_ }
 				 &list_available_managed_servers();
-		@backups = grep { $servermap{$_->{'server'}} } @backups;
+		#@backups = grep { $servermap{$_->{'server'}} } @backups;
 		}
 
 	# Filter by search
@@ -95,6 +95,7 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 		foreach $b (@backups) {
 			$candelete = $dest->{'mode'} <= 2 &&
 				     $b->{'ok'};
+			$sm = $servermap{$b->{'server'}};
 			print &ui_checked_columns_row([
 				"<a href='view_backuplog.cgi?".
 				 "bid=$b->{'id'}&$params'>".
@@ -102,7 +103,9 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 				 "</a>",
 				&make_date($b->{'time'}),
 				$server ? ( ) :
-				 ( $servermap{$b->{'server'}}->{'host'} ),
+				 ( $sm ? "<a href='edit_serv.cgi?".
+					 "id=$sm->{'id'}'>$sm->{'host'}</a>"
+				       : $b->{'host'} ),
 				$b->{'ok'} ?
 				  &text('backuplogs_size',
 					&nice_size($b->{'size'})) :
@@ -129,7 +132,9 @@ sub match_backup
 {
 my ($backuplog, $search) = @_;
 my $server = $servermap{$_->{'server'}};
-return $server->{'host'} =~ /\Q$search\E/i ||
+print STDERR "host=$backuplog->{'host'}\n";
+return $server && $server->{'host'} =~ /\Q$search\E/i ||
+       $backuplog->{'host'} =~ /\Q$search\E/i ||
        $backuplog->{'owner'} =~ /\Q$search\E/i ||
        &nice_backup_destination($backuplog->{'dest'}) =~ /\Q$search\E/i;
 return 0;

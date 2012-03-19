@@ -1198,8 +1198,6 @@ my ($server, $serial, $key, $reset, $empty, $nostart) = @_;
 my $vhost = &type_kvm_parent($server);
 my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
 delete($server->{'kvm_filesystem_offset'});
-$server->{'kvm_start'} = 1 if ($reset);
-$server->{'kvm_start'} = 0 if ($nostart);
 $server->{'kvm_args'} = $config{'kvm_manual'} if (!$reset);
 my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 
@@ -1483,6 +1481,8 @@ my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
 my @ips6 = split(/\s+/, $server->{'kvm_ip6'});
 my @netmasks6 = split(/\s+/, $server->{'kvm_netmask6'});
 $server->{'status'} = 'down';
+$nostart = 1 if (!$server->{'kvm_start'});
+$nostart = 0 if ($reset);
 
 # Gateways can either be set per IP address, or copy from host system.
 # If none are set, assume the first IP uses the host system gateway.
@@ -1853,7 +1853,7 @@ if ($vhost->{'kvm_zone'} && !$reset) {
 
 # Start up the instance
 my $started = 0;
-if ($server->{'kvm_start'}) {
+if (!$nostart) {
 	&$first_print($text{'create_kvmstartup'});
 	my ($ok, $err) = &type_kvm_startup($server, $empty);
 	if ($ok != 1) {
