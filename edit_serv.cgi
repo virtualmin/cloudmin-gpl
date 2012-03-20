@@ -125,8 +125,10 @@ if ($vhost) {
 
 if (!$view) {
 	# Groups
-	print &ui_table_row($text{'edit_groups'},
-		&show_groups_form($server, \@servers));
+	if (&can_action($server, "groups")) {
+		print &ui_table_row($text{'edit_groups'},
+			&show_groups_form($server, \@servers));
+		}
 
 	# Start at boot
 	$bfunc = "type_".$t."_get_atboot";

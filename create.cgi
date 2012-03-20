@@ -27,7 +27,9 @@ if (defined($in{'unixhost'}) && !$in{'unixhost_def'}) {
 	$server->{'unix_hostname'} = $in{'unixhost'};
 	}
 $server->{'desc'} = $in{'desc'};
-&parse_groups_form($server, \%in);
+if (&can_action($server, "groups")) {
+	&parse_groups_form($server, \%in);
+	}
 
 # SSH login
 $sfunc = "type_".$in{'type'}."_no_ssh";

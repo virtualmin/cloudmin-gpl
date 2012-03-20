@@ -102,7 +102,8 @@ return ( 'startup', 'shutdown', 'reboot', 'boot', 'console', 'graph', 'view',
 	 'run', 'pass', 'domains', 'update', 'script', 'pause', 'reset',
 	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
 	 'reverse', 'limits', 'ioclass', 'disks', 'devices', 'sshkeys',
-	 'backup', 'webmin', 'virtualmin', 'api', 'storage', 'mount' );
+	 'backup', 'webmin', 'virtualmin', 'api', 'storage', 'mount',
+	 'groups', );
 }
 
 # list_safe_owner_actions()

@@ -436,7 +436,9 @@ else {
 	$server->{'type'} = $in{'type'};
 	$in{'notes'} =~ s/\r//g;
 	$server->{'notes'} = join("\t", split(/\n/, $in{'notes'}));
-	&parse_groups_form($server, \%in);
+	if (&can_action($server, "groups")) {
+		&parse_groups_form($server, \%in);
+		}
 	if (defined($in{'canvirt'})) {
 		$server->{'novirt'} = $in{'canvirt'} ? 0 : 1;
 		}

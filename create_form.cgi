@@ -50,8 +50,10 @@ print &ui_table_row($text{'add_desc'},
 	&ui_textbox("desc", undef, 60));
 
 # In groups
-print &ui_table_row($text{'edit_groups'},
-	&show_groups_form($server, \@servers));
+if (&can_action($server, "groups")) {
+	print &ui_table_row($text{'edit_groups'},
+		&show_groups_form($server, \@servers));
+	}
 
 # System image, if any are available for the server type
 @images = &list_server_images($in{'type'});
@@ -248,8 +250,10 @@ if ($empty) {
 		&ui_textbox("desc", undef, 60));
 
 	# In groups
-	print &ui_table_row($text{'edit_groups'},
-		&show_groups_form($server, \@servers));
+	if (&can_action($server, "groups")) {
+		print &ui_table_row($text{'edit_groups'},
+			&show_groups_form($server, \@servers));
+		}
 
 	# CD image or file (on host)
 	if ($empty != 2) {
