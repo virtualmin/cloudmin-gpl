@@ -266,7 +266,7 @@ if (!$dryrun && @tocopy) {
 	my $err = &replicate_multiple_files($server, \@tocopy);
 	if ($err) {
 		$rv->{'err'} = &text('repl_copyfailed',
-				     $lfile, $err);
+				     scalar(@tocopy), $err);
 		return $rv;
 		}
 	}
@@ -357,7 +357,7 @@ if (!$dryrun && @tocopy) {
 	my $err = &replicate_multiple_files($server, \@tocopy);
 	if ($err) {
 		$rv->{'err'} = &text('repl_copyfailed',
-				     $lfile, $err);
+				     scalar(@tocopy), $err);
 		return $rv;
 		}
 	}
