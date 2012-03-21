@@ -755,7 +755,7 @@ foreach my $s (grep { $_->{'missing'} } @servers) {
 			if ($disks && ref($disks) && @$disks > 1) {
 				&$first_print(&text('rrun_redisks',
 					$s->{'host'}, scalar(@$disks)-1));
-				my $err = create_missing_backup_server_disks(
+				my $err = &create_missing_backup_server_disks(
 						$s, $disks);
 				if ($err) {
 					&$second_print(
@@ -2450,6 +2450,37 @@ if (defined(&$cfunc)) {
 $server->{'missing'} = 0;
 
 return 1;
+}
+
+# create_missing_backup_server_disks(&server, &disks)
+# Re-create any disks that belonged to a virtual system originally
+# XXX attached CDs or devices should be re-attached
+sub create_missing_backup_server_disks
+{
+my ($server, $disks) = @_;
+my $cfunc = "type_".$server->{'manager'}."_create_disk";
+my $nfunc = "type_".$server->{'manager'}."_new_disk";
+my $lfunc = "type_".$server->{'manager'}."_list_disks";
+my $currentdisks = &$lfunc($server);
+return $currentdisks if (!ref($currentdisks));
+my $lasterr;
+foreach my $disk (@$disks[1 .. (@$disks-1)]) {
+	if ($disk->{'device'} && !$disk->{'lv'} && !$disk->{'storage'}) {
+		# Just adding an existing file as a disk
+		# XXX anything to do here?
+		}
+	else {
+		# Creating a new disk file or LV
+		my $newdisk = &$nfunc($server, $currentdisks, 0);
+		$disk->{'real'} = $newdisk->{'real'};
+		$disk->{'vg'} = $newdisk->{'vg'};
+		$disk->{'lv'} = $newdisk->{'lv'};
+		$disk->{'storage_id'} = $newdisk->{'storage_id'};
+		}
+	my $err = &$cfunc($server, $disk);
+	$lasterr ||= $err;
+	}
+return $lasterr;
 }
 
 1;

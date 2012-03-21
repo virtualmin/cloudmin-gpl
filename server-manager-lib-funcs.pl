@@ -1591,7 +1591,7 @@ else {
 		}
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}:".
 		   quotemeta($remotefile);
-	my ($status, $out) = &run_ssh_command($sshcmd,$server->{'ssh_pass'});
+	my ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
 	}
 }
