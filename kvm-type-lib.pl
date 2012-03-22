@@ -2766,6 +2766,7 @@ push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
 $server->{'kvm_drives'} = join(" ", @drives);
 if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
 	# This is the new root disk
+	$server->{'kvm_disksize'} = $disk->{'size'}/(1024*1024);
 	$server->{'kvm_filesystem'} = $drive{'file'};
 	$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
 	$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
@@ -2773,6 +2774,7 @@ if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
 if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
     $disk->{'mount'} && $disk->{'fs'} eq 'swap') {
 	# This is the new swap disk
+	$server->{'kvm_swap'} = $disk->{'size'}/(1024*1024);
 	$server->{'kvm_swapfile'} = $drive{'file'};
 	$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
 	$server->{'kvm_swapfile_lv'} = $disk->{'lv'};
