@@ -5715,7 +5715,7 @@ return undef;
 sub kvm_instance_chooser_button
 {
 my ($ifield, $hfield) = @_;
-return "<input type=button onClick='ifield = form.$ifield; chooser = window.open(\"kvm_chooser.cgi?host=\"+escape(form.$hfield.value), \"chooser\", \"toolbar=no,menubar=no,scrollbar=yes,width=600,height=300\"); chooser.ifield = ifield; window.ifield = ifield' value=\"...\">\n";
+return "<input type=button onClick='ifield = form.$ifield; chooser = window.open(\"kvm_chooser.cgi?host=\"+escape(form.$hfield.value), \"chooser\", \"toolbar=no,menubar=no,scrollbars=yes,width=600,height=300\"); chooser.ifield = ifield; window.ifield = ifield' value=\"...\">\n";
 }
 
 # allocate_kvm_ip_addresses(&server, &vhost, [&bridges])

@@ -5022,7 +5022,7 @@ return @rv;
 sub ip_address_chooser_button
 {
 my ($ifield, $server) = @_;
-return "<input type=button onClick='ifield = form.$ifield; chooser = window.open(\"ip_chooser.cgi?id=$server->{'id'}\", \"chooser\", \"toolbar=no,menubar=no,scrollbar=yes,width=300,height=600\"); chooser.ifield = ifield; window.ifield = ifield' value=\"...\">\n";
+return "<input type=button onClick='ifield = form.$ifield; chooser = window.open(\"ip_chooser.cgi?id=$server->{'id'}\", \"chooser\", \"toolbar=no,menubar=no,scrollbars=yes,width=300,height=600\"); chooser.ifield = ifield; window.ifield = ifield' value=\"...\">\n";
 }
 
 # get_server_package_system(&server)
