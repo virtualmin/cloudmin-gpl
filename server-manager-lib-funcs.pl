@@ -4824,7 +4824,7 @@ sub allocate_ip6_address
 my @rvs = &available_ip6_addresses(@_);
 if (@rvs) {
 	&add_creation_use_ip($rvs[0]->{'ip'});
-	return ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gateway'} );
+	return ( $rvs[0]->{'ip'}, $rvs[0]->{'netmask'}, $rvs[0]->{'gateway'} );
 	}
 return ( );
 }
