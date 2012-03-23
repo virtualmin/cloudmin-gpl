@@ -199,6 +199,7 @@ $locations_file = "$module_config_directory/locations";
 
 $pools_file = "$module_config_directory/pools";
 $pools6_file = "$module_config_directory/pools6";
+$creation_ips_file = "$module_config_directory/creation-ips";
 
 $server_images_dir = "$ENV{'WEBMIN_VAR'}/$module_name";
 if ($cloudmin_pro) {

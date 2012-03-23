@@ -4717,8 +4717,11 @@ return &parallel_ping_free(@poss);
 sub allocate_ip_address
 {
 my @rvs = &available_ip_addresses(@_);
-return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gateway'} )
-	    : ( );
+if (@rvs) {
+	&add_creation_use_ip($rvs[0]->{'ip'});
+	return ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gateway'} );
+	}
+return ( );
 }
 
 # available_ip6_addresses(pool-ids, [ifaces, want-iface])
@@ -4819,8 +4822,11 @@ my ($ifaces) = @_;
 sub allocate_ip6_address
 {
 my @rvs = &available_ip6_addresses(@_);
-return @rvs ? ( $rvs[0]->{'ip'}, $rvs[0]->{'netmask'}, $rvs[0]->{'gateway'} )
-	    : ( );
+if (@rvs) {
+	&add_creation_use_ip($rvs[0]->{'ip'});
+	return ( $rvs[0]->{'ip'}, $rvs[0]->{'cidr'}, $rvs[0]->{'gateway'} );
+	}
+return ( );
 }
 
 # range_check_ip_address(ip, start-ips, end-ips, cidrs,
@@ -4984,7 +4990,45 @@ foreach my $s (&list_managed_servers()) {
 	#		}
 	#	}
 	}
+
+# Add IPs in use by creation processes
+foreach my $ip (&get_creation_use_ips()) {
+	$used{$ip} = 1;
+	}
 return %used;
+}
+
+# get_creation_use_ips()
+# Returns the list of IPs in use right now by systems being created
+sub get_creation_use_ips
+{
+my %create;
+my @rv;
+&read_file($creation_ips_file, \%create);
+foreach my $ip (keys %create) {
+	if (kill(0, $create{$ip})) {
+		push(@rv, $ip);
+		}
+	}
+return @rv;
+}
+
+# add_creation_use_ip(ip)
+# Adds an IP to the list of those being used to create a system
+sub add_creation_use_ip
+{
+my ($newip) = @_;
+&lock_file($creation_ips_file);
+my %create;
+&read_file($creation_ips_file, \%create);
+foreach my $ip (keys %create) {
+	if (!kill(0, $create{$ip})) {
+		delete($create{$ip});
+		}
+	}
+$create{$newip} = $$;
+&write_file($creation_ips_file, \%create);
+&unlock_file($creation_ips_file);
 }
 
 # expand_ip_range(start, end)
