@@ -155,7 +155,7 @@ else {
 # Change the object
 $olddisk = { %$disk };
 if ($newsize) {
-	$disk->{'fixedsize'} ||
+	$disk->{'fixedsize'} &&
 		&usage("The size of this disk cannot be changed");
 	$incr = $newsize*1024*1024 - $disk->{'size'};
 	$disk->{'size'} = $newsize*1024*1024;
