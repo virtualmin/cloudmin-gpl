@@ -1284,7 +1284,8 @@ else {
 		$cmd = "LANG=C $cmd";
 		}
 	if ($server->{'root_shell'} &&
-	    $server->{'root_shell'} !~ /^(\S+\/)?(sh|bash|dash)$/) {
+	    $server->{'root_shell'} !~ /^(\S+\/)?(sh|bash|dash)$/ ||
+	    $server->{'force_root_shell'}) {
 		# Shell is not bash .. force use of sh
 		$cmd = "exec /bin/sh -c ".quotemeta($cmd);
 		}
@@ -11560,6 +11561,21 @@ foreach $k (@_) {
         }
 print "</table>\n";
 print "$text{'sub_if'}<p>\n";
+}
+
+# randomize_order(item, ...)
+# Return some items in a random order
+sub randomize_order
+{
+my @orig = @_;
+my @rv;
+&seed_random();
+while(@orig) {
+	my $idx = int(rand(scalar(@orig)));
+	push(@rv, $orig[$idx]);
+	splice(@orig, $idx, 1);
+	}
+return @rv;
 }
 
 # obtain_lock_server(&server|&servers, [readonly])

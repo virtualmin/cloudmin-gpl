@@ -111,5 +111,9 @@ if (@bad) {
 	    { 'dest' => $backup->{'dest'},
 	      'host' => join(' ', map { $_->{'host'} } (@servers, @missing)) });
 
+if (@ok && defined(&theme_select_server)) {
+	&theme_select_server($ok[0]);
+	}
+
 &ui_print_footer("", $text{'return'});
 

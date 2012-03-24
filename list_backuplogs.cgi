@@ -54,10 +54,18 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 		@backups = grep { $_->{'backup'} eq $in{'log'} } @backups;
 		}
 	else {
+		# Limit to backups for user's systems, or backups made by
+		# this owner if the system was deleted
 		@backups = &list_backup_logs();
+		%allservermap = map { $_->{'id'}, $_ }
+				 &list_managed_servers();
 		%servermap = map { $_->{'id'}, $_ }
 				 &list_available_managed_servers();
-		#@backups = grep { $servermap{$_->{'server'}} } @backups;
+		@backups = grep { $allservermap{$_->{'server'}} ?
+					$servermap{$_->{'server'}} :
+				  $access{'owner'} ?
+				  	($_->{'owner'} eq $base_remote_user) :
+					1 } @backups;
 		}
 
 	# Filter by search

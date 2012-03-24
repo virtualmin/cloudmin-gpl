@@ -586,7 +586,11 @@ elsif ($dest->{'mode'} == 3) {
 		 'ssh_user' => $dest->{'user'},
 		 'ssh_pass' => $dest->{'pass'},
 		 'ssh_port' => $dest->{'port'},
-		 'status' => 'nowebmin', };
+		 'status' => 'nowebmin',
+		 'force_root_shell' => 1,	# So that commands are
+						# run in sh regardless
+						# of SSH user's shell
+	        };
 	}
 else {
 	return undef;
@@ -1742,6 +1746,9 @@ elsif ($dest->{'mode'} == 3) {
 			   'ssh_pass' => $dest->{'pass'},
 			   'ssh_port' => $dest->{'port'},
 			   'status' => 'nowebmin',
+			   'force_root_shell' => 1,	# So that commands are
+							# run in sh regardless
+							# of SSH user's shell
 			  };
 	return &transfer_file_between_servers($destserver, $server,
 					      $dest->{'path'}.$ext, $file, 0);
@@ -1822,6 +1829,9 @@ elsif ($dest->{'mode'} == 3) {
 			   'ssh_pass' => $dest->{'pass'},
 			   'ssh_port' => $dest->{'port'},
 			   'status' => 'nowebmin',
+			   'force_root_shell' => 1,	# So that commands are
+							# run in sh regardless
+							# of SSH user's shell
 			  };
 	return &delete_file_on_server($destserver, $dest->{'path'}.$ext);
 	}
@@ -2264,7 +2274,7 @@ if ($limits) {
 		}
 
 	# Validate CPU limit
-	$cfunc = "type_".$in{'type'}."_get_cpu_size";
+	$cfunc = "type_".$server->{'manager'}."_get_cpu_size";
 	$incr = defined(&$cfunc) ? &$cfunc($server) : undef;
 	if ($incr && $limits->{'max_cpu'}) {
 		# May be over CPU limit
@@ -2448,6 +2458,14 @@ if (defined(&$cfunc)) {
 
 # Run post-creation script
 &run_system_script($server, 'after', 'create');
+
+# If restoring by an owner, grant to him
+if ($access{'owner'}) {
+	my $owner = &get_system_owner($base_remote_user);
+	if ($owner) {
+		&grant_to_system_owner($owner, $server);
+		}
+	}
 
 $server->{'missing'} = 0;
 
