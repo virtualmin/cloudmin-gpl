@@ -5174,10 +5174,10 @@ my $disks = &type_kvm_list_disks($server, 0);
 &$first_print($text{'smove_disks'});
 &$indent_print();
 foreach my $d (@$disks) {
-	&$first_print(&text('smove_onedisk', $d->{'real'}));
 	$d->{'newreal'} = $d->{'real'};
 	if ($d->{'device'} && !$d->{'lv'}) {
 		# A real device, which shouldn't be touched
+		&$first_print(&text('smove_onedisk', $d->{'real'}));
 		&$second_print(&text('smove_devdisk'));
 		next;
 		}
@@ -5189,15 +5189,19 @@ foreach my $d (@$disks) {
 	if (@dst && $dst[7] == $sst[7] &&
 	    ($old_kvm_dir eq $new_kvm_dir || $d->{'lv'})) {
 		# Already there! Perhaps from shared LVM or directory
+		&$first_print(&text('smove_onedisk', $d->{'real'}));
 		&$second_print($text{'smove_alrdisk'});
 		next;
 		}
 
+	&start_background_dot_printer(&text('smove_onedisk', $d->{'real'}));
 	my $newreal;
 	if ($d->{'lv'}) {
 		# LVM logical volume .. transfer to LV of the same name
-		$dest->{'kvm_vg'} ||
+		if (!$dest->{'kvm_vg'}) {
+			&stop_background_dot_printer();
 			return $text{'smove_errvg'};
+			}
 		$newreal = "/dev/".$dest->{'kvm_vg'}."/".$d->{'lv'};
 
 		# Create LV on target first
@@ -5213,7 +5217,10 @@ foreach my $d (@$disks) {
 		my $err = &remote_foreign_call($dest, "lvm",
 					  "create_logical_volume", $lv);
 		$err ||= $last_remote_error;
-		$err && return &text('smove_errlv', $err);
+		if ($err) {
+			&stop_background_dot_printer();
+			return &text('smove_errlv', $err);
+			}
 
 		# Transfer over the data, using dd. The size for
 		# checksum purposes is rounded down to 1MB to account
@@ -5222,6 +5229,7 @@ foreach my $d (@$disks) {
 			$d->{'real'}, $newreal, 1, 1,
 			int($d->{'size'}/(1024*1024))*1024*1024);
 		if ($err) {
+			&stop_background_dot_printer();
 			return &text('smove_errdisk', $err);
 			}
 		push(@dellvs, $d->{'real'});
@@ -5234,11 +5242,13 @@ foreach my $d (@$disks) {
 		my $err = &transfer_file_between_servers($vhost, $dest,
 			$d->{'real'}, $newreal, 0, 1);
 		if ($err) {
+			&stop_background_dot_printer();
 			return &text('smove_errdisk', $err);
 			}
 		push(@delfiles, $d->{'real'});
 		}
 
+	&stop_background_dot_printer();
 	$d->{'newreal'} = $newreal;
 	&$second_print(&text('smove_donedisk',
 			     &nice_size($d->{'size'})));
