@@ -136,9 +136,10 @@ if (!&$ifunc($server, $image, $temp, $in{'munge'} ? 0 : 2)) {
 	}
 
 # Transfer the image file to the master
-&$first_print(&text('mkimage_fetching',
-		    &nice_image_destination($image->{'dest'})));
+&start_background_dot_printer(&text('mkimage_fetching',
+                    &nice_image_destination($image->{'dest'})));
 $err = &fetch_image_files($vhost, $image, $temp, 1, $server);
+&stop_background_dot_printer();
 if ($err) {
 	&$second_print(&text('mkimage_failed', $err));
 	}

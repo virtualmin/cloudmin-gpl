@@ -9461,6 +9461,8 @@ return $html;
 
 # Print functions for HTML output
 sub first_html_print { print @_,"<br>\n"; }
+sub first_oneline_html_print { print @_; }
+sub first_endline_html_print { print "<br>\n"; }
 sub second_html_print { print @_,"<p>\n"; }
 sub indent_html_print { print "<ul>\n"; }
 sub outdent_html_print { print "</ul>\n"; }
@@ -9471,6 +9473,15 @@ sub first_text_print
 {
 print $indent_text,
       (map { &html_tags_to_text(&entities_to_ascii($_)) } @_),"\n";
+}
+sub first_oneline_text_print
+{
+print $indent_text,
+      (map { &html_tags_to_text(&entities_to_ascii($_)) } @_);
+}
+sub first_endline_text_print
+{
+print "\n";
 }
 sub second_text_print
 {
@@ -9521,6 +9532,8 @@ $first_print = $second_print = $indent_print = $outdent_print = $block_print =
 sub set_all_text_print
 {
 $first_print = \&first_text_print;
+$first_oneline_print = \&first_oneline_text_print;
+$first_endline_print = \&first_endline_text_print;
 $second_print = \&second_text_print;
 $indent_print = \&indent_text_print;
 $outdent_print = \&outdent_text_print;
@@ -9529,6 +9542,8 @@ $block_print = \&block_text_print;
 sub set_all_html_print
 {
 $first_print = \&first_html_print;
+$first_oneline_print = \&first_oneline_html_print;
+$first_endline_print = \&first_endline_html_print;
 $second_print = \&second_html_print;
 $indent_print = \&indent_html_print;
 $outdent_print = \&outdent_html_print;
@@ -11576,6 +11591,50 @@ while(@orig) {
 	splice(@orig, $idx, 1);
 	}
 return @rv;
+}
+
+# start_background_dot_printer([message], [interval])
+# Launch a thread that prints a dot every X seconds
+sub start_background_dot_printer
+{
+my ($msg, $interval) = @_;
+if (!$ENV{'REQUEST_METHOD'}) {
+	# Not in web UI, so just print message
+	&$first_print($msg) if ($msg);
+	}
+else {
+	$interval ||= 1;
+	&stop_background_dot_printer();
+	my $pid = $$;
+	if ($msg) {
+		&$first_oneline_print($msg);
+		}
+	$main::background_dot_printer_msg = $msg;
+	$main::background_dot_printer_pid = fork();
+	if ($main::background_dot_printer_pid == 0) {
+		while(1) {
+			sleep($interval);
+			kill(0, $pid) || last;
+			print ".";
+			}
+		exit(0);
+		}
+	}
+}
+
+# stop_background_dot_printer()
+# Stop the background process run by start_background_dot_printer
+sub stop_background_dot_printer
+{
+if ($main::background_dot_printer_pid > 0) {
+	kill('KILL', $main::background_dot_printer_pid);
+	if ($main::background_dot_printer_msg) {
+		&$first_endline_print();
+		}
+	waitpid($main::background_dot_printer_pid, WNOHANG);
+	$main::background_dot_printer_pid = undef;
+	$main::background_dot_printer_msg = undef;
+	}
 }
 
 # obtain_lock_server(&server|&servers, [readonly])

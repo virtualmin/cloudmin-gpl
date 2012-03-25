@@ -4748,13 +4748,14 @@ $image->{'kvm_virtio'} = $server->{'kvm_virtio'};
 
 if (!$image->{'nocompress'}) {
 	# Compress disk image to a temp file
-	&$first_print($text{'mkimage_xengzip'});
+	&start_background_dot_printer($text{'mkimage_xengzip'});
 	my $gzfile = $image->{'id'}.".ext3.gz";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	    ($server->{'kvm_filesystem_lv'} ?
 		&dd_command($fsfile, undef)." | gzip -c" :
 		"gzip -c ".quotemeta($fsfile)).
 	    	  " >".quotemeta("$tempdir/$gzfile"));
+	&stop_background_dot_printer();
 	if ($ex) {
 		&$second_print(&text('mkimage_ekvmgzip', "<pre>$out</pre>"));
 		}
@@ -4765,13 +4766,14 @@ if (!$image->{'nocompress'}) {
 	}
 else {
 	# Just use the image file as-is
-	&$first_print($text{'mkimage_xengzip2'});
+	&start_background_dot_printer($text{'mkimage_xengzip2'});
 	my $imgfile = $image->{'id'}.".ext3";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		$server->{'kvm_filesystem_lv'} ?
 			&dd_command($fsfile, "$tempdir/$imgfile") :
 			"ln -s ".quotemeta($fsfile)." ".
 			  quotemeta("$tempdir/$imgfile"));
+	&stop_background_dot_printer();
 	if ($ex) {
 		&$second_print(&text('mkimage_ekvmlink', "<pre>$out</pre>"));
 		}
