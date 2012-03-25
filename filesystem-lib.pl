@@ -607,6 +607,8 @@ if (ref($files)) {
 	foreach my $f (@delmaps) {
 		$err ||= &execute_command_on_server($vhost,
 			"dmsetup remove /dev/mapper/$f");
+		&execute_command_on_server($vhost,
+			"dmsetup remove /dev/mapper/$f-cow");
 		}
 	}
 else {
