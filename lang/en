@@ -517,6 +517,7 @@ create_ekvmfsfdisk=Failed to list partitions in disk image $1 : $2
 create_ekvmfslinux=No Linux partitions found in disk image $1
 create_ekvmfsnone=None of the partions in the disk image $1 could be mounted and contained the /etc directory. This may be due to the use of RAID or LVM.
 create_ekvmioclass=Invalid KVM IO class
+create_eopenvzioclass=Invalid OpenVZ IO class
 create_kvmip=IP address for KVM instance
 create_kvmip2=IP addresses for KVM instance
 create_ekvmhost=The hostname for a KVM instance cannot contain a . , as the domain name is added automatically
@@ -1704,6 +1705,7 @@ zone_eiface=Missing or invalid-looking base network interface
 
 move_backing=Creating backup of $1 on $2 ..
 move_backing2=Creating backup of $1 on $2, and sending it to $3 ..
+move_tempdir=Preparing for backup of $1 on $2 ..
 move_ewebmin=.. failed to connect to Webmin : $1
 move_eparent=.. parent domain $1 was not transferred successfully.
 move_ealias=.. alias target domain $1 was not transferred successfully.

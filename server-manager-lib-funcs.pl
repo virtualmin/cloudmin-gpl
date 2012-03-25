@@ -6001,17 +6001,8 @@ foreach my $sd (@sorted) {
 	# Re-connect to Webmin, to avoid RPC timeout
 	&remote_finished();
 
-	# Show start message
-	if ($direct) {
-		&$first_print(&text('move_backing2', $d->{'dom'},
-				    $server->{'host'}, $dest->{'host'}));
-		}
-	else {
-		&$first_print(&text('move_backing', $d->{'dom'},
-				    $server->{'host'}));
-		}
-
 	# Find a good temp dir on the source
+	&$first_print(&text('move_tempdir', $d->{'dom'}, $server->{'host'}));
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
 	if ($last_remote_error) {
@@ -6061,6 +6052,18 @@ foreach my $sd (@sorted) {
 		$failed{$d->{'id'}} = $sd;
 		next;
 		}
+	&$second_print($text{'create_done'});
+
+	# Show start message
+	if ($direct) {
+		&start_background_dot_printer(
+			&text('move_backing2', $d->{'dom'},
+			      $server->{'host'}, $dest->{'host'}));
+		}
+	else {
+		&start_background_dot_printer(
+			&text('move_backing', $d->{'dom'}, $server->{'host'}));
+		}
 
 	my @args = ( [ "domain", $d->{'dom'} ],
 		     [ "all-features" ],
@@ -6079,6 +6082,7 @@ foreach my $sd (@sorted) {
 		}
 	my ($err, $out) = &call_virtualmin_api(
 		$server, "backup-domain", \@args);
+	&stop_background_dot_printer();
 	if ($err) {
 		&$second_print(&text('move_ebackup', $err));
 		$failed{$d->{'id'}} = $sd;
@@ -6132,11 +6136,12 @@ foreach my $sd (@sorted) {
 	my ($localtemp, @st);
 	if (!$direct) {
 		if ($server->{'id'} != 0) {
-			&$first_print(&text('move_download',
-					    $d->{'dom'}, $filename));
+			&start_background_dot_printer(
+				&text('move_download', $d->{'dom'}, $filename));
 			$localtemp = &transname($filename);
 			my $err = &get_file_from_server($server,
 				"$tmpdir/$filename", $localtemp);
+			&stop_background_dot_printer();
 			&execute_command_on_server($server,
 				   "rm -f ".quotemeta("$tmpdir/$filename"));
 			if ($err) {
@@ -6155,10 +6160,12 @@ foreach my $sd (@sorted) {
 
 		# Transfer to destination (if not already there)
 		if ($dest->{'id'} != 0) {
-			&$first_print(&text('move_upload', $d->{'dom'},
-				$filename, $dest->{'host'}));
+			&start_background_dot_printer(
+				&text('move_upload', $d->{'dom'},
+				      $filename, $dest->{'host'}));
 			my $err = &put_file_to_server($dest, $localtemp,
 							 $desttemp);
+			&stop_background_dot_printer();
 			unlink($localtemp);
 			if ($err) {
 				&$second_print(&text('move_eupload', $err));
@@ -6243,7 +6250,8 @@ foreach my $sd (@sorted) {
 
 	# Restore on destination
 	my $desttemp = $donebackup{$d->{'id'}};
-	&$first_print(&text('move_restore', $d->{'dom'}, $dest->{'host'}));
+	&start_background_dot_printer(
+		&text('move_restore', $d->{'dom'}, $dest->{'host'}));
 	my @args = ( [ "source", $desttemp ],
 			[ "all-features" ],
 			[ "option", "dns fixip 1" ],
@@ -6259,6 +6267,7 @@ foreach my $sd (@sorted) {
 		}
 	my ($err, $out) = &call_virtualmin_api($dest,
 			"restore-domain", \@args);
+	&stop_background_dot_printer();
 	if ($delete != 1) {
 		&execute_command_on_server($server,
 			"rm -f ".quotemeta($desttemp));
