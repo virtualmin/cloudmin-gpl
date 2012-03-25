@@ -958,11 +958,13 @@ else {
 my $size;
 if ($tarfile) {
 	# Tar up the filesystem
-	&$first_print(&text('brun_tarring', $server->{'host'}, $root));
+	&start_background_dot_printer(
+		&text('brun_tarring', $server->{'host'}, $root));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     &tar_gzip_command($vhost, ".", $tarfile);
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, $tarcmd);
+	&stop_background_dot_printer();
 	if ($ex || $err) {
 		$err = $out if ($ex);
 		return { 'ok' => 0,
@@ -987,9 +989,11 @@ if ($tarfile) {
 
 		# Send via SCP or FTP
 		if (!$err) {
-			&$first_print(&text('brun_sending', $server->{'host'},
-					    &nice_backup_destination($dest)));
+			&start_background_dot_printer(
+				&text('brun_sending', $server->{'host'},
+				      &nice_backup_destination($dest)));
 			$err = &send_to_backup_dest($vhost, $tarfile, $dest);
+			&stop_background_dot_printer();
 			}
 
 		# Delete from host
@@ -1003,13 +1007,15 @@ if ($tarfile) {
 	}
 else {
 	# Tar directly to dest system
-	&$first_print(&text('brun_tarring4', $server->{'host'}, $root,
-					     $destserver->{'host'}));
+	&start_background_dot_printer(
+		&text('brun_tarring4', $server->{'host'}, $root,
+		      $destserver->{'host'}));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     &tar_gzip_command($vhost, ".");
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my $err = &pipe_command_to_server($vhost, $destserver, $tarcmd,
 					  $dest->{'path'});
+	&stop_background_dot_printer();
 	if ($err) {
 		return { 'ok' => 0,
 			 'msg' => &text('brun_etar',
@@ -1068,9 +1074,11 @@ my $tarerr;
 if ($tarfile) {
 	# Copy in the tar.gz backup file, if needed
 	if ($dest->{'mode'} != 1) {
-		&$first_print(&text('rrun_getting', $server->{'host'},
-					    &nice_backup_destination($dest)));
+		&start_background_dot_printer(
+			&text('rrun_getting', $server->{'host'},
+			      &nice_backup_destination($dest)));
 		my $err = &get_from_backup_dest($vhost, $tarfile, $dest);
+		&stop_background_dot_printer();
 		if ($err) {
 			return { 'ok' => 0,
 				 'msg' => &text('rrun_eget', $err) };
@@ -1084,13 +1092,14 @@ if ($tarfile) {
 	$size = $st[7];
 
 	# Un-tar the filesystem
-	&$first_print(&text('rrun_untarring', $server->{'host'}, $root));
+	&start_background_dot_printer(
+		&text('rrun_untarring', $server->{'host'}, $root));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     "rm -rf * && ".
 		     &tar_gunzip_command($vhost, $tarfile);
-	print STDERR $tarcmd,"\n";
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, $tarcmd);
+	&stop_background_dot_printer();
 	if ($ex || $err) {
 		$err = $out if ($ex);
 		$tarerr = &text('rrun_etar', "<tt>".&html_escape($out)."</tt>");
@@ -1104,14 +1113,16 @@ if ($tarfile) {
 	}
 else {
 	# Un-tar directly from the source system
-	&$first_print(&text('rrun_untarring4', $server->{'host'}, $root,
-					       $destserver->{'host'}));
+	&start_background_dot_printer(
+		&text('rrun_untarring4', $server->{'host'}, $root,
+		      $destserver->{'host'}));
 	my $tarcmd = "cd ".quotemeta($root)." && ".
 		     "rm -rf * && ".
 		     &tar_gunzip_command($vhost, undef);
 	$tarcmd = &niced_backup_command($vhost, $tarcmd);
 	my $err = &pipe_command_from_server($destserver, $vhost, $tarcmd,
 					    $dest->{'path'});
+	&stop_background_dot_printer();
 	if ($err) {
 		return { 'ok' => 0,
 			 'msg' => &text('rrun_etar',
@@ -1275,7 +1286,7 @@ my @gzfiles;
 if ($gzfile) {
 	# Need to write to local files
 	my $i = 0;
-	&$first_print(&text('brun_ddone', $server->{'host'}));
+	&start_background_dot_printer(&text('brun_ddone', $server->{'host'}));
 	foreach my $dev (@devs) {
 		my $ext = $i ? ".$i" : "";
 		if ($skipdisks{$dev}) {
@@ -1301,11 +1312,12 @@ if ($gzfile) {
 		push(@gzfiles, $gzfile.$ext);
 		$i++;
 		}
+	&stop_background_dot_printer();
 	}
 else {
 	# Can write directly to target system
 	my $i = 0;
-	&$first_print(&text('brun_ddone2', $server->{'host'},
+	&start_background_dot_printer(&text('brun_ddone2', $server->{'host'},
 					   $destserver->{'host'}));
         foreach my $dev (@devs) {
 		my $ext = $i ? ".$i" : "";
@@ -1332,6 +1344,7 @@ else {
 		push(@gzfiles, $dest->{'path'}.$ext);
 		$i++;
 		}
+	&stop_background_dot_printer();
 	}
 
 # Close Webmin session, as it may have timed out
@@ -1510,9 +1523,10 @@ my ($staton, @statfiles);
 if ($dest->{'mode'} != 1 && $localfile) {
 	# Files are not on the host already, and need to be downloaded via
 	# FTP or SSH
-        &$first_print(&text('rrun_getting', $server->{'host'},
+        &start_background_dot_printer(&text('rrun_getting', $server->{'host'},
                                             &nice_backup_destination($dest)));
         my $err = &get_from_backup_dest($vhost, $localfile, $dest);
+	&stop_background_dot_printer();
         if ($err) {
                 return { 'ok' => 0,
                          'msg' => &text('rrun_eget', $err) };
@@ -1573,7 +1587,8 @@ if ($gzip_format) {
 	if ($localfile) {
 		# Just extract from local files
 		my $i = 0;
-		&$first_print(&text('rrun_dd', $server->{'host'}));
+		&start_background_dot_printer(
+			&text('rrun_dd', $server->{'host'}));
 		foreach my $dev (@devs) {
 			my $ext = $i ? ".$i" : "";
 			my @st = &stat_file_on_server($vhost, $localfile.$ext);
@@ -1596,8 +1611,9 @@ if ($gzip_format) {
 	else {
 		# Pipe in from remote system and extract
 		my $i = 0;
-		&$first_print(&text('rrun_dd2', $server->{'host'},
-				    $destserver->{'host'}));
+		&start_background_dot_printer(
+			&text('rrun_dd2', $server->{'host'},
+			    $destserver->{'host'}));
 		foreach my $dev (@devs) {
 			my $ext = $i ? ".$i" : "";
 			my @st = &stat_file_on_server($destserver,
@@ -1617,12 +1633,14 @@ if ($gzip_format) {
 			$i++;
 			}
 		}
+	&stop_background_dot_printer();
 	}
 elsif ($server->{$manager.'_filesystem_lv'}) {
 	# Overwrite logical volumes with tar piped into DD
 	if ($localfile) {
 		# From temp tar file
-		&$first_print(&text('rrun_dd', $server->{'host'}));
+		&start_background_dot_printer(
+			&text('rrun_dd', $server->{'host'}));
 		foreach my $d (@lvmdisks) {
 			my $devfile = $d->{'real'};
 			$devfile =~ s/^(.*)\///;
@@ -1641,8 +1659,9 @@ elsif ($server->{$manager.'_filesystem_lv'}) {
 		}
 	else {
 		# From tar via SSH
-		&$first_print(&text('rrun_dd2', $server->{'host'},
-				    $destserver->{'host'}));
+		&start_background_dot_printer(
+			&text('rrun_dd2', $server->{'host'},
+			      $destserver->{'host'}));
 		foreach my $d (@lvmdisks) {
 			my $devfile = $d->{'real'};
 			$devfile =~ s/^(.*)\///;
@@ -1658,13 +1677,14 @@ elsif ($server->{$manager.'_filesystem_lv'}) {
 				}
 			}
 		}
+	&stop_background_dot_printer();
 	}
 else {
 	# Extract tar file of disk images in the disk base directory
 	my $dir = $filedisks[0]->{'real'};
         $dir =~ s/\/[^\/]+$//;
 	if ($localfile) {
-		&$first_print(&text('rrun_untarring2',
+		&start_background_dot_printer(&text('rrun_untarring2',
 				    $server->{'host'}, $dir));
 		my $tarcmd = "cd ".quotemeta($dir)." && ".
 			     "gunzip -c ".quotemeta($localfile)." | tar xpf -";
@@ -1679,7 +1699,7 @@ else {
 		}
 	else {
 		# Fetch and extract tar file in one command
-		&$first_print(&text('rrun_untarring5',
+		&start_background_dot_printer(&text('rrun_untarring5',
 			    $server->{'host'}, $dir, $destserver->{'host'}));
 		my $tarcmd = "cd ".quotemeta($dir)." && ".
 			     "gunzip -c | tar xpf -";
@@ -1691,6 +1711,7 @@ else {
 					"<tt>".&html_escape($err)."</tt>");
 			}
 		}
+	&stop_background_dot_printer();
 	}
 &remote_finished();
 
