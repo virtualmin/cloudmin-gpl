@@ -1120,7 +1120,7 @@ if ($server->{'fast'}) {
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		local $main::error_must_die = 1;
-		alarm(2);
+		&set_alarm(2);
 		my $err;
 		&open_socket($ip, $rpcport, TRYPORT, \$err);
 		close(TRYPORT);
@@ -1133,10 +1133,10 @@ my $rfc;
 eval {
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
-	alarm(20);
+	&set_alarm(20);
 	$last_remote_error = undef;
 	$rfc = &remote_foreign_config($server, "");
-	alarm(0);
+	&set_alarm(0);
 	};
 if ($last_remote_error) {
 	my $ec = $last_remote_error =~ /Login\s+to\s+RPC/ ? 2 : 1;
@@ -1178,7 +1178,7 @@ eval {
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
 	if ($timeout) {
-		alarm($timeout);
+		&set_alarm($timeout);
 		}
 	($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
@@ -1214,7 +1214,9 @@ eval {
 			$out .= $wait_for_input;
 			}
 		}
-	alarm(0);
+	if ($timeout) {
+		&set_alarm(0);
+		}
 	if (!$leave) {
 		close($fh);
 		waitpid($fpid, 0);
@@ -2632,11 +2634,11 @@ while(time() - $sshstart < $timeout) {
 	my $ssherr;
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout" };
-		alarm(5);
+		&set_alarm(5);
 		&open_socket($ip, $server->{'ssh_port'} || 22, SSHTEST,
 			     \$ssherr);
 		close(SSHTEST);
-		alarm(0);
+		&set_alarm(0);
 		};
 	if (!$ssherr && !$@) {
 		return 1;
@@ -2841,7 +2843,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		local $main::error_must_die = 1;
-		alarm($webmin_timeout);
+		&set_alarm($webmin_timeout);
 		$server->{'status_msg'} = undef;
 		if (&remote_foreign_check($server, "virtual-server") &&
 		    !$server->{'novirtualmin'}) {
@@ -2850,8 +2852,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			goto SKIPINFO if ($skipinfo);
 			&remote_foreign_require($server, "virtual-server",
 						"virtual-server-lib.pl");
-			alarm($webmin_timeout * 3);	# Give this longer,
-							# as connect worked
+			# Give this longer as connect worked
+			&set_alarm($webmin_timeout * 3);
 			my @doms = &remote_foreign_call($server,
 					"virtual-server", "list_domains");
 			&save_server_domains($server, \@doms);
@@ -2899,7 +2901,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			# Perform a config check, if we haven't done an OK
 			# one yet. This may be slow, so reset the timeout.
 			if (!$server->{'virtualmin_checked'}) {
-				alarm($webmin_timeout * 3);
+				&set_alarm($webmin_timeout * 3);
 				&check_virtualmin_config($server, 1);
 				}
 
@@ -3042,7 +3044,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			}
 
 		SKIPINFO:
-		alarm(0);
+		&set_alarm(0);
 		};
 	if ($@) {
 		# Failed in some way, most likely a timeout
@@ -3739,13 +3741,13 @@ for(my $i=0; $i<$procs; $i++) {
 
 # Wait for them all
 eval {
-	alarm($maxtime) if ($maxtime);
+	&set_alarm($maxtime) if ($maxtime);
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	while(@pids) {
 		my $pid = wait();
 		@pids = grep { $_ ne $pid } @pids;
 		}
-	alarm(0);
+	&set_alarm(0);
 	};
 if ($@ =~ /timeout/) {
 	# Took too long - kill all subprocesses!
@@ -4228,14 +4230,14 @@ if ($server->{'user'} && $ok != 2) {
 	while(time() - $start < 60) {
 		sleep(1);
 		my $werr;
-		alarm(5);
+		&set_alarm(5);
 		eval {
 			local $SIG{'ALRM'} = sub { die "timeout\n" };
 			&open_socket($server->{'ip'},
 				     $server->{'port'} || 10000,
 				     WTEST, \$werr);
 			};
-		alarm(0);
+		&set_alarm(0);
 		if (!$werr && !$@) {
 			close(WTEST);
 			last;
@@ -6202,11 +6204,12 @@ foreach my $sd (@sorted) {
 
 	if ($delete == 2) {
 		# Disable on source
-		&$first_print(&text('move_disable', $d->{'dom'},
-						    $server->{'host'}));
+		&start_background_dot_printer(
+			&text('move_disable', $d->{'dom'}, $server->{'host'}));
 		my @args = ( [ "domain", $d->{'dom'} ] );
 		my ($err, $out) = &call_virtualmin_api(
 					$server, "disable-domain", \@args);
+		&stop_background_dot_printer();
 		if ($err) {
 			&$second_print(&text('move_edisable', $err));
 			$failed{$d->{'id'}} = $sd;
@@ -6221,11 +6224,12 @@ foreach my $sd (@sorted) {
 		}
 	elsif ($delete == 1) {
 		# Delete on source
-		&$first_print(&text('move_delete', $d->{'dom'},
-						   $server->{'host'}));
+		&start_background_dot_printer(
+			&text('move_delete', $d->{'dom'}, $server->{'host'}));
 		my @args = ( [ "domain", $d->{'dom'} ] );
 		my ($err, $out) = &call_virtualmin_api(
 					$server, "delete-domain", \@args);
+		&stop_background_dot_printer();
 		if ($err) {
 			&$second_print(&text('move_edelete', $err));
 			$failed{$d->{'id'}} = $sd;
@@ -11607,33 +11611,25 @@ return @rv;
 sub start_background_dot_printer
 {
 my ($msg, $interval) = @_;
-if (!$ENV{'REQUEST_METHOD'} || uc($ENV{'HTTPS'}) eq "ON") {
+if (!$ENV{'REQUEST_METHOD'}) {
 	# Not in web UI or using SSL (which breaks with background process
 	# printing stuff) so just print message
 	&$first_print($msg) if ($msg);
 	}
 else {
 	$interval ||= 1;
-	&stop_background_dot_printer();
+	$main::background_dot_printer_interval = $interval;
 	my $pid = $$;
 	if ($msg) {
 		&$first_oneline_print($msg);
 		}
-	$| = 1;
+	$SIG{'ALRM'} = sub { if ($main::background_dot_printer_interval) {
+			       print ".";
+			     }
+			     alarm($main::background_dot_printer_interval);
+			   };
+	alarm(1);
 	$main::background_dot_printer_msg = $msg;
-	$main::background_dot_printer_pid = fork();
-	if ($main::background_dot_printer_pid == 0) {
-		untie(*STDIN);
-		untie(*STDERR);
-		open(STDIN, "</dev/null");
-		open(STDERR, ">/dev/null");
-		while(1) {
-			sleep($interval);
-			kill(0, $pid) || last;
-			print ".";
-			}
-		exit(0);
-		}
 	}
 }
 
@@ -11641,15 +11637,25 @@ else {
 # Stop the background process run by start_background_dot_printer
 sub stop_background_dot_printer
 {
-if ($main::background_dot_printer_pid > 0) {
-	kill('KILL', $main::background_dot_printer_pid);
+if ($main::background_dot_printer_interval) {
+	$main::background_dot_printer_interval = 0;
+	alarm(0);
 	if ($main::background_dot_printer_msg) {
 		&$first_endline_print();
 		}
-	waitpid($main::background_dot_printer_pid, WNOHANG);
-	$main::background_dot_printer_pid = undef;
 	$main::background_dot_printer_msg = undef;
 	}
+}
+
+# set_alarm(time)
+# Sets up a default handled alert for some time
+sub set_alarm
+{
+my ($timeout) = @_;
+if ($timeout) {
+	$SIG{'ALRM'} = 'default';
+	}
+alarm($timeout);
 }
 
 # obtain_lock_server(&server|&servers, [readonly])
