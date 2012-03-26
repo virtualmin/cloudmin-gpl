@@ -1526,8 +1526,8 @@ if ($dest->{'mode'} != 1 && $localfile) {
         &start_background_dot_printer(&text('rrun_getting', $server->{'host'},
                                             &nice_backup_destination($dest)));
         my $err = &get_from_backup_dest($vhost, $localfile, $dest);
-	&stop_background_dot_printer();
         if ($err) {
+		&stop_background_dot_printer();
                 return { 'ok' => 0,
                          'msg' => &text('rrun_eget', $err) };
                 }
@@ -1549,6 +1549,7 @@ if ($dest->{'mode'} != 1 && $localfile) {
 		# Only one tar.gz file
 		@statfiles = ( $localfile );
 		}
+	&stop_background_dot_printer();
         }
 elsif ($dest->{'mode'} == 1 && $localfile) {
 	# Files are on the host already
