@@ -11607,8 +11607,9 @@ return @rv;
 sub start_background_dot_printer
 {
 my ($msg, $interval) = @_;
-if (!$ENV{'REQUEST_METHOD'}) {
-	# Not in web UI, so just print message
+if (!$ENV{'REQUEST_METHOD'} || uc($ENV{'HTTPS'}) eq "ON") {
+	# Not in web UI or using SSL (which breaks with background process
+	# printing stuff) so just print message
 	&$first_print($msg) if ($msg);
 	}
 else {
@@ -11618,9 +11619,14 @@ else {
 	if ($msg) {
 		&$first_oneline_print($msg);
 		}
+	$| = 1;
 	$main::background_dot_printer_msg = $msg;
 	$main::background_dot_printer_pid = fork();
 	if ($main::background_dot_printer_pid == 0) {
+		untie(*STDIN);
+		untie(*STDERR);
+		open(STDIN, "</dev/null");
+		open(STDERR, ">/dev/null");
 		while(1) {
 			sleep($interval);
 			kill(0, $pid) || last;
