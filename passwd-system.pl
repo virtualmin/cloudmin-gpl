@@ -79,6 +79,9 @@ while(@ARGV > 0) {
 			&usage("--graphical-pass must be followed by a ".
 			       "password without spaces");
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

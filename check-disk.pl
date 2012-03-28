@@ -60,6 +60,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--virt") {
 		$virt = shift(@ARGV);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

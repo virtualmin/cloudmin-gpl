@@ -87,6 +87,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--backup-exclude") {
 		$include = 0;
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

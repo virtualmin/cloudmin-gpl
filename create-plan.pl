@@ -120,6 +120,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-host-mode") {
 		$hostmode = '';
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	elsif ($a =~ /^\-\-(\S+)$/ && $pfields{$1}) {
 		push(@pset, { 'id' => $1, 'value' => shift(@ARGV) });
 		}

@@ -39,6 +39,9 @@ while(@ARGV > 0) {
 	if ($a eq "--serial") {
 		$serial = shift(@ARGV);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

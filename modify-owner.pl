@@ -106,6 +106,9 @@ while(@ARGV > 0) {
 		&supports_plans() || &usage("The --no-plan-actions flag is not supported");
 		$actions_def = 0;
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	elsif ($a =~ /^--max-(\S+)$/) {
 		$w = $1 eq 'systems' ? 'servers' : $1;
 		&indexof($w, @plan_limit_types) >= 0 ||

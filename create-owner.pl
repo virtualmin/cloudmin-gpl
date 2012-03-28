@@ -102,6 +102,9 @@ while(@ARGV > 0) {
 			       &list_plans();
 		$plan || &usage("No plan with ID or name $planid exists");
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	elsif ($a =~ /^\-\-(\S+)$/ && $pfields{$1}) {
 		push(@pset, { 'id' => $1, 'value' => shift(@ARGV) });
 		}

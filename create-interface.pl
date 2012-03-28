@@ -85,6 +85,9 @@ while(@ARGV > 0) {
 			       "IPv6 address");
 		push(@add6, $address6);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

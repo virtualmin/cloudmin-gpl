@@ -122,6 +122,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--webmin-port") {
 		$webmin_port = shift(@ARGV);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage("Unknown flag $a");
 		}

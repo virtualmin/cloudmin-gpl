@@ -176,6 +176,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
 	elsif ($a eq "--allocate-serial") { $allocate_serial = 1; }
 	elsif ($a eq "--no-check-serial") { $nocheck_serial = 1; }
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
 		$typeargs{$1}->{$2} = shift(@ARGV);

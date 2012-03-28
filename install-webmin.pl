@@ -55,6 +55,9 @@ while(@ARGV > 0) {
         elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--output") { $show_output = 1 }
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

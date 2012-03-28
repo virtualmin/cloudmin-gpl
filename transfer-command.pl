@@ -57,6 +57,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--sourcefile") {
 		$src = shift(@ARGV);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

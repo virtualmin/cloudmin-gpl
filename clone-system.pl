@@ -120,6 +120,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-disk-directory") {
 		$directory = "";
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

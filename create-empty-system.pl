@@ -97,6 +97,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--manual-status") {
 		$manual_status = 1;
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
 		$typeargs{$1}->{$2} = shift(@ARGV);

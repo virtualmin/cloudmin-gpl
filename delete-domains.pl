@@ -68,6 +68,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--host") {
 		$host = shift(@ARGV);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

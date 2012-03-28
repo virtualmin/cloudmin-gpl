@@ -66,6 +66,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
 	elsif ($a eq "--allocate-serial") { $allocate_serial = 1; }
 	elsif ($a eq "--gpl-serial") { $serial = $key = "GPL"; }
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

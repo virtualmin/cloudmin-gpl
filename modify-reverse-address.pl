@@ -51,6 +51,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-name") {
 		$name = '';
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

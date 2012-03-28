@@ -72,6 +72,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--quiet") { $quiet = 1; }
 	elsif ($a eq "--purge") { $purge = shift(@ARGV); }
 	elsif ($a eq "--test") { $test = 1; }
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

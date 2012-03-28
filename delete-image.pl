@@ -37,6 +37,9 @@ while(@ARGV > 0) {
 	if ($a eq "--id") {
 		$id = shift(@ARGV);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

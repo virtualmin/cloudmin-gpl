@@ -54,6 +54,9 @@ while(@ARGV > 0) {
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--help") { &usage(); }
 	elsif ($a eq "--command") { push(@cmd, shift(@ARGV)); }
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		push(@cmd, $a);
 		}

@@ -66,6 +66,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--checksum-size") {
 		$checksumsize = shift(@ARGV);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage();
 		}

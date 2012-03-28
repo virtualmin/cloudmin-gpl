@@ -172,6 +172,9 @@ while(@ARGV > 0) {
 		# Reboot after
 		$do_reboot = 1;
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	else {
 		&usage("Unknown flag $a");
 		}

@@ -110,6 +110,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ip") {
 		$ip = shift(@ARGV);
 		}
+	elsif ($a eq "--multiline") {
+		$multiline = 1;
+		}
 	elsif ($a =~ /^\-\-(\S+)$/ && &indexof($1, @allfeatures) >= 0) {
 		push(@features, $1);
 		}
