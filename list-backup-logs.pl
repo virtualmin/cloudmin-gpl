@@ -67,7 +67,7 @@ while(@ARGV > 0) {
 		$end = &date_to_time(shift(@ARGV));
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

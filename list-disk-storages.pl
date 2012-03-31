@@ -52,7 +52,7 @@ while(@ARGV > 0) {
 		$host = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

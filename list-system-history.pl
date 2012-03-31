@@ -70,7 +70,7 @@ while(@ARGV > 0) {
 		$stat = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

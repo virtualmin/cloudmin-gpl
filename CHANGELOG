@@ -43,3 +43,5 @@ The master administrator can now define custom links that appear on the left men
 KVM virtual systems can now have an IO class set, which controls the priority of their disk IO operations compared to other VMs on the same host.
 The ISO file for a CD attached to a virtual system can now be changed while the system is running.
 Backups now include the details of systems, as well as their disk images. This allows Cloudmin to re-create a deleted system from a backup as part of the restore process. In the UI, this must be done from the Backup Logs page.
+---- Changes since 6.2 ----
+When calling the remote API with the json, perl or xml format flags, multiline mode is automatically enabled so that the output from commands can be correctly parsed. API errors are also returned using the selected format.

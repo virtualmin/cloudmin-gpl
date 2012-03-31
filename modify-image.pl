@@ -78,11 +78,11 @@ while(@ARGV > 0) {
 		$multiline = 1;
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 &set_all_text_print();
-$id || &usage();
+$id || &usage("No image ID specified");
 if ($defstor) {
 	(@addstor || @delstor) && &usage("The --default-storage flag cannot be combined with --add-storage or --remove-storage");
 	}

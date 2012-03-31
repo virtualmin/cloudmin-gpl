@@ -48,7 +48,7 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--help") { &usage(); }
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

@@ -65,7 +65,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
-	else { &usage(); }
+	else {
+		&usage("Unknown parameter $a");
+		}
 	}
 
 # Work out who to refresh

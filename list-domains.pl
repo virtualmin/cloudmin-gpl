@@ -55,7 +55,7 @@ while(@ARGV > 0) {
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--domain") { push(@dnames, shift(@ARGV)); }
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

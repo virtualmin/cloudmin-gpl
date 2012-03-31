@@ -64,7 +64,7 @@ while(@ARGV > 0) {
 		push(@ids, shift(@ARGV));
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

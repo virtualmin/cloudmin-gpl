@@ -41,10 +41,10 @@ while(@ARGV > 0) {
 		$multiline = 1;
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
-$id || &usage();
+$id || &usage("No image ID specified");
 
 # Get the image
 ($image) = grep { $_->{'id'} eq $id } &list_server_images();

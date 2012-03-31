@@ -43,12 +43,12 @@ while(@ARGV > 0) {
 		$multiline = 1;
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 
 # Validate inputs
-$serial || &usage();
+$serial || &usage("No serial number specified");
 @lics = &list_virtualmin_licences();
 ($lic) = grep { $_->{'serial'} eq $serial } @lics;
 $lic || &usage("No license with serial nunber $serial exists");

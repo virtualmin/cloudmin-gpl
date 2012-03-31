@@ -55,7 +55,7 @@ while(@ARGV > 0) {
         elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

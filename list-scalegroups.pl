@@ -47,7 +47,7 @@ while(@ARGV > 0) {
 		$idonly = 1;
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 @scalegroups = &list_scalegroups();

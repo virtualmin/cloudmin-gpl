@@ -105,7 +105,7 @@ while(@ARGV > 0) {
 		$typeargs{$1}->{$2} = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

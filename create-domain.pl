@@ -117,7 +117,7 @@ while(@ARGV > 0) {
 		push(@features, $1);
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

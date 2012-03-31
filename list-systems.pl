@@ -93,7 +93,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--last-period") { $period_ago = 1; }
 	elsif ($a eq "--period-ago") { $period_ago = shift(@ARGV); }
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 if (!@hosts && !@groups && !@types && !@managers && !@owners && !@statuses &&

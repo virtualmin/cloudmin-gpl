@@ -110,7 +110,7 @@ while(@ARGV > 0) {
 		$multiline = 1;
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 $address || $name || &usage("Missing --address or --name parameter");

@@ -13,10 +13,10 @@ while(@ARGV) {
 		$vsyncid = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
-$vsyncid || &usage();
+$vsyncid || &usage("No vsync ID specified");
 $vsync = &get_virtualmin_sync($vsyncid);
 $vsync || &usage("No replication config with ID $vsyncid found");
 $src = &get_managed_server($vsync->{'src'});

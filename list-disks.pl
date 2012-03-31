@@ -50,7 +50,7 @@ while(@ARGV > 0) {
 		$multi = 1;
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

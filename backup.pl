@@ -13,10 +13,10 @@ while(@ARGV) {
 		$backupid = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
-$backupid || &usage();
+$backupid || &usage("No backup ID specified");
 ($backup) = grep { $_->{'id'} eq $backupid } &list_backups();
 $backup || &usage("No backup with ID $backupid found");
 @servers = &get_backup_servers($backup);

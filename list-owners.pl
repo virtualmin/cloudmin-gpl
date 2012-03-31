@@ -59,7 +59,7 @@ while(@ARGV > 0) {
 		$period_ago = shift(@ARGV);
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 

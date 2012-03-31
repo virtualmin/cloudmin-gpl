@@ -50,7 +50,7 @@ while(@ARGV > 0) {
 		$names{lc(shift(@ARGV))} = 1;
 		}
 	else {
-		&usage();
+		&usage("Unknown parameter $a");
 		}
 	}
 &supports_plans() || &usage("This system does not support plans");
