@@ -32,7 +32,7 @@ foreach $l (@links) {
 		$l->{'open'} ? $text{'newlinks_new'} : $text{'newlinks_same'},
 		join(", ", map { $text{'newlinks_'.$_} }
 			      grep { $l->{'who'}->{$_} }
-				   ('master', 'domain', 'reseller') ),
+				   ('master', 'owner') ),
 		$catdesc,
 		@links > 1 ? ( $updown ) : ( ),
 		]);
