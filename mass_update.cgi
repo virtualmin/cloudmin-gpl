@@ -37,35 +37,36 @@ foreach $s (@servers) {
 if (@servers == 1) {
 	# Show each update in series
 	$s = $servers[0];
-	print &text('update_doing', $s->{'host'}, scalar(keys %pkgs)),"<br>\n";
-	print "<ul>\n";
+	&$first_print(&text('update_doing', $s->{'host'}, scalar(keys %pkgs)));
+	&$indent_print();
 	%donedep = ( );
 	@allgot = ( );
-	print &text('update_pkgs',
+	&start_background_dot_printer(&text('update_pkgs',
 	  join(", ", map { &text('update_ver', $_->{'name'}, $_->{'version'}) }
-		         @poss)),"<br>\n";
+		         @poss)));
 	my ($got, $errs) = &install_multiple_package_updates($s, \@poss);
+	&stop_background_dot_printer();
 	if (@$got && !@$errs) {
 		# Worked OK
-		print &text('update_donepkg2',
-			join(" ", map { "<tt>$_</tt>" } @$got)),"<p>\n";
+		&$second_print(&text('update_donepkg2',
+			join(" ", map { "<tt>$_</tt>" } @$got)));
 		push(@allgot, @$got);
 		}
 	elsif (@$got && @$errs) {
 		# Partially worked
-		print &text('update_donepkg3',
+		&$second_print(&text('update_donepkg3',
 			join(" ", map { "<tt>$_</tt>" } @$got),
-			join(" ", @$errs)),"<p>\n";
+			join(" ", @$errs)));
 		push(@allgot, @$got);
 		}
 	else {
 		# Totally failed
-		print &text('update_pkgerr2', join(" ", @$errs)),"<p>\n";
+		&$second_print(&text('update_pkgerr2', join(" ", @$errs)));
 		}
-	print "</ul>\n";
-	print $text{'update_done'},"<p>\n";
+	&$outdent_print();
+	&$second_print($text{'update_done'});
 
-	print $text{'update_statusing'},"<br>\n";
+	&$first_print($text{'update_statusing'});
 	&obtain_lock_server($s);
 	delete($s->{'virtualmin_poss'});
 	delete($s->{'all_poss'});
@@ -73,7 +74,7 @@ if (@servers == 1) {
         &check_server_status($s);
         &save_managed_server($s);
 	&release_lock_server($s);
-	print $text{'update_statusok'},"<p>\n";
+	&$second_print($text{'update_statusok'});
 
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server($s);
@@ -82,43 +83,44 @@ if (@servers == 1) {
 	}
 else {
 	# Run them in parallel, and report on updates done at the end
-	print &text('mass_updoing', scalar(@upservers), $pos),"<br>\n";
-	print "<ul>\n";
+	&start_background_dot_printer(
+		&text('mass_updoing', scalar(@upservers), $pos));
 	@rv = &parallel_install_package_updates(\@upservers, [ values %pkgs ]);
+	&stop_background_dot_printer();
+	&$indent_print();
 	for($i=0; $i<@rv; $i++) {
 		$s = $upservers[$i];
 		if (@{$rv[$i]}) {
-			print &text('mass_upserver',
-				"<tt>$s->{'host'}</tt>"),"<br>\n";
-			print "<ul>\n";
+			&$first_print(&text('mass_upserver',
+				"<tt>$s->{'host'}</tt>"));
+			&$indent_print();
 			$p = $rv[$i]->[0];
-			print &text('update_pkgs',
+			&$first_print(&text('update_pkgs',
 			  join(", ", map { &text('update_ver',
 						 $_->{'name'},
 					         $_->{'version'}) }
-					 @{$p->{'want'}})),"<br>\n";
+					 @{$p->{'want'}})));
 			if (!$p->{'status'}) {
-				print &text('mass_upfailed',
-					    $p->{'error'});
+				&$second_print(&text('mass_upfailed',
+						     $p->{'error'}));
 				}
 			elsif (@{$p->{'updates'}}) {
-				print &text('mass_uplist', 
+				&$second_print(&text('mass_uplist', 
 					join(" ", map { "<tt>$_</tt>" }
-						@{$p->{'updates'}}));
+						@{$p->{'updates'}})));
 				}
 			else {
-				print $text{'mass_upnone'};
+				&$second_print($text{'mass_upnone'});
 				}
-			print "<br>\n";
-			print "</ul>\n";
+			&$outdent_print();
 			}
 		else {
-			print &text('mass_upservernone',
-				    "<tt>$s->{'host'}</tt>"),"<br>\n";
+			&$second_print(&text('mass_upservernone',
+					    "<tt>$s->{'host'}</tt>"));
 			}
 		}
-	print "</ul>\n";
-	print $text{'mass_updone'},"<p>\n";
+	&$outdent_print();
+	&$second_print($text{'mass_updone'});
 
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server();
