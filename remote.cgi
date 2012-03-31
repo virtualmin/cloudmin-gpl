@@ -43,7 +43,7 @@ $format = defined($in{'json'}) ? 'json' :
 # Run the program
 $main::virtualmin_remote_api = 1;
 $ENV{'VIRTUALMIN_REMOTE_API'} = 1;
-$in{'program'} =~ /^[a-z0-9\.-]+$/i || &error($text{'remote_eprogram'});
+$in{'program'} =~ /^[a-z0-9\.-]+$/i || &api_error($text{'remote_eprogram'});
 $cmd = $dir = undef;
 foreach $m ($module_name, @plugins) {
 	$mdir = &module_root_directory($m);
@@ -53,10 +53,11 @@ foreach $m ($module_name, @plugins) {
 		$dir = $mdir;
 		}
 	}
-if (!$cmd) {
-	print "Content-type: text/plain\n\n";
-	print "Remote program $in{'program'} does not exist\n";
-	exit(0);
+$cmd || &api_error(&text('remote_eprogram2', $in{'program'}));
+if ($format) {
+	# Always force multiline format, as JSON output makes no sense
+	# without it
+	$in{'multiline'} = '';
 	}
 
 # Build list of command-line args
@@ -103,3 +104,18 @@ else {
 	print "\n";
 	print "Exit status: $?\n";
 	}
+
+sub api_error
+{
+print "Content-type: text/plain\n\n";
+if ($format) {
+	$data = { 'status' => 'error',
+		  'error' => join("", @_) };
+	$ffunc = "create_".$format."_format";
+	print &$ffunc($data);
+	}
+else {
+	print "ERROR: ",@_,"\n";
+	}
+CORE::exit(0);
+}
