@@ -1620,6 +1620,29 @@ return $err;
 sub put_multiple_files_to_server
 {
 my ($server, $localfiles, $remotedir, $forcessh) = @_;
+
+if (scalar(@$localfiles) > 1000) {
+	# Too many files for one scp command .. break up into chunks of 1000
+	# and copy separately
+	my @leftfiles = @$localfiles;
+	my @errs;
+	while(@leftfiles) {
+		my @chunk;
+		if (scalar(@leftfiles) > 1000) {
+			@chunk = @leftfiles[0 .. 999];
+			@leftfiles = @leftfiles[1000 .. $#leftfiles];
+			}
+		else {
+			@chunk = @leftfiles;
+			@leftfiles = ( );
+			}
+		my $err = &put_multiple_files_to_server(
+				$server, \@chunk, $remotedir, $forcessh);
+		push(@errs, $err) if ($err);
+		}
+	return @errs ? join(" ", @errs) : undef;
+	}
+
 my $pfunc = "type_".$server->{'manager'}."_put_multiple_files";
 if (defined(&$pfunc) && !$forcessh) {
 	# Use type-specific function call
