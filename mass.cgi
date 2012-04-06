@@ -225,14 +225,16 @@ elsif ($in{'script'}) {
 	&ui_print_unbuffered_header(undef, $text{'mass_sctitle'}, "");
 
 	# Find available updates across systems
-	print &text('mass_scgetting', scalar(@servers)),"<br>\n";
+	&start_background_dot_printer(
+		&text('mass_scgetting', scalar(@servers)));
 	@updates = &list_all_script_updates(\@servers);
+	&stop_background_dot_printer();
 
 	# Show a table of them, by script
 	if (@updates) {
 		@scripts = &unique(map { $_->{'script'}->{'name'}."/".
 					 $_->{'ver'} } @updates);
-		print $text{'mass_scdone'},"<p>\n";
+		&$second_print($text{'mass_scdone'});
 		print &ui_form_start("mass_script.cgi", "post");
 		@links = ( &select_all_link("d"), &select_invert_link("d") );
 		@tds = ( "width=5", "width=20%", "width=10%", "width=10%",
@@ -242,7 +244,7 @@ elsif ($in{'script'}) {
 					  $text{'mass_scname'},
 					  $text{'mass_scver'},
 					  $text{'mass_scnewver'},
-					  $text{'mass_scdoms'} ], 100, 1,\@tds);
+					  $text{'mass_scdoms'} ], 100, 0,\@tds);
 		foreach my $namever (@scripts) {
 			($name, $ver) = split(/\//, $namever);
 			@thisname = grep { $_->{'script'}->{'name'} eq $name &&
@@ -269,7 +271,7 @@ elsif ($in{'script'}) {
 		print &ui_form_end([ [ undef, $text{'mass_scok'} ] ]);
 		}
 	else {
-		print $text{'mass_scnone'},"<p>\n";
+		&$second_print($text{'mass_scnone'});
 		}
 
 	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},

@@ -3764,13 +3764,17 @@ for(my $i=0; $i<$procs; $i++) {
 
 # Wait for them all
 eval {
-	&set_alarm($maxtime) if ($maxtime);
-	local $SIG{'ALRM'} = sub { die "timeout\n" };
+	if ($maxtime) {
+		&set_alarm($maxtime);
+		local $SIG{'ALRM'} = sub { die "timeout\n" };
+		}
 	while(@pids) {
 		my $pid = wait();
 		@pids = grep { $_ ne $pid } @pids;
 		}
-	&set_alarm(0);
+	if ($maxtime) {
+		&set_alarm(0);
+		}
 	};
 if ($@ =~ /timeout/) {
 	# Took too long - kill all subprocesses!
