@@ -331,8 +331,8 @@ if (@servers) {
 				elsif ($c eq "bw_usage") {
 					# Bandwidth used
 					$bw = $s->{'bw_usage'};
-					push(@cols, $bw ? &nice_size($bw)
-							: undef);
+					push(@cols, &nice_size($bw));
+
 					}
 				elsif ($c eq "hostsystem") {
 					# Host system
