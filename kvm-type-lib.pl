@@ -3942,7 +3942,7 @@ if (!$iface->{'unknown'}) {
 					   $iface->{'address6'});
 	}
 
-# Change MAC and model address if non-virtual
+# Change MAC address and model if non-virtual
 if ($iface->{'virtual'} eq '') {
 	my @macs = split(/\s+/, $server->{'mac'});
 	my @models = split(/\s+/, $server->{'kvm_model'});
@@ -3960,6 +3960,8 @@ if ($iface->{'virtual'} eq '') {
 	$server->{'mac'} = join(" ", @macs);
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
+	&save_managed_server($server);
+	&type_kvm_set_atboot($server, 2);
 	}
 
 # If bridge changed, update connection between tapN and new bridge
