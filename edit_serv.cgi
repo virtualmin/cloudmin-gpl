@@ -19,6 +19,7 @@ $in{'notes'} = 1 if (!defined($in{'notes'}) && $server->{'notes'});
 if ($view) {
 	&ui_print_header(&server_in($server), $text{'view_title'}, "");
 
+	print &ui_form_start("save_view.cgi", "post");
 	print &ui_hidden_table_start($text{'edit_bheader'}, "width=100%", 2,
 				     "basic", $in{'basic'}, \@tds);
 	}
@@ -26,10 +27,10 @@ else {
 	&ui_print_header(&server_in($server), $text{'edit_title'}, "", "edit");
 
 	print &ui_form_start("save_serv.cgi", "post");
-	print &ui_hidden("id", $in{'id'});
 	print &ui_hidden_table_start($text{'edit_bheader'}, "width=100%", 2,
 				     "basic", $in{'basic'}, \@tds);
 	}
+print &ui_hidden("id", $in{'id'});
 
 # Hostname (editable for anything except this host)
 if ($server->{'id'} != 0 && !$view) {
@@ -74,10 +75,9 @@ $tfunc = "type_".$t."_desc";
 print &ui_table_row($text{'edit_type'}, &$tfunc());
 
 if ($server->{'id'} != 0) {
-	# Description (maybe editable)
+	# Description (always editable)
 	print &ui_table_row($text{'edit_desc'},
-		$view ? $server->{'desc'}
-		      : &ui_textbox("desc", $server->{'desc'}, 50), 3);
+		&ui_textbox("desc", $server->{'desc'}, 50), 3);
 	}
 
 # Kernel info
@@ -91,7 +91,7 @@ if ($k->{'version'}) {
 if ($view) {
 	($os) = grep { $_->[0] eq $server->{'type'} }
 		     @servers::server_types;
-	print &ui_table_row($text{'edit_type2'}, $os->[1].$kfield);
+	print &ui_table_row($text{'edit_type2'}, $os->[1]." : ".$kfield);
 	}
 else {
 	if ($server->{'type'} eq 'unknown' || !$server->{'type'}) {
@@ -493,7 +493,8 @@ if (!$view) {
 # Action buttons at end of form (depends on status)
 $down = $status eq 'down' || $status eq 'nossh' || $status eq 'nohost';
 if ($view) {
-	# No form, so no buttons
+	# Just save button
+	print &ui_form_end([ [ "save", $text{'save'} ] ]);
 	}
 elsif ($main::cloudmin_no_edit_buttons) {
 	# Theme provides it's own action links
