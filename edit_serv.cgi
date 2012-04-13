@@ -47,14 +47,19 @@ if ($server->{'unix_hostname'} &&
 			    "<tt>$server->{'unix_hostname'}</tt>");
 	}
 
-# IP address
+# IP address used by Cloudmin
 if ($server->{'ip_force'} || !&check_ipaddress($server->{'host'})) {
 	$ip = &get_server_ip($server);
-	print &ui_table_row($text{'edit_ipaddr'},
-		&ui_opt_textbox("ip", $server->{'ip_force'}, 20,
+	if ($view) {
+		print &ui_table_row($text{'edit_ipaddr'}, "<tt>$ip</tt>");
+		}
+	else {
+		print &ui_table_row($text{'edit_ipaddr'},
+		    &ui_opt_textbox("ip", $server->{'ip_force'}, 20,
 			$text{'edit_ipaddrauto'}.
 			($server->{'ip_force'} ? "" : " (<tt>$ip</tt>)"),
 			$text{'edit_ipaddrset'}));
+		}
 	}
 
 # IPv6 address
@@ -476,12 +481,14 @@ if (@history > 1) {
 	}
 
 # Section for notes
-print &ui_hidden_table_start($text{'edit_nheader'},
+if (!$view) {
+	print &ui_hidden_table_start($text{'edit_nheader'},
 			     "width=100%", 2, "notes", $in{'notes'}, \@tds);
-print &ui_table_row(undef,
-	&ui_textarea("notes", join("\n", split(/\t/, $server->{'notes'})),
-		     10, 80, undef, 0, "style='width:100%'"), 2);
-print &ui_hidden_table_end("notes");
+	print &ui_table_row(undef,
+	    &ui_textarea("notes", join("\n", split(/\t/, $server->{'notes'})),
+			 10, 80, undef, 0, "style='width:100%'"), 2);
+	print &ui_hidden_table_end("notes");
+	}
 
 # Action buttons at end of form (depends on status)
 $down = $status eq 'down' || $status eq 'nossh' || $status eq 'nohost';

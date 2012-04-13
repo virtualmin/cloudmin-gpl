@@ -4452,11 +4452,11 @@ if (&can_ssh_status($server) &&
 	}
 }
 
-# type_kvm_edit_form(&server)
+# type_kvm_edit_form(&server, [view-only])
 # Show information about some Xen system
 sub type_kvm_edit_form
 {
-my ($server) = @_;
+my ($server, $view) = @_;
 my $rv;
 
 # KVM process ID
@@ -4475,16 +4475,35 @@ if ($server->{'kvm_args'}) {
 $rv .= &ui_table_row($text{'edit_kvmdriver'},
 	$server->{'kvm_virtio'} ? "VirtIO" : "IDE");
 
-# Console keymap
-$rv .= &ui_table_row($text{'edit_kvmkeymap'},
-	&ui_select('kvm_keymap', $server->{'kvm_keymap'},
-		   [ [ '', "&lt;$text{'default'}&gt;" ],
-		     sort { $a->[1] cmp $b->[1] }
-			  &list_kvm_keymaps($server) ]));
+if ($view) {
+	# Console keymap
+	my $keymap;
+	if ($server->{'kvm_keymap'}) {
+		($keymap) = map { $_->[1] }
+			grep { $_->[0] eq $server->{'kvm_keymap'} }
+				&list_kvm_keymaps($server);
+		}
+	else {
+		$keymap = $text{'default'};
+		}
+	$rv .= &ui_table_row($text{'edit_kvmkeymap'}, $keymap);
 
-# High-res graphics?
-$rv .= &ui_table_row($text{'create_kvmvga'},
-	&ui_yesno_radio("kvm_vga", $server->{'kvm_vga'}));
+	# High-res graphics?
+	$rv .= &ui_table_row($text{'create_kvmvga'},
+		$server->{'kvm_vga'} ? $text{'yes'} : $text{'no'});
+	}
+else {
+	# Console keymap
+	$rv .= &ui_table_row($text{'edit_kvmkeymap'},
+		&ui_select('kvm_keymap', $server->{'kvm_keymap'},
+			   [ [ '', "&lt;$text{'default'}&gt;" ],
+			     sort { $a->[1] cmp $b->[1] }
+				  &list_kvm_keymaps($server) ]));
+
+	# High-res graphics?
+	$rv .= &ui_table_row($text{'create_kvmvga'},
+		&ui_yesno_radio("kvm_vga", $server->{'kvm_vga'}));
+	}
 
 return $rv;
 }
