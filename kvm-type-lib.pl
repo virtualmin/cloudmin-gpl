@@ -2829,8 +2829,10 @@ if ($disk->{'media'} eq 'cdrom') {
 my $fserr;
 if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 	my $err = &mount_filesystem_if_needed($server);
-	return "Failed to mount filesystem : $err" if ($err);
-	$err = &make_dir_on_server($server, $disk->{'mount'}, 0755, 1);
+	if ($disk->{'fs'} ne 'swap') {
+		return "Failed to mount filesystem : $err" if ($err);
+		$err = &make_dir_on_server($server, $disk->{'mount'}, 0755, 1);
+		}
 	return "Failed to create mount point : $err" if ($err);
 	my $fstab = &get_system_fstab($server);
 	$fserr = "Failed to read fstab file : $fstab" if (!ref($fstab));
