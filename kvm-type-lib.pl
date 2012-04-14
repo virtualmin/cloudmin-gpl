@@ -1616,7 +1616,8 @@ if (!$empty) {
 	$fsfile = $server->{'kvm_filesystem'};
 	if ($server->{'kvm_disksize'}) {
 		my $dksize = $server->{'kvm_disksize'}*1024*1024;
-		&$first_print(&text('create_xenresize', &nice_size($dksize)));
+		&start_background_dot_printer(
+			&text('create_xenresize', &nice_size($dksize)));
 		my $disks = &type_kvm_list_disks($server, 1);
 		my $disk;
 		if (ref($disks)) {
@@ -1624,6 +1625,7 @@ if (!$empty) {
 					 $server->{'kvm_filesystem'} } @$disks;
 			}
 		if (!$disk || !$disk->{'fs'}) {
+			&stop_background_dot_printer();
 			&$second_print(&text('create_exenresize2'));
 			}
 		else {
@@ -1631,6 +1633,7 @@ if (!$empty) {
 			$disk->{'size'} = $dksize;
 			my $err = &type_kvm_modify_disk($server, $disk,
 							$olddisk);
+			&stop_background_dot_printer();
 			if ($err) {
 				&$second_print(&text('create_exenresize',$err));
 				}       
