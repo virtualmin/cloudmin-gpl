@@ -69,7 +69,7 @@ if (@emails && ($failcount || $backup->{'always'})) {
 			$email,
 			undef,
 			&text($failcount ? 'brun_fsubject' : 'brun_subject',
-			      scalar(@servers), $dstr),
+			      scalar(@servers), &strip_html_tags($dstr)),
 			$report."\n".$capture_print,
 			);
 		}
