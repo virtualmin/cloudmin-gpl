@@ -1163,7 +1163,8 @@ return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'},
 # run_ssh_command(command, password, timeout, [leave-open])
 # Attempts to run some ssh or scp command, giving it a password if needed.
 # Returns 0 on success, 1 if the connection fails, 2 if the password is wrong,
-# or 3 for some other error, 4 for timeout, and the output.
+# or 3 for some other error, 4 for timeout, 5 for command ran but failed,
+# and the output.
 # If the leave-open parameter is given, the loop stops when that message is
 # read, and the still-open file descriptor is returned
 sub run_ssh_command
@@ -1248,7 +1249,7 @@ if ($connect_failed) {
 	return (1, $out);
 	}
 if ($ex) {
-	return (3, $out);
+	return (5, $out, undef, undef, $ex / 256);
 	}
 return (0, $out, $fh, $fpid);
 }
@@ -1292,16 +1293,23 @@ else {
 		$cmd = "exec /bin/sh -c ".quotemeta($cmd);
 		}
 	$sshcmd .= " ".quotemeta($cmd);
-	my ($status, $out, $fh, $fpid) =
+	my ($status, $out, $fh, $fpid, $ex) =
 	    &run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout,
 			     $leave ? "SERVER_MANAGER_LOGIN_DONE" : undef);
 	if ($status == 0) {
+		# Command ran successfully
 		return ($out, 0, undef, $status, $fh, $fpid);
 		}
 	elsif ($status == 3) {
+		# SSH failed
 		return ($out || "Connection failed\n", 1, undef, $status);
 		}
+	elsif ($status == 5) {
+		# Command ran, but failed
+		return ($out, $ex, undef, $status);
+		}
 	else {
+		# SSH failed to login or something
 		return ($out, undef, $text{'status_'.$status}, $status);
 		}
 	}
