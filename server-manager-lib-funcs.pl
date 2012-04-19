@@ -1221,7 +1221,7 @@ eval {
 	if (!$leave) {
 		close($fh);
 		waitpid($fpid, 0);
-		$ex = $?;
+		$ex = $? / 256;
 		}
 	};
 &additional_log('exec', undef, $cmd);
@@ -1248,8 +1248,13 @@ if ($hostkey_failed) {
 if ($connect_failed) {
 	return (1, $out);
 	}
-if ($ex) {
-	return (5, $out, undef, undef, $ex / 256);
+if ($ex == 255) {
+	# SSH connection itself failed
+	return (3, $out);
+	}
+elsif ($ex) {
+	# Remote command failed
+	return (5, $out, undef, undef, $ex);
 	}
 return (0, $out, $fh, $fpid);
 }
