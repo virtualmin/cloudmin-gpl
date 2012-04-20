@@ -531,8 +531,8 @@ if (defined(&$dfunc)) {
 		&open_tempfile(DTEMP, ">$dtemp", 0, 1);
 		&print_tempfile(DTEMP, &serialise_variable($disks));
 		&close_tempfile(DTEMP);
-		my $err = &put_file_to_server($destserver,
-				$dtemp, $disks_dest->{'path'});
+		my $err = &send_to_backup_dest(&get_this_managed_server(),
+					       $dtemp, $disks_dest);
 		if ($err) {
 			&$second_print(&text('brun_serverfailed', $err));
 			}
@@ -2237,12 +2237,16 @@ return $server;
 sub get_missing_backup_server_disks
 {
 my ($hostname, $deststr) = @_;
-my $dest = &parse_backup_destination($deststr);
-my $destserver = &get_backup_dest_server($dest);
-my $out = &get_file_data_from_server($destserver,
-	 $dest->{'path'}."/".$hostname.".disks");
-return undef if (!$out);
-my $disks = &unserialise_variable($out);
+my $disks_deststr = $deststr;
+$disks_deststr .= "/".$hostname.".disks";
+my $disks_dest = &parse_backup_destination($disks_deststr);
+my $temp = &transname();
+my $err = &get_from_backup_dest(&get_this_managed_server(),
+                                $temp,
+                                $disks_dest);
+return undef if ($err);
+my $disks = &unserialise_variable(&read_file_contents($temp));
+&unlink_file($temp);
 return ref($disks) ? $disks : undef;
 }
 
