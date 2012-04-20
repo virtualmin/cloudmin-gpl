@@ -1322,19 +1322,21 @@ else {
 					   $destserver->{'host'}));
         foreach my $dev (@devs) {
 		my $ext = $i ? ".$i" : "";
+		my $err;
 		if ($skipdisks{$dev}) {
 			# Create empty file indicating skip
-			&execute_command_on_server($vhost,
-				"rm -f ".quotemeta($dest->{'path'}.$ext));
-			&execute_command_on_server($vhost,
-				"touch ".quotemeta($dest->{'path'}.$ext));
+			my $empty = &transname();
+			&open_tempfile(EMPTY, ">$empty", 0, 1);
+			&close_tempfile(EMPTY);
+			$err = &put_file_to_server($destserver,
+				$temp, $dest->{'path'}.$ext);
 			}
 		else {
 			# Create gzip file from dd of disk
 			my $ddcmd = &dd_command($dev, undef).
 				    " | gzip -c $config{'zip_args'}";
 			$ddcmd = &niced_backup_command($vhost, $ddcmd);
-			my $err = &pipe_command_to_server(
+			$err = &pipe_command_to_server(
 					$vhost, $destserver, $ddcmd,
 					$dest->{'path'}.$ext);
 			if ($err) {
