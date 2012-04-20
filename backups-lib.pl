@@ -506,8 +506,9 @@ $server_deststr .= $server->{'host'}.".serv";
 my $server_dest = &parse_backup_destination($server_deststr);
 &$first_print(&text('brun_server', $server->{'host'},
                     &nice_backup_destination($server_deststr)));
-my $err = &put_file_to_server($destserver, $server->{'file'},
-					   $server_dest->{'path'});
+my $err = &send_to_backup_dest(&get_this_managed_server(),
+			       $server->{'file'},
+			       $server_dest);
 if ($err) {
 	&$second_print(&text('brun_serverfailed', $err));
 	}
@@ -2212,12 +2213,13 @@ return 1;
 sub get_missing_backup_server
 {
 my ($hostname, $deststr) = @_;
-my $dest = &parse_backup_destination($deststr);
-my $destserver = &get_backup_dest_server($dest);
-return undef if (!$destserver);
+my $server_deststr = $deststr;
+$server_deststr .= "/".$hostname.".serv";
+my $server_dest = &parse_backup_destination($server_deststr);
 my $temp = &transname();
-my $err = &get_file_from_server($destserver,
-		$dest->{'path'}."/".$hostname.".serv", $temp);
+my $err = &get_from_backup_dest(&get_this_managed_server(),
+				$temp,
+				$server_dest);
 return undef if ($err);
 my $server = { };
 &read_file($temp, $server);
