@@ -9357,7 +9357,8 @@ else {
 	}
 if ($loc) {
 	# Have a location, need to pick host from it
-	$vhost = &find_host_from_location($server, $loc, $type, $mem, $disk);
+	$vhost = &find_host_from_location($server, $loc, $type,
+					  $mem, $gmem, $disk);
 	$vhost || &error(&text('create_exenvhostalloc2', $loc->{'desc'}));
 	}
 my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $gmem, $disk);
