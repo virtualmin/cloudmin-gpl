@@ -390,6 +390,7 @@ if (&can_action(undef, "ips")) {
 				&list_vhost_locations(\@vhosts) : ( );
 		my $style = @locs ? "opener_hidden" : "opener_shown";
 		my @allifaces;
+		my $sfx = $empty ? "empty" : "";
 		foreach my $vhost (@vhosts) {
 			my $vtable = &ui_columns_start([
 				$text{'create_xenifacecol'},
@@ -413,7 +414,7 @@ if (&can_action(undef, "ips")) {
 				}
 			$vtable .= &ui_columns_end();
 			$itable .= "<div style=$style ".
-				   "id=$vhost->{'id'}>".$vtable."</div>\n";
+				   "id=$sfx$vhost->{'id'}>".$vtable."</div>\n";
 			}
 		@allifaces = &unique(@allifaces);
 
@@ -436,7 +437,7 @@ if (&can_action(undef, "ips")) {
 				}
 			$vtable .= &ui_columns_end();
 			$itable .= "<div style=opener_shown ".
-				   "id=loc>".$vtable."</div>\n";
+				   "id=${sfx}loc>".$vtable."</div>\n";
 			}
 
 		# Build bridge selector
@@ -462,13 +463,13 @@ if (&can_action(undef, "ips")) {
 		$rv .= "{\n";
 		foreach my $vhost (@vhosts) {
 			$rv .= "var divobj = ".
-			       "document.getElementById('$vhost->{'id'}');\n";
+		           "document.getElementById('$sfx$vhost->{'id'}');\n";
 			$rv .= "divobj.className = id == '$vhost->{'id'}' ? ".
-			       "'opener_shown' : 'opener_hidden';\n";
+			   "'opener_shown' : 'opener_hidden';\n";
 			}
 		$rv .= "var divobj = document.getElementById('loc');\n";
 		$rv .= "if (divobj) {\n";
-		$rv .= "    divobj.className = id == 'loc' ? 'opener_shown' : ".
+		$rv .= "    divobj.className = id == '${sfx}loc' ? 'opener_shown' : ".
 		       "'opener_hidden';\n";
 		$rv .= "    }\n";
 		$rv .= "}\n";
