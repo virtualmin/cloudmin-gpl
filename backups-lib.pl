@@ -1329,7 +1329,7 @@ else {
 			&open_tempfile(EMPTY, ">$empty", 0, 1);
 			&close_tempfile(EMPTY);
 			$err = &put_file_to_server($destserver,
-				$temp, $dest->{'path'}.$ext);
+				$empty, $dest->{'path'}.$ext);
 			}
 		else {
 			# Create gzip file from dd of disk
@@ -1339,10 +1339,10 @@ else {
 			$err = &pipe_command_to_server(
 					$vhost, $destserver, $ddcmd,
 					$dest->{'path'}.$ext);
-			if ($err) {
-				$ddfail = &text('brun_edd', $lvmdevs[0], $err);
-				last;
-				}
+			}
+		if ($err) {
+			$ddfail = &text('brun_edd', $lvmdevs[0], $err);
+			last;
 			}
 		push(@gzfiles, $dest->{'path'}.$ext);
 		$i++;
