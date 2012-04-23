@@ -1176,9 +1176,10 @@ my $out;
 my $ex;
 my ($fh, $fpid);
 eval {
-	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
+	local $oldalrm = $SIG{'ALRM'};
 	if ($timeout) {
+		$SIG{'ALRM'} = sub { die "timeout\n" };
 		&set_alarm($timeout);
 		}
 	($fh, $fpid) = &proc::pty_process_exec($cmd);
@@ -1216,6 +1217,7 @@ eval {
 			}
 		}
 	if ($timeout) {
+		$SIG{'ALRM'} = $oldalrm;
 		&set_alarm(0);
 		}
 	if (!$leave) {
@@ -1226,7 +1228,7 @@ eval {
 	};
 &additional_log('exec', undef, $cmd);
 if ($@) {
-	if ($@ =~ /timeout/) {
+	if ($@ =~ /timeout/ && $timeout) {
 		return (4, "SSH failed to complete in $timeout seconds");
 		}
 	else {

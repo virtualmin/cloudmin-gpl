@@ -1366,11 +1366,20 @@ if ($server->{'kvm_swapfile_vg'}) {
 if ($empty) {
 	my $dksize = $server->{'kvm_disksize'}*1024*1024;
 	if (!$server->{'kvm_filesystem_vg'}) {
+		# Create whole disk file with dd
 		my $cmd = &dd_command("/dev/zero", $fsfile, $dksize);
 		my ($out, $ex, $err) = &execute_command_on_server(
 						$vhost, $cmd);
 		$err = $out if ($ex);
 		$err && return "Failed to create file $disk->{'real'} : $err";
+		}
+	else {
+		# Just empty first 32k
+		my $cmd = &dd_command("/dev/zero", $fsfile, 32768);
+		my ($out, $ex, $err) = &execute_command_on_server(
+						$vhost, $cmd);
+		$err = $out if ($ex);
+		$err && return "Failed to zero out $disk->{'real'} : $err";
 		}
 	my $err = &create_disk_image_partition($vhost, $fsfile,
 					       1, $dksize, 1);
@@ -2713,6 +2722,13 @@ else {
 						  "create_logical_volume", $lv);
 		$err ||= $last_remote_error;
 		return "LVM logical volume creation failed : $err" if ($err);
+
+		# Zero out first 32k
+		my $cmd = &dd_command("/dev/zero", $disk->{'real'}, 32768);
+		my ($out, $ex, $err) = &execute_command_on_server(
+						$vhost, $cmd);
+		$err = $out if ($ex);
+		$err && return "Failed to zero out $disk->{'real'} : $err";
 		}
 	elsif (!@st) {
 		# Create empty file
