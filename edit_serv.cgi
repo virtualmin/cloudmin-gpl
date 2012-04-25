@@ -77,7 +77,7 @@ print &ui_table_row($text{'edit_type'}, &$tfunc());
 if ($server->{'id'} != 0) {
 	# Description (always editable)
 	print &ui_table_row($text{'edit_desc'},
-		&ui_textbox("desc", $server->{'desc'}, 50), 3);
+		&ui_textbox("desc", $server->{'desc'}, 60), 3);
 	}
 
 # Kernel info
