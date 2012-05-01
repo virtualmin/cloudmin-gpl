@@ -6471,8 +6471,10 @@ if (!$server->{'kvm_monitor'}) {
 	}
 my @mlines;
 
-$server->{'kvm_vnc_passwd'} ||= $server->{'ssh_pass'} ||
-			        &generate_random_password(7);
+if ($config{'vnc_passmode'} == 0) {
+	$server->{'kvm_vnc_passwd'} ||= $server->{'ssh_pass'};
+	}
+$server->{'kvm_vnc_passwd'} ||= &generate_random_password(7);
 push(@mlines, "change vnc password");
 push(@mlines, $server->{'kvm_vnc_passwd'});
 
