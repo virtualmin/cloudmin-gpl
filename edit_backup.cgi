@@ -53,7 +53,7 @@ elsif ($mode == 5) {
 	    [ 1, $text{'alert_mode1'},
 	      &ui_multi_select("servers",
 		       [ map { [ $_->{'id'}, $_->{'host'} ] } @servers ],
-		       [ map { [ $_->{'id'}, $_->{'host'} ] } @allservers ],
+		       [ map { [ $_->{'id'}, $_->{'host'} ] } @canservers ],
 		       10, 1, 0, $text{'alert_serveropts'},
 				 $text{'alert_servervals'}) ],
 	  );
