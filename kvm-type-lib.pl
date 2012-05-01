@@ -215,7 +215,7 @@ my ($server, $vhost, $got) = @_;
 
 # Save KVM root disk
 $server->{'kvm_filesystem'} = $got->{'filesystem'};
-if ($got->{'filesystem'} =~ /^\/dev\/([^\S+])\/([^\S+])$/) {
+if ($got->{'filesystem'} =~ /^\/dev\/(\S+)\/(\S+)$/) {
 	$server->{'kvm_filesystem_vg'} = $1;
 	$server->{'kvm_filesystem_lv'} = $2;
 	}
