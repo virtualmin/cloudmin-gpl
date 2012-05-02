@@ -106,7 +106,7 @@ foreach $s (@servers) {
 				print "    CPU limit: ",int($u->{'cpu'}),"\n";
 				}
 			if ($u->{'load'}) {
-				print "    CPU used: ",int($u->{'load'}),"\n";
+				print "    CPU load: ",int($u->{'load'}),"\n";
 				}
 			if ($u->{'disk'}) {
 				print "    Disk limit: $u->{'disk'}\n";
