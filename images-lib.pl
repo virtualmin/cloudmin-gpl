@@ -619,7 +619,7 @@ if (!$err) {
 	}
 
 # Work out files we create regardless of whether the new system has them or not
-my @critcal = ( "/etc/resolv.conf" );
+my @critical = ( "/etc/resolv.conf" );
 if ($server->{'manager'} ne 'zones') {
 	push(@critical, "/etc/hosts");
 	}
@@ -628,7 +628,7 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",
 		 "/etc/sysconfig/network", "/etc/postfix/main.cf",
 		 "/etc/conf.d/hostname", "/etc/mailman/mm_cfg.py") {
-	my $fixpath = "$dir/$fix";
+	my $fixpath = $dir.$fix;
 	my $temppath = &transname();
 
 	# Only do files that exist, apart from /etc/hosts and /etc/resolv.conf
@@ -688,6 +688,12 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
 	$err = &put_file_to_server($vhost, $temppath, $fixpath);
+	if ($err) {
+		# On Ubuntu 12.04, resolv.conf is a link to a directory
+		# that doesn't exist at creation time!?
+		&delete_file_on_server($vhost, $fixpath);
+		$err = &put_file_to_server($vhost, $temppath, $fixpath);
+		}
 	return "Failed to save fixed $fix : $err" if ($err);
 	}
 return undef;
@@ -782,6 +788,18 @@ if (&stat_file_on_server($vhost,
 	$mand{"/etc/sysconfig/network-scripts/ifcfg-$iface"} = 1;
 	}
 
+# Read the resolv.conf file, in case domain or nameservers are needed later
+my ($resolv, $err) = &get_file_data_from_server($vhost, "$dir/etc/resolv.conf");
+my (@nss, @search);
+foreach my $l (split(/\r?\n/, $resolv)) {
+	if ($l =~ /^nameserver\s+(\S+)/) {
+		push(@nss, $1);
+		}
+	elsif ($l =~ /^(domain|search)\s+(.*)/) {
+		push(@search, split(/\s+/, $2));
+		}
+	}
+
 # Fix relevant files
 foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/network/interfaces",
@@ -824,6 +842,7 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		}
 	elsif ($fix eq "/etc/network/interfaces") {
 		# Debian-style config file. Just blow away any existing config
+		my $hasdns = $data =~ /dns-nameservers/ ? 1 : 0;
 		$data = "auto $iface lo\n".
 			"\n".
 			"iface lo inet loopback\n".
@@ -834,6 +853,11 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 			"	broadcast $broadcast\n".
 			"	network $network\n".
 			($gw ? "	gateway $gw\n" : "").
+			($hasdns && @nss ?
+				"        dns-nameservers ".
+				join(" ", @nss)."\n" : "").
+			($hasdns ? join("", map { "        dns-domain $_\n" }
+						@search) : "").
 			"\n";
 		}
 	elsif ($fix eq "/etc/conf.d/net") {
