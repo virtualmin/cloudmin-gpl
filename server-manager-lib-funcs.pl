@@ -8085,9 +8085,7 @@ $server->{$pfx."_cidr"} = join(" ", @cidrs);
 if (@gws || @ifaces) {
 	$server->{$pfx."_gws"} = join(" ", @gws);
 	}
-if (@ifaces) {
-	$server->{$pfx."_ifaces"} = join(" ", @ifaces);
-	}
+$server->{$pfx."_ifaces"} = join(" ", @ifaces);
 }
 
 # show_ip6_range_input(&server, prefix, show-gateways, &possible-ifaces)

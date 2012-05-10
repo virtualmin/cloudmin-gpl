@@ -101,31 +101,26 @@ print &ui_hidden_table_start($text{'kvm_nheader'}, "width=100%", 2, "net", 0);
 
 # IP allocation range and CIDR
 @possifaces = &list_kvm_host_bridges($kvm);
-if (!@possifaces) {
-	# Don't know host yet, so just use fixed list
-	@possifaces = ( "br0", "br1" );
-	}
 @hostifaces = split(/\s+/, $kvm->{'kvm_iface'});
 @allocifaces = &unique(@possifaces, @hostifaces);
+$multi_ifaces = @possifaces > 1 || $kvm->{'kvm_iface'};
 print &ui_table_row($text{'kvm_range'},
-	&show_ip_range_input($kvm, "kvm", 1, \@allocifaces));
+	&show_ip_range_input($kvm, "kvm", 1,
+			     $multi_ifaces ? \@allocifaces : undef));
 
 # Show IPv6 allocation ranges, if any
-$input6 = &show_ip6_range_input($kvm, "kvm", 1, \@allocifaces);
+$input6 = &show_ip6_range_input($kvm, "kvm", 1,
+				$multi_ifaces ? \@allocifaces : undef);
 print &ui_table_row($text{'kvm_range6'}, $input6) if ($input6);
 
 # Network interfaces to use on host system
-if (@possifaces > 1 || @hostifaces > 1) {
+if ($multi_ifaces) {
 	print &ui_table_row($text{'kvm_iface'},
 		&ui_radio("iface_def", scalar(@hostifaces) ? 0 : 1,
 			  [ [ 1, $text{'kvm_iface1'} ],
 			    [ 0, $text{'kvm_iface0'} ] ])."<br>\n".
 		&ui_select("iface", \@hostifaces, \@possifaces,
 			   scalar(@possifaces), 1, 1));
-	}
-else {
-	# No need to change setting
-	print &ui_hidden("iface", $kvm->{'kvm_iface'});
 	}
 
 # Source resolv.conf file
