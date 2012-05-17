@@ -500,25 +500,27 @@ else {
 	}
 
 # Save system details, for use when restoring
-my $server_deststr = $deststr;
-$server_deststr =~ s/\/[^\/]+$/\//;
-$server_deststr .= $server->{'host'}.".serv";
-my $server_dest = &parse_backup_destination($server_deststr);
-&$first_print(&text('brun_server', $server->{'host'},
-                    &nice_backup_destination($server_deststr)));
-my $err = &send_to_backup_dest(&get_this_managed_server(),
-			       $server->{'file'},
-			       $server_dest);
-if ($err) {
-	&$second_print(&text('brun_serverfailed', $err));
-	}
-else {
-	&$second_print($text{'create_done'});
+if ($rv->{'ok'}) {
+	my $server_deststr = $deststr;
+	$server_deststr =~ s/\/[^\/]+$/\//;
+	$server_deststr .= $server->{'host'}.".serv";
+	my $server_dest = &parse_backup_destination($server_deststr);
+	&$first_print(&text('brun_server', $server->{'host'},
+			    &nice_backup_destination($server_deststr)));
+	my $err = &send_to_backup_dest(&get_this_managed_server(),
+				       $server->{'file'},
+				       $server_dest);
+	if ($err) {
+		&$second_print(&text('brun_serverfailed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 	}
 
 # If more than one disk, save dump of disk details in a separate file
 my $dfunc = "type_".$server->{'manager'}."_list_disks";
-if (defined(&$dfunc)) {
+if ($rv->{'ok'} && defined(&$dfunc)) {
 	my $disks = &$dfunc($server);
 	if (ref($disks) && @$disks > 1) {
 		my $dtemp = &transname();
@@ -583,7 +585,6 @@ elsif ($dest->{'mode'} == 3) {
 	return { 'id' => &server_id(),
 		 'ssh_protocol' => 2,
 		 'host' => $dest->{'host'},
-		 'ip' => &to_ipaddress($dest->{'host'}) || $dest->{'host'},
 		 'ssh_user' => $dest->{'user'},
 		 'ssh_pass' => $dest->{'pass'},
 		 'ssh_port' => $dest->{'port'},
