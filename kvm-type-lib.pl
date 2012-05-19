@@ -5508,7 +5508,7 @@ foreach my $proc (@$instances) {
 		&$second_print($text{'find_kvmfs'});
 		next;
 		}
-	my $parts = &list_disk_image_partitions($vhost, $got->{'filesystem'});
+	my $parts = &list_disk_image_partitions($vhost, $proc->{'filesystem'});
 	if (!ref($parts) || !@$parts) {
 		my ($out, $ex, $err) = &execute_command_on_server($vhost, 
 			"qemu-img info ".quotemeta($proc->{'filesystem'}));
