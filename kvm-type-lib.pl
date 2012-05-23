@@ -1923,7 +1923,7 @@ if ($server->{'kvm_pause'}) {
 	delete($server->{'kvm_pause'});
 	}
 
-if (&can_ssh_status($server)) {
+if (&can_ssh_status($server) && !$force) {
 	# Sync filesystems first, to avoid corruption
 	&execute_command_on_server($server, "sync ; sync ; sync", 5);
 	}
