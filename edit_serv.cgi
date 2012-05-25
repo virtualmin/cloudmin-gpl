@@ -188,6 +188,23 @@ if ($view && defined(&$rfunc) && $config{'bw_enabled'}) {
 		&bandwidth_usage_message($server));
 	}
 
+# Operation in progress, if any
+$lock = &get_lock_on_server($server);
+if ($lock) {
+	$nice = &nice_hour_mins_secs(time() - $lock->{'time'});
+	if ($lock->{'safe'} && &can_action($server, "global")) {
+		$killbutton = " ".&ui_button($text{'edit_lockkill'}, undef, 0,
+			"onClick='window.location = ".
+			"\"kill.cgi?id=$server->{'id'}\"'");
+		}
+	print &ui_table_row($text{'edit_lock'},
+		$lock->{'unknown'} ? $text{'edit_lockunknown'} :
+		!$lock->{'short'} ? &text('edit_lockpid', $lock->{'pid'})
+				  : &text('edit_lockcmd',
+					  "<tt>$lock->{'short'}</tt>", $nice).
+				    $killbutton);
+	}
+
 print &ui_hidden_table_end("basic");
 
 if ($status eq 'virt' || $status eq 'novirt') {

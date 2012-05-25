@@ -1145,6 +1145,11 @@ edit_link_reverse=Reverse Addresses
 edit_link_limits=Resource Limits
 edit_link_view=System Details
 edit_showpass=Show..
+edit_lock=System locked by
+edit_lockunknown=Unknown operation!
+edit_lockpid=Process with PID $1
+edit_lockcmd=Command $1, running for $2
+edit_lockkill=Kill Process
 
 update_title=Update Packages
 update_hostlist=Packages will be updated on : $1

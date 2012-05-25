@@ -11773,6 +11773,72 @@ else {
 	}
 }
 
+# get_lock_on_server(&server)
+# If a system is locked due to a pending operation, return a hash ref of
+# details about the lock. Keys are :
+# pid - Process ID of the locker
+# time - Time the lock was made
+# cmd - Full command line for the process, if available
+# safe - Can this be safely killed?
+sub get_lock_on_server
+{
+my ($server) = @_;
+my $sfile = $servers::module_config_directory."/".$server->{'id'}.".serv";
+if (!&test_lock($sfile)) {
+	return undef;
+	}
+my $lfile = $sfile.".lock";
+my $pid = &read_file_contents($lfile);
+$pid = int($pid);
+return { 'unknown' => 1 } if (!$pid);
+my @st = stat($lfile);
+my $lock = { 'pid' => $pid,
+	     'time' => $st[9] };
+if (&foreign_check("proc")) {
+	&foreign_require("proc");
+	my ($proc) = &proc::list_processes($pid);
+	if ($proc) {
+		$lock->{'args'} = $proc->{'args'};
+		my @a = split(/\s+/, $proc->{'args'});
+		shift(@a) if ($a[0] =~ /perl$/);
+		$lock->{'cmd'} = $a[0];
+		$lock->{'cmd'} =~ /([^\/]+)$/;
+		$lock->{'short'} = $1;
+		foreach my $s (&list_totally_safe_commands()) {
+			$lock->{'safe'} = 2 if ($lock->{'short'} =~ /$s/);
+			}
+		foreach my $s (&list_mostly_safe_commands()) {
+			$lock->{'safe'} = 1 if ($lock->{'short'} =~ /$s/);
+			}
+		}
+	}
+return $lock;
+}
+
+# list_totally_safe_commands()
+# Returns a list of commands that can be interrupted with complete safety
+sub list_totally_safe_commands
+{
+return ("status.pl", "refresh-systems.pl", "bandwidth.pl");
+}
+
+# list_mostly_safe_commands()
+# Returns a list of commands that can be interrupted but may leave the system
+# in an inconsistent state
+sub list_mostly_safe_commands
+{
+return ("backup.cgi", "create_domain.cgi", "mass.cgi", "mass_domains.cgi",
+	"mass_update.cgi", "pause.cgi", "restore_domain.cgi",
+	"save_bwifaces.cgi", "save_diskdir.cgi", "save_view.cgi",
+	"save_serv.cgi", "set_default.cgi", "unpause.cgi",
+	"save_(xen|kvm|zones|lxc|vserver|openvz|citrix).cgi",
+	"create-domain.pl", "create-ec2-image.pl", "delete-domains.pl",
+	"disable-domains.pl", "enable-domains.pl", "install-virtualmin.pl",
+	"install-webmin.pl", "modify-system.pl", "pause-system.pl",
+	"reboot-system.pl", "shutdown-system.pl", "startup-system.pl",
+	"unpause-system.pl", "update-systems.pl");
+}
+
 # obtain_lock_anything()
 # Should be called before any state-changing action
 sub obtain_lock_anything
