@@ -11808,7 +11808,8 @@ if (&foreign_check("proc")) {
 			$lock->{'safe'} = 2 if ($lock->{'short'} =~ /$s/);
 			}
 		foreach my $s (&list_mostly_safe_commands()) {
-			$lock->{'safe'} = 1 if ($lock->{'short'} =~ /$s/);
+			$lock->{'safe'} = 1 if ($lock->{'short'} =~ /$s/ &&
+						!$lock->{'safe'});
 			}
 		}
 	}

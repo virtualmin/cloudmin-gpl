@@ -3704,6 +3704,7 @@ log_undefault_server=Removed system $1 as default host for $3
 log_host_server=Saved $3 host system $1
 log_unhost_server=Un-registered $3 host system $1
 log_diskdir_server=Changed default disk directory for system $1
+log_kill_server=Killed the lock on system $1
 log_refresh_servers=Refreshed $1 systems
 log_refresh_servers_l=Refreshed $1 systems : $2
 log_delete_servers=Deleted $1 systems
@@ -5020,6 +5021,11 @@ elink_plans0=Master admin and owners on plans ..
 sub_HOST=The virtual system's hostname
 sub_IP=The virtual system's primary IP address
 sub_SSH_USER=The username Cloudmin uses to SSH into the system
+
+kill_title=Kill Process
+kill_safe=Are you sure you want to terminate the Cloudmin process $2 with PID $1, which is holding a lock on this system?
+kill_warn=This command is currently performing an operation on the system, but it can be safely interrupted.
+kill_ok=Kill Now
 
 __norefs=1
 
