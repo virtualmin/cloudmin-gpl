@@ -5390,7 +5390,11 @@ my ($server) = @_;
 
 # Check if the installer is still running
 my $temp = $server->{'virtualmin_temp'};
-my ($out) = &execute_command_on_server($server, "fuser $temp");
+my ($out, $ex, $err) = &execute_command_on_server($server, "fuser $temp");
+if ($err) {
+	# SSH failed, so try again
+	return undef;
+	}
 my @pids;
 while($out =~ /(\d+)(.*)/) {
 	push(@pids, $1);
