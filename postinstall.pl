@@ -22,9 +22,7 @@ $config{'first_version'} ||= &get_base_module_version();
 
 # Setup Cron job to check managed server statuses
 &foreign_require("cron", "cron-lib.pl");
-my ($job) = grep { $_->{'user'} eq 'root' &&
-		      $_->{'command'} eq $check_status_cmd }
-		    &cron::list_cron_jobs();
+my $job = &find_server_manager_cron_job($check_status_cmd);
 if (!$job) {
 	$job = { 'command' => $check_status_cmd,
 		 'user' => 'root',
@@ -39,9 +37,7 @@ if (!$job) {
 	}
 
 # And cron job to check licence
-my ($job) = grep { $_->{'user'} eq 'root' &&
-		      $_->{'command'} eq $check_licence_cmd }
-		    &cron::list_cron_jobs();
+my $job = &find_server_manager_cron_job($check_licence_cmd);
 if (!$job) {
 	$job = { 'command' => $check_licence_cmd,
 		 'user' => 'root',
@@ -89,9 +85,7 @@ if (&supports_plans()) {
 
 # Create cron job to count owner's backup space used
 if (defined(&list_backups)) {
-	my ($job) = grep { $_->{'user'} eq 'root' &&
-			      $_->{'command'} eq $backup_space_cmd }
-			    &cron::list_cron_jobs();
+	my $job = &find_server_manager_cron_job($backup_space_cmd);
 	if (!$job) {
 		$job = { 'command' => $backup_space_cmd,
 			 'user' => 'root',
