@@ -507,6 +507,11 @@ if ($rv->{'ok'}) {
 	my $server_dest = &parse_backup_destination($server_deststr);
 	&$first_print(&text('brun_server', $server->{'host'},
 			    &nice_backup_destination($server_deststr)));
+	if ($server_dest->{'mode'} == 1) {
+		# Set vhost as dest system
+		$server_dest->{'mode'} = 2;
+		$server_dest->{'id'} = $vhost->{'id'};
+		}
 	my $err = &send_to_backup_dest(&get_this_managed_server(),
 				       $server->{'file'},
 				       $server_dest);
@@ -533,6 +538,11 @@ if ($rv->{'ok'} && defined(&$dfunc)) {
 		&open_tempfile(DTEMP, ">$dtemp", 0, 1);
 		&print_tempfile(DTEMP, &serialise_variable($disks));
 		&close_tempfile(DTEMP);
+		if ($disks_dest->{'mode'} == 1) {
+			# Set vhost as dest system
+			$disks_dest->{'mode'} = 2;
+			$disks_dest->{'id'} = $vhost->{'id'};
+			}
 		my $err = &send_to_backup_dest(&get_this_managed_server(),
 					       $dtemp, $disks_dest);
 		if ($err) {
