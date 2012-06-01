@@ -119,6 +119,11 @@ foreach $s (@allservers) {
 		}
 	}
 
+# Find IPs for DHCP
+if (&foreign_installed("dhcpd")) {
+	# XXX
+	}
+
 # For IPs that might be free, parallel ping them. Unless
 # there are more than 1024
 @ips = keys %ips;
