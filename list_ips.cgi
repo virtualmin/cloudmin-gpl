@@ -128,9 +128,9 @@ if (&foreign_installed("dhcpd")) {
 		push(@subnets, &dhcpd::find("subnet", $shared->{'members'}));
 		}
 	foreach $subnet (@subnets) {
-		@ranges = &find("range", $subnet->{'members'});
-		foreach $pool (&find("pool", $subnet->{'members'})) {
-			push(@ranges, &find("range", $pool->{'members'}));
+		@ranges = &dhcpd::find("range", $subnet->{'members'});
+		foreach $pool (&dhcpd::find("pool", $subnet->{'members'})) {
+			push(@ranges, &dhcpd::find("range", $pool->{'members'}));
 			}
 		foreach $range (@ranges) {
 			local @rv = @{$range->{'values'}};
