@@ -121,7 +121,25 @@ foreach $s (@allservers) {
 
 # Find IPs for DHCP
 if (&foreign_installed("dhcpd")) {
-	# XXX
+	&foreign_require("dhcpd");
+	$conf = &dhcpd::get_config();
+	@subnets = &dhcpd::find("subnet", $conf);
+	foreach $shared (&dhcpd::find("shared-network", $conf)) {
+		push(@subnets, &dhcpd::find("subnet", $shared->{'members'}));
+		}
+	foreach $subnet (@subnets) {
+		@ranges = &find("range", $subnet->{'members'});
+		foreach $pool (&find("pool", $subnet->{'members'})) {
+			push(@ranges, &find("range", $pool->{'members'}));
+			}
+		foreach $range (@ranges) {
+			local @rv = @{$range->{'values'}};
+			shift(@rv) if ($rv[0] eq "dynamic-bootp");
+			foreach $ip (&dhcpd::expand_ip_range($rv[0], $rv[1])) {
+				$ips{$ip} ||= { 'dhcpd' => 1 };
+				}
+			}
+		}
 	}
 
 # For IPs that might be free, parallel ping them. Unless
@@ -217,6 +235,7 @@ else {
 	foreach $ip (@ips) {
 		$s = $ips{$ip}->{'server'};
 		$p = $ips{$ip}->{'ping'};
+		$d = $ips{$ip}->{'dhcpd'};
 		@hosts = sort { $a cmp $b }
 			      map { $idmap{$_}->{'host'} }
 				  &unique(@{$ips{$ip}->{'hosts'}});
@@ -234,6 +253,7 @@ else {
 			$s ? "<a href='edit_serv.cgi?id=$s->{'id'}'>".
 			     "$s->{'host'}</a>" :
 			 $p > 0 ? $text{'ips_ping'} :
+			 $d ? $text{'ips_dhcpd'} :
 			 $p < 0 ? $text{'ips_unalloc'} :
 				  $text{'ips_free'},
 			!$oc ? ( ) :

@@ -4247,6 +4247,7 @@ ips_owner=Owner
 ips_host=Host systems
 ips_free=Free
 ips_ping=In Use
+ips_dhcpd=For DHCP
 ips_unalloc=Unallocated
 ips_tabips=IP addresses in use
 ips_tabranges=IP ranges in use
