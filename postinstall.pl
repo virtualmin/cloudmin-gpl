@@ -55,7 +55,7 @@ if (!$job) {
 if ($config{'show_this'}) {
 	my $server = &get_this_managed_server();
 	if ($server) {
-		&check_server_status($server);
+		&check_server_status($server, 0, 1);
 		&save_managed_server($server);
 		}
 	}
