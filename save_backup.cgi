@@ -118,7 +118,6 @@ else {
 		delete($backup->{'purge'});
 		}
 	else {
-		$backup->{'dest'} || &error($text{'backup_epurgehost'});
 		($base, $date) = &extract_purge_path($backup->{'dest'});
 		$base || &error($text{'backup_epurgedate'});
 		$in{'purge'} =~ /^[0-9\.]+$/ && $in{'purge'} > 0 ||

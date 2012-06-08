@@ -336,28 +336,46 @@ else {
 	}
 
 # Purge old date-based backups
-if ($backup->{'purge'} && $backup->{'dest'}) {
-	my ($base, $re) = &extract_purge_path($backup->{'dest'});
-	&$first_print(&text('brun_purging', $backup->{'purge'}, $base));
-	if ($failed) {
-		# Skip because some backups failed
-		&$second_print($text{'brun_purgeskip'});
+if ($backup->{'purge'}) {
+	# Work out all destinations to purge
+	my @purgedests;
+	if ($backup->{'dest'}) {
+		@purgedests = ( $backup->{'dest'} );
 		}
 	else {
-		# Do the purge
-		&$indent_print();
-		my $err = &purge_old_backups($backup->{'dest'},
-					     $backup->{'purge'});
-		&$outdent_print();
-		if ($err !~ /^\d+$/) {
-			&$second_print(&text('brun_purgefailed', $err));
+		foreach my $s (@servers) {
+			my $vhost = &get_parent_server($s);
+			if ($vhost && $vhost->{'backup_default'}) {
+				push(@purgedests, $vhost->{'backup_default'});
+				}
 			}
-		elsif ($err) {
-			&$second_print(&text('brun_purgedone',
-					     &nice_size($err)));
+		@purgedests = &unique(@purgedests);
+		}
+
+	# Run purge on each one
+	foreach my $purgedest (@purgedests) {
+		my ($base, $re) = &extract_purge_path($purgedest);
+		&$first_print(&text('brun_purging', $backup->{'purge'}, $base));
+		if ($failed) {
+			# Skip because some backups failed
+			&$second_print($text{'brun_purgeskip'});
 			}
 		else {
-			&$second_print($text{'brun_purgenone'});
+			# Do the purge
+			&$indent_print();
+			my $err = &purge_old_backups($purgedest,
+						     $backup->{'purge'});
+			&$outdent_print();
+			if ($err !~ /^\d+$/) {
+				&$second_print(&text('brun_purgefailed', $err));
+				}
+			elsif ($err) {
+				&$second_print(&text('brun_purgedone',
+						     &nice_size($err)));
+				}
+			else {
+				&$second_print($text{'brun_purgenone'});
+				}
 			}
 		}
 	}
