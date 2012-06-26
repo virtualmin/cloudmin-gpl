@@ -4424,16 +4424,20 @@ my ($server, $regen) = @_;
 if ($server->{'kvm_vg'} &&
     ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt')) {
 	&remote_foreign_require($server, "lvm", "lvm-lib.pl");
-	my ($vg) = grep { $_->{'name'} eq $server->{'kvm_vg'} }
-		   &remote_foreign_call($server, "lvm", "list_volume_groups");
-	if ($vg) {
-		$server->{'kvm_vg_total'} =
-			$vg->{'pe_total'}*$vg->{'pe_size'}*1024;
-		$server->{'kvm_vg_used'} =
-			$vg->{'pe_alloc'}*$vg->{'pe_size'}*1024;
-		$server->{'kvm_vg_free'} = $server->{'kvm_vg_total'} -
-					   $server->{'kvm_vg_used'};
+	my @vgs = grep { $_->{'name'} eq $server->{'kvm_vg'} }
+                   &remote_foreign_call($server, "lvm", "list_volume_groups");
+	if (@vgs) {
+		$server->{'kvm_vg_total'} = 0;
+		$server->{'kvm_vg_used'} = 0;
 		}
+	foreach my $vg (@vgs) {
+		$server->{'kvm_vg_total'} +=
+			$vg->{'pe_total'}*$vg->{'pe_size'}*1024;
+		$server->{'kvm_vg_used'} +=
+			$vg->{'pe_alloc'}*$vg->{'pe_size'}*1024;
+		}
+	$server->{'kvm_vg_free'} = $server->{'kvm_vg_total'} -
+				   $server->{'kvm_vg_used'};
 	}
 elsif (!$server->{'kvm_vg'}) {
 	# LVM definately not in use .. check disk space on the /kvm directory
