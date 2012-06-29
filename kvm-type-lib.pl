@@ -2569,6 +2569,15 @@ if ($mounts == 2 && &can_ssh_status($server)) {
 return \@rv;
 }
 
+# type_kvm_list_disk_partitions(&server, &disk)
+# Returns an array ref of partitions on some disk
+sub type_kvm_list_disk_partitions
+{
+my ($server, $disk) = @_;
+my $vhost = &type_kvm_parent($server);
+return &list_disk_image_partitions($vhost, $disk->{'real'});
+}
+
 # type_kvm_list_disk_devices(&server)
 # Quick function to return just the list of disk files a KVM instances uses
 sub type_kvm_list_disk_devices
@@ -3077,7 +3086,7 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		}
 
 	# Delete the last partition, then re-create it
-	if ($part) {
+	if ($part && $server->{'type'} ne 'windows' && $part->{'type'} ne '7') {
 		push(@cmds, "parted -s ".quotemeta($disk->{'real'})." rm ".
 			    $part->{'part'});
 		push(@cmds, "parted -s ".quotemeta($disk->{'real'})." mkpart ".

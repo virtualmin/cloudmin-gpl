@@ -73,6 +73,7 @@ if (!ref($disks) && $multi) {
 	$disks = &$dfunc($server, 0);
 	}
 ref($disks) || &usage("Failed to list disks : $disks");
+$pfunc = "type_".$server->{'manager'}."_list_disk_partitions";
 
 if ($multi) {
 	# Show one per block
@@ -120,6 +121,22 @@ if ($multi) {
 			print "    Size: $d->{'size'}\n";
 			print "    Nice size: ",&nice_size($d->{'size'}),"\n";
 			}
+
+		if ($d->{'format'} eq 'disk' && defined(&$pfunc)) {
+			$parts = &$pfunc($server, $d);
+			if (ref($parts)) {
+				foreach my $p (@$parts) {
+					print "    Partition $p->{'part'}: ",
+					      "range ",
+					      $p->{'start'},"-",$p->{'end'},
+					      " size ",
+					      &nice_size($p->{'size_bytes'}),
+					      " blocks ",$p->{'blocks'},
+					      " type ",$p->{'type'},"\n";
+					}
+				}
+			}
+
 		if ($d->{'df_size'}) {
 			print "    Filesystem size: $d->{'df_size'}\n";
 			print "    Filesystem used: $d->{'df_used'}\n";
