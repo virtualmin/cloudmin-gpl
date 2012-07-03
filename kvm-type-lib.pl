@@ -2630,6 +2630,11 @@ my $rv = { };
 my %used;
 foreach my $d (@$disks) {
 	$used{$d->{'virt'}}++;
+	if ($d->{'virt'} =~ /^(\/dev\/(s|h|v)d)([a-z])$/) {
+		$used{"/dev/sd".$3}++;
+		$used{"/dev/hd".$3}++;
+		$used{"/dev/vd".$3}++;
+		}
 	}
 $used{"/dev/hdc"}++;	# Typically for CD-ROM
 
