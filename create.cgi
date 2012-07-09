@@ -206,12 +206,13 @@ if ($server->{'directory'}) {
 	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'create_title'}, "");
-&obtain_lock_server($server);
 
 # Run pre-creation script
 if (!&run_system_script($server, 'before', 'create')) {
 	goto END;
 	}
+
+&obtain_lock_server($server);
 
 if ($serial) {
 	# Mark this key as in-use

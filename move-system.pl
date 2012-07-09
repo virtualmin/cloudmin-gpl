@@ -131,6 +131,8 @@ $can = &$cfunc($server, $dest);
 $can || &usage("The selected system cannot be moved to the new host");
 $can == 3 && !$manual && &usage("Only a manual move is possible");
 
+&run_system_script($server, 'before', 'move') || exit(2);
+
 &obtain_lock_server($dest);
 &obtain_lock_server($server);
 if ($manual) {
@@ -143,6 +145,7 @@ else {
 	print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
 	$err = &move_system($server, $dest, $shutdown, $allocate, $directory);
 	}
+&run_system_script($server, 'after', 'move');
 &release_lock_server($server);
 &release_lock_server($dest);
 if ($err) {
