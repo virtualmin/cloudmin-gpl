@@ -1360,7 +1360,7 @@ else {
 	if ($server->{'ssh_port'}) {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
-	$sshcmd .= &ssh_command_args();
+	$sshcmd .= &ssh_command_args($server);
 	$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}:".
 		   quotemeta($remotefile);
 	if (-d $localfile && &is_dir_on_server($server, $remotefile)) {
@@ -1445,20 +1445,21 @@ if ($server->{'ssh_port'}) {
 	$sshcmd .= " -p ".$server->{'ssh_port'};
 	}
 $sshcmd .= " ".$extra if ($extra);
-$sshcmd .= &ssh_command_args();
+$sshcmd .= &ssh_command_args($server);
 $sshcmd .= " $server->{'ssh_user'}\@".($server->{'ip'} || $server->{'host'});
 return $sshcmd;
 }
 
-# ssh_command_args()
+# ssh_command_args(&server)
 # Returns extra args for the ssh command for compression and/or encryption
 sub ssh_command_args
 {
+my ($server) = @_;
 my $rv;
 if ($config{'ssh_compress'}) {
 	$rv .= " -C";
 	}
-my $ciphers = $config{'ssh_ciphers'};
+my $ciphers = $server->{'ssh_ciphers'} || $config{'ssh_ciphers'};
 if ($ciphers && $ciphers ne '*') {
 	$ciphers =~ s/_/-/g;
 	$rv .= " -c ".quotemeta($ciphers);
@@ -1602,7 +1603,7 @@ else {
 	if ($server->{'ssh_port'}) {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
-	$sshcmd .= &ssh_command_args();
+	$sshcmd .= &ssh_command_args($server);
 	$sshcmd .= " ".quotemeta($localfile);
 	if (-d $localfile && &is_dir_on_server($server, $remotefile)) {
 		$sshcmd .= "/*";
@@ -1681,7 +1682,7 @@ if ($server->{'key'}) {
 if ($server->{'ssh_port'}) {
 	$sshcmd .= " -P ".$server->{'ssh_port'};
 	}
-$sshcmd .= &ssh_command_args();
+$sshcmd .= &ssh_command_args($server);
 $sshcmd .= " ".join(" ", map { quotemeta($_) } @$localfiles).
 	   " $server->{'ssh_user'}\@".
 	   ($server->{'ip'} || $server->{'host'}).":".
@@ -1755,7 +1756,7 @@ else {
 		if ($destserver->{'ssh_port'}) {
 			$sshcmd .= " -p ".$destserver->{'ssh_port'};
 			}
-		$sshcmd .= &ssh_command_args();
+		$sshcmd .= &ssh_command_args($server);
 		$sshcmd .= " $destserver->{'ssh_user'}\@".
 			   ($destserver->{'ip'} || $destserver->{'host'});
 		$sshcmd .= " ".&dd_command(undef, $dest);
@@ -1770,7 +1771,7 @@ else {
 		if ($destserver->{'ssh_port'}) {
 			$sshcmd .= " -P ".$destserver->{'ssh_port'};
 			}
-		$sshcmd .= &ssh_command_args();
+		$sshcmd .= &ssh_command_args($server);
 		$sshcmd .= " ".quotemeta($src);
 		if ($srcisdir && $destisdir) {
 			$sshcmd .= "/\\*";
@@ -1992,7 +1993,7 @@ else {
 	if ($destserver->{'ssh_port'}) {
 		$sshcmd .= " -p ".$destserver->{'ssh_port'};
 		}
-	$sshcmd .= &ssh_command_args();
+	$sshcmd .= &ssh_command_args($server);
 	$sshcmd .= " $destserver->{'ssh_user'}\@".
 		   ($destserver->{'ip'} || $destserver->{'host'});
 	$sshcmd .= " ".&dd_command(undef, $dest);
@@ -2130,7 +2131,7 @@ else {
 	if ($destserver->{'ssh_port'}) {
 		$sshcmd .= " -p ".$destserver->{'ssh_port'};
 		}
-	$sshcmd .= &ssh_command_args();
+	$sshcmd .= &ssh_command_args($server);
 	$sshcmd .= " $destserver->{'ssh_user'}\@".
 		   ($destserver->{'ip'} || $destserver->{'host'});
 	$sshcmd .= " ".quotemeta($destcmd);
@@ -11842,6 +11843,24 @@ return ("backup.cgi", "create_domain.cgi", "mass.cgi", "mass_domains.cgi",
 	"install-webmin.pl", "modify-system.pl", "pause-system.pl",
 	"reboot-system.pl", "shutdown-system.pl", "startup-system.pl",
 	"unpause-system.pl", "update-systems.pl");
+}
+
+# list_ssh_ciphers()
+# Returns a list of SSH cipher codes and descriptions
+sub list_ssh_ciphers
+{
+return ( [ "blowfish_cbc", "Blowfish (fast)" ],
+	 [ "3des_cbc", "3DES CBC" ],
+	 [ "aes128_cbc", "AES128 CBC" ],
+	 [ "aes192_cbc", "AES192 CBC" ],
+	 [ "aes256_cbc", "AES256 CBC" ],
+	 [ "aes128_ctr", "AES128 CTR" ],
+	 [ "aes192_ctr", "AES192 CTR" ],
+	 [ "aes256_ctr", "AES256 CTR" ],
+	 [ "arcfour128", "ARCFour128" ],
+	 [ "arcfour256", "ARCFour256" ],
+	 [ "arcfour", "ARCFour" ],
+	 [ "cast128_cbc", "CAST128 CBC" ] );
 }
 
 # obtain_lock_anything()

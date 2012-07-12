@@ -107,6 +107,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--default-ssh-port") {
 		$ssh_port = "";
 		}
+	elsif ($a eq "--ssh-cipher") {
+		$ssh_ciphers = shift(@ARGV);
+		}
+	elsif ($a eq "--default-ssh-cipher") {
+		$ssh_ciphers = "";
+		}
 	elsif ($a eq "--webmin-same") {
 		$webmin_same = 1;
 		}
@@ -299,6 +305,13 @@ if (defined($ssh_user)) {
 	}
 if (defined($ssh_port)) {
 	$server->{'ssh_port'} = $ssh_port;
+	$recheck = 1;
+	}
+if (defined($ssh_ciphers)) {
+	$ssh_ciphers eq "" ||
+	    &indexof($ssh_ciphers, map { $_->[0] } &list_ssh_ciphers()) >= 0 ||
+		&usage("SSH cipher $ssh_ciphers is not supported");
+	$server->{'ssh_ciphers'} = $ssh_ciphers;
 	$recheck = 1;
 	}
 if (defined($force_ip)) {

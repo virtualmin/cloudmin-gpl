@@ -245,6 +245,9 @@ if ($multi) {
 			if ($s->{'ssh_port'}) {
 				print "    SSH port: $s->{'ssh_port'}\n";
 				}
+			if ($s->{'ssh_ciphers'}) {
+				print "    SSH cipher: $s->{'ssh_ciphers'}\n";
+				}
 			print "    Webmin same as SSH: ",
 				($s->{'ssh_pass_same'} ? "Yes" : "No"),"\n";
 			if (!$s->{'ssh_pass_same'}) {
