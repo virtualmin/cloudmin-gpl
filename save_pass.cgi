@@ -33,6 +33,13 @@ else {
 	if (defined($in{'auth_mode'})) {
 		$err = &parse_ssh_login_form(\%in, $server);
 		&error($err) if ($err);
+
+		if ($in{'ssh_ciphers'}) {
+			&indexof($in{'ssh_ciphers'},
+			    map { $_->[0] } &list_ssh_ciphers()) >= 0 ||
+				&error($text{'pass_eciphers'});
+			}
+		$server->{'ssh_ciphers'} = $in{'ssh_ciphers'};
 		}
 	if (defined($in{'webmin_mode'})) {
 		$err = &parse_webmin_login_form(\%in, $server);

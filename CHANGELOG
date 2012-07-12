@@ -47,3 +47,4 @@ Backups now include the details of systems, as well as their disk images. This a
 When calling the remote API with the json, perl or xml format flags, multiline mode is automatically enabled so that the output from commands can be correctly parsed. API errors are also returned using the selected format.
 ---- Changes since 6.3 ----
 Added a button to the Edit System page to kill any lock held on the system by other Cloudmin processes.
+The SSH cipher can now be set on a per-system basis, on the Change Password page.

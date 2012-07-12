@@ -89,6 +89,16 @@ else {
 
 	if ($hasssh) {
 		&show_ssh_login_form($server);
+
+		$defmsg = $text{'default'};
+		if ($config{'ssh_ciphers'}) {
+			$defmsg .= " (".$config{'ssh_ciphers'}.")";
+			}
+		print &ui_table_row($text{'pass_ciphers'},
+			&ui_select("ssh_ciphers", $server->{'ssh_ciphers'},
+				[ [ "", $defmsg ],
+				  map { [ $_->[0], $_->[0]." - ".$_->[1] ] }
+				      &list_ssh_ciphers() ]));
 		}
 
 	if ($haswebmin) {
