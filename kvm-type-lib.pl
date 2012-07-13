@@ -2413,18 +2413,23 @@ my ($server, $mounts) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # If LVM is in use, get LVs from the host system
-my @lvs;
+my (@lvs, @vgs);
 if ($server->{'kvm_filesystem_vg'}) {
 	if ($main::list_logical_cache{$vhost->{'id'}}) {
 		@lvs = @{$main::list_logical_cache{$vhost->{'id'}}};
+		@vgs = @{$main::list_volume_cache{$vhost->{'id'}}};
 		}
 	else {
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		@lvs = &remote_foreign_call($vhost, "lvm",
 			"list_logical_volumes", $server->{'kvm_filesystem_vg'});
 		$main::list_logical_cache{$vhost->{'id'}} = \@lvs;
+		@vgs = &remote_foreign_call($vhost, "lvm",
+			"list_volume_groups", $server->{'xen_filesystem_vg'});
+		$main::list_volume_cache{$vhost->{'id'}} = \@vgs;
 		}
 	}
+my %vgnames = map { $_->{'name'}, $_ } @vgs;
 
 # Parse disks from Cloudmin config
 my $idx = -1;
@@ -2464,7 +2469,7 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		}
 	if ($server->{'kvm_filesystem_vg'} &&
 	    $disk->{'real'} =~ /^\/dev\/(\S+)\/(\S+)$/ &&
-	    $1 eq $server->{'kvm_filesystem_vg'}) {
+	    $vgnames{$1}) {
 		# Server has root on LVM .. check if this is too
 		$disk->{'vg'} = $1;
 		$disk->{'lv'} = $2;
