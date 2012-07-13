@@ -4438,8 +4438,7 @@ my ($server, $regen) = @_;
 if ($server->{'kvm_vg'} &&
     ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt')) {
 	&remote_foreign_require($server, "lvm", "lvm-lib.pl");
-	my @vgs = grep { $_->{'name'} eq $server->{'kvm_vg'} }
-                   &remote_foreign_call($server, "lvm", "list_volume_groups");
+	my @vgs = &remote_foreign_call($server, "lvm", "list_volume_groups");
 	if (@vgs) {
 		$server->{'kvm_vg_total'} = 0;
 		$server->{'kvm_vg_used'} = 0;
