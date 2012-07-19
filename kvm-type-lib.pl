@@ -2421,12 +2421,15 @@ if ($server->{'kvm_filesystem_vg'}) {
 		}
 	else {
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-		@lvs = &remote_foreign_call($vhost, "lvm",
-			"list_logical_volumes", $server->{'kvm_filesystem_vg'});
-		$main::list_logical_cache{$vhost->{'id'}} = \@lvs;
 		@vgs = &remote_foreign_call($vhost, "lvm",
-			"list_volume_groups", $server->{'xen_filesystem_vg'});
+			"list_volume_groups");
 		$main::list_volume_cache{$vhost->{'id'}} = \@vgs;
+		@lvs = ( );
+		foreach my $vg (@vgs) {
+			push(@lvs, &remote_foreign_call($vhost, "lvm",
+				"list_logical_volumes", $vg->{'name'}));
+			}
+		$main::list_logical_cache{$vhost->{'id'}} = \@lvs;
 		}
 	}
 my %vgnames = map { $_->{'name'}, $_ } @vgs;
