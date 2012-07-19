@@ -205,6 +205,7 @@ create_ec2c1.medium=High-CPU Medium (2 cores, 1.7GB RAM, 32-bit, 5 compute units
 create_ec2c1.xlarge=High-CPU Extra-large (8 cores, 7GB RAM, 64-bit, 20 compute units)
 create_ec2cc1.4xlarge=Cluster Compute Quadruple Extra-large (8 cores, 23GB RAM, 33.5 compute units)
 create_ec2cc2.8xlarge=Cluster Compute Eight Extra-large (16 cores, 62GB RAM, 88 compute units)
+create_ec2hi1.4xlarge=High I/O Quadruple Extra large (8 cores, 62GB RAM, 35 compute units)
 create_ec2sgroups=EC2 security groups
 create_ec2sbelow=Selected below ..
 create_ec2apiurl=EC2 API base URL
