@@ -7045,7 +7045,6 @@ elsif ($status eq 'alive') {
 		push(@rv, { 'id' => 'refresh',
 			    'desc' => $text{'edit_refresh'},
 			    'cat' => '' });
-		push(@rv, undef);
 		}
 	if (!$noreboot && &can_action($server, "reboot")) {
 		push(@rv, { 'id' => 'reboot',
@@ -7071,7 +7070,6 @@ else {
 				    'desc' => $text{'edit_regen'},
 				    'cat' => '' });
 			}
-		push(@rv, undef);
 		}
 	if (&can_action($server, "run")) {
 		push(@rv, { 'id' => 'shell',
@@ -7102,7 +7100,6 @@ else {
 				    'link' => $durl });
 			}
 		}
-	push(@rv, undef);	# Spacer
 	if (($status eq 'novirt' || $status eq 'nowebmin') &&
 	    $server->{'manager'} ne 'this' &&
 	    &can_action($server, "virtualmin")) {
@@ -7304,13 +7301,14 @@ if (defined(&$afunc)) {
 # Add plugin-defined actions
 foreach my $p (@plugins) {
 	if (&plugin_defined($p, "server_actions")) {
-		push(@rv, &plugin_call($p, "server_actions", $server));
+		local @a = &plugin_call($p, "server_actions", $server);
+		push(@rv, grep { $_ } @a);
 		}
 	}
 
 # Add custom links
 my %catmap = map { $text{'cat_'.$_->{'cat'}} || $_->{'catname'},
-		   $_->{'cat'} } @rv;
+		   $_->{'cat'} } grep { $_ } @rv;
 foreach my $l (&list_visible_custom_links($server)) {
 	$l->{'title'} = $l->{'desc'};
 	delete($l->{'desc'});
