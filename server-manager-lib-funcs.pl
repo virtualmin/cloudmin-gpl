@@ -3003,7 +3003,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				}
 			}
 		else {
-			# Doesn't have Virtualmin
+			# Doesn't have Virtualmin or system-status module
 			&save_server_domains($server, [ ]);
 			$server->{'status'} = 'novirt';
 			$server->{'status_msg'} = undef;
@@ -3036,6 +3036,14 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 						}
 					}
 				}
+			}
+
+		# Get Webmin software packages type
+		if (&remote_foreign_check("software")) {
+			&remote_foreign_require($server, "software",
+				"software-lib.pl");
+			$info->{'update_system'} = &remote_eval($server,
+				"software", '$update_system');
 			}
 
 		# Set flags to indicate collected info

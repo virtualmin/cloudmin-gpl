@@ -13,6 +13,11 @@ to just Virtualmin-specific updates with the C<--virtualmin> flag. To select
 specific packages, use the C<--package> flag followed by a name like 
 I<dovecot>.
 
+This command can also be used to install packages from YUM or APT on managed
+systems, with the C<--install> flag. In this mode, packages chosen with the
+C<--package> flag will be downloaded and installed if missing from the
+chosen systems.
+
 =head1 Example usage
 
   cloudmin update-systems --host xennoupdate.home
@@ -60,9 +65,17 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--install") {
+		$install = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
+	}
+
+if ($install && !@pkgnames) {
+	&usage("When the --install flag is given, one or more packages to ".
+	       "install must be supplied");
 	}
 
 # Work out who to refresh
@@ -74,19 +87,36 @@ while(@ARGV > 0) {
 if ($testmode) {
 	print "Finding updated packages on ",scalar(@servers)," systems ..\n";
 	}
+elsif ($install) {
+	print "Installing packages on ",scalar(@servers)," systems ..\n";
+	}
 else {
 	print "Updating packages on ",scalar(@servers)," systems ..\n";
 	}
 &obtain_lock_server(\@servers);
 &parallel_server_function(\@servers,
-	sub { my $info = &get_server_collected($_[0]);
-	      my @poss;
-	      if (!$virtonly) {
-	          @poss = @{$info->{'allposs'}};
-	      }
-	      @poss = @{$info->{'poss'}} if (!@poss);
-	      if (@pkgnames) {
-		@poss = grep { &indexof($_->{'name'}, @pkgnames) >= 0 } @poss;
+	sub { my @poss;
+	      my $info = &get_server_collected($_[0]);
+	      if ($install) {
+		  # Fake up packages to install
+		  if (!$info->{'update_system'}) {
+	              print "$_[0]->{'host'}: ERROR Update system unknown\n";
+		      return;
+		      }
+		  @poss = map { { 'name' => $_,
+				  'system' => $info->{'update_system'} } }
+			      @pkgnames;
+	          }
+	      else {
+		  # Find named packages in list of those available for update
+	          if (!$virtonly) {
+	              @poss = @{$info->{'allposs'}};
+	          }
+	          @poss = @{$info->{'poss'}} if (!@poss);
+	          if (@pkgnames) {
+		    @poss = grep { &indexof($_->{'name'}, @pkgnames) >= 0 }
+				 @poss;
+	          }
 	      }
 
 	      my (@allgot, @allerrs);
@@ -134,6 +164,7 @@ print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                        [--host-on name]\n";
 print "                        [--os oscode]*\n";
 print "                        [--package name]* | [--virtualmin]\n";
+print "                        [--install]\n";
 exit(1);
 }
 
