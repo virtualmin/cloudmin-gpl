@@ -553,6 +553,7 @@ if ($server->{'id'} eq '0') {
 		 'location' => $server->{'location'},
 		 'ip_force' => $server->{'ip_force'},
 		 'novirt' => $server->{'novirt'},
+		 'update_system' => $server->{'update_system'},
 		);
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone', 'provision',
@@ -3046,6 +3047,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			$info->{'update_system'} = &remote_eval($server,
 				"software", '$update_system');
 			}
+		$server->{'update_system'} = $info->{'update_system'};
 
 		# Set flags to indicate collected info
 		if ($info) {
@@ -6998,10 +7000,12 @@ if ($status eq 'virt' && (&can_action($server, "edit") ||
 	}
 
 # Link for updates, if any
-if (($server->{'virtualmin_poss'} || $server->{'all_poss'}) &&
+my $hasposs = $server->{'virtualmin_poss'} || $server->{'all_poss'};
+if (($hasposs || $server->{'update_system'}) &&
     &can_action($server, "update")) {
 	push(@rv, { 'id' => 'update',
-		    'desc' => &text('edit_link_update',
+		    'desc' => &text($hasposs ? 'edit_link_update'
+					     : 'edit_link_install',
 		    		    $server->{'all_poss'} ||
 				      $server->{'virtualmin_poss'}),
 		    'cat' => '',

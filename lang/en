@@ -1143,6 +1143,7 @@ edit_link_edit=Edit System
 edit_link_coll=Detailed Status
 edit_link_doms=Virtualmin Domains
 edit_link_update=Package Updates ($1)
+edit_link_install=Install Packages
 edit_link_ifaces=Network Interfaces
 edit_link_reverse=Reverse Addresses
 edit_link_limits=Resource Limits
