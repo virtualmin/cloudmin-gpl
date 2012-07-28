@@ -3039,7 +3039,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			}
 
 		# Get Webmin software packages type
-		if (&remote_foreign_check("software")) {
+		if (&remote_foreign_check("software") &&
+		    !$info->{'update_system'}) {
 			&remote_foreign_require($server, "software",
 				"software-lib.pl");
 			$info->{'update_system'} = &remote_eval($server,
@@ -3866,13 +3867,13 @@ return &parallel_server_function($servers,
 	undef, $maxtime);
 }
 
-# parallel_install_package_updates(&servers, [&packages])
+# parallel_install_package_updates(&servers, [&packages], [installing])
 # Updates all packages on multiple servers, in 10 (by default) processes.
 # Each element of the per-server return array is an hash ref with status,
 # packages and error fields.
 sub parallel_install_package_updates
 {
-my ($servers, $packages) = @_;
+my ($servers, $packages, $install) = @_;
 my %want;
 if ($packages) {
 	foreach my $p (@$packages) {
@@ -3882,13 +3883,20 @@ if ($packages) {
 return &parallel_server_function($servers,
 	sub { my ($server, $want) = @_;
 	      my $info = &get_server_collected($server);
-	      @poss = @{$info->{'allposs'}};
-	      @poss = @{$info->{'poss'}} if (!@poss);
-	      if ($want) {
-		# Limit to those requested
-		@poss = grep { $want{$_->{'name'},$_->{'system'}} } @poss;
+	      my @poss;
+	      if ($install) {
+		# Fake up packages to install
+		@poss = @$packages;
+	        }
+              else {
+		# Find desired packages to update
+	        @poss = @{$info->{'allposs'}};
+	        @poss = @{$info->{'poss'}} if (!@poss);
+	        if ($want) {
+		  # Limit to those requested
+		  @poss = grep { $want{$_->{'name'},$_->{'system'}} } @poss;
+	        }
 	      }
-	      my %donedep;
 	      my ($got, $errs) = &install_multiple_package_updates($server,
 					[ &sort_package_updates(@poss) ]);
 	      my $status;

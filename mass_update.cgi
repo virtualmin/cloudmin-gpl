@@ -8,42 +8,67 @@ require './server-manager-lib.pl';
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
 @servers || &error($text{'mass_enone'});
 &can_action_error(\@servers, "update");
+$in{'packages'} =~ s/^\s+//;
+$in{'packages'} =~ s/\s+$//;
+$in{'install'} && !$in{'packages'} && &error($text{'update_epackages'});
+
+$title = $in{'install'} ? $text{'update_title2'} : $text{'update_title'};
 if (@servers == 1) {
-	&ui_print_header(&server_in($servers[0]), $text{'update_title'}, "");
+	&ui_print_header(&server_in($servers[0]), $title, "");
 	}
 else {
-	&ui_print_header(undef, $text{'update_title'}, "");
+	&ui_print_header(undef, $title, "");
 	}
 
 # Find selected servers with updates, limiting to those we want
 @upservers = ( );
 $pos = 0;
-%wantids = map { $_, 1 } split(/\0/, $in{'p'});
-foreach $s (@servers) {
-	$info = &get_server_collected($s);
-	@poss = @{$info->{'allposs'}};
-	@poss = @{$info->{'poss'}} if (!@poss);
-	@poss = grep { $wantids{$_->{'system'}.'/'.$_->{'name'}} } @poss;
-	if (@poss) {
-		push(@upservers, $s);
+if ($in{'install'}) {
+	# Installing possibly new packages
+	@upservers = @servers;
+	foreach $s (@servers) {
+		$info = &get_server_collected($s);
+		next if (!$info || !$info->{'update_system'});
+		@poss = ( );
+		foreach $p (split(/\s+/, $in{'packages'})) {
+			my $pkg = { 'name' => $p,
+				    'system' => $info->{'update_system'} };
+			push(@poss, $pkg);
+			$k = $pkg->{'system'}."/".$pkg->{'name'};
+			$pkgs{$k} ||= $pkg;
+			}
 		$pos += scalar(@poss);
 		}
-	foreach $pkg (@poss) {
-		$k = $pkg->{'system'}."/".$pkg->{'name'};
-		$pkgs{$k} ||= $pkg;
+	}
+else {
+	# Updating packages .. find them from list of known updates
+	%wantids = map { $_, 1 } split(/\0/, $in{'p'});
+	foreach $s (@servers) {
+		$info = &get_server_collected($s);
+		@poss = @{$info->{'allposs'}};
+		@poss = @{$info->{'poss'}} if (!@poss);
+		@poss = grep { $wantids{$_->{'system'}.'/'.$_->{'name'}} }
+			     @poss;
+		if (@poss) {
+			push(@upservers, $s);
+			$pos += scalar(@poss);
+			}
+		foreach $pkg (@poss) {
+			$k = $pkg->{'system'}."/".$pkg->{'name'};
+			$pkgs{$k} ||= $pkg;
+			}
 		}
 	}
 
 if (@servers == 1) {
-	# Show each update in series
+	# Show each update in series, as we are just installing on one system
 	$s = $servers[0];
-	&$first_print(&text('update_doing', $s->{'host'}, scalar(keys %pkgs)));
+	&$first_print(&text($in{'install'} ? 'update_doingi' : 'update_doing',
+			    $s->{'host'}, scalar(keys %pkgs)));
 	&$indent_print();
 	%donedep = ( );
 	@allgot = ( );
-	&start_background_dot_printer(&text('update_pkgs',
-	  join(", ", map { &text('update_ver', $_->{'name'}, $_->{'version'}) }
-		         @poss)));
+	&start_background_dot_printer(&get_update_msg(@poss));
 	my ($got, $errs) = &install_multiple_package_updates($s, \@poss);
 	&stop_background_dot_printer();
 	if (@$got && !@$errs) {
@@ -82,24 +107,24 @@ if (@servers == 1) {
 		}
 	}
 else {
-	# Run them in parallel, and report on updates done at the end
+	# Run them in parallel, and report on updates done at the end, as we
+	# are installing on multiple systems
 	&start_background_dot_printer(
-		&text('mass_updoing', scalar(@upservers), $pos));
-	@rv = &parallel_install_package_updates(\@upservers, [ values %pkgs ]);
+		&text($in{'install'} ? 'mass_updoingi' : 'mass_updoing',
+		      scalar(@upservers), $pos));
+	@rv = &parallel_install_package_updates(\@upservers, [ values %pkgs ],
+						$in{'install'});
 	&stop_background_dot_printer();
 	&$indent_print();
 	for($i=0; $i<@rv; $i++) {
 		$s = $upservers[$i];
 		if (@{$rv[$i]}) {
-			&$first_print(&text('mass_upserver',
-				"<tt>$s->{'host'}</tt>"));
+			&$first_print(&text($in{'install'} ? 'mass_upserveri'
+							   : 'mass_upserver',
+					    "<tt>$s->{'host'}</tt>"));
 			&$indent_print();
 			$p = $rv[$i]->[0];
-			&$first_print(&text('update_pkgs',
-			  join(", ", map { &text('update_ver',
-						 $_->{'name'},
-					         $_->{'version'}) }
-					 @{$p->{'want'}})));
+			&$first_print(&get_update_msg(@{$p->{'want'}}));
 			if (!$p->{'status'}) {
 				&$second_print(&text('mass_upfailed',
 						     $p->{'error'}));
@@ -130,4 +155,18 @@ else {
 	    { 'hosts' => \@hostnames });
 
 &ui_print_footer("", $text{'index_return'});
+
+sub get_update_msg
+{
+my @poss = @_;
+if ($in{'install'}) {
+	return &text('update_pkgsi',
+		  join(", ", map { "<tt>$_->{'name'}</tt>" } @poss));
+	}
+else {
+	return &text('update_pkgs',
+		  join(", ", map { &text('update_ver', $_->{'name'},
+						  $_->{'version'}) } @poss));
+	}
+}
 

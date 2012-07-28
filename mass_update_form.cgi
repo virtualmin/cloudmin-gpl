@@ -111,6 +111,21 @@ else {
 	print "<p>$text{'update_none'}<p>\n";
 	}
 
+# Show install form
+print &ui_hr();
+print &ui_form_start("mass_update.cgi");
+foreach $d (keys %d) {
+	print &ui_hidden("d", $d);
+	}
+print &ui_hidden("install", 1);
+print &ui_table_start($text{'update_installheader'});
+
+print &ui_table_row($text{'update_toinstall'},
+	&ui_textbox("packages", undef, 50));
+
+print &ui_table_end();
+print &ui_form_end([ [ undef, $text{'update_install'} ] ]);
+
 if (@servers == 1 && defined(&theme_select_server)) {
 	&theme_select_server($servers[0]);
 	}
