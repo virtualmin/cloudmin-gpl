@@ -2369,6 +2369,10 @@ if (!$bridge || $bridge eq "*") {
 	}
 $data .= "$brctl addif $bridge \$1\n";
 $data .= "$ifconfig \$1 up\n";
+$data .= "mtu=`$ifconfig $bridge | grep MTU | sed -e 's/.*MTU://; s/ .*//'`\n";
+$data .= "if [ \"\$mtu\" != \"\" ]; then\n";
+$data .= "    $ifconfig \$1 mtu \$mtu\n";
+$data .= "fi\n";
 return ($data,
 	$kvm_dir."/".$server->{'host'}."-".$iface->{'name'}.".sh");
 }
