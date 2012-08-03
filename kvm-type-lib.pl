@@ -4396,6 +4396,12 @@ sub type_kvm_post_refresh
 my ($server, $regen) = @_;
 my $vhost = &get_parent_server($server);
 
+# If running, cannot be mounted
+if ($server->{'status'} ne 'down' &&
+    $server->{'status'} ne 'nohost') {
+	delete($server->{'kvm_mount'});
+	}
+
 if ($server->{'kvm_disktotal'} eq '' ||
     $server->{'kvm_disktotal'} < 0 || $regen) {
 	&type_kvm_compute_disksize($server);
