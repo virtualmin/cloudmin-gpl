@@ -12,6 +12,7 @@ $server = { 'id' => &server_id(),
 	    'status' => 'create',
 	    'bw_limit' => $config{'bw_def'},
 	    'created' => time(),
+	    'directory' => $in{'directory'},
 	  };
 $efunc = "type_".$in{'type'}."_can_create_empty";
 $empty = &$efunc();
@@ -131,6 +132,12 @@ if ($limits) {
 			       $limits->{'ips'}));
 			}
 		}
+	}
+
+# Validate disk image directory
+if ($server->{'directory'}) {
+	$err = &validate_directory($server);
+	$err && &usage(&text('create_edirectory', $err));
 	}
 
 &ui_print_unbuffered_header(undef, $text{'create_title2'}, "");

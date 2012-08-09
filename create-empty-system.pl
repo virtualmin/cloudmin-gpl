@@ -97,6 +97,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--manual-status") {
 		$manual_status = 1;
 		}
+	elsif ($a eq "--disk-directory" || $a eq "--force-disk-directory") {
+		$directory = shift(@ARGV);
+		$directory =~ /^\/\S+$/ ||
+		    &usage("--disk-directory must be followed by a full path");
+		$force_directory = $a eq "--force-disk-directory" ? 1 : 0;
+		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -132,6 +138,8 @@ $server = { 'id' => $newid || &server_id(),
 	    'bw_limit' => $config{'bw_def'},
 	    'created' => time(),
 	    'manual_status' => $manual_status,
+	    'directory' => $directory,
+	    'force_directory' => $force_directory,
 	  };
 $server->{'desc'} = $desc;
 if ($image && $img->{'type'}) {
@@ -258,6 +266,10 @@ if ($limits) {
 			}
 		}
 	}
+
+# Validate directory
+$err = &validate_directory($server);
+$err && &usage("--disk-directory is invalid : $err");
 
 # Run pre-creation script
 &run_system_script($server, 'before', 'create') || exit(2);
@@ -395,6 +407,7 @@ print "                             --type $crtypes\n" if ($crtypes);
 print "                            [--desc \"system description\"]\n";
 print "                            [--image id | --imagefile path]\n";
 print "                            [--id number]\n";
+print "                            [--disk-directory dir]\n";
 if (defined(&list_system_owners)) {
 	print "                            [--owner name]\n";
 	}
