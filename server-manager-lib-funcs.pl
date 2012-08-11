@@ -10080,10 +10080,12 @@ sub create_boot_server_interface
 my ($server, $iface) = @_;
 if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	# Ask Webmin to add
+	local $wiface = { %$iface };
+	delete($wiface->{'bridge'});
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
 	return $last_remote_error if ($last_remote_error);
-	&remote_foreign_call($server, "net", "save_interface", $iface);
+	&remote_foreign_call($server, "net", "save_interface", $wiface);
 	return $last_remote_error if ($last_remote_error);
 	}
 elsif (&redhat_server_type($server)) {
