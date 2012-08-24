@@ -3661,6 +3661,20 @@ elsif ($server->{'status'} eq 'down') {
 	return "Failed to mount filesystem : $err" if ($err);
 	$rv = &list_boot_server_interfaces($server);
 	&umount_filesystem_if_needed($server);
+
+	# Add interfaces that KVM has been configured with, but aren't active
+	# on the VM
+	my @net = split(/\s+/, $server->{'kvm_net'});
+	for(my $i=0; $i<@net; $i++) {
+		my $name = "eth".$i;
+		my ($already) = grep { $_->{'fullname'} eq $name } @$rv;
+		if (!$already) {
+			push(@$rv, { 'name' => 'eth'.$i,
+				     'fullname' => 'eth'.$i,
+				     'unknown' => 1,
+				     'up' => 1 });
+			}
+		}
 	}
 else {
 	# Get active and boot interfaces
