@@ -103,15 +103,16 @@ if (defined(&list_system_owners)) {
 		}
 	}
 
-# Find IPs from systems
+# Find IPs from systems. Include IPs from interfaces that Cloudmin wouldn't
+# actually use itself.
 foreach $s (@allservers) {
-	foreach $ip (&get_server_ip($s)) {
+	foreach $ip (&get_server_ip($s), split(/\s+/, $s->{'ip_addresses'})) {
 		if (&check_ipaddress($ip)) {
 			$ips{$ip} ||= { 'hosts' => [ ] };
 			$ips{$ip}->{'server'} = $s;
 			}
 		}
-	foreach $ip (&get_server_ip6($s)) {
+	foreach $ip (&get_server_ip6($s), split(/\s+/, $s->{'ip6_addresses'})) {
 		if (&check_ip6address($ip)) {
 			$ips{$ip} ||= { 'hosts' => [ ] };
 			$ips{$ip}->{'server'} = $s;
