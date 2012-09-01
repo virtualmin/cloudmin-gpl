@@ -355,8 +355,9 @@ if ($multi) {
 		$cfunc = "type_".$s->{'manager'}."_can_smp";
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$mfunc = "type_".$s->{'manager'}."_get_smp";
-			$smp = &$mfunc($s);
+			($smp, $cores) = &$mfunc($s);
 			print "    Virtual CPUs: ",$smp,"\n";
+			print "    Virtual cores: ",$cores,"\n";
 			}
 
 		# Disk space limit

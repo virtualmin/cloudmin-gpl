@@ -287,7 +287,16 @@ delete($got->{'args'}->{'k'});
 
 # Save SMP
 if ($got->{'args'}->{'smp'}) {
-	$server->{'kvm_smp'} = $got->{'args'}->{'smp'};
+	my @s = split(/,/, $got->{'args'}->{'smp'});
+	$server->{'kvm_smp'} = $s[0];
+	foreach my $s (@s) {
+		if ($s =~ /cores=(\d+)/) {
+			$server->{'kvm_smp_cores'} = $1;
+			}
+		elsif ($s =~ /sockets=(\d+)/) {
+			$server->{'kvm_smp_cores'} = $s[0] / $s;
+			}
+		}
 	}
 delete($got->{'args'}->{'smp'});
 
@@ -2325,6 +2334,9 @@ if ($server->{'kvm_keymap'}) {
 # Add SMP flag
 if ($server->{'kvm_smp'}) {
 	$cmd .= " -smp ".$server->{'kvm_smp'};
+	if ($server->{'kvm_smp_cores'} > 1) {
+		$cmd .= ",cores=".$server->{'kvm_smp_cores'};
+		}
 	}
 
 # Add other imported flags
@@ -3452,21 +3464,28 @@ return 2;
 }
 
 # type_kvm_get_smp(&server)
-# Returns the number of virtual CPUs 
+# Returns the number of virtual CPUs and the number of cores
 sub type_kvm_get_smp
 {
 my ($server) = @_;
-return $server->{'kvm_smp'} || 1;
+return ($server->{'kvm_smp'} || 1,
+	$server->{'kvm_smp_cores'} || 1);
 }
 
-# type_kvm_save_smp(&server, cpus)
-# Sets the number of virtual CPUs
+# type_kvm_save_smp(&server, cpus, cores)
+# Sets the number of virtual CPUs and cores
 sub type_kvm_save_smp
 {
-my ($server, $smp) = @_;
+my ($server, $smp, $cores) = @_;
 $smp > 0 || return "KVM virtual CPUs must be at least 1";
 $smp < 256 || return "KVM virtual CPUs must be less than 256";
+$cores > 0 || return "KVM virtual cores must be at least 1";
+$cores <= $smp || return "KVM virtual cores cannot be greater than the number ".
+			 "of CPUs";
+$smp % $cores == 0 || return "Number of KVM CPUs must be a multiple of the ".
+			     "number of KVM cores";
 $server->{'kvm_smp'} = $smp;
+$server->{'kvm_smp_cores'} = $cores;
 &type_kvm_set_atboot($server, 2);
 return undef;
 }

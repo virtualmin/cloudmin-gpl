@@ -61,7 +61,7 @@ if (defined(&$canvfunc) && &$canvfunc($server)) {
 elsif (defined(&$cansfunc) && &$cansfunc($server)) {
 	# Only CPU count supported
 	$sfunc = "type_".$server->{'manager'}."_get_smp";
-	$smp = &$sfunc($server);
+	($smp, $cores) = &$sfunc($server);
 
 	&ui_print_header(&server_in($server), $text{'vcpus_title'}, "",
 			 "vcpus2");
@@ -73,6 +73,10 @@ elsif (defined(&$cansfunc) && &$cansfunc($server)) {
 	# Virtual CPUs
 	print &ui_table_row($text{'vcpus_smp'},
 		&ui_textbox("smp", $smp, 4));
+
+	# Virtual cores
+	print &ui_table_row($text{'vcpus_cores'},
+		&ui_textbox("cores", $cores, 4));
 
 	# CPUs on host system
 	$vhost = &get_parent_server($server);

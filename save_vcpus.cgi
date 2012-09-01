@@ -49,6 +49,8 @@ elsif (defined(&$cansfunc) && &$cansfunc($server)) {
 	# Only CPU count supported
 	$in{'smp'} =~ /^\d+$/ && $in{'smp'} > 0 ||
 		&error($text{'vcpus_esmp'});
+	$in{'cores'} =~ /^\d+$/ && $in{'cores'} > 0 ||
+		&error($text{'vcpus_ecores'});
 	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'vcpus_title'}, "");
@@ -65,7 +67,7 @@ if (defined(&$canvfunc) && ($can = &$canvfunc($server))) {
 elsif (defined(&$cansfunc) && ($can = &$cansfunc($server))) {
 	# Apply CPU count
 	$sfunc = "type_".$server->{'manager'}."_save_smp";
-	$err = &$sfunc($server, $in{'smp'});
+	$err = &$sfunc($server, $in{'smp'}, $in{'cores'});
 	}
 &save_managed_server($server);
 &release_lock_server($server);

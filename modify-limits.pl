@@ -5,8 +5,7 @@
 Changes memory and CPU limits on one or more systems
 
 This command changes the allocated memory and limits on CPU use for a virtual
-system. At the time of writing this was only possible for Xen instances, but
-may be extended to other types in future.
+system. Not all virtual system types support all forms of resource limits.
 
 The systems to modify are set using the standard flags like C<--host> and
 C<--type>. Memory allocated is set with the C<--memory> flag, which must be
@@ -41,6 +40,12 @@ instead.
 For virtual system types that support changing the IO scheduling class,
 the C<--ioclass> flag can be given followed by a number from 0 (highest
 priority) to 7 (lowest).
+
+Xen systems can have the number and assignment of virtual CPUs set with
+the C<--vcpus> flag, followed by either a number of CPUs or a list of
+mappings in virtual-cpu:host-cpu format. KVM systems only support setting
+the number of CPUs, but also allow you to define the number of cores per
+virtual CPU with the C<--cores> flag.
 
 By default, the command will inform you if a reboot is needed to apply any
 CPU or memory limit changes. However, you can force an immediate shutdown
@@ -132,6 +137,11 @@ while(@ARGV > 0) {
 			$vcpus ne '' || &usage("--vcpus must be followed by a number of CPUs, or a list of mappings");
 			}
 		}
+	elsif ($a eq "--cores") {
+		$cores = shift(@ARGV);
+		$cores =~ /^\d+$/ ||
+			&usage("--cores must be followed by a number");
+		}
 	elsif ($a eq "--bw-limit") {
 		$bw = shift(@ARGV);
 		$bw =~ /^[1-9]\d*$/ ||
@@ -181,7 +191,8 @@ while(@ARGV > 0) {
 	}
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
    defined($bw) || defined($rate) || defined($disk) || defined(@bw_ifaces) ||
-   defined($gmemory) || defined($ioclass) || &usage("Nothing to modify!");
+   defined($gmemory) || defined($ioclass) || defined($cores) ||
+	&usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hoston);
@@ -402,7 +413,7 @@ foreach $s (@servers) {
 		}
 
 	# Change virtual CPUs
-	if (defined($vcpus)) {
+	if (defined($vcpus) || defined($cores)) {
 		print "Setting virtual CPUs on $tdesc system $s->{'host'} ..\n";
 		$canvfunc = "type_".$t."_can_vcpus";
 		$cansfunc = "type_".$t."_can_smp";
@@ -426,6 +437,10 @@ foreach $s (@servers) {
 			}
 		elsif (defined(&$cansfunc) && &$cansfunc($s)) {
 			# Make the change to CPU count only
+			$gsfunc = "type_".$t."_get_smp";
+			($old_vcpus_count, $old_cores) = &$gsfunc($s);
+			$vcpus_count ||= $old_vcpus_count;
+			$cores ||= $old_cores;
 			$sfunc = "type_".$t."_save_smp";
 			if (!$vcpus_count) {
 				$err = "This virtual system type only ".
@@ -433,7 +448,7 @@ foreach $s (@servers) {
 				       "CPUs";
 				}
 			else {
-				$err = &$sfunc($s, $vcpus_count);
+				$err = &$sfunc($s, $vcpus_count, $cores);
 				}
 			if ($err) {
 				print ".. failed : $err\n";
@@ -664,6 +679,7 @@ print "                       [--guaranteed-memory MB]\n";
 print "                       [--disk MB | --no-disk]\n";
 print "                       [--reboot]\n";
 print "                       [--vcpus N | --vcpus list]\n";
+print "                       [--cores N]\n";
 print "                       [--bw-limit MB | --bw-unlimited]\n";
 print "                       [--bw-interfaces iface | --bw-all-interfaces]\n";
 print "                       [--rate-limit Mb/s | --rate-unlimited]\n";

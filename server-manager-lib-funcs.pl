@@ -1119,9 +1119,9 @@ if ($server->{'fast'}) {
 	my $rpcport = $server->{'port'}+1;
 	my $ip = &get_server_ip($server);
 	eval {
+		&set_alarm(2);
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		local $main::error_must_die = 1;
-		&set_alarm(2);
 		my $err;
 		&open_socket($ip, $rpcport, TRYPORT, \$err);
 		close(TRYPORT);
@@ -1132,9 +1132,9 @@ if ($server->{'fast'}) {
 	}
 my $rfc;
 eval {
+	&set_alarm(20);
 	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	local $main::error_must_die = 1;
-	&set_alarm(20);
 	$last_remote_error = undef;
 	$rfc = &remote_foreign_config($server, "");
 	&set_alarm(0);
@@ -1180,8 +1180,8 @@ eval {
 	local $main::error_must_die = 1;
 	local $oldalrm = $SIG{'ALRM'};
 	if ($timeout) {
-		$SIG{'ALRM'} = sub { die "timeout\n" };
 		&set_alarm($timeout);
+		$SIG{'ALRM'} = sub { die "timeout\n" };
 		}
 	($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
@@ -2679,8 +2679,8 @@ while(time() - $sshstart < $timeout) {
 	sleep(1);
 	my $ssherr;
 	eval {
-		local $SIG{'ALRM'} = sub { die "timeout" };
 		&set_alarm(5);
+		local $SIG{'ALRM'} = sub { die "timeout" };
 		&open_socket($ip, $server->{'ssh_port'} || 22, SSHTEST,
 			     \$ssherr);
 		close(SSHTEST);
@@ -2887,9 +2887,9 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 	my $webmin_timeout = int($config{'webmin_timeout'}) || 60;
 	$webmin_timeout *= 3 if ($regen);
 	eval {
+		&set_alarm($webmin_timeout);
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		local $main::error_must_die = 1;
-		&set_alarm($webmin_timeout);
 		$server->{'status_msg'} = undef;
 		if (&remote_foreign_check($server, "virtual-server") &&
 		    !$server->{'novirtualmin'}) {
@@ -2900,6 +2900,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 						"virtual-server-lib.pl");
 			# Give this longer as connect worked
 			&set_alarm($webmin_timeout * 3);
+			local $SIG{'ALRM'} = sub { die "timeout\n" };
 			my @doms = &remote_foreign_call($server,
 					"virtual-server", "list_domains");
 			&save_server_domains($server, \@doms);
@@ -2948,6 +2949,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			# one yet. This may be slow, so reset the timeout.
 			if (!$server->{'virtualmin_checked'}) {
 				&set_alarm($webmin_timeout * 3);
+				local $SIG{'ALRM'} = sub { die "timeout\n" };
 				&check_virtualmin_config($server, 1);
 				}
 
@@ -11684,8 +11686,7 @@ sub start_background_dot_printer
 {
 my ($msg, $interval) = @_;
 if (!$ENV{'REQUEST_METHOD'}) {
-	# Not in web UI or using SSL (which breaks with background process
-	# printing stuff) so just print message
+	# Not in web UI, so just print message
 	&$first_print($msg) if ($msg);
 	}
 else {
