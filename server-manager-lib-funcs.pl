@@ -3138,7 +3138,7 @@ else {
 # If we couldn't get memory or disk from Webmin, get it via SSH
 my $info = &get_server_collected($server);
 my $got_more_info;
-if (!$got_memory) {
+if (!$got_memory && &can_ssh_status($server)) {
 	# Try Linux "free" command
 	my ($out, $ex, $err) = &execute_command_on_server($server, "free");
 	if (!$ex && !$err) {
@@ -3197,7 +3197,7 @@ if (!$got_memory) {
 		}
 	}
 
-if (!$got_disk) {
+if (!$got_disk && &can_ssh_status($server)) {
 	# Get disk from df command
 	my ($out, $ex, $err) = &execute_command_on_server($server, "df -kl");
 	if (!$ex && !$err) {
@@ -3230,7 +3230,7 @@ if (!$got_disk) {
 	}
 
 # Get kernel and CPU info via SSH
-if (!$got_kernel) {
+if (!$got_kernel && &can_ssh_status($server)) {
 	my ($out, $ex, $err) = &execute_command_on_server($server, 
 		"uname -r ; uname -m ; uname -s");
 	if (!$ex && !$err) {
@@ -3243,7 +3243,8 @@ if (!$got_kernel) {
 	}
 
 # Get IO stats via SSH
-if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i && !$got_io) {
+if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i && !$got_io &&
+    &can_ssh_status($server)) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 							  "vmstat 1 2", 5);
 	if (!$ex && !$err) {

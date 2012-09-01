@@ -561,6 +561,11 @@ if ($limits && $limits->{'max_cpu'}) {
 $rv .= &ui_table_row($text{'create_xencpu'},
 	&ui_opt_textbox("kvm_cpu", $cpu, 4, $text{'domains_unlimited'})."%");
 
+# Virtual CPUs
+$rv .= &ui_table_row($text{'create_kvmvcpus'},
+	&ui_textbox("kvm_smp", 1, 4)." ".$text{'create_kvmvcores'}." ".
+	&ui_textbox("kvm_smp_cores", 1, 4));
+
 # IO class
 if (&can_action(undef, "ioclass")) {
 	$rv .= &ui_table_row($text{'edit_lioclass'},
@@ -660,6 +665,15 @@ if (!$in{'kvm_cpu_def'}) {
 	$in{'kvm_cpu'} =~ /^[1-9]\d*$/ || &error($text{'create_exencpu'});
 	$server->{'kvm_cpu'} = $in{'kvm_cpu'};
 	}
+
+# Validate virtual CPUs
+$in{'kvm_smp'} =~ /^[1-9]\d*$/ || &error($text{'create_ekvmvcpus'});
+$in{'kvm_smp_cores'} =~ /^[1-9]\d*$/ || &error($text{'create_ekvmcores'});
+$in{'kvm_smp_cores'} <= $in{'kvm_smp'} || &error($text{'create_ekvmcores2'});
+$in{'kvm_smp'} % $in{'kvm_smp_cores'} == 0 ||
+	&error($text{'create_ekvmcores3'});
+$server->{'kvm_smp'} = $in{'kvm_smp'};
+$server->{'kvm_smp_cores'} = $in{'kvm_smp_cores'};
 
 # Validate IO class
 if (&can_action(undef, "ioclass")) {
@@ -854,6 +868,8 @@ my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
                               'opt' => 1 } ),
 	   { 'name' => 'memory', 'value' => 'megabytes', 'opt' => 1 },
 	   { 'name' => 'cpu', 'value' => 'percent', 'opt' => 1 },
+	   { 'name' => 'vcpus', 'value' => 'number', 'opt' => 1 },
+	   { 'name' => 'cores', 'value' => 'number', 'opt' => 1 },
 	   { 'name' => 'ioclass', 'value' => 'priority', 'opt' => 1 },
 	   { 'name' => 'ip6', 'value' => 'ipv6-address,[ipv6-address]', 'opt' => 1 },
 	   { 'name' => 'netmask6', 'value' => 'mask,[mask]', 'opt' => 1 },
@@ -924,6 +940,12 @@ if ($args->{'cpu'}) {
 	$args->{'cpu'} =~ /^[1-9]\d*$/ || return "Non-numeric CPU percentage";
 	$server->{'kvm_cpu'} = $args->{'cpu'};
 	}
+
+# Validate CPUs and cores flags
+my $smp = $args->{'vcpus'} || 1;
+my $cores = $args->{'cores'} || 1;
+my $err = &type_kvm_save_smp($server, $smp, $cores);
+return $err if ($err);
 
 # Validate IO class flag
 if ($args->{'ioclass'} ne '') {
@@ -3486,7 +3508,7 @@ $smp % $cores == 0 || return "Number of KVM CPUs must be a multiple of the ".
 			     "number of KVM cores";
 $server->{'kvm_smp'} = $smp;
 $server->{'kvm_smp_cores'} = $cores;
-&type_kvm_set_atboot($server, 2);
+&type_kvm_set_atboot($server, 2) if ($server->{'status'} ne 'create');
 return undef;
 }
 

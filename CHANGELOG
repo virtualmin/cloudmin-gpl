@@ -50,3 +50,4 @@ Added a button to the Edit System page to kill any lock held on the system by ot
 The SSH cipher can now be set on a per-system basis, on the Change Password page.
 ---- Changes since 6.4 ----
 New packages can now be installed on multiple systems from the Package Updates page, or with the update-systems API command with the --install flag.
+The number of cores for KVM systems can now be set, in addition to the number of virtual CPUs. This allows the creation of VMs that appear to have (for example) 4 cores but only 2 physical CPUs.
