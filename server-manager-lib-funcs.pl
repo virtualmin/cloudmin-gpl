@@ -826,6 +826,15 @@ return $server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt' ||
        $server->{'status'} eq 'downwebmin';
 }
 
+# can_net_status(&server)
+# Returns 1 if the Webmin net module is supported on a system
+sub can_net_status
+{
+my ($server) = @_;
+return ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') &&
+       &remote_foreign_check($server, "net");
+}
+
 # can_webmin_status(&server)
 # Return 1 if Cloudmin can use Webmin on a system
 sub can_webmin_status
@@ -9760,7 +9769,7 @@ return !$err && !$ex && $out =~ /GNU\s+tar/i ? 1 : 0;
 sub list_active_server_interfaces
 {
 my ($server) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if (&can_net_status($server)) {
 	# Get from Webmin
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
@@ -9811,7 +9820,7 @@ else {
 sub create_active_server_interface
 {
 my ($server, $iface) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if (&can_net_status($server)) {
 	# Call remote Webmin to bring up interface
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
@@ -9851,7 +9860,7 @@ return undef;
 sub delete_active_server_interface
 {
 my ($server, $iface) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if (&can_net_status($server)) {
 	# De-activate it using Webmin
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
@@ -9877,8 +9886,7 @@ my ($server, $iface, $oldiface) = @_;
 my $oldip = &get_server_ip($server);
 my $changing_primary = $oldip eq $oldiface->{'address'} &&
 	      	       $iface->{'address'} ne $oldiface->{'address'} ? 1 : 0;
-if (($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') &&
-    !$changing_primary) {
+if (&can_net_status($server) && !$changing_primary) {
 	# Change it using Webmin
 	my $webmin_iface = { %$iface };
 	delete($webmin_iface->{'ether'})
@@ -9946,7 +9954,7 @@ return undef;
 sub list_boot_server_interfaces
 {
 my ($server) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if (&can_net_status($server)) {
 	# Get from Webmin
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
@@ -10081,7 +10089,7 @@ else {
 sub create_boot_server_interface
 {
 my ($server, $iface) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if (&can_net_status($server)) {
 	# Ask Webmin to add
 	local $wiface = { %$iface };
 	delete($wiface->{'bridge'});
@@ -10200,7 +10208,7 @@ else {
 sub delete_boot_server_interface
 {
 my ($server, $iface) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if (&can_net_status($server)) {
 	# Get from Webmin and delete it
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
@@ -10286,7 +10294,7 @@ else {
 sub modify_boot_server_interface
 {
 my ($server, $iface, $oldiface) = @_;
-if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+if (&can_net_status($server)) {
 	# Use Webmin
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "net", "net-lib.pl");
