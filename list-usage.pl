@@ -55,10 +55,10 @@ while(@ARGV > 0) {
         elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--start") {
-		$start = int(&date_to_time(shift(@ARGV)) / (24*60*60));
+		$start = int(&date_to_time(shift(@ARGV)));
 		}
 	elsif ($a eq "--end") {
-		$end = int(&date_to_time(shift(@ARGV)) / (24*60*60));
+		$end = int(&date_to_time(shift(@ARGV)));
 		}
 	elsif ($a eq "--multiline") {
 		$multi = 1;
@@ -99,21 +99,11 @@ foreach $s (@servers) {
 			print "    Start: ",&make_date($u->{'start'}),"\n";
 			print "    End: ",&make_date($u->{'end'}),"\n";
 			print "    Status: ",($u->{'up'} ? "Up" : "Down"),"\n";
-			if ($u->{'mem'}) {
-				print "    Memory: $u->{'mem'}\n";
-				}
-			if ($u->{'cpu'}) {
-				print "    CPU limit: ",int($u->{'cpu'}),"\n";
-				}
-			if ($u->{'load'}) {
-				print "    CPU load: ",int($u->{'load'}),"\n";
-				}
-			if ($u->{'disk'}) {
-				print "    Disk limit: $u->{'disk'}\n";
-				}
-			if ($u->{'space'}) {
-				print "    Disk used: $u->{'space'}\n";
-				}
+			print "    Memory: ",($u->{'mem'} || 0),"\n";
+			print "    CPU: ",int($u->{'cpu'}),"\n";
+			print "    CPU load: ",int($u->{'load'}),"\n";
+			print "    Disk limit: ",($u->{'disk'} || 0),"\n";
+			print "    Disk used: ",($u->{'space'} || 0),"\n";
 			}
 		}
 	else {
