@@ -40,8 +40,13 @@ if (defined($in{'bw'})) {
 		&error($text{'limits_ebw'});
 	}
 if (defined($in{'ioclass'})) {
+	$ifunc = "type_".$t."_get_ioclass";
+	$oldioclass = &$ifunc($server);
 	$in{'ioclass'} =~ /^[0-7]$/ ||
 		&error($text{'limits_eioclass'});
+	$in{'ioclass'} >= $access{'ioclass'} ||
+	    $in{'ioclass'} == $oldioclass ||
+		&error(&text('create_ekvmioclassmax', $access{'ioclass'}));
 	}
 
 # Apply them, telling the user

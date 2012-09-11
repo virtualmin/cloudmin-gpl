@@ -203,6 +203,9 @@ if (defined($bw) || defined(@bw_ifaces)) {
 	}
 if (defined($ioclass)) {
 	&can_action_usage(\@servers, "ioclass");
+	$ioclass >= $access{'ioclass'} ||
+		&usage("IO class cannot be better than your plan ".
+		       "limit of $access{'ioclass'}");
 	}
 
 # Check if we can do any of them

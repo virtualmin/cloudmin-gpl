@@ -58,6 +58,13 @@ foreach $t (grep { $_ ne 'this' } @server_management_types) {
 	}
 print &ui_table_row($text{'plan_types'}, join("<br>\n", @typesboxes));
 
+# Max allowed IO class
+print &ui_table_row($text{'plan_ioclass'},
+		&ui_select("ioclass", int($plan->{'ioclass'}),
+			[ [ 0, $text{'edit_lioclass0'} ],
+			  1 .. 6,
+			  [ 7, $text{'edit_lioclass7'} ] ]));
+
 # Users on this plan
 if (!$in{'new'}) {
 	@users = grep { $_->{'acl'}->{'plan'} eq $plan->{'id'} }

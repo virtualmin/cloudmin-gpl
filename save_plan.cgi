@@ -60,6 +60,9 @@ else {
 	$in{'types'} eq '' && &error($text{'plan_etypes'});
 	$plan->{'types'} = join(" ", split(/\0/, $in{'types'}));
 
+	# IO class
+	$plan->{'ioclass'} = $in{'ioclass'};
+
 	# Allowed host systems
 	if ($in{'hosts_def'}) {
 		delete($plan->{'hosts'});

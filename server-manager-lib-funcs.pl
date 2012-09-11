@@ -11893,6 +11893,15 @@ return ( [ "blowfish_cbc", "Blowfish (fast)" ],
 	 [ "cast128_cbc", "CAST128 CBC" ] );
 }
 
+# get_default_ioclass(type)
+# Returns the default IO class for the current user
+sub get_default_ioclass
+{
+my ($type) = @_;
+return $access{'ioclass'} > $config{$type.'_ioclass'} ?
+	$access{'ioclass'} : $config{$type.'_ioclass'};
+}
+
 # obtain_lock_anything()
 # Should be called before any state-changing action
 sub obtain_lock_anything

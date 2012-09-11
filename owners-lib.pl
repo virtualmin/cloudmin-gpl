@@ -488,6 +488,7 @@ if (!@rv) {
 		    'max_disk' => 10*1024*1024*1024,
 		    'types' => join(' ', @virtual_server_management_types),
 		    'actions' => join(' ', &list_safe_owner_actions()),
+		    'ioclass' => '0',
 		  });
 	}
 return @rv;
@@ -561,6 +562,7 @@ foreach my $l (@plan_limit_types) {
 		}
 	}
 $o->{'acl'}->{'types'} = $plan->{'types'};
+$o->{'acl'}->{'ioclass'} = $plan->{'ioclass'};
 if ($o->{'acl'}->{'actions_def'}) {
 	$o->{'acl'}->{'actions'} = $plan->{'actions'};
 	}

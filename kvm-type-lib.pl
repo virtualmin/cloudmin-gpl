@@ -569,7 +569,7 @@ $rv .= &ui_table_row($text{'create_kvmvcpus'},
 # IO class
 if (&can_action(undef, "ioclass")) {
 	$rv .= &ui_table_row($text{'edit_lioclass'},
-		&ui_select("kvm_ioclass", $config{'kvm_ioclass'},
+		&ui_select("kvm_ioclass", &get_default_ioclass('kvm'),
 			[ [ 0, $text{'edit_lioclass0'} ],
 			  1 .. 6,
 			  [ 7, $text{'edit_lioclass7'} ] ]));
@@ -679,10 +679,12 @@ $server->{'kvm_smp_cores'} = $in{'kvm_smp_cores'};
 if (&can_action(undef, "ioclass")) {
 	$in{'kvm_ioclass'} =~ /^[0-7]$/ ||
 		&error($text{'create_ekvmioclass'});
+	$in{'kvm_ioclass'} >= $access{'ioclass'} ||
+		&error(&text('create_ekvmioclassmax', $access{'ioclass'}));
 	$server->{'kvm_ioclass'} = $in{'kvm_ioclass'};
 	}
 else {
-	$server->{'kvm_ioclass'} = $config{'kvm_ioclass'};
+	$server->{'kvm_ioclass'} = &get_default_ioclass('kvm');
 	}
 
 # Select host system
@@ -953,10 +955,13 @@ if ($args->{'ioclass'} ne '') {
 	    return "You are not allowed to set the IO class for new systems";
 	$args->{'ioclass'} =~ /^[0-7]$/ ||
 	    return "IO class must be a number from 0 to 7";
+	$args->{'ioclass'} >= $access{'ioclass'} ||
+	    return "IO class cannot be better than your plan ".
+		   "limit of $access{'ioclass'}";
 	$server->{'kvm_ioclass'} = $args->{'ioclass'};
 	}
 else {
-	$server->{'kvm_ioclass'} = $config{'kvm_ioclass'};
+	$server->{'kvm_ioclass'} = &get_default_ioclass('kvm');
 	}
 
 # Hosting server
