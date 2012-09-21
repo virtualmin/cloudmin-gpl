@@ -1398,7 +1398,7 @@ if ($server->{'kvm_swapfile_vg'}) {
                 }
         }
 
-# Create empty disk file and partition
+# Create empty disk file, with no partitions
 if ($empty) {
 	my $dksize = $server->{'kvm_disksize'}*1024*1024;
 	if (!$server->{'kvm_filesystem_vg'}) {
@@ -1418,7 +1418,7 @@ if ($empty) {
 		$err && return "Failed to zero out $disk->{'real'} : $err";
 		}
 	my $err = &create_disk_image_partition($vhost, $fsfile,
-					       1, $dksize, 1);
+					       undef, $dksize, 1);
 	return $err if ($err);
 	}
 

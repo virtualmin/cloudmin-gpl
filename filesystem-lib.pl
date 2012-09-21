@@ -241,9 +241,10 @@ foreach my $l (split(/\r?\n/, $out)) {
 return \@rv;
 }
 
-# create_disk_image_partition(&server, file, number, [size], [make-label],
+# create_disk_image_partition(&server, file, [number], [size], [make-label],
 #			      [bootable], [parted-type])
-# Creates a new partition on some empty disk image
+# Creates a new partition on some empty disk image. If no partition number
+# is given, only the disk label is created.
 sub create_disk_image_partition
 {
 my ($vhost, $real, $num, $size, $make_label, $bootable, $ptype) = @_;
@@ -260,21 +261,25 @@ if (&has_command_on_server($vhost, "parted")) {
 		}
 
 	# Create a partition
-	my $mbs = $size ? int($size/1000000) : undef;
-	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-                "parted -s ".quotemeta($real).
-		" mkpartfs primary $ptype 1 ".$mbs);
-	if ($ex || $err) {
-		return "Failed to create partition : ".($err || $out);
-		}
-
-	# Make bootable
-	if ($bootable) {
+	if ($num) {
+		my $mbs = $size ? int($size/1000000) : undef;
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			"parted -s ".quotemeta($real).
-			" set $num boot on");
+			" mkpartfs primary $ptype 1 ".$mbs);
 		if ($ex || $err) {
-			return "Failed to make bootable : ".($err || $out);
+			return "Failed to create partition : ".($err || $out);
+			}
+
+		# Make bootable
+		if ($bootable) {
+			my ($out, $ex, $err) =
+			    &execute_command_on_server($vhost,
+				"parted -s ".quotemeta($real).
+				" set $num boot on");
+			if ($ex || $err) {
+				return "Failed to make bootable : ".
+					($err || $out);
+				}
 			}
 		}
 	}
@@ -283,19 +288,21 @@ else {
 	my $mbs = $size ? int($size/1024/1024) : undef;
 	my $temp = &transname();
 	&open_tempfile(TEMP, ">$temp");
-	&print_tempfile(TEMP, "n\n");	 # New partition
-	&print_tempfile(TEMP, "p\n");	 # Primary
-	&print_tempfile(TEMP, "$num\n"); # First partition
-	&print_tempfile(TEMP, "\n");	 # First cylinder
-	if ($mbs) {
-		&print_tempfile(TEMP, "+${mbs}M\n");	# Specific size
-		}
-	else {
-		&print_tempfile(TEMP, "\n");		# Use full disk
-		}
-	if ($bootable) {
-		&print_tempfile(TEMP, "a\n");		# Add bootable flag
-		&print_tempfile(TEMP, "$num\n");	# First partition
+	if ($num) {
+		&print_tempfile(TEMP, "n\n");	 # New partition
+		&print_tempfile(TEMP, "p\n");	 # Primary
+		&print_tempfile(TEMP, "$num\n"); # First partition
+		&print_tempfile(TEMP, "\n");	 # First cylinder
+		if ($mbs) {
+			&print_tempfile(TEMP, "+${mbs}M\n");	# Specific size
+			}
+		else {
+			&print_tempfile(TEMP, "\n");	 # Use full disk
+			}
+		if ($bootable) {
+			&print_tempfile(TEMP, "a\n");	 # Add bootable flag
+			&print_tempfile(TEMP, "$num\n"); # First partition
+			}
 		}
 	&print_tempfile(TEMP, "w\n");	 # Write table
 	&print_tempfile(TEMP, "q\n");	 # Quit
@@ -304,7 +311,7 @@ else {
 	my $err = &put_file_to_server($vhost, $temp, $vhosttemp);
 	&unlink_file($temp);
 
-	# Create a partition with fdisk
+	# Create a partition with fdisk, by running the script
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"fdisk -u $real <$vhosttemp");
 	&delete_file_on_server($vhost, $vhosttemp);
