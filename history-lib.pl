@@ -25,13 +25,15 @@ if ($info->{'load'}) {
 # Add memory usage
 if ($info->{'mem'}) {
         push(@stats, [ "memused",
-                       ($info->{'mem'}->[0]-$info->{'mem'}->[1])*1024,
+                       ($info->{'mem'}->[0]-$info->{'mem'}->[1])*1024 ]);
+	push(@stats, [ "memtotal",
                        $info->{'mem'}->[0]*1024 ]);
 	push(@stats, [ "memfree", $info->{'mem'}->[1]*1024 ]);
         if ($info->{'mem'}->[2]) {
                 push(@stats, [ "swapused",
-                              ($info->{'mem'}->[2]-$info->{'mem'}->[3])*1024,
-                              $info->{'mem'}->[2]*1024 ]);
+                              ($info->{'mem'}->[2]-$info->{'mem'}->[3])*1024 ]);
+		push(@stats, [ "swaptotal",
+                               $info->{'mem'}->[2]*1024 ]);
                 push(@stats, [ "swapfree", $info->{'mem'}->[2]*1024 ]);
                 }
         }
