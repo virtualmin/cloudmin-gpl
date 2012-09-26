@@ -2412,6 +2412,13 @@ $data .= "mtu=`$ifconfig $bridge | grep MTU | sed -e 's/.*MTU://; s/ .*//'`\n";
 $data .= "if [ \"\$mtu\" != \"\" ]; then\n";
 $data .= "    $ifconfig \$1 mtu \$mtu\n";
 $data .= "fi\n";
+if (!&check_firewall_allowed_ips($server)) {
+	# Add commands to limit allowed IPs and MACs
+	my @ips = &get_all_firewall_addresses($server);
+	foreach my $cmd (&get_firewall_commands($server, \@ips, '$1')) {
+		$data .= $cmd."\n";
+		}
+	}
 return ($data,
 	$kvm_dir."/".$server->{'host'}."-".$iface->{'name'}.".sh");
 }
@@ -4089,8 +4096,10 @@ if ($iface->{'virtual'} eq '' && $iface->{'bridge'} ne $oldiface->{'bridge'}) {
 				"brctl addif $iface->{'bridge'} $tap");
 			}
 		}
+	}
 
-	# Also update bridge creation script
+if ($iface->{'virtual'} eq '') {
+	# Always update bridge creation script
 	my ($data, $script) = &generate_kvm_bridge_script(
 				$server, $iface, $iface->{'bridge'});
 	my $err = &put_file_data_to_server($vhost, $data, $script);
