@@ -30,6 +30,7 @@ if ($in{'log'}) {
 	$backup = { 'servers' => join(' ', map { $_->{'id'} } @servers),
 		    'missing' => join(' ', map { $_->{'host'} } @missing),
 		    'dest' => $backuplog->{'dest'},
+		    'owner' => $backuplog->{'owner'},
 		    'parallel' => 0 };
 	$backup->{'dest'} =~ s/\/([^\/]+)$//;	# Remove host.tar.gz
 	}
