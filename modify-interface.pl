@@ -76,7 +76,7 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--new-ether") {
 		$newether = shift(@ARGV);
-		$newether =~ /^[A-Fa-f0-9:]+$/ ||
+		&check_macaddress($newether) ||
 		    &usage("--new-ether must be followed by a MAC address");
 		}
 	elsif ($a eq "--no-ether") {

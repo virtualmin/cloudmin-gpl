@@ -24,6 +24,10 @@ For KVM and Xen systems using HVM, the C<--model> flag can be used to set
 the type of network card that is emulated on the virtual system. This is
 only possible for real interfaces though.
 
+For KVM and Xen systems, the C<--ether> flag can be used to set the ethernet
+address of the new interface. If not specified, a random ethernet address
+will be selected by Cloudmin.
+
 Either way, the full interface name and IP address will be displayed if the
 command completes successfully.
 
@@ -64,6 +68,11 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--netmask") {
 		$netmask = shift(@ARGV);
+		}
+	elsif ($a eq "--ether") {
+		$ether = shift(@ARGV);
+		&check_macaddress($ether) ||
+		    &usage("--ether must be followed by a MAC address");
 		}
 	elsif ($a eq "--allocate") {
 		$allocate = 1;
@@ -202,6 +211,9 @@ if ($can != 3) {
 if ($bridge) {
 	$iface->{'bridge'} = $bridge;
 	}
+if ($ether) {
+	$iface->{'ether'} = $ether;
+	}
 
 # Validate and store the model
 if ($model) {
@@ -275,6 +287,7 @@ print "                           --address ip.address | --allocate\n";
 print "                          [--netmask ip.netmask]\n";
 print "                          [--real [--bridge name] [--model type]]\n";
 print "                          [--address6 ipv6-address]*\n";
+print "                          [--ether ethernet-address]\n";
 exit(1);
 }
 

@@ -18,7 +18,7 @@ foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
 		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp",
-		 "roundrobin", "scalegroup", "stats") {
+		 "roundrobin", "scalegroup", "stats", "firewall") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -11900,6 +11900,14 @@ sub get_default_ioclass
 my ($type) = @_;
 return $access{'ioclass'} > $config{$type.'_ioclass'} ?
 	$access{'ioclass'} : $config{$type.'_ioclass'};
+}
+
+# check_macaddress(addr)
+# Returns 1 if some address looks like a valid ethernet MAC
+sub check_macaddress
+{
+my ($addr) = @_;
+return $addr =~ /^[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}$/i ? 1 : 0;
 }
 
 # obtain_lock_anything()

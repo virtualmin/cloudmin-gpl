@@ -149,7 +149,7 @@ else {
 
 	# Save ethernet address
 	if (defined($in{'mac'}) || defined($in{'mac_def'})) {
-		$in{'mac_def'} || $in{'mac'} =~ /^[A-Fa-f0-9:]+$/ ||
+		$in{'mac_def'} || &check_macaddress($in{'mac'}) ||
 			&error($text{'iface_emac'});
 		$iface->{'ether'} = $in{'mac_def'} ? undef : $in{'mac'};
 		}
