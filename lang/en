@@ -2410,7 +2410,7 @@ range_used=Used
 range_estart6=Missing or invalid starting IPv6 address for allocation in row $1
 range_eend6=Missing or invalid ending IPv6 address for allocation in row $1
 range_enetmask6=Missing or invalid IPv6 netmask in row $1
-range_esame6=In row $1 the starting network is $1 but the ending network is $2
+range_esame6=In row $1 the starting network is $2 but the ending network is $3
 
 disks_title=Manage Disks
 disks_real=File or device on host
@@ -4299,7 +4299,7 @@ ips_left=Left
 ips_active=Active?
 ips_desc=Description
 ips_err=Failed to save IP pools
-ips6_err=Failed to save IPv4 pools
+ips6_err=Failed to save IPv6 pools
 ips_edelete=IP pool starting at $1 cannot be removed, as it is in use by the following host systems : $2
 ips_estarts=No starting IP addresses entered in row $1
 ips_ipsearch=Only show IPs for systems matching
