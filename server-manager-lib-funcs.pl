@@ -557,7 +557,7 @@ if ($server->{'id'} eq '0') {
 		);
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone', 'provision',
-		       'scalegroup') {
+		       'scalegroup', 'floor') {
 		foreach my $k (keys %this) {
 			if ($k =~ /^\Q$t\E_/ || $k eq $t) {
 				delete($this{$k});
