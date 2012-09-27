@@ -402,6 +402,17 @@ if ($multi) {
 			print "    IO class: $ioclass\n";
 			}
 
+		# Allowed IPs
+		$cfunc = "type_".$s->{'manager'}."_can_firewall";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$mfunc = "type_".$s->{'manager'}."_get_firewall";
+			@ips = &$mfunc($s);
+			print "    Allowed IPs: ",
+				(!@ips ? "Any" : $ips[0] eq "*" ?
+				 "All assigned to system" : join(" ", @ips)),
+				"\n";
+			}
+
 		# Show bandwidth limit and usage
 		$rfunc = "type_".$s->{'manager'}."_real_interfaces";
 		if (defined(&$rfunc) && $config{'bw_enabled'}) {

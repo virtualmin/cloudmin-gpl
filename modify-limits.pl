@@ -47,6 +47,12 @@ mappings in virtual-cpu:host-cpu format. KVM systems only support setting
 the number of CPUs, but also allow you to define the number of cores per
 virtual CPU with the C<--cores> flag.
 
+For KVM systems Cloudmin can prevent use of IPs or MAC addresses that
+have not been assigned to virtual systems with the C<--all-firewall> flag.
+Alternately you can specify a custom list of IPs to allow with the C<--firewall>
+flag followed by a comma-separated IP list, or C<--no-firewall> to disable
+blocking of spoofed addresses altogether.
+
 By default, the command will inform you if a reboot is needed to apply any
 CPU or memory limit changes. However, you can force an immediate shutdown
 and restart with the C<--reboot> flag, if needed.
@@ -178,6 +184,20 @@ while(@ARGV > 0) {
 		$ioclass =~ /^[0-7]$/ ||
 			&usage("--ioclass must be followed by a number from 0 (high priority) to 7 (low)");
 		}
+	elsif ($a eq "--no-firewall") {
+		$firewall = "";
+		}
+	elsif ($a eq "--all-firewall") {
+		$firewall = "*";
+		}
+	elsif ($a eq "--firewall") {
+		$firewall = join(" ", split(/\s+|,/, shift(@ARGV)));
+		@ips = split(/\s+/, $firewall);
+		foreach $ip (@ips) {
+			&check_ipaddress($ip) || &check_ip6address($ip) ||
+				&usage("Invalid firewall address $ip");
+			}
+		}
 	elsif ($a eq "--reboot") {
 		# Reboot after
 		$do_reboot = 1;
@@ -192,7 +212,7 @@ while(@ARGV > 0) {
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
    defined($bw) || defined($rate) || defined($disk) || defined(@bw_ifaces) ||
    defined($gmemory) || defined($ioclass) || defined($cores) ||
-	&usage("Nothing to modify!");
+   defined($firewall) || &usage("Nothing to modify!");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hoston);
@@ -206,6 +226,9 @@ if (defined($ioclass)) {
 	$ioclass >= $access{'ioclass'} ||
 		&usage("IO class cannot be better than your plan ".
 		       "limit of $access{'ioclass'}");
+	}
+if (defined($firewall)) {
+	&can_action_usage(\@servers, "ifaces");
 	}
 
 # Check if we can do any of them
@@ -612,6 +635,35 @@ foreach $s (@servers) {
 		$s->{'bw_ifaces'} = join(" ", @bw_ifaces);
 		}
 
+	# Change firewall settings, if we can
+	if (defined($firewall)) {
+		print "Setting anti-spoofing firewall on $tdesc system $s->{'host'} ..\n";
+		$cfunc = "type_".$t."_can_firewall";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$sfunc = "type_".$t."_save_firewall";
+			@ips = split(/\s+/, $firewall);
+			my $err = &$sfunc($s, \@ips);
+			if ($err) {
+				print ".. failed : $err\n";
+				$failed++;
+				}
+			elsif (!$firewall) {
+				print ".. firewall disabled\n";
+				}
+			elsif ($firewall eq "*") {
+				print ".. all known IPs allowed\n";
+				}
+			else {
+				print ".. only IPs $firewall allowed\n";
+				}
+			}
+		else {
+			print ".. not supported\n";
+			$failed++;
+			}
+		print "\n";
+		}
+
 	# Update and changed parameters
 	&save_managed_server($s);
 
@@ -687,6 +739,8 @@ print "                       [--bw-limit MB | --bw-unlimited]\n";
 print "                       [--bw-interfaces iface | --bw-all-interfaces]\n";
 print "                       [--rate-limit Mb/s | --rate-unlimited]\n";
 print "                       [--ioclass number]\n";
+print "                       [--no-firewall | --all-firewall |\n";
+print "                        --firewall ip,ip,...]\n";
 exit(1);
 }
 
