@@ -46,10 +46,14 @@ my @rv;
 my @ips = grep { &check_ipaddress($_) || &check_ip6address($_) } @$addrs;
 my @macs = grep { &check_macaddress($_) } @$addrs;
 my $chain = $server->{'id'};
+push(@rv, "ebtables -D INPUT -j $chain 2>/dev/null");
+push(@rv, "ebtables -D OUTPUT -j $chain 2>/dev/null");
 push(@rv, "ebtables -D FORWARD -j $chain 2>/dev/null");
 push(@rv, "ebtables -X $chain 2>/dev/null");
 if (@ips || @macs) {
 	push(@rv, "ebtables -N $chain");
+	push(@rv, "ebtables -I INPUT -j $chain");
+	push(@rv, "ebtables -I OUTPUT -j $chain");
 	push(@rv, "ebtables -I FORWARD -j $chain");
 	push(@rv, "ebtables -A $chain -p ARP -i $iface -j ACCEPT");
 	}

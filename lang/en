@@ -2380,6 +2380,7 @@ limits_firewall1=Only those assigned by Cloudmin
 limits_firewall2=Only listed addresses
 limits_settingfw1=Restricting allowed IP addresses ..
 limits_settingfw2=Allowing use of all IP addresses ..
+limits_efirewall=Invalid address to allow : $1
 
 run_before_create=Running pre-creation script ..
 run_after_create=Running post-creation script ..

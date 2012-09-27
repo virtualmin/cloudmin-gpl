@@ -345,7 +345,7 @@ if (defined(&$cfunc) && &$cfunc($server) && &can_action($server, "ifaces")) {
 		@ips = split(/\s+/, $in{'firewall'});
 		foreach $ip (@ips) {
 			&check_ipaddress($ip) || &check_ip6address($ip) ||
-				&error($text{'limits_efirewall', $ip));
+				&error(&text('limits_efirewall', $ip));
 			}
 		}
 	$sfunc = "type_".$t."_save_firewall";
