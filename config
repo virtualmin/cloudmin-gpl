@@ -63,3 +63,4 @@ show_ping=1
 kvm_ioclass=0
 openvz_ioclass=3
 vnc_passmode=0
+kvm_firewall=0

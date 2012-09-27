@@ -579,7 +579,7 @@ return $rv;
 }
 
 # type_kvm_advanced_create_form([empty-mode])
-# Returns HTML for Xen-specific inputs
+# Returns HTML for KVM-specific inputs
 sub type_kvm_advanced_create_form
 {
 my ($empty) = @_;
@@ -614,6 +614,10 @@ $rv .= &ui_table_row($text{'create_kvmmodel'},
 # High-res graphics?
 $rv .= &ui_table_row($text{'create_kvmvga'},
 	&ui_yesno_radio("kvm_vga", 0));
+
+# Firewall spoofed IPs?
+$rv .= &ui_table_row($text{'create_kvmfirewall'},
+	&ui_yesno_radio("kvm_firewall", $config{'kvm_firewall'}));
 
 # Start after creation?
 $rv .= &ui_table_row($text{'create_xenstart'},
@@ -838,6 +842,10 @@ $server->{'kvm_start'} = defined($in{'kvm_start'}) ? $in{'kvm_start'} : 1;
 # High-res graphics
 $server->{'kvm_vga'} = defined($in{'kvm_vga'}) ? $in{'kvm_vga'} : 0;
 
+# Firewall spoofed IPs
+$server->{'kvm_firewall'} = defined($in{'kvm_firewall'}) ?
+			$in{'kvm_firewall'} : $config{'kvm_firewall'};
+
 # Append zone name
 my @zones = &list_bind_zones();
 my $zone;
@@ -885,6 +893,7 @@ if (&can_action(undef, "advanced")) {
 		  { 'name' => 'model', 'value' => $models, 'opt' => 1 },
 		  { 'name' => 'start', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'vga', 'value' => 'true|false', 'opt' => 1 },
+		  { 'name' => 'firewall', 'value' => 'true|false', 'opt' => 1 },
 	    );
 	}
 return @rv;
@@ -1214,6 +1223,14 @@ if (&can_action(undef, "advanced")) {
 	else {
 		$server->{'kvm_vga'} = 0;
 		}
+
+	# Save spoofing firewall
+	if ($args->{'firewall'} =~ /true|yes/i) {
+		$server->{'kvm_firewall'} = 1;
+		}
+	else {
+		$server->{'kvm_firewall'} = 0;
+		}
 	}
 else {
 	# Use defaults
@@ -1222,6 +1239,7 @@ else {
 	$server->{'kvm_model'} = $config{'kvm_model'};
 	$server->{'kvm_start'} = 1;
 	$server->{'kvm_vga'} = 0;
+	$server->{'kvm_firewall'} = $config{'kvm_firewall'};
 	}
 
 return undef;
@@ -1285,6 +1303,9 @@ else {
 	}
 $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
+
+# Set anti-spoof firewall based on config
+$server->{'kvm_firewall'} = $config{'kvm_firewall'};
 
 # Work out interface parameters, create networking config
 my @ips = split(/\s+/, $server->{'kvm_ip'});
@@ -1953,6 +1974,14 @@ sub type_kvm_shutdown
 my ($server, $force) = @_;
 my $vhost = &type_kvm_parent($server);
 
+# Remove all anti-spoof firewall rules
+my $ifaces = &type_kvm_list_interfaces($server, 1);
+if (ref($ifaces) && !&check_firewall_allowed_ips($server)) {
+	foreach my $iface (grep { $_->{'tap'} } @$ifaces) {
+		&activate_firewall_commands($server, 0, $iface->{'tap'});
+		}
+	}
+
 # If paused, delete any pause file
 if ($server->{'kvm_pause'}) {
 	&delete_file_on_server($vhost, $server->{'kvm_pause'});
@@ -2412,7 +2441,7 @@ $data .= "mtu=`$ifconfig $bridge | grep MTU | sed -e 's/.*MTU://; s/ .*//'`\n";
 $data .= "if [ \"\$mtu\" != \"\" ]; then\n";
 $data .= "    $ifconfig \$1 mtu \$mtu\n";
 $data .= "fi\n";
-if (!&check_firewall_allowed_ips($server)) {
+if ($server->{'kvm_firewall'} && !&check_firewall_allowed_ips($server)) {
 	# Add commands to limit allowed IPs and MACs
 	my @ips = &get_all_firewall_addresses($server);
 	foreach my $cmd (&get_firewall_commands($server, \@ips, '$1')) {
@@ -2424,7 +2453,7 @@ return ($data,
 }
 
 # type_kvm_can_disks(&server)
-# Returns 1, as we can manage disks for Xen instances. These are files or
+# Returns 1, as we can manage disks for KVM instances. These are files or
 # devices mapped to virtual disks in the instance.
 sub type_kvm_can_disks
 {
@@ -2961,7 +2990,7 @@ return $fserr;
 }
 
 # type_kvm_delete_disk(&server, &disk, [detach-only], [leave-fstab])
-# Removes a disk from the Xen configuration, the system's fstab file, and
+# Removes a disk from the KVM configuration, the system's fstab file, and
 # deletes the underlying config file. The disk object must come from a call
 # to type_kvm_list_disks with the mount flag set to 1.
 sub type_kvm_delete_disk
@@ -3678,17 +3707,17 @@ sub type_kvm_can_ipv6
 return 1;
 }
 
-# type_kvm_list_interfaces(&server)
+# type_kvm_list_interfaces(&server, [force-from-cfg])
 # Returns a list of network interfaces on the system, or an error message
 sub type_kvm_list_interfaces
 {
-my ($server) = @_;
+my ($server, $fromcfg) = @_;
 my $rv;
 my $can = &type_kvm_can_interfaces($server);
+my @net = split(/\s+/, $server->{'kvm_net'});
 
-if ($can == 3) {
+if ($can == 3 || $fromcfg) {
 	# Cannot manage IPs, like on a Windows VM
-	my @net = split(/\s+/, $server->{'kvm_net'});
 	$rv = [ map { { 'name' => 'eth'.$_,
 		        'fullname' => 'eth'.$_,
 			'unknown' => 1,
@@ -3717,7 +3746,6 @@ elsif ($server->{'status'} eq 'down') {
 
 	# Add interfaces that KVM has been configured with, but aren't active
 	# on the VM
-	my @net = split(/\s+/, $server->{'kvm_net'});
 	for(my $i=0; $i<@net; $i++) {
 		my $name = "eth".$i;
 		my ($already) = grep { $_->{'fullname'} eq $name } @$rv;
@@ -3776,6 +3804,24 @@ for(my $i=0; $i<@macs; $i++) {
 		$iface->{'ether'} = $mac eq '*' || $mac eq '' ? undef : $mac;
 		$iface->{'bridge'} = $b eq '*' || $b eq '' ? undef : $b;
 		$iface->{'model'} = $m eq '*' || $m eq '' ? undef : $m;
+		}
+	}
+
+# If VM is running, get tap interfaces
+if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
+	my $vhost = &type_kvm_parent($server);
+	foreach my $net (@nets) {
+		if ($net =~ /script=([^,]+-(eth\d+))\.sh/) {
+			my $scriptbase = $1;
+			my $eth = $2;
+			my $tapfile = $scriptbase.".tap";
+			my $tap = &get_file_data_from_server($vhost, $tapfile);
+			$tap =~ s/\r|\n//g;
+			my ($iface) = grep { $_->{'fullname'} eq $eth } @$rv;
+			if ($iface) {
+				$iface->{'tap'} = $tap;
+				}
+			}
 		}
 	}
 
@@ -4170,7 +4216,7 @@ return $server->{'kvm_disktotal'};
 }
 
 # type_kvm_get_disk_space(&server)
-# Returns the amount of disk space used on the host by this Xen instance, which
+# Returns the amount of disk space used on the host by this KVM instance, which
 # is the same as the disk allocated
 sub type_kvm_get_disk_space
 {
@@ -4187,7 +4233,7 @@ return $server->{'kvm_memory'}*1024*1024;
 }
 
 # type_kvm_get_cpu_size(&server)
-# Returns the cached percentage of CPU allocated to this Xen instance
+# Returns the cached percentage of CPU allocated to this KVM instance
 sub type_kvm_get_cpu_size
 {
 my ($server) = @_;
@@ -4236,7 +4282,7 @@ else {
 }
 
 # type_kvm_put_multiple_files(&server, &localfiles, remotedir)
-# If the filesystem for this Xen instance is locally mounted, write the file
+# If the filesystem for this KVM instance is locally mounted, write the file
 # directly to there
 sub type_kvm_put_multiple_files
 {
@@ -4579,7 +4625,7 @@ if (&can_ssh_status($server) &&
 }
 
 # type_kvm_edit_form(&server, [view-only])
-# Show information about some Xen system
+# Show information about some KVM system
 sub type_kvm_edit_form
 {
 my ($server, $view) = @_;
@@ -4617,6 +4663,10 @@ if ($view) {
 	# High-res graphics?
 	$rv .= &ui_table_row($text{'create_kvmvga'},
 		$server->{'kvm_vga'} ? $text{'yes'} : $text{'no'});
+
+	# Firewall spoofed IPs?
+	$rv .= &ui_table_row($text{'create_kvmfirewall'},
+		$server->{'kvm_firewall'} ? $text{'yes'} : $text{'no'});
 	}
 else {
 	# Console keymap
@@ -4629,6 +4679,10 @@ else {
 	# High-res graphics?
 	$rv .= &ui_table_row($text{'create_kvmvga'},
 		&ui_yesno_radio("kvm_vga", $server->{'kvm_vga'}));
+
+	# Firewall spoofed IPs?
+	$rv .= &ui_table_row($text{'create_kvmfirewall'},
+		&ui_yesno_radio("kvm_firewall", $server->{'kvm_firewall'}));
 	}
 
 return $rv;
@@ -4651,6 +4705,23 @@ else {
 	}
 
 $server->{'kvm_vga'} = $in->{'kvm_vga'};
+
+if ($server->{'kvm_firewall'} != $in->{'kvm_firewall'}) {
+	$server->{'kvm_firewall'} = $in->{'kvm_firewall'};
+
+	# Need to activate or de-activate firewall
+	if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
+		my $ifaces = &type_kvm_list_interfaces($server, 1);
+		ref($ifaces) || return "Failed to list interfaces : $ifaces";
+		foreach my $iface (grep { $_->{'tap'} } @$ifaces) {
+			&activate_firewall_commands($server,
+				$server->{'kvm_firewall'}, $iface->{'tap'});
+			}
+		}
+
+	# Update interface scripts
+	&regenerate_all_kvm_bridge_scripts($server);
+	}
 }
 
 # type_kvm_server_info(&server)
@@ -4678,6 +4749,8 @@ if ($server->{'kvm_keymap'}) {
 	}
 push(@rv, [ "KVM high resolution graphics?",
 	    $server->{'kvm_vga'} ? "Yes" : "No" ]);
+push(@rv, [ "Block spoofed IPs and MACs?",
+	    $server->{'kvm_firewall'} ? "Yes" : "No" ]);
 return @rv;
 }
 
@@ -5131,7 +5204,7 @@ return undef;
 }
 
 # type_kvm_unpause_system(&server)
-# Resumes a Xen instance. Returns undef on success or an error message
+# Resumes a KVM instance. Returns undef on success or an error message
 # on failure.
 sub type_kvm_unpause_system
 {
@@ -6722,6 +6795,28 @@ my ($server, $vhost) = @_;
 $vhost ||= &type_kvm_parent($server);
 if ($vhost->{'kvm_cgroup_support'} && &can_ssh_status($vhost)) {
 	&execute_command_on_server($vhost, "cgdelete cpu:$server->{'id'}");
+	}
+}
+
+# regenerate_all_kvm_bridge_scripts(&server)
+# Re-write out all bridge scripts for a KVM instance
+sub regenerate_all_kvm_bridge_scripts
+{
+my ($server) = @_;
+my $vhost = &type_kvm_parent($server);
+my @nets = split(/\s+/, $server->{'kvm_net'});
+my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
+my $i = 0;
+foreach my $net (@nets) {
+	my $bridge = $bridges[$i];
+	if ($net =~ /script=([^,]+-(eth\d+)\.sh)/) {
+		my $script = $1;
+		my $eth = $2;
+                $bridge = undef if ($bridge eq '*');
+                my ($data, undef) = &generate_kvm_bridge_script(
+                        $server, { 'name' => $eth }, $bridge);
+                &put_file_data_to_server($vhost, $data, $script);
+		}
 	}
 }
 
