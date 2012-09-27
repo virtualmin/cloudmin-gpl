@@ -844,7 +844,8 @@ $server->{'kvm_vga'} = defined($in{'kvm_vga'}) ? $in{'kvm_vga'} : 0;
 
 # Firewall spoofed IPs
 $server->{'kvm_firewall'} = defined($in{'kvm_firewall'}) ?
-			$in{'kvm_firewall'} : $config{'kvm_firewall'};
+				$in{'kvm_firewall'} :
+			    $config{'kvm_firewall'} ? '*' : '';
 
 # Append zone name
 my @zones = &list_bind_zones();
@@ -1226,10 +1227,10 @@ if (&can_action(undef, "advanced")) {
 
 	# Save spoofing firewall
 	if ($args->{'firewall'} =~ /true|yes/i) {
-		$server->{'kvm_firewall'} = 1;
+		$server->{'kvm_firewall'} = '*';
 		}
 	else {
-		$server->{'kvm_firewall'} = 0;
+		$server->{'kvm_firewall'} = '';
 		}
 	}
 else {
@@ -1239,7 +1240,7 @@ else {
 	$server->{'kvm_model'} = $config{'kvm_model'};
 	$server->{'kvm_start'} = 1;
 	$server->{'kvm_vga'} = 0;
-	$server->{'kvm_firewall'} = $config{'kvm_firewall'};
+	$server->{'kvm_firewall'} = $config{'kvm_firewall'} ? '*' : '';
 	}
 
 return undef;
@@ -1305,7 +1306,7 @@ $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
 
 # Set anti-spoof firewall based on config
-$server->{'kvm_firewall'} = $config{'kvm_firewall'};
+$server->{'kvm_firewall'} = $config{'kvm_firewall'} ? '*' : '';
 
 # Work out interface parameters, create networking config
 my @ips = split(/\s+/, $server->{'kvm_ip'});
@@ -2441,9 +2442,13 @@ $data .= "mtu=`$ifconfig $bridge | grep MTU | sed -e 's/.*MTU://; s/ .*//'`\n";
 $data .= "if [ \"\$mtu\" != \"\" ]; then\n";
 $data .= "    $ifconfig \$1 mtu \$mtu\n";
 $data .= "fi\n";
-if ($server->{'kvm_firewall'} && !&check_firewall_allowed_ips($server)) {
-	# Add commands to limit allowed IPs and MACs
-	my @ips = &get_all_firewall_addresses($server);
+if (!&check_firewall_allowed_ips($server)) {
+	# Add commands to limit allowed IPs and MACs, or not
+	my @ips = $server->{'kvm_firewall'} eq '' ? ( ) :
+		  $server->{'kvm_firewall'} eq '*' ?
+			&get_all_firewall_addresses($server) :
+			( split(/\s+/, $server->{'kvm_firewall'}),
+			  &get_server_mac($server) );
 	foreach my $cmd (&get_firewall_commands($server, \@ips, '$1')) {
 		$data .= $cmd."\n";
 		}
@@ -3810,7 +3815,7 @@ for(my $i=0; $i<@macs; $i++) {
 # If VM is running, get tap interfaces
 if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 	my $vhost = &type_kvm_parent($server);
-	foreach my $net (@nets) {
+	foreach my $net (@net) {
 		if ($net =~ /script=([^,]+-(eth\d+))\.sh/) {
 			my $scriptbase = $1;
 			my $eth = $2;
@@ -4663,10 +4668,6 @@ if ($view) {
 	# High-res graphics?
 	$rv .= &ui_table_row($text{'create_kvmvga'},
 		$server->{'kvm_vga'} ? $text{'yes'} : $text{'no'});
-
-	# Firewall spoofed IPs?
-	$rv .= &ui_table_row($text{'create_kvmfirewall'},
-		$server->{'kvm_firewall'} ? $text{'yes'} : $text{'no'});
 	}
 else {
 	# Console keymap
@@ -4679,10 +4680,6 @@ else {
 	# High-res graphics?
 	$rv .= &ui_table_row($text{'create_kvmvga'},
 		&ui_yesno_radio("kvm_vga", $server->{'kvm_vga'}));
-
-	# Firewall spoofed IPs?
-	$rv .= &ui_table_row($text{'create_kvmfirewall'},
-		&ui_yesno_radio("kvm_firewall", $server->{'kvm_firewall'}));
 	}
 
 return $rv;
@@ -4705,23 +4702,6 @@ else {
 	}
 
 $server->{'kvm_vga'} = $in->{'kvm_vga'};
-
-if ($server->{'kvm_firewall'} != $in->{'kvm_firewall'}) {
-	$server->{'kvm_firewall'} = $in->{'kvm_firewall'};
-
-	# Need to activate or de-activate firewall
-	if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
-		my $ifaces = &type_kvm_list_interfaces($server, 1);
-		ref($ifaces) || return "Failed to list interfaces : $ifaces";
-		foreach my $iface (grep { $_->{'tap'} } @$ifaces) {
-			&activate_firewall_commands($server,
-				$server->{'kvm_firewall'}, $iface->{'tap'});
-			}
-		}
-
-	# Update interface scripts
-	&regenerate_all_kvm_bridge_scripts($server);
-	}
 }
 
 # type_kvm_server_info(&server)
@@ -6815,9 +6795,52 @@ foreach my $net (@nets) {
                 $bridge = undef if ($bridge eq '*');
                 my ($data, undef) = &generate_kvm_bridge_script(
                         $server, { 'name' => $eth }, $bridge);
-                &put_file_data_to_server($vhost, $data, $script);
+                my $err = &put_file_data_to_server($vhost, $data, $script);
+		return $err if ($err);
 		}
 	}
+return undef;
+}
+
+# type_kvm_can_firewall(&server)
+# Returns 1 if an allowed IP / MAC address firewall can be managed on some
+# system
+sub type_kvm_can_firewall
+{
+my ($server) = @_;
+return !&check_firewall_allowed_ips($server);
+}
+
+# type_kvm_get_firewall(&server)
+# If the IP spoofing firewall is disabled, returns an empty list. If all active
+# IPs are allowed, returns just '*'. Otherwise, returns the list of allowed IPs.
+sub type_kvm_get_firewall
+{
+my ($server) = @_;
+return split(/\s+/, $server->{'kvm_firewall'});
+}
+
+# type_kvm_save_firewall(&server, &ips)
+# Enabled or disables the IP spoofing firewall. The ips parameter has the same
+# meaning as returned by type_kvm_get_firewall
+sub type_kvm_save_firewall
+{
+my ($server, $ips) = @_;
+$server->{'kvm_firewall'} = join(" ", @$ips);
+
+# Need to activate or de-activate firewall
+if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
+	my $ifaces = &type_kvm_list_interfaces($server, 1);
+	ref($ifaces) || return "Failed to list interfaces : $ifaces";
+	foreach my $iface (grep { $_->{'tap'} } @$ifaces) {
+		my $err = &activate_firewall_commands($server,
+			$server->{'kvm_firewall'}, $iface->{'tap'});
+		return $err if ($err);
+		}
+	}
+
+# Update interface scripts
+return &regenerate_all_kvm_bridge_scripts($server);
 }
 
 1;

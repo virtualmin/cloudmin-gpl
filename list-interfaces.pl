@@ -151,6 +151,9 @@ if ($multi) {
 		if ($i->{'bridge'}) {
 			print "    Bridge: $i->{'bridge'}\n";
 			}
+		if ($i->{'tap'}) {
+			print "    TAP interface: $i->{'tap'}\n";
+			}
 		if ($i->{'model'}) {
 			print "    Device model: $i->{'model'}\n";
 			}

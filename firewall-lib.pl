@@ -47,8 +47,8 @@ my @ips = grep { &check_ipaddress($_) || &check_ip6address($_) } @$addrs;
 my @macs = grep { &check_macaddress($_) } @$addrs;
 my $chain = $server->{'id'};
 push(@rv, "ebtables -D FORWARD -j $chain 2>/dev/null");
+push(@rv, "ebtables -X $chain 2>/dev/null");
 if (@ips || @macs) {
-	push(@rv, "ebtables -X $chain 2>/dev/null");
 	push(@rv, "ebtables -N $chain");
 	push(@rv, "ebtables -I FORWARD -j $chain");
 	push(@rv, "ebtables -A $chain -p ARP -i $iface -j ACCEPT");
@@ -94,14 +94,17 @@ return ( &get_server_ip($server),
 	 &get_server_mac($server) );
 }
 
-# activate_firewall_commands(&server, active, iface)
+# activate_firewall_commands(&server, ips-list, iface)
 # Run the ebtables commands to limit the allowed IPs for a server, or allow all
 sub activate_firewall_commands
 {
-my ($server, $active, $iface) = @_;
+my ($server, $ipslist, $iface) = @_;
 my $vhost = &type_kvm_parent($server);
-my @ips = $active ? &get_all_firewall_addresses($server) : ( );
-my @cmds = &get_firewall_commands($server, \@ips, $iface)
+my @ips = $ipslist eq '' ? ( ) :
+	  $ipslist eq '*' ? &get_all_firewall_addresses($server) :
+			    ( split(/\s+/, $ipslist),
+			       &get_server_mac($server) );
+my @cmds = &get_firewall_commands($server, \@ips, $iface);
 my $cmd = join(" ; ", @cmds);
 my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
 return $err ? $err : $ex ? $out : undef;

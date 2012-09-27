@@ -330,6 +330,34 @@ if (defined($in{'rate'}) || defined($in{'rate_def'})) {
 		}
 	}
 
+# Update allowed IPs
+$cfunc = "type_".$t."_can_firewall";
+if (defined(&$cfunc) && &$cfunc($server) && &can_action($server, "ifaces")) {
+	&$first_print($in{'firewall_mode'} ? $text{'limits_settingfw1'}
+					   : $text{'limits_settingfw2'});
+	if ($in{'firewall_mode'} == 0) {
+		@ips = ( );
+		}
+	elsif ($in{'firewall_mode'} == 1) {
+		@ips = ( '*' );
+		}
+	else {
+		@ips = split(/\s+/, $in{'firewall'});
+		foreach $ip (@ips) {
+			&check_ipaddress($ip) || &check_ip6address($ip) ||
+				&error($text{'limits_efirewall', $ip));
+			}
+		}
+	$sfunc = "type_".$t."_save_firewall";
+	my $err = &$sfunc($server, \@ips);
+	if ($err) {
+		&$second_print(&text('limits_failed', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
 &save_managed_server($server);
 &release_lock_server($server);
 &webmin_log("limits", "server", $server->{'host'});
