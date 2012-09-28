@@ -358,8 +358,18 @@ if (defined(&$cfunc) && &$cfunc($server) && &can_action($server, "ifaces")) {
 		}
 	}
 
+# Refresh status, in case it got changed
+&$first_print($text{'save_refreshing'});
+&check_server_status($server, 0, 1);
 &save_managed_server($server);
 &release_lock_server($server);
+&$second_print(&text('save_refreshdone2',
+		     &describe_status($server, 1, 1)));
+
+if (defined(&theme_post_save_server)) {
+	&theme_post_save_server($server);
+	}
+
 &webmin_log("limits", "server", $server->{'host'});
 
 # Offer to reboot if needed

@@ -5538,6 +5538,18 @@ foreach my $net (@nets) {
 	}
 $server->{'kvm_net'} = join(" ", @nets);
 
+# Re-generate network scripts to update firewall rules
+# XXX
+if ($ip ne $newip) {
+	my @firewall = split(/\s+/, $server->{'kvm_firewall'});
+	for(my $i=0; $i<@firewall; $i++) {
+		if ($firewall[$i] eq $ip) {
+			$firewall[$i] = $newip;
+			}
+		}
+	&type_kvm_save_firewall($server, \@firewall);
+	}
+
 # Delete the original disk images
 if (@delfiles || @dellvs) {
 	&$first_print(&text('smove_delfiles',
@@ -6192,6 +6204,7 @@ else {
 	my $err = &allocate_kvm_ip_addresses($newserver, $dest);
 	return ($err, 1) if ($err);
 	}
+my @oldips = split(/\s+/, $oldserver->{'kvm_ip'});
 my @ips = split(/\s+/, $newserver->{'kvm_ip'});
 my @cidrs = split(/\s+/, $newserver->{'kvm_cidr'});
 my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
@@ -6412,6 +6425,7 @@ for(my $i=0; $i<@oldmacs; $i++) {
 	push(@macs, &generate_mac_address($newserver, $i));
 	}
 $newserver->{'mac'} = join(" ", @macs);
+$newserver->{'mac_addresses'} = join(" ", @macs);
 
 # Fix other config files that refer to the hostname or IP
 &$first_print($text{'create_xenfix'});
@@ -6496,6 +6510,16 @@ foreach my $net (@nets) {
 		}
 	}
 $newserver->{'kvm_net'} = join(" ", @nets);
+
+# Re-generate network scripts to update firewall rules
+my @firewall = split(/\s+/, $newserver->{'kvm_firewall'});
+for(my $i=0; $i<@firewall; $i++) {
+	my $idx = &indexof($firewall[$i], @oldips);
+	if ($idx >= 0 && $idx < @ips) {
+		$firewall[$i] = $ips[$idx];
+		}
+	}
+&type_kvm_save_firewall($newserver, \@firewall);
 
 # Fix up other config entries using the old name
 foreach my $f ('kvm_filesystem_lv', 'kvm_swapfile_lv',
