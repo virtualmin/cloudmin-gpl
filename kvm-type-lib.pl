@@ -3965,6 +3965,7 @@ if ($nonvirt) {
 
 	# Add to lists of interfaces on the system
 	$server->{'mac'} = join(" ", @macs);
+	$server->{'mac_addresses'} = join(" ", @macs);
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
@@ -3993,6 +3994,11 @@ if (!$iface->{'unknown'}) {
 	&add_ip_address($server, $iface->{'address'});
 	&add_delete_ip6_addresses($server, undef, $iface->{'address6'});
 	}
+
+# Re-generate ifup scripts for new IP
+&type_kvm_save_firewall($server,
+	[ split(/\s+/, $server->{'kvm_firewall'}) ]);
+
 return undef;
 }
 
@@ -4042,6 +4048,7 @@ if ($iface->{'virtual'} eq '' && defined($idx)) {
 	splice(@nets, $idx, 1);
 	splice(@ifaces, $idx, 1);
 	$server->{'mac'} = join(" ", @macs);
+	$server->{'mac_addresses'} = join(" ", @macs);
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
@@ -4073,6 +4080,11 @@ if (!$iface->{'unknown'}) {
 	&delete_ip_address($server, $iface->{'address'});
 	&add_delete_ip6_addresses($server, $iface->{'address6'}, undef);
 	}
+
+# Re-generate ifup scripts for old IP
+&type_kvm_save_firewall($server,
+	[ split(/\s+/, $server->{'kvm_firewall'}) ]);
+
 return undef;
 }
 
@@ -4122,6 +4134,7 @@ if ($iface->{'virtual'} eq '') {
 	$models[$idx] = $iface->{'model'} || '*';
 	$ifaces[$idx] = $iface->{'bridge'} || '*';
 	$server->{'mac'} = join(" ", @macs);
+	$server->{'mac_addresses'} = join(" ", @macs);
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
 	&save_managed_server($server);
@@ -4154,6 +4167,10 @@ if ($iface->{'virtual'} eq '') {
 	my $err = &put_file_data_to_server($vhost, $data, $script);
 	return "Failed to create script $script : $err" if ($err);
 	}
+
+# Re-generate ifup scripts for changed IP
+&type_kvm_save_firewall($server,
+	[ split(/\s+/, $server->{'kvm_firewall'}) ]);
 
 return undef;
 }
