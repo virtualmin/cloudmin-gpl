@@ -52,3 +52,4 @@ The SSH cipher can now be set on a per-system basis, on the Change Password page
 New packages can now be installed on multiple systems from the Package Updates page, or with the update-systems API command with the --install flag.
 The number of cores for KVM systems can now be set, in addition to the number of virtual CPUs. This allows the creation of VMs that appear to have (for example) 4 cores but only 2 physical CPUs.
 A minimum IO class for KVM and OpenVZ virtual systems can now be defined at the plan level, so that system owners cannot create or modify systems to have an excessive IO priority.
+KVM systems can now be prevented from using IP or MAC addresses that have not been assigned to them, to prevent collision with other real or virtual systems.
