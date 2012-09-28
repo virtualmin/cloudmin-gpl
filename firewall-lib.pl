@@ -85,6 +85,7 @@ if (!@ips && @macs) {
 if (@ips || @macs) {
 	push(@rv, "ebtables -A $chain -i $iface -j DROP");
 	}
+push(@rv, "true");	# Make sure script doesn't fail
 return @rv;
 }
 

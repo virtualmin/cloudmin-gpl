@@ -843,9 +843,9 @@ $server->{'kvm_start'} = defined($in{'kvm_start'}) ? $in{'kvm_start'} : 1;
 $server->{'kvm_vga'} = defined($in{'kvm_vga'}) ? $in{'kvm_vga'} : 0;
 
 # Firewall spoofed IPs
-$server->{'kvm_firewall'} = defined($in{'kvm_firewall'}) ?
-				$in{'kvm_firewall'} :
-			    $config{'kvm_firewall'} ? '*' : '';
+$server->{'kvm_firewall'} = (defined($in{'kvm_firewall'}) ?
+				$in{'kvm_firewall'} : $config{'kvm_firewall'}) ?
+			    '*' : '';
 
 # Append zone name
 my @zones = &list_bind_zones();
@@ -1305,11 +1305,16 @@ else {
 $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
 
-# Set anti-spoof firewall based on config
-$server->{'kvm_firewall'} = $config{'kvm_firewall'} ? '*' : '';
+# Generate MAC addresses
+my @ips = split(/\s+/, $server->{'kvm_ip'});
+my @macs;
+for(my $i=0; $i<@ips; $i++) {
+	push(@macs, &generate_mac_address($server, $i));
+	}
+$server->{'mac'} = join(" ", @macs);
+$server->{'mac_addresses'} = join(" ", @macs);
 
 # Work out interface parameters, create networking config
-my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
 my @gws = split(/\s+/, $server->{'kvm_gw'});
 my @nets;
@@ -1566,13 +1571,6 @@ my @setgws6 = grep { $_ ne "*" } @gws6;
 if (!@setgws6 && $defgw6) {
 	@gws6 = ( $defgw6 );
 	}
-
-# Generate MAC addresses
-my @macs;
-for(my $i=0; $i<@ips; $i++) {
-	push(@macs, &generate_mac_address($server, $i));
-	}
-$server->{'mac'} = join(" ", @macs);
 
 # Fix root disk device to match virtio mode
 my $wantdev = $server->{'kvm_virtio'} ? "/dev/vda" : "/dev/hda";
@@ -1979,7 +1977,7 @@ my $vhost = &type_kvm_parent($server);
 my $ifaces = &type_kvm_list_interfaces($server, 1);
 if (ref($ifaces) && !&check_firewall_allowed_ips($server)) {
 	foreach my $iface (grep { $_->{'tap'} } @$ifaces) {
-		&activate_firewall_commands($server, 0, $iface->{'tap'});
+		&activate_firewall_commands($server, "", $iface->{'tap'});
 		}
 	}
 
