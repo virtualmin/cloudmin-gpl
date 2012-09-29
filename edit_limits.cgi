@@ -194,13 +194,15 @@ if (defined(&$cfunc) && &$cfunc($server) && &can_action($server, "ifaces")) {
 	$gfunc = "type_".$t."_get_firewall";
 	@ips = &$gfunc($server);
 	$mode = !@ips ? 0 : $ips[0] eq '*' ? 1 : 2;
+	@sips = ( &get_server_ip($server), &get_server_ip6($server) );
 	print &ui_table_row($text{'limits_firewall'},
 	    &ui_radio_table("firewall_mode", $mode,
 		[ [ 0, $text{'limits_firewall0'} ],
 		  [ 1, $text{'limits_firewall1'} ],
 		  [ 2, $text{'limits_firewall2'},
 		    &ui_textbox("firewall",
-			$mode == 2 ? join(" ", @ips) : "", 40) ] ]));
+			$mode == 2 ? join(" ", @ips)
+				   : join(" ", @sips), 60) ] ]));
 	}
 
 print &ui_table_end();

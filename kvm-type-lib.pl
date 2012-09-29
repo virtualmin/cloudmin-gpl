@@ -1307,12 +1307,19 @@ $server->{'kvm_swapfile'} = $swfile;
 
 # Generate MAC addresses
 my @ips = split(/\s+/, $server->{'kvm_ip'});
+my @ips6 = split(/\s+/, $server->{'kvm_ip6'});
 my @macs;
 for(my $i=0; $i<@ips; $i++) {
 	push(@macs, &generate_mac_address($server, $i));
 	}
 $server->{'mac'} = join(" ", @macs);
 $server->{'mac_addresses'} = join(" ", @macs);
+
+# If not resetting and firewall is set to all IPs, change it to the actual list
+# of assigned IPs now
+if (!$reset && $server->{'kvm_firewall'} eq '*') {
+	$server->{'kvm_firewall'} = join(" ", @ips, @ips6);
+	}
 
 # Work out interface parameters, create networking config
 my @ifaces = split(/\s+/, $server->{'kvm_hostifaces'});
@@ -3995,7 +4002,14 @@ if (!$iface->{'unknown'}) {
 	&add_delete_ip6_addresses($server, undef, $iface->{'address6'});
 	}
 
-# Re-generate ifup scripts for new IP
+# Add new IPs to firewall, and re-generate ifup scripts
+if ($server->{'kvm_firewall'} && $server->{'kvm_firewall'} ne '*' &&
+    !$iface->{'unknown'}) {
+	my @fwips = split(/\s+/, $server->{'kvm_firewall'});
+	push(@fwips, $iface->{'address'});
+	push(@fwips, @{$iface->{'address6'}});
+	$server->{'kvm_firewall'} = join(" ", &unique(@fwips));
+	}
 &type_kvm_save_firewall($server,
 	[ split(/\s+/, $server->{'kvm_firewall'}) ]);
 
@@ -4081,7 +4095,14 @@ if (!$iface->{'unknown'}) {
 	&add_delete_ip6_addresses($server, $iface->{'address6'}, undef);
 	}
 
-# Re-generate ifup scripts for old IP
+# Remove old IPs from firewall, and re-generate ifup scripts
+if ($server->{'kvm_firewall'} && $server->{'kvm_firewall'} ne '*' &&
+    !$iface->{'unknown'}) {
+	my @fwips = split(/\s+/, $server->{'kvm_firewall'});
+	@fwips = grep { $_ ne $iface->{'address'} } @fwips;
+	@fwips = grep { &indexof($_, @{$iface->{'address6'}}) < 0 } @fwips;
+	$server->{'kvm_firewall'} = join(" ", &unique(@fwips));
+	}
 &type_kvm_save_firewall($server,
 	[ split(/\s+/, $server->{'kvm_firewall'}) ]);
 
@@ -4168,7 +4189,20 @@ if ($iface->{'virtual'} eq '') {
 	return "Failed to create script $script : $err" if ($err);
 	}
 
-# Re-generate ifup scripts for changed IP
+# Remove old IPs from firewall and add new, and re-generate ifup scripts
+if ($server->{'kvm_firewall'} && $server->{'kvm_firewall'} ne '*') {
+	my @fwips = split(/\s+/, $server->{'kvm_firewall'});
+	if (!$oldiface->{'unknown'}) {
+		@fwips = grep { $_ ne $oldiface->{'address'} } @fwips;
+		@fwips = grep { &indexof($_, @{$oldiface->{'address6'}}) < 0 }
+			      @fwips;
+		}
+	if (!$iface->{'unknown'}) {
+		push(@fwips, $iface->{'address'});
+		push(@fwips, @{$iface->{'address6'}});
+		}
+	$server->{'kvm_firewall'} = join(" ", &unique(@fwips));
+	}
 &type_kvm_save_firewall($server,
 	[ split(/\s+/, $server->{'kvm_firewall'}) ]);
 
@@ -5539,7 +5573,6 @@ foreach my $net (@nets) {
 $server->{'kvm_net'} = join(" ", @nets);
 
 # Re-generate network scripts to update firewall rules
-# XXX
 if ($ip ne $newip) {
 	my @firewall = split(/\s+/, $server->{'kvm_firewall'});
 	for(my $i=0; $i<@firewall; $i++) {
