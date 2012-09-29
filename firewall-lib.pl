@@ -16,25 +16,6 @@ if (!&has_command_on_server($vhost, "ebtables")) {
 return undef;
 }
 
-# save_firewall_allowed_ips(&server, &ips)
-# Updates the list of IPs and mac addresses that a VM is allowed to use. Returns
-# undef on success, or an error mesage on failure.
-# XXX delete?
-sub save_firewall_allowed_ips
-{
-my ($server, $ips) = @_;
-my $vhost = &get_parent_server($server);
-if (!$vhost) {
-	return "No host system found!";
-	}
-
-# Update eth0.sh file
-
-# Apply firewall rules, if VM is running
-
-return undef;
-}
-
 # get_firewall_commands(&server, &addrs, interface)
 # Returns a list of ebtables commands to limit traffic to given addrs on some
 # interface. The commands will allow traffic whose source or dest is on the 
