@@ -192,9 +192,11 @@ sub list_disk_image_partitions
 my ($server, $fsfile) = @_;
 my ($out, $ex, $err) = &execute_command_on_server($server,
 	"fdisk -l -u ".quotemeta($fsfile));
-return $err if ($err);
-return $out if ($ex || $out =~ /valid\s+partition\s+table/i ||
-		       $out =~ /0\s+MB,\s+0\s+bytes/);
+return $err if ($err);	# Could not run fdisk
+return $out if ($ex);	# fdisk failed
+return $out if ($out =~ /valid\s+partition\s+table/i); # No partition table
+return $out if ($out =~ /0\s+MB,\s+0\s+bytes/ &&       # Not a disk
+		$out !~ /\n\Q$fsfile\E\d/);
 my @rv;
 my $p = 1;
 my $secsize;
