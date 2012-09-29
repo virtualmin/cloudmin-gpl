@@ -29,7 +29,12 @@ while(@ARGV > 0) {
 # Work out who to check
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hostons);
 @servers = sort { $a->{'host'} cmp $b->{'host'} } @servers;
-@servers || &usage("No systems specified");
+@servers = grep { &can_get_server_traffic($_) } @servers;
+if (!@servers) {
+	# No systems to check, exit now
+	print STDERR "No systems to collect bandwidth for exist\n";
+	exit(0);
+	}
 
 # Prevent concurrent runs
 $pid = &test_lock($bandwidth_dir);

@@ -7,6 +7,15 @@
 # - Sum up for period, show in UI and list-systems.pl
 # - Nice graphs
 
+# can_get_server_traffic(&server)
+# Returns 1 if bandwidth monitoring is possible for a system
+sub can_get_server_traffic
+{
+my ($server) = @_;
+my $ifunc = "type_".$server->{'manager'}."_real_interfaces";
+return defined(&$ifunc);
+}
+
 # get_server_traffic(&server)
 # Returns the number of in and out bytes and packets for some virtual system,
 # taken by sampling it's interface on the host system.
