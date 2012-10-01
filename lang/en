@@ -3590,6 +3590,8 @@ brun_edd=Failed to create copy of LVM disk $1 : $2
 brun_dd=Creating copy of LVM disk for $1 ..
 brun_ddone=Compressing LVM disks for $1 ..
 brun_ddone2=Compressing LVM disks for $1 via SSH to $2 ..
+brun_ddfile=Compressing disk files for $1 ..
+brun_ddfile2=Compressing disk files for $1 via SSH to $2 ..
 brun_allok=Backups of $1 systems completed successfully.
 brun_somefailed=Backups of $1 systems completed, but $2 failed!
 brun_emkdir=Failed to create destination directory : $1
@@ -3646,6 +3648,8 @@ rrun_failhost=Failed system
 rrun_failreason=Reason for failure
 rrun_redisks=Re-creating $2 additional disks for system $1 ..
 rrun_eredisks=.. disk creation failed : $1. Contents of the failed disks will not be restored.
+rrun_disksize=Resizing disk $1 from $2 to $3, to match backup ..
+rrun_edisksize=.. resize failed : $1. The restore may not complete properly, or may not make use of all space on the disk.
 
 backuplogs_title=Backup Logs
 backuplogs_find=Find logs matching:

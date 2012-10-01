@@ -545,7 +545,7 @@ if ($rv->{'ok'}) {
 my $dfunc = "type_".$server->{'manager'}."_list_disks";
 if ($rv->{'ok'} && defined(&$dfunc)) {
 	my $disks = &$dfunc($server);
-	if (ref($disks) && @$disks > 1) {
+	if (ref($disks) && @$disks > 0) {
 		my $dtemp = &transname();
 		my $disks_deststr = $deststr;
 		$disks_deststr =~ s/\/[^\/]+$/\//;
@@ -855,6 +855,46 @@ if ($server->{'status'} ne 'down') {
 	$was_up = 1;
 	&save_managed_server($server);
 	&$second_print($text{'create_done'});
+	}
+
+# Check for disks whose size doesn't match the size in the backup
+my $disksdest = $dest;
+$disksdest =~ s/\/([^\/]+)$//;	# Following function adds the server name back
+my $olddisks = &get_missing_backup_server_disks(
+		$server->{'host'}, $disksdest);
+my $dfunc = "type_".$server->{'manager'}."_list_disks";
+my $disks = defined(&$dfunc) ? &$dfunc($server, 0) : undef;
+if (!$server->{'missing'} && ref($olddisks) && ref($disks) && @$olddisks > 0) {
+	# Check for each original disk that the current disk exists, is not
+	# the same size, and is a logical volume. File-based disks don't need
+	# resizing, because they just get over-written.
+	for(my $i=0; $i<@$olddisks; $i++) {
+		my $inc = &get_disk_include($server, $disks->[$i]);
+		if ($inc &&
+		    $olddisks->[$i]->{'size'} &&
+		    $i < @$disks &&
+		    $disks->[$i]->{'size'} &&
+		    $olddisks->[$i]->{'size'} != $disks->[$i]->{'size'} &&
+		    $disks->[$i]->{'lv'}) {
+			my $d = $disks->[$i];
+			my $od = $olddisks->[$i];
+			my $rdesc = &describe_disk($server, $d);
+			&$first_print(&text('rrun_disksize',
+					    $rdesc,
+					    &nice_size($d->{'size'}),
+					    &nice_size($od->{'size'})));
+			my $nd = { %$d };
+			$nd->{'size'} = $od->{'size'};
+			my $mfunc = "type_".$server->{'manager'}."_modify_disk";
+			my $err = &$mfunc($server, $nd, $d);
+			if ($err) {
+				&$second_print(&text('rrun_edisksize', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				}
+			}
+		}
 	}
 
 # Call the type-specific backup function
@@ -1313,10 +1353,11 @@ if (!@do_devs) {
 	}
 
 my @gzfiles;
+my $msg = $server->{$manager.'_filesystem_lv'} ? 'brun_ddone' : 'brun_ddfile';
 if ($gzfile) {
 	# Need to write to local files
 	my $i = 0;
-	&start_background_dot_printer(&text('brun_ddone', $server->{'host'}));
+	&start_background_dot_printer(&text($msg, $server->{'host'}));
 	foreach my $dev (@devs) {
 		my $ext = $i ? ".$i" : "";
 		if ($skipdisks{$dev}) {
@@ -1347,7 +1388,7 @@ if ($gzfile) {
 else {
 	# Can write directly to target system
 	my $i = 0;
-	&start_background_dot_printer(&text('brun_ddone2', $server->{'host'},
+	&start_background_dot_printer(&text($msg.'2', $server->{'host'},
 					   $destserver->{'host'}));
         foreach my $dev (@devs) {
 		my $ext = $i ? ".$i" : "";
