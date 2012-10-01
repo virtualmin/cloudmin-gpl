@@ -51,7 +51,7 @@ else {
 			$in{'lvm'} =~ /^[A-Za-z0-9\.\-\_]+$/ ||
 				&error($text{'kvm_elvm'});
 			$err = &check_host_lvm($kvm, $in{'lvm'});
-			&error(&text('kvm_elvmerr', $err)) if ($err);
+			&error(&text('xen_elvmerr', $err)) if ($err);
 			$kvm->{'kvm_vg'} = $in{'lvm'};
 			}
 		}
