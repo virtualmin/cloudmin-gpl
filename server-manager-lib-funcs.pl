@@ -11694,7 +11694,7 @@ return @rv;
 sub start_background_dot_printer
 {
 my ($msg, $interval) = @_;
-if (!$ENV{'REQUEST_METHOD'}) {
+if (!$ENV{'REQUEST_METHOD'} && !$config{'nodots'}) {
 	# Not in web UI, so just print message
 	&$first_print($msg) if ($msg);
 	}
