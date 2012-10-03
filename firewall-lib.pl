@@ -64,6 +64,10 @@ if (!@ips && @macs) {
 		}
 	}
 if (@ips || @macs) {
+	# Allow broadcast, such as DHCP
+	push(@rv, "ebtables -A $chain -p IPv4 -i $iface --ip-destination 255.255.255.255 -j ACCEPT");
+
+	# Set default policy to drop
 	push(@rv, "ebtables -A $chain -i $iface -j DROP");
 	}
 push(@rv, "true");	# Make sure script doesn't fail
