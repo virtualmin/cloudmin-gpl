@@ -1560,6 +1560,7 @@ my @cidrs = split(/\s+/, $server->{'kvm_cidr'});
 my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
 my @ips6 = split(/\s+/, $server->{'kvm_ip6'});
 my @netmasks6 = split(/\s+/, $server->{'kvm_netmask6'});
+my @macs = split(/\s+/, $server->{'mac'});
 $server->{'status'} = 'down';
 $nostart = 1 if (!$server->{'kvm_start'});
 $nostart = 0 if ($reset);
