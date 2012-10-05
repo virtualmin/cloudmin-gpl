@@ -6,7 +6,7 @@ Delete an existing Cloudmin system owner
 
 This command deletes a single owner account, identified with the C<--name>
 parameter. No confirmation is requested, but none of the systems he owns
-are effected.
+are effected unless you also supply the C<--delete-systems> flag.
 
 =head1 Example usage
 
@@ -41,6 +41,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--delete-systems") {
+		$deletesystems = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -51,9 +54,47 @@ $name || &usage("Missing --name parameter");
 ($owner) = grep { $_->{'name'} eq $name } &list_system_owners();
 $owner || &usage("No system owner named $name exists");
 
+# Find his systems
+@oservers = ( );
+foreach my $sid (split(/\s+/, $owner->{'acl'}->{'servers'})) {
+	my $server = &get_managed_server($sid);
+	push(@oservers, $server) if ($server);
+	}
+
+if ($deletesystems) {
+	# Delete his systems
+	foreach my $s (@oservers) {
+		&obtain_lock_server($server);
+		$tfunc = "type_".$s->{'manager'}."_desc";
+		$tdesc = &$tfunc();
+
+		# Run pre-deletion script
+		&run_system_script($s, 'before', 'delete') || next;
+
+		&delete_all_domains($s);
+
+		print "Deleting $tdesc system $s->{'host'} ..\n";
+		$dfunc = "type_".$s->{'manager'}."_delete";
+		$err = &$dfunc($s, 0);
+		if ($err) {
+			print ".. deletion failed : $err\n\n";
+			}
+		else {
+			&clear_ssh_host_key($s);
+			&delete_managed_server($s, $keep);
+			print ".. deleted successfully\n\n";
+
+			# Run post-deletion script
+			&run_system_script($s, 'after', 'delete');
+			}
+		&release_lock_server($server);
+		}
+	}
+
 # Delete him
 &delete_system_owner($owner);
 print "Deleted Cloudmin system owner $name\n";
+
 &cloudmin_api_log(\@OLDARGV);
 
 sub usage
@@ -62,6 +103,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Deletes an existing Cloudmin system owner.\n";
 print "\n";
 print "cloudmin delete-owner --name username\n";
+print "                     [--delete-systems]\n";
 exit(1);
 }
 
