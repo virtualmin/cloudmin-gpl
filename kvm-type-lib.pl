@@ -3141,6 +3141,8 @@ if ($disk->{'real'} ne $olddisk->{'real'}) {
 # If the system is up, un-mount the disk
 my $mounted = 0;
 if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
+	$olddisk->{'virt_mount'} eq '/' &&
+		return "The root disk of a running system cannot be resized";
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"umount ".$olddisk->{'virt_mount'});
 	if ($err || $ex) {
