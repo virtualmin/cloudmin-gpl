@@ -634,6 +634,9 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	# Only do files that exist, apart from /etc/hosts and /etc/resolv.conf
 	# which should be everywhere
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
+	if (!$err && -d $temppath) {
+		$err = "$fix is a directory, but a file was expected";
+		}
 	next if ($err && &indexof($fix, @critical) < 0);
 
 	my $data = &read_file_contents($temppath);
