@@ -2221,6 +2221,18 @@ if ($proc) {
 	}
 &delete_kvm_cgroup($server, $vhost);
 
+# Remove all anti-spoof firewall rules, if the VM wasn't running. This is 
+# needed if it was shutdown outside of Cloudmin.
+if (!$proc) {
+	my $ifaces = &type_kvm_list_interfaces($server, 1);
+	if (ref($ifaces) && !&check_firewall_allowed_ips($server)) {
+		foreach my $iface (grep { $_->{'tap'} } @$ifaces) {
+			&activate_firewall_commands(
+				$server, "", $iface->{'tap'});
+			}
+		}
+	}
+
 # Delete boot-time entry
 &type_kvm_set_atboot($server, 0);
 
