@@ -1703,12 +1703,14 @@ return $status ? $out : undef;
 
 # transfer_file_between_servers(&source-server, &dest-server,
 #				source-file, dest-file,
-#				[device-file?], [checksum?], [checksum-size])
+#				[device-file?], [checksum?], [checksum-size],
+#				[via-master])
 # Copy a file from one system to another, directly if possible. Returns undef
 # if OK, or an error message on failure.
 sub transfer_file_between_servers
 {
-my ($srcserver, $destserver, $src, $dest, $device, $checksum, $checksize) = @_;
+my ($srcserver, $destserver, $src, $dest, $device, $checksum, $checksize,
+    $viamaster) = @_;
 my $rv;
 my ($srccs_ok, $srccs);
 
@@ -1742,6 +1744,11 @@ else {
 	# First build scp command
 	if ($destserver->{'ssh_nologin'}) {
 		return "SSH logins on target system are not available";
+		}
+
+	# Just download to master and re-upload
+	if ($viamaster) {
+		goto VIAMASTER;
 		}
 
 	my $keytemp;
@@ -1850,7 +1857,8 @@ else {
 		&delete_file_on_server($srcserver, $keytemp);
 		}
 
-	if ($rv) {
+	VIAMASTER;
+	if ($rv || $viamaster) {
 		# Fall back to fetching to master and uploading
 		my $temp = &transname();
 		$rv = undef;
@@ -9728,27 +9736,43 @@ foreach my $l (split(/\r?\n/, $out)) {
 	}
 foreach my $l (@lines) {
 	my %ifc;
-	$l =~ /^([^:\s]+)/; $ifc{'name'} = $1;
-	$l =~ /^(\S+)/; $ifc{'fullname'} = $1;
-	if ($l =~ /^(\S+):(\d+)/) { $ifc{'virtual'} = $2; }
-	if ($l =~ /inet addr:(\S+)/) { $ifc{'address'} = $1; }
-	if ($l =~ /Mask:(\S+)/) { $ifc{'netmask'} = $1; }
-	if ($l =~ /Bcast:(\S+)/) { $ifc{'broadcast'} = $1; }
-	if ($l =~ /HWaddr (\S+)/) { $ifc{'ether'} = $1; }
-	if ($l =~ /MTU:(\d+)/) { $ifc{'mtu'} = $1; }
-	if ($l =~ /P-t-P:(\S+)/) { $ifc{'ptp'} = $1; }
-	$ifc{'up'}++ if ($l =~ /\sUP\s/);
-	$ifc{'promisc'}++ if ($l =~ /\sPROMISC\s/);
-        my (@address6, @netmask6);
+        $l =~ /^([^:\s]+)/; $ifc{'name'} = $1;
+        $l =~ /^(\S+)/; $ifc{'fullname'} = $1; $ifc{'fullname'} =~ s/:$//;
+        if ($l =~ /^(\S+):(\d+)/) { $ifc{'virtual'} = $2; }
+        if ($l =~ /^(\S+)\.(\d+)/) { $ifc{'vlanid'} = $2; }
+        if ($l =~ /inet addr:(\S+)/) { $ifc{'address'} = $1; }
+        elsif ($l =~ /inet (\S+)/) { $ifc{'address'} = $1; }
+        elsif (!$empty) { next; }
+        if ($l =~ /Mask:(\S+)/) { $ifc{'netmask'} = $1; }
+        elsif ($l =~ /netmask (\S+)/) { $ifc{'netmask'} = $1; }
+        if ($l =~ /Bcast:(\S+)/) { $ifc{'broadcast'} = $1; }
+        elsif ($l =~ /broadcast (\S+)/) { $ifc{'broadcast'} = $1; }
+        if ($l =~ /HWaddr (\S+)/) { $ifc{'ether'} = $1; }
+        elsif ($l =~ /ether (\S+)/) { $ifc{'ether'} = $1; }
+        if ($l =~ /MTU:(\d+)/) { $ifc{'mtu'} = $1; }
+        elsif ($l =~ /mtu (\d+)/) { $ifc{'mtu'} = $1; }
+        if ($l =~ /P-t-P:(\S+)/) { $ifc{'ptp'} = $1; }
+        elsif ($l =~ /ptp (\S+)/) { $ifc{'ptp'} = $1; }
+        $ifc{'up'}++ if ($l =~ /\sUP\s|<\S*UP\S*>/);
+        $ifc{'promisc'}++ if ($l =~ /\sPROMISC\s/);
+        local (@address6, @netmask6, @scope6);
         while($l =~ s/inet6 addr:\s*(\S+)\/(\d+)\s+Scope:(Global)//i) {
-                my ($address6, $netmask6, $scope6) = ($1, $2, $3);
+                local ($address6, $netmask6, $scope6) = ($1, $2, $3);
                 push(@address6, $address6);
                 push(@netmask6, $netmask6);
+                push(@scope6, $scope6);
+                }
+        while($l =~ s/inet6 (\S+)\s+prefixlen (\d+)\s+scopeid\s+(\S+)<global>//i) {
+                local ($address6, $netmask6, $scope6) = ($1, $2, $3);
+                push(@address6, $address6);
+                push(@netmask6, $netmask6);
+                push(@scope6, $scope6);
                 }
         $ifc{'address6'} = \@address6;
         $ifc{'netmask6'} = \@netmask6;
-	$ifc{'edit'} = ($ifc{'name'} !~ /^ppp/);
-	$ifc{'index'} = scalar(@rv);
+        $ifc{'scope6'} = \@scope6;
+        $ifc{'edit'} = ($ifc{'name'} !~ /^ppp/);
+        $ifc{'index'} = scalar(@rv);
 	push(@ifaces, \%ifc);
 	}
 return @ifaces;
