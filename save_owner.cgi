@@ -23,7 +23,6 @@ if ($in{'switch'}) {
 	print "w.location = \"switch.cgi?name=$in{'old'}\";\n";
 	print "</script>\n";
 	&ui_print_footer();
-	exit;
 	}
 elsif ($in{'bw'}) {
 	# Redirect to bandwidth graph for owner
@@ -35,9 +34,57 @@ elsif ($in{'logs'}) {
 		  &urlize($owner->{'name'})."&mall=1");
 	}
 elsif ($in{'delete'}) {
-	# Just remove owner account
-	&delete_system_owner($owner);
-	&webmin_log("delete", "owner", $owner->{'name'});
+	# Get owners systems
+	@sids = split(/\s+/, $owner->{'acl'}->{'servers'});
+	@oservers = grep { $_ } map { &get_managed_server($_) } @sids;
+
+	if ($in{'confirm'}) {
+		if ($in{'systems'}) {
+			# Also delete his systems
+			&set_all_null_print();
+			foreach my $s (@oservers) {
+				&obtain_lock_server($s);
+				&run_system_script($s, 'before', 'delete') ||
+					next;
+				&delete_all_domains($s);
+				$dfunc = "type_".$s->{'manager'}."_delete";
+				$err = &$dfunc($s, 0);
+				if (!$err) {
+					&clear_ssh_host_key($s);
+					&delete_managed_server($s, 0);
+					run_system_script($s, 'after','delete');
+					}
+				&release_lock_server($s);
+				}
+			}
+
+		# Remove owner account
+		&delete_system_owner($owner);
+		&webmin_log("delete", "owner", $owner->{'name'});
+		&redirect("list_owners.cgi");
+		}
+	else {
+		# Ask for confirmation, with option to delete systems
+		&ui_print_header(undef, $text{'owner_title2'}, "");
+
+		print &ui_confirmation_form(
+			"save_owner.cgi",
+			&text('owner_rusure', "<tt>$owner->{'name'}</tt>"),
+			[ [ "old", $in{'old'} ],
+			  [ "delete", 1 ],
+			  [ "confirm", 1 ] ],
+			[ [ undef, $text{'owner_sure'} ],
+			  @oservers ? ( [ 'systems', &text('owner_sure2',
+							  scalar(@oservers)) ] )
+				   : ( ) ],
+			undef,
+			@oservers ? &text('owner_surelist',
+				     join(" ", map { $_->{'host'} } @oservers))
+				 : "",
+			);
+
+		&ui_print_footer("list_owners.cgi", $text{'owners_return'});
+		}
 	}
 else {
 	# Validate inputs, starting with login
@@ -131,6 +178,5 @@ else {
 	&save_system_owner($owner, $old);
 	&webmin_log($in{'new'} ? "create" : "modify",
 		    "owner", $owner->{'name'});
+	&redirect("list_owners.cgi");
 	}
-
-&redirect("list_owners.cgi");

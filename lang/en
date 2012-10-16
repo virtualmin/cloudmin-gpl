@@ -2784,6 +2784,10 @@ owner_fromplan=From plan
 owner_header5=Backups that count towards plan
 owner_header6=Additional limits and capabilities
 owner_logs=View Logs
+owner_rusure=Are you sure you want to delete the system owner $1 ?
+owner_sure=Delete Owner
+owner_sure2=Delete Owner And $1 Systems
+owner_surelist=The following systems will also be deleted if you click the second button : $1
 
 downers_err=Failed to delete system owners
 downers_enone=None selected
