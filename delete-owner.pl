@@ -64,7 +64,7 @@ foreach my $sid (split(/\s+/, $owner->{'acl'}->{'servers'})) {
 if ($deletesystems) {
 	# Delete his systems
 	foreach my $s (@oservers) {
-		&obtain_lock_server($server);
+		&obtain_lock_server($s);
 		$tfunc = "type_".$s->{'manager'}."_desc";
 		$tdesc = &$tfunc();
 
@@ -81,13 +81,13 @@ if ($deletesystems) {
 			}
 		else {
 			&clear_ssh_host_key($s);
-			&delete_managed_server($s, $keep);
+			&delete_managed_server($s, 0);
 			print ".. deleted successfully\n\n";
 
 			# Run post-deletion script
 			&run_system_script($s, 'after', 'delete');
 			}
-		&release_lock_server($server);
+		&release_lock_server($s);
 		}
 	}
 

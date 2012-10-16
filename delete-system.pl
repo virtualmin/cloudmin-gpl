@@ -99,7 +99,7 @@ if ($keepdisks) {
 
 # Do it!
 foreach $s (@servers) {
-	&obtain_lock_server($server);
+	&obtain_lock_server($s);
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
 
@@ -122,7 +122,7 @@ foreach $s (@servers) {
 		# Run post-deletion script
 		&run_system_script($s, 'after', 'delete');
 		}
-	&release_lock_server($server);
+	&release_lock_server($s);
 	}
 &cloudmin_api_log(\@OLDARGV);
 
