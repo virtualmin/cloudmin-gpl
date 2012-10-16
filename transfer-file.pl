@@ -19,6 +19,10 @@ If the file being copied is actually a device (such as a partition or LVM
 logical volume), use the C<--device> flag to have Cloudmin transfer it in the
 correct way.
 
+By default Cloudmin will transfer the file directly from the source system
+to the destination. However, you can force the transfer to go via the master
+system instead with the C<--via-master> flag.
+
 =head1 Example usage
 
   cloudmin transfer-file --source xencentos.home --dest xensendmail.home --file /etc/hosts --destfile /tmp/hosts
@@ -66,6 +70,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--checksum-size") {
 		$checksumsize = shift(@ARGV);
 		}
+	elsif ($a eq "--via-master") {
+		$viamaster = 1;
+		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -90,7 +97,8 @@ $destserver || &usage("No system named $desthost exists");
 # Do the transfer
 print "Copying $src on $srcserver->{'host'} to $dest on $destserver->{'host'} ..\n";
 $err = &transfer_file_between_servers($srcserver, $destserver, $src, $dest,
-				      $device, $checksum, $checksumsize);
+				      $device, $checksum, $checksumsize,
+				      $viamaster);
 if ($err) {
 	print ".. copy failed : $err\n";
 	exit(1);
@@ -111,6 +119,7 @@ print "                       --file path\n";
 print "                      [--destfile path]\n";
 print "                      [--device-file]\n";
 print "                      [--checksum [--checksum-size bytes]]\n";
+print "                      [--via-master]\n";
 exit(1);
 }
 
