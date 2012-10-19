@@ -4068,7 +4068,7 @@ kvms_return=list of KVM hosts
 kvms_dir=Base directory
 kvms_default=Make Selected the Default Host System
 kvms_startheader=Add host system
-kvms_starthost=Host system add
+kvms_starthost=Host system to add:
 kvms_start=Start Adding Host
 kvms_alladded=Add possible host systems have already been added. Use the <a href='$1'>Add Physical System</a> page to register additional hosts.
 
@@ -5069,6 +5069,24 @@ kill_title=Kill Process
 kill_safe=Are you sure you want to terminate the Cloudmin process $2 with PID $1, which is holding a lock on this system?
 kill_warn=This command is currently performing an operation on the system, but it can be safely interrupted.
 kill_ok=Kill Now
+
+iscsi_title=iSCSI Servers
+iscsi_none=No iSCSI servers have been configured yet.
+iscsi_add=Add iSCSI server:
+iscsi_ok=Start Adding
+iscsi_done=All possible systems have already been added as iSCSI servers.
+iscsi_nossh=Only systems that are running and accessible can be used as an iSCSI server
+iscsi_nowebmin=Only systems with Webmin installed can be used as an iSCSI server
+iscsi_nomod=None of the supported iSCSI servers are installed and detected by Webmin
+iscsi_noversion=Webmin version 1.600 or later is required
+iscsi_title1=Add iSCSI Server
+iscsi_title2=Edit iSCSI Server
+iscsi_header=iSCSI server details
+iscsi_host=System hostname
+iscsi_base=Create new disks under
+iscsi_base_dir=Directory
+iscsi_base_vg=LVM volume group
+iscsi_eadd=The system $1 cannot be added : $2
 
 __norefs=1
 
