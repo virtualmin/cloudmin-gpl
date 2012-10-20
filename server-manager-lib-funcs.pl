@@ -18,7 +18,7 @@ foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
 		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp",
-		 "roundrobin", "scalegroup", "stats", "firewall") {
+		 "roundrobin", "scalegroup", "stats", "firewall", "iscsi") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -557,7 +557,7 @@ if ($server->{'id'} eq '0') {
 		);
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone', 'provision',
-		       'scalegroup', 'floor') {
+		       'scalegroup', 'floor', 'iscsi') {
 		foreach my $k (keys %this) {
 			if ($k =~ /^\Q$t\E_/ || $k eq $t) {
 				delete($this{$k});
@@ -6680,7 +6680,7 @@ if ($anyvirt) {
 		push(@glinks, "list_storages.cgi");
 		push(@gtitles, $text{'storages_title'});
 		push(@gicons, "images/storages.gif");
-		push(@gcats, "settings");
+		push(@gcats, "storage");
 		}
 	}
 
@@ -6799,7 +6799,7 @@ if (defined(&list_directories) && @diskfile_server_management_types) {
 	push(@glinks, "list_directories.cgi");
 	push(@gtitles, $text{'directories_title'});
 	push(@gicons, "images/directories.gif");
-	push(@gcats, "hosts");
+	push(@gcats, "storage");
 	}
 
 # IP allocation overview
@@ -6816,6 +6816,14 @@ if (@hosted_server_management_types && !$module_info{'onehost'}) {
 	push(@gtitles, $text{'failovers_title'});
 	push(@gicons, "images/failovers.gif");
 	push(@gcats, "hosts");
+	}
+
+# iSCSI Servers
+if (&supports_iscsi()) {
+	push(@glinks, "list_iscsi.cgi");
+	push(@gtitles, $text{'iscsi_title'});
+	push(@gicons, "images/iscsi.gif");
+	push(@gcats, "storage");
 	}
 
 # Custom links
@@ -9469,18 +9477,17 @@ if (!@leftservers) {
 		}
 	return;
 	}
+@leftservers = sort { $a->{'host'} cmp $b->{'host'} } @leftservers;
 
 print &ui_form_start($cgi);
 print &ui_hidden("new", 1);
-print &ui_table_start($text{'kvms_startheader'}, undef, 2);
 
-print &ui_table_row($text{'kvms_starthost'},
-		    &ui_select("id", undef,
-			       [ map { [ $_->{'id'}, $_->{'host'} ] }
-				     @leftservers ]));
+print "<b>$text{'kvms_starthost'}</b> ",
+      &ui_select("id", undef,
+	       [ map { [ $_->{'id'}, $_->{'host'} ] } @leftservers ])." ".
+      &ui_submit($text{'kvms_start'});
 
-print &ui_table_end();
-print &ui_form_end([ [ undef, $text{'kvms_start'} ] ]);
+print &ui_form_end();
 }
 
 # tempname_on_server(&server, [basename])

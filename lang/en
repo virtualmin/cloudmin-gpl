@@ -2676,6 +2676,7 @@ cat_power=System State
 cat_manage=System Operations
 cat_ec2=Amazon EC2
 cat_settings=Cloudmin Settings
+cat_storage=System Storage
 cat_owners=Virtual System Owners
 cat_virtualmin=Virtualmin Settings
 cat_hosts=Host Systems
@@ -5092,6 +5093,9 @@ iscsi_return=list of iSCSI servers
 iscsi_mod=iSCSI server type
 iscsi_mod_iscsi-target=iSCSI enterprise target
 iscsi_mod_iscsi-server=NetBSD iSCSI server
+iscsi_err=Failed to save iSCSI server
+iscsi_ebase_dir=Missing or non-absolute base directory
+iscsi_emkdir=Base directory does not exist and could not be created
 
 __norefs=1
 
