@@ -281,6 +281,10 @@ elsif ($type eq "links" || $type eq "linkcats") {
 	# Multiple custom links
         return $text{'log_'.$action.'_'.$type};
         }
+elsif ($type eq "iscsi") {
+	# One iSCSI server
+	return &text('log_'.$action.'_iscsi', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),
