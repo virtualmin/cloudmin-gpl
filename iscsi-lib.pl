@@ -24,33 +24,33 @@ return grep { $_->{'manager'} eq 'real' ||
 }
 
 # check_iscsi_server(&server)
-# If a system can be an iSCSI server, return undef. Otherwise return an error
-# message explaining why, such as a missing module
+# If a system can be an iSCSI server, return 1 and the Webmin module to use.
+# Otherwise return 0 and an error message explaining why.
 sub check_iscsi_server
 {
 my ($server) = @_;
 if (!&can_ssh_status($server)) {
-	return $text{'iscsi_nossh'};
+	return (0, $text{'iscsi_nossh'});
 	}
 if ($server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
-	return $text{'iscsi_nowebmin'};
+	return (0, $text{'iscsi_nowebmin'});
 	}
 my $info = &get_server_collected($server);
 if ($info->{'general'}->{'version'} < 1.600) {
-	return $text{'iscsi_noversion'};
+	return (0, $text{'iscsi_noversion'});
 	}
 my $mod;
 foreach my $m ("iscsi-target", "iscsi-server") {
-	if (&remote_foreign_check($server, $m) &&
-	    &remote_foreign_installed($server, $m)) {
-		$mod = $m;
-		last;
-		}
+	next if (!&remote_foreign_check($server, $m));
+	&remote_foreign_require($server, $m);
+	next if (!&remote_foreign_call($server, $m, "foreign_installed", $m));
+	$mod = $m;
+	last;
 	}
 if (!$mod) {
-	return $text{'iscsi_nomod'};
+	return (0, $text{'iscsi_nomod'});
 	}
-return undef;
+return (1, $mod);
 }
 
 1;

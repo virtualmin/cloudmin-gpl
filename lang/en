@@ -5087,6 +5087,11 @@ iscsi_base=Create new disks under
 iscsi_base_dir=Directory
 iscsi_base_vg=LVM volume group
 iscsi_eadd=The system $1 cannot be added : $2
+iscsi_delete=Remove System
+iscsi_return=list of iSCSI servers
+iscsi_mod=iSCSI server type
+iscsi_mod_iscsi-target=iSCSI enterprise target
+iscsi_mod_iscsi-server=NetBSD iSCSI server
 
 __norefs=1
 
