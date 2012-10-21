@@ -79,4 +79,114 @@ if (!&remote_foreign_call($server, "iscsi-client", "foreign_installed",
 return undef;
 }
 
+# create_iscsi_disk(&server, &disk)
+# On the iSCSI server for the given VM's host, create and export the given disk.
+# Returns undef on success, or an error message on failure.
+sub create_iscsi_disk
+{
+my ($server, $disk) = @_;
+
+# Get the host system and thus the iSCSI server and connect
+my $vhost = &get_parent_server($server);
+$vhost || return "No host system found!";
+my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id eq '' && return "Host system $vhost->{'host'} is not configured ".
+		    "to use iSCSI";
+my $scsiserver = &get_managed_server($id);
+$scsiserver || return "iSCSI server with ID $id does not exist!";
+my $mod = $scsiserver->{'iscsi_module'};
+$mod || return "System $scsiserver->{'host'} is no longer an iSCSI server";
+$last_remote_error = undef;
+&remote_foreign_require($iscsiserver, $mod);
+$last_remote_error && return "Error loading $mod : $last_remote_error";
+
+# Create the disk file or LV
+my $dir = $vhost->{'iscsi_base_dir'};
+my $vg = $vhost->{'iscsi_base_vg'};
+$server->{'iscsi_disk_count'} ||= 0;
+my $real;
+if ($vg) {
+	# Create a logical volume
+	&remote_foreign_require($iscsiserver, "lvm");
+	$last_remote_error &&
+		return "Error loading LVM module : $last_remote_error";
+	my $lv = { 'name' => $server->{'host'}."_".
+			     $server->{'iscsi_disk_count'}."_img",
+		   'size' => $disk->{'size'} / 1024,
+		   'perm' => 'rw',
+		   'alloc' => 'n',
+		   'vg' => $vg };
+	my $err = &remote_foreign_call($iscsiserver, "lvm",
+				       "create_logical_volume", $lv);
+	$err ||= $last_remote_error;
+	return "LVM logical volume creation failed : $err" if ($err);
+
+	# Zero out first 32k
+	$real = "/dev/$lv->{'vg'}/$lv->{'name'}";
+	my $cmd = &dd_command("/dev/zero", $real, 32768);
+	my ($out, $ex, $err) = &execute_command_on_server(
+					$iscsiserver, $cmd);
+	$err = $out if ($ex);
+	$err && return "Failed to zero out $real : $err";
+	}
+else {
+	# Create an empty file
+	$real = $dir."/".$server->{'host'}."_".
+			 $server->{'iscsi_disk_count'}."_img",
+	my $cmd = &dd_command("/dev/zero", $real, $disk->{'size'});
+	my ($out, $ex, $err) = &execute_command_on_server($iscsiserver, $cmd);
+	$err = $out if ($ex);
+	$err && return "Failed to create file $disk->{'real'} : $err";
+	}
+$server->{'iscsi_disk_count'}++;
+
+# Export via iSCSI
+if ($mod eq "iscsi-server") {
+	# Add an extent
+	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
+	my $extent = { 'num' => &remote_foreign_call($iscsiserver, $mod,
+					"find_free_num", $conf, 'extent'),
+		       'type' => 'extent' };
+	$extent->{'device'} = $real;
+	$extent->{'start'} = 0;
+	$extent->{'size'} = $disk->{'size'};
+	&remote_foreign_call($iscsiserver, $mod, "save_directive", $conf,
+			     undef, $extent);
+	$last_remote_error &&
+		return "Failed to create extent : $last_remote_error";
+
+	# Add a target for the extent
+	my $target = { 'num' => &remote_foreign_call($iscsiserver, $mod,
+					"find_free_num", $conf, 'target'),
+		       'type' => 'target' };
+	$target->{'export'} = 'extent'.$extent->{'num'};
+	$target->{'flags'} = 'rw';
+	$target->{'network'} = 'any';
+	&remote_foreign_call($iscsiserver, $mod, "save_directive", $conf,
+			     undef, $target);
+	$last_remote_error &&
+		return "Failed to create target : $last_remote_error";
+
+	# Apply the config
+	my $err = &remote_foreign_call($iscsiserver, $mod,
+				       "restart_iscsi_server");
+	return "Failed to apply iSCSI server configuration : $err" if ($err);
+	}
+elsif ($mod eq "iscsi-target") {
+	}
+else {
+	return "Unknown module $mod";
+	}
+# XXX
+# XXX restart iSCSI server
+
+# Connect from host system
+# XXX
+
+# Set real path in disk object
+# XXX
+
+return undef;
+}
+
 1;
