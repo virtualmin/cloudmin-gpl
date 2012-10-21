@@ -44,15 +44,24 @@ else {
 
 	# Save and check LVM
 	if (defined($in{'lvm_def'})) {
-		if ($in{'lvm_def'}) {
+		if ($in{'lvm_def'} == 1) {
+			# Regular files
 			delete($kvm->{'kvm_vg'});
+			delete($kvm->{'kvm_iscsi'});
 			}
-		else {
+		elsif ($in{'lvm_def'} == 0) {
+			# LVM volume group
 			$in{'lvm'} =~ /^[A-Za-z0-9\.\-\_]+$/ ||
 				&error($text{'kvm_elvm'});
 			$err = &check_host_lvm($kvm, $in{'lvm'});
 			&error(&text('xen_elvmerr', $err)) if ($err);
 			$kvm->{'kvm_vg'} = $in{'lvm'};
+			delete($kvm->{'kvm_iscsi'});
+			}
+		else {
+			# iSCSI server
+			$kvm->{'kvm_iscsi'} = $in{'iscsi'};
+			delete($kvm->{'kvm_vg'});
 			}
 		}
 

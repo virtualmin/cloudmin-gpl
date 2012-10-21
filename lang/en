@@ -4084,9 +4084,10 @@ kvm_egone=The KVM host no longer exists!
 kvm_header=KVM host system details
 kvm_host=System hosting KVMs
 kvm_dir=Base directory for virtual systems
-kvm_lvm=LVM volume group for disk images
-kvm_nolvm=None - use regular files
-kvm_lvmvg=Volume group named
+kvm_storage=Create disk images in
+kvm_storage1=Regular files under base directory
+kvm_storage0=LVM volume group
+kvm_storage2=Devices on iSCSI server
 kvm_domain=Add KVM systems to DNS domain
 kvm_domain2=DNS domain for KVM servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
 kvm_range=IP address allocation ranges
@@ -5104,6 +5105,12 @@ iscsi_mod_iscsi-server=NetBSD iSCSI server
 iscsi_err=Failed to save iSCSI server
 iscsi_ebase_dir=Missing or non-absolute base directory
 iscsi_emkdir=Base directory does not exist and could not be created
+
+iscsi_cnossh=Only systems that are running and accessible can be an iSCSI client
+iscsi_cnowebmin=Only systems with Webmin installed can be an iSCSI client
+iscsi_cnoversion=Webmin version 1.600 or later is required
+iscsi_cnomod=The Webmin iSCSI client module is not installed
+iscsi_cnoclient=The iSCSI client package is not installed
 
 __norefs=1
 

@@ -48,6 +48,8 @@ if ($kvm->{'status'} ne 'down' &&
 		$no_lvm = 1 if (!@pvs && !$last_remote_error);
 		}
 	}
+
+# Use drop-down of VG if possible, text field otherwise
 if (@pvs) {
 	$lvfield = &ui_select("lvm", $kvm->{'kvm_vg'},
 			      [ map { $_->{'name'} } @pvs ], 1, 0,
@@ -57,12 +59,26 @@ else {
 	$lvfield = &ui_textbox("lvm", $kvm->{'kvm_vg'}, 40);
 	}
 
+# Check if iSCSI is supported
+@iservers = &list_iscsi_target_servers();
+if (&supports_iscsi() && @iservers && !&check_iscsi_client($kvm)) {
+	$ifield = &ui_select("iscsi", $kvm->{'kvm_iscsi'},
+		     [ map { [ $_->{'id'}, $_->{'host'} ] } @iservers ]);
+	}
+
+
+# Build table of storage types
+@stable = ( [ 1, $text{'kvm_storage1'} ] );
 if (!$no_lvm) {
-	# LVM volume group for disks
-	print &ui_table_row($text{'kvm_lvm'},
-		&ui_radio("lvm_def", $kvm->{'kvm_vg'} ? 0 : 1,
-			  [ [ 1, $text{'kvm_nolvm'}."<br>" ],
-			    [ 0, $text{'kvm_lvmvg'}." ".$lvfield ] ]));
+	push(@stable, [ 0, $text{'kvm_storage0'}, $lvfield ]);
+	}
+if ($ifield) {
+	push(@stable, [ 2, $text{'kvm_storage2'}, $ifield ]);
+	}
+if (@stable > 1) {
+	print &ui_table_row($text{'kvm_storage'},
+		&ui_radio_table("lvm_def", $kvm->{'kvm_iscsi'} ? 2 :
+					   $kvm->{'kvm_vg'} ? 0 : 1, \@stable));
 	}
 
 # DNS domain name to add under (if we host any)

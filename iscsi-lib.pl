@@ -53,4 +53,30 @@ if (!$mod) {
 return (1, $mod);
 }
 
+# check_iscsi_client(&server)
+# Returns undef if some system can be an iSCSI client, 0 if not
+sub check_iscsi_client
+{
+my ($server) = @_;
+if (!&can_ssh_status($server)) {
+	return $text{'iscsi_cnossh'};
+	}
+if ($server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
+	return $text{'iscsi_cnowebmin'};
+	}
+my $info = &get_server_collected($server);
+if ($info->{'general'}->{'version'} < 1.600) {
+	return $text{'iscsi_cnoversion'};
+	}
+if (!&remote_foreign_check($server, "iscsi-client")) {
+	return $text{'iscsi_cnomod'};
+	}
+&remote_foreign_require($server, "iscsi-client");
+if (!&remote_foreign_call($server, "iscsi-client", "foreign_installed",
+			  "iscsi-client")) {
+	return $text{'iscsi_cnoclient'};
+	}
+return undef;
+}
+
 1;
