@@ -92,10 +92,10 @@ $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
-my $scsiserver = &get_managed_server($id);
-$scsiserver || return "iSCSI server with ID $id does not exist!";
-my $mod = $scsiserver->{'iscsi_module'};
-$mod || return "System $scsiserver->{'host'} is no longer an iSCSI server";
+my $iscsiserver = &get_managed_server($id);
+$iscsiserver || return "iSCSI server with ID $id does not exist!";
+my $mod = $iscsiserver->{'iscsi_module'};
+$mod || return "System $iscsiserver->{'host'} is no longer an iSCSI server";
 $last_remote_error = undef;
 &remote_foreign_require($iscsiserver, $mod);
 $last_remote_error && return "Error loading $mod : $last_remote_error";
@@ -115,7 +115,7 @@ else {
 
 # Try a test query of targets from the vhost
 $last_remote_error = undef;
-&remote_foreign_require($vhost, "iscsi-cient");
+&remote_foreign_require($vhost, "iscsi-client");
 $last_remote_error &&
 	return "Error loading iSCSI client module : $last_remote_error";
 my $ip = &get_server_ip($iscsiserver);
@@ -125,11 +125,12 @@ ref($targets) || return "Failed to list targets on $iscsiserver->{'host'} ".
 			"from $vhost->{'host'} : $targets";
 
 # Create the disk file or LV
-my $dir = $vhost->{'iscsi_base_dir'};
-my $vg = $vhost->{'iscsi_base_vg'};
+my $dir = $iscsiserver->{'iscsi_base_dir'};
+my $vg = $iscsiserver->{'iscsi_base_vg'};
 $server->{'iscsi_disk_count'} ||= 0;
 my $real;
 my $suffix = $server->{'host'}."_".$server->{'iscsi_disk_count'}."_img";
+print STDERR "vg=$vg suffix=$suffix\n";
 if ($vg) {
 	# Create a logical volume
 	&remote_foreign_require($iscsiserver, "lvm");
@@ -161,10 +162,12 @@ else {
 	$err = $out if ($ex);
 	$err && return "Failed to create file $real : $err";
 	}
+print STDERR "real=$real\n";
 $server->{'iscsi_disk_count'}++;
 
 # Export via iSCSI
 my $targetname;
+print STDERR "mod=$mod\n";
 if ($mod eq "iscsi-server") {
 	# Add an extent
 	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
@@ -194,6 +197,7 @@ if ($mod eq "iscsi-server") {
 	# Apply the config
 	my $err = &remote_foreign_call($iscsiserver, $mod,
 				       "restart_iscsi_server");
+	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
 
 	$targetname = $target->{'export'};
@@ -215,11 +219,16 @@ elsif ($mod eq "iscsi-target") {
 	       'value' => '1 Path='.$real });
 	&remote_foreign_call($iscsiserver, $mod,
 		"save_directive", $conf, $pconf, [ ], [ $target ]);
+	$last_remote_error &&
+		return "Failed to create target : $last_remote_error";
 	&remote_foreign_call($iscsiserver, $mod, "flush_file_lines");
+	$last_remote_error &&
+		return "Failed to flush file : $last_remote_error";
 
 	# Apply the config
 	my $err = &remote_foreign_call($iscsiserver, $mod,
 				       "restart_iscsi_server");
+	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
 
 	$targetname = $target->{'value'};
@@ -236,7 +245,7 @@ $rtarget || return "Expected target $targetname is not shared by ".
 
 # Connect from host system
 # XXX clean up disk if failed?
-my $err = &remote_foreign_call($vhost, "iscsi-cient", $ip, 3260, undef,
+my $err = &remote_foreign_call($vhost, "iscsi-client", $ip, 3260, undef,
 			       $rtarget);
 return "iSCSI connection failed : $err" if ($err);
 

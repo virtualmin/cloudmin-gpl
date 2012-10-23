@@ -1296,7 +1296,7 @@ elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
                           $server->{'kvm_swapfile_lv'};
                 }
 	}
-elsif ($vhost->{'kvm_iscsi'} && !$server->{'kvm_nolvm'}) {
+elsif ($vhost->{'kvm_iscsi'} ne '' && !$server->{'kvm_nolvm'}) {
 	# On iSCSI server
 	$server->{'kvm_filesystem_iscsi'} = $vhost->{'kvm_iscsi'};
         if ($server->{'kvm_swap'}) {
@@ -1397,7 +1397,7 @@ if ($server->{'kvm_filesystem_vg'}) {
 		return "LVM logical volume creation failed : $err" if ($err);
 		}
 	}
-elsif ($server->{'kvm_filesystem_iscsi'}) {
+elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
 	# On iSCSI, so create iSCSI disk and attach to host
 	my $disk = { 'size' => ($img && !$empty ? $img->{'rawsize'} : 0) ||
 			       $server->{'kvm_disksize'}*1024*1024 ||
@@ -1436,7 +1436,7 @@ if ($server->{'kvm_swapfile_vg'}) {
                         if ($err);
                 }
         }
-elsif ($server->{'kvm_swapfile_iscsi'}) {
+elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
 	# Create iSCSI disk for swap
 	my $disk = { 'size' => $server->{'kvm_swap'}*1024*1024,
 		   };
@@ -2829,7 +2829,7 @@ if (!$device) {
 		$rv->{'lv'} =~ s/\./_/g;
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
-	elsif ($server->{'kvm_filesystem_iscsi'}) {
+	elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
 		# Disk will be on an iSCSI server. The real field gets set later
 		$rv->{'scsi_server'} = $server->{'kvm_filesystem_iscsi'};
 		}
