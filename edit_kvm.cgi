@@ -32,10 +32,6 @@ if (!$module_info{'onehost'}) {
 print &ui_table_row($text{'kvm_dir'},
 	&ui_textbox("dir", $kvm->{'kvm_dir'} || "/kvm", 60));
 
-# Allow memory over-committing?
-print &ui_table_row($text{'openvz_overmemory'},
-	&ui_yesno_radio("overmemory", $kvm->{'kvm_overmemory'}));
-
 # Find volume groups on host, if we can
 @pvs = ( );
 if ($kvm->{'status'} ne 'down' &&
@@ -77,9 +73,13 @@ if ($ifield) {
 	}
 if (@stable > 1) {
 	print &ui_table_row($text{'kvm_storage'},
-		&ui_radio_table("lvm_def", $kvm->{'kvm_iscsi'} ? 2 :
+		&ui_radio_table("lvm_def", $kvm->{'kvm_iscsi'} ne '' ? 2 :
 					   $kvm->{'kvm_vg'} ? 0 : 1, \@stable));
 	}
+
+# Allow memory over-committing?
+print &ui_table_row($text{'openvz_overmemory'},
+	&ui_yesno_radio("overmemory", $kvm->{'kvm_overmemory'}));
 
 # DNS domain name to add under (if we host any)
 @zones = &list_bind_zones();

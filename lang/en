@@ -5105,6 +5105,7 @@ iscsi_mod_iscsi-server=NetBSD iSCSI server
 iscsi_err=Failed to save iSCSI server
 iscsi_ebase_dir=Missing or non-absolute base directory
 iscsi_emkdir=Base directory does not exist and could not be created
+iscsi_nousers=Not used by any hosts
 
 iscsi_cnossh=Only systems that are running and accessible can be an iSCSI client
 iscsi_cnowebmin=Only systems with Webmin installed can be an iSCSI client
