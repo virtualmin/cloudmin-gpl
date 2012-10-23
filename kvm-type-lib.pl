@@ -807,7 +807,8 @@ elsif ($in{'kvm_lvm'} == 0) {
 	}
 elsif ($in{'kvm_lvm'} == 1) {
 	# Must be on LVM
-	$vhost->{'kvm_vg'} || &error(&text('xen_eonlvm', $vhost->{'host'}));
+	$vhost->{'kvm_iscsi'} || $vhost->{'kvm_vg'} ||
+		&error(&text('xen_eonlvm', $vhost->{'host'}));
 	$server->{'directory'} && &error($text{'xen_eonlvmdir'});
 	}
 
@@ -1170,7 +1171,7 @@ if ($zone) {
 if (&can_action(undef, "advanced")) {
 	# Validate LVM flag
 	if ($args->{'lvm'} =~ /true|yes/i) {
-		$vhost->{'kvm_vg'} ||
+		$vhost->{'kvm_vg'} || $vhost->{'kvm_iscsi'} ||
 			return "Host system $vhost->{'host'} does not use LVM";
 		$server->{'directory'} &&
 			return "LVM cannot be enabled when a disk directory ".
@@ -1295,6 +1296,13 @@ elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
                           $server->{'kvm_swapfile_lv'};
                 }
 	}
+elsif ($vhost->{'kvm_iscsi'} && !$server->{'kvm_nolvm'}) {
+	# On iSCSI server
+	$server->{'kvm_filesystem_iscsi'} = $vhost->{'kvm_iscsi'};
+        if ($server->{'kvm_swap'}) {
+		$server->{'kvm_swapfile_iscsi'} = $vhost->{'kvm_iscsi'};
+		}
+	}
 else {
 	# On regular files
 	$fsfile = "$kvm_dir/$server->{'host'}.img";
@@ -1302,8 +1310,6 @@ else {
                 $swfile = "$kvm_dir/$server->{'host'}.swap";
                 }
 	}
-$server->{'kvm_filesystem'} = $fsfile;
-$server->{'kvm_swapfile'} = $swfile;
 
 # Generate MAC addresses
 my @ips = split(/\s+/, $server->{'kvm_ip'});
@@ -1346,17 +1352,6 @@ if ($server->{'kvm_model'}) {
 		}
 	}
 
-# Set drive in config, unless resetting in which case they stay the same
-if (!$reset) {
-	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,".
-		  ($server->{'kvm_virtio'} ? "if=virtio,boot=on" : "if=ide");
-	if ($swfile) {
-		$server->{'kvm_drives'} .=
-			" file=$swfile,media=disk,index=1,cache=off,".
-			($server->{'kvm_virtio'} ? "if=virtio" : "if=ide");
-		}
-	}
-
 # Find existing LV if resetting
 my (@lvs, $fslv);
 &remote_finished();
@@ -1370,9 +1365,9 @@ if ($reset && $server->{'kvm_filesystem_vg'}) {
 			 $_->{'name'} eq $server->{'kvm_swapfile_lv'} } @lvs;
 	}
 
-# If on LVM, create an LV first
 $last_remote_error = undef;
 if ($server->{'kvm_filesystem_vg'}) {
+	# If on LVM, create an LV first
 	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 	my $lv = { 'name' => $server->{'kvm_filesystem_lv'},
 		   'size' =>
@@ -1402,9 +1397,19 @@ if ($server->{'kvm_filesystem_vg'}) {
 		return "LVM logical volume creation failed : $err" if ($err);
 		}
 	}
+elsif ($server->{'kvm_filesystem_iscsi'}) {
+	# On iSCSI, so create iSCSI disk and attach to host
+	my $disk = { 'size' => ($img && !$empty ? $img->{'rawsize'} : 0) ||
+			       $server->{'kvm_disksize'}*1024*1024 ||
+			       1024*1024,
+		   };
+	my $err = &create_iscsi_disk($server, $disk);
+	$err && return "iSCSI disk creation failed : $err";
+	$fsfile = $disk->{'real'};
+	}
 
-# Create swap LV
 if ($server->{'kvm_swapfile_vg'}) {
+	# Create swap LV
         my $lv = { 'name' => $server->{'kvm_swapfile_lv'},
                    'size' => int($server->{'kvm_swap'}*1024),
                    'perm' => 'rw',
@@ -1431,6 +1436,27 @@ if ($server->{'kvm_swapfile_vg'}) {
                         if ($err);
                 }
         }
+elsif ($server->{'kvm_swapfile_iscsi'}) {
+	# Create iSCSI disk for swap
+	my $disk = { 'size' => $server->{'kvm_swap'}*1024*1024,
+		   };
+	my $err = &create_iscsi_disk($server, $disk);
+	$err && return "iSCSI swap disk creation failed : $err";
+	$swfile = $disk->{'real'};
+	}
+
+# Set drive in config, unless resetting in which case they stay the same
+$server->{'kvm_filesystem'} = $fsfile;
+$server->{'kvm_swapfile'} = $swfile;
+if (!$reset) {
+	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,".
+		  ($server->{'kvm_virtio'} ? "if=virtio,boot=on" : "if=ide");
+	if ($swfile) {
+		$server->{'kvm_drives'} .=
+			" file=$swfile,media=disk,index=1,cache=off,".
+			($server->{'kvm_virtio'} ? "if=virtio" : "if=ide");
+		}
+	}
 
 # Create empty disk file, with no partitions
 if ($empty) {
@@ -2584,6 +2610,19 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 			$disk->{'lv_snap_of'} = $lv->{'snap_of'};
 			}
 		}
+	elsif ($disk->{'real'} =~ /^\/dev\/disk\/by-path\/ip-(\S+):(\d+)-iscsi-(\S+):(\S+)-lun-(\d+)$/) {
+		# Disk is on an iSCSI server
+		$disk->{'iscsi_ip'} = $1;
+		$disk->{'iscsi_port'} = $2;
+		$disk->{'iscsi_name'} = $3;
+		$disk->{'iscsi_target'} = $4;
+		$disk->{'iscsi_lun'} = $5;
+		my $iscsiserver = &get_managed_server_by(
+					"ip", $disk->{'iscsi_ip'});
+		if ($iscsiserver) {
+			$disk->{'iscsi_server'} = $iscsiserver->{'id'};
+			}
+		}
 	if ($disk->{'vg'}) {
 		$disk->{'storage_id'} = 'lvm_'.$disk->{'vg'};
 		$disk->{'storage'} = &text('storage_lvm',$disk->{'vg'});
@@ -2790,6 +2829,10 @@ if (!$device) {
 		$rv->{'lv'} =~ s/\./_/g;
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
+	elsif ($server->{'kvm_filesystem_iscsi'}) {
+		# Disk will be on an iSCSI server. The real field gets set later
+		$rv->{'scsi_server'} = $server->{'kvm_filesystem_iscsi'};
+		}
 	else {
 		# Pick an image file
 		$rv->{'real'} = "$kvm_dir/$server->{'host'}.".
@@ -2853,6 +2896,10 @@ else {
 						$vhost, $cmd);
 		$err = $out if ($ex);
 		$err && return "Failed to zero out $disk->{'real'} : $err";
+		}
+	elsif ($disk->{'iscsi_server'}) {
+		# Create iSCSI disk
+		# XXX set 'real' field
 		}
 	elsif (!@st) {
 		# Create empty file

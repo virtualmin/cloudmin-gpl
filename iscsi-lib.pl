@@ -159,7 +159,7 @@ else {
 	my $cmd = &dd_command("/dev/zero", $real, $disk->{'size'});
 	my ($out, $ex, $err) = &execute_command_on_server($iscsiserver, $cmd);
 	$err = $out if ($ex);
-	$err && return "Failed to create file $disk->{'real'} : $err";
+	$err && return "Failed to create file $real : $err";
 	}
 $server->{'iscsi_disk_count'}++;
 
@@ -251,6 +251,11 @@ $conn || return "No iSCSI connection to $ip for ".
 $disk->{'real'} = $conn->{'longdevice'} ||
 		  "/dev/disk/by-path/ip-$conn->{'ip'}:$conn->{'port'}-".
 		  "iscsi-$conn->{'name'}:$conn->{'target'}-lun-1";
+foreach my $f ("ip", "port", "name", "target") {
+	$disk->{'iscsi_'.$f} = $conn->{$f};
+	}
+$disk->{'iscsi_lun'} = $conn->{'scsilun'};
+$disk->{'iscsi_server'} = $iscsiserver->{'id'};
 
 return undef;
 }
