@@ -70,7 +70,7 @@ if (@$disks) {
 				&mount::device_name($d->{'virt'}, 1) :
 				"<tt>$d->{'virt'}</tt>";
 		$canedit = !$d->{'device'} || $d->{'lv'} || $d->{'storage'} ||
-			   &can_action($server, 'devices');
+			   $d->{'iscsi_ip'} || &can_action($server, 'devices');
 		$sched = &get_scheduled_change($server, "disk", $d->{'real'});
 		print &ui_checked_columns_row([
 		    $canedit ?
@@ -78,6 +78,7 @@ if (@$disks) {
 		      "$rdesc</a>" : $rdesc,
 		    $vdesc,
 		    $d->{'lv'} ? $text{'disks_lvm'} :
+		     $d->{'iscsi_ip'} ? $text{'disks_iscsi'} :
 		     $d->{'storage'} && $server->{'manager'} eq 'citrix' ?
 			$text{'disks_storagetype'} :
 		      $d->{'device'} ? $text{'disks_dev'} : $text{'disks_file'},

@@ -2622,6 +2622,26 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		if ($iscsiserver) {
 			$disk->{'iscsi_server'} = $iscsiserver->{'id'};
 			}
+
+		# Get size from /proc/partitions on host
+		my $realdevice;
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$vhost, "readlink $disk->{'real'}");
+		if (!$ex && !$err && $out =~ /\/(sd[a-z]+)/) {
+			$realdevice = $1;
+			}
+		($out, $ex, $err) = &execute_command_on_server(
+					$vhost, "cat /proc/partitions");
+		if (!$ex && !$err && $realdevice) {
+			foreach my $l (split(/\r?\n/, $out)) {
+				$l =~ s/^\s+//;
+				my ($major, $minor, $blocks, $name) =
+					split(/\s+/, $l);
+				if ($name eq $realdevice) {
+					$disk->{'size'} = $blocks * 1024;
+					}
+				}
+			}
 		}
 	if ($disk->{'vg'}) {
 		$disk->{'storage_id'} = 'lvm_'.$disk->{'vg'};

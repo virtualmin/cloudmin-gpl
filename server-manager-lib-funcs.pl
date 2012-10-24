@@ -178,9 +178,12 @@ if ($key eq "id") {
 	push(@rv, $s) if ($s);
 	}
 else {
-	@rv = grep { $_->{$key} eq $value } &list_managed_servers(1);
-	foreach my $s (@rv) {
-		&complete_managed_server($s);
+	my $complete = $key eq "ip" ? 1 : 0;
+	@rv = grep { $_->{$key} eq $value } &list_managed_servers(!$complete);
+	if (!$complete) {
+		foreach my $s (@rv) {
+			&complete_managed_server($s);
+			}
 		}
 	}
 return wantarray ? @rv : $rv[0];
@@ -804,6 +807,17 @@ if ($server->{'manager'} eq 'citrix' && $d->{'storage'}) {
 	my $r = $d->{'realdesc'} || $d->{'real'};
 	return &text('disks_storage', "<i>$d->{'storage'}</i>",
 				      "<tt>$r</tt>");
+	}
+elsif ($d->{'iscsi_ip'}) {
+	# From iSCSI server
+	my $ihost;
+	if ($d->{'iscsi_server'} ne '') {
+		my $iscsiserver = &get_managed_server($d->{'iscsi_server'});
+		$ihost = $iscsiserver->{'host'};
+		}
+	$ihost ||= $d->{'iscsi_ip'};
+	return &text('disks_oniscsi', "<tt>$ihost</tt>",
+				      "<tt>$d->{'iscsi_target'}</tt>");
 	}
 elsif ($d->{'device'} && defined(&mount::device_name)) {
 	# Real or LVM device

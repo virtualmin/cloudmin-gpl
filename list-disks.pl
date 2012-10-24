@@ -106,6 +106,21 @@ if ($multi) {
 			print "    LVM volume group: $d->{'vg'}\n";
 			print "    LVM logical volume: $d->{'lv'}\n";
 			}
+		if ($d->{'iscsi_ip'}) {
+			if ($d->{'iscsi_server'} ne '') {
+				my $iscsiserver = &get_managed_server(
+							$d->{'iscsi_server'});
+				print "    iSCSI server: ",
+				      "$iscsiserver->{'host'}\n";
+				}
+			else {
+				print "    iSCSI server: UNKNOWN\n";
+				}
+			print "    iSCSI server IP: $d->{'iscsi_ip'}\n";
+			print "    iSCSI server port: $d->{'iscsi_port'}\n";
+			print "    iSCSI server name: $d->{'iscsi_name'}\n";
+			print "    iSCSI target: $d->{'iscsi_target'}\n";
+			}
 		if ($d->{'lv_snap_of'}) {
 			print "    LVM logical volume snapshot of: ",
 			      "$d->{'lv_snap_of'}\n";

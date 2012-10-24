@@ -171,6 +171,8 @@ print STDERR "mod=$mod\n";
 if ($mod eq "iscsi-server") {
 	# Add an extent
 	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
 	my $extent = { 'num' => &remote_foreign_call($iscsiserver, $mod,
 					"find_free_num", $conf, 'extent'),
 		       'type' => 'extent' };
@@ -206,17 +208,21 @@ elsif ($mod eq "iscsi-target") {
 	# Add a target
 	my $pconf = &remote_foreign_call($iscsiserver, $mod,
 					 "get_iscsi_config_parent");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
 	my $conf = $pconf->{'members'};
 	my $host = &remote_foreign_call($iscsiserver, $mod,
 					"find_host_name", $conf) ||
 		   &remote_foreign_call($iscsiserver, $mod,
 					"generate_host_name");
+	$last_remote_error &&
+		return "Failed to get iSCSI hostname : $last_remote_error";
 	$target = { 'name' => 'Target',
 		    'value' => $host.":".$suffix,
                     'members' => [ ] };
 	push(@{$target->{'members'}},
 	     { 'name' => 'Lun',
-	       'value' => '1 Path='.$real });
+	       'value' => '1 Type=fileio,Path='.$real });
 	&remote_foreign_call($iscsiserver, $mod,
 		"save_directive", $conf, $pconf, [ ], [ $target ]);
 	$last_remote_error &&
@@ -231,7 +237,7 @@ elsif ($mod eq "iscsi-target") {
 	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
 
-	$targetname = $target->{'value'};
+	$targetname = $suffix;
 	}
 
 # Get list of available targets on host from server
@@ -245,8 +251,8 @@ $rtarget || return "Expected target $targetname is not shared by ".
 
 # Connect from host system
 # XXX clean up disk if failed?
-my $err = &remote_foreign_call($vhost, "iscsi-client", $ip, 3260, undef,
-			       $rtarget);
+my $err = &remote_foreign_call($vhost, "iscsi-client",
+		"create_iscsi_connection", $ip, 3260, undef, $rtarget);
 return "iSCSI connection failed : $err" if ($err);
 
 # Set real path in disk object
