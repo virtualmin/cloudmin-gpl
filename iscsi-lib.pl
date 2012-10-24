@@ -36,7 +36,7 @@ if ($server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
 	return (0, $text{'iscsi_nowebmin'});
 	}
 my $info = &get_server_collected($server);
-if ($info->{'general'}->{'version'} < 1.600) {
+if ($info->{'general'}->{'version'} < 1.603) {
 	return (0, $text{'iscsi_noversion'});
 	}
 my $mod;
@@ -65,7 +65,7 @@ if ($server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
 	return $text{'iscsi_cnowebmin'};
 	}
 my $info = &get_server_collected($server);
-if ($info->{'general'}->{'version'} < 1.600) {
+if ($info->{'general'}->{'version'} < 1.603) {
 	return $text{'iscsi_cnoversion'};
 	}
 if (!&remote_foreign_check($server, "iscsi-client")) {
