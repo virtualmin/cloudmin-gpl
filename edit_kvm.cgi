@@ -57,11 +57,10 @@ else {
 
 # Check if iSCSI is supported
 @iservers = &list_iscsi_target_servers();
-if (&supports_iscsi() && @iservers && !&check_iscsi_client($kvm)) {
+if (&supports_iscsi() && @iservers) {
 	$ifield = &ui_select("iscsi", $kvm->{'kvm_iscsi'},
 		     [ map { [ $_->{'id'}, $_->{'host'} ] } @iservers ]);
 	}
-
 
 # Build table of storage types
 @stable = ( [ 1, $text{'kvm_storage1'} ] );

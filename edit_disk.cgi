@@ -143,10 +143,13 @@ print &ui_table_row($text{'disk_virt'},
 
 # Get current disk used and free on host
 $freemsg = "";
-($diskfree, $disktotal) = &host_free_disk($vhost, $server->{'manager'},$server);
-if ($diskfree) {
-	$freemsg = &text('disk_sizefree', &nice_size($disktotal),
-					  &nice_size($diskfree));
+if ($disk->{'iscsi_server'} eq '') {
+	($diskfree, $disktotal) = &host_free_disk($vhost, $server->{'manager'},
+						  $server);
+	if ($diskfree) {
+		$freemsg = &text('disk_sizefree', &nice_size($disktotal),
+						  &nice_size($diskfree));
+		}
 	}
 
 # Size of file

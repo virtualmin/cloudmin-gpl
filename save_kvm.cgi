@@ -52,7 +52,7 @@ else {
 		elsif ($in{'lvm_def'} == 0) {
 			# LVM volume group
 			$in{'lvm'} =~ /^[A-Za-z0-9\.\-\_]+$/ ||
-				&error($text{'kvm_elvm'});
+				&error($text{'xen_elvm'});
 			$err = &check_host_lvm($kvm, $in{'lvm'});
 			&error(&text('xen_elvmerr', $err)) if ($err);
 			$kvm->{'kvm_vg'} = $in{'lvm'};
@@ -60,6 +60,8 @@ else {
 			}
 		else {
 			# iSCSI server
+			$err = &check_iscsi_client($kvm);
+			$err && &error(&text('xen_eiscsi', $err));
 			$kvm->{'kvm_iscsi'} = $in{'iscsi'};
 			delete($kvm->{'kvm_vg'});
 			}

@@ -64,18 +64,32 @@ if (!&can_ssh_status($server)) {
 if ($server->{'status'} ne 'virt' && $server->{'status'} ne 'novirt') {
 	return $text{'iscsi_cnowebmin'};
 	}
+
+# Is Webmin up to date?
 my $info = &get_server_collected($server);
 if ($info->{'general'}->{'version'} < 1.603) {
 	return $text{'iscsi_cnoversion'};
 	}
+
+# Is module installed?
 if (!&remote_foreign_check($server, "iscsi-client")) {
 	return $text{'iscsi_cnomod'};
 	}
+
+# Is module working?
 &remote_foreign_require($server, "iscsi-client");
-if (!&remote_foreign_call($server, "iscsi-client", "foreign_installed",
-			  "iscsi-client")) {
-	return $text{'iscsi_cnoclient'};
+my $err = &remote_foreign_call($server, "iscsi-client", "check_config");
+if ($err) {
+	return &text('iscsi_cnoclient', $err);
 	}
+
+# Is iscsi automatic startup enabled?
+my $conf = &remote_foreign_call($server, "iscsi-client", "get_iscsi_config");
+my ($startup) = grep { $_->{'name'} eq 'node.startup' } @$conf;
+if (!$startup || $startup->{'value'} ne 'automatic') {
+	return $text{'iscsi_cnostartup'};
+	}
+
 return undef;
 }
 
@@ -130,7 +144,6 @@ my $vg = $iscsiserver->{'iscsi_base_vg'};
 $server->{'iscsi_disk_count'} ||= 0;
 my $real;
 my $suffix = $server->{'host'}."_".$server->{'iscsi_disk_count'}."_img";
-print STDERR "vg=$vg suffix=$suffix\n";
 if ($vg) {
 	# Create a logical volume
 	&remote_foreign_require($iscsiserver, "lvm");
@@ -162,12 +175,10 @@ else {
 	$err = $out if ($ex);
 	$err && return "Failed to create file $real : $err";
 	}
-print STDERR "real=$real\n";
 $server->{'iscsi_disk_count'}++;
 
 # Export via iSCSI
 my $targetname;
-print STDERR "mod=$mod\n";
 if ($mod eq "iscsi-server") {
 	# Add an extent
 	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
@@ -271,6 +282,129 @@ foreach my $f ("ip", "port", "name", "target") {
 	}
 $disk->{'iscsi_lun'} = $conn->{'scsilun'};
 $disk->{'iscsi_server'} = $iscsiserver->{'id'};
+
+return undef;
+}
+
+# delete_iscsi_disk(&server, &disk)
+# On the iSCSI server for the given VM's host, un-export and delete the given
+# disk. Returns undef on success, or an error message on failure.
+sub delete_iscsi_disk
+{
+my ($server, $disk) = @_;
+
+# Get the host system and thus the iSCSI server and connect
+my $vhost = &get_parent_server($server);
+$vhost || return "No host system found!";
+my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id eq '' && return "Host system $vhost->{'host'} is not configured ".
+		    "to use iSCSI";
+my $iscsiserver = &get_managed_server($id);
+$iscsiserver || return "iSCSI server with ID $id does not exist!";
+my $mod = $iscsiserver->{'iscsi_module'};
+$mod || return "System $iscsiserver->{'host'} is no longer an iSCSI server";
+$last_remote_error = undef;
+&remote_foreign_require($iscsiserver, $mod);
+$last_remote_error && return "Error loading $mod : $last_remote_error";
+
+# Disconnect from the host system
+&remote_foreign_require($vhost, "iscsi-client");
+$last_remote_error && return "Error loading iscsi-client : $last_remote_error";
+my $conn = { 'name' => $disk->{'iscsi_name'},
+	     'target' => $disk->{'iscsi_target'},
+	     'ip' => $disk->{'iscsi_ip'},
+	     'port' => $disk->{'iscsi_port'} };
+my $err = &remote_foreign_call($vhost, "iscsi-client",
+			       "delete_iscsi_connection", $conn);
+$err ||= $last_remote_error;
+$err && return "Failed to disconnect iSCSI connection : $err";
+
+# Find and remove the target
+my $real;
+if ($mod eq "iscsi-server") {
+	# Remove the target
+	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	$disk->{'iscsi_target'} =~ /^target(\d+)$/ ||
+		return "iSCSI target is not in targetN format";
+	my $num = $1;
+	my ($target) = grep { $_->{'type'} eq 'target' &&
+			      $_->{'num'} eq $num } @$conf;
+	$target || return "No target named $disk->{'iscsi_target'} found";
+	&remote_foreign_call($iscsiserver, $mod, "save_directive",
+			     $conf, $target, undef);
+	$last_remote_error &&
+		return "Failed to delete target : $last_remote_error";
+
+	# Remove the extent
+	$target->{'export'} =~ /^extent(\d+)$/ ||
+		return "iSCSI extent is not in extentN format";
+	my $num = $1;
+	my ($extent) = grep { $_->{'type'} eq 'extent' &&
+			      $_->{'num'} eq $1 } @$conf;
+	$extent || return "No extent named $target->{'export'} found";
+	$real = $extent->{'device'};
+	&remote_foreign_call($iscsiserver, $mod, "save_directive",
+			     $conf, $extent, undef);
+	$last_remote_error &&
+		return "Failed to delete extent : $last_remote_error";
+
+	# Apply the config
+	my $err = &remote_foreign_call($iscsiserver, $mod,
+				       "restart_iscsi_server");
+	$err ||= $last_remote_error;
+	return "Failed to apply iSCSI server configuration : $err" if ($err);
+	}
+elsif ($mod eq "iscsi-target") {
+	# Remove the target
+	my $pconf = &remote_foreign_call($iscsiserver, $mod,
+					 "get_iscsi_config_parent");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	my $conf = $pconf->{'members'};
+	my $targetname = $disk->{'iscsi_name'}.":".$disk->{'iscsi_target'};
+	my ($target) = grep { $_->{'name'} eq 'Target' &&
+			      $_->{'value'} eq $targetname } @$conf;
+	$target || return "No target named $targetname found";
+	my ($lun) = grep { $_->{'name'} eq 'Lun' } @{$target->{'members'}};
+	if ($lun && $lun->{'value'} =~ /Path=([^,]+)/) {
+		$real = $1;
+		}
+	&remote_foreign_call($iscsiserver, $mod,
+                "save_directive", $conf, $pconf, [ $target ], [ ]);
+	$last_remote_error &&
+		return "Failed to delete target : $last_remote_error";
+	&remote_foreign_call($iscsiserver, $mod, "flush_file_lines");
+	$last_remote_error &&
+		return "Failed to flush file : $last_remote_error";
+
+	# Apply the config
+	my $err = &remote_foreign_call($iscsiserver, $mod,
+				       "restart_iscsi_server");
+	$err ||= $last_remote_error;
+	return "Failed to apply iSCSI server configuration : $err" if ($err);
+	}
+else {
+	return "Unknown module $mod";
+	}
+
+# Remove the LV or real file
+if ($real =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
+	# Delete LV
+	my ($vg, $lv) = ($1, $2);
+	&remote_foreign_require($iscsiserver, "lvm");
+        $last_remote_error &&
+                return "Error loading LVM module : $last_remote_error";
+	my $err = &remote_foreign_call($iscsiserver, "lvm",
+			"delete_logical_volume", { 'device' => $real });
+	return "Failed to delete LV $real : $err" if ($err);
+	}
+elsif ($real !~ /^\/dev\//) {
+	# Delete regular file
+	my $err = &delete_file_on_server($iscsiserver, $real);
+	return "Failed to delete $real : $err" if ($err);
+	}
 
 return undef;
 }

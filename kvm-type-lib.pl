@@ -2851,7 +2851,7 @@ if (!$device) {
 		}
 	elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
 		# Disk will be on an iSCSI server. The real field gets set later
-		$rv->{'scsi_server'} = $server->{'kvm_filesystem_iscsi'};
+		$rv->{'iscsi_server'} = $server->{'kvm_filesystem_iscsi'};
 		}
 	else {
 		# Pick an image file
@@ -2917,9 +2917,10 @@ else {
 		$err = $out if ($ex);
 		$err && return "Failed to zero out $disk->{'real'} : $err";
 		}
-	elsif ($disk->{'iscsi_server'}) {
+	elsif ($disk->{'iscsi_server'} ne '') {
 		# Create iSCSI disk
-		# XXX set 'real' field
+		my $err = &create_iscsi_disk($server, $disk);
+		return $err if ($err);
 		}
 	elsif (!@st) {
 		# Create empty file
@@ -3165,6 +3166,11 @@ if (!$detach) {
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
 				     { 'device' => $disk->{'real'} });
+		}
+	elsif ($disk->{'iscsi_server'} ne '') {
+		# Delete from iSCSI server
+		my $err = &delete_iscsi_disk($server, $disk);
+		return $err if ($err);
 		}
 	if ($disk->{'lv'} && $disk->{'lv_snap_of'}) {
 		# LV is a snapshot .. does any existing system use it?

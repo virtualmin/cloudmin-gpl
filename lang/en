@@ -1921,6 +1921,7 @@ xen_ecachesize=Missing or non-numeric image cache size
 xen_ecachedir=Missing or non-numeric image cache directory
 xen_localdns=(Local)
 xen_provisiondns=(Cloudmin Services)
+xen_eiscsi=Host system cannot use iSCSI : $1
 
 xens_title=Xen Host Systems
 xens_host=System hostname
@@ -5113,7 +5114,8 @@ iscsi_cnossh=Only systems that are running and accessible can be an iSCSI client
 iscsi_cnowebmin=Only systems with Webmin installed can be an iSCSI client
 iscsi_cnoversion=Webmin version 1.600 or later is required
 iscsi_cnomod=The Webmin iSCSI client module is not installed
-iscsi_cnoclient=The iSCSI client package is not installed
+iscsi_cnoclient=The system is not setup as an iSCSI client : $1
+iscsi_cnostartup=Automatic startup is not enabled in the iSCSI client
 
 __norefs=1
 
