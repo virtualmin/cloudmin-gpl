@@ -215,9 +215,18 @@ my ($server, $vhost, $got) = @_;
 
 # Save KVM root disk
 $server->{'kvm_filesystem'} = $got->{'filesystem'};
-if ($got->{'filesystem'} =~ /^\/dev\/(\S+)\/(\S+)$/) {
+if ($got->{'filesystem'} =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
+	# On LVM
 	$server->{'kvm_filesystem_vg'} = $1;
 	$server->{'kvm_filesystem_lv'} = $2;
+	}
+elsif ($got->{'filesystem'} =~ /^\/dev\/disk\/by-path\/ip-(\S+):(\d+)-iscsi-(\S+):(\S+)-lun-(\d+)$/) {
+	# On an ISCSI server
+	my $ip = $1;
+	my $iscsiserver = &get_managed_server_by("ip", $ip);
+	if ($iscsiserver) {
+		$server->{'kvm_filesystem_iscsi'} = $iscsiserver->{'id'};
+		}
 	}
 
 # Save other disks
@@ -2654,7 +2663,8 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		$disk->{'storage'} = $text{'storage_files'};
 		}
 	$disk->{'index'} = scalar(@rv);
-	if ($disk->{'real'} eq $server->{'kvm_swapfile'}) {
+	if ($disk->{'real'} && $disk->{'real'} eq $server->{'kvm_swapfile'}) {
+		# Disk is the swapfile
 		$disk->{'swap'} = 1;
 		}
 	push(@rv, $disk);
@@ -2983,16 +2993,32 @@ if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
 	# This is the new root disk
 	$server->{'kvm_disksize'} = $disk->{'size'}/(1024*1024);
 	$server->{'kvm_filesystem'} = $drive{'file'};
-	$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
-	$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
+	delete($server->{'kvm_filesystem_vg'});
+	delete($server->{'kvm_filesystem_lv'});
+	delete($server->{'kvm_filesystem_iscsi'});
+	if ($disk->{'lv'}) {
+		$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
+		$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
+		}
+	elsif ($disk->{'iscsi_server'}) {
+		$server->{'kvm_filesystem_iscsi'} = $disk->{'iscsi_server'};
+		}
 	}
 if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
     $disk->{'mount'} && $disk->{'fs'} eq 'swap') {
 	# This is the new swap disk
 	$server->{'kvm_swap'} = $disk->{'size'}/(1024*1024);
 	$server->{'kvm_swapfile'} = $drive{'file'};
-	$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
-	$server->{'kvm_swapfile_lv'} = $disk->{'lv'};
+	delete($server->{'kvm_swapfile_vg'});
+	delete($server->{'kvm_swapfile_lv'});
+	delete($server->{'kvm_swapfile_iscsi'});
+	if ($disk->{'lv'}) {
+		$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
+		$server->{'kvm_swapfile_lv'} = $disk->{'lv'};
+		}
+	elsif ($disk->{'iscsi_server'}) {
+		$server->{'kvm_swapfile_iscsi'} = $disk->{'iscsi_server'};
+		}
 	}
 &save_managed_server($server);
 &type_kvm_set_atboot($server, 2);
@@ -3017,22 +3043,6 @@ if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
 # Add to total disk size
 if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
 	$server->{'kvm_disktotal'} += $disk->{'size'};
-	}
-
-# Set as primary disk
-if (!$server->{'kvm_filesystem'} &&
-    ($disk->{'media'} eq 'disk' || $disk->{'media'} eq '')) {
-	$server->{'kvm_filesystem'} = $disk->{'real'};
-	$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
-	$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
-	$server->{'kvm_disksize'} = $disk->{'size'} / (1024*1024);
-	}
-if (!$server->{'kvm_swapfile'} && $disk->{'fs'} eq 'swap' &&
-    ($disk->{'media'} eq 'disk' || $disk->{'media'} eq '')) {
-	$server->{'kvm_swapfile'} = $disk->{'real'};
-	$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
-	$server->{'kvm_swapfile_lv'} = $disk->{'lv'};
-	$server->{'kvm_swap'} = $disk->{'size'} / (1024*1024);
 	}
 
 # If mounting a CD, there are no partitions
@@ -5091,7 +5101,8 @@ if (!$image->{'nocompress'}) {
 	&start_background_dot_printer($text{'mkimage_xengzip'});
 	my $gzfile = $image->{'id'}.".ext3.gz";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	    ($server->{'kvm_filesystem_lv'} ?
+	    ($server->{'kvm_filesystem_lv'} ||
+	     $server->{'kvm_filesystem_iscsi'} ?
 		&dd_command($fsfile, undef)." | gzip -c" :
 		"gzip -c ".quotemeta($fsfile)).
 	    	  " >".quotemeta("$tempdir/$gzfile"));
@@ -5109,7 +5120,8 @@ else {
 	&start_background_dot_printer($text{'mkimage_xengzip2'});
 	my $imgfile = $image->{'id'}.".ext3";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
-		$server->{'kvm_filesystem_lv'} ?
+		$server->{'kvm_filesystem_lv'} ||
+		$server->{'kvm_filesystem_iscsi'} ?
 			&dd_command($fsfile, "$tempdir/$imgfile") :
 			"ln -s ".quotemeta($fsfile)." ".
 			  quotemeta("$tempdir/$imgfile"));
@@ -6186,7 +6198,8 @@ sub get_kvm_console_file
 {
 my ($server) = @_;
 my $dir;
-if ($server->{'kvm_filesystem_lv'} || !$server->{'kvm_filesystem'}) {
+if ($server->{'kvm_filesystem_lv'} || $server->{'kvm_filesystem_iscsi'} ||
+    !$server->{'kvm_filesystem'}) {
 	# On LVM, use config dir for console file
 	my $vhost = &get_parent_server($server);
 	$dir = $server->{'directory'} || $vhost->{'kvm_dir'};

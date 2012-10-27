@@ -1270,8 +1270,10 @@ if (!ref($disks)) {
 	return { 'ok' => 0,
 		 'msg' => &text('brun_edisks', $disks) };
 	}
+
+# Find LVM disks, and disks that are on regular files (or iSCSI)
 my @lvmdisks = grep { $_->{'lv'} } @$disks;
-my @filedisks = grep { !$_->{'device'} } @$disks;
+my @filedisks = grep { !$_->{'device'} || $_->{'iscsi_server'} ne '' } @$disks;
 my %skipdisks = map { $_->{'real'}, !&should_include_disk($server, $_) }
 		    @$disks;
 
@@ -1573,7 +1575,7 @@ if (!ref($disks)) {
                  'msg' => &text('brun_edisks', $disks) };
         }
 my @lvmdisks = grep { $_->{'lv'} } @$disks;
-my @filedisks = grep { !$_->{'device'} } @$disks;
+my @filedisks = grep { !$_->{'device'} || $_->{'iscsi_server'} ne '' } @$disks;
 my @devs;
 if ($server->{$manager.'_filesystem_lv'}) {
 	if (!@lvmdisks) {

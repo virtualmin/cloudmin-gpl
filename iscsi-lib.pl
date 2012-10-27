@@ -293,7 +293,7 @@ sub delete_iscsi_disk
 {
 my ($server, $disk) = @_;
 
-# Get the host system and thus the iSCSI server and connect
+# Get the host system and thus the iSCSI server
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
@@ -407,6 +407,155 @@ elsif ($real !~ /^\/dev\//) {
 	}
 
 return undef;
+}
+
+# modify_iscsi_disk(&server, &disk, &old-disk)
+# Apply a size change to an iSCSI disk
+sub modify_iscsi_disk
+{
+my ($server, $disk, $olddisk) = @_;
+
+# Check if anything needs to change
+if ($disk->{'size'} == $olddisk->{'size'}) {
+	return undef;
+	}
+
+# Get the host system and thus the iSCSI server
+my $vhost = &get_parent_server($server);
+$vhost || return "No host system found!";
+my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id eq '' && return "Host system $vhost->{'host'} is not configured ".
+		    "to use iSCSI";
+my $iscsiserver = &get_managed_server($id);
+$iscsiserver || return "iSCSI server with ID $id does not exist!";
+my $mod = $iscsiserver->{'iscsi_module'};
+$mod || return "System $iscsiserver->{'host'} is no longer an iSCSI server";
+$last_remote_error = undef;
+&remote_foreign_require($iscsiserver, $mod);
+$last_remote_error && return "Error loading $mod : $last_remote_error";
+
+# Find the target, and from it the underlying file
+my $real;
+if ($mod eq "iscsi-server") {
+	# Find the target
+	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	$disk->{'iscsi_target'} =~ /^target(\d+)$/ ||
+		return "iSCSI target is not in targetN format";
+	my $num = $1;
+	my ($target) = grep { $_->{'type'} eq 'target' &&
+			      $_->{'num'} eq $num } @$conf;
+	$target || return "No target named $disk->{'iscsi_target'} found";
+
+	# Find the extent
+	$target->{'export'} =~ /^extent(\d+)$/ ||
+		return "iSCSI extent is not in extentN format";
+	my $num = $1;
+	my ($extent) = grep { $_->{'type'} eq 'extent' &&
+			      $_->{'num'} eq $1 } @$conf;
+	$extent || return "No extent named $target->{'export'} found";
+	$real = $extent->{'device'};
+	}
+elsif ($mod eq "iscsi-target") {
+	# Find the target
+	my $pconf = &remote_foreign_call($iscsiserver, $mod,
+					 "get_iscsi_config_parent");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	my $conf = $pconf->{'members'};
+	my $targetname = $disk->{'iscsi_name'}.":".$disk->{'iscsi_target'};
+	my ($target) = grep { $_->{'name'} eq 'Target' &&
+			      $_->{'value'} eq $targetname } @$conf;
+	$target || return "No target named $targetname found";
+	my ($lun) = grep { $_->{'name'} eq 'Lun' } @{$target->{'members'}};
+	if ($lun && $lun->{'value'} =~ /Path=([^,]+)/) {
+		$real = $1;
+		}
+	}
+else {
+	return "Unknown module $mod";
+	}
+
+# Disconnect from the host system
+&remote_foreign_require($vhost, "iscsi-client");
+$last_remote_error && return "Error loading iscsi-client : $last_remote_error";
+my $conn = { 'name' => $disk->{'iscsi_name'},
+	     'target' => $disk->{'iscsi_target'},
+	     'ip' => $disk->{'iscsi_ip'},
+	     'port' => $disk->{'iscsi_port'} };
+my $err = &remote_foreign_call($vhost, "iscsi-client",
+			       "delete_iscsi_connection", $conn);
+$err ||= $last_remote_error;
+$err && return "Failed to disconnect iSCSI connection : $err";
+
+# Resize the LV or file
+my $resizeerr;
+if ($real =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
+	# Expand or reduce the LV size
+	my ($out, $ex, $err);
+	if ($disk->{'size'} > $olddisk->{'size'}) {
+		($out, $ex, $err) = &execute_command_on_server($iscsiserver,
+			"lvextend -L".int($disk->{'size'}/1024)."k ".
+			quotemeta($real));
+		}
+	elsif ($disk->{'size'} < $olddisk->{'size'}) {
+		($out, $ex, $err) = &execute_command_on_server($iscsiserver,
+			"lvreduce -f -L".int($disk->{'size'}/1024)."k ".
+			quotemeta($real));
+		}
+	$resizeerr = $err ? $err : $ex ? $out : undef;
+	}
+elsif ($real !~ /^\/dev\//) {
+	# Append to or truncate the regular file
+	if ($disk->{'size'} > $olddisk->{'size'}) {
+		# Expand by appending null bytes
+		($out, $ex, $err) = &execute_command_on_server($iscsiserver,
+			&dd_command("/dev/zero", undef,
+				    $disk->{'size'}-$olddisk->{'size'}).
+			" >>".quotemeta($real));
+		}
+	elsif ($disk->{'size'} < $olddisk->{'size'}) {
+		# Truncate by copying the first part into a separate file
+		($out, $ex, $err) = &execute_command_on_server($iscsiserver,
+			&dd_command($real, $real.".tmp", $disk->{'size'}).
+			" && ".
+			"mv ".quotemeta($real.".tmp")." ".quotemeta($real));
+		}
+	$resizeerr = $err ? $err : $ex ? $out : undef;
+	}
+
+if (!$resizeerr) {
+	# Change the extent size, for the iscsi-server module
+	# XXX
+	if ($mod eq "iscsi-server") {
+		}
+
+	# Apply iSCSI server configuration
+	if ($mod eq "iscsi-server") {
+		# Apply the config
+		my $err = &remote_foreign_call($iscsiserver, $mod,
+					       "restart_iscsi_server");
+		$err ||= $last_remote_error;
+		return "Failed to apply iSCSI server configuration : $err"
+			if ($err);
+		}
+	elsif ($mod eq "iscsi-target") {
+		# Apply the config
+		my $err = &remote_foreign_call($iscsiserver, $mod,
+					       "restart_iscsi_server");
+		$err ||= $last_remote_error;
+		return "Failed to apply iSCSI server configuration : $err"
+			if ($err);
+		}
+	}
+
+# Re-connect on the host system
+my $err = &remote_foreign_call($vhost, "iscsi-client",
+		"create_iscsi_connection", $ip, 3260, undef, $conn);
+return "iSCSI connection failed : $err" if ($err);
+
+return $resizeerr;
 }
 
 1;
