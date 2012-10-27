@@ -2618,6 +2618,7 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		$disk->{'iscsi_name'} = $3;
 		$disk->{'iscsi_target'} = $4;
 		$disk->{'iscsi_lun'} = $5;
+		$disk->{'fixedreal'} = 1;
 		my $iscsiserver = &get_managed_server_by(
 					"ip", $disk->{'iscsi_ip'});
 		if ($iscsiserver) {
@@ -2853,6 +2854,7 @@ if (!$device) {
 	elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
 		# Disk will be on an iSCSI server. The real field gets set later
 		$rv->{'iscsi_server'} = $server->{'kvm_filesystem_iscsi'};
+		$rv->{'fixedreal'} = 1;
 		}
 	else {
 		# Pick an image file
