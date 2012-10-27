@@ -2273,6 +2273,7 @@ if (!$keep) {
 				 $d->{'real'} ne $server->{'kvm_cdimage'} &&
 				 !$d->{'device'});	# CD image in file
 			next if ($d->{'device'} &&	# Attached real device
+				 !$d->{'iscsi_server'} &&
 				 !$d->{'lv'});
 			my $err = &type_kvm_delete_disk($server, $d, 0, 1);
 			return $err if ($err);

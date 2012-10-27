@@ -5109,6 +5109,13 @@ iscsi_err=Failed to save iSCSI server
 iscsi_ebase_dir=Missing or non-absolute base directory
 iscsi_emkdir=Base directory does not exist and could not be created
 iscsi_nousers=Not used by any hosts
+iscsi_einuse=This iSCSI server cannot be removed, as it is still in use by host systems : $1
+iscsi_einuse2=This iSCSI server cannot be removed, as it is still in use by virtual systems : $1
+iscsi_usedby=Current users
+iscsi_user=System hostname
+iscsi_type=Use type
+iscsi_type_host=Host system
+iscsi_type_vm=Virtual system disks
 
 iscsi_cnossh=Only systems that are running and accessible can be an iSCSI client
 iscsi_cnowebmin=Only systems with Webmin installed can be an iSCSI client
