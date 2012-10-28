@@ -3256,7 +3256,16 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 	my @cmds;
 	my $loop = &get_loop_device($vhost);
 
-	if ($disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
+	if ($disk->{'iscsi_server'} ne '') {
+		# On iSCSI, so if growing the disk it needs to be expanded
+		# on the the remote server now
+		if ($disk->{'size'} > $olddisk->{'size'}) {
+			push(@cmds, sub {
+				&modify_iscsi_disk($server, $disk, $olddisk);
+				});
+			}
+		}
+	elsif ($disk->{'lv'} && $disk->{'size'} > $olddisk->{'size'}) {
 		# Expand logical volume (before filesystem)
 		push(@cmds, "lvextend -L".int($disk->{'size'}/1024)."k ".
 			    quotemeta($disk->{'real'}));
@@ -3309,7 +3318,16 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		push(@cmds, "losetup -d $loop");
 		}
 
-	if (!$disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
+
+	if ($disk->{'iscsi_server'} ne '') {
+		# Shrink on the iSCSI server after resizing the partition
+		if ($disk->{'size'} < $olddisk->{'size'}) {
+			push(@cmds, sub {
+				&modify_iscsi_disk($server, $disk, $olddisk);
+				});
+			}
+		}
+	elsif (!$disk->{'lv'} && $disk->{'size'} < $olddisk->{'size'}) {
 		# Truncate the file (after resizing filesystem)
 		push(@cmds, &dd_command($disk->{'real'},
 				        $disk->{'real'}.".tmp",
@@ -3325,11 +3343,19 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Run them in turn
 	foreach my $cmd (@cmds) {
-		my ($out, $ex, $err) = &execute_command_on_server(
-			$vhost, $cmd);
-		if ($cmd =~ /fsck/ && ($ex == 1 || $ex == 256)) {
-			# Safe to ignore filesystem fixes
-			$ex = 0;
+		my ($out, $ex, $err);
+		if (ref($cmd) eq 'CODE') {
+			# Call a function (used for iSCSI resizes)
+			$err = &$cmd;
+			}
+		else {
+			# Run a command
+			($out, $ex, $err) = &execute_command_on_server(
+				$vhost, $cmd);
+			if ($cmd =~ /fsck/ && ($ex == 1 || $ex == 256)) {
+				# Safe to ignore filesystem fixes
+				$ex = 0;
+				}
 			}
 		if ($err) {
 			$moderr = $err;

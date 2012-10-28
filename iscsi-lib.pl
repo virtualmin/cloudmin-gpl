@@ -342,7 +342,7 @@ if ($mod eq "iscsi-server") {
 		return "iSCSI extent is not in extentN format";
 	my $num = $1;
 	my ($extent) = grep { $_->{'type'} eq 'extent' &&
-			      $_->{'num'} eq $1 } @$conf;
+			      $_->{'num'} eq $num } @$conf;
 	$extent || return "No extent named $target->{'export'} found";
 	$real = $extent->{'device'};
 	&remote_foreign_call($iscsiserver, $mod, "save_directive",
@@ -436,9 +436,10 @@ $last_remote_error && return "Error loading $mod : $last_remote_error";
 
 # Find the target, and from it the underlying file
 my $real;
+my ($conf, $extent);	# For iscsi-server module
 if ($mod eq "iscsi-server") {
 	# Find the target
-	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
+	$conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
 	$last_remote_error &&
 		return "Failed to get config : $last_remote_error";
 	$disk->{'iscsi_target'} =~ /^target(\d+)$/ ||
@@ -452,8 +453,8 @@ if ($mod eq "iscsi-server") {
 	$target->{'export'} =~ /^extent(\d+)$/ ||
 		return "iSCSI extent is not in extentN format";
 	my $num = $1;
-	my ($extent) = grep { $_->{'type'} eq 'extent' &&
-			      $_->{'num'} eq $1 } @$conf;
+	($extent) = grep { $_->{'type'} eq 'extent' &&
+			   $_->{'num'} eq $num } @$conf;
 	$extent || return "No extent named $target->{'export'} found";
 	$real = $extent->{'device'};
 	}
@@ -527,8 +528,12 @@ elsif ($real !~ /^\/dev\//) {
 
 if (!$resizeerr) {
 	# Change the extent size, for the iscsi-server module
-	# XXX
 	if ($mod eq "iscsi-server") {
+		$extent->{'size'} = $disk->{'size'};
+		&remote_foreign_call($iscsiserver, $mod, "save_directive",
+				     $conf, $extent, $extent);
+		$last_remote_error &&
+			return "Failed to delete extent : $last_remote_error";
 		}
 
 	# Apply iSCSI server configuration
@@ -552,7 +557,7 @@ if (!$resizeerr) {
 
 # Re-connect on the host system
 my $err = &remote_foreign_call($vhost, "iscsi-client",
-		"create_iscsi_connection", $ip, 3260, undef, $conn);
+	"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef, $conn);
 return "iSCSI connection failed : $err" if ($err);
 
 return $resizeerr;
