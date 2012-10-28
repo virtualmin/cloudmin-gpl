@@ -6429,7 +6429,7 @@ my @drives;
 my $i = 0;
 foreach my $d (@$disks) {
 	&$first_print(&text('clone_copydisk', $d->{'real'}));
-	if ($d->{'device'} && !$d->{'lv'}) {
+	if ($d->{'device'} && !$d->{'lv'} && $d->{'iscsi_server'} eq '') {
 		# A real device, which shouldn't be touched
 		push(@drives, $olddrives[$i]);
 		&$second_print(&text('smove_devdisk'));
@@ -6488,6 +6488,19 @@ foreach my $d (@$disks) {
 			$newd->{'lv'} = $newlv;
 			my ($ok, $out) = &type_kvm_fsck_disk(
 					$oldserver, $newd, 0);
+			}
+		}
+	elsif ($d->{'iscsi_server'} ne '') {
+		# Cloning to a new iSCSI disk
+		my $newd = { %$d };
+		$err = &create_iscsi_disk($newserver, $newd);
+		if (!$err) {
+			# Copy the data using DD
+			$d->{'newreal'} = $newd->{'real'};
+			$err = &transfer_file_between_servers(
+			    $vhost, $dest,
+			    $d->{'real'}, $d->{'newreal'}, 1, 1,
+			    int($d->{'size'}/(1024*1024))*1024*1024);
 			}
 		}
 	else {
