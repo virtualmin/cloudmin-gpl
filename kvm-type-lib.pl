@@ -2627,6 +2627,7 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		$disk->{'iscsi_name'} = $3;
 		$disk->{'iscsi_target'} = $4;
 		$disk->{'iscsi_lun'} = $5;
+		$disk->{'iscsi_connect'} = 0;
 		$disk->{'fixedreal'} = 1;
 		my $iscsiserver = &get_managed_server_by(
 					"ip", $disk->{'iscsi_ip'});
@@ -2650,6 +2651,7 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 					split(/\s+/, $l);
 				if ($name eq $realdevice) {
 					$disk->{'size'} = $blocks * 1024;
+					$disk->{'iscsi_connect'} = 1;
 					}
 				}
 			}
@@ -3217,6 +3219,13 @@ my $moderr;
 my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
 my $part = ref($parts) ? $parts->[@$parts - 1] : undef;
 
+# Connect iSCSI now if requested
+if ($disk->{'iscsi_ip'} && $disk->{'iscsi_connect'} &&
+    !$olddisk->{'iscsi_connect'}) {
+	my $err = &connect_iscsi_disk($server, $disk);
+	return $err if ($err);
+	}
+
 # Work out if we can resize the filesystem
 my $resizefs;
 if ($disk->{'size'} != $olddisk->{'size'}) {
@@ -3471,6 +3480,13 @@ if ($mounted && $disk->{'mount'}) {
 	if ($err || $ex) {
 		return "Failed to mount $disk->{'virt'} : ".($err || $out);
 		}
+	}
+
+# Disconnect iSCSI now if requested
+if ($disk->{'iscsi_ip'} && !$disk->{'iscsi_connect'} &&
+    $olddisk->{'iscsi_connect'}) {
+	my $err = &disconnect_iscsi_disk($server, $disk);
+	return $err if ($err);
 	}
 
 return $moderr;
@@ -5415,6 +5431,22 @@ my $old_kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 my $new_kvm_dir = (defined($directory) ? $directory : $server->{'directory'}) ||
 		  $dest->{'kvm_dir'};
 
+# If virtual system disks are on iSCSI, make sure the dest vhost is using
+# the same iSCSI server
+my $disks = &type_kvm_list_disks($server, 0);
+foreach my $d (@$disks) {
+	if ($d->{'iscsi_ip'}) {
+		$d->{'iscsi_server'} eq '' && return $text{'smove_eicsiserver'};
+		my $old_iscsiserver = &get_managed_server($d->{'iscsi_server'});
+		$dest->{'kvm_iscsi'} eq '' && return $text{'smove_eicsidest'};
+		my $new_iscsiserver = &get_managed_server($dest->{'kvm_iscsi'});
+		$old_iscsiserver->{'id'} eq $new_iscsiserver->{'id'} ||
+			return &text('smove_eiscsidiff',
+				     $old_iscsiserver->{'host'},
+				     $new_iscsiserver->{'host'});
+		}
+	}
+
 # Check if a shutdown is needed, if kvm on the dest doesn't support -incoming,
 my $shutwhy;
 if (!$shutdown) {
@@ -5548,7 +5580,6 @@ if ($newip && $newgw ne $gw) {
 # Copy across all disk images, directly if possible
 my $count = 0;
 my $sz = 0;
-my $disks = &type_kvm_list_disks($server, 0);
 &$first_print($text{'smove_disks'});
 &$indent_print();
 foreach my $d (@$disks) {
@@ -5569,6 +5600,28 @@ foreach my $d (@$disks) {
 		# Already there! Perhaps from shared LVM or directory
 		&$first_print(&text('smove_onedisk', $d->{'real'}));
 		&$second_print($text{'smove_alrdisk'});
+		next;
+		}
+
+	# If the disk is on iSCSI, the move can be done by simply disconnecting
+	# and re-connecting on the new host
+	if ($d->{'iscsi_server'} ne '') {
+		my $iscsiserver = &get_managed_server($d->{'iscsi_server'});
+		&$first_print(&text('smove_iscsi', $iscsiserver->{'host'},
+				    $d->{'iscsi_target'}));
+		my $err = &disconnect_iscsi_disk($server, $d);
+		if ($err) {
+			return &text('smove_eiscsidis', $err);
+			}
+		my $newserver = { %$server };
+		$newserver->{'kvm_on'} = $dest->{'id'};
+		my $newd = { %$d };
+		$err = &connect_iscsi_disk($newserver, $newd);
+		if ($err) {
+			return &text('smove_eiscsiconn', $err);
+			}
+		$d->{'newreal'} = $newd->{'real'};
+		&$second_print($text{'create_done'});
 		next;
 		}
 
@@ -6314,6 +6367,27 @@ if ($snapshot) {
 	foreach my $d (@$disks) {
 		next if ($d->{'device'} && !$d->{'lv'});
 		$d->{'lv'} || return &text('clone_elvm', $d->{'real'});
+		}
+	}
+
+# If moving to a new host, make sure it uses the same iSCSI server
+if ($vhost->{'id'} ne $dest->{'id'}) {
+	my $disks = &type_kvm_list_disks($newserver, 0);
+	foreach my $d (@$disks) {
+		if ($d->{'iscsi_ip'}) {
+			$d->{'iscsi_server'} eq '' &&
+				return $text{'clone_eicsiserver'};
+			my $old_iscsiserver = &get_managed_server(
+				$d->{'iscsi_server'});
+			$dest->{'kvm_iscsi'} eq '' &&
+				return $text{'clone_eicsidest'};
+			my $new_iscsiserver = &get_managed_server(
+						$dest->{'kvm_iscsi'});
+			$old_iscsiserver->{'id'} eq $new_iscsiserver->{'id'} ||
+				return &text('clone_eiscsidiff',
+					     $old_iscsiserver->{'host'},
+					     $new_iscsiserver->{'host'});
+			}
 		}
 	}
 

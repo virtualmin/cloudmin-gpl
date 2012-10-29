@@ -282,6 +282,7 @@ foreach my $f ("ip", "port", "name", "target") {
 	}
 $disk->{'iscsi_lun'} = $conn->{'scsilun'};
 $disk->{'iscsi_server'} = $iscsiserver->{'id'};
+$disk->{'iscsi_connect'} = 1;
 
 return undef;
 }
@@ -314,10 +315,12 @@ my $conn = { 'name' => $disk->{'iscsi_name'},
 	     'target' => $disk->{'iscsi_target'},
 	     'ip' => $disk->{'iscsi_ip'},
 	     'port' => $disk->{'iscsi_port'} };
-my $err = &remote_foreign_call($vhost, "iscsi-client",
-			       "delete_iscsi_connection", $conn);
-$err ||= $last_remote_error;
-$err && return "Failed to disconnect iSCSI connection : $err";
+if ($disk->{'iscsi_connect'}) {
+	my $err = &remote_foreign_call($vhost, "iscsi-client",
+				       "delete_iscsi_connection", $conn);
+	$err ||= $last_remote_error;
+	$err && return "Failed to disconnect iSCSI connection : $err";
+	}
 
 # Find and remove the target
 my $real;
@@ -485,10 +488,12 @@ my $conn = { 'name' => $disk->{'iscsi_name'},
 	     'target' => $disk->{'iscsi_target'},
 	     'ip' => $disk->{'iscsi_ip'},
 	     'port' => $disk->{'iscsi_port'} };
-my $err = &remote_foreign_call($vhost, "iscsi-client",
-			       "delete_iscsi_connection", $conn);
-$err ||= $last_remote_error;
-$err && return "Failed to disconnect iSCSI connection : $err";
+if ($disk->{'iscsi_connect'}) {
+	my $err = &remote_foreign_call($vhost, "iscsi-client",
+				       "delete_iscsi_connection", $conn);
+	$err ||= $last_remote_error;
+	$err && return "Failed to disconnect iSCSI connection : $err";
+	}
 
 # Resize the LV or file
 my $resizeerr;
@@ -556,11 +561,71 @@ if (!$resizeerr) {
 	}
 
 # Re-connect on the host system
-my $err = &remote_foreign_call($vhost, "iscsi-client",
-	"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef, $conn);
-return "iSCSI connection failed : $err" if ($err);
+if ($disk->{'iscsi_connect'}) {
+	my $err = &remote_foreign_call($vhost, "iscsi-client",
+		"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef, $conn);
+	$disk->{'iscsi_connect'} = 0 if ($err);
+	return "iSCSI connection failed : $err" if ($err);
+	}
 
 return $resizeerr;
+}
+
+# connect_iscsi_disk(&server, &disk)
+# Re-establish the connection from a host system to the iSCSI server for some
+# disk
+sub connect_iscsi_disk
+{
+my ($server, $disk) = @_;
+
+# Get the host system
+my $vhost = &get_parent_server($server);
+$vhost || return "No host system found!";
+my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id eq '' && return "Host system $vhost->{'host'} is not configured ".
+		    "to use iSCSI";
+$last_remote_error = undef;
+&remote_foreign_require($vhost, "iscsi-client");
+$last_remote_error && return "Error loading iscsi-client : $last_remote_error";
+
+# Make the connection
+my $conn = { 'name' => $disk->{'iscsi_name'},
+	     'target' => $disk->{'iscsi_target'},
+	     'ip' => $disk->{'iscsi_ip'},
+	     'port' => $disk->{'iscsi_port'} };
+my $err = &remote_foreign_call($vhost, "iscsi-client",
+	"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef, $conn);
+$err ||= $last_remote_error;
+$disk->{'iscsi_connect'} = 1 if (!$err);
+return $err;
+}
+
+# disconnect_iscsi_disk(&server, &disk)
+# Break the connection from a host system to the iSCSI server for some disk
+sub disconnect_iscsi_disk
+{
+my ($server, $disk) = @_;
+
+# Get the host system
+my $vhost = &get_parent_server($server);
+$vhost || return "No host system found!";
+my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id eq '' && return "Host system $vhost->{'host'} is not configured ".
+		    "to use iSCSI";
+$last_remote_error = undef;
+&remote_foreign_require($vhost, "iscsi-client");
+$last_remote_error && return "Error loading iscsi-client : $last_remote_error";
+
+# Make the connection
+my $conn = { 'name' => $disk->{'iscsi_name'},
+	     'target' => $disk->{'iscsi_target'},
+	     'ip' => $disk->{'iscsi_ip'},
+	     'port' => $disk->{'iscsi_port'} };
+my $err = &remote_foreign_call($vhost, "iscsi-client",
+			       "delete_iscsi_connection", $conn);
+$err ||= $last_remote_error;
+$disk->{'iscsi_connect'} = 0 if (!$err);
+return $err;
 }
 
 1;
