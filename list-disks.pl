@@ -116,6 +116,9 @@ if ($multi) {
 			else {
 				print "    iSCSI server: UNKNOWN\n";
 				}
+			print "    iSCSI state: ",
+			      ($d->{'iscsi_connect'} ? "Connected"
+						     : "Disconnected"),"\n";
 			print "    iSCSI server IP: $d->{'iscsi_ip'}\n";
 			print "    iSCSI server port: $d->{'iscsi_port'}\n";
 			print "    iSCSI server name: $d->{'iscsi_name'}\n";

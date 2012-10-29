@@ -3002,7 +3002,7 @@ if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
 		$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
 		$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
 		}
-	elsif ($disk->{'iscsi_server'}) {
+	elsif ($disk->{'iscsi_server'} ne '') {
 		$server->{'kvm_filesystem_iscsi'} = $disk->{'iscsi_server'};
 		}
 	}
@@ -3018,7 +3018,7 @@ if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
 		$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
 		$server->{'kvm_swapfile_lv'} = $disk->{'lv'};
 		}
-	elsif ($disk->{'iscsi_server'}) {
+	elsif ($disk->{'iscsi_server'} ne '') {
 		$server->{'kvm_swapfile_iscsi'} = $disk->{'iscsi_server'};
 		}
 	}
@@ -5144,7 +5144,7 @@ if (!$image->{'nocompress'}) {
 	my $gzfile = $image->{'id'}.".ext3.gz";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	    ($server->{'kvm_filesystem_lv'} ||
-	     $server->{'kvm_filesystem_iscsi'} ?
+	     $server->{'kvm_filesystem_iscsi'} ne '' ?
 		&dd_command($fsfile, undef)." | gzip -c" :
 		"gzip -c ".quotemeta($fsfile)).
 	    	  " >".quotemeta("$tempdir/$gzfile"));
@@ -5163,7 +5163,7 @@ else {
 	my $imgfile = $image->{'id'}.".ext3";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		$server->{'kvm_filesystem_lv'} ||
-		$server->{'kvm_filesystem_iscsi'} ?
+		$server->{'kvm_filesystem_iscsi'} ne '' ?
 			&dd_command($fsfile, "$tempdir/$imgfile") :
 			"ln -s ".quotemeta($fsfile)." ".
 			  quotemeta("$tempdir/$imgfile"));
@@ -6277,7 +6277,8 @@ sub get_kvm_console_file
 {
 my ($server) = @_;
 my $dir;
-if ($server->{'kvm_filesystem_lv'} || $server->{'kvm_filesystem_iscsi'} ||
+if ($server->{'kvm_filesystem_lv'} ||
+    $server->{'kvm_filesystem_iscsi'} ne '' ||
     !$server->{'kvm_filesystem'}) {
 	# On LVM, use config dir for console file
 	my $vhost = &get_parent_server($server);

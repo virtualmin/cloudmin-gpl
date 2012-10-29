@@ -187,6 +187,24 @@ if ($gotstorage) {
 	print &ui_hidden("storage", $in{'storage'});
 	}
 
+# iSCSI information
+if ($disk->{'iscsi_ip'}) {
+	print &ui_table_row($text{'disk_istate'},
+		$disk->{'iscsi_connect'} ? $text{'disk_istate1'} :
+			"<font color=red>$text{'disk_istate0'}</font>");
+	if ($disk->{'iscsi_server'} ne '') {
+		my $iserver = &get_managed_server($disk->{'iscsi_server'});
+		print &ui_table_row($text{'disk_iserver'},
+				    $iserver->{'host'});
+		}
+	else {
+		print &ui_table_row($text{'disk_iserver'},
+			&text('disk_iunknown', $disk->{'iscsi_ip'}));
+		}
+	print &ui_table_row($text{'disk_itarget'},
+			    $disk->{'iscsi_target'});
+	}
+
 # Disk format
 print &ui_table_row($text{'disk_format'},
 	$text{'mimage_fmt'.$disk->{'format'}});
@@ -243,12 +261,16 @@ if ($in{'new'}) {
 $root = $disk->{'mount'} eq '/' ? 1 : 0;
 $detach = !$root && &can_action($server, "devices") &&
 	  !($disk->{'device'} && !$disk->{'lv'} && !$disk->{'storage'});
+$connect = $disk->{'iscsi_ip'} && !$disk->{'iscsi_connect'};
+$disconnect = $disk->{'iscsi_ip'} && $disk->{'iscsi_connect'};
 
 print &ui_table_end();
 print &ui_form_end($in{'new'} ? [ [ undef, $text{'create'} ] ]
 		      : [ [ undef, $text{'save'} ],
 			  $fsck ? ( [ 'fsck', $text{'disk_fsck'} ] ) : ( ),
 			  $detach ? ( [ 'detach', $text{'disk_detach'} ] ) : (),
+			  $connect ? ( [ 'connect', $text{'disk_connect'} ] ) : (),
+			  $disconnect ? ( [ 'disconnect', $text{'disk_disconnect'} ] ) : (),
 			  $root ? ( ) : ( [ 'delete', $text{'delete'} ] ) ]);
 
 # Scheduled expansion form

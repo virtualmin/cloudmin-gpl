@@ -23,6 +23,10 @@ use the C<--new-real> flag followed by a new path on the host system.
 To change the media type of a disk, use the C<--new-media> flag followed by
 a type such as I<disk> or I<cdrom>.
 
+Disks mounted from an iSCSI can be disconnected on the host system using
+the C<--iscsi-disconnect> flag. To re-establish a connection, use the 
+C<--iscsi-connect> flag.
+
 =head1 Example usage
 
   cloudmin modify-disk --host xencentos.home --virt /dev/sda3 --new-size 2048
@@ -90,6 +94,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--iscsi-disconnect") {
+		$iscsi_connect = 0;
+		}
+	elsif ($a eq "--iscsi-connect") {
+		$iscsi_connect = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -100,7 +110,7 @@ $real || $virt || $lv || $mount ||
 	&usage("The disk to modify must be identified by the ".
 	       "--real, --virt, --mount or --lv parameters");
 $newsize || $newvirt || $media || $newreal || defined($include) ||
-	&usage("Nothing to do");
+	defined($iscsi_connect) || &usage("Nothing to do");
 !$newsize || $newsize =~ /^\d*$/ ||
 	&usage("Invalid --new-size parameter - must be followed by a ".
 	       "number of MB");
@@ -178,6 +188,11 @@ if ($newreal) {
 		&usage("You are not allowed to select your own devices for disks");
 	$disk->{'real'} = $newreal;
 	}
+if (defined($iscsi_connect)) {
+	$disk->{'iscsi_ip'} || &usage("Only iSCSI disks can be connected ".
+				      "or disconnected");
+	$disk->{'iscsi_connect'} = $iscsi_connect;
+	}
 
 # Validate the new size
 $limits = &get_owner_limits();
@@ -247,6 +262,7 @@ print "                    [--new-media type]\n";
 print "                    [--new-real file]\n";
 print "                    [--force]\n";
 print "                    [--backup-exclude | --backup-include]\n";
+print "                    [--iscsi-connect | --iscsi-disconnect]\n";
 exit(1);
 }
 

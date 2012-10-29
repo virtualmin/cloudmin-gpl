@@ -129,6 +129,22 @@ elsif ($in{'fsck'}) {
 	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
 			 "", $text{'index_return'});
 	}
+elsif ($in{'connect'} || $in{'disconnect'}) {
+	# Make or remove iSCSI connection
+	&ui_print_header(&server_in($server), $text{'iconnect_title'}, "");
+
+	&$first_print(&text($in{'connect'} ? 'iconnect_conn' : 'iconnect_dis',
+			    $disk->{'iscsi_ip'}, $disk->{'iscsi_target'}));
+	my $newdisk = { %$disk };
+	$newdisk->{'iscsi_connect'} = $in{'connect'} ? 1 : 0;
+	$mfunc = "type_".$server->{'manager'}."_modify_disk";
+	$err = &$mfunc($server, $newdisk, $disk);
+	&$second_print($err ? &text('iconnect_failed', $err)
+			    : $text{'create_done'});
+
+	&ui_print_footer("list_disks.cgi?id=$in{'id'}", $text{'disks_return'},
+			 "", $text{'index_return'});
+	}
 else {
 	# Validate inputs, and update the disk hash
 
