@@ -114,6 +114,12 @@ $last_remote_error = undef;
 &remote_foreign_require($iscsiserver, $mod);
 $last_remote_error && return "Error loading $mod : $last_remote_error";
 
+# If the system has no iSCSI login yet, generate one
+if (!$server->{'iscsi_user'}) {
+	$server->{'iscsi_user'} = $server->{'host'};
+	$server->{'iscsi_pass'} = &generate_random_password(12);
+	}
+
 # Make sure the iSCSI server is running
 if ($mod eq "iscsi-target") {
 	&remote_foreign_call($iscsiserver, $mod, "is_iscsi_target_running") ||
@@ -234,6 +240,9 @@ elsif ($mod eq "iscsi-target") {
 	push(@{$target->{'members'}},
 	     { 'name' => 'Lun',
 	       'value' => '1 Type=fileio,Path='.$real });
+	push(@{$target->{'members'}},
+	     { 'name' => 'IncomingUser',
+	       'value' => $server->{'iscsi_user'}.' '.$server->{'iscsi_pass'}});
 	&remote_foreign_call($iscsiserver, $mod,
 		"save_directive", $conf, $pconf, [ ], [ $target ]);
 	$last_remote_error &&
@@ -263,7 +272,8 @@ $rtarget || return "Expected target $targetname is not shared by ".
 # Connect from host system
 # XXX clean up disk if failed?
 my $err = &remote_foreign_call($vhost, "iscsi-client",
-		"create_iscsi_connection", $ip, 3260, undef, $rtarget);
+		"create_iscsi_connection", $ip, 3260, undef, $rtarget,
+		"CHAP", $server->{'iscsi_user'}, $server->{'iscsi_pass'});
 return "iSCSI connection failed : $err" if ($err);
 
 # Set real path in disk object
@@ -563,7 +573,8 @@ if (!$resizeerr) {
 # Re-connect on the host system
 if ($disk->{'iscsi_connect'}) {
 	my $err = &remote_foreign_call($vhost, "iscsi-client",
-		"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef, $conn);
+		"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef,
+		$conn, "CHAP", $server->{'iscsi_user'},$server->{'iscsi_pass'});
 	$disk->{'iscsi_connect'} = 0 if ($err);
 	return "iSCSI connection failed : $err" if ($err);
 	}
@@ -594,7 +605,8 @@ my $conn = { 'name' => $disk->{'iscsi_name'},
 	     'ip' => $disk->{'iscsi_ip'},
 	     'port' => $disk->{'iscsi_port'} };
 my $err = &remote_foreign_call($vhost, "iscsi-client",
-	"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef, $conn);
+	"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef, $conn,
+	"CHAP", $server->{'iscsi_user'}, $server->{'iscsi_pass'});
 $err ||= $last_remote_error;
 $disk->{'iscsi_connect'} = 1 if (!$err);
 return $err;

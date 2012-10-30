@@ -222,11 +222,15 @@ if ($got->{'filesystem'} =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
 	}
 elsif ($got->{'filesystem'} =~ /^\/dev\/disk\/by-path\/ip-(\S+):(\d+)-iscsi-(\S+):(\S+)-lun-(\d+)$/) {
 	# On an ISCSI server
-	my $ip = $1;
+	my ($ip, $port, $name, $target, $lun) = ($1, $2, $3, $4, $5);
 	my $iscsiserver = &get_managed_server_by("ip", $ip);
 	if ($iscsiserver) {
 		$server->{'kvm_filesystem_iscsi'} = $iscsiserver->{'id'};
 		}
+	$server->{'kvm_filesystem_name'} = $name;
+	$server->{'kvm_filesystem_target'} = $target;
+	$server->{'kvm_filesystem_ip'} = $ip;
+	$server->{'kvm_filesystem_port'} = $port;
 	}
 
 # Save other disks
@@ -1411,10 +1415,20 @@ elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
 	my $disk = { 'size' => ($img && !$empty ? $img->{'rawsize'} : 0) ||
 			       $server->{'kvm_disksize'}*1024*1024 ||
 			       1024*1024,
+		     'iscsi_server' => $server->{'kvm_filesystem_iscsi'},
 		   };
+	if ($reset) {
+		# If resettting, disk already exists .. so delete it first
+		# XXX
+		# XXX need to know original target, host name, IP and port
+		}
 	my $err = &create_iscsi_disk($server, $disk);
 	$err && return "iSCSI disk creation failed : $err";
 	$fsfile = $disk->{'real'};
+	$server->{'kvm_filesystem_iscsi_name'} = $disk->{'iscsi_name'};
+	$server->{'kvm_filesystem_iscsi_target'} = $disk->{'iscsi_target'};
+	$server->{'kvm_filesystem_iscsi_ip'} = $disk->{'iscsi_ip'};
+	$server->{'kvm_filesystem_iscsi_port'} = $disk->{'iscsi_port'};
 	}
 
 if ($server->{'kvm_swapfile_vg'}) {
@@ -1449,9 +1463,17 @@ elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
 	# Create iSCSI disk for swap
 	my $disk = { 'size' => $server->{'kvm_swap'}*1024*1024,
 		   };
+	if ($reset) {
+		# If resettting, disk already exists .. so delete it first
+		# XXX
+		}
 	my $err = &create_iscsi_disk($server, $disk);
 	$err && return "iSCSI swap disk creation failed : $err";
 	$swfile = $disk->{'real'};
+	$server->{'kvm_swapfile_iscsi_name'} = $disk->{'iscsi_name'};
+	$server->{'kvm_swapfile_iscsi_target'} = $disk->{'iscsi_target'};
+	$server->{'kvm_swapfile_iscsi_ip'} = $disk->{'iscsi_ip'};
+	$server->{'kvm_swapfile_iscsi_port'} = $disk->{'iscsi_port'};
 	}
 
 # Set drive in config, unless resetting in which case they stay the same
@@ -2282,7 +2304,7 @@ if (!$keep) {
 				 $d->{'real'} ne $server->{'kvm_cdimage'} &&
 				 !$d->{'device'});	# CD image in file
 			next if ($d->{'device'} &&	# Attached real device
-				 !$d->{'iscsi_server'} &&
+				 $d->{'iscsi_server'} eq '' &&
 				 !$d->{'lv'});
 			my $err = &type_kvm_delete_disk($server, $d, 0, 1);
 			return $err if ($err);
@@ -3004,6 +3026,10 @@ if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
 		}
 	elsif ($disk->{'iscsi_server'} ne '') {
 		$server->{'kvm_filesystem_iscsi'} = $disk->{'iscsi_server'};
+		$server->{'kvm_filesystem_iscsi_name'} = $disk->{'iscsi_name'};
+		$server->{'kvm_filesystem_iscsi_target'} = $disk->{'iscsi_target'};
+		$server->{'kvm_filesystem_iscsi_ip'} = $disk->{'iscsi_ip'};
+		$server->{'kvm_filesystem_iscsi_port'} = $disk->{'iscsi_port'};
 		}
 	}
 if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
@@ -3020,6 +3046,10 @@ if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
 		}
 	elsif ($disk->{'iscsi_server'} ne '') {
 		$server->{'kvm_swapfile_iscsi'} = $disk->{'iscsi_server'};
+		$server->{'kvm_swapfile_iscsi_name'} = $disk->{'iscsi_name'};
+		$server->{'kvm_swapfile_iscsi_target'} = $disk->{'iscsi_target'};
+		$server->{'kvm_swapfile_iscsi_ip'} = $disk->{'iscsi_ip'};
+		$server->{'kvm_swapfile_iscsi_port'} = $disk->{'iscsi_port'};
 		}
 	}
 &save_managed_server($server);
@@ -5584,7 +5614,7 @@ my $sz = 0;
 &$indent_print();
 foreach my $d (@$disks) {
 	$d->{'newreal'} = $d->{'real'};
-	if ($d->{'device'} && !$d->{'lv'}) {
+	if ($d->{'device'} && !$d->{'lv'} && $d->{'iscsi_server'} eq '') {
 		# A real device, which shouldn't be touched
 		&$first_print(&text('smove_onedisk', $d->{'real'}));
 		&$second_print(&text('smove_devdisk'));
@@ -5686,6 +5716,7 @@ foreach my $d (@$disks) {
 	$count++;
 	$sz += $d->{'size'};
 	}
+my @deldiskfiles = ( @dellvs, @delfiles );
 &$outdent_print();
 if ($count) {
 	&$second_print(&text('smove_disksdone', $count,
@@ -5767,7 +5798,8 @@ if ($ip ne $newip) {
 
 # Delete the original disk images
 if (@delfiles || @dellvs) {
-	&$first_print(&text('smove_delfiles',
+	&$first_print(&text(@deldiskfiles ? 'smove_delfiles'
+					  : 'smove_delfiles2',
 			    scalar(@delfiles)+scalar(@dellvs)));
 	foreach my $f (@delfiles) {
 		my $err = &delete_file_on_server($vhost, $f);

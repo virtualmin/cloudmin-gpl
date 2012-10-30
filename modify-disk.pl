@@ -145,6 +145,10 @@ $cfunc = "type_".$server->{'manager'}."_can_disks";
 defined(&$cfunc) && &$cfunc($server) ||
 	&usage("Disks cannot be managed on this system");
 $disks = &$dfunc($server, 1);
+if (!ref($disks) && $iscsi_connect) {
+	# Get the list of disks again, without mount details
+	$disks = &$dfunc($server, 0);
+	}
 ref($disks) || &usage("Failed to list disks : $disks");
 
 # Find the disk to modify
