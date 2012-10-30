@@ -563,6 +563,26 @@ if ($multi) {
 			      "$s->{'scalegroup_reason'}\n";
 			}
 
+		# Show iSCSI server info
+		if ($s->{'iscsi_module'}) {
+			if ($s->{'iscsi_base_dir'}) {
+				print "    iSCSI directory: ",
+				      $s->{'iscsi_base_dir'},"\n";
+				}
+			elsif ($s->{'iscsi_base_vg'}) {
+				print "    iSCSI LVM VG: ",
+				      $s->{'iscsi_base_vg'},"\n";
+				}
+			print "    iSCSI module: ",$s->{'iscsi_module'},"\n";
+			my @df = &get_iscsi_disk_space($s);
+			if (@df) {
+				print "    iSCSI disk: ",
+				      &nice_size($df[1]),"\n";
+				print "    iSCSI disk free: ",
+				      &nice_size($df[0]),"\n";
+				}
+			}
+
 		# Show collected info
 		if ($info && scalar(keys %$info) > 1) {
 			if ($info->{'load'}) {

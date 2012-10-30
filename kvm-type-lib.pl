@@ -4969,6 +4969,14 @@ if (&can_ssh_status($server)) {
 		push(@rv, [ "KVM network bridges", join(" ", @bridges) ]);
 		}
 	}
+push(@rv, [ "KVM directory", $server->{'kvm_dir'} ]);
+if ($server->{'kvm_vg'}) {
+	push(@rv, [ "KVM LVM VG", $server->{'kvm_vg'} ]);
+	}
+if ($server->{'kvm_iscsi'} ne '') {
+	my $iscsiserver = &get_managed_server($server->{'kvm_iscsi'});
+	push(@rv, [ "KVM iSCSI server", $iscsiserver->{'host'} ]);
+	}
 return @rv;
 }
 

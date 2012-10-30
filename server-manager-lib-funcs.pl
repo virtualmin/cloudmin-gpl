@@ -8346,10 +8346,19 @@ my @rv;
 my $lvm = $vhost->{$manager.'_vg_free'} &&
 	  (!$server || $server->{$manager.'_filesystem_vg'} ||
 		       $manager eq 'citrix');
+my $iscsi = $vhost->{$manager.'_iscsi'} ne '' &&
+	    (!$server || $server->{$manager.'_filesystem_iscsi'} ne '');
 if ($manager && $lvm) {
 	# Host is using LVM, and free space has been collected in the
 	# post_refresh function
 	@rv = ( $vhost->{$manager.'_vg_free'}, $vhost->{$manager.'_vg_total'} );
+	}
+elsif ($manager && $iscsi) {
+	# Host is using iSCSI, so get free space from iSCSI server
+	my $iscsiserver = &get_managed_server($vhost->{$manager.'_iscsi'});
+	if ($iscsiserver) {
+		@rv = &get_iscsi_disk_space($iscsiserver);
+		}
 	}
 elsif ($vinfo && $vinfo->{'disk_free'}) {
 	# Get disk space from filesystem. Free space has to exclude amount
