@@ -640,4 +640,41 @@ $disk->{'iscsi_connect'} = 0 if (!$err);
 return $err;
 }
 
+# get_iscsi_disk_space(&iscsiserver)
+# Returns the free and total disk space on an iSCSI server
+sub get_iscsi_disk_space
+{
+my ($iscsiserver) = @_;
+if ($get_iscsi_disk_space_cache{$iscsiserver->{'id'}}) {
+	return @{$get_iscsi_disk_space_cache{$iscsiserver->{'id'}}};
+	}
+my $vg = $iscsiserver->{'iscsi_base_vg'};
+my $dir = $iscsiserver->{'iscsi_base_dir'};
+my @rv;
+if ($vg) {
+	# Get size and free space on LVM volume group
+	&remote_foreign_require($iscsiserver, "lvm");
+	my @vgs = &remote_foreign_call($iscsiserver, "lvm",
+				       "list_volume_groups");
+	my ($v) = grep { $_->{'name'} eq $vg } @vgs;
+	if ($v) {
+		my $total = $v->{'pe_total'}*$v->{'pe_size'}*1024;
+		my $used = $v->{'pe_alloc'}*$v->{'pe_size'}*1024;
+		@rv = ( $total - $used, $total );
+		}
+	}
+elsif ($dir) {
+	# Get free space on filesystem containing directory
+	my ($out, $ex, $err) = &execute_command_on_server(
+		$iscsiserver, "df -k ".quotemeta($dir));
+	if (!$ex && !$err && $out =~ /\s(\d+)\s+(\d+)\s+(\d+)/) {
+		@rv = ( $3*1024, $1*1024 );
+		}
+	}
+if (@rv) {
+	$get_iscsi_disk_space_cache{$iscsiserver->{'id'}} = \@rv;
+	}
+return @rv;
+}
+
 1;
