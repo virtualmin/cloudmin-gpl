@@ -820,7 +820,7 @@ elsif ($in{'kvm_lvm'} == 0) {
 	}
 elsif ($in{'kvm_lvm'} == 1) {
 	# Must be on LVM
-	$vhost->{'kvm_iscsi'} || $vhost->{'kvm_vg'} ||
+	$vhost->{'kvm_iscsi'} ne '' || $vhost->{'kvm_vg'} ||
 		&error(&text('xen_eonlvm', $vhost->{'host'}));
 	$server->{'directory'} && &error($text{'xen_eonlvmdir'});
 	}
@@ -909,6 +909,7 @@ if (&can_action(undef, "advanced")) {
 		  { 'name' => 'start', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'vga', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'firewall', 'value' => 'true|false', 'opt' => 1 },
+		  { 'name' => 'iscsi', 'value' => 'hostname', 'opt' => 1 },
 	    );
 	}
 return @rv;
@@ -1184,7 +1185,7 @@ if ($zone) {
 if (&can_action(undef, "advanced")) {
 	# Validate LVM flag
 	if ($args->{'lvm'} =~ /true|yes/i) {
-		$vhost->{'kvm_vg'} || $vhost->{'kvm_iscsi'} ||
+		$vhost->{'kvm_vg'} || $vhost->{'kvm_iscsi'} ne '' ||
 			return "Host system $vhost->{'host'} does not use LVM";
 		$server->{'directory'} &&
 			return "LVM cannot be enabled when a disk directory ".
@@ -1195,6 +1196,18 @@ if (&can_action(undef, "advanced")) {
 		}
 	elsif ($server->{'directory'}) {
 		$server->{'kvm_nolvm'} = 1;
+		}
+
+	# Validate forced iSCSI server flag
+	if ($args->{'iscsi'}) {
+		my $iscsiserver = &get_managed_server_by(
+					"host", $args->{'iscsi'});
+		$iscsiserver ||
+			return "iSCSI server $args->{'iscsi'} does not exist";
+		$iscsiserver->{'iscsi_module'} ||
+			return "System $args->{'iscsi'} is not an iSCSI server";
+		$server->{'kvm_force_iscsi'} = $iscsiserver->{'id'};
+		$server->{'kvm_nolvm'} = 0;
 		}
 
 	# Validate virtio flag, or use image or configured default
@@ -1294,6 +1307,13 @@ if ($reset) {
 		return "A system with no primary disk cannot be reset";
 		}
 	}
+elsif ($server->{'kvm_force_iscsi'} ne '') {
+	# On iSCSI server, forced at creation time
+	$server->{'kvm_filesystem_iscsi'} = $server->{'kvm_force_iscsi'};
+        if ($server->{'kvm_swap'}) {
+		$server->{'kvm_swapfile_iscsi'} = $server->{'kvm_force_iscsi'};
+		}
+	}
 elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
 	# On LVM logical volumes
 	$server->{'kvm_filesystem_vg'} = $vhost->{'kvm_vg'};
@@ -1310,7 +1330,7 @@ elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
                 }
 	}
 elsif ($vhost->{'kvm_iscsi'} ne '' && !$server->{'kvm_nolvm'}) {
-	# On iSCSI server
+	# On iSCSI server, determined by host
 	$server->{'kvm_filesystem_iscsi'} = $vhost->{'kvm_iscsi'};
         if ($server->{'kvm_swap'}) {
 		$server->{'kvm_swapfile_iscsi'} = $vhost->{'kvm_iscsi'};
@@ -1322,6 +1342,12 @@ else {
         if ($server->{'kvm_swap'}) {
                 $swfile = "$kvm_dir/$server->{'host'}.swap";
                 }
+	}
+
+# Check again if host supports iSCSI
+if ($server->{'kvm_filesystem_iscsi'} ne '') {
+	my $err = &check_iscsi_client($vhost);
+	$err && return "Host system $vhost->{'host'} does not support iSCSI : $err";
 	}
 
 # Generate MAC addresses
@@ -6411,7 +6437,7 @@ if ($snapshot) {
 		}
 	}
 
-# If moving to a new host, make sure it uses the same iSCSI server
+# If cloning to a new host, make sure it uses the same iSCSI server
 if ($vhost->{'id'} ne $dest->{'id'}) {
 	my $disks = &type_kvm_list_disks($newserver, 0);
 	foreach my $d (@$disks) {

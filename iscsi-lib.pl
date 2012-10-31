@@ -104,6 +104,7 @@ my ($server, $disk) = @_;
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id = $server->{$server->{'manager'}.'_force_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
 my $iscsiserver = &get_managed_server($id);
@@ -308,6 +309,7 @@ my ($server, $disk) = @_;
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id = $server->{$server->{'manager'}.'_force_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
 my $iscsiserver = &get_managed_server($id);
@@ -437,6 +439,7 @@ if ($disk->{'size'} == $olddisk->{'size'}) {
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id = $server->{$server->{'manager'}.'_force_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
 my $iscsiserver = &get_managed_server($id);
