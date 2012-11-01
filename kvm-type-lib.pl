@@ -1416,8 +1416,7 @@ if ($server->{'kvm_filesystem_vg'}) {
 		   'perm' => 'rw',
 		   'alloc' => 'n',
 		   'vg' => $server->{'kvm_filesystem_vg'} };
-	if (!($fslv && $fslv->{'size'} > $lv->{'size'} &&
-		       $fslv->{'size'}-$lv->{'size'} < 100*1024)) {
+	if (!$fslv || !&size_close_enough($fslv->{'size'}, $lv->{'size'})) {
 		# Only delete and re-create if an old LV with close enough to
 		# the same size doesn't exist
 		if ($reset) {
@@ -1443,22 +1442,39 @@ elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
 			       1024*1024,
 		     'iscsi_server' => $server->{'kvm_filesystem_iscsi'},
 		   };
+	my $keep_disk = 0;
 	if ($reset) {
-		# If resettting, disk already exists .. so delete it first
+		# If resettting, disk already exists .. fill in object
+		# with info from VM
 		$disk->{'iscsi_name'} = $server->{'kvm_filesystem_iscsi_name'};
 		$disk->{'iscsi_target'} = $server->{'kvm_filesystem_iscsi_target'};
 		$disk->{'iscsi_ip'} = $server->{'kvm_filesystem_iscsi_ip'};
 		$disk->{'iscsi_port'} = $server->{'kvm_filesystem_iscsi_port'};
 		$disk->{'iscsi_connect'} = -1;	# May or may not be connected
-		my $err = &delete_iscsi_disk($server, $disk);
+
+		# Get info on existing disk on iSCSI server
+		my $iscsiserver = &get_managed_server(
+					$server->{'kvm_filesystem_iscsi'});
+		my $idisk = &get_iscsi_disk_info($iscsiserver, $disk);
+		if (ref($idisk) &&
+		    &size_close_enough($idisk->{'size'}, $disk->{'size'})) {
+			$keep_disk = 1;
+			}
 		}
-	my $err = &create_iscsi_disk($server, $disk);
-	$err && return "iSCSI disk creation failed : $err";
-	$fsfile = $disk->{'real'};
-	$server->{'kvm_filesystem_iscsi_name'} = $disk->{'iscsi_name'};
-	$server->{'kvm_filesystem_iscsi_target'} = $disk->{'iscsi_target'};
-	$server->{'kvm_filesystem_iscsi_ip'} = $disk->{'iscsi_ip'};
-	$server->{'kvm_filesystem_iscsi_port'} = $disk->{'iscsi_port'};
+	if (!$keep_disk) {
+		# Disk needs to be deleted (if re-setting) and then created
+		# on iSCSI server
+		if ($reset) {
+			my $err = &delete_iscsi_disk($server, $disk);
+			}
+		my $err = &create_iscsi_disk($server, $disk);
+		$err && return "iSCSI disk creation failed : $err";
+		$fsfile = $disk->{'real'};
+		$server->{'kvm_filesystem_iscsi_name'} = $disk->{'iscsi_name'};
+		$server->{'kvm_filesystem_iscsi_target'} = $disk->{'iscsi_target'};
+		$server->{'kvm_filesystem_iscsi_ip'} = $disk->{'iscsi_ip'};
+		$server->{'kvm_filesystem_iscsi_port'} = $disk->{'iscsi_port'};
+		}
 	}
 
 if ($server->{'kvm_swapfile_vg'}) {
@@ -6686,9 +6702,13 @@ foreach my $d (@$disks) {
 		push(@drives, $drive);
 		if ($newserver->{'kvm_filesystem'} eq $d->{'real'}) {
 			$newserver->{'kvm_filesystem'} = $d->{'newreal'};
+			$newserver->{'kvm_filesystem_iscsi_target'} =
+				$d->{'iscsi_target'};
 			}
 		if ($newserver->{'kvm_swapfile'} eq $d->{'real'}) {
 			$newserver->{'kvm_swapfile'} = $d->{'newreal'};
+			$newserver->{'kvm_swapfile_iscsi_target'} =
+				$d->{'iscsi_target'};
 			}
 		&$second_print(&text($snapped ? 'clone_snapdiskdone'
 					      : 'clone_copydiskdone',

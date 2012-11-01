@@ -11964,6 +11964,14 @@ my ($addr) = @_;
 return $addr =~ /^[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}$/i ? 1 : 0;
 }
 
+# size_close_enough(current-size, want-size)
+# Checks if a disk of current-size is close enough to want-size to be used
+sub size_close_enough
+{
+my ($curr, $want) = @_;
+return $curr >= $want && $curr - $want < 100*1024;
+}
+
 # obtain_lock_anything()
 # Should be called before any state-changing action
 sub obtain_lock_anything

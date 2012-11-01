@@ -263,7 +263,10 @@ elsif ($mod eq "iscsi-target") {
 				       "restart_iscsi_server");
 	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
+
+	$disk->{'iscsi_name'} = $host;
 	}
+$disk->{'iscsi_target'} = $targetname;
 
 # Get list of available targets on host from server
 my $targets = &remote_foreign_call($vhost, "iscsi-client",
@@ -271,15 +274,22 @@ my $targets = &remote_foreign_call($vhost, "iscsi-client",
 ref($targets) || return "Failed to list targets on $iscsiserver->{'host'} ".
 			"from $vhost->{'host'} : $targets";
 my ($rtarget) = grep { $_->{'target'} eq $targetname } @$targets;
-$rtarget || return "Expected target $targetname is not shared by ".
-		   $iscsiserver->{'host'};
+if (!$rtarget) {
+	&delete_iscsi_disk($server, $disk);
+	return "Expected target $targetname is not shared by ".
+	       $iscsiserver->{'host'};
+	}
 
 # Connect from host system
-# XXX clean up disk if failed?
 my $err = &remote_foreign_call($vhost, "iscsi-client",
 		"create_iscsi_connection", $ip, 3260, undef, $rtarget,
 		"CHAP", $server->{'iscsi_user'}, $server->{'iscsi_pass'});
-return "iSCSI connection failed : $err" if ($err);
+if ($err) {
+	&delete_iscsi_disk($server, $disk);
+	return "iSCSI connection failed : $err";
+	}
+$disk->{'iscsi_ip'} = $ip;
+$disk->{'iscsi_port'} = 3260;
 
 # Set real path in disk object
 my $conns = &remote_foreign_call($vhost, "iscsi-client",
@@ -287,11 +297,20 @@ my $conns = &remote_foreign_call($vhost, "iscsi-client",
 my ($conn) = grep { $_->{'ip'} eq $ip &&
 		    $_->{'name'} eq $rtarget->{'name'} &&
 		    $_->{'target'} eq $targetname } @$conns;
-$conn || return "No iSCSI connection to $ip for ".
-		"$rtarget->{'name'}:$targetname found on $vhost->{'host'}";
+if (!$conn) {
+	$disk->{'iscsi_connect'} = -1;
+	&delete_iscsi_disk($server, $disk);
+	return "No iSCSI connection to $ip for ".
+	       "$rtarget->{'name'}:$targetname found on $vhost->{'host'}";
+	}
 $disk->{'real'} = $conn->{'longdevice'} ||
 		  "/dev/disk/by-path/ip-$conn->{'ip'}:$conn->{'port'}-".
 		  "iscsi-$conn->{'name'}:$conn->{'target'}-lun-1";
+my @st = &stat_file_on_server($vhost, $disk->{'real'});
+if (!@st) {
+	return "Expected iSCSI disk device $disk->{'real'} does not exist ".
+	       "on host system $vhost->{'host'}";
+	}
 foreach my $f ("ip", "port", "name", "target") {
 	$disk->{'iscsi_'.$f} = $conn->{$f};
 	}
@@ -684,6 +703,92 @@ if (@rv) {
 	$get_iscsi_disk_space_cache{$iscsiserver->{'id'}} = \@rv;
 	}
 return @rv;
+}
+
+# get_iscsi_disk_info(&iscsiserver, &disk)
+# Given a disk object, find the underlying file and return a hash ref with
+# information about it (if possible). Otherwise return an error message if 
+# something went wrong, or undef if the disk file doesn't exist.
+sub get_iscsi_disk_info
+{
+my ($iscsiserver, $disk) = @_;
+
+my $mod = $iscsiserver->{'iscsi_module'};
+$mod || return "System $iscsiserver->{'host'} is no longer an iSCSI server";
+$last_remote_error = undef;
+&remote_foreign_require($iscsiserver, $mod);
+$last_remote_error && return "Error loading $mod : $last_remote_error";
+
+# Find the target, and from it the underlying file
+my $real;
+if ($mod eq "iscsi-server") {
+	# Find the target
+	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	$disk->{'iscsi_target'} =~ /^target(\d+)$/ ||
+		return "iSCSI target is not in targetN format";
+	my $num = $1;
+	my ($target) = grep { $_->{'type'} eq 'target' &&
+			      $_->{'num'} eq $num } @$conf;
+	$target || return "No target named $disk->{'iscsi_target'} found";
+
+	# Find the extent
+	$target->{'export'} =~ /^extent(\d+)$/ ||
+		return "iSCSI extent is not in extentN format";
+	my $num = $1;
+	my ($extent) = grep { $_->{'type'} eq 'extent' &&
+			      $_->{'num'} eq $num } @$conf;
+	$extent || return "No extent named $target->{'export'} found";
+	$real = $extent->{'device'};
+	}
+elsif ($mod eq "iscsi-target") {
+	# Find the target
+	my $pconf = &remote_foreign_call($iscsiserver, $mod,
+					 "get_iscsi_config_parent");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	my $conf = $pconf->{'members'};
+	my $targetname = $disk->{'iscsi_name'}.":".$disk->{'iscsi_target'};
+	my ($target) = grep { $_->{'name'} eq 'Target' &&
+			      $_->{'value'} eq $targetname } @$conf;
+	$target || return "No target named $targetname found";
+	my ($lun) = grep { $_->{'name'} eq 'Lun' } @{$target->{'members'}};
+	if ($lun && $lun->{'value'} =~ /Path=([^,]+)/) {
+		$real = $1;
+		}
+	}
+else {
+	return "Unknown module $mod";
+	}
+
+my $idisk = { 'real' => $real };
+if ($real =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
+	# Get the LV size
+	$idisk->{'type'} = 'lvm';
+	$idisk->{'vg'} = $1;
+	$idisk->{'lv'} = $2;
+	&remote_foreign_require($iscsiserver, "lvm");
+	$last_remote_error &&
+		return "Error loading LVM module : $last_remote_error";
+	my @lvs = &remote_foreign_call($iscsiserver, "lvm",
+				       "list_logical_volumes", $idisk->{'vg'});
+	my ($lv) = grep { $_->{'name'} eq $idisk->{'lv'} } @lvs;
+	$lv || return undef;
+	$idisk->{'size'} = $lv->{'size'} * 1024;
+	}
+elsif ($real !~ /^\/dev\//) {
+	# Get the file size
+	$idisk->{'type'} = 'file';
+	my @st = &stat_file_on_server($iscsiserver, $real);
+	return undef if (!@st);
+	return $st[0] if (@st == 1);
+	$idisk->{'size'} = $st[7];
+	}
+else {
+	return "$real is a device, not a file or LV";
+	}
+return $idisk;
 }
 
 1;
