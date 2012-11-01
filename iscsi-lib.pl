@@ -104,7 +104,7 @@ my ($server, $disk) = @_;
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
-$id = $server->{$server->{'manager'}.'_force_iscsi'} if ($id eq '');
+$id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
 my $iscsiserver = &get_managed_server($id);
@@ -203,9 +203,14 @@ if ($mod eq "iscsi-server") {
 		return "Failed to create extent : $last_remote_error";
 
 	# Add a target for the extent
-	my $target = { 'num' => &remote_foreign_call($iscsiserver, $mod,
-					"find_free_num", $conf, 'target'),
-		       'type' => 'target' };
+	my $target = { 'type' => 'target' };
+	if ($disk->{'iscsi_target'} =~ /target(\d+)$/) {
+		$target->{'num'} = $1;
+		}
+	else {
+		$target->{'num'} = &remote_foreign_call($iscsiserver, $mod,
+                                        "find_free_num", $conf, 'target');
+		}
 	$target->{'export'} = 'extent'.$extent->{'num'};
 	$target->{'flags'} = 'rw';
 	$target->{'network'} = 'any';
@@ -220,7 +225,7 @@ if ($mod eq "iscsi-server") {
 	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
 
-	$targetname = $target->{'export'};
+	$targetname = $target->{'type'}.$target->{'num'};
 	}
 elsif ($mod eq "iscsi-target") {
 	# Add a target
@@ -235,8 +240,9 @@ elsif ($mod eq "iscsi-target") {
 					"generate_host_name");
 	$last_remote_error &&
 		return "Failed to get iSCSI hostname : $last_remote_error";
+	$targetname = $disk->{'iscsi_target'} || $suffix;
 	$target = { 'name' => 'Target',
-		    'value' => $host.":".$suffix,
+		    'value' => $host.":".$targetname,
                     'members' => [ ] };
 	push(@{$target->{'members'}},
 	     { 'name' => 'Lun',
@@ -257,8 +263,6 @@ elsif ($mod eq "iscsi-target") {
 				       "restart_iscsi_server");
 	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
-
-	$targetname = $suffix;
 	}
 
 # Get list of available targets on host from server
@@ -309,7 +313,7 @@ my ($server, $disk) = @_;
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
-$id = $server->{$server->{'manager'}.'_force_iscsi'} if ($id eq '');
+$id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
 my $iscsiserver = &get_managed_server($id);
@@ -331,7 +335,9 @@ if ($disk->{'iscsi_connect'}) {
 	my $err = &remote_foreign_call($vhost, "iscsi-client",
 				       "delete_iscsi_connection", $conn);
 	$err ||= $last_remote_error;
-	$err && return "Failed to disconnect iSCSI connection : $err";
+	if ($disk->{'iscsi_connect'} > 0) {
+		$err && return "Failed to disconnect iSCSI connection : $err";
+		}
 	}
 
 # Find and remove the target
@@ -439,7 +445,7 @@ if ($disk->{'size'} == $olddisk->{'size'}) {
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
-$id = $server->{$server->{'manager'}.'_force_iscsi'} if ($id eq '');
+$id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
 my $iscsiserver = &get_managed_server($id);
