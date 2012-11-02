@@ -38,6 +38,11 @@ By default disk creation will fail if the specified file or logical volume
 already exists on the host system. You can instead force deletion of any
 existing file with the C<--overwrite> flag.
 
+If possible, Cloudmin will add the new disk to a running system and mount it
+on the specific directory. However, in some cases this may not be possible
+without rebooting the system - to have this done automatically, use the
+C<--reboot> flag.
+
 =head1 Example usage
 
   cloudmin create-disk --host xencentos.home --auto-virt --auto-real --size 500
@@ -104,6 +109,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--overwrite") {
 		$overwrite = 1;
+		}
+	elsif ($a eq "--reboot") {
+		$reboot = 1;
 		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
@@ -246,21 +254,37 @@ if ($hostfree && $disk->{'size'} > $hostfree) {
 $cfunc = "type_".$server->{'manager'}."_create_disk";
 $err = &$cfunc($server, $disk, scalar(@$disks) ? 0 : 1);
 &save_managed_server($server);
-&release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");
+	&release_lock_server($server);
 	exit(1);
 	}
 else {
 	# Tell the user about reboot
 	$rfunc = "type_".$server->{'manager'}."_need_disk_reboot";
 	if (defined(&$rfunc) && &$rfunc($server, $disk, undef)) {
-		&$second_print(".. done. However, the disk will not be visible until the system is rebooted");
+		if ($reboot) {
+			&$second_print(".. done");
+			&$first_print("Rebooting system to add new disk ..");
+			$err = &reboot_server($server);
+			&check_server_status($server, 0, 1);
+			&save_managed_server($server);
+			if ($err) {
+				print ".. failed : $err\n";
+				}
+			else {
+				print " .. done\n";
+				}
+			}
+		else {
+			&$second_print(".. done. However, the disk will not be visible until the system is rebooted");
+			}
 		}
 	else {
 		&$second_print(".. done");
 		}
 	}
+&release_lock_server($server);
 &cloudmin_api_log(\@OLDARGV);
 
 sub usage
@@ -278,6 +302,7 @@ print "                    [--mount directory|\"swap\"]\n";
 print "                    [--media type]\n";
 print "                    [--storage id|\"name\"]\n";
 print "                    [--overwrite]\n";
+print "                    [--reboot]\n";
 exit(1);
 }
 

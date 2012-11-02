@@ -1778,7 +1778,8 @@ if (!$empty && $server->{'kvm_swapfile'}) {
 	$swsize = $server->{'kvm_swap'}*1024*1024;
 	$swfile = $server->{'kvm_swapfile'};
 	my @st = &stat_file_on_server($vhost, $swfile);
-	if (!@st || $server->{'kvm_swapfile_vg'}) {
+	if (!@st || $server->{'kvm_swapfile_vg'} ||
+	    $server->{'kvm_swapfile_iscsi'} ne '') {
 		&$first_print(&text('create_xenswap',
 				    &nice_size($swsize)));
 		my ($out, $ex, $err) = &execute_command_on_server(
@@ -4201,7 +4202,7 @@ if ($nonvirt) {
 			for(my $try=0; $try<5; $try++) {
 				sleep(1);
 				my $active = &list_active_server_interfaces(
-						$server);
+						$server, 1);
 				if (ref($active) && @$active > @$oldactive) {
 					$canactivate = 1;
 					last;

@@ -9753,11 +9753,11 @@ return &ui_textbox($name, $bits, $size, $dis)." ".
 		 undef, undef, undef, $dis);
 }
 
-# parse_ifconfig_output(out)
+# parse_ifconfig_output(out, [include-with-no-ip])
 # Parses the output of ifconfig -a into a list of interfaces
 sub parse_ifconfig_output
 {
-my ($out) = @_;
+my ($out, $empty) = @_;
 my @ifaces;
 my @lines;
 foreach my $l (split(/\r?\n/, $out)) {
@@ -9818,11 +9818,11 @@ my ($out, $ex, $err) = &execute_command_on_server($server,"tar --version 2>&1");
 return !$err && !$ex && $out =~ /GNU\s+tar/i ? 1 : 0;
 }
 
-# list_active_server_interfaces(&server)
+# list_active_server_interfaces(&server, [include-with-no-ip])
 # Returns a list of all running network interfaces on a system, as an array ref
 sub list_active_server_interfaces
 {
-my ($server) = @_;
+my ($server, $empty) = @_;
 if (&can_net_status($server)) {
 	# Get from Webmin
 	$last_remote_error = undef;
@@ -9831,8 +9831,10 @@ if (&can_net_status($server)) {
 	my @active = &remote_foreign_call(
 		$server, "net", "active_interfaces", 1);
 	return $last_remote_error if ($last_remote_error);
-	@active = grep { &check_ipaddress($_->{'address'}) ||
-			 $_->{'address'} eq '' } @active;
+	if (!$empty) {
+		@active = grep { &check_ipaddress($_->{'address'}) ||
+				 $_->{'address'} eq '' } @active;
+		}
 
 	# Also add in gateways
 	my @routes = &remote_foreign_call($server, "net", "list_routes");
@@ -9850,7 +9852,7 @@ else {
 		"ifconfig -a");
 	return $err if ($err);
 	return $out if ($ex);
-	my @active = &parse_ifconfig_output($out);
+	my @active = &parse_ifconfig_output($out, $empty);
 
 	# Also add in gateways
 	my ($out, $ex, $err) = &execute_command_on_server($server,
