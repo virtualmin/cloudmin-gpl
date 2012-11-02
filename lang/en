@@ -3016,6 +3016,7 @@ smove_evirtip=.. IP changed failed : $1. Some or all domains may still be on the
 smove_eicsiserver=The iSCSI server for the system being moved is not known!
 smove_eicsidest=The source host system is using iSCSI, but the destination host system is not configured to use it
 smove_eiscsidiff=The source host system is using iSCSI server $1, but the destination host system is using $2
+smove_eiscsidest=The destination host system does not support iSCSI : $1
 smove_iscsi=Moving iSCSI connection to $1 target $2 to new host system ..
 smove_eiscsidis=.. disconnection failed : $1
 smove_eiscsiconn=.. connection failed : $1

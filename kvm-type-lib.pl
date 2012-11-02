@@ -1484,8 +1484,7 @@ if ($server->{'kvm_swapfile_vg'}) {
                    'perm' => 'rw',
                    'alloc' => 'n',
                    'vg' => $server->{'kvm_swapfile_vg'} };
-        if (!($fslv && $swaplv->{'size'} > $lv->{'size'} &&
-                       $swaplv->{'size'}-$lv->{'size'} < 100*1024)) {
+	if (!$swaplv || !&size_close_enough($swaplv->{'size'}, $lv->{'size'})) {
                 # Only delete and re-create if an old LV with close enough to
                 # the same size doesn't exist
                 if ($reset) {
@@ -1510,22 +1509,39 @@ elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
 	my $disk = { 'size' => $server->{'kvm_swap'}*1024*1024,
 		     'iscsi_server' => $server->{'kvm_swapfile_iscsi'},
 		   };
+	my $keep_disk = 0;
 	if ($reset) {
-		# If resettting, disk already exists .. so delete it first
+		# If resettting, disk already exists .. fill in object
+		# with info from VM
 		$disk->{'iscsi_name'} = $server->{'kvm_swapfile_iscsi_name'};
 		$disk->{'iscsi_target'} = $server->{'kvm_swapfile_iscsi_target'};
 		$disk->{'iscsi_ip'} = $server->{'kvm_swapfile_iscsi_ip'};
 		$disk->{'iscsi_port'} = $server->{'kvm_swapfile_iscsi_port'};
 		$disk->{'iscsi_connect'} = -1;	# May or may not be connected
-		my $err = &delete_iscsi_disk($server, $disk);
+
+		# Get info on existing disk on iSCSI server
+		my $iscsiserver = &get_managed_server(
+					$server->{'kvm_swapfile_iscsi'});
+		my $idisk = &get_iscsi_disk_info($iscsiserver, $disk);
+		if (ref($idisk) &&
+		    &size_close_enough($idisk->{'size'}, $disk->{'size'})) {
+			$keep_disk = 1;
+			}
 		}
-	my $err = &create_iscsi_disk($server, $disk);
-	$err && return "iSCSI swap disk creation failed : $err";
-	$swfile = $disk->{'real'};
-	$server->{'kvm_swapfile_iscsi_name'} = $disk->{'iscsi_name'};
-	$server->{'kvm_swapfile_iscsi_target'} = $disk->{'iscsi_target'};
-	$server->{'kvm_swapfile_iscsi_ip'} = $disk->{'iscsi_ip'};
-	$server->{'kvm_swapfile_iscsi_port'} = $disk->{'iscsi_port'};
+	if (!$keep_disk) {
+		# Disk needs to be deleted (if re-setting) and then created
+		# on iSCSI server
+		if ($reset) {
+			my $err = &delete_iscsi_disk($server, $disk);
+			}
+		my $err = &create_iscsi_disk($server, $disk);
+		$err && return "iSCSI swap disk creation failed : $err";
+		$swfile = $disk->{'real'};
+		$server->{'kvm_swapfile_iscsi_name'} = $disk->{'iscsi_name'};
+		$server->{'kvm_swapfile_iscsi_target'} = $disk->{'iscsi_target'};
+		$server->{'kvm_swapfile_iscsi_ip'} = $disk->{'iscsi_ip'};
+		$server->{'kvm_swapfile_iscsi_port'} = $disk->{'iscsi_port'};
+		}
 	}
 
 # Set drive in config, unless resetting in which case they stay the same
@@ -5528,12 +5544,19 @@ foreach my $d (@$disks) {
 	if ($d->{'iscsi_ip'}) {
 		$d->{'iscsi_server'} eq '' && return $text{'smove_eicsiserver'};
 		my $old_iscsiserver = &get_managed_server($d->{'iscsi_server'});
-		$dest->{'kvm_iscsi'} eq '' && return $text{'smove_eicsidest'};
-		my $new_iscsiserver = &get_managed_server($dest->{'kvm_iscsi'});
-		$old_iscsiserver->{'id'} eq $new_iscsiserver->{'id'} ||
-			return &text('smove_eiscsidiff',
-				     $old_iscsiserver->{'host'},
-				     $new_iscsiserver->{'host'});
+		if ($server->{'kvm_force_iscsi'} ne '') {
+			my $new_iscsiserver = &get_managed_server($d->{'iscsi_server'});
+			my $err = &check_iscsi_client($dest);
+			$err && return &text('smove_eiscsidest', $err);
+			}
+		else {
+			$dest->{'kvm_iscsi'} eq '' && return $text{'smove_eicsidest'};
+			my $new_iscsiserver = &get_managed_server($dest->{'kvm_iscsi'});
+			$old_iscsiserver->{'id'} eq $new_iscsiserver->{'id'} ||
+				return &text('smove_eiscsidiff',
+					     $old_iscsiserver->{'host'},
+					     $new_iscsiserver->{'host'});
+			}
 		}
 	}
 
@@ -6472,14 +6495,22 @@ if ($vhost->{'id'} ne $dest->{'id'}) {
 				return $text{'clone_eicsiserver'};
 			my $old_iscsiserver = &get_managed_server(
 				$d->{'iscsi_server'});
-			$dest->{'kvm_iscsi'} eq '' &&
-				return $text{'clone_eicsidest'};
-			my $new_iscsiserver = &get_managed_server(
-						$dest->{'kvm_iscsi'});
-			$old_iscsiserver->{'id'} eq $new_iscsiserver->{'id'} ||
-				return &text('clone_eiscsidiff',
-					     $old_iscsiserver->{'host'},
-					     $new_iscsiserver->{'host'});
+			if ($server->{'kvm_force_iscsi'} ne '') {
+				my $new_iscsiserver = &get_managed_server(
+							$d->{'iscsi_server'});
+				my $err = &check_iscsi_client($dest);
+				$err && return &text('smove_eiscsidest', $err);
+				}
+			else {
+				$dest->{'kvm_iscsi'} eq '' &&
+					return $text{'clone_eicsidest'};
+				my $new_iscsiserver = &get_managed_server(
+							$dest->{'kvm_iscsi'});
+				$old_iscsiserver->{'id'} eq $new_iscsiserver->{'id'} ||
+					return &text('clone_eiscsidiff',
+						     $old_iscsiserver->{'host'},
+						     $new_iscsiserver->{'host'});
+				}
 			}
 		}
 	}
