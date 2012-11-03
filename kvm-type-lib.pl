@@ -3202,6 +3202,7 @@ sub type_kvm_delete_disk
 {
 my ($server, $disk, $detach, $nofstab) = @_;
 my $vhost = &type_kvm_parent($server);
+use Data::Dumper;
 
 # Actually un-mount if mounted
 if (&can_ssh_status($server) && $disk->{'mounted'}) {
@@ -3273,13 +3274,14 @@ if (!$detach) {
 		}
 	elsif ($disk->{'lv'}) {
 		# Delete mapper entries for LV, if any
-		my $mapper = "$disk->{'vg'}-$disk->{'lv'}";
-		&delete_mapper_entries($vhost, $mapper);
+		&delete_mapper_entries($vhost, $disk->{'vg'}, $disk->{'lv'});
 
 		# Delete the logical volume
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
-				     { 'device' => $disk->{'real'} });
+		my $err = &remote_foreign_call($vhost, "lvm",
+				"delete_logical_volume",
+				{ 'device' => $disk->{'real'} });
+		$err ||= $last_remote_error;
 		}
 	elsif ($disk->{'iscsi_server'} ne '') {
 		# Delete from iSCSI server
@@ -3294,8 +3296,8 @@ if (!$detach) {
 			# Source of snapshot is un-used, likely because it was
 			# deleted before this clone. Delete the LV.
 			&delete_all_disk_image_partitions($vhost, $srcreal);
-			my $mapper = "$disk->{'vg'}-$disk->{'lv_snap_of'}";
-			&delete_mapper_entries($vhost, $mapper);
+			&delete_mapper_entries($vhost, $disk->{'vg'},
+						$disk->{'lv_snap_of'});
 			&remote_foreign_call($vhost, "lvm",
 					     "delete_logical_volume",
 					     { 'device' => $srcreal });
@@ -5898,7 +5900,7 @@ if (@delfiles || @dellvs) {
 	foreach my $f (@dellvs) {
 		my $err = &delete_all_disk_image_partitions($vhost, $f);
 		my ($vg, $lv) = &split_lvm_device($f);
-		$err = &delete_mapper_entries($vhost, "$vg-$lv");
+		$err = &delete_mapper_entries($vhost, $vg, $lv);
 		&remote_foreign_call($vhost, "lvm", "delete_logical_volume",
 				     { 'device' => $f });
 		my $srcf = &find_snapshot_source_logical_volume(
@@ -5907,7 +5909,7 @@ if (@delfiles || @dellvs) {
 			# Delete snapshot source if no longer in use
 			&delete_all_disk_image_partitions($vhost, $srcf);
 			my ($srcvg, $srclv) = &split_lvm_device($srcf);
-			&delete_mapper_entries($vhost, "$srcvg-$srclv");
+			&delete_mapper_entries($vhost, $srcvg, $srclv);
 			&remote_foreign_call($vhost, "lvm",
 					     "delete_logical_volume",
 					     { 'device' => $srcf });
