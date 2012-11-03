@@ -214,6 +214,9 @@ if ($mod eq "iscsi-server") {
 	$target->{'export'} = 'extent'.$extent->{'num'};
 	$target->{'flags'} = 'rw';
 	$target->{'network'} = 'any';
+	$targetname = $target->{'type'}.$target->{'num'};
+	my ($rtarget) = grep { $_->{'target'} eq $targetname } @$targets;
+	$rtarget && return "Target $targetname is already being exported!";
 	&remote_foreign_call($iscsiserver, $mod, "save_directive", $conf,
 			     undef, $target);
 	$last_remote_error &&
@@ -224,8 +227,6 @@ if ($mod eq "iscsi-server") {
 				       "restart_iscsi_server");
 	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
-
-	$targetname = $target->{'type'}.$target->{'num'};
 	}
 elsif ($mod eq "iscsi-target") {
 	# Add a target
@@ -241,6 +242,8 @@ elsif ($mod eq "iscsi-target") {
 	$last_remote_error &&
 		return "Failed to get iSCSI hostname : $last_remote_error";
 	$targetname = $disk->{'iscsi_target'} || $suffix;
+	my ($rtarget) = grep { $_->{'target'} eq $targetname } @$targets;
+	$rtarget && return "Target $targetname is already being exported!";
 	$target = { 'name' => 'Target',
 		    'value' => $host.":".$targetname,
                     'members' => [ ] };

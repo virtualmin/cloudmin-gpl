@@ -1210,22 +1210,27 @@ eval {
 	while(1) {
 		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", "REMOTE HOST IDENTIFICATION", ".*\n", $leave ? ( $leave ) : ( ));
 		if ($rv == 0) {
+			# Need to supply password
 			syswrite($fh, "$pass\n");
 			$given_password++;
 			}
 		elsif ($rv == 1) {
+			# Answer yes/no question
 			syswrite($fh, "yes\n");
 			}
 		elsif ($rv == 2) {
+			# Got wrong password
 			$wrong_password++;
 			$out .= $wait_for_input;
 			last;
 			}
 		elsif ($rv == 3) {
+			# Connection failed, give up
 			$connect_failed++;
 			$out .= $wait_for_input;
 			}
 		elsif ($rv == 4) {
+			# Remote host key is invalid
 			$hostkey_failed++;
 			$out .= $wait_for_input;
 			}
@@ -1234,9 +1239,11 @@ eval {
 			last;
 			}
 		elsif ($rv < 0) {
+			# End of input
 			last;
 			}
-		else {
+		elsif ($rv == 5) {
+			# Some other line of text
 			$out .= $wait_for_input;
 			}
 		}
@@ -1285,14 +1292,15 @@ elsif ($ex) {
 return (0, $out, $fh, $fpid);
 }
 
-# execute_command_on_server(&server, command, [timeout], [leave-open])
+# execute_command_on_server(&server, command, [timeout], [leave-open],
+# 			    [no-force-language])
 # Runs some command on a managed system (most likely via SSH), and returns
 # the output, exit status and error message if it could not be run.
 # If the leave-open parameter is set, the command is left running and a file
 # handle for talking to it is returned.
 sub execute_command_on_server
 {
-my ($server, $cmd, $timeout, $leave) = @_;
+my ($server, $cmd, $timeout, $leave, $nolang) = @_;
 my $efunc = "type_".$server->{'manager'}."_execute_command";
 if (defined(&$efunc)) {
 	# Use type-specific function call
@@ -1309,13 +1317,15 @@ else {
 		$sshcmd .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
-	# Force all output to be in english
-	if ($cmd =~ /^(\(+)(.*)/) {
-		# Command is like (foo)
-		$cmd = $1."LANG=C ".$2;
-		}
-	else {
-		$cmd = "LANG=C $cmd";
+	if (!$nolang) {
+		# Force all output to be in english
+		if ($cmd =~ /^(\(+)(.*)/) {
+			# Command is like (foo)
+			$cmd = $1."LANG=C ".$2;
+			}
+		else {
+			$cmd = "LANG=C $cmd";
+			}
 		}
 	if ($server->{'root_shell'} &&
 	    $server->{'root_shell'} !~ /^(\S+\/)?(sh|bash|dash)$/ ||

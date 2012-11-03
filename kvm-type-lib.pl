@@ -1419,9 +1419,11 @@ if ($server->{'kvm_filesystem_vg'}) {
 	if (!$fslv || !&size_close_enough($fslv->{'size'}, $lv->{'size'})) {
 		# Only delete and re-create if an old LV with close enough to
 		# the same size doesn't exist
-		if ($reset) {
+		if ($reset && $fslv) {
 			# Delete the old LV
 			&delete_all_disk_image_partitions($vhost, $fsfile);
+			&delete_mapper_entries(
+				$vhost, $lv->{'vg'}, $lv->{'name'});
 			my $err = &remote_foreign_call($vhost, "lvm",
 					     "delete_logical_volume",
 					     { 'device' => $fsfile });
@@ -1487,9 +1489,11 @@ if ($server->{'kvm_swapfile_vg'}) {
 	if (!$swaplv || !&size_close_enough($swaplv->{'size'}, $lv->{'size'})) {
                 # Only delete and re-create if an old LV with close enough to
                 # the same size doesn't exist
-                if ($reset) {
+                if ($reset && $swlv) {
                         # Delete the old LV
                         &delete_all_disk_image_partitions($vhost, $swfile);
+			&delete_mapper_entries(
+				$vhost, $lv->{'vg'}, $lv->{'name'});
                         my $err = &remote_foreign_call($vhost, "lvm",
                                              "delete_logical_volume",
                                              { 'device' => $swfile });
@@ -3136,6 +3140,11 @@ if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
 	my $str = join(",", map { $_."=".$drive{$_} } keys %drive);
 	my ($aok, $aout) = &run_kvm_monitor_command($server,
 		[ "pci_add 0 storage $str" ]);
+	if (!$aok || $aout !~ /OK/) {
+		# Try again with auto, as this is needed by some KVM instances
+		($aok, $aout) = &run_kvm_monitor_command($server,
+			[ "pci_add auto storage $str" ]);
+		}
 	$attacherr = !$aok ? $aout :
 		      $aout =~ /OK/ ? undef : $aout;
 	$disk->{'reboot'} = 1 if ($attacherr);
@@ -3220,17 +3229,30 @@ if ($server->{'status'} ne 'down' &&
     $disk->{'virt'} !~ /\/hd/) {
 	my $pcis = &list_kvm_pci_devices($server);
 	if (ref($pcis)) {
-		my @stors = grep { $_->{'type'} =~ /storage/i } @$pcis;
+		my @stors = grep { $_->{'type'} =~
+				   /storage|SCSI\s+controller/i } @$pcis;
 		my $stor = $stors[$disk->{'drive_index'}];
 		if ($stor) {
 			&load_kvm_hotplug_modules($server);
 			my ($ok, $out) = &run_kvm_monitor_command($server,
 				[ "pci_del $stor->{'bus'} $stor->{'device'}" ]);
-			if (!$ok || $out !~ /OK/) {
+			if (!$ok || $out =~ /extraneous|empty/) {
+				# Try alternate pci_del command format
+				($ok, $out) = &run_kvm_monitor_command($server,
+					[ "pci_del $stor->{'bus'}:$stor->{'device'}" ]);
+				}
+			if (!$ok || $out =~ /empty/) {
 				$disk->{'reboot'} = 1;
 				}
 			}
 		}
+	}
+
+# If on LVM and the VM is still connected to the LV, fail now to prevent
+# leftover LVs
+if ($disk->{'lv'} && !$detach) {
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, "fuser ".quotemeta($disk->{'real'}));
+	# XXX
 	}
 
 # Remove from the KVM config
@@ -3282,6 +3304,7 @@ if (!$detach) {
 				"delete_logical_volume",
 				{ 'device' => $disk->{'real'} });
 		$err ||= $last_remote_error;
+		return $err if ($err);
 		}
 	elsif ($disk->{'iscsi_server'} ne '') {
 		# Delete from iSCSI server
@@ -4190,8 +4213,8 @@ if ($nonvirt) {
 		my ($aok, $aout) = &run_kvm_monitor_command($server,
 			[ "pci_add 0 nic $str" ]);
 		if (!$aok || $aout !~ /OK/) {
-			# Try again without mac=, as some KVM instances don't
-			# support it
+			# Try again with auto and without mac=, as some KVM
+			# instances don't support it
 			$str =~ s/,mac=([^,]+)//;
 			($aok, $aout) = &run_kvm_monitor_command($server,
 				[ "pci_add auto nic $str" ]);
@@ -6692,8 +6715,9 @@ foreach my $d (@$disks) {
 			}
 		}
 	elsif ($d->{'iscsi_server'} ne '') {
-		# Cloning to a new iSCSI disk
+		# Cloning to a new iSCSI disk (with new target name)
 		my $newd = { %$d };
+		delete($newd->{'iscsi_target'});
 		$err = &create_iscsi_disk($newserver, $newd);
 		if (!$err) {
 			# Copy the data using DD
@@ -7117,14 +7141,18 @@ else {
 		     "KVM monitor commands");
 	@$cmds || return (0, "No monitor commands given");
 
-	# Run nc with echo into it
+	# Run nc with echo into it. Only take the last 2 lines, as the KVM
+	# console sometimes outputs huge long lines that take wait_for_lines
+	# a long time to parse
+	my @echos;
 	foreach my $c (@$cmds) {
 		push(@echos, "echo ".quotemeta($c));
 		}
 	my $sleep = $delay ? "--sleep $delay" : "";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"(".join(" ; ", @echos).") | ".
-		"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}",
+		"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}".
+		" | tail -2",
 		$timeout > 0 ? $timeout : undef);
 	if ($ex || $err) {
 		return (0, $err || $out);

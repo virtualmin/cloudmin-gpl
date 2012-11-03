@@ -54,9 +54,8 @@ while(@ARGV > 0) {
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--help") { &usage(); }
 	elsif ($a eq "--command") { push(@cmd, shift(@ARGV)); }
-	elsif ($a eq "--multiline") {
-		$multiline = 1;
-		}
+	elsif ($a eq "--multiline") { $multiline = 1; }
+	elsif ($a eq "--default-language") { $nolang = 1; }
 	else {
 		push(@cmd, $a);
 		}
@@ -74,7 +73,8 @@ $cmd = "($cmd) </dev/null";	# Suppress stdin
 
 if (@servers == 1) {
 	# Just do one
-	($out, $ex, $err) = &execute_command_on_server($servers[0], $cmd);
+	($out, $ex, $err) = &execute_command_on_server(
+				$servers[0], $cmd, undef, 0, $nolang);
 	&cloudmin_api_log(\@OLDARGV);
 	if ($err) {
 		print "ERROR: $err\n";
@@ -88,8 +88,8 @@ if (@servers == 1) {
 else {
 	# Do multiple in parallel
 	&parallel_server_function(\@servers,
-		sub { my ($out, $ex, $err) =
-			&execute_command_on_server($_[0], $cmd);
+		sub { my ($out, $ex, $err) = &execute_command_on_server(
+						$_[0], $cmd, undef, 0, $nolang);
 		      if ($err) {
 		          print "$_[0]->{'host'}: ERROR: $err\n";
 			  return 255;
@@ -115,6 +115,7 @@ print "                     [--os oscode]*\n";
 print "                     [--owner name]*\n";
 print "                     [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                     [--host-on name]\n";
+print "                     [--default-language]\n";
 print "                     command arg ...\n";
 exit(1);
 }

@@ -618,11 +618,16 @@ if (ref($files)) {
 			push(@delmaps, $f);
 			}
 		}
-	push(@delmaps, $mapper);
-	push(@delmaps, $dashmapper);
+	foreach my $f (@$files) {
+		if ($f eq $mapper || $f eq $dashmapper) {
+			push(@delmaps, $f);
+			}
+		}
 	foreach my $f (@delmaps) {
-		$err ||= &execute_command_on_server($vhost,
+		my ($cout, $cex, $cerr) = &execute_command_on_server($vhost,
 			"dmsetup remove /dev/mapper/$f");
+		$cerr = $cout if ($cex);
+		$err ||= $cerr;
 		&execute_command_on_server($vhost,
 			"dmsetup remove /dev/mapper/$f-cow");
 		}
