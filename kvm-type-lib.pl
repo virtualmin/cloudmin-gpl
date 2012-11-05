@@ -6734,6 +6734,8 @@ foreach my $d (@$disks) {
 		# Cloning to a new iSCSI disk (with new target name)
 		my $newd = { %$d };
 		delete($newd->{'iscsi_target'});
+		$newserver->{'kvm_on'} = $dest->{'id'};	# So disk is mounted on
+							# new host system
 		$err = &create_iscsi_disk($newserver, $newd);
 		if (!$err) {
 			# Copy the data using DD

@@ -624,6 +624,7 @@ my ($server, $disk) = @_;
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
 $last_remote_error = undef;
@@ -653,6 +654,7 @@ my ($server, $disk) = @_;
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
 my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+$id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
 $last_remote_error = undef;
