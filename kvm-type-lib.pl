@@ -2251,6 +2251,19 @@ $server->{'kvm_console'} ||= &get_kvm_console_file($server);
 my $err = &create_kvm_monitor_file($server);
 return (0, "Failed to create monitor input file : $err") if ($err);
 
+# If on iSCSI, re-connect and disconnected disks
+if ($server->{'kvm_filesystem_iscsi'} ne '') {
+	my $disks = &type_kvm_list_disks($server, 0);
+	if (ref($disks)) {
+		foreach my $d (@$disks) {
+			if ($d->{'iscsi_server'} ne '' &&
+			    $d->{'iscsi_connect'} == 0) {
+				&connect_iscsi_disk($server, $d);
+				}
+			}
+		}
+	}
+
 # Run qemu-kvm to start it up, in the background
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"$cmd >$server->{'kvm_console'} 2>&1 </dev/null &");
