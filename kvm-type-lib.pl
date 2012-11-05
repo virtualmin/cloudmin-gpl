@@ -3216,7 +3216,6 @@ sub type_kvm_delete_disk
 {
 my ($server, $disk, $detach, $nofstab) = @_;
 my $vhost = &type_kvm_parent($server);
-use Data::Dumper;
 
 # Actually un-mount if mounted
 if (&can_ssh_status($server) && $disk->{'mounted'}) {
@@ -3257,9 +3256,9 @@ if ($server->{'status'} ne 'down' &&
 # leftover LVs
 if ($disk->{'lv'} && !$detach && $server->{'status'} ne 'down') {
 	my ($out, $ex, $err) = &execute_command_on_server(
-		$vhost, "fuser ".quotemeta($disk->{'real'})." 2>/dev/null");
+		$vhost, "fuser ".quotemeta($disk->{'real'})." 2>&1");
 	if (!$ex && !$err) {
-		$out =~ s/^\s+//;
+		$out =~ s/^\S+:\s*//;
 		my @pids = grep { /^\d+$/ } split(/\s+/, $out);
 		@pids && return "Logical volume cannot be removed while the ".
 				"disk is still in use by the running KVM ".
