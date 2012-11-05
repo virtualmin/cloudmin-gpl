@@ -2874,7 +2874,7 @@ return @rv;
 # command line
 sub type_kvm_need_disk_reboot
 {
-my ($server, $disk) = @_;
+my ($server, $disk, $olddisk) = @_;
 if ($server->{'status'} eq 'down') {
 	return 0;	# Already down, no need to reboot
 	}
@@ -2884,8 +2884,13 @@ elsif ($disk && $disk->{'reboot'}) {
 elsif ($olddisk && $olddisk->{'reboot'}) {
 	return 1;	# Detaching while running failed
 	}
-elsif ($server->{'kvm_monitor_port'} && $disk && $disk->{'virt'} !~ /\/hd/) {
+elsif ($server->{'kvm_monitor_port'} && $disk &&
+       $disk->{'virt'} !~ /\/hd/) {
 	return 0;	# Can live attach non-IDE disk
+	}
+elsif ($server->{'kvm_monitor_port'} && $olddisk &&
+       $olddisk->{'virt'} !~ /\/hd/) {
+	return 0;	# Can live detach non-IDE disk
 	}
 elsif ($server->{'kvm_monitor_port'} && $disk && $olddisk &&
        $disk->{'media'} eq 'cdrom' &&
@@ -3250,9 +3255,16 @@ if ($server->{'status'} ne 'down' &&
 
 # If on LVM and the VM is still connected to the LV, fail now to prevent
 # leftover LVs
-if ($disk->{'lv'} && !$detach) {
-	my ($out, $ex, $err) = &execute_command_on_server($vhost, "fuser ".quotemeta($disk->{'real'}));
-	# XXX
+if ($disk->{'lv'} && !$detach && $server->{'status'} ne 'down') {
+	my ($out, $ex, $err) = &execute_command_on_server(
+		$vhost, "fuser ".quotemeta($disk->{'real'})." 2>/dev/null");
+	if (!$ex && !$err) {
+		$out =~ s/^\s+//;
+		my @pids = grep { /^\d+$/ } split(/\s+/, $out);
+		@pids && return "Logical volume cannot be removed while the ".
+				"disk is still in use by the running KVM ".
+				"virtual system";
+		}
 	}
 
 # Remove from the KVM config
@@ -6630,6 +6642,11 @@ delete($newserver->{'kvm_console'});
 
 # Get old boot flag
 my $oldboot = &type_kvm_get_atboot($oldserver);
+
+# Clear iSCSI username and password, so that a new one is generated
+delete($newserver->{'iscsi_user'});
+delete($newserver->{'iscsi_pass'});
+delete($newserver->{'iscsi_disk_count'});
 
 # Copy each of the disks and update the kvm_drives setting
 &$first_print(&text('clone_copydisks'));
