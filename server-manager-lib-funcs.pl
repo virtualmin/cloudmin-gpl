@@ -1208,7 +1208,7 @@ eval {
 		}
 	($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
-		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", "REMOTE HOST IDENTIFICATION", ".*\n", $leave ? ( $leave ) : ( ));
+		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", "REMOTE HOST IDENTIFICATION", ".*\n", ".{40}", $leave ? ( $leave ) : ( ));
 		if ($rv == 0) {
 			# Need to supply password
 			syswrite($fh, "$pass\n");
@@ -1234,7 +1234,7 @@ eval {
 			$hostkey_failed++;
 			$out .= $wait_for_input;
 			}
-		elsif ($rv == 6) {
+		elsif ($rv == 7) {
 			# Hit leave-open message
 			last;
 			}
@@ -1242,7 +1242,7 @@ eval {
 			# End of input
 			last;
 			}
-		elsif ($rv == 5) {
+		elsif ($rv == 5 || $rv == 6) {
 			# Some other line of text
 			$out .= $wait_for_input;
 			}
