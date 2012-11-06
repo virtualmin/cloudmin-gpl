@@ -557,6 +557,7 @@ if ($server->{'id'} eq '0') {
 		 'ip_force' => $server->{'ip_force'},
 		 'novirt' => $server->{'novirt'},
 		 'update_system' => $server->{'update_system'},
+		 'mac_addresses' => $server->{'mac_addresses'},
 		);
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone', 'provision',
@@ -3392,7 +3393,7 @@ if ($server->{'status'} ne 'nohost') {
 		}
 	if ((!ref($ifaces) || !@$ifaces) && &can_ssh_status($server)) {
 		# Fall back to getting from ifconfig output
-		$ifaces = &list_active_server_interfaces($server);
+		$ifaces = &list_active_server_interfaces($server, 1);
 		}
 	if (ref($ifaces)) {
 		$server->{'ip_addresses'} = join(" ",
@@ -8356,16 +8357,16 @@ my @rv;
 my $lvm = $vhost->{$manager.'_vg_free'} &&
 	  (!$server || $server->{$manager.'_filesystem_vg'} ||
 		       $manager eq 'citrix');
-my $iscsi = $vhost->{$manager.'_iscsi'} ne '' &&
-	    (!$server || $server->{$manager.'_filesystem_iscsi'} ne '');
+my $iscsi = $server ? $server->{$manager.'_filesystem_iscsi'}
+		    : $vhost->{$manager.'_iscsi'};
 if ($manager && $lvm) {
 	# Host is using LVM, and free space has been collected in the
 	# post_refresh function
 	@rv = ( $vhost->{$manager.'_vg_free'}, $vhost->{$manager.'_vg_total'} );
 	}
-elsif ($manager && $iscsi) {
-	# Host is using iSCSI, so get free space from iSCSI server
-	my $iscsiserver = &get_managed_server($vhost->{$manager.'_iscsi'});
+elsif ($manager && $iscsi ne '') {
+	# Host or VM is using iSCSI, so get free space from iSCSI server
+	my $iscsiserver = &get_managed_server($iscsi);
 	if ($iscsiserver) {
 		@rv = &get_iscsi_disk_space($iscsiserver);
 		}
@@ -11978,10 +11979,11 @@ return $addr =~ /^[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a
 
 # size_close_enough(current-size, want-size)
 # Checks if a disk of current-size is close enough to want-size to be used
+# (not smaller, and not more than 50 MB larger).
 sub size_close_enough
 {
 my ($curr, $want) = @_;
-return $curr >= $want && $curr - $want < 100*1024;
+return $curr >= $want && $curr - $want <= 50*1024*1024;
 }
 
 # obtain_lock_anything()
