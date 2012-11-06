@@ -517,7 +517,7 @@ foreach my $rev (@$revs) {
 		return &text('reverse_ezone', $ip);
 		}
 	&lock_file(&bind8::make_chroot(&bind8::absolute_path($rfn)));
-	my $arpa = &ip_address_to_arpa($ip, $zone);
+	my $arpa = &ip_address_to_arpa($ip, $zone->{'name'});
 	my ($r) = grep { $_->{'name'} eq $arpa } @$rrecs;
 	if ($r && !$rev->{'name'}) {
 		# Delete the record
