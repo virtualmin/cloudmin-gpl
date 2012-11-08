@@ -161,6 +161,10 @@ if ($vg) {
 		   'perm' => 'rw',
 		   'alloc' => 'n',
 		   'vg' => $vg };
+	if ($mod eq "iscsi-server") {
+		# Add 1M to handle overhead needed by netbsd iscsi server
+		$lv->{'size'} += 1024;
+		}
 	my $err = &remote_foreign_call($iscsiserver, "lvm",
 				       "create_logical_volume", $lv);
 	$err ||= $last_remote_error;
@@ -187,10 +191,31 @@ $server->{'iscsi_disk_count'}++;
 # Export via iSCSI
 my $targetname;
 if ($mod eq "iscsi-server") {
-	# Add an extent
+	# Get iSCSI server configuration
 	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_iscsi_config");
 	$last_remote_error &&
 		return "Failed to get config : $last_remote_error";
+
+	# Work out the target name
+	my $target = { 'type' => 'target' };
+	if ($disk->{'iscsi_target'} =~ /target(\d+)$/) {
+		$target->{'num'} = $1;
+		}
+	else {
+		$target->{'num'} = &remote_foreign_call($iscsiserver, $mod,
+                                        "find_free_num", $conf, 'target');
+		}
+	$targetname = $target->{'type'}.$target->{'num'};
+	my ($rtarget) = grep { $_->{'target'} eq $targetname } @$targets;
+	$rtarget && return "Target $targetname is already being exported!";
+
+	# Get iSCSI users
+	my @users =  &remote_foreign_call($iscsiserver, $mod,
+					  "list_iscsi_users");
+	$last_remote_error &&
+		return "Failed to list users : $last_remote_error";
+
+	# Add an extent
 	my $extent = { 'num' => &remote_foreign_call($iscsiserver, $mod,
 					"find_free_num", $conf, 'extent'),
 		       'type' => 'extent' };
@@ -202,25 +227,34 @@ if ($mod eq "iscsi-server") {
 	$last_remote_error &&
 		return "Failed to create extent : $last_remote_error";
 
-	# Add a target for the extent
-	my $target = { 'type' => 'target' };
-	if ($disk->{'iscsi_target'} =~ /target(\d+)$/) {
-		$target->{'num'} = $1;
-		}
-	else {
-		$target->{'num'} = &remote_foreign_call($iscsiserver, $mod,
-                                        "find_free_num", $conf, 'target');
-		}
+	# Update the target object with the extent, and then create it
 	$target->{'export'} = 'extent'.$extent->{'num'};
 	$target->{'flags'} = 'rw';
-	$target->{'network'} = 'any';
-	$targetname = $target->{'type'}.$target->{'num'};
-	my ($rtarget) = grep { $_->{'target'} eq $targetname } @$targets;
-	$rtarget && return "Target $targetname is already being exported!";
+	$target->{'network'} = '0/0';
 	&remote_foreign_call($iscsiserver, $mod, "save_directive", $conf,
 			     undef, $target);
 	$last_remote_error &&
 		return "Failed to create target : $last_remote_error";
+	&remote_foreign_call($iscsiserver, $mod, "flush_file_lines");
+	$last_remote_error &&
+		return "Failed to flush file : $last_remote_error";
+
+	# Add or update the user
+	my ($user) = grep { $_->{'user'} eq $server->{'iscsi_user'} } @users;
+	if (!$user) {
+		# Create the user
+		$user = { 'user' => $server->{'iscsi_user'},
+			  'pass' => $server->{'iscsi_pass'},
+			  'mode' => 'chap' };
+		&remote_foreign_call($iscsiserver, $mod,
+				     "create_iscsi_user", $user);
+		}
+	elsif ($user->{'pass'} ne $server->{'iscsi_pass'}) {
+		# Fix password
+		$user->{'pass'} = $server->{'iscsi_pass'};
+		&remote_foreign_call($iscsiserver, $mod,
+				     "modify_iscsi_user", $user);
+		}
 
 	# Apply the config
 	my $err = &remote_foreign_call($iscsiserver, $mod,
@@ -306,11 +340,14 @@ if (!$conn) {
 	return "No iSCSI connection to $ip for ".
 	       "$rtarget->{'name'}:$targetname found on $vhost->{'host'}";
 	}
+$conn->{'scsilun'} = 1 if ($conn->{'scsilun'} eq '');
 $disk->{'real'} = $conn->{'longdevice'} ||
 		  "/dev/disk/by-path/ip-$conn->{'ip'}:$conn->{'port'}-".
-		  "iscsi-$conn->{'name'}:$conn->{'target'}-lun-1";
+		  "iscsi-$conn->{'name'}:$conn->{'target'}-lun-$conn->{'scsilun'}";
 my @st = &stat_file_on_server($vhost, $disk->{'real'});
 if (!@st) {
+	$disk->{'iscsi_connect'} = -1;
+	&delete_iscsi_disk($server, $disk);
 	return "Expected iSCSI disk device $disk->{'real'} does not exist ".
 	       "on host system $vhost->{'host'}";
 	}
@@ -541,14 +578,19 @@ my $resizeerr;
 if ($real =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
 	# Expand or reduce the LV size
 	my ($out, $ex, $err);
+	my $wantsize = int($disk->{'size'}/1024);
+	if ($mod eq "iscsi-server") {
+		# For netbsd iscsi server overhead
+		$wantsize += 1024;
+		}
 	if ($disk->{'size'} > $olddisk->{'size'}) {
 		($out, $ex, $err) = &execute_command_on_server($iscsiserver,
-			"lvextend -L".int($disk->{'size'}/1024)."k ".
+			"lvextend -L".$wantsize."k ".
 			quotemeta($real));
 		}
 	elsif ($disk->{'size'} < $olddisk->{'size'}) {
 		($out, $ex, $err) = &execute_command_on_server($iscsiserver,
-			"lvreduce -f -L".int($disk->{'size'}/1024)."k ".
+			"lvreduce -f -L".$wantsize."k ".
 			quotemeta($real));
 		}
 	$resizeerr = $err ? $err : $ex ? $out : undef;
@@ -781,6 +823,10 @@ if ($real =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
 	my ($lv) = grep { $_->{'name'} eq $idisk->{'lv'} } @lvs;
 	$lv || return undef;
 	$idisk->{'size'} = $lv->{'size'} * 1024;
+	if ($mod eq "iscsi-server") {
+		# Take away overhead
+		$idisk->{'size'} -= (1024*1024);
+		}
 	}
 elsif ($real !~ /^\/dev\//) {
 	# Get the file size
