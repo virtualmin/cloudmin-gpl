@@ -1,10 +1,16 @@
 <header>Network Interfaces</header>
 
-On VServers and Zones systems, Cloudmin can manage network interfaces as systems
-of these types are not able to bring up or configure their own interfaces
-directly - unlike real systems or those running under Xen. This section
+This page allows you to create and manage network interfaces on virtual
+systems. While some system types (such as Xen and KVM) can create new
+interfaces on the system itself, this is not recommended as they may be
+blocked by the IP spoofing firewall Cloudmin sets up. Hence it is recommended
+to use this page for all network interface management. <p>
+
+The list on this page
 displays all network interfaces currently active on the virtual system, and
-for each shows which Virtualmin domains are using it. <p>
+for each shows which Virtualmin domains are using them, if appropriate. Below
+the list is a form for changing the default gateway for the system, for types
+where this can be managed independently of the host. <p>
 
 To bring up a new interface, click on the <b>Add a new interface</b> link
 above or below the table. To change the address of or delete an existing
