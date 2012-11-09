@@ -42,7 +42,7 @@ else {
 			" ; test -d ".quotemeta($in{'dir'}));
 	$ex && &error($text{'kvm_edir'});
 
-	# Save and check LVM
+	# Save and check LVM or iSCSI setting
 	if (defined($in{'lvm_def'})) {
 		if ($in{'lvm_def'} == 1) {
 			# Regular files
