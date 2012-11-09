@@ -344,6 +344,7 @@ $conn->{'scsilun'} = 1 if ($conn->{'scsilun'} eq '');
 $disk->{'real'} = $conn->{'longdevice'} ||
 		  "/dev/disk/by-path/ip-$conn->{'ip'}:$conn->{'port'}-".
 		  "iscsi-$conn->{'name'}:$conn->{'target'}-lun-$conn->{'scsilun'}";
+
 # Wait 10 seconds for disk device to appear
 my @st;
 for(my $i=0; $i<10; $i++) {
@@ -351,6 +352,8 @@ for(my $i=0; $i<10; $i++) {
 	last if (@st);
 	sleep(1);
 	}
+
+# Fail if disk isn't available
 if (!@st) {
 	$disk->{'iscsi_connect'} = -1;
 	&delete_iscsi_disk($server, $disk);
@@ -656,6 +659,14 @@ if ($disk->{'iscsi_connect'}) {
 		$conn, "CHAP", $server->{'iscsi_user'},$server->{'iscsi_pass'});
 	$disk->{'iscsi_connect'} = 0 if ($err);
 	return "iSCSI connection failed : $err" if ($err);
+	}
+
+# Wait 10 seconds for disk device to re-appear
+my @st;
+for(my $i=0; $i<10; $i++) {
+	@st = &stat_file_on_server($vhost, $disk->{'real'});
+	last if (@st);
+	sleep(1);
 	}
 
 return $resizeerr;
