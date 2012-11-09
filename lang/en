@@ -3024,6 +3024,8 @@ smove_eiscsidest=The destination host system does not support iSCSI : $1
 smove_iscsi=Moving iSCSI connection to $1 target $2 to new host system ..
 smove_eiscsidis=.. disconnection failed : $1
 smove_eiscsiconn=.. connection failed : $1
+smove_iscsiconn=Adding iSCSI connection to $1 target $2 on new host system ..
+smove_iscsidisc=Removing iSCSI connection to $1 target $2 on old host system ..
 
 transfer_title2=Transfer File
 transfer_err=Failed to transfer file

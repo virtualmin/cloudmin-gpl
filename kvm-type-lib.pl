@@ -2251,7 +2251,7 @@ $server->{'kvm_console'} ||= &get_kvm_console_file($server);
 my $err = &create_kvm_monitor_file($server);
 return (0, "Failed to create monitor input file : $err") if ($err);
 
-# If on iSCSI, re-connect and disconnected disks
+# If on iSCSI, re-connect any disconnected disks
 if ($server->{'kvm_filesystem_iscsi'} ne '') {
 	my $disks = &type_kvm_list_disks($server, 0);
 	if (ref($disks)) {
@@ -5595,13 +5595,16 @@ foreach my $d (@$disks) {
 		$d->{'iscsi_server'} eq '' && return $text{'smove_eicsiserver'};
 		my $old_iscsiserver = &get_managed_server($d->{'iscsi_server'});
 		if ($server->{'kvm_force_iscsi'} ne '') {
-			my $new_iscsiserver = &get_managed_server($d->{'iscsi_server'});
+			my $new_iscsiserver = &get_managed_server(
+						$d->{'iscsi_server'});
 			my $err = &check_iscsi_client($dest);
 			$err && return &text('smove_eiscsidest', $err);
 			}
 		else {
-			$dest->{'kvm_iscsi'} eq '' && return $text{'smove_eicsidest'};
-			my $new_iscsiserver = &get_managed_server($dest->{'kvm_iscsi'});
+			$dest->{'kvm_iscsi'} eq '' &&
+				return $text{'smove_eicsidest'};
+			my $new_iscsiserver = &get_managed_server(
+						$dest->{'kvm_iscsi'});
 			$old_iscsiserver->{'id'} eq $new_iscsiserver->{'id'} ||
 				return &text('smove_eiscsidiff',
 					     $old_iscsiserver->{'host'},
@@ -6556,10 +6559,11 @@ if ($vhost->{'id'} ne $dest->{'id'}) {
 					return $text{'clone_eicsidest'};
 				my $new_iscsiserver = &get_managed_server(
 							$dest->{'kvm_iscsi'});
-				$old_iscsiserver->{'id'} eq $new_iscsiserver->{'id'} ||
+				$old_iscsiserver->{'id'} eq
+				    $new_iscsiserver->{'id'} ||
 					return &text('clone_eiscsidiff',
-						     $old_iscsiserver->{'host'},
-						     $new_iscsiserver->{'host'});
+					    $old_iscsiserver->{'host'},
+					    $new_iscsiserver->{'host'});
 				}
 			}
 		}
