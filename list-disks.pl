@@ -9,6 +9,10 @@ identified with the C<--host> parameter. However, you can get more detail
 with the optional C<--multiline> flag, which will include their mount points
 and filesystem types (where available).
 
+For iSCSI disks, you can use the C<--show-iscsi> flag to display additional
+information about the underlying disk device on the iSCSI server. However, this
+will make the command slightly slower to execute.
+
 =head1 Example usage
 
   cloudmin list-disks --host xencentos.home
@@ -48,6 +52,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--multiline") {
 		$multi = 1;
+		}
+	elsif ($a eq "--show-iscsi") {
+		$iscsi = 1;
 		}
 	else {
 		&usage("Unknown parameter $a");
@@ -123,6 +130,16 @@ if ($multi) {
 			print "    iSCSI server port: $d->{'iscsi_port'}\n";
 			print "    iSCSI server name: $d->{'iscsi_name'}\n";
 			print "    iSCSI target: $d->{'iscsi_target'}\n";
+			}
+		if ($d->{'iscsi_ip'} && $iscsi && $d->{'iscsi_server'} ne '') {
+			my $iscsiserver = &get_managed_server(
+						$d->{'iscsi_server'});
+			my $info = &get_iscsi_disk_info($iscsiserver, $d);
+			print "    iSCSI real disk state: ",
+				(!$info ? "Not found" :
+				 !ref($info) ? $info : "Found"),"\n";
+			print "    iSCSI real disk type: ",$info->{'type'},"\n";
+			print "    iSCSI real disk path: ",$info->{'real'},"\n";
 			}
 		if ($d->{'lv_snap_of'}) {
 			print "    LVM logical volume snapshot of: ",
@@ -206,6 +223,7 @@ print "Lists all disks on some virtual system.\n";
 print "\n";
 print "cloudmin list-disks --host hostname\n";
 print "                   [--multiline]\n";
+print "                   [--show-iscsi]\n";
 exit(1);
 }
 
