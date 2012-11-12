@@ -6755,12 +6755,10 @@ foreach my $d (@$disks) {
 							# new host system
 		$err = &create_iscsi_disk($newserver, $newd);
 		if (!$err) {
-			# Copy the data using DD
+			# Copy the data using DD, on the iSCSI server
 			$d->{'newreal'} = $newd->{'real'};
-			$err = &transfer_file_between_servers(
-			    $vhost, $dest,
-			    $d->{'real'}, $d->{'newreal'}, 1, 1,
-			    int($d->{'size'}/(1024*1024))*1024*1024);
+			$err = &clone_iscsi_disk($oldserver, $newserver,
+						 $d, $newd);
 			}
 		}
 	else {

@@ -859,4 +859,46 @@ else {
 return $idisk;
 }
 
+# clone_iscsi_disk(&srcserver, &dstserver, &srcdisk, &dstdisk)
+# Copy the contents of one iSCSI disk to another. Returns undef on success, or
+# an error message on failure.
+sub clone_iscsi_disk
+{
+my ($srcserver, $dstserver, $srcdisk, $dstdisk) = @_;
+
+# Get the iSCSI server
+my $srcvhost = &get_parent_server($srcserver);
+$srcvhost || return "No host system found for $srcserver->{'host'}!";
+my $srcid = $vhost->{$srcserver->{'manager'}.'_iscsi'};
+$srcid = $srcserver->{$srcserver->{'manager'}.'_filesystem_iscsi'}
+	if ($id eq '');
+my $dstvhost = &get_parent_server($dstserver);
+$dstvhost || return "No host system found for $dstserver->{'host'}!";
+my $dstid = $vhost->{$dstserver->{'manager'}.'_iscsi'};
+$dstid = $dstserver->{$dstserver->{'manager'}.'_filesystem_iscsi'}
+	if ($id eq '');
+$srcid eq $dstid || return "The source and destination systems do not use the ".
+			   "same iSCSI server";
+my $iscsiserver = &get_managed_server($srcid);
+$iscsiserver || return "iSCSI server with ID $srcid does not exist!";
+
+# Get the underlying disks
+my $srcinfo = &get_iscsi_disk_info($iscsiserver, $srcdisk);
+$srcinfo || return "No iSCSI disk information found for source";
+ref($srcinfo) || return "Failed to get iSCSI disk information for ".
+			"source : $srcinfo";
+my $dstinfo = &get_iscsi_disk_info($iscsiserver, $dstdisk);
+$dstinfo || return "No iSCSI disk information found for dest";
+ref($dstinfo) || return "Failed to get iSCSI disk information for ".
+			"dest : $dstinfo";
+
+# Copy the data
+my $err = &transfer_file_between_servers(
+	$iscsiserver, $iscsiserver,
+	$srcinfo->{'real'}, $dstinfo->{'real'},
+	1, 1, 
+	int($srcdisk->{'size'}/(1024*1024))*1024*1024);
+return $err;
+}
+
 1;
