@@ -233,9 +233,10 @@ my %rv;
 my @servers = &get_backup_servers($backup);
 foreach my $s (@servers) {
 	if ($s->{'status'} eq 'nohost') {
+		my $vhost = &get_parent_server($s);
 		$rv{$s->{'id'}} = {
 			'ok' => 0,
-			'msg' => &text('brun_ehostdown'),
+			'msg' => &text('brun_ehostdown', $vhost->{'host'}),
 			};
 		$failed++;
 		}

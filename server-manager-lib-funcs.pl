@@ -7982,6 +7982,21 @@ foreach my $p (&is_parent_server($server)) {
 return @rv;
 }
 
+# list_parent_servers(&servers)
+# Returns a unique list of parent systems for some servers
+sub list_parent_servers
+{
+my ($servers) = @_;
+my (@rv, %donevhost);
+foreach my $s (@$servers) {
+	my $vhost = &get_parent_server($s);
+	if ($vhost && !$donevhost{$vhost->{'id'}}++) {
+		push(@rv, $vhost);
+		}
+	}
+return @rv;
+}
+
 # show_ip_range_input(&server, prefix, show-gateways, &possible-ifaces)
 # Returns HTML for entering 1 or more IP allocation ranges
 sub show_ip_range_input

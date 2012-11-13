@@ -54,3 +54,5 @@ The number of cores for KVM systems can now be set, in addition to the number of
 A minimum IO class for KVM and OpenVZ virtual systems can now be defined at the plan level, so that system owners cannot create or modify systems to have an excessive IO priority.
 KVM systems can now be prevented from using IP or MAC addresses that have not been assigned to them, to prevent collision with other real or virtual systems.
 When a backup is restored that contains disks whose size doesn't match the target system, disks are resized first to match the backup.
+---- Changes since 6.5 ----
+Systems to backup can now be selected by host or location group.

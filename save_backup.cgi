@@ -43,7 +43,10 @@ else {
 	# Validate and store inputs
 	@canservers = grep { &supports_backup($_) }
                 &list_available_managed_servers_sorted();
-	foreach $f ('servers', 'groups', 'owners', 'managers') {
+	@canvhosts = &list_parent_servers(\@canservers);
+	@canlocs = &list_vhost_locations(\@canvhosts);
+	foreach $f ('servers', 'groups', 'owners', 'managers',
+		    'vhosts', 'locs') {
 		delete($backup->{$f});
 		}
 	if ($in{'mode'} == 0) {
@@ -71,6 +74,20 @@ else {
 		# Checked system types
 		$backup->{'managers'} = join(" ", split(/\0/, $in{'managers'}));
 		$backup->{'managers'} || &error($text{'alert_emanagers'});
+		}
+	elsif ($in{'mode'} == 7) {
+		# Selected host systems
+		%vids = map { $_, 1 } split(/\r?\n/, $in{'vhosts'});
+		@vhosts = grep { $vids{$_->{'id'}} } @canvhosts;
+		@vhosts || &error($text{'alert_evhosts'});
+		$backup->{'vhosts'} = join(' ', map { $_->{'id'} } @vhosts);
+		}
+	elsif ($in{'mode'} == 8) {
+		# Selected location groups
+		%lids = map { $_, 1 } split(/\r?\n/, $in{'locs'});
+		@locs = grep { $lids{$_->{'id'}} } @canlocs;
+		@locs || &error($text{'alert_elocs'});
+		$backup->{'locs'} = join(' ', map { $_->{'id'} } @locs);
 		}
 	$backup->{'shutdown'} = $in{'shutdown'};
 	$backup->{'parallel'} = $in{'parallel'};

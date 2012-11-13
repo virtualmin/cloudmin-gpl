@@ -376,6 +376,27 @@ elsif ($alert->{'scalegroups'}) {
 		push(@rv, grep { $_->{'scalegroup'} eq $id } @$allservers);
 		}
 	}
+elsif ($alert->{'vhosts'}) {
+	# Hosted on some systesm
+	my %vids = map { $_, 1 } split(/\s+/, $alert->{'vhosts'});
+	foreach my $s (@$allservers) {
+		my $vhost = &get_parent_server($s);
+		if ($vhost && $vids{$vhost->{'id'}}) {
+			push(@rv, $s);
+			}
+		}
+	}
+elsif ($alert->{'locs'}) {
+	# Hosted in some location groups
+	my %lids = map { $_, 1 } split(/\s+/, $alert->{'locs'});
+	foreach my $s (@$allservers) {
+		my $vhost = &get_parent_server($s);
+		if ($vhost && $vhost->{'location'} &&
+		    $lids{$vhost->{'location'}}) {
+			push(@rv, $s);
+                        }
+		}
+	}
 # Filter out dupes
 my %done;
 return grep { !$done{$_->{'id'}}++ } @rv;
@@ -504,6 +525,20 @@ elsif ($alert->{'scalegroups'}) {
 elsif ($alert->{'iplist'}) {
 	# Systems with IPs
 	return &text('alertdesc_iplist', "<tt>".$alert->{'iplist'}."</tt>");
+	}
+elsif ($alert->{'vhosts'}) {
+	# Systems on hosts
+	my @users = map { my $s = &get_managed_server($_); $s ? ( $s ) : ( ) }
+			split(/\s+/, $alert->{'vhosts'});
+	return &text('alertdesc_vhosts',
+		     join(" ", map { "<tt>$_->{'host'}</tt>" } @users));
+	}
+elsif ($alert->{'locs'}) {
+	# Systems in location groups
+	my %locmap = map { $_->{'id'}, $_ } &list_locations();
+	return &text('alertdesc_locs',
+		     join(" ", map { $locmap{$_}->{'desc'} }
+			  split(/\s+/, $alert->{'locs'})));
 	}
 else {
 	return "???";

@@ -26,7 +26,7 @@ print &ui_hidden("new", $in{'new'});
 print &ui_hidden_table_start($text{'backup_header'}, "width=100%", 2,
 			     "main", 1, [ "width=30%" ]);
 
-# Systems to backup
+# Work out selection mode
 @allservers = &list_available_managed_servers_sorted();
 @canservers = grep { &supports_backup($_) } @allservers;
 $mode = $backup->{'servers'} eq '*' ? 0 :
@@ -34,10 +34,17 @@ $mode = $backup->{'servers'} eq '*' ? 0 :
 	$backup->{'groups'} ne '' ? 2 :
 	$backup->{'owners'} ne '' ? 3 :
 	$backup->{'managers'} ne '' ? 4 :
-	$backup->{'scalegroups'} ne '' ? 5 : 0;
+	$backup->{'scalegroups'} ne '' ? 5 :
+	$backup->{'vhosts'} ne '' ? 7 :
+	$backup->{'locs'} ne '' ? 8 :
+	0;
+
+# Build lists of groups, owners, hosts and locations
 @allgroups = &unique(map { split(/\t/, $_->{'group'}) } @canservers);
 @allowners = &list_system_owners();
 @allscalegroups = &list_scalegroups() if (defined(&list_scalegroups));
+@allvhosts = &list_parent_servers(\@canservers);
+@alllocs = &list_vhost_locations(\@allvhosts);
 if ($mode == 1) {
 	%sids = map { $_, 1 } split(/\s+/, $backup->{'servers'});
 	@servers = grep { $sids{$_->{'id'}} } @canservers;
@@ -49,6 +56,16 @@ elsif ($mode == 5) {
 	%sids = map { $_, 1 } split(/\s+/, $backup->{'scalegroups'});
 	@scalegroups = grep { $sids{$_->{'id'}} } @allscalegroups;
 	}
+elsif ($mode == 7) {
+	%vids = map { $_, 1 } split(/\s+/, $backup->{'vhosts'});
+	@vhosts = grep { $vids{$_->{'id'}} } @allvhosts;
+	}
+elsif ($mode == 8) {
+	%lids = map { $_, 1 } split(/\s+/, $backup->{'locs'});
+	@locs = grep { $lids{$_->{'id'}} } &list_locations();
+	}
+
+# Selection by individual systems
 @stable = ( [ 0, $text{'alert_mode0'} ],
 	    [ 1, $text{'alert_mode1'},
 	      &ui_multi_select("servers",
@@ -75,6 +92,8 @@ if (@allowners && !$backup->{'owner'}) {
 			5, 1, 0, $text{'alert_owneropts'},
 				 $text{'alert_ownervals'}) ]);
 	}
+
+# Selection by VM type
 %allmans = map { $_->{'manager'}, 1 } @canservers;
 @backup_server_management_types = grep {
 	my $cfunc = "type_".$_."_can_backup";
@@ -84,6 +103,27 @@ push(@stable, [ 4, $text{'alert_mode4'},
 		join(" ", map { &ui_checkbox("managers", $_,
 				     $text{$_.'_typedesc'} || $_, $mans{$_}) }
 			      @backup_server_management_types) ]);
+
+# Selection by host
+if (@vhosts || @allvhosts) {
+	push(@stable, [ 7, $text{'alert_mode7'},
+		&ui_multi_select("vhosts",
+			[ map { [ $_->{'id'}, $_->{'host'} ] } @vhosts ],
+			[ map { [ $_->{'id'}, $_->{'host'} ] } @allvhosts ],
+			5, 1, 0, $text{'alert_vhostopts'},
+				 $text{'alert_vhostvals'}) ]);
+	}
+
+# Selection by location group
+if (@locs || @alllocs) {
+	push(@stable, [ 8, $text{'alert_mode8'},
+		&ui_multi_select("locs",
+			[ map { [ $_->{'id'}, $_->{'desc'} ] } @locs ],
+			[ map { [ $_->{'id'}, $_->{'desc'} ] } @alllocs ],
+			3, 1, 0, $text{'alert_locopts'},
+				 $text{'alert_locvals'}) ]);
+	}
+
 print &ui_table_row($text{'backup_servers'},
 		    &ui_radio_table("mode", $mode, \@stable), 2);
 
