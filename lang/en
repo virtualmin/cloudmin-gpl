@@ -2922,6 +2922,7 @@ smove_errvg=.. destination system is not using LVM
 smove_errlv=.. LVM logical volume creation failed : $1
 smove_donedisk=.. copied image of $1
 smove_disksdone=.. copied $1 disk images totalling $2
+smove_disksdone2=.. moved $1 iSCSI disks
 smove_disksnone=.. no disk images were copied
 smove_xenconf=Fixing and copying Xen config file $1 ..
 smove_xenconfdone=.. copied to $1

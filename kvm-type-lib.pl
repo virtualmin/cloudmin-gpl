@@ -5745,6 +5745,7 @@ if ($newip && $newgw ne $gw) {
 
 # Copy across all disk images, directly if possible
 my $count = 0;
+my $iscsi_count = 0;
 my $sz = 0;
 &$first_print($text{'smove_disks'});
 &$indent_print();
@@ -5788,6 +5789,7 @@ foreach my $d (@$disks) {
 			}
 		$d->{'newreal'} = $newd->{'real'};
 		&$second_print($text{'create_done'});
+		$iscsi_count++;
 		next;
 		}
 
@@ -5857,6 +5859,9 @@ my @deldiskfiles = ( @dellvs, @delfiles );
 if ($count) {
 	&$second_print(&text('smove_disksdone', $count,
 			     &nice_size($sz)));
+	}
+elsif ($iscsi_count) {
+	&$second_print(&text('smove_disksdone2', $iscsi_count));
 	}
 else {
 	&$second_print(&text('smove_disksnone'));
