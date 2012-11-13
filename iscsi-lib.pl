@@ -281,9 +281,10 @@ elsif ($mod eq "iscsi-target") {
 	$target = { 'name' => 'Target',
 		    'value' => $host.":".$targetname,
                     'members' => [ ] };
+	my $type = $real =~ /^\/dev\// ? 'blockio' : 'fileio';
 	push(@{$target->{'members'}},
 	     { 'name' => 'Lun',
-	       'value' => '1 Type=fileio,Path='.$real });
+	       'value' => '1 Type='.$type.',Path='.$real });
 	push(@{$target->{'members'}},
 	     { 'name' => 'IncomingUser',
 	       'value' => $server->{'iscsi_user'}.' '.$server->{'iscsi_pass'}});
@@ -893,11 +894,20 @@ ref($dstinfo) || return "Failed to get iSCSI disk information for ".
 			"dest : $dstinfo";
 
 # Copy the data
-my $err = &transfer_file_between_servers(
-	$iscsiserver, $iscsiserver,
-	$srcinfo->{'real'}, $dstinfo->{'real'},
-	1, 1, 
-	int($srcdisk->{'size'}/(1024*1024))*1024*1024);
+my $err;
+if ($srcinfo->{'type'} eq 'file') {
+	$err = &transfer_file_between_servers(
+		$iscsiserver, $iscsiserver,
+		$srcinfo->{'real'}, $dstinfo->{'real'},
+		0, 1);
+	}
+else {
+	$err = &transfer_file_between_servers(
+		$iscsiserver, $iscsiserver,
+		$srcinfo->{'real'}, $dstinfo->{'real'},
+		1, 1, 
+		int($srcdisk->{'size'}/(1024*1024))*1024*1024);
+	}
 return $err;
 }
 
