@@ -44,7 +44,9 @@ else {
 	@canservers = grep { &supports_backup($_) }
                 &list_available_managed_servers_sorted();
 	@canvhosts = &list_parent_servers(\@canservers);
-	@canlocs = &list_vhost_locations(\@canvhosts);
+	if (defined(&list_vhost_locations)) {
+		@canlocs = &list_vhost_locations(\@canvhosts);
+		}
 	foreach $f ('servers', 'groups', 'owners', 'managers',
 		    'vhosts', 'locs') {
 		delete($backup->{$f});
