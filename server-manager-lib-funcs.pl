@@ -9299,8 +9299,13 @@ if (!$incdown) {
 			 $_->{'status'} eq 'novirt' ||
 			 $_->{'status'} eq 'virt' } @vhosts;
 	}
-@vhosts = grep { &usable_host_system($_, $type, $mem, $gmem, $disk) } @vhosts;
-return @vhosts;
+my @rv;
+foreach my $v (@vhosts) {
+	if (&usable_host_system($v, $type, $mem, $gmem, $disk)) {
+		push(@rv, $v);
+		}
+	}
+return @rv;
 }
 
 # find_host_server(&server, host-type,
