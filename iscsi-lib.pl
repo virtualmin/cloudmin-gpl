@@ -4,8 +4,9 @@
 # Returns 1 if iSCSI configuration is supported on this Cloudmin install
 sub supports_iscsi
 {
-return &indexof("kvm", @virtual_server_management_types) >= 0 ||
-       &indexof("xen", @virtual_server_management_types) >= 0;
+return !$module_info{'onehost'} &&
+       (&indexof("kvm", @virtual_server_management_types) >= 0 ||
+        &indexof("xen", @virtual_server_management_types) >= 0);
 }
 
 # list_iscsi_target_servers()
