@@ -44,7 +44,9 @@ $mode = $backup->{'servers'} eq '*' ? 0 :
 @allowners = &list_system_owners();
 @allscalegroups = &list_scalegroups() if (defined(&list_scalegroups));
 @allvhosts = &list_parent_servers(\@canservers);
-@alllocs = &list_vhost_locations(\@allvhosts);
+if (defined(&list_vhost_locations)) {
+	@alllocs = &list_vhost_locations(\@allvhosts);
+	}
 if ($mode == 1) {
 	%sids = map { $_, 1 } split(/\s+/, $backup->{'servers'});
 	@servers = grep { $sids{$_->{'id'}} } @canservers;
