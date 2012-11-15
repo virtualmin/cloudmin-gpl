@@ -1241,6 +1241,7 @@ eval {
 			}
 		elsif ($rv < 0) {
 			# End of input
+			$out .= $wait_for_input;
 			last;
 			}
 		elsif ($rv == 5 || $rv == 6) {
