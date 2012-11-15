@@ -166,6 +166,12 @@ ref($disks) || return ( &text('disks_eget', $disks), undef );
 my ($disk) = grep { $_->{'real'} eq $sched->{'real'} } @$disks;
 $disk || return ( &text('schange_edisk', $sched->{'real'}), undef );
 
+# Check if the resize is needed
+if ($disk->{'size'} == $sched->{'size'}) {
+	return ( &text('schange_ediskdone', &nice_size($disk->{'size'})), 
+		 undef );
+	}
+
 # Check if resize is safe
 my $wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
 if (!$sched->{'force'} && defined(&$wfunc)) {

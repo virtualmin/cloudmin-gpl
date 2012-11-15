@@ -4457,6 +4457,7 @@ schange_efunc=Scheduled $1 change for system $2 is not implemented!
 schange_eownername=Original system owner $1 no longer exists
 schange_eowner=System owner $2 is not allowed to make $1 changes on system $3
 schange_edisk=Disk using file $1 does not exist
+schange_ediskdone=Disk has already been resized to $1
 schange_shutting=Shutting down system prior to disk resize ..
 schange_disksize=Changing size of disk $1 from $2 to $3 ..
 smove_diskfailed=.. resize failed : $1
