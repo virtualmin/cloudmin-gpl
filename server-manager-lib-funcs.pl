@@ -9460,7 +9460,16 @@ elsif (&can_select_host_location() && @locs) {
 elsif (&can_select_host_server()) {
 	# Specific host chosen
 	($vhost) = grep { $_->{'id'} eq $in->{$name."_on"} } @vhosts;
-	$vhost || &error($text{'create_exenvhostsel'});
+	if (!$vhost) {
+		# Not on usable list .. but why?
+		$vhost = &get_managed_server($in->{$name."_on"});
+		my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $gmem,
+						     $disk);
+		if (!$ok) {
+			return &text('create_exenvhostsel2', $err);
+			}
+		return &error($text{'create_exenvhostsel'});
+		}
 	}
 else {
 	# Cannot choose any host - let plan decide
