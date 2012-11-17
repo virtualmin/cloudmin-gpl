@@ -1,14 +1,5 @@
 # Functions for managing iSCSI servers and clients
 
-# supports_iscsi()
-# Returns 1 if iSCSI configuration is supported on this Cloudmin install
-sub supports_iscsi
-{
-return !$module_info{'onehost'} &&
-       (&indexof("kvm", @virtual_server_management_types) >= 0 ||
-        &indexof("xen", @virtual_server_management_types) >= 0);
-}
-
 # list_iscsi_target_servers()
 # Returns a list of managed systems that are setup as an iSCSI server
 sub list_iscsi_target_servers

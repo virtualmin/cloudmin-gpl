@@ -12016,6 +12016,16 @@ my ($curr, $want) = @_;
 return $curr >= $want && $curr - $want <= 50*1024*1024;
 }
 
+# supports_iscsi()
+# Returns 1 if iSCSI configuration is supported on this Cloudmin install
+sub supports_iscsi
+{
+return !$module_info{'onehost'} &&
+       defined(&list_iscsi_target_servers) &&
+       (&indexof("kvm", @virtual_server_management_types) >= 0 ||
+        &indexof("xen", @virtual_server_management_types) >= 0);
+}
+
 # obtain_lock_anything()
 # Should be called before any state-changing action
 sub obtain_lock_anything
