@@ -1151,7 +1151,8 @@ if ($server->{'fast'}) {
 		close(TRYPORT);
 		};
 	if ($@ =~ /timeout/) {
-		return (1, "Port $rpcport is firewalled");
+		my $highport = $server->{'port'}+10;
+		return (1, "Port $rpcport is firewalled. Ports $rpcport to $highport used by Webmin's RPC protocol");
 		}
 	}
 my $rfc;
