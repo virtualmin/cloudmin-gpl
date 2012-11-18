@@ -3103,6 +3103,10 @@ if ($disk->{'mount'} && $disk->{'fs'} eq 'swap') {
 	# Turn off caching for swapfiles
 	$drive{'cache'} = 'off';
 	}
+elsif ($disk->{'file'} =~ /^\/dev\//) {
+	# Turn off caching for disks on LVM
+	$drive{'cache'} = 'off';
+	}
 push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
 $server->{'kvm_drives'} = join(" ", @drives);
 if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
