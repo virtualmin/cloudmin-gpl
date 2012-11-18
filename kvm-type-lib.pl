@@ -1552,8 +1552,9 @@ elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
 $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
 if (!$reset) {
-	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0,".
-		  ($server->{'kvm_virtio'} ? "if=virtio,boot=on" : "if=ide");
+	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0".
+		  ($server->{'kvm_virtio'} ? ",if=virtio,boot=on" : ",if=ide").
+		  ($fsfile =~ /^\/dev\// ? ",cache=off" : "");
 	if ($swfile) {
 		$server->{'kvm_drives'} .=
 			" file=$swfile,media=disk,index=1,cache=off,".
