@@ -1553,8 +1553,7 @@ $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
 if (!$reset) {
 	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0".
-		  ($server->{'kvm_virtio'} ? ",if=virtio,boot=on" : ",if=ide").
-		  ($fsfile =~ /^\/dev\// ? ",cache=off" : "");
+		  ($server->{'kvm_virtio'} ? ",if=virtio,boot=on" : ",if=ide");
 	if ($swfile) {
 		$server->{'kvm_drives'} .=
 			" file=$swfile,media=disk,index=1,cache=off,".
@@ -3101,10 +3100,6 @@ if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
 	}
 if ($disk->{'mount'} && $disk->{'fs'} eq 'swap') {
 	# Turn off caching for swapfiles
-	$drive{'cache'} = 'off';
-	}
-elsif ($disk->{'file'} =~ /^\/dev\//) {
-	# Turn off caching for disks on LVM
 	$drive{'cache'} = 'off';
 	}
 push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
