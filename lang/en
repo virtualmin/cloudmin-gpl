@@ -3991,6 +3991,7 @@ vsync_tmpl_chroot=FTP directory restrictions
 vsync_err=Failed to save virtualmin replication
 vsync_esrc=Source system does not exist or you are not allowed to use it
 vsync_edest=One of the destination systems does not exist or you are not allowed to use it
+vsync_edests=No destination systems selected
 vsync_edoms=No Virtualmin domains or global settings selected
 vsync_efeats=No Virtualmin features selected
 vsync_eemail=Missing or invalid-looking email address
