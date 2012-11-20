@@ -3602,6 +3602,7 @@ brun_shutdown=Shutting down $1 prior to backup ..
 brun_startup=Starting up $1 after backup ..
 brun_backing=Backing up $1 to $2 ..
 brun_backed=.. created backup of $1
+brun_empty=.. system excluded from backup
 brun_failed=.. backup failed : $1
 brun_server=Saving details of system $1 to $2 ..
 brun_serverfailed=.. saving failed : $1
@@ -3702,6 +3703,7 @@ backuplogs_status=Status
 backuplogs_sz=Size
 backuplogs_size=Complete : $1
 backuplogs_failed=<font color=red>Failed : $1</font>
+backuplogs_empty=<font color=orange>All disks excluded</font>
 backuplogs_success=<font color=green>Completed OK</font>
 backuplogs_none=No backups matching your search were found.
 backuplogs_delete=Delete Selected Backups

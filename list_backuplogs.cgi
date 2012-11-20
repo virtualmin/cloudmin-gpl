@@ -117,6 +117,8 @@ if ($in{'search'} || $in{'week'} || $in{'log'}) {
 				$b->{'ok'} ?
 				  &text('backuplogs_size',
 					&nice_size($b->{'size'})) :
+				$b->{'empty'} ?
+				  $text{'backuplogs_empty'} :
 				  &text('backuplogs_failed', $b->{'msg'}),
 				], \@tds, "d", $b->{'id'}, 0, !$candelete);
 			}

@@ -37,9 +37,11 @@ $rv = &execute_backup($backup);
 
 # Print a summary line
 @ok = grep { $rv->{$_->{'id'}} &&
-	     $rv->{$_->{'id'}}->{'ok'} } @servers;
+	     ($rv->{$_->{'id'}}->{'ok'} ||
+	      $rv->{$_->{'id'}}->{'empty'}) } @servers;
 @bad = grep { !$rv->{$_->{'id'}} ||
-	      !$rv->{$_->{'id'}}->{'ok'} } @servers;
+	      !($rv->{$_->{'id'}}->{'ok'} ||
+		$rv->{$_->{'id'}}->{'empty'}) } @servers;
 if (scalar(@ok) == scalar(@servers)) {
 	print "<b>",&text('brun_allok', scalar(@ok)),"</b><p>\n";
 	}

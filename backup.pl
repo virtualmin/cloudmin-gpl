@@ -30,7 +30,8 @@ $rv = &execute_backup($backup);
 $failcount = 0;
 foreach $s (@servers) {
 	if (!$rv->{$s->{'id'}} ||
-	    !$rv->{$s->{'id'}}->{'ok'}) {
+	    (!$rv->{$s->{'id'}}->{'ok'} &&
+	     !$rv->{$s->{'id'}}->{'empty'})) {
 		$failcount++;
 		}
 	}
@@ -47,6 +48,9 @@ foreach $s (@servers) {
 	elsif ($r->{'ok'}) {
 		$report .= sprintf($fmt, $s->{'host'}, "OK",
 					 &nice_size($r->{'size'}));
+		}
+	elsif ($r->{'empty'}) {
+		$report .= sprintf($fmt, $s->{'host'}, "OK", "Excluded");
 		}
 	else {
 		$report .= sprintf($fmt, $s->{'host'}, $r->{'msg'}, "-");

@@ -148,6 +148,9 @@ foreach $s (@servers) {
 		if ($r->{'ok'}) {
 			print "OK ",&nice_size($r->{'size'});
 			}
+		elsif ($r->{'empty'}) {
+			print "OK Excluded\n";
+			}
 		else {
 			print "FAILED ",$r->{'msg'};
 			$allok = 0;

@@ -60,6 +60,10 @@ if ($log->{'ok'}) {
 	print &ui_table_row($text{'viewlog_status'},
 		$text{'backuplogs_success'});
 	}
+elsif ($log->{'empty'}) {
+	print &ui_table_row($text{'viewlog_status'},
+		$text{'backuplogs_empty'});
+	}
 else {
 	print &ui_table_row($text{'viewlog_status'},
 		&text('backuplogs_failed', $log->{'msg'}));

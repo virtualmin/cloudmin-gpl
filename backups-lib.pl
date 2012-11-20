@@ -317,7 +317,8 @@ if ($backup->{'parallel'}) {
 	for(my $i=0; $i<@prv; $i++) {
 		my $s = $servers[$i];
 		$rv{$s->{'id'}} = $prv[$i]->[0];
-		$failed++ if (!$prv[$i]->[0]->{'ok'});
+		$failed++ if (!$prv[$i]->[0]->{'ok'} &&
+			      !$prv[$i]->[0]->{'empty'});
 		if ($capture_print && $prv[$i]->[0]) {
 			$capture_print .= $prv[$i]->[0]->{'capture'};
 			}
@@ -330,7 +331,8 @@ else {
 						 $backup->{'shutdown'},
 						 $backup->{'owner'});
 		$rv{$s->{'id'}} = $srv;
-		$failed++ if (!$srv->{'ok'});
+		$failed++ if (!$srv->{'ok'} &&
+			      !$srv->{'empty'});
 		&save_backup_log($s, $destmap{$s->{'id'}}, $srv,
 				 $backup, $start);
 		}
@@ -512,7 +514,12 @@ my $bfunc = "type_".$server->{'manager'}."_backup_system";
 my $rv = &$bfunc($server, $deststr, $shutdown, $owner);
 &$outdent_print();
 if ($rv->{'ok'}) {
+	# Worked completely
 	&$second_print(&text('brun_backed', &nice_size($rv->{'size'})));
+	}
+elsif ($rv->{'empty'}) {
+	# All disks excluded, but didn't fail
+	&$second_print(&text('brun_empty'));
 	}
 else {
 	&$second_print(&text('brun_failed', $rv->{'msg'}));
@@ -968,6 +975,7 @@ my $log = { 'time' => $time,
 	    'dest' => $dest,
 	    'dests' => $rv->{'dests'} || $dest,
 	    'ok' => $rv->{'ok'},
+	    'empty' => $rv->{'empty'},
 	    'size' => $rv->{'size'},
 	    'msg' => $rv->{'msg'},
 	    'base_dest' => $backup->{'dest'},
@@ -1351,7 +1359,10 @@ else {
 	}
 my @do_devs = grep { !$skipdisks{$_} } @devs;
 if (!@do_devs) {
+	# All disks excluded .. but that may be OK, as long as some disks
+	# were found
 	return { 'ok' => 0,
+		 'empty' => @devs ? 1 : 0,
 		 'msg' => $text{'brun_allskip'} };
 	}
 
