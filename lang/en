@@ -2907,6 +2907,7 @@ unpause_ecannot=This system type cannot be un-paused, or the system is not pause
 smove_shutting=Shutting down on original host system ..
 smove_shutting2=Shutting down on original host system (because $1) ..
 smove_diffvg=LVM volume group is different
+smove_diffver=Major Xen version is different - $1 vs $2
 smove_incoming=KVM on destination does not support the -incoming flag
 smove_incoming2=KVM on source does not support the -incoming flag
 smove_monitor=KVM instance does not have a monitor port
