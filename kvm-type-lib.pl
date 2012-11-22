@@ -3005,7 +3005,16 @@ my $vhost = &type_kvm_parent($server);
 
 # Fix up virt_mount if virt was changed
 if ($disk->{'virt_auto'} && $disk->{'virt'} ne $disk->{'virt_auto'}) {
-	$disk->{'virt_mount'} = $disk->{'virt'}.'1';
+	if ($disk->{'virt_onsystem'} =~ /^(\/dev\/(s|h|v)d)[a-z]/) {
+		# Convert the entered device path that appears on the KVM
+		# command line like /dev/hda1 to the path used inside the VM,
+		# like /dev/vda1
+		my $prefix = $1;
+		if ($disk->{'virt'} =~ /^\/dev\/(s|h|v)d([a-z]\d*)$/) {
+			$disk->{'virt_onsystem'} = $prefix.$2;
+			}
+		}
+	$disk->{'virt_mount'} = $disk->{'virt_onsystem'}.'1';
 	}
 
 my @st = &stat_file_on_server($vhost, $disk->{'real'});
