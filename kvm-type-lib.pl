@@ -2956,6 +2956,7 @@ else {
 	$rv->{'virt_mount'} = $rv->{'virt_onsystem'}."1";
 	}
 $rv->{'virt_part'} = 1;
+$rv->{'virt_auto'} = $rv->{'virt'};
 
 if (!$device) {
 	my $vhost = &type_kvm_parent($server);
@@ -3001,6 +3002,11 @@ sub type_kvm_create_disk
 {
 my ($server, $disk) = @_;
 my $vhost = &type_kvm_parent($server);
+
+# Fix up virt_mount if virt was changed
+if ($disk->{'virt_auto'} && $disk->{'virt'} ne $disk->{'virt_auto'}) {
+	$disk->{'virt_mount'} = $disk->{'virt'}.'1';
+	}
 
 my @st = &stat_file_on_server($vhost, $disk->{'real'});
 if ($disk->{'device'} && !$disk->{'lv'}) {
