@@ -227,7 +227,7 @@ $img->{'dest'} = join(" ", @dests);
 return undef;
 }
 
-# create_image_files_tempdir(&vhost, id)
+# create_image_files_tempdir(&image-server, id)
 # Attempts to create a temp directory for image files on some host, and returns
 # either (1, dir) or (0, some error).
 sub create_image_files_tempdir

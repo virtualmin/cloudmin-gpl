@@ -2038,6 +2038,9 @@ mkimage_efsckcannot=.. not possible for the first disk
 mkimage_hvm=HVM virtualization required?
 mkimage_ehvmcd=For CD / DVD images, HVM virtualization must be enabled
 mkimage_nofilesystem=.. no primary disk found!
+mkimage_eiscsiserver=No iSCSI server found!
+mkimage_efirstdisk=Disk for root filesystem was not found!
+mkimage_eiscsidisk=Failed to lookup primary disk on iSCSI server
 
 pass_title=Change Password
 pass_header=New system passwords

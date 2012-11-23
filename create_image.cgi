@@ -57,17 +57,24 @@ if ($info && $info->{'kernel'}) {
 &ui_print_unbuffered_header(&server_in($server), $text{'mkimage_title'}, "");
 &obtain_lock_server($server);
 
+# Work out the system on which the image will be created. This may be the
+# host, or an iSCSI server
+$vhost = &get_parent_server($server);
+$imageserver = $vhost;
+$ofunc = "type_".$server->{'manager'}."_get_image_server";
+if (defined(&$ofunc)) {
+       $imageserver = &$ofunc($server);
+       }
+
 # Select temp dir for image on parent host
 &$first_print($text{'mkimage_temping'});
-$pfunc = "type_".$server->{'manager'}."_parent";
-$vhost = &$pfunc($server);
 $image->{'vhost'} = $vhost->{'id'};
 $err = &set_image_location($image, $vhost);
 if ($err) {
 	&$second_print(&text('mkimage_edest', $err));
 	goto FAILED;
 	}
-($tempok, $temp) = &create_image_files_tempdir($vhost, $image->{'id'});
+($tempok, $temp) = &create_image_files_tempdir($imageserver, $image->{'id'});
 if (!$tempok) {
 	&$second_print(&text('mkimage_failed', $temp));
 	goto FAILED;
@@ -131,14 +138,14 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 
 # Convert the remote system into an image file - this will output progress
 $ifunc = "type_".$server->{'manager'}."_create_image";
-if (!&$ifunc($server, $image, $temp, $in{'munge'} ? 0 : 2)) {
+if (!&$ifunc($server, $image, $temp, $in{'munge'} ? 0 : 2, $imageserver)) {
 	goto FAILED;
 	}
 
 # Transfer the image file to the master
 &start_background_dot_printer(&text('mkimage_fetching',
                     &nice_image_destination($image->{'dest'})));
-$err = &fetch_image_files($vhost, $image, $temp, 1, $server);
+$err = &fetch_image_files($imageserver, $image, $temp, 1, $server);
 &stop_background_dot_printer();
 if ($err) {
 	&$second_print(&text('mkimage_failed', $err));
@@ -154,7 +161,7 @@ else {
 
 # Cleanup the image on the host
 $ifunc = "type_".$server->{'manager'}."_cleanup_image";
-if (!&$ifunc($server, $image, $temp)) {
+if (!&$ifunc($server, $image, $temp, $imageserver)) {
 	goto FAILED;
 	}
 
