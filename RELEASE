@@ -6,10 +6,10 @@
         ssh virtualmin@virtualmin.com "cd domains/vm2.virtualmin.com/public_html/kvm/universal ; createrepo -s sha ."
 
  - Build kvm tar.gz
-	./create-module.pl --dir server-manager virtualmin/server-manager-$ver.kvm.wbm.gz server-manager-kvm
+	./create-module.pl --dir server-manager --sign virtualmin/server-manager-$ver.kvm.wbm.gz server-manager-kvm
 
  - Upload kvm tar.gz
-	scp virtualmin/server-manager-$ver.kvm.wbm.gz virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/wbm/
+	scp virtualmin/server-manager-$ver.kvm.wbm.gz* virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/wbm/
 
  - Fix updates.txt
         ssh virtualmin@virtualmin.com
