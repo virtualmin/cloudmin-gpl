@@ -6,7 +6,10 @@ Delete an existing Cloudmin system owner
 
 This command deletes a single owner account, identified with the C<--name>
 parameter. No confirmation is requested, but none of the systems he owns
-are effected unless you also supply the C<--delete-systems> flag.
+are effected unless you also supply the C<--delete-systems> flag or unless
+deletion of all systems has been enabled in the Cloudmin configuration.
+Alternately, the flag C<--no-delete-systems> can be used to prevent removal
+of any virtual systems belonging to this owner.
 
 =head1 Example usage
 
@@ -33,6 +36,7 @@ $< == 0 || die "$0 must be run as root";
 &can_action_usage(undef, "global");
 
 # Parse command line
+$deletesystems = $config{'owner_delete'};
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--name") {
@@ -43,6 +47,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--delete-systems") {
 		$deletesystems = 1;
+		}
+	elsif ($a eq "--no-delete-systems") {
+		$deletesystems = 0;
 		}
 	else {
 		&usage("Unknown parameter $a");
@@ -103,7 +110,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Deletes an existing Cloudmin system owner.\n";
 print "\n";
 print "cloudmin delete-owner --name username\n";
-print "                     [--delete-systems]\n";
+print "                     [--delete-systems] | [--no-delete-systems]\n";
 exit(1);
 }
 

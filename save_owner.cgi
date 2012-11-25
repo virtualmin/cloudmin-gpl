@@ -67,16 +67,28 @@ elsif ($in{'delete'}) {
 		# Ask for confirmation, with option to delete systems
 		&ui_print_header(undef, $text{'owner_title2'}, "");
 
+		if (!@oservers) {
+			# Has no systems, so only show one button
+			@buts = ( [ undef, $text{'owner_sure'} ] );
+			}
+		elsif ($config{'owner_delete'}) {
+			# Always delete systems
+			@buts = ( [ 'systems', &text('owner_sure2',
+						     scalar(@oservers)) ] );
+			}
+		else {
+			# Give the user a choice
+			@buts = ( [ undef, $text{'owner_sure'} ],
+				  [ 'systems', &text('owner_sure2',
+						     scalar(@oservers)) ] );
+			}
 		print &ui_confirmation_form(
 			"save_owner.cgi",
 			&text('owner_rusure', "<tt>$owner->{'name'}</tt>"),
 			[ [ "old", $in{'old'} ],
 			  [ "delete", 1 ],
 			  [ "confirm", 1 ] ],
-			[ [ undef, $text{'owner_sure'} ],
-			  @oservers ? ( [ 'systems', &text('owner_sure2',
-							  scalar(@oservers)) ] )
-				   : ( ) ],
+			\@buts,
 			undef,
 			@oservers ? &text('owner_surelist',
 				     join(" ", map { $_->{'host'} } @oservers))
