@@ -75,12 +75,16 @@ elsif ($in{'delete'}) {
 			# Always delete systems
 			@buts = ( [ 'systems', &text('owner_sure2',
 						     scalar(@oservers)) ] );
+			$msg = &text('owner_surelist2',
+				     join(" ", map { $_->{'host'} } @oservers));
 			}
 		else {
 			# Give the user a choice
 			@buts = ( [ undef, $text{'owner_sure'} ],
 				  [ 'systems', &text('owner_sure2',
 						     scalar(@oservers)) ] );
+			$msg = &text('owner_surelist',
+				     join(" ", map { $_->{'host'} } @oservers));
 			}
 		print &ui_confirmation_form(
 			"save_owner.cgi",
@@ -90,9 +94,7 @@ elsif ($in{'delete'}) {
 			  [ "confirm", 1 ] ],
 			\@buts,
 			undef,
-			@oservers ? &text('owner_surelist',
-				     join(" ", map { $_->{'host'} } @oservers))
-				 : "",
+			$msg,
 			);
 
 		&ui_print_footer("list_owners.cgi", $text{'owners_return'});
