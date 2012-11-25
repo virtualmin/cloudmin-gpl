@@ -1261,7 +1261,8 @@ elsif (&can_transfer_directly($dest)) {
 	$gzfile = undef;
 	}
 else {
-	# Pick temp file for compressed disks
+	# Pick temp file for compressed disks, for example if destination
+	# is via FTP
 	$gzfile = &tempname_on_server($vhost, $server->{'host'}.'.gz');
 	if (!$gzfile) {
 		return { 'ok' => 0,
@@ -1369,7 +1370,8 @@ if (!@do_devs) {
 my @gzfiles;
 my $msg = $server->{$manager.'_filesystem_lv'} ? 'brun_ddone' : 'brun_ddfile';
 if ($gzfile) {
-	# Need to write to local files
+	# Need to write to local files on the host. These may be kept there,
+	# or transferred via FTP to a final destination.
 	my $i = 0;
 	&start_background_dot_printer(&text($msg, $server->{'host'}));
 	foreach my $dev (@devs) {
@@ -1407,6 +1409,7 @@ else {
         foreach my $dev (@devs) {
 		my $ext = $i ? ".$i" : "";
 		my $err;
+		my ($disk) = grep { $_->{'real'} eq $dev } @filedisks;
 		if ($skipdisks{$dev}) {
 			# Create empty file indicating skip
 			my $empty = &transname();
@@ -1414,6 +1417,28 @@ else {
 			&close_tempfile(EMPTY);
 			$err = &put_file_to_server($destserver,
 				$empty, $dest->{'path'}.$ext);
+			}
+		elsif ($disk && $disk->{'iscsi_server'} ne '') {
+			# Disk is on iSCSI. Can backup directly from the iSCSI
+			# server, to avoid network round-trip
+			my $iscsiserver = &get_managed_server(
+						$disk->{'iscsi_server'});
+			my $idisk = &get_iscsi_disk_info($iscsiserver, $disk);
+			if (!$idisk) {
+				$err = $text{'brun_eiscsidisk'};
+				}
+			elsif (!ref($idisk)) {
+				$err = &text('brun_eiscsidisk', $idisk);
+				}
+			else {
+				my $ddcmd = &dd_command($idisk->{'real'},undef).
+					    " | gzip -c $config{'zip_args'}";
+				$ddcmd = &niced_backup_command(
+					$iscsiserver, $ddcmd);
+				$err = &pipe_command_to_server(
+					$iscsiserver, $destserver, $ddcmd,
+					$dest->{'path'}.$ext);
+				}
 			}
 		else {
 			# Create gzip file from dd of disk
