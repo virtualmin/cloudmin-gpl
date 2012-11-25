@@ -1696,7 +1696,8 @@ foreach my $g (@statfiles) {
 
 my $tarerr;
 if ($gzip_format) {
-	# Un-zip each .gz.* file over a disk
+	# Un-zip each .gz.* file over a disk. Used when restoring from a file
+	# on the host system.
 	if ($localfile) {
 		# Just extract from local files
 		my $i = 0;
@@ -1731,7 +1732,38 @@ if ($gzip_format) {
 			my $ext = $i ? ".$i" : "";
 			my @st = &stat_file_on_server($destserver,
 						      $dest->{'path'}.$ext);
-			if ($st[7]) {
+			my ($disk) = grep { $_->{'real'} eq $dev } @filedisks;
+			if ($st[7] && $disk && $disk->{'iscsi_server'} ne '') {
+				# Disk is on iSCSI. Unzip directly onto the
+				# underlying iSCSI server.
+				my $iscsiserver = &get_managed_server(
+					$disk->{'iscsi_server'});
+				my $idisk = &get_iscsi_disk_info($iscsiserver,
+								 $disk);
+				if (!$idisk) {
+					$tarerr = $text{'brun_eiscsidisk'};
+					last;
+					}
+				elsif (!ref($idisk)) {
+					$tarerr = &text('brun_eiscsidisk',
+							$idisk);
+					last;
+					}
+				my $ddcmd = "(gunzip -c | ".
+				    &dd_command(undef, $idisk->{'real'}).
+				    ") 2>&1";
+				$ddcmd = &niced_backup_command(
+					$iscsiserver, $ddcmd);
+				my $err = &pipe_command_from_server(
+					$destserver, $iscsiserver, $ddcmd,
+					$dest->{'path'}.$ext);
+				if ($err) {
+					$tarerr = &text('rrun_edd', $dev, $err);
+					last;
+					}
+				}
+			elsif ($st[7]) {
+				# Non-iSCSI disk, in a regular file
 				my $ddcmd = "(gunzip -c | ".
 					    &dd_command(undef, $dev).") 2>&1";
 				$ddcmd = &niced_backup_command($vhost, $ddcmd);
@@ -1793,7 +1825,9 @@ elsif ($server->{$manager.'_filesystem_lv'}) {
 	&stop_background_dot_printer();
 	}
 else {
-	# Extract tar file of disk images in the disk base directory
+	# Extract tar file of disk images in the disk base directory. This is
+	# only needed for older format backups that used a single tar file for
+	# multiple disks.
 	my $dir = $filedisks[0]->{'real'};
         $dir =~ s/\/[^\/]+$//;
 	if ($localfile) {
