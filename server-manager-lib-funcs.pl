@@ -7262,6 +7262,7 @@ if ($canmove && &can_action($server, "move")) {
 	}
 if ($canfail && &can_action($server, "move") &&
     $server->{'status'} eq 'nohost' &&
+    defined(&server_failover_possible) &&
     &server_failover_possible($server)) {
 	# Can trigger a failover
 	push(@rv, { 'id' => 'failover',
