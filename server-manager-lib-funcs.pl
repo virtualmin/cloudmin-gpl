@@ -8168,6 +8168,11 @@ for(my $i=0; defined($in->{"start_$i"}); $i++) {
 		else {
 			&check_ipaddress($in->{"gw_${i}"}) ||
 				&error(&text('range_egw', $i+1));
+			&check_within_range(
+			    $in->{"gw_${i}"}, $in->{"start_$i"},
+			    $in->{"end_$i"}, $in->{"cidr_$i"}) ||
+				&error(&text('range_egwrange', $i+1,
+					     $in->{"gw_${i}"}));
 			push(@gws, $in->{"gw_${i}"});
 			}
 		}
@@ -12007,6 +12012,22 @@ sub check_macaddress
 {
 my ($addr) = @_;
 return $addr =~ /^[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}:[a-f0-9]{2}$/i ? 1 : 0;
+}
+
+# check_within_range(ip, start, end, cidr)
+# Returns 1 if some IP address is within the network defined by the start
+# address and CIDR
+sub check_within_range
+{
+my ($ip, $start, $end, $cidr) = @_;
+&foreign_require("net");
+my $ipnum = &net::ip_to_integer($ip);
+my $startnum = &net::ip_to_integer($start);
+my $cidrnum = &net::ip_to_integer(
+	$cidr =~ /^\d+$/ ? &net::prefix_to_mask($cidr) : $cidr);
+$startnum &= $cidrnum;
+$ipnum &= $cidrnum;
+return $ipnum == $startnum;
 }
 
 # size_close_enough(current-size, want-size)
