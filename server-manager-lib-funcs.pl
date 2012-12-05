@@ -4317,13 +4317,13 @@ if ($oldping) {
 return undef;
 }
 
-# startup_server(&server)
+# startup_server(&server, [no-wait-for-ping])
 # Start up some virtual system by calling it's type-specific function.
 # Returns a status code (0=failed, 1=OK, 2=No ping, 3=No SSH) and an error
 # message.
 sub startup_server
 {
-my ($server) = @_;
+my ($server, $nowait) = @_;
 
 # If configured, check all disks first
 if ($config{'fsck_boot'}) {
@@ -4335,11 +4335,11 @@ if ($config{'fsck_boot'}) {
 
 # Call type-specific startup function
 my $sfunc = "type_".$server->{'manager'}."_startup";
-my ($ok, $err) = &$sfunc($server);
+my ($ok, $err) = &$sfunc($server, $nowait);
 return ($ok, $err) if ($ok != 1);
 
 # If the server has Webmin, wait for it to come up
-if ($server->{'user'} && $ok != 2) {
+if ($server->{'user'} && $ok != 2 && !$nowait) {
 	my $start = time();
 	while(time() - $start < 60) {
 		sleep(1);

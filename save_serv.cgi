@@ -46,33 +46,45 @@ if ($in{'shutdown'}) {
 	}
 
 elsif ($in{'startup'}) {
-	# Start up this virtual system
+	# Start up this virtual system, after asking for the mode
 	&can_action_error($server, "startup");
 	&ui_print_header(&server_in($server), $text{'save_starttitle'}, "");
-	&obtain_lock_server($server);
-	print &text('save_starting',
-		    "<tt>$server->{'host'}</tt>"),"<br>\n";
-	($ok, $err) = &startup_server($server);
-	if (!$ok) {
-		print &text('save_startfailed', $err),"<p>\n";
-		&save_managed_server($server);
+	if (!$in{'confirm'}) {
+		&show_confirm_form(
+			&text('save_startrusure', "<tt>$server->{'host'}</tt>").
+			"<br>\n".
+			($server->{'ssh_nologin'} ? "" :
+			  &ui_checkbox("wait", 1, $text{'save_startwait'}, 1)),
+			"save_serv.cgi", [ [ "id", $in{'id'} ],
+					   [ "startup", 1 ] ],
+			$text{'save_startok'});
 		}
 	else {
-		&check_server_status($server, 0, 1);
-		&refresh_server_usage($server);
-		&save_managed_server($server);
-		if ($ok == 1) {
-			print $text{'save_startdone'},"<p>\n";
+		&obtain_lock_server($server);
+		print &text('save_starting',
+			    "<tt>$server->{'host'}</tt>"),"<br>\n";
+		($ok, $err) = &startup_server($server, !$in{'wait'});
+		if (!$ok) {
+			print &text('save_startfailed', $err),"<p>\n";
+			&save_managed_server($server);
 			}
 		else {
-			print &text('save_startmaybe', $err),"<p>\n";
+			&check_server_status($server, 0, 1);
+			&refresh_server_usage($server);
+			&save_managed_server($server);
+			if ($ok == 1) {
+				print $text{'save_startdone'},"<p>\n";
+				}
+			else {
+				print &text('save_startmaybe', $err),"<p>\n";
+				}
+			if (defined(&theme_post_save_server)) {
+				&theme_post_save_server($server);
+				}
 			}
-		if (defined(&theme_post_save_server)) {
-			&theme_post_save_server($server);
-			}
+		&release_lock_server($server);
+		&webmin_log("startup", "server", $server->{'host'});
 		}
-	&release_lock_server($server);
-	&webmin_log("startup", "server", $server->{'host'});
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
 

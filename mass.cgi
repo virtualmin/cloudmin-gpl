@@ -382,33 +382,61 @@ elsif ($in{'startup'}) {
 		}
 
 	&ui_print_unbuffered_header(undef, $text{'mass_starttitle'}, "");
+	if (!$in{'confirm'}) {
+		# Ask the user if he is sure
+		print "<center>\n";
+		print &ui_form_start("mass.cgi", "post");
+		print &ui_hidden("startup", 1);
+		print &ui_hidden("referer", $ENV{'HTTP_REFERER'});
+		foreach $s (@servers) {
+			print &ui_hidden("d", $s->{'id'});
+			}
+		print $text{'mass_startrusre'},"<p>\n";
+		print "<table>\n";
+		foreach $s (@servers) {
+			$tfunc = "type_".$s->{'manager'}."_desc";
+			print "<tr>\n";
+			print "<td><tt>$s->{'host'}</tt></td>\n";
+			print "<td>&nbsp;</td>\n";
+			print "<td>(",&$tfunc(),")</td>\n";
+			print "</tr>\n";
+			}
+		print "</table>\n";
+		print &ui_submit($text{'mass_startok'}, "confirm")."<p>\n";
+		print &ui_checkbox("wait", 1, $text{'save_startwait'}, 1);
+		print &ui_form_end();
+		print "</center>\n";
 
-	# Do the startup, in parallel. Real systems are done first.
-	if (@servers == 1) {
-		print &text('mass_starting2', "<tt>$s0</tt>"),"<br>\n";
 		}
 	else {
-		print &text('mass_starting', scalar(@servers)),"<br>\n";
-		}
-	&obtain_lock_server(\@servers);
-	foreach my $sl (\@pservers, \@oservers) {
-		&parallel_server_function($sl,
-			sub { ($ok, $err) = &startup_server($_[0]);
-			      &check_server_status($_[0], 0, 1);
-			      &refresh_server_usage($_[0]);
-			      &save_managed_server($_[0]) });
-		}
-	print $text{'mass_started'},"<p>\n";
-	foreach my $s (@servers) {
-		if (defined(&theme_post_save_server)) {
-			&theme_post_save_server($s);
+		# Do the startup, in parallel. Real systems are done first.
+		if (@servers == 1) {
+			print &text('mass_starting2', "<tt>$s0</tt>"),"<br>\n";
 			}
+		else {
+			print &text('mass_starting', scalar(@servers)),"<br>\n";
+			}
+		&obtain_lock_server(\@servers);
+		foreach my $sl (\@pservers, \@oservers) {
+			&parallel_server_function($sl,
+				sub { ($ok, $err) = &startup_server(
+							$_[0], !$in{'wait'});
+				      &check_server_status($_[0], 0, 1);
+				      &refresh_server_usage($_[0]);
+				      &save_managed_server($_[0]) });
+			}
+		print $text{'mass_started'},"<p>\n";
+		foreach my $s (@servers) {
+			if (defined(&theme_post_save_server)) {
+				&theme_post_save_server($s);
+				}
+			}
+		&theme_select_server($servers[0])
+			if (@servers == 1 && defined(&theme_select_server));
+		&release_lock_server(\@servers);
+		&webmin_log("startup", "servers", scalar(@servers),
+			    { 'hosts' => \@hostnames });
 		}
-	&theme_select_server($servers[0]) if (@servers == 1 &&
-					      defined(&theme_select_server));
-	&release_lock_server(\@servers);
-	&webmin_log("startup", "servers", scalar(@servers),
-		    { 'hosts' => \@hostnames });
 
 	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
 			 $text{'index_return'});

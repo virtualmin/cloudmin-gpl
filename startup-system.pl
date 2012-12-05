@@ -8,6 +8,12 @@ For virtual systems running under Xen, VServers or Zones, Cloudmin can start up
 existing instances using this command. The command will only exit when all the
 specified systems have been booted.
 
+The C<--wait-for-ssh> will cause this API command to only return once an SSH
+connection to the system can be established. Conversely, the C<--no-wait>
+flag will cause the command to return as soon as the virtual system has been
+launched. Otherwise, Cloudmin will wait until the system can be pinged, for
+up to 60 seconds.
+
 =head1 Example usage
 
   cloudmin startup-system --host xencentos.home
@@ -46,18 +52,23 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--no-wait") {
+		$nowait = 1;
+		}
 	elsif ($a eq "--help") { &usage(); }
 	else {
 		&usage("Unknown parameter $a");
 		}
 	}
+$waitssh && $nowait && &usage("The --wait-for-ssh and --no-wait flags ".
+			      "are mutually exclusive");
 
 # Get the systems
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hostons);
 @servers || &usage("No systems specified");
 &can_action_usage(\@servers, "startup"); 
 
-# Check if any cannot be shutdown
+# Check if any cannot be started up
 foreach $s (@servers) {
 	$sfunc = "type_".$s->{'manager'}."_no_startup";
 	if (defined(&$sfunc) && &$sfunc($server) ||
@@ -74,7 +85,7 @@ foreach $s (@servers) {
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
 	print "Starting up $tdesc system $s->{'host'} ..\n";
-	($ok, $err) = &startup_server($s);
+	($ok, $err) = &startup_server($s, $nowait);
 	if (!$ok) {
 		$err = &html_tags_to_text($err);
 		print ".. startup failed : $err\n\n";
@@ -130,7 +141,7 @@ print "                        [--os oscode]*\n";
 print "                        [--owner name]*\n";
 print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                        [--host-on name]\n";
-print "                        [--wait-for-ssh]\n";
+print "                        [--wait-for-ssh | --no-wait]\n";
 exit(1);
 }
 
