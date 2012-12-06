@@ -5,7 +5,6 @@ require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'create_err'});
 &can_create_server_error($in{'type'});
-@servers = &list_managed_servers();
 $server = { 'id' => &server_id(),
 	    'manager' => $in{'type'},
 	    'status' => 'create',
@@ -13,6 +12,10 @@ $server = { 'id' => &server_id(),
 	    'created' => time(),
 	    'directory' => $in{'directory'},
 	  };
+
+# Prevent concurrent creation that would exceed limits
+&obtain_lock_user(undef, 1);
+@servers = &list_managed_servers();
 
 # Validate inputs, starting with hostname
 if (defined($in{'host'})) {
@@ -558,6 +561,8 @@ if ($serial) {
 &release_lock_server($server);
 &webmin_log("create", "server", $server->{'host'},
 	    { 'type' => $server->{'manager'} });
+
+&release_lock_user();
 
 &ui_print_footer("", $text{'index_return'});
 

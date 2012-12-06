@@ -11912,6 +11912,16 @@ else {
 	}
 }
 
+sub test_lock_server
+{
+my ($server) = @_;
+if ($main::got_lock_server{$server->{'id'}}) {
+	# Locked already in this process
+	return 0;
+	}
+return &test_lock("$servers::module_config_directory/$server->{'id'}.serv");
+}
+
 # get_lock_on_server(&server)
 # If a system is locked due to a pending operation, return a hash ref of
 # details about the lock. Keys are :
@@ -12056,14 +12066,29 @@ sub obtain_lock_anything
 $SIG{'PIPE'} = 'IGNORE';
 }
 
-sub test_lock_server
+# obtain_lock_user([user], [fail-if-locked])
+# Takes out a lock to prevent concurrent operations (like creates) by the
+# given or current user
+sub obtain_lock_user
 {
-my ($server) = @_;
-if ($main::got_lock_server{$server->{'id'}}) {
-	# Locked already in this process
-	return 0;
+my ($user, $fail) = @_;
+return if (!$access{'owner'});
+$user ||= $base_remote_user;
+&make_dir($user_lock_dir, 0700) if (!-d $user_lock_dir);
+if ($fail && &test_lock("$user_lock_dir/$user")) {
+	&error($text{'create_einprogress'});
 	}
-return &test_lock("$servers::module_config_directory/$server->{'id'}.serv");
+&lock_file("$user_lock_dir/$user");
+}
+
+# release_lock_user([user])
+# Releases a lock taken by obtain_lock_user
+sub release_lock_user
+{
+my ($user) = @_;
+return if (!$access{'owner'});
+$user ||= $base_remote_user;
+&unlock_file("$user_lock_dir/$user");
 }
 
 $done_server_manager_lib_funcs = 1;

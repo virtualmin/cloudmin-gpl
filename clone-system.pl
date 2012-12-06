@@ -128,6 +128,9 @@ while(@ARGV > 0) {
 		}
 	}
 
+# Prevent concurrent creation that would exceed limits
+&obtain_lock_user();
+
 # Check for mandatory args
 $host || &usage("Missing --host parameter");
 $newhost || &usage("Missing --new-host parameter");
@@ -245,6 +248,7 @@ elsif (!$newserver && $err) {
 if ($newserver) {
 	&cloudmin_api_log(\@OLDARGV);
 	}
+&release_lock_user();
 if ($err) {
 	exit(1);
 	}

@@ -8,6 +8,9 @@ $server = &get_managed_server($in{'id'});
 $server || &error($text{'mkimage_egone'});
 &can_create_server_error($server->{'manager'});
 
+# Prevent concurrent creation that would exceed limits
+&obtain_lock_user(undef, 1);
+
 # Check if clonable
 $dfunc = "type_".$server->{'manager'}."_desc";
 $desc = &$dfunc();
@@ -149,5 +152,8 @@ if ($newserver) {
 		&theme_select_server($newserver);
 		}
 	}
+
+&release_lock_user();
+
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 

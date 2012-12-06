@@ -188,6 +188,9 @@ while(@ARGV > 0) {
 		}
 	}
 
+# Prevent concurrent creation that would exceed limits
+&obtain_lock_user();
+
 # Check for mandatory args
 @servers = &list_managed_servers();
 $type || &usage("Missing required --type parameter");
@@ -684,6 +687,8 @@ if (defined(&$cfunc)) {
 # Run post-creation script
 &run_system_script($server, 'after', 'create');
 &release_lock_server($server);
+
+&release_lock_user();
 
 print "Creation of $tdesc system $server->{'host'} is complete\n";
 &cloudmin_api_log(\@OLDARGV);
