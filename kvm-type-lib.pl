@@ -628,6 +628,10 @@ $rv .= &ui_table_row($text{'create_kvmmodel'},
 $rv .= &ui_table_row($text{'create_kvmvga'},
 	&ui_yesno_radio("kvm_vga", 0));
 
+# Additional command-line args
+$rv .= &ui_table_row($text{'edit_kvmargs'},
+	&ui_textbox("kvm_args", $server->{'kvm_args'}, 40));
+
 # Firewall spoofed IPs?
 $rv .= &ui_table_row($text{'create_kvmfirewall'},
 	&ui_yesno_radio("kvm_firewall", $config{'kvm_firewall'}));
@@ -856,6 +860,10 @@ $server->{'kvm_start'} = defined($in{'kvm_start'}) ? $in{'kvm_start'} : 1;
 # High-res graphics
 $server->{'kvm_vga'} = defined($in{'kvm_vga'}) ? $in{'kvm_vga'} : 0;
 
+# Additional KVM args
+$in->{'kvm_args'} =~ /;|\&|\||<|>|\0|\!/ && &error($text{'create_ekvmargs'});
+$server->{'kvm_args'} = $in->{'kvm_args'};
+
 # Firewall spoofed IPs
 $server->{'kvm_firewall'} = (defined($in{'kvm_firewall'}) ?
 				$in{'kvm_firewall'} : $config{'kvm_firewall'}) ?
@@ -910,6 +918,7 @@ if (&can_action(undef, "advanced")) {
 		  { 'name' => 'vga', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'firewall', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'iscsi', 'value' => 'hostname', 'opt' => 1 },
+		  { 'name' => 'args', 'value' => 'parameters', 'opt' => 1 },
 	    );
 	}
 return @rv;
@@ -1251,6 +1260,11 @@ if (&can_action(undef, "advanced")) {
 	else {
 		$server->{'kvm_vga'} = 0;
 		}
+
+	# Validate extra command-line args
+	$args->{'args'} =~ /;|\&|\||<|>|\0|\!/ &&
+		return "Invalid characters in additional args";
+	$server->{'kvm_args'} = $args->{'args'};
 
 	# Save spoofing firewall
 	if ($args->{'firewall'} =~ /true|yes/i) {
@@ -4997,12 +5011,6 @@ if ($proc) {
 	$rv .= &ui_table_row($text{'edit_kvmpid'}, $proc->{'pid'});
 	}
 
-# Additional command line args
-if ($server->{'kvm_args'}) {
-	$rv .= &ui_table_row($text{'edit_kvmargs'},
-		"<tt>".&html_escape($server->{'kvm_args'})."</tt>");
-	}
-
 # Disk mode
 $rv .= &ui_table_row($text{'edit_kvmdriver'},
 	$server->{'kvm_virtio'} ? "VirtIO" : "IDE");
@@ -5023,6 +5031,12 @@ if ($view) {
 	# High-res graphics?
 	$rv .= &ui_table_row($text{'create_kvmvga'},
 		$server->{'kvm_vga'} ? $text{'yes'} : $text{'no'});
+
+	# Additional command-line args
+	if ($server->{'kvm_args'}) {
+		$rv .= &ui_table_row($text{'edit_kvmargs'},
+				     "<tt>$server->{'kvm_args'}</tt>");
+		}
 	}
 else {
 	# Console keymap
@@ -5035,6 +5049,13 @@ else {
 	# High-res graphics?
 	$rv .= &ui_table_row($text{'create_kvmvga'},
 		&ui_yesno_radio("kvm_vga", $server->{'kvm_vga'}));
+
+	# Additional command-line args
+	$rv .= &ui_table_row($text{'edit_kvmargs'},
+		&ui_textbox("kvm_args", $server->{'kvm_args'}, 40));
+
+	# Message about reboot
+	$rv .= &ui_table_row(" ", $text{'create_kvmreboot'});
 	}
 
 return $rv;
@@ -5053,10 +5074,16 @@ else {
 	my ($k) = grep { $_->[0] eq $in->{'kvm_keymap'} } @keymaps;
 	$k || &error($text{'edit_ekvmkeymap'});
 	$server->{'kvm_keymap'} = $k->[0];
-	&type_kvm_set_atboot($server, 2);
 	}
 
+# Save VGA mode
 $server->{'kvm_vga'} = $in->{'kvm_vga'};
+
+# Save extra args
+$in->{'kvm_args'} =~ /;|\&|\||<|>|\0|\!/ && &error($text{'create_ekvmargs'});
+$server->{'kvm_args'} = $in->{'kvm_args'};
+
+&type_kvm_set_atboot($server, 2);
 }
 
 # type_kvm_server_info(&server)

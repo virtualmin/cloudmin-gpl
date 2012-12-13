@@ -56,3 +56,5 @@ KVM systems can now be prevented from using IP or MAC addresses that have not be
 When a backup is restored that contains disks whose size doesn't match the target system, disks are resized first to match the backup.
 ---- Changes since 6.5 ----
 Systems to backup can now be selected by host or location group.
+---- Changes since 6.6 ----
+Additional command-line parameters for KVM instances can now be set when creating or editing a system.
