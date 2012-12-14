@@ -177,8 +177,7 @@ elsif ($config{'bw_period'} eq 'year') {
 	}
 else {
 	# Start N days ago
-	$rv = $day - $config{'bw_period'}*24*60*60;
-	$rv -= $ago*$config{'bw_period'}*24*60*60;
+	$rv = $day - $ago*$config{'bw_days'}*24*60*60;
 	}
 $rv = int($rv/3600)*3600;	# Round to hour, just in case
 return $rv;
