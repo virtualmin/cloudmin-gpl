@@ -1566,8 +1566,11 @@ elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
 $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
 if (!$reset) {
+	my $ver = &kvm_host_version($vhost);
+	my $boot = $ver && &compare_versions($ver, "0.12") >= 0 ? ""
+							       : ",boot=on";
 	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0".
-		  ($server->{'kvm_virtio'} ? ",if=virtio,boot=on" : ",if=ide");
+		  ($server->{'kvm_virtio'} ? ",if=virtio".$boot : ",if=ide");
 	if ($swfile) {
 		$server->{'kvm_drives'} .=
 			" file=$swfile,media=disk,index=1,cache=off,".
@@ -2467,12 +2470,16 @@ if (&kvm_host_supports_flag($vhost, "name")) {
 $cmd .= " -m ".$server->{'kvm_memory'};
 
 # Add disks
+my $ver = &kvm_host_version($vhost);
 foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 	if ($d =~ /^file=(\S+),media=disk,index=(\d+),if=ide$/) {
 		my $n = chr($2+97);
 		$cmd .= " -hd".$n." ".$1;
 		}
 	else {
+		if ($ver && &compare_versions($ver, "0.12") >= 0) {
+			$d =~ s/,boot=on//g;	# No longer needed
+			}
 		$cmd .= " -drive $d";
 		}
 	}
@@ -7332,6 +7339,21 @@ if (!$out) {
 		}
 	}
 return $out =~ /-$flag/ ? 1 : 0;
+}
+
+# kvm_host_version(&vhost)
+# Returns the version of KVM installed
+sub kvm_host_version
+{
+my ($vhost) = @_;
+if (!$kvm_host_version_cache{$vhost->{'id'}}) {
+	my $cmd = &find_qemu_kvm_command($vhost);
+        my ($out) = &execute_command_on_server($vhost, $cmd." --help");
+	if ($out =~ /version\s+(\S+)/) {
+		$kvm_host_version_cache{$vhost->{'id'}} = $1;
+		}
+	}
+return $kvm_host_version_cache{$vhost->{'id'}};
 }
 
 # delete_kvm_cgroup(&server, [&vhost])
