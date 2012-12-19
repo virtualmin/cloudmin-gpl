@@ -3241,12 +3241,13 @@ if (!$got_memory && &can_ssh_status($server)) {
 		}
 	}
 
-if (!$got_disk && &can_ssh_status($server)) {
-	# Get disk from df command
+if (&can_ssh_status($server)) {
+	# Get disk size and free space from df command, for each filesystem
 	my ($out, $ex, $err) = &execute_command_on_server($server, "df -kl");
 	if (!$ex && !$err) {
 		my @lines = split(/\r?\n/, $out);
 		my ($total, $free);
+		my @fslist;
 		for(my $i=0; $i<@lines; $i++) {
 			my $l = $lines[$i];
 			if ($l =~ /^\/\S+$/) {
@@ -3254,7 +3255,7 @@ if (!$got_disk && &can_ssh_status($server)) {
 				$l .= $lines[++$i];
 				}
 			if ($l =~ /^\// && $l !~ /^\/platform\//) {
-				my ($fs, $blocks, $used, $avail) =
+				my ($fs, $blocks, $used, $avail, $pc, $mount) =
 					split(/\s+/, $l);
 				if ($blocks) {
 					$total += $blocks*1024;
@@ -3263,9 +3264,15 @@ if (!$got_disk && &can_ssh_status($server)) {
 					$total += ($used+$avail)*1024;
 					}
 				$free += $avail*1024;
+				push(@fslist, { 'fs' => $mount,
+						'dev' => $fs,
+						'total' => $blocks,
+						'used' => $used,
+						'free' => $avail });
 				}
 			}
-		if ($total) {
+		$info->{'disk_list'} = \@fslist;
+		if ($total && !$got_disk) {
 			$info->{'disk_total'} = $total;
 			$info->{'disk_free'} = $free;
 			}
@@ -8382,7 +8389,9 @@ my $lvm = $vhost->{$manager.'_vg_free'} &&
 		       $manager eq 'citrix');
 my $iscsi = $server ? $server->{$manager.'_filesystem_iscsi'}
 		    : $vhost->{$manager.'_iscsi'};
-if ($manager && $lvm) {
+my $new_dir = $server ? $server->{'new_directory'} : undef;
+my $dir = $new_dir || $vhost->{$manager.'_dir'};
+if ($manager && $lvm && !$new_dir) {
 	# Host is using LVM, and free space has been collected in the
 	# post_refresh function
 	@rv = ( $vhost->{$manager.'_vg_free'}, $vhost->{$manager.'_vg_total'} );
@@ -8394,8 +8403,21 @@ elsif ($manager && $iscsi ne '') {
 		@rv = &get_iscsi_disk_space($iscsiserver);
 		}
 	}
+elsif ($vinfo && $vinfo->{'disk_list'} && $dir) {
+	# Get disk space from the specific directory the disk will be
+	# created on
+	foreach my $fs (sort { length($b->{'fs'}) <=> length($a->{'fs'}) }
+			     @{$vinfo->{'disk_list'}}) {
+		my $fsp = $fs->{'fs'};
+		if ($dir eq $fsp || $dir =~ /^\Q$fsp\E\// || $fsp eq "/") {
+			# Found it
+			@rv = ( $fs->{'free'}, $fs->{'total'} );
+			last;
+			}
+		}
+	}
 elsif ($vinfo && $vinfo->{'disk_free'}) {
-	# Get disk space from filesystem. Free space has to exclude amount
+	# Get disk space from all filesystems. Free space has to exclude amount
 	# allocated to each VM on the host, even if not used yet.
 	my $free = $vinfo->{'disk_free'};
 	foreach my $child (&get_managed_server_by($manager."_on",
@@ -8505,17 +8527,17 @@ if (@rv && $vhost->{'floor_mem_down'}) {
 return wantarray ? @rv : $rv[0];
 }
 
-# usable_host_system(&server, manager, extra-ram, extra-guaranteed-ram,
-#		     extra-disk)
+# usable_host_system(&vhost, manager, extra-ram, extra-guaranteed-ram,
+#		     extra-disk, [&for-server])
 # Checks if some host system is has enough RAM and disk free to host another
 # virtual system.
 sub usable_host_system
 {
-my ($vhost, $manager, $mem, $gmem, $disk) = @_;
+my ($vhost, $manager, $mem, $gmem, $disk, $server) = @_;
 my $omanager = $manager eq "zones" ? "zone" : $manager;
 
 # Check how much RAM and disk is free now
-my $diskfree = &host_free_disk($vhost, $manager);
+my $diskfree = &host_free_disk($vhost, $manager, $server);
 my $memfree = &host_free_memory($vhost, $manager);
 my $gmemfree = &host_free_memory($vhost, $manager, 1);
 
@@ -8669,7 +8691,7 @@ if (defined(&$gmfunc)) {
 	$gmem = &$gmfunc($server);
 	}
 my ($ok, $err) = &usable_host_system($dest, $server->{'manager'},
-				     $mem, $gmem, $disk);
+				     $mem, $gmem, $disk, $server);
 if (!$ok) {
 	return "The host system $dest->{'host'} is not suitable : $err";
 	}
@@ -9293,12 +9315,12 @@ return " (<a href='$link' onClick='window.open(\"$link\", \"showpass\", \"toolba
 }
 
 # list_available_host_servers(type, [extra-ram, extra-guaranteed-ram,
-#			      extra-disk], [include-down])
+#			      extra-disk], [include-down], [&for-server])
 # Returns a list of systems that can host some virtualization type, and
 # are up and running. Also takes RAM and disk needs into account.
 sub list_available_host_servers
 {
-my ($type, $mem, $gmem, $disk, $incdown) = @_;
+my ($type, $mem, $gmem, $disk, $incdown, $server) = @_;
 my $alttype = $type eq "zones" ? "zone" : $type;
 my @vhosts = grep { ($_->{$type.'_host'} || $_->{$alttype.'_host'}) &&
                     &can_host_server($_) } &list_managed_servers();
@@ -9309,7 +9331,7 @@ if (!$incdown) {
 	}
 my @rv;
 foreach my $v (@vhosts) {
-	if (&usable_host_system($v, $type, $mem, $gmem, $disk)) {
+	if (&usable_host_system($v, $type, $mem, $gmem, $disk, $server)) {
 		push(@rv, $v);
 		}
 	}
@@ -9323,7 +9345,7 @@ return @rv;
 sub find_host_server
 {
 my ($server, $type, $mem, $gmem, $disk) = @_;
-my @vhosts = &list_available_host_servers($type, $mem, $gmem, $disk);
+my @vhosts = &list_available_host_servers($type, $mem, $gmem, $disk, $server);
 return undef if (!@vhosts);
 return &find_host_server_from_vhosts($server, \@vhosts, $access{'hostmode'},
 				     $type);
@@ -9441,7 +9463,8 @@ return wantarray ? ( ) : undef;
 sub parse_host_server_field
 {
 my ($server, $name, $type, $in, $mem, $gmem, $disk) = @_;
-my @vhosts = &list_available_host_servers($type);
+my @vhosts = &list_available_host_servers($type, undef, undef, undef, 0,
+					  $server);
 @vhosts || &error($text{'create_exenvhostnone'});
 my @locs;
 if (defined(&list_vhost_locations)) {
@@ -9471,7 +9494,7 @@ elsif (&can_select_host_server()) {
 		# Not on usable list .. but why?
 		$vhost = &get_managed_server($in->{$name."_on"});
 		my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $gmem,
-						     $disk);
+						     $disk, $server);
 		if (!$ok) {
 			return &text('create_exenvhostsel2', $err);
 			}
@@ -9489,7 +9512,8 @@ if ($loc) {
 					  $mem, $gmem, $disk);
 	$vhost || &error(&text('create_exenvhostalloc2', $loc->{'desc'}));
 	}
-my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $gmem, $disk);
+my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $gmem, $disk,
+				     $server);
 $ok || &error(&text('create_ehostusable', $vhost->{'host'}, $err));
 return $vhost;
 }
@@ -10987,7 +11011,7 @@ if (defined(&$gmfunc)) {
 	$gmem = &$gmfunc($server);
 	}
 my ($ok, $err) = &usable_host_system($dest, $server->{'manager'},
-				     $mem, $gmem, $disk);
+				     $mem, $gmem, $disk, $newserver);
 if (!$ok) {
 	return (undef, &text('clone_ehostspace', $dest->{'host'}, $err));
 	}
