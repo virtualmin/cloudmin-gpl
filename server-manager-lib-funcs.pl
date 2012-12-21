@@ -8376,36 +8376,77 @@ if ($freemem) {
 return @rv ? " (".join(", ", @rv).")" : "";
 }
 
-# host_free_disk(&host, manager, [&for-server])
+# host_free_disk(&host, manager, [&for-server], [&for-disk])
 # Returns the amount of disk space free on some host system, perhaps in LVM.
 # In an array context, returns the total disk too.
 sub host_free_disk
 {
-my ($vhost, $manager, $server) = @_;
+my ($vhost, $manager, $server, $disk) = @_;
 my $vinfo = &get_server_collected($vhost);
 my @rv;
-my $lvm = $vhost->{$manager.'_vg_free'} &&
-	  (!$server || $server->{$manager.'_filesystem_vg'} ||
-		       $manager eq 'citrix');
-my $iscsi = $server ? $server->{$manager.'_filesystem_iscsi'}
-		    : $vhost->{$manager.'_iscsi'};
-my $new_dir = !$server ? undef :
-	      $server->{'new_directory'} ? $server->{'new_directory'} :
-					   $server->{'directory'};
-my $dir = $new_dir || $vhost->{$manager.'_dir'};
-if ($manager && $lvm && !$new_dir) {
+
+# Work out where the disk would be created
+my ($lvm, $iscsi, $dir);
+if ($disk) {
+	# Disk object provided - use the iSCSI server or VG from the disk, and
+	# fall back to the server's default directory
+	if ($disk->{'iscsi_server'} ne '') {
+		$iscsi = $disk->{'iscsi_server'};
+		}
+	elsif ($disk->{'vg'}) {
+		$lvm = $disk->{'vg'};
+		}
+	elsif ($disk->{'dir'}) {
+		$dir = $disk->{'dir'};
+		}
+	else {
+		if ($server) {
+			$dir = $server->{'new_directory'} ||
+			       $server->{'directory'};
+			}
+		$dir ||= $vhost->{$manager.'_dir'};
+		}
+	}
+elsif ($server) {
+	# Server provided - use its defaults for new systems
+	# XXX citrix?
+	if ($server->{$manager.'_filesystem_iscsi'} ne '') {
+		$iscsi = $server->{$manager.'_filesystem_iscsi'};
+		}
+	elsif ($server->{$manager.'_filesystem_vg'}) {
+		$lvm = $server->{$manager.'_filesystem_vg'};
+		}
+	else {
+		$dir = $server->{'new_directory'} ||
+		       $server->{'directory'} ||
+		       $vhost->{$manager.'_dir'};
+		}
+	}
+else {
+	# Use host system defaults
+	if ($vhost->{$manager.'_iscsi'} ne '') {
+		$iscsi = $vhost->{$manager.'_iscsi'};
+		}
+	elsif ($vhost->{$manager.'_vg'}) {
+		$lvm = $vhost->{$manager.'_vg'};
+		}
+	else {
+		$dir = $vhost->{$manager.'_dir'};
+		}
+	}
+if ($lvm) {
 	# Host is using LVM, and free space has been collected in the
 	# post_refresh function
 	@rv = ( $vhost->{$manager.'_vg_free'}, $vhost->{$manager.'_vg_total'} );
 	}
-elsif ($manager && $iscsi ne '') {
+elsif ($iscsi ne '') {
 	# Host or VM is using iSCSI, so get free space from iSCSI server
 	my $iscsiserver = &get_managed_server($iscsi);
 	if ($iscsiserver) {
 		@rv = &get_iscsi_disk_space($iscsiserver);
 		}
 	}
-elsif ($vinfo && $vinfo->{'disk_list'} && $dir) {
+elsif ($dir && $vinfo && $vinfo->{'disk_list'}) {
 	# Get disk space from the specific directory the disk will be
 	# created on
 	foreach my $fs (sort { length($b->{'fs'}) <=> length($a->{'fs'}) }

@@ -206,7 +206,7 @@ if ($limits && $limits->{'max_disk'} && $incr > 0 &&
 	       &nice_size($limits->{'max_disk'}),
 	       &nice_size($limits->{'disk'})));
 	}
-$hostfree = &host_free_disk($vhost, $server->{'manager'}, $server);
+$hostfree = &host_free_disk($vhost, $server->{'manager'}, $server, $disk);
 if ($hostfree && $incr > $hostfree) {
 	&usage("The host system $vhost->{'host'} has only ".
 	       &nice_size($hostfree)." disk space free");

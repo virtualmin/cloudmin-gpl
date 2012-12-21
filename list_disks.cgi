@@ -32,7 +32,7 @@ if (defined(&$mfunc)) {
 # Build disk creation links, with storages
 $sfunc = "type_".$server->{'manager'}."_list_storages";
 if (&can_action($server, "storage") && defined(&$sfunc)) {
-	$storages = &$sfunc($vhost);
+	$storages = &$sfunc($vhost, $server);
 	if (ref($storages) && @$storages > 1) {
 		foreach $s (@$storages) {
 			push(@links, "<a href='edit_disk.cgi?new=1&".

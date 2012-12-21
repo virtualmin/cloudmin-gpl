@@ -152,7 +152,7 @@ else {
 	$sfunc = "type_".$server->{'manager'}."_list_storages";
 	if (defined(&$sfunc) && defined($in{'storage'}) &&
 	    &can_action($server, "storage")) {
-		$storages = &$sfunc($vhost);
+		$storages = &$sfunc($vhost, $server);
 		ref($storages) || &error($storages);
 		($gotstorage) = grep { $_->{'id'} eq $in{'storage'}} @$storages;
 		$gotstorage || &error($text{'disk_estorage'});
@@ -235,7 +235,7 @@ else {
 			       &nice_size($limits->{'disk'})));
 			}
 		$hostfree = &host_free_disk($vhost, $server->{'manager'},
-					    $server);
+					    $server, $disk);
 		if ($hostfree && $incr > $hostfree) {
 			&error(&text('disk_ehostlimit',
 				     &nice_size($hostfree)));

@@ -17,7 +17,7 @@ $vhost = &get_parent_server($server);
 $sfunc = "type_".$server->{'manager'}."_list_storages";
 if (defined(&$sfunc) && $in{'new'} && &can_action($server, "storage") &&
     $in{'storage'}) {
-	$storages = &$sfunc($vhost);
+	$storages = &$sfunc($vhost, $server);
 	ref($storages) || &error($storages);
 	($gotstorage) = grep { $_->{'id'} eq $in{'storage'} } @$storages;
 	$gotstorage || &error($text{'disk_estorage'});
@@ -144,7 +144,7 @@ print &ui_table_row($text{'disk_virt'},
 # Get current disk used and free on host
 $freemsg = "";
 ($diskfree, $disktotal) = &host_free_disk($vhost, $server->{'manager'},
-					  $server);
+					  $server, $disk);
 if ($diskfree) {
 	$freemsg = &text('disk_sizefree', &nice_size($disktotal),
 					  &nice_size($diskfree));

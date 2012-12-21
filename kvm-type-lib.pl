@@ -1569,7 +1569,7 @@ $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
 if (!$reset) {
 	my $ver = &kvm_host_version($vhost);
-	my $boot = $ver && &compare_versions($ver, "0.12") >= 0 ? ""
+	my $boot = $ver && &compare_versions($ver, "0.12.6") >= 0 ? ""
 							       : ",boot=on";
 	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0".
 		  ($server->{'kvm_virtio'} ? ",if=virtio".$boot : ",if=ide");
@@ -2479,7 +2479,7 @@ foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 		$cmd .= " -hd".$n." ".$1;
 		}
 	else {
-		if ($ver && &compare_versions($ver, "0.12") >= 0) {
+		if ($ver && &compare_versions($ver, "0.12.6") >= 0) {
 			$d =~ s/,boot=on//g;	# No longer needed
 			}
 		$cmd .= " -drive $d";
@@ -2985,13 +2985,21 @@ if (!$device) {
 	my $vhost = &type_kvm_parent($server);
 	my $kvm_dir = $server->{'new_directory'} || $vhost->{'kvm_dir'};
 	my $vg;
+	my $iscsi;
 	if ($storage) {
-		$vg = $storage->{'id'} =~ /^lvm_(\S+)/ ? $1 : undef;
+		if ($storage->{'id'} =~ /^lvm_(\S+)/) {
+			$vg = $1;
+			}
+		elsif ($storage->{'id'} eq 'iscsi') {
+			$iscsi = $server->{'kvm_filesystem_iscsi'};
+			}
 		$rv->{'storage_id'} = $storage->{'id'};
 		}
 	else {
 		$vg = $server->{'kvm_filesystem_vg'};
-		$rv->{'storage_id'} = $vg ? 'lvm_'.$vg : 'files';
+		$iscsi = $server->{'kvm_filesystem_iscsi'};
+		$rv->{'storage_id'} = $vg ? 'lvm_'.$vg :
+				      $iscsi ne '' ? 'iscsi' : 'files';
 		}
 	if ($vg) {
 		# Create an LVM name
@@ -3000,7 +3008,7 @@ if (!$device) {
 		$rv->{'lv'} =~ s/\./_/g;
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
-	elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
+	elsif ($iscsi ne '') {
 		# Disk will be on an iSCSI server. The real field gets set later
 		$rv->{'iscsi_server'} = $server->{'kvm_filesystem_iscsi'};
 		$rv->{'fixedreal'} = 1;
@@ -3009,6 +3017,7 @@ if (!$device) {
 		# Pick an image file
 		$rv->{'real'} = "$kvm_dir/$server->{'host'}.".
 				(scalar(@$disks)+1).".img";
+		$rv->{'dir'} = $kvm_dir;
 		}
 	}
 $rv->{'format'} = 'disk';
@@ -3685,14 +3694,21 @@ sub type_kvm_list_disk_filesystems
 return ('ext3', 'ext4', 'ext2', 'reiserfs', 'swap');
 }
 
-# type_kvm_list_storages(&vhost)
+# type_kvm_list_storages(&vhost, [&server])
 # Returns a list of possible storage locations on some host system. Each is a
 # hash ref with a id and desc fields. Example storages include local files and
 # LVM volume groups.
 sub type_kvm_list_storages
 {
-my ($vhost) = @_;
+my ($vhost, $server) = @_;
 my @rv;
+my $iscsi = $server ? $server->{'kvm_filesystem_iscsi'}
+		    : $vhost->{'kvm_iscsi'};
+if ($iscsi ne '') {
+	push(@rv, { 'id' => 'iscsi',
+		    'desc' => $text{'storage_iscsi'},
+		    'adddesc' => $text{'storage_addiscsi'} });
+	}
 push(@rv, { 'id' => 'files',
 	    'desc' => $text{'storage_files'},
 	    'adddesc' => $text{'storage_addfiles'} });

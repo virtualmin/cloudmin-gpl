@@ -180,7 +180,7 @@ if ($storage) {
 	$sfunc = "type_".$server->{'manager'}."_list_storages";
 	defined(&$sfunc) || &usage("Disk storage location cannot be specified ".
 				   "for this virtual system type");
-	$storages = &$sfunc($vhost);
+	$storages = &$sfunc($vhost, $server);
 	ref($storages) || &usage("Failed to list disk storage ".
 				 "locations : $storages");
 	($gotstorage) = grep { $_->{'id'} eq $storage ||
@@ -243,7 +243,7 @@ if ($limits && $limits->{'max_disk'} &&
 	       &nice_size($limits->{'max_disk'}),
 	       &nice_size($limits->{'disk'})));
 	}
-$hostfree = &host_free_disk($vhost, $server->{'manager'}, $server);
+$hostfree = &host_free_disk($vhost, $server->{'manager'}, $server, $disk);
 if ($hostfree && $disk->{'size'} > $hostfree) {
 	&usage("The host system $vhost->{'host'} has only ".
 	       &nice_size($hostfree)." disk space free");
