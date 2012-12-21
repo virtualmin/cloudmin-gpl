@@ -58,3 +58,4 @@ When a backup is restored that contains disks whose size doesn't match the targe
 Systems to backup can now be selected by host or location group.
 ---- Changes since 6.6 ----
 Additional command-line parameters for KVM instances can now be set when creating or editing a system.
+The disk space available on a host system for a new virtual disk or system now takes the directory to be used into account.

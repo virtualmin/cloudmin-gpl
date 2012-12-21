@@ -228,7 +228,8 @@ if (defined($in{'disk'}) || defined($in{'disk_def'})) {
 	else {
 		# Check limits
 		$incr = $d - $oldd;
-		$diskfree = &host_free_disk($vhost, $server->{'manager'});
+		$diskfree = &host_free_disk($vhost, $server->{'manager'},
+					    $server);
 		$checkdisk = !$vhost->{$server->{'manager'}.'_overdisk'};
 		if ($limits && $limits->{'max_disk'} &&
 		    $limits->{'disk'} + $incr > $limits->{'max_disk'}) {

@@ -966,6 +966,7 @@ if ($args->{'disksize'} || $empty) {
 		return "--kvm-disksize must be at least $img->{'rawsize'} ".
 		       "bytes, as that is the size of the selected image";
 		}
+	$server->{'kvm_disktotal'} += $args->{'disksize'}*1024*1024;
 	}
 else {
 	$server->{'kvm_disktotal'} += $img->{'rawsize'};
@@ -1032,7 +1033,8 @@ $vhost->{'kvm_host'} ||
 my ($ok, $err) = &usable_host_system($vhost, "kvm",
                                      $server->{'kvm_memory'}*1024*1024,
 				     0,
-                                     $server->{'kvm_disktotal'});
+                                     $server->{'kvm_disktotal'},
+				     $server);
 $ok || return "Host system $vhost->{'host'} cannot be used : $err";
 $server->{'kvm_on'} = $vhost->{'id'};
 

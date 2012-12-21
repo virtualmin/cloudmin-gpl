@@ -605,6 +605,15 @@ if ($multi) {
 				print "    Disk space free: ",
 				      &nice_size($info->{'disk_free'}),"\n";
 				}
+			if ($info->{'disk_list'}) {
+				foreach my $fs (@{$info->{'disk_list'}}) {
+					print "    Filesystem: $fs->{'fs'}",
+				          " size ",&nice_size($fs->{'total'}),
+				          " used ",&nice_size($fs->{'used'}),
+				          " free ",&nice_size($fs->{'free'}),
+					  "\n";
+					}
+				}
 			if ($info->{'startstop'}) {
 				@ss = @{$info->{'startstop'}};
 				print "    Running services: ",

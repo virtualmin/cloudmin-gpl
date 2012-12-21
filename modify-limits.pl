@@ -497,7 +497,7 @@ foreach $s (@servers) {
 		print "Setting disk limit on $tdesc system $s->{'host'} to ",
 		      ($disk ? &nice_size($disk) : "Unlimited")," ..\n";
 		$cfunc = "type_".$t."_can_disk";
-		$diskfree = &host_free_disk($vhost, $s->{'manager'});
+		$diskfree = &host_free_disk($vhost, $s->{'manager'}, $s);
 		$checkdisk = !$vhost->{$s->{'manager'}.'_overdisk'};
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_disk";

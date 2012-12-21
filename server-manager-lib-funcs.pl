@@ -3266,9 +3266,9 @@ if (&can_ssh_status($server)) {
 				$free += $avail*1024;
 				push(@fslist, { 'fs' => $mount,
 						'dev' => $fs,
-						'total' => $blocks,
-						'used' => $used,
-						'free' => $avail });
+						'total' => $blocks*1024,
+						'used' => $used*1024,
+						'free' => $avail*1024 });
 				}
 			}
 		$info->{'disk_list'} = \@fslist;
@@ -8358,14 +8358,14 @@ my $rv = $config{'from_addr'} || &mailboxes::get_from_address();
 return $rv;
 }
 
-# host_free_desc(&vhost, [manager])
+# host_free_desc(&vhost, [manager], [&server])
 # Returns a string listing free disk space and RAM for some host
 sub host_free_desc
 {
-my ($vhost, $manager) = @_;
+my ($vhost, $manager, $server) = @_;
 return "" if (!can_action(undef, "global"));
 my @rv;
-my $freedisk = &host_free_disk($vhost, $manager);
+my $freedisk = &host_free_disk($vhost, $manager, $server);
 if ($freedisk) {
 	push(@rv, &text('create_hostdisk', &nice_size($freedisk)));
 	}
@@ -8389,7 +8389,9 @@ my $lvm = $vhost->{$manager.'_vg_free'} &&
 		       $manager eq 'citrix');
 my $iscsi = $server ? $server->{$manager.'_filesystem_iscsi'}
 		    : $vhost->{$manager.'_iscsi'};
-my $new_dir = $server ? $server->{'new_directory'} : undef;
+my $new_dir = !$server ? undef :
+	      $server->{'new_directory'} ? $server->{'new_directory'} :
+					   $server->{'directory'};
 my $dir = $new_dir || $vhost->{$manager.'_dir'};
 if ($manager && $lvm && !$new_dir) {
 	# Host is using LVM, and free space has been collected in the
