@@ -614,6 +614,15 @@ if ($multi) {
 					  "\n";
 					}
 				}
+			if ($info->{'vg_list'}) {
+				foreach my $vg (@{$info->{'vg_list'}}) {
+					print "    LVM VG: $vg->{'vg'}",
+				          " size ",&nice_size($vg->{'total'}),
+				          " used ",&nice_size($vg->{'used'}),
+				          " free ",&nice_size($vg->{'free'}),
+					  "\n";
+					}
+				}
 			if ($info->{'startstop'}) {
 				@ss = @{$info->{'startstop'}};
 				print "    Running services: ",

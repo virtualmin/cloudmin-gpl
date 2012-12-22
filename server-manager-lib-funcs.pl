@@ -3139,6 +3139,34 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				$server, "net", "active_interfaces") ];
 			}
 
+		# Get list of LVM volume groups, if this is a parent
+		if (&is_parent_server($server) &&
+		    &remote_foreign_check($server, "lvm")) {
+			$last_remote_error = undef;
+			&remote_foreign_require($server, "lvm");
+			my @vgs = &remote_foreign_call($server, "lvm",
+					"list_volume_groups");
+			if (!$last_remote_error && ref($vgs[0])) {
+				my @vglist;
+				foreach my $vg (@vgs) {
+					my $vgl = {
+					    'vg' => $vg->{'name'},
+					    'total' => $vg->{'pe_total'}*
+						       $vg->{'pe_size'}*1024,
+					    'used' => $vg->{'pe_alloc'}*
+						      $vg->{'pe_size'}*1024,
+					    };
+					$vgl->{'free'} = $vgl->{'total'} -
+							 $vgl->{'used'};
+					push(@vglist, $vgl);
+					}
+				$info->{'vg_list'} = \@vglist;
+				}
+			}
+		else {
+			delete($info->{'vg_list'});
+			}
+
 		# Get Webmin config dir, if not known yet
 		if (!$server->{'webmin_config_directory'}) {
 			$server->{'webmin_config_directory'} =
@@ -8385,6 +8413,13 @@ my ($vhost, $manager, $server, $disk) = @_;
 my $vinfo = &get_server_collected($vhost);
 my @rv;
 
+# For Citrix Xen, all storage is on internally control volume groups. So just
+# return the pre-cached size
+if ($manager eq 'citrix') {
+	@rv = ( $vhost->{'citrix_vg_free'}, $vhost->{'citrix_vg_total'} );
+	return wantarray ? @rv : $rv[0];
+	}
+
 # Work out where the disk would be created
 my ($lvm, $iscsi, $dir);
 if ($disk) {
@@ -8409,7 +8444,6 @@ if ($disk) {
 	}
 elsif ($server) {
 	# Server provided - use its defaults for new systems
-	# XXX citrix?
 	if ($server->{$manager.'_filesystem_iscsi'} ne '') {
 		$iscsi = $server->{$manager.'_filesystem_iscsi'};
 		}
@@ -8434,10 +8468,22 @@ else {
 		$dir = $vhost->{$manager.'_dir'};
 		}
 	}
-if ($lvm) {
-	# Host is using LVM, and free space has been collected in the
-	# post_refresh function
-	@rv = ( $vhost->{$manager.'_vg_free'}, $vhost->{$manager.'_vg_total'} );
+
+if ($lvm && $vinfo && $vinfo->{'vg_list'}) {
+	# Host is using LVM, and we want a specific volume group
+	my ($free, $total);
+	foreach my $vg (@{$vinfo->{'vg_list'}}) {
+		if ($vg->{'vg'} eq $lvm) {
+			@rv = ( $vg->{'free'}, $vg->{'total'} );
+			$free += $vg->{'free'};
+			$total += $vg->{'total'};
+			last;
+			}
+		}
+	if (!@rv) {
+		# Fall back to sum of all volume groups
+		@rv = ( $free, $total );
+		}
 	}
 elsif ($iscsi ne '') {
 	# Host or VM is using iSCSI, so get free space from iSCSI server
@@ -9422,14 +9468,8 @@ elsif ($hostmode eq 'disk') {
 	# Sort by free disk
 	my %diskmap;
 	foreach my $vhost (@vhosts) {
-		if ($vhost->{$type.'_vg_free'}) {
-			# Special case for Xen or KVM on LVM
-			$diskmap{$vhost->{'id'}} = $vhost->{$type.'_vg_free'};
-			}
-		else {
-			my $info = &get_server_collected($vhost);
-			$diskmap{$vhost->{'id'}} = $info->{'disk_free'};
-			}
+		my $free = &host_free_disk($vhost, $type, $server);
+		$diskmap{$vhost->{'id'}} = $free;
 		}
 	@vhosts = sort { $diskmap{$b->{'id'}} <=> $diskmap{$a->{'id'}}} @vhosts;
 	return $vhosts[0];

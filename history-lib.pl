@@ -58,10 +58,10 @@ if ($info->{'disk_total'}) {
 
 # Add disk usage for hosting
 foreach my $manager (&is_parent_server($server)) {
-	if ($server->{$manager.'_vg_free'}) {
-		push(@stats, [ "hostdiskused",$server->{$manager.'_vg_total'} -
-					      $server->{$manager.'_vg_free'} ]);
-		push(@stats, [ "hostdiskfree",$server->{$manager.'_vg_free'} ]);
+	my ($free, $total) = &host_free_disk($server, $manager);
+	if ($total) {
+		push(@stats, [ "hostdiskused", $total - $free ]);
+		push(@stats, [ "hostdiskfree", $free ]);
 		last;
 		}
 	}

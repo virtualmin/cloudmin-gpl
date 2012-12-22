@@ -1569,7 +1569,7 @@ $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
 if (!$reset) {
 	my $ver = &kvm_host_version($vhost);
-	my $boot = $ver && &compare_versions($ver, "0.12.6") >= 0 ? ""
+	my $boot = $ver && &compare_versions($ver, "1.1") >= 0 ? ""
 							       : ",boot=on";
 	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0".
 		  ($server->{'kvm_virtio'} ? ",if=virtio".$boot : ",if=ide");
@@ -2479,7 +2479,7 @@ foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
 		$cmd .= " -hd".$n." ".$1;
 		}
 	else {
-		if ($ver && &compare_versions($ver, "0.12.6") >= 0) {
+		if ($ver && &compare_versions($ver, "1.1") >= 0) {
 			$d =~ s/,boot=on//g;	# No longer needed
 			}
 		$cmd .= " -drive $d";
@@ -3714,20 +3714,12 @@ push(@rv, { 'id' => 'files',
 	    'adddesc' => $text{'storage_addfiles'} });
 if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	# Check for and add LVM volume groups
-	if ($vhost->{'kvm_vg'} && &remote_foreign_check($vhost, "lvm")) {
-		$last_remote_error = undef;
-		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
-		local @vgs;
-		if (!$last_remote_error) {
-			@vgs = &remote_foreign_call($vhost, "lvm",
-						    "list_volume_groups");
-			}
-		@vgs = grep { $_->{'name'} ne 'gpt_vg' } @vgs;
-		push(@rv, map {
-			{ 'id' => 'lvm_'.$_->{'name'},
-			  'desc' => &text('storage_lvm', $_->{'name'}),
-			  'adddesc' => &text('storage_addlvm', $_->{'name'}) }
-				} @vgs);
+	my $info = &get_server_collected($vhost);
+	foreach my $vg (@{$info->{'vg_list'}}) {
+		next if ($vg->{'vg'} eq 'gpt_vg');
+		push(@rv, { 'id' => 'lvm_'.$vg->{'vg'},
+			    'desc' => &text('storage_lvm', $vg->{'vg'}),
+			    'adddesc' => &text('storage_addlvm', $vg->{'vg'}) });
 		}
 	}
 return \@rv;
@@ -4966,41 +4958,10 @@ sub type_kvm_post_host_refresh
 {
 my ($server, $regen) = @_;
 
-# If using LVM, see how much space is free on the VG
-if ($server->{'kvm_vg'} &&
-    ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt')) {
-	&remote_foreign_require($server, "lvm", "lvm-lib.pl");
-	my @vgs = &remote_foreign_call($server, "lvm", "list_volume_groups");
-	if (@vgs) {
-		$server->{'kvm_vg_total'} = 0;
-		$server->{'kvm_vg_used'} = 0;
-		}
-	foreach my $vg (@vgs) {
-		$server->{'kvm_vg_total'} +=
-			$vg->{'pe_total'}*$vg->{'pe_size'}*1024;
-		$server->{'kvm_vg_used'} +=
-			$vg->{'pe_alloc'}*$vg->{'pe_size'}*1024;
-		}
-	$server->{'kvm_vg_free'} = $server->{'kvm_vg_total'} -
-				   $server->{'kvm_vg_used'};
-	}
-elsif (!$server->{'kvm_vg'}) {
-	# LVM definately not in use .. check disk space on the /kvm directory
-	if (&can_ssh_status($server)) {
-		my ($out, $ex, $err) = &execute_command_on_server(
-			$server, "df -k ".quotemeta($server->{'kvm_dir'}));
-		if (!$ex && !$err && $out =~ /\s(\d+)\s+(\d+)\s+(\d+)/) {
-			$server->{'kvm_vg_total'} = $1*1024;
-			$server->{'kvm_vg_used'} = $2*1024;
-			$server->{'kvm_vg_free'} = $3*1024;
-			}
-		else {
-			delete($server->{'kvm_vg_total'});
-			delete($server->{'kvm_vg_used'});
-			delete($server->{'kvm_vg_free'});
-			}
-		}
-	}
+# Not needed anymore
+delete($server->{'kvm_vg_total'});
+delete($server->{'kvm_vg_used'});
+delete($server->{'kvm_vg_free'});
 
 # Check if cgroups are supported
 if (&can_ssh_status($server) &&
