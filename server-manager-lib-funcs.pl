@@ -2916,14 +2916,14 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		# Webmin replied, but it rejected our login
 		$server->{'status'} = 'nowebminlogin';
 		$server->{'status_msg'} = $err;
-		goto DONECHECK;
+		goto NOWEBMINCHECK;
 		}
 	elsif ($status) {
 		# Could not login to Webmin .. which may be because it is down,
 		# un-contactable, or not installed
 		$server->{'status'} = $webminroot ? 'downwebmin' : 'nowebmin';
 		$server->{'status_msg'} = $err;
-		goto DONECHECK;
+		goto NOWEBMINCHECK;
 		}
 
 	# Webmin is OK! Check for Virtualmin
@@ -3207,6 +3207,9 @@ else {
 	$server->{'status_msg'} = undef;
 	}
 
+# If Webmin check failed, a goto above will jump here
+NOWEBMINCHECK:
+
 # If we couldn't get memory or disk from Webmin, get it via SSH
 my $info = &get_server_collected($server);
 my $got_more_info;
@@ -3271,7 +3274,7 @@ if (!$got_memory && &can_ssh_status($server)) {
 
 if (&can_ssh_status($server)) {
 	# Get disk size and free space from df command, for each filesystem
-	my ($out, $ex, $err) = &execute_command_on_server($server, "df -kl");
+	my ($out, $ex, $err) = &execute_command_on_server($server, "df -k");
 	if (!$ex && !$err) {
 		my @lines = split(/\r?\n/, $out);
 		my ($total, $free);
@@ -3282,9 +3285,18 @@ if (&can_ssh_status($server)) {
 				# Filesystem name on own line
 				$l .= $lines[++$i];
 				}
-			if ($l =~ /^\// && $l !~ /^\/platform\//) {
-				my ($fs, $blocks, $used, $avail, $pc, $mount) =
-					split(/\s+/, $l);
+			my ($fs, $blocks, $used, $avail, $pc, $mount) =
+				split(/\s+/, $l);
+			next if ($fs =~ /^\/platform\//);
+			next if ($mount !~ /^\//);
+			push(@fslist, { 'fs' => $mount,
+					'dev' => $fs,
+					'total' => $blocks*1024,
+					'used' => $used*1024,
+					'free' => $avail*1024 });
+			if ($fs =~ /^\//) {
+				# Only add local filesystems to
+				# free disk space total
 				if ($blocks) {
 					$total += $blocks*1024;
 					}
@@ -3292,11 +3304,6 @@ if (&can_ssh_status($server)) {
 					$total += ($used+$avail)*1024;
 					}
 				$free += $avail*1024;
-				push(@fslist, { 'fs' => $mount,
-						'dev' => $fs,
-						'total' => $blocks*1024,
-						'used' => $used*1024,
-						'free' => $avail*1024 });
 				}
 			}
 		$info->{'disk_list'} = \@fslist;
