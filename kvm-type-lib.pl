@@ -307,7 +307,7 @@ if ($got->{'args'}->{'smp'}) {
 			$server->{'kvm_smp_cores'} = $1;
 			}
 		elsif ($s =~ /sockets=(\d+)/) {
-			$server->{'kvm_smp_cores'} = $s[0] / $s;
+			$server->{'kvm_smp_cores'} = $s[0] / $1;
 			}
 		}
 	}
