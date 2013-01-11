@@ -314,12 +314,13 @@ else {
 	else {
 		# Modify the size or devices, if we can
 		&ui_print_header(&server_in($server), $text{'disk_titlem'}, "");
-		&$first_print(&text('disk_modifying',
+		&start_background_dot_printer(&text('disk_modifying',
 				    "<tt>$disk->{'real'}</tt>"));
 		$cfunc = "type_".$server->{'manager'}."_modify_disk";
 		$err = &$cfunc($server, $disk, $olddisk);
 		&save_disk_include($server, $disk, $in{'include'});
 		&save_managed_server($server);
+		&stop_background_dot_printer();
 		if ($err) {
 			&$second_print(&text('disk_modifyfailed', $err));
 			}
