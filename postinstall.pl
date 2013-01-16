@@ -5,7 +5,7 @@ sub module_install
 {
 # Convert all existing cron jobs to WebminCron, except existing backups
 # XXX
-foreach my $script ($check_status_cmd, $check_licence_cmd) {
+foreach my $script ($check_status_cmd, $check_licence_cmd, $backup_space_cmd) {
 	if ($script ne $backup_cron_cmd) {
 		&convert_cron_script($script);
 		}
@@ -89,19 +89,16 @@ if (&supports_plans()) {
 
 # Create cron job to count owner's backup space used
 if (defined(&list_backups)) {
-	my $job = &find_module_cron_job($backup_space_cmd);
-	if (!$job) {
-		$job = { 'command' => $backup_space_cmd,
-			 'user' => 'root',
-			 'mins' => int(rand()*60),
-			 'hours' => int(rand()*24),
-			 'days' => '*',
-			 'weekdays' => '*',
-			 'months' => '*',
-			 'active' => 1, };
-		&cron::create_cron_job($job);
-		&cron::create_wrapper($backup_space_cmd,
-				      $module_name, "space.pl");
+	if (!&find_cron_script($backup_space_cmd)) {
+		my $job = { 'command' => $backup_space_cmd,
+			    'user' => 'root',
+			    'mins' => int(rand()*60),
+			    'hours' => int(rand()*24),
+			    'days' => '*',
+			    'weekdays' => '*',
+			    'months' => '*',
+			    'active' => 1, };
+		&setup_cron_script($job);
 		}
 	}
 
