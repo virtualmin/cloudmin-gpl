@@ -100,7 +100,7 @@ my ($backup, $wasnew) = @_;
 my $cmd = $backup_cron_cmd." --id ".$backup->{'id'};
 my $job;
 if (!$wasnew) {
-	($job) = &find_server_manager_cron_job($cmd);
+	($job) = &find_module_cron_job($cmd);
 	}
 if ($backup->{'enabled'} && $job) {
 	# Fix job schedule
@@ -138,7 +138,7 @@ my ($backup) = @_;
 # Delete cron too
 &foreign_require("cron", "cron-lib.pl");
 my $cmd = $backup_cron_cmd." --id ".$backup->{'id'};
-my ($job) = &find_server_manager_cron_job($cmd);
+my ($job) = &find_module_cron_job($cmd);
 if ($job) {
 	&lock_file(&cron::cron_file($job));
 	&cron::delete_cron_job($job);

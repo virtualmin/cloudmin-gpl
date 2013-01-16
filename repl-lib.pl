@@ -538,7 +538,7 @@ if (defined(&list_backups)) {
 		}
 
 	# Delete any backup.pl cron jobs that are no longer valid
-	foreach my $job (&find_server_manager_cron_job($backup_cron_cmd)) {
+	foreach my $job (&find_module_cron_job($backup_cron_cmd)) {
 		if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$backupids{$1}) {
 			&cron::delete_cron_job($job);
 			}
@@ -556,7 +556,7 @@ if (defined(&list_virtualmin_syncs)) {
 		}
 
 	# Delete any vsync.pl cron jobs that are no longer valid
-	foreach my $job (&find_server_manager_cron_job($vsync_cron_cmd)) {
+	foreach my $job (&find_module_cron_job($vsync_cron_cmd)) {
 		if ($job->{'command'} =~ /\-\-id\s+(\S+)/ && !$vsyncids{$1}) {
 			&cron::delete_cron_job($job);
 			}

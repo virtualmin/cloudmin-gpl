@@ -3,6 +3,14 @@ do 'server-manager-lib.pl';
 
 sub module_install
 {
+# Convert all existing cron jobs to WebminCron, except existing backups
+# XXX
+foreach my $script ($check_status_cmd, $check_licence_cmd) {
+	if ($script ne $backup_cron_cmd) {
+		&convert_cron_script($script);
+		}
+	}
+
 # Make sure the remote.cgi page is accessible in non-session mode
 my %miniserv;
 &get_miniserv_config(\%miniserv);
@@ -22,33 +30,29 @@ $config{'first_version'} ||= &get_base_module_version();
 
 # Setup Cron job to check managed server statuses
 &foreign_require("cron", "cron-lib.pl");
-my $job = &find_server_manager_cron_job($check_status_cmd);
-if (!$job) {
-	$job = { 'command' => $check_status_cmd,
-		 'user' => 'root',
-		 'mins' => '0,5,10,15,20,25,30,35,40,45,50,55',
-		 'hours' => '*',
-		 'days' => '*',
-		 'weekdays' => '*',
-		 'months' => '*',
-		 'active' => 1, };
-	&cron::create_cron_job($job);
-	&cron::create_wrapper($check_status_cmd, $module_name, "status.pl");
+if (!&find_cron_script($check_status_cmd)) {
+	my $job = { 'command' => $check_status_cmd,
+		    'user' => 'root',
+		    'mins' => '0,5,10,15,20,25,30,35,40,45,50,55',
+		    'hours' => '*',
+		    'days' => '*',
+		    'weekdays' => '*',
+		    'months' => '*',
+		    'active' => 1, };
+	&setup_cron_script($job);
 	}
 
 # And cron job to check licence
-my $job = &find_server_manager_cron_job($check_licence_cmd);
-if (!$job) {
-	$job = { 'command' => $check_licence_cmd,
-		 'user' => 'root',
-		 'mins' => int(rand()*60),
-		 'hours' => '*',
-		 'days' => '*',
-		 'weekdays' => '*',
-		 'months' => '*',
-		 'active' => 1, };
-	&cron::create_cron_job($job);
-	&cron::create_wrapper($check_licence_cmd, $module_name, "licence.pl");
+if (!&find_cron_script($check_licence_cmd)) {
+	my $job = { 'command' => $check_licence_cmd,
+		    'user' => 'root',
+		    'mins' => int(rand()*60),
+		    'hours' => '*',
+		    'days' => '*',
+		    'weekdays' => '*',
+		    'months' => '*',
+		    'active' => 1, };
+	&setup_cron_script($job); 
 	}
 
 # Refresh my status
@@ -85,7 +89,7 @@ if (&supports_plans()) {
 
 # Create cron job to count owner's backup space used
 if (defined(&list_backups)) {
-	my $job = &find_server_manager_cron_job($backup_space_cmd);
+	my $job = &find_module_cron_job($backup_space_cmd);
 	if (!$job) {
 		$job = { 'command' => $backup_space_cmd,
 			 'user' => 'root',

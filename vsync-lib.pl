@@ -31,7 +31,7 @@ if (!$jobs) {
 	}
 if (!$keepenabled) {
 	my $cmd = $vsync_cron_cmd." --id ".$vsync{'id'};
-	$job = &find_server_manager_cron_job($cmd, $jobs);
+	$job = &find_module_cron_job($cmd, $jobs);
 	$vsync{'enabled'} = $job ? 1 : 0;
 	}
 return \%vsync;
@@ -65,7 +65,7 @@ my ($vsync, $wasnew) = @_;
 my $cmd = $vsync_cron_cmd." --id ".$vsync->{'id'};
 my $job;
 if (!$wasnew) {
-	($job) = &find_server_manager_cron_job($cmd);
+	($job) = &find_module_cron_job($cmd);
 	}
 if ($vsync->{'enabled'} && $job) {
 	# Fix job schedule
@@ -104,7 +104,7 @@ my $file = $vsyncs_dir."/".$vsync->{'id'};
 # Delete cron too
 &foreign_require("cron", "cron-lib.pl");
 my $cmd = $vsync_cron_cmd." --id ".$vsync->{'id'};
-my ($job) = &find_server_manager_cron_job($cmd);
+my ($job) = &find_module_cron_job($cmd);
 if ($job) {
 	&lock_file(&cron::cron_file($job));
 	&cron::delete_cron_job($job);

@@ -18,7 +18,8 @@ foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "commands", "filesystem", "history", "json", "dns",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
 		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp",
-		 "roundrobin", "scalegroup", "stats", "firewall", "iscsi") {
+		 "roundrobin", "scalegroup", "stats", "firewall", "iscsi",
+		 "cron") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -8368,21 +8369,6 @@ if ($server->{'status'} ne 'down' &&
 	}
 }
 
-# find_server_manager_cron_job(command, [&jobs], [user])
-# Returns the cron job object that runs some command (perhaps with redirection)
-sub find_server_manager_cron_job
-{
-my ($cmd, $jobs, $user) = @_;
-if (!$jobs) {
-	&foreign_require("cron", "cron-lib.pl");
-	$jobs = [ &cron::list_cron_jobs() ];
-	}
-$user ||= "root";
-my @rv = grep { $_->{'user'} eq $user &&
-	     $_->{'command'} =~ /(^|[ \|\&;])\Q$cmd\E($|[ \|\&><;])/ } @$jobs;
-return wantarray ? @rv : $rv[0];
-}
-
 # get_global_from_address(&server)
 # Returns the from address to use when sending email to some server.
 sub get_global_from_address
@@ -10829,16 +10815,6 @@ if (&has_command_on_server($server, "lsof")) {
 	return \@rv;
 	}
 return "Missing lsof command";
-}
-
-# copy_cron_sched_keys(&src, &dest)
-# Copy keys defining a cron schedule from one hash ref to another
-sub copy_cron_sched_keys
-{
-my ($src, $dst) = @_;
-foreach my $k ('mins', 'hours', 'days', 'months', 'weekdays', 'special') {
-	$dst->{$k} = $src->{$k};
-	}
 }
 
 # distance_from_server(&server1, &server2)

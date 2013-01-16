@@ -91,7 +91,7 @@ my ($msg) = @_;
 # Returns the job object for bandwidth monitoring
 sub find_bw_cron_job
 {
-return &find_server_manager_cron_job($bandwidth_cron_cmd);
+return &find_module_cron_job($bandwidth_cron_cmd);
 }
 
 # get_bandwidth(&server)
