@@ -4,10 +4,8 @@ do 'server-manager-lib.pl';
 sub module_install
 {
 # Convert all existing cron jobs to WebminCron, except existing backups
-# XXX
-foreach my $script ($check_status_cmd, $check_licence_cmd, $backup_space_cmd,
-		    $bandwidth_cron_cmd) {
-	if ($script ne $backup_cron_cmd) {
+foreach my $script (@cron_cmds) {
+	if ($script ne $backup_cron_cmd && $script ne $vsync_cron_cmd) {
 		&convert_cron_script($script);
 		}
 	}

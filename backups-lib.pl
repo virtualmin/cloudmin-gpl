@@ -21,7 +21,7 @@ foreach my $b (readdir(BACKUPS)) {
 closedir(BACKUPS);
 
 if (!$keepenabled) {
-	# Merge in cron jobs to see which are enabled
+	# Merge in classic cron jobs to see which are enabled
 	&foreign_require("cron", "cron-lib.pl");
 	my @jobs = &cron::list_cron_jobs();
 	foreach my $j (@jobs) {
@@ -32,6 +32,22 @@ if (!$keepenabled) {
 			my ($backup) = grep { $_->{'id'} eq $id } @rv;
 			if ($backup) {
 				$backup->{'enabled'} = 1;
+				&copy_cron_sched_keys($j, $backup);
+				}
+			}
+		}
+
+	# Also merge in webmincron jobs
+	&foreign_require("webmincron");
+	my @jobs = &webmincron::list_webmin_crons();
+	foreach my $j (@jobs) {
+		if ($j->{'module'} eq $module_name &&
+		    $j->{'func'} eq 'run_cron_script' &&
+		    $j->{'args'}->[0] eq 'backup.pl') {
+			local $id = $j->{'args'}->[1] =~ /--id\s+(\d+)/ ? $1 : 1;
+			local ($backup) = grep { $_->{'id'} eq $id } @rv;
+			if ($backup) {
+				$backup->{'enabled'} = 2;
 				&copy_cron_sched_keys($j, $backup);
 				}
 			}
@@ -96,34 +112,46 @@ $backup->{'file'} = "$scheduled_backups_dir/$backup->{'id'}";
 sub save_backup_cron
 {
 my ($backup, $wasnew) = @_;
-&foreign_require("cron", "cron-lib.pl");
+&foreign_require("cron");
 my $cmd = $backup_cron_cmd." --id ".$backup->{'id'};
 my $job;
 if (!$wasnew) {
-	($job) = &find_module_cron_job($cmd);
+	($job) = &find_cron_script($cmd);
 	}
 if ($backup->{'enabled'} && $job) {
 	# Fix job schedule
 	&copy_cron_sched_keys($backup, $job);
-	&lock_file(&cron::cron_file($job));
-	&cron::change_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	if ($job->{'module'}) {
+		# Webmin cron
+		&setup_cron_script($job);
+		}
+	else {
+		# Classic cron
+		&lock_file(&cron::cron_file($job));
+		&cron::change_cron_job($job);
+		&unlock_file(&cron::cron_file($job));
+		}
 	}
 elsif ($backup->{'enabled'} && !$job) {
-	# Create cron job
+	# Create webmincron job
 	$job = { 'user' => 'root',
 		 'active' => 1,
 		 'command' => $cmd };
 	&copy_cron_sched_keys($backup, $job);
-	&lock_file(&cron::cron_file($job));
-	&cron::create_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	&setup_cron_script($job);
 	}
 elsif (!$backup->{'enabled'} && $job) {
 	# Delete cron job
-	&lock_file(&cron::cron_file($job));
-	&cron::delete_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	if ($job->{'module'}) {
+		# Webmin cron
+		&delete_cron_script($job);
+		}
+	else {
+		# Classic cron
+		&lock_file(&cron::cron_file($job));
+		&cron::delete_cron_job($job);
+		&unlock_file(&cron::cron_file($job));
+		}
 	}
 &cron::create_wrapper($backup_cron_cmd, $module_name, "backup.pl");
 }
@@ -136,13 +164,10 @@ my ($backup) = @_;
 &unlink_logged($backup->{'file'});
 
 # Delete cron too
-&foreign_require("cron", "cron-lib.pl");
 my $cmd = $backup_cron_cmd." --id ".$backup->{'id'};
-my ($job) = &find_module_cron_job($cmd);
+my ($job) = &find_cron_script($cmd);
 if ($job) {
-	&lock_file(&cron::cron_file($job));
-	&cron::delete_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	&delete_cron_script($job);
 	}
 }
 
