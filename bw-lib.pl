@@ -87,13 +87,6 @@ my ($msg) = @_;
 &close_tempfile(MSG);
 }
 
-# find_bw_cron_job()
-# Returns the job object for bandwidth monitoring
-sub find_bw_cron_job
-{
-return &find_module_cron_job($bandwidth_cron_cmd);
-}
-
 # get_bandwidth(&server)
 # Returns the bandwidth usage object for some server
 sub get_bandwidth
@@ -238,7 +231,7 @@ return $umsg;
 # config flag.
 sub setup_bandwidth_cron
 {
-my $job = &find_bw_cron_job();
+my $job = &find_cron_script($bandwidth_cron_cmd);
 if (!$job && $config{'bw_enabled'}) {
 	# Create the job
 	$job = { 'command' => $bandwidth_cron_cmd,
@@ -249,16 +242,11 @@ if (!$job && $config{'bw_enabled'}) {
 		 'weekdays' => '*',
 		 'months' => '*',
 		 'active' => 1, };
-	&lock_file(&cron::cron_file($job));
-	&cron::create_cron_job($job);
-	&cron::create_wrapper($bandwidth_cron_cmd, $module_name,"bandwidth.pl");
-	&unlock_file(&cron::cron_file($job));
+	&setup_cron_script($job);
 	}
 elsif ($job && !$config{'bw_enabled'}) {
 	# Delete the job
-	&lock_file(&cron::cron_file($job));
-	&cron::delete_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	&delete_cron_script($job);
 	}
 }
 

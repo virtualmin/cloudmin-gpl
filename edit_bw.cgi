@@ -9,7 +9,7 @@ print &ui_form_start("save_bw.cgi", "post");
 print &ui_table_start($text{'bw_header'}, undef, 2);
 
 # Is monitoring enabled?
-$job = &find_bw_cron_job();
+$job = &find_cron_script($bandwidth_cron_cmd);
 print &ui_table_row($text{'bw_enabled'},
 	&ui_yesno_radio("enabled", $job ? 1 : 0));
 
