@@ -6,32 +6,26 @@ sub list_virtualmin_syncs
 {
 my ($keepenabled) = @_;
 my @rv;
-&foreign_require("cron", "cron-lib.pl");
-my @jobs = &cron::list_cron_jobs();
 opendir(VSYNC, $vsyncs_dir);
 foreach my $f (readdir(VSYNC)) {
 	next if ($f =~ /^\./);
-	my $vsync = &get_virtualmin_sync($f, \@jobs, $keepenabled);
+	my $vsync = &get_virtualmin_sync($f, $keepenabled);
 	push(@rv, $vsync) if ($vsync);
 	}
 closedir(VSYNC);
 return @rv;
 }
 
-# get_virtualmin_sync(id, [&cronjobs], [keep-enabled])
+# get_virtualmin_sync(id, [keep-enabled])
 # Looks up a sync by ID and returns a hash ref for it
 sub get_virtualmin_sync
 {
 my ($id, $jobs, $keepenabled) = @_;
 my %vsync;
 &read_file_cached("$vsyncs_dir/$id", \%vsync) || return undef;
-if (!$jobs) {
-	&foreign_require("cron", "cron-lib.pl");
-	$jobs = [ &cron::list_cron_jobs() ];
-	}
 if (!$keepenabled) {
 	my $cmd = $vsync_cron_cmd." --id ".$vsync{'id'};
-	$job = &find_module_cron_job($cmd, $jobs);
+	$job = &find_cron_script($cmd);
 	$vsync{'enabled'} = $job ? 1 : 0;
 	}
 return \%vsync;
@@ -65,14 +59,21 @@ my ($vsync, $wasnew) = @_;
 my $cmd = $vsync_cron_cmd." --id ".$vsync->{'id'};
 my $job;
 if (!$wasnew) {
-	($job) = &find_module_cron_job($cmd);
+	($job) = &find_cron_script($cmd);
 	}
 if ($vsync->{'enabled'} && $job) {
 	# Fix job schedule
 	&copy_cron_sched_keys($vsync, $job);
-	&lock_file(&cron::cron_file($job));
-	&cron::change_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	if ($job->{'module'}) {
+		# Webmincron
+		&setup_cron_script($job);
+		}
+	else {
+		# Classic cron
+		&lock_file(&cron::cron_file($job));
+		&cron::change_cron_job($job);
+		&unlock_file(&cron::cron_file($job));
+		}
 	}
 elsif ($vsync->{'enabled'} && !$job) {
 	# Create cron job
@@ -80,17 +81,21 @@ elsif ($vsync->{'enabled'} && !$job) {
 		 'active' => 1,
 		 'command' => $cmd };
 	&copy_cron_sched_keys($vsync, $job);
-	&lock_file(&cron::cron_file($job));
-	&cron::create_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	&setup_cron_script($job);
 	}
 elsif (!$vsync->{'enabled'} && $job) {
 	# Delete cron job
-	&lock_file(&cron::cron_file($job));
-	&cron::delete_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	if ($job->{'module'}) {
+		# Webmincron
+		&delete_cron_script($job);
+		}
+	else {
+		# Classic cron
+		&lock_file(&cron::cron_file($job));
+		&cron::delete_cron_job($job);
+		&unlock_file(&cron::cron_file($job));
+		}
 	}
-&cron::create_wrapper($vsync_cron_cmd, $module_name, "vsync.pl");
 }
 
 # delete_virtualmin_sync(&vsync)
@@ -102,13 +107,10 @@ my $file = $vsyncs_dir."/".$vsync->{'id'};
 &unlink_logged($file);
 
 # Delete cron too
-&foreign_require("cron", "cron-lib.pl");
 my $cmd = $vsync_cron_cmd." --id ".$vsync->{'id'};
-my ($job) = &find_module_cron_job($cmd);
+my ($job) = &find_cron_script($cmd);
 if ($job) {
-	&lock_file(&cron::cron_file($job));
-	&cron::delete_cron_job($job);
-	&unlock_file(&cron::cron_file($job));
+	&delete_cron_script($job);
 	}
 }
 
