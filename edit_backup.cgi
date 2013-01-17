@@ -187,7 +187,7 @@ print &ui_hidden_table_start($text{'backup_sched'}, "width=100%", 2,
 
 # Backup on scheduled enabled?
 print &ui_table_row($text{'backup_enabled'},
-	&ui_yesno_radio("enabled", $backup->{'enabled'}));
+	&ui_yesno_radio("enabled", $backup->{'enabled'} ? 1 : 0));
 
 # Scheduled run time
 print &ui_table_row($text{'backup_when'},
