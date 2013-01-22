@@ -208,6 +208,7 @@ create_ec2c1.xlarge=High-CPU Extra-large (8 cores, 7GB RAM, 64-bit, 20 compute u
 create_ec2cc1.4xlarge=Cluster Compute Quadruple Extra-large (8 cores, 23GB RAM, 33.5 compute units)
 create_ec2cc2.8xlarge=Cluster Compute Eight Extra-large (16 cores, 62GB RAM, 88 compute units)
 create_ec2hi1.4xlarge=High I/O Quadruple Extra large (8 cores, 62GB RAM, 35 compute units)
+create_ec2hi1.8xlarge=High Memory and I/O Quadruple Extra large (8 cores, 117GB RAM, 35 compute units)
 create_ec2m3.xlarge=Extra-large 2nd Generation (4 cores, 15GB RAM, 64-bit, 13 compute units)
 create_ec2m3.2xlarge=Double Extra-large 2nd Generation (8 cores, 30 GB RAM, 64-bit, 26 compute units)
 create_ec2sgroups=EC2 security groups
