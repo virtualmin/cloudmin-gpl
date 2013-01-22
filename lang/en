@@ -1935,6 +1935,7 @@ xen_ecachedir=Missing or non-numeric image cache directory
 xen_localdns=(Local)
 xen_provisiondns=(Cloudmin Services)
 xen_eiscsi=Host system cannot use iSCSI : $1
+xen_echildren=This system cannot be de-registered as a host as it is still in use by one or more virtual systems
 
 xens_title=Xen Host Systems
 xens_host=System hostname

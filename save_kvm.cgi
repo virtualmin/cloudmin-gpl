@@ -13,6 +13,7 @@ $kvm || &error($text{'kvm_egone'});
 
 if ($in{'delete'}) {
 	# Just mark this system as no longer a KVM host
+	&list_child_servers($kvm) && &error($text{'xen_echildren'});
 	$kvm->{'kvm_host'} = 0;
 	&save_managed_server($kvm);
 	}
