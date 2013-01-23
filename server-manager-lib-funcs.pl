@@ -11911,12 +11911,17 @@ if (!$ENV{'REQUEST_METHOD'} || $config{'nodots'}) {
 else {
 	$interval ||= 1;
 	$main::background_dot_printer_interval = $interval;
+	$main::background_dot_printer_count = 0;
 	my $pid = $$;
 	if ($msg) {
 		&$first_oneline_print($msg);
 		}
 	$SIG{'ALRM'} = sub { if ($main::background_dot_printer_interval) {
-			       print ". ";
+			       print ".";
+			       $main::background_dot_printer_count++;
+			       if ($main::background_dot_printer_count % 80 == 0) {
+			         print "\n";
+			       }
 			     }
 			     alarm($main::background_dot_printer_interval);
 			   };

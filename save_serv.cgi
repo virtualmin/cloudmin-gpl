@@ -24,17 +24,19 @@ if ($in{'shutdown'}) {
 		}
 	else {
 		&obtain_lock_server($server);
-		print &text('save_shutting',
-			    "<tt>$server->{'host'}</tt>"),"<br>\n";
+		&start_background_dot_printer(&text('save_shutting',
+			    "<tt>$server->{'host'}</tt>"));
 		$err = &shutdown_server($server, $in{'force'});
 		if ($err) {
-			print &text('save_shutfailed', $err),"<p>\n";
+			&stop_background_dot_printer();
+			&$second_print(&text('save_shutfailed', $err));
 			}
 		else {
 			&check_server_status($server, 0, 1);
 			&refresh_server_usage($server);
 			&save_managed_server($server);
-			print $text{'save_shutdone'},"<p>\n";
+			&stop_background_dot_printer();
+			&$second_print($text{'save_shutdone'});
 			if (defined(&theme_post_save_server)) {
 				&theme_post_save_server($server);
 				}
@@ -61,22 +63,24 @@ elsif ($in{'startup'}) {
 		}
 	else {
 		&obtain_lock_server($server);
-		print &text('save_starting',
-			    "<tt>$server->{'host'}</tt>"),"<br>\n";
+		&start_background_dot_printer(&text('save_starting',
+			    "<tt>$server->{'host'}</tt>"));
 		($ok, $err) = &startup_server($server, !$in{'wait'});
 		if (!$ok) {
-			print &text('save_startfailed', $err),"<p>\n";
+			&stop_background_dot_printer();
+			&$second_print(&text('save_startfailed', $err));
 			&save_managed_server($server);
 			}
 		else {
 			&check_server_status($server, 0, 1);
 			&refresh_server_usage($server);
 			&save_managed_server($server);
+			&stop_background_dot_printer();
 			if ($ok == 1) {
-				print $text{'save_startdone'},"<p>\n";
+				&$second_print($text{'save_startdone'});
 				}
 			else {
-				print &text('save_startmaybe', $err),"<p>\n";
+				&$second_print(&text('save_startmaybe', $err));
 				}
 			if (defined(&theme_post_save_server)) {
 				&theme_post_save_server($server);
