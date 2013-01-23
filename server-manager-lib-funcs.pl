@@ -3629,6 +3629,22 @@ if (!$done) {
 				}
 			}
 		}
+
+	# If system has an /etc/sysconfig/network file, delete the gateway
+	# from it, as it is on an interface now
+	my $nfile = "/etc/sysconfig/network";
+	my $temp = &transname();
+	my $err = &get_file_from_server($server, $nfile, $temp);
+	if (!$err) {
+		my %net;
+		&read_env_file($temp, \%net);
+		if ($net{'GATEWAY'}) {
+			delete($net{'GATEWAY'});
+			&write_env_file($temp, \%net);
+			&put_file_to_server($server, $temp, $nfile);
+			}
+		}
+
 	&umount_filesystem_if_needed($server);
 	}
 
@@ -11900,7 +11916,7 @@ else {
 		&$first_oneline_print($msg);
 		}
 	$SIG{'ALRM'} = sub { if ($main::background_dot_printer_interval) {
-			       print ".";
+			       print ". ";
 			     }
 			     alarm($main::background_dot_printer_interval);
 			   };
