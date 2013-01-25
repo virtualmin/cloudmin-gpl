@@ -338,7 +338,7 @@ if ($alert->{'all'} || $alert->{'servers'} eq '*') {
 	# Monitoring everyone
 	@rv = @$allservers;
 	}
-elsif ($alert->{'servers'}) {
+elsif ($alert->{'servers'} ne '') {
 	# Get just ones we want
 	foreach my $id (split(/\s+/, $alert->{'servers'})) {
 		my ($s) = grep { $_->{'id'} eq $id } @$allservers;
@@ -376,7 +376,7 @@ elsif ($alert->{'scalegroups'}) {
 		push(@rv, grep { $_->{'scalegroup'} eq $id } @$allservers);
 		}
 	}
-elsif ($alert->{'vhosts'}) {
+elsif ($alert->{'vhosts'} ne '') {
 	# Hosted on some systesm
 	my %vids = map { $_, 1 } split(/\s+/, $alert->{'vhosts'});
 	foreach my $s (@$allservers) {
@@ -491,7 +491,7 @@ if ($alert->{'all'} || $alert->{'servers'} eq '*') {
 	# All systems
 	return $text{'alertdesc_all'};
 	}
-elsif ($alert->{'servers'}) {
+elsif ($alert->{'servers'} ne '') {
 	# Listed systems
 	my @users = map { my $s = &get_managed_server($_); $s ? ( $s ) : ( ) }
 			split(/\s+/, $alert->{'servers'});
@@ -526,7 +526,7 @@ elsif ($alert->{'iplist'}) {
 	# Systems with IPs
 	return &text('alertdesc_iplist', "<tt>".$alert->{'iplist'}."</tt>");
 	}
-elsif ($alert->{'vhosts'}) {
+elsif ($alert->{'vhosts'} ne '') {
 	# Systems on hosts
 	my @users = map { my $s = &get_managed_server($_); $s ? ( $s ) : ( ) }
 			split(/\s+/, $alert->{'vhosts'});
