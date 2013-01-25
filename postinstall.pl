@@ -142,6 +142,8 @@ if (!$itimes{$basever}) {
 	$itimes{$basever} = time();
 	&write_file($install_times_file, \%itimes);
 	}
+
+&webmin_log("postinstall"):
 }
 
 1;

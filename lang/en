@@ -3967,6 +3967,7 @@ log_delete_link=Deleted custom link $1
 log_create_iscsi=Added iSCSI server $1
 log_modify_iscsi=Modified iSCSI server $1
 log_delete_iscsi=Removed iSCSI server $1
+log_postinstall=Ran post-install script
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system
