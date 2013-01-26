@@ -3,6 +3,18 @@ do 'server-manager-lib.pl';
 
 sub module_install
 {
+# If Webmin version has a copy of webmincron.pl that is too old, copy over
+# fixed version
+if (&get_webmin_version() < 1.615) {
+	local $src = "$module_root_directory/webmincron-fixed.pl";
+	local $dst = &module_root_directory("webmincron")."/webmincron.pl";
+	local @srcst = stat($src);
+	local @dstst = stat($dst);
+	if ($srcst[7] != $dstst[7]) {
+		&copy_source_dest($src, $dst);
+		}
+	}
+
 # Convert all existing cron jobs to WebminCron, except existing backups
 foreach my $script (@cron_cmds) {
 	if ($script ne $backup_cron_cmd && $script ne $vsync_cron_cmd) {
