@@ -42,6 +42,7 @@ else {
 		$server->{'ssh_ciphers'} = $in{'ssh_ciphers'};
 		}
 	if (defined($in{'webmin_mode'})) {
+		# Webmin authentication details entered
 		$err = &parse_webmin_login_form(\%in, $server);
 		&error($err) if ($err);
 
@@ -54,6 +55,13 @@ else {
 				$server->{'ssl'} = $webminssl;
 				}
 			}
+		}
+	elsif ($server->{'ssh_pass_same'} && $server->{'user'} &&
+	       !$server->{'no_webmin_login'} && $server->{'ssh_pass'}) {
+		# Webmin login details could not be entered, perhaps because
+		# state was nosshlogin. But if the Webmin and SSH passwords are
+		# supposed to be in sync, set the Webmin pass now
+		$server->{'pass'} = $server->{'ssh_pass'};
 		}
 	$done = 1;
 	}
