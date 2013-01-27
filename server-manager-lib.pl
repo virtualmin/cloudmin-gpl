@@ -60,6 +60,9 @@ $historic_rotation_time = 7*24*60*60;
 $check_status_cmd = "$module_config_directory/status.pl";
 $check_licence_cmd = "$module_config_directory/licence.pl";
 $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
+$backup_space_cmd = "$module_config_directory/space.pl";
+$backup_cron_cmd = "$module_config_directory/backup.pl";
+$vsync_cron_cmd = "$module_config_directory/vsync.pl";
 @cron_cmds = ( $check_status_cmd, $check_licence_cmd,
 	       $bandwidth_cron_cmd, $backup_cron_cmd,
 	       $backup_space_cmd, $vsync_cron_cmd );
@@ -191,9 +194,7 @@ $owner_plans_dir = "$module_config_directory/plans";
 $usage_data_dir = "$module_config_directory/usage";
 
 $scheduled_backups_dir = "$module_config_directory/backups";
-$backup_cron_cmd = "$module_config_directory/backup.pl";
 $backup_log_dir = "$module_config_directory/backuplogs";
-$backup_space_cmd = "$module_config_directory/space.pl";
 
 $locations_file = "$module_config_directory/locations";
 
@@ -230,7 +231,6 @@ $image_storages_dir = "$module_config_directory/storages";
 $disk_directories_dir = "$module_config_directory/directories";
 
 $vsyncs_dir = "$module_config_directory/vsyncs";
-$vsync_cron_cmd = "$module_config_directory/vsync.pl";
 
 $alerts_dir = "$module_config_directory/alerts";
 $alert_status_file = "$module_config_directory/alert-status";
