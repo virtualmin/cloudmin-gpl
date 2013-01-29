@@ -56,6 +56,17 @@ if ($info->{'disk_total'}) {
         push(@stats, [ "diskfree", $info->{'disk_free'} ]);
         }
 
+# Add root FS usage
+if ($info->{'disk_list'}) {
+	my ($root) = grep { $_->{'fs'} eq '/' } @{$info->{'disk_list'}};
+	if ($root) {
+		push(@stats, [ "rootdiskused",
+			       $root->{'total'} - $root->{'free'},
+			       $root->{'total'} ]);
+		push(@stats, [ "rootdiskfree", $root->{'free'} ]);
+		}
+	}
+
 # Add disk usage for hosting
 foreach my $manager (&is_parent_server($server)) {
 	my ($free, $total) = &host_free_disk($server, $manager);
