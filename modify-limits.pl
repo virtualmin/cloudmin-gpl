@@ -297,6 +297,7 @@ foreach $s (@servers) {
 				# Over RAM limit for host
 				 print ".. this would exceed the host's free ",
 				  "memory of ",&nice_size($memfree),"\n";
+				$failed++;
 				}
 			elsif ($limits && $limits->{'max_ram'} && !$memory) {
 				# Set to unlimited but not allowed
@@ -519,6 +520,7 @@ foreach $s (@servers) {
 				# Over disk limit for host
 				 print ".. this would exceed the host's free ",
 				  "disk space of ",&nice_size($diskfree),"\n";
+				$failed++;
 				}
 			elsif ($limits && $limits->{'max_disk'} && !$disk) {
 				# Set to unlimited but not allowed
