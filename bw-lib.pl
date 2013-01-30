@@ -147,7 +147,12 @@ my $now = time();
 my @tm = localtime(time());
 my $day = timelocal(0, 0, 0, $tm[3], $tm[4], $tm[5]);  # Start of this day
 my $rv;
-if ($config{'bw_period'} eq 'week') {
+if ($config{'bw_period'} eq 'day') {
+	# Start on at midnight
+	$rv = $day;
+	$rv -= $ago*24*60*60;
+	}
+elsif ($config{'bw_period'} eq 'week') {
 	# Start on last sunday
 	$rv = $day - $tm[6]*24*60*60;
 	$rv -= $ago*7*24*60*60;
@@ -188,7 +193,11 @@ if ($ago == 0) {
 	}
 else {
 	my $start = &bandwidth_period_start($ago);
-	if ($config{'bw_period'} eq 'week') {
+	if ($config{'bw_period'} eq 'day') {
+		# 1 day after start
+		$rv = $start + 24*60*60 - 1;
+		}
+	elsif ($config{'bw_period'} eq 'week') {
 		# 7 days after start
 		$rv = $start + 7*24*60*60 - 1;
 		}
