@@ -624,6 +624,11 @@ $rv .= &ui_table_row($text{'create_kvmmodel'},
 		   [ [ undef, $text{'default'} ],
 		     @$models ]));
 
+# Network interface MAC address
+$rv .= &ui_table_row($text{'create_xenmac'},
+	&ui_opt_textbox("kvm_mac", undef, 30, $text{'create_xenmacauto'},
+			$text{'create_xenmacether'}));
+
 # High-res graphics?
 $rv .= &ui_table_row($text{'create_kvmvga'},
 	&ui_yesno_radio("kvm_vga", 0));
@@ -852,6 +857,13 @@ elsif ($in{'kvm_model'}) {
 	my ($m) = grep { $_->[0] eq $in{'kvm_model'} } @$models;
 	$m || &error($text{'create_ekvmmodel'});
 	$server->{'kvm_model'} = $in{'kvm_model'};
+	}
+
+# MAC address
+if (!$in{'kvm_mac_def'} && &can_action(undef, "advanced")) {
+	$in{'kvm_mac'} =~ /^([0-9a-f]{1,2}:)*[0-9a-f]{1,2}$/i ||
+		&error($text{'create_exenmac'});
+	$server->{'kvm_mac'} = $in{'kvm_mac'};
 	}
 
 # Start at creation
@@ -1371,7 +1383,12 @@ my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @ips6 = split(/\s+/, $server->{'kvm_ip6'});
 my @macs;
 for(my $i=0; $i<@ips; $i++) {
-	push(@macs, &generate_mac_address($server, $i));
+	if ($i == 0 && $server->{'kvm_mac'}) {
+		push(@macs, $server->{'kvm_mac'});
+		}
+	else {
+		push(@macs, &generate_mac_address($server, $i));
+		}
 	}
 $server->{'mac'} = join(" ", @macs);
 $server->{'mac_addresses'} = join(" ", @macs);
