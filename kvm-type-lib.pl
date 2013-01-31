@@ -1046,7 +1046,8 @@ my ($ok, $err) = &usable_host_system($vhost, "kvm",
                                      $server->{'kvm_memory'}*1024*1024,
 				     0,
                                      $server->{'kvm_disktotal'},
-				     $server);
+				     $server,
+				     1);
 $ok || return "Host system $vhost->{'host'} cannot be used : $err";
 $server->{'kvm_on'} = $vhost->{'id'};
 

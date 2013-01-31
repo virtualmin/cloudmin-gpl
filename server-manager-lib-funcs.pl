@@ -8413,12 +8413,12 @@ if ($freemem) {
 return @rv ? " (".join(", ", @rv).")" : "";
 }
 
-# host_free_disk(&host, manager, [&for-server], [&for-disk])
+# host_free_disk(&host, manager, [&for-server], [&for-disk], [new-server])
 # Returns the amount of disk space free on some host system, perhaps in LVM.
 # In an array context, returns the total disk too.
 sub host_free_disk
 {
-my ($vhost, $manager, $server, $disk) = @_;
+my ($vhost, $manager, $server, $disk, $newserver) = @_;
 my $vinfo = &get_server_collected($vhost);
 my @rv;
 
@@ -8454,12 +8454,31 @@ if ($disk) {
 elsif ($server) {
 	# Server provided - use its defaults for new systems
 	if ($server->{$manager.'_filesystem_iscsi'} ne '') {
+		# iSCSI server already chosen for this system
 		$iscsi = $server->{$manager.'_filesystem_iscsi'};
 		}
 	elsif ($server->{$manager.'_filesystem_vg'}) {
+		# VG already chosen for this system
 		$lvm = $server->{$manager.'_filesystem_vg'};
 		}
+	elsif (!$newserver && $server->{'new_directory'}) {
+		# For an existing system when adding a disk
+		$dir = $server->{'new_directory'};
+		}
+	elsif ($server->{'directory'}) {
+		# Directory specified
+		$dir = $server->{'directory'};
+		}
+	elsif ($newserver && $vhost->{$manager.'_iscsi'} ne '') {
+		# For a new system, use vhost's iSCSI setting
+                $iscsi = $vhost->{$manager.'_iscsi'};
+                }
+	elsif ($newserver && $vhost->{$manager.'_vg'}) {
+		# For a new system, use vhost's LVM setting
+                $lvm = $vhost->{$manager.'_vg'};
+                }
 	else {
+		# Fall back to directory on host
 		$dir = $server->{'new_directory'} ||
 		       $server->{'directory'} ||
 		       $vhost->{$manager.'_dir'};
@@ -8626,16 +8645,16 @@ return wantarray ? @rv : $rv[0];
 }
 
 # usable_host_system(&vhost, manager, extra-ram, extra-guaranteed-ram,
-#		     extra-disk, [&for-server])
+#		     extra-disk, [&for-server], [new-server])
 # Checks if some host system is has enough RAM and disk free to host another
 # virtual system.
 sub usable_host_system
 {
-my ($vhost, $manager, $mem, $gmem, $disk, $server) = @_;
+my ($vhost, $manager, $mem, $gmem, $disk, $server, $newserver) = @_;
 my $omanager = $manager eq "zones" ? "zone" : $manager;
 
 # Check how much RAM and disk is free now
-my $diskfree = &host_free_disk($vhost, $manager, $server);
+my $diskfree = &host_free_disk($vhost, $manager, $server, undef, $newserver);
 my $memfree = &host_free_memory($vhost, $manager);
 my $gmemfree = &host_free_memory($vhost, $manager, 1);
 
@@ -9414,8 +9433,8 @@ return " (<a href='$link' onClick='window.open(\"$link\", \"showpass\", \"toolba
 
 # list_available_host_servers(type, [extra-ram, extra-guaranteed-ram,
 #			      extra-disk], [include-down], [&for-server])
-# Returns a list of systems that can host some virtualization type, and
-# are up and running. Also takes RAM and disk needs into account.
+# Returns a list of systems that can host a new system of some virtualization
+# type, and are up and running. Also takes RAM and disk needs into account.
 sub list_available_host_servers
 {
 my ($type, $mem, $gmem, $disk, $incdown, $server) = @_;
@@ -9429,7 +9448,7 @@ if (!$incdown) {
 	}
 my @rv;
 foreach my $v (@vhosts) {
-	if (&usable_host_system($v, $type, $mem, $gmem, $disk, $server)) {
+	if (&usable_host_system($v, $type, $mem, $gmem, $disk, $server, 1)) {
 		push(@rv, $v);
 		}
 	}
@@ -9438,8 +9457,8 @@ return @rv;
 
 # find_host_server(&server, host-type,
 # 		   [extra-ram, extra-guaranteed-ram, extra-disk])
-# Returns a host system for some type (xen, vserver, zone), based on those
-# available to the system owner and available RAM / etc
+# Returns a host system for a new VM of some type (xen, vserver, zone), based
+# on those available to the system owner and available RAM / etc
 sub find_host_server
 {
 my ($server, $type, $mem, $gmem, $disk) = @_;
@@ -9451,7 +9470,7 @@ return &find_host_server_from_vhosts($server, \@vhosts, $access{'hostmode'},
 
 # find_host_server_from_vhosts(&server, &vhosts, host-allocation-mode,
 # 			       host-type)
-# Finds the best host system from a list
+# Finds the best host system for a new VM from a list
 sub find_host_server_from_vhosts
 {
 my ($server, $vhosts, $hostmode, $type) = @_;
