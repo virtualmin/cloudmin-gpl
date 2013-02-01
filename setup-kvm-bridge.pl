@@ -82,7 +82,7 @@ $br0 ||= { 'name' => $br_name,
 $br0->{'up'} = 1;
 $br0->{'dhcp'} = $br0->{'bootp'} = 0;
 $br0->{'address'} = $eth0->{'address'};
-$br0->{'netmask'} = $eth0->{'netmask'};
+$br0->{'netmask'} = $eth0->{'netmask'} || $eth0_active->{'netmask'};
 $br0->{'network'} = $eth0->{'network'};
 $br0->{'gateway'} = $eth0->{'gateway'};
 $br0->{'broadcast'} = $eth0->{'broadcast'};
