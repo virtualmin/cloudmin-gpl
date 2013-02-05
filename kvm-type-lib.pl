@@ -1977,11 +1977,16 @@ if (!$empty && $mp) {
         # Add the swap file to /etc/fstab, if any
         &$first_print($text{'create_xenfstab'});
         my $fstab = &get_system_fstab($server);
-	my $wantdev = $server->{'kvm_virtio'} ? "/dev/vdb" : "/dev/hdb";
         if (!ref($fstab)) {
                 &$second_print(&text('create_exenswaptab', $fstab));
                 }
         else {
+		my $wantdev = $server->{'kvm_virtio'} ? "/dev/vdb" : "/dev/hdb";
+		my ($root) = grep { $_->[1] eq '/' } @$fstab;
+		if ($root && $root->[0] =~ /^(\/dev\/[hsv]d)/) {
+			# Can guess swap device based on root device
+			$wantdev = $1."b";
+			}
                 my $changed_fstab;
                 if ($server->{'kvm_swapfile'}) {
                         # Add swap device
