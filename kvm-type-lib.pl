@@ -5287,6 +5287,22 @@ else {
 	}
 }
 
+# type_kvm_check_image(&server, &image)
+# Returns an error message if a system cannot be imaged for some reason
+sub type_kvm_check_image
+{
+my ($server, $image) = @_;
+my $fstab = &get_system_fstab($server);
+return undef if (!ref($fstab));
+my ($root) = grep { $_->[1] eq '/' } @$fstab;
+return "No root filesystem found in /etc/fstab" if (!$root);
+$root->[0] =~ /^\/dev\/(h|s|v)d[a-z]/ ||
+	return "Root filesystem in /etc/fstab is mounted from $root->[0], ".
+	       "not a real device path. This will cause systems created from ".
+	       "the image to use incorrect device paths";
+return undef;
+}
+
 # type_kvm_create_image(&server, &image, tempdir, [nomunge], [&imageserver])
 # Convert a KVM system into an image file, which is really just the KVM disk.
 # Outputs text, and returns 0 on failure.

@@ -167,6 +167,13 @@ if ($info && $info->{'kernel'}) {
 	$image->{'arch'} = $info->{'kernel'}->{'arch'};
 	}
 
+# Check if the VM is suitable for imaging
+$cfunc = "type_".$server->{'manager'}."_check_image";
+if (defined(&$cfunc)) {
+	my $err = &$cfunc($server, $image);
+	$err && &usage("This system cannot be imaged : $err");
+	}
+
 # Work out the system on which the image will be created. This may be the 
 # host, or an iSCSI server
 $vhost = &get_parent_server($server);

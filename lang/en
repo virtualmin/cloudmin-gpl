@@ -2051,6 +2051,7 @@ mkimage_nofilesystem=.. no primary disk found!
 mkimage_eiscsiserver=No iSCSI server found!
 mkimage_efirstdisk=Disk for root filesystem was not found!
 mkimage_eiscsidisk=Failed to lookup primary disk on iSCSI server
+mkimage_echeck=An image cannot be created from this system : $1
 
 pass_title=Change Password
 pass_header=New system passwords
