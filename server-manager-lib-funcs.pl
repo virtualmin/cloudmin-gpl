@@ -9624,7 +9624,7 @@ if ($loc) {
 	$vhost || &error(&text('create_exenvhostalloc2', $loc->{'desc'}));
 	}
 my ($ok, $err) = &usable_host_system($vhost, $type, $mem, $gmem, $disk,
-				     $server);
+				     $server, 1);
 $ok || &error(&text('create_ehostusable', $vhost->{'host'}, $err));
 return $vhost;
 }
