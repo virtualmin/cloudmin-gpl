@@ -3303,7 +3303,9 @@ my $vhost = &type_kvm_parent($server);
 # Actually un-mount if mounted
 if (&can_ssh_status($server) && $disk->{'mounted'}) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"umount ".$disk->{'mounted'});
+		$disk->{'fs'} eq 'swap' ?
+			"swapoff ".$disk->{'mounted'} :
+			"umount ".$disk->{'mounted'});
 	if ($err || $ex) {
 		return "Failed to un-mount $disk->{'virt_mount'} : ".
 		       ($err || $out);
@@ -3469,7 +3471,9 @@ if (&can_ssh_status($server) && $olddisk->{'mounted'}) {
 	$olddisk->{'virt_mount'} eq '/' &&
 		return "The root disk of a running system cannot be resized";
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"umount ".$olddisk->{'virt_mount'});
+		$olddisk->{'fs'} eq 'swap' ?
+			"swapoff ".$olddisk->{'virt_mount'} :
+			"umount ".$olddisk->{'virt_mount'});
 	if ($err || $ex) {
 		return "Failed to un-mount $olddisk->{'virt_mount'} : ".
 		       ($err || $out);
@@ -3517,10 +3521,15 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		# Shrink the filesystem
 		push(@cmds, "losetup -o $part->{'offset'} $loop ".
 			    quotemeta($disk->{'real'}));
-		push(@cmds, &get_fsck_command($vhost, $disk->{'fs'}).
-			    " -f -p $loop");
-		push(@cmds, &get_resize_command($vhost, $disk->{'fs'}).
-			    " ".$loop." ".$newmbs."M");
+		if ($disk->{'fs'} eq 'swap') {
+			push(@cmds, "mkswap $loop");
+			}
+		else {
+			push(@cmds, &get_fsck_command($vhost, $disk->{'fs'}).
+				    " -f -p $loop");
+			push(@cmds, &get_resize_command($vhost, $disk->{'fs'}).
+				    " ".$loop." ".$newmbs."M");
+			}
 		push(@cmds, "losetup -d $loop");
 		}
 
@@ -3538,13 +3547,17 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		# Expand the filesystem
 		push(@cmds, "losetup -o $part->{'offset'} $loop ".
 			    quotemeta($disk->{'real'}));
-		push(@cmds, &get_fsck_command($vhost, $disk->{'fs'}).
-			    " -f -p $loop");
-		push(@cmds, &get_resize_command($vhost, $disk->{'fs'}).
-			    " ".$loop." ".$newmbs."M");
+		if ($disk->{'fs'} eq 'swap') {
+			push(@cmds, "mkswap $loop");
+			}
+		else {
+			push(@cmds, &get_fsck_command($vhost, $disk->{'fs'}).
+				    " -f -p $loop");
+			push(@cmds, &get_resize_command($vhost, $disk->{'fs'}).
+				    " ".$loop." ".$newmbs."M");
+			}
 		push(@cmds, "losetup -d $loop");
 		}
-
 
 	if ($disk->{'iscsi_server'} ne '') {
 		# Shrink on the iSCSI server after resizing the partition
@@ -3694,7 +3707,9 @@ if ($disk->{'real'} ne $olddisk->{'real'} &&
 # If it was mounted before, mount it now
 if ($mounted && $disk->{'mount'}) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"mount ".$disk->{'virt_mount'}." ".$disk->{'mount'});
+		$disk->{'fs'} eq 'swap' ?
+			"swapon ".$disk->{'virt_mount'} :
+			"mount ".$disk->{'virt_mount'}." ".$disk->{'mount'});
 	if ($err || $ex) {
 		return "Failed to mount $disk->{'virt'} : ".($err || $out);
 		}
