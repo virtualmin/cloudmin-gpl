@@ -187,6 +187,7 @@ $dfunc = "type_".$in{'type'}."_create_done";
 if (defined(&$dfunc)) {
 	print $text{'create_created'},"<p>\n";
 	print $text{'create_waiting'};
+	$dot_count = 0;
 	while(1) {
 		$err = &$dfunc($server, 1);
 		if ($err eq "OK") {
@@ -202,6 +203,8 @@ if (defined(&$dfunc)) {
 			}
 		else {
 			print ".";
+			$dot_count++;
+			print "\n" if (++$dot_count % 80 == 0);
 			}
 		sleep(1);
 		}

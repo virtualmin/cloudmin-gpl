@@ -359,10 +359,12 @@ foreach my $sp (@dests) {
 			close(OUT);
 			exit($err ? 1 : 0);
 			}
+		my $dot_count = 0;
 		while(1) {
 			my $expid = waitpid($pid, WNOHANG);
 			last if ($expid == $pid);
 			print "." if ($progress);
+			print "\n" if (++$dot_count % 80 == 0);
 			sleep(1);
 			}
 		my $err = &read_file_contents($outtemp);
@@ -1334,10 +1336,12 @@ foreach my $dest (split(/\s+/, $image->{'dest'})) {
 			close(OUT);
 			exit($err ? 1 : 0);
 			}
+		my $dot_count = 0;
 		while(1) {
 			my $expid = waitpid($pid, WNOHANG);
 			last if ($expid == $pid);
 			print "." if ($progress);
+			print "\n" if (++$dot_count % 80 == 0);
 			sleep(1);
 			}
 		my $err = &read_file_contents($outtemp);

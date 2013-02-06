@@ -49,9 +49,11 @@ else {
 
 # Wait for completion
 print $text{'newami_waiting'};
+$dot_count = 0;
 while(1) {
 	sleep(1);
 	print ".";
+	print "\n" if (++$dot_count % 80 == 0);
 	$done = &type_ec2_create_ami_done($server);
 	if ($done eq "OK") {
 		print "<br>\n";
@@ -78,9 +80,11 @@ else {
 
 # Wait for completion
 print $text{'newami_uwaiting'};
+$dot_count = 0;
 while(1) {
 	sleep(1);
 	print ".";
+	print "\n" if (++$dot_count % 80 == 0);
 	$done = &type_ec2_upload_ami_done($server);
 	if ($done eq "OK") {
 		print "<br>\n";

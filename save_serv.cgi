@@ -255,6 +255,7 @@ elsif ($in{'installvirt'}) {
 
 		# Wait till done
 		print $text{'save_virtwait'};
+		$dot_count = 0;
 		while(1) {
 			sleep(1);
 			$done = &install_virtualmin_server_done($server);
@@ -269,6 +270,7 @@ elsif ($in{'installvirt'}) {
 				}
 			else {
 				print ".";
+				print "\n" if (++$dot_count % 80 == 0);
 				}
 			}
 	        &stop_installing_virtualmin_licence($serial, $key);

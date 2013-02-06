@@ -258,6 +258,7 @@ $dfunc = "type_".$in{'type'}."_create_done";
 if (defined(&$dfunc)) {
 	print $text{'create_created'},"<p>\n";
 	print $text{'create_waiting'};
+	$dot_count = 0;
 	while(1) {
 		$err = &$dfunc($server);
 		if ($err eq "OK") {
@@ -273,6 +274,7 @@ if (defined(&$dfunc)) {
 			}
 		else {
 			print ".";
+			print "\n" if (++$dot_count % 80 == 0);
 			}
 		sleep(1);
 		}
@@ -338,6 +340,7 @@ if (!$no_ssh && !$server->{'ssh_nologin'}) {
 		# Check in a loop until SSH is available
 		print $text{'create_sshing'};
 		$sshstart = time();
+		$dot_count = 0;
 		while(1) {
 			($sshstatus, $ssherr, $webmindir, $webminport,
 			 $webminssl) = &check_server_ssh_login($server);
@@ -360,6 +363,7 @@ if (!$no_ssh && !$server->{'ssh_nologin'}) {
 				}
 			else {
 				print ".";
+				print "\n" if (++$dot_count % 80 == 0);
 				}
 			sleep(1);
 			}
