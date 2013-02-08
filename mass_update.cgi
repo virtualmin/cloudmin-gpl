@@ -68,9 +68,9 @@ if (@servers == 1) {
 	&$indent_print();
 	%donedep = ( );
 	@allgot = ( );
-	&start_background_dot_printer(&get_update_msg(@poss));
+	#&start_background_dot_printer(&get_update_msg(@poss));
 	my ($got, $errs) = &install_multiple_package_updates($s, \@poss);
-	&stop_background_dot_printer();
+	#&stop_background_dot_printer();
 	if (@$got && !@$errs) {
 		# Worked OK
 		&$second_print(&text('update_donepkg2',
