@@ -51,6 +51,7 @@ require './server-manager-lib.pl';
 $< == 0 || die "$0 must be run as root";
 @OLDARGV = @ARGV;
 &usage_if_cloudmin_replica();
+&foreign_require("net");
 
 # Parse command line
 while(@ARGV > 0) {
@@ -228,6 +229,11 @@ if ($newaddress) {
 	}
 if ($newnetmask) {
 	$iface->{'netmask'} = $newnetmask;
+	}
+if (($newaddress || $newnetmask) &&
+    $iface->{'address'} && $iface->{'netmask'}) {
+	$iface->{'broadcast'} = &net::compute_broadcast(
+		$iface->{'address'}, $iface->{'netmask'});
 	}
 if ($newether) {
 	$iface->{'ether'} = $newether;

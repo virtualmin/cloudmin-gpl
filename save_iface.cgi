@@ -22,6 +22,7 @@ if (!$in{'new'}) {
 	$oldiface = { %$iface };
 	}
 %used = &used_ip_addresses();
+&foreign_require("net");
 
 if ($in{'delete'}) {
 	# Delete it, but ask first as this may render some site inaccessible
@@ -106,6 +107,8 @@ else {
 		&check_ipaddress($in{'netmask'}) ||
 			&error($text{'iface_enetmask'});
 		$iface->{'netmask'} = $in{'netmask'};
+		$iface->{'broadcast'} = &net::compute_broadcast(
+			$iface->{'address'}, $iface->{'netmask'});
 		}
 
 	# Save bridge on host
