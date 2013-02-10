@@ -358,6 +358,7 @@ if (@servers) {
 		}
 	print &ui_links_row([ @links, @crlinks ]);
 	@buts = (    [ "refresh", $text{'index_refresh'} ],
+		     [ "regen", $text{'index_regen'} ],
 		     $posscount ? ( [ "update",$text{'index_update'} ] )
 				: ( ),
 		     $procount ? ( [ "script", $text{'index_script'} ] )

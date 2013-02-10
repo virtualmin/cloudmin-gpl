@@ -15,10 +15,11 @@ $s0 = $servers[0]->{'host'};
 @oservers = grep { &is_virtual_server($_) } @servers;
 @hostnames = map { $_->{'host'} } @servers;
 
-if ($in{'refresh'}) {
+if ($in{'refresh'} || $in{'regen'}) {
 	# Fetch the status of selected servers, in 10 processes
 	&can_action_error(\@servers, "refresh");
-	&ui_print_header(undef, $text{'mass_ftitle'}, "");
+	&ui_print_header(undef, $in{'regen'} ? $text{'mass_gtitle'}
+					     : $text{'mass_ftitle'}, "");
 	$override_webmin_script_type = 'status';
 
 	if (@servers == 1) {
@@ -29,8 +30,8 @@ if ($in{'refresh'}) {
 		}
 	print "<ul>\n";
 	&obtain_lock_server(\@servers);
-	@prv = &parallel_check_server_status(\@pservers, 0);
-	@orv = &parallel_check_server_status(\@oservers, 0);
+	@prv = &parallel_check_server_status(\@pservers, $in{'regen'} ? 1 : 0);
+	@orv = &parallel_check_server_status(\@oservers, $in{'regen'} ? 1 : 0);
 	&release_lock_server(\@servers);
 
 	# Show new statuses
@@ -50,8 +51,8 @@ if ($in{'refresh'}) {
 		&theme_post_save_server();
 		&theme_select_server($aservers[0]) if (@aservers == 1);
 		}
-	&webmin_log("refresh", "servers", scalar(@servers),
-		    { 'hosts' => \@hostnames });
+	&webmin_log($in{'regen'} ? "regen" : "refresh", "servers",
+		    scalar(@servers), { 'hosts' => \@hostnames });
 
 	&ui_print_footer($in{'referer'} || $ENV{'HTTP_REFERER'},
 			 $text{'index_return'});

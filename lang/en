@@ -31,6 +31,7 @@ index_move=Move Systems
 index_header=Global Options
 index_return=list of managed systems
 index_refresh=Refresh Status
+index_regen=Refresh Fully
 index_pos=<a href='$2'>$1 update</a>
 index_poss=<a href='$2'>$1 updates</a>
 index_update=Update Packages
@@ -773,6 +774,7 @@ status_by_remote=Remote API
 
 mass_enone=No systems selected to operate on
 mass_ftitle=Refreshing System Statuses
+mass_gtitle=Fully Refreshing System Statuses
 mass_fdoing=Now refreshing the status of $1 selected systems ..
 mass_fdoing2=Now refreshing the status of system $1 ..
 mass_fdone=.. done!
@@ -3804,6 +3806,7 @@ log_unhost_server=Un-registered $3 host system $1
 log_diskdir_server=Changed default disk directory for system $1
 log_kill_server=Killed the lock on system $1
 log_refresh_servers=Refreshed $1 systems
+log_regen_servers=Fully refreshed $1 systems
 log_refresh_servers_l=Refreshed $1 systems : $2
 log_delete_servers=Deleted $1 systems
 log_delete_servers_l=Deleted $1 systems : $2
