@@ -2706,22 +2706,27 @@ my $vhost = &type_kvm_parent($server);
 
 # If LVM is in use, get LVs from the host system
 my (@lvs, @vgs);
+my $lvm_error;
 if ($server->{'kvm_filesystem_vg'}) {
 	if ($main::list_logical_cache{$vhost->{'id'}}) {
 		@lvs = @{$main::list_logical_cache{$vhost->{'id'}}};
 		@vgs = @{$main::list_volume_cache{$vhost->{'id'}}};
 		}
 	else {
+		$last_remote_error = undef;
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		@vgs = &remote_foreign_call($vhost, "lvm",
 			"list_volume_groups");
-		$main::list_volume_cache{$vhost->{'id'}} = \@vgs;
-		@lvs = ( );
-		foreach my $vg (@vgs) {
-			push(@lvs, &remote_foreign_call($vhost, "lvm",
-				"list_logical_volumes", $vg->{'name'}));
+		$lvm_error = $last_remote_error;
+		if (!$lvm_error) {
+			$main::list_volume_cache{$vhost->{'id'}} = \@vgs;
+			@lvs = ( );
+			foreach my $vg (@vgs) {
+				push(@lvs, &remote_foreign_call($vhost, "lvm",
+					"list_logical_volumes", $vg->{'name'}));
+				}
+			$main::list_logical_cache{$vhost->{'id'}} = \@lvs;
 			}
-		$main::list_logical_cache{$vhost->{'id'}} = \@lvs;
 		}
 	}
 my %vgnames = map { $_->{'name'}, $_ } @vgs;
@@ -2772,6 +2777,13 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		if ($lv) {
 			$disk->{'size'} = $lv->{'size'} * 1024;
 			$disk->{'lv_snap_of'} = $lv->{'snap_of'};
+			}
+		elsif ($lvm_error) {
+			# Disk is on LVM, but failed to get details
+			return "Failed to fetch LVM devices : $lvm_error";
+			}
+		else {
+			return "Logical volume $disk->{'lv'} was not found";
 			}
 		}
 	elsif ($disk->{'real'} =~ /^\/dev\/disk\/by-path\/ip-(\S+):(\d+)-iscsi-(\S+):(\S+)-lun-(\d+)$/) {
