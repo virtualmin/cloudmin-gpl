@@ -124,6 +124,14 @@ closedir(LISTDIR);
 return \@files;
 }
 
+# type_this_readlink(&server, file)
+# For a file on the Cloudmin master, just check it directly
+sub type_this_readlink
+{
+my ($server, $file) = @_;
+return readlink($file);
+}
+
 # type_this_open_shell(&server)
 # Opens a shell in a sub-process, connected to a pty. Returns an error message
 # (or undef if OK), and a file handle.

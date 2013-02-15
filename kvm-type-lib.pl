@@ -4816,6 +4816,21 @@ else {
 	}
 }
 
+# type_kvm_readlink(&server, file)
+# If the filesystem for this KVM instance is locally mounted, check the link
+# from there
+sub type_kvm_readlink
+{
+my ($server, $file) = @_;
+if ($server->{'kvm_mount'}) {
+        my $vhost = &type_kvm_parent($server);
+        return &readlink_on_server($vhost, $server->{'kvm_mount'}.$remotedir);
+        }
+else {
+        return 'FALLBACK';
+        }
+}
+
 # type_kvm_mount_filesystem(&server, [wantfile], [mount-point])
 # Mounts a down KVM image's root disk image on /mnt/something, and sets
 # kvm_mount in the server object

@@ -2582,6 +2582,27 @@ return $out if ($ex);
 return $out =~ /^(\d+)\s/ ? $1*1024 : "Unknown du output : $out";
 }
 
+# readlink_on_server(&server, file)
+# If a file is a symlink, return the target. Otherwise return undef
+sub readlink_on_server
+{
+my ($server, $file) = @_;
+my $dfunc = "type_".$server->{'manager'}."_readlink";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	my $rv = &$dfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to ssh
+	}
+
+# Run readlink via SSH
+my ($out, $ex, $err) = &execute_command_on_server($server,
+        "readlink ".quotemeta($file));
+return undef if ($err || $ex);
+my @lines = split(/\r?\n/, $out);
+return $lines[$#lines];
+}
+
 # shared_dir_on_servers(&server1, &server2, dir)
 # Checks if some directory is shared between two machines (ie. via NFS)
 sub shared_dir_on_servers
