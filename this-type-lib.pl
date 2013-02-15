@@ -132,6 +132,14 @@ my ($server, $file) = @_;
 return readlink($file);
 }
 
+# type_this_symlink_file(&server, source, dest)
+# Just call local link function
+sub type_this_symlink_file
+{
+my ($server, $src, $dest) = @_;
+return &symlink_file($src, $dest) ? undef : $!;
+}
+
 # type_this_open_shell(&server)
 # Opens a shell in a sub-process, connected to a pty. Returns an error message
 # (or undef if OK), and a file handle.

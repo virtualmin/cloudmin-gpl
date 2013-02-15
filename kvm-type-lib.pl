@@ -4824,7 +4824,23 @@ sub type_kvm_readlink
 my ($server, $file) = @_;
 if ($server->{'kvm_mount'}) {
         my $vhost = &type_kvm_parent($server);
-        return &readlink_on_server($vhost, $server->{'kvm_mount'}.$remotedir);
+        return &readlink_on_server($vhost, $server->{'kvm_mount'}.$file);
+        }
+else {
+        return 'FALLBACK';
+        }
+}
+
+# type_kvm_symlink_file(&server, source, dest)
+# If the filesystem for this KVM instance is locally mounted, create the
+# link from there
+sub type_kvm_symlink_file
+{
+my ($server, $src, $dest) = @_;
+if ($server->{'kvm_mount'}) {
+        my $vhost = &type_kvm_parent($server);
+        return &symlink_file_on_server($vhost, $server->{'kvm_mount'}.$src,
+					       $server->{'kvm_mount'}.$dest);
         }
 else {
         return 'FALLBACK';

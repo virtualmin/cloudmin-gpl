@@ -2603,6 +2603,25 @@ my @lines = split(/\r?\n/, $out);
 return $lines[$#lines];
 }
 
+# symlink_file_on_server(&server, source, dest)
+# Create a symbolic link on a managed system
+sub symlink_file_on_server
+{
+my ($server, $src, $dest) = @_;
+my $dfunc = "type_".$server->{'manager'}."_symlink_file";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	my $rv = &$dfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to ssh
+	}
+
+# Run readlink via SSH
+my ($out, $ex, $err) = &execute_command_on_server($server,
+        "ln -s ".quotemeta($src)." ".quotemeta($dest));
+return $err ? $err : $ex ? $out : undef;
+}
+
 # shared_dir_on_servers(&server1, &server2, dir)
 # Checks if some directory is shared between two machines (ie. via NFS)
 sub shared_dir_on_servers
