@@ -24,6 +24,7 @@ alloc_ipv6=Allocate an IPv6 address for new systems?,1,1-Yes,0-No
 ssh_port=SSH server port for new systems,3,SSH default (22),5
 vnc_passmode=Graphical console password for new systems,1,1-Generate randomly,0-Same as root password
 owner_delete=Delete systems when their owner is deleted?,1,1-Yes,0-No
+timezone_sync=Set timezone on new systems to match host?,1,1-Yes,0-No
 
 line4.5=KVM settings,11
 kvm_mem=Default KVM memory allocation,0,10,,MB

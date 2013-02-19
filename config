@@ -66,3 +66,4 @@ vnc_passmode=0
 kvm_firewall=0
 nodots=0
 owner_delete=0
+timezone_sync=1

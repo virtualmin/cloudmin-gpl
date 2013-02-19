@@ -4840,8 +4840,8 @@ sub type_kvm_symlink_file
 my ($server, $src, $dest) = @_;
 if ($server->{'kvm_mount'}) {
         my $vhost = &type_kvm_parent($server);
-        return &symlink_file_on_server($vhost, $server->{'kvm_mount'}.$src,
-					       $server->{'kvm_mount'}.$dest);
+        return &symlink_file_on_server($vhost, $src,
+				       $server->{'kvm_mount'}.$dest);
         }
 else {
         return 'FALLBACK';

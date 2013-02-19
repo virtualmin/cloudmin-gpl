@@ -701,6 +701,38 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		}
 	return "Failed to save fixed $fix : $err" if ($err);
 	}
+
+# Sync /etc/localtime with host
+my $hostzone;
+if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
+	# Get timezone from webmin on host
+	&remote_foreign_require($vhost, "time");
+	$hostzone = &remote_foreign_call($vhost, "time",
+					 "get_current_timezone");
+	}
+if (!$hostzone) {
+	# Fall back to reading link
+	my $hostlink = &readlink_on_server($vhost, "/etc/localtime");
+	if ($hostlink =~ /\/zoneinfo\/(\S+)$/) {
+		$hostzone = $1;
+		}
+	}
+if ($hostzone) {
+	my $serverlink = &readlink_on_server($server, "/etc/localtime");
+	my $serverdir;
+	if ($serverlink =~ /^(.*\/zoneinfo)\//) {
+		$serverdir = $1;
+		}
+	elsif (&is_dir_on_server($server, "/usr/share/zoneinfo")) {
+		$serverdir = "/usr/share/zoneinfo";
+		}
+	if ($serverdir) {
+		&delete_file_on_server($server, "/etc/localtime");
+		&symlink_file_on_server($server,
+			$serverdir."/".$hostzone, "/etc/localtime");
+		}
+	}
+
 return undef;
 }
 
