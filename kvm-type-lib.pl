@@ -2615,7 +2615,8 @@ if ($server->{'kvm_ioclass'} ne '') {
 	$cmd = "ionice -n$server->{'kvm_ioclass'} $cmd";
 	}
 if ($vhost->{'kvm_cgroup_support'}) {
-	my @cmds = ( "cgcreate -g cpu:$server->{'id'}" );
+	my @cmds = ( "test -d $vhost->{'kvm_cgroup_dir'} || sleep 20",
+		     "cgcreate -g cpu:$server->{'id'}" );
 	if ($server->{'kvm_cpu'}) {
 		my $n = int($server->{'kvm_cpu'} * 1024 / 100);
 		push(@cmds, "echo $n >$vhost->{'kvm_cgroup_dir'}/cpu/$server->{'id'}/cpu.shares");
