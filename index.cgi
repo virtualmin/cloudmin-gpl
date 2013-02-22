@@ -340,6 +340,10 @@ if (@servers) {
 					push(@cols, $p ? $p->{'short_host'}
 						       : undef);
 					}
+				elsif ($c eq "vcpus") {
+					# Virtual CPUs
+					push(@cols, &get_vcpus_count($s));
+					}
 				else {
 					push(@cols, $s->{$c});
 					}
@@ -428,3 +432,21 @@ my $bb = join("&", map { $_."=".$b->{$_} } sort { $a cmp $b } (keys %$bhash));
 return $aa eq $bb;
 }
 
+sub get_vcpus_count
+{
+my ($s) = @_;
+return undef if ($s->{'status'} eq 'nohost');
+my $cfunc = "type_".$s->{'manager'}."_can_vcpus";
+if (defined(&$cfunc) && &$cfunc($s)) {
+	my $mfunc = "type_".$s->{'manager'}."_get_vcpus";
+	my $vcpus = &$mfunc($s);
+	return ref($vcpus) ? scalar(@$vcpus) : undef;
+	}
+$cfunc = "type_".$s->{'manager'}."_can_smp";
+if (defined(&$cfunc) && &$cfunc($s)) {
+	my $mfunc = "type_".$s->{'manager'}."_get_smp";
+	my ($smp, $cores) = &$mfunc($s);
+	return $smp ? $smp.($cores > 1 ? ",$cores" : "") : undef;
+	}
+return undef;
+}
