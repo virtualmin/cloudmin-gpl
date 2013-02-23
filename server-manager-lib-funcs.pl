@@ -1321,7 +1321,7 @@ else {
 		$sshcmd .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
 		}
-	if (!$nolang) {
+	if (!$nolang && $server->{'root_shell'}) {
 		# Force all output to be in english
 		if ($cmd =~ /^(\(+)(.*)/) {
 			# Command is like (foo)
