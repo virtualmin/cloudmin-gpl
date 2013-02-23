@@ -11065,6 +11065,7 @@ my $err = &mount_filesystem_if_needed($server);
 return undef if ($err);
 my $rhr = &get_file_data_from_server($server, "/etc/redhat-release");
 my $issue = &get_file_data_from_server($server, "/etc/issue");
+my $motd = &get_file_data_from_server($server, "/etc/motd");
 if ($rhr =~ /CentOS/i) {
 	$rv = "centos";
 	}
@@ -11082,6 +11083,9 @@ elsif ($issue =~ /Debian/i) {
 	}
 elsif ($issue =~ /Amazon/i) {
 	$rv = "amazon";
+	}
+elsif ($motd =~ /FreeBSD/i) {
+	$rv = "freebsd";
 	}
 &umount_filesystem_if_needed($server);
 return $rv;
