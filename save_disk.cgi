@@ -147,6 +147,23 @@ elsif ($in{'connect'} || $in{'disconnect'}) {
 	}
 else {
 	# Validate inputs, and update the disk hash
+	if (!$in{'new'} && $disk->{'mount'} eq '/' &&
+	    $server->{'status'} ne 'down' && !$in{'shutdown'}) {
+		# If root disk and system is running, offer to shut down for
+		# a resize
+		&ui_print_header(&server_in($server), $text{'disk_title'}, "");
+
+		print &ui_confirmation_form("save_disk.cgi",
+			&text('disk_changerusure', $disk->{'mount'}),
+			[ map { [ $_, $in{$_} ] } keys %in ],
+			[ [ 'shutdown', $text{'disk_shutdown'} ] ],
+			);
+
+		&ui_print_footer("list_disks.cgi?id=$in{'id'}",
+				   $text{'disks_return'},
+				 "", $text{'index_return'});
+		return;
+		}
 
 	# Storage location
 	$sfunc = "type_".$server->{'manager'}."_list_storages";
@@ -314,6 +331,23 @@ else {
 	else {
 		# Modify the size or devices, if we can
 		&ui_print_header(&server_in($server), $text{'disk_titlem'}, "");
+
+		$did_shutdown = 0;
+		if ($in{'shutdown'} && $server->{'status'} ne 'down') {
+			# Shut down before resizing
+			&$first_print($text{'mkimage_shutdown'});
+			local $err = &shutdown_server($server);
+			&check_server_status($server, 0, 1);
+			&save_managed_server($server);
+			if ($err) {
+				&$second_print(&text('mkimage_eshutdown',$err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				}
+			$did_shutdown = 1;
+			}
+
 		&start_background_dot_printer(&text('disk_modifying',
 				    "<tt>$disk->{'real'}</tt>"));
 		$cfunc = "type_".$server->{'manager'}."_modify_disk";
@@ -321,12 +355,31 @@ else {
 		&save_disk_include($server, $disk, $in{'include'});
 		&save_managed_server($server);
 		&stop_background_dot_printer();
+
 		if ($err) {
 			&$second_print(&text('disk_modifyfailed', $err));
 			}
 		else {
 			&$second_print(&text('disk_modifyok'));
-			&show_disk_reboot_message($server, $disk, $olddisk);
+			}
+
+		if ($did_shutdown) {
+			# Start up after resizing
+			&$first_print($text{'mkimage_startup'});
+			local $err = &startup_server($server);
+			&check_server_status($server, 0, 1);
+			&save_managed_server($server);
+			if ($err) {
+				&$second_print(&text('mkimage_estartup', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				}
+			}
+
+		if (!$err) {
+			&show_disk_reboot_message($server, $disk, $olddisk)
+				if (!$did_shutdown);
 			&webmin_log("modify", "disk", $server->{'host'},
 				    { 'real' => $disk->{'real'} });
 			}
