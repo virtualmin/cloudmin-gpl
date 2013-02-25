@@ -2290,7 +2290,14 @@ return (0, "Failed to create nc.pl : $ncerr") if ($ncerr);
 
 # Create a console output file and monitor input file
 $server->{'kvm_console'} ||= &get_kvm_console_file($server);
+my $oldmon = $server->{'kvm_monitor'};
+my $oldpass = $server->{'kvm_vnc_passwd'};
 my $err = &create_kvm_monitor_file($server);
+if ($oldmon ne $server->{'kvm_monitor'} ||
+    $oldpass ne $server->{'kvm_vnc_passwd'}) {
+	# Re-save after setting password for VNC
+	&save_managed_server($server);
+	}
 return (0, "Failed to create monitor input file : $err") if ($err);
 
 # If on iSCSI, re-connect any disconnected disks
