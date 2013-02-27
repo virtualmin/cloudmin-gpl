@@ -120,6 +120,13 @@ foreach $s (@allservers) {
 		}
 	}
 
+# Find blocked IPs
+$blocked = &get_blocked_ips();
+foreach my $ip (keys %$blocked) {
+	$ips{$ip} ||= { };
+	$ips{$ip}->{'blocked'} = 1;
+	}
+
 # Find IPs for DHCP
 if (&foreign_installed("dhcpd")) {
 	&foreign_require("dhcpd");
@@ -180,6 +187,7 @@ if (!$module_info{'onehost'}) {
 	  [ "pools", $text{'ips_tabpools'}, "list_ips.cgi?mode=pools" ]);
 	}
 push(@tabs, [ "pools6", $text{'ips_tabpools6'}, "list_ips.cgi?mode=pools6" ]);
+push(@tabs, [ "blocked", $text{'ips_tabblocked'},"list_ips.cgi?mode=blocked" ]);
 print &ui_tabs_start(\@tabs, "mode", $in{'mode'} || "ips", 1);
 
 # Show all the IPs we know about, in a tab
@@ -237,6 +245,7 @@ else {
 		$s = $ips{$ip}->{'server'};
 		$p = $ips{$ip}->{'ping'};
 		$d = $ips{$ip}->{'dhcpd'};
+		$b = $ips{$ip}->{'blocked'};
 		@hosts = sort { $a cmp $b }
 			      map { $idmap{$_}->{'host'} }
 				  &unique(@{$ips{$ip}->{'hosts'}});
@@ -255,6 +264,7 @@ else {
 			     "$s->{'host'}</a>" :
 			 $p > 0 ? $text{'ips_ping'} :
 			 $d ? $text{'ips_dhcpd'} :
+			 $b ? $text{'ips_blocked'} :
 			 $p < 0 ? $text{'ips_unalloc'} :
 				  $text{'ips_free'},
 			!$oc ? ( ) :
@@ -384,6 +394,20 @@ foreach $p (@pools6, { }) {
 	$i++;
 	}
 print &ui_columns_end();
+print &ui_form_end([ [ undef, $text{'save'} ] ]);
+print &ui_tabs_end_tab();
+
+# Show blocked IPs
+print &ui_tabs_start_tab("mode", "blocked");
+print $text{'ips_blockeddesc'},"<p>\n";
+print &ui_form_start("save_blocked.cgi", "post");
+
+print &ui_table_start(undef, undef, 2);
+print &ui_table_row(undef,
+	&ui_textarea("blocked", join("\n", sort { $a cmp $b } keys %$blocked),
+		     10, 80));
+print &ui_table_end();
+
 print &ui_form_end([ [ undef, $text{'save'} ] ]);
 print &ui_tabs_end_tab();
 

@@ -3977,6 +3977,7 @@ log_create_iscsi=Added iSCSI server $1
 log_modify_iscsi=Modified iSCSI server $1
 log_delete_iscsi=Removed iSCSI server $1
 log_postinstall=Ran post-install script
+log_blocked=Updated blocked IPs list
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system
@@ -4366,15 +4367,18 @@ ips_host=Host systems
 ips_free=Free
 ips_ping=In Use
 ips_dhcpd=For DHCP
+ips_blocked=Blocked
 ips_unalloc=Unallocated
 ips_tabips=IP addresses in use
 ips_tabranges=IP ranges in use
 ips_tabpools=Common IPv4 pools
 ips_tabpools6=Common IPv6 pools
+ips_tabblocked=Blocked IPs
 ips_ipsdesc=This table shows all IP addresses known to Cloudmin, including those active on managed systems and those available for allocation.
 ips_rangesdesc=This table shows all IP allocation ranges configured for host systems, and how much of each has been used.
 ips_poolsdesc=This table allows you to define IPv4 allocation ranges that can be used by multiple host systems, and updated from a central location.
 ips_pools6desc=This table allows you to define IPv6 allocation ranges that can be used by multiple host systems, and updated from a central location.
+ips_blockeddesc=IP addresses entered in this box will never be assigned to virtual systems. This can be used to block IPs that you plan to use for other purposes or are assigned to physical systems that are currently down.
 ips_range1=Range start
 ips_range2=Range end
 ips_count=Addresses
@@ -5193,6 +5197,9 @@ iscsi_cnoversion=Webmin version 1.600 or later is required
 iscsi_cnomod=The Webmin iSCSI client module is not installed
 iscsi_cnoclient=The system is not setup as an iSCSI client : $1
 iscsi_cnostartup=Automatic startup is not enabled in the iSCSI client
+
+blocked_err=Failed to save blocked IP addresses
+blocked_eip=Invalid IP address : $1
 
 __norefs=1
 

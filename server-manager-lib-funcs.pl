@@ -5211,6 +5211,12 @@ foreach my $s (&list_managed_servers()) {
 foreach my $ip (&get_creation_use_ips()) {
 	$used{$ip} = 1;
 	}
+
+# Add blocked IPs
+my $blocked = &get_blocked_ips();
+foreach my $ip (keys %$blocked) {
+	$used{$ip} = 1;
+	}
 return %used;
 }
 
@@ -12295,7 +12301,24 @@ for(my $i=0; $i<@sp1 || $i<@sp2; $i++) {
 return 0;
 }
 
+# get_blocked_ips()
+# Returns a hash ref of IPs that are currently blocked for allocation
+sub get_blocked_ips
+{
+my %ips;
+&read_file($blocked_ips_file, \%ips);
+return \%ips;
+}
 
+# save_blocked_ips(&ips)
+# Updates the list of IPs that are currently blocked for allocation
+sub save_blocked_ips
+{
+my ($ips) = @_;
+&lock_file($blocked_ips_file);
+&write_file($blocked_ips_file, $ips);
+&unlock_file($blocked_ips_file);
+}
 
 # obtain_lock_anything()
 # Should be called before any state-changing action
