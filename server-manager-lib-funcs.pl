@@ -602,9 +602,7 @@ else {
 		my $f = $servers::module_config_directory."/".
 		        $server->{'id'}.".serv";
 		&write_file($f, $server);
-		if ($newserver) {
-			&set_ownership_permissions(undef, undef, 0600, $f);
-			}
+		&set_ownership_permissions(undef, undef, 0600, $f);
 		$main::remote_servers_cache{$server->{'host'}} =
 		   $main::remote_servers_cache{$server->{'host'}.":".
 					      $server->{'port'}} = $server;
