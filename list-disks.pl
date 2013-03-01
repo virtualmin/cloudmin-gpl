@@ -82,6 +82,10 @@ if (!ref($disks) && $multi) {
 ref($disks) || &usage("Failed to list disks : $disks");
 $pfunc = "type_".$server->{'manager'}."_list_disk_partitions";
 
+# Get supported cache types
+$cfunc = "type_".$server->{'manager'}."_list_disk_caches";
+$caches = defined(&$cfunc) ? &$cfunc($server) : [ ];
+
 if ($multi) {
 	# Show one per block
 	foreach $d (@$disks) {
@@ -151,6 +155,18 @@ if ($multi) {
 			}
 		if ($d->{'media'}) {
 			print "    Media: $d->{'media'}\n";
+			}
+		if (@$caches) {
+			if ($d->{'cache'}) {
+				($c) = grep { $_->{'id'} eq $d->{'cache'} ||
+				      $_->{'alt'} eq $d->{'cache'} } @$caches;
+				}
+			else {
+				($c) = grep { $_->{'default'} } @$caches;
+				}
+			$c ||= { 'id' => $d->{'cache'},
+				 'desc' => 'Unknown' };
+			print "    Caching: $c->{'id'} - $c->{'desc'}\n";
 			}
 		if ($d->{'size'}) {
 			print "    Size: $d->{'size'}\n";

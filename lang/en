@@ -2482,6 +2482,7 @@ disk_size1=New disk file size
 disk_size0=Disk file size
 disk_size=Device size
 disk_media=Disk media
+disk_cache=Caching mode
 disk_storage=Disk storage location
 disk_istate=iSCSI state
 disk_istate1=Connected

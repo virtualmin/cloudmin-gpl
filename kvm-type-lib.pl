@@ -2764,6 +2764,7 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		     'virtdev' => $dev,
 		     'drive_index' => $idx,
 		     'media' => $drive{'media'} || 'disk',
+		     'cache' => $drive{'cache'},
 		     'format' => 'disk' };
 	if ($disk->{'media'} eq 'cdrom') {
 		# Can change device, but not size
@@ -3827,6 +3828,36 @@ sub type_kvm_list_disk_medias
 my ($server) = @_;
 return [ { 'id' => 'disk', 'desc' => 'Hard disk' },
 	 { 'id' => 'cdrom', 'desc' => 'CD or DVD drive' } ];
+}
+
+# type_kvm_list_disk_caches(&server)
+# Returns the list of possible disk caching types for some system. Each is a
+# has ref with id and desc fields
+sub type_kvm_list_disk_caches
+{
+my ($server) = @_;
+my $vhost = &get_parent_server($server);
+if (&kvm_host_version($vhost) > 1.0) {
+	return [ { 'id' => 'none',
+		   'alt' => 'off',
+		   'desc' => 'Disabled (Only uses host disk)', },
+		 { 'id' => 'writeback',
+		   'desc' => 'Writeback (Reads and writes to host cache)' },
+		 { 'id' => 'writethrough',
+		   'alt' => 'on',
+		   'desc' => 'Writethrough (Reads from host cache)',
+		   'default' => 1, },
+		 { 'id' => 'unsafe',
+		   'desc' => 'Unsafe' },
+		];
+	}
+else {
+	return [ { 'id' => 'on',
+		   'default' => 1,
+		   'desc' => 'Enabled (Reads from host cache)' },
+		 { 'id' => 'off',
+		   'desc' => 'Disabled (Only uses host disk)' } ];
+	}
 }
 
 # type_kvm_can_cpu(&server)

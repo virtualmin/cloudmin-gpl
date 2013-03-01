@@ -179,6 +179,27 @@ if (defined(&$mfunc)) {
 			   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$medias ]));
 	}
 
+# Caching mode, if supported
+$cfunc = "type_".$server->{'manager'}."_list_disk_caches";
+if (defined(&$cfunc)) {
+	$caches = &$cfunc($server);
+	ref($caches) || &error($caches);
+	$c = $disk->{'cache'};
+	if ($c) {
+		($obj) = grep { $_->{'id'} eq $c ||
+				$_->{'alt'} eq $c } @$caches;
+		$c = $obj->{'id'} if ($obj);
+		}
+	else {
+		($obj) = grep { $_->{'default'} } @$caches;
+		$c = $obj->{'id'};
+		}
+	print &ui_table_row($text{'disk_cache'},
+		&ui_select("cache", $c,
+			   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$caches ],
+			   1, 0, 1));
+	}
+
 # Storage location, if supported
 if ($gotstorage) {
 	print &ui_table_row($text{'disk_storage'}, $gotstorage->{'desc'});
