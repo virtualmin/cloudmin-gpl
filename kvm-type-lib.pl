@@ -3137,9 +3137,12 @@ else {
 			   'alloc' => 'n',
 			   'vg' => $disk->{'vg'} };
 		my $err = &remote_foreign_call($vhost, "lvm",
-						  "create_logical_volume", $lv);
+					       "create_logical_volume", $lv);
 		$err ||= $last_remote_error;
 		return "LVM logical volume creation failed : $err" if ($err);
+
+		# Invalidate LV cache for host
+		delete($main::list_logical_cache{$vhost->{'id'}});
 
 		# Zero out first 32k
 		my $cmd = &dd_command("/dev/zero", $disk->{'real'}, 32768);
@@ -3437,6 +3440,9 @@ if (!$detach) {
 				{ 'device' => $disk->{'real'} });
 		$err ||= $last_remote_error;
 		return $err if ($err);
+
+		# Invalidate LV cache for host
+		delete($main::list_logical_cache{$vhost->{'id'}});
 		}
 	elsif ($disk->{'iscsi_server'} ne '') {
 		# Delete from iSCSI server
