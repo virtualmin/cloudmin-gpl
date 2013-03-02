@@ -1582,6 +1582,17 @@ elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
 		}
 	}
 
+# Work out default cache type
+my $cacheflag;
+if ($config{'kvm_cache'}) {
+	my $caches = &type_kvm_list_disk_caches($server);
+	my ($obj) = grep { $_->{'id'} eq $config{'kvm_cache'} ||
+			   $_->{'alt'} eq $config{'kvm_cache'} } @$caches;
+	if ($obj) {
+		$cacheflag = ",cache=$obj->{'id'}";
+		}
+	}
+
 # Set drive in config, unless resetting in which case they stay the same
 $server->{'kvm_filesystem'} = $fsfile;
 $server->{'kvm_swapfile'} = $swfile;
@@ -1590,7 +1601,8 @@ if (!$reset) {
 	my $boot = $ver && &compare_versions($ver, "1.1") >= 0 ? ""
 							       : ",boot=on";
 	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0".
-		  ($server->{'kvm_virtio'} ? ",if=virtio".$boot : ",if=ide");
+		  ($server->{'kvm_virtio'} ? ",if=virtio".$boot : ",if=ide").
+		  $cacheflag;
 	if ($swfile) {
 		$server->{'kvm_drives'} .=
 			" file=$swfile,media=disk,index=1,cache=off,".
@@ -3842,7 +3854,7 @@ sub type_kvm_list_disk_caches
 {
 my ($server) = @_;
 my $vhost = &get_parent_server($server);
-if (&kvm_host_version($vhost) > 1.0) {
+if (&compare_versions(&kvm_host_version($vhost), "0.12") > 0) {
 	return [ { 'id' => 'none',
 		   'alt' => 'off',
 		   'desc' => 'Disabled (Only uses host disk)', },
