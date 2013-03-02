@@ -270,6 +270,18 @@ else {
 		$disk->{'media'} = $in{'media'};
 		}
 
+	# Disk cache type
+	$cfunc = "type_".$server->{'manager'}."_list_disk_caches";
+	if (defined(&$cfunc) && defined($in{'cache'})) {
+		$caches = &$cfunc($server);
+		ref($caches) || &error($caches);
+		($obj) = grep { $_->{'id'} eq $in{'cache'} ||
+				$_->{'alt'} eq $in{'cache'} } @$caches;
+		$obj || $in{'cache'} eq $disk->{'cache'} ||
+			&error($text{'disk_ecache'});
+		$disk->{'cache'} = $in{'cache'};
+		}
+
 	# New filesystem and mount point
 	if ($in{'new'}) {
 		$disk->{'fs'} = $in{'fs'};

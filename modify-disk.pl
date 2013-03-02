@@ -23,6 +23,9 @@ use the C<--new-real> flag followed by a new path on the host system.
 To change the media type of a disk, use the C<--new-media> flag followed by
 a type such as I<disk> or I<cdrom>.
 
+To change the caching mode of a disk, use the C<--new-cache> flag followed by
+a mode like C<on> or C<off>.
+
 Disks mounted from an iSCSI can be disconnected on the host system using
 the C<--iscsi-disconnect> flag. To re-establish a connection, use the 
 C<--iscsi-connect> flag.
@@ -85,6 +88,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--new-media") {
 		$media = shift(@ARGV);
 		}
+	elsif ($a eq "--new-cache") {
+		$cache = shift(@ARGV);
+		}
 	elsif ($a eq "--backup-include") {
 		$include = 1;
 		}
@@ -109,7 +115,7 @@ while(@ARGV > 0) {
 $real || $virt || $lv || $mount ||
 	&usage("The disk to modify must be identified by the ".
 	       "--real, --virt, --mount or --lv parameters");
-$newsize || $newvirt || $media || $newreal || defined($include) ||
+$newsize || $newvirt || $media || $cache || $newreal || defined($include) ||
 	defined($iscsi_connect) || &usage("Nothing to do");
 !$newsize || $newsize =~ /^\d*$/ ||
 	&usage("Invalid --new-size parameter - must be followed by a ".
@@ -135,6 +141,19 @@ if ($media) {
 	($gotmedia) = grep { $_->{'id'} eq $media } @$medias;
 	$gotmedia || &usage("Invalid media type - supported types are : ".
 			    join(" ", map { $_->{'id'} } @$medias));
+	}
+
+# Validate cache type
+if ($cache) {
+	$cfunc = "type_".$server->{'manager'}."_list_disk_caches";
+	defined(&$cfunc) || &usage("Disk caching cannot be specified for this ".
+				   "virtual system type");
+	$caches = &$cfunc($server);
+	($gotcache) = grep { $_->{'id'} eq $cache ||
+			     $_->{'alt'} eq $cache } @$caches;
+	$gotcache || &usage("Invalid cache type - supported types are : ".
+			    join(" ", map { $_->{'id'} } @$caches));
+	$cache = $gotcache->{'id'};
 	}
 
 # Get the current disks
@@ -182,6 +201,9 @@ if ($newvirt) {
 	}
 if ($media) {
 	$disk->{'media'} = $media;
+	}
+if ($cache) {
+	$disk->{'cache'} = $cache;
 	}
 if ($newreal) {
 	$disk->{'change'} ||
@@ -263,6 +285,7 @@ print "                     --real device|file | --virt device | --lv name\n";
 print "                    [--new-size MB]\n";
 print "                    [--new-virt device]\n";
 print "                    [--new-media type]\n";
+print "                    [--new-cache mode]\n";
 print "                    [--new-real file]\n";
 print "                    [--force]\n";
 print "                    [--backup-exclude | --backup-include]\n";

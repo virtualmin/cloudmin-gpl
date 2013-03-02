@@ -34,6 +34,11 @@ CD-ROM with the C<--media> flag. This allows you to attach an existing ISO
 image as a CD, which will appear as a actual CD-ROM drive within the virtual
 system. On KVM the supported media types are I<disk> and I<cdrom>.
 
+Some virtualization types allow you to specify the caching type for the
+disk image with the C<--cache> flag, followed by a mode like C<on> or
+C<off> or C<writeback>. This can be used to trade of disk performance for 
+host memory usage.
+
 By default disk creation will fail if the specified file or logical volume
 already exists on the host system. You can instead force deletion of any
 existing file with the C<--overwrite> flag.
@@ -103,6 +108,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--media") {
 		$media = shift(@ARGV);
+		}
+	elsif ($a eq "--cache") {
+		$cache = shift(@ARGV);
 		}
 	elsif ($a eq "--storage") {
 		$storage = shift(@ARGV);
@@ -174,6 +182,19 @@ if ($media) {
 			    join(" ", map { $_->{'id'} } @$medias));
 	}
 
+# Validate cache type
+if ($cache) {
+	$cfunc = "type_".$server->{'manager'}."_list_disk_caches";
+	defined(&$cfunc) || &usage("Disk caching cannot be specified for this ".
+				   "virtual system type");
+	$caches = &$cfunc($server);
+	($gotcache) = grep { $_->{'id'} eq $cache ||
+			     $_->{'alt'} eq $cache } @$caches;
+	$gotcache || &usage("Invalid cache type - supported types are : ".
+			    join(" ", map { $_->{'id'} } @$caches));
+	$cache = $gotcache->{'id'};
+	}
+
 # Validate storage
 if ($storage) {
 	&can_action_usage($server, "storage");
@@ -208,6 +229,9 @@ if ($lv) {
 	}
 if ($media) {
 	$disk->{'media'} = $media;
+	}
+if ($cache) {
+	$disk->{'cache'} = $cache;
 	}
 $disk->{'overwrite'} = $overwrite;
 
@@ -300,6 +324,7 @@ print "                    [--device]\n";
 print "                    [--format filesystem]\n";
 print "                    [--mount directory|\"swap\"]\n";
 print "                    [--media type]\n";
+print "                    [--cache mode]\n";
 print "                    [--storage id|\"name\"]\n";
 print "                    [--overwrite]\n";
 print "                    [--reboot]\n";

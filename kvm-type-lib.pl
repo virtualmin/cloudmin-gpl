@@ -3172,6 +3172,9 @@ else {
 my @drives = split(/\s+/, $server->{'kvm_drives'});
 my %drive = ( 'file' => $disk->{'real'},
 	      'media' => $disk->{'media'} || 'disk' );
+if ($disk->{'cache'}) {
+	$drive{'cache'} = $disk->{'cache'};
+	}
 if ($disk->{'media'} eq 'cdrom') {
 	# CDs must be on IDE
 	$drive{'if'} = 'ide';
@@ -3650,6 +3653,7 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 if ($disk->{'virt'} ne $olddisk->{'virt'} ||
     $disk->{'media'} ne $olddisk->{'media'} ||
+    $disk->{'cache'} ne $olddisk->{'cache'} ||
     $disk->{'real'} ne $olddisk->{'real'}) {
 	# Change the virtual device, both in the KVM config file and fstab
 	if ($olddisk->{'virt_mount'} =~ /(\d+)$/) {
@@ -3666,6 +3670,7 @@ if ($disk->{'virt'} ne $olddisk->{'virt'} ||
 	if ($disk->{'media'}) {
 		$drive{'media'} = $disk->{'media'};
 		}
+	$drive{'cache'} = $disk->{'cache'};
 	if ($disk->{'real'}) {
 		$drive{'file'} = $disk->{'real'};
 		}
