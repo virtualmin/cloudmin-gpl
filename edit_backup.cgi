@@ -178,6 +178,8 @@ print &ui_table_row(&hlink($text{'backup_dest'}, "backup_dest"),
 		  [ 4, $text{'backup_dest4'},
 			&show_backup_ssh_dest(
 			    $mode == 4 ? $dest : { }, "ftp", 21) ],
+		  [ 5, $text{'backup_dest5'},
+			&show_backup_s3_dest($mode == 5 ? $dest : { }) ],
 	 	]));
 
 print &ui_hidden_table_end("destsect");

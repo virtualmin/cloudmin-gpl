@@ -717,6 +717,35 @@ elsif ($dest->{'mode'} == 4) {
 		quotemeta($file)." 2>&1");
 	return $err ? $err : $ex ? "FTP upload failed : $out" : undef;
 	}
+elsif ($dest->{'mode'} == 5) {
+	# Is S3 supported?
+	my $err = &check_s3();
+	return $err if ($err);
+
+	# Create the S3 bucket if missing
+	my $err = &init_s3_bucket($dest->{'user'}, $dest->{'pass'},
+				  $dest->{'bucket'}, 1);
+	return "Failed to create bucket : $err" if ($err);
+
+	# Send to S3 from the Cloudmin master
+	my $sendfrom;
+	if ($server->{'manager'} eq 'this') {
+		$sendfrom = $file;
+		}
+	else {
+		$sendfrom = &transname();
+		my $err = &get_file_from_server($server, $file, $sendfrom);
+		return $err if ($err);
+		}
+	my $path = $dest->{'path'}.$ext;
+	my $err = &s3_upload($dest->{'user'}, $dest->{'pass'},
+			     $dest->{'bucket'}, $sendfrom, $path, undef,
+			     undef, 1, $dest->{'rrs'});
+	if ($server->{'manager'} ne 'this') {
+		&unlink_file($sendfrom);
+		}
+	return $err;
+	}
 else {
 	return "Unknown destination mode $dest->{'mode'}";
 	}
@@ -1529,13 +1558,15 @@ if ($dest->{'mode'} != 1 && $gzfile) {
 
 	if (!$err) {
 		# Send via SCP or FTP
-		&$first_print(&text('brun_sending', $server->{'host'},
-					    &nice_backup_destination($dest)));
+		&start_background_dot_printer(
+			&text('brun_sending', $server->{'host'},
+			      &nice_backup_destination($dest)));
 		foreach my $g (@gzfiles) {
 			my ($ext) = ($g =~ /(\.\d+)$/ ? $1 : undef);
 			$err = &send_to_backup_dest($vhost, $g, $dest, $ext);
 			last if ($err);
 			}
+		&stop_background_dot_printer();
 		}
 
 	# Delete from host
@@ -1958,6 +1989,34 @@ elsif ($dest->{'mode'} == 4) {
 		  "/".quotemeta($dest->{'path'}.$ext);
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err ? $err : $ex ? "FTP download failed : $out" : undef;
+	}
+elsif ($dest->{'mode'} == 5) {
+	# Is S3 supported?
+	my $err = &check_s3();
+	return $err if ($err);
+
+	# Get from S3 via the Cloudmin master
+	my $sendto;
+	if ($server->{'manager'} eq 'this') {
+                $sendto = $file;
+                }
+	else {
+		$sendto = &transname();
+		}
+	my $path = $dest->{'path'}.$ext;
+	my $err = &s3_download($dest->{'user'}, $dest->{'pass'},
+			       $dest->{'bucket'}, $path, $sendto);
+	return $err if ($err);
+
+	# If final dest is not the master, copy over
+	if ($server->{'manager'} ne 'this') {
+		my $err = &put_file_to_server($server, $sendto, $file);
+		&unlink_file($sendto);
+		return $err;
+		}
+	else {
+		return undef;
+		}
 	}
 else {
 	return "Unknown destination mode $dest->{'mode'}";

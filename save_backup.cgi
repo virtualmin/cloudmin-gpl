@@ -107,11 +107,18 @@ else {
 		$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode2'});
 		$backup->{'dest'} = &join_backup_destination($dest);
 		}
-	else {
+	elsif ($in{'dest_mode'} == 3 || $in{'dest_mode'} == 4) {
 		# SSH or FTP
 		$dest = { 'mode' => $in{'dest_mode'} };
 		$pfx = $in{'dest_mode'} == 3 ? 'ssh' : 'ftp';
 		$err = &parse_backup_ssh_dest($dest, $pfx, \%in);
+		&error($err) if ($err);
+		$backup->{'dest'} = &join_backup_destination($dest);
+		}
+	elsif ($in{'dest_mode'} == 5) {
+		# Amazon S3
+		$dest = { 'mode' => 5 };
+		$err = &parse_backup_s3_dest($dest, \%in);
 		&error($err) if ($err);
 		$backup->{'dest'} = &join_backup_destination($dest);
 		}

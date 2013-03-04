@@ -3519,6 +3519,13 @@ backups_eftppass=Invalid FTP password - no spaces or the : or / symbols are allo
 backups_eftppath=Missing or non-absolute FTP directory
 backups_fromhost=From host system
 backups_return=backups list
+backups_s3akey=S3 access key
+backups_s3skey=S3 secret key
+backups_s3path=Bucket and path
+backups_s3rrs=Use reduced redundancy storage?
+backups_es3akey=Missing or invalid-looking S3 access key
+backups_es3skey=Missing or invalid-looking S3 secret key
+backups_es3path=S3 path must be either a bucket name, or bucket/subdirectory
 
 backup_title1=Create Backup
 backup_title2=Edit Backup
@@ -3532,6 +3539,7 @@ backup_dest=Backup destination
 backup_dest0=Default destination for host system
 backup_dest3=Remote SSH server
 backup_dest4=Remote FTP server
+backup_dest5=Amazon S3
 backup_owner=Created by system owner
 backup_shutdown=Shut down systems?
 backup_shutdown1=Yes (ensures filesystem consistency)
@@ -3575,6 +3583,8 @@ bdest_mode1=<tt>$1</tt> on host system
 bdest_mode2=<tt>$2</tt> on system <tt>$1</tt>
 bdest_mode3=<tt>$3</tt> on SSH server <tt>$2</tt> as <tt>$1</tt>
 bdest_mode4=<tt>$3</tt> on FTP server <tt>$2</tt> as <tt>$1</tt>
+bdest_mode5=<tt>$2</tt> in bucket <tt>$1</tt> on Amazon S3
+bdest_mode5b=<tt>$1</tt> on Amazon S3
 
 reverse_title=Reverse Addresses
 reverse_header=Reverse address mappings
@@ -5202,6 +5212,17 @@ iscsi_cnostartup=Automatic startup is not enabled in the iSCSI client
 
 blocked_err=Failed to save blocked IP addresses
 blocked_eip=Invalid IP address : $1
+
+s3_emodule=The Perl module $1 needed to communicate with Amazon's S3 service is not installed
+s3_elist=Failed to list S3 buckets : $1
+s3_elistfiles=Failed to list S3 files : $1
+s3_edelete=Failed to delete S3 bucket : $1
+s3_edeletefile=Failed to delete S3 file : $1
+s3_ecreate=Failed to create S3 bucket : $1
+s3_einfo=Failed to upload information file : $1
+s3_edom=Failed to upload domain file : $1
+s3_elist2=Failed to list S3 bucket : $1
+s3_einfo2=Failed to read $1 : $2
 
 __norefs=1
 
