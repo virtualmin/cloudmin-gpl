@@ -4772,6 +4772,7 @@ boot_edevice=Selected boot device does not exist!
 
 purge_edatepath=Purging of old backups is only possible for date-based destinations
 purge_els=Failed to list directory $1 : $2
+purge_es3ls=Failed to list S3 bucket $1 : $2
 purge_deleting=Deleting directory $1 ..
 purge_deletingftp=Deleting FTP directory $1 ..
 purge_edelete=.. deletion failed : $1
