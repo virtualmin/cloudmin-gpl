@@ -49,6 +49,7 @@ else {
 	@allservers = grep { &supports_backup($_) }
 			&list_available_managed_servers_sorted();
 	@servers = grep { $want{$_->{'id'}} } @allservers;
+	@servers || &error($text{'restore_enone'});
 	$backup = { 'servers' => join(' ', map { $_->{'id'} } @servers),
 		    'parallel' => $in{'parallel'} };
 	if ($in{'dest_mode'} == 3 || $in{'dest_mode'} == 4) {
@@ -56,6 +57,12 @@ else {
 		$pfx = $in{'dest_mode'} == 3 ? 'ssh' : 'ftp';
 		$err = &parse_backup_ssh_dest($dest, $pfx, \%in);
 		&error($err) if ($err);
+                $backup->{'dest'} = &join_backup_destination($dest);
+		}
+	elsif ($in{'dest_mode'} == 5) {
+		$dest = { 'mode' => 5 };
+		$err = &parse_backup_s3_dest($dest, \%in);
+                &error($err) if ($err);
                 $backup->{'dest'} = &join_backup_destination($dest);
 		}
 	}
@@ -90,9 +97,14 @@ $rv = &execute_restore($backup);
 if (scalar(@ok) == $rcount) {
 	print "<b>",&text('rrun_allok', scalar(@ok)),"</b><p>\n";
 	}
-else {
+elsif (scalar(@ok)) {
 	print "<b><font color=red>",
 	      &text('rrun_somefailed', scalar(@ok), scalar(@bad)),
+	      "</font></b><p>\n";
+	}
+else {
+	print "<b><font color=red>",
+	      &text('rrun_somefailed2', scalar(@bad)),
 	      "</font></b><p>\n";
 	}
 

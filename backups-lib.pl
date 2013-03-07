@@ -1699,6 +1699,11 @@ if ($dest->{'mode'} != 1 && $localfile) {
                 return { 'ok' => 0,
                          'msg' => &text('rrun_eget', $err) };
                 }
+	my @st = &stat_file_on_server($vhost, $localfile);
+	if (!@st || !$st[7]) {
+		return { 'ok' => 0,
+			 'msg' => &text('rrun_estat', $localfile) };
+		}
 	$staton = $vhost;
 	if ($gzip_format) {
 		# Also load in additional .gz.* files
@@ -2105,6 +2110,12 @@ elsif ($dest->{'mode'} == 4) {
 		"--delete 2>&1");
 	return $err ? $err : $ex ? "FTP deletion failed : $out" : undef;
 	}
+elsif ($dest->{'mode'} == 5) {
+	# From Amazon S3
+	my $err = &s3_delete_file($dest->{'user'}, $dest->{'pass'},
+				  $dest->{'bucket'}, $dest->{'path'}.$ext);
+	return $err;
+	}
 else {
 	return "Unknown backup destination mode $dest->{'mode'}";
 	}
@@ -2283,6 +2294,7 @@ my $cutoff = time() - $days*24*60*60;
 
 # Find old files
 my $destserver = &get_backup_dest_server($dest);
+my %sizemap;
 if ($dest->{'mode'} == 4) {
 	# List on FTP server
 	my $err;
@@ -2301,6 +2313,20 @@ if ($dest->{'mode'} == 4) {
 		if ($f->[9] && $f->[9] < $cutoff) {
 			# Found deletion candidate
 			push(@delfiles, $base."/".$f->[13]);
+			}
+		}
+	}
+elsif ($dest->{'mode'} == 5) {
+	# List on S3
+	my $err;
+	my $files = &s3_list_files($dest->{'user'}, $dest->{'pass'},
+				   $dest->{'bucket'});
+	ref($files) || return &text('purge_es3ls', $dest->{'bucket'}, $files);
+	foreach my $f (@$files) {
+		local $ctime = &s3_parse_date($f->{'LastModified'});
+		if ($f->{'Key'} =~ /^$re$/ && $ctime && $ctime < $cutoff) {
+			push(@delfiles, $f->{'Key'});
+			$sizemap{$f->{'Key'}} = $f->{'Size'};
 			}
 		}
 	}
@@ -2334,6 +2360,21 @@ if (@delfiles && $dest->{'mode'} == 4) {
 			}
 		else {
 			&$second_print($text{'create_done'});
+			}
+		}
+	}
+elsif (@delfiles && $dest->{'mode'} == 5) {
+	# Delete via S3
+	foreach my $f (@delfiles) {
+		&$first_print(&text('purge_deletings3', $f));
+		my $err = &s3_delete_file($dest->{'user'}, $dest->{'pass'},
+					  $dest->{'bucket'}, $f);
+		if ($err) {
+			&$second_print(&text('purge_edelete', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			$sz += $sizemap{$f};
 			}
 		}
 	}

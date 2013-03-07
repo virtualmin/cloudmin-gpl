@@ -90,6 +90,8 @@ else {
 			&show_backup_ssh_dest({ }, "ssh", 22) ],
 		  [ 4, $text{'backup_dest4'},
 			&show_backup_ssh_dest({ }, "ftp", 21) ],
+		  [ 5, $text{'backup_dest5'},
+			&show_backup_s3_dest({ }, 1) ],
 	 	]));
 	}
 

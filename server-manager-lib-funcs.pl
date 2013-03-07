@@ -11539,7 +11539,7 @@ print &ui_table_row(&hlink($text{'backups_def'}, "backups_def"),
 	  [ 4, $text{'backups_mode4'},
 	       &show_backup_ssh_dest($mode == 4 ? $dest : { }, "ftp", 21) ],
 	  [ 5, $text{'backups_mode5'},
-	       &show_backup_s3_dest($mode == 5 ? $dest : { }) ],
+	       &show_backup_s3_dest($mode == 5 ? $dest : { }, 0) ],
 	]));
 
 print &ui_hidden_table_end("backups");
@@ -11636,11 +11636,11 @@ $dest->{'path'} = $in->{$pfx."_path"};
 return undef;
 }
 
-# show_backup_s3_dest(&destination)
+# show_backup_s3_dest(&destination, [for-restore])
 # Returns HTML for entering S3 details for a backup
 sub show_backup_s3_dest
 {
-my ($dest) = @_;
+my ($dest, $restore) = @_;
 my $noac = "autocomplete=off";
 my $path = $dest->{'bucket'};
 $path .= "/".$dest->{'path'} if ($dest->{'path'});
@@ -11659,8 +11659,9 @@ return "<table>".
 			  0, undef, $noac)."</td> </tr>\n".
        "<tr> <td><b>$text{'backups_s3path'}</b></td> ".
        "<td>".&ui_textbox("s3_path", $path, 40)."<br>".
-	      &ui_checkbox("s3_rrs", 1, $text{'backups_s3rrs'}, $dest->{'rrs'}).
-	      "</td> </tr>\n".
+	  ($restore ? "" :
+	   &ui_checkbox("s3_rrs", 1, $text{'backups_s3rrs'}, $dest->{'rrs'})).
+	  "</td> </tr>\n".
        "</table>\n";
 }
 
@@ -11688,6 +11689,9 @@ elsif ($in->{'s3_path'} =~ /^([^\/ ]+)$/) {
 	}
 else {
 	&error($text{'backups_es3path'});
+	}
+if ($dest->{'bucket'} =~ /\%/) {
+	&error($text{'backups_es3strftime'});
 	}
 
 $dest->{'rrs'} = $in{'s3_rrs'};

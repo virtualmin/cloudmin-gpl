@@ -3526,6 +3526,7 @@ backups_s3rrs=Use reduced redundancy storage?
 backups_es3akey=Missing or invalid-looking S3 access key
 backups_es3skey=Missing or invalid-looking S3 secret key
 backups_es3path=S3 path must be either a bucket name, or bucket/subdirectory
+backups_es3strftime=Strftime-style substitutions cannot be used in S3 bucket names, only in subdirectories
 
 backup_title1=Create Backup
 backup_title2=Edit Backup
@@ -3715,6 +3716,7 @@ rrun_eget=Failed to fetch from source : $1
 rrun_estat=TAR fetch appeared to succeed, but destination file $1 was not created
 rrun_allok=Restores of $1 systems completed successfully.
 rrun_somefailed=Restores of $1 systems completed, but $2 failed!
+rrun_somefailed2=Restores of all $1 systems failed!
 rrun_recreate=Re-creating missing system $1 ..
 rrun_erecreate=.. not possible : $1
 rrun_erecreate2=.. creation failed
@@ -3762,6 +3764,7 @@ restore_missing=Deleted, will be re-created
 restore_parallel=Restore order
 restore_dest=Restore from source
 restore_ok=Restore Now
+restore_enone=No systems to restore selected!
 
 dbackup_err=Failed to delete backups
 dbackup_enone=None selected to delete!
