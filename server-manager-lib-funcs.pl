@@ -11644,12 +11644,18 @@ my ($dest) = @_;
 my $noac = "autocomplete=off";
 my $path = $dest->{'bucket'};
 $path .= "/".$dest->{'path'} if ($dest->{'path'});
+my $user = $dest->{'user'};
+my $pass = $dest->{'pass'};
+if (!$access{'owner'}) {
+	$user ||= $config{'s3_akey'};
+	$pass ||= $config{'s3_skey'};
+	}
 return "<table>".
        "<tr> <td><b>$text{'backups_s3akey'}</b></td> ".
-       "<td>".&ui_textbox("s3_akey", $dest->{'user'}, 30,
+       "<td>".&ui_textbox("s3_akey", $user, 30,
 			  0, undef, $noac)."</td> </tr>\n".
        "<tr> <td><b>$text{'backups_s3skey'}</b></td> ".
-       "<td>".&ui_password("s3_skey", $dest->{'pass'}, 30,
+       "<td>".&ui_password("s3_skey", $pass, 30,
 			  0, undef, $noac)."</td> </tr>\n".
        "<tr> <td><b>$text{'backups_s3path'}</b></td> ".
        "<td>".&ui_textbox("s3_path", $path, 40)."<br>".
@@ -11683,6 +11689,8 @@ elsif ($in->{'s3_path'} =~ /^([^\/ ]+)$/) {
 else {
 	&error($text{'backups_es3path'});
 	}
+
+$dest->{'rrs'} = $in{'s3_rrs'};
 
 return undef;
 }
