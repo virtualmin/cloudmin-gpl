@@ -383,7 +383,9 @@ if ($backup->{'purge'}) {
 	# Run purge on each one
 	foreach my $purgedest (@purgedests) {
 		my ($base, $re) = &extract_purge_path($purgedest);
-		&$first_print(&text('brun_purging', $backup->{'purge'}, $base));
+		&$first_print($base ?
+			&text('brun_purging', $backup->{'purge'}, $base, $re) :
+			&text('brun_purging2', $backup->{'purge'}, $re));
 		if ($failed) {
 			# Skip because some backups failed
 			&$second_print($text{'brun_purgeskip'});
@@ -2333,7 +2335,7 @@ my $dest = &parse_backup_destination($deststr);
 
 # Extract the base path
 my ($base, $re) = &extract_purge_path($deststr);
-$base && $re || return $text{'purge_edatepath'};
+$base || $re || return $text{'purge_edatepath'};
 my $cutoff = time() - $days*24*60*60;
 
 # Find old files
@@ -2366,9 +2368,10 @@ elsif ($dest->{'mode'} == 5) {
 	my $files = &s3_list_files($dest->{'user'}, $dest->{'pass'},
 				   $dest->{'bucket'});
 	ref($files) || return &text('purge_es3ls', $dest->{'bucket'}, $files);
+	my $fullre = ($base ? $base."/" : "").$re;
 	foreach my $f (@$files) {
 		local $ctime = &s3_parse_date($f->{'LastModified'});
-		if ($f->{'Key'} =~ /^$re$/ && $ctime && $ctime < $cutoff) {
+		if ($f->{'Key'} =~ /^$fullre$/ && $ctime && $ctime < $cutoff) {
 			push(@delfiles, $f->{'Key'});
 			$sizemap{$f->{'Key'}} = $f->{'Size'};
 			}
@@ -2452,7 +2455,14 @@ sub extract_purge_path
 my ($deststr) = @_;
 my $dest = &parse_backup_destination($deststr);
 if ($dest->{'path'} =~ /^(\S+)\/([^%]*%.*)$/) {
+	# SSH or FTP destination
 	my ($base, $date) = ($1, $2);
+	$date =~ s/%[_\-0\^\#]*\d*[A-Za-z]/\.\*/g;
+	return ($base, $date);
+	}
+elsif ($dest->{'bucket'} && $dest->{'path'} =~ /^(.*)(\/|^)([^%]*%.*)$/) {
+	# S3 destination
+	my ($base, $date) = ($1, $3);
 	$date =~ s/%[_\-0\^\#]*\d*[A-Za-z]/\.\*/g;
 	return ($base, $date);
 	}
