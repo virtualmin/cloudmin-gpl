@@ -738,11 +738,33 @@ elsif ($dest->{'mode'} == 5) {
 		return $err if ($err);
 		}
 	my $path = $dest->{'path'}.$ext;
-	my $err = &s3_upload($dest->{'user'}, $dest->{'pass'},
-			     $dest->{'bucket'}, $sendfrom, $path, undef,
-			     undef, 1, $dest->{'rrs'});
-	if ($server->{'manager'} ne 'this') {
-		&unlink_file($sendfrom);
+
+	# Upload in a forked process
+	my $errtemp = &transname();
+	my $pid = fork();
+	if ($pid < 0) {
+		return "Fork failed : $!";
+		}
+	if (!$pid) {
+		my $err = &s3_upload($dest->{'user'}, $dest->{'pass'},
+				     $dest->{'bucket'}, $sendfrom, $path, undef,
+				     undef, 1, $dest->{'rrs'});
+		if ($server->{'manager'} ne 'this') {
+			&unlink_file($sendfrom);
+			}
+		&open_tempfile(ERR, ">$errtemp", 0, 1);
+		&print_tempfile(ERR, $err);
+		&close_tempfile(ERR);
+		exit($err ? 1 : 0);
+		}
+	while(waitpid($pid, 0) < 0) {
+		sleep(1);
+		}
+	my $ex = $?;
+	my $err = &read_file_contents($errtemp);
+	&unlink_file($errtemp);
+	if ($ex) {
+		return $err || "Unknown S3 download error";
 		}
 	return $err;
 	}
@@ -2009,9 +2031,31 @@ elsif ($dest->{'mode'} == 5) {
 		$sendto = &transname();
 		}
 	my $path = $dest->{'path'}.$ext;
-	my $err = &s3_download($dest->{'user'}, $dest->{'pass'},
-			       $dest->{'bucket'}, $path, $sendto);
-	return $err if ($err);
+
+	# Fetch in a sub-process, so that dot printing signal doesn't 
+	# interrupt the download
+	my $errtemp = &transname();
+	my $pid = fork();
+	if ($pid < 0) {
+		return "Fork failed : $!";
+		}
+	if (!$pid) {
+		my $err = &s3_download($dest->{'user'}, $dest->{'pass'},
+				       $dest->{'bucket'}, $path, $sendto);
+		&open_tempfile(ERR, ">$errtemp", 0, 1);
+		&print_tempfile(ERR, $err);
+		&close_tempfile(ERR);
+		exit($err ? 1 : 0);
+		}
+	while(waitpid($pid, 0) < 0) {
+		sleep(1);
+		}
+	my $ex = $?;
+	my $err = &read_file_contents($errtemp);
+	&unlink_file($errtemp);
+	if ($ex) {
+		return $err || "Unknown S3 download error";
+		}
 
 	# If final dest is not the master, copy over
 	if ($server->{'manager'} ne 'this') {
@@ -2048,7 +2092,7 @@ if ($dest->{'path'} =~ /\.gz$/ && $dest->{'path'} !~ /\.tar\.gz$/) {
 # Also delete .serv file (may be missing)
 foreach my $ext (".serv", ".disks") {
 	my $serv_dest = { %$dest };
-	$serv_dest->{'path'} =~ s/\/[^\/]+$/\//;
+	$serv_dest->{'path'} =~ s/(^|\/)[^\/]+$/\//;
 	$serv_dest->{'path'} .= $server->{'host'}.$ext;
 	&delete_one_backup_dest($serv_dest, $server);
 	}
