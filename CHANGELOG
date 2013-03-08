@@ -64,3 +64,5 @@ Moved all background cron jobs (except existing backups) to Webmin's built-in sc
 When a new virtual system is created, its timezone is set to match the host system rather than using the zone in the image.
 When resizing the root disk on a running system, the user is now prompted to have it shut down and re-started as part of the resize process.
 Added a tab to the IP Addresses page to block IP addresses from being allocated to new systems.
+---- Changes since 6.9 ----
+Virtual systems can now be backed up to and restored from Amazon S3.
