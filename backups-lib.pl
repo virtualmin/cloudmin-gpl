@@ -724,11 +724,6 @@ elsif ($dest->{'mode'} == 5) {
 	my $err = &check_s3();
 	return $err if ($err);
 
-	# Create the S3 bucket if missing
-	my $err = &init_s3_bucket($dest->{'user'}, $dest->{'pass'},
-				  $dest->{'bucket'}, 1);
-	return "Failed to create bucket : $err" if ($err);
-
 	# Get to the Cloudmin master if needed
 	my $sendfrom;
 	if ($server->{'manager'} eq 'this') {
@@ -748,9 +743,16 @@ elsif ($dest->{'mode'} == 5) {
 		return "Fork failed : $!";
 		}
 	if (!$pid) {
-		my $err = &s3_upload($dest->{'user'}, $dest->{'pass'},
-				     $dest->{'bucket'}, $sendfrom, $path, undef,
-				     undef, 1, $dest->{'rrs'});
+		# Create the S3 bucket if missing
+		my $err = &init_s3_bucket($dest->{'user'}, $dest->{'pass'},
+					  $dest->{'bucket'}, 1);
+
+		# Upload the file
+		if (!$err) {
+			$err = &s3_upload($dest->{'user'}, $dest->{'pass'},
+				  $dest->{'bucket'}, $sendfrom, $path, undef,
+				  undef, 1, $dest->{'rrs'});
+			}
 		if ($server->{'manager'} ne 'this') {
 			&unlink_file($sendfrom);
 			}
@@ -2442,7 +2444,9 @@ if ($dest->{'mode'} == 4) {
 		}
 	}
 elsif ($dest->{'mode'} == 5) {
-	# List on S3
+	# List on S3. Unlike FTP or SSH destinations, there are no real 
+	# sub-directories, so we have to match files whose paths start with
+	# the target regexp.
 	my $err;
 	my $files = &s3_list_files($dest->{'user'}, $dest->{'pass'},
 				   $dest->{'bucket'});
@@ -2450,14 +2454,15 @@ elsif ($dest->{'mode'} == 5) {
 	my $fullre = ($base ? $base."/" : "").$re;
 	foreach my $f (@$files) {
 		my $ctime = &s3_parse_date($f->{'LastModified'});
-		if ($f->{'Key'} =~ /^$fullre$/ && $ctime && $ctime < $cutoff) {
+		if ($f->{'Key'} =~ /^$fullre\// && $ctime && $ctime < $cutoff) {
 			push(@delfiles, $f->{'Key'});
 			$sizemap{$f->{'Key'}} = $f->{'Size'};
 			}
 		}
 	}
 elsif ($dest->{'mode'} == 6) {
-	# List on Rackspace cloud files
+	# List on Rackspace cloud files. See the comment on S3 above for an
+	# explanation of how "directories" work.
 	$rsh = &rs_connect($config{'rs_endpoint'},
 			      $dest->{'user'}, $dest->{'pass'});
 	if (!ref($rsh)) {
@@ -2470,7 +2475,7 @@ elsif ($dest->{'mode'} == 6) {
 		my $st = &rs_stat_object($rsh, $dest->{'container'}, $f);
                 next if (!ref($st));
 		my $ctime = int($st->{'Timestamp'});
-		if ($f =~ /^$fullre$/ && $ctime && $ctime < $cutoff) {
+		if ($f =~ /^$fullre\// && $ctime && $ctime < $cutoff) {
 			push(@delfiles, $f);
 			$sizemap{$f} = $st->{'Content-Length'};
 			}
