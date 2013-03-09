@@ -9,6 +9,10 @@ for this backup will be saved to. The options are :
 <li><b>Remote SSH server</b> - Backups are uploaded via SCP to the non-Cloudmin-managed system whose hostname and authentication details is entered in the adjacent fields.
 
 <li><b>Remote FTP server</b> - Backups are uploaded via FTP to the server whose hostname and authentication details is entered in the adjacent fields.
+
+<li><b>Amazon S3</b> - Backups are sent to Amazon's cloud file storage service. You must first sign up for an S3 account with Amazon before using this option.
+
+<li><b>Rackspace Cloud Files</b> - Backups are sent to Rackspace's service. Again, you must first sign up for a Rackspace account and enter the login and password when using this option.
 </ul>
 
 In all cases you can use <tt>strftime</tt>-style date-based substitution codes
