@@ -734,20 +734,13 @@ elsif ($dest->{'mode'} == 5) {
 		my $err = &get_file_from_server($server, $file, $sendfrom);
 		return $err if ($err);
 		}
-	my $path = $dest->{'path'}.$ext;
 
-	# Upload in a forked process
-	my $errtemp = &transname();
-	my $pid = fork();
-	if ($pid < 0) {
-		return "Fork failed : $!";
-		}
-	if (!$pid) {
-		# Create the S3 bucket if missing
+	# Create function to upload, and call it in a separate process
+	my $path = $dest->{'path'}.$ext;
+	my $func = sub {
+		my ($dest, $sendfrom, $path) = @_;
 		my $err = &init_s3_bucket($dest->{'user'}, $dest->{'pass'},
 					  $dest->{'bucket'}, 1);
-
-		# Upload the file
 		if (!$err) {
 			$err = &s3_upload($dest->{'user'}, $dest->{'pass'},
 				  $dest->{'bucket'}, $sendfrom, $path, undef,
@@ -756,36 +749,12 @@ elsif ($dest->{'mode'} == 5) {
 		if ($server->{'manager'} ne 'this') {
 			&unlink_file($sendfrom);
 			}
-		&open_tempfile(ERR, ">$errtemp", 0, 1);
-		&print_tempfile(ERR, $err);
-		&close_tempfile(ERR);
-		exit($err ? 1 : 0);
-		}
-	while(waitpid($pid, 0) < 0) {
-		sleep(1);
-		}
-	my $ex = $?;
-	my $err = &read_file_contents($errtemp);
-	&unlink_file($errtemp);
-	if ($ex) {
-		return $err || "Unknown S3 download error";
-		}
+		return $err;
+		};
+	my $err = &fork_function($func, [ $dest, $sendfrom, $path ]);
 	return $err;
 	}
 elsif ($dest->{'mode'} == 6) {
-	# Connect to rackspace
-	my $rsh = &rs_connect($config{'rs_endpoint'},
-			      $dest->{'user'}, $dest->{'pass'});
-	if (!ref($rsh)) {
-		return "Failed to connect to Rackspace : $rsh";
-		}
-
-	# Create the container if missing
-	my $err = &rs_create_container($rsh, $dest->{'container'});
-	if ($err) {
-		return "Failed to create container : $err";
-		}
-
 	# Get to Cloudmin master if needed
 	my $sendfrom;
 	if ($server->{'manager'} eq 'this') {
@@ -796,14 +765,35 @@ elsif ($dest->{'mode'} == 6) {
 		my $err = &get_file_from_server($server, $file, $sendfrom);
 		return $err if ($err);
 		}
-	my $path = $dest->{'path'}.$ext;
 
-	# Upload the file
-	my $err = &rs_upload_object($rsh, $dest->{'container'},
-			            $path, $sendfrom);
-	if ($server->{'manager'} ne 'this') {
-		&unlink_file($sendfrom);
-		}
+	# Create the upload function, and call it in a separate process
+	my $func = sub {
+		my ($dest, $sendfrom, $path) = @_;
+
+		# Connect to rackspace
+		my $rsh = &rs_connect($config{'rs_endpoint'},
+				      $dest->{'user'}, $dest->{'pass'});
+		if (!ref($rsh)) {
+			return "Failed to connect to Rackspace : $rsh";
+			}
+
+		# Create the container if missing
+		my $err = &rs_create_container($rsh, $dest->{'container'});
+		if ($err) {
+			return "Failed to create container : $err";
+			}
+
+		# Upload the file
+		my $path = $dest->{'path'}.$ext;
+		my $err = &rs_upload_object($rsh, $dest->{'container'},
+					    $path, $sendfrom);
+		if ($server->{'manager'} ne 'this') {
+			&unlink_file($sendfrom);
+			}
+		return $err;
+		};
+
+	my $err = &fork_function($func, [ $dest, $sendfrom, $path ]);
 	return $err;
 	}
 else {
@@ -2068,32 +2058,17 @@ elsif ($dest->{'mode'} == 5) {
 	else {
 		$sendto = &transname();
 		}
-	my $path = $dest->{'path'}.$ext;
 
-	# Fetch in a sub-process, so that dot printing signal doesn't 
-	# interrupt the download
-	my $errtemp = &transname();
-	my $pid = fork();
-	if ($pid < 0) {
-		return "Fork failed : $!";
-		}
-	if (!$pid) {
+	# Create download function and call it in a sub-process
+	my $path = $dest->{'path'}.$ext;
+	my $func = sub {
+		my ($dest, $sendto, $path) = @_;
 		my $err = &s3_download($dest->{'user'}, $dest->{'pass'},
 				       $dest->{'bucket'}, $path, $sendto);
-		&open_tempfile(ERR, ">$errtemp", 0, 1);
-		&print_tempfile(ERR, $err);
-		&close_tempfile(ERR);
-		exit($err ? 1 : 0);
-		}
-	while(waitpid($pid, 0) < 0) {
-		sleep(1);
-		}
-	my $ex = $?;
-	my $err = &read_file_contents($errtemp);
-	&unlink_file($errtemp);
-	if ($ex) {
-		return $err || "Unknown S3 download error";
-		}
+		return $err;
+		};
+	my $err = &fork_function($func, [ $dest, $sendto, $path ]);
+	return $err if ($err);
 
 	# If final dest is not the master, copy over
 	if ($server->{'manager'} ne 'this') {
@@ -2106,13 +2081,6 @@ elsif ($dest->{'mode'} == 5) {
 		}
 	}
 elsif ($dest->{'mode'} == 6) {
-	# Connect to rackspace
-	my $rsh = &rs_connect($config{'rs_endpoint'},
-			      $dest->{'user'}, $dest->{'pass'});
-	if (!ref($rsh)) {
-		return "Failed to connect to Rackspace : $rsh";
-		}
-
 	# Get from S3 via the Cloudmin master
 	my $sendto;
 	if ($server->{'manager'} eq 'this') {
@@ -2121,11 +2089,25 @@ elsif ($dest->{'mode'} == 6) {
 	else {
 		$sendto = &transname();
 		}
-	my $path = $dest->{'path'}.$ext;
 
-	# Do the download
-	my $err = &rs_download_object($rsh, $dest->{'container'},
-				      $path, $sendto);
+	# Create download function and call in a sub-process
+	my $path = $dest->{'path'}.$ext;
+	my $func = sub {
+		my ($dest, $sendto, $path) = @_;
+
+		# Connect to rackspace
+		my $rsh = &rs_connect($config{'rs_endpoint'},
+				      $dest->{'user'}, $dest->{'pass'});
+		if (!ref($rsh)) {
+			return "Failed to connect to Rackspace : $rsh";
+			}
+
+		# Do the download
+		my $err = &rs_download_object($rsh, $dest->{'container'},
+					      $path, $sendto);
+		return $err;
+		};
+	my $err = &fork_function($func, [ $dest, $sendto, $path ]);
 	return $err if ($err);
 
 	# If final dest is not the master, copy over
@@ -2468,7 +2450,7 @@ elsif ($dest->{'mode'} == 6) {
 	if (!ref($rsh)) {
 		return "Failed to connect to Rackspace : $rsh";
 		}
-	my $files = &rs_list_objects($dest->{'container'});
+	my $files = &rs_list_objects($rsh, $dest->{'container'});
 	ref($files) || return &text('purge_ersls', $dest->{'container'},$files);
 	my $fullre = ($base ? $base."/" : "").$re;
 	foreach my $f (@$files) {
