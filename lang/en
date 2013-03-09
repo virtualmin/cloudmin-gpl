@@ -3586,6 +3586,8 @@ bdest_mode3=<tt>$3</tt> on SSH server <tt>$2</tt> as <tt>$1</tt>
 bdest_mode4=<tt>$3</tt> on FTP server <tt>$2</tt> as <tt>$1</tt>
 bdest_mode5=<tt>$2</tt> in bucket <tt>$1</tt> on Amazon S3
 bdest_mode5b=<tt>$1</tt> on Amazon S3
+bdest_mode6=<tt>$2</tt> in container <tt>$1</tt> on Rackspace Cloud Files
+bdest_mode6b=<tt>$1</tt> on Rackspace Cloud Files
 
 reverse_title=Reverse Addresses
 reverse_header=Reverse address mappings
@@ -4777,8 +4779,11 @@ boot_edevice=Selected boot device does not exist!
 purge_edatepath=Purging of old backups is only possible for date-based destinations
 purge_els=Failed to list directory $1 : $2
 purge_es3ls=Failed to list S3 bucket $1 : $2
+purge_ersls=Failed to list Rackspace container $1 : $2
 purge_deleting=Deleting directory $1 ..
 purge_deletingftp=Deleting FTP directory $1 ..
+purge_deletings3=Deleting S3 file $1 ..
+purge_deletingrs=Deleting Rackspace file $1 ..
 purge_edelete=.. deletion failed : $1
 purge_elstimes=FTP directory listing of $1 does not contain timestamps
 

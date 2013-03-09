@@ -19,7 +19,7 @@ foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
 		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp",
 		 "roundrobin", "scalegroup", "stats", "firewall", "iscsi",
-		 "cron", "s3") {
+		 "cron", "s3", "rs") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -11408,6 +11408,12 @@ elsif ($dest =~ /^(s3|s3rrs):\/*([^:]*):([^\@]*)\@([^\/]+)(\/(.*))?$/) {
 		 'rrs' => $1 eq 's3rrs' ? 1 : 0,
 	       };
 	}
+elsif ($dest =~ /^(rs):\/*([^:]*):([^\@]*)\@([^\/]+)(\/(.*))?$/) {
+	# Backspace cloud files
+	return { 'mode' => 6, 'user' => $2, 'pass' => $3,
+		 'container' => $4, 'path' => $6,
+	       };
+	}
 elsif ($dest =~ /^([a-zA-Z0-9\.\-\_]+):(\/\S*)$/) {
 	# Named host:path
 	my ($hostname, $path) = ($1, $2);
@@ -11454,6 +11460,11 @@ elsif ($dest->{'mode'} == 5) {
 	       $dest->{'user'}.":".$dest->{'pass'}."\@".$dest->{'bucket'}.
 	       ($dest->{'path'} ? "/".$dest->{'path'} : "");
 	}
+elsif ($dest->{'mode'} == 6) {
+	return "rs://".
+	       $dest->{'user'}.":".$dest->{'pass'}."\@".$dest->{'container'}.
+	       ($dest->{'path'} ? "/".$dest->{'path'} : "");
+	}
 else {
 	return undef;
 	}
@@ -11498,6 +11509,15 @@ elsif ($dest->{'mode'} == 5) {
 		}
 	else {
 		return &text('bdest_mode5b', $dest->{'bucket'});
+		}
+	}
+elsif ($dest->{'mode'} == 6) {
+	if ($dest->{'path'}) {
+		return &text('bdest_mode6', $dest->{'container'},
+					    $dest->{'path'});
+		}
+	else {
+		return &text('bdest_mode6b', $dest->{'container'});
 		}
 	}
 else {

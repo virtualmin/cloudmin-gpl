@@ -729,7 +729,7 @@ elsif ($dest->{'mode'} == 5) {
 				  $dest->{'bucket'}, 1);
 	return "Failed to create bucket : $err" if ($err);
 
-	# Send to S3 from the Cloudmin master
+	# Get to the Cloudmin master if needed
 	my $sendfrom;
 	if ($server->{'manager'} eq 'this') {
 		$sendfrom = $file;
@@ -767,6 +767,40 @@ elsif ($dest->{'mode'} == 5) {
 	&unlink_file($errtemp);
 	if ($ex) {
 		return $err || "Unknown S3 download error";
+		}
+	return $err;
+	}
+elsif ($dest->{'mode'} == 6) {
+	# Connect to rackspace
+	my $rsh = &rs_connect($config{'rs_endpoint'},
+			      $dest->{'user'}, $dest->{'pass'});
+	if (!ref($rsh)) {
+		return "Failed to connect to Rackspace : $rsh";
+		}
+
+	# Create the container if missing
+	my $err = &rs_create_container($rsh, $dest->{'container'});
+	if ($err) {
+		return "Failed to create container : $err";
+		}
+
+	# Get to Cloudmin master if needed
+	my $sendfrom;
+	if ($server->{'manager'} eq 'this') {
+		$sendfrom = $file;
+		}
+	else {
+		$sendfrom = &transname();
+		my $err = &get_file_from_server($server, $file, $sendfrom);
+		return $err if ($err);
+		}
+	my $path = $dest->{'path'}.$ext;
+
+	# Upload the file
+	my $err = &rs_upload_object($rsh, $dest->{'container'},
+			            $path, $sendfrom);
+	if ($server->{'manager'} ne 'this') {
+		&unlink_file($sendfrom);
 		}
 	return $err;
 	}
@@ -2069,6 +2103,39 @@ elsif ($dest->{'mode'} == 5) {
 		return undef;
 		}
 	}
+elsif ($dest->{'mode'} == 6) {
+	# Connect to rackspace
+	my $rsh = &rs_connect($config{'rs_endpoint'},
+			      $dest->{'user'}, $dest->{'pass'});
+	if (!ref($rsh)) {
+		return "Failed to connect to Rackspace : $rsh";
+		}
+
+	# Get from S3 via the Cloudmin master
+	my $sendto;
+	if ($server->{'manager'} eq 'this') {
+                $sendto = $file;
+                }
+	else {
+		$sendto = &transname();
+		}
+	my $path = $dest->{'path'}.$ext;
+
+	# Do the download
+	my $err = &rs_download_object($rsh, $dest->{'container'},
+				      $path, $sendto);
+	return $err if ($err);
+
+	# If final dest is not the master, copy over
+	if ($server->{'manager'} ne 'this') {
+		my $err = &put_file_to_server($server, $sendto, $file);
+		&unlink_file($sendto);
+		return $err;
+		}
+	else {
+		return undef;
+		}
+	}
 else {
 	return "Unknown destination mode $dest->{'mode'}";
 	}
@@ -2160,6 +2227,17 @@ elsif ($dest->{'mode'} == 5) {
 	# From Amazon S3
 	my $err = &s3_delete_file($dest->{'user'}, $dest->{'pass'},
 				  $dest->{'bucket'}, $dest->{'path'}.$ext);
+	return $err;
+	}
+elsif ($dest->{'mode'} == 6) {
+	# From rackspace cloud files
+	my $rsh = &rs_connect($config{'rs_endpoint'},
+			      $dest->{'user'}, $dest->{'pass'});
+	if (!ref($rsh)) {
+		return "Failed to connect to Rackspace : $rsh";
+		}
+	my $err = &rs_delete_object($rsh, $dest->{'container'},
+				    $dest->{'path'}.$ext);
 	return $err;
 	}
 else {
@@ -2341,6 +2419,7 @@ my $cutoff = time() - $days*24*60*60;
 # Find old files
 my $destserver = &get_backup_dest_server($dest);
 my %sizemap;
+my $rsh;
 if ($dest->{'mode'} == 4) {
 	# List on FTP server
 	my $err;
@@ -2370,10 +2449,30 @@ elsif ($dest->{'mode'} == 5) {
 	ref($files) || return &text('purge_es3ls', $dest->{'bucket'}, $files);
 	my $fullre = ($base ? $base."/" : "").$re;
 	foreach my $f (@$files) {
-		local $ctime = &s3_parse_date($f->{'LastModified'});
+		my $ctime = &s3_parse_date($f->{'LastModified'});
 		if ($f->{'Key'} =~ /^$fullre$/ && $ctime && $ctime < $cutoff) {
 			push(@delfiles, $f->{'Key'});
 			$sizemap{$f->{'Key'}} = $f->{'Size'};
+			}
+		}
+	}
+elsif ($dest->{'mode'} == 6) {
+	# List on Rackspace cloud files
+	$rsh = &rs_connect($config{'rs_endpoint'},
+			      $dest->{'user'}, $dest->{'pass'});
+	if (!ref($rsh)) {
+		return "Failed to connect to Rackspace : $rsh";
+		}
+	my $files = &rs_list_objects($dest->{'container'});
+	ref($files) || return &text('purge_ersls', $dest->{'container'},$files);
+	my $fullre = ($base ? $base."/" : "").$re;
+	foreach my $f (@$files) {
+		my $st = &rs_stat_object($rsh, $dest->{'container'}, $f);
+                next if (!ref($st));
+		my $ctime = int($st->{'Timestamp'});
+		if ($f =~ /^$fullre$/ && $ctime && $ctime < $cutoff) {
+			push(@delfiles, $f);
+			$sizemap{$f} = $st->{'Content-Length'};
 			}
 		}
 	}
@@ -2425,6 +2524,20 @@ elsif (@delfiles && $dest->{'mode'} == 5) {
 			}
 		}
 	}
+elsif (@delfiles && $dest->{'mode'} == 6) {
+	# Delete via Rackspace
+	foreach my $f (@delfiles) {
+		&$first_print(&text('purge_deletingrs', $f));
+		my $err = &rs_delete_object($rsh, $dest->{'contaner'}, $f);
+		if ($err) {
+			&$second_print(&text('purge_edelete', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			$sz += $sizemap{$f};
+			}
+		}
+	}
 elsif (@delfiles) {
 	# Delete via SSH
 	foreach my $f (@delfiles) {
@@ -2460,8 +2573,9 @@ if ($dest->{'path'} =~ /^(\S+)\/([^%]*%.*)$/) {
 	$date =~ s/%[_\-0\^\#]*\d*[A-Za-z]/\.\*/g;
 	return ($base, $date);
 	}
-elsif ($dest->{'bucket'} && $dest->{'path'} =~ /^(.*)(\/|^)([^%]*%.*)$/) {
-	# S3 destination
+elsif (($dest->{'bucket'} || $dest->{'container'}) &&
+       $dest->{'path'} =~ /^(.*)(\/|^)([^%]*%.*)$/) {
+	# S3 or Rackspace destination
 	my ($base, $date) = ($1, $3);
 	$date =~ s/%[_\-0\^\#]*\d*[A-Za-z]/\.\*/g;
 	return ($base, $date);

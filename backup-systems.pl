@@ -191,6 +191,7 @@ print " - A dir on the host systems, like host:/backup\n";
 print " - An FTP destination, like ftp:login:pass\@server/backup\n";
 print " - An SSH destination, like ssh:login:pass\@server/backup\n";
 print " - An S3 destination, like s3:access-key:secret-key\@bucket/path\n";
+print " - A Rackspace destination, like rs:user:pass\@container/path\n";
 exit(1);
 }
 
