@@ -11650,10 +11650,9 @@ my ($dest, $pfx, $defport) = @_;
 my $noac = "autocomplete=off";
 return "<table>".
        "<tr> <td><b>$text{'backups_'.$pfx.'host'}</b></td> ".
-       "<td>".&ui_textbox($pfx."_host", $dest->{'host'}, 30)."</td> </tr>\n".
-       "<tr> <td><b>$text{'backups_'.$pfx.'port'}</b></td> ".
-       "<td>".&ui_opt_textbox($pfx."_port", $dest->{'port'}, 6,
-			      $text{'default'}." ($defport)")."</td> </tr>\n".
+       "<td>".&ui_textbox($pfx."_host", $dest->{'host'}, 30)." ".
+             "<b>$text{'backups_'.$pfx.'port'}</b> ".
+             &ui_textbox($pfx."_port", $dest->{'port'} || $defport, 6)."</td> </tr>\n".
        "<tr> <td><b>$text{'backups_'.$pfx.'user'}</b></td> ".
        "<td>".&ui_textbox($pfx."_user", $dest->{'user'}, 20,
 			  0, undef, $noac)."</td> </tr>\n".
@@ -11662,7 +11661,8 @@ return "<table>".
 			  0, undef, $noac)."</td> </tr>\n".
        "<tr> <td><b>$text{'backups_'.$pfx.'path'}</b></td> ".
        "<td>".&ui_textbox($pfx."_path", $dest->{'path'}, 40)."</td> </tr>\n".
-       "</table>\n";
+       "</table>\n".
+       &ui_hidden($pfx."_defport", $defport);
 }
 
 # parse_backup_ssh_dest(&destination, prefix, &in)
@@ -11678,9 +11678,10 @@ $in->{$pfx."_host"} =~ /^\S+$/ || return $text{'backups_e'.$pfx.'host'};
 	return $text{'backups_e'.$pfx.'host2'};
 $dest->{'host'} = $in->{$pfx."_host"};
 
-$in->{$pfx."_port_def"} || $in->{$pfx."_port"} =~ /^\d+$/ ||
+$in->{$pfx."_port"} =~ /^\d+$/ ||
 	return $text{'backups_e'.$pfx.'port'};
-$dest->{'port'} = $in->{$pfx."_port_def"} ? undef : $in->{$pfx."_port"};
+$dest->{'port'} = $in->{$pfx."_port"} == $in->{$pfx."_defport"} ?
+			undef : $in->{$pfx."_port"};
 
 $in->{$pfx."_user"} =~ /^[^\: \t\r\n]+$/ ||
 	return $text{'backups_e'.$pfx.'user'};
