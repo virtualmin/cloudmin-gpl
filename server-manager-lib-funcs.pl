@@ -4083,7 +4083,7 @@ if (!$pid) {
 	# Call the function, and save output
 	my $out = &$func(@$args);
 	&open_tempfile(ERR, ">$outtemp", 0, 1);
-	&print_tempfile(ERR, &serialize_value($out));
+	&print_tempfile(ERR, &serialise_variable($out));
 	&close_tempfile(ERR);
 	exit(0);
 	}
@@ -4099,7 +4099,7 @@ if ($ex) {
 elsif (!$outstr) {
 	return "Subprocess produced no output";
 	}
-my $out = &unserialize_variable($outstr);
+my $out = &unserialise_variable($outstr);
 return $out;
 }
 
