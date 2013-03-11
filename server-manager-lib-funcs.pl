@@ -1414,11 +1414,7 @@ else {
 sub mount_filesystem_if_needed
 {
 my ($server, $wantfile) = @_;
-if (!&mountable_filesystem($server)) {
-	# Cannot mount windows / etc
-	return $text{'create_enomount'};
-	}
-elsif ($mounted_filesystem{$server->{'id'}}) {
+if ($mounted_filesystem{$server->{'id'}}) {
 	# Already mounted, so just up the count
 	$mounted_filesystem{$server->{'id'}}++;
 	}
@@ -1426,6 +1422,10 @@ else {
 	# Mount if needed
 	my $nfunc = "type_".$server->{'manager'}."_need_mount";
 	if (defined(&$nfunc) && &$nfunc($server)) {
+		if (!&mountable_filesystem($server)) {
+			# Cannot mount windows / BSD / etc
+			return $text{'create_enomount'};
+			}
 		my $mfunc = "type_".$server->{'manager'}."_mount_filesystem";
 		my $err = &$mfunc($server, $wantfile);
 		return $err if ($err);
@@ -6007,6 +6007,11 @@ my $shadow = &transname();
 my $passfile = "/etc/shadow";
 my $err = &get_file_from_server($server, $passfile, $shadow);
 if ($err) {
+	# Perhaps /etc/master.passwd (like on BSD)
+	$passfile = "/etc/master.passwd";
+	$err = &get_file_from_server($server, $passfile, $shadow);
+	}
+if ($err) {
 	# Perhaps it has /etc/passwd?
 	$passfile = "/etc/passwd";
 	$err = &get_file_from_server($server, $passfile, $shadow);
@@ -6024,6 +6029,11 @@ if (!$err) {
 		}
 	&flush_file_lines($shadow);
 	$err = &put_file_to_server($server, $shadow, $passfile);
+	if ($passfile eq "/etc/master.passwd") {
+		# Re-generate BSD password DB
+		&execute_command_on_server($server,
+			"/usr/sbin/pwd_mkdb -p /etc/master.passwd");
+		}
 	}
 
 # Un-mount if mounted before
