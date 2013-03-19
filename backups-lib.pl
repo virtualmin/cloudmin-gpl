@@ -518,6 +518,12 @@ if ($destserver && $destserver->{'id'} eq $server->{'id'}) {
 		 'msg' => $text{'brun_eself'} };
 	}
 
+# Check for backup to down system
+if ($destserver && $dest->{'mode'} <= 2 && !&can_ssh_status($destserver)) {
+	return { 'ok' => 0,
+		 'msg' => &text('brun_edestdown', $destserver->{'host'}) };
+	}
+
 # Check if running, and if so shut down
 my $was_up = 0;
 if ($server->{'status'} ne 'down' && $shutdown) {
