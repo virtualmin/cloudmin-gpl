@@ -523,6 +523,21 @@ if ($destserver && $dest->{'mode'} <= 2 && !&can_ssh_status($destserver)) {
 	return { 'ok' => 0,
 		 'msg' => &text('brun_edestdown', $destserver->{'host'}) };
 	}
+elsif ($destserver && $dest->{'mode'} == 3) {
+	# SSH dest .. check if usable by uploading a test file
+	my $testfile = &transname();
+	&open_tempfile(TESTFILE, ">$testfile");
+	&close_tempfile(TESTFILE);
+	my $err = &put_file_to_server($destserver, $testfile,
+			$dest->{'path'}.".cloudmin-test");
+	if ($err) {
+		return { 'ok' => 0,
+			 'msg' => &text('brun_edesttest',
+					$destserver->{'host'}, $err) };
+		}
+	&delete_file_on_server($destserver,
+			       $dest->{'path'}.".cloudmin-test");
+	}
 
 # Check if running, and if so shut down
 my $was_up = 0;
