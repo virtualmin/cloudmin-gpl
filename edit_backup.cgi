@@ -166,12 +166,15 @@ print &ui_table_row(&hlink($text{'backup_dest'}, "backup_dest"),
 	&ui_radio_table("dest_mode", $mode,
 		[ [ -1, $text{'backup_dest0'} ],
 		  [ 2, $text{'backups_mode2'},
-		       &ui_select("vm2", $dest->{'id'},
-			  [ map { [ $_->{'id'}, $_->{'short_host'} ] }
-			        @allservers ]).
-		       " ".
-		       &ui_textbox("vm2dir",
-			   $dest->{'mode'} == 2 ? $dest->{'path'} : "", 40) ],
+		       "<table>\n".
+		       "<tr> <td><b>$text{'backups_dirhost'}</b></td>\n".
+		       "<td>".&ui_select("vm2", $dest->{'id'},
+					 [ map { [ $_->{'id'}, $_->{'short_host'} ] }
+					       @allservers ])."</td> </tr>\n".
+		       "<tr> <td><b>$text{'backups_dirdir'}</b></td>\n".
+		       "<td>".&ui_textbox("vm2dir",
+					   $dest->{'mode'} == 2 ? $dest->{'path'} : "", 40)."</td> </tr>\n".
+		       "</table>" ],
 		  [ 3, $text{'backup_dest3'},
 			&show_backup_ssh_dest(
 			    $mode == 3 ? $dest : { }, "ssh", 22) ],
@@ -180,6 +183,8 @@ print &ui_table_row(&hlink($text{'backup_dest'}, "backup_dest"),
 			    $mode == 4 ? $dest : { }, "ftp", 21) ],
 		  [ 5, $text{'backup_dest5'},
 			&show_backup_s3_dest($mode == 5 ? $dest : { }, 0) ],
+		  [ 6, $text{'backup_dest6'},
+			&show_backup_rs_dest($mode == 6 ? $dest : { }, 0) ],
 	 	]));
 
 print &ui_hidden_table_end("destsect");

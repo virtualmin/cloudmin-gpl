@@ -122,6 +122,13 @@ else {
 		&error($err) if ($err);
 		$backup->{'dest'} = &join_backup_destination($dest);
 		}
+	elsif ($in{'dest_mode'} == 6) {
+		# Rackspace Cloud files
+		$dest = { 'mode' => 6 };
+		$err = &parse_backup_rs_dest($dest, \%in);
+		&error($err) if ($err);
+		$backup->{'dest'} = &join_backup_destination($dest);
+		}
 
 	# Parse schedule
 	$backup->{'enabled'} = $in{'enabled'};
