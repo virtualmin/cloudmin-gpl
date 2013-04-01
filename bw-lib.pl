@@ -87,32 +87,99 @@ my ($msg) = @_;
 &close_tempfile(MSG);
 }
 
-# get_bandwidth(&server)
+# get_bandwidth(&server, [start, end])
 # Returns the bandwidth usage object for some server
 sub get_bandwidth
 {
-if (!defined($get_bandwidth_cache{$_[0]->{'id'}})) {
+my ($server, $start, $end) = @_;
+
+# XXX only read files in range, and make cache smarter
+# XXX what about last_hour / etc?
+# XXX bandwidth.pl should only get most recent file
+# XXX cache should store which files are included
+if (!defined($get_bandwidth_cache{$server->{'id'}})) {
 	my %bwinfo;
-	&read_file("$bandwidth_dir/$_[0]->{'id'}", \%bwinfo);
-	$get_bandwidth_cache{$_[0]->{'id'}} = \%bwinfo;
+	foreach my $f (glob("$bandwidth_dir/$server->{'id'}-*"),
+		       "$bandwidth_dir/$server->{'id'}") {
+		&read_file($f, \%bwinfo);
+		}
+	$get_bandwidth_cache{$server->{'id'}} = \%bwinfo;
 	}
-return $get_bandwidth_cache{$_[0]->{'id'}};
+return $get_bandwidth_cache{$server->{'id'}};
 }
 
 # save_bandwidth(&server, &info)
 # Updates collected bandwidth counts for some server
+# XXX only update latest file
+# XXX broken! don't call
 sub save_bandwidth
 {
-&make_dir($bandwidth_dir, 0700);
-&write_file("$bandwidth_dir/$_[0]->{'id'}", $_[1]);
-$get_bandwidth_cache{$_[0]->{'id'}} ||= $_[1];
+my ($server, $info) = @_;
+if (!-d $bandwidth_dir) {
+	&make_dir($bandwidth_dir, 0700);
+	}
+&write_file("$bandwidth_dir/$server->{'id'}", $info);
+$get_bandwidth_cache{$server->{'id'}} ||= $info;
+}
+
+# append_bandwidth(&server, &new-info)
+# Update counts for new bandwidth collection
+sub append_bandwidth
+{
+my ($server, $info) = @_;
+if (!-d $bandwidth_dir) {
+	&make_dir($bandwidth_dir, 0700);
+	}
+
+# Update latest bandwidth file with new data
+my $oldinfo = { };
+my $file = "$bandwidth_dir/$server->{'id'}";
+&read_file($file, $oldinfo);
+my $cache = $get_bandwidth_cache{$server->{'id'}};
+foreach my $k (keys %$info) {
+	if ($k =~ /^(min|hour)_/) {
+		# Increment time-based counter
+		$oldinfo->{$k} += $info->{$k};
+		}
+	else {
+		# Overwrite other value, like last time written
+		$oldinfo->{$k} = $info->{$k};
+		}
+	if ($cache) {
+		$cache->{$k} = $oldinfo->{$k};
+		}
+	}
+$oldinfo->{'first_time'} ||= &compute_first_bandwidth_time($oldinfo);
+&write_file($file, $oldinfo);
+
+# If first event in file is older than rotation time, rename the file
+if (time() - $oldinfo->{'first_time'} > $historic_rotation_time) {
+	rename($file, $file."-".time());
+	}
+}
+
+# compute_first_bandwidth_time(&bw-info)
+# Returns the minimum time for a bandwidth stat
+sub compute_first_bandwidth_time
+{
+my ($info) = @_;
+my $min = undef;
+foreach my $k (keys %$info) {
+	if ($k =~ /^(hour|min)_in_(\d+)/ && ($2 < $min || !defined($min))) {
+		$min = $1;
+		}
+	}
+return $min;
 }
 
 # delete_bandwidth(&server)
 # Remove all bandwidth counts for some server
 sub delete_bandwidth
 {
-&unlink_file("$bandwidth_dir/$_[0]->{'id'}");
+foreach my $f (glob("$bandwidth_dir/$_[0]->{'id'}-*"),
+	       "$bandwidth_dir/$_[0]->{'id'}") {
+	&unlink_file($f);
+	}
 delete($get_bandwidth_cache{$_[0]->{'id'}});
 }
 
