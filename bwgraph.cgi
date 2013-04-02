@@ -9,7 +9,7 @@ $color_mapping = { 'in', '#ff0000',
 $bar_width = 100;
 
 # Work out which mode we are in
-if ($in{'id'}) {
+if ($in{'id'} ne '') {
 	$mode = "server";
 	}
 elsif ($in{'owner'}) {
@@ -23,7 +23,7 @@ $dir = $in{'dir'} ? $in{'dir'} :
 
 # Get the server being shown
 @servers = &list_managed_servers();
-if ($in{'id'}) {
+if ($in{'id'} ne '') {
 	# One server
 	($server) = grep { $_->{'id'} eq $in{'id'} } @servers;
 	$server || &error($text{'graph_eserver'});
@@ -453,7 +453,7 @@ function onResize() {
 </script>
 EOF
 
-if ($in{'id'}) {
+if ($in{'id'} ne '') {
 	if ($server && defined(&theme_select_server)) {
 		&theme_select_server($server);
 		}
