@@ -1,11 +1,4 @@
 # Functions for virtual system bandwidth monitoring
-# - Every hour, poll all real interfaces and get byte counts
-# - Compare with last run, if positive add to total for the day
-# - Graphing per system / per period
-# - Ability to email or shutdown system if over limit
-# - Support vservers and zones
-# - Sum up for period, show in UI and list-systems.pl
-# - Nice graphs
 
 # can_get_server_traffic(&server)
 # Returns 1 if bandwidth monitoring is possible for a system
@@ -124,11 +117,11 @@ foreach my $f (glob("$bandwidth_dir/$server->{'id'}-*"),
 return $get_bandwidth_cache{$server->{'id'}};
 }
 
-# append_bandwidth(&server, &new-info, &delete-info)
+# append_bandwidth(&server, &new-info, &delete-info, [force-rotation])
 # Update counts for new bandwidth collection
 sub append_bandwidth
 {
-my ($server, $info, $delinfo) = @_;
+my ($server, $info, $delinfo, $forcerotate) = @_;
 if (!-d $bandwidth_dir) {
 	&make_dir($bandwidth_dir, 0700);
 	}
@@ -159,11 +152,29 @@ $oldinfo->{'first_time'} ||= &compute_first_bandwidth_time($oldinfo);
 
 # If first event in file is older than rotation time, rename the file
 if ($oldinfo->{'first_time'} &&
-    time() - $oldinfo->{'first_time'} > $historic_rotation_time) {
+    (time() - $oldinfo->{'first_time'} > $historic_rotation_time ||
+     $forcerotate)) {
 	my $newfile = $file."-".$oldinfo->{'first_time'}."-".time();
 	rename($file, $newfile);
 	delete($get_bandwidth_cache_file{$file});
 	$get_bandwidth_cache_file{$newfile} = 1;
+
+	# Populate non-time-based counters in the new file, and hour/minute
+	# counters from the most recent hour so that they can be properly
+	# incremented
+	my $newinfo = { };
+	foreach my $k (keys %$info) {
+		if ($k !~ /^(min|hour)_/) {
+			# Stat like last_* for previous byte or packet counts
+			$newinfo->{$k} = $info->{$k};
+			}
+		elsif ($k =~ /^hour_\S+_(\d+)$/ && $1 eq $info->{'new_hour'} ||
+		       $k =~ /^min_\S+_(\d+)$/ && $1 eq $info->{'new_min'}) {
+			# Most recent minute or hour stat
+			$newinfo->{$k} = $info->{$k};
+			}
+		}
+	&write_file($file, $newinfo);
 	}
 }
 

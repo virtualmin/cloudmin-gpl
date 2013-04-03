@@ -21,6 +21,7 @@ while(@ARGV > 0) {
         elsif ($a eq "--owner") { push(@owners, shift(@ARGV)); }
         elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
+	elsif ($a eq "--rotate") { $forcerotate = 1; }
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -58,7 +59,7 @@ foreach my $server (@servers) {
 foreach $s (@servers) {
 	next if ($s->{'status'} eq 'nohost' ||
 		 $s->{'status'} eq 'down');
-	my $bwinfo = &get_bandwidth($s);
+	my $bwinfo = &get_bandwidth($s, time(), undef);
 	$now = time();
 	($in, $out, $inp, $outp) = &get_server_traffic($s);
 	next if (!defined($in));
@@ -136,7 +137,7 @@ foreach $s (@servers) {
 	$new_bwinfo->{'last_time'} = $now;
 
 	# Write out
-	&append_bandwidth($s, $new_bwinfo, $del_bwinfo);
+	&append_bandwidth($s, $new_bwinfo, $del_bwinfo, $forcerotate);
 
 	# Also save as history
 	&add_historic_collected_info({ }, $now, $s, { 'bwin' => 1,
@@ -148,8 +149,9 @@ foreach $s (@servers) {
 $start = &bandwidth_period_start();
 $now = time();
 foreach $s (@servers) {
+	next if ($s->{'status'} eq 'nohost');
 	&obtain_lock_server($s);
-	my $bwinfo = &get_bandwidth($s);
+	my $bwinfo = &get_bandwidth($s, $start, undef);
 	next if (!$bwinfo->{'last_time'});	# Only do if bandwidth is
 						# supported by system type
 
