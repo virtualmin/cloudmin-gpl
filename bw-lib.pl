@@ -93,40 +93,46 @@ sub get_bandwidth
 {
 my ($server, $start, $end) = @_;
 
+# Find files for the server that fall within the time range
+# XXX update cache of files when rotating?
 # XXX only read files in range, and make cache smarter
-# XXX what about last_hour / etc?
 # XXX bandwidth.pl should only get most recent file
 # XXX cache should store which files are included
-if (!defined($get_bandwidth_cache{$server->{'id'}})) {
-	my %bwinfo;
-	foreach my $f (glob("$bandwidth_dir/$server->{'id'}-*"),
-		       "$bandwidth_dir/$server->{'id'}") {
-		&read_file($f, \%bwinfo);
+$get_bandwidth_cache{$server->{'id'}} ||= { };
+foreach my $f (glob("$bandwidth_dir/$server->{'id'}-*"),
+	       "$bandwidth_dir/$server->{'id'}") {
+	next if ($get_bandwidth_cache_file{$f});	# In cache already
+	my $want = 0;
+	if ($f =~ /\-(\d+)\-(\d+)$/) {
+		# Has a time range .. do we want it?
+		my ($fstart, $fend) = ($1, $2);
+		if (defined($start) && $start > $fend ||
+		    defined($end) && $end < $fstart) {
+			# Desired start range is beyond the end of this file,
+			# or vice-versa .. skip it
+			$want = 0;
+			}
+		else {
+			$want = 1;
+			}
 		}
-	$get_bandwidth_cache{$server->{'id'}} = \%bwinfo;
+	else {
+		# Assume yes (like for the latest file)
+		$want = 1;
+		}
+	if ($want) {
+		&read_file($f, $get_bandwidth_cache{$server->{'id'}});
+		$get_bandwidth_cache_file{$f} = 1;
+		}
 	}
 return $get_bandwidth_cache{$server->{'id'}};
 }
 
-# save_bandwidth(&server, &info)
-# Updates collected bandwidth counts for some server
-# XXX only update latest file
-# XXX broken! don't call
-sub save_bandwidth
-{
-my ($server, $info) = @_;
-if (!-d $bandwidth_dir) {
-	&make_dir($bandwidth_dir, 0700);
-	}
-&write_file("$bandwidth_dir/$server->{'id'}", $info);
-$get_bandwidth_cache{$server->{'id'}} ||= $info;
-}
-
-# append_bandwidth(&server, &new-info)
+# append_bandwidth(&server, &new-info, &delete-info)
 # Update counts for new bandwidth collection
 sub append_bandwidth
 {
-my ($server, $info) = @_;
+my ($server, $info, $delinfo) = @_;
 if (!-d $bandwidth_dir) {
 	&make_dir($bandwidth_dir, 0700);
 	}
@@ -149,12 +155,15 @@ foreach my $k (keys %$info) {
 		$cache->{$k} = $oldinfo->{$k};
 		}
 	}
+foreach my $k (@$delinfo) {
+	delete($oldinfo->{$k});
+	}
 $oldinfo->{'first_time'} ||= &compute_first_bandwidth_time($oldinfo);
 &write_file($file, $oldinfo);
 
 # If first event in file is older than rotation time, rename the file
 if (time() - $oldinfo->{'first_time'} > $historic_rotation_time) {
-	rename($file, $file."-".time());
+	rename($file, $file."-".$oldinfo->{'first_time'}."-".time());
 	}
 }
 
@@ -166,7 +175,7 @@ my ($info) = @_;
 my $min = undef;
 foreach my $k (keys %$info) {
 	if ($k =~ /^(hour|min)_in_(\d+)/ && ($2 < $min || !defined($min))) {
-		$min = $1;
+		$min = $2;
 		}
 	}
 return $min;

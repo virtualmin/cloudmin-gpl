@@ -73,11 +73,13 @@ foreach $s (@servers) {
 	$inp_diff = 0 if ($inp_diff < 0);
 	$outp_diff = 0 if ($outp_diff < 0);
 
-	# Save new lasts
-	$bwinfo->{'last_in'} = $in;
-	$bwinfo->{'last_out'} = $out;
-	$bwinfo->{'last_inp'} = $inp;
-	$bwinfo->{'last_outp'} = $outp;
+	# Create hashes for increments or changes to apply
+	my $new_bwinfo = { };
+	my $del_bwinfo = [ ];
+	$new_bwinfo->{'last_in'} = $in;
+	$new_bwinfo->{'last_out'} = $out;
+	$new_bwinfo->{'last_inp'} = $inp;
+	$new_bwinfo->{'last_outp'} = $outp;
 
 	# Spread over period between last poll and now
 	if ($bwinfo->{'last_time'}) {
@@ -86,46 +88,55 @@ foreach $s (@servers) {
 		$hlast = int($bwinfo->{'last_time'}/3600)*3600;
 		$hours = ($hnow - $hlast) / 3600.0;
 		$hours = 1 if ($hours < 1);
+		my $hh_set = $hlast;
 		for($hh=$hlast; $hh<$hlast+$hours*3600; $hh+=3600) {
-			$bwinfo->{'hour_in_'.$hh} += $in_diff / $hours;
-			$bwinfo->{'hour_out_'.$hh} += $out_diff / $hours;
-			$bwinfo->{'hour_inp_'.$hh} += $inp_diff / $hours;
-			$bwinfo->{'hour_outp_'.$hh} += $outp_diff / $hours;
+			$new_bwinfo->{'hour_in_'.$hh} = $in_diff / $hours;
+			$new_bwinfo->{'hour_out_'.$hh} = $out_diff / $hours;
+			$new_bwinfo->{'hour_inp_'.$hh} = $inp_diff / $hours;
+			$new_bwinfo->{'hour_outp_'.$hh} = $outp_diff / $hours;
+			$hh_set = $hh;
 			}
-		$bwinfo->{'new_hour'} = $hh;
-		$bwinfo->{'old_hour'} ||= int($bwinfo->{'last_time'}/3600)*3600;
+
+		# Save oldest and newest hours for which we have data
+		$new_bwinfo->{'new_hour'} = $hh_set;
+		$new_bwinfo->{'old_hour'} =
+			$bwinfo->{'old_hour'} ||
+			int($bwinfo->{'last_time'}/3600)*3600;
 
 		# By minute
 		$mnow = int($now/60)*60;
 		$mlast = int($bwinfo->{'last_time'}/60)*60;
 		$mins = ($mnow - $mlast) / 60.0;
 		$mins = 1 if ($mins < 1);
+		my $mm_set = $mlast;
 		for($mm=$mlast; $mm<($mlast+$mins*60); $mm+=60) {
-			$bwinfo->{'min_in_'.$mm} += $in_diff / $mins;
-			$bwinfo->{'min_out_'.$mm} += $out_diff / $mins;
-			$bwinfo->{'min_inp_'.$mm} += $inp_diff / $mins;
-			$bwinfo->{'min_outp_'.$mm} += $outp_diff / $mins;
-			$bwinfo->{'new_min'} = $mm;
+			$new_bwinfo->{'min_in_'.$mm} = $in_diff / $mins;
+			$new_bwinfo->{'min_out_'.$mm} = $out_diff / $mins;
+			$new_bwinfo->{'min_inp_'.$mm} = $inp_diff / $mins;
+			$new_bwinfo->{'min_outp_'.$mm} = $outp_diff / $mins;
+			$mm_set = $mm;
 			}
-		$bwinfo->{'old_min'} ||= $mlast;
+
+		# Save oldest and newest minutes for which we have data
+		$new_bwinfo->{'new_min'} = $mm_set;
+		$new_bwinfo->{'old_min'} = $bwinfo->{'old_min'} || $mlast;
 
 		# Get rid of per-minute stats more than 1 week old
 		$weekago = $now - 7*24*60*60;
 		$weekago = int($weekago/60) * 60;
 		if ($bwinfo->{'old_min'} < $weekago) {
 			for(my $mm=$bwinfo->{'old_min'}; $mm<$weekago; $mm+=60){
-				delete($bwinfo->{'min_in_'.$mm});
-				delete($bwinfo->{'min_out_'.$mm});
-				delete($bwinfo->{'min_inp_'.$mm});
-				delete($bwinfo->{'min_outp_'.$mm});
+				push(@$del_bwinfo,
+				     'min_in_'.$mm, 'min_out_'.$mm,
+				     'min_inp_'.$mm, 'min_outp_'.$mm);
 				}
-			$bwinfo->{'old_min'} = $weekago;
+			$new_bwinfo->{'old_min'} = $weekago;
 			}
 		}
-	$bwinfo->{'last_time'} = $now;
+	$new_bwinfo->{'last_time'} = $now;
 
 	# Write out
-	&save_bandwidth($s, $bwinfo);
+	&append_bandwidth($s, $new_bwinfo, $del_bwinfo);
 
 	# Also save as history
 	&add_historic_collected_info({ }, $now, $s, { 'bwin' => 1,
