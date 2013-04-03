@@ -65,4 +65,5 @@ When a new virtual system is created, its timezone is set to match the host syst
 When resizing the root disk on a running system, the user is now prompted to have it shut down and re-started as part of the resize process.
 Added a tab to the IP Addresses page to block IP addresses from being allocated to new systems.
 ---- Changes since 6.9 ----
-Virtual systems can now be backed up to and restored from Amazon S3.
+Virtual systems can now be backed up to and restored from Amazon S3 and Rackspace Cloud Files.
+Bandwidth data files are now split up into weekly chunks, which reduces the run time of the bandwidth.pl cron job and makes graphing bandwidth usage faster.

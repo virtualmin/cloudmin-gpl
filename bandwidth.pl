@@ -124,8 +124,8 @@ foreach $s (@servers) {
 		# Get rid of per-minute stats more than 1 week old
 		$weekago = $now - 7*24*60*60;
 		$weekago = int($weekago/60) * 60;
-		if ($bwinfo->{'old_min'} < $weekago) {
-			for(my $mm=$bwinfo->{'old_min'}; $mm<$weekago; $mm+=60){
+		if ($new_bwinfo->{'old_min'} < $weekago) {
+			for(my $mm=$new_bwinfo->{'old_min'}; $mm<$weekago; $mm+=60){
 				push(@$del_bwinfo,
 				     'min_in_'.$mm, 'min_out_'.$mm,
 				     'min_inp_'.$mm, 'min_outp_'.$mm);

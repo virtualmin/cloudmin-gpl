@@ -94,10 +94,6 @@ sub get_bandwidth
 my ($server, $start, $end) = @_;
 
 # Find files for the server that fall within the time range
-# XXX update cache of files when rotating?
-# XXX only read files in range, and make cache smarter
-# XXX bandwidth.pl should only get most recent file
-# XXX cache should store which files are included
 $get_bandwidth_cache{$server->{'id'}} ||= { };
 foreach my $f (glob("$bandwidth_dir/$server->{'id'}-*"),
 	       "$bandwidth_dir/$server->{'id'}") {
@@ -121,7 +117,6 @@ foreach my $f (glob("$bandwidth_dir/$server->{'id'}-*"),
 		$want = 1;
 		}
 	if ($want) {
-		print STDERR "reading $f\n";
 		&read_file($f, $get_bandwidth_cache{$server->{'id'}});
 		$get_bandwidth_cache_file{$f} = 1;
 		}
@@ -163,8 +158,12 @@ $oldinfo->{'first_time'} ||= &compute_first_bandwidth_time($oldinfo);
 &write_file($file, $oldinfo);
 
 # If first event in file is older than rotation time, rename the file
-if (time() - $oldinfo->{'first_time'} > $historic_rotation_time) {
-	rename($file, $file."-".$oldinfo->{'first_time'}."-".time());
+if ($oldinfo->{'first_time'} &&
+    time() - $oldinfo->{'first_time'} > $historic_rotation_time) {
+	my $newfile = $file."-".$oldinfo->{'first_time'}."-".time();
+	rename($file, $newfile);
+	delete($get_bandwidth_cache_file{$file});
+	$get_bandwidth_cache_file{$newfile} = 1;
 	}
 }
 
