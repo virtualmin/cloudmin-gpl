@@ -154,7 +154,7 @@ if ($mode ne 'systems' && $mode ne 'host') {
 		# Get total over last hour or day
 		my ($stotal, $scount);
 		foreach $s (@showservers) {
-			$b = &get_bandwidth($s);
+			$b = &get_bandwidth($s, $start, $end);
 			for($i=$start; $i<=$end; $i+=$step) {
 				if ($dir eq 'in') {
 					$stotal += $b->{$prefix.'_in_'.$i};
@@ -248,7 +248,7 @@ else {
 			@adding = &list_child_servers($s);
 			}
 		foreach $as (@adding) {
-			$bwinfo = &get_bandwidth($as);
+			$bwinfo = &get_bandwidth($as, $start, $end);
 			for($hh=$start; $hh<$end; $hh+=$step) {
 				$b->{'in'} += $bwinfo->{$prefix.'_in_'.$hh};
 				$b->{'out'} += $bwinfo->{$prefix.'_out_'.$hh};

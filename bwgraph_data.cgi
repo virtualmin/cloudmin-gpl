@@ -37,7 +37,7 @@ if ($in{'mode'} eq 'server') {
 	($server) = grep { $_->{'id'} eq $in{'id'} } @servers;
 	$server || &error($text{'edit_egone'});
 	&can_action_error($server, "graph");
-	$bwinfo = &get_bandwidth($server);
+	$bwinfo = &get_bandwidth($server, $start, $end);
 	for($i=$start; $i<=$end; $i+=$step) {
 		@tm = localtime($i);
 		$in = $bwinfo->{$prefix."_in_".$i};
@@ -60,7 +60,7 @@ elsif ($in{'mode'} eq 'total' || $in{'mode'} eq 'owner') {
 	&can_action_error(\@servers, "graph");
 	@bwinfos = ( );
 	foreach $server (@servers) {
-		$bwinfo = &get_bandwidth($server);
+		$bwinfo = &get_bandwidth($server, $start, $end);
 		push(@bwinfos, $bwinfo) if ($bwinfo);
 		}
 	for($i=$start; $i<=$end; $i+=$step) {

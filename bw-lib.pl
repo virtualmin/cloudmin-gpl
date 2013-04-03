@@ -121,6 +121,7 @@ foreach my $f (glob("$bandwidth_dir/$server->{'id'}-*"),
 		$want = 1;
 		}
 	if ($want) {
+		print STDERR "reading $f\n";
 		&read_file($f, $get_bandwidth_cache{$server->{'id'}});
 		$get_bandwidth_cache_file{$f} = 1;
 		}

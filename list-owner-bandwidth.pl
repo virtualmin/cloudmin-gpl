@@ -92,7 +92,7 @@ foreach $o (@owners) {
 	@bwinfos = ( );
 	$old_min = $old_hour = $new_min = $new_hour = undef;
 	foreach $s (@servers) {
-		my $bwinfo = &get_bandwidth($s);
+		my $bwinfo = &get_bandwidth($s, $start, $end);
 		if (!$old_min || $bwinfo->{'old_min'} < $old_min) {
 			$old_min = $bwinfo->{'old_min'};
 			}
