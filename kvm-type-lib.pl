@@ -4933,20 +4933,23 @@ if (!$server->{'kvm_filesystem_offset'} || $wantfile) {
 		return &text('create_ekvmfsfdisk', $fsfile, $parts);
 		}
 
-	# Find Linux partitions and their offsets
+	# Find Linux or BSD partitions and their offsets
 	my @offsets;
 	foreach my $p (@$parts) {
-		if ($p->{'type'} eq '83' && $p->{'offset'}) {
-			push(@offsets, $p->{'offset'});
+		if (($p->{'type'} eq '83' || $p->{'type'} eq 'a5') &&
+		    $p->{'offset'}) {
+			push(@offsets, $p);
 			}
 		}
 	@offsets || return &text('create_ekvmfslinux', $fsfile);
 
-	# Try each offset
+	# Try each partition with an offset
 	foreach my $o (@offsets) {
+		my $cmd = $o->{'type'} eq 'a5' ?
+		    "mount -t ufs -o loop,offset=$o->{'offset'},ufstype=ufs2" :
+		    "mount -o loop,offset=$o->{'offset'}";
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"mount -o loop,offset=$o ".quotemeta($fsfile)." ".
-					 quotemeta($mp));
+			$cmd." ".quotemeta($fsfile)." ".quotemeta($mp));
 		next if ($ex || $err);
 		my @st = &stat_file_on_server($vhost,
 					      $mp.($wantfile || "/etc"));
@@ -4954,7 +4957,8 @@ if (!$server->{'kvm_filesystem_offset'} || $wantfile) {
 			# Found it! Leave mounted
 			$server->{'kvm_mount'} = $mp;
 			if (!$wantfile) {
-				$server->{'kvm_filesystem_offset'} = $o;
+				$server->{'kvm_filesystem_offset'} = $o->{'offset'};
+				$server->{'kvm_filesystem_type'} = $o->{'type'};
 				}
 			return undef;
 			}
@@ -4969,9 +4973,11 @@ if (!$server->{'kvm_filesystem_offset'} || $wantfile) {
 
 # Mount with the correct offset
 my $o = $server->{'kvm_filesystem_offset'};
+my $t = $server->{'kvm_filesystem_type'} || "83";
+my $cmd = $t eq 'a5' ? "mount -t ufs -o loop,offset=$o,ufstype=ufs2"
+		     : "mount -o loop,offset=$o";
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
-	"mount -o loop,offset=$o ".quotemeta($fsfile)." ".
-				   quotemeta($mp));
+	$cmd." ".quotemeta($fsfile)." ".quotemeta($mp));
 return "Failed to mount $fsfile on $mp : $out" if ($ex);
 $server->{'kvm_mount'} = $mp;
 return undef;
