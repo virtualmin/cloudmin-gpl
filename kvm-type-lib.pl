@@ -1927,6 +1927,15 @@ if (!$empty && $mp) {
 		&set_shadow_root_password($server, undef);
 		}
 
+	# On FreeBSD, create an /etc/rc.local script that runs pwd_mkdb
+	# so that any password change gets applied
+	if ($server->{'type'} eq 'freebsd') {
+		&put_file_data_to_server(
+			$server,
+			"/usr/sbin/pwd_mkdb -p /etc/master.passwd\n",
+			"/etc/rc.local");
+		}
+
 	# Create authorized keys file
 	if ($server->{'key'}) {
 		&$first_print($text{'create_xensetkey'});
@@ -3815,7 +3824,8 @@ sub type_kvm_can_fsck
 my ($server, $disk) = @_;
 return ($server->{'status'} eq 'down' || !$disk->{'mounted'}) &&
        $disk->{'fs'} && $disk->{'fs'} ne 'swap' &&
-       $disk->{'media'} ne 'cdrom';
+       $disk->{'media'} ne 'cdrom' &&
+       $server->{'type'} ne 'freebsd';
 }
 
 # type_kvm_fsck_disk(&server, &disk, [only-if-unclean])

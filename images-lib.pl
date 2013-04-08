@@ -629,7 +629,8 @@ if ($server->{'manager'} ne 'zones') {
 foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",
 		 "/etc/sysconfig/network", "/etc/postfix/main.cf",
-		 "/etc/conf.d/hostname", "/etc/mailman/mm_cfg.py") {
+		 "/etc/conf.d/hostname", "/etc/mailman/mm_cfg.py",
+		 "/etc/rc.conf") {
 	my $fixpath = $dir.$fix;
 	my $temppath = &transname();
 
@@ -684,6 +685,10 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		$data =~ s/DEFAULT_EMAIL_HOST\s*=\s*"(.*)"/DEFAULT_EMAIL_HOST = "$fullhost"/;
 		$data =~ s/DEFAULT_URL_HOST\s*=\s*'(.*)'/DEFAULT_URL_HOST = '$fullhost'/;
 		$data =~ s/DEFAULT_URL_HOST\s*=\s*"(.*)"/DEFAULT_URL_HOST = "$fullhost"/;
+		}
+	elsif ($fix eq "/etc/rc.conf") {
+		# Fix hostname line
+		$data = &set_rc_conf_line($data, "hostname", $fullhost);
 		}
 	else {
 		# Other hostname file
@@ -840,7 +845,8 @@ foreach my $l (split(/\r?\n/, $resolv)) {
 # Fix relevant files
 foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/network/interfaces",
-		 "/etc/conf.d/net") {
+		 "/etc/conf.d/net",
+		 "/etc/rc.conf") {
 	my $fixpath = "$dir/$fix";
 	my $temppath = &transname();
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
@@ -904,6 +910,14 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 			$data .= "routes_$iface=( \"default via $gw\" )\n";
 			}
 		}
+	elsif ($fix eq "/etc/rc.conf") {
+		# Set IP and gateway lines
+		my $bsdiface = $iface;
+		$bsdiface =~ s/^([a-z]+)/re/g;	# Assume realtec
+		my $line = "inet $ip netmask $netmask broadcast $broadcast";
+		$data = &set_rc_conf_line($data, "ifconfig_$bsdiface", $line);
+		$data = &set_rc_conf_line($data, "defaultrouter", $gw);
+		}
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
@@ -931,7 +945,8 @@ $iface ||= "eth0";
 my ($fix, $data);
 foreach my $f ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 	       "/etc/network/interfaces",
-	       "/etc/conf.d/net") {
+	       "/etc/conf.d/net",
+	       "/etc/rc.conf") {
 	my $fixpath = "$dir/$f";
 	$data = &get_file_data_from_server($vhost, $fixpath);
 	if ($data) {
@@ -981,6 +996,13 @@ for(my $i=0; $i<@$ips; $i++) {
 		if ($gw) {
 			$data .= "routes_$iface=( \"default via $gw\" )\n";
 			}
+		}
+	elsif ($fix eq "/etc/rc.conf") {
+		# Add FreeBSD networking line
+		my $bsdiface = $iface;
+		$bsdiface =~ s/^([a-z]+)/re/g;	# Assume realtec
+		my $line = "inet $ip netmask $netmask broadcast $broadcast";
+		$data = &set_rc_conf_line($data, "ifconfig_$bsdiface", $line);
 		}
 	my $fixpath = "$dir/$fix";
 	my $err = &put_file_data_to_server($vhost, $data, $fixpath);
@@ -1211,6 +1233,11 @@ my $salt = substr(time(), -2);
 my $shadow = &transname();
 my $passfile = "/etc/shadow";
 my $err = &get_file_from_server($server, $passfile, $shadow);
+if ($err) {
+	# Perhaps /etc/master.passwd (like on BSD)
+	$passfile = "/etc/master.passwd";
+	$err = &get_file_from_server($server, $passfile, $shadow);
+	}
 if ($err) {
 	$passfile = "/etc/passwd";
 	$err = &get_file_from_server($server, $passfile, $shadow);
@@ -1810,6 +1837,34 @@ foreach my $dest (split(/\s+/, $image->{'dest'})) {
 	}
 $image->{'dest'} = join(" ", @okdests);
 return undef;
+}
+
+# set_rc_conf_line(rc-conf-data, name, value)
+# Changes or adds the rc.conf line for some setting
+sub set_rc_conf_line
+{
+my ($data, $name, $value) = @_;
+my @lines = split(/\r?\n/, $data);
+my $found = undef;
+for(my $i=0; $i<@lines; $i++) {
+	if ($lines[$i] =~ /^\s*([^=]+)\s*=\s*(.*)/ && $1 eq $name) {
+		# Found it!
+		$found = $i;
+		}
+	}
+if (defined($found) && defined($value)) {
+	# Replace existing line
+	$lines[$found] = $name."=\"".$value."\"";
+	}
+elsif (defined($found) && !defined($value)) {
+	# Remove existing line
+	splice(@lines, $found, 1);
+	}
+elsif (!defined($found) && defined($value)) {
+	# Add to end
+	push(@lines, $name."=\"".$value."\"");
+	}
+return join("\n", @lines)."\n";
 }
 
 1;
