@@ -913,7 +913,8 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 	elsif ($fix eq "/etc/rc.conf") {
 		# Set IP and gateway lines
 		my $bsdiface = $iface;
-		$bsdiface =~ s/^([a-z]+)/re/g;	# Assume realtec
+		my $pfx = &get_interface_prefix($server);
+		$bsdiface =~ s/^([a-z]+)/$pfx/g;
 		my $line = "inet $ip netmask $netmask broadcast $broadcast";
 		$data = &set_rc_conf_line($data, "ifconfig_$bsdiface", $line);
 		$data = &set_rc_conf_line($data, "defaultrouter", $gw);

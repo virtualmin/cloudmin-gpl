@@ -4131,7 +4131,8 @@ if (&can_ssh_status($server)) {
 	return 2;
 	}
 elsif ($server->{'status'} eq 'down' &&
-       (&redhat_server_type($server) || &debian_server_type($server))) {
+       (&redhat_server_type($server) || &debian_server_type($server) ||
+	&freebsd_server_type($server))) {
 	# Can manage via direct file manipulation
 	return 2;
 	}
@@ -4184,17 +4185,18 @@ my ($server, $fromcfg) = @_;
 my $rv;
 my $can = &type_kvm_can_interfaces($server);
 my @net = split(/\s+/, $server->{'kvm_net'});
+my $eth = &get_interface_prefix($server);
 
 if ($can == 3 || $fromcfg) {
 	# Cannot manage IPs, like on a Windows VM
-	$rv = [ map { { 'name' => 'eth'.$_,
-		        'fullname' => 'eth'.$_,
+	$rv = [ map { { 'name' => $eth.$_,
+		        'fullname' => $eth.$_,
 			'unknown' => 1,
 		        'up' => 1 } } (0 .. scalar(@net)-1) ];
 	if ($server->{'status'} ne 'down') {
 		# Set active field
 		foreach my $iface (@$rv) {
-			if ($iface->{'name'} eq 'eth0') {
+			if ($iface->{'name'} eq $eth.'0') {
 				# We know the IP, so ping it
 				$iface->{'active'} =
 					$server->{'status'} eq 'noping' ? 0 : 1;
@@ -4216,11 +4218,11 @@ elsif ($server->{'status'} eq 'down') {
 	# Add interfaces that KVM has been configured with, but aren't active
 	# on the VM
 	for(my $i=0; $i<@net; $i++) {
-		my $name = "eth".$i;
+		my $name = $eth.$i;
 		my ($already) = grep { $_->{'fullname'} eq $name } @$rv;
 		if (!$already) {
-			push(@$rv, { 'name' => 'eth'.$i,
-				     'fullname' => 'eth'.$i,
+			push(@$rv, { 'name' => $eth.$i,
+				     'fullname' => $eth.$i,
 				     'unknown' => 1,
 				     'up' => 1 });
 			}
@@ -4248,11 +4250,11 @@ else {
 # Set nodelete flag on first real interface, filter out interfaces
 # with no IP or non-ethernet
 if (ref($rv)) {
-	$rv = [ grep { $_->{'fullname'} =~ /^eth/ &&
+	$rv = [ grep { $_->{'fullname'} =~ /^$eth/ &&
 		       $_->{'up'} } @$rv ];
 	foreach my $iface (@$rv) {
 		$iface->{'active'} ||= 0;
-		if ($iface->{'fullname'} eq 'eth0') {
+		if ($iface->{'fullname'} eq $eth."0") {
 			$iface->{'nodelete'} = 1
 			}
 		$iface->{'noedit'} = 1 if (!$iface->{'address'} &&
@@ -4268,7 +4270,7 @@ for(my $i=0; $i<@macs; $i++) {
 	my $mac = $macs[$i];
 	my $b = $bridges[$i];
 	my $m = $models[$i];
-	my ($iface) = grep { $_->{'fullname'} eq "eth".$i } @$rv;
+	my ($iface) = grep { $_->{'fullname'} eq $eth.$i } @$rv;
 	if ($iface) {
 		$iface->{'ether'} = $mac eq '*' || $mac eq '' ? undef : $mac;
 		$iface->{'bridge'} = $b eq '*' || $b eq '' ? undef : $b;
@@ -4282,11 +4284,11 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 	foreach my $net (@net) {
 		if ($net =~ /script=([^,]+-(eth\d+))\.sh/) {
 			my $scriptbase = $1;
-			my $eth = $2;
+			my $tapeth = $2;
 			my $tapfile = $scriptbase.".tap";
 			my $tap = &get_file_data_from_server($vhost, $tapfile);
 			$tap =~ s/\r|\n//g;
-			my ($iface) = grep { $_->{'fullname'} eq $eth } @$rv;
+			my ($iface) = grep { $_->{'fullname'} eq $tapeth } @$rv;
 			if ($iface) {
 				$iface->{'tap'} = $tap;
 				}

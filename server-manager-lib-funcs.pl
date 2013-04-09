@@ -10045,7 +10045,9 @@ foreach my $l (@lines) {
         elsif ($l =~ /inet (\S+)/) { $ifc{'address'} = $1; }
         elsif (!$empty) { next; }
         if ($l =~ /Mask:(\S+)/) { $ifc{'netmask'} = $1; }
-        elsif ($l =~ /netmask (\S+)/) { $ifc{'netmask'} = $1; }
+        elsif ($l =~ /netmask ([0-9\.]+) /) { $ifc{'netmask'} = $1; }
+        elsif ($l =~ /netmask 0x([0-9a-f]+)/)
+		{ $ifc{'netmask'} = &net::integer_to_ip(hex($1)); }
         if ($l =~ /Bcast:(\S+)/) { $ifc{'broadcast'} = $1; }
         elsif ($l =~ /broadcast (\S+)/) { $ifc{'broadcast'} = $1; }
         if ($l =~ /HWaddr (\S+)/) { $ifc{'ether'} = $1; }
@@ -10893,6 +10895,14 @@ if ($src->{'address6'}) {
 	$dest->{'netmask6'} = [ @{$src->{'netmask6'}} ];
 	}
 return $dest;
+}
+
+# get_interface_prefix(&server)
+# Returns the prefix for Ethernet interfaces on a system - typically eth
+sub get_interface_prefix
+{
+my ($server) = @_;
+return $server->{'type'} eq 'freebsd' ? 're' : 'eth';
 }
 
 # enable_ipv6_redhat(&server)
