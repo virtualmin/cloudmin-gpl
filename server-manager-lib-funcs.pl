@@ -1462,7 +1462,6 @@ sub mountable_filesystem
 {
 my ($server) = @_;
 return $server->{'type'} eq 'windows' ||
-       $server->{'type'} =~ /bsd$/ ||
        $server->{'type'} eq 'solaris' ? 0 : 1;
 }
 
@@ -6029,7 +6028,7 @@ if (!$err) {
 		}
 	&flush_file_lines($shadow);
 	$err = &put_file_to_server($server, $shadow, $passfile);
-	if ($passfile eq "/etc/master.passwd") {
+	if ($passfile eq "/etc/master.passwd" && &can_ssh_status($server)) {
 		# Re-generate BSD password DB
 		&execute_command_on_server($server,
 			"/usr/sbin/pwd_mkdb -p /etc/master.passwd");
@@ -10120,6 +10119,7 @@ if (&can_net_status($server)) {
 	}
 else {
 	# Try parsing ifconfig output
+	# XXX freebsd
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"ifconfig -a");
 	return $err if ($err);
@@ -10127,6 +10127,7 @@ else {
 	my @active = &parse_ifconfig_output($out, $empty);
 
 	# Also add in gateways
+	# XXX freebsd
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"netstat -rn");
 	return $err if ($err);
@@ -10162,6 +10163,7 @@ if (&can_net_status($server)) {
 	}
 else {
 	# Activate with ifconfig command
+	# XXX freebsd
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." ".
 		     quotemeta($iface->{'address'})." up ".
 		     "netmask ".quotemeta($iface->{'netmask'})." ".
@@ -10198,6 +10200,7 @@ if (&can_net_status($server)) {
 	}
 else {
 	# Just remove with ifconfig
+	# XXX freebsd
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." down";
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err if ($err);
@@ -10228,6 +10231,7 @@ if (&can_net_status($server) && !$changing_primary) {
 	}
 else {
 	# Use the ifconfig command
+	# XXX freebsd
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." ".
 		     quotemeta($iface->{'address'})." ".
 		     "netmask ".quotemeta($iface->{'netmask'})." ".
@@ -10404,6 +10408,98 @@ elsif (&debian_server_type($server)) {
 		}
 	&unlink_file($temp);
 	return \@boot;
+	}
+elsif (&freebsd_server_type($server)) {
+	# Read /etc/rc.conf
+	my $rc = &get_server_rc_conf($server);
+	return $rc if (!ref($rc));
+
+	# Extract network interfaces
+	my @boot;
+	foreach my $r (keys %$rc) {
+		my $v = $rc->{$r};
+		my %ifc;
+		if ($r =~ /^ifconfig_([a-z0-9]+)$/) {
+			# Non-virtual interface
+			%ifc = ( 'name' => $1,
+				 'fullname' => $1 );
+			}
+		elsif ($r =~ /^ifconfig_([a-z0-9]+)_alias(\d+)$/) {
+			# Virtual interface
+			%ifc = ( 'name' => $1,
+				 'virtual' => $2,
+				 'fullname' => "$1:$2" );
+			}
+		else { next; }
+
+		if ($v =~ /^inet\s+(\S+)/ || /^([0-9\.]+)/) {
+			$ifc{'address'} = $1;
+			}
+		elsif ($v eq 'DHCP') {
+			$ifc{'dhcp'} = 1;
+			}
+		my @a = split(/\./, $ifc{'address'});
+		if ($v =~ /netmask\s+(0x\S+)/) {
+			$ifc{'netmask'} = &parse_hex($1);
+			}
+		elsif ($v =~ /netmask\s+([0-9\.]+)/) {
+			$ifc{'netmask'} = $1;
+			}
+		else {
+			$ifc{'netmask'} = $a[0] >= 192 ? "255.255.255.0" :
+					  $a[0] >= 128 ? "255.255.0.0" :
+							 "255.0.0.0";
+			}
+		if ($v =~ /broadcast\s+(0x\S+)/) {
+			$ifc{'broadcast'} = &parse_hex($1);
+			}
+		elsif ($v =~ /broadcast\s+([0-9\.]+)/) {
+			$ifc{'broadcast'} = $1;
+			}
+		else {
+			my @n = split(/\./, $ifc{'netmask'});
+			$ifc{'broadcast'} = sprintf "%d.%d.%d.%d",
+						($a[0] | ~int($n[0]))&0xff,
+						($a[1] | ~int($n[1]))&0xff,
+						($a[2] | ~int($n[2]))&0xff,
+						($a[3] | ~int($n[3]))&0xff;
+			}
+		$ifc{'mtu'} = $1 if ($v =~ /mtu\s+(\d+)/);
+		$ifc{'up'} = 1;
+		$ifc{'edit'} = 1;
+		$ifc{'index'} = scalar(@rv);
+		$ifc{'file'} = "/etc/rc.conf";
+
+		# Check for IPv6 params
+		my $v6 = $rc->{'ipv6_ifconfig_'.$ifc{'fullname'}};
+		if ($v6 =~ /^inet6\s+(\S+)/ || $v6 =~ /^([0-9a-f:]+)/) {
+			$ifc{'address6'} = [ $1 ];
+			}
+		elsif (!$v6 && $rc->{'ipv6_enable'}) {
+			$ifc{'auto6'} = 1;
+			}
+		if ($v6 =~ /prefixlen\s+(\d+)/) {
+			$ifc{'netmask6'} = [ $1 ];
+			}
+
+		# Add IPv6 aliases
+		foreach my $rr (sort { $a cmp $b } keys %$rc) {
+			if ($rr =~ /^ipv6_ifconfig_(\S+)_alias\d+$/ &&
+			    $1 eq $ifc{'fullname'}) {
+				my $v6 = $rc->{$rr};
+				if ($v6 =~ /^inet6\s+(\S+)/ ||
+				    $v6 =~ /^([0-9a-f:]+)/) {
+					push(@{$ifc{'address6'}}, $1);
+					}
+				if ($v6 =~ /prefixlen\s+(\d+)/) {
+					push(@{$ifc{'netmask6'}}, $1);
+					}
+				}
+			}
+
+		push(@boot, \%ifc);
+		}
+	return @boot;
 	}
 else {
 	# Out of luck ..
@@ -10863,6 +10959,14 @@ sub debian_server_type
 my ($server) = @_;
 return $server->{'type'} eq 'debian' ||
        $server->{'type'} eq 'ubuntu';
+}
+
+# freebsd_server_type(&server)
+# Returns 1 if a system uses FreeBSD config files
+sub freebsd_server_type
+{
+my ($server) = @_;
+return $server->{'type'} eq 'freebsd';
 }
 
 # cloudmin_api_log(&argv, [&server])
@@ -11394,13 +11498,32 @@ return @rv;
 sub same_xen_virt
 {
 my ($d1, $d2, $nopart) = @_;
-$d1 =~ s/\/(xvd|hd|vd)/\/sd/g;
-$d2 =~ s/\/(xvd|hd|vd)/\/sd/g;
+$d1 = &regularize_xen_virt($d1);
+$d2 = &regularize_xen_virt($d2);
 if ($nopart) {
 	$d1 =~ s/\d+$//g;
 	$d2 =~ s/\d+$//g;
 	}
 return lc($d1) eq lc($d2);
+}
+
+# regularize_xen_virt(device)
+# Convert a device name to the format like /dev/sda1
+sub regularize_xen_virt
+{
+my ($d) = @_;
+if ($d =~ /^\/dev\/(ada|da|ad)(\d+)(s(\d+)([a-z]*))?$/) {
+	# FreeBSD device .. convert to Linux
+	$d = "/dev/sd".chr($2+97);
+	if ($4 ne "") {
+		$d .= $4;
+		}
+	}
+else {
+	# Convert all xen, KVM and IDE formats to SCSI
+	$d =~ s/\/(xvd|hd|vd)/\/sd/g;
+	}
+return $d;
 }
 
 # parse_backup_destination(dest)

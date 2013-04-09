@@ -1839,6 +1839,32 @@ $image->{'dest'} = join(" ", @okdests);
 return undef;
 }
 
+# get_server_rc_conf(&server)
+# Given a FreeBSD system, return the rc.conf file as a hash ref, or an error
+# message string.
+sub get_server_rc_conf
+{
+my ($server) = @_;
+my $temp = &transname();
+my $rcfile = "/etc/rc.conf";
+my $err = &get_file_from_server($server, $rcfile, $temp);
+return $err if ($err);
+
+# Parse rc.conf file
+my $lref = &read_file_lines($temp, 1);
+my %rc;
+foreach my $l (@$lref) {
+	$l =~ s/\r|\n//g;
+	$l =~ s/#.*$//;
+	if ($l =~ /^\s*([^=\s]+)\s*=\s*"(.*)"/ ||
+	    $l =~ /^\s*([^=\s]+)\s*=\s*(\S+)/) {
+		$rc{$1} = $2;
+		}
+	}
+&unlink_file($temp);
+return \%rc;
+}
+
 # set_rc_conf_line(rc-conf-data, name, value)
 # Changes or adds the rc.conf line for some setting
 sub set_rc_conf_line
