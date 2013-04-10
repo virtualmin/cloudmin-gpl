@@ -4314,15 +4314,16 @@ sub type_kvm_create_interface
 {
 my ($server, $iface, $nonvirt) = @_;
 my $can = &type_kvm_can_interfaces($server);
+my $eth = &get_interface_prefix($server, $iface);
 
 # Find a free interface number, if needed
 my $vhost = &type_kvm_parent($server);
 if ($nonvirt) {
-	$iface->{'name'} =~ /^eth(\d+)$/ ||
+	$iface->{'name'} =~ /^$eth(\d+)$/ ||
 		return "Only Ethernet intefaces can be created";
 	my @nets = split(/\s+/, $server->{'kvm_net'});
 	$1 == scalar(@nets) ||
-		return "A new real interface must be named eth".scalar(@nets);
+		return "A new real interface must be named $eth".scalar(@nets);
 	$iface->{'fullname'} = $iface->{'name'};
 	$iface->{'unknown'} = 1 if ($can == 3);
 	}
@@ -4342,7 +4343,7 @@ else {
 
 # Allocate IP, if needed
 my @kvm_iface = split(/\s+/, $vhost->{'kvm_iface'});
-my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
+my $idx = $iface->{'name'} =~ /^$eth(\d+)/ ? $1 : 0;
 $iface->{'bridge'} ||= $kvm_iface[$idx];
 if (!$iface->{'address'} && !$iface->{'unknown'}) {
 	my $cidr;
@@ -4402,7 +4403,7 @@ if ($nonvirt) {
 		&load_kvm_hotplug_modules($server);
 
 		# Connect to KVM monitor
-		my $oldactive = &list_active_server_interfaces($server);
+		my $oldactive = &list_active_server_interfaces($server, 1);
 		my $str = "model=$model,mac=$mac,vlan=$num";
 		my ($aok, $aout) = &run_kvm_monitor_command($server,
 			[ "pci_add 0 nic $str" ]);
@@ -4484,6 +4485,7 @@ sub type_kvm_delete_interface
 my ($server, $iface) = @_;
 my $vhost = &type_kvm_parent($server);
 my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
+my $eth = &get_interface_prefix($server, $iface);
 
 # Delete boot interface
 if (!$iface->{'unknown'}) {
@@ -4502,7 +4504,7 @@ if (&can_ssh_status($server) && $iface->{'active'}) {
 	}
 
 # Remove from KVM config
-my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : undef;
+my $idx = $iface->{'name'} =~ /^$eth(\d+)/ ? $1 : undef;
 if ($iface->{'virtual'} eq '' && defined($idx)) {
 	my @macs = split(/\s+/, $server->{'mac'});
 	my @models = split(/\s+/, $server->{'kvm_model'});
@@ -4577,6 +4579,8 @@ sub type_kvm_modify_interface
 my ($server, $iface, $oldiface) = @_;
 my %oldserver = %$server;
 my $vhost = &type_kvm_parent($server);
+my $eth = &get_interface_prefix($server, $iface);
+my $oldeth = &get_interface_prefix($server, $oldiface);
 
 # Modify boot interface
 if (!$iface->{'unknown'}) {
@@ -4611,7 +4615,7 @@ if ($iface->{'virtual'} eq '') {
 	while(scalar(@ifaces) < scalar(@macs)) {
 		push(@ifaces, "*");
 		}
-	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
+	my $idx = $iface->{'name'} =~ /^$oldeth(\d+)/ ? $1 : 0;
 	$macs[$idx] = $iface->{'ether'} || '*';
 	$models[$idx] = $iface->{'model'} || '*';
 	$ifaces[$idx] = $iface->{'bridge'} || '*';
@@ -4626,7 +4630,7 @@ if ($iface->{'virtual'} eq '') {
 # If bridge changed, update connection between tapN and new bridge
 if ($iface->{'virtual'} eq '' && $iface->{'bridge'} ne $oldiface->{'bridge'}) {
 	# If running, re-connect the tap interface to the new bridge
-	my $idx = $iface->{'name'} =~ /^eth(\d+)/ ? $1 : 0;
+	my $idx = $iface->{'name'} =~ /^$eth(\d+)/ ? $1 : 0;
 	my @nets = split(/\s+/, $server->{'kvm_net'});
 	if ($server->{'status'} ne 'down' &&
 	    $nets[$idx] =~ /script=([^,]+-(eth\d+))\.sh/) {
@@ -4958,8 +4962,8 @@ if (!$server->{'kvm_filesystem_offset'} || $wantfile) {
 	# Try each partition with an offset
 	foreach my $o (@offsets) {
 		my $cmd = $o->{'type'} eq 'a5' ?
-		    "mount -t ufs -o loop,offset=$o->{'offset'},ufstype=ufs2" :
-		    "mount -o loop,offset=$o->{'offset'}";
+		  "mount -t ufs -o loop,offset=$o->{'offset'},ufstype=ufs2,ro" :
+		  "mount -o loop,offset=$o->{'offset'}";
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			$cmd." ".quotemeta($fsfile)." ".quotemeta($mp));
 		next if ($ex || $err);
@@ -4990,7 +4994,11 @@ my $cmd = $t eq 'a5' ? "mount -t ufs -o loop,offset=$o,ufstype=ufs2"
 		     : "mount -o loop,offset=$o";
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	$cmd." ".quotemeta($fsfile)." ".quotemeta($mp));
-return "Failed to mount $fsfile on $mp : $out" if ($ex);
+if ($ex) {
+	return "Failed to mount $fsfile on $mp : $out".
+	       ($t eq "a5" ? "\nThis may be due to lack of read-write support ".
+			     "for UFS in the kernel" : "");
+	}
 $server->{'kvm_mount'} = $mp;
 return undef;
 }

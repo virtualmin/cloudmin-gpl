@@ -10121,7 +10121,6 @@ if (&can_net_status($server)) {
 	}
 else {
 	# Try parsing ifconfig output
-	# XXX freebsd
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"ifconfig -a");
 	return $err if ($err);
@@ -10163,9 +10162,34 @@ if (&can_net_status($server)) {
 			     $webmin_iface);
 	return $last_remote_error if ($last_remote_error);
 	}
+elsif ($server->{'type'} eq 'freebsd') {
+	# Activate with ifconfig command on BSD
+	my $cmd = "ifconfig ".quotemeta($iface->{'name'})." ";
+	if ($iface->{'virtual'} ne '') {
+		$cmd .= " alias $iface->{'address'}";
+		}
+	else {
+		$cmd .= " $iface->{'address'}";
+		}
+        if ($iface->{'netmask'}) { $cmd .= " netmask $iface->{'netmask'}"; }
+        if ($iface->{'broadcast'}) { $cmd .= " broadcast $iface->{'broadcast'}"; }
+        if ($iface->{'mtu'}) { $cmd .= " mtu $iface->{'mtu'}"; }
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	return $err if ($err);
+	return $out if ($ex);
+
+	# Add IPv6 addresses
+        for(my $i=0; $i<@{$iface->{'address6'}}; $i++) {
+                my $cmd = "ifconfig $iface->{'name'} inet6 ".
+                          $iface->{'address6'}->[$i].
+                          " prefixlen ".$iface->{'netmask6'}->[$i];
+		my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+		return $err if ($err);
+		return $out if ($ex);
+                }
+	}
 else {
-	# Activate with ifconfig command
-	# XXX freebsd
+	# Activate with ifconfig command on Linux
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." ".
 		     quotemeta($iface->{'address'})." up ".
 		     "netmask ".quotemeta($iface->{'netmask'})." ".
@@ -10200,9 +10224,16 @@ if (&can_net_status($server)) {
 	&remote_foreign_call($server, "net", "deactivate_interface", $iface);
 	return $last_remote_error if ($last_remote_error);
 	}
+elsif ($server->{'type'} eq 'freebsd') {
+	# Just remove with ifconfig on FreeBSD
+	my $cmd = "ifconfig ".quotemeta($iface->{'name'}).
+		  " delete ".$iface->{'address'};
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	return $err if ($err);
+	return $out if ($ex);
+	}
 else {
-	# Just remove with ifconfig
-	# XXX freebsd
+	# Just remove with ifconfig on Linux
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." down";
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err if ($err);
@@ -10501,7 +10532,7 @@ elsif (&freebsd_server_type($server)) {
 
 		push(@boot, \%ifc);
 		}
-	return @boot;
+	return \@boot;
 	}
 else {
 	# Out of luck ..
@@ -10622,6 +10653,26 @@ elsif (&debian_server_type($server)) {
 	&unlink_file($temp);
         return $err;
 	}
+elsif (&freebsd_server_type($server)) {
+	# Add to rc.conf
+	my $bsdiface = $iface->{'name'};
+	my $pfx = &get_interface_prefix($server);
+	$bsdiface =~ s/^([a-z]+)/$pfx/g;
+	my $line = "inet $iface->{'address'}";
+	$line .= " netmask $iface->{'netmask'}" if ($iface->{'netmask'});
+	$line .= " broadcast $iface->{'broadcast'}" if ($iface->{'broadcast'});
+	my $data = &get_file_data_from_server($server, "/etc/rc.conf");
+	if ($iface->{'virtual'} eq '') {
+		$data = &set_rc_conf_line($data,
+			"ifconfig_".$bsdiface, $line);
+		}
+	else {
+		$data = &set_rc_conf_line($data,
+			"ifconfig_".$bsdiface."_alias".$iface->{'virtual'}, $line);
+		}
+	my $err = &put_file_data_to_server($server, $data, "/etc/rc.conf");
+	return $err;
+	}
 else {
 	# Out of luck
 	return "Creating boot-time network interfaces on systems of type ".
@@ -10707,6 +10758,20 @@ elsif (&debian_server_type($server)) {
 	my $err = &put_file_to_server($server, $temp, $ifile);
 	&unlink_file($temp);
         return $err;
+	}
+elsif (&freebsd_server_type($server)) {
+	# Delete from rc.conf on FreeBSD
+	my $data = &get_file_data_from_server($server, "/etc/rc.conf");
+	if ($iface->{'virtual'} eq '') {
+		$data = &set_rc_conf_line($data, "ifconfig_".$iface->{'name'});
+		}
+	else {
+		$data = &set_rc_conf_line($data,
+			"ifconfig_".$iface->{'name'}."_alias_".$iface->{'virtual'},
+			$line);
+		}
+	my $err = &put_file_data_to_server($server, $data, "/etc/rc.conf");
+	return $err;
 	}
 else {
 	# Out of luck
@@ -10897,12 +10962,48 @@ if ($src->{'address6'}) {
 return $dest;
 }
 
-# get_interface_prefix(&server)
+# get_interface_prefix(&server, &iface)
 # Returns the prefix for Ethernet interfaces on a system - typically eth
 sub get_interface_prefix
 {
-my ($server) = @_;
-return $server->{'type'} eq 'freebsd' ? 're' : 'eth';
+my ($server, $iface) = @_;
+if ($server->{'type'} eq 'freebsd') {
+	# On FreeBSD, depends on the hardware type
+	if (!$iface || !$iface->{'model'} || $iface->{'model'} eq 'rtl8139') {
+		return 're';
+		}
+	elsif ($iface->{'model'} eq 'i82551' ||
+	       $iface->{'model'} eq 'i82557b' ||
+	       $iface->{'model'} eq 'i82559er') {
+		return 'fxp';
+		}
+	elsif ($iface->{'model'} =~ /^ne2k/) {
+		return 'ed';
+		}
+	elsif ($iface->{'model'} eq 'e1000') {
+		return 'em';
+		}
+	elsif ($iface->{'model'} eq 'virtio') {
+		return 'vtnet';
+		}
+	elsif ($iface->{'model'} eq 'pcnet') {
+		return 'lnc';
+		}
+	elsif ($iface->{'model'} eq 'lance') {
+		return 'le';
+		}
+	elsif ($iface->{'model'} eq 'mcf_fec') {
+		return 'le';
+		}
+	else {
+		# Don't know, fall back to realtec
+		return 're;
+		}
+	}
+else {
+	# Always ethN on linux
+	return 'eth';
+	}
 }
 
 # enable_ipv6_redhat(&server)
