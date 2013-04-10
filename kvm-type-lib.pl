@@ -4167,7 +4167,8 @@ sub type_kvm_can_gateway
 {
 my ($server) = @_;
 return $server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt' ||
-       &redhat_server_type($server) || &debian_server_type($server);
+       &redhat_server_type($server) || &debian_server_type($server) ||
+       &freebsd_server_type($server);
 }
 
 # type_kvm_can_ipv6(&server)

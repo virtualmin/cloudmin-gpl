@@ -3614,7 +3614,7 @@ sub modify_default_gateway
 my ($server, $gw, $gwdev) = @_;
 my ($oldgw, $oldgwdev) = &get_server_default_gateway($server);
 $gwdev ||= $oldgwdev;
-$gwdev ||= "eth0";
+$gwdev ||= &get_interface_prefix($server)."0";
 
 # First try to change using Webmin
 my $done;
@@ -3634,52 +3634,67 @@ if (!$done) {
 	# Find first boot-time interface with a gateway, and change it
 	my $err = &mount_filesystem_if_needed($server);
 	return $err if ($err);
-	my $boots = &list_boot_server_interfaces($server);
-	if (ref($boots)) {
-		my ($oldiface) = grep { $_->{'fullname'} eq $oldgwdev } @$boots;
-		my ($newiface) = grep { $_->{'fullname'} eq $gwdev } @$boots;
-		if ($oldgwdev eq $gwdev && $oldiface) {
-			# Just change gateway on same interface
-			my $orig_oldiface = { %$oldiface };
-			$oldiface->{'gateway'} = $gw;
-			my $err = &modify_boot_server_interface(
-					$server, $oldiface, $orig_oldiface);
-			return $err if ($err);
-			}
-		else {
-			if ($oldgw && $oldiface) {
-				# Remove from old interface
+
+	if (!&freebsd_server_type($server)) {
+		my $boots = &list_boot_server_interfaces($server);
+		if (ref($boots)) {
+			my ($oldiface) = grep { $_->{'fullname'} eq $oldgwdev }
+					      @$boots;
+			my ($newiface) = grep { $_->{'fullname'} eq $gwdev }
+					      @$boots;
+			if ($oldgwdev eq $gwdev && $oldiface) {
+				# Just change gateway on same interface
 				my $orig_oldiface = { %$oldiface };
-				delete($oldiface->{'gateway'});
+				$oldiface->{'gateway'} = $gw;
 				my $err = &modify_boot_server_interface(
-					$server, $oldiface, $orig_oldiface);
+						$server, $oldiface, $orig_oldiface);
 				return $err if ($err);
 				}
+			else {
+				if ($oldgw && $oldiface) {
+					# Remove from old interface
+					my $orig_oldiface = { %$oldiface };
+					delete($oldiface->{'gateway'});
+					my $err = &modify_boot_server_interface(
+						$server, $oldiface, $orig_oldiface);
+					return $err if ($err);
+					}
 
-			if ($gw && $newiface) {
-				# Add to new interface
-				my $orig_newiface = { %$newiface };
-				$newiface->{'gateway'} = $gw;
-				my $err = &modify_boot_server_interface(
-					$server, $newiface, $orig_newiface);
-				return $err if ($err);
+				if ($gw && $newiface) {
+					# Add to new interface
+					my $orig_newiface = { %$newiface };
+					$newiface->{'gateway'} = $gw;
+					my $err = &modify_boot_server_interface(
+						$server, $newiface, $orig_newiface);
+					return $err if ($err);
+					}
 				}
 			}
 		}
 
-	# If system has an /etc/sysconfig/network file, delete the gateway
-	# from it, as it is on an interface now
-	my $nfile = "/etc/sysconfig/network";
-	my $temp = &transname();
-	my $err = &get_file_from_server($server, $nfile, $temp);
-	if (!$err) {
-		my %net;
-		&read_env_file($temp, \%net);
-		if ($net{'GATEWAY'}) {
-			delete($net{'GATEWAY'});
-			&write_env_file($temp, \%net);
-			&put_file_to_server($server, $temp, $nfile);
+	if (&redhat_server_type($server)) {
+		# If system has an /etc/sysconfig/network file, delete the gateway
+		# from it, as it is on an interface now
+		my $nfile = "/etc/sysconfig/network";
+		my $temp = &transname();
+		my $err = &get_file_from_server($server, $nfile, $temp);
+		if (!$err) {
+			my %net;
+			&read_env_file($temp, \%net);
+			if ($net{'GATEWAY'}) {
+				delete($net{'GATEWAY'});
+				&write_env_file($temp, \%net);
+				&put_file_to_server($server, $temp, $nfile);
+				}
 			}
+		}
+
+	if (&freebsd_server_type($server)) {
+		# Update rc.conf file
+		my $data = &get_file_data_from_server($server, "/etc/rc.conf");
+		$data = &set_rc_conf_line($data, "defaultrouter", $gw || "NO");
+		my $err = &put_file_data_to_server($server, $data, "/etc/rc.conf");
+		return $err if ($err);
 		}
 
 	&umount_filesystem_if_needed($server);
@@ -3687,9 +3702,19 @@ if (!$done) {
 
 # Updating routing table
 if (&can_ssh_status($server)) {
-	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"route delete default".
-		($gw ? " ; route add default gw $gw" : ""));
+	my ($out, $ex, $err);
+	if (!&freebsd_server_type($server)) {
+		# Linux syntax
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"route delete default".
+			($gw ? " ; route add default gw $gw" : ""));
+		}
+	else {
+		# FreeBSD syntax
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"route del default".
+			($gw ? " ; route add default $gw" : ""));
+		}
 	if ($ex || $err) {
 		return "Failed to activate new gateway : ".($err || $out);
 		}
@@ -6732,7 +6757,12 @@ if (!$got) {
 			my @w = split(/\s+/, $l);
 			if ($w[0] eq "default" || $w[0] eq "0.0.0.0") {
 				$gw = $w[1];
-				$gwdev = $w[7];
+				if (&freebsd_server_type($server)) {
+					$gwdev = $w[5];
+					}
+				else {
+					$gwdev = $w[7];
+					}
 				last;
 				}
 			}
@@ -10997,7 +11027,7 @@ if ($server->{'type'} eq 'freebsd') {
 		}
 	else {
 		# Don't know, fall back to realtec
-		return 're;
+		return 're';
 		}
 	}
 else {
