@@ -10105,8 +10105,24 @@ foreach my $l (@lines) {
         $ifc{'netmask6'} = \@netmask6;
         $ifc{'scope6'} = \@scope6;
         $ifc{'edit'} = ($ifc{'name'} !~ /^ppp/);
-        $ifc{'index'} = scalar(@rv);
+        $ifc{'index'} = scalar(@ifaces);
 	push(@ifaces, \%ifc);
+
+	# On a FreeBSD system, parse out all additional IPs
+	my $vcount = 0;
+        while($l =~ s/inet\s+(\S+)\s+netmask\s+(\S+)(\s+broadcast\s+(\S+))?//) {
+		next if ($1 eq $ifc{'address'});	# Main address
+                local %vifc = %ifc;
+                $vifc{'address'} = $1;
+                $vifc{'netmask'} = &net::parse_hex($2);
+                $vifc{'broadcast'} = $4;
+                $vifc{'up'} = 1;
+                $vifc{'edit'} = $ifc{'edit'};
+		$vifc{'virtual'} = $vcount++;
+                $vifc{'fullname'} = $vifc{'name'}.':'.$vifc{'virtual'};
+                $vifc{'index'} = scalar(@ifaces);
+                push(@ifaces, \%vifc);
+                }
 	}
 return @ifaces;
 }
@@ -10292,9 +10308,14 @@ if (&can_net_status($server) && !$changing_primary) {
 			     $webmin_iface);
 	return $last_remote_error if ($last_remote_error);
 	}
+elsif (&freebsd_server_type($server)) {
+	# Use the ifconfig command on FreeBSD
+	# XXX
+
+	# XXX IPv6
+	}
 else {
-	# Use the ifconfig command
-	# XXX freebsd
+	# Use the ifconfig command on Linux
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." ".
 		     quotemeta($iface->{'address'})." ".
 		     "netmask ".quotemeta($iface->{'netmask'})." ".
@@ -10686,7 +10707,7 @@ elsif (&debian_server_type($server)) {
 elsif (&freebsd_server_type($server)) {
 	# Add to rc.conf
 	my $bsdiface = $iface->{'name'};
-	my $pfx = &get_interface_prefix($server);
+	my $pfx = &get_interface_prefix($server, $iface);
 	$bsdiface =~ s/^([a-z]+)/$pfx/g;
 	my $line = "inet $iface->{'address'}";
 	$line .= " netmask $iface->{'netmask'}" if ($iface->{'netmask'});
@@ -10797,7 +10818,7 @@ elsif (&freebsd_server_type($server)) {
 		}
 	else {
 		$data = &set_rc_conf_line($data,
-			"ifconfig_".$iface->{'name'}."_alias_".$iface->{'virtual'},
+			"ifconfig_".$iface->{'name'}."_alias".$iface->{'virtual'},
 			$line);
 		}
 	my $err = &put_file_data_to_server($server, $data, "/etc/rc.conf");
@@ -10971,6 +10992,36 @@ elsif (&debian_server_type($server)) {
 	my $err = &put_file_to_server($server, $temp, $ifile);
 	&unlink_file($temp);
         return $err;
+	}
+elsif (&freebsd_server_type($server)) {
+	# Change in rc.conf
+	my $bsdiface = $iface->{'name'};
+	my $pfx = &get_interface_prefix($server, $iface);
+	$bsdiface =~ s/^([a-z]+)/$pfx/g;
+	my $oldbsdiface = $oldiface->{'name'};
+	my $line = "inet $iface->{'address'}";
+	$line .= " netmask $iface->{'netmask'}" if ($iface->{'netmask'});
+	$line .= " broadcast $iface->{'broadcast'}" if ($iface->{'broadcast'});
+	my $data = &get_file_data_from_server($server, "/etc/rc.conf");
+	if ($iface->{'virtual'} eq '') {
+		$data = &set_rc_conf_line($data,
+			"ifconfig_".$bsdiface, $line);
+		}
+	else {
+		$data = &set_rc_conf_line($data,
+			"ifconfig_".$bsdiface."_alias".$iface->{'virtual'}, $line);
+		}
+	if ($oldbsdiface ne $bsdiface) {
+		if ($iface->{'virtual'} eq '') {
+			$data = &set_rc_conf_line($data, "ifconfig_".$oldbsdiface);
+			}
+		else {
+			$data = &set_rc_conf_line($data,
+			    "ifconfig_".$oldbsdiface."_alias".$iface->{'virtual'});
+			}
+		}
+	my $err = &put_file_data_to_server($server, $data, "/etc/rc.conf");
+	return $err;
 	}
 else {
 	# Out of luck

@@ -4321,7 +4321,7 @@ my $eth = &get_interface_prefix($server, $iface);
 my $vhost = &type_kvm_parent($server);
 if ($nonvirt) {
 	$iface->{'name'} =~ /^$eth(\d+)$/ ||
-		return "Only Ethernet intefaces can be created";
+		return "Only intefaces starting with $eth can be created";
 	my @nets = split(/\s+/, $server->{'kvm_net'});
 	$1 == scalar(@nets) ||
 		return "A new real interface must be named $eth".scalar(@nets);
@@ -4333,7 +4333,8 @@ else {
 	return "Failed to list interfaces : $ifaces" if (!ref($ifaces));
 	my $n = 0;
 	foreach my $oldiface (@$ifaces) {
-		if ($oldiface->{'virtual'} >= $n &&
+		if ($oldiface->{'virtual'} ne '' &&
+		    $oldiface->{'virtual'} >= $n &&
 		    $oldiface->{'name'} eq $iface->{'name'}) {
 			$n = $oldiface->{'virtual'} + 1;
 			}
