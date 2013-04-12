@@ -10210,16 +10210,7 @@ if (&can_net_status($server)) {
 	}
 elsif ($server->{'type'} eq 'freebsd') {
 	# Activate with ifconfig command on BSD
-	my $cmd = "ifconfig ".quotemeta($iface->{'name'})." ";
-	if ($iface->{'virtual'} ne '') {
-		$cmd .= " alias $iface->{'address'}";
-		}
-	else {
-		$cmd .= " $iface->{'address'}";
-		}
-        if ($iface->{'netmask'}) { $cmd .= " netmask $iface->{'netmask'}"; }
-        if ($iface->{'broadcast'}) { $cmd .= " broadcast $iface->{'broadcast'}"; }
-        if ($iface->{'mtu'}) { $cmd .= " mtu $iface->{'mtu'}"; }
+	my $cmd = &get_freebsd_ifconfig_command($iface);
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err if ($err);
 	return $out if ($ex);
@@ -10310,7 +10301,28 @@ if (&can_net_status($server) && !$changing_primary) {
 	}
 elsif (&freebsd_server_type($server)) {
 	# Use the ifconfig command on FreeBSD
-	# XXX
+	if ($iface->{'virtual'} eq '') {
+		# Apply IP, netmask and broadcast to real IP
+		my $cmd = &get_freebsd_ifconfig_command($iface);
+		my ($out, $ex, $err) =&execute_command_on_server($server, $cmd);
+		return $err if ($err);
+		return $out if ($ex);
+		}
+	elsif ($iface->{'address'} ne $oldiface->{'address'} ||
+	       $iface->{'netmask'} ne $oldiface->{'netmask'}) {
+		# Remove and re-add virtual IP
+		my $cmd = "ifconfig ".quotemeta($iface->{'name'}).
+			  " delete ".$oldiface->{'address'};
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd);
+		return $err if ($err);
+		return $out if ($ex);
+
+		my $cmd = &get_freebsd_ifconfig_command($iface);
+		my ($out, $ex, $err) =&execute_command_on_server($server, $cmd);
+		return $err if ($err);
+		return $out if ($ex);
+		}
 
 	# XXX IPv6
 	}
@@ -11085,6 +11097,24 @@ else {
 	# Always ethN on linux
 	return 'eth';
 	}
+}
+
+# get_freebsd_ifconfig_command(&iface)
+# Returns the command to add some interface on FreeBSD
+sub get_freebsd_ifconfig_command
+{
+my ($iface) = @_;
+my $cmd = "ifconfig ".quotemeta($iface->{'name'})." ";
+if ($iface->{'virtual'} ne '') {
+	$cmd .= " alias $iface->{'address'}";
+	}
+else {
+	$cmd .= " $iface->{'address'}";
+	}
+if ($iface->{'netmask'}) { $cmd .= " netmask $iface->{'netmask'}"; }
+if ($iface->{'broadcast'}) { $cmd .= " broadcast $iface->{'broadcast'}"; }
+if ($iface->{'mtu'}) { $cmd .= " mtu $iface->{'mtu'}"; }
+return $cmd;
 }
 
 # enable_ipv6_redhat(&server)
