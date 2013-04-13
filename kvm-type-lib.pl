@@ -2013,8 +2013,10 @@ if (!$empty && $mp) {
                         # Add swap device
                         my ($sw) = grep { $_->[0] eq $wantdev.'1' } @$fstab;
                         if (!$sw) {
+				my $opts = &freebsd_server_type($server) ?
+						"rw" : "defaults";
                                 push(@$fstab, [ $wantdev.'1', 'swap', 'swap',
-                                                'defaults', 0, 0, ]);
+                                                $opts, 0, 0, ]);
                                 $changed_fstab++;
                                 }
                         }
@@ -2905,14 +2907,16 @@ if ($mounts) {
 		if ($f) {
 			$d->{'virt_mount'} = $f->[0];
 			$d->{'virt_onsystem'} = $f->[0];
-			if ($d->{'virt_onsystem'} =~ /^\/dev\/(s|h|v)d[a-z]+\d+$/) {
+			if ($d->{'virt_onsystem'} =~
+			    /^\/dev\/(s|h|v)d[a-z]+\d+$/) {
 				# Change mount point on Linux like /dev/hda1 to
 				# disk device like /dev/hda
 				$d->{'virt_onsystem'} =~ s/\d+$//;
 				}
-			elsif ($d->{'virt_onsystem'} =~ /^\/dev\/(ada|ad|da)\d+s/) {
-				# Change mount point on FreeBSD like /dev/ada0s1a
-				# to disk device like /dev/ada0
+			elsif ($d->{'virt_onsystem'} =~
+			       /^\/dev\/(ada|ad|da)\d+s/) {
+				# Change mount point on FreeBSD like
+				# /dev/ada0s1a to disk device like /dev/ada0
 				$d->{'virt_onsystem'} =~ s/s\d+[a-z]?$//;
 				}
 			$d->{'mount'} = $f->[1];
@@ -3043,7 +3047,7 @@ if ($disks->[0]->{'virt'} =~ /^(\/dev\/(s|h|v)d)[a-z]$/) {
 		# Use same device path as root, on Linux
 		$rv->{'virt_onsystem'} = $1.$n;
 		}
-	elsif ($disks->[0]->{'virt_onsystem'} =~ /^(\/dev\/(ada|ad|da))(\d+)s/) {
+	elsif ($disks->[0]->{'virt_onsystem'} =~ /^(\/dev\/(ada|ad|da))(\d+)/) {
 		# Use same device as root, on FreeBSD, then construct a path for
 		# the new disk like /dev/ada1
 		$rv->{'virt_onsystem'} = $1.(ord($n)-97);
@@ -3133,7 +3137,7 @@ if ($disk->{'virt_auto'} && $disk->{'virt'} ne $disk->{'virt_auto'}) {
 			$disk->{'virt_onsystem'} = $prefix.$2;
 			}
 		}
-	# XXX bsd too
+	# XXX does something need to be done here for FreeBSD paths?
 	$disk->{'virt_mount'} = $disk->{'virt_onsystem'}.'1';
 	}
 
@@ -3336,8 +3340,9 @@ if ($disk->{'mount'} && $server->{'status'} ne 'alive') {
 	if (!$fserr) {
 		my $fs = $disk->{'fs'} ? $disk->{'fs'} :
 			  $disk->{'media'} eq 'cdrom' ? 'iso9660' : 'ext3';
+		my $opts = &freebsd_server_type($server) ? "rw" : "defaults";
 		push(@$fstab, [ $disk->{'virt_mount'}, $disk->{'mount'},
-				$fs, 'defaults', 0, 0 ]);
+				$fs, $opts, 0, 0 ]);
 		my $err = &put_system_fstab($server, $fstab);
 		$fserr = "Failed to update fstab file : $err" if ($err);
 		}

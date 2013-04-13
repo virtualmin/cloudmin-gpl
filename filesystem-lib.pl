@@ -289,6 +289,11 @@ if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 else {
 	# Create input file for fdisk
 	my $mbs = $size ? int($size/1024/1024) : undef;
+	if ($mbs) {
+		# Force round down by 8M, as fdisk on some systems won't allow
+		# creation of a partition that occupies the whole disk
+		$mbs -= 8;
+		}
 	my $temp = &transname();
 	&open_tempfile(TEMP, ">$temp");
 	if ($num) {
@@ -305,6 +310,11 @@ else {
 		if ($bootable) {
 			&print_tempfile(TEMP, "a\n");	 # Add bootable flag
 			&print_tempfile(TEMP, "$num\n"); # First partition
+			}
+		if ($ptype eq "ufs") {
+			# Set BSD partition type
+			&print_tempfile(TEMP, "t\n");	# Change type
+			&print_tempfile(TEMP, "a5\n");	# BSD
 			}
 		}
 	&print_tempfile(TEMP, "w\n");	 # Write table
