@@ -63,7 +63,7 @@ elsif ($fs eq 'swap') {
 		}
 	}
 elsif ($fs eq 'ufs') {
-	$cmd = "newfs ".quotemeta($device);
+	$cmd = "mkfs -t ufs ".quotemeta($device);
 	}
 else {
 	return "Unknown filesystem type $fs";
@@ -252,7 +252,7 @@ sub create_disk_image_partition
 my ($vhost, $real, $num, $size, $make_label, $bootable, $ptype) = @_;
 $ptype ||= "ext2";
 
-if (&has_command_on_server($vhost, "parted")) {
+if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 	# Create the disk label with parted
 	if ($make_label) {
 		my ($out, $ex, $err) = &execute_command_on_server($vhost, 
@@ -267,7 +267,8 @@ if (&has_command_on_server($vhost, "parted")) {
 		my $mbs = $size ? int($size/1000000) : undef;
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			"parted -s ".quotemeta($real).
-			" mkpartfs primary $ptype 1 ".$mbs);
+			($ptype eq "ufs" ? " mkpart " : " mkpartfs ").
+			"primary $ptype 1 ".$mbs);
 		if ($ex || $err) {
 			return "Failed to create partition : ".($err || $out);
 			}

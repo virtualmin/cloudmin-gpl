@@ -2905,7 +2905,16 @@ if ($mounts) {
 		if ($f) {
 			$d->{'virt_mount'} = $f->[0];
 			$d->{'virt_onsystem'} = $f->[0];
-			$d->{'virt_onsystem'} =~ s/\d+$//;
+			if ($d->{'virt_onsystem'} =~ /^\/dev\/(s|h|v)d[a-z]+\d+$/) {
+				# Change mount point on Linux like /dev/hda1 to
+				# disk device like /dev/hda
+				$d->{'virt_onsystem'} =~ s/\d+$//;
+				}
+			elsif ($d->{'virt_onsystem'} =~ /^\/dev\/(ada|ad|da)\d+s/) {
+				# Change mount point on FreeBSD like /dev/ada0s1a
+				# to disk device like /dev/ada0
+				$d->{'virt_onsystem'} =~ s/s\d+[a-z]?$//;
+				}
 			$d->{'mount'} = $f->[1];
 			$d->{'fs'} = $f->[2];
 			if ($f->[0] =~ /(\d+)$/) {
@@ -3031,12 +3040,25 @@ if ($disks->[0]->{'virt'} =~ /^(\/dev\/(s|h|v)d)[a-z]$/) {
 	$prefix .= $n;
 	$rv->{'virt'} = $prefix;
 	if ($disks->[0]->{'virt_onsystem'} =~ /^(\/dev\/(s|h|v)d)[a-z]$/) {
+		# Use same device path as root, on Linux
 		$rv->{'virt_onsystem'} = $1.$n;
+		}
+	elsif ($disks->[0]->{'virt_onsystem'} =~ /^(\/dev\/(ada|ad|da))(\d+)s/) {
+		# Use same device as root, on FreeBSD, then construct a path for
+		# the new disk like /dev/ada1
+		$rv->{'virt_onsystem'} = $1.(ord($n)-97);
 		}
 	else {
 		$rv->{'virt_onsystem'} = $rv->{'virt'};
 		}
-	$rv->{'virt_mount'} = $rv->{'virt_onsystem'}."1";
+	if ($rv->{'virt_onsystem'} =~ /^(\/dev\/(ada|ad|da))/) {
+		# Mount point on FreeBSD is like /dev/ada1s1
+		$rv->{'virt_mount'} = $rv->{'virt_onsystem'}."s1";
+		}
+	else {
+		# Mount point on Linux is like /dev/hdb1
+		$rv->{'virt_mount'} = $rv->{'virt_onsystem'}."1";
+		}
 	}
 else {
 	# No idea .. just guess
@@ -3111,6 +3133,7 @@ if ($disk->{'virt_auto'} && $disk->{'virt'} ne $disk->{'virt_auto'}) {
 			$disk->{'virt_onsystem'} = $prefix.$2;
 			}
 		}
+	# XXX bsd too
 	$disk->{'virt_mount'} = $disk->{'virt_onsystem'}.'1';
 	}
 
@@ -3125,6 +3148,7 @@ else {
 	if ($disk->{'lv'} && $disk->{'overwrite'}) {
 		# Delete existing LV
 		&delete_all_disk_image_partitions($vhost, $disk->{'real'});
+		&delete_mapper_entries($vhost, $disk->{'vg'}, $disk->{'lv'});
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		&remote_foreign_call($vhost, "lvm",
 				     "delete_logical_volume",
@@ -3178,8 +3202,10 @@ else {
 
 	# Create the partiton
 	if (!@st) {
+		my $ptype = &freebsd_server_type($server) ? "ufs" : "ext2";
 		my $err = &create_disk_image_partition($vhost, $disk->{'real'},
-						       1, $disk->{'size'}, 1);
+						       1, $disk->{'size'}, 1, 0,
+						       $ptype);
 		return $err if ($err);
 		}
 
@@ -3782,7 +3808,7 @@ return $moderr;
 # Returns supported filesystem types. Assumes Linux.
 sub type_kvm_list_disk_filesystems
 {
-return ('ext3', 'ext4', 'ext2', 'reiserfs', 'swap');
+return ('ext3', 'ext4', 'ext2', 'reiserfs', 'swap', 'ufs');
 }
 
 # type_kvm_list_storages(&vhost, [&server])
@@ -4186,18 +4212,22 @@ my ($server, $fromcfg) = @_;
 my $rv;
 my $can = &type_kvm_can_interfaces($server);
 my @net = split(/\s+/, $server->{'kvm_net'});
+my @macs = split(/\s+/, $server->{'mac'});
+my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
+my @models = split(/\s+/, $server->{'kvm_model'});
 my $eth = &get_interface_prefix($server);
 
 if ($can == 3 || $fromcfg) {
 	# Cannot manage IPs, like on a Windows VM
-	$rv = [ map { { 'name' => $eth.$_,
-		        'fullname' => $eth.$_,
+	$rv = [ map { my $deveth = &get_interface_prefix($server, $models[$_]);
+		      { 'name' => $deveth.$_,
+		        'fullname' => $deveth.$_,
 			'unknown' => 1,
 		        'up' => 1 } } (0 .. scalar(@net)-1) ];
 	if ($server->{'status'} ne 'down') {
 		# Set active field
 		foreach my $iface (@$rv) {
-			if ($iface->{'name'} eq $eth.'0') {
+			if ($iface->{'name'} =~ /^[a-z]0$/) {
 				# We know the IP, so ping it
 				$iface->{'active'} =
 					$server->{'status'} eq 'noping' ? 0 : 1;
@@ -4222,8 +4252,9 @@ elsif ($server->{'status'} eq 'down') {
 		my $name = $eth.$i;
 		my ($already) = grep { $_->{'fullname'} eq $name } @$rv;
 		if (!$already) {
-			push(@$rv, { 'name' => $eth.$i,
-				     'fullname' => $eth.$i,
+			my $deveth = &get_interface_prefix($server, $models[$i]);
+			push(@$rv, { 'name' => $deveth.$i,
+				     'fullname' => $deveth.$i,
 				     'unknown' => 1,
 				     'up' => 1 });
 			}
@@ -4250,12 +4281,15 @@ else {
 
 # Set nodelete flag on first real interface, filter out interfaces
 # with no IP or non-ethernet
+# XXX deal with mixed interface types better
 if (ref($rv)) {
-	$rv = [ grep { $_->{'fullname'} =~ /^$eth/ &&
+	my @prefixes = map { &get_interface_prefix($server, $_) } @models;
+	$rv = [ grep { $_->{'fullname'} =~ /^([a-z]+)/ &&
+		       &indexof($1, @prefixes) >= 0 &&
 		       $_->{'up'} } @$rv ];
 	foreach my $iface (@$rv) {
 		$iface->{'active'} ||= 0;
-		if ($iface->{'fullname'} eq $eth."0") {
+		if ($iface->{'fullname'} =~ /^[a-z]0$/) {
 			$iface->{'nodelete'} = 1
 			}
 		$iface->{'noedit'} = 1 if (!$iface->{'address'} &&
@@ -4264,14 +4298,12 @@ if (ref($rv)) {
 	}
 
 # Set MAC, bridges and model field on real interfaces
-my @macs = split(/\s+/, $server->{'mac'});
-my @bridges = split(/\s+/, $server->{'kvm_hostifaces'});
-my @models = split(/\s+/, $server->{'kvm_model'});
 for(my $i=0; $i<@macs; $i++) {
 	my $mac = $macs[$i];
 	my $b = $bridges[$i];
 	my $m = $models[$i];
-	my ($iface) = grep { $_->{'fullname'} eq $eth.$i } @$rv;
+	my $deveth = &get_interface_prefix($server, $m);
+	my ($iface) = grep { $_->{'fullname'} eq $deveth.$i } @$rv;
 	if ($iface) {
 		$iface->{'ether'} = $mac eq '*' || $mac eq '' ? undef : $mac;
 		$iface->{'bridge'} = $b eq '*' || $b eq '' ? undef : $b;

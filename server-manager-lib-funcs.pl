@@ -11055,37 +11055,36 @@ if ($src->{'address6'}) {
 return $dest;
 }
 
-# get_interface_prefix(&server, &iface)
+# get_interface_prefix(&server, &iface|model)
 # Returns the prefix for Ethernet interfaces on a system - typically eth
 sub get_interface_prefix
 {
 my ($server, $iface) = @_;
 if ($server->{'type'} eq 'freebsd') {
 	# On FreeBSD, depends on the hardware type
-	if (!$iface || !$iface->{'model'} || $iface->{'model'} eq 'rtl8139') {
+	my $model = !ref($iface) ? $iface : $iface->{'model'};
+	if (!$model eq 'rtl8139') {
 		return 're';
 		}
-	elsif ($iface->{'model'} eq 'i82551' ||
-	       $iface->{'model'} eq 'i82557b' ||
-	       $iface->{'model'} eq 'i82559er') {
+	elsif ($model eq 'i82551' || $model eq 'i82557b' || $model eq 'i82559er') {
 		return 'fxp';
 		}
-	elsif ($iface->{'model'} =~ /^ne2k/) {
+	elsif ($model =~ /^ne2k/) {
 		return 'ed';
 		}
-	elsif ($iface->{'model'} eq 'e1000') {
+	elsif ($model eq 'e1000') {
 		return 'em';
 		}
-	elsif ($iface->{'model'} eq 'virtio') {
+	elsif ($model eq 'virtio') {
 		return 'vtnet';
 		}
-	elsif ($iface->{'model'} eq 'pcnet') {
+	elsif ($model eq 'pcnet') {
 		return 'lnc';
 		}
-	elsif ($iface->{'model'} eq 'lance') {
+	elsif ($model eq 'lance') {
 		return 'le';
 		}
-	elsif ($iface->{'model'} eq 'mcf_fec') {
+	elsif ($model eq 'mcf_fec') {
 		return 'le';
 		}
 	else {
