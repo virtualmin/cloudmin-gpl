@@ -916,7 +916,6 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		my ($model) = split(/\s+/,
 				    $server->{$server->{'manager'}.'_model'});
 		my $pfx = &get_interface_prefix($server, $model);
-		print STDERR "model=$model pfx=$pfx\n";
 		$bsdiface =~ s/^([a-z]+)/$pfx/g;
 		my $line = "inet $ip netmask $netmask broadcast $broadcast";
 		$data = &set_rc_conf_line($data, "ifconfig_$bsdiface", $line);

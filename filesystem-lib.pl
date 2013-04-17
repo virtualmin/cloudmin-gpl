@@ -43,8 +43,8 @@ my $cmd;
 if ($fs =~ /^ext\d+$/) {
 	$cmd = "mkfs -t $fs -F ".quotemeta($device);
 	if ($size) {
-		$cmd .= " && ".&get_resize_command($server, $fs).
-			" ".quotemeta($device)." ".int($size/1024)."k";
+		$cmd .= " && ".&get_resize_command($server, $fs,
+						   $device, int($size/(1024*1024)));
 		}
 	}
 elsif ($fs eq 'reiserfs') {
@@ -336,26 +336,53 @@ else {
 return undef;
 }
 
-# get_resize_command(&vhost, fs-type)
+# get_resize_command(&vhost, fs-type, [device], [size-in-mb])
 # Returns the appropriate command to resize an EXT filesystem of some type
 sub get_resize_command
 {
-my ($vhost, $fs) = @_;
-my $cmd = $fs =~ /ext(\d+)$/ ? "resize".$1."fs" : undef;
-if (!$cmd || !&has_command_on_server($vhost, $cmd)) {
-	$cmd = "resize2fs";
+my ($vhost, $fs, $dev, $size) = @_;
+my $cmd;
+if ($fs =~ /ext(\d+)$/) {
+	$cmd = "resize".$1."fs";
+	if (!&has_command_on_server($vhost, $cmd)) {
+		$cmd = "resize2fs";
+		}
+	if ($dev) {
+		$cmd .= " ".quotemeta($dev);
+		if ($size) {
+			$cmd .= " ".$size."M";
+			}
+		}
+	}
+elsif ($fs eq "ufs") {
+	$cmd = "growfs.ufs -y";
+	if ($dev) {
+		if ($size) {
+			$cmd .= " -s ".int($size * 2048);
+			}
+		$cmd .= " ".quotemeta($dev);
+		}
 	}
 return $cmd;
 }
 
-# get_fsck_command(&vhost, fs-type)
+# get_fsck_command(&vhost, fs-type, [device])
 # Returns a command to fsck an EXT filesystem of some type
 sub get_fsck_command
 {
-my ($vhost, $fs) = @_;
-my $cmd = $fs =~ /ext(\d+)$/ ? "e".$1."fsck" : undef;
-if (!$cmd || !&has_command_on_server($vhost, $cmd)) {
-	$cmd = "e2fsck";
+my ($vhost, $fs, $dev) = @_;
+my $cmd;
+if ($fs =~ /ext(\d+)$/) {
+	$cmd = "e".$1."fsck";
+	if (!&has_command_on_server($vhost, $cmd)) {
+		$cmd = "e2fsck";
+		}
+	}
+elsif ($fs eq "ufs") {
+	$cmd = "fsck.ufs";
+	}
+if ($cmd && $dev) {
+	$cmd .= " -f -p ".quotemeta($dev);
 	}
 return $cmd;
 }

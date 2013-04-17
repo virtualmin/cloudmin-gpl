@@ -2005,8 +2005,13 @@ if (!$empty && $mp) {
 		my $wantdev = $server->{'kvm_virtio'} ? "/dev/vdb" : "/dev/hdb";
 		my ($root) = grep { $_->[1] eq '/' } @$fstab;
 		if ($root && $root->[0] =~ /^(\/dev\/[hsv]d)/) {
-			# Can guess swap device based on root device
+			# Can guess swap device based on root device, on a
+			# Linux VM
 			$wantdev = $1."b";
+			}
+		elsif ($root && $root->[0] =~ /^(\/dev\/(ads|da|ad))/) {
+			# Can guess swap device from root, on FreeBSD VM
+			$wantdev = $1."1s0";
 			}
                 my $changed_fstab;
                 if ($server->{'kvm_swapfile'}) {
@@ -2712,6 +2717,12 @@ sub type_kvm_can_safely_resize_disk
 my ($server, $disk) = @_;
 if (!$disk->{'fs'}) {
 	return $text{'disk_eresizefs'};
+	}
+elsif ($disk->{'fs'} eq 'ufs') {
+	my $vhost = &type_kvm_parent($server);
+	&has_command_on_server($vhost, "growfs.ufs") ||
+		return $text{'disk_eresizefsufs'};
+	return undef;
 	}
 elsif ($disk->{'fs'} !~ /^ext\d+$/ && $disk->{'fs'} ne 'swap') {
 	return $text{'disk_eresizefstype'};
@@ -3531,7 +3542,8 @@ if ($disk->{'iscsi_ip'} && $disk->{'iscsi_connect'} &&
 # Work out if we can resize the filesystem
 my $resizefs;
 if ($disk->{'size'} != $olddisk->{'size'}) {
-	if ($disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap') {
+	if ($disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap' ||
+            $disk->{'fs'} eq 'ufs') {
 		$part || return "No partitions were found on the disk image!";
 		$disk->{'virt_part'} == scalar(@$parts) ||
 			return "Only the last partition on a disk image can ".
@@ -3607,10 +3619,10 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 			push(@cmds, "mkswap $loop");
 			}
 		else {
-			push(@cmds, &get_fsck_command($vhost, $disk->{'fs'}).
-				    " -f -p $loop");
-			push(@cmds, &get_resize_command($vhost, $disk->{'fs'}).
-				    " ".$loop." ".$newmbs."M");
+			push(@cmds, &get_fsck_command($vhost, $disk->{'fs'},
+						      $loop));
+			push(@cmds, &get_resize_command($vhost, $disk->{'fs'},
+							$loop, $newmbs));
 			}
 		push(@cmds, "losetup -d $loop");
 		}
@@ -3633,10 +3645,10 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 			push(@cmds, "mkswap $loop");
 			}
 		else {
-			push(@cmds, &get_fsck_command($vhost, $disk->{'fs'}).
-				    " -f -p $loop");
-			push(@cmds, &get_resize_command($vhost, $disk->{'fs'}).
-				    " ".$loop." ".$newmbs."M");
+			push(@cmds, &get_fsck_command($vhost, $disk->{'fs'},
+						      $loop));
+			push(@cmds, &get_resize_command($vhost, $disk->{'fs'},
+							$loop, $newmbs));
 			}
 		push(@cmds, "losetup -d $loop");
 		}
@@ -3855,8 +3867,7 @@ sub type_kvm_can_fsck
 my ($server, $disk) = @_;
 return ($server->{'status'} eq 'down' || !$disk->{'mounted'}) &&
        $disk->{'fs'} && $disk->{'fs'} ne 'swap' &&
-       $disk->{'media'} ne 'cdrom' &&
-       $server->{'type'} ne 'freebsd';
+       $disk->{'media'} ne 'cdrom';
 }
 
 # type_kvm_fsck_disk(&server, &disk, [only-if-unclean])
