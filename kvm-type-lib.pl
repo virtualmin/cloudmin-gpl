@@ -3762,6 +3762,16 @@ if ($disk->{'virt'} ne $olddisk->{'virt'} ||
 	&save_managed_server($server);
 	&type_kvm_set_atboot($server, 2);
 
+	# Caching mode cannot be changed live
+	my $caches = &type_kvm_list_disk_caches($server);
+	my ($ojb) = grep { $_->{'id'} eq $disk->{'cache'} ||
+                           $_->{'alt'} eq $disk->{'cache'} } @$caches;
+	my ($oldojb) = grep { $_->{'id'} eq $olddisk->{'cache'} ||
+                              $_->{'alt'} eq $olddisk->{'cache'} } @$caches;
+	if ($obj && $oldobj && $obj->{'id'} ne $oldobj->{'id'}) {
+		$disk->{'reboot'} = 1;
+		}
+
 	# Update fstab, if in there
 	if ($server->{'status'} ne 'alive' &&
 	    $disk->{'virt'} ne $olddisk->{'virt'}) {
