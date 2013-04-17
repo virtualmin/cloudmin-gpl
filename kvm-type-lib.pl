@@ -2009,19 +2009,31 @@ if (!$empty && $mp) {
 			# Linux VM
 			$wantdev = $1."b";
 			}
-		elsif ($root && $root->[0] =~ /^(\/dev\/(ads|da|ad))/) {
+		elsif ($root && $root->[0] =~ /^(\/dev\/(ada|da|ad))/) {
 			# Can guess swap device from root, on FreeBSD VM
-			$wantdev = $1."1s0";
+			$wantdev = $1."1";
+			}
+		if (&freebsd_server_type($server)) {
+			# On FreeBSD, add s1 to get the partition
+			$wantdev .= "s1";
+			}
+		else {
+			# On Linux, add 1 to get the first partition
+			$wantdev .= "1";
 			}
                 my $changed_fstab;
                 if ($server->{'kvm_swapfile'}) {
                         # Add swap device
-                        my ($sw) = grep { $_->[0] eq $wantdev.'1' } @$fstab;
+                        my ($sw) = grep { $_->[0] eq $wantdev } @$fstab;
                         if (!$sw) {
-				my $opts = &freebsd_server_type($server) ?
-						"rw" : "defaults";
-                                push(@$fstab, [ $wantdev.'1', 'swap', 'swap',
-                                                $opts, 0, 0, ]);
+				if (&freebsd_server_type($server)) {
+					push(@$fstab, [ $wantdev, 'none',
+						'swap', 'sw', 0, 0 ]);
+					}
+				else {
+					push(@$fstab, [ $wantdev, 'swap',
+						'swap', 'defaults', 0, 0, ]);
+					}
                                 $changed_fstab++;
                                 }
                         }
