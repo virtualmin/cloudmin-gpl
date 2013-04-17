@@ -10816,6 +10816,21 @@ elsif (&freebsd_server_type($server)) {
 		$data = &set_rc_conf_line($data,
 			"ifconfig_".$bsdiface."_alias".$iface->{'virtual'}, $line);
 		}
+
+	# Add any IPv6 addresses
+	if (@{$iface->{'address6'}}) {
+		$data = &set_rc_conf_line($data, "ipv6_enable", "YES");
+		}
+	for(my $i=0; $i<@{$iface->{'address6'}}; $i++) {
+		my $str = $iface->{'address6'}->[$i]." prefixlen ".
+			  $iface->{'netmask6'}->[$i];
+		my $name = "ipv6_ifconfig_".$iface->{'name'};
+		if ($i > 0) {
+			$name .= "_alias".($i-1);
+			}
+		$data = &set_rc_conf_line($data, $name, $str);
+		}
+
 	my $err = &put_file_data_to_server($server, $data, "/etc/rc.conf");
 	return $err;
 	}
@@ -10907,6 +10922,7 @@ elsif (&debian_server_type($server)) {
 	}
 elsif (&freebsd_server_type($server)) {
 	# Delete from rc.conf on FreeBSD
+	my $rc = &get_server_rc_conf($server);
 	my $data = &get_file_data_from_server($server, "/etc/rc.conf");
 	if ($iface->{'virtual'} eq '') {
 		$data = &set_rc_conf_line($data, "ifconfig_".$iface->{'name'});
@@ -10916,6 +10932,15 @@ elsif (&freebsd_server_type($server)) {
 			"ifconfig_".$iface->{'name'}."_alias".$iface->{'virtual'},
 			$line);
 		}
+
+	# Delete all IPv6 addresses
+	foreach my $r (keys %$rc) {
+		if ($r =~ /^ipv6_ifconfig_([a-z0-9]+)/ &&
+		    $1 eq $iface->{'fullname'}) {
+			$data = &set_rc_conf_line($data, $r, undef);
+			}
+		}
+
 	my $err = &put_file_data_to_server($server, $data, "/etc/rc.conf");
 	return $err;
 	}
