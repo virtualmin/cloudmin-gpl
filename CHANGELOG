@@ -67,3 +67,4 @@ Added a tab to the IP Addresses page to block IP addresses from being allocated 
 ---- Changes since 6.9 ----
 Virtual systems can now be backed up to and restored from Amazon S3 and Rackspace Cloud Files.
 Bandwidth data files are now split up into weekly chunks, which reduces the run time of the bandwidth.pl cron job and makes graphing bandwidth usage faster.
+Virtual systems running FreeBSD can now be managed by Cloudmin in just the same way as Linux systems. This includes IP address assignment, disk creation and deletion, imaging and status monitoring.
