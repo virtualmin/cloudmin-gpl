@@ -4486,11 +4486,12 @@ if ($nonvirt) {
 			($aok, $aout) = &run_kvm_monitor_command($server,
 				[ "pci_add auto nic $str" ]);
 			}
-		return ($aout || "No response to pci_add command")
-			if (!$aok || $aout !~ /OK/);
-
-		# Wait for new interface to appear
-		if (ref($oldactive)) {
+		if (!$aok || $aout !~ /OK/) {
+			# Didn't get added
+			$canactivate = 0;
+			}
+		elsif (ref($oldactive)) {
+			# Wait for new interface to appear
 			for(my $try=0; $try<5; $try++) {
 				sleep(1);
 				my $active = &list_active_server_interfaces(
