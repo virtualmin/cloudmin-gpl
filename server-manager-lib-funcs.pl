@@ -3301,6 +3301,48 @@ if (!$got_memory && &can_ssh_status($server)) {
 			}
 		}
 
+	# Try FreeBSD memory and swap commands
+	if (!$got_memory && &has_command_on_server($server, "/sbin/sysctl")) {
+		# Get real memory usage from sysctl
+		my $sysctl = {};
+		my ($sysctl_output) = &execute_command_on_server(
+			$server, "/sbin/sysctl -a 2>/dev/null");
+		foreach my $line (split(/\n/, $sysctl_output)) {
+			if ($line =~ m/^([^:]+):\s+(.+)\s*$/s) {
+				$sysctl->{$1} = $2;
+				}
+			}
+		if ($sysctl->{"hw.physmem"}) {
+			my $mem_inactive =
+				$sysctl->{"vm.stats.vm.v_inactive_count"} *
+				$sysctl->{"hw.pagesize"};
+			my $mem_cache = $sysctl->{"vm.stats.vm.v_cache_count"} *
+					$sysctl->{"hw.pagesize"};
+			my $mem_free = $sysctl->{"vm.stats.vm.v_free_count"} *
+				       $sysctl->{"hw.pagesize"};
+			$info->{'mem'} = [ 
+				$sysctl->{"hw.physmem"} / 1024,
+				($mem_inactive + $mem_cache + $mem_free) / 1024,
+				];
+			$got_more_info = $got_memory = 1;
+			}
+
+		# Add swap usage
+		my ($swapinfo_output) = &execute_command_on_server(
+			$server, "/usr/sbin/swapinfo");
+		my ($swap_total, $swap_free) = (0, 0);
+		foreach my $line (split(/\n/, $swapinfo_output)) {
+			if ($line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)/) {
+				$swap_total += $2 * 1024;
+				$swap_free += $4 * 1024;
+				}
+			}
+		if ($info->{'mem'}) {
+			$info->{'mem'}->[2] = $swap_total;
+			$info->{'mem'}->[3] = $swap_free;
+			}
+		}
+
 	# Get CPU load from "uptime" command
 	my ($out, $ex, $err) = &execute_command_on_server($server, "uptime");
 	if (!$ex && !$err &&
@@ -3369,6 +3411,7 @@ if (!$got_kernel && &can_ssh_status($server)) {
 # Get IO stats via SSH
 if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i && !$got_io &&
     &can_ssh_status($server)) {
+	# For a Linux system, use vmstat
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 							  "vmstat 1 2", 5);
 	if (!$ex && !$err) {
@@ -3381,6 +3424,46 @@ if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /Linux/i && !$got_io &&
 
 			# CPU user, kernel, idle, io, vm
 			$info->{'cpu'} = [ @w[12..16] ];
+
+			$got_more_info = 1;
+			}
+		}
+	}
+if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /FreeBSD/i && !$got_io &&
+    &can_ssh_status($server)) {
+	# For a BSD system, use iostat to get disk activity
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+							  "iostat -x 1 2", 5);
+	if (!$ex && !$err) {
+                local @lines = split(/\r?\n/, $out);
+		my (%reads, %writes);
+		foreach my $l (@lines) {
+			if ($l =~ /^((ada|da|ad)\d+)\s+([0-9\.]+)\s+([0-9\.]+)\s+([0-9\.]+)\s+([0-9\.]+)/) {
+				# The first bunch of stats is polluted by the
+				# disk activity from running the iostat command,
+				# so only use the last one
+				$reads{$1} = $5;
+				$writes{$1} = $6;
+				}
+			}
+		$info->{'io'} = [ 0, 0 ];
+		foreach my $d (keys %reads) {
+			$info->{'io'}->[0] += $reads{$d};
+			$info->{'io'}->[1] += $writes{$d};
+			}
+		$got_more_info = 1;
+		}
+
+	# And vmstat to get CPU states
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+							  "vmstat 1 2", 5);
+	if (!$ex && !$err) {
+		local @lines = split(/\r?\n/, $out);
+		local @w = split(/\s+/, $lines[$#lines]);
+		shift(@w) if ($w[0] eq '');
+		if ($w[16] =~ /^\d+$/) {
+			# CPU user, kernel, idle, io, vm
+			$info->{'cpu'} = [ $w[16], $w[17], $w[18], 0, 0 ];
 
 			$got_more_info = 1;
 			}
