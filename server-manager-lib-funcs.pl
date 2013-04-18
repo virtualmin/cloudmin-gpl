@@ -3259,6 +3259,7 @@ if (!$got_memory && &can_ssh_status($server)) {
 		if ($out =~ /Mem:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/i) {
 			$mem[0] = $1;
 			$mem[1] = $3 + $5 + $6;
+			$mem[4] = $5 + $6;
 			}
 		if ($out =~ /Swap:\s+(\d+)\s+(\d+)\s+(\d+)/i) {
 			$mem[2] = $1;

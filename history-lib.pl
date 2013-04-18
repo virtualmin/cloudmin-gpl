@@ -36,6 +36,9 @@ if ($info->{'mem'}) {
                                $info->{'mem'}->[2]*1024 ]);
                 push(@stats, [ "swapfree", $info->{'mem'}->[2]*1024 ]);
                 }
+        if ($info->{'mem'}->[4] ne '') {
+		push(@stats, [ "memcached", $info->{'mem'}->[4]*1024 ]);
+		}
         }
 
 # Add memory usage for hosting
