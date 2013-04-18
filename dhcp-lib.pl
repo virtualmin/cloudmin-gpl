@@ -64,7 +64,7 @@ return wantarray ? ( $host, $par ) : $host;
 sub recursive_dhcpd_search_host
 {
 my ($pconf, $server, $iface) = @_;
-my $hostname = $iface->{'name'} eq 'eth0' ?
+my $hostname = $iface->{'name'} =~ /^[a-z]+0$/ ?
 		$server->{'host'} : $iface->{'name'}.'-'.$server->{'host'};
 foreach my $obj (@{$pconf->{'members'}}) {
 	if ($obj->{'name'} eq 'host' &&
@@ -126,7 +126,7 @@ my @rv;
 foreach my $obj (@{$pconf->{'members'}}) {
 	if ($obj->{'name'} eq 'host' &&
 	    ($obj->{'values'}->[0] eq $server->{'host'} ||
-	     $obj->{'values'}->[0] =~ /^eth(\d+)\.(\S+)$/ &&
+	     $obj->{'values'}->[0] =~ /^[a-z]+(\d+)\.(\S+)$/ &&
 	      $2 eq $server->{'host'})) {
 		push(@rv, [ $obj, $pconf ]);
 		}
@@ -155,7 +155,7 @@ my $hostname = $iface->{'name'} =~ /(\d+)$/ && $1 == 0 ?
 			$server->{'host'} :
 			$iface->{'name'}.'-'.$server->{'host'};
 my $address = $iface->{'address'};
-if (!$address && $iface->{'fullname'} eq 'eth0') {
+if (!$address && $iface->{'fullname'} =~ /^[a-z]+0$/) {
 	# If interface has no address and is the first on the system,
 	# use primary IP instead
 	$address = &get_server_ip($server);

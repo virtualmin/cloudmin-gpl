@@ -912,6 +912,15 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		}
 	elsif ($fix eq "/etc/rc.conf") {
 		# Set IP and gateway lines
+		my $rc = &get_server_rc_conf($server);
+		if (ref($rc)) {
+			# First remove all existing network config lines
+			foreach my $k (keys %$rc) {
+				if ($k =~ /^(ipv6_)?ifconfig_([a-z]+[0-9]+)/) {
+					$data = &set_rc_conf_line($data, $k);
+					}
+				}
+			}
 		my $bsdiface = $iface;
 		my ($model) = split(/\s+/,
 				    $server->{$server->{'manager'}.'_model'});

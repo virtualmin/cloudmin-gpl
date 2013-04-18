@@ -185,7 +185,7 @@ if (defined(&$mfunc) && &$mfunc($server, $in{'new'} ? undef : $iface)) {
 		&ui_opt_textbox("mac", $iface->{'ether'}, 20,
 				$text{'iface_macdef'}));
 	}
-elsif (!$in{'new'} && $iface->{'ether'}) {
+elsif (!$in{'new'} && $iface->{'ether'} && $iface->{'virtual'} eq '') {
 	print &ui_table_row($text{'iface_mac'},
 		"<tt>$iface->{'ether'}</tt>");
 	}

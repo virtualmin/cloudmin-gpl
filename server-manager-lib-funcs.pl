@@ -10172,14 +10172,20 @@ foreach my $l (@lines) {
         $ifc{'up'}++ if ($l =~ /\sUP\s|<\S*UP\S*>/);
         $ifc{'promisc'}++ if ($l =~ /\sPROMISC\s/);
         local (@address6, @netmask6, @scope6);
-        while($l =~ s/inet6 addr:\s*(\S+)\/(\d+)\s+Scope:(Global)//i) {
+        while($l =~ s/inet6\s+addr:\s*(\S+)\/(\d+)\s+Scope:(Global)//i) {
+		# Linux format
                 local ($address6, $netmask6, $scope6) = ($1, $2, $3);
                 push(@address6, $address6);
                 push(@netmask6, $netmask6);
                 push(@scope6, $scope6);
                 }
-        while($l =~ s/inet6 (\S+)\s+prefixlen (\d+)\s+scopeid\s+(\S+)<global>//i) {
-                local ($address6, $netmask6, $scope6) = ($1, $2, $3);
+        while($l =~ s/inet6\s+(\S+)\s+prefixlen\s+(\d+)(\s+scopeid\s+(\S+)<global>)?//i) {
+		# Solaris / BSD format
+                local ($address6, $netmask6, $scope6) = ($1, $2, $4);
+		if ($address6 =~ /^(\S+)%([a-z]+\d+)$/) {
+			# Scope separated by %, as seen on BSD
+			($address6, $scope6) = ($1, $2);
+			}
                 push(@address6, $address6);
                 push(@netmask6, $netmask6);
                 push(@scope6, $scope6);
@@ -10407,7 +10413,35 @@ elsif (&freebsd_server_type($server)) {
 		return $out if ($ex);
 		}
 
-	# XXX IPv6
+	if ($iface->{'virtual'} eq '') {
+		# Remove old v6 addresses that are no longer active
+		for(my $n=0; $n<@{$oldiface->{'address6'}}; $n++) {
+			if (&indexof($oldiface->{'address6'}->[$n], 
+				     @{$iface->{'address6'}}) < 0) {
+				my $cmd = "ifconfig $iface->{'fullname'} ".
+					"inet6 ".$oldiface->{'address6'}->[$n].
+					" delete";
+				my ($out, $ex, $err) =
+				    &execute_command_on_server($server, $cmd);
+				return $err if ($err);
+				return $out if ($ex);
+				}
+			}
+
+		# Add new ones that are now active
+		for(my $n=0; $n<@{$iface->{'address6'}}; $n++) {
+			if (&indexof($iface->{'address6'}->[$n], 
+				     @{$oldiface->{'address6'}}) < 0) {
+				my $cmd = "ifconfig $iface->{'fullname'} ".
+				      "inet6 ".$iface->{'address6'}->[$n].
+				      " prefixlen ".$iface->{'netmask6'}->[$n];
+				my ($out, $ex, $err) =
+				    &execute_command_on_server($server, $cmd);
+				return $err if ($err);
+				return $out if ($ex);
+				}
+			}
+		}
 	}
 else {
 	# Use the ifconfig command on Linux
@@ -11115,6 +11149,7 @@ elsif (&debian_server_type($server)) {
 	}
 elsif (&freebsd_server_type($server)) {
 	# Change in rc.conf
+	my $rc = &get_server_rc_conf($server);
 	my $bsdiface = $iface->{'name'};
 	my $pfx = &get_interface_prefix($server, $iface);
 	$bsdiface =~ s/^([a-z]+)/$pfx/g;
@@ -11133,13 +11168,43 @@ elsif (&freebsd_server_type($server)) {
 		}
 	if ($oldbsdiface ne $bsdiface) {
 		if ($iface->{'virtual'} eq '') {
-			$data = &set_rc_conf_line($data, "ifconfig_".$oldbsdiface);
+			$data = &set_rc_conf_line($data,
+			    "ifconfig_".$oldbsdiface);
 			}
 		else {
 			$data = &set_rc_conf_line($data,
 			    "ifconfig_".$oldbsdiface."_alias".$iface->{'virtual'});
 			}
 		}
+
+	# Delete existing IPv6 addresses, as long as they aren't in use
+	foreach my $r (keys %$rc) {
+		if ($r =~ /^ipv6_ifconfig_([a-z0-9]+)/ &&
+		    $1 eq $oldiface->{'fullname'}) {
+			my ($v) = split(/\s+/, $rc->{$r});
+			if (&indexof($v, @{$iface->{'address6'}}) < 0) {
+				$data = &set_rc_conf_line($data, $r, undef);
+				}
+			}
+		}
+
+	# Add new IPv6 addresses
+	if (@{$iface->{'address6'}}) {
+		$data = &set_rc_conf_line($data, "ipv6_enable", "YES");
+		}
+	for(my $i=0; $i<@{$iface->{'address6'}}; $i++) {
+		if (&indexof($iface->{'address6'}->[$i],
+			     @{$oldiface->{'address6'}}) < 0) {
+			my $str = $iface->{'address6'}->[$i]." prefixlen ".
+				  $iface->{'netmask6'}->[$i];
+			my $name = "ipv6_ifconfig_".$iface->{'name'};
+			if ($i > 0) {
+				$name .= "_alias".($i-1);
+				}
+			$data = &set_rc_conf_line($data, $name, $str);
+			}
+		}
+
 	my $err = &put_file_data_to_server($server, $data, "/etc/rc.conf");
 	return $err;
 	}
@@ -11170,7 +11235,9 @@ sub get_interface_prefix
 my ($server, $iface) = @_;
 if ($server->{'type'} eq 'freebsd') {
 	# On FreeBSD, depends on the hardware type
-	my $model = !ref($iface) ? $iface : $iface->{'model'};
+	my $model = !$iface ? $server->{$server->{'manager'}.'_model'} :
+		    !ref($iface) ? $iface : $iface->{'model'};
+	$model =~ s/\s+.*$//;	# In case kvm_model is a list
 	if (!$model eq 'rtl8139') {
 		return 're';
 		}

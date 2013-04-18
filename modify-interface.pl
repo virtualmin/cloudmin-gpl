@@ -260,6 +260,7 @@ foreach my $a (@add6) {
 	$nm ||= 64;
 	push(@{$iface->{'address6'}}, $ip);
 	push(@{$iface->{'netmask6'}}, $nm);
+	push(@{$iface->{'scope6'}}, undef) if ($iface->{'scope6'});
 	}
 foreach my $a (@del6) {
 	my ($ip, $nm) = split(/\//, $a);
@@ -267,6 +268,7 @@ foreach my $a (@del6) {
 	if ($idx >= 0) {
 		splice(@{$iface->{'address6'}}, $idx, 1);
 		splice(@{$iface->{'netmask6'}}, $idx, 1);
+		splice(@{$iface->{'scope6'}}, $idx, 1) if ($iface->{'scope6'});
 		}
 	}
 
