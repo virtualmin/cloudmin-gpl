@@ -4321,7 +4321,10 @@ else {
 # with no IP or non-ethernet
 # XXX deal with mixed interface types better
 if (ref($rv)) {
-	my @prefixes = map { &get_interface_prefix($server, $_) } @models;
+	# Get all possible prefixes from network interface models, or use the
+	# default prefix if no models set yet
+	my @prefixes = map { &get_interface_prefix($server, $_) }
+			   (@models ? @models : (""));
 	$rv = [ grep { $_->{'fullname'} =~ /^([a-z]+)/ &&
 		       &indexof($1, @prefixes) >= 0 &&
 		       $_->{'up'} } @$rv ];
