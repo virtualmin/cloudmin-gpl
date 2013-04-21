@@ -1881,6 +1881,11 @@ if (!$empty) {
 			&stop_background_dot_printer();
 			&$second_print(&text('create_exenresize2'));
 			}
+		elsif (&freebsd_server_type($server) ||
+		       $disk->{'fs'} eq 'ufs') {
+			&stop_background_dot_printer();
+			&$second_print(&text('create_exenresizebsd'));
+			}
 		else {
 			my $olddisk = { %$disk };
 			$disk->{'size'} = $dksize;
@@ -2944,7 +2949,14 @@ if ($mounts) {
 				}
 			$d->{'mount'} = $f->[1];
 			$d->{'fs'} = $f->[2];
-			if ($f->[0] =~ /(\d+)$/) {
+			if (&freebsd_server_type($server) &&
+			    $f->[0] =~ /s(\d+)[a-z]?$/) {
+				# Get partition number on FreeBSD
+				$d->{'virt_part'} = $1;
+				}
+			elsif (!&freebsd_server_type($server) &&
+			       $f->[0] =~ /(\d+)$/) {
+				# Partition number on Linux
 				$d->{'virt_part'} = $1;
 				}
 			if ($d->{'fs'} eq 'swap') {
@@ -3661,6 +3673,8 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 						      $loop));
 			push(@cmds, &get_resize_command($vhost, $disk->{'fs'},
 							$loop, $newmbs));
+			push(@cmds, &get_fsck_command($vhost, $disk->{'fs'},
+						      $loop));
 			}
 		push(@cmds, "losetup -d $loop");
 		}

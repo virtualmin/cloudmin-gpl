@@ -63,7 +63,7 @@ elsif ($fs eq 'swap') {
 		}
 	}
 elsif ($fs eq 'ufs') {
-	$cmd = "mkfs -t ufs ".quotemeta($device);
+	$cmd = "mkfs.ufs ".quotemeta($device);
 	}
 else {
 	return "Unknown filesystem type $fs";
@@ -358,7 +358,7 @@ elsif ($fs eq "ufs") {
 	$cmd = "growfs.ufs -y";
 	if ($dev) {
 		if ($size) {
-			$cmd .= " -s ".int($size * 2048);
+			$cmd .= " -s ".int(($size-64) * 2048);
 			}
 		$cmd .= " ".quotemeta($dev);
 		}
@@ -379,7 +379,7 @@ if ($fs =~ /ext(\d+)$/) {
 		}
 	}
 elsif ($fs eq "ufs") {
-	$cmd = "fsck.ufs";
+	$cmd = "fsck.ufs -y";
 	}
 if ($cmd && $dev) {
 	$cmd .= " -f -p ".quotemeta($dev);

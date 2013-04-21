@@ -183,6 +183,7 @@ if ($multi) {
 					      " size ",
 					      &nice_size($p->{'size_bytes'}),
 					      " blocks ",$p->{'blocks'},
+					      " offset ",$p->{'offset'},
 					      " type ",$p->{'type'},"\n";
 					}
 				}
