@@ -3069,7 +3069,9 @@ foreach my $d (@$disks) {
 		$used{"/dev/vd".$3}++;
 		}
 	}
-$used{"/dev/hdc"}++;	# Typically for CD-ROM
+if (!&freebsd_server_type($server)) {
+	$used{"/dev/hdc"}++;	# Typically for CD-ROM, on Linux
+	}
 
 # Pick a /dev/???? file that is free on the virtual system
 my $n;
@@ -5634,7 +5636,7 @@ if (!$image->{'nocompress'}) {
 	    	  " >".quotemeta("$tempdir/$gzfile"));
 	&stop_background_dot_printer();
 	if ($ex) {
-		&$second_print(&text('mkimage_ekvmgzip', "<pre>$out</pre>"));
+		&$second_print(&text('mkimage_exengzip', "<pre>$out</pre>"));
 		}
 	else {
 		&$second_print($text{'create_done'});
@@ -5651,7 +5653,7 @@ else {
 			  	quotemeta("$tempdir/$imgfile"));
 	&stop_background_dot_printer();
 	if ($ex) {
-		&$second_print(&text('mkimage_ekvmlink', "<pre>$out</pre>"));
+		&$second_print(&text('mkimage_exenlink', "<pre>$out</pre>"));
 		}
 	else {
 		&$second_print($text{'create_done'});
