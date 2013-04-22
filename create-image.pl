@@ -264,24 +264,25 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 
 # Convert the remote system into an image file - this will output progress
 $ifunc = "type_".$server->{'manager'}."_create_image";
-if (!&$ifunc($server, $image, $temp, $munge ? 0 : 2, $imageserver)) {
-	exit(3);
-	}
+$imageok = &$ifunc($server, $image, $temp, $munge ? 0 : 2, $imageserver);
 
 # Transfer the image file to the master
-$dstr = &nice_image_destination($image->{'dest'});
-&$first_print("Transferring image files to $dstr ..");
-$err = &fetch_image_files($imageserver, $image, $temp, 0, $server);
-if ($err) {
-	&$second_print(".. failed : $err");
-	}
-else {
-	&$second_print(".. transferred all files");
+if ($imageok) {
+	$dstr = &nice_image_destination($image->{'dest'});
+	&$first_print("Transferring image files to $dstr ..");
+	$err = &fetch_image_files($imageserver, $image, $temp, 0, $server);
+	if ($err) {
+		&$second_print(".. failed : $err");
+		$imageok = 0;
+		}
+	else {
+		&$second_print(".. transferred all files");
 
-	# Save the new image file
-	&generate_image_md5s($image);
-	&generate_image_size($image);
-	&save_server_image($image);
+		# Save the new image file
+		&generate_image_md5s($image);
+		&generate_image_size($image);
+		&save_server_image($image);
+		}
 	}
 
 # Cleanup the image on the host
@@ -310,7 +311,7 @@ if ($shutdown) {
 &release_lock_server($server);
 
 # Exit if image transfer failed, but only after cleanup is done
-if ($err) {
+if (!$imageok) {
 	exit(5);
 	}
 else {

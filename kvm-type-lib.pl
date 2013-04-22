@@ -5637,6 +5637,7 @@ if (!$image->{'nocompress'}) {
 	&stop_background_dot_printer();
 	if ($ex) {
 		&$second_print(&text('mkimage_exengzip', "<pre>$out</pre>"));
+		return 0;
 		}
 	else {
 		&$second_print($text{'create_done'});
@@ -5654,6 +5655,7 @@ else {
 	&stop_background_dot_printer();
 	if ($ex) {
 		&$second_print(&text('mkimage_exenlink', "<pre>$out</pre>"));
+		return 0;
 		}
 	else {
 		&$second_print($text{'create_done'});
