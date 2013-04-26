@@ -5541,6 +5541,7 @@ return undef if (!ref($fstab));
 my ($root) = grep { $_->[1] eq '/' } @$fstab;
 return "No root filesystem found in /etc/fstab" if (!$root);
 $root->[0] =~ /^\/dev\/(h|s|v)d[a-z]/ ||
+    $root->[0] =~ /^\/dev\/(ada|da|ad)\d/ ||
 	return "Root filesystem in /etc/fstab is mounted from $root->[0], ".
 	       "not a real device path. This will cause systems created from ".
 	       "the image to use incorrect device paths";
