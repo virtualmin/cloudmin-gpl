@@ -993,6 +993,7 @@ edit_disks=Manage Disks
 edit_vcpus=Manage Virtual CPUs
 edit_bw=Bandwidth Graph
 edit_history=Statistics Graphs
+edit_snapshot=Disk Snapshots
 edit_vversion=Virtualmin version
 edit_vlicence=Virtualmin license
 edit_vsk=Serial $1 key $2 (expires $3)
@@ -5251,6 +5252,12 @@ s3_einfo=Failed to upload information file : $1
 s3_edom=Failed to upload domain file : $1
 s3_elist2=Failed to list S3 bucket : $1
 s3_einfo2=Failed to read $1 : $2
+
+snapshot_evmtype=Only Xen and KVM systems support snapshots
+snapshot_elvmdisk=Only systems using LVM for disk images can be snapshotted
+snapshot_evhostcmd=The required command $1 was not found on the host system $2
+snapshot_edmsetup=The <tt>dmsetup targets</tt> command failed on host system $2 : $1
+snapshot_emerge=Kernel support for LVM snapshot merging is not available on host system $1
 
 __norefs=1
 

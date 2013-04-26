@@ -19,7 +19,7 @@ foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
 		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp",
 		 "roundrobin", "scalegroup", "stats", "firewall", "iscsi",
-		 "cron", "s3", "rs") {
+		 "cron", "s3", "rs", "snapshots") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -7604,6 +7604,16 @@ if (&can_action($server, "graph") &&
 		    'cat' => 'res',
 		    'link' => "history.cgi?search=$server->{'host'}&".
 			      "id=$server->{'id'}" });
+	}
+
+# Disk snapshots
+if (&can_action($server, "snapshot") &&
+    defined(&supports_snapshot) &&
+    &supports_snapshot($server)) {
+	push(@rv, { 'id' => 'snapshot',
+		    'desc' => $text{'edit_snapshot'},
+		    'cat' => 'res',
+		    'link' => "list_snapshots.cgi?id=$server->{'id'}" });
 	}
 
 # Host system pages
