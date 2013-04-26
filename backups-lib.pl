@@ -525,6 +525,7 @@ if ($destserver && $dest->{'mode'} <= 2 && !&can_ssh_status($destserver)) {
 	}
 elsif ($destserver && $dest->{'mode'} == 3) {
 	# SSH dest .. check if usable by uploading a test file
+	&create_backup_dest_dir($destserver, $dest->{'path'});
 	my $testfile = &transname();
 	&open_tempfile(TESTFILE, ">$testfile");
 	&close_tempfile(TESTFILE);
