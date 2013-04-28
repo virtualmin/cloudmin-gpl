@@ -27,9 +27,9 @@ if (!$in{'ips_def'} && &can_action($server, 'ips')) {
 	else {
 		$ips = [ ];
 		for(my $i=0; defined($in{"ip_$i"}); $i++) {
-			$in{"ip_$i"} =~ /\S/ ||
-				&error(&text('clone_eiprow', $i+1));
-			push(@$ips, $in{"ip_$i"});
+			if ($in{"ip_$i"} =~ /\S/) {
+				push(@$ips, $in{"ip_$i"});
+				}
 			}
 		}
 	foreach $ip (@$ips) {
@@ -44,9 +44,9 @@ if (!$in{'ips6_def'} && &can_action($server, 'ips')) {
 	elsif (defined($in{'ip6_0'})) {
 		$ips6 = [ ];
 		for(my $i=0; defined($in{"ip6_$i"}); $i++) {
-			$in{"ip6_$i"} =~ /\S/ ||
-				&error(&text('clone_eip6row', $i+1));
-			push(@$ips6, $in{"ip6_$i"});
+			if ($in{"ip6_$i"} =~ /\S/) {
+				push(@$ips6, $in{"ip6_$i"});
+				}
 			}
 		}
 	if ($ips6) {
