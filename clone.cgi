@@ -31,6 +31,7 @@ if (!$in{'ips_def'} && &can_action($server, 'ips')) {
 				push(@$ips, $in{"ip_$i"});
 				}
 			}
+		@$ips || &error($text{'clone_eipcount'});
 		}
 	foreach $ip (@$ips) {
 		&check_ipaddress($ip) ||
@@ -48,6 +49,7 @@ if (!$in{'ips6_def'} && &can_action($server, 'ips')) {
 				push(@$ips6, $in{"ip6_$i"});
 				}
 			}
+		@$ips6 || &error($text{'clone_eip6count'});
 		}
 	if ($ips6) {
 		foreach $ip6 (@$ips6) {

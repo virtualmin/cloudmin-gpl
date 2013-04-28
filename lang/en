@@ -4672,7 +4672,8 @@ clone_ehostdown=The destination host system $1 is down or un-usable
 clone_ehostspace=The host system $1 is not suitable for this clone : $2
 clone_eipused=The IP address $1 is already in use
 clone_eiprow=Missing IP address in row $1
-clone_eip6row=Missing IPv6 address in row $1
+clone_eipcheck=No IP addresses entered
+clone_eip6check=No IPv6 addresses entered
 clone_eipcheck=$1 is not a valid IP address
 clone_eip6check=$1 is not a valid IPv6 address
 clone_copylimits=Copying CPU, RAM and disk limits from original system ..
@@ -5258,6 +5259,7 @@ snapshot_elvmdisk=Only systems using LVM for disk images can be snapshotted
 snapshot_evhostcmd=The required command $1 was not found on the host system $2
 snapshot_edmsetup=The <tt>dmsetup targets</tt> command failed on host system $2 : $1
 snapshot_emerge=Kernel support for LVM snapshot merging is not available on host system $1
+snapshot_enodisks=Virtual system has no disks!
 
 __norefs=1
 
