@@ -145,10 +145,28 @@ return \@rv;
 }
 
 # delete_snapshot(&server, &snapshot)
-# Delete one snapshot that was previously created
+# Delete one snapshot that was previously created, by deleting all LVs
 sub delete_snapshot
 {
 my ($server, $snapshot) = @_;
+
+# Connect to LVM module on host
+my $vhost = &get_parent_server($server);
+$last_remote_error = undef;
+&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
+return $last_remote_error if ($last_remote_error);
+
+my @errs;
+for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) {
+	my $snaplv = { 'name' => $snapshot->{'lvs'}->[$i],
+		       'vg' => $snapshot->{'vgs'}->[$i] };
+	$snaplv->{'device'} = "/dev/".$snaplv->{'vg'}."/".$snaplv->{'name'};
+	my $err = &remote_foreign_call($vhost, "lvm",
+			"delete_logical_volume", $snaplv);
+	push(@errs, $err) if ($err);
+	}
+
+return join(" ", @errs);
 }
 
 # merge_snapshot(&server, &snapshot)
@@ -156,6 +174,16 @@ my ($server, $snapshot) = @_;
 sub merge_snapshot
 {
 my ($server, $snapshot) = @_;
+my $vhost = &get_parent_server($server);
+&execute_command_on_server($vhost, "modprobe dm-snapshot");
+for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) { 
+	my $dev = "/dev/".$snapshot->{'vgs'}->[$i]."/".$snapshot->{'lvs'}->[$i];
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
+		"lvconvert --merge $dev");
+	return $err if ($err);
+	return $out if ($ex);
+	}
+return undef;
 }
 
 1;
