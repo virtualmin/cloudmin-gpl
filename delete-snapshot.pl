@@ -68,7 +68,9 @@ $err = &check_snapshot_support($server);
 $err && &usage("Snapshots are not supported for this system : $err");
 
 # Get the snapshot
-my ($snapshot) = grep { $_->{'id'} eq $snapid } &list_snapshots($server);
+$snaps = &list_snapshots($server);
+ref($snaps) || &usage("Failed to list snapshots : $snaps");
+($snapshot) = grep { $_->{'id'} eq $snapid } @$snaps;
 $snapshot || &usage("No snapshot named $snapid found");
 
 # Do it

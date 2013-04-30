@@ -5255,11 +5255,13 @@ s3_elist2=Failed to list S3 bucket : $1
 s3_einfo2=Failed to read $1 : $2
 
 snapshot_evmtype=Only Xen and KVM systems support snapshots
+snapshot_enohost=A system whose host is down cannot be snapshotted
 snapshot_elvmdisk=Only systems using LVM for disk images can be snapshotted
 snapshot_evhostcmd=The required command $1 was not found on the host system $2
 snapshot_edmsetup=The <tt>dmsetup targets</tt> command failed on host system $2 : $1
 snapshot_emerge=Kernel support for LVM snapshot merging is not available on host system $1
 snapshot_enodisks=Virtual system has no disks!
+snapshot_eactive=Snapshot logical volume $1 over-full and so cannot be reverted to
 
 __norefs=1
 

@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 
-=head1 create-disk.pl
+=head1 create-snapshot.pl
 
 Creates a snapshot of the disks for a virtual system.
 
@@ -79,7 +79,9 @@ $err = &check_snapshot_support($server);
 $err && &usage("Snapshots are not supported for this system : $err");
 
 # Check for ID clash
-my ($clash) = grep { $_->{'id'} eq $snapid } &list_snapshots($server);
+$snaps = &list_snapshots($server);
+ref($snaps) || &usage("Failed to list snapshots : $snaps");
+($clash) = grep { $_->{'id'} eq $snapid } @$snaps;
 $clash && &usage("A snapshot with the ID $snapid already exists");
 
 # XXX check disk limits

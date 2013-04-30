@@ -19,6 +19,9 @@ if ($server->{'manager'} ne 'kvm' &&
     $server->{'manager'} ne 'xen') {
 	return $text{'snapshot_evmtype'};
 	}
+elsif ($server->{'status'} eq 'nohost') {
+	return $text{'snapshot_enohost'};
+	}
 elsif (!$server->{$server->{'manager'}.'_filesystem_vg'}) {
 	return $text{'snapshot_elvmdisk'};
 	}
@@ -138,6 +141,9 @@ foreach my $lv (@lvs) {
 		push(@{$snap->{'lvs'}}, $lv->{'name'});
 		push(@{$snap->{'sizes'}}, $lv->{'size'});
 		push(@{$snap->{'usages'}}, $lv->{'snapusage'});
+		push(@{$snap->{'actives'}},
+		     defined($lv->{'snap_active'}) ? $lv->{'snap_active'} :
+		     $lv->{'snapusage'} eq '' ? 0 : 1);
 		}
 	}
 
@@ -174,6 +180,11 @@ return join(" ", @errs);
 sub merge_snapshot
 {
 my ($server, $snapshot) = @_;
+for(my $i=0; $i<@{$snapshot->{'actives'}}; $i++) {
+	if (!$snapshot->{'actives'}->[$i]) {
+		return &text('snapshot_eactive', $snapshot->{'lvs'}->[$i]);
+		}
+	}
 my $vhost = &get_parent_server($server);
 &execute_command_on_server($vhost, "modprobe dm-snapshot");
 for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) { 

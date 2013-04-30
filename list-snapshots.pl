@@ -67,29 +67,34 @@ if ($multi) {
 	# Show one per block
 	foreach $s (@$snaps) {
 		print $s->{'id'},"\n";
-		print "   Sizes: ",join(" ", @{$s->{'sizes'}}),"\n";
-		print "   Nice sizes: ",join(" ", map { &nice_size($_) }
+		print "   Size: ",join(" ", @{$s->{'sizes'}}),"\n";
+		print "   Nice size: ",join(" ", map { &nice_size($_) }
 						      @{$s->{'sizes'}}),"\n";
-		print "   VGs: ",join(" ", @{$s->{'vgs'}}),"\n";
-		print "   LVs: ",join(" ", @{$s->{'lvs'}}),"\n";
-		print "   Usages: ",join(" ", map { $_."%" }
+		print "   VG: ",join(" ", @{$s->{'vgs'}}),"\n";
+		print "   LV: ",join(" ", @{$s->{'lvs'}}),"\n";
+		print "   Usage: ",join(" ", map { ($_ eq "" ? 100 : %_)."%" }
 						  @{$s->{'usages'}}),"\n";
+		print "   Status: ",join(" ", map { $_ ? "Available" : "Full" }
+						  @{$s->{'actives'}}),"\n";
 		}
 	}
 else {
 	# Show one per line
-	$fmt = "%-30.30s %-10.10s %-10.10s %-10.10s\n";
-	printf $fmt, "ID", "Disks", "Total size", "Max usage";
-	printf $fmt, ("-" x 30), ("-" x 10), ("-" x 10), ("-" x 10);
+	$fmt = "%-30.30s %-10.10s %-10.10s %-10.10s %-10.10s\n";
+	printf $fmt, "ID", "Disks", "Total size", "Max usage", "Status";
+	printf $fmt, ("-" x 30), ("-" x 10), ("-" x 10), ("-" x 10), ("-" x 10);
 	foreach $s (@$snaps) {
-		my ($totalsize, $maxpc);
+		my ($totalsize, $maxpc, $anyinactive) = (0, 0, 0);
 		for(my $i=0; $i<@{$s->{'sizes'}}; $i++) {
 			$totalsize += $s->{'sizes'}->[$i];
 			$maxpc = $s->{'usages'}->[$i]
 				if ($s->{'usages'}->[$i] > $maxpc);
+			$anyinactive = 1 if (!$s->{'actives'}->[$i]);
 			}
 		printf $fmt, $s->{'id'}, scalar(@{$s->{'sizes'}}),
-			     &nice_size($totalsize), $maxpc."%";
+			     &nice_size($totalsize),
+			     $anyinactive ? "100%" : $maxpc."%",
+			     $anyinactive ? "Full" : "Available";
 		}
 	}
 
