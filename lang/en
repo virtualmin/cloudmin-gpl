@@ -5263,5 +5263,14 @@ snapshot_emerge=Kernel support for LVM snapshot merging is not available on host
 snapshot_enodisks=Virtual system has no disks!
 snapshot_eactive=Snapshot logical volume $1 over-full and so cannot be reverted to
 
+snapshots_title=Disk Snapshots
+snapshots_echeck=This system does not support snapshots : $1
+snapshots_elist=Failed to list snapshots : $1
+snapshots_header=New snapshot details
+snapshots_snapid=Snapshot ID
+snapshots_percent=Percent of virtual disk to allocate
+snapshots_of=out of
+snapshots_none=No snapshots have been created yet.
+
 __norefs=1
 
