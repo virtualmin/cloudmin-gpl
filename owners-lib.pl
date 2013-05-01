@@ -113,7 +113,7 @@ sub list_safe_owner_actions
 return ( 'startup', 'shutdown', 'reboot', 'console', 'boot', 'graph', 'view',
 	 'run', 'pass', 'domains', 'update', 'script', 'pause', 'reset',
          'create', 'delete', 'ifaces', 'reverse', 'limits', 'disks',
-	 'webmin', 'virtualmin', 'api' );
+	 'webmin', 'virtualmin', 'api', 'snapshot' );
 }
 
 # can_action([&server|&servers], [action])
