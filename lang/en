@@ -5271,6 +5271,22 @@ snapshots_snapid=Snapshot ID
 snapshots_percent=Percent of virtual disk to allocate
 snapshots_of=out of
 snapshots_none=No snapshots have been created yet.
+snapshots_id=Snapshot ID
+snapshots_size=Total size
+snapshots_disks=Disks
+snapshots_percent=Maximum usage
+snapshots_status=Status
+snapshots_inactive=Over-full!
+snapshots_active=Available
+snapshots_return=list of snapshots
+snapshots_delete=Delete Selected Snapshots
 
-__norefs=1
-
+snapshot_title=View Disk Snapshot
+snapshot_header=Snapshot details
+snapshot_vg=LVM volume group
+snapshot_lv=LVM logical volume
+snapshot_size=Logical volume size
+snapshot_status=Current status
+snapshot_full=$1 used
+snapshot_merge=Revert System To Snapshot
+snapshot_nomerge=This snapshot cannot be reverted to because all the disk space allocated has been consumed by changes.
