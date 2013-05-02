@@ -285,6 +285,14 @@ elsif ($type eq "iscsi") {
 	# One iSCSI server
 	return &text('log_'.$action.'_iscsi', $object);
 	}
+elsif ($type eq "snapshot") {
+	# One disk snapshot
+	return &text('log_'.$action.'_snapshot', $object, $p->{'snapid'});
+	}
+elsif ($type eq "snapshots") {
+	# Multiple disk snapshots
+	return &text('log_'.$action.'_snapshots', $object, $p->{'count'});
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),

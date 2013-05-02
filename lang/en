@@ -4015,6 +4015,10 @@ log_modify_iscsi=Modified iSCSI server $1
 log_delete_iscsi=Removed iSCSI server $1
 log_postinstall=Ran post-install script
 log_blocked=Updated blocked IPs list
+log_create_snapshot=Created snapshot $2 of system $1
+log_merge_snapshot=Reverted to snapshot $2 of system $1
+log_delete_snapshot=Deleted snapshot $2 of system $1
+log_delete_snapshots=Deleted $2 snapshots of system $1
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system
