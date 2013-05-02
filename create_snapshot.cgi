@@ -4,6 +4,7 @@
 require './server-manager-lib.pl';
 &ReadParse();
 &error_setup($text{'snapshot_cerr'});
+&ReadParse();
 
 # Get the server
 $server = &get_managed_server($in{'id'});

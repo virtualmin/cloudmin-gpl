@@ -11,7 +11,7 @@ $server || &error($text{'edit_egone'});
 $snaps = &list_snapshots($server); 
 ref($snaps) || &error(&text('snapshots_elist', $snaps));
 ($snapshot) = grep { $_->{'id'} eq $in{'snapid'} } @$snaps;
-$snapshot || &error($text{'snapshot_egone'});
+$snapshot || &error(&text('snapshot_egone', $in{'snapid'}));
 
 &ui_print_header(&server_in($server), $text{'snapshot_mtitle'}, "");
 
