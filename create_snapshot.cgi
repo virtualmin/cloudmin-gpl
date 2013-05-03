@@ -23,7 +23,15 @@ ref($snaps) || &error(&text('snapshots_elist', $snaps));
 ($clash) = grep { $_->{'id'} eq $in{'snapid'} } @$snaps;
 $clash && &error($text{'snapshot_eclash'});
 
-# XXX check disk limits
+# Validate additional disk size
+$limits = &get_owner_limits();
+$snapsize = &new_snapshot_size($server, $in{'percent'});
+if ($limits && $limits->{'max_disk'} &&
+    $limits->{'disk'} + $snapsize > $limits->{'max_disk'}) {
+	&error(&text('snapshot_elimit',
+	       &nice_size($limits->{'max_disk'}),
+	       &nice_size($limits->{'disk'})));
+	}
 
 &ui_print_header(&server_in($server), $text{'snapshot_ctitle'}, "");
 

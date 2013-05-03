@@ -84,7 +84,15 @@ ref($snaps) || &usage("Failed to list snapshots : $snaps");
 ($clash) = grep { $_->{'id'} eq $snapid } @$snaps;
 $clash && &usage("A snapshot with the ID $snapid already exists");
 
-# XXX check disk limits
+# Validate additional disk size
+$limits = &get_owner_limits();
+$snapsize = &new_snapshot_size($server, $percent);
+if ($limits && $limits->{'max_disk'} &&
+    $limits->{'disk'} + $snapsize > $limits->{'max_disk'}) {
+	&usage(&text('snapshot_elimit',
+	       &nice_size($limits->{'max_disk'}),
+	       &nice_size($limits->{'disk'})));
+	}
 
 # Do it
 &$first_print("Creating snapshot for $server->{'host'} ..");

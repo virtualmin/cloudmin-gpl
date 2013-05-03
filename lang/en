@@ -5312,3 +5312,4 @@ snapshot_egone=Snapshot $1 no longer exists
 snapshot_dtitle=Delete Snapshots
 snapshot_deleting=Deleting snapshot with ID $1 ..
 snapshot_edelete=.. deletion failed : $1
+snapshot_elimit=Creating this snapshot would exceed your total disk limit of $1. Currently you are using $2 of disk space.

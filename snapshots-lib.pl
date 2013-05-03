@@ -228,4 +228,21 @@ if (ref($snaps)) {
 return $rv;
 }
 
+# new_snapshot_size(&server, percent)
+# Returns the estimated size in bytes of a new snapshot
+sub new_snapshot_size
+{
+my ($server, $percent) = @_;
+my $lfunc = "type_".$server->{'manager'}."_list_disks";
+my $disks = &$lfunc($server, 0);
+ref($disks) || return 0;	# No idea!
+my $rv = 0;
+foreach my $d (@$disks) {
+	if ($d->{'vg'}) {
+		$rv += int($d->{'size'} * $percent / 100);
+		}
+	}
+return $rv;
+}
+
 1;
