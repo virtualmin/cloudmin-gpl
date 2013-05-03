@@ -4813,6 +4813,7 @@ if ($server->{'status'} ne 'nohost') {
 			}
 		}
 	}
+$server->{'kvm_disktotal'} += &compute_snapshots_size($server);
 return $server->{'kvm_disktotal'};
 }
 

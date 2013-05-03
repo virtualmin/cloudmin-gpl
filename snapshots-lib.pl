@@ -139,7 +139,8 @@ foreach my $lv (@lvs) {
 		$lv->{'device'} =~ /^\/dev\/([^\/]+)\/\S+$/ || next;
 		push(@{$snap->{'vgs'}}, $1);
 		push(@{$snap->{'lvs'}}, $lv->{'name'});
-		push(@{$snap->{'sizes'}}, $lv->{'size'});
+		push(@{$snap->{'sizes'}}, $lv->{'cow_size'}*1024 ||
+					  $lv->{'size'}*1024);
 		push(@{$snap->{'usages'}}, $lv->{'snapusage'});
 		push(@{$snap->{'actives'}},
 		     defined($lv->{'snap_active'}) ? $lv->{'snap_active'} :
@@ -195,6 +196,27 @@ for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) {
 	return $out if ($ex);
 	}
 return undef;
+}
+
+# compute_snapshots_size(&server)
+# Returns the size (if bytes) of all snapshots
+sub compute_snapshots_size
+{
+my ($server) = @_;
+if (!&supports_snapshot($server) ||
+    !$server->{$server->{'manager'}.'_filesystem_vg'}) {
+	return 0;
+	}
+my $rv = 0;
+my $snaps = &list_snapshots($server);
+if (ref($snaps)) {
+	foreach my $s (@$snaps) {
+		foreach my $sz (@{$s->{'sizes'}}) {
+			$rv += $rz;
+			}
+		}
+	}
+return $rv;
 }
 
 1;
