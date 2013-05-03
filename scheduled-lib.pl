@@ -172,6 +172,17 @@ if ($disk->{'size'} == $sched->{'size'}) {
 		 undef );
 	}
 
+# Check for snapshots
+if ($disk->{'lv'} &&
+    $disk->{'size'} != $olddisk->{'size'} &&
+    defined(&check_snapshot_support) &&
+    !&check_snapshot_support($server)) {
+	my $snaps = &list_snapshots($server);
+	if (ref($snaps) && @$snaps > 0) {
+		return ( $text{'disk_esnapshot'}, undef );
+		}
+	}
+
 # Check if resize is safe
 my $wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
 if (!$sched->{'force'} && defined(&$wfunc)) {

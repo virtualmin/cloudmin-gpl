@@ -234,6 +234,18 @@ if ($hostfree && $incr > $hostfree) {
 	       &nice_size($hostfree)." disk space free");
 	}
 
+# Check for snapshots
+if ($disk->{'lv'} &&
+    $disk->{'size'} != $olddisk->{'size'} &&
+    defined(&check_snapshot_support) &&
+    !&check_snapshot_support($server)) {
+	my $snaps = &list_snapshots($server);
+	if (ref($snaps) && @$snaps > 0) {
+		&usage("Disks cannot be resized on a system with ".
+		       "active snapshots");
+		}
+	}
+
 # Check if resize is safe
 if ($disk->{'size'} != $olddisk->{'size'} && !$force) {
 	$wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";

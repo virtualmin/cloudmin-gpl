@@ -297,6 +297,18 @@ else {
 			}
 		}
 
+	# Check for snapshots if resizing
+	if (!$in{'new'} &&
+	    $disk->{'lv'} &&
+	    $disk->{'size'} != $olddisk->{'size'} &&
+	    defined(&check_snapshot_support) &&
+	    !&check_snapshot_support($server)) {
+		my $snaps = &list_snapshots($server);
+		if (ref($snaps) && @$snaps > 0) {
+			&error($text{'disk_esnapshot'});
+			}
+		}
+
 	$wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
 	if ($in{'new'}) {
 		# Create the disk
