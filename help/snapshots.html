@@ -1,0 +1,21 @@
+<header>Disk Snapshots</header>
+
+In Cloudmin, a snapshot is a copy of all the virtual disks that make up a 
+system. Snapshotting is only possible for disks that are stored in LVM 
+volume groups, and are hosted on systems whose kernel includes the snapshot
+merge feature. At any time after a snapshot has been created, the virtual
+system can be reverted to the state its disks were in at the time the snapshot
+was taken. <p>
+
+This page lists all snapshots associated with the virtual system, if any.
+To revert to a snapshot, click on it and then click the <b>Revert</b> button. To
+remove one or more snapshots, check the boxes next to them and then click
+the <b>Delete</b> button. <p>
+
+A new snapshot can be created using the form at the bottom of the page.
+If the percentage is set to anything less than 100, it is possible for the
+snapshot to completely fill up if there are too many changes to the virtual
+systems filesystem. Once this happens, it will be no longer possible to revert
+to the state in the snapshot. <p>
+
+<footer>
