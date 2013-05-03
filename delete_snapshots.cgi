@@ -11,7 +11,7 @@ $server || &error($text{'edit_egone'});
 &can_action_error($server, "snapshots");
 
 # Validate inputs
-@d = split(/\0/, $in{'id'});
+@d = split(/\0/, $in{'d'});
 @d || &error($text{'snapshot_enone'});
 
 # Get the snapshots
@@ -38,6 +38,7 @@ foreach my $snapshot (@del) {
 		&$second_print($text{'create_done'});
 		}
 	}
+&save_managed_server($server);
 &release_lock_server($server);
 if (@del == 1) {
 	&webmin_log("delete", "snapshot", $server->{'host'},

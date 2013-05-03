@@ -90,6 +90,7 @@ $clash && &usage("A snapshot with the ID $snapid already exists");
 &$first_print("Creating snapshot for $server->{'host'} ..");
 &obtain_lock_server($server);
 $err = &create_snapshot($server, $snapid, $percent);
+&save_managed_server($server);
 &release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");

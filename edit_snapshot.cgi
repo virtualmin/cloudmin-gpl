@@ -26,6 +26,8 @@ print &ui_table_row($text{'snapshots_snapid'},
 
 $anyinactive = 0;
 for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) {
+	print &ui_table_hr();
+
 	print &ui_table_row($text{'snapshot_vg'},
 		$snapshot->{'vgs'}->[$i]);
 
@@ -33,7 +35,7 @@ for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) {
 		$snapshot->{'lvs'}->[$i]);
 
 	print &ui_table_row($text{'snapshot_size'},
-		$snapshot->{'sizes'}->[$i]);
+		&nice_size($snapshot->{'sizes'}->[$i]));
 
 	if ($snapshot->{'actives'}->[$i]) {
 		print &ui_table_row($text{'snapshot_status'},

@@ -69,6 +69,7 @@ if (&can_ssh_status($server)) {
 
 # Go through all the disks, and LV snapshot each one
 my $i = 0;
+my $totalsize = 0;
 foreach my $d (@$disks) {
 	if ($d->{'vg'}) {
 		# This disk can be snapshotted .. do it
@@ -86,10 +87,12 @@ foreach my $d (@$disks) {
                                           "create_logical_volume", $snaplv);
 		$err ||= $last_remote_error;
 		return $err if ($err);
+		$totalsize += $snaplv->{'size'} * 1024;
 		}
 	$i++;
 	}
 
+$server->{$server->{'manager'}.'_disktotal'} += $totalsize;
 return undef;
 }
 
@@ -164,6 +167,7 @@ $last_remote_error = undef;
 return $last_remote_error if ($last_remote_error);
 
 my @errs;
+my $totalsize = 0;
 for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) {
 	my $snaplv = { 'name' => $snapshot->{'lvs'}->[$i],
 		       'vg' => $snapshot->{'vgs'}->[$i] };
@@ -171,8 +175,10 @@ for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) {
 	my $err = &remote_foreign_call($vhost, "lvm",
 			"delete_logical_volume", $snaplv);
 	push(@errs, $err) if ($err);
+	$totalsize += $snapshot->{'sizes'}->[$i];
 	}
 
+$server->{$server->{'manager'}.'_disktotal'} -= $totalsize;
 return join(" ", @errs);
 }
 
@@ -188,13 +194,16 @@ for(my $i=0; $i<@{$snapshot->{'actives'}}; $i++) {
 	}
 my $vhost = &get_parent_server($server);
 &execute_command_on_server($vhost, "modprobe dm-snapshot");
+my $totalsize = 0;
 for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) { 
 	my $dev = "/dev/".$snapshot->{'vgs'}->[$i]."/".$snapshot->{'lvs'}->[$i];
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
 		"lvconvert --merge $dev");
 	return $err if ($err);
 	return $out if ($ex);
+	$totalsize += $snapshot->{'sizes'}->[$i];
 	}
+$server->{$server->{'manager'}.'_disktotal'} -= $totalsize;
 return undef;
 }
 
@@ -212,7 +221,7 @@ my $snaps = &list_snapshots($server);
 if (ref($snaps)) {
 	foreach my $s (@$snaps) {
 		foreach my $sz (@{$s->{'sizes'}}) {
-			$rv += $rz;
+			$rv += $sz;
 			}
 		}
 	}

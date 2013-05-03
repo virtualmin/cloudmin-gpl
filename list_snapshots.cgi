@@ -24,14 +24,14 @@ if (@$snaps) {
 	print &ui_form_start("delete_snapshots.cgi");
 	print &ui_hidden("id", $in{'id'});
 	@tds = ( "width=5" );
-	print &ui_checked_columns_start([
+	print &ui_columns_start([
 		"",
 		$text{'snapshots_id'},
 		$text{'snapshots_size'},
 		$text{'snapshots_disks'},
 		$text{'snapshots_percent'},
 		$text{'snapshots_status'},
-		]);
+		], 100, 0, \@tds);
 	foreach my $s (@$snaps) {
 		my ($totalsize, $maxpc, $anyinactive) = (0, 0, 0);
 		for(my $i=0; $i<@{$s->{'sizes'}}; $i++) {
@@ -56,6 +56,7 @@ if (@$snaps) {
 else {
 	print "<b>$text{'snapshots_none'}</b><p>\n";
 	}
+print &ui_hr();
 
 # Get total disk size
 $dfunc = "type_".$server->{'manager'}."_list_disks";

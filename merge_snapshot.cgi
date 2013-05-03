@@ -34,7 +34,7 @@ if ($in{'confirm'}) {
 		}
 
 	# Do it
-	&$first_print(&text('snapshot_revert', "<tt>$snapid</tt>",
+	&$first_print(&text('snapshot_revert', "<tt>$in{'snapid'}</tt>",
 			    $server->{'host'}));
 	$err = &merge_snapshot($server, $snapshot);
 	if ($err) {
@@ -60,11 +60,11 @@ if ($in{'confirm'}) {
 	# Re-check status
 	&$first_print($text{'save_refreshing'});
 	&check_server_status($server);
-	&save_managed_server($server);
 	&$second_print(&text('save_refreshdone2',
 			     describe_status($server, 1, 1)));
 
 	FAILED:
+	&save_managed_server($server);
 	&release_lock_server($server);
 	&webmin_log("merge", "snapshot", $server->{'host'},
 		    { 'snapid' => $snapshot->{'id'} });

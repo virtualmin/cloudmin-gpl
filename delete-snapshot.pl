@@ -77,6 +77,7 @@ $snapshot || &usage("No snapshot named $snapid found");
 &$first_print("Deleting snapshot $snapid for $server->{'host'} ..");
 &obtain_lock_server($server);
 $err = &delete_snapshot($server, $snapshot);
+&save_managed_server($server);
 &release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");

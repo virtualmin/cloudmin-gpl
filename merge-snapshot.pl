@@ -12,7 +12,6 @@ C<--id> flag.
 =head1 Example usage
 
   cloudmin merge-snapshot --host kvmsnap.home --id snaptest
-  XXX
   Reverting to snapshot snaptest for kvmsnap.home ..
   .. done
 
@@ -94,6 +93,7 @@ if ($server->{'status'} ne 'down') {
 &$first_print("Reverting to snapshot $snapid for $server->{'host'} ..");
 $err = &merge_snapshot($server, $snapshot);
 if ($err) {
+	&save_managed_server($server);
 	&release_lock_server($server);
 	&$second_print(".. failed : $err");
 	exit(1);

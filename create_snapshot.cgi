@@ -30,7 +30,8 @@ $clash && &error($text{'snapshot_eclash'});
 # Create it
 &$first_print(&text('snapshot_creating', $server->{'host'}));
 &obtain_lock_server($server);
-$err = &create_snapshot($server, $snapid, $percent);
+$err = &create_snapshot($server, $in{'snapid'}, $in{'percent'});
+&save_managed_server($server);
 &release_lock_server($server);
 if ($err) {
 	&$second_print(&text('snapshot_ecreate', $err));
