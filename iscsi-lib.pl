@@ -299,6 +299,9 @@ elsif ($mod eq "iscsi-target") {
 	}
 $disk->{'iscsi_target'} = $targetname;
 
+# Wait for server to restart fully
+sleep(5);
+
 # Get list of available targets on host from server
 my $targets = &remote_foreign_call($vhost, "iscsi-client",
 				   "list_iscsi_targets", $ip);
