@@ -415,7 +415,8 @@ if ($serial) {
 $vhost = &get_parent_server($server);
 if ($image) {
 	$img = &get_server_image($image);
-	print "Copying system image files to host system $vhost->{'host'} ..\n";
+	$copyserver = &get_transfer_image_dest($server);
+	print "Copying system image files to $copyserver->{'host'} ..\n";
 	($imageok, $imagetemp, $imagehost) = &transfer_image_files($server);
 	if ($imageok == 0) {
 		print ".. failed : $imagetemp\n";

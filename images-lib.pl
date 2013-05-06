@@ -253,10 +253,31 @@ return (0, $err) if ($err);
 return (1, $temp);
 }
 
+# get_transfer_image_dest(&server)
+# Returns the object for the system to which the image should be transferred
+sub get_transfer_image_dest
+{
+my ($server) = @_;
+my $sid = $server->{$server->{'manager'}.'_force_iscsi'};
+if ($sid eq '') {
+	$sid = $server->{$server->{'manager'}.'_filesystem_iscsi'};
+	}
+if ($sid eq '') {
+	my $vhost = &get_parent_server($server);
+	return $vhost;
+	}
+else {
+	my $iscsiserver = &get_managed_server($sid);
+	return $iscsiserver;
+	}
+}
+
 # transfer_image_files(&server, [show-progress-dots])
 # Transfers all files for some system's image to a parent host, and returns
 # a success flag (0=failed, 1=transferred, 2=not needed, 3=in cache, 4=
-# transferred to cache) the path to the temp directory created for them.
+# transferred to cache), path to the temp directory created for them, the
+# server object the image was copied from, and the server the image was copied
+# to (usually the vhost, but maybe the iSCSI server).
 sub transfer_image_files
 {
 my ($server, $progress) = @_;
@@ -268,15 +289,19 @@ $img || return (0, "Could not find image with ID $server->{'image'}");
 my @files = split(/\s+/, $img->{'files'});
 my @md5s = split(/\s+/, $img->{'md5'});
 
+# Work out which system the image should be copied to.
+my $copyserver = &get_transfer_image_dest($server);
+$copyserver || return (0, "No image copy destination found!");
+
 # Check if the host has image caching enabled, and if we have the image
 # already
 my $prefix = $server->{'manager'};
 $prefix = "zone" if ($prefix eq "zones");
-my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
+my $cachedir = $copyserver->{$prefix.'_cachedir'} || $images_cache_dir;
 my $imagedir;
-if ($vhost->{$prefix.'_cachesize'}) {
+if ($copyserver->{$prefix.'_cachesize'}) {
 	# Make the directory if needed
-	my $err = &make_dir_on_server($vhost, $cachedir, 0700, 1);
+	my $err = &make_dir_on_server($copyserver, $cachedir, 0700, 1);
 	if ($err) {
 		return (0, "Failed to create cache directory $cachedir : $err");
 		}
@@ -284,11 +309,11 @@ if ($vhost->{$prefix.'_cachesize'}) {
 	# See if we have all the needed files in the cache
 	my $missing = 0;
 	foreach my $f (@files) {
-		my @st = &stat_file_on_server($vhost, "$cachedir/$f");
+		my @st = &stat_file_on_server($copyserver, "$cachedir/$f");
 		$missing++ if (!@st);
 		}
 	if (!$missing &&
-	    !&verify_image_md5s($vhost, $cachedir, \@files, \@md5s)) {
+	    !&verify_image_md5s($copyserver, $cachedir, \@files, \@md5s)) {
 		# Failed MD5 check
 		$missing++;
 		}
@@ -297,24 +322,24 @@ if ($vhost->{$prefix.'_cachesize'}) {
 		# files to indicate most recent use
 		foreach my $f (@files) {
 			&execute_command_on_server(
-				$vhost, "touch ".quotemeta("$cachedir/$f"));
+			    $copyserver, "touch ".quotemeta("$cachedir/$f"));
 			}
-		return (3, $cachedir, $vhost);
+		return (3, $cachedir, $copyserver, $copyserver);
 		}
 
 	# No, need to transfer to the cache
 	$imagedir = $cachedir;
 
 	# If cache is too big, clean up some files first
-	my $maxsize = $vhost->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
-	my $err = &cleanup_cache_dir($vhost, $cachedir,
+	my $maxsize = $copyserver->{$prefix.'_cachesize'} * 1024 * 1024 * 1024;
+	my $err = &cleanup_cache_dir($copyserver, $cachedir,
 					$maxsize, $img->{'size'});
 	return (0, $err) if ($err);
 	}
 else {
 	# Choose a temp dir that we transfer to
 	my ($tempok, $temp) = &create_image_files_tempdir(
-					$vhost, $img->{'id'});
+					$copyserver, $img->{'id'});
 	return (0, $temp) if (!$tempok);
 	$imagedir = $temp;
 	}
@@ -323,19 +348,20 @@ else {
 my @dests;
 foreach my $dstr (split(/\s+/, $img->{'dest'})) {
 	my ($destserver, $destpath) = &get_image_dest_path($dstr);
-	if ($destserver->{'id'} eq $vhost->{'id'}) {
+	if ($destserver->{'id'} eq $copyserver->{'id'}) {
 		# Already got it!
 		my $missing = 0;
 		foreach my $f (@files) {
-			my @st = &stat_file_on_server($vhost, "$destpath/$f");
+			my @st = &stat_file_on_server(
+				$copyserver, "$destpath/$f");
 			$missing++ if (!@st);
 			}
 		if (!$missing) {
-			return (2, $destpath, $destserver);
+			return (2, $destpath, $destserver, $copyserver);
 			}
 		}
 	push(@dests, [ $destserver, $destpath,
-			&distance_from_server($vhost, $destserver) ]);
+			&distance_from_server($copyserver, $destserver) ]);
 	}
 
 # Sort by distance, closest first, then try in that order
@@ -352,7 +378,7 @@ foreach my $sp (@dests) {
 		my $outtemp = &tempname();
 		if (!$pid) {
 			my $err = &transfer_file_between_servers(
-					$destserver, $vhost,
+					$destserver, $copyserver,
 					$path, "$imagedir/$f", 0, 1);
 			open(OUT, ">$outtemp");
 			print OUT $err;
@@ -384,10 +410,10 @@ if ($lasterr) {
 	return (0, $lasterr);
 	}
 elsif ($cachedir eq $imagedir) {
-	return (4, $imagedir, $lastserver);
+	return (4, $imagedir, $lastserver, $copyserver);
 	}
 else {
-	return (1, $imagedir, $lastserver);
+	return (1, $imagedir, $lastserver, $copyserver);
 	}
 }
 
@@ -436,10 +462,9 @@ sub cleanup_image_files
 {
 my ($server, $temp) = @_;
 return if (!$temp);
-my $pfunc = "type_".$server->{'manager'}."_parent";
-my $vhost = &$pfunc($server);
-$vhost || return "Could not find parent system";
-my ($out, $ex, $err) = &execute_command_on_server($vhost,
+my $copyserver = &get_transfer_image_dest($server);
+$copyserver || return "Could not find image destination system";
+my ($out, $ex, $err) = &execute_command_on_server($copyserver,
 				"rm -rf ".quotemeta($temp));
 return $err ? $err : $ex ? $out : undef;
 }

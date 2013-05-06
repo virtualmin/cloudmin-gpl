@@ -179,6 +179,7 @@ else {
 	$err && return "Failed to create file $real : $err";
 	}
 $server->{'iscsi_disk_count'}++;
+$disk->{'iscsi_real'} = $real;
 
 # Export via iSCSI
 my $targetname;

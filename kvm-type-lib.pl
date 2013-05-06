@@ -1510,6 +1510,7 @@ elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
 		$server->{'kvm_filesystem_iscsi_target'} = $disk->{'iscsi_target'};
 		$server->{'kvm_filesystem_iscsi_ip'} = $disk->{'iscsi_ip'};
 		$server->{'kvm_filesystem_iscsi_port'} = $disk->{'iscsi_port'};
+		$server->{'kvm_filesystem_iscsi_real'} = $disk->{'iscsi_real'};
 		}
 	}
 
@@ -1579,6 +1580,7 @@ elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
 		$server->{'kvm_swapfile_iscsi_target'} = $disk->{'iscsi_target'};
 		$server->{'kvm_swapfile_iscsi_ip'} = $disk->{'iscsi_ip'};
 		$server->{'kvm_swapfile_iscsi_port'} = $disk->{'iscsi_port'};
+		$server->{'kvm_swapfile_iscsi_real'} = $disk->{'iscsi_real'};
 		}
 	}
 
@@ -1636,6 +1638,7 @@ if ($empty) {
 
 # Add CD to list of disks
 my $imgdestfile;
+my $copyserver = $vhost;	# Where the image is at
 if ($empty && $server->{'image'}) {
 	# CD will be copied to a new file
 	$imgdestfile = "$kvm_dir/$server->{'host'}.cd";
@@ -1651,7 +1654,16 @@ elsif ($empty && !$server->{'image'}) {
 	$server->{'kvm_bootdevice'} = 'd';
 	}
 else {
-	$imgdestfile = $fsfile;
+	# Copying image to first drive on the system
+	$copyserver = &get_transfer_image_dest($server);
+	if ($copyserver->{'id'} eq $vhost->{'id'}) {
+		# Copy to disk image file on the host
+		$imgdestfile = $fsfile;
+		}
+	else {
+		# Copy to the underlying iSCSI disk file
+		$imgdestfile = $server->{'kvm_filesystem_iscsi_real'};
+		}
 	$server->{'kvm_bootdevice'} = 'c';
 	}
 
@@ -1666,7 +1678,7 @@ if ($imgdestfile) {
 		my $writer = $imgdestfile =~ /^\/dev\// ?
 			"| ".&dd_command(undef, $imgdestfile) :
 			"> ".quotemeta($imgdestfile);
-		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		my ($out, $ex, $err) = &execute_command_on_server($copyserver,
 			"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
 			" echo SERVER-MANAGER-COMPLETE ||".
 			" echo SERVER-MANAGER-FAILED)".
@@ -1686,7 +1698,8 @@ if ($imgdestfile) {
 			}
 		$cmd = "($cmd && echo SERVER-MANAGER-COMPLETE || ".
 		       "echo SERVER-MANAGER-FAILED) >$temp 2>&1 </dev/null &";
-		my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$copyserver, $cmd);
 		}
 	}
 
@@ -1700,6 +1713,7 @@ sub type_kvm_create_done
 {
 my ($server) = @_;
 my $vhost = &type_kvm_parent($server);
+my $copyserver = $empty ? $vhost : &get_transfer_image_dest($server);
 if (!$server->{'kvm_temp'}) {
 	# No image creation was needed (as we are using a CD already on
 	# the host)
@@ -1707,16 +1721,16 @@ if (!$server->{'kvm_temp'}) {
 	}
 
 # Read the gzip output file
-my $data = &get_file_data_from_server($vhost, $server->{'kvm_temp'});
+my $data = &get_file_data_from_server($copyserver, $server->{'kvm_temp'});
 if ($data =~ /SERVER-MANAGER-FAILED/) {
 	$data =~ s/SERVER-MANAGER-FAILED\n//;
-	&execute_command_on_server($vhost,
+	&execute_command_on_server($copyserver,
 		"rm -f ".quotemeta($server->{'kvm_temp'}));
 	delete($server->{'kvm_temp'});
 	return "Failed to extract filesystem : $data";
 	}
 elsif ($data =~ /SERVER-MANAGER-COMPLETE/) {
-	&execute_command_on_server($vhost,
+	&execute_command_on_server($copyserver,
 		"rm -f ".quotemeta($server->{'kvm_temp'}));
 	delete($server->{'kvm_temp'});
 	return "OK";
@@ -1757,6 +1771,21 @@ my @setgws6 = grep { $_ ne "*" } @gws6;
 if (!@setgws6 && $defgw6) {
 	@gws6 = ( $defgw6 );
 	}
+
+# If root disk is on iSCSI, disconnect and re-connect
+my $disks = &type_kvm_list_disks($server, 0);
+if (ref($disks) && $disks->[0]->{'iscsi_server'} ne '') {
+	&$first_print($text{'create_iscsireconnect'});
+	&disconnect_iscsi_disk($server, $disks->[0]);
+	my $err = &connect_iscsi_disk($server, $disks->[0]);
+	if ($err) {
+		&$second_print(&text('create_eiscsireconnect', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
 
 # Fix root disk device to match virtio mode
 my $wantdev = $server->{'kvm_virtio'} ? "/dev/vda" : "/dev/hda";

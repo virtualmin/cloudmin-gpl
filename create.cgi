@@ -225,8 +225,9 @@ if ($serial) {
 # If there is an image file, copy to the server
 $vhost = &get_parent_server($server);
 if ($in{'image'}) {
+	$copyserver = &get_transfer_image_dest($server);
 	print &text('create_copying', &nice_size($img->{'size'}),
-				      $vhost->{'host'});
+				      $copyserver->{'host'});
 	($imageok, $imagetemp) = &transfer_image_files($server, 1);
 	print "<br>\n";
 	if ($imageok == 0) {

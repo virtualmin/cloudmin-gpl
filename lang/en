@@ -616,6 +616,8 @@ create_ekvmcores=Missing or non-numeric number of cores per socket
 create_ekvmcores2=Number of cores cannot be greater than the number of virtual CPUs
 create_ekvmcores3=Number of CPUs must be a multiple of the number of cores
 create_einprogress=You already have another system creation in progress
+create_iscsireconnect=Refreshing iSCSI connection ..
+create_eiscsireconnect=.. re-connection failed : $1
 
 keys_title=SSH Keys
 keys_desc=Key description
