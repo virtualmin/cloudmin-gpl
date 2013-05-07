@@ -275,6 +275,7 @@ elsif ($mod eq "iscsi-target") {
 		    'value' => $host.":".$targetname,
                     'members' => [ ] };
 	my $type = $real =~ /^\/dev\// ? 'blockio' : 'fileio';
+	$type = "fileio";
 	push(@{$target->{'members'}},
 	     { 'name' => 'Lun',
 	       'value' => '1 Type='.$type.',Path='.$real });
@@ -300,7 +301,7 @@ elsif ($mod eq "iscsi-target") {
 $disk->{'iscsi_target'} = $targetname;
 
 # Wait for server to restart fully
-sleep(5);
+sleep(10);
 
 # Get list of available targets on host from server
 my $targets = &remote_foreign_call($vhost, "iscsi-client",

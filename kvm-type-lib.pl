@@ -1706,12 +1706,12 @@ if ($imgdestfile) {
 return undef;
 }
 
-# type_kvm_create_done(&server)
+# type_kvm_create_done(&server, [empty])
 # Checks if the filesystem gunzip is complete, and returns OK if so.
 # Returns undef if still running, or an error message on failure.
 sub type_kvm_create_done
 {
-my ($server) = @_;
+my ($server, $empty) = @_;
 my $vhost = &type_kvm_parent($server);
 my $copyserver = $empty ? $vhost : &get_transfer_image_dest($server);
 if (!$server->{'kvm_temp'}) {
