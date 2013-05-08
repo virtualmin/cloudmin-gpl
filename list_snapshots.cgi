@@ -76,7 +76,7 @@ print &ui_table_row($text{'snapshots_snapid'},
 	&ui_textbox("snapid", undef, 20));
 
 # Percent of VM disk to allocate
-print &ui_table_row($text{'snapshots_percent'},
+print &ui_table_row($text{'snapshots_newpercent'},
 	&ui_textbox("percent", 20, 4)."% ".$text{'snapshots_of'}." ".
 	&nice_size($total));
 
