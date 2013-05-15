@@ -9978,6 +9978,27 @@ my $func = "${pkg}::$_[1]";
 return defined(&$func);
 }
 
+# list_plugin_sections(level)
+# Returns a list of right-frame sections defined by Virtualmin plugins.
+# Level 0 = master admin, 4 = system owner
+sub list_plugin_sections
+{
+local ($level) = @_;
+local $want = $level == 0 ? "for_master" : "for_owner";
+local @rv;
+foreach my $p (@plugins) {
+        if (&plugin_defined($p, "theme_sections")) {
+                foreach my $s (&plugin_call($p, "theme_sections")) {
+                        if ($s->{$want}) {
+                                $s->{'plugin'} = $p;
+                                push(@rv, $s);
+                                }
+                        }
+                }
+        }
+return @rv;
+}
+
 # strip_html_tags(html)
 # Removes all HTML tags from a string, returning plain text
 sub strip_html_tags

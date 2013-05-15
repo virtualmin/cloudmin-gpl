@@ -3371,6 +3371,7 @@ plugins_none=No available Cloudmin plugins were found on your system.
 plugins_prov=Provides
 plugins_server_actions=System-level link
 plugins_settings_links=Global setting
+plugins_theme_sections=System information section
 plugins_noacts=None
 plugins_err=Failed to save plugins
 plugins_echeck=$1 cannot be enabled : $2

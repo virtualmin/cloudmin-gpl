@@ -14,7 +14,8 @@ foreach $minfo (&get_all_module_infos()) {
 
 		# What does this plugin provide?
 		@prov = ( );
-		foreach my $f ("server_actions", "settings_links") {
+		foreach my $f ("server_actions", "settings_links",
+			       "theme_sections") {
 			if (&plugin_defined($minfo->{'dir'}, $f)) {
 				push(@prov, $text{'plugins_'.$f});
 				}
