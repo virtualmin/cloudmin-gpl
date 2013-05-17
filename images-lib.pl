@@ -1350,7 +1350,9 @@ foreach my $f ("messages", "auth.log", "secure", "daemon.log", "syslog",
 	       "wtmp", "dpkg.log", "anaconda.log", "boot.log", "cron",
 	       "faillog", "freshclam.log", "maillog", "mail.*", "mysqld.log",
 	       "rpmpkgs", "xferlog", "yum.log") {
-	&delete_file_on_server($server, "$logdir/$f", 1);
+	if (!&is_dir_on_server($server, "$logdir/$f")) {
+		&delete_file_on_server($server, "$logdir/$f", 1);
+		}
 	}
 
 # Clear rotated logs
