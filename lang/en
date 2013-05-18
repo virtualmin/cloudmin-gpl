@@ -2796,6 +2796,7 @@ owner_action_reset=Reset from image
 owner_action_create=Create systems
 owner_action_delete=Delete systems
 owner_action_limits=Edit RAM and CPU limits
+owner_action_vcpus=Manage virtual CPUs
 owner_action_disks=Manage disks
 owner_action_devices=Add files or devices as disks
 owner_action_add=Add existing systems
