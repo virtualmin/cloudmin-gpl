@@ -2427,7 +2427,7 @@ if (!$noping) {
 	}
 
 # Wait for SSH to come up
-if ($pinged && !$server->{'ssh_nologin'}) {
+if (defined($pinged) && $pinged && !$server->{'ssh_nologin'}) {
 	$sshed = &wait_for_ssh($server);
 	}
 
