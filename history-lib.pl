@@ -144,7 +144,8 @@ else {
 
 # Add network traffic in and out in bytes / second, taken from the last minute
 # sample (unless more than 1 hour old)
-if ($config{'bw_enabled'}) {
+if ($config{'bw_enabled'} &&
+    $server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 	my $bwinfo = &get_bandwidth($server);
 	if ($bwinfo->{'new_min'} &&
 	    $time - $bwinfo->{'new_min'} < 3600) {
