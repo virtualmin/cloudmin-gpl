@@ -5262,6 +5262,8 @@ s3_einfo=Failed to upload information file : $1
 s3_edom=Failed to upload domain file : $1
 s3_elist2=Failed to list S3 bucket : $1
 s3_einfo2=Failed to read $1 : $2
+s3_eputacl=Failed to save bucket ACL : $1
+s3_eputlifecycle=Failed to save bucket lifecycle : $1
 
 snapshot_evmtype=Only Xen and KVM systems support snapshots
 snapshot_enohost=A system whose host is down cannot be snapshotted
