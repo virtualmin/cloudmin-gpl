@@ -1438,6 +1438,79 @@ if ($reset && $server->{'kvm_filesystem_vg'}) {
 			 $_->{'name'} eq $server->{'kvm_swapfile_lv'} } @lvs;
 	}
 
+# Create swap LV or iSCSI target
+$last_remote_error = undef;
+if ($server->{'kvm_swapfile_vg'}) {
+	# Create swap LV
+        my $lv = { 'name' => $server->{'kvm_swapfile_lv'},
+                   'size' => int($server->{'kvm_swap'}*1024),
+                   'perm' => 'rw',
+                   'alloc' => 'n',
+                   'vg' => $server->{'kvm_swapfile_vg'} };
+	if (!$swaplv || !&size_close_enough($swaplv->{'size'}, $lv->{'size'})) {
+                # Only delete and re-create if an old LV with close enough to
+                # the same size doesn't exist
+                if ($reset && $swlv) {
+                        # Delete the old LV
+                        &delete_all_disk_image_partitions($vhost, $swfile);
+			&delete_mapper_entries(
+				$vhost, $lv->{'vg'}, $lv->{'name'});
+                        my $err = &remote_foreign_call($vhost, "lvm",
+                                             "delete_logical_volume",
+                                             { 'device' => $swfile });
+                        $err ||= $last_remote_error;
+                        return "LVM logical volume deletion failed : $err"
+                                if ($err);
+                        }
+                my $err = &remote_foreign_call($vhost, "lvm",
+                                                "create_logical_volume", $lv);
+                $err ||= $last_remote_error;
+                return "LVM logical volume creation for swap failed : $err"
+                        if ($err);
+                }
+        }
+elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
+	# Create iSCSI disk for swap
+	my $disk = { 'size' => $server->{'kvm_swap'}*1024*1024,
+		     'iscsi_server' => $server->{'kvm_swapfile_iscsi'},
+		   };
+	my $keep_disk = 0;
+	if ($reset) {
+		# If resettting, disk already exists .. fill in object
+		# with info from VM
+		$disk->{'iscsi_name'} = $server->{'kvm_swapfile_iscsi_name'};
+		$disk->{'iscsi_target'} = $server->{'kvm_swapfile_iscsi_target'};
+		$disk->{'iscsi_ip'} = $server->{'kvm_swapfile_iscsi_ip'};
+		$disk->{'iscsi_port'} = $server->{'kvm_swapfile_iscsi_port'};
+		$disk->{'iscsi_connect'} = -1;	# May or may not be connected
+
+		# Get info on existing disk on iSCSI server
+		my $iscsiserver = &get_managed_server(
+					$server->{'kvm_swapfile_iscsi'});
+		my $idisk = &get_iscsi_disk_info($iscsiserver, $disk);
+		if (ref($idisk) &&
+		    &size_close_enough($idisk->{'size'}, $disk->{'size'})) {
+			$keep_disk = 1;
+			}
+		}
+	if (!$keep_disk) {
+		# Disk needs to be deleted (if re-setting) and then created
+		# on iSCSI server
+		if ($reset) {
+			my $err = &delete_iscsi_disk($server, $disk);
+			}
+		my $err = &create_iscsi_disk($server, $disk);
+		$err && return "iSCSI swap disk creation failed : $err";
+		$swfile = $disk->{'real'};
+		$server->{'kvm_swapfile_iscsi_name'} = $disk->{'iscsi_name'};
+		$server->{'kvm_swapfile_iscsi_target'} = $disk->{'iscsi_target'};
+		$server->{'kvm_swapfile_iscsi_ip'} = $disk->{'iscsi_ip'};
+		$server->{'kvm_swapfile_iscsi_port'} = $disk->{'iscsi_port'};
+		$server->{'kvm_swapfile_iscsi_real'} = $disk->{'iscsi_real'};
+		}
+	}
+
+# Create filesystem LV or iSCSI target
 $last_remote_error = undef;
 if ($server->{'kvm_filesystem_vg'}) {
 	# If on LVM, create an LV first
@@ -1511,76 +1584,6 @@ elsif ($server->{'kvm_filesystem_iscsi'} ne '') {
 		$server->{'kvm_filesystem_iscsi_ip'} = $disk->{'iscsi_ip'};
 		$server->{'kvm_filesystem_iscsi_port'} = $disk->{'iscsi_port'};
 		$server->{'kvm_filesystem_iscsi_real'} = $disk->{'iscsi_real'};
-		}
-	}
-
-if ($server->{'kvm_swapfile_vg'}) {
-	# Create swap LV
-        my $lv = { 'name' => $server->{'kvm_swapfile_lv'},
-                   'size' => int($server->{'kvm_swap'}*1024),
-                   'perm' => 'rw',
-                   'alloc' => 'n',
-                   'vg' => $server->{'kvm_swapfile_vg'} };
-	if (!$swaplv || !&size_close_enough($swaplv->{'size'}, $lv->{'size'})) {
-                # Only delete and re-create if an old LV with close enough to
-                # the same size doesn't exist
-                if ($reset && $swlv) {
-                        # Delete the old LV
-                        &delete_all_disk_image_partitions($vhost, $swfile);
-			&delete_mapper_entries(
-				$vhost, $lv->{'vg'}, $lv->{'name'});
-                        my $err = &remote_foreign_call($vhost, "lvm",
-                                             "delete_logical_volume",
-                                             { 'device' => $swfile });
-                        $err ||= $last_remote_error;
-                        return "LVM logical volume deletion failed : $err"
-                                if ($err);
-                        }
-                my $err = &remote_foreign_call($vhost, "lvm",
-                                                "create_logical_volume", $lv);
-                $err ||= $last_remote_error;
-                return "LVM logical volume creation for swap failed : $err"
-                        if ($err);
-                }
-        }
-elsif ($server->{'kvm_swapfile_iscsi'} ne '') {
-	# Create iSCSI disk for swap
-	my $disk = { 'size' => $server->{'kvm_swap'}*1024*1024,
-		     'iscsi_server' => $server->{'kvm_swapfile_iscsi'},
-		   };
-	my $keep_disk = 0;
-	if ($reset) {
-		# If resettting, disk already exists .. fill in object
-		# with info from VM
-		$disk->{'iscsi_name'} = $server->{'kvm_swapfile_iscsi_name'};
-		$disk->{'iscsi_target'} = $server->{'kvm_swapfile_iscsi_target'};
-		$disk->{'iscsi_ip'} = $server->{'kvm_swapfile_iscsi_ip'};
-		$disk->{'iscsi_port'} = $server->{'kvm_swapfile_iscsi_port'};
-		$disk->{'iscsi_connect'} = -1;	# May or may not be connected
-
-		# Get info on existing disk on iSCSI server
-		my $iscsiserver = &get_managed_server(
-					$server->{'kvm_swapfile_iscsi'});
-		my $idisk = &get_iscsi_disk_info($iscsiserver, $disk);
-		if (ref($idisk) &&
-		    &size_close_enough($idisk->{'size'}, $disk->{'size'})) {
-			$keep_disk = 1;
-			}
-		}
-	if (!$keep_disk) {
-		# Disk needs to be deleted (if re-setting) and then created
-		# on iSCSI server
-		if ($reset) {
-			my $err = &delete_iscsi_disk($server, $disk);
-			}
-		my $err = &create_iscsi_disk($server, $disk);
-		$err && return "iSCSI swap disk creation failed : $err";
-		$swfile = $disk->{'real'};
-		$server->{'kvm_swapfile_iscsi_name'} = $disk->{'iscsi_name'};
-		$server->{'kvm_swapfile_iscsi_target'} = $disk->{'iscsi_target'};
-		$server->{'kvm_swapfile_iscsi_ip'} = $disk->{'iscsi_ip'};
-		$server->{'kvm_swapfile_iscsi_port'} = $disk->{'iscsi_port'};
-		$server->{'kvm_swapfile_iscsi_real'} = $disk->{'iscsi_real'};
 		}
 	}
 
