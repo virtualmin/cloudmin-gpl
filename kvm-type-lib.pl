@@ -3751,14 +3751,14 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		$server->{'kvm_disktotal'} -= $olddisk->{'size'};
 		$server->{'kvm_disktotal'} += $disk->{'size'};
 		}
+	}
 
-	# If this was the primary disk, adjust initial size
-	if ($disk->{'real'} eq $server->{'kvm_filesystem'}) {
-		$server->{'kvm_disksize'} = $disk->{'size'} / (1024*1024);
-		}
-	if ($disk->{'real'} eq $server->{'kvm_swapfile'}) {
-		$server->{'kvm_swap'} = $disk->{'size'} / (1024*1024);
-		}
+# If this was the primary disk, update disk details in the VM
+if ($olddisk->{'real'} eq $server->{'kvm_filesystem'}) {
+	&set_server_disk_fields($server, $disk, 'filesystem');
+	}
+if ($olddisk->{'real'} eq $server->{'kvm_swapfile'}) {
+	&set_server_disk_fields($server, $disk, 'swapfile');
 	}
 
 if ($disk->{'virt'} ne $olddisk->{'virt'} ||

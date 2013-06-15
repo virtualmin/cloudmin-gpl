@@ -12448,7 +12448,7 @@ return "Failed to create new disk : $err" if ($err);
 # Copy data to it from the old disk
 my $oldreal = $disk->{'real'};
 my $newreal = $newdisk->{'real'};
-my $cmd = &dd_commnad($oldreal, $newreal, $disk->{'size'});
+my $cmd = &dd_command($oldreal, $newreal, $disk->{'size'});
 my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
 $err = $out if ($ex);
 $err && return "Failed to copy data from $oldreal to $newreal : $err";
@@ -12479,12 +12479,12 @@ sub set_server_disk_fields
 my ($server, $disk, $disktype) = @_;
 my $m = $server->{'manager'};
 if ($disktype eq 'filesystem') {
-	$server->{$m.'disksize'} = $disk->{'size'}/(1024*1024);
+	$server->{$m.'_disksize'} = $disk->{'size'}/(1024*1024);
 	}
 else {
-	$server->{$m.'swap'} = $disk->{'size'}/(1024*1024);
+	$server->{$m.'_swap'} = $disk->{'size'}/(1024*1024);
 	}
-$server->{$m.$disktype} = $disk->{'real'};
+$server->{$m.'_'.$disktype} = $disk->{'real'};
 delete($server->{$m.'_'.$disktype.'_vg'});
 delete($server->{$m.'_'.$disktype.'_lv'});
 delete($server->{$m.'_'.$disktype.'_iscsi'});
