@@ -12380,8 +12380,6 @@ if ($dest->{'container'} =~ /\%/) {
 return undef;
 }
 
-
-
 # fsck_all_disks(&server, [only-if-unclean])
 # Checks all the possible disks on some virtual system, and returns the same
 # output as type_*_fsck_disk
@@ -12411,6 +12409,96 @@ foreach my $d (@$disks) {
 		}
 	}
 return ($allok, $allout);
+}
+
+# can_move_disk_storage(&server, &disk)
+# Returns 1 if a system supports disk moves, 0 if not
+sub can_move_disk_storage
+{
+my ($server, $disk) = @_;
+return $server->{'manager'} eq 'xen' ||
+       $server->{'manager'} eq 'kvm';
+}
+
+# move_disk_storage(&server, &disk, &storage)
+# Move the data files for some disk to a different storage location. This can
+# be a regular file, LVM or iSCSI. Also updates the actual disk path.
+# Returns undef on success or an error message on failure.
+sub move_disk_storage
+{
+my ($server, $disk, $storage) = @_;
+my $vhost = &get_parent_server($server);
+$server->{'status'} eq 'down' || return "System is not down";
+
+# Work out where the new disk is going to be
+my $lfunc = "type_".$server->{'manager'}."_list_disks";
+my $disks = &$lfunc($server, 0);
+ref($disks) || return "Failed to list disks : $disks";
+my $nfunc = "type_".$server->{'manager'}."_new_disk";
+my $newdisk = &$nfunc($server, $disks, 0, $storage);
+$newdisk->{'size'} = $disk->{'size'};
+ref($newdisk) || return "Failed to create new disk object : $newdisk";
+my $olddisk = { %$disk };
+
+# Create the LV or iSCSI disk, but without adding to the VM config
+my $cfunc = "type_".$server->{'manager'}."_create_disk";
+my $err = &$cfunc($server, $newdisk, 0, 1);
+return "Failed to create new disk : $err" if ($err);
+
+# Copy data to it from the old disk
+my $oldreal = $disk->{'real'};
+my $newreal = $newdisk->{'real'};
+my $cmd = &dd_commnad($oldreal, $newreal, $disk->{'size'});
+my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
+$err = $out if ($ex);
+$err && return "Failed to copy data from $oldreal to $newreal : $err";
+
+# Update the existing disk in the VM config
+# XXX real
+# XXX iscsi info?
+foreach my $f ("real", "lv", "vg", "iscsi_server", "iscsi_name",
+	       "iscsi_target", "iscsi_ip", "iscsi_port") {
+	$disk->{$f} = $newdisk->{$f};
+	}
+my $mfunc = "type_".$server->{'manager'}."_modify_disk";
+my $err = &$mfunc($server, $disk, $olddisk);
+$err && return "Failed to modify disk : $err";
+
+# Delete the old disk file, LV or iSCSI disk
+my $dfunc = "type_".$server->{'manager'}."_delete_disk";
+my $err = &$dfunc($server, $olddisk, 0, 1, 1);
+$err && return "Failed to remove old disk file : $err";
+
+return undef;
+}
+
+# set_server_disk_fields(&server, &disk, "filesystem"|"swapfile")
+# Sets fields like kvm_filesystem_vg based on the contents of the disk object
+sub set_server_disk_fields
+{
+my ($server, $disk, $disktype) = @_;
+my $m = $server->{'manager'};
+if ($disktype eq 'filesystem') {
+	$server->{$m.'disksize'} = $disk->{'size'}/(1024*1024);
+	}
+else {
+	$server->{$m.'swap'} = $disk->{'size'}/(1024*1024);
+	}
+$server->{$m.$disktype} = $disk->{'real'};
+delete($server->{$m.'_'.$disktype.'_vg'});
+delete($server->{$m.'_'.$disktype.'_lv'});
+delete($server->{$m.'_'.$disktype.'_iscsi'});
+if ($disk->{'lv'}) {
+	$server->{$m.'_'.$disktype.'_vg'} = $disk->{'vg'};
+	$server->{$m.'_'.$disktype.'_lv'} = $disk->{'lv'};
+	}
+elsif ($disk->{'iscsi_server'} ne '') {
+	$server->{$m.'_'.$disktype.'_iscsi'} = $disk->{'iscsi_server'};
+	$server->{$m.'_'.$disktype.'_iscsi_name'} = $disk->{'iscsi_name'};
+	$server->{$m.'_'.$disktype.'_iscsi_target'} = $disk->{'iscsi_target'};
+	$server->{$m.'_'.$disktype.'_iscsi_ip'} = $disk->{'iscsi_ip'};
+	$server->{$m.'_'.$disktype.'_iscsi_port'} = $disk->{'iscsi_port'};
+	}
 }
 
 # dd_command(in, out, [size], [block-size])

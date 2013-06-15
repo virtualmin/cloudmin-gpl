@@ -3187,13 +3187,13 @@ $rv->{'media'} = 'disk';
 return $rv;
 }
 
-# type_kvm_create_disk(&server, &disk)
+# type_kvm_create_disk(&server, &disk, [bootable], [don't-add-to-config])
 # Adds a new virtual disk to a KVM system's config.
 # If this is a real file that doesn't exist yet, create it and optionally mkfs
 # it. Also add to the /etc/fstab file, if requested.
 sub type_kvm_create_disk
 {
-my ($server, $disk) = @_;
+my ($server, $disk, $bootable, $noconfig) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # Fix up virt_mount if virt was changed
@@ -3293,76 +3293,50 @@ else {
 	}
 
 # Add the disk to the KVM config
-my @drives = split(/\s+/, $server->{'kvm_drives'});
-my %drive = ( 'file' => $disk->{'real'},
-	      'media' => $disk->{'media'} || 'disk' );
-if ($disk->{'cache'}) {
-	$drive{'cache'} = $disk->{'cache'};
+if (!$noconfig) {
+	my @drives = split(/\s+/, $server->{'kvm_drives'});
+	my %drive = ( 'file' => $disk->{'real'},
+		      'media' => $disk->{'media'} || 'disk' );
+	if ($disk->{'cache'}) {
+		$drive{'cache'} = $disk->{'cache'};
+		}
+	if ($disk->{'media'} eq 'cdrom') {
+		# CDs must be on IDE
+		$drive{'if'} = 'ide';
+		$disk->{'virt'} =~ s/\/(s|v)d([a-z]+)$/\/hd$2/;
+		}
+	elsif ($disk->{'virt'} =~ /sd[a-z]+$/) {
+		$drive{'if'} = 'scsi';
+		}
+	elsif ($disk->{'virt'} =~ /vd[a-z]+$/) {
+		$drive{'if'} = 'virtio';
+		}
+	else {
+		$drive{'if'} = 'ide';
+		}
+	if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
+		$drive{'index'} = ord($2)-97;
+		}
+	if ($disk->{'mount'} && $disk->{'fs'} eq 'swap') {
+		# Turn off caching for swapfiles
+		$drive{'cache'} = 'off';
+		}
+	push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
+	$server->{'kvm_drives'} = join(" ", @drives);
 	}
-if ($disk->{'media'} eq 'cdrom') {
-	# CDs must be on IDE
-	$drive{'if'} = 'ide';
-	$disk->{'virt'} =~ s/\/(s|v)d([a-z]+)$/\/hd$2/;
-	}
-elsif ($disk->{'virt'} =~ /sd[a-z]+$/) {
-	$drive{'if'} = 'scsi';
-	}
-elsif ($disk->{'virt'} =~ /vd[a-z]+$/) {
-	$drive{'if'} = 'virtio';
-	}
-else {
-	$drive{'if'} = 'ide';
-	}
-if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
-	$drive{'index'} = ord($2)-97;
-	}
-if ($disk->{'mount'} && $disk->{'fs'} eq 'swap') {
-	# Turn off caching for swapfiles
-	$drive{'cache'} = 'off';
-	}
-push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
-$server->{'kvm_drives'} = join(" ", @drives);
 if (!$server->{'kvm_filesystem'} && $drive{'media'} eq 'disk') {
 	# This is the new root disk
-	$server->{'kvm_disksize'} = $disk->{'size'}/(1024*1024);
-	$server->{'kvm_filesystem'} = $drive{'file'};
-	delete($server->{'kvm_filesystem_vg'});
-	delete($server->{'kvm_filesystem_lv'});
-	delete($server->{'kvm_filesystem_iscsi'});
-	if ($disk->{'lv'}) {
-		$server->{'kvm_filesystem_vg'} = $disk->{'vg'};
-		$server->{'kvm_filesystem_lv'} = $disk->{'lv'};
-		}
-	elsif ($disk->{'iscsi_server'} ne '') {
-		$server->{'kvm_filesystem_iscsi'} = $disk->{'iscsi_server'};
-		$server->{'kvm_filesystem_iscsi_name'} = $disk->{'iscsi_name'};
-		$server->{'kvm_filesystem_iscsi_target'} = $disk->{'iscsi_target'};
-		$server->{'kvm_filesystem_iscsi_ip'} = $disk->{'iscsi_ip'};
-		$server->{'kvm_filesystem_iscsi_port'} = $disk->{'iscsi_port'};
-		}
+	&set_server_disk_fields($server, $disk, 'filesystem');
 	}
 if (!$server->{'kvm_swapfile'} && $drive{'media'} eq 'disk' &&
     $disk->{'mount'} && $disk->{'fs'} eq 'swap') {
 	# This is the new swap disk
-	$server->{'kvm_swap'} = $disk->{'size'}/(1024*1024);
-	$server->{'kvm_swapfile'} = $drive{'file'};
-	delete($server->{'kvm_swapfile_vg'});
-	delete($server->{'kvm_swapfile_lv'});
-	delete($server->{'kvm_swapfile_iscsi'});
-	if ($disk->{'lv'}) {
-		$server->{'kvm_swapfile_vg'} = $disk->{'vg'};
-		$server->{'kvm_swapfile_lv'} = $disk->{'lv'};
-		}
-	elsif ($disk->{'iscsi_server'} ne '') {
-		$server->{'kvm_swapfile_iscsi'} = $disk->{'iscsi_server'};
-		$server->{'kvm_swapfile_iscsi_name'} = $disk->{'iscsi_name'};
-		$server->{'kvm_swapfile_iscsi_target'} = $disk->{'iscsi_target'};
-		$server->{'kvm_swapfile_iscsi_ip'} = $disk->{'iscsi_ip'};
-		$server->{'kvm_swapfile_iscsi_port'} = $disk->{'iscsi_port'};
-		}
+	&set_server_disk_fields($server, $disk, 'swapfile');
 	}
-&save_managed_server($server);
-&type_kvm_set_atboot($server, 2);
+if (!$noconfig) {
+	&save_managed_server($server);
+	&type_kvm_set_atboot($server, 2);
+	}
 
 # Add block device on server now
 my $attacherr;
@@ -3387,7 +3361,8 @@ if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
 	}
 
 # Add to total disk size
-if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
+if (!$noconfig && $server->{'kvm_disktotal'} ne '' &&
+    (!$disk->{'device'} || $disk->{'lv'})) {
 	$server->{'kvm_disktotal'} += $disk->{'size'};
 	}
 
@@ -3440,13 +3415,14 @@ if ($disk->{'mount'} && &can_ssh_status($server) && !$attacherr) {
 return $fserr;
 }
 
-# type_kvm_delete_disk(&server, &disk, [detach-only], [leave-fstab])
+# type_kvm_delete_disk(&server, &disk, [detach-only], [leave-fstab],
+# 		       [don't-update-config])
 # Removes a disk from the KVM configuration, the system's fstab file, and
 # deletes the underlying config file. The disk object must come from a call
 # to type_kvm_list_disks with the mount flag set to 1.
 sub type_kvm_delete_disk
 {
-my ($server, $disk, $detach, $nofstab) = @_;
+my ($server, $disk, $detach, $nofstab, $noconfig) = @_;
 my $vhost = &type_kvm_parent($server);
 
 # Actually un-mount if mounted
@@ -3501,24 +3477,27 @@ if ($disk->{'lv'} && !$detach && $server->{'status'} ne 'down') {
 	}
 
 # Remove from the KVM config
-my @drives = split(/\s+/, $server->{'kvm_drives'});
-splice(@drives, $disk->{'drive_index'}, 1);
-$server->{'kvm_drives'} = join(" ", @drives);
+if (!$noconfig) {
+	my @drives = split(/\s+/, $server->{'kvm_drives'});
+	splice(@drives, $disk->{'drive_index'}, 1);
+	$server->{'kvm_drives'} = join(" ", @drives);
 
-# Main drive has been removed, so remove reference to it in config
-if ($server->{'kvm_filesystem'} eq $disk->{'real'}) {
-	delete($server->{'kvm_filesystem'});
-	}
-if ($server->{'kvm_swapfile'} eq $disk->{'real'}) {
-	delete($server->{'kvm_swapfile'});
-	}
+	# Main drive has been removed, so remove reference to it in config
+	if ($server->{'kvm_filesystem'} eq $disk->{'real'}) {
+		delete($server->{'kvm_filesystem'});
+		}
+	if ($server->{'kvm_swapfile'} eq $disk->{'real'}) {
+		delete($server->{'kvm_swapfile'});
+		}
 
-&save_managed_server($server);
-&type_kvm_set_atboot($server, 2);
+	&save_managed_server($server);
+	&type_kvm_set_atboot($server, 2);
 
-# Remove from total disk size
-if ($server->{'kvm_disktotal'} ne '' && (!$disk->{'device'} || $disk->{'lv'})) {
-	$server->{'kvm_disktotal'} -= $disk->{'size'};
+	# Remove from total disk size
+	if ($server->{'kvm_disktotal'} ne '' &&
+	    (!$disk->{'device'} || $disk->{'lv'})) {
+		$server->{'kvm_disktotal'} -= $disk->{'size'};
+		}
 	}
 
 # Remove from fstab
