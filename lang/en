@@ -2571,6 +2571,10 @@ disk_overwrite2=Overwrite existing volume?
 disk_include=Include disk in backups?
 disk_changerusure=The disk mounted on $1 cannot be modified while the system is running. Cloudmin will need to shut it down, apply the change, and start it back up again.
 disk_shutdown=Shutdown and Modify Disk
+disk_mheader=Move disk
+disk_oldstorage=Current storage location
+disk_newstorage=New storage location
+disk_move=Move Now
 
 fsck_title=Check Disk
 fsck_doing=Checking $1 filesystem in $2 ..
