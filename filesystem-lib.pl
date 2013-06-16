@@ -929,13 +929,16 @@ foreach my $dir (@availdirs) {
 return $lasterr;
 }
 
-# directory_selector(type, [value])
+# directory_selector(type, [value], [exclude-default])
 # Returns a field for choosing a disk image directory chooser for some system
 # type. May return undef if there are no choices.
 sub directory_selector
 {
-my ($manager, $value) = @_;
+my ($manager, $value, $nodef) = @_;
 my @dirs = &list_available_directories_for_manager($manager);
+if ($nodef) {
+	@dirs = grep { $_->{'dir'} } @dirs;
+	}
 if (@dirs == 1 && $dirs[0]->{'dir'} eq '') {
 	# Just one directory, and it is for the host system default .. so no
 	# need for a selector

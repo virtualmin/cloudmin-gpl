@@ -12439,11 +12439,16 @@ my $newdisk = &$nfunc($server, $disks, 0, $storage);
 $newdisk->{'size'} = $disk->{'size'};
 ref($newdisk) || return "Failed to create new disk object : $newdisk";
 my $olddisk = { %$disk };
+if ($disk->{'real'} eq $newdisk->{'real'}) {
+	return "Old and new disk files are the same : $disk->{'real'}";
+	}
 
 # Create the LV or iSCSI disk, but without adding to the VM config
-my $cfunc = "type_".$server->{'manager'}."_create_disk";
-my $err = &$cfunc($server, $newdisk, 0, 1);
-return "Failed to create new disk : $err" if ($err);
+if ($newdisk->{'lv'} || $newdisk->{'iscsi_server'} ne '') {
+	my $cfunc = "type_".$server->{'manager'}."_create_disk";
+	my $err = &$cfunc($server, $newdisk, 0, 1);
+	return "Failed to create new disk : $err" if ($err);
+	}
 
 # Copy data to it from the old disk
 my $oldreal = $disk->{'real'};
@@ -12454,8 +12459,6 @@ $err = $out if ($ex);
 $err && return "Failed to copy data from $oldreal to $newreal : $err";
 
 # Update the existing disk in the VM config
-# XXX real
-# XXX iscsi info?
 foreach my $f ("real", "lv", "vg", "iscsi_server", "iscsi_name",
 	       "iscsi_target", "iscsi_ip", "iscsi_port") {
 	$disk->{$f} = $newdisk->{$f};

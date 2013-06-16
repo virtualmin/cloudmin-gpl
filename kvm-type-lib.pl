@@ -3144,7 +3144,8 @@ $rv->{'virt_auto'} = $rv->{'virt'};
 
 if (!$device) {
 	my $vhost = &type_kvm_parent($server);
-	my $kvm_dir = $server->{'new_directory'} || $vhost->{'kvm_dir'};
+	my $kvm_dir = ($storage ? $storage->{'directory'} : undef) ||
+		      $server->{'new_directory'} || $vhost->{'kvm_dir'};
 	my $vg;
 	my $iscsi;
 	if ($storage) {
@@ -3780,7 +3781,12 @@ if ($disk->{'virt'} ne $olddisk->{'virt'} ||
 	if ($disk->{'media'}) {
 		$drive{'media'} = $disk->{'media'};
 		}
-	$drive{'cache'} = $disk->{'cache'};
+	if ($disk->{'cache'}) {
+		$drive{'cache'} = $disk->{'cache'};
+		}
+	else {
+		delete($drive{'cache'});
+		}
 	if ($disk->{'real'}) {
 		$drive{'file'} = $disk->{'real'};
 		}

@@ -129,6 +129,7 @@ else {
 	if ($disk->{'lv'} && $disk->{'real'} =~ /^\/dev\/(\S+)\/(\S+)$/) {
 		$realsel = "<tt>$2</tt>";
 		$txt = 'disk_reallvm';
+		print &ui_table_row($text{'disk_realvg'}, "<tt>$1</tt>");
 		}
 	else {
 		$realsel = "<tt>$disk->{'real'}</tt>";
@@ -377,9 +378,14 @@ if (&can_action($server, "storage") && &can_move_disk_storage($server, $disk) &&
 		$disk->{'storage'});
 
 	# New storage
-	print &ui_table_row($text{'disk_newstorage'},
-		&ui_select("storage", $disk->{'storage_id'},
-		   [ map { [ $_->{'id'}, $_->{'desc'} ] } @$storages ]));
+	print &ui_table_row($text{'disk_newdest'},
+	    &ui_radio_table("storage_mode", 0,
+		[ [ 0, $text{'disk_newstorage'},
+		    &ui_select("storage", $disk->{'storage_id'},
+		        [ map { [ $_->{'id'}, $_->{'desc'} ] } @$storages ]) ],
+		  [ 1, $text{'disk_newdirectory'},
+		    &directory_selector($server->{'manager'}, 0, 1) ||
+		    "<i>$text{'disk_nodirectories'}</i>" ] ]));
 
 	print &ui_table_end();
 	print &ui_form_end([ [ undef, $text{'disk_move'} ] ]);

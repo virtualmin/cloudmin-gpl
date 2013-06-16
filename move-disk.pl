@@ -4,12 +4,24 @@
 
 Move a virtual disk to a new storage location.
 
-XXX
+This command moves a single virtual disk from the system chose with the 
+C<--host> parameter to a new storage location. The disk to move can be chosen
+either with the C<--virt> parameter (followed by a device on the system), 
+C<--real> followed by the path on the host, or C<--lv> followed by a logical
+volume name.
+
+The destination is set using with C<--new-storage> parameter, followed by
+a storage ID as shown by the C<list-disk-storages> command. This is typically
+either C<files> or C<lvm_> followed by a volume group name.
+
+Alterately, you can force a move to a specific disk image directory with the
+C<--new-directory> flag followed by a path.
 
 =head1 Example usage
 
-  cloudmin move-disk --host xencentos.home --new-storage /mnt/disk2
-  XXX
+  cloudmin move-disk --host xencentos.home --virt /dev/hda --new-storage files
+  Moving virtual disk for /dev/hda to files ..
+  .. done
 
 =cut
 
@@ -39,9 +51,6 @@ while(@ARGV > 0) {
 	elsif ($a eq "--real") {
 		$real = shift(@ARGV);
 		}
-	elsif ($a eq "--mount") {
-		$mount = shift(@ARGV);
-		}
 	elsif ($a eq "--lv") {
 		$lv = shift(@ARGV);
 		}
@@ -51,36 +60,50 @@ while(@ARGV > 0) {
 	elsif ($a eq "--new-storage") {
 		$storageid = shift(@ARGV);
 		}
+	elsif ($a eq "--new-directory") {
+		$directory = shift(@ARGV);
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
 	}
 
 # Validate parameters
-$real || $virt || $lv || $mount ||
+$real || $virt || $lv ||
 	&usage("The disk to move must be identified by the ".
-	       "--real, --virt, --mount or --lv parameters");
-$storageid || &usage("Missing --new-storage parameter");
+	       "--real, --virt or --lv parameters");
+$storageid || $directory ||
+	&usage("Missing --new-storage or --new-directory parameters");
 
 # Get the server
 $host || &usage("Missing --host parameter");
 $server = &get_managed_server_by("host", $host);
 $server || &usage("System with hostname $host does not exist");
 &can_action_usage($server, "disks");
+&can_action_usage($server, "storages");
 &obtain_lock_server($server);
 $server->{'status'} eq 'down' || &usage("Only systems that are down can have ".
 					"their disk moved");
 
-# Get the storage
-$sfunc = "type_".$server->{'manager'}."_list_storages";
-$vhost = &get_parent_server($server);
-$storages = &$sfunc($vhost, $server);
-ref($storages) || &usage("Failed to list storages : $storages");
-($storage) = grep { $_->{'id'} eq $storageid } @$storages;
-$storage || &usage("No storage with ID $storageid found. Valid IDs are : ".
-		   join(" ", map { $_->{'id'} } @$storages));
-$disk->{'storage_id'} eq $storage->{'id'} &&
-	&usage("This disk is already using storage $storageid");
+if ($storageid) {
+	# Get the storage
+	$sfunc = "type_".$server->{'manager'}."_list_storages";
+	$vhost = &get_parent_server($server);
+	$storages = &$sfunc($vhost, $server);
+	ref($storages) || &usage("Failed to list storages : $storages");
+	($storage) = grep { $_->{'id'} eq $storageid } @$storages;
+	$storage || &usage("No storage with ID $storageid found. Valid IDs ".
+			   "are : ".join(" ", map { $_->{'id'} } @$storages));
+	}
+else {
+	# Fake one up
+	@directories = &list_directories();
+	($dir) = grep { $_->{'dir'} eq $directory } @directories;
+	$dir || &usage("Directory $directory is not on the disk ".
+		       "image directories list");
+	$storage = { 'id' => 'files',
+		     'directory' => $directory };
+	}
 
 # Get the current disks
 $dfunc = "type_".$server->{'manager'}."_list_disks";
@@ -101,16 +124,16 @@ elsif ($lv) {
 	($disk) = grep { $_->{'lv'} eq $lv } @$disks;
 	$disk || &usage("No disk for the LVM logical volume $lv was found");
 	}
-elsif ($mount) {
-	($disk) = grep { $_->{'mount'} eq $mount } @$disks;
-	$disk || &usage("No disk for the mount point $mount was found");
-	}
 else {
 	($disk) = grep { $_->{'virt'} eq $virt } @$disks;
 	$disk || &usage("No disk mapped to the virtual device $virt was found");
 	}
 &can_move_disk_storage($server, $disk) ||
 	&error("Disk moves are not supported on this system");
+if ($storageid) {
+	$disk->{'storage_id'} eq $storage->{'id'} &&
+		&usage("This disk is already using storage $storageid");
+	}
 
 # Do it
 &$first_print("Moving virtual disk for $disk->{'virt'} to $storage->{'id'} ..");
