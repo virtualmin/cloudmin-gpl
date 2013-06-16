@@ -2580,6 +2580,16 @@ disk_newdirectory=Disk image directory
 disk_move=Move Now
 disk_nodirectories=None defined yet
 
+movedisk_err=Failed to move disk
+movedisk_ecannot=Disks on this system cannot be moved!
+movedown_edown=Disks can only be moved when the system is down
+movedisk_estorage=Selected storage does not exist!
+movedisk_edirectory=Selected directory does not exist!
+movedisk_esame=The disk image is already in the selected storage location
+movedisk_title=Move Disk
+movedisk_doings=Moving disk for $1 to storage $2 ..
+movedisk_doingd=Moving disk for $1 to directory $2 ..
+
 fsck_title=Check Disk
 fsck_doing=Checking $1 filesystem in $2 ..
 fsck_ok=.. no errors found
@@ -3890,6 +3900,7 @@ log_detach_disk=Detached disk <tt>$2</tt> for system $1
 log_modify_disk=Modified disk <tt>$2</tt> for system $1
 log_schedule_disk=Scheduled resize of disk <tt>$2</tt> for system $1
 log_unschedule_disk=De-scheduled resize of disk <tt>$2</tt> for system $1
+log_move_disk=Changed storage location of disk <tt>$2</tt> for system $1
 log_delete_disks=Deleted disks <tt>$2</tt> for system $1
 log_create_iface=Created network interface <tt>$2</tt> on system $1
 log_modify_iface=Modified network interface <tt>$2</tt> on system $1

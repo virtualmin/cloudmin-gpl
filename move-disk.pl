@@ -136,7 +136,12 @@ if ($storageid) {
 	}
 
 # Do it
-&$first_print("Moving virtual disk for $disk->{'virt'} to $storage->{'id'} ..");
+if ($storageid) {
+	&$first_print("Moving virtual disk for $disk->{'virt'} to $storage->{'id'} ..");
+	}
+else {
+	&$first_print("Moving virtual disk for $disk->{'virt'} to $directory ..");
+	}
 $err = &move_disk_storage($server, $disk, $storage);
 &save_managed_server($server);
 &release_lock_server($server);

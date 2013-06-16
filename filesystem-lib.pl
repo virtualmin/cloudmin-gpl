@@ -744,7 +744,16 @@ my ($vhost, $real, $pnum) = @_;
 my $parts = &list_disk_image_partitions($vhost, $real);
 ref($parts) || return (0, "Failed to list partitions : $parts");
 if (!defined($pnum)) {
-	$pnum = scalar(@$parts);
+	# No partition number given, assume last non-swap
+	for(my $i=0; $i<@$parts; $i++) {
+		if ($parts->[$i]->{'type'} ne '82') {
+			$pnum = $i + 1;
+			}
+		}
+	if (!defined($pnum)) {
+		# Fall back to last one
+		$pnum = scalar(@$parts);
+		}
 	}
 my $part = $parts->[$pnum-1];
 my $loop = &get_loop_device($vhost);
