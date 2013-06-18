@@ -2229,6 +2229,7 @@ sub type_kvm_shutdown
 {
 my ($server, $force) = @_;
 my $vhost = &type_kvm_parent($server);
+delete($kvm_check_login_procs_cache{$vhost->{'id'}});
 
 # Remove all anti-spoof firewall rules
 my $ifaces = &type_kvm_list_interfaces($server, 1);
@@ -2313,6 +2314,7 @@ if ($server->{'ssh_nologin'} && $server->{'ssh_noping'}) {
 	$noping = 1;
 	}
 my $vhost = &type_kvm_parent($server);
+delete($kvm_check_login_procs_cache{$vhost->{'id'}});
 my $cmd = &get_kvm_start_command($server, undef, $extra);
 my ($pinged, $sshed);
 
@@ -5956,6 +5958,8 @@ my (@delfiles, @dellvs);
 my $old_kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 my $new_kvm_dir = (defined($directory) ? $directory : $server->{'directory'}) ||
 		  $dest->{'kvm_dir'};
+delete($kvm_check_login_procs_cache{$vhost->{'id'}});
+delete($kvm_check_login_procs_cache{$dest->{'id'}});
 
 # If virtual system disks are on iSCSI, make sure the dest vhost is using
 # the same iSCSI server
@@ -6968,6 +6972,8 @@ sub type_kvm_clone_system
 my ($oldserver, $newserver, $newhost, $ips, $snapshot, $dest, $ips6) = @_;
 my $vhost = &type_kvm_parent($newserver);
 $dest ||= $vhost;
+delete($kvm_check_login_procs_cache{$vhost->{'id'}});
+delete($kvm_check_login_procs_cache{$dest->{'id'}});
 my $old_kvm_dir = $oldserver->{'directory'} || $vhost->{'kvm_dir'};
 my $new_kvm_dir = $newserver->{'directory'} || $dest->{'kvm_dir'};
 
