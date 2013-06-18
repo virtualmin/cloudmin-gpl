@@ -70,3 +70,5 @@ Bandwidth data files are now split up into weekly chunks, which reduces the run 
 Virtual systems running FreeBSD can now be managed by Cloudmin in just the same way as Linux systems. This includes IP address assignment, disk creation and deletion, imaging and status monitoring.
 ---- Changes since 7.0 ----
 Added a page and API commands for creating snapshots of virtual systems, and rolling their state back to those snapshots.
+---- Changes since 7.1 ----
+Virtual disks on KVM systems can now be moved to a different directory or LVM volume  group.
