@@ -5150,7 +5150,11 @@ if ($vhost->{'status'} eq 'down' ||
     $vhost->{'status'} eq 'nosshlogin') {
 	return (5, "KVM host $vhost->{'host'} is down");
 	}
-my $procs = &list_kvm_instances($vhost);
+my $procs = $kvm_check_login_procs_cache{$vhost->{'id'}};
+if (!$procs || !ref($procs)) {
+	$kvm_check_login_procs_cache{$vhost->{'id'}} = $procs =
+		&list_kvm_instances($vhost);
+	}
 if (!ref($procs)) {
 	# Host may be down .. ping to see
 	my $vping = &ping_server_host($vhost->{'ip'});
