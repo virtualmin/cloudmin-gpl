@@ -2809,6 +2809,14 @@ else {
 	&obtain_lock_server($server);
 	}
 
+# If this system has a parent and it is down, fail fast
+my $parent = &get_parent_server($server);
+if ($parent->{'status'} eq 'down') {
+	$server->{'status'} = 'nohost';
+	$server->{'status_err'} = "Host system $parent->{'host'} is down";
+	goto DONECHECK;
+	}
+
 # Do a quick ping, if this is a non-virtual system.
 # Don't ping if the virtual system type (ie Xen) has it's own function to 
 # detect status though, unless SSH logins are disabled
