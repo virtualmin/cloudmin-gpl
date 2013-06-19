@@ -60,10 +60,10 @@ $err = &move_disk_storage($server, $disk, $storage);
 &stop_background_dot_printer();
 
 if ($err) {
-	&$second_print(&text('disk_modifyfailed', $err));
+	&$second_print(&text('movedisk_modifyfailed', $err));
 	}
 else {
-	&$second_print(&text('disk_modifyok'));
+	&$second_print(&text('movedisk_modifyok'));
 	&webmin_log("move", "disk", $server->{'host'},
 		    { 'real' => $disk->{'real'} });
 	}

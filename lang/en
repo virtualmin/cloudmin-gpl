@@ -2589,6 +2589,8 @@ movedisk_esame=The disk image is already in the selected storage location
 movedisk_title=Move Disk
 movedisk_doings=Moving disk for $1 to storage $2 ..
 movedisk_doingd=Moving disk for $1 to directory $2 ..
+movedisk_modifyfailed=.. move failed : $1
+movedisk_modifyok=.. moved successfully
 
 fsck_title=Check Disk
 fsck_doing=Checking $1 filesystem in $2 ..
