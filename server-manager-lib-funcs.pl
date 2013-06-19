@@ -12499,6 +12499,10 @@ $server->{$m.'_'.$disktype} = $disk->{'real'};
 delete($server->{$m.'_'.$disktype.'_vg'});
 delete($server->{$m.'_'.$disktype.'_lv'});
 delete($server->{$m.'_'.$disktype.'_iscsi'});
+delete($server->{$m.'_'.$disktype.'_iscsi_ip'});
+delete($server->{$m.'_'.$disktype.'_iscsi_port'});
+delete($server->{$m.'_'.$disktype.'_iscsi_name'});
+delete($server->{$m.'_'.$disktype.'_iscsi_target'});
 if ($disk->{'lv'}) {
 	$server->{$m.'_'.$disktype.'_vg'} = $disk->{'vg'};
 	$server->{$m.'_'.$disktype.'_lv'} = $disk->{'lv'};

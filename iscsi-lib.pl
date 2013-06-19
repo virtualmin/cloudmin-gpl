@@ -95,7 +95,8 @@ my ($server, $disk) = @_;
 # Get the host system and thus the iSCSI server and connect
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
-my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+my $id = $disk->{'iscsi_server'};
+$id = $vhost->{$server->{'manager'}.'_iscsi'} if ($id eq '');
 $id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
@@ -378,7 +379,8 @@ my ($server, $disk) = @_;
 # Get the host system and thus the iSCSI server
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
-my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+my $id = $disk->{'iscsi_server'};
+$id = $vhost->{$server->{'manager'}.'_iscsi'} if ($id eq '');
 $id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
@@ -510,7 +512,8 @@ if ($disk->{'size'} == $olddisk->{'size'}) {
 # Get the host system and thus the iSCSI server
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
-my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+my $id = $disk->{'iscsi_server'};
+$id = $vhost->{$server->{'manager'}.'_iscsi'} if ($id eq '');
 $id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
@@ -680,7 +683,8 @@ my ($server, $disk) = @_;
 # Get the host system
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
-my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+my $id = $disk->{'iscsi_server'};
+$id = $vhost->{$server->{'manager'}.'_iscsi'} if ($id eq '');
 $id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
@@ -710,7 +714,8 @@ my ($server, $disk) = @_;
 # Get the host system
 my $vhost = &get_parent_server($server);
 $vhost || return "No host system found!";
-my $id = $vhost->{$server->{'manager'}.'_iscsi'};
+my $id = $disk->{'iscsi_server'};
+$id = $vhost->{$server->{'manager'}.'_iscsi'} if ($id eq '');
 $id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
 $id eq '' && return "Host system $vhost->{'host'} is not configured ".
 		    "to use iSCSI";
@@ -867,12 +872,14 @@ my ($srcserver, $dstserver, $srcdisk, $dstdisk) = @_;
 # Get the iSCSI server
 my $srcvhost = &get_parent_server($srcserver);
 $srcvhost || return "No host system found for $srcserver->{'host'}!";
-my $srcid = $vhost->{$srcserver->{'manager'}.'_iscsi'};
+my $srcid = $srcdisk->{'iscsi_server'};
+$srcid = $vhost->{$server->{'manager'}.'_iscsi'} if ($srcid eq '');
 $srcid = $srcserver->{$srcserver->{'manager'}.'_filesystem_iscsi'}
 	if ($id eq '');
 my $dstvhost = &get_parent_server($dstserver);
 $dstvhost || return "No host system found for $dstserver->{'host'}!";
-my $dstid = $vhost->{$dstserver->{'manager'}.'_iscsi'};
+my $dstid = $dstdisk->{'iscsi_server'};
+$dstid = $vhost->{$dstserver->{'manager'}.'_iscsi'} if ($dstid eq '');
 $dstid = $dstserver->{$dstserver->{'manager'}.'_filesystem_iscsi'}
 	if ($id eq '');
 $srcid eq $dstid || return "The source and destination systems do not use the ".

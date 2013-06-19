@@ -2880,6 +2880,8 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		else {
 			return "Logical volume $disk->{'lv'} was not found";
 			}
+		$disk->{'storage_id'} = 'lvm_'.$disk->{'vg'};
+		$disk->{'storage'} = &text('storage_lvm',$disk->{'vg'});
 		}
 	elsif ($disk->{'real'} =~ /^\/dev\/disk\/by-path\/ip-(\S+):(\d+)-iscsi-(\S+):(\S+)-lun-(\d+)$/) {
 		# Disk is on an iSCSI server
@@ -2916,12 +2918,12 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 					}
 				}
 			}
-		}
-	if ($disk->{'vg'}) {
-		$disk->{'storage_id'} = 'lvm_'.$disk->{'vg'};
-		$disk->{'storage'} = &text('storage_lvm',$disk->{'vg'});
+		$disk->{'storage_id'} = 'iscsi_'.$iscsiserver->{'host'};
+		$disk->{'storage'} = &text('storage_iscsi',
+					   $iscsiserver->{'host'});
 		}
 	else {
+		# Disk is just in a regular file
 		$disk->{'storage_id'} = 'files';
 		$disk->{'storage'} = $text{'storage_files'};
 		}
@@ -3154,6 +3156,10 @@ if (!$device) {
 		if ($storage->{'id'} =~ /^lvm_(\S+)/) {
 			$vg = $1;
 			}
+		elsif ($storage->{'id'} =~ /^iscsi_(\S+)/) {
+			my $iscsiserver = &get_managed_server_by("host", "$1");
+			$iscsi = $iscsiserver->{'id'};
+			}
 		elsif ($storage->{'id'} eq 'iscsi') {
 			$iscsi = $server->{'kvm_filesystem_iscsi'};
 			}
@@ -3174,7 +3180,7 @@ if (!$device) {
 		}
 	elsif ($iscsi ne '') {
 		# Disk will be on an iSCSI server. The real field gets set later
-		$rv->{'iscsi_server'} = $server->{'kvm_filesystem_iscsi'};
+		$rv->{'iscsi_server'} = $iscsi;
 		$rv->{'fixedreal'} = 1;
 		}
 	else {
@@ -3894,16 +3900,19 @@ sub type_kvm_list_storages
 {
 my ($vhost, $server) = @_;
 my @rv;
-my $iscsi = $server ? $server->{'kvm_filesystem_iscsi'}
-		    : $vhost->{'kvm_iscsi'};
-if ($iscsi ne '') {
-	push(@rv, { 'id' => 'iscsi',
-		    'desc' => $text{'storage_iscsi'},
-		    'adddesc' => $text{'storage_addiscsi'} });
-	}
+
+# Regular files
 push(@rv, { 'id' => 'files',
 	    'desc' => $text{'storage_files'},
 	    'adddesc' => $text{'storage_addfiles'} });
+
+# Add iSCSI servers
+foreach my $iscsi (&list_iscsi_target_servers()) {
+	push(@rv, { 'id' => 'iscsi_'.$iscsi->{'host'},
+		    'desc' => &text('storage_iscsi', $iscsi->{'host'}),
+		    'adddesc' => &text('storage_addiscsi', $iscsi->{'host'}) });
+	}
+
 if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	# Check for and add LVM volume groups
 	my $info = &get_server_collected($vhost);

@@ -4162,8 +4162,8 @@ storage_addfiles=Create a new disk in a regular file.
 storage_lvm=LVM volume group $1
 storage_addlvm=Create a new disk in volume group $1.
 storage_addcitrix=Create a new disk in $1.
-storage_iscsi=iSCSI server
-storage_addiscsi=Create a new disk on the iSCSI server.
+storage_iscsi=iSCSI server $1
+storage_addiscsi=Create a new disk on the iSCSI server $1.
 
 icopy_title=Copy System Image
 icopy_copying=Copying to image storage location $1 ..
