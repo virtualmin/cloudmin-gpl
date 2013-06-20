@@ -207,7 +207,7 @@ if ($storage) {
 	($gotstorage) = grep { $_->{'id'} eq $storage ||
 			       lc($_->{'desc'}) eq lc($storage) } @$storages;
 	$gotstorage || &usage("Invalid storage location - choices are : ".
-			    join(" ", map { "\"$_->{'desc'}\"" } @$storages));
+			    join(" ", map { $_->{'id'} } @$storages));
 	}
 
 # Create a new disk object

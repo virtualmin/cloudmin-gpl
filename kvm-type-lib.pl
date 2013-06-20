@@ -2798,10 +2798,18 @@ sub type_kvm_list_disks
 my ($server, $mounts) = @_;
 my $vhost = &type_kvm_parent($server);
 
+# Check if any disk are on LVM
+my $lvmcount = 0;
+foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
+	if ($dstr =~ /file=\/dev\/[^\/]+\/[^\/]+,/) {
+		$lvcount++;
+		}
+	}
+
 # If LVM is in use, get LVs from the host system
 my (@lvs, @vgs);
 my $lvm_error;
-if ($server->{'kvm_filesystem_vg'}) {
+if ($server->{'kvm_filesystem_vg'} || $lvmcount) {
 	if ($main::list_logical_cache{$vhost->{'id'}}) {
 		@lvs = @{$main::list_logical_cache{$vhost->{'id'}}};
 		@vgs = @{$main::list_volume_cache{$vhost->{'id'}}};
@@ -2862,10 +2870,9 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		my @st = &stat_file_on_server($vhost, $drive{'file'});
 		$disk->{'size'} = $st[7];
 		}
-	if ($server->{'kvm_filesystem_vg'} &&
-	    $disk->{'real'} =~ /^\/dev\/(\S+)\/(\S+)$/ &&
+	if ($disk->{'real'} =~ /^\/dev\/([^\/]+)\/([^\/]+)$/ &&
 	    $vgnames{$1}) {
-		# Server has root on LVM .. check if this is too
+		# Disk is on LVM
 		$disk->{'vg'} = $1;
 		$disk->{'lv'} = $2;
 		my ($lv) = grep { $_->{'name'} eq $disk->{'lv'} } @lvs;
