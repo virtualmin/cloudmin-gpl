@@ -92,6 +92,10 @@ if ($storageid) {
 	$storages = &$sfunc($vhost, $server);
 	ref($storages) || &usage("Failed to list storages : $storages");
 	($storage) = grep { $_->{'id'} eq $storageid } @$storages;
+	if (!$storage && ($storageid eq 'lvm' || $storageid eq 'iscsi')) {
+		# Pick first LVM / iSCSI storage
+		($storage) = grep { $_->{'id'} =~ /^\Q$storageid\E_/ } @$storages;
+		}
 	$storage || &usage("No storage with ID $storageid found. Valid IDs ".
 			   "are : ".join(" ", map { $_->{'id'} } @$storages));
 	}
