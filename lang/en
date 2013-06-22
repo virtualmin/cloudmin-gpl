@@ -2359,6 +2359,7 @@ dgroup_err=Failed to delete security groups
 dgroup_enone=None selected
 dgroup_eused=Group $1 is being used by EC2 systems : $2
 
+script_title=Update Scripts
 script_err=Failed to update scripts
 script_enone=No scripts selected
 script_doing=Updating $1 scripts on $2 systems in parallel ..
