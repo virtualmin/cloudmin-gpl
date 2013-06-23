@@ -1,0 +1,18 @@
+<header>Move Virtualmin Domains</header>
+
+This form allows you to move one or more Virtualmin domains to another system
+managed by Cloudmin. Only systems that Cloudmin knows have Virtualmin installed
+and are up and running can be selected as a destination. <p>
+
+The domain move process uses Virtualmin's backup and restore features. By 
+default the selected domains are backed up on the source, disabled and then
+restored (and thus re-created) on the target system. This protects domain data
+from being lost if the restore fails on the target. However, you can use the
+<b>Delete from source systems?</b> field to change this behavior. <p>
+
+The <b>Re-allocate private IP addresses?</b> field determines (for domains with
+private IPs) if they will keep their existing addresses on the target system,
+or if new addresses will be allocated. The latter is recommended if the domain's
+private IP is not on the target system's network. <p>
+
+<footer>

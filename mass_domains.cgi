@@ -144,7 +144,7 @@ elsif ($in{'enable'}) {
 
 elsif ($in{'move'}) {
 	# Move the domains to another server, after asking where
-	&ui_print_header(undef, $text{'dmass_titlemove'}, "", "move");
+	&ui_print_header(undef, $text{'dmass_titlemove'}, "", "dmove");
 
 	if (!$in{'confirm'}) {
 		# Ask where
