@@ -6326,7 +6326,8 @@ if ($direct) {
 		my ($out, $ex, $err) = &execute_command_on_server($server,
 			"ssh -o PasswordAuthentication=no -x ".
 			"-".$dest->{'ssh_protocol'}." ".
-			($dest->{'ssh_port'} ? " -p ".$dest->{'ssh_port'} : "").
+			($dest->{'ssh_port'} ? "-p ".$dest->{'ssh_port'}." "
+					     : "").
 			$dest->{'ssh_user'}."\@".$dest->{'ip'}." echo OK");
 		return $err if ($err);
 		if ($ex || $out !~ /OK/) {
