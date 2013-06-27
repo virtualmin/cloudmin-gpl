@@ -4116,11 +4116,13 @@ else {
 	}
 return &parallel_server_function($servers,
 	sub { if (!$skiplock || !&test_lock_server($_[0])) {
+		&obtain_lock_server($_[0]);
 	        &check_server_status($_[0], $regen, 0, $time);
 	        &save_managed_server($_[0]);
 	        if (defined(&refresh_server_usage)) {
 		  &refresh_server_usage($_[0], $time);
 	        }
+		&release_lock_server($_[0]);
 	      }
 	      return ( $_[0]->{'status'}, $_[0]->{'status_msg'},
 		       $_[0]->{'virtualmin_domains'},
