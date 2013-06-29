@@ -39,6 +39,9 @@ if ($info->{'mem'}) {
         if ($info->{'mem'}->[4] ne '') {
 		push(@stats, [ "memcached", $info->{'mem'}->[4]*1024 ]);
 		}
+        if ($info->{'mem'}->[5] ne '') {
+		push(@stats, [ "memburst", $info->{'mem'}->[5]*1024 ]);
+		}
         }
 
 # Add memory usage for hosting
