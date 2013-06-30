@@ -6587,10 +6587,10 @@ foreach my $sd (@sorted) {
 	next if ($d->{'parent'} && $donebackup{$d->{'parent'}});
 	next if ($d->{'parent'} && $failed{$d->{'parent'}});
 
-	if ($delete == 2) {
+	if ($delete == 2 && !$d->{'disabled'}) {
 		# Disable on source
-		&start_background_dot_printer(
-			&text('move_disable', $d->{'dom'}, $server->{'host'}));
+		&start_background_dot_printer(&text('move_disable',
+			&show_domain_name($d), $server->{'host'}));
 		my @args = ( [ "domain", $d->{'dom'} ] );
 		my ($err, $out) = &call_virtualmin_api(
 					$server, "disable-domain", \@args);
@@ -6601,16 +6601,22 @@ foreach my $sd (@sorted) {
 			next;
 			}
 		else {
-			&$second_print(&text('move_disabled', $d->{'dom'}));
+			&$second_print(&text('move_disabled',
+				&show_domain_name($d)));
 			push(@refresh, $server)
 				if (!$refreshed{$server->{'id'}}++);
 			$disabled{$server->{'id'},$d->{'dom'}} = 1;
 			}
 		}
+	elsif ($delete == 2 && $d->{'disabled'}) {
+		# Already disabled
+		&$first_print(&text('move_disabledalready',
+			&show_domain_name($d), $server->{'host'}));
+		}
 	elsif ($delete == 1) {
 		# Delete on source
-		&start_background_dot_printer(
-			&text('move_delete', $d->{'dom'}, $server->{'host'}));
+		&start_background_dot_printer(&text('move_delete',
+			&show_domain_name($d), $server->{'host'}));
 		my @args = ( [ "domain", $d->{'dom'} ] );
 		my ($err, $out) = &call_virtualmin_api(
 					$server, "delete-domain", \@args);
@@ -6621,7 +6627,8 @@ foreach my $sd (@sorted) {
 			next;
 			}
 		else {
-			&$second_print(&text('move_deleted', $d->{'dom'}));
+			&$second_print(&text('move_deleted',
+				&show_domain_name($d)));
 			push(@refresh, $server)
 				if (!$refreshed{$server->{'id'}}++);
 			}
