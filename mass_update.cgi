@@ -151,6 +151,7 @@ else {
 		&theme_post_save_server();
 		}
 	}
+@hostnames = map { $_->{'host'} } @servers;
 &webmin_log("update", "servers", scalar(@servers),
 	    { 'hosts' => \@hostnames });
 
