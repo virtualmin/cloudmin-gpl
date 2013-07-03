@@ -92,6 +92,21 @@ return undef if (!$rv);
 return $rv;
 }
 
+# reread_managed_server(&server)
+# Updates a server hash by re-reading it from disk. This can be useful if
+# a server was read, then locked some time later. Returns undef if it was 
+# deleted in the interim.
+sub reread_managed_server
+{
+my ($server) = @_;
+my $newserver = &get_managed_server($server->{'id'});
+if ($newserver) {
+	%$server = %$newserver;
+	return $server;
+	}
+return undef;
+}
+
 # get_this_managed_server()
 # Returns a hash ref for this system
 sub get_this_managed_server
@@ -4117,6 +4132,7 @@ else {
 return &parallel_server_function($servers,
 	sub { if (!$skiplock || !&test_lock_server($_[0])) {
 		&obtain_lock_server($_[0]);
+		&reread_managed_server($_[0]) || return ( );
 	        &check_server_status($_[0], $regen, 0, $time);
 	        &save_managed_server($_[0]);
 	        if (defined(&refresh_server_usage)) {
