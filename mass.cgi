@@ -38,6 +38,7 @@ if ($in{'refresh'} || $in{'regen'}) {
 	@rv = ( @prv, @orv );
 	@aservers = ( @pservers, @oservers );
 	for($i=0; $i<@rv; $i++) {
+		next if (!@{$rv[$i]});	# Deleted
 		$s = $aservers[$i];
 		($s->{'status'}, $s->{'status_msg'},
 		 $s->{'virtualmin_domains'},
