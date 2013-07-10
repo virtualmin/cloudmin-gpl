@@ -4177,6 +4177,11 @@ return &parallel_server_function($servers,
 		  @poss = grep { $want{$_->{'name'},$_->{'system'}} } @poss;
 	        }
 	      }
+	      &obtain_lock_server($server);
+	      &reread_managed_server($server) ||
+		return { 'want' => \@poss,
+			 'status' => 0,
+			 'error' => 'System has been deleted' };
 	      my ($got, $errs) = &install_multiple_package_updates($server,
 					[ &sort_package_updates(@poss) ]);
 	      my $status;
@@ -4193,7 +4198,6 @@ return &parallel_server_function($servers,
 			    'error' => join(" ", @$errs) ||
 				       "Nothing installed" };
 	      }
-	      &obtain_lock_server($server);
               &refresh_server_updates($server, \@allgot);
 	      &check_server_status($server);
 	      &save_managed_server($server);
