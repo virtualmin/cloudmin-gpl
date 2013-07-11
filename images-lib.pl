@@ -258,10 +258,21 @@ return (1, $temp);
 sub get_transfer_image_dest
 {
 my ($server) = @_;
-my $sid = $server->{$server->{'manager'}.'_force_iscsi'};
+my $m = $server->{'manager'};
+
+# Forced iSCSI server
+my $sid = $server->{$m.'_force_iscsi'};
+
+# From server object
 if ($sid eq '') {
-	$sid = $server->{$server->{'manager'}.'_filesystem_iscsi'};
+	$sid = $server->{$m.'_filesystem_iscsi'};
 	}
+
+# From vhost (needed if server-level setting hasn't been done yet)
+if ($sid eq '' && $vhost->{$m.'_iscsi'} ne '' && !$server->{$m.'_nolvm'}) {
+	$sid = $vhost->{$m.'_iscsi'};
+	}
+
 if ($sid eq '') {
 	my $vhost = &get_parent_server($server);
 	return $vhost;
