@@ -116,6 +116,20 @@ return ( 'startup', 'shutdown', 'reboot', 'console', 'boot', 'graph', 'view',
 	 'webmin', 'virtualmin', 'api', 'snapshot' );
 }
 
+# owner_action_category(action)
+# Returns the category code for an action
+sub owner_action_category
+{
+my ($action) = @_;
+return $action =~ /startup|shutdown|reboot|boot|console/ ? 'power' :
+       $action =~ /create|add|empty|advanced|delete|pause|reset|backup/ ? 'create' :
+       $action =~ /ips|ifaces|realifaces|reverse/ ? 'ips' :
+       $action =~ /limits|vcpus|ioclass|disks|devices|graph|storage|mount/ ? 'limits' :
+       $action =~ /domains|script|webmin|virtualmin/ ? 'virutalmin' :
+       $action =~ /run|pass|update|snapshot|groups|view|ssh|api/ ? 'manage' :
+	 undef;
+}
+
 # can_action([&server|&servers], [action])
 # Returns if the current user can perform some action on some server
 sub can_action

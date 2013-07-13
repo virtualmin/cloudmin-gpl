@@ -2754,6 +2754,9 @@ cat_virtualmin=Virtualmin Settings
 cat_hosts=Host Systems
 cat_backup=Backup and Restore
 cat_monitor=System Monitoring
+cat_create=Creation and Deletion
+cat_limits=Limits and Resources
+cat_ips=Networking
 
 owners_title=System Owners
 owners_add=Add a new system owner.

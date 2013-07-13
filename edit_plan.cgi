@@ -43,11 +43,20 @@ print &ui_hidden_table_start($text{'plan_header2'}, "width=100%", 2, "acts", 0,
 
 # Allowed actions
 %actions = map { $_, 1 } split(/\s+/, $plan->{'actions'});
-print &ui_table_row($text{'plan_actions'},
-	&ui_grid_table(
-	     [ map { &ui_checkbox("actions", $_, $text{'owner_action_'.$_},
-				  $actions{$_}) } &list_owner_actions() ],
-	     2, 100, [ "width=50%", "width=50%" ]));
+@actions = &list_owner_actions();
+@cats = &unique(map { &owner_action_category($_) } @actions);
+$afield = "";
+foreach my $c (sort { $text{'cat_'.$a} cmp $text{'cat_'.$b} } @cats) {
+	$afield .= "<b>".($text{'cat_'.$c} || $c)."</b><br>\n";
+	$afield .= &ui_grid_table(
+		     [ map { &ui_checkbox("actions", $_, $text{'owner_action_'.$_},
+					$actions{$_}, undef,
+					$owner->{'acl'}->{'actions_def'}) }
+			 sort { $text{'owner_action_'.$a} cmp $text{'owner_action_'.$b} }
+			      grep { &owner_action_category($_) eq $c } @actions ],
+		     2, 100, [ "width=50%", "width=50%" ]);
+	}
+print &ui_table_row($text{'plan_actions'}, $afield);
 
 # Allowed VPS types
 @cantypes = split(/\s+/, $plan->{'types'});
