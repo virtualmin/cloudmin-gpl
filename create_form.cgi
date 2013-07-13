@@ -10,7 +10,7 @@ require './server-manager-lib.pl';
 
 # Check if 'empty' creation is supported
 $efunc = "type_".$in{'type'}."_can_create_empty";
-$empty = defined(&$efunc) && &$efunc();
+$empty = defined(&$efunc) && &$efunc() && &can_action(undef, "empty");
 if ($empty) {
 	# Yes, so show tabs
 	$prog = "create_form.cgi?type=$in{'type'}&mode=";
