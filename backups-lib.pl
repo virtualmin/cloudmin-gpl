@@ -2441,6 +2441,7 @@ if ($dest->{'mode'} == 4) {
 		}
 	foreach my $f (@$files) {
 		next if ($f->[13] !~ /^$re$/);
+		next if ($f->[13] eq "." || $f->[13] eq "..");
 		if ($f->[9] && $f->[9] < $cutoff) {
 			# Found deletion candidate
 			push(@delfiles, $base."/".$f->[13]);
@@ -2491,6 +2492,7 @@ else {
 	ref($files) || return &text('purge_els', $base, $files);
 	foreach my $f (@$files) {
 		next if ($f !~ /^$re$/);
+		next if ($f eq "." || $f eq "..");
 		my @st = &stat_file_on_server($destserver, $base."/".$f);
 		next if (!@st || @st == 1);
 		if ($st[9] < $cutoff) {
