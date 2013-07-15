@@ -100,7 +100,7 @@ sub list_owner_actions
 {
 return ( 'startup', 'shutdown', 'reboot', 'boot', 'console', 'graph', 'view',
 	 'run', 'pass', 'domains', 'update', 'script', 'pause', 'reset',
-	 'create', 'add', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
+	 'create', 'add', 'empty', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
 	 'reverse', 'limits', 'vcpus', 'ioclass', 'disks', 'devices', 'sshkeys',
 	 'backup', 'webmin', 'virtualmin', 'api', 'storage', 'snapshot',
          'mount', 'groups', );
@@ -114,6 +114,20 @@ return ( 'startup', 'shutdown', 'reboot', 'console', 'boot', 'graph', 'view',
 	 'run', 'pass', 'domains', 'update', 'script', 'pause', 'reset',
          'create', 'delete', 'ifaces', 'reverse', 'limits', 'vcpus', 'disks',
 	 'webmin', 'virtualmin', 'api', 'snapshot' );
+}
+
+# owner_action_category(action)
+# Returns the category code for an action
+sub owner_action_category
+{
+my ($action) = @_;
+return $action =~ /startup|shutdown|reboot|boot|console/ ? 'power' :
+       $action =~ /create|add|empty|advanced|delete|pause|reset|backup/ ? 'create' :
+       $action =~ /ips|ifaces|realifaces|reverse/ ? 'ips' :
+       $action =~ /limits|vcpus|ioclass|disks|devices|graph|storage|mount/ ? 'limits' :
+       $action =~ /domains|script|webmin|virtualmin/ ? 'virutalmin' :
+       $action =~ /run|pass|update|snapshot|groups|view|ssh|api/ ? 'manage' :
+	 undef;
 }
 
 # can_action([&server|&servers], [action])

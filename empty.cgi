@@ -15,6 +15,8 @@ $server = { 'id' => &server_id(),
 	  };
 $efunc = "type_".$in{'type'}."_can_create_empty";
 $empty = &$efunc();
+$empty || &error($text{'create_eempty'});
+&can_action_error(undef, "empty");
 
 # Prevent concurrent creation that would exceed limits
 &obtain_lock_user(undef, 1);

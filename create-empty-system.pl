@@ -127,6 +127,7 @@ $clash && &usage("A system with the same hostname already exists");
 # Check if can create
 ($can, $canerr) = &can_create_server($type);
 $can || &usage("Creation is not allowed : $canerr");
+&can_action_usage(undef, "empty");
 
 # Create initial server object
 $server = { 'id' => $newid || &server_id(),
