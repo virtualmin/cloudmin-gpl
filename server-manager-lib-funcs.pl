@@ -7203,7 +7203,7 @@ if (&can_action(undef, "backup") && defined(&list_backups)) {
 	push(@gcats, "backup");
 	}
 
-if ($access{'owner'}) {
+if ($access{'owner'} && $config{'show_pass'}) {
 	# Change owner details
 	push(@glinks, "owner_form.cgi");
 	push(@gtitles, $text{'oform_title'});
@@ -7220,10 +7220,14 @@ if (!$cloudmin_pro) {
 	}
 
 # New feature log
-push(@glinks, "edit_newchangelog.cgi");
-push(@gtitles, $text{'newchangelog_title'});
-push(@gicons, "images/newchangelog.gif");
-push(@gcats, "settings");
+my $me = $access{'owner'} ? 'owner' : 'master';
+my %shownf = map { $_, 1 } split(/,/, $config{'show_nf'});
+if ($shownf{$me}) {
+	push(@glinks, "edit_newchangelog.cgi");
+	push(@gtitles, $text{'newchangelog_title'});
+	push(@gicons, "images/newchangelog.gif");
+	push(@gcats, "settings");
+	}
 
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
 }

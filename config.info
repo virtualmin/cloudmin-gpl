@@ -9,6 +9,7 @@ sort_mode=Sort systems by,1,2-Description,1-Host system,0-Hostname
 index_cols=Columns to display,2,ip-IP address,ips-All IP addresses,ip6-IPv6 address,ips6-All IPv6 addresses,mac-MAC address,macs-All MAC addresses,manager-Type,type-OS,status-Status,desc-Description,group-Groups,owner-Owners,disk-Disk space,mem-Memory,cpu-CPU assigned,bw_usage-Bandwidth,vcpus-Virtual CPUs
 xen_mem_mode=Change Xen memory allocations,1,1-At next boot,0-Immediately
 show_nf=Show new features to,2,master-Master administrator,owner-System owners
+show_pass=Show password and email change form to system owners?,1,1-Yes,0-No
 show_unix=Show Unix hostname field on creation form?,1,1-Yes,0-No
 show_ping=Use ping to test availability on IP Addresses page?,1,1-Yes,0-No
 theme_image=URL for company logo image,3,None or default,50

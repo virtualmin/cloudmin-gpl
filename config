@@ -30,6 +30,7 @@ bw_dir_out=1
 bw_notify=24
 sort_mode=0
 show_nf=master,owner
+show_pass=1
 xen_vnc=1
 kvm_vnc=1
 xen_consoled=1
