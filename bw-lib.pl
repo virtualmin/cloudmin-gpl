@@ -132,7 +132,7 @@ my $file = "$bandwidth_dir/$server->{'id'}";
 &read_file($file, $oldinfo);
 my $cache = $get_bandwidth_cache{$server->{'id'}};
 foreach my $k (keys %$info) {
-	if ($k =~ /^(min|hour)_/) {
+	if ($k =~ /^(min|hour)_(in|out)/) {
 		# Increment time-based counter
 		$oldinfo->{$k} += $info->{$k};
 		}

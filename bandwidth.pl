@@ -63,6 +63,8 @@ foreach $s (@servers) {
 	$now = time();
 	($in, $out, $inp, $outp) = &get_server_traffic($s);
 	next if (!defined($in));
+	($owner) = defined(&get_server_owners) ? &get_server_owners($s) : ( );
+	$ownername = $owner ? $owner->{'name'} : "NONE";
 
 	# Work out diffs
 	$in_diff = $in - $bwinfo->{'last_in'};
@@ -95,6 +97,7 @@ foreach $s (@servers) {
 			$new_bwinfo->{'hour_out_'.$hh} = $out_diff / $hours;
 			$new_bwinfo->{'hour_inp_'.$hh} = $inp_diff / $hours;
 			$new_bwinfo->{'hour_outp_'.$hh} = $outp_diff / $hours;
+			$new_bwinfo->{'hour_owner_'.$hh} = $ownername;
 			$hh_set = $hh;
 			}
 
@@ -115,6 +118,7 @@ foreach $s (@servers) {
 			$new_bwinfo->{'min_out_'.$mm} = $out_diff / $mins;
 			$new_bwinfo->{'min_inp_'.$mm} = $inp_diff / $mins;
 			$new_bwinfo->{'min_outp_'.$mm} = $outp_diff / $mins;
+			$new_bwinfo->{'min_owner_'.$mm} = $ownername;
 			$mm_set = $mm;
 			}
 
