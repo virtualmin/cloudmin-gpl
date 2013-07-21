@@ -198,6 +198,20 @@ if (defined(&get_server_usage) && !$in{'new'}) {
 				    &text('edit_ugbh2', $gbh, $avgspace));
 		}
 
+	# Combined bandwidth usage
+	if ($config{'bw_enabled'}) {
+		$bstart = &bandwidth_period_start($in{'ago'});
+		$bend = &bandwidth_period_end($in{'ago'});
+		$bwinfo = &get_owner_bandwidth($owner, $bstart, $bend);
+		$bwtotal = 0;
+		for($hh=$bstart; $hh<$bend; $hh+=3600) {
+			$bwtotal += $bwinfo->{'hour_in_'.$hh};
+			$bwtotal += $bwinfo->{'hour_out_'.$hh};
+			}
+		print &ui_table_row($text{'owner_bwusage'},
+			&nice_size($bwtotal));
+		}
+
 	# Systems included
 	if (@usageids) {
 		my @usagenames;

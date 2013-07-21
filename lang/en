@@ -2851,6 +2851,7 @@ owner_switch=Switch to Owner
 owner_bwgraph=Bandwidth Graph
 owner_usagesystems=Systems included in usage
 owner_del=$1 (deleted)
+owner_bwusage=Bandwidth used over period
 owner_header4=Limits and usage against plan
 owner_serverslimit=Virtual systems
 owner_ramlimit=RAM assigned to systems

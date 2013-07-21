@@ -41,6 +41,7 @@ $< == 0 || die "$0 must be run as root";
 @allservers = &list_managed_servers();
 
 # Parse command line
+$period_ago = 0;
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--multiline") {
@@ -223,14 +224,15 @@ if ($multi) {
 		if ($config{'bw_enabled'}) {
 			$bstart = &bandwidth_period_start($period_ago);
 			$bend = &bandwidth_period_end($period_ago);
-			$bwinfo = &get_owner_bandwidth($owner, $bstart, $bend);
+			$bwinfo = &get_owner_bandwidth($o, $bstart, $bend);
 			for($hh=$bstart; $hh<$bend; $hh+=3600) {
 				$bwin += $bwinfo->{'hour_in_'.$hh};
 				$bwout += $bwinfo->{'hour_out_'.$hh};
 				}
 			$bwtotal = $bwin + $bwout;
 			print "    Bandwidth usage for: ",
-				"$period_ago periods ago\n";
+				($period_ago ? "$period_ago periods ago\n"
+					     : "Current period\n");
 			print "    Bandwidth usage towards limit: ",
 				&nice_size($bwtotal),"\n";
 			print "    Bandwidth usage incoming: ",

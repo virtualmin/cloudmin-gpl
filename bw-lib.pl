@@ -124,11 +124,12 @@ sub get_owner_bandwidth
 {
 my ($owner, $start, $end) = @_;
 my %rv;
-foreach my $id (split(/\s+/, $owner->{'acl'}->{'eversystems'})) {
+foreach my $id (split(/\s+/, $owner->{'acl'}->{'everservers'})) {
 	my $fake = { 'id' => $id };
 	my $sbw = &get_bandwidth($fake, $start, $end);
 	foreach my $k (keys %$sbw) {
-		if ($k =~ /^(hour|min)_(in|out)/) {
+		if ($k =~ /^(hour|min)_(in|out)_(\d+)/ &&
+		    $sbw->{$1.'_owner_'.$3} eq $owner->{'name'}) {
 			$rv{$k} += $sbw->{$k};
 			}
 		}
