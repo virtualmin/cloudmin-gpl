@@ -119,12 +119,21 @@ return $get_bandwidth_cache{$server->{'id'}};
 
 # get_owner_bandwidth(&owner, start, end)
 # Returns all bandwidth samples within some time period that are accounted to
-# a system owner
+# a system owner. Multiple samples for the same hour or minute are summed up.
 sub get_owner_bandwidth
 {
 my ($owner, $start, $end) = @_;
-# XXX for each existing owner, track all systems that he ever owned by ID
-# XXX use this info in get_owner_usage as well
+my %rv;
+foreach my $id (split(/\s+/, $owner->{'acl'}->{'eversystems'})) {
+	my $fake = { 'id' => $id };
+	my $sbw = &get_bandwidth($fake, $start, $end);
+	foreach my $k (keys %$sbw) {
+		if ($k =~ /^(hour|min)_(in|out)/) {
+			$rv{$k} += $sbw->{$k};
+			}
+		}
+	}
+return \%rv;
 }
 
 # append_bandwidth(&server, &new-info, &delete-info, [force-rotation])
