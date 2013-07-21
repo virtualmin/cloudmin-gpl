@@ -103,7 +103,7 @@ return ( 'startup', 'shutdown', 'reboot', 'boot', 'console', 'graph', 'view',
 	 'create', 'add', 'empty', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
 	 'reverse', 'limits', 'vcpus', 'ioclass', 'disks', 'devices', 'sshkeys',
 	 'backup', 'webmin', 'virtualmin', 'api', 'storage', 'snapshot',
-         'mount', 'groups', );
+         'mount', 'groups', 'rate', );
 }
 
 # list_safe_owner_actions()
@@ -124,7 +124,7 @@ my ($action) = @_;
 return $action =~ /startup|shutdown|reboot|boot|console/ ? 'power' :
        $action =~ /create|add|empty|advanced|delete|pause|reset|backup/ ? 'create' :
        $action =~ /ips|ifaces|realifaces|reverse/ ? 'ips' :
-       $action =~ /limits|vcpus|ioclass|disks|devices|graph|storage|mount/ ? 'limits' :
+       $action =~ /limits|vcpus|ioclass|rate|disks|devices|graph|storage|mount/ ? 'limits' :
        $action =~ /domains|script|webmin|virtualmin/ ? 'virutalmin' :
        $action =~ /run|pass|update|snapshot|groups|view|ssh|api/ ? 'manage' :
 	 undef;

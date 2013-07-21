@@ -230,6 +230,9 @@ if (defined($ioclass)) {
 if (defined($firewall)) {
 	&can_action_usage(\@servers, "ifaces");
 	}
+if (defined($rate)) {
+	&can_action_usage(\@servers, "rate");
+	}
 
 # Check if we can do any of them
 foreach $s (@servers) {

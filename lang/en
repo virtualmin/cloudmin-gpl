@@ -2834,6 +2834,7 @@ owner_action_realifaces=Add real network interfaces
 owner_action_reverse=Change reverse IP mappings
 owner_action_sshkeys=Select SSH keys
 owner_action_ioclass=Change IO class
+owner_action_rate=Change network speed
 owner_action_webmin=Install Webmin
 owner_action_virtualmin=Install Virtualmin
 owner_action_backup=Backup and restore systems

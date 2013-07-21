@@ -178,7 +178,7 @@ if (defined(&$rfunc) && $config{'bw_enabled'}) {
 
 # Network rate limit
 $rfunc = "type_".$t."_get_network_rate";
-if (defined(&$rfunc)) {
+if (defined(&$rfunc) && &can_action($server, "rate")) {
 	$rate = &$rfunc($server);
 	if (defined($rate)) {
 		print &ui_table_row($text{'edit_lrate'},
