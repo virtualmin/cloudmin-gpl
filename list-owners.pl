@@ -133,6 +133,7 @@ if ($multi) {
 		# Find all usage for managed systems
 		@allusage = &get_owner_usage($o);
 		@allusage = sort { $a->{'start'} cmp $b->{'start'} } @allusage;
+		@usageids = &unique(map { $_->{'server'} } @allusage);
 		($start, $end) = &usage_period_start_end(\@allusage,
 							 $period_ago);
 
@@ -216,6 +217,17 @@ if ($multi) {
 			       $gbh," GB hours ($space byte seconds)\n";
 			print "    Disk average over period: ",
 				$avgdisk," bytes\n";
+			}
+
+		# Systems included
+		if (@usageids) {
+			my @usagenames;
+			foreach my $id (@usageids) {
+				my $us = &get_managed_server($id);
+				push(@usagenames, $us ? $us->{'host'} : $id);
+				}
+			print "    Systems included: ",
+			      join(" ", @usagenames),"\n";
 			}
 		}
 	}

@@ -138,14 +138,9 @@ if (defined(&get_server_usage) && !$in{'new'}) {
 
 	# Find all usage for managed systems
 	@allservers = &list_managed_servers();
-	@allusage = ( );
-	foreach $id (@sids) {
-		my ($server) = grep { $_->{'id'} eq $id } @allservers;
-		if ($server) {
-			push(@allusage, &get_server_usage($server));
-			}
-		}
+	@allusage = &get_owner_usage($owner);
 	@allusage = sort { $a->{'start'} cmp $b->{'start'} } @allusage;
+	@usageids = &unique(map { $_->{'server'} } @allusage);
 	($start, $end) = &usage_period_start_end(\@allusage, $in{'ago'});
 
 	# Period start and end
@@ -202,6 +197,18 @@ if (defined(&get_server_usage) && !$in{'new'}) {
 		$avgspace = &nice_size(int($space / ($end - $start)));
 		print &ui_table_row($text{'edit_uspace'},
 				    &text('edit_ugbh2', $gbh, $avgspace));
+		}
+
+	# Systems included
+	if (@usageids) {
+		my @usagenames;
+		foreach my $id (@usageids) {
+			my $us = &get_managed_server($id);
+			push(@usagenames, $us ? $us->{'host'} :
+				&text('owner_del', $id));
+			}
+		print &ui_table_row($text{'owner_usagesystems'},
+			&ui_links_row(\@usagenames));
 		}
 
 	print &ui_hidden_table_end();

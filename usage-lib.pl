@@ -43,11 +43,13 @@ foreach my $id (readdir(USAGEDIR)) {
 	foreach my $u (&get_server_usage($fake)) {
 		if ($u->{'owner'} eq $owner->{'name'}) {
 			# Sample has an owner, and it is the one we want
+			$u->{'server'} = $id;
 			push(@rv, $u);
 			}
 		elsif (!exists($u->{'owner'}) && $canservers{$id}) {
 			# Sample has no owner, but system is owned by the
 			# owner we want currently
+			$u->{'server'} = $id;
 			push(@rv, $u);
 			}
 		}
@@ -155,7 +157,7 @@ $now ||= time();
 my $usage = &last_server_usage($server);
 my $info;
 my ($owner) = defined(&get_server_owners) ? &get_server_owners($server) : ( );
-my $ownername = $owner ? $owner->{'name'} : undef;
+my $ownername = $owner ? $owner->{'name'} : "NONE";
 
 # Get current status and usage
 my $up = $server->{'status'} ne 'down' &&
