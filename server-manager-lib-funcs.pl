@@ -647,9 +647,6 @@ if (!$keep) {
 	&unlink_file("$historic_info_dir/$server->{'id'}");
 	&unlink_file("$failover_files_dir/$server->{'id'}");
 	&unlink_file("$status_history_dir/$server->{'id'}");
-	if (defined(&delete_bandwidth)) {
-		&delete_bandwidth($server);
-		}
 	}
 
 if (defined(&list_system_owners)) {

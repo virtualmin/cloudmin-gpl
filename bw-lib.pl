@@ -117,6 +117,16 @@ foreach my $f (glob("$bandwidth_dir/$server->{'id'}-*"),
 return $get_bandwidth_cache{$server->{'id'}};
 }
 
+# get_owner_bandwidth(&owner, start, end)
+# Returns all bandwidth samples within some time period that are accounted to
+# a system owner
+sub get_owner_bandwidth
+{
+my ($owner, $start, $end) = @_;
+# XXX for each existing owner, track all systems that he ever owned by ID
+# XXX use this info in get_owner_usage as well
+}
+
 # append_bandwidth(&server, &new-info, &delete-info, [force-rotation])
 # Update counts for new bandwidth collection
 sub append_bandwidth

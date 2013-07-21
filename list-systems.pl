@@ -425,9 +425,9 @@ if ($multi) {
 				"Last ".$config{'bw_days'}." days"),"\n";
 			if ($period_ago ne '') {
 				# Work out usage for some period ago
-				$bwinfo = &get_bandwidth($s);
 				$start = &bandwidth_period_start($period_ago);
 				$end = &bandwidth_period_end($period_ago);
+				$bwinfo = &get_bandwidth($s, $start, $end);
 				for($hh=$start; $hh<$end; $hh+=3600) {
 					$bwin += $bwinfo->{'hour_in_'.$hh};
 					$bwout += $bwinfo->{'hour_out_'.$hh};

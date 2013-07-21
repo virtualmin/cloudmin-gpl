@@ -219,6 +219,26 @@ if ($multi) {
 				$avgdisk," bytes\n";
 			}
 
+		# Combined bandwidth usage
+		if ($config{'bw_enabled'}) {
+			$bstart = &bandwidth_period_start($period_ago);
+			$bend = &bandwidth_period_end($period_ago);
+			$bwinfo = &get_owner_bandwidth($owner, $bstart, $bend);
+			for($hh=$bstart; $hh<$bend; $hh+=3600) {
+				$bwin += $bwinfo->{'hour_in_'.$hh};
+				$bwout += $bwinfo->{'hour_out_'.$hh};
+				}
+			$bwtotal = $bwin + $bwout;
+			print "    Bandwidth usage for: ",
+				"$period_ago periods ago\n";
+			print "    Bandwidth usage towards limit: ",
+				&nice_size($bwtotal),"\n";
+			print "    Bandwidth usage incoming: ",
+				&nice_size($bwin),"\n";
+			print "    Bandwidth usage outgoing: ",
+				&nice_size($bwout),"\n";
+			}
+
 		# Systems included
 		if (@usageids) {
 			my @usagenames;

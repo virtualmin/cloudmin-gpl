@@ -137,7 +137,6 @@ if (defined(&get_server_usage) && !$in{'new'}) {
 				"edit_owner.cgi?name=".&urlize($in{'name'})));
 
 	# Find all usage for managed systems
-	@allservers = &list_managed_servers();
 	@allusage = &get_owner_usage($owner);
 	@allusage = sort { $a->{'start'} cmp $b->{'start'} } @allusage;
 	@usageids = &unique(map { $_->{'server'} } @allusage);

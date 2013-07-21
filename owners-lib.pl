@@ -11,6 +11,7 @@ foreach my $u (&acl::list_users()) {
 	my %acl = &get_module_acl($u->{'name'});
 	next if (!$acl{'owner'});
 	$u->{'acl'} = \%acl;
+	&complete_system_owner($u);
 	push(@rv, $u);
 	}
 return @rv;
@@ -27,7 +28,19 @@ return undef if (!$u);
 my %acl = &get_module_acl($u->{'name'});
 return undef if (!$acl{'owner'});
 $u->{'acl'} = \%acl;
+&complete_system_owner($u);
 return $u;
+}
+
+# complete_system_owner(&owner)
+# Called after reading in an owner, to fill in fields like everservers with the
+# IDs of any systems ever owned
+sub complete_system_owner
+{
+my ($owner) = @_;
+$owner->{'acl'}->{'everservers'} = join(" ", &unique(
+	split(/\s+/, $owner->{'acl'}->{'everservers'}),
+	split(/\s+/, $owner->{'acl'}->{'servers'})));
 }
 
 # save_system_owner(&user, [&old], [acl-only])

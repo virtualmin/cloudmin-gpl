@@ -37,8 +37,8 @@ my ($owner) = @_;
 my %canservers = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
 my @rv;
 
-opendir(USAGEDIR, $usage_data_dir);
-foreach my $id (readdir(USAGEDIR)) {
+# Read bandwidth logs for systems that have ever been owned by this owner
+foreach my $id (split(/\s+/, $owner->{'acl'}->{'everservers'})) {
 	my $fake = { 'id' => $id };
 	foreach my $u (&get_server_usage($fake)) {
 		if ($u->{'owner'} eq $owner->{'name'}) {
@@ -54,7 +54,6 @@ foreach my $id (readdir(USAGEDIR)) {
 			}
 		}
 	}
-closedir(USAGEDIR);
 
 return @rv;
 }
