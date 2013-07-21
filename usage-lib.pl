@@ -27,6 +27,36 @@ close(USAGE);
 return @rv;
 }
 
+# get_owner_usage(&owner)
+# Returns all usage samples from all systems that can be attributed to this
+# owner - either samples which have an owner field, or from systems that he
+# currently owns
+sub get_owner_usage
+{
+my ($owner) = @_;
+my %canservers = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
+my @rv;
+
+opendir(USAGEDIR, $usage_data_dir);
+foreach my $id (readdir(USAGEDIR)) {
+	my $fake = { 'id' => $id };
+	foreach my $u (&get_server_usage($fake)) {
+		if ($u->{'owner'} eq $owner->{'name'}) {
+			# Sample has an owner, and it is the one we want
+			push(@rv, $u);
+			}
+		elsif (!exists($u->{'owner'}) && $canservers{$id}) {
+			# Sample has no owner, but system is owned by the
+			# owner we want currently
+			push(@rv, $u);
+			}
+		}
+	}
+closedir(USAGEDIR);
+
+return @rv;
+}
+
 # save_server_usage(&server, &usages)
 # Write out all usage data for some system
 sub save_server_usage
@@ -124,6 +154,8 @@ my ($server, $now) = @_;
 $now ||= time();
 my $usage = &last_server_usage($server);
 my $info;
+my ($owner) = defined(&get_server_owners) ? &get_server_owners($server) : ( );
+my $ownername = $owner ? $owner->{'name'} : undef;
 
 # Get current status and usage
 my $up = $server->{'status'} ne 'down' &&
@@ -190,7 +222,8 @@ if ($usage && $usage->{'up'} && $up) {
 	    ($load == $usage->{'load'} || $loadtime) &&
 	    $mem == $usage->{'mem'} &&
 	    $disk == $usage->{'disk'} &&
-	    $space == $usage->{'space'}) {
+	    $space == $usage->{'space'} &&
+	    $ownername eq $usage->{'owner'}) {
 		$extend = 1;
 		}
 	}
@@ -230,6 +263,7 @@ else {
 		$newusage->{'load'} = $load;
 		$newusage->{'loadtime'} = $loadtime;
 		}
+	$newusage->{'owner'} = $ownername;
 	&append_server_usage($server, $newusage);
 	}
 }

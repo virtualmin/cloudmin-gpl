@@ -650,9 +650,6 @@ if (!$keep) {
 	if (defined(&delete_bandwidth)) {
 		&delete_bandwidth($server);
 		}
-	if (defined($usage_data_dir)) {
-		&unlink_file("$usage_data_dir/$server->{'id'}");
-		}
 	}
 
 if (defined(&list_system_owners)) {

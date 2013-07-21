@@ -131,10 +131,7 @@ if ($multi) {
 			}
 
 		# Find all usage for managed systems
-		@allusage = ( );
-		foreach $s (@users) {
-			push(@allusage, &get_server_usage($s));
-			}
+		@allusage = &get_owner_usage($o);
 		@allusage = sort { $a->{'start'} cmp $b->{'start'} } @allusage;
 		($start, $end) = &usage_period_start_end(\@allusage,
 							 $period_ago);
