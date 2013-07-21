@@ -104,6 +104,9 @@ foreach $s (@servers) {
 			print "    CPU load: ",int($u->{'load'}),"\n";
 			print "    Disk limit: ",($u->{'disk'} || 0),"\n";
 			print "    Disk used: ",($u->{'space'} || 0),"\n";
+			if ($u->{'owner'}) {
+				print "    Owner: ",$u->{'owner'},"\n";
+				}
 			}
 		}
 	else {
