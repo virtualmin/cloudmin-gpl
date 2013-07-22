@@ -21,6 +21,11 @@ data with the C<--minute> flag. Also, output is by default rounded to the
 nearest MB or GB to make it more readable - but you can switch to showing the
 exact number of bytes with the C<--exact> flag.
 
+Note that for data collected before Cloudmin 7.2, the bandwidth used by all
+systems managed by the selected owners currently is included - even if they
+were not managed at some point in the page. After Cloudmin 7.2, bandwidth
+is properly accounted to the owner at the time of measurement.
+
 =head1 Example usage
 
   cloudmin list-owner-bandwidth --owner bob --start -2
@@ -88,46 +93,26 @@ foreach $o (@owners) {
 	print $o->{'name'},"\n";
 
 	# Get systems, bandwidth and date ranges
-	@servers = &get_owner_servers($o);
-	@bwinfos = ( );
-	$old_min = $old_hour = $new_min = $new_hour = undef;
-	foreach $s (@servers) {
-		my $bwinfo = &get_bandwidth($s, $start, $end);
-		if (!$old_min || $bwinfo->{'old_min'} < $old_min) {
-			$old_min = $bwinfo->{'old_min'};
-			}
-		if (!$new_min || $bwinfo->{'new_min'} > $new_min) {
-			$new_min = $bwinfo->{'new_min'};
-			}
-		if (!$old_hour || $bwinfo->{'old_hour'} < $old_hour) {
-			$old_hour = $bwinfo->{'old_hour'};
-			}
-		if (!$new_hour || $bwinfo->{'new_hour'} > $new_hour) {
-			$new_hour = $bwinfo->{'new_hour'};
-			}
-		push(@bwinfos, $bwinfo);
-		}
-
-	# Work out start and end time
+	$bwinfo = &get_owner_bandwidth($o, $start, $end);
 	($mystart, $myend) = ($start, $end);
 	if ($minute) {
 		# Oldest minute
-		if ($mystart < $old_min) {
-			$mystart = $old_min;
+		if ($mystart < $bwinfo->{'old_min'}) {
+			$mystart = $bwinfo->{'old_min'};
 			}
 		if (!$myend) {
-			$myend = $new_min || int($now/60)*60;
+			$myend = $bwinfo->{'new_min'} || int($now/60)*60;
 			}
 		$step = 60;
 		$suffix = "min_";
 		}
 	else {
 		# Oldest hour
-		if ($mystart < $old_hour) {
-			$mystart = $old_hour;
+		if ($mystart < $bwinfo->{'old_hour'}) {
+			$mystart = $bwinfo->{'old_hour'};
 			}
 		if (!$myend) {
-			$myend = $new_hour || int($now/3600)*3600;
+			$myend = $bwinfo->{'new_hour'} || int($now/3600)*3600;
 			}
 		$step = 3600;
 		$suffix = "hour_";
@@ -138,13 +123,10 @@ foreach $o (@owners) {
 	printf $fmt, "Date/time", "Data in", "Data out",
 		     "Packets in", "Packets out";
 	for(my $i=$mystart; $i<=$myend; $i+=$step) {
-		my ($in, $out, $inp, $outp) = (0, 0, 0, 0);
-		foreach my $bwinfo (@bwinfos) {
-			$in += $bwinfo->{$suffix.'in_'.$i};
-			$out += $bwinfo->{$suffix.'out_'.$i};
-			$inp += $bwinfo->{$suffix.'inp_'.$i};
-			$outp += $bwinfo->{$suffix.'outp_'.$i};
-			}
+		my $in = $bwinfo->{$suffix.'in_'.$i};
+		my $out = $bwinfo->{$suffix.'out_'.$i};
+		my $inp = $bwinfo->{$suffix.'inp_'.$i};
+		my $outp = $bwinfo->{$suffix.'outp_'.$i};
 		printf $fmt, &make_date($i),
 			     &maybe_nice_size($in), &maybe_nice_size($out),
 			     int($inp), int($outp);

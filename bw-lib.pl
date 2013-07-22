@@ -129,17 +129,27 @@ foreach my $id (split(/\s+/, $owner->{'acl'}->{'everservers'})) {
 	my $fake = { 'id' => $id };
 	my $sbw = &get_bandwidth($fake, $start, $end);
 	foreach my $k (keys %$sbw) {
-		if ($k =~ /^(hour|min)_(in|out)_(\d+)/ &&
+		if ($k =~ /^(hour|min)_(in|out|inp|outp)_(\d+)/ &&
 		    $sbw->{$1.'_owner_'.$3} eq $owner->{'name'}) {
 			# Hour or minute was tagged with this owner
 			$rv{$k} += $sbw->{$k};
 			}
-		elsif ($k =~ /^(hour|min)_(in|out)_(\d+)/ &&
+		elsif ($k =~ /^(hour|min)_(in|out|inp|outp)_(\d+)/ &&
 		       !$sbw->{$1.'_owner_'.$3} &&
 		       $canservers{$id}) {
 			# Not tagged with any owner, but system belongs
 			# to this owner currently
 			$rv{$k} += $sbw->{$k};
+			}
+		elsif ($k =~ /^old_(min|hour)/ &&
+		       (!$rv{$k} || $sbw->{$k} < $rv{$k})) {
+			# Oldest hour or minute - include in response
+			$rv{$k} = $sbw->{$k};
+			}
+		elsif ($k =~ /^new_(min|hour)/ &&
+		       (!$rv{$k} || $sbw->{$k} > $rv{$k})) {
+			# Newest hour or minute - include in response
+			$rv{$k} = $sbw->{$k};
 			}
 		}
 	}
