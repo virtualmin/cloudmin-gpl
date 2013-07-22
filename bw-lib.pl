@@ -123,6 +123,7 @@ return $get_bandwidth_cache{$server->{'id'}};
 sub get_owner_bandwidth
 {
 my ($owner, $start, $end) = @_;
+my %canservers = map { $_, 1 } split(/\s+/, $owner->{'acl'}->{'servers'});
 my %rv;
 foreach my $id (split(/\s+/, $owner->{'acl'}->{'everservers'})) {
 	my $fake = { 'id' => $id };
@@ -130,6 +131,14 @@ foreach my $id (split(/\s+/, $owner->{'acl'}->{'everservers'})) {
 	foreach my $k (keys %$sbw) {
 		if ($k =~ /^(hour|min)_(in|out)_(\d+)/ &&
 		    $sbw->{$1.'_owner_'.$3} eq $owner->{'name'}) {
+			# Hour or minute was tagged with this owner
+			$rv{$k} += $sbw->{$k};
+			}
+		elsif ($k =~ /^(hour|min)_(in|out)_(\d+)/ &&
+		       !$sbw->{$1.'_owner_'.$3} &&
+		       $canservers{$id}) {
+			# Not tagged with any owner, but system belongs
+			# to this owner currently
 			$rv{$k} += $sbw->{$k};
 			}
 		}
