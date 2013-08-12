@@ -155,6 +155,7 @@ $now = time();
 foreach $s (@servers) {
 	next if ($s->{'status'} eq 'nohost');
 	&obtain_lock_server($s);
+	&reread_managed_server($s) || next;
 	my $bwinfo = &get_bandwidth($s, $start, undef);
 	next if (!$bwinfo->{'last_time'});	# Only do if bandwidth is
 						# supported by system type
