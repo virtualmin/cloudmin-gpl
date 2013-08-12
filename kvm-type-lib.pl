@@ -1523,7 +1523,8 @@ if ($server->{'kvm_filesystem_vg'}) {
 		   'perm' => 'rw',
 		   'alloc' => 'n',
 		   'vg' => $server->{'kvm_filesystem_vg'} };
-	if (!$fslv || !&size_close_enough($fslv->{'size'}, $lv->{'size'})) {
+	if (!$fslv ||
+	    !&size_close_enough($fslv->{'size'}*1024, $lv->{'size'}*1024)) {
 		# Only delete and re-create if an old LV with close enough to
 		# the same size doesn't exist
 		if ($reset && $fslv) {
