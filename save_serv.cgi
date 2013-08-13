@@ -463,7 +463,7 @@ else {
 
 	# Save boot-time flag
 	$bfunc = "type_".$t."_set_atboot";
-	if (defined(&$bfunc)) {
+	if (defined(&$bfunc) && $server->{'status'} ne 'nohost') {
 		&$bfunc($server, $in{'atboot'});
 		}
 
