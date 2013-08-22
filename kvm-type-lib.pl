@@ -1442,6 +1442,7 @@ if ($reset && $server->{'kvm_filesystem_vg'}) {
 $last_remote_error = undef;
 if ($server->{'kvm_swapfile_vg'}) {
 	# Create swap LV
+	&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
         my $lv = { 'name' => $server->{'kvm_swapfile_lv'},
                    'size' => int($server->{'kvm_swap'}*1024),
                    'perm' => 'rw',
