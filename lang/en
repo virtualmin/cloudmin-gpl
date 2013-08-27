@@ -2206,7 +2206,8 @@ amis_ours=Your account
 amis_delete=Delete Selected Images
 amis_makepublic=Make Public
 amis_makeprivate=Make Private
-amis_none=No EC2 images were found. Perhaps Cloudmin could not contact the EC2 service.
+amis_nonefound=No EC2 images were found.
+amis_nonefailed=Failed to list EC2 images :
 amis_return=list of EC2 images
 
 eami_title=Edit EC2 Image

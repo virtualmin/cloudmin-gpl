@@ -25,6 +25,9 @@ foreach $ec2 (&list_ec2_accounts()) {
 			push(@amis, $ami);
 			}
 		}
+	else {
+		push(@errs, [ $ec2, $images ]);
+		}
 	$myaccounts{$ec2->{'account'}} = $ec2;
 	}
 @amis = sort { $a->{'imageId'} cmp $b->{'imageId'} } @amis;
@@ -93,8 +96,14 @@ if (@amis) {
 			     [ "private", $text{'amis_makeprivate'} ],
 			   ]);
 	}
+elsif (@errs) {
+	print "<b>$text{'amis_nonefailed'}</b><p>\n";
+	foreach my $err (@errs) {
+		print $err->[0]->{'account'}." : ".$err->[1]."<br>\n";
+		}
+	}
 else {
-	print "<b>$text{'amis_none'}</b><p>\n";
+	print "<b>$text{'amis_nonefound'}</b><p>\n";
 	}
 
 &ui_print_footer("", $text{'index_return'});
