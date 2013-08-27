@@ -1847,7 +1847,7 @@ if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
 		&$second_print(&text('create_ekvmgrubget'));
 		}
 	else {
-		$data =~ s/ root=(\S+)(\d+)/ root=$wantdev$2/g;
+		$data =~ s/ root=(\S+)(\d+)(\s|$)/ root=$wantdev$2$3/g;
 		my $err = &put_file_data_to_server($server, $data, $grubconf);
 		if ($err) {
 			&$second_print(&text('create_ekvmgrub', $err));
