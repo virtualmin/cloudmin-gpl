@@ -3229,6 +3229,9 @@ vnc_ecitrixport=No VNC console process found - maybe this Citrix Xen VM does not
 vnc_ecitrixport2=No port for VNC console process found
 vnc_direct=If the VNC client does not run or cannot connect, you can use a separate VNC client to connect to <tt>$1</tt> port <tt>$2</tt> instead, and login with password <tt>$3</tt> .
 vnc_directnopass=If the VNC client does not run or cannot connect, you can use a separate VNC client to connect to <tt>$1</tt> port <tt>$2</tt> instead.
+vnc_display=Display graphical console using :
+vnc_flash=Flash object
+vnc_java=Java applet
 
 history_title=System Statistics Graphs
 history_ecannot=You are not allowed to view historic system statistics

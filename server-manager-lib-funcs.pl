@@ -13226,13 +13226,23 @@ my ($ips) = @_;
 &unlock_file($blocked_ips_file);
 }
 
-# vnc_client_html(host, port, password)
+# vnc_client_html(host, port, password, &in, &server, cgi)
 # Returns HTML for a Java applet or Flash client for connecting to a VNC server
 sub vnc_client_html
 {
-my ($masterhost, $masterport, $pass) = @_;
+my ($masterhost, $masterport, $pass, $in, $server, $cgi) = @_;
 my $rv;
-my $flash = 1;
+my $flash = $in{'flash'} ? 1 : $in{'java'} ? 0 : $config{'flash_vnc'};
+my $url = $cgi."?id=".$server->{'id'};
+
+# Show menu to change between flash and java
+my @links;
+push(@links, $flash ? "<b>$text{'vnc_flash'}</b>"
+		    : "<a href='$url&flash=1'>$text{'vnc_flash'}</a>");
+push(@links, !$flash ? "<b>$text{'vnc_java'}</b>"
+		     : "<a href='$url&java=1'>$text{'vnc_java'}</a>");
+print "<b>$text{'vnc_display'}</b> ",&ui_links_row(\@links),"<p>\n";
+
 if ($flash) {
 	# Start SWF policy server
 	my $port = 843;
@@ -13275,7 +13285,7 @@ if ($flash) {
 		   "&viewOnly=false".
 		   "&useRemoteCursor=false".
 		   "&password=".&urlize($pass);
-	$rv .= "<object id='Flashlight' width='100%' height='90%' type='application/x-shockwave-flash' data='flashlight/Flashlight.swf'>\n";
+	$rv .= "<object id='Flashlight' width='100%' height='85%' type='application/x-shockwave-flash' data='flashlight/Flashlight.swf'>\n";
 	$rv .= "<param name='movie' value='Flashlight.swf'/>\n";
 	$rv .= "<param name='allowScriptAccess' value='always'/>\n";
 	$rv .= "<param name='allowFullscreen' value='always'/>\n";
