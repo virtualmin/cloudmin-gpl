@@ -152,7 +152,7 @@ if ($module_info{'onehost'} eq 'xen' &&
 # Do the same for KVM
 if ($module_info{'onehost'} eq 'kvm' &&
     $server_management_types{'kvm'}) {
-	my $err = $config{'xen_checked'} ? undef
+	my $err = $config{'kvm_checked'} ? undef
 					 : &check_kvm_host_software($this);
 	my $br0 = &first_bridge_iface();
 	if ($err) {
@@ -13224,6 +13224,83 @@ my ($ips) = @_;
 &lock_file($blocked_ips_file);
 &write_file($blocked_ips_file, $ips);
 &unlock_file($blocked_ips_file);
+}
+
+# vnc_client_html(host, port, password)
+# Returns HTML for a Java applet or Flash client for connecting to a VNC server
+sub vnc_client_html
+{
+my ($masterhost, $masterport, $pass) = @_;
+my $rv;
+my $flash = 1;
+if ($flash) {
+	# Start SWF policy server
+	my $port = 843;
+	my $proto = getprotobyname('tcp');
+	socket(MAIN, PF_INET, SOCK_STREAM, $proto) ||
+		&error(&text('index_esocket', "$!"));
+	setsockopt(MAIN, SOL_SOCKET, SO_REUSEADDR, pack("l", 1));
+	bind(MAIN, sockaddr_in($port, INADDR_ANY)) ||
+		&error(&text('index_eport', $port));
+	listen(MAIN, SOMAXCONN);
+
+	# Fork the process that will accept the connection
+	my $pid = fork();
+	if (!$pid) {
+		$rmask = undef;
+		vec($rmask, fileno(MAIN), 1) = 1;
+		$sel = select($rmask, undef, undef, 10);
+		exit(1) if ($sel <= 0);
+		accept(SOCK, MAIN);
+		close(MAIN);
+		select(SOCK); $| = 1;
+		$header = "<policy-file-request/>\000";
+		read(SOCK, $buf, length($header));
+		$buf eq $header || die "Invalid message $buf";
+		print SOCK "<?xml version=\"1.0\"?>\n".
+			   "<!DOCTYPE cross-domain-policy SYSTEM \"/xml/dtds/cross-domain-policy.dtd\">\n".
+			   "<cross-domain-policy>\n".
+			   "<site-control permitted-cross-domain-policies=\"master-only\"/>\n".
+			   "<allow-access-from domain=\"$masterhost\" to-ports=\"$masterport\" />\n".
+			   "</cross-domain-policy>\n";
+		close(SOCK);
+		exit(0);
+		}
+	close(MAIN);
+
+	# Output call to flash VNC client
+	my $vars = "host=".&urlize($masterhost).
+		   "&port=".&urlize($masterport).
+		   "&autoConnect=true".
+		   "&viewOnly=false".
+		   "&useRemoteCursor=false".
+		   "&password=".&urlize($pass);
+	$rv .= "<object id='Flashlight' width='100%' height='90%' type='application/x-shockwave-flash' data='flashlight/Flashlight.swf'>\n";
+	$rv .= "<param name='movie' value='Flashlight.swf'/>\n";
+	$rv .= "<param name='allowScriptAccess' value='always'/>\n";
+	$rv .= "<param name='allowFullscreen' value='always'/>\n";
+	$rv .= "<param name='wmode' value='opaque'/>\n";
+	$rv .= "<param name='FlashVars' value='$vars'/>\n";
+	$rv .= "</object>\n";
+	}
+else {
+	# Use Java applet
+	$rv .= "<applet archive=vncviewer.jar code=VncViewer.class ".
+	       "width=100% height=90%>\n";
+	$rv .= "<param name=port value='$masterport'>\n";
+	if ($pass) {
+		$rv .= "<param name=password value='$pass'>\n";
+		}
+	$rv .= "$text{'vnc_nojava'} <p>\n";
+	$rv .= "</applet>\n";
+	}
+if ($pass) {
+	$rv .= &text('vnc_direct', $masterhost, $masterport, $pass),"<p>\n";
+	}
+else {
+	$rv .= &text('vnc_directnopass', $masterhost, $masterport),"<p>\n";
+	}
+return $rv;
 }
 
 # obtain_lock_anything()

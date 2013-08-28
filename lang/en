@@ -3227,8 +3227,8 @@ vnc_edomid=No Xen domain ID found!
 vnc_eprocs=Failed to list running processes on host system : $1
 vnc_ecitrixport=No VNC console process found - maybe this Citrix Xen VM does not have VNC enabled?
 vnc_ecitrixport2=No port for VNC console process found
-vnc_direct=If the Java VNC applet does not run or cannot connect, you can use a separate VNC client to connect to <tt>$1</tt> port <tt>$2</tt> instead, and login with password <tt>$3</tt> .
-vnc_directnopass=If the Java VNC applet does not run or cannot connect, you can use a separate VNC client to connect to <tt>$1</tt> port <tt>$2</tt> instead.
+vnc_direct=If the VNC client does not run or cannot connect, you can use a separate VNC client to connect to <tt>$1</tt> port <tt>$2</tt> instead, and login with password <tt>$3</tt> .
+vnc_directnopass=If the VNC client does not run or cannot connect, you can use a separate VNC client to connect to <tt>$1</tt> port <tt>$2</tt> instead.
 
 history_title=System Statistics Graphs
 history_ecannot=You are not allowed to view historic system statistics
