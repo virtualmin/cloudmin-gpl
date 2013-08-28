@@ -234,6 +234,12 @@ ajaxterm.Terminal_ctor=function(id,width,height) {
 	}
 	function keydown(ev) {
 		if (!ev) var ev=window.event;
+		if (ev.keyCode == 8) {
+			queue(escape(String.fromCharCode(127)));
+			if (ev.stopPropagation) ev.stopPropagation();
+			if (ev.preventDefault)  ev.preventDefault();
+			return false;
+			}
 		if (ie) {
 //			s="kd keyCode="+ev.keyCode+" which="+ev.which+" shiftKey="+ev.shiftKey+" ctrlKey="+ev.ctrlKey+" altKey="+ev.altKey;
 //			debug(s);
