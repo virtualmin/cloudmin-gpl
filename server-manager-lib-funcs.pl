@@ -1785,11 +1785,38 @@ else {
 		goto VIAMASTER;
 		}
 
-	my $keytemp;
+	# Get the destination system's SSH key
+	my $key;
 	if ($destserver->{'key'}) {
+		($key) = grep { $_->{'id'} == $destserver->{'key'} }
+			      &list_ssh_keys();
+		}
+
+	# Attempt to use SSH agent forwarding
+	my $sshagent = 0;
+	my ($sshsock, $sshpid);
+	if ($destserver->{'key'}) {
+		my $out = &backquote_command("ssh-agent 2>&1 </dev/null");
+		if (!$? && $out =~ /SSH_AUTH_SOCK/ && $out =~ /SSH_AGENT_PID/) {
+			# Extract the socket file and PID
+			$out =~ /SSH_AGENT_PID([= ]+)(\d+)/;
+			$sshpid = $2;
+			$out =~ /SSH_AUTH_SOCK([= ]+)([^; ]+)/;
+			$sshsock = $2;
+
+			# Add the key we want to use to the agent
+			$ENV{'SSH_AGENT_PID'} = $sshpid;
+			$ENV{'SSH_AUTH_SOCK'} = $sshsock;
+			$out = &backquote_command(
+				"ssh-add ".quotemeta($key->{'file'}).
+				" 2>&1 </dev/null");
+			$sshagent = !$? && $sshpid && $sshsock;
+			}
+		}
+
+	my $keytemp;
+	if ($destserver->{'key'} && !$sshagent) {
 		# A key is needed - copy it to the source system
-		my ($key) = grep { $_->{'id'} == $destserver->{'key'} }
-				    &list_ssh_keys();
 		$keytemp = $key->{'file'};
 		$keytemp =~ s/^.*[\\\/]//;
 		$keytemp = "/tmp/$keytemp";
@@ -1807,7 +1834,7 @@ else {
 		if ($destserver->{'ssh_port'}) {
 			$sshcmd .= " -p ".$destserver->{'ssh_port'};
 			}
-		$sshcmd .= &ssh_command_args($server);
+		$sshcmd .= &ssh_command_args($srcserver);
 		$sshcmd .= " $destserver->{'ssh_user'}\@".
 			   ($destserver->{'ip'} || $destserver->{'host'});
 		$sshcmd .= " ".&dd_command(undef, $dest);
@@ -1822,7 +1849,7 @@ else {
 		if ($destserver->{'ssh_port'}) {
 			$sshcmd .= " -P ".$destserver->{'ssh_port'};
 			}
-		$sshcmd .= &ssh_command_args($server);
+		$sshcmd .= &ssh_command_args($srcserver);
 		$sshcmd .= " ".quotemeta($src);
 		if ($srcisdir && $destisdir) {
 			$sshcmd .= "/\\*";
@@ -1889,6 +1916,13 @@ else {
 		}
 	if ($keytemp) {
 		&delete_file_on_server($srcserver, $keytemp);
+		}
+
+	# Clean up SSH agent
+	if ($sshpid) {
+		delete($ENV{'SSH_AGENT_PID'});
+		delete($ENV{'SSH_AUTH_SOCK'});
+		&kill_logged('TERM', $sshpid);
 		}
 
 	VIAMASTER;
