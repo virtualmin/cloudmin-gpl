@@ -701,7 +701,25 @@ my $err = &remote_foreign_call($vhost, "iscsi-client",
 	"create_iscsi_connection", $disk->{'iscsi_ip'}, 3260, undef, $conn,
 	"CHAP", $server->{'iscsi_user'}, $server->{'iscsi_pass'});
 $err ||= $last_remote_error;
-$disk->{'iscsi_connect'} = 1 if (!$err);
+if (!$err) {
+	# Wait for connection to show up
+	for(my $i=0; $i<10; $i++) {
+		sleep(1);
+		my $conns = &remote_foreign_call($vhost, "iscsi-client",
+						 "list_iscsi_connections");
+		next if (!ref($conns));
+		my ($nconn) = grep { $_->{'target'} eq $conn->{'target'} }
+				   @$conns;
+		if ($nconn) {
+			$disk->{'iscsi_connect'} = 1;
+			last;
+			}
+		}
+	if (!$disk->{'iscsi_connect'}) {
+		$err = "iSCSI connection not established after 10 seconds";
+		}
+	}
+
 return $err;
 }
 
