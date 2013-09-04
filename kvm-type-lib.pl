@@ -4846,7 +4846,8 @@ if ($server->{'status'} ne 'nohost') {
 		$server->{'kvm_disktotal'} = 0;
 		foreach my $d (@$disks) {
 			$server->{'kvm_disktotal'} += $d->{'size'}
-				if (!$d->{'device'} || $d->{'lv'});
+				if (!$d->{'device'} || $d->{'lv'} ||
+				    $d->{'iscsi_server'} ne '');
 			}
 		}
 	}
