@@ -3276,7 +3276,12 @@ else {
 		$err = $out if ($ex);
 		$err && return "Failed to zero out $disk->{'real'} : $err";
 		}
-	elsif ($disk->{'iscsi_server'} ne '') {
+	elsif ($disk->{'iscsi_server'} ne '' && $disk->{'iscsi_target'}) {
+		# Attach to iSCSI disk
+		my $err = &attach_iscsi_disk($server, $disk);
+		return $err if ($err);
+		}
+	elsif ($disk->{'iscsi_server'} ne '' && !$disk->{'iscsi_target'}) {
 		# Create iSCSI disk
 		my $err = &create_iscsi_disk($server, $disk);
 		return $err if ($err);

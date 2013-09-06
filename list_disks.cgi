@@ -47,8 +47,21 @@ if (!@links) {
 		   "$text{'disks_add1'}</a>" );
 	}
 if (&can_action($server, "devices") && $can != 2) {
+	# Option to add an existing file or device as a disk
 	push(@links, "<a href='edit_disk.cgi?new=2&id=$in{'id'}'>".
 		     "$text{'disks_add2'}</a>");
+
+	# Option to add an iSCSI disk
+	$got_iscsi = 0;
+	if (ref($storages)) {
+		foreach my $s (@$storages) {
+			$got_iscsi++ if ($s->{'id'} =~ /^iscsi_/);
+			}
+		}
+	if ($got_iscsi) {
+		push(@links, "<a href='edit_disk.cgi?new=3&id=$in{'id'}'>".
+			     "$text{'disks_add4'}</a>");
+		}
 	}
 
 if (@$disks) {

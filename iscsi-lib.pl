@@ -369,6 +369,112 @@ $disk->{'iscsi_connect'} = 1;
 return undef;
 }
 
+# attach_iscsi_disk(&server, &disk)
+# Attach the VM host to an iSCSI disk that is already exported
+# Returns undef on success, or an error message on failure.
+sub attach_iscsi_disk
+{
+my ($server, $disk) = @_;
+
+# Get the host system and thus the iSCSI server and connect
+my $vhost = &get_parent_server($server);
+$vhost || return "No host system found!";
+my $id = $disk->{'iscsi_server'};
+$id = $vhost->{$server->{'manager'}.'_iscsi'} if ($id eq '');
+$id = $server->{$server->{'manager'}.'_filesystem_iscsi'} if ($id eq '');
+$id eq '' && return "Host system $vhost->{'host'} is not configured ".
+		    "to use iSCSI";
+my $iscsiserver = &get_managed_server($id);
+$iscsiserver || return "iSCSI server with ID $id does not exist!";
+my $mod = $iscsiserver->{'iscsi_module'};
+$mod || return "System $iscsiserver->{'host'} is no longer an iSCSI server";
+$last_remote_error = undef;
+&remote_foreign_require($iscsiserver, $mod);
+$last_remote_error && return "Error loading $mod : $last_remote_error";
+
+# Make sure the iSCSI server is running
+if ($mod eq "iscsi-target") {
+	&remote_foreign_call($iscsiserver, $mod, "is_iscsi_target_running") ||
+		return "iSCSI server is not running on $iscsiserver->{'host'}";
+	}
+elsif ($mod eq "iscsi-server") {
+	&remote_foreign_call($iscsiserver, $mod, "is_iscsi_server_running") ||
+		return "iSCSI server is not running on $iscsiserver->{'host'}";
+	}
+else {
+	return "Unknown module $mod";
+	}
+
+# Try a test query of targets on the iSCSI server from the vhost
+$last_remote_error = undef;
+&remote_foreign_require($vhost, "iscsi-client");
+$last_remote_error &&
+	return "Error loading iSCSI client module : $last_remote_error";
+my $ip = &get_server_ip($iscsiserver);
+my $targets = &remote_foreign_call($vhost, "iscsi-client",
+				   "list_iscsi_targets", $ip);
+ref($targets) || return "Failed to list targets on $iscsiserver->{'host'} ".
+			"from $vhost->{'host'} : $targets";
+
+# Verify that the requested target exists
+my ($rtarget) = grep { $_->{'target'} eq $disk->{'iscsi_target'} } @$targets;
+$rtarget || return "Target $rtarget is not being exported from ".
+		   "$iscsiserver->{'host'} to $vhost->{'host'}";
+
+# Connect from host system
+my $err = &remote_foreign_call($vhost, "iscsi-client",
+		"create_iscsi_connection", $ip, 3260, undef, $rtarget,
+		"CHAP", $server->{'iscsi_user'}, $server->{'iscsi_pass'});
+if ($err) {
+	&delete_iscsi_disk($server, $disk);
+	return "iSCSI connection failed : $err";
+	}
+$disk->{'iscsi_ip'} = $ip;
+$disk->{'iscsi_port'} = 3260;
+
+# Set real path in disk object
+my $conns = &remote_foreign_call($vhost, "iscsi-client",
+				 "list_iscsi_connections");
+my ($conn) = grep { $_->{'ip'} eq $ip &&
+		    $_->{'name'} eq $rtarget->{'name'} &&
+		    $_->{'target'} eq $targetname } @$conns;
+if (!$conn) {
+	$disk->{'iscsi_connect'} = -1;
+	&delete_iscsi_disk($server, $disk);
+	return "No iSCSI connection to $ip for ".
+	       "$rtarget->{'name'}:$targetname found on $vhost->{'host'}";
+	}
+$conn->{'scsilun'} = 1 if ($conn->{'scsilun'} eq '');
+$disk->{'real'} = $conn->{'longdevice'} ||
+		  "/dev/disk/by-path/ip-$conn->{'ip'}:$conn->{'port'}-".
+		  "iscsi-$conn->{'name'}:$conn->{'target'}-lun-$conn->{'scsilun'}";
+
+# Wait 10 seconds for disk device to appear
+my @st;
+for(my $i=0; $i<10; $i++) {
+	@st = &stat_file_on_server($vhost, $disk->{'real'});
+	last if (@st);
+	sleep(1);
+	}
+
+# Fail if disk isn't available
+if (!@st) {
+	$disk->{'iscsi_connect'} = -1;
+	&delete_iscsi_disk($server, $disk);
+	return "Expected iSCSI disk device $disk->{'real'} does not exist ".
+	       "on host system $vhost->{'host'}";
+	}
+foreach my $f ("ip", "port", "name", "target") {
+	$disk->{'iscsi_'.$f} = $conn->{$f};
+	}
+$disk->{'iscsi_lun'} = $conn->{'scsilun'};
+$disk->{'iscsi_server'} = $iscsiserver->{'id'};
+$disk->{'iscsi_connect'} = 1;
+$server->{'iscsi_disk_count'}++;
+
+return undef;
+}
+
 # delete_iscsi_disk(&server, &disk)
 # On the iSCSI server for the given VM's host, un-export and delete the given
 # disk. Returns undef on success, or an error message on failure.

@@ -73,6 +73,23 @@ if ($disk->{'fixedreal'}) {
 	$txt = 'disk_real';
 	print &ui_hidden("fixedreal", 1);
 	}
+elsif ($in{'new'} == 3) {
+	# Show iSCSI server and target
+	print &ui_table_row($text{'disk_iscsiserver'},
+		&ui_select("iscsi_server", undef,
+			[ map { [ $_->{'id'}, $_->{'host'} ] }
+			      &list_iscsi_target_servers() ]));
+	print &ui_table_row($text{'disk_iscsitarget'},
+		&ui_textbox("iscsi_target", undef, 40));
+
+	# Show iSCSI login and password, if the VM doesn't have one yet
+	if (!$server->{'iscsi_user'}) {
+		print &ui_table_row($text{'disk_iscsiuser'},
+			&ui_textbox("iscsi_user", undef, 20));
+		print &ui_table_row($text{'disk_iscsipass'},
+			&ui_textbox("iscsi_pass", undef, 20));
+		}
+	}
 elsif ($in{'new'} == 2) {
 	# Show device selector from host, if we can
 	if ($vhost->{'id'} eq '0') {
@@ -136,7 +153,9 @@ else {
 		$txt = 'disk_real';
 		}
 	}
-print &ui_table_row(&text($txt, "<tt>$vhost->{'host'}</tt>"), $realsel);
+if ($realsel) {
+	print &ui_table_row(&text($txt, "<tt>$vhost->{'host'}</tt>"), $realsel);
+	}
 
 # Device on virtual system
 print &ui_table_row($text{'disk_virt'},

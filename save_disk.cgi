@@ -192,6 +192,22 @@ else {
 	if ($disk->{'fixedreal'}) {
 		# Do nothing, as no real device is needed
 		}
+	elsif ($in{'new'} == 3) {
+		# Existing iSCSI disk
+		$disk->{'iscsi_server'} = $in{'iscsi_server'};
+		$in{'iscsi_target'} =~ /^[a-z0-9\.\_\-]+$/i ||
+			&error($text{'disk_eiscsitarget'});
+		$disk->{'iscsi_target'} = $in{'iscsi_target'};
+		if (!$server->{'iscsi_user'}) {
+			$in{'iscsi_user'} =~ /^\S+$/ ||
+				&error($text{'disk_eiscsiuser'});
+			$server->{'iscsi_user'} = $in{'iscsi_user'};
+			$in{'iscsi_pass'} =~ /^\S+$/ ||
+				&error($text{'disk_eiscsipass'});
+			$server->{'iscsi_pass'} = $in{'iscsi_pass'};
+			}
+		$changed_real = 1;
+		}
 	elsif ($in{'new'} == 2) {
 		# From device menu
 		if ($in{'real_mode'} == 0) {
