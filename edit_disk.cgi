@@ -36,7 +36,7 @@ if ($in{'new'}) {
 			 "", "disk".$in{'new'});
 	$nfunc = "type_".$server->{'manager'}."_new_disk";
 	if (defined(&$nfunc)) {
-		$disk = &$nfunc($server, $disks, $in{'new'} == 2,
+		$disk = &$nfunc($server, $disks, $in{'new'} >= 2,
 				$gotstorage);
 		}
 	else {

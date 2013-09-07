@@ -417,8 +417,9 @@ ref($targets) || return "Failed to list targets on $iscsiserver->{'host'} ".
 			"from $vhost->{'host'} : $targets";
 
 # Verify that the requested target exists
-my ($rtarget) = grep { $_->{'target'} eq $disk->{'iscsi_target'} } @$targets;
-$rtarget || return "Target $rtarget is not being exported from ".
+my $targetname = $disk->{'iscsi_target'};
+my ($rtarget) = grep { $_->{'target'} eq $targetname } @$targets;
+$rtarget || return "Target $targetname is not being exported from ".
 		   "$iscsiserver->{'host'} to $vhost->{'host'}";
 
 # Connect from host system

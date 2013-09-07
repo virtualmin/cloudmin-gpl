@@ -179,7 +179,7 @@ else {
 	if ($in{'new'}) {
 		$nfunc = "type_".$server->{'manager'}."_new_disk";
 		if (defined(&$nfunc)) {
-			$disk = &$nfunc($server, $disks, $in{'new'} == 2,
+			$disk = &$nfunc($server, $disks, $in{'new'} >= 2,
 					$gotstorage);
 			}
 		else {
@@ -207,6 +207,9 @@ else {
 			$server->{'iscsi_pass'} = $in{'iscsi_pass'};
 			}
 		$changed_real = 1;
+
+		# Create an iSCSI storage object
+		$gotstorage = { 'id' => 'iscsi_'.$disk->{'iscsi_server'} };
 		}
 	elsif ($in{'new'} == 2) {
 		# From device menu
@@ -335,6 +338,10 @@ else {
 		elsif ($in{'new'} == 2) {
 			&$first_print(&text('disk_creating3',
 					    "<tt>$disk->{'real'}</tt>"));
+			}
+		elsif ($in{'new'} == 3) {
+			&$first_print(&text('disk_creating4',
+					    "<tt>$iscsiserver->{'host'}</tt>"));
 			}
 		else {
 			&$first_print(&text('disk_creating',
