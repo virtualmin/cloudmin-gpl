@@ -17,7 +17,12 @@ immediately freed up.
 
 To simply detach a disk from a virtual system without deleting the underlying
 image file or logical volume, use the C<--detach> flag. The file or LV can be
-later attached to another system with the C<create-disk> API command.
+later attached to another system with the C<create-disk> API command. 
+
+When detaching, you can also use the C<--iscsi-disconnect> flag to first
+disconnect the iSCSI connection from the host system to the iSCSI server. The
+disk can then be attached to another system on the same or different host with
+the C<attach-disk> API command.
 
 =head1 Example usage
 
@@ -65,6 +70,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--detach") {
 		$detach = 1;
 		}
+	elsif ($a eq "--iscsi-disconnect") {
+		$iscsi_disconnect = 1;
+		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -75,6 +83,7 @@ while(@ARGV > 0) {
 
 # Validate parameters
 $real || $virt || $lv || $mount || &usage("The disk to remove must be identified by the --real, --virt, --mount or --lv parameters");
+$iscsi_disconnect && !$detach && &usage("The --iscsi-disconnect flag can only be used in conjunction with --detach");
 
 # Get the server
 $host || &usage("Missing --host parameter");
@@ -116,6 +125,21 @@ else {
 	}
 $disk->{'mount'} eq '/' && &usage("The disk mounted on / cannot be removed, as this will make the system un-bootable");
 
+# Detach iSCSI connection first
+if ($iscsi_disconnect) {
+	$disk->{'iscsi_ip'} || &usage("The --iscsi-disconnect flag can only be used on iSCSI disks");
+	$disk->{'iscsi_connect'} || &usage("The --iscsi-disconnect flag can only be used on iSCSI disks that are currently connected");
+	&$first_print("Disconnecting iSCSI virtual disk for $disk->{'virt'} ..");
+	$err = &disconnect_iscsi_disk($server, $disk);
+	if ($err) {
+		&$second_print(".. failed : $err");
+		exit(2);
+		}
+	else {
+		&$second_print(".. done");
+		}
+	}
+
 # Do it
 if ($detach) {
 	&$first_print("Detaching virtual disk for $disk->{'virt'} ..");
@@ -151,6 +175,7 @@ print "\n";
 print "cloudmin delete-disk --host hostname\n";
 print "                     --real device|file | --virt device | --lv name\n";
 print "                    [--detach]\n";
+print "                    [--iscsi-disconnect]\n";
 exit(1);
 }
 

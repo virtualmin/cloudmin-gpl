@@ -3236,7 +3236,8 @@ if ($disk->{'device'} && !$disk->{'lv'}) {
 		      "on $vhost->{'host'}";
 	}
 else {
-	@st || $disk->{'size'} || return "Missing size for new disk";
+	@st || $disk->{'size'} || $disk->{'iscsi_target'} ||
+		return "Missing size for new disk";
 	if ($disk->{'lv'} && $disk->{'overwrite'}) {
 		# Delete existing LV
 		&delete_all_disk_image_partitions($vhost, $disk->{'real'});
@@ -3280,6 +3281,7 @@ else {
 		# Attach to iSCSI disk
 		my $err = &attach_iscsi_disk($server, $disk);
 		return $err if ($err);
+		@st = &stat_file_on_server($vhost, $disk->{'real'});
 		}
 	elsif ($disk->{'iscsi_server'} ne '' && !$disk->{'iscsi_target'}) {
 		# Create iSCSI disk
