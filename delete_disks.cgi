@@ -61,7 +61,9 @@ else {
 	$totalsize = 0;
 	foreach $disk (@$disks) {
 		print &ui_hidden("d", $disk->{'real'});
-		$totalsize += $disk->{'size'} if (!$disk->{'device'});
+		$totalsize += $disk->{'size'} if (!$disk->{'device'} ||
+						  $disk->{'lv'} ||
+						  $disk->{'iscsi_server'} ne '');
 		}
 	if (!$totalsize) {
 		print &text('ddisk_rusure2', scalar(@$disks)),"<p>\n";
