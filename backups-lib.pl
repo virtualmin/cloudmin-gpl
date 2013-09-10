@@ -1554,7 +1554,7 @@ else {
 				$err = $text{'brun_eiscsidisk'};
 				}
 			elsif (!ref($idisk)) {
-				$err = &text('brun_eiscsidisk', $idisk);
+				$err = &text('brun_eiscsidisk2', $idisk);
 				}
 			else {
 				my $ddcmd = &dd_command($idisk->{'real'},undef).
