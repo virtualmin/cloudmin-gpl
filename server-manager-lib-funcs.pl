@@ -6368,26 +6368,6 @@ foreach my $sd (@$serverdoms) {
 		}
 	}
 
-# If doing a direct transfer, make sure all sources can SSH to the dest
-if ($direct) {
-	foreach my $server (values %sources) {
-		next if ($dest->{'ssh_pass'});	# Assume it will work
-		next if ($dest->{'id'} == 0);	# Direct isn't even needed
-		my ($out, $ex, $err) = &execute_command_on_server($server,
-			"ssh -o PasswordAuthentication=no -x ".
-			"-".$dest->{'ssh_protocol'}." ".
-			($dest->{'ssh_port'} ? "-p ".$dest->{'ssh_port'}." "
-					     : "").
-			$dest->{'ssh_user'}."\@".$dest->{'ip'}." echo OK");
-		return $err if ($err);
-		if ($ex || $out !~ /OK/) {
-			return &text('dmass_emovessh',
-				     $server->{'host'}, $dest->{'host'},
-				     &html_escape($out));
-			}
-		}
-	}
-
 return undef;
 }
 
@@ -6423,7 +6403,6 @@ sub move_domains_to_server
 {
 my ($serverdoms, $dest, $delete, $direct, $realloc) = @_;
 my (@refresh, %refreshed);
-$direct = 0 if ($dest->{'id'} == 0);	# Transferring to master
 
 # Sort list so that parents come first
 my @sorted = sort { $a->[1]->{'parent'} <=> $b->[1]->{'parent'} ||
@@ -6455,24 +6434,16 @@ foreach my $sd (@sorted) {
 
 	# Find a temp file on the target, if needed
 	my $desttemp;
-	if ($dest->{'id'} != 0) {
-		$last_remote_error = undef;
-                &remote_foreign_require($dest, "webmin", "webmin-lib.pl");
-		if ($last_remote_error) {
-			&$second_print(&text('move_ewebmin',
-					     $last_remote_error));
-			$failed{$d->{'id'}} = $sd;
-			next;
-			}
-		$desttemp = &remote_foreign_call($dest, "webmin",
-						 "tempname", $filename);
-		if ($direct) {
-			# For a direct transfer, this is a directory that we
-			# scp the backup into
-			&remote_foreign_call($dest, "webmin", "make_dir",
-					     $desttemp, 0700);
-			}
+	$last_remote_error = undef;
+	&remote_foreign_require($dest, "webmin", "webmin-lib.pl");
+	if ($last_remote_error) {
+		&$second_print(&text('move_ewebmin',
+				     $last_remote_error));
+		$failed{$d->{'id'}} = $sd;
+		next;
 		}
+	$desttemp = &remote_foreign_call($dest, "webmin",
+					 "tempname", $filename);
 
 	# Check if parent has failed
 	if ($d->{'parent'} && $failed{$d->{'parent'}}) {
@@ -6490,31 +6461,17 @@ foreach my $sd (@sorted) {
 	&$second_print($text{'create_done'});
 
 	# Show start message
-	if ($direct) {
-		&start_background_dot_printer(
-			&text('move_backing2', $d->{'dom'},
-			      $server->{'host'}, $dest->{'host'}));
-		}
-	else {
-		&start_background_dot_printer(
-			&text('move_backing', $d->{'dom'}, $server->{'host'}));
-		}
+	&start_background_dot_printer(
+		&text('move_backing', $d->{'dom'}, $server->{'host'}));
 
+	# Backup to a temp file on the target
 	my @args = ( [ "domain", $d->{'dom'} ],
 		     [ "all-features" ],
 		     [ "option", "mail mailfiles 1" ],
 		     [ "option", "virtualmin-mailman archive 1" ],
 		     [ "newformat" ],
+		     [ "dest", $tmpdir ],
 		      );
-	if ($direct) {
-		# Backup to dest via SSH directly
-		my $pa = $dest->{'ssh_port'} ? ":".$dest->{'ssh_port'} : "";
-		push(@args, [ "dest", "ssh://$dest->{'ssh_user'}:$dest->{'ssh_pass'}\@$dest->{'ip'}$pa$desttemp" ]);
-		}
-	else {
-		# Backup to a temp file on the target
-		push(@args, [ "dest", $tmpdir ]);
-		}
 	my ($err, $out) = &call_virtualmin_api(
 		$server, "backup-domain", \@args);
 	&stop_background_dot_printer();
@@ -6525,24 +6482,14 @@ foreach my $sd (@sorted) {
 		}
 
 	# Work out the resulting filename and size
-	my (@st, $filename, $statserver, $statdir);
-	if ($direct) {
-		# Stat on dest server
-		$statserver = $dest;
-		$statdir = $desttemp;
-		}
-	else {
-		# Stat on source server
-		$statserver = $server;
-		$statdir = $tmpdir;
-		}
+	my (@st, $filename);
 	&remote_finished();
-	&remote_foreign_require($statserver, "webmin", "webmin-lib.pl");
+	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
 	foreach my $p ("$d->{'dom'}.tar.gz",
 		       "$d->{'dom'}.tar.bz2",
 		       "$d->{'dom'}.tar") {
-		my $st = &remote_eval($statserver, "webmin",
-					"[ stat('$statdir/$p') ]");
+		my $st = &remote_eval($server, "webmin",
+					"[ stat('$tmpdir/$p') ]");
 		@st = @$st;
 		if (@st) {
 			$filename = $p;
@@ -6567,56 +6514,27 @@ foreach my $sd (@sorted) {
 
 	&$second_print(&text('move_backed', &nice_size($st[7])));
 
-	# Transfer to master system, if not already there
-	my ($localtemp, @st);
-	if (!$direct) {
-		if ($server->{'id'} != 0) {
-			&start_background_dot_printer(
-				&text('move_download', $d->{'dom'}, $filename));
-			$localtemp = &transname($filename);
-			my $err = &get_file_from_server($server,
-				"$tmpdir/$filename", $localtemp);
-			&stop_background_dot_printer();
-			&execute_command_on_server($server,
-				   "rm -f ".quotemeta("$tmpdir/$filename"));
-			if ($err) {
-				&$second_print(&text('move_edownload', $err));
-				$failed{$d->{'id'}} = $sd;
-				next;
-				}
-			@st = stat($localtemp);
-			&$second_print(&text('move_downloaded',
-					     &nice_size($st[7])));
-			}
-		else {
-			$localtemp = "$tmpdir/$filename";
-			@st = stat($localtemp);
-			}
-
-		# Transfer to destination (if not already there)
-		if ($dest->{'id'} != 0) {
-			&start_background_dot_printer(
-				&text('move_upload', $d->{'dom'},
-				      $filename, $dest->{'host'}));
-			my $err = &put_file_to_server($dest, $localtemp,
-							 $desttemp);
-			&stop_background_dot_printer();
-			unlink($localtemp);
-			if ($err) {
-				&$second_print(&text('move_eupload', $err));
-				$failed{$d->{'id'}} = $sd;
-				next;
-				}
-			&$second_print(&text('move_uploaded',
-					     &nice_size($st[7])));
-			}
-		else {
-			$desttemp = $localtemp;
-			}
+	# Transfer from temp file on source system to temp file on dest system
+	&start_background_dot_printer(
+		&text('move_transfer', $d->{'dom'},
+		      $server->{'host'}, $dest->{'host'}));
+	my $err = &transfer_file_between_servers($server, $dest,
+			"$tmpdir/$filename", $desttemp, 0, 1, 0, !$direct);
+	&stop_background_dot_printer();
+	if ($err) {
+		&$second_print(&text('move_edownload', $err));
+		$failed{$d->{'id'}} = $sd;
+		next;
 		}
 	else {
-		# Work out real destination filename
-		$desttemp .= "/".$filename;
+		&$second_print($text{'create_done'});
+		}
+
+	# Delete temp file from source
+	if ($tmpdir && $filename) {
+		&delete_file_on_server($server, "$tmpdir/$filename");
+		&delete_file_on_server($server, "$tmpdir/$filename.dom");
+		&delete_file_on_server($server, "$tmpdir/$filename.info");
 		}
 
 	# Flag as done
@@ -6749,6 +6667,13 @@ foreach my $sd (@sorted) {
 		}
 	&$second_print(&text('move_restored', $d->{'dom'}));
 	push(@refresh, $dest) if (!$refreshed{$dest->{'id'}}++);
+
+	# Clean up temp file on dest
+	if ($desttemp) {
+		&delete_file_on_server($dest, $desttemp);
+		&delete_file_on_server($dest, $desttemp.".dom");
+		&delete_file_on_server($dest, $desttemp.".info");
+		}
 	}
 
 if (@refresh) {
