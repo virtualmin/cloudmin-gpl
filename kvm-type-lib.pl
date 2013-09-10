@@ -5304,9 +5304,8 @@ my ($server, $view) = @_;
 my $rv;
 
 # KVM process ID
-my $proc = &get_server_kvm_instance($server);
-if ($proc) {
-	$rv .= &ui_table_row($text{'edit_kvmpid'}, $proc->{'pid'});
+if ($server->{'status'} ne 'down') {
+	$rv .= &ui_table_row($text{'edit_kvmpid'}, $server->{'kvm'});
 	}
 
 # Disk mode
