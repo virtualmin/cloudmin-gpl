@@ -5381,15 +5381,14 @@ sub used_ip_addresses
 my %used;
 foreach my $s (&list_managed_servers()) {
 	# Add IPs from VPS
-	$used{&to_ipaddress($s->{'host'})} = $s;
 	$used{$s->{'ip'}} = $s;
+	$used{$s->{'ip_force'}} = $s if ($s->{'ip_force'});
 	foreach my $ip (split(/\s+/, $s->{'ip_addresses'})) {
 		$used{$ip} = $s;
 		}
 
 	# Add IPv6 addresses
-	my $ip6 = &to_ip6address($s->{'host'});
-	$used{$ip6} = $s if ($ip6);
+	$used{$s->{'ip6_force'}} = $s if ($s->{'ip6_force'});
 	foreach my $ip6 (split(/\s+/, $s->{'ip6_addresses'})) {
 		$used{$ip6} = $s;
 		}
