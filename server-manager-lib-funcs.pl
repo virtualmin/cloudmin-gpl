@@ -1304,14 +1304,14 @@ return (0, $out, $fh, $fpid);
 }
 
 # execute_command_on_server(&server, command, [timeout], [leave-open],
-# 			    [no-force-language])
+# 			    [no-force-language], [extra-ssh-flags])
 # Runs some command on a managed system (most likely via SSH), and returns
 # the output, exit status and error message if it could not be run.
 # If the leave-open parameter is set, the command is left running and a file
 # handle for talking to it is returned.
 sub execute_command_on_server
 {
-my ($server, $cmd, $timeout, $leave, $nolang) = @_;
+my ($server, $cmd, $timeout, $leave, $nolang, $extraflags) = @_;
 my $efunc = "type_".$server->{'manager'}."_execute_command";
 if (defined(&$efunc)) {
 	# Use type-specific function call
@@ -1327,6 +1327,9 @@ else {
 	if ($leave) {
 		$sshcmd .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
+		}
+	if ($extraflags) {
+		$sshcmd .= " ".$extraflags;
 		}
 	if (!$nolang && $server->{'root_shell'}) {
 		# Force all output to be in english
@@ -1865,7 +1868,8 @@ else {
 
 	# Then execute on the source system
 	my ($out, $ex, $err, $status, $fh, $fpid) =
-		&execute_command_on_server($srcserver, $sshcmd, undef, 1);
+		&execute_command_on_server($srcserver, $sshcmd, undef, 1, 0,
+					   $sshagent ? "-A" : "");
 	if (!$err && !$ex) {
 		# Started OK .. wait for a password prompt
 		$out = undef;
