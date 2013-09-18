@@ -1565,6 +1565,9 @@ else {
 					$iscsiserver, $destserver, $ddcmd,
 					$dest->{'path'}.$ext);
 				}
+			# Connection to Webmin on iSCSI server may drop
+			# during backup
+			&remote_finished();
 			}
 		else {
 			# Create gzip file from dd of disk
