@@ -149,7 +149,7 @@ else {
 # sample (unless more than 1 hour old)
 if ($config{'bw_enabled'} &&
     $server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
-	my $bwinfo = &get_bandwidth($server);
+	my $bwinfo = &get_bandwidth($server, time()-3600, undef);
 	if ($bwinfo->{'new_min'} &&
 	    $time - $bwinfo->{'new_min'} < 3600) {
 		push(@stats, [ "bwin",
