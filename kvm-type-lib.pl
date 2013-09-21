@@ -6172,6 +6172,7 @@ foreach my $d (@$disks) {
 	# If the disk is on iSCSI, the move can be done by simply disconnecting
 	# and re-connecting on the new host
 	if ($d->{'iscsi_server'} ne '') {
+		&remote_finished();
 		my $iscsiserver = &get_managed_server($d->{'iscsi_server'});
 		&$first_print(&text('smove_iscsi', $iscsiserver->{'host'},
 				    $d->{'iscsi_target'}));
