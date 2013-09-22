@@ -182,6 +182,11 @@ else {
 $server->{'iscsi_disk_count'}++;
 $disk->{'iscsi_real'} = $real;
 
+# Re-establish Webmin connections
+&remote_finished();
+&remote_foreign_require($iscsiserver, $mod);
+&remote_foreign_require($vhost, "iscsi-client");
+
 # Export via iSCSI
 my $targetname;
 if ($mod eq "iscsi-server") {
