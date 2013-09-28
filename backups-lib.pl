@@ -2805,17 +2805,29 @@ $server->{'status'} = 'create';
 
 &obtain_lock_server($server);
 
+# Fix the hosted-on system if needed
+my $vkey = ($server->{'manager'} eq 'zones' ? 'zone' : $server->{'manager'});
+my $vhost = &get_parent_server($server);
+if (!$vhost || !$vhost->{$vkey."_on"}) {
+	# Old host doesn't work here .. pick a new one
+	my $mem = $server->{$server->{'manager'}.'_memory'};
+	my $disk = $server->{$server->{'manager'}.'_disktotal'};
+	$vhost = &find_host_server($server, $vkey, $mem, 0, $disk);
+	$vhost || return $text{'restore_enewvhost'};
+	$server->{$vkey.'_on'} = $vhost->{'id'};
+	}
+
 # Run pre-creation script
 if (!&run_system_script($server, 'before', 'create')) {
 	return 0;
 	}
 
 # If there is an image file, copy to the server
-my $vhost = &get_parent_server($server);
 my $img = &get_server_image($server->{'image'});
 if ($img) {
+	my $copyserver = &get_transfer_image_dest($server);
 	&$first_print(&text('create_copying', &nice_size($img->{'size'}),
-			    $vhost->{'host'}));
+			    $copyserver->{'host'}));
 	($imageok, $imagetemp) = &transfer_image_files($server, 0);
 	if ($imageok == 0) {
 		# Copy failed
