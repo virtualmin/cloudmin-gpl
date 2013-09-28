@@ -1308,6 +1308,8 @@ sub type_kvm_create
 {
 my ($server, $serial, $key, $reset, $empty, $nostart) = @_;
 my $vhost = &type_kvm_parent($server);
+$vhost && $vhost->{'kvm_host'} || return "Host system does not exist or is ".
+					 "not a KVM host";
 my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
 delete($server->{'kvm_filesystem_offset'});
 $server->{'kvm_args'} = $config{'kvm_manual'} if (!$reset);
