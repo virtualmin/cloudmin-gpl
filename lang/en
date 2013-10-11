@@ -3840,6 +3840,7 @@ restore_parallel=Restore order
 restore_dest=Restore from source
 restore_ok=Restore Now
 restore_enone=No systems to restore selected!
+restore_enewvhost=Original host system cannot be used, and no new suitable host system was found
 
 dbackup_err=Failed to delete backups
 dbackup_enone=None selected to delete!
