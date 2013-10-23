@@ -17,7 +17,9 @@ if ($in{'shutdown'}) {
 		&show_confirm_form(
 			&text('save_shutrusure', "<tt>$server->{'host'}</tt>").
 			"<br>\n".
-			&ui_checkbox("force", 1, $text{'save_shutforce'}, 0),
+			(&is_virtual_server() ?
+			  &ui_checkbox("force", 1, $text{'save_shutforce'}, 0) :
+			  ""),
 			"save_serv.cgi", [ [ "id", $in{'id'} ],
 					   [ "shutdown", 1 ] ],
 			$text{'save_shutok'});
