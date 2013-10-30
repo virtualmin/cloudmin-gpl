@@ -1622,7 +1622,8 @@ if (!$reset) {
 # Create empty disk file, with no partitions
 if ($empty) {
 	my $dksize = $server->{'kvm_disksize'}*1024*1024;
-	if (!$server->{'kvm_filesystem_vg'}) {
+	if (!$server->{'kvm_filesystem_vg'} &&
+	    $server->{'kvm_filesystem_iscsi'} eq '') {
 		# Create whole disk file with dd
 		my $cmd = &dd_command("/dev/zero", $fsfile, $dksize);
 		my ($out, $ex, $err) = &execute_command_on_server(
