@@ -2808,7 +2808,7 @@ $server->{'status'} = 'create';
 # Fix the hosted-on system if needed
 my $vkey = ($server->{'manager'} eq 'zones' ? 'zone' : $server->{'manager'});
 my $vhost = &get_parent_server($server);
-if (!$vhost || !$vhost->{$vkey."_on"}) {
+if (!$vhost || !$vhost->{$vkey."_host"}) {
 	# Old host doesn't work here .. pick a new one
 	my $mem = $server->{$server->{'manager'}.'_memory'};
 	my $disk = $server->{$server->{'manager'}.'_disktotal'};

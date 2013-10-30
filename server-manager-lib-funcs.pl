@@ -9672,7 +9672,7 @@ return @rv;
 sub find_host_server
 {
 my ($server, $type, $mem, $gmem, $disk) = @_;
-my @vhosts = &list_available_host_servers($type, $mem, $gmem, $disk, $server);
+my @vhosts = &list_available_host_servers($type, $mem, $gmem, $disk, 0,$server);
 return undef if (!@vhosts);
 return &find_host_server_from_vhosts($server, \@vhosts, $access{'hostmode'},
 				     $type);
