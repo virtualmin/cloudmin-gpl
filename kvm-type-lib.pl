@@ -1370,8 +1370,12 @@ elsif ($vhost->{'kvm_iscsi'} ne '' && !$server->{'kvm_nolvm'}) {
 else {
 	# On regular files
 	$fsfile = "$kvm_dir/$server->{'host'}.img";
+	my @st = &stat_file_on_server($vhost, $fsfile);
+	return "Disk image file $fsfile already exists" if (@st);
         if ($server->{'kvm_swap'}) {
                 $swfile = "$kvm_dir/$server->{'host'}.swap";
+		my @st = &stat_file_on_server($vhost, $swfile);
+		return "Swap image file $fsfile already exists" if (@st);
                 }
 	}
 
