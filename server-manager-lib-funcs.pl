@@ -1929,7 +1929,7 @@ else {
 		&kill_logged('TERM', $sshpid);
 		}
 
-	VIAMASTER;
+	VIAMASTER:
 	if ($rv || $viamaster) {
 		# Fall back to fetching to master and uploading
 		my $temp = &transname();
