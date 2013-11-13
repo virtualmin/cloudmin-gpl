@@ -208,6 +208,7 @@ if ($server->{'directory'}) {
 	$err && &usage(&text('create_edirectory', $err));
 	}
 
+$main::force_bottom_scroll = 1;
 &ui_print_unbuffered_header(&server_in($server), $text{'create_title'}, "");
 
 # Run pre-creation script

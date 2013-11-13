@@ -10006,14 +10006,32 @@ $html =~ s/<[^>]*>//g;
 return $html;
 }
 
+# Return optional javascript to force scroll to the botton
+sub bottom_scroll_js
+{
+if ($main::force_bottom_scroll) {
+        return "<script>".
+               "window.scrollTo(0, document.body.scrollHeight)".
+               "</script>\n";
+        }
+else {
+        return "";
+        }
+}
+
 # Print functions for HTML output
-sub first_html_print { print @_,"<br>\n"; }
+sub first_html_print { print @_,"<br>\n";
+		       print &bottom_scroll_js(); }
 sub first_oneline_html_print { print @_; }
-sub first_endline_html_print { print "<br>\n"; }
+sub first_endline_html_print { print "<br>\n";
+			       print &bottom_scroll_js(); }
 sub second_html_print { print @_,"<p>\n"; }
-sub indent_html_print { print "<ul>\n"; }
-sub outdent_html_print { print "</ul>\n"; }
-sub block_html_print { print "<pre>".&html_escape(join("", @_))."</pre>"; }
+sub indent_html_print { print "<ul>\n";
+			print &bottom_scroll_js(); }
+sub outdent_html_print { print "</ul>\n";
+			 print &bottom_scroll_js(); }
+sub block_html_print { print "<pre>".&html_escape(join("", @_))."</pre>";
+		       print &bottom_scroll_js(); }
 
 # Print functions for text output
 sub first_text_print
