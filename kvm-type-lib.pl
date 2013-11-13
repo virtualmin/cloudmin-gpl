@@ -6633,7 +6633,7 @@ sub parse_kvm_start_command
 {
 my ($line) = @_;
 while($cmd =~ s/(\d*)(<|>)((\/\S+)|&\d+)\s*$//) { }
-if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm|qemu)\s+(.*)/) {
+if ($line =~ /^\s*(\S+\/|)(qemu-kvm|kvm|qemu|qemu-system-x86_64|qemu-system-i[0-9]86)\s+(.*)/) {
 	# Found a possible KVM line .. parse the args
 	my ($cmd, $args) = ($2, $3);
 	my @w = &split_quoted_string($args);
