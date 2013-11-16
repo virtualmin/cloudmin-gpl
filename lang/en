@@ -464,6 +464,7 @@ create_xenmanual=Other configuration file entries
 create_xenvnc=Configuring Xen instance for VNC console access ..
 create_xenvncfailed=.. failed : $1
 create_xenvncdone=.. added on dynamic port
+create_xenregister=Registering Xen configuration file ..
 create_xendhcpsetup=Adding DHCP entries ..
 create_exendhcpifaces=.. list of network interfaces is not available
 create_xendhcp=Adding DHCP entry for $1 with Ethernet address $2 ..
