@@ -107,9 +107,18 @@ foreach $s (@servers) {
 			$bwinfo->{'old_hour'} ||
 			int($bwinfo->{'last_time'}/3600)*3600;
 
+		# Compute time 1 week ago, as a cutoff for minute stats
+		$weekago = $now - 7*24*60*60;
+		$weekago = int($weekago/60) * 60;
+
 		# By minute
 		$mnow = int($now/60)*60;
 		$mlast = int($bwinfo->{'last_time'}/60)*60;
+		if ($mlast < $weekago) {
+			# No point collecting minute stats for > 1 week ago,
+			# as we don't even save them
+			$mlast = $weekago;
+			}
 		$mins = ($mnow - $mlast) / 60.0;
 		$mins = 1 if ($mins < 1);
 		my $mm_set = $mlast;
@@ -127,8 +136,6 @@ foreach $s (@servers) {
 		$new_bwinfo->{'old_min'} = $bwinfo->{'old_min'} || $mlast;
 
 		# Get rid of per-minute stats more than 1 week old
-		$weekago = $now - 7*24*60*60;
-		$weekago = int($weekago/60) * 60;
 		if ($new_bwinfo->{'old_min'} < $weekago) {
 			for(my $mm=$new_bwinfo->{'old_min'}; $mm<$weekago; $mm+=60){
 				push(@$del_bwinfo,
