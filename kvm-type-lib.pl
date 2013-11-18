@@ -5246,8 +5246,8 @@ if (&can_ssh_status($server) && (!defined($server->{'label_map'}) || $regen)) {
 if ((!defined($server->{'kvm_ip6'}) || $regen) &&
     ($server->{'status'} eq 'down' || &can_ssh_status($server))) {
 	# Fetch IPv6 addresses from interfaces
-	$server->{'kvm_ip6'} =
-		join(" ", &list_interface_ip6_addresses($server));
+	my $newip6 = join(" ", &list_interface_ip6_addresses($server));
+	$server->{'kvm_ip6'} = $newip6 if ($newip6);
 	}
 
 # If paused, make sure pause file still exists
