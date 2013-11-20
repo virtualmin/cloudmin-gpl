@@ -7425,13 +7425,11 @@ else {
 			    'link' => $wurl });
 		if ($wurl =~ /link.cgi/) {
 			# Also direct link
-			my $prot = $server->{'ssl'} ? 'https' : 'http';
-			my $durl = "$prot://$server->{'host'}:$server->{'port'}/";
 			push(@rv, { 'id' => 'webmin',
 				    'desc' => $text{'edit_webmin3'},
 				    'cat' => '',
 				    'target' => '_new',
-				    'link' => $durl });
+				    'link' => &get_webmin_url($server) });
 			}
 		}
 	if (($status eq 'novirt' || $status eq 'nowebmin') &&
@@ -11538,6 +11536,20 @@ else {
 	my $host = &get_system_hostname();
         my $port = $miniserv{'port'};
         return $proto."://$host:$port";
+	}
+}
+
+# get_webmin_url(&server)
+# Returns the URL for Webmin on some system
+sub get_webmin_url
+{
+my ($server) = @_;
+if ($server->{'webmin_url'}) {
+	return $server->{'webmin_url'};
+	}
+else {
+	my $prot = $server->{'ssl'} ? 'https' : 'http';
+	return "$prot://$server->{'host'}:$server->{'port'}/";
 	}
 }
 

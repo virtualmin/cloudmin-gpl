@@ -46,6 +46,9 @@ Determines if Cloudmin will create Virtualmin domains on this system or not.
 C<--disk-directory> I<path> or C<--no-disk-directory>
 Sets the default image directory for new virtual disks.
 
+C<--webmin-url> I<url> or C<--no-webmin-url>
+Changes the URL used in the "Link to Webmin" menu entry in the Cloudmin UI.
+
 =head1 Example usage
 
   cloudmin modify-system --host xencentos.home --desc "CentOS 5 on Xen"
@@ -159,6 +162,14 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--no-disk-directory") {
 		$directory = "";
+		}
+	elsif ($a eq "--webmin-url") {
+		$wurl = shift(@ARGV);
+		$wurl =~ /^(http|https):\/\/\S+$/ ||
+			&usage("--webmin-url must be followed by a full URL");
+		}
+	elsif ($a eq "--no-webmin-url") {
+		$wurl = "";
 		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
@@ -319,6 +330,9 @@ if (defined($force_ip)) {
 	$recheck = 1;
 	&complete_managed_server($server);	# To refresh 'ip' field
 	}
+if (defined($wurl)) {
+	$server->{'webmin_url'} = $wurl;
+	}
 if ($webmin_same) {
 	$server->{'ssh_pass_same'} = 1;
 	$server->{'user'} = 'root';
@@ -414,7 +428,8 @@ if (defined(&list_locations)) {
 	}
 print "                      [--force-ip address | --no-force-ip]\n";
 print "                      [--disk-directory path |\n";
-print"                        --no-disk-directory]\n";
+print "                       --no-disk-directory]\n";
+print "                      [--webmin-url url | --no-webmin-url]\n";
 exit(1);
 }
 

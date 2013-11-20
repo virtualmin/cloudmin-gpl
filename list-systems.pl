@@ -186,6 +186,9 @@ if ($multi) {
 			print "    Virtualmin version: ",
 			      $info->{'minfo'}->{'version'},"\n";
 			}
+		if ($s->{'status'} eq 'virt' || $s->{'status'} eq 'novirt') {
+			print "    Webmin URL: ",&get_webmin_url($s),"\n";
+			}
 		if ($s->{'created'}) {
 			print "    Created: ",&make_date($s->{'created'}),"\n";
 			print "    Age: ",&nice_hour_mins_secs(
