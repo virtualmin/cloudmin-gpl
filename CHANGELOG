@@ -76,3 +76,4 @@ Usage by system owners now correctly takes deletion and re-assignment of systems
 Bandwidth usage by systems owned by a particular owner is now displayed on the Edit Owner page, and is correctly computed taking deletion and re-assignment into account.
 ---- Changes since 7.2 ----
 The graphical console for virtual systems is now displayed using a Flash object by default, with the option to switch back to Java.
+---- Changes since 7.3 ----
