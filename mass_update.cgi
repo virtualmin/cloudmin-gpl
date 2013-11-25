@@ -33,11 +33,24 @@ if ($in{'install'}) {
 		foreach $p (split(/\s+/, $in{'packages'})) {
 			my $pkg = { 'name' => $p,
 				    'system' => $info->{'update_system'} };
-			push(@poss, $pkg);
 			$k = $pkg->{'system'}."/".$pkg->{'name'};
+			if ($in{'newonly'}) {
+				# Skip if already installed
+				@uposs = @{$info->{'allposs'}};
+				@uposs = @{$info->{'poss'}} if (!@uposs);
+				($existing) = grep {
+					$_->{'system'} eq $pkg->{'system'} &&
+					$_->{'name'} eq $pkg->{'name'}
+					} @uposs;
+				next if ($existing);
+				}
+			push(@poss, $pkg);
 			$pkgs{$k} ||= $pkg;
 			}
 		$pos += scalar(@poss);
+		}
+	if (!%pkgs) {
+		&ui_print_endpage("<b>$text{'update_nothingtodo'}</b>");
 		}
 	}
 else {

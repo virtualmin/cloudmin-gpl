@@ -121,10 +121,13 @@ foreach $d (keys %d) {
 	print &ui_hidden("d", $d);
 	}
 print &ui_hidden("install", 1);
-print &ui_table_start($text{'update_installheader'});
+print &ui_table_start($text{'update_installheader'}, undef, 2);
 
 print &ui_table_row($text{'update_toinstall'},
 	&ui_textbox("packages", undef, 50));
+
+print &ui_table_row($text{'update_newonly'},
+	&ui_yesno_radio("newonly", 1));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'update_install'} ] ]);
