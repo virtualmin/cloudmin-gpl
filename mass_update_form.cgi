@@ -6,6 +6,9 @@ require './server-manager-lib.pl';
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
 @servers || &error($text{'mass_enone'});
+@wservers = grep { $_->{'status'} eq 'virt' ||
+		   $_->{'status'} eq 'novirt' } @servers;
+@wservers || &error($text{'update_enone2'});
 &can_action_error(\@servers, "update");
 if (@servers == 1) {
 	&ui_print_header(&server_in($servers[0]), $text{'update_title'}, "");

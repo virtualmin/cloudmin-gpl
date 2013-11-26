@@ -1185,6 +1185,7 @@ edit_lockkill=Kill Process
 
 update_title=Update Packages
 update_title2=Install Packages
+update_enone2=None of the selected systems have Webmin or Virtualmin installed
 update_hostlist=Packages will be updated on : $1
 update_more=$1 more ..
 update_doing=Updating $2 packages on $1 ..
