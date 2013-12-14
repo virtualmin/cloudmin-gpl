@@ -180,7 +180,6 @@ $dir = { 'name' => 'zone',
 			  'values' => [ $file ] } ]
 	};
 &bind8::create_zone($dir, $conf, $vinfo ? $vinfo->{'idx'} : undef);
-&bind8::set_ownership(&bind8::make_chroot($bind8::config{'named_conf'}));
 &$second_print(".. done");
 
 # Create initial records
