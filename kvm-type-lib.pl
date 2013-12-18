@@ -7230,9 +7230,6 @@ $newserver->{'kvm_drives'} = join(" ", @drives);
 $newserver->{'kvm_on'} = $dest->{'id'};
 &$second_print($text{'create_done'});
 
-# Enable at boot for new VM
-&type_kvm_set_atboot($newserver, $oldboot);
-
 # Register in DNS
 if ($dest->{'kvm_zone'}) {
 	my $dnsname = $newhost.".".$dest->{'kvm_zone'}.".";
@@ -7251,6 +7248,7 @@ if ($dest->{'kvm_zone'}) {
 
 # Mount the filesystem
 &$first_print($text{'create_xenmount'});
+delete($newserver->{'kvm_filesystem_offset'});	# May be invalidated
 my $err = &mount_filesystem_if_needed($newserver);
 my $mp = $newserver->{'kvm_mount'};
 if ($err || !$mp) {
@@ -7392,6 +7390,9 @@ foreach my $f ('kvm_monitor', 'kvm_console') {
 
 # Force re-generation of monitor port
 delete($newserver->{'kvm_monitor_port'});
+
+# Enable at boot for new VM
+&type_kvm_set_atboot($newserver, $oldboot);
 
 return (undef, 0);
 }
