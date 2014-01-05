@@ -182,6 +182,10 @@ foreach my $stat (@stats) {
 		rename($statfile, $statfile.".".$sfirsttime."-".$time);
 		}
 	}
+
+# Delete old history files
+&cleanup_old_history_files("$historic_info_dir/$server->{'id'}",
+			   ".*-.*");
 }
 
 # list_historic_collected_info(stat, &server, [start], [end])
@@ -318,26 +322,29 @@ if ($v ne '0' && $v ne int($v)) {
 return wantarray ? ($v, $u) : $v;
 }
 
-# cleanup_old_history_files(dir)
+# cleanup_old_history_files(dir, [pattern])
 # Delete files in some directory (history or bandwidth) older than the
 # configured cleanup age
 sub cleanup_old_history_files
 {
-my ($dir) = @_;
+my ($dir, $pattern) = @_;
 my $age = $config{'cleanup_age'};
 return 0 if (!$age);
 my $cutoff = time() - $age*86400;
 my $rv = 0;
+opendir(DIR, $dir) || return 0;
 my @files = readdir(DIR);
 closedir(DIR);
 foreach my $f (@files) {
+	next if ($f eq "." || $f eq "..");
 	my $path = "$dir/$f";
 	if (-d $path) {
 		$rv += &cleanup_old_history_files($path);
 		}
 	else {
 		my @st = stat($path);
-		if (@st && $st[9] < $cutoff) {
+		if (@st && $st[9] < $cutoff &&
+		    (!$pattern || $f =~ /$pattern/)) {
 			&unlink_file($path);
 			$rv++;
 			}

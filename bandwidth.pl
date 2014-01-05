@@ -282,6 +282,9 @@ if (&supports_plans()) {
 		}
 	}
 
+# Clean up old bandwidth files
+&cleanup_old_history_files($bandwidth_dir, ".*-.*");
+
 &unlock_file($bandwidth_dir);
 
 sub usage
