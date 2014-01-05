@@ -318,5 +318,33 @@ if ($v ne '0' && $v ne int($v)) {
 return wantarray ? ($v, $u) : $v;
 }
 
+# cleanup_old_history_files(dir)
+# Delete files in some directory (history or bandwidth) older than the
+# configured cleanup age
+sub cleanup_old_history_files
+{
+my ($dir) = @_;
+my $age = $config{'cleanup_age'};
+return 0 if (!$age);
+my $cutoff = time() - $age*86400;
+my $rv = 0;
+my @files = readdir(DIR);
+closedir(DIR);
+foreach my $f (@files) {
+	my $path = "$dir/$f";
+	if (-d $path) {
+		$rv += &cleanup_old_history_files($path);
+		}
+	else {
+		my @st = stat($path);
+		if (@st && $st[9] < $cutoff) {
+			&unlink_file($path);
+			$rv++;
+			}
+		}
+	}
+return $rv;
+}
+
 1;
 
