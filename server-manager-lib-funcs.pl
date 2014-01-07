@@ -960,7 +960,7 @@ else {
 sub check_ssh_key_data
 {
 my ($text) = @_;
-if ($text =~ /-----BEGIN\s+(RSA|DSA)\s+PRIVATE\s+KEY-----\n([A-Za-z\-]+:\s+\S+\n)*([A-Za-z0-9\+\/=\n]+)-----END\s+(\S+)\s+PRIVATE\s+KEY-----/ && $1 eq $3) {
+if ($text =~ /-----BEGIN\s+(RSA|DSA)\s+PRIVATE\s+KEY-----\n([A-Za-z\-]+:\s+\S+\n)*([A-Za-z0-9\+\/=\n]+)-----END\s+(\S+)\s+PRIVATE\s+KEY-----/ && $1 eq $4) {
 	return 2;
 	}
 elsif ($text =~ /^SSH\s+PRIVATE\s+KEY\s+FILE/) {
