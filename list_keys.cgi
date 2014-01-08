@@ -45,7 +45,7 @@ if (@keys) {
 	}
 else {
 	print "<b>$text{'keys_none'}</b><p>\n";
-	@links = ( $links[2] );
+	@links = @links[2..$#links];	# Remove select all / invert
 	print &ui_links_row(\@links);
 	}
 
