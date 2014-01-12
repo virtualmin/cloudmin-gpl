@@ -5378,3 +5378,11 @@ snapshot_dtitle=Delete Snapshots
 snapshot_deleting=Deleting snapshot with ID $1 ..
 snapshot_edelete=.. deletion failed : $1
 snapshot_elimit=Creating this snapshot would exceed your total disk limit of $1. Currently you are using $2 of disk space.
+
+import_title=Import System Image
+import_header=Image import options
+import_type=Virtual system type
+import_source=Import from
+import_source0=An existing file on one of your systems
+import_source1=Download from Stacklet
+import_continue=Continue..

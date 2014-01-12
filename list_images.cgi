@@ -68,19 +68,7 @@ if ($in{'search'}) {
 			   $_->{'id'} =~ /\Q$in{'search'}\E/i } @combined;
 	}
 
-# Build list of creation links
 @links = ( &select_all_link("d"), &select_invert_link("d") );
-foreach $t (@virtual_server_management_types) {
-	$mfunc = "type_".$t."_can_manual_image";
-	if (defined(&$mfunc) && &$mfunc()) {
-		push(@links, "<a href='manual_image_form.cgi?manager=$t&".
-			     "mode=$in{'mode'}&search=".
-			     &urlize($in{'search'})."'>".
-			     &text('images_create', $text{$t.'_typedesc'}).
-			     "</a>");
-		}
-	}
-
 if (@combined) {
 	# Show table of images
 	print &ui_form_start("get_images.cgi", "post");

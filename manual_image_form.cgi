@@ -3,7 +3,7 @@
 
 require './server-manager-lib.pl';
 &can_action_error(undef, "global");
-&ui_print_header(undef, $text{'mimage_title'}, "", "manualimage");
+&ui_print_header(undef, $text{'import_title'}, "", "manualimage");
 &ReadParse();
 
 print &ui_form_start("manual_image.cgi", "post");

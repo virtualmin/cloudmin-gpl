@@ -6,7 +6,7 @@ require './server-manager-lib.pl';
 &can_action_error(undef, "global");
 &ReadParse();
 
-&ui_print_unbuffered_header(undef, $text{'mimage_title'}, "");
+&ui_print_unbuffered_header(undef, $text{'import_title'}, "");
 
 # Validate inputs and create object
 $image = { 'manager' => $in{'manager'},

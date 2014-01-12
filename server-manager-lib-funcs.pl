@@ -6958,6 +6958,11 @@ if ($anyvirt) {
 	push(@gicons, "images/images.gif");
 	push(@gcats, "settings");
 
+	push(@glinks, "import_form.cgi");
+	push(@gtitles, $text{'import_title'});
+	push(@gicons, "images/images.gif");
+	push(@gcats, "settings");
+
 	if (!$module_info{'onehost'}) {
 		push(@glinks, "list_storages.cgi");
 		push(@gtitles, $text{'storages_title'});
