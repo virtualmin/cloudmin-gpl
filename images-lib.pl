@@ -1943,5 +1943,56 @@ elsif (!defined($found) && defined($value)) {
 return join("\n", @lines)."\n";
 }
 
+sub get_stacklet_index_url
+{
+return "ftp://ftp.stacklet.com/archive/archive.xml";
+}
+
+# list_stacklet_images([manager])
+# Returns a list of all available images from Stacklet
+sub list_stacklet_images
+{
+my ($manager) = @_;
+my $url = &get_stacklet_index_url();
+$url =~ /^ftp:\/\/([^\/]+)(\/.*)$/ || return "Invalid URL $url";
+my ($host, $port, $page) = ($1, 21, $2);
+my $temp = &transname();
+my $err;
+&ftp_download($host, $page, $temp, \$err, undef, undef, undef, $port, 1);
+return $err if ($err);
+
+eval "use XML::Simple";
+return "Missing XML::Simple Perl module" if ($@);
+my $xml;
+eval {
+	$xml = XML::Simple::XMLin($temp);
+	};
+&unlink_file($temp);
+return "XML parsing failed : $@" if ($@);
+$xml->{'channel'} && $xml->{'channel'}->{'item'} ||
+	return "XML format is invalid";
+my $rv = $xml->{'channel'}->{'item'};
+
+# Filter by manager type
+my $format = $manager eq 'kvm' ? 'kvm-raw-disk-image' :
+	     $manager eq 'xen' ? 'xen-pv-disk-image' :
+	     $manager eq 'citrix' ? 'kvm-raw-disk-image' :
+	     !$manager ? undef : 'unknown';
+if ($format) {
+	my $frv = [ ];
+	foreach my $i (@$rv) {
+		my ($f) = grep { $_->{'domain'} eq 'format' }
+			       @{$i->{'category'}};
+		if ($f && $f->{'content'} eq $format) {
+			push(@$frv, $i);
+			}
+		}
+	return $frv;
+	}
+else {
+	return $rv;
+	}
+}
+
 1;
 

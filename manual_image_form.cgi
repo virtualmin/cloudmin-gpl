@@ -9,6 +9,7 @@ require './server-manager-lib.pl';
 print &ui_form_start("manual_image.cgi", "post");
 print &ui_hidden("manager", $in{'manager'});
 print &ui_hidden("mode", $in{'mode'});
+print &ui_hidden("source", $in{'source'});
 print &ui_hidden("search", $in{'search'});
 print &ui_table_start($text{'mimage_header'}, undef, 2);
 
@@ -16,58 +17,72 @@ print &ui_table_start($text{'mimage_header'}, undef, 2);
 $dfunc = "type_".$in{'manager'}."_desc";
 print &ui_table_row($text{'mimage_type'}, &$dfunc());
 
-# Image type (CD or disk)
-$ffunc = "type_".$in{'manager'}."_image_formats";
-@formats = &$ffunc();
-print &ui_table_row($text{'mimage_format'},
-	&ui_radio("format", $formats[0],
-		  [ map { [ $_, $text{'mimage_fmt'.$_} ] } @formats ]));
+if ($in{'source'} == 0) {
+	# Image type (CD or disk)
+	$ffunc = "type_".$in{'manager'}."_image_formats";
+	@formats = &$ffunc();
+	print &ui_table_row($text{'mimage_format'},
+		&ui_radio("format", $formats[0],
+			  [ map { [ $_, $text{'mimage_fmt'.$_} ] } @formats ]));
 
-# Operating system
-print &ui_table_row($text{'eimage_os'},
-	    &ui_select("type", 'unknown',
-	      [ map { [ $_->[0], $_->[1] ] }
-		sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
+	# Operating system
+	print &ui_table_row($text{'eimage_os'},
+		    &ui_select("type", 'unknown',
+		      [ map { [ $_->[0], $_->[1] ] }
+			sort { $a->[1] cmp $b->[1] } @servers::server_types ]));
 
-# Location of file (local, on some managed system, or via HTTP)
-@servers = grep { $_->{'id'} ne '0' &&
-		  &can_ssh_status($_) } &list_managed_servers_sorted();
-print &ui_table_row($text{'mimage_file'},
-	&ui_radio_table("file_mode", 0,
-		[ [ 0, $text{'mimage_file0'},
-		    &ui_filebox("file", undef, 40) ],
-		  @servers ? (
-		    [ 1, $text{'mimage_file1'},
-		      &ui_select("server", undef,
-		         [ map { [ $_->{'id'}, $_->{'short_host'} ] }
-				 @servers ]).
-		      " ".
-		      &ui_textbox("serverfile", undef, 40)
-		    ] ) : ( ),
-		  [ 2, $text{'mimage_file2'},
-		    &ui_filebox("url", undef, 60) ],
-		]));
+	# Location of file (local, on some managed system, or via HTTP)
+	@servers = grep { $_->{'id'} ne '0' &&
+			  &can_ssh_status($_) } &list_managed_servers_sorted();
+	print &ui_table_row($text{'mimage_file'},
+		&ui_radio_table("file_mode", 0,
+			[ [ 0, $text{'mimage_file0'},
+			    &ui_filebox("file", undef, 40) ],
+			  @servers ? (
+			    [ 1, $text{'mimage_file1'},
+			      &ui_select("server", undef,
+				 [ map { [ $_->{'id'}, $_->{'short_host'} ] }
+					 @servers ]).
+			      " ".
+			      &ui_textbox("serverfile", undef, 40)
+			    ] ) : ( ),
+			  [ 2, $text{'mimage_file2'},
+			    &ui_filebox("url", undef, 60) ],
+			]));
 
-# Leave in place?
-print &ui_table_row($text{'mimage_upload'},
-	&ui_yesno_radio("upload", 1));
+	# Leave in place?
+	print &ui_table_row($text{'mimage_upload'},
+		&ui_yesno_radio("upload", 1));
 
-# Unique ID
-print &ui_table_row($text{'mkimage_id'},
-		    &ui_textbox("imageid", undef, 30));
+	# Unique ID
+	print &ui_table_row($text{'mkimage_id'},
+			    &ui_textbox("imageid", undef, 30));
 
-# Description
-print &ui_table_row($text{'mkimage_desc'},
-		    &ui_textbox("desc", undef, 60));
+	# Description
+	print &ui_table_row($text{'mkimage_desc'},
+			    &ui_textbox("desc", undef, 60));
 
-# Compress image
-print &ui_table_row($text{'mkimage_compress'},
-		    &ui_yesno_radio("compress", 1));
+	# Compress image
+	print &ui_table_row($text{'mkimage_compress'},
+			    &ui_yesno_radio("compress", 1));
 
-# Needs full virtualization?
-if ($in{'manager'} eq 'xen' || $in{'manager'} eq 'citrix') {
-	print &ui_table_row($text{'mkimage_hvm'},
-			    &ui_yesno_radio("hvm", 0));
+	# Needs full virtualization?
+	if ($in{'manager'} eq 'xen' || $in{'manager'} eq 'citrix') {
+		print &ui_table_row($text{'mkimage_hvm'},
+				    &ui_yesno_radio("hvm", 0));
+		}
+	}
+else {
+	# Stacklet image to import
+	$stacklet = &list_stacklet_images($in{'manager'});
+	ref($stacklet) || &error(&text('mkimage_estacklet', $stacklet));
+
+	print &ui_table_row($text{'mkimage_stacklet'},
+	   &ui_select('stacklet', undef,
+		[ map { [ $_->{'guid'}->{'content'},
+			  $_->{'description'} ] }
+		      (sort { $a->{'description'} cmp $b->{'description'} }
+			    @$stacklet) ]));
 	}
 
 print &ui_table_end();
