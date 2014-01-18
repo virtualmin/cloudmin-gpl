@@ -1750,6 +1750,10 @@ my ($srcserver, $destserver, $src, $dest, $device, $checksum, $checksize,
     $viamaster) = @_;
 my $rv;
 my ($srccs_ok, $srccs);
+if ($srcserver->{'id'} == $destserver->{'id'}) {
+	# Never checksum local transfers
+	$checksum = 0;
+	}
 
 # Get checksum on source system, if possible
 if ($checksum) {

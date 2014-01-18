@@ -2,9 +2,19 @@
 # Show a form for creating an image from a CD iso or raw disk
 
 require './server-manager-lib.pl';
+&error_setup($text{'mimage_err'});
 &can_action_error(undef, "global");
-&ui_print_header(undef, $text{'import_title'}, "", "manualimage");
 &ReadParse();
+
+if ($in{'source'} == 1) {
+	# Get all stacklet images
+	$stacklet = &list_stacklet_images($in{'manager'});
+	ref($stacklet) || &error(&text('mkimage_estacklet', $stacklet));
+	@$stacklet || &error(&text('mkimage_estacknone',
+				   $text{$in{'manager'}.'_typedesc'}));
+	}
+
+&ui_print_header(undef, $text{'import_title'}, "", "manualimage");
 
 print &ui_form_start("manual_image.cgi", "post");
 print &ui_hidden("manager", $in{'manager'});
@@ -50,7 +60,7 @@ if ($in{'source'} == 0) {
 			    &ui_filebox("url", undef, 60) ],
 			]));
 
-	# Leave in place?
+	# Copy to all storage locations, or leave in place?
 	print &ui_table_row($text{'mimage_upload'},
 		&ui_yesno_radio("upload", 1));
 
@@ -62,10 +72,6 @@ if ($in{'source'} == 0) {
 	print &ui_table_row($text{'mkimage_desc'},
 			    &ui_textbox("desc", undef, 60));
 
-	# Compress image
-	print &ui_table_row($text{'mkimage_compress'},
-			    &ui_yesno_radio("compress", 1));
-
 	# Needs full virtualization?
 	if ($in{'manager'} eq 'xen' || $in{'manager'} eq 'citrix') {
 		print &ui_table_row($text{'mkimage_hvm'},
@@ -74,9 +80,6 @@ if ($in{'source'} == 0) {
 	}
 else {
 	# Stacklet image to import
-	$stacklet = &list_stacklet_images($in{'manager'});
-	ref($stacklet) || &error(&text('mkimage_estacklet', $stacklet));
-
 	print &ui_table_row($text{'mkimage_stacklet'},
 	   &ui_select('stacklet', undef,
 		[ map { [ $_->{'guid'}->{'content'},
@@ -84,6 +87,10 @@ else {
 		      (sort { $a->{'description'} cmp $b->{'description'} }
 			    @$stacklet) ]));
 	}
+
+# Compress image
+print &ui_table_row($text{'mkimage_compress'},
+		    &ui_yesno_radio("compress", 1));
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'create'} ] ]);

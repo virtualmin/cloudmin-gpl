@@ -79,3 +79,4 @@ The graphical console for virtual systems is now displayed using a Flash object 
 ---- Changes since 7.3 ----
 ---- Changes since 7.4 ----
 Added a Cloudmin Configuration option to limit the time for which system statistics and bandwidth usage data is kept.
+Moved the page for importing existing image files to be accessible from a new link on the left menu, and added support for downloading pre-built Xen and KVM images from Stacklet.

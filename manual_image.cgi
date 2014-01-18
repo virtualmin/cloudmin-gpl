@@ -9,79 +9,179 @@ require './server-manager-lib.pl';
 &ui_print_unbuffered_header(undef, $text{'import_title'}, "");
 
 # Validate inputs and create object
-$image = { 'manager' => $in{'manager'},
-	   'format' => $in{'format'},
-	   'type' => $in{'type'},
-	   'nocompress' => 1 };
-$in{'imageid'} =~ /^\S+$/ || &error($text{'mkimage_eid'});
-($clash) = grep { $_->{'id'} eq $in{'imageid'} } &list_server_images();
-$clash && &error($text{'mkimage_eclash'});
-$image->{'id'} = $in{'imageid'};
-$in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
-$image->{'desc'} = $in{'desc'};
-if ($in{'format'} eq 'cd' && defined($in{'hvm'}) && !$in{'hvm'}) {
-	&error($text{'mkimage_ehvmcd'});
-	}
-$image->{$in{'manager'}.'_hvm'} = $in{'hvm'};
+if ($in{'source'} == 0) {
+	# From local or remote file
+	$image = { 'manager' => $in{'manager'},
+		   'format' => $in{'format'},
+		   'type' => $in{'type'},
+		   'nocompress' => 1 };
+	$in{'imageid'} =~ /^\S+$/ || &error($text{'mkimage_eid'});
+	($clash) = grep { $_->{'id'} eq $in{'imageid'} } &list_server_images();
+	$clash && &error($text{'mkimage_eclash'});
+	$image->{'id'} = $in{'imageid'};
+	$in{'desc'} =~ /\S/ || &error($text{'mkimage_edesc'});
+	$image->{'desc'} = $in{'desc'};
+	if ($in{'format'} eq 'cd' && defined($in{'hvm'}) && !$in{'hvm'}) {
+		&error($text{'mkimage_ehvmcd'});
+		}
+	$image->{$in{'manager'}.'_hvm'} = $in{'hvm'};
 
-# Get the file
-if ($in{'file_mode'} == 0) {
-	# On Cloudmin master
-	$srcserver = &get_this_managed_server();
-	$srcpath = $in{'file'};
-	-r $srcpath && !-d $srcpath || &error($text{'mimage_efile'});
-	}
-elsif ($in{'file_mode'} == 1) {
-	# On another system
-	$srcserver = &get_managed_server($in{'server'});
-	$srcserver || &error($text{'mimage_eserver'});
-	$srcpath = $in{'serverfile'};
-	$srcpath =~ /^\/\S/ || &error($text{'mimage_eserverfile'});
+	# Get the file
+	if ($in{'file_mode'} == 0) {
+		# On Cloudmin master
+		$srcserver = &get_this_managed_server();
+		$srcpath = $in{'file'};
+		-r $srcpath && !-d $srcpath || &error($text{'mimage_efile'});
+		}
+	elsif ($in{'file_mode'} == 1) {
+		# On another system
+		$srcserver = &get_managed_server($in{'server'});
+		$srcserver || &error($text{'mimage_eserver'});
+		$srcpath = $in{'serverfile'};
+		$srcpath =~ /^\/\S/ || &error($text{'mimage_eserverfile'});
+		}
+	else {
+		# Download from a URL
+		$in{'upload'} || &error($text{'mimage_eupload'});
+		$in{'url'} =~ /^(http|https):\/\// ||
+			&error($text{'mimage_eurl'});
+		($host, $port, $page, $ssl) = &parse_http_url($in{'url'});
+		$host && $page || &error($text{'mimage_eurl'});
+		$srcserver = &get_this_managed_server();
+		$srcpage = $page;
+		$srcpage =~ s/^.*[\\\/]//;
+		$srcpath = &transname($srcpage);
+		$progress_callback_url = $in{'url'};
+		&http_download($host, $port, $page, $srcpath, undef,
+				\&progress_callback, $ssl);
+		$srcdelete = 1;
+		}
+	$image->{'files'} = $srcpath;
+	$image->{'files'} =~ s/^.*\///;
+	@st = &stat_file_on_server($srcserver, $srcpath);
+	@st || &error($text{'mimage_efile'});
+	&has_command_on_server($srcserver, "file") ||
+		&error(&text('mimage_efilecmd', 'file'));
+
+	# Copy device (like /dev/cdrom) to temp file
+	if ($srcpath =~ /^\/dev\//) {
+		my $regularsrcpath = &tempname_on_server(
+					$srcserver, $in{'manager'}."-image-$$");
+		&$first_print(&text('mimage_regular', $regularsrcpath));
+		my $err = &transfer_file_between_servers($srcserver, $srcserver,
+				$srcpath, $regularsrcpath, 1);
+		if ($err) {
+			&delete_file_on_server($srcserver, $regularsrcpath);
+			&$second_print(&text('mimage_eregular', &html_escape($err)));
+			goto FAILED;
+			}
+		if ($srcdelete) {
+			&delete_file_on_server($srcserver, $srcpath);
+			}
+		$srcpath = $regularsrcpath;
+		$image->{'files'} = $in{'manager'}."-image-$$";
+		$srcdelete = 1;
+		&remote_finished();	# In case of timeout
+		@st = &stat_file_on_server($srcserver, $srcpath);
+		&$second_print(&text('mimage_regulardone', &nice_size($st[7])));
+		}
 	}
 else {
-	# Download from a URL
-	$in{'upload'} || &error($text{'mimage_eupload'});
-	$in{'url'} =~ /^(http|https):\/\// ||
-		&error($text{'mimage_eurl'});
-	($host, $port, $page, $ssl) = &parse_http_url($in{'url'});
-	$host && $page || &error($text{'mimage_eurl'});
-	$srcserver = &get_this_managed_server();
-	$srcpage = $page;
-	$srcpage =~ s/^.*[\\\/]//;
-	$srcpath = &transname($srcpage);
-	$progress_callback_url = $in{'url'};
-	&http_download($host, $port, $page, $srcpath, undef,
-			\&progress_callback, $ssl);
-	$srcdelete = 1;
-	}
-$image->{'files'} = $srcpath;
-$image->{'files'} =~ s/^.*\///;
-@st = &stat_file_on_server($srcserver, $srcpath);
-@st || &error($text{'mimage_efile'});
-&has_command_on_server($srcserver, "file") ||
-	&error(&text('mimage_efilecmd', 'file'));
+	# From stacklet
+	$image = { 'manager' => $in{'manager'},
+		   'nocompress' => 1,
+		   'nocompress' => 1,
+		   };
+	# XXX test with Xen
 
-# Copy device (like /dev/cdrom) to temp file
-if ($srcpath =~ /^\/dev\//) {
-	my $regularsrcpath = &tempname_on_server(
-				$srcserver, $in{'manager'}."-image-$$");
-	&$first_print(&text('mimage_regular', $regularsrcpath));
-	my $err = &transfer_file_between_servers($srcserver, $srcserver,
-			$srcpath, $regularsrcpath, 1);
+	# Validate the image selected
+	my $stacklets = &list_stacklet_images();
+	ref($stacklets) || &error(&text('mkimage_estacklet', $stacklets));
+	my ($stacklet) = grep { $_->{'guid'}->{'content'} eq $in{'stacklet'} }
+			      @$stacklets;
+	$stacklet || &error(&text('mkimage_eguid', $in{'stacklet'}));
+	$image->{'desc'} = $stacklet->{'description'};
+	$image->{'src'} = 'stacklet';
+
+	# Pick an image ID and OS type
+	my $url = $stacklet->{'enclosure'}->{'url'};
+	if ($url =~ /\/([^\/]+)$/) {
+		$image->{'id'} = $1;
+		while($image->{'id'} =~ s/\.(raw|img|tar|gz|bz2)$//) { }
+		}
+	else {
+		$image->{'id'} = $stacklet->{'guid'}->{'content'};
+		}
+	foreach my $t (@servers::server_types) {
+		if ($url =~ /$t->[0]/) {
+			$image->{'type'} = $t->[0];
+			last;
+			}
+		}
+	$image->{'arch'} = $url =~ /x86[\-_]64/ ? 'x86_64' : 'x86';
+	$image->{'files'} = $image->{'id'}.".disk";
+
+	# Check for an ID clash
+	($clash) = grep { $_->{'id'} eq $image->{'id'} } &list_server_images();
+	$clash && &error(&text('mkimage_estackclash', $image->{'id'}));
+
+	# Download the image from stacklet
+	my $temp = &transname();
+	$progress_callback_url = $url;
+	my $err;
+	&$first_print(&text('mkimage_stackdownload', $url));
+	if ($url =~ /^(http|https):/) {
+		# Download via HTTP
+		my ($host, $port, $page, $ssl) = &parse_http_url($url);
+		&http_download($host, $port, $page, $temp, \$err,
+			\&progress_callback, $ssl);
+		}
+	elsif ($url =~ /^ftp:\/\/([^\/]+)(\/\S+)$/) {
+		# Download via FTP
+		my ($host, $page, $port) = ($1, $2, 21);
+		&ftp_download($host, $page, $temp, \$err, \&progress_callback);
+		}
+	else {
+		# Invaid URL!
+		&error($text{'mkimage_estackurl'});
+		}
 	if ($err) {
-		&delete_file_on_server($srcserver, $regularsrcpath);
-		&$second_print(&text('mimage_eregular', &html_escape($err)));
+		&$second_print(&text('mkimage_estackdownload', $err));
 		goto FAILED;
 		}
-	if ($srcdelete) {
-		&delete_file_on_server($srcserver, $srcpath);
+	else {
+		my @st = stat($temp);
+		&$second_print(&text('mkimage_stacksize', &nice_size($st[7])));
 		}
-	$srcpath = $regularsrcpath;
-	$image->{'files'} = $in{'manager'}."-image-$$";
-	$srcdelete = 1;
-	&remote_finished();	# In case of timeout
-	@st = &stat_file_on_server($srcserver, $srcpath);
-	&$second_print(&text('mimage_regulardone', &nice_size($st[7])));
+
+	# Un-compress the tar.bz2 file
+	&$first_print($text{'mkimage_stackuntar'});
+	$tempdir = &transname();
+	&make_dir($tempdir, 0700);
+	$out = &backquote_command("(cd ".quotemeta($tempdir)." && ".
+				  " bunzip2 -c ".quotemeta($temp)." | ".
+				  "tar xf -) 2>&1");
+	if ($?) {
+		&$second_print(&text('mkimage_estackuntar',
+				     &html_escape($out)));
+		goto FAILED;
+		}
+
+	# Find the image file in the extracted directory
+	$srcserver = &get_this_managed_server();
+	($srcpath) = glob("$tempdir/*.img");
+	if (!$srcpath) {
+		&$second_print($text{'mkimage_estackimgfile'});
+		goto FAILED;
+		}
+	&$second_print($text{'setup_done'});
+
+	# Set format for later validation
+	($fout, $ex, $err) = &execute_command_on_server(
+		$srcserver, "file ".quotemeta($srcpath));
+	$in{'format'} = $fout =~ /boot\s+sector/ ? 'disk' : '';
+	$image->{'format'} = $in{'format'};
+	$in{'upload'} = 1;
 	}
 
 # Validate format
