@@ -2407,10 +2407,10 @@ my ($out, $ex, $err) = &execute_command_on_server($vhost,
 return (0, $err) if ($err);
 return (0, $out || "Unknown error") if ($ex);
 
-# Wait 20 seconds for it to start
+# Wait 60 seconds for it to start
 my $tries = 0;
 my $found = 0;
-while($tries++ < 20) {
+while($tries++ < 60) {
 	my $proc = &get_server_kvm_instance($server);
 	if ($proc) {
 		$server->{'kvm'} = $proc->{'pid'};
