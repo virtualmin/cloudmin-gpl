@@ -112,8 +112,10 @@ else {
 	else {
 		$image->{'id'} = $stacklet->{'guid'}->{'content'};
 		}
+	my ($distro) = grep { $_->{'domain'} eq 'distro' }
+			    @{$stacklet->{'category'}};
 	foreach my $t (@servers::server_types) {
-		if ($url =~ /$t->[0]/) {
+		if ($distro && $distro->{'content'} =~ /$t->[0]/i) {
 			$image->{'type'} = $t->[0];
 			last;
 			}

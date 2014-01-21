@@ -1987,11 +1987,20 @@ if ($format) {
 			push(@$frv, $i);
 			}
 		}
-	return $frv;
+	$rv = $frv;
 	}
-else {
-	return $rv;
+# Filter by status
+my $frv = [ ];
+foreach my $i (@$rv) {
+	my ($f) = grep { $_->{'domain'} eq 'status' }
+		       @{$i->{'category'}};
+	if (!$f || $f->{'content'} eq 'active' ||
+	    $f->{'content'} eq 'superceded') {
+		push(@$frv, $i);
+		}
+	$rv = $frv;
 	}
+return $rv;
 }
 
 1;
