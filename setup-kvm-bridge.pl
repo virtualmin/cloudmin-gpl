@@ -33,6 +33,11 @@ $< == 0 || die "$0 must be run as root";
 $br_name = "br0";
 $eth_name = "eth0";
 
+# Interface given
+if ($ARGV[0]) {
+	$eth_name = shift(@ARGV);
+	}
+
 # Check for supported OS
 $gconfig{'os_type'} eq 'redhat-linux' ||
   $gconfig{'os_type'} eq 'debian-linux' ||
