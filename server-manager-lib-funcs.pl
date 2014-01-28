@@ -3414,7 +3414,7 @@ if (!$got_memory && &can_ssh_status($server)) {
 
 if (&can_ssh_status($server)) {
 	# Get disk size and free space from df command, for each filesystem
-	my ($out, $ex, $err) = &execute_command_on_server($server, "df -k");
+	my ($out, $ex, $err) = &execute_command_on_server($server, "df -k", 5);
 	if (!$ex && !$err) {
 		my @lines = split(/\r?\n/, $out);
 		my ($total, $free);
