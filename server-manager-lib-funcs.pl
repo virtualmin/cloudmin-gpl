@@ -7607,8 +7607,7 @@ if (&can_action($server, "graph") &&
 	push(@rv, { 'id' => 'history',
 		    'desc' => $text{'edit_history'},
 		    'cat' => 'res',
-		    'link' => "history.cgi?search=$server->{'host'}&".
-			      "id=$server->{'id'}" });
+		    'link' => "one_history.cgi?id=$server->{'id'}" });
 	}
 
 # Disk snapshots
@@ -9436,7 +9435,6 @@ my ($server, $type) = @_;
 $type ||= $server->{'manager'} if ($server);
 my $sfunc = "type_".$type."_no_ssh";
 my $no_ssh = defined(&$sfunc) && &$sfunc();
-my $newserver = !$server || !$server->{'id'};
 
 # Current password popup
 my $passpop;
@@ -9445,13 +9443,11 @@ if ($server && $server->{'pass'}) {
 	}
 
 # Webmin login
-print &ui_hidden("webmin_newserver", $newserver);
 print &ui_table_row($text{'add_webmin'},
 	&ui_radio("webmin_mode", !$server ? 0 :
 				 $server->{'ssh_pass_same'} ? 1 :
 				 $server->{'user'} ? 2 : 0,
-	      [ [ 0, ($newserver ? $text{'add_webmin0'}
-				 : $text{'add_webmin0a'})."<br>" ],
+	      [ [ 0, $text{'add_webmin0a'}."<br>" ],
 		$no_ssh ? ( ) : ( [ 1, $text{'add_webmin1'}."<br>" ] ),
 		[ 2, &text('add_webmin2',
 			  &ui_textbox("wuser", $server ? $server->{'user'}
@@ -9497,9 +9493,7 @@ else {
 	delete($server->{'user'});
 	delete($server->{'pass'});
 	$server->{'ssh_pass_same'} = 0;
-	if (!$in->{'webmin_newserver'}) {
-		$server->{'no_webmin_login'} = 1;
-		}
+	$server->{'no_webmin_login'} = 1;
 	}
 $server->{'ssl'} = $in->{'ssl'} ? 1 : 0;
 $in->{'port'} =~ /^\d+$/ || return $text{'add_eport'};
