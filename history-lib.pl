@@ -303,6 +303,17 @@ foreach my $s (@$servers) {
 return @rv;
 }
 
+# get_historic_maxes(&sever)
+# Returns a hash reference from stats to the max possible values ever seen for
+# some server.
+sub get_historic_maxes
+{
+my ($server) = @_;
+my %maxpossible;
+&read_file("$historic_info_dir/$server->{'id'}/maxes", \%maxpossible);
+return \%maxpossible;
+}
+
 # make_value_nice(stat, value)
 # Converts a value of some stat type into a more human-friendly format.
 # In an array context returns units too.
