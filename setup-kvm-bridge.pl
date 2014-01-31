@@ -33,7 +33,7 @@ $< == 0 || die "$0 must be run as root";
 $br_name = "br0";
 $eth_name = "eth0";
 
-# Interface given
+# Interface given on command line
 if ($ARGV[0]) {
 	$eth_name = shift(@ARGV);
 	}
