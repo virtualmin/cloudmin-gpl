@@ -101,7 +101,8 @@ my @tstats;
 foreach $stat (@stats) {
 	$fmt = &historic_stat_info($stat, $maxes);
 	if ($fmt && $fmt->{'type'} eq 'email') {
-		my @info = &list_historic_collected_info($stat, $start, $end);
+		my @info = &list_historic_collected_info($stat, $server,
+							 $start, $end);
 		my $lasttime;
 		my $count = 0;
 		foreach $i (@info) {
@@ -135,7 +136,7 @@ foreach $t (sort { $text{'history_type_'.$a} cmp
 	@grid = ( );
 	foreach $s (sort { $text{'history_stat_'.$a} cmp
 			   $text{'history_stat_'.$b} } @{$type_to_stat{$t}}) {
-		$link = "history.cgi?start=".&urlize($start).
+		$link = "one_history.cgi?start=".&urlize($start).
 			"&period=".&urlize($period).
 			"&logscale=".$in{'logscale'}."&stat=$s&id=$in{'id'}";
 		push(@grid, &ui_checkbox("stat", $s,
@@ -227,7 +228,7 @@ foreach $stat (@stats) {
 	}
 print "  ];\n";
 print "  timeplot = Timeplot.create(document.getElementById('history'), plotInfo);\n";
-print "  timeplot.loadText('history_data.cgi?$statsparams&start=$start&end=$end&nice=1', ',', eventSource);\n";
+print "  timeplot.loadText('one_history_data.cgi?$statsparams&start=$start&end=$end&nice=1&id=$in{'id'}', ',', eventSource);\n";
 print "}\n";
 
 # Resize handler Javascript
