@@ -752,6 +752,9 @@ elsif ($st eq 'notdown') {
 elsif ($st eq 'wm') {
 	return ( 'novirt', 'virt' );
 	}
+elsif ($st eq 'canssh') {
+	return ( 'nowebmin', 'novirt', 'virt' );
+	}
 elsif ($st eq 'bad') {
 	return ( 'down', 'noping', 'nohost', 'nossh', 'nosshlogin',
 		 'downwebmin', 'nowebminlogin' );
@@ -9340,6 +9343,7 @@ push(@grid, &ui_select("ssearch", $in->{'ssearch'} || 'up',
 		[ [ 'up', "&lt;$text{'status_up'}&gt;" ],
 		  [ 'notdown', "&lt;$text{'status_notdown'}&gt;" ],
 		  [ 'wm', "&lt;$text{'status_wm'}&gt;" ],
+		  [ 'canssh', "&lt;$text{'status_canssh'}&gt;" ],
 		  [ 'bad', "&lt;$text{'status_bad'}&gt;" ],
 		  [ 'updates', "&lt;$text{'status_updates'}&gt;" ],
 		  map { [ $_->[0], $text{'status_'.$_->[0]} ] }

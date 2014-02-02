@@ -770,6 +770,7 @@ status_unknown=Unknown
 status_up=Up and usable
 status_notdown=Running
 status_wm=Webmin or Virtualmin
+status_canssh=SSHable
 status_bad=Down or unusable
 status_updates=Updates available
 status_create=Creating
