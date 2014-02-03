@@ -8,11 +8,14 @@ For virtual systems running under Xen, VServers or Zones, Cloudmin can start up
 existing instances using this command. The command will only exit when all the
 specified systems have been booted.
 
-The C<--wait-for-ssh> will cause this API command to only return once an SSH
-connection to the system can be established. Conversely, the C<--no-wait>
+The C<--wait-for-ssh> flag will cause this API command to only return once an
+SSH connection to the system can be established. Conversely, the C<--no-wait>
 flag will cause the command to return as soon as the virtual system has been
 launched. Otherwise, Cloudmin will wait until the system can be pinged, for
 up to 60 seconds.
+
+The C<--check-disks> flag can be used to force a fsck of all virtual system
+disks before startup, to prevent boot failures caused by an unclean shutdown.
 
 =head1 Example usage
 
@@ -55,6 +58,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-wait") {
 		$nowait = 1;
 		}
+	elsif ($a eq "--check-disks") {
+		$fsck = 1;
+		}
 	elsif ($a eq "--help") { &usage(); }
 	else {
 		&usage("Unknown parameter $a");
@@ -85,7 +91,7 @@ foreach $s (@servers) {
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
 	print "Starting up $tdesc system $s->{'host'} ..\n";
-	($ok, $err) = &startup_server($s, $nowait);
+	($ok, $err) = &startup_server($s, $nowait, $fsck);
 	if (!$ok) {
 		$err = &html_tags_to_text($err);
 		print ".. startup failed : $err\n\n";
@@ -142,6 +148,7 @@ print "                        [--owner name]*\n";
 print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                        [--host-on name]\n";
 print "                        [--wait-for-ssh | --no-wait]\n";
+print "                        [--check-disks]\n";
 exit(1);
 }
 
