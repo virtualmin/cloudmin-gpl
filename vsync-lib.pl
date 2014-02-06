@@ -135,7 +135,7 @@ my ($vsync) = @_;
 my $src = &get_managed_server($vsync->{'src'});
 my @dests = &get_virtualmin_sync_dests($vsync);
 foreach my $s ($src, @dests) {
-	return 0 if (!&can_action("domains", $s));
+	return 0 if (!&can_action($s, "domains"));
 	}
 return 1;
 }

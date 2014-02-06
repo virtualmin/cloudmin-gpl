@@ -29,7 +29,7 @@ elsif ($in{'run'}) {
 else {
 	# Validate inputs, starting with source host
 	$src = &get_managed_server($in{'src'});
-	$src && &can_action("domains", $src) ||
+	$src && &can_action($src, "domains") ||
 		&error($text{'vsync_esrc'});
 	$vsync->{'src'} = $src->{'id'};
 
@@ -38,7 +38,7 @@ else {
 	@destids || &error($text{'vsync_edests'});
 	foreach $id (@destids) {
 		$dest = &get_managed_server($id);
-		$dest && &can_action("domains", $dest) ||
+		$dest && &can_action($dest, "domains") ||
 			&error($text{'vsync_edest'});
 		$dest->{'id'} eq $src->{'id'} &&
 			&error(&text('vsync_edestsame', $dest->{'host'}));
