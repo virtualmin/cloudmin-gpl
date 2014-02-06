@@ -116,6 +116,12 @@ if ($got) {
 				    "id=$_->{'id'}'>$_->{'host'}</a></tt>" }
 				  @users);
 	print &ui_table_row($text{'eimage_users'}, $users);
+
+	# Post-creation scripts
+	print &ui_table_row($text{'eimage_postcmdon'},
+		&ui_textbox("postcmdon", $got->{'postcmdon'}, 60));
+	print &ui_table_row($text{'eimage_postcmdoff'},
+		&ui_textbox("postcmdoff", $got->{'postcmdoff'}, 60));
 	}
 
 # MD5 checksum, if we have it

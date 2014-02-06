@@ -32,6 +32,8 @@ else {
 		$img->{'nodelete'} = !$in{'nodelete'};
 		}
 	$img->{'default'} = $in{'default'};
+	$img->{'postcmdon'} = $in{'postcmdon'};
+	$img->{'postcmdoff'} = $in{'postcmdoff'};
 	&save_server_image($img);
 	if ($in{'default'}) {
 		# Nobody else can be the default
