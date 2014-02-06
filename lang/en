@@ -2442,6 +2442,8 @@ run_before_create=Running pre-creation script ..
 run_after_create=Running post-creation script ..
 run_before_delete=Running pre-deletion script ..
 run_after_delete=Running post-deletion script ..
+run_post_imageoff=Running post-creation script for image ..
+run_post_imageon=Running post-creation script for image on new system ..
 run_failed=.. script failed : $1
 
 range_start=Start address

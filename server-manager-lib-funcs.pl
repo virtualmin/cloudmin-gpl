@@ -4626,16 +4626,16 @@ if ($oldping) {
 return undef;
 }
 
-# startup_server(&server, [no-wait-for-ping])
+# startup_server(&server, [no-wait-for-ping], [force-fsck])
 # Start up some virtual system by calling it's type-specific function.
 # Returns a status code (0=failed, 1=OK, 2=No ping, 3=No SSH) and an error
 # message.
 sub startup_server
 {
-my ($server, $nowait) = @_;
+my ($server, $nowait, $fsck) = @_;
 
 # If configured, check all disks first
-if ($config{'fsck_boot'}) {
+if ($config{'fsck_boot'} || $fsck) {
 	my ($ok, $out) = &fsck_all_disks($server, $config{'fsck_boot'} == 2);
 	if ($ok == 0) {
 		return (0, "Disk check failed : $out");
@@ -8170,7 +8170,6 @@ sub run_system_script
 {
 my ($server, $when, $action) = @_;
 my $cmd = $config{$when.'_'.$action.'_cmd'};
-return 1 if (!$cmd);
 
 # Set environment variables
 foreach $e (keys %ENVS) {
@@ -8191,16 +8190,49 @@ if ($server->{'manager'} ne 'this' && $server->{'manager'} ne 'real') {
 		}
 	}
 
-&$first_print($text{'run_'.$when.'_'.$action});
-my $out = &backquote_logged("($cmd) 2>&1 </dev/null");
-if ($?) {
-	&$second_print(&text('run_failed', "<tt>".&html_escape($out)."</tt>"));
-	return 0;
+# Run global pre/post command
+if ($cmd) {
+	&$first_print($text{'run_'.$when.'_'.$action});
+	my $out = &backquote_logged("($cmd) 2>&1 </dev/null");
+	if ($?) {
+		&$second_print(&text('run_failed',
+				"<tt>".&html_escape($out)."</tt>"));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 	}
-else {
-	&$second_print($text{'create_done'});
-	return 1;
+
+# Check if post commands are defined in the image, and if so run them
+my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
+if ($img && $img->{'postcmdoff'} && $when eq 'after' && $action eq 'create') {
+	&$first_print($text{'run_post_imageoff'});
+	my $out = &backquote_logged("($img->{'postcmdoff'}) 2>&1 </dev/null");
+	if ($?) {
+		&$second_print(&text('run_failed',
+			"<tt>".&html_escape($out)."</tt>"));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 	}
+if ($img && $img->{'postcmdoff'} && $when eq 'after' && $action eq 'create') {
+	&$first_print($text{'run_post_imageon'});
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+					$img->{'postcmdon'});
+	if ($ex || $err) {
+		&$second_print(&text('run_failed',
+			$err ? $err : "<tt>".&html_escape($out)."</tt>"));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+return 1;
 }
 
 # get_parent_server(&server)
