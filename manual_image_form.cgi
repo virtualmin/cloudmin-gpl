@@ -7,11 +7,24 @@ require './server-manager-lib.pl';
 &ReadParse();
 
 if ($in{'source'} == 1) {
-	# Get all stacklet images
+	# Get all free stacklet images
 	$stacklet = &list_stacklet_images($in{'manager'});
 	ref($stacklet) || &error(&text('mkimage_estacklet', $stacklet));
 	@$stacklet || &error(&text('mkimage_estacknone',
 				   $text{$in{'manager'}.'_typedesc'}));
+	}
+elsif ($in{'source'} == 2) {
+	# Get all subscriber stacklet images
+	$in{'stackuser'} =~ /\S/ || &error($text{'mkimage_estackuser'});
+	$in{'stackpass'} =~ /\S/ || &error($text{'mkimage_estackpass'});
+	$stacklet = &list_stacklet_images($in{'manager'},
+				$in{'stackuser'}, $in{'stackpass'});
+	ref($stacklet) || &error(&text('mkimage_estacklet', $stacklet));
+	@$stacklet || &error(&text('mkimage_estacknone',
+				   $text{$in{'manager'}.'_typedesc'}));
+	$config{'stackuser'} = $in{'stackuser'};
+	$config{'stackpass'} = $in{'stackpass'};
+	&save_module_config();
 	}
 
 &ui_print_header(undef, $text{'import_title'}, "", "manualimage");
@@ -21,6 +34,8 @@ print &ui_hidden("manager", $in{'manager'});
 print &ui_hidden("mode", $in{'mode'});
 print &ui_hidden("source", $in{'source'});
 print &ui_hidden("search", $in{'search'});
+print &ui_hidden("stackuser", $in{'stackuser'});
+print &ui_hidden("stackpass", $in{'stackpass'});
 print &ui_table_start($text{'mimage_header'}, undef, 2);
 
 # Virtualization type

@@ -95,7 +95,8 @@ else {
 	# XXX test with Xen
 
 	# Validate the image selected
-	my $stacklets = &list_stacklet_images();
+	my $stacklets = &list_stacklet_images(
+				undef, $in{'stackuser'}, $in{'stackpass'});
 	ref($stacklets) || &error(&text('mkimage_estacklet', $stacklets));
 	my ($stacklet) = grep { $_->{'guid'}->{'content'} eq $in{'stacklet'} }
 			      @$stacklets;
