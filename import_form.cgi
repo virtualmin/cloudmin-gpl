@@ -21,9 +21,17 @@ print &ui_table_row($text{'import_type'},
 	&ui_select("manager", undef, \@opts));
 
 # Import source
+my $sgrid = &ui_grid_table([
+	$text{'import_stackuser'},
+	&ui_textbox("stackuser", $config{'stackuser'}, 30),
+	$text{'import_stackpass'},
+	&ui_textbox("stackpass", $config{'stackpass'}, 30),
+	], 2);
 print &ui_table_row($text{'import_source'},
 	&ui_radio("source", 0, [ [ 0, $text{'import_source0'}."<br>" ],
-				 [ 1, $text{'import_source1'} ] ]));
+				 [ 1, $text{'import_source1'}."<br>" ],
+				 [ 2, $text{'import_source2'}."<br>".
+				      $sgrid ] ]));
 
 
 print &ui_table_end();
