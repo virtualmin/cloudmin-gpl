@@ -1798,7 +1798,6 @@ if (ref($disks) && $disks->[0]->{'iscsi_server'} ne '') {
 		}
 	}
 
-
 # Fix root disk device to match virtio mode
 my $wantdev = $server->{'kvm_virtio'} ? "/dev/vda" : "/dev/hda";
 my $hasbootfs = 0;
@@ -1876,8 +1875,13 @@ if (!$empty && $server->{'kvm_swapfile'}) {
 	    $server->{'kvm_swapfile_iscsi'} ne '') {
 		&$first_print(&text('create_xenswap',
 				    &nice_size($swsize)));
-		my ($out, $ex, $err) = &execute_command_on_server(
-			$vhost, &dd_command("/dev/zero", $swfile, $swsize));
+		my ($out, $ex, $err);
+		if (!$server->{'kvm_swapfile_vg'} &&
+		    $server->{'kvm_swapfile_iscsi'} eq '') {
+			# Zero out swap file, but only if a local file
+			($out, $ex, $err) = &execute_command_on_server(
+			  $vhost, &dd_command("/dev/zero", $swfile, $swsize));
+			}
 		if (!$err) {
 			$err = &create_disk_image_partition($vhost, $swfile,
 							    1, $swsize, 1, 0,
