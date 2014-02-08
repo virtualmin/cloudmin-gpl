@@ -1951,30 +1951,46 @@ return "ftp://ftp.stacklet.com/archive/".
        ($user ? "subscriber.xml" : "archive.xml");
 }
 
-# list_stacklet_images([manager])
+# list_stacklet_images([manager], [user], [pass])
 # Returns a list of all available images from Stacklet
 sub list_stacklet_images
 {
-my ($manager) = @_;
-my $url = &get_stacklet_index_url();
-$url =~ /^ftp:\/\/([^\/]+)(\/.*)$/ || return "Invalid URL $url";
-my ($host, $port, $page) = ($1, 21, $2);
-my $temp = &transname();
-my $err;
-&ftp_download($host, $page, $temp, \$err, undef, undef, undef, $port, 1);
-return $err if ($err);
+my ($manager, $user, $pass) = @_;
+my @urls;
+push(@urls, &get_stacklet_index_url($user, $pass)) if ($user);
+push(@urls, &get_stacklet_index_url());
+my $rv = [ ];
+foreach my $url (@urls) {
+	$url =~ /^ftp:\/\/([^\/]+)(\/.*)$/ || return "Invalid URL $url";
+	my ($host, $port, $page) = ($1, 21, $2);
+	my $temp = &transname();
+	my $err;
+	&ftp_download($host, $page, $temp, \$err, undef, undef, undef, $port,1);
+	return $err if ($err);
 
-eval "use XML::Simple";
-return "Missing XML::Simple Perl module" if ($@);
-my $xml;
-eval {
-	$xml = XML::Simple::XMLin($temp);
-	};
-&unlink_file($temp);
-return "XML parsing failed : $@" if ($@);
-$xml->{'channel'} && $xml->{'channel'}->{'item'} ||
-	return "XML format is invalid";
-my $rv = $xml->{'channel'}->{'item'};
+	eval "use XML::Simple";
+	return "Missing XML::Simple Perl module" if ($@);
+	my $xml;
+	eval {
+		$xml = XML::Simple::XMLin($temp);
+		};
+	&unlink_file($temp);
+	return "XML parsing failed : $@" if ($@);
+	$xml->{'channel'} && $xml->{'channel'}->{'item'} ||
+		return "XML format is invalid";
+	if ($user && $urls eq $urls[0]) {
+		# Tag with login and password for download of image
+		foreach my $i (@{$xml->{'channel'}->{'item'}}) {
+			$i->{'stackuser'} = $user;
+			$i->{'stackpass'} = $pass;
+			}
+		}
+	push(@$rv, @{$xml->{'channel'}->{'item'}});
+	}
+
+# Filter out dupes
+my %doneguid;
+$rv = [ grep { !$doneguid{$_->{'guid'}->{'content'}} } @$rv ];
 
 # Filter by manager type
 my $format = $manager eq 'kvm' ? 'kvm-raw-disk-image' :

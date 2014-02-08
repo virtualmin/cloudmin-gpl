@@ -141,12 +141,12 @@ else {
 	elsif ($url =~ /^ftp:\/\/([^\/]+)(\/\S+)$/) {
 		# Download via FTP
 		my ($host, $page, $port) = ($1, $2, 21);
-		if ($in{'stackuser'}) {
+		if ($stacklet->{'stackuser'}) {
 			# Use encrypted FTP download
 			&ftp_encrypted_download($host, $page, $temp, \$err,
 					        \&progress_callback,
-						$in{'stackuser'},
-						$in{'stackpass'});
+						$stacklet->{'stackuser'},
+						$stacklet->{'stackpass'});
 			}
 		else {
 			# Use regular FTP
