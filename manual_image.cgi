@@ -92,7 +92,6 @@ else {
 		   'nocompress' => 1,
 		   'nocompress' => 1,
 		   };
-	# XXX test with Xen
 
 	# Validate the image selected
 	my $stacklets = &list_stacklet_images(
@@ -142,7 +141,18 @@ else {
 	elsif ($url =~ /^ftp:\/\/([^\/]+)(\/\S+)$/) {
 		# Download via FTP
 		my ($host, $page, $port) = ($1, $2, 21);
-		&ftp_download($host, $page, $temp, \$err, \&progress_callback);
+		if ($in{'stackuser'}) {
+			# Use encrypted FTP download
+			&ftp_encrypted_download($host, $page, $temp, \$err,
+					        \&progress_callback,
+						$in{'stackuser'},
+						$in{'stackpass'});
+			}
+		else {
+			# Use regular FTP
+			&ftp_download($host, $page, $temp, \$err,
+				      \&progress_callback);
+			}
 		}
 	else {
 		# Invaid URL!

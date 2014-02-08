@@ -1943,9 +1943,12 @@ elsif (!defined($found) && defined($value)) {
 return join("\n", @lines)."\n";
 }
 
+# get_stacklet_index_url([user, pass])
 sub get_stacklet_index_url
 {
-return "ftp://ftp.stacklet.com/archive/archive.xml";
+my ($user, $pass) = @_;
+return "ftp://ftp.stacklet.com/archive/".
+       ($user ? "subscriber.xml" : "archive.xml");
 }
 
 # list_stacklet_images([manager])
