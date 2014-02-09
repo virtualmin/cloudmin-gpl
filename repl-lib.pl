@@ -197,7 +197,8 @@ if (!$isrepl) {
 	return $rv;
 	}
 my @rfiles = &remote_foreign_call($server, "server-manager",
-					   "get_last_modified_times");
+					   "get_last_modified_times",
+					   $config{'noreplimages'});
 if (@rfiles <= 1 || $last_remote_error) {
 	$rv->{'err'} = &text('repl_nofiles',
 			     $last_remote_error || $text{'repl_nofiles2'});
@@ -206,7 +207,7 @@ if (@rfiles <= 1 || $last_remote_error) {
 my %rfiles = map { $_->{'relfile'}, $_ } @rfiles;
 
 # Get local files
-my @lfiles = &get_last_modified_times();
+my @lfiles = &get_last_modified_times($config{'noreplimages'});
 my %lfiles = map { $_->{'relfile'}, $_ } @lfiles;
 
 # Work out which directories must exist on remote already
@@ -310,8 +311,18 @@ foreach my $rowner (@rowners) {
 		}
 	}
 
-# Call post-replication function to setup cron jobs / etc
+# Call post-replication function to fix up host IDs, for virtual systems that
+# were hosted on the target. 
+# XXX remove entry on target for target itself
+# XXX add entry for old master
+# XXX fix up host IDs
 my $this = &get_this_managed_server();
+if (!$dryrun) {
+	&remote_foreign_call($server, "server-manager", "replication_fix_hosts",
+			     $this, $server);
+	}
+
+# Call post-replication function to setup cron jobs / etc
 if (!$dryrun) {
 	&remote_foreign_call($server, "server-manager", "replication_done",
 			     $this->{'host'}, \@copied, \@deleted);
@@ -393,12 +404,13 @@ foreach my $rdir (keys %dirs) {
 return undef;
 }
 
-# get_last_modified_times()
+# get_last_modified_times([skip-images])
 # Returns a list of files used by Cloudmin and their last modification times.
 # This is called on both the replication source and dest to compute what needs
 # to be sent over.
 sub get_last_modified_times
 {
+my ($skipimages) = @_;
 my (@files, @dirs);
 
 # Build list of dirs to recurse into
@@ -450,7 +462,7 @@ foreach my $s (&list_managed_servers()) {
 	}
 
 # Add image meta-files, and images stored on the cloudmin master
-if (defined(&list_server_images)) {
+if (defined(&list_server_images) && !$skipimages) {
 	foreach my $i (&list_server_images()) {
 		push(@files, $i->{'file'});
 		my @imgfiles = split(/\s+/, $i->{'files'});
@@ -571,6 +583,41 @@ if (defined(&setup_bandwidth_cron)) {
 
 &save_replication_master($master);
 return undef;
+}
+
+# replication_fix_hosts(&old-master, &this-server-as-seen-by-master)
+# Called after replication is done to fix up host IDs
+sub replication_fix_hosts
+{
+my ($oldmaster, $thisserver) = @_;
+
+# Find virtual systems that were hosted on this replica (as seen by the master),
+# and change their host system to this machine.
+my $hostedonme = 0;
+foreach my $s (&list_managed_servers()) {
+	my $parent = &get_parent_server($s);
+	if ($parent && $parent->{'id'} == $thisserver->{'id'}) {
+		$s->{$manager."_on"} = 0;
+		&save_managed_server($s);
+		$hostedonme++;
+		}
+	}
+
+# Copy hosting settings like the base directory and IP ranges into this server's
+# object
+if ($hostedonme) {
+	# XXX
+	}
+
+# Find virtual systems that were hosted on the old master
+# XXX
+
+# Create a server entry for the old master if needed
+# XXX
+
+# Change virtual systems that were hosted on the old master to the new server
+# object, so they can be managed in the case of a master takeover
+# XXX
 }
 
 1;
