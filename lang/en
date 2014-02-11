@@ -4618,7 +4618,7 @@ repl_now=Replicate to selected systems after saving
 repl_images=Replicate system image files
 repl_isreplica=This system is a Cloudmin replica - no changes are allowed
 repl_warning=This system is a Cloudmin replica of $1. No changes to managed systems or global settings are allowed.
-repl_warning2=This system is a Cloudmin replica, but is not replicating from any master sytem yet. No changes to managed systems or global settings are allowed.
+repl_warning2=This system is a Cloudmin replica, but is not replicating from any master system yet. No changes to managed systems or global settings are allowed.
 repl_locked=Replication already in progress
 
 schange_eserver=Scheduled $1 change is for a non-existent system with ID $2
