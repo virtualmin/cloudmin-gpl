@@ -305,8 +305,7 @@ elsif ($in{'omode'} == 2) {
 		   'pass' => &acl::encrypt_password($in{'newownerpass'}),
 		   'real' => 'Owner of '.$server->{'host'},
 		   'acl' => { 'email' => 'root@'.$server->{'host'},
-			      'actions' => join(" ", @actions),
-			      'plainpass' => $in{'newownerpass'}, },
+			      'actions' => join(" ", @actions) },
 		 };
 	if ($in{'newownerplan'}) {
 		$plan = &get_plan($in{'newownerplan'});

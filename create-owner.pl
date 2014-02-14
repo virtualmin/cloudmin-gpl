@@ -138,7 +138,6 @@ $owner = { 'name' => $name,
 	   'acl' => { 'email' => $email,
 		      'servers' => join(" ", @ids),
 		      'actions' => join(" ", @actions),
-		      'plainpass' => $pass,
 		    },
 	 };
 if ($lock) {

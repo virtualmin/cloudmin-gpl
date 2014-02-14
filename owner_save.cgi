@@ -15,7 +15,6 @@ if (!$in{'opass_def'}) {
 	$in{'opass'} =~ /\S/ || &error($text{'owner_epass'});
 	$in{'opass'} =~ /:/ && &error($text{'owner_epass2'});
 	$owner->{'pass'} = &acl::encrypt_password($in{'opass'});
-	$owner->{'acl'}->{'plainpass'} = $in{'opass'};
 	}
 $in{'email'} =~ /^\S+\@\S+$/ || &error($text{'owner_eemail'});
 $owner->{'acl'}->{'email'} = $in{'email'};
