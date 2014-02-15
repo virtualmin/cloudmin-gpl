@@ -193,6 +193,26 @@ $dir = { 'name' => 'zone',
 		       1, 0, undef, undef, undef);
 &$second_print(".. created $file");
 
+# Remove any options that would make BIND listen on localhost only
+my $options = &bind8::find("options", $conf);
+if ($options) {
+	&bind8::save_directive($options, "allow-query", [ ], 0);
+	foreach my $dir ("listen-on", "listen-on-v6") {
+		my @listen = &bind8::find($dir, $options->{'members'});
+		next if (!@listen);
+		if ($listen[0]->{'values'}->[0] eq 'port' &&
+		    $listen[0]->{'values'}->[1] eq '53' &&
+		    $listen[0]->{'type'} &&
+		    ($listen[0]->{'members'}->[0]->{'name'} eq
+		     '127.0.0.1' ||
+		     $listen[0]->{'members'}->[0]->{'name'} eq '::1')) {
+			$listen[0]->{'members'}->[0]->{'name'} = 'any';
+			}
+		&bind8::save_directive($options, $dir, \@listen, 1);
+		}
+	&bind8::flush_file_lines();
+	}
+
 # Apply changes
 &$first_print("Restarting BIND ..");
 &bind8::restart_bind();
