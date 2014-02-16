@@ -1154,7 +1154,7 @@ if ($server->{'fast'}) {
 	my $rpcport = $server->{'port'}+1;
 	my $ip = &get_server_ip($server);
 	eval {
-		&set_alarm(2);
+		&set_alarm(5);
 		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		local $main::error_must_die = 1;
 		my $err;
