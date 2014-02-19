@@ -90,7 +90,6 @@ else {
 	# From stacklet
 	$image = { 'manager' => $in{'manager'},
 		   'nocompress' => 1,
-		   'nocompress' => 1,
 		   };
 
 	# Validate the image selected
