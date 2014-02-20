@@ -31,6 +31,8 @@ C<--period-ago> flag followed by a number of weeks or months.
 To limit output to the unique IDs of selected systems, use the C<--id-only>
 flag. To get just hostnames use C<--name-only>, C<--address-only> to print
 just IP addresses, or C<--address6-only> to print only IPv6 addresses.
+You can also fetch only system details that can be displayed quickly (without
+needed to poll the host) with the C<--simple-multiline> flag.
 
 =head1 Example usage
 
@@ -68,6 +70,9 @@ while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--multiline") {
 		$multi = 1;
+		}
+	elsif ($a eq "--simple-multiline") {
+		$multi = 2;
 		}
 	elsif ($a eq "--name-only") {
 		$nameonly = 1;
@@ -201,28 +206,6 @@ if ($multi) {
 		if ($k->{'arch'}) {
 			print "    CPU architecture: $k->{'arch'}\n";
 			}
-		$bfunc = "type_".$s->{'manager'}."_get_atboot";
-		if (defined(&$bfunc)) {
-			print "    Start at boot: ",
-			      (&$bfunc($s) ? "Yes" : "No"),"\n";
-			}
-		if ($s->{'notes'}) {
-			print "    Notes: ",join("\\n", split(/\t/, $s->{'notes'})),"\n";
-			}
-		$mfunc = "type_".$s->{'manager'}."_get_boot_mode";
-		if (defined(&$mfunc)) {
-			($mok, $mode) = &$mfunc($s);
-			print "    Boot method: ",
-				(!$mok ? "Unknown : $mode" : $mode),"\n";
-			}
-		$dfunc = "type_".$s->{'manager'}."_get_boot_device";
-		if (defined(&$dfunc)) {
-			($dok, $device) = &$dfunc($s);
-			print "    Boot device: ",
-				(!$dok ? "Unknown : $device" :
-				 ref($device) ? join(" ", @$device)
-					      : $device),"\n";
-			}
 
 		# Login information
 		if ($server->{'ssh_nologin'}) {
@@ -260,6 +243,32 @@ if ($multi) {
 			print "    Webmin port: $s->{'port'}\n";
 			print "    Webmin SSL: ",
 			      ($s->{'ssl'} ? "Yes" : "No"),"\n";
+			}
+
+		# In fast mode, skip all other expensive status fields
+		next if ($multi == 2);
+
+		$bfunc = "type_".$s->{'manager'}."_get_atboot";
+		if (defined(&$bfunc)) {
+			print "    Start at boot: ",
+			      (&$bfunc($s) ? "Yes" : "No"),"\n";
+			}
+		if ($s->{'notes'}) {
+			print "    Notes: ",join("\\n", split(/\t/, $s->{'notes'})),"\n";
+			}
+		$mfunc = "type_".$s->{'manager'}."_get_boot_mode";
+		if (defined(&$mfunc)) {
+			($mok, $mode) = &$mfunc($s);
+			print "    Boot method: ",
+				(!$mok ? "Unknown : $mode" : $mode),"\n";
+			}
+		$dfunc = "type_".$s->{'manager'}."_get_boot_device";
+		if (defined(&$dfunc)) {
+			($dok, $device) = &$dfunc($s);
+			print "    Boot device: ",
+				(!$dok ? "Unknown : $device" :
+				 ref($device) ? join(" ", @$device)
+					      : $device),"\n";
 			}
 
 		# Show type-specific info
@@ -687,7 +696,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all registered managed systems.\n";
 print "\n";
 print "cloudmin list-systems [--multiline | --name-only | --id-only |\n";
-print "                       --address-only]\n";
+print "                       --simple-multiline | --address-only]\n";
 print "                      [--all-hosts] | [--host name]*\n";
 print "                      [--group name]*\n";
 my $types = join("|", @server_management_types);
