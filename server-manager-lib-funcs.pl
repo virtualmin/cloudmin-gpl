@@ -721,9 +721,13 @@ foreach my $s (&list_managed_servers_sorted(undef, 1)) {
 	my ($ingroup) = grep { $wantgroups{lc($_)} }
 				split(/\t/, $s->{'group'});
 	my $p = @$hostedon ? &get_parent_server($s) : undef;
+	my $ip = &get_server_ip($s);
+	my $ip6 = &get_server_ip6($s);
 	if (($all && &can_action($s)) ||
 	    $ingroup ||
 	    &indexoflc($s->{'host'}, @$hosts) >= 0 ||
+	    $ip && &indexoflc($ip, @$hosts) >= 0 ||
+	    $ip6 && &indexoflc($ip6, @$hosts) >= 0 ||
 	    &indexoflc($s->{'manager'}, @$managers) >= 0 ||
 	    &indexoflc($s->{'type'}, @$types) >= 0 ||
 	    &indexoflc($s->{'status'}, @$expstatuses) >= 0 ||
