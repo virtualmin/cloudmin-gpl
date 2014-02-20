@@ -302,25 +302,36 @@ elsif ($in{'installwebmin'}) {
 	($src, $type, $err) = &get_install_webmin_source($server);
 	$err && &error(&text('save_webminerr', $err));
 
-	print &text('save_webmining', "<tt>$server->{'host'}</tt>",
-		    $src =~ /:/ ? "<tt>$src</tt>" : uc($src)),"<br>\n";
-	($out, $err) = &install_webmin_server($server, $src, $type, 1);
-	print "<pre>$out</pre>";
-	if ($err) {
-		print &text('save_webminfailed', $err),"<p>\n";
+	if (!$in{'confirm'}) {
+		# Ask first
+		&show_confirm_form(
+		    &text('save_webminrusure', "<tt>$server->{'host'}</tt>"),
+		    "save_serv.cgi", [ [ "id", $in{'id'} ],
+				       [ "installwebmin", 1 ] ],
+		    $text{'save_webminok'});
 		}
 	else {
-		&obtain_lock_server($server);
-		&check_server_status($server);
-		&save_managed_server($server);
-		&release_lock_server($server);
-		print $text{'save_webmindone'},"<p>\n";
-
-		if (defined(&theme_post_save_server)) {
-			&theme_post_save_server($server);
+		# Do it
+		print &text('save_webmining', "<tt>$server->{'host'}</tt>",
+			    $src =~ /:/ ? "<tt>$src</tt>" : uc($src)),"<br>\n";
+		($out, $err) = &install_webmin_server($server, $src, $type, 1);
+		print "<pre>$out</pre>";
+		if ($err) {
+			print &text('save_webminfailed', $err),"<p>\n";
 			}
+		else {
+			&obtain_lock_server($server);
+			&check_server_status($server);
+			&save_managed_server($server);
+			&release_lock_server($server);
+			print $text{'save_webmindone'},"<p>\n";
+
+			if (defined(&theme_post_save_server)) {
+				&theme_post_save_server($server);
+				}
+			}
+		&webmin_log("webmin", "server", $server->{'host'});
 		}
-	&webmin_log("webmin", "server", $server->{'host'});
 
 	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
 	}
