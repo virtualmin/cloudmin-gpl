@@ -726,6 +726,7 @@ foreach my $s (&list_managed_servers_sorted(undef, 1)) {
 	if (($all && &can_action($s)) ||
 	    $ingroup ||
 	    &indexoflc($s->{'host'}, @$hosts) >= 0 ||
+	    &indexoflc($s->{'id'}, @$hosts) >= 0 ||
 	    $ip && &indexoflc($ip, @$hosts) >= 0 ||
 	    $ip6 && &indexoflc($ip6, @$hosts) >= 0 ||
 	    &indexoflc($s->{'manager'}, @$managers) >= 0 ||
@@ -738,6 +739,30 @@ foreach my $s (&list_managed_servers_sorted(undef, 1)) {
 		}
 	}
 return @rv;
+}
+
+# find_one_managed_server(host|ip)
+# Returns a server looked up by hostname, IP or ID
+sub find_one_managed_server
+{
+my ($what) = @_;
+if (&check_ipaddress($what)) {
+	my ($rv) = grep { my $ip = &get_server_ip($_); $ip eq $what }
+			&list_managed_servers();
+	return $rv if ($rv);
+	}
+elsif (&check_ip6address($what)) {
+	my ($rv) = grep { my $ip6 = &get_server_ip6($_); $ip6 eq $what }
+			&list_managed_servers();
+	return $rv if ($rv);
+	}
+elsif ($what =~ /^\d+$/) {
+	my $rv = &get_managed_server($what);
+	return $rv if ($rv);
+	}
+# Fall back to hostname lookup
+my $rv = &get_managed_server_by("host", $what);
+return $rv;
 }
 
 # expand_status_code(code)

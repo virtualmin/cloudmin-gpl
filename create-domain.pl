@@ -130,7 +130,7 @@ $dfeatures || @features || &usage("Either the --default-features or several --fe
 # Get destinaton system
 if ($host) {
 	# Explicitly given
-	$server = &get_managed_server_by("host", $host);
+	$server = &find_one_managed_server($host);
 	$server || &usage("No system with hostname $host was found");
 	}
 else {

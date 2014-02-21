@@ -58,7 +58,7 @@ while(@ARGV > 0) {
 
 # Get the host system
 $host || &usage("Missing --host parameter");
-$server = &get_managed_server_by("host", $host);
+$server = &find_one_managed_server($host);
 $server || &usage("System with hostname $host does not exist");
 ($manager) = &is_parent_server($server);
 $manager || &usage("System $host is not a host system");

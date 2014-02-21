@@ -106,7 +106,7 @@ $name || &usage("Missing --name parameter");
 
 # Get the server
 $host || &usage("Missing --host parameter");
-$server = &get_managed_server_by("host", $host);
+$server = &find_one_managed_server($host);
 $server || &usage("System with hostname $host does not exist");
 $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 defined(&$cfunc) && &$cfunc($server) ||

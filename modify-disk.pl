@@ -126,7 +126,7 @@ $newsize || $newvirt || $media || $cache || $newreal || defined($include) ||
 
 # Get the server
 $host || &usage("Missing --host parameter");
-$server = &get_managed_server_by("host", $host);
+$server = &find_one_managed_server($host);
 $server || &usage("System with hostname $host does not exist");
 &can_action_usage($server, "disks");
 &obtain_lock_server($server);

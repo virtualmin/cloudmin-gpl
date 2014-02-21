@@ -92,7 +92,7 @@ $host || &usage("Missing --host parameter");
 defined($ssh_pass) || defined($key) || defined($webmin_pass) || $webmin_same ||
     defined($vnc_pass) || &usage("No password changes specified");
 $ssh_pass && $key && &usage("Only one of --ssh-pass or --ssh-key can be used");
-$server = &get_managed_server_by("host", $host);
+$server = &find_one_managed_server($host);
 $server || &usage("System with hostname $host does not exist");
 &can_action_usage($server, "pass"); 
 

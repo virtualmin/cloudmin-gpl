@@ -137,7 +137,7 @@ $newhost || &usage("Missing --new-host parameter");
 $newhost =~ /^[a-z0-9\.\-]+$/ || &usage("Invalid new hostname");
 
 # Get the system
-$server = &get_managed_server_by("host", $host);
+$server = &find_one_managed_server($host);
 $server || &usage("No system named $host exists");
 if ($ips || $ips6) {
 	&can_action_usage($server, 'ips');

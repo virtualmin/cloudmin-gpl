@@ -109,7 +109,7 @@ $dest->{'status'} eq 'virt' || &usage("System $desthost is not running Virtualmi
 
 # Get the domains
 if ($host) {
-	$server = &get_managed_server_by("host", $host);
+	$server = &find_one_managed_server($host);
 	$server || &usage("System $host does not exist");
 	@sources = ( $server );
 	}

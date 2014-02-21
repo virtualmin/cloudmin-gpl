@@ -78,7 +78,7 @@ while(@ARGV > 0) {
 
 # Get the domains
 if ($host) {
-	$server = &get_managed_server_by("host", $host);
+	$server = &find_one_managed_server($host);
 	$server || &usage("System $host does not exist");
 	@sources = ( $server );
 	}

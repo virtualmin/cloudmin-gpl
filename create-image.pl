@@ -123,7 +123,7 @@ $host || &usage("Missing --host parameter");
 $id || &usage("Missing --id parameter");
 
 # Get the server to image
-$server = &get_managed_server_by("host", $host);
+$server = &find_one_managed_server($host);
 $server || &usage("No system with hostname $host was found");
 $nfunc = "type_".$server->{'manager'}."_no_image";
 if (defined(&$nfunc) && &$nfunc($server)) {

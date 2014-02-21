@@ -73,8 +73,8 @@ $dest || $src || &usage("Missing --destfile or --sourcefile flag");
 $dest && $src && &usage("Only one of --destfile or --sourcefile is allowed");
 
 # Get the servers
-$srcserver = &get_managed_server_by("host", $srchost);
-$destserver = &get_managed_server_by("host", $desthost);
+$srcserver = &find_one_managed_server($srchost);
+$destserver = &find_one_managed_server($desthost);
 $srcserver || &usage("No system named $srchost exists");
 $destserver || &usage("No system named $desthost exists");
 &can_action_usage([ $srcserver, $destserver ], "run");

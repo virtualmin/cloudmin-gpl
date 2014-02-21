@@ -51,7 +51,7 @@ while(@ARGV > 0) {
 
 # Get the systems
 $host || &usage("No system to open the console for specified");
-$server = &get_managed_server_by("host", $host);
+$server = &find_one_managed_server($host);
 $server || &usage("No system with hostname $host exists");
 
 # Check if the console is available

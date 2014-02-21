@@ -54,7 +54,7 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--host") {
 		$servername = shift(@ARGV);
-		$server = &get_managed_server_by("host", $servername);
+		$server = &find_one_managed_server($servername);
 		$server || &usage("No system with hostname $servername found");
 		}
 	elsif ($a eq "--owner") {
