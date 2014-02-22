@@ -7583,6 +7583,16 @@ if ($canboot && &can_action($server, "boot")) {
 		    'link' => "boot_form.cgi?id=$server->{'id'}" });
 	}
 
+# Backup just this system
+my $bfunc = "type_".$server->{'manager'}."_can_backup";
+if (&can_action(undef, "backup") && defined(&list_backups) &&
+    defined(&$bfunc) && &$bfunc($server) && $server->{'state'} ne 'nohost') {
+	push(@rv, { 'id' => 'onebackup',
+		    'desc' => $text{'edit_onebackup'},
+		    'cat' => 'power',
+		    'link' => "onebackup_form.cgi?id=$server->{'id'}" });
+	}
+
 # Pause/un-pause link
 my $pfunc = "type_".$t."_can_pause";
 if (defined(&$pfunc) && &can_action($server, "pause")) {
