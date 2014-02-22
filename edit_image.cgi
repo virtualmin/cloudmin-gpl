@@ -108,6 +108,10 @@ if ($got) {
 	print &ui_table_row(&text('eimage_default', &$tfunc()),
 		&ui_yesno_radio("default", $got->{'default'}));
 
+	# Clear keys when creating system
+	print &ui_table_row($text{'eimage_keepkeys'},
+		&ui_yesno_radio("keepkeys", $got->{'keepkeys'}));
+
 	# Systems using it
 	@users = grep { $_->{'image'} eq $i->{'id'} } &list_managed_servers();
 	$users = @users == 0 ? $text{'keys_nousers'} :

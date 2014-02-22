@@ -1759,6 +1759,7 @@ sub type_kvm_create_post
 {
 my ($server, $serial, $key, $reset, $empty, $nostart) = @_;
 my $vhost = &type_kvm_parent($server);
+my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
 my @ips = split(/\s+/, $server->{'kvm_ip'});
 my @cidrs = split(/\s+/, $server->{'kvm_cidr'});
 my @netmasks = map { &net::prefix_to_mask($_) } @cidrs;
@@ -1993,7 +1994,7 @@ if (!$empty && $mp) {
 		&$second_print($err ? &text('create_exensetkey', $err)
 				    : $text{'create_done'});
 		}
-	else {
+	elsif (!$img->{'keepkeys'}) {
 		&clear_authorized_key($server);
 		}
 

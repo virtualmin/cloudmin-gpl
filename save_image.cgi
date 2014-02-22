@@ -32,6 +32,7 @@ else {
 		$img->{'nodelete'} = !$in{'nodelete'};
 		}
 	$img->{'default'} = $in{'default'};
+	$img->{'keepkeys'} = $in{'keepkeys'};
 	$img->{'postcmdon'} = $in{'postcmdon'};
 	$img->{'postcmdoff'} = $in{'postcmdoff'};
 	&save_server_image($img);
