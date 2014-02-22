@@ -12,7 +12,8 @@ $server || &error($text{'edit_egone'});
 @doms = &get_server_domains($server);
 $img = &get_server_image($server->{'image'});
 
-print &text('reset_rusure', "<tt>$server->{'host'}</tt>"),"<p>\n";
+print "<b>",&text('reset_rusure', "<tt>$server->{'host'}</tt>"),"</b><p>\n";
+
 print &ui_form_start("reset.cgi");
 print &ui_hidden("id", $server->{'id'});
 print &ui_table_start($text{'reset_header'}, undef, 2);
