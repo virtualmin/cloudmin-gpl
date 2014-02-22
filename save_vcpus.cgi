@@ -49,8 +49,10 @@ elsif (defined(&$cansfunc) && &$cansfunc($server)) {
 	# Only CPU count supported
 	$in{'smp'} =~ /^\d+$/ && $in{'smp'} > 0 ||
 		&error($text{'vcpus_esmp'});
-	$in{'cores'} =~ /^\d+$/ && $in{'cores'} > 0 ||
-		&error($text{'vcpus_ecores'});
+	if (defined($in{'cores'})) {
+		$in{'cores'} =~ /^\d+$/ && $in{'cores'} > 0 ||
+			&error($text{'vcpus_ecores'});
+		}
 	}
 
 &ui_print_unbuffered_header(&server_in($server), $text{'vcpus_title'}, "");

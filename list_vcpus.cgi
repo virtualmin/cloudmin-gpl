@@ -74,9 +74,11 @@ elsif (defined(&$cansfunc) && &$cansfunc($server)) {
 	print &ui_table_row($text{'vcpus_smp'},
 		&ui_textbox("smp", $smp, 4));
 
-	# Virtual cores
-	print &ui_table_row($text{'vcpus_cores'},
-		&ui_textbox("cores", $cores, 4));
+	if (defined($cores)) {
+		# Virtual cores
+		print &ui_table_row($text{'vcpus_cores'},
+			&ui_textbox("cores", $cores, 4));
+		}
 
 	# CPUs on host system
 	$vhost = &get_parent_server($server);
