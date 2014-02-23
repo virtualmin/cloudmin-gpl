@@ -19,19 +19,22 @@ print &ui_table_start($text{'onebackup_header'}, "width=100%", 2);
 
 # Destination
 @allservers = &list_available_managed_servers_sorted();
+@allservers = grep { &can_ssh_status($_) &&
+		     $_->{'id'} != $server->{'id'} } @allservers;
 print &ui_table_row($text{'backup_dest'},
 	&ui_radio_table("dest_mode", 7,
 		[ [ 7, $text{'backups_mode7'} ],
-		  [ 2, $text{'backups_mode2'},
-		       "<table>\n".
-		       "<tr> <td><b>$text{'backups_dirhost'}</b></td>\n".
-		       "<td>".&ui_select("vm2", undef,
-					 [ map { [ $_->{'id'}, $_->{'short_host'} ] }
-					       @allservers ])."</td> </tr>\n".
-		       "<tr> <td><b>$text{'backups_dirdir'}</b></td>\n".
-		       "<td>".&ui_textbox("vm2dir", "/backup", 40).
+		  @allservers ?
+		  ( [ 2, $text{'backups_mode2'},
+		         "<table>\n".
+		         "<tr> <td><b>$text{'backups_dirhost'}</b></td>\n".
+		         "<td>".&ui_select("vm2", undef,
+				 [ map { [ $_->{'id'}, $_->{'short_host'} ] }
+				       @allservers ])."</td> </tr>\n".
+		         "<tr> <td><b>$text{'backups_dirdir'}</b></td>\n".
+		         "<td>".&ui_textbox("vm2dir", "/backup", 40).
 			 "</td> </tr>\n".
-		       "</table>" ],
+		         "</table>" ] ) : ( ),
 		  [ 3, $text{'backup_dest3'},
 			&show_backup_ssh_dest({ }, "ssh", 22) ],
 		  [ 4, $text{'backup_dest4'},
