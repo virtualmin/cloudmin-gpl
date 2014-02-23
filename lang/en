@@ -5430,3 +5430,4 @@ onebackup_shutdown=Shut down system?
 onebackup_err=Failed to backup system
 onebackup_destdesc=Backing up $1 to $2 ..
 onebackup_failed=.. backup failed : $1
+onebackup_downfailed=Backup for download failed

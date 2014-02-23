@@ -9,18 +9,15 @@ my $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &ui_print_header(&server_in($server), $text{'onebackup_title'}, "");
 
-print &ui_form_start("onebackup.cgi", "post");
+my $efunc = "type_".$server->{'manager'}."_backup_extension";
+my $ext = defined(&$efunc) ? &$efunc($server) : undef;
+$ext ||= "gz";
+
+print &ui_form_start("onebackup.cgi/$server->{'host'}.$ext", "post");
 print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'onebackup_header'}, "width=100%", 2);
 
 # Destination
-$dest = $backup->{'dest'} ? &parse_backup_destination($backup->{'dest'})
-			  : undef;
-if ($dest && $dest->{'mode'} == 0) {
-	# On master, convert to on-host mode
-	$dest->{'mode'} = 2;
-	$dest->{'id'} = '0';
-	}
 @allservers = &list_available_managed_servers_sorted();
 print &ui_table_row($text{'backup_dest'},
 	&ui_radio_table("dest_mode", 7,
@@ -28,23 +25,21 @@ print &ui_table_row($text{'backup_dest'},
 		  [ 2, $text{'backups_mode2'},
 		       "<table>\n".
 		       "<tr> <td><b>$text{'backups_dirhost'}</b></td>\n".
-		       "<td>".&ui_select("vm2", $dest->{'id'},
+		       "<td>".&ui_select("vm2", undef,
 					 [ map { [ $_->{'id'}, $_->{'short_host'} ] }
 					       @allservers ])."</td> </tr>\n".
 		       "<tr> <td><b>$text{'backups_dirdir'}</b></td>\n".
-		       "<td>".&ui_textbox("vm2dir",
-					   $dest->{'mode'} == 2 ? $dest->{'path'} : "", 40)."</td> </tr>\n".
+		       "<td>".&ui_textbox("vm2dir", "/backup", 40).
+			 "</td> </tr>\n".
 		       "</table>" ],
 		  [ 3, $text{'backup_dest3'},
-			&show_backup_ssh_dest(
-			    $mode == 3 ? $dest : { }, "ssh", 22) ],
+			&show_backup_ssh_dest({ }, "ssh", 22) ],
 		  [ 4, $text{'backup_dest4'},
-			&show_backup_ssh_dest(
-			    $mode == 4 ? $dest : { }, "ftp", 21) ],
+			&show_backup_ssh_dest({ }, "ftp", 21) ],
 		  [ 5, $text{'backup_dest5'},
-			&show_backup_s3_dest($mode == 5 ? $dest : { }, 0) ],
+			&show_backup_s3_dest({ }, 0) ],
 		  [ 6, $text{'backup_dest6'},
-			&show_backup_rs_dest($mode == 6 ? $dest : { }, 0) ],
+			&show_backup_rs_dest({ }, 0) ],
 	 	]));
 
 # Shutdown or pause?
