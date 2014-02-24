@@ -83,3 +83,4 @@ Moved the page for importing existing image files to be accessible from a new li
 The statistics graph page for a single system can now show multiple stats at the same time.
 ---- Changes since 7.5 ----
 Post-creation scripts can be now be set on a per-image basis.
+A single virtual system can now be backed up quickly, either to another system, and FTP server, for download in the browser.
