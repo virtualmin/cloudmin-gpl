@@ -1978,7 +1978,7 @@ foreach my $url (@urls) {
 	return "XML parsing failed : $@" if ($@);
 	$xml->{'channel'} && $xml->{'channel'}->{'item'} ||
 		return "XML format is invalid";
-	if ($user && $urls eq $urls[0]) {
+	if ($user && $url eq $urls[0]) {
 		# Tag with login and password for download of image
 		foreach my $i (@{$xml->{'channel'}->{'item'}}) {
 			$i->{'stackuser'} = $user;
