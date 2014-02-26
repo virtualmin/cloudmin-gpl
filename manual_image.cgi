@@ -128,30 +128,32 @@ else {
 
 	# Download the image from stacklet
 	my $temp = &transname();
-	$progress_callback_url = $url;
 	my $err;
-	&$first_print(&text('mkimage_stackdownload', $url));
 	if ($url =~ /^(http|https):/) {
 		# Download via HTTP
+		&start_background_dot_printer(
+			&text('mkimage_stackdownload', $url));
 		my ($host, $port, $page, $ssl) = &parse_http_url($url);
 		&http_download($host, $port, $page, $temp, \$err,
-			\&progress_callback, $ssl);
+			       undef, $ssl);
 		}
 	elsif ($url =~ /^ftp:\/\/([^\/]+)(\/\S+)$/) {
 		# Download via FTP
+		&start_background_dot_printer(
+			&text('mkimage_stackdownload', $url));
 		my ($host, $page, $port) = ($1, $2, 21);
 		if ($stacklet->{'stackuser'}) {
 			# Use encrypted FTP download
 			&ftp_encrypted_download($host, $page, $temp, \$err,
-					        \&progress_callback,
+					        undef,
 						$stacklet->{'stackuser'},
 						$stacklet->{'stackpass'});
 			}
 		else {
 			# Use regular FTP
-			&ftp_download($host, $page, $temp, \$err,
-				      \&progress_callback);
+			&ftp_download($host, $page, $temp, \$err);
 			}
+		&stop_background_dot_printer();
 		}
 	else {
 		# Invaid URL!
