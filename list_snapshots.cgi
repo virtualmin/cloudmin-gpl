@@ -44,7 +44,7 @@ if (@$snaps) {
 			"<a href='edit_snapshot.cgi?id=$in{'id'}&snapid=$s->{'id'}'>".&html_escape($s->{'id'})."</a>",
 			&nice_size($totalsize),
 			scalar(@{$s->{'lvs'}}),
-			$anyinactive ? "100%" : $maxpc."%",
+			$anyinactive ? "<font color=red>100%</a>" : $maxpc."%",
 			$anyinactive ?
 			  "<font color=red>$text{'snapshots_inactive'}</font>" :
 			  $text{'snapshots_active'},
