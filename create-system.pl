@@ -30,6 +30,10 @@ or C<--serial> and C<--key>. The former will select an available license from
 the pool of those registered with Cloudmin, while the latter let you specify a
 serial number and key explicity. 
 
+By default this API command will not exit until system creation completes.
+However, you can use the C<--background> flag to have most of the work
+performed in the background once initial checks are complete.
+
 =head1 Example usage
 
   cloudmin create-system --host xennoupdate --type xen --desc "Test without updates" --ssh-pass smeg  --no-update --xen-host sentosa.home --xen-memory 512 --image xen-centos5.0-virtualmin --allocate-serial
@@ -178,6 +182,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-check-serial") { $nocheck_serial = 1; }
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
+		}
+	elsif ($a eq "--background") {
+		$background = 1;
 		}
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
@@ -448,6 +455,12 @@ if ($err) {
 	exit(2);
 	}
 
+# Fork API command into the background
+if ($background && !&background_api_command()) {
+	print ".. continuing creation in the background\n";
+	exit(0);
+	}
+
 $dfunc = "type_".$type."_create_done";
 if (defined(&$dfunc)) {
 	print ".. creation started\n\n";
@@ -715,6 +728,7 @@ print "                      [--same-serial] | [--allocate-serial]\n";
 print "                      [--no-check-serial]\n";
 print "                      [--id number]\n";
 print "                      [--disk-directory dir]\n";
+print "                      [--background]\n";
 if (defined(&list_system_owners)) {
 	print "                      [--owner name]\n";
 	}

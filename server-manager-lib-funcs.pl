@@ -13415,6 +13415,28 @@ $user ||= $base_remote_user;
 &unlock_file("$user_lock_dir/$user");
 }
 
+# background_api_command()
+# Fork the current process into the background, so that some long-running
+# operation like VM creation can continue. Returns 1 in the backgrounded
+# process.
+sub background_api_command
+{
+if (!fork()) {
+	# In the new process, so stop doing output
+	$main::initial_process_id = $$;
+	&set_all_null_print();
+	close(STDIN);
+	close(STDOUT);
+	close(STDERR);
+	return 1;
+	}
+else {
+	# In the original process
+	$main::initial_process_id = 0;
+	return 0;
+	}
+}
+
 $done_server_manager_lib_funcs = 1;
 
 

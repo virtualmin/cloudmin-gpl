@@ -35,6 +35,10 @@ an different host system for the clone to be created on with the C<--dest>
 flag. This must be followed by the hostname of a system that can host virtual
 systems of the type being cloned.
 
+By default this API command will not exit until the cloning process completes.
+However, you can use the C<--background> flag to have most of the work
+performed in the background once initial checks are complete.
+
 =head1 Example usage
 
   cloudmin clone-system --host citrixsrc.home --new-host citrixdest
@@ -122,6 +126,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
+		}
+	elsif ($a eq "--background") {
+		$background = 1;
 		}
 	else {
 		&usage("Unknown parameter $a");
@@ -230,6 +237,10 @@ if ($limits) {
 # Call the clone function
 &obtain_lock_server($server);
 print "Creating clone of $desc system $server->{'host'} named $newhost ..\n\n";
+if ($background && !&background_api_command()) {
+	print ".. cloning will continue in the background\n";
+	exit(0);
+	}
 &$indent_print();
 ($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips, $live,
 				   $dest, $ips6, $directory);
@@ -266,6 +277,7 @@ print "                     [--address6 ip]*\n";
 print "                     [--live]\n";
 print "                     [--dest new-host-system-name]\n";
 print "                     [--disk-directory path | --no-disk-directory]\n";
+print "                     [--background]\n";
 exit(1);
 }
 

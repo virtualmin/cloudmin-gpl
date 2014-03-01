@@ -29,6 +29,10 @@ network), Cloudmin will select a new IP address as part of the move process.
 If a system has been already moved manually, the C<--manual> flag can be used
 to tell Cloudmin to simply update its configurations to reflect the new host.
 
+By default this API command will not exit until the move process completes.
+However, you can use the C<--background> flag to have most of the work
+performed in the background once initial checks are complete.
+
 =head1 Example usage
 
   cloudmin move-system --host xengtest.home --dest geylang.home
@@ -103,6 +107,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--background") {
+		$background = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -145,6 +152,10 @@ else {
 	print "Moving $desc system $server->{'host'} from $vhost->{'host'} to $dest->{'host'} ..\n\n";
 	$err = &move_system($server, $dest, $shutdown, $allocate, $directory);
 	}
+if ($background && !&background_api_command()) {
+	print ".. the move will continue in the background\n";
+	exit(0);
+	}
 &run_system_script($server, 'after', 'move');
 &release_lock_server($server);
 &release_lock_server($dest);
@@ -166,6 +177,7 @@ print "                    [--shutdown]\n";
 print "                    [--allocate-ip]\n";
 print "                    [--manual]\n";
 print "                    [--disk-directory path | --no-disk-directory]\n";
+print "                    [--background]\n";
 exit(1);
 }
 
