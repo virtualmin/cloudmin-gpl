@@ -735,27 +735,35 @@ foreach my $l (split(/\r?\n/, $out)) {
 return \%mounted;
 }
 
-# loopback_mount_partition(host, disk-image, partition-number)
+# loopback_mount_partition(host, disk-image, partition-number|&part)
 # Finds a free loopback device and maps it to a particular partition in a disk
 # image, then returns an OK flag and the device path or error message.
 sub loopback_mount_partition
 {
 my ($vhost, $real, $pnum) = @_;
-my $parts = &list_disk_image_partitions($vhost, $real);
-ref($parts) || return (0, "Failed to list partitions : $parts");
-if (!defined($pnum)) {
-	# No partition number given, assume last non-swap
-	for(my $i=0; $i<@$parts; $i++) {
-		if ($parts->[$i]->{'type'} ne '82') {
-			$pnum = $i + 1;
+my $part;
+if (ref($pnum)) {
+	# Partition object given
+	$part = $pnum;
+	}
+else {
+	# Need to find partition
+	my $parts = &list_disk_image_partitions($vhost, $real);
+	ref($parts) || return (0, "Failed to list partitions : $parts");
+	if (!defined($pnum)) {
+		# No partition number given, assume last non-swap
+		for(my $i=0; $i<@$parts; $i++) {
+			if ($parts->[$i]->{'type'} ne '82') {
+				$pnum = $i + 1;
+				}
+			}
+		if (!defined($pnum)) {
+			# Fall back to last one
+			$pnum = scalar(@$parts);
 			}
 		}
-	if (!defined($pnum)) {
-		# Fall back to last one
-		$pnum = scalar(@$parts);
-		}
+	$part = $parts->[$pnum-1];
 	}
-my $part = $parts->[$pnum-1];
 my $loop = &get_loop_device($vhost);
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"losetup -o $part->{'offset'} $loop ".quotemeta($real));
