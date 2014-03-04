@@ -432,7 +432,7 @@ else {
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"fdisk -u ".quotemeta($real)." <$vhosttemp");
 	&delete_file_on_server($vhost, $vhosttemp);
-	if ($ex || $err) {
+	if (($ex && $out !~ /WARNING:/) || $err) {
 		return "Failed to delete and re-create partition : ".
 		       ($out || $err);
 		}
