@@ -497,15 +497,15 @@ if (ref($parts)) {
 return $parts;
 }
 
-# create_disk_image_filesystem(&server, device, filesystem, [partition])
+# create_disk_image_filesystem(&server, device, filesystem, [partition], [size])
 # Creates a filesystem on a partition using parted
 sub create_disk_image_filesystem
 {
-my ($vhost, $real, $fs, $part) = @_;
+my ($vhost, $real, $fs, $part, $size) = @_;
 $part ||= 1;
 my ($ok, $loop) = &loopback_mount_partition($vhost, $real, $part);
 $ok || return $loop;
-my $err = &create_device_filesystem($vhost, $loop, $fs);
+my $err = &create_device_filesystem($vhost, $loop, $fs, $size);
 &loopback_unmount_partition($vhost, $loop);
 return $err;
 }
