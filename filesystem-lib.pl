@@ -288,7 +288,7 @@ if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 	}
 else {
 	# Create input file for fdisk
-	my $mbs = $size ? int($size/1024/1024) : undef;
+	my $mbs = $size ? int($size/1000/1000) : undef;
 	if ($mbs) {
 		# Force round down by 8M, as fdisk on some systems won't allow
 		# creation of a partition that occupies the whole disk
@@ -412,7 +412,7 @@ if (&has_command_on_server($vhost, "parted")) {
 else {
 	# Delete and re-create in fdisk .. create input file first
 	my $temp = &transname();
-	my $mbs = int($newsize/1024/1024);
+	my $mbs = int($newsize/1000/1000);
 	&open_tempfile(TEMP, ">$temp");
 	&print_tempfile(TEMP, "d\n");	# Delete
 	&print_tempfile(TEMP, $part->{'part'}."\n");	# Partition number
@@ -501,8 +501,15 @@ return $parts;
 # Creates a filesystem on a partition using parted
 sub create_disk_image_filesystem
 {
-my ($vhost, $real, $fs, $part, $size) = @_;
-$part ||= 1;
+my ($vhost, $real, $fs, $pnum, $size) = @_;
+$pnum ||= 1;
+my $parts = &list_disk_image_partitions($vhost, $real);
+ref($parts) || return "Failed to list partitions on $real : $parts";
+$pnum <= @$parts || return "Requested partition $part, but disk only has ".
+			   scalar(@$parts)." partitions";
+my $part = $parts->[$pnum-1];
+$part || return "No partition $pnum found!";
+$size ||= $part->{'size_bytes'};
 my ($ok, $loop) = &loopback_mount_partition($vhost, $real, $part);
 $ok || return $loop;
 my $err = &create_device_filesystem($vhost, $loop, $fs, $size);
