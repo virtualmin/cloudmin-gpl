@@ -343,17 +343,7 @@ return undef;
 sub get_fdisk_megabyte_size
 {
 my ($vhost) = @_;
-my ($out) = &execute_command_on_server($vhost, "fdisk -v");
-if ($out =~ /util-linux-ng\s+([0-9\.]+)/) {
-	my $ver = $1;
-	if ($ver < 2) {
-		return 1000*1000;
-		}
-	else {
-		return 1024*1024;
-		}
-	}
-return 1024*1024;	# New versions binary sizes
+return $vhost->{'citrix_host'} ? 1000*1000 : 1024*1024;
 }
 
 # get_resize_command(&vhost, fs-type, [device], [size-in-mb])
