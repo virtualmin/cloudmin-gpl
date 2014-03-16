@@ -264,7 +264,7 @@ if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 
 	# Create a partition
 	if ($num) {
-		my $mbs = $size ? int($size/1000000) : undef;
+		my $mbs = $size ? int($size/1000/1000) : undef;
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			"parted -s ".quotemeta($real).
 			($ptype eq "ufs" ? " mkpart " : " mkpartfs ").
@@ -288,7 +288,8 @@ if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 	}
 else {
 	# Create input file for fdisk
-	my $mbs = $size ? int($size/1000/1000) : undef;
+	my $funits = &get_fdisk_megabyte_size($vhost);
+	my $mbs = $size ? int($size/$funits) : undef;
 	if ($mbs) {
 		# Force round down by 8M, as fdisk on some systems won't allow
 		# creation of a partition that occupies the whole disk
@@ -334,6 +335,25 @@ else {
 	}
 
 return undef;
+}
+
+# get_fdisk_megabyte_size(&vhost)
+# Returns the number that fdisk uses as a "megabyte", which can be 1000000
+# or 1048576
+sub get_fdisk_megabyte_size
+{
+my ($vhost) = @_;
+my ($out) = &execute_command_on_server($vhost, "fdisk -v");
+if ($out =~ /util-linux-ng\s+([0-9\.]+)/) {
+	my $ver = $1;
+	if ($ver < 2) {
+		return 1000*1000;
+		}
+	else {
+		return 1024*1024;
+		}
+	}
+return 1024*1024;	# New versions binary sizes
 }
 
 # get_resize_command(&vhost, fs-type, [device], [size-in-mb])
@@ -412,7 +432,8 @@ if (&has_command_on_server($vhost, "parted")) {
 else {
 	# Delete and re-create in fdisk .. create input file first
 	my $temp = &transname();
-	my $mbs = int($newsize/1000/1000);
+	my $funits = &get_fdisk_megabyte_size($vhost);
+	my $mbs = int($newsize/$funits);
 	&open_tempfile(TEMP, ">$temp");
 	&print_tempfile(TEMP, "d\n");	# Delete
 	&print_tempfile(TEMP, $part->{'part'}."\n");	# Partition number
