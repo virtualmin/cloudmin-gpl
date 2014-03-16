@@ -288,8 +288,7 @@ if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 	}
 else {
 	# Create input file for fdisk
-	my $funits = &get_fdisk_megabyte_size($vhost);
-	my $mbs = $size ? int($size/$funits) : undef;
+	my $mbs = $size ? int($size/1000000) : undef;
 	if ($mbs) {
 		# Force round down by 8M, as fdisk on some systems won't allow
 		# creation of a partition that occupies the whole disk
@@ -303,7 +302,7 @@ else {
 		&print_tempfile(TEMP, "$num\n"); # First partition
 		&print_tempfile(TEMP, "\n");	 # First cylinder
 		if ($mbs) {
-			&print_tempfile(TEMP, "+${mbs}M\n");	# Specific size
+			&print_tempfile(TEMP, "+${mbs}MB\n");	# Specific size
 			}
 		else {
 			&print_tempfile(TEMP, "\n");	 # Use full disk
@@ -335,15 +334,6 @@ else {
 	}
 
 return undef;
-}
-
-# get_fdisk_megabyte_size(&vhost)
-# Returns the number that fdisk uses as a "megabyte", which can be 1000000
-# or 1048576
-sub get_fdisk_megabyte_size
-{
-my ($vhost) = @_;
-return $vhost->{'citrix_host'} ? 1000*1000 : 1024*1024;
 }
 
 # get_resize_command(&vhost, fs-type, [device], [size-in-mb])
@@ -422,8 +412,7 @@ if (&has_command_on_server($vhost, "parted")) {
 else {
 	# Delete and re-create in fdisk .. create input file first
 	my $temp = &transname();
-	my $funits = &get_fdisk_megabyte_size($vhost);
-	my $mbs = int($newsize/$funits);
+	my $mbs = int($newsize/1000/1000);
 	&open_tempfile(TEMP, ">$temp");
 	&print_tempfile(TEMP, "d\n");	# Delete
 	&print_tempfile(TEMP, $part->{'part'}."\n");	# Partition number
@@ -431,7 +420,7 @@ else {
 	&print_tempfile(TEMP, "p\n");   # Primary
 	&print_tempfile(TEMP, $part->{'part'}."\n");	# Same partition
 	&print_tempfile(TEMP, $part->{'start'}."\n");	# Same start
-	&print_tempfile(TEMP, "+${mbs}M\n");		# New size
+	&print_tempfile(TEMP, "+${mbs}MB\n");		# New size
 	&print_tempfile(TEMP, "w\n");	 # Write table
 	&print_tempfile(TEMP, "q\n");	 # Quit
 	&close_tempfile(TEMP);
