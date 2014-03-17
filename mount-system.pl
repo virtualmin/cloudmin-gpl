@@ -57,6 +57,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--virt") {
+		$virt = shift(@ARGV);
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -77,10 +80,19 @@ defined(&$nfunc) || &usage("This virtual system type does not have a ".
 &$nfunc($server) ||
 	&usage("This virtual system does not need its filesystem mounted");
 
+# If a disk was asked for, get it
+$disk = undef;
+if ($virt) {
+	$dfunc = "type_".$server->{'manager'}."_list_disks";
+	$disks = &$dfunc($server, 0);
+	($disk) = grep { $_->{'virt'} eq $virt } @$disks;
+	$disk || &usage("No disk with virtual device $virt was found");
+	}
+
 # Mount now
 &obtain_lock_server($server);
 print "Mounting filesystem for $server->{'host'} ..\n";
-$err = &$mfunc($server, $wantdir, $mountdir);
+$err = &$mfunc($server, $wantdir, $mountdir, 0, $disk);
 if ($err) {
 	print ".. failed : $err\n";
 	}
