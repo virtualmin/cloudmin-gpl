@@ -3944,11 +3944,14 @@ foreach my $iscsi (&list_iscsi_target_servers()) {
 if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	# Check for and add LVM volume groups
 	my $info = &get_server_collected($vhost);
-	foreach my $vg (@{$info->{'vg_list'}}) {
-		next if ($vg->{'vg'} eq 'gpt_vg');
-		push(@rv, { 'id' => 'lvm_'.$vg->{'vg'},
-			    'desc' => &text('storage_lvm', $vg->{'vg'}),
-			    'adddesc' => &text('storage_addlvm', $vg->{'vg'}) });
+	my @vgs = grep { $_->{'vg'} ne 'gpt_vg' } @{$info->{'vg_list'}};
+	foreach my $vg (@vgs) {
+		push(@rv, {
+		    'id' => 'lvm_'.$vg->{'vg'},
+		    'desc' => @vgs > 1 ? &text('storage_lvm', $vg->{'vg'})
+				       : $text{'storage_lvm1'},
+		    'adddesc' => @vgs > 1 ? &text('storage_addlvm', $vg->{'vg'})
+					  : $text{'storage_addlvm1'} });
 		}
 	}
 return \@rv;
