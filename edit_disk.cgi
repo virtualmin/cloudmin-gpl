@@ -68,7 +68,7 @@ print &ui_table_start($text{'disk_header'}, undef, 2);
 # Real file on host system
 if ($disk->{'fixedreal'}) {
 	# Cannot be edited
-	$realsel = $disk->{'real'} ? &describe_disk($server, $disk)
+	$realsel = $disk->{'real'} ? &describe_disk($server, $disk, $disks)
 				   : $text{'disk_autoreal'};
 	$txt = 'disk_real';
 	print &ui_hidden("fixedreal", 1);

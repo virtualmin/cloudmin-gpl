@@ -1012,7 +1012,7 @@ if (!$server->{'missing'} && ref($olddisks) && ref($disks) && @$olddisks > 0) {
 		    $disks->[$i]->{'lv'}) {
 			my $d = $disks->[$i];
 			my $od = $olddisks->[$i];
-			my $rdesc = &describe_disk($server, $d);
+			my $rdesc = &describe_disk($server, $d, $disks);
 			&$first_print(&text('rrun_disksize',
 					    $rdesc,
 					    &nice_size($d->{'size'}),

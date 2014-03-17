@@ -38,7 +38,7 @@ if ($in{'confirm'}) {
 	# Do it
 	foreach $disk (@$disks) {
 		&$first_print(&text('disk_deleting',
-				    &describe_disk($server, $disk)));
+				    &describe_disk($server, $disk, $disks)));
 		$dfunc = "type_".$server->{'manager'}."_delete_disk";
 		$err = &$dfunc($server, $disk);
 		if ($err) {

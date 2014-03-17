@@ -3935,10 +3935,15 @@ push(@rv, { 'id' => 'files',
 	    'adddesc' => $text{'storage_addfiles'} });
 
 # Add iSCSI servers
-foreach my $iscsi (&list_iscsi_target_servers()) {
-	push(@rv, { 'id' => 'iscsi_'.$iscsi->{'host'},
-		    'desc' => &text('storage_iscsi', $iscsi->{'host'}),
-		    'adddesc' => &text('storage_addiscsi', $iscsi->{'host'}) });
+my @iscsis = &list_iscsi_target_servers();
+foreach my $iscsi (@iscsis) {
+	push(@rv, {
+	    'id' => 'iscsi_'.$iscsi->{'host'},
+	    'desc' => @iscsis > 1 ? &text('storage_iscsi', $iscsi->{'host'})
+			          : $text{'storage_iscsi1'},
+	    'adddesc' => @iscsis > 1 ? &text('storage_addiscsi',
+					     $iscsi->{'host'})
+				     : $text{'storage_addiscsi1'} });
 	}
 
 if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {

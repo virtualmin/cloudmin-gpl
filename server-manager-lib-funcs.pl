@@ -838,11 +838,13 @@ if ($s->{'status'} eq 'virt' && $s->{'virtualmin_error'}) {
 return $msg;
 }
 
-# describe_disk(&server, &disk)
+# describe_disk(&server, &disk, &all-disks)
 # Returns a human-readable string describing the real location of a disk
 sub describe_disk
 {
-my ($server, $d) = @_;
+my ($server, $d, $disks) = @_;
+my @iscsis = &unique(map { $_->{'iscsi_ip'} } grep { $_->{'iscsi_ip'}} @$disks);
+my @vgs = &unique(map { $_->{'vg'} } grep { $_->{'vg'} } @$disks);
 if ($server->{'manager'} eq 'citrix' && $d->{'storage'}) {
 	# Citrix storage
 	my $r = $d->{'realdesc'} || $d->{'real'};
@@ -857,8 +859,17 @@ elsif ($d->{'iscsi_ip'}) {
 		$ihost = $iscsiserver->{'host'};
 		}
 	$ihost ||= $d->{'iscsi_ip'};
-	return &text('disks_oniscsi', "<tt>$ihost</tt>",
-				      "<tt>$d->{'iscsi_target'}</tt>");
+	if (@iscsi > 1) {
+		return &text('disks_oniscsi', "<tt>$ihost</tt>",
+					      "<tt>$d->{'iscsi_target'}</tt>");
+		}
+	else {
+		return &text('disks_oniscsi1', "<tt>$d->{'iscsi_target'}</tt>");
+		}
+	}
+elsif ($d->{'lv'} && @vgs == 1) {
+	# LVM device, in only VG
+	return &text('disks_lv', $d->{'lv'});
 	}
 elsif ($d->{'device'} && defined(&mount::device_name)) {
 	# Real or LVM device
