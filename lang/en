@@ -1423,6 +1423,7 @@ lxc_egone=The LXC host no longer exists!
 lxc_header=LXC host system details
 lxc_host=System hosting LXC containers
 lxc_dir=Base directory for virtual systems
+lxc_storage=Store instance files in
 lxc_domain=Add LXC systems to DNS domain
 lxc_domain2=DNS domain for LXC servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
 lxc_range=IP address allocation ranges
