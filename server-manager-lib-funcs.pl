@@ -11469,7 +11469,15 @@ if (!@rv) {
 				 $_->{'virtual'} eq '' } @$ifaces;
 		}
 	}
-return @rv;
+if ($vhost->{'citrix_host'}) {
+	# For citrix, some bridges like xapiN don't show up in brctl show
+	my $networks = &parse_xe_command($vhost, "network-list");
+	if (ref($networks)) {
+		push(@rv, map { $_->{'bridge'} }
+			      grep { $_->{'bridge'} } @$networks);
+		}
+	}
+return &unique(@rv);
 }
 
 # redhat_server_type(&server)
