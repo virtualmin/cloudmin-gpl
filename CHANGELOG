@@ -86,3 +86,4 @@ Post-creation scripts can be now be set on a per-image basis.
 A single virtual system can now be backed up quickly, either to another system, and FTP server, for download in the browser.
 Images only available to subscribers can now be downloaded from Stacklet.
 Added the edit-file API command, for easily editing a single file on a remote server.
+---- Changes since 7.6 ----
