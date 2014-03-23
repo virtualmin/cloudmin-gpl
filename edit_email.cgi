@@ -25,7 +25,7 @@ print &ui_table_row($text{'email_suser'},
 	  [ [ 1, $text{'email_susernone'}."<br>" ],
 	    [ 0, &text('email_suserpass',
 		   &ui_textbox("suser", $mailboxes::config{'smtp_user'}, 20),
-		   &ui_textbox("spass", $mailboxes::config{'smtp_pass'}, 20)) ],
+		   &ui_password("spass",$mailboxes::config{'smtp_pass'}, 20)) ],
 	  ]));
 
 # Send email as
