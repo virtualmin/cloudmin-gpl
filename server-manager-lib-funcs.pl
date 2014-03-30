@@ -2373,18 +2373,26 @@ my ($out, $ex, $err) = &execute_command_on_server($server,
 return $err ? $err : $ex ? $out : undef;
 }
 
-# stat_file_on_server(&server, remotefile)
+# stat_file_on_server(&server, remotefile, [lookup-usernames])
 # Returns the stat structure for a file on a server.
 # If something failed, returns a 1-element array containing the error.
 # If the file doesn't exist, returns an empty array.
 sub stat_file_on_server
 {
-my ($server, $remotefile) = @_;
+my ($server, $remotefile, $usernames) = @_;
 my $gfunc = "type_".$server->{'manager'}."_stat_file";
 if (defined(&$gfunc)) {
 	# Use type-specific function call
 	my @rv = &$gfunc(@_);
 	return @rv if ($rv[0] ne 'FALLBACK');
+	}
+
+# Build perl code to stat a file
+my $qremotefile = quotemeta($remotefile);
+my $cmd = "\@rv = lstat(\"$qremotefile\"); ";
+$cmd .= "if (\@rv) { \$rv[13] = readlink(\"$qremotefile\") } ";
+if ($usernames) {
+	$cmd .= "if (\@rv) { \$rv[4] = getpwuid(\$rv[4]) || \$rv[4]; \$rv[5] = getgrgid(\$rv[5]) || \$rv[5]; } ";
 	}
 
 if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
@@ -2393,22 +2401,30 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	$last_remote_error = undef;
 	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
 	if (!$last_remote_error) {
-		my $st = &remote_eval($server, "webmin",
-				      "[ stat('$remotefile') ]");
+		my $wcmd = $cmd;
+		$wcmd .= "return \\\@rv;";
+		my $st = &remote_eval($server, "webmin", $wcmd);
 		return @$st if ($st);
 		}
 	}
 
 # Use stat command, perl, or in worst case ls -l
+my $sfmt;
+if ($usernames) {
+	# If usernames were requested, use custom stat format. Note that this
+	# may fail on MacOS and others
+	$sfmt = '-c "%n %s %b %f %U %G %D %i %h %t %T %X %Y %Z %o"';
+	}
 my ($out, $ex, $err) = &execute_command_on_server($server,
-	"stat -t ".quotemeta($remotefile));
+	"stat $sfmt -t ".quotemeta($remotefile)." ; ".readlink($remotefile));
 return ( $err ) if ($err);
 if ($out =~ /No such file/i) {
 	return ( );
 	}
 elsif (!$ex && $out =~ /^\Q$remotefile\E\s/) {
 	# Parse stat command output
-	my @w = split(/\s+/, $out);
+	my ($sout, $lout) = split(/\r?\n/, $out);
+	my @w = split(/\s+/, $sout);
 	my @st;
 	$st[0] = hex($w[6]);		# Device
 	$st[1] = $w[7];			# Inode
@@ -2423,17 +2439,19 @@ elsif (!$ex && $out =~ /^\Q$remotefile\E\s/) {
 	$st[10] = $w[13];		# Inode change time
 	$st[11] = $w[14];		# Block size
 	$st[12] = $w[2];		# Number of blocks
+	$st[13] = $lout;
 	return @st;
 	}
 
 # Next try perl, with script as an input file as passing a complex
 # command via -e doesn't work
 my $cmdtemp = &tempname_on_server($server);
-my $err = &put_file_data_to_server($server,
-		'print join(":", stat($ARGV[0]))."\n"', $cmdtemp);
+my $pcmd = $cmd;
+$pcmd .= "print join(\":\", \@rv).\"\\n\";";
+my $err = &put_file_data_to_server($server, $pcmd, $cmdtemp);
 if (!$err) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"perl $cmdtemp ".quotemeta($remotefile));
+		"perl $cmdtemp");
 	&delete_file_on_server($server, $cmdtemp);
 	return ( $err ) if ($err);
 	if (!$ex) {
@@ -2443,14 +2461,15 @@ if (!$err) {
 	}
 
 # Finally, use ls .. which gives less info :-(
+my $flags = $usernames ? "-ld" : "-ldn";
 my ($out, $ex, $err) = &execute_command_on_server($server,
-	"ls -ldn ".quotemeta($remotefile));
+	"ls $flags ".quotemeta($remotefile));
 return ( $err ) if ($err);
 $out =~ s/\r?\n$//;
 if ($out =~ /No such file/i) {
 	return ( );
 	}
-elsif ($ex || $out !~ /\s\Q$remotefile\E$/) {
+elsif ($ex || $out !~ /\s\Q$remotefile\E($|\s+->\s+)/) {
 	return ( "ls -ldn $remotefile failed : $out" );
 	}
 else {
@@ -2493,8 +2512,30 @@ else {
 	if ($p[9] eq "d") {
 		$st[2] += 040000;
 		}
+	if ($out =~ /\s\Q$remotefile\E\s+->\s+(.*)/) {
+		$st[13] = $1;
+		}
 	return @st;
 	}
+}
+
+# file_info_line(&server, path)
+# Given a path, returns a line of text with details from statting it, as
+# handled by the file manager applet.
+sub file_info_line
+{
+my ($server, $path) = @_;
+my @st = &stat_file_on_server($server, $path, 1);
+return undef if (@st <= 1);
+my $ext = $path =~ /\S+\.([^\.\/]+)$/ ? $1 : undef;
+my $dp = $path;
+$dp =~ s/\\/\\\\/g;
+$dp =~ s/\t/\\t/g;
+# XXX
+return join("\t", $dp, $type,
+                  $user, $group,
+                  $st[7] < 0 ? 2**32+$st[7] : $st[7], $st[2],
+                  $st[9], $f ? "" : $islink && !$rl ? "???" : $rl);
 }
 
 # is_dir_on_server(&server, path)
@@ -7403,6 +7444,12 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
 			    'cat' => 'manage',
 			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
 		}
+	if ($cantransfer && &can_action($server, "transfer")) {
+		push(@rv, { 'id' => 'filemanager',
+			    'desc' => $text{'edit_filemanager'},
+			    'cat' => 'manage',
+			    'link' => "filemanager.cgi?id=$server->{'id'}" });
+		}
 	if ($status ne 'paused' && $status ne 'noping' && $status ne 'nossh' &&
 	    !$nostart && &can_action($server, "startup")) {
 		push(@rv, { 'id' => 'startup',
@@ -7467,6 +7514,12 @@ else {
 			    'desc' => $text{'edit_transfer'},
 			    'cat' => 'manage',
 			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
+		}
+	if ($cantransfer && &can_action($server, "transfer")) {
+		push(@rv, { 'id' => 'filemanager',
+			    'desc' => $text{'edit_filemanager'},
+			    'cat' => 'manage',
+			    'link' => "filemanager.cgi?id=$server->{'id'}" });
 		}
 	if (($status eq 'novirt' || $status eq 'virt') && $server->{'id'}) {
 		# Tunneled link to Webmin
@@ -13454,6 +13507,15 @@ else {
 	$main::initial_process_id = 0;
 	return 0;
 	}
+}
+
+# print_content_type([type])
+# Prints the content-type header, with a charset
+sub print_content_type
+{
+local $type = $_[0] || "text/plain";
+my $charset = &get_charset();
+print "Content-type: $type; charset=$charset\n\n";
 }
 
 $done_server_manager_lib_funcs = 1;

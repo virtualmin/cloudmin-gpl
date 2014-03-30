@@ -56,6 +56,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--lookup-usernames") {
+		$lookup = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -76,7 +79,7 @@ if ($err) {
 	}
 
 # Stat it
-@st = &stat_file_on_server($server, $file);
+@st = &stat_file_on_server($server, $file, $lookup);
 &umount_filesystem_if_needed($server);
 if (@st == 1) {
 	print "ERROR: $st[0]\n";
@@ -95,14 +98,25 @@ print "Inode: $st[1]\n" if ($st[1]);
 print "Permissions: ",&make_unix_perms($st[2]),"\n" if ($st[2]);
 print "Octal permissions: ",sprintf("%o", $st[2]),"\n" if ($st[2]);
 print "Hard links: $st[3]\n" if ($st[3]);
-print "UID: $st[4]\n" if ($st[4]);
-print "GID: $st[5]\n" if ($st[5]);
+if ($lookup) {
+	print "User: $st[4]\n" if ($st[4] ne '');
+	}
+else {
+	print "UID: $st[4]\n" if ($st[4] ne '');
+	}
+if ($lookup) {
+	print "Group: $st[5]\n" if ($st[5] ne '');
+	}
+else {
+	print "GID: $st[5]\n" if ($st[5] ne '');
+	}
 print "Size: $st[7]\n";
 print "Access time: ",&make_date($st[8]),"\n" if ($st[8]);
 print "Modification time: ",&make_date($st[9]),"\n" if ($st[9]);
 print "Change time: ",&make_date($st[10]),"\n" if ($st[10]);
 print "Block size: $st[11]\n" if ($st[11]);
 print "Block count: $st[12]\n" if ($st[12]);
+print "Link target: $st[13]\n" if ($st[13]);
 
 &cloudmin_api_log(\@OLDARGV);
 

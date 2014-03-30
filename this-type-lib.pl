@@ -101,7 +101,10 @@ return (0, undef, $miniserv{'root'}, $miniserv{'port'}, $miniserv{'ssl'});
 sub type_this_stat_file
 {
 my ($server, $remotefile) = @_;
-return stat($remotefile);
+my @st = stat($remotefile);
+return () if (!@st);
+$st[13] = readlink($remotefile);
+return @st;
 }
 
 # type_this_make_dir(&server, remotedir, perms, recur)
