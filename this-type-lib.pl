@@ -96,15 +96,19 @@ my %miniserv;
 return (0, undef, $miniserv{'root'}, $miniserv{'port'}, $miniserv{'ssl'});
 }
 
-# type_this_stat_file(&server, remotefile)
+# type_this_stat_file(&server, remotefile, [lookup-usernames])
 # For a file on the Cloudmin master, just stat it directly
 sub type_this_stat_file
 {
-my ($server, $remotefile) = @_;
+my ($server, $remotefile, $usernames) = @_;
 my @st = stat($remotefile);
 return () if (!@st);
 $st[13] = $remotefile;
 $st[14] = readlink($remotefile);
+if ($usernames) {
+	$st[4] = getpwuid($st[4]) || $st[4];
+	$st[5] = getgrgid($st[5]) || $st[5];
+	}
 return @st;
 }
 
@@ -117,13 +121,18 @@ my $ok = &make_dir($remotedir, $perms, $recur);
 return $ok ? undef : "$!";
 }
 
-# type_this_list_dir(&server, remotedir)
+# type_this_list_dir(&server, remotedir, [full-stat], [lookup-usernames])
 # For a dir on the Cloudmin master, just list it directly
 sub type_this_list_dir
 {
-my ($server, $remotedir) = @_;
+my ($server, $remotedir, $fullstat, $usernames) = @_;
 opendir(LISTDIR, $remotedir) || return "$!";
 my @files = grep { $_ ne "." && $_ ne ".." } readdir(LISTDIR);
+if ($fullstat) {
+	my $d = $remotedir eq "/" ? "" : $remotedir;
+	@files = map { &type_this_stat_file($server, $d."/".$_, $usernames) }
+		     @files;
+	}
 closedir(LISTDIR);
 return \@files;
 }

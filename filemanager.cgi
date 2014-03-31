@@ -17,7 +17,7 @@ if ($main::session_id) {
         }
 
 print <<EOF;
-<applet code=FileManager name=FileManager archive=../file/file.jar width=100% height=80% MAYSCRIPT>
+<applet code=FileManager name=FileManager archive=../file/file.jar width=100% height=90% MAYSCRIPT>
 <param name=root value="/">
 <param name=extra value="&id=$server->{'id'}">
 <param name=sharing value="0">
@@ -33,6 +33,8 @@ print <<EOF;
 <param name=force_text value="1">
 <param name=htmlexts value="$fconfig{'htmlexts'}">
 <param name=images value="../file/images">
+<param name=no_preview value=1>
+<param name=no_html value=1>
 $session
 $text{'index_nojava'} <p>
 </applet>

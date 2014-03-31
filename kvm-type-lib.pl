@@ -5007,15 +5007,15 @@ else {
 	}
 }
 
-# type_kvm_stat_file(&server, remotefile, localfile)
+# type_kvm_stat_file(&server, remotefile, [lookup-usernames])
 # If the filesystem for this KVM instance is locally mounted, stat the file
 # directly from there
 sub type_kvm_stat_file
 {
-my ($server, $remotefile) = @_;
+my ($server, $remotefile, $usernames) = @_;
 if ($server->{'kvm_mount'}) {
 	my $vhost = &type_kvm_parent($server);
-	return &stat_file_on_server($vhost, $server->{'kvm_mount'}.$remotefile);
+	return &stat_file_on_server($vhost, $server->{'kvm_mount'}.$remotefile, $usernames);
 	}
 else {
 	return 'FALLBACK';
@@ -5038,15 +5038,16 @@ else {
 	}
 }
 
-# type_kvm_list_dir(&server, dir)
+# type_kvm_list_dir(&server, dir, [full-stat], [lookup-usernames])
 # If the filesystem for this KVM instance is locally mounted, list the dir
 # directly from there
 sub type_kvm_list_dir
 {
-my ($server, $remotedir) = @_;
+my ($server, $remotedir, $fullstat, $usernames) = @_;
 if ($server->{'kvm_mount'}) {
 	my $vhost = &type_kvm_parent($server);
-	return &list_dir_on_server($vhost, $server->{'kvm_mount'}.$remotedir);
+	return &list_dir_on_server($vhost, $server->{'kvm_mount'}.$remotedir,
+				   $fullstat, $usernames);
 	}
 else {
 	return 'FALLBACK';
