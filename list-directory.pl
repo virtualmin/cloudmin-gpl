@@ -73,6 +73,7 @@ if (!ref($files)) {
 
 # Show contents
 foreach $f (@$files) {
+	next if ($f eq "." || $f eq "..");
 	print $f,"\n";
 	}
 

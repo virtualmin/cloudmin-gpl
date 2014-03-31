@@ -2656,7 +2656,7 @@ else {
 		"ls -a ".quotemeta($dir));
 	return $err if ($err);
 	return $out if ($ex);
-	my @rv = grep { $_ ne "." && $_ ne ".." } split(/\r?\n/, $out);
+	my @rv = split(/\r?\n/, $out);
 	return \@rv;
 	}
 }

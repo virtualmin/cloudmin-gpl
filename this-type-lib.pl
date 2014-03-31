@@ -127,7 +127,7 @@ sub type_this_list_dir
 {
 my ($server, $remotedir, $fullstat, $usernames) = @_;
 opendir(LISTDIR, $remotedir) || return "$!";
-my @files = grep { $_ ne "." && $_ ne ".." } readdir(LISTDIR);
+my @files = readdir(LISTDIR);
 if ($fullstat) {
 	my $d = $remotedir eq "/" ? "" : $remotedir;
 	@files = map { &type_this_stat_file($server, $d."/".$_, $usernames) }
