@@ -116,7 +116,7 @@ print "Modification time: ",&make_date($st[9]),"\n" if ($st[9]);
 print "Change time: ",&make_date($st[10]),"\n" if ($st[10]);
 print "Block size: $st[11]\n" if ($st[11]);
 print "Block count: $st[12]\n" if ($st[12]);
-print "Link target: $st[13]\n" if ($st[13]);
+print "Link target: $st[14]\n" if ($st[14]);
 
 &cloudmin_api_log(\@OLDARGV);
 

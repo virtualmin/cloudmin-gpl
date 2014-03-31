@@ -103,7 +103,8 @@ sub type_this_stat_file
 my ($server, $remotefile) = @_;
 my @st = stat($remotefile);
 return () if (!@st);
-$st[13] = readlink($remotefile);
+$st[13] = $remotefile;
+$st[14] = readlink($remotefile);
 return @st;
 }
 

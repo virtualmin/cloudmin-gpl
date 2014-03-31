@@ -2374,7 +2374,8 @@ return $err ? $err : $ex ? $out : undef;
 }
 
 # stat_file_on_server(&server, remotefile, [lookup-usernames])
-# Returns the stat structure for a file on a server.
+# Returns the stat structure for a file on a server. However, there are two
+# extra fields: 13-the filename, 14-symlink target
 # If something failed, returns a 1-element array containing the error.
 # If the file doesn't exist, returns an empty array.
 sub stat_file_on_server
@@ -2390,7 +2391,7 @@ if (defined(&$gfunc)) {
 # Build perl code to stat a file
 my $qremotefile = quotemeta($remotefile);
 my $cmd = "\@rv = lstat(\"$qremotefile\"); ";
-$cmd .= "if (\@rv) { \$rv[13] = readlink(\"$qremotefile\") } ";
+$cmd .= "if (\@rv) { \$rv[13] = \"$qremotefile\"; \$rv[14] = readlink(\"$qremotefile\") } ";
 if ($usernames) {
 	$cmd .= "if (\@rv) { \$rv[4] = getpwuid(\$rv[4]) || \$rv[4]; \$rv[5] = getgrgid(\$rv[5]) || \$rv[5]; } ";
 	}
@@ -2439,7 +2440,8 @@ elsif (!$ex && $out =~ /^\Q$remotefile\E\s/) {
 	$st[10] = $w[13];		# Inode change time
 	$st[11] = $w[14];		# Block size
 	$st[12] = $w[2];		# Number of blocks
-	$st[13] = $lout;
+	$st[13] = $remotefile;
+	$st[14] = $lout;
 	return @st;
 	}
 
@@ -2474,68 +2476,36 @@ elsif ($ex || $out !~ /\s\Q$remotefile\E($|\s+->\s+)/) {
 	}
 else {
 	# Parse ls command output
-	my @now = localtime(time());
-	my @w = split(/\s+/, $out);
-	my @st;
-	$st[3] = $w[1];			# Links
-	$st[4] = $w[2];			# UID
-	$st[5] = $w[3];			# GID
-	$st[7] = $w[4];			# Size
-	if ($w[7] =~ /^(\d+):(\d+)$/) {
-		# Time is month day hour:minute
-		my @tm = ( 0, $2, $1, $w[6],
-			      &month_to_number($w[5]), $now[5] );
-		$st[8] = $st[9] = $st[10] = timelocal(@tm);
-		}
-	elsif ($w[5] =~ /^(\d{4})\-(\d+)\-(\d+)$/) {
-		# Time is year-month-day hour:minute
-		local @tm = ( 0, 0, 0, $3, $2-1, $1-1900 );
-		if ($w[6] =~ /^(\d+):(\d+)$/) {
-			$tm[1] = $2;
-			$tm[2] = $1;
-			$st[8] = $st[9] = $st[10] = timelocal(@tm);
-			}
-		}
-	elsif ($w[7] =~ /^\d+$/) {
-		# Time is month day year
-		my @tm = ( 0, 0, 0, $w[6],
-			      &month_to_number($w[5]), $w[7]-1900 );
-		$st[8] = $st[9] = $st[10] = timelocal(@tm);
-		}
-	$st[2] = 0;			# Permissions
-	my @p = reverse(split(//, $w[0]));
-	for(my $i=0; $i<9; $i++) {
-		if ($p[$i] ne '-') {
-			$st[2] += (1<<$i);
-			}
-		}
-	if ($p[9] eq "d") {
-		$st[2] += 040000;
-		}
-	if ($out =~ /\s\Q$remotefile\E\s+->\s+(.*)/) {
-		$st[13] = $1;
-		}
+	my @st = &parse_lsl_line($out);
 	return @st;
 	}
 }
 
-# file_info_line(&server, path)
+# file_info_line(&server, path, [&stat])
 # Given a path, returns a line of text with details from statting it, as
 # handled by the file manager applet.
 sub file_info_line
 {
-my ($server, $path) = @_;
-my @st = &stat_file_on_server($server, $path, 1);
+my ($server, $path, $st) = @_;
+my %icon_map = (  "c", 1,    "txt", 1,
+                  "pl", 1,   "cgi", 1,
+                  "html", 1, "htm", 1,
+                  "gif", 2,  "jpg", 2,
+                  "tar", 3
+               );
+my @st = $st ? @$st : &stat_file_on_server($server, $path, 1);
 return undef if (@st <= 1);
 my $ext = $path =~ /\S+\.([^\.\/]+)$/ ? $1 : undef;
 my $dp = $path;
 $dp =~ s/\\/\\\\/g;
 $dp =~ s/\t/\\t/g;
-# XXX
+my $type = $st[14] ? 5 :
+	   $st[2] & 040000 ? 0 :
+	   $icon_map{$ext} ? $icon_map{$ext} : 4;
 return join("\t", $dp, $type,
-                  $user, $group,
-                  $st[7] < 0 ? 2**32+$st[7] : $st[7], $st[2],
-                  $st[9], $f ? "" : $islink && !$rl ? "???" : $rl);
+                  $st[4], $st[5],
+                  $st[7], $st[2],
+                  $st[9], $st[14]);
 }
 
 # is_dir_on_server(&server, path)
@@ -2651,12 +2621,12 @@ my ($out, $ex, $err) = &execute_command_on_server($server,
 return $err ? $err : $ex ? $out : undef;
 }
 
-# list_dir_on_server(&server, dir)
+# list_dir_on_server(&server, dir, [full-stat], [lookup-usernames])
 # Lists the contents of a directory on a remote system. Returns an array ref
 # of filenames (except . and ..) on success, or an error message on failure.
 sub list_dir_on_server
 {
-my ($server, $dir) = @_;
+my ($server, $dir, $fullstat, $usernames) = @_;
 my $dfunc = "type_".$server->{'manager'}."_list_dir";
 if (defined(&$dfunc)) {
 	# Use type-specific function call
@@ -2666,12 +2636,29 @@ if (defined(&$dfunc)) {
 	}
 
 # Run ls via SSH
-my ($out, $ex, $err) = &execute_command_on_server($server,
-	"ls -a ".quotemeta($dir));
-return $err if ($err);
-return $out if ($ex);
-my @rv = grep { $_ ne "." && $_ ne ".." } split(/\r?\n/, $out);
-return \@rv;
+if ($fullstat) {
+	# Return full file details
+	my $flags = $usernames ? "-la" : "-lan";
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"ls $flags ".quotemeta($dir));
+	return $err if ($err);
+	return $out if ($ex);
+	my @rv;
+	foreach my $l (split(/\r?\n/, $out)) {
+		my @st = &parse_lsl_line($l);
+		push(@rv, \@st) if (@st);
+		}
+	return \@rv;
+	}
+else {
+	# Just return filenames
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"ls -a ".quotemeta($dir));
+	return $err if ($err);
+	return $out if ($ex);
+	my @rv = grep { $_ ne "." && $_ ne ".." } split(/\r?\n/, $out);
+	return \@rv;
+	}
 }
 
 # glob_on_server(&server, glob-path)
