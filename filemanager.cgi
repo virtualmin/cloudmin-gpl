@@ -9,6 +9,16 @@ $server || &error($text{'edit_egone'});
 
 &ui_print_header(&server_in($server), $text{'filemanager_title'}, "");
 
+# Output JS functions called by Java
+print <<EOF;
+<script>
+function upload(dir)
+{
+open("upform.cgi?dir="+escape(dir)+"&trust=$trust&id=$in{'id'}", "upload", "toolbar=no,menubar=no,scrollbar=no,width=550,height=230");
+}
+</script>
+EOF
+
 # Work out config params from file manager module
 %fconfig = &foreign_config("file");
 $iconsize = int($fconfig{'iconsize'});
