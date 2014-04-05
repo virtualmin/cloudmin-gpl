@@ -1812,7 +1812,9 @@ if ($srcserver->{'id'} eq $destserver->{'id'}) {
 		$device ? &dd_command($src, $dest) :
 	        $srcisdir && $destisdir ?
 		          "cp -r -H ".quotemeta($src)."/* ".quotemeta($dest) :
-		          "cp -r -H ".quotemeta($src)." ".quotemeta($dest));
+	        $srcisdir ?
+		          "cp -r -H ".quotemeta($src)." ".quotemeta($dest) :
+		          "cp -H ".quotemeta($src)." ".quotemeta($dest));
 	$rv = $err ? $err : $ex ? $out : undef;
 	}
 elsif ($srcserver->{'id'} == 0) {

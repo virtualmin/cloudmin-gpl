@@ -11,7 +11,7 @@ $server || &error($text{'edit_egone'});
 print "Content-type: text/plain\n\n";
 
 @st = &stat_file_on_server($server, $in{'from'});
-if (-l &unmake_chroot($in{'from'})) {
+if ($st[14]) {
 	# Copying a link, so just re-create it
 	&delete_file_on_server($server, $in{'to'});
 	$err = &symlink_file_on_server($server, $st[14], $in{'to'});
