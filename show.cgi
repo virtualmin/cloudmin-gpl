@@ -44,19 +44,19 @@ else {
 		}
 	}
 
-# Make sure the file exists
-@st = &stat_file_on_server($server, $p);
-if (@st == 1) {
-	&error($st[0]);
-	}
-elsif (!@st) {
-	&error("File does not exist!");
-	}
-
-# If just testing existence, exit now
+# If just testing existence, simply stat the file
 if ($in{'test'}) {
 	print "Content-type: text/plain\n\n";
-	print "\n";
+	@st = &stat_file_on_server($server, $p);
+	if (@st == 1) {
+		print $st[0],"\n";
+		}
+	elsif (!@st) {
+		print "File does not exist!\n";
+		}
+	else {
+		print "\n";
+		}
 	return;
 	}
 
@@ -64,6 +64,7 @@ if ($in{'test'}) {
 $temp = &transname();
 $err = &get_file_from_server($server, $p, $temp);
 &error($err) if ($err);
+@st = stat($temp);
 
 # Read and print it
 print "X-no-links: 1\n";

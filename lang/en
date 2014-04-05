@@ -5446,3 +5446,5 @@ onebackup_failed=.. backup failed : $1
 onebackup_downfailed=Backup for download failed
 
 filemanager_title=File Manager
+filemanager_esearch=Searches can only be done on running systems
+filemanager_nojava=The feature requires Java to function, but your browser does not support Java.

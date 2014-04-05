@@ -34,9 +34,11 @@ print <<EOF;
 <param name=htmlexts value="$fconfig{'htmlexts'}">
 <param name=images value="../file/images">
 <param name=no_preview value=1>
+<param name=no_extract value=1>
 <param name=no_html value=1>
+<param name=no_newhtml value=1>
 $session
-$text{'index_nojava'} <p>
+$text{'filemanager_nojava'} <p>
 </applet>
 EOF
 
