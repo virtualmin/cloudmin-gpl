@@ -112,6 +112,14 @@ if ($usernames) {
 return @st;
 }
 
+# type_this_rename_file(&server, oldfile, newfile)
+# Return a file or directory
+sub type_this_rename_file
+{
+my ($server, $oldfile, $newfile) = @_;
+return &rename_file($oldfile, $newfile) ? undef : "Rename failed";
+}
+
 # type_this_make_dir(&server, remotedir, perms, recur)
 # For a dir on the Cloudmin master, just create it directly
 sub type_this_make_dir

@@ -5007,6 +5007,21 @@ else {
 	}
 }
 
+# type_kvm_rename_file(&server, oldfile, newfile)
+# If the filesystem for this Xen instance is locally mounted, rename the
+# file directly from there
+sub type_kvm_rename_file
+{
+my ($server, $oldfile, $newfile) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &rename_file_on_server($vhost, $server->{'kvm_mount'}.$oldfile, $server->{'kvm_mount'}.$newfile);
+	}
+else {
+	return 'FALLBACK';
+	}
+}
+
 # type_kvm_stat_file(&server, remotefile, [lookup-usernames])
 # If the filesystem for this KVM instance is locally mounted, stat the file
 # directly from there

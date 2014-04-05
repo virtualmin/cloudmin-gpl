@@ -2373,6 +2373,26 @@ my ($out, $ex, $err) = &execute_command_on_server($server,
 return $err ? $err : $ex ? $out : undef;
 }
 
+# rename_file_on_server(&server, oldfile, newfile)
+# Renames a file on a managed server. Returns undef on success, or an error
+# message on failure.
+sub rename_file_on_server
+{
+my ($server, $oldfile, $newfile) = @_;
+my $rfunc = "type_".$server->{'manager'}."_rename_file";
+if (defined(&$rfunc)) {
+	# Use type-specific function call
+	my $rv = &$rfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to scp
+	}
+
+# Just run mv via SSH
+my ($out, $ex, $err) = &execute_command_on_server($server,
+			"mv ".quotemeta($oldfile)." ".quotemeta($newfile));
+return $err ? $err : $ex ? $out : undef;
+}
+
 # stat_file_on_server(&server, remotefile, [lookup-usernames])
 # Returns the stat structure for a file on a server. However, there are two
 # extra fields: 13-the filename, 14-symlink target
