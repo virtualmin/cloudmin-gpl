@@ -8604,7 +8604,6 @@ for(my $i=0; defined($in->{"start_$i"}); $i++) {
 	}
 
 # Validate and store resulting lists
-@starts || &error($text{'range_enone'});
 $server->{$pfx."_pool"} = join(" ", @pools);
 $server->{$pfx."_start"} = join(" ", @starts);
 $server->{$pfx."_end"} = join(" ", @ends);
