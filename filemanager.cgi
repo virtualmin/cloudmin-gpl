@@ -16,6 +16,10 @@ function upload(dir)
 {
 open("upform.cgi?dir="+escape(dir)+"&trust=$trust&id=$in{'id'}", "upload", "toolbar=no,menubar=no,scrollbar=no,width=550,height=230");
 }
+function htmledit(path)
+{
+alert("Not implmented");
+}
 </script>
 EOF
 
