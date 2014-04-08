@@ -2513,7 +2513,7 @@ my %icon_map = (  "c", 1,    "txt", 1,
                   "pl", 1,   "cgi", 1,
                   "html", 1, "htm", 1,
                   "gif", 2,  "jpg", 2,
-                  "tar", 3
+                  "tar", 3,  "png", 2,
                );
 my @st = $st ? @$st : &stat_file_on_server($server, $path, 1);
 return undef if (@st <= 1);
