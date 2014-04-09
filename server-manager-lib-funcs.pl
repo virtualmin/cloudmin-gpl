@@ -2763,6 +2763,53 @@ my ($out, $ex, $err) = &execute_command_on_server($server,
 return $err ? $err : $ex ? $out : undef;
 }
 
+# set_ownership_permissions_on_server(&server, [user, [group]], [perms], file+)
+# Change the ownership and permissions of a file on a remote system
+sub set_ownership_permissions_on_server
+{
+my ($server, $user, $group, $perms, @files) = @_;
+my $gfunc = "type_".$server->{'manager'}."_set_ownership_permissions";
+if (defined(&$gfunc)) {
+	# Use type-specific function call
+	my @rv = &$gfunc(@_);
+	return @rv if ($rv[0] ne 'FALLBACK');
+	}
+
+# Call Webmin function, if available
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	$last_remote_error = undef;
+	&remote_foreign_require($server, "webmin", "webmin-lib.pl");
+	if (!$last_remote_error) {
+		my $rv = &remote_foreign_call($server, "webmin",
+		    "set_ownership_permissions", $user, $group, $perms, @files);
+		return $last_remote_error ? $last_remote_error :
+		       !$rv ? "set_ownership_permissions failed" : undef;
+		}
+	}
+
+# Construct chmod / chown command
+my @cmds;
+if ($user ne "") {
+	push(@cmds, "chown ".quotemeta($user).
+		    ($group ne "" ? ":".quotemeta($group) : "")." ".
+		    join(" ", map { quotemeta($_) } @files));
+	}
+if ($perms ne "") {
+	push(@cmds, "chmod 0".sprintf("%o", $perms & 07777)." ".
+		    join(" ", map { quotemeta($_) } @files));
+	}
+
+# Run them
+if (@cmds) {
+	my $cmd = join(" ; ", @cmds);
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	return $err if ($err);
+	return $out if ($ex);
+	return undef;
+	}
+return undef;
+}
+
 # shared_dir_on_servers(&server1, &server2, dir)
 # Checks if some directory is shared between two machines (ie. via NFS)
 sub shared_dir_on_servers

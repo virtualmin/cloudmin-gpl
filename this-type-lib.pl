@@ -112,6 +112,14 @@ if ($usernames) {
 return @st;
 }
 
+# type_this_set_ownership_permissions(&server, user, group, perms, [file]+)
+# Set permissions on a local file
+sub type_this_set_ownership_permissions
+{
+my ($server, $user, $group, $perms, @files) = @_;
+return &set_ownership_permissions($user, $group, $perms, @files) ? undef : "$!";
+}
+
 # type_this_rename_file(&server, oldfile, newfile)
 # Return a file or directory
 sub type_this_rename_file
