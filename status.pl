@@ -32,6 +32,14 @@ foreach $l (\@pservers, \@oservers) {
 	&parallel_check_server_status($l, 0, 1);
 	}
 
+# Un-mount servers that haven't been used for a while
+foreach my $s (@oservers) {
+	if ($s->{'last_mount_time'} &&
+	    time() - $s->{'last_mount_time'} > 60) {
+		&temp_umount_filesystem_if_needed($s);
+		}
+	}
+
 # Once systems have been updated, re-check alerts based on new history
 if (!&is_cloudmin_replica()) {
 	&evaluate_all_alerts(\@servers);

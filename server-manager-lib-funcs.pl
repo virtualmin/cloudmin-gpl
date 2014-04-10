@@ -1464,6 +1464,55 @@ else {
 	}
 }
 
+# temp_mount_filesystem_if_needed(&server)
+# Called by the file manager tools to perform a temporary mount for down systems
+sub temp_mount_filesystem_if_needed
+{
+my ($server) = @_;
+if ($server->{'status'} ne 'down') {
+	# System is running, so no need to mount
+	return undef;
+	}
+my $nfunc = "type_".$server->{'manager'}."_need_mount";
+if (!defined(&$nfunc)) {
+	# Not mountable
+	return undef;
+	}
+if (!&$nfunc($server)) {
+	# Already mounted, or not needed
+	if ($server->{$server->{'manager'}.'_mount'}) {
+		# Mounted, so increase last usage time
+		$server->{'last_mount_time'} = time();
+		}
+	return undef;
+	}
+
+# Perform temporary mount
+my $err = &mount_filesystem_if_needed($server);
+return $err if ($err);
+$server->{'last_mount_time'} = time();
+&save_managed_server($server);
+return undef;
+}
+
+# temp_umount_filesystem_if_needed(&server)
+# If a VM's filesystem was temporarily mounted for file manager access, undo it
+sub temp_umount_filesystem_if_needed
+{
+my ($server) = @_;
+return undef if (!$server->{'last_mount_time'});
+return undef if (!$server->{$server->{'manager'}.'_mount'});
+
+my $ufunc = "type_".$server->{'manager'}."_umount_filesystem";
+return undef if (!defined(&$ufunc));
+my $err = &$ufunc($server);
+return $err if ($err);
+
+$server->{'last_mount_time'} = undef;
+&save_managed_server($server);
+return undef;
+}
+
 # mount_filesystem_if_needed(&server, [wantfile])
 # Mount a virtual system's filesystem if needed to access files
 sub mount_filesystem_if_needed
@@ -2395,19 +2444,24 @@ my ($out, $ex, $err) = &execute_command_on_server($server,
 return $err ? $err : $ex ? $out : undef;
 }
 
-# stat_file_on_server(&server, remotefile, [lookup-usernames])
+# stat_file_on_server(&server, remotefile, [lookup-usernames], [remove-root])
 # Returns the stat structure for a file on a server. However, there are two
 # extra fields: 13-the filename, 14-symlink target
 # If something failed, returns a 1-element array containing the error.
 # If the file doesn't exist, returns an empty array.
 sub stat_file_on_server
 {
-my ($server, $remotefile, $usernames) = @_;
+my ($server, $remotefile, $usernames, $removeroot) = @_;
 my $gfunc = "type_".$server->{'manager'}."_stat_file";
 if (defined(&$gfunc)) {
 	# Use type-specific function call
 	my @rv = &$gfunc(@_);
-	return @rv if ($rv[0] ne 'FALLBACK');
+	if ($rv[0] ne 'FALLBACK') {
+		if ($removeroot && $rv[13]) {
+			$rv[13] =~ s/^\Q$removeroot\E//;
+			}
+		return @rv;
+		}
 	}
 
 # Build perl code to stat a file
@@ -2427,7 +2481,12 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 		my $wcmd = $cmd;
 		$wcmd .= "return \\\@rv;";
 		my $st = &remote_eval($server, "webmin", $wcmd);
-		return @$st if ($st);
+		if ($st) {
+			if ($removeroot && $st->[13]) {
+				$st->[13] =~ s/^\Q$removeroot\E//;
+				}
+			return @$st;
+			}
 		}
 	}
 
@@ -2464,6 +2523,9 @@ elsif (!$ex && $out =~ /^\Q$remotefile\E\s/) {
 	$st[12] = $w[2];		# Number of blocks
 	$st[13] = $remotefile;
 	$st[14] = $lout;
+	if ($removeroot) {
+		$st[13] =~ s/^\Q$removeroot\E//;
+		}
 	return @st;
 	}
 
@@ -2480,7 +2542,11 @@ if (!$err) {
 	return ( $err ) if ($err);
 	if (!$ex) {
 		$out =~ s/\r|\n//g;
-		return split(/:/, $out);
+		my @st = split(/:/, $out);
+		if ($removeroot && $st[13]) {
+			$st[13] =~ s/^\Q$removeroot\E//;
+			}
+		return @st;
 		}
 	}
 
@@ -2499,6 +2565,9 @@ elsif ($ex || $out !~ /\s\Q$remotefile\E($|\s+->\s+)/) {
 else {
 	# Parse ls command output
 	my @st = &parse_lsl_line($out);
+	if ($removeroot && $st[13]) {
+		$st[13] =~ s/^\Q$removeroot\E//;
+		}
 	return @st;
 	}
 }
@@ -2643,12 +2712,13 @@ my ($out, $ex, $err) = &execute_command_on_server($server,
 return $err ? $err : $ex ? $out : undef;
 }
 
-# list_dir_on_server(&server, dir, [full-stat], [lookup-usernames])
+# list_dir_on_server(&server, dir, [full-stat], [lookup-usernames],
+# 		     [remove-root])
 # Lists the contents of a directory on a remote system. Returns an array ref
 # of filenames (except . and ..) on success, or an error message on failure.
 sub list_dir_on_server
 {
-my ($server, $dir, $fullstat, $usernames) = @_;
+my ($server, $dir, $fullstat, $usernames, $removeroot) = @_;
 my $dfunc = "type_".$server->{'manager'}."_list_dir";
 if (defined(&$dfunc)) {
 	# Use type-specific function call
@@ -2668,6 +2738,9 @@ if ($fullstat) {
 	my @rv;
 	foreach my $l (split(/\r?\n/, $out)) {
 		my @st = &parse_lsl_line($l);
+		if ($removeroot && $st[13]) {
+			$st[13] =~ s/^\Q$removeroot\E//;
+			}
 		push(@rv, \@st) if (@st);
 		}
 	return \@rv;
@@ -4770,6 +4843,9 @@ return undef;
 sub startup_server
 {
 my ($server, $nowait, $fsck) = @_;
+
+# If mounted now, forcibly un-mount
+&temp_umount_filesystem_if_needed($server);
 
 # If configured, check all disks first
 if ($config{'fsck_boot'} || $fsck) {
@@ -7507,7 +7583,7 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
 			    'cat' => 'manage',
 			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
 		}
-	if ($cantransfer && &can_action($server, "transfer")) {
+	if (&can_action($server, "transfer")) {
 		push(@rv, { 'id' => 'filemanager',
 			    'desc' => $text{'edit_filemanager'},
 			    'cat' => 'manage',

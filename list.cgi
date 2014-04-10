@@ -9,6 +9,11 @@ $server || &error($text{'edit_egone'});
 &can_action_error($server, "transfer");
 print "Content-type: text/plain\n\n";
 
+$err = &temp_mount_filesystem_if_needed($server);
+if ($err) {
+	print $err,"\n";
+	return;
+	}
 $files = &list_dir_on_server($server, $in{'dir'}, 1, 1);
 if (!ref($files)) {
 	print $files,"\n";

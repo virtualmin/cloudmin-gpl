@@ -5030,7 +5030,7 @@ sub type_kvm_stat_file
 my ($server, $remotefile, $usernames) = @_;
 if ($server->{'kvm_mount'}) {
 	my $vhost = &type_kvm_parent($server);
-	return &stat_file_on_server($vhost, $server->{'kvm_mount'}.$remotefile, $usernames);
+	return &stat_file_on_server($vhost, $server->{'kvm_mount'}.$remotefile, $usernames, $server->{'kvm_mount'});
 	}
 else {
 	return 'FALLBACK';
@@ -5062,7 +5062,8 @@ my ($server, $remotedir, $fullstat, $usernames) = @_;
 if ($server->{'kvm_mount'}) {
 	my $vhost = &type_kvm_parent($server);
 	return &list_dir_on_server($vhost, $server->{'kvm_mount'}.$remotedir,
-				   $fullstat, $usernames);
+				   $fullstat, $usernames,
+				   $server->{'kvm_mount'});
 	}
 else {
 	return 'FALLBACK';
