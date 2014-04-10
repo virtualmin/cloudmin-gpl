@@ -6149,6 +6149,7 @@ sub check_virtualmin_config
 {
 my ($server, $noreq) = @_;
 if ($server->{'status'} eq 'virt') {
+	$last_remote_error = undef;
 	if (!$noreq) {
 		&remote_foreign_require($server, "virtual-server",
 						 "virtual-server-lib.pl");
@@ -6157,9 +6158,15 @@ if ($server->{'status'} eq 'virt') {
 				   "set_all_null_print");
 	my $cerr = &remote_foreign_call($server, "virtual-server",
 				   "check_virtual_server_config");
-	$cerr =~ s/<[^>]*>//g;	# Remove HTML
-	$server->{'virtualmin_checked'} = $cerr ? 0 : 1;
-	$server->{'virtualmin_error'} = $cerr;
+	if ($last_remote_error) {
+		$server->{'virtualmin_checked'} = 0;
+		$server->{'virtualmin_error'} = $last_remote_error;
+		}
+	else {
+		$cerr =~ s/<[^>]*>//g;	# Remove HTML
+		$server->{'virtualmin_checked'} = $cerr ? 0 : 1;
+		$server->{'virtualmin_error'} = $cerr;
+		}
 	}
 else {
 	delete($server->{'virtualmin_checked'});
