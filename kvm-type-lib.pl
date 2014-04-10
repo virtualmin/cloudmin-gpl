@@ -5100,6 +5100,23 @@ else {
         }
 }
 
+# type_kvm_set_ownership_permissions(&server, user, group, perms, file+)
+# If the filesystem for this kvm instance is locally mounted, change the
+# permissions there
+sub type_kvm_set_ownership_permissions
+{
+my ($server, $user, $group, $perms, @files) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	my $dir = $server->{'kvm_mount'};
+	return &set_ownership_permissions_on_server($server, $user, $group,
+			$perms, map { $dir.$_ } @files);
+	}
+else {
+	return 'FALLBACK';
+        }
+}
+
 # type_kvm_mount_filesystem(&server, [wantfile], [mount-point])
 # Mounts a down KVM image's root disk image on /mnt/something, and sets
 # kvm_mount in the server object
