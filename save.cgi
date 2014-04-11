@@ -10,6 +10,11 @@ $server || &error($text{'edit_egone'});
 
 $p = $ENV{'PATH_INFO'};
 print "Content-type: text/plain\n\n";
+$err = &temp_mount_filesystem_if_needed($server);
+if ($err) {
+	print $err,"\n";
+	return;
+	}
 
 # Read posted data
 $clen = $ENV{'CONTENT_LENGTH'};

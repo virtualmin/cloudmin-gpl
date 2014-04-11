@@ -13,6 +13,11 @@ if (!&can_ssh_status($server)) {
 	print $text{'filemanager_esearch'},"\n";
 	return;
 	}
+$err = &temp_mount_filesystem_if_needed($server);
+if ($err) {
+	print $err,"\n";
+	return;
+	}
 
 # Build up a find command
 $in{'dir'} =~ s/^\/+/\//g;

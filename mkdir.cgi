@@ -10,7 +10,10 @@ $server || &error($text{'edit_egone'});
 
 print "Content-type: text/plain\n\n";
 
-$err = &make_dir_on_server($server, $in{'dir'}, 0777);
+$err = &temp_mount_filesystem_if_needed($server);
+if (!$err) {
+	$err = &make_dir_on_server($server, $in{'dir'}, 0777);
+	}
 if ($err) {
 	print $err,"\n";
 	}

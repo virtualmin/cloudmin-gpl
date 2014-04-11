@@ -10,6 +10,9 @@ $server || &error($text{'edit_egone'});
 &can_action_error($server, "transfer");
 
 print "Content-type: text/plain\n\n";
-$err = &rename_file_on_server($server, $in{'old'}, $in{'new'});
+$err = &temp_mount_filesystem_if_needed($server);
+if (!$err) {
+	$err = &rename_file_on_server($server, $in{'old'}, $in{'new'});
+	}
 print $err,"\n";
 

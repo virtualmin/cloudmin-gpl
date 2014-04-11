@@ -7,6 +7,8 @@ require './server-manager-lib.pl';
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "transfer");
+$err = &temp_mount_filesystem_if_needed($server);
+&error($err) if ($err);
 
 &popup_header($file::text{'upload_title'});
 $upid = time().$$;

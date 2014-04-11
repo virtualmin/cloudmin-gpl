@@ -7,6 +7,8 @@ require './server-manager-lib.pl';
 $server = &get_managed_server($getin{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "transfer");
+$err = &temp_mount_filesystem_if_needed($server);
+&error($err) if ($err);
 &ReadParseMime(undef, \&read_parse_mime_callback, [ $getin{'upid'} ]);
 &popup_header();
 

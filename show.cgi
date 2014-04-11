@@ -8,6 +8,8 @@ $in{'id'} =~ s/\0.*$//;
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
 &can_action_error($server, "transfer");
+$err = &temp_mount_filesystem_if_needed($server);
+&error($err) if ($err);
 
 use POSIX;
 $p = $ENV{'PATH_INFO'};

@@ -9,5 +9,8 @@ $server || &error($text{'edit_egone'});
 &can_action_error($server, "transfer");
 
 print "Content-type: text/plain\n\n";
-$err = &delete_file_on_server($server, $in{'file'});
+$err = &temp_mount_filesystem_if_needed($server);
+if (!$err) {
+	$err = &delete_file_on_server($server, $in{'file'});
+	}
 print $err,"\n";

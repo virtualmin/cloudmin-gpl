@@ -13,6 +13,11 @@ if (!&can_ssh_status($server)) {
 	print $text{'filemanager_eextract'},"\n";
 	return;
 	}
+$err = &temp_mount_filesystem_if_needed($server);
+if ($err) {
+	print $err,"\n";
+	return;
+	}
 
 # Work out the extraction command
 $path = $in{'file'};
