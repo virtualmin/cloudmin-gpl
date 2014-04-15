@@ -101,7 +101,7 @@ return (0, undef, $miniserv{'root'}, $miniserv{'port'}, $miniserv{'ssl'});
 sub type_this_stat_file
 {
 my ($server, $remotefile, $usernames) = @_;
-my @st = stat($remotefile);
+my @st = lstat($remotefile);
 return () if (!@st);
 $st[13] = $remotefile;
 $st[14] = readlink($remotefile);
@@ -137,17 +137,21 @@ my $ok = &make_dir($remotedir, $perms, $recur);
 return $ok ? undef : "$!";
 }
 
-# type_this_list_dir(&server, remotedir, [full-stat], [lookup-usernames])
+# type_this_list_dir(&server, remotedir, [full-stat], [lookup-usernames],
+# 		     [remove-dir])
 # For a dir on the Cloudmin master, just list it directly
 sub type_this_list_dir
 {
-my ($server, $remotedir, $fullstat, $usernames) = @_;
+my ($server, $remotedir, $fullstat, $usernames, $removedir) = @_;
 opendir(LISTDIR, $remotedir) || return "$!";
 my @files = readdir(LISTDIR);
 if ($fullstat) {
 	my $d = $remotedir eq "/" ? "" : $remotedir;
-	@files = map { &type_this_stat_file($server, $d."/".$_, $usernames) }
+	@files = map { [ &type_this_stat_file($server, $d."/".$_, $usernames) ] }
 		     @files;
+	foreach my $st (@files) {
+		$st->[13] =~ s/^\Q$removedir\E// if ($removedir);
+		}
 	}
 closedir(LISTDIR);
 return \@files;

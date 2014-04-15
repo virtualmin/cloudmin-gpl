@@ -10,7 +10,12 @@ $server || &error($text{'edit_egone'});
 &can_action_error($server, "transfer");
 
 print "Content-type: text/plain\n\n";
-($size, $files, $dirs) = &disk_usage_on_server($server, $in{'dir'});
-print "\n";
-print $size," ",$files," ",$dirs," ",&nice_size($size),"\n";
+($size, $files, $dirs) = &disk_usage_on_server($server, $in{'dir'}, 1);
+if ($size !~ /^\d+$/) {
+	print $size,"\n";
+	}
+else {
+	print "\n";
+	print $size," ",$files," ",$dirs," ",&nice_size($size),"\n";
+	}
 

@@ -3460,6 +3460,7 @@ return $fserr;
 sub type_kvm_delete_disk
 {
 my ($server, $disk, $detach, $nofstab, $noconfig) = @_;
+&temp_umount_filesystem_if_needed($server);
 my $vhost = &type_kvm_parent($server);
 
 # Actually un-mount if mounted
@@ -3602,6 +3603,7 @@ return undef;
 sub type_kvm_modify_disk
 {
 my ($server, $disk, $olddisk) = @_;
+&temp_umount_filesystem_if_needed($server);
 my $vhost = &type_kvm_parent($server);
 my $moderr;
 my $parts = &list_disk_image_partitions($vhost, $disk->{'real'});
@@ -5112,6 +5114,22 @@ if ($server->{'kvm_mount'}) {
 	my $dir = $server->{'kvm_mount'};
 	return &set_ownership_permissions_on_server($server, $user, $group,
 			$perms, map { $dir.$_ } @files);
+	}
+else {
+	return 'FALLBACK';
+        }
+}
+
+# type_kvm_disk_usage(&server, dir, [include-counts])
+# If the filesystem for this kvm instance is locally mounted, run the du
+# command there.
+sub type_kvm_disk_usage
+{
+my ($server, $dir, $counts) = @_;
+if ($server->{'kvm_mount'}) {
+	my $vhost = &type_kvm_parent($server);
+	return &disk_usage_on_server($vhost, $server->{'kvm_mount'}.$dir,
+				     $counts);
 	}
 else {
 	return 'FALLBACK';
