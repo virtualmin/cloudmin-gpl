@@ -87,3 +87,4 @@ A single virtual system can now be backed up quickly, either to another system, 
 Images only available to subscribers can now be downloaded from Stacklet.
 Added the edit-file API command, for easily editing a single file on a remote server.
 ---- Changes since 7.6 ----
+Added a file manager for browsing the filesystems of real and virtual systems, even those that are shut down.
