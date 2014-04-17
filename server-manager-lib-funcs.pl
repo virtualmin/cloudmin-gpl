@@ -1452,10 +1452,12 @@ else {
 		$sshcmd .= " -P ".$server->{'ssh_port'};
 		}
 	$sshcmd .= &ssh_command_args($server);
-	$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}:".
-		   quotemeta($remotefile);
+	$sshcmd .= " $server->{'ssh_user'}\@$server->{'ip'}:";
 	if (-d $localfile && &is_dir_on_server($server, $remotefile)) {
-		$sshcmd .= "/\\*";
+		$sshcmd .= quotemeta($remotefile)."/\\*";
+		}
+	else {
+		$sshcmd .= "\"".quotemeta($remotefile)."\"";
 		}
 	$sshcmd .= " ".quotemeta($localfile);
 	my ($status, $out) =
@@ -1749,7 +1751,7 @@ else {
 		}
 	$sshcmd .= " $server->{'ssh_user'}\@".
 		   ($server->{'ip'} || $server->{'host'}).":".
-		   quotemeta($remotefile);
+		   "\"".quotemeta($remotefile)."\"";
 	my ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
 	}
@@ -1957,7 +1959,7 @@ else {
 			}
 		$sshcmd .= " $destserver->{'ssh_user'}\@".
 			   ($destserver->{'ip'} || $destserver->{'host'}).":".
-			   quotemeta($dest);
+			   "\"".quotemeta($dest)."\"";
 		}
 	if ($keytemp) {
 		$sshcmd .= " ; ex=\$? ; rm -f ".quotemeta($keytemp).
@@ -2719,10 +2721,12 @@ return $err ? $err : $ex ? $out : undef;
 sub list_dir_on_server
 {
 my ($server, $dir, $fullstat, $usernames, $removeroot) = @_;
+print STDERR "listing $dir on $server->{'host'}\n";
 my $dfunc = "type_".$server->{'manager'}."_list_dir";
 if (defined(&$dfunc)) {
 	# Use type-specific function call
 	my $rv = &$dfunc(@_);
+	print STDERR "rv=$rv\n";
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to ssh
 	}
@@ -2731,6 +2735,7 @@ if (defined(&$dfunc)) {
 if ($fullstat) {
 	# Return full file details
 	my $flags = $usernames ? "-la" : "-lan";
+	print STDERR "running ls $flags $dir\n";
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"ls $flags ".quotemeta($dir));
 	return $err if ($err);
@@ -2738,6 +2743,7 @@ if ($fullstat) {
 	my @rv;
 	foreach my $l (split(/\r?\n/, $out)) {
 		my @st = &parse_lsl_line($l);
+		print STDERR "st[13]=$st[13] removeroot=$removeroot\n";
 		if ($removeroot && $st[13]) {
 			$st[13] =~ s/^\Q$removeroot\E//;
 			}
@@ -2775,25 +2781,38 @@ $out =~ s/\r|\n//g;
 return [ grep { $_ ne $glob } split(/\s+/, $out) ];
 }
 
-# disk_usage_on_server(&server, dir)
+# disk_usage_on_server(&server, dir, [include-counts])
 # Returns the size of a directory in bytes, or an error message.
 sub disk_usage_on_server
 {
-my ($server, $dir) = @_;
+my ($server, $dir, $counts) = @_;
 my $dfunc = "type_".$server->{'manager'}."_disk_usage";
 if (defined(&$dfunc)) {
 	# Use type-specific function call
-	my $rv = &$dfunc(@_);
-	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+	my @rv = &$dfunc(@_);
+	return @rv if ($rv[0] ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to ssh
 	}
 
 # Run du via SSH
-my ($out, $ex, $err) = &execute_command_on_server($server,
-	"du -sk ".quotemeta($dir));
+my $cmd = "du -sk ".quotemeta($dir);
+if ($counts) {
+	$cmd .= " ; find ".quotemeta($dir)." -type f | wc -l";
+	$cmd .= " ; find ".quotemeta($dir)." -type d | wc -l";
+	}
+my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 return $err if ($err);
 return $out if ($ex);
-return $out =~ /^(\d+)\s/ ? $1*1024 : "Unknown du output : $out";
+if ($out !~ /^(\d+)\s/) {
+	return "Unknown du output : $out";
+	}
+if ($counts) {
+	my @lines = split(/\r?\n/, $out);
+	return ($1 * 1024, int($lines[1]), int($lines[2]));
+	}
+else {
+	return $1 * 1024;
+	}
 }
 
 # readlink_on_server(&server, file)
