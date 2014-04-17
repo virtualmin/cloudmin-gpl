@@ -2721,12 +2721,10 @@ return $err ? $err : $ex ? $out : undef;
 sub list_dir_on_server
 {
 my ($server, $dir, $fullstat, $usernames, $removeroot) = @_;
-print STDERR "listing $dir on $server->{'host'}\n";
 my $dfunc = "type_".$server->{'manager'}."_list_dir";
 if (defined(&$dfunc)) {
 	# Use type-specific function call
 	my $rv = &$dfunc(@_);
-	print STDERR "rv=$rv\n";
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to ssh
 	}
