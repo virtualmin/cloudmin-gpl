@@ -1471,6 +1471,13 @@ else {
 sub temp_mount_filesystem_if_needed
 {
 my ($server) = @_;
+my $vhost = &get_parent_server($server);
+if ($vhost) {
+	# Parent may require a mount, for VMs within a VM
+	my $err = &temp_mount_filesystem_if_needed($vhost);
+	return $err if ($err);
+	}
+
 if ($server->{'status'} ne 'down') {
 	# System is running, so no need to mount
 	return undef;
