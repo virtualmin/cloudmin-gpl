@@ -4729,7 +4729,7 @@ my $func = &remote_eval($server, $mod,
 my @systems = &unique(map { $_->{'system'} } @$packs);
 foreach my $system (@systems) {
 	my @spacks = grep { $_->{'system'} eq $system } @$packs;
-	my @names = map { $_->{'update'} || $_->{'name'} } @spacks;
+	my @names = &unique(map { $_->{'update'} || $_->{'name'} } @spacks);
 	my ($out, $rv) = &remote_foreign_call($server, $mod,
 			$func, $pkg."::package_install_multiple",
 			\@names, $system, 1);
