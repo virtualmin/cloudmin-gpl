@@ -2329,7 +2329,7 @@ if ($server->{'ssh_nologin'} && $server->{'ssh_noping'}) {
 	}
 my $vhost = &type_kvm_parent($server);
 delete($kvm_check_login_procs_cache{$vhost->{'id'}});
-my $cmd = &get_kvm_start_command($server, undef, $extra);
+my $cmd = &get_kvm_start_command($server, 0, $extra, 0);
 my ($pinged, $sshed);
 
 # Double-check if already running
@@ -2577,11 +2577,11 @@ foreach my $net (@nets) {
 return undef;
 }
 
-# get_kvm_start_command(&server, [for-boot], [extra-args])
+# get_kvm_start_command(&server, [for-boot], [extra-args], [startup-delay])
 # Returns the full command line to start a KVM instance
 sub get_kvm_start_command
 {
-my ($server, $forboot, $extra) = @_;
+my ($server, $forboot, $extra, $delay) = @_;
 my $vhost = &type_kvm_parent($server);
 my $inuse = &list_ports_in_use($vhost, "tcp");
 my $cmd = &find_qemu_kvm_command($vhost);
@@ -2714,18 +2714,24 @@ $cmd .= " ".$extra if ($extra);
 if ($server->{'kvm_ioclass'} ne '') {
 	$cmd = "ionice -n$server->{'kvm_ioclass'} $cmd";
 	}
+my @cmds;
+if ($delay ne '') {
+	push(@cmds, "sleep $delay");
+	}
 if ($vhost->{'kvm_cgroup_support'}) {
-	my @cmds = ( "test -d $vhost->{'kvm_cgroup_dir'}/cpu || sleep 20",
-		     "cgcreate -g cpu:$server->{'id'}" );
+	push(@cmds, "test -d $vhost->{'kvm_cgroup_dir'}/cpu || sleep 20",
+		    "cgcreate -g cpu:$server->{'id'}");
 	if ($server->{'kvm_cpu'}) {
 		my $n = int($server->{'kvm_cpu'} * 1024 / 100);
 		push(@cmds, "echo $n >$vhost->{'kvm_cgroup_dir'}/cpu/$server->{'id'}/cpu.shares");
 		}
 	push(@cmds, "exec cgexec -g cpu:$server->{'id'} $cmd");
-	$cmd = "(".join(" ; ", @cmds).")";
+	}
+else {
+	push(@cmds, $cmd);
 	}
 
-return $cmd;
+return "(".join(" ; ", @cmds).")";
 }
 
 # generate_kvm_bridge_script(&server, &iface, [bridge])
@@ -5529,6 +5535,7 @@ foreach my $l (split(/\r?\n/, $data)) {
 	$l =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
 	$l =~ s/^.*cgexec\s+\-g\s+(\S+)\s+//;
 	$l =~ s/^.*ionice\s+\-n\d+\s+//;
+	$l =~ s/^.*sleep\s+(\d*0)\s*;\s+//;
 	my $kvm = &parse_kvm_start_command($l);
 	if ($kvm && &match_kvm_instance($server, $kvm)) {
 		return 1;
@@ -5545,22 +5552,37 @@ sub type_kvm_set_atboot
 my ($server, $atboot) = @_;
 my $vhost = &type_kvm_parent($server);
 
+# Work out a startup delay, which is the based on the number of other systems
+# started at boot time on the same host
+my $delay = 0;
+my $temp = &transname();
+my $bfile = &stat_file_on_server($vhost, "/etc/init.d") ?
+		"/etc/init.d/cloudmin-kvm" : "/etc/rc.local";
+my %sleeps;
+if ($atboot && !&get_file_from_server($vhost, $bfile, $temp)) {
+	my $lref = &read_file_lines($temp);
+	foreach my $l (@$lref) {
+		if ($l =~ /sleep\s+(\d*0)/) {
+			$sleeps{$1}++;
+			}
+		}
+	for($delay=0; $sleeps{$delay}; $delay+=10) { }
+	}
+
 # Create monitor input file and command to write it to socket
 $server->{'kvm_console'} ||= &get_kvm_console_file($server);
 my $ncerr = upload_nc_script($vhost);
 return $ncerr if ($ncerr);
 &create_kvm_monitor_file($server);
 
-my $cmd = &get_kvm_start_command($server).
+my $cmd = &get_kvm_start_command($server, 1, undef, $delay).
           " >$server->{'kvm_console'} 2>&1 </dev/null &";
 $cmd .= " sleep 3 ;";
 $cmd .= " /usr/bin/nc.pl --sleep 3 localhost $server->{'kvm_monitor_port'} ".
 	"<$server->{'kvm_monitor'} >>$server->{'kvm_console'} 2>&1";
 
-my $temp = &transname();
-if (&stat_file_on_server($vhost, "/etc/init.d")) {
+if ($bfile =~ /^\/etc\/init.d\//) {
 	# Insert into init script
-	my $bfile = "/etc/init.d/cloudmin-kvm";
 	if (&stat_file_on_server($vhost, $bfile)) {
 		# File already exists
 		my $err = &get_file_from_server($vhost, $bfile, $temp);
@@ -5580,6 +5602,7 @@ if (&stat_file_on_server($vhost, "/etc/init.d")) {
 		$line =~ s/^\s*\/\S+\/pty.pl(\s+\-\-(\S+)\s+(\S+))*\s+//;
 		$line =~ s/^.*cgexec\s+\-g\s+(\S+)\s+//;
 		$line =~ s/^.*ionice\s+\-n\d+\s+//;
+		$line =~ s/^.*sleep\s+(\d*0)\s*;\s+//;
 		my $kvm = &parse_kvm_start_command($line);
 		if ($kvm && &match_kvm_instance($server, $kvm)) {
 			$lnum = $i;
