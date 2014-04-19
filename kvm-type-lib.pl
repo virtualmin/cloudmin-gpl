@@ -2987,6 +2987,8 @@ if ($mounts) {
 					}
 				}
 			if ($label) {
+				# A label was found, use the underlying virtual
+				# device instead
 				($f) = grep { $_->[0] eq 'LABEL='.$label ||
 					     uc($_->[0]) eq 'UUID='.uc($label) }
 					    @$fstab;
@@ -2994,6 +2996,18 @@ if ($mounts) {
 					$f->[0] = $label_to_part{$label};
 					$d->{'virt_label'} = $label;
 					}
+				}
+			}
+		if (!$f) {
+			# If no fstab entry was found but there is only one
+			# disk with one partition, it must be the root
+			my ($rootf) = grep { $_->[1] eq '/' } @$fstab;
+			my $parts = &list_disk_image_partitions($vhost,
+								$d->{'real'});
+			if ($rootf && ref($parts) && @$parts == 1 &&
+			    $d->{'real'} eq $server->{'kvm_filesystem'}) {
+				$f = $rootf;
+				$f->[0] = $d->{'virt'}.'1';
 				}
 			}
 		if ($f) {
