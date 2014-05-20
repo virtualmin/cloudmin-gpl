@@ -159,6 +159,11 @@ foreach $b (&net::boot_interfaces()) {
 		}
 	}
 
+# Clear bridge error for this host
+my $server = &get_this_managed_server();
+delete($server->{'kvm_host_err'});
+&save_managed_server($server);
+
 sub usage
 {
 print "$_[0]\n\n" if ($_[0]);
