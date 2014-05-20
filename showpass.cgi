@@ -1,7 +1,6 @@
 #!/usr/local/bin/perl
 # Show a virtual system's SSH or Webmin password
 
-$trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
 $server = &get_managed_server($in{'id'});

@@ -1,7 +1,6 @@
 #!/usr/local/bin/perl
 # Opens a window for selecting a running linux KVM instance
 
-$trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
 &can_add_server_error("kvm");

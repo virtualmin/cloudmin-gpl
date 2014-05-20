@@ -1,7 +1,6 @@
 #!/usr/local/bin/perl
 # Opens a window for choosing a free IP address
 
-$trust_unknown_referers = 1;
 require './server-manager-lib.pl';
 &ReadParse();
 $server = &get_managed_server($in{'id'});
