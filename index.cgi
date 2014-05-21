@@ -357,6 +357,7 @@ if (@servers) {
 			$procount++ if ($s->{'virtualmin_serial'});
 			$cmfunc = "type_".$s->{'manager'}."_can_move";
 			$movecount++ if (defined(&$cmfunc) && &$cmfunc($s));
+			$delcount++ if (&is_virtual_server($s));
 			}
 		print &ui_columns_end();
 		}
@@ -369,7 +370,8 @@ if (@servers) {
 			       : ( ),
 		     undef,
 		     [ "dereg", $text{'index_dereg'} ],
-		     [ "delete", $text{'index_delete'} ],
+		     $delcount ? ( [ "delete", $text{'index_delete'} ] )
+			       : ( ),
 		     undef,
 		     [ "shutdown", $text{'index_shutdown'} ],
 		     [ "startup", $text{'index_startup'} ],
