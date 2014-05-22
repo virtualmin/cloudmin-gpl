@@ -882,7 +882,8 @@ foreach my $l (split(/\r?\n/, $resolv)) {
 foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/network/interfaces",
 		 "/etc/conf.d/net",
-		 "/etc/rc.conf") {
+		 "/etc/rc.conf",
+		 "/etc/webmin/virtual-server/config") {
 	my $fixpath = "$dir/$fix";
 	my $temppath = &transname();
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
@@ -965,6 +966,11 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		my $line = "inet $ip netmask $netmask broadcast $broadcast";
 		$data = &set_rc_conf_line($data, "ifconfig_$bsdiface", $line);
 		$data = &set_rc_conf_line($data, "defaultrouter", $gw);
+		}
+	elsif ($fix eq "/etc/webmin/virtual-server/config") {
+		# Clear old IP address in Virtualmin config
+		$data =~ s/old_defip=.*\n//;
+		$data =~ s/old_defip6=.*\n//;
 		}
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
