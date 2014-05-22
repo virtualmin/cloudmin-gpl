@@ -2540,6 +2540,11 @@ if (!$keep) {
 		}
 	}
 
+# Delete mount dir
+if (!$keep) {
+	&delete_file_on_server($vhost, "/mnt/kvm-".$server->{'host'});
+	}
+
 # Delete console and monitor input files
 if ($server->{'kvm_console'}) {
 	&delete_file_on_server($vhost, $server->{'kvm_console'});
