@@ -4278,18 +4278,20 @@ kvm_estartpass=KVM instance was started OK, but the graphical console password c
 kvms_title=KVM Host Systems
 kvms_host=System hostname
 kvms_os=OS
-kvms_users=Hosted systems
+kvms_users2=Systems
 kvms_nousers=None
 kvms_manyusers=$1 systems
 kvms_none=No systems have been registered for KVM hosting yet.
 kvms_none2=None of the registered systems can host KVM instances.
 kvms_return=list of KVM hosts
-kvms_dir=Base directory
+kvms_dir2=Storage
 kvms_default=Make Selected the Default Host System
 kvms_startheader=Add host system
 kvms_starthost=Host system to add:
 kvms_start=Start Adding Host
 kvms_alladded=Add possible host systems have already been added. Use the <a href='$1'>Add Physical System</a> page to register additional hosts.
+kvms_ram=RAM usage
+kvms_disk=Disk usage
 
 kvm_create=Register KVM Host
 kvm_edit=Edit KVM Host

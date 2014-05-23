@@ -16,23 +16,30 @@ if (@kvms) {
 	@tds = ( "width=5" );
 	print &ui_columns_start([ "",
 				  $text{'kvms_host'},
-				  $text{'kvms_os'},
-				  $text{'kvms_dir'},
+				  $text{'kvms_dir2'},
 				  $text{'index_status'},
-				  $text{'kvms_users'} ]);
+				  $text{'kvms_users2'},
+				  $text{'kvms_ram'},
+				  $text{'kvms_disk'}, ]);
 	foreach $s (@kvms) {
-		@users = grep { $_->{'kvm_on'} eq $s->{'id'} }
-			      @allservers;
-		$users = @users == 0 ? $text{'kvms_nousers'} :
-		    @users > 4 ? &text('kvms_manyusers', scalar(@users)) :
-		    join("<br>", map { "<tt>$_->{'host'}</tt>" } @users);
+		@users = grep { $_->{'kvm_on'} eq $s->{'id'} } @allservers;
+		$iserver = $s->{'kvm_iscsi'} ne '' ?
+			&get_managed_server($s->{'kvm_iscsi'}) : undef;
 		print &ui_columns_row([
-		    &ui_oneradio("default", $s->{'id'}, "", $s->{'kvm_default'}),
+		    &ui_oneradio("default", $s->{'id'}, "",$s->{'kvm_default'}),
 		    "<a href='edit_kvm.cgi?id=$s->{'id'}'>$s->{'host'}</a>",
-		    &describe_os($s->{'type'}),
-		    "<tt>$s->{'kvm_dir'}</tt>",
+
+		    $s->{'kvm_vg'} ? "LVM VG <tt>$s->{'kvm_vg'}</tt>" :
+		      $iserver ? "iSCSI <tt>$iserver->{'host'}</tt>" :
+		      "<tt>$s->{'kvm_dir'}</tt>",
+
 		    &describe_status($s, 1, 0),
-		    "<a href='index.cgi?psearch=$s->{'id'}&pok=1'>$users</a>",
+
+		    "<a href='index.cgi?psearch=$s->{'id'}&pok=1'>".
+		      scalar(@users)."</a>",
+
+		    &describe_host_memory($s, 'kvm'),
+		    &describe_host_disk($s, 'kvm'),
 		    ], \@tds);
 		}
 	print &ui_columns_end();

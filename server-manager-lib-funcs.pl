@@ -882,6 +882,24 @@ else {
 	}
 }
 
+# describe_host_memory(&server, manager)
+# Returns a string showing host disk usage
+sub describe_host_memory
+{
+my ($server, $manager) = @_;
+my ($memfree, $memtotal) = &host_free_memory($server, $manager, 0);
+return &nice_size($memtotal - $memfree)."&nbsp;/&nbsp;".&nice_size($memtotal);
+}
+
+# describe_host_disk(&server, manager)
+# Returns a string showing host disk usage
+sub describe_host_disk
+{
+my ($server, $manager) = @_;
+my ($memfree, $memtotal) = &host_free_disk($server, $manager, 0);
+return &nice_size($memtotal - $memfree)."&nbsp;/&nbsp;".&nice_size($memtotal);
+}
+
 # can_ssh_status(&server)
 # Return 1 if Cloudmin can run commands on a system via SSH
 sub can_ssh_status
