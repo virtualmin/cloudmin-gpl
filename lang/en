@@ -1039,6 +1039,7 @@ edit_imem=Real memory used
 edit_hmem=Real memory used for $1 hosting
 edit_hgmem=Guaranteed memory used for $1 hosting
 edit_outof=$2 out of $1
+edit_of=$1 of $2
 edit_iswap=Virtual memory used
 edit_idisk=Local disk space used
 edit_hdisk=Local disk space used for $1 hosting

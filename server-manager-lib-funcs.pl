@@ -888,7 +888,8 @@ sub describe_host_memory
 {
 my ($server, $manager) = @_;
 my ($memfree, $memtotal) = &host_free_memory($server, $manager, 0);
-return &nice_size($memtotal - $memfree)."&nbsp;/&nbsp;".&nice_size($memtotal);
+return &text('edit_of', &nice_size($memtotal - $memfree),
+			&nice_size($memtotal));
 }
 
 # describe_host_disk(&server, manager)
@@ -896,8 +897,9 @@ return &nice_size($memtotal - $memfree)."&nbsp;/&nbsp;".&nice_size($memtotal);
 sub describe_host_disk
 {
 my ($server, $manager) = @_;
-my ($memfree, $memtotal) = &host_free_disk($server, $manager, 0);
-return &nice_size($memtotal - $memfree)."&nbsp;/&nbsp;".&nice_size($memtotal);
+my ($diskfree, $disktotal) = &host_free_disk($server, $manager, 0);
+return &text('edit_of', &nice_size($disktotal - $diskfree),
+			&nice_size($disktotal));
 }
 
 # can_ssh_status(&server)
