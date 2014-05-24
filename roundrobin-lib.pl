@@ -78,7 +78,7 @@ my $file = "$roundrobins_dir/$rr->{'id'}";
 sub delete_roundrobin_dns
 {
 my ($rr) = @_;
-my ($ok, $msg) = &set_bind_dns_addresses($rr->{'name'}.".".$rr->{'dom'}.".",
+my ($ok, $msg) = &set_bind_dns_addresses(&roundrobin_to_record($rr).".",
 					 $rr->{'dom'}, [ ], [ ]);
 return $ok ? undef : $msg;
 }
@@ -301,7 +301,7 @@ if (@inc) {
 			     @inc[$rr->{'dnscount'} .. $#inc]);
 		}
 	($ok, $msg) = &set_bind_dns_addresses(
-	    $rr->{'name'}.".".$rr->{'dom'}.".", $rr->{'dom'}, \@ips, \@cmts,
+	    &roundrobin_to_record($rr).".", $rr->{'dom'}, \@ips, \@cmts,
 	    $rr->{'ttl'});
 	}
 else {
@@ -454,7 +454,7 @@ my $msg;
 if ($ok) {
 	# Start email about system failures
 	$msg = &text('remail_desc',
-		     $rr->{'name'}.".".$rr->{'dom'},
+		     &roundrobin_to_record($rr),
 		     scalar(@inc), $rr->{'min'});
 	$msg = join("\n", &mailboxes::wrap_lines($msg, 75))."\n";
 	$msg .= "\n";
@@ -463,7 +463,7 @@ if ($ok) {
 else {
 	# Start email about update errors
 	$msg = &text('remail_desc2',
-		     $rr->{'name'}.".".$rr->{'dom'}, $emsg);
+		     &roundrobin_to_record($rr), $emsg);
 	$msg = join("\n", &mailboxes::wrap_lines($msg, 75))."\n";
 	$msg .= "\n";
 	$msg .= $text{'rmail_whynot2'}."\n";
@@ -512,7 +512,7 @@ $from ||= &get_global_from_address();
 
 # Send the email
 my $email = join(", ", @emails);
-my $subject = &text('remail_subject', $rr->{'name'}.".".$rr->{'dom'},
+my $subject = &text('remail_subject', &roundrobin_to_record($rr),
 				      scalar(@inc));
 &mailboxes::send_text_mail($from, $email, undef, $subject, $msg);
 }
@@ -541,6 +541,19 @@ if ($rr->{'msg'}) {
                &text('roundrobins_fail', $rr->{'msg'})."</font>)";
 	}
 return $rv;
+}
+
+# roundrobin_to_record(&rr)
+# Returns the DNS record name for a roundrobin (with no trailing dot)
+sub roundrobin_to_record
+{
+my ($rr) = @_;
+if ($rr->{'name'} eq '@') {
+	return $rr->{'dom'};
+	}
+else {
+	return $rr->{'name'}.".".$rr->{'dom'};
+	}
 }
 
 1;
