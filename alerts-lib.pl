@@ -20,6 +20,7 @@
 # owner - Send email to system owner
 # email - Send email to this address
 # interval - Period in seconds between sending alert emails
+# sendwhen - If true, also email when alert stops firing
 sub list_alerts
 {
 my @rv;
@@ -206,21 +207,26 @@ foreach my $alert (@$alerts) {
 		$st->{'start'} = $oldst->{'start'} || $now;
 		if (!$alert->{'silenced'} &&
 		    $sincelast > $alert->{'interval'}) {
-			&send_alert_email($alert, $st);
+			&send_alert_email($alert, $st, 1);
 			$alert->{'lastemail'} = $now;
 			&save_alert($alert);
 			}
+		}
+	elsif (!$st->{'firing'} && $oldst->{'firing'} && $alert->{'sendwhen'} &&
+	       !$noemail && !$alert->{'silenced'}) {
+		# Send email because the alert has stopped firing
+		&send_alert_email($alert, $oldst, 0);
 		}
 	}
 &save_alert_statuses($statuses);
 &unlock_file($alert_status_file);
 }
 
-# send_alert_email(&alert, &status)
+# send_alert_email(&alert, &status, alert-firing)
 # Send email about some alert firing to all relevant users
 sub send_alert_email
 {
-my ($alert, $st) = @_;
+my ($alert, $st, $firing) = @_;
 &foreign_require("mailboxes", "mailboxes-lib.pl");
 
 # Find systems and values in the alert
@@ -275,7 +281,7 @@ foreach my $ep (@emails) {
 	my $subject = $alert->{'desc'};
 	if (!$subject) {
 		# Construct subject based on alert
-		my $pfx = "aemail_subject";
+		my $pfx = $firing ? "aemail_subject" : "aemail_nosubject";
 		if (@servers > 1) {
 			$subject = &text($pfx.'1', scalar(@servers));
 			}
@@ -292,7 +298,12 @@ foreach my $ep (@emails) {
 	my $fmt = "%-25.25s %-20.20s %-6.6s %-6.6s %-17.17s\n";
 	my $msg;
 	$msg .= "\n";
-	$msg .= $text{'aemail_desc'}."\n";
+	if ($firing) {
+		$msg .= $text{'aemail_desc'}."\n";
+		}
+	else {
+		$msg .= $text{'aemail_nodesc'}."\n";
+		}
 	$msg .= "\n";
 	$msg .= sprintf $fmt, $text{'alerts_server'},
 				$text{'alerts_stat'},

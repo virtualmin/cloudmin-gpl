@@ -171,11 +171,13 @@ print &ui_table_row($text{'alert_notif'},
 ($intunit, $int) = &split_for_units($alert->{'interval'});
 print &ui_table_row($text{'alert_interval'},
 	&ui_textbox("int", $int, 4).
-	&ui_select("intunit", $intunit, \@forunits));
+	&ui_select("intunit", $intunit, \@forunits)." ".
+	&ui_checkbox("sendwhen", 1, $text{'alert_sendwhen'},
+		     $alert->{'sendwhen'}));
 
 # Alert message
 print &ui_table_row($text{'alert_desc'},
-	&ui_opt_textbox("desc", $alert->{'desc'}, 50, $text{'alert_descdef'}));
+	&ui_opt_textbox("desc", $alert->{'desc'}, 60, $text{'alert_descdef'}));
 
 print &ui_hidden_table_end("notif");
 

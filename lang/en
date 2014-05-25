@@ -4471,6 +4471,7 @@ alert_stbelow=Active only on $1
 alert_stbelow2=Active only $1 systems
 alert_stsilenced=(Silenced)
 alert_uponly=Exclude down or un-managable systems
+alert_sendwhen=Also email when conditions stop matching
 
 dalerts_err1=Failed to delete alerts
 dalerts_err2=Failed to silence alerts
@@ -4480,11 +4481,14 @@ dalerts_enone=None selected
 
 aemail_subject1=Cloudmin alert for $1 systems
 aemail_subject2=Cloudmin alert for $1
+aemail_nosubject1=Cloudmin alert stopped for $1 systems
+aemail_nosubject2=Cloudmin alert stopped for $1
 aemail_cutoff=Cutoff
 aemail_value=Value
 aemail_started=Started
 aemail_link=Alerts can be viewed in Cloudmin on the System Alerts page, under the System Monitoring category, or at the URL :
 aemail_desc=The following alerts are active in Cloudmin :
+aemail_nodesc=The following alerts are no longer active in Cloudmin :
 
 email_title=Email Settings
 email_header=Options for email sent by Cloudmin

@@ -109,6 +109,7 @@ else {
 		}
 	$in{'int'} =~ /^\d+$/ || &error($text{'alert_einterval'});
 	$alert->{'interval'} = &join_for_units($in{'intunit'}, $in{'int'});
+	$alert->{'sendwhen'} = $in{'sendwhen'};
 
 	# Save or create, and evaluate now
 	&save_alert($alert);
