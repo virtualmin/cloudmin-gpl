@@ -71,6 +71,7 @@ else {
 	# Parse DNS record
 	$roundrobin->{'desc'} = $in{'desc'};
 	$in{'name'} =~ /^[a-zA-Z0-9\.\_\-]+$/ ||
+	    $in{'name'} eq '@' ||
 		&error($text{'roundrobin_ename'});
 	$in{'name'} !~ /^\./ && $in{'name'} !~ /\.$/ ||
 		&error($text{'roundrobin_ename2'});
