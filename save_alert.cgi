@@ -34,7 +34,7 @@ else {
 	elsif ($in{'mode'} == 1) {
 		# Selected systems
 		$alert->{'servers'} = join(" ", split(/\r?\n/, $in{'servers'}));
-		$alert->{'servers'} || &error($text{'alert_eservers'});
+		$alert->{'servers'} ne '' || &error($text{'alert_eservers'});
 		}
 	elsif ($in{'mode'} == 2) {
 		# Selected groups

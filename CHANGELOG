@@ -88,3 +88,4 @@ Images only available to subscribers can now be downloaded from Stacklet.
 Added the edit-file API command, for easily editing a single file on a remote server.
 ---- Changes since 7.6 ----
 Added a file manager for browsing the filesystems of real and virtual systems, even those that are shut down.
+System alerts can now be configured to send email when the alert condition stops firing.
