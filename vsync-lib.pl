@@ -373,7 +373,7 @@ my $vinfo = &get_server_collected($dest);
 my $desttemp = $tempdir->{$dest->{'id'}};
 my @rargs = @$rargs;
 push(@rargs, [ "source", $desttemp ]);
-if ($info->{'minfo'}->{'version'} >= 3.89) {
+if ($vinfo->{'minfo'}->{'version'} >= 3.89) {
 	push(@rargs, [ "skip-warnings" ]);
 	}
 push(@rargs, [ "option", "dir delete 1" ]);
