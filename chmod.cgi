@@ -28,10 +28,10 @@ elsif ($in{'rec'} == 1) {
 	ref($files) || &failure($files);
 	&update($in{'path'}, 0);
 	foreach $f (@$files) {
-		next if ($f->[13] eq "." || $f->[13] eq "..");
+		next if ($f->[13] =~ /\/\.$/ || $f->[13]  =~ /\/\.\.$/);
 		next if ($f->[14]);
 		my $isdir = $f->[2] & 040000;
-		&update("$in{'path'}/$f->[13]", 1) if (!$isdir);
+		&update($f->[13], 1) if (!$isdir);
 		}
 	}
 elsif ($in{'rec'} == 2) {
@@ -58,8 +58,8 @@ sub recurse
 local ($dir, $do_files, $do_dirs) = @_;
 my $files = &list_dir_on_server($server, $dir, 1);
 foreach my $f (@$files) {
-	my $full = "$dir/$f->[13]";
-	next if ($f->[13] eq "." || $f->[13] eq "..");
+	my $full = $f->[13];
+	next if ($f->[13] =~ /\/\.$/ || $f->[13]  =~ /\/\.\.$/);
 	next if ($f->[13]);
 	my $isdir = $f->[2] & 040000;
 	if (!$isdir && $do_files ||

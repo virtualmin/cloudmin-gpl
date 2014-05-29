@@ -2745,7 +2745,7 @@ return $err ? $err : $ex ? $out : undef;
 # list_dir_on_server(&server, dir, [full-stat], [lookup-usernames],
 # 		     [remove-root])
 # Lists the contents of a directory on a remote system. Returns an array ref
-# of filenames (except . and ..) on success, or an error message on failure.
+# of filenames or stat structures on success, or an error message on failure.
 sub list_dir_on_server
 {
 my ($server, $dir, $fullstat, $usernames, $removeroot) = @_;
@@ -2761,7 +2761,6 @@ if (defined(&$dfunc)) {
 if ($fullstat) {
 	# Return full file details
 	my $flags = $usernames ? "-la" : "-lan";
-	print STDERR "running ls $flags $dir\n";
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"ls $flags ".quotemeta($dir));
 	return $err if ($err);
@@ -2769,11 +2768,17 @@ if ($fullstat) {
 	my @rv;
 	foreach my $l (split(/\r?\n/, $out)) {
 		my @st = &parse_lsl_line($l);
-		print STDERR "st[13]=$st[13] removeroot=$removeroot\n";
+		next if (!@st);
+		if ($dir eq "/") {
+			$st[13] = "/".$st[13];
+			}
+		else {
+			$st[13] = $dir."/".$st[13];
+			}
 		if ($removeroot && $st[13]) {
 			$st[13] =~ s/^\Q$removeroot\E//;
 			}
-		push(@rv, \@st) if (@st);
+		push(@rv, \@st);
 		}
 	return \@rv;
 	}

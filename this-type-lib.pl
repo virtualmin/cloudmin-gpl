@@ -147,8 +147,9 @@ opendir(LISTDIR, $remotedir) || return "$!";
 my @files = readdir(LISTDIR);
 if ($fullstat) {
 	my $d = $remotedir eq "/" ? "" : $remotedir;
-	@files = map { [ &type_this_stat_file($server, $d."/".$_, $usernames) ] }
-		     @files;
+	$d =~ s/\/$//;
+	@files = map { [ &type_this_stat_file($server, $d."/".$_, $usernames) ]
+		     } @files;
 	foreach my $st (@files) {
 		$st->[13] =~ s/^\Q$removedir\E// if ($removedir);
 		}

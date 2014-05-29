@@ -23,7 +23,7 @@ print "\n";
 @files = sort { lc($a->[13]) cmp lc($b->[13]) } @$files;
 $d = $in{'dir'} eq '/' ? '' : $in{'dir'};
 foreach $f (@files) {
-	my $fil = &file_info_line($server, "$d/$f->[13]", $f);
+	my $fil = &file_info_line($server, $f->[13], $f);
 	print "$fil\n" if (defined($fil));
 	}
 
