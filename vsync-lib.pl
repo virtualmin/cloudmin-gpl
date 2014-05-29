@@ -378,6 +378,9 @@ if ($info->{'minfo'}->{'version'} >= 3.89) {
 	}
 push(@rargs, [ "option", "dir delete 1" ]);
 my ($err, $out) = &call_virtualmin_api($dest, "restore-domain", \@rargs);
+if (!$err && $out =~ /Restore\s+failed/) {
+	$err = $out;
+	}
 if ($err) {
 	return ( 0, $err, $dest->{'host'} );
 	}
