@@ -4291,6 +4291,7 @@ kvms_startheader=Add host system
 kvms_starthost=Host system to add:
 kvms_start=Start Adding Host
 kvms_alladded=Add possible host systems have already been added. Use the <a href='$1'>Add Physical System</a> page to register additional hosts.
+kvms_alladded2=Add possible host systems have already been added, and registration of physical systems has been disabled on your system! You must first re-enable this on the <a href='$1'>Cloudmin Configuration</a> page.
 kvms_ram=RAM usage
 kvms_disk=Disk usage
 
@@ -5456,3 +5457,43 @@ filemanager_title=File Manager
 filemanager_esearch=Searches can only be done on running systems
 filemanager_eextract=Archive extraction can only be done on running systems
 filemanager_nojava=The feature requires Java to function, but your browser does not support Java.
+
+gce_typedesc=Google Compute Engine
+gce_createlink=Create GCE Instance
+gce_addlink=Add GCE Instance
+gce_typeshort=GCE
+gce_scan=Find GCE Instances
+
+gces_title=GCE Projects
+gces_project=Project name
+gces_account=Google account
+gces_none=You have not entered any Google Compute Engine projects yet.
+gces_add=Add a GCE project.
+gces_return=GCE projects list
+gces_delete=Delete Selected Projects
+gces_def=Default?
+gces_setdef=Change Default Projects
+
+gce_create=Add GCE Project
+gce_edit=Edit GCE Project
+gce_header=Google compute engine details
+gce_account=Google account
+gce_project=Project name
+gce_apikey=API key
+gce_egone=This GCE project no longer exists!
+gce_err=Failed to save GCE project 
+gce_derr=Failed to delete GCE project
+gce_eused=This project is being used by $1 managed servers. It cannot be removed unless they are delete or de-registered.
+gce_eused2=This project is being used by auto-scaling group $1. It cannot be removed until the group is deleted.
+gce_eaccount=Missing or invalid Google account. This is typically an email address, like example@gmail.com
+gce_instances=Running instance IDs
+gce_none=None found
+gce_domain=Add GCE instances to DNS domain
+
+dgces_err=Failed to delete GCE projects
+dgces_enone=None selected
+dgces_egone=One of the projects no longer exists!
+dgces_eusers=The project $1 is being used by $2 managed servers. It cannot be removed unless they are delete or de-registered.
+dgces_eusers2=The project $1 is being used by auto-scaling group $2. It cannot be removed unless the group is deleted.
+dgces_edefault=No new default project selected
+

@@ -41,6 +41,7 @@ push(@INC, $server_manager_root);
 				      "openvz",
 				      "lxc",
 				      "ec2",
+				      "gce",
 				      "this",
 				    );
 foreach my $smt (@possible_server_management_types) {
@@ -10216,8 +10217,14 @@ my @leftservers = grep { !$currmap{$_->{'id'}} &&
 			 &can_ssh_status($_) } @$canservers;
 if (!@leftservers) {
 	if (@$servers) {
-		print "<b>",&text('kvms_alladded',
-				  'add_form.cgi?type=real'),"</b><p>\n";
+		if ($config{'show_real'}) {
+			print "<b>",&text('kvms_alladded',
+					  'add_form.cgi?type=real'),"</b><p>\n";
+			}
+		else {
+			print "<b>",&text('kvms_alladded2',
+				  "../config.cgi?module=$module_name"),"</b><p>\n";
+			}
 		}
 	return;
 	}
