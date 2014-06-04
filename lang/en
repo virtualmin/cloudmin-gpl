@@ -5498,6 +5498,11 @@ gce_newoauth=OAuth2 code from Google:
 gce_eoauth=Missing or invalid OAuth2 code
 gce_oauth=OAuth2 code from Goolge
 gce_oauthnone=None set yet - save this project to be prompted for a code
+gce_etoken=Failed to get access token from OAuth2 code : $1
+gce_secret=Google OAuth2 client secret
+gce_esecret=Missing or invalid-lookup client secret - this can be found on the <a href='$1'>Google Developers Console</a>.
+gce_token=Google access token
+gce_tokennone=None obtained yet - save this project to have Cloudmin fetch one
 
 dgces_err=Failed to delete GCE projects
 dgces_enone=None selected
