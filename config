@@ -7,6 +7,7 @@ show_citrix=1
 show_vserver=1
 show_zones=1
 show_ec2=1
+show_gce=1
 show_openvz=1
 show_lxc=1
 image_owners=amazon 093590521311

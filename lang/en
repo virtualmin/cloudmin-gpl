@@ -2799,6 +2799,7 @@ cat_res=Resources
 cat_power=System State
 cat_manage=System Operations
 cat_ec2=Amazon EC2
+cat_gce=Google Compute Engine
 cat_settings=Cloudmin Settings
 cat_storage=System Storage
 cat_owners=Virtual System Owners
@@ -5489,6 +5490,14 @@ gce_eaccount=Missing or invalid Google account. This is typically an email addre
 gce_instances=Running instance IDs
 gce_none=None found
 gce_domain=Add GCE instances to DNS domain
+gce_clientid=Google OAuth2 client ID
+gce_eclientid=Missing or invalid-looking OAuth2 client ID - this can be found on the <a href='$1'>Google Developers Console</a>.
+gce_descoauth=Before this GCE project can be used by Cloudmin, you must first authorize access to it by clicking on the link below. After logging into your Google account and authorizing access, a code will be displayed that you can enter into the text box below.
+gce_openoauth=Begin OAuth2 Enrollment
+gce_newoauth=OAuth2 code from Google:
+gce_eoauth=Missing or invalid OAuth2 code
+gce_oauth=OAuth2 code from Goolge
+gce_oauthnone=None set yet - save this project to be prompted for a code
 
 dgces_err=Failed to delete GCE projects
 dgces_enone=None selected
