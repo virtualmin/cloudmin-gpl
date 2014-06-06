@@ -955,7 +955,7 @@ else {
 # Validate swap flag
 $server->{'kvm_disktotal'} = 0;
 if (!$empty) {
-        if ($args->{'swap'}) {
+        if ($args->{'swap'} ne '') {
                 $args->{'swap'} =~ /^\d+$/ ||
                         return "Non-numeric swap allocation";
                 $server->{'kvm_swap'} = $args->{'swap'};
@@ -1786,6 +1786,7 @@ if (!@setgws6 && $defgw6) {
 	}
 
 # If root disk is on iSCSI, disconnect and re-connect
+&remote_finished();
 my $disks = &type_kvm_list_disks($server, 0);
 if (ref($disks) && $disks->[0]->{'iscsi_server'} ne '') {
 	&$first_print($text{'create_iscsireconnect'});
