@@ -5511,3 +5511,8 @@ dgces_eusers=The project $1 is being used by $2 managed servers. It cannot be re
 dgces_eusers2=The project $1 is being used by auto-scaling group $2. It cannot be removed unless the group is deleted.
 dgces_edefault=No new default project selected
 
+gimages_title=GCE Images
+
+gaddresses_title=GCE Addresses
+
+gdisks_title=GCE Disks
