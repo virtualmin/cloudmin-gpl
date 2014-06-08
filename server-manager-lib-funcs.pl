@@ -322,7 +322,8 @@ elsif ($mode == 1) {
 	@rv = sort { $a->{'host'} cmp $b->{'host'} } @rv;
 	foreach my $s (grep { $_->{'manager'} eq 'this' ||
 			      $_->{'manager'} eq 'real' ||
-			      $_->{'manager'} eq 'ec2' } @rv) {
+			      $_->{'manager'} eq 'ec2' ||
+			      $_->{'manager'} eq 'gce' } @rv) {
 		# First level (real or EC2)
 		push(@newrv, $s);
 		foreach my $cs (&list_child_servers($s, \@rv)) {
@@ -3822,7 +3823,8 @@ foreach my $p (&is_parent_server($server)) {
 # returns internal IPs
 if ((!$server->{'ip_addresses'} ||
      !defined($server->{'mac_addresses'}) || $regen) &&
-    $server->{'manager'} ne 'ec2') {
+    $server->{'manager'} ne 'ec2' &&
+    $server->{'manager'} ne 'gce') {
 	&compute_ip_addresses($server);
 	}
 

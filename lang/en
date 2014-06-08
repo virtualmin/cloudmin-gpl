@@ -172,6 +172,8 @@ add_citrixhost=Citrix Xen hosting system
 add_citrixinstance=Citrix Xen VM
 add_ecitrixinstance=No Citrix Xen VM name entered
 add_ecitrixinstance2=The selected Citrix Xen VM does not exist on $1
+add_gceproject=GCE project
+add_gceinstance=GCE instance name
 
 create_title=Create New System
 create_title2=Create Empty System
@@ -5503,6 +5505,9 @@ gce_secret=Google OAuth2 client secret
 gce_esecret=Missing or invalid-lookup client secret - this can be found on the <a href='$1'>Google Developers Console</a>.
 gce_token=Google access token
 gce_tokennone=None obtained yet - save this project to have Cloudmin fetch one
+gce_einstance=Missing or invalid-looking instance name
+gce_einstance2=The instance name was not found under the selected account
+gce_einstanceclash=The managed server $1 is already using this instance name
 
 dgces_err=Failed to delete GCE projects
 dgces_enone=None selected
