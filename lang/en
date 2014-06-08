@@ -5508,6 +5508,10 @@ gce_tokennone=None obtained yet - save this project to have Cloudmin fetch one
 gce_einstance=Missing or invalid-looking instance name
 gce_einstance2=The instance name was not found under the selected account
 gce_einstanceclash=The managed server $1 is already using this instance name
+edit_gceinstance=GCE instance name
+edit_gceproject=GCE project name
+edit_gceimage=Created from GCE image
+edit_gcezone=GCE zone
 
 dgces_err=Failed to delete GCE projects
 dgces_enone=None selected
@@ -5521,3 +5525,14 @@ gimages_title=GCE Images
 gaddresses_title=GCE Addresses
 
 gdisks_title=GCE Disks
+
+gchooser_title=Select GCE Instance
+gchooser_elogin=GCE login failed : $1
+gchooser_enone=The selected project has no associated running instances
+gchooser_id=Instance name
+gchooser_zone=GCE zone
+gchooser_state=State
+gchooser_unuse=<font color=#ff0000>Managed host $1</font>
+gchooser_free=Not yet managed
+gchooser_search=Find images matching:
+gchooser_ok=Search
