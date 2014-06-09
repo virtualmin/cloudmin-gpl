@@ -629,6 +629,11 @@ create_ekvmcores3=Number of CPUs must be a multiple of the number of cores
 create_einprogress=You already have another system creation in progress
 create_iscsireconnect=Refreshing iSCSI connection ..
 create_eiscsireconnect=.. re-connection failed : $1
+create_gceimage=GCE system image
+create_gcesize=GCE instance type
+create_gcezone=Create instance in zone
+create_gcezoneauto=Choose automatically
+
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -5508,6 +5513,8 @@ gce_tokennone=None obtained yet - save this project to have Cloudmin fetch one
 gce_einstance=Missing or invalid-looking instance name
 gce_einstance2=The instance name was not found under the selected account
 gce_einstanceclash=The managed server $1 is already using this instance name
+gce_ezone=Selected GCE zone does not exist
+
 edit_gceinstance=GCE instance name
 edit_gceproject=GCE project name
 edit_gceimage=Created from GCE image
