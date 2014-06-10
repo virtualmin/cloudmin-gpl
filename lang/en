@@ -5514,6 +5514,8 @@ gce_einstance=Missing or invalid-looking instance name
 gce_einstance2=The instance name was not found under the selected account
 gce_einstanceclash=The managed server $1 is already using this instance name
 gce_ezone=Selected GCE zone does not exist
+gce_eimage=Missing or invalid-looking GCE image name
+gce_eimage2=Selected GCE image does not exist
 
 edit_gceinstance=GCE instance name
 edit_gceproject=GCE project name
