@@ -9291,19 +9291,21 @@ return undef;
 sub get_provider_link
 {
 # Does this owner have a logo
-my ($logo, $link);
-($logo, $link) = ($access{'theme_image'}, $access{'theme_link'});
+my ($logo, $link, $alt) = ($access{'theme_image'}, $access{'theme_link'},
+			   $access{'theme_alt'});
 if (!$logo) {
         # Call back to global config
         $logo = $config{'theme_image'} || $gconfig{'vm2_theme_image'};
         $link = $config{'theme_link'} || $gconfig{'vm2_theme_link'};
+        $alt = $config{'theme_alt'} || $gconfig{'vm2_theme_alt'};
         }
 if ($logo && $logo ne "none") {
         my $html;
-        $html .= "<a href='$link' target=_new>" if ($link);
-        $html .= "<img src='$image' border=0>";
+        $html .= "<a href='".&html_escape($link)."' target=_blank>" if ($link);
+        $html .= "<img src='".&html_escape($image)."' ".
+                 "alt='".&html_escape($alt)."' border=0>";
         $html .= "</a>" if ($link);
-        return wantarray ? ( $html, $logo, $link ) : $html;
+        return wantarray ? ( $html, $logo, $link, $alt ) : $html;
         }
 else {
         return wantarray ? ( ) : undef;
