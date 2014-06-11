@@ -5538,6 +5538,7 @@ gdisks_title=GCE Disks
 gchooser_title=Select GCE Instance
 gchooser_elogin=GCE login failed : $1
 gchooser_enone=The selected project has no associated running instances
+gchooser_enone2=No images matching $1 were found.
 gchooser_id=Instance name
 gchooser_zone=GCE zone
 gchooser_state=State
@@ -5545,3 +5546,6 @@ gchooser_unuse=<font color=#ff0000>Managed host $1</font>
 gchooser_free=Not yet managed
 gchooser_search=Find images matching:
 gchooser_ok=Search
+gchooser_name=Image name
+gchooser_size=Size
+gchooser_desc=Description
