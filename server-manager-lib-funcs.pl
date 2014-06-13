@@ -8419,7 +8419,7 @@ $last_remote_error = undef;
 &remote_foreign_require($server, "virtual-server", "virtual-server-lib.pl");
 return undef if ($last_remote_error);
 my $updates = &remote_eval($server, "virtual-server",
-			'[ &list_script_upgrades([ &list_domains() ]) ]');
+  '[ &list_script_upgrades([ grep { !$_->{'disabled'} } &list_domains() ]) ]');
 &open_tempfile(SERIAL, ">".$tempbase.".".$server->{'id'});
 &print_tempfile(SERIAL, &serialise_variable($updates));
 &close_tempfile(SERIAL);
