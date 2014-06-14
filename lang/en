@@ -5497,6 +5497,7 @@ gce_eaccount=Missing or invalid Google account. This is typically an email addre
 gce_instances=Running instance IDs
 gce_none=None found
 gce_domain=Add GCE instances to DNS domain
+gce_zone=Default GCE zone for new instances
 gce_clientid=Google OAuth2 client ID
 gce_eclientid=Missing or invalid-looking OAuth2 client ID - this can be found on the <a href='$1'>Google Developers Console</a>.
 gce_descoauth=Before this GCE project can be used by Cloudmin, you must first authorize access to it by clicking on the link below. After logging into your Google account and authorizing access, a code will be displayed that you can enter into the text box below.
