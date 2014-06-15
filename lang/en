@@ -633,7 +633,7 @@ create_gceimage=GCE system image
 create_gcesize=GCE instance type
 create_gcezone=Create instance in zone
 create_gcezoneauto=Choose automatically
-
+create_gcenetwork=Connect instance to network
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -5515,6 +5515,7 @@ gce_einstance=Missing or invalid-looking instance name
 gce_einstance2=The instance name was not found under the selected account
 gce_einstanceclash=The managed server $1 is already using this instance name
 gce_ezone=Selected GCE zone does not exist
+gce_enetwork=Selected GCE network does not exist
 gce_eimage=Missing or invalid-looking GCE image name
 gce_eimage2=Selected GCE image does not exist
 
@@ -5550,3 +5551,9 @@ gchooser_ok=Search
 gchooser_name=Image name
 gchooser_size=Size
 gchooser_desc=Description
+
+nchooser_title=Select GCE Network
+nchooser_name=Network name
+nchooser_iprange=IP range
+nchooser_desc=Description
+nchooser_enone=No GCE networks found for this project!
