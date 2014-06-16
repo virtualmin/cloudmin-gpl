@@ -634,6 +634,8 @@ create_gcesize=GCE instance type
 create_gcezone=Create instance in zone
 create_gcezoneauto=Choose automatically
 create_gcenetwork=Connect instance to network
+create_egceinstance=Could not find new GCE instance!
+create_egcestate=Instance is in un-expected state <tt>$1</tt>
 
 keys_title=SSH Keys
 keys_desc=Key description

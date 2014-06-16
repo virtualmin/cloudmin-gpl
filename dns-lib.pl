@@ -171,7 +171,7 @@ elsif ($rzone && $rzone->{'provision'}) {
 sub delete_bind8_record
 {
 my ($dnsname, $zonename, $ip) = @_;
-return 0 if (!$dnsname);
+return 0 if (!$dnsname || !$ip);
 &foreign_require("bind8", "bind8-lib.pl");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
