@@ -96,6 +96,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ssh-user") {
 		$ssh_user = shift(@ARGV);
 		}
+	elsif ($a eq "--ssh-sudo") {
+		$ssh_sudo = 1;
+		}
+	elsif ($a eq "--no-ssh-sudo") {
+		$ssh_sudo = 0;
+		}
 	elsif ($a eq "--ssh-pass") {
 		$ssh_pass = shift(@ARGV);
 		}
@@ -314,6 +320,10 @@ if (defined($ssh_user)) {
 	$server->{'ssh_user'} = $ssh_user;
 	$recheck = 1;
 	}
+if (defined($ssh_sudo)) {
+	$server->{'ssh_sudo'} = $ssh_sudo;
+	$recheck = 1;
+	}
 if (defined($ssh_port)) {
 	$server->{'ssh_port'} = $ssh_port;
 	$recheck = 1;
@@ -416,6 +426,7 @@ print "                      [--os code]\n";
 print "                      [--virt | --novirt]\n";
 print "                      [--ssh-pass passsword | --ssh-key keyid]\n";
 print "                      [--ssh-user username]\n";
+print "                      [--ssh-sudo | --no-ssh-sudo]\n";
 print "                      [--ssh-port number | --default-ssh-port]\n";
 print "                      [--webmin-user user]\n";
 print "                      [--webmin-pass password]\n";

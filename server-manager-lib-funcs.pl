@@ -1607,6 +1607,9 @@ sub build_ssh_command
 {
 my ($server, $loud, $extra) = @_;
 my $sshcmd = "ssh".($loud ? "" : " -q")." -x -".$server->{'ssh_protocol'};
+if ($server->{'ssh_sudo'}) {
+	$sshcmd .= " -t";
+	}
 if ($server->{'key'}) {
 	my ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
@@ -1618,6 +1621,9 @@ if ($server->{'ssh_port'}) {
 $sshcmd .= " ".$extra if ($extra);
 $sshcmd .= &ssh_command_args($server);
 $sshcmd .= " $server->{'ssh_user'}\@".($server->{'ip'} || $server->{'host'});
+if ($server->{'ssh_sudo'}) {
+	$sshcmd .= " sudo";
+	}
 return $sshcmd;
 }
 
@@ -9899,10 +9905,11 @@ print &ui_table_row($text{'add_protocol'},
 	&ui_radio("protocol", $server ? $server->{'ssh_protocol'} : 2,
 		  [ [ 2 ], [ 1 ] ]));
 
-# Root login
+# SSH login
 print &ui_table_row($text{'add_user'},
 	&ui_textbox("uuser", $server ? $server->{'ssh_user'} : "root",
-		    20, 0, undef, "autocomplete=off"));
+		    20, 0, undef, "autocomplete=off")." ".
+	&ui_checkbox("usudo", 1, $text{'add_sudo'}, $server->{'ssh_sudo'}));
 
 # SSH port number
 print &ui_table_row($text{'add_sshport'},
@@ -9923,6 +9930,7 @@ my $must_pass = !&can_action(undef, "sshkeys") &&
 
 $in->{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i || return $text{'add_euuser'};
 $server->{'ssh_user'} = $in->{'uuser'};
+$server->{'ssh_sudo'} = $in->{'usudo'};
 if (!$in->{'uport_def'}) {
 	$in->{'uport'} =~ /^\d+$/ && $in->{'uport'} > 0 &&
 	    $in->{'uport'} < 65536 || return $text{'add_euport'};

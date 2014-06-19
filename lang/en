@@ -127,6 +127,7 @@ add_collecting=Enabling background status collection ..
 add_ecollect=.. failed : $1
 add_ssl=Use SSL to connect to Webmin
 add_protocol=SSH protocol version
+add_sudo=Sudo to root
 add_port=Webmin port
 add_eport=Missing or non-numeric Webmin port
 add_desc=System description
