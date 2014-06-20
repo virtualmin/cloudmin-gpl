@@ -1142,9 +1142,15 @@ if (defined(&$sfunc)) {
 	}
 
 # Need to really SSH
-my $cmd = &build_ssh_command($server, 1);
 my $timeout = int($config{'ssh_timeout'}) || 30;
-$cmd .= " 'grep ^root= /etc/webmin/miniserv.conf ; grep ^port= /etc/webmin/miniserv.conf ; grep ^ssl= /etc/webmin/miniserv.conf ; id -a ; echo HOSTNAME ; hostname ; echo OK'";
+my $cmd = &build_ssh_command($server, 1, undef, 
+		"grep ^root= /etc/webmin/miniserv.conf ; ".
+		"grep ^port= /etc/webmin/miniserv.conf ; ".
+		"grep ^ssl= /etc/webmin/miniserv.conf ; ".
+		"id -a ; ".
+		"echo HOSTNAME ; ".
+		"hostname ; ".
+		"echo OK");
 my ($status, $out) = &run_ssh_command($cmd, $server->{'ssh_pass'}, $timeout);
 if ($status == 0) {
 	# Connected OK .. check the output to see if we have Webmin
@@ -1389,13 +1395,9 @@ elsif ($server->{'ssh_nologin'}) {
 	}
 else {
 	# Just run via SSH
-	my $sshcmd = &build_ssh_command($server);
 	if ($leave) {
-		$sshcmd .= " -t";	# Force allocation of pty
+		$extraflags .= " -t";	# Force allocation of pty
 		$cmd = "echo SERVER_MANAGER_LOGIN_DONE ; $cmd";
-		}
-	if ($extraflags) {
-		$sshcmd .= " ".$extraflags;
 		}
 	if (!$nolang && $server->{'root_shell'}) {
 		# Force all output to be in english
@@ -1413,7 +1415,7 @@ else {
 		# Shell is not bash .. force use of sh
 		$cmd = "exec /bin/sh -c ".quotemeta($cmd);
 		}
-	$sshcmd .= " ".quotemeta($cmd);
+	my $sshcmd = &build_ssh_command($server, 0, $extraflags, $cmd);
 	my ($status, $out, $fh, $fpid, $ex) =
 	    &run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout,
 			     $leave ? "SERVER_MANAGER_LOGIN_DONE" : undef);
@@ -1455,9 +1457,9 @@ if ($server->{'ssh_nologin'}) {
 
 if ($device) {
 	# Run dd on the server and capture output
-	my $sshcmd = &build_ssh_command($server);
-	$sshcmd .= " ".&dd_command($remotefile, undef)." | ".
-		   &dd_command(undef, $localfile);
+	my $sshcmd = &build_ssh_command($server, 0, undef,
+		&dd_command($remotefile, undef)." | ".
+		&dd_command(undef, $localfile));
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1601,11 +1603,11 @@ return $server->{'type'} eq 'windows' ||
        $server->{'type'} eq 'solaris' ? 0 : 1;
 }
 
-# build_ssh_command(&server, [no-quiet], [extra-ssh-args])
+# build_ssh_command(&server, [no-quiet], [extra-ssh-args], [command-to-run])
 # Returns the base of an SSH comand for logging into some system
 sub build_ssh_command
 {
-my ($server, $loud, $extra) = @_;
+my ($server, $loud, $extra, $runcmd) = @_;
 my $sshcmd = "ssh".($loud ? "" : " -q")." -x -".$server->{'ssh_protocol'};
 if ($server->{'ssh_sudo'}) {
 	$sshcmd .= " -t";
@@ -1621,8 +1623,14 @@ if ($server->{'ssh_port'}) {
 $sshcmd .= " ".$extra if ($extra);
 $sshcmd .= &ssh_command_args($server);
 $sshcmd .= " $server->{'ssh_user'}\@".($server->{'ip'} || $server->{'host'});
-if ($server->{'ssh_sudo'}) {
+if ($server->{'ssh_sudo'} && $runcmd) {
+	$sshcmd .= " ".quotemeta("sudo sh -c ".quotemeta($runcmd));
+	}
+elsif ($server->{'ssh_sudo'}) {
 	$sshcmd .= " sudo";
+	}
+elsif ($runcmd) {
+	$sshcmd .= " ".quotemeta($runcmd);
 	}
 return $sshcmd;
 }
@@ -1761,8 +1769,8 @@ if ($server->{'ssh_nologin'}) {
 
 if ($device) {
 	# Run dd piped into SSH
-	my $sshcmd = &build_ssh_command($server);
-	$sshcmd .= " ".&dd_command(undef, $remotefile);
+	my $sshcmd = &build_ssh_command($server, 0, undef,
+			&dd_command(undef, $remotefile));
 	$sshcmd = &dd_command($localfile, undef)." | ".$sshcmd;
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
