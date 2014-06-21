@@ -60,6 +60,7 @@ index_resgroup=Showing $3 systems in group <tt>$1</tt>, out of $2 in total ..
 index_resparent=Showing $3 systems hosted on <tt>$1</tt>, out of $2 in total ..
 index_ressearch=Showing $3 systems matching <i>$1</i>, out of $2 in total ..
 index_resec2=Showing $3 systems run by EC2 account <tt>$1</tt>, out of $2 in total ..
+index_resgce=Showing $3 systems under GCE project <tt>$1</tt>, out of $2 in total ..
 index_resstatus=Showing $3 systems with status $1, out of $2 in total ..
 index_bindlink=(Add and manage DNS zones)
 index_savesearch=Set default search

@@ -41,7 +41,7 @@ if (!$main::cloudmin_no_create_links) {
 
 # Find all servers
 $searching = $in{'search'} || $in{'gok'} || $in{'pok'} || $in{'eok'} ||
-	     $in{'sok'};
+	     $in{'sok'} || $in{'cok'};
 $formno = 0;
 if (@allservers > $config{'display_max'} || $searching) {
 	# Too many! Show a search form
@@ -99,6 +99,10 @@ if (@servers) {
 		}
 	elsif ($in{'eok'}) {
 		push(@g, &text('index_resec2', &html_escape($ec2->{'account'}),
+			    scalar(@allservers), scalar(@servers)));
+		}
+	elsif ($in{'cok'}) {
+		push(@g, &text('index_resgce', &html_escape($gce->{'project'}),
 			    scalar(@allservers), scalar(@servers)));
 		}
 	elsif ($in{'sok'}) {

@@ -9646,7 +9646,7 @@ return &substitute_template($str, $hash);
 sub get_search_form_mode
 {
 my ($in) = @_;
-foreach my $i ('gok', 'pok', 'eok', 'sok', 'ook', 'ok') {
+foreach my $i ('gok', 'pok', 'eok', 'sok', 'ook', 'cok', 'ok') {
 	return $i if ($in->{$i});
 	}
 return undef;
@@ -9749,9 +9749,15 @@ elsif ($mode eq 'pok') {
 	}
 elsif ($mode eq 'eok') {
 	# Search by EC2 account
-	my ($ec2) = grep { $_->{'id'} == $in->{'esearch'} }
+	($ec2) = grep { $_->{'id'} == $in->{'esearch'} }
 		      &list_ec2_accounts();
 	return grep { $_->{'ec2'} == $in->{'esearch'} } @$servers;
+	}
+elsif ($mode eq 'cok') {
+	# Search by GCE project
+	($gce) = grep { $_->{'id'} == $in->{'esearch'} }
+		      &list_gce_projects();
+	return grep { $_->{'gce'} == $in->{'csearch'} } @$servers;
 	}
 elsif ($mode eq 'sok') {
 	# Search by status
