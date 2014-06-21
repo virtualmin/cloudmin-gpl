@@ -1609,8 +1609,8 @@ sub build_ssh_command
 {
 my ($server, $loud, $extra, $runcmd) = @_;
 my $sshcmd = "ssh".($loud ? "" : " -q")." -x -".$server->{'ssh_protocol'};
-if ($server->{'ssh_sudo'}) {
-	#$sshcmd .= " -t -t";
+if ($server->{'ssh_sudo'} && $extra !~ /-t/) {
+	$sshcmd .= " -t";
 	}
 if ($server->{'key'}) {
 	my ($key) = grep { $_->{'id'} == $server->{'key'} }
