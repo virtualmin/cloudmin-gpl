@@ -1290,7 +1290,7 @@ eval {
 		}
 	($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
-		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*Permission denied.*\n", "ssh: connect.*\n", "REMOTE HOST IDENTIFICATION", ".*\n", ".{80}", $leave ? ( $leave ) : ( ));
+		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*(Permission denied|sudo: sorry, you must have a tty to run sudo).*\n", "ssh: connect.*\n", "REMOTE HOST IDENTIFICATION", ".*\n", ".{80}", $leave ? ( $leave ) : ( ));
 		if ($rv == 0) {
 			# Need to supply password
 			syswrite($fh, "$pass\n");
@@ -1455,11 +1455,11 @@ if ($server->{'ssh_nologin'}) {
 	return "SSH logins are not available";
 	}
 
-if ($device) {
+if ($device || $server->{'ssh_sudo'}) {
 	# Run dd on the server and capture output
 	my $sshcmd = &build_ssh_command($server, 0, undef,
-		&dd_command($remotefile, undef)." | ".
-		&dd_command(undef, $localfile));
+		&dd_command($remotefile, undef))." | ".
+		&dd_command(undef, $localfile);
 	my ($status, $out) =
 		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
 	return $status ? $out : undef;
@@ -1610,7 +1610,7 @@ sub build_ssh_command
 my ($server, $loud, $extra, $runcmd) = @_;
 my $sshcmd = "ssh".($loud ? "" : " -q")." -x -".$server->{'ssh_protocol'};
 if ($server->{'ssh_sudo'}) {
-	$sshcmd .= " -t";
+	#$sshcmd .= " -t -t";
 	}
 if ($server->{'key'}) {
 	my ($key) = grep { $_->{'id'} == $server->{'key'} }
@@ -1767,7 +1767,7 @@ if ($server->{'ssh_nologin'}) {
 	return "SSH logins are not available";
 	}
 
-if ($device) {
+if ($device || $server->{'ssh_sudo'}) {
 	# Run dd piped into SSH
 	my $sshcmd = &build_ssh_command($server, 0, undef,
 			&dd_command(undef, $remotefile));
@@ -1822,6 +1822,18 @@ return $err;
 sub put_multiple_files_to_server
 {
 my ($server, $localfiles, $remotedir, $forcessh) = @_;
+if ($server->{'ssh_sudo'}) {
+	# Special case - cannot use scp, so cannot copy multiple files
+	my @errs;
+	foreach my $f (@$localfiles) {
+		$f =~ /\/([^\/]+)$/ || next;
+		my $remotef = $remotedir."/".$1;
+		my $err = &put_file_to_server($server, $f, $remotef, 0,
+					      $forcessh);
+		push(@errs, $err) if ($err);
+		}
+	return @errs ? join(" ", @errs) : undef;
+	}
 
 if (scalar(@$localfiles) > 1000) {
 	# Too many files for one scp command .. break up into chunks of 1000
