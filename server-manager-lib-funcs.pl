@@ -12946,7 +12946,8 @@ if ($size) {
 my $cmd = "dd".($in ? " if=".quotemeta($in) : "").
 	       ($out ? " of=".quotemeta($out) : "").
 	       " bs=$bs".
-	       ($size ? " count=$blocks" : "");
+	       ($size ? " count=$blocks" : "").
+	       " 2>/dev/null";
 return $cmd;
 }
 
