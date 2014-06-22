@@ -9934,7 +9934,7 @@ print &ui_table_row($text{'add_protocol'},
 # SSH login
 print &ui_table_row($text{'add_user'},
 	&ui_textbox("uuser", $server ? $server->{'ssh_user'} : "root",
-		    20, 0, undef, "autocomplete=off")." ".
+		    30, 0, undef, "autocomplete=off")." ".
 	&ui_checkbox("usudo", 1, $text{'add_sudo'}, $server->{'ssh_sudo'}));
 
 # SSH port number
