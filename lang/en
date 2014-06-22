@@ -638,6 +638,9 @@ create_gcezoneauto=Choose automatically
 create_gcenetwork=Connect instance to network
 create_egceinstance=Could not find new GCE instance!
 create_egcestate=Instance is in un-expected state <tt>$1</tt>
+create_egcetimeout=Operation did not complete after $1 seconds!
+create_sudotty=Allowing sudo access without a TTY ..
+create_esudotty=.. failed : $1. Some file transfer operations may not work!
 
 keys_title=SSH Keys
 keys_desc=Key description
