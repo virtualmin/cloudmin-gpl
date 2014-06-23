@@ -3415,6 +3415,14 @@ ec2scan_err=Failed to find EC2 instances
 ec2scan_doing=Searching for instances under account $1 ..
 ec2scan_failed=.. failed to list instances : $1
 
+gcescan_title=Find GCE Instances
+gcescan_header=GCE instance import details
+gcescan_auth=SSH login key
+gcescan_ok=Add Systems Under Project
+gcescan_err=Failed to find GCE instances
+gcescan_doing=Searching for instances under project $1 ..
+gcescan_failed=.. failed to list instances : $1
+
 find_title_xen=Find Xen Instances
 find_title_openvz=Find OpenVZ Containers
 find_title_kvm=Find KVM Instances
