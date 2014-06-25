@@ -5547,6 +5547,14 @@ dgces_eusers2=The project $1 is being used by auto-scaling group $2. It cannot b
 dgces_edefault=No new default project selected
 
 gimages_title=GCE Images
+gimages_name=Image name
+gimages_public=Public?
+gimages_desc=Description
+gimages_size=Size
+gimages_users=Used by systems
+gimages_delete=Delete Selected Images
+gimages_nonefound=No GCE images were found.
+gimages_nonefailed=Failed to list GCE images :
 
 gaddresses_title=GCE Addresses
 
