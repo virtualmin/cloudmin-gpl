@@ -1082,6 +1082,9 @@ edit_ec2subnetid=ID $1 in VPC $2
 edit_ec2newami=Create EC2 Image
 edit_ec2address=Assign EC2 Address
 edit_ec2attach=Attached EC2 Volumes
+edit_gcenewimage=Create GCE Image
+edit_gceaddress=Assign GCE Address
+edit_gceattach=Attached GCE Disks
 edit_webmin2=Open Webmin
 edit_webmin3=Link to Webmin
 edit_shell=Run Commands
@@ -5555,6 +5558,16 @@ gimages_users=Used by systems
 gimages_delete=Delete Selected Images
 gimages_nonefound=No GCE images were found.
 gimages_nonefailed=Failed to list GCE images :
+
+newgimage_title=Create GCE Image
+newgimage_desc=This page allows you to create a new GCE image from a running virtual system. The image can then be used to create new GCE instances.
+newgimage_header=New GCE image details
+newgimage_name=Image name
+newgimage_ok=Create Image
+newgimage_munge=Clear Virtualmin serial numbers?
+newgimage_err=Failed to create GCE image
+newgimage_eclash=A GCE image named $1 already exists
+newgimage_ename=Missing or invalid-looking image name
 
 gaddresses_title=GCE Addresses
 
