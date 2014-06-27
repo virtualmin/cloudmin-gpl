@@ -330,7 +330,9 @@ if ($vhost) {
 # Call any post-creation function
 $dfunc = "type_".$in{'type'}."_create_post";
 if (defined(&$dfunc)) {
+	print $text{'create_postconfig'},"<br>\n";
 	&$dfunc($server, $serial, $key);
+	print $text{'create_done'},"<p>\n";
 	}
 
 if (!$no_ssh && !$server->{'ssh_nologin'}) {

@@ -506,7 +506,9 @@ if ($vhost) {
 # Call any post-creation function
 $dfunc = "type_".$type."_create_post";
 if (defined(&$dfunc)) {
+	print "Performing post-creation configuration ..\n";
 	&$dfunc($server, $serial, $key);
+	print ".. done\n\n";
 	}
 
 if (!$no_ssh && !$no_sshlogin) {

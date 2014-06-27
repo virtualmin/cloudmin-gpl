@@ -247,6 +247,7 @@ create_created2=.. creation complete.
 create_waiting=Waiting for creation to complete ..
 create_ewait=.. creation failed : $1
 create_waited=.. creation has completed successfully.
+create_postconfig=Performing post-creation configuration ..
 create_sshing=Waiting for SSH login ..
 create_sshdone=.. SSH server ready.
 create_sshdone2=.. SSH server ready. Webmin was found in $1.
