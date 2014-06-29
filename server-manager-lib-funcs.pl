@@ -1940,7 +1940,7 @@ else {
 		}
 
 	# Just download to master and re-upload
-	if ($viamaster) {
+	if ($viamaster || $dest->{'ssh_sudo'}) {
 		goto VIAMASTER;
 		}
 
@@ -2473,7 +2473,7 @@ if (defined(&$dfunc)) {
 	# Use type-specific function call
 	my $rv = &$dfunc(@_);
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
-						# asked to fallback to scp
+						# asked to fallback to ssh
 	}
 
 # Just run rm via SSH
@@ -2494,7 +2494,7 @@ if (defined(&$rfunc)) {
 	# Use type-specific function call
 	my $rv = &$rfunc(@_);
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
-						# asked to fallback to scp
+						# asked to fallback to ssh
 	}
 
 # Just run mv via SSH
