@@ -2191,9 +2191,9 @@ if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	}
 elsif ($srcserver->{'id'} == 0) {
 	# Copying from Cloudmin master - run command piped into SSH
-	my $sshcmd = &build_ssh_command($destserver);
-	$sshcmd = "( ( $srccmd ) ; echo EXIT_STATUS: \$? 1>&2 ) | ".
-		  $sshcmd." ".quotemeta(&dd_command(undef, $dest));
+	my $sshcmd = &build_ssh_command($destserver, 0, undef,
+					&dd_command(undef, $dest));
+	$sshcmd = "( ( $srccmd ) ; echo EXIT_STATUS: \$? 1>&2 ) | ".$sshcmd;
 	my ($status, $out) = &run_ssh_command($sshcmd,
 					      $destserver->{'ssh_pass'});
 	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
@@ -2204,8 +2204,8 @@ elsif ($srcserver->{'id'} == 0) {
 	}
 elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - run SSH command outputting to file
-	my $sshcmd = &build_ssh_command($srcserver);
-	$sshcmd = "( $sshcmd ".quotemeta($srccmd)." ; ".
+	my $sshcmd = &build_ssh_command($srcserver, 0, undef, $srccmd);
+	$sshcmd = "( $sshcmd ; ".
 		  "  echo EXIT_STATUS: \$? 1>&2 ) ".
 		  "| ".&dd_command(undef, $dest);
 	my ($status, $out) = &run_ssh_command($sshcmd,
@@ -2327,10 +2327,10 @@ if ($srcserver->{'id'} eq $destserver->{'id'}) {
 	}
 elsif ($srcserver->{'id'} == 0) {
 	# Copying from Cloudmin master - run command with SSH piped in
-	my $sshcmd = &build_ssh_command($destserver);
+	my $sshcmd = &build_ssh_command($destserver, 0, undef, $destcmd);
 	$sshcmd = "(".&dd_command($src, undef)." ; ".
 		  " echo EXIT_STATUS: \$? 1>&2) | ".
-		  $sshcmd." ".quotemeta($destcmd);
+		  $sshcmd;
 	my ($status, $out) = &run_ssh_command(
 				$sshcmd, $destserver->{'ssh_pass'});
 	if ($out =~ /EXIT_STATUS:\s+(\d+)/ && $1) {
@@ -2342,8 +2342,9 @@ elsif ($srcserver->{'id'} == 0) {
 elsif ($destserver->{'id'} == 0) {
 	# Copying to Cloudmin master - run SSH command outputting file piped
 	# into command
-	my $sshcmd = &build_ssh_command($srcserver);
-	$sshcmd = "( $sshcmd ".&dd_command($src, undef)." ; ".
+	my $sshcmd = &build_ssh_command($srcserver, 0, undef,
+					&dd_command($src, undef));
+	$sshcmd = "( $sshcmd ; ".
 		  " echo EXIT_STATUS: \$? 1>&2) | ".$destcmd;
 	my ($status, $out) = &run_ssh_command($sshcmd,
 					      $srcserver->{'ssh_pass'});
