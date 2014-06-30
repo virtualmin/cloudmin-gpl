@@ -3816,6 +3816,9 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		$server->{'kvm_disktotal'} -= $olddisk->{'size'};
 		$server->{'kvm_disktotal'} += $disk->{'size'};
 		}
+
+	# Invalidate LV cache for host, due to size change
+	delete($main::list_logical_cache{$vhost->{'id'}});
 	}
 
 # If this was the primary disk, update disk details in the VM
