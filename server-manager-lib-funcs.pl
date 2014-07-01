@@ -7716,12 +7716,9 @@ else {
 		push(@rv, { 'id' => 'refresh',
 			    'desc' => $text{'edit_refresh'},
 			    'cat' => '' });
-		if ($server->{'status'} eq 'virt' ||
-		    $server->{'status'} eq 'novirt') {
-			push(@rv, { 'id' => 'regen',
-				    'desc' => $text{'edit_regen'},
-				    'cat' => '' });
-			}
+		push(@rv, { 'id' => 'regen',
+			    'desc' => $text{'edit_regen'},
+			    'cat' => '' });
 		}
 	if (&can_action($server, "run")) {
 		push(@rv, { 'id' => 'shell',
