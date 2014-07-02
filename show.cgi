@@ -7,14 +7,23 @@ require './server-manager-lib.pl';
 $in{'id'} =~ s/\0.*$//;
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
-&can_action_error($server, "transfer");
-$err = &temp_mount_filesystem_if_needed($server);
-&error($err) if ($err);
+if (!&can_error($server, "transfer")) {
+	$err = "You are not allowed to transfer files";
+	}
+else {
+	$err = &temp_mount_filesystem_if_needed($server);
+	}
+
+if ($err) {
+	print "Content-type: text/plain\n\n";
+	print $err,"\n";
+	return;
+	}
 
 use POSIX;
 $p = $ENV{'PATH_INFO'};
 ($p =~ /^\s*\|/ || $p =~ /\|\s*$/ || $p =~ /\0/) &&
-	&error_exit($text{'view_epathinfo'});
+	&error($text{'view_epathinfo'});
 if ($in{'type'}) {
 	# Use the supplied content type
 	$type = $in{'type'};
@@ -65,7 +74,11 @@ if ($in{'test'}) {
 # Download the file
 $temp = &transname();
 $err = &get_file_from_server($server, $p, $temp);
-&error($err) if ($err);
+if ($err) {
+	print "Content-type: text/plain\n\n";
+	print $err,"\n";
+	return;
+	}
 @st = stat($temp);
 
 # Read and print it
