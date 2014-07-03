@@ -139,7 +139,7 @@ return $action =~ /startup|shutdown|reboot|boot|console/ ? 'power' :
        $action =~ /ips|ifaces|realifaces|reverse/ ? 'ips' :
        $action =~ /limits|vcpus|ioclass|rate|disks|devices|graph|storage|mount/ ? 'limits' :
        $action =~ /domains|script|webmin|virtualmin/ ? 'virutalmin' :
-       $action =~ /run|pass|update|snapshot|groups|view|ssh|api/ ? 'manage' :
+       $action =~ /run|pass|update|snapshot|groups|view|ssh|api|transfer/ ? 'manage' :
 	 undef;
 }
 
@@ -148,6 +148,10 @@ return $action =~ /startup|shutdown|reboot|boot|console/ ? 'power' :
 sub can_action
 {
 my ($server, $action) = @_;
+if ($action eq "transfer") {
+	# Deprecated, now always allowed
+	return wantarray ? ( 1, undef ) : 1;
+	}
 if (!$access{'owner'}) {
 	# Master admin can do anything
 	return wantarray ? ( 1, undef ) : 1;

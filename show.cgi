@@ -7,7 +7,7 @@ require './server-manager-lib.pl';
 $in{'id'} =~ s/\0.*$//;
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
-if (!&can_error($server, "transfer")) {
+if (!&can_action($server, "transfer")) {
 	$err = "You are not allowed to transfer files";
 	}
 else {
