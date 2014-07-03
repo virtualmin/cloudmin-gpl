@@ -245,6 +245,18 @@ if ($multi) {
 			      ($s->{'ssl'} ? "Yes" : "No"),"\n";
 			}
 
+		# Graphical console login
+		$cfunc = "type_".$s->{'manager'}."_can_graphical_password";
+		if (defined(&$cfunc) && &$cfunc($s)) {
+			$gfunc = "type_".$s->{'manager'}.
+			         "_get_graphical_password";
+			$pass = &$gfunc($s);
+			if ($pass) {
+				print "    Graphical console password: ",
+				      $pass,"\n";
+				}
+			}
+
 		# In fast mode, skip all other expensive status fields
 		next if ($multi == 2);
 
