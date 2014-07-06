@@ -5591,6 +5591,9 @@ gdisks_source=Disk contents
 gdisks_source0=Empty disk
 gdisks_source1=From image
 gdisks_source2=From snapshot
+gdisks_derr=Failed to delete GCE disks
+gdisks_eproject=Project does not exist!
+gdisks_edisk=Disk does not exist!
 
 gchooser_title=Select GCE Instance
 gchooser_elogin=GCE login failed : $1
