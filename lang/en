@@ -5573,6 +5573,24 @@ newgimage_ename=Missing or invalid-looking image name
 gaddresses_title=GCE Addresses
 
 gdisks_title=GCE Disks
+gdisks_disks=Disks
+gdisks_snaps=Snapshots
+gdisks_delete=Delete Selected Disks
+gdisks_name=Disk name
+gdisks_zone=Zone
+gdisks_project=Project
+gdisks_size=Disk size
+gdisks_user=Used by
+gdisks_dnone=No GCE disks have been created yet!
+gdisks_dheader=Create GCE Disk
+gdisks_project2=Owned by project
+gdisks_size2=Disk size
+gdisks_sizedef=From image or snapshot
+gdisks_zone2=Create in zone
+gdisks_source=Disk contents
+gdisks_source0=Empty disk
+gdisks_source1=From image
+gdisks_source2=From snapshot
 
 gchooser_title=Select GCE Instance
 gchooser_elogin=GCE login failed : $1
