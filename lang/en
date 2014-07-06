@@ -5594,6 +5594,9 @@ gdisks_source2=From snapshot
 gdisks_derr=Failed to delete GCE disks
 gdisks_eproject=Project does not exist!
 gdisks_edisk=Disk does not exist!
+gdisks_rusure=Are you sure you want to delete the $1 selected disks, totalling $2? Data on them will be lost forever.
+gdisks_enone=No disks to delete selected!
+gdisks_dok=Delete Disks Now
 
 gchooser_title=Select GCE Instance
 gchooser_elogin=GCE login failed : $1
