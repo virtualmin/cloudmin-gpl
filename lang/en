@@ -5607,6 +5607,7 @@ gdisks_esize=Missing or non-numeric disk size
 gdisks_creating=Creating GCE disk named $1 ..
 gdisks_createerr=.. creation failed : $1
 gdisks_eimage=Selected image does not exist
+gdisks_esnapshot=Selected snapshot does not exist
 
 gchooser_title=Select GCE Instance
 gchooser_title2=Select GCE Image
