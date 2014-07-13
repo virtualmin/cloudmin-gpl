@@ -5608,6 +5608,11 @@ gdisks_creating=Creating GCE disk named $1 ..
 gdisks_createerr=.. creation failed : $1
 gdisks_eimage=Selected image does not exist
 gdisks_esnapshot=Selected snapshot does not exist
+gdisks_sname=Snapshot name
+gdisks_desc=Snapshot description
+gdisks_nosnap=You cannot create a snapshot unless at least once disk exists to copy it from.
+gdisks_sheader=Create GCE Snapshot
+gdisks_snapdisk=Copy from disk
 
 gchooser_title=Select GCE Instance
 gchooser_title2=Select GCE Image
