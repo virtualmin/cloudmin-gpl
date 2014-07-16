@@ -2,6 +2,7 @@
 # Upgrade from Cloudmin GPL to Pro
 
 require './server-manager-lib.pl';
+$access{'owner'} && &error($text{'upgrade_ecannot'});
 &foreign_require("webmin", "webmin-lib.pl");
 &foreign_require("cron", "cron-lib.pl");
 &error_setup($text{'upgrade_err'});

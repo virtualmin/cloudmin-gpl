@@ -7479,7 +7479,7 @@ if ($access{'owner'} && $config{'show_pass'}) {
 	push(@gcats, "settings");
 	}
 
-if (!$cloudmin_pro) {
+if (!$cloudmin_pro && !$access{'owner'}) {
 	# Upgrade link
 	push(@glinks, "upgrade_form.cgi");
 	push(@gtitles, $text{'upgrade_title'});
