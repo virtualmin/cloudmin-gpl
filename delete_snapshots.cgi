@@ -8,7 +8,7 @@ require './server-manager-lib.pl';
 # Get the server
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
-&can_action_error($server, "snapshots");
+&can_action_error($server, "snapshot");
 
 # Validate inputs
 @d = split(/\0/, $in{'d'});

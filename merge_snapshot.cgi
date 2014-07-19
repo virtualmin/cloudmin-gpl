@@ -7,7 +7,7 @@ require './server-manager-lib.pl';
 # Get the server and snapshot
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
-&can_action_error($server, "snapshots");
+&can_action_error($server, "snapshot");
 $snaps = &list_snapshots($server); 
 ref($snaps) || &error(&text('snapshots_elist', $snaps));
 ($snapshot) = grep { $_->{'id'} eq $in{'snapid'} } @$snaps;
