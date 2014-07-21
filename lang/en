@@ -5621,6 +5621,7 @@ gdisks_nosnap=You cannot create a snapshot unless at least once disk exists to c
 gdisks_sheader=Create GCE Snapshot
 gdisks_snapdisk=Copy from disk
 gdisks_err2=Failed to create GCE snapshot
+gdisks_esnapdisk=Disk to snapshot was not found!
 
 gchooser_title=Select GCE Instance
 gchooser_title2=Select GCE Image
