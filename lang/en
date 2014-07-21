@@ -5583,6 +5583,7 @@ gdisks_project=Project
 gdisks_size=Disk size
 gdisks_user=Used by
 gdisks_dnone=No GCE disks have been created yet!
+gdisks_snone=No GCE snapshots have been created yet!
 gdisks_dheader=Create GCE Disk
 gdisks_project2=Owned by project
 gdisks_size2=Disk size
