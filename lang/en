@@ -5612,6 +5612,7 @@ gdisks_ename=Missing or invalid disk name
 gdisks_esizedef=Empty disks or disks created from an image must have a size
 gdisks_esize=Missing or non-numeric disk size
 gdisks_creating=Creating GCE disk named $1 ..
+gdisks_creating2=Creating GCE snapshot named $1 ..
 gdisks_createerr=.. creation failed : $1
 gdisks_eimage=Selected image does not exist
 gdisks_esnapshot=Selected snapshot does not exist
