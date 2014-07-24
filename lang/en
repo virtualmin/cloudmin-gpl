@@ -5607,6 +5607,7 @@ gdisks_deleting=Deleting GCE disk $1 ..
 gdisks_deleting2=Deleting GCE snapshot $1 ..
 gdisks_edelete=.. deletion failed : $1
 gdisks_return=list of GCE disks
+gdisks_return2=list of GCE snapshots
 gdisks_err=Failed to create GCE disk
 gdisks_ename=Missing or invalid disk name
 gdisks_esizedef=Empty disks or disks created from an image must have a size
