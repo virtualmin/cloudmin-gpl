@@ -5646,3 +5646,27 @@ nchooser_name=Network name
 nchooser_iprange=IP range
 nchooser_desc=Description
 nchooser_enone=No GCE networks found for this project!
+
+gattach_title=Attached GCE Disks
+gattach_delete=Detach Selected Disks
+gattach_name=Disk name
+gattach_size=Size
+gattach_device=Device path
+gattach_dir=Mount point
+gattach_none=No GCE disks have been attached to this system yet.
+gattach_evols=GCE disks cannot be attached to this system, has none have been created under its project yet.
+gattach_evols2=Use the <a href='$1'>GCE Disks</a> page to create some.
+gattach_header=Disk attachment options
+gattach_avolume=Disk to attach
+gattach_adevice=Device file path
+gattach_auto=Decide automatically
+gattach_nomount=Don't mount
+gattach_fs=Format with filesystem
+gattach_nofs=Don't format
+gattach_create=Attach GCE Disk
+gattach_nounmounts=All available disks are already attached to this system.
+gattach_nounmounts2=Use the <a href='$1'>GCE Disks</a> page to create a new one.
+gattach_mount=Mount on directory
+gattach_return=attached GCE disks
+
+
