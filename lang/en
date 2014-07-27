@@ -5669,4 +5669,10 @@ gattach_nounmounts=All available disks are already attached to this system.
 gattach_nounmounts2=Use the <a href='$1'>GCE Disks</a> page to create a new one.
 gattach_mount=Mount on directory
 gattach_return=attached GCE disks
-
+gattach_err=Failed to attach disk
+gattach_edisk=Disk does not exist!
+gattach_edevice=Invalid-looking device name
+gattach_emount=Mount point must be a full path
+gattach_doing=Attaching GCE disk $1 ..
+gattach_failed=.. attachment failed : $1
+gattach_done=.. attached successfully as $1
