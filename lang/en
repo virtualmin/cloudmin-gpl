@@ -642,6 +642,7 @@ create_egcestate=Instance is in un-expected state <tt>$1</tt>
 create_egcetimeout=Operation did not complete after $1 seconds!
 create_sudotty=Allowing sudo access without a TTY ..
 create_esudotty=.. failed : $1. Some file transfer operations may not work!
+create_gceother=Other image named ..
 
 keys_title=SSH Keys
 keys_desc=Key description
@@ -5657,7 +5658,7 @@ gattach_none=No GCE disks have been attached to this system yet.
 gattach_evols=GCE disks cannot be attached to this system, has none have been created under its project yet.
 gattach_evols2=Use the <a href='$1'>GCE Disks</a> page to create some.
 gattach_header=Disk attachment options
-gattach_avolume=Disk to attach
+gattach_adisk=Disk to attach
 gattach_adevice=Device file path
 gattach_auto=Decide automatically
 gattach_nomount=Don't mount
@@ -5668,5 +5669,4 @@ gattach_nounmounts=All available disks are already attached to this system.
 gattach_nounmounts2=Use the <a href='$1'>GCE Disks</a> page to create a new one.
 gattach_mount=Mount on directory
 gattach_return=attached GCE disks
-
 
