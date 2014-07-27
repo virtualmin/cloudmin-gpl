@@ -95,6 +95,7 @@ while(<FSTAB>) {
 	s/\r|\n//g;
 	s/#.*$//g;
 	my @r = split(/\s+/, $_);
+	next if (!@r);	# Empty line
 	if ($r[0] =~ /^dev\//) {
 		# Fix stupid dev/sdaX line
 		$r[0] = "/".$r[0];
@@ -136,6 +137,50 @@ sub sort_system_fstab
 {
 my @fstab = @_;
 return sort { length($a->[1]) <=> length($b->[1]) } @fstab;
+}
+
+# get_system_mounts(&server)
+# Returns an array ref containing entries from a system's mounted filesystems,
+# the same format as the regular file. Returns an error string on failure.
+sub get_system_mounts
+{
+my ($server) = @_;
+my (@rv, $mountcmd);
+
+my ($out, $ex, $err);
+if (&can_ssh_status($server)) {
+	# Use mount command
+	($out, $ex, $err) = &execute_command_on_server($server, "mount");
+	return $err if ($err);
+	return $out if ($ex);
+	$mountcmd = 1;
+	}
+else {
+	# Try the /etc/mtab file
+	($out, $err) = &get_file_data_from_server($server, "/etc/mtab");
+	return $err if ($err);
+	}
+
+# Parse the file
+local $_;
+foreach (split(/\r?\n/, $out)) {
+	s/\r|\n//g;
+	s/#.*$//g;
+	my @r = split(/\s+/, $_);
+	next if (!@r);	# Empty line
+	if ($r[0] =~ /^dev\//) {
+		# Fix stupid dev/sdaX line
+		$r[0] = "/".$r[0];
+		}
+	if ($mountcmd) {
+		# Mount command output has some extra columns
+		@r = ( $r[0], $r[2], $r[4], $r[5] );
+		$r[4] =~ s/^\((.*)\)$/$1/;
+		}
+	push(@rv, \@r);
+	}
+close(FSTAB);
+return \@rv;
 }
 
 # mount_device_filesystem(&server, directory, device, filesystem)
