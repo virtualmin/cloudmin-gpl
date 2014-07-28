@@ -3285,6 +3285,11 @@ cattach_nofs=.. volume's filesystem type is unknown
 cattach_nofstab2=.. could not write <tt>fstab</tt> file : $1
 cattach_nomount=.. added filesystem to <tt>fstab</tt> file, but failed to mount : $1
 cattach_fstabclash=.. the device $1 is already configured to be mounted on $2.
+cattach_parts=Checking for partitions on $1 ..
+cattach_eparts=.. failed to list partitions : $1
+cattach_emkpart=.. failed to create a partition : $1
+cattach_madepart=.. new partition added
+cattach_gotpart=.. a partition already exists
 
 vnc_title=Graphical Console
 vnc_ecannot=VNC console access is not enabled for this system
@@ -5683,3 +5688,4 @@ gattach_emissing=Disk does not exist
 gattach_ewronghost=Disk is not attached to this system!
 gattach_detaching=Detaching GCE disk $1 ..
 gattach_edetach=.. detach failed : $1
+gattach_notattached=.. attachment appeared to succeed, but the disk does not appear to be attached

@@ -289,12 +289,12 @@ return \@rv;
 }
 
 # create_disk_image_partition(&server, file, [number], [size], [make-label],
-#			      [bootable], [parted-type])
+#			      [bootable], [parted-type], [no-fs])
 # Creates a new partition on some empty disk image. If no partition number
 # is given, only the disk label is created.
 sub create_disk_image_partition
 {
-my ($vhost, $real, $num, $size, $make_label, $bootable, $ptype) = @_;
+my ($vhost, $real, $num, $size, $make_label, $bootable, $ptype, $nofs) = @_;
 $ptype ||= "ext2";
 
 if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
@@ -309,10 +309,11 @@ if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 
 	# Create a partition
 	if ($num) {
-		my $mbs = $size ? int($size/1000/1000) : undef;
+		my $mbs = $size ? int($size/1000/1000) : "100%";
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
 			"parted -s ".quotemeta($real).
-			($ptype eq "ufs" ? " mkpart " : " mkpartfs ").
+			($nofs ? " mkpart " :
+			 $ptype eq "ufs" ? " mkpart " : " mkpartfs ").
 			"primary $ptype 1 ".$mbs);
 		if ($ex || $err) {
 			return "Failed to create partition : ".($err || $out);
