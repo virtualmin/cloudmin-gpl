@@ -65,6 +65,16 @@ elsif ($type eq "disks") {
 	return &text('log_'.$action.'_disks', $object,
 		     &html_escape(join(" ", @reals)));
 	}
+elsif ($type eq "gdisk") {
+	# GCE disk operation
+	return &text('log_'.$action.'_gdisk', $object,
+		     &html_escape($p->{'host'}));
+	}
+elsif ($type eq "gdisks") {
+	# GCE disks operation
+	return &text('log_'.$action.'_gdisks', $object,
+		     &html_escape($p->{'host'}));
+	}
 elsif ($type eq "iface") {
 	# Network interface operation
 	return &text('log_'.$action.'_iface', $object,
