@@ -11688,7 +11688,7 @@ if ($server->{'type'} eq 'freebsd') {
 	}
 else {
 	# Always ethN on linux
-	return 'eth';
+	return $server->{'linux_iface_prefix'} || 'eth';
 	}
 }
 
