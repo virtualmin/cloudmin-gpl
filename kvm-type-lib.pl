@@ -5382,7 +5382,7 @@ if (&can_ssh_status($server) &&
 	$server->{'kvm_cgroup_support'} = 0;
 	if (&has_command_on_server($server, "cgcreate")) {
 		my $cpath;
-		foreach my $c ("/mnt/cgroups", "/cgroup") {
+		foreach my $c ("/mnt/cgroups", "/cgroup", "/sys/fs/cgroup") {
 			my @st = &stat_file_on_server($server, $c."/cpu");
 			if (@st > 1) {
 				$cpath = $c;
