@@ -4160,6 +4160,8 @@ log_create_gdisk=Created GCE disk $1
 log_attach_gdisk=Attached GCE disk $1 to system $2
 log_delete_gdisks=Deleted $1 GCE disks
 log_detach_gdisks=Detached $1 GCE disks from system $2
+log_create_gsnapshot=Created GCE snapshot $1
+log_delete_gsnapshots=Deleted $1 GCE snapshots
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system

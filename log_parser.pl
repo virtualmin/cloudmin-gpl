@@ -75,6 +75,16 @@ elsif ($type eq "gdisks") {
 	return &text('log_'.$action.'_gdisks', $object,
 		     &html_escape($p->{'host'}));
 	}
+elsif ($type eq "gsnapshot") {
+	# GCE snapshot operation
+	return &text('log_'.$action.'_gsnapshot', $object,
+		     &html_escape($p->{'host'}));
+	}
+elsif ($type eq "gsnapshots") {
+	# GCE snapshots operation
+	return &text('log_'.$action.'_gsnapshots', $object,
+		     &html_escape($p->{'host'}));
+	}
 elsif ($type eq "iface") {
 	# Network interface operation
 	return &text('log_'.$action.'_iface', $object,
