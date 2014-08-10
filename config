@@ -72,3 +72,4 @@ timezone_sync=1
 rs_endpoint=https://identity.api.rackspacecloud.com/v1.0
 rs_snet=0
 flash_vnc=1
+images_all=0
