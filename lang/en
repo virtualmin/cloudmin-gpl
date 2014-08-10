@@ -5572,6 +5572,8 @@ gimages_users=Used by systems
 gimages_delete=Delete Selected Images
 gimages_nonefound=No GCE images were found.
 gimages_nonefailed=Failed to list GCE images :
+gimages_allmode1=Show only latest images
+gimages_allmode2=Show all image versions
 
 newgimage_title=Create GCE Image
 newgimage_desc=This page allows you to create a new GCE image from a running virtual system. The image can then be used to create new GCE instances.
