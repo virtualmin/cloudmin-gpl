@@ -117,12 +117,14 @@ elsif ($in{'delete'}) {
 			}
 
 		# Ask if disks should be kept, if appropriate
-		$anydisks = 0;
+		$anykeep = 0;
 		foreach $s (@servers) {
 			$cfunc = "type_".$s->{'manager'}."_can_disks";
-			$anydisks++ if (defined(&$cfunc) && &$cfunc($s));
+			$kfunc = "type_".$s->{'manager'}."_can_keep";
+			$anykeep++ if (defined(&$cfunc) && &$cfunc($s) ||
+					defined(&$kfunc) && &$kfunc($s));
 			}
-		if (&can_action(\@servers, "devices") && $anydisks) {
+		if (&can_action(\@servers, "devices") && $anykeep) {
 		        print &ui_checkbox("keep", 1, $text{'save_deletekeep'},
 					   0),"<p>\n";
 			}

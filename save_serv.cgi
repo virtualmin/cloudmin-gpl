@@ -171,6 +171,9 @@ elsif ($in{'delete'}) {
 	if (!$in{'confirm'}) {
 		@doms = &get_server_domains($server);
 		$cfunc = "type_".$server->{'manager'}."_can_disks";
+		$kfunc = "type_".$server->{'manager'}."_can_keep";
+		$cankeep =  defined(&$cfunc) && &$cfunc($server) ||
+			     defined(&$kfunc) && &$kfunc($server);
 		&show_confirm_form(
 		    &text('save_deleterusure', "<tt>$server->{'host'}</tt>").
 		    (@doms ? "<p>".&text('save_deleterusure2',
