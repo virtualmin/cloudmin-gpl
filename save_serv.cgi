@@ -178,8 +178,7 @@ elsif ($in{'delete'}) {
 		    &text('save_deleterusure', "<tt>$server->{'host'}</tt>").
 		    (@doms ? "<p>".&text('save_deleterusure2',
 					 scalar(@doms)) : "").
-		    (&can_action($server, "devices") &&
-		     defined(&$cfunc) && &$cfunc($server) ?
+		    (&can_action($server, "devices") && $cankeep ?
 		        "<p>".&ui_checkbox("keep", 1,
 					   $text{'save_deletekeep'}, 0) : ""),
 		    "save_serv.cgi", [ [ "id", $in{'id'} ],
