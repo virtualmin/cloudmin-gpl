@@ -5574,18 +5574,10 @@ gimages_nonefound=No GCE images were found.
 gimages_nonefailed=Failed to list GCE images :
 gimages_allmode1=Show only latest images
 gimages_allmode2=Show all image versions
-
-newgimage_title=Create GCE Image
-newgimage_desc=This page allows you to create a new GCE image from a running virtual system. The image can then be used to create new GCE instances.
-newgimage_header=New GCE image details
-newgimage_name=Image name
-newgimage_ok=Create Image
-newgimage_munge=Clear Virtualmin serial numbers?
-newgimage_err=Failed to create GCE image
-newgimage_eclash=A GCE image named $1 already exists
-newgimage_ename=Missing or invalid-looking image name
-
-gaddresses_title=GCE Addresses
+gimages_header=GCE image creation options
+gimages_disk=Create image from disk
+gimages_desc=Image description
+gimages_ok=Create Image
 
 gdisks_title=GCE Disks
 gdisks_disks=Disks
