@@ -2330,6 +2330,8 @@ if ($server->{'ssh_nologin'} && $server->{'ssh_noping'}) {
 	}
 my $vhost = &type_kvm_parent($server);
 delete($kvm_check_login_procs_cache{$vhost->{'id'}});
+&find_qemu_kvm_command($vhost) ||
+	return (0, "KVM command was not found!");
 my $cmd = &get_kvm_start_command($server, 0, $extra, 0);
 my ($pinged, $sshed);
 
