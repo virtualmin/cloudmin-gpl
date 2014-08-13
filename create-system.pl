@@ -612,7 +612,8 @@ if (defined(&$dfunc)) {
 print "Refreshing status ..\n";
 &save_managed_server($server);
 &check_server_status($server, 1);
-if (!$server->{'type'} || $server->{'type'} eq 'unknown') {
+if ((!$server->{'type'} || $server->{'type'} eq 'unknown') &&
+    &can_ssh_status($server)) {
 	$server->{'type'} = &guess_os_type($server);
 	if ($server->{'type'}) {
 		&check_server_status($server);
