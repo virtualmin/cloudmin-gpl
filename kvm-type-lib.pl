@@ -924,6 +924,7 @@ my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
 if (&can_action(undef, "advanced")) {
 	my $models = join('|', map { $_->[0] } @{&type_kvm_list_models()});
 	push(@rv, { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1 },
+	 	  { 'name' => 'mac', 'value' => 'ethernet-address', 'opt' => 1 },
 		  { 'name' => 'virtio', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'model', 'value' => $models, 'opt' => 1 },
 		  { 'name' => 'start', 'value' => 'true|false', 'opt' => 1 },
@@ -1244,6 +1245,13 @@ if (&can_action(undef, "advanced")) {
 	else {
 		$server->{'kvm_virtio'} = $empty ? $config{'kvm_virtio'}
 						 : $img->{'kvm_virtio'};
+		}
+
+	# MAC address flag
+	if ($args->{'mac'}) {
+		$args->{'mac'} =~ /^([0-9a-f]{1,2}:)*[0-9a-f]{1,2}$/i ||
+			return "Invalid MAC address";
+		$server->{'kvm_mac'} = $args->{'mac'};
 		}
 
 	# Validate model flag
