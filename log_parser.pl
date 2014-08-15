@@ -85,6 +85,16 @@ elsif ($type eq "gsnapshots") {
 	return &text('log_'.$action.'_gsnapshots', $object,
 		     &html_escape($p->{'host'}));
 	}
+elsif ($type eq "gimage") {
+	# GCE image operation
+	return &text('log_'.$action.'_gimage', $object,
+		     &html_escape($p->{'host'}));
+	}
+elsif ($type eq "gimages") {
+	# GCE images operation
+	return &text('log_'.$action.'_gimages', $object,
+		     &html_escape($p->{'host'}));
+	}
 elsif ($type eq "iface") {
 	# Network interface operation
 	return &text('log_'.$action.'_iface', $object,
