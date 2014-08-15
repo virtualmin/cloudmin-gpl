@@ -209,6 +209,9 @@ else {
 	&$second_print(".. done");
 	}
 
+# Run pre-imaging script
+&run_system_script($server, 'before', 'image') || exit(4);
+
 $sfunc = "type_".$server->{'manager'}."_no_shutdown";
 $noshut = defined(&$sfunc) && &$sfunc($server);
 if ($server->{'status'} ne 'down' && !$noshut) {
@@ -308,6 +311,10 @@ if ($shutdown) {
 	&save_managed_server($server);
 	&$second_print(".. done");
 	}
+
+# Run post-imaging script
+&run_system_script($server, 'after', 'image');
+
 &release_lock_server($server);
 
 # Exit if image transfer failed, but only after cleanup is done
