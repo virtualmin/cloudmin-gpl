@@ -5592,6 +5592,7 @@ gimages_ename=Missing or invalid image name
 gimages_edisk=Selected disk does not exist!
 gimages_creating=Creating GCE image named $1 ..
 gimages_createerr=.. failed : $1
+gimages_return=list of GCE images
 
 gdisks_title=GCE Disks
 gdisks_disks=Disks
