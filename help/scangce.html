@@ -1,0 +1,38 @@
+<header>Find GCE Instances</header>
+
+If you have many systems running under GCE already, this page can be used
+to bring all instances owned by some project under Cloudmin's management. <p>
+
+The following fields are displayed on the form :
+
+<dl>
+<dt><b>GCE project</b>
+<dd>From this menu you must select the Google account and GCE project that
+    owns the instances to add.
+
+<dt><b>SSH login key</b>
+<dd>In order to manage a system, Cloudmin needs to remotely login to it via SSH.
+    GCE does not support logging in via a password, so this key must be 
+    already registered with GCE.
+
+<dt><b>SSH username</b>
+<dd>This must be either <tt>root</tt>, or a user who has permissions to
+    sudo to root.
+
+<dt><b>Webmin login mode</b>
+<dd>If Webmin or Virtualmin is already installed on the system being added,
+    you must select the correct authentication credentials in this section.
+    Since GCE instances always use keys for SSH, you must enter a login and
+    password for Webmin here. <br>
+    If Webmin is running in SSL mode, you will need to check the
+    <b>Use SSL to connect to Webmin</b> box. This is the default for most
+    installs, especially when Webmin is setup as part of the Virtualmin stack.
+
+<dt><b>Webmin port</b>
+<dd>If Webmin is running on the default port 10000, you can leave this field
+    un-changed. Otherwise, you must enter the correct port number.
+
+</dl>
+
+<footer>
+
