@@ -1,0 +1,59 @@
+<header>Create New System</header>
+
+This page allows you to create a new virtual system running on Google's
+GCE service. Unlike the other virtual system types supported by Cloudmin,
+it is not created on a host system owned by you or from one of the locally
+stored images - instead, it is created from an image provided by Google or
+yourself. <p>
+
+The fields on this form that need to be filled in to create a GCE instance
+are :<p>
+
+<dl>
+
+<dt><b>Internet hostname</b>
+<dd>The hostname that will be used by this instance, like <i>mymachine</i>.
+
+<dt><b>System description</b>
+<dd>A short human-readable description for this new virtual system, like 
+    <i>Webserver on GCE</i>.
+
+<dt><b>SSH key for root</b>
+<dd>New GCE instances are always only accessible via an SSH key, rather than
+    with a password.
+
+<include newlicence>
+
+<dt><b>Allow creation of Virtualmin domains?</b>
+<dd>This setting determines if the newly create system can have Virtualmin
+    domains added to it. Typically you will want to leave this set to
+    <b>Yes</b>.
+
+<dt><b>Update Virtualmin packages?</b>
+<dd>When this is set to <b>Yes</b> (as it is by default) and you are creating
+    a system from an AMI that includes Virtualmin Pro, all packages used by
+    Virtualmin will be updated to the latest available versions after creation
+    is complete.
+
+<dt><b>GCE project</b>
+<dd>If you have multiple GCE projects registered with Cloudmin, you must select
+    the one that will own this new instance from this menu.
+
+<dt><b>GCE system image</b>
+<dd>This menu lists all of the GCE images that you have created, and public
+    Linux images provided by Google.
+
+<dt><b>GCE instance size</b>
+<dd>The size of an instance determines how much RAM, CPU and local disk it
+    has available. Larger instances cost more per hour to run.
+
+</dl>
+
+When the <b>Create</b> button is clicked, Cloudmin will call the GCE API to
+start
+the creation process. Depending on the size of the image, this can take between
+1 and 5 minutes. The hostname of the newly created system will be just the IP
+assigned by Google, but can be changed later once you have added an entry for the same IP address to your own DNS domain. <p>
+
+<footer>
+
