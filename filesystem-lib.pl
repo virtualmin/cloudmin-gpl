@@ -409,14 +409,18 @@ elsif ($fs eq "ufs") {
 elsif ($fs eq "xfs") {
 	# Special XFS resize command only works
 	# on a mounted filesystem!
-	$cmd = "xfs_growfs";
+	my $mp = &tempname_on_server($vhost);
+	$cmd = "(mkdir -p ".quotemeta($mp)." && ".
+	       "mount -t xfs $dev $mp && ".
+	       "xfs_growfs";
 	if ($size) {
-		$cmd .= " -D ".int($size * 1024);
+		$cmd .= " -D ".int($size * 1024 * 1024 / 4096);
 		}
 	else {
 		$cmd .= " -d";
 		}
-	$cmd .= " ".quotemeta($dev);
+	$cmd .= " ".quotemeta($mp);
+	$cmd .= " ; umount $mp ; rmdir $mp)";
 	}
 return $cmd;
 }
