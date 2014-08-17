@@ -3656,7 +3656,7 @@ if ($disk->{'iscsi_ip'} && $disk->{'iscsi_connect'} &&
 my $resizefs;
 if ($disk->{'size'} != $olddisk->{'size'}) {
 	if ($disk->{'fs'} =~ /^ext\d+$/ || $disk->{'fs'} eq 'swap' ||
-            $disk->{'fs'} eq 'ufs') {
+            $disk->{'fs'} eq 'ufs' || $disk->{'fs'} eq 'xfs') {
 		$part || return "No partitions were found on the disk image!";
 		$disk->{'virt_part'} == scalar(@$parts) ||
 			return "Only the last partition on a disk image can ".

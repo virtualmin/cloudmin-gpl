@@ -409,6 +409,18 @@ elsif ($fs eq "ufs") {
 		$cmd .= " ".quotemeta($dev);
 		}
 	}
+elsif ($f eq "xfs") {
+	$cmd = "xfs_growfs";
+	if ($dev) {
+		if ($size) {
+			$cmd .= " -D ".int($size * 1024);
+			}
+		else {
+			$cmd .= " -d";
+			}
+		$cmd .= " ".quotemeta($dev);
+		}
+	}
 return $cmd;
 }
 
