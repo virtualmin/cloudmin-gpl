@@ -294,7 +294,7 @@ return \@rv;
 # is given, only the disk label is created.
 sub create_disk_image_partition
 {
-my ($vhost, $real, $num, $size, $make_label, $bootable, $ptype, $nofs) = @_;
+my ($vhost, $real, $num, $size, $make_label, $bootable, $ptype) = @_;
 $ptype ||= "ext2";
 
 if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
@@ -311,10 +311,8 @@ if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 	if ($num) {
 		my $mbs = $size ? int($size/1000/1000) : "100%";
 		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"parted -s ".quotemeta($real).
-			($nofs ? " mkpart " :
-			 $ptype eq "ufs" ? " mkpart " : " mkpartfs ").
-			"primary $ptype 1 ".$mbs);
+			"parted -s ".quotemeta($real)." ".
+			"mkpart primary $ptype 1 ".$mbs);
 		if ($ex || $err) {
 			return "Failed to create partition : ".($err || $out);
 			}
@@ -563,7 +561,7 @@ my ($vhost, $real, $fs, $pnum, $size) = @_;
 $pnum ||= 1;
 my $parts = &list_disk_image_partitions($vhost, $real);
 ref($parts) || return "Failed to list partitions on $real : $parts";
-$pnum <= @$parts || return "Requested partition $part, but disk only has ".
+$pnum <= @$parts || return "Requested partition $pnum, but disk only has ".
 			   scalar(@$parts)." partitions";
 my $part = $parts->[$pnum-1];
 $part || return "No partition $pnum found!";
