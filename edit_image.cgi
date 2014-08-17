@@ -67,6 +67,12 @@ if ($got && $got->{'format'}) {
 		$text{'mimage_fmt'.$got->{'format'}});
 	}
 
+# Filesystem
+if ($got && $got->{'fs'}) {
+	print &ui_table_row($text{'eimage_fs'},
+		$text{'fs_'.$got->{'fs'}} || uc($got->{'fs'}));
+	}
+
 # Status (available or not)
 print &ui_table_row($text{'eimage_status'},
 		    $got && $got->{'partial'} ?

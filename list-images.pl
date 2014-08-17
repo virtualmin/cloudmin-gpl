@@ -103,6 +103,9 @@ if ($multi) {
 		if ($i->{'format'}) {
 			print "    Format: $i->{'format'}\n";
 			}
+		if ($i->{'fs'}) {
+			print "    Filesystem: $i->{'fs'}\n";
+			}
 		print "    Compressed: ",
 		      ($i->{'nocompress'} ? "No" : "Yes"),"\n";
 		print "    Compressed size: $i->{'size'}\n";

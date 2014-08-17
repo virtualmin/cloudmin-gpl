@@ -263,6 +263,9 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 			exit(3);
 			}
 		}
+	if (@$disks && $disks->[0]->{'fs'}) {
+		$image->{'fs'} = $disks->[0]->{'fs'};
+		}
 	}
 
 # Convert the remote system into an image file - this will output progress

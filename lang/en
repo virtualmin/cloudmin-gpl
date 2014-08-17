@@ -2012,6 +2012,7 @@ eimage_desc=Description
 eimage_type=For system type
 eimage_os=Operating system
 eimage_format=Image format
+eimage_fs=Filesystem type
 eimage_status=Current status
 eimage_size=Compressed size
 eimage_rawsize=Size on host system
