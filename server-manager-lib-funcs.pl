@@ -10942,7 +10942,12 @@ elsif (&redhat_server_type($server)) {
 		my %conf;
 		&read_env_file($temp, \%conf);
 		my $b = { };
-                $b->{'fullname'} = $conf{'DEVICE'};
+                if ($conf{'DEVICE'}) {
+                        $b->{'fullname'} = $conf{'DEVICE'};
+                        }
+                elsif ($f =~ /^ifcfg-(\S+)$/) {
+                        $b->{'fullname'} = $1;
+                        }
                 if ($b->{'fullname'} =~ /(\S+):(\d+)/) {
                         $b->{'name'} = $1;
                         $b->{'virtual'} = $2;
@@ -11433,7 +11438,7 @@ elsif (&redhat_server_type($server)) {
 	# Update ifcfg- file
 	my %conf;
 	my $idir = "/etc/sysconfig/network-scripts";
-	my $ifile = $idir."/ifcfg-".$iface->{'fullname'};
+	my $ifile = $oldiface->{'file'} || $idir."/ifcfg-".$iface->{'fullname'};
 	if (!&stat_file_on_server($server, $ifile)) {
 		# If missing, do nothing
 		return undef;
