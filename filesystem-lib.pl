@@ -420,7 +420,7 @@ elsif ($fs eq "xfs") {
 		$cmd .= " -d";
 		}
 	$cmd .= " ".quotemeta($mp);
-	$cmd .= " ; umount $mp ; rmdir $mp)";
+	$cmd .= " ; ex=\$? ; umount $mp ; rmdir $mp ; exit \$ex)";
 	}
 return $cmd;
 }
