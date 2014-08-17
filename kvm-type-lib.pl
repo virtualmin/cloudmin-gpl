@@ -3958,7 +3958,7 @@ return $moderr;
 # Returns supported filesystem types. Assumes Linux.
 sub type_kvm_list_disk_filesystems
 {
-return ('ext3', 'ext4', 'ext2', 'reiserfs', 'swap', 'ufs');
+return ('ext3', 'ext4', 'ext2', 'reiserfs', 'swap', 'ufs', 'xfs');
 }
 
 # type_kvm_list_storages(&vhost, [&server])
