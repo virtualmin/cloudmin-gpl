@@ -2812,6 +2812,11 @@ elsif ($disk->{'fs'} eq 'ufs') {
 	#return undef;
 	return $text{'disk_eresizefsufs2'};
 	}
+elsif ($disk->{'fs'} eq 'xfs') {
+	my $vhost = &type_kvm_parent($server);
+	&has_command_on_server($vhost, "xfs_growfs") ||
+		return $text{'disk_eresizefsxfs'};
+	}
 elsif ($disk->{'fs'} !~ /^ext\d+$/ && $disk->{'fs'} ne 'swap') {
 	return $text{'disk_eresizefstype'};
 	}

@@ -437,6 +437,9 @@ if ($fs =~ /ext(\d+)$/) {
 elsif ($fs eq "ufs") {
 	$cmd = "fsck.ufs -y";
 	}
+elsif ($fs eq "xfs") {
+	$cmd = "fsck.xfs -y";
+	}
 if ($cmd && $dev) {
 	$cmd .= " -f -p ".quotemeta($dev);
 	}
