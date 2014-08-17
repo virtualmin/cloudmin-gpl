@@ -861,9 +861,9 @@ my $network = &net::compute_network($ip, $netmask);
 # Work out mandatory files .. on redhat-ish systems, always create ifcfg- file
 # for primary interface.
 my %mand;
-if (&stat_file_on_server($vhost,
-			 $dir."/etc/sysconfig/network-scripts/ifcfg-lo")) {
+if (&stat_file_on_server($vhost, $dir."/etc/sysconfig/network-scripts")) {
 	$mand{"/etc/sysconfig/network-scripts/ifcfg-$iface"} = 1;
+	$mand{"/etc/udev/rules.d/80-net-name-slot.rules"} = 1;
 	}
 
 # Read the resolv.conf file, in case domain or nameservers are needed later
@@ -883,7 +883,8 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/network/interfaces",
 		 "/etc/conf.d/net",
 		 "/etc/rc.conf",
-		 "/etc/webmin/virtual-server/config") {
+		 "/etc/webmin/virtual-server/config",
+		 "/etc/udev/rules.d/80-net-name-slot.rules") {
 	my $fixpath = "$dir/$fix";
 	my $temppath = &transname();
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
@@ -971,6 +972,10 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		# Clear old IP address in Virtualmin config
 		$data =~ s/old_defip=.*\n//;
 		$data =~ s/old_defip6=.*\n//;
+		}
+	elsif ($fix eq "/etc/udev/rules.d/80-net-name-slot.rules") {
+		# Create this file empty, to use old-style interfaces
+		$data = "";
 		}
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
