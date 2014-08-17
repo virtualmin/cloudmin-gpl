@@ -380,44 +380,43 @@ else {
 return undef;
 }
 
-# get_resize_command(&vhost, fs-type, [device], [size-in-mb])
+# get_resize_command(&vhost, fs-type, device, [size-in-mb])
 # Returns the appropriate command to resize an EXT filesystem of some type
 sub get_resize_command
 {
 my ($vhost, $fs, $dev, $size) = @_;
 my $cmd;
 if ($fs =~ /ext(\d+)$/) {
+	# Use extN resize command if there is one, or otherwise
+	# fall back to resize2fs
 	$cmd = "resize".$1."fs";
 	if (!&has_command_on_server($vhost, $cmd)) {
 		$cmd = "resize2fs";
 		}
-	if ($dev) {
-		$cmd .= " ".quotemeta($dev);
-		if ($size) {
-			$cmd .= " ".$size."M";
-			}
+	$cmd .= " ".quotemeta($dev);
+	if ($size) {
+		$cmd .= " ".$size."M";
 		}
 	}
 elsif ($fs eq "ufs") {
+	# Use linux port of growfs.ufs
 	$cmd = "growfs.ufs -y";
-	if ($dev) {
-		if ($size) {
-			$cmd .= " -s ".int(($size-64) * 2048);
-			}
-		$cmd .= " ".quotemeta($dev);
+	if ($size) {
+		$cmd .= " -s ".int(($size-64) * 2048);
 		}
+	$cmd .= " ".quotemeta($dev);
 	}
-elsif ($f eq "xfs") {
+elsif ($fs eq "xfs") {
+	# Special XFS resize command only works
+	# on a mounted filesystem!
 	$cmd = "xfs_growfs";
-	if ($dev) {
-		if ($size) {
-			$cmd .= " -D ".int($size * 1024);
-			}
-		else {
-			$cmd .= " -d";
-			}
-		$cmd .= " ".quotemeta($dev);
+	if ($size) {
+		$cmd .= " -D ".int($size * 1024);
 		}
+	else {
+		$cmd .= " -d";
+		}
+	$cmd .= " ".quotemeta($dev);
 	}
 return $cmd;
 }
