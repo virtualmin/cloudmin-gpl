@@ -2631,6 +2631,27 @@ else {
 	}
 }
 
+# recursive_stat_file_on_server(...)
+# Like stat_file_on_server, but follows symlinks
+sub recursive_stat_file_on_server
+{
+my ($server, $remotefile, $usernames, $removeroot) = @_;
+my @st = &stat_file_on_server(@_);
+return @st if (@st <= 1);	# Doesn't exist or err
+return @st if (!$st[14]);	# Not a link
+my $path = $st[14];
+if ($st[14] !~ /^\//) {
+	$remotefile =~ s/\/[^\/]+$//;
+	$remotefile .= "/".$path;
+	$remotefile = &simplify_path($remotefile);
+	}
+else {
+	$remotefile = $path;
+	}
+return &recursive_stat_file_on_server($server, $remotefile,
+				      $usernames, $removeroot);
+}
+
 # file_info_line(&server, path, [&stat])
 # Given a path, returns a line of text with details from statting it, as
 # handled by the file manager applet.

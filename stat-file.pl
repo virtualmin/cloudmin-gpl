@@ -59,6 +59,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--lookup-usernames") {
 		$lookup = 1;
 		}
+	elsif ($a eq "--follow") {
+		$follow = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -79,7 +82,12 @@ if ($err) {
 	}
 
 # Stat it
-@st = &stat_file_on_server($server, $file, $lookup);
+if ($follow) {
+	@st = &recursive_stat_file_on_server($server, $file, $lookup);
+	}
+else {
+	@st = &stat_file_on_server($server, $file, $lookup);
+	}
 &umount_filesystem_if_needed($server);
 if (@st == 1) {
 	print "ERROR: $st[0]\n";
@@ -91,7 +99,7 @@ elsif (@st == 0) {
 	}
 
 # Show the deets
-print "Filename: $file\n";
+print "Filename: $st[13]\n";
 print "System: $server->{'host'}\n";
 print "Device: $st[0]\n" if ($st[0]);
 print "Inode: $st[1]\n" if ($st[1]);
