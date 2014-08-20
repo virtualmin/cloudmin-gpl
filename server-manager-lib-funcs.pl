@@ -7155,7 +7155,8 @@ elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 		}
 	}
 if (!$got) {
-	if (&can_ssh_status($server)) {
+	if (&can_ssh_status($server) &&
+	    &has_command_on_server($server, "netstat")) {
 		# Get from netstat command
 		my ($out, $ex, $err) = &execute_command_on_server(
 					$server, "netstat -rn");
@@ -7172,6 +7173,11 @@ if (!$got) {
 				last;
 				}
 			}
+		}
+	elsif (&can_ssh_status($server) &&
+	       &has_command_on_server($server, "ip")) {
+		# Get from ip command
+		# XXX
 		}
 	else {
 		# Get from boot interfaces
@@ -10708,14 +10714,14 @@ foreach my $l (@lines) {
 
 	# Add extra IPs as fake virtual interfaces
 	$l =~ s/\sinet\s+([0-9\.]+)\/(\d+)//;
-	my $i = 1;
+	my $i = 0;
 	while($l =~ s/\sinet\s+([0-9\.]+)\/(\d+)//) {
 		my %vifc;
 		$vifc{'name'} = $ifc{'name'};
 		$vifc{'fullname'} = $ifc{'name'}.":".$i;
 		$vifc{'address'} = $1;
-		$vifc{'netmask'} = &prefix_to_mask("$2");
-		$vifc{'broadcast'} = &compute_broadcast(
+		$vifc{'netmask'} = &net::prefix_to_mask("$2");
+		$vifc{'broadcast'} = &net::compute_broadcast(
 			$vifc{'address'}, $vifc{'netmask'});
 		$vifc{'mtu'} = $ifc{'mtu'};
 		$vifc{'up'} = $ifc{'up'};
@@ -10787,17 +10793,33 @@ else {
 		}
 
 	# Also add in gateways
-	# XXX freebsd
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"netstat -rn");
 	return $err if ($err);
-	return $out if ($ex);
-	foreach my $l (split(/\r?\n/, $out)) {
-		my ($dest, $gw, undef, undef, undef, undef, undef, $i) =
-			split(/\s+/, $l);
-		my ($iface) = grep { $_->{'fullname'} eq $i } @active;
-		if ($dest eq "0.0.0.0" && $iface) {
-			$iface->{'gateway'} = $gw;
+	if ($ex) {
+		# Try the ip command
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"ip route");
+		return $err if ($err);
+		return $out if ($ex);
+		foreach my $l (split(/\r?\n/, $out)) {
+			next if ($l !~ /^default/ ||
+				 $l !~ /\s+via\s+(\S+).*\s+dev\s+(\S+)/);
+			my ($iface) = grep { $_->{'fullname'} eq $2 } @active;
+			if ($iface) {
+				$iface->{'gateway'} = $1;
+				}
+			}
+		}
+	else {
+		# Parse netstat output
+		foreach my $l (split(/\r?\n/, $out)) {
+			my ($dest, $gw, undef, undef, undef, undef, undef, $i) =
+				split(/\s+/, $l);
+			my ($iface) = grep { $_->{'fullname'} eq $i } @active;
+			if ($dest eq "0.0.0.0" && $iface) {
+				$iface->{'gateway'} = $gw;
+				}
 			}
 		}
 	return \@active;
@@ -10868,7 +10890,7 @@ elsif (&has_command_on_server($server, "ip")) {
 		return $out if ($ex);
 		}
 	my $cmd = "ip addr add ".quotemeta($iface->{'address'})."/".
-		  &mask_to_prefix($iface->{'netmask'})." ".
+		  &net::mask_to_prefix($iface->{'netmask'})." ".
 	          "broadcast ".quotemeta($iface->{'broadcast'})." ".
 		  "dev ".quotemeta($iface->{'name'});
 	my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
@@ -10925,7 +10947,7 @@ elsif (&has_command_on_server($server, "ip")) {
 	my @del;
 	if ($iface->{'address'}) {
 		push(@del, $iface->{'address'}."/".
-			   &mask_to_prefix($iface->{'netmask'}));
+			   &net::mask_to_prefix($iface->{'netmask'}));
 		}
 	for(my $i=0; $i<@{$iface->{'address6'}}; $i++) {
 		push(@del, $iface->{'address6'}->[$i]."/".
