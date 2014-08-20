@@ -10635,6 +10635,79 @@ foreach my $l (@lines) {
 return @ifaces;
 }
 
+# parse_ifconfig_output(out, [include-with-no-ip])
+# Parses the output of ip addr into a list of interfaces
+sub parse_ip_addr_output
+{
+my ($out, $empty) = @_;
+my @ifaces;
+my @lines;
+foreach my $l (split(/\r?\n/, $out)) {
+	if ($l =~ /^\S+/) { push(@lines, $l); }
+	else { $lines[$#lines] .= $l; }
+	}
+foreach my $l (@lines) {
+	my %ifc;
+	$l =~ /^\d+:\s+(\S+):/ || next;
+	$ifc{'name'} = $1;
+	$ifc{'fullname'} = $1;
+	if ($l =~ /\sinet\s+([0-9\.]+)\/(\d+)/) {
+		$ifc{'address'} = $1;
+		$ifc{'netmask'} = &net::prefix_to_mask("$2");
+		}
+	elsif (!$empty) {
+		next;
+		}
+	if ($l =~ /\sbrd\s+([0-9\.]+)/) {
+		$ifc{'broadcast'} = $1;
+		}
+	if ($l =~ /\smtu\s+(\d+)/) {
+		$ifc{'mtu'} = $1;
+		}
+	if ($l =~ /ether\s+([0-9a-f:]+)/i) {
+		$ifc{'ether'} = $1;
+		}
+
+	my (@address6, @netmask6, @scope6);
+	while($l =~ s/inet6\s+(\S+)\/(\d+)\s+scope\s+(\S+)//i) {
+		local ($address6, $netmask6, $scope6) = ($1, $2, $3);
+		push(@address6, $address6);
+		push(@netmask6, $netmask6);
+		push(@scope6, $scope6);
+		}
+	$ifc{'address6'} = \@address6;
+	$ifc{'netmask6'} = \@netmask6;
+	$ifc{'scope6'} = \@scope6;
+
+	$ifc{'up'}++ if ($l =~ /\sUP\s|<\S*UP\S*>/);
+	$ifc{'promisc'}++ if ($l =~ /\sPROMISC\s/);
+	$ifc{'edit'} = ($ifc{'name'} !~ /^ppp/);
+	$ifc{'index'} = scalar(@ifaces);
+	push(@ifaces, \%ifc);
+
+	# Add extra IPs as fake virtual interfaces
+	$l =~ s/\sinet\s+([0-9\.]+)\/(\d+)//;
+	my $i = 1;
+	while($l =~ s/\sinet\s+([0-9\.]+)\/(\d+)//) {
+		my %vifc;
+		$vifc{'name'} = $ifc{'name'};
+		$vifc{'fullname'} = $ifc{'name'}.":".$i;
+		$vifc{'address'} = $1;
+		$vifc{'netmask'} = &prefix_to_mask("$2");
+		$vifc{'broadcast'} = &compute_broadcast(
+			$vifc{'address'}, $vifc{'netmask'});
+		$vifc{'mtu'} = $ifc{'mtu'};
+		$vifc{'up'} = $ifc{'up'};
+		$vifc{'virtual'} = $i;
+		$vifc{'edit'} = ($vifc{'name'} !~ /^ppp/);
+		$vifc{'index'} = scalar(@ifaces);
+		push(@ifaces, \%vifc);
+		$i++;
+		}
+	}
+return @ifaces;
+}
+
 # tar_supports_gzip(&server)
 # Returns 1 if tar on some system supports the z option to do gzip compression.
 # Assumed true for GNU tar.
@@ -10678,8 +10751,19 @@ else {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 		"ifconfig -a");
 	return $err if ($err);
-	return $out if ($ex);
-	my @active = &parse_ifconfig_output($out, $empty);
+	my @active;
+	if ($ex) {
+		# Maybe we have the ip command?
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"ip addr");
+		return $err if ($err);
+		return $out if ($ex);
+		@active = &parse_ip_addr_output($out, $empty);
+		# XXX set field on active iface if from ip command
+		}
+	else {
+		@active = &parse_ifconfig_output($out, $empty);
+		}
 
 	# Also add in gateways
 	# XXX freebsd
