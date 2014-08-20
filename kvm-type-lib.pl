@@ -1880,7 +1880,7 @@ if (!$empty && $server->{'kvm_swapfile'}) {
         # Create the swap file, if needed
 	$swsize = $server->{'kvm_swap'}*1024*1024;
 	$swfile = $server->{'kvm_swapfile'};
-	my @st = &stat_file_on_server($vhost, $swfile);
+	my @st = &recursive_stat_file_on_server($vhost, $swfile);
 	if (!@st || $server->{'kvm_swapfile_vg'} ||
 	    $server->{'kvm_swapfile_iscsi'} ne '') {
 		&$first_print(&text('create_xenswap',
@@ -2541,7 +2541,8 @@ if (!$keep) {
 	my $disks = &type_kvm_list_disks($server, 0);
 	if (ref($disks)) {
 		foreach my $d (reverse(@$disks)) {
-			my @st = &stat_file_on_server($vhost, $d->{'real'});
+			my @st = &recursive_stat_file_on_server(
+					$vhost, $d->{'real'});
 			next if (!@st);			# Already gone
 			next if ($d->{'media'} eq 'cdrom' &&
 				 $d->{'real'} ne $server->{'kvm_cdimage'} &&
@@ -3288,7 +3289,7 @@ if ($disk->{'virt_auto'} && $disk->{'virt'} ne $disk->{'virt_auto'}) {
 	$disk->{'virt_mount'} = $disk->{'virt_onsystem'}.'1';
 	}
 
-my @st = &stat_file_on_server($vhost, $disk->{'real'});
+my @st = &recursive_stat_file_on_server($vhost, $disk->{'real'});
 if ($disk->{'device'} && !$disk->{'lv'}) {
 	# Check if the device exists
 	@st || return "Device $disk->{'real'} does not exist ".
@@ -6302,8 +6303,8 @@ foreach my $d (@$disks) {
 
 	# Check if disk file exists on the target system already, and
 	# that the KVM directory isn't being changed
-	my @sst = &stat_file_on_server($vhost, $d->{'real'});
-	my @dst = &stat_file_on_server($dest, $d->{'real'});
+	my @sst = &recursive_stat_file_on_server($vhost, $d->{'real'});
+	my @dst = &recursive_stat_file_on_server($dest, $d->{'real'});
 	if (@dst && $dst[7] == $sst[7] &&
 	    ($old_kvm_dir eq $new_kvm_dir || $d->{'lv'})) {
 		# Already there! Perhaps from shared LVM or directory
@@ -6561,7 +6562,7 @@ $server->{'kvm_on'} = $dest->{'id'};
 my $disks = &type_kvm_list_disks($server, 0);
 return $disks if (!ref($disks));
 foreach my $d (@$disks) {
-	my @dst = &stat_file_on_server($dest, $d->{'real'});
+	my @dst = &recursive_stat_file_on_server($dest, $d->{'real'});
 	if (!@dst) {
 		return &text('smove_echeckdisk', $d->{'real'});
 		}
