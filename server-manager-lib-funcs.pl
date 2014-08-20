@@ -10886,6 +10886,9 @@ elsif (&has_command_on_server($server, "ip")) {
 		return $out if ($ex);
 		}
 	}
+else {
+	return "Both the ifconfig and ip commands are missing";
+	}
 return undef;
 }
 
@@ -10910,12 +10913,41 @@ elsif ($server->{'type'} eq 'freebsd') {
 	return $err if ($err);
 	return $out if ($ex);
 	}
-else {
+elsif (&has_command_on_server($server, "ifconfig")) {
 	# Just remove with ifconfig on Linux
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." down";
 	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
 	return $err if ($err);
 	return $out if ($ex);
+	}
+elsif (&has_command_on_server($server, "ip")) {
+	# Just remove with ip command
+	my @del;
+	if ($iface->{'address'}) {
+		push(@del, $iface->{'address'}."/".
+			   &mask_to_prefix($iface->{'netmask'}));
+		}
+	for(my $i=0; $i<@{$iface->{'address6'}}; $i++) {
+		push(@del, $iface->{'address6'}->[$i]."/".
+			   $iface->{'netmask6'}->[$i]);
+		}
+	foreach my $d (@del) {
+		my $cmd = "ip addr del ".quotemeta($d).
+			  " dev ".quotemeta($iface->{'name'});
+		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		return $err if ($err);
+		return $out if ($ex);
+		}
+	if ($iface->{'virtual'} eq '') {
+		my $cmd = "ip link set dev ".
+			  quotemeta($iface->{'name'})." down";
+		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		return $err if ($err);
+		return $out if ($ex);
+		}
+	}
+else {
+	return "Both the ifconfig and ip commands are missing";
 	}
 return undef;
 }
