@@ -1897,6 +1897,10 @@ if (!$empty && $server->{'kvm_swapfile'}) {
 							    1, $swsize, 1, 0,
 							    "linux-swap");
 			}
+		if (!$err) {
+			$err = &create_disk_image_filesystem($vhost, $swfile,
+							     "swap", 1);
+			}
 		if ($err) {
 			&$second_print(&text('create_exenswap', $out));
 			}
@@ -2797,11 +2801,11 @@ my ($server) = @_;
 return $server->{'status'} ne 'nohost' ? 1 : 0;
 }
 
-# type_kvm_can_safely_resize_disk(&server, &disk)
+# type_kvm_can_safely_resize_disk(&server, &disk, &old-disk)
 # Returns undef if some disk can be safely resized, or an error message if not
 sub type_kvm_can_safely_resize_disk
 {
-my ($server, $disk) = @_;
+my ($server, $disk, $olddisk) = @_;
 if (!$disk->{'fs'}) {
 	return $text{'disk_eresizefs'};
 	}
@@ -2813,6 +2817,8 @@ elsif ($disk->{'fs'} eq 'ufs') {
 	return $text{'disk_eresizefsufs2'};
 	}
 elsif ($disk->{'fs'} eq 'xfs') {
+	$disk->{'size'} >= $olddisk->{'size'} ||
+		return $text{'disk_eshrinkxfs'};
 	my $vhost = &type_kvm_parent($server);
 	&has_command_on_server($vhost, "xfs_growfs") ||
 		return $text{'disk_eresizefsxfs'};
