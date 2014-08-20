@@ -10838,7 +10838,7 @@ elsif ($server->{'type'} eq 'freebsd') {
 		return $out if ($ex);
                 }
 	}
-else {
+elsif (&has_command_on_server($server, "ifconfig")) {
 	# Activate with ifconfig command on Linux
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." ".
 		     quotemeta($iface->{'address'})." up ".
@@ -10851,8 +10851,36 @@ else {
 	# Activate IPv6 addresses with ifconfig command
 	for(my $n=0; $i<@{$iface->{'address6'}}; $n++) {
 		my $cmd = "ifconfig ".quotemeta($iface->{'fullname'}).
-			  " inet6 add ".$a->{'address6'}->[$n]."/".
-					$a->{'netmask6'}->[$n];
+			  " inet6 add ".$iface->{'address6'}->[$n]."/".
+					$iface->{'netmask6'}->[$n];
+		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		return $err if ($err);
+		return $out if ($ex);
+		}
+	}
+elsif (&has_command_on_server($server, "ip")) {
+	# Activate with ip command on Linux
+	if ($iface->{'virtual'} eq '') {
+		# Activate the link if needed
+		my $cmd = "ip link set dev ".quotemeta($iface->{'name'})." ip";
+		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		return $err if ($err);
+		return $out if ($ex);
+		}
+	my $cmd = "ip addr add ".quotemeta($iface->{'address'})."/".
+		  &mask_to_prefix($iface->{'netmask'})." ".
+	          "broadcast ".quotemeta($iface->{'broadcast'})." ".
+		  "dev ".quotemeta($iface->{'name'});
+	my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+	return $err if ($err);
+	return $out if ($ex);
+
+	# Activate IPv6 addresses with ip command
+	for(my $n=0; $i<@{$iface->{'address6'}}; $n++) {
+		my $cmd = "ip -6 addr add ".
+			  $a->{'address6'}->[$n]."/".
+			  $a->{'netmask6'}->[$n]." dev ".
+			  quotemeta($iface->{'fullname'});
 		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
 		return $err if ($err);
 		return $out if ($ex);
