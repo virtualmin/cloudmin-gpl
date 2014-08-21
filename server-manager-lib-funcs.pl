@@ -4160,17 +4160,26 @@ if (!$done) {
 # Updating routing table
 if (&can_ssh_status($server)) {
 	my ($out, $ex, $err);
-	if (!&freebsd_server_type($server)) {
-		# Linux syntax
-		($out, $ex, $err) = &execute_command_on_server($server,
-			"route delete default".
-			($gw ? " ; route add default gw $gw" : ""));
-		}
-	else {
+	if (&freebsd_server_type($server)) {
 		# FreeBSD syntax
 		($out, $ex, $err) = &execute_command_on_server($server,
 			"route del default".
 			($gw ? " ; route add default $gw" : ""));
+		}
+	elsif (&has_command_on_server($server, "route")) {
+		# Linux syntax with route command
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"route delete default".
+			($gw ? " ; route add default gw $gw" : ""));
+		}
+	elsif (&has_command_on_server($server, "ip")) {
+		# Linux syntax with ip command
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"ip route delete default".
+			($gw ? " ; ip route add default via $gw" : ""));
+		}
+	else {
+		return "Neither the route or ip commands are installed";
 		}
 	if ($ex || $err) {
 		return "Failed to activate new gateway : ".($err || $out);
@@ -4245,9 +4254,22 @@ if (!$done) {
 
 # Updating routing table
 if (&can_ssh_status($server)) {
-	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"route -A inet6 delete default".
-		($gw ? " ; route -A inet6 add default gw $gw" : ""));
+	my ($out, $ex, $err);
+	if (&has_command_on_server($server, "route")) {
+		# Linux with route command
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"route -A inet6 delete default".
+			($gw ? " ; route -A inet6 add default gw $gw" : ""));
+		}
+	elsif (&has_command_on_server($server, "ip")) {
+		# Linux with ip command
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"ip -6 route delete default".
+			($gw ? " ; ip -6 route add default via $gw" : ""));
+		}
+	else {
+		return "Neither the route or ip commands are installed";
+		}
 	if ($ex || $err) {
 		return "Failed to activate new IPv6 gateway : ".($err || $out);
 		}
@@ -7177,7 +7199,15 @@ if (!$got) {
 	elsif (&can_ssh_status($server) &&
 	       &has_command_on_server($server, "ip")) {
 		# Get from ip command
-		# XXX
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$server, "ip route");
+		foreach my $l (split(/\r?\n/, $out)) {
+			if ($l =~ /^default.*\s+via\s+(\S+).*\s+dev\s+(\S+)/) {
+				$gw = $1;
+				$gwdev = $2;
+				last;
+				}
+			}
 		}
 	else {
 		# Get from boot interfaces
@@ -7227,7 +7257,8 @@ elsif ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 		}
 	}
 if (!$got) {
-	if (&can_ssh_status($server)) {
+	if (&can_ssh_status($server) &&
+	    &has_command_on_server($server, "netstat")) {
 		# Get from netstat command
 		my ($out, $ex, $err) = &execute_command_on_server(
 					$server, "netstat -rn -A inet6");
@@ -7236,6 +7267,19 @@ if (!$got) {
 			if ($w[0] eq "::/0" && $w[1] ne "::") {
 				$gw = $w[1];
 				$gwdev = $w[6];
+				last;
+				}
+			}
+		}
+	elsif (&can_ssh_status($server) &&
+	       &has_command_on_server($server, "ip")) {
+		# Get from ip command
+		my ($out, $ex, $err) = &execute_command_on_server(
+					$server, "ip -6 route");
+		foreach my $l (split(/\r?\n/, $out)) {
+			if ($l =~ /^default.*\s+via\s+(\S+).*\s+dev\s+(\S+)/) {
+				$gw = $1;
+				$gwdev = $2;
 				last;
 				}
 			}
@@ -10641,6 +10685,7 @@ foreach my $l (@lines) {
         $ifc{'scope6'} = \@scope6;
         $ifc{'edit'} = ($ifc{'name'} !~ /^ppp/);
         $ifc{'index'} = scalar(@ifaces);
+	$ifc{'command'} = 'ifconfig';
 	push(@ifaces, \%ifc);
 
 	# On a FreeBSD system, parse out all additional IPs
@@ -10710,6 +10755,7 @@ foreach my $l (@lines) {
 	$ifc{'promisc'}++ if ($l =~ /\sPROMISC\s/);
 	$ifc{'edit'} = ($ifc{'name'} !~ /^ppp/);
 	$ifc{'index'} = scalar(@ifaces);
+	$ifc{'command'} = 'ip';
 	push(@ifaces, \%ifc);
 
 	# Add extra IPs as fake virtual interfaces
@@ -10786,7 +10832,6 @@ else {
 		return $err if ($err);
 		return $out if ($ex);
 		@active = &parse_ip_addr_output($out, $empty);
-		# XXX set field on active iface if from ip command
 		}
 	else {
 		@active = &parse_ifconfig_output($out, $empty);
