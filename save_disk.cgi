@@ -364,7 +364,7 @@ else {
 	elsif (!$in{'force'} &&
 	       $disk->{'size'} != $olddisk->{'size'} &&
 	       defined(&$wfunc) &&
-	       ($err = &$wfunc($server, $disk))) {
+	       ($err = &$wfunc($server, $disk, $olddisk))) {
 		# Show a warning before resizing
 		&ui_print_header(&server_in($server), $text{'disk_titlem'}, "");
 

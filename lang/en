@@ -2634,6 +2634,7 @@ disk_eresizefs=Cloudmin does not know what type of filesystem this disk contains
 disk_eresizefstype=This disk does not contain an EXT filesystem or a swap file, and so the filesystem cannot be resized by Cloudmin.
 disk_eresizefsufs=This disk contains a UFS filesystem, but the host system does not have the <tt>growfs.ufs</tt> command needed to safely resize it.
 disk_eresizefsxfs=This disk contains an XFS filesystem, but the host system does not have the <tt>xfs_growfs</tt> command needed to safely resize it.
+disk_eshrinkxfs=This disk contains an XFS filesystem, which does not support being reduced in size
 disk_eresizefsufs2=This disk contains a UFS filesystem, which cannot be resized on Linux due to bugs in the <tt>growfs.ufs</tt> command.
 disk_sizewarn=Warning - this disk cannot be safely resized.
 disk_sizeok=Resize Disk Anyway

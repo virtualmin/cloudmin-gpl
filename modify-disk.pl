@@ -250,7 +250,7 @@ if ($disk->{'lv'} &&
 if ($disk->{'size'} != $olddisk->{'size'} && !$force) {
 	$wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
 	if (defined(&$wfunc)) {
-		$err = &$wfunc($server, $disk);
+		$err = &$wfunc($server, $disk, $olddisk);
 		if ($err) {
 			print "This disk cannot be resized : $err\n";
 			print "\n";

@@ -186,7 +186,7 @@ if ($disk->{'lv'} &&
 # Check if resize is safe
 my $wfunc = "type_".$server->{'manager'}."_can_safely_resize_disk";
 if (!$sched->{'force'} && defined(&$wfunc)) {
-	my $err = &$wfunc($server, $disk);
+	my $err = &$wfunc($server, $disk, $olddisk);
 	if ($err) {
 		return &text('schange_ewarn', $err);
 		}
