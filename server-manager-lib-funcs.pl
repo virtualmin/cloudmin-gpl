@@ -5271,6 +5271,14 @@ return ($out, undef, $wroot);
 sub open_webmin_firewall_port
 {
 my ($server, $port, $root) = @_;
+if (&has_command_on_server($server, "firewall-cmd")) {
+	# Try to use firewalld
+	my $portrange = join("-", $port, $port+10);
+	&execute_command_on_server($server,
+		"firewall-cmd --add-port $portrange/tcp");
+	&execute_command_on_server($server,
+		"firewall-cmd --permanent --add-port $portrange/tcp");
+	}
 my @st = &stat_file_on_server($server, "$root/firewall/open-ports.pl");
 if (!@st) {
 	return (6);
@@ -11094,7 +11102,7 @@ elsif (&freebsd_server_type($server)) {
 			}
 		}
 	}
-else {
+elsif (&has_command_on_server($server, "ifconfig")) {
 	# Use the ifconfig command on Linux
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." ".
 		     quotemeta($iface->{'address'})." ".
@@ -11141,6 +11149,56 @@ else {
 				}
 			}
 		}
+	}
+elsif (&has_command_on_server($server, "ip")) {
+	# Use the ip command on Linux
+	if ($iface->{'address'} ne $oldiface->{'address'} ||
+	    $iface->{'netmask'} ne $oldiface->{'netmask'}) {
+		# Remove old IP and add new
+		my $cmd = "ip addr del ".$oldiface->{'address'}."/".
+			  &net::mask_to_prefix($oldiface->{'netmask'}).
+			  " dev ".$iface->{'name'};
+		$cmd .= " && ip addr add ".$iface->{'address'}."/".
+		        &net::mask_to_prefix($iface->{'netmask'}).
+			" broadcast ".$iface->{'broadcast'}.
+		        " dev ".$iface->{'name'};
+		my ($out, $ex, $err, $status) =
+			&execute_command_on_server($server, $cmd,
+				$changing_primary ? 5 : undef);
+		if ($changing_primary && $status == 4) {
+			# Changing main IP timed out, but that's expected
+			$err = $ex = undef;
+			}
+		return $err if ($err);
+		return $out if ($ex);
+		}
+
+	# Remove old IPv6 addresses first
+	for(my $i=0; $i<@{$oldiface->{'address6'}}; $i++) {
+		my $cmd = "ip -6 addr del ".
+			  $oldiface->{'address6'}->[$i]."/".
+			  $oldiface->{'netmask6'}->[$i]." dev ".
+			  $iface->{'name'};
+		my ($out, $ex, $err, $status) =
+			&execute_command_on_server($server, $cmd);
+		return $err if ($err);
+		return $out if ($ex);
+		}
+
+	# Add back new IPv6 addresses
+        for(my $i=0; $i<@{$iface->{'address6'}}; $i++) {
+                my $cmd = "ip -6 addr add ".
+                          $iface->{'address6'}->[$i]."/".
+                          $iface->{'netmask6'}->[$i]." dev ".
+                          $iface->{'name'};
+		my ($out, $ex, $err, $status) =
+			&execute_command_on_server($server, $cmd);
+		return $err if ($err);
+		return $out if ($ex);
+                }
+	}
+else {
+	return "Both the ifconfig and ip commands are missing";
 	}
 return undef;
 }
