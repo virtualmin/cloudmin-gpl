@@ -5572,7 +5572,6 @@ dgces_edefault=No new default project selected
 gimages_title=GCE Images
 gimages_name=Image name
 gimages_public=Public?
-gimages_desc=Description
 gimages_size=Size
 gimages_users=Used by systems
 gimages_delete=Delete Selected Images
