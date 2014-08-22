@@ -91,3 +91,4 @@ Added a file manager for browsing the filesystems of real and virtual systems, e
 System alerts can now be configured to send email when the alert condition stops firing.
 ---- Changes since 7.7 ----
 Systems that require root access via sudo can now be managed by Cloudmin, and EC2 instances that require sudo are automatically detected at creation time.
+CentOS 7 is now supported as host system and virtual system type, including the ability to manage XFS filesystems and network interfaces with the ip command.
