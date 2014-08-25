@@ -113,6 +113,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--ignore-fsck") {
+		$ignorefsck = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -259,8 +262,14 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 			}
 		else {
 			&$block_print($out);
-			&$second_print(".. filesystem errors found!");
-			exit(3);
+			if ($ignorefsck) {
+				&$second_print(".. filesystem errors found, ".
+					       "but continuing anyway!");
+				}
+			else {
+				&$second_print(".. filesystem errors found!");
+				exit(3);
+				}
 			}
 		}
 	if (@$disks && $disks->[0]->{'fs'}) {
@@ -341,6 +350,7 @@ print "                     [--version number | --inc-version]\n";
 print "                     [--no-serial]\n";
 print "                     [--no-compress]\n";
 print "                     [--storage spec]\n";
+print "                     [--ignore-fsck]\n";
 exit(1);
 }
 
