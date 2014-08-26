@@ -8,7 +8,7 @@ if ($ARGV[0] =~ /^\-+sleep/) {
 	shift(@ARGV);
 	$delay = shift(@ARGV);
 	}
-@ARGV == 2 || die "usage: nc.pl [--delay secs] host port";
+@ARGV == 2 || die "usage: nc.pl [--sleep secs] host port";
 my ($addr, $port) = @ARGV;
 
 # Open the connection
@@ -16,8 +16,17 @@ my $proto = getprotobyname("tcp");
 my $fh;
 socket($fh, PF_INET(), SOCK_STREAM, $proto) ||
 	die "Failed to create socket : $!";
-connect($fh, pack_sockaddr_in($port, inet_aton($addr))) ||
-	die "Failed to connect : $!";
+my $try = 0;
+my $connected = 0;
+while($try < 10) {
+	if (connect($fh, pack_sockaddr_in($port, inet_aton($addr)))) {
+		$connected = 1;
+		last;
+		}
+	$try++;
+	sleep($try);
+	}
+$connected || die "Failed to connect : $!";
 select($fh);
 $| = 1;
 select(STDOUT);
