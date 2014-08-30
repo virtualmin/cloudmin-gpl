@@ -5956,7 +5956,8 @@ if (!$config{'kvm_qemu'}) {
 
 # Make sure /dev/loop1 exists
 my @st = &stat_file_on_server($server, "/dev/loop1");
-@st || return &text('kvm_eloop', "<tt>/dev/loop1</tt>");
+my @st2 = &stat_file_on_server($server, "/dev/loop-control");
+@st || @st2 || return &text('kvm_eloop', "<tt>/dev/loop1</tt>");
 
 return undef;
 }
