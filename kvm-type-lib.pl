@@ -2763,6 +2763,7 @@ sub generate_kvm_bridge_script
 my ($server, $iface, $bridge) = @_;
 my $vhost = &type_kvm_parent($server);
 my $brctl = &has_command_on_server($vhost, "brctl") || "brctl";
+my $ip = &has_command_on_server($vhost, "ip");
 my $ifconfig = &has_command_on_server($vhost, "ifconfig") || "ifconfig";
 my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 my $data = "#!/bin/sh\n".
@@ -2773,11 +2774,22 @@ if (!$bridge || $bridge eq "*") {
 	$bridge ||= "br0";
 	}
 $data .= "$brctl addif $bridge \$1\n";
-$data .= "$ifconfig \$1 up\n";
-$data .= "mtu=`$ifconfig $bridge | grep MTU | sed -e 's/.*MTU://; s/ .*//'`\n";
-$data .= "if [ \"\$mtu\" != \"\" ]; then\n";
-$data .= "    $ifconfig \$1 mtu \$mtu\n";
-$data .= "fi\n";
+if ($ip) {
+	# Use ip command
+	$data .= "$ip link set dev \$1 up\n";
+	$data .= "mtu=`$ip link | grep ${bridge}: | sed -e 's/.*mtu://; s/ .*//'`\n";
+	$data .= "if [ \"\$mtu\" != \"\" ]; then\n";
+	$data .= "    $ip link set dev \$1 mtu \$mtu\n";
+	$data .= "fi\n";
+	}
+else {
+	# Use ifconfig command
+	$data .= "$ifconfig \$1 up\n";
+	$data .= "mtu=`$ifconfig $bridge | grep MTU | sed -e 's/.*MTU://; s/ .*//'`\n";
+	$data .= "if [ \"\$mtu\" != \"\" ]; then\n";
+	$data .= "    $ifconfig \$1 mtu \$mtu\n";
+	$data .= "fi\n";
+	}
 if (!&check_firewall_allowed_ips($server)) {
 	# Add commands to limit allowed IPs and MACs, or not
 	my @ips = $server->{'kvm_firewall'} eq '' ? ( ) :
