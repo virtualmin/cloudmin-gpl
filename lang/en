@@ -445,6 +445,7 @@ create_vheader=Virtualmin options
 create_oheader=Owner details
 create_aheader=Advanced options
 create_nheader=Host and networking options
+create_atboot=Start when host system boots up?
 create_lheader=Resource limit options
 create_eimagevirt=You have selected a system image with Virtualmin Pro, but have not entered license details
 create_xendnswarn=Warning : No DNS zone for new Xen instances has been configured on the <a href='$1'>Xen host</a> page. You can use the <a href='$2'>BIND DNS Server</a> module to create a zone.

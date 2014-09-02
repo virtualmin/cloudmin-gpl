@@ -184,6 +184,12 @@ if (defined(&$ffunc)) {
 				        2, "net", 0, [ "width=30%" ]);
 	$nbody = &$ffunc(0);
 	$nhtml .= $nbody;
+	$bfunc = "type_".$in{'type'}."_set_atboot";
+	if ($nbody && defined(&$bfunc)) {
+		# Enable at host boot time opton
+		$nhtml .= &ui_table_row($text{'create_atboot'},
+			&ui_yesno_radio("atboot", $config{'default_start'}));
+		}
 	$nhtml .= &ui_hidden_table_end();
 	print $nhtml if ($nbody);
 	}
@@ -330,6 +336,13 @@ if ($empty) {
 					     "net2", 0, [ "width=30%" ]);
 		$nbody = &$ffunc(1);
 		$nhtml .= $nbody;
+		$bfunc = "type_".$in{'type'}."_set_atboot";
+		if ($nbody && defined(&$bfunc)) {
+			# Enable at host boot time opton
+			$nhtml .= &ui_table_row($text{'create_atboot'},
+				&ui_yesno_radio("atboot",
+						$config{'default_start'}));
+			}
 		$nhtml .= &ui_hidden_table_end();
 		print $nhtml if ($nbody);
 		}
