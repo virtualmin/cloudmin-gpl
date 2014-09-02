@@ -15,6 +15,11 @@ The CD image to install from can either be specified with the C<--imagefile>
 flag followed by a filename on the host system, or the C<--image> flag followed
 by the ID of a system image in ISO format.
 
+The flag C<--start-at-boot> can be given to have the new system restarted
+when its host system reboots. Alternately, you can use C<--no-start-at-boot>
+to disable this. If neither flag is given, the Cloudmin default setting
+(chosen on the Cloudmin Configuration page in the UI) is used.
+
 Once creation completes, you will need to use the Graphical Console page
 in the Cloudmin UI to complete the installation process.
 
@@ -69,6 +74,7 @@ foreach $t (@server_management_types) {
 @crtypes || &usage("No system types are available for creation!");
 
 # Parse command line
+$start_boot = $config{'default_start'};
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--type") {
@@ -105,6 +111,12 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
+		}
+	elsif ($a eq "--start-at-boot") {
+		$start_boot = 1;
+		}
+	elsif ($a eq "--no-start-at-boot") {
+		$start_boot = 0;
 		}
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
@@ -374,7 +386,7 @@ print ".. done ($server->{'status'})\n\n";
 
 # Enable at boot time, if possible
 $bfunc = "type_".$type."_set_atboot";
-if (defined(&$bfunc)) {
+if (defined(&$bfunc) && $start_boot) {
 	print "Enabling at hosting system boot ..\n";
 	&$bfunc($server, 1);
 	print ".. done\n\n";
@@ -409,6 +421,7 @@ print "                            [--desc \"system description\"]\n";
 print "                            [--image id | --imagefile path]\n";
 print "                            [--id number]\n";
 print "                            [--disk-directory dir]\n";
+print "                            [--start-at-boot | --no-start-at-boot]\n";
 if (defined(&list_system_owners)) {
 	print "                            [--owner name]\n";
 	}
