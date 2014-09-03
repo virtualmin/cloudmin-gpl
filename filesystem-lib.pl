@@ -301,7 +301,7 @@ if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
 	# Create the disk label with parted
 	if ($make_label) {
 		my ($out, $ex, $err) = &execute_command_on_server($vhost, 
-			"parted -s ".quotemeta($real)." mklabel msdos");
+			"parted -s ".quotemeta($real)." mklabel gpt");
 		if ($ex || $err) {
 			return "Failed to create disk label : ".($err || $out);
 			}
@@ -468,6 +468,12 @@ if (&has_command_on_server($vhost, "parted")) {
 		$part->{'parted_start'}." ".
 		int($newsize/1000000)."M");
 	if ($ex || $err) {
+		# Oh crap .. try to put back the old partition size
+		&execute_command_on_server($vhost,
+			"parted -s ".quotemeta($real)." mkpart ".
+			$part->{'parted_type'}." ".
+			$part->{'parted_start'}." ".
+			$part->{'parted_end'});
 		return "Failed to create new partition : ".($err || $out);
 		}
 	}
