@@ -3765,14 +3765,21 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		push(@cmds, "losetup -d $loop");
 		}
 
-	# Delete the last partition, then re-create it
+	# Delete the last partition, then re-create it (with a fall back to
+	# the original size if re-creation fails)
 	if ($part && $server->{'type'} ne 'windows' && $part->{'type'} ne '7') {
 		push(@cmds, "parted -s ".quotemeta($disk->{'real'})." rm ".
 			    $part->{'part'});
-		push(@cmds, "parted -s ".quotemeta($disk->{'real'})." mkpart ".
-			    $part->{'parted_type'}." ".
-			    $part->{'parted_start'}." ".
-			    int($disk->{'size'}/1000000)."M");
+		push(@cmds, [ "parted -s ".quotemeta($disk->{'real'}).
+			        " mkpart ".
+			        $part->{'parted_type'}." ".
+			        $part->{'parted_start'}." ".
+			        int($disk->{'size'}/1000000)."M",
+			      "parted -s ".quotemeta($disk->{'real'}).
+				" mkpart ".
+                                $part->{'parted_type'}." ".
+                                $part->{'parted_start'}." ".
+                                $part->{'parted_end'} ]);
 		}
 
 	if ($disk->{'size'} > $olddisk->{'size'} && $resizefs) {
@@ -3821,6 +3828,15 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		if (ref($cmd) eq 'CODE') {
 			# Call a function (used for iSCSI resizes)
 			$err = &$cmd;
+			}
+		elsif (ref($cmd) eq 'ARRAY') {
+			# Run a primary and recovery command
+			($out, $ex, $err) = &execute_command_on_server(
+				$vhost, $cmd->[0]);
+			if ($ex) {
+				# Failed, try to back out
+				&execute_command_on_server($vhost, $cmd->[1]);
+				}
 			}
 		else {
 			# Run a command
