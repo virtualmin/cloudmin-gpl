@@ -297,11 +297,13 @@ sub create_disk_image_partition
 my ($vhost, $real, $num, $size, $make_label, $bootable, $ptype) = @_;
 $ptype ||= "ext2";
 
-if (&has_command_on_server($vhost, "parted") && $ptype ne "ufs") {
+my $ver = &get_parted_version($vhost);
+if ($ver && $ptype ne "ufs") {
 	# Create the disk label with parted
 	if ($make_label) {
+		my $labeltype = $ver >= 2 ? "gpt" : "msdos";
 		my ($out, $ex, $err) = &execute_command_on_server($vhost, 
-			"parted -s ".quotemeta($real)." mklabel gpt");
+			"parted -s ".quotemeta($real)." mklabel $labeltype");
 		if ($ex || $err) {
 			return "Failed to create disk label : ".($err || $out);
 			}
@@ -1050,6 +1052,20 @@ else {
 	# No directories available
 	return "<i>$text{'create_nodirectory'}</i>";
 	}
+}
+
+# get_parted_version(&vhost)
+# If a system has parted installed, return the verison number. Otherwise return
+# undef.
+sub get_parted_version
+{
+my ($vhost) = @_;
+my ($out, $ex, $err) = &execute_command_on_server($vhost, "parted -v");
+return undef if ($ex || $err);
+if ($out =~ /^.*parted.*\s([0-9\.]+)/) {
+	return $1;
+	}
+return undef;
 }
 
 1;
