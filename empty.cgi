@@ -261,7 +261,7 @@ print &text('add_statusok', &describe_status($server, 1)),"<p>\n";
 
 # Enable at boot time, if possible
 $bfunc = "type_".$in{'type'}."_set_atboot";
-if (defined(&$bfunc)) {
+if (defined(&$bfunc) && $in{'atboot'}) {
 	print $text{'create_atbooting'},"<br>\n";
 	&$bfunc($server, 1);
 	print $text{'create_done'},"<p>\n";
