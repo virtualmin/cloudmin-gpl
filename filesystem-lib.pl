@@ -245,13 +245,19 @@ return $out if ($out =~ /0\s+MB,\s+0\s+bytes/ &&       # Not a disk
 my @rv;
 my $p = 1;
 my $secsize;
+my $disklabel = 'dos';
 foreach my $l (split(/\r?\n/, $out)) {
 	if ($l =~ /=\s+(\d+)\s+bytes/i) {
 		$secsize = $1;
 		}
-	elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?\s+([0-9a-f]+)\s+(\S+)/i) {
-		# Found a partition line
+	elsif ($l =~ /Disk\s+label\s+type:\s+(\S+)/) {
+		$disklabel = $1;
+		}
+	elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?\s+([0-9a-f]+)\s+(\S+)/i &&
+	       $disklabel eq "dos") {
+		# Found a DOS format partition line
 		push(@rv, { 'part' => $p,
+			    'disklabel' => $disklabel,
 			    'start' => $1,
 			    'start_bytes' => $1 * $secsize,
 			    'end' => $2,
@@ -261,6 +267,19 @@ foreach my $l (split(/\r?\n/, $out)) {
 			    'type' => $4,
 			    'offset' => $1 * $secsize });
 		$p++;
+		}
+	elsif ($l =~ /\s\d+\s+(\d+)\s+(\d+)\s+(\d+\S+)\s+(\S.*\S)\s+(primary|logical|extended)/ && $disklabel eq "gpt") {
+		# Found a GPT format partition line
+		push(@rv, { 'part' => $p,
+			    'disklabel' => $disklabel,
+			    'start' => $1,
+			    'start_bytes' => $1 * $secsize,
+			    'end' => $2,
+			    'end_bytes' => $2 * $secsize,
+			    'blocks' => ($2 - $1) + 1,
+			    'size_bytes' => ($2 - $1 + 1) * $secsize,
+			    'type' => $4,
+			    'offset' => $1 * $secsize });
 		}
 	}
 $secsize || return "Sector size not found in disk image";
