@@ -8616,7 +8616,7 @@ if ($img && $img->{'postcmdoff'} && $when eq 'after' && $action eq 'create') {
 		&$second_print($text{'create_done'});
 		}
 	}
-if ($img && $img->{'postcmdoff'} && $when eq 'after' && $action eq 'create') {
+if ($img && $img->{'postcmdon'} && $when eq 'after' && $action eq 'create') {
 	&$first_print($text{'run_post_imageon'});
 	my ($out, $ex, $err) = &execute_command_on_server($server,
 					$img->{'postcmdon'});
