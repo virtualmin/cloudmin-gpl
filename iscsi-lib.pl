@@ -817,15 +817,24 @@ if (!$err) {
 	# Wait for connection to show up
 	for(my $i=0; $i<10; $i++) {
 		sleep(1);
+
+		# Check for iscsi connection
 		my $conns = &remote_foreign_call($vhost, "iscsi-client",
 						 "list_iscsi_connections");
 		next if (!ref($conns));
 		my ($nconn) = grep { $_->{'target'} eq $conn->{'target'} }
 				   @$conns;
-		if ($nconn) {
-			$disk->{'iscsi_connect'} = 1;
-			last;
+		next if (!$nconn);
+
+		# Check for actual device file
+		if ($nconn->{'longdevice'}) {
+			my @st = &stat_file_on_server(
+				$vhost, $nconn->{'longdevice'});
+			next if (!@st);
 			}
+
+		$disk->{'iscsi_connect'} = 1;
+		last;
 		}
 	if (!$disk->{'iscsi_connect'}) {
 		$err = "iSCSI connection not established after 10 seconds";
