@@ -108,6 +108,12 @@ if (!$no_ssh) {
 			   &ui_password("upass", $randpass, 20))."<br>" ],
 			[ 1, &text('add_auth1', &ssh_key_menu("key"))."<br>" ],
 			[ 2, $text{'add_auth2'} ] ]));
+
+		# SSH port field
+		if ($config{'ssh_port'}) {
+			print &ui_table_row($text{'add_sshport'},
+			    &ui_textbox("ssh_port", $config{'ssh_port'}, 5));
+			}
 		}
 	}
 else {

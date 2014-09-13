@@ -54,7 +54,11 @@ if (!$no_ssh) {
 		$server->{'ssh_nologin'} = 1;
 		}
 	$server->{'ssh_protocol'} = 2;	# Nobody uses 1 anymore!
-	$server->{'ssh_port'} = $config{'ssh_port'};
+	if (defined($in{'ssh_port'})) {
+		$in{'ssh_port'} =~ /^\d+$/ && $in{'ssh_port'} > 0 ||
+			&error($text{'add_esshport'});
+		$server->{'ssh_port'} = $in{'ssh_port'};
+		}
 	}
 
 # Assume webmin login is same as root
