@@ -848,7 +848,12 @@ my %rv;
 my @servers = &get_backup_servers($backup);
 foreach my $s (@servers) {
 	my $vhost = &get_parent_server($s);
-	if (!$vhost) {
+	if ($s->{'missing'} && $backup->{'newvhost'} ne '') {
+		# A new host was given
+		$s->{$s->{'manager'}.'_on'} = $backup->{'newvhost'};
+		$s->{'status'} = 'down';
+		}
+	elsif (!$vhost) {
 		$rv{$s->{'id'}} = {
 			'ok' => 0,
 			'msg' => &text('brun_ehostid'),
@@ -2665,12 +2670,12 @@ return 0 if (!&get_disk_include($server, $disk));
 return 1;
 }
 
-# get_missing_backup_server(hostname, dest-str)
+# get_missing_backup_server(hostname, dest-str, [&force-host])
 # If a deleted server was backed up to some destination, read it's .serv file
 # and return
 sub get_missing_backup_server
 {
-my ($hostname, $deststr) = @_;
+my ($hostname, $deststr, $newvhost) = @_;
 my $server_deststr = $deststr;
 $server_deststr .= "/".$hostname.".serv";
 my $server_dest = &parse_backup_destination($server_deststr);

@@ -13,6 +13,12 @@ I<backupserver:/cloudmin>.
 By default, systems are restored one by one. However, you can have them
 done in parallel with the C<--parallel> flag.
 
+If a system being restored no longer exists, Cloudmin will attempt to re-create
+it using the same parameters (like disk size, CPU and memory limits) that it
+had originally. However, this will fail if the original host system is down
+or un-available - in which case you can use the C<--new-host> flag to specify
+an alternate host system to restore on.
+
 =head1 Example usage
 
   cloudmin restore-systems --host functest.home --source /tmp
@@ -56,6 +62,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--source") { $source = shift(@ARGV); }
 	elsif ($a eq "--parallel") { $parallel = 1; }
 	elsif ($a eq "--quiet") { $quiet = 1; }
+	elsif ($a eq "--new-host") { $newhost = shift(@ARGV); }
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -87,6 +94,16 @@ foreach $h (@hosts) {
 		}
 	}
 
+# Check forced host system for missing systems
+if ($newhost) {
+	$newvhost = &get_managed_server_by("host", $newhost);
+	$newvhost || &usage("Host system $newhost does not exist");
+	foreach my $m (@missing) {
+		$newvhost->{$m->{'manager'}.'_host'} ||
+			&usage($m->{'host'}." cannot be hosted on ".$newhost);
+		}
+	}
+
 if (!@servers && !@missing) {
 	if (@badhosts) {
 		&usage("No systems with hostnames ".
@@ -99,6 +116,7 @@ if (!@servers && !@missing) {
 $backup = { 'dest' => $source,
 	    'servers' => join(' ', map { $_->{'id'} } @servers),
 	    'missing' => join(' ', map { $_->{'host'} } @missing),
+	    'newvhost' => $newvhost->{'id'},
 	    'parallel' => $parallel };
 
 # Make sure source and dest can be managed by the user
@@ -158,6 +176,7 @@ print "                         [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                         [--host-on name]\n";
 print "                         --source source-directory\n";
 print "                         [--parallel]\n";
+print "                         [--new-host hostname]\n";
 exit(1);
 }
 
