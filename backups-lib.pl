@@ -848,8 +848,14 @@ my %rv;
 my @servers = &get_backup_servers($backup);
 foreach my $s (@servers) {
 	my $vhost = &get_parent_server($s);
-	if ($s->{'status'} eq 'nohost' ||
-	    !&can_ssh_status($vhost)) {
+	if (!$vhost) {
+		$rv{$s->{'id'}} = {
+			'ok' => 0,
+			'msg' => &text('brun_ehostid'),
+			};
+		}
+	elsif ($s->{'status'} eq 'nohost' ||
+	       !&can_ssh_status($vhost)) {
 		$rv{$s->{'id'}} = {
 			'ok' => 0,
 			'msg' => &text('brun_ehostdown', $vhost->{'host'}),

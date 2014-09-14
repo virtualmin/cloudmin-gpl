@@ -122,7 +122,7 @@ $rv = &execute_restore($backup);
 
 # Show results
 $allok = 1;
-foreach $s (@servers) {
+foreach $s (@servers, @missing) {
 	$r = $rv->{$s->{'id'}};
 	print $s->{'host'},": ";
 	if ($r) {
