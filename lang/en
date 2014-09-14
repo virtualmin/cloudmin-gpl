@@ -3927,11 +3927,15 @@ restore_egone3=System to restore has been deleted, and no system details were in
 restore_egone4=System to restore has been deleted, and the backup does not include the system's hostname
 restore_ecannot=You are not allowed to restore this backup
 restore_servers=Virtual systems to restore
+restore_servers0=Existing systems
+restore_servers1=New system named
 restore_missing=Deleted, will be re-created
 restore_parallel=Restore order
 restore_dest=Restore from source
 restore_ok=Restore Now
 restore_enone=No systems to restore selected!
+restore_ehostname=Missing or invalid hostname to restore
+restore_ehostname2=No backup for system $1 was found at the selected source
 restore_enewvhost=Original host system cannot be used, and no new suitable host system was found
 
 dbackup_err=Failed to delete backups

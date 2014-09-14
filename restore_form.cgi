@@ -50,6 +50,10 @@ print &ui_hidden("log", $in{'log'});
 print &ui_hidden("id", $in{'id'});
 print &ui_table_start($text{'restore_header'}, "width=100%", 2);
 
+# Build list of systems that can be backed up or restored
+@allservers = &list_available_managed_servers_sorted();
+@canservers = grep { &supports_backup($_) } @allservers;
+
 # Systems to include
 if ($in{'log'}) {
 	# Exactly one system
@@ -61,12 +65,16 @@ if ($in{'log'}) {
 	}
 else {
 	# Allow selection, with those from backup checked by default
-	@allservers = grep { &supports_backup($_) }
-			&list_available_managed_servers_sorted();
 	print &ui_table_row($text{'restore_servers'},
-		&ui_select("servers", [ map { $_->{'id'} } @servers ],
-			   [ map { [ $_->{'id'}, $_->{'host'} ] } @allservers ],
-			   10, 1));
+		&ui_radio_table("servers_mode", 0,
+			[ [ 0, $text{'restore_servers0'},
+			    &ui_select("servers",
+				       [ map { $_->{'id'} } @servers ],
+				       [ map { [ $_->{'id'}, $_->{'host'} ] }
+					     @canservers ],
+				       10, 1) ],
+			  [ 1, $text{'restore_servers1'},
+			    &ui_textbox("hostname", undef, 40) ] ]));
 	}
 
 # Parallel mode
@@ -86,6 +94,16 @@ else {
 	print &ui_table_row($text{'restore_dest'},
 	    &ui_radio_table("dest_mode", -1,
 		[ [ -1, $text{'backup_dest0'} ],
+		  [ 2, $text{'backups_mode2'},
+		       "<table>\n".
+		       "<tr> <td><b>$text{'backups_dirhost'}</b></td>\n".
+		       "<td>".&ui_select("vm2", $dest->{'id'},
+					 [ map { [ $_->{'id'}, $_->{'short_host'} ] }
+					       @allservers ])."</td> </tr>\n".
+		       "<tr> <td><b>$text{'backups_dirdir'}</b></td>\n".
+		       "<td>".&ui_textbox("vm2dir",
+					   $dest->{'mode'} == 2 ? $dest->{'path'} : "", 40)."</td> </tr>\n".
+		       "</table>" ],
 		  [ 3, $text{'backup_dest3'},
 			&show_backup_ssh_dest({ }, "ssh", 22) ],
 		  [ 4, $text{'backup_dest4'},

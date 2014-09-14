@@ -45,26 +45,60 @@ elsif ($in{'id'}) {
 	$backup->{'servers'} = join(' ', map { $_->{'id'} } @servers);
 	}
 else {
-	# Allow free choice of systems and source (Host, FTP or SSH)
-	@allservers = grep { &supports_backup($_) }
-			&list_available_managed_servers_sorted();
-	@servers = grep { $want{$_->{'id'}} } @allservers;
-	@servers || &error($text{'restore_enone'});
-	$backup = { 'servers' => join(' ', map { $_->{'id'} } @servers),
-		    'parallel' => $in{'parallel'} };
+	# Parse backup source fields
 	if ($in{'dest_mode'} == 3 || $in{'dest_mode'} == 4) {
+		# SSH or FTP server
 		$dest = { 'mode' => $in{'dest_mode'} };
 		$pfx = $in{'dest_mode'} == 3 ? 'ssh' : 'ftp';
 		$err = &parse_backup_ssh_dest($dest, $pfx, \%in);
 		&error($err) if ($err);
-                $backup->{'dest'} = &join_backup_destination($dest);
 		}
 	elsif ($in{'dest_mode'} == 5) {
+		# S3 bucket
 		$dest = { 'mode' => 5 };
 		$err = &parse_backup_s3_dest($dest, \%in);
                 &error($err) if ($err);
-                $backup->{'dest'} = &join_backup_destination($dest);
 		}
+	elsif ($in{'dest_mode'} == 2) {
+		# Some other system
+		$dest = { 'mode' => 2 };
+		$dest->{'path'} = $in{'vm2dir'};
+		$dest->{'id'} = $in{'vm2'};
+		$dest->{'path'} =~ /^\/\S+/ || &error($text{'backups_emode2'});
+		}
+	$deststr = $dest ? &join_backup_destination($dest) : undef;
+
+	# Allow free choice of systems and source (Host, FTP or SSH)
+	@allservers = grep { &supports_backup($_) }
+			&list_available_managed_servers_sorted();
+	if ($in{'servers_mode'} == 0) {
+		# From selected systems
+		@servers = grep { $want{$_->{'id'}} } @allservers;
+		@servers || &error($text{'restore_enone'});
+		}
+	else {
+		# A specific hostname
+		$in{'hostname'} =~ /^[a-z0-9\.\_\-]+$/i ||
+			&error($text{'restore_ehostname'});
+		($missing) = grep { $_->{'name'} eq $in{'hostname'} }
+				  @allservers;
+		if ($missing) {
+			# Actually exists
+			@servers = ( $missing );
+			}
+		else {
+			# May or may not exist at the backup dest
+			$missing = &get_missing_backup_server(
+					$in{'hostname'}, $deststr);
+			$missing || &error(&text('restore_ehostname2',
+						 $in{'hostname'}));
+			@missing = ( $missing );
+			}
+		}
+	$backup = { 'servers' => join(' ', map { $_->{'id'} } @servers),
+		    'missing' => join(' ', map { $_->{'host'} } @missing),
+		    'dest' => $deststr,
+		    'parallel' => $in{'parallel'} };
 	}
 
 # Double-check access to servers
