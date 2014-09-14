@@ -2287,9 +2287,9 @@ if (&can_ssh_status($server) && !$force) {
 	# Wait 30 seconds for shutdown
 	my $tries = 0;
 	while($tries < 30) {
-		my ($kout, $kex) = &execute_command_on_server(
-					$vhost, "kill -0 $proc->{'pid'}");
-		if ($kex) {
+		my ($kout, $kex, $kerr) = &execute_command_on_server(
+					$vhost, "kill -0 $proc->{'pid'}", 5);
+		if ($kex && !$kerr) {
 			&delete_kvm_cgroup($server, $vhost);
 			return undef;
 			}
