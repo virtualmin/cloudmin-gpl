@@ -13,11 +13,6 @@ I<backupserver:/cloudmin>.
 By default, systems are restored one by one. However, you can have them
 done in parallel with the C<--parallel> flag.
 
-In normal use, the C<restore-systems> command is used to recover a virtual
-system that already exists. However, you can use it to re-create a deleted
-system with the C<--recreate> flag - assuming that the C<.serv> file for the
-original system is included in the backup directory.
-
 =head1 Example usage
 
   cloudmin restore-systems --host functest.home --source /tmp
@@ -61,7 +56,6 @@ while(@ARGV > 0) {
 	elsif ($a eq "--source") { $source = shift(@ARGV); }
 	elsif ($a eq "--parallel") { $parallel = 1; }
 	elsif ($a eq "--quiet") { $quiet = 1; }
-	elsif ($a eq "--recreate") { $recreate = 1; }
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -164,7 +158,6 @@ print "                         [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                         [--host-on name]\n";
 print "                         --source source-directory\n";
 print "                         [--parallel]\n";
-print "                         [--recreate]\n";
 exit(1);
 }
 
