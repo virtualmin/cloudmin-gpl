@@ -618,16 +618,25 @@ if ($multi) {
 				      &nice_size($info->{'mem'}->[0]*1024),"\n";
 				print "    Real memory free: ",
 				      &nice_size($info->{'mem'}->[1]*1024),"\n";
+				print "    Real memory used: ",
+				      &nice_size($info->{'mem'}->[0]*1024 -
+						 $info->{'mem'}->[1]*1024),"\n";
 				print "    Virtual memory: ",
 				      &nice_size($info->{'mem'}->[2]*1024),"\n";
 				print "    Virtual memory free: ",
 				      &nice_size($info->{'mem'}->[3]*1024),"\n";
+				print "    Virtual memory used: ",
+				      &nice_size($info->{'mem'}->[2]*1024 -
+						 $info->{'mem'}->[3]*1024),"\n";
 				}
 			if ($info->{'disk_total'}) {
 				print "    Disk space: ",
 				      &nice_size($info->{'disk_total'}),"\n";
 				print "    Disk space free: ",
 				      &nice_size($info->{'disk_free'}),"\n";
+				print "    Disk space used: ",
+				      &nice_size($info->{'disk_total'} -
+						 $info->{'disk_free'}),"\n";
 				}
 			if ($info->{'disk_list'}) {
 				foreach my $fs (@{$info->{'disk_list'}}) {
