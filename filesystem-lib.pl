@@ -447,13 +447,16 @@ return $cmd;
 }
 
 # get_fsck_command(&vhost, fs-type, [device])
-# Returns a command to fsck an EXT filesystem of some type
+# Returns a command to fsck an disk filesystem of some type
 sub get_fsck_command
 {
 my ($vhost, $fs, $dev) = @_;
 my $cmd;
 if ($fs =~ /ext(\d+)$/) {
 	$cmd = "e".$1."fsck";
+	if (!&has_command_on_server($vhost, $cmd)) {
+		$cmd = "fsck.".$fs;
+		}
 	if (!&has_command_on_server($vhost, $cmd)) {
 		$cmd = "e2fsck";
 		}
