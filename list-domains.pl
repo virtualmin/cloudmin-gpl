@@ -9,6 +9,10 @@ systems. By default the output is in table format similar to Virtualmin's
 own C<list-domains.pl> command, but you can switch to a more complete
 and parsable format with the C<--multiline> flag.
 
+To limit the list to only specific domains, use the C<--domain> flag followed
+by a domain name (which can be given mulitple times). To show only domains that
+are enabled, use the C<--enabled> flag (or C<--disabled> to do the reverse).
+
 =head1 Example usage
 
   cloudmin list-domains --host xencentos.home
@@ -54,6 +58,8 @@ while(@ARGV > 0) {
         elsif ($a eq "--host-on") { push(@hostons, shift(@ARGV)); }
         elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--domain") { push(@dnames, shift(@ARGV)); }
+	elsif ($a eq "--disabled") { $disabled = 1; }
+	elsif ($a eq "--enabled") { $disabled = 0; }
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -75,6 +81,14 @@ if (@dnames) {
 	# Limit to those requested
 	%want = map { $_, 1 } @dnames;
 	@serverdoms = grep { $want{$_->[1]->{'dom'}} } @serverdoms;
+	}
+if ($disabled eq '1') {
+	# Only disabled domains
+	@serverdoms = grep { $_->[1]->{'disabled'} } @serverdoms;
+	}
+elsif ($disabled eq '0') {
+	# Only enabled domains
+	@serverdoms = grep { !$_->[1]->{'disabled'} } @serverdoms;
 	}
 
 if ($multi) {
@@ -187,6 +201,7 @@ print "                      [--owner name]*\n";
 print "                      [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                      [--host-on name]\n";
 print "                      [--domain name]*\n";
+print "                      [--disabled | --enabled]\n";
 exit(1);
 }
 
