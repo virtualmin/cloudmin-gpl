@@ -3788,6 +3788,7 @@ brun_destdesc2=Backing up $1 systems to destinations from host systems ..
 brun_evhost=No default destination set on $1
 brun_espace=Backup disk space limit of $1 has been reached
 brun_ehostdown=Host system $1 is down
+brun_ehosttype=Host system $1 does not support this virtualization type
 brun_ehostid=Original host system is not known to Cloudmin
 brun_emanager=Virtual system type $1 is not supported
 brun_etemp=Failed to select temporary file on $1
@@ -3937,6 +3938,9 @@ restore_enone=No systems to restore selected!
 restore_ehostname=Missing or invalid hostname to restore
 restore_ehostname2=No backup for system $1 was found at the selected source
 restore_enewvhost=Original host system cannot be used, and no new suitable host system was found
+restore_vhost=Create missing systems on
+restore_vhostdef=Original host system
+restore_evhost=Selected host system does not exist or is not usable
 
 dbackup_err=Failed to delete backups
 dbackup_enone=None selected to delete!

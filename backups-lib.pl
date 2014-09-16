@@ -852,8 +852,10 @@ foreach my $s (@servers) {
 		# A new host was given
 		$s->{$s->{'manager'}.'_on'} = $backup->{'newvhost'};
 		$s->{'status'} = 'down';
+		$vhost = &get_managed_server($backup->{'newvhost'});
 		}
 	elsif (!$vhost) {
+		# Host doesn't exist
 		$rv{$s->{'id'}} = {
 			'ok' => 0,
 			'msg' => &text('brun_ehostid'),
@@ -861,15 +863,25 @@ foreach my $s (@servers) {
 		}
 	elsif ($s->{'status'} eq 'nohost' ||
 	       !&can_ssh_status($vhost)) {
+		# Host is down
 		$rv{$s->{'id'}} = {
 			'ok' => 0,
 			'msg' => &text('brun_ehostdown', $vhost->{'host'}),
 			};
 		}
 	if (&indexof($s->{'manager'}, @server_management_types) < 0) {
+		# VM type isn't one we support
 		$rv{$s->{'id'}} = {
 			'ok' => 0,
 			'msg' => &text('brun_emanager', $s->{'manager'}),
+			};
+		}
+	elsif ($vhost && !$rv{$s->{'id'}} &&
+	       !$vhost->{$s->{'manager'}.'_host'}) {
+		# Host system is not suitable for VM type
+		$rv{$s->{'id'}} = {
+			'ok' => 0,
+			'msg' => &text('brun_ehosttype', $vhost->{'host'}),
 			};
 		}
 	}
@@ -2815,18 +2827,7 @@ my ($server) = @_;
 $server->{'status'} = 'create';
 
 &obtain_lock_server($server);
-
-# Fix the hosted-on system if needed
-my $vkey = ($server->{'manager'} eq 'zones' ? 'zone' : $server->{'manager'});
 my $vhost = &get_parent_server($server);
-if (!$vhost || !$vhost->{$vkey."_host"}) {
-	# Old host doesn't work here .. pick a new one
-	my $mem = $server->{$server->{'manager'}.'_memory'};
-	my $disk = $server->{$server->{'manager'}.'_disktotal'};
-	$vhost = &find_host_server($server, $vkey, $mem, 0, $disk);
-	$vhost || return $text{'restore_enewvhost'};
-	$server->{$vkey.'_on'} = $vhost->{'id'};
-	}
 
 # Run pre-creation script
 if (!&run_system_script($server, 'before', 'create')) {

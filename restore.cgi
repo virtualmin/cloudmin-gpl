@@ -101,6 +101,14 @@ else {
 		    'parallel' => $in{'parallel'} };
 	}
 
+# Parse host system
+if ($in{'vhost'} ne '') {
+	($vhost) = grep { $_->{'id'} eq $in{'vhost'} }
+			&list_all_available_host_servers();
+	$vhost || &error($text{'restore_evhost'});
+	$backup->{'newvhost'} = $vhost->{'id'};
+	}
+
 # Double-check access to servers
 foreach $s (@servers) {
 	&can_action_error($s, "backup");

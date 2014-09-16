@@ -77,6 +77,15 @@ else {
 			    &ui_textbox("hostname", undef, 40) ] ]));
 	}
 
+# Create missing systems on host
+@vhosts = &list_all_available_host_servers();
+if (@vhosts) {
+	print &ui_table_row($text{'restore_vhost'},
+		&ui_select("vhost", undef,
+			   [ [ undef, "&lt;$text{'restore_vhostdef'}&gt;" ],
+			     map { [ $_->{'id'}, $_->{'host'} ] } @vhosts ]));
+	}
+
 # Parallel mode
 if (!$in{'log'}) {
 	print &ui_table_row($text{'restore_parallel'},
