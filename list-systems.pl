@@ -5,10 +5,10 @@
 Output a table of all systems managed by Cloudmin.
 
 When run with no parameters, this command outputs a table of all virtual
-systems known to Cloudmin. You can limit the display to a subset of systems using
-the standard options like C<--host>, C<--type> and C<--owner>, have it output all
-available information with the C<--multiline> parameter, or just show hostnames
-with C<--name-only>.
+systems known to Cloudmin. You can limit the display to a subset of systems
+using the standard options like C<--host>, C<--type> and C<--owner>, have it
+output all available information with the C<--multiline> parameter, or just
+show hostnames with C<--name-only>.
 
 To limit the display to only systems that can host virtual systems, use the
 C<--host-type> flag followed by a virtualization type like C<xen>, C<openvz>
@@ -32,7 +32,9 @@ To limit output to the unique IDs of selected systems, use the C<--id-only>
 flag. To get just hostnames use C<--name-only>, C<--address-only> to print
 just IP addresses, or C<--address6-only> to print only IPv6 addresses.
 You can also fetch only system details that can be displayed quickly (without
-needed to poll the host) with the C<--simple-multiline> flag.
+needed to poll the host) with the C<--simple-multiline> flag. To switch output
+from friendly units (like 10 MB) to just bytes (like 10485760), use the 
+C<--bytes> flag.
 
 =head1 Example usage
 
@@ -97,6 +99,7 @@ while(@ARGV > 0) {
 	elsif ($a eq "--status") { push(@statuses, shift(@ARGV)); }
 	elsif ($a eq "--last-period") { $period_ago = 1; }
 	elsif ($a eq "--period-ago") { $period_ago = shift(@ARGV); }
+	elsif ($a eq "--bytes") { $bytes = 1; }
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -305,24 +308,24 @@ if ($multi) {
 		foreach my $p (&is_parent_server($s)) {
 			($memfree, $memtotal) = &host_free_memory($s, $p, 0);
 			print "    Host memory for $p: ",
-			      &nice_size($memtotal),"\n";
+			      &prnt_size($memtotal),"\n";
 			print "    Host memory free for $p: ",
-			      &nice_size($memfree),"\n";
+			      &prnt_size($memfree),"\n";
 
 			($gmemfree, $gmemtotal) = &host_free_memory($s, $p, 1);
 			if ($gmemfree != $memfree) {
 				print "    Host guaranteed memory for $p: ",
-				      &nice_size($gmemtotal),"\n";
+				      &prnt_size($gmemtotal),"\n";
 				print "    Host guaranteed memory free ",
 				      "for $p: ",
-				      &nice_size($gmemfree),"\n";
+				      &prnt_size($gmemfree),"\n";
 				}
 
 			($diskfree, $disktotal) = &host_free_disk($s, $p);
 			print "    Host disk for $p: ",
-			      &nice_size($disktotal),"\n";
+			      &prnt_size($disktotal),"\n";
 			print "    Host disk free for $p: ",
-			      &nice_size($diskfree),"\n";
+			      &prnt_size($diskfree),"\n";
 			}
 
 		# Show limits, where we can, starting with memory
@@ -332,7 +335,7 @@ if ($multi) {
 			$mem = &$mfunc($s);
 			if (defined($mem)) {
 				print "    Memory limit: ",
-				      ($mem ? &nice_size($mem)
+				      ($mem ? &prnt_size($mem)
 					    : "Unlimited"),"\n";
 				}
 			}
@@ -343,7 +346,7 @@ if ($multi) {
 			$mem = &$mfunc($s);
 			if (defined($mem)) {
 				print "    Guaranteed memory limit: ",
-				      &nice_size($mem),"\n";
+				      &prnt_size($mem),"\n";
 				}
 			}
 
@@ -391,7 +394,7 @@ if ($multi) {
 			$disk = &$dfunc($s);
 			if (defined($disk)) {
 				print "    Disk space limit on host: ",
-				      ($disk ? &nice_size($disk)
+				      ($disk ? &prnt_size($disk)
 					    : "Unlimited"),"\n";
 				}
 			}
@@ -402,7 +405,7 @@ if ($multi) {
 			$space = &$dfunc($s);
 			if ($space) {
 				print "    Disk space used on host: ",
-					&nice_size($space),"\n";
+					&prnt_size($space),"\n";
 				}
 			}
 
@@ -441,7 +444,7 @@ if ($multi) {
 		$rfunc = "type_".$s->{'manager'}."_real_interfaces";
 		if (defined(&$rfunc) && $config{'bw_enabled'}) {
 			print "    Bandwidth limit: ",
-			      ($s->{'bw_limit'} ? &nice_size($s->{'bw_limit'})
+			      ($s->{'bw_limit'} ? &prnt_size($s->{'bw_limit'})
 						: "Unlimited"),"\n";
 			print "    Bandwidth accounting period: ",
 			      ($config{'bw_period'} ?
@@ -460,22 +463,22 @@ if ($multi) {
 				print "    Bandwidth usage for: ",
 					"$period_ago periods ago\n";
 				print "    Bandwidth usage towards limit: ",
-					&nice_size($bwtotal),"\n";
+					&prnt_size($bwtotal),"\n";
 				print "    Bandwidth usage incoming: ",
-					&nice_size($bwin),"\n";
+					&prnt_size($bwin),"\n";
 				print "    Bandwidth usage outgoing: ",
-					&nice_size($bwout),"\n";
+					&prnt_size($bwout),"\n";
 				}
 			else {
 				# Show current period's usage
 				print "    Bandwidth usage for: ",
 					"Current period\n";
 				print "    Bandwidth usage towards limit: ",
-					&nice_size($s->{'bw_usage'}),"\n";
+					&prnt_size($s->{'bw_usage'}),"\n";
 				print "    Bandwidth usage incoming: ",
-					&nice_size($s->{'bw_usage_in'}),"\n";
+					&prnt_size($s->{'bw_usage_in'}),"\n";
 				print "    Bandwidth usage outgoing: ",
-					&nice_size($s->{'bw_usage_out'}),"\n";
+					&prnt_size($s->{'bw_usage_out'}),"\n";
 				}
 			if ($s->{'bw_usage'} > $s->{'bw_limit'} &&
 			    $s->{'bw_limit'} && $s->{'bw_notify'}) {
@@ -601,9 +604,9 @@ if ($multi) {
 			my @df = &get_iscsi_disk_space($s);
 			if (@df) {
 				print "    iSCSI disk: ",
-				      &nice_size($df[1]),"\n";
+				      &prnt_size($df[1]),"\n";
 				print "    iSCSI disk free: ",
-				      &nice_size($df[0]),"\n";
+				      &prnt_size($df[0]),"\n";
 				}
 			}
 
@@ -615,44 +618,44 @@ if ($multi) {
 				}
 			if ($info->{'mem'}) {
 				print "    Real memory: ",
-				      &nice_size($info->{'mem'}->[0]*1024),"\n";
+				      &prnt_size($info->{'mem'}->[0]*1024),"\n";
 				print "    Real memory free: ",
-				      &nice_size($info->{'mem'}->[1]*1024),"\n";
+				      &prnt_size($info->{'mem'}->[1]*1024),"\n";
 				print "    Real memory used: ",
-				      &nice_size($info->{'mem'}->[0]*1024 -
+				      &prnt_size($info->{'mem'}->[0]*1024 -
 						 $info->{'mem'}->[1]*1024),"\n";
 				print "    Virtual memory: ",
-				      &nice_size($info->{'mem'}->[2]*1024),"\n";
+				      &prnt_size($info->{'mem'}->[2]*1024),"\n";
 				print "    Virtual memory free: ",
-				      &nice_size($info->{'mem'}->[3]*1024),"\n";
+				      &prnt_size($info->{'mem'}->[3]*1024),"\n";
 				print "    Virtual memory used: ",
-				      &nice_size($info->{'mem'}->[2]*1024 -
+				      &prnt_size($info->{'mem'}->[2]*1024 -
 						 $info->{'mem'}->[3]*1024),"\n";
 				}
 			if ($info->{'disk_total'}) {
 				print "    Disk space: ",
-				      &nice_size($info->{'disk_total'}),"\n";
+				      &prnt_size($info->{'disk_total'}),"\n";
 				print "    Disk space free: ",
-				      &nice_size($info->{'disk_free'}),"\n";
+				      &prnt_size($info->{'disk_free'}),"\n";
 				print "    Disk space used: ",
-				      &nice_size($info->{'disk_total'} -
+				      &prnt_size($info->{'disk_total'} -
 						 $info->{'disk_free'}),"\n";
 				}
 			if ($info->{'disk_list'}) {
 				foreach my $fs (@{$info->{'disk_list'}}) {
 					print "    Filesystem: $fs->{'fs'}",
-				          " size ",&nice_size($fs->{'total'}),
-				          " used ",&nice_size($fs->{'used'}),
-				          " free ",&nice_size($fs->{'free'}),
+				          " size ",&prnt_size($fs->{'total'}),
+				          " used ",&prnt_size($fs->{'used'}),
+				          " free ",&prnt_size($fs->{'free'}),
 					  "\n";
 					}
 				}
 			if ($info->{'vg_list'}) {
 				foreach my $vg (@{$info->{'vg_list'}}) {
 					print "    LVM VG: $vg->{'vg'}",
-				          " size ",&nice_size($vg->{'total'}),
-				          " used ",&nice_size($vg->{'used'}),
-				          " free ",&nice_size($vg->{'free'}),
+				          " size ",&prnt_size($vg->{'total'}),
+				          " used ",&prnt_size($vg->{'used'}),
+				          " free ",&prnt_size($vg->{'free'}),
 					  "\n";
 					}
 				}
@@ -729,5 +732,10 @@ print "                      [--host-type type|\"all\"]\n";
 print "                      [--host-on name]\n";
 print "                      [--last-period | --period-ago N]\n";
 exit(1);
+}
+
+sub prnt_size
+{
+return $bytes ? $_[0] : &nice_size($_[0]);
 }
 
