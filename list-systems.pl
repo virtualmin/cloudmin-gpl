@@ -731,6 +731,7 @@ print "                      [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                      [--host-type type|\"all\"]\n";
 print "                      [--host-on name]\n";
 print "                      [--last-period | --period-ago N]\n";
+print "                      [--bytes]\n";
 exit(1);
 }
 
