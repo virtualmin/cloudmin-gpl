@@ -14,6 +14,7 @@ return (
 			     "delete-snapshot.pl", "merge-shapshot.pl" ],
 	[ "Virtual disks", "*-disk.pl", "*-disks.pl", "*-disk-storages.pl" ],
 	[ "Amazon EC2", "*-ec2-*.pl" ],
+	[ "Google Compute Engine", "*-gce-*.pl" ],
 	[ "Network interfaces", "*-interface.pl", "*-interfaces.pl",
 				"set-default-gateway.pl" ],
 	[ "System owners", "*-owner.pl", "*-owners.pl",
@@ -56,7 +57,11 @@ on virtual systems.",
 
 "Amazon EC2",
 "The commands in this section are specific to EC2 virtual system creation,
-and management of associated resources such as IP addresses.",
+and management of associated resources such as IP addresses and volumes.",
+
+"Google Compute Engine",
+"The commands in this section are specific to GCE virtual system creation,
+and management of associated resources such as disks and snapshots.",
 
 "Network Interfaces",
 "Virtual systems running under Zones or Linux Vservers cannot manage their
