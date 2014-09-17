@@ -10109,6 +10109,18 @@ foreach my $v (@vhosts) {
 return @rv;
 }
 
+# list_all_available_host_servers()
+# Returns a list of host systems of all possible types
+sub list_all_available_host_servers
+{
+my @vhosts;
+foreach my $t (@hosted_server_management_types) {
+	push(@vhosts, &list_available_host_servers($t));
+	}
+my %donev;
+return grep { !$donev{$_->{'id'}} } @vhosts;
+}
+
 # find_host_server(&server, host-type,
 # 		   [extra-ram, extra-guaranteed-ram, extra-disk])
 # Returns a host system for a new VM of some type (xen, vserver, zone), based
