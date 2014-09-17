@@ -68,7 +68,7 @@ else {
 	print &ui_table_row($text{'key_public'},
 		&ui_textarea("public", &wrap_long_line(
 					&generate_public_key($key), 80),
-			     10, 80, "off", 0, "readonly"));
+			     10, 80, "off", 0, "readonly disabled"));
 
 	# Show type-specific key info
 	foreach $t (@server_management_types) {
