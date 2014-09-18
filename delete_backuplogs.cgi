@@ -25,7 +25,9 @@ foreach $id (@d) {
 	$log = &get_backup_log($id);
 	$log || &error(&text('dbackup_egone', $id));
 	$server = $servermap{$log->{'server'}};
-	$server || &error(&text('dbackup_egone2', $id));
+	$server || !$access{'owner'} ||
+	    ($log->{'owner'} eq $base_remote_user) ||
+		&error(&text('dbackup_egone2', $id));
 	push(@logs, $log);
 	}
 
@@ -37,8 +39,9 @@ if ($in{'confirm'}) {
 	@dest = ( );
 	foreach $log (@logs) {
 		$server = $servermap{$log->{'server'}};
-		&$first_print(&text('dbackup_deleting', $server->{'host'},
-				    &nice_backup_destination($log->{'dest'})));
+		&$first_print(&text('dbackup_deleting',
+			    $server ? $server->{'host'} : $log->{'host'},
+			    &nice_backup_destination($log->{'dest'})));
 		$err = &delete_backup_dest(
 			&parse_backup_destination($log->{'dest'}), $server);
 		if ($err) {
@@ -49,10 +52,13 @@ if ($in{'confirm'}) {
 					     &nice_size($log->{'size'})));
 
 			# Also remove other logs for this dest
-			@samelogs = grep { $_->{'dest'} eq $log->{'dest'} }
-					 &list_backup_logs($server);
-			foreach $samelog (@samelogs) {
-				&delete_backup_log($samelog);
+			if ($server) {
+				@samelogs = grep
+					{ $_->{'dest'} eq $log->{'dest'} }
+					&list_backup_logs($server);
+				foreach $samelog (@samelogs) {
+					&delete_backup_log($samelog);
+					}
 				}
 			push(@dest, $log->{'dest'});
 			}
