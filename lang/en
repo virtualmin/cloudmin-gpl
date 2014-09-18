@@ -3941,6 +3941,7 @@ restore_enewvhost=Original host system cannot be used, and no new suitable host 
 restore_vhost=Create missing systems on
 restore_vhostdef=Original host system
 restore_evhost=Selected host system does not exist or is not usable
+restore_eimage=This virtualization type does not support creation of empty systems, and the original image is no longer available
 
 dbackup_err=Failed to delete backups
 dbackup_enone=None selected to delete!

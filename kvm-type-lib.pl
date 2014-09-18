@@ -1330,7 +1330,7 @@ if (!@st) {
 	}
 
 # Validate CD image on host
-if ($empty && !$server->{'image'}) {
+if ($empty && !$server->{'image'} && $server->{'imagefile'}) {
 	&stat_file_on_server($vhost, $server->{'imagefile'}) ||
 		return "CD image $server->{'imagefile'} on host system ".
 		       "$vhost->{'host'} does not exist";
@@ -1668,10 +1668,12 @@ if ($empty && $server->{'image'}) {
 	$server->{'kvm_cdimage'} = $imgdestfile;
 	}
 elsif ($empty && !$server->{'image'}) {
-	# CD is in an existing file
-	$server->{'kvm_drives'} .=
-		" file=$server->{'imagefile'},media=cdrom,index=1,if=ide";
-	$server->{'kvm_bootdevice'} = 'd';
+	# CD is in an existing file, or no image is needed
+	if ($server->{'imagefile'}) {
+		$server->{'kvm_drives'} .=
+		    " file=$server->{'imagefile'},media=cdrom,index=1,if=ide";
+		$server->{'kvm_bootdevice'} = 'd';
+		}
 	}
 else {
 	# Copying image to first drive on the system

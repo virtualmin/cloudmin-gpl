@@ -2810,11 +2810,6 @@ if ($server->{'directory'}) {
 	return &text('create_edirectory', $err) if ($err);
 	}
 
-# Must have an image
-# XXX isn't really needed, but makes code below simpler
-my $img = $server->{'image'} ? &get_server_image($server->{'image'}) : undef;
-return $text{'rrun_erecreateimage'} if (!$img);
-
 return undef;
 }
 
@@ -2836,6 +2831,7 @@ if (!&run_system_script($server, 'before', 'create')) {
 
 # If there is an image file, copy to the server
 my $img = &get_server_image($server->{'image'});
+my $empty;
 if ($img) {
 	my $copyserver = &get_transfer_image_dest($server);
 	&$first_print(&text('create_copying', &nice_size($img->{'size'}),
@@ -2843,7 +2839,7 @@ if ($img) {
 	($imageok, $imagetemp) = &transfer_image_files($server, 0);
 	if ($imageok == 0) {
 		# Copy failed
-		print &text('create_ecopy', $imagetemp),"<p>\n";
+		&$second_print(&text('create_ecopy', $imagetemp));
 		return 0;
 		}
 	else {
@@ -2854,13 +2850,23 @@ if ($img) {
 			       $imageok == 3 ? $text{'create_incache'} :
 					       $text{'create_addcache'});
 		}
+	$empty = 0;
+	}
+else {
+	delete($server->{'image'});
+	$empty = 1;
+	my $efunc = "type_".$server->{'manager'}."_can_create_empty";
+	if (!defined(&$efunc) || !&$efunc()) {
+		&$second_print($text{'restore_eimage'});
+		return 0;
+		}
 	}
 
 # Call the server type's creation function, then wait for it to be come ready
 my $tfunc = "type_".$server->{'manager'}."_desc";
 &$first_print(&text('create_creating', &$tfunc()));
 my $cfunc = "type_".$server->{'manager'}."_create";
-my $err = &$cfunc($server, undef, undef, 0, 0, 1);
+my $err = &$cfunc($server, undef, undef, 0, $empty, 1);
 if ($err) {
 	&$second_print(&text('create_ecreate', $err));
 	return 0;
@@ -2870,7 +2876,7 @@ if (defined(&$dfunc)) {
 	&$second_print($text{'create_created'});
 	&$first_print($text{'create_waiting'});
 	while(1) {
-		$err = &$dfunc($server);
+		$err = &$dfunc($server, $empty);
 		if ($err eq "OK") {
 			last;
 			}
@@ -2903,7 +2909,7 @@ if ($vhost) {
 # Call any post-creation function
 my $dfunc = "type_".$server->{'manager'}."_create_post";
 if (defined(&$dfunc)) {
-	&$dfunc($server, undef, undef, 0, 0, 1);
+	&$dfunc($server, undef, undef, 0, $empty, 1);
 	}
 
 # Call any really final post-creation function
