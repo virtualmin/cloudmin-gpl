@@ -116,7 +116,11 @@ sub date_to_time
 {
 my ($date) = @_;
 my $rv;
-if ($date =~ /^(\d{4})-(\d+)-(\d+)$/) {
+if ($date =~ /^(\d{4})-(\d+)-(\d+):(\d+):(\d+)$/) {
+	# Date and time only
+	$rv = timelocal(0, $5, $4, $3, $2-1, $1-1900);
+	}
+elsif ($date =~ /^(\d{4})-(\d+)-(\d+)$/) {
 	# Date only
 	$rv = timelocal(0, 0, 0, $3, $2-1, $1-1900);
 	}
@@ -134,8 +138,8 @@ print "$_[0]\n\n" if ($_[0]);
 print "Lists the values of some statistic on one or more systems.\n";
 print "\n";
 print "cloudmin list-system-history --stat name\n";
-print "                             [--start yyyy-mm-dd]\n";
-print "                             [--end yyyy-mm-dd]\n";
+print "                             [--start yyyy-mm-dd(:hh:mm)]\n";
+print "                             [--end yyyy-mm-dd(:hh:mm)]\n";
 print "                             [--all-hosts] | [--host name]*\n";
 print "                             [--group name]*\n";
 my $types = join("|", @server_management_types);
