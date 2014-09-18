@@ -180,9 +180,11 @@ if ($multi) {
 			print "    Virtualmin config error: ",
 			      &strip_html_tags($s->{'virtualmin_error'}),"\n";
 			}
-		if ($s->{'status'} eq 'virt' || $s->{'status'} eq 'novirt') {
+		if ($s->{'type'}) {
 			print "    OS: ",&describe_os($s->{'type'}),"\n";
 			print "    OS code: ",$s->{'type'},"\n";
+			}
+		if ($s->{'status'} eq 'virt' || $s->{'status'} eq 'novirt') {
 			print "    Webmin version: ",
 			      $info->{'general'}->{'version'},"\n";
 			print "    Webmin OS type: ",
