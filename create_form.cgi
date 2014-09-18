@@ -287,6 +287,7 @@ if ($empty) {
 				      &ui_textbox("file", undef, 40).
 				      $chooser ]);
 			}
+		push(@opts, [ 2, $text{'create_nocdfile'} ]);
 		if (@opts > 1) {
 			print &ui_table_row($text{'create_cd'},
 				    &ui_radio_table("cdmode", 0, \@opts));

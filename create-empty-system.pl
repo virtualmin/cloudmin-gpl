@@ -13,7 +13,9 @@ C<--type> I<code> The virtualization type code, like ''xen'' , ''zones''  or ''v
 
 The CD image to install from can either be specified with the C<--imagefile>
 flag followed by a filename on the host system, or the C<--image> flag followed
-by the ID of a system image in ISO format.
+by the ID of a system image in ISO format. If neither are given, a VM with
+an empty disk is created - however, it will be un-usable until either a CD
+image is attached, or an operating system image is copied to the disk.
 
 The flag C<--start-at-boot> can be given to have the new system restarted
 when its host system reboots. Alternately, you can use C<--no-start-at-boot>
@@ -187,9 +189,6 @@ if ($empty != 2) {
 		$imagefile =~ /^\/\S+$/ ||
 			&usage("--imagefile must be followed by a full path");
 		$server->{'imagefile'} = $imagefile;
-		}
-	else {
-		&usage("One of --image or --imagefile must be given");
 		}
 	}
 else {

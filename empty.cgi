@@ -54,11 +54,14 @@ if ($empty != 2) {
 		$server->{'image'} = $in{'image'};
 		$server->{'type'} = $img->{'type'};
 		}
-	else {
+	elsif ($in{'cdmode'} == 1) {
 		# Regular file
 		&can_action_error(undef, "global");
 		$in{'file'} =~ /^\/\S+$/ || &error($text{'create_eimagefile'});
 		$server->{'imagefile'} = $in{'file'};
+		}
+	else {
+		# Neither a CD image or a file
 		}
 	}
 
