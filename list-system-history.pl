@@ -91,10 +91,13 @@ foreach $s (@servers) {
 	print $s->{'host'},"\n";
 	@history = &list_historic_collected_info($stat, $s,
 						$start || undef, $end || undef);
+	%done = ( );
 	if ($multi) {
 		# In multi-line format
 		foreach my $h (@history) {
-			print "    Time: ",&make_date($h->[0]),"\n";
+			$f = &make_date($h->[0]);
+			next if ($done{$f}++);
+			print "    Time: ",$f,"\n";
 			print "    Value: ",$h->[1],"\n";
 			}
 		}
@@ -103,9 +106,11 @@ foreach $s (@servers) {
 		printf $fmt, "Time", "Value";
 		printf $fmt, ("-" x 20), ("-" x 40);
 		foreach my $h (@history) {
+			$f = &make_date($h->[0]);
+			next if ($done{$f}++);
 			($val, $units) = &make_value_nice($stat, $h->[1]);
 			$val .= " ".$units if ($units);
-			printf $fmt, &make_date($h->[0]), $val;
+			printf $fmt, $f, $val;
 			}
 		}
 	}
