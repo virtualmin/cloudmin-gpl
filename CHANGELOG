@@ -95,3 +95,4 @@ CentOS 7 is now supported as host system and virtual system type, including the 
 ---- Changes since 7.8 ----
 Whether or not to start new virtual systems at host boot time can now be controlled on the system creation form, and via a Cloudmin Configuration page option.
 System statistics for the fraction of disk, RAM and swap space used can now be graphed and alerted on.
+Backups can now be restored on Cloudmin master systems other than the one they were made on, even if the orginal system image is missing or if the original host is no longer available.
