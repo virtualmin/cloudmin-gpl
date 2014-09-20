@@ -750,8 +750,8 @@ my $err;
 if (ref($files)) {
 	my @delmaps;
 	foreach my $f (@$files) {
-		if ($f =~ /^\Q$mapper\Ep\d+$/ ||
-		    $f =~ /^\Q$dashmapper\Ep\d+$/) {
+		if ($f =~ /^\Q$mapper\Ep?\d+$/ ||
+		    $f =~ /^\Q$dashmapper\Ep?\d+$/) {
 			push(@delmaps, $f);
 			}
 		}
