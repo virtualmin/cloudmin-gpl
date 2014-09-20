@@ -3772,6 +3772,11 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 	if ($part && $server->{'type'} ne 'windows' && $part->{'type'} ne '7') {
 		push(@cmds, "parted -s ".quotemeta($disk->{'real'})." rm ".
 			    $part->{'part'});
+		if (@$parts == 1 && $part->{'disklabel'} eq 'gpt') {
+			# Re-create the GPT disk label, so it is the right size
+			push(@cmds, "parted -s ".quotemeta($disk->{'real'}).
+				    " mklabel gpt");
+			}
 		push(@cmds, [ "parted -s ".quotemeta($disk->{'real'}).
 			        " mkpart ".
 			        $part->{'parted_type'}." ".
@@ -3854,7 +3859,8 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 			last;
 			}
 		elsif ($ex) {
-			$moderr = "$cmd failed : $out";
+			my $cmdstr = ref($cmd) eq 'ARRAY' ? $cmd->[0] : $cmd;
+			$moderr = "$cmdstr failed : $out";
 			last;
 			}
 		}
@@ -4067,7 +4073,7 @@ my ($server, $disk, $noforce) = @_;
 my $flag = $noforce ? "" : "-f";
 my $vhost = &get_parent_server($server);
 my ($ok, $loop) = &loopback_mount_partition($vhost, $disk->{'real'});
-$ok || return $loop;
+$ok || return (0, $loop);
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"fsck -y $flag $loop");
 &loopback_unmount_partition($vhost, $loop);

@@ -268,7 +268,7 @@ foreach my $l (split(/\r?\n/, $out)) {
 			    'offset' => $1 * $secsize });
 		$p++;
 		}
-	elsif ($l =~ /\s\d+\s+(\d+)\s+(\d+)\s+(\d+\S+)\s+(\S.*\S)\s+(primary|logical|extended)/ && $disklabel eq "gpt") {
+	elsif ($l =~ /\s\d+\s+(\d+)\s+(\d+)\s+(\d+\S+)\s+(\S.*\S)\s+(primary|logical|extended|ext\S+)/ && $disklabel eq "gpt") {
 		# Found a GPT format partition line
 		push(@rv, { 'part' => $p,
 			    'disklabel' => $disklabel,
@@ -849,6 +849,7 @@ else {
 	# Need to find partition
 	my $parts = &list_disk_image_partitions($vhost, $real);
 	ref($parts) || return (0, "Failed to list partitions : $parts");
+	@$parts || return (0, "Disk has no partitions!");
 	if (!defined($pnum)) {
 		# No partition number given, assume last non-swap
 		for(my $i=0; $i<@$parts; $i++) {
