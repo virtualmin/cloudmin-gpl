@@ -13112,15 +13112,20 @@ my ($allok, $allout) = (1, undef);
 foreach my $d (@$disks) {
 	if (&$cfunc($server, $d)) {
 		my ($ok, $out) = &$ffunc($server, $d, $noforce);
-		$allout .= $out;
 		if ($ok == 0) {
 			# Failed on this disk
+			$allout = $out;
 			$allok = 0;
 			last;
 			}
 		elsif ($ok == 2) {
 			# Work done on this disk
+			$allout .= $out;
 			$allok = 2;
+			}
+		else {
+			# Disk is OK
+			$allout .= $out;
 			}
 		}
 	}
