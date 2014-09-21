@@ -3769,10 +3769,12 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 
 	# Delete the last partition, then re-create it (with a fall back to
 	# the original size if re-creation fails)
+	my $need_part_resize = 0;
 	if ($part && $server->{'type'} ne 'windows' && $part->{'type'} ne '7') {
 		push(@cmds, "parted -s ".quotemeta($disk->{'real'})." rm ".
 			    $part->{'part'});
-		if (@$parts == 1 && $part->{'disklabel'} eq 'gpt') {
+		if (@$parts == 1 && $part->{'disklabel'} eq 'gpt' &&
+		    $disk->{'size'} > $olddisk->{'size'}) {
 			# Re-create the GPT disk label, so it is the right size
 			push(@cmds, "parted -s ".quotemeta($disk->{'real'}).
 				    " mklabel gpt");
@@ -3787,6 +3789,7 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
                                 $part->{'parted_type'}." ".
                                 $part->{'parted_start'}." ".
                                 $part->{'parted_end'} ]);
+		$need_part_resize = 1;
 		}
 
 	if ($disk->{'size'} > $olddisk->{'size'} && $resizefs) {
@@ -3827,6 +3830,19 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 		# Shrink logical volume (after resizing filesystem)
 		push(@cmds, "lvreduce -f -L".int($disk->{'size'}/1024)."k ".
 			    quotemeta($disk->{'real'}));
+		}
+
+	# For GPT format disks, the disk label has to be re-generated
+	# AFTER shrinking so that it matches the new device size
+	if ($need_part_resize && $part->{'disklabel'} eq 'gpt' &&
+	    $disk->{'size'} < $olddisk->{'size'} && @$parts == 1) {
+		push(@cmds, "parted -s ".quotemeta($disk->{'real'}).
+			    " mklabel gpt");
+		push(@cmds, "parted -s ".quotemeta($disk->{'real'}).
+			    " mkpart ".
+			    $part->{'parted_type'}." ".
+			    $part->{'parted_start'}." ".
+			    int($disk->{'size'}/1000000)."M");
 		}
 
 	# Run them in turn
