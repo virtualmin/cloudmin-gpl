@@ -74,3 +74,4 @@ rs_snet=0
 flash_vnc=1
 images_all=0
 default_start=1
+disk_format=2

@@ -320,7 +320,24 @@ my $ver = &get_parted_version($vhost);
 if ($ver && $ptype ne "ufs") {
 	# Create the disk label with parted
 	if ($make_label) {
-		my $labeltype = $ver >= 2 ? "gpt" : "msdos";
+		my $labeltype;
+		if ($ver < 2) {
+			# Old parted only supports DOS
+			$labeltype = "msdos";
+			}
+		elsif ($config{'disk_format'} == 0) {
+			# User wants old DOS format
+			$labeltype = "msdos";
+			}
+		elsif ($config{'disk_format'} == 1) {
+			# User wants new GPT format
+			$labeltype = "gpt";
+			}
+		else {
+			# Based on disk size
+			$labeltype = $size >= 1024*1024*1024*1024 ?
+					"gpt" : "msdos";
+			}
 		my ($out, $ex, $err) = &execute_command_on_server($vhost, 
 			"parted -s ".quotemeta($real)." mklabel $labeltype");
 		if ($ex || $err) {

@@ -28,6 +28,7 @@ owner_delete=Delete systems when their owner is deleted?,1,1-Yes,0-No
 timezone_sync=Set timezone on new systems to match host?,1,1-Yes,0-No
 cleanup_age=Days to keep history and bandwidth data,3,Forver,5,,days
 default_start=Start new virtual systems at host boot time?,1,1-Yes,0-No
+disk_format=Partition format for virtual disks,1,0-DOS,1-GPT,2-DOS for disks below 1 TB&#44; GPT for larger disks
 
 line4.5=KVM settings,11
 kvm_mem=Default KVM memory allocation,0,10,,MB
