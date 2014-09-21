@@ -176,6 +176,10 @@ if ($multi) {
 		if ($d->{'format'} eq 'disk' && defined(&$pfunc)) {
 			$parts = &$pfunc($server, $d);
 			if (ref($parts)) {
+				if (@$parts && $parts->[0]->{'disklabel'}) {
+					print "    Disk label: ",
+					      $parts->[0]->{'disklabel'},"\n";
+					}
 				foreach my $p (@$parts) {
 					print "    Partition $p->{'part'}: ",
 					      "range ",
