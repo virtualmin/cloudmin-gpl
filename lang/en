@@ -598,6 +598,7 @@ create_descempty=An empty system is one that has no contents on its disk initial
 create_cd=Installation CD image
 create_cdimage=Cloudmin image
 create_cdfile=File or device on host
+create_nocdfile=No CD image
 create_nocd=You are not allowed to install from a file on the host, and there are no CD images available!
 create_noimagedownload=No Cloudmin images for this system type have been downloaded yet!
 create_kvmvirtio=Fixing root disk device in fstab file ..
