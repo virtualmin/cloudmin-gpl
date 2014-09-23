@@ -322,7 +322,7 @@ if ($ver && $ptype ne "ufs") {
 	if ($make_label) {
 		my $labeltype;
 		if ($ver < 2) {
-			# Old parted only supports DOS
+			# Old parted only supports DOS format reliably
 			$labeltype = "msdos";
 			}
 		elsif ($config{'disk_format'} == 0) {
