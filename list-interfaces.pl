@@ -102,6 +102,9 @@ if ($multi) {
 			}
 		}
 
+	# Get resolv.conf if possible
+	my $resolv = &get_server_resolv_conf($server);
+
 	# Show one per block
 	foreach $i (@$ifaces) {
 		if ($info) {
@@ -147,6 +150,19 @@ if ($multi) {
 			}
 		if ($i->{'fullname'} eq $gwdev6) {
 			print "    Gateway for IPv6: $gw6\n";
+			}
+		if ($i eq $ifaces->[0]) {
+			if (ref($resolv)) {
+				foreach my $n (@{$resolv->{'nameserver'}}) {
+					print "    Nameserver: $n\n";
+					}
+				foreach my $n (@{$resolv->{'domain'}}) {
+					print "    Search domain: $n\n";
+					}
+				}
+			elsif ($resolv) {
+				print "    Nameserver error: $resolv\n";
+				}
 			}
 		if ($i->{'bridge'}) {
 			print "    Bridge: $i->{'bridge'}\n";

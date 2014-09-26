@@ -13912,6 +13912,41 @@ my ($ips) = @_;
 &unlock_file($blocked_ips_file);
 }
 
+# get_server_resolv_conf(&server)
+# Returns the parsed resolv.conf file from some system
+sub get_server_resolv_conf
+{
+my ($server) = @_;
+if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
+	# Get from remote net module
+	&remote_foreign_require($server, "net");
+	my $resolv = &remote_foreign_call($server, "net", "get_dns_config");
+	if ($resolv && %$resolv) {
+		return $resolv;
+		}
+	}
+# Fall back to direct parsing
+my $err = &mount_filesystem_if_needed($server);
+return $err if ($err);
+my ($data, $err) = &get_file_data_from_server($server, "/etc/resolv.conf");
+&umount_filesystem_if_needed($server);
+return $err if ($err);
+return "Empty resolv.conf file" if ($data !~ /\S/);
+my %resolv;
+foreach my $l (split(/\r?\n/, $data)) {
+	if ($l =~ /nameserver\s+(.*)/) {
+		push(@{$resolv{'nameserver'}}, split(/\s+/, $1));
+		}
+	elsif ($l =~ /domain\s+(\S+)/) {
+		$resolv{'domain'} = [ $1 ];
+		}
+	elsif ($l =~ /search\s+(.*)/) {
+		$resolv{'domain'} = [ split(/\s+/, $1) ];
+		}
+	}
+return \%resolv;
+}
+
 # vnc_client_html(host, port, password, &in, &server, cgi)
 # Returns HTML for a Java applet or Flash client for connecting to a VNC server
 sub vnc_client_html
