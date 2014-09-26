@@ -260,6 +260,12 @@ if ($multi) {
 				print "    Graphical console password: ",
 				      $pass,"\n";
 				}
+			$pfunc = "type_".$s->{'manager'}."_get_graphical_port";
+			$port = defined(&$pfunc) && &$pfunc($s);
+			if ($port) {
+				print "    Graphical console port: ",
+				      $port,"\n";
+				}
 			}
 
 		# In fast mode, skip all other expensive status fields

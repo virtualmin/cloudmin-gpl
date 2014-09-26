@@ -7694,6 +7694,15 @@ $server->{'kvm_vnc_passwd'} = $pass;
 return undef;
 }
 
+# type_kvm_get_graphical_port(&server)
+# Returns the VNC port number
+sub type_kvm_get_graphical_port
+{
+my ($server) = @_;
+return $server->{'kvm_vnc_display'} ? 5900 + $server->{'kvm_vnc_display'}
+				    : undef;
+}
+
 # create_kvm_monitor_file(&server)
 # Create a file on the host system for KVM monitor input, and uploads pty.pl
 sub create_kvm_monitor_file
