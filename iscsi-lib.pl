@@ -637,7 +637,31 @@ elsif ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-tgtd") {
 	# Remove the target
-	# XXX
+	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_tgtd_config");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	my $targetname = $disk->{'iscsi_name'}.":".$disk->{'iscsi_target'};
+	my ($target) = grep { $_->{'name'} eq 'target' &&
+			      $_->{'value'} eq $targetname } @$conf;
+	$target || return "No target named $targetname found";
+	my ($lun) = grep { $_->{'name'} eq 'backing-store' }
+			 @{$target->{'members'}};
+	if ($lun) {
+		$real = $lun->{'values'}->[0];
+		}
+	&remote_foreign_call($iscsiserver, $mod,
+		"save_directive", $conf, $target, undef);
+	$last_remote_error &&
+                return "Failed to delete target : $last_remote_error";
+        &remote_foreign_call($iscsiserver, $mod, "flush_file_lines");
+        $last_remote_error &&
+                return "Failed to flush file : $last_remote_error";
+
+	# Apply the config
+	my $err = &remote_foreign_call($iscsiserver, $mod,
+				       "restart_iscsi_tgtd");
+	$err ||= $last_remote_error;
+	return "Failed to apply iSCSI server configuration : $err" if ($err);
 	}
 else {
 	return "Unknown module $mod";
@@ -732,7 +756,18 @@ elsif ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-tgtd") {
 	# Find the target
-	# XXX
+	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_tgtd_config");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	my $targetname = $disk->{'iscsi_name'}.":".$disk->{'iscsi_target'};
+	my ($target) = grep { $_->{'name'} eq 'target' &&
+			      $_->{'value'} eq $targetname } @$conf;
+	$target || return "No target named $targetname found";
+	my ($lun) = grep { $_->{'name'} eq 'backing-store' }
+			 @{$target->{'members'}};
+	if ($lun) {
+		$real = $lun->{'values'}->[0];
+		}
 	}
 else {
 	return "Unknown module $mod";
@@ -1031,7 +1066,18 @@ elsif ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-tgtd") {
 	# Find the target
-	# XXX
+	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_tgtd_config");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	my $targetname = $disk->{'iscsi_name'}.":".$disk->{'iscsi_target'};
+	my ($target) = grep { $_->{'name'} eq 'target' &&
+			      $_->{'value'} eq $targetname } @$conf;
+	$target || return "No target named $targetname found";
+	my ($lun) = grep { $_->{'name'} eq 'backing-store' }
+			 @{$target->{'members'}};
+	if ($lun) {
+		$real = $lun->{'values'}->[0];
+		}
 	}
 else {
 	return "Unknown module $mod";
