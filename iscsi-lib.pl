@@ -32,7 +32,7 @@ if ($info->{'general'}->{'version'} < 1.605) {
 	return (0, $text{'iscsi_noversion'});
 	}
 my $mod;
-foreach my $m ("iscsi-target", "iscsi-server") {
+foreach my $m ("iscsi-target", "iscsi-server", "iscsi-tgtd") {
 	next if (!&remote_foreign_check($server, $m));
 	&remote_foreign_require($server, $m);
 	next if (!&remote_foreign_call($server, $m, "foreign_installed", $m));
@@ -121,6 +121,10 @@ if ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-server") {
 	&remote_foreign_call($iscsiserver, $mod, "is_iscsi_server_running") ||
+		return "iSCSI server is not running on $iscsiserver->{'host'}";
+	}
+if ($mod eq "iscsi-tgtd") {
+	&remote_foreign_call($iscsiserver, $mod, "is_tgtd_running") ||
 		return "iSCSI server is not running on $iscsiserver->{'host'}";
 	}
 else {
@@ -275,7 +279,8 @@ elsif ($mod eq "iscsi-target") {
 	$last_remote_error &&
 		return "Failed to get iSCSI hostname : $last_remote_error";
 	$targetname = $disk->{'iscsi_target'} || $suffix;
-	my ($rtarget) = grep { $_->{'target'} eq $targetname } @$targets;
+	my ($rtarget) = grep { $_->{'name'} eq 'Target' &&
+			       $_->{'value'} =~ /:\Q$targetname\E$/ } @$conf;
 	$rtarget && return "Target $targetname is already being exported!";
 	$target = { 'name' => 'Target',
 		    'value' => $host.":".$targetname,
@@ -299,6 +304,46 @@ elsif ($mod eq "iscsi-target") {
 	# Apply the config
 	my $err = &remote_foreign_call($iscsiserver, $mod,
 				       "restart_iscsi_server");
+	$err ||= $last_remote_error;
+	return "Failed to apply iSCSI server configuration : $err" if ($err);
+
+	$disk->{'iscsi_name'} = $host;
+	}
+elsif ($mod eq "iscsi-tgtd") {
+	# Add a target
+	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_tgtd_config");
+	$last_remote_error &&
+		return "Failed to get config : $last_remote_error";
+	my $host = &remote_foreign_call($iscsiserver, $mod,
+					"find_host_name", $conf) ||
+		   &remote_foreign_call($iscsiserver, $mod,
+					"generate_host_name");
+	$last_remote_error &&
+		return "Failed to get iSCSI hostname : $last_remote_error";
+	$targetname = $disk->{'iscsi_target'} || $suffix;
+	my ($rtarget) = grep { $_->{'name'} eq 'target' &&
+			       $_->{'value'} =~ /:\Q$targetname\E$/ } @$conf;
+	$rtarget && return "Target $targetname is already being exported!";
+	$target = { 'name' => 'target',
+		    'value' => $host.":".$targetname,
+		    'type' => 1,
+		    'members' => [ { 'name' => 'backing-store',
+				     'value' => $real },
+				   { 'name' => 'incominguser',
+				     'value' => $server->{'iscsi_user'}.' '.
+						$server->{'iscsi_pass'} } ],
+		  };
+	&remote_foreign_call($iscsiserver, $mod,
+		"save_directive", $conf, undef, $target);
+	$last_remote_error &&
+		return "Failed to create target : $last_remote_error";
+	&remote_foreign_call($iscsiserver, $mod, "flush_file_lines");
+	$last_remote_error &&
+		return "Failed to flush file : $last_remote_error";
+
+	# Apply the config
+	my $err = &remote_foreign_call($iscsiserver, $mod,
+				       "restart_iscsi_tgtd");
 	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
 
@@ -404,6 +449,10 @@ if ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-server") {
 	&remote_foreign_call($iscsiserver, $mod, "is_iscsi_server_running") ||
+		return "iSCSI server is not running on $iscsiserver->{'host'}";
+	}
+elsif ($mod eq "iscsi-tgtd") {
+	&remote_foreign_call($iscsiserver, $mod, "is_tgtd_running") ||
 		return "iSCSI server is not running on $iscsiserver->{'host'}";
 	}
 else {
@@ -586,6 +635,10 @@ elsif ($mod eq "iscsi-target") {
 	$err ||= $last_remote_error;
 	return "Failed to apply iSCSI server configuration : $err" if ($err);
 	}
+elsif ($mod eq "iscsi-tgtd") {
+	# Remove the target
+	# XXX
+	}
 else {
 	return "Unknown module $mod";
 	}
@@ -677,6 +730,10 @@ elsif ($mod eq "iscsi-target") {
 		$real = $1;
 		}
 	}
+elsif ($mod eq "iscsi-tgtd") {
+	# Find the target
+	# XXX
+	}
 else {
 	return "Unknown module $mod";
 	}
@@ -759,6 +816,14 @@ if (!$resizeerr) {
 		# Apply the config
 		my $err = &remote_foreign_call($iscsiserver, $mod,
 					       "restart_iscsi_server");
+		$err ||= $last_remote_error;
+		return "Failed to apply iSCSI server configuration : $err"
+			if ($err);
+		}
+	elsif ($mod eq "iscsi-tgtd") {
+		# Apply the config
+		my $err = &remote_foreign_call($iscsiserver, $mod,
+					       "restart_iscsi_tgtd");
 		$err ||= $last_remote_error;
 		return "Failed to apply iSCSI server configuration : $err"
 			if ($err);
@@ -963,6 +1028,10 @@ elsif ($mod eq "iscsi-target") {
 	if ($lun && $lun->{'value'} =~ /Path=([^,]+)/) {
 		$real = $1;
 		}
+	}
+elsif ($mod eq "iscsi-tgtd") {
+	# Find the target
+	# XXX
 	}
 else {
 	return "Unknown module $mod";
