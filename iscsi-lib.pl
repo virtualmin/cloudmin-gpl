@@ -123,7 +123,7 @@ elsif ($mod eq "iscsi-server") {
 	&remote_foreign_call($iscsiserver, $mod, "is_iscsi_server_running") ||
 		return "iSCSI server is not running on $iscsiserver->{'host'}";
 	}
-if ($mod eq "iscsi-tgtd") {
+elsif ($mod eq "iscsi-tgtd") {
 	&remote_foreign_call($iscsiserver, $mod, "is_tgtd_running") ||
 		return "iSCSI server is not running on $iscsiserver->{'host'}";
 	}
