@@ -1796,7 +1796,10 @@ else {
 	$sshcmd .= " $server->{'ssh_user'}\@".
 		   ($server->{'ip'} || $server->{'host'}).":".
 		   "\"".quotemeta($remotefile)."\"";
-	my ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'});
+	my @st = stat($localfile);
+	my $timeout = $st[7] < 1024*1024 ? 5 : undef;
+	my ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
+					      $timeout);
 	return $status ? $out : undef;
 	}
 }
@@ -3882,6 +3885,7 @@ if ($server->{'status'} ne 'nohost' &&
     defined(&server_failover_possible) &&
     &server_failover_possible($server)) {
 	# Fetch config files
+	$server->{'checked_data_files'} = 0;
 	my $ffunc = "type_".$server->{'manager'}."_get_failover_files";
 	if (defined(&$ffunc)) {
 		if (!-d $failover_files_dir) {
@@ -3894,9 +3898,8 @@ if ($server->{'status'} ne 'nohost' &&
 	my $dfunc = "type_".$server->{'manager'}."_get_data_files";
 	if (defined(&$dfunc)) {
 		my @dfiles = &$dfunc($server);
-		if (@dfiles) {
-			$server->{'data_files'} = join(" ", @dfiles);
-			}
+		$server->{'data_files'} = join(" ", @dfiles);
+		$server->{'checked_data_files'} = 1;
 		}
 	}
 

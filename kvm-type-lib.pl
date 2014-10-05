@@ -7595,7 +7595,8 @@ if (!$server) {
 	}
 if ($server && $newvhost) {
 	# Make sure disks exist on target
-	return 0 if (!$server->{'data_files'});
+	return 0 if (!$server->{'data_files'} &&
+		     !$server->{'checked_data_files'});
 	foreach my $f (split(/\s+/, $server->{'data_files'})) {
 		my @st = &stat_file_on_server($newvhost, $f);
 		return 0 if (@st <= 1);
@@ -7613,7 +7614,7 @@ sub type_kvm_get_data_files
 my ($server) = @_;
 my $disks = &type_kvm_list_disks($server, 0);
 return ( ) if (!ref($disks));
-return map { $_->{'real'} } @$disks;
+return map { $_->{'real'} } grep { $_->{'iscsi_server'} eq '' } @$disks;
 }
 
 # type_kvm_failover_system(&server, &dest)
