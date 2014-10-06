@@ -311,6 +311,7 @@ elsif ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-tgtd") {
 	# Add a target
+	&remote_eval($iscsiserver, $mod, '$get_tgtd_config_cache = undef;');
 	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_tgtd_config");
 	$last_remote_error &&
 		return "Failed to get config : $last_remote_error";
@@ -333,8 +334,14 @@ elsif ($mod eq "iscsi-tgtd") {
 				     'value' => $server->{'iscsi_user'}.' '.
 						$server->{'iscsi_pass'} } ],
 		  };
+	my $rconfig = &remote_foreign_config($iscsiserver, $mod);
+	my $addfile = $rconfig->{'add_file'};
+	if ($addfile && &is_dir_on_server($iscsiserver, $addfile)) {
+		# Add under a directory
+		$addfile .= "/".$targetname.".conf";
+		}
 	&remote_foreign_call($iscsiserver, $mod,
-		"save_directive", $conf, undef, $target);
+		"save_directive", $conf, undef, $target, undef, $addfile);
 	$last_remote_error &&
 		return "Failed to create target : $last_remote_error";
 	&remote_foreign_call($iscsiserver, $mod, "flush_file_lines");
@@ -637,6 +644,7 @@ elsif ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-tgtd") {
 	# Remove the target
+	&remote_eval($iscsiserver, $mod, '$get_tgtd_config_cache = undef;');
 	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_tgtd_config");
 	$last_remote_error &&
 		return "Failed to get config : $last_remote_error";
@@ -656,6 +664,8 @@ elsif ($mod eq "iscsi-tgtd") {
         &remote_foreign_call($iscsiserver, $mod, "flush_file_lines");
         $last_remote_error &&
                 return "Failed to flush file : $last_remote_error";
+	&remote_foreign_call($iscsiserver, $mod, "delete_if_empty",
+		$target->{'file'});
 
 	# Apply the config
 	my $err = &remote_foreign_call($iscsiserver, $mod,
@@ -756,6 +766,7 @@ elsif ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-tgtd") {
 	# Find the target
+	&remote_eval($iscsiserver, $mod, '$get_tgtd_config_cache = undef;');
 	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_tgtd_config");
 	$last_remote_error &&
 		return "Failed to get config : $last_remote_error";
@@ -1066,6 +1077,7 @@ elsif ($mod eq "iscsi-target") {
 	}
 elsif ($mod eq "iscsi-tgtd") {
 	# Find the target
+	&remote_eval($iscsiserver, $mod, '$get_tgtd_config_cache = undef;');
 	my $conf = &remote_foreign_call($iscsiserver, $mod, "get_tgtd_config");
 	$last_remote_error &&
 		return "Failed to get config : $last_remote_error";
