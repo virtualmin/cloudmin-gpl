@@ -603,7 +603,7 @@ foreach my $fix ("/etc/virtualmin-license",
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
-	$err = &put_file_to_server($server, $temppath, $fix);
+	$err = &put_file_to_server($server, $temppath, $fix, 0, 0, 5);
 	return "Failed to save fixed $fix : $err" if ($err);
 	}
 
@@ -733,12 +733,13 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
-	$err = &put_file_to_server($vhost, $temppath, $fixpath);
+	$err = &put_file_to_server($vhost, $temppath, $fixpath, 0, 0, 5);
 	if ($err) {
 		# On Ubuntu 12.04, resolv.conf is a link to a directory
 		# that doesn't exist at creation time!?
 		&delete_file_on_server($vhost, $fixpath);
-		$err = &put_file_to_server($vhost, $temppath, $fixpath);
+		$err = &put_file_to_server($vhost, $temppath, $fixpath,
+					   0, 0, 5);
 		}
 	return "Failed to save fixed $fix : $err" if ($err);
 	}
@@ -832,7 +833,7 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
-	$err = &put_file_to_server($server, $temppath, $fix);
+	$err = &put_file_to_server($server, $temppath, $fix, 0, 0, 5);
 	return "Failed to save fixed $fix : $err" if ($err);
 	}
 
@@ -980,7 +981,7 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
-	$err = &put_file_to_server($vhost, $temppath, $fixpath);
+	$err = &put_file_to_server($vhost, $temppath, $fixpath, 0, 0, 5);
 	return "Failed to save network config $fix : $err" if ($err);
 	}
 
@@ -1064,7 +1065,7 @@ for(my $i=0; $i<@$ips; $i++) {
 		$data = &set_rc_conf_line($data, "ifconfig_$bsdiface", $line);
 		}
 	my $fixpath = "$dir/$fix";
-	my $err = &put_file_data_to_server($vhost, $data, $fixpath);
+	my $err = &put_file_data_to_server($vhost, $data, $fixpath, 0, 0, 5);
 	return "Failed to save network config $fix : $err" if ($err);
 	}
 return undef;
@@ -1142,7 +1143,7 @@ if (!&get_file_from_server($server, $sshd_config, $sc)) {
 		}
 	&flush_file_lines($sc);
 	if ($changed) {
-		return &put_file_to_server($server, $sc, $sshd_config);
+		return &put_file_to_server($server, $sc, $sshd_config, 0, 0, 5);
 		}
 	else {
 		return "OK";
@@ -1187,7 +1188,7 @@ else {
 		}
 	}
 &flush_file_lines($sc);
-my $err = &put_file_to_server($server, $sc, $sshd_config);
+my $err = &put_file_to_server($server, $sc, $sshd_config, 0, 0, 5);
 &unlink_file($sc);
 return $err;
 }
@@ -1272,7 +1273,7 @@ foreach my $fix ("/etc/virtualmin-license",
 		$data =~ s/upuser=.*/upuser=\$SERIAL/g;
 		$data =~ s/uppass=.*/uppass=\$KEY/g;
 		}
-	$err = &put_file_data_to_server($server, $data, $fix);
+	$err = &put_file_data_to_server($server, $data, $fix, 0, 0, 5);
 	return "Failed to save munged $fix : $err" if ($err);
 	}
 return \@rv;
@@ -1317,7 +1318,8 @@ if (!$err) {
 	&flush_file_lines($shadow);
 	if ($changed_root) {
 		push(@rv, [ $passfile, $data ]);
-		$err = &put_file_to_server($server, $shadow, $passfile);
+		$err = &put_file_to_server($server, $shadow, $passfile,
+					   0, 0, 5);
 		return "Failed to save munged $passfile : $err" if ($err);
 		}
 	}
@@ -1341,7 +1343,8 @@ if (!$err) {
 		}
 	&flush_file_lines($users);
 	if ($changed) {
-		$err = &put_file_to_server($server, $users, $passfile);
+		$err = &put_file_to_server($server, $users, $passfile,
+					   0, 0, 5);
 		return "Failed to save munged miniserv.users : $err" if ($err);
 		}
 	}
@@ -1405,7 +1408,8 @@ foreach my $fix ("$roothome/.ssh/authorized_keys",
 		 "$roothome/.ssh/known_hosts2",) {
 	my $data = &get_file_data_from_server($server, $fix);
 	if ($data) {
-		my $err = &put_file_data_to_server($server, "", $fix);
+		my $err = &put_file_data_to_server($server, "", $fix,
+						   0, 0, 5);
 		if ($err) {
 			return "Failed to truncate $fix : $err";
 			}

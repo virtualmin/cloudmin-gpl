@@ -1438,12 +1438,13 @@ else {
 	}
 }
 
-# get_file_from_server(&server, remotefile, localfile, device-file, force-ssh)
+# get_file_from_server(&server, remotefile, localfile, device-file, force-ssh,
+# 		       timeout)
 # Transfers a file from the given server to this system. May use scp or some
 # type-specific method
 sub get_file_from_server
 {
-my ($server, $remotefile, $localfile, $device, $forcessh) = @_;
+my ($server, $remotefile, $localfile, $device, $forcessh, $timeout) = @_;
 my $gfunc = "type_".$server->{'manager'}."_get_file";
 if (defined(&$gfunc) && !$forcessh) {
 	# Use type-specific function call
@@ -1461,7 +1462,7 @@ if ($device || $server->{'ssh_sudo'}) {
 		&dd_command($remotefile, undef))." | ".
 		&dd_command(undef, $localfile);
 	my ($status, $out) =
-		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
+		&run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout);
 	return $status ? $out : undef;
 	}
 else {
@@ -1486,7 +1487,7 @@ else {
 		}
 	$sshcmd .= " ".quotemeta($localfile);
 	my ($status, $out) =
-		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
+		&run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout);
 	return $status ? $out : undef;
 	}
 }
@@ -1737,25 +1738,27 @@ else {
 	}
 }
 
-# get_file_data_from_server(&server, remotefile, force-ssh)
+# get_file_data_from_server(&server, remotefile, force-ssh, timeout)
 # Returns the contents of some file
 sub get_file_data_from_server
 {
-my ($server, $remotefile, $forcessh) = @_;
+my ($server, $remotefile, $forcessh, $timeout) = @_;
 my $temp = &transname();
-my $err = &get_file_from_server($server, $remotefile, $temp, 0, $forcessh);
+my $err = &get_file_from_server($server, $remotefile, $temp, 0, $forcessh,
+				$timeout);
 return wantarray ? ( undef, $err) : undef if ($err);
 my $data = &read_file_contents($temp);
 &unlink_file($temp);
 return wantarray ? ( $data ) : $data;
 }
 
-# put_file_to_server(&server, localfile, remotefile, device-file, force-ssh)
+# put_file_to_server(&server, localfile, remotefile, device-file, force-ssh,
+# 		     timeout)
 # Transfers a file from this system to the given server. May use scp or some
 # type-specific method
 sub put_file_to_server
 {
-my ($server, $localfile, $remotefile, $device, $forcessh) = @_;
+my ($server, $localfile, $remotefile, $device, $forcessh, $timeout) = @_;
 my $pfunc = "type_".$server->{'manager'}."_put_file";
 if (defined(&$pfunc) && !$forcessh) {
 	# Use type-specific function call
@@ -1767,13 +1770,18 @@ if ($server->{'ssh_nologin'}) {
 	return "SSH logins are not available";
 	}
 
+if (!defined($timeout) && !$device) {
+	# No timeout given, so make one up based on the file size
+	my @st = stat($localfile);
+	$timeout = $st[7] < 1024*1024 ? 5 : undef;
+	}
 if ($device || $server->{'ssh_sudo'}) {
 	# Run dd piped into SSH
 	my $sshcmd = &build_ssh_command($server, 0, undef,
 			&dd_command(undef, $remotefile));
 	$sshcmd = &dd_command($localfile, undef)." | ".$sshcmd;
 	my ($status, $out) =
-		&run_ssh_command($sshcmd, $server->{'ssh_pass'});
+		&run_ssh_command($sshcmd, $server->{'ssh_pass'}, $timeout);
 	return $status ? $out : undef;
 	}
 else {
@@ -1796,8 +1804,6 @@ else {
 	$sshcmd .= " $server->{'ssh_user'}\@".
 		   ($server->{'ip'} || $server->{'host'}).":".
 		   "\"".quotemeta($remotefile)."\"";
-	my @st = stat($localfile);
-	my $timeout = $st[7] < 1024*1024 ? 5 : undef;
 	my ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
 					      $timeout);
 	return $status ? $out : undef;
@@ -1814,7 +1820,8 @@ my $temp = &transname();
 &open_tempfile(TEMP, ">$temp", 0, 1);
 &print_tempfile(TEMP, $data);
 &close_tempfile(TEMP);
-my $err = &put_file_to_server($server, $temp, $remotefile, 0, $forcessh);
+my $err = &put_file_to_server($server, $temp, $remotefile, 0, $forcessh,
+			      $timeout);
 &unlink_file($temp);
 return $err;
 }
