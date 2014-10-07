@@ -4894,12 +4894,22 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	}
 else {
 	# Need to try SSHing in
-	my %iconfig = &foreign_config("init");
-	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"($iconfig{'shutdown_command'} || shutdown now || ".
-		"shutdown -i 5 -g 0 -y) >/dev/null 2>&1 </dev/null &");
-	return $err if ($err);
-	return $out if ($ex);
+	if ($server->{'type'} eq 'windows') {
+		# Windows command
+		my ($out, $ex, $err) = &execute_command_on_server($server,
+					    "shutdown /t 0 /s");
+		return $err if ($err);
+		return $out if ($ex);
+		}
+	else {
+		# Linux commands
+		my %iconfig = &foreign_config("init");
+		my ($out, $ex, $err) = &execute_command_on_server($server,
+			"($iconfig{'shutdown_command'} || shutdown now || ".
+			"shutdown -i 5 -g 0 -y) >/dev/null 2>&1 </dev/null &");
+		return $err if ($err);
+		return $out if ($ex);
+		}
 	}
 
 # Wait for clean shutdown
@@ -4939,11 +4949,21 @@ if ($server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt') {
 	}
 else {
 	# Need to try SSHing in
-	my %iconfig = &foreign_config("init");
-	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"$iconfig{'reboot_command'} || shutdown -r now || reboot");
-	return $err if ($err);
-	return $out if ($ex);
+	if ($server->{'type'} eq 'windows') {
+		# Windows command
+		my ($out, $ex, $err) = &execute_command_on_server($server,
+					    "shutdown /t 0 /r");
+		return $err if ($err);
+		return $out if ($ex);
+		}
+	else {
+		# Unix commands
+		my %iconfig = &foreign_config("init");
+		my ($out, $ex, $err) = &execute_command_on_server($server,
+		    "$iconfig{'reboot_command'} || shutdown -r now || reboot");
+		return $err if ($err);
+		return $out if ($ex);
+		}
 	}
 
 if ($oldping) {
