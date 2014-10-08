@@ -5559,11 +5559,11 @@ $server->{'kvm_args'} = $in->{'kvm_args'};
 &type_kvm_set_atboot($server, 2);
 }
 
-# type_kvm_server_info(&server)
+# type_kvm_server_info(&server, show-in-bytes)
 # Returns an array of information for list-systems.pl to display
 sub type_kvm_server_info
 {
-my ($server) = @_;
+my ($server, $bytes) = @_;
 my @rv;
 my $vhost = &type_kvm_parent($server);
 push(@rv, [ "Hosted on", $vhost->{'host'} ]);
@@ -5573,7 +5573,8 @@ if ($proc) {
 	}
 if ($server->{'kvm_disktotal'}) {
 	push(@rv, [ "KVM total disk size",
-		    &nice_size($server->{'kvm_disktotal'}) ]);
+		    ($bytes ? $server->{'kvm_disktotal'}
+			    : &nice_size($server->{'kvm_disktotal'})) ]);
 	}
 if ($server->{'kvm_args'}) {
 	push(@rv, [ "KVM command line args", $server->{'kvm_args'} ]);
@@ -5589,12 +5590,12 @@ push(@rv, [ "Block spoofed IPs and MACs?",
 return @rv;
 }
 
-# type_kvm_server_host_info(&server)
+# type_kvm_server_host_info(&server, show-in-bytes)
 # Returns an array of information for list-systems.pl to display, for a KVM
 # host system
 sub type_kvm_server_host_info
 {
-my ($server) = @_;
+my ($server, $bytes) = @_;
 my @rv;      
 if (&can_ssh_status($server)) {
 	my @bridges = &list_host_bridges($server);

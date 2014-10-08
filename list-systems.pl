@@ -297,7 +297,7 @@ if ($multi) {
 		# Show type-specific info
 		$ifunc = "type_".$s->{'manager'}."_server_info";
 		if (defined(&$ifunc)) {
-			foreach my $i (&$ifunc($s)) {
+			foreach my $i (&$ifunc($s, $bytes)) {
 				print "    $i->[0]: $i->[1]\n";
 				}
 			}
@@ -306,7 +306,7 @@ if ($multi) {
 		foreach my $p (&is_parent_server($s)) {
 			$ifunc = "type_".$p."_server_host_info";
 			if (defined(&$ifunc)) {
-				foreach my $i (&$ifunc($s)) {
+				foreach my $i (&$ifunc($s, $bytes)) {
 					print "    $i->[0]: $i->[1]\n";
 					}
 				}
