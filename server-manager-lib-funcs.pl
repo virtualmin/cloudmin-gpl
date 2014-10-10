@@ -13185,8 +13185,15 @@ $server->{'status'} eq 'down' || return "System is not down";
 my $lfunc = "type_".$server->{'manager'}."_list_disks";
 my $disks = &$lfunc($server, 0);
 ref($disks) || return "Failed to list disks : $disks";
+my $index;
+for(my $i=0; $i<@$disks; $i++) {
+	if ($disks->[$i]->{'virt'} eq $disk->{'virt'}) {
+		$index = $i;
+		last;
+		}
+	}
 my $nfunc = "type_".$server->{'manager'}."_new_disk";
-my $newdisk = &$nfunc($server, $disks, 0, $storage);
+my $newdisk = &$nfunc($server, $disks, 0, $storage, $index);
 $newdisk->{'size'} = $disk->{'size'};
 ref($newdisk) || return "Failed to create new disk object : $newdisk";
 my $olddisk = { %$disk };

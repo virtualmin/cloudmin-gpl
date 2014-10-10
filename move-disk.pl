@@ -165,7 +165,7 @@ print "Move a virtual disk to a new storage location.\n";
 print "\n";
 print "cloudmin move-disk --host hostname\n";
 print "                   --real device|file | --virt device | --lv name\n";
-print "                  [--new-storage id]\n"; 
+print "                  [--new-storage id | --new-directory dir]\n"; 
 exit(1);
 }
 

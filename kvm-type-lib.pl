@@ -3172,11 +3172,11 @@ else {
 	}
 }
 
-# type_kvm_new_disk(&server, &disks, real?, [&storage])
+# type_kvm_new_disk(&server, &disks, real?, [&storage], [disk-index])
 # Returns a structure for a new disk on some KVM system
 sub type_kvm_new_disk
 {
-my ($server, $disks, $device, $storage) = @_;
+my ($server, $disks, $device, $storage, $index) = @_;
 my $rv = { };
 
 # Find which device files are used
@@ -3255,10 +3255,11 @@ if (!$device) {
 		$rv->{'storage_id'} = $vg ? 'lvm_'.$vg :
 				      $iscsi ne '' ? 'iscsi' : 'files';
 		}
+	my $filenum = defined($index) ? $index : (scalar(@$disks)+1);
 	if ($vg) {
 		# Create an LVM name
 		$rv->{'vg'} = $vg;
-		$rv->{'lv'} = $server->{'host'}."_".(scalar(@$disks)+1)."_img";
+		$rv->{'lv'} = $server->{'host'}."_".$filenum."_img";
 		$rv->{'lv'} =~ s/\./_/g;
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
@@ -3270,7 +3271,7 @@ if (!$device) {
 	else {
 		# Pick an image file
 		$rv->{'real'} = "$kvm_dir/$server->{'host'}.".
-				(scalar(@$disks)+1).".img";
+				$filenum.".img";
 		$rv->{'dir'} = $kvm_dir;
 		}
 	}
