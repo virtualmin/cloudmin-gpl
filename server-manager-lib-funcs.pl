@@ -3182,6 +3182,7 @@ else {
 	# Lock to prevent concurrent access
 	&obtain_lock_server($server);
 	}
+my $oldstatus = $server->{'status'};
 
 # If this system has a parent and it is down, fail fast
 my $parent = &get_parent_server($server);
@@ -3229,7 +3230,6 @@ my $rv = 0;
 my ($status, $err, $webminroot, $webminport, $webminssl, $hostname) =
 	&check_server_ssh_login($server);
 $err =~ s/\r?\n/ /g;
-my $oldstatus = $server->{'status'};
 if ($status == 2) {
 	# Could not login via SSH
 	$server->{'status'} = 'nosshlogin';
@@ -3911,7 +3911,7 @@ if ($server->{'status'} ne 'nohost' &&
 	}
 
 # Record status change
-if ($oldstatus ne $server->{'status'}) {
+if ($oldstatus && $oldstatus ne $server->{'status'}) {
 	$server->{'statuslast'} = $oldstatus;
 	$server->{'statuslasttime'} = $server->{'statustime'};
 	}
