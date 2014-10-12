@@ -1323,6 +1323,11 @@ delete($server->{'kvm_filesystem_offset'});
 $server->{'kvm_args'} = $config{'kvm_manual'} if (!$reset);
 my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
 
+# If re-creating a system, the monitor port can be re-generated
+if (!$reset) {
+	delete($server->{'kvm_monitor_port'});
+	}
+
 # Create base dir if needed
 my @st = &stat_file_on_server($vhost, $kvm_dir);
 if (!@st) {
