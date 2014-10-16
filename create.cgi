@@ -261,8 +261,14 @@ if ($err) {
 	goto END;
 	}
 $dfunc = "type_".$in{'type'}."_create_done";
+$ip = &get_server_ip($server);
 if (defined(&$dfunc)) {
-	print $text{'create_created'},"<p>\n";
+	if ($ip) {
+		print &text('create_createdip', $ip, $server->{'host'}),"<p>\n";
+		}
+	else {
+		print $text{'create_created'},"<p>\n";
+		}
 	print $text{'create_waiting'};
 	$dot_count = 0;
 	while(1) {
@@ -287,7 +293,12 @@ if (defined(&$dfunc)) {
 	print $text{'create_waited'},"<p>\n";
 	}
 else {
-	print $text{'create_created2'},"<p>\n";
+	if ($ip) {
+		print &text('create_created2ip', $ip,$server->{'host'}),"<p>\n";
+		}
+	else {
+		print $text{'create_created2'},"<p>\n";
+		}
 	}
 if ($imageok == 1) {
 	&cleanup_image_files($server, $imagetemp);
