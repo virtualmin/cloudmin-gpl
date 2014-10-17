@@ -4454,9 +4454,9 @@ for(my $i=0; $i<$procs; $i++) {
 
 # Wait for them all
 eval {
+	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	if ($maxtime) {
 		&set_alarm($maxtime);
-		local $SIG{'ALRM'} = sub { die "timeout\n" };
 		}
 	while(@pids) {
 		my $pid = wait();
