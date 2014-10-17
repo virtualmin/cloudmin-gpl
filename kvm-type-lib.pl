@@ -7631,6 +7631,7 @@ sub type_kvm_failover_system
 my ($server, $dest) = @_;
 my $vhost = &get_parent_server($server);
 $server->{'kvm_on'} = $dest->{'id'};
+delete($server->{'kvm_monitor_port'});
 return undef;
 }
 
