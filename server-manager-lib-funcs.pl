@@ -19,7 +19,7 @@ foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
 		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp",
 		 "roundrobin", "scalegroup", "stats", "firewall", "iscsi",
-		 "cron", "s3", "rs", "snapshots") {
+		 "cron", "s3", "rs", "snapshots", "google") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
