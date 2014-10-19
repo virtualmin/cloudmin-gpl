@@ -489,7 +489,7 @@ if (&can_action(undef, "ips")) {
 			$rv .= "divobj.className = id == '$vhost->{'id'}' ? ".
 			   "'opener_shown' : 'opener_hidden';\n";
 			}
-		$rv .= "var divobj = document.getElementById('loc');\n";
+		$rv .= "var divobj = document.getElementById('${sfx}loc');\n";
 		$rv .= "if (divobj) {\n";
 		$rv .= "    divobj.className = id == '${sfx}loc' ? 'opener_shown' : ".
 		       "'opener_hidden';\n";
