@@ -10253,7 +10253,7 @@ if ($field) {
 	my $f = &ui_table_row($label, $field);
 	my $js;
 	if (&can_select_host_location() && @locs) {
-		$js .= "${hostfunc}('${hostfuncsfx}loc')\n";
+		$js .= "${hostfunc}('${hostsfx}loc')\n";
 		}
 	elsif (&can_select_host_server()) {
 		$js .= "${hostfunc}($default->{'id'});\n";
