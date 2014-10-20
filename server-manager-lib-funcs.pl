@@ -10209,7 +10209,7 @@ else {
 # Returns HTML for selecting a host system, if the user is allowed to.
 sub show_host_server_field
 {
-my ($label, $name, $type, $hostfunc) = @_;
+my ($label, $name, $type, $hostfunc, $hostsfx) = @_;
 my @vhosts = &list_available_host_servers($type);
 my ($default) = grep { $_->{$type.'_default'} } @vhosts;
 $default ||= $vhosts[0];
@@ -10225,7 +10225,7 @@ my $hostfield = &ui_select($name."_on", $default->{'id'},
 my $locfield = &ui_select($name."_loc", $defloc->{'id'},
 		[ map { [ $_->{'id'}, $_->{'desc'} ] } @locs ],
 		1, 0, 0, 0,
-		$locfunc ? "onChange='${hostfunc}(\"loc\")'" : "");
+		$locfunc ? "onChange='${hostfunc}(\"${hostsfx}loc\")'" : "");
 if (!@vhosts) {
 	# None available
 	$field = "<font color=red><b>$text{'create_novhost'}</b></font>";
@@ -10253,7 +10253,7 @@ if ($field) {
 	my $f = &ui_table_row($label, $field);
 	my $js;
 	if (&can_select_host_location() && @locs) {
-		$js .= "${hostfunc}('loc')\n";
+		$js .= "${hostfunc}('${hostfuncsfx}loc')\n";
 		}
 	elsif (&can_select_host_server()) {
 		$js .= "${hostfunc}($default->{'id'});\n";
