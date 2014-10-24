@@ -676,7 +676,8 @@ foreach my $f (@$fstab) {
 			$ok = 0;
 			}
 		}
-	elsif ($f->[0] eq "LABEL=/" && $server->{'image'}) {
+	elsif (($f->[0] eq "LABEL=/" || $f->[0] eq "LABEL=root") &&
+	       $server->{'image'}) {
 		# Assume that first partition on first disk is /
 		$f->[0] = $disks->[0]->{'virt'}."1";
 		}
