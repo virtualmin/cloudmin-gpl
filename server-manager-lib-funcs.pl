@@ -4453,9 +4453,10 @@ for(my $i=0; $i<$procs; $i++) {
 	}
 
 # Wait for them all
+local $oldalrm = $SIG{'ALRM'};
 eval {
-	local $SIG{'ALRM'} = sub { die "timeout\n" };
 	if ($maxtime) {
+		$SIG{'ALRM'} = sub { die "timeout\n" };
 		&set_alarm($maxtime);
 		}
 	while(@pids) {
@@ -4466,6 +4467,7 @@ eval {
 		&set_alarm(0);
 		}
 	};
+$SIG{'ALRM'} = $oldalrm;
 if ($@ =~ /timeout/) {
 	# Took too long - kill all subprocesses!
 	foreach my $pid (@pids) {
