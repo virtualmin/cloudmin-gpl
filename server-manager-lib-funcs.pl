@@ -3090,17 +3090,20 @@ return $type;
 }
 
 # ping_server_host(hostname|ip, [force_timeout])
-# Returns 1 if some host responds to a ping in 2 seconds
+# Returns 1 if some host responds to a ping (with any packets) in 2 seconds
 sub ping_server_host
 {
 my ($host, $force_timeout) = @_;
 my $timeout = $force_timeout || $ping_host_timeout;
 my $pinger = &check_ip6address($host) ? "ping6" : "ping";
 &has_command($pinger) || return 0;
-my $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? $pinger." -c 1" : $pinger;
+my $packets = int($timeout) || 1;
+my $pingcmd = $gconfig{'os_type'} =~ /-linux$/ ? $pinger." -c $packets"
+					       : $pinger;
 my ($out, $timed_out) = &backquote_with_timeout(
 	$pingcmd." ".$host." 2>&1", $timeout, 1);
-return !$timed_out && !$? ? 1 : 0;
+return $out =~ /bytes\s+from/ ? 1 :
+       !$timed_out && !$? ? 1 : 0;
 }
 
 # wait_for_ping(&server, [timeout])
