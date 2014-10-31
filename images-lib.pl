@@ -1375,8 +1375,16 @@ foreach my $f ("messages", "auth.log", "secure", "daemon.log", "syslog",
 	       "wtmp", "dpkg.log", "anaconda.log", "boot.log", "cron",
 	       "faillog", "freshclam.log", "maillog", "mail.*", "mysqld.log",
 	       "rpmpkgs", "xferlog", "yum.log") {
-	if (!&is_dir_on_server($server, "$logdir/$f")) {
+	if ($f =~ /\*|\?/) {
+		# For globs, always delete
 		&delete_file_on_server($server, "$logdir/$f", 1);
+		}
+	else {
+		# For single files, truncate if they exist and aren't a dir
+		my @st = &stat_file_on_server($server, "$logdir/$f");
+		if (@st > 1 && !($st[2] & 040000)) {
+			&truncate_file_on_server($server, "$logdir/$f");
+			}
 		}
 	}
 

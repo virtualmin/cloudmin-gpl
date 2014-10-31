@@ -2493,6 +2493,30 @@ my ($out, $ex, $err) = &execute_command_on_server($server,
 return $err ? $err : $ex ? $out : undef;
 }
 
+# truncate_file_on_server(&server, remotefile)
+# Truncate to zero bytes or create empty a file on a server
+sub truncate_file_on_server
+{
+my ($server, $remotefile) = @_;
+my $dfunc = "type_".$server->{'manager'}."_truncate_file";
+if (defined(&$dfunc)) {
+	# Use type-specific function call
+	my $rv = &$dfunc(@_);
+	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
+						# asked to fallback to ssh
+	}
+if (&can_ssh_status($server)) {
+	# Empty it from /dev/null
+	my ($out, $ex, $err) = &execute_command_on_server($server,
+		"cat /dev/null > ".quotemeta($remotefile));
+	return $err ? $err : $ex ? $out : undef;
+	}
+else {
+	# Copy an empty file over it
+	return &put_file_data_to_server($server, "", $remotefile);
+	}
+}
+
 # rename_file_on_server(&server, oldfile, newfile)
 # Renames a file on a managed server. Returns undef on success, or an error
 # message on failure.
