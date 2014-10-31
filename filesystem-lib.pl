@@ -85,7 +85,7 @@ my (@rv, $mounted);
 my $fstab = &transname();
 my $err = &mount_filesystem_if_needed($server);
 return $err if ($err);
-$err = &get_file_from_server($server, "/etc/fstab", $fstab);
+$err = &get_file_from_server($server, "/etc/fstab", $fstab, 0, 0, 5);
 &umount_filesystem_if_needed($server);
 return "Failed to get /etc/fstab : $err" if ($err);
 
@@ -124,7 +124,7 @@ foreach my $f (@$fstab) {
 # Upload the file
 my $err = &mount_filesystem_if_needed($server);
 return $err if ($err);
-$err = &put_file_to_server($server, $file, "/etc/fstab");
+$err = &put_file_to_server($server, $file, "/etc/fstab", 0, 0, 5);
 &umount_filesystem_if_needed($server);
 return "Failed to write /etc/fstab : $err" if ($err);
 return undef;
