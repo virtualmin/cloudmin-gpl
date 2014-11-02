@@ -20,6 +20,10 @@ key setup in Cloudmin with the C<--ssh-key> flag, followed by a key ID.
 Registered keys can be fetched from the C<list-ssh-keys> API command. This will
 update the C</root/.ssh/authorized_keys> file on the virtual system.
 
+If you have multiple SSH keys configured in Cloudmin, the C<--add-ssh-key>
+flag can be used to add an extra key that is allowed to login to the system.
+Conversely, C<--remove-ssh-key> can be used to disallow access by a key.
+
 If you have created a virtual system for a customer, changing the root
 password when you are ready to hand it over is a good idea. Be aware that 
 for Xen systems, if the password is changed on the system directly (perhaps
@@ -59,13 +63,29 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ssh-pass") {
 		$ssh_pass = shift(@ARGV);
 		}
-	elsif ($a eq "--ssh-key") {
+	elsif ($a eq "--ssh-key" || $a eq "--add-ssh-key" ||
+	       $a eq "--remove-ssh-key") {
 		&can_action_usage(undef, "sshkeys");
-		$ssh_key = shift(@ARGV);
-		($key) = grep { $_->{'id'} eq $ssh_key } @keys;
-		$key || &usage("No SSH key with ID $ssh_key found");
-		$key->{'public'} &&
+		my $ssh_key = shift(@ARGV);
+		my ($k) = grep { $_->{'id'} eq $ssh_key } @keys;
+		$k || &usage("No SSH key with ID $ssh_key found");
+		$a eq "--ssh-key" && $k->{'public'} &&
 		  &usage("The SSH key with ID $ssh_key is a public key only");
+		if ($a eq "--add-ssh-key") {
+			$addkey = $k;
+			}
+		elsif ($a eq "--remove-ssh-key") {
+			$k->{'id'} ne $server->{'key'} ||
+			  &usage("The SSH key currently used to login by ".
+				 "Cloudmin cannot be removed");
+			!$key || $k->{'id'} ne $key->{'id'} ||
+			  &usage("The SSH key chosen to be used to login by ".
+				 "Cloudmin cannot be removed");
+			$removekey = $k;
+			}
+		else {
+			$key = $k;
+			}
 		}
 	elsif ($a eq "--webmin-pass") {
 		$webmin_pass = shift(@ARGV);
@@ -90,7 +110,8 @@ while(@ARGV > 0) {
 # Check for required inputs
 $host || &usage("Missing --host parameter");
 defined($ssh_pass) || defined($key) || defined($webmin_pass) || $webmin_same ||
-    defined($vnc_pass) || &usage("No password changes specified");
+    defined($vnc_pass) || defined($addkey) || defined($removekey) ||
+    &usage("No password changes specified");
 $ssh_pass && $key && &usage("Only one of --ssh-pass or --ssh-key can be used");
 $server = &find_one_managed_server($host);
 $server || &usage("System with hostname $host does not exist");
@@ -144,6 +165,32 @@ elsif (defined($key)) {
 		$server->{'ssh_pass_same'} = 0;
 		delete($server->{'ssh_pass'});
 		&save_managed_server($server);
+		}
+	}
+
+if (defined($addkey)) {
+	# Add an SSH key
+	print "Adding SSH key ..\n";
+	$err = &create_authorized_key($server, 1, $addkey);
+	if ($err) {
+		print ".. failed : $err\n\n";
+                $failed++;
+                }
+	else {
+		print ".. added successfully\n\n";
+		}
+	}
+
+if (defined($removekey)) {
+	# Remove an SSH key
+	print "Removing SSH key ..\n";
+	$err = &create_authorized_key($server, 2, $removekey);
+	if ($err) {
+		print ".. failed : $err\n\n";
+                $failed++;
+                }
+	else {
+		print ".. removed successfully\n\n";
 		}
 	}
 
@@ -220,6 +267,7 @@ print "cloudmin passwd-system --host name\n";
 print "                      [--ssh-pass password | --ssh-key id]\n";
 print "                      [--webmin-pass password | --webmin-same]\n";
 print "                      [--graphical-pass password]\n";
+print "                      [--add-ssh-key id | --remove-ssh-key id]\n";
 exit(1);
 }
 

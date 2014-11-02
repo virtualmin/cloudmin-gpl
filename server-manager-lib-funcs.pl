@@ -6501,16 +6501,19 @@ else {
 	}
 }
 
-# create_authorized_key(&server, [add-key])
-# Add or replace the SSH key selected for this server in root's
+# create_authorized_key(&server, [0=replace, 1=add, 2=remove], [&key])
+# Replace, add or remove the SSH key selected for this server in root's
 # ~/.ssh/authorized_keys file
 sub create_authorized_key
 {
-my ($server, $add) = @_;
-my ($key) = grep { $_->{'id'} eq $server->{'key'} } &list_ssh_keys();
+my ($server, $mode, $key) = @_;
+if (!$key) {
+	($key) = grep { $_->{'id'} eq $server->{'key'} } &list_ssh_keys();
+	$key || return "Key with ID $server->{'key'} does not exist!";
+	}
 my $authkeys = &setup_authorized_keys($server);
 my $temp = &transname();
-if ($add) {
+if ($mode > 0) {
 	my @st = &stat_file_on_server($server, $authkeys);
 	if (@st == 1) {
 		# Could not stat
@@ -6524,14 +6527,29 @@ if ($add) {
 my $lref = &read_file_lines($temp);
 my $keyline = &generate_public_key($key);
 my $idx = &indexof($keyline, @$lref);
-if ($idx < 0) {
-	push(@$lref, $keyline);
+my $write;
+if ($mode == 2) {
+	# Remove from the file
+	if ($idx >= 0) {
+		splice(@$lref, $idx, 1);
+		$write = 1;
+		}
+	}
+else {
+	# Add to the file
+	if ($idx < 0) {
+		push(@$lref, $keyline);
+		$write = 1;
+		}
+	}
+if ($write) {
+	# File was changed, need to write out
 	&flush_file_lines($temp);
 	&set_ownership_permissions(undef, undef, 0700, $temp);
 	return &put_file_to_server($server, $temp, $authkeys);
 	}
 else {
-	# Already in the file
+	# No change done or needed
 	&unflush_file_lines($temp);
 	return undef;
 	}
