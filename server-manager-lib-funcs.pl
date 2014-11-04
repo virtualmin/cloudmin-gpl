@@ -6507,9 +6507,17 @@ else {
 sub create_authorized_key
 {
 my ($server, $mode, $key) = @_;
+
+# Mount filesystem if needed
+my $err = &mount_filesystem_if_needed($server);
+return $err if ($err);
+
 if (!$key) {
 	($key) = grep { $_->{'id'} eq $server->{'key'} } &list_ssh_keys();
-	$key || return "Key with ID $server->{'key'} does not exist!";
+	if (!$key) {
+		&umount_filesystem_if_needed($server);
+		return "Key with ID $server->{'key'} does not exist!";
+		}
 	}
 my $authkeys = &setup_authorized_keys($server);
 my $temp = &transname();
@@ -6517,11 +6525,15 @@ if ($mode > 0) {
 	my @st = &stat_file_on_server($server, $authkeys);
 	if (@st == 1) {
 		# Could not stat
+		&umount_filesystem_if_needed($server);
 		return "Error reading $authkeys : $st[0]";
 		}
 	elsif (@st > 0) {
 		my $err = &get_file_from_server($server, $authkeys, $temp);
-		return $err if ($err);
+		if ($err) {
+			&umount_filesystem_if_needed($server);
+			return $err;
+			}
 		}
 	}
 my $lref = &read_file_lines($temp);
@@ -6542,17 +6554,20 @@ else {
 		$write = 1;
 		}
 	}
+my $rv;
 if ($write) {
 	# File was changed, need to write out
 	&flush_file_lines($temp);
 	&set_ownership_permissions(undef, undef, 0700, $temp);
-	return &put_file_to_server($server, $temp, $authkeys);
+	$rv = &put_file_to_server($server, $temp, $authkeys);
 	}
 else {
 	# No change done or needed
 	&unflush_file_lines($temp);
-	return undef;
+	$rv = undef;
 	}
+&umount_filesystem_if_needed($server);
+return $rv;
 }
 
 # setup_authorized_keys(&server)
@@ -6588,6 +6603,38 @@ if (!@st) {
 	}
 
 return "$sshdir/authorized_keys";
+}
+
+# list_authorized_keys(&server)
+# Returns a list of keys that can be used to login as root on some system
+sub list_authorized_keys
+{
+my ($server) = @_;
+
+my $err = &mount_filesystem_if_needed($server);
+return $err if ($err);
+
+my $authkeys = &setup_authorized_keys($server);
+my @rv;
+my ($data, $err) = &get_file_data_from_server($server, $authkeys);
+if ($err) {
+	&umount_filesystem_if_needed($server);
+	return $err;
+	}
+my @keys = &list_ssh_keys();
+my %keyhash;
+foreach my $key (@keys) {
+	my $keyline = &generate_public_key($key);
+	$keyhash{$keyline} = $key;
+	}
+foreach my $l (split(/\r?\n/, $data)) {
+	my $key = $keyhash{$l};
+	if ($key) {
+		push(@rv, $key);
+		}
+	}
+&umount_filesystem_if_needed($server);
+return \@rv;
 }
 
 # set_shadow_root_password(&server, pass)
