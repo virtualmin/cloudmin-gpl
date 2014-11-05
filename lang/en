@@ -2161,6 +2161,11 @@ pass_force=Change login used by Cloudmin
 pass_saving=Updating passwords used by Cloudmin ..
 pass_ciphers=SSH cipher
 pass_eciphers=Invalid SSH cipher
+pass_authkeys=Other authorized SSH keys
+pass_akey=Key description
+pass_atype=Key type
+pass_apublic=Public
+pass_aprivate=Private
 
 licences_title=Virtualmin Pro Licenses
 licences_serial=Serial number

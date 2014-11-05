@@ -13,6 +13,7 @@ $pfunc = "type_".$server->{'manager'}."_can_password";
 $canpass = !$in{'force'} &&
 	   !$server->{'ssh_nologin'} &&
 	   defined(&$pfunc) && &$pfunc($server);
+@keys = &list_ssh_keys();
 
 # Work out if Cloudmin logs into the system or not
 $haswebmin = ($server->{'status'} eq 'nowebminlogin' ||
@@ -45,7 +46,6 @@ print &ui_table_start($text{'pass_header'}, undef, 2, undef, $right);
 if ($canpass) {
 	# Can change actual password
 	print &ui_hidden("mode", 1);
-	@keys = &list_ssh_keys();
 	$passpop = $server->{'ssh_pass'} ? &show_password_popup($server, "ssh")
 					 : undef;
 	if (&can_action(undef, "sshkeys") && @keys) {
@@ -118,6 +118,28 @@ if (defined(&$cfunc) && &$cfunc($server)) {
 			       : $text{'pass_vnone'} ],
 		    [ 0, $text{'pass_set'}." ".
 			 &ui_textbox("vnc_pass", undef, 20) ] ]));
+	}
+
+# Additional SSH keys on the system
+if ($canpass && !$in{'force'}) {
+	$authkeys = &list_authorized_keys($server);
+	if (ref($authkeys)) {
+		# XXX disallow editing of current key
+		%inuse = map { $_->{'id'}, $_ } @$authkeys;
+		@tds = ( "width=5" );
+		$atable = &ui_columns_start([ "", $text{'pass_akey'},
+					      $text{'pass_atype'} ], \@tds);
+		foreach my $key (@keys) {
+			$atable .= &ui_checked_columns_row([
+				$key->{'desc'},
+				$key->{'public'} ? $text{'pass_apublic'}
+						 : $text{'pass_aprivate'},
+				], \@tds, "d", $key->{'id'},
+				$inuse{$k->{'id'}});
+			}
+		$atable .= &ui_columns_end();
+		print &ui_table_row($text{'pass_authkeys'}, $atable);
+		}
 	}
 
 print &ui_table_end();
