@@ -97,3 +97,5 @@ Whether or not to start new virtual systems at host boot time can now be control
 System statistics for the fraction of disk, RAM and swap space used can now be graphed and alerted on.
 Backups can now be restored on Cloudmin master systems other than the one they were made on, even if the orginal system image is missing or if the original host is no longer available.
 New disks can now be created with GPT partition tables, if supported by the parted command.
+---- Changes since 7.9 ----
+Additional SSH keys for a system can now be viewed and selected on the Change Password page, set with the passwd-system API command, and displayed with the list-system-keys command.

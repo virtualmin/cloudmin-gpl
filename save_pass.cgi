@@ -7,6 +7,7 @@ require './server-manager-lib.pl';
 &error_if_cloudmin_replica();
 $server = &get_managed_server($in{'id'});
 $server || &error($text{'edit_egone'});
+$oldserver = { %$server };
 &can_action_error($server, "pass");
 
 if ($in{'mode'}) {
@@ -152,6 +153,39 @@ if ($in{'mode'}) {
 			&$second_print($text{'create_done'});
 			$server->{'pass'} = $server->{'ssh_pass'};
 			$server->{'ssh_pass_same'} = 1;
+			}
+		}
+
+	# Update other authorized keys
+	if (defined($in{'oldkeys'})) {
+		my @allkeys = &list_ssh_keys();
+		my %oldkeys = map { $_, 1 } split(/\s+/, $in{'oldkeys'});
+		my %newkeys = map { $_, 1 } split(/\0/, $in{'d'});
+		foreach my $key (@allkeys) {
+			next if ($key->{'id'} eq $server->{'key'} ||
+				 $key->{'id'} eq $oldserver->{'key'});
+			if ($oldkeys{$key->{'id'}} && !$newkeys{$key->{'id'}}) {
+				# Remove SSH key
+				&$first_print(&text('pass_rkey',
+						    $key->{'desc'}));
+				$err = &create_authorized_key($server, 2, $key);
+				}
+			elsif (!$oldkeys{$key->{'id'}} &&
+			       $newkeys{$key->{'id'}}) {
+				# Add SSH key
+				&$first_print(&text('pass_akey',
+						    $key->{'desc'}));
+				$err = &create_authorized_key($server, 1, $key);
+				}
+			else {
+				next;
+				}
+			if ($err) {
+				&$second_print(&text('pass_earkey', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				}
 			}
 		}
 	}

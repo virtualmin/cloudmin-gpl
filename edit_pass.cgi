@@ -124,9 +124,10 @@ if (defined(&$cfunc) && &$cfunc($server)) {
 if ($canpass && !$in{'force'}) {
 	$authkeys = &list_authorized_keys($server);
 	if (ref($authkeys)) {
-		# XXX disallow editing of current key
 		%inuse = map { $_->{'id'}, $_ } @$authkeys;
 		@tds = ( "width=5" );
+		print &ui_hidden("oldkeys",
+			join(" ", map { $_->{'id'} } @$authkeys));
 		$atable = &ui_columns_start([ "", $text{'pass_akey'},
 					      $text{'pass_atype'} ], \@tds);
 		foreach my $key (@keys) {
@@ -135,7 +136,8 @@ if ($canpass && !$in{'force'}) {
 				$key->{'public'} ? $text{'pass_apublic'}
 						 : $text{'pass_aprivate'},
 				], \@tds, "d", $key->{'id'},
-				$inuse{$k->{'id'}});
+				$inuse{$key->{'id'}},
+				$key->{'id'} eq $server->{'key'});
 			}
 		$atable .= &ui_columns_end();
 		print &ui_table_row($text{'pass_authkeys'}, $atable);
