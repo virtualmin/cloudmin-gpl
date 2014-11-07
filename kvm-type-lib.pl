@@ -4099,7 +4099,11 @@ $ok || return (0, $loop);
 my ($out, $ex, $err) = &execute_command_on_server($vhost,
 	"fsck -y $flag $loop");
 &loopback_unmount_partition($vhost, $loop);
-if ($ex > 2 || $err) {
+if ($ex && $out =~ /fsck\S+:\s+not\s+found/) {
+	# Filesystem not supported, so assume OK
+	return (1, $out);
+	}
+elsif ($ex > 2 || $err) {
 	return (0, $out);
 	}
 elsif ($ex) {
