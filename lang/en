@@ -5537,7 +5537,7 @@ gce_typeshort=GCE
 gce_scan=Find GCE Instances
 
 gces_title=GCE Projects
-gces_project=Project name
+gces_project=Project ID
 gces_account=Google account
 gces_none=You have not entered any Google Compute Engine projects yet.
 gces_add=Add a GCE project.
@@ -5550,7 +5550,7 @@ gce_create=Add GCE Project
 gce_edit=Edit GCE Project
 gce_header=Google compute engine details
 gce_account=Google account
-gce_project=Project name
+gce_project=Project ID
 gce_apikey=API key
 gce_egone=This GCE project no longer exists!
 gce_err=Failed to save GCE project 
@@ -5584,7 +5584,7 @@ gce_eimage=Missing or invalid-looking GCE image name
 gce_eimage2=Selected GCE image does not exist
 
 edit_gceinstance=GCE instance name
-edit_gceproject=GCE project name
+edit_gceproject=GCE project ID
 edit_gceimage=Created from GCE image
 edit_gcezone=GCE zone
 
