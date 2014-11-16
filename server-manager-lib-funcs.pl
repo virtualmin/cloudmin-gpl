@@ -2508,7 +2508,7 @@ if (defined(&$dfunc)) {
 if (&can_ssh_status($server)) {
 	# Empty it from /dev/null
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"cat /dev/null > ".quotemeta($remotefile));
+		"cat /dev/null > ".quotemeta($remotefile), 5);
 	return $err ? $err : $ex ? $out : undef;
 	}
 else {
@@ -2591,7 +2591,7 @@ if ($usernames) {
 	$sfmt = '-c "%n %s %b %f %U %G %D %i %h %t %T %X %Y %Z %o"';
 	}
 my ($out, $ex, $err) = &execute_command_on_server($server,
-	"stat $sfmt -t ".quotemeta($remotefile)." ; ".readlink($remotefile));
+	"stat $sfmt -t ".quotemeta($remotefile)." ; ".readlink($remotefile), 5);
 return ( $err ) if ($err);
 if ($out =~ /No such file/i) {
 	return ( );
@@ -2630,7 +2630,7 @@ $pcmd .= "print join(\":\", \@rv).\"\\n\";";
 my $err = &put_file_data_to_server($server, $pcmd, $cmdtemp);
 if (!$err) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"perl $cmdtemp");
+		"perl $cmdtemp", 5);
 	&delete_file_on_server($server, $cmdtemp);
 	return ( $err ) if ($err);
 	if (!$ex) {
@@ -2646,7 +2646,7 @@ if (!$err) {
 # Finally, use ls .. which gives less info :-(
 my $flags = $usernames ? "-ld" : "-ldn";
 my ($out, $ex, $err) = &execute_command_on_server($server,
-	"ls $flags ".quotemeta($remotefile));
+	"ls $flags ".quotemeta($remotefile), 5);
 return ( $err ) if ($err);
 $out =~ s/\r?\n$//;
 if ($out =~ /No such file/i) {
@@ -2731,14 +2731,14 @@ my ($server, $cmd) = @_;
 if ($server->{'manager'} eq 'this') {
 	return &has_command($cmd);
 	}
-my ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd");
+my ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd", 5);
 if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 	# Failed .. but maybe we don't even have the which command??
 	if ($out =~ /which:\s+command\s+not\s+found/i) {
 		if ($cmd =~ /^\//) {
 			# Full path given, so just look for it
 			my (undef, $tex, undef) = &execute_command_on_server(
-				$server, "test -x $cmd");
+				$server, "test -x $cmd", 5);
 			if (!$tex) {
 				$out = $cmd;
 				}
@@ -2749,7 +2749,7 @@ if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 		else {
 			# Search PATH manually
 			($out, $ex, $err) = &execute_command_on_server($server,
-				"for p in `echo \$PATH | sed -e 's/:/ /g'`; do if [ -r \"\$p/$cmd\" ]; then echo \"\$p/$cmd\"; fi; done");
+				"for p in `echo \$PATH | sed -e 's/:/ /g'`; do if [ -r \"\$p/$cmd\" ]; then echo \"\$p/$cmd\"; fi; done", 5);
 			if ($out !~ /^\S+\/\Q$cmd\E/) {
 				# That failed too :(
 				return undef;
@@ -2822,7 +2822,7 @@ my ($out, $ex, $err) = &execute_command_on_server($server,
 	"mkdir ".
 	($perms ? " -m ".quotemeta($operms) : "").
 	($recur ? " -p" : "")." ".
-	quotemeta($dir));
+	quotemeta($dir), 5);
 return $err ? $err : $ex ? $out : undef;
 }
 
@@ -2846,7 +2846,7 @@ if ($fullstat) {
 	# Return full file details
 	my $flags = $usernames ? "-la" : "-lan";
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"ls $flags ".quotemeta($dir));
+		"ls $flags ".quotemeta($dir), 5);
 	return $err if ($err);
 	return $out if ($ex);
 	my @rv;
@@ -2869,7 +2869,7 @@ if ($fullstat) {
 else {
 	# Just return filenames
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"ls -a ".quotemeta($dir));
+		"ls -a ".quotemeta($dir), 5);
 	return $err if ($err);
 	return $out if ($ex);
 	my @rv = split(/\r?\n/, $out);
@@ -2889,7 +2889,7 @@ if (defined(&$dfunc)) {
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to ssh
 	}
-my ($out, $ex, $err) = &execute_command_on_server($server, "echo $glob");
+my ($out, $ex, $err) = &execute_command_on_server($server, "echo $glob", 5);
 return $err if ($err);
 return $out if ($ex);
 $out =~ s/\r|\n//g;
@@ -2945,7 +2945,7 @@ if (defined(&$dfunc)) {
 
 # Run readlink via SSH
 my ($out, $ex, $err) = &execute_command_on_server($server,
-        "readlink ".quotemeta($file));
+        "readlink ".quotemeta($file), 5);
 return undef if ($err || $ex);
 my @lines = split(/\r?\n/, $out);
 return $lines[$#lines];
@@ -2966,7 +2966,7 @@ if (defined(&$dfunc)) {
 
 # Run readlink via SSH
 my ($out, $ex, $err) = &execute_command_on_server($server,
-        "ln -s ".quotemeta($src)." ".quotemeta($dest));
+        "ln -s ".quotemeta($src)." ".quotemeta($dest), 5);
 return $err ? $err : $ex ? $out : undef;
 }
 
@@ -3009,7 +3009,7 @@ if ($perms ne "") {
 # Run them
 if (@cmds) {
 	my $cmd = join(" ; ", @cmds);
-	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd, 5);
 	return $err if ($err);
 	return $out if ($ex);
 	return undef;
@@ -3067,7 +3067,7 @@ foreach my $cmd (
 	[ "ps --cols 2048 -e -o pid,user,args", 3, [ 0, 1, 2 ] ],  # Linux
 	[ "ps -e -o pid,user,args", 3, [ 0, 1, 2 ] ],		   # Solaris
 	) {
-	($out, $ex, $err) = &execute_command_on_server($server,$cmd->[0]);
+	($out, $ex, $err) = &execute_command_on_server($server, $cmd->[0], 5);
 	if (!$ex && !$err) {
 		foreach my $l (split(/\r?\n/, $out)) {
 			my %p;
@@ -3347,7 +3347,7 @@ if ($regen) {
 # Work out the root shell
 if (!$server->{'root_shell'} || $regen) {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-							  'echo $SHELL');
+							  'echo $SHELL', 5);
 	if (!$ex && !$err) {
 		$out =~ s/\s//g;
 		$server->{'root_shell'} = $out;
@@ -3662,7 +3662,7 @@ my $info = &get_server_collected($server);
 my $got_more_info;
 if (!$got_memory && &can_ssh_status($server)) {
 	# Try Linux "free" command
-	my ($out, $ex, $err) = &execute_command_on_server($server, "free");
+	my ($out, $ex, $err) = &execute_command_on_server($server, "free", 5);
 	if (!$ex && !$err) {
 		my @mem;
 		if ($out =~ /Mem:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/i) {
@@ -3685,14 +3685,14 @@ if (!$got_memory && &can_ssh_status($server)) {
 		my %stat;
 		foreach my $s ("physmem", "freemem") {
 			my ($out) = &execute_command_on_server(
-					$server, "kstat -p -m unix -s $s");
+					$server, "kstat -p -m unix -s $s", 5);
 			if ($out =~ /\s+(\d+)/) {
 				$stat{$s} = $1;
 				}
 			}
 		my ($swaptotal, $swapfree);
 		my ($out) = &execute_command_on_server(
-				$server, "swap -l");
+				$server, "swap -l", 5);
 		foreach my $line (split(/\r?\n/, $out)) {
 			if ($line =~ /^\S+\s+\d+,\d+\s+\d+\s+(\d+)\s+(\d+)/) {
 				$swaptotal += $1;
@@ -3700,7 +3700,7 @@ if (!$got_memory && &can_ssh_status($server)) {
 				}
 			}
 		local ($pagesize) = &execute_command_on_server(
-					$server, "pagesize 2>/dev/null");
+					$server, "pagesize 2>/dev/null", 5);
 		$pagesize = int($pagesize)/1024;
 		$pagesize ||= 8;	# Fallback
 		if ($stat{'physmem'}) {
@@ -3716,7 +3716,7 @@ if (!$got_memory && &can_ssh_status($server)) {
 		# Get real memory usage from sysctl
 		my $sysctl = {};
 		my ($sysctl_output) = &execute_command_on_server(
-			$server, "/sbin/sysctl -a 2>/dev/null");
+			$server, "/sbin/sysctl -a 2>/dev/null", 5);
 		foreach my $line (split(/\n/, $sysctl_output)) {
 			if ($line =~ m/^([^:]+):\s+(.+)\s*$/s) {
 				$sysctl->{$1} = $2;
@@ -3739,7 +3739,7 @@ if (!$got_memory && &can_ssh_status($server)) {
 
 		# Add swap usage
 		my ($swapinfo_output) = &execute_command_on_server(
-			$server, "/usr/sbin/swapinfo");
+			$server, "/usr/sbin/swapinfo", 5);
 		my ($swap_total, $swap_free) = (0, 0);
 		foreach my $line (split(/\n/, $swapinfo_output)) {
 			if ($line =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)/) {
@@ -3754,7 +3754,7 @@ if (!$got_memory && &can_ssh_status($server)) {
 		}
 
 	# Get CPU load from "uptime" command
-	my ($out, $ex, $err) = &execute_command_on_server($server, "uptime");
+	my ($out, $ex, $err) = &execute_command_on_server($server, "uptime", 5);
 	if (!$ex && !$err &&
 	    $out =~ /average:\s+([0-9\.]+),\s*([0-9\.]+),\s*([0-9\.]+)/i) {
 		$info->{'load'} = [ $1, $2, $3 ];
@@ -3808,7 +3808,7 @@ if (&can_ssh_status($server)) {
 # Get kernel and CPU info via SSH
 if (!$got_kernel && &can_ssh_status($server)) {
 	my ($out, $ex, $err) = &execute_command_on_server($server, 
-		"uname -r ; uname -m ; uname -s");
+		"uname -r ; uname -m ; uname -s", 5);
 	if (!$ex && !$err) {
 		my ($r, $m, $o) = split(/\r?\n/, $out);
 		$info->{'kernel'} = { 'version' => $r,
