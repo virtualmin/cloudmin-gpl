@@ -2166,8 +2166,8 @@ pass_akey=Key description
 pass_atype=Key type
 pass_apublic=Public
 pass_aprivate=Private
-pass_rkey=Removing SSH key $1 ..
-pass_akey=Adding SSH key $1 ..
+pass_remkey=Removing SSH key $1 ..
+pass_addkey=Adding SSH key $1 ..
 pass_earkey=.. key change failed : $1
 
 licences_title=Virtualmin Pro Licenses

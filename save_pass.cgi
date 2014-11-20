@@ -166,14 +166,14 @@ if ($in{'mode'}) {
 				 $key->{'id'} eq $oldserver->{'key'});
 			if ($oldkeys{$key->{'id'}} && !$newkeys{$key->{'id'}}) {
 				# Remove SSH key
-				&$first_print(&text('pass_rkey',
+				&$first_print(&text('pass_remkey',
 						    $key->{'desc'}));
 				$err = &create_authorized_key($server, 2, $key);
 				}
 			elsif (!$oldkeys{$key->{'id'}} &&
 			       $newkeys{$key->{'id'}}) {
 				# Add SSH key
-				&$first_print(&text('pass_akey',
+				&$first_print(&text('pass_addkey',
 						    $key->{'desc'}));
 				$err = &create_authorized_key($server, 1, $key);
 				}
