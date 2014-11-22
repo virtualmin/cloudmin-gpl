@@ -2784,7 +2784,7 @@ $data .= "$brctl addif $bridge \$1\n";
 if ($ip) {
 	# Use ip command
 	$data .= "$ip link set dev \$1 up\n";
-	$data .= "mtu=`$ip link | grep ${bridge}: | sed -e 's/.*mtu //; s/ .*//'`\n";
+	$data .= "mtu=`$ip link | head -1 | grep ${bridge}: | sed -e 's/.*mtu //; s/ .*//'`\n";
 	$data .= "if [ \"\$mtu\" != \"\" ]; then\n";
 	$data .= "    $ip link set dev \$1 mtu \$mtu\n";
 	$data .= "fi\n";
