@@ -5734,3 +5734,14 @@ gattach_ewronghost=Disk is not attached to this system!
 gattach_detaching=Detaching GCE disk $1 ..
 gattach_edetach=.. detach failed : $1
 gattach_notattached=.. attachment appeared to succeed, but the disk does not appear to be attached
+
+left_vm2=Cloudmin
+left_login=Login: $1
+left_owner=System owner
+left_master2=Cloudmin master admin
+left_novm2=No systems created.
+left_novm2access=You do not have access to any systems.
+left_vm2status=Status: $1
+left_nomore=No more servers can be created
+left_vm2config=Cloudmin Configuration
+
