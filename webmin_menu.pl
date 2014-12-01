@@ -110,6 +110,90 @@ if ($server) {
 			push(@rv, @citems);
 			}
 		}
+
+	# Get global settings, add Module Config
+	my @vservers = grep { $_->{'status'} eq 'virt' } @servers;
+        my ($glinks, $gtitles, $gicons, $gcats) =
+                &server_manager::get_global_links(scalar(@vservers));
+        my $glinks = [ map { "server-manager/$_" } @$glinks ];
+        my $gcats = [ map { $_ || "settings" } @$gcats ];
+        if (!$server_manager::access{'noconfig'}) {
+                push(@$glinks, "config.cgi?server-manager");
+                push(@$gtitles, $text{'left_vm2config'});
+                push(@$gicons, undef);
+                push(@$gcats, 'settings');
+                }
+
+	# Show global settings, under categories
+	my @ugcats = &unique(@$gcats);
+        if (@ugcats) {
+		push(@rv, { 'type' => 'hr' });
+                }
+        foreach my $c (@ugcats) {
+		my $citem = { 'type' => 'cat',
+			      'id' => 'cat_'.$c,
+			      'desc' => $text{'cat_'.$c},
+			      'members' => [ ] };
+		push(@rv, $citem);
+                for($i=0; $i<@$glinks; $i++) {
+                        next if ($gcats->[$i] ne $c);
+			push(@{$citem->{'members'}},
+			     { 'type' => 'item',
+			       'desc' => $gtitles->[$i],
+			       'link' => $glinks->[$i] });
+                        }
+                }
+
+	# Show add / create links
+	my @alllinks = &get_available_create_links();
+        if (@alllinks) {
+		push(@rv, { 'type' => 'hr' });
+		}
+        @createlinks = grep { $_->{'create'} } @alllinks;
+        @addlinks = grep { !$_->{'create'} } @alllinks;
+        if (scalar(@createlinks) + scalar(@addlinks) <= 3) {
+                # Collapse to one section
+                @newlinks = ( @createlinks, @addlinks );
+                @createlinks = @addlinks = ( );
+                }
+        foreach my $ml ([ "create", \@createlinks ],
+                        [ "add", \@addlinks ],
+                        [ "new", \@newlinks ]) {
+                my ($m, $l) = @$ml;
+                if (@$l == 1) {
+                        my $c = $l->[0];
+                        my $form = $c->{'link'} ? $c->{'link'} :
+                                   $c->{'create'} ? 'create_form.cgi' :
+                                                    'add_form.cgi';
+			push(@rv, { 'type' => 'item',
+				    'desc' => $c->{'desc'},
+				    'link' => '/'.$module_name.'/'.
+					      $form.'?type='.$c->{'type'} });
+                        }
+                elsif (@$l) {
+			my $citem = { 'type' => 'cat',
+				      'id' => 'create_'.$m,
+				      'desc' => $text{'left_vm2'.$m},
+				      'members' => [ ] };
+			push(@rv, $citem);
+                        foreach my $c (@$l) {
+                                my $form = $c->{'link'} ? $c->{'link'} :
+                                           $c->{'create'} ? 'create_form.cgi' :
+                                                            'add_form.cgi';
+				push(@{$citem->{'members'}},
+				     { 'type' => 'item',
+				       'desc' => $c->{'desc'},
+				       'link' => '/'.$module_name.'/'.
+                                              $form.'?type='.$c->{'type'} });
+                                }
+                        }
+                }
+
+	# Show list of all systems
+	push(@rv, { 'type' => 'item',
+		    'desc' => $text{'left_vm2list'},
+		    'link' => '/'.$module_name.'/index.cgi',
+		    'icon' => '/'.$module_name.'/images/vm2.png' });
 	}
 
 return @rv;
