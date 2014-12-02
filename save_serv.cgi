@@ -446,6 +446,7 @@ else {
 	if ($server->{'id'} != 0) {
 		$oldip = &to_ipaddress($server->{'host'});
 		$newip = &to_ipaddress($in{'host'});
+		$newip || &error(&text('save_enewip', $in{'host'}));
 		if ($oldip && $oldip ne $newip && !$in{'confirm'}) {
 			# IP mismatch .. but allow override
 			&show_host_override_form($oldip, $newip);
