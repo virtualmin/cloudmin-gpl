@@ -40,7 +40,7 @@ my @servers = &list_available_managed_servers_sorted();
 my @allservers = &list_managed_servers();
 my ($server) = grep { $_->{'id'} eq $in->{'sid'} } @servers;
 if (!$server && $data && $data->{'server'} ne '') {
-	($server) = grep { $_->{'id'} eq $sects->{'server'} } @servers;
+	($server) = grep { $_->{'id'} eq $data->{'server'} } @servers;
 	}
 $server ||= $servers[0];
 my $sid = $server ? $server->{'id'} : undef;
@@ -76,7 +76,6 @@ if ($server) {
 	# Get actions for this system
 	my @actions = grep { $_ && keys(%$_) > 0 }
                            &get_server_actions($server);
-	# XXX leftvm2_ text?
 
 	# Work out action categories, and show those under each
 	my @cats = sort { $a cmp $b } &unique(map { $_->{'cat'} } @actions);
