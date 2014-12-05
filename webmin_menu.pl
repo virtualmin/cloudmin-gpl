@@ -94,9 +94,13 @@ if ($server) {
                                 $url = '/'.$module_name.'/save_serv.cgi?id='.
 				       $server->{'id'}.'&'.$b->{'id'}.'=1';
 				}
+			my $t = $b->{'target'} eq '_new' ||
+				$b->{'target'} eq '_blank' ? 'new' :
+				$b->{'target'} eq '_top' ? 'window' : undef;
 			push(@citems, { 'type' => 'item',
 					'desc' => $b->{'title'} || $b->{'desc'},
-					'link' => $url });
+					'link' => $url,
+					'target' => $t });
 			}
 		if ($c) {
 			push(@rv, { 'type' => 'cat',

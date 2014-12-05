@@ -5745,7 +5745,6 @@ left_novm2access=You do not have access to any systems.
 left_vm2status=Status: $1
 left_nomore=No more servers can be created
 left_vm2config=Cloudmin Configuration
-left_vm2=List Managed Systems
 left_vm2create=Create System
 left_vm2add=Add System
 left_vm2new=New System
