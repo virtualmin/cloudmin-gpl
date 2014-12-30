@@ -5749,3 +5749,16 @@ left_vm2create=Create System
 left_vm2add=Add System
 left_vm2new=New System
 left_vm2list=List Managed Systems
+
+right_vm2docs=Cloudmin documentation
+right_virtdocs2=Additional documentation
+right_updatesheader=Package Updates
+right_upcount=$1 updates to Virtualmin packages are available. Use the <a href='$2'>Virtualmin Package Updates</a> module to install them selectively.
+right_upcount1=One updated Virtualmin package is available. Use the <a href='$2'>Virtualmin Package Updates</a> module to see all managed packages.
+right_upsys=$1 updates to system packages are available. Use the <a href='$2'>Virtualmin Package Updates</a> module to install them selectively.
+right_upname=Package
+right_updesc=Description
+right_upver=Version
+right_upok=Install All Updates Now
+right_newfeaturesheader=New Cloudmin Features
+

@@ -6275,8 +6275,19 @@ return $rv;
 # Returns HTML for any warnings
 sub warning_messages
 {
+return join("", &list_warning_messages());
+}
+
+# list_warning_messages()
+# Returns warning messages as an array of HTML
+sub list_warning_messages
+{
+my @warns;
+
 # Licence expiry
-my $warns = &licence_error_message();
+my $lerr = &licence_error_message();
+push(@warns, $lerr) if ($lerr);
+
 if (&is_cloudmin_replica()) {
 	# System is a replica
 	my $rv = "<table width=100%><tr bgcolor=#ffff88><td align=center>";
@@ -6284,7 +6295,7 @@ if (&is_cloudmin_replica()) {
 	$rv .= "<p><b>".($master ? &text('repl_warning', $master)
 				 : $text{'repl_warning2'})."</b><p>\n";
 	$rv .= "</td></tr></table>\n";
-	$warns .= $rv;
+	push(@warns, $rv);
 	}
 my $one = $module_info{'onehost'};
 if ($one) {
@@ -6298,10 +6309,10 @@ if ($one) {
 				      $text{$one.'_typedesc'}, $err)."</b><p>";
 		$rv .= "<b>".$text{'onehost_err2'}."</b><p>\n";
 		$rv .= "</td></tr></table>\n";
-		$warns .= $rv;
+		push(@warns, $rv);
 		}
 	}
-return $warns;
+return @warns;
 }
 
 # check_server_manager_licence()
