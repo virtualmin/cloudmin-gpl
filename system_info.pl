@@ -1,6 +1,7 @@
 # Provide more system info blocks specific to Cloudmin
 
 require 'server-manager-lib.pl';
+use Time::Local;
 
 sub list_system_info
 {
@@ -85,6 +86,54 @@ if (!$data->{'noupdates'} && $hasposs && $canposs && @poss) {
 		    'html' => $html });
 	}
 
+# Details of managed systems
+my @servers = &list_available_managed_servers_sorted();
+if (@servers > 1) {
+	my %c;
+	foreach my $s (@servers) {
+		$c{'all'}++;
+		if (&is_parent_server($s)) {
+			$c{'host'}++;
+			}
+		my $virt = &is_virtual_server($s);
+		$c{$virt ? 'virt' : 'real'}++;
+		if ($s->{'status'} eq 'alive' ||
+		    &can_ssh_status($s)) {
+			$c{'up'}++;
+			}
+		else {
+			$c{'down'}++;
+			}
+		my $mfunc = "type_".$s->{'manager'}."_get_memory_size";
+		if (defined(&$mfunc)) {
+			my $mem = &$mfunc($s);
+			if ($mem) {
+				$c{'mem'} += $mem;
+				}
+			}
+		my $dfunc = "type_".$s->{'manager'}."_get_disk_size";
+		if (defined(&$dfunc)) {
+			my $disk = &$dfunc($s);
+			if ($disk) {
+				$c{'disk'} += $disk;
+				}
+			}
+		}
+	my @table;
+	foreach my $f ('all', 'host', 'virt', 'real', 'up', 'down',
+		       'mem', 'disk') {
+		push(@table, { 'desc' => $text{'right_vm2count'.$f},
+			       'value' => $f eq 'mem' || $f eq 'disk' ?
+					&nice_size($c{$f}) : int($c{$f}) });
+		}
+	push(@rv, { 'type' => 'table',
+		    'id' => 'vm2servers',
+		    'desc' => $text{'right_vm2serversheader'},
+		    'table' => \@table });
+	}
+
+# XXX system owner info?
+
 # New features
 my $newhtml = &get_new_features_html(undef);
 if ($newhtml) {
@@ -104,6 +153,70 @@ foreach my $p (&list_plugin_sections()) {
 		    'open' => $p->{'status'} });
 	}
 
+# Cloudmin licence info
+my %sserial;
+if (&read_env_file($licence_file, \%sserial) &&
+    $sserial{'SerialNumber'} ne 'GPL' &&
+    !$access{'owner'}) {
+	my @table;  
+        my $open = 0;
+
+	# Serial and key
+	push(@table, { 'desc' => $text{'right_sserial'},
+		       'value' => $sserial{'SerialNumber'} });
+	push(@table, { 'desc' =>  $text{'right_skey'},
+		       'value' => $sserial{'LicenseKey'} });
+
+	# Allowed system counts
+	my %lstatus;
+	&read_file($licence_status, \%lstatus);
+	my @allservers = grep { &is_virtual_server($_) }
+			      &list_managed_servers();
+	push(@table, { 'desc' => $text{'right_vm2max'},
+		       'value' => $lstatus{'servers'} > 0 ?
+				    $lstatus{'servers'} :
+				    $text{'right_vunlimited'} });
+	push(@table, { 'desc' => $text{'right_vm2used'},
+		       'value' => scalar(@allservers) });
+
+	# Show license expiry date
+	if ($lstatus{'expiry'} =~ /^203[2-8]-/) {
+		push(@table, { 'desc' => $text{'right_expiry'},
+			       'value' => $text{'right_expirynever'} });
+		}
+	elsif ($lstatus{'expiry'}) {
+		push(@table, { 'desc' => $text{'right_expiry'},
+			       'value' => $lstatus{'expiry'} });
+		my $ltm = &parse_license_date($lstatus{'expiry'});
+		if ($ltm) {
+			my $days = int(($ltm - time()) / (24*60*60));
+			push(@table, { 'desc' => $text{'right_expirydays'},
+				       'value' => $days < 0 ?
+					&text('right_expiryago', -$days) :
+					$days });
+			$open = 1 if ($days < 7);
+			}
+		}
+
+	push(@rv, { 'type' => 'table',
+	    'id' => 'serial',
+	    'desc' => $text{'right_licenceheader'},
+	    'open' => $open,
+	    'table' => \@table });
+
+	# XXX re-check licence link
+	}
+
 return @rv;
 }
 
+sub parse_license_date
+{
+my ($str) = @_;
+if ($str =~ /^(\d{4})-(\d+)-(\d+)$/) {
+        return eval { timelocal(0, 0, 0, $3, $2-1, $1-1900) };
+        }
+return undef;
+}
+
+1;
