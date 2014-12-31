@@ -15,6 +15,7 @@ if (!&foreign_available($module_name)) {
 my @rv;
 
 # Get own system info
+my @servers = &list_available_managed_servers_sorted();
 my $me = &get_managed_server(0);
 my $meinfo;
 if ($me) {
@@ -86,8 +87,91 @@ if (!$data->{'noupdates'} && $hasposs && $canposs && @poss) {
 		    'html' => $html });
 	}
 
+# Show a system owner info about his VMs, but not about the system
+if ($access{'owner'}) {
+	my @table;
+
+	# General info about the account
+        push(@table, { 'desc' => $text{'right_login'},
+                       'value' => $remote_user });
+        push(@table, { 'desc' => $text{'right_from'},
+                       'value' => $ENV{'REMOTE_HOST'} });
+        push(@table, { 'desc' => $text{'right_vm2'},
+                       'value' => $module_info{'version'} });
+	push(@table, { 'desc' => $text{'right_vm2real'},
+		       'value' => $access{'real'} });
+	push(@table, { 'desc' => $text{'right_vm2email'},
+		       'value' => $access{'email'} });
+
+	# Show primary system, if there is just one
+	if (@servers == 1) {
+		my $s = $servers[0];
+		if (&can_action($s, "view")) {
+			push(@table, { 'desc' => $text{'right_vm2one'},
+				       'value' => &ui_link(
+					  '/'.$module_name.'/edit_serv.cgi?id='.
+					  $s->{'id'}, $s->{'host'}) });
+			}
+		else {
+			push(@table, { 'desc' => $text{'right_vm2one'},
+				       'value' => $s->{'host'} });
+			}
+		}
+
+	push(@rv, { 'type' => 'table',
+		    'id' => 'owner',
+		    'priority' => 50,
+		    'desc' => $text{'right_ownerheader'},
+		    'table' => \@table });
+        push(@rv, { 'type' => 'veto',
+                    'veto' => 'sysinfo' });
+	}
+
+# Show system limits and counts
+if ($access{'owner'} && &supports_plans()) {
+	my $limits = &get_owner_limits();
+	my $plan = &get_owner_plan();
+	if ($limits) {
+		my @table;
+		if ($plan) {
+			push(@table, { 'desc' => $text{'right_vm2plan'},
+				       'value' => $plan->{'desc'},
+				       'wide' => 1 });
+			}
+		foreach my $l (@plan_limit_types) {
+			my $n = &indexof($l, @nice_plan_limit_types) >= 0;
+			my $nice = $n ? &nice_size($limits->{$l}) :
+				$l eq "cpu" ? $limits->{$l}."%"
+					    : $limits->{$l};
+			my $nicemax = $n ? &nice_size($limits->{'max_'.$l}) :
+				   $l eq "cpu" ? $limits->{'max_'.$l}."%"
+					       : $limits->{'max_'.$l};
+			my $msg1 = $limits->{$l} ||
+					!$limits->{$l.'_unlimited'} ?
+					$nice : $text{'right_vunlimited'};
+			my $msg2 = $limits->{'max_'.$l} ?
+				$nicemax : $text{'right_vunlimited'};
+			if ($limits->{'max_'.$l} &&
+			    $limits->{$l} > $limits->{'max_'.$l}) {
+				$msg1 = "<font color=red>$msg1</font>";
+				$msg2 = "<font color=red>$msg2</font>";
+				}
+			push(@table, { 'desc' => $text{'right_vm2c'.$l},
+				       'value' => $msg1 });
+			push(@table, { 'desc' => $text{'right_vm2m'.$l},
+				       'value' => $msg2 });
+			}
+		push(@rv, { 'type' => 'table',
+			    'id' => 'vm2limits',
+			    'open' => 0,
+			    'desc' => $text{'right_vm2limitsheader'},
+			    'table' => \@table });
+		}
+	}
+
+# XXX Show usage
+
 # Details of managed systems
-my @servers = &list_available_managed_servers_sorted();
 if (@servers > 1) {
 	my %c;
 	foreach my $s (@servers) {
@@ -128,11 +212,11 @@ if (@servers > 1) {
 		}
 	push(@rv, { 'type' => 'table',
 		    'id' => 'vm2servers',
+		    'priority' => 40,
+		    'open' => 1,
 		    'desc' => $text{'right_vm2serversheader'},
 		    'table' => \@table });
 	}
-
-# XXX system owner info?
 
 # New features
 my $newhtml = &get_new_features_html(undef);
