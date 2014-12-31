@@ -204,7 +204,11 @@ if (&read_env_file($licence_file, \%sserial) &&
 	    'open' => $open,
 	    'table' => \@table });
 
-	# XXX re-check licence link
+	# Re-check licence link
+        push(@rv, { 'type' => 'link',
+                    'priority' => 20,
+                    'desc' => $text{'right_slcheck'},
+                    'link' => '/'.$module_name.'/licence.cgi' });
 	}
 
 return @rv;
