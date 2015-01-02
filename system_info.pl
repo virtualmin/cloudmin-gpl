@@ -121,6 +121,7 @@ if ($access{'owner'}) {
 	push(@rv, { 'type' => 'table',
 		    'id' => 'owner',
 		    'priority' => 50,
+		    'open' => 1,
 		    'desc' => $text{'right_ownerheader'},
 		    'table' => \@table });
         push(@rv, { 'type' => 'veto',
@@ -333,7 +334,7 @@ if (@servers > 1) {
 	push(@rv, { 'type' => 'table',
 		    'id' => 'vm2servers',
 		    'priority' => 40,
-		    'open' => 1,
+		    'open' => $access{'owner'} ? 1 : 0,
 		    'desc' => $text{'right_vm2serversheader'},
 		    'table' => \@table });
 	}
