@@ -5806,3 +5806,5 @@ right_vm2mbw=Maximum bandwidth
 right_vm2cspace=Current backup space used
 right_vm2mspace=Maximum backup space
 right_vm2limitsheader=Cloudmin Limits
+right_vm2usageheader=Usage By Owned Systems
+

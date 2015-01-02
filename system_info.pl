@@ -169,7 +169,127 @@ if ($access{'owner'} && &supports_plans()) {
 		}
 	}
 
-# XXX Show usage
+# Show owner's usage
+if ($access{'owner'} && defined(&server_manager::get_owner_usage)) {
+	my $owner = &get_system_owner($base_remote_user);
+	my @allusage = &get_owner_usage($owner);
+	@allusage = sort { $a->{'start'} cmp $b->{'start'} } @allusage;
+	my @usageids = &unique(map { $_->{'server'} } @allusage);
+	if (@allusage) {
+		my @table;
+
+		# Period range
+		my ($start, $end) = &usage_period_start_end(\@allusage, 0);
+		push(@table, { 'desc' => $text{'edit_ustart'},
+			       'wide' => 1,
+			       'value' => &make_date($start) });
+
+		# Total uptime over usage period
+		my $up = &sum_usage_over_period(\@allusage, $start, $end, 'up');
+		push(@table, { 'desc' => $text{'edit_uup'},
+			       'wide' => 1,
+			       'value' => &nice_hour_mins_secs($up) });
+
+		# Memory over accounting period
+		my $mem = &sum_usage_over_period(\@allusage, $start, $end,
+						 'mem');
+		if ($mem) {
+			my $gbh = sprintf("%.2f", $mem / (3600*1024*1024*1024));
+			my $avgmem = &nice_size(int($mem / ($end - $start)));
+			my $upmem = &nice_size(int($mem / $up));
+			push(@table, { 'desc' => $text{'edit_umem'},
+				       'wide' => 1,
+				       'value' => &text('edit_ugbh', $gbh,
+							$avgmem, $upmem) });
+			}
+
+		# CPU allocation, in percent hours
+		my $cpu = &sum_usage_over_period(\@allusage, $start, $end,
+						 'cpu');
+		if ($cpu) {
+			my $cpuh = sprintf("%.2f", ($cpu / 3600));
+			my $avgcpu = int($cpu / ($end - $start));
+			my $upcpu = int($cpu / $up);
+			push(@table, { 'desc' => $text{'edit_ucpu'},
+				       'wide' => 1,
+				       'value' => &text('edit_ucpuh', $cpuh,
+							$avgcpu, $upcpu) });
+			}
+
+		# CPU load, in percent hours
+		my $load = &sum_usage_over_period(\@allusage, $start, $end,
+						  'load');
+		if ($load) {
+			my $cpuh = sprintf("%.2f", ($load / 3600));
+			my $avgcpu = int($load / ($end - $start));
+			my $upcpu = int($load / $up);
+			push(@table, { 'desc' => $text{'edit_uload'},
+				       'wide' => 1,
+				       'value' => &text('edit_ucpuh', $cpuh,
+							$avgcpu, $upcpu) });
+			}
+
+		# Disk assigned and used over period
+		my $disk = &sum_usage_over_period(\@allusage, $start, $end,
+						  'disk');
+		my $space = &sum_usage_over_period(\@allusage, $start, $end,
+						   'space');
+		if ($disk && $disk != $space) {
+			my $gbh = sprintf("%.2f",
+					$disk / (3600*1024*1024*1024));
+			my $avgdisk = &nice_size(int($disk / ($end - $start)));
+			push(@table, { 'desc' => $text{'edit_udisk'},
+				       'wide' => 1,
+				       'value' => &text('edit_ugbh2', $gbh,
+							$avgdisk) });
+			}
+		if ($space) {
+			my $gbh = sprintf("%.2f",
+					$space / (3600*1024*1024*1024));
+			my $avgspace = &nice_size(
+					int($space / ($end - $start)));
+			push(@table, { 'desc' => $text{'edit_uspace'},
+				       'wide' => 1,
+				       'value' => &text('edit_ugbh2', $gbh,
+							$avgspace) });
+			}
+
+		# Combined bandwidth usage
+		if ($config{'bw_enabled'}) {
+			my $bstart = &bandwidth_period_start(0);
+			my $bend = &bandwidth_period_end(0);
+			my $bwinfo = &get_owner_bandwidth(
+					$owner, $bstart, $bend);
+			my $bwtotal = 0;
+			for($hh=$bstart; $hh<$bend; $hh+=3600) {
+				$bwtotal += $bwinfo->{'hour_in_'.$hh};
+				$bwtotal += $bwinfo->{'hour_out_'.$hh};
+				}
+			push(@table, { 'desc' => $text{'owner_bwusage'},
+				       'wide' => 1,
+				       'value' => &nice_size($bwtotal) });
+			}
+
+		# Systems included
+		if (@usageids) {
+			my @usagenames;
+			foreach my $id (@usageids) {
+				my $us = &get_managed_server($id);
+				push(@usagenames, $us ? $us->{'host'} :
+					&text('owner_del', $id));
+				}
+			push(@table, { 'desc' => $text{'owner_usagesystems'},
+				       'wide' => 1,
+				       'value' => &ui_links_row(\@usagenames)});
+			}
+
+		push(@rv, { 'type' => 'table',
+			    'id' => 'vm2usage',
+			    'open' => 0,
+			    'desc' => $text{'right_vm2usageheader'},
+			    'table' => \@table });
+		}
+	}
 
 # Details of managed systems
 if (@servers > 1) {
