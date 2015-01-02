@@ -7967,5 +7967,72 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 return &regenerate_all_kvm_bridge_scripts($server);
 }
 
+# type_kvm_open_vnc_port(&server)
+# Opens a VNC port on the master system which is connected to the VNC console
+# on the VM. Returns a port number and password on success, or 0 and an error
+# message on failure.
+sub type_kvm_open_vnc_port
+{
+my ($server) = @_;
+$server->{'kvm_vnc_display'} ||
+	return (0, $text{'vnc_ecannot'});
+
+# Get the VNC port
+my $vhost = &type_kvm_parent($server);
+my $port = 5900 + $server->{'kvm_vnc_display'};
+
+# Check that the VNC port is really open on the KVM host, and connect to it
+my $err = undef;
+&open_socket($vhost->{'ip'}, $port, VNCSOCK, \$err);
+if ($err) {
+	return (0, &text('vnc_nolisten', $port, $vhost->{'host'}));
+	}
+
+my $masterport;
+if ($vhost->{'id'} == 0) {
+	# Special case - this box is the Xen host, so no forwarding needed
+	$masterport = $port;
+	close(VNCSOCK);
+	}
+else {
+	# Pick a free port on the Cloudmin master, 5900+
+	$masterport = 5900;
+	my $proto = getprotobyname('tcp');
+	socket(VNCMASTER, PF_INET, SOCK_STREAM, $proto) ||
+		return (0, "Socket failed : $!");
+	setsockopt(VNCMASTER, SOL_SOCKET, SO_REUSEADDR, pack("l", 1));
+	while(1) {
+		last if (bind(VNCMASTER, sockaddr_in($masterport, INADDR_ANY)));
+		$masterport++;
+		}
+	listen(VNCMASTER, SOMAXCONN);
+
+	# Fork a listening process to forward VNC traffic
+	if (!fork()) {
+		# Wait for a connection
+		untie(*STDIN); untie(*STDOUT);
+		close(STDIN); close(STDOUT);
+		$SIG{'ALRM'} = sub { exit(2) };
+		alarm(30);
+		my $acptaddr = accept(VNCCLIENT, VNCMASTER);
+		$acptaddr || exit(1);
+		close(VNCMASTER);
+		alarm(0);
+		untie(*STDERR);
+		close(STDERR);
+
+		# Start forwarding traffic
+		select(VNCCLIENT); $| = 1;
+		select(VNCSOCK); $| = 1;
+		&forward_connection_sockets(VNCCLIENT, VNCCLIENT,
+					    VNCSOCK, VNCSOCK);
+		exit;
+		}
+	close(VNCMASTER);
+	close(VNCSOCK);
+	}
+return ($masterport, $server->{'kvm_vnc_passwd'});
+}
+
 1;
 

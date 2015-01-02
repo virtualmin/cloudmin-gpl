@@ -8179,6 +8179,19 @@ foreach my $p (@par) {
 		}
 	}
 
+# VNC console access
+my $vfunc = "type_".$server->{'manager'}."_open_vnc_port";
+if (defined(&$vfunc) &&
+    $server->{'status'} ne 'down' && $server->{'status'} ne 'nohost' &&
+    &can_action($server, "console")) {
+	# VNC console access link
+	push(@rv, { 'id' => 'vnc',
+		    'desc' => $text{'edit_vnc'},
+		    'cat' => 'power',
+		    'link' => "gvnc.cgi?id=$server->{'id'}" });
+	}
+
+
 # Add type-specific actions
 my $afunc = "type_".$t."_server_actions";
 if (defined(&$afunc)) {
