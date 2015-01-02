@@ -115,26 +115,6 @@ my ($server) = @_;
 return $server->{'manager'} eq 'this' || $server->{'manager'} eq 'real';
 }
 
-# type_kvm_server_actions(&server)
-# Returns extra links for KVM instances
-sub type_kvm_server_actions
-{
-my ($server) = @_;
-my @rv;
-if ($server->{'kvm_vnc_display'} &&
-    $server->{'status'} ne 'down' && $server->{'status'} ne 'nohost' &&
-    &can_action($server, "console")) {
-	# KVM VNC console access link
-	push(@rv, { 'id' => 'vnc',
-		    'desc' => $text{'edit_vnc'},
-		    'cat' => 'power',
-		    'link' => "kvnc.cgi?id=$server->{'id'}" });
-	}
-return @rv;
-}
-
-
-
 # type_kvm_add_form()
 # Returns inputs for adding an existing KVM instance. This is just a matter of
 # selecting the host and the server.
