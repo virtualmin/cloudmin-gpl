@@ -99,3 +99,4 @@ Backups can now be restored on Cloudmin master systems other than the one they w
 New disks can now be created with GPT partition tables, if supported by the parted command.
 ---- Changes since 7.9 ----
 Additional SSH keys for a system can now be viewed and selected on the Change Password page, set with the passwd-system API command, and displayed with the list-system-keys command.
+Added the vnc-system API comment for opening up a port to the graphical console on a virtual system.
