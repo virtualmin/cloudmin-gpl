@@ -4500,7 +4500,13 @@ if ($@ =~ /timeout/) {
 	foreach my $pid (@pids) {
 		kill('KILL', $pid);
 		}
-	&error("Parallel function took longer than $maxtime seconds!");
+	if ($maxtime) {
+		&error("Parallel function took longer than $maxtime seconds!");
+		}
+	else {
+		&error("Parallel function timed out, but no timeout was set : ".
+		       $@);
+		}
 	}
 elsif ($@) {
 	die $@;
