@@ -102,6 +102,7 @@ if ($server) {
 					'link' => $url,
 					'target' => $t });
 			}
+		@citems = sort { $a->{'desc'} cmp $b->{'desc'} } @citems;
 		if ($c) {
 			push(@rv, { 'type' => 'cat',
 				    'id' => 'cat_'.$c,
@@ -138,13 +139,16 @@ if ($server) {
 			      'desc' => $text{'cat_'.$c},
 			      'members' => [ ] };
 		push(@rv, $citem);
+		my @citems;
                 for($i=0; $i<@$glinks; $i++) {
                         next if ($gcats->[$i] ne $c);
-			push(@{$citem->{'members'}},
+			push(@citems,
 			     { 'type' => 'item',
 			       'desc' => $gtitles->[$i],
 			       'link' => $glinks->[$i] });
                         }
+		@citems = sort { $a->{'desc'} cmp $b->{'desc'} } @citems;
+		$citem->{'members'} = \@citems;
                 }
 
 	# Show add / create links
@@ -179,16 +183,19 @@ if ($server) {
 				      'desc' => $text{'left_vm2'.$m},
 				      'members' => [ ] };
 			push(@rv, $citem);
+			my @citems;
                         foreach my $c (@$l) {
                                 my $form = $c->{'link'} ? $c->{'link'} :
                                            $c->{'create'} ? 'create_form.cgi' :
                                                             'add_form.cgi';
-				push(@{$citem->{'members'}},
+				push(@citems,
 				     { 'type' => 'item',
 				       'desc' => $c->{'desc'},
 				       'link' => '/'.$module_name.'/'.
                                               $form.'?type='.$c->{'type'} });
                                 }
+			@citems = sort { $a->{'desc'} cmp $b->{'desc'}} @citems;
+			$citem->{'members'} = \@citems;
                         }
                 }
 
