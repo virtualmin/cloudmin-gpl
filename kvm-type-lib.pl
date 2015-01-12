@@ -6462,10 +6462,20 @@ my $oldboot = &type_kvm_get_atboot($server);
 
 # Fix disk paths
 my @drives = split(/\s+/, $server->{'kvm_drives'});
+my $destver = &kvm_host_version($dest);
 foreach my $d (@$disks) {
 	my %drive = map { split(/=/, $_, 2) }
                         split(/,/, $drives[$d->{'drive_index'}]);
 	$drive{'file'} = $d->{'newreal'};
+	if ($d->{'drive_index'} == 0) {
+		# Fix up boot flag
+		if (&compare_versions($destver, "1.1") >= 0) {
+			delete($drive{'boot'});
+			}
+		else {
+			$drive{'boot'} = 'on';
+			}
+		}
 	$drives[$d->{'drive_index'}] =
 		join(",", map { $_."=".$drive{$_} } keys %drive);
 	if ($server->{'kvm_filesystem'} eq $d->{'real'}) {
