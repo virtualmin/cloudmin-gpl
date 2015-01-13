@@ -2065,8 +2065,8 @@ if (!$empty && $mp) {
 			$wantdev = $1."1";
 			}
 		if (&freebsd_server_type($server)) {
-			# On FreeBSD, add s1 to get the partition
-			$wantdev .= "s1";
+			# On FreeBSD, add p1 to get the partition
+			$wantdev .= "p1";
 			}
 		else {
 			# On Linux, add 1 to get the first partition
