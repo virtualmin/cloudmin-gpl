@@ -373,9 +373,8 @@ my $vinfo = &get_server_collected($dest);
 my $desttemp = $tempdir->{$dest->{'id'}};
 my @rargs = @$rargs;
 push(@rargs, [ "source", $desttemp ]);
-if ($vinfo->{'minfo'}->{'version'} >= 3.89) {
-	push(@rargs, [ "skip-warnings" ]);
-	}
+push(@rargs, [ "skip-warnings" ]);
+push(@rargs, [ "no-reuid" ]);
 push(@rargs, [ "option", "dir delete 1" ]);
 my ($err, $out) = &call_virtualmin_api($dest, "restore-domain", \@rargs);
 if (!$err && $out =~ /Restore\s+failed/) {
