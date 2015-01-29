@@ -1,6 +1,6 @@
 # Functions to generate the left menu
 
-require 'server-manager-lib.pl';
+do 'server-manager-lib.pl';
 
 # list_webmin_menu(&data, &in)
 # Returns items for the Cloudmin left menu
