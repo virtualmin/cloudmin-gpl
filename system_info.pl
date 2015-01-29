@@ -1,6 +1,6 @@
 # Provide more system info blocks specific to Cloudmin
 
-require 'server-manager-lib.pl';
+do 'server-manager-lib.pl';
 use Time::Local;
 
 sub list_system_info
