@@ -5620,7 +5620,7 @@ while(@poss) {
 	# Ping them
 	my @rvs = grep { $_ } map { $_->[0] }
 		&parallel_server_function(\@tocheck, 
-		sub { my $p = &ping_server_host($_[0]->{'ip'});
+		sub { my $p = &ping_server_host($_[0]->{'ip'}, 1);
 		      return $p ? undef : $_[0] });
 	if (@rvs) {
 		# Found at least one free
