@@ -1773,7 +1773,7 @@ if ($server->{'ssh_nologin'}) {
 if (!defined($timeout) && !$device) {
 	# No timeout given, so make one up based on the file size
 	my @st = stat($localfile);
-	$timeout = $st[7] < 1024*1024 ? 5 : undef;
+	$timeout = $st[7] < 1024*1024 ? 10 : undef;
 	}
 if ($device || $server->{'ssh_sudo'}) {
 	# Run dd piped into SSH
