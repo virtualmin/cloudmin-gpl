@@ -348,6 +348,31 @@ if (@servers) {
 					# Virtual CPUs
 					push(@cols, &get_vcpus_count($s));
 					}
+				elsif ($c eq "down") {
+					# Down services
+					$info = &get_server_collected($s);
+					if (!$info || !$info->{'startstop'}) {
+						push(@cols, "&nbsp;");
+						}
+					else {
+						@down = grep { !$_->{'status'} }
+						     @{$info->{'startstop'}};
+						if (@down) {
+							push(@cols,
+							  "<font color=red>".
+							  join(", ",
+							    map { $_->{'name'} }
+								@down).
+							  "</font>");
+							}
+						else {
+							push(@cols,
+							  "<font color=green>".
+							  $text{'index_allup'}.
+							  "</font>");
+							}
+						}
+					}
 				else {
 					push(@cols, $s->{$c});
 					}
