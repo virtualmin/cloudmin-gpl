@@ -5781,6 +5781,13 @@ $root->[0] =~ /^\/dev\/(h|s|v)d[a-z]/ ||
 return undef;
 }
 
+# type_kvm_can_direct_image(&server)
+# Returns 1 since imaging direct to the master is supported
+sub type_kvm_can_direct_image
+{
+return 1;
+}
+
 # type_kvm_create_image(&server, &image, image-to-dir, [nomunge],
 # 			[&image-from-server], [&image-to-server])
 # Convert a KVM system into an image file, which is really just the KVM disk.

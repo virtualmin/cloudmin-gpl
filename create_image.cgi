@@ -144,7 +144,8 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 # being cached on the host
 my $masterdir = &image_dest_on_master($image);
 my ($imagetodir, $imagetoserver);
-if ($masterdir) {
+my $difunc = "type_".$server->{'manager'}."_can_direct_image";
+if ($masterdir && defined(&$difunc) && &$difunc($server)) {
 	# Image is going direct to the Cloudmin master
 	$imagetodir = $masterdir;
 	$imagetoserver = &get_this_managed_server();

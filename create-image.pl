@@ -203,18 +203,6 @@ else {
 		}
 	}
 
-# Select temp dir for image on parent host
-# XXX move down
-&$first_print("Creating temporary directory for image files ..");
-($tempok, $temp) = &create_image_files_tempdir($imageserver, $image->{'id'});
-if (!$tempok) {
-	&$second_print(".. failed : $temp");
-	exit(3);
-	}
-else {
-	&$second_print(".. done");
-	}
-
 # Run pre-imaging script
 &run_system_script($server, 'before', 'image') || exit(4);
 
@@ -284,11 +272,24 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 # being cached on the host
 my $masterdir = &image_dest_on_master($image);
 my ($imagetodir, $imagetoserver);
-if ($masterdir) {
+my $difunc = "type_".$server->{'manager'}."_can_direct_image";
+if ($masterdir && defined(&$difunc) && &$difunc($server)) {
+	# Image is going direct to the Cloudmin master
 	$imagetodir = $masterdir;
 	$imagetoserver = &get_this_managed_server();
 	}
 else {
+	# Select temp dir for image on parent host
+	&$first_print("Creating temporary directory for image files ..");
+	($tempok, $temp) = &create_image_files_tempdir(
+				$imageserver, $image->{'id'});
+	if (!$tempok) {
+		&$second_print(".. failed : $temp");
+		exit(3);
+		}
+	else {
+		&$second_print(".. done");
+		}
 	$imagetodir = $temp;
 	$imagetoserver = undef;
 	}
