@@ -13390,7 +13390,7 @@ elsif ($disk->{'iscsi_server'} ne '') {
 	}
 }
 
-# dd_command(in, out, [size], [block-size])
+# dd_command(in, [out], [size], [block-size])
 # Returns a DD command, using a 32768 block size
 sub dd_command
 {

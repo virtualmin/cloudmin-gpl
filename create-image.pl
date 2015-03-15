@@ -186,8 +186,7 @@ if (defined(&$ofunc)) {
 	$imageserver = &$ofunc($server);
 	}
 
-# Select temp dir for image on parent host
-&$first_print("Creating temporary directory for image files ..");
+# Work out where the image is going to
 $image->{'vhost'} = $vhost->{'id'};
 if ($dest) {
 	if (!&parse_backup_destination($dest, $vhost)) {
@@ -203,6 +202,10 @@ else {
 		exit(3);
 		}
 	}
+
+# Select temp dir for image on parent host
+# XXX move down
+&$first_print("Creating temporary directory for image files ..");
 ($tempok, $temp) = &create_image_files_tempdir($imageserver, $image->{'id'});
 if (!$tempok) {
 	&$second_print(".. failed : $temp");
@@ -277,32 +280,48 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 		}
 	}
 
+# Check if the image is coming directly to the Cloudmin master, and isn't
+# being cached on the host
+my $masterdir = &image_dest_on_master($image);
+my ($imagetodir, $imagetoserver);
+if ($masterdir) {
+	$imagetodir = $masterdir;
+	$imagetoserver = &get_this_managed_server();
+	}
+else {
+	$imagetodir = $temp;
+	$imagetoserver = undef;
+	}
+
 # Convert the remote system into an image file - this will output progress
 $ifunc = "type_".$server->{'manager'}."_create_image";
-$imageok = &$ifunc($server, $image, $temp, $munge ? 0 : 2, $imageserver);
+$imageok = &$ifunc($server, $image, $imagetodir, $munge ? 0 : 2, $imageserver,
+		   $imagetoserver);
 
 # Transfer the image file to the master
-if ($imageok) {
+if ($imageok == 1) {
 	$dstr = &nice_image_destination($image->{'dest'});
 	&$first_print("Transferring image files to $dstr ..");
-	$err = &fetch_image_files($imageserver, $image, $temp, 0, $server);
+	$err = &fetch_image_files($imageserver, $image, $imagetodir, 0,$server);
 	if ($err) {
 		&$second_print(".. failed : $err");
 		$imageok = 0;
 		}
 	else {
 		&$second_print(".. transferred all files");
-
-		# Save the new image file
-		&generate_image_md5s($image);
-		&generate_image_size($image);
-		&save_server_image($image);
 		}
+	}
+
+if ($imageok) {
+	# Save the new image file
+	&generate_image_md5s($image);
+	&generate_image_size($image);
+	&save_server_image($image);
 	}
 
 # Cleanup the image on the host
 $ifunc = "type_".$server->{'manager'}."_cleanup_image";
-if (!&$ifunc($server, $image, $temp, $imageserver)) {
+if (!&$ifunc($server, $image, $imagetodir, $imageserver, $imagetoserver)) {
 	exit(3);
 	}
 

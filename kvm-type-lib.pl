@@ -5781,14 +5781,16 @@ $root->[0] =~ /^\/dev\/(h|s|v)d[a-z]/ ||
 return undef;
 }
 
-# type_kvm_create_image(&server, &image, tempdir, [nomunge], [&imageserver])
+# type_kvm_create_image(&server, &image, image-to-dir, [nomunge],
+# 			[&image-from-server], [&image-to-server])
 # Convert a KVM system into an image file, which is really just the KVM disk.
 # Outputs text, and returns 0 on failure.
 sub type_kvm_create_image
 {
-my ($server, $image, $tempdir, $nomunge, $imageserver) = @_;
+my ($server, $image, $image_to_dir, $nomunge, $image_from_server,
+    $image_to_server) = @_;
 my $vhost = &type_kvm_parent($server);
-$imageserver ||= $vhost;
+$image_from_server ||= $vhost;
 
 # Mount the disk image
 &$first_print($text{'mkimage_kvmmount'});
@@ -5859,45 +5861,51 @@ if ($server->{'kvm_filesystem_iscsi'} ne '') {
 	$fsfile = $idisk->{'real'};
 	}
 
+# Build the compression command
+my $rv;
+my ($cmd, $outfile);
 if (!$image->{'nocompress'}) {
-	# Compress disk image to a temp file
+	# Compress disk image
 	&start_background_dot_printer($text{'mkimage_xengzip'});
-	my $gzfile = $image->{'id'}.".ext3.gz";
-	my ($out, $ex, $err) = &execute_command_on_server($imageserver,
-	    ($isdevice ?
-		&dd_command($fsfile, undef)." | gzip -c" :
-		"gzip -c ".quotemeta($fsfile)).
-	    	  " >".quotemeta("$tempdir/$gzfile"));
-	&stop_background_dot_printer();
-	if ($ex) {
-		&$second_print(&text('mkimage_exengzip', "<pre>$out</pre>"));
-		return 0;
-		}
-	else {
-		&$second_print($text{'create_done'});
-		$image->{'files'} = $gzfile;
-		}
+	$cmd = $isdevice ? &dd_command($fsfile, undef)." | gzip -c"
+			 : "gzip -c ".quotemeta($fsfile);
+	$outfile = $image->{'id'}.".ext3.gz";
 	}
 else {
 	# Just use the image file as-is
 	&start_background_dot_printer($text{'mkimage_xengzip2'});
-	my $imgfile = $image->{'id'}.".ext3";
-	my ($out, $ex, $err) = &execute_command_on_server($imageserver,
-		$isdevice ? &dd_command($fsfile, "$tempdir/$imgfile") :
-			    "ln -s ".quotemeta($fsfile)." ".
-			  	quotemeta("$tempdir/$imgfile"));
-	&stop_background_dot_printer();
-	if ($ex) {
-		&$second_print(&text('mkimage_exenlink', "<pre>$out</pre>"));
-		return 0;
-		}
-	else {
-		&$second_print($text{'create_done'});
-		$image->{'files'} = $imgfile;
-		}
+	$outfile = $image->{'id'}.".ext3";
+	$cmd = &dd_command($fsfile, undef);
 	}
 
-return 1;
+my ($out, $ex, $err);
+if ($image_to_server) {
+	# Write to a file on the image destination server (likely the master)
+	my $perr = &pipe_command_to_server($image_from_server, $image_to_server,
+			$cmd, "$image_to_dir/$outfile");
+	if ($perr) {
+		$out = $perr;
+		$ex = 1;
+		}
+	$rv = 2;
+	}
+else {
+	# Write to a file on the host
+	($out, $ex, $err) = &execute_command_on_server($image_from_server,
+		$cmd." > ".quotemeta("$image_to_dir/$outfile"));
+	$rv = 1;
+	}
+&stop_background_dot_printer();
+if ($ex) {
+	&$second_print(&text('mkimage_exenlink', "<pre>$out</pre>"));
+	return 0;
+	}
+else {
+	&$second_print($text{'create_done'});
+	$image->{'files'} = $outfile;
+	}
+
+return $rv;
 }
 
 # type_kvm_get_image_server(&server)
@@ -5916,27 +5924,30 @@ if ($server->{'kvm_filesystem_iscsi'} ne '') {
 return &get_parent_server($server);
 }
 
-# type_kvm_cleanup_image(&server, &image, tempdir, [&image-server])
+# type_kvm_cleanup_image(&server, &image, tempdir, [&image-from-server],
+# 			 [&image-to-server])
 # Delete all temp files created on the host system for an image, and reverse
 # any munge processes that were done to prepare the imaged system.
 sub type_kvm_cleanup_image
 {
-my ($server, $image, $tempdir, $imageserver) = @_;
+my ($server, $image, $tempdir, $image_from_server, $image_to_server) = @_;
 my $vhost = &type_kvm_parent($server);
-$imageserver ||= $vhost;
+$image_from_server ||= $vhost;
 
-# Remove compressed image
-&$first_print($text{'mkimage_xendelete'});
-my $gzfile = $image->{'id'}.".ext3.gz";
-my ($out, $ex, $err) = &execute_command_on_server($imageserver,
-				"rm -f ".quotemeta("$tempdir/$gzfile"));
-$err = $out if ($ex);
-if ($err) {
-	&$second_print(&text('mkimage_exendelete', $out));
-	return 0;
-	}
-else {
-	&$second_print($text{'create_done'});
+# Remove compressed image temp file, if there was one
+if (!$image_to_server) {
+	&$first_print($text{'mkimage_xendelete'});
+	my $gzfile = $image->{'id'}.".ext3.gz";
+	my ($out, $ex, $err) = &execute_command_on_server($imageserver,
+					"rm -f ".quotemeta("$tempdir/$gzfile"));
+	$err = $out if ($ex);
+	if ($err) {
+		&$second_print(&text('mkimage_exendelete', $out));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 	}
 
 # Re-mount KVM filesystem

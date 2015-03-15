@@ -1429,6 +1429,20 @@ foreach my $fix ("$roothome/.ssh/authorized_keys",
 return \@rv;
 }
 
+# image_dest_on_master(&image)
+# Returns the master dir if the first destination of an image is on the master
+sub image_dest_on_master
+{
+my ($image) = @_;
+my ($dest) = split(/\s+/, $image->{'dest'});
+return undef if (!$dest);
+my ($destserver, $destpath) = &get_image_dest_path($dest);
+if ($destserver->{'id'} eq '0') {
+	return $destpath;
+	}
+return undef;
+}
+
 # fetch_image_files(&vhost, &image, tempdir, show-progress-dots?, &server)
 # Transfers from some host system the files that make up some image to
 # the destination defined in the image. Since this can take some time, outputs
@@ -1441,6 +1455,7 @@ my $totalsize = 0;
 my $oldsize;
 my $tohost = 0;
 my @stors = &list_storages();
+my @imgfiles = split(/\s+/, $image->{'files'});
 
 foreach my $dest (split(/\s+/, $image->{'dest'})) {
 	# Work out where to transfer the image to
@@ -1453,7 +1468,6 @@ foreach my $dest (split(/\s+/, $image->{'dest'})) {
 	# Transfer each file in the image
 	my $i_totalsize = 0;
 	my $i_oldsize;
-	my @imgfiles = split(/\s+/, $image->{'files'});
 	foreach my $f (@imgfiles) {
 		my $path = "$destpath/$f";
 		my @oldst = &stat_file_on_server($destserver, $path);
@@ -1504,7 +1518,7 @@ foreach my $dest (split(/\s+/, $image->{'dest'})) {
 # locally anyway.
 my $prefix = $server->{'manager'};
 $prefix = "zone" if ($prefix eq "zones");
-if ($vhost->{$prefix.'_cachesize'} && !$vhost) {
+if ($vhost->{$prefix.'_cachesize'}) {
 	# Create the cache dir if needed
 	my $cachedir = $vhost->{$prefix.'_cachedir'} || $images_cache_dir;
 	my $err = &make_dir_on_server($vhost, $cachedir, 0700, 1);
