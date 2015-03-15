@@ -73,21 +73,12 @@ if (defined(&$ofunc)) {
        $imageserver = &$ofunc($server);
        }
 
-# Select temp dir for image on parent host
-&$first_print($text{'mkimage_temping'});
+# Work out where the image is going
 $image->{'vhost'} = $vhost->{'id'};
 $err = &set_image_location($image, $vhost);
 if ($err) {
 	&$second_print(&text('mkimage_edest', $err));
 	goto FAILED;
-	}
-($tempok, $temp) = &create_image_files_tempdir($imageserver, $image->{'id'});
-if (!$tempok) {
-	&$second_print(&text('mkimage_failed', $temp));
-	goto FAILED;
-	}
-else {
-	&$second_print($text{'create_done'});
 	}
 
 # Run pre-imaging script
@@ -149,23 +140,55 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 		}
 	}
 
+# Check if the image is coming directly to the Cloudmin master, and isn't
+# being cached on the host
+my $masterdir = &image_dest_on_master($image);
+my ($imagetodir, $imagetoserver);
+if ($masterdir) {
+	# Image is going direct to the Cloudmin master
+	$imagetodir = $masterdir;
+	$imagetoserver = &get_this_managed_server();
+	}
+else {
+	# Select temp dir for image on parent host
+	&$first_print($text{'mkimage_temping'});
+	($tempok, $temp) = &create_image_files_tempdir(
+				$imageserver, $image->{'id'});
+	if (!$tempok) {
+		&$second_print(&text('mkimage_failed', $temp));
+		goto FAILED;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	$imagetodir = $temp;
+	$imagetoserver = undef;
+	}
+
 # Convert the remote system into an image file - this will output progress
 $ifunc = "type_".$server->{'manager'}."_create_image";
-if (!&$ifunc($server, $image, $temp, $in{'munge'} ? 0 : 2, $imageserver)) {
+$imageok = &$ifunc($server, $image, $imagetodir, $in{'munge'} ? 0 : 2,
+		   $imageserver, $imagetoserver);
+if (!$imageok) {
 	goto FAILED;
 	}
 
 # Transfer the image file to the master
-&start_background_dot_printer(&text('mkimage_fetching',
-                    &nice_image_destination($image->{'dest'})));
-$err = &fetch_image_files($imageserver, $image, $temp, 1, $server);
-&stop_background_dot_printer();
-if ($err) {
-	&$second_print(&text('mkimage_failed', $err));
+if ($imageok == 1) {
+	&start_background_dot_printer(&text('mkimage_fetching',
+			    &nice_image_destination($image->{'dest'})));
+	$err = &fetch_image_files($imageserver, $image, $imagetodir, 1,$server);
+	&stop_background_dot_printer();
+	if ($err) {
+		&$second_print(&text('mkimage_failed', $err));
+		$imageok = 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 	}
-else {
-	&$second_print($text{'create_done'});
 
+if ($imageok) {
 	# Save the new image file
 	&generate_image_md5s($image);
 	&generate_image_size($image);
@@ -174,7 +197,7 @@ else {
 
 # Cleanup the image on the host
 $ifunc = "type_".$server->{'manager'}."_cleanup_image";
-if (!&$ifunc($server, $image, $temp, $imageserver)) {
+if (!&$ifunc($server, $image, $imagetodir, $imageserver, $imagetoserver)) {
 	goto FAILED;
 	}
 
