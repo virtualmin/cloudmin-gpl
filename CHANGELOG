@@ -100,3 +100,5 @@ New disks can now be created with GPT partition tables, if supported by the part
 ---- Changes since 7.9 ----
 Additional SSH keys for a system can now be viewed and selected on the Change Password page, set with the passwd-system API command, and displayed with the list-system-keys command.
 Added the vnc-system API comment for opening up a port to the graphical console on a virtual system.
+---- Changes since 8.0 ----
+When creating an image that will be stored on the Cloudmin master, it is now compressed directly to the master system so that no temporary disk space is needed on the host.
