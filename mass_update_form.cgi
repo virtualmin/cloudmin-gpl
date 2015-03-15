@@ -40,6 +40,7 @@ foreach $s (@servers) {
 		}
 
 	# Find new and old versions for each package
+	my %doneforsystem;
 	foreach $pkg (@poss) {
 		$k = $pkg->{'system'}."/".$pkg->{'name'};
 		if (&indexof($pkg->{'version'}, @{$newvers{$k}}) < 0) {
@@ -51,7 +52,11 @@ foreach $s (@servers) {
 			$olds++;
 			}
 		$pkgs{$k} ||= $pkg;
-		$pkgs{$k}->{'count'}++;
+		if (!$doneforsystem{$k}++) {
+			# Don't double-count multiple versions for the same
+			# system, as this inflates the system count
+			$pkgs{$k}->{'count'}++;
+			}
 		}
 	}
 
