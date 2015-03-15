@@ -2850,7 +2850,7 @@ my $vhost = &type_kvm_parent($server);
 my $lvmcount = 0;
 foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 	if ($dstr =~ /file=\/dev\/[^\/]+\/[^\/]+,/) {
-		$lvcount++;
+		$lvmcount++;
 		}
 	}
 
