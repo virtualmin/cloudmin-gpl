@@ -5905,7 +5905,7 @@ else {
 &stop_background_dot_printer();
 if ($ex) {
 	&$second_print(&text('mkimage_exenlink', "<pre>$out</pre>"));
-	return 0;
+	$rv = 0;
 	}
 else {
 	&$second_print($text{'create_done'});
