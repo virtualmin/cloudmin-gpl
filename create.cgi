@@ -229,7 +229,7 @@ if ($serial) {
 
 # If there is an image file, copy to the server
 $vhost = &get_parent_server($server);
-if ($in{'image'}) {
+if ($in{'image'} && !&should_stream_image($server, $img, 0)) {
 	$copyserver = &get_transfer_image_dest($server);
 	print &text('create_copying', &nice_size($img->{'size'}),
 				      $copyserver->{'host'});
