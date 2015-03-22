@@ -1691,30 +1691,7 @@ sub type_kvm_create_done
 my ($server, $empty) = @_;
 my $vhost = &type_kvm_parent($server);
 my $copyserver = $empty ? $vhost : &get_transfer_image_dest($server);
-if (!$server->{'kvm_temp'}) {
-	# No image creation was needed (as we are using a CD already on
-	# the host)
-	return "OK";
-	}
-
-# Read the gzip output file
-my $data = &get_file_data_from_server($copyserver, $server->{'kvm_temp'});
-if ($data =~ /SERVER-MANAGER-FAILED/) {
-	$data =~ s/SERVER-MANAGER-FAILED\n//;
-	&execute_command_on_server($copyserver,
-		"rm -f ".quotemeta($server->{'kvm_temp'}));
-	delete($server->{'kvm_temp'});
-	return "Failed to extract filesystem : $data";
-	}
-elsif ($data =~ /SERVER-MANAGER-COMPLETE/) {
-	&execute_command_on_server($copyserver,
-		"rm -f ".quotemeta($server->{'kvm_temp'}));
-	delete($server->{'kvm_temp'});
-	return "OK";
-	}
-else {
-	return undef;
-	}
+return &done_deploy_disk_image($server, $copyserver);
 }
 
 # type_kvm_create_post(&server, [serial, key], [reset], [empty], [no-start])

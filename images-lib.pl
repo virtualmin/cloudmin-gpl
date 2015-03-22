@@ -2109,6 +2109,36 @@ else {
 	}
 }
 
+# done_deploy_disk_image(&server, &copyserver)
+# Can be called from the create_.._done function to check if background image
+# placement is done for a Xen or KVM system
+sub done_deploy_disk_image
+{
+my ($server, $copyserver) = @_;
+my $temp = $server->{$server->{'manager'}.'_temp'};
+if (!$temp) {
+        # No image creation was needed (as we are using a CD already on the host
+	return "OK";
+	}
+
+# Read the gzip output file
+my $data = &get_file_data_from_server($copyserver, $temp);
+if ($data =~ /SERVER-MANAGER-FAILED/) {
+        $data =~ s/SERVER-MANAGER-FAILED\n//;
+	&delete_file_on_server($copyserver, $temp);
+        delete($server->{$server->{'manager'}.'_temp'});
+        return "Failed to extract filesystem : $data";
+        }
+elsif ($data =~ /SERVER-MANAGER-COMPLETE/) {
+	&delete_file_on_server($copyserver, $temp);
+        delete($server->{$server->{'manager'}.'_temp'});
+        return "OK";
+        }
+else {
+        return undef;
+        }
+}
+
 # should_direct_image(&server, &image, preferred)
 # Returns 1 if direct image creation to the master should be done. This is only
 # true if the system type supports it, and no image caching is desired. The
