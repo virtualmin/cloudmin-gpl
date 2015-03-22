@@ -2126,7 +2126,7 @@ $preferred = $config{'image_nodirect'} ? 1 : 0 if (!$preferred);
 return 1 if ($preferred == 2);
 return 0 if ($preferred == 1);
 
-# Copying to an iSCSI server? If so, no caching happens so direct mode
+# Copying from an iSCSI server? If so, no caching happens so direct mode
 # makes sense
 my $ofunc = "type_".$server->{'manager'}."_get_image_server";
 if (defined(&$ofunc) && &$ofunc($server)) {
@@ -2144,12 +2144,51 @@ return 1 if (!$cachesize || $image->{'size'} > $cachesize * 1024 * 1024 * 1024);
 return 0;
 }
 
-# should_stream_image(&server, &image)
+# should_stream_image(&server, &image, preferred)
 # Returns 1 if direct image creation from the source should be done. This is
 # only true if the system type supports it, and no image caching is desired
 sub should_stream_image
 {
-my ($server, $image) = @_;
+my ($server, $image, $preferred) = @_;
+
+# Does the VM type support it?
+my $difunc = "type_".$server->{'manager'}."_can_stream_image";
+return 0 if (!defined(&$difunc) || !&$difunc($server));
+
+# Respect preferred flag
+$preferred = $config{'image_nostream'} ? 1 : 0 if (!$preferred);
+return 1 if ($preferred == 2);
+return 0 if ($preferred == 1);
+
+# Figure out where the image is being extracted to
+my $copyserver = &get_transfer_image_dest($server);
+
+# Is the image already there? If so, direct mode makes no sense because the
+# transfer_image_files function won't be doing anything
+foreach my $dstr (split(/\s+/, $image->{'dest'})) {
+	my ($destserver, $destpath) = &get_image_dest_path($dstr);
+	if ($destserver->{'id'} eq $copyserver->{'id'}) {
+		return 0;
+		}
+	}
+
+# Is the image already in the cache? If so, direct mode makes no sense because
+# the transfer_image_files function knows this and won't do any copying
+my $cachedir = $copyserver->{$prefix.'_cachedir'} || $images_cache_dir;
+if ($copyserver->{$prefix.'_cachesize'}) {
+	my @files = split(/\s+/, $image->{'files'});
+	my $missing = 0;
+	foreach my $f (@files) {
+		my @st = &stat_file_on_server($copyserver, "$cachedir/$f");
+		$missing++ if (!@st);
+		}
+	if (!$missing) {
+		# All image files are there, so assume they can be used
+		return 0;
+		}
+	}
+
+return 1;
 }
 
 1;

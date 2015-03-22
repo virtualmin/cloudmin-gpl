@@ -432,8 +432,7 @@ if ($serial) {
 
 # If there is an image file, copy to the server (if needed)
 $vhost = &get_parent_server($server);
-if ($image) {
-	$img = &get_server_image($image);
+if ($image && !&should_stream_image($server, $img)) {
 	$copyserver = &get_transfer_image_dest($server);
 	print "Copying system image files to $copyserver->{'host'} ..\n";
 	($imageok, $imagetemp, $imagehost) = &transfer_image_files($server);
