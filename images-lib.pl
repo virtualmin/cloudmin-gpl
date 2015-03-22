@@ -2066,39 +2066,76 @@ sub deploy_disk_image
 {
 my ($server, $img, $imgdestfile, $copyserver) = @_;
 my @imgfiles = split(/\s+/, $img->{'files'});
-my $imgfile = "$server->{'imagetemp'}/$imgfiles[0]";
-my $temp = "/tmp/$$.$server->{'host'}.gunzip";
-$server->{$server->{'manager'}.'_temp'} = $temp;
-my ($out, $ex, $err);
-if (!$img->{'nocompress'}) {
-	# Need to un-compress the image
-	my $writer = $imgdestfile =~ /^\/dev\// ?
-		"| ".&dd_command(undef, $imgdestfile) :
-		"> ".quotemeta($imgdestfile);
-	($out, $ex, $err) = &execute_command_on_server($copyserver,
-		"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
-		" echo SERVER-MANAGER-COMPLETE ||".
-		" echo SERVER-MANAGER-FAILED)".
-		" >$temp 2>&1 </dev/null &");
-	}
-else {
-	my $cmd;
-	if ($imgdestfile =~ /^\/dev\//) {
-		# DD directly into LVM
-		$cmd = &dd_command($imgfile, $imgdestfile);
+if ($server->{'imagetemp'}) {
+	# Image was already copied to the destination, and so can be
+	# uncompresses and put into place there
+	my $imgfile = "$server->{'imagetemp'}/$imgfiles[0]";
+	my $temp = "/tmp/$$.$server->{'host'}.gunzip";
+	$server->{$server->{'manager'}.'_temp'} = $temp;
+	my ($out, $ex, $err);
+	if (!$img->{'nocompress'}) {
+		# Need to un-compress the image
+		my $writer = $imgdestfile =~ /^\/dev\// ?
+			"| ".&dd_command(undef, $imgdestfile) :
+			"> ".quotemeta($imgdestfile);
+		($out, $ex, $err) = &execute_command_on_server($copyserver,
+			"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
+			" echo SERVER-MANAGER-COMPLETE ||".
+			" echo SERVER-MANAGER-FAILED)".
+			" >$temp 2>&1 </dev/null &");
 		}
 	else {
-		# Can just move or copy
-		$cmd = $server->{'imagelocal'} ? "cp" : "mv";
-		$cmd .= " ".quotemeta($imgfile);
-		$cmd .= " ".quotemeta($imgdestfile);
+		my $cmd;
+		if ($imgdestfile =~ /^\/dev\//) {
+			# DD directly into LVM
+			$cmd = &dd_command($imgfile, $imgdestfile);
+			}
+		else {
+			# Can just move or copy
+			$cmd = $server->{'imagelocal'} ? "cp" : "mv";
+			$cmd .= " ".quotemeta($imgfile);
+			$cmd .= " ".quotemeta($imgdestfile);
+			}
+		$cmd = "($cmd && echo SERVER-MANAGER-COMPLETE || ".
+		       "echo SERVER-MANAGER-FAILED) >$temp 2>&1 </dev/null &";
+		($out, $ex, $err) = &execute_command_on_server(
+					$copyserver, $cmd);
 		}
-	$cmd = "($cmd && echo SERVER-MANAGER-COMPLETE || ".
-	       "echo SERVER-MANAGER-FAILED) >$temp 2>&1 </dev/null &";
-	($out, $ex, $err) = &execute_command_on_server(
-				$copyserver, $cmd);
+	return $err ? $err : $ex ? $out : undef;
 	}
-return $err ? $err : $ex ? $out : undef;
+else {
+	# Image should be streamed directly in from the source
+	# XXX
+	}
+}
+
+# should_direct_image(&server, &image)
+# Returns 1 if direct image creation to the master should be done. This is only
+# true if the system type supports it, and no image caching is desired
+sub should_direct_image
+{
+my ($server, $image) = @_;
+
+# Does the VM type support it?
+my $difunc = "type_".$server->{'manager'}."_can_direct_image";
+return 0 if (!defined(&$difunc) || !&$difunc($server));
+
+# Copying to an iSCSI server? If so, no caching happens so direct mode
+# makes sense
+my $ofunc = "type_".$server->{'manager'}."_get_image_server";
+if (defined(&$ofunc) && &$ofunc($server)) {
+	return 1;
+	}
+
+# If the host system doesn't do caching or if the image wouldn't even fit in
+# the cache, use direct mode
+my $vhost = &get_parent_server($server);
+my $prefix = $server->{'manager'};
+$prefix = "zone" if ($prefix eq "zones");
+my $cachesize = $vhost->{$prefix.'_cachesize'};
+return 1 if (!$cachesize || $image->{'size'} > $cachesize * 1024 * 1024 * 1024);
+
+return 0;
 }
 
 1;
