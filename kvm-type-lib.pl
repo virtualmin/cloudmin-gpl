@@ -5739,7 +5739,7 @@ return 1;
 # Returns 1 because piping the image directly in from the master is supported
 sub type_kvm_can_stream_image
 {
-return 0;	# XXX not done yet
+return 1;
 }
 
 # type_kvm_create_image(&server, &image, image-to-dir, [nomunge],

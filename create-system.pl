@@ -198,6 +198,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-start-at-boot") {
 		$start_boot = 0;
 		}
+	elsif ($a eq "--direct-image") {
+		$direct = 2;
+		}
+	elsif ($a eq "--no-direct-image") {
+		$direct = 1;
+		}
 	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
 		# Type-specific option
 		$typeargs{$1}->{$2} = shift(@ARGV);
@@ -432,7 +438,7 @@ if ($serial) {
 
 # If there is an image file, copy to the server (if needed)
 $vhost = &get_parent_server($server);
-if ($image && !&should_stream_image($server, $img)) {
+if ($image && !&should_stream_image($server, $img, $direct)) {
 	$copyserver = &get_transfer_image_dest($server);
 	print "Copying system image files to $copyserver->{'host'} ..\n";
 	($imageok, $imagetemp, $imagehost) = &transfer_image_files($server);
@@ -742,6 +748,7 @@ print "                      [--id number]\n";
 print "                      [--disk-directory dir]\n";
 print "                      [--background]\n";
 print "                      [--start-at-boot | --no-start-at-boot]\n";
+print "                      [--direct-image | --no-direct-image]\n";
 if (defined(&list_system_owners)) {
 	print "                      [--owner name]\n";
 	}

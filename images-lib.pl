@@ -2066,12 +2066,12 @@ sub deploy_disk_image
 {
 my ($server, $img, $imgdestfile, $copyserver) = @_;
 my @imgfiles = split(/\s+/, $img->{'files'});
+my $temp = "/tmp/$$.$server->{'host'}.gunzip";
+$server->{$server->{'manager'}.'_temp'} = $temp;
 if ($server->{'imagetemp'}) {
 	# Image was already copied to the destination, and so can be
 	# uncompresses and put into place there
 	my $imgfile = "$server->{'imagetemp'}/$imgfiles[0]";
-	my $temp = "/tmp/$$.$server->{'host'}.gunzip";
-	$server->{$server->{'manager'}.'_temp'} = $temp;
 	my ($out, $ex, $err);
 	if (!$img->{'nocompress'}) {
 		# Need to un-compress the image
@@ -2104,8 +2104,43 @@ if ($server->{'imagetemp'}) {
 	return $err ? $err : $ex ? $out : undef;
 	}
 else {
-	# Image should be streamed directly in from the source
-	# XXX
+	# Image should be streamed directly in from the source (in a separate
+	# process, so that we can wait for completion)
+	my $pid = fork();
+	if (!$pid) {
+		my $lasterr;
+		foreach my $dest (split(/\s+/, $img->{'dest'})) {
+			my ($srcserver, $srcpath) = &get_image_dest_path($dest);
+			my $cmd = &dd_command(undef, $imgdestfile);
+			if (!$img->{'nocompress'}) {
+				$cmd = "gunzip -c | ".$cmd;
+				}
+			my $err;
+			my @st = &stat_file_on_server(
+					$srcserver, $srcpath."/".$imgfiles[0]);
+			if (!@st || @st == 1) {
+				$err = "Missing ".$srcpath."/".$imgfiles[0].
+				       " on ".$srcserver->{'host'};
+				}
+			else {
+				$err = &pipe_command_from_server(
+					$srcserver, $copyserver,
+					$cmd, $srcpath."/".$imgfiles[0]);
+				}
+			$lasterr = $err;
+			last if (!$err);
+			}
+		my $out;
+		if ($lasterr) {
+			$out = "SERVER-MANAGER-FAILED\n".$lasterr;
+			}
+		else {
+			$out = "SERVER-MANAGER-COMPLETE\n";
+			}
+		&put_file_data_to_server($copyserver, $out, $temp);
+		exit(0);
+		}
+	return undef;
 	}
 }
 
