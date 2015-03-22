@@ -2109,16 +2109,22 @@ else {
 	}
 }
 
-# should_direct_image(&server, &image)
+# should_direct_image(&server, &image, preferred)
 # Returns 1 if direct image creation to the master should be done. This is only
-# true if the system type supports it, and no image caching is desired
+# true if the system type supports it, and no image caching is desired. The
+# preferrer flag is 2=yes, 1=no, 0=decide automatically
 sub should_direct_image
 {
-my ($server, $image) = @_;
+my ($server, $image, $preferred) = @_;
 
 # Does the VM type support it?
 my $difunc = "type_".$server->{'manager'}."_can_direct_image";
 return 0 if (!defined(&$difunc) || !&$difunc($server));
+
+# Respect preferred flag
+$preferred = $config{'image_nodirect'} ? 1 : 0 if (!$preferred);
+return 1 if ($preferred == 2);
+return 0 if ($preferred == 1);
 
 # Copying to an iSCSI server? If so, no caching happens so direct mode
 # makes sense
@@ -2136,6 +2142,14 @@ my $cachesize = $vhost->{$prefix.'_cachesize'};
 return 1 if (!$cachesize || $image->{'size'} > $cachesize * 1024 * 1024 * 1024);
 
 return 0;
+}
+
+# should_stream_image(&server, &image)
+# Returns 1 if direct image creation from the source should be done. This is
+# only true if the system type supports it, and no image caching is desired
+sub should_stream_image
+{
+my ($server, $image) = @_;
 }
 
 1;

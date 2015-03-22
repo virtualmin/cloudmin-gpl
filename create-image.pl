@@ -116,6 +116,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ignore-fsck") {
 		$ignorefsck = 1;
 		}
+	elsif ($a eq "--direct-image") {
+		$direct = 2;
+		}
+	elsif ($a eq "--no-direct-image") {
+		$direct = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -272,7 +278,7 @@ if (defined(&$dfunc) && defined(&$cffunc)) {
 # being cached on the host
 my $masterdir = &image_dest_on_master($image);
 my ($imagetodir, $imagetoserver);
-if ($masterdir && &should_direct_image($server, $image)) {
+if ($masterdir && &should_direct_image($server, $image, $direct)) {
 	# Image is going direct to the Cloudmin master
 	$imagetodir = $masterdir;
 	$imagetoserver = &get_this_managed_server();
@@ -370,6 +376,7 @@ print "                     [--no-serial]\n";
 print "                     [--no-compress]\n";
 print "                     [--storage spec]\n";
 print "                     [--ignore-fsck]\n";
+print "                     [--direct-image | --no-direct-image]\n";
 exit(1);
 }
 

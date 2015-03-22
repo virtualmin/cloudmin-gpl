@@ -74,3 +74,5 @@ flash_vnc=1
 images_all=0
 default_start=1
 disk_format=2
+image_nostream=0
+image_nodirect=0
