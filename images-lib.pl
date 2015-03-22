@@ -2059,5 +2059,47 @@ foreach my $i (@$rv) {
 return $rv;
 }
 
+# deploy_disk_image(&server, &image, destfile, &copyserver)
+# Starts off the appropriate command to de-compress a disk image into place
+# in the background for a Xen or KVM system
+sub deploy_disk_image
+{
+my ($server, $img, $imgdestfile, $copyserver) = @_;
+my @imgfiles = split(/\s+/, $img->{'files'});
+my $imgfile = "$server->{'imagetemp'}/$imgfiles[0]";
+my $temp = "/tmp/$$.$server->{'host'}.gunzip";
+$server->{$server->{'manager'}.'_temp'} = $temp;
+my ($out, $ex, $err);
+if (!$img->{'nocompress'}) {
+	# Need to un-compress the image
+	my $writer = $imgdestfile =~ /^\/dev\// ?
+		"| ".&dd_command(undef, $imgdestfile) :
+		"> ".quotemeta($imgdestfile);
+	($out, $ex, $err) = &execute_command_on_server($copyserver,
+		"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
+		" echo SERVER-MANAGER-COMPLETE ||".
+		" echo SERVER-MANAGER-FAILED)".
+		" >$temp 2>&1 </dev/null &");
+	}
+else {
+	my $cmd;
+	if ($imgdestfile =~ /^\/dev\//) {
+		# DD directly into LVM
+		$cmd = &dd_command($imgfile, $imgdestfile);
+		}
+	else {
+		# Can just move or copy
+		$cmd = $server->{'imagelocal'} ? "cp" : "mv";
+		$cmd .= " ".quotemeta($imgfile);
+		$cmd .= " ".quotemeta($imgdestfile);
+		}
+	$cmd = "($cmd && echo SERVER-MANAGER-COMPLETE || ".
+	       "echo SERVER-MANAGER-FAILED) >$temp 2>&1 </dev/null &";
+	($out, $ex, $err) = &execute_command_on_server(
+				$copyserver, $cmd);
+	}
+return $err ? $err : $ex ? $out : undef;
+}
+
 1;
 

@@ -1676,38 +1676,8 @@ else {
 
 # Put the image into place, in the background
 if ($imgdestfile) {
-	my @imgfiles = split(/\s+/, $img->{'files'});
-	my $imgfile = "$server->{'imagetemp'}/$imgfiles[0]";
-	my $temp = "/tmp/$$.$server->{'host'}.gunzip";
-	$server->{'kvm_temp'} = $temp;
-	if (!$img->{'nocompress'}) {
-		# Need to un-compress the image
-		my $writer = $imgdestfile =~ /^\/dev\// ?
-			"| ".&dd_command(undef, $imgdestfile) :
-			"> ".quotemeta($imgdestfile);
-		my ($out, $ex, $err) = &execute_command_on_server($copyserver,
-			"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
-			" echo SERVER-MANAGER-COMPLETE ||".
-			" echo SERVER-MANAGER-FAILED)".
-			" >$temp 2>&1 </dev/null &");
-		}
-	else {
-		my $cmd;
-		if ($imgdestfile =~ /^\/dev\//) {
-			# DD directly into LVM
-			$cmd = &dd_command($imgfile, $imgdestfile);
-			}
-		else {
-			# Can just move or copy
-			$cmd = $server->{'imagelocal'} ? "cp" : "mv";
-			$cmd .= " ".quotemeta($imgfile);
-			$cmd .= " ".quotemeta($imgdestfile);
-			}
-		$cmd = "($cmd && echo SERVER-MANAGER-COMPLETE || ".
-		       "echo SERVER-MANAGER-FAILED) >$temp 2>&1 </dev/null &";
-		my ($out, $ex, $err) = &execute_command_on_server(
-					$copyserver, $cmd);
-		}
+	my $err = &deploy_disk_image($server, $img, $imgdestfile, $copyserver);
+	return $err if ($err);
 	}
 
 return undef;
@@ -5786,6 +5756,13 @@ return undef;
 sub type_kvm_can_direct_image
 {
 return 1;
+}
+
+# type_kvm_can_stream_image(&server, &image)
+# Returns 1 because piping the image directly in from the master is supported
+sub type_kvm_can_stream_image
+{
+return 0;	# XXX not done yet
 }
 
 # type_kvm_create_image(&server, &image, image-to-dir, [nomunge],
