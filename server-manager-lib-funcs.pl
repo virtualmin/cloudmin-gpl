@@ -6685,13 +6685,22 @@ if ($err) {
 	$err = &get_file_from_server($server, $passfile, $shadow);
 	}
 if (!$err) {
+	my $crypted;
+	if (defined($pass)) {
+		# Use MD5 if possible, DES otherwise
+		&foreign_require("useradmin");
+		if (!&useradmin::check_md5()) {
+			$crypted = &useradmin::encrypt_md5($pass);
+			}
+		else {
+			$crypted = &unix_crypt($pass, substr(time(), -2));
+			}
+		}
 	my $lref = &read_file_lines($shadow);
 	foreach my $l (@$lref) {
 		my @w = split(/:/, $l, -1);
 		if ($w[0] eq "root") {
-			my $salt = substr(time(), -2);
-			$w[1] = defined($pass) ? &unix_crypt($pass, $salt)
-					       : "*LK*";
+			$w[1] = $crypted || "*LK*";
 			$l = join(':', @w);
 			}
 		}
