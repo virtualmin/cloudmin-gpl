@@ -2661,6 +2661,7 @@ disk_changerusure=The disk mounted on $1 cannot be modified while the system is 
 disk_shutdown=Shutdown and Modify Disk
 disk_mheader=Move disk
 disk_oldstorage=Current storage location
+disk_movedown=Warning - moving this disk will require a reboot of the system.
 disk_newdest=Move disk to
 disk_newstorage=Storage location
 disk_newdirectory=Disk image directory

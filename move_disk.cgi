@@ -10,7 +10,6 @@ $server || &error($text{'edit_egone'});
 $vhost = &get_parent_server($server);
 &can_action_error($server, "disks");
 &can_action_error($server, "storages");
-$server->{'status'} eq 'down' || &error($text{'movedisk_edown'});
 $vhost = &get_parent_server($server);
 &obtain_lock_server($server);
 
@@ -43,6 +42,22 @@ else {
 
 &ui_print_unbuffered_header(&server_in($server), $text{'movedisk_title'}, "");
 
+# Shut down if needed
+$did_shutdown = 0;
+if ($server->{'status'} ne 'down') {
+	&$first_print($text{'mkimage_shutdown'});
+	local $err = &shutdown_server($server);
+	&check_server_status($server, 0, 1);
+	&save_managed_server($server);
+	if ($err) {
+		&$second_print(&text('mkimage_eshutdown', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	$did_shutdown = 1;
+	}
+
 if ($in{'storage_mode'} == 0) {
 	&start_background_dot_printer(
 		&text('movedisk_doings', "<tt>$disk->{'virt'}</tt>",
@@ -64,6 +79,23 @@ if ($err) {
 	}
 else {
 	&$second_print(&text('movedisk_modifyok'));
+	}
+
+if ($did_shutdown) {
+	# Start up after resizing
+	&$first_print($text{'mkimage_startup'});
+	local $err = &startup_server($server);
+	&check_server_status($server, 0, 1);
+	&save_managed_server($server);
+	if ($err) {
+		&$second_print(&text('mkimage_estartup', $err));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+if (!$err) {
 	&webmin_log("move", "disk", $server->{'host'},
 		    { 'real' => $disk->{'real'} });
 	}

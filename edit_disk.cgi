@@ -384,13 +384,17 @@ if (!$in{'new'} && !$disk->{'fixedsize'} &&
 # Show form to move disk to a new storage
 $sfunc = "type_".$server->{'manager'}."_list_storages";
 if (&can_action($server, "storage") && &can_move_disk_storage($server, $disk) &&
-    $server->{'status'} eq 'down' && defined(&$sfunc) &&
-    ref($storages = &$sfunc($vhost, $server))) {
+    defined(&$sfunc) && ref($storages = &$sfunc($vhost, $server))) {
 	print &ui_hr();
         print &ui_form_start("move_disk.cgi", "post");
 	print &ui_hidden("id", $in{'id'});
 	print &ui_hidden("real", $disk->{'real'});
 	print &ui_table_start($text{'disk_mheader'}, undef, 2);
+
+	# Warning about shutdown
+	if ($server->{'status'} ne 'down') {
+		print &ui_table_row(undef, "<b>$text{'disk_movedown'}</b>", 2);
+		}
 
 	# Current storage
 	print &ui_table_row($text{'disk_oldstorage'},
