@@ -135,7 +135,7 @@ if ($server) {
                 }
         foreach my $c (@ugcats) {
 		my $citem = { 'type' => 'cat',
-			      'id' => 'cat_'.$c,
+			      'id' => 'global_'.$c,
 			      'desc' => $text{'cat_'.$c},
 			      'members' => [ ] };
 		push(@rv, $citem);
