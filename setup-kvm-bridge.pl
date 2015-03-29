@@ -96,6 +96,7 @@ $br0->{'address6'} = $eth0->{'address6'};
 $br0->{'netmask6'} = $eth0->{'netmask6'};
 $br0->{'gateway6'} = $eth0->{'gateway6'};
 $br0->{'auto6'} = $eth0->{'auto6'};
+$br0->{'bridgeto'} = $eth0->{'fullname'};
 &net::save_interface($br0);
 
 if ($gconfig{'os_type'} eq 'redhat-linux') {
@@ -104,7 +105,7 @@ if ($gconfig{'os_type'} eq 'redhat-linux') {
 	$brconf{'TYPE'} = 'Bridge';
 	&write_env_file("$net::net_scripts_dir/ifcfg-$br_name", \%brconf);
 
-	# Manually change eth0 to use br0 as a bridge
+	# Manually change eth0 to be a dumb interface with no address
 	&read_env_file("$net::net_scripts_dir/ifcfg-$eth_name", \%ethconf);
 	$ethconf{'BRIDGE'} = $br_name;
 	foreach $f ('IPADDR', 'NETMASK', 'NETWORK', 'GATEWAY', 'BROADCAST',
