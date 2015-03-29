@@ -6215,6 +6215,10 @@ if (!$webminroot) {
 $server->{'port'} = $webminport;
 $server->{'ssl'} = $webminssl;
 
+# Open firewall ports, in case the installer didn't do it
+&open_webmin_firewall_port_and_print(
+	$server, $server->{'port'}, $webminroot);
+
 # And check for Virtualmin root
 my ($out, $ex, $err) = &execute_command_on_server($server,
 				"cat $webminroot/virtual-server/module.info");
