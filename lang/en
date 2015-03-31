@@ -4365,8 +4365,8 @@ kvms_default=Make Selected the Default Host System
 kvms_startheader=Add host system
 kvms_starthost=Host system to add:
 kvms_start=Start Adding Host
-kvms_alladded=Add possible host systems have already been added. Use the <a href='$1'>Add Physical System</a> page to register additional hosts.
-kvms_alladded2=Add possible host systems have already been added, and registration of physical systems has been disabled on your system! You must first re-enable this on the <a href='$1'>Cloudmin Configuration</a> page.
+kvms_alladded=All possible host systems have already been added. Use the <a href='$1'>Add Physical System</a> page to register additional hosts.
+kvms_alladded2=All possible host systems have already been added, and registration of physical systems has been disabled on your system! You must first re-enable this on the <a href='$1'>Cloudmin Configuration</a> page.
 kvms_ram=RAM usage
 kvms_disk=Disk usage
 
