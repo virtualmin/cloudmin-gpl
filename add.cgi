@@ -18,15 +18,9 @@ if (&can_action($server, "groups")) {
 	&parse_groups_form($server, \%in);
 	}
 
-# Check for hostname and IP clashes
+# Check for hostname clash
 ($clash) = grep { $_->{'host'} eq $in{'host'} } @servers;
 $clash && &error($text{'add_eclash'});
-foreach $s (@servers) {
-	foreach $ip (split(/\s+/, $s->{'ip_addresses'})) {
-		$ip eq $server->{'ip'} && &error(&text('add_eipclash',
-						       $s->{'host'}, $ip));
-		}
-	}
 
 # Validate owner resource limits
 $limits = &get_owner_limits();
@@ -50,6 +44,15 @@ $err = &parse_ssh_login_form(\%in, $server);
 $err = &parse_webmin_login_form(\%in, $server);
 &error($err) if ($err);
 $server->{'novirt'} = !$in{'canvirt'};
+
+# Check for IP and port clash
+foreach $clash (@servers) {
+	foreach $ip (split(/\s+/, $clash->{'ip_addresses'})) {
+		$ip eq $server->{'ip'} &&
+		  $clash->{'ssl_port'} == $server->{'ssh_port'} &&
+		    &error(&text('add_eipclash', $clash->{'host'}, $ip));
+		}
+	}
 
 # Parse type-specific inputs
 $pfunc = "type_".$in{'type'}."_add_parse";
