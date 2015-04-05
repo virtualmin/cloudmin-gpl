@@ -217,9 +217,16 @@ push(@args, map { [ "domain", $_ ] } @doms);
 my @tmpls = split(/\s+/, $vsync->{'tmpls'});
 push(@args, map { [ "virtualmin", $_ ] } @tmpls);
 my @feats = split(/\s+/, $vsync->{'feats'});
+my @efeats = split(/\s+/, $vsync->{'efeats'});
 if (@feats) {
 	push(@args, map { [ "feature", $_ ] } @feats);
 	push(@args, [ &indexof("dir", @feats) >= 0 ? "newformat"
+						   : "separate" ]);
+	}
+elsif (@efeats) {
+	push(@args, [ "all-features" ]);
+	push(@args, map { [ "except-feature", $_ ] } @efeats);
+	push(@args, [ &indexof("dir", @efeats) < 0 ? "newformat"
 						   : "separate" ]);
 	}
 else {

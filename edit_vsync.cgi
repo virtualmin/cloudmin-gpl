@@ -91,11 +91,13 @@ if (!@features) {
 
 # Domain features to sync
 print &ui_table_row($text{'vsync_feats'},
-	&ui_radio("feats_def", $vsync->{'feats'} ? 0 : 1,
-		  [ [ 1, $text{'vsync_feats1'} ],
-		    [ 0, $text{'vsync_feats0'} ] ])."<br>\n".
+	&ui_radio("feats_def", $vsync->{'feats'} ? 0 :
+			       $vsync->{'efeats'} ? 2 : 1,
+		  [ [ 1, $text{'vsync_feats1'}."<br>" ],
+		    [ 0, $text{'vsync_feats0'}."<br>" ],
+		    [ 2, $text{'vsync_feats2'} ] ])."<br>\n".
 	&ui_select("feats",
-		   [ split(/\s+/, $vsync->{'feats'}) ],
+		   [ split(/\s+/, $vsync->{'efeats'} || $vsync->{'feats'}) ],
 		   [ [ 'virtualmin', 'Virtual server configuration' ],
 		     map { [ $_->{'feature'}, $_->{'desc'} ] }
 			 @features ],

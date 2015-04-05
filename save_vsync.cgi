@@ -63,13 +63,19 @@ else {
 		&error($text{'vsync_edoms'});
 	
 	# Parse features
-	if ($in{'feats_def'}) {
+	@feats = split(/\0/, $in{'feats'});
+	if ($in{'feats_def'} == 1) {
 		delete($vsync->{'feats'});
 		}
-	else {
-		@feats = split(/\0/, $in{'feats'});
+	elsif ($in{'feats_def'} == 0) {
 		@feats || &error($text{'vsync_efeats'});
 		$vsync->{'feats'} = join(" ", @feats);
+		delete($vsync->{'efeats'});
+		}
+	elsif ($in{'feats_def'} == 2) {
+		@feats || &error($text{'vsync_eefeats'});
+		$vsync->{'efeats'} = join(" ", @feats);
+		delete($vsync->{'feats'});
 		}
 
 	# Parse schedule
