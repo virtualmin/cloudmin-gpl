@@ -376,6 +376,10 @@ push(@rargs, [ "source", $desttemp ]);
 push(@rargs, [ "skip-warnings" ]);
 push(@rargs, [ "no-reuid" ]);
 push(@rargs, [ "option", "dir delete 1" ]);
+if ($vinfo->{'minfo'}->{'version'} >= 4.161) {
+	# Use replication mode
+	push(@rargs, [ "replication" ]);
+	}
 my ($err, $out) = &call_virtualmin_api($dest, "restore-domain", \@rargs);
 if (!$err && $out =~ /Restore\s+failed/) {
 	$err = $out;
