@@ -4949,8 +4949,9 @@ else {
 
 # Wait for clean shutdown
 my $tries = 0;
+my $ip = &get_server_ip($server);
 while($tries < 60) {
-	my $p = &ping_server_host(&get_server_ip($server));
+	my $p = &ping_server_host($ip);
 	if (!$p) {
 		return undef;
 		}
@@ -4967,7 +4968,8 @@ sub reboot_server
 {
 my ($server) = @_;
 my $rfunc = "type_".$server->{'manager'}."_reboot";
-my $oldping = &ping_server_host(&get_server_ip($server));
+my $ip = &get_server_ip($server);
+my $oldping = &ping_server_host($ip);
 if (defined(&$rfunc)) {
 	# Type provides a reboot function
 	my $rv = &$rfunc($server);
@@ -5004,8 +5006,9 @@ else {
 if ($oldping) {
 	# Wait for a shutdown
 	my $tries = 0;
+	my $ip = &get_server_ip($server);
 	while($tries < 60) {
-		my $p = &ping_server_host(&get_server_ip($server));
+		my $p = &ping_server_host($ip);
 		last if (!$p);
 		sleep(1);
 		$tries++;
