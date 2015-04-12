@@ -17,6 +17,10 @@ either C<files> or C<lvm_> followed by a volume group name.
 Alterately, you can force a move to a specific disk image directory with the
 C<--new-directory> flag followed by a path.
 
+By default, systems that are running cannot have their disks moved. However, the
+C<--shutdown> flag can be given to force a temporary shutdown and restart
+during the move process.
+
 =head1 Example usage
 
   cloudmin move-disk --host xencentos.home --virt /dev/hda --new-storage files
@@ -63,6 +67,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--new-directory") {
 		$directory = shift(@ARGV);
 		}
+	elsif ($a eq "--shutdown") {
+		$shutdown = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -82,8 +89,9 @@ $server || &usage("System with hostname $host does not exist");
 &can_action_usage($server, "disks");
 &can_action_usage($server, "storages");
 &obtain_lock_server($server);
-$server->{'status'} eq 'down' || &usage("Only systems that are down can have ".
-					"their disk moved");
+$server->{'status'} eq 'down' || $shutdown ||
+	&usage("Only systems that are down can have their disk moved, unless ".
+	       "the --shutdown flag is given");
 
 if ($storageid) {
 	# Get the storage
@@ -139,22 +147,59 @@ if ($storageid) {
 		&usage("This disk is already using storage $storageid");
 	}
 
+# Shutdown if needed
+$did_shutdown = 0;
+if ($server->{'status'} ne 'down') {
+	&$first_print("Shutting down system ..");
+	local $err = &shutdown_server($server);
+	&check_server_status($server, 0, 1);
+	&save_managed_server($server);
+	if ($err) {
+		&$second_print(".. failed : $err");
+		}
+	else {
+		&$second_print(".. done");
+		}
+	$did_shutdown = 1;
+	}
+
 # Do it
 if ($storageid) {
-	&$first_print("Moving virtual disk for $disk->{'virt'} to $storage->{'id'} ..");
+	&$first_print("Moving virtual disk for $disk->{'virt'} ".
+		      "to $storage->{'id'} ..");
 	}
 else {
-	&$first_print("Moving virtual disk for $disk->{'virt'} to $directory ..");
+	&$first_print("Moving virtual disk for $disk->{'virt'} ".
+		      "to $directory ..");
 	}
 $err = &move_disk_storage($server, $disk, $storage);
 &save_managed_server($server);
 &release_lock_server($server);
 if ($err) {
 	&$second_print(".. failed : $err");
-	exit(1);
 	}
 else {
 	&$second_print(".. done");
+	}
+
+if ($did_shutdown) {
+	# Start up after resizing
+	&$first_print("Starting up system ..");
+	local $err = &startup_server($server);
+	&check_server_status($server, 0, 1);
+	&save_managed_server($server);
+	if ($err) {
+		&$second_print(".. failed : $err");
+		}
+	else {
+		&$second_print(".. done");
+		}
+	}
+
+if ($err) {
+	exit(1);
+	}
+else {
 	&cloudmin_api_log(\@OLDARGV);
 	}
 
@@ -166,6 +211,7 @@ print "\n";
 print "cloudmin move-disk --host hostname\n";
 print "                   --real device|file | --virt device | --lv name\n";
 print "                  [--new-storage id | --new-directory dir]\n"; 
+print "                  [--shutdown]\n";
 exit(1);
 }
 
