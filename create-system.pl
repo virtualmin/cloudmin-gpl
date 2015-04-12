@@ -204,7 +204,8 @@ while(@ARGV > 0) {
 	elsif ($a eq "--no-direct-image") {
 		$direct = 1;
 		}
-	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/) {
+	elsif ($a =~ /^\-\-([^\-]+)\-(\S+)$/ &&
+	       $server_management_types{$1}) {
 		# Type-specific option
 		$typeargs{$1}->{$2} = shift(@ARGV);
 		}
