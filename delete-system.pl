@@ -61,6 +61,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
+	elsif ($a eq "--override-lock") {
+		$override = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -99,6 +102,16 @@ if ($keepdisks) {
 
 # Do it!
 foreach $s (@servers) {
+	if ($override) {
+		# Kill any existing locks
+		my $lock = &test_lock_server($s);
+		if ($lock) {
+			print "Killing process $lock with lock on $s->{'host'} ..\n";
+			&kill_logged('KILL', $lock);
+			print ".. done\n";
+			}
+		}
+
 	&obtain_lock_server($s);
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
@@ -135,6 +148,7 @@ print "cloudmin delete-system [--host name]*\n";
 print "                       [--owner name]*\n";
 print "                       [--keep]\n";
 print "                       [--keep-disks]\n";
+print "                       [--override-lock]\n";
 exit(1);
 }
 
