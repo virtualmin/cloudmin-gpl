@@ -3325,35 +3325,37 @@ else {
 		}
 	}
 
-# Add the disk to the KVM config
+# Create the drive object using KVM's fields
+my @drives = split(/\s+/, $server->{'kvm_drives'});
+my %drive = ( 'file' => $disk->{'real'},
+	      'media' => $disk->{'media'} || 'disk' );
+if ($disk->{'cache'}) {
+	$drive{'cache'} = $disk->{'cache'};
+	}
+if ($disk->{'media'} eq 'cdrom') {
+	# CDs must be on IDE
+	$drive{'if'} = 'ide';
+	$disk->{'virt'} =~ s/\/(s|v)d([a-z]+)$/\/hd$2/;
+	}
+elsif ($disk->{'virt'} =~ /sd[a-z]+$/) {
+	$drive{'if'} = 'scsi';
+	}
+elsif ($disk->{'virt'} =~ /vd[a-z]+$/) {
+	$drive{'if'} = 'virtio';
+	}
+else {
+	$drive{'if'} = 'ide';
+	}
+if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
+	$drive{'index'} = ord($2)-97;
+	}
+if ($disk->{'mount'} && $disk->{'fs'} eq 'swap') {
+	# Turn off caching for swapfiles
+	$drive{'cache'} = 'off';
+	}
+
 if (!$noconfig) {
-	my @drives = split(/\s+/, $server->{'kvm_drives'});
-	my %drive = ( 'file' => $disk->{'real'},
-		      'media' => $disk->{'media'} || 'disk' );
-	if ($disk->{'cache'}) {
-		$drive{'cache'} = $disk->{'cache'};
-		}
-	if ($disk->{'media'} eq 'cdrom') {
-		# CDs must be on IDE
-		$drive{'if'} = 'ide';
-		$disk->{'virt'} =~ s/\/(s|v)d([a-z]+)$/\/hd$2/;
-		}
-	elsif ($disk->{'virt'} =~ /sd[a-z]+$/) {
-		$drive{'if'} = 'scsi';
-		}
-	elsif ($disk->{'virt'} =~ /vd[a-z]+$/) {
-		$drive{'if'} = 'virtio';
-		}
-	else {
-		$drive{'if'} = 'ide';
-		}
-	if ($disk->{'virt'} =~ /([hsv])d([a-z])$/) {
-		$drive{'index'} = ord($2)-97;
-		}
-	if ($disk->{'mount'} && $disk->{'fs'} eq 'swap') {
-		# Turn off caching for swapfiles
-		$drive{'cache'} = 'off';
-		}
+	# Add the disk to the KVM config
 	push(@drives, join(",", map { $_."=".$drive{$_} } keys %drive));
 	$server->{'kvm_drives'} = join(" ", @drives);
 	}
@@ -3387,6 +3389,11 @@ if ($server->{'status'} ne 'down' && $server->{'kvm_monitor_port'} &&
 		# Try again with auto, as this is needed by some KVM instances
 		($aok, $aout) = &run_kvm_monitor_command($server,
 			[ "pci_add auto storage $str" ]);
+		}
+	if (!$aok && $aout =~ /unknown\s+command/) {
+		# Try again with new drive_add command
+		($aok, $aout) = &run_kvm_monitor_command($server,
+			[ "drive_add 0 $str" ]);
 		}
 	$attacherr = !$aok ? $aout :
 		      $aout =~ /OK/ ? undef : $aout;
@@ -3488,6 +3495,12 @@ if ($server->{'status'} ne 'down' &&
 				# Try alternate pci_del command format
 				($ok, $out) = &run_kvm_monitor_command($server,
 					[ "pci_del $stor->{'bus'}:$stor->{'device'}" ]);
+				}
+			if (!$ok && $out =~ /unknown\s+command/ &&
+			    $stor->{'id'}) {
+				# Try with new device_del command
+				($ok, $out) = &run_kvm_monitor_command($server,
+					[ "device_del $stor->{'id'}" ]);
 				}
 			if (!$ok || $out =~ /empty/) {
 				$disk->{'reboot'} = 1;
@@ -4609,12 +4622,21 @@ if ($nonvirt) {
 		if (!$aok || $aout !~ /OK/) {
 			# Try again with auto and without mac=, as some KVM
 			# instances don't support it
-			$str =~ s/,mac=([^,]+)//;
+			my $str2 = $str;
+			$str2 =~ s/,mac=([^,]+)//;
 			($aok, $aout) = &run_kvm_monitor_command($server,
-				[ "pci_add auto nic $str" ]);
+				[ "pci_add auto nic $str2" ]);
 			}
-		if (!$aok || $aout !~ /OK/) {
-			# Didn't get added
+		if (!$aok && $aout =~ /unknown\s+command/) {
+			# Try new device_add command
+			my $driver = $model =~ /virtio/ ? "virtio-net-pci"
+							: $model;
+			$str =~ s/model=([^,]+),?//;
+			($aok, $aout) = &run_kvm_monitor_command($server,
+                                [ "device_add $driver,$str" ]);
+			}
+		if (!$aok) {
+			# Certainly didn't get added
 			$canactivate = 0;
 			}
 		elsif (ref($oldactive)) {
@@ -4746,6 +4768,12 @@ if ($iface->{'virtual'} eq '' &&
 			&load_kvm_hotplug_modules($server);
 			my ($ok, $out) = &run_kvm_monitor_command($server,
 				[ "pci_del $eth->{'bus'} $eth->{'device'}" ]);
+			if (!$ok && $out =~ /unknown\s+command/ &&
+			    $eth->{'id'}) {
+				# Try with new device_del command
+				($ok, $out) = &run_kvm_monitor_command($server,
+					[ "device_del $eth->{'id'}" ]);
+				}
 			if ($ok) {
 				$iface->{'reboot'} = 0;
 				}
@@ -7726,6 +7754,7 @@ $timeout ||= 10;
 $server->{'kvm_monitor_port'} ||
 	return (0, "This system was not started with a monitor port");
 my $vhost = &type_kvm_parent($server);
+my $monout;
 if ($vhost->{'id'} eq '0') {
 	# Make a direct local connection
 	my $err;
@@ -7753,9 +7782,7 @@ if ($vhost->{'id'} eq '0') {
 	elsif ($@) {
 		return (0, $@);
 		}
-	else {
-		return (1, $out);
-		}
+	$monout = $out;
 	}
 else {
 	# Connect via nc.pl
@@ -7774,15 +7801,17 @@ else {
 	my $sleep = $delay ? "--sleep $delay" : "";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"(".join(" ; ", @echos).") | ".
-		"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}".
-		" | tail -2",
+		"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}",
 		$timeout > 0 ? $timeout : undef);
 	if ($ex || $err) {
 		return (0, $err || $out);
 		}
-
-	return (1, $out);
+	$monout = $out;
 	}
+if ($monout =~ /unknown\s+command/i) {
+	return (0, $monout);
+	}
+return (1, $monout);
 }
 
 # list_kvm_pci_devices(&server)
@@ -7806,6 +7835,9 @@ foreach my $l (split(/\r?\n/, $out)) {
 		$pci->{'type'} = $1;
 		$pci->{'major'} = $2;
 		$pci->{'minor'} = $3;
+		}
+	elsif ($l =~ /^\s+id\s+"(.*)"/) {
+		$pci->{'id'} = $1;
 		}
 	}
 return \@rv;
