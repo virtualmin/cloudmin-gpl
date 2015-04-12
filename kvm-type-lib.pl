@@ -7817,8 +7817,8 @@ sub load_kvm_hotplug_modules
 {
 my ($server) = @_;
 if (&can_ssh_status($server)) {
-	&execute_command_on_server($server, "modprobe acpiphp");
-	&execute_command_on_server($server, "modprobe pci_hotplug");
+	&execute_command_on_server($server, "modprobe acpiphp", 5);
+	&execute_command_on_server($server, "modprobe pci_hotplug", 5);
 	}
 }
 
