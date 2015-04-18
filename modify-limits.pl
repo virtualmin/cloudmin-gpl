@@ -99,7 +99,7 @@ while(@ARGV > 0) {
 			&usage("--memory must be followed by a number in MB");
 		$memory *= 1024*1024;
 		}
-	elsif ($a eq "--no-memory") {
+	elsif ($a eq "--no-memory" || $a eq "--unlimited-memory") {
 		$memory = 0;
 		}
 	elsif ($a eq "--guaranteed-memory") {
@@ -115,7 +115,7 @@ while(@ARGV > 0) {
 			&usage("--disk must be followed by a number in MB");
 		$disk *= 1024*1024;
 		}
-	elsif ($a eq "--no-disk") {
+	elsif ($a eq "--no-disk" || $a eq "--unlimited-disk") {
 		$disk = 0;
 		}
 	elsif ($a eq "--cpu") {
@@ -123,7 +123,7 @@ while(@ARGV > 0) {
 		$cpu =~ /^\d+$/ && $cpu > 0 ||
 			&usage("--cpu must be followed by a percentage");
 		}
-	elsif ($a eq "--no-cpu") {
+	elsif ($a eq "--no-cpu" || $a eq "--unlimited-cpu") {
 		$cpu = 0;
 		}
 	elsif ($a eq "--weight") {
@@ -732,11 +732,11 @@ print "                       [--os oscode]*\n";
 print "                       [--owner name]*\n";
 print "                       [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                       [--host-on name]\n";
-print "                       [--cpu percentage | --no-cpu]\n";
+print "                       [--cpu percentage | --unlimited-cpu]\n";
 print "                       [--weight number]\n";
-print "                       [--memory MB | --no-memory]\n";
+print "                       [--memory MB | --unlimited-memory]\n";
 print "                       [--guaranteed-memory MB]\n";
-print "                       [--disk MB | --no-disk]\n";
+print "                       [--disk MB | --unlimited-disk]\n";
 print "                       [--reboot]\n";
 print "                       [--vcpus N | --vcpus list]\n";
 print "                       [--cores N]\n";
