@@ -12134,7 +12134,7 @@ if ($server->{'type'} eq 'freebsd') {
 	my $model = !$iface ? $server->{$server->{'manager'}.'_model'} :
 		    !ref($iface) ? $iface : $iface->{'model'};
 	$model =~ s/\s+.*$//;	# In case kvm_model is a list
-	if (!$model eq 'rtl8139') {
+	if ($model eq 'rtl8139') {
 		return 're';
 		}
 	elsif ($model eq 'i82551' || $model eq 'i82557b' || $model eq 'i82559er') {
