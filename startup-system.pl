@@ -16,6 +16,8 @@ up to 60 seconds.
 
 The C<--check-disks> flag can be used to force a fsck of all virtual system
 disks before startup, to prevent boot failures caused by an unclean shutdown.
+Alternately, the C<--no-check-disks> flag can be used to forcibly skip any disk
+check that is enabled by default.
 
 =head1 Example usage
 
@@ -61,6 +63,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--check-disks") {
 		$fsck = 1;
 		}
+	elsif ($a eq "--no-check-disks") {
+		$fsck = 0;
+		}
 	elsif ($a eq "--help") { &usage(); }
 	else {
 		&usage("Unknown parameter $a");
@@ -87,6 +92,7 @@ foreach $s (@servers) {
 
 # Do it!
 &obtain_lock_server(\@servers);
+$failed = 0;
 foreach $s (@servers) {
 	$tfunc = "type_".$s->{'manager'}."_desc";
 	$tdesc = &$tfunc();
@@ -95,6 +101,7 @@ foreach $s (@servers) {
 	if (!$ok) {
 		$err = &html_tags_to_text($err);
 		print ".. startup failed : $err\n\n";
+		$failed++;
 		}
 	else {
 		&check_server_status($s);
@@ -106,7 +113,7 @@ foreach $s (@servers) {
 			}
 		}
 
-	if ($waitssh) {
+	if ($waitssh && $ok) {
 		# Wait for system to be SSH able
 		print "Waiting for SSH login to $s->{'host'} ..\n";
 		$start = time();
@@ -133,6 +140,7 @@ foreach $s (@servers) {
 	}
 &release_lock_server(\@servers);
 &cloudmin_api_log(\@OLDARGV);
+exit($failed);
 
 sub usage
 {
@@ -148,7 +156,7 @@ print "                        [--owner name]*\n";
 print "                        [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                        [--host-on name]\n";
 print "                        [--wait-for-ssh | --no-wait]\n";
-print "                        [--check-disks]\n";
+print "                        [--check-disks | --no-check-disks]\n";
 exit(1);
 }
 
