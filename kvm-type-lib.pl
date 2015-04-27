@@ -5932,7 +5932,7 @@ $image_from_server ||= $vhost;
 if (!$image_to_server) {
 	&$first_print($text{'mkimage_xendelete'});
 	my $gzfile = $image->{'id'}.".ext3.gz";
-	my ($out, $ex, $err) = &execute_command_on_server($imageserver,
+	my ($out, $ex, $err) = &execute_command_on_server($image_from_server,
 					"rm -f ".quotemeta("$tempdir/$gzfile"));
 	$err = $out if ($ex);
 	if ($err) {
