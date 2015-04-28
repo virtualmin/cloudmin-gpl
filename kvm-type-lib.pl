@@ -6065,7 +6065,7 @@ sub type_kvm_open_shell
 {
 my ($server) = @_;
 my ($out, $ex, $err, $status, $fh, $fpid) =
-	&execute_command_on_server($server, "/bin/sh", 0, 1);
+	&execute_command_on_server($server, &get_bourne_shell($server), 0, 1);
 return $err ? ($err, undef) : $ex ? ($out, undef) : (undef, $fh);
 }
 

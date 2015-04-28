@@ -5034,12 +5034,15 @@ return undef;
 sub startup_server
 {
 my ($server, $nowait, $fsck) = @_;
+if (!defined($fsck)) {
+	$fsck = $config{'fsck_boot'} ? 1 : 0;
+	}
 
 # If mounted now, forcibly un-mount
 &temp_umount_filesystem_if_needed($server);
 
 # If configured, check all disks first
-if ($config{'fsck_boot'} || $fsck) {
+if ($fsck) {
 	my ($ok, $out) = &fsck_all_disks($server, $config{'fsck_boot'} == 2);
 	if ($ok == 0) {
 		return (0, "Disk check failed : $out");
@@ -14272,6 +14275,19 @@ sub print_content_type
 local $type = $_[0] || "text/plain";
 my $charset = &get_charset();
 print "Content-type: $type; charset=$charset\n\n";
+}
+
+# get_bourne_shell(&server)
+# Returns a shell that is bash if possible, sh otherwise
+sub get_bourne_shell
+{
+my ($server) = @_;
+my $shell = $server->{'root_shell'};
+if ($shell =~ /\/bash$/) {
+	return $shell;
+	}
+my @st = &stat_file_on_server($server, "/bin/bash");
+return @st > 1 ? "/bin/bash" : "/bin/sh";
 }
 
 $done_server_manager_lib_funcs = 1;
