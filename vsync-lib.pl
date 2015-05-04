@@ -381,7 +381,6 @@ my $desttemp = $tempdir->{$dest->{'id'}};
 my @rargs = @$rargs;
 push(@rargs, [ "source", $desttemp ]);
 push(@rargs, [ "skip-warnings" ]);
-push(@rargs, [ "no-reuid" ]);
 push(@rargs, [ "option", "dir delete 1" ]);
 if ($vinfo->{'minfo'}->{'version'} >= 4.161) {
 	# Use replication mode
