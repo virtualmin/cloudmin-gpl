@@ -4258,6 +4258,7 @@ vsync_efindsrc=.. source no longer exists!
 vsync_efinddest=.. no destinations exist!
 vsync_found=.. found source $1 and $2 destinations
 vsync_foundone=.. found source $1 and destination $2
+vsync_remoteerr=.. failed to list remotely hosted features : $1
 vsync_refreshing=Refreshing domains on source system ..
 vsync_temp=Creating temporary directories ..
 vsync_etemp=.. failed to get temporary directory on $1

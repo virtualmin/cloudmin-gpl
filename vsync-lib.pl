@@ -179,6 +179,7 @@ else {
 &save_managed_server($src);
 &$second_print($text{'create_done'});
 
+
 # Create temp dirs on the source and dests
 &$first_print($text{'vsync_temp'});
 my %tempdir;
@@ -198,16 +199,32 @@ foreach my $s ($src, @dests) {
 my $srctemp = $tempdir{$src->{'id'}};
 &$second_print($text{'create_done'});
 
-# Backup all domains to the temp dir
-my @args = ( [ "dest", $srctemp ] );
+# Work out domains
 my @doms;
-my @srcdoms = map { $_->{'dom'} } &get_server_domains($src);
+my @srcdomobjs = &get_server_domains($src);
+my @srcdoms = map { $_->{'dom'} } @srcdomobjs;
 if ($vsync->{'doms_all'}) {
 	@doms = @srcdoms;
 	}
 else {
 	@doms = split(/\s+/, $vsync->{'doms'});
 	}
+
+# Work out if the first domain has a shared home dir
+my ($err, $out) = &call_virtualmin_api($src, "list-domains",
+				       [ [ "multiline" ],
+					 [ "domain", $doms[0] ] ]);
+my %remotes;
+if ($err) {
+	&$second_print(&text('vsync_remoteerr', $err));
+	return 0;
+	}
+if ($out =~ /Remote\s+features:\s*(.*)/) {
+	%remotes = map { $_, 1 } split(/\s+/, $1);
+	}
+
+# Backup all domains to the temp dir
+my @args = ( [ "dest", $srctemp ] );
 &$first_print(&text('vsync_backup', scalar(@doms)));
 if (!@doms && !$vsync->{'tmpls'}) {
 	&$second_print($text{'vsync_ebackupdoms'});
@@ -267,7 +284,7 @@ foreach my $dname (@doms) {
 &$first_print($text{'vsync_transfer'});
 my @rargs = grep { $_->[0] ne "dest" && $_->[0] ne "newformat" &&
 		   $_->[0] ne "separate" } @args;
-my $args = [ $src, \@doms, \%dompath, \%tempdir, \@rargs ];
+my $args = [ $src, \@doms, \%dompath, \%tempdir, \@rargs, $remotes{'dir'} ];
 my @transouts = &parallel_server_function(
 			\@dests, \&transfer_virtualmin_domains, $args);
 my @transok = grep { $_->[0] } @transouts;
@@ -375,13 +392,15 @@ return ( 1 );
 sub restore_virtualmin_domains
 {
 my $dest = $_[0];
-my ($src, $doms, $dompath, $tempdir, $rargs) = @{$_[1]};
+my ($src, $doms, $dompath, $tempdir, $rargs, $remote_dir) = @{$_[1]};
 my $vinfo = &get_server_collected($dest);
 my $desttemp = $tempdir->{$dest->{'id'}};
 my @rargs = @$rargs;
 push(@rargs, [ "source", $desttemp ]);
 push(@rargs, [ "skip-warnings" ]);
-push(@rargs, [ "no-reuid" ]);
+if ($remote_dir) {
+	push(@rargs, [ "no-reuid" ]);
+	}
 push(@rargs, [ "option", "dir delete 1" ]);
 if ($vinfo->{'minfo'}->{'version'} >= 4.161) {
 	# Use replication mode
