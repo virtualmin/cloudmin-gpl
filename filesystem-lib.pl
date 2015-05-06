@@ -474,7 +474,7 @@ if ($fs =~ /ext(\d+)$/) {
 	if (!&has_command_on_server($vhost, $cmd)) {
 		$cmd = "fsck.".$fs;
 		}
-	if (!&has_command_on_server($vhost, $cmd)) {
+	if (!&has_command_on_server($vhost, $cmd) && $1 < 4) {
 		$cmd = "e2fsck";
 		}
 	}
