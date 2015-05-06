@@ -3,6 +3,7 @@
 # refresh status)
 
 require './server-manager-lib.pl';
+&error_if_cloudmin_replica();
 &ReadParse();
 %d = map { $_, 1 } split(/\0/, $in{'d'});
 @servers = grep { $d{$_->{'id'}} } &list_managed_servers();
