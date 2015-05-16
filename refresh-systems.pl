@@ -46,6 +46,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--serial") {
 		$serial = 1;
 		}
+	elsif ($a eq "--skip-locked") {
+		$skiplocked = 1;
+		}
 	elsif ($a eq "--all-hosts") { $all = 1; }
 	elsif ($a eq "--host") { push(@hosts, shift(@ARGV)); }
 	elsif ($a eq "--group") { push(@groups, shift(@ARGV)); }
@@ -66,6 +69,11 @@ while(@ARGV > 0) {
 @servers = &find_managed_servers($all, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hostons);
 @servers || &usage("No systems specified");
 &can_action_usage(\@servers, "refresh"); 
+
+# Exclude those that are locked
+if ($skiplocked) {
+	@servers = grep { !&test_lock_server($_) } @servers;
+	}
 
 # Identify parent and virtual systems
 @pservers = grep { !&is_virtual_server($_) } @servers;
@@ -122,6 +130,7 @@ print "                         [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                         [--host-on name]\n";
 print "                         [--regenerate]*\n";
 print "                         [--serial]\n";
+print "                         [--skip-locked]\n";
 exit(1);
 }
 
