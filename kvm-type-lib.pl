@@ -2809,13 +2809,13 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 # If LVM is in use, get LVs from the host system
 my (@lvs, @vgs);
 my $lvm_error;
+$last_remote_error = undef;
 if ($server->{'kvm_filesystem_vg'} || $lvmcount) {
 	if ($main::list_logical_cache{$vhost->{'id'}}) {
 		@lvs = @{$main::list_logical_cache{$vhost->{'id'}}};
 		@vgs = @{$main::list_volume_cache{$vhost->{'id'}}};
 		}
 	else {
-		$last_remote_error = undef;
 		&remote_foreign_require($vhost, "lvm", "lvm-lib.pl");
 		@vgs = &remote_foreign_call($vhost, "lvm",
 			"list_volume_groups");
