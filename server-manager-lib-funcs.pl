@@ -3533,7 +3533,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			}
 
 		# Get Webmin software packages type
-		if (&remote_foreign_check("software") &&
+		if (&remote_foreign_check($server, "software") &&
 		    !$info->{'update_system'}) {
 			&remote_foreign_require($server, "software",
 				"software-lib.pl");
