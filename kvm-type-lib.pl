@@ -5366,8 +5366,7 @@ if ($server->{'status'} ne 'down' &&
 	delete($server->{'kvm_mount'});
 	}
 
-if ($server->{'kvm_disktotal'} eq '' ||
-    $server->{'kvm_disktotal'} < 0 || $regen) {
+if ($server->{'kvm_disktotal'} <= 0 || $regen) {
 	&type_kvm_compute_disksize($server);
 	}
 if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
