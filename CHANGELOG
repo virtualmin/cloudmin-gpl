@@ -103,3 +103,5 @@ Added the vnc-system API comment for opening up a port to the graphical console 
 ---- Changes since 8.0 ----
 When creating an image that will be stored on the Cloudmin master, it is now compressed directly to the master system so that no temporary disk space is needed on the host.
 When syncing domains between Virtualmin 1.750 or later systems, replication mode is now used to prevent over-writing of shared storage like MySQL databases or NFS-exported home directories.
+---- Changes since 8.2 ----
+When deleting a replicated Virtualmin domain, Cloudmin will preserve shared resources until the last replica is removed.
