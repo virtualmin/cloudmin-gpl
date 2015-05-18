@@ -79,19 +79,26 @@ while(@ARGV > 0) {
 # Check for citical parameters
 @dnames || &usage("No domains to delete specified");
 
-# Get the domains
 if ($host) {
 	$server = &find_one_managed_server($host);
 	$server || &usage("System $host does not exist");
-	@sources = ( $server );
 	}
-else {
-	@sources = &list_managed_servers();
-	}
+
+# Get the domains
 @serverdoms = ( );
-foreach $s (@sources) {
+foreach $s (&list_managed_servers()) {
 	if ($s->{'status'} eq 'virt') {
+		# Get the domains from this system, and count up the number of
+		# domains that exist with the same name
 		@doms = &get_server_domains($s);
+		foreach $d (@doms) {
+			$dcount{$d->{'dom'}}++;
+			}
+
+		# If in single host mode and this isn't that host, skip
+		next if ($host && $s->{'host'} ne $host);
+
+		# Find all the requested domains by name
 		foreach $dn (@dnames) {
 			($d) = grep { $_->{'dom'} eq $dn } @doms;
 			if ($d) {
@@ -117,6 +124,11 @@ foreach $sd (@serverdoms) {
 	print "Deleting Virtualmin domain $d->{'dom'} from ",
 	      "$server->{'host'} ..\n";
 	@args = ( [ "domain", $d->{'dom'} ] );
+	$dcount{$d->{'dom'}}--;
+	if ($dcount{$d->{'dom'}}) {
+		# Another copy exists - preserve remote resources
+		push(@args, [ "preserve-remote" ]);
+		}
 	($err, $out) = &call_virtualmin_api($server, "delete-domain", \@args);
 	print $out;
 	if ($err) {
