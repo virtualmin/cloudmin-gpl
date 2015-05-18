@@ -41,12 +41,26 @@ if ($in{'delete'}) {
 			$text{'dmass_deleteok'}, $postmsg);
 		}
 	else {
-		# Do them
+		# Build a map from domain names to their number of occurances
+		my %dcount;
+		foreach $s (&list_managed_servers()) {
+			my @doms = &get_server_domains($s);
+			foreach my $d (@doms) {
+				$dcount{$d->{'dom'}}++;
+				}
+			}
+
+		# Do the deletion
 		foreach $sd (@serverdoms) {
 			($server, $d) = @$sd;
 			print &text('dmass_deleting', "<tt>$d->{'dom'}</tt>",
 					"<tt>$server->{'host'}</tt>"),"<br>\n";
 			@args = ( [ "domain", $d->{'dom'} ] );
+			$dcount{$d->{'dom'}}--;
+			if ($dcount{$d->{'dom'}}) {
+				# Another copy exists - preserve remote data
+				push(@args, [ "preserve-remote" ]);
+				}
 			($err, $out) = &call_virtualmin_api($server,
 						"delete-domain", \@args);
 			if ($err) {
