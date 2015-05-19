@@ -7,12 +7,13 @@ Removes Virtualmin domains from managed systems
 This command deletes a domain (specified with the C<--domain> parameter) from
 which every Cloudmin-managed system hosts it. This can be normally worked out
 automatically, but if the same domain exists on more than one machine, you
-will need to add C<--host> followed by the correct hostname. Be careful using
-it, as it will not prompt for any confirmation before deletion.
+will need to add C<--host> followed by the correct hostname. Or use
+C<--all-hosts> to remove the domain from every system that it is on.
 
 When the command is run, it will display all of the output from the
 C<delete-domain.pl> command on the remote system. More than one domain can
 be deleted by specifying the C<--domain> parameter multiple times.
+Be careful using it, as it will not prompt for any confirmation before deletion.
 
 =head1 Example usage
 
@@ -68,6 +69,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--host") {
 		$host = shift(@ARGV);
 		}
+	elsif ($a eq "--all-hosts") {
+		$allhosts = 1;
+		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -78,6 +82,7 @@ while(@ARGV > 0) {
 
 # Check for citical parameters
 @dnames || &usage("No domains to delete specified");
+$hosr && $allhosts && &usage("--host and --all-hosts cannot both be used");
 
 if ($host) {
 	$server = &find_one_managed_server($host);
@@ -87,14 +92,14 @@ if ($host) {
 # Get the domains
 @serverdoms = ( );
 foreach $s (&list_managed_servers()) {
-	if ($s->{'status'} eq 'virt') {
-		# Get the domains from this system, and count up the number of
-		# domains that exist with the same name
-		@doms = &get_server_domains($s);
-		foreach $d (@doms) {
-			$dcount{$d->{'dom'}}++;
-			}
+	# Get the domains from this system, and count up the number of
+	# domains that exist with the same name
+	@doms = &get_server_domains($s);
+	foreach $d (@doms) {
+		$dcount{$d->{'dom'}}++;
+		}
 
+	if ($s->{'status'} eq 'virt') {
 		# If in single host mode and this isn't that host, skip
 		next if ($host && $s->{'host'} ne $host);
 
@@ -102,7 +107,7 @@ foreach $s (&list_managed_servers()) {
 		foreach $dn (@dnames) {
 			($d) = grep { $_->{'dom'} eq $dn } @doms;
 			if ($d) {
-				if ($found{$d->{'dom'}}++) {
+				if ($found{$d->{'dom'}}++ && !$allhosts) {
 					&usage("Domain $dn was found on more than one system. Use --host to specify the source you want");
 					}
 				push(@serverdoms, [ $s, $d ]);
@@ -173,7 +178,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Deletes one or more Virtualmin domains from managed systems.\n";
 print "\n";
 print "cloudmin delete-domains --domain name [--domain name]*\n";
-print "                       [--host source.hostname]\n";
+print "                       [--host source.hostname | --all-hosts]\n";
 exit(1);
 }
 
