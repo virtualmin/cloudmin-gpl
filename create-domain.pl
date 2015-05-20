@@ -110,6 +110,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--ip") {
 		$ip = shift(@ARGV);
 		}
+	elsif ($a eq "--vsync") {
+		$vsyncnow = 1;
+		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -216,15 +219,22 @@ print "Creating Virtualmin domain $domain on $server->{'host'} ..\n";
 ($err, $out) = &call_virtualmin_api($server, "create-domain", \@args);
 print $out;
 if ($err) {
-	print ".. failed : $err\n";
+	print ".. failed : $err\n\n";
 	exit(1);
 	}
 else {
 	&check_server_status($server);
 	&save_managed_server($server);
-	print ".. creation complete!\n";
+	print ".. creation complete!\n\n";
 	}
 &release_lock_server($server);
+
+# If sync was requested, run any vsync profiles that match the source system
+if ($vsyncnow) {
+	&set_all_text_print();
+	&run_all_vsyncs_for_server($server, $domain);
+	}
+
 &cloudmin_api_log(\@OLDARGV);
 
 sub usage
@@ -238,6 +248,7 @@ print "                      [--desc \"domain description\"]\n";
 print "                       --pass password\n";
 print "                       --default-features | [--feature name]*\n";
 print "                      [--ip address | --allocate-ip]\n";
+print "                      [--vsync]\n";
 exit(1);
 }
 

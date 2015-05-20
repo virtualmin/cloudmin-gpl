@@ -179,7 +179,6 @@ else {
 &save_managed_server($src);
 &$second_print($text{'create_done'});
 
-
 # Create temp dirs on the source and dests
 &$first_print($text{'vsync_temp'});
 my %tempdir;
@@ -442,6 +441,24 @@ if (@ddelete) {
 return ( 1, undef, $dest->{'host'}, undef );
 }
 
+# run_all_vsyncs_for_server(&server, domain-name)
+# Called after creating a domain on a system to run all vsyncs that use it
+# as a source
+sub run_all_vsyncs_for_server
+{
+my ($server, $dname) = @_;
+foreach my $vsync (grep { $_->{'src'} eq $server->{'id'} &&
+			  $_->{'doms_all'} }
+			&list_virtualmin_syncs(1)) {
+	&$first_print(&text('dcreate_vsync', $server->{'host'}, $dname));
+	my $vsync_copy = { %$vsync };
+	delete($vsync_copy->{'doms_all'});
+	$vsync_copy->{'doms'} = $dname;
+	&$indent_print();
+	&sync_virtualmin_domains($vsync_copy);
+	&$outdent_print();
+	}
+}
 
 1;
 

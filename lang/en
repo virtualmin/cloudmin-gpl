@@ -943,6 +943,7 @@ domains_cvirt=Assign virtual IP address
 domains_cvirt0=No
 domains_cvirt1=Yes, allocate automatically
 domains_cvirt2=Yes, with address $1
+domains_cvsyncnow=Sync to all replicas after creation?
 domains_return=domains form
 domains_delete=Delete Selected
 domains_disable=Disable Selected
@@ -990,6 +991,7 @@ dcreate_ealloc=Failed to allocate IP address : $1
 dcreate_egotvirt=The system $1 does not current have the IP address $2 active, and cannot create its own network interfaces
 dcreate_iface=Creating new network interface ..
 dcreate_ifaced=.. created with address $1
+dcreate_vsync=Syncing new domain $2 from $1 ..
 
 edit_title=Edit System
 edit_bheader=System details

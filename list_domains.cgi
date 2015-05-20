@@ -148,6 +148,13 @@ print &ui_table_row($text{'domains_cvirt'},
 			  [ 2, &text('domains_cvirt2',
 				&ui_textbox("virt", undef, 20)) ] ]));
 
+# Sync to all possible destinations now
+@vsyncs = &list_virtualmin_syncs(1);
+if (@vsyncs) {
+	print &ui_table_row($text{'domains_cvsyncnow'},
+		&ui_yesno_radio("vsyncnow", 1));
+	}
+
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'domains_cok'} ] ]);
 print &ui_hidden_end();

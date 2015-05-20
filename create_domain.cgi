@@ -107,6 +107,12 @@ else {
 	&check_server_status($server);
 	&save_managed_server($server);
 	print $text{'dcreate_statusok'},"<p>\n";
+
+	# If sync was requested, run any vsync profiles that match the
+	# source system
+	if ($in{'vsyncnow'}) {
+		&run_all_vsyncs_for_server($server, $in{'dom'});
+		}
 	}
 
 &release_lock_server($server);

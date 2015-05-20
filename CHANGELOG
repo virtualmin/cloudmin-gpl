@@ -105,3 +105,4 @@ When creating an image that will be stored on the Cloudmin master, it is now com
 When syncing domains between Virtualmin 1.750 or later systems, replication mode is now used to prevent over-writing of shared storage like MySQL databases or NFS-exported home directories.
 ---- Changes since 8.2 ----
 When deleting a replicated Virtualmin domain, Cloudmin will preserve shared resources until the last replica is removed.
+When creating a Virtualmin domain on a system with sycning enabled, Cloudmin can now replicate it immediately to other hosts.
