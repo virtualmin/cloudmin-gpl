@@ -69,8 +69,9 @@ if (&can_action($server, 'ips')) {
 # IPv6 addresses, if allowed and VM type supports IPv6 and the system has v6
 # addresses currently
 $c6func = "type_".$server->{'manager'}."_can_ipv6";
+@ip6ifaces = grep { $_->{'address6'} && @{$_->{'address6'}} } @$ifaces;
 if (&can_action($server, 'ips') && defined(&$c6func) && &$c6func($server) &&
-    $server->{'ip6_addresses'}) {
+    $server->{'ip6_addresses'} && @ip6ifaces) {
 	@grid = ( );
 	if (defined(&$cfunc) && &$cfunc($server)) {
 		# Can show list of interfaces
