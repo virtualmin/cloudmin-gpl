@@ -113,6 +113,7 @@ if ($gconfig{'os_type'} eq 'redhat-linux') {
 		    'IPV6INIT', 'IPV6_DEFAULTGW') {
 		delete($ethconf{$f});
 		}
+	$ethconf{'NM_CONTROLLED'} = 'no';
 	&write_env_file("$net::net_scripts_dir/ifcfg-$eth_name", \%ethconf);
 	print "Created bridge $br_name connected to $eth_name\n";
 	}
