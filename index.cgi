@@ -468,16 +468,10 @@ sub get_vcpus_count
 my ($s) = @_;
 return undef if ($s->{'status'} eq 'nohost');
 my $cfunc = "type_".$s->{'manager'}."_can_vcpus";
-if (defined(&$cfunc) && &$cfunc($s)) {
-	my $mfunc = "type_".$s->{'manager'}."_get_vcpus";
-	my $vcpus = &$mfunc($s);
-	return ref($vcpus) ? scalar(@$vcpus) : undef;
-	}
-$cfunc = "type_".$s->{'manager'}."_can_smp";
-if (defined(&$cfunc) && &$cfunc($s)) {
-	my $mfunc = "type_".$s->{'manager'}."_get_smp";
-	my ($smp, $cores) = &$mfunc($s);
-	return $smp ? $smp.($cores > 1 ? ",$cores" : "") : undef;
+my $sfunc = "type_".$s->{'manager'}."_can_smp";
+if (defined(&$cfunc) && &$cfunc($s) || defined(&$sfunc) && &$sfunc($s)) {
+	my $mfunc = "type_".$s->{'manager'}."_get_cpu_count";
+	return &$mfunc($s);
 	}
 return undef;
 }

@@ -4228,6 +4228,14 @@ $server->{'kvm_smp_cores'} = $cores;
 return undef;
 }
 
+# type_kvm_get_cpu_count(&server)
+# Returns the number of virtual CPUs, cached
+sub type_kvm_get_cpu_count
+{
+my ($server) = @_;
+return $server->{'kvm_smp'} || 1;
+}
+
 # type_kvm_can_ioclass(&server)
 # Returns 1, as the IO class can be set for KVM instances without a reboot
 sub type_kvm_can_ioclass
