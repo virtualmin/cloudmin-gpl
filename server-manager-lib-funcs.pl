@@ -13874,7 +13874,7 @@ if ($main::got_lock_server{$server->{'id'}}) {
 return &test_lock("$servers::module_config_directory/$server->{'id'}.serv");
 }
 
-# get_lock_on_server(&server)
+# get_lock_on_server(&server, [&processes])
 # If a system is locked due to a pending operation, return a hash ref of
 # details about the lock. Keys are :
 # pid - Process ID of the locker
@@ -13883,7 +13883,7 @@ return &test_lock("$servers::module_config_directory/$server->{'id'}.serv");
 # safe - Can this be safely killed?
 sub get_lock_on_server
 {
-my ($server) = @_;
+my ($server, $procs) = @_;
 my $sfile = $servers::module_config_directory."/".$server->{'id'}.".serv";
 if (!&test_lock($sfile)) {
 	return undef;
@@ -13895,9 +13895,12 @@ return { 'unknown' => 1 } if (!$pid);
 my @st = stat($lfile);
 my $lock = { 'pid' => $pid,
 	     'time' => $st[9] };
-if (&foreign_check("proc")) {
+if (!$procs && &foreign_check("proc")) {
 	&foreign_require("proc");
-	my ($proc) = &proc::list_processes($pid);
+	$procs = [ &proc::list_processes() ];
+	}
+if ($procs) {
+	my ($proc) = grep { $_->{'pid'} eq $pid } @$procs;
 	if ($proc) {
 		$lock->{'args'} = $proc->{'args'};
 		my @a = split(/\s+/, $proc->{'args'});
@@ -13915,6 +13918,27 @@ if (&foreign_check("proc")) {
 		}
 	}
 return $lock;
+}
+
+# list_running_actions([&server])
+# Returns a list of all actions that are running, based on server locks or
+# status files
+sub list_running_actions
+{
+my ($oneserver) = @_;
+return ( ) if (&foreign_check("proc"));
+&foreign_require("proc");
+my $procs = [ &proc::list_processes() ];
+my @rv;
+foreach my $server ($oneserver ? ( $oneserver ) : &list_managed_servers()) {
+	my $lock = &get_lock_on_server($server, $procs);
+	if ($lock) {
+		$lock->{'server'} = $server->{'id'};
+		$lock->{'lock'} = 1;
+		push(@rv, $lock);
+		}
+	}
+return @rv;
 }
 
 # list_totally_safe_commands()
