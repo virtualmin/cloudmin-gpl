@@ -68,7 +68,7 @@ if ($in{'search'}) {
 			   $_->{'id'} =~ /\Q$in{'search'}\E/i } @combined;
 	}
 
-@links = ( &select_all_link("d"), &select_invert_link("d") );
+@links = ( &select_all_link("d", 1), &select_invert_link("d", 1) );
 if (@combined) {
 	# Show table of images
 	print &ui_form_start("get_images.cgi", "post");
