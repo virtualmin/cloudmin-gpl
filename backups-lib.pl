@@ -556,6 +556,14 @@ if ($server->{'status'} ne 'down' && $shutdown) {
 	&$second_print($text{'create_done'});
 	}
 
+# Get current boot flag
+my $gbfunc = "type_".$server->{'manager'}."_get_atboot";
+if (defined(&$gbfunc)) {
+	my $atboot = &$gbfunc($server);
+	$server->{'backup_atboot'} = $atboot ? 1 : 0;
+	&save_managed_server($server);
+	}
+
 # Call the type-specific backup function
 &$first_print(&text('brun_backing', $server->{'host'},
 		    &nice_backup_destination($deststr)));
@@ -2948,7 +2956,9 @@ if ($server->{'status'} ne 'down') {
 
 # Enable at boot time, if possible
 my $bfunc = "type_".$server->{'manager'}."_set_atboot";
-if (defined(&$bfunc) && $config{'default_start'}) {
+my $atboot = defined($server->{'backup_atboot'}) ? $server->{'backup_atboot'}
+						 : $config{'default_start'};
+if (defined(&$bfunc) && $atboot) {
 	&$first_print($text{'create_atbooting'});
 	&$bfunc($server, 1);
 	&$second_print($text{'create_done'});
