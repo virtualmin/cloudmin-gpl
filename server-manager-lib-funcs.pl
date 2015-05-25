@@ -13926,18 +13926,19 @@ return $lock;
 sub list_running_actions
 {
 my ($oneserver) = @_;
-return ( ) if (&foreign_check("proc"));
+return ( ) if (!&foreign_check("proc"));
 &foreign_require("proc");
 my $procs = [ &proc::list_processes() ];
 my @rv;
 foreach my $server ($oneserver ? ( $oneserver ) : &list_managed_servers()) {
 	my $lock = &get_lock_on_server($server, $procs);
 	if ($lock) {
-		$lock->{'server'} = $server->{'id'};
+		$lock->{'server'} = $server;
 		$lock->{'lock'} = 1;
 		push(@rv, $lock);
 		}
 	}
+# XXX actions without locks?
 return @rv;
 }
 
