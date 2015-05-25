@@ -91,7 +91,7 @@ if (&can_action($server, 'ips') && defined(&$c6func) && &$c6func($server) &&
 		}
 	print &ui_table_row($text{'clone_ips6'},
 		&ui_radio("ips6_def", 1, [ [ 1, $text{'clone_ips1'} ],
-					  [ 0, $text{'clone_ips0'} ] ]).
+					   [ 0, $text{'clone_ips0'} ] ]).
 		"<br>\n".$ipsfield);
 	}
 
