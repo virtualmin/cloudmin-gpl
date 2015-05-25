@@ -508,6 +508,7 @@ return ( 1, &backup_strftime($destdir)."/".$s->{'host'}.".".
 sub execute_system_backup
 {
 my ($server, $deststr, $shutdown, $owner) = @_;
+&obtain_lock_server($server);
 
 # Check for backup to self
 my $vhost = &get_parent_server($server);
@@ -638,6 +639,7 @@ if ($was_up) {
 	&$second_print($text{'create_done'});
 	}
 
+&release_lock_server($server);
 return $rv;
 }
 
