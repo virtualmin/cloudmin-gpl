@@ -4689,6 +4689,7 @@ if ($nonvirt) {
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
+	&recompute_kvm_ips($server, $iface->{'address'}, undef);
 	}
 else {
 	# Virtual interfaces can always be activated immediately
@@ -4780,6 +4781,7 @@ if ($iface->{'virtual'} eq '' && defined($idx)) {
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_net'} = join(" ", @nets);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
+	&recompute_kvm_ips($server, undef, $iface->{'address'});
 	$iface->{'reboot'} = 1;
 	}
 
@@ -4880,6 +4882,7 @@ if ($iface->{'virtual'} eq '') {
 	$server->{'mac_addresses'} = join(" ", @macs);
 	$server->{'kvm_model'} = join(" ", @models);
 	$server->{'kvm_hostifaces'} = join(" ", @ifaces);
+	&recompute_kvm_ips($server, $iface->{'address'},$oldiface->{'address'});
 	&save_managed_server($server);
 	&type_kvm_set_atboot($server, 2);
 	}
@@ -4929,6 +4932,36 @@ if ($server->{'kvm_firewall'} && $server->{'kvm_firewall'} ne '*') {
 	[ split(/\s+/, $server->{'kvm_firewall'}) ]);
 
 return undef;
+}
+
+# recompute_kvm_ips(&server, add-ip4, delete-ip4)
+# After adding, removing or editing a real interface, update the internal list
+# of those that should be used at creation time
+sub recompute_kvm_ips
+{
+my ($server, $add, $del) = @_;
+my @ips = split(/\s+/, $server->{'kvm_ip'});
+if ($add && !$del) {
+	push(@ips, $add);
+	}
+elsif (!$add && $del) {
+	my $idx = &indexof($del, @ips);
+	splice(@ips, $idx, 1) if ($idx >= 0);
+	}
+elsif ($add && $del && $add ne $del) {
+	my $idx = &indexof($del, @ips);
+	if ($idx >= 0) {
+		$ips[$idx] = $add;
+		}
+	else {
+		# List may be out of sync
+		push(@ips, $add);
+		}
+	}
+else {
+	return;	# Nothing to do
+	}
+$server->{'kvm_ip'} = join(" ", @ips);
 }
 
 # type_kvm_list_models([&server])
