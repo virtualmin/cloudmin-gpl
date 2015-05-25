@@ -3539,12 +3539,12 @@ rdp_firewall=You can open up the RDP port on the <a href='$1'>EC2 Security Group
 rdp_eec2=RDP access is only available for EC2 instances
 rdp_desc=This page should open a window that will log you into the Windows system <tt>$1</tt> on port $2, using password <tt>$3</tt>. If this fails, the regular Windows Remote Desktop or the <tt>rdesktop</tt> command on Linux can be used instead.
 
-nicetime_days=$1 days, $2 hours, $3:$4 minutes
-nicetime_hours=$1 hours, $2:$3 minutes
-nicetime_mins=$1 minutes, $2 seconds
+nicetime_days=$1 days, $2 hours, $3:$4 mins
+nicetime_hours=$1 hours, $2:$3 mins
+nicetime_mins=$1 mins, $2 secs
 nicetime_hours_only=$1 hours
-nicetime_mins_only=$1 minutes
-nicetime_secs_only=$1 seconds
+nicetime_mins_only=$1 mins
+nicetime_secs_only=$1 secs
 
 reset_title=Reset From Image
 reset_rusure=Are you sure you want to reset the virtual system $1 to the state it was in when first created from the image selected below? All data and files added since creation will be deleted.
