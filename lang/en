@@ -5814,3 +5814,11 @@ right_vm2mspace=Maximum backup space
 right_vm2limitsheader=Cloudmin Limits
 right_vm2usageheader=Usage By Owned Systems
 
+locks_title=Running Actions
+locks_none=No Cloudmin actions are currently running. Only when some background operation like a status check or scheduled backup, API command or action performed via the UI is in progress will they be listed on this page.
+locks_host=Locked system
+locks_short=Running command
+locks_pid=Process ID
+locks_time=Action started at
+locks_age=Running for
+locks_kill=Stop Selected Actions

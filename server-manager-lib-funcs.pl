@@ -7736,6 +7736,15 @@ if ($shownf{$me}) {
 	push(@gcats, "settings");
 	}
 
+# Running actions
+if (!$access{'owner'}) {
+	# Upgrade link
+	push(@glinks, "list_locks.cgi");
+	push(@gtitles, $text{'locks_title'});
+	push(@gicons, "images/locks.gif");
+	push(@gcats, "settings");
+	}
+
 return (\@glinks, \@gtitles, \@gicons, \@gcats);
 }
 
