@@ -25,7 +25,7 @@ if (@locks) {
 		    $l->{'pid'},
 		    &make_date($l->{'time'}),
 		    &nice_hour_mins_secs(time() - $l->{'time'}),
-		    ], \@tds, "d", $l->{'pid'});
+		    ], \@tds, "d", $l->{'pid'}, 0, $l->{'safe'} == 0);
 		}
 	print &ui_columns_end();
 	print &ui_form_end([ [ undef, $text{'locks_kill'} ] ]);
