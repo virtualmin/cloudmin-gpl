@@ -21,14 +21,16 @@ print &ui_table_row($text{'oform_pass'},
 print &ui_table_row($text{'oform_email'},
 	&ui_textbox("email", $owner->{'acl'}->{'email'}, 40));
 
-# Language
-@langs = &list_languages();
-$glang = $gconfig{"lang"} || $default_lang;
-($linfo) = grep { $_->{'lang'} eq $glang } @langs;
-print &ui_table_row($text{'oform_lang'},
-	&ui_select("lang", $owner->{'lang'},
-		   [ [ "", &text('oform_langdef', $linfo->{'desc'}) ],
-		     map { [ $_->{'lang'}, $_->{'desc'} ] } @langs ]));
+if (!$config{'noowner_lang'}) {
+	# Language
+	@langs = &list_languages();
+	$glang = $gconfig{"lang"} || $default_lang;
+	($linfo) = grep { $_->{'lang'} eq $glang } @langs;
+	print &ui_table_row($text{'oform_lang'},
+		&ui_select("lang", $owner->{'lang'},
+			   [ [ "", &text('oform_langdef', $linfo->{'desc'}) ],
+			     map { [ $_->{'lang'}, $_->{'desc'} ] } @langs ]));
+	}
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'save'} ] ]);
