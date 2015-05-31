@@ -537,7 +537,7 @@ $rv .= &ui_table_row($text{'create_xendisksize'},
 				  $text{'create_xendiskdef'}));
 
 # Swap space
-if (!$empty) {
+if (!$empty && &can_action(undef, 'swap')) {
 	$rv .= &ui_table_row($text{'create_xenswapsize'},
 		&vui_opt_bytesbox("kvm_swap",
 				  $config{'kvm_swap'}*1024*1024 || undef, 8,
@@ -642,7 +642,7 @@ $server->{'kvm_memory'} = ($in{'kvm_memory'} * $in{'kvm_memory_units'}) /
 $server->{'kvm_disktotal'} = 0;
 
 # Validate swap file
-if (!$in{'kvm_swap_def'} && !$empty) {
+if (!$in{'kvm_swap_def'} && !$empty && &can_action(undef, 'swap')) {
 	$in{'kvm_swap'} =~ /^\d+$/ || &error($text{'create_exenswapsize'});
 	$server->{'kvm_swap'} = ($in{'kvm_swap'} * $in{'kvm_swap_units'}) /
 				(1024*1024);
@@ -935,7 +935,7 @@ else {
 
 # Validate swap flag
 $server->{'kvm_disktotal'} = 0;
-if (!$empty) {
+if (!$empty && &can_action(undef, 'swap')) {
         if ($args->{'swap'} ne '') {
                 $args->{'swap'} =~ /^\d+$/ ||
                         return "Non-numeric swap allocation";

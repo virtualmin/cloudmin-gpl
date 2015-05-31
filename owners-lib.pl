@@ -116,7 +116,7 @@ return ( 'startup', 'shutdown', 'reboot', 'boot', 'console', 'graph', 'view',
 	 'create', 'add', 'empty', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
 	 'reverse', 'limits', 'vcpus', 'ioclass', 'disks', 'devices', 'sshkeys',
 	 'backup', 'webmin', 'virtualmin', 'api', 'storage', 'snapshot',
-         'mount', 'groups', 'rate', );
+         'mount', 'groups', 'rate', 'swap' );
 }
 
 # list_safe_owner_actions()
@@ -126,7 +126,7 @@ sub list_safe_owner_actions
 return ( 'startup', 'shutdown', 'reboot', 'console', 'boot', 'graph', 'view',
 	 'run', 'pass', 'domains', 'update', 'script', 'pause', 'reset',
          'create', 'delete', 'ifaces', 'reverse', 'limits', 'vcpus', 'disks',
-	 'webmin', 'virtualmin', 'api', 'snapshot' );
+	 'webmin', 'virtualmin', 'api', 'snapshot', 'swap' );
 }
 
 # owner_action_category(action)
@@ -135,7 +135,7 @@ sub owner_action_category
 {
 my ($action) = @_;
 return $action =~ /startup|shutdown|reboot|boot|console/ ? 'power' :
-       $action =~ /create|add|empty|advanced|delete|pause|reset|backup/ ? 'create' :
+       $action =~ /create|add|empty|advanced|delete|pause|reset|backup|swap/ ? 'create' :
        $action =~ /ips|ifaces|realifaces|reverse/ ? 'ips' :
        $action =~ /limits|vcpus|ioclass|rate|disks|devices|graph|storage|mount/ ? 'limits' :
        $action =~ /domains|script|webmin|virtualmin/ ? 'virutalmin' :

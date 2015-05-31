@@ -2939,6 +2939,7 @@ owner_action_storage=Select disk storages
 owner_action_mount=Mount virtual disks on host
 owner_action_groups=Edit system groups
 owner_action_snapshot=Create and merge snapshots
+owner_action_swap=Create systems with swap disks
 owner_actions_def1=From plan
 owner_actions_def0=Selected below ..
 owner_egone=System owner no longer exists!
