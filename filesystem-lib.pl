@@ -452,7 +452,7 @@ elsif ($fs eq "xfs") {
 	       "mount -t xfs $dev $mp && ".
 	       "xfs_growfs";
 	if ($size) {
-		$cmd .= " -D ".int($size * 1024 * 1024 / 4096);
+		$cmd .= " -D ".int(($size-64) * 1024 * 1024 / 4096);
 		}
 	else {
 		$cmd .= " -d";
