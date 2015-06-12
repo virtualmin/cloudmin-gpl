@@ -373,6 +373,9 @@ if (@servers) {
 							}
 						}
 					}
+				elsif ($c eq "image") {
+					push(@cols, $s->{'image'});
+					}
 				else {
 					push(@cols, $s->{$c});
 					}
