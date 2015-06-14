@@ -5342,31 +5342,46 @@ return ($out, undef, $wroot);
 sub open_webmin_firewall_port
 {
 my ($server, $port, $root) = @_;
+my @lasterr;
+foreach my $mod ("firewalld", "firewall") {
+	my @st = &stat_file_on_server($server, "$root/$mod/open-ports.pl");
+	if (!@st) {
+		# Module doesn't exist
+		@lasterr = (6);
+		}
+	elsif (@st == 1) {
+		# Failed to stat the command?!
+		@lasterr = (5, $st[0]);
+		}
+	my $portrange = join(":", $port, $port+10);
+	my $cmd = "cd $root/$mod && ".
+		  "$root/$mod/open-ports.pl $portrange 2>&1";
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	if ($err) {
+		# Command couldn't be run
+		@lasterr = (5, $err);
+		}
+	elsif ($ex <= 1) {
+		# Worked or wasn't needed
+		return ($ex, $out);
+		}
+	else {
+		# Failed for some other reason
+		@lasterr = ($ex, $out);
+		}
+	}
+
+# Fall back to using firewalld commands directly. This can be removed once
+# Webmin 1.760 is out.
 if (&has_command_on_server($server, "firewall-cmd")) {
-	# Try to use firewalld
 	my $portrange = join("-", $port, $port+10);
 	&execute_command_on_server($server,
 		"firewall-cmd --add-port $portrange/tcp");
 	&execute_command_on_server($server,
 		"firewall-cmd --permanent --add-port $portrange/tcp");
 	}
-my @st = &stat_file_on_server($server, "$root/firewall/open-ports.pl");
-if (!@st) {
-	return (6);
-	}
-elsif (@st == 1) {
-	return (5, $st[0]);
-	}
-my $portrange = join(":", $port, $port+10);
-my $cmd = "cd $root/firewall && ".
-	  "$root/firewall/open-ports.pl $portrange 2>&1";
-my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
-if ($err) {
-	return (5, $err);
-	}
-else {
-	return ($ex, $out);
-	}
+
+return @lasterr;
 }
 
 # open_webmin_firewall_port_and_print(&webmin, port, root-dir)
