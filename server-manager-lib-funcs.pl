@@ -6222,6 +6222,10 @@ my $script = "/virtualmin-install.sh";
 # Done .. but did it work?
 my ($tout, $tex, $terr) = &execute_command_on_server($server,
 				"tail -20 $temp ; rm -f $temp");
+if ($terr) {
+	# Transient failure, try again later
+	return undef;
+	}
 if ($tout !~ s/SERVER-MANAGER-COMPLETE//) {
 	# Looks like it didn't ..
 	return "<pre>".&html_escape($tout)."</pre>";
@@ -6230,6 +6234,10 @@ if ($tout !~ s/SERVER-MANAGER-COMPLETE//) {
 # Make sure it REALLY got installed, by looking for Webmin
 my ($sstatus, $serr, $webminroot, $webminport, $webminssl) =
 	&check_server_ssh_login($server);
+if ($status != 0) {
+	# Transient failure, try again later
+	return undef;
+	}
 if (!$webminroot) {
 	return "<pre>".&html_escape($tout)."</pre>";
 	}
