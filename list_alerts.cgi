@@ -54,6 +54,7 @@ foreach $a (@alerts) {
 		$s = &get_managed_server($id);
 		next if (!$s);
 		($r) = grep { $_->{'name'} eq $name } @{$a->{'rules'}};
+		$info = &historic_stat_info($r->{'name'});
 		$p = 60*60;
 		foreach $hp (&get_history_periods()) {
 			if ($r->{'for'} < $hp->[1]) {
@@ -67,9 +68,19 @@ foreach $a (@alerts) {
 			}
 		else {
 			# Compared to some value
+			$rvalue = $r->{'value'};
+			if ($info->{'scale'}) {
+				# Convert to human-readable scale
+				$rvalue /= $info->{'scale'};
+				$value /= $info->{'scale'};
+				}
+			if ($value =~ /\.\d+$/) {
+				# Truncate long decimal
+				$value = sprintf("%.2f", $value);
+				}
 			$cutoff = ($r->{'over'} ? $text{'alert_over'}
 						: $text{'alert_under'})." ".
-						   $r->{'value'};
+						   $rvalue;
 			if ($r->{'value'} =~ /(K|M|G|T)B?$/i) {
 				$value = &nice_size($value);
 				}

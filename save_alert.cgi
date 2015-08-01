@@ -65,6 +65,7 @@ else {
 	for(my $i=0; defined($in{"name_$i"}); $i++) {
 		next if (!$in{"name_$i"});
 		my $r = { 'name' => $in{"name_$i"} };
+		my $info = &historic_stat_info($r->{'name'});
 		if (&is_binary_alert($r->{'name'})) {
 			# Just compared to 1
 			$r->{'over'} = 1;
@@ -82,6 +83,9 @@ else {
 			$in{"value_$i"} =~ /^[0-9\.]+((K|M|G|T)B?)?$/i ||
 				&error(&text('alert_evalue', $i+1));
 			$r->{'value'} = $in{"value_$i"};
+			if ($info->{'scale'}) {
+				$r->{'value'} *= $info->{'scale'};
+				}
 			}
 		$in{"for_$i"} =~ /^[0-9\.]+$/ ||
 			&error(&text('alert_efor', $i+1));

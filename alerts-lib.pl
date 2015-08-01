@@ -574,10 +574,15 @@ foreach my $r ($alert->{'rules'} ? @{$alert->{'rules'}}
 		}
 	else {
 		# Compared to some value
+		my $info = &historic_stat_info($r->{'name'});
+		my $rvalue = $r->{'value'};
+		if ($info->{'scale'}) {
+			$rvalue /= $info->{'scale'};
+			}
 		$desc = &text($r->{'over'} ? 'alert_rdescover'
 					   : 'alert_rdescunder',
 			      $text{'history_stat_'.$r->{'name'}},
-			      $r->{'value'},
+			      $rvalue,
 			      $for.$forunit);
 		}
 	if ($r->{'count'} > 1) {

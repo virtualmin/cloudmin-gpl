@@ -113,11 +113,14 @@ unshift(@names, [ undef, '&nbsp;' ]);
 foreach my $r ((grep { !&is_binary_alert($_->{'name'}) } @{$alert->{'rules'}}),
 	       { 'for' => 60, 'count' => 1, 'over' => 1 }) {
 	($forunit, $for) = &split_for_units($r->{'for'});
+	$info = &historic_stat_info($r->{'name'});
+	$value = $info->{'scale'} ? $r->{'value'} / $info->{'scale'}
+				  : $r->{'value'};
 	push(@rtable, [ &ui_select("name_$i", $r->{'name'}, \@names),
 			&ui_select("over_$i", $r->{'over'} ? 1 : 0,
 				   [ [ 1, $text{'alert_over'} ],
 				     [ 0, $text{'alert_under'} ] ]),
-			&ui_textbox("value_$i", $r->{'value'}, 6),
+			&ui_textbox("value_$i", $value, 6),
 			&ui_textbox("for_$i", $for, 4).
 			 &ui_select("forunit_$i", $forunit, \@forunits),
 			&ui_textbox("count_$i", $r->{'count'}, 4),
