@@ -1176,7 +1176,7 @@ if ($status == 0) {
 				$pp ||= "perl";
 				my ($sout, $sex) =
 				    &execute_command_on_server(
-					$server, "$pp -e 'use Net::SSLeay'");
+					$server, "$pp -e 'use Net::SSLeay'", 5);
 				if ($sex) {
 					$ssl = 0;	# Missing Perl module
 					}
@@ -1729,11 +1729,11 @@ else {
 		}
 	# Also delete using ssh-keygen, which can handle hashing
 	&execute_command_on_server($srcserver,
-		"ssh-keygen -R ".quotemeta($server->{'host'}));
+		"ssh-keygen -R ".quotemeta($server->{'host'}), 5);
 	&execute_command_on_server($srcserver,
-		"ssh-keygen -R ".quotemeta($server->{'ip'}));
+		"ssh-keygen -R ".quotemeta($server->{'ip'}), 5);
 	&execute_command_on_server($srcserver,
-		"ssh-keygen -R ".quotemeta($ip));
+		"ssh-keygen -R ".quotemeta($ip), 5);
 	return undef;
 	}
 }
@@ -4201,19 +4201,19 @@ if (&can_ssh_status($server)) {
 		# FreeBSD syntax
 		($out, $ex, $err) = &execute_command_on_server($server,
 			"route del default".
-			($gw ? " ; route add default $gw" : ""));
+			($gw ? " ; route add default $gw" : ""), 5);
 		}
 	elsif (&has_command_on_server($server, "route")) {
 		# Linux syntax with route command
 		($out, $ex, $err) = &execute_command_on_server($server,
 			"route delete default".
-			($gw ? " ; route add default gw $gw" : ""));
+			($gw ? " ; route add default gw $gw" : ""), 5);
 		}
 	elsif (&has_command_on_server($server, "ip")) {
 		# Linux syntax with ip command
 		($out, $ex, $err) = &execute_command_on_server($server,
 			"ip route delete default".
-			($gw ? " ; ip route add default via $gw" : ""));
+			($gw ? " ; ip route add default via $gw" : ""), 5);
 		}
 	else {
 		return "Neither the route or ip commands are installed";
@@ -4296,13 +4296,13 @@ if (&can_ssh_status($server)) {
 		# Linux with route command
 		($out, $ex, $err) = &execute_command_on_server($server,
 			"route -A inet6 delete default".
-			($gw ? " ; route -A inet6 add default gw $gw" : ""));
+			($gw ? " ; route -A inet6 add default gw $gw" : ""), 5);
 		}
 	elsif (&has_command_on_server($server, "ip")) {
 		# Linux with ip command
 		($out, $ex, $err) = &execute_command_on_server($server,
 			"ip -6 route delete default".
-			($gw ? " ; ip -6 route add default via $gw" : ""));
+			($gw ? " ; ip -6 route add default via $gw" : ""), 5);
 		}
 	else {
 		return "Neither the route or ip commands are installed";
@@ -5356,7 +5356,7 @@ foreach my $mod ("firewalld", "firewall") {
 	my $portrange = join(":", $port, $port+10);
 	my $cmd = "cd $root/$mod && ".
 		  "$root/$mod/open-ports.pl $portrange 2>&1";
-	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd, 60);
 	if ($err) {
 		# Command couldn't be run
 		@lasterr = (5, $err);
@@ -5376,9 +5376,9 @@ foreach my $mod ("firewalld", "firewall") {
 if (&has_command_on_server($server, "firewall-cmd")) {
 	my $portrange = join("-", $port, $port+10);
 	&execute_command_on_server($server,
-		"firewall-cmd --add-port $portrange/tcp");
+		"firewall-cmd --add-port $portrange/tcp", 5);
 	&execute_command_on_server($server,
-		"firewall-cmd --permanent --add-port $portrange/tcp");
+		"firewall-cmd --permanent --add-port $portrange/tcp", 5);
 	}
 
 return @lasterr;
@@ -5413,7 +5413,7 @@ if (!@st) {
 	return "Webmin version 1.491 or later is required";
 	}
 my ($out, $ex, $err) = &execute_command_on_server($server,
-	"/etc/webmin/system-status/enable-collection.pl 5");
+	"/etc/webmin/system-status/enable-collection.pl 5", 60);
 return $err ? $err : $ex ? $out : undef;
 }
 
@@ -5456,7 +5456,7 @@ sub set_server_webmin_password
 {
 my ($server, $webmindir, $user, $pass) = @_;
 my ($pout, $pex, $perr) = &execute_command_on_server($server,
-	"$webmindir/changepass.pl /etc/webmin $user ".quotemeta($pass));
+	"$webmindir/changepass.pl /etc/webmin $user ".quotemeta($pass), 60);
 return $perr ? $perr : $pex ? $pout : undef;
 }
 
@@ -5495,7 +5495,7 @@ if ($server->{'status'} eq 'virt' ||
     $server->{'status'} eq 'novirt' ||
     $server->{'status'} eq 'nowebminlogin') {
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"kill -USR1 `cat /var/webmin/miniserv.pid`");
+		"kill -USR1 `cat /var/webmin/miniserv.pid`", 5);
 	return $err if ($err);
 	return "Failed to reload Webmin : $out" if ($ex);
 	}
@@ -5979,7 +5979,7 @@ if ((!$os || $os eq 'unknown') && $server->{'manager'} eq 'zones') {
 if ((!$os || $os eq 'unknown') && $pkg eq "pkgadd") {
 	# Only Solaris has pkgadd
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"uname -s");
+		"uname -s", 5);
 	if ($out =~ /SunOS|Solaris/i) {
 		$os = "solaris";
 		}
@@ -5988,14 +5988,14 @@ if (!$os || $os eq 'unknown') {
 	# Could not get OS, so check useful system files
 	# XXX this should really be done with os_list.txt
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-	    "(ls /etc/fedora-release /etc/redhat-release /etc/mandrake-release /etc/SuSE-release) 2>/dev/null");
+	    "(ls /etc/fedora-release /etc/redhat-release /etc/mandrake-release /etc/SuSE-release) 2>/dev/null", 5);
 	if ($out =~ /fedora-release/) {
 		$os = "fedora";
 		}
 	elsif ($out =~ /redhat-release/) {
 		# Might be redhat or centos
 		($out, $ex, $err) = &execute_command_on_server($server,
-			"cat /etc/redhat-release");
+			"cat /etc/redhat-release", 5);
 		if ($out =~ /CentOS/i) {
 			$os = "centos";
 			}
@@ -6012,7 +6012,7 @@ if (!$os || $os eq 'unknown') {
 	else {
 		# Might be Debian or Ubuntu
 		($out, $ex, $err) = &execute_command_on_server($server,
-			"cat /etc/issue");
+			"cat /etc/issue", 5);
 		if ($out =~ /Ubuntu/) {
 			$os = "ubuntu";
 			}
@@ -6119,7 +6119,7 @@ if (!$serial) {
 # Check that hostname is usable
 if ($os ne "solaris") {
 	my ($hout, $hex, $herr) = &execute_command_on_server(
-					$server, "hostname -f");
+					$server, "hostname -f", 5);
 	if ($hex || $herr) {
 		return &text('virtualmin_ehostname', $herr || $hout);
 		}
@@ -6200,7 +6200,7 @@ my ($server) = @_;
 
 # Check if the installer is still running
 my $temp = $server->{'virtualmin_temp'};
-my ($out, $ex, $err) = &execute_command_on_server($server, "fuser $temp");
+my ($out, $ex, $err) = &execute_command_on_server($server, "fuser $temp", 5);
 if ($err) {
 	# SSH failed, so try again
 	return undef;
@@ -6217,11 +6217,11 @@ if (@pids) {
 
 # Remove the install script
 my $script = "/virtualmin-install.sh";
-&execute_command_on_server($server, "rm -f ".quotemeta($script));
+&delete_file_on_server($server, $script);
 
 # Done .. but did it work?
 my ($tout, $tex, $terr) = &execute_command_on_server($server,
-				"tail -20 $temp ; rm -f $temp");
+				"tail -20 $temp ; rm -f $temp", 5);
 if ($terr) {
 	# Transient failure, try again later
 	return undef;
@@ -6250,7 +6250,7 @@ $server->{'ssl'} = $webminssl;
 
 # And check for Virtualmin root
 my ($out, $ex, $err) = &execute_command_on_server($server,
-				"cat $webminroot/virtual-server/module.info");
+			"cat $webminroot/virtual-server/module.info", 5);
 if ($ex) {
 	return $text{'virtual_evirtualmincheck'};
 	}
@@ -6697,7 +6697,7 @@ my ($server, $pass) = @_;
 # root logins! Fix that (in advanced, so that the new password works)
 if ($server->{'manager'} eq 'ec2') {
 	&fix_ssh_root_login($server);
-	&execute_command_on_server($server, "killall -HUP sshd");
+	&execute_command_on_server($server, "killall -HUP sshd", 5);
 	}
 
 # Mount filesystem if needed
@@ -6742,7 +6742,7 @@ if (!$err) {
 	if ($passfile eq "/etc/master.passwd" && &can_ssh_status($server)) {
 		# Re-generate BSD password DB
 		&execute_command_on_server($server,
-			"/usr/sbin/pwd_mkdb -p /etc/master.passwd");
+			"/usr/sbin/pwd_mkdb -p /etc/master.passwd", 60);
 		}
 	}
 
@@ -6831,7 +6831,8 @@ foreach my $t ('', 'dsa', 'rsa') {
 		}
 	&delete_file_on_server($server, $hkf.".pub");
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"ssh-keygen".($t ? " -t $t" : "")." -f $hkf -N '' </dev/null");
+		"ssh-keygen".($t ? " -t $t" : "")." -f $hkf -N '' </dev/null",
+		60);
 	if ($ex || $err) {
 		return "Failed to generate $hkf : ".($err || $out);
 		}
@@ -6841,7 +6842,7 @@ if ($found) {
 	# Restart SSHd too
 	&execute_command_on_server($server,
 		$server->{'type'} eq 'solaris' ?
-			'pkill -HUP sshd' : 'killall -HUP sshd');
+			'pkill -HUP sshd' : 'killall -HUP sshd', 5);
 	&clear_ssh_host_key($server);
 	}
 return $found ? undef : "No SSH host keys found";
@@ -7175,8 +7176,7 @@ foreach my $sd (@sorted) {
 			"restore-domain", \@args);
 	&stop_background_dot_printer();
 	if ($delete != 1) {
-		&execute_command_on_server($server,
-			"rm -f ".quotemeta($desttemp));
+		&delete_file_on_server($server, $desttemp);
 		}
 	if (!$err && $out =~ /Restore\s+failed/i) {
 		# Catch case where restore-domain didn't exit with non-zero
@@ -7372,7 +7372,7 @@ if (!$got) {
 	    &has_command_on_server($server, "netstat")) {
 		# Get from netstat command
 		my ($out, $ex, $err) = &execute_command_on_server(
-					$server, "netstat -rn");
+					$server, "netstat -rn", 5);
 		foreach my $l (split(/\r?\n/, $out)) {
 			my @w = split(/\s+/, $l);
 			if ($w[0] eq "default" || $w[0] eq "0.0.0.0") {
@@ -7391,7 +7391,7 @@ if (!$got) {
 	       &has_command_on_server($server, "ip")) {
 		# Get from ip command
 		my ($out, $ex, $err) = &execute_command_on_server(
-					$server, "ip route");
+					$server, "ip route", 5);
 		foreach my $l (split(/\r?\n/, $out)) {
 			if ($l =~ /^default.*\s+via\s+(\S+).*\s+dev\s+(\S+)/) {
 				$gw = $1;
@@ -7452,7 +7452,7 @@ if (!$got) {
 	    &has_command_on_server($server, "netstat")) {
 		# Get from netstat command
 		my ($out, $ex, $err) = &execute_command_on_server(
-					$server, "netstat -rn -A inet6");
+					$server, "netstat -rn -A inet6", 5);
 		foreach my $l (split(/\r?\n/, $out)) {
 			my @w = split(/\s+/, $l);
 			if ($w[0] eq "::/0" && $w[1] ne "::") {
@@ -7466,7 +7466,7 @@ if (!$got) {
 	       &has_command_on_server($server, "ip")) {
 		# Get from ip command
 		my ($out, $ex, $err) = &execute_command_on_server(
-					$server, "ip -6 route");
+					$server, "ip -6 route", 5);
 		foreach my $l (split(/\r?\n/, $out)) {
 			if ($l =~ /^default.*\s+via\s+(\S+).*\s+dev\s+(\S+)/) {
 				$gw = $1;
@@ -11012,7 +11012,8 @@ return @ifaces;
 sub tar_supports_gzip
 {
 my ($server) = @_;
-my ($out, $ex, $err) = &execute_command_on_server($server,"tar --version 2>&1");
+my ($out, $ex, $err) = &execute_command_on_server(
+			$server, "tar --version 2>&1", 5);
 return !$err && !$ex && $out =~ /GNU\s+tar/i ? 1 : 0;
 }
 
@@ -11047,13 +11048,13 @@ if (&can_net_status($server)) {
 else {
 	# Try parsing ifconfig output
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"ifconfig -a");
+		"ifconfig -a", 5);
 	return $err if ($err);
 	my @active;
 	if ($ex) {
 		# Maybe we have the ip command?
 		($out, $ex, $err) = &execute_command_on_server($server,
-			"ip addr");
+			"ip addr", 5);
 		return $err if ($err);
 		return $out if ($ex);
 		@active = &parse_ip_addr_output($out, $empty);
@@ -11064,12 +11065,12 @@ else {
 
 	# Also add in gateways
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		"netstat -rn");
+		"netstat -rn", 5);
 	return $err if ($err);
 	if ($ex) {
 		# Try the ip command
 		($out, $ex, $err) = &execute_command_on_server($server,
-			"ip route");
+			"ip route", 5);
 		return $err if ($err);
 		return $out if ($ex);
 		foreach my $l (split(/\r?\n/, $out)) {
@@ -11116,7 +11117,7 @@ if (&can_net_status($server)) {
 elsif ($server->{'type'} eq 'freebsd') {
 	# Activate with ifconfig command on BSD
 	my $cmd = &get_freebsd_ifconfig_command($iface);
-	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd, 5);
 	return $err if ($err);
 	return $out if ($ex);
 
@@ -11125,7 +11126,8 @@ elsif ($server->{'type'} eq 'freebsd') {
                 my $cmd = "ifconfig $iface->{'name'} inet6 ".
                           $iface->{'address6'}->[$i].
                           " prefixlen ".$iface->{'netmask6'}->[$i];
-		my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
                 }
@@ -11136,7 +11138,7 @@ elsif (&has_command_on_server($server, "ifconfig")) {
 		     quotemeta($iface->{'address'})." up ".
 		     "netmask ".quotemeta($iface->{'netmask'})." ".
 		     "broadcast ".quotemeta($iface->{'broadcast'});
-	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd, 5);
 	return $err if ($err);
 	return $out if ($ex);
 
@@ -11145,7 +11147,8 @@ elsif (&has_command_on_server($server, "ifconfig")) {
 		my $cmd = "ifconfig ".quotemeta($iface->{'fullname'}).
 			  " inet6 add ".$iface->{'address6'}->[$n]."/".
 					$iface->{'netmask6'}->[$n];
-		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 		}
@@ -11155,7 +11158,8 @@ elsif (&has_command_on_server($server, "ip")) {
 	if ($iface->{'virtual'} eq '') {
 		# Activate the link if needed
 		my $cmd = "ip link set dev ".quotemeta($iface->{'name'})." ip";
-		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 		}
@@ -11163,7 +11167,7 @@ elsif (&has_command_on_server($server, "ip")) {
 		  &net::mask_to_prefix($iface->{'netmask'})." ".
 	          "broadcast ".quotemeta($iface->{'broadcast'})." ".
 		  "dev ".quotemeta($iface->{'name'});
-	my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd, 5);
 	return $err if ($err);
 	return $out if ($ex);
 
@@ -11173,7 +11177,8 @@ elsif (&has_command_on_server($server, "ip")) {
 			  $a->{'address6'}->[$n]."/".
 			  $a->{'netmask6'}->[$n]." dev ".
 			  quotemeta($iface->{'fullname'});
-		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 		}
@@ -11201,14 +11206,14 @@ elsif ($server->{'type'} eq 'freebsd') {
 	# Just remove with ifconfig on FreeBSD
 	my $cmd = "ifconfig ".quotemeta($iface->{'name'}).
 		  " delete ".$iface->{'address'};
-	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd, 5);
 	return $err if ($err);
 	return $out if ($ex);
 	}
 elsif (&has_command_on_server($server, "ifconfig")) {
 	# Just remove with ifconfig on Linux
 	my $cmd = "ifconfig ".quotemeta($iface->{'fullname'})." down";
-	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd);
+	my ($out, $ex, $err) = &execute_command_on_server($server, $cmd, 5);
 	return $err if ($err);
 	return $out if ($ex);
 	}
@@ -11226,14 +11231,16 @@ elsif (&has_command_on_server($server, "ip")) {
 	foreach my $d (@del) {
 		my $cmd = "ip addr del ".quotemeta($d).
 			  " dev ".quotemeta($iface->{'name'});
-		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 		}
 	if ($iface->{'virtual'} eq '') {
 		my $cmd = "ip link set dev ".
 			  quotemeta($iface->{'name'})." down";
-		my ($out, $ex, $err) = &execute_command_on_server($server,$cmd);
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 		}
@@ -11269,7 +11276,8 @@ elsif (&freebsd_server_type($server)) {
 	if ($iface->{'virtual'} eq '') {
 		# Apply IP, netmask and broadcast to real IP
 		my $cmd = &get_freebsd_ifconfig_command($iface);
-		my ($out, $ex, $err) =&execute_command_on_server($server, $cmd);
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 		}
@@ -11279,12 +11287,13 @@ elsif (&freebsd_server_type($server)) {
 		my $cmd = "ifconfig ".quotemeta($iface->{'name'}).
 			  " delete ".$oldiface->{'address'};
 		my ($out, $ex, $err) =
-			&execute_command_on_server($server, $cmd);
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 
 		my $cmd = &get_freebsd_ifconfig_command($iface);
-		my ($out, $ex, $err) =&execute_command_on_server($server, $cmd);
+		my ($out, $ex, $err) =
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 		}
@@ -11298,7 +11307,7 @@ elsif (&freebsd_server_type($server)) {
 					"inet6 ".$oldiface->{'address6'}->[$n].
 					" delete";
 				my ($out, $ex, $err) =
-				    &execute_command_on_server($server, $cmd);
+				    &execute_command_on_server($server, $cmd,5);
 				return $err if ($err);
 				return $out if ($ex);
 				}
@@ -11312,7 +11321,7 @@ elsif (&freebsd_server_type($server)) {
 				      "inet6 ".$iface->{'address6'}->[$n].
 				      " prefixlen ".$iface->{'netmask6'}->[$n];
 				my ($out, $ex, $err) =
-				    &execute_command_on_server($server, $cmd);
+				    &execute_command_on_server($server, $cmd,5);
 				return $err if ($err);
 				return $out if ($ex);
 				}
@@ -11345,7 +11354,7 @@ elsif (&has_command_on_server($server, "ifconfig")) {
 					  $oldiface->{'address6'}->[$n]."/".
 					  $oldiface->{'netmask6'}->[$n];
 				my ($out, $ex, $err) =
-				    &execute_command_on_server($server, $cmd);
+				    &execute_command_on_server($server, $cmd,5);
 				return $err if ($err);
 				return $out if ($ex);
 				}
@@ -11360,7 +11369,7 @@ elsif (&has_command_on_server($server, "ifconfig")) {
 					  $iface->{'address6'}->[$n]."/".
 					  $iface->{'netmask6'}->[$n];
 				my ($out, $ex, $err) =
-				    &execute_command_on_server($server, $cmd);
+				    &execute_command_on_server($server, $cmd,5);
 				return $err if ($err);
 				return $out if ($ex);
 				}
@@ -11397,7 +11406,7 @@ elsif (&has_command_on_server($server, "ip")) {
 			  $oldiface->{'netmask6'}->[$i]." dev ".
 			  $iface->{'name'};
 		my ($out, $ex, $err, $status) =
-			&execute_command_on_server($server, $cmd);
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
 		}
@@ -11409,7 +11418,7 @@ elsif (&has_command_on_server($server, "ip")) {
                           $iface->{'netmask6'}->[$i]." dev ".
                           $iface->{'name'};
 		my ($out, $ex, $err, $status) =
-			&execute_command_on_server($server, $cmd);
+			&execute_command_on_server($server, $cmd, 5);
 		return $err if ($err);
 		return $out if ($ex);
                 }
@@ -12249,7 +12258,7 @@ sub list_host_bridges
 {
 my ($vhost) = @_;
 my @rv;
-my ($out, $ex, $err) = &execute_command_on_server($vhost, "brctl show");
+my ($out, $ex, $err) = &execute_command_on_server($vhost, "brctl show", 5);
 if (!$ex && !$err) {
 	foreach my $l (split(/\r?\n/, $out)) {
 		if ($l !~ /^bridge\s+name/ && $l =~ /^(\S+)/) {
@@ -12365,7 +12374,7 @@ $proto ||= "tcp";
 if (&has_command_on_server($server, "lsof")) {
 	# Parse lsof for LISTEN lines
 	my ($out, $ex, $err) = &execute_command_on_server(
-				$server, "lsof -i $proto -n -l -P");
+				$server, "lsof -i $proto -n -l -P", 5);
 	return $err if ($err);
 	return $out if ($ex);
 	my @rv;
@@ -12710,7 +12719,7 @@ if ($server->{'status'} ne 'down') {
 		}
 	elsif (&can_ssh_status($server)) {
 		# Flush buffers to disk to ensure LVM snapshot gets everything
-		&execute_command_on_server($server, "sync ; sync ; sync");
+		&execute_command_on_server($server, "sync ; sync ; sync", 60);
 		}
 	}
 
@@ -13532,7 +13541,7 @@ else {
 sub get_loop_device
 {
 my ($vhost) = @_;
-my ($out, $ex, $err) = &execute_command_on_server($vhost, "losetup -a");
+my ($out, $ex, $err) = &execute_command_on_server($vhost, "losetup -a", 5);
 if ($ex || $err) {
 	# Take a guess
 	return "/dev/loop7";
@@ -13555,7 +13564,7 @@ sub list_server_cpus
 {
 my ($server) = @_;
 my ($info, $ex, $err) = &execute_command_on_server($server,
-				"cat /proc/cpuinfo");
+				"cat /proc/cpuinfo", 5);
 return "Failed to get CPUs" if ($ex || $err);
 my @rv;
 my $cpu;
