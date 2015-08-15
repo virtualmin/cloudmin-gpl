@@ -2232,6 +2232,7 @@ if (&can_ssh_status($server) && !$force) {
 	&execute_command_on_server($server, "sync ; sync ; sync", 5);
 	}
 my $proc = &get_server_kvm_instance($server);
+my $wait = $config{'kvm_powerdown'} || 30;
 if (&can_ssh_status($server) && !$force) {
 	# Try poweroff command
 	my ($out, $ex, $err) = &execute_command_on_server($server,
@@ -2241,7 +2242,7 @@ if (&can_ssh_status($server) && !$force) {
 
 	# Wait 30 seconds for shutdown
 	my $tries = 0;
-	while($tries < 30) {
+	while($tries < $wait) {
 		my ($kout, $kex, $kerr) = &execute_command_on_server(
 					$vhost, "kill -0 $proc->{'pid'}", 5);
 		if ($kex && !$kerr) {
@@ -2261,7 +2262,7 @@ if (!$force) {
 	if ($mok) {
 		# Wait for it to work
 		my $tries = 0;
-		while($tries < 30) {
+		while($tries < $wait) {
 			my ($kout, $kex) = &execute_command_on_server(
 					$vhost, "kill -0 $proc->{'pid'}");
 			if ($kex) {
