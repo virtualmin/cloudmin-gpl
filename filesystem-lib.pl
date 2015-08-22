@@ -250,10 +250,10 @@ foreach my $l (split(/\r?\n/, $out)) {
 	if ($l =~ /=\s+(\d+)\s+bytes/i) {
 		$secsize = $1;
 		}
-	elsif ($l =~ /Disk\s+label\s+type:\s+(\S+)/) {
+	elsif ($l =~ /Disk\s*label\s+type:\s+(\S+)/) {
 		$disklabel = $1;
 		}
-	elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?\s+([0-9a-f]+)\s+(\S+)/i &&
+	elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?(\s+[0-9\.]+[kMGTP])?\s+([0-9a-f]+)\s+(\S+)/i &&
 	       $disklabel eq "dos") {
 		# Found a DOS format partition line
 		push(@rv, { 'part' => $p,
@@ -264,7 +264,7 @@ foreach my $l (split(/\r?\n/, $out)) {
 			    'end_bytes' => $2 * $secsize,
 			    'blocks' => $3,
 			    'size_bytes' => ($2 - $1 + 1) * $secsize,
-			    'type' => $4,
+			    'type' => $5,
 			    'offset' => $1 * $secsize });
 		$p++;
 		}
