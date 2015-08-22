@@ -176,6 +176,8 @@ if ($multi) {
 		if ($d->{'format'} eq 'disk' && defined(&$pfunc)) {
 			$parts = &$pfunc($server, $d);
 			if (ref($parts)) {
+				print "    Partition status: OK ",
+				      scalar(@$parts)," found\n";
 				if (@$parts && $parts->[0]->{'disklabel'}) {
 					print "    Disk label: ",
 					      $parts->[0]->{'disklabel'},"\n";
@@ -190,6 +192,10 @@ if ($multi) {
 					      " offset ",$p->{'offset'},
 					      " type ",$p->{'type'},"\n";
 					}
+				}
+			else {
+				print "    Partition status: ERROR ",
+				      $parts,"\n";
 				}
 			}
 
