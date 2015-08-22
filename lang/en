@@ -426,6 +426,7 @@ create_xencpu=Maximum CPU use
 create_exencpu=Maximum CPU use must be a number
 create_xenrate=Maximum network speed
 create_exenmemory=Memory allocated must be a number
+create_exenmemory2=A system with less than $1 of memory is unlikely to boot
 create_elxcmemory=LXC host system does not support memory limits
 create_elxcdisk=Disk space limit must be a number
 create_elxcdisklvm=Host system $1 does not use LVM and so cannot enforce disk space limits
