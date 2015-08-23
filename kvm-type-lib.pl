@@ -639,7 +639,7 @@ my $img = $empty ? undef : &get_server_image($server->{'image'});
 $in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
 $server->{'kvm_memory'} = ($in{'kvm_memory'} * $in{'kvm_memory_units'}) /
 			  (1024*1024);
-$server->{'kvm_memory'} >= 32*1024*1024 ||
+$server->{'kvm_memory'} >= 32 ||
 	&error(&text('create_exenmemory2', '32M'));
 $server->{'kvm_disktotal'} = 0;
 
