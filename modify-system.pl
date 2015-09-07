@@ -49,6 +49,15 @@ Sets the default image directory for new virtual disks.
 C<--webmin-url> I<url> or C<--no-webmin-url>
 Changes the URL used in the "Link to Webmin" menu entry in the Cloudmin UI.
 
+C<--webmin-ssl> or C<--no-webmin-ssl>
+Turns on or off use of SSL to connect to Webmin. By default this is determined
+automatically when a VM is created or added to Cloudmin.
+
+C<--webmin-verify-ssl> or C<--no-webmin-verify-ssl>
+Turns on or off verification of the Webmin SSL certificate. This will reject
+self-signed certs, those for a different hostname, and certs not signed by
+a recognized CA.
+
 =head1 Example usage
 
   cloudmin modify-system --host xencentos.home --desc "CentOS 5 on Xen"
@@ -130,6 +139,18 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--webmin-pass") {
 		$webmin_pass = shift(@ARGV);
+		}
+	elsif ($a eq "--webmin-ssl") {
+		$ssl = 1;
+		}
+	elsif ($a eq "--no-webmin-ssl") {
+		$ssl = 0;
+		}
+	elsif ($a eq "--webmin-verify-ssl") {
+		$checkssl = 1;
+		}
+	elsif ($a eq "--no-webmin-verify-ssl") {
+		$checkssl = 0;
 		}
 	elsif ($a eq "--boot") {
 		$boot = 1;
@@ -361,6 +382,14 @@ else {
 		$recheck = 1;
 		}
 	}
+if (defined($checkssl)) {
+	$server->{'checkssl'} = $checkssl;
+	$recheck = 1;
+	}
+if (defined($ssl)) {
+	$server->{'ssl'} = $ssl;
+	$recheck = 1;
+	}
 if (defined($loc)) {
 	$server->{'location'} = $loc ? $loc->{'id'} : undef;
 	}
@@ -431,6 +460,7 @@ print "                      [--ssh-port number | --default-ssh-port]\n";
 print "                      [--webmin-user user]\n";
 print "                      [--webmin-pass password]\n";
 print "                      [--webmin-same]\n";
+print "                      [--webmin-ssl | --no-webmin-ssl]\n";
 print "                      [--boot | --no-boot]\n";
 print "                      [--boot-mode mode]\n";
 print "                      [--boot-device device]\n";
@@ -441,6 +471,7 @@ print "                      [--force-ip address | --no-force-ip]\n";
 print "                      [--disk-directory path |\n";
 print "                       --no-disk-directory]\n";
 print "                      [--webmin-url url | --no-webmin-url]\n";
+print "                      [--webmin-verify-ssl | --no-webmin-verify-ssl]\n";
 exit(1);
 }
 

@@ -248,6 +248,8 @@ if ($multi) {
 			print "    Webmin port: $s->{'port'}\n";
 			print "    Webmin SSL: ",
 			      ($s->{'ssl'} ? "Yes" : "No"),"\n";
+			print "    Webmin SSL verification: ",
+			      ($s->{'checkssl'} ? "Yes" : "No"),"\n";
 			}
 
 		# Graphical console login
