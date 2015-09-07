@@ -10107,6 +10107,14 @@ print &ui_table_row($text{'add_webmin'},
 # Webmin port
 print &ui_table_row($text{'add_port'},
 	&ui_textbox("port", $server ? $server->{'port'} : 10000, 6));
+
+# Use SSL for Webmin?
+print &ui_table_row($text{'pass_ssl'},
+	&ui_yesno_radio("ssl", $server->{'ssl'}));
+
+# Check SSL certificate?
+print &ui_table_row($text{'pass_checkssl'},
+	&ui_yesno_radio("checkssl", $server->{'checkssl'}));
 }
 
 # parse_webmin_login_form(&in, &server)
@@ -10144,6 +10152,8 @@ else {
 $server->{'ssl'} = $in->{'ssl'} ? 1 : 0;
 $in->{'port'} =~ /^\d+$/ || return $text{'add_eport'};
 $server->{'port'} = $in->{'port'};
+$server->{'ssl'} = $in->{'ssl'};
+$server->{'checkssl'} = $in->{'checkssl'};
 return undef;
 }
 
