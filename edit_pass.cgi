@@ -69,7 +69,8 @@ if ($canpass) {
 	# Webmin password
 	if ($server->{'status'} eq 'virt' ||
 	    $server->{'status'} eq 'novirt' ||
-	    $server->{'status'} eq 'nowebminlogin') {
+	    $server->{'status'} eq 'nowebminlogin' ||
+	    $server->{'status'} eq 'downwebmin') {
 		$passpop = $server->{'pass'} ?
 				&show_password_popup($server, "webmin") :
 				undef;
