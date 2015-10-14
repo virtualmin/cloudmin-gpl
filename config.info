@@ -41,6 +41,7 @@ kvm_model=Default network device model,4,-KVM default,rtl8139-Realtek 8139,i8255
 kvm_ioclass=Default IO class,4,0-0 (best),1-1,2-2,3-3,4-4,5-5,6-6,7-7 (worst)
 kvm_firewall=Block spoofed IPs and MACs by default?,1,1-Yes,0-No
 kvm_cache=Default cache mode for disks,1,-KVM default,off-Disabled,on-Enabled,writeback-Enabled for reads and writes
+kvm_powerdown=Time to wait for clean shutdown to complete,3,Default (30 seconds)
 
 line2=Webmin install URLs,11
 download_rpm=Download URL for Webmin RPM package,3,From www.webmin.com
