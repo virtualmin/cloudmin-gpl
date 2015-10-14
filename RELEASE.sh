@@ -36,13 +36,13 @@ if [ "$mode" = "webmin" ]; then
 fi
 
 if [ "$mode" = "theme" ]; then
-        scp /usr/src/redhat/RPMS/noarch/wbt-virtual-server-theme-$themever-1.noarch.rpm virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/universal/
+        scp /usr/src/redhat/RPMS/noarch/wbt-virtual-server-theme-$ver-1.noarch.rpm virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/universal/
         ssh virtualmin@virtualmin.com "cd domains/vm2.virtualmin.com/public_html/kvm/universal ; createrepo -s sha ."
 
-        scp /usr/local/webadmin/virtualmin/virtual-server-theme-$themever.wbt.gz* virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/wbm/
+        scp /usr/local/webadmin/virtualmin/virtual-server-theme-$ver.wbt.gz* virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/wbm/
         ssh virtualmin@virtualmin.com "sed -e 's/$oldver/$ver/' -i domains/vm2.virtualmin.com/public_html/kvm/wbm/updates.txt"
 
-        ssh lentor "cp /tmp/webmin-virtual-server-theme_${themever}_all.deb /usr/local/download/deb/cloudmin-kvm/binary"
+        ssh lentor "cp /tmp/webmin-virtual-server-theme_${ver}_all.deb /usr/local/download/deb/cloudmin-kvm/binary"
         ssh lentor "cd /usr/local/download/deb/cloudmin-kvm ; ./make-repo.sh"
         ( cd /usr/local/download/deb/cloudmin-kvm ; rsync --rsh=ssh -r -v * virtualmin@virtualmin.com:domains/vm2.virtualmin.com/public_html/kvm/debian/ )
 fi
