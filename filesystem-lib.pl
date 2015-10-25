@@ -869,9 +869,10 @@ else {
 	ref($parts) || return (0, "Failed to list partitions : $parts");
 	@$parts || return (0, "Disk has no partitions!");
 	if (!defined($pnum)) {
-		# No partition number given, assume last non-swap
+		# No partition number given, assume last non-swap/extended
 		for(my $i=0; $i<@$parts; $i++) {
-			if ($parts->[$i]->{'type'} ne '82') {
+			if ($parts->[$i]->{'type'} ne '82' &&
+			    $parts->[$i]->{'type'} ne '5') {
 				$pnum = $i + 1;
 				}
 			}

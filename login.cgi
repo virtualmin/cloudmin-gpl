@@ -57,7 +57,7 @@ if (!$pid) {
 $try = 0;
 while(1) {
         my $err;
-        &open_socket("localhost", $port, TEST2, \$err);
+        &open_socket("127.0.0.1", $port, TEST2, \$err);
         last if (!$err);
         $try++;
         if ($try > 30) {

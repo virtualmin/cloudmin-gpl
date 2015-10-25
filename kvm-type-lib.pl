@@ -5706,7 +5706,7 @@ return $ncerr if ($ncerr);
 my $cmd = &get_kvm_start_command($server, 1, undef, $delay).
           " >$server->{'kvm_console'} 2>&1 </dev/null &";
 $cmd .= " sleep 3 ;";
-$cmd .= " /usr/bin/nc.pl --sleep 3 localhost $server->{'kvm_monitor_port'} ".
+$cmd .= " /usr/bin/nc.pl --sleep 3 127.0.0.1 $server->{'kvm_monitor_port'} ".
 	"<$server->{'kvm_monitor'} >>$server->{'kvm_console'} 2>&1";
 
 if ($bfile =~ /^\/etc\/init.d\//) {
@@ -7826,7 +7826,7 @@ if ($vhost->{'id'} eq '0') {
 	my $out;
 	eval {
 		local $SIG{'ALRM'} = sub { die "timeout" };
-		&open_socket("localhost", $server->{'kvm_monitor_port'},
+		&open_socket("127.0.0.1", $server->{'kvm_monitor_port'},
 			     MON, \$err);
 		return (0, $err) if ($err);
 		foreach my $c (@$cmds) {
@@ -7865,7 +7865,7 @@ else {
 	my $sleep = $delay ? "--sleep $delay" : "";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"(".join(" ; ", @echos).") | ".
-		"/usr/bin/nc.pl $sleep localhost $server->{'kvm_monitor_port'}",
+		"/usr/bin/nc.pl $sleep 127.0.0.1 $server->{'kvm_monitor_port'}",
 		$timeout > 0 ? $timeout : undef);
 	if ($ex || $err) {
 		return (0, $err || $out);
