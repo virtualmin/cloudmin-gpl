@@ -230,7 +230,12 @@ if (@servers) {
 					push(@cols, &$tfunc());
 					}
 				elsif ($c eq "type") {
-					push(@cols, &describe_os($s->{'type'}));
+					my $os = &describe_os($s->{'type'});
+					if (&can_webmin_status($s)) {
+						$info = &get_server_collected($s);
+						$os .= " ".$info->{'general'}->{'real_os_version'};
+						}
+					push(@cols, $os);
 					}
 				elsif ($c eq "status") {
 					push(@cols, &describe_status($s, 1, 2).
