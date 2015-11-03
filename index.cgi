@@ -231,8 +231,8 @@ if (@servers) {
 					}
 				elsif ($c eq "type") {
 					my $os = &describe_os($s->{'type'});
-					if (&can_webmin_status($s)) {
-						$info = &get_server_collected($s);
+					$info = &get_server_collected($s);
+					if ($info && $info->{'general'}) {
 						$os .= " ".$info->{'general'}->{'real_os_version'};
 						}
 					push(@cols, $os);
