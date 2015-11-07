@@ -10103,9 +10103,7 @@ print &ui_table_row($text{'add_webmin'},
 						       : "root", 20),
 			  &ui_password("wpass", $server ? $server->{'pass'}
 						       : "", 20)) ] ]).
-		     $passpop."<br>".
-	&ui_checkbox("ssl", 1, $text{'add_ssl'},
-		     $server ? $server->{'ssl'} : 1));
+		     $passpop);
 
 # Webmin port
 print &ui_table_row($text{'add_port'},
@@ -10155,7 +10153,6 @@ else {
 $server->{'ssl'} = $in->{'ssl'} ? 1 : 0;
 $in->{'port'} =~ /^\d+$/ || return $text{'add_eport'};
 $server->{'port'} = $in->{'port'};
-$server->{'ssl'} = $in->{'ssl'};
 $server->{'checkssl'} = $in->{'checkssl'};
 return undef;
 }
