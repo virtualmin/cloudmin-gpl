@@ -806,14 +806,17 @@ my ($type) = grep { $_->[0] eq $t } @servers::server_types;
 return $type->[1];
 }
 
-# describe_status(&server, [withcolor], [withdomains])
+# describe_status(&server, [withcolor], [withdomains], [withfullerror])
 # Returns a string describing the status of some server (down, nossh,
 # nologin, nowebmin, nowebminlogin, novirt, virt)
 sub describe_status
 {
-my ($s, $withcol, $withdoms) = @_;
+my ($s, $withcol, $withdoms, $witherror) = @_;
 my %cmap = map { $_->[0], $_->[1] } @server_statuses;
 my $msg = $text{'status_'.$s->{'status'}} || $text{'status_unknown'};
+if ($s->{'status_msg'} && $witherror) {
+	$msg .= " - <font color=#ff8800>$s->{'status_msg'}</font>";
+	}
 if ($s->{'status'} eq 'virt' && $withdoms && $s->{'virtualmin_domains'}) {
 	if ($withdoms == 1) {
 		$msg .= " (".&text('status_doms',

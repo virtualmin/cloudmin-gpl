@@ -386,7 +386,7 @@ elsif ($in{'refresh'} || $in{'regen'}) {
 	&check_server_status($server, $in{'regen'} ? 1 : 0);
 	&save_managed_server($server);
 	print &text('save_refreshdone2',
-		    describe_status($server, 1, 1)),"<p>\n";
+		    describe_status($server, 1, 1, 1)),"<p>\n";
 
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server($server);
