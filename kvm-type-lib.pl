@@ -2576,16 +2576,10 @@ $cmd .= " -m ".$server->{'kvm_memory'};
 # Add disks
 my $ver = &kvm_host_version($vhost);
 foreach my $d (split(/\s+/, $server->{'kvm_drives'})) {
-	if ($d =~ /^file=(\S+),media=disk,index=(\d+),if=ide$/) {
-		my $n = chr($2+97);
-		$cmd .= " -hd".$n." ".$1;
+	if ($ver && &compare_versions($ver, "1.1") >= 0) {
+		$d =~ s/,boot=on//g;	# No longer needed
 		}
-	else {
-		if ($ver && &compare_versions($ver, "1.1") >= 0) {
-			$d =~ s/,boot=on//g;	# No longer needed
-			}
-		$cmd .= " -drive $d";
-		}
+	$cmd .= " -drive $d";
 	}
 
 # Boot device
