@@ -140,12 +140,24 @@ foreach my $s ($src, @dests) {
 return 1;
 }
 
-# list_virtualmin_globals()
+# list_virtualmin_globals(\@servers)
 # Returns a list of codes for Virtualmin global settings that can be replicated
 sub list_virtualmin_globals
 {
-return ( 'config', 'templates', 'scheds', 'resellers', 'email', 'custom',
-	 'scripts', 'styles', 'chroot' );
+my ($servers) = @_;
+my $any_pro = 0;
+foreach my $s (@servers) {
+	my $info = &get_server_collected($s);
+	if ($info->{'minfo'} && $info->{'minfo'}->{'version'} !~ /gpl/i) {
+		$any_pro++;
+		last;
+		}
+	}
+return ( 'config', 'templates',
+         $any_pro ? ( 'resellers' ) : ( ),
+         'email', 'custom', 'scripts',
+         $any_pro ? ( 'styles' ) : ( ),
+         'scheds', 'chroot', 'mailserver' );
 }
 
 # sync_virtualmin_domains(&vsync)
