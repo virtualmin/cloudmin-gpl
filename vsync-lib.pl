@@ -223,7 +223,7 @@ else {
 
 # Work out if the first domain has a shared home dir
 my ($err, $out) = &call_virtualmin_api($src, "list-domains",
-				       [ [ "multiline" ],
+				       [ [ "simple-multiline" ],
 					 [ "domain", $doms[0] ] ]);
 my %remotes;
 if ($err) {
