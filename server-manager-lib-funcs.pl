@@ -1048,7 +1048,7 @@ sub check_ssh_public_key_data
 my ($text) = @_;
 my @lines = split(/\r?\n/, $text);
 #return 0 if (@lines != 1);
-if ($text =~ /^(ssh-rsa|ssh-dss)\s+(\S+)(\s+(\S+))?\r?\n/) {
+if ($text =~ /^(ssh-rsa|ssh-dss|ecdsa-sha2-nistp521)\s+(\S+)(\s+(\S+))?\r?\n/) {
 	return 2;
 	}
 elsif ($text =~ /^(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\r?\n/) {
