@@ -116,6 +116,8 @@ if (@servers == 1) {
 
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server($s);
+		}
+	if (defined(&theme_select_server)) {
 		&theme_select_server($s);
 		}
 	}
