@@ -6584,7 +6584,7 @@ foreach my $net (@nets) {
 $server->{'kvm_net'} = join(" ", @nets);
 
 # Re-generate network scripts to update firewall rules
-if ($ip ne $newip) {
+if ($newip && $ip ne $newip) {
 	my @firewall = split(/\s+/, $server->{'kvm_firewall'});
 	for(my $i=0; $i<@firewall; $i++) {
 		if ($firewall[$i] eq $ip) {
