@@ -6280,9 +6280,14 @@ if (!$shutdown) {
 my $shared = $old_kvm_dir eq $new_kvm_dir &&
 	     &shared_dir_on_servers($vhost, $dest, $old_kvm_dir);
 
+# Find the bridge to use on the new host system
+my @dest_kvm_ifaces = split(/\s+/, $dest->{'kvm_iface'});
+my ($kvm_hostiface) = split(/\s+/, $server->{'kvm_hostifaces'});
+my $dest_kvm_iface = &indexof($kvm_hostiface, @dest_kvm_ifaces) >= 0 ?
+			$kvm_hostiface : $dest_kvm_ifaces[0];
+
 # Check if need to allocate new IP
 my $ip = &get_server_ip($server);
-my @kvm_iface = split(/\s+/, $dest->{'kvm_iface'});
 my ($newip, $newcidr, $newgw);
 my $defgw = &get_server_default_gateway($vhost);
 my @gws = split(/\s+/, $server->{'kvm_gw'});
@@ -6290,13 +6295,13 @@ my $gw = $gws[0] eq "*" ? $defgw : $gws[0];
 if ($allocate && $dest->{'kvm_start'} &&
     !&range_check_ip_address($ip, $dest->{'kvm_start'}, $dest->{'kvm_end'},
 				  $dest->{'kvm_cidr'}, $dest->{'kvm_gws'},
-				  $dest->{'kvm_ifaces'}, $kvm_iface[0])) {
+				  $dest->{'kvm_ifaces'}, $dest_kvm_iface)) {
 	# Allocate the primary IP
 	&$first_print($text{'smove_allocating'});
 	($newip, $newcidr, $newgw) = &allocate_ip_address(
 		$dest->{'kvm_start'}, $dest->{'kvm_end'},
 	        $dest->{'kvm_cidr'}, $dest->{'kvm_gws'},
-		$dest->{'kvm_ifaces'}, $kvm_iface[0]);
+		$dest->{'kvm_ifaces'}, $dest_kvm_iface);
 	$newip || return &text('create_exenalloc', $dest->{'host'},
 			    &describe_ip_range($dest->{'kvm_start'},
 					       $dest->{'kvm_end'}));
@@ -6335,6 +6340,7 @@ if ($newip) {
 	my $oldiface = { %$iface };
 	$iface->{'address'} = $newip;
 	$iface->{'netmask'} = &net::prefix_to_mask($newcidr);
+	$iface->{'bridge'} = $dest_kvm_iface;
 	&modify_primary_ip_address($server, $ip, $newip);
 	my $err = &type_kvm_modify_interface($server, $iface, $oldiface);
 	return $err if ($err);
