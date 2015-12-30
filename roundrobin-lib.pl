@@ -445,6 +445,7 @@ if ($alert->{'email'}) {
 	# Other addresses
 	push(@emails, split(/[ ,]+/, $alert->{'email'}));
 	}
+return if (!@emails);
 
 # Construct email message about status
 my $fmt = "%-25.25s %-15.15s %-35.35s\n";
