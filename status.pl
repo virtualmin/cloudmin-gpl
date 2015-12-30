@@ -28,6 +28,25 @@ if (@ARGV) {
 @pservers = grep { !&is_virtual_server($_) } @servers;
 @oservers = grep { &is_virtual_server($_) } @servers;
 
+# If a server is locked by this job for longer than 1 hour, forcibly release it
+foreach my $s (@servers) {
+	my $lock = &get_lock_on_server($s);
+	if ($lock && $lock->{'cmd'} =~ /status\.pl/ &&
+	    $lock->{'time'} && $lock->{'pid'}) {
+		my $diff = time() - $lock->{'time'};
+		if ($diff > 2*60*60) {
+			print STDERR "killing lock on $s->{'host'} ",
+				     "by $lock->{'pid'}\n";
+			&kill_logged('KILL', $lock->{'pid'});
+			}
+		elsif ($diff > 60*60) {
+			print STDERR "terminating lock on $s->{'host'} ",
+				     "by $lock->{'pid'}\n";
+			&kill_logged('TERM', $lock->{'pid'});
+			}
+		}
+	}
+
 foreach $l (\@pservers, \@oservers) {
 	&parallel_check_server_status($l, 0, 1);
 	}
