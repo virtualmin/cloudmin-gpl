@@ -5451,7 +5451,7 @@ if ($server->{'kvm_pause'} && $server->{'status'} ne 'nohost') {
 	}
 
 # Re-get the VNC port from the command line
-if ($server->{'status'} ne 'down') {
+if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 	my $proc;
 	my $procs = &list_kvm_instances($vhost);
 	if (ref($procs)) {
