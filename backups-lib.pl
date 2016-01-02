@@ -1432,7 +1432,7 @@ else {
 # Get disk list
 my $dfunc = "type_".$manager."_list_disks";
 my $disks = &$dfunc($server, 1);
-if (!ref($disks)) {
+if (!ref($disks) || !@$disks) {
 	$disks = &$dfunc($server, 0);
 	}
 if (!ref($disks)) {
