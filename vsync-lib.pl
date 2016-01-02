@@ -213,6 +213,7 @@ my $srctemp = $tempdir{$src->{'id'}};
 # Work out domains
 my @doms;
 my @srcdomobjs = &get_server_domains($src);
+@srcdomobjs = &sort_domains_parent_first(@srcdomobjs);
 my @srcdoms = map { $_->{'dom'} } @srcdomobjs;
 if ($vsync->{'doms_all'}) {
 	@doms = @srcdoms;
@@ -470,6 +471,18 @@ foreach my $vsync (grep { $_->{'src'} eq $server->{'id'} &&
 	&sync_virtualmin_domains($vsync_copy);
 	&$outdent_print();
 	}
+}
+
+# sort_domains_parent_first(&domain, ...)
+# Returns a list of domain objects, sorted by parent first
+sub sort_domains_parent_first
+{
+my @doms = @_;
+my @pfirst = ((grep { !$_->{'parent'} } @doms),
+	      (grep { $_->{'parent'} } @doms));
+my @tfirst = ((grep { !$_->{'alias'} } @pfirst),
+	      (grep { $_->{'alias'} } @pfirst));
+return @tfirst;
 }
 
 1;
