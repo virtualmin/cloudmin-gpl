@@ -1439,6 +1439,10 @@ if (!ref($disks)) {
 	return { 'ok' => 0,
 		 'msg' => &text('brun_edisks', $disks) };
 	}
+if (!@$disks) {
+	return { 'ok' => 0,
+		 'msg' => $text{'brun_eanydisks'} };
+	}
 
 # Find LVM disks, and disks that are on regular files (or iSCSI)
 my @lvmdisks = grep { $_->{'lv'} } @$disks;
