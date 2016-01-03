@@ -92,6 +92,7 @@ $non_virtual = $in{'new'} == 2 || !$in{'new'} && $iface->{'virtual'} eq '';
 
 # Show bridge if not virtual
 if ($non_virtual && (@bridges || $iface->{'bridge'})) {
+	@bridges = grep { &can_use_bridge($_) } @bridges;
 	print &ui_table_row($text{'iface_bridge'},
 		    &ui_select("bridge", $iface->{'bridge'},
 			       [ [ undef, "&lt;".$text{'default'}."&gt;" ],

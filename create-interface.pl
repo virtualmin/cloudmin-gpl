@@ -161,6 +161,8 @@ if ($nonvirt) {
 		&indexof($bridge, @bridges) >= 0 ||
 			&usage("Bridge $bridge does not exist on host system. ".
 			       "Available bridges are : ".join(" ", @bridges));
+		&can_use_bridge($bridge) || &usage("You are not allowed to ".
+						   "use this bridge");
 		}
 	}
 else {

@@ -117,6 +117,8 @@ else {
 		@bridges = &list_host_bridges($vhost);
 		!$in{'bridge'} || &indexof($in{'bridge'}, @bridges) >= 0 ||
 			&error($text{'iface_ebridge'});
+		&can_use_bridge($in{'bridge'}) ||
+			&error($text{'iface_ebridge2'});
 		$iface->{'bridge'} = $in{'bridge'};
 		}
 

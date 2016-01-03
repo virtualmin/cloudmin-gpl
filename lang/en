@@ -1712,6 +1712,7 @@ iface_edelete=This interface cannot be deleted
 iface_emac=Missing or invalid ethernet address - must be formatted like 00:16:3E:37:91:2F
 iface_esupportreal=Real network interfaces are not supported on this system
 iface_ebridge=The selected network bridge does not exist!
+iface_ebridge2=You are not allowed to use the selected bridge
 iface_active=Currently active on system?
 iface_activeno=No - may require a reboot to enable
 iface_noedit=This network interface cannot be edited

@@ -160,6 +160,8 @@ if ($newbridge) {
 	&indexof($newbridge, @bridges) >= 0 ||
 		&usage("Bridge $newbridge is not valid - options are : ".
 		       join(" ", @bridges));
+	&can_use_bridge($newbridge) || &usage("You are not allowed to ".
+					      "use this bridge");
 	}
 
 # Get the interface
