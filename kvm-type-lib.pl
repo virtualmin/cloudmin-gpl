@@ -338,7 +338,8 @@ my @vhosts = grep { $_->{'kvm_host'} && &can_host_server($_) }
 		     &list_managed_servers();
 my $max_hostifaces = 0;
 foreach my $vhost (@vhosts) {
-	my @hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+	my @hostifaces = grep { &can_use_bridge($_) }
+			      split(/\s+/, $vhost->{'kvm_iface'});
 	if (scalar(@hostifaces) > $max_hostifaces) {
 		$max_hostifaces = scalar(@hostifaces);
 		}
@@ -399,7 +400,8 @@ if (&can_action(undef, "ips")) {
 				$text{'create_xenipcol'},
 				$text{'create_xennetmaskcol'},
 				$text{'create_xengwcol'}]);
-			my @ifaces = split(/\s+/, $vhost->{'kvm_iface'});
+			my @ifaces = grep { &can_use_bridge($_) }
+					split(/\s+/, $vhost->{'kvm_iface'});
 			push(@allifaces, @ifaces);
 			if (!@ifaces) {
 				@ifaces = ( $text{'create_xenifacedef'} );
@@ -705,7 +707,8 @@ $server->{'kvm_on'} = $vhost->{'id'};
 my $bridges;
 if ($in->{'kvm_ip_def'} == 0 && &can_action(undef, "ips")) {
 	# Validate IP addresses
-	my @allhostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+	my @allhostifaces = grep { &can_use_bridge($_) }
+				 split(/\s+/, $vhost->{'kvm_iface'});
 	if (!@allhostifaces) {
 		# No host interfaces set, so just assume default
 		@allhostifaces = ( '*' );
@@ -756,7 +759,8 @@ else {
 	# Allocate the IP now, by looking for one that isn't pingable or
 	# use by any system
 	if ($in{'kvm_ip_def'} == 2) {
-		$bridges = [ split(/\0/, $in->{'kvm_bridge'}) ];
+		$bridges = [ grep { &can_use_bridge($_) }
+				  split(/\0/, $in->{'kvm_bridge'}) ];
 		}
 	my $err = &allocate_kvm_ip_addresses($server, $vhost, $bridges);
 	&error($err) if ($err);
@@ -1064,14 +1068,16 @@ if ($args->{'ip'}) {
 		return "The number of IPs must match the number of CIDRs";
 	if ($args->{'bridge'}) {
 		# Bridges set explicitly
-		my @hostifaces = split(/[, ]+/, $args->{'bridge'});
+		my @hostifaces = grep { &can_use_bridge($_) }
+				      split(/[, ]+/, $args->{'bridge'});
 		scalar(@ips) == scalar(@hostifaces) ||
 		    return "The number of IPs must match the number of bridges";
 		$server->{'kvm_hostifaces'} = join(' ', @hostifaces);
 		}
 	else {
 		# Automatically determine from host system
-		my @hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+		my @hostifaces = grep { &can_use_bridge($_) }
+				      split(/\s+/, $vhost->{'kvm_iface'});
 		if (!@hostifaces) {
 			# No host interfaces set, so just assume default
 			$server->{'kvm_hostifaces'} = '*';
@@ -7023,7 +7029,8 @@ if ($bridges) {
 	@hostifaces = @$bridges;
 	}
 elsif ($vhost->{'kvm_iface'}) {
-	@hostifaces = split(/\s+/, $vhost->{'kvm_iface'});
+	@hostifaces = grep { &can_use_bridge($_) }
+			   split(/\s+/, $vhost->{'kvm_iface'});
 	}
 else {
 	@hostifaces = ( "*" );

@@ -394,6 +394,16 @@ if ($access{'images'}) {
 return 1;
 }
 
+# can_use_bridge(name)
+# Returns 1 if the current user can use some bridge
+sub can_use_bridge
+{
+my ($name) = @_;
+my @bridges = split(/\s+/, $access{'bridges'});
+return 1 if (!@bridges);
+return &indexoflc($name, @bridges) >= 0;
+}
+
 # get_server_owners(&server)
 # Returns a list of owner objects for some server
 sub get_server_owners
