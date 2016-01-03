@@ -36,6 +36,11 @@ C<--can-reset> - Reset to original image
 
 If no action flags are given, those defined in the plan will be allowed instead.
 
+If you have host systems with multiple bridges, you can limit the bridges the owner
+can create network interfaces on with the C<--bridges> flag followed by one or more
+bridge names (in quotes). Alternately, you can allow access to all bridges with
+the C<--all-bridges> flag.
+
 =head1 Example usage
 
   cloudmin create-owner --name bob --email bob@example.com --pass smeg --host xencentos.home --can-reboot --can-console --can-startup --can-shutdown
@@ -102,6 +107,12 @@ while(@ARGV > 0) {
 			       &list_plans();
 		$plan || &usage("No plan with ID or name $planid exists");
 		}
+	elsif ($a eq "--bridges") {
+		$bridges = shift(@ARGV);
+		}
+	elsif ($a eq "--all-bridges") {
+		$bridges = "";
+		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -147,6 +158,9 @@ if ($plan) {
 	$owner->{'acl'}->{'plan'} = $plan->{'id'};
 	$owner->{'acl'}->{'actions_def'} = @actions ? 0 : 1;
 	}
+if (defined($bridges)) {
+	$owner->{'acl'}->{'bridges'} = $bridges;
+	}
 foreach $p (@oplugins) {
 	$err = &plugin_call($p, "save_owner_fields", $owner, 1, \@pset);
 	&usage($err) if ($err);
@@ -169,6 +183,7 @@ print "                      --pass password\n";
 if (&supports_plans()) {
 	print "                      --plan name\n";
 	}
+print "                     [--bridges \"name name\" | --all-bridges]\n";
 print "                     [--lock]\n";
 print "                     [--real \"Real name\"]\n";
 print "                     [--host hostname]*\n";

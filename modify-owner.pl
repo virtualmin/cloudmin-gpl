@@ -20,6 +20,11 @@ The C<--can-*> and C<--cannot-*> families of flags can be used to grant or
 remove permissions on the hosts this account owns. For a full list, see
 the documentation for the C<create-owner> command.
 
+If you have host systems with multiple bridges, you can limit the bridges an owner
+can create network interfaces on with the C<--bridges> flag followed by one or more
+bridge names (in quotes). Alternately, you can allow access to all bridges with
+the C<--all-bridges> flag.
+
 =head1 Example usage
 
   cloudmin modify-owner --name freeman --add-host xenblah.home --can-run 
@@ -130,6 +135,12 @@ while(@ARGV > 0) {
 			&usage("Unknown limit type $w");
 		$maxes{$w} = -1;
 		}
+	elsif ($a eq "--bridges") {
+		$bridges = shift(@ARGV);
+		}
+	elsif ($a eq "--all-bridges") {
+		$bridges = "";
+		}
 	elsif ($a =~ /^\-\-(\S+)$/ && $pfields{$1}) {
 		push(@pset, { 'id' => $1, 'value' => shift(@ARGV) });
 		}
@@ -209,6 +220,11 @@ foreach $m (keys %maxes) {
 		}
 	}
 
+# Update bridges
+if (defined($bridges)) {
+	$owner->{'acl'}->{'bridges'} = $bridges;
+	}
+
 # Apply plugin fields
 foreach $p (@oplugins) {
 	$err = &plugin_call($p, "save_owner_fields", $owner, 0, \@pset);
@@ -243,6 +259,7 @@ if (&supports_plans()) {
 		print "                     [--max-${l} $units | --unlimited-${l} | --plan-${l}]\n";
 		}
 	}
+print "                     [--bridges \"name name\" | --all-bridges]\n";
 print "                     [--lock | --unlock]\n";
 print "                     [--real \"Real name\"]\n";
 print "                     [--add-host hostname]*\n";

@@ -121,6 +121,9 @@ if ($multi) {
 		%actions = map { $_, 1 } split(/\s+/, $o->{'acl'}->{'actions'});
 		print "    Allowed actions: ",
 		    join(" ", grep { $actions{$_} } &list_owner_actions()),"\n";
+		if ($o->{'acl'}->{'bridges'}) {
+			print "    Allowed bridges: ",$o->{'acl'}->{'bridges'},"\n";
+			}
 
 		# Limits from plugins
 		foreach $p (@oplugins) {
