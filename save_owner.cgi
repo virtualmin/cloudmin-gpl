@@ -151,6 +151,21 @@ else {
 			join(" ", split(/\0/, $in{'actions'}));
 		}
 
+	# Allowed bridges
+	if (defined($in{'bridges_def'})) {
+		if ($in{'bridges_def'}) {
+			delete($owner->{'acl'}->{'bridges'});
+			}
+		else {
+			@bridges = split(/\s+/, $in{'bridges'});
+			@bridges || &error($text{'owner_ebridges'});
+			foreach my $b (@bridges) {
+				$b =~ /^[a-z]+[0-9]+$/ || &error(&text('owner_ebridge', $b));
+				}
+			$owner->{'acl'}->{'bridges'} = join(" ", @bridges);
+			}
+		}
+
 	# Plan limit overrides
 	if (&supports_plans()) {
 		$acl = $owner->{'acl'};

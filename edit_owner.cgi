@@ -113,6 +113,12 @@ if (&supports_plans()) {
 		}
 	}
 
+# Allowed bridges
+if (@virtual_server_management_types) {
+	print &ui_table_row($text{'owner_bridges'},
+		&ui_opt_textbox("bridges", $acl->{'bridges'}, 20, $text{'owner_bridges_all'}));
+	}
+
 print &ui_hidden_table_end();
 
 # Section for plugin-defined limits
