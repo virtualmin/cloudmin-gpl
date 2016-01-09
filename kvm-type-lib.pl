@@ -5633,6 +5633,7 @@ if (&can_ssh_status($server)) {
 		}
 	}
 push(@rv, [ "KVM directory", $server->{'kvm_dir'} ]);
+push(@rv, [ "KVM version", &kvm_host_version($server) ]);
 if ($server->{'kvm_vg'}) {
 	push(@rv, [ "KVM LVM VG", $server->{'kvm_vg'} ]);
 	}
