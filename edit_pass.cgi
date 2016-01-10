@@ -77,7 +77,7 @@ if ($canpass) {
 		print &ui_table_row(&text('pass_webmin', $server->{'user'}),
 			&ui_radio("webmin_pass_def",
 				  $server->{'ssh_pass_same'} ? 2 : 1,
-				  [ [ 1, $text{'pass_leave'}.$passpop ],
+			  	[ [ 1, $text{'pass_leave'}.$passpop ],
 				    $server->{'user'} eq 'root' ? 
 					( [ 2, $text{'pass_same'} ] ) : ( ),
 				    [ 0, $text{'pass_set'} ] ])." ".
