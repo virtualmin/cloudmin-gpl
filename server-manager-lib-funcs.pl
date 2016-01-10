@@ -9780,7 +9780,7 @@ if ($info && $info->{'serial'}) {
 my $was_up = 0;
 if ($server->{'status'} ne 'down') {
 	&$first_print($text{'reset_shutting'});
-	$err = &shutdown_server($server);
+	$err = &shutdown_server($server, 1);
 	if ($err) {
 		return &text('smove_shutfailed', $err);
 		}
