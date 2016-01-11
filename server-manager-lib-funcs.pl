@@ -3375,6 +3375,13 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		$server->{'status_msg'} = $err;
 		goto NOWEBMINCHECK;
 		}
+	if ($ostype) {
+		# Cache OS as detected by Webmin for faster access
+		$server->{'webmin_os_type'} = $ostype;
+		$server->{'webmin_real_os_type'} = $real_ostype;
+		$server->{'webmin_os_version'} = $osver;
+		$server->{'webmin_real_os_version'} = $real_osver;
+		}
 
 	# Webmin is OK! Check for Virtualmin
 	my $info;

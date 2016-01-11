@@ -231,9 +231,8 @@ if (@servers) {
 					}
 				elsif ($c eq "type") {
 					my $os = &describe_os($s->{'type'});
-					$info = &get_server_collected($s);
-					if ($info && $info->{'general'}) {
-						$os .= " ".$info->{'general'}->{'real_os_version'};
+					if ($s->{'webmin_real_os_type'}) {
+						$os .= " ".$s->{'webmin_real_os_version'};
 						}
 					push(@cols, $os);
 					}
@@ -355,7 +354,7 @@ if (@servers) {
 					}
 				elsif ($c eq "down") {
 					# Down services
-					$info = &get_server_collected($s);
+					my $info = &get_server_collected($s);
 					if (!$info || !$info->{'startstop'}) {
 						push(@cols, "&nbsp;");
 						}
