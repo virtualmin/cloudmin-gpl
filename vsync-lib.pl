@@ -215,11 +215,13 @@ my @doms;
 my @srcdomobjs = &get_server_domains($src);
 @srcdomobjs = &sort_domains_parent_first(@srcdomobjs);
 my @srcdoms = map { $_->{'dom'} } @srcdomobjs;
+my %domexists = map { $_, 1 } @srcdoms;
 if ($vsync->{'doms_all'}) {
 	@doms = @srcdoms;
 	}
 else {
 	@doms = split(/\s+/, $vsync->{'doms'});
+	@doms = grep { $domexists{$_} } @doms;
 	}
 
 # Work out if the first domain has a shared home dir
