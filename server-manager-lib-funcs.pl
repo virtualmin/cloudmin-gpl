@@ -19,7 +19,7 @@ foreach my $lib ("images", "newfeatures", "owners", "login", "domainname",
 		 "bw", "usage", "backups", "locations", "vsync", "alerts",
 		 "repl", "scheduled", "dhcp", "failover", "vui", "ftp",
 		 "roundrobin", "scalegroup", "stats", "firewall", "iscsi",
-		 "cron", "s3", "rs", "snapshots", "google") {
+		 "cron", "s3", "rs", "snapshots", "google", "vbackup") {
         do "$server_manager_root/$lib-lib.pl";
         if ($@ && -r "$server_manager_root/$lib-lib.pl") {
                 print STDERR "failed to load $lib-lib.pl : $@\n";
@@ -7722,6 +7722,12 @@ if ($virtcount) {
 	push(@glinks, "list_vsyncs.cgi");
 	push(@gtitles, $text{'vsyncs_title'});
 	push(@gicons, "images/vsyncs.gif");
+	push(@gcats, "virtualmin");
+
+	# Virtualmin backups
+	push(@glinks, "list_vbackups.cgi");
+	push(@gtitles, $text{'vbackups_title'});
+	push(@gicons, "images/vbackups.gif");
 	push(@gcats, "virtualmin");
 	}
 

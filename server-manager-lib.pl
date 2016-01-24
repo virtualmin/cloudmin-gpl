@@ -63,9 +63,11 @@ $bandwidth_cron_cmd = "$module_config_directory/bandwidth.pl";
 $backup_space_cmd = "$module_config_directory/space.pl";
 $backup_cron_cmd = "$module_config_directory/backup.pl";
 $vsync_cron_cmd = "$module_config_directory/vsync.pl";
+$vbackup_cron_cmd = "$module_config_directory/vbackup.pl";
 @cron_cmds = ( $check_status_cmd, $check_licence_cmd,
 	       $bandwidth_cron_cmd, $backup_cron_cmd,
-	       $backup_space_cmd, $vsync_cron_cmd );
+	       $backup_space_cmd, $vsync_cron_cmd,
+	       $vbackup_cron_cmd, );
 
 @standard_virtualmin_features = (
 	{ 'feature' => 'dir', 'desc' => 'Home directory',
@@ -231,6 +233,8 @@ $image_storages_dir = "$module_config_directory/storages";
 $disk_directories_dir = "$module_config_directory/directories";
 
 $vsyncs_dir = "$module_config_directory/vsyncs";
+
+$vbackups_dir = "$module_config_directory/vbackups";
 
 $alerts_dir = "$module_config_directory/alerts";
 $alert_status_file = "$module_config_directory/alert-status";

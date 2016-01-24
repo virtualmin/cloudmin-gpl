@@ -5833,3 +5833,12 @@ locks_pid=Process ID
 locks_time=Action started at
 locks_age=Running for
 locks_kill=Stop Selected Actions
+
+vbackups_title=Virtual Server Backups
+vbackups_src=Source systems
+vbackups_dest=Destination
+vbackups_what=Virtual servers
+vbackups_sched=Schedule
+vbackups_none=No Virtualmin backups have been created yet.
+vbackups_add=Add a new Virtualmin backup.
+vbackups_return=backups list
