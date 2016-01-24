@@ -5842,3 +5842,31 @@ vbackups_sched=Schedule
 vbackups_none=No Virtualmin backups have been created yet.
 vbackups_add=Add a new Virtualmin backup.
 vbackups_return=backups list
+
+vbackup_title1=Add Virtual Server Backup
+vbackup_title2=Edit Virtual Server Backup
+vbackup_ecannot=You are not allowed to edit this backup config
+vbackup_egone=Backup config does not exist!
+vbackup_header1=Backed up systems and domains
+vbackup_src=Source systems
+vbackup_dest=Backup destination URLs
+vbackup_doms=Virtualmin domains to backup
+vbackup_doms_all=All on source system
+vbackup_tmpls=Virtualmin global settings to backup
+vbackup_header3=Backup schedule
+vbackup_enabled=Backup enabled?
+vbackup_when=When to backup
+vbackup_email=Send email on failure to
+vbackup_err=Failed to save virtualmin backup
+vbackup_esrc=Source system does not exist or you are not allowed to use it
+vbackup_edest=One of the destination systems does not exist or you are not allowed to use it
+vbackup_edests=No destination systems selected
+vbackup_edoms=No Virtualmin domains or global settings selected
+vbackup_efeats=No Virtualmin features selected
+vbackup_eefeats=No Virtualmin features to exclude selected
+vbackup_eemail=Missing or invalid-looking email address
+vbackup_edomon=Domain $1 does not exist on the source system
+vbackup_run=Replicate Now
+vbackup_edestsame=Source system $1 cannot also be a destination
+
+
