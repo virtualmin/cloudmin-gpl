@@ -1344,10 +1344,13 @@ elsif ($server->{'kvm_force_iscsi'} ne '') {
 	$server->{'kvm_filesystem_iscsi'} = $server->{'kvm_force_iscsi'};
 	delete($server->{'kvm_filesystem_vg'});
 	delete($server->{'kvm_filesystem_lv'});
+	delete($server->{'kvm_swapfile_vg'});
+	delete($server->{'kvm_swapfile_lv'});
         if ($server->{'kvm_swap'}) {
 		$server->{'kvm_swapfile_iscsi'} = $server->{'kvm_force_iscsi'};
-		delete($server->{'kvm_swapfile_vg'});
-		delete($server->{'kvm_swapfile_lv'});
+		}
+	else {
+		delete($server->{'kvm_swapfile_iscsi'});
 		}
 	}
 elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
@@ -1358,24 +1361,31 @@ elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
 	$fsfile = "/dev/".$server->{'kvm_filesystem_vg'}."/".
 		  $server->{'kvm_filesystem_lv'};
 	delete($server->{'kvm_filesystem_iscsi'});
+	delete($server->{'kvm_swapfile_iscsi'});
         if ($server->{'kvm_swap'}) {
                 $server->{'kvm_swapfile_vg'} = $vhost->{'kvm_vg'};
                 $server->{'kvm_swapfile_lv'} = $server->{'host'}.'_swap';
 		$server->{'kvm_swapfile_lv'} =~ s/\./_/g;
                 $swfile = "/dev/".$server->{'kvm_swapfile_vg'}."/".
                           $server->{'kvm_swapfile_lv'};
-		delete($server->{'kvm_swapfile_iscsi'});
                 }
+	else {
+		delete($server->{'kvm_swapfile_vg'});
+		delete($server->{'kvm_swapfile_lv'});
+		}
 	}
 elsif ($vhost->{'kvm_iscsi'} ne '' && !$server->{'kvm_nolvm'}) {
 	# On iSCSI server, determined by host
 	$server->{'kvm_filesystem_iscsi'} = $vhost->{'kvm_iscsi'};
 	delete($server->{'kvm_filesystem_vg'});
 	delete($server->{'kvm_filesystem_lv'});
+	delete($server->{'kvm_swapfile_vg'});
+	delete($server->{'kvm_swapfile_lv'});
         if ($server->{'kvm_swap'}) {
 		$server->{'kvm_swapfile_iscsi'} = $vhost->{'kvm_iscsi'};
-		delete($server->{'kvm_swapfile_vg'});
-		delete($server->{'kvm_swapfile_lv'});
+		}
+	else {
+		delete($server->{'kvm_swapfile_iscsi'});
 		}
 	}
 else {
@@ -1386,13 +1396,13 @@ else {
 	delete($server->{'kvm_filesystem_vg'});
 	delete($server->{'kvm_filesystem_lv'});
 	delete($server->{'kvm_filesystem_iscsi'});
+	delete($server->{'kvm_swapfile_vg'});
+	delete($server->{'kvm_swapfile_lv'});
+	delete($server->{'kvm_swapfile_iscsi'});
         if ($server->{'kvm_swap'}) {
                 $swfile = "$kvm_dir/$server->{'host'}.swap";
 		my @st = &stat_file_on_server($vhost, $swfile);
 		return "Swap image file $fsfile already exists" if (@st);
-		delete($server->{'kvm_swapfile_vg'});
-		delete($server->{'kvm_swapfile_lv'});
-		delete($server->{'kvm_swapfile_iscsi'});
                 }
 	}
 
