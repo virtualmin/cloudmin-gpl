@@ -6,17 +6,24 @@ backup-domain</tt> API command. For example :
 <ul>
 <li>A local file, like <tt>/backup/yourdomain.com.tgz</tt>
 <p>
-<li>An FTP destination, like <tt>ftp://login:pass\@server/backup/yourdomain.com.tgz</tt>
+<li>An FTP destination, like <tt>ftp://login:pass\@server/backup/domain.com.tgz</tt>
 <p>
-<li>An SSH destination, like <tt>ssh://login:pass\@server/backup/yourdomain.com.tgz</tt>
+<li>An SSH destination, like <tt>ssh://login:pass\@server/backup/domain.com.tgz</tt>
 <p>
-<li>An S3 bucket, like <tt>s3://accesskey:secretkey@bucket</tt>
+<li>An S3 bucket, like <tt>s3://accesskey:secretkey@bucket/domain.com.tgz</tt>
 <p>
-<li>A Rackspace container, like <tt>rs://user:apikey@container</tt>
+<li>A Rackspace container, like <tt>rs://user:apikey@container/domain.com.tgz</tt>
+<p>
+<li>A Google Cloud Storage bucket, like <tt>gcs://bucket/domain.com.tgz</tt>
+<p>
+<li>A Dropbox folder, like <tt>dropbox://folder/domain.com.tgz</tt>
 </ul>
 
 Any destination that ends with <tt>tar.gz</tt> or <tt>zip</tt> will be assumed
 to be a single file, which will contain all selected domains. Anything else
 will be treated as a directory, which will receive one file per domain. <p>
+
+For Dropbox and GCS backups, each Virtualmin system must already have an
+account with the storage provider configured. <p>
 
 <footer>
