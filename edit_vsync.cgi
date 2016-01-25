@@ -49,6 +49,7 @@ foreach $s (@servers) {
 @doms = split(/\s+/, $vsync->{'doms'});
 @doms = sort { $a cmp $b } @doms;
 @alldoms = sort { $a->{'dom'} cmp $b->{'dom'} } @alldoms;
+@alldoms = grep { $_->{'dom'} } @alldoms;
 print &ui_table_row($text{'vsync_doms'},
 	&ui_checkbox("doms_all", 1, $text{'vsync_doms_all'},
 		     $vsync->{'doms_all'})."\n".
@@ -68,7 +69,7 @@ print &ui_hidden_table_start($text{'vsync_header2'}, "width=100%", 2,
 @tmpls = split(/\s+/, $vsync->{'tmpls'});
 print &ui_table_row($text{'vsync_tmpls'},
 	&ui_grid_table(
-	       [ map { &ui_checkbox("tmpl", $_, $text{'vsync_tmpl_'.$_},
+	       [ map { &ui_checkbox("tmpl", $_, $text{'vsync_tmpl_'.$_} || $_,
 				    &indexof($_, @tmpls) >= 0)."<br>\n" }
 		     &list_virtualmin_globals(\@servers) ], 2, 100));
 

@@ -4253,6 +4253,7 @@ vsync_tmpl_scripts=Third-party script installers
 vsync_tmpl_styles=Third-party content styles
 vsync_tmpl_scheds=Scheduled Virtualmin backups
 vsync_tmpl_chroot=FTP directory restrictions
+vsync_tmpl_mailserver=Mail server settings
 vsync_err=Failed to save virtualmin replication
 vsync_esrc=Source system does not exist or you are not allowed to use it
 vsync_edest=One of the destination systems does not exist or you are not allowed to use it

@@ -48,6 +48,7 @@ foreach $s (@servers) {
 @doms = split(/\s+/, $vbackup->{'doms'});
 @doms = sort { $a cmp $b } @doms;
 @alldoms = sort { $a->{'dom'} cmp $b->{'dom'} } @alldoms;
+@alldoms = grep { $_->{'dom'} } @alldoms;
 print &ui_table_row($text{'vbackup_doms'},
 	&ui_checkbox("doms_all", 1, $text{'vsync_doms_all'},
 		     $vbackup->{'doms_all'})."\n".
@@ -60,7 +61,7 @@ print &ui_table_row($text{'vbackup_doms'},
 @tmpls = split(/\s+/, $vbackup->{'tmpls'});
 print &ui_table_row($text{'vbackup_tmpls'},
 	&ui_grid_table(
-	       [ map { &ui_checkbox("tmpl", $_, $text{'vsync_tmpl_'.$_},
+	       [ map { &ui_checkbox("tmpl", $_, $text{'vsync_tmpl_'.$_} || $_,
 				    &indexof($_, @tmpls) >= 0)."<br>\n" }
 		     &list_virtualmin_globals(\@servers) ], 2, 100));
 
