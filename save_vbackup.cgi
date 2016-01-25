@@ -42,23 +42,21 @@ else {
 	@dests = split(/\r?\n/, $in{'dest'});
 	@dests || &error($text{'vbackup_edests'});
 	foreach $dest (@dests) {
-		# XXX
+		$dest =~ /^(ftp|ssh|s3|s3rrs|rs|gcs|dropbox):/ ||
+		    $dest =~ /^\/\S+$/ ||
+			&error(&text('vbackup_edest', $dest));
 		}
+	$vbackup->{'dest'} = join(" ", @dests);
 
 	# Parse domains
 	@doms = split(/\r?\n/, $in{'doms'});
 	$vbackup->{'doms'} = join(" ", @doms);
-	%srcdoms = map { $_->{'dom'}, $_ } &get_server_domains($src);
-	foreach $dname (@doms) {
-		$srcdoms{$dname} ||
-		    &error(&text('vbackup_edomon', &show_domain_name($dname)));
-		}
 	$vbackup->{'doms_all'} = $in{'doms_all'};
 
 	# Parse global settings
 	$vbackup->{'tmpls'} = join(" ", split(/\0/, $in{'tmpl'}));
 	$vbackup->{'doms'} || $vbackup->{'tmpls'} || $vbackup->{'doms_all'} ||
-		&error($text{'vbackup_edoms'});
+		&error($text{'vsync_edoms'});
 	
 	# Parse schedule
 	$vbackup->{'enabled'} = $in{'enabled'};
@@ -67,7 +65,7 @@ else {
 	# Parse email
 	if ($in{'emailother'}) {
 		$in{'email'} =~ /^\S+\@\S+$/ ||
-			&error($text{'vbackup_eemail'});
+			&error($text{'vsync_eemail'});
 		$vbackup->{'email'} = $in{'email'};
 		}
 	else {
