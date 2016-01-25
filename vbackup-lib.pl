@@ -114,13 +114,28 @@ if ($job) {
 	}
 }
 
+# get_virtualmin_backup_srcs(&vsync)
+# Returns an array of source systems for some backup
+sub get_virtualmin_backup_srcs
+{
+my ($vbackup) = @_;
+my @rv;
+foreach my $id (split(/\s+/, $vbackup->{'src'})) {
+	my $s = &get_managed_server($id);
+	push(@rv, $s) if ($s);
+	}
+return @rv;
+}
+
 # can_virtualmin_backup(&vbackup)
 # Checks if the current user can edit a backup
 sub can_virtualmin_backup
 {
 my ($vbackup) = @_;
-my $src = &get_managed_server($vbackup->{'src'});
-return &can_action($src, "domains");
+foreach my $src (&get_virtualmin_backup_srcs($vbackup)) {
+	return 0 if (!&can_action($src, "domains"));
+	}
+return 1;
 }
 
 # backup_virtualmin_domains(&vbackup)

@@ -35,7 +35,7 @@ print &ui_table_row($text{'vbackup_src'},
 		10, 1, 0, $text{'vsync_destopts'}, $text{'vsync_destvals'}));
 
 # Backup destination URL
-print &ui_table_row($text{'vbackup_dest'},
+print &ui_table_row(&hlink($text{'vbackup_dest'}, 'vbackup_dest'),
 	&ui_textarea("dests", join("\n", split(/\s+/, $vbackup->{'dest'})),
 		     5, 60));
 

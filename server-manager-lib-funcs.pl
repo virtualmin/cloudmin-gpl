@@ -3404,6 +3404,9 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			local $SIG{'ALRM'} = sub { die "timeout\n" };
 			my @doms = &remote_foreign_call($server,
 					"virtual-server", "list_domains");
+			foreach my $d (@doms) {
+				$d->{'cloudmin_id'} = $server->{'id'};
+				}
 			&save_server_domains($server, \@doms);
 
 			# Get and save collected status info

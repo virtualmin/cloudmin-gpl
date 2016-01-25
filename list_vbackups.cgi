@@ -15,20 +15,19 @@ if (@vbackups) {
 				  $text{'vbackups_what'},
 				  $text{'vbackups_sched'} ], 100);
 	foreach $v (@vbackups) {
-		$src = &get_managed_server($v->{'src'});
-		@users = &get_virtualmin_sync_dests($v);
+		@users = &get_virtualmin_backup_srcs($v);
 		$users = @users == 0 ? $text{'keys_nousers'} :
                          @users > 4 ? &text('keys_manyusers', scalar(@users)) :
                            join(", ", map { "<tt>$_->{'host'}</tt>" } @users);
 		@doms = split(/\s+/, $v->{'doms'});
-		$what = $v->{'doms_all'} ? $text{'vbackups_domsall'} :
-		        @doms == 0 ? $text{'vbackups_templates'} :
-			@doms > 4 ? &text('vbackups_manydoms', scalar(@doms)) :
+		$what = $v->{'doms_all'} ? $text{'vsyncs_domsall'} :
+		        @doms == 0 ? $text{'vsyncs_templates'} :
+			@doms > 4 ? &text('vsyncs_manydoms', scalar(@doms)) :
 			  join(", ", map { "<tt>$_</tt>" } @doms);
 		print &ui_columns_row([
 			"<a href='edit_vbackup.cgi?id=$v->{'id'}'>".
-			  $src->{'host'}."</a>",
-			$users,
+			  $users."</a>",
+			$v->{'dest'},
 			$what,
 			$v->{'enabled'} ? &cron::when_text($v, 1)
 				        : $text{'backups_dis'},

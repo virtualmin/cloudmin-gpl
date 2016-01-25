@@ -1,0 +1,22 @@
+<header>Backup destination URLs</header>
+
+Backup destinations must be entered in the format used by the <tt>virtualmin
+backup-domain</tt> API command. For example :
+
+<ul>
+<li>A local file, like <tt>/backup/yourdomain.com.tgz</tt>
+<p>
+<li>An FTP destination, like <tt>ftp://login:pass\@server/backup/yourdomain.com.tgz</tt>
+<p>
+<li>An SSH destination, like <tt>ssh://login:pass\@server/backup/yourdomain.com.tgz</tt>
+<p>
+<li>An S3 bucket, like <tt>s3://accesskey:secretkey@bucket</tt>
+<p>
+<li>A Rackspace container, like <tt>rs://user:apikey@container</tt>
+</ul>
+
+Any destination that ends with <tt>tar.gz</tt> or <tt>zip</tt> will be assumed
+to be a single file, which will contain all selected domains. Anything else
+will be treated as a directory, which will receive one file per domain. <p>
+
+<footer>
