@@ -64,24 +64,6 @@ else {
 	@servers = @allservers;
 	}
 
-# Build select links
-@links = ( &select_all_link("d", $formno), &select_invert_link("d", $formno) );
-@upservers = grep { $_->{'status'} eq 'virt' ||
-		    $_->{'status'} eq 'novirt' ||
-		    $_->{'status'} eq 'nowebminlogin' ||
-		    $_->{'status'} eq 'downwebmin' ||
-		    $_->{'status'} eq 'nowebmin' } @servers;
-@weservers = grep { $_->{'status'} eq 'virt' ||
-                    $_->{'status'} eq 'novirt' } @servers;
-if (@upservers && defined(&select_rows_link)) {
-	push(@links, &select_rows_link("d", $formno, $text{'index_selup'},
-				       [ map { $_->{'id'} } @upservers ]));
-	}
-if (@weservers && defined(&select_rows_link)) {
-	push(@links, &select_rows_link("d", $formno, $text{'index_selwe'},
-				       [ map { $_->{'id'} } @weservers ]));
-	}
-
 # Show a table of managed servers
 $posscount = $virtcount = $procount = 0;
 if (@servers) {
@@ -186,9 +168,26 @@ if (@servers) {
 
 	print &ui_form_start("mass.cgi", "post");
 	@tds = ( "width=5" );
-	print &ui_links_row([ @links, @crlinks ]);
 	foreach $cat (@cats) {
+		# Build select links
+		@links = ( &select_rows_link(
+				"d", $formno, $text{'ui_selall'},
+				[ map { $_->{'id'} } @{$cat->[0]} ]) );
+		@upservers = grep { !&can_down_status($_) } @{$cat->[0]};
+		@weservers = grep { &can_webmin_status($_) } @{$cat->[0]};
+		if (@upservers) {
+			push(@links, &select_rows_link(
+					"d", $formno, $text{'index_selup'},
+					[ map { $_->{'id'} } @upservers ]));
+			}
+		if (@weservers) {
+			push(@links, &select_rows_link(
+					"d", $formno, $text{'index_selwe'},
+					[ map { $_->{'id'} } @weservers ]));
+			}
+
 		print &ui_subheading($cat->[1]) if ($cat->[1]);
+		print &ui_links_row([ @links, @crlinks ]);
 		print &ui_columns_start([
 			"",
 			$text{'index_host'},
@@ -396,8 +395,8 @@ if (@servers) {
 			$delcount++ if (&is_virtual_server($s));
 			}
 		print &ui_columns_end();
+		print &ui_links_row([ @links, @crlinks ]);
 		}
-	print &ui_links_row([ @links, @crlinks ]);
 	@buts = (    [ "refresh", $text{'index_refresh'} ],
 		     [ "regen", $text{'index_regen'} ],
 		     $posscount ? ( [ "update",$text{'index_update'} ] )

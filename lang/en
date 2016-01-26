@@ -5836,7 +5836,7 @@ locks_age=Running for
 locks_kill=Stop Selected Actions
 
 vbackups_title=Virtual Server Backups
-vbackups_src=Source systems
+vbackups_srcs=Source systems
 vbackups_dest=Destination
 vbackups_what=Virtual servers
 vbackups_sched=Schedule
@@ -5872,5 +5872,5 @@ vbackup_edestsame=Source system $1 cannot also be a destination
 vbackup_err=Failed to save virtualmin backup
 vbackup_esrcs=No systems to backup selected
 vbackup_esrc=One of the source systems does not exist or you are not allowed to use it
-vbackup_edests=No destination URLS entered
+vbackup_edests=No destination URLs entered
 vbackup_edest=Destination URL $1 does not look valid

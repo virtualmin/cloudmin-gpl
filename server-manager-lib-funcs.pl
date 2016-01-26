@@ -794,7 +794,6 @@ elsif ($st eq 'bad') {
 else {
 	return ( $st );
 	}
-
 }
 
 # describe_os(os)
@@ -912,7 +911,8 @@ return &text('edit_of', &nice_size($disktotal - $diskfree),
 sub can_ssh_status
 {
 my ($server) = @_;
-return $server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt' ||
+return $server->{'status'} eq 'virt' ||
+       $server->{'status'} eq 'novirt' ||
        $server->{'status'} eq 'nowebmin' ||
        $server->{'status'} eq 'nowebminlogin' ||
        $server->{'status'} eq 'downwebmin';
@@ -933,6 +933,14 @@ sub can_webmin_status
 {
 my ($server) = @_;
 return $server->{'status'} eq 'virt' || $server->{'status'} eq 'novirt';
+}
+
+# can_down_status(&server)
+# Returns 1 if a server is down
+sub can_down_status
+{
+my ($server) = @_;
+return $server->{'status'} eq 'down' || $server->{'status'} eq 'nohost';
 }
 
 # list_ssh_keys()
