@@ -19,7 +19,7 @@ while(@ARGV) {
 $vbackupid || &usage("No backup ID specified");
 $vbackup = &get_virtualmin_backup($vbackupid);
 $vbackup || &usage("No backup config with ID $vbackupid found");
-$src = &get_managed_server($vbackup->{'src'});
+@srcs = &get_virtualmin_backup_srcs($vbackup);
 @doms = split(/\s+/, $vbackup->{'doms'});
 
 # Execute it, capturing the output
@@ -34,13 +34,14 @@ push(@emails, $config{'bw_email'}) if ($vbackup->{'emailmaster'} &&
 				       $config{'bw_email'});
 if (!$ok && @emails) {
 	&foreign_require("mailboxes");
+	$srcnames = join(" ", map { $_->{'host'} } @srcs);
 	foreach $email (@emails) {
 		&mailboxes::send_text_mail(
 			&get_global_from_address($src),
 			@emails,
 			undef,
 			&text(@doms ? 'vbackup_fsubject' : 'vbackup_fsubject2',
-			      scalar(@doms), $src->{'host'}),
+			      scalar(@doms), $srcnames),
 			$capture_print,
 			);
 		}

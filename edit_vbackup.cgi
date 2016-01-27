@@ -36,8 +36,8 @@ print &ui_table_row($text{'vbackup_src'},
 
 # Backup destination URL
 print &ui_table_row(&hlink($text{'vbackup_dest'}, 'vbackup_dest'),
-	&ui_textarea("dests", join("\n", split(/\s+/, $vbackup->{'dest'})),
-		     5, 60));
+	&ui_textarea("dest", join("\n", split(/\s+/, $vbackup->{'dest'})),
+		     3, 60));
 
 # Domains to include
 @alldoms = ( );

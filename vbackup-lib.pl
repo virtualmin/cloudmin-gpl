@@ -138,221 +138,79 @@ foreach my $src (&get_virtualmin_backup_srcs($vbackup)) {
 return 1;
 }
 
+# backup_virtualmin_domains_one(&server, &backup)
+# Backup domains on a single system
+sub backup_virtualmin_domains_one
+{
+my ($server, $vbackup) = @_;
+
+# Work out which domains are wanted, and are on this system
+my @doms = split(/\s+/, $vbackup->{'doms'});
+my %domsmap = map { $_, 1 } @doms;
+my @srcdomobjs = &get_server_domains($server);
+@srcdomobjs = &sort_domains_parent_first(@srcdomobjs);
+my @srcdoms;
+if ($vbackups->{'doms_all'}) {
+	@srcdoms = map { $_->{'dom'} } @srcdomobjs;
+	}
+else {
+	@srcdoms = grep { $domsmap{$_} }
+			map { $_->{'dom'} } @srcdomobjs;
+	}
+
+# Construct the backup command
+my @args;
+foreach my $dest (split(/\s+/, $vbackup->{'dest'})) {
+	push(@args, [ "dest", $dest ]);
+	}
+push(@args, map { [ "domain", $_ ] } @srcdoms);
+my @tmpls = split(/\s+/, $vbackup->{'tmpls'});
+push(@args, map { [ "virtualmin", $_ ] } @tmpls);
+push(@args, [ "all-features" ]);
+if ($dests[0] !~ /\.(gz|tgz|tar.gz|zip|tar.bz2)$/i) {
+	push(@args, [ "newformat" ]);
+	}
+
+# Call the API
+my ($err, $out) = &call_virtualmin_api($server, "backup-domain", \@args);
+if ($err || $out !~ /Final\s+size\s+was\s+([0-9\.]+\s*\S+)/) {
+	return (0, $err || $out);
+	}
+my $nicesize = $1;
+
+return (1, $nicesize, scalar(@srcdoms), scalar(@tmpls));
+}
+
 # backup_virtualmin_domains(&vbackup)
 # Execute a Virtualmin domain backup, printing output as it goes
 sub backup_virtualmin_domains
 {
 my ($vbackup) = @_;
-# XXX
+my @srcs = &get_virtualmin_backup_srcs($vbackup);
+my @doms = split(/\s+/, $vbackup->{'doms'});
 
-&$first_print($text{'vbackup_finding'});
-my $src = &get_managed_server($vbackup->{'src'});
-my @dests = &get_virtualmin_backup_dests($vbackup);
-if (!$src) {
-	&$second_print($text{'vbackup_efindsrc'});
-	return 0;
-	}
-if (!@dests) {
-	&$second_print($text{'vbackup_efinddest'});
-	return 0;
-	}
-if (@dests == 1) {
-	&$second_print(&text('vbackup_foundone', $src->{'host'},
-					       $dests[0]->{'host'}));
-	}
-else {
-	&$second_print(&text('vbackup_found', $src->{'host'}, scalar(@dests)));
-	}
-
-# Refresh status of source system, to ensure domains list is up to date
+# Refresh status of source systems, to ensure domains list is up to date
 &$first_print($text{'vbackup_refreshing'});
-&check_server_status($src);
-&save_managed_server($src);
+&parallel_check_server_status(\@srcs, 0, 1);
 &$second_print($text{'create_done'});
 
-# Create temp dirs on the source and dests
-&$first_print($text{'vbackup_temp'});
-my %tempdir;
-foreach my $s ($src, @dests) {
-	my $temp = &tempname_on_server($s);
-	if (!$temp) {
-		&$first_print(&text('vbackup_etemp', $s->{'host'}));
-		return 0;
-		}
-	my $err = &make_dir_on_server($s, $temp, 0700, 1);
-	if ($err) {
-		&$first_print(&text('vbackup_emktemp', $s->{'host'}, $err));
-		return 0;
-		}
-	$tempdir{$s->{'id'}} = $temp;
-	}
-my $srctemp = $tempdir{$src->{'id'}};
-&$second_print($text{'create_done'});
+# Backup each server in parallel
+&$first_print(&text('vbackup_doing', scalar(@srcs)));
+my @rv = &parallel_server_function(\@srcs, \&backup_virtualmin_domains_one,
+			           $vbackup);
+&$second_print($text{'vbackup_pdone'});
 
-# Work out domains
-my @doms;
-my @srcdomobjs = &get_server_domains($src);
-@srcdomobjs = &sort_domains_parent_first(@srcdomobjs);
-my @srcdoms = map { $_->{'dom'} } @srcdomobjs;
-my %domexists = map { $_, 1 } @srcdoms;
-if ($vbackup->{'doms_all'}) {
-	@doms = @srcdoms;
-	}
-else {
-	@doms = split(/\s+/, $vbackup->{'doms'});
-	@doms = grep { $domexists{$_} } @doms;
+# Print the result messages
+my $fails = 0;
+for(my $i=0; $i<@rv; $i++) {
+	my ($ok, $msg, $dc, $tc) = @{$rv[$i]};
+	&$first_print(&text('vbackup_result', $srcs[$i]->{'host'},
+			    $ok ? &text('vbackup_size', $msg, $dc, $tc)
+				: &text('vbackup_fail', $msg)));
+	$fails++ if (!$ok);
 	}
 
-# Work out if the first domain has a shared home dir
-my ($err, $out) = &call_virtualmin_api($src, "list-domains",
-				       [ [ "simple-multiline" ],
-					 [ "domain", $doms[0] ] ]);
-my %remotes;
-if ($err) {
-	&$second_print(&text('vbackup_remoteerr', $err));
-	return 0;
-	}
-if ($out =~ /Remote\s+features:\s*(.*)/) {
-	%remotes = map { $_, 1 } split(/\s+/, $1);
-	}
-
-# Backup all domains to the temp dir
-my @args = ( [ "dest", $srctemp ] );
-&$first_print(&text('vbackup_backup', scalar(@doms)));
-if (!@doms && !$vbackup->{'tmpls'}) {
-	&$second_print($text{'vbackup_ebackupdoms'});
-	return 0;
-	}
-push(@args, map { [ "domain", $_ ] } @doms);
-my @tmpls = split(/\s+/, $vbackup->{'tmpls'});
-push(@args, map { [ "virtualmin", $_ ] } @tmpls);
-my @feats = split(/\s+/, $vbackup->{'feats'});
-my @efeats = split(/\s+/, $vbackup->{'efeats'});
-if (@feats) {
-	push(@args, map { [ "feature", $_ ] } @feats);
-	push(@args, [ &indexof("dir", @feats) >= 0 ? "newformat"
-						   : "separate" ]);
-	}
-elsif (@efeats) {
-	push(@args, [ "all-features" ]);
-	push(@args, map { [ "except-feature", $_ ] } @efeats);
-	push(@args, [ &indexof("dir", @efeats) < 0 ? "newformat"
-						   : "separate" ]);
-	}
-else {
-	push(@args, [ "all-features" ]);
-	push(@args, [ "newformat" ]);
-	}
-my ($err, $out) = &call_virtualmin_api($src, "backup-domain", \@args);
-if ($err || $out !~ /Final\s+size\s+was\s+([0-9\.]+\s*\S+)/) {
-	&delete_file_on_server($src, $srctemp);
-	&$second_print(&text('vbackup_ebackup', $err));
-	return 0;
-	}
-my $nicesize = $1;
-
-# Find the created file for each domain
-my %dompath;
-if (@tmpls) {
-	push(@doms, "virtualmin");
-	}
-foreach my $dname (@doms) {
-	foreach my $sfx ("tar.gz", "tar.bz2", "tar", "zip") {
-		my $path = "$srctemp/$dname.$sfx";
-		my @st = &stat_file_on_server($src, $path);
-		if (@st && $st[7]) {
-			$dompath{$dname} = $path;
-			last;
-			}
-		}
-	if (!$dompath{$dname}) {
-		&delete_file_on_server($src, $srctemp);
-		&$second_print(&text('vbackup_ebackupfile', $dname));
-		return 0;
-		}
-	}
-&$second_print(&text('vbackup_backed', $nicesize));
-
-# Transfer each to the targets, in parallel
-&$first_print($text{'vbackup_transfer'});
-my @rargs = grep { $_->[0] ne "dest" && $_->[0] ne "newformat" &&
-		   $_->[0] ne "separate" } @args;
-my $args = [ $src, \@doms, \%dompath, \%tempdir, \@rargs, $remotes{'dir'} ];
-my @transouts = &parallel_server_function(
-			\@dests, \&transfer_virtualmin_domains, $args);
-my @transok = grep { $_->[0] } @transouts;
-my @transfailed = grep { !$_->[0] } @transouts;
-my $ok = 1;
-if (@transfailed) {
-	&$second_print(&text('vbackup_etransfer',
-			     scalar(@transok), scalar(@transfailed)));
-	foreach my $t (@transfailed) {
-		&$second_print(&text('vbackup_etransfer2',
-				     $t->[1], $t->[3], $t->[2]));
-		}
-	$ok = 0;
-	}
-else {
-	&$second_print($text{'create_done'});
-	}
-
-# Clean up on source
-if ($srctemp) {
-	&delete_file_on_server($src, $srctemp);
-	}
-
-# Restore on the targets for which the transfer worked, in parallel
-&$first_print($text{'vbackup_restore'});
-my @okdests;
-for(my $i=0; $i<@dests; $i++) {
-	if ($transouts[$i]->[0]) {
-		push(@okdests, $dests[$i]);
-		}
-	}
-my @restoreouts = &parallel_server_function(
-			\@okdests, \&restore_virtualmin_domains, $args);
-my @restoreok = grep { $_->[0] } @restoreouts;
-my @restorefailed = grep { !$_->[0] } @restoreouts;
-if (@restorefailed) {
-	&$second_print(&text('vbackup_erestore',
-			     scalar(@restoreok), scalar(@restorefailed)));
-	foreach my $t (@restorefailed) {
-		&$second_print(&text('vbackup_erestore2', $t->[2], $t->[1]));
-		}
-	$ok = 0;
-	}
-else {
-	&$second_print($text{'create_done'});
-	}
-
-# Clean up on targets
-foreach my $dest (@dests) {
-	my $desttemp = $tempdir{$dest->{'id'}};
-	if ($desttemp) {
-		&delete_file_on_server($dest, $desttemp);
-		}
-	}
-
-return $ok;
-}
-
-# transfer_virtualmin_domains(&dest, &args)
-# Transfer all domain files to a remote system
-sub transfer_virtualmin_domains
-{
-my $dest = $_[0];
-my ($src, $doms, $dompath, $tempdir) = @{$_[1]};
-my $desttemp = $tempdir->{$dest->{'id'}};
-foreach my $dname (@$doms) {
-	my $filename = $dompath->{$dname};
-	$filename =~ s/^.*\///;
-	my $err = &transfer_file_between_servers(
-		$src, $dest, $dompath->{$dname}, "$desttemp/$filename");
-	if ($err) {
-		return ( 0, $err, $dest->{'host'} );
-		}
-	}
-return ( 1 );
+return !$fails;
 }
 
 1;
