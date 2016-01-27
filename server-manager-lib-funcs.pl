@@ -4721,6 +4721,11 @@ else {
 		$path = "/?dom=$d->{'id'}";
 		$target = "_blank";
 		}
+	elsif ($info->{'general'}->{'theme'} eq 'authentic-theme') {
+		# Can link using theme's domain display mode
+		$path = "/?virtualmin&dom=$d->{'dom'}";
+		$target = "_blank";
+		}
 	else {
 		# Need to link to edit_domain.cgi
 		$path = "/virtual-server/edit_domain.cgi?dom=$d->{'id'}";
