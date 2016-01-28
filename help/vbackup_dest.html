@@ -26,4 +26,9 @@ will be treated as a directory, which will receive one file per domain. <p>
 For Dropbox and GCS backups, each Virtualmin system must already have an
 account with the storage provider configured. <p>
 
+You can use the tags <tt>${HOST}</tt> and <tt>${IP}</tt> in backup destinations,
+which will be replaced by the source system hostname and IP address respectively
+for each system. This allows different systems to backup to different final
+directories. <p>
+
 <footer>
