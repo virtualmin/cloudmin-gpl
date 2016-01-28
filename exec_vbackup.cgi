@@ -30,7 +30,7 @@ if ($ok) {
 else {
 	print "<b>$text{'vbackup_failed'}</b><p>\n";
 	}
-&webmin_log("exec", "vbackup", $src->{'host'}, { 'doms' => \@doms });
+&webmin_log("exec", "vbackup", $srcs[0]->{'host'}, { 'doms' => \@doms });
 
 &ui_print_footer("list_vbackups.cgi", $text{'vbackups_return'});
 

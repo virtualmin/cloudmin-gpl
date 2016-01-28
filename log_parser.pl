@@ -240,18 +240,18 @@ elsif ($type eq "backuplog") {
 		return &text('log_'.$action.'_backuplogs', scalar(@dests));
 		}
 	}
-elsif ($type eq "vsync") {
-	# Domain sync
+elsif ($type eq "vsync" || $type eq "vbackup") {
+	# Domain sync / backup
 	my @doms = split(/\0/, $p->{'doms'});
 	if (!@doms) {
-		return &text('log_'.$action.'_vsync_g', $object);
+		return &text('log_'.$action.'_'.$type.'_g', $object);
 		}
 	elsif (!$long) {
-		return &text('log_'.$action.'_vsync', $object, scalar(@doms));
+		return &text('log_'.$action.'_'.$type, $object, scalar(@doms));
 		}
 	else {
 		@doms = @doms[0..4] if (@doms > 4);
-		return &text('log_'.$action.'_vsync_l', $object,
+		return &text('log_'.$action.'_'.$type.'_l', $object,
 				join(' ', @doms));
 		}
 	}
