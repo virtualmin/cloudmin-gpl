@@ -5885,6 +5885,10 @@ vbackup_esrcs=No systems to backup selected
 vbackup_esrc=One of the source systems does not exist or you are not allowed to use it
 vbackup_edests=No destination URLs entered
 vbackup_edest=Destination URL $1 does not look valid
+vbackup_purge=Delete old backups after
+vbackup_nopurge=Don't delete
+vbackup_days=days
+vbackup_epurge=Days to delete old backups after must be a number
 
 vbackup_title3=Backup Virtual Servers
 vbackup_running=Starting backup of $1 virtual servers and $2 settings in total from $3 to $4 ..

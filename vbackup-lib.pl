@@ -165,8 +165,11 @@ my $mkdir = 0;
 foreach my $dest (split(/\s+/, $vbackup->{'dest'})) {
 	$strftime = 1 if ($dest =~ /%/);
 	$mkdir = 1 if ($dest =~ /^\//);
-	$dest = &substitute_template($dest, \$server);
+	$dest = &substitute_template($dest, $server);
 	push(@args, [ "dest", $dest ]);
+	}
+if ($vbackup->{'purge'}) {
+	push(@args, [ "purge", $vbackup->{'purge'} ]);
 	}
 push(@args, map { [ "domain", $_ ] } @srcdoms);
 my @tmpls = split(/\s+/, $vbackup->{'tmpls'});

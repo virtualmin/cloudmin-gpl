@@ -34,10 +34,15 @@ print &ui_table_row($text{'vbackup_src'},
 		[ map { [ $_->{'id'}, $_->{'host'} ] } @servers ],
 		10, 1, 0, $text{'vsync_destopts'}, $text{'vsync_destvals'}));
 
-# Backup destination URL
+# Backup destination URLs
 print &ui_table_row(&hlink($text{'vbackup_dest'}, 'vbackup_dest'),
 	&ui_textarea("dest", join("\n", split(/\s+/, $vbackup->{'dest'})),
 		     3, 60));
+
+# Purge old backups
+print &ui_table_row($text{'vbackup_purge'},
+	&ui_opt_textbox("purge", $vbackup->{'purge'}, 5,
+			$text{'vbackup_nopurge'})." ".$text{'vbackup_days'});
 
 # Domains to include
 @alldoms = ( );

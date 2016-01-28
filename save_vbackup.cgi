@@ -48,6 +48,16 @@ else {
 		}
 	$vbackup->{'dest'} = join(" ", @dests);
 
+	# Parse purge days
+	if ($in{'purge_def'}) {
+		delete($vbackup->{'purge'});
+		}
+	else {
+		$in{'purge'} =~ /^\d+(\.\d+)?$/ ||
+			&error($text{'vbackup_epurge'});
+		$vbackup->{'purge'} = $in{'purge'};
+		}
+
 	# Parse domains
 	@doms = split(/\r?\n/, $in{'doms'});
 	$vbackup->{'doms'} = join(" ", @doms);
