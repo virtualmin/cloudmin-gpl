@@ -160,7 +160,11 @@ else {
 
 # Construct the backup command
 my @args;
+my $strftime = 0;
+my $mkdir = 0;
 foreach my $dest (split(/\s+/, $vbackup->{'dest'})) {
+	$strftime = 1 if ($dest =~ /%/);
+	$mkdir = 1 if ($dest =~ /^\//);
 	push(@args, [ "dest", $dest ]);
 	}
 push(@args, map { [ "domain", $_ ] } @srcdoms);
@@ -170,6 +174,8 @@ push(@args, [ "all-features" ]);
 if ($dests[0] !~ /\.(gz|tgz|tar.gz|zip|tar.bz2)$/i) {
 	push(@args, [ "newformat" ]);
 	}
+push(@args, [ "mkdir" ]) if ($mkdir);
+push(@args, [ "strftime" ]) if ($strftime);
 
 # Call the API
 my ($err, $out) = &call_virtualmin_api($server, "backup-domain", \@args);
