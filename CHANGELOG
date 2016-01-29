@@ -108,3 +108,4 @@ When deleting a replicated Virtualmin domain, Cloudmin will preserve shared reso
 When creating a Virtualmin domain on a system with sycning enabled, Cloudmin can now replicate it immediately to other hosts.
 Added the Running Actions page to view and terminate operations with locks on Cloudmin systems. Also created the equivalent list-system-locks API command.
 ---- Changes since 8.4 ----
+Virtualmin backups can be scheduled across multiple Cloudmin-managed systems to a common destination.
