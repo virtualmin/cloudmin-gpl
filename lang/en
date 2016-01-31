@@ -1352,6 +1352,9 @@ openvz_typeshort=OpenVZ
 lxc_typedesc=LXC
 lxc_typeshort=LXC
 
+docker_typedesc=Docker
+docker_typeshort=Docker
+
 vservers_title=VServer Host Systems
 vservers_host=System hostname
 vservers_os=OS
@@ -1486,6 +1489,47 @@ lxc_eiface=Missing or invalid-looking base network interface
 lxc_bridge=Bridge on host system for LXC interfaces
 lxc_ebridges=LXC host system does not have any network bridges - these are needed for LXC container networking
 lxc_ebridge=Selected bridge $1 does not exist
+
+dockers_title=Docker Host Systems
+dockers_host=System hostname
+dockers_os=OS
+dockers_users=Hosted systems
+dockers_nousers=None
+dockers_manyusers=$1 systems
+dockers_none=No systems have been registered for Docker hosting yet.
+dockers_none2=None of the registered systems can host Docker containers.
+dockers_return=list of Docker hosts
+
+docker_create=Register Docker Host
+docker_edit=Edit Docker Host
+docker_editlink=Docker Host Settings
+docker_egone=The Docker host no longer exists!
+docker_header=Docker host system details
+docker_host=System hosting Docker containers
+docker_dir=Base directory for virtual systems
+docker_storage=Store instance files in
+docker_domain=Add Docker systems to DNS domain
+docker_domain2=DNS domain for Docker servers<br><font size=-1>(Setup a DNS server on this system<br>to enable automatic DNS record creation)</font>
+docker_range=IP address allocation ranges
+docker_startend=$1 to $2 / $3
+docker_iface=Base network interface
+docker_ether=First ethernet interface
+docker_portclash=Check for possible port clashes?
+docker_auto=Decide automatically
+docker_reg=Register
+docker_unreg=De-Register
+docker_find=Find Hosted Docker Containers
+docker_err=Failed to save Docker host
+docker_elinux=Docker containers are only supported on Linux
+docker_ewhich=The required command $1 does not exist. Perhaps the Docker software is not installed?
+docker_edown=A system which cannot be contacted via SSH cannot be used for Docker hosting
+docker_esoft=The selected system cannot support Docker containers : $1
+docker_edir=The specified base directory does not exist
+docker_ezone=Missing or invalid-looking DNS domain
+docker_eiface=Missing or invalid-looking base network interface
+docker_bridge=Bridge on host system for Docker interfaces
+docker_ebridges=Docker host system does not have any network bridges - these are needed for Docker container networking
+docker_ebridge=Selected bridge $1 does not exist
 
 vchooser_title=Select VServer Instance
 vchooser_elist=Failed to fetch VServers : $1

@@ -40,6 +40,7 @@ push(@INC, $server_manager_root);
 				      "zones",
 				      "openvz",
 				      "lxc",
+				      "docker",
 				      "ec2",
 				      "gce",
 				      "this",
@@ -332,7 +333,7 @@ elsif ($mode == 1) {
 			$cs->{'indent_host'} = $s->{'id'};
 			push(@newrv, $cs);
 			foreach my $ccs (&list_child_servers($cs, \@rv)) {
-				# Third level (lxc or openvz on xen)
+				# Third level (lxc, docker or openvz on xen)
 				$ccs->{'indent'} = 2;
 				$ccs->{'indent_host'} = $cs->{'id'};
 				push(@newrv, $ccs);
@@ -7534,6 +7535,7 @@ my $anyvirt = $server_management_types{'xen'} ||
 	      $server_management_types{'vserver'} ||
 	      $server_management_types{'openvz'} ||
 	      $server_management_types{'lxc'} ||
+	      $server_management_types{'docker'} ||
 	      $server_management_types{'zones'};
 
 if (!&can_action(undef, "global")) {
@@ -8888,7 +8890,7 @@ sub is_parent_server
 {
 my ($server) = @_;
 my @rv;
-foreach my $t ('xen', 'kvm', 'vserver', 'zone', 'openvz', 'lxc', 'citrix') {
+foreach my $t ('xen', 'kvm', 'vserver', 'zone', 'openvz', 'lxc', 'docker', 'citrix') {
 	if ($server->{$t."_host"}) {
 		push(@rv, $t eq 'zone' ? 'zones' : $t);
 		}
@@ -14038,7 +14040,7 @@ return ("backup.cgi", "create_domain.cgi", "mass.cgi", "mass_domains.cgi",
 	"mass_update.cgi", "pause.cgi", "restore_domain.cgi",
 	"save_bwifaces.cgi", "save_diskdir.cgi", "save_view.cgi",
 	"save_serv.cgi", "set_default.cgi", "unpause.cgi",
-	"save_(xen|kvm|zones|lxc|vserver|openvz|citrix).cgi",
+	"save_(xen|kvm|zones|lxc|docker|vserver|openvz|citrix).cgi",
 	"create-domain.pl", "create-ec2-image.pl", "delete-domains.pl",
 	"disable-domains.pl", "enable-domains.pl", "install-virtualmin.pl",
 	"install-webmin.pl", "modify-system.pl", "pause-system.pl",
