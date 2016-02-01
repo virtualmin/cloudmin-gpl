@@ -10,6 +10,7 @@ show_ec2=1
 show_gce=1
 show_openvz=1
 show_lxc=1
+show_docker=1
 image_owners=amazon 093590521311
 link_mode=0
 vserver_conf=/etc/vservers
