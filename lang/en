@@ -165,6 +165,10 @@ add_lxchost=LXC hosting system
 add_lxcinstance=LXC container name
 add_elxcinstance=No LXC container name entered
 add_elxcinstance2=The selected LXC container does not exist on $1
+add_dockerhost=Docker hosting system
+add_dockerinstance=Docker container name
+add_edockerinstance=No Docker container name entered
+add_edockerinstance2=The selected Docker container does not exist on $1
 add_kvmhost=KVM hosting system
 add_kvmpid=KVM process to manage
 add_ekvminstance=No KVM process selected
@@ -1127,6 +1131,8 @@ edit_openvzdir=OpenVZ directory on host system
 edit_lxchost=LXC host system
 edit_lxcinstance=LXC context ID
 edit_lxcdir=LXC directory on host system
+edit_dockerinstance=Docker container ID
+edit_dockerimage=Original Docker image
 edit_xenhost=Xen host system
 edit_xeninstance=Xen instance name
 edit_xenmem=Memory allocated now
@@ -3692,6 +3698,9 @@ openvz_addlink=Add OpenVZ Container
 
 lxc_createlink=Create LXC Container
 lxc_addlink=Add LXC Container
+
+docker_createlink=Create Docker Container
+docker_addlink=Add Docker Container
 
 backups_title=System Backups
 backups_add=Add a new system backup.
