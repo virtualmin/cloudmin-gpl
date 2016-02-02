@@ -5692,11 +5692,14 @@ return ( );
 sub set_interface_active_from_ping
 {
 my ($ifaces) = @_;
-&parallel_server_function(
+my @rv = &parallel_server_function(
 	[ map { { 'id' => $_->{'fullname'},
 		  'iface' => $_ } } @$ifaces ],
 	sub { my $p = &ping_server_host($_[0]->{'iface'}->{'address'});
-	      $_[0]->{'iface'}->{'active'} = $p ? 1 : 0 });
+	      return $p ? 1 : 0 });
+for(my $i=0; $i<@rv; $i++) {
+	$ifaces->[$i]->{'active'} = $rv[$i]->[0];
+	}
 }
 
 # allocate_ip6_address(pool-ids, [ifaces, want-iface])
