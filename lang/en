@@ -1615,6 +1615,23 @@ ltchooser_id=Template name
 ltchooser_file=Filename
 ltchooser_size=Size
 
+dchooser_title=Select Docker Container
+dchooser_elist=Failed to fetch containers : $1
+dchooser_enone=The selected system has no Docker containers
+dchooser_id=Container name
+dchooser_image=Image
+dchooser_cmd=Command
+
+dichooser_title=Select Docker Image
+dichooser_elist=Failed to fetch images : $1
+dichooser_enone=The selected system has no Docker images
+dichooser_id=Image name
+dichooser_file=Description
+dichooser_size=Size
+dichooser_tags=Tags
+dichooser_search=Find images:
+dichooser_ok=Search
+
 ipchooser_title=Select Free IP Address
 ipchooser_ealloc=IP address allocation is not available for this system type
 ipchooser_enone=No free IP addresses are available
@@ -3576,6 +3593,15 @@ find_citrixinstances=Finding running Citrix Xen VMs ..
 find_citrixinstancesdone=.. found $1 VMs
 find_citrixinstanceserr=.. failed : $1
 find_citrixinstance=Processing VM $1 ..
+find_dockerconts=Finding Docker containers ..
+find_edockerconts2=.. found $1 containers
+find_edockerconts=.. search failed : $1
+find_dockerinstance=Processing Docker container with ID $1 ..
+find_dockeralready=.. already managed by Cloudmin as $1
+find_dockeralready2=.. the system $1 is already using IP address $2
+find_dockernotrunning=.. container $1 is not currently running
+find_dockerdone=.. added system $1 with status $2
+find_dockernoip=.. could not work out IP address
 
 plugins_title=Cloudmin Plugins
 plugins_config=Configure..
