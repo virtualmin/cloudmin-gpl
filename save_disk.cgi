@@ -220,6 +220,12 @@ else {
 			$in{'other'} =~/^\/\S+$/ || &error($text{'disk_ereal'});
 			$disk->{'real'} = $in{'other'};
 			}
+		if ($disk->{'real'} =~ /^\/dev\/(\S+)\/(\S+)$/ &&
+		    $1 eq $vhost->{$server->{'manager'}.'_vg'}) {
+			# On LVM on the host
+			$disk->{'vg'} = $1;
+			$disk->{'lv'} = $2;
+			}
 		$changed_real = 1;
 		}
 	elsif ($in{'new'} == 1 && &can_action($server, "devices")) {
