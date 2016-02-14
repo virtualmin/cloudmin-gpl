@@ -58,6 +58,10 @@ my ($rfn, $rrecs, undef, $rzone) = &get_reverse_dns_zone($ip);
 if ($zone && $zone->{'local'}) {
 	# Add to local DNS zone
 	&$first_print(&text('create_vserverdns', $dnsname, $ip));
+	if (!$ip) {
+		&$second_print(&text('create_vserverdnseip'));
+		return 0;
+		}
 	my $lpath = &bind8::make_chroot(&bind8::absolute_path($zone->{'file'}));
 	&lock_file($lpath);
 	my @recs = &bind8::read_zone_file($zone->{'file'}, $zone->{'name'});
@@ -80,6 +84,10 @@ elsif ($zone && $zone->{'provision'}) {
 	# Add on provisioning host
 	&$first_print(&text('create_vserverdnsprov', $dnsname, $ip,
 			    $zone->{'server'}->{'host'}));
+	if (!$ip) {
+		&$second_print(&text('create_vserverdnseip'));
+		return 0;
+		}
 	my $recs = &cloudmin_services::list_dns_records(
 			$zone->{'server'}, $zone->{'name'});
 	if (!ref($recs)) {
