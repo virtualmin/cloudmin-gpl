@@ -6677,9 +6677,7 @@ else {
 my $sshdir = "$roothome/.ssh";
 my @st = &stat_file_on_server($server, $sshdir);
 if (!@st) {
-	my $temp = &transname();
-	&make_dir($temp, 0700);
-	&put_file_to_server($server, $temp, $sshdir);
+	&make_dir_on_server($server, $sshdir, 0700);
 	}
 
 return "$sshdir/authorized_keys";
