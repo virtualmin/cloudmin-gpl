@@ -444,13 +444,17 @@ else {
 	&can_action($server, "edit");
 	&obtain_lock_server($server);
 	if ($server->{'id'} != 0) {
-		$oldip = &to_ipaddress($server->{'host'});
-		$newip = &to_ipaddress($in{'host'});
-		$newip || &error(&text('save_enewip', $in{'host'}));
-		if ($oldip && $oldip ne $newip && !$in{'confirm'}) {
-			# IP mismatch .. but allow override
-			&show_host_override_form($oldip, $newip);
-			exit;
+		my $rfunc = "type_".$server->{'manager'}."_requires_resolution";
+		if (!defined(&$rfunc) || &$rfunc($server)) {
+			# Make sure the new hostname can be resolved
+			$oldip = &to_ipaddress($server->{'host'});
+			$newip = &to_ipaddress($in{'host'});
+			$newip || &error(&text('save_enewip', $in{'host'}));
+			if ($oldip && $oldip ne $newip && !$in{'confirm'}) {
+				# IP mismatch .. but allow override
+				&show_host_override_form($oldip, $newip);
+				return;
+				}
 			}
 		$server->{'host'} = $in{'host'};
 		$server->{'desc'} = $in{'desc'};

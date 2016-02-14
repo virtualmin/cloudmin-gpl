@@ -228,11 +228,15 @@ if (defined($type)) {
 if (defined($newhost)) {
 	$server->{'id'} == 0 && &usage("The hostname for this system ".
 				       "cannot be changed");
-	$oldip = &to_ipaddress($server->{'host'});
-	$newip = &to_ipaddress($newhost);
-	if ($oldip && $oldip ne $newip && !$forcehost) {
-		&usage("The new hostname must resolve to the same IP address ".
-		       "as the old hostname, or --force-host must be used");
+	my $rfunc = "type_".$server->{'manager'}."_requires_resolution";
+	if (!defined(&$rfunc) || &$rfunc($server)) {
+		$oldip = &to_ipaddress($server->{'host'});
+		$newip = &to_ipaddress($newhost);
+		if ($oldip && $oldip ne $newip && !$forcehost) {
+			&usage("The new hostname must resolve to the same IP ".
+			       "address as the old hostname, or --force-host ".
+			       "must be used");
+			}
 		}
 	}
 if (defined($loc)) {
