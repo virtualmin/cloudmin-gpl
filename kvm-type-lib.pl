@@ -859,8 +859,8 @@ $server->{'kvm_start'} = defined($in{'kvm_start'}) ? $in{'kvm_start'} : 1;
 $server->{'kvm_vga'} = defined($in{'kvm_vga'}) ? $in{'kvm_vga'} : 0;
 
 # Additional KVM args
-$in->{'kvm_args'} =~ /;|\&|\||<|>|\0|\!/ && &error($text{'create_ekvmargs'});
-$server->{'kvm_args'} = $in->{'kvm_args'};
+$in{'kvm_args'} =~ /;|\&|\||<|>|\0|\!/ && &error($text{'create_ekvmargs'});
+$server->{'kvm_args'} = $in{'kvm_args'};
 
 # Firewall spoofed IPs
 $server->{'kvm_firewall'} = (defined($in{'kvm_firewall'}) ?
