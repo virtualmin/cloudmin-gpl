@@ -8621,7 +8621,11 @@ sub check_licence_expiry
 my ($lic) = @_;
 my $date = ref($lic) ? $lic->{'expiry'} : $lic;
 if ($date =~ /^(\d{4})\-(\d+)\-(\d+)$/) {
-	my $ut = timelocal(0, 0, 0, $3, $2-1, $1-1900);
+	my $ut;
+	eval {
+		$ut = timelocal(0, 0, 0, $3, $2-1, $1-1900);
+		};
+	return -1 if ($@);
 	my $days = int(($ut - time()) / (24*60*60));
 	return $days < 0 ? 2 : $days < 7 ? 1 : 0;
 	}
