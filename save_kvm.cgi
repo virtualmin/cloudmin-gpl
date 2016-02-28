@@ -107,6 +107,7 @@ else {
 
 	$kvm->{'kvm_host'} = 1;
 	&check_server_status($kvm);
+	&type_kvm_post_host_refresh($kvm, 1, &get_server_collected($kvm));
 	&save_managed_server($kvm);
 
 	if ($in{'autoadd'} && $in{'autologin'}) {
