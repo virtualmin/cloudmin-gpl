@@ -858,6 +858,9 @@ $server->{'kvm_start'} = defined($in{'kvm_start'}) ? $in{'kvm_start'} : 1;
 # High-res graphics
 $server->{'kvm_vga'} = defined($in{'kvm_vga'}) ? $in{'kvm_vga'} : 0;
 
+# KVM keymap
+$server->{'kvm_keymap'} = $config{'kvm_keymap'};
+
 # Additional KVM args
 $in{'kvm_args'} =~ /;|\&|\||<|>|\0|\!/ && &error($text{'create_ekvmargs'});
 $server->{'kvm_args'} = $in{'kvm_args'};
@@ -1294,6 +1297,7 @@ else {
 	$server->{'kvm_vga'} = 0;
 	$server->{'kvm_firewall'} = $config{'kvm_firewall'} ? '*' : '';
 	}
+$server->{'kvm_keymap'} = $config{'kvm_keymap'};
 
 return undef;
 }
