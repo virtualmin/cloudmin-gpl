@@ -72,7 +72,10 @@ while(@ARGV > 0) {
 @images = sort { $b->{'priority'} <=> $a->{'priority'} ||
 		 $a->{'id'} cmp $b->{'id'} } &list_server_images($type);
 @images = grep { &can_image($_) } @images;
-@avail = &list_available_server_images($type);
+eval {
+	local $main::error_must_die = 1;
+	@avail = &list_available_server_images($type);
+	};
 if (@ids) {
 	@images = grep { &indexof($_->{'id'}, @ids) >= 0 } @images;
 	}
