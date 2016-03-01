@@ -9967,7 +9967,7 @@ return &substitute_template($str, $hash);
 sub get_search_form_mode
 {
 my ($in) = @_;
-foreach my $i ('gok', 'pok', 'eok', 'sok', 'ook', 'cok', 'ok') {
+foreach my $i ('gok', 'pok', 'eok', 'sok', 'ook', 'cok', 'ok', 'mok') {
 	return $i if ($in->{$i});
 	}
 return undef;
@@ -10034,6 +10034,13 @@ if (@owners && !$access{'owner'}) {
 			       [ map { $_->{'name'} } @owners ]).
 		    " ".&ui_submit($text{'index_searchook'}, "ook"));
 	}
+
+# Search by VM type
+push(@grid, &highlight_field($text{'index_msearch'}, "mok"));
+push(@grid, &ui_select("msearch", $in->{'msearch'},
+		       [ map { [ $_, $text{$_.'_typedesc'} ] }
+			     @possible_server_management_types ]).
+	    " ".&ui_submit($text{'index_searchsok'}, "mok"));
 
 # Search by EC2 account (normally hidden)
 if ($mode eq 'eok') {
@@ -10103,6 +10110,10 @@ elsif ($mode eq 'ook') {
 		return grep { $owned{$_->{'id'}} } @$servers;
 		}
 	return ( );
+	}
+elsif ($mode eq 'mok') {
+	# Search by type
+	return grep { $_->{'manager'} eq $in->{'msearch'} } @$servers;
 	}
 else {
 	# By hostname

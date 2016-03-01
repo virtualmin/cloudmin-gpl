@@ -51,6 +51,7 @@ index_searcheok=Show
 index_ssearch=With status:
 index_searchsok=Show
 index_osearch=Owned by:
+index_msearch=System type:
 index_searchook=Show
 index_selup=Select up systems.
 index_selwe=Select Webmin systems.
