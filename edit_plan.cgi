@@ -7,12 +7,22 @@ require './server-manager-lib.pl';
 @plans = &list_plans();
 if ($in{'new'}) {
 	&ui_print_header(undef, $text{'plan_title1'}, "");
-	$plan = { 'types' => join(' ', @virtual_server_management_types),
-		  'actions' => join(' ', &list_safe_owner_actions()) };
+	if ($in{'clone'}) {
+		($clone) = grep { $_->{'id'} eq $in{'clone'} } @plans;
+		$clone || &error($text{'plan_egone'});
+		$plan = { %$clone };
+		delete($plan->{'id'});
+		$plan->{'desc'} = "Clone of ".$plan->{'desc'};
+		}
+	else {
+		$plan = { 'types' => join(' ',@virtual_server_management_types),
+			  'actions' => join(' ',&list_safe_owner_actions()) };
+		}
 	}
 else {
 	&ui_print_header(undef, $text{'plan_title2'}, "");
 	($plan) = grep { $_->{'id'} eq $in{'id'} } @plans;
+	$plan || &error($text{'plan_egone'});
 	}
 
 print &ui_form_start("save_plan.cgi", "post");
@@ -156,6 +166,7 @@ if (@iplugins) {
 print &ui_form_end(
     $in{'new'} ? [ [ undef, $text{'create'} ] ]
 	       : [ [ undef, $text{'plan_save'} ],
+		   [ 'clone', $text{'plan_clone'} ],
 		   [ 'delete', $text{'delete'} ] ]); 
 
 &ui_print_footer("list_plans.cgi", $text{'plans_return'});

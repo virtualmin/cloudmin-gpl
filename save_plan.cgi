@@ -28,6 +28,10 @@ if ($in{'delete'}) {
 	&webmin_log("delete", "plan", $plan->{'id'},
 		    { 'desc' => $plan->{'desc'} });
 	}
+elsif ($in{'clone'}) {
+	# Redirect to edit form, in clone mode
+	&redirect("edit_plan.cgi?new=1&clone=$plan->{'id'}");
+	}
 else {
 	# Validate inputs
 	$in{'desc'} =~ /\S/ || &error($text{'plan_edesc'});
