@@ -284,7 +284,13 @@ foreach $s (@servers) {
 			$gfunc = "type_".$t."_get_memory";
 			$oldmemory = &$gfunc($s);
 			$incr = $memory - $oldmemory;
-			if ($oldmemory && $oldmemory == $memory) {
+			if (&$cfunc($s) == 3) {
+				# Changing not supported
+				print ".. RAM changes are not supported by ",
+				      "this virtualization type\n";
+				$failed++;
+				}
+			elsif ($oldmemory && $oldmemory == $memory) {
 				# No change
 				print ".. already set\n";
 				}
@@ -352,7 +358,13 @@ foreach $s (@servers) {
 			$incr = $memory - $oldmemory;
 			$rgfunc = "type_".$t."_get_memory";
 			$rmemory = &$rgfunc($s);
-			if ($oldmemory && $oldmemory == $memory) {
+			if (&$cfunc($s) == 3) {
+				# Changing not supported
+				print ".. RAM changes are not supported by ",
+				      "this virtualization type\n";
+				$failed++;
+				}
+			elsif ($oldmemory && $oldmemory == $memory) {
 				# No change
 				print ".. already set\n";
 				}
@@ -404,7 +416,13 @@ foreach $s (@servers) {
 			$gfunc = "type_".$t."_get_cpu";
 			($oldcpu, $oldweight) = &$gfunc($s);
 			$incr = $cpu - $oldcpu;
-			if ($limits && $limits->{'max_cpu'} && $incr > 0 &&
+			if (&$cfunc($s) == 3) {
+				# Changing not supported
+				print ".. CPU changes are not supported by ",
+				      "this virtualization type\n";
+				$failed++;
+				}
+			elsif ($limits && $limits->{'max_cpu'} && $incr > 0 &&
 			    $limits->{'cpu'} + $incr > $limits->{'max_cpu'} &&
 			    defined($cpu)) {
 				# Over CPU limit
@@ -507,7 +525,13 @@ foreach $s (@servers) {
 			$gfunc = "type_".$t."_get_disk";
 			$olddisk = &$gfunc($s);
 			$incr = $disk - $olddisk;
-			if ($olddisk && $olddisk == $disk) {
+			if (&$cfunc($s) == 3) {
+				# Changing not supported
+				print ".. disk changes are not supported by ",
+				      "this virtualization type\n";
+				$failed++;
+				}
+			elsif ($olddisk && $olddisk == $disk) {
 				# No change
 				print ".. already set\n";
 				}
@@ -561,7 +585,13 @@ foreach $s (@servers) {
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_network_rate";
 			$oldrate = &$gfunc($s);
-			if (defined($oldrate) && $oldrate == $rate) {
+			if (&$cfunc($s) == 3) {
+				# Changing not supported
+				print ".. rate changes are not supported by ",
+				      "this virtualization type\n";
+				$failed++;
+				}
+			elsif (defined($oldrate) && $oldrate == $rate) {
 				print ".. already set\n";
 				}
 			else {
@@ -592,7 +622,13 @@ foreach $s (@servers) {
 		if (defined(&$cfunc) && &$cfunc($s)) {
 			$gfunc = "type_".$t."_get_ioclass";
 			$oldioclass = &$gfunc($s);
-			if (defined($oldioclass) && $oldioclass == $ioclass) {
+			if (&$cfunc($s) == 3) {
+				# Changing not supported
+				print ".. IO changes are not supported by ",
+				      "this virtualization type\n";
+				$failed++;
+				}
+			elsif (defined($oldioclass) && $oldioclass == $ioclass) {
 				print ".. already set\n";
 				}
 			else {
