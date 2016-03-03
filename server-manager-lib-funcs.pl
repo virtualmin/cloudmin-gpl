@@ -7874,14 +7874,18 @@ my $clfunc = "type_".$t."_supports_console_login";
 my $canlogin = defined(&$clfunc) && &$clfunc($server);
 my $rsfunc = "type_".$server->{'manager'}."_can_reset";
 my $canreset = defined(&$rsfunc) && &$rsfunc($server);
+my $cpfunc = "type_".$server->{'manager'}."_can_password";
 my $canpass = $server->{'type'} ne 'windows' &&
-	      $server->{'id'} ne '0';
+	      $server->{'id'} ne '0' &&
+	      defined(&$cpfunc) && &$cpfunc($server);
 my $clonefunc = "type_".$server->{'manager'}."_can_clone";
 my $canclone = defined(&$clonefunc) && &$clonefunc($server);
 my $bootmodefunc = "type_".$server->{'manager'}."_list_boot_modes";
 my $bootdevicefunc = "type_".$server->{'manager'}."_list_boot_devices";
 my $canboot = defined(&$bootmodefunc) && ref(&$bootmodefunc($server)) ||
 	      defined(&$bootdevicefunc) && ref(&$bootdevicefunc($server));
+my $nwfunc = "type_".$server->{'manager'}."_no_webmin";
+my $canwebmin = !defined(&$nwfunc) || !&$nwfunc($server);
 
 # Start with links to edit_serv.cgi
 my $ed = "edit_serv.cgi?id=$server->{'id'}";
@@ -8061,13 +8065,15 @@ else {
 		}
 	if (($status eq 'novirt' || $status eq 'nowebmin') &&
 	    $server->{'manager'} ne 'this' &&
-	    &can_action($server, "virtualmin")) {
+	    &can_action($server, "virtualmin") &&
+	    $canwebmin) {
 		push(@rv, { 'id' => 'installvirt',
 			    'desc' => $text{'edit_installvirt'},
 			    'cat' => 'manage' });
 		}
 	if ($status eq 'nowebmin' &&
-	    &can_action($server, "webmin")) {
+	    &can_action($server, "webmin") &&
+	    $canwebmin) {
 		push(@rv, { 'id' => 'installwebmin',
 			    'desc' => $text{'edit_installwebmin'},
 			    'cat' => 'manage' });
