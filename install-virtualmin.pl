@@ -88,6 +88,11 @@ foreach $s (@servers) {
 	if ($s->{'status'} ne 'nowebmin' &&
 	    $s->{'status'} ne 'novirt') {
 		push(@cannot, $s);
+		next;
+		}
+	my $nfunc = "type_".$s->{'manager'}."_no_webmin";
+	if (defined(&$nfunc) && &$nfunc($s)) {
+		push(@cannot, $s);
 		}
 	}
 @cannot && &usage("The following systems cannot have Virtualmin installed : ".
