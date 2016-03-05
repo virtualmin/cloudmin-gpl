@@ -24,11 +24,17 @@ print &ui_table_start($text{'edit_lheader'}, undef, 2);
 
 # Memory limit
 $mfunc = "type_".$t."_get_memory";
+$canfunc = "type_".$t."_can_memory";
 $m = defined(&$mfunc) ? &$mfunc($server) : undef;
 if (defined($m)) {
 	print &ui_table_hr() if ($donehr++);
 	$ufunc =  "type_".$t."_can_unlimited_memory";
-	if (defined(&$ufunc) && &$ufunc($server)) {
+	if (&$canfunc($server) == 3) {
+		# Limit is fixed
+		print &ui_table_row($text{'edit_lmemory'},
+			&nice_size($m));
+		}
+	elsif (defined(&$ufunc) && &$ufunc($server)) {
 		# Unlimited option
 		print &ui_table_row($text{'edit_lmemory'},
 			&vui_opt_bytesbox("memory", $m || undef, undef,
@@ -81,18 +87,26 @@ if (defined($gm)) {
 
 # CPU limit
 $cfunc = "type_".$t."_get_cpu";
+$canfunc = "type_".$t."_can_cpu";
 if (defined(&$cfunc)) {
 	($cpu, $weight) = &$cfunc($server);
 	print &ui_table_hr() if ((defined($cpu) || defined($weight)) &&
 				 $donehr++);
-	if (defined($cpu)) {
+	if (&$canfunc($server) == 3) {
+		# Cannot change CPU limit
 		print &ui_table_row($text{'edit_lcpu'},
-			&ui_opt_textbox("cpu", $cpu == 0 ? undef : $cpu,
-				4, $text{'edit_lunlimit'})."%");
+			$cpu == 0 ? $text{'edit_lunlimit'} : $cpu."%");
 		}
-	if (defined($weight)) {
-		print &ui_table_row($text{'edit_lweight'},
-			&ui_textbox("weight", $weight, 4));
+	else {
+		if (defined($cpu)) {
+			print &ui_table_row($text{'edit_lcpu'},
+				&ui_opt_textbox("cpu", $cpu == 0 ? undef : $cpu,
+					4, $text{'edit_lunlimit'})."%");
+			}
+		if (defined($weight)) {
+			print &ui_table_row($text{'edit_lweight'},
+				&ui_textbox("weight", $weight, 4));
+			}
 		}
 
 	# Owner CPU
@@ -104,13 +118,21 @@ if (defined(&$cfunc)) {
 
 # Disk limit
 $dfunc = "type_".$t."_get_disk";
+$canfunc = "type_".$t."_can_disk";
 if (defined(&$dfunc)) {
 	print &ui_table_hr() if ($donehr++);
 	$disk = &$dfunc($server);
-	print &ui_table_row($text{'edit_ldisk'},
-		&vui_opt_bytesbox("disk", $disk || undef, undef,
+	if (&$canfunc($server) == 3) {
+		# Cannot edit
+		print &ui_table_row($text{'edit_ldisk'},
+		    $disk == 0 ? $text{'edit_lunlimit'} : &nice_size($disk));
+		}
+	else {
+		print &ui_table_row($text{'edit_ldisk'},
+			&vui_opt_bytesbox("disk", $disk || undef, undef,
 				  $text{'edit_lunlimit'}, undef,
 				  0, undef, undef, undef, 1024*1024*1024));
+		}
 
 	# Current usage
 	$sfunc = "type_".$t."_get_disk_space";
@@ -138,14 +160,21 @@ if (defined(&$dfunc)) {
 
 # IO class
 $ifunc = "type_".$t."_get_ioclass";
+$canfunc = "type_".$t."_can_ioclass";
 if (defined(&$ifunc) && &can_action($server, "ioclass")) {
 	print &ui_table_hr() if ($donehr++);
 	$ioclass = &$ifunc($server);
-	print &ui_table_row($text{'edit_lioclass'},
-		&ui_select("ioclass", $ioclass,
-			[ [ 0, $text{'edit_lioclass0'} ],
-			  1 .. 6,
+	if (&$canfunc($server) == 3) {
+		# Cannot edit IO class
+		print &ui_table_row($text{'edit_lioclass'}, $ioclass);
+		}
+	else {
+		print &ui_table_row($text{'edit_lioclass'},
+			&ui_select("ioclass", $ioclass,
+				[ [ 0, $text{'edit_lioclass0'} ],
+				  1 .. 6,
 			  [ 7, $text{'edit_lioclass7'} ] ]));
+		}
 	}
 
 # Bandwidth limit
