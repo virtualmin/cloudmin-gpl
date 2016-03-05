@@ -552,6 +552,7 @@ create_lxcetc=Setting up LXC container configuration files ..
 create_lxcsetpass=Setting LXC container root password ..
 create_dockermemory=Memory limit for Docker container
 create_dockercmd=Command to run in container
+create_dockercmddef=Default from image
 create_edockertemplate=No Docker image selected
 create_edockertemplate2=Docker image $1 does not exist
 create_edockercmd=Missing command to run in container
