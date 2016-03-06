@@ -1640,7 +1640,7 @@ dichooser_file=Description
 dichooser_size=Size
 dichooser_tags=Tags
 dichooser_search=Find images:
-dichooser_ok=Search
+dichooser_ok=Search Docker Hub
 
 ipchooser_title=Select Free IP Address
 ipchooser_ealloc=IP address allocation is not available for this system type
