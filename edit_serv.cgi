@@ -138,8 +138,15 @@ if (!$view) {
 	# Start at boot
 	$bfunc = "type_".$t."_get_atboot";
 	if (defined(&$bfunc) && $server->{'status'} ne 'nohost') {
-		print &ui_table_row($text{'edit_atboot'},
+		$sbfunc = "type_".$t."_set_atboot";
+		if (defined(&$sbfunc)) {
+			print &ui_table_row($text{'edit_atboot'},
 			    &ui_yesno_radio("atboot",&$bfunc($server) ? 1 : 0));
+			}
+		else {
+			print &ui_table_row($text{'edit_atboot'},
+				&$bfunc($server) ? $text{'yes'} : $text{'no'});
+			}
 		}
 	}
 
