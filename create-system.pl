@@ -296,6 +296,7 @@ $server = { 'id' => $newid || &server_id(),
 	    'manual_status' => $manual_status,
 	    'directory' => $directory,
 	    'force_directory' => $force_directory,
+	    'initial_atboot' => $start_boot,
 	  };
 $server->{'desc'} = $desc;
 if ($image && $img->{'type'}) {

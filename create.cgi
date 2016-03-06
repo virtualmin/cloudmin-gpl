@@ -11,6 +11,7 @@ $server = { 'id' => &server_id(),
 	    'bw_limit' => $config{'bw_def'},
 	    'created' => time(),
 	    'directory' => $in{'directory'},
+	    'initial_atboot' => $in{'atboot'},
 	  };
 
 # Prevent concurrent creation that would exceed limits
