@@ -5994,7 +5994,7 @@ vbackup_fail=FAILED ($1)
 vbackup_allok=Backup completed successfully.
 vbackup_failed=Backup failed - see the output above for the reason why.
 
-dimages_title=Docker Images
+dimages_title=Available Docker Images
 dimages_id=Image ID
 dimages_name=Image name
 dimages_hosts=Host systems
@@ -6003,3 +6003,11 @@ dimages_delete=Delete Selected Images
 dimages_push=Upload Selected Images
 dimages_nonefailed=No Docker images could be fetched from your host systems :
 dimages_nonefound=No Docker images were found on any host systems.
+
+simages_title=Search Docker Images
+dimages_esearch=Search failed on all hosts : $1
+simages_desc=Image description
+simages_download=Download Selected Images
+simages_nonefound=No images matched your search.
+simages_search=Find images matching:
+simages_ok=Search
