@@ -31,8 +31,12 @@ if (&can_action($server, "groups")) {
 	}
 
 # SSH login details
-print &ui_table_hr();
-&show_ssh_login_form(undef, $in{'type'});
+my $sfunc = "type_".$in{'type'}."_no_ssh";
+my $no_ssh = defined(&$sfunc) && &$sfunc();
+if (!$no_ssh) {
+	print &ui_table_hr();
+	&show_ssh_login_form(undef, $in{'type'});
+	}
 
 # Webmin login details
 print &ui_table_hr();

@@ -11,7 +11,10 @@ $server = { 'manager' => $in{'type'},
 
 # Validate inputs, starting with hostname
 $server->{'ip'} = $server->{'ip_addresses'} = &to_ipaddress($in{'host'});
-$server->{'ip'} || &error($text{'add_ehost'});
+my $rfunc = "type_".$server->{'manager'}."_requires_resolution";
+if (!defined(&$rfunc) || &$rfunc($server)) {
+	$server->{'ip'} || &error($text{'add_ehost'});
+	}
 $server->{'host'} = $in{'host'};
 $server->{'desc'} = $in{'desc'};
 if (&can_action($server, "groups")) {
