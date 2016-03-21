@@ -1240,6 +1240,7 @@ edit_lockunknown=Unknown operation!
 edit_lockpid=Process with PID $1
 edit_lockcmd=Command $1, running for $2
 edit_lockkill=Kill Process
+edit_dockernewimage=Create Docker Image
 
 update_title=Update Packages
 update_title2=Install Packages
@@ -6015,7 +6016,7 @@ simages_deleting=Deleting image <tt>$2</tt> from <tt>$1</tt> ..
 simages_edelete=.. deletion failed : $1
 dimages_egone=.. image does not exist on this host
 dimages_return=Docker images
-simages_pushing=Uploading image <tt>$2</tt> from <tt>$1</tt> ..
+simages_pushing=Uploading image <tt>$2</tt> from <tt>$1</tt> to Docker hub ..
 simages_epush=.. upload failed : $1
 
 simages_title=Search Docker Images
@@ -6028,3 +6029,18 @@ simages_search=Find images matching:
 simages_ok=Search
 simages_stars=Stars
 simages_return=Docker image search
+
+dimage_title=Create Docker Image
+dimage_header=Docker image options
+dimage_vhost=Create on host system
+dimage_name=Image name
+dimage_desc=Image description
+dimage_author=Author's name
+dimage_cmd=Default command to run on created systems
+dimage_cmd0=Same as source system
+dimage_cmd1=Don't set any default
+dimage_cmd2=New command
+dimage_ports=Ports to open on created systems
+dimage_def=None
+dimage_upload=Upload to Docker hub after creation?
+dimage_ok=Create Image
