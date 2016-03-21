@@ -5997,6 +5997,7 @@ vbackup_failed=Backup failed - see the output above for the reason why.
 dimages_title=Local Docker Images
 dimages_id=Image ID
 dimages_name=Image name
+dimages_tags=Tags
 dimages_hosts=Host systems
 dimages_users=Used by containers
 dimages_delete=Delete Images From:
