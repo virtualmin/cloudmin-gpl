@@ -5994,7 +5994,7 @@ vbackup_fail=FAILED ($1)
 vbackup_allok=Backup completed successfully.
 vbackup_failed=Backup failed - see the output above for the reason why.
 
-dimages_title=Installed Docker Images
+dimages_title=Local Docker Images
 dimages_id=Image ID
 dimages_name=Image name
 dimages_hosts=Host systems
@@ -6014,6 +6014,8 @@ simages_deleting=Deleting image <tt>$2</tt> from <tt>$1</tt> ..
 simages_edelete=.. deletion failed : $1
 dimages_egone=.. image does not exist on this host
 dimages_return=Docker images
+simages_pushing=Uploading image <tt>$2</tt> from <tt>$1</tt> ..
+simages_epush=.. upload failed : $1
 
 simages_title=Search Docker Images
 dimages_esearch=Search failed on all hosts : $1
