@@ -61,16 +61,15 @@ if ($format) {
 	}
 
 # Build list of command-line args
-@args = ();
-foreach $i (keys %in) {
+@args = ( );
+foreach $iv (@in) {
+	($i, $v) = split(/=/, $iv, 2);
 	next if ($i eq "program" || $i eq $format);
-	if ($in{$i} eq "") {
+	if ($v eq "") {
 		push(@args, "--$i");
 		}
 	else {
-		foreach $v (split(/\0/, $in{$i})) {
-			push(@args, "--$i", $v);
-			}
+		push(@args, "--$i", $v);
 		}
 	}
 
