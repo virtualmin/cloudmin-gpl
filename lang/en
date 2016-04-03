@@ -3279,6 +3279,7 @@ smove_eiscsidis=.. disconnection failed : $1
 smove_eiscsiconn=.. connection failed : $1
 smove_iscsiconn=Adding iSCSI connection to $1 target $2 on new host system ..
 smove_iscsidisc=Removing iSCSI connection to $1 target $2 on old host system ..
+smove_dockerimage=Saving container to a temporary image ..
 
 transfer_title2=Transfer File
 transfer_err=Failed to transfer file
