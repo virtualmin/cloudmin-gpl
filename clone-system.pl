@@ -83,7 +83,7 @@ $< == 0 || die "$0 must be run as root";
 &usage_if_cloudmin_replica();
 
 # Parse command line
-$shutdown = 0;
+$live = 0;
 $directory = undef;
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
