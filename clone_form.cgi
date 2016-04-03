@@ -41,7 +41,9 @@ if ($can == 2) {
 # IP addresses for non-virtual interfaces
 $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 $ifunc = "type_".$server->{'manager'}."_list_interfaces";
-if (&can_action($server, 'ips')) {
+$nifunc = "type_".$server->{'manager'}."_no_ips";
+$supportsips = !defined(&$nifunc) || !&$nifunc($server);
+if (&can_action($server, 'ips') && $supportsips) {
 	@grid = ( );
 	if (defined(&$cfunc) && &$cfunc($server)) {
 		# Can show list of interfaces
@@ -71,7 +73,7 @@ if (&can_action($server, 'ips')) {
 $c6func = "type_".$server->{'manager'}."_can_ipv6";
 @ip6ifaces = grep { $_->{'address6'} && @{$_->{'address6'}} } @$ifaces;
 if (&can_action($server, 'ips') && defined(&$c6func) && &$c6func($server) &&
-    $server->{'ip6_addresses'} && @ip6ifaces) {
+    $server->{'ip6_addresses'} && @ip6ifaces && $supportsips) {
 	@grid = ( );
 	if (defined(&$cfunc) && &$cfunc($server)) {
 		# Can show list of interfaces
