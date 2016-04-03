@@ -171,6 +171,11 @@ if ($dest) {
 	&can_action_usage($server, "move");
 	}
 
+$nifunc = "type_".$server->{'manager'}."_no_ips";
+if (defined(&$nifunc) && &$nifunc($server) && (@$ips || @$ips6)) {
+	&usage("This virtual system type does not support IP assignment");
+	}
+
 # Validate owner resource limits
 &can_create_server_usage($server->{'manager'});
 $limits = &get_owner_limits();

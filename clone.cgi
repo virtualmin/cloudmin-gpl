@@ -20,7 +20,9 @@ defined(&$cfunc) || &error(&text('clone_ecan', $desc));
 
 # Validate inputs
 $in{'host'} =~ /^[a-z0-9\.\-]+$/ || &error($text{'clone_ehost'});
-if (!$in{'ips_def'} && &can_action($server, 'ips')) {
+$nifunc = "type_".$server->{'manager'}."_no_ips";
+$supportsips = !defined(&$nifunc) || !&$nifunc($server);
+if (!$in{'ips_def'} && &can_action($server, 'ips') && $supportsips) {
 	if (defined($in{'ips'})) {
 		$ips = [ split(/\s+/, $in{'ips'}) ];
 		}
@@ -38,7 +40,7 @@ if (!$in{'ips_def'} && &can_action($server, 'ips')) {
 			&error(&text('clone_eipcheck', $ip));
 		}
 	}
-if (!$in{'ips6_def'} && &can_action($server, 'ips')) {
+if (!$in{'ips6_def'} && &can_action($server, 'ips') && $supportsips) {
 	if (defined($in{'ips6'})) {
 		$ips6 = [ split(/\s+/, $in{'ips6'}) ];
 		}
