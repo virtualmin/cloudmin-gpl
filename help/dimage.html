@@ -1,0 +1,36 @@
+<header>Create Docker Image</header>
+
+Docker containers cannot be created from regular Cloudmin images - instead they
+must be created from native Docker images, which are stored separately on
+each host. 
+Images can either be downloaded from the Docker Hub (on the <b>Search Docker
+Images</b> page), or created from an existing container using this page. <p>
+
+An image has the following attributes, which are set on this form :<p>
+
+<dl>
+
+<dt><b>Image name</b>
+<dd>A unique name for this image. If you have a Docker Hub account, this should
+    start with your Docker username followed by a / , like <tt>yourlogin/imagename</tt>. <p>
+
+<dt><b>Image description</b> and <b>Author's name</b>
+<dd>A short human-readable description for the image and it's author. These are mostly useful if you upload the image to the Docker Hub.<p>
+
+<dt><b>Default command to run on created systems</b>
+<dd>This field sets the shell command that will be run inside a container created from this image on startup. Typically this starts a server like MySQL on Nginx, but could also be as simple as <tt>sleep 99999999</tt> to create an image that acts more like a VM.<p>
+
+<dt><b>Ports to open on created systems</b>
+<dd>If this image runs a network-accessible server, you should enter the TCP ports that the server listens on here.<p>
+
+<dt><b>Image tags</b>
+<dd>An optional list of short tags for this image, like <tt>latest</tt> or <tt>version-3</tt>.<p>
+
+<dt><b>Upload to Docker hub after creation?</b>
+<dd>If <b>Yes</b> is selected here and image creation completes, it will be
+uploaded to the Docker Hub under the account configured on the container's
+host system. This allows the image to be downloaded by other Docker users. <p>
+
+</dl>
+
+<footer>
