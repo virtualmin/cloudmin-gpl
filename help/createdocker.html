@@ -1,0 +1,22 @@
+<header>Register Docker Host</header>
+
+This page allows you to tell Cloudmin that an existing system it manages is
+suitable for hosting Docker containers. To do this, the following fields must
+be filled in :<p>
+
+<dl>
+<dt><b>System hosting Docker containers</b>
+<dd>From the menu you must select a system that has the software
+    installed and kernel version required to run Docker. Cloudmin does not yet have
+    the ability to install these packages automatically.
+
+<dt><b>Add Docker systems to DNS domain</b>
+<dd>If the master Cloudmin system runs a DNS server, this field will show a menu
+    of local DNS domains to which the hostname of newly created Docker instances
+    will be added. It is highly recommended that you setup a DNS server and make    sure it can be managed through Webmin before using Docker and Cloudmin, so that
+    new instances will have resolvable hostnames.
+
+</dl>
+
+<footer>
+
