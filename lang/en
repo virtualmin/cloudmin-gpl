@@ -6055,6 +6055,7 @@ dimage_cmd1=Don't set any default
 dimage_cmd2=New command
 dimage_ports=Ports to open on created systems
 dimage_def=None
+dimage_tags=Tags for new image
 dimage_upload=Upload to Docker hub after creation?
 dimage_ok=Create Image
 dimage_err=Failed to create Docker image
