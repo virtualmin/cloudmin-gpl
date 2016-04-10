@@ -1,12 +1,12 @@
 #!/usr/local/bin/perl
-# Show a form for importing Xen instances from a host system
+# Show a form for importing VMs from a host system
 
 require './server-manager-lib.pl';
 &ReadParse();
-&can_add_server_error($in{'type'});
+$type = $in{'type'};
+&can_add_server_error($type);
 $server = &get_managed_server_by("id", $in{'id'});
 $server || &error($text{'edit_egone'});
-$type = $in{'type'};
 &ui_print_header(&server_in($server), $text{'find_title_'.$type},
 		 "", "find".$type);
 
@@ -19,22 +19,34 @@ print &ui_table_start($text{'find_header'}, undef, 2);
 $tfunc = "type_".$type."_desc";
 print &ui_table_row($text{'find_type'}, &$tfunc());
 
-# Base directory for .cfg files
-print &ui_table_row($text{'find_dir'},
-	&ui_opt_textbox("dir", undef, 40, $text{'find_dirauto'}));
+# Base directory for .cfg files (if it makes sense)
+if (!$in{'nodir'}) {
+	print &ui_table_row($text{'find_dir'},
+		&ui_opt_textbox("dir", undef, 40, $text{'find_dirauto'}));
+	}
 
 # Limit to running instances?
 print &ui_table_row($text{'find_running'},
 	&ui_yesno_radio("running",
 			defined($in{'running'}) ? $in{'running'} : 1));
 
+# Demo mode
+#print &ui_table_row($text{'find_show'},
+#	&ui_yesno_radio("show", 1));
+
 # SSH login details for found instances
-print &ui_table_hr();
-&show_ssh_login_form($server, $type);
+$nsfunc = "type_".$type."_no_ssh";
+if (!defined(&$nsfunc) || !&$nsfunc()) {
+	print &ui_table_hr();
+	&show_ssh_login_form($server, $type);
+	}
 
 # Webmin login details
-print &ui_table_hr();
-&show_webmin_login_form($server, $type);
+$nwfunc = "type_".$type."_no_webmin";
+if (!defined(&$nwfunc) || !&$nwfunc()) {
+	print &ui_table_hr();
+	&show_webmin_login_form($server, $type);
+	}
 
 print &ui_table_end();
 print &ui_form_end([ [ undef, $text{'find_ok'} ] ]);
