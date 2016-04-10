@@ -8,13 +8,21 @@ be filled in :<p>
 <dt><b>System hosting Docker containers</b>
 <dd>From the menu you must select a system that has the software
     installed and kernel version required to run Docker. Cloudmin does not yet have
-    the ability to install these packages automatically.
+    the ability to install these packages automatically.<p>
 
 <dt><b>Add Docker systems to DNS domain</b>
 <dd>If the master Cloudmin system runs a DNS server, this field will show a menu
     of local DNS domains to which the hostname of newly created Docker instances
-    will be added. It is highly recommended that you setup a DNS server and make    sure it can be managed through Webmin before using Docker and Cloudmin, so that
-    new instances will have resolvable hostnames.
+    will be added. Because Docker container IP addresses can change on reboot,
+    Cloudmin will automatically update any DNS record it creates to match the
+    new IP.<p>
+
+<dt><b>Switch Docker Hub account</b>
+<dd>In order to upload Docker images to the Hub, you must first register for
+    an account at <a href=https://hub.docker.com/ target=_blank>https://hub.docker.com/</a> and then enter the login details for that account here. This is
+    not needed if you plan to use only local images though.<p>
+
+<dt><b>
 
 </dl>
 
