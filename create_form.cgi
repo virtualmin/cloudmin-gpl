@@ -74,9 +74,11 @@ if (@images) {
 				   @images ]));
 	}
 elsif ($mustimages) {
-	# No images available, but none are needed
+	# No images available, but an image is needed
 	print &ui_table_row($text{'create_image'},
-		"<font color=red>$text{'create_noimagedownloaded'}</font>");
+		"<font color=red>$text{'create_noimagedownloaded'}</font><br>".
+		(&can_action(undef, "global") ?
+			&text('create_noimageget', 'list_images.cgi') : ''));
 	}
 
 # Root password / SSH key (if possible)

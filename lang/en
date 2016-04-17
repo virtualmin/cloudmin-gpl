@@ -333,6 +333,8 @@ create_consoleuser=Creating console access user ..
 create_packages=Enabling software package management ..
 create_epackages=.. failed : $1
 create_image=Cloudmin system image
+create_noimagedownloaded=No Cloudmin images are available for use!
+create_noimageget=Use the <a href='$1'>New System Images</a> page to download some.
 create_noimage=&lt;None - base OS only&gt;
 create_noimage_openvz=&lt;From OpenVZ template&gt;
 create_noimage_lxc=&lt;From LXC template&gt;
@@ -1547,6 +1549,7 @@ docker_eiface=Missing or invalid-looking base network interface
 docker_currlogin=Current Docker Hub account
 docker_elogin=Failed to fetch account : $1
 docker_newlogin=Switch Docker Hub account
+docker_newlogin2=Docker Hub account
 docker_login0=Don't change
 docker_login1=Logout from current account
 docker_login2=Login with account
