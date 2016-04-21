@@ -7212,7 +7212,7 @@ if ($ips) {
 
 # Check for IPv6 addresses
 if (!$dest->{'kvm_pool6'} && $oldserver->{'kvm_ip6'}) {
-	$ips && scalar(@$ips) || return &text('clone_eips6', $dest->{'host'});
+	$ips6 && scalar(@$ips6) || return &text('clone_eips6', $dest->{'host'});
 	}
 if ($ips6) {
 	my @oldips6 = split(/\s+/, $oldserver->{'kvm_ip6'});
