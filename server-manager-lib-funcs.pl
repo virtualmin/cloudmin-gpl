@@ -4009,6 +4009,10 @@ if ($server->{'status'} ne 'nohost') {
 				}
 			}
 		$server->{'ip6_addresses'} = join(" ", @addr6);
+		if (defined($server->{$server->{'manager'}.'_ip6'})) {
+			$server->{$server->{'manager'}.'_ip6'} =
+				join(" ", @addr6);
+			}
 		}
 	}
 }
