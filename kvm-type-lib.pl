@@ -4133,12 +4133,13 @@ else {
 }
 
 # type_kvm_can_cpu(&server)
-# Checks if the host of some KVM system supports cgroups
+# Checks if the host of some KVM system supports cgroups. If so, returns 5
+# meaning it can be changed without a reboot.
 sub type_kvm_can_cpu
 {
 my ($server) = @_;
 my $vhost = &get_parent_server($server);
-return $vhost->{'kvm_cgroup_support'} ? 3 : 0;
+return $vhost->{'kvm_cgroup_support'} ? 5 : 0;
 }
 
 # type_kvm_get_cpu(&server)
