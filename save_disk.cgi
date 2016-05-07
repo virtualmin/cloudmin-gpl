@@ -185,6 +185,7 @@ else {
 		else {
 			$disk = { };
 			}
+		$disk->{'new'} = $in{'new'};
 		}
 
 	# Real disk device

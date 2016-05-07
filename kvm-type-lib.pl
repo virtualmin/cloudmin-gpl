@@ -3276,12 +3276,14 @@ if ($disk->{'virt_auto'} && $disk->{'virt'} ne $disk->{'virt_auto'}) {
 	}
 
 my @st = &recursive_stat_file_on_server($vhost, $disk->{'real'});
-if ($disk->{'device'} && !$disk->{'lv'}) {
-	# Check if the device exists
+if ($disk->{'device'} && !$disk->{'lv'} || $disk->{'new'} == 2) {
+	# Check if the device exists, for when an existing file or device
+	# is being added
 	@st || return "Device $disk->{'real'} does not exist ".
 		      "on $vhost->{'host'}";
 	}
 else {
+	# A new disk file or LV is being created
 	@st || $disk->{'size'} || $disk->{'iscsi_target'} ||
 		return "Missing size for new disk";
 	if ($disk->{'lv'} && $disk->{'overwrite'}) {
