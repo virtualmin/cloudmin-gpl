@@ -1650,7 +1650,7 @@ dichooser_enone=The selected system has no Docker images
 dichooser_id=Image name
 dichooser_file=Description
 dichooser_size=Size
-dichooser_tags=Tags
+dichooser_tags=Tag
 dichooser_search=Find images:
 dichooser_ok=Search Docker Hub
 
