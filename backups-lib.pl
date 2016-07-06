@@ -1472,7 +1472,8 @@ if ($server->{$manager.'_filesystem_lv'} && $server->{'status'} ne 'down' &&
     !$clusterlvm) {
 	&$first_print(&text('brun_snapshot', $server->{'host'}));
 	foreach my $d (@lvmdisks) {
-		my $snaplv = { 'size' => int(($d->{'size'}/10)/1024),
+		my $snaplv = { 'size' => 10,
+			       'size_of' => 'FREE',
 			       'is_snap' => 1,
 			       'snapof' => $d->{'lv'},
 			       'name' => $d->{'lv'}.'_cloudmin_snap',
