@@ -205,7 +205,7 @@ if ($done) {
 
 	if ($need_reboot && $server->{'status'} ne 'down') {
 		# Tell user that a reboot is needed
-		print &ui_form_start("save_serv.cgi");
+		print &ui_form_start("save_serv.cgi", "post");
 		print &ui_hidden("id", $in{'id'});
 		print &ui_hidden("reboot", 1);
 		print &ui_hidden("confirm", 1);

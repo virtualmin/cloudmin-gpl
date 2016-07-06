@@ -376,7 +376,7 @@ if (defined(&theme_post_save_server)) {
 
 # Offer to reboot if needed
 if ($reboot && $server->{'status'} ne 'down') {
-	print &ui_form_start("save_serv.cgi");
+	print &ui_form_start("save_serv.cgi", "post");
 	print &ui_hidden("id", $in{'id'});
 	print &ui_hidden("reboot", 1);
 	print &ui_hidden("confirm", 1);
