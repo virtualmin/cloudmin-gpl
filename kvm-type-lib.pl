@@ -912,7 +912,9 @@ my @rv = ( $module_info{'onehost'} eq 'kvm' ? ( ) :
 	 );
 if (&can_action(undef, "advanced")) {
 	my $models = join('|', map { $_->[0] } @{&type_kvm_list_models()});
-	push(@rv, { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1 },
+	push(@rv, { 'name' => 'lvm', 'value' => 'true|false', 'opt' => 1,
+		    'deprecated' => 1 },
+		  { 'name' => 'storage', 'value' => 'storage-id', 'opt' => 1 },
 	 	  { 'name' => 'mac', 'value' => 'ethernet-address', 'opt' => 1 },
 		  { 'name' => 'virtio', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'model', 'value' => $models, 'opt' => 1 },
@@ -1199,31 +1201,66 @@ if ($zone) {
 	}
 
 if (&can_action(undef, "advanced")) {
-	# Validate LVM flag
-	if ($args->{'lvm'} =~ /true|yes/i) {
-		$vhost->{'kvm_vg'} || $vhost->{'kvm_iscsi'} ne '' ||
-			return "Host system $vhost->{'host'} does not use LVM";
-		$server->{'directory'} &&
-			return "LVM cannot be enabled when a disk directory ".
-			       "is specified";
+	# Validate storage location flag
+	my $storages = &type_kvm_list_storages($vhost);
+	ref($storages) || return "Failed to list storages : $storages";
+	my $storage;
+	my ($fstorage) = grep { $_->{'id'} eq 'files' } @$storages;
+	if ($args->{'storage'}) {
+		# Find requested storage
+		($storage) = grep { $_->{'id'} eq $args->{'storage'} } 
+				  @$storages;
+		$storage ||return "No storage with ID $args->{'storage'} found";
 		}
-	elsif ($args->{'lvm'} =~ /false|no/i) {
-		$server->{'kvm_nolvm'} = 1;
-		}
-	elsif ($server->{'directory'}) {
-		$server->{'kvm_nolvm'} = 1;
-		}
-
-	# Validate forced iSCSI server flag
-	if ($args->{'iscsi'}) {
+	elsif ($args->{'iscsi'}) {
+		# Validate forced iSCSI server flag
 		my $iscsiserver = &get_managed_server_by(
 					"host", $args->{'iscsi'});
 		$iscsiserver ||
 			return "iSCSI server $args->{'iscsi'} does not exist";
 		$iscsiserver->{'iscsi_module'} ||
 			return "System $args->{'iscsi'} is not an iSCSI server";
-		$server->{'kvm_force_iscsi'} = $iscsiserver->{'id'};
-		$server->{'kvm_nolvm'} = 0;
+		($storage) = grep { $_->{'iscsi'} eq $iscsiserver->{'id'} }
+				  @$storages;
+		}
+	elsif ($args->{'lvm'}) {
+		# Validate LVM flag (deprecated)
+		if ($args->{'lvm'} =~ /true|yes/i) {
+			($storage) = grep { $_->{'id'} =~ /^lvm_/ } @$storages;
+			$storage || return "Host system $vhost->{'host'} ".
+					   "does not use LVM";
+			$server->{'directory'} &&
+				return "LVM cannot be enabled when a disk ".
+				       "directory is specified";
+			}
+		elsif ($args->{'lvm'} =~ /false|no/i) {
+			$storage = $fstorage;
+			}
+		}
+	else {
+		# Default storage
+		if ($server->{'directory'}) {
+			$storage = $fstorage;
+			}
+		elsif ($vhost->{'kvm_vg'}) {
+			($storage) = grep { $_->{'vg'} eq $vhost->{'kvm_vg'} }
+					  @$storages;
+			}
+		else {
+			$storage = $fstorage;
+			}
+		}
+
+	# Use the storage chosen
+	$storage || return "No storage location found!";
+	if ($storage->{'type'} eq 'files') {
+		$server->{'kvm_nolvm'} = 1;
+		}
+	elsif ($storage->{'type'} eq 'lvm') {
+		$server->{'kvm_force_vg'} = $storage->{'vg'};
+		}
+	elsif ($storage->{'type'} eq 'iscsi') {
+		$server->{'kvm_force_iscsi'} = $storage->{'iscsi'};
 		}
 
 	# Validate virtio flag, or use image or configured default
@@ -1343,9 +1380,11 @@ if ($reset) {
 		return "A system with no primary disk cannot be reset";
 		}
 	}
-elsif ($server->{'kvm_force_iscsi'} ne '') {
-	# On iSCSI server, forced at creation time
-	$server->{'kvm_filesystem_iscsi'} = $server->{'kvm_force_iscsi'};
+elsif ($server->{'kvm_force_iscsi'} ne '' ||
+       $vhost->{'kvm_iscsi'} ne '' && !$server->{'kvm_nolvm'}) {
+	# On iSCSI server
+	$server->{'kvm_filesystem_iscsi'} = $server->{'kvm_force_iscsi'} ne '' ?
+		$server->{'kvm_force_iscsi'} : $vhost->{'kvm_iscsi'};
 	delete($server->{'kvm_filesystem_vg'});
 	delete($server->{'kvm_filesystem_lv'});
 	delete($server->{'kvm_swapfile_vg'});
@@ -1357,9 +1396,11 @@ elsif ($server->{'kvm_force_iscsi'} ne '') {
 		delete($server->{'kvm_swapfile_iscsi'});
 		}
 	}
-elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
+elsif ($server->{'kvm_force_vg'} ||
+       $vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
 	# On LVM logical volumes
-	$server->{'kvm_filesystem_vg'} = $vhost->{'kvm_vg'};
+	$server->{'kvm_filesystem_vg'} = $server->{'kvm_force_vg'} ||
+					 $vhost->{'kvm_vg'};
 	$server->{'kvm_filesystem_lv'} = $server->{'host'}.'_img';
 	$server->{'kvm_filesystem_lv'} =~ s/\./_/g;
 	$fsfile = "/dev/".$server->{'kvm_filesystem_vg'}."/".
@@ -1367,7 +1408,7 @@ elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
 	delete($server->{'kvm_filesystem_iscsi'});
 	delete($server->{'kvm_swapfile_iscsi'});
         if ($server->{'kvm_swap'}) {
-                $server->{'kvm_swapfile_vg'} = $vhost->{'kvm_vg'};
+                $server->{'kvm_swapfile_vg'} = $server->{'kvm_filesystem_vg'};
                 $server->{'kvm_swapfile_lv'} = $server->{'host'}.'_swap';
 		$server->{'kvm_swapfile_lv'} =~ s/\./_/g;
                 $swfile = "/dev/".$server->{'kvm_swapfile_vg'}."/".
@@ -1376,20 +1417,6 @@ elsif ($vhost->{'kvm_vg'} && !$server->{'kvm_nolvm'}) {
 	else {
 		delete($server->{'kvm_swapfile_vg'});
 		delete($server->{'kvm_swapfile_lv'});
-		}
-	}
-elsif ($vhost->{'kvm_iscsi'} ne '' && !$server->{'kvm_nolvm'}) {
-	# On iSCSI server, determined by host
-	$server->{'kvm_filesystem_iscsi'} = $vhost->{'kvm_iscsi'};
-	delete($server->{'kvm_filesystem_vg'});
-	delete($server->{'kvm_filesystem_lv'});
-	delete($server->{'kvm_swapfile_vg'});
-	delete($server->{'kvm_swapfile_lv'});
-        if ($server->{'kvm_swap'}) {
-		$server->{'kvm_swapfile_iscsi'} = $vhost->{'kvm_iscsi'};
-		}
-	else {
-		delete($server->{'kvm_swapfile_iscsi'});
 		}
 	}
 else {
@@ -4023,6 +4050,7 @@ my @rv;
 
 # Regular files
 push(@rv, { 'id' => 'files',
+	    'type' => 'files',
 	    'desc' => $text{'storage_files'},
 	    'adddesc' => $text{'storage_addfiles'} });
 
@@ -4031,6 +4059,8 @@ my @iscsis = &list_iscsi_target_servers();
 foreach my $iscsi (@iscsis) {
 	push(@rv, {
 	    'id' => 'iscsi_'.$iscsi->{'host'},
+	    'type' => 'iscsi',
+	    'iscsi' => $iscsi->{'id'},
 	    'desc' => @iscsis > 1 ? &text('storage_iscsi', $iscsi->{'host'})
 			          : $text{'storage_iscsi1'},
 	    'adddesc' => @iscsis > 1 ? &text('storage_addiscsi',
@@ -4045,6 +4075,8 @@ if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	foreach my $vg (@vgs) {
 		push(@rv, {
 		    'id' => 'lvm_'.$vg->{'vg'},
+		    'type' => 'lvm',
+		    'vg' => $vg->{'vg'},
 		    'desc' => @vgs > 1 ? &text('storage_lvm', $vg->{'vg'})
 				       : $text{'storage_lvm1'},
 		    'adddesc' => @vgs > 1 ? &text('storage_addlvm', $vg->{'vg'})
