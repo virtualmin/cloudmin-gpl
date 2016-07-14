@@ -759,6 +759,7 @@ if ($type) {
 	$afunc = "type_".$type."_create_args";
 	if (defined(&$afunc)) {
 		foreach $a (&$afunc()) {
+			next if ($a->{'deprecated'});
 			my ($o1, $o2) = $a->{'opt'} ? ("[", "]") : ( );
 			print "                      ";
 			if ($a->{'value'}) {
