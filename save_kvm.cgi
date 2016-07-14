@@ -19,7 +19,7 @@ if ($in{'delete'}) {
 	}
 elsif ($in{'find'}) {
 	# Redirect to find form
-	&redirect("find_form.cgi?id=$kvm->{'id'}&type=kvm");
+	&redirect("find_form.cgi?id=$kvm->{'id'}&type=kvm&nodir=1");
 	return;
 	}
 else {
