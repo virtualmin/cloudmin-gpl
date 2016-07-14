@@ -805,39 +805,25 @@ if (!$empty) {
 	}
 
 # Storage location setting
+my $storage;
 if ($in{'kvm_storage'}) {
 	my $storages = &type_kvm_list_storages($vhost);
 	ref($storages) || &error(&text('create_exenstorages', $storages));
-	my ($storage) = grep { $_->{'id'} eq $in{'kvm_storage'} } @$storages;
-	$storage || &error(&text('create_exenstorage',
-				 $in{'kvm_storage'}, $vhost->{'host'}));
-	if ($storage->{'type'} eq 'files') {
-		$server->{'kvm_nolvm'} = 1;
-		}
-	elsif ($storage->{'type'} eq 'lvm') {
-		$server->{'kvm_force_vg'} = $storage->{'vg'};
-		}
-	elsif ($storage->{'type'} eq 'iscsi') {
-		$server->{'kvm_force_iscsi'} = $storage->{'iscsi'};
-		}
+	($storage) = grep { $_->{'id'} eq $in{'kvm_storage'} } @$storages;
 	}
-
-# LVM setting
-if ($in{'kvm_lvm'} == -1 || !defined($in{'kvm_lvm'})) {
-	# Use host system default, unless a directory was set
-	if ($server->{'directory'}) {
-		$server->{'kvm_nolvm'} = 1;
-		}
+else {
+	($storage) = grep { $_->{'default'} } @$storages;
 	}
-elsif ($in{'kvm_lvm'} == 0) {
-	# Force not on LVM
+$storage || &error(&text('create_exenstorage',
+			 $in{'kvm_storage'}, $vhost->{'host'}));
+if ($storage->{'type'} eq 'files') {
 	$server->{'kvm_nolvm'} = 1;
 	}
-elsif ($in{'kvm_lvm'} == 1) {
-	# Must be on LVM
-	$vhost->{'kvm_iscsi'} ne '' || $vhost->{'kvm_vg'} ||
-		&error(&text('xen_eonlvm', $vhost->{'host'}));
-	$server->{'directory'} && &error($text{'xen_eonlvmdir'});
+elsif ($storage->{'type'} eq 'lvm') {
+	$server->{'kvm_force_vg'} = $storage->{'vg'};
+	}
+elsif ($storage->{'type'} eq 'iscsi') {
+	$server->{'kvm_force_iscsi'} = $storage->{'iscsi'};
 	}
 
 # VirtIO setting
@@ -1262,12 +1248,8 @@ if (&can_action(undef, "advanced")) {
 		if ($server->{'directory'}) {
 			$storage = $fstorage;
 			}
-		elsif ($vhost->{'kvm_vg'}) {
-			($storage) = grep { $_->{'vg'} eq $vhost->{'kvm_vg'} }
-					  @$storages;
-			}
 		else {
-			$storage = $fstorage;
+			($storage) = grep { $_->{'default'} } @$storages;
 			}
 		}
 
@@ -4103,6 +4085,21 @@ if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 					  : $text{'storage_addlvm1'} });
 		}
 	}
+
+# Work out the default storage
+my $def;
+if ($vhost->{'kvm_vg'}) {
+	($def) = grep { $_->{'vg'} eq $vhost->{'kvm_vg'} } @rv;
+	}
+elsif ($vhost->{'kvm_iscsi'} ne '') {
+	($def) = grep { $_->{'iscsi'} eq $vhost->{'kvm_iscsi'} } @rv;
+	}
+else {
+	$def = $rv[0];
+	}
+$def || return "No default storage found for $vhost->{'host'}";
+$def->{'default'} = 1;
+
 return \@rv;
 }
 
