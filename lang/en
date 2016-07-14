@@ -668,6 +668,8 @@ create_sudotty=Allowing sudo access without a TTY ..
 create_esudotty=.. failed : $1. Some file transfer operations may not work!
 create_gceother=Other image named ..
 create_egceop2=Operation failed : $1
+create_exenstorages=Failed to list storage locations : $1
+create_exenstorage=Storage location with ID $1 does not exist on host $2
 
 keys_title=SSH Keys
 keys_desc=Key description

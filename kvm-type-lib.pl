@@ -580,16 +580,18 @@ sub type_kvm_advanced_create_form
 my ($empty) = @_;
 my $rv;
 
-# LVM / local files option
-my @lvmhosts = grep { $_->{'kvm_host'} && $_->{'kvm_vg'} }
-		    &list_managed_servers();
-if (@lvmhosts) {
-	$rv .= &ui_table_row($text{'xen_onlvm'},
-		&ui_radio("kvm_lvm", -1,
-			  [ [ -1, $text{'xen_onlvmdef'} ],
-			    [ 0, $text{'xen_onlvm0'} ],
-			    [ 1, $text{'xen_onlvm1'} ] ]));
+# Storage location
+my @vhosts = grep { $_->{'kvm_host'} } &list_managed_servers();
+my @storages;
+my %done;
+foreach my $vhost (@vhosts) {
+	my $storages = &type_kvm_list_storages($vhost);
+	push(@storages, grep { !$done{$_->{'id'}}++ } @$storages);
 	}
+$rv .= &ui_table_row($text{'xen_onlvm'},
+	&ui_select("kvm_storage", "",
+		   [ [ "", "&lt;$text{'xen_onlvmdef'}&gt;" ],
+		     map { [ $_->{'id'}, $_->{'desc'} ] } @storages ]));
 
 # VirtIO option
 $rv .= &ui_table_row($text{'create_kvmusevirtio'},
@@ -800,6 +802,24 @@ if (!$empty) {
 		$server->{'kvm_gw6'} = undef;
 		}
 	$server->{'ip6_addresses'} = $server->{'kvm_ip6'};
+	}
+
+# Storage location setting
+if ($in{'kvm_storage'}) {
+	my $storages = &type_kvm_list_storages($vhost);
+	ref($storages) || &error(&text('create_exenstorages', $storages));
+	my ($storage) = grep { $_->{'id'} eq $in{'kvm_storage'} } @$storages;
+	$storage || &error(&text('create_exenstorage',
+				 $in{'kvm_storage'}, $vhost->{'host'}));
+	if ($storage->{'type'} eq 'files') {
+		$server->{'kvm_nolvm'} = 1;
+		}
+	elsif ($storage->{'type'} eq 'lvm') {
+		$server->{'kvm_force_vg'} = $storage->{'vg'};
+		}
+	elsif ($storage->{'type'} eq 'iscsi') {
+		$server->{'kvm_force_iscsi'} = $storage->{'iscsi'};
+		}
 	}
 
 # LVM setting
