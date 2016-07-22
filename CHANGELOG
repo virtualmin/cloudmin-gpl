@@ -109,3 +109,5 @@ When creating a Virtualmin domain on a system with sycning enabled, Cloudmin can
 Added the Running Actions page to view and terminate operations with locks on Cloudmin systems. Also created the equivalent list-system-locks API command.
 ---- Changes since 8.4 ----
 Virtualmin backups can be scheduled across multiple Cloudmin-managed systems to a common destination.
+---- Changes since 9.0 ----
+The storage location for a Xen or KVM instance's disks can now be selected at VM creation time, rather than always using the host system default.

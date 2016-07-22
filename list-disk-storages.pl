@@ -66,7 +66,7 @@ $manager || &usage("System $host is not a host system");
 # Get the storages
 $sfunc = "type_".$manager."_list_storages";
 defined(&$sfunc) || &usage("System $host does not support disk storages");
-$storages = &$sfunc($server);
+$storages = &$sfunc($server, 1);
 ref($storages) || &usage("Failed to list disk storages : $storages");
 
 if ($multi) {

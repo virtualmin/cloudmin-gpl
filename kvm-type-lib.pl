@@ -585,7 +585,7 @@ my @vhosts = grep { $_->{'kvm_host'} } &list_managed_servers();
 my @storages;
 my %done;
 foreach my $vhost (@vhosts) {
-	my $storages = &type_kvm_list_storages($vhost);
+	my $storages = &type_kvm_list_storages($vhost, 1);
 	push(@storages, grep { !$done{$_->{'id'}}++ } @$storages);
 	}
 $rv .= &ui_table_row($text{'xen_onlvm'},
@@ -927,7 +927,8 @@ if (&can_action(undef, "advanced")) {
 		  { 'name' => 'start', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'vga', 'value' => 'true|false', 'opt' => 1 },
 		  { 'name' => 'firewall', 'value' => 'true|false', 'opt' => 1 },
-		  { 'name' => 'iscsi', 'value' => 'hostname', 'opt' => 1 },
+		  { 'name' => 'iscsi', 'value' => 'hostname', 'opt' => 1,
+		    'deprecated' => 1 },
 		  { 'name' => 'args', 'value' => 'parameters', 'opt' => 1 },
 	    );
 	}
@@ -1219,7 +1220,7 @@ if (&can_action(undef, "advanced")) {
 		$storage ||return "No storage with ID $args->{'storage'} found";
 		}
 	elsif ($args->{'iscsi'}) {
-		# Validate forced iSCSI server flag
+		# Validate forced iSCSI server flag (deprecated)
 		my $iscsiserver = &get_managed_server_by(
 					"host", $args->{'iscsi'});
 		$iscsiserver ||
@@ -1392,7 +1393,8 @@ elsif ($server->{'kvm_force_iscsi'} ne '' ||
 	delete($server->{'kvm_swapfile_vg'});
 	delete($server->{'kvm_swapfile_lv'});
         if ($server->{'kvm_swap'}) {
-		$server->{'kvm_swapfile_iscsi'} = $server->{'kvm_force_iscsi'};
+		$server->{'kvm_swapfile_iscsi'} =
+			$server->{'kvm_filesystem_iscsi'};
 		}
 	else {
 		delete($server->{'kvm_swapfile_iscsi'});
@@ -4041,13 +4043,13 @@ sub type_kvm_list_disk_filesystems
 return ('ext3', 'ext4', 'ext2', 'reiserfs', 'swap', 'ufs', 'xfs');
 }
 
-# type_kvm_list_storages(&vhost, [&server])
+# type_kvm_list_storages(&vhost, [always-show-hosts])
 # Returns a list of possible storage locations on some host system. Each is a
 # hash ref with a id and desc fields. Example storages include local files and
 # LVM volume groups.
 sub type_kvm_list_storages
 {
-my ($vhost, $server) = @_;
+my ($vhost, $always) = @_;
 my @rv;
 
 # Regular files
@@ -4058,31 +4060,32 @@ push(@rv, { 'id' => 'files',
 
 # Add iSCSI servers
 my @iscsis = &list_iscsi_target_servers();
+my $showi = $always || @iscsis > 1;
 foreach my $iscsi (@iscsis) {
 	push(@rv, {
 	    'id' => 'iscsi_'.$iscsi->{'host'},
 	    'type' => 'iscsi',
 	    'iscsi' => $iscsi->{'id'},
-	    'desc' => @iscsis > 1 ? &text('storage_iscsi', $iscsi->{'host'})
-			          : $text{'storage_iscsi1'},
-	    'adddesc' => @iscsis > 1 ? &text('storage_addiscsi',
-					     $iscsi->{'host'})
-				     : $text{'storage_addiscsi1'} });
+	    'desc' => $showi ? &text('storage_iscsi', $iscsi->{'host'})
+			     : $text{'storage_iscsi1'},
+	    'adddesc' => $showi ? &text('storage_addiscsi', $iscsi->{'host'})
+				: $text{'storage_addiscsi1'} });
 	}
 
 if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 	# Check for and add LVM volume groups
 	my $info = &get_server_collected($vhost);
 	my @vgs = grep { $_->{'vg'} ne 'gpt_vg' } @{$info->{'vg_list'}};
+	my $showv = $always || @vgs > 1;
 	foreach my $vg (@vgs) {
 		push(@rv, {
 		    'id' => 'lvm_'.$vg->{'vg'},
 		    'type' => 'lvm',
 		    'vg' => $vg->{'vg'},
-		    'desc' => @vgs > 1 ? &text('storage_lvm', $vg->{'vg'})
-				       : $text{'storage_lvm1'},
-		    'adddesc' => @vgs > 1 ? &text('storage_addlvm', $vg->{'vg'})
-					  : $text{'storage_addlvm1'} });
+		    'desc' => $showv ? &text('storage_lvm', $vg->{'vg'})
+				     : $text{'storage_lvm1'},
+		    'adddesc' => $showv ? &text('storage_addlvm', $vg->{'vg'})
+					: $text{'storage_addlvm1'} });
 		}
 	}
 
