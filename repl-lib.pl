@@ -443,7 +443,7 @@ push(@files, $virtualmin_licences_file, $serial_cache_file,
 	     $alert_status_file, $xen_cpu_seconds_file,
 	     $server_images_cache,
 	     $custom_links_file, $custom_link_categories_file,
-	     $blocked_ips_file,
+	     $blocked_ips_file, $docker_volumes_file,
 	     "$module_config_directory/bw-template",
 	     "$module_root_directory/owner-bw-template");
 foreach my $p (@plugins) {

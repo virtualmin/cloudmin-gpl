@@ -56,6 +56,9 @@ push(@rv, $disk_directories_dir);
 # Custom links
 push(@rv, $custom_links_file, $custom_link_categories_file);
 
+# Docker volumes file
+push(@rv, $docker_volumes_file);
+
 return &unique(@rv);
 }
 
