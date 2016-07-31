@@ -6076,3 +6076,10 @@ dimage_etag=All tags must be alphanumeric
 dimage_creating=Creating image named <tt>$1</tt> on <tt>$2</tt> ..
 dimage_failed=.. creation failed : $1
 dimage_created=.. created with ID $1
+
+dkvolumes_title=Docker Shared Volumes
+dkvolumes_src=Volume source
+dkvolumes_type=Volume type
+dkvolumes_users=Current users
+dkvolumes_none=No Docker shared volumes have been defined yet.
+dkvolumes_add=Create a new shared volume.
