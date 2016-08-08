@@ -10,7 +10,7 @@ my @rv;
 my $hasprov = &indexof("cloudmin-services", @plugins) >= 0 ? 1 : 0;
 if (&foreign_installed("bind8")) {
 	# Local local DNS zones
-	&foreign_require("bind8", "bind8-lib.pl");
+	&foreign_require("bind8");
 	@rv = sort { $a->{'name'} cmp $b->{'name'} }
 		 grep { $_->{'type'} eq 'master' } &bind8::list_zone_names();
 	foreach my $z (@rv) {
@@ -49,7 +49,7 @@ return @rv;
 sub add_bind8_record
 {
 my ($dnsname, $ip, $zonename) = @_;
-&foreign_require("bind8", "bind8-lib.pl");
+&foreign_require("bind8");
 my $rtype = &check_ipaddress($ip) ? "A" : "AAAA";
 
 my @zones = &list_bind_zones();
@@ -180,7 +180,7 @@ sub delete_bind8_record
 {
 my ($dnsname, $zonename, $ip) = @_;
 return 0 if (!$dnsname || !$ip);
-&foreign_require("bind8", "bind8-lib.pl");
+&foreign_require("bind8");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 my ($rfn, $rrecs, undef, $rzone) = &get_reverse_dns_zone($ip);
@@ -267,7 +267,7 @@ sub modify_bind_dns_record
 {
 my ($dnsname, $zonename, $oldip, $ip) = @_;
 return undef if (!$dnsname);
-&foreign_require("bind8", "bind8-lib.pl");
+&foreign_require("bind8");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 my ($rfn, $rrecs, undef, $rzone) = &get_reverse_dns_zone($oldip);
@@ -360,7 +360,7 @@ return undef;
 sub set_bind_dns_addresses
 {
 my ($dnsname, $zonename, $ips, $cmts, $ttl) = @_;
-&foreign_require("bind8", "bind8-lib.pl");
+&foreign_require("bind8");
 my @zones = &list_bind_zones();
 my ($zone) = grep { $_->{'name'} eq $zonename } @zones;
 if ($zone && $zone->{'local'}) {
