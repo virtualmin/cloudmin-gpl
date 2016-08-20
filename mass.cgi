@@ -51,7 +51,9 @@ if ($in{'refresh'} || $in{'regen'}) {
 
 	if (defined(&theme_post_save_server)) {
 		&theme_post_save_server();
-		&theme_select_server($aservers[0]) if (@aservers == 1);
+		if (defined(&theme_select_server)) {
+			&theme_select_server($aservers[0]) if (@aservers == 1);
+			}
 		}
 	&webmin_log($in{'regen'} ? "regen" : "refresh", "servers",
 		    scalar(@servers), { 'hosts' => \@hostnames });
