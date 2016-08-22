@@ -111,3 +111,4 @@ Added the Running Actions page to view and terminate operations with locks on Cl
 Virtualmin backups can be scheduled across multiple Cloudmin-managed systems to a common destination.
 ---- Changes since 9.0 ----
 The storage location for a Xen or KVM instance's disks can now be selected at VM creation time, rather than always using the host system default.
+Added a button to the backup form to immediately execute a backup, but in the background.

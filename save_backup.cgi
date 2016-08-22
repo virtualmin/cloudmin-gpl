@@ -34,6 +34,11 @@ elsif ($in{'run'}) {
 	&redirect("backup.cgi?id=$backup->{'id'}");
 	return;
 	}
+elsif ($in{'runbg'}) {
+	# Redirect to run backup in the background
+	&redirect("backup.cgi?id=$backup->{'id'}&bg=1");
+	return;
+	}
 elsif ($in{'logs'}) {
 	# Redirect to logs for this backup
 	&redirect("list_backuplogs.cgi?log=$backup->{'id'}");

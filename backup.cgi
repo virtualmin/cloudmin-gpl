@@ -30,33 +30,41 @@ else {
 	print "<b>",&text('brun_destdesc2', scalar(@servers)),"</b><p>\n";
 	}
 
-# Execute it, and show output
-&$indent_print();
-$rv = &execute_backup($backup);
-&$outdent_print();
-
-# Print a summary line
-@ok = grep { $rv->{$_->{'id'}} &&
-	     ($rv->{$_->{'id'}}->{'ok'} ||
-	      $rv->{$_->{'id'}}->{'empty'}) } @servers;
-@bad = grep { !$rv->{$_->{'id'}} ||
-	      !($rv->{$_->{'id'}}->{'ok'} ||
-		$rv->{$_->{'id'}}->{'empty'}) } @servers;
-if (scalar(@ok) == scalar(@servers)) {
-	print "<b>",&text('brun_allok', scalar(@ok)),"</b><p>\n";
+if ($in{'bg'}) {
+	# Launch it in the background
+	&system_logged("$backup_cron_cmd --id $backup->{'id'} >/dev/null 2>&1 </dev/null &");
+	print "<b>$text{'brun_background'}</b><p>\n";
 	}
 else {
-	print "<b><font color=red>",
-	      &text('brun_somefailed', scalar(@ok), scalar(@bad)),
-	      "</font></b><p>\n";
+	# Execute it, and show output
+	&$indent_print();
+	$rv = &execute_backup($backup);
+	&$outdent_print();
+
+	# Print a summary line
+	@ok = grep { $rv->{$_->{'id'}} &&
+		     ($rv->{$_->{'id'}}->{'ok'} ||
+		      $rv->{$_->{'id'}}->{'empty'}) } @servers;
+	@bad = grep { !$rv->{$_->{'id'}} ||
+		      !($rv->{$_->{'id'}}->{'ok'} ||
+			$rv->{$_->{'id'}}->{'empty'}) } @servers;
+	if (scalar(@ok) == scalar(@servers)) {
+		print "<b>",&text('brun_allok', scalar(@ok)),"</b><p>\n";
+		}
+	else {
+		print "<b><font color=red>",
+		      &text('brun_somefailed', scalar(@ok), scalar(@bad)),
+		      "</font></b><p>\n";
+		}
+
+	# Show failure reasons
+	print "<table>\n";
+	foreach $s (@bad) {
+		print "<tr> <td>$s->{'host'}</td> <td>:</td> <td>$rv->{$s->{'id'}}->{'msg'}</td> </tr>\n";
+		}
+	print "</table>\n";
 	}
 
-# Show failure reasons
-print "<table>\n";
-foreach $s (@bad) {
-	print "<tr> <td>$s->{'host'}</td> <td>:</td> <td>$rv->{$s->{'id'}}->{'msg'}</td> </tr>\n";
-	}
-print "</table>\n";
 &webmin_log("backup", "backup", $backup->{'id'},
 	    { 'dest' => $backup->{'dest'},
 	      'host' => join(' ', map { $_->{'host'} } @servers) });
