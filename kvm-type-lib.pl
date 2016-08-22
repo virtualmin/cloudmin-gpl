@@ -805,9 +805,9 @@ if (!$empty) {
 	}
 
 # Storage location setting
+my $storages = &type_kvm_list_storages($vhost);
 my $storage;
 if ($in{'kvm_storage'}) {
-	my $storages = &type_kvm_list_storages($vhost);
 	ref($storages) || &error(&text('create_exenstorages', $storages));
 	($storage) = grep { $_->{'id'} eq $in{'kvm_storage'} } @$storages;
 	}
