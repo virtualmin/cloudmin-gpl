@@ -410,7 +410,7 @@ else {
 	my ($out, $ex, $err) = &execute_command_on_server($vhost,
 		"fdisk -u $real <$vhosttemp");
 	&delete_file_on_server($vhost, $vhosttemp);
-	if ($err || $ex && $out !~ /The kernel still uses the old table/) {
+	if ($err || $ex && $out !~ /The kernel still uses the old table|Error informing the kernel/) {
 		return "Failed to create partition : ".($out || $err);
 		}
 	}
