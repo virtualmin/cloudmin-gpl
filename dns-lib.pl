@@ -8,7 +8,7 @@ sub list_bind_zones
 my ($rev) = @_;
 my @rv;
 my $hasprov = &indexof("cloudmin-services", @plugins) >= 0 ? 1 : 0;
-if (&foreign_installed("bind8")) {
+if (&foreign_check("bind8")) {
 	# Local local DNS zones
 	&foreign_require("bind8");
 	@rv = sort { $a->{'name'} cmp $b->{'name'} }
