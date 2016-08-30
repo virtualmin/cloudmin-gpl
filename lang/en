@@ -6097,6 +6097,7 @@ dkvolumes_name=Volume name
 dkvolumes_src=Source
 dkvolumes_driver=Driver
 dkvolumes_hosts=Host systems
+dkvolumes_users=Containers
 dkvolumes_none=No Docker volumes have been defined yet.
 dkvolumes_delete=Delete Selected Volumes
 dkvolumes_copy=Copy To All Hosts
