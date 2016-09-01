@@ -27,7 +27,7 @@ if (@vsyncs) {
 			  join(", ", map { "<tt>$_</tt>" } @doms);
 		print &ui_columns_row([
 			"<a href='edit_vsync.cgi?id=$v->{'id'}'>".
-			  $src->{'host'}."</a>",
+			  ($src->{'host'} || "ID $v->{'src'}")."</a>",
 			$users,
 			$what,
 			$v->{'enabled'} ? &cron::when_text($v, 1)
