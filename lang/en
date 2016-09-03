@@ -6117,11 +6117,15 @@ dkvolumes_edelete=.. deletion failed : $1
 
 dkvolume_title=Create Docker Volume
 dkvolume_header=Docker shared volume options
-dkvolume_src=Volume source directory
-dkvolume_src0=New directory on host
-dkvolume_src1=Existing host directory
-dkvolume_src2=Volume named
-dkvolume_plugin=Docker volume plugin
-dkvolume_noplugin=None
-dkvolume_mount=Default mount point in containers
-dkvolume_nomount=None set
+dkvolume_driver=Volume driver
+dkvolumes_srcdef=Docker default, or based on volume options
+dkvolumes_srcname=Path on host system
+dkvolume_optname=Option name
+dkvolume_optvalue=Option value
+dkvolume_opts=Custom volume options
+
+docker_driver_local=Local files
+docker_driver_flocker=Flocker multi-host storage
+docker_driver_drdb=DRDB
+docker_driver_gce=Google Compute Engine
+docker_driver_local-persist=Local files with persistance
