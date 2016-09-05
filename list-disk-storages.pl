@@ -76,6 +76,8 @@ if ($multi) {
 		print "    Name: $s->{'desc'}\n";
 		print "    Description: $s->{'longdesc'}\n"
 			if ($s->{'longdesc'});
+		print "    Default: ",($s->{'default'} ? "Yes" : "No"),"\n";
+		print "    Volume group: $s->{'vg'}\n" if ($s->{'vg'});
 		}
 	}
 elsif ($nameonly) {
