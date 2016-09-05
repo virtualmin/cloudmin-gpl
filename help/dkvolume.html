@@ -7,8 +7,20 @@ The fields on the form are :
 <dt><b>Volume name</b>
 <dd>A unique name for this volume.<p>
 
-<dt><b>Volume driver</b>
-<dd>
-XXX
+<dt><b>Host systems</b>
+<dd>The Docker hosts that this volume will be created on. Note that unless the source directory is already shared via NFS, containers created on different hosts will not see the same files.<p>
+
+<dt><b>Driver</b>
+<dd>The volume driver determines how the underlying storage is accessed. By default Docker only supports the <b>Local files</b> driver, but others can be installed. See <a href=https://docs.docker.com/engine/extend/plugins/ target=_new>https://docs.docker.com/engine/extend/plugins/</a> for a list of available driver plugins.<br>
+If <b>Default</b> is selected, Cloudmin will use the <b>Local files</b> driver unless you select a host directory below - in which case, it will use <b>Persistent local files</b>.<p>
+
+<dt><b>Source</b>
+<dd>By default (unless a custom driver is chosen), Docker will create a directory on the host for each new volume, typically under <tt>/var/lib/docker</tt>. To specify an alternate directory, select <b>Path on host system</b> and enter it here.<br>
+Note that this will only work if the <tt>local-persist</tt> plugin has been installed. Files and installation instructions are available at <a href=https://github.com/CWSpear/local-persist target=_new>https://github.com/CWSpear/local-persist</a>.<p>
+
+<dt><b>Custom volume options</b>
+<dd>Each driver supports a number of options that can be used to control where files are stored, how large the volume is, and more. This table allows you to enter options that are not currently supported by the Cloudmin UI.
+
+</dl>
 
 <footer>
