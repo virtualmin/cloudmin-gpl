@@ -1207,11 +1207,12 @@ if ($zone) {
 	$server->{'host'} .= ".".$vhost->{'kvm_zone'};
 	}
 
+my $storages = &type_kvm_list_storages($vhost);
+ref($storages) || return "Failed to list storages : $storages";
+my $storage;
+
 if (&can_action(undef, "advanced")) {
 	# Validate storage location flag
-	my $storages = &type_kvm_list_storages($vhost);
-	ref($storages) || return "Failed to list storages : $storages";
-	my $storage;
 	my ($fstorage) = grep { $_->{'id'} eq 'files' } @$storages;
 	if ($args->{'storage'}) {
 		# Find requested storage
@@ -1252,18 +1253,6 @@ if (&can_action(undef, "advanced")) {
 		else {
 			($storage) = grep { $_->{'default'} } @$storages;
 			}
-		}
-
-	# Use the storage chosen
-	$storage || return "No storage location found!";
-	if ($storage->{'type'} eq 'files') {
-		$server->{'kvm_nolvm'} = 1;
-		}
-	elsif ($storage->{'type'} eq 'lvm') {
-		$server->{'kvm_force_vg'} = $storage->{'vg'};
-		}
-	elsif ($storage->{'type'} eq 'iscsi') {
-		$server->{'kvm_force_iscsi'} = $storage->{'iscsi'};
 		}
 
 	# Validate virtio flag, or use image or configured default
@@ -1336,8 +1325,21 @@ else {
 	$server->{'kvm_start'} = 1;
 	$server->{'kvm_vga'} = 0;
 	$server->{'kvm_firewall'} = $config{'kvm_firewall'} ? '*' : '';
+	($storage) = grep { $_->{'default'} } @$storages;
 	}
 $server->{'kvm_keymap'} = $config{'kvm_keymap'};
+
+# Use the storage chosen
+$storage || return "No storage location found!";
+if ($storage->{'type'} eq 'files') {
+	$server->{'kvm_nolvm'} = 1;
+	}
+elsif ($storage->{'type'} eq 'lvm') {
+	$server->{'kvm_force_vg'} = $storage->{'vg'};
+	}
+elsif ($storage->{'type'} eq 'iscsi') {
+	$server->{'kvm_force_iscsi'} = $storage->{'iscsi'};
+	}
 
 return undef;
 }
