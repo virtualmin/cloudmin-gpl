@@ -4348,6 +4348,8 @@ log_create_vbackup_g=Created Virtualmin backup of $1 for global settings
 log_modify_vbackup_g=Modified Virtualmin backup of $1 for global settings
 log_delete_vbackup_g=Deleted Virtualmin backup of $1 for global settings
 log_exec_vbackup_g=Ran Virtualmin backup of $1 for global settings
+log_create_dkvolume=Created Docker volume $1
+log_delete_dkvolumes=Deleted $1 Docker volumes
 
 vsyncs_title=Virtual Server Replication
 vsyncs_src=Source system

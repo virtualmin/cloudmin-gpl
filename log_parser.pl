@@ -323,6 +323,14 @@ elsif ($type eq "snapshots") {
 	# Multiple disk snapshots
 	return &text('log_'.$action.'_snapshots', $object, $p->{'count'});
 	}
+elsif ($type eq "dkvolume") {
+	# Docker volume
+	return &text('log_'.$action.'_dkvolume', $p->{'name'});
+	}
+elsif ($type eq "dkvolumes") {
+	# Multiple Docker volumes
+	return &text('log_'.$action.'_dkvolumes', $object);
+	}
 elsif ($action eq "cmd" || $action eq "remote") {
 	# Local or remote API call
 	return &text('log_'.$action.($long ? '_l' : ''),
