@@ -58,6 +58,7 @@ after_delete_cmd=Command to run after deleting a system,0,60
 line6=Timeouts,11
 ping_timeout=Ping timeout,0,5,,seconds
 ssh_timeout=SSH status check timeout,0,5,,seconds
+short_timeout=Timeout for short SSH commands,3,Default (5 seconds)
 webmin_timeout=Webmin status collection timeout,0,5,,seconds
 login_timeout=Text console timeout,0,5,,seconds
 ping_wait_timeout=Time to wait for ping on startup,0,5,,seconds

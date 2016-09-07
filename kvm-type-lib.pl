@@ -491,7 +491,7 @@ if (&can_action(undef, "ips") && @v6vhosts && !$empty) {
 				  [ 2, $text{'create_kvmip6manual'},
 				       &ui_textbox("kvm_ip6", undef, 30)." ".
 				       $text{'create_kvmip6netmask'}." ".
-				       &ui_textbox("kvm_netmask6", 64, 5) ] ],
+				       &ui_textbox("kvm_netmask6", 64, $short_timeout) ] ],
 				1));
 
 	# Default IPv6 gateway
@@ -2284,14 +2284,14 @@ if ($server->{'kvm_pause'}) {
 
 if (&can_ssh_status($server) && !$force) {
 	# Sync filesystems first, to avoid corruption
-	&execute_command_on_server($server, "sync ; sync ; sync", 5);
+	&execute_command_on_server($server, "sync ; sync ; sync", $short_timeout);
 	}
 my $proc = &get_server_kvm_instance($server);
 my $wait = $config{'kvm_powerdown'} || 30;
 if (&can_ssh_status($server) && !$force) {
 	# Try poweroff command
 	my ($out, $ex, $err) = &execute_command_on_server($server,
-		  "poweroff >/dev/null 2>&1 </dev/null &", 5);
+		  "poweroff >/dev/null 2>&1 </dev/null &", $short_timeout);
 	return $err if ($err);
 	return $out if ($ex);
 
@@ -2299,7 +2299,7 @@ if (&can_ssh_status($server) && !$force) {
 	my $tries = 0;
 	while($tries < $wait) {
 		my ($kout, $kex, $kerr) = &execute_command_on_server(
-					$vhost, "kill -0 $proc->{'pid'}", 5);
+					$vhost, "kill -0 $proc->{'pid'}", $short_timeout);
 		if ($kex && !$kerr) {
 			&delete_kvm_cgroup($server, $vhost);
 			return undef;
@@ -7992,8 +7992,8 @@ sub load_kvm_hotplug_modules
 {
 my ($server) = @_;
 if (&can_ssh_status($server)) {
-	&execute_command_on_server($server, "modprobe acpiphp", 5);
-	&execute_command_on_server($server, "modprobe pci_hotplug", 5);
+	&execute_command_on_server($server, "modprobe acpiphp", $short_timeout);
+	&execute_command_on_server($server, "modprobe pci_hotplug", $short_timeout);
 	}
 }
 

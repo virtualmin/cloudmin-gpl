@@ -267,6 +267,8 @@ $user_lock_dir = "$module_config_directory/userlocks";
 
 $blocked_ips_file = "$module_config_directory/blocked-ips";
 
+$short_timeout = $config{'short_ssh_timeout'} || 5;
+
 # Init all plugins
 @confplugins = split(/\s+/, $config{'plugins'});
 if ($no_vm2_plugins) {
