@@ -5997,9 +5997,10 @@ if (!$pkg || !$update) {
 			last;
 			}
 		}
-	foreach my $cmd ("apt-get", "yum", "up2date", "pkg-get") {
+	foreach my $cmd ("apt-get", "yum", "dnf", "up2date", "pkg-get") {
 		if (&has_command_on_server($server, $cmd)) {
 			$update = $cmd eq "up2date" ? "rhn" :
+				  $cmd eq "dnf" ? "yum" :
 				  $cmd eq "pkg-get" ? "csw" :
 				  $cmd eq "apt-get" ? "apt" : $cmd;
 			last;
