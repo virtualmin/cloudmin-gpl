@@ -72,6 +72,7 @@ backuplog_days=Number of days to show backup logs for,0,5
 sclass=Linux IO scheduling class for backups,1,-Default,1-Real time,2-Best effort,3-Idle
 sprio=Linux IO scheduling priority,3,Default,5,,,Range 0 to 7
 zip_args=Extra command-line parameters for compression command,3,None
+snap_pct=Percent of VG to use for backup snapshots,0,5,,%
 s3_endpoint=S3-compatible server hostname,3,Use Amazon S3
 s3_akey=Default S3 access key for backups,3,None,60
 s3_skey=Default S3 secret key for backups,3,None,60
