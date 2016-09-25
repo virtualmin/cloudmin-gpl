@@ -256,6 +256,7 @@ foreach my $l (split(/\r?\n/, $out)) {
 	elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?(\s+[0-9\.]+[kMGTP])?\s+([0-9a-f]+)\s+(\S+)/i &&
 	       $disklabel eq "dos") {
 		# Found a DOS format partition line
+		# /dev/sda1 * 2048 312580095 156289024 83 Linux
 		push(@rv, { 'part' => $p,
 			    'disklabel' => $disklabel,
 			    'start' => $1,
@@ -269,7 +270,7 @@ foreach my $l (split(/\r?\n/, $out)) {
 		$p++;
 		}
 	elsif ($l =~ /\s\d+\s+(\d+)\s+(\d+)\s+(\d+\S+)\s+(\S.*\S)\s+(primary|logical|extended|ext\S+)/ && $disklabel eq "gpt") {
-		# Found a GPT format partition line
+		# Found a GPT format partition line (old format)
 		push(@rv, { 'part' => $p,
 			    'disklabel' => $disklabel,
 			    'start' => $1,
@@ -281,6 +282,24 @@ foreach my $l (split(/\r?\n/, $out)) {
 			    'type' => $4,
 			    'offset' => $1 * $secsize });
 		}
+	elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?(\s+[0-9\.]+[kMGTP])?\s+(\S+)/i &&
+	       $disklabel eq "gpt") {
+		# Found a GPT format partition line (new format)
+		# /dev/sda1 2048 1258291166 1258289119  600G Linux
+		my %tagmap = reverse(%fdisk::tags);
+		push(@rv, { 'part' => $p,
+			    'disklabel' => $disklabel,
+			    'start' => $1,
+			    'start_bytes' => $1 * $secsize,
+			    'end' => $2,
+			    'end_bytes' => $2 * $secsize,
+			    'blocks' => $3,
+			    'size_bytes' => ($2 - $1 + 1) * $secsize,
+			    'type' => $tagmap{$5} || $5,
+			    'offset' => $1 * $secsize });
+		$p++;
+		}
+
 	}
 $secsize || return "Sector size not found in disk image";
 
