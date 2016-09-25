@@ -246,6 +246,7 @@ my @rv;
 my $p = 1;
 my $secsize;
 my $disklabel = 'dos';
+&foreign_require("fdisk");
 foreach my $l (split(/\r?\n/, $out)) {
 	if ($l =~ /=\s+(\d+)\s+bytes/i) {
 		$secsize = $1;
