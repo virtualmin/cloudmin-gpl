@@ -3654,6 +3654,7 @@ plugins_config=Configure..
 plugins_open=Open..
 plugins_active=Enabled?
 plugins_desc=Plugin description
+plugins_ver=Version
 plugins_actions=Actions
 plugins_none=No available Cloudmin plugins were found on your system.
 plugins_prov=Provides

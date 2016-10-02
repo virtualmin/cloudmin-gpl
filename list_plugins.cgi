@@ -40,6 +40,7 @@ foreach $minfo (&get_all_module_infos()) {
 			  'checked' => &indexof($minfo->{'dir'}, @plugins) >= 0
 			},
 			&plugin_call($minfo->{'dir'}, "plugin_desc"),
+			$minfo->{'version'},
 			join(", ", @prov),
 			&ui_links_row(\@acts),
 			]);
@@ -53,7 +54,7 @@ print &ui_form_columns_table(
 	0,
 	undef,
 	undef,
-	[ $text{'plugins_active'}, $text{'plugins_desc'},
+	[ $text{'plugins_active'}, $text{'plugins_desc'}, $text{'plugins_ver'},
 	  $text{'plugins_prov'}, $text{'plugins_actions'} ],
 	100,
 	\@table,
