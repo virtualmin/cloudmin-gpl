@@ -6112,12 +6112,10 @@ return $text{'kvm_elinux'} if ($out !~ /linux/i);
 # Check commands
 my $full = &find_qemu_kvm_command($server);
 return &text('kvm_ewhich2', "<tt>qemu-kvm</tt>", "<tt>kvm</tt>") if (!$full);
-&has_command_on_server($server, "qemu-img") ||
-	return &text('kvm_ewhich', "<tt>qemu-img</tt>");
-&has_command_on_server($server, "parted") ||
-	return &text('kvm_ewhich', "<tt>parted</tt>");
-&has_command_on_server($server, "lsof") ||
-	return &text('kvm_ewhich', "<tt>lsof</tt>");
+foreach my $cmd ("qemu-img", "parted", "lsof", "fuser") {
+	&has_command_on_server($server, $cmd) ||
+		return &text('kvm_ewhich', "<tt>$cmd</tt>");
+	}
 
 if (!$config{'kvm_qemu'}) {
 	# Check CPU
