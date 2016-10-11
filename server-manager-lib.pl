@@ -227,7 +227,6 @@ elsif ($module_info{'onehost'} eq 'kvm') {
 		"http://cloudmin.virtualmin.com/kvm/images/images.txt";
 	}
 $server_images_cache = "$module_config_directory/server-images-cache";
-$server_images_cache = "$module_config_directory/server-images-cache";
 $images_cache_dir = "/var/cloudmin-images";
 $image_storages_dir = "$module_config_directory/storages";
 $disk_directories_dir = "$module_config_directory/directories";
