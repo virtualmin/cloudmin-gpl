@@ -1302,7 +1302,7 @@ eval {
 		}
 	($fh, $fpid) = &proc::pty_process_exec($cmd);
 	while(1) {
-		my $rv = &wait_for($fh, "password:", "yes\\/no", "(^|\\n)\\s*(Permission denied|sudo: sorry, you must have a tty to run sudo).*\n", "ssh: connect.*\n", "REMOTE HOST IDENTIFICATION", ".*\n", ".{80}", $leave ? ( $leave ) : ( ));
+		my $rv = &wait_for($fh, "password:|password for \\S+:", "yes\\/no", "(^|\\n)\\s*(Permission denied|sudo: sorry, you must have a tty to run sudo).*\n", "ssh: connect.*\n", "REMOTE HOST IDENTIFICATION", ".*\n", ".{80}", $leave ? ( $leave ) : ( ));
 		if ($rv == 0) {
 			# Need to supply password
 			syswrite($fh, "$pass\n");
@@ -1399,9 +1399,12 @@ my ($server, $cmd, $timeout, $leave, $nolang, $extraflags) = @_;
 my $efunc = "type_".$server->{'manager'}."_execute_command";
 if (defined(&$efunc)) {
 	# Use type-specific function call
-	return &$efunc(@_);
+	my @rv = &$efunc(@_);
+	if ($rv[1] ne 'FALLBACK') {
+		return @rv;
+		}
 	}
-elsif ($server->{'ssh_nologin'}) {
+if ($server->{'ssh_nologin'}) {
 	# Cannot run commands
 	return (undef, undef, "SSH logins are not available");
 	}
