@@ -1758,13 +1758,24 @@ else {
 sub get_file_data_from_server
 {
 my ($server, $remotefile, $forcessh, $timeout) = @_;
-my $temp = &transname();
-my $err = &get_file_from_server($server, $remotefile, $temp, 0, $forcessh,
-				$timeout);
-return wantarray ? ( undef, $err) : undef if ($err);
-my $data = &read_file_contents($temp);
-&unlink_file($temp);
-return wantarray ? ( $data ) : $data;
+if ($server->{'ssh_sudo'}) {
+	# Capture output from cat
+	my ($out, $ex, $err) = &execute_command_on_server(
+		$server, "cat ".quotemeta($remotefile), $timeout);
+	return wantarray ? ( undef, $err) : undef if ($err);
+	return wantarray ? ( undef, $out) : undef if ($ex);
+	return wantarray ? ( $out ) : $out;
+	}
+else {
+	# Download to a local file and read
+	my $temp = &transname();
+	my $err = &get_file_from_server($server, $remotefile, $temp, 0,
+					$forcessh, $timeout);
+	return wantarray ? ( undef, $err) : undef if ($err);
+	my $data = &read_file_contents($temp);
+	&unlink_file($temp);
+	return wantarray ? ( $data ) : $data;
+	}
 }
 
 # put_file_to_server(&server, localfile, remotefile, device-file, force-ssh,
