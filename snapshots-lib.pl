@@ -198,7 +198,7 @@ my $totalsize = 0;
 for(my $i=0; $i<@{$snapshot->{'lvs'}}; $i++) { 
 	my $dev = "/dev/".$snapshot->{'vgs'}->[$i]."/".$snapshot->{'lvs'}->[$i];
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, 
-		"lvconvert --merge $dev");
+		"lvconvert --merge -i 5 $dev");
 	return $err if ($err);
 	return $out if ($ex);
 	$totalsize += $snapshot->{'sizes'}->[$i];
