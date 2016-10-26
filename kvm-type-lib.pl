@@ -6144,6 +6144,9 @@ return undef;
 sub find_qemu_kvm_command
 {
 my ($vhost) = @_;
+if ($kvm_qemu_command_cache{$vhost->{'id'}}) {
+	return $kvm_qemu_command_cache{$vhost->{'id'}};
+	}
 my $info = &get_server_collected($vhost);
 my $arch = $info->{'kernel'}->{'arch'};
 $arch = "i386" if ($arch =~ /^i[0-9]86$/);
@@ -6151,7 +6154,10 @@ foreach my $c ("kvm", "qemu-kvm", "/usr/libexec/qemu-kvm",
 	       "qemu-system-$arch",
 	       $config{'kvm_qemu'} ? ( "qemu" ) : ( )) {
 	my $path = &has_command_on_server($vhost, $c);
-	return $path if ($path);
+	if ($path) {
+		$kvm_qemu_command_cache{$vhost->{'id'}} = $path;
+		return $path;
+		}
 	}
 return undef;
 }
