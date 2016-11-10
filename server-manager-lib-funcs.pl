@@ -2757,29 +2757,27 @@ my ($server, $cmd) = @_;
 if ($server->{'manager'} eq 'this') {
 	return &has_command($cmd);
 	}
+if ($cmd =~ /^\//) {
+	# Full path given, so just look for it
+	my (undef, $tex, undef) = &execute_command_on_server(
+		$server, "test -x $cmd", $short_timeout);
+	if (!$tex) {
+		return $cmd;
+		}
+	else {
+		return undef;
+		}
+	}
 my ($out, $ex, $err) = &execute_command_on_server($server, "which $cmd", $short_timeout);
 if ($ex || $out =~ /no\s+\Q$cmd\E\s+in/) {
 	# Failed .. but maybe we don't even have the which command??
 	if ($out =~ /which:\s+command\s+not\s+found/i) {
-		if ($cmd =~ /^\//) {
-			# Full path given, so just look for it
-			my (undef, $tex, undef) = &execute_command_on_server(
-				$server, "test -x $cmd", $short_timeout);
-			if (!$tex) {
-				$out = $cmd;
-				}
-			else {
-				return undef;
-				}
-			}
-		else {
-			# Search PATH manually
-			($out, $ex, $err) = &execute_command_on_server($server,
-				"for p in `echo \$PATH | sed -e 's/:/ /g'`; do if [ -r \"\$p/$cmd\" ]; then echo \"\$p/$cmd\"; fi; done", $short_timeout);
-			if ($out !~ /^\S+\/\Q$cmd\E/) {
-				# That failed too :(
-				return undef;
-				}
+		# Search PATH manually
+		($out, $ex, $err) = &execute_command_on_server($server,
+			"for p in `echo \$PATH | sed -e 's/:/ /g'`; do if [ -r \"\$p/$cmd\" ]; then echo \"\$p/$cmd\"; fi; done", $short_timeout);
+		if ($out !~ /^\S+\/\Q$cmd\E/) {
+			# That failed too :(
+			return undef;
 			}
 		}
 	else {
