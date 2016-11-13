@@ -4850,17 +4850,13 @@ sub install_package_update
 {
 my ($server, $p) = @_;
 $last_remote_error = undef;
-my $mod = $server->{'status'} eq 'virt' ? 'security-updates'
-					: 'package-updates';
-my $pkg = $mod;
-$pkg =~ s/-/_/g;
-&remote_foreign_require($server, $mod, $mod."-lib.pl");
-my $func = &remote_eval($server, $mod,
+&remote_foreign_require($server, "package-updates");
+my $func = &remote_eval($server, "package-updates",
 			   'defined(&capture_function_output_tempfile)') ?
 				"capture_function_output_tempfile" :
 				"capture_function_output";
-my ($out, $rv) = &remote_foreign_call($server, $mod,
-		$func, $pkg."::package_install",
+my ($out, $rv) = &remote_foreign_call($server, "package-updates",
+		$func, "package_updates::package_install",
 		$p->{'update'} || $p->{'name'}, $p->{'system'}, 1);
 if ($last_remote_error) {
 	return $last_remote_error;
@@ -4881,12 +4877,9 @@ sub install_multiple_package_updates
 my ($server, $packs) = @_;
 my @allrv;
 $last_remote_error = undef;
-my $mod = $server->{'status'} eq 'virt' ? 'security-updates'
-					: 'package-updates';
-my $pkg = $mod;
-$pkg =~ s/-/_/g;
-&remote_foreign_require($server, $mod, $mod."-lib.pl");
-if (!&remote_eval($server, $mod, 'defined(&package_install_multiple)')) {
+&remote_foreign_require($server, "package-updates");
+if (!&remote_eval($server, "package-updates",
+		  'defined(&package_install_multiple)')) {
 	# Need to install one by one
 	my @allerrs;
 	foreach my $p (@$packs) {
@@ -4909,7 +4902,7 @@ if (!&remote_eval($server, $mod, 'defined(&package_install_multiple)')) {
 		}
 	return (\@allrv, \@allerrs);
 	}
-my $func = &remote_eval($server, $mod,
+my $func = &remote_eval($server, "package-updates",
 			   'defined(&capture_function_output_tempfile)') ?
 				"capture_function_output_tempfile" :
 				"capture_function_output";
@@ -4917,8 +4910,8 @@ my @systems = &unique(map { $_->{'system'} } @$packs);
 foreach my $system (@systems) {
 	my @spacks = grep { $_->{'system'} eq $system } @$packs;
 	my @names = &unique(map { $_->{'update'} || $_->{'name'} } @spacks);
-	my ($out, $rv) = &remote_foreign_call($server, $mod,
-			$func, $pkg."::package_install_multiple",
+	my ($out, $rv) = &remote_foreign_call($server, "package-updates",
+			$func, "package_updates::package_install_multiple",
 			\@names, $system, 1);
 	if ($last_remote_error) {
 		return ([ ], [ $last_remote_error ]);
