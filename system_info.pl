@@ -14,26 +14,18 @@ if (!&foreign_available($module_name)) {
 
 my @rv;
 
-# Get own system info
+# Get own system info, either from local collection or the system status module
 my @servers = &list_available_managed_servers_sorted();
 my $me = &get_managed_server(0);
 my $meinfo;
 if ($me) {
 	$meinfo = &get_server_collected($me);
 	}
-my (@poss, @allposs, @inst);
-if ($meinfo && $meinfo->{'poss'}) {
-	# Use own collected info
-	@poss = @{$meinfo->{'poss'}};
-	@allposs = @{$meinfo->{'allposs'}};
-	@inst = @{$meinfo->{'inst'}};
+else {
+	&foreign_require("system-status");
+	$meinfo = &system_status::get_collected_info();
 	}
-elsif ($hasposs) {
-	# Get possible updates directly from security-updates module
-	&foreign_require("security-updates");
-	@poss = &list_possible_updates();
-	@inst = &list_possible_installs();
-	}
+my @vposs = $meinfo ? @{$meinfo->{'vposs'}} : ( );
 
 # Custom URL redirect
 if ($data->{'alt'} && !$in{'noalt'}) {
@@ -63,18 +55,18 @@ if ($config{'docs_link'}) {
 		    'link' => $config{'docs_link'} });
 	}
 
-# Virtualmin package updates
-my $hasposs = foreign_check("security-updates");
-my $canposs = foreign_available("security-updates");
-if (!$data->{'noupdates'} && $hasposs && $canposs && @poss) {
-	my $html = &ui_form_start("/security-updates/update.cgi");
-	$html .= &text(@poss > 1 ? 'right_upcount' : 'right_upcount1',
-		       scalar(@poss),
-		       '/security-updates/index.cgi?mode=updates')."<p>\n";
+# Virtualmin package updates, filtered from the possible updates list
+my $hasvposs = foreign_check("package-updates");
+my $canvposs = foreign_available("package-updates");
+if (!$data->{'noupdates'} && $hasvposs && $canvposs && @vposs) {
+	my $html = &ui_form_start("/package-updates/update.cgi");
+	$html .= &text(@vposs > 1 ? 'right_upcount' : 'right_upcount1',
+		       scalar(@vposs),
+		       '/package-updates/index.cgi?mode=updates')."<p>\n";
 	$html .= &ui_columns_start([ $text{'right_upname'},
                                      $text{'right_updesc'},
                                      $text{'right_upver'} ], "80%");
-	foreach my $p (@poss) {
+	foreach my $p (@vposs) {
 		$html .= &ui_columns_row([
 			$p->{'name'}, $p->{'desc'}, $p->{'version'} ]);
 		$html .= &ui_hidden("u", $p->{'update'}."/".$p->{'system'});

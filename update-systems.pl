@@ -109,10 +109,11 @@ else {
 	          }
 	      else {
 		  # Find named packages in list of those available for update
-	          if (!$virtonly) {
-	              @poss = @{$info->{'allposs'}};
+	          if ($virtonly) {
+	              @poss = @{$info->{'vposs'}};
+		  } else {
+	              @poss = @{$info->{'poss'}};
 	          }
-	          @poss = @{$info->{'poss'}} if (!@poss);
 	          if (@pkgnames) {
 		    @poss = grep { &indexof($_->{'name'}, @pkgnames) >= 0 }
 				 @poss;

@@ -68,8 +68,7 @@ if ($multi) {
 	# Show one update per block
 	foreach $s (@servers) {
 		$info = &get_server_collected($s);
-		@poss = @{$info->{'allposs'}};
-		@poss = @{$info->{'poss'}} if (!@poss);
+		@poss = @{$info->{'poss'}};
 		foreach $p (@poss) {
 			print $p->{'name'},"\n";
 			print "    Package type: ",$p->{'system'},"\n";
@@ -92,8 +91,7 @@ elsif ($nameonly) {
 	# Show just update names
 	foreach $s (@servers) {
 		$info = &get_server_collected($s);
-		@poss = @{$info->{'allposs'}};
-		@poss = @{$info->{'poss'}} if (!@poss);
+		@poss = @{$info->{'poss'}};
 		foreach $p (@poss) {
 			print $p->{'name'},"\n";
 			}
@@ -117,8 +115,7 @@ else {
 		}
 	foreach $s (@servers) {
 		$info = &get_server_collected($s);
-		@poss = @{$info->{'allposs'}};
-		@poss = @{$info->{'poss'}} if (!@poss);
+		@poss = @{$info->{'poss'}};
 		foreach $p (@poss) {
 			printf $fmt, @servers > 1 ? ( $s->{'host'} ) : ( ),
 				     $p->{'name'},

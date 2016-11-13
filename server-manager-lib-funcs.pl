@@ -3415,6 +3415,7 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		$server->{'status_msg'} = undef;
 		if (&remote_foreign_check($server, "virtual-server") &&
 		    !$server->{'novirtualmin'}) {
+			print STDERR "foo\n";
 			# Get and save remote Virtualmin domains
 			$server->{'status'} = 'virt';
 			goto SKIPINFO if ($skipinfo);
@@ -3480,12 +3481,17 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 
 			# Cache number of domains, updates and licence
 			$server->{'virtualmin_domains'} = scalar(@doms);
-			$server->{'virtualmin_poss'} =
-				scalar(@{$info->{'poss'}});
 			if ($info->{'allposs'}) {
-				$server->{'all_poss'} =
-					scalar(@{$info->{'allposs'}});
+				# Older Virtualmin system that uses allposs
+				# for all packages, and poss for virtualmin only
+				$info->{'vposs'} = $info->{'poss'};
+				$info->{'poss'} = $info->{'allposs'};
+				delete($info->{'allposs'});
 				}
+			$server->{'virtualmin_poss'} =
+				scalar(@{$info->{'vposs'}});
+			$server->{'all_poss'} =
+				scalar(@{$info->{'poss'}});
 			if ($info->{'serial'}) {
 				$server->{'virtualmin_serial'} =
 					$info->{'serial'}->{'serial'};
@@ -3507,28 +3513,8 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 			$info = &remote_foreign_call($server, "system-status",
 			     $regen ? "collect_system_info"
 				    : "get_collected_info");
-			if (&remote_foreign_check($server, "security-updates")){
-				# System has security-updates module, probably
-				# because it runs Cloudmin. Fetch updates that
-				# are specific to Cloudmin.
-				&remote_foreign_require($server,
-					"security-updates",
-					"security-updates-lib.pl");
-				my @poss = &remote_foreign_call($server,
-					"security-updates",
-					"list_possible_updates", 2);
-				$info->{'allposs'} = $info->{'poss'};
-				$server->{'all_poss'} =
-					scalar(@{$info->{'allposs'}});
-				$info->{'poss'} = \@poss;
-				$server->{'virtualmin_poss'} =
-					scalar(@{$info->{'poss'}});
-				}
-			else {
-				$server->{'all_poss'} =
-					scalar(@{$info->{'poss'}});
-				delete($server->{'virtualmin_poss'});
-				}
+			$server->{'all_poss'} = scalar(@{$info->{'poss'}});
+			delete($server->{'virtualmin_poss'});
 			}
 		else {
 			# Doesn't have Virtualmin or system-status module
@@ -4625,8 +4611,7 @@ return &parallel_server_function($servers,
 	        }
               else {
 		# Find desired packages to update
-	        @poss = @{$info->{'allposs'}};
-	        @poss = @{$info->{'poss'}} if (!@poss);
+	        @poss = @{$info->{'poss'}};
 	        if ($want) {
 		  # Limit to those requested
 		  @poss = grep { $want{$_->{'name'},$_->{'system'}} } @poss;

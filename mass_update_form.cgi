@@ -30,11 +30,13 @@ $olds = 0;
 foreach $s (@servers) {
 	$info = &get_server_collected($s);
 	my @poss;
-	if (!$in{'virt'}) {
-		@poss = @{$info->{'allposs'}};
+	if ($in{'virt'}) {
+		@poss = @{$info->{'vposs'}};
 		}
-	@poss = @{$info->{'poss'}} if (!@poss);
-	$anyvirt++ if (@{$info->{'poss'}});
+	else {
+		@poss = @{$info->{'poss'}};
+		}
+	$anyvirt++ if (@{$info->{'vposs'}});
 	if (@poss) {
 		push(@upservers, $s);
 		}
@@ -61,7 +63,7 @@ foreach $s (@servers) {
 	}
 
 # Show search form, unless there are no systems with updates
-if (@upservers) {
+if (@upservers || $in{'search'}) {
 	print &ui_form_start("mass_update_form.cgi");
 	foreach $d (keys %d) {
 		print &ui_hidden("d", $d);

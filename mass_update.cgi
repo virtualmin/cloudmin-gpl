@@ -36,8 +36,7 @@ if ($in{'install'}) {
 			$k = $pkg->{'system'}."/".$pkg->{'name'};
 			if ($in{'newonly'}) {
 				# Skip if already installed
-				@uposs = @{$info->{'allposs'}};
-				@uposs = @{$info->{'poss'}} if (!@uposs);
+				@uposs = @{$info->{'poss'}};
 				($existing) = grep {
 					$_->{'system'} eq $pkg->{'system'} &&
 					$_->{'name'} eq $pkg->{'name'}
@@ -58,8 +57,7 @@ else {
 	%wantids = map { $_, 1 } split(/\0/, $in{'p'});
 	foreach $s (@servers) {
 		$info = &get_server_collected($s);
-		@poss = @{$info->{'allposs'}};
-		@poss = @{$info->{'poss'}} if (!@poss);
+		@poss = @{$info->{'poss'}};
 		@poss = grep { $wantids{$_->{'system'}.'/'.$_->{'name'}} }
 			     @poss;
 		if (@poss) {
