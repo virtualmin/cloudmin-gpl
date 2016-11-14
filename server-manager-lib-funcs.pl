@@ -1640,7 +1640,7 @@ $sshcmd .= " ".$extra if ($extra);
 $sshcmd .= &ssh_command_args($server);
 $sshcmd .= " $server->{'ssh_user'}\@".($server->{'ip'} || $server->{'host'});
 if ($server->{'ssh_sudo'} && $runcmd) {
-	$sshcmd .= " ".quotemeta("sudo sh -c ".quotemeta($runcmd));
+	$sshcmd .= " ".quotemeta("sudo sh -c ".quotemeta("stty -onlcr ; $runcmd"));
 	}
 elsif ($server->{'ssh_sudo'}) {
 	$sshcmd .= " sudo";
