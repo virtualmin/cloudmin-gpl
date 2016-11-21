@@ -3415,7 +3415,6 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 		$server->{'status_msg'} = undef;
 		if (&remote_foreign_check($server, "virtual-server") &&
 		    !$server->{'novirtualmin'}) {
-			print STDERR "foo\n";
 			# Get and save remote Virtualmin domains
 			$server->{'status'} = 'virt';
 			goto SKIPINFO if ($skipinfo);
