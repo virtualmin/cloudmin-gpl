@@ -2664,7 +2664,7 @@ if (ref($inuse)) {
 	# Add VNC flag with random port. Don't re-select a port if we are
 	# generating the command for use at boot time and a port has already
 	# been chosen.
-	if (!$forboot || !$server->{'kvm_vnc_display'}) {
+	if (!$server->{'kvm_vnc_display'}) {
 		push(@$inuse, map { $_->{'kvm_vnc_display'}+5900 }
 				  grep { $_->{'kvm_vnc_display'} &&
 					 $_->{'id'} ne $server->{'id'} }
