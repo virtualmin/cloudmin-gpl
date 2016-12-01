@@ -2659,16 +2659,19 @@ foreach my $net (split(/\s+/, $server->{'kvm_net'})) {
 	$i++;
 	}
 
+# Figure out ports used by other known VMs
+my @vmports = map { $_->{'kvm_vnc_display'}+5900 }
+		  grep { $_->{'kvm_vnc_display'} &&
+			 $_->{'id'} ne $server->{'id'} }
+		       &list_managed_servers();
+
 # VNC settings, on a free port
 if (ref($inuse)) {
-	# Add VNC flag with random port. Don't re-select a port if we are
-	# generating the command for use at boot time and a port has already
-	# been chosen.
-	if (!$server->{'kvm_vnc_display'}) {
-		push(@$inuse, map { $_->{'kvm_vnc_display'}+5900 }
-				  grep { $_->{'kvm_vnc_display'} &&
-					 $_->{'id'} ne $server->{'id'} }
-				       &list_managed_servers());
+	# Add VNC flag with random port, if none has been set yet OR if some
+	# other system is using the same port
+	if (!$server->{'kvm_vnc_display'} ||
+	    &indexof($server->{'kvm_vnc_display'}+5900, @vmports)) {
+		push(@$inuse, @vmports);
 		my $vport = 5901;
 		while(1) {
 			last if (&indexof($vport, @$inuse) < 0);
