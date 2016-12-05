@@ -65,7 +65,7 @@ if (!$in{'clear'}) {
 			$out = &html_escape($out, 1);
 			$history .= $out;
 			}
-		@previous = &unique(@previous, $fullcmd);
+		@previous = &unique($fullcmd, @previous);
 		&make_dir($shell_previous_dir, 0700);
 		&open_lock_tempfile(PREVFILE, ">>$prevfile");
 		&print_tempfile(PREVFILE, $fullcmd,"\n");
