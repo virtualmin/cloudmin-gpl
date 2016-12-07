@@ -39,6 +39,11 @@ when its host system reboots. Alternately, you can use C<--no-start-at-boot>
 to disable this. If neither flag is given, the Cloudmin default setting
 (chosen on the Cloudmin Configuration page in the UI) is used.
 
+To grant an existing system owner control over the new virtual system, use
+the C<--owner> flag followed by a username. If you have Cloudmin Services
+installed, the C<--cloudmin-services> flag will setup the system as a services
+client (assuming that the image contains Virtualmin).
+
 =head1 Example usage
 
   cloudmin create-system --host xennoupdate --type xen --desc "Test without updates" --ssh-pass smeg  --no-update --xen-host sentosa.home --xen-memory 512 --image xen-centos5.0-virtualmin --allocate-serial
@@ -172,6 +177,9 @@ while(@ARGV > 0) {
 		$owner = &get_system_owner($ownername);
 		$owner || &usage("No system owner named $ownername exists");
 		}
+	elsif ($a eq "--cloudmin-services") {
+		$cloudmin_services = 1;
+		}
 	elsif ($a eq "--manual-status") {
 		$manual_status = 1;
 		}
@@ -262,6 +270,12 @@ if ($image) {
 		       "specified system type");
 	$img->{'format'} eq 'cd' &&
 		&usage("Selected image is a CD");
+	}
+if ($cloudmin_services) {
+	$owner || &usage("--cloudmin-services cannot be specified unless ".
+			 "a system owner is also set with --owner");
+	&indexof("cloudmin-services", @plugins) >= 0 ||
+		&usage("The Cloudmin Services plugin is not installed");
 	}
 
 # Check if can create
@@ -686,6 +700,19 @@ if ($server->{'status'} eq 'virt') {
 	&save_managed_server($server);
 	}
 
+# If the server has Virtualmin, setup Cloudmin services
+if ($server->{'status'} eq 'virt' && $cloudmin_services && $owner) {
+	print "Configuring system to use Cloudmin Services ..\n";
+	$err = &setup_cloudmin_services($server);
+	if ($err) {
+		print ".. failed : $err\n\n";
+		}
+	else {
+		print ".. done\n\n";
+		}
+	&save_managed_server($server);
+	}
+
 # If the system has Virtualmin, update any domains on the old default IP
 if ($server->{'status'} eq 'virt') {
 	@doms = &get_server_domains($server);
@@ -753,6 +780,7 @@ print "                      [--start-at-boot | --no-start-at-boot]\n";
 print "                      [--direct-image | --no-direct-image]\n";
 if (defined(&list_system_owners)) {
 	print "                      [--owner name]\n";
+	print "                      [--cloudmin-services]\n";
 	}
 if ($type) {
 	# Show type-specific command line args

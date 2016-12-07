@@ -6514,6 +6514,80 @@ else {
 	}
 }
 
+# setup_cloudmin_services(&server)
+# Configure a new system with Virtualmin to use this system for Cloudmin
+# services, and grant its owner access.
+sub setup_cloudmin_services
+{
+my ($server) = @_;
+if (&indexof("cloudmin-services", @plugins) < 0) {
+	return "Cloudmin Services is not installed or not enabled";
+	}
+
+# Setup the system owner with access, if he doesn't have it
+my ($owner) = &get_server_owners($server);
+if (!$owner) {
+	return "system does not have an owner";
+	}
+if ($owner->{'acl'}->{'pass'} eq '') {
+	return "Cloudmin does not know the passwordd for ".
+	       "system owner $owner->{'name'}";
+	}
+
+my @servers = &cloudmin_services::list_provisioning_servers();
+my @pservices;
+foreach my $s (@servers) {
+	foreach $f (grep { $s->{'provision_'.$_} }
+			&cloudmin_services::supported_features()) {
+		push(@pservices, $f);
+		}
+	}
+
+
+# Does the owner's plan grant access, or does it come from the owner?
+&foreign_require("cloudmin-services");
+my $plan = &get_owner_plan($owner->{'name'});
+my $pobj = $owner->{'provision_fromplan'} ? $plan : $owner->{'acl'};
+my @pkeys = grep { /^provision_/ && $pobj->{$_} } keys %$pobj;
+my @pnames = map { /^provision_(.*)/; $_ } @pkeys;
+if (!@pnames) {
+	# Setup for the owner with all services that have hosts
+	@pnames = @pservices;
+	foreach my $f (@pnames) {
+		# XXX should this be hard-coded?
+		$owner->{'acl'}->{'provision_'.$f} = 25;
+		}
+	&save_system_owner($owner, $owner);
+	}
+else {
+	# Limit to services we have hosts for
+	@pnames = grep { &indexof($_, @pservices) >= 0 } @pnames;
+	}
+
+# Configure the Virtualmin system to talk to this one
+my $temp = &transname();
+my $cfile = "/etc/webmin/virtual-server/config";
+my $err = &get_file_from_server($server, $cfile, $temp);
+return $err if ($err);
+my %vconf;
+&read_file($temp, \%vconf);
+my %miniserv;
+&get_miniserv_config(\%miniserv);
+$vconf{'provision_server'} = &get_system_hostname();
+$vconf{'provision_port'} = $miniserv{'port'};
+$vconf{'provision_ssl'} = $miniserv{'ssl'};
+$vconf{'provision_user'} = $owner->{'name'};
+$vconf{'provision_pass'} = $owner->{'acl'}->{'pass'};
+foreach my $f (@pnames) {
+	$vconf{'provision_'.$f} = 1;
+	}
+&write_file($temp, \%vconf);
+my $err = &put_file_to_server($server, $temp, $cfile);
+return $err if ($err);
+
+return undef;
+}
+
 # update_virtualmin_ips(&server)
 # Update the IPs for any domains on the old main shared IP
 sub update_virtualmin_ips
