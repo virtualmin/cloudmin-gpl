@@ -1204,27 +1204,27 @@ if ($server->{'status'} eq 'virt' && $info && @{$info->{'poss'}}) {
 	&$first_print(&text('update_ipackages', scalar(@{$info->{'poss'}})));
 	my @allgot;
 	&$indent_print();
-	print &text('update_pkgs',
+	&$first_print(&text('update_pkgs',
           join(", ", map { &text('update_ver', $_->{'name'}, $_->{'version'}) }
-                         @{$info->{'poss'}})),"<br>\n";
+                         @{$info->{'poss'}})));
 	my ($got, $errs) = &install_multiple_package_updates($server,
 				[ &sort_package_updates(@{$info->{'poss'}}) ]);
 	if (@$got && !@$errs) {
 		# Worked OK
-		print &text('update_donepkg2',
-			join(" ", map { "<tt>$_</tt>" } @$got)),"<p>\n";
+		&$second_print(&text('update_donepkg2',
+			join(" ", map { "<tt>$_</tt>" } @$got)));
 		push(@allgot, @$got);
 		}
 	elsif (@$got && @$errs) {
 		# Partially worked
-		print &text('update_donepkg3',
+		&$second_print(&text('update_donepkg3',
 			join(" ", map { "<tt>$_</tt>" } @$got),
-			join(" ", @$errs)),"<p>\n";
+			join(" ", @$errs)));
 		push(@allgot, @$got);
 		}
 	else {
 		# Totally failed
-		print &text('update_pkgerr2', join(" ", @$errs)),"<p>\n";
+		&$second_print(&text('update_pkgerr2', join(" ", @$errs)));
 		}
 	&$outdent_print();
 	&$second_print(&text('update_itotal', scalar(@allgot)));
