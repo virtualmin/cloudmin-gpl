@@ -530,6 +530,19 @@ if ($server->{'status'} eq 'virt') {
 	&save_managed_server($server);
 	}
 
+# If the server has Virtualmin, setup Cloudmin services
+if ($server->{'status'} eq 'virt' && $in{'services'} && $owner) {
+	&$first_print($text{'add_vservices'});
+	$err = &setup_cloudmin_services($server);
+	if ($err) {
+		&$second_print(&text('add_vserviceserr', $err));
+		}
+	else {
+		&$second_print($text{'add_vservicesok'});
+		}
+	&save_managed_server($server);
+	}
+
 # If the system has Virtualmin, update any domains on the old default IP
 if ($server->{'status'} eq 'virt') {
 	@doms = &get_server_domains($server);

@@ -143,8 +143,13 @@ if (&can_action(undef, "global") && defined(&list_system_owners) &&
 				  @plans ]) ]);
 		}
 	if (@otable > 1) {
+		my $csbox;
+		if (&indexof("cloudmin-services", @plugins) >= 0) {
+			$csbox .= &ui_checkbox("services", 1,
+					$text{'create_oservices'}, 0);
+			}
 		print &ui_table_row($text{'create_owner'},
-			&ui_radio_table("omode", 0, \@otable, 1));
+			&ui_radio_table("omode", 0, \@otable, 1).$csbox);
 		}
 	else {
 		print &ui_hidden("omode", 0);
