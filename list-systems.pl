@@ -169,6 +169,13 @@ if ($multi) {
 		if ($s->{'new_directory'}) {
 			print "    New disk directory: $s->{'new_directory'}\n";
 			}
+		if ($s->{'image'}) {
+			print "    Image: $s->{'image'}\n";
+			$img = &get_server_image($s->{'image'});
+			if ($img) {
+				print "    Image description: $img->{'desc'}\n";
+				}
+			}
 		print "    Status: ",$text{'status_'.$s->{'status'}},"\n";
 		print "    Status code: $s->{'status'}\n";
 		if ($s->{'status_msg'}) {
