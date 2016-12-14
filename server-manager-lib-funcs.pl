@@ -6542,14 +6542,14 @@ foreach my $s (@servers) {
 		push(@pservices, $f);
 		}
 	}
-
+@pservices = &unique(@pservices);
 
 # Does the owner's plan grant access, or does it come from the owner?
 &foreign_require("cloudmin-services");
 my $plan = &get_owner_plan($owner->{'name'});
 my $pobj = $owner->{'provision_fromplan'} ? $plan : $owner->{'acl'};
 my @pkeys = grep { /^provision_/ && $pobj->{$_} } keys %$pobj;
-my @pnames = map { /^provision_(.*)/; $_ } @pkeys;
+my @pnames = map { /^provision_(.*)/; $1 } @pkeys;
 if (!@pnames) {
 	# Setup for the owner with all services that have hosts
 	@pnames = @pservices;
