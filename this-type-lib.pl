@@ -56,9 +56,12 @@ if ($leave) {
 else {
 	# Just run the command, and get the output
 	&clean_environment();
+	if ($cmd !~ /^\s*\(.*\)\s*$/) {
+		$cmd = "(".$cmd.")";
+		}
 	my $out = $timeout ?
-		&backquote_with_timeout("($cmd) 2>&1 </dev/null", $timeout) :
-		&backquote_command("($cmd) 2>&1 </dev/null");
+		&backquote_with_timeout("$cmd 2>&1 </dev/null", $timeout) :
+		&backquote_command("$cmd 2>&1 </dev/null");
 	&reset_environment();
 	return ($out, $?/256);
 	}
