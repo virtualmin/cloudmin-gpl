@@ -577,7 +577,10 @@ return $plan->{'desc'}.' ('.
 	     $plan->{'max_ram'} ? &nice_size($plan->{'max_ram'})
 				: $text{'domains_unlimited'},
 	     $plan->{'max_disk'} ? &nice_size($plan->{'max_disk'})
-				: $text{'domains_unlimited'}).')';
+				: $text{'domains_unlimited'},
+	     $plan->{'max_cpu'} ? $plan->{'max_cpu'}."%"
+                                : $text{'domains_unlimited'}
+	    ).')';
 }
 
 # apply_plan(&plan)

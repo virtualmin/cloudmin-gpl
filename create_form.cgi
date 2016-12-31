@@ -137,10 +137,13 @@ if (&can_action(undef, "global") && defined(&list_system_owners) &&
 		push(@otable, [ 2, $text{'create_onew'},
 			&ui_textbox("newowner", undef, 20)." ".
 			$text{'create_onewpass'}." ".
-		        &ui_password("newownerpass", undef, 20)."<br>".
+		        &ui_password("newownerpass", undef, 20)."<br>\n".
 		  	&ui_select("newownerplan", $plans[0]->{'id'},
 			    [ map { [ $_->{'id'}, &describe_plan($_) ] }
-				  @plans ]) ]);
+				  @plans ])."<br>\n".
+			&ui_checkbox("fromplan", 1,
+				     $text{'create_ofromplan'}, 0)
+			]);
 		}
 	if (@otable > 1) {
 		my $csbox;

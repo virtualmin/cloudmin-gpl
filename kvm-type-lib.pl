@@ -632,23 +632,31 @@ $rv .= &ui_table_row($text{'create_xenstart'},
 return $rv;
 }
 
-# type_kvm_create_parse(&server, &in, [empty-flag])
+# type_kvm_create_parse(&server, &in, [empty-flag], [&limits-from-plan])
 # Parse inputs from type_kvm_create_form, and update the server object
 sub type_kvm_create_parse
 {
-my ($server, $in, $empty) = @_;
+my ($server, $in, $empty, $plan) = @_;
 my $img = $empty ? undef : &get_server_image($server->{'image'});
 
 # Validate memory parameters
-$in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
-$server->{'kvm_memory'} = ($in{'kvm_memory'} * $in{'kvm_memory_units'}) /
-			  (1024*1024);
+if ($plan && $plan->{'max_ram'}) {
+	$server->{'kvm_memory'} = $plan->{'max_ram'} / (1024*1024);
+	}
+else {
+	$in{'kvm_memory'} =~ /^\d+$/ || &error($text{'create_exenmemory'});
+	$server->{'kvm_memory'} = ($in{'kvm_memory'}*$in{'kvm_memory_units'}) /
+				  (1024*1024);
+	}
 $server->{'kvm_memory'} >= 32 ||
 	&error(&text('create_exenmemory2', '32M'));
-$server->{'kvm_disktotal'} = 0;
 
 # Validate swap file
-if (!$in{'kvm_swap_def'} && !$empty && &can_action(undef, 'swap')) {
+$server->{'kvm_disktotal'} = 0;
+if ($plan && $plan->{'max_disk'}) {
+	# If disk limit comes from plan, it all goes towards actual disk
+	}
+elsif (!$in{'kvm_swap_def'} && !$empty && &can_action(undef, 'swap')) {
 	$in{'kvm_swap'} =~ /^\d+$/ || &error($text{'create_exenswapsize'});
 	$server->{'kvm_swap'} = ($in{'kvm_swap'} * $in{'kvm_swap_units'}) /
 				(1024*1024);
@@ -656,24 +664,31 @@ if (!$in{'kvm_swap_def'} && !$empty && &can_action(undef, 'swap')) {
 	}
 
 # Validate disk size
-if (!$in{'kvm_disk_def'} || $empty) {
+if ($plan && $plan->{'max_disk'}) {
+	$server->{'kvm_disksize'} = $plan->{'max_disk'} / (1024*1024);
+	$server->{'kvm_disktotal'} += $server->{'kvm_disksize'}*1024*1024;
+	}
+elsif (!$in{'kvm_disk_def'} || $empty) {
 	$in{'kvm_disk'} =~ /^\d+$/ || &error($text{'create_exendisksize'});
 	$server->{'kvm_disksize'} = ($in{'kvm_disk'} * $in{'kvm_disk_units'}) /
 				    (1024*1024);
 	$server->{'kvm_disktotal'} += $server->{'kvm_disksize'}*1024*1024;
-	if (!$empty &&
-	    $img->{'rawsize'} &&
-	    $img->{'rawsize'} > $server->{'kvm_disksize'}*1024*1024) {
-		&error(&text('create_exendisksize2',
-			     &nice_size($img->{'rawsize'})));
-		}
 	}
 else {
 	$server->{'kvm_disktotal'} += $img->{'rawsize'};
 	}
+if (!$empty &&
+    $img->{'rawsize'} &&
+    $img->{'rawsize'} > $server->{'kvm_disksize'}*1024*1024) {
+	&error(&text('create_exendisksize2',
+		     &nice_size($img->{'rawsize'})));
+	}
 
 # Validate CPU
-if (!$in{'kvm_cpu_def'}) {
+if ($plan && $plan->{'max_cpu'}) {
+	$server->{'kvm_cpu'} = $plan->{'max_cpu'};
+	}
+elsif (!$in{'kvm_cpu_def'}) {
 	$in{'kvm_cpu'} =~ /^[1-9]\d*$/ || &error($text{'create_exencpu'});
 	$server->{'kvm_cpu'} = $in{'kvm_cpu'};
 	}
