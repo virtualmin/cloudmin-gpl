@@ -150,6 +150,10 @@ if ($got) {
 		     @convs;
 	}
 
+# Check if there are any registered hosts for this image type
+@hosts = grep { $_->{$i->{'manager'}.'_host'} && &can_host_server($_) }
+	      &list_managed_servers();
+
 print &ui_table_end();
 if ($got) {
 	print &ui_form_end([ [ '', $text{'save'} ],
@@ -157,6 +161,8 @@ if ($got) {
 			     @convs ? ( [ 'convert', $text{'eimage_convert'},
 					  &ui_select("convto", undef, \@copts) ]
 				      ) : ( ),
+			     @hosts ? ( [ 'create', $text{'eimage_create'} ] )
+				    : ( ),
 			   ]);
 	}
 

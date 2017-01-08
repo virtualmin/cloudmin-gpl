@@ -22,6 +22,10 @@ elsif ($in{'convert'}) {
 	&redirect("convert_image_form.cgi?id=$img->{'id'}&convto=$in{'convto'}".
 		  "&search=".&urlize($in{'search'})."&mode=$in{'mode'}");
 	}
+elsif ($in{'create'}) {
+	# Redirect to creation form
+	&redirect("create_form.cgi?type=$img->{'manager'}&image=$img->{'id'}");
+	}
 else {
 	# Update description and OS
 	&error_setup($text{'eimage_err'});

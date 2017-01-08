@@ -64,7 +64,12 @@ if (@images) {
 	# Can select an image
 	$noimage = $text{'create_noimage_'.$in{'type'}} ||
 		   $text{'create_noimage'};
-	($defimage) = grep { $_->{'default'} } @images;
+	if ($in{'image'}) {
+		($defimage) = grep { $_->{'id'} eq $in{'image'} } @images;
+		}
+	else {
+		($defimage) = grep { $_->{'default'} } @images;
+		}
 	print &ui_table_row($text{'create_image'},
 		&ui_select("image", $defimage ? $defimage->{'id'} : undef,
 			[ $mustimage || !&can_image(undef) ? ( )

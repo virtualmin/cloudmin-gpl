@@ -2146,6 +2146,7 @@ eimage_files=Component files
 eimage_dest=Image storage location
 eimage_delete=Delete Image
 eimage_convert=Convert To:
+eimage_create=Create System From Image
 eimage_users=Used to create systems
 eimage_postcmdon=Command to run on virtual system after creation
 eimage_postcmdoff=Command to run on Cloudmin master after creation
