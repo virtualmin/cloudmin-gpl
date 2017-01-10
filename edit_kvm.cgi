@@ -12,6 +12,20 @@ require './server-manager-lib.pl';
 ($kvm) = grep { $_->{'id'} eq $in{'id'} } @allservers;
 $kvm || &error($text{'kvm_egone'});
 
+if ($in{'new'}) {
+	# Can this system even host KVM instances?
+	$err = &check_kvm_host_software($kvm);
+	if ($err) {
+		print &ui_confirmation_form(
+			"install_kvm.cgi",
+			&text('kvm_einstall', $err),
+			[ [ 'id', $in{'id'} ] ],
+			[ [ undef, $text{'kvm_install'} ] ],
+			);
+		return;
+		}
+	}
+
 print &ui_form_start("save_kvm.cgi", "post");
 print &ui_hidden("new", $in{'new'});
 print &ui_hidden_table_start($text{'kvm_header'}, "width=100%", 2, "main", 1);
