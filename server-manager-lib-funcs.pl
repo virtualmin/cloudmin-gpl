@@ -1182,10 +1182,7 @@ if ($status == 0) {
 		if ($root && $ssl) {
 			# Webmin wants SSL .. but can we really provide it?
 			if (!$server->{'has_net_ssleay'}) {
-				my $pp = &get_file_data_from_server($server,
-						"/etc/webmin/perl-path");
-				chop($pp);
-				$pp ||= "perl";
+				my $pp = &get_server_perl_path($server);
 				my ($sout, $sex) =
 				    &execute_command_on_server(
 					$server, "$pp -e 'use Net::SSLeay'", $short_timeout);
@@ -1276,6 +1273,18 @@ if ($@) {
 	}
 return (0, undef, $rfc->{'os_type'}, $rfc->{'real_os_type'},
 	$rfc->{'os_version'}, $rfc->{'real_os_version'});
+}
+
+# get_server_perl_path(&server)
+# Returns the path to Perl used by Webmin
+sub get_server_perl_path
+{
+my ($server) = @_;
+my $pp = &get_file_data_from_server($server, "/etc/webmin/perl-path");
+chop($pp);
+$pp ||= &has_command_on_server($server, "perl");
+$pp ||= "perl";
+return $pp;
 }
 
 # run_ssh_command(command, password, timeout, [leave-open])
@@ -3359,6 +3368,11 @@ if ($webminport && $server->{'id'} != 0) {
 # Save the hostname, if we got it
 if ($hostname) {
 	$server->{'unix_hostname'} = $hostname;
+	}
+
+# Save the webmin root dir, if we got it
+if ($webminroot) {
+	$server->{'webminroot'} = $webminroot;
 	}
 
 if ($regen) {
@@ -6079,7 +6093,7 @@ if ($update eq "apt") {
 	# Use apt-get
 	&execute_command_on_server($server, "apt-get update");
 	my ($pout, $pex, $perr) = &execute_command_on_server(
-		$server, "apt-get -y -f --force-yes install $names </dev/null | cat");
+		$server, "apt-get -y -f --force-yes install $names </dev/null");
 	return $pex ? (0, $pout) : $perr ? (0, $perr) : (1, $pout);
 	}
 elsif ($update eq "yum") {
@@ -6104,6 +6118,21 @@ else {
 	# Don't know how
 	return (0, undef);
 	}
+}
+
+# try_install_packages_on_server(&server, package, ...)
+# Try to install packages one by one, and return success 1 when the first one
+# succeeds. Otherwise return 0 and the error output.
+sub try_install_packages_on_server
+{
+my ($server, @packs) = @_;
+my $lasterr;
+foreach my $p (@packs) {
+	my ($ok, $err) = &install_package_on_server($server, $p);
+	return (1) if ($ok);
+	$lasterr = $err;
+	}
+return (0, $lasterr);
 }
 
 # install_virtualmin_server(&server, set-password, serial, key)

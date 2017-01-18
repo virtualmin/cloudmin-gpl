@@ -6180,3 +6180,6 @@ xeninstall_xenbrgot=.. already exists
 xeninstall_exenbrcopy=.. failed to copy setup script : $1
 xeninstall_exenbr=.. bridge setup failed : $1
 xeninstall_xenbrreboot=.. bridge has been created, but a reboot is required
+xeninstall_etype=Unsupported system type for automatic setup : $1
+xeninstall_xengrub=Configuring Xen kernel to boot by default ..
+xeninstall_exengrub=.. kernel failed : $1
