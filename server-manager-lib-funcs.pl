@@ -9467,8 +9467,10 @@ elsif ($server) {
                 $iscsi = $vhost->{$manager.'_iscsi'};
                 }
 	elsif ($newserver && $vhost->{$manager.'_vg'}) {
-		# For a new system, use vhost's LVM setting
-                $lvm = $vhost->{$manager.'_vg'};
+		# For a new system, use all LVs on the vhost. The default
+		# cannot be used alone, because we don't know which storage
+		# the user selected
+                $lvm = "*";
                 }
 	else {
 		# Fall back to directory on host
@@ -9483,7 +9485,7 @@ else {
 		$iscsi = $vhost->{$manager.'_iscsi'};
 		}
 	elsif ($vhost->{$manager.'_vg'}) {
-		$lvm = $vhost->{$manager.'_vg'};
+		$lvm = "*";
 		}
 	else {
 		$dir = $vhost->{$manager.'_dir'};
@@ -9494,11 +9496,10 @@ if ($lvm && $vinfo && $vinfo->{'vg_list'}) {
 	# Host is using LVM, and we want a specific volume group
 	my ($free, $total);
 	foreach my $vg (@{$vinfo->{'vg_list'}}) {
+		$free += $vg->{'free'};
+		$total += $vg->{'total'};
 		if ($vg->{'vg'} eq $lvm) {
 			@rv = ( $vg->{'free'}, $vg->{'total'} );
-			$free += $vg->{'free'};
-			$total += $vg->{'total'};
-			last;
 			}
 		}
 	if (!@rv) {
