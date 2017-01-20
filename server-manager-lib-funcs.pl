@@ -9494,17 +9494,19 @@ else {
 
 if ($lvm && $vinfo && $vinfo->{'vg_list'}) {
 	# Host is using LVM, and we want a specific volume group
-	my ($free, $total);
+	my ($maxfree, $maxtotal);
 	foreach my $vg (@{$vinfo->{'vg_list'}}) {
-		$free += $vg->{'free'};
-		$total += $vg->{'total'};
+		if ($vg->{'free'} > $maxfree) {
+			$maxfree += $vg->{'free'};
+			$maxtotal += $vg->{'total'};
+			}
 		if ($vg->{'vg'} eq $lvm) {
 			@rv = ( $vg->{'free'}, $vg->{'total'} );
 			}
 		}
 	if (!@rv) {
-		# Fall back to sum of all volume groups
-		@rv = ( $free, $total );
+		# Fall back to max of all volume groups
+		@rv = ( $maxfree, $maxtotal );
 		}
 	}
 elsif ($iscsi ne '') {
