@@ -112,7 +112,8 @@ else {
 sub can_host_kvm
 {
 my ($server) = @_;
-return $server->{'manager'} eq 'this' || $server->{'manager'} eq 'real';
+return $server->{'manager'} eq 'this' || $server->{'manager'} eq 'real' ||
+       ($server->{'manager'} eq 'kvm' && $config{'kvm_on_kvm'});
 }
 
 # type_kvm_add_form()
@@ -1829,6 +1830,7 @@ if (ref($disks) && $disks->[0]->{'iscsi_server'} ne '') {
 	}
 
 # Fix root disk device to match virtio mode
+# XXX should this be sda? When?
 my $wantdev = $server->{'kvm_virtio'} ? "/dev/vda" : "/dev/hda";
 my $hasbootfs = 0;
 if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
@@ -8191,6 +8193,173 @@ else {
 	close(VNCSOCK);
 	}
 return ($masterport, $server->{'kvm_vnc_passwd'});
+}
+
+# install_kvm_host_software(&vhost, [qemu-mode])
+# Performs all installation and configuration needed to setup a KVM host,
+# printing stuff along the way. Returns 0 on failure, 1 on success, or 2 if
+# success but a reboot is needed.
+sub install_kvm_host_software
+{
+my ($vhost, $qemu) = @_;
+
+# Install Webmin if missing
+if (!&can_webmin_status($vhost)) {
+	&$first_print($text{'xeninstall_webmin'});
+	if ($vhost->{'status'} eq 'downwebmin' ||
+	    $vhost->{'status'} eq 'nowebminlogin') {
+		&$second_print($text{'xeninstall_ewebmindown'});
+		return 0;
+		}
+	my ($src, $type, $err) = &get_install_webmin_source($vhost);
+	if (!$src) {
+		&$second_print($text{'xeninstall_ewebminsrc'});
+		return 0;
+		}
+	my ($out, $err) = &install_webmin_server($vhost, $src, $type, 1);
+	if ($err) {
+		&$second_print(&text('xeninstall_ewebmin', $err));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	&check_server_status($vhost);
+	&save_managed_server($vhost);
+	}
+
+# Check status again, to ensure Webmin is accessible
+&$first_print($text{'xeninstall_status'});
+if (!&can_webmin_status($vhost)) {
+	&$second_print(&text('xeninstall_estatus',&describe_status($vhost, 1)));
+	return 0;
+	}
+&$second_print($text{'create_done'});
+
+if (&redhat_server_type($vhost)) {
+	# Install vital packages on Redhat
+	&$first_print($text{'xeninstall_pkgs'});
+	my ($ok, $err) = &install_package_on_server(
+				$vhost, "wget lsof bzip2 parted fdisk psmisc");
+	if (!$ok) {
+		&$second_print(&text('xeninstall_epkgs', $err));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+
+	# Install KVM packages
+	&$first_print($text{'kvminstall_kvm'});
+	my ($ok, $err) = &install_package_on_server($vhost,
+		"kvm kvm-qemu-img qemu-kvm qemu-img qemu-kvm-tools kvm-tools bridge-utils");
+	if (!$ok) {
+		&$second_print(&text('kvminstall_epkgs', $err));
+		return 0;
+		}
+	else {
+		# Also optional packages
+		foreach my $p ("kmod-kvm", "ebtables", "openssh-clients",
+			       "libcgroup-tools", "libcgroup") {
+			&install_package_on_server($vhost, $p);
+			}
+		&$second_print($text{'create_done'});
+		}
+
+	# Activate cgroups
+	&$first_print($text{'kvminstall_cgroup'});
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"service cgconfig start && chkconfig cgconfig on");
+	if ($ex || $err) {
+		&$second_print(&text('kvminstall_ecgroup', $err || $out));
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+
+	# Activate KVM kernel module
+	if (!$qemu) {
+		&$first_print($text{'kvminstall_kmod'});
+		my ($mout, $mex, $merr) = &execute_command_on_server($vhost,
+			"modprobe kvm-intel || modprobe kvm-amd");
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"/sbin/lsmod");
+		if ($out !~ /kvm/) {
+			&$first_print(&text('kvminstall_ekmod',$mout || $merr));
+			return 0;
+			}
+		my @st = &stat_file_on_server($vhost, "/dev/kvm");
+		if (!@st) {
+			&$first_print($text{'kvminstall_ekmod2'});
+			return 0;
+			}
+		&$second_print($text{'create_done'});
+		}
+
+	# Create missing loopback devices
+	&$first_print($text{'kvminstall_loop'});
+	for(my $i=0; $i<8; $i++) {
+		my $l = "/dev/loop".$i;
+		my @st = &stat_file_on_server($vhost, $l);
+		if (!@st) {
+			&execute_command_on_server($vhost, "mknod $l b 7 $i");
+			}
+		}
+	&$second_print($text{'create_done'});
+	}
+elsif (&debian_server_type($vhost)) {
+	# Install vital packages on Debian
+	}
+else {
+	# Unknown OS type
+	&$first_print(&text('xeninstall_etype',
+			    &describe_os($vhost->{'type'})));
+	return 0;
+	}
+
+# Find network bridges
+my $ifaces = &list_active_server_interfaces($vhost);
+my $br = 0;
+if (ref($ifaces)) {
+	foreach my $iface (@$ifaces) {
+		if ($iface->{'name'} =~ /^br/) {
+			$br++;
+			}
+		}
+	}
+
+# Create a network bridge (same for Redhat and Debian-based systems)
+&$first_print(&text('xeninstall_xenbr', 'br0'));
+if ($br) {
+	&$second_print($text{'xeninstall_xenbrgot'});
+	}
+else {
+	# Copy bridge creation script
+	# XXX is eth0 the ethernet interface?
+	my $src = $module_root_directory."/create-net-bridge.pl";
+	my $dst = $vhost->{'webminroot'}."/net/create-net-bridge.pl";
+	my $err = &put_file_to_server($vhost, $src, $dst);
+	if ($err) {
+		&$second_print(&text('xeninstall_exenbrcopy', $err));
+		return 0;
+		}
+	my $pp = &get_server_perl_path($server);
+	my $cmd = $pp." ".$dst." --interface eth0 --bridge br0";
+	my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
+	if ($ex == 1 && !$err) {
+		&$second_print($text{'xeninstall_xenbrreboot'});
+		return 2;	# Need reboot to activate
+		}
+	elsif ($ex || $err) {
+		&$second_print(&text('xeninstall_exenbr',$err || $out));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	}
+
+return 1;
 }
 
 1;
