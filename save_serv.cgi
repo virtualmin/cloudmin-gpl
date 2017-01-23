@@ -150,7 +150,13 @@ elsif ($in{'reboot'}) {
 	if ($in{'confirm'}) {
 		&webmin_log("reboot", "server", $server->{'host'});
 		}
-	&ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
+	if ($in{'return'}) {
+		&ui_print_footer($in{'return'}, $in{'returndesc'});
+		}
+	else {
+		&ui_print_footer("edit_serv.cgi?id=$in{'id'}",
+				 $text{'edit_return'});
+		}
 	}
 
 elsif ($in{'delete'}) {
