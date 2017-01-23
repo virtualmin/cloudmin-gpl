@@ -21,6 +21,7 @@ if ($in{'new'}) {
 			&text('kvm_einstall', $err),
 			[ [ 'id', $in{'id'} ] ],
 			[ [ undef, $text{'kvm_install'} ] ],
+			&ui_checkbox("noqemu", 1, $text{'kvm_installq'}, 1),
 			);
 		return;
 		}

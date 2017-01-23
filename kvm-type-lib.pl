@@ -8276,39 +8276,68 @@ if (&redhat_server_type($vhost)) {
 	else {
 		&$second_print($text{'create_done'});
 		}
+	}
+elsif (&debian_server_type($vhost)) {
+	# Install vital packages on Debian
+	&$first_print($text{'xeninstall_pkgs'});
+	my ($ok, $err) = &install_package_on_server(
+				$vhost, "wget lsof bzip2 parted");
+	if (!$ok) {
+		&$second_print(&text('xeninstall_epkgs', $err));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
 
-	# Activate KVM kernel module
-	if (!$qemu) {
-		&$first_print($text{'kvminstall_kmod'});
-		my ($mout, $mex, $merr) = &execute_command_on_server($vhost,
-			"modprobe kvm-intel || modprobe kvm-amd");
-		my ($out, $ex, $err) = &execute_command_on_server($vhost,
-			"/sbin/lsmod");
-		if ($out !~ /kvm/) {
-			&$first_print(&text('kvminstall_ekmod',$mout || $merr));
-			return 0;
-			}
-		my @st = &stat_file_on_server($vhost, "/dev/kvm");
-		if (!@st) {
-			&$first_print($text{'kvminstall_ekmod2'});
-			return 0;
+	# Turm off apparmor
+	&$first_print($text{'kvminstall_apparmor'});
+	my @st = &stat_file_on_server($vhost, "/etc/init.d/apparmor");
+	if (@st) {
+		&execute_command_on_servr($vhost,
+			"/etc/init.d/apparmor stop");
+		&execute_command_on_servr($vhost,
+			"update-rc.d -f apparmor remove");
+		&$second_print($text{'create_done'});
+		}
+	else {
+		&$second_print($text{'kvminstall_noapparmor'});
+		}
+
+	# Install KVM packages
+	&$first_print($text{'kvminstall_kvm'});
+	my ($ok, $err) = &install_package_on_server($vhost,
+		"kvm qemu");
+	if (!$ok) {
+		&$second_print(&text('kvminstall_epkgs', $err));
+		return 0;
+		}
+	else {
+		# Also optional packages
+		foreach my $p ("ebtables", "cgroup-bin") {
+			&install_package_on_server($vhost, $p);
 			}
 		&$second_print($text{'create_done'});
 		}
 
-	# Create missing loopback devices
-	&$first_print($text{'kvminstall_loop'});
-	for(my $i=0; $i<8; $i++) {
-		my $l = "/dev/loop".$i;
-		my @st = &stat_file_on_server($vhost, $l);
-		if (!@st) {
-			&execute_command_on_server($vhost, "mknod $l b 7 $i");
+	# Activate cgroups (if a separate init script exists)
+	&$first_print($text{'kvminstall_cgroup'});
+	my @st = &stat_file_on_server($vhost, "/etc/init.d/cgconfig");
+	if (@st) {
+		my ($out, $ex, $err) = &execute_command_on_server($vhost,
+			"/etc/init.d/cgconfig start && ".
+			"update-rc.d cgconfig defaults");
+		if ($ex || $err) {
+			&$second_print(&text('kvminstall_ecgroup',
+					     $err || $out));
+			}
+		else {
+			&$second_print($text{'create_done'});
 			}
 		}
-	&$second_print($text{'create_done'});
-	}
-elsif (&debian_server_type($vhost)) {
-	# Install vital packages on Debian
+	else {
+		&$second_print($text{'kvminstall_nocgroup'});
+		}
 	}
 else {
 	# Unknown OS type
@@ -8316,6 +8345,36 @@ else {
 			    &describe_os($vhost->{'type'})));
 	return 0;
 	}
+
+# Activate KVM kernel module
+if (!$qemu) {
+	&$first_print($text{'kvminstall_kmod'});
+	my ($mout, $mex, $merr) = &execute_command_on_server($vhost,
+		"modprobe kvm-intel || modprobe kvm-amd");
+	my ($out, $ex, $err) = &execute_command_on_server($vhost,
+		"/sbin/lsmod");
+	if ($out !~ /kvm/) {
+		&$first_print(&text('kvminstall_ekmod',$mout || $merr));
+		return 0;
+		}
+	my @st = &stat_file_on_server($vhost, "/dev/kvm");
+	if (!@st) {
+		&$first_print($text{'kvminstall_ekmod2'});
+		return 0;
+		}
+	&$second_print($text{'create_done'});
+	}
+
+# Create missing loopback devices
+&$first_print($text{'kvminstall_loop'});
+for(my $i=0; $i<8; $i++) {
+	my $l = "/dev/loop".$i;
+	my @st = &stat_file_on_server($vhost, $l);
+	if (!@st) {
+		&execute_command_on_server($vhost, "mknod $l b 7 $i");
+		}
+	}
+&$second_print($text{'create_done'});
 
 # Find network bridges
 my $ifaces = &list_active_server_interfaces($vhost);
@@ -8335,7 +8394,8 @@ if ($br) {
 	}
 else {
 	# Copy bridge creation script
-	# XXX is eth0 the ethernet interface?
+	my $iface = &first_ethernet_iface($vhost);
+	my $eth = $iface ? $iface->{'name'} : 'eth0';
 	my $src = $module_root_directory."/create-net-bridge.pl";
 	my $dst = $vhost->{'webminroot'}."/net/create-net-bridge.pl";
 	my $err = &put_file_to_server($vhost, $src, $dst);
@@ -8344,7 +8404,7 @@ else {
 		return 0;
 		}
 	my $pp = &get_server_perl_path($server);
-	my $cmd = $pp." ".$dst." --interface eth0 --bridge br0";
+	my $cmd = $pp." ".$dst." --interface $eth --bridge br0";
 	my ($out, $ex, $err) = &execute_command_on_server($vhost, $cmd);
 	if ($ex == 1 && !$err) {
 		&$second_print($text{'xeninstall_xenbrreboot'});

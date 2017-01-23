@@ -470,12 +470,20 @@ my @macs = split(/\s+/, $server->{'mac_addresses'});
 return wantarray ? @macs : $macs[0];
 }
 
-# first_ethernet_iface()
+# first_ethernet_iface([&server])
 # Returns the object for the first active ethernet or bonded interface
 sub first_ethernet_iface
 {
-# Try real ethernet first
-foreach my $a (&net::active_interfaces()) {
+my ($server) = @_;
+&foreign_require("net");
+my @ifaces;
+if ($server) {
+	@ifaces = &list_active_server_interfaces($server, 1);
+	}
+else {
+	@ifaces = &net::active_interfaces();
+	}
+foreach my $a (@ifaces) {
 	if ($a->{'up'} &&
 	    $a->{'virtual'} eq '' &&
 	    $a->{'address'} &&
