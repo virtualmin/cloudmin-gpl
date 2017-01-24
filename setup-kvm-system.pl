@@ -11,7 +11,29 @@ from the Cloudmin installer, but can be used from the shell as well.
 =head1 Example usage
 
   cloudmin setup-kvm-system --host kvmhost.home
-XXX
+Setting up KVM host system ..
+    Checking system status ..
+    .. done
+
+    Installing required commands ..
+    .. done
+
+    Turning off AppArmor ..
+    .. not installed
+
+    Installing KVM packages ..
+    .. done
+
+    Enabling CGroups ..
+    .. not needed, as this system is running systemd
+
+    Creating loopback device files ..
+    .. done
+
+    Setting up br0 network bridge ..
+    .. done
+
+.. setup complete! You can now add this system as a KVM host.
 
 =cut
 
