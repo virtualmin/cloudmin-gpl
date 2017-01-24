@@ -478,7 +478,9 @@ my ($server) = @_;
 &foreign_require("net");
 my @ifaces;
 if ($server) {
-	@ifaces = &list_active_server_interfaces($server, 1);
+	my $ifaces = &list_active_server_interfaces($server, 1);
+	ref($ifaces) || return undef;
+	@ifaces = @$ifaces;
 	}
 else {
 	@ifaces = &net::active_interfaces();
