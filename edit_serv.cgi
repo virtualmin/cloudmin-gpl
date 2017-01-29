@@ -124,8 +124,26 @@ $vhost = &get_parent_server($server);
 if ($vhost) {
 	print &ui_table_row($text{'edit_parent'},
 	  &can_action($vhost, "view") ?
-	    "<a href='edit_serv.cgi?id=$vhost->{'id'}'>$vhost->{'host'}</a>" :
+	    &ui_link("edit_serv.cgi?id=$vhost->{'id'}", $vhost->{'host'}) :
             $vhost->{'host'});
+	}
+
+# Cloned from
+if ($server->{'cloneof'}) {
+	my $cloneof = &get_managed_server($server->{'cloneof'});
+	if (!$cloneof) {
+		print &ui_table_row($text{'edit_cloneof'},
+			&text('edit_clonegone', $server->{'cloneof'}));
+		}
+	elsif (&can_action($cloneof, "view")) {
+		print &ui_table_row($text{'edit_cloneof'},
+			&ui_link("edit_serv.cgi?id=$cloneof->{'id'}",
+				 $cloneof->{'host'}));
+		}
+	else {
+		print &ui_table_row($text{'edit_cloneof'},
+			$cloneof->{'host'});
+		}
 	}
 
 if (!$view) {

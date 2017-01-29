@@ -137,6 +137,16 @@ if ($multi) {
 		if ($s->{'unix_hostname'}) {
 			print "    Unix hostname: $s->{'unix_hostname'}\n";
 			}
+		my $vhost = &get_parent_server($s);
+		if ($vhost) {
+			print "    Hosted on: $vhost->{'host'}\n";
+			}
+		if ($s->{'cloneof'}) {
+			my $cloneof = &get_managed_server($s->{'cloneof'});
+			print "    Cloned from: ",
+			      ($cloneof ? $cloneof->{'host'}
+					: "ID $s->{'cloneof'}"),"\n";
+			}
 		if ($s->{'ip_force'}) {
 			print "    Forced IP address: $s->{'ip_force'}\n";
 			}
