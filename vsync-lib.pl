@@ -225,16 +225,18 @@ else {
 	}
 
 # Work out if the first domain has a shared home dir
-my ($err, $out) = &call_virtualmin_api($src, "list-domains",
-				       [ [ "simple-multiline" ],
-					 [ "domain", $doms[0] ] ]);
 my %remotes;
-if ($err) {
-	&$second_print(&text('vsync_remoteerr', $err));
-	return 0;
-	}
-if ($out =~ /Remote\s+features:\s*(.*)/) {
-	%remotes = map { $_, 1 } split(/\s+/, $1);
+if (@doms) {
+	my ($err, $out) = &call_virtualmin_api($src, "list-domains",
+					       [ [ "simple-multiline" ],
+						 [ "domain", $doms[0] ] ]);
+	if ($err) {
+		&$second_print(&text('vsync_remoteerr', $err));
+		return 0;
+		}
+	if ($out =~ /Remote\s+features:\s*(.*)/) {
+		%remotes = map { $_, 1 } split(/\s+/, $1);
+		}
 	}
 
 # Backup all domains to the temp dir
