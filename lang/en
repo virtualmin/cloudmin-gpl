@@ -4026,6 +4026,9 @@ brun_eformat=Could not work out format from filename $1
 
 rrun_title=Restore Systems
 rrun_err=Restore failed
+rrun_rusure=Are you sure you want to restore the following virtual systems : $1 ?
+rrun_rusure2=All files on these systems will be reset to the state they were in when the backup was created!
+rrun_rusureok=Restore Now
 rrun_destdesc=Restoring $1 systems from $2 ..
 rrun_destdesc2=Restoring $1 systems from destinations from host systems ..
 rrun_finding=Finding systems to restore ..

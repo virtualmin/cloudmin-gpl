@@ -116,6 +116,23 @@ foreach $s (@servers) {
 
 &ui_print_unbuffered_header(undef, $text{'restore_title'}, "");
 
+# Ask for confirmation first if needed
+if (!$in{'confirm'}) {
+	my @hiddens;
+	foreach my $k (keys %in) {
+		push(@hiddens, map { [ $k, $_ ] } split(/\0/, $in{$k}));
+		}
+	print &ui_confirmation_form(
+		"restore.cgi",
+		&text('rrun_rusure', join(", ", map { "<tt>$_->{'host'}</tt>" }
+						(@servers, @missing))),
+		\@hiddens,
+		[ [ 'confirm', $text{'rrun_rusureok'} ] ],
+		$text{'rrun_rusure2'},
+		);
+	return;
+	}
+
 # Show what is being done
 $rcount = scalar(@servers) + scalar(@missing);
 if ($backup->{'dest'}) {
