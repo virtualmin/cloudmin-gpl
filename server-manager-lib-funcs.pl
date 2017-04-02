@@ -5841,6 +5841,9 @@ for(my $i=0; $i<@startips; $i++) {
 			}
 		}
 	}
+if (!@rv && $wantiface) {
+	return &text('create_exenallociface', $wantiface);
+	}
 return join(", ", @rv);
 }
 
