@@ -5588,7 +5588,7 @@ my @poss;
 for(my $i=0; $i<@startips; $i++) {
 	# If this range is for some host system interface, skip if we aren't
 	# allocating for that interface
-	next if ($wantiface && $ifaces[$i] ne $wantiface &&
+	next if ($wantiface && $wantiface ne '*' && $ifaces[$i] ne $wantiface &&
 		 $ifaces[$i] ne '' && $ifaces[$i] ne '*');
 
 	# Split into sub-ranges

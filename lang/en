@@ -375,6 +375,7 @@ create_exengw6=Missing or invalid gateway IPv6 address
 create_exenip=Missing or invalid Xen instance IP address
 create_exenalloc=Failed to allocate an IP address on $1 from the range $2
 create_exenalloc6=Failed to allocate an IPv6 address on $1 from the range $2
+create_exenallociface=for interface $1
 create_exenallocnone=No IP allocation ranges have been defined on $1
 create_exenallocnone6=No IPv6 allocation ranges have been defined on $1
 create_exennoifaces=No host system interfaces available for allocation
