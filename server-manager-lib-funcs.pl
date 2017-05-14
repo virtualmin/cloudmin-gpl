@@ -3629,13 +3629,15 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				$server, "net", "active_interfaces") ];
 			}
 
-		# Get list of LVM volume groups, if this is a parent
+		# Get list of LVM volume groups and thin pool logical volumes,
+		# if this is a parent
 		if (&is_parent_server($server) &&
 		    &remote_foreign_check($server, "lvm")) {
 			$last_remote_error = undef;
 			&remote_foreign_require($server, "lvm");
 			my @vgs = &remote_foreign_call($server, "lvm",
 					"list_volume_groups");
+			my @lvs;
 			if (!$last_remote_error && ref($vgs[0])) {
 				my @vglist;
 				foreach my $vg (@vgs) {
@@ -3649,12 +3651,32 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 					$vgl->{'free'} = $vgl->{'total'} -
 							 $vgl->{'used'};
 					push(@vglist, $vgl);
+					push(@lvs, &remote_foreign_call($server,
+						"lvm", "list_logical_volumes",
+						$vg->{'name'}));
 					}
 				$info->{'vg_list'} = \@vglist;
+				}
+			if (!$last_remote_error && ref($lvs[0])) {
+				my @lvlist;
+				foreach my $lv (@lvs) {
+					next if (!$lv->{'thin'});
+					my $lvl = {
+					    'lv' => $lv->{'name'},
+					    'vg' => $lv->{'vg'},
+					    'total' => $lv->{'size'}*1024,
+					    'used' => $lv->{'thin_used'}*1024,
+					    };
+					$lvl->{'free'} = $lvl->{'total'} -
+							 $lvl->{'used'};
+					push(@lvlist, $lvl);
+					}
+				$info->{'lv_thin_list'} = \@lvlist;
 				}
 			}
 		else {
 			delete($info->{'vg_list'});
+			delete($info->{'lv_thin_list'});
 			}
 
 		# Get Webmin config dir, if not known yet
