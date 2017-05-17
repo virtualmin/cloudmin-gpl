@@ -3460,6 +3460,11 @@ if ($server->{'user'} || $server->{'id'} == 0) {
 				    : "get_collected_info");
 			$info->{'minfo'} = &remote_eval($server,
 				"virtual_server", "\\\%module_info");
+			if (!$info->{'minfo'}->{'virtualmin'}) {
+				$info->{'minfo'}->{'virtualmin'} =
+					$info->{'minfo'}->{'version'} =~ /gpl/ ?
+					'gpl' : 'pro';
+				}
 			$info->{'config'} = &remote_foreign_config(
 				$server, "virtual-server");
 			if (&remote_eval($server, "virtual_server",
