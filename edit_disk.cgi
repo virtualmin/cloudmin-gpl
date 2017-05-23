@@ -157,6 +157,11 @@ if ($realsel) {
 	print &ui_table_row(&text($txt, "<tt>$vhost->{'host'}</tt>"), $realsel);
 	}
 
+# LVM thin pool
+if ($disk->{'thin'}) {
+	print &ui_table_row($text{'disk_realthin'}, "<tt>$disk->{'thin'}</tt>");
+	}
+
 # Device on virtual system
 print &ui_table_row($text{'disk_virt'},
 	&ui_textbox("virt", $disk->{'virt'}, 30));

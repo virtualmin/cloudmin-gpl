@@ -5319,7 +5319,7 @@ elsif ($type eq "tgz" || $type eq "pkgadd") {
 							 : "/usr/local";
 	$rootdir = "$basedir/webmin";
 	my ($wout, $wex, $werr) = &execute_command_on_server($server,
-	    "wget -nv -O $temp $src && mkdir -p $basedir && cd $basedir && gunzip -c $temp | tar xf - && echo webmin-*/version && rm -f $temp");
+	    "wget -nv --no-check-certificate -O $temp $src && mkdir -p $basedir && cd $basedir && gunzip -c $temp | tar xf - && echo webmin-*/version && rm -f $temp");
 	return (undef, $werr) if ($werr);
 	return ($wout, "Tar file download or extraction failed") if ($wex);
 	my $tardir;

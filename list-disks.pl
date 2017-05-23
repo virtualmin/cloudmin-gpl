@@ -117,6 +117,9 @@ if ($multi) {
 			print "    LVM volume group: $d->{'vg'}\n";
 			print "    LVM logical volume: $d->{'lv'}\n";
 			}
+		if ($d->{'thin'}) {
+			print "    LVM thin pool: $d->{'thin'}\n";
+			}
 		if ($d->{'iscsi_ip'}) {
 			if ($d->{'iscsi_server'} ne '') {
 				my $iscsiserver = &get_managed_server(

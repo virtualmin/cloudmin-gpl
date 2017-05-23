@@ -838,6 +838,10 @@ if ($storage->{'type'} eq 'files') {
 elsif ($storage->{'type'} eq 'lvm') {
 	$server->{'kvm_force_vg'} = $storage->{'vg'};
 	}
+elsif ($storage->{'type'} eq 'thin') {
+	$server->{'kvm_force_vg'} = $storage->{'vg'};
+	$server->{'kvm_force_thin'} = $storage->{'lv'};
+	}
 elsif ($storage->{'type'} eq 'iscsi') {
 	$server->{'kvm_force_iscsi'} = $storage->{'iscsi'};
 	}
@@ -1353,6 +1357,10 @@ if ($storage->{'type'} eq 'files') {
 elsif ($storage->{'type'} eq 'lvm') {
 	$server->{'kvm_force_vg'} = $storage->{'vg'};
 	}
+elsif ($storage->{'type'} eq 'thin') {
+	$server->{'kvm_force_vg'} = $storage->{'vg'};
+	$server->{'kvm_force_thin'} = $storage->{'lv'};
+	}
 elsif ($storage->{'type'} eq 'iscsi') {
 	$server->{'kvm_force_iscsi'} = $storage->{'iscsi'};
 	}
@@ -1425,6 +1433,7 @@ elsif ($server->{'kvm_force_vg'} ||
 					 $vhost->{'kvm_vg'};
 	$server->{'kvm_filesystem_lv'} = $server->{'host'}.'_img';
 	$server->{'kvm_filesystem_lv'} =~ s/\./_/g;
+	$server->{'kvm_filesystem_thin'} = $server->{'kvm_force_thin'};
 	$fsfile = "/dev/".$server->{'kvm_filesystem_vg'}."/".
 		  $server->{'kvm_filesystem_lv'};
 	delete($server->{'kvm_filesystem_iscsi'});
@@ -1433,6 +1442,7 @@ elsif ($server->{'kvm_force_vg'} ||
                 $server->{'kvm_swapfile_vg'} = $server->{'kvm_filesystem_vg'};
                 $server->{'kvm_swapfile_lv'} = $server->{'host'}.'_swap';
 		$server->{'kvm_swapfile_lv'} =~ s/\./_/g;
+		$server->{'kvm_swapfile_thin'} = $server->{'kvm_force_thin'};
                 $swfile = "/dev/".$server->{'kvm_swapfile_vg'}."/".
                           $server->{'kvm_swapfile_lv'};
                 }
@@ -1448,9 +1458,11 @@ else {
 	return "Disk image file $fsfile already exists" if (@st);
 	delete($server->{'kvm_filesystem_vg'});
 	delete($server->{'kvm_filesystem_lv'});
+	delete($server->{'kvm_filesystem_thin'});
 	delete($server->{'kvm_filesystem_iscsi'});
 	delete($server->{'kvm_swapfile_vg'});
 	delete($server->{'kvm_swapfile_lv'});
+	delete($server->{'kvm_swapfile_thin'});
 	delete($server->{'kvm_swapfile_iscsi'});
         if ($server->{'kvm_swap'}) {
                 $swfile = "$kvm_dir/$server->{'host'}.swap";
@@ -1533,7 +1545,8 @@ if ($server->{'kvm_swapfile_vg'}) {
                    'size' => int($server->{'kvm_swap'}*1024),
                    'perm' => 'rw',
                    'alloc' => 'n',
-                   'vg' => $server->{'kvm_swapfile_vg'} };
+                   'vg' => $server->{'kvm_swapfile_vg'},
+	           'thin_in' => $server->{'kvm_swapfile_thin'}, };
 	if (!$swaplv || !&size_close_enough($swaplv->{'size'}, $lv->{'size'})) {
                 # Only delete and re-create if an old LV with close enough to
                 # the same size doesn't exist
@@ -1609,7 +1622,8 @@ if ($server->{'kvm_filesystem_vg'}) {
 			1024*1024,
 		   'perm' => 'rw',
 		   'alloc' => 'n',
-		   'vg' => $server->{'kvm_filesystem_vg'} };
+		   'vg' => $server->{'kvm_filesystem_vg'},
+	           'thin_in' => $server->{'kvm_filesystem_thin'}, };
 	if (!$fslv ||
 	    !&size_close_enough($fslv->{'size'}*1024, $lv->{'size'}*1024)) {
 		# Only delete and re-create if an old LV with close enough to
@@ -2965,6 +2979,7 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		if ($lv) {
 			$disk->{'size'} = $lv->{'size'} * 1024;
 			$disk->{'lv_snap_of'} = $lv->{'snap_of'};
+			$disk->{'thin'} = $lv->{'thin_in'};
 			}
 		elsif ($lvm_error) {
 			# Disk is on LVM, but failed to get details
@@ -3257,11 +3272,15 @@ if (!$device) {
 	my $vhost = &type_kvm_parent($server);
 	my $kvm_dir = ($storage ? $storage->{'directory'} : undef) ||
 		      $server->{'new_directory'} || $vhost->{'kvm_dir'};
-	my $vg;
+	my ($vg, $thin);
 	my $iscsi;
 	if ($storage) {
 		if ($storage->{'id'} =~ /^lvm_(\S+)/) {
 			$vg = $1;
+			}
+		elsif ($storage->{'id'} =~ /^thin_(\S+)_(\S+)/) {
+			$vg = $1;
+			$thin = $2;
 			}
 		elsif ($storage->{'id'} =~ /^iscsi_(\S+)/) {
 			my $iscsiserver = &get_managed_server_by("host", "$1");
@@ -3284,6 +3303,7 @@ if (!$device) {
 		$rv->{'vg'} = $vg;
 		$rv->{'lv'} = $server->{'host'}."_".$filenum."_img";
 		$rv->{'lv'} =~ s/\./_/g;
+		$rv->{'thin'} = $thin;
 		$rv->{'real'} = "/dev/".$rv->{'vg'}."/".$rv->{'lv'};
 		}
 	elsif ($iscsi ne '') {
@@ -3362,7 +3382,8 @@ else {
 			   'size' => int($disk->{'size'}/1024),
 			   'perm' => 'rw',
 			   'alloc' => 'n',
-			   'vg' => $disk->{'vg'} };
+			   'vg' => $disk->{'vg'},
+			   'thin_in' => $disk->{'thin'}, };
 		my $err = &remote_foreign_call($vhost, "lvm",
 					       "create_logical_volume", $lv);
 		$err ||= $last_remote_error;
@@ -4108,6 +4129,21 @@ if ($vhost->{'status'} eq 'virt' || $vhost->{'status'} eq 'novirt') {
 				     : $text{'storage_lvm1'},
 		    'adddesc' => $showv ? &text('storage_addlvm', $vg->{'vg'})
 					: $text{'storage_addlvm1'} });
+		}
+
+	# Also add thin pool LVs
+	my @lvs = @{$info->{'lv_thin_list'}};
+	my $showv = $always || @lvs > 1;
+	foreach my $lv (@lvs) {
+		push(@rv, {
+		    'id' => 'thin_'.$lv->{'vg'}.'_'.$lv->{'lv'},
+		    'type' => 'thin',
+		    'vg' => $lv->{'vg'},
+		    'lv' => $lv->{'lv'},
+		    'desc' => $showv ? &text('storage_thin', $lv->{'lv'})
+				     : $text{'storage_thin1'},
+		    'adddesc' => $showv ? &text('storage_addthin',$lv->{'lv'})
+					: $text{'storage_addthin'} });
 		}
 	}
 
