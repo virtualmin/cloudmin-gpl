@@ -2988,8 +2988,17 @@ foreach my $dstr (split(/\s+/, $server->{'kvm_drives'})) {
 		else {
 			return "Logical volume $disk->{'lv'} was not found";
 			}
-		$disk->{'storage_id'} = 'lvm_'.$disk->{'vg'};
-		$disk->{'storage'} = &text('storage_lvm',$disk->{'vg'});
+		if ($disk->{'thin'}) {
+			$disk->{'storage_id'} =
+				'thin_'.$disk->{'vg'}.'_'.$disk->{'thin'};
+			$disk->{'storage'} = &text('storage_thin',
+						   $disk->{'thin'});
+			}
+		else {
+			$disk->{'storage_id'} = 'lvm_'.$disk->{'vg'};
+			$disk->{'storage'} = &text('storage_lvm',
+						   $disk->{'vg'});
+			}
 		}
 	elsif ($disk->{'real'} =~ /^\/dev\/disk\/by-path\/ip-(\S+):(\d+)-iscsi-(\S+):(\S+)-lun-(\d+)$/) {
 		# Disk is on an iSCSI server
