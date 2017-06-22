@@ -588,6 +588,7 @@ if ($server->{'id'} eq '0') {
 		 'update_system' => $server->{'update_system'},
 		 'mac_addresses' => $server->{'mac_addresses'},
 		 'notes' => $server->{'notes'},
+		 'webminroot' => $server->{'webminroot'},
 		);
 	# Save all Cloudmin type-specific details
 	foreach my $t (@server_management_types, 'zone', 'provision',

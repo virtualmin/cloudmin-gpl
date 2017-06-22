@@ -8266,11 +8266,13 @@ if (!&can_webmin_status($vhost)) {
 		&$second_print(&text('xeninstall_ewebmin', $err));
 		return 0;
 		}
-	else {
-		&$second_print($text{'create_done'});
-		}
 	&check_server_status($vhost);
 	&save_managed_server($vhost);
+	if (!$vhost->{'webminroot'}) {
+		&$second_print($text{'xeninstall_ewebminroot'});
+		return 0;
+		}
+	&$second_print($text{'create_done'});
 	}
 
 # Check status again, to ensure Webmin is accessible
