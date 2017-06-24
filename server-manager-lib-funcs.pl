@@ -14454,7 +14454,7 @@ if ($flash) {
 		   "&viewOnly=false".
 		   "&useRemoteCursor=false".
 		   "&password=".&urlize($pass);
-	$rv .= "<object id='Flashlight' width='100%' height='85%' type='application/x-shockwave-flash' data='flashlight/Flashlight.swf'>\n";
+	$rv .= "<object id='Flashlight' width='100%' height='640' type='application/x-shockwave-flash' data='flashlight/Flashlight.swf'>\n";
 	$rv .= "<param name='movie' value='Flashlight.swf'/>\n";
 	$rv .= "<param name='allowScriptAccess' value='always'/>\n";
 	$rv .= "<param name='allowFullscreen' value='always'/>\n";
