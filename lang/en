@@ -6172,6 +6172,7 @@ docker_driver_gce=Google Compute Engine
 xeninstall_webmin=Installing Webmin ..
 xeninstall_ewebmindown=.. Webmin is already installed, but is either down or cannot be accessed by Cloudmin
 xeninstall_ewebminsrc=.. no source for installing Webmin found!
+xeninstall_ewebminroot=.. Webmin root directory not found!
 xeninstall_ewebmin=.. Webmin install failed : $1
 xeninstall_pkgs=Installing required commands ..
 xeninstall_epkgs=.. install failed : $1
