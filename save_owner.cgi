@@ -147,7 +147,6 @@ else {
 		}
 	else {
 		$owner->{'acl'}->{'actions_def'} = 0;
-		$in{'actions'} eq '' && &error($text{'owner_eactions'});
 		$owner->{'acl'}->{'actions'} =
 			join(" ", split(/\0/, $in{'actions'}));
 		}

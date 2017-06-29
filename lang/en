@@ -3026,7 +3026,6 @@ owner_epass=Missing password
 owner_epass2=Passwords cannot contain the : character
 owner_eemail=Missing or invalid-looking email address
 owner_eservers=No systems to manage selected
-owner_eactions=No allowed operations selected
 owner_action_startup=Startup systems
 owner_action_shutdown=Shut down systems
 owner_action_reboot=Reboot systems
