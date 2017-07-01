@@ -679,6 +679,7 @@ else {
 	$server->{'kvm_disktotal'} += $img->{'rawsize'};
 	}
 if (!$empty &&
+    $server->{'kvm_disksize'} &&
     $img->{'rawsize'} &&
     $img->{'rawsize'} > $server->{'kvm_disksize'}*1024*1024) {
 	&error(&text('create_exendisksize2',
