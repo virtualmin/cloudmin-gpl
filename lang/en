@@ -4073,6 +4073,8 @@ rrun_fixifaces=Updating network interface bridges ..
 rrun_nobridges=.. no bridges found on host system
 rrun_ebridge=.. failed to update bridge : $1
 rrun_ebridgeifaces=.. failed to list network interfaces : $1
+rrun_donebridges=.. updated bridges for interfaces $1
+rrun_nobridges2=.. no bridges needed fixing
 
 backuplogs_title=Backup Logs
 backuplogs_find=Find logs matching:

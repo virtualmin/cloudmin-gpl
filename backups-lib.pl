@@ -1064,7 +1064,7 @@ if (!$server->{'missing'} && ref($olddisks) && ref($disks) && @$olddisks > 0) {
 		}
 	}
 
-# Call the type-specific backup function
+# Call the type-specific restore function
 &$first_print(&text('rrun_restoring', $server->{'host'},
 		    &nice_backup_destination($dest)));
 &$indent_print();
@@ -1080,11 +1080,12 @@ else {
 
 # Check for any network interfaces with invalid bridges
 my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
+my $vhost = &get_parent_server($server);
 if (defined(&$cfunc) && &$cfunc($server)) {
 	&$first_print($text{'rrun_fixifaces'});
 	my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
 	my $ifaces = &$ifunc($server);
-	my @bridges = &list_host_bridges($dest);
+	my @bridges = &list_host_bridges($vhost);
 	if (!ref($ifaces)) {
 		&$second_print(&text('rrun_ebridgeifaces', $ifaces));
 		}
