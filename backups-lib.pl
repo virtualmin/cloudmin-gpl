@@ -1078,6 +1078,45 @@ else {
 	&$second_print(&text('rrun_failed', $rv->{'msg'}));
 	}
 
+# Check for any network interfaces with invalid bridges
+my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
+if (defined(&$cfunc) && &$cfunc($server)) {
+	&$first_print($text{'rrun_fixifaces'});
+	my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+	my $ifaces = &$ifunc($server);
+	my @bridges = &list_host_bridges($dest);
+	if (!ref($ifaces)) {
+		&$second_print(&text('rrun_ebridgeifaces', $ifaces));
+		}
+	elsif (!@bridges) {
+		&$second_print($text{'rrun_nobridges'});
+		}
+	else {
+		my @fixed;
+		my $mfunc = "type_".$server->{'manager'}."_modify_interface";
+		foreach my $iface (@$ifaces) {
+			next if (!$iface->{'bridge'});
+			next if (&indexof($iface->{'bridge'}, @bridges) >= 0);
+			my $oldiface = { %$iface };
+			$iface->{'bridge'} = $bridges[0];
+			my $err = &$mfunc($server, $iface, $oldiface);
+			if ($err) {
+				&$second_print(&text('rrun_ebridge', $err));
+				}
+			else {
+				push(@fixed, $iface->{'name'});
+				}
+			}
+		if (@fixed) {
+			&$second_print(&text('rrun_donebridges',
+					     join(" ", @fixed)));
+			}
+		else {
+			&$second_print($text{'rrun_nobridges2'});
+			}
+		}
+	}
+
 # Start up again
 if ($was_up) {
 	&$first_print(&text('rrun_startup', $server->{'host'}));
