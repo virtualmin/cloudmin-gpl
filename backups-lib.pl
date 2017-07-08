@@ -2919,22 +2919,24 @@ else {
 
 # Clear out forced VG or iSCSI server if no longer valid, such as when restoring
 # on a different host
-my $vg = $server->{$server->{'manager'}.'_force_vg'};
-my $iscsi = $server->{$server->{'manager'}.'_force_iscsi'};
 my $sfunc = "type_".$server->{'manager'}."_list_storages";
-my $storages = &$sfunc($vhost);
-if ($vg) {
-	my ($vstor) = grep { $_->{'type'} eq 'lvm' &&
-			     $_->{'vg'} eq $vg } @$storages;
-	if (!$vstor) {
-		delete($server->{$server->{'manager'}.'_force_vg'});
+if (defined(&$sfunc)) {
+	my $vg = $server->{$server->{'manager'}.'_force_vg'};
+	my $iscsi = $server->{$server->{'manager'}.'_force_iscsi'};
+	my $storages = &$sfunc($vhost);
+	if ($vg) {
+		my ($vstor) = grep { $_->{'type'} eq 'lvm' &&
+				     $_->{'vg'} eq $vg } @$storages;
+		if (!$vstor) {
+			delete($server->{$server->{'manager'}.'_force_vg'});
+			}
 		}
-	}
-if ($iscsi) {
-	my ($istor) = grep { $_->{'type'} eq 'iscsi' &&
-			     $_->{'iscsi'} eq $iscsi } @$storages;
-	if (!$istor) {
-		delete($server->{$server->{'manager'}.'_force_iscsi'});
+	if ($iscsi) {
+		my ($istor) = grep { $_->{'type'} eq 'iscsi' &&
+				     $_->{'iscsi'} eq $iscsi } @$storages;
+		if (!$istor) {
+			delete($server->{$server->{'manager'}.'_force_iscsi'});
+			}
 		}
 	}
 
