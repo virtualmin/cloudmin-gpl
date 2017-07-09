@@ -1844,11 +1844,12 @@ if (ref($disks) && $disks->[0]->{'iscsi_server'} ne '') {
 		}
 	}
 
-# Fix root disk device to match virtio mode
+# Fix root disk device in /etc/fstab to match virtio mode
 # XXX should this be sda? When?
 my $wantdev = $server->{'kvm_virtio'} ? "/dev/vda" : "/dev/hda";
 my $hasbootfs = 0;
-if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
+if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
+		$img->{'kvm_virtio'} eq '')) {
 	&$first_print($text{'create_kvmvirtio'});
 	&mount_filesystem_if_needed($server);
 	my $fstab = &get_system_fstab($server);
@@ -1883,7 +1884,8 @@ if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
 	}
 
 # Fix grub config to match virtio mode
-if (!$empty && $server->{'kvm_virtio'} != $img->{'kvm_virtio'}) {
+if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
+		$img->{'kvm_virtio'} eq '')) {
 	&$first_print($text{'create_kvmgrub'});
 	my $grubdir = $hasbootfs ? "/grub" : "/boot/grub";
 	&mount_filesystem_if_needed($server, $grubdir);
