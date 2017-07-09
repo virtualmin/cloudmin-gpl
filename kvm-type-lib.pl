@@ -1884,10 +1884,10 @@ if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
 	}
 
 # Fix grub config to match virtio mode
+my $grubdir = $hasbootfs ? "/grub" : "/boot/grub";
 if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
 		$img->{'kvm_virtio'} eq '')) {
 	&$first_print($text{'create_kvmgrub'});
-	my $grubdir = $hasbootfs ? "/grub" : "/boot/grub";
 	&mount_filesystem_if_needed($server, $grubdir);
 	my $grubconf;
 	my $data;
@@ -1904,6 +1904,56 @@ if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
 	else {
 		$data =~ s/ root=(\S+)(\d+)(\s|$)/ root=$wantdev$2$3/g;
 		my $err = &put_file_data_to_server($server, $data, $grubconf);
+		if ($err) {
+			&$second_print(&text('create_ekvmgrub', $err));
+			}
+		else {
+			&$second_print($text{'create_done'});
+			}
+		}
+	&umount_filesystem_if_needed($server);
+	}
+
+# Fix grub configs to use ethN style interface names
+if (!$empty) {
+	&$first_print($text{'create_kvmgrubeth'});
+	&mount_filesystem_if_needed($server, $grubdir);
+	my $flags = "net.ifnames=0 biosdevname=0";
+
+	# Fix /etc/default/grub, from which the main .cfg file is generated
+	my $grubdef = &get_file_data_from_server("/etc/default/grub");
+	if ($grubdef && $grubdef =~ /GRUB_CMDLINE_LINUX="(.*)"/) {
+		my $cmdline = $1;
+		if ($cmdline !~ /\Q$flags\E/) {
+			$cmdline .= " " if ($cmdline);
+			$cmdline .= $flags;
+			$grubdef =~ s/GRUB_CMDLINE_LINUX="(.*)"/GRUB_CMDLINE_LINUX="$cmdline"/;
+			my $err = &put_file_data_to_server($server, $grubdef,
+					"/etc/default/grub");
+			}
+		}
+
+	# Fix the actual grub config file
+	my $grubconf;
+	my $datafile = &transname();
+	foreach my $g ("$grubdir/menu.lst", "$grubdir/grub.conf") {
+		my $err = &get_file_from_server($server, $g, $datafile);
+		if (!$err) {
+			$grubconf = $g;
+			last;
+			}
+		}
+	if (!$grubconf) {
+		&$second_print(&text('create_ekvmgrubget'));
+		}
+	else {
+		my $lref = &read_file_lines($datafile);
+		foreach my $l (@$lref) {
+			if ($l =~ /^\s*linux\s+.*root=/ && $l !~ /\Q$flags\E/) {
+				$l .= " ".$flags;
+				}
+			}
+		my $err = &put_file_to_server($server, $datafile, $grubconf);
 		if ($err) {
 			&$second_print(&text('create_ekvmgrub', $err));
 			}
