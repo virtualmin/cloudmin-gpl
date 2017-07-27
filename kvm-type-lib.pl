@@ -1891,7 +1891,8 @@ if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
 	&mount_filesystem_if_needed($server, $grubdir);
 	my $grubconf;
 	my $data;
-	foreach my $g ("$grubdir/menu.lst", "$grubdir/grub.conf") {
+	foreach my $g ("$grubdir/menu.lst", "$grubdir/grub.conf",
+		       "$grubdir/grub.cfg") {
 		$data = &get_file_data_from_server($server, $g);
 		if ($data) {
 			$grubconf = $g;
@@ -1914,14 +1915,14 @@ if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
 	&umount_filesystem_if_needed($server);
 	}
 
-# Fix grub configs to use ethN style interface names
+# Fix grub configs to use ethN style interface names (as seen on Debian)
 if (!$empty) {
 	&$first_print($text{'create_kvmgrubeth'});
-	&mount_filesystem_if_needed($server, $grubdir);
 	my $flags = "net.ifnames=0 biosdevname=0";
 
 	# Fix /etc/default/grub, from which the main .cfg file is generated
-	my $grubdef = &get_file_data_from_server("/etc/default/grub");
+	&mount_filesystem_if_needed($server);
+	my $grubdef = &get_file_data_from_server($server, "/etc/default/grub");
 	if ($grubdef && $grubdef =~ /GRUB_CMDLINE_LINUX="(.*)"/) {
 		my $cmdline = $1;
 		if ($cmdline !~ /\Q$flags\E/) {
@@ -1932,11 +1933,14 @@ if (!$empty) {
 					"/etc/default/grub");
 			}
 		}
+	&umount_filesystem_if_needed($server);
 
 	# Fix the actual grub config file
+	&mount_filesystem_if_needed($server, $grubdir);
 	my $grubconf;
 	my $datafile = &transname();
-	foreach my $g ("$grubdir/menu.lst", "$grubdir/grub.conf") {
+	foreach my $g ("$grubdir/menu.lst", "$grubdir/grub.conf",
+		       "$grubdir/grub.cfg") {
 		my $err = &get_file_from_server($server, $g, $datafile);
 		if (!$err) {
 			$grubconf = $g;
