@@ -130,6 +130,7 @@ if (!$in{'confirm'}) {
 		[ [ 'confirm', $text{'rrun_rusureok'} ] ],
 		$text{'rrun_rusure2'},
 		);
+	&ui_print_footer("", $text{'return'});
 	return;
 	}
 
