@@ -6312,6 +6312,8 @@ return "gz";
 sub type_kvm_restore_system
 {
 my ($server, $deststr) = @_;
+delete($server->{'kvm_console'});	# Not valid on new host
+delete($server->{'kvm_monitor'});
 return &image_restore_system($server, $deststr);
 }
 
