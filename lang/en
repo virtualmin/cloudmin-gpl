@@ -649,6 +649,7 @@ create_ekvmvirtio=.. device fix failed : $1
 create_kvmgrub=Fixing root disk device in Grub configuration file ..
 create_ekvmgrubget=.. no Grub configuration file found!
 create_ekvmgrub=.. Grub fix failed : $1
+create_kvmgrubhda=.. no change needed
 create_kvmgrubeth=Fixing interface names in Grub configuration file ..
 create_exenmodelhvm=An network interface device type can only be selected for HVM Xen instances
 create_eplan=No plan for new system owner selected

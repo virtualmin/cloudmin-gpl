@@ -1863,6 +1863,10 @@ if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
 			    $f->[0] !~ /^\Q$wantdev\E/ &&
 			    $f->[0] =~ /(\d+)$/) {
 				my $part = $1;
+				# Leave hda/sda unchanged if another variant
+				# is selected
+				next if ($wantdev =~ /^\/dev\/[hs]da/ &&
+					 $f->[0] =~ /^\/dev\/[hs]da/);
 				$f->[0] = $wantdev.$part;
 				$changed++;
 				}
@@ -1903,13 +1907,23 @@ if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
 		&$second_print(&text('create_ekvmgrubget'));
 		}
 	else {
-		$data =~ s/ root=(\S+)(\d+)(\s|$)/ root=$wantdev$2$3/g;
-		my $err = &put_file_data_to_server($server, $data, $grubconf);
-		if ($err) {
-			&$second_print(&text('create_ekvmgrub', $err));
+		if ($wantdev =~ /^\/dev\/[hs]da$/ &&
+		    $data =~ /root=\/dev\/[hs]da/) {
+			# Assume that if hda/sda is in use and one of those
+			# is what we want, that it is correct
+			&$second_print($text{'create_kvmgrubhda'});
 			}
 		else {
-			&$second_print($text{'create_done'});
+			# Need to fix
+			$data =~ s/ root=(\S+)(\d+)(\s|$)/ root=$wantdev$2$3/g;
+			my $err = &put_file_data_to_server(
+					$server, $data, $grubconf);
+			if ($err) {
+				&$second_print(&text('create_ekvmgrub', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				}
 			}
 		}
 	&umount_filesystem_if_needed($server);
