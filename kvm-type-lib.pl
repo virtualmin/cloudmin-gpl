@@ -1971,6 +1971,7 @@ if (!$empty) {
 				$l .= " ".$flags;
 				}
 			}
+		&flush_file_lines($datafile);
 		my $err = &put_file_to_server($server, $datafile, $grubconf);
 		if ($err) {
 			&$second_print(&text('create_ekvmgrub', $err));
