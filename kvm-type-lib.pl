@@ -1484,11 +1484,14 @@ my @ips6 = split(/\s+/, $server->{'kvm_ip6'});
 my @macs;
 for(my $i=0; $i<@ips; $i++) {
 	if ($i == 0 && $server->{'kvm_mac'}) {
-		push(@macs, $server->{'kvm_mac'});
+		my $macclash = &get_managed_server_by(
+			"kvm_mac", $server->{'kvm_mac'});
+		if (!$macclash || $macclash->{'id'} eq $server->{'id'}) {
+			push(@macs, $server->{'kvm_mac'});
+			next;
+			}
 		}
-	else {
-		push(@macs, &generate_mac_address($server, $i));
-		}
+	push(@macs, &generate_mac_address($server, $i));
 	}
 $server->{'mac'} = join(" ", @macs);
 $server->{'mac_addresses'} = join(" ", @macs);
