@@ -23,6 +23,7 @@ if ($in{'new'}) {
 			[ [ undef, $text{'kvm_install'} ] ],
 			&ui_checkbox("noqemu", 1, $text{'kvm_installq'}, 1),
 			);
+		&ui_print_footer("list_kvms.cgi", $text{'kvms_return'});
 		return;
 		}
 	}
