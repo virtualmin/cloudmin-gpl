@@ -2780,12 +2780,19 @@ if (ref($inuse)) {
 		push(@$inuse, @vmports);
 		my $vport = 5901;
 		while(1) {
-			last if (&indexof($vport, @$inuse) < 0);
+			last if (&indexof($vport, @$inuse) < 0 &&
+				 &indexof($vport - 200, @$inuse) < 0);
 			$vport++;
 			}
 		$server->{'kvm_vnc_display'} = $vport-5900;
 		}
 	$cmd .= " -vnc :".$server->{'kvm_vnc_display'}.",password";
+	if (&kvm_host_version($vhost) >= 1.5) {
+		# Can also enable websockets
+		$server->{'kvm_vnc_websocket'} =
+			$server->{'kvm_vnc_display'} + 5700;
+		$cmd .= ",websocket=".$server->{'kvm_vnc_websocket'};
+		}
 
 	# Enable high-resolution mode
 	if ($server->{'kvm_vga'}) {
@@ -8263,6 +8270,7 @@ $server->{'kvm_vnc_display'} ||
 # Get the VNC port
 my $vhost = &type_kvm_parent($server);
 my $port = 5900 + $server->{'kvm_vnc_display'};
+my $wsport;
 
 # Check that the VNC port is really open on the KVM host, and connect to it
 my $err = undef;
@@ -8270,51 +8278,33 @@ my $err = undef;
 if ($err) {
 	return (0, &text('vnc_nolisten', $port, $vhost->{'host'}));
 	}
+if ($server->{'kvm_vnc_websocket'}) {
+	# Also connect to the websockets port on the kVM host
+	my $wserr = undef;
+	$wsport = $server->{'kvm_vnc_websocket'};
+	&open_socket($vhost->{'ip'}, $wsport, WSSOCK, \$wserr);
+	if ($wserr) {
+		$wsport = undef;
+		}
+	}
 
 my $masterport;
+my $wsmasterport;
 if ($vhost->{'id'} == 0) {
 	# Special case - this box is the Xen host, so no forwarding needed
 	$masterport = $port;
+	$wsport = $server->{'kvm_vnc_websocket'};
 	close(VNCSOCK);
 	}
 else {
 	# Pick a free port on the Cloudmin master, 5900+
-	$masterport = 5900;
-	my $proto = getprotobyname('tcp');
-	socket(VNCMASTER, PF_INET, SOCK_STREAM, $proto) ||
-		return (0, "Socket failed : $!");
-	setsockopt(VNCMASTER, SOL_SOCKET, SO_REUSEADDR, pack("l", 1));
-	while(1) {
-		last if (bind(VNCMASTER, sockaddr_in($masterport, INADDR_ANY)));
-		$masterport++;
+	$masterport = &forward_vnc_port(5900, VNCSOCK);
+	if ($wsport) {
+		# Also forward a port in the 5700+ range
+		$wsmasterport = &forward_vnc_port(5700, WSSOCK);
 		}
-	listen(VNCMASTER, SOMAXCONN);
-
-	# Fork a listening process to forward VNC traffic
-	if (!fork()) {
-		# Wait for a connection
-		untie(*STDIN); untie(*STDOUT);
-		close(STDIN); close(STDOUT);
-		$SIG{'ALRM'} = sub { exit(2) };
-		alarm(30);
-		my $acptaddr = accept(VNCCLIENT, VNCMASTER);
-		$acptaddr || exit(1);
-		close(VNCMASTER);
-		alarm(0);
-		untie(*STDERR);
-		close(STDERR);
-
-		# Start forwarding traffic
-		select(VNCCLIENT); $| = 1;
-		select(VNCSOCK); $| = 1;
-		&forward_connection_sockets(VNCCLIENT, VNCCLIENT,
-					    VNCSOCK, VNCSOCK);
-		exit;
-		}
-	close(VNCMASTER);
-	close(VNCSOCK);
 	}
-return ($masterport, $server->{'kvm_vnc_passwd'});
+return ($masterport, $server->{'kvm_vnc_passwd'}, $wsmasterport);
 }
 
 # install_kvm_host_software(&vhost, [qemu-mode])

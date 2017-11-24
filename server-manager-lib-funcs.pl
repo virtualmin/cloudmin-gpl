@@ -14557,6 +14557,48 @@ my @st = &stat_file_on_server($server, "/bin/bash");
 return @st > 1 ? "/bin/bash" : "/bin/sh";
 }
 
+# forward_vnc_port(baseport, vnc-filehandle)
+sub forward_vnc_port
+{
+my ($baseport, $vncfh) = @_;
+
+# Pick a free port on the Cloudmin master
+my $masterport = $baseport;
+my $proto = getprotobyname('tcp');
+socket(VNCMASTER, PF_INET, SOCK_STREAM, $proto) ||
+	return (0, "Socket failed : $!");
+setsockopt(VNCMASTER, SOL_SOCKET, SO_REUSEADDR, pack("l", 1));
+while(1) {
+	last if (bind(VNCMASTER, sockaddr_in($masterport, INADDR_ANY)));
+	$masterport++;
+	}
+listen(VNCMASTER, SOMAXCONN);
+
+# Fork a listening process to forward VNC traffic
+if (!fork()) {
+	# Wait for a connection
+	untie(*STDIN); untie(*STDOUT);
+	close(STDIN); close(STDOUT);
+	$SIG{'ALRM'} = sub { exit(2) };
+	alarm(30);
+	my $acptaddr = accept(VNCCLIENT, VNCMASTER);
+	$acptaddr || exit(1);
+	close(VNCMASTER);
+	alarm(0);
+	untie(*STDERR);
+	close(STDERR);
+
+	# Start forwarding traffic
+	select(VNCCLIENT); $| = 1;
+	select($vncfh); $| = 1;
+	&forward_connection_sockets(VNCCLIENT, VNCCLIENT, $vncfh, $vncfh);
+	exit;
+	}
+close(VNCMASTER);
+close(VNCSOCK);
+return $masterport;
+}
+
 $done_server_manager_lib_funcs = 1;
 
 
