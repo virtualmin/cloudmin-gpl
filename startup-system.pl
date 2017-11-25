@@ -23,7 +23,7 @@ check that is enabled by default.
 
   cloudmin startup-system --host xencentos.home
   Starting up Xen system xencentos.home ..
-  .. startup successfull
+  .. startup successful
 
 =cut
 
@@ -106,7 +106,7 @@ foreach $s (@servers) {
 	else {
 		&check_server_status($s);
 		if ($ok == 1) {
-			print ".. startup successfull\n\n";
+			print ".. startup successful\n\n";
 			}
 		else {
 			print ".. started, but a problem was detected : $err\n\n";
