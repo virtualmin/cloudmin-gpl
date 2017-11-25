@@ -14394,24 +14394,29 @@ foreach my $l (split(/\r?\n/, $data)) {
 return \%resolv;
 }
 
-# vnc_client_html(host, port, password, &in, &server, cgi)
+# vnc_client_html(host, port, password, &in, &server, cgi, [websockets-port])
 # Returns HTML for a Java applet or Flash client for connecting to a VNC server
 sub vnc_client_html
 {
-my ($masterhost, $masterport, $pass, $in, $server, $cgi) = @_;
+my ($masterhost, $masterport, $pass, $in, $server, $cgi, $wsmasterport) = @_;
 my $rv;
-my $flash = $in{'flash'} ? 1 : $in{'java'} ? 0 : $config{'flash_vnc'};
+my $flash = $in{'novnc'} ? 2 : $in{'flash'} ? 1 : $in{'java'} ? 0 : $config{'flash_vnc'};
+$flash = 1 if ($flash == 2 && !$wsmasterport);
 my $url = $cgi."?id=".$server->{'id'};
 
-# Show menu to change between flash and java
+# Show menu to change between flash, java and novnc
 my @links;
-push(@links, $flash ? "<b>$text{'vnc_flash'}</b>"
-		    : "<a href='$url&flash=1'>$text{'vnc_flash'}</a>");
-push(@links, !$flash ? "<b>$text{'vnc_java'}</b>"
-		     : "<a href='$url&java=1'>$text{'vnc_java'}</a>");
+push(@links, $flash == 1 ? "<b>$text{'vnc_flash'}</b>"
+		         : "<a href='$url&flash=1'>$text{'vnc_flash'}</a>");
+push(@links, $flash == 0 ? "<b>$text{'vnc_java'}</b>"
+		         : "<a href='$url&java=1'>$text{'vnc_java'}</a>");
+if ($wsmasterport) {
+	push(@links, $flash == 2 ? "<b>$text{'vnc_novnc'}</b>"
+			 : "<a href='$url&novnc=1'>$text{'vnc_novnc'}</a>");
+	}
 print "<b>$text{'vnc_display'}</b> ",&ui_links_row(\@links),"<p>\n";
 
-if ($flash) {
+if ($flash == 1) {
 	# Start SWF policy server
 	my $port = 843;
 	my $proto = getprotobyname('tcp');
@@ -14461,7 +14466,7 @@ if ($flash) {
 	$rv .= "<param name='FlashVars' value='$vars'/>\n";
 	$rv .= "</object>\n";
 	}
-else {
+elsif ($flash == 0) {
 	# Use Java applet
 	$rv .= "<applet archive=vncviewer.jar code=VncViewer.class ".
 	       "width=100% height=90%>\n";
@@ -14471,6 +14476,11 @@ else {
 		}
 	$rv .= "$text{'vnc_nojava'} <p>\n";
 	$rv .= "</applet>\n";
+	}
+elsif ($flash == 2) {
+	# Use NoVNC, connecting to it's port
+	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&encrypt=0&password=".&urlize($pass)."' width=100% height=640>\n";
+	$rv .= "</iframe>\n";
 	}
 if ($pass) {
 	$rv .= &text('vnc_direct', $masterhost, $masterport, $pass),"<p>\n";
@@ -14565,25 +14575,27 @@ my ($baseport, $vncfh) = @_;
 # Pick a free port on the Cloudmin master
 my $masterport = $baseport;
 my $proto = getprotobyname('tcp');
-socket(VNCMASTER, PF_INET, SOCK_STREAM, $proto) ||
+my $vncmaster = "VNCMASTER".$baseport;
+socket($vncmaster, PF_INET, SOCK_STREAM, $proto) ||
 	return (0, "Socket failed : $!");
-setsockopt(VNCMASTER, SOL_SOCKET, SO_REUSEADDR, pack("l", 1));
+setsockopt($vncmaster, SOL_SOCKET, SO_REUSEADDR, pack("l", 1));
 while(1) {
-	last if (bind(VNCMASTER, sockaddr_in($masterport, INADDR_ANY)));
+	last if (bind($vncmaster, sockaddr_in($masterport, INADDR_ANY)));
 	$masterport++;
 	}
-listen(VNCMASTER, SOMAXCONN);
+listen($vncmaster, SOMAXCONN);
 
 # Fork a listening process to forward VNC traffic
 if (!fork()) {
 	# Wait for a connection
+	#sleep(20);
 	untie(*STDIN); untie(*STDOUT);
 	close(STDIN); close(STDOUT);
 	$SIG{'ALRM'} = sub { exit(2) };
 	alarm(30);
-	my $acptaddr = accept(VNCCLIENT, VNCMASTER);
+	my $acptaddr = accept(VNCCLIENT, $vncmaster);
 	$acptaddr || exit(1);
-	close(VNCMASTER);
+	close($vncmaster);
 	alarm(0);
 	untie(*STDERR);
 	close(STDERR);
@@ -14594,8 +14606,8 @@ if (!fork()) {
 	&forward_connection_sockets(VNCCLIENT, VNCCLIENT, $vncfh, $vncfh);
 	exit;
 	}
-close(VNCMASTER);
-close(VNCSOCK);
+close($vncmaster);
+close($vncfh);
 return $masterport;
 }
 

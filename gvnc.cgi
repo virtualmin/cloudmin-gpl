@@ -14,13 +14,13 @@ $server->{'status'} ne 'down' && $server->{'status'} ne 'nohost' ||
 
 # Get the VNC port
 $vfunc = "type_".$server->{'manager'}."_open_vnc_port";
-($masterport, $pass) = &$vfunc($server);
+($masterport, $pass, $wsmasterport) = &$vfunc($server);
 $masterport || &error($pass);
 
 # Ouput applet HTML
 ($masterhost) = split(/:/, $ENV{'HTTP_HOST'});
 print &vnc_client_html($masterhost, $masterport, $pass,
-		       \%in, $server, "gvnc.cgi");
+		       \%in, $server, "gvnc.cgi", $wsmasterport);
 
 ENDPAGE:
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});

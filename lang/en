@@ -3483,6 +3483,7 @@ vnc_directnopass=If the VNC client does not run or cannot connect, you can use a
 vnc_display=Display graphical console using :
 vnc_flash=Flash object
 vnc_java=Java applet
+vnc_novnc=NoVNC
 
 history_title=System Statistics Graphs
 history_ecannot=You are not allowed to view historic system statistics

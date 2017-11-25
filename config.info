@@ -14,7 +14,7 @@ show_ping=Use ping to test availability on IP Addresses page?,1,1-Yes,0-No
 theme_image=URL for company logo image,3,None or default,50
 theme_link=Link destination for company logo,3,None,50
 nodots=Print progress dots during long operation?,1,0-Yes,1-No
-flash_vnc=Display graphical console using,1,1-Flash,0-Java applet
+flash_vnc=Display graphical console using,1,1-Flash,0-Java applet,2-NoVNC
 
 line3.5=Virtual system settings,11
 fsck_boot=Check disks for errors before booting?,1,1-Yes,0-No,2-Only if dirty
