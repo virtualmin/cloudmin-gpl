@@ -112,3 +112,9 @@ Virtualmin backups can be scheduled across multiple Cloudmin-managed systems to 
 ---- Changes since 9.0 ----
 The storage location for a Xen or KVM instance's disks can now be selected at VM creation time, rather than always using the host system default.
 Added a button to the backup form to immediately execute a backup, but in the background.
+---- Changes since 9.1 ----
+Added a checkbox to the VM creation page and a flag to create-system to setup Cloudmin Services, if installed.
+---- Changes since 9.2 ----
+KVM virtual system disks can be created using LVM thin pools, if a pool has been created on the host system.
+---- Changes since 9.3 ----
+Console access to KVM instances is now possible using the pure-Javascript NoVNC client, which removes the need for browser support for Java or Flash. This requires KVM  version 1.5 or later and that VMs be restarted after upgrading Cloudmin.
