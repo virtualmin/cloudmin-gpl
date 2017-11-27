@@ -8298,10 +8298,13 @@ if ($vhost->{'id'} == 0) {
 	}
 else {
 	# Pick a free port on the Cloudmin master, 5900+
-	$masterport = &forward_vnc_port(5900, VNCSOCK);
+	my $err;
+	($masterport, $err) = &forward_vnc_port(5900, VNCSOCK);
+	return (0, &text('vnc_eforward', $err)) if ($err);
 	if ($wsport) {
-		# Also forward a port in the 5700+ range
-		$wsmasterport = &forward_vnc_port(5700, WSSOCK);
+		# Also forward a port in the 5700+ range for websockets
+		($wsmasterport, $err) = &forward_vnc_port(5700, WSSOCK, 1);
+		return (0, &text('vnc_eforwardws', $err)) if ($err);
 		}
 	}
 return ($masterport, $server->{'kvm_vnc_passwd'}, $wsmasterport);

@@ -162,11 +162,11 @@ if (defined($old_mode)) {
 	}
 }
 
-# forward_connection_sockets(input1, output1, input2, output2)
+# forward_connection_sockets(input1, output1, input2, output2, [ssl1, ssl2])
 # Forward all traffic in both directions between two sockets
 sub forward_connection_sockets
 {
-my ($in1, $out1, $in2, $out2) = @_;
+my ($in1, $out1, $in2, $out2, $ssl_con1, $ssl_con2) = @_;
 while(1) {
 	my $rmask = undef;
 	vec($rmask, fileno($in1), 1) = 1;
@@ -174,17 +174,39 @@ while(1) {
 	my $sel = select($rmask, undef, undef, 10);
 	if (vec($rmask, fileno($in1), 1)) {
 		# Got something from SSH client
-		my $buf;
-		$ok = sysread($in1, $buf, 1024);
+		my ($buf, $ok);
+		if ($ssl_con1) {
+			$buf = Net::SSLeay::read($ssl_con1);
+			$ok = defined($buf);
+			}
+		else {
+			$ok = sysread($in1, $buf, 1024);
+			}
 		last if ($ok <= 0);	# End of the client
-		syswrite($out2, $buf, length($buf)) || last;
+		if ($ssl_con2) {
+			Net::SSLeay::write($ssl_con2, $buf) || last;
+			}
+		else {
+			syswrite($out2, $buf, length($buf)) || last;
+			}
 		}
 	if (vec($rmask, fileno($in2), 1)) {
 		# Got something from console
-		my $buf;
-		$ok = sysread($in2, $buf, 1024);
+		my ($buf, $ok);
+		if ($ssl_con2) {
+			$buf = Net::SSLeay::read($ssl_con2);
+			$ok = defined($buf);
+			}
+		else {
+			$ok = sysread($in2, $buf, 1024);
+			}
 		last if ($ok <= 0);	# End of the client
-		syswrite($out1, $buf, length($buf)) || last;
+		if ($ssl_con1) {
+			Net::SSLeay::write($ssl_con1, $buf) || last;
+			}
+		else {
+			syswrite($out1, $buf, length($buf)) || last;
+			}
 		}
 	}
 }

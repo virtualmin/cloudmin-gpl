@@ -14479,7 +14479,7 @@ elsif ($flash == 0) {
 	}
 elsif ($flash == 2) {
 	# Use NoVNC, connecting to it's port
-	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&encrypt=0&password=".&urlize($pass)."' width=100% height=640>\n";
+	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&encrypt=1&password=".&urlize($pass)."' width=100% height=640>\n";
 	$rv .= "</iframe>\n";
 	}
 if ($pass) {
@@ -14567,10 +14567,10 @@ my @st = &stat_file_on_server($server, "/bin/bash");
 return @st > 1 ? "/bin/bash" : "/bin/sh";
 }
 
-# forward_vnc_port(baseport, vnc-filehandle)
+# forward_vnc_port(baseport, vnc-filehandle, ssl-mode)
 sub forward_vnc_port
 {
-my ($baseport, $vncfh) = @_;
+my ($baseport, $vncfh, $ssl) = @_;
 
 # Pick a free port on the Cloudmin master
 my $masterport = $baseport;
@@ -14588,7 +14588,6 @@ listen($vncmaster, SOMAXCONN);
 # Fork a listening process to forward VNC traffic
 if (!fork()) {
 	# Wait for a connection
-	#sleep(20);
 	untie(*STDIN); untie(*STDOUT);
 	close(STDIN); close(STDOUT);
 	$SIG{'ALRM'} = sub { exit(2) };
@@ -14600,10 +14599,50 @@ if (!fork()) {
 	untie(*STDERR);
 	close(STDERR);
 
-	# Start forwarding traffic
 	select(VNCCLIENT); $| = 1;
 	select($vncfh); $| = 1;
-	&forward_connection_sockets(VNCCLIENT, VNCCLIENT, $vncfh, $vncfh);
+	if ($ssl) {
+		# Initialize SSL on the client socket
+		my %miniserv;
+		&get_miniserv_config(\%miniserv);
+		eval "use Net::SSLeay";
+		$@ && return (0, "Failed to load Net::SSLeay");
+		eval "Net::SSLeay::SSLeay_add_ssl_algorithms()";
+		eval "Net::SSLeay::load_error_strings()";
+		my $ssl_ctx = Net::SSLeay::CTX_new();
+		my $extracas = $miniserv{'extracas'};
+		if ($extracas && $extracas ne "none") {
+			foreach my $p (split(/\s+/, $extracas)) {
+				Net::SSLeay::CTX_load_verify_locations(
+					$ssl_ctx, $p, "");
+				}
+			}
+		my $keyfile = $miniserv{'keyfile'};
+		my $certfile = $miniserv{'certfile'};
+		Net::SSLeay::CTX_use_PrivateKey_file(
+			$ssl_ctx, $keyfile,
+			&Net::SSLeay::FILETYPE_PEM) ||
+			return (0, "Failed to open SSL key $keyfile");
+		Net::SSLeay::CTX_use_certificate_file(
+			$ssl_ctx, $certfile || $keyfile,
+			&Net::SSLeay::FILETYPE_PEM) ||
+			return (0, "Failed to open SSL cert $certfile");
+
+		# Create the SSL connection
+		my $ssl_con = Net::SSLeay::new($ssl_ctx);
+		Net::SSLeay::set_wfd($ssl_con, fileno(VNCCLIENT));
+		Net::SSLeay::set_rfd($ssl_con, fileno(VNCCLIENT));
+		Net::SSLeay::accept($ssl_con) || return (0, "accept() failed");
+
+		# Start forwarding SSL traffic
+		&forward_connection_sockets(
+			VNCCLIENT, VNCCLIENT, $vncfh, $vncfh, $ssl_con, undef);
+		}
+	else {
+		# Start forwarding regular traffic
+		&forward_connection_sockets(
+			VNCCLIENT, VNCCLIENT, $vncfh, $vncfh);
+		}
 	exit;
 	}
 close($vncmaster);
