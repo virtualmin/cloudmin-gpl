@@ -25,8 +25,9 @@ if ($in{'clearcmds'}) {
 	}
 else {
 	open(PREVFILE, $prevfile);
-	chop(@previous = <PREVFILE>);
+	chop(@allprevious = <PREVFILE>);
 	close(PREVFILE);
+	@previous = &unique(@allprevious);
 	}
 $cmd = $in{'doprev'} ? $in{'pcmd'} : $in{'cmd'};
 $pwd = $in{'pwd'} || "/";
@@ -65,7 +66,8 @@ if (!$in{'clear'}) {
 			$out = &html_escape($out, 1);
 			$history .= $out;
 			}
-		@previous = &unique($fullcmd, @previous);
+		@previous = ((grep { $_ ne $fullcmd } @previous), $fullcmd);
+		push(@allprevious, $fullcmd);
 		&make_dir($shell_previous_dir, 0700);
 		&open_lock_tempfile(PREVFILE, ">>$prevfile");
 		&print_tempfile(PREVFILE, $fullcmd,"\n");
@@ -99,7 +101,7 @@ print "</tr>\n";
 
 print &ui_hidden("pwd", $pwd);
 print &ui_hidden("history", &urlize($history));
-foreach $p (@previous) {
+foreach $p (@allprevious) {
 	print &ui_hidden("previous", $p);
 	}
 
