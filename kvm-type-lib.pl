@@ -1711,13 +1711,16 @@ if (!$reset) {
 	my $ver = &kvm_host_version($vhost);
 	my $boot = $ver && &compare_versions($ver, "1.1") >= 0 ? ""
 							       : ",boot=on";
+	my $formatflag = $ver && &compare_versions($ver, "1.1") >= 0 ?
+				",format=raw" : "";
 	$server->{'kvm_drives'} = "file=$fsfile,media=disk,index=0".
 		  ($server->{'kvm_virtio'} ? ",if=virtio".$boot : ",if=ide").
-		  $cacheflag;
+		  $cacheflag.$formatflag;
 	if ($swfile) {
 		$server->{'kvm_drives'} .=
 			" file=$swfile,media=disk,index=1,cache=off,".
-			($server->{'kvm_virtio'} ? "if=virtio" : "if=ide");
+			($server->{'kvm_virtio'} ? "if=virtio" : "if=ide").
+			$formatflag;
 		}
 	}
 
@@ -8289,9 +8292,9 @@ if ($server->{'kvm_vnc_websocket'}) {
 	}
 
 my $masterport;
-my $wsmasterport;
+my ($wsmasterport, $wsencrypt);
 if ($vhost->{'id'} == 0) {
-	# Special case - this box is the Xen host, so no forwarding needed
+	# Special case - this box is the KVM host, so no forwarding needed
 	$masterport = $port;
 	$wsport = $server->{'kvm_vnc_websocket'};
 	close(VNCSOCK);
@@ -8301,13 +8304,14 @@ else {
 	my $err;
 	($masterport, $err) = &forward_vnc_port(5900, VNCSOCK);
 	return (0, &text('vnc_eforward', $err)) if ($err);
-	if ($wsport) {
-		# Also forward a port in the 5700+ range for websockets
-		($wsmasterport, $err) = &forward_vnc_port(5700, WSSOCK, 1);
-		return (0, &text('vnc_eforwardws', $err)) if ($err);
-		}
 	}
-return ($masterport, $server->{'kvm_vnc_passwd'}, $wsmasterport);
+if ($wsport) {
+	# Also forward a port in the 5700+ range for websockets
+	$wsencrypt = $ENV{'HTTPS'} eq 'ON' ? 1 : 0;
+	($wsmasterport, $err) = &forward_vnc_port(5700, WSSOCK, $wsencrypt);
+	return (0, &text('vnc_eforwardws', $err)) if ($err);
+	}
+return ($masterport, $server->{'kvm_vnc_passwd'}, $wsmasterport, $wsencrypt);
 }
 
 # install_kvm_host_software(&vhost, [qemu-mode])
