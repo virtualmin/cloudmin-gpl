@@ -126,6 +126,14 @@ if ($in{'new'}) {
 			    [ 1, $text{'kvm_autologin1'} ] ]));
 	}
 
+# KVM version
+if (&can_ssh_status($kvm)) {
+	my $ver = &kvm_host_version($kvm);
+	if ($ver) {
+		print &ui_table_row($text{'kvm_version'}, $ver);
+		}
+	}
+
 print &ui_hidden_table_end("main");
 
 print &ui_hidden_table_start($text{'kvm_nheader'}, "width=100%", 2, "net", 0);
