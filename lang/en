@@ -5679,6 +5679,7 @@ snapshot_edmsetup=The <tt>dmsetup targets</tt> command failed on host system $2 
 snapshot_emerge=Kernel support for LVM snapshot merging is not available on host system $1
 snapshot_enodisks=Virtual system has no disks!
 snapshot_eactive=Snapshot logical volume $1 over-full and so cannot be reverted to
+snapshot_esnapsnap=Virtual disk <tt>$1</tt> is itself a snapshot, and so cannot be snapshotted again
 
 snapshots_title=Disk Snapshots
 snapshots_echeck=This system does not support snapshots : $1

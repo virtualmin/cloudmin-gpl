@@ -73,6 +73,10 @@ my $totalsize = 0;
 foreach my $d (@$disks) {
 	if ($d->{'vg'}) {
 		# This disk can be snapshotted .. do it
+		if ($d->{'lv_snap_of'}) {
+			# Actually no, because it is itself a snapshot!
+			return &text('snapshot_esnapsnap', $d->{'lv'});
+			}
 		my $snapname = $server->{'host'}."_".$i."_".$snapid."_snap";
 		my $snaplv = {
 			'size' => int($d->{'size'} * $percent / 100 / 1024),
