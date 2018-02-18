@@ -116,7 +116,7 @@ return ( 'startup', 'shutdown', 'reboot', 'boot', 'console', 'graph', 'view',
 	 'create', 'add', 'empty', 'delete', 'advanced', 'ips', 'ifaces', 'realifaces',
 	 'reverse', 'limits', 'vcpus', 'ioclass', 'disks', 'devices', 'sshkeys',
 	 'backup', 'webmin', 'virtualmin', 'api', 'storage', 'snapshot',
-         'mount', 'groups', 'rate', 'swap' );
+         'mount', 'groups', 'move', 'rate', 'swap' );
 }
 
 # list_safe_owner_actions()

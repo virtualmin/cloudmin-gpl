@@ -14394,11 +14394,12 @@ foreach my $l (split(/\r?\n/, $data)) {
 return \%resolv;
 }
 
-# vnc_client_html(host, port, password, &in, &server, cgi, [websockets-port])
+# vnc_client_html(host, port, password, &in, &server, cgi,
+# 		  [websockets-port, websockets-encrypt])
 # Returns HTML for a Java applet or Flash client for connecting to a VNC server
 sub vnc_client_html
 {
-my ($masterhost, $masterport, $pass, $in, $server, $cgi, $wsmasterport) = @_;
+my ($masterhost, $masterport, $pass, $in, $server, $cgi, $wsmasterport, $wsencrypt) = @_;
 my $rv;
 my $flash = $in{'novnc'} ? 2 : $in{'flash'} ? 1 : $in{'java'} ? 0 : $config{'flash_vnc'};
 $flash = 1 if ($flash == 2 && !$wsmasterport);
@@ -14479,7 +14480,8 @@ elsif ($flash == 0) {
 	}
 elsif ($flash == 2) {
 	# Use NoVNC, connecting to it's port
-	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&encrypt=1&password=".&urlize($pass)."' width=100% height=640>\n";
+	my $eflag = $wsencrypt ? "&encrypt=1" : "";
+	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&password=".&urlize($pass).$eflag."' width=100% height=640>\n";
 	$rv .= "</iframe>\n";
 	}
 if ($pass) {
