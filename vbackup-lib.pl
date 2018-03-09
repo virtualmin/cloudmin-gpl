@@ -150,7 +150,7 @@ my %domsmap = map { $_, 1 } @doms;
 my @srcdomobjs = &get_server_domains($server);
 @srcdomobjs = &sort_domains_parent_first(@srcdomobjs);
 my @srcdoms;
-if ($vbackups->{'doms_all'}) {
+if ($vbackup->{'doms_all'}) {
 	@srcdoms = map { $_->{'dom'} } @srcdomobjs;
 	}
 else {
