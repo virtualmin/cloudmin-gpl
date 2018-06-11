@@ -247,6 +247,7 @@ my $p = 1;
 my $secsize;
 my $disklabel = 'dos';
 &foreign_require("fdisk");
+my %tagmap = reverse(%fdisk::tags);
 foreach my $l (split(/\r?\n/, $out)) {
 	if ($l =~ /=\s+(\d+)\s+bytes/i) {
 		$secsize = $1;
@@ -270,8 +271,9 @@ foreach my $l (split(/\r?\n/, $out)) {
 			    'offset' => $1 * $secsize });
 		$p++;
 		}
-	elsif ($l =~ /\s\d+\s+(\d+)\s+(\d+)\s+(\d+\S+)\s+(\S.*\S)\s+(primary|logical|extended|ext\S+)/ && $disklabel eq "gpt") {
-		# Found a GPT format partition line (old format)
+	elsif ($l =~ /^\s\d+\s+(\d+)\s+(\d+)\s+([0-9\.]+[kMGTP])\s+((\S+).*\S)(\s+(primary|logical|extended|ext\S+))?/ && $disklabel eq "gpt") {
+		# Found a GPT format partition line (old format) like :
+		#  1  2048  10483711  5G  Linux filesystem  ext4
 		push(@rv, { 'part' => $p,
 			    'disklabel' => $disklabel,
 			    'start' => $1,
@@ -280,14 +282,13 @@ foreach my $l (split(/\r?\n/, $out)) {
 			    'end_bytes' => $2 * $secsize,
 			    'blocks' => ($2 - $1) + 1,
 			    'size_bytes' => ($2 - $1 + 1) * $secsize,
-			    'type' => $4,
+			    'type' => $tagmap{$4} || $tagmap{$5} || $4,
 			    'offset' => $1 * $secsize });
 		}
-	elsif ($l =~ /\s(\d+)\s+(\d+)\s+(\d+)\+?(\s+[0-9\.]+[kMGTP])?\s+(\S+)/i &&
+	elsif ($l =~ /^\/\S+\s+(\d+)\s+(\d+)\s+(\d+)\+?(\s+[0-9\.]+[kMGTP])?\s+(\S+)/i &&
 	       $disklabel eq "gpt") {
-		# Found a GPT format partition line (new format)
+		# Found a GPT format partition line (new format) like :
 		# /dev/sda1 2048 1258291166 1258289119  600G Linux
-		my %tagmap = reverse(%fdisk::tags);
 		push(@rv, { 'part' => $p,
 			    'disklabel' => $disklabel,
 			    'start' => $1,
