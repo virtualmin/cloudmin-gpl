@@ -2777,9 +2777,11 @@ my @vmports = map { $_->{'kvm_vnc_display'}+5900 }
 # VNC settings, on a free port
 if (ref($inuse)) {
 	# Add VNC flag with random port, if none has been set yet OR if some
-	# other system is using the same port
+	# other system or command is using the same port
 	if (!$server->{'kvm_vnc_display'} ||
-	    &indexof($server->{'kvm_vnc_display'}+5900, @vmports)) {
+	    &indexof($server->{'kvm_vnc_display'}+5900, @vmports) ||
+	    (!$forboot &&
+	     &indexof($server->{'kvm_vnc_display'}+5900, @$inuse))) {
 		push(@$inuse, @vmports);
 		my $vport = 5901;
 		while(1) {
