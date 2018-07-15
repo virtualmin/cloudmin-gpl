@@ -300,6 +300,9 @@ if (@inc) {
 			join(" ", map { $_->{'id'} }
 			     @inc[$rr->{'dnscount'} .. $#inc]);
 		}
+	else {
+		delete($rr->{'dnsover'});
+		}
 	($ok, $msg) = &set_bind_dns_addresses(
 	    &roundrobin_to_record($rr).".", $rr->{'dom'}, \@ips, \@cmts,
 	    $rr->{'ttl'});
