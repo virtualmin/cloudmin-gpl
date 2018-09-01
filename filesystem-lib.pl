@@ -284,6 +284,7 @@ foreach my $l (split(/\r?\n/, $out)) {
 			    'size_bytes' => ($2 - $1 + 1) * $secsize,
 			    'type' => $tagmap{$4} || $tagmap{$5} || $4,
 			    'offset' => $1 * $secsize });
+		$p++;
 		}
 	elsif ($l =~ /^\/\S+\s+(\d+)\s+(\d+)\s+(\d+)\+?(\s+[0-9\.]+[kMGTP])?\s+(\S+)/i &&
 	       $disklabel eq "gpt") {
