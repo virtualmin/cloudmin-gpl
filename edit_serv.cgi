@@ -94,7 +94,8 @@ if ($view) {
 	print &ui_table_row($text{'edit_type2'}, $os->[1]." : ".$kfield);
 	}
 else {
-	if ($server->{'type'} eq 'unknown' || !$server->{'type'}) {
+	if (($server->{'type'} eq 'unknown' || !$server->{'type'}) &&
+	    &can_ssh_status($server)) {
 		$guessbutton = " ".&ui_button($text{'edit_guesstype'}, undef, 0,
                                 "onClick='document.location=\"guesstype.cgi?id=$server->{'id'}\"'");
 		}
