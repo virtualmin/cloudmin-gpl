@@ -210,7 +210,7 @@ while(@ARGV > 0) {
 		}
 	}
 defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
-   defined($bw) || defined($rate) || defined($disk) || defined(@bw_ifaces) ||
+   defined($bw) || defined($rate) || defined($disk) || @bw_ifaces ||
    defined($gmemory) || defined($ioclass) || defined($cores) ||
    defined($firewall) || &usage("Nothing to modify!");
 
@@ -218,7 +218,7 @@ defined($cpu) || defined($weight) || defined($memory) || defined($vcpus) ||
 @servers = &find_managed_servers(0, \@hosts, \@groups, \@managers, \@types, \@owners, \@statuses, \@hoston);
 @servers || &usage("No systems specified");
 &can_action_usage(\@servers, "limits");
-if (defined($bw) || defined(@bw_ifaces)) {
+if (defined($bw) || @bw_ifaces) {
 	&can_action_usage(\@servers, "bw");
 	}
 if (defined($ioclass)) {
@@ -672,7 +672,7 @@ foreach $s (@servers) {
 		}
 
 	# Change bandwidth interfaces
-	if (defined(@bw_ifaces)) {
+	if (@bw_ifaces) {
 		$s->{'bw_ifaces'} = join(" ", @bw_ifaces);
 		}
 
