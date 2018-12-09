@@ -6427,6 +6427,7 @@ my @st = &stat_file_on_server($vhost, $server->{'kvm_pause'});
 my ($ok, $err) = &type_kvm_startup($server, 0,
 			"-incoming \"exec:cat $server->{'kvm_pause'}\"");
 &delete_file_on_server($vhost, $server->{'kvm_pause'});
+&run_kvm_monitor_command($server, [ "cont" ], 3, -1);
 delete($server->{'kvm_pause'});
 return $ok == 1 ? undef : $err;
 }
@@ -8045,8 +8046,8 @@ return &put_file_to_server($vhost,
 	"$module_root_directory/nc.pl", "/usr/bin/nc.pl");
 }
 
-# run_kvm_monitor_command(&server, &command, command-delay, [timeout])
-# Runs some command by connecting to the KVM monitor port for a system,
+# run_kvm_monitor_command(&server, &commands, command-delay, [timeout])
+# Runs some commands by connecting to the KVM monitor port for a system,
 # and returns an OK flag and the output.
 sub run_kvm_monitor_command
 {
