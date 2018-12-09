@@ -8404,7 +8404,7 @@ elsif (&debian_server_type($vhost)) {
 	# Install vital packages on Debian
 	&$first_print($text{'xeninstall_pkgs'});
 	my ($ok, $err) = &install_package_on_server(
-				$vhost, "wget lsof bzip2 parted");
+				$vhost, "wget lsof bzip2 parted psmisc");
 	if (!$ok) {
 		&$second_print(&text('xeninstall_epkgs', $err));
 		return 0;
