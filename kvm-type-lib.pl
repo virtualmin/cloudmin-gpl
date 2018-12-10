@@ -2569,6 +2569,11 @@ if ($found) {
 			  $server->{'kvm_vnc_passwd'} ], 3);
 	}
 
+# If this is an un-pause, continue the VM
+if ($extra =~ /-incoming/) {
+	&run_kvm_monitor_command($server, [ "cont" ], 3, -1);
+	}
+
 # Read the output file
 my $out = &get_file_data_from_server($vhost, $server->{'kvm_console'});
 if (!$found) {
@@ -6427,7 +6432,6 @@ my @st = &stat_file_on_server($vhost, $server->{'kvm_pause'});
 my ($ok, $err) = &type_kvm_startup($server, 0,
 			"-incoming \"exec:cat $server->{'kvm_pause'}\"");
 &delete_file_on_server($vhost, $server->{'kvm_pause'});
-&run_kvm_monitor_command($server, [ "cont" ], 3, -1);
 delete($server->{'kvm_pause'});
 return $ok == 1 ? undef : $err;
 }
