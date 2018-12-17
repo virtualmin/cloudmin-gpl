@@ -6792,6 +6792,9 @@ $server->{'kvm_on'} = $dest->{'id'};
 $server->{'directory'} = $directory if (defined($directory));
 delete($server->{'new_directory'}) if (defined($directory));
 
+# Force re-generation of monitor port, to prevent clashes
+delete($server->{'kvm_monitor_port'});
+
 # Enable at boot on new system
 &type_kvm_set_atboot($server, $oldboot);
 
