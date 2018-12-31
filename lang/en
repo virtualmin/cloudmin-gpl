@@ -3237,6 +3237,7 @@ smove_disksdone=.. copied $1 disk images totalling $2
 smove_disksdone2=.. moved $1 iSCSI disks
 smove_disksnone=.. no disk images were copied
 smove_xenconf=Fixing and copying Xen config file $1 ..
+smove_exenconf=.. error reading Xen config : $1
 smove_xenconfdone=.. copied to $1
 smove_starting=Starting up on new host system ..
 smove_startfailed=.. startup failed : $1
@@ -6257,3 +6258,8 @@ openvzinstall_eepel=.. EPEL failed : $1
 openvzinstall_kernel=Installing OpenVZ kernel and tools ..
 openvzinstall_ekernel=.. kernel installation failed : $1
 openvzinstall_etype=Unsupported operating system type $1
+
+validate_evhost=Host system with ID $1 does not exist!
+validate_edns=Hostname $1 cannot be resolved
+validate_edns2=Hostname $1 resolves to $2, which is not one of the expected addresses $3
+validate_edisk=Virtual disk $1 does not exist on $2
