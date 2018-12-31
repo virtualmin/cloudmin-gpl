@@ -14652,6 +14652,56 @@ close($vncfh);
 return $masterport;
 }
 
+# validate_server(&server)
+# Runs validation checks on a VM and returns a list of error messages
+sub validate_server
+{
+my ($server) = @_;
+my @rv;
+my $vhost = &get_parent_server($server);
+if (!$vhost) {
+	# If host doesn't exist, give up now
+	my $vid = $server->{$server->{'manager'}.'_on'};
+	push(@rv, &text('validate_evhost', $vid));
+	return @rv;
+	}
+
+# Check if hostname is resolvable
+my $ip = &to_ipaddress($server->{'host'});
+if (!$ip) {
+	push(@rv, &text('validate_edns', $server->{'host'}));
+	}
+else {
+	# Can resolve, but to any IP on the system?
+	my @ips = &get_server_ip($server);
+	if (&indexof($ip, @ips) < 0) {
+		push(@rv, &text('validate_edns2', $server->{'host'},
+				$ip, join(" ", @ips)));
+		}
+	}
+
+# Check if all disks exist
+my $dfunc = "type_".$server->{'manager'}."_list_disks";
+if (&can_ssh_status($server) && defined(&$dfunc)) {
+	my $disks = &$dfunc($server, 0);
+	foreach my $d (@$disks) {
+		my @st = &stat_file_on_server($vhost, $d->{'real'});
+		if (!@st || @st == 1) {
+			push(@rv, &text('validate_edisk', $d->{'real'},
+					$vhost->{'host'}));
+			}
+		}
+	}
+
+# Run type-specific checks
+my $vfunc = "type_".$server->{'manager'}."_validate";
+if (defined(&$vfunc)) {
+	push(@rv, &$vfunc($server));
+	}
+
+return @rv;
+}
+
 $done_server_manager_lib_funcs = 1;
 
 
