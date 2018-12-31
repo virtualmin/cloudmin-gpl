@@ -117,15 +117,15 @@ if (!$server->{'iscsi_user'}) {
 # Make sure the iSCSI server is running
 if ($mod eq "iscsi-target") {
 	&remote_foreign_call($iscsiserver, $mod, "is_iscsi_target_running") ||
-		return "iSCSI server is not running on $iscsiserver->{'host'}";
+		return "iSCSI server $mod is not running on $iscsiserver->{'host'}";
 	}
 elsif ($mod eq "iscsi-server") {
 	&remote_foreign_call($iscsiserver, $mod, "is_iscsi_server_running") ||
-		return "iSCSI server is not running on $iscsiserver->{'host'}";
+		return "iSCSI server $mod is not running on $iscsiserver->{'host'}";
 	}
 elsif ($mod eq "iscsi-tgtd") {
 	&remote_foreign_call($iscsiserver, $mod, "is_tgtd_running") ||
-		return "iSCSI server is not running on $iscsiserver->{'host'}";
+		return "iSCSI server $mod is not running on $iscsiserver->{'host'}";
 	}
 else {
 	return "Unknown module $mod";
