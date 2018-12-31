@@ -82,6 +82,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--id-only") {
 		$idonly = 1;
 		}
+	elsif ($a eq "--file-only") {
+		$fileonly = 1;
+		}
 	elsif ($a eq "--address-only") {
 		$addressonly = 1;
 		}
@@ -722,6 +725,12 @@ elsif ($idonly) {
 		print $s->{'id'},"\n";
 		}
 	}
+elsif ($fileonly) {
+	# Just config files
+	foreach $s (@servers) {
+		print $s->{'file'},"\n";
+		}
+	}
 elsif ($addressonly) {
 	# Just IPs
 	foreach $s (@servers) {
@@ -747,7 +756,7 @@ print "$_[0]\n\n" if ($_[0]);
 print "Lists some or all registered managed systems.\n";
 print "\n";
 print "cloudmin list-systems [--multiline | --name-only | --id-only |\n";
-print "                       --simple-multiline | --address-only]\n";
+print "                       --file-only | --simple-multiline | --address-only]\n";
 print "                      [--all-hosts] | [--host name]*\n";
 print "                      [--group name]*\n";
 my $types = join("|", @server_management_types);
