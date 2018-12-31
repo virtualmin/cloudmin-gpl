@@ -367,7 +367,12 @@ foreach my $f (@files) {
 		}
 	else {
 		my @st = stat($path);
-		if (@st && $st[9] < $cutoff &&
+		my $age = $st[9];
+		if ($path =~ /(\d+)\-(\d+)$/) {
+			# For time-based files, get age from filename
+			$age = $2;
+			}
+		if (@st && $age < $cutoff &&
 		    (!$pattern || $f =~ /$pattern/)) {
 			&unlink_file($path);
 			$rv++;
