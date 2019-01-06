@@ -7796,6 +7796,12 @@ if ($anyvirt || $server_management_types{'ec2'}) {
 	push(@gcats, "monitor");
 	}
 
+# System validation
+push(@glinks, "edit_validate.cgi");
+push(@gtitles, $text{'validate_title'});
+push(@gicons, "images/validate.gif");
+push(@gcats, "monitor");
+
 # Type-defined icons
 foreach my $t (@server_management_types) {
 	my $gfunc = "type_".$t."_global_links";
@@ -9050,6 +9056,17 @@ sub is_virtual_server
 {
 my ($server) = @_;
 foreach my $t (@virtual_server_management_types) {
+	return $t if ($server->{'manager'} eq $t);
+	}
+return undef;
+}
+
+# is_hosted_server(&server)
+# Returns the manager type of some system if virtual and hosted locally
+sub is_hosted_server
+{
+my ($server) = @_;
+foreach my $t (@hosted_server_management_types) {
 	return $t if ($server->{'manager'} eq $t);
 	}
 return undef;
@@ -14658,12 +14675,15 @@ sub validate_server
 {
 my ($server) = @_;
 my @rv;
-my $vhost = &get_parent_server($server);
-if (!$vhost) {
-	# If host doesn't exist, give up now
-	my $vid = $server->{$server->{'manager'}.'_on'};
-	push(@rv, &text('validate_evhost', $vid));
-	return @rv;
+my $vhost;
+if (&is_hosted_server($server)) {
+	$vhost = &get_parent_server($server);
+	if (!$vhost) {
+		# If host doesn't exist, give up now
+		my $vid = $server->{$server->{'manager'}.'_on'};
+		push(@rv, &text('validate_evhost', $vid));
+		return @rv;
+		}
 	}
 
 # Check if hostname is resolvable
@@ -14682,8 +14702,9 @@ else {
 
 # Check if all disks exist
 my $dfunc = "type_".$server->{'manager'}."_list_disks";
-if (&can_ssh_status($server) && defined(&$dfunc)) {
+if ($vhost && &can_ssh_status($vhost) && defined(&$dfunc)) {
 	my $disks = &$dfunc($server, 0);
+	my $vhost = &get_parent_server($server);
 	foreach my $d (@$disks) {
 		my @st = &stat_file_on_server($vhost, $d->{'real'});
 		if (!@st || @st == 1) {
@@ -14700,6 +14721,17 @@ if (defined(&$vfunc)) {
 	}
 
 return @rv;
+}
+
+# can_validate(&server)
+# Checks if a system can be validated (either non-virtual, or host is up)
+sub can_validate
+{
+my ($server) = @_;
+return 1 if (!&is_hosted_server($server));
+my $vhost = &get_parent_server($server);
+return 0 if (!$vhost);
+return &can_ssh_status($vhost);
 }
 
 $done_server_manager_lib_funcs = 1;
