@@ -14704,7 +14704,6 @@ else {
 my $dfunc = "type_".$server->{'manager'}."_list_disks";
 if ($vhost && &can_ssh_status($vhost) && defined(&$dfunc)) {
 	my $disks = &$dfunc($server, 0);
-	my $vhost = &get_parent_server($server);
 	foreach my $d (@$disks) {
 		my @st = &stat_file_on_server($vhost, $d->{'real'});
 		if (!@st || @st == 1) {
