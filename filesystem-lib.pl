@@ -785,32 +785,41 @@ my $mapper = $vg."-".$lv;
 my $dashvg = $vg;
 $dashvg =~ s/\-/\-\-/g;
 my $dashmapper=  $dashvg."-".$lv;
+
+# Build list of all mappers
 my $files = &list_dir_on_server($vhost, "/dev/mapper");
+return $files if (!ref($files));
+my ($out, $ex, $err) = &execute_command_on_server($vhost, "dmsetup ls");
+return $err if ($err);
+return $out if ($ex);
+my @maps = @$files;
+foreach my $l (split(/\r?\n/, $out)) {
+	my ($dd) = split(/\s+/, $l);
+	push(@maps, $dd);
+	}
+@maps = &unique(@maps);
+
+# Extract all devices to remove from the list
 my $err;
-if (ref($files)) {
-	my @delmaps;
-	foreach my $f (@$files) {
-		if ($f =~ /^\Q$mapper\Ep?\d+$/ ||
-		    $f =~ /^\Q$dashmapper\Ep?\d+$/) {
-			push(@delmaps, $f);
-			}
-		}
-	foreach my $f (@$files) {
-		if ($f eq $mapper || $f eq $dashmapper) {
-			push(@delmaps, $f);
-			}
-		}
-	foreach my $f (@delmaps) {
-		my ($cout, $cex, $cerr) = &execute_command_on_server($vhost,
-			"dmsetup remove /dev/mapper/$f");
-		$cerr = $cout if ($cex);
-		$err ||= $cerr;
-		&execute_command_on_server($vhost,
-			"dmsetup remove /dev/mapper/$f-cow");
+my @delmaps;
+foreach my $f (@maps) {
+	if ($f =~ /^\Q$mapper\Ep?\d+$/ ||
+	    $f =~ /^\Q$dashmapper\Ep?\d+$/) {
+		push(@delmaps, $f);
 		}
 	}
-else {
-	$err = $files;
+foreach my $f (@maps) {
+	if ($f eq $mapper || $f eq $dashmapper) {
+		push(@delmaps, $f);
+		}
+	}
+foreach my $f (@delmaps) {
+	my ($cout, $cex, $cerr) = &execute_command_on_server($vhost,
+		"dmsetup remove /dev/mapper/$f");
+	$cerr = $cout if ($cex);
+	$err ||= $cerr;
+	&execute_command_on_server($vhost,
+		"dmsetup remove /dev/mapper/$f-cow");
 	}
 return $err;
 }
