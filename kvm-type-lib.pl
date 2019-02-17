@@ -8425,9 +8425,9 @@ elsif (&debian_server_type($vhost)) {
 	&$first_print($text{'kvminstall_apparmor'});
 	my @st = &stat_file_on_server($vhost, "/etc/init.d/apparmor");
 	if (@st) {
-		&execute_command_on_servr($vhost,
+		&execute_command_on_server($vhost,
 			"/etc/init.d/apparmor stop");
-		&execute_command_on_servr($vhost,
+		&execute_command_on_server($vhost,
 			"update-rc.d -f apparmor remove");
 		&$second_print($text{'create_done'});
 		}
