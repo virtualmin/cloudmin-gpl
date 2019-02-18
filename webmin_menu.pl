@@ -48,7 +48,9 @@ my $sid = $server ? $server->{'id'} : undef;
 if (@servers) {
 	# Show managed servers
 	my @slist = map { [ $_->{'id'}, ("&nbsp;&nbsp;" x $_->{'indent'}).
-		            $_->{'host'} ] } @servers;
+		            &shorten_hostname($_->{'host'}),
+			    "title=\"".&html_escape($_->{'host'})."\"" ] }
+			@servers;
 	my $smenu = { 'type' => 'menu',
 		      'cgi' => '',
 		      'name' => 'sid',
