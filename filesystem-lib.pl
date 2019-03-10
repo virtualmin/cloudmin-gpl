@@ -529,7 +529,7 @@ if (&has_command_on_server($vhost, "parted")) {
 		"parted -s ".quotemeta($real)." mkpart ".
 		$part->{'parted_type'}." ".
 		$part->{'parted_start'}." ".
-		int($newsize/1000000)."M");
+		int($newsize/1000000)."MB");
 	if ($ex || $err) {
 		# Oh crap .. try to put back the old partition size
 		&execute_command_on_server($vhost,
