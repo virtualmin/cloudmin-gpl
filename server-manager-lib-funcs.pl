@@ -1215,6 +1215,9 @@ if ($status == 0) {
 		return (0, $out, $root, $port, $ssl, $hostname);
 		}
 	}
+elsif ($status == 5) {
+	return (3, $out, undef);
+	}
 else {
 	return ($status, $out, undef);
 	}
