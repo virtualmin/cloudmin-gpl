@@ -964,6 +964,8 @@ domains_unlimited=Unlimited
 domains_fromparent=From parent
 domains_unknown=Unknown
 domains_none=No Virtualmin domains matching your search were found.
+domains_none2=No Virtualmin domains were found on any managed systems.
+domains_many=There are $1 Virtualmin domains on managed systems, which is higher than the display limit of $2. Use this form to search for domains to manage.
 domains_alias=Alias
 domains_subdom=Sub-domain
 domains_sub=Sub-server
@@ -3491,6 +3493,8 @@ vnc_java=Java applet
 vnc_novnc=NoVNC
 vnc_eforward=Port forwarding failed : $1
 vnc_eforwardws=Websockets port forwarding failed : $1
+vnc_esocket=Failed to create socket for SWF policy server : $1
+vnc_eport=Failed to bind port for SWF policy server : $1
 
 history_title=System Statistics Graphs
 history_ecannot=You are not allowed to view historic system statistics
