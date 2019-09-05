@@ -1727,6 +1727,7 @@ if (!$reset) {
 # Create empty disk file, with no partitions
 if ($empty) {
 	my $dksize = $server->{'kvm_disksize'}*1024*1024;
+	$dksize ||= $server->{'kvm_disktotal'};
 	if (!$server->{'kvm_filesystem_vg'} &&
 	    $server->{'kvm_filesystem_iscsi'} eq '') {
 		# Create whole disk file with dd
