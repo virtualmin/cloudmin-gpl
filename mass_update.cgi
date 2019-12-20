@@ -14,10 +14,10 @@ $in{'install'} && !$in{'packages'} && &error($text{'update_epackages'});
 
 $title = $in{'install'} ? $text{'update_title2'} : $text{'update_title'};
 if (@servers == 1) {
-	&ui_print_header(&server_in($servers[0]), $title, "");
+	&ui_print_unbuffered_header(&server_in($servers[0]), $title, "");
 	}
 else {
-	&ui_print_header(undef, $title, "");
+	&ui_print_unbuffered_header(undef, $title, "");
 	}
 
 # Find selected servers with updates, limiting to those we want
