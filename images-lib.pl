@@ -105,7 +105,7 @@ my %serial;
 &read_file($licence_file, \%serial);
 my ($mout, $merr);
 &http_download($mhost, $mport, $mpage, \$mout, \$merr, undef, $ssl,
-	       $serial{'SerialNumber'}, $serial{'LicenseKey'});
+	       $serial{'SerialNumber'}, $serial{'LicenseKey'}, 5);
 my @mirrors;
 if (!$merr) {
 	@mirrors = split(/\r?\n/, $mout);
