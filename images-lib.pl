@@ -93,10 +93,13 @@ my ($type) = @_;
 
 # Use cache if less than 1 hour old
 my @st = stat($server_images_cache);
-if (@st && $st[9] > time()-3600) {
-	my $rv = &unserialise_variable(
+my $cache;
+if (@st) {
+	$cache = &unserialise_variable(
 			&read_file_contents($server_images_cache));
-	return @$rv;
+	if ($st[9] > time()-3600) {
+		return @$cache;
+		}
 	}
 
 # Download the list of mirrors
@@ -143,7 +146,10 @@ while(@mirrors) {
 		}
 	last if (@rv);
 	}
-&error("Failed to get server images : $err") if ($err);
+if ($err) {
+	return @$cache if ($cache);
+	&error("Failed to get server images : $err");
+	}
 
 # Save to cache and return
 &open_tempfile(CACHE, ">$server_images_cache");
