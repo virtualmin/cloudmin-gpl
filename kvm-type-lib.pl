@@ -1508,7 +1508,8 @@ my @gws = split(/\s+/, $server->{'kvm_gw'});
 my @nets;
 for(my $i=0; $i<@ips; $i++) {
 	# Create bridge script
-	my $net = "tap,vlan=$i";
+	my $net = "tap";
+	$net .= ,vlan=$i" if (&kvm_host_supports_vlan($vhost));
 	my ($data, $script) = &generate_kvm_bridge_script(
 			$server, { 'name' => 'eth'.$i }, $ifaces[$i]);
 	my $err = &put_file_data_to_server($vhost, $data, $script);
@@ -4857,7 +4858,9 @@ if ($nonvirt) {
 	my $mac = &generate_mac_address($server, $num);
 	push(@macs, $mac);
 	push(@models, $iface->{'model'} || "*");
-	push(@nets, "tap,vlan=".$num);
+	my $tap = "tap";
+	$tap .= ",vlan=$num") if (&kvm_host_supports_vlan($vhost));
+	push(@nets, $tap);
 	push(@ifaces, $iface->{'bridge'} || '*');
 
 	# Create script to attach correct bridge and record tap
@@ -4878,7 +4881,8 @@ if ($nonvirt) {
 
 		# Connect to KVM monitor
 		my $oldactive = &list_active_server_interfaces($server, 1);
-		my $str = "model=$model,mac=$mac,vlan=$num";
+		my $str = "model=$model,mac=$mac";
+		$str .= ",vlan=$num" if (&kvm_host_supports_vlan($vhost));
 		my ($aok, $aout) = &run_kvm_monitor_command($server,
 			[ "pci_add 0 nic $str" ]);
 		if (!$aok || $aout !~ /OK/) {
@@ -8553,6 +8557,14 @@ else {
 	}
 
 return 1;
+}
+
+# kvm_host_supports_vlan(&vhost)
+# Returns 1 if the vlan= net option is supported
+sub kvm_host_supports_vlan
+{
+my $ver = &kvm_host_version($vhost);
+return &compare_versions($ver, 3) < 0;
 }
 
 1;
