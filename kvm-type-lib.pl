@@ -1509,7 +1509,7 @@ my @nets;
 for(my $i=0; $i<@ips; $i++) {
 	# Create bridge script
 	my $net = "tap";
-	$net .= ,vlan=$i" if (&kvm_host_supports_vlan($vhost));
+	$net .= ",vlan=$i" if (&kvm_host_supports_vlan($vhost));
 	my ($data, $script) = &generate_kvm_bridge_script(
 			$server, { 'name' => 'eth'.$i }, $ifaces[$i]);
 	my $err = &put_file_data_to_server($vhost, $data, $script);
@@ -4859,7 +4859,7 @@ if ($nonvirt) {
 	push(@macs, $mac);
 	push(@models, $iface->{'model'} || "*");
 	my $tap = "tap";
-	$tap .= ",vlan=$num") if (&kvm_host_supports_vlan($vhost));
+	$tap .= ",vlan=$num" if (&kvm_host_supports_vlan($vhost));
 	push(@nets, $tap);
 	push(@ifaces, $iface->{'bridge'} || '*');
 
