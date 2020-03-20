@@ -14627,7 +14627,7 @@ if (!fork()) {
 		my %miniserv;
 		&get_miniserv_config(\%miniserv);
 		eval "use Net::SSLeay";
-		$@ && return (0, "Failed to load Net::SSLeay");
+		$@ && &error("Failed to load Net::SSLeay");
 		eval "Net::SSLeay::SSLeay_add_ssl_algorithms()";
 		eval "Net::SSLeay::load_error_strings()";
 		my $ssl_ctx = Net::SSLeay::CTX_new();
@@ -14643,17 +14643,53 @@ if (!fork()) {
 		Net::SSLeay::CTX_use_PrivateKey_file(
 			$ssl_ctx, $keyfile,
 			&Net::SSLeay::FILETYPE_PEM) ||
-			return (0, "Failed to open SSL key $keyfile");
+			&error("Failed to open SSL key $keyfile");
 		Net::SSLeay::CTX_use_certificate_file(
 			$ssl_ctx, $certfile || $keyfile,
 			&Net::SSLeay::FILETYPE_PEM) ||
-			return (0, "Failed to open SSL cert $certfile");
+			&error("Failed to open SSL cert $certfile");
+
+		# Turn off various SSL protocols
+		if ($miniserv{'no_ssl2'}) {
+			eval 'Net::SSLeay::CTX_set_options($ssl_ctx,
+				&Net::SSLeay::OP_NO_SSLv2)';
+			}
+		if ($miniserv{'no_ssl3'}) {
+			eval 'Net::SSLeay::CTX_set_options($ssl_ctx,
+				&Net::SSLeay::OP_NO_SSLv3)';
+			}
+		if ($miniserv{'no_tls1'}) {
+			eval 'Net::SSLeay::CTX_set_options($ssl_ctx,
+				&Net::SSLeay::OP_NO_TLSv1)';
+			}
+		if ($miniserv{'no_tls1_1'}) {
+			eval 'Net::SSLeay::CTX_set_options($ssl_ctx,
+				&Net::SSLeay::OP_NO_TLSv1_1)';
+			}
+		if ($miniserv{'no_tls1_2'}) {
+			eval 'Net::SSLeay::CTX_set_options($ssl_ctx,
+				&Net::SSLeay::OP_NO_TLSv1_2)';
+			}
+		if ($miniserv{'no_sslcompression'}) {
+			eval 'Net::SSLeay::CTX_set_options($ssl_ctx,
+				&Net::SSLeay::OP_NO_COMPRESSION)';
+			}
+		if ($miniserv{'ssl_honorcipherorder'}) {
+			eval 'Net::SSLeay::CTX_set_options($ssl_ctx,
+				&Net::SSLeay::OP_CIPHER_SERVER_PREFERENCE)';
+			}
 
 		# Create the SSL connection
 		my $ssl_con = Net::SSLeay::new($ssl_ctx);
-		Net::SSLeay::set_wfd($ssl_con, fileno(VNCCLIENT));
-		Net::SSLeay::set_rfd($ssl_con, fileno(VNCCLIENT));
-		Net::SSLeay::accept($ssl_con) || return (0, "accept() failed");
+		if ($miniserv{'ssl_cipher_list'}) {
+			# Force use of ciphers
+			eval "Net::SSLeay::set_cipher_list(
+				\$ssl_con, \$miniserv{'ssl_cipher_list'})";
+			}
+		Net::SSLeay::set_fd($ssl_con, fileno(VNCCLIENT)) ||
+			&error("set_fd failed");
+		Net::SSLeay::accept($ssl_con) ||
+			&error("accept() failed : ".Net::SSLeay::print_errs());
 
 		# Start forwarding SSL traffic
 		&forward_connection_sockets(
