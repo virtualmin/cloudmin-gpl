@@ -14500,7 +14500,7 @@ elsif ($flash == 0) {
 elsif ($flash == 2) {
 	# Use NoVNC, connecting to it's port
 	my $eflag = $wsencrypt ? "&encrypt=1" : "";
-	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&password=".&urlize($pass).$eflag."' width=100% height=640>\n";
+	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&path=&password=".&urlize($pass).$eflag."' width=100% height=640>\n";
 	$rv .= "</iframe>\n";
 	}
 if ($pass) {
