@@ -164,6 +164,7 @@ print "  var eventSource = new Timeplot.DefaultEventSource();\n";
 @axes = ( );
 $geom = $in{'logscale'} ? 'LogarithmicValueGeometry'
 		        : 'DefaultValueGeometry';
+my $ii = 0;
 foreach $stat (@stats) {
 	$maxopt = "";
 	$fmt = &historic_stat_info($stat, $maxes);
@@ -187,14 +188,15 @@ foreach $stat (@stats) {
 		else {
 			next;
 			}
-		print "var value$axis = new Timeplot.$geom({\n";
+		}
+		print "var value${axis}${ii} = new Timeplot.$geom({\n";
 		print "        gridColor: '#B3B6B0',\n";
 		print "        axisLabelsPlacement: '$place',\n";
 		print "        $maxopt\n";
 		print "        min: 0\n";
 		print "      });\n";
-		}
-	$stat_to_axis{$stat} = "value".$axis;
+	$stat_to_axis{$stat} = "value${axis}${ii}";
+	$ii++;
 	}
 
 # Generate JS for each stat
