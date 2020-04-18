@@ -249,7 +249,7 @@ my $disklabel = 'dos';
 &foreign_require("fdisk");
 my %tagmap = reverse(%fdisk::tags);
 foreach my $l (split(/\r?\n/, $out)) {
-	if ($l =~ /=\s+(\d+)\s+bytes/i) {
+	if ($l =~ /=\s+(\d+)\s+byte/i) {
 		$secsize = $1;
 		}
 	elsif ($l =~ /Disk\s*label\s+type:\s+(\S+)/) {
