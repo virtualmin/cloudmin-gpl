@@ -8377,9 +8377,18 @@ if (&redhat_server_type($vhost)) {
 	# Install vital packages on Redhat
 	&$first_print($text{'xeninstall_pkgs'});
 	my ($ok, $err) = &install_package_on_server(
-				$vhost, "wget lsof bzip2 parted fdisk psmisc");
+				$vhost, "wget lsof bzip2 psmisc");
 	if (!$ok) {
 		&$second_print(&text('xeninstall_epkgs', $err));
+		return 0;
+		}
+	else {
+		&$second_print($text{'create_done'});
+		}
+	my ($fok, $ferr) = &install_package_on_server($vhost, "fdisk");
+	my ($pok, $perr) = &install_package_on_server($vhost, "parted");
+	if (!f$ok && !$pok) {
+		&$second_print(&text('xeninstall_epkgs', $ferr."\n".$perr));
 		return 0;
 		}
 	else {
