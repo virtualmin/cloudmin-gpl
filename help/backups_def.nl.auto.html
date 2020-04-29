@@ -1,0 +1,126 @@
+<header> Standaard back-upbestemming </header> Deze sectie is bedoeld voor het openen van de back-upmap die virtuele systemen die op dit systeem worden gehost, zullen gebruiken voor hun back-upbestanden. De mogelijkheden zijn: <ul><li> <b>Nog geen ingesteld</b> - Er is geen standaard gedefinieerd, waardoor back-ups worden gedwongen een handmatig opgegeven FTP- of SSH-server te gebruiken. <p><li> <b>Directory op Cloudmin-master</b> - Back-ups worden overgebracht naar de Cloudmin-master en opgeslagen in de opgegeven directory. <p><li> <b>Directory op hostsysteem</b> - Back-ups worden naar de opgegeven directory op dit hostsysteem geschreven. <p><li> <b>Directory op systeem</b> - Back-ups worden overgebracht naar het geselecteerde systeem en opgeslagen in de ingevoerde directory. <p><li> <b>Externe SSH-server</b> - Back-ups worden via SCP geüpload naar het niet-Cloudmin-beheerde systeem waarvan de hostnaam en authenticatiegegevens in de aangrenzende velden zijn ingevoerd. <li> <b>Externe FTP-server</b> - Back-ups worden via FTP geüpload naar de server waarvan de hostnaam en authenticatiegegevens in de aangrenzende velden zijn ingevoerd. </ul> In alle gevallen kunt u op datum gebaseerde substitutiecodes in <tt>strftime-</tt> stijl gebruiken in de bestemmingspaden. Enkele van de andere codes die kunnen worden gebruikt, zijn: <br><pre> <font size=-1>
+ % a De verkorte naam van de weekdag volgens de cur</font> <AD> <font size=-1>
+        huur locatie.
+
+ % A De volledige naam van de weekdag volgens de huidige
+        landinstelling.
+
+ % b De verkorte naam van de maand volgens de huidige
+        landinstelling.
+
+ % B De volledige maandnaam volgens de huidige
+        landinstelling.
+
+ % c De voorkeursdatum- en tijdweergave voor de
+        huidige landinstelling.
+
+ % C Het eeuwgetal (jaar / 100) als een geheel getal van 2 cijfers.
+
+ % d De dag van de maand als decimaal getal (bereik 01
+        tot 31).
+
+ % e Like% d, de dag van de maand als decimaal getal,
+        maar een voorloopnul wordt vervangen door een spatie.
+
+ % E Modifier: gebruik een alternatief formaat, zie hieronder.
+
+ % G Het ISO 8601-jaar met eeuw als decimaal getal.
+        Het 4-cijferige jaar dat overeenkomt met het ISO-weeknummer</font> <AD> <font size=-1>
+        ber (zie% V). Dit heeft hetzelfde formaat en dezelfde waarde
+        als% y, behalve dat als het ISO-weeknummer hoort
+        naar het vorige of volgende jaar wordt dat jaar gebruikt
+        in plaats daarvan.
+
+ % g Zoals% G, maar zonder eeuw, dat wil zeggen met een 2-cijferig cijfer
+        jaar (00-99).
+
+ % h Equivalent aan% b.
+
+ % H Het uur als decimaal getal met een 24-uursklok
+        (bereik 00 tot 23).
+
+ % I Het uur als decimaal getal met een 12-uursklok
+        (bereik 01 tot 12).
+
+ % j De dag van het jaar als decimaal getal (bereik 001
+        tot 366).
+
+ % k Het uur (24-uursklok) als decimaal getal (bereik
+        0 tot 23); enkele cijfers worden voorafgegaan door een spatie.
+        (Zie ook% H.)
+
+ % l Het uur (12-uursklok) als decimaal getal (bereik
+        1 tot 12); enkele cijfers worden voorafgegaan door een spatie.
+        (Zie ook% I.)
+
+ % m De maand als decimaal getal (bereik 01 tot 12).
+
+ % M De minuut als decimaal getal (bereik 00 tot 59).
+
+ % n Een nieuwregel-teken.
+
+ % O Modifier: gebruik een alternatief formaat, zie hieronder.
+
+ % p Ofwel `AM &#39;of` PM&#39; volgens de gegeven tijd
+        waarde, of de overeenkomstige tekenreeksen voor de huidige
+        landinstelling. De middag wordt behandeld als &#39;pm&#39; en middernacht als
+        &#39;ben&#39;.
+
+ % P Like% p maar in kleine letters: `am &#39;of` pm&#39; of een corre</font> <AD> <font size=-1>
+        sponding-tekenreeks voor de huidige landinstelling.
+
+ % r De tijd in am- of pm-notatie. In de POSIX
+        landinstelling dit komt overeen met `% I:% M:% S% p &#39;.
+
+ % R De tijd in 24-uursnotatie (% H:% M). Voor een
+        versie inclusief de seconden, zie% T hieronder.
+
+ % s Het aantal seconden sinds het tijdperk, dwz sinds
+        1970-01-01 00:00:00 UTC.
+
+ % S De tweede als decimaal getal (bereik 00 tot 61).
+
+ % t Een tabteken.
+
+ % T De tijd in 24-uursnotatie (% H:% M:% S).
+
+ % u De dag van de week als decimaal, van 1 tot 7,
+        Maandag zijnde 1. Zie ook% w.
+
+ % U Het weeknummer van het huidige jaar als decimaal
+        nummer, bereik 00 tot 53, beginnend met de eerste
+        Zondag als eerste dag van week 01. Zie ook% V en
+        % W.
+
+ % V Het ISO 8601: 1988-weeknummer van het huidige jaar
+        als decimaal getal, bereik 01 tot 53, waar week 1
+        is de eerste week met minimaal 4 dagen in de week
+        lopende jaar, en met maandag als eerste dag van
+        de week. Zie ook% U en% W.
+
+ % w De dag van de week als decimaal, van 0 tot 6,
+        Zondag is 0. Zie ook% u.
+
+ % W Het weeknummer van het huidige jaar als decimaal
+        nummer, bereik 00 tot 53, beginnend met de eerste
+        Maandag als eerste dag van week 01.
+
+ % x De voorkeursdatumweergave voor de huidige
+        landinstelling zonder de tijd.
+
+ % X De gewenste tijdsweergave voor de stroom
+        landinstelling zonder de datum.
+
+ % y Het jaar als decimaal getal zonder een eeuw
+        (bereik 00 tot 99).
+
+ % Y Het jaar als decimaal getal inclusief de eeuw.
+
+ % z De tijdzone als uurverschuiving vanaf GMT. Verplicht om
+        zenden RFC822-conforme datums uit (met &quot;% a,% d% b% Y
+        % H:% M:% S% z &quot;).
+
+ % Z De tijdzone of naam of afkorting.
+
+ %% Een letterlijk% -teken.
+</font> </pre><footer>
