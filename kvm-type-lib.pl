@@ -8572,6 +8572,7 @@ return 1;
 # Returns 1 if the vlan= net option is supported
 sub kvm_host_supports_vlan
 {
+my ($vhost) = @_;
 my $ver = &kvm_host_version($vhost);
 return &compare_versions($ver, 3) < 0;
 }
