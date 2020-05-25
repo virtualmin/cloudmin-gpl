@@ -5616,6 +5616,8 @@ kill_title=Kill Process
 kill_safe=Are you sure you want to terminate the Cloudmin process $2 with PID $1, which is holding a lock on this system?
 kill_warn=This command is currently performing an operation on the system, but it can be safely interrupted.
 kill_ok=Kill Now
+kill_elock=System is no longer locked!
+kill_esafe=Process cannot be safely killed
 
 iscsi_title=iSCSI Servers
 iscsi_none=No iSCSI servers have been configured yet.

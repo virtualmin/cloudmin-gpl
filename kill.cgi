@@ -13,7 +13,7 @@ $lock = &get_lock_on_server($server);
 $lock && $lock->{'pid'} || &error($text{'kill_elock'});
 $lock->{'safe'} || &error($text{'kill_esafe'});
 
-if ($in{'confirm'} && $lock->{'safe'} == 2) {
+if ($in{'confirm'} || $lock->{'safe'} == 2) {
 	# Just do it
 	&kill_logged('TERM', $lock->{'pid'});
 	sleep(2);
