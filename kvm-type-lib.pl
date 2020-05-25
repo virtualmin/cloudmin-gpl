@@ -8574,7 +8574,7 @@ sub kvm_host_supports_vlan
 {
 my ($vhost) = @_;
 my $ver = &kvm_host_version($vhost);
-return &compare_versions($ver, 3) < 0;
+return &compare_versions($ver, "2.12.0") < 0;
 }
 
 1;
