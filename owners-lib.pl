@@ -63,6 +63,11 @@ if (!$aclonly) {
 		}
 	if ($oldu) {
 		&acl::modify_user($oldu->{'name'}, $u);
+		if ($u->{'pass'} =~ /^\!/) {
+			my %miniserv;
+			&get_miniserv_config(\%miniserv);
+			&acl::delete_session_user(\%miniserv, $u->{'name'});
+			}
 		}
 	else {
 		&acl::create_user($u);
@@ -148,10 +153,6 @@ return $action =~ /startup|shutdown|reboot|boot|console/ ? 'power' :
 sub can_action
 {
 my ($server, $action) = @_;
-if ($action eq "transfer") {
-	# Deprecated, now always allowed
-	return wantarray ? ( 1, undef ) : 1;
-	}
 if (!$access{'owner'}) {
 	# Master admin can do anything
 	return wantarray ? ( 1, undef ) : 1;
