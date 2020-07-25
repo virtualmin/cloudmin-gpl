@@ -13844,7 +13844,12 @@ foreach my $g (@groups) {
 push(@grid, (@grid ? "&nbsp;&nbsp;&nbsp;" : "").
 	    &text('edit_newgroup', &ui_textbox("newgroup", undef, 10, 0, undef,
 					       "autocomplete=off")));
-return &ui_grid_table(\@grid, 4);
+if (@grid == 1) {
+	return $grid[0];
+	}
+else {
+	return &ui_grid_table(\@grid, 4);
+	}
 }
 
 # parse_groups_form(&server, &in)
@@ -14141,7 +14146,7 @@ return &test_lock("$servers::module_config_directory/$server->{'id'}.serv");
 # pid - Process ID of the locker
 # time - Time the lock was made
 # cmd - Full command line for the process, if available
-# safe - Can this be safely killed?
+# safe - Can this be safely killed? (2=totally, 1=mostly, 0=no)
 sub get_lock_on_server
 {
 my ($server, $procs) = @_;
