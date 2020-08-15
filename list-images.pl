@@ -63,6 +63,12 @@ while(@ARGV > 0) {
 	elsif ($a eq "--id") {
 		push(@ids, shift(@ARGV));
 		}
+	elsif ($a eq "--virtualmin") {
+		$virtualmin = 1;
+		}
+	elsif ($a eq "--local") {
+		$local = 1;
+		}
 	else {
 		&usage("Unknown parameter $a");
 		}
@@ -85,6 +91,8 @@ if ($multi) {
 	foreach $i (@images) {
 		$tfunc = "type_".$i->{'manager'}."_desc";
 		($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
+		next if ($virtualmin && !$avail ||
+			 $local && $avail);
 		print $i->{'id'},"\n";
 		print "    Description: $i->{'desc'}\n";
 		print "    System type: ",&$tfunc(),"\n";
@@ -141,6 +149,9 @@ if ($multi) {
 elsif ($nameonly) {
 	# Just image IDs
 	foreach $i (@images) {
+		($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
+		next if ($virtualmin && !$avail ||
+			 $local && $avail);
 		print $i->{'id'},"\n";
 		}
 	}
@@ -150,6 +161,9 @@ else {
 	printf $fmt, "ID", "Description";
 	printf $fmt, ("-" x 30), ("-" x 48);
 	foreach $i (@images) {
+		($avail) = grep { $_->{'id'} eq $i->{'id'} } @avail;
+		next if ($virtualmin && !$avail ||
+			 $local && $avail);
 		printf $fmt, $i->{'id'}, $i->{'desc'};
 		}
 	}
@@ -163,6 +177,7 @@ print "cloudmin list-images [--multiline | --name-only]\n";
 print "                     [--type typename]\n";
 print "                     [--md5-verify]\n";
 print "                     [--id image-id]*\n";
+print "                     [--virtualmin | --local]\n";
 exit(1);
 }
 
