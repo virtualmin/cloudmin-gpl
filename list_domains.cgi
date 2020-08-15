@@ -11,85 +11,101 @@ foreach $s (@vservers) {
 &can_action_error(\@vservers, "domains");
 
 $formno = 0;
-if ($totaldomains) {
-	# Search form
+if ($totaldomains > $config{'display_max'}) {
+	# Too many domains, show search form
+	print "<b>",&text('domains_many', $totaldomains, $config{'display_max'}),"</b><p>\n";
 	print &ui_form_start("list_domains.cgi");
 	print "<b>$text{'domains_find'}</b>\n";
 	print &ui_textbox("search", $in{'search'}, 30);
 	print &ui_submit($text{'domains_ok'});
 	print &ui_form_end();
 	$formno++;
+
+	# Apply search, if any
+	if ($in{'search'}) {
+		$parsedsearch = &parse_domain_name($in{'search'});
+		foreach $s (@vservers) {
+			foreach $d (&get_server_domains($s)) {
+				if ($d->{'dom'} =~ /\Q$in{'search'}\E/i ||
+				    $d->{'dom'} =~ /\Q$parsedsearch\E/i) {
+					push(@doms, $d);
+					$d->{'_server'} = $s;
+					}
+				}
+			}
+		if (!@doms) {
+			print "<b>$text{'domains_none'}</b><p>\n";
+			}
+		else {
+			print &text('domains_matches', scalar(@doms)),"<p>\n";
+			}
+		}
+	}
+elsif ($totaldomains) {
+	# Not many, can list them all
+	foreach $s (@vservers) {
+		foreach my $d (&get_server_domains($s)) {
+			push(@doms, $d);
+			$d->{'_server'} = $s;
+			}
+		}
+	}
+else {
+	# No domains known
+	print "<b>$text{'domains_none2'}</b><p>\n";
 	}
 
-if ($in{'search'}) {
-	# Search across all servers
-	$parsedsearch = &parse_domain_name($in{'search'});
-	foreach $s (@vservers) {
-		foreach $d (&get_server_domains($s)) {
-			if ($d->{'dom'} =~ /\Q$in{'search'}\E/i ||
-			    $d->{'dom'} =~ /\Q$parsedsearch\E/i) {
-				push(@doms, $d);
-				$d->{'_server'} = $s;
-				}
+# Show results, if any
+if (@doms) {
+	@links = ( &select_all_link("d", $formno),
+		   &select_invert_link("d", $formno) );
+	@tds = ( "width=5" );
+	print &ui_form_start("mass_domains.cgi", "post");
+	print &ui_links_row(\@links);
+	print &ui_columns_start([ "",
+				  $text{'domains_dom'},
+				  $text{'domains_server'},
+				  $text{'domains_type'},
+				  $text{'domains_desc'},
+				  $text{'domains_quota'},
+				  $text{'domains_uquota'} ], 100, 0, \@tds);
+	foreach $d (@doms) {
+		$server = $d->{'_server'};
+		$bs = &get_server_blocksize($server);
+		$info = &get_server_collected($server);
+		if ($info->{'quota'}) {
+			($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
+					 @{$info->{'quota'}};
 			}
+		$di1 = $d->{'disabled'} ? "<i>" : "";
+		$di2 = $d->{'disabled'} ? "</i>" : "";
+		print &ui_checked_columns_row([
+			$di1.&domain_link($server, $d).$di2,
+			"<a href='edit_serv.cgi?id=$server->{'id'}'>".
+			 $server->{'host'}."</a>",
+			$d->{'alias'} ? $text{'domains_alias'} :
+			 $d->{'subdom'} ? $text{'domains_subdom'} :
+			 $d->{'parent'} ? $text{'domains_sub'} :
+					  $text{'domains_top'},
+			$d->{'owner'},
+			$info->{'quota'} ? (
+			    $d->{'parent'} ? $text{'domains_fromparent'} :
+			    $d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
+					  : $text{'domains_unlimited'},
+			    $dquota ? &nice_size($dquota->[1]) : "") :
+			    ( $text{'domains_unlimited'},
+			      $text{'domains_unknown'} )
+			], \@tds, "d", $server->{'id'}."/".$d->{'id'});
 		}
-
-	# Show results, if any
-	if (@doms) {
-		print &text('domains_matches', scalar(@doms)),"<p>\n";
-		@links = ( &select_all_link("d", $formno),
-			   &select_invert_link("d", $formno) );
-		@tds = ( "width=5" );
-		print &ui_form_start("mass_domains.cgi", "post");
-		print &ui_links_row(\@links);
-		print &ui_columns_start([ "",
-					  $text{'domains_dom'},
-					  $text{'domains_server'},
-					  $text{'domains_type'},
-					  $text{'domains_desc'},
-					  $text{'domains_quota'},
-					  $text{'domains_uquota'} ], 100, 0, \@tds);
-		foreach $d (@doms) {
-			$server = $d->{'_server'};
-			$bs = &get_server_blocksize($server);
-			$info = &get_server_collected($server);
-			if ($info->{'quota'}) {
-				($dquota) = grep { $_->[0]->{'id'} == $d->{'id'} }
-						 @{$info->{'quota'}};
-				}
-			$di1 = $d->{'disabled'} ? "<i>" : "";
-			$di2 = $d->{'disabled'} ? "</i>" : "";
-			print &ui_checked_columns_row([
-				$di1.&domain_link($server, $d).$di2,
-				"<a href='edit_serv.cgi?id=$server->{'id'}'>".
-				 $server->{'host'}."</a>",
-				$d->{'alias'} ? $text{'domains_alias'} :
-				 $d->{'subdom'} ? $text{'domains_subdom'} :
-				 $d->{'parent'} ? $text{'domains_sub'} :
-						  $text{'domains_top'},
-				$d->{'owner'},
-				$info->{'quota'} ? (
-				    $d->{'parent'} ? $text{'domains_fromparent'} :
-				    $d->{'quota'} ? &nice_size($d->{'quota'}*$bs)
-					          : $text{'domains_unlimited'},
-				    $dquota ? &nice_size($dquota->[1]) : "") :
-				    ( $text{'domains_unlimited'},
-				      $text{'domains_unknown'} )
-				], \@tds, "d", $server->{'id'}."/".$d->{'id'});
-			}
-		print &ui_columns_end();
-		print &ui_links_row(\@links);
-		print &ui_form_end([ [ "delete", $text{'domains_delete'} ],
-				     undef,
-				     [ "disable", $text{'domains_disable'} ],
-				     [ "enable", $text{'domains_enable'} ],
-				     undef,
-				     [ "move", $text{'domains_move'} ],
-				   ]);
-		}
-	else {
-		print "<b>$text{'domains_none'}</b><p>\n";
-		}
+	print &ui_columns_end();
+	print &ui_links_row(\@links);
+	print &ui_form_end([ [ "delete", $text{'domains_delete'} ],
+			     undef,
+			     [ "disable", $text{'domains_disable'} ],
+			     [ "enable", $text{'domains_enable'} ],
+			     undef,
+			     [ "move", $text{'domains_move'} ],
+			   ]);
 	}
 
 # Creation form (hidden by default). For top-level servers only, limited options
