@@ -153,14 +153,18 @@ else {
 
 	# Allowed bridges
 	if (defined($in{'bridges_def'})) {
-		if ($in{'bridges_def'}) {
+		if ($in{'bridges_def'} == 1) {
 			delete($owner->{'acl'}->{'bridges'});
+			}
+		elsif ($in{'bridges_def'} == 2) {
+			$owner->{'acl'}->{'bridges'} = 'none';
 			}
 		else {
 			@bridges = split(/\s+/, $in{'bridges'});
 			@bridges || &error($text{'owner_ebridges'});
 			foreach my $b (@bridges) {
-				$b =~ /^[a-z]+[0-9]+$/ || &error(&text('owner_ebridge', $b));
+				$b =~ /^[a-z]+[0-9]+$/ ||
+					&error(&text('owner_ebridge', $b));
 				}
 			$owner->{'acl'}->{'bridges'} = join(" ", @bridges);
 			}

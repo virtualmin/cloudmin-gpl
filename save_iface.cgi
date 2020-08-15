@@ -112,7 +112,7 @@ else {
 		}
 
 	# Save bridge on host
-	if (defined($in{'bridge'})) {
+	if (&can_select_bridges() && defined($in{'bridge'})) {
 		$vhost = &get_parent_server($server);
 		@bridges = &list_host_bridges($vhost);
 		!$in{'bridge'} || &indexof($in{'bridge'}, @bridges) >= 0 ||

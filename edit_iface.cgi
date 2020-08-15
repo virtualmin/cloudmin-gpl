@@ -60,8 +60,9 @@ if ($in{'new'} == 1) {
 elsif ($in{'new'} == 2) {
 	# New real interface .. show name
 	$max = 1;
+	my $pfx = &get_interface_prefix($server);
 	foreach $p (@$parents) {
-		if ($p->{'fullname'} =~ /^eth(\d+)$/ && $1 >= $max) {
+		if ($p->{'fullname'} =~ /^\Q$pfx\E(\d+)$/ && $1 >= $max) {
 			$max++;
 			}
 		}
@@ -69,7 +70,7 @@ elsif ($in{'new'} == 2) {
 		$iface->{'netmask'} = $parents->[0]->{'netmask'};
 		}
 	print &ui_table_row($text{'iface_name'},
-			    &ui_textbox("name", "eth$max", 20));
+			    &ui_textbox("name", $pfx.$max, 20));
 	}
 else {
 	# Show details of existing interface
@@ -91,7 +92,7 @@ else {
 $non_virtual = $in{'new'} == 2 || !$in{'new'} && $iface->{'virtual'} eq '';
 
 # Show bridge if not virtual
-if ($non_virtual && (@bridges || $iface->{'bridge'})) {
+if (&can_select_bridges() && $non_virtual && (@bridges || $iface->{'bridge'})) {
 	@bridges = grep { &can_use_bridge($_) } @bridges;
 	print &ui_table_row($text{'iface_bridge'},
 		    &ui_select("bridge", $iface->{'bridge'},

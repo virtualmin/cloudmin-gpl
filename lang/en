@@ -3119,6 +3119,7 @@ owner_surelist=The following systems will also be deleted if you click the secon
 owner_surelist2=The following systems will also be deleted : $1
 owner_bridges=Allowed bridges on host systems
 owner_bridges_all=All bridges
+owner_bridges_none=No bridges
 owner_ebridges=No allowed bridges entered
 owner_ebridge=The bridge name '$1' does not look correct - valid bridge names are like <tt>br0</tt>
 

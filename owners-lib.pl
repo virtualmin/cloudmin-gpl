@@ -395,13 +395,21 @@ if ($access{'images'}) {
 return 1;
 }
 
+# can_select_bridges()
+# Return 1 if any bridges can be selected
+sub can_select_bridges
+{
+return $access{'bridges'} eq 'none' ? 0 : 1;
+}
+
 # can_use_bridge(name)
 # Returns 1 if the current user can use some bridge
 sub can_use_bridge
 {
 my ($name) = @_;
+return 1 if ($access{'bridges'} eq '');
+return 0 if ($access{'bridges'} eq 'none');
 my @bridges = split(/\s+/, $access{'bridges'});
-return 1 if (!@bridges);
 return &indexoflc($name, @bridges) >= 0;
 }
 

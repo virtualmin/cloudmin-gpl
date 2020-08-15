@@ -116,7 +116,14 @@ if (&supports_plans()) {
 # Allowed bridges
 if (@virtual_server_management_types) {
 	print &ui_table_row($text{'owner_bridges'},
-		&ui_opt_textbox("bridges", $acl->{'bridges'}, 20, $text{'owner_bridges_all'}));
+		&ui_radio_table("bridges_def",
+			$acl->{'bridges'} eq '' ? 1 :
+			$acl->{'bridges'} eq 'none' ? 2 : 0,
+			[ [ 1, $text{'owner_bridges_all'} ],
+			  [ 2, $text{'owner_bridges_none'} ],
+			  [ 0, $text{'owner_bridges_sel'},
+				&ui_textbox("bridges", $acl->{'bridges'}, 40) ]
+			]));
 	}
 
 print &ui_hidden_table_end();
