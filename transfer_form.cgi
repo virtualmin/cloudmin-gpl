@@ -83,10 +83,7 @@ print &ui_table_row($text{'transfer_transdestid'},
 		[ map { [ $_->{'id'}, $_->{'host'} ] }
 		      grep { $_->{'id'} != $in{'id'} &&
 			     &can_action($_, "transfer") &&
-			     ($_->{'status'} eq 'virt' ||
-			      $_->{'status'} eq 'novirt' ||
-			      $_->{'status'} eq 'nowebmin' ||
-			      $_->{'status'} eq 'nowebminlogin') } @servers ]));
+			     &can_ssh_status($_) } @servers ]));
 
 # Destination file on other server
 print &ui_table_row($text{'transfer_transdest'},
