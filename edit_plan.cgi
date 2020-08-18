@@ -84,6 +84,19 @@ print &ui_table_row($text{'plan_ioclass'},
 			  1 .. 6,
 			  [ 7, $text{'edit_lioclass7'} ] ]));
 
+# Allowed bridges
+if (@virtual_server_management_types) {
+	print &ui_table_row($text{'owner_bridges'},
+		&ui_radio_table("bridges_def",
+			$plan->{'bridges'} eq '' ? 1 :
+			$plan->{'bridges'} eq 'none' ? 2 : 0,
+			[ [ 1, $text{'owner_bridges_all'} ],
+			  [ 2, $text{'owner_bridges_none'} ],
+			  [ 0, $text{'owner_bridges_sel'},
+				&ui_textbox("bridges", $plan->{'bridges'}, 40) ]
+			]));
+	}
+
 # Users on this plan
 if (!$in{'new'}) {
 	@users = grep { $_->{'acl'}->{'plan'} eq $plan->{'id'} }

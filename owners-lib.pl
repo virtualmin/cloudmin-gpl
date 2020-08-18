@@ -616,6 +616,7 @@ foreach my $l (@plan_limit_types) {
 	}
 $o->{'acl'}->{'types'} = $plan->{'types'};
 $o->{'acl'}->{'ioclass'} = $plan->{'ioclass'};
+$o->{'acl'}->{'bridges'} = $plan->{'bridges'};
 if ($o->{'acl'}->{'actions_def'}) {
 	$o->{'acl'}->{'actions'} = $plan->{'actions'};
 	}
