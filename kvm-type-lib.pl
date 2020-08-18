@@ -8387,7 +8387,7 @@ if (&redhat_server_type($vhost)) {
 		}
 	my ($fok, $ferr) = &install_package_on_server($vhost, "fdisk");
 	my ($pok, $perr) = &install_package_on_server($vhost, "parted");
-	if (!f$ok && !$pok) {
+	if (!$fok && !$pok) {
 		&$second_print(&text('xeninstall_epkgs', $ferr."\n".$perr));
 		return 0;
 		}
