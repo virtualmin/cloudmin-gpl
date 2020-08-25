@@ -76,7 +76,7 @@ elsif (!$eth0) {
 	print "No ethernet interface named $eth_name was found\n";
 	exit(2);
 	}
-elsif (!$eth0->{'address'}) {
+elsif (!$eth0->{'address'} || $eth0->{'dhcp'}) {
 	print "Ethernet interface $eth_name does not have a fixed address\n";
 	exit(2);
 	}
