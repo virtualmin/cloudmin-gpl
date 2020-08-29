@@ -245,6 +245,7 @@ if ($fout =~ /(gzip|bzip2)\s+compressed/) {
 if ($in{'format'} eq "cd") {
 	# CD must have an iso 9660 filesystem
 	$fout =~ /iso\s+9660/i || $fout =~ /x86\s+boot\s+sector/i ||
+	    $fout =~ /MBR\s+boot\s+sector/i ||
 		&error(&text('mimage_ecd',
 			     "<tt>".&html_escape($fout)."</tt>"));
 	}
