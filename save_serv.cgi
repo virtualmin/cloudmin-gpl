@@ -323,7 +323,7 @@ elsif ($in{'installwebmin'}) {
 		print &text('save_webmining', "<tt>$server->{'host'}</tt>",
 			    $src =~ /:/ ? "<tt>$src</tt>" : uc($src)),"<br>\n";
 		($out, $err) = &install_webmin_server($server, $src, $type, 1);
-		print "<pre>$out</pre>";
+		print "<pre>$out</pre>" if ($out);
 		if ($err) {
 			print &text('save_webminfailed', $err),"<p>\n";
 			}
