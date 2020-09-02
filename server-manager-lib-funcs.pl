@@ -10912,7 +10912,7 @@ sub first_html_print { print @_,"<br>\n";
 sub first_oneline_html_print { print @_; }
 sub first_endline_html_print { print "<br>\n";
 			       print &bottom_scroll_js(); }
-sub second_html_print { print @_,"<p>\n"; }
+sub second_html_print { print @_,"<br><br data-x-br>\n"; }
 sub indent_html_print { print "<ul>\n";
 			print &bottom_scroll_js(); }
 sub outdent_html_print { print "</ul>\n";
