@@ -14776,8 +14776,30 @@ return 0 if (!$vhost);
 return &can_ssh_status($vhost);
 }
 
-$done_server_manager_lib_funcs = 1;
+# get_module_version_and_type()
+# Return current Cloudmin version and type
+sub get_module_version_and_type
+{
+my %minfo = &get_module_info("server-manager");
+my $vermod = $minfo{'version'};
+my ($ver, $mod) = ($vermod, "Pro");
+if ($vermod =~ /\..*?\./i) {
+	if ($vermod =~ /^(\d+\.\d+)\.(\w+)$/) {
+		$ver = $1;
+		$mod = uc($2);
+		if ($mod =~ /gpl/i) {
+			$mod = '';
+			} 
+		elsif ($mod =~ /real/i) {
+			$mod = 'Connect';
+			}
+		}
+	}
+$vermod = "$ver $mod" ;
+return wantarray ? ($ver, $mod) : $vermod;
+}
 
+$done_server_manager_lib_funcs = 1;
 
 1;
 
