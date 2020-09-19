@@ -1,1 +1,1 @@
-../virtual-server/domainname-lib.pl
+/usr/local/webadmin/virtual-server/domainname-lib.pl

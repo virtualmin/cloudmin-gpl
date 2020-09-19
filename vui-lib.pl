@@ -1,1 +1,1 @@
-../virtual-server/vui-lib.pl
+/usr/local/webadmin/virtual-server/vui-lib.pl

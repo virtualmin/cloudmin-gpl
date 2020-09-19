@@ -1,1 +1,1 @@
-../virtual-server/rs-lib.pl
+/usr/local/webadmin/virtual-server/rs-lib.pl
