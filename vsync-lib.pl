@@ -251,6 +251,7 @@ my @tmpls = split(/\s+/, $vsync->{'tmpls'});
 push(@args, map { [ "virtualmin", $_ ] } @tmpls);
 my @feats = split(/\s+/, $vsync->{'feats'});
 my @efeats = split(/\s+/, $vsync->{'efeats'});
+push(@efeats, keys %remotes);
 if (@feats) {
 	push(@args, map { [ "feature", $_ ] } @feats);
 	push(@args, [ &indexof("dir", @feats) >= 0 ? "newformat"
