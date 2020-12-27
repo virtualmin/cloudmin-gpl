@@ -12,15 +12,23 @@ $server->{'status'} ne 'down' && $server->{'status'} ne 'nohost' ||
 
 &ui_print_header(&server_in($server), $text{'vnc_title'}, "");
 
+# Figure out which mode we're in (flash, java or noVNC)
+$mode = $in{'novnc'} ? 2 : $in{'flash'} ? 1 : $in{'java'} ? 0 : $config{'flash_vnc'};
+$sfunc = "type_".$server->{'manager'}."_supports_websockets";
+if ($mode == 2 && !&$sfunc($server)) {
+	$mode = 0;
+	}
+
 # Get the VNC port
 $vfunc = "type_".$server->{'manager'}."_open_vnc_port";
-($masterport, $pass, $wsmasterport, $wsencrypt) = &$vfunc($server);
-$masterport || &error($pass);
+($masterport, $pass, $wsmasterport, $wsencrypt) = &$vfunc($server, $mode);
+$masterport || $wsmasterport || &error($pass);
 
 # Ouput applet HTML
 ($masterhost) = split(/:/, $ENV{'HTTP_HOST'});
 print &vnc_client_html($masterhost, $masterport, $pass,
-		       \%in, $server, "gvnc.cgi", $wsmasterport, $wsencrypt);
+		       $mode, $server, "gvnc.cgi", $wsmasterport, $wsencrypt);
+print "port=$masterport wsport=$wsmasterport<p>\n";
 
 ENDPAGE:
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});

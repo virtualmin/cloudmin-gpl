@@ -14418,16 +14418,15 @@ foreach my $l (split(/\r?\n/, $data)) {
 return \%resolv;
 }
 
-# vnc_client_html(host, port, password, &in, &server, cgi,
+# vnc_client_html(host, port, password, mode, &server, cgi,
 # 		  [websockets-port, websockets-encrypt])
 # Returns HTML for a Java applet or Flash client for connecting to a VNC server
 sub vnc_client_html
 {
-my ($masterhost, $masterport, $pass, $in, $server, $cgi, $wsmasterport, $wsencrypt) = @_;
+my ($masterhost, $masterport, $pass, $flash, $server, $cgi, $wsmasterport, $wsencrypt) = @_;
 my $rv;
-my $flash = $in{'novnc'} ? 2 : $in{'flash'} ? 1 : $in{'java'} ? 0 : $config{'flash_vnc'};
-$flash = 1 if ($flash == 2 && !$wsmasterport);
 my $url = $cgi."?id=".$server->{'id'};
+my $sfunc = "type_".$server->{'manager'}."_supports_websockets";
 
 # Show menu to change between flash, java and novnc
 my @links;
@@ -14435,7 +14434,7 @@ push(@links, $flash == 1 ? "<b>$text{'vnc_flash'}</b>"
 		         : "<a href='$url&flash=1'>$text{'vnc_flash'}</a>");
 push(@links, $flash == 0 ? "<b>$text{'vnc_java'}</b>"
 		         : "<a href='$url&java=1'>$text{'vnc_java'}</a>");
-if ($wsmasterport) {
+if (&$sfunc($server)) {
 	push(@links, $flash == 2 ? "<b>$text{'vnc_novnc'}</b>"
 			 : "<a href='$url&novnc=1'>$text{'vnc_novnc'}</a>");
 	}

@@ -8276,50 +8276,54 @@ if ($server->{'status'} ne 'down' && $server->{'status'} ne 'nohost') {
 return &regenerate_all_kvm_bridge_scripts($server);
 }
 
-# type_kvm_open_vnc_port(&server)
+# type_kvm_open_vnc_port(&server, mode)
 # Opens a VNC port on the master system which is connected to the VNC console
 # on the VM. Returns a port number and password on success, or 0 and an error
 # message on failure.
 sub type_kvm_open_vnc_port
 {
-my ($server) = @_;
+my ($server, $mode) = @_;
 $server->{'kvm_vnc_display'} ||
 	return (0, $text{'vnc_ecannot'});
 
 # Get the VNC port
 my $vhost = &type_kvm_parent($server);
-my $port = 5900 + $server->{'kvm_vnc_display'};
-my $wsport;
+my ($port, $wsport);
 
-# Check that the VNC port is really open on the KVM host, and connect to it
-my $err = undef;
-&open_socket($vhost->{'ip'}, $port, VNCSOCK, \$err);
-if ($err) {
-	return (0, &text('vnc_nolisten', $port, $vhost->{'host'}));
+if ($mode == 0 || $mode == 1) {
+	# Check that the VNC port is really open on the KVM host, and connect
+	$port = 5900 + $server->{'kvm_vnc_display'};
+	my $err = undef;
+	&open_socket($vhost->{'ip'}, $port, VNCSOCK, \$err);
+	if ($err) {
+		return (0, &text('vnc_nolisten', $port, $vhost->{'host'}));
+		}
 	}
-if ($server->{'kvm_vnc_websocket'}) {
+elsif ($mode == 2) {
 	# Also connect to the websockets port on the kVM host
 	my $wserr = undef;
 	$wsport = $server->{'kvm_vnc_websocket'};
 	&open_socket($vhost->{'ip'}, $wsport, WSSOCK, \$wserr);
 	if ($wserr) {
-		$wsport = undef;
+		return (0, &text('vnc_nolisten', $wsport, $vhost->{'host'}));
 		}
 	}
 
 my $masterport;
 my ($wsmasterport, $wsencrypt);
-if ($vhost->{'id'} == 0) {
-	# Special case - this box is the KVM host, so no forwarding needed
-	$masterport = $port;
-	$wsport = $server->{'kvm_vnc_websocket'};
-	close(VNCSOCK);
-	}
-else {
-	# Pick a free port on the Cloudmin master, 5900+
-	my $err;
-	($masterport, $err) = &forward_vnc_port(5900, VNCSOCK);
-	return (0, &text('vnc_eforward', $err)) if ($err);
+if ($port) {
+	if ($vhost->{'id'} == 0) {
+		# Special case - this box is the KVM host, so no forwarding
+		$masterport = $port;
+		$wsport = $server->{'kvm_vnc_websocket'};
+		close(VNCSOCK);
+		}
+	else {
+		# Pick a free port on the Cloudmin master, 5900+
+		my $err;
+		($masterport, $err) = &forward_vnc_port(5900, VNCSOCK);
+		return (0, &text('vnc_eforward', $err)) if ($err);
+		}
 	}
 if ($wsport) {
 	# Also forward a port in the 5700+ range for websockets
@@ -8328,6 +8332,14 @@ if ($wsport) {
 	return (0, &text('vnc_eforwardws', $err)) if ($err);
 	}
 return ($masterport, $server->{'kvm_vnc_passwd'}, $wsmasterport, $wsencrypt);
+}
+
+# type_kvm_supports_websockets(&server)
+# Can this system accept a websockets VNC connection?
+sub type_kvm_supports_websockets
+{
+my ($server) = @_;
+return $server->{'kvm_vnc_websocket'};
 }
 
 # install_kvm_host_software(&vhost, [qemu-mode])
