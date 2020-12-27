@@ -864,6 +864,7 @@ $iface ||= "eth0";
 # Work out broadcast and network addresses
 my $broadcast = &net::compute_broadcast($ip, $netmask);
 my $network = &net::compute_network($ip, $netmask);
+my $cidr = &net::mask_to_prefix($netmask);
 
 # Work out mandatory files .. on redhat-ish systems, always create ifcfg- file
 # for primary interface.
@@ -891,7 +892,8 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/conf.d/net",
 		 "/etc/rc.conf",
 		 "/etc/webmin/virtual-server/config",
-		 "/etc/udev/rules.d/80-net-name-slot.rules") {
+		 "/etc/udev/rules.d/80-net-name-slot.rules",
+		 "/etc/netplan/50-cloud-init.yaml") {
 	my $fixpath = "$dir/$fix";
 	my $temppath = &transname();
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
@@ -983,6 +985,24 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 	elsif ($fix eq "/etc/udev/rules.d/80-net-name-slot.rules") {
 		# Create this file empty, to use old-style interfaces
 		$data = "";
+		}
+	elsif ($fix eq "/etc/netplan/50-cloud-init.yaml") {
+		# Create full Netplan config
+		$data = "network:\n".
+			"    version: 2\n";
+			"    ethernets:\n".
+			"	eth0:\n".
+			"	    addresses: ['$ip/$cidr']\n".
+			"	    gateway4: $gw\n";
+		if (@nss) {
+			my $nss = join(",", @nss);
+			$data .= "	    nameservers:\n".
+				 "		addresses: [$nss]\n";
+			}
+		if (@nss && @search) {
+			my $search = join(",", @search);
+			$data .= "		search: [$search]\n";
+			}
 		}
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
