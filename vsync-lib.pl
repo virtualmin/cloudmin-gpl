@@ -397,7 +397,7 @@ foreach my $dname (@$doms) {
 	$filename =~ s/^.*\///;
 	my $err = &transfer_file_between_servers(
 		$src, $dest, $dompath->{$dname}, "$desttemp/$filename",
-		0, 1,);
+		0, 1);
 	if ($err) {
 		return ( 0, $err, $dest->{'host'} );
 		}
