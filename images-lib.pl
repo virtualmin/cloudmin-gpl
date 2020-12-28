@@ -672,7 +672,7 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		 "/etc/mailname", "/etc/nodename", "/etc/resolv.conf",
 		 "/etc/sysconfig/network", "/etc/postfix/main.cf",
 		 "/etc/conf.d/hostname", "/etc/mailman/mm_cfg.py",
-		 "/etc/rc.conf") {
+		 "/etc/rc.conf", "/etc/cloud/cloud.cfg") {
 	my $fixpath = $dir.$fix;
 	my $temppath = &transname();
 
@@ -732,10 +732,16 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		# Fix hostname line
 		$data = &set_rc_conf_line($data, "hostname", $fullhost);
 		}
+	elsif ($fix eq "/etc/cloud/cloud.cfg") {
+		# On Ubuntu, keep the hostname set
+		$data =~ s/preserve_hostname:\s+\S+/preserve_hostname: true/g;
+		}
 	else {
 		# Other hostname file
 		$data = $fullhost."\n";
 		}
+	print STDERR "writing $fixpath\n";
+	print STDERR $data;
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
@@ -836,6 +842,8 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		# Other hostname file
 		$data = $fullhost."\n";
 		}
+	print STDERR "writing to $fix\n";
+	print STDERR $data;
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
@@ -989,21 +997,23 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 	elsif ($fix eq "/etc/netplan/50-cloud-init.yaml") {
 		# Create full Netplan config
 		$data = "network:\n".
-			"    version: 2\n";
+			"    version: 2\n".
 			"    ethernets:\n".
-			"	eth0:\n".
-			"	    addresses: ['$ip/$cidr']\n".
-			"	    gateway4: $gw\n";
+			"        eth0:\n".
+			"            addresses: ['$ip/$cidr']\n".
+			"            gateway4: $gw\n";
 		if (@nss) {
 			my $nss = join(",", @nss);
-			$data .= "	    nameservers:\n".
-				 "		addresses: [$nss]\n";
+			$data .= "            nameservers:\n".
+				 "                addresses: [$nss]\n";
 			}
 		if (@nss && @search) {
 			my $search = join(",", @search);
-			$data .= "		search: [$search]\n";
+			$data .= "                search: [$search]\n";
 			}
 		}
+	print STDERR "writing to $fixpath\n";
+	print STDERR $data;
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
