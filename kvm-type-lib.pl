@@ -3942,8 +3942,11 @@ if ($disk->{'size'} != $olddisk->{'size'}) {
 			push(@cmds, "parted -s ".quotemeta($disk->{'real'}).
 				    " mklabel gpt");
 			}
-		push(@cmds, [ "echo Fix | parted -s ---pretend-input-tty ".
-			      quotemeta($disk->{'real'}).
+		push(@cmds, "(echo print ; echo Fix ; echo quit) | ".
+			    "parted ---pretend-input-tty ".
+			    quotemeta($disk->{'real'})." ; ".
+			    "/bin/true");
+		push(@cmds, [ "parted -s ".quotemeta($disk->{'real'}).
 			        " mkpart ".
 			        $part->{'parted_type'}." ".
 			        $part->{'parted_start'}." ".
