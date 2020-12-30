@@ -200,8 +200,26 @@ if ($done) {
 	&$first_print($text{'pass_refreshing'});
 	&check_server_status($server, 0, 1);
 	&save_managed_server($server);
-	print &text('save_refreshdone2',
-		    describe_status($server, 1, 1)),"<p>\n";
+	&$second_print(&text('save_refreshdone2',
+			     &describe_status($server, 1, 1)));
+
+	# Double-check that sudo file transfers work
+	&$first_print($text{'pass_scptest'});
+	if (&can_ssh_status($server)) {
+		($code, $err) = &check_server_scp_login($server);
+		if ($code == 1) {
+			&$second_print(&text('pass_scpfailed1', $err));
+			}
+		elsif ($code == 2) {
+			&$second_print(&text('pass_scpfailed2', $err));
+			}
+		else {
+			&$second_print($text{'pass_scpok'});
+			}
+		if ($code && $server->{'ssh_sudo'}) {
+			&$second_print($text{'pass_scpsudo'});
+			}
+		}
 
 	if ($need_reboot && $server->{'status'} ne 'down') {
 		# Tell user that a reboot is needed

@@ -2321,6 +2321,11 @@ pass_aprivate=Private
 pass_remkey=Removing SSH key $1 ..
 pass_addkey=Adding SSH key $1 ..
 pass_earkey=.. key change failed : $1
+pass_scptest=Testing file transfers to the system ..
+pass_scpfailed1=.. uploading a file failed : $1
+pass_scpfailed2=.. downloading a file failed : $1
+pass_scpsudo=You may need to adjust the <tt>sudo</tt> configuration to allow commands to be run without re-entering the password.
+pass_scpok=.. uploads and downloads work OK
 
 licences_title=Virtualmin Pro Licenses
 licences_serial=Serial number

@@ -1223,6 +1223,26 @@ else {
 	}
 }
 
+# check_server_scp_login(&server)
+# Checks if SCP up and down to the server work. Returns 0 if yes, 1 if upload
+# failed, 2 if download failed - and an error message
+sub check_server_scp_login
+{
+my ($server) = @_;
+my $temp = &transname();
+my $data = "test\n";
+&open_tempfile(TEMP, ">$temp", 0, 1);
+&print_tempfile(TEMP, $data);
+&close_tempfile(TEMP);
+my $rtemp = &tempname_on_server($server);
+my $err = &put_file_to_server($server, $temp, $rtemp);
+return (1, $err) if ($err);
+$err = &get_file_from_server($server, $rtemp, $temp);
+return (2, $err) if ($err);
+&delete_file_on_server($server, $rtemp);
+return (0, undef);
+}
+
 # check_server_webmin_login(&server)
 # Checks if Webmin is running on some system, and can be contacted via RPC
 # with the login details given. Returns a status code (0=OK, 1=No connect, 2=No
