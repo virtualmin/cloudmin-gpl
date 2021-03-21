@@ -156,8 +156,11 @@ else {
 		delete($backup->{'purge'});
 		}
 	else {
-		($base, $date) = &extract_purge_path($backup->{'dest'});
-		$base || $date || &error($text{'backup_epurgedate'});
+		if ($backup->{'dest'}) {
+			# Check that the destination has strftime codes
+			($base, $date) = &extract_purge_path($backup->{'dest'});
+			$base || $date || &error($text{'backup_epurgedate'});
+			}
 		$in{'purge'} =~ /^[0-9\.]+$/ && $in{'purge'} > 0 ||
 			&error($text{'backup_epurge'});
 		$backup->{'purge'} = $in{'purge'};
