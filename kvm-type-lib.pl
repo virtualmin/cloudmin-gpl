@@ -5685,7 +5685,7 @@ if ((!defined($server->{'kvm_ip6'}) || $regen) &&
 	$server->{'kvm_ip'} = $newip if ($newip);
 	}
 
-if ((!defined($server->{'kvm_ip6'}) || $regen) &&
+if (!defined($server->{'kvm_ip6'}) &&
     ($server->{'status'} eq 'down' || &can_ssh_status($server))) {
 	# Fetch IPv6 addresses from interfaces
 	my $newip6 = join(" ", &list_interface_ip6_addresses($server));
