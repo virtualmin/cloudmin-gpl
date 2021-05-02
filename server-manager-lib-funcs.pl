@@ -4144,6 +4144,23 @@ foreach my $ip (@$newlist) {
 $server->{$server->{'manager'}.'_ip6'} = join(" ", @initips);
 }
 
+# list_interface_ip_addresses(&server)
+# Returns a list of all IPv4 addresses, taken from interfaces
+sub list_interface_ip_addresses
+{
+my ($server) = @_;
+my $cfunc = "type_".$server->{'manager'}."_can_interfaces";
+return () if (!defined(&$cfunc) || !&$cfunc($server));
+my $ifunc = "type_".$server->{'manager'}."_list_interfaces";
+my $ifaces = &$ifunc($server);
+return () if (!ref($ifaces));
+my @rv;
+foreach my $i (@$ifaces) {
+	push(@rv, $i->{'address'}) if ($i->{'address'});
+	}
+return @rv;
+}
+
 # list_interface_ip6_addresses(&server)
 # Returns a list of all IPv6 addresses, taken from interfaces
 sub list_interface_ip6_addresses

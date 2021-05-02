@@ -5680,6 +5680,13 @@ if (&can_ssh_status($server) && (!defined($server->{'label_map'}) || $regen)) {
 
 if ((!defined($server->{'kvm_ip6'}) || $regen) &&
     ($server->{'status'} eq 'down' || &can_ssh_status($server))) {
+	# Fetch IPv4 addresses from interfaces if somehow they are missing
+	my $newip = join(" ", &list_interface_ip_addresses($server));
+	$server->{'kvm_ip'} = $newip if ($newip);
+	}
+
+if ((!defined($server->{'kvm_ip6'}) || $regen) &&
+    ($server->{'status'} eq 'down' || &can_ssh_status($server))) {
 	# Fetch IPv6 addresses from interfaces
 	my $newip6 = join(" ", &list_interface_ip6_addresses($server));
 	$server->{'kvm_ip6'} = $newip6 if ($newip6);
