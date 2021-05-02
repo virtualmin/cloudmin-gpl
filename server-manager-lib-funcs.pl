@@ -1526,7 +1526,9 @@ if ($device || $server->{'ssh_sudo'}) {
 else {
 	# Just scp down
 	my $sshcmd = "scp -r -p";
-	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+	if ($server->{'ssh_protocol'}) {
+		$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+		}
 	if ($server->{'key'}) {
 		my ($key) = grep { $_->{'id'} == $server->{'key'} }
 				    &list_ssh_keys();
@@ -1667,7 +1669,10 @@ return $server->{'type'} eq 'windows' ||
 sub build_ssh_command
 {
 my ($server, $loud, $extra, $runcmd) = @_;
-my $sshcmd = "ssh".($loud ? "" : " -q")." -x -".$server->{'ssh_protocol'};
+my $sshcmd = "ssh".($loud ? "" : " -q")." -x";
+if ($server->{'ssh_protocol'}) {
+	$sshcmd .= " -".$server->{'ssh_protocol'};
+	}
 if ($server->{'ssh_sudo'} && $extra !~ /-t/) {
 	$sshcmd .= " -t";
 	}
@@ -1856,7 +1861,9 @@ if ($device || $server->{'ssh_sudo'}) {
 else {
 	# Just scp up
 	my $sshcmd = "scp -r -p";
-	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+	if ($server->{'ssh_protocol'}) {
+		$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+		}
 	if ($server->{'key'}) {
 		my ($key) = grep { $_->{'id'} == $server->{'key'} }
 				    &list_ssh_keys();
@@ -1949,7 +1956,9 @@ if ($server->{'ssh_nologin'}) {
 
 # Build and run scp command
 my $sshcmd = "scp -r -p";
-$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+if ($server->{'ssh_protocol'}) {
+	$sshcmd .= " -o Protocol=".$server->{'ssh_protocol'};
+	}
 if ($server->{'key'}) {
 	my ($key) = grep { $_->{'id'} == $server->{'key'} }
 			    &list_ssh_keys();
@@ -2065,7 +2074,9 @@ else {
 	if ($device) {
 		# Use dd piped into SSH
 		$sshcmd = &dd_command($src, undef)." | ssh -q -x";
-		$sshcmd .= " -".$destserver->{'ssh_protocol'};
+		if ($destserver->{'ssh_protocol'}) {
+			$sshcmd .= " -".$destserver->{'ssh_protocol'};
+			}
 		if ($keytemp) {
 			$sshcmd .= " -i ".quotemeta($keytemp);
 			}
@@ -2080,7 +2091,9 @@ else {
 	else {
 		# Can use scp
 		$sshcmd = "scp -r -p";
-		$sshcmd .= " -o Protocol=".$destserver->{'ssh_protocol'};
+		if ($destserver->{'ssh_protocol'}) {
+			$sshcmd .= " -o Protocol=".$destserver->{'ssh_protocol'};
+			}
 		if ($keytemp) {
 			$sshcmd .= " -i ".quotemeta($keytemp);
 			}
@@ -2311,7 +2324,9 @@ else {
 
 	# Build SSH command
 	$sshcmd = $srccmd." | ssh -q -x";
-	$sshcmd .= " -".$destserver->{'ssh_protocol'};
+	if ($destserver->{'ssh_protocol'}) {
+		$sshcmd .= " -".$destserver->{'ssh_protocol'};
+		}
 	if ($keytemp) {
 		$sshcmd .= " -i ".quotemeta($keytemp);
 		}
@@ -2450,7 +2465,9 @@ else {
 
 	# Build SSH command
 	$sshcmd = &dd_command($src, undef)." | ssh -q -x";
-	$sshcmd .= " -".$destserver->{'ssh_protocol'};
+	if ($destserver->{'ssh_protocol'}) {
+		$sshcmd .= " -".$destserver->{'ssh_protocol'};
+		}
 	if ($keytemp) {
 		$sshcmd .= " -i ".quotemeta($keytemp);
 		}
@@ -10465,10 +10482,12 @@ else {
 					  $server ? $server->{'ssh_noping'} : 0));
 	}
 
-# SSH protocol version
-print &ui_table_row($text{'add_protocol'},
-	&ui_radio("protocol", $server ? $server->{'ssh_protocol'} : 2,
-		  [ [ 2 ], [ 1 ] ]));
+# SSH protocol version (but only if using v1, since it's obsolete)
+if ($server && $server->{'ssh_protocol'} == 1) {
+	print &ui_table_row($text{'add_protocol'},
+		&ui_radio("protocol", $server ? $server->{'ssh_protocol'} : 2,
+			  [ [ 2 ], [ 1 ] ]));
+	}
 
 # SSH login
 print &ui_table_row($text{'add_user'},
@@ -10523,7 +10542,9 @@ elsif ($in->{'auth_mode'} == 2) {
 	$server->{'ssh_nologin'} = 1;
 	$server->{'ssh_noping'} = $in->{'noping'};
 	}
-$server->{'ssh_protocol'} = $in->{'protocol'};
+if (defined($in{'protocol'})) {
+	$server->{'ssh_protocol'} = $in->{'protocol'};
+	}
 return undef;
 }
 

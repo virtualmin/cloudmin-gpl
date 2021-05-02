@@ -252,7 +252,9 @@ if ($multi) {
 					print "    SSH key ID: $s->{'key'}\n";
 					}
 				}
-			print "    SSH version: $s->{'ssh_protocol'}\n";
+			if ($s->{'ssh_protocol'}) {
+				print "    SSH version: $s->{'ssh_protocol'}\n";
+				}
 			if ($s->{'ssh_port'}) {
 				print "    SSH port: $s->{'ssh_port'}\n";
 				}
