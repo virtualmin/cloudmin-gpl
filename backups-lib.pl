@@ -1364,8 +1364,9 @@ if ($tarfile) {
 		}
 	my @st = &stat_file_on_server($vhost, $tarfile);
 	if (!@st || !$st[7]) {
+		my $msg = $dest->{'mode'} == 1 ? 'rrun_estat2' : 'rrun_estat';
 		return { 'ok' => 0,
-			 'msg' => &text('rrun_estat', $tarfile) };
+			 'msg' => &text($msg, $tarfile) };
 		}
 	$size = $st[7];
 
@@ -1903,7 +1904,8 @@ my $size;
 foreach my $g (@statfiles) {
 	@st = &stat_file_on_server($staton, $g);
 	if (!@st) {
-		return { 'ok' => 0, 'msg' => &text('rrun_estat', $g) };
+		my $msg = $dest->{'mode'} == 1 ? 'rrun_estat2' : 'rrun_estat';
+		return { 'ok' => 0, 'msg' => &text($msg, $g) };
 		}
 	$size += $st[7];
 	}

@@ -4089,6 +4089,7 @@ rrun_getting=Fetching backup for $1 from $2 ..
 rrun_etar=Failed to extract TAR file : $1
 rrun_eget=Failed to fetch from source : $1
 rrun_estat=TAR fetch appeared to succeed, but destination file $1 was not created
+rrun_estat2=Backup file $1 does not exist
 rrun_allok=Restores of $1 systems completed successfully.
 rrun_somefailed=Restores of $1 systems completed, but $2 failed!
 rrun_somefailed2=Restores of all $1 systems failed!
