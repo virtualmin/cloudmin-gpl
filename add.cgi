@@ -142,7 +142,7 @@ if ($server->{'status'} eq 'virt') {
 		}
 	else {
 		print &text('add_vcheckerr',
-			    $server->{'virtualmin_checked'}),"<p>\n";
+			    $server->{'virtualmin_error'}),"<p>\n";
 		}
 	&save_managed_server($server);
 	}
