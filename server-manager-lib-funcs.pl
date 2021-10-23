@@ -5342,6 +5342,7 @@ elsif ($type eq "dpkg" && $src eq "apt") {
 
 	# Now call apt-get to do the install
 	&execute_command_on_server($server, "apt-key add $keytemp");
+	&execute_command_on_server($server, "gpg --dearmor $keytemp >/etc/apt/trusted.gpg.d/jcameron-key.gpg");
 	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 				"apt-get -y --force-yes -f install webmin");
 	return (undef, $werr) if ($werr);
