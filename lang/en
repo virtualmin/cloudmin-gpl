@@ -2190,6 +2190,8 @@ eimage_default=Default image for $1?
 eimage_dtime=Image downloaded at
 eimage_ctime=Image created at
 eimage_keepkeys=Preserve root SSH authorized keys?
+eimage_xencfg=Xen config lines for new systems
+eimage_exencfg=Invalid Xen config line $1
 
 remote_eprogram=Invalid remote program name
 remote_eprogram2=Remote program $1 does not exist

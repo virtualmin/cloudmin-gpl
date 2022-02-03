@@ -132,6 +132,12 @@ if ($got) {
 		&ui_textbox("postcmdon", $got->{'postcmdon'}, 60));
 	print &ui_table_row($text{'eimage_postcmdoff'},
 		&ui_textbox("postcmdoff", $got->{'postcmdoff'}, 60));
+
+	# Type-specific fields
+	$ifunc = "type_".$i->{'manager'}."_image_fields";
+	if (defined(&$ifunc)) {
+		print &$ifunc($got);
+		}
 	}
 
 # MD5 checksum, if we have it

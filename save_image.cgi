@@ -39,6 +39,10 @@ else {
 	$img->{'keepkeys'} = $in{'keepkeys'};
 	$img->{'postcmdon'} = $in{'postcmdon'};
 	$img->{'postcmdoff'} = $in{'postcmdoff'};
+	$ifunc = "type_".$img->{'manager'}."_image_parse";
+	if (defined(&$ifunc)) {
+		&$ifunc($img, \%in);
+		}
 	&save_server_image($img);
 	if ($in{'default'}) {
 		# Nobody else can be the default
