@@ -10659,7 +10659,7 @@ else {
 	}
 }
 
-# show_host_server_field(label, name, manager, [host-change-function])
+# show_host_server_field(label, name, manager, [host-change-function], [prefix])
 # Returns HTML for selecting a host system, if the user is allowed to.
 sub show_host_server_field
 {
