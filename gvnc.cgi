@@ -24,11 +24,12 @@ $vfunc = "type_".$server->{'manager'}."_open_vnc_port";
 ($masterport, $pass, $wsmasterport, $wsencrypt) = &$vfunc($server, $mode);
 $masterport || $wsmasterport || &error($pass);
 
-# Ouput applet HTML
-($masterhost) = split(/:/, $ENV{'HTTP_HOST'});
-print &vnc_client_html($masterhost, $masterport, $pass,
+if ($masterport) {
+	# Ouput applet HTML
+	($masterhost) = split(/:/, $ENV{'HTTP_HOST'});
+	print &vnc_client_html($masterhost, $masterport, $pass,
 		       $mode, $server, "gvnc.cgi", $wsmasterport, $wsencrypt);
-print "port=$masterport wsport=$wsmasterport<p>\n";
+	}
 
 ENDPAGE:
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
