@@ -14566,11 +14566,15 @@ elsif ($flash == 2) {
 	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&path=&password=".&urlize($pass).$eflag."' width=100% height=640>\n";
 	$rv .= "</iframe>\n";
 	}
-if ($pass) {
-	$rv .= &text('vnc_direct', $masterhost, $masterport, $pass),"<p>\n";
-	}
-else {
-	$rv .= &text('vnc_directnopass', $masterhost, $masterport),"<p>\n";
+if ($masterport) {
+	if ($pass) {
+		$rv .= &text('vnc_direct', $masterhost,
+			     $masterport, $pass),"<p>\n";
+		}
+	else {
+		$rv .= &text('vnc_directnopass', $masterhost,
+			     $masterport),"<p>\n";
+		}
 	}
 return $rv;
 }
