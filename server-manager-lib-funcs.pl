@@ -6481,10 +6481,10 @@ push(@warns, $lerr) if ($lerr);
 
 if (&is_cloudmin_replica()) {
 	# System is a replica
-	my $rv = "<table width=100%><tr bgcolor=#ffff88><td align=center>";
+	my $rv = "<table width=100%><tr><td>";
 	my $master = &get_replication_master();
-	$rv .= "<p><b>".($master ? &text('repl_warning', $master)
-				 : $text{'repl_warning2'})."</b><p>\n";
+	$rv .=  &ui_alert_box(($master ? &text('repl_warning', $master)
+				 : $text{'repl_warning2'}), 'warn');
 	$rv .= "</td></tr></table>\n";
 	push(@warns, $rv);
 	}
@@ -6495,10 +6495,9 @@ if ($one) {
 	if (!$this->{$one.'_host'} && $err) {
 		# System cannot be a host in single-host mode
 		my $rv = "<table width=100%>".
-			 "<tr bgcolor=#ffff88><td align=center>";
-		$rv .= "<p><b>".&text('onehost_err',
-				      $text{$one.'_typedesc'}, $err)."</b><p>";
-		$rv .= "<b>".$text{'onehost_err2'}."</b><p>\n";
+			 "<tr><td>";
+		$rv .=  &ui_alert_box(&text('onehost_err',
+				  $text{$one.'_typedesc'}, $err), 'danger', undef, 1, $text{'onehost_err2'});
 		$rv .= "</td></tr></table>\n";
 		push(@warns, $rv);
 		}
