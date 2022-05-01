@@ -5539,6 +5539,9 @@ if (!$server->{'kvm_filesystem_offset'} || $wantfile) {
 			push(@offsets, $p);
 			}
 		}
+	if (!@offsets) {
+		@offsets = @$parts;
+		}
 	@offsets || return &text('create_ekvmfslinux', $fsfile);
 
 	# Try each partition with an offset
