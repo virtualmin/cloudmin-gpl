@@ -740,8 +740,6 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		# Other hostname file
 		$data = $fullhost."\n";
 		}
-	print STDERR "writing $fixpath\n";
-	print STDERR $data;
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
@@ -842,8 +840,6 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		# Other hostname file
 		$data = $fullhost."\n";
 		}
-	print STDERR "writing to $fix\n";
-	print STDERR $data;
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
@@ -1012,8 +1008,6 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 			$data .= "                search: [$search]\n";
 			}
 		}
-	print STDERR "writing to $fixpath\n";
-	print STDERR $data;
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
 	&close_tempfile(FIXED);
