@@ -142,12 +142,12 @@ elsif ($in{'reboot'}) {
 			}
 		}
 	&check_server_status($server, 0, 1);
-	if (defined(&theme_post_save_server)) {
-		&theme_post_save_server($server);
-		}
 	&save_managed_server($server);
 	&release_lock_server($server);
 	if ($in{'confirm'}) {
+		if (defined(&theme_post_save_server)) {
+			&theme_post_save_server($server);
+			}
 		&webmin_log("reboot", "server", $server->{'host'});
 		}
 	if ($in{'return'}) {
