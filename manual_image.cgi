@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl
-# Show a form for creating an image from a CD iso or raw disk
+# Import an image from a CD iso or raw disk
 
 require './server-manager-lib.pl';
 &error_setup($text{'mimage_err'});
@@ -384,6 +384,8 @@ if ($in{'upload'}) {
 	$okcount = $errcount = 0;
 	@dests = ( );
 	foreach $stor (@stors) {
+		$dest = &parse_backup_destination($stor->{'dest'});
+		$hostcount++ if ($dest->{'mode'} == 1);
 		($destserver, $destpath) =
 			&get_image_dest_path($stor->{'dest'});
 		if ($destserver) {
@@ -406,6 +408,9 @@ if ($in{'upload'}) {
 		}
 	if (!$okcount) {
 		&$second_print($text{'mimage_nocopy'});
+		if ($hostcount == scalar(@stors)) {
+			&$second_print($text{'mimage_nocopy2'});
+			}
 		}
 	elsif ($errcount) {
 		&$second_print($text{'mimage_somecopy'});

@@ -4882,6 +4882,7 @@ mimage_eserverfile=Missing or non-absolute image path
 mimage_copying=Copying image file to storage locations $1 ..
 mimage_ecopy=.. copy to $1 failed : $2
 mimage_nocopy=.. could not copy to any locations!
+mimage_nocopy2=This will happen if all storage locations are on a host system. At least one location must be on the Cloudmin master.
 mimage_somecopy=.. copied to only some locations
 mimage_allcopy=.. all copies completed successfully
 mimage_saving=Computing image checksum and saving details ..
