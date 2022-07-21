@@ -106,7 +106,7 @@ else {
 	&parse_default_backup_dest_table($kvm, \%in);
 
 	$kvm->{'kvm_host'} = 1;
-	&check_server_status($kvm);
+	&check_server_status($kvm, 1);
 	&type_kvm_post_host_refresh($kvm, 1, &get_server_collected($kvm));
 	&save_managed_server($kvm);
 
