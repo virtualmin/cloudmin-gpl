@@ -8293,6 +8293,7 @@ return &regenerate_all_kvm_bridge_scripts($server);
 # Opens a VNC port on the master system which is connected to the VNC console
 # on the VM. Returns a port number and password on success, or 0 and an error
 # message on failure.
+# XXX drop websockets proxying when Webmin 2.002 is out
 sub type_kvm_open_vnc_port
 {
 my ($server, $mode) = @_;
@@ -8344,7 +8345,8 @@ if ($wsport) {
 	($wsmasterport, $err) = &forward_vnc_port(5700, WSSOCK, $wsencrypt);
 	return (0, &text('vnc_eforwardws', $err)) if ($err);
 	}
-return ($masterport, $server->{'kvm_vnc_passwd'}, $wsmasterport, $wsencrypt);
+return ($masterport, $server->{'kvm_vnc_passwd'}, $wsmasterport, $wsencrypt,
+	$vhost->{'ip'}, $port, $wsport);
 }
 
 # type_kvm_supports_websockets(&server)

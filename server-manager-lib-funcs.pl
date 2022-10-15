@@ -14477,11 +14477,14 @@ return \%resolv;
 }
 
 # vnc_client_html(host, port, password, mode, &server, cgi,
-# 		  [websockets-port, websockets-encrypt])
-# Returns HTML for a Java applet or Flash client for connecting to a VNC server
+# 		  [websockets-port, websockets-encrypt],
+# 		  [host-ip, port-on-host, websockets-port-on-host])
+# Returns HTML for a Java applet, Flash client or Websockets JS server for
+# connecting to a VNC server
 sub vnc_client_html
 {
-my ($masterhost, $masterport, $pass, $flash, $server, $cgi, $wsmasterport, $wsencrypt) = @_;
+my ($masterhost, $masterport, $pass, $flash, $server, $cgi, $wsmasterport,
+    $wsencrypt, $hostip, $hostport, $wshostport) = @_;
 my $rv;
 my $url = $cgi."?id=".$server->{'id'};
 my $sfunc = "type_".$server->{'manager'}."_supports_websockets";
@@ -14559,10 +14562,20 @@ elsif ($flash == 0) {
 	$rv .= "$text{'vnc_nojava'} <p>\n";
 	$rv .= "</applet>\n";
 	}
+elsif ($flash == 2 && &get_webmin_version() >= 2.002 && $wshostport) {
+	# Use NoVNC, connecting to a websockets proxy
+	my $path = &setup_webmin_websockets_proxy(
+		$server, $hostip, $wshostport, "/");
+	$path =~ s/^\///;
+	my $rand = time().$$;
+	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$ENV{'SERVER_PORT'}&path=".&urlize($path)."&password=".&urlize($pass)."&rand=".$rand.$eflag."' width=100% height=640>\n";
+	$rv .= "</iframe>\n";
+	}
 elsif ($flash == 2) {
-	# Use NoVNC, connecting to it's port
+	# Use NoVNC, connecting to a forwarded port
 	my $eflag = $wsencrypt ? "&encrypt=1" : "";
-	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&path=&password=".&urlize($pass).$eflag."' width=100% height=640>\n";
+	my $rand = time().$$;
+	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&path=&password=".&urlize($pass)."&rand=".$rand.$eflag."' width=100% height=640>\n";
 	$rv .= "</iframe>\n";
 	}
 if ($masterport) {
@@ -14576,6 +14589,37 @@ if ($masterport) {
 		}
 	}
 return $rv;
+}
+
+# setup_webmin_websockets_proxy(&server, wshost, wsport, path)
+# Setup a websockets proxy path in Webmin to some backend, and return the path
+sub setup_webmin_websockets_proxy
+{
+my ($server, $wshost, $wsport, $wspath) = @_;
+my %miniserv;
+&lock_file(&get_miniserv_config_file());
+&get_miniserv_config(\%miniserv);
+my $path = '/vnc/'.$server->{'id'};
+$miniserv{'websockets_'.$path} = "host=$wshost port=$wsport wspath=$wspath";
+&put_miniserv_config(\%miniserv);
+&unlock_file(&get_miniserv_config_file());
+&reload_miniserv();
+return $path;
+}
+
+# remove_webmin_websockets_proxy(&server)
+# Remove any Webmin websockets proxy for a VM
+sub remove_webmin_websockets_proxy
+{
+my ($server) = @_;
+my %miniserv;
+&lock_file(&get_miniserv_config_file());
+&get_miniserv_config(\%miniserv);
+my $path = '/vnc/'.$server->{'id'};
+delete($miniserv{'websockets_'.$path});
+&put_miniserv_config(\%miniserv);
+&unlock_file(&get_miniserv_config_file());
+&reload_miniserv();
 }
 
 # obtain_lock_anything()
@@ -14655,6 +14699,10 @@ return @st > 1 ? "/bin/bash" : "/bin/sh";
 }
 
 # forward_vnc_port(baseport, vnc-filehandle, ssl-mode)
+# Forward a connection that is made to the base port to a file handle that is
+# connected to a remote VNC server. If the SSL flag is set, the incoming
+# connection is in SSL mode and needs to be decrypted when talking to the
+# non-SSL file handle.
 sub forward_vnc_port
 {
 my ($baseport, $vncfh, $ssl) = @_;

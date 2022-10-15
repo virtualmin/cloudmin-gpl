@@ -21,13 +21,15 @@ if ($mode == 2 && !&$sfunc($server)) {
 
 # Get the VNC port
 $vfunc = "type_".$server->{'manager'}."_open_vnc_port";
-($masterport, $pass, $wsmasterport, $wsencrypt) = &$vfunc($server, $mode);
+($masterport, $pass, $wsmasterport, $wsencrypt,
+ $hostip, $hostport, $wshostport) = &$vfunc($server, $mode);
 $masterport || $wsmasterport || &error($pass);
 
 # Ouput applet, flash or JS HTML
 ($masterhost) = split(/:/, $ENV{'HTTP_HOST'});
 print &vnc_client_html($masterhost, $masterport, $pass,
-	       $mode, $server, "gvnc.cgi", $wsmasterport, $wsencrypt);
+	       $mode, $server, "gvnc.cgi", $wsmasterport, $wsencrypt,
+	       $hostip, $hostport, $wshostport);
 
 ENDPAGE:
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
