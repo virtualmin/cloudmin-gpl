@@ -693,6 +693,9 @@ if (defined(&list_scheduled_changes)) {
 		}
 	}
 
+# Clean up any websockets proxy
+&remove_webmin_websockets_proxy($server);
+
 # Delete again, just in case it was re-created by any previous steps
 if ($server->{'id'}) {
 	&unlink_file($servers::module_config_directory."/".
