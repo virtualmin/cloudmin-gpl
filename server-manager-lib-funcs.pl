@@ -14603,7 +14603,7 @@ my %miniserv;
 &lock_file(&get_miniserv_config_file());
 &get_miniserv_config(\%miniserv);
 my $path = '/vnc/'.$server->{'id'};
-$miniserv{'websockets_'.$path} = "host=$wshost port=$wsport wspath=$wspath";
+$miniserv{'websockets_'.$path} = "host=$wshost port=$wsport wspath=$wspath buser=$base_remote_user";
 &put_miniserv_config(\%miniserv);
 &unlock_file(&get_miniserv_config_file());
 &reload_miniserv();
