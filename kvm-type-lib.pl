@@ -2895,7 +2895,7 @@ sub generate_kvm_bridge_script
 {
 my ($server, $iface, $bridge) = @_;
 my $vhost = &type_kvm_parent($server);
-my $brctl = &has_command_on_server($vhost, "brctl") || "brctl";
+my $brctl = &has_command_on_server($vhost, "brctl");
 my $ip = &has_command_on_server($vhost, "ip");
 my $ifconfig = &has_command_on_server($vhost, "ifconfig") || "ifconfig";
 my $kvm_dir = $server->{'directory'} || $vhost->{'kvm_dir'};
@@ -2906,7 +2906,12 @@ if (!$bridge || $bridge eq "*") {
 	($bridge) = &list_host_bridges($vhost);
 	$bridge ||= "br0";
 	}
-$data .= "$brctl addif $bridge \$1\n";
+if ($brctl) {
+	$data .= "$brctl addif $bridge \$1\n";
+	}
+elsif ($ip) {
+	$data .= "$ip link set dev \$1 master $bridge\n";
+	}
 if ($ip) {
 	# Use ip command
 	$data .= "$ip link set dev \$1 up\n";
