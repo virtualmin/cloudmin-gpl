@@ -6288,7 +6288,7 @@ return $text{'kvm_elinux'} if ($out !~ /linux/i);
 # Check commands
 my $full = &find_qemu_kvm_command($server);
 return &text('kvm_ewhich2', "<tt>qemu-kvm</tt>", "<tt>kvm</tt>") if (!$full);
-foreach my $cmd ("qemu-img", "parted", "lsof", "fuser") {
+foreach my $cmd ("qemu-img", "parted", "lsof") {
 	&has_command_on_server($server, $cmd) ||
 		return &text('kvm_ewhich', "<tt>$cmd</tt>");
 	}
@@ -8306,6 +8306,7 @@ my ($port, $wsport);
 
 if ($mode == 0 || $mode == 1) {
 	# Check that the VNC port is really open on the KVM host, and connect
+	# for proxying
 	$port = 5900 + $server->{'kvm_vnc_display'};
 	my $err = undef;
 	&open_socket($vhost->{'ip'}, $port, VNCSOCK, \$err);
@@ -8314,7 +8315,7 @@ if ($mode == 0 || $mode == 1) {
 		}
 	}
 elsif ($mode == 2) {
-	# Also connect to the websockets port on the kVM host
+	# Also connect to the websockets port on the kVM host for proxying
 	my $wserr = undef;
 	$wsport = $server->{'kvm_vnc_websocket'};
 	&open_socket($vhost->{'ip'}, $wsport, WSSOCK, \$wserr);
