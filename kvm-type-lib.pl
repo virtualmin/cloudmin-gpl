@@ -954,6 +954,7 @@ if (&can_action(undef, "advanced")) {
 		  { 'name' => 'iscsi', 'value' => 'hostname', 'opt' => 1,
 		    'deprecated' => 1 },
 		  { 'name' => 'args', 'value' => 'parameters', 'opt' => 1 },
+		  { 'name' => 'cputype', 'value' => 'type', 'opt' => 1 },
 	    );
 	}
 return @rv;
@@ -1354,7 +1355,16 @@ else {
 $server->{'kvm_keymap'} = $config{'kvm_keymap'};
 
 # CPU type from host
-$server->{'kvm_cputype'} = $vhost->{'kvm_defcputype'};
+$server->{'kvm_cputype'} = $args->{'cputype'} || $vhost->{'kvm_defcputype'};
+$server->{'kvm_cputype'} = '' if ($server->{'kvm_cputype'} eq 'default');
+if ($server->{'kvm_cputype'}) {
+	my @cpus = &list_kvm_cpu_types($vhost);
+	if (@cpus) {
+		my ($cpu) = grep { $_->{'model'} eq $server->{'kvm_cputype'} }
+				 @cpus;
+		$cpu || return "Invalid CPU type $server->{'kvm_cputype'}";
+		}
+	}
 
 # Use the storage chosen
 $storage || return "No storage location found!";
