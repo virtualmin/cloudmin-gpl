@@ -2858,6 +2858,11 @@ if ($server->{'kvm_smp'}) {
 		}
 	}
 
+# Add CPU type flag
+if ($server->{'kvm_cputype'}) {
+	$cmd .= " -cpu ".quotemeta($server->{'kvm_cputype'});
+	}
+
 # Add other imported flags
 if ($server->{'kvm_args'}) {
 	$cmd .= " ".$server->{'kvm_args'};
@@ -5812,6 +5817,21 @@ else {
 	$rv .= &ui_table_row(" ", $text{'create_kvmreboot'});
 	}
 
+# CPU type
+my $vhost = &type_kvm_parent($server);
+my @cpus = &list_kvm_cpu_types($vhost);
+if (@cpus) {
+	my @opts = ( [ "", $text{'edit_kvmcputypedef'} ] );
+	foreach my $c (@cpus) {
+		next if ($c->{'desc'} =~ /^\(alias/ &&
+			 $server->{'kvm_cputype'} ne $c->{'model'});
+		push(@opts, [ $c->{'model'},
+		      $c->{'model'}.($c->{'desc'} ? " - ".$c->{'desc'} : "") ]);
+		}
+	$rv .= &ui_table_row($text{'edit_kvmcputype'},
+		&ui_select("kvm_cputype", $server->{'kvm_cputype'}, \@opts));
+	}
+
 return $rv;
 }
 
@@ -5836,6 +5856,11 @@ $server->{'kvm_vga'} = $in->{'kvm_vga'};
 # Save extra args
 $in->{'kvm_args'} =~ /;|\&|\||<|>|\0|\!/ && &error($text{'create_ekvmargs'});
 $server->{'kvm_args'} = $in->{'kvm_args'};
+
+# Save CPU type
+if (defined($in->{'kvm_cputype'})) {
+	$server->{'kvm_cputype'} = $in->{'kvm_cputype'};
+	}
 
 &type_kvm_set_atboot($server, 2);
 }
@@ -8608,6 +8633,35 @@ sub kvm_host_supports_vlan
 my ($vhost) = @_;
 my $ver = &kvm_host_version($vhost);
 return &compare_versions($ver, "2.9.0") < 0;
+}
+
+# list_kvm_cpu_types(&vhost)
+# Returns a list of all supported CPU types, each of which is a hash ref with
+# keys type, model and desc.
+sub list_kvm_cpu_types
+{
+my ($vhost) = @_;
+my $cmd = &find_qemu_kvm_command($vhost);
+return () if (!$cmd);
+my ($out, $ex, $err) = &execute_command_on_server(
+			$vhost, "$cmd -cpu help");
+return () if ($ex || $err);
+my @lines = split(/\r?\n/, $out);
+my $started = 0;
+foreach my $l (@lines) {
+	if ($l =~ /Available\s+CPUs/) {
+		$started = 1;
+		}
+	elsif ($started && $l =~ /^(\S+)\s+(\S+)\s*(.*)/) {
+		push(@rv, { 'type' => $1, 'model' => $2, 'desc' => $3 });
+		}
+	elsif ($started && $l !~ /\S/) {
+		last;
+		}
+	}
+my @spec = grep { $_->{'model'} =~ /^(base|host|max)$/ } @rv;
+@rv = grep { $_->{'model'} !~ /^(base|host|max)$/ } @rv;
+return (@spec, @rv);
 }
 
 1;
