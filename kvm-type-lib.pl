@@ -897,6 +897,9 @@ $server->{'kvm_firewall'} = (defined($in{'kvm_firewall'}) ?
 				$in{'kvm_firewall'} : $config{'kvm_firewall'}) ?
 			    '*' : '';
 
+# CPU type from host
+$server->{'kvm_cputype'} = $vhost->{'kvm_defcputype'};
+
 # Append zone name
 my @zones = &list_bind_zones();
 my $zone;
@@ -1349,6 +1352,9 @@ else {
 	($storage) = grep { $_->{'default'} } @$storages;
 	}
 $server->{'kvm_keymap'} = $config{'kvm_keymap'};
+
+# CPU type from host
+$server->{'kvm_cputype'} = $vhost->{'kvm_defcputype'};
 
 # Use the storage chosen
 $storage || return "No storage location found!";
@@ -5893,6 +5899,8 @@ push(@rv, [ "KVM high resolution graphics?",
 	    $server->{'kvm_vga'} ? "Yes" : "No" ]);
 push(@rv, [ "Block spoofed IPs and MACs?",
 	    $server->{'kvm_firewall'} ? "Yes" : "No" ]);
+push(@rv, [ "KVM CPU type",
+	    $server->{'kvm_cputype'} || "Default" ]);
 return @rv;
 }
 

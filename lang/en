@@ -4656,6 +4656,7 @@ kvm_install=Install KVM Host Software
 kvm_installq=Setup KVM kernel acceleration?
 kvm_installtitle=Install KVM Host
 kvm_return=KVM host system
+kvm_defcputype=CPU type for new instances
 
 floor_disk=Disk space to leave free
 floor_edisk=Missing or non-numeric disk space to leave free

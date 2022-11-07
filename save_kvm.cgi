@@ -71,6 +71,11 @@ else {
 	# Over-allocation settings
 	$kvm->{'kvm_overmemory'} = $in{'overmemory'};
 
+	# Default CPU type
+	if (defined($in{'cputype'})) {
+		$kvm->{'kvm_defcputype'} = $in{'cputype'};
+		}
+
 	# DNS zone
 	$in{'zone'} =~ /^[a-z0-9\.\-\_]+$/i || &error($text{'kvm_ezone'});
 	$kvm->{'kvm_zone'} = $in{'zone'};

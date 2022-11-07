@@ -96,6 +96,23 @@ if (@stable > 1) {
 print &ui_table_row($text{'openvz_overmemory'},
 	&ui_yesno_radio("overmemory", $kvm->{'kvm_overmemory'}));
 
+# Default CPU type
+my @cpus;
+if (&can_ssh_status($kvm)) {
+	@cpus = &list_kvm_cpu_types($kvm);
+	}
+if (@cpus) {
+	my @opts = ( [ "", $text{'edit_kvmcputypedef'} ] );
+	foreach my $c (@cpus) {
+		next if ($c->{'desc'} =~ /^\(alias/ &&
+			 $server->{'kvm_cputype'} ne $c->{'model'});
+		push(@opts, [ $c->{'model'},
+		      $c->{'model'}.($c->{'desc'} ? " - ".$c->{'desc'} : "") ]);
+		}
+	print &ui_table_row($text{'kvm_defcputype'},
+		&ui_select("cputype", $kvm->{'kvm_defcputype'}, \@opts));
+	}
+
 # DNS domain name to add under (if we host any)
 @zones = &list_bind_zones();
 $zonename = $kvm->{'kvm_zone'} || $config{'kvm_zone'};
