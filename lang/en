@@ -5085,6 +5085,7 @@ clone_eips6=Host system $1 does not have any automatic IPv6 allocation ranges de
 clone_eips2=The original system has $1 IP addresses, but $2 new addresses were supplied
 clone_eips62=The original system has $1 IPv6 addresses, but $2 new v6 addresses were supplied
 clone_elvm=Cloning of a live system is only supported when all disks are on LVM, but disk $1 is not
+clone_erealdisks=None of the disks on this system can be cloned!
 clone_esnapremote=Cloning a live system is not support when moving to another host system
 clone_elvmremote=Cloning a system using LVM is not possible unless the destination system also uses LVM
 clone_eips3=Only 1 IP address needs to be supplied, but $2 were provided

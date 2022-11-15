@@ -7510,14 +7510,30 @@ if ($ips6) {
 		return &text('clone_eips62', scalar(@oldips), scalar(@$ips));
 	}
 
+# Get all the disks
+my $disks = &type_kvm_list_disks($newserver, 1);
+if (!ref($disks)) {
+	$disks = &type_kvm_list_disks($newserver, 0);
+	}
+if (!ref($disks)) {
+	return &text('clone_ecopydisks', $disks);
+	}
+
 # Make sure all disks are on LVM if snapshotting
 if ($snapshot) {
-	my $disks = &type_kvm_list_disks($newserver, 0);
 	foreach my $d (@$disks) {
 		next if ($d->{'device'} && !$d->{'lv'});
 		$d->{'lv'} || return &text('clone_elvm', $d->{'real'});
 		}
 	}
+
+# Make sure at least one disk is real
+my @realdisks;
+foreach my $d (@$disks) {
+	next if ($d->{'device'} && !$d->{'lv'} && $d->{'iscsi_server'} eq '');
+	push(@realdisks, $d);
+	}
+@realdisks || return $text{'clone_erealdisks'};
 
 # If cloning to a new host, make sure it uses the same iSCSI server
 if ($vhost->{'id'} ne $dest->{'id'}) {
