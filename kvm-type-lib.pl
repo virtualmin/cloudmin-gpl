@@ -6876,6 +6876,7 @@ foreach my $f ('kvm_monitor', 'kvm_console') {
 
 # Copy across bridge scripts
 my @nets = split(/\s+/, $server->{'kvm_net'});
+my $destvlan = &kvm_host_supports_vlan($dest);
 foreach my $net (@nets) {
 	if ($net =~ /script=([^,]+-(eth\d+)\.sh)/) {
 		my $script = $1;
@@ -6896,6 +6897,10 @@ foreach my $net (@nets) {
 				$net =~ s/script=\Q$script\E/script=$newscript/;
 				}
 			}
+		}
+	if ($net =~ /,vlan=\d+/ && !$destvlan) {
+		# Remove unsupported flag
+		$net =~ s/,vlan=\d+//;
 		}
 	}
 $server->{'kvm_net'} = join(" ", @nets);
