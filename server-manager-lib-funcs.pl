@@ -12884,14 +12884,14 @@ return $rv;
 }
 
 # clone_system(&server, new-hostname, new-description, [&ips], snapshot,
-# 	       [&dest-host], [&ips-v6], [new-directory])
+# 	       [&dest-host], [&ips-v6], [new-directory], [start-clone])
 # Creates a clone of an existing virtual system, by calling the type-specific
 # clone function. Returns the new system hash and an error message or undef.
 # May print stuff.
 sub clone_system
 {
 my ($server, $newhost, $newdesc, $ips, $snapshot, $dest, $ips6,
-    $directory) = @_;
+    $directory, $start) = @_;
 my $vhost = &get_parent_server($server);
 $dest ||= $vhost;
 
@@ -13025,7 +13025,7 @@ if ($was_up && !$snapshot) {
 	}
 
 # Start up clone if original was up before
-if ($was_up && !$err) {
+if ($was_up && !$err && $start) {
 	&$first_print($text{'clone_starting2'});
 	my ($ok, $err) = &startup_server($newserver);
 	if (!$ok) {

@@ -38,6 +38,10 @@ if ($can == 2) {
 		&ui_yesno_radio("live", !$down));
 	}
 
+# Start the new cloned VM
+print &ui_table_row($text{'clone_start'},
+	&ui_yesno_radio("start", 1));
+
 # IP addresses for non-virtual interfaces
 $cfunc = "type_".$server->{'manager'}."_can_interfaces";
 $ifunc = "type_".$server->{'manager'}."_list_interfaces";

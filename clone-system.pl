@@ -39,6 +39,9 @@ By default this API command will not exit until the cloning process completes.
 However, you can use the C<--background> flag to have most of the work
 performed in the background once initial checks are complete.
 
+By default the newly created clone will be started up assuming the original
+system was running, but you can prevent this with the C<--no-start> flag.
+
 =head1 Example usage
 
   cloudmin clone-system --host citrixsrc.home --new-host citrixdest
@@ -85,6 +88,7 @@ $< == 0 || die "$0 must be run as root";
 # Parse command line
 $live = 0;
 $directory = undef;
+$start = 1;
 while(@ARGV > 0) {
 	my $a = shift(@ARGV);
 	if ($a eq "--host") {
@@ -129,6 +133,9 @@ while(@ARGV > 0) {
 		}
 	elsif ($a eq "--background") {
 		$background = 1;
+		}
+	elsif ($a eq "--no-start") {
+		$start = 0;
 		}
 	else {
 		&usage("Unknown parameter $a");
@@ -248,7 +255,7 @@ if ($background && !&background_api_command()) {
 	}
 &$indent_print();
 ($newserver, $err) = &clone_system($server, $newhost, $newdesc, $ips, $live,
-				   $dest, $ips6, $directory);
+				   $dest, $ips6, $directory, $start);
 &$outdent_print();
 &release_lock_server($server);
 if ($newserver && $err) {
@@ -283,6 +290,7 @@ print "                     [--live]\n";
 print "                     [--dest new-host-system-name]\n";
 print "                     [--disk-directory path | --no-disk-directory]\n";
 print "                     [--background]\n";
+print "                     [--no-start]\n";
 exit(1);
 }
 
