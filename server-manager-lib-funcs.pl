@@ -12574,6 +12574,8 @@ my ($server) = @_;
 return $server->{'type'} eq 'centos' ||
        $server->{'type'} eq 'redhat' ||
        $server->{'type'} eq 'fedora' ||
+       $server->{'type'} eq 'rocky' ||
+       $server->{'type'} eq 'alma' ||
        $server->{'type'} eq 'amazon';
 }
 
