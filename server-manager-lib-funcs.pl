@@ -6237,13 +6237,13 @@ foreach my $p (@packs) {
 return (0, $lasterr);
 }
 
-# install_virtualmin_server(&server, set-password, serial, key)
+# install_virtualmin_server(&server, set-password, serial, key, bundle-lemp, type-minimal)
 # Starts the process of installing Virtualmin, by copying over the install
 # script and running it. Returns undef if start OK, or an error message on
 # failure.
 sub install_virtualmin_server
 {
-my ($server, $setpass, $serial, $key) = @_;
+my ($server, $setpass, $serial, $key, $bundle_lemp, $type_minimal) = @_;
 
 # Check for a supported OS
 my ($pkg, $update, $os) = &get_server_package_system($server);
@@ -6303,9 +6303,18 @@ if ($error) {
 
 # Transfer over the install script
 my $script = "/virtualmin-install.sh";
+my $script_with_args = $script;
 my $err = &put_file_to_server($server, $itemp, $script);
 unlink($itemp);
 return &text('virtualmin_ecopy', $err) if ($err);
+
+# Bundle and type
+if ($bundle_lemp) {
+	$script_with_args .= " --bundle LEMP";
+}
+if ($type_minimal) {
+	$script_with_args .= " --minimal";
+}
 
 # Call type-specific pre function
 my $pfunc = "type_".$server->{'manager'}."_pre_virtualmin";
@@ -6341,7 +6350,7 @@ if (!&has_command_on_server($server, "fuser")) {
 my $temp = "/tmp/virtualmin-install.out";
 $server->{'virtualmin_temp'} = $temp;
 my ($out, $ex, $err) = &execute_command_on_server($server,
-	"chmod +x $script ; ((echo y ; echo $server->{'host'}) | $script && echo SERVER-MANAGER-COMPLETE) >$temp 2>&1 &");
+	"chmod +x $script ; ((echo y ; echo $server->{'host'}) | $script_with_args && echo SERVER-MANAGER-COMPLETE) >$temp 2>&1 &");
 
 return undef;
 }
@@ -8626,8 +8635,8 @@ if (!$nonone) {
 	push(@opts, [ 0, $text{'virtualmin_smode0'}."<br>" ]);
 	}
 push(@opts, [ 1, &text('virtualmin_smode1',
-		       &ui_textbox($name."_serial", undef, 20),
-		       &ui_textbox($name."_key", undef, 20))."<br>" ]);
+		       "&nbsp;".&ui_textbox($name."_serial", undef, 20)."&nbsp;",
+		       "&nbsp;".&ui_textbox($name."_key", undef, 20))."<br>" ]);
 if (&can_action(undef, "licence")) {
 	if ($aserial) {
 		push(@opts, [ 3, $text{'virtualmin_smode3'}."<br>" ]);

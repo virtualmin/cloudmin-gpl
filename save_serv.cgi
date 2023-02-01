@@ -237,6 +237,12 @@ elsif ($in{'installvirt'}) {
 		$vlform = &ui_table_start($text{'virtualmin_lheader'},undef, 2);
 		$vlform .= &ui_table_row($text{'virtualmin_lfrom'},
 				&virtualmin_licence_form("licence", 1, 1));
+		$vlform .= &ui_table_row($text{'virtualmin_smode5'},
+			&ui_radio("licence_bundle", 0, [ [ 0, $text{'virtualmin_smode51'} ],
+				  [ 1, $text{'virtualmin_smode52'} ] ]));
+		$vlform .= &ui_table_row($text{'virtualmin_smode6'},
+			&ui_radio("licence_type", 0, [ [ 0, $text{'virtualmin_smode61'} ],
+				  [ 1, $text{'virtualmin_smode62'} ] ]));
 		$vlform .= &ui_table_end();
 		&show_confirm_form(
 		    &text('save_virtrusure', "<tt>$server->{'host'}</tt>").
@@ -254,7 +260,9 @@ elsif ($in{'installvirt'}) {
 		print $text{'save_virtstart'},"<br>\n";
 		&obtain_lock_server($server);
 	        &start_installing_virtualmin_licence($serial, $key);
-		$err = &install_virtualmin_server($server, 1, $serial, $key);
+		$err = &install_virtualmin_server($server, 1, $serial, $key,
+		                                  $in{'licence_bundle'},
+		                                  $in{'licence_type'});
 		if ($err) {
 			print &text('save_virterr', $err),"<p>\n";
 			goto VIRTFAILED;
