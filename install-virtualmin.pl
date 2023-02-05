@@ -66,6 +66,8 @@ while(@ARGV > 0) {
 	elsif ($a eq "--same-serial") { $same_serial = 1; }
 	elsif ($a eq "--allocate-serial") { $allocate_serial = 1; }
 	elsif ($a eq "--gpl-serial") { $serial = $key = "GPL"; }
+	elsif ($a eq "--bundle-lemp") { $bundle_lemp = 1; }
+	elsif ($a eq "--type-minimal") { $type_minimal = 1; }
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -137,7 +139,8 @@ print "Installing Virtualmin on ",scalar(@servers)," systems ..\n";
 	sub { # Start install
 	      ($serial, $key) = @{$serialmap{$_[0]->{'id'}}};
 	      &start_installing_virtualmin_licence($serial, $key);
-	      $err = &install_virtualmin_server($_[0], 0, $serial, $key);
+	      $err = &install_virtualmin_server($_[0], 0, $serial,
+	                 $key, $bundle_lemp, $type_minimal);
 	      if ($err) {
 	          print "$_[0]->{'host'}: ERROR: $err\n";
                   return 1;
@@ -179,6 +182,8 @@ print "                             --gpl-serial]\n";
 print "                            [--owner name]*\n";
 print "                            [--status status-code|\"up\"|\"wm\"|\"bad\"]\n";
 print "                            [--host-on name]\n";
+print "                            [--bundle-lemp]\n";
+print "                            [--type-minimal]\n";
 exit(1);
 }
 
