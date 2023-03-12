@@ -204,8 +204,8 @@ if ($done) {
 			     &describe_status($server, 1, 1)));
 
 	# Double-check that sudo file transfers work
-	&$first_print($text{'pass_scptest'});
 	if (&can_ssh_status($server)) {
+		&$first_print($text{'pass_scptest'});
 		($code, $err) = &check_server_scp_login($server);
 		if ($code == 1) {
 			&$second_print(&text('pass_scpfailed1', $err));
