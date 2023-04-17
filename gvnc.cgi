@@ -27,9 +27,9 @@ $masterport || $wsmasterport || &error($pass);
 
 # Ouput applet, flash or JS HTML
 ($masterhost) = split(/:/, $ENV{'HTTP_HOST'});
-print &vnc_client_html($masterhost, $masterport, $pass,
+print "<div data-iframe='1'>".&vnc_client_html($masterhost, $masterport, $pass,
 	       $mode, $server, "gvnc.cgi", $wsmasterport, $wsencrypt,
-	       $hostip, $hostport, $wshostport);
+	       $hostip, $hostport, $wshostport)."</div>";
 
 ENDPAGE:
 &ui_print_footer("edit_serv.cgi?id=$in{'id'}", $text{'edit_return'});
