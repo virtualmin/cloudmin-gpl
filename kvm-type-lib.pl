@@ -1511,6 +1511,7 @@ for(my $i=0; $i<@ips; $i++) {
 	}
 $server->{'mac'} = join(" ", @macs);
 $server->{'mac_addresses'} = join(" ", @macs);
+$server->{'linux_iface_prefix'} = $img->{'linux_iface_prefix'} if ($img);
 
 # If not resetting and firewall is set to all IPs, change it to the actual list
 # of assigned IPs now
@@ -6186,6 +6187,7 @@ if (!$rawsize) {
 $image->{'rawsize'} = $rawsize;
 $image->{'format'} = 'disk';
 $image->{'kvm_virtio'} = $server->{'kvm_virtio'};
+$image->{'linux_iface_prefix'} = $server->{'linux_iface_prefix'};
 
 # If the disk is on iSCSI, take the image from the iSCSI server
 my $isdevice = $server->{'kvm_filesystem_lv'} ||
