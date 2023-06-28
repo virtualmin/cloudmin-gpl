@@ -1546,7 +1546,7 @@ else {
 		$sshcmd .= quotemeta($remotefile)."/\\*";
 		}
 	else {
-		$sshcmd .= "\"".quotemeta($remotefile)."\"";
+		$sshcmd .= &ssh_quote_path($remotefile);
 		}
 	$sshcmd .= " ".quotemeta($localfile);
 	my ($status, $out) =
@@ -1720,6 +1720,36 @@ $rv .= " " if ($rv);
 return $rv;
 }
 
+# ssh_quote_path(path)
+# Quote a path for passing to the SCP or SSH command
+sub ssh_quote_path
+{
+my ($path) = @_;
+my $ver = &get_ssh_version(&get_this_managed_server());
+if (&compare_versions($ver, "7.4") >= 0) {
+	return quotemeta($path);
+	}
+return "\"".quotemeta($path)."\"";
+}
+
+# get_ssh_version(&server)
+# Returns the version number of the SSH command
+sub get_ssh_version
+{
+my ($server) = @_;
+my $id = $server ? $server->{'id'} : 0;
+if (!$get_ssh_version_cache{$id}) {
+	my $out = $id == 0 ? &backquote_command("ssh -V")
+			   : &execute_command_on_server($server, "ssh -V");
+	if ($out =~ /OpenSSH_(\S+)/i) {
+		$ver = $1;
+		$ver =~ s/,$//;
+		$get_ssh_version_cache{$id} = $ver;
+		}
+	}
+return $get_ssh_version_cache{$id};
+}
+
 # clear_ssh_host_key(&server)
 # Remove the key for some system from .ssh/known_hosts on the Cloudmin master
 sub clear_ssh_host_key
@@ -1882,7 +1912,7 @@ else {
 		}
 	$sshcmd .= " $server->{'ssh_user'}\@".
 		   ($server->{'ip'} || $server->{'host'}).":".
-		   "\"".quotemeta($remotefile)."\"";
+		   &ssh_quote_path($remotefile);
 	my ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
 					      $timeout);
 	return $status ? $out : undef;
@@ -5271,9 +5301,11 @@ if (!&has_command_on_server($server, "perl") ||
 		}
 	}
 
-# Make sure the system has Perl
+# Make sure the system has Perl and gpg
 my $perlpath = &has_command_on_server($server, "perl");
 $perlpath || return (undef, "Perl is not installed");
+my $gpgpath = &has_command_on_server($server, "gpg");
+$gpgpath || return (undef, "GPG is not installed");
 
 # Upload Webmin public key if needed
 my $keytemp = &tempname_on_server($server, "jcameron-key.asc");
