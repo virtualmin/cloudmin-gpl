@@ -1725,7 +1725,8 @@ return $rv;
 sub ssh_quote_path
 {
 my ($path) = @_;
-my $ver = &get_ssh_version(&get_this_managed_server());
+my $this = &get_this_managed_server();
+my $ver = $this->{'ssh_version'} || &get_ssh_version($this);
 if (&compare_versions($ver, "7.4") >= 0) {
 	return quotemeta($path);
 	}
