@@ -1739,8 +1739,8 @@ sub get_ssh_version
 my ($server) = @_;
 my $id = $server ? $server->{'id'} : 0;
 if (!$get_ssh_version_cache{$id}) {
-	my $out = $id == 0 ? &backquote_command("ssh -V")
-			   : &execute_command_on_server($server, "ssh -V");
+	my $out = $id == 0 ? &backquote_command("ssh -V 2>&1")
+			   : &execute_command_on_server($server, "ssh -V 2>&1");
 	if ($out =~ /OpenSSH_(\S+)/i) {
 		$ver = $1;
 		$ver =~ s/,$//;
@@ -4022,6 +4022,12 @@ if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /FreeBSD/i && !$got_io &&
 			$got_more_info = 1;
 			}
 		}
+	}
+
+# Save SSH version
+if (&can_ssh_status($server) && (!$info->{'ssh_version'} || $regen)) {
+	$info->{'ssh_version'} = &get_ssh_version($server);
+	$got_more_info = 1;
 	}
 
 if ($got_more_info) {
