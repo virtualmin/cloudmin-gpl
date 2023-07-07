@@ -897,8 +897,14 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/rc.conf",
 		 "/etc/webmin/virtual-server/config",
 		 "/etc/udev/rules.d/80-net-name-slot.rules",
-		 "/etc/netplan/50-cloud-init.yaml") {
+		 "/etc/netplan/50-cloud-init.yaml",
+		 "/etc/NetworkManager/system-connections/*.nmconnection") {
 	my $fixpath = "$dir/$fix";
+	if ($fixpath =~ /\*/) {
+		my $globs = &glob_on_server($vhost, $fixpath);
+		next if (!ref($globs) || !@$globs);
+		$fixpath = $globs->[0];
+		}
 	my $temppath = &transname();
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
 	next if ($err && !$mand{$fix});
@@ -1006,6 +1012,24 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		if (@nss && @search) {
 			my $search = join(",", @search);
 			$data .= "                search: [$search]\n";
+			}
+		}
+	elsif ($fix =~ /^\/etc\/NetworkManager\/system-connections/) {
+		# Update address in NetworkManager config
+		$data =~ s/address1=\S+/address1=$ip\/$cidr,$gw/;
+		if (@nss) {
+			my $nss = join(";", @nss);
+			$data =~ s/dns=\S+/dns=$nss/;
+			}
+		else {
+			$data =~ s/dns=\S+\n//;
+			}
+		if (@search) {
+			my $search = join(";", @search);
+			$data =~ s/dns-search=\S+/dns-search=$search/;
+			}
+		else {
+			$data =~ s/dns-search=\S+\n//;
 			}
 		}
 	&open_tempfile(FIXED, ">$temppath");
