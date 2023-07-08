@@ -3007,11 +3007,10 @@ if (defined(&$dfunc)) {
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to ssh
 	}
-my ($out, $ex, $err) = &execute_command_on_server($server, "echo $glob", $short_timeout);
+my ($out, $ex, $err) = &execute_command_on_server($server, "ls -d $glob", $short_timeout);
 return $err if ($err);
 return $out if ($ex);
-$out =~ s/\r|\n//g;
-return [ grep { $_ ne $glob } split(/\s+/, $out) ];
+return [ grep { $_ ne $glob && $_ ne "" } split(/\r?\n/, $out) ];
 }
 
 # disk_usage_on_server(&server, dir, [include-counts])
