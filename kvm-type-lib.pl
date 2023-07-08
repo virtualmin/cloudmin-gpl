@@ -1917,7 +1917,11 @@ my $grubdir = $hasbootfs ? "/grub" : "/boot/grub";
 if (!$empty && ($server->{'kvm_virtio'} != $img->{'kvm_virtio'} ||
 		$img->{'kvm_virtio'} eq '')) {
 	&$first_print($text{'create_kvmgrub'});
-	&mount_filesystem_if_needed($server, $grubdir);
+	my $merr = &mount_filesystem_if_needed($server, $grubdir);
+	if ($merr && $grubdir !~ /2$/) {
+		$grubdir .= "2";
+		$merr = &mount_filesystem_if_needed($server, $grubdir);
+		}
 	my $grubconf;
 	my $data;
 	foreach my $g ("$grubdir/menu.lst", "$grubdir/grub.conf",
@@ -1975,7 +1979,11 @@ if (!$empty) {
 	&umount_filesystem_if_needed($server);
 
 	# Fix the actual grub config file
-	&mount_filesystem_if_needed($server, $grubdir);
+	my $merr = &mount_filesystem_if_needed($server, $grubdir);
+	if ($merr && $grubdir !~ /2$/) {
+		$grubdir .= "2";
+		$merr = &mount_filesystem_if_needed($server, $grubdir);
+		}
 	my $grubconf;
 	my $datafile = &transname();
 	foreach my $g ("$grubdir/menu.lst", "$grubdir/grub.conf",
@@ -1994,6 +2002,9 @@ if (!$empty) {
 		foreach my $l (@$lref) {
 			if ($l =~ /^\s*linux\s+.*root=/ && $l !~ /\Q$flags\E/) {
 				$l .= " ".$flags;
+				}
+			elsif ($l =~ /^\s*set\s+kernelopts="(root=.*)"/ && $l !~ /\Q$flags\E/) {
+				$l = "  set kernelopts=\"$1 $flags\"";
 				}
 			}
 		&flush_file_lines($datafile);
@@ -5596,7 +5607,7 @@ if (!$server->{'kvm_filesystem_offset'} || $wantfile) {
 				"umount ".quotemeta($mp));
 			}
 		}
-	return &text('create_ekvmfsnone', $fsfile);
+	return &text('create_ekvmfsnone', $fsfile, $wantfile || "/etc");
 	}
 
 # Mount with the correct offset
