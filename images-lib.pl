@@ -871,10 +871,14 @@ my $network = &net::compute_network($ip, $netmask);
 my $cidr = &net::mask_to_prefix($netmask);
 
 # Work out mandatory files .. on redhat-ish systems, always create ifcfg- file
-# for primary interface.
+# for primary interface UNLESS it looks like NetworkManager is in use.
 my %mand;
-if (&stat_file_on_server($vhost, $dir."/etc/sysconfig/network-scripts")) {
-	$mand{"/etc/sysconfig/network-scripts/ifcfg-$iface"} = 1;
+my $ns = "/etc/sysconfig/network-scripts";
+if (&stat_file_on_server($vhost, $dir.$ns)) {
+	if (!&stat_file_on_server($vhost, $dir."/etc/NetworkManager/system-connections") ||
+	    &stat_file_on_server($vhost, $dir.$ns."/ifcfg-$iface")) {
+		$mand{$ns."/ifcfg-$iface"} = 1;
+		}
 	$mand{"/etc/udev/rules.d/80-net-name-slot.rules"} = 1;
 	}
 
