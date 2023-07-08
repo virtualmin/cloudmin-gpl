@@ -1020,21 +1020,22 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		}
 	elsif ($fix =~ /^\/etc\/NetworkManager\/system-connections/) {
 		# Update address in NetworkManager config
-		$data =~ s/address1=\S+/address1=$ip\/$cidr,$gw/;
+		$data =~ s/address1=[0-9\.,\/]+/address1=$ip\/$cidr,$gw/;
 		if (@nss) {
 			my $nss = join(";", @nss);
-			$data =~ s/dns=\S+/dns=$nss/;
+			$data =~ s/dns=\S+/dns=$nss/g;
 			}
 		else {
-			$data =~ s/dns=\S+\n//;
+			$data =~ s/dns=\S+\n//g;
 			}
 		if (@search) {
 			my $search = join(";", @search);
-			$data =~ s/dns-search=\S+/dns-search=$search/;
+			$data =~ s/dns-search=\S+/dns-search=$search/g;
 			}
 		else {
-			$data =~ s/dns-search=\S+\n//;
+			$data =~ s/dns-search=\S+\n//g;
 			}
+		$data =~ s/method=\S+/method=manual/;
 		}
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
