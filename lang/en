@@ -577,6 +577,7 @@ create_edockervolsrc=Volume source directory in row $1 must be a full path
 create_edockervolname=Selected volume in row $1 does not exist on host
 create_edockervoldest=Volume mount directory in row $1 must be a full path
 create_edockervolfrom=Container to copy volumes from is hosted on $2, but this container is on host $1
+create_edockerhost=Container hostname cannot contain a .
 create_edockertemplate=No Docker image selected
 create_edockertemplate2=Docker image $1 does not exist
 create_edockercmd=Missing command to run in container
