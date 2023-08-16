@@ -901,7 +901,7 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/rc.conf",
 		 "/etc/webmin/virtual-server/config",
 		 "/etc/udev/rules.d/80-net-name-slot.rules",
-		 "/etc/netplan/50-cloud-init.yaml",
+		 "/etc/netplan/*.yaml",
 		 "/etc/NetworkManager/system-connections/*.nmconnection") {
 	my $fixpath = "$dir/$fix";
 	if ($fixpath =~ /\*/) {
@@ -1000,7 +1000,7 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		# Create this file empty, to use old-style interfaces
 		$data = "";
 		}
-	elsif ($fix eq "/etc/netplan/50-cloud-init.yaml") {
+	elsif ($fix =~ /^\/etc\/netplan/) {
 		# Create full Netplan config
 		$data = "network:\n".
 			"    version: 2\n".
