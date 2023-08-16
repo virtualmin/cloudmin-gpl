@@ -14627,7 +14627,7 @@ elsif ($flash == 2) {
 	# Use NoVNC, connecting to a forwarded port
 	my $eflag = $wsencrypt ? "&encrypt=1" : "";
 	my $rand = time().$$;
-	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&path=&password=".&urlize($pass)."&rand=".$rand.$eflag."' width=100% height=640>\n";
+	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&path=&password=".&urlize($pass)."&rand=".$rand.$eflag."' width=100% height=1024>\n";
 	$rv .= "</iframe>\n";
 	}
 if ($masterport) {
