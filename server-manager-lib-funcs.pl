@@ -2015,7 +2015,9 @@ return $status ? $out : undef;
 #				[device-file?], [checksum?], [checksum-size],
 #				[via-master])
 # Copy a file from one system to another, directly if possible. Returns undef
-# if OK, or an error message on failure.
+# if OK, or an error message on failure. If viamaster is 0, a direct transfer
+# will be tried first, then via the master system. If 1, the transfer is always
+# via the master. If 2, only a direct transfer is tried.
 sub transfer_file_between_servers
 {
 my ($srcserver, $destserver, $src, $dest, $device, $checksum, $checksize,
@@ -2062,7 +2064,7 @@ else {
 		}
 
 	# Just download to master and re-upload
-	if ($viamaster || $dest->{'ssh_sudo'}) {
+	if ($viamaster == 1 || $dest->{'ssh_sudo'}) {
 		goto VIAMASTER;
 		}
 
@@ -2212,7 +2214,7 @@ else {
 		}
 
 	VIAMASTER:
-	if ($rv || $viamaster) {
+	if ($rv && $viamaster != 2 || $viamaster == 1) {
 		# Fall back to fetching to master and uploading
 		my $temp = &transname();
 		$rv = undef;
