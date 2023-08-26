@@ -14962,6 +14962,26 @@ $vermod = "$ver $mod" ;
 return wantarray ? ($ver, $mod) : $vermod;
 }
 
+# get_gzip_command(&server)
+# Returns either gzip or pigz
+sub get_gzip_command
+{
+my ($server) = @_;
+my $mode = defined($server->{'pigz'}) ? $server->{'pigz'} : $config{'pigz'};
+my $rv = $mode ? "pigz" : "gzip";
+$rv .= " ".$config{'zip_args'} if ($config{'zip_args'});
+return $rv;
+}
+
+# get_ungzip_command(&server)
+# Returns either gunzip or pigz
+sub get_ungzip_command
+{
+my ($server) = @_;
+my $mode = defined($server->{'pigz'}) ? $server->{'pigz'} : $config{'pigz'};
+return $mode ? "unpigz" : "gunzip";
+}
+
 $done_server_manager_lib_funcs = 1;
 
 1;
