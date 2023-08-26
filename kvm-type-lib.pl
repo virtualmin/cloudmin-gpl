@@ -6229,8 +6229,9 @@ my ($cmd, $outfile);
 if (!$image->{'nocompress'}) {
 	# Compress disk image
 	&start_background_dot_printer($text{'mkimage_xengzip'});
-	$cmd = $isdevice ? &dd_command($fsfile, undef)." | gzip -c"
-			 : "gzip -c ".quotemeta($fsfile);
+	my $gzip = &get_gzip_command($vhost);
+	$cmd = $isdevice ? &dd_command($fsfile, undef)." | ".$gzip." -c"
+			 : $gzip." -c ".quotemeta($fsfile);
 	$outfile = $image->{'id'}.".ext3.gz";
 	}
 else {

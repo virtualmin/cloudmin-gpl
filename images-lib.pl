@@ -2127,6 +2127,7 @@ my ($server, $img, $imgdestfile, $copyserver) = @_;
 my @imgfiles = split(/\s+/, $img->{'files'});
 my $temp = "/tmp/$$.$server->{'host'}.gunzip";
 $server->{$server->{'manager'}.'_temp'} = $temp;
+my $gunzip = &get_ungzip_command($server);
 if ($server->{'imagetemp'}) {
 	# Image was already copied to the destination, and so can be
 	# uncompresses and put into place there
@@ -2138,7 +2139,7 @@ if ($server->{'imagetemp'}) {
 			"| ".&dd_command(undef, $imgdestfile) :
 			"> ".quotemeta($imgdestfile);
 		($out, $ex, $err) = &execute_command_on_server($copyserver,
-			"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
+			"($gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
 			" echo SERVER-MANAGER-COMPLETE ||".
 			" echo SERVER-MANAGER-FAILED)".
 			" >$temp 2>&1 </dev/null &");
@@ -2172,7 +2173,7 @@ else {
 			my ($srcserver, $srcpath) = &get_image_dest_path($dest);
 			my $cmd = &dd_command(undef, $imgdestfile);
 			if (!$img->{'nocompress'}) {
-				$cmd = "gunzip -c | ".$cmd;
+				$cmd = "$gunzip -c | ".$cmd;
 				}
 			my $err;
 			my @st = &stat_file_on_server(
