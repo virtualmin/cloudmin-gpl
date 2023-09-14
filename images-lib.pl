@@ -871,10 +871,14 @@ my $network = &net::compute_network($ip, $netmask);
 my $cidr = &net::mask_to_prefix($netmask);
 
 # Work out mandatory files .. on redhat-ish systems, always create ifcfg- file
-# for primary interface.
+# for primary interface UNLESS it looks like NetworkManager is in use.
 my %mand;
-if (&stat_file_on_server($vhost, $dir."/etc/sysconfig/network-scripts")) {
-	$mand{"/etc/sysconfig/network-scripts/ifcfg-$iface"} = 1;
+my $ns = "/etc/sysconfig/network-scripts";
+if (&stat_file_on_server($vhost, $dir.$ns)) {
+	if (!&stat_file_on_server($vhost, $dir."/etc/NetworkManager/system-connections") ||
+	    &stat_file_on_server($vhost, $dir.$ns."/ifcfg-$iface")) {
+		$mand{$ns."/ifcfg-$iface"} = 1;
+		}
 	$mand{"/etc/udev/rules.d/80-net-name-slot.rules"} = 1;
 	}
 
@@ -897,8 +901,14 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		 "/etc/rc.conf",
 		 "/etc/webmin/virtual-server/config",
 		 "/etc/udev/rules.d/80-net-name-slot.rules",
-		 "/etc/netplan/50-cloud-init.yaml") {
+		 "/etc/netplan/*.yaml",
+		 "/etc/NetworkManager/system-connections/*.nmconnection") {
 	my $fixpath = "$dir/$fix";
+	if ($fixpath =~ /\*/) {
+		my $globs = &glob_on_server($vhost, $fixpath);
+		next if (!ref($globs) || !@$globs);
+		$fixpath = $globs->[0];
+		}
 	my $temppath = &transname();
 	my $err = &get_file_from_server($vhost, $fixpath, $temppath);
 	next if ($err && !$mand{$fix});
@@ -990,7 +1000,7 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 		# Create this file empty, to use old-style interfaces
 		$data = "";
 		}
-	elsif ($fix eq "/etc/netplan/50-cloud-init.yaml") {
+	elsif ($fix =~ /^\/etc\/netplan/) {
 		# Create full Netplan config
 		$data = "network:\n".
 			"    version: 2\n".
@@ -1007,6 +1017,25 @@ foreach my $fix ("/etc/sysconfig/network-scripts/ifcfg-$iface",
 			my $search = join(",", @search);
 			$data .= "                search: [$search]\n";
 			}
+		}
+	elsif ($fix =~ /^\/etc\/NetworkManager\/system-connections/) {
+		# Update address in NetworkManager config
+		$data =~ s/address1=[0-9\.,\/]+/address1=$ip\/$cidr,$gw/;
+		if (@nss) {
+			my $nss = join(";", @nss);
+			$data =~ s/dns=\S+/dns=$nss/g;
+			}
+		else {
+			$data =~ s/dns=\S+\n//g;
+			}
+		if (@search) {
+			my $search = join(";", @search);
+			$data =~ s/dns-search=\S+/dns-search=$search/g;
+			}
+		else {
+			$data =~ s/dns-search=\S+\n//g;
+			}
+		$data =~ s/method=\S+/method=manual/;
 		}
 	&open_tempfile(FIXED, ">$temppath");
 	&print_tempfile(FIXED, $data);
@@ -2098,6 +2127,7 @@ my ($server, $img, $imgdestfile, $copyserver) = @_;
 my @imgfiles = split(/\s+/, $img->{'files'});
 my $temp = "/tmp/$$.$server->{'host'}.gunzip";
 $server->{$server->{'manager'}.'_temp'} = $temp;
+my $gunzip = &get_ungzip_command($server);
 if ($server->{'imagetemp'}) {
 	# Image was already copied to the destination, and so can be
 	# uncompresses and put into place there
@@ -2109,7 +2139,7 @@ if ($server->{'imagetemp'}) {
 			"| ".&dd_command(undef, $imgdestfile) :
 			"> ".quotemeta($imgdestfile);
 		($out, $ex, $err) = &execute_command_on_server($copyserver,
-			"(gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
+			"($gunzip -c ".quotemeta($imgfile)." ".$writer." &&".
 			" echo SERVER-MANAGER-COMPLETE ||".
 			" echo SERVER-MANAGER-FAILED)".
 			" >$temp 2>&1 </dev/null &");
@@ -2143,7 +2173,7 @@ else {
 			my ($srcserver, $srcpath) = &get_image_dest_path($dest);
 			my $cmd = &dd_command(undef, $imgdestfile);
 			if (!$img->{'nocompress'}) {
-				$cmd = "gunzip -c | ".$cmd;
+				$cmd = "$gunzip -c | ".$cmd;
 				}
 			my $err;
 			my @st = &stat_file_on_server(

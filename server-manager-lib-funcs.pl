@@ -1546,7 +1546,7 @@ else {
 		$sshcmd .= quotemeta($remotefile)."/\\*";
 		}
 	else {
-		$sshcmd .= "\"".quotemeta($remotefile)."\"";
+		$sshcmd .= &ssh_quote_path($remotefile);
 		}
 	$sshcmd .= " ".quotemeta($localfile);
 	my ($status, $out) =
@@ -1720,6 +1720,37 @@ $rv .= " " if ($rv);
 return $rv;
 }
 
+# ssh_quote_path(path)
+# Quote a path for passing to the SCP or SSH command
+sub ssh_quote_path
+{
+my ($path) = @_;
+my $this = &get_this_managed_server();
+my $ver = $this->{'ssh_version'} || &get_ssh_version($this);
+if (&compare_versions($ver, "7.4") >= 0) {
+	return quotemeta($path);
+	}
+return "\"".quotemeta($path)."\"";
+}
+
+# get_ssh_version(&server)
+# Returns the version number of the SSH command
+sub get_ssh_version
+{
+my ($server) = @_;
+my $id = $server ? $server->{'id'} : 0;
+if (!$get_ssh_version_cache{$id}) {
+	my $out = $id == 0 ? &backquote_command("ssh -V 2>&1")
+			   : &execute_command_on_server($server, "ssh -V 2>&1");
+	if ($out =~ /OpenSSH_(\S+)/i) {
+		$ver = $1;
+		$ver =~ s/,$//;
+		$get_ssh_version_cache{$id} = $ver;
+		}
+	}
+return $get_ssh_version_cache{$id};
+}
+
 # clear_ssh_host_key(&server)
 # Remove the key for some system from .ssh/known_hosts on the Cloudmin master
 sub clear_ssh_host_key
@@ -1882,7 +1913,7 @@ else {
 		}
 	$sshcmd .= " $server->{'ssh_user'}\@".
 		   ($server->{'ip'} || $server->{'host'}).":".
-		   "\"".quotemeta($remotefile)."\"";
+		   &ssh_quote_path($remotefile);
 	my ($status, $out) = &run_ssh_command($sshcmd, $server->{'ssh_pass'},
 					      $timeout);
 	return $status ? $out : undef;
@@ -1984,7 +2015,9 @@ return $status ? $out : undef;
 #				[device-file?], [checksum?], [checksum-size],
 #				[via-master])
 # Copy a file from one system to another, directly if possible. Returns undef
-# if OK, or an error message on failure.
+# if OK, or an error message on failure. If viamaster is 0, a direct transfer
+# will be tried first, then via the master system. If 1, the transfer is always
+# via the master. If 2, only a direct transfer is tried.
 sub transfer_file_between_servers
 {
 my ($srcserver, $destserver, $src, $dest, $device, $checksum, $checksize,
@@ -2031,7 +2064,7 @@ else {
 		}
 
 	# Just download to master and re-upload
-	if ($viamaster || $dest->{'ssh_sudo'}) {
+	if ($viamaster == 1 || $dest->{'ssh_sudo'}) {
 		goto VIAMASTER;
 		}
 
@@ -2181,7 +2214,7 @@ else {
 		}
 
 	VIAMASTER:
-	if ($rv || $viamaster) {
+	if ($rv && $viamaster != 2 || $viamaster == 1) {
 		# Fall back to fetching to master and uploading
 		my $temp = &transname();
 		$rv = undef;
@@ -2976,11 +3009,10 @@ if (defined(&$dfunc)) {
 	return $rv if ($rv ne 'FALLBACK');	# Type-specific function has
 						# asked to fallback to ssh
 	}
-my ($out, $ex, $err) = &execute_command_on_server($server, "echo $glob", $short_timeout);
+my ($out, $ex, $err) = &execute_command_on_server($server, "ls -d $glob", $short_timeout);
 return $err if ($err);
 return $out if ($ex);
-$out =~ s/\r|\n//g;
-return [ grep { $_ ne $glob } split(/\s+/, $out) ];
+return [ grep { $_ ne $glob && $_ ne "" } split(/\r?\n/, $out) ];
 }
 
 # disk_usage_on_server(&server, dir, [include-counts])
@@ -3992,6 +4024,12 @@ if ($info->{'kernel'} && $info->{'kernel'}->{'os'} =~ /FreeBSD/i && !$got_io &&
 			$got_more_info = 1;
 			}
 		}
+	}
+
+# Save SSH version
+if (&can_ssh_status($server) && (!$info->{'ssh_version'} || $regen)) {
+	$info->{'ssh_version'} = &get_ssh_version($server);
+	$got_more_info = 1;
 	}
 
 if ($got_more_info) {
@@ -5271,9 +5309,11 @@ if (!&has_command_on_server($server, "perl") ||
 		}
 	}
 
-# Make sure the system has Perl
+# Make sure the system has Perl and gpg
 my $perlpath = &has_command_on_server($server, "perl");
 $perlpath || return (undef, "Perl is not installed");
+my $gpgpath = &has_command_on_server($server, "gpg");
+$gpgpath || return (undef, "GPG is not installed");
 
 # Upload Webmin public key if needed
 my $keytemp = &tempname_on_server($server, "jcameron-key.asc");
@@ -14589,7 +14629,7 @@ elsif ($flash == 2) {
 	# Use NoVNC, connecting to a forwarded port
 	my $eflag = $wsencrypt ? "&encrypt=1" : "";
 	my $rand = time().$$;
-	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&path=&password=".&urlize($pass)."&rand=".$rand.$eflag."' width=100% height=640>\n";
+	$rv .= "<iframe src='novnc/vnc_lite.html?host=$masterhost&port=$wsmasterport&path=&password=".&urlize($pass)."&rand=".$rand.$eflag."' width=100% height=1024>\n";
 	$rv .= "</iframe>\n";
 	}
 if ($masterport) {
@@ -14920,6 +14960,26 @@ if ($vermod =~ /\..*?\./i) {
 	}
 $vermod = "$ver $mod" ;
 return wantarray ? ($ver, $mod) : $vermod;
+}
+
+# get_gzip_command(&server)
+# Returns either gzip or pigz
+sub get_gzip_command
+{
+my ($server) = @_;
+my $mode = defined($server->{'pigz'}) ? $server->{'pigz'} : $config{'pigz'};
+my $rv = $mode ? "pigz" : "gzip";
+$rv .= " ".$config{'zip_args'} if ($config{'zip_args'});
+return $rv;
+}
+
+# get_ungzip_command(&server)
+# Returns either gunzip or pigz
+sub get_ungzip_command
+{
+my ($server) = @_;
+my $mode = defined($server->{'pigz'}) ? $server->{'pigz'} : $config{'pigz'};
+return $mode ? "unpigz" : "gunzip";
 }
 
 $done_server_manager_lib_funcs = 1;

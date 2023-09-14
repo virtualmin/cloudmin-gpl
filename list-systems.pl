@@ -231,6 +231,9 @@ if ($multi) {
 		if ($k->{'arch'}) {
 			print "    CPU architecture: $k->{'arch'}\n";
 			}
+		if ($info->{'ssh_version'}) {
+			print "    SSH version: $info->{'ssh_version'}\n";
+			}
 
 		# Login information
 		if ($server->{'ssh_nologin'}) {

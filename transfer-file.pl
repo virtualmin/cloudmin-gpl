@@ -21,7 +21,8 @@ correct way.
 
 By default Cloudmin will transfer the file directly from the source system
 to the destination. However, you can force the transfer to go via the master
-system instead with the C<--via-master> flag.
+system instead with the C<--via-master> flag. Or use C<--direct> to only
+attempt a direct transfer.
 
 =head1 Example usage
 
@@ -73,6 +74,9 @@ while(@ARGV > 0) {
 	elsif ($a eq "--via-master") {
 		$viamaster = 1;
 		}
+	elsif ($a eq "--direct") {
+		$viamaster = 2;
+		}
 	elsif ($a eq "--multiline") {
 		$multiline = 1;
 		}
@@ -119,7 +123,7 @@ print "                       --file path\n";
 print "                      [--destfile path]\n";
 print "                      [--device-file]\n";
 print "                      [--checksum [--checksum-size bytes]]\n";
-print "                      [--via-master]\n";
+print "                      [--via-master | --direct]\n";
 exit(1);
 }
 

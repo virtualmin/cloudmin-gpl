@@ -1591,8 +1591,8 @@ if ($gzfile) {
 		else {
 			# Create gzip file from dd of disk
 			my $ddcmd = "(".&dd_command($dev, undef).
-				    " | gzip $config{'zip_args'} -c >".
-				    $gzfile.$ext.") 2>&1";
+				    " | ".&get_gzip_command($vhost).
+				    " -c >".$gzfile.$ext.") 2>&1";
 			$ddcmd = &niced_backup_command($vhost, $ddcmd);
 			my ($out, $ex, $err) = &execute_command_on_server(
 						$vhost, $ddcmd);
@@ -1637,7 +1637,7 @@ else {
 				}
 			else {
 				my $ddcmd = &dd_command($idisk->{'real'},undef).
-					    " | gzip -c $config{'zip_args'}";
+				    " | ".&get_gzip_command($vhost)." -c";
 				$ddcmd = &niced_backup_command(
 					$iscsiserver, $ddcmd);
 				$err = &pipe_command_to_server(
@@ -1651,7 +1651,7 @@ else {
 		else {
 			# Create gzip file from dd of disk
 			my $ddcmd = &dd_command($dev, undef).
-				    " | gzip -c $config{'zip_args'}";
+				    " | ".&get_gzip_command($vhost)." -c";
 			$ddcmd = &niced_backup_command($vhost, $ddcmd);
 			$err = &pipe_command_to_server(
 					$vhost, $destserver, $ddcmd,
@@ -1924,7 +1924,8 @@ if ($gzip_format) {
 			my @st = &stat_file_on_server($vhost, $localfile.$ext);
 			if ($st[7]) {
 				my $ddcmd =
-				    "(gunzip -c ".quotemeta($localfile.$ext).
+				    "(".&get_gunzip_command($vhost).
+				    " -c ".quotemeta($localfile.$ext).
 				    " | ".&dd_command(undef, $dev).") 2>&1";
 				$ddcmd = &niced_backup_command($vhost, $ddcmd);
 				my ($out, $ex, $err) =
@@ -1965,7 +1966,8 @@ if ($gzip_format) {
 							$idisk);
 					last;
 					}
-				my $ddcmd = "(gunzip -c | ".
+				my $ddcmd =
+				    "(".&get_gunzip_command($vhost)." -c | ".
 				    &dd_command(undef, $idisk->{'real'}).
 				    ") 2>&1";
 				$ddcmd = &niced_backup_command(
@@ -1980,8 +1982,9 @@ if ($gzip_format) {
 				}
 			elsif ($st[7]) {
 				# Non-iSCSI disk, in a regular file
-				my $ddcmd = "(gunzip -c | ".
-					    &dd_command(undef, $dev).") 2>&1";
+				my $ddcmd =
+				    "(".&get_gunzip_command($vhost)." -c | ".
+				    &dd_command(undef, $dev).") 2>&1";
 				$ddcmd = &niced_backup_command($vhost, $ddcmd);
 				my $err = &pipe_command_from_server(
 					$destserver, $vhost, $ddcmd,
@@ -2005,7 +2008,8 @@ elsif ($server->{$manager.'_filesystem_lv'}) {
 		foreach my $d (@lvmdisks) {
 			my $devfile = $d->{'real'};
 			$devfile =~ s/^(.*)\///;
-			my $tarcmd = "gunzip -c ".quotemeta($localfile).
+			my $tarcmd = &get_gunzip_command($vhost)." -c ".
+				     quotemeta($localfile).
 				     " | tar Oxpf - $devfile ./$devfile".
 				     " | ".&dd_command(undef, $d->{'real'}).
 				     "2>&1";
@@ -2026,7 +2030,7 @@ elsif ($server->{$manager.'_filesystem_lv'}) {
 		foreach my $d (@lvmdisks) {
 			my $devfile = $d->{'real'};
 			$devfile =~ s/^(.*)\///;
-			my $tarcmd = "gunzip -c ".
+			my $tarcmd = &get_gunzip_command($vhost)." -c ".
 				     " | tar Oxpf - $devfile ./$devfile".
 				     " | ".&dd_command(undef, $d->{'real'});
 			$tarcmd = &niced_backup_command($vhost, $tarcmd);
@@ -2050,7 +2054,8 @@ else {
 		&start_background_dot_printer(&text('rrun_untarring2',
 				    $server->{'host'}, $dir));
 		my $tarcmd = "cd ".quotemeta($dir)." && ".
-			     "gunzip -c ".quotemeta($localfile)." | tar xpf -";
+			     &get_gunzip_command($vhost)." -c ".
+			     quotemeta($localfile)." | tar xpf -";
 		$tarcmd = &niced_backup_command($vhost, $tarcmd);
 		my ($out, $ex, $err) = &execute_command_on_server(
 					$vhost, $tarcmd);
@@ -2065,7 +2070,7 @@ else {
 		&start_background_dot_printer(&text('rrun_untarring5',
 			    $server->{'host'}, $dir, $destserver->{'host'}));
 		my $tarcmd = "cd ".quotemeta($dir)." && ".
-			     "gunzip -c | tar xpf -";
+			     &get_gunzip_command($vhost)." -c | tar xpf -";
 		$tarcmd = &niced_backup_command($vhost, $tarcmd);
 		my $err = &pipe_command_from_server($destserver, $vhost,
 						    $tarcmd, $dest->{'path'});
@@ -2685,12 +2690,13 @@ else {
 sub tar_gzip_command
 {
 my ($vhost, $dir, $file) = @_;
-my $use_tar = !$config{'zip_args'} && &tar_supports_gzip($vhost);
+my $gzip = &get_gzip_command($vhost);
+my $use_tar = $gzip !~ /pigz/ && !$config{'zip_args'} && &tar_supports_gzip($vhost);
 if ($use_tar) {
 	return "tar czf ".($file ? quotemeta($file) : "-")." ".$dir;
 	}
 else {
-	return "tar cf - ".$dir." | gzip -c ".$config{'zip_args'}.
+	return "tar cf - ".$dir." | ".$gzip." -c".
 	       ($file ? " >".quotemeta($file) : "");
 	}
 }
@@ -2701,12 +2707,13 @@ else {
 sub tar_gunzip_command
 {
 my ($vhost, $file) = @_;
-my $use_tar = &tar_supports_gzip($vhost);
+my $gunzip = &get_gunzip_command($vhost);
+my $use_tar = $gunzip !~ /unpigz/ && &tar_supports_gzip($vhost);
 if ($use_tar) {
 	return "tar xpzf ".($file ? quotemeta($file) : "-");
 	}
 else {
-	return "gunzip -c ".quotemeta($file)." | tar xpf -";
+	return $gunzip." -c ".quotemeta($file)." | tar xpf -";
 	}
 }
 

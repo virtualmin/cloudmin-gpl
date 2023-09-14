@@ -79,3 +79,4 @@ image_nostream=0
 image_nodirect=0
 snap_pct=10
 xen_maxvcpus=64
+pigz=0
