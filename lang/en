@@ -3258,6 +3258,7 @@ smove_disksnone=.. no disk images were copied
 smove_xenconf=Fixing and copying Xen config file $1 ..
 smove_exenconf=.. error reading Xen config : $1
 smove_xenconfdone=.. copied to $1
+smove_ekernel=.. failed to setup Xen kernel : $1
 smove_starting=Starting up on new host system ..
 smove_startfailed=.. startup failed : $1
 smove_delfiles=Deleting $1 disk and config files from original host ..
