@@ -8508,8 +8508,11 @@ if (&redhat_server_type($vhost)) {
 
 	# Install KVM packages
 	&$first_print($text{'kvminstall_kvm'});
-	my ($ok, $err) = &install_package_on_server($vhost,
-		"kvm kvm-qemu-img qemu-kvm qemu-img qemu-kvm-tools kvm-tools bridge-utils");
+	my $pkgs = "kvm-qemu-img qemu-kvm qemu-img qemu-kvm-tools kvm-tools bridge-utils";
+	my ($ok, $err) = &install_package_on_server($vhost, "kvm ".$pkgs);
+	if (!$ok) {
+		($ok, $err) = &install_package_on_server($vhost, $pkgs);
+		}
 	if (!$ok) {
 		&$second_print(&text('kvminstall_epkgs', $err));
 		return 0;
