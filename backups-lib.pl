@@ -3109,5 +3109,21 @@ foreach my $disk (@$disks[1 .. (@$disks-1)]) {
 return $lasterr;
 }
 
+# get_gunzip_command()
+# Returns the full path to the gunzip-compatible command
+sub get_gunzip_command
+{
+if (!$config{'pigz'}) {
+	return (&has_command('gunzip') || 'gunzip').' -f';
+	}
+elsif (&has_command('unpigz')) {
+	return &has_command('unpigz').' -f';
+	}
+else {
+	# Fall back to using -d option
+	return (&has_command('pigz') || 'pigz').' -d';
+	}
+}
+
 1;
 
