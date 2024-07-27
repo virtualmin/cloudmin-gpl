@@ -5316,10 +5316,10 @@ my $gpgpath = &has_command_on_server($server, "gpg");
 $gpgpath || return (undef, "GPG is not installed");
 
 # Upload Webmin public key if needed
-my $keytemp = &tempname_on_server($server, "jcameron-key.asc");
+my $keytemp = &tempname_on_server($server, "developers-key.asc");
 if ($src eq "yum" || $src eq "apt") {
 	my $err = &put_file_to_server($server,
-			"$module_root_directory/jcameron-key.asc",
+			"$module_root_directory/developers-key.asc",
 			$keytemp);
 	if ($err) {
 		return (undef, "Failed to upload Webmin public key : $err");
@@ -5385,7 +5385,7 @@ elsif ($type eq "dpkg" && $src eq "apt") {
 
 	# Now call apt-get to do the install
 	&execute_command_on_server($server, "apt-key add $keytemp");
-	&execute_command_on_server($server, "gpg --dearmor $keytemp >/etc/apt/trusted.gpg.d/jcameron-key.gpg");
+	&execute_command_on_server($server, "gpg --dearmor $keytemp >/usr/share/keyrings/webmin-developers-key.gpg");
 	my ($wout, $wex, $werr) = &execute_command_on_server($server,
 				"apt-get -y --force-yes -f install webmin");
 	return (undef, $werr) if ($werr);
@@ -12914,6 +12914,12 @@ if ($rhr =~ /CentOS/i) {
 	}
 elsif ($rhr =~ /Redhat/i) {
 	$rv = "redhat";
+	}
+elsif ($rhr =~ /Alma/i) {
+	$rv = "alma";
+	}
+elsif ($rhr =~ /Rocky/i) {
+	$rv = "rocky";
 	}
 elsif ($rhr =~ /Fedora/i) {
 	$rv = "fedora";
