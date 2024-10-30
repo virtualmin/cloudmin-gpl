@@ -110,7 +110,8 @@ if ($in{'dest_mode'} == 7) {
 	}
 else {
 	# Show progress
-	&ui_print_header(&server_in($server), $text{'onebackup_title'}, "");
+	&ui_print_unbuffered_header(&server_in($server),
+				    $text{'onebackup_title'}, "");
 
 	print "<b>",&text('onebackup_destdesc', $server->{'host'},
 		    &nice_backup_destination($backup->{'dest'})),"</b><p>\n";
