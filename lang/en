@@ -5065,6 +5065,7 @@ clone_host=New hostname prefix
 clone_desc=Description for new system
 clone_live=Keep source system up while cloning?
 clone_snap=Create fast snapshot copy?
+clone_start=Startup the new clone VM?
 clone_ok=Create Clone
 clone_shutting=Shutting down original system before cloning ..
 clone_starting=Starting up original system after cloning ..
