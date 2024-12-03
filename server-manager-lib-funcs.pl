@@ -2217,14 +2217,18 @@ else {
 	if ($rv && $viamaster != 2 || $viamaster == 1) {
 		# Fall back to fetching to master and uploading
 		my $temp = &transname();
-		$rv = undef;
-		my $err = &get_file_from_server(
+		my $err2 = &get_file_from_server(
 				$srcserver, $src, $temp, $device);
-		$rv = undef;
-		$rv = "Download to Cloudmin master failed : $err" if ($err);
-		$err = &put_file_to_server($destserver, $temp, $dest, $device);
+		if ($err2) {
+			$rv .= "Download to Cloudmin master failed : $err2";
+			}
+		else {
+			$err2 = &put_file_to_server(
+					$destserver, $temp, $dest, $device);
+			$rv .= "Upload from Cloudmin master failed : $err2"
+				if ($err2);
+			}
 		&unlink_file($temp);
-		$rv = "Upload from Cloudmin master failed : $err" if ($err);
 		}
 	}
 
