@@ -10472,7 +10472,8 @@ else {
 	$server->{'no_webmin_login'} = 1;
 	}
 $server->{'ssl'} = $in->{'ssl'} ? 1 : 0;
-$in->{'port'} =~ /^\d+$/ || return $text{'add_eport'};
+$in->{'webmin_mode'} == 0 || $in->{'port'} =~ /^\d+$/ ||
+	return $text{'add_eport'};
 $server->{'port'} = $in->{'port'};
 $server->{'checkssl'} = $in->{'checkssl'};
 return undef;
@@ -10568,7 +10569,8 @@ my $must_pass = !&can_action(undef, "sshkeys") &&
 	        !$server->{'key'} &&
 		!$server->{'ssh_nologin'};
 
-$in->{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i || return $text{'add_euuser'};
+$in->{'auth_mode'} == 2 || $in->{'uuser'} =~ /^[a-z0-9\.\-\_]+$/i ||
+	return $text{'add_euuser'};
 $server->{'ssh_user'} = $in->{'uuser'};
 $server->{'ssh_sudo'} = $in->{'usudo'};
 if (!$in->{'uport_def'}) {
