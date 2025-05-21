@@ -8227,12 +8227,6 @@ if ($status eq 'down' || $status eq 'nossh' || $status eq 'nohost' ||
 			    'cat' => 'manage',
 			    'link' => "transfer_form.cgi?id=$server->{'id'}" });
 		}
-	if (&can_action($server, "transfer")) {
-		push(@rv, { 'id' => 'filemanager',
-			    'desc' => $text{'edit_filemanager'},
-			    'cat' => 'manage',
-			    'link' => "filemanager.cgi?id=$server->{'id'}" });
-		}
 	if ($status ne 'paused' && $status ne 'noping' && $status ne 'nossh' &&
 	    !$nostart && &can_action($server, "startup")) {
 		push(@rv, { 'id' => 'startup',

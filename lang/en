@@ -1153,7 +1153,6 @@ edit_refresh=Refresh Status
 edit_regen=Refresh Status Fully
 edit_delete=Delete System
 edit_transfer=Transfer Files
-edit_filemanager=File Manager
 edit_nodoms=This system is not hosting any Virtualmin domains yet.
 edit_aheader=Authentication options
 edit_auth=SSH login mode
