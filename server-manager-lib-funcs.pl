@@ -13141,6 +13141,21 @@ if (!$totalfail) {
 		&$second_print(&text('save_refreshdone2',
 			       &describe_status($dest, 1, 1)));
 		}
+
+	# Update Virtualmin IP addresses
+	if ($newserver->{'status'} eq 'virt') {
+		my @doms = &get_server_domains($newserver);
+		if (@doms) {
+			&$first_print($text{'create_domips'});
+			my $err = &update_virtualmin_ips($newserver);
+			if ($err) {
+				&$second_print(&text('create_domipsfailed', $err));
+				}
+			else {
+				&$second_print($text{'create_done'});
+				}
+			}
+		}
 	}
 
 if ($totalfail) {
