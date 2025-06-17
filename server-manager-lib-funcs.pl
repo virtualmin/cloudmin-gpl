@@ -13042,6 +13042,8 @@ if (defined(&$ckfunc)) {
 	return (undef, $err) if ($err);
 	}
 
+&run_system_script($newserver, 'before', 'clone');
+
 # Shut the system down if running
 my $was_up = 0;
 if ($server->{'status'} ne 'down') {
@@ -13157,6 +13159,8 @@ if (!$totalfail) {
 			}
 		}
 	}
+
+&run_system_script($newserver, 'after', 'clone');
 
 if ($totalfail) {
 	# Don't even bother to save the new system
