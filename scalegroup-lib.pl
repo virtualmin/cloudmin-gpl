@@ -528,8 +528,9 @@ else {
 	&obtain_lock_server($srcserver);
 	my $newdesc = $scalegroup->{'desc'}." system ".$num;
 	my $err;
-	($newserver, $err) = &clone_system($srcserver, $newhost, $newdesc,
-					      undef, 0, $vhost);
+	($newserver, $err) = &clone_system(
+		$srcserver, $newhost, $newdesc, undef,
+		$scalegroup->{'snapshot'}, $vhost);
 	&release_lock_server($srcserver);
 	return $err if ($err);
 	}

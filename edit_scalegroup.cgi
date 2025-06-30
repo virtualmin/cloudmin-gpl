@@ -172,6 +172,10 @@ else {
 		}
 	print &ui_table_row($text{'scalegroup_dests'},
 		&ui_radio_table("dest_mode", $dmode, \@dtable));
+
+	# Clone with snapshot if possible?
+	print &ui_table_row($text{'scalegroup_snapshot'},
+		&ui_yesno_radio("snapshot", $scalegroup->{'snapshot'}));
 	}
 
 print &ui_hidden_table_end("system");

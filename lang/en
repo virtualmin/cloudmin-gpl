@@ -5383,6 +5383,7 @@ scalegroup_egone=Group no longer exists!
 scalegroup_header1=Auto-scaling group details
 scalegroup_desc=Scaling group description
 scalegroup_hosttmpl=Hostname template
+scalegroup_snapshot=Clone using snapshot if possible?
 scalegroup_clone=Source system to clone
 scalegroup_dests=Host systems to create on
 scalegroup_dests0=Any available host

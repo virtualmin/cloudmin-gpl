@@ -88,6 +88,7 @@ else {
 	else {
 		# System to clone
 		$scalegroup->{'clone'} = $in{'clone'};
+		$scalegroup->{'snapshot'} = $in{'snapshot'};
 
 		# Possible host systems
 		delete($scalegroup->{'dest_location'});
