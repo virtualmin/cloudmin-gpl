@@ -64,6 +64,8 @@ if ($multi) {
 		if ($s->{'clone'}) {
 			my $clone = &get_managed_server($s->{'clone'});
 			print "    Source system: $clone->{'host'}\n";
+			print "    Clone with snapshot: ",
+				($s->{'snapshot'} ? "Yes" : "No"),"\n";
 			}
 		elsif ($s->{'manager'} eq 'ec2') {
 			my ($account) =
