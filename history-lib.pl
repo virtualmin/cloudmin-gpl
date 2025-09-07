@@ -8,10 +8,10 @@ my ($info, $time, $server, $only) = @_;
 
 # Add disk usage, CPU and memory to historic stats, if we got them
 if (!-d $historic_info_dir) {
-        &make_dir($historic_info_dir, 0700);
+        &make_dir($historic_info_dir, 0700, 1);
         }
 if (!-d "$historic_info_dir/$server->{'id'}") {
-	&make_dir("$historic_info_dir/$server->{'id'}", 0700);
+	&make_dir("$historic_info_dir/$server->{'id'}", 0700, 1);
 	}
 my @stats;
 

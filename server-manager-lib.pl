@@ -52,9 +52,15 @@ foreach my $smt (@possible_server_management_types) {
 $ssh_keys_dir = "$module_config_directory/keys";
 $server_domains_dir = "$module_config_directory/domains";
 $server_collected_dir = "$module_config_directory/coll";
+if (!-d $server_collected_dir) {
+	$server_collected_dir = "$module_var_directory/coll";
+	}
 $this_server_status = "$module_config_directory/this";
 
 $historic_info_dir = "$module_config_directory/history";
+if (!-d $historic_info_dir) {
+	$historic_info_dir = "$module_var_directory/history";
+	}
 $historic_rotation_time = 7*24*60*60;
 
 $check_status_cmd = "$module_config_directory/status.pl";

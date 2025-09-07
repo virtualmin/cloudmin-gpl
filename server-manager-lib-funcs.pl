@@ -4533,7 +4533,7 @@ sub save_server_collected
 {
 my ($server, $info) = @_;
 if (!-d $server_collected_dir) {
-	&make_dir($server_collected_dir, 0700);
+	&make_dir($server_collected_dir, 0700, 1);
 	}
 if ($info) {
 	# Have info to write
