@@ -650,18 +650,6 @@ sub fix_hostname_config_files
 {
 my ($server, $ip, $host, $fullhost, $vhost, $dir, $resolv) = @_;
 
-# Check if the target has Virtualmin, and thus needs 127.0.0.1 in
-# /etc/resolv.conf
-my $vconfig = &transname();
-my $err = &get_file_from_server($vhost,
-		"$dir/etc/webmin/virtual-server/config", $vconfig);
-my $needs_localhost;
-if (!$err) {
-	my %vconfig;
-	&read_file($vconfig, \%vconfig);
-	$needs_localhost = $vconfig{'dns'};
-	}
-
 # Work out files we create regardless of whether the new system has them or not
 my @critical = ( "/etc/resolv.conf" );
 if ($server->{'manager'} ne 'zones') {
@@ -708,11 +696,6 @@ foreach my $fix ("/etc/hosts", "/etc/hostname", "/etc/HOSTNAME",
 		else {
 			# From xen host
 			$data = &get_file_data_from_server($vhost, $fix);
-			}
-		if ($needs_localhost &&
-		    $data !~ /nameserver\s+127.0.0.1/i) {
-			$data = "nameserver 127.0.0.1\n".
-				$data;
 			}
 		}
 	elsif ($fix eq "/etc/conf.d/hostname") {
