@@ -7143,7 +7143,7 @@ if (!@rv) {
 	my $ifaces = &list_active_server_interfaces($vhost);
 	if (ref($ifaces)) {
 		@rv = map { $_->{'fullname'} }
-			  grep { $_->{'fullname'} =~ /^br/ &&
+			  grep { $_->{'fullname'} =~ /^(br|bridge)/ &&
 				 $_->{'virtual'} eq '' } @$ifaces;
 		}
 	}
