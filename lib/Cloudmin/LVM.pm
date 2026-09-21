@@ -55,6 +55,36 @@ my $error = foreign_call('lvm', 'resize_logical_volume',
 die "Cannot grow logical volume: $error\n" if (defined($error) && length($error));
 }
 
+# command(self, operation, arguments...)
+# Runs fixed LVM commands and a device-mapper report, with bounded execution.
+# dm_info uses fixed fields and takes no command-line arguments.
+sub command
+{
+my ($self, $operation, @args) = @_;
+my $read = $operation eq 'vgs' || $operation eq 'lvs' || $operation eq 'dm_info';
+die "Unsupported LVM operation\n"
+	if ($operation !~ /\A(?:vgs|lvs|dm_info|lvcreate|lvextend|lvremove|lvchange)\z/);
+die "LVM changes are disabled in read-only mode\n"
+	if (!$read && ($self->{'readonly'} || is_readonly_mode()));
+return $self->{'runner'}->($operation, @args) if ($self->{'runner'});
+# Only production calls require Linux tools; fixture runners stop above.
+die "LVM storage requires the local Linux host\n" if ($^O ne 'linux');
+die "Install lvm2 to manage LVM storage\n" if (!-x '/usr/sbin/lvm');
+# Device-mapper reports include thin-pool mappings omitted from lvs.
+my @command = $operation eq 'dm_info'
+	? ('/usr/sbin/dmsetup', 'info', '--columns', '--noheadings', '--separator', '|',
+		'-o', 'uuid,major,minor,open')
+	: ('/usr/sbin/lvm', $operation, @args);
+my ($out, $err);
+my $status = execute_command(join(' ', map { quote_path($_) }
+	('/usr/bin/timeout', '--kill-after=5', '60', @command)),
+	undef, \$out, \$err, 0, $read, !$read);
+die "LVM $operation failed: ".substr($err || 'no diagnostic output', 0, 2000)."\n"
+	if ($status);
+die "LVM metadata is too large\n" if (length($out || '') > 16*1024**2);
+return $out;
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
