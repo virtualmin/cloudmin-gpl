@@ -96,6 +96,18 @@ die "Invalid LVM name\n" if (!defined($name) || ref($name) ||
 return $name;
 }
 
+# device_path(group, volume) returns the stable, escaped device-mapper name.
+# Use this canonical path so libvirt does not resolve a longer /dev/VG alias.
+sub device_path
+{
+my ($group, $volume) = map { name($_) } @_;
+s/-/--/g for ($group, $volume);
+my $name = "$group-$volume";
+die "The combined volume group and logical volume name is too long\n"
+	if (length($name) > 127);
+return "/dev/mapper/$name";
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
