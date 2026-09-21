@@ -15,4 +15,20 @@ die "Invalid submission attempt\n" if (ref($attempt) || $attempt !~ /\A[a-f0-9]{
 return $token.':attempt:'.$attempt;
 }
 
+# image_attempts(input) validates the optional per-image attempt identifiers.
+sub image_attempts
+{
+my ($input) = @_;
+# Non-browser clients may omit per-image attempts entirely.
+return {} if (!$input->{'image_attempts'});
+my $attempts = convert_from_json($input->{'image_attempts'});
+die "Invalid image submission attempts\n" if (ref($attempts) ne 'HASH' || keys(%$attempts) > 16);
+foreach my $attempt (values %$attempts) {
+	# Reject empty entries; each supplied image needs a valid attempt ID.
+	die "Invalid image submission attempts\n" if (!defined($attempt) || $attempt eq '');
+	key('', $attempt);
+	}
+return $attempts;
+}
+
 1;
