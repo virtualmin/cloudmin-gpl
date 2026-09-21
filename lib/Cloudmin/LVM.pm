@@ -152,6 +152,62 @@ return ($volume->{'segtype'} || '') =~ /\A(?:linear|striped|thin|snapshot)\z/ &&
 	($volume->{'lv_path'} || '') =~ m{\A/dev/};
 }
 
+# host_use(volume, [group_devices]) refuses host mounts, swap and device users.
+# Callers separately check guest, snapshot and imported-image references.
+# group_devices maps allowed major:minor numbers to true for a whole-group stop;
+# volume must then include open_count. Without group_devices, refuse all holders.
+sub host_use
+{
+my ($volume, $group_devices) = @_;
+my $path = $volume->{'lv_path'};
+my @stat = stat($path);
+die "LVM device is inactive or missing\n" if (!@stat || !-b _);
+my ($major, $minor) = @{$volume}{qw(lv_kernel_major lv_kernel_minor)};
+die "Cannot identify the LVM device number\n"
+	if (($major || '') !~ /\A\d+\z/ || !defined($minor) || $minor !~ /\A\d+\z/);
+my @device = stat("/dev/block/$major:$minor");
+die "The LVM device number changed\n" if (!@device || $device[6] != $stat[6]);
+# Mount checks use device numbers, so alternate path names cannot hide use.
+open(my $mounts, '<', '/proc/self/mountinfo') || die "Cannot check host mounts\n";
+while (my $line = <$mounts>) {
+	my @fields = split(/\s+/, $line);
+	die "This logical volume is mounted on the host\n" if ($fields[2] eq "$major:$minor");
+	}
+close($mounts);
+# Btrfs mountinfo uses an anonymous device number, not its backing devices.
+btrfs_host_use("$major:$minor");
+# Swap does not appear in mountinfo and needs a separate device check.
+open(my $swap, '<', '/proc/swaps') || die "Cannot check host swap\n";
+while (my $line = <$swap>) {
+	my ($source) = split(/\s+/, $line);
+	next if (!$source || $source !~ m{^/});
+	my @other = stat($source);
+	die "This logical volume supplies host swap\n" if (@other && -b _ && $stat[6] == $other[6]);
+	}
+close($swap);
+# A holder can be a host filesystem's partition or another device-mapper layer.
+my $holders = "/sys/dev/block/$major:$minor/holders";
+opendir(my $dir, $holders) || die "Cannot check block-device dependencies\n";
+my @holders = grep { $_ ne '.' && $_ ne '..' } readdir($dir);
+closedir($dir);
+foreach my $holder (@holders) {
+	# Individual-volume operations cannot disturb any dependent block device.
+	die "Other block devices depend on this logical volume\n" if (!$group_devices);
+	open(my $dev, '<', "$holders/$holder/dev") || die "Cannot identify dependent block device\n";
+	my $number = <$dev>;
+	close($dev);
+	chomp($number) if (defined($number));
+	# Internal thin mappings stop with the group; outside dependants do not.
+	die "Other block devices depend on this volume group\n"
+		if (!defined($number) || !$group_devices->{$number});
+	}
+# Each internal holder accounts for one kernel open. Extra opens include raw
+# disk users and mounts in other namespaces, even on internal thin devices.
+die "This logical volume is open on the host\n"
+	if ($group_devices && $volume->{'open_count'} > @holders);
+return 1;
+}
+
 # btrfs_host_use(device_number, [sysfs_root]) refuses any mounted Btrfs member.
 # The optional root allows isolated tests; callers use the kernel's sysfs tree.
 sub btrfs_host_use
