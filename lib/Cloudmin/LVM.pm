@@ -152,6 +152,38 @@ return ($volume->{'segtype'} || '') =~ /\A(?:linear|striped|thin|snapshot)\z/ &&
 	($volume->{'lv_path'} || '') =~ m{\A/dev/};
 }
 
+# btrfs_host_use(device_number, [sysfs_root]) refuses any mounted Btrfs member.
+# The optional root allows isolated tests; callers use the kernel's sysfs tree.
+sub btrfs_host_use
+{
+my ($number, $root) = @_;
+$root //= '/sys/fs/btrfs';
+# An unloaded Btrfs module has no mounted filesystems or sysfs directory.
+return 1 if (!-e $root);
+opendir(my $filesystems, $root) || die "Cannot check host Btrfs filesystems\n";
+my @ids = grep { /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i }
+	readdir($filesystems);
+closedir($filesystems);
+foreach my $id (@ids) {
+	# Kernel device links cover all members, including secondary and seed disks.
+	# They are removed on unmount, even if the UUID directory remains.
+	opendir(my $devices, "$root/$id/devices") || die "Cannot check host Btrfs devices\n";
+	my @names = grep { $_ ne '.' && $_ ne '..' } readdir($devices);
+	closedir($devices);
+	foreach my $name (@names) {
+		open(my $device, '<', "$root/$id/devices/$name/dev")
+			|| die "Cannot read host Btrfs device number\n";
+		my $other = <$device>;
+		close($device);
+		die "Cannot identify host Btrfs device number\n"
+			if (!defined($other) || $other !~ /\A\d+:\d+\s*\z/);
+		$other =~ s/\s+\z//;
+		die "This logical volume is mounted on the host by Btrfs\n" if ($other eq $number);
+		}
+	}
+return 1;
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
