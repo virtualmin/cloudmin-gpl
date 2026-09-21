@@ -1,0 +1,9 @@
+desc=Cloudmin
+longdesc=Manage KVM virtual machines through libvirt.
+category=webmin
+depends=proc mount useradmin xterm systemd net 2.670
+os_support=*-linux
+version=10.0.0-alpha1
+gpl=1
+websockets=1
+readonly=1
