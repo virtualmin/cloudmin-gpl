@@ -208,6 +208,39 @@ die "This logical volume is open on the host\n"
 return 1;
 }
 
+# group_host_use(self, group) checks every mapping before deactivating a VG.
+# Device-mapper UUIDs cover thin-pool aliases and hidden data/metadata devices.
+# group is a fresh inventory record with vg_uuid and volumes; nothing is stopped.
+sub group_host_use
+{
+my ($self, $group) = @_;
+(my $uuid = $group->{'vg_uuid'}) =~ s/-//g;
+die "Cannot identify volume group devices\n" if ($uuid !~ /\A[a-zA-Z0-9]{32}\z/);
+my $prefix = "LVM-$uuid";
+my (@devices, %numbers);
+foreach my $line (split(/\n/, $self->command('dm_info'))) {
+	my ($id, $major, $minor, $open) = map { s/^\s+|\s+$//g; $_ } split(/\|/, $line, -1);
+	# Exclude mappings from other groups before validating this group's report.
+	next if (!defined($id) || index($id, $prefix) != 0);
+	# The remaining UUID identifies the LV and optional internal mapping role.
+	die "Cannot check volume group device state\n" if (
+		$id !~ /\A\Q$prefix\E[a-zA-Z0-9]{32}(?:-[a-zA-Z0-9_-]+)?\z/ ||
+		grep { !defined($_) || $_ !~ /\A\d+\z/ } ($major, $minor, $open));
+	$numbers{"$major:$minor"} = 1;
+	push(@devices, { lv_path => "/dev/block/$major:$minor",
+		lv_kernel_major => $major, lv_kernel_minor => $minor, open_count => 0+$open });
+	}
+foreach my $lv (values %{$group->{'volumes'}}) {
+	# A missing mapping must not make a known active LV appear safe to stop.
+	next if (($lv->{'lv_active'} || '') ne 'active');
+	die "LVM device inventory changed; retry\n" if (
+		!$numbers{($lv->{'lv_kernel_major'} // '').':'.($lv->{'lv_kernel_minor'} // '')});
+	}
+# Build the full allowed set before testing dependencies between its mappings.
+host_use($_, \%numbers) foreach @devices;
+return 1;
+}
+
 # btrfs_host_use(device_number, [sysfs_root]) refuses any mounted Btrfs member.
 # The optional root allows isolated tests; callers use the kernel's sysfs tree.
 sub btrfs_host_use
