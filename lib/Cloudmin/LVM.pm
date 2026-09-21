@@ -85,6 +85,17 @@ die "LVM metadata is too large\n" if (length($out || '') > 16*1024**2);
 return $out;
 }
 
+# name(value) validates a volume-group, logical-volume or thin-pool name.
+sub name
+{
+my ($name) = @_;
+die "Invalid LVM name\n" if (!defined($name) || ref($name) ||
+	$name !~ /\A[a-zA-Z0-9_+][a-zA-Z0-9_.+-]{0,126}\z/ ||
+	$name eq '.' || $name eq '..' || $name =~ /\A(?:snapshot|pvmove)/ ||
+	$name =~ /_(?:cdata|cmeta|corig|mimage|mlog|rimage|rmeta|tdata|tmeta|vorigin)/);
+return $name;
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
