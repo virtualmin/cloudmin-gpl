@@ -143,6 +143,15 @@ foreach my $report (@{$data->{'report'}}) {
 return \@rows;
 }
 
+# usable(volume) identifies ordinary disks, excluding pool internals.
+sub usable
+{
+my ($volume) = @_;
+return ($volume->{'segtype'} || '') =~ /\A(?:linear|striped|thin|snapshot)\z/ &&
+	($volume->{'lv_attr'} || '') =~ /\A[-Vos][wr]/ &&
+	($volume->{'lv_path'} || '') =~ m{\A/dev/};
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
