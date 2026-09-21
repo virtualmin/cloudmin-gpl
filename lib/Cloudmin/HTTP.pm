@@ -125,4 +125,105 @@ for (1..10) {
 die "Too many image download redirects.\n";
 }
 
+# probe(url)
+# Reads HTTPS response headers within 15 seconds, without downloading the image.
+# A range request handles publishers that omit sizes or reject HEAD requests.
+# Returns a positive byte count, undef if unavailable, or throws on transport
+# errors.
+sub probe
+{
+my ($url) = @_;
+my ($ca) = grep { -r $_ } ('/etc/pki/tls/certs/ca-bundle.crt',
+	'/etc/ssl/certs/ca-certificates.crt', '/etc/ssl/ca-bundle.pem');
+# Size probes require the same verified TLS as image downloads.
+die "System CA certificates are unavailable\n" if (!$ca);
+my ($handle, $bytes);
+my $method = 'HEAD';
+# alarm_handler(signal): cap the entire redirect and HEAD/range sequence.
+local $SIG{'ALRM'} = sub { die "Image size lookup timed out\n" };
+my $ok = eval {
+	alarm(15);
+	# Request headers only; a one-byte range is the fallback for unusable
+	# HEAD.
+	for (1..8) {
+		$url = Cloudmin::Images::validate_url($url);
+		my ($host, $port, $page) = parse_http_url($url);
+		my $authority = authority($host, $port);
+		$handle = make_http_connection($host, $port, 1, $method, $page,
+			[ [ 'Host', $authority ],
+			  [ 'User-Agent', 'Webmin Cloudmin' ],
+			  [ 'Accept-Encoding', 'identity' ],
+			  [ 'Connection', 'close' ],
+			  $method eq 'GET' ? ([ 'Range', 'bytes=0-0' ]) : () ],
+			undef, { capath => $ca, host => $host });
+		# Connection and malformed-status errors must not be cached as
+		# file sizes.
+		die "$handle\n" if (!ref($handle));
+		my $line = read_http_connection($handle) || '';
+		my ($status) = $line =~ m{\AHTTP/1\.[01]\s+(\d{3})\b};
+		# Without a valid status line, length headers have no
+		# usable meaning.
+		die "Invalid image server response\n" if (!$status);
+		my (%headers, $length);
+		# Bound publisher-controlled headers before interpreting length
+		# fields.
+		while (defined($line = read_http_connection($handle))) {
+			$length += length($line);
+			die "Image response headers are too large\n"
+				if ($length > 32768);
+			# Stop at the header boundary without reading
+			# the image response body.
+			last if ($line =~ /\A\r?\n\z/);
+			$line =~ s/\r?\n\z//;
+			# Normalize ordinary header names; ignore
+			# malformed lines.
+			$headers{lc($1)} = $2
+				if ($line =~ /\A([^:\s]+):\s*(.*)\z/);
+			}
+		close_http_connection($handle);
+		undef($handle);
+		# Resolve redirects, then validate HTTPS again before
+		# connecting.
+		if ($status =~ /\A30[12378]\z/) {
+			$url = redirect($headers{'location'}, $host, $port,
+				$page);
+			next;
+			}
+		# An encoded response does not describe the downloadable image's
+		# size.
+		last if ($headers{'content-encoding'} &&
+			$headers{'content-encoding'} ne 'identity');
+		if ($status == 206) {
+			# The range response length is one byte; Content-Range
+			# holds the total.
+			($bytes) = ($headers{'content-range'} ||
+				'') =~ m{\Abytes 0-0/(\d+)\z}i;
+			}
+		elsif ($status == 200 && !$headers{'transfer-encoding'}) {
+			# A complete, unchunked response can state the total
+			# directly.
+			$bytes = $headers{'content-length'};
+			}
+		# Stop probing once a representable, positive size is known.
+		last if (Cloudmin::ImageSizes::valid_bytes($bytes));
+		if ($method eq 'HEAD' &&
+			($status == 200 || $status == 405 || $status == 501)) {
+			# Retry once with a range when HEAD is unsupported or
+			# lacks a size.
+			$method = 'GET';
+			next;
+			}
+		last;
+		}
+	1;
+	};
+my $error = $@;
+alarm(0);
+# Close any connection left open by an exception before returning or failing.
+close_http_connection($handle) if (ref($handle));
+# Keep failed transport checks distinct from a valid but unknown size.
+die $error if (!$ok);
+return Cloudmin::ImageSizes::valid_bytes($bytes) ? 0 + $bytes : undef;
+}
+
 1;
