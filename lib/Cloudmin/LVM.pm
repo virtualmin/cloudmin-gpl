@@ -108,6 +108,15 @@ die "The combined volume group and logical volume name is too long\n"
 return "/dev/mapper/$name";
 }
 
+# number(value) requires an exact nonnegative byte count from LVM JSON.
+sub number
+{
+my ($value) = @_;
+die "Invalid LVM capacity\n" if (!defined($value) || ref($value) ||
+	$value !~ /\A\d+(?:\.0+)?\z/ || $value > 9007199254740991);
+return 0+$value;
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
