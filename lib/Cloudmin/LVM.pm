@@ -40,6 +40,21 @@ else {
 die "Cannot create logical volume: $error\n" if (defined($error) && length($error));
 }
 
+# resize_logical_volume(self, record, bytes) uses Webmin after a grow-only check.
+sub resize_logical_volume
+{
+my ($self, $record, $bytes) = @_;
+die "LVM changes are disabled in read-only mode\n"
+	if ($self->{'readonly'} || is_readonly_mode());
+die "Shrinking logical volumes is not supported\n" if ($bytes <= $record->{'lv_size'});
+# Webmin's resize API takes KiB; round up so it never shortens the request.
+foreign_require('lvm', 'lvm-lib.pl');
+my $error = foreign_call('lvm', 'resize_logical_volume',
+	{ device => $record->{'lv_path'}, size => $record->{'lv_size'}/1024 },
+	int(($bytes+1023)/1024));
+die "Cannot grow logical volume: $error\n" if (defined($error) && length($error));
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
