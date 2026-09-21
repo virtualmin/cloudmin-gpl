@@ -117,6 +117,32 @@ die "Invalid LVM capacity\n" if (!defined($value) || ref($value) ||
 return 0+$value;
 }
 
+# report(self, operation, section, fields)
+# Decodes LVM's JSON report without relying on localized table output.
+sub report
+{
+my ($self, $operation, $section, $fields) = @_;
+my $data = convert_from_json($self->command($operation, '--reportformat', 'json',
+	'--units', 'b', '--nosuffix', '-o', $fields));
+die "Invalid LVM inventory\n" if (ref($data) ne 'HASH' || ref($data->{'report'}) ne 'ARRAY');
+my @rows;
+foreach my $report (@{$data->{'report'}}) {
+	# LVM can return several report sections; consume only the requested one.
+	next if (!exists($report->{$section}));
+	die "Invalid LVM inventory\n" if (ref($report->{$section}) ne 'ARRAY');
+	foreach my $row (@{$report->{$section}}) {
+		# Keep fields scalar and remove the padding used by LVM's JSON reports.
+		die "Invalid LVM inventory row\n" if (ref($row) ne 'HASH');
+		foreach my $value (values %$row) {
+			die "Invalid LVM inventory field\n" if (ref($value));
+			$value =~ s/^\s+|\s+$//g if (defined($value));
+			}
+		push(@rows, $row);
+		}
+	}
+return \@rows;
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
