@@ -320,6 +320,13 @@ sub get_name { return $_[0]->{'native'}->get_name().($_[0]->{'thin'} ? '/'.$_[0]
 sub is_persistent { return $_[0]->{'native'}->is_persistent(); }
 # get_autostart(self) reports the volume group's boot policy.
 sub get_autostart { return $_[0]->{'native'}->get_autostart(); }
+# is_active(self) requires both the registered VG and the selected thin pool.
+sub is_active
+{
+my ($self) = @_;
+return 0 if (!$self->{'native'}->is_active());
+return !$self->{'thin'} || $self->group()->{'volumes'}->{$self->{'thin'}}->{'lv_active'} eq 'active';
+}
 
 # get_xml_description(self, [flags]) supplies metadata to Cloudmin's pool readers.
 # Synthetic thin-pool XML is never submitted to libvirt.
