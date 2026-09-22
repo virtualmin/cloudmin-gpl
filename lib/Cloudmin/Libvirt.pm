@@ -95,4 +95,14 @@ return XML::LibXML->load_xml(string => $_[0], no_network => 1,
 	load_ext_dtd => 0, expand_entities => 0);
 }
 
+# get_machine_type(architecture)
+# Returns the libvirt machine type alias Cloudmin uses for new guests.
+sub get_machine_type
+{
+my ($architecture) = @_;
+# These architectures use QEMU's generic virtual board instead of a PC chipset.
+return 'virt' if (($architecture || '') =~ /^(?:aarch64|armv7l|riscv64)$/);
+return 'q35';
+}
+
 1;
