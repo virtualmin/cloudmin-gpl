@@ -199,6 +199,13 @@ return ($volume->{'segtype'} || '') =~ /\A(?:linear|striped|thin|snapshot)\z/ &&
 	($volume->{'lv_path'} || '') =~ m{\A/dev/};
 }
 
+# capacity(record) distinguishes a classic snapshot's origin from its COW store.
+sub capacity
+{
+my ($record) = @_;
+return number(($record->{'lv_attr'} || '') =~ /^s/ ? $record->{'origin_size'} : $record->{'lv_size'});
+}
+
 # identity(path) resolves a local LVM block device to its persistent LV UUID.
 sub identity
 {
@@ -225,6 +232,52 @@ foreach my $group (values %{$driver->inventory()}) {
 		}
 	}
 die "Block device is not a supported LVM logical volume\n";
+}
+
+# copy_to_file(path, destination, [limit]) stages opaque LV bytes for a worker.
+# The parser sees only this private regular file, never a host block device.
+sub copy_to_file
+{
+my ($path, $destination, $limit) = @_;
+my $volume = device($path);
+host_use($volume);
+my $size = capacity($volume);
+# A budget reduced by free space should report the storage shortage first.
+die "Not enough free space for private image processing\n"
+	if (Cloudmin::Worker::free_space(dirname($destination)) < $size + 256*1024**2);
+die "Worker input exceeds the image byte limit\n" if (defined($limit) && $size > $limit);
+# Check the opened device against the inventory before copying any bytes.
+sysopen(my $in, $path, O_RDONLY) or die "Cannot open logical volume: $!\n";
+my @opened = stat($in);
+my @current = stat('/dev/block/'.$volume->{'lv_kernel_major'}.':'.$volume->{'lv_kernel_minor'});
+die "The logical volume changed while opening it\n" if (!@opened || !@current || $opened[6] != $current[6]);
+sysopen(my $out, $destination, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, 0600)
+	or die "Cannot create private disk copy: $!\n";
+my $remaining = $size;
+while ($remaining) {
+	my $read = sysread($in, my $buffer, $remaining > 1048576 ? 1048576 : $remaining);
+	die "Cannot read logical volume at byte ".($size-$remaining).": $!\n" if (!defined($read));
+	die "Logical volume ended at byte ".($size-$remaining)."; expected $size bytes\n" if (!$read);
+	# Preserve empty regions without allocating their full virtual capacity.
+	if ($buffer !~ /[^\0]/) {
+		sysseek($out, $read, 1) // die "Cannot seek private disk copy\n";
+		}
+	else {
+		# Partial writes are valid; finish the nonzero chunk before reading more.
+		my $offset = 0;
+		while ($offset < $read) {
+			my $written = syswrite($out, $buffer, $read-$offset, $offset);
+			die "Cannot write private disk copy\n" if (!$written);
+			$offset += $written;
+			}
+		}
+	$remaining -= $read;
+	}
+# A trailing hole still needs the full disk length in the private file.
+truncate($out, $size) && close($out) or die "Cannot finish private disk copy\n";
+close($in);
+die "The logical volume changed during copying\n"
+	if (identity($path) ne 'lvm:'.$volume->{'vg_uuid'}.':'.$volume->{'lv_uuid'});
 }
 
 # host_use(volume, [group_devices]) refuses host mounts, swap and device users.
