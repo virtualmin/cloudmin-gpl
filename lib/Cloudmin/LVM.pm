@@ -199,6 +199,26 @@ return ($volume->{'segtype'} || '') =~ /\A(?:linear|striped|thin|snapshot)\z/ &&
 	($volume->{'lv_path'} || '') =~ m{\A/dev/};
 }
 
+# device(path, [driver]) resolves a block device, including /dev/mapper aliases.
+# Inventory views may share a driver; mutation guards request fresh metadata.
+sub device
+{
+my ($path, $driver) = @_;
+my @stat = stat($path);
+die "Cannot identify LVM block device\n" if (!@stat || !-b _);
+$driver ||= __PACKAGE__->new();
+# Device numbers match aliases without trusting the caller's path spelling.
+foreach my $group (values %{$driver->inventory()}) {
+	foreach my $volume (values %{$group->{'volumes'}}) {
+		next if (!usable($volume) || !$volume->{'lv_path'});
+		my @other = stat($volume->{'lv_path'});
+		return $volume
+			if (@other && -b _ && $stat[6] == $other[6]);
+		}
+	}
+die "Block device is not a supported LVM logical volume\n";
+}
+
 # host_use(volume, [group_devices]) refuses host mounts, swap and device users.
 # Callers separately check guest, snapshot and imported-image references.
 # group_devices maps allowed major:minor numbers to true for a whole-group stop;
