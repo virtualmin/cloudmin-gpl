@@ -125,4 +125,12 @@ while (1) {
 	}
 }
 
+# setup_agent_error() reports missing host tools before guest allocation.
+sub setup_agent_error
+{
+return 'Guest software setup requires virsh and timeout on the Cloudmin host'
+	if (!-x '/usr/bin/virsh' || !-x '/usr/bin/timeout');
+return '';
+}
+
 1;
