@@ -447,4 +447,22 @@ use Fcntl qw(O_RDONLY O_RDWR O_NOFOLLOW SEEK_SET);
 use IO::Handle ();
 use Errno qw(EOPNOTSUPP ENOTTY EINVAL);
 
+# new(class, pool, record) retains UUID identity independently of device paths.
+sub new
+{
+my ($class, $pool, $record) = @_;
+return bless({ pool => $pool, name => $record->{'lv_name'}, uuid => $record->{'lv_uuid'} }, $class);
+}
+
+# record(self, [refresh]) refuses deleted, renamed or replaced logical volumes.
+sub record
+{
+my ($self, $refresh) = @_;
+my $record = $self->{'pool'}->group($refresh)->{'volumes'}->{$self->{'name'}};
+die "The logical volume is missing or was replaced\n"
+	if (!$record || $record->{'lv_uuid'} ne $self->{'uuid'} || !Cloudmin::LVM::usable($record) ||
+	($record->{'pool_lv'} || '') ne $self->{'pool'}->{'thin'});
+return $record;
+}
+
 1;
