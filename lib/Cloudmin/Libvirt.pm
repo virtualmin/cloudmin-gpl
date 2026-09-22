@@ -105,4 +105,24 @@ return 'virt' if (($architecture || '') =~ /^(?:aarch64|armv7l|riscv64)$/);
 return 'q35';
 }
 
+# refresh_pool(pool, [timeout])
+# Retries refresh while a libvirt storage job is busy; timeout defaults to 30
+# seconds.
+# Other failures propagate immediately; the caller's job deadline still applies.
+sub refresh_pool
+{
+my ($pool, $timeout) = @_;
+my $end = Time::HiRes::time() + (defined($timeout) ? $timeout : 30);
+while (1) {
+	return if (eval { $pool->refresh(); 1 });
+	my $error = $@;
+	# Libvirt rejects refresh while a volume clone or upload is running.
+	die $error if (!ref($error) || !$error->isa('Sys::Virt::Error') ||
+		$error->code() != 1 ||
+		$error->message() !~ /pool .* has asynchronous jobs running/ ||
+		Time::HiRes::time() >= $end);
+	Time::HiRes::sleep(0.2);
+	}
+}
+
 1;
