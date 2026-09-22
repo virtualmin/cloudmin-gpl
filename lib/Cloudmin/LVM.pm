@@ -316,6 +316,10 @@ return $group;
 sub get_uuid_string { return $_[0]->{'id'}; }
 # get_name(self) distinguishes thin pools sharing one volume group.
 sub get_name { return $_[0]->{'native'}->get_name().($_[0]->{'thin'} ? '/'.$_[0]->{'thin'} : ''); }
+# is_persistent(self) follows the registered libvirt volume group.
+sub is_persistent { return $_[0]->{'native'}->is_persistent(); }
+# get_autostart(self) reports the volume group's boot policy.
+sub get_autostart { return $_[0]->{'native'}->get_autostart(); }
 
 # get_xml_description(self, [flags]) supplies metadata to Cloudmin's pool readers.
 # Synthetic thin-pool XML is never submitted to libvirt.
