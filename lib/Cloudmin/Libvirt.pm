@@ -133,4 +133,34 @@ return 'Guest software setup requires virsh and timeout on the Cloudmin host'
 return '';
 }
 
+# list_host_bridges(self, [networks])
+# Returns Linux bridges on the host that are not owned by a libvirt network,
+# read from sysfs so no interface daemon is required.
+# Pass networks from list_networks() to exclude their bridges; otherwise none
+# are excluded. sys_net always describes the local host, not a remote URI.
+sub list_host_bridges
+{
+my ($self, $networks) = @_;
+my %owned = map { ($_->{'bridge'} || '') => 1 } @{$networks || []};
+my @bridges;
+opendir(my $dh, $self->{'sys_net'}) || return [];
+foreach my $name (sort readdir($dh)) {
+	# Avoid hidden entries and duplicate choices already offered as
+	# networks.
+	next if ($name =~ /^\./ || $owned{$name});
+	# The bridge directory distinguishes Linux bridges from other
+	# interfaces.
+	next if (!-d "$self->{'sys_net'}/$name/bridge");
+	# An empty bridge has no carrier until its first guest attaches. IFF_UP
+	# tells us whether the administrator enabled it, independently of
+	# carrier.
+	my $flags = read_file_contents("$self->{'sys_net'}/$name/flags") || '';
+	my $state = $flags =~ /\A0x([0-9a-f]+)\s*\z/i
+		? (hex($1) & 1 ? 'up' : 'down') : '';
+	push(@bridges, { 'name' => $name, 'state' => $state });
+	}
+closedir($dh);
+return \@bridges;
+}
+
 1;
