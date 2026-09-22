@@ -608,4 +608,13 @@ close($in) && $out->sync() && close($out) or die "Cannot finish writing logical 
 $self->record(1);
 }
 
+# initialization_pending(self) returns an unfinished creation/growth marker.
+sub initialization_pending
+{
+my ($self) = @_;
+my @tags = grep { /^cloudmin_zero_from_\d+$/ } split(/,/, $self->record()->{'lv_tags'} || '');
+die "Conflicting logical volume initialization markers\n" if (@tags > 1);
+return $tags[0];
+}
+
 1;
