@@ -466,6 +466,13 @@ return $record;
 }
 # get_name(self) returns the logical volume name.
 sub get_name { return $_[0]->{'name'}; }
+# get_path(self) returns the verified current block-device path.
+sub get_path
+{
+my ($self) = @_;
+my $record = $self->record();
+return Cloudmin::LVM::device_path($record->{'vg_name'}, $record->{'lv_name'});
+}
 
 # snapshot(self, name, [journal]) creates a restore point using Webmin LVM.
 # The caller must stop guest writes and journal the name before allocation.
