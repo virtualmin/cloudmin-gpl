@@ -199,6 +199,14 @@ return ($volume->{'segtype'} || '') =~ /\A(?:linear|striped|thin|snapshot)\z/ &&
 	($volume->{'lv_path'} || '') =~ m{\A/dev/};
 }
 
+# identity(path) resolves a local LVM block device to its persistent LV UUID.
+sub identity
+{
+my ($path) = @_;
+my $volume = device($path);
+return 'lvm:'.$volume->{'vg_uuid'}.':'.$volume->{'lv_uuid'};
+}
+
 # device(path, [driver]) resolves a block device, including /dev/mapper aliases.
 # Inventory views may share a driver; mutation guards request fresh metadata.
 sub device
