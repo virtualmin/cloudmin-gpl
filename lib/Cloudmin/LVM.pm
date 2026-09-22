@@ -143,6 +143,53 @@ foreach my $report (@{$data->{'report'}}) {
 return \@rows;
 }
 
+# inventory(self, [refresh])
+# Retains LVM UUIDs so device-node recreation and renamed paths do not hide a
+# replaced volume. A single read supplies every pool in the current operation.
+sub inventory
+{
+my ($self, $refresh) = @_;
+return $self->{'inventory'} if ($self->{'inventory'} && !$refresh);
+my $groups = $self->report('vgs', 'vg',
+	'vg_name,vg_uuid,vg_size,vg_free,vg_extent_size,vg_attr');
+my $volumes = $self->report('lvs', 'lv',
+	'vg_name,vg_uuid,lv_name,lv_uuid,lv_attr,segtype,pool_lv,origin,'.
+	'data_percent,metadata_percent,lv_size,origin_size,lv_path,lv_active,lv_tags,'.
+	'lv_kernel_major,lv_kernel_minor,zero,lv_health_status');
+my %groups;
+# Index groups first so the LV report can be checked against their UUIDs.
+foreach my $group (@$groups) {
+	name($group->{'vg_name'});
+	$group->{$_} = number($group->{$_}) for qw(vg_size vg_free vg_extent_size);
+	die "Invalid LVM volume group identity\n"
+		if (($group->{'vg_uuid'} || '') !~ /\A[a-zA-Z0-9-]{32,40}\z/);
+	$group->{'volumes'} = {};
+	$groups{$group->{'vg_name'}} = $group;
+	}
+foreach my $volume (@$volumes) {
+	# A group replaced between the two commands cannot supply a valid snapshot
+	# of the inventory; let the caller retry the whole read.
+	my $group = $groups{$volume->{'vg_name'}};
+	die "LVM inventory changed while reading it; retry\n"
+		if (!$group || $group->{'vg_uuid'} ne $volume->{'vg_uuid'});
+	$volume->{'lv_size'} = number($volume->{'lv_size'});
+	die "Invalid LVM volume identity\n"
+		if (($volume->{'lv_uuid'} || '') !~ /\A[a-zA-Z0-9-]{32,40}\z/);
+	$group->{'volumes'}->{$volume->{'lv_name'}} = $volume;
+	}
+return $self->{'inventory'} = \%groups;
+}
+
+# group(self, name, [expected_uuid]) resolves a current volume group.
+sub group
+{
+my ($self, $name, $uuid) = @_;
+name($name);
+my $group = $self->inventory()->{$name} || die "LVM volume group is missing\n";
+die "The LVM volume group was replaced\n" if ($uuid && $group->{'vg_uuid'} ne $uuid);
+return $group;
+}
+
 # usable(volume) identifies ordinary disks, excluding pool internals.
 sub usable
 {
