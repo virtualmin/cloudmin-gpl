@@ -287,6 +287,31 @@ package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
 
+# new(class, driver, native_pool, group, [thin_pool]) binds immutable LVM IDs.
+sub new
+{
+my ($class, $driver, $native, $group, $thin) = @_;
+return bless({ driver => $driver, native => $native, vg => $group->{'vg_name'},
+	vg_uuid => $group->{'vg_uuid'}, thin => $thin ? $thin->{'lv_name'} : '',
+	thin_uuid => $thin ? $thin->{'lv_uuid'} : '',
+	id => $thin ? Cloudmin::LVM::thin_id($native->get_uuid_string(), $thin->{'lv_uuid'}) : $native->get_uuid_string() }, $class);
+}
+
+# group(self, [refresh]) rechecks the VG and thin-pool identities.
+sub group
+{
+my ($self, $refresh) = @_;
+$self->{'driver'}->inventory(1) if ($refresh);
+my $group = $self->{'driver'}->group($self->{'vg'}, $self->{'vg_uuid'});
+if ($self->{'thin'}) {
+	# A recreated thin pool must not inherit its predecessor's public identity.
+	my $thin = $group->{'volumes'}->{$self->{'thin'}};
+	die "The LVM thin pool is missing or was replaced\n" if (!$thin ||
+		$thin->{'lv_uuid'} ne $self->{'thin_uuid'} || $thin->{'segtype'} ne 'thin-pool');
+	}
+return $group;
+}
+
 package Cloudmin::LVM::Volume;
 use strict;
 use warnings;
