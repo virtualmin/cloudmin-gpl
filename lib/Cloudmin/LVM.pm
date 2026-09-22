@@ -464,5 +464,44 @@ die "The logical volume is missing or was replaced\n"
 	($record->{'pool_lv'} || '') ne $self->{'pool'}->{'thin'});
 return $record;
 }
+# get_name(self) returns the logical volume name.
+sub get_name { return $_[0]->{'name'}; }
+
+# snapshot(self, name, [journal]) creates a restore point using Webmin LVM.
+# The caller must stop guest writes and journal the name before allocation.
+# journal(volume), when supplied, records the new UUID before tagging/activation.
+sub snapshot
+{
+my ($self, $name, $journal) = @_;
+my $pool = $self->{'pool'};
+my $record = $self->record(1);
+Cloudmin::LVM::host_use($record);
+Cloudmin::LVM::device_path($pool->{'vg'}, $name);
+die "Snapshot volume already exists\n" if ($pool->group()->{'volumes'}->{$name});
+my $thin = $record->{'segtype'} eq 'thin';
+# Reserve a full origin plus COW metadata so normal writes cannot fill a thick
+# snapshot. Thin snapshots share their pool's data and metadata space.
+my $bytes = $pool->aligned_capacity(int($record->{'lv_size'}*1.01)+16*1024**2);
+my $info = $pool->get_info();
+die "Not enough space for an LVM snapshot\n" if (!$thin && $bytes > $info->{'available'});
+die "Extend the thin pool before taking a snapshot\n" if ($thin &&
+	($info->{'data_percent'} >= 95 || $info->{'metadata_percent'} >= 90));
+$pool->{'driver'}->create_logical_volume({name => $name, vg => $pool->{'vg'},
+	size => int(($bytes+1023)/1024), size_of => '', perm => 'rw', alloc => 'n',
+	is_snap => 1, snapof => $self->get_name(), thin_in => $pool->{'thin'}});
+$pool->refresh();
+my ($snapshot) = grep { $_->get_name() eq $name } $pool->list_all_volumes();
+# Save ownership before later tagging or activation can fail.
+die "Created LVM snapshot is missing\n" if (!$snapshot);
+$journal->($snapshot) if ($journal);
+$pool->{'driver'}->command('lvchange', '--addtag', 'cloudmin_snapshot',
+	'--select', 'lv_uuid='.$snapshot->{'uuid'});
+# LVM marks new thin snapshots to skip activation. Keep owned restore points
+# readable now and after the registered volume group starts at boot.
+$pool->{'driver'}->command('lvchange', '--setactivationskip', 'n', '--activate', 'y',
+	'--select', 'lv_uuid='.$snapshot->{'uuid'}) if ($thin);
+$pool->refresh();
+return $snapshot;
+}
 
 1;
