@@ -511,4 +511,16 @@ $pool->refresh();
 return $snapshot;
 }
 
+# snapshot_health(self) rejects invalid or exhausted native restore points.
+sub snapshot_health
+{
+my ($self) = @_;
+my $record = $self->record(1);
+die "The LVM snapshot is invalid or exhausted\n" if (
+	$record->{'lv_health_status'} || ($record->{'lv_attr'} || '') =~ /^....[IS]/ ||
+	(($record->{'lv_attr'} || '') =~ /^s/ &&
+	 (($record->{'data_percent'} // '') !~ /\A\d+(?:\.\d+)?\z/ || $record->{'data_percent'} >= 100)));
+return 1;
+}
+
 1;
