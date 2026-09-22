@@ -617,4 +617,44 @@ die "Conflicting logical volume initialization markers\n" if (@tags > 1);
 return $tags[0];
 }
 
+# zero_range(self, offset) erases new thick extents before guest access resumes.
+sub zero_range
+{
+my ($self, $offset) = @_;
+die "LVM changes are disabled in read-only mode\n"
+	if ($self->{'pool'}->{'driver'}->{'readonly'} || WebminCore::is_readonly_mode());
+my $record = $self->record(1);
+Cloudmin::LVM::host_use($record);
+die "Invalid logical volume initialization boundary\n" if ($offset > $record->{'lv_size'});
+sysopen(my $out, $record->{'lv_path'}, O_RDWR) or die "Cannot open logical volume: $!\n";
+my @opened = stat($out);
+my @current = stat('/dev/block/'.$record->{'lv_kernel_major'}.':'.$record->{'lv_kernel_minor'});
+die "The logical volume changed while opening it\n" if (!@opened || !@current || $opened[6] != $current[6]);
+sysseek($out, $offset, SEEK_SET) // die "Cannot seek logical volume\n";
+my $remaining = $record->{'lv_size'}-$offset;
+# BLKZEROOUT guarantees zero-filled reads, unlike ordinary discard. Linux can
+# offload it to storage or punch zeroed holes in a loop-backed file. Keep the
+# checked descriptor open so a renamed device cannot redirect initialization.
+if ($remaining) {
+	my $range = pack('QQ', $offset, $remaining);
+	if (ioctl($out, 0x127f, $range)) { # Linux <linux/fs.h>: BLKZEROOUT
+		# Successful zeroout covers the entire requested range.
+		$remaining = 0;
+		}
+	elsif ($! != EOPNOTSUPP && $! != ENOTTY && $! != EINVAL) {
+		# Only unsupported-operation errors permit the buffered-write fallback.
+		die "Cannot zero logical volume: $!\n";
+		}
+	}
+# Devices without the zeroout operation receive ordinary buffered zero writes.
+my $zeros = "\0" x 1048576;
+while ($remaining) {
+	my $written = syswrite($out, $zeros, $remaining > length($zeros) ? length($zeros) : $remaining);
+	die "Cannot zero logical volume\n" if (!$written);
+	$remaining -= $written;
+	}
+$out->sync() && close($out) or die "Cannot finish initializing logical volume\n";
+$self->record(1);
+}
+
 1;
