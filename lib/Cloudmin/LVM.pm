@@ -379,6 +379,15 @@ return map { Cloudmin::LVM::Volume->new($self, $_) }
 	values %{$self->group()->{'volumes'}};
 }
 
+# aligned_capacity(self, bytes) rounds ordinary disks to complete VG extents.
+# Thin volumes use sectors; their physical allocation follows the thin pool.
+sub aligned_capacity
+{
+my ($self, $bytes) = @_;
+my $unit = $self->{'thin'} ? 512 : $self->group()->{'vg_extent_size'};
+return int(($bytes+$unit-1)/$unit)*$unit;
+}
+
 package Cloudmin::LVM::Volume;
 use strict;
 use warnings;
