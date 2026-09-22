@@ -273,6 +273,16 @@ foreach my $id (@ids) {
 return 1;
 }
 
+# thin_id(base_uuid, thin_uuid) gives a thin destination a stable public UUID.
+sub thin_id
+{
+my $id = substr(sha256_hex(join(':', 'cloudmin-lvm-thin', @_)), 0, 32);
+substr($id, 12, 1) = '5';
+substr($id, 16, 1) = sprintf('%x', 8 | (hex(substr($id, 16, 1)) & 3));
+$id =~ s/\A(.{8})(.{4})(.{4})(.{4})(.{12})\z/$1-$2-$3-$4-$5/;
+return $id;
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
