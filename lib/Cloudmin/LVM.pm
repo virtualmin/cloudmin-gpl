@@ -388,6 +388,58 @@ my $unit = $self->{'thin'} ? 512 : $self->group()->{'vg_extent_size'};
 return int(($bytes+$unit-1)/$unit)*$unit;
 }
 
+# create_volume(self, xml, [flags]) creates a raw LV without formatting any PV.
+sub create_volume
+{
+my ($self, $xml, $flags) = @_;
+die "Unsupported LVM volume flags\n" if ($flags);
+die "Start the LVM storage pool first\n" if (!$self->is_active());
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+# Accept raw byte capacities only; reject names before calling Webmin.
+my $name = Cloudmin::LVM::name($doc->findvalue('/volume/name'));
+Cloudmin::LVM::device_path($self->{'vg'}, $name);
+my $size = Cloudmin::LVM::number($doc->findvalue('/volume/capacity'));
+die "Logical volumes must contain raw disks\n"
+	if (($doc->findvalue('/volume/target/format/@type') || 'raw') ne 'raw');
+die "Invalid logical volume capacity\n" if (!$size ||
+	($doc->findvalue('/volume/capacity/@unit') || 'bytes') !~ /\A(?:bytes|B)\z/);
+my $group = $self->group(1);
+die "Destination logical volume already exists\n" if ($group->{'volumes'}->{$name});
+my $info = $self->get_info();
+# Thin disks reserve address space; ordinary LVs reserve physical extents.
+die "Not enough free space in the LVM storage pool\n" if (!$self->{'thin'} && $size > $info->{'available'});
+die "Extend the thin pool before allocating more disks\n" if ($self->{'thin'} &&
+	($info->{'data_percent'} >= 95 || $info->{'metadata_percent'} >= 90 || !$info->{'available'}));
+if ($self->{'thin'}) {
+	# Thin allocation relies on the pool to zero new chunks and report health.
+	my $thin = $group->{'volumes'}->{$self->{'thin'}};
+	die "Enable zeroing on this thin pool before creating guest disks\n"
+		if (($thin->{'zero'} || '') ne 'zero');
+	die "Repair the thin pool before creating guest disks\n" if ($thin->{'lv_health_status'});
+	}
+# Webmin's helper accepts KiB and already supports thick and thin allocation.
+$self->{'driver'}->create_logical_volume({name => $name, vg => $self->{'vg'},
+	size => int(($size+1023)/1024), perm => $self->{'thin'} ? 'rw' : 'r', alloc => 'n',
+	thin_in => $self->{'thin'}, size_of => ''});
+$self->refresh();
+my ($volume) = grep { $_->get_name() eq $name } $self->list_all_volumes();
+die "Created logical volume is missing from storage inventory\n" if (!$volume);
+# Thick LVs may contain data from a previous allocation. Erase all bytes before
+# attaching an empty disk or uploading a shorter image. Thin pools zero chunks.
+if (!$self->{'thin'}) {
+	# A crash before tagging leaves a read-only disk, excluded from attachment.
+	# Once writable, its durable marker blocks use until all old data is erased.
+	my @identity = ('--select', 'lv_uuid='.$volume->{'uuid'});
+	$self->{'driver'}->command('lvchange', '--addtag', 'cloudmin_zero_from_0', @identity);
+	$self->{'driver'}->command('lvchange', '--permission', 'rw', @identity);
+	$self->refresh();
+	$volume->zero_range(0);
+	$self->{'driver'}->command('lvchange', '--deltag', 'cloudmin_zero_from_0', @identity);
+	$self->refresh();
+	}
+return $volume;
+}
+
 package Cloudmin::LVM::Volume;
 use strict;
 use warnings;
