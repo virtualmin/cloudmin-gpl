@@ -552,4 +552,60 @@ return '<volume type="block"><name>'.$escape->($self->get_name()).'</name><key>'
 	'</path><format type="raw"/></target></volume>';
 }
 
+# write_file(self, path) copies validated raw bytes without parsing guest data.
+# Comparing each chunk avoids allocating empty thin regions or rewriting them.
+sub write_file
+{
+my ($self, $path) = @_;
+die "LVM changes are disabled in read-only mode\n"
+	if ($self->{'pool'}->{'driver'}->{'readonly'} || WebminCore::is_readonly_mode());
+my $record = $self->record(1);
+Cloudmin::LVM::host_use($record);
+my @input = lstat($path);
+# Root copies bytes only; disk formats must already be checked in the worker.
+die "Logical volume input must be a regular raw file\n" if (!@input || !-f _ || -l _);
+die "Raw disk exceeds logical volume capacity\n" if ($input[7] > $record->{'lv_size'});
+sysopen(my $in, $path, O_RDONLY|O_NOFOLLOW) or die "Cannot read raw disk: $!\n";
+sysopen(my $out, $record->{'lv_path'}, O_RDWR) or die "Cannot open logical volume: $!\n";
+my @opened = stat($out);
+my @current = stat('/dev/block/'.$record->{'lv_kernel_major'}.':'.$record->{'lv_kernel_minor'});
+die "The logical volume changed while opening it\n" if (!@opened || !@current || $opened[6] != $current[6]);
+my $offset = 0;
+while ($offset < $input[7]) {
+	if ($self->{'pool'}->{'thin'} && $offset % (128*1024**2) == 0) {
+		# Recheck during long uploads, not just when the thin disk is allocated.
+		$self->{'pool'}->group(1);
+		my $info = $self->{'pool'}->get_info();
+		die "Extend the thin pool before writing more disk data\n"
+			if ($info->{'data_percent'} >= 95 || $info->{'metadata_percent'} >= 90);
+		}
+	my $length = $input[7]-$offset;
+	# Read at most one MiB and compare it with the destination's current bytes.
+	$length = 1048576 if ($length > 1048576);
+	my $read = sysread($in, my $buffer, $length);
+	die "Cannot read raw disk\n" if (!defined($read) || !$read);
+	sysseek($out, $offset, SEEK_SET) // die "Cannot seek logical volume\n";
+	my $previous = '';
+	while (length($previous) < $read) {
+		my $got = sysread($out, my $part, $read-length($previous));
+		die "Cannot read logical volume\n" if (!$got);
+		$previous .= $part;
+		}
+	if ($previous ne $buffer) {
+		# Skipping identical chunks avoids unnecessary thin-pool allocation.
+		sysseek($out, $offset, SEEK_SET) // die "Cannot seek logical volume\n";
+		my $written = 0;
+		while ($written < $read) {
+			my $n = syswrite($out, $buffer, $read-$written, $written);
+			die "Cannot write logical volume\n" if (!$n);
+			$written += $n;
+			}
+		}
+	$offset += $read;
+	}
+# Flush writes before the caller attaches the disk or records completion.
+close($in) && $out->sync() && close($out) or die "Cannot finish writing logical volume\n";
+$self->record(1);
+}
+
 1;
