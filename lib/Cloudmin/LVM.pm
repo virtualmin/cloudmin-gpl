@@ -312,6 +312,24 @@ if ($self->{'thin'}) {
 return $group;
 }
 
+# get_uuid_string(self) returns the selected destination's public ID.
+sub get_uuid_string { return $_[0]->{'id'}; }
+# get_name(self) distinguishes thin pools sharing one volume group.
+sub get_name { return $_[0]->{'native'}->get_name().($_[0]->{'thin'} ? '/'.$_[0]->{'thin'} : ''); }
+
+# get_xml_description(self, [flags]) supplies metadata to Cloudmin's pool readers.
+# Synthetic thin-pool XML is never submitted to libvirt.
+sub get_xml_description
+{
+my ($self) = @_;
+return $self->{'native'}->get_xml_description(0) if (!$self->{'thin'});
+my $escape = \&Cloudmin::Libvirt::xml_escape;
+return '<pool type="lvmthin"><name>'.$escape->($self->get_name()).'</name><uuid>'.
+	$self->get_uuid_string().'</uuid><source><name>'.$escape->($self->{'vg'}).
+	'</name><thin_pool>'.$escape->($self->{'thin'}).'</thin_pool></source><target><path>/dev/'.
+	$escape->($self->{'vg'}).'</path></target></pool>';
+}
+
 package Cloudmin::LVM::Volume;
 use strict;
 use warnings;
