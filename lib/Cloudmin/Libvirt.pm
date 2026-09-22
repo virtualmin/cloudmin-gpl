@@ -259,4 +259,16 @@ return { cpus => 0 + ($doc->findvalue('/domain/vcpu/@current') || $doc->findvalu
 	boot => \@boot, networks => network_attachments($doc) };
 }
 
+# pending_settings(running, saved)
+# Returns differences in public resource settings without retaining guest XML.
+sub pending_settings
+{
+my ($running, $saved) = @_;
+# Canonical JSON compares boot/network arrays and scalar settings with one rule.
+return { map { $_ => { running => $running->{$_}, saved => $saved->{$_} } }
+	grep { convert_to_json([$running->{$_}], 0, 0, 1) ne
+		convert_to_json([$saved->{$_}], 0, 0, 1) }
+	keys %$saved };
+}
+
 1;
