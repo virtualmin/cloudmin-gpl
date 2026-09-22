@@ -523,4 +523,19 @@ die "The LVM snapshot is invalid or exhausted\n" if (
 return 1;
 }
 
+# get_info(self) reports the LV's virtual capacity and physical allocation.
+sub get_info
+{
+my ($self) = @_;
+my $record = $self->record();
+my $allocation = $record->{'lv_size'};
+if ($record->{'segtype'} eq 'thin') {
+	# Thin disks report allocated chunks rather than their full address space.
+	my $percent = $record->{'data_percent'};
+	die "Cannot read thin-volume allocation\n" if (($percent // '') !~ /\A\d+(?:\.\d+)?\z/);
+	$allocation = int($allocation*$percent/100);
+	}
+return { type => 1, capacity => Cloudmin::LVM::capacity($record), allocation => $allocation };
+}
+
 1;
