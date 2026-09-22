@@ -370,6 +370,15 @@ return '<pool type="lvmthin"><name>'.$escape->($self->get_name()).'</name><uuid>
 	$escape->($self->{'vg'}).'</path></target></pool>';
 }
 
+# list_all_volumes(self, [flags]) excludes thin metadata and other destinations.
+sub list_all_volumes
+{
+my ($self) = @_;
+return map { Cloudmin::LVM::Volume->new($self, $_) }
+	grep { Cloudmin::LVM::usable($_) && ($_->{'pool_lv'} || '') eq $self->{'thin'} }
+	values %{$self->group()->{'volumes'}};
+}
+
 package Cloudmin::LVM::Volume;
 use strict;
 use warnings;
