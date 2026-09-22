@@ -198,4 +198,20 @@ return {
 };
 }
 
+# memory_kib(doc, element)
+# Converts libvirt memory fields to KiB, including omitted currentMemory.
+sub memory_kib
+{
+my ($doc, $element) = @_;
+my ($node) = $doc->findnodes('/domain/'.$element);
+# Without currentMemory, libvirt starts with the configured memory maximum.
+($node) = $doc->findnodes('/domain/memory') if (!$node && $element eq 'currentMemory');
+die "Missing memory configuration\n" if (!$node);
+my %units = (b => 1/1024, bytes => 1/1024, KiB => 1, k => 1,
+	MiB => 1024, M => 1024, GiB => 1024**2, G => 1024**2);
+my $unit = $node->getAttribute('unit') || 'KiB';
+die "Unsupported memory unit\n" if (!$units{$unit});
+return $node->textContent() * $units{$unit};
+}
+
 1;
