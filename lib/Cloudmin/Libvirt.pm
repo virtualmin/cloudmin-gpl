@@ -214,4 +214,23 @@ die "Unsupported memory unit\n" if (!$units{$unit});
 return $node->textContent() * $units{$unit};
 }
 
+# network_attachments(doc)
+# Returns an array reference of MAC, type and source records from parsed XML.
+# Ignores device details that libvirt adds at runtime.
+sub network_attachments
+{
+my ($doc) = @_;
+my @interfaces;
+foreach my $node ($doc->findnodes('/domain/devices/interface')) {
+	my $type = $node->getAttribute('type');
+	# Compare only the network and bridge attachments exposed by the editor.
+	next if ($type !~ /\A(?:network|bridge)\z/);
+	# Read the configured source, not libvirt's bridge/portid or <actual> data.
+	push(@interfaces, { mac => lc($node->findvalue('mac/@address')),
+		type => $type, source => ''.$node->findvalue('source/@'.$type) });
+}
+# XML device order must not make otherwise identical attachments differ.
+return [sort { $a->{'mac'} cmp $b->{'mac'} } @interfaces];
+}
+
 1;
