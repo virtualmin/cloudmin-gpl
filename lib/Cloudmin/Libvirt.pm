@@ -347,4 +347,25 @@ return { capacity => $blocks * $size, allocation => ($blocks - $free) * $size,
 	available => $available * $size };
 }
 
+# get_storage_volume_record(self, volume)
+# Converts a Sys::Virt::StorageVol object into a Cloudmin inventory record.
+sub get_storage_volume_record
+{
+my ($self, $volume) = @_;
+my $info = eval { $volume->get_info() } || {};
+my $doc = eval { parse_xml_document($volume->get_xml_description(0)) };
+return {
+	'name' => $volume->get_name(),
+	'key' => eval { $volume->get_key() },
+	'path' => eval { $volume->get_path() },
+	'type' => $info->{'type'},
+	'block' => $volume->isa('Cloudmin::LVM::Volume') ? 1 : 0,
+	'snapshot' => $volume->isa('Cloudmin::LVM::Volume') &&
+		($volume->record()->{'lv_tags'} || '') =~ /(?:^|,)cloudmin_snapshot(?:,|$)/ ? 1 : 0,
+	'capacity' => $info->{'capacity'} || 0,
+	'allocation' => $info->{'allocation'} || 0,
+	'format' => $doc ? $doc->findvalue('/volume/target/format/@type') : '',
+};
+}
+
 1;
