@@ -286,4 +286,47 @@ if ($self->{'startup'}) {
 return $pending;
 }
 
+# get_domain_addresses(self, domain, record, [skip_agent])
+# Collects guest IP addresses from the guest agent when it answers, otherwise
+# combines libvirt DHCP leases and the host ARP table. skip_agent defaults to
+# false. record is accepted for inventory callers but is not read by this
+# method.
+sub get_domain_addresses
+{
+my ($self, $domain, $record, $skip_agent) = @_;
+my %seen;
+my @addresses;
+foreach my $source ($ADDRESSES_AGENT, $ADDRESSES_LEASE, $ADDRESSES_ARP) {
+	# A failed bounded health probe should not immediately query the
+	# agent again.
+	next if ($skip_agent && $source == $ADDRESSES_AGENT);
+	my @interfaces = eval { $domain->get_interface_addresses($source, 0) };
+	foreach my $interface (@interfaces) {
+		foreach my $entry (@{$interface->{'addrs'} || []}) {
+			my $address = $entry->{'addr'} || next;
+			# Skip loopback and IPv6 link-local addresses reported
+			# by the agent.
+			next if ($address =~ /^(?:127\.|::1$|fe80:)/i);
+			# A lease or ARP entry must not repeat an address
+			# already collected.
+			next if ($seen{$address}++);
+			push(@addresses, {
+				'address' => $address,
+				'prefix' => $entry->{'prefix'},
+				'mac' => lc($interface->{'hwaddr'} || ''),
+				'interface' => $interface->{'name'},
+				'source' => $source == $ADDRESSES_AGENT
+				? 'agent'
+					: $source == $ADDRESSES_LEASE ? 'lease'
+					: 'arp',
+			});
+			}
+		}
+	# Prefer any usable agent result; otherwise combine leases and ARP
+	# entries.
+	last if (@addresses && $source == $ADDRESSES_AGENT);
+	}
+return \@addresses;
+}
+
 1;
