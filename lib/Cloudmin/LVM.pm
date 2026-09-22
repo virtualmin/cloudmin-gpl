@@ -608,6 +608,50 @@ close($in) && $out->sync() && close($out) or die "Cannot finish writing logical 
 $self->record(1);
 }
 
+# resize(self, bytes, [flags]) grows an LV without touching its guest filesystem.
+sub resize
+{
+my ($self, $bytes, $flags) = @_;
+die "Unsupported LVM resize flags\n" if ($flags);
+$bytes = Cloudmin::LVM::number($bytes);
+my $record = $self->record(1);
+Cloudmin::LVM::host_use($record);
+die "Shrinking logical volumes is not supported\n" if ($bytes < $record->{'lv_size'});
+my $driver = $self->{'pool'}->{'driver'};
+die "LVM changes are disabled in read-only mode\n"
+	if ($driver->{'readonly'} || WebminCore::is_readonly_mode());
+my $tag = $self->initialization_pending();
+if ($bytes > $record->{'lv_size'}) {
+	# A retry at the final size skips allocation and resumes only pending zeroing.
+	if ($self->{'pool'}->{'thin'}) {
+		# Growing a thin disk must retain the zeroing and health guarantees
+		# checked when the disk was first allocated.
+		my $group = $self->{'pool'}->group(1);
+		my $thin = $group->{'volumes'}->{$self->{'pool'}->{'thin'}};
+		my $info = $self->{'pool'}->get_info();
+		die "Repair or extend the thin pool and enable zeroing before growing disks\n"
+			if (($thin->{'zero'} || '') ne 'zero' || $thin->{'lv_health_status'} ||
+				$info->{'data_percent'} >= 95 || $info->{'metadata_percent'} >= 90);
+		}
+	die "Not enough free space to grow the logical volume\n"
+		if (!$self->{'pool'}->{'thin'} && $bytes-$record->{'lv_size'} > $self->{'pool'}->get_info()->{'available'});
+	if (!$self->{'pool'}->{'thin'} && !$tag) {
+		# Keep the old boundary on the LV so interrupted growth can finish zeroing.
+		$tag = 'cloudmin_zero_from_'.$record->{'lv_size'};
+		$driver->command('lvchange', '--addtag', $tag, '--select', 'lv_uuid='.$self->{'uuid'});
+		}
+	$driver->resize_logical_volume($record, $bytes);
+	}
+$self->{'pool'}->refresh();
+if ($tag) {
+	# Clear the durable marker only after every newly exposed byte is zeroed.
+	my ($offset) = $tag =~ /_(\d+)$/;
+	$self->zero_range($offset);
+	$driver->command('lvchange', '--deltag', $tag, '--select', 'lv_uuid='.$self->{'uuid'});
+	$self->{'pool'}->refresh();
+	}
+}
+
 # initialization_pending(self) returns an unfinished creation/growth marker.
 sub initialization_pending
 {
