@@ -466,6 +466,8 @@ return $record;
 }
 # get_name(self) returns the logical volume name.
 sub get_name { return $_[0]->{'name'}; }
+# get_key(self) returns a persistent identity instead of a reusable device path.
+sub get_key { return 'lvm:'.$_[0]->{'pool'}->{'vg_uuid'}.':'.$_[0]->{'uuid'}; }
 # get_path(self) returns the verified current block-device path.
 sub get_path
 {
@@ -536,6 +538,18 @@ if ($record->{'segtype'} eq 'thin') {
 	$allocation = int($allocation*$percent/100);
 	}
 return { type => 1, capacity => Cloudmin::LVM::capacity($record), allocation => $allocation };
+}
+
+# get_xml_description(self, [flags]) describes raw block storage for callers.
+sub get_xml_description
+{
+my ($self) = @_;
+my $escape = \&Cloudmin::Libvirt::xml_escape;
+my $info = $self->get_info();
+return '<volume type="block"><name>'.$escape->($self->get_name()).'</name><key>'.
+	$escape->($self->get_key()).'</key><capacity>'.$info->{'capacity'}.'</capacity><allocation>'.
+	$info->{'allocation'}.'</allocation><target><path>'.$escape->($self->get_path()).
+	'</path><format type="raw"/></target></volume>';
 }
 
 1;
