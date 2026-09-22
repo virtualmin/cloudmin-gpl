@@ -271,4 +271,19 @@ return { map { $_ => { running => $running->{$_}, saved => $saved->{$_} } }
 	keys %$saved };
 }
 
+# pending_domain_settings(self, domain, running, saved)
+# Excludes a cold start's settling balloon without hiding later saved changes.
+sub pending_domain_settings
+{
+my ($self, $domain, $running, $saved) = @_;
+my $pending = pending_settings($running, $saved);
+if ($self->{'startup'}) {
+	# Unavailable startup state falls back to the ordinary XML comparison.
+	delete $pending->{'memory_mib'} if (eval {
+		$self->{'startup'}->settling($domain, $running->{'memory_mib'}, $saved->{'memory_mib'});
+		});
+	}
+return $pending;
+}
+
 1;
