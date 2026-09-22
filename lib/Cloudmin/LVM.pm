@@ -336,6 +336,27 @@ $self->{'native'}->refresh();
 $self->group(1);
 }
 
+# get_info(self) reports physical space and thin data/metadata usage percentages.
+sub get_info
+{
+my ($self) = @_;
+my $group = $self->group();
+# Thick allocations consume VG extents; thin allocations consume pool chunks.
+return { state => $self->is_active() ? 2 : 0, capacity => $group->{'vg_size'},
+	available => $group->{'vg_free'}, allocation => $group->{'vg_size'}-$group->{'vg_free'} }
+	if (!$self->{'thin'});
+my $thin = $group->{'volumes'}->{$self->{'thin'}};
+# Missing usage is unsafe to treat as an empty pool, especially for metadata.
+foreach my $field (qw(data_percent metadata_percent)) {
+	die "Cannot read thin-pool usage; activate and check the pool\n"
+		if (($thin->{$field} // '') !~ /\A\d+(?:\.\d+)?\z/ || $thin->{$field} > 100);
+	}
+my $allocation = int($thin->{'lv_size'}*$thin->{'data_percent'}/100);
+return { state => $self->is_active() ? 2 : 0, capacity => $thin->{'lv_size'},
+	allocation => $allocation, available => $thin->{'lv_size'}-$allocation,
+	data_percent => 0+$thin->{'data_percent'}, metadata_percent => 0+$thin->{'metadata_percent'} };
+}
+
 # get_xml_description(self, [flags]) supplies metadata to Cloudmin's pool readers.
 # Synthetic thin-pool XML is never submitted to libvirt.
 sub get_xml_description
