@@ -329,4 +329,22 @@ foreach my $source ($ADDRESSES_AGENT, $ADDRESSES_LEASE, $ADDRESSES_ARP) {
 return \@addresses;
 }
 
+# filesystem_space(path)
+# Reads current Linux filesystem bytes, excluding reserves from available space.
+sub filesystem_space
+{
+my ($path) = @_;
+return undef if ($^O ne 'linux' || !$path || !-d $path);
+open(my $stat, '-|', 'stat', '-f', '--format=%S %b %f %a', '--', $path) || return undef;
+my $line = <$stat>;
+my $ok = close($stat);
+return undef if (!$ok || !defined($line) || $line !~ /\A(\d+) (\d+) (\d+) (-?\d+)\s*\z/);
+my ($size, $blocks, $free, $available) = ($1, $2, $3, $4);
+# Full filesystems may report negative availability after reserves are used.
+return undef if (!$size || !$blocks || $free > $blocks || $available > $free);
+$available = 0 if ($available < 0);
+return { capacity => $blocks * $size, allocation => ($blocks - $free) * $size,
+	available => $available * $size };
+}
+
 1;
