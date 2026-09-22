@@ -86,4 +86,13 @@ additional_log('exec', undef, "libvirt API: $method\n".
 	convert_to_json($parameters, 1));
 }
 
+# parse_xml_document(xml)
+# Parses libvirt XML without resolving external entities or reading DTDs.
+sub parse_xml_document
+{
+require XML::LibXML;
+return XML::LibXML->load_xml(string => $_[0], no_network => 1,
+	load_ext_dtd => 0, expand_entities => 0);
+}
+
 1;
