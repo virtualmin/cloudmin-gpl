@@ -233,4 +233,30 @@ foreach my $node ($doc->findnodes('/domain/devices/interface')) {
 return [sort { $a->{'mac'} cmp $b->{'mac'} } @interfaces];
 }
 
+# resource_settings(doc)
+# Normalizes the public settings compared by the editor and status collector.
+sub resource_settings
+{
+my ($doc) = @_;
+die "Missing CPU configuration\n" if (!$doc->findvalue('/domain/vcpu'));
+my @boot;
+foreach my $node ($doc->findnodes('/domain/os/boot')) {
+	# Legacy boot order selects a device class rather than an individual disk.
+	push(@boot, { device => $node->getAttribute('dev') });
+	}
+foreach my $node ($doc->findnodes('/domain/devices/*/boot')) {
+	# Per-device order identifies disks by target and interfaces by MAC.
+	my $device = $node->parentNode();
+	push(@boot, { device => $device->nodeName(),
+		target => $device->findvalue('target/@dev | mac/@address'),
+		order => $node->getAttribute('order') });
+	}
+return { cpus => 0 + ($doc->findvalue('/domain/vcpu/@current') || $doc->findvalue('/domain/vcpu')),
+	cpu_limit => 0 + $doc->findvalue('/domain/vcpu'),
+	memory_mib => memory_kib($doc, 'currentMemory') / 1024,
+	memory_limit_mib => memory_kib($doc, 'memory') / 1024,
+	bootmenu => $doc->findvalue('/domain/os/bootmenu/@enable') eq 'yes' ? 1 : 0,
+	boot => \@boot, networks => network_attachments($doc) };
+}
+
 1;
