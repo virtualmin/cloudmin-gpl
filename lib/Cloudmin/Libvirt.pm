@@ -74,4 +74,16 @@ return bless({
 }, $class);
 }
 
+# log_call(method, parameters)
+# Attaches a libvirt API call to the next Webmin action log. Callers select
+# public parameters explicitly; never pass domain XML or provisioning inputs.
+sub log_call
+{
+my ($method, $parameters) = @_;
+# Webmin's command record also carries API invocations. Identify the binding
+# explicitly rather than implying that an equivalent shell command was run.
+additional_log('exec', undef, "libvirt API: $method\n".
+	convert_to_json($parameters, 1));
+}
+
 1;
