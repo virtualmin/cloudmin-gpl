@@ -411,6 +411,21 @@ $id =~ s/\A(.{8})(.{4})(.{4})(.{4})(.{12})\z/$1-$2-$3-$4-$5/;
 return $id;
 }
 
+# pools(self, native_pool) exposes thick allocation and each thin pool separately.
+sub pools
+{
+my ($self, $native) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($native->get_xml_description(0));
+my $group = $self->group($doc->findvalue('/pool/source/name'));
+my @pools = (Cloudmin::LVM::Pool->new($self, $native, $group));
+# Thin-pool containers are destinations; their metadata LVs are never disks.
+foreach my $volume (sort { $a->{'lv_name'} cmp $b->{'lv_name'} } values %{$group->{'volumes'}}) {
+	next if ($volume->{'segtype'} ne 'thin-pool');
+	push(@pools, Cloudmin::LVM::Pool->new($self, $native, $group, $volume));
+	}
+return @pools;
+}
+
 package Cloudmin::LVM::Pool;
 use strict;
 use warnings;
