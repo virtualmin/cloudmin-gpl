@@ -328,6 +328,14 @@ return 0 if (!$self->{'native'}->is_active());
 return !$self->{'thin'} || $self->group()->{'volumes'}->{$self->{'thin'}}->{'lv_active'} eq 'active';
 }
 
+# refresh(self) refreshes both libvirt inventory and LVM metadata.
+sub refresh
+{
+my ($self) = @_;
+$self->{'native'}->refresh();
+$self->group(1);
+}
+
 # get_xml_description(self, [flags]) supplies metadata to Cloudmin's pool readers.
 # Synthetic thin-pool XML is never submitted to libvirt.
 sub get_xml_description
