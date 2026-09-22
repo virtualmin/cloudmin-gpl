@@ -701,4 +701,14 @@ $out->sync() && close($out) or die "Cannot finish initializing logical volume\n"
 $self->record(1);
 }
 
+# delete(self, [flags]) removes only the UUID checked by the caller's usage guard.
+sub delete
+{
+my ($self, $flags) = @_;
+die "Unsupported LVM deletion flags\n" if ($flags);
+Cloudmin::LVM::host_use($self->record(1));
+$self->{'pool'}->{'driver'}->command('lvremove', '--yes', '--select', 'lv_uuid='.$self->{'uuid'});
+$self->{'pool'}->refresh();
+}
+
 1;
