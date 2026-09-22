@@ -163,4 +163,39 @@ closedir($dh);
 return \@bridges;
 }
 
+# get_network_record(self, network)
+# Converts a Sys::Virt::Network object into a Cloudmin inventory record.
+sub get_network_record
+{
+my ($self, $network) = @_;
+my $active = eval { $network->is_active() } ? 1 : 0;
+my $persistent = eval { $network->is_persistent() } ? 1 : 0;
+my $autostart = $persistent && eval { $network->get_autostart() } ? 1 : 0;
+my $xml = eval { $network->get_xml_description(0) } || '';
+# Extract the bridge name from either accepted XML quote style.
+my ($bridge) = $xml =~ /<bridge\b[^>]*\bname\s*=\s*["']([^"']+)["']/i;
+my ($forward) = $xml =~ /<forward\b[^>]*\bmode\s*=\s*["']([^"']+)["']/i;
+# A network without a forward element is isolated to the host.
+$forward = $xml =~ /<forward\b/i ? ($forward || 'nat') : 'isolated';
+my ($address, $netmask, $prefix) = $xml =~
+	/<ip\b(?![^>]*family\s*=\s*["']ipv6["'])[^>]*\baddress\s*=\s*["']([^"']+)["'](?:[^>]*\bnetmask\s*=\s*["']([^"']+)["'])?(?:[^>]*\bprefix\s*=\s*["'](\d+)["'])?/i;
+my $dhcp = $xml =~ /<dhcp\b/i ? 1 : 0;
+
+# Inventory records retain inactive networks without claiming they are usable.
+return {
+	'id' => $network->get_uuid_string(),
+	'uuid' => $network->get_uuid_string(),
+	'name' => $network->get_name(),
+	'active' => $active,
+	'persistent' => $persistent,
+	'autostart' => $autostart,
+	'bridge' => $bridge,
+	'forward' => $forward,
+	'address' => $address,
+	'netmask' => $netmask,
+	'prefix' => $prefix,
+	'dhcp' => $dhcp,
+};
+}
+
 1;
