@@ -846,6 +846,20 @@ my ($domain) = grep { $_->get_uuid_string() eq lc($id) ||
 return $domain;
 }
 
+# set_domain_autostart(self, id, enabled)
+# Changes whether libvirt starts the guest when the host boots.
+sub set_domain_autostart
+{
+my ($self, $id, $enabled) = @_;
+my $domain = $self->find_domain($id) || die "Virtual machine not found\n";
+log_call('Sys::Virt::Domain::set_autostart', {
+	uuid => $id, enabled => $enabled ? 1 : 0 });
+my $ok = eval { $domain->set_autostart($enabled ? 1 : 0); 1 };
+# Return readable libvirt errors to both API and page callers.
+die error_message($@)."\n" if (!$ok);
+return 1;
+}
+
 # list_host_bridges(self, [networks])
 # Returns Linux bridges on the host that are not owned by a libvirt network,
 # read from sysfs so no interface daemon is required.
