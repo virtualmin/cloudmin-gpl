@@ -380,4 +380,34 @@ while ($xml =~ /<mac\b[^>]*\baddress\s*=\s*(["'])([^"']+)\1/ig) {
 return @macs;
 }
 
+# extract_interfaces(xml)
+# Returns network interfaces with their MAC, model and attachment.
+sub extract_interfaces
+{
+my ($xml) = @_;
+my @interfaces;
+while ($xml =~ m{<interface\b([^>]*)>(.*?)</interface>}sg) {
+	my ($attrs, $body) = ($1, $2);
+	my ($type) = $attrs =~ /\btype\s*=\s*["']([^"']+)["']/i;
+	my ($mac) = $body =~ m{<mac\b[^>]*\baddress\s*=\s*["']([^"']+)["']}i;
+	my ($network) =
+		$body =~ m{<source\b[^>]*\bnetwork\s*=\s*["']([^"']+)["']}i;
+	my ($bridge) =
+		$body =~ m{<source\b[^>]*\bbridge\s*=\s*["']([^"']+)["']}i;
+	my ($model) = $body =~ m{<model\b[^>]*\btype\s*=\s*["']([^"']+)["']}i;
+	my ($target) = $body =~ m{<target\b[^>]*\bdev\s*=\s*["']([^"']+)["']}i;
+	# The page needs both the guest NIC model and its host-side attachment.
+	push(@interfaces, {
+		'type' => $type || '',
+		'mac' => lc($mac || ''),
+		'network' => $network,
+		'bridge' => $bridge,
+		'source' => $network || $bridge,
+		'model' => $model,
+		'target' => $target,
+	});
+	}
+return @interfaces;
+}
+
 1;
