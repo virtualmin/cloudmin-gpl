@@ -948,6 +948,20 @@ die error_message($@)."\n" if (!$ok);
 return 1;
 }
 
+# removed_guest(self, uuid, [job_id])
+# Removes local managed logs after guest deletion. A valid creation job also
+# permits the controller callback to remove that creation's access records.
+sub removed_guest
+{
+my ($self, $uuid, $job) = @_;
+# Rotation files must not survive deletion or creation rollback.
+$self->{'serial_log'}->remove($uuid) if ($self->{'serial_log'} && !$self->{'readonly'} &&
+	$self->uri() eq 'qemu:///system' && !$self->find_domain($uuid));
+# Access records are tied to a creation job, not just a possibly reused UUID.
+$self->{'on_remove'}->($uuid, $job) if ($self->uri() eq 'qemu:///system' &&
+	$self->{'on_remove'} && ($job || '') =~ /\A[a-f0-9]{32}\z/);
+}
+
 # list_host_bridges(self, [networks])
 # Returns Linux bridges on the host that are not owned by a libvirt network,
 # read from sysfs so no interface daemon is required.
