@@ -110,6 +110,40 @@ my $ok = eval { require Sys::Virt; 1 };
 return $ok ? undef : error_message($@);
 }
 
+# connect(self)
+# Opens and caches the configured libvirt connection.
+sub connect
+{
+my ($self) = @_;
+# Reuse this adapter's connection for host checks and guest discovery.
+return $self->{'connection'} if ($self->{'connection'});
+
+my $connection;
+# Let tests provide a connection without contacting a hypervisor.
+if ($self->{'connection_factory'}) {
+	$connection = eval {
+		$self->{'connection_factory'}->(
+			$self->{'uri'}, $self->{'readonly'});
+		};
+	}
+# Normal requests connect through the installed Perl libvirt bindings.
+else {
+	require Sys::Virt;
+	$connection = eval {
+		Sys::Virt->new(
+			'uri' => $self->{'uri'},
+			'readonly' => $self->{'readonly'},
+		);
+		};
+	}
+
+# Report failed or empty connection results before caching the handle.
+die error_message($@ || 'Libvirt returned no connection')
+	if (!$connection);
+$self->{'connection'} = $connection;
+return $connection;
+}
+
 # parse_xml_document(xml)
 # Parses libvirt XML without resolving external entities or reading DTDs.
 sub parse_xml_document
