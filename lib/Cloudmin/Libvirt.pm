@@ -592,6 +592,23 @@ log_call('Sys::Virt::define_domain', { uuid => $uuid, name => $name,
 return $self->connect()->define_domain($xml, 1);
 }
 
+# remove_created_volume(self, pool_uuid, name, [expected_key])
+# Deletes a journalled volume only after checking every remaining domain
+# reference.
+sub remove_created_volume
+{
+my ($self, $pool_id, $name, $key) = @_;
+my ($pool, $volume) = $self->volume($pool_id, $name, $key);
+# Repeated rollback can safely pass a volume that is already gone.
+return 1 if (!$volume);
+# A volume used by any guest is no longer safe for automatic rollback.
+Cloudmin::Images::assert_unused(undef, $self->connect(), $pool, $volume);
+log_call('Sys::Virt::StorageVol::delete', {
+	pool => $pool_id, volume => $name, flags => 0 });
+$volume->delete(0);
+return 1;
+}
+
 # setup_agent_error() reports missing host tools before guest allocation.
 sub setup_agent_error
 {
