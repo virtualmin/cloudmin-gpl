@@ -130,6 +130,23 @@ my ($type) = parse_pool_xml($_[0]->get_xml_description(0));
 return $type eq 'logical' || $type eq 'lvmthin';
 }
 
+# file_pool(self, [preferred_uuid]) selects file storage for images and firmware.
+# These auxiliary files cannot be placed in a volume group or thin pool.
+sub file_pool
+{
+my ($self, $preferred) = @_;
+my @pools = grep { $_->is_active() &&
+	(parse_pool_xml($_->get_xml_description(0)))[0] =~ /\A(?:dir|fs|netfs)\z/ }
+	storage_pools($self);
+my ($pool) = grep { $_->get_uuid_string() eq ($preferred || '') } @pools;
+# Libvirt lists pools in no particular order. Prefer the conventional default
+# pool, then the first by name, so auxiliary files land predictably.
+($pool) = grep { $_->get_name() eq 'default' } @pools if (!$pool);
+($pool) = sort { $a->get_name() cmp $b->get_name() } @pools if (!$pool);
+die "An active file storage pool is required for images and firmware\n" if (!$pool);
+return $pool;
+}
+
 # uri(self)
 # Returns the configured libvirt connection URI.
 sub uri
