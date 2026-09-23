@@ -668,6 +668,50 @@ die "Invalid guest agent response\n"
 return $response;
 }
 
+# get_setup_host_key(self, uuid, [final_attempt]) reads the public identity.
+# A disconnected or busy agent returns undef. Missing files, blocked reads and
+# lost handles also return undef until final_attempt requests their diagnostic.
+# final_attempt defaults to false and does not disable transport retries.
+sub get_setup_host_key
+{
+my ($self, $uuid, $final_attempt) = @_;
+my $opened = $self->setup_agent_command($uuid, 'guest-file-open',
+	{ path => '/var/log/qemu-ga/cloudmin-identity.json', mode => 'r' }, $final_attempt);
+# No open reply means preparation or the agent is still unavailable.
+return undef if (!$opened);
+my $handle = $opened->{'return'};
+die "Invalid guest identity handle\n" if (!defined($handle) || ref($handle) || $handle !~ /\A\d+\z/);
+my ($identity, $pending);
+my $ok = eval {
+	my $read = $self->setup_agent_command($uuid, 'guest-file-read',
+		{ handle => 0+$handle, count => 4096 }, $final_attempt);
+	if (!$read) {
+		# A guest reboot can close an open agent handle before its read.
+		$pending = 1;
+	}
+	else {
+		# Validate the complete record and UUID before accepting its SSH key.
+		my $reply = $read->{'return'};
+		die "Invalid guest identity response\n" if (ref($reply) ne 'HASH' ||
+			!defined($reply->{'count'}) || $reply->{'count'} !~ /\A\d+\z/ || $reply->{'count'} >= 4096 ||
+			ref($reply->{'buf-b64'}) || ($reply->{'buf-b64'} || '') !~ /\A[A-Za-z0-9+\/=\r\n]+\z/);
+		my $bytes = decode_base64($reply->{'buf-b64'});
+		die "Incomplete guest identity response\n" if (length($bytes) != $reply->{'count'});
+		$identity = convert_from_json($bytes);
+		die "The guest identity does not match this creation request\n" if (ref($identity) ne 'HASH' ||
+			($identity->{'uuid'} || '') ne $uuid);
+		die "Invalid guest SSH host key\n" if (ref($identity->{'key'}) ||
+			($identity->{'key'} || '') !~ /\Assh-rsa [A-Za-z0-9+\/=]+(?: [^\r\n]*)?\z/);
+	}
+	1;
+};
+my $error = $@;
+# Closing is required even if parsing or identity validation fails.
+eval { $self->setup_agent_command($uuid, 'guest-file-close', { handle => 0+$handle }); };
+die $error if (!$ok);
+return $pending ? undef : $identity->{'key'};
+}
+
 # list_host_bridges(self, [networks])
 # Returns Linux bridges on the host that are not owned by a libvirt network,
 # read from sysfs so no interface daemon is required.
