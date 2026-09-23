@@ -360,6 +360,47 @@ while (1) {
 	}
 }
 
+# conversion_sources(self, volume) stages a managed backing chain for conversion.
+# Only libvirt-listed local volumes may supply backing bytes. The worker rewrites
+# links on private copies, so guest-controlled paths never select host files.
+sub conversion_sources
+{
+my ($self, $volume) = @_;
+my (%files, %seen, @layers, %managed);
+while ($volume) {
+	my $path = $volume->get_path();
+	die "The disk backing chain is cyclic or too deep\n" if ($seen{$path}++ || @layers >= 32);
+	my $doc = parse_xml_document($volume->get_xml_description(0));
+	my $format = $doc->findvalue('/volume/target/format/@type') || 'raw';
+	die "Unsupported disk backing format\n" if ($format !~ /\A(?:raw|qcow2)\z/);
+	# Fixed private names let the worker rebuild links without host paths.
+	my $name = @layers ? 'layer'.scalar(@layers) : 'image';
+	$files{$name} = $path;
+	push(@layers, {name => $name, format => $format});
+	my $backing = $doc->findvalue('/volume/backingStore/path');
+	last if (!$backing);
+	die "Raw disks cannot have backing files\n" if ($format ne 'qcow2');
+	if (!%managed) {
+		# Build this map only for chained images; ordinary imports need no scan.
+		foreach my $pool ($self->storage_pools()) {
+			next if (!$pool->is_active());
+			my ($type) = parse_pool_xml($pool->get_xml_description(0));
+			next if ($type !~ /\A(?:dir|fs|netfs)\z/);
+			foreach my $item ($pool->list_all_volumes()) {
+				my $resolved = Cwd::abs_path($item->get_path());
+				$managed{$resolved} = $item if ($resolved);
+				}
+			}
+		}
+	$backing = dirname($path).'/'.$backing if ($backing !~ m{^/});
+	# Resolve relative links against their layer, then require managed storage.
+	my $resolved = Cwd::abs_path($backing);
+	$volume = $resolved ? $managed{$resolved} : undef;
+	die "The disk backing file is not in an active managed file pool\n" if (!$volume);
+	}
+return (\%files, @layers > 1 ? \@layers : undef);
+}
+
 # setup_agent_error() reports missing host tools before guest allocation.
 sub setup_agent_error
 {
