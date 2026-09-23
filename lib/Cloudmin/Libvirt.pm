@@ -96,6 +96,20 @@ additional_log('exec', undef, "libvirt API: $method\n".
 	convert_to_json($parameters, 1));
 }
 
+# module_error(self)
+# Returns the Sys::Virt load error, or undef when the bindings are available
+# or an injected connection factory makes them unnecessary.
+sub module_error
+{
+my ($self) = @_;
+# Injected connections allow tests to run without Sys::Virt installed.
+return undef if ($self->{'connection_factory'});
+
+# Load bindings here so the dashboard can report a missing package.
+my $ok = eval { require Sys::Virt; 1 };
+return $ok ? undef : error_message($@);
+}
+
 # parse_xml_document(xml)
 # Parses libvirt XML without resolving external entities or reading DTDs.
 sub parse_xml_document
