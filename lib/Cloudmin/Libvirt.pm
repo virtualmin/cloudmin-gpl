@@ -410,4 +410,33 @@ while ($xml =~ m{<interface\b([^>]*)>(.*?)</interface>}sg) {
 return @interfaces;
 }
 
+# extract_graphics(xml)
+# Returns the VNC graphics device when present, otherwise the first device,
+# with its type, listen address and assigned ports.
+sub extract_graphics
+{
+my ($xml) = @_;
+my @devices;
+foreach my $attrs ($xml =~ m{<graphics\b([^>]*)>}gi) {
+	my %device;
+	while ($attrs =~ /\b([\w-]+)\s*=\s*["']([^"']*)["']/g) {
+		$device{lc($1)} = $2;
+		}
+	push(@devices, \%device);
+	}
+# Headless guests have no graphics device to display.
+return undef if (!@devices);
+# The console opens VNC, so a guest with several displays reports that one.
+my ($vnc) = grep { ($_->{'type'} || '') eq 'vnc' } @devices;
+my %graphics = %{$vnc || $devices[0]};
+# Ports are -1 until QEMU assigns them at start.
+return {
+	'type' => $graphics{'type'},
+	'listen' => $graphics{'listen'},
+	'port' => ($graphics{'port'} || -1) > 0 ? $graphics{'port'} : undef,
+	'websocket' => ($graphics{'websocket'} || -1) > 0
+		? $graphics{'websocket'} : undef,
+};
+}
+
 1;
