@@ -814,6 +814,22 @@ if (!$ok) {
 return $stream;
 }
 
+# serial_history(self, uuid) opens only the running guest's managed log.
+# Call after open_serial_console(), under the same console authorization.
+sub serial_history
+{
+my ($self, $uuid) = @_;
+# Adapters without a log manager retain live-only console output.
+return undef if (!$self->{'serial_log'});
+# History has the same local write-access requirement as the exclusive stream.
+die "Serial history requires local write access\n" if
+	($self->{'readonly'} || $self->uri() ne 'qemu:///system');
+my $domain = $self->find_domain($uuid) || die "Virtual machine not found\n";
+# The guest may have stopped since the console stream was opened.
+die "Serial console closed\n" if (!$domain->is_active());
+return $self->{'serial_log'}->reader($uuid, $domain->get_xml_description(0));
+}
+
 # find_domain(self, id)
 # Matches a guest's UUID or name in the current inventory; returns undef if
 # absent.
