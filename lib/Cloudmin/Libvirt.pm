@@ -74,6 +74,16 @@ return bless({
 }, $class);
 }
 
+# disk_pool(type) identifies supported writable disk backends.
+sub disk_pool { return ($_[0] || '') =~ /\A(?:dir|fs|netfs|logical|lvmthin)\z/; }
+
+# block_pool(pool) identifies LVM destinations that store raw block devices.
+sub block_pool
+{
+my ($type) = parse_pool_xml($_[0]->get_xml_description(0));
+return $type eq 'logical' || $type eq 'lvmthin';
+}
+
 # log_call(method, parameters)
 # Attaches a libvirt API call to the next Webmin action log. Callers select
 # public parameters explicitly; never pass domain XML or provisioning inputs.
