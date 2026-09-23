@@ -439,4 +439,21 @@ return {
 };
 }
 
+# extract_serial_console(xml)
+# Returns an alias record for the default PTY console, or undef if unsupported.
+# Fall back to the first serial port only when there is no console element.
+sub extract_serial_console
+{
+my ($xml) = @_;
+my $doc = parse_xml_document($xml);
+my ($device) = $doc->findnodes('/domain/devices/console');
+# Older domain definitions may declare a serial port without a console element.
+($device) = $doc->findnodes('/domain/devices/serial') if (!$device);
+# File, socket and other backends are not supported by this console transport.
+return undef if (!$device || $device->getAttribute('type') ne 'pty');
+# Use an alias, never a host path. No alias means libvirt's default device.
+my $alias = $device->findvalue('alias/@name');
+return { alias => length($alias) ? $alias : undef };
+}
+
 1;
