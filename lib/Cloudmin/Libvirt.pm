@@ -846,6 +846,42 @@ my ($domain) = grep { $_->get_uuid_string() eq lc($id) ||
 return $domain;
 }
 
+# start_domain(self, id)
+# Starts a defined guest; a missing guest or libvirt refusal raises an error.
+sub start_domain
+{
+my ($self, $id) = @_;
+my $domain = $self->find_domain($id) || die "Virtual machine not found\n";
+# Existing guests acquire history on a cold start without replacing live XML
+# or hardware saved in a managed-save image.
+if ($self->{'serial_log'} && !$self->{'readonly'} &&
+	$self->uri() eq 'qemu:///system' && !$domain->is_active() &&
+	!$domain->has_managed_save_image(0)) {
+	my $before = $domain->get_xml_description(3); # SECURE | INACTIVE
+	my $after = $self->{'serial_log'}->configure($before);
+	if ($after ne $before) {
+		# Preserve all saved hardware and credentials when adding the log.
+		log_call('Sys::Virt::define_domain', {
+			uuid => $domain->get_uuid_string(), flags => 1 });
+		$self->connect()->define_domain($after, 1);
+		}
+	}
+# Managed saves resume old hardware; only a cold start applies saved memory.
+my $memory = eval {
+	my $doc = parse_xml_document($domain->get_xml_description($XML_INACTIVE));
+	$self->{'startup'} && !$domain->has_managed_save_image(0) &&
+		$doc->exists('/domain/devices/memballoon[@model="virtio"]')
+		? memory_kib($doc, 'currentMemory') / 1024 : undef;
+	};
+$self->call_domain_method($id, 'create');
+# A cache failure must not turn a successful start into a reported failure.
+if (defined($memory)) {
+	# Libvirt handles obtained before create can retain the inactive domain ID.
+	eval { $self->{'startup'}->remember($self->find_domain($id), $memory) };
+	}
+return 1;
+}
+
 # set_domain_autostart(self, id, enabled)
 # Changes whether libvirt starts the guest when the host boots.
 sub set_domain_autostart
