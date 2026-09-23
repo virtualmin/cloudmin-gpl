@@ -881,6 +881,45 @@ if (defined($memory)) {
 	}
 return 1;
 }
+# shutdown_domain(self, id)
+# Requests a clean guest shutdown; completion is asynchronous.
+sub shutdown_domain
+{
+return $_[0]->call_domain_method($_[1], 'shutdown');
+}
+# reboot_domain(self, id)
+# Requests a guest reboot through libvirt and propagates refusal errors.
+sub reboot_domain
+{
+return $_[0]->call_domain_method($_[1], 'reboot');
+}
+# destroy_domain(self, id)
+# Forces a guest off without deleting its definition or storage.
+sub destroy_domain
+{
+return $_[0]->call_domain_method($_[1], 'destroy');
+}
+
+# suspend_domain(self, id)
+# Pauses guest execution while retaining its memory and devices.
+sub suspend_domain
+{
+return $_[0]->call_domain_method($_[1], 'suspend');
+}
+
+# resume_domain(self, id)
+# Continues execution of a paused guest.
+sub resume_domain
+{
+return $_[0]->call_domain_method($_[1], 'resume');
+}
+
+# reset_domain(self, id)
+# Resets the hardware without asking the guest operating system to shut down.
+sub reset_domain
+{
+return $_[0]->call_domain_method($_[1], 'reset');
+}
 
 # set_domain_autostart(self, id, enabled)
 # Changes whether libvirt starts the guest when the host boots.
