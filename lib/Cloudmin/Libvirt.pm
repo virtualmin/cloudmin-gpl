@@ -779,6 +779,41 @@ open(my $socket, '+<&=', $fd) || die "Cannot open the console socket: $!\n";
 return $socket;
 }
 
+# open_serial_console(self, uuid)
+# Opens the default PTY console as a nonblocking libvirt stream. The caller must
+# run libvirt's event loop and abort the stream when the browser disconnects.
+sub open_serial_console
+{
+my ($self, $uuid) = @_;
+# Serial input needs the same local write access as the graphical console.
+die "Console access requires write permission\n" if ($self->{'readonly'});
+die "Console access requires local libvirt\n"
+	if ($self->uri() ne 'qemu:///system');
+# Resolve only a stable UUID, never a device path or a guest name.
+die "Invalid virtual machine identifier\n" if (!defined($uuid) ||
+	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+my $domain = $self->find_domain($uuid) || die "Virtual machine not found\n";
+# Recheck live hardware; the guest may have stopped since rendering the page.
+die "Start the virtual machine before opening its console\n"
+	if (!$domain->is_active());
+my $device = extract_serial_console($domain->get_xml_description(0));
+die "This virtual machine has no supported serial console\n" if (!$device);
+# Nonblocking I/O lets the supervisor check access while the port is idle.
+my $stream = $self->connect()->new_stream(1); # NONBLOCK
+my $ok = eval {
+	# SAFE requires exclusive access. Never force another client off the port.
+	$domain->open_console($stream, $device->{'alias'}, 2); # CONSOLE_SAFE
+	1;
+	};
+if (!$ok) {
+	# Release even a partially opened stream before returning libvirt's error.
+	my $error = $@;
+	eval { $stream->abort(); };
+	die $error;
+	}
+return $stream;
+}
+
 # find_domain(self, id)
 # Matches a guest's UUID or name in the current inventory; returns undef if
 # absent.
