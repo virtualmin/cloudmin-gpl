@@ -1128,6 +1128,24 @@ if ($self->{'startup'}) {
 return $pending;
 }
 
+# get_resource_stats(self, [uuids])
+# Reads one batch without waiting on busy QEMU jobs. Omit uuids for the
+# overview; detail viewers request only their selected guests.
+sub get_resource_stats
+{
+my ($self, $ids) = @_;
+my $connection = $self->connect();
+my $domains = defined($ids) ? [ grep { defined($_) }
+	map { eval { $connection->get_domain_by_uuid($_) } } @$ids ] : undef;
+# An empty explicit selection must not become a request for every
+# domain.
+return {} if (defined($domains) && !@$domains);
+# CPU_TOTAL, BALLOON, VCPU, INTERFACE and BLOCK; NOWAIT permits partial results.
+my @stats = $connection->get_all_domain_stats(2 | 4 | 8 | 16 | 32, $domains,
+	1 << 29);
+return { map { $_->{'dom'}->get_uuid_string() => $_->{'data'} } @stats };
+}
+
 # get_domain_addresses(self, domain, record, [skip_agent])
 # Collects guest IP addresses from the guest agent when it answers, otherwise
 # combines libvirt DHCP leases and the host ARP table. skip_agent defaults to
