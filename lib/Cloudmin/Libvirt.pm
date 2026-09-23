@@ -264,6 +264,46 @@ return {
 };
 }
 
+# get_host_capabilities(self, [architecture])
+# Returns the host CPU count, memory, and the machine type and firmware
+# choices libvirt offers for KVM guests of the given architecture. The
+# architecture defaults to the host CPU reported in libvirt's capabilities XML.
+sub get_host_capabilities
+{
+my ($self, $architecture) = @_;
+my $connection = $self->connect();
+my $node = $connection->get_node_info();
+my $caps = parse_xml_document($connection->get_capabilities());
+my $host_arch = $caps->findvalue('/capabilities/host/cpu/arch');
+$architecture ||= $host_arch;
+# Creation supports native KVM guests only, not cross-architecture emulation.
+die "Only native x86-64 and ARM64 KVM guests are supported\n"
+	if ($architecture !~ /\A(?:x86_64|aarch64)\z/ ||
+	$architecture ne $host_arch);
+my $machine = get_machine_type($architecture);
+# Query firmware support for the machine type that creation will actually use.
+my $domain = parse_xml_document($connection->get_domain_capabilities(
+	undef, $architecture, $machine, 'kvm', 0));
+my @firmware = map { $_->textContent() }
+	$domain->findnodes('/domainCapabilities/os/enum[@name="firmware"]/value');
+# x86 BIOS can be implicit even when the firmware enum lists only EFI.
+push(@firmware, 'bios')
+	if ($architecture eq 'x86_64' && !grep { $_ eq 'bios' } @firmware);
+my @machines = map { $_->textContent() }
+	$caps->findnodes('/capabilities/guest/arch[@name="'.$architecture.
+	'"]/machine');
+return {
+	architecture => $architecture, host_architecture => $host_arch,
+	machine => $machine, machines => \@machines,
+	emulator => $domain->findvalue('/domainCapabilities/path'),
+	cpus => $node->{'cpus'}, memory_kib => $node->{'memory'},
+	free_memory => $connection->get_node_free_memory(),
+	firmware => \@firmware,
+	efi => scalar(grep { $_ eq 'efi' } @firmware) ? 1 : 0,
+	bios => scalar(grep { $_ eq 'bios' } @firmware) ? 1 : 0,
+};
+}
+
 # parse_xml_document(xml)
 # Parses libvirt XML without resolving external entities or reading DTDs.
 sub parse_xml_document
