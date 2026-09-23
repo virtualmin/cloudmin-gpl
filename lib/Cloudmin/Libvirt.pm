@@ -423,6 +423,76 @@ my $ok = eval {
 if (!$ok) { my $error = $@; eval { $stream->abort(); }; die $error; }
 }
 
+# upload_seed(self, pool_uuid, name, file, journal, [format], [capacity])
+# Imports checked bytes into the backend; defaults to a raw seed sized to the file.
+# journal() records cleanup intent before the destination volume is created.
+sub upload_seed
+{
+my ($self, $pool_id, $name, $file, $journal, $format, $capacity) = @_;
+# Callers may import raw seeds or verified QCOW2 disks with virtual capacity.
+$format ||= 'raw';
+die "Invalid volume format\n" if ($format !~ /\A(?:raw|qcow2)\z/);
+my ($pool, $existing) = $self->volume($pool_id, $name);
+# An existing volume name belongs to another operation; never replace it.
+die "Destination seed volume already exists\n" if ($existing);
+my $size = -s $file || die "Cloud-init seed is empty\n";
+$capacity ||= $size;
+Cloudmin::Worker::byte_limit($capacity);
+$journal->();
+if (block_pool($pool)) {
+	# Seed and restore imports share this path; LVs always store raw sectors.
+	my $volume = $pool->create_volume('<volume><name>'.xml_escape($name).
+		"</name><capacity unit='bytes'>$capacity</capacity><target><format type='raw'/></target></volume>");
+	if ($format eq 'raw') {
+		# The caller already inspected these bytes; no format conversion is needed.
+		$volume->write_file($file);
+		}
+	else {
+		# Parse QCOW2 only in the isolated worker, then copy its raw result.
+		my $runner = $self->{'disk_worker'} || sub { Cloudmin::Worker->new()->run(@_) };
+		# A fully written QCOW2 file slightly exceeds its virtual capacity, so
+		# budget the staged input like clone_disk; the raw output still has to fit.
+		$runner->('convert', {format => $format, output_format => 'raw',
+			limit => int($capacity*1.05)+16*1024**2},
+			files => {image => $file}, consume => sub { $volume->write_file($_[0]); });
+		}
+	return $self->get_storage_volume_record($volume);
+	}
+log_call('Sys::Virt::StoragePool::create_volume', {
+	pool => $pool_id, volume => $name, capacity_bytes => $capacity,
+	format => $format });
+my $volume = $pool->create_volume("<volume><name>".xml_escape($name)."</name>".
+	"<capacity unit='bytes'>$capacity</capacity><target><format type='$format'/></target></volume>");
+my $stream = $self->connect()->new_stream();
+# Stream the input file without granting the guest access to staging files.
+my $ok = eval {
+	# Record the transfer size, never the seed's credentials or contents.
+	log_call('Sys::Virt::StorageVol::upload', {
+		pool => $pool_id, volume => $name, bytes => $size, offset => 0,
+		flags => 0 });
+	$volume->upload($stream, 0, $size, 0);
+	open(my $fh, '<', $file) || die "Cannot read cloud-init seed: $!\n";
+	binmode($fh);
+	$stream->send_all(sub {
+		# reader(stream, buffer, length)
+		# Supplies the next seed bytes to libvirt.
+		my $read = read($fh, $_[1], $_[2]);
+		# An I/O error must abort the upload rather than masquerade as
+		# EOF.
+		die "Cannot read cloud-init seed: $!\n" if (!defined($read));
+		return $read;
+		});
+	close($fh);
+	$stream->finish();
+	1;
+	};
+my $error = $@;
+# Release an unfinished stream and preserve the original upload failure.
+eval { $stream->abort() } if (!$ok);
+die $error if (!$ok);
+return $self->get_storage_volume_record($volume);
+}
+
 # setup_agent_error() reports missing host tools before guest allocation.
 sub setup_agent_error
 {
@@ -783,6 +853,14 @@ $value =~ s/&quot;/"/g;
 $value =~ s/&apos;/'/g;
 $value =~ s/&amp;/&/g;
 return $value;
+}
+
+# xml_escape(value)
+# Escapes text for use inside libvirt XML elements and quoted attributes.
+sub xml_escape
+{
+my ($value) = @_;
+return html_escape($value);
 }
 
 # format_version(version)
