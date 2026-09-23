@@ -609,6 +609,39 @@ $volume->delete(0);
 return 1;
 }
 
+# set_user_password(self, uuid, username, password)
+# Resets an existing guest account's password without saving it in Cloudmin.
+# Requires a writable adapter, running guest and responding agent.
+sub set_user_password
+{
+my ($self, $uuid, $username, $password) = @_;
+# Deny read-only adapters and malformed IDs before looking up the guest.
+die "Password reset requires write permission\n" if ($self->{'readonly'});
+die "Invalid virtual machine ID\n" if (!defined($uuid) || ref($uuid) ||
+	$uuid !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+# Restrict account names and reject separators in chpasswd's line-based input.
+die "Enter a valid guest username\n" if (!defined($username) || ref($username) ||
+	$username !~ /\A[a-z_][a-z0-9_.-]{0,31}\$?\z/i);
+die "Enter a password of 1 to 1024 characters without line breaks\n"
+	if (!defined($password) || ref($password) || !length($password) ||
+	length($password) > 1024 || $password =~ /[\0\r\n]/);
+my $domain = $self->find_domain($uuid) || die "Virtual machine not found\n";
+# Recheck readiness on this submission; the status shown in a browser may be old.
+my $state = $domain->get_info()->{'state'};
+die "The virtual machine must be running\n" if ($state != 1 && $state != 2);
+# Treat a failed or empty agent probe as unavailable before sending the secret.
+my $info = eval { $domain->get_guest_info(2, 0) }; # GUEST_INFO_OS
+die "The guest agent is not responding\n" if (ref($info) ne 'HASH' || !keys(%$info));
+# Pass plaintext directly to libvirt with flags=0. Never report a backend error
+# verbatim: it may contain the guest command and its password argument.
+my $ok = eval { $domain->set_user_password($username, $password, 0); 1 };
+die "Could not reset the password. Check that the account exists and the guest agent permits password changes.\n"
+	if (!$ok);
+# Record only successful changes, with the VM and account but no password.
+log_call('set_user_password', { uuid => $uuid, username => $username });
+return 1;
+}
+
 # setup_agent_error() reports missing host tools before guest allocation.
 sub setup_agent_error
 {
