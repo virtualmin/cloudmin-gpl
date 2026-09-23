@@ -712,6 +712,22 @@ die $error if (!$ok);
 return $pending ? undef : $identity->{'key'};
 }
 
+# find_domain(self, id)
+# Matches a guest's UUID or name in the current inventory; returns undef if
+# absent.
+sub find_domain
+{
+my ($self, $id) = @_;
+# An empty identifier must not open a connection or match an unnamed record.
+return undef if (!defined($id) || $id eq '');
+my $connection = $self->connect();
+# Enumeration distinguishes a missing guest from a failed daemon connection.
+my ($domain) = grep { $_->get_uuid_string() eq lc($id) ||
+	$_->get_name() eq $id }
+	$connection->list_all_domains(0);
+return $domain;
+}
+
 # list_host_bridges(self, [networks])
 # Returns Linux bridges on the host that are not owned by a libvirt network,
 # read from sysfs so no interface daemon is required.
