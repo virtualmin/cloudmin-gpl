@@ -497,4 +497,17 @@ $value =~ s/&amp;/&/g;
 return $value;
 }
 
+# format_version(version)
+# Converts libvirt's integer version format into major.minor.release.
+sub format_version
+{
+my ($version) = @_;
+# Do not format missing or nonnumeric versions as valid version numbers.
+return undef if (!defined($version) || $version !~ /^\d+$/);
+my $major = int($version / 1_000_000);
+my $minor = int(($version % 1_000_000) / 1_000);
+my $release = $version % 1_000;
+return join('.', $major, $minor, $release);
+}
+
 1;
