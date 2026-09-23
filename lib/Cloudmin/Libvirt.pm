@@ -962,6 +962,19 @@ $self->{'on_remove'}->($uuid, $job) if ($self->uri() eq 'qemu:///system' &&
 	$self->{'on_remove'} && ($job || '') =~ /\A[a-f0-9]{32}\z/);
 }
 
+# list_networks(self)
+# Returns libvirt networks with their forwarding mode, bridge and addressing,
+# sorted by name.
+sub list_networks
+{
+my ($self) = @_;
+my $connection = $self->connect();
+my @records = map { $self->get_network_record($_) }
+	$connection->list_all_networks(0);
+@records = sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @records;
+return \@records;
+}
+
 # list_host_bridges(self, [networks])
 # Returns Linux bridges on the host that are not owned by a libvirt network,
 # read from sysfs so no interface daemon is required.
