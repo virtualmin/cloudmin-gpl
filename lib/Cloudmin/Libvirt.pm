@@ -456,4 +456,21 @@ my $alias = $device->findvalue('alias/@name');
 return { alias => length($alias) ? $alias : undef };
 }
 
+# decode_xml_text(value)
+# Decodes the entities libvirt uses when serializing text and attributes.
+sub decode_xml_text
+{
+my ($value) = @_;
+# Missing XML values stay distinguishable from explicitly empty strings.
+return undef if (!defined($value));
+$value =~ s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge;
+$value =~ s/&#(\d+);/chr($1)/ge;
+$value =~ s/&lt;/</g;
+$value =~ s/&gt;/>/g;
+$value =~ s/&quot;/"/g;
+$value =~ s/&apos;/'/g;
+$value =~ s/&amp;/&/g;
+return $value;
+}
+
 1;
