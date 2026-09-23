@@ -215,6 +215,29 @@ $self->{'connection'} = $connection;
 return $connection;
 }
 
+# disconnect(self)
+# Releases this adapter's connection before restarting its libvirt daemon.
+sub disconnect
+{
+my ($self) = @_;
+delete($self->{'connection'});
+}
+
+# probe(self)
+# Tests the connection and returns a result hash instead of throwing an error.
+sub probe
+{
+my ($self) = @_;
+my $connection = eval { $self->connect() };
+# Return connection failures as data for the readiness panel.
+return {
+	'ok' => 0,
+	'error' => error_message($@ || 'Libvirt returned no connection'),
+} if (!$connection);
+
+return { 'ok' => 1 };
+}
+
 # parse_xml_document(xml)
 # Parses libvirt XML without resolving external entities or reading DTDs.
 sub parse_xml_document
