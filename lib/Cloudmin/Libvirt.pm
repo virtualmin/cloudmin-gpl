@@ -481,6 +481,27 @@ my $ok = eval {
 if (!$ok) { my $error = $@; eval { $stream->abort(); }; die $error; }
 }
 
+# create_disk(self, pool_uuid, name, bytes, journal)
+# Allocates an empty QCOW2 file or raw logical volume at the requested capacity.
+# The required journal() callback records the volume for cleanup before allocation.
+sub create_disk
+{
+my ($self, $pool_id, $name, $bytes, $journal) = @_;
+my ($pool, $existing) = $self->volume($pool_id, $name);
+# Never replace storage left by another request or an interrupted allocation.
+die "Destination volume already exists\n" if ($existing);
+# Record intent first so a lost allocation reply can still be cleaned up.
+$journal->();
+my $format = block_pool($pool) ? 'raw' : 'qcow2';
+log_call('Sys::Virt::StoragePool::create_volume', {
+	pool => $pool_id, volume => $name, capacity_bytes => $bytes,
+	format => $format, flags => 0 });
+my $volume = $pool->create_volume('<volume><name>'.xml_escape($name).
+	"</name><capacity unit='bytes'>$bytes</capacity><allocation>0</allocation>".
+	"<target><format type='$format'/></target></volume>", 0);
+return $self->get_storage_volume_record($volume);
+}
+
 # upload_seed(self, pool_uuid, name, file, journal, [format], [capacity])
 # Imports checked bytes into the backend; defaults to a raw seed sized to the file.
 # journal() records cleanup intent before the destination volume is created.
