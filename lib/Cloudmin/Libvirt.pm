@@ -510,4 +510,25 @@ my $release = $version % 1_000;
 return join('.', $major, $minor, $release);
 }
 
+# error_message(error)
+# Converts string and Sys::Virt exception objects into one-line messages.
+sub error_message
+{
+my ($error) = @_;
+my $message = '';
+# Prefer the message supplied by a Sys::Virt exception object.
+if (ref($error) && eval { $error->can('message') }) {
+	$message = eval { $error->message() } || "$error";
+	}
+# Plain errors and other objects use their string representation.
+else {
+	$message = defined($error) ? "$error" : '';
+	}
+# Remove Perl source locations and line breaks before returning UI text.
+$message =~ s/\s+$//;
+$message =~ s/\s+at\s+\S+\s+line\s+\d+\.?$//;
+$message =~ s/\s+/ /g;
+return $message || 'Unknown libvirt error';
+}
+
 1;
