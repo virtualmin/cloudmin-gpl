@@ -572,6 +572,26 @@ die $error if (!$ok);
 return $self->get_storage_volume_record($volume);
 }
 
+# define_guest(self, xml)
+# Defines a persistent domain using libvirt's schema validation.
+sub define_guest
+{
+my ($self, $xml) = @_;
+my $document = parse_xml_document($xml);
+my $uuid = $document->findvalue('/domain/uuid');
+my $name = $document->findvalue('/domain/name');
+# Defining existing XML could replace a guest; creation must only add one.
+die "A domain with this name or UUID already exists\n" if (grep {
+	$_->get_uuid_string() eq $uuid || $_->get_name() eq $name
+	} $self->connect()->list_all_domains());
+# Configure recording before the first boot, including clones and restores.
+$xml = $self->{'serial_log'}->configure($xml) if ($self->{'serial_log'} &&
+	!$self->{'readonly'} && $self->uri() eq 'qemu:///system');
+log_call('Sys::Virt::define_domain', { uuid => $uuid, name => $name,
+	flags => 1 });
+return $self->connect()->define_domain($xml, 1);
+}
+
 # setup_agent_error() reports missing host tools before guest allocation.
 sub setup_agent_error
 {
