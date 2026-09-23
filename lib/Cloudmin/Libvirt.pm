@@ -360,6 +360,64 @@ while (1) {
 	}
 }
 
+# clone_disk(self, pool_uuid, name, source, bytes, format, journal)
+# Makes an independent libvirt volume and grows it without changing the image.
+# source contains pool, volume and volume_key; journal() records cleanup intent.
+sub clone_disk
+{
+my ($self, $pool_id, $name, $source, $bytes, $format, $journal) = @_;
+my ($pool, $existing) = $self->volume($pool_id, $name);
+# Native LVM allocation rounds to extents; convert to the same final capacity.
+$bytes = $pool->aligned_capacity($bytes) if ($pool->isa('Cloudmin::LVM::Pool'));
+# Never overwrite an existing disk, even after a retried request.
+die "Destination volume already exists\n" if ($existing);
+my (undef, $original) = $self->volume(@{$source}{qw(pool volume volume_key)});
+# The selected import may have disappeared after request validation.
+die "Source image volume is missing\n" if (!$original);
+# Record intent before libvirt allocates anything, for recovery after a crash.
+$journal->();
+# LVM disks contain raw sectors. Convert in the existing unprivileged worker,
+# then copy its checked output without asking a privileged process to parse it.
+if (block_pool($pool) || $original->isa('Cloudmin::LVM::Volume')) {
+	my $source_doc = parse_xml_document($original->get_xml_description(0));
+	my $source_format = $source_doc->findvalue('/volume/target/format/@type') || 'raw';
+	my ($files, $layers) = $self->conversion_sources($original);
+	my $destination_format = block_pool($pool) ? 'raw' : $format;
+	# Allocate only after validating the source chain; the journal owns cleanup.
+	my $volume = $pool->create_volume('<volume><name>'.xml_escape($name).
+		"</name><capacity unit='bytes'>$bytes</capacity><target><format type='$destination_format'/></target></volume>");
+	my $runner = $self->{'disk_worker'} || sub { Cloudmin::Worker->new()->run(@_) };
+	# Allow input-format overhead while bounding the converted virtual capacity.
+	$runner->('convert', {format => $source_format, output_format => $destination_format,
+		capacity => $bytes, limit => int($bytes*1.05)+16*1024**2, layers => $layers},
+		files => $files, consume => sub {
+			my ($file, $info) = @_;
+			die "Converted disk exceeds its destination\n" if ($info->{'virtual-size'} > $bytes);
+			$self->write_volume($volume, $file);
+			});
+	return $self->get_storage_volume_record($volume);
+	}
+log_call('Sys::Virt::StoragePool::clone_volume', {
+	pool => $pool_id, volume => $name, source_pool => $source->{'pool'},
+	source_volume => $source->{'volume'}, capacity_bytes => $bytes,
+	format => $format, flags => 0 });
+my $volume = $pool->clone_volume("<volume><name>".xml_escape($name)."</name>".
+	"<capacity unit='bytes'>$bytes</capacity><allocation>0</allocation>".
+	"<target><format type='$format'/></target></volume>", $original, 0);
+# Some storage drivers clone at the original capacity despite the requested
+# size.
+my $capacity = $volume->get_info()->{'capacity'};
+if ($capacity < $bytes) {
+	# Record growth separately when the pool cloned at the source size.
+	log_call('Sys::Virt::StorageVol::resize', {
+		pool => $pool_id, volume => $name,
+		before_bytes => $capacity,
+		after_bytes => $bytes, flags => 0 });
+	$volume->resize($bytes, 0);
+	}
+return $self->get_storage_volume_record($volume);
+}
+
 # conversion_sources(self, volume) stages a managed backing chain for conversion.
 # Only libvirt-listed local volumes may supply backing bytes. The worker rewrites
 # links on private copies, so guest-controlled paths never select host files.
