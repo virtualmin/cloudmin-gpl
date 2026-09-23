@@ -401,6 +401,28 @@ while ($volume) {
 return (\%files, @layers > 1 ? \@layers : undef);
 }
 
+# write_volume(self, volume, file) copies checked disk bytes through its backend.
+sub write_volume
+{
+my ($self, $volume, $file) = @_;
+# Block writes use verified device descriptors; files use libvirt's stream API.
+return $volume->write_file($file) if ($volume->isa('Cloudmin::LVM::Volume'));
+my $stream = $self->connect()->new_stream();
+my $ok = eval {
+	$volume->upload($stream, 0, -s $file, 0);
+	open(my $fh, '<', $file) or die "Cannot read checked disk\n";
+	binmode($fh);
+	$stream->send_all(sub {
+		my $read = read($fh, $_[1], $_[2]);
+		die "Cannot read checked disk\n" if (!defined($read));
+		return $read;
+		});
+	close($fh); $stream->finish(); 1;
+	};
+# Abort partial transfers without replacing the original error with cleanup.
+if (!$ok) { my $error = $@; eval { $stream->abort(); }; die $error; }
+}
+
 # setup_agent_error() reports missing host tools before guest allocation.
 sub setup_agent_error
 {
