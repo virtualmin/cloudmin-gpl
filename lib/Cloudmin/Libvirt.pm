@@ -238,6 +238,32 @@ return {
 return { 'ok' => 1 };
 }
 
+# get_host_info(self)
+# Returns basic, read-only details about the connected hypervisor.
+sub get_host_info
+{
+my ($self) = @_;
+my $connection = $self->connect();
+# Webmin resolves the local FQDN; remote connections identify their own host.
+my $hostname = $self->{'uri'} =~ m{\Aqemu:///}
+	? get_system_hostname() : $connection->get_hostname();
+# Match the installer's preferred local daemon layout. Remote connections
+# must not inherit the management host's installed binaries.
+my $layout = $self->{'uri'} eq 'qemu:///system'
+	? (-x '/usr/sbin/virtqemud' ? 'modular'
+		: -x '/usr/sbin/libvirtd' ? 'monolithic' : undef) : undef;
+return {
+	'uri' => $self->{'uri'},
+	'hostname' => $hostname,
+	'driver' => $connection->get_type(),
+	'libvirt_version' => format_version(
+		$connection->get_library_version()),
+	'libvirt_layout' => $layout,
+	'hypervisor_version' => format_version(
+		$connection->get_version()),
+};
+}
+
 # parse_xml_document(xml)
 # Parses libvirt XML without resolving external entities or reading DTDs.
 sub parse_xml_document
