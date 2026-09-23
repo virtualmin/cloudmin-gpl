@@ -456,6 +456,20 @@ my $alias = $device->findvalue('alias/@name');
 return { alias => length($alias) ? $alias : undef };
 }
 
+# parse_pool_xml(xml)
+# Extracts the backend type and target path from a libvirt pool document.
+sub parse_pool_xml
+{
+my ($xml) = @_;
+my ($quote, $type) = $xml =~
+	/<pool\b[^>]*\btype\s*=\s*(["'])([^"']+)\1/i;
+my ($target) = $xml =~
+	m{<target\b[^>]*>.*?<path\b[^>]*>(.*?)</path>}is;
+# Decode an existing target without inventing a path for non-file pools.
+$target = decode_xml_text($target) if (defined($target));
+return ($type, $target);
+}
+
 # decode_xml_text(value)
 # Decodes the entities libvirt uses when serializing text and attributes.
 sub decode_xml_text
