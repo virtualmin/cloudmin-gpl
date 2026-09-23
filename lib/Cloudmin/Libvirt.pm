@@ -105,6 +105,21 @@ foreach my $pool ($self->connect()->list_all_storage_pools(0)) {
 return @pools;
 }
 
+# storage_pool(self, uuid) resolves native and thin destinations consistently.
+sub storage_pool
+{
+my ($self, $uuid) = @_;
+my ($native) = grep { $_->get_uuid_string() eq $uuid }
+	$self->connect()->list_all_storage_pools(0);
+# Resolve ordinary pools without parsing every unrelated pool's definition.
+return $native if ($native &&
+	(parse_pool_xml($native->get_xml_description(0)))[0] ne 'logical');
+my ($pool) = grep { $_->get_uuid_string() eq $uuid } storage_pools($self);
+die $self->{'storage_errors'}->{$uuid}."\n" if ($self->{'storage_errors'}->{$uuid});
+die "Storage pool is missing\n" if (!$pool);
+return $pool;
+}
+
 # disk_pool(type) identifies supported writable disk backends.
 sub disk_pool { return ($_[0] || '') =~ /\A(?:dir|fs|netfs|logical|lvmthin)\z/; }
 
