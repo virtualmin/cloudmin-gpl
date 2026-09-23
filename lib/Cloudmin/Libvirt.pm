@@ -745,6 +745,40 @@ die $error if (!$ok);
 return $pending ? undef : $identity->{'key'};
 }
 
+# open_console(self, uuid)
+# Returns a connected VNC filehandle for a local guest. Libvirt authorizes the
+# attachment; the guest's VNC password never leaves the host.
+sub open_console
+{
+my ($self, $uuid) = @_;
+# Console input is an interactive write operation, not inventory access.
+die "Console access requires write permission\n" if ($self->{'readonly'});
+# This flow receives a local descriptor rather than forwarding remote
+# VNC.
+die "Console access requires local libvirt\n"
+	if ($self->uri() ne 'qemu:///system');
+# Bind the attachment to a stable guest identity, not a reused domain
+# name.
+die "Invalid virtual machine identifier\n"
+	if (!defined($uuid) ||
+	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+my $domain = $self->find_domain($uuid) || die "Virtual machine not found\n";
+# Inactive domains do not have a QEMU graphics socket to attach to.
+die "Start the virtual machine before opening its console\n"
+	if (!$domain->is_active());
+my $xml = parse_xml_document($domain->get_xml_description(0));
+my @graphics = $xml->findnodes('/domain/devices/graphics');
+my ($index) = grep { $graphics[$_]->getAttribute('type') eq 'vnc' }
+	0..$#graphics;
+# noVNC cannot display SPICE or another non-VNC graphics backend.
+die "This virtual machine has no VNC display\n" if (!defined($index));
+# OPEN_GRAPHICS_SKIPAUTH applies only to this already-authorized connection.
+# It does not change authentication on the guest's listening VNC socket.
+my $fd = $domain->open_graphics_fd($index, 1);
+open(my $socket, '+<&=', $fd) || die "Cannot open the console socket: $!\n";
+return $socket;
+}
+
 # find_domain(self, id)
 # Matches a guest's UUID or name in the current inventory; returns undef if
 # absent.
