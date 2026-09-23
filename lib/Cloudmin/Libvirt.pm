@@ -368,4 +368,16 @@ return {
 };
 }
 
+# extract_macs(xml)
+# Extracts normalized interface MAC addresses from a libvirt domain document.
+sub extract_macs
+{
+my ($xml) = @_;
+my @macs;
+while ($xml =~ /<mac\b[^>]*\baddress\s*=\s*(["'])([^"']+)\1/ig) {
+	push(@macs, lc($2));
+	}
+return @macs;
+}
+
 1;
