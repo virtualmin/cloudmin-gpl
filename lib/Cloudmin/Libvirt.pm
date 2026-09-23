@@ -74,6 +74,37 @@ return bless({
 }, $class);
 }
 
+# storage_pools(self) returns native pools and discovered LVM thin destinations.
+# Only local logical pools use host LVM commands; remote inventory stays native.
+sub storage_pools
+{
+my ($self) = @_;
+my @pools;
+foreach my $pool ($self->connect()->list_all_storage_pools(0)) {
+	my ($type) = parse_pool_xml($pool->get_xml_description(0));
+	if ($type eq 'logical' && $self->uri() eq 'qemu:///system') {
+		# Local VGs expose separate thick and thin allocation destinations.
+		my $driver = $self->{'lvm'} ||= Cloudmin::LVM->new(readonly => $self->{'readonly'});
+		my @logical = eval { $driver->pools($pool) };
+		if ($@) {
+			# A missing VG must not hide unrelated file storage or other guests.
+			$self->{'storage_errors'}->{$pool->get_uuid_string()} = error_message($@);
+			push(@pools, $pool);
+			}
+		else {
+			# A successful reread clears a previous inventory failure.
+			delete($self->{'storage_errors'}->{$pool->get_uuid_string()});
+			push(@pools, @logical);
+			}
+		}
+	else {
+		# Preserve other backends and remote pools as native libvirt objects.
+		push(@pools, $pool);
+		}
+	}
+return @pools;
+}
+
 # disk_pool(type) identifies supported writable disk backends.
 sub disk_pool { return ($_[0] || '') =~ /\A(?:dir|fs|netfs|logical|lvmthin)\z/; }
 
@@ -82,6 +113,14 @@ sub block_pool
 {
 my ($type) = parse_pool_xml($_[0]->get_xml_description(0));
 return $type eq 'logical' || $type eq 'lvmthin';
+}
+
+# uri(self)
+# Returns the configured libvirt connection URI.
+sub uri
+{
+my ($self) = @_;
+return $self->{'uri'};
 }
 
 # log_call(method, parameters)
