@@ -617,6 +617,57 @@ return 'Guest software setup requires virsh and timeout on the Cloudmin host'
 return '';
 }
 
+# setup_agent_command(self, uuid, command, [arguments], [final_attempt])
+# Returns a decoded guest-file reply, or undef while the agent is not ready.
+# final_attempt stops retrying guest file, policy and lost-handle errors.
+# arguments defaults to an empty object; final_attempt defaults to false.
+# Sys::Virt does not expose virDomainQemuAgentCommand; use libvirt's CLI for it.
+sub setup_agent_command
+{
+my ($self, $uuid, $command, $arguments, $final_attempt) = @_;
+# Limit this write-capable channel to the three identity file operations.
+die "Guest identity lookup requires write permission\n" if ($self->{'readonly'});
+die "Invalid virtual machine identifier\n" if (!defined($uuid) ||
+	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+die "Unsupported guest identity operation\n"
+	if ($command !~ /\Aguest-file-(?:open|read|close)\z/);
+my $missing = setup_agent_error();
+die "$missing\n" if ($missing);
+my $json = convert_to_json({ execute => $command, arguments => $arguments || {} }, 0, 1);
+my $cmd = join(' ', map { quote_path($_) } '/usr/bin/timeout', '-k', '1', '5',
+	'/usr/bin/virsh', '--connect', $self->uri(), 'qemu-agent-command',
+	'--domain', $uuid, '--timeout', '2', '--cmd', $json);
+my ($output, $error);
+# Keep libvirt diagnostics stable when distinguishing boot delays from errors.
+local $ENV{'LC_ALL'} = 'C';
+my $status = execute_command($cmd, undef, \$output, \$error);
+if ($status) {
+	# A disconnected or busy agent may become available as the guest boots.
+	return undef if (($status >> 8) == 124 || ($status >> 8) == 137 || $status == 9 ||
+		($error || '') =~ /(?:guest agent (?:is not connected|not available|is not responding)|agent.*(?:timed out|timeout))/i);
+	# Libvirt converts QGA errors to stderr and a nonzero exit status. Only
+	# guest failures can be boot delays; host access errors must fail at once.
+	my ($guest_error) = ($error || '') =~
+		/unable to execute QEMU agent command '\Q$command\E':\s*(.*)/is;
+	# Preparation publishes the identity, enables file RPCs and labels the
+	# file. A restart can also lose a read handle. Keep the final diagnostic.
+	return undef if (!$final_attempt && defined($guest_error) &&
+		($guest_error =~ /(?:has been disabled|not allowed|Permission denied)/i ||
+		 $command eq 'guest-file-open' && $guest_error =~ /No such file or directory/i ||
+		 $command eq 'guest-file-read' && $guest_error =~ /(?:handle.*has not been found|invalid handle)/i));
+	# Retain a bounded diagnostic without terminal control characters.
+	$error = substr($error || 'virsh failed without a diagnostic', 0, 1024);
+	$error =~ s/[\x00-\x1f\x7f]+/ /g;
+	die "Guest identity lookup failed: $error\n";
+}
+# Successful virsh calls must still return a bounded, valid agent response.
+die "Invalid guest agent response\n" if (length($output || '') > 16384);
+my $response = eval { convert_from_json($output) };
+die "Invalid guest agent response\n"
+	if (ref($response) ne 'HASH' || exists($response->{'error'}));
+return $response;
+}
+
 # list_host_bridges(self, [networks])
 # Returns Linux bridges on the host that are not owned by a libvirt network,
 # read from sysfs so no interface daemon is required.
