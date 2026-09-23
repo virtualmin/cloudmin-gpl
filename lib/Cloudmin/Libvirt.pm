@@ -860,6 +860,19 @@ die error_message($@)."\n" if (!$ok);
 return 1;
 }
 
+# call_domain_method(self, id, method)
+# Runs a Sys::Virt::Domain method and normalizes the error text.
+sub call_domain_method
+{
+my ($self, $id, $method) = @_;
+my $domain = $self->find_domain($id) || die "Virtual machine not found\n";
+log_call('Sys::Virt::Domain::'.$method, { uuid => $id });
+my $ok = eval { $domain->$method(); 1 };
+# Preserve failure rather than returning a successful lifecycle result.
+die error_message($@)."\n" if (!$ok);
+return 1;
+}
+
 # list_host_bridges(self, [networks])
 # Returns Linux bridges on the host that are not owned by a libvirt network,
 # read from sysfs so no interface daemon is required.
