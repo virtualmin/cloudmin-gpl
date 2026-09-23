@@ -323,6 +323,23 @@ return 'virt' if (($architecture || '') =~ /^(?:aarch64|armv7l|riscv64)$/);
 return 'q35';
 }
 
+# volume(self, pool_uuid, name, [expected_key])
+# Resolves a current active pool and volume, preserving lookup failures.
+# Returns (pool, volume); a missing volume is undef, while a key mismatch dies.
+sub volume
+{
+my ($self, $pool_id, $name, $key) = @_;
+my $pool = $self->storage_pool($pool_id);
+# Refreshing an inactive pool cannot establish the current volume identity.
+die "Storage pool is no longer active\n" if (!$pool->is_active());
+refresh_pool($pool);
+my ($volume) = grep { $_->get_name() eq $name } $pool->list_all_volumes();
+# A replacement with the same name must not inherit the old volume's trust.
+die "The selected volume has changed\n"
+	if ($volume && defined($key) && $key ne $volume->get_key());
+return ($pool, $volume);
+}
+
 # refresh_pool(pool, [timeout])
 # Retries refresh while a libvirt storage job is busy; timeout defaults to 30
 # seconds.
