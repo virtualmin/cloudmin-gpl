@@ -220,4 +220,42 @@ push(@{$context->{'errors'}}, "Cannot check storage operations: $@") if (!$ok);
 return $context;
 }
 
+# volume_usage(self, pool_record, volume_record, context)
+# Lists every known owner and explains why a volume cannot be deleted directly.
+sub volume_usage
+{
+my ($self, $pool, $volume, $context) = @_;
+# Local file identities catch aliases; remote inventories compare names only.
+my $local = $self->{'adapter'}->uri() eq 'qemu:///system';
+my (@owners, %seen);
+foreach my $ref (@{$context->{'references'}}) {
+	# A volume's own target path is not a dependency from another volume.
+	# Thin destinations list native LVs under a derived pool ID, so the same
+	# logical volume is also recognized by its own device, never a backing path.
+	next if ($ref->{'kind'} eq 'backing' && $ref->{'name'} eq $volume->{'name'} &&
+		($ref->{'pool'} eq $pool->{'uuid'} || (($volume->{'key'} || '') =~ /\Alvm:/ &&
+		 same_file($ref->{'path'}, $volume->{'path'}, $local))));
+	my $matches = grep { ($_->[0] eq $pool->{'name'} || $_->[0] eq $pool->{'uuid'}) &&
+		$_->[1] eq $volume->{'name'} } @{$ref->{'sources'}};
+	$matches ||= grep { same_file($_, $volume->{'path'}, $local) } @{$ref->{'paths'}};
+	next if (!$matches || $seen{join(':', map { $ref->{$_} // '' } qw(kind uuid pool name))}++);
+	push(@owners, { map { $_ => $ref->{$_} } qw(kind uuid pool name active) });
+	}
+foreach my $image (@{$context->{'images'}}) {
+	# Match recorded paths too: imports may be registered in aliased pools.
+	if ((($image->{'pool'} || '') eq $pool->{'uuid'} &&
+		($image->{'volume'} || '') eq $volume->{'name'}) ||
+		same_file($image->{'volume_path'}, $volume->{'path'}, $local) ||
+		($image->{'volume_key'} && $image->{'volume_key'} eq ($volume->{'key'} || ''))) {
+		push(@owners, { kind => 'image', name => $image->{'name'}, id => $image->{'id'} });
+		}
+	}
+my $reason = @owners ? 'This volume is still owned or referenced. Open its virtual machine or Image Manager to manage it.'
+	: $volume->{'snapshot'} ? 'Delete this restore point from the virtual machine snapshot history.'
+	: @{$context->{'errors'}} ? join(' ', @{$context->{'errors'}})
+	: $context->{'busy'} ? 'Wait for virtual machine operations and image imports to finish before deleting volumes.'
+	: !($pool->{'manageable'} || $pool->{'volume_manageable'}) ? 'Only volumes in local persistent directory or LVM pools can be deleted here.' : '';
+return { owners => \@owners, reason => $reason, checked => !@{$context->{'errors'}} };
+}
+
 1;
