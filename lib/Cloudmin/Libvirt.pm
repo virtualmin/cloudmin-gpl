@@ -1207,6 +1207,71 @@ return { capacity => $blocks * $size, allocation => ($blocks - $free) * $size,
 	available => $available * $size };
 }
 
+# get_storage_pool_record(self, pool, [include_volumes])
+# Converts a native or LVM pool object into a Cloudmin inventory record.
+sub get_storage_pool_record
+{
+my ($self, $pool, $include_volumes) = @_;
+my $storage_error = $self->{'storage_errors'}->{$pool->get_uuid_string()};
+my $active = !$storage_error && eval { $pool->is_active() } ? 1 : 0;
+my $persistent = eval { $pool->is_persistent() } ? 1 : 0;
+my $autostart = $persistent && eval { $pool->get_autostart() } ? 1 : 0;
+my $info = $active ? (eval { $pool->get_info() } || {}) : {};
+my $xml = eval { $pool->get_xml_description(0) } || '';
+my ($type, $target) = parse_pool_xml($xml);
+# Libvirt caches filesystem counters and includes reserved blocks as available.
+# Only local file-based pools can be measured from this host's filesystem.
+if ($active && $self->uri() eq 'qemu:///system' && ($type || '') =~ /\A(?:dir|fs|netfs)\z/) {
+	my $space = filesystem_space($target);
+	$info = { %$info, %$space } if ($space);
+	}
+my @volumes;
+my $volume_error = $storage_error;
+
+# Only active pools can reliably enumerate their volumes.
+if ($active && $include_volumes) {
+	my $ok = eval {
+		@volumes = map { $self->get_storage_volume_record($_) }
+			$pool->list_all_volumes(0);
+		1;
+		};
+	# Keep the pool visible even when its volume inventory cannot be read.
+	$volume_error = error_message($@) if (!$ok);
+	}
+@volumes = sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @volumes;
+
+# Use the reported state, falling back to the active flag when unavailable.
+my $state = defined($info->{'state'})
+	? ($POOL_STATES{$info->{'state'}} || 'unknown')
+	: ($active ? 'running' : 'inactive');
+my $provisioning = $EXTERNAL_STORAGE{$type || ''} ? 'external'
+	: $MANAGED_STORAGE{$type || ''} ? 'managed' : 'unknown';
+my $uuid = $pool->get_uuid_string();
+my $name = $pool->get_name();
+
+return {
+	'id' => $uuid,
+	'uuid' => $uuid,
+	'name' => $name,
+	'type' => $type || 'unknown',
+	'target' => $target,
+	'state' => $state,
+	'active' => $active,
+	'persistent' => $persistent,
+	'autostart' => $autostart,
+	'capacity' => $info->{'capacity'} || 0,
+	'allocation' => $info->{'allocation'} || 0,
+	'available' => $info->{'available'} || 0,
+	'allocation_unit' => $pool->isa('Cloudmin::LVM::Pool') && !$pool->{'thin'} ?
+		$pool->group()->{'vg_extent_size'} : 512,
+	'provisioning' => $provisioning,
+	'volumes' => \@volumes,
+	'volume_count' => scalar(@volumes),
+	'volume_error' => $volume_error,
+	map { defined($info->{$_}) ? ($_ => $info->{$_}) : () } qw(data_percent metadata_percent),
+};
+}
+
 # get_storage_volume_record(self, volume)
 # Converts a Sys::Virt::StorageVol object into a Cloudmin inventory record.
 sub get_storage_volume_record
