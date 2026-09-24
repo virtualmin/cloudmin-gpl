@@ -605,4 +605,50 @@ return { name => $name, path => $path, existing => $exists ? 1 : 0,
 	autostart => 0+$autostart, xml => $xml };
 }
 
+# register_lvm(self, input) registers an existing VG without formatting disks.
+# Webmin's LVM module manages PVs, VGs and thin pools; Cloudmin discovers them.
+sub register_lvm
+{
+my ($self, $in) = @_;
+$self->assert_local();
+my $name = $in->{'name'} || '';
+die "Use a pool name of up to 64 letters, numbers, dots, underscores or hyphens\n"
+	if ($name !~ /\A[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}\z/);
+die "Select an existing LVM volume group\n" if (!length($in->{'group'} || ''));
+my $group = Cloudmin::LVM::name($in->{'group'});
+my $autostart = $in->{'autostart'} // 0;
+die "Invalid start-at-boot setting\n" if ($autostart !~ /\A[01]\z/);
+return $self->{'jobs'}->lock('create-host', sub {
+	my $driver = Cloudmin::LVM->new();
+	# Recheck the chosen group and all registrations under the mutation lock.
+	$driver->group($group);
+	my $connection = $self->{'adapter'}->connect();
+	foreach my $pool ($connection->list_all_storage_pools(0)) {
+		my $doc = Cloudmin::Libvirt::parse_xml_document($pool->get_xml_description(0));
+		die "A storage pool named $name already exists\n" if ($pool->get_name() eq $name);
+		die "This volume group is already registered\n" if (
+			$doc->findvalue('/pool/@type') eq 'logical' && $doc->findvalue('/pool/source/name') eq $group);
+		}
+	# Allocate a libvirt registration ID independently of the existing VG UUID.
+	open(my $random, '<', '/dev/urandom') or die "Cannot allocate storage pool identity\n";
+	read($random, my $bytes, 16) == 16 or die "Cannot allocate storage pool identity\n";
+	close($random);
+	my $uuid = unpack('H*', $bytes);
+	$uuid =~ s/\A(.{8})(.{4})(.{4})(.{4})(.{12})\z/$1-$2-$3-$4-$5/;
+	my $x = \&Cloudmin::Libvirt::xml_escape;
+	# Define and activate the group; libvirt build would format storage.
+	my $xml = "<pool type='logical'><name>".$x->($name)."</name><uuid>$uuid</uuid>".
+		'<source><name>'.$x->($group).'</name></source><target><path>/dev/'.$x->($group).'</path></target></pool>';
+	my $pool = $connection->define_storage_pool($xml);
+	my $ok = eval { $pool->create(); $pool->set_autostart($autostart); 1 };
+	if (!$ok) {
+		# Removing the new definition must never deactivate an existing host VG.
+		my $error = $@;
+		eval { $pool->undefine(); 1 } or $error .= " Pool definition cleanup failed: $@";
+		die $error;
+		}
+	return $pool->get_name();
+	});
+}
+
 1;
