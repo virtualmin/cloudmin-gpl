@@ -558,4 +558,51 @@ die "Storage changes are available only for the local qemu:///system host\n"
 	if ($self->{'adapter'}->uri() ne 'qemu:///system');
 }
 
+# prepare(self, input)
+# Validates a name and canonical directory without creating or changing files.
+sub prepare
+{
+my ($self, $in) = @_;
+$self->assert_local();
+my $name = $in->{'name'} // '';
+my $path = $in->{'path'} // '';
+die "Use a pool name of up to 64 letters, numbers, dots, underscores or hyphens, starting with a letter or number\n"
+	if ($name !~ /\A[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}\z/);
+die "Enter an absolute directory path without . or .. components\n"
+	if ($path !~ m{\A/[^\x00-\x1f\x7f]+\z} || length($path) > 4096 ||
+		$path =~ m{(?:\A|/)\.{1,2}(?:/|\z)});
+$path =~ s{/+}{/}g;
+$path =~ s{/$}{};
+die "Choose a dedicated storage directory, not the filesystem root\n" if (!$path);
+# Resolve the parent before comparing pool paths, including not-yet-created targets.
+my $exists = -e $path || -l $path;
+die "The storage path must be a directory\n" if ($exists && !-d $path);
+my $parent = abs_path(dirname($path));
+die "The parent directory must already exist\n" if (!$parent || !-d $parent);
+$path = $exists ? abs_path($path) : ($parent eq '/' ? '' : $parent).'/'.basename($path);
+die "Choose a dedicated storage directory, not the filesystem root\n" if (!$path || $path eq '/');
+my $autostart = $in->{'autostart'} // 0;
+die "Invalid start-at-boot setting\n" if ($autostart !~ /\A[01]\z/);
+foreach my $pool ($self->{'adapter'}->connect()->list_all_storage_pools(0)) {
+	die "A storage pool named $name already exists\n" if ($pool->get_name() eq $name);
+	my (undef, $target) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
+	# Nested or aliased targets would present the same files as separate pools.
+	die "This directory overlaps storage pool ".$pool->get_name()."; choose a separate directory\n"
+		if ($target && (contains_path($target, $path) || contains_path($path, $target)));
+	}
+# A caller-selected UUID makes libvirt reject a name claimed concurrently by
+# another administrator, rather than redefining that administrator's pool.
+open(my $random, '<', '/dev/urandom') || die "Cannot open random source: $!\n";
+read($random, my $bytes, 16) == 16 || die "Cannot read random source\n";
+close($random);
+my $uuid = unpack('H*', $bytes);
+substr($uuid, 12, 1) = '4';
+substr($uuid, 16, 1) = sprintf('%x', 8 | (hex(substr($uuid, 16, 1)) & 3));
+$uuid =~ s/\A(.{8})(.{4})(.{4})(.{4})(.{12})\z/$1-$2-$3-$4-$5/;
+my $xml = "<pool type='dir'><name>".Cloudmin::Libvirt::xml_escape($name).
+	"</name><uuid>$uuid</uuid><target><path>".Cloudmin::Libvirt::xml_escape($path)."</path></target></pool>";
+return { name => $name, path => $path, existing => $exists ? 1 : 0,
+	autostart => 0+$autostart, xml => $xml };
+}
+
 1;
