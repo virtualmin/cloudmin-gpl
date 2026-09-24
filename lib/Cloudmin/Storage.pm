@@ -258,4 +258,25 @@ my $reason = @owners ? 'This volume is still owned or referenced. Open its virtu
 return { owners => \@owners, reason => $reason, checked => !@{$context->{'errors'}} };
 }
 
+# volume_revision(pool, volume)
+# Binds confirmation to file identity, size and format, or an LV's UUID/capacity.
+# Refresh can enrich XML without changing the disk.
+sub volume_revision
+{
+my ($pool, $volume) = @_;
+my $path = $volume->get_path();
+my @stat = lstat($path);
+if ($volume->isa('Cloudmin::LVM::Volume')) {
+	# Device nodes can be recreated; use the LV UUID after excluding host use.
+	Cloudmin::LVM::host_use($volume->record(1));
+	return sha256_hex(join("\0", $pool->get_uuid_string(), $volume->get_key(),
+		$volume->get_info()->{'capacity'}));
+	}
+die "Only regular storage files can be deleted here\n" if (!@stat || !-f _);
+my $doc = Cloudmin::Libvirt::parse_xml_document($volume->get_xml_description(0));
+my $info = $volume->get_info();
+return sha256_hex(join("\0", $pool->get_uuid_string(), $volume->get_key(), $path,
+	@stat[0,1,7,9,10], @$info{qw(type capacity)}, $doc->findvalue('/volume/target/format/@type')));
+}
+
 1;
