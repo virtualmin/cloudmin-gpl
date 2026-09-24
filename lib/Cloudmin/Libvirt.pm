@@ -1349,6 +1349,50 @@ if ($self->{'startup'}) {
 return $pending;
 }
 
+# complete_domain(self, domain, record, [skip_addresses])
+# Adds firmware, disks, interfaces, console and address details
+# read from the guest's XML and, when running, from leases or the agent.
+sub complete_domain
+{
+my ($self, $domain, $record, $skip_addresses) = @_;
+my $xml = eval { $domain->get_xml_description(0) } || '';
+# The inactive definition keeps persistent guests' settings when running.
+my $inactive = $record->{'persistent'}
+	? (eval { $domain->get_xml_description($XML_INACTIVE) } || $xml)
+	: $xml;
+# Stored labels come from the persistent configuration when one exists.
+$record->{'xml'} = $xml;
+$record->{'title'} =
+	decode_xml_text(($inactive =~ m{<title>(.*?)</title>}s)[0]);
+$record->{'description'} = decode_xml_text(
+	($inactive =~ m{<description>(.*?)</description>}s)[0]);
+# Firmware is either libvirt auto-selection or an explicit loader path.
+my ($os) = $inactive =~ m{<os\b([^>]*)>}s;
+my ($firmware) = ($os || '') =~ /\bfirmware\s*=\s*["']([^"']+)["']/i;
+# A ROM loader can contain BIOS firmware. Pflash loaders identify EFI.
+my $doc = parse_xml_document($inactive);
+my ($loader) = $doc->findnodes('/domain/os/loader');
+$firmware = 'efi' if (!$firmware && $loader &&
+	($loader->getAttribute('type') || '') eq 'pflash');
+$record->{'firmware'} = $firmware || 'bios';
+my ($arch) = $inactive =~ m{<type\b[^>]*\barch\s*=\s*["']([^"']+)["']}i;
+my ($machine) = $inactive =~ m{<type\b[^>]*\bmachine\s*=\s*["']([^"']+)["']}i;
+$record->{'architecture'} = $arch;
+$record->{'machine'} = $machine;
+$record->{'cpu_mode'} = ($inactive =~ m{<cpu\b[^>]*mode=['"]([^'"]+)['"]})[0];
+$record->{'cpu_model'} = $doc->findvalue('/domain/cpu/model');
+# Running guests show attached devices, including changes made only to the
+# live definition. Stopped guests retain their configured hardware.
+my $hardware = $record->{'active'} ? $xml : $inactive;
+$record->{'disks'} = [ extract_disks($hardware) ];
+$record->{'interfaces'} = [ extract_interfaces($hardware) ];
+$record->{'graphics'} = extract_graphics($xml);
+$record->{'serial_console'} = extract_serial_console($hardware);
+$record->{'addresses'} = $record->{'active'} && !$skip_addresses
+	? $self->get_domain_addresses($domain, $record) : [];
+return $record;
+}
+
 # get_resource_stats(self, [uuids])
 # Reads one batch without waiting on busy QEMU jobs. Omit uuids for the
 # overview; detail viewers request only their selected guests.
