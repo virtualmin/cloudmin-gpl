@@ -1029,6 +1029,25 @@ die error_message($@)."\n" if (!$ok);
 return 1;
 }
 
+# undefine_domain(self, id)
+# Removes a persistent guest definition together with its NVRAM, managed save
+# and snapshot/checkpoint metadata. Disks are not touched; callers remove
+# volumes.
+sub undefine_domain
+{
+my ($self, $id) = @_;
+my $domain = $self->find_domain($id) || die "Virtual machine not found\n";
+my $metadata = extract_metadata($domain->get_xml_description(0));
+my $uuid = $domain->get_uuid_string();
+log_call('Sys::Virt::Domain::undefine', { uuid => $uuid,
+	flags => $UNDEFINE_FLAGS });
+my $ok = eval { $domain->undefine($UNDEFINE_FLAGS); 1 };
+# Undefine may fail when libvirt cannot remove the requested auxiliary state.
+die error_message($@)."\n" if (!$ok);
+$self->removed_guest($uuid, $metadata->{'job'});
+return 1;
+}
+
 # removed_guest(self, uuid, [job_id])
 # Removes local managed logs after guest deletion. A valid creation job also
 # permits the controller callback to remove that creation's access records.
