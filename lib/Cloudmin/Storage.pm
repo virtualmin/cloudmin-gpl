@@ -44,4 +44,24 @@ $directory =~ s{/+$}{};
 return $path eq $directory || index($path, "$directory/") == 0;
 }
 
+# active_guests(self, pool)
+# Finds running guests using named volumes or files, including backing stores.
+sub active_guests
+{
+my ($self, $pool) = @_;
+my (undef, $target) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
+my @guests;
+foreach my $vm ($self->{'adapter'}->connect()->list_all_domains(0)) {
+	# Stopped guests have no disk I/O to protect; their files remain intact.
+	next if (!$vm->is_active());
+	my $doc = Cloudmin::Libvirt::parse_xml_document($vm->get_xml_description(0));
+	my @sources = $doc->findnodes('/domain/devices/disk//source');
+	if (grep { ($_->getAttribute('pool') || '') eq $pool->get_name() ||
+		contains_path($target, $_->getAttribute('file') || undef) } @sources) {
+		push(@guests, { name => $vm->get_name(), uuid => $vm->get_uuid_string() });
+		}
+	}
+return \@guests;
+}
+
 1;
