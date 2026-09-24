@@ -592,6 +592,57 @@ log_call('Sys::Virt::define_domain', { uuid => $uuid, name => $name,
 return $self->connect()->define_domain($xml, 1);
 }
 
+# check_creation_cleanup(self, job)
+# Refuses rollback of a committed guest whose disks or history changed later.
+sub check_creation_cleanup
+{
+my ($self, $job) = @_;
+my $r = $job->{'request'};
+my $domain = $self->find_domain($r->{'uuid'}) || return 1;
+my $metadata = extract_metadata($domain->get_xml_description(0));
+# A reused UUID alone does not prove that this job owns the current guest.
+die "Virtual machine ownership changed; cleanup stopped\n"
+	if (($metadata->{'job'} || '') ne $job->{'id'});
+# Later history may still depend on disks that creation rollback would remove.
+die "Remove snapshots, backup checkpoints and managed saves before cleaning up this virtual machine\n"
+	if ($domain->list_all_snapshots(0) || $domain->list_all_checkpoints(0) ||
+		$domain->has_managed_save_image(0));
+# Resolve the journalled volumes before comparing live and saved definitions.
+my %paths;
+foreach my $kind (qw(seed disk)) {
+	my $saved = $job->{'resources'}->{$kind} || next;
+	my ($pool, $volume) = $self->volume($r->{'pool'}, $saved->{'name'}, $saved->{'key'});
+	if ($volume) {
+		# Refuse shared disks before stopping the guest, as well as at deletion.
+		Cloudmin::Images::assert_unused(undef, $self->connect(), $pool, $volume, $r->{'uuid'});
+		$paths{$volume->get_path()} = 1;
+	}
+}
+# Inspect both definitions; pending disk edits must not become orphaned storage.
+foreach my $flags (0, 2) {
+	my $xml = $domain->get_xml_description($flags);
+	my $doc = parse_xml_document($xml);
+	foreach my $disk ($doc->findnodes('/domain/devices/disk[@device="disk"]')) {
+		my $path = $disk->findvalue('source/@file') || $disk->findvalue('source/@dev');
+		# Added disks and backing chains need the ordinary deletion
+		# review.
+		die "The virtual machine disks changed; use its deletion page to review them\n"
+			if (!$path || !$paths{$path} || $disk->exists('backingStore/source'));
+		if ($domain->is_active()) {
+			# A running block job can change disk ownership after
+			# these checks.
+			my $block = $domain->get_block_job_info($disk->findvalue('target/@dev'), 0);
+			die "Wait for the current disk operation to finish\n" if ($block && $block->{'type'});
+		}
+	}
+}
+# Check whole-domain jobs and firmware ownership before stopping the guest.
+die "Wait for the current libvirt operation to finish\n"
+	if ($domain->is_active() && $domain->get_job_info()->{'type'});
+Cloudmin::VMManage::check_nvram($self, $domain);
+return 1;
+}
+
 # remove_created_volume(self, pool_uuid, name, [expected_key])
 # Deletes a journalled volume only after checking every remaining domain
 # reference.
