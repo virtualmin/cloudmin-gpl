@@ -319,6 +319,16 @@ return ($pool, $volume, { %$record, pool => $pool->get_name(), uuid => $uuid,
 	usage => $usage, revision => $revision });
 }
 
+# inspect_volume(self, uuid, name, [refresh]) refuses unsafe deletion candidates.
+# Returns the same tuple as review_volume; refresh defaults to false.
+sub inspect_volume
+{
+my ($self, @args) = @_;
+my @review = $self->review_volume(@args);
+die $review[2]->{'usage'}->{'reason'}."\n" if ($review[2]->{'usage'}->{'reason'});
+return @review;
+}
+
 # inventory(self)
 # Lists all backends. Local directory pools have lifecycle controls; directory
 # and LVM pools also allow deletion of volumes with no owners or host use.
