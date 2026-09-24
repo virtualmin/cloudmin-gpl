@@ -121,4 +121,24 @@ delete $counts{'volumes'} if ($counts{'volumes_unknown'});
 return \%counts;
 }
 
+# volume_reference(xml, owner, [base])
+# Parses file and named-volume references once for each owner or backing disk.
+sub volume_reference
+{
+my ($xml, $owner, $base) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+# Include boot files and firmware as well as disks when protecting storage.
+my @paths = map { $_->getValue() } $doc->findnodes(
+	'//@file | //@dev | //@path | //path/text() | //nvram/text() | '.
+	'//loader/text() | //kernel/text() | //initrd/text() | //dtb/text()');
+foreach my $path (@paths) {
+	# Whitespace can be part of a filename; only discard XML indentation.
+	next if ($path !~ /\S/);
+	$path = "$base/$path" if ($path !~ m{^/} && $base);
+	}
+return { %$owner, paths => [grep { /\S/ } @paths], sources => [map {
+	[ $_->getAttribute('pool'), $_->getAttribute('volume') ]
+	} $doc->findnodes('//source[@pool and @volume]')] };
+}
+
 1;
