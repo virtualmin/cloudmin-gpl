@@ -1154,6 +1154,81 @@ my @records = map {
 return \@records;
 }
 
+# get_domain_record(self, domain, [strict])
+# Converts a Sys::Virt::Domain object into a Cloudmin inventory hash reference.
+# strict defaults to false; identity lookups always propagate failures.
+sub get_domain_record
+{
+my ($self, $domain, $strict) = @_;
+# Strict reads propagate errors so resource validation cannot silently lose
+# MAC addresses or ownership data. Inventory reads fall back to empty
+# metadata and false status flags.
+my $info = $strict ? $domain->get_info() : eval { $domain->get_info() } || {};
+my $active = ($strict ? $domain->is_active() : eval { $domain->is_active() })
+	? 1 : 0;
+my $persistent = ($strict ? $domain->is_persistent()
+	: eval { $domain->is_persistent() }) ? 1 : 0;
+# Keep an unavailable setting distinct from autostart being disabled.
+my $autostart = $persistent ? eval { $domain->get_autostart() ? 1 : 0 } : 0;
+my $xml = $strict ? $domain->get_xml_description(0)
+	: eval { $domain->get_xml_description(0) } || '';
+my @macs = extract_macs($xml);
+# Use the reported state, or infer it from the active flag if missing.
+my $state = defined($info->{'state'})
+	? domain_state_name($info->{'state'})
+	: ($active ? 'running' : 'shutoff');
+# Identity lookup errors propagate because callers need a UUID and name.
+my $uuid = $domain->get_uuid_string();
+my $name = $domain->get_name();
+
+# A failed comparison stays unknown rather than clearing an existing warning.
+my $pending = {};
+if ($active && $persistent) {
+	# Only a running persistent guest can differ
+	# from its next-start definition.
+	$pending = eval { $self->pending_domain_settings($domain, resource_settings(parse_xml_document($xml)),
+		resource_settings(parse_xml_document($domain->get_xml_description($XML_INACTIVE)))) };
+	}
+
+# Reuse the same disk inventory for labels and writable resource targets.
+my @disks = extract_disks($xml);
+# Retain familiar Cloudmin lookup keys alongside the inventory fields.
+return {
+	'id' => $uuid,
+	'uuid' => $uuid,
+	'name' => $name,
+	'host' => $name,
+	'manager' => 'kvm',
+	'state' => $state,
+	'status' => $state,
+	'active' => $active,
+	'persistent' => $persistent,
+	'autostart' => $autostart,
+	'pending' => $pending,
+	# Status polling needs disk roles, but never full paths, to label boot changes.
+	'disk_roles' => { map { $_->{'target'} => $_->{'role'} }
+		grep { $_->{'target'} } @disks },
+	# Keep memory in KiB; the UI converts it to bytes.
+	'memory_kib' => $info->{'memory'} || 0,
+	'max_memory_kib' => $info->{'maxMem'} || 0,
+	'vcpus' => $info->{'nrVirtCpu'} || 0,
+	'disk_targets' => [ map { $_->{'target'} }
+		grep { $_->{'device'} eq 'disk' && !$_->{'readonly'} &&
+		$_->{'target'} } @disks ],
+	'memory_stats_period' => scalar(($xml =~ m{<memballoon\b.*?<stats\b[^>]*period=['"](\d+)['"]}s)[0]),
+	'macs' => \@macs,
+	'mac_addresses' => join(' ', @macs),
+	'cloudmin' => extract_metadata($xml),
+};
+}
+
+# domain_state_name(state)
+# Gives inventory and editor settings the same public libvirt state names.
+sub domain_state_name
+{
+return $DOMAIN_STATES{$_[0]} || 'unknown';
+}
+
 # memory_kib(doc, element)
 # Converts libvirt memory fields to KiB, including omitted currentMemory.
 sub memory_kib
