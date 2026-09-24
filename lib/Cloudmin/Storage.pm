@@ -329,6 +329,24 @@ die $review[2]->{'usage'}->{'reason'}."\n" if ($review[2]->{'usage'}->{'reason'}
 return @review;
 }
 
+# delete_volume(self, uuid, name, revision, confirmed)
+# Rechecks usage and identity under the host lock immediately before removal.
+sub delete_volume
+{
+my ($self, $uuid, $name, $revision, $confirmed) = @_;
+$self->assert_local();
+die "Confirm permanent volume deletion\n" if (($confirmed || '') ne '1');
+return $self->{'jobs'}->lock('create-host', sub {
+	my ($pool, $volume, $record) = $self->inspect_volume($uuid, $name, 1);
+	die "The storage volume changed; review it again before deleting\n"
+		if (!$revision || $revision ne $record->{'revision'});
+	Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::delete', {
+		pool => $uuid, volume => $name, flags => 0 });
+	$volume->delete(0);
+	return $record;
+	});
+}
+
 # inventory(self)
 # Lists all backends. Local directory pools have lifecycle controls; directory
 # and LVM pools also allow deletion of volumes with no owners or host use.
