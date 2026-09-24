@@ -279,4 +279,50 @@ return sha256_hex(join("\0", $pool->get_uuid_string(), $volume->get_key(), $path
 	@stat[0,1,7,9,10], @$info{qw(type capacity)}, $doc->findvalue('/volume/target/format/@type')));
 }
 
+# inventory(self)
+# Lists all backends. Local directory pools have lifecycle controls; directory
+# and LVM pools also allow deletion of volumes with no owners or host use.
+sub inventory
+{
+my ($self) = @_;
+my $local = $self->{'adapter'}->uri() eq 'qemu:///system';
+my @pools;
+foreach my $pool (Cloudmin::Libvirt::storage_pools($self->{'adapter'})) {
+	my $record = $self->{'adapter'}->get_storage_pool_record($pool, 1);
+	$record->{'revision'} = revision($pool);
+	$record->{'unregisterable'} = $local && $record->{'persistent'} &&
+		$record->{'type'} =~ /\A(?:dir|logical)\z/;
+	$record->{'manageable'} = $local && $record->{'persistent'} && $record->{'type'} eq 'dir';
+	$record->{'volume_manageable'} = $local && $record->{'persistent'} &&
+		$record->{'type'} =~ /\A(?:logical|lvmthin)\z/;
+	$record->{'guests'} = $record->{'manageable'} && $record->{'active'}
+		? $self->active_guests($pool) : [];
+	$record->{'filesystem'} = filesystem_id($record->{'target'})
+		if ($local && $record->{'active'} && $record->{'type'} =~ /\A(?:dir|fs|netfs)\z/);
+	push(@pools, $record);
+	}
+my $context = $self->volume_context();
+my $lvm = Cloudmin::LVM->new();
+foreach my $pool (@pools) {
+	foreach my $volume (@{$pool->{'volumes'}}) {
+		$volume->{'usage'} = $self->volume_usage($pool, $volume, $context);
+		# Report unsafe storage per volume without hiding the rest of inventory.
+		if (!$volume->{'usage'}->{'reason'}) {
+			if ($pool->{'type'} =~ /\A(?:logical|lvmthin)\z/) {
+				# Host mounts and device stacks protect LVs even without guest owners.
+				my $safe = eval { Cloudmin::LVM::host_use(Cloudmin::LVM::device($volume->{'path'}, $lvm)); 1 };
+				$volume->{'usage'}->{'reason'} = Cloudmin::Libvirt::error_message($@) if (!$safe);
+				next;
+				}
+			# Directory deletion accepts only regular files, never device aliases.
+			my @stat = lstat($volume->{'path'} || '');
+			$volume->{'usage'}->{'reason'} = 'Only regular storage files can be deleted here.'
+				if (!@stat || !-f _);
+			}
+		}
+	}
+return { pools => [sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @pools],
+	local => $local, overview => overview(\@pools), usage_errors => $context->{'errors'} };
+}
+
 1;
