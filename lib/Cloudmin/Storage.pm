@@ -347,6 +347,112 @@ return $self->{'jobs'}->lock('create-host', sub {
 	});
 }
 
+# review_pool(self, uuid, [stop]) checks whether a registration can be removed.
+# Returns the native pool and a public review without changing storage. stop
+# defaults to 0; 1 permits a later stop, including whole-group LVM deactivation.
+# References cover the whole VG. Blocked reviews retain their refusal reason.
+sub review_pool
+{
+my ($self, $uuid, $stop) = @_;
+# Bind only a validated stop choice and native UUID into the review.
+$self->assert_local();
+$stop //= 0;
+die "Invalid stop-before-unregister setting\n" if ($stop !~ /\A[01]\z/);
+die "Invalid storage pool ID\n" if (($uuid || '') !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+# Only native registrations can be removed; explain derived thin IDs separately.
+my $pool = eval { $self->{'adapter'}->connect()->get_storage_pool_by_uuid($uuid) };
+if (!$pool) {
+	# Preserve the native lookup error unless this is a known thin destination.
+	my $error = $@;
+	my $destination = eval { Cloudmin::Libvirt::storage_pool($self->{'adapter'}, $uuid) };
+	die "LVM-thin destinations cannot be unregistered separately. Unregister the parent LVM pool instead.\n"
+		if ($destination && $destination->isa('Cloudmin::LVM::Pool') && $destination->{'thin'});
+	die $error;
+	}
+# Read other pools' dependencies while excluding the registration being removed.
+my ($type, $target) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
+die "Only persistent directory or LVM pool registrations can be removed\n"
+	if ($type !~ /\A(?:dir|logical)\z/ || !$pool->is_persistent());
+my $context = $self->volume_context(1, $uuid);
+my %ids = ($uuid => 1);
+my %names = ($pool->get_name() => 1);
+my @paths = ($target);
+my @identity;
+my ($missing_mapper, $missing_thin_prefix);
+if ($type eq 'logical') {
+	# Inactive LVs can lack device nodes; include both canonical LVM aliases.
+	my $driver = $self->{'adapter'}->{'lvm'} || Cloudmin::LVM->new();
+	my $doc = Cloudmin::Libvirt::parse_xml_document($pool->get_xml_description(0));
+	my $vg = Cloudmin::LVM::name($doc->findvalue('/pool/source/name'));
+	my $groups = $driver->inventory(1);
+	if (!$groups->{$vg} && !$pool->is_active()) {
+		# Only a successful inventory can prove a stale registration. No stop
+		# is needed, but missing device nodes must not hide saved references.
+		push(@identity, 'missing-group', $vg);
+		push(@paths, "/dev/$vg");
+		# Doubled hyphens belong to a VG name; a single one separates its LV.
+		$vg =~ s/-/--/g;
+		$missing_mapper = qr{\A/dev/mapper/\Q$vg\E-[^-]};
+		$missing_thin_prefix = $pool->get_name().'/';
+		}
+	else {
+		# Existing groups and every actual stop require complete LV metadata.
+		my @destinations = $driver->pools($pool);
+		foreach my $destination (@destinations) {
+			$ids{$destination->get_uuid_string()} = 1;
+			$names{$destination->get_name()} = 1;
+			}
+		my $group = $destinations[0]->group();
+		push(@identity, $group->{'vg_uuid'});
+		# Retain every LV's aliases and identity, including saved snapshots.
+		foreach my $lv (values %{$group->{'volumes'}}) {
+			my ($vg, $name) = ($group->{'vg_name'}, $lv->{'lv_name'});
+			s/-/--/g for ($vg, $name);
+			push(@paths, $lv->{'lv_path'}, "/dev/mapper/$vg-$name");
+			push(@identity, join(':', map { $lv->{$_} // '' } qw(lv_uuid lv_name segtype)));
+			# Snapshot history must be removed through its owning machine first.
+			push(@{$context->{'errors'}}, 'Remove Cloudmin snapshots before unregistering this volume group.')
+				if (($lv->{'lv_tags'} || '') =~ /(?:^|,)cloudmin_snapshot(?:,|$)/);
+			}
+		if ($stop && $pool->is_active()) {
+			# Stopping a logical pool deactivates every LV, including host-only disks.
+			my $safe = eval { $driver->group_host_use($group); 1 };
+			# Show host-use failures in the review instead of offering removal.
+			push(@{$context->{'errors'}}, Cloudmin::Libvirt::error_message($@)) if (!$safe);
+			}
+		}
+	}
+my (@owners, %seen);
+foreach my $ref (@{$context->{'references'}}) {
+	# Paths cover direct attachments; named sources also cover missing files.
+	my $used = grep { $names{$_->[0]} || $ids{$_->[0]} ||
+		($missing_thin_prefix && index($_->[0], $missing_thin_prefix) == 0) } @{$ref->{'sources'}};
+	$used ||= grep { my $path = $_; ($missing_mapper && $path =~ $missing_mapper) ||
+		grep { $_ && (contains_path($_, $path) || same_file($_, $path, 1)) } @paths } @{$ref->{'paths'}};
+	# Live, saved and snapshot XML can all refer to the same owner.
+	next if (!$used || $seen{join(':', map { $ref->{$_} // '' } qw(kind uuid pool name))}++);
+	push(@owners, { map { $_ => $ref->{$_} } qw(kind uuid pool name active) });
+	}
+foreach my $image (@{$context->{'images'}}) {
+	# Saved imports can refer to a thin destination or an aliased disk path.
+	my $path = $image->{'volume_path'} || '';
+	push(@owners, { kind => 'image', id => $image->{'id'}, name => $image->{'name'} })
+		if ($ids{$image->{'pool'} || ''} || ($missing_mapper && $path =~ $missing_mapper) ||
+			$path && grep { $_ && (contains_path($_, $path) || same_file($_, $path, 1)) } @paths);
+	}
+# Report owners first, then unreadable references, jobs or missing stop permission.
+my $reason = @owners ? 'This pool is still referenced by virtual machines, images or other storage.'
+	: @{$context->{'errors'}} ? join(' ', @{$context->{'errors'}})
+	: $context->{'busy'} ? 'Wait for virtual machine operations and image imports to finish before unregistering a pool.'
+	: $pool->is_active() && !$stop
+		? 'This pool is active. Review Stop and Unregister, or use --stop with unregister-pool.' : '';
+# A changed stop choice, registration or VG identity invalidates this revision.
+return ($pool, { id => $uuid, uuid => $uuid, name => $pool->get_name(), type => $type,
+	path => $target, stop_required => $pool->is_active() ? 1 : 0,
+	revision => sha256_hex(join("\0", revision($pool), $stop, sort @identity)),
+	usage => { owners => \@owners, reason => $reason, checked => !@{$context->{'errors'}} } });
+}
+
 # inventory(self)
 # Lists all backends. Local directory pools have lifecycle controls; directory
 # and LVM pools also allow deletion of volumes with no owners or host use.
