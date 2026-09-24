@@ -325,4 +325,13 @@ return { pools => [sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @pools],
 	local => $local, overview => overview(\@pools), usage_errors => $context->{'errors'} };
 }
 
+# assert_local(self)
+# Filesystem checks and directory creation apply only to the local system host.
+sub assert_local
+{
+my ($self) = @_;
+die "Storage changes are available only for the local qemu:///system host\n"
+	if ($self->{'adapter'}->uri() ne 'qemu:///system');
+}
+
 1;
