@@ -32,4 +32,16 @@ return sha256_hex(join("\0", $doc->toStringC14N(),
 	$persistent ? $pool->get_autostart() : 0));
 }
 
+# contains_path(directory, path)
+# Compares complete path components, resolving existing filesystem aliases.
+sub contains_path
+{
+my ($directory, $path) = @_;
+return 0 if (!defined($directory) || !defined($path));
+$directory = abs_path($directory) || $directory;
+$path = abs_path($path) || $path;
+$directory =~ s{/+$}{};
+return $path eq $directory || index($path, "$directory/") == 0;
+}
+
 1;
