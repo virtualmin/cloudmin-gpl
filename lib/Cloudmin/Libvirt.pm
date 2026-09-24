@@ -1040,6 +1040,20 @@ return {
 };
 }
 
+# list_storage_pools(self, [include_volumes])
+# Returns active and inactive pools, optionally with volume details.
+# Volume enumeration is omitted by default.
+sub list_storage_pools
+{
+my ($self, $include_volumes) = @_;
+my @pools = $self->storage_pools();
+my @records = map {
+	$self->get_storage_pool_record($_, $include_volumes)
+	} @pools;
+@records = sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @records;
+return \@records;
+}
+
 # memory_kib(doc, element)
 # Converts libvirt memory fields to KiB, including omitted currentMemory.
 sub memory_kib
