@@ -737,6 +737,38 @@ $self->complete_domain($domain, $record, $skip_addresses);
 return $record;
 }
 
+# get_guest_status(self, uuid)
+# Reads power, guest-agent and address signals inside the bounded status worker.
+# A responding agent does not establish that guest setup has finished.
+sub get_guest_status
+{
+my ($self, $uuid) = @_;
+my $domain = $self->find_domain($uuid) || die "Virtual machine not found\n";
+my $record = $self->get_domain_record($domain, 1);
+$self->complete_domain($domain, $record, 1);
+$record->{'agent'} = 'unavailable';
+# Stopped guests have no agent or current interface addresses to query.
+return $record if (!$record->{'active'});
+# Agent timeouts belong to the domain, not this connection. The probe process
+# deadline bounds this read without changing another client's freeze timeout.
+if ($record->{'state'} =~ /\A(?:running|blocked)\z/) {
+	my $info = eval { $domain->get_guest_info(2, 0) }; # GUEST_INFO_OS
+	# An empty or failed reply does not establish guest-agent
+	# readiness.
+	$record->{'agent'} = 'responding'
+		if (ref($info) eq 'HASH' && keys(%$info));
+	}
+# Agent addresses are useful only when the agent answered this check.
+my $ok = eval {
+	$record->{'addresses'} = $self->get_domain_addresses($domain, $record,
+		$record->{'agent'} ne 'responding');
+	1;
+	};
+my $error = $@;
+die $error if (!$ok);
+return $record;
+}
+
 # set_user_password(self, uuid, username, password)
 # Resets an existing guest account's password without saving it in Cloudmin.
 # Requires a writable adapter, running guest and responding agent.
