@@ -722,6 +722,21 @@ foreach my $domain (@domains) {
 return \@records;
 }
 
+# get_domain(self, id, [skip_addresses])
+# Returns one guest's inventory record with disks, interfaces, console and
+# address details, or undef when no guest matches the UUID or name.
+# skip_addresses defaults to false; set it to avoid guest-agent queries.
+sub get_domain
+{
+my ($self, $id, $skip_addresses) = @_;
+my $domain = $self->find_domain($id);
+# Missing guests are a normal lookup result; discovery errors still propagate.
+return undef if (!$domain);
+my $record = $self->get_domain_record($domain, 1);
+$self->complete_domain($domain, $record, $skip_addresses);
+return $record;
+}
+
 # set_user_password(self, uuid, username, password)
 # Resets an existing guest account's password without saving it in Cloudmin.
 # Requires a writable adapter, running guest and responding agent.
