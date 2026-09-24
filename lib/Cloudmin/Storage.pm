@@ -141,4 +141,18 @@ return { %$owner, paths => [grep { /\S/ } @paths], sources => [map {
 	} $doc->findnodes('//source[@pool and @volume]')] };
 }
 
+# same_file(first, second, local)
+# Detects path aliases on the local host without inspecting remote host paths.
+sub same_file
+{
+my ($first, $second, $local) = @_;
+return 0 if (!defined($first) || !defined($second) || $first eq '' || $second eq '');
+return 1 if ($first eq $second);
+return 0 if (!$local);
+return 1 if ((abs_path($first) || $first) eq (abs_path($second) || $second));
+my @first = stat($first);
+my @second = stat($second);
+return @first && @second && $first[0] == $second[0] && $first[1] == $second[1];
+}
+
 1;
