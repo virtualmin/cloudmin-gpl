@@ -1439,6 +1439,66 @@ foreach my $field ($blocks[0]->findnodes('*[namespace-uri()="urn:cloudmin:vm:1"]
 return \%fields;
 }
 
+# extract_disks(xml)
+# Returns disk and CD-ROM devices with their source, target and format.
+sub extract_disks
+{
+my ($xml) = @_;
+my @disks;
+my $creation = extract_metadata($xml)->{'job'} || '';
+while ($xml =~ m{<disk\b([^>]*)>(.*?)</disk>}sg) {
+	my ($attrs, $body) = ($1, $2);
+	my ($device) = $attrs =~ /\bdevice\s*=\s*["']([^"']+)["']/i;
+	my ($type) = $attrs =~ /\btype\s*=\s*["']([^"']+)["']/i;
+	my ($source) = $body =~ m{<source\b([^>]*)/?>}i;
+	# Source attributes distinguish file paths, host devices and pool
+	# volumes.
+	my %source;
+	while (($source || '') =~ /\b(\w+)\s*=\s*["']([^"']*)["']/g) {
+		$source{lc($1)} = decode_xml_text($2);
+		}
+	my ($target) = $body =~ m{<target\b[^>]*\bdev\s*=\s*["']([^"']+)["']}i;
+	my ($bus) = $body =~ m{<target\b[^>]*\bbus\s*=\s*["']([^"']+)["']}i;
+	my ($format) = $body =~ m{<driver\b[^>]*\btype\s*=\s*["']([^"']+)["']}i;
+	my ($alias) = $body =~ m{<alias\b[^>]*\bname\s*=\s*["']([^"']+)["']}i;
+	my $readonly = $body =~ /<readonly\b/i ? 1 : 0;
+	my $role = ($device || '') eq 'cdrom' ? 'cdrom' : 'disk';
+	# Creation metadata identifies our disks without assuming vda is the OS.
+	if ($creation =~ /\A[a-f0-9]{32}\z/) {
+		$role = 'data' if (($device || 'disk') eq 'disk' && !$readonly);
+		# Snapshot overlays retain the original disk in their backing chain.
+		my @files = map { my $file = decode_xml_text($_); $file =~ s{.*/}{}; $file }
+			$body =~ m{<source\b[^>]*\b(?:file|dev|volume)\s*=\s*["']([^"']+)["']}g;
+		$role = 'system' if (grep {
+			/\Acloudmin-(?:vm|.+-system)-\Q$creation\E\.(?:qcow2|[0-9]+)\z/ ||
+			/\Acloudmin-\Q$creation\E-system\z/ || /-cloudmin--\Q$creation\E--system\z/
+			} @files);
+		# File seeds may gain a timestamp suffix on restore. Native seeds use
+		# short LV names, with doubled dashes in their /dev/mapper aliases.
+		$role = 'seed' if ($readonly && grep {
+			/\Acloudmin-(?:seed|.+-seed)-\Q$creation\E\.(?:iso|[0-9]+)\z/ ||
+			/\Acloudmin-\Q$creation\E-seed\z/ || /-cloudmin--\Q$creation\E--seed\z/
+			} @files);
+		}
+	# Preserve missing details rather than guessing a guest's storage
+	# format.
+	push(@disks, {
+		'device' => $device || 'disk',
+		'type' => $type || '',
+		'target' => $target,
+		'alias' => $alias,
+		'bus' => $bus,
+		'format' => $format,
+		'pool' => $source{'pool'},
+		'volume' => $source{'volume'},
+		'path' => $source{'file'} || $source{'dev'},
+		'readonly' => $readonly,
+		'role' => $role,
+	});
+	}
+return @disks;
+}
+
 # extract_interfaces(xml)
 # Returns network interfaces with their MAC, model and attachment.
 sub extract_interfaces
