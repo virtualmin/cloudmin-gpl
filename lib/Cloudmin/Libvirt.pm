@@ -643,6 +643,36 @@ Cloudmin::VMManage::check_nvram($self, $domain);
 return 1;
 }
 
+# remove_created_guest(self, uuid, job_id)
+# Removes only a domain carrying this creation job's ownership marker.
+sub remove_created_guest
+{
+my ($self, $uuid, $job_id) = @_;
+my ($domain) = grep { $_->get_uuid_string() eq $uuid }
+	$self->connect()->list_all_domains();
+# Cleanup is idempotent when an earlier attempt already removed the guest.
+if (!$domain) {
+	# Retry key cleanup even if an interrupted removal already undefined the
+	# VM.
+	$self->removed_guest($uuid, $job_id);
+	return 1;
+	}
+my $metadata = extract_metadata($domain->get_xml_description(0));
+# Do not delete a replacement guest just because it reused the UUID.
+die "Virtual machine ownership changed; automatic cleanup stopped\n"
+	if (($metadata->{'job'} || '') ne $job_id);
+# Rollback stops only the new guest marked as owned by this creation job.
+if ($domain->is_active()) {
+	log_call('Sys::Virt::Domain::destroy', { uuid => $uuid });
+	$domain->destroy();
+	}
+# Remove this new guest's NVRAM, retaining unrelated metadata.
+log_call('Sys::Virt::Domain::undefine', { uuid => $uuid, flags => 4 });
+$domain->undefine(4);
+$self->removed_guest($uuid, $job_id);
+return 1;
+}
+
 # remove_created_volume(self, pool_uuid, name, [expected_key])
 # Deletes a journalled volume only after checking every remaining domain
 # reference.
