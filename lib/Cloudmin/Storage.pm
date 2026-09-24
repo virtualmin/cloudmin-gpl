@@ -64,4 +64,19 @@ foreach my $vm ($self->{'adapter'}->connect()->list_all_domains(0)) {
 return \@guests;
 }
 
+# filesystem_id(path)
+# Identifies the backing filesystem, including bind mounts and Btrfs subvolumes.
+# Remote pool paths must never be passed here: they belong to a different host.
+sub filesystem_id
+{
+my ($path) = @_;
+return undef if ($^O ne 'linux' || !$path || !-d $path);
+open(my $stat, '-|', 'stat', '-f', '--format=%t:%i', '--', $path) || return undef;
+my $id = <$stat>;
+my $ok = close($stat);
+return undef if (!$ok || !defined($id));
+chomp($id);
+return $id =~ /\A[0-9a-f]+:[0-9a-f]*[1-9a-f][0-9a-f]*\z/i ? lc($id) : undef;
+}
+
 1;
