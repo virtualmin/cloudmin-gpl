@@ -1458,6 +1458,74 @@ my @stats = $connection->get_all_domain_stats(2 | 4 | 8 | 16 | 32, $domains,
 return { map { $_->{'dom'}->get_uuid_string() => $_->{'data'} } @stats };
 }
 
+# get_guest_resources(self, uuid)
+# Reads OS and mounted filesystem sizes for the status probe worker.
+# The probe supervisor bounds the call without changing shared domain settings.
+sub get_guest_resources
+{
+my ($self, $uuid) = @_;
+# Slow probes accept only exact UUIDs from inventory subscriptions.
+die "Invalid virtual machine ID\n" if (!defined($uuid) || ref($uuid) ||
+	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+# UUID lookup avoids enumerating every VM for each slow guest check.
+my $domain = $self->connect()->get_domain_by_uuid($uuid);
+# A guest stopped between scheduling and execution has no live
+# filesystem data.
+return {} if (!$domain->is_active());
+my %writable = map { map { defined($_) ? ($_ => 1) : () } $_->{'target'},
+	$_->{'alias'} }
+	grep { $_->{'device'} eq 'disk' && !$_->{'readonly'} }
+	extract_disks($domain->get_xml_description(0));
+my $info = eval { $domain->get_guest_info(2 | 8 | 16,
+	0) }; # OS, HOSTNAME, FILESYSTEM
+my $error = $@;
+# Preserve the native agent error for the collector.
+die $error if ($error);
+my @filesystems;
+my (%seen, $used, $total, $incomplete);
+for my $i (0 .. ($info->{'fs.count'} || 0) - 1) {
+	my %fs = map { $_ => $info->{"fs.$i.$_"} }
+		qw(name mountpoint fstype total-bytes used-bytes);
+	# Only disk-backed filesystems contribute; omit tmpfs, network mounts
+	# and media.
+	next if (!($info->{"fs.$i.disk.count"} || 0) ||
+		($fs{'fstype'} || '') =~ /\A(?:iso9660|udf|squashfs)\z/);
+	# A filesystem mounted at multiple paths must contribute only
+	# once.
+	next if (!$fs{'name'} || $seen{$fs{'name'}}++);
+	push(@filesystems, \%fs);
+	my @aliases = map { $info->{"fs.$i.disk.$_.alias"} }
+		0 .. $info->{"fs.$i.disk.count"} - 1;
+	# Missing disk mappings cannot establish that a filesystem belongs to a
+	# writable disk. Keep its details, but withhold the aggregate
+	# percentage.
+	if (grep { !defined($_) || !length($_) } @aliases) { $incomplete = 1;
+		next; }
+	# Read-only or unmapped disks are displayed but excluded from
+	# usage totals.
+	next if (grep { !$writable{$_} } @aliases);
+	# Partial or inconsistent agent measurements make the aggregate
+	# unavailable.
+	if (!defined($fs{'used-bytes'}) || !($fs{'total-bytes'}) ||
+		$fs{'used-bytes'} > $fs{'total-bytes'}) {
+		$incomplete = 1;
+		}
+	else {
+		# Sum only complete measurements for writable
+		# disk-backed filesystems.
+		$used += $fs{'used-bytes'};
+		$total += $fs{'total-bytes'};
+		}
+	}
+return { os => $info->{'os.pretty-name'} || $info->{'os.name'},
+	kernel => $info->{'os.kernel-release'},
+	hostname => $info->{'hostname'}, filesystems => \@filesystems,
+	(defined($used) &&
+	!$incomplete
+	? (filesystem_used_bytes => $used, filesystem_total_bytes => $total)
+	: ()) };
+}
+
 # get_domain_addresses(self, domain, record, [skip_agent])
 # Collects guest IP addresses from the guest agent when it answers, otherwise
 # combines libvirt DHCP leases and the host ARP table. skip_agent defaults to
