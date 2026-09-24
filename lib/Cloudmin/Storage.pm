@@ -453,6 +453,39 @@ return ($pool, { id => $uuid, uuid => $uuid, name => $pool->get_name(), type => 
 	usage => { owners => \@owners, reason => $reason, checked => !@{$context->{'errors'}} } });
 }
 
+# unregister(self, uuid, revision, confirmed, [stop]) removes a saved definition.
+# confirmed must be 1; stop defaults to 0 and must match the review's choice.
+# The fresh review runs under the host lock. Files and LVs are never deleted.
+sub unregister
+{
+my ($self, $uuid, $revision, $confirmed, $stop) = @_;
+# Refuse unconfirmed requests before entering the mutation path.
+$self->assert_local();
+die "Confirm storage pool unregistration\n" if (($confirmed || '') ne '1');
+return $self->{'jobs'}->lock('create-host', sub {
+	# Recheck both identity and references immediately before stopping storage.
+	my ($pool, $record) = $self->review_pool($uuid, $stop);
+	die "Storage settings changed; review the pool again\n"
+		if (!$revision || $record->{'revision'} ne $revision);
+	die $record->{'usage'}->{'reason'}."\n" if ($record->{'usage'}->{'reason'});
+	if ($record->{'stop_required'}) {
+		# Libvirt refuses open devices too, covering use that starts after review.
+		Cloudmin::Libvirt::log_call('Sys::Virt::StoragePool::destroy', { uuid => $uuid });
+		my $stopped = eval { $pool->destroy(); 1 };
+		# A failed stop must leave the registration available for recovery.
+		die "Could not stop the pool; its registration was kept. Check its volume activation state: ".
+			Cloudmin::Libvirt::error_message($@)."\n" if (!$stopped);
+		die "The pool is still active; its registration was kept\n" if ($pool->is_active());
+		}
+	# Unregister only after inactivity is established; report partial failure.
+	Cloudmin::Libvirt::log_call('Sys::Virt::StoragePool::undefine', { uuid => $uuid });
+	my $removed = eval { $pool->undefine(); 1 };
+	die "The pool is stopped, but its registration could not be removed. Review and retry unregistration: ".
+		Cloudmin::Libvirt::error_message($@)."\n" if (!$removed);
+	return $record;
+	});
+}
+
 # inventory(self)
 # Lists all backends. Local directory pools have lifecycle controls; directory
 # and LVM pools also allow deletion of volumes with no owners or host use.
