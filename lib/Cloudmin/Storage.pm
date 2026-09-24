@@ -605,6 +605,39 @@ return { name => $name, path => $path, existing => $exists ? 1 : 0,
 	autostart => 0+$autostart, xml => $xml };
 }
 
+# create(self, input)
+# Registers existing VGs or creates directory pools. Existing directory contents
+# and permissions are preserved; registering a VG never formats its disks.
+sub create
+{
+my ($self, $in) = @_;
+$self->assert_local();
+return $self->register_lvm($in) if (($in->{'type'} || '') eq 'logical');
+die "Unknown storage pool type\n" if (($in->{'type'} || 'dir') ne 'dir');
+return $self->{'jobs'}->lock('create-host', sub {
+	my $plan = $self->prepare($in);
+	my $pool;
+	my $ok = eval {
+		Cloudmin::Libvirt::log_call('Sys::Virt::define_storage_pool', { name => $plan->{'name'}, path => $plan->{'path'} });
+		$pool = $self->{'adapter'}->connect()->define_storage_pool($plan->{'xml'});
+		# Building an existing directory could change its ownership or mode.
+		$pool->build(0) if (!$plan->{'existing'});
+		$pool->create();
+		$pool->set_autostart($plan->{'autostart'});
+		1;
+		};
+	my $error = $@;
+	if (!$ok && $pool) {
+		# Roll back only the new definition, never remove files or directories.
+		my $cleaned = eval { $pool->destroy() if ($pool->is_active()); $pool->undefine(); 1 };
+		$error .= " Pool definition cleanup failed: $@" if (!$cleaned);
+		$error .= " Any created directory was kept at $plan->{path}." if (!$plan->{'existing'});
+		}
+	die $error if (!$ok);
+	return $plan->{'name'};
+	});
+}
+
 # register_lvm(self, input) registers an existing VG without formatting disks.
 # Webmin's LVM module manages PVs, VGs and thin pools; Cloudmin discovers them.
 sub register_lvm
