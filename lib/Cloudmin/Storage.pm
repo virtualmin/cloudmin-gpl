@@ -79,4 +79,46 @@ chomp($id);
 return $id =~ /\A[0-9a-f]+:[0-9a-f]*[1-9a-f][0-9a-f]*\z/i ? lc($id) : undef;
 }
 
+# overview(pools)
+# Counts live inventory and sums each identified filesystem only once.
+sub overview
+{
+my ($pools) = @_;
+my %counts = (pools => scalar(@$pools), active => 0, volumes => 0,
+	capacity => 0, available => 0, filesystems => 0);
+my %filesystems;
+foreach my $pool (@$pools) {
+	next if (!$pool->{'active'});
+	$counts{'active'}++;
+	$counts{'volumes'} += $pool->{'volume_count'} || 0;
+	$counts{'volumes_unknown'} = 1 if ($pool->{'volume_error'});
+	# Unknown or non-filesystem backends cannot safely contribute to a total.
+	if (!$pool->{'filesystem'} || !$pool->{'capacity'}) {
+		$counts{'space_unknown'} = 1;
+		next;
+		}
+	my $key = $pool->{'filesystem'};
+	# Record the first observation of this filesystem; aliases share its space.
+	if (!$filesystems{$key}) {
+		$filesystems{$key} = { capacity => $pool->{'capacity'}, available => $pool->{'available'} };
+		}
+	else {
+		# Counters can move between pool reads; use the lower reported free space.
+		$filesystems{$key}->{'available'} = $pool->{'available'}
+			if ($pool->{'available'} < $filesystems{$key}->{'available'});
+		$filesystems{$key}->{'capacity'} = $pool->{'capacity'}
+			if ($pool->{'capacity'} < $filesystems{$key}->{'capacity'});
+		}
+	}
+foreach my $fs (values %filesystems) {
+	$counts{'filesystems'}++;
+	$counts{'capacity'} += $fs->{'capacity'};
+	$counts{'available'} += $fs->{'available'};
+	}
+# Avoid presenting a partial sum as all available space or an incomplete count.
+delete @counts{qw(capacity available)} if ($counts{'space_unknown'});
+delete $counts{'volumes'} if ($counts{'volumes_unknown'});
+return \%counts;
+}
+
 1;
