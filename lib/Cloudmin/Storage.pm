@@ -279,6 +279,46 @@ return sha256_hex(join("\0", $pool->get_uuid_string(), $volume->get_key(), $path
 	@stat[0,1,7,9,10], @$info{qw(type capacity)}, $doc->findvalue('/volume/target/format/@type')));
 }
 
+# review_volume(self, uuid, name, [refresh])
+# Returns the native pool, volume and public review, including refusal reasons.
+# uuid selects the pool; name is matched exactly. refresh defaults to false.
+# A blocked review has no deletion revision. Reviews do not change the volume.
+sub review_volume
+{
+my ($self, $uuid, $name, $refresh) = @_;
+# Validate selectors before opening a local pool or reading its volumes.
+$self->assert_local();
+die "Invalid storage pool ID\n" if (($uuid || '') !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+die "Invalid storage volume name\n" if (!defined($name) || ref($name) ||
+	!length($name) || length($name) > 4096 || $name =~ /[\x00-\x1f\x7f]/);
+my $pool = Cloudmin::Libvirt::storage_pool($self->{'adapter'}, $uuid);
+# Only persistent active file and LVM destinations support volume deletion.
+my ($type) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
+die "Only active local persistent directory or LVM pools can be managed here\n"
+	if ($type !~ /\A(?:dir|logical|lvmthin)\z/ || !$pool->is_persistent() || !$pool->is_active());
+Cloudmin::Libvirt::refresh_pool($pool) if ($refresh);
+my ($volume) = grep { $_->get_name() eq $name } $pool->list_all_volumes(0);
+die "Storage volume no longer exists\n" if (!$volume);
+# Inventory tolerates partial native reads; deletion requires every identity
+# field to succeed so a missing path cannot hide a file reference.
+my $record = { name => $volume->get_name(), key => $volume->get_key(),
+	path => $volume->get_path(), %{$volume->get_info()} };
+$record->{'snapshot'} = 1 if ($volume->isa('Cloudmin::LVM::Volume') &&
+	($volume->record()->{'lv_tags'} || '') =~ /(?:^|,)cloudmin_snapshot(?:,|$)/);
+die "Cannot identify the selected storage volume\n"
+	if (!$record->{'key'} || !$record->{'path'} || !defined($record->{'capacity'}));
+my $context = $self->volume_context($refresh);
+my $usage = $self->volume_usage({ uuid => $uuid, name => $pool->get_name(), manageable => 1 }, $record, $context);
+my $revision;
+if (!$usage->{'reason'}) {
+	# Host mounts and non-regular files must remain visible as blocked reviews.
+	$revision = eval { volume_revision($pool, $volume) };
+	$usage->{'reason'} = Cloudmin::Libvirt::error_message($@) if ($@);
+	}
+return ($pool, $volume, { %$record, pool => $pool->get_name(), uuid => $uuid,
+	usage => $usage, revision => $revision });
+}
+
 # inventory(self)
 # Lists all backends. Local directory pools have lifecycle controls; directory
 # and LVM pools also allow deletion of volumes with no owners or host use.
