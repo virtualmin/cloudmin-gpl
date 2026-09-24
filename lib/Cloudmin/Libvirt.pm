@@ -1319,6 +1319,26 @@ while ($xml =~ /<mac\b[^>]*\baddress\s*=\s*(["'])([^"']+)\1/ig) {
 return @macs;
 }
 
+# extract_metadata(xml)
+# Reads the image and creation details Cloudmin stored in the domain metadata.
+sub extract_metadata
+{
+my ($xml) = @_;
+# XML editors may rename prefixes without changing the metadata namespace.
+my $doc = eval { parse_xml_document($xml) } || return {};
+my @blocks = $doc->findnodes('/domain/metadata/*[local-name()="vm" and namespace-uri()="urn:cloudmin:vm:1"]');
+# Missing, malformed or ambiguous metadata must not establish ownership.
+return {} if (@blocks != 1);
+my %fields;
+foreach my $field ($blocks[0]->findnodes('*[namespace-uri()="urn:cloudmin:vm:1"]')) {
+	my $name = $field->localname();
+	# Ownership fields must be unique scalar values, not nested elements.
+	return {} if (exists($fields{$name}) || $field->exists('*'));
+	$fields{$name} = $field->textContent();
+	}
+return \%fields;
+}
+
 # extract_interfaces(xml)
 # Returns network interfaces with their MAC, model and attachment.
 sub extract_interfaces
