@@ -690,6 +690,38 @@ $volume->delete(0);
 return 1;
 }
 
+# list_domains(self, [strict], [include_addresses])
+# Returns sorted inventory; strict reads reject incomplete creation preflight
+# data. Address discovery is optional so preflight does not query guest agents.
+# Both optional flags default to false.
+sub list_domains
+{
+my ($self, $strict, $include_addresses) = @_;
+my $connection = $self->connect();
+my @domains = $connection->list_all_domains(0);
+my @records;
+foreach my $domain (@domains) {
+	my $record = eval { $self->get_domain_record($domain, $strict) };
+	if (!$record) {
+		# A guest can be undefined after enumeration. Other read failures
+		# must still stop preflight rather than hide a possible conflict.
+		my $error = $@;
+		next if (ref($error) && $error->isa('Sys::Virt::Error') &&
+			$error->code() == 42);
+		die $error;
+		}
+	if ($include_addresses) {
+		# Stopped guests must not show an old lease as a current
+		# address.
+		$record->{'addresses'} = $record->{'active'}
+			? $self->get_domain_addresses($domain, $record) : [];
+		}
+	push(@records, $record);
+	}
+@records = sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @records;
+return \@records;
+}
+
 # set_user_password(self, uuid, username, password)
 # Resets an existing guest account's password without saving it in Cloudmin.
 # Requires a writable adapter, running guest and responding agent.
