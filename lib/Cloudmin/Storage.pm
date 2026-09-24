@@ -532,6 +532,23 @@ return { pools => [sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @pools],
 	local => $local, overview => overview(\@pools), usage_errors => $context->{'errors'} };
 }
 
+# lvm_groups(self) lists existing groups not already registered with libvirt.
+sub lvm_groups
+{
+my ($self) = @_;
+$self->assert_local();
+my %registered;
+foreach my $pool ($self->{'adapter'}->connect()->list_all_storage_pools(0)) {
+	# Inactive registrations also reserve their volume group.
+	my $doc = Cloudmin::Libvirt::parse_xml_document($pool->get_xml_description(0));
+	$registered{$doc->findvalue('/pool/source/name')} = 1
+		if ($doc->findvalue('/pool/@type') eq 'logical');
+	}
+my $driver = $self->{'adapter'}->{'lvm'} || Cloudmin::LVM->new();
+return [sort { lc($a) cmp lc($b) || $a cmp $b }
+	grep { !$registered{$_} } keys %{$driver->inventory()}];
+}
+
 # assert_local(self)
 # Filesystem checks and directory creation apply only to the local system host.
 sub assert_local
