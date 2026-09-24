@@ -155,4 +155,69 @@ my @second = stat($second);
 return @first && @second && $first[0] == $second[0] && $first[1] == $second[1];
 }
 
+# volume_context(self, [refresh], [excluded_pool])
+# Collects owners, dependencies and pending work. Any unreadable source blocks
+# deletion. Pool removal excludes its own inventory, including when inactive.
+# refresh defaults to false; excluded_pool is a native pool UUID to skip.
+sub volume_context
+{
+my ($self, $refresh, $excluded_pool) = @_;
+my $conn = $self->{'adapter'}->connect();
+my $context = { references => [], images => [], errors => [] };
+my $ok = eval {
+	foreach my $vm ($conn->list_all_domains(0)) {
+		my $owner = { kind => 'vm', name => $vm->get_name(), uuid => $vm->get_uuid_string(),
+			active => $vm->is_active() ? 1 : 0 };
+		push(@{$context->{'references'}}, volume_reference($vm->get_xml_description(0), $owner));
+		# Stopped guests, saved memory and snapshots retain their disk references.
+		push(@{$context->{'references'}}, volume_reference($vm->get_xml_description(2), $owner))
+			if ($vm->is_persistent());
+		push(@{$context->{'references'}}, volume_reference($vm->managed_save_get_xml_description(0),
+			{ %$owner, kind => 'saved' })) if ($vm->has_managed_save_image(0));
+		foreach my $snapshot ($vm->list_all_snapshots(0)) {
+			push(@{$context->{'references'}}, volume_reference($snapshot->get_xml_description(0),
+				{ %$owner, kind => 'snapshot' }));
+			}
+		foreach my $checkpoint ($vm->list_all_checkpoints(0)) {
+			push(@{$context->{'references'}}, volume_reference($checkpoint->get_xml_description(0),
+				{ %$owner, kind => 'checkpoint' }));
+			}
+		}
+	1;
+	};
+push(@{$context->{'errors'}}, "Cannot check virtual machine references: $@") if (!$ok);
+$ok = eval {
+	foreach my $pool ($conn->list_all_storage_pools(0)) {
+		# Removing a registration preserves its data and internal backing chains.
+		next if ($excluded_pool && $pool->get_uuid_string() eq $excluded_pool);
+		# An inactive pool may hide a dependent disk. Never call it unused.
+		if (!$pool->is_active()) {
+			push(@{$context->{'errors'}}, 'Start storage pool '.$pool->get_name().' to check its volume dependencies.');
+			next;
+			}
+		Cloudmin::Libvirt::refresh_pool($pool) if ($refresh);
+		foreach my $volume ($pool->list_all_volumes(0)) {
+			push(@{$context->{'references'}}, volume_reference($volume->get_xml_description(0),
+				{ kind => 'backing', name => $volume->get_name(), pool => $pool->get_uuid_string(),
+				  path => $volume->get_path() },
+				dirname($volume->get_path())));
+			}
+		}
+	1;
+	};
+push(@{$context->{'errors'}}, "Cannot check storage dependencies: $@") if (!$ok);
+$ok = eval {
+	# Strict image reads prevent a damaged job record from hiding ownership.
+	$context->{'images'} = $self->{'images'}->list(undef, undef, 1);
+	$context->{'busy'} = @{$self->{'jobs'}->list(undef, 1)} ? 1 : 0;
+	foreach my $image (@{$context->{'images'}}) {
+		$context->{'busy'} = 1 if ($image->{'state'} !~ /\A(?:ready|failed|deleted)\z/ ||
+			$self->{'images'}->{'test_lock'}->($self->{'images'}->path($image->{'id'}, 'json')));
+		}
+	1;
+	};
+push(@{$context->{'errors'}}, "Cannot check storage operations: $@") if (!$ok);
+return $context;
+}
+
 1;
