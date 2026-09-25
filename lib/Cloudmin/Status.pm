@@ -69,6 +69,22 @@ $self->{'metrics'}->forget($id);
 $self->{'revision'}++;
 }
 
+# checked(self, uuid, result, now) caches one probe for all interested users.
+sub checked
+{
+my ($self, $id, $result, $now) = @_;
+# Ignore a slow health result for a guest removed while the probe ran.
+return if (!$self->{'vms'}->{$id});
+$self->{'health'}->{$id} = $result;
+# A health probe may learn addresses that the inventory did not yet
+# contain.
+$self->{'vms'}->{$id}->{'addresses'} = $result->{'addresses'}
+	if ($result->{'addresses'});
+$self->{'due'}->{$id} = $now + (($result->{'ssh'} || '') eq 'responding' ? 30
+	: 5);
+$self->refresh($id);
+}
+
 # next_probe(self, clients, now)
 # Selects the most overdue health check among permitted, visible VM details.
 # Overview subscriptions never trigger SSH checks for the whole inventory.
