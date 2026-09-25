@@ -55,4 +55,21 @@ die "A virtual machine SSH key already exists\n" if (-e $path || -l $path);
 return $path;
 }
 
+# find(self, uuid, job_id)
+# Returns a protected key path, or undef when this guest has no managed key.
+sub find
+{
+my ($self, $uuid, $job) = @_;
+my $path = $self->path($uuid, $job);
+# An absent store means no managed key, rather than an unsafe credential.
+return undef if (!$self->check_directory());
+my @s = lstat($path);
+# Guests created without host login keys have no matching file.
+return undef if (!@s);
+# Only a small, private, unshared regular file can be passed to SSH.
+die "Unsafe virtual machine SSH key file\n" if (!-f _ || -l _ || $s[3] != 1 ||
+	$s[4] != $> || ($s[2] & 0077) || !$s[7] || $s[7] > 16384);
+return $path;
+}
+
 1;
