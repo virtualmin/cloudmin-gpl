@@ -135,6 +135,26 @@ foreach my $client (grep { !$_->{'paused'} } @$clients) {
 return [sort keys %ids];
 }
 
+# sampled(self, ids, stats, monotonic_seconds, epoch_seconds)
+# Replaces metrics and discards guest-agent data older than five minutes.
+sub sampled
+{
+my ($self, $ids, $stats, $now, $wall) = @_;
+foreach my $id (@$ids) {
+	# An inventory event may delete a guest between sampling and
+	# storage.
+	next if (!$self->{'vms'}->{$id});
+	# Do not retain disk usage indefinitely if a busy worker cannot refresh
+	# it.
+	delete($self->{'guest'}->{$id}) if ($self->{'guest'}->{$id} &&
+		$wall - ($self->{'guest'}->{$id}->{'checked_at'} || 0) > 300);
+	$self->{'resources'}->{$id} =
+		$self->{'metrics'}->sample($self->{'vms'}->{$id},
+		$stats->{$id} || {}, $now, $wall);
+	$self->refresh($id);
+	}
+}
+
 # next_guest_probe(self, clients, now)
 # Schedules at most one slow query per second.
 # A 100-VM overview takes at least 100 seconds per round, regardless of viewers.
