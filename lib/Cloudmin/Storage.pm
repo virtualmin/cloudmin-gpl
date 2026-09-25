@@ -684,4 +684,23 @@ return $self->{'jobs'}->lock('create-host', sub {
 	});
 }
 
+# assert_idle(self, pool)
+# Protects active disk I/O and pending jobs while holding the host mutation lock.
+sub assert_idle
+{
+my ($self, $pool) = @_;
+die "Wait for virtual machine operations to finish before stopping a storage pool\n"
+	if (@{$self->{'jobs'}->list(undef, 1)});
+my $images = $self->{'images'};
+foreach my $job (@{$images->list()}) {
+	next if (($job->{'pool'} || '') ne $pool->get_uuid_string());
+	# Include waiting uploads and stale imports until explicitly cancelled.
+	die "Finish or cancel image imports using this pool before stopping it\n"
+		if ($job->{'state'} !~ /\A(?:ready|failed|deleted)\z/ ||
+			$images->{'test_lock'}->($images->path($job->{'id'}, 'json')));
+	}
+die "Stop virtual machines using this pool before stopping it\n"
+	if (@{$self->active_guests($pool)});
+}
+
 1;
