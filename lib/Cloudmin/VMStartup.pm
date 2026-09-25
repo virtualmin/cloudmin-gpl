@@ -25,4 +25,20 @@ die "Guest is not running\n" if (!defined($id) || $id < 0);
 return "$boot:$id";
 }
 
+# record(self, domain, callback) serializes reads and changes for this VM.
+# callback(file, identity) runs under the lock; exceptions release it too.
+sub record
+{
+my ($self, $domain, $callback) = @_;
+my $uuid = $domain->get_uuid_string();
+die "Invalid guest identity\n" if ($uuid !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+my $identity = $self->identity($domain);
+make_path($self->{'directory'}, {mode => 0700});
+my $file = "$self->{directory}/$uuid";
+open(my $lock, '>>', "$file.lock") or die "Cannot open startup lock: $!\n";
+chmod(0600, "$file.lock");
+flock($lock, LOCK_EX) or die "Cannot lock startup record: $!\n";
+return $callback->($file, $identity);
+}
+
 1;
