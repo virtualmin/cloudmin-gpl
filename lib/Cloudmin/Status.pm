@@ -85,6 +85,24 @@ $self->{'due'}->{$id} = $now + (($result->{'ssh'} || '') eq 'responding' ? 30
 $self->refresh($id);
 }
 
+# refresh_addresses(self, ids, lookup)
+# Refreshes host-observed leases and ARP entries without polling guest agents.
+# lookup(uuid, record) returns an address array; failures retain the last read.
+sub refresh_addresses
+{
+my ($self, $ids, $lookup) = @_;
+foreach my $id (@$ids) {
+	my $vm = $self->{'vms'}->{$id} || next;
+	next if (!$vm->{'active'});
+	# Keep agent-only static addresses until the next agent or lifecycle update.
+	next if (grep { ($_->{'source'} || '') eq 'agent' } @{$vm->{'addresses'}});
+	my $addresses = eval { $lookup->($id, $vm) };
+	next if (ref($addresses) ne 'ARRAY');
+	$vm->{'addresses'} = $addresses;
+	$self->refresh($id);
+	}
+}
+
 # next_probe(self, clients, now)
 # Selects the most overdue health check among permitted, visible VM details.
 # Overview subscriptions never trigger SSH checks for the whole inventory.
