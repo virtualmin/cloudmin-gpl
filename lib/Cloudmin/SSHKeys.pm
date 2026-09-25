@@ -24,4 +24,23 @@ die "Invalid virtual machine SSH key identity\n" if (
 return "$self->{directory}/$uuid-$job";
 }
 
+# check_directory(self, [create])
+# Requires a private directory owned by the controller's user (root in Webmin).
+# create defaults to false; only allocation creates a missing directory.
+sub check_directory
+{
+my ($self, $create) = @_;
+my $dir = $self->{'directory'};
+# Only new-key allocation may create storage; lookups remain read-only.
+make_dir($dir, 0700, 1) || die "Cannot create virtual machine SSH key directory\n"
+	if ($create && !-e $dir && !-l $dir);
+my @s = lstat($dir);
+# A host that has never saved a key has no directory yet.
+return 0 if (!@s && !$create);
+# Never trust a shared, foreign-owned or redirected credential directory.
+die "Unsafe virtual machine SSH key directory\n"
+	if (!@s || !-d _ || -l _ || $s[4] != $> || ($s[2] & 0077));
+return 1;
+}
+
 1;
