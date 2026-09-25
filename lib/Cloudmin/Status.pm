@@ -173,6 +173,19 @@ $self->{'guest_next'} = $now + 1 if ($id);
 return $id;
 }
 
+# guest_checked(self, uuid, result, now)
+# Shares guest-agent data and schedules its next query one minute later.
+sub guest_checked
+{
+my ($self, $id, $result, $now) = @_;
+# A completed probe cannot recreate an already removed inventory entry.
+return if (!$self->{'vms'}->{$id});
+$self->{'guest'}->{$id} = $result;
+$self->{'guest'}->{$id}->{'checked_at'} = $now;
+$self->{'guest_due'}->{$id} = $now + 60;
+$self->refresh($id);
+}
+
 # value(self, uuid) combines public inventory, health and resource measurements.
 sub value
 {
