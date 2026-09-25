@@ -27,6 +27,24 @@ die "Invalid serial log identity\n" if (!defined($uuid) ||
 return "$self->{directory}/cloudmin-".lc($uuid)."-serial.log";
 }
 
+# setting(file, name, default) reads one scalar libvirt configuration value.
+sub setting
+{
+my ($file, $name, $default) = @_;
+open(my $in, '<', $file) || do {
+	# Absent files use libvirt defaults; unreadable files stop auto-setup.
+	return $default if ($! == ENOENT);
+	die "Cannot read serial logging configuration: $!\n";
+	};
+my $value = $default;
+while (<$in>) {
+	# Native settings are scalars, optionally quoted and followed by a comment.
+	$value = $1 if /^\s*\Q$name\E\s*=\s*(.*?)\s*(?:#.*)?$/;
+	}
+$value =~ s/\A["'](.*)["']\z/$1/;
+return $value;
+}
+
 package Cloudmin::SerialLog::Reader;
 use strict;
 use warnings;
