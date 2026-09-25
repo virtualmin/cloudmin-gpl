@@ -7,6 +7,31 @@ use WebminCore qw(convert_to_json);
 use File::Basename qw(dirname);
 require(dirname(__FILE__).'/Metrics.pm');
 
+# new(class) creates an empty collector cache.
+sub new
+{
+return bless { vms => {}, health => {}, due => {}, resources => {}, guest => {},
+	guest_due => {},
+	metrics => Cloudmin::Metrics->new(), encoded => {}, revision => 0 }, $_[0];
+}
+
+# record(self, vm)
+# Retains only public inventory fields, never guest XML or secrets.
+sub record
+{
+my ($self, $vm) = @_;
+my $id = $vm->{'uuid'};
+# Keep disk roles and resource differences public; never cache secure XML here.
+$self->{'vms'}->{$id} = { map { $_ => $vm->{$_} }
+	qw(uuid name state active persistent autostart vcpus memory_kib macs
+	   addresses disk_targets disk_roles pending) };
+$self->{'vms'}->{$id}->{'addresses'} ||= [];
+# Sys::Virt returns names as UTF-8 bytes; WebSocket text encoding needs characters.
+utf8::decode($self->{'vms'}->{$id}->{'name'})
+	if (defined($self->{'vms'}->{$id}->{'name'}) && !utf8::is_utf8($self->{'vms'}->{$id}->{'name'}));
+$self->refresh($id);
+}
+
 # refresh(self, uuid) compares each changed record once, regardless of viewers.
 sub refresh
 {
