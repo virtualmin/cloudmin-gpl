@@ -49,4 +49,22 @@ foreach my $client (grep { !$_->{'paused'} } @$clients) {
 return [sort keys %ids];
 }
 
+# next_guest_probe(self, clients, now)
+# Schedules at most one slow query per second.
+# A 100-VM overview takes at least 100 seconds per round, regardless of viewers.
+sub next_guest_probe
+{
+my ($self, $clients, $now) = @_;
+# Pace slow guest-agent queries across all viewers, not per connection.
+return if (($self->{'guest_next'} || 0) > $now);
+my ($id) = sort { ($self->{'guest_due'}->{$a} ||
+	0) <=> ($self->{'guest_due'}->{$b} || 0) || $a cmp $b }
+	grep { $self->{'vms'}->{$_}->{'state'} =~ /\A(?:running|blocked)\z/ &&
+		($self->{'guest_due'}->{$_} || 0) <= $now }
+		@{$self->resource_ids($clients)};
+# An empty queue should not delay a guest that becomes due next tick.
+$self->{'guest_next'} = $now + 1 if ($id);
+return $id;
+}
+
 1;
