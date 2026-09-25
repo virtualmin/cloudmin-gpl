@@ -195,4 +195,58 @@ return { vm => $self->{'vms'}->{$id}, health => $self->{'health'}->{$id},
 	guest => $self->{'guest'}->{$id} };
 }
 
+# message(self, subscriber)
+# Returns an authorized snapshot or delta, or undef when unchanged.
+# The collector clears subscriber.revision when it rereads permissions.
+sub message
+{
+my ($self, $client) = @_;
+# Hidden pages retain their known snapshot without receiving updates.
+return if ($client->{'paused'});
+my $full = !exists($client->{'known'});
+# Skip per-guest comparisons when nothing in the shared cache has
+# changed.
+return if (!$full && ($client->{'revision'} // -1) == $self->{'revision'});
+$client->{'revision'} = $self->{'revision'};
+my $known = $client->{'known'} ||= {};
+my %visible = $client->{'id'} eq 'overview' ? %{$self->{'vms'}}
+	: $self->{'vms'}->{$client->{'id'}}
+	? ($client->{'id'} => $self->{'vms'}->{$client->{'id'}}) : ();
+# Apply the subscriber's current assignments before comparing or sending records.
+%visible = map { $_ => $visible{$_} } grep {
+	$client->{'policy'}->allows('view', $_) } keys %visible if ($client->{'policy'});
+my (%changed, @removed);
+foreach my $id (keys %visible) {
+	my $value = $self->value($id);
+	# Connection capabilities belong to the viewer, not the shared health cache.
+	if ($client->{'policy'} && $value->{'health'}) {
+		# Copy health so hiding controls for one viewer cannot affect another.
+		$value = { %$value, health => { %{$value->{'health'}} } };
+		foreach my $kind (qw(console terminal)) {
+			$value->{'health'}->{$kind.'_available'} = 0
+				if (!$client->{'policy'}->allows($kind, $id));
+			}
+		# Revoking console access must also prevent serial pages from reopening.
+		$value->{'health'}->{'serial_available'} = 0
+			if (!$client->{'policy'}->allows('console', $id));
+		}
+	my $encoded = convert_to_json($value, 0, 0, 1);
+	# Compare against this subscriber's snapshot, not another user's
+	# history.
+	if (!defined($known->{$id}) || $known->{$id} ne $encoded) {
+		$changed{$id} = $value;
+		$known->{$id} = $encoded;
+		}
+	}
+foreach my $id (keys %$known) {
+	# Remove guests deleted from inventory or excluded by the target or ACL.
+	if (!$visible{$id}) { push(@removed, $id); delete $known->{$id}; }
+	}
+# A cache revision may concern only guests outside this subscriber's
+# view.
+return if (!$full && !keys(%changed) && !@removed);
+return { type => 'status', full => $full ? 1 : 0, changed => \%changed,
+	removed => \@removed };
+}
+
 1;
