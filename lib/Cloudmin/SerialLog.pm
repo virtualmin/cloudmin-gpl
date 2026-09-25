@@ -186,6 +186,17 @@ for (1..3) {
 die "Serial history changed while connecting; reconnect to the console\n";
 }
 
+# remove(self, uuid) removes only this guest's managed log and native rotations.
+sub remove
+{
+my ($self, $uuid) = @_;
+my $path = $self->path($uuid);
+foreach my $file ($path, map { "$path.$_" } 0..31) {
+	# Missing files are normal after failed creation or native rotation.
+	unlink($file) || $! == ENOENT || die "Cannot remove serial history: $!\n";
+	}
+}
+
 package Cloudmin::SerialLog::Reader;
 use strict;
 use warnings;
