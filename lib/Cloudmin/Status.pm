@@ -67,4 +67,13 @@ $self->{'guest_next'} = $now + 1 if ($id);
 return $id;
 }
 
+# value(self, uuid) combines public inventory, health and resource measurements.
+sub value
+{
+my ($self, $id) = @_;
+return { vm => $self->{'vms'}->{$id}, health => $self->{'health'}->{$id},
+	resources => $self->{'resources'}->{$id},
+	guest => $self->{'guest'}->{$id} };
+}
+
 1;
