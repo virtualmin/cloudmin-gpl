@@ -80,6 +80,48 @@ if (!$console || !$console->findvalue('target/@type') ||
 return $node && $node->getAttribute('type') eq 'pty' ? $node : undef;
 }
 
+# configure(self, xml) adds a private log, cleared on each cold start.
+# Preserve custom logs and unsupported console devices.
+sub configure
+{
+my ($self, $xml) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+# Leave guests without a supported default console unchanged.
+my $node = device($doc) || return $xml;
+my $path = $self->path($doc->findvalue('/domain/uuid'));
+my ($log) = $node->findnodes('log');
+# A custom log belongs to the administrator, even on a supported console.
+return $xml if ($log && $log->getAttribute('file') ne $path);
+# Libvirt may repeat a serial device's log under its console alias. Keep just
+# the serial definition so removing or replacing it cannot leave a stale copy.
+my @aliases = grep { $_->findvalue('target/@type') eq 'serial' &&
+	($_->findvalue('target/@port') || '0') eq
+	($node->findvalue('target/@port') || '0') }
+	$doc->findnodes('/domain/devices/console');
+my @duplicate_logs = $node->nodeName() eq 'serial' ?
+	map { $_->findnodes('log') } @aliases : ();
+# Preserve custom settings on the console alias as well as the serial device.
+return $xml if (grep { $_->getAttribute('file') ne $path } @duplicate_logs);
+if (!$self->bounded()) {
+	# Following rotation requires at least one retained file. Do not enable
+	# logging when the host disables rotation or keeps no previous file.
+	return $xml if (!$log && !@duplicate_logs);
+	# Remove only managed definitions that can no longer be bounded safely.
+	$_->unbindNode() foreach (grep { $_ } ($log, @duplicate_logs));
+	return $doc->toString();
+	}
+# Refuse unsafe pre-existing paths before virtlogd opens or rotates them.
+open_private($_) foreach ($path, map { "$path.$_" } 0..31);
+# Already-correct definitions need no rewrite or libvirt redefinition.
+return $xml if ($log && $log->getAttribute('append') eq 'off' && !@duplicate_logs);
+# Keep one log definition and discard earlier boot output on the next start.
+$_->unbindNode() foreach @duplicate_logs;
+$log ||= $node->addNewChild(undef, 'log');
+$log->setAttribute('file', $path);
+$log->setAttribute('append', 'off');
+return $doc->toString();
+}
+
 # open_private(path) opens a regular private file without following symlinks.
 # Returns undef for an absent file; refuses unsafe ownership, mode or links.
 sub open_private
