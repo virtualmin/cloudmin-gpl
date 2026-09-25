@@ -43,4 +43,16 @@ die "Unsafe virtual machine SSH key directory\n"
 return 1;
 }
 
+# destination(self, uuid, job_id)
+# Prepares a new key's location without replacing an existing credential.
+sub destination
+{
+my ($self, $uuid, $job) = @_;
+my $path = $self->path($uuid, $job);
+$self->check_directory(1);
+# Retries must not overwrite the private key from an earlier creation.
+die "A virtual machine SSH key already exists\n" if (-e $path || -l $path);
+return $path;
+}
+
 1;
