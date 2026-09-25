@@ -72,4 +72,16 @@ die "Unsafe virtual machine SSH key file\n" if (!-f _ || -l _ || $s[3] != 1 ||
 return $path;
 }
 
+# remove(self, uuid, job_id)
+# Removes only this creation's key after rollback or successful guest deletion.
+sub remove
+{
+my ($self, $uuid, $job) = @_;
+my $path = $self->path($uuid, $job);
+# Deletion is also valid on hosts that never enabled managed SSH keys.
+return if (!$self->check_directory());
+# Remove a stale link itself without following its target.
+unlink($path) || die "Cannot remove virtual machine SSH key: $!\n" if (-e $path || -l $path);
+}
+
 1;
