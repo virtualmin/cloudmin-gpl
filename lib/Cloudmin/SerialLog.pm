@@ -139,6 +139,53 @@ die "Serial history is not a private regular file\n" if
 return $fh;
 }
 
+# reader(self, uuid, xml) returns recent output and a cursor for the same log.
+# The caller supplies the running domain's XML. Its log must match the managed
+# path; this helper does not check the domain's power state or access grants.
+sub reader
+{
+my ($self, $uuid, $xml) = @_;
+my $path = $self->path($uuid);
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+# Unsupported or unrecorded consoles keep their live-only transport.
+my $node = device($doc) || return undef;
+return undef if ($node->findvalue('log/@file') ne $path);
+for (1..3) {
+	# Open newest first and include older files only up to the replay limit.
+	my $fh = open_private($path) || next;
+	my @initial = stat($fh);
+	my ($history, $left) = ('', 65536);
+	my $current = $fh;
+	my %seen;
+	for my $index (-1..31) {
+		# Stop at the byte limit or the first missing older generation.
+		last if (!$left);
+		$current = open_private("$path.$index") if ($index >= 0);
+		last if (!$current);
+		my @st = stat($current);
+		# Rotation can expose the same inode under two names.
+		last if ($seen{"$st[0]:$st[1]"}++);
+		# Prepend older bytes to keep the replay in order.
+		my $count = $st[7] < $left ? $st[7] : $left;
+		defined(sysseek($current, $st[7] - $count, SEEK_SET))
+			|| die "Cannot seek serial history: $!\n";
+		my $read = sysread($current, my $bytes, $count);
+		# Reject incomplete reads rather than replay partial history.
+		die "Cannot read serial history\n" if (!defined($read) || $read != $count);
+		$history = $bytes.$history;
+		$left -= $count;
+		}
+	my @now = stat($path);
+	# Retry if rotation changed the active file during the snapshot.
+	next if (!@now || $now[0] != $initial[0] || $now[1] != $initial[1]);
+	# Read live output from the same handle, after the replayed bytes.
+	return bless { path => $path, fh => $fh, history => $history,
+		position => sysseek($fh, 0, 1) }, 'Cloudmin::SerialLog::Reader';
+	}
+# Fail if rotation prevents a consistent snapshot.
+die "Serial history changed while connecting; reconnect to the console\n";
+}
+
 package Cloudmin::SerialLog::Reader;
 use strict;
 use warnings;
