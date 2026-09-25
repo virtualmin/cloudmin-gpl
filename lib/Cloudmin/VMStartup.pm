@@ -54,4 +54,25 @@ $self->record($domain, sub {
 	});
 }
 
+# settling(self, domain, running, saved) recognizes this start's balloon target.
+# Retire it once reached or edited; other boot generations cannot use it.
+sub settling
+{
+my ($self, $domain, $running, $saved) = @_;
+return 0 if (!-f "$self->{directory}/".$domain->get_uuid_string());
+return $self->record($domain, sub {
+	my ($file, $identity) = @_;
+	my $raw = read_file_contents($file);
+	return 0 if (!$raw);
+	my $record = convert_from_json($raw);
+	return 0 if (($record->{'identity'} || '') ne $identity);
+	if ($saved != $record->{'memory'} || $running == $record->{'memory'}) {
+		# Later changes must be compared normally, including live-only edits.
+		unlink($file);
+		return 0;
+		}
+	return 1;
+	});
+}
+
 1;
