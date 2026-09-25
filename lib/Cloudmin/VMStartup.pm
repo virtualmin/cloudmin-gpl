@@ -41,4 +41,17 @@ flock($lock, LOCK_EX) or die "Cannot lock startup record: $!\n";
 return $callback->($file, $identity);
 }
 
+# remember(self, domain, memory_mib) records only a successful cold start.
+sub remember
+{
+my ($self, $domain, $memory) = @_;
+$self->record($domain, sub {
+	my ($file, $identity) = @_;
+	open(my $out, '>', $file) or die "Cannot save startup memory: $!\n";
+	chmod(0600, $file);
+	print $out convert_to_json({identity => $identity, memory => $memory}, 0, 1);
+	close($out) or die "Cannot save startup memory: $!\n";
+	});
+}
+
 1;
