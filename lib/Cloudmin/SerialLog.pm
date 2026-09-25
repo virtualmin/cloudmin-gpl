@@ -58,6 +58,28 @@ return $size =~ /\A[1-9][0-9]*(?:[ \t]*(?:bytes|[KMGTPE]i?B|[bBkKmMgGtTpPeE]))?\
 	$backups =~ /\A[0-9]+\z/ && $backups >= 1 && $backups <= 32;
 }
 
+# device(doc) selects the PTY behind libvirt's default console.
+sub device
+{
+my ($doc) = @_;
+my ($console) = $doc->findnodes('/domain/devices/console');
+my ($serial) = $doc->findnodes('/domain/devices/serial');
+my $node = $console;
+# A serial-backed console and its serial element describe the same device.
+if (!$console || !$console->findvalue('target/@type') ||
+	$console->findvalue('target/@type') eq 'serial') {
+	if ($console && length($console->findvalue('target/@port'))) {
+		# Some external guests expose a later serial port as the default console.
+		my $port = $console->findvalue('target/@port');
+		($serial) = grep { ($_->findvalue('target/@port') || '0') eq $port }
+			$doc->findnodes('/domain/devices/serial');
+		}
+	$node = $serial || $console;
+	}
+# File, TCP and other console backends do not support this PTY/log pairing.
+return $node && $node->getAttribute('type') eq 'pty' ? $node : undef;
+}
+
 package Cloudmin::SerialLog::Reader;
 use strict;
 use warnings;
