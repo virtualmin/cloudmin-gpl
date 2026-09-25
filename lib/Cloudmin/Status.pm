@@ -44,6 +44,21 @@ $self->{'encoded'}->{$id} = $encoded;
 $self->{'revision'}++;
 }
 
+# invalidate(self, uuid) discards old health after a lifecycle or agent event.
+sub invalidate
+{
+my ($self, $id) = @_;
+delete $self->{'health'}->{$id};
+delete $self->{'resources'}->{$id};
+delete $self->{'guest'}->{$id};
+$self->{'metrics'}->forget($id);
+$self->{'guest_due'}->{$id} = 0;
+$self->{'due'}->{$id} = 0;
+# Deletion events can arrive after the corresponding inventory record is
+# gone.
+$self->refresh($id) if ($self->{'vms'}->{$id});
+}
+
 # remove(self, uuid) drops a deleted VM and any pending health result.
 sub remove
 {
