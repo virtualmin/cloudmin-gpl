@@ -703,4 +703,39 @@ die "Stop virtual machines using this pool before stopping it\n"
 	if (@{$self->active_guests($pool)});
 }
 
+# change(self, action, uuid, revision, [enabled])
+# Re-resolves persistent directory pools and refuses stale or unsupported writes.
+sub change
+{
+my ($self, $action, $uuid, $revision, $enabled) = @_;
+$self->assert_local();
+die "Unknown storage action\n" if ($action !~ /\A(?:start|stop|autostart)\z/);
+die "Invalid storage pool ID\n" if (!defined($uuid) || $uuid !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+return $self->{'jobs'}->lock('create-host', sub {
+	my $pool = $self->{'adapter'}->connect()->get_storage_pool_by_uuid($uuid);
+	my ($type) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
+	die "Only persistent directory pools can be managed here\n" if ($type ne 'dir' || !$pool->is_persistent());
+	die "Storage settings changed; reload the page\n" if (($revision || '') ne revision($pool));
+	if ($action eq 'autostart') {
+		# A missing target must never silently turn off a boot setting.
+		die "Invalid start-at-boot setting\n" if (!defined($enabled) || $enabled !~ /\A[01]\z/);
+		$pool->set_autostart(0+$enabled);
+		}
+	# Starting activates the saved pool definition without creating its directory.
+	elsif ($action eq 'start') {
+		die "Storage pool is already active\n" if ($pool->is_active());
+		Cloudmin::Libvirt::log_call('Sys::Virt::StoragePool::create', { uuid => $uuid });
+		$pool->create();
+		}
+	# Stopping removes access through libvirt after active users have been checked.
+	else {
+		die "Storage pool is already inactive\n" if (!$pool->is_active());
+		$self->assert_idle($pool);
+		Cloudmin::Libvirt::log_call('Sys::Virt::StoragePool::destroy', { uuid => $uuid });
+		$pool->destroy();
+		}
+	return $pool->get_name();
+	});
+}
+
 1;
