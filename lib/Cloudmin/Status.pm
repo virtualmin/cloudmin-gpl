@@ -7,6 +7,18 @@ use WebminCore qw(convert_to_json);
 use File::Basename qw(dirname);
 require(dirname(__FILE__).'/Metrics.pm');
 
+# refresh(self, uuid) compares each changed record once, regardless of viewers.
+sub refresh
+{
+my ($self, $id) = @_;
+my $encoded = convert_to_json($self->value($id), 0, 0, 1);
+# Repeated probe results must not cause another broadcast to every
+# viewer.
+return if (($self->{'encoded'}->{$id} || '') eq $encoded);
+$self->{'encoded'}->{$id} = $encoded;
+$self->{'revision'}++;
+}
+
 # remove(self, uuid) drops a deleted VM and any pending health result.
 sub remove
 {
