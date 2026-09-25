@@ -201,4 +201,50 @@ package Cloudmin::SerialLog::Reader;
 use strict;
 use warnings;
 
+# history(self) returns the bounded snapshot once, before following live bytes.
+sub history { return delete($_[0]->{'history'}) || ''; }
+
+# read(self) returns at most 64 KiB, following native renames without duplicates.
+sub read
+{
+my ($self) = @_;
+my $fh = $self->{'fh'};
+my @st = stat($fh);
+# Truncation invalidates the saved cursor; reconnect to obtain a new snapshot.
+die "Serial history was truncated; reconnect to the console\n"
+	if ($st[7] < $self->{'position'});
+my $count = sysread($fh, my $bytes, 65536);
+# A read error is different from an idle log at EOF.
+die "Cannot read serial history: $!\n" if (!defined($count));
+$self->{'position'} += $count;
+# Drain this file before following rotation.
+return $bytes if ($count);
+my @active = stat($self->{'path'});
+# EOF is normal while the active log is unchanged or between native renames.
+return '' if (!@active || ($active[0] == $st[0] && $active[1] == $st[1]));
+# Rotation can append its last bytes between our EOF read and the rename.
+# Drain them before opening the next generation.
+my @final = stat($fh);
+return '' if ($final[7] > $self->{'position'});
+# Find the next newer file, even after several rotations between polls.
+for my $index (0..31) {
+	my @old = stat("$self->{path}.$index");
+	# Locate the open inode's current name before selecting its successor.
+	next if (!@old || $old[0] != $st[0] || $old[1] != $st[1]);
+	my $next = $index ? "$self->{path}.".($index - 1) : $self->{'path'};
+	my $new = Cloudmin::SerialLog::open_private($next) || return '';
+	my @verify = stat("$self->{path}.$index");
+	my @new = stat($new);
+	# Retry a concurrent rename instead of rereading or skipping a generation.
+	return '' if (!@verify || $verify[0] != $st[0] || $verify[1] != $st[1] ||
+		($new[0] == $st[0] && $new[1] == $st[1]));
+	# Read the verified newer file from its start on the next poll.
+	$self->{'fh'} = $new;
+	$self->{'position'} = 0;
+	return '';
+	}
+# Report lost output if rotation has overtaken the reader.
+die "Serial history rotated too quickly; reconnect to the console\n";
+}
+
 1;
