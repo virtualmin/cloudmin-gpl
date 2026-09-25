@@ -45,6 +45,19 @@ $value =~ s/\A["'](.*)["']\z/$1/;
 return $value;
 }
 
+# bounded(self) requires native log rotation before enabling recording.
+sub bounded
+{
+my ($self) = @_;
+# Direct QEMU file logging has no native rotation to bound disk use.
+return 0 if (setting($self->{'qemu_config'}, 'stdio_handler', 'logd') ne 'logd');
+my $size = setting($self->{'log_config'}, 'max_size', '2097152');
+my $backups = setting($self->{'log_config'}, 'max_backups', '3');
+# The reader supports 1–32 rotated backup files.
+return $size =~ /\A[1-9][0-9]*(?:[ \t]*(?:bytes|[KMGTPE]i?B|[bBkKmMgGtTpPeE]))?\z/ &&
+	$backups =~ /\A[0-9]+\z/ && $backups >= 1 && $backups <= 32;
+}
+
 package Cloudmin::SerialLog::Reader;
 use strict;
 use warnings;
