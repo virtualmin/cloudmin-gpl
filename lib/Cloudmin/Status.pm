@@ -35,4 +35,18 @@ my ($id) = sort { ($self->{'due'}->{$a} || 0) <=> ($self->{'due'}->{$b} || 0) ||
 return $id;
 }
 
+# resource_ids(self, clients) lists VMs that visible clients are allowed to view.
+sub resource_ids
+{
+my ($self, $clients) = @_;
+my %ids;
+# Collect assigned VMs across visible subscriptions, sampling each VM once.
+foreach my $client (grep { !$_->{'paused'} } @$clients) {
+	my @ids = $client->{'id'} eq 'overview' ? keys %{$self->{'vms'}} : ($client->{'id'});
+	$ids{$_} = 1 for grep { $self->{'vms'}->{$_} &&
+		(!$client->{'policy'} || $client->{'policy'}->allows('view', $_)) } @ids;
+	}
+return [sort keys %ids];
+}
+
 1;
