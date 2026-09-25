@@ -80,6 +80,23 @@ if (!$console || !$console->findvalue('target/@type') ||
 return $node && $node->getAttribute('type') eq 'pty' ? $node : undef;
 }
 
+# open_private(path) opens a regular private file without following symlinks.
+# Returns undef for an absent file; refuses unsafe ownership, mode or links.
+sub open_private
+{
+my ($path) = @_;
+sysopen(my $fh, $path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK) || do {
+	# Rotation briefly removes a pathname before its successor is created.
+	return undef if ($! == ENOENT);
+	die "Cannot open serial history: $!\n";
+	};
+my @st = stat($fh);
+# Validate the open file; rotation may already have renamed its path.
+die "Serial history is not a private regular file\n" if
+	(!@st || !S_ISREG($st[2]) || $st[4] != $> || ($st[2] & 0077) || $st[3] != 1);
+return $fh;
+}
+
 package Cloudmin::SerialLog::Reader;
 use strict;
 use warnings;
