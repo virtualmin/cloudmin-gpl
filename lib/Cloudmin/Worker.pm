@@ -85,6 +85,86 @@ for my $path ('/var/lib/private', $ROOT) {
 	}
 }
 
+# command(self, task, id, [limit])
+# Builds a fixed sandbox policy. Requests cannot choose users or unit
+# properties. limit is the controller's byte budget, defaulting to 16 MiB.
+sub command
+{
+my ($self, $task, $id, $limit) = @_;
+path($id);
+my $file_limit = byte_limit(defined($limit) ? $limit : $SMALL_FILE);
+# Small images still need space for bounded logs, manifests and request data.
+$file_limit = $SMALL_FILE if ($file_limit < $SMALL_FILE);
+# Resource limits exist only for the supported task types.
+die "Unknown image worker task\n" if (!exists($TIMEOUT{$task}));
+my $helper = abs_path(dirname(__FILE__).'/../../worker.pl');
+# Resolve the packaged worker before handing its path to systemd.
+die "Image worker program is missing\n" if (!$helper);
+my $guestfs = $task eq 'inspect' || $task eq 'clone_prepare';
+my @properties = (
+	'DynamicUser=yes', "StateDirectory=cloudmin-workers/$id",
+	'StateDirectoryMode=0700',
+	"WorkingDirectory=$PUBLIC/$id", 'UMask=0077', 'NoNewPrivileges=yes',
+	'CapabilityBoundingSet=', 'AmbientCapabilities=',
+	'ProtectSystem=strict',
+	'ProtectHome=yes', 'PrivateTmp=yes', 'ProtectProc=invisible',
+	# Supermin reads module files to build its appliance; loading modules
+	# stays forbidden.
+	'ProtectKernelTunables=yes',
+	'ProtectKernelModules='.($guestfs ? 'no' : 'yes'),
+	'SystemCallFilter=~@module', 'ProtectKernelLogs=yes',
+	'ProtectControlGroups=yes', 'RestrictNamespaces=yes',
+	'RestrictSUIDSGID=yes',
+	'LockPersonality=yes', 'RestrictRealtime=yes', 'KeyringMode=private',
+	'TemporaryFileSystem=/run:ro',
+	# Keep user lookup and resolver data available, without host control
+	# sockets.
+	'BindReadOnlyPaths=-/run/systemd/userdb -/run/systemd/resolve/resolv.conf '.
+		'-/run/systemd/resolve/stub-resolv.conf -/run/NetworkManager/resolv.conf '.
+		'-/run/NetworkManager/no-stub-resolv.conf',
+	'InaccessiblePaths=-/etc/webmin -/var/webmin -/etc/libvirt -/var/lib/libvirt',
+	'StandardInput=null', "StandardOutput=append:$ROOT/$id/events",
+	"StandardError=append:$ROOT/$id/errors",
+	'KillMode=control-group', 'TimeoutStopSec=5',
+	"RuntimeMaxSec=$TIMEOUT{$task}",
+	'TasksMax=64', 'MemoryMax='.($guestfs ? '2G' : '512M'), 'LimitCORE=0',
+	'LimitFSIZE='.$file_limit,
+	# Network tasks include downloads, guest setup and backup
+	# transfers/probes.
+	'PrivateNetwork='.($task eq 'image' || $task eq 'size' || $task eq 'software' || $task eq 'backup_transfer' || $task eq 'backup_host_key' ? 'no' : 'yes'),
+	'PrivateDevices='.($guestfs ? 'no' : 'yes'),
+);
+# DynamicUser always isolates /tmp. Give host-file imports read-only views
+# at fixed paths; ordinary Unix permissions still apply to every component.
+push(@properties,
+	'BindReadOnlyPaths=/tmp:/run/cloudmin-host-tmp /var/tmp:/run/cloudmin-host-var-tmp')
+	if ($task eq 'local_image');
+# The inspection appliance gets KVM access, but no libvirt group or sockets.
+push(@properties, 'DevicePolicy=closed', 'DeviceAllow=/dev/kvm rw',
+	'SupplementaryGroups=kvm') if ($guestfs);
+# GNU tar can need openat2 calls blocked by this sandbox's SUID
+# protection.
+# Use bsdtar for supermin's extraction without changing the host's tar.
+push(@properties, 'BindReadOnlyPaths=/usr/bin/bsdtar:/usr/bin/tar')
+	if ($guestfs);
+my @environment;
+# Ubuntu protects /boot kernels from ordinary users. Point supermin at the
+# staged copy of the running kernel and its matching installed modules.
+if ($guestfs) {
+	my $release = kernel_release();
+	@environment = ("--setenv=SUPERMIN_KERNEL=$PUBLIC/$id/appliance-kernel",
+		"--setenv=SUPERMIN_MODULES=/lib/modules/$release",
+		"--setenv=SUPERMIN_KERNEL_VERSION=$release");
+	}
+return ('/usr/bin/systemd-run', '--quiet', '--wait', '--collect',
+	'--no-ask-password',
+	'--service-type=exec', "--unit=cloudmin-worker-$id",
+	(map { ('--property', $_) } @properties),
+	'--setenv=PATH=/usr/sbin:/usr/bin:/sbin:/bin', '--setenv=LANG=C',
+	'--setenv=HOME='.$PUBLIC.'/'.$id, @environment, '/usr/bin/perl',
+	$helper);
+}
+
 # kernel_release()
 # Uses the host kernel identity, never a guest image or request parameter.
 sub kernel_release
