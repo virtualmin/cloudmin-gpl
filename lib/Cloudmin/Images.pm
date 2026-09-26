@@ -76,4 +76,14 @@ $self->{'log'}->($action, 'image', $job->{'id'}, {
 });
 }
 
+# generate_id()
+# Returns an unpredictable identifier for form tokens and private files.
+sub generate_id
+{
+open(my $fh, '<', '/dev/urandom') || die "Cannot open random source: $!\n";
+read($fh, my $bytes, 32) == 32 || die "Cannot read random source\n";
+close($fh);
+return unpack('H*', $bytes);
+}
+
 1;
