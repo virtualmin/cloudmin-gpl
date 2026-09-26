@@ -86,6 +86,27 @@ close($fh);
 return unpack('H*', $bytes);
 }
 
+# key(self)
+# Loads or creates the module-local CSRF signing key under a file lock.
+sub key
+{
+my ($self) = @_;
+my $file = "$self->{directory}/form-key";
+# The signing key must never enter Webmin's file-change log.
+return $self->with_lock($file, 1, sub {
+	my $key = read_file_contents($file);
+	# A read failure must not replace the key and invalidate
+	# existing forms.
+	die "Cannot read form key: $!\n" if (!defined($key) && -e $file);
+	if (!$key) {
+		# Only the lock holder initializes an empty key file.
+		$key = generate_id();
+		write_private_file($file, $key);
+		}
+	return $key;
+	});
+}
+
 # path(self, id, suffix)
 # Validates the job ID; suffix is a fixed extension supplied by internal
 # callers.
