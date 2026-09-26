@@ -253,4 +253,26 @@ die "Invalid worker staging space\n" if (!defined($blocks));
 return $blocks * $size;
 }
 
+# stop(self, id)
+# Stops only this generated unit and confirms it has stopped before callers
+# read its output.
+sub stop
+{
+my ($self, $id) = @_;
+path($id);
+my $unit = "cloudmin-worker-$id.service";
+# Collected units are already gone. Any other systemd failure is an error.
+my $state = `/usr/bin/systemctl show --property=LoadState --value $unit 2>/dev/null`;
+# A failed query gives no evidence that the service has stopped.
+die "Cannot check image worker service\n" if ($?);
+# systemd may already have collected a completed transient unit.
+return if ($state =~ /\Anot-found\s*\z/);
+# A successful stop waits for the entire service control group to exit.
+return if (system('/usr/bin/systemctl', 'stop', $unit) == 0);
+# A finished unit can be garbage-collected between the state check and stop.
+$state = `/usr/bin/systemctl show --property=LoadState --value $unit 2>/dev/null`;
+die "Cannot stop image worker service\n"
+	if ($? || $state !~ /\Anot-found\s*\z/);
+}
+
 1;
