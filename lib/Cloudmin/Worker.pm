@@ -51,4 +51,15 @@ read($fh, my $bytes, 16) == 16 || die "Cannot allocate image worker\n";
 return unpack('H*', $bytes);
 }
 
+# path(id)
+# Checks a task ID's format before deriving its private directory path.
+sub path
+{
+my ($id) = @_;
+# Reject traversal and arbitrary service names before using the
+# identifier.
+die "Invalid image worker identifier\n" if (($id || '') !~ /\A[a-f0-9]{32}\z/);
+return "$ROOT/$id";
+}
+
 1;
