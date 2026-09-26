@@ -188,6 +188,36 @@ binmode($fh);
 print($fh $data) && close($fh) || die "Cannot write worker input: $!\n";
 }
 
+# copy_file(source, destination, [limit])
+# Copies regular files or managed LVM bytes without parsing disk formats.
+# Regular files use reflinks/sparse copying; LVs become private sparse files.
+# limit optionally bounds inputs or outputs to their controller-issued budget.
+sub copy_file
+{
+my ($source, $destination, $limit) = @_;
+byte_limit($limit) if (defined($limit));
+# Managed block disks are copied as bytes before entering the sandbox.
+if (-b $source) {
+	require(dirname(__FILE__).'/LVM.pm');
+	return Cloudmin::LVM::copy_to_file($source, $destination, $limit);
+	}
+my @s = lstat($source);
+# Reject special files before applying the separate byte budget.
+die "Worker input must be a regular file\n"
+	if (!@s || !-f _ || -l _);
+# The worker and Webmin stores can live on different filesystems. Reserve
+# space for a full copy before cp can consume the host's remaining storage.
+# Report a storage shortage before a budget clamped to that same free space.
+die "Not enough free space for private image processing\n"
+	if (free_space(dirname($destination)) < $s[7] + $RESERVE_BYTES);
+die "Worker input exceeds the image byte limit\n"
+	if (defined($limit) && $s[7] > $limit);
+system('/usr/bin/cp', '--reflink=auto', '--sparse=always', '--', $source,
+	$destination) == 0
+	|| die "Cannot copy image into the private worker directory\n";
+chmod(0600, $destination) || die "Cannot protect worker input\n";
+}
+
 # free_space(directory)
 # Reads filesystem capacity without loading Webmin configuration or parsing a
 # disk.
