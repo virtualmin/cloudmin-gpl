@@ -116,6 +116,21 @@ my $value = time().'.'.generate_id();
 return $value.'.'.hmac_sha256_hex("$owner:$value", $self->key());
 }
 
+# check_token(self, owner, token)
+# Requires a token issued to this authenticated Webmin user within one day.
+sub check_token
+{
+my ($self, $owner, $token) = @_;
+my ($stamp, $nonce, $signature) = ($token || '') =~
+	/\A(\d+)\.([a-f0-9]{64})\.([a-f0-9]{64})\z/;
+# Allow small clock skew, but reject stale, malformed or foreign-user
+# tokens.
+die "This form has expired. Reload the page and try again.\n"
+	if (!$stamp || $stamp > time()+300 || $stamp < time()-86400 ||
+	    $signature ne hmac_sha256_hex("$owner:$stamp.$nonce",
+	$self->key()));
+}
+
 # path(self, id, suffix)
 # Validates the job ID; suffix is a fixed extension supplied by internal
 # callers.
