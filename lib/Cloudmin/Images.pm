@@ -141,6 +141,15 @@ die "Invalid image job\n" if (($id || '') !~ /\A[a-f0-9]{32}\z/);
 return "$self->{directory}/$id.$suffix";
 }
 
+# save(self, id, record)
+# Atomically replaces the status file so readers never see partial JSON.
+sub save
+{
+my ($self, $id, $record) = @_;
+$record->{'updated'} = time();
+write_private_file($self->path($id, 'json'), convert_to_json($record, 0, 1));
+}
+
 # write_private_file(file, data)
 # Uses Webmin's atomic writer with private permissions and catchable errors.
 sub write_private_file
