@@ -253,6 +253,178 @@ die "Invalid worker staging space\n" if (!defined($blocks));
 return $blocks * $size;
 }
 
+# launch(self, task, id, [progress], [limit])
+# Reads bounded events from preopened files, without passing Webmin pipes over
+# D-Bus. limit supplies the controller's file budget to the service policy.
+sub launch
+{
+my ($self, $task, $id, $progress, $limit) = @_;
+my $work = path($id);
+# Retain these descriptors so a worker cannot redirect root reads using links.
+write_data("$work/events", '');
+write_data("$work/errors", '');
+sysopen(my $events, "$work/events", O_RDONLY|O_NOFOLLOW) ||
+	die "Cannot open worker events\n";
+sysopen(my $errors, "$work/errors", O_RDONLY|O_NOFOLLOW) ||
+	die "Cannot open worker errors\n";
+my @command = $self->command($task, $id, $limit);
+my ($stdin, $stdout, $stderr) = (gensym(), gensym(), gensym());
+local $SIG{'CHLD'} = 'DEFAULT';
+my $pid;
+{
+	# Clear inherited credentials only for the launcher, keeping Webmin's
+	# context available to job callbacks in the parent process.
+	local %ENV = (PATH => '/usr/sbin:/usr/bin:/sbin:/bin', LANG => 'C');
+	$pid = open3($stdin, $stdout, $stderr, @command);
+	}
+close($stdin);
+my $select = IO::Select->new($stdout, $stderr);
+my ($buffer, $diagnostic, $result, $failure, $hello) = ('', '', undef, '', 0);
+my ($status, $received) = (undef, 0);
+my $started = time();
+# Allow systemd's own runtime stop to finish before the controller gives
+# up.
+my $deadline = $started + $TIMEOUT{$task} + 15;
+my $last_tick = 0;
+my $ok = eval {
+	while (1) {
+		# This is the controller deadline, independent of
+		# systemd's exit reason.
+		die "Image worker timed out\n" if (time() > $deadline);
+		# Callers check cancellation on ticks. Once a second is enough
+		# and avoids a job-store read on every 100 ms poll of a long
+		# task.
+		if ($progress && time() - $last_tick >= 1) {
+			$progress->({ type => 'tick' });
+			$last_tick = time();
+			}
+		# The client reports service-launch failures, not worker
+		# protocol events.
+		for my $fh ($select->can_read(0.1)) {
+			my $n = sysread($fh, my $data, 16384);
+			# A failed pipe read cannot be treated as an
+			# orderly launcher exit.
+			die "Cannot read service response: $!\n"
+				if (!defined($n));
+			# Stop watching closed launcher pipes while task files
+			# are still drained.
+			if (!$n) { $select->remove($fh); next; }
+			$diagnostic = substr($diagnostic.$data, -4096);
+			}
+		my $read = 0;
+		for my $fh ($events, $errors) {
+			my $n = sysread($fh, my $data, 16384);
+			# Fail rather than accept results from an
+			# incompletely read event file.
+			die "Cannot read image worker response: $!\n"
+				if (!defined($n));
+			$read += $n;
+			$received += $n;
+			# Bound total output as well as each individual
+			# protocol message.
+			die "Image worker output limit exceeded\n"
+				if ($received > 8 * 1024**2);
+			if (fileno($fh) == fileno($errors)) {
+				# Diagnostics are bounded text, never part of
+				# the JSON protocol.
+				$diagnostic = substr($diagnostic.$data, -4096);
+				next;
+				}
+			$buffer .= $data;
+			# An unterminated or oversized JSON line must
+			# not exhaust the parent.
+			die "Image worker response is too large\n"
+				if (length($buffer) > 65536);
+			while ($buffer =~ s/\A([^\n]*)\n//) {
+				my $event = eval { decode_json($1) };
+				# Only JSON objects participate in the
+				# worker event protocol.
+				die "Invalid image worker response\n"
+					if (ref($event) ne 'HASH');
+				my $type = $event->{'type'} || '';
+				if ($type eq 'identity') {
+					# Require one non-root identity before
+					# accepting task data.
+					die "Invalid worker identity\n"
+						if ($hello || grep {
+						!defined($_) || ref($_) ||
+							!/\A[1-9]\d*\z/
+						} @$event{qw(uid euid)});
+					$hello = 1;
+					}
+				else {
+					# A single identity precedes progress
+					# and exactly one final response.
+					die "Invalid worker event order\n"
+						if (!$hello ||
+						defined($result) || $failure);
+					# Progress may update the job or raise a
+					# cancellation error.
+					if ($type eq 'progress') { $progress->($event) if ($progress); }
+					# Accept only a structured task result
+					# as the success response.
+					elsif ($type eq 'result' &&
+					ref($event->{'data'}) eq 'HASH') { $result = $event->{'data'}; }
+					# Bound the worker's failure message
+					# before returning it to callers.
+					elsif ($type eq 'error' &&
+					!ref($event->{'message'})) {
+						$failure = substr($event->{'message'} || 'Image worker failed', 0, 1500);
+						}
+					# Unknown or malformed events must not
+					# be treated as success.
+					else { die "Unknown image worker response\n"; }
+					}
+				}
+			}
+		# Drain files once more after the service client exits before
+		# accepting output.
+		last if (defined($status) && !$read && !$select->count());
+		# Poll the launcher without blocking delivery of progress and
+		# cancellation.
+		if ($pid) {
+			my $done = waitpid($pid, WNOHANG);
+			# Losing the launcher prevents verification of
+			# successful completion.
+			die "Cannot wait for image worker\n" if ($done < 0);
+			# Preserve exit status once the child has been reaped.
+			if ($done) { $status = $?; $pid = undef; }
+			}
+		# Avoid spinning after launcher pipes close but before
+		# it is reaped.
+		select(undef, undef, undef, 0.1)
+			if (!$select->count() && !$read);
+		}
+	if ($status || $failure || !$hello || ref($result) ne 'HASH' ||
+		length($buffer)) {
+		# Silent exits can be timeouts, crashes or external stops.
+		# Report the elapsed time and limit without guessing why the
+		# service stopped.
+		my $reason = $failure || substr($diagnostic, 0, 1500);
+		$reason ||= sprintf('Image worker failed without an error message after %.0f seconds (time limit: %d seconds)',
+			time() - $started, $TIMEOUT{$task});
+		die "$reason\n";
+		}
+	1;
+	};
+my $error = $@;
+if ($pid) {
+	# Prevent further start requests, then stop the service and all its
+	# descendants.
+	kill('KILL', $pid);
+	waitpid($pid, 0);
+	my $stopped = eval { $self->stop($id); 1 };
+	# Keep a failed service stop visible alongside the original
+	# launch error.
+	$error .= " Cannot stop image worker: $@" if (!$stopped);
+	}
+close($stdout); close($stderr); close($events); close($errors);
+# Release descriptors before propagating a protocol or cancellation
+# error.
+die $error if (!$ok);
+return $result;
+}
+
 # stop(self, id)
 # Stops only this generated unit and confirms it has stopped before callers
 # read its output.
