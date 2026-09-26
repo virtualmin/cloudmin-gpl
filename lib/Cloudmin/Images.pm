@@ -29,4 +29,40 @@ die "Invalid maximum image import size. Choose available space or a positive who
 return $gib * 1024**3;
 }
 
+# new(class, directory => path, lock_file => callback, unlock_file => callback,
+#     test_lock => callback, log => callback, disk_free => callback,
+#     [uri => URI], [worker => runner], [pool_lock => callback], [max_bytes => n])
+# Opens the private job store with the module's Webmin locking and logging APIs.
+# uri defaults to qemu:///system; worker defaults to an isolated task runner.
+# pool_lock(uuid, callback, creating) coordinates reservations and deletion
+# with pool lifecycle changes; creating requests an active-pool recheck.
+# max_bytes optionally caps image files; zero or absent uses available space.
+sub new
+{
+my ($class, %opts) = @_;
+# Callers must choose storage outside the module's public directory.
+die "Image job directory is required\n" if (!$opts{'directory'});
+Cloudmin::Worker::byte_limit($opts{'max_bytes'}) if ($opts{'max_bytes'});
+make_dir($opts{'directory'}, 0700, 1)
+	|| die "Cannot create image job directory: $!\n";
+return bless({ %opts, uri => $opts{'uri'} || 'qemu:///system' }, $class);
+}
+
+# with_lock(self, file, nodiff, callback)
+# Releases Webmin locks even when an operation returns early or throws an error.
+# nodiff suppresses file-content logging; callback() returns the result.
+sub with_lock
+{
+my ($self, $file, $nodiff, $code) = @_;
+$self->{'lock_file'}->($file, 0, 0, $nodiff)
+	|| die "Cannot lock $file\n";
+my $result;
+my $ok = eval { $result = $code->(); 1 };
+my $error = $@;
+$self->{'unlock_file'}->($file);
+# Propagate callback failures only after releasing the Webmin lock.
+die $error if (!$ok);
+return $result;
+}
+
 1;
