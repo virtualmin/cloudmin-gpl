@@ -35,4 +35,20 @@ die "Invalid image byte limit\n" if (!defined($value) || ref($value) ||
 return 0 + $value;
 }
 
+# new(class)
+# Creates a runner without touching the host during ordinary page rendering.
+sub new
+{
+return bless({}, $_[0]);
+}
+
+# generate_id()
+# Allocates a private task identifier independent of all user input.
+sub generate_id
+{
+open(my $fh, '<', '/dev/urandom') || die "Cannot allocate image worker\n";
+read($fh, my $bytes, 16) == 16 || die "Cannot allocate image worker\n";
+return unpack('H*', $bytes);
+}
+
 1;
