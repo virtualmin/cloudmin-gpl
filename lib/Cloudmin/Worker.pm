@@ -253,6 +253,121 @@ die "Invalid worker staging space\n" if (!defined($blocks));
 return $blocks * $size;
 }
 
+# run(self, task, request, [files => hash], [contents => hash],
+#     [output => path], [outputs => hash], [progress => callback],
+#     [started => callback], [consume => callback])
+# Runs an isolated task and claims only its expected files. files maps staged
+# basenames to source paths; contents maps basenames to bytes. output receives
+# the single output file; outputs maps clone disk basenames to destination paths.
+# started(id) journals the task; progress(event) can abort it by throwing.
+# consume(path, result) reads claimed conversion output after the worker stops.
+sub run
+{
+my ($self, $task, $request, %opts) = @_;
+# Reject unknown tasks before creating service state or choosing a
+# timeout.
+die "Unknown image worker task\n" if (!exists($TIMEOUT{$task}));
+# Only download and size-probe tasks receive Webmin's outgoing proxy settings.
+# These stay in the private request file, outside job records and progress.
+if ($task eq 'image' || $task eq 'size') {
+	no warnings 'once';
+	$request = { %$request, proxy => { map {
+		defined($WebminCore::gconfig{$_}) ? ($_ => $WebminCore::gconfig{$_}) : ()
+		} qw(http_proxy proxy_user proxy_pass proxy_fallback noproxy bind_proxy) } };
+	}
+private_root();
+# Libguestfs inspection and clone preparation use a fixed bsdtar bind mount.
+die "Install bsdtar (libarchive-tools on Debian/Ubuntu) for disk inspection and clone preparation\n"
+	if (($task eq 'inspect' || $task eq 'clone_prepare') && !-x '/usr/bin/bsdtar');
+$self->cleanup_stale();
+my $id = generate_id();
+my $work = path($id);
+mkdir($work, 0700) || die "Cannot create image worker: $!\n";
+my ($result, $error);
+my $ok = eval {
+	write_data("$ROOT/$id.lease", encode_json({ created => time() }));
+	my $limit = $SMALL_FILE;
+	# Bound disk work by workspace free space, even without a configured cap.
+	# Leave the host's reserved free space available.
+	if ($task eq 'image' || $task eq 'local_image' || $task eq 'convert' || $task eq 'inspect' || $task eq 'clone_prepare' || $task eq 'backup_archive' || $task eq 'backup_transfer') {
+		my $available = free_space($work) - $RESERVE_BYTES;
+		die "Not enough free space for private image processing\n" if ($available <= 0);
+		$limit = $task eq 'inspect' || $task eq 'clone_prepare' ? byte_limit($available)
+			: byte_limit($request->{'limit'});
+		$limit = $available if ($limit > $available);
+		if ($task eq 'clone_prepare') {
+			# Writable QCOW2 copies can grow to full capacity in the appliance.
+			# Check this filesystem separately from the destination storage pool.
+			die "Invalid clone disk budget\n" if (ref($request->{'disks'}) ne 'ARRAY' ||
+				!@{$request->{'disks'}} || @{$request->{'disks'}} > 32);
+			my $capacity = 0;
+			$capacity += byte_limit($_->{'capacity'}) foreach @{$request->{'disks'}};
+			die "Not enough temporary storage for full clone preparation\n"
+				if ($capacity * 1.01 + 512*1024**2 > $available);
+		}
+		# Give acquisition workers the reduced budget as well as enforcing
+		# it in systemd and when claiming their output.
+		$request = { %$request, limit => $limit } if ($task ne 'inspect');
+		}
+	# Let a persistent job record its task ID before any child can
+	# start.
+	$opts{'started'}->($id) if ($opts{'started'});
+	for my $name (keys %{$opts{'files'} || {}},
+		keys %{$opts{'contents'} || {}}) {
+		# Callers may supply data files, but not replace
+		# controller inputs.
+		die "Invalid worker input filename\n"
+			if ($name !~ /\A[a-z][a-z0-9.-]*\z/
+			|| $name eq 'request.json' ||
+			$name eq 'appliance-kernel');
+		}
+	copy_file($opts{'files'}->{$_},
+		"$work/$_", $limit) for keys %{$opts{'files'} || {}};
+	write_data("$work/$_",
+		$opts{'contents'}->{$_}) for keys %{$opts{'contents'} || {}};
+	# Basic qemu-img inspection needs no appliance or private kernel
+	# copy.
+	stage_kernel($work)
+		if ($task eq 'clone_prepare' || $task eq 'inspect' &&
+		($request->{'guest'} || $request->{'appliance'}));
+	my $json = encode_json({ %$request, task => $task });
+	# Bound the request that the isolated process will decode into
+	# memory.
+	die "Image worker request is too large\n"
+		if (length($json) > 512 * 1024);
+	write_data("$work/request.json", $json);
+	$result = $self->launch($task, $id, $opts{'progress'}, $limit);
+	# A stopped service has no surviving descendants that can alter this
+	# file.
+	$self->stop($id);
+	# Probes return JSON only; imports, archives and downloads also return a
+	# file.
+	$self->claim("$work/output", $opts{'output'}, $limit) if ($opts{'output'});
+	# Conversion callers consume a checked regular output after the sandbox stops.
+	if ($opts{'consume'}) {
+		die "Output consumer is available only for disk conversion\n" if ($task ne 'convert');
+		$self->claim("$work/output", "$work/claimed", $limit);
+		$opts{'consume'}->("$work/claimed", $result);
+		}
+	# Clones and archive extraction return only controller-selected files.
+	# Claim them after the service and any guestfs appliance have stopped.
+	foreach my $name (sort keys %{$opts{'outputs'} || {}}) {
+		die "Invalid clone output filename\n"
+			if (!(($task eq 'clone_prepare' && $name =~ /\Adisk\d+\z/) ||
+			($task eq 'backup_archive' && $name =~ /\A(?:disk\d{1,2}|nvram|ssh-key|domain.xml)\z/)));
+		$self->claim("$work/$name", $opts{'outputs'}->{$name}, $limit);
+	}
+	1;
+	};
+$error = $@;
+my $cleaned = eval { $self->cleanup($id); 1 };
+# Preserve the original task error when cleanup fails as well.
+$error .= " Worker cleanup failed: $@" if (!$cleaned);
+# A successful task is still a failure if its sandbox cannot be removed.
+die $error if (!$ok || !$cleaned);
+return $result;
+}
+
 # launch(self, task, id, [progress], [limit])
 # Reads bounded events from preopened files, without passing Webmin pipes over
 # D-Bus. limit supplies the controller's file budget to the service policy.
