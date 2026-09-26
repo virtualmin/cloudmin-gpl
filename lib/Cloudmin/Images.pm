@@ -166,4 +166,18 @@ umask($mask);
 die $error if (!$ok);
 }
 
+# get(self, id, [owner])
+# Reads a job, optionally restricting access to its initiating Webmin user.
+sub get
+{
+my ($self, $id, $owner) = @_;
+my $json = read_file_contents($self->path($id, 'json'));
+# Missing or unreadable records are not valid import jobs.
+die "Image job not found\n" if (!defined($json));
+my $job = convert_from_json($json);
+# Use the same error for a missing job and one owned by another user.
+die "Image job not found\n" if (defined($owner) && $job->{'owner'} ne $owner);
+return $job;
+}
+
 1;
