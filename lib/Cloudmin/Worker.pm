@@ -188,4 +188,19 @@ binmode($fh);
 print($fh $data) && close($fh) || die "Cannot write worker input: $!\n";
 }
 
+# free_space(directory)
+# Reads filesystem capacity without loading Webmin configuration or parsing a
+# disk.
+sub free_space
+{
+open(my $fh, '-|', '/usr/bin/stat', '-f', '-c', '%a:%S', '--', $_[0])
+	|| die "Cannot check worker staging space\n";
+my $space = <$fh>;
+close($fh) || die "Cannot check worker staging space\n";
+my ($blocks, $size) = ($space || '') =~ /\A(\d+):(\d+)\s*\z/;
+# An unreadable capacity must not be mistaken for enough free space.
+die "Invalid worker staging space\n" if (!defined($blocks));
+return $blocks * $size;
+}
+
 1;
