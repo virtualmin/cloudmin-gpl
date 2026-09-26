@@ -107,6 +107,15 @@ return $self->with_lock($file, 1, sub {
 	});
 }
 
+# form_token(self, owner)
+# Signs a one-day form token, also used to make double submissions idempotent.
+sub form_token
+{
+my ($self, $owner) = @_;
+my $value = time().'.'.generate_id();
+return $value.'.'.hmac_sha256_hex("$owner:$value", $self->key());
+}
+
 # path(self, id, suffix)
 # Validates the job ID; suffix is a fixed extension supplied by internal
 # callers.
