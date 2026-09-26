@@ -176,4 +176,16 @@ die "Cannot determine the host kernel version\n"
 return $release;
 }
 
+# write_data(path, data)
+# Creates input files privately before systemd gives this directory to the
+# worker.
+sub write_data
+{
+my ($path, $data) = @_;
+sysopen(my $fh, $path, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, 0600) ||
+	die "Cannot prepare worker input: $!\n";
+binmode($fh);
+print($fh $data) && close($fh) || die "Cannot write worker input: $!\n";
+}
+
 1;
