@@ -176,6 +176,26 @@ die "Cannot determine the host kernel version\n"
 return $release;
 }
 
+# stage_kernel(directory)
+# Gives the temporary worker its own kernel without changing host permissions.
+sub stage_kernel
+{
+my ($work) = @_;
+my $release = kernel_release();
+# Supermin needs modules that match the appliance kernel.
+die "Install modules for the running kernel $release, or reboot after updating the kernel\n"
+	if (!-d "/lib/modules/$release");
+my ($source) = grep { -f $_ && !-l $_ }
+	("/boot/vmlinuz-$release", "/lib/modules/$release/vmlinuz");
+# An upgrade may remove the running kernel before reboot.
+die "Install the running kernel $release, or reboot after updating the kernel\n"
+	if (!$source);
+my @s = lstat($source);
+# The appliance must not boot a kernel writable by an unprivileged user.
+die "Unsafe host kernel permissions\n" if ($s[4] != 0 || ($s[2] & 0022));
+copy_file($source, "$work/appliance-kernel");
+}
+
 # write_data(path, data)
 # Creates input files privately before systemd gives this directory to the
 # worker.
