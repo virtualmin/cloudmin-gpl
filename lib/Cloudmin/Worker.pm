@@ -447,4 +447,29 @@ die "Cannot stop image worker service\n"
 	if ($? || $state !~ /\Anot-found\s*\z/);
 }
 
+# claim(self, source, destination, [limit])
+# Rejects links and non-regular files before moving output to the private store.
+# limit defaults to the 16 MiB budget for small provisioning tasks.
+sub claim
+{
+my ($self, $source, $destination, $limit) = @_;
+$limit = byte_limit(defined($limit) ? $limit : $SMALL_FILE);
+my @s = lstat($source);
+# Reject special files, shared inodes and outputs outside the size
+# budget.
+die "Invalid image worker output file\n"
+	if (!@s || !-f _ || -l _ || $s[3] != 1 || !$s[7] || $s[7] > $limit);
+# Claiming output must never replace a controller-owned file or link.
+die "Image worker destination already exists\n"
+	if (-e $destination || -l $destination);
+if (!rename($source, $destination)) {
+	# Staging and libvirt state may live on different filesystems.
+	die "Cannot claim image worker output: $!\n" if ($! != EXDEV);
+	copy_file($source, $destination, $limit);
+	unlink($source) || die "Cannot remove worker output after copying\n";
+	}
+chown(0, 0, $destination) && chmod(0600, $destination)
+	|| die "Cannot protect completed image worker output\n";
+}
+
 1;
