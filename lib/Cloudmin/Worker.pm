@@ -472,4 +472,27 @@ chown(0, 0, $destination) && chmod(0600, $destination)
 	|| die "Cannot protect completed image worker output\n";
 }
 
+# cleanup(self, id)
+# Stops a surviving task and removes its private state without following links.
+sub cleanup
+{
+my ($self, $id) = @_;
+my $work = path($id);
+$self->stop($id);
+my @s = lstat($work);
+# A compromised task must not redirect recursive removal through a link.
+die "Unsafe image worker directory\n" if (@s && (!-d _ || -l _));
+# systemd creates one public symlink for each private StateDirectory.
+unlink("$PUBLIC/$id") || die "Cannot remove worker directory link\n"
+	if (-l "$PUBLIC/$id");
+# Cleanup also handles tasks whose private directory was already
+# removed.
+remove_tree($work, { safe => 1, error => \my $errors }) if (@s);
+# Keep the lease when removal fails so a later recovery can retry.
+die "Cannot clean image worker files\n" if ($errors && @$errors);
+# The controller-owned lease is the last piece of completed task state.
+unlink("$ROOT/$id.lease") || die "Cannot remove worker lease\n"
+	if (-e "$ROOT/$id.lease");
+}
+
 1;
