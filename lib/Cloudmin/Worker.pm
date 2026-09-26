@@ -85,4 +85,15 @@ for my $path ('/var/lib/private', $ROOT) {
 	}
 }
 
+# kernel_release()
+# Uses the host kernel identity, never a guest image or request parameter.
+sub kernel_release
+{
+my $release = (POSIX::uname())[2];
+# The release becomes a path component and a service environment value.
+die "Cannot determine the host kernel version\n"
+	if ($release !~ /\A[a-zA-Z0-9._+-]+\z/);
+return $release;
+}
+
 1;
