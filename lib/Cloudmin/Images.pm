@@ -86,4 +86,14 @@ close($fh);
 return unpack('H*', $bytes);
 }
 
+# path(self, id, suffix)
+# Validates the job ID; suffix is a fixed extension supplied by internal
+# callers.
+sub path
+{
+my ($self, $id, $suffix) = @_;
+die "Invalid image job\n" if (($id || '') !~ /\A[a-f0-9]{32}\z/);
+return "$self->{directory}/$id.$suffix";
+}
+
 1;
