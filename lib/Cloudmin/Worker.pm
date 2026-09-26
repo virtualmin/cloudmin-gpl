@@ -62,4 +62,27 @@ die "Invalid image worker identifier\n" if (($id || '') !~ /\A[a-f0-9]{32}\z/);
 return "$ROOT/$id";
 }
 
+# private_root()
+# Requires root-owned, private parents before preparing input for a worker.
+sub private_root
+{
+# The isolation policy depends on Linux service and namespace support.
+die "Image workers require Linux and systemd\n"
+	if ($^O ne 'linux' || !-x '/usr/bin/systemd-run');
+# Unprivileged callers must not prepare directories for privileged
+# claims.
+die "Only the Cloudmin controller may start image workers\n"
+	if ($< != 0 || $> != 0);
+for my $path ('/var/lib/private', $ROOT) {
+	# Concurrent imports may both initialize these shared parents.
+	mkdir($path, 0700) || $! == EEXIST ||
+		die "Cannot create worker directory: $!\n" if (!-e $path);
+	my @s = lstat($path);
+	# Existing parents are trusted only if other users cannot
+	# replace inputs.
+	die "Unsafe worker directory: $path\n"
+		if (!@s || !-d _ || -l _ || $s[4] != 0 || ($s[2] & 0077));
+	}
+}
+
 1;
