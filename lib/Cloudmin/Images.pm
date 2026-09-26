@@ -96,4 +96,20 @@ die "Invalid image job\n" if (($id || '') !~ /\A[a-f0-9]{32}\z/);
 return "$self->{directory}/$id.$suffix";
 }
 
+# write_private_file(file, data)
+# Uses Webmin's atomic writer with private permissions and catchable errors.
+sub write_private_file
+{
+my ($file, $data) = @_;
+no warnings 'once';
+local $main::error_must_die = 1;
+my $mask = umask(0077);
+my $ok = eval { write_file_contents($file, $data); 1 };
+my $error = $@;
+umask($mask);
+# Restore the caller's permissions policy even when the atomic write
+# fails.
+die $error if (!$ok);
+}
+
 1;
