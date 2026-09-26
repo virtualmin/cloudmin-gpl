@@ -495,4 +495,22 @@ unlink("$ROOT/$id.lease") || die "Cannot remove worker lease\n"
 	if (-e "$ROOT/$id.lease");
 }
 
+# cleanup_stale(self)
+# Reclaims interrupted tasks after their maximum lifetime, using root-owned
+# leases.
+sub cleanup_stale
+{
+my ($self) = @_;
+opendir(my $dh, $ROOT) || die "Cannot read image worker directory\n";
+my @ids = map { /\A([a-f0-9]{32})\.lease\z/ ? $1 : () } readdir($dh);
+closedir($dh);
+for my $id (@ids) {
+	my @s = lstat("$ROOT/$id.lease");
+	# Only old, root-owned regular leases authorize reclaiming a
+	# task.
+	next if (!@s || !-f _ || -l _ || $s[4] != 0 || time() - $s[9] < 7200);
+	$self->cleanup($id);
+	}
+}
+
 1;
