@@ -65,4 +65,15 @@ die $error if (!$ok);
 return $result;
 }
 
+# log_action(self, action, job, [error])
+# Flushes metadata diffs with the action; never passes form tokens or disk data.
+sub log_action
+{
+my ($self, $action, $job, $error) = @_;
+$self->{'log'}->($action, 'image', $job->{'id'}, {
+	name => $job->{'name'}, state => $job->{'state'},
+	pool => $job->{'pool_name'}, error => $error || $job->{'error'} || '',
+});
+}
+
 1;
