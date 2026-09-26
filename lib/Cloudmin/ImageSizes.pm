@@ -68,4 +68,54 @@ return { bytes => defined($bytes) ? 0 + $bytes : undef,
 		$now - $cache->{'attempted'} >= $retry ? 1 : 0 };
 }
 
+# refresh(self, entry)
+# Refreshes stale headers once under a Webmin lock; failures retain estimates.
+sub refresh
+{
+my ($self, $entry) = @_;
+my $result = $self->get($entry);
+# Ordinary reads of a fresh entry must not acquire locks or start a worker.
+return $result if (!$result->{'refresh'});
+make_dir($self->{'directory'}, 0700, 1) ||
+	die "Cannot create image size cache\n";
+my $path = $self->path($entry);
+# Another probe already owns this URL; let the browser keep its cached estimate.
+return $result if ($self->{'test_lock'}->($path));
+$self->{'lock_file'}->($path, 0, 0, 1) || die "Cannot lock image size cache\n";
+my $ok = eval {
+	# A concurrent request may already have refreshed this URL.
+	$result = $self->get($entry);
+	if ($result->{'refresh'}) {
+		# A failed probe records its attempt but preserves the last
+		# usable size.
+		my $bytes = eval { $self->{'probe'}->($entry->{'url'}) };
+		my $now = $self->now();
+		my $cache = { attempted => $now,
+			checked => $result->{'checked'},
+			bytes => $result->{'bytes'} };
+		if (valid_bytes($bytes)) {
+			# Replace the estimate only with a valid, newly observed
+			# byte count.
+			$cache->{'bytes'} = 0 + $bytes;
+			$cache->{'checked'} = $now;
+			}
+		my $mask = umask(0077);
+		# Keep private cache permissions and restore umask even after
+		# write failure.
+		my $written = eval { write_file_contents($path,
+			convert_to_json($cache, 0, 1)); 1 };
+		my $error = $@;
+		umask($mask);
+		die $error if (!$written);
+		$result = $self->get($entry);
+		}
+	1;
+	};
+my $error = $@;
+$self->{'unlock_file'}->($path);
+# Release the URL lock before propagating failures to the request handler.
+die $error if (!$ok);
+return $result;
+}
+
 1;
