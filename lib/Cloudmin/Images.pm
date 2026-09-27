@@ -432,6 +432,40 @@ rmdir($links) if ($links);
 _exit($ok ? 0 : 1);
 }
 
+# receive(self, id, owner, input, length)
+# Streams an authenticated browser upload to a fixed private file, not memory.
+# input is a readable handle; length is the complete HTTP body size in bytes.
+sub receive
+{
+my ($self, $id, $owner, $input, $length) = @_;
+my $job = $self->get($id, $owner);
+# Only an unfilled upload job may accept a request body.
+die "This job is not waiting for an upload.\n"
+	if ($job->{'state'} ne 'waiting');
+# Require a bounded Content-Length before consuming any browser data.
+Cloudmin::Worker::byte_limit($length);
+die "Image exceeds the configured maximum file size.\n"
+	if ($self->{'max_bytes'} && $length > $self->{'max_bytes'});
+# The shared staging filesystem may have less space than the size cap.
+die "Not enough free space to stage this upload.\n"
+	if ($length > $self->staging_limit());
+my $received = $self->with_job_lock($id, 'upload', sub {
+	my ($current) = @_;
+	# Another request may have finished this upload before we took
+	# its lock.
+	die "This upload has already finished.\n"
+	if ($current->{'state'} ne 'waiting');
+	# Reject insufficient destination space before receiving a large HTTP body.
+	die "The storage pool does not have enough free space for this upload.\n"
+		if ($length > pool_limit($self->import_pool($current->{'pool'})));
+	return $self->receive_locked($current, $input, $length);
+	});
+# A busy job must not spawn another importer for incomplete input.
+die "This upload is already running.\n" if (!$received);
+# The detached worker must start after the upload releases its Webmin locks.
+$self->start($id);
+}
+
 # receive_locked(self, job, input, length)
 # Receives an upload while the caller holds its metadata and staging locks.
 sub receive_locked
