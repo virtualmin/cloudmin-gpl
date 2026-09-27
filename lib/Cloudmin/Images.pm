@@ -538,6 +538,57 @@ sysopen(my $cancel, $self->path($id, 'cancel'), O_WRONLY|O_CREAT, 0600)
 close($cancel) || die "Cannot close image cancellation request: $!\n";
 }
 
+# remove_locked(self, job)
+# Deletes only this job's unused volume while its Webmin locks are held.
+sub remove_locked
+{
+my ($self, $job) = @_;
+my $id = $job->{'id'};
+if ($job->{'state'} ne 'deleted' && ($job->{'volume_path'} || $job->{'pid'})) {
+	# Inventory errors must block deletion, never imply that a disk is
+	# unused.
+	require Sys::Virt;
+	my $conn = Sys::Virt->new(uri => $self->{'uri'}, readonly => 0);
+	my $pool = eval { $conn->get_storage_pool_by_uuid($job->{'pool'}) };
+	if (!$pool) {
+		# Forget a removed pool's record only if its local file is also
+		# gone. A local path check cannot establish absence on a remote
+		# host.
+		my $error = $@;
+		my $missing = ref($error) &&
+			eval { $error->code() == Sys::Virt::Error::ERR_NO_STORAGE_POOL() };
+		die $error if (!$missing || $self->{'uri'}
+			ne 'qemu:///system' ||
+			!$job->{'volume_path'} || -e $job->{'volume_path'} ||
+			-l $job->{'volume_path'});
+		}
+	else {
+		# An existing pool may already have lost this import's
+		# volume.
+		my ($volume) = grep { $_->get_name() eq $job->{'volume'} }
+			$pool->list_all_volumes();
+		if ($volume) {
+			# A reused name must not authorize deleting a
+			# replacement volume.
+			die "The image volume has changed; it was not deleted.\n"
+				if ($job->{'volume_key'} && $job->{'volume_key'}
+				ne $volume->get_key());
+			$self->assert_unused($conn, $pool, $volume);
+			Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::delete', {
+				pool => $job->{'pool'}, volume => $job->{'volume'}, flags => 0 });
+			$volume->delete(0);
+			}
+		}
+	}
+$self->cleanup_staging($id);
+# Keep a tombstone so the same attempt cannot recreate the image.
+$job->{'state'} = 'deleted';
+$job->{'cleanup_pending'} = 0;
+delete($job->{'error'});
+$self->save($id, $job);
+return 1;
+}
+
 # xml_uses_volume(xml, path, pool, volume, [base])
 # Checks libvirt-generated XML for file, pool-volume and backing-store refs.
 # base resolves relative backing paths when scanning another storage volume.
