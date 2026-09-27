@@ -311,4 +311,18 @@ return { source => 'download', pool => $pool->{'id'}, pool_name => $pool->{'name
 	checksum_source => ($image->{'catalogue_origin'} || '') eq 'bundled' ? 'vendor' : 'catalogue' };
 }
 
+# matches_download(job, request) compares assets without trusting display names.
+# The destination pool is checked separately when joining an unfinished import.
+sub matches_download
+{
+my ($job, $request) = @_;
+# Only catalogue downloads can match a reusable source.
+return 0 if (($job->{'source'} || '') ne 'download');
+# Require the exact asset and checksum source, not merely the same release ID.
+foreach my $field (qw(slug url format architecture checksum_url checksum_algorithm)) {
+	return 0 if (($job->{$field} || '') ne ($request->{$field} || ''));
+}
+return 1;
+}
+
 1;
