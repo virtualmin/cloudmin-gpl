@@ -585,4 +585,43 @@ foreach my $ref (@paths) {
 return 0;
 }
 
+# volume_references(connection, [excluded_uuid])
+# Reads libvirt references once for a picker or an exclusive-use check.
+sub volume_references
+{
+my ($conn, $excluded) = @_;
+my @refs;
+foreach my $domain ($conn->list_all_domains()) {
+	# The caller checks the excluded guest's saved state and snapshots.
+	next if (defined($excluded) && $domain->get_uuid_string() eq $excluded);
+	my @xml = ($domain->get_xml_description(0));
+	push(@xml, $domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE()))
+		if ($domain->is_persistent());
+	push(@xml, map { $_->get_xml_description(0) } $domain->list_all_snapshots());
+	push(@refs, map { { xml => $_,
+		reason => "Image is used by virtual machine ".$domain->get_name()."." } } @xml);
+	}
+foreach my $p ($conn->list_all_storage_pools()) {
+	# Inactive pools do not expose a volume inventory.
+	next if (!$p->is_active());
+	# Discard cached entries for files removed outside libvirt before scanning.
+	Cloudmin::Libvirt::refresh_pool($p);
+	foreach my $v ($p->list_all_volumes()) {
+		my $ref = eval { { xml => $v->get_xml_description(0), key => $v->get_key(),
+			path => $v->get_path(), base => dirname($v->get_path()),
+			reason => "Image is a backing file for volume ".$v->get_name()."." } };
+		if (!$ref) {
+			# A volume may disappear after listing. Only libvirt's missing-volume
+			# error (50) establishes absence; other failures must block deletion.
+			my $error = $@;
+			next if (ref($error) && $error->isa('Sys::Virt::Error') &&
+				$error->code() == 50);
+			die $error;
+			}
+		push(@refs, $ref);
+		}
+	}
+return \@refs;
+}
+
 1;
