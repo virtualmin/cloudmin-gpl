@@ -287,4 +287,17 @@ die "The storage pool does not have enough free space.\n"
 return $available - $RESERVE_BYTES;
 }
 
+# validate_url(url)
+# Accepts HTTPS downloads only, without embedded credentials or control bytes.
+sub validate_url
+{
+my ($url) = @_;
+die "Enter a direct HTTPS image URL without login credentials.\n"
+	if (!defined($url) || length($url) > 4096 ||
+	    $url !~ m{\Ahttps://[^/\s\@?#]+/[^\s\x00-\x1f]*\z}i);
+# Webmin's URL parser matches the scheme case-sensitively.
+$url =~ s/\Ahttps:/https:/i;
+return $url;
+}
+
 1;
