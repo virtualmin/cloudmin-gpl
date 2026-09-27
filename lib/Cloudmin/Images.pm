@@ -624,4 +624,22 @@ foreach my $p ($conn->list_all_storage_pools()) {
 return \@refs;
 }
 
+# volume_use(references, path, pool_name, volume_name, key)
+# Returns the first use of a volume, including aliases and backing files.
+sub volume_use
+{
+my ($refs, $path, $pool, $name, $key) = @_;
+foreach my $ref (@$refs) {
+	# The volume's own XML is not a dependency from another disk.
+	next if (defined($ref->{'key'}) && $ref->{'key'} eq $key);
+	# Native libvirt and Cloudmin use different keys for the same LVM volume.
+	# Exclude the same volume's native record without hiding other backing disks.
+	next if (($key || '') =~ /^lvm:/ && $ref->{'path'} &&
+		(abs_path($ref->{'path'}) || $ref->{'path'}) eq (abs_path($path) || $path));
+	return $ref->{'reason'} if (xml_uses_volume($ref->{'xml'},
+		$path, $pool, $name, $ref->{'base'}));
+	}
+return;
+}
+
 1;
