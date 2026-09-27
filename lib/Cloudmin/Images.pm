@@ -325,4 +325,31 @@ foreach my $field (qw(slug url format architecture checksum_url checksum_algorit
 return 1;
 }
 
+# prune_deleted(self)
+# Discards deletion markers after their one-day submission tokens have expired.
+# A second day covers allowed clock skew and leaves retries time to finish.
+sub prune_deleted
+{
+my ($self) = @_;
+opendir(my $dh, $self->{'directory'}) || die "Cannot list image jobs: $!\n";
+my @ids = map { /\A([a-f0-9]{32})\.json\z/ ? $1 : () } readdir($dh);
+closedir($dh);
+foreach my $id (@ids) {
+	my $file = $self->path($id, 'json');
+	my $job = eval { $self->get($id) };
+	next if (!$job || $job->{'state'} ne 'deleted' ||
+		($job->{'updated'} || 0) >= time()-172800 || $self->{'test_lock'}->($file));
+	$self->with_lock($file, 1, sub {
+		# Another import request may have pruned this record while we waited.
+		return if (!-f $file);
+		my $current = $self->get($id);
+		return if ($current->{'state'} ne 'deleted' ||
+			($current->{'updated'} || 0) >= time()-172800);
+		foreach my $path ($self->path($id, 'cancel'), $file) {
+			unlink($path) || die "Cannot remove expired image job: $!\n" if (-e $path);
+			}
+		});
+	}
+}
+
 1;
