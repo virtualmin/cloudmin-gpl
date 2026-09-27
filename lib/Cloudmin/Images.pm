@@ -274,4 +274,17 @@ Cloudmin::Libvirt::refresh_pool($pool);
 return $pool;
 }
 
+# pool_limit(pool)
+# Leaves a filesystem reserve and rejects unknown destination capacity.
+sub pool_limit
+{
+my ($pool) = @_;
+my $available = $pool->get_info()->{'available'};
+die "Cannot determine free storage pool space.\n"
+	if (!defined($available) || ref($available) || $available !~ /\A\d+\z/);
+die "The storage pool does not have enough free space.\n"
+	if ($available <= $RESERVE_BYTES);
+return $available - $RESERVE_BYTES;
+}
+
 1;
