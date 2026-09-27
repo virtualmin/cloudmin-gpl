@@ -538,4 +538,51 @@ sysopen(my $cancel, $self->path($id, 'cancel'), O_WRONLY|O_CREAT, 0600)
 close($cancel) || die "Cannot close image cancellation request: $!\n";
 }
 
+# xml_uses_volume(xml, path, pool, volume, [base])
+# Checks libvirt-generated XML for file, pool-volume and backing-store refs.
+# base resolves relative backing paths when scanning another storage volume.
+sub xml_uses_volume
+{
+my ($xml, $path, $pool, $volume, $base) = @_;
+# decode(value) restores XML attribute text before comparing filesystem paths.
+my $decode = sub {
+	my ($v) = @_;
+	$v =~ s/&#x([0-9a-f]+);/chr(hex($1))/gei;
+	$v =~ s/&#(\d+);/chr($1)/ge;
+	$v =~ s/&quot;/"/g; $v =~ s/&apos;/'/g;
+	$v =~ s/&lt;/</g; $v =~ s/&gt;/>/g; $v =~ s/&amp;/&/g;
+	return $v;
+	};
+my @paths;
+# Sources may identify a file directly or refer to a named pool volume.
+while ($xml =~ /<source\b([^>]*)>/g) {
+	my $attrs = $1;
+	my %attrs;
+	while ($attrs =~ /\b(\w+)\s*=\s*(['"])(.*?)\2/g) {
+		$attrs{$1} = $decode->($3);
+		}
+	# Managed-volume references do not need an explicit filesystem
+	# path.
+	return 1 if (($attrs{'pool'} || '') eq $pool &&
+		($attrs{'volume'} || '') eq $volume);
+	push(@paths, grep { defined } @attrs{qw(file dev)});
+	}
+push(@paths, map { $decode->($_) } $xml =~ m{<path>(.*?)</path>}sg);
+my $real = abs_path($path) || $path;
+my @target_stat = stat($path);
+foreach my $ref (@paths) {
+	# Storage-volume backing paths can be relative to their
+	# containing disk.
+	$ref = "$base/$ref" if ($ref !~ m{^/} && $base);
+	# Compare both literal and resolved paths to catch aliases to
+	# the volume.
+	return 1 if ($ref eq $path || (abs_path($ref) || $ref) eq $real);
+	# Hard-linked disks share data even when both paths are already canonical.
+	my @ref_stat = stat($ref);
+	return 1 if (@target_stat && @ref_stat &&
+		$target_stat[0] == $ref_stat[0] && $target_stat[1] == $ref_stat[1]);
+	}
+return 0;
+}
+
 1;
