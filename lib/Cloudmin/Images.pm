@@ -242,4 +242,20 @@ if ($active) {
 return [ sort { $b->{'created'} <=> $a->{'created'} } @jobs ];
 }
 
+# staging_limit(self)
+# Reserves space on the actual staging filesystem, not only the target pool.
+sub staging_limit
+{
+my ($self) = @_;
+my $available = $self->{'disk_free'}->($self->{'directory'});
+# Unknown capacity must fail before an import starts consuming space.
+die "Cannot determine free staging space.\n"
+	if (!defined($available) || $available !~ /\A\d+\z/);
+my $limit = $available - $RESERVE_BYTES;
+# Keep the reserve even when the proposed image itself would fit.
+die "Not enough free space for image staging.\n" if ($limit <= 0);
+my $maximum = $self->{'max_bytes'} || 0;
+return $maximum && $maximum < $limit ? $maximum : $limit;
+}
+
 1;
