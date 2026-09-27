@@ -258,4 +258,20 @@ my $maximum = $self->{'max_bytes'} || 0;
 return $maximum && $maximum < $limit ? $maximum : $limit;
 }
 
+# import_pool(self, uuid, [connection])
+# Rechecks the current destination before accepting or processing image data.
+sub import_pool
+{
+my ($self, $uuid, $conn) = @_;
+require Sys::Virt;
+$conn ||= Sys::Virt->new(uri => $self->{'uri'}, readonly => 0);
+my $pool = $conn->get_storage_pool_by_uuid($uuid);
+die "The selected storage pool is no longer active.\n" if (!$pool->is_active());
+my $xml = $pool->get_xml_description();
+die "Image import requires a directory, filesystem or NFS pool.\n"
+	if ($xml !~ /<pool\b[^>]*type=['"](?:dir|fs|netfs)['"]/);
+Cloudmin::Libvirt::refresh_pool($pool);
+return $pool;
+}
+
 1;
