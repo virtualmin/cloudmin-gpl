@@ -405,4 +405,71 @@ foreach my $id (@ids) {
 	}
 }
 
+# transfer(self, job, input, limit, state)
+# Copies bounded binary chunks and publishes byte progress once per second.
+# For uploading, limit is the exact Content-Length; otherwise it is a ceiling.
+sub transfer
+{
+my ($self, $job, $input, $limit, $state) = @_;
+sysopen(my $out, $self->path($job->{'id'}, 'part'), O_WRONLY|O_CREAT|O_EXCL,
+	0600)
+	|| die "Cannot create staging file: $!\n";
+binmode($out);
+$job->{'state'} = $state;
+$job->{'bytes'} = 0;
+$self->save($job->{'id'}, $job);
+my $last = 0;
+my $checked = 0;
+while (1) {
+	$self->checkpoint($job);
+	# HTTP request bodies end at Content-Length, not at socket EOF.
+	last if ($state eq 'uploading' && $job->{'bytes'} == $limit);
+	my $count = 1024*1024;
+	# Do not read beyond this request's body on a persistent HTTP
+	# connection.
+	$count = $limit - $job->{'bytes'}
+		if ($state eq 'uploading' && $count > $limit - $job->{'bytes'});
+	my $buffer = '';
+	my $n = read($input, $buffer, $count, 0);
+	# A failed read must not look like successful end-of-file.
+	die "Cannot read image data: $!\n" if (!defined($n));
+	# Stop at EOF, then check the promised length below for
+	# truncated uploads.
+	last if (!$n);
+	$job->{'bytes'} += $n;
+	# Enforce the limit on received bytes, independently of header
+	# validation.
+	die "Image exceeds the available staging limit.\n"
+		if ($job->{'bytes'} > $limit);
+	if ($job->{'bytes'} - $checked >= 64 * 1024**2) {
+		# Recheck during large transfers when other jobs may consume
+		# space.
+		die "Image staging is running out of free space.\n"
+			if ($self->staging_limit() < $n);
+		$checked = $job->{'bytes'};
+		}
+	print($out $buffer) || die "Cannot write image data: $!\n";
+	if (time() != $last) {
+		# Avoid a status-file rewrite for every chunk on a fast
+		# connection.
+		$self->save($job->{'id'}, $job);
+		$last = time();
+		}
+	}
+close($out) || die "Cannot finish staging image: $!\n";
+# Empty files cannot contain a usable disk image.
+die "The image is empty.\n" if (!$job->{'bytes'});
+# EOF before Content-Length is a failed upload, not a smaller image.
+die "The upload was interrupted.\n"
+	if ($state eq 'uploading' && $job->{'bytes'} != $limit);
+}
+
+# checkpoint(self, job)
+# Checks the cancellation flag without signalling a possibly reused process ID.
+sub checkpoint
+{
+my ($self, $job) = @_;
+die "Image import cancelled.\n" if (-e $self->path($job->{'id'}, 'cancel'));
+}
+
 1;
