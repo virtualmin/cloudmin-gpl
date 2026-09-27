@@ -405,6 +405,33 @@ foreach my $id (@ids) {
 	}
 }
 
+# start(self, id)
+# Detaches a bounded worker; a per-job lock prevents duplicate execution.
+sub start
+{
+my ($self, $id) = @_;
+my $pid = fork();
+# A failed fork leaves the queued job available for a later retry.
+die "Cannot start image import: $!\n" if (!defined($pid));
+# Return control to the request while the child performs the import.
+return $pid if ($pid);
+# Detach from the request; run() opens its own libvirt connection.
+setsid();
+untie(*STDIN);
+untie(*STDOUT);
+untie(*STDERR);
+$SIG{'CHLD'} = 'DEFAULT';
+umask(0077);
+open(STDIN, '<', '/dev/null');
+open(STDOUT, '>', '/dev/null');
+open(STDERR, '>', '/dev/null');
+my $ok = eval { $self->run($id); 1 };
+# Webmin removes its per-process lock directory only from the request process.
+my $links = get_lock_links_dir();
+rmdir($links) if ($links);
+_exit($ok ? 0 : 1);
+}
+
 # receive_locked(self, job, input, length)
 # Receives an upload while the caller holds its metadata and staging locks.
 sub receive_locked
