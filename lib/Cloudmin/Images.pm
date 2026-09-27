@@ -745,6 +745,17 @@ for my $line (split(/\n/, $manifest)) {
 die "No checksum entry for this image. Check the image and checksum URLs.\n";
 }
 
+# run(self, id)
+# Acquires, checks and uploads one image through Sys::Virt. On failure, cleanup
+# attempts to delete only this import's new volume and reports deletion errors.
+sub run
+{
+my ($self, $id) = @_;
+return $self->with_job_lock($id, 'import', sub {
+	return $self->run_locked($_[0]);
+	});
+}
+
 # run_locked(self, job)
 # Imports a queued image while the caller holds its Webmin locks.
 sub run_locked
