@@ -745,4 +745,252 @@ for my $line (split(/\n/, $manifest)) {
 die "No checksum entry for this image. Check the image and checksum URLs.\n";
 }
 
+# run_locked(self, job)
+# Imports a queued image while the caller holds its Webmin locks.
+sub run_locked
+{
+my ($self, $job) = @_;
+my $id = $job->{'id'};
+# Replayed starts must not re-import an active or completed job.
+return if ($job->{'state'} ne 'queued');
+my ($volume, $stream);
+my $ok = eval {
+	local $SIG{'ALRM'} =
+		sub { die "Image import timed out. Please retry.\n" };
+	local $SIG{'TERM'} = sub { die "Image import was interrupted.\n" };
+	alarm(3600);
+	# Resolve current pool state inside this process, after acquiring job
+	# locks.
+	require Sys::Virt;
+	my $conn = Sys::Virt->new(uri => $self->{'uri'}, readonly => 0);
+	my $pool = $self->import_pool($job->{'pool'}, $conn);
+	# Both the destination pool and private staging area must have room.
+	my $limit = pool_limit($pool);
+	my $staging_limit = $self->staging_limit();
+	# Use the smaller budget across staging and destination
+	# filesystems.
+	$limit = $staging_limit if ($limit > $staging_limit);
+	$job->{'pid'} = $$;
+	$self->save($id, $job);
+	$self->checkpoint($job);
+
+	my $path = $self->path($id, 'part');
+	my %files;
+	my $request = { format => $job->{'format'}, limit => $limit,
+		sha256 => $job->{'sha256'} };
+	if ($job->{'source'} eq 'download' || $job->{'source'} eq 'url') {
+		# The HTTPS client and vendor manifest parser run without host
+		# privileges.
+		$job->{'state'} = 'downloading';
+		$request->{'url'} = $job->{'url'};
+		if ($job->{'source'} eq 'download') {
+			# Catalogue downloads require the publisher's matching
+			# checksum.
+			$request->{'checksum_url'} = $job->{'checksum_url'};
+			$request->{'checksum_algorithm'} =
+				$job->{'checksum_algorithm'} || 'sha256';
+			}
+		}
+	else {
+		# Local paths and uploads supply file data instead of
+		# HTTPS URLs.
+		# Host path access is checked by the worker's unprivileged UID.
+		if ($job->{'source'} eq 'local') {
+			$request->{'path'} = $job->{'path'};
+			$job->{'state'} = 'copying';
+			}
+		elsif ($job->{'source'} eq 'upload') {
+			# The upload receiver has already staged the request
+			# body privately.
+			$files{'image'} = $path;
+			$job->{'state'} = 'verifying';
+			}
+		# Unknown sources must not reach the disk parser or storage
+		# pool.
+		else { die "Unknown image source\n"; }
+		}
+	$self->save($id, $job);
+	my $checked = $self->path($id, 'checked');
+	my $worker = $self->{'worker'} || Cloudmin::Worker->new();
+	# started(unit_id) journals the sandbox for recovery after a crash.
+	# progress(event) checks cancellation and validates reported byte counts.
+	my $info = $worker->run($job->{'source'}
+		eq 'local' ? 'local_image' : 'image',
+		$request, files => \%files, output => $checked,
+		started => sub { $job->{'worker'} = $_[0];
+		$self->save($id, $job); },
+		progress => sub {
+			$self->checkpoint($job);
+			my $event = $_[0];
+			# Ticks check cancellation without rewriting
+			# unchanged progress.
+			return if ($event->{'type'} eq 'tick');
+			# Workers report progress, never replacement job records
+			# or paths.
+			if (($event->{'phase'} ||
+			'') =~ /\A(?:downloading|copying)\z/) {
+				my $value = $event->{'value'};
+				# The worker cannot raise its
+				# controller-assigned byte budget.
+				die "Invalid download progress\n"
+				if (!defined($value) || ref($value) ||
+					$value !~ /\A\d+\z/ || $value > $limit);
+				$job->{($event->{'mode'} || 0) == 2 ? 'total'
+				: 'bytes'} = 0 + $value;
+				}
+			elsif (($event->{'phase'} || '') eq 'verifying') {
+				# Verification begins only after the worker has
+				# acquired the image.
+				$job->{'state'} = 'verifying';
+				# Ignore unusable optional byte counts
+				# while retaining the phase.
+				$job->{'bytes'} = $event->{'bytes'}
+				if (defined($event->{'bytes'}) &&
+					!ref($event->{'bytes'}) &&
+					$event->{'bytes'} =~ /\A\d+\z/ &&
+					$event->{'bytes'} <= $limit);
+				}
+			# Only the expected import phases may change the
+			# root-owned job.
+			else { die "Invalid image worker progress\n"; }
+			$self->save($id, $job);
+			});
+	# Treat worker output as data: only bounded sizes and known checksum
+	# names may enter root-owned metadata or the libvirt volume definition.
+	# ISO capacity must equal its file size because the bytes are stored as raw.
+	die "Invalid checked image metadata\n"
+		if (($info->{'format'} || '') ne $job->{'format'} ||
+		!defined($info->{'virtual-size'}) ||
+		ref($info->{'virtual-size'}) ||
+		$info->{'virtual-size'} !~ /\A[1-9]\d*\z/ ||
+		$info->{'virtual-size'} > 16 * 1024**4 ||
+		!defined($info->{'bytes'}) || ref($info->{'bytes'}) ||
+		$info->{'bytes'} !~ /\A[1-9]\d*\z/ ||
+		$info->{'bytes'} > $limit || $info->{'bytes'} != -s $checked ||
+		($job->{'format'} eq 'iso' && $info->{'virtual-size'} != $info->{'bytes'}));
+	# Accept the digest algorithm required by this request, not a worker
+	# choice.
+	my $verified = $info->{'verified'} || '';
+	my $expected_algorithm = $job->{'source'} eq 'download'
+		? ($job->{'checksum_algorithm'} || 'sha256') : $job->{'sha256'}
+		? 'sha256' : '';
+	my $digest_length = $verified eq 'sha512' ? 128 : 64;
+	die "Invalid checksum result\n" if ($verified ne $expected_algorithm ||
+		($verified &&
+		($info->{'checksum_digest'} ||
+		'') !~ /\A[a-f0-9]{$digest_length}\z/));
+	# Replace staging input with the checked file before recording verified
+	# metadata.
+	unlink($path) || die "Cannot remove unchecked staging file: $!\n"
+		if (-e $path);
+	rename($checked, $path) || die "Cannot claim checked image: $!\n";
+	delete($job->{'worker'});
+	# Record verification only when this request required a
+	# checksum.
+	$job->{'verified'} = $verified if ($verified);
+	# Retain the checked digest for later custom catalogue
+	# promotion.
+	$job->{'checksum_digest'} = $info->{'checksum_digest'} if ($verified);
+	$job->{'virtual_size'} = $info->{'virtual-size'};
+	$job->{'bytes'} = $info->{'bytes'};
+	$self->save($id, $job);
+	$self->checkpoint($job);
+	# Other operations may have consumed storage while inspection was
+	# running.
+	Cloudmin::Libvirt::refresh_pool($pool);
+	die "The storage pool does not have enough free space.\n"
+		if ($job->{'bytes'} > pool_limit($pool));
+
+	# Libvirt stores ISO bytes as raw; the import keeps its ISO type and suffix.
+	my $storage_format = $job->{'format'} eq 'iso' ? 'raw' : $job->{'format'};
+	$job->{'state'} = 'importing';
+	$job->{'transferred'} = 0;
+	$self->save($id, $job);
+	# Unique volume names and libvirt's create operation prevent overwrite.
+	Cloudmin::Libvirt::log_call('Sys::Virt::StoragePool::create_volume', {
+		pool => $job->{'pool'}, volume => $job->{'volume'},
+		capacity_bytes => $job->{'virtual_size'}, format => $storage_format });
+	$volume = $pool->create_volume("<volume><name>$job->{volume}</name>".
+		"<capacity unit='bytes'>$job->{virtual_size}</capacity>".
+		"<allocation>0</allocation><target><format type='$storage_format'/>".
+		"</target></volume>");
+	$job->{'volume_key'} = $volume->get_key();
+	$job->{'volume_path'} = $volume->get_path();
+	$self->save($id, $job);
+	$stream = $conn->new_stream();
+	Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::upload', {
+		pool => $job->{'pool'}, volume => $job->{'volume'},
+		bytes => $job->{'bytes'}, offset => 0, flags => 0 });
+	$volume->upload($stream, 0, $job->{'bytes'}, 0);
+	open(my $fh, '<', $path) || die "Cannot open staged image: $!\n";
+	binmode($fh);
+	my $last = 0;
+	# send_all(stream, buffer, length) fills the aliased buffer for libvirt.
+	$stream->send_all(sub {
+		$self->checkpoint($job);
+		# Sys::Virt expects the data in its aliased second argument.
+		my $n = read($fh, $_[1], $_[2]);
+		# Do not let libvirt finish a stream after a
+		# staging-file read error.
+		die "Cannot read staged image: $!\n" if (!defined($n));
+		$job->{'transferred'} += $n;
+		if (time() != $last) {
+			# Keep polling useful without rewriting metadata for
+			# every chunk.
+			$self->save($id, $job);
+			$last = time();
+			}
+		return $n;
+		});
+	close($fh);
+	$stream->finish();
+	$stream = undef;
+	$self->checkpoint($job);
+	Cloudmin::Libvirt::refresh_pool($pool);
+	$job->{'volume_key'} = $volume->get_key();
+	$job->{'volume_path'} = $volume->get_path();
+	$self->cleanup_staging($id);
+	$job->{'state'} = 'ready';
+	$self->save($id, $job);
+	alarm(0);
+	1;
+	};
+alarm(0);
+if (!$ok) {
+	# Roll back only resources created by this worker, even on timeout.
+	my $error = "$@";
+	$job->{'failure_state'} = $job->{'state'};
+	# Close an incomplete stream before deleting its destination
+	# volume.
+	eval { $stream->abort() } if ($stream);
+	my $removed = 1;
+	if ($volume) {
+		# Keep deletion failures in the job so the leftover volume is
+		# visible.
+		$removed = eval {
+			Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::delete', {
+				pool => $job->{'pool'}, volume => $job->{'volume'}, flags => 0 });
+			$volume->delete(0);
+			1;
+			};
+		# Report a leftover volume instead of claiming rollback
+		# succeeded.
+		$error .= " Failed to remove partial volume $job->{volume}: $@"
+			if (!$removed);
+		}
+	my $cleaned = eval { $self->cleanup_staging($id); 1 };
+	# A failed staging cleanup must remain visible for a later
+	# delete retry.
+	$error .= " Staging cleanup failed: $@" if (!$cleaned);
+	$error =~ s/\s+at \S+ line \d+\.?\s*$//;
+	$job->{'state'} = $removed && $cleaned &&
+		-e $self->path($id, 'cancel') ? 'deleted' : 'failed';
+	$job->{'error'} = $error;
+	# Retry only after removing the allocated volume and staging files.
+	$job->{'cleanup_pending'} = $removed && $cleaned ? 0 : 1;
+	$self->save($id, $job);
+	}
+return $ok ? 1 : 0;
+}
+
 1;
