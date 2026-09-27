@@ -212,4 +212,34 @@ die "Image job not found\n" if (defined($owner) && $job->{'owner'} ne $owner);
 return $job;
 }
 
+# list(self, [owner], [active_only], [strict])
+# Returns jobs newest first, optionally filtering by owner and working imports.
+# Strict reads refuse incomplete ownership information before storage deletion.
+sub list
+{
+my ($self, $owner, $active, $strict) = @_;
+# Read-only users can view a fresh host before any job store is created.
+die "Cannot read image job directory\n"
+	if ($strict && (-e $self->{'directory'} || -l $self->{'directory'}) && !-d $self->{'directory'});
+return [] if (!-d $self->{'directory'});
+opendir(my $dh, $self->{'directory'}) || die "Cannot list image jobs: $!\n";
+my @ids = map { /\A([a-f0-9]{32})\.json\z/ ? $1 : () } readdir($dh);
+closedir($dh);
+# A concurrent deletion may remove an entry after directory enumeration.
+my @jobs = grep { $_ && $_->{'state'} ne 'deleted' }
+	map { $strict ? $self->get($_) : eval { $self->get($_) } } @ids;
+# A supplied owner narrows the result without changing shared store
+# contents.
+@jobs = grep { $_->{'owner'} eq $owner } @jobs if (defined($owner));
+# Use the same live-worker criteria for the overview count and job listing.
+if ($active) {
+	@jobs = grep {
+		$_->{'state'} =~ /\A(?:queued|downloading|uploading|copying|verifying|importing)\z/ &&
+		time() - $_->{'updated'} < 3700 &&
+		(!$_->{'pid'} || kill(0, $_->{'pid'}))
+		} @jobs;
+	}
+return [ sort { $b->{'created'} <=> $a->{'created'} } @jobs ];
+}
+
 1;
