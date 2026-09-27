@@ -722,4 +722,27 @@ my $reason = volume_use(volume_references($conn, $excluded),
 die "$reason\n" if ($reason);
 }
 
+# checksum(manifest, filename, algorithm)
+# Reads named GNU/BSD entries or a single digest from a per-image sidecar.
+sub checksum
+{
+my ($manifest, $filename, $algorithm) = @_;
+# Digest length and manifest matching support only these hash
+# algorithms.
+die "Unsupported checksum algorithm\n" if ($algorithm !~ /\Asha(?:256|512)\z/);
+my $length = $algorithm eq 'sha512' ? 128 : 64;
+# Alpine publishes one bare SHA-512 digest at image.qcow2.sha512.
+return lc($1) if ($manifest =~ /\A\s*([a-fA-F0-9]{$length})\s*\z/);
+for my $line (split(/\n/, $manifest)) {
+	# GNU manifests place the digest before the exact image
+	# filename.
+	return lc($1)
+		if ($line =~ /^([a-fA-F0-9]{$length})\s+\*?\Q$filename\E\s*$/);
+	# BSD manifests spell out the algorithm and parenthesized
+	# filename.
+	return lc($1) if ($line =~ /^\Q$algorithm\E\s+\(\Q$filename\E\)\s*=\s*([a-fA-F0-9]{$length})\s*$/i);
+	}
+die "No checksum entry for this image. Check the image and checksum URLs.\n";
+}
+
 1;
