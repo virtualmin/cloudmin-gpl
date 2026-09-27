@@ -538,6 +538,25 @@ sysopen(my $cancel, $self->path($id, 'cancel'), O_WRONLY|O_CREAT, 0600)
 close($cancel) || die "Cannot close image cancellation request: $!\n";
 }
 
+# remove(self, id)
+# Cancels an active import, or deletes its own unused volume under the job lock.
+# Returns false while the worker is still cleaning up; callers may poll again.
+sub remove
+{
+my ($self, $id) = @_;
+my $job = $self->get($id);
+# Keep delete requests idempotent after the first cleanup has succeeded.
+return 1 if ($job->{'state'} eq 'deleted');
+$self->cancel($id);
+# remove(): wait for the import worker to release its metadata before deletion.
+my $remove = sub {
+	return $self->with_job_lock($id, 'delete', sub {
+		return $self->remove_locked($_[0]);
+		}) || 0;
+	};
+return $self->{'pool_lock'} ? $self->{'pool_lock'}->($job->{'pool'}, $remove, 0) : $remove->();
+}
+
 # remove_locked(self, job)
 # Deletes only this job's unused volume while its Webmin locks are held.
 sub remove_locked
