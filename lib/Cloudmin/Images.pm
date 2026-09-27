@@ -325,6 +325,59 @@ foreach my $field (qw(slug url format architecture checksum_url checksum_algorit
 return 1;
 }
 
+# create(self, owner, token, request, [selection], [attempt])
+# Records a validated import once. Repeated submission returns the same job.
+# selection distinguishes images submitted together with one form token.
+# attempt permits a fresh submission while preserving the signed token.
+sub create
+{
+my ($self, $owner, $token, $request, $selection, $attempt) = @_;
+$self->check_token($owner, $token);
+$self->prune_deleted();
+my $id = substr(sha256_hex(Cloudmin::Attempts::key($token, $attempt).(defined($selection) ? ':'.$selection : '')),
+	0, 32);
+# An attempt identifies one submission. Changed inputs must never silently
+# return an earlier upload or import with different validation and storage.
+my $fingerprint = sha256_hex(convert_to_json($request, 1));
+# existing(): accept a retry only when its owner and original inputs match.
+my $existing = sub {
+	my $job = $self->get($id, $owner);
+	my $saved = $job->{'request_fingerprint'};
+	# Older records keep the original form fields at the top level.
+	$saved ||= sha256_hex(convert_to_json({ map { $_ => $job->{$_} }
+		keys %$request }, 1));
+	die "This form has already submitted different image settings; reload the page\n"
+		if ($saved ne $fingerprint);
+	return $job;
+	};
+# A repeated form submission only reads an existing job, so it must not
+# wait for that job's download or upload to release its write lock.
+return $existing->() if (-f $self->path($id, 'json'));
+# create(): reserve and audit the import while its pool is locked.
+my $create = sub {
+	my $created;
+	my $job = $self->with_lock($self->path($id, 'json'), 0, sub {
+		# Another submitter may have created the record while we waited.
+		return $existing->() if (-f $self->path($id, 'json'));
+		my $job = { %$request, id => $id, owner => $owner, created => time(),
+			request_fingerprint => $fingerprint,
+			state => $request->{'source'}
+			eq 'upload' ? 'waiting' : 'queued',
+			bytes => 0,
+			volume => 'cloudmin-'.($request->{'slug'} || 'image').
+				'-'.substr($id, 0, 12).'.'.$request->{'format'} };
+		$self->save($id, $job);
+		$created = 1;
+		return $job;
+		});
+	# A repeated form submission reuses its job without duplicating the
+	# audit.
+	$self->log_action('create', $job) if ($created);
+	return $job;
+	};
+return $self->{'pool_lock'} ? $self->{'pool_lock'}->($request->{'pool'}, $create, 1) : $create->();
+}
+
 # prune_deleted(self)
 # Discards deletion markers after their one-day submission tokens have expired.
 # A second day covers allowed clock skew and leaves retries time to finish.
