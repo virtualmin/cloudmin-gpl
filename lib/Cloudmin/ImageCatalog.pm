@@ -11,6 +11,18 @@ use WebminCore qw(read_file_contents write_file_contents convert_from_json
 require(dirname(__FILE__).'/Images.pm');
 require(Cwd::abs_path(dirname(__FILE__).'/ImageChoices.pm'));
 
+# validate_record(record)
+# Applies the same schema to custom entries and bundled image assets.
+sub validate_record
+{
+my ($record) = @_;
+# Wrap the editor's flat record as a single-asset manifest for shared
+# validation.
+die "Invalid catalogue entry\n" if (ref($record) ne 'HASH');
+validate_catalogue({ schema => 1, images => [ { %$record,
+	assets => [ $record ] } ] });
+}
+
 # normalize_architecture([architecture])
 # Converts common architecture aliases to libvirt and distribution names.
 # Omitted input becomes an empty filter; unknown names are lowercased and
