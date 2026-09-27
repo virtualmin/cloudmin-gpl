@@ -642,4 +642,14 @@ foreach my $ref (@$refs) {
 return;
 }
 
+# assert_unused(self, connection, pool, volume, [excluded_uuid])
+# Rechecks live, persistent, snapshot and backing references before mutation.
+sub assert_unused
+{
+my ($self, $conn, $pool, $volume, $excluded) = @_;
+my $reason = volume_use(volume_references($conn, $excluded),
+	$volume->get_path(), $pool->get_name(), $volume->get_name(), $volume->get_key());
+die "$reason\n" if ($reason);
+}
+
 1;
