@@ -300,4 +300,15 @@ $url =~ s/\Ahttps:/https:/i;
 return $url;
 }
 
+# catalogue_request(image, pool) copies validated image metadata for an import.
+sub catalogue_request
+{
+my ($image, $pool) = @_;
+return { source => 'download', pool => $pool->{'id'}, pool_name => $pool->{'name'},
+	slug => $image->{'id'},
+	(map { $_ => $image->{$_} } qw(name format url checksum_url checksum_algorithm
+		architecture firmware cloud_init guest_agent min_disk_bytes)),
+	checksum_source => ($image->{'catalogue_origin'} || '') eq 'bundled' ? 'vendor' : 'catalogue' };
+}
+
 1;
