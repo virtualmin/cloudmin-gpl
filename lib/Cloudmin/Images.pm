@@ -76,6 +76,38 @@ $self->{'log'}->($action, 'image', $job->{'id'}, {
 });
 }
 
+# with_job_lock(self, id, action, callback)
+# Skips busy jobs, locks their metadata and staging data, and logs after unlock.
+# callback(job) receives the record read under the lock.
+sub with_job_lock
+{
+my ($self, $id, $action, $code) = @_;
+my $file = $self->path($id, 'json');
+# A running import owns this lock; do not block another HTTP request on
+# it.
+return if ($self->{'test_lock'}->($file));
+my ($job, $result);
+my $ok = eval {
+	$result = $self->with_lock($file, 0, sub {
+		# Re-read under the lock in case another request completed
+		# first.
+		$job = $self->get($id);
+		# Staged images can be gigabytes; never capture them for diffs.
+		return $self->with_lock($self->path($id, 'part'), 1,
+			sub { $code->($job) });
+		});
+	1;
+	};
+my $error = $@;
+# No-op callbacks skip audit entries, but completed and failed actions
+# log.
+$self->log_action($action, $job, $error)
+	if ($job && (!$ok || defined($result)));
+# Return the original operation error after lock and audit handling.
+die $error if (!$ok);
+return $result;
+}
+
 # generate_id()
 # Returns an unpredictable identifier for form tokens and private files.
 sub generate_id
