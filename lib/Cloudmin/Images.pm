@@ -528,4 +528,14 @@ foreach my $file (@files) {
 	}
 }
 
+# cancel(self, id)
+# Requests worker cleanup without waiting, so a batch can stop every download.
+sub cancel
+{
+my ($self, $id) = @_;
+sysopen(my $cancel, $self->path($id, 'cancel'), O_WRONLY|O_CREAT, 0600)
+	|| die "Cannot cancel image import: $!\n";
+close($cancel) || die "Cannot close image cancellation request: $!\n";
+}
+
 1;
