@@ -472,4 +472,24 @@ my ($self, $job) = @_;
 die "Image import cancelled.\n" if (-e $self->path($job->{'id'}, 'cancel'));
 }
 
+# cleanup_staging(self, id)
+# Stops any orphaned sandbox and removes only this job's staged data.
+sub cleanup_staging
+{
+my ($self, $id) = @_;
+$self->path($id, 'part');
+my $job = $self->get($id);
+# A controller crash can leave a worker running after its import
+# disappears.
+Cloudmin::Worker->new()->cleanup($job->{'worker'}) if ($job->{'worker'});
+opendir(my $dh, $self->{'directory'}) || die "Cannot list staging files: $!\n";
+my @files = grep { /^\Q$id\E\.(?:checked|part(?:\.webmintmp\.\d+\.\d+)?)$/ }
+	readdir($dh);
+closedir($dh);
+foreach my $file (@files) {
+	unlink("$self->{directory}/$file") ||
+		die "Cannot remove staged image: $!\n";
+	}
+}
+
 1;
