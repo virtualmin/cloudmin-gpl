@@ -405,6 +405,42 @@ foreach my $id (@ids) {
 	}
 }
 
+# receive_locked(self, job, input, length)
+# Receives an upload while the caller holds its metadata and staging locks.
+sub receive_locked
+{
+my ($self, $job, $input, $length) = @_;
+my $id = $job->{'id'};
+my $ok = eval {
+	local $SIG{'ALRM'} =
+		sub { die "Upload timed out. Please try again.\n" };
+	alarm(3600);
+	$self->transfer($job, $input, $length, 'uploading');
+	$self->checkpoint($job);
+	$job->{'state'} = 'queued';
+	$self->save($id, $job);
+	alarm(0);
+	1;
+	};
+alarm(0);
+if (!$ok) {
+	# A partial upload must never become an importable disk.
+	my $error = "$@";
+	$job->{'failure_state'} = $job->{'state'};
+	my $cleaned = eval { $self->cleanup_staging($id); 1 };
+	# Keep cleanup failures alongside the reason the upload stopped.
+	$error .= " Staging cleanup failed: $@" if (!$cleaned);
+	$job->{'state'} = $cleaned &&
+		-e $self->path($id, 'cancel') ? 'deleted' : 'failed';
+	$job->{'error'} = $error;
+	# Staging cleanup must finish before a replacement import is allowed.
+	$job->{'cleanup_pending'} = $cleaned ? 0 : 1;
+	$self->save($id, $job);
+	die $error;
+	}
+return 1;
+}
+
 # transfer(self, job, input, limit, state)
 # Copies bounded binary chunks and publishes byte progress once per second.
 # For uploading, limit is the exact Content-Length; otherwise it is a ceiling.
