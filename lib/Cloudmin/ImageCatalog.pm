@@ -29,4 +29,137 @@ return 'armv7l' if ($architecture =~ /^(?:arm|armhf|armv7|armv7l)$/);
 return $architecture;
 }
 
+# validate_catalogue(catalogue, [allow_empty])
+# Rejects malformed or unsafe manifests before their values reach the UI.
+# allow_empty defaults to false; custom catalogues may opt into an empty list.
+sub validate_catalogue
+{
+my ($catalogue, $allow_empty) = @_;
+# Reject incompatible top-level data before walking its release records.
+die "Image catalogue must be a JSON object"
+	if (ref($catalogue) ne 'HASH');
+# Unknown schemas may assign different meanings to required fields.
+die "Unsupported image catalogue schema"
+	if (($catalogue->{'schema'} || 0) != 1);
+# Custom catalogues may be empty, but always retain the array structure.
+die "Image catalogue has no images"
+	if (ref($catalogue->{'images'}) ne 'ARRAY' ||
+	    (!$allow_empty && !@{$catalogue->{'images'}}));
+
+my %ids;
+foreach my $image (@{$catalogue->{'images'}}) {
+	# Each release needs one safe, unique ID and scalar identifying
+	# metadata.
+	die "Image catalogue entry must be an object"
+		if (ref($image) ne 'HASH');
+	my $id = $image->{'id'} || '';
+	# IDs enter form values, catalogue keys and generated volume
+	# names.
+	die "Invalid image catalogue ID '$id'"
+		if (length($id) > 96 || $id !~ /\A[a-z0-9][a-z0-9._-]*\z/);
+	# One ID must identify one release before its architectures are
+	# expanded.
+	die "Duplicate image catalogue ID '$id'" if ($ids{$id}++);
+	foreach my $field (qw(name vendor os release status source_url)) {
+		# UI labels and sorting require nonempty scalar
+		# metadata.
+		die "Image '$id' is missing $field"
+			if (!defined($image->{$field}) ||
+			ref($image->{$field}) || $image->{$field} eq '');
+		}
+	# Source links and status labels are constrained independently of
+	# assets.
+	die "Image '$id' has an unsafe source_url"
+		if (!valid_url($image->{'source_url'}));
+	# Status determines which label and sort priority the UI uses.
+	die "Image '$id' has an invalid status"
+		if ($image->{'status'} !~ /\A(?:recommended|supported|older)\z/);
+	# Optional lifecycle dates must be real calendar dates in sortable ISO
+	# form.
+	foreach my $field (qw(release_date end_of_life)) {
+		# Missing dates are allowed; supplied dates must survive
+		# calendar validation.
+		next if (!defined($image->{$field}) || $image->{$field} eq '');
+		my ($year, $month,
+			$day) = $image->{$field} =~ /\A([1-9]\d{3})-(\d{2})-(\d{2})\z/;
+		die "Image '$id' has an invalid $field; use YYYY-MM-DD\n"
+			if (!$year ||
+			!eval { timegm(0, 0, 12, $day, $month - 1, $year); 1 });
+		}
+	# A supported lifetime cannot end before the release begins.
+	die "Image '$id' reaches end of life before its release date\n"
+		if ($image->{'release_date'} && $image->{'end_of_life'} &&
+			$image->{'end_of_life'} lt $image->{'release_date'});
+	# Every release must retain at least one architecture that can be
+	# downloaded.
+	die "Image '$id' has no downloadable assets"
+		if (ref($image->{'assets'}) ne 'ARRAY' ||
+		!@{$image->{'assets'}});
+
+	my %architectures;
+	foreach my $asset (@{$image->{'assets'}}) {
+		# Architecture keys must remain unique after alias
+		# normalization.
+		die "Image '$id' asset must be an object"
+			if (ref($asset) ne 'HASH');
+		my $architecture = normalize_architecture(
+			$asset->{'architecture'});
+		# Bound normalized architecture keys before they reach
+		# catalogue lookup.
+		die "Image '$id' has an invalid architecture"
+			if ($architecture !~ /\A[a-z0-9_]+\z/ ||
+			length($architecture) > 32);
+		# Alias spellings cannot create two assets for the same
+		# CPU family.
+		die "Image '$id' repeats architecture '$architecture'"
+			if ($architectures{$architecture}++);
+		# Accept only formats, digests and boot modes the import flow
+		# understands.
+		die "Image '$id' has an unsupported disk format"
+			if (($asset->{'format'} || '') !~ /\A(?:qcow2|raw|iso)\z/);
+		# Digest parsing supports only the two algorithms used
+		# by the importer.
+		die "Image '$id' has an unsupported checksum algorithm"
+			if (($asset->{'checksum_algorithm'} ||
+			'sha256') !~ /\Asha(?:256|512)\z/);
+		# Empty firmware leaves selection to host capabilities
+		# and image checks.
+		die "Image '$id' has an unsupported firmware type"
+			if (($asset->{'firmware'} ||
+			'') !~ /\A(?:bios|uefi|uefi-or-bios)?\z/);
+		foreach my $field (qw(url checksum_url)) {
+			# Both the image and its checksum manifest must pass
+			# download URL policy.
+			die "Image '$id' has an unsafe $field"
+				if (!valid_url($asset->{$field}));
+			}
+		# Signature links are metadata only today, but still require
+		# safe URLs.
+		die "Image '$id' has an unsafe signature_url"
+			if ($asset->{'signature_url'} &&
+			    !valid_url($asset->{'signature_url'}));
+		# Disk capacity and optional transfer size describe different
+		# quantities.
+		die "Image '$id' has an invalid minimum disk size"
+			if (!defined($asset->{'min_disk_bytes'}) ||
+			$asset->{'min_disk_bytes'} !~ /\A\d+\z/);
+		# Optional transfer estimates must remain exact
+		# JavaScript integers.
+		die "Image '$id' has an invalid download size"
+			if (exists($asset->{'download_size_bytes'}) &&
+			    (ref($asset->{'download_size_bytes'}) ||
+			     ($asset->{'download_size_bytes'} ||
+			'') !~ /\A[1-9]\d{0,14}\z/));
+		}
+	}
+}
+
+# valid_url(url)
+# Applies the image downloader's URL rules to catalogue metadata too.
+sub valid_url
+{
+my ($url) = @_;
+return eval { Cloudmin::Images::validate_url($url); 1 } ? 1 : 0;
+}
+
 1;
