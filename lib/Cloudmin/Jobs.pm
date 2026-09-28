@@ -86,6 +86,16 @@ die $error if (!$ok);
 return $result;
 }
 
+# busy(self, id)
+# Reports a live worker through Webmin's lock API, excluding exited Linux
+# processes that still have a PID while waiting to be reaped.
+sub busy
+{
+my ($self, $id) = @_;
+validate_id($id);
+return $self->lock_pid("$self->{directory}/worker-$id") ? 1 : 0;
+}
+
 # zombie(pid) recognizes an exited Linux process that its parent has not reaped.
 # Missing or unreadable process data never authorizes breaking a live lock.
 sub zombie
