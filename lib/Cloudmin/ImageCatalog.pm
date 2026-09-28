@@ -228,6 +228,61 @@ return $self->change($new ? 'create' : 'modify', [ $key ], sub {
 	});
 }
 
+# update_entries(self, action, keys)
+# Enables/disables either source or removes selected custom image architectures.
+# action is enable, disable or delete; keys is an array of id:architecture
+# strings.
+sub update_entries
+{
+my ($self, $action, $keys) = @_;
+# Reject unsupported or empty bulk actions before taking the catalogue lock.
+die "Invalid catalogue action\n"
+	if ($action !~ /\A(?:enable|disable|delete)\z/);
+# An empty selection is a form error, not a successful no-op edit.
+die "Select catalogue entries\n" if (!@$keys);
+return $self->change($action, $keys, sub {
+	# edit(catalogue) applies the selection against current settings.
+	my ($catalogue) = @_;
+	my %entries = map { $_->{'catalogue_key'} => $_ }
+	@{$self->list_entries()};
+	# Validate the full selection before changing any entry.
+	foreach my $key (@$keys) {
+		my $entry = $entries{$key} ||
+			die "Catalogue entry no longer exists\n";
+		# Disabling preserves vendor entries; deletion is for
+		# local records only.
+		die "Only custom entries can be deleted; disable Cloudmin entries instead\n"
+			if ($action eq 'delete' && $entry->{'catalogue_origin'}
+			ne 'custom');
+		}
+	foreach my $key (@$keys) {
+		if ($action eq 'disable') {
+			# Retain the record but exclude it from download
+			# choices.
+			$catalogue->{'disabled'}->{$key} = 1;
+			}
+		else {
+			# Enabling or deleting removes the saved disabled
+			# marker.
+			delete($catalogue->{'disabled'}->{$key});
+			}
+		}
+	if ($action eq 'delete') {
+		# Remove selected architectures and any now-empty custom
+		# releases.
+		my %remove = map { $_ => 1 } @$keys;
+		foreach my $image (@{$catalogue->{'images'}}) {
+			$image->{'assets'} = [ grep {
+				!$remove{$image->{'id'}.':'.
+					normalize_architecture($_->{'architecture'})}
+				} @{$image->{'assets'}} ];
+			}
+		$catalogue->{'images'} = [ grep { @{$_->{'assets'}} }
+			@{$catalogue->{'images'}} ];
+		}
+	});
+}
+
 # normalize_architecture([architecture])
 # Converts common architecture aliases to libvirt and distribution names.
 # Omitted input becomes an empty filter; unknown names are lowercased and
