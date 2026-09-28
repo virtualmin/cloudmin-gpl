@@ -174,4 +174,15 @@ my ($url) = @_;
 return eval { Cloudmin::Images::validate_url($url); 1 } ? 1 : 0;
 }
 
+# error_message(error)
+# Removes Perl source locations from manifest errors shown to callers.
+sub error_message
+{
+my ($error) = @_;
+my $message = defined($error) ? "$error" : '';
+$message =~ s/\s+at\s+\S+\s+line\s+\d+\.?$//;
+$message =~ s/\s+$//;
+return $message || 'Unknown error';
+}
+
 1;
