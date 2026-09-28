@@ -137,6 +137,48 @@ validate_catalogue({ schema => 1, images => [ { %$record,
 	assets => [ $record ] } ] });
 }
 
+# change(self, action, keys, callback)
+# Serializes edits with Webmin locks and records configuration diffs in its log.
+# keys is an array of catalogue keys; callback(settings) edits the locked hash.
+sub change
+{
+my ($self, $action, $keys, $callback) = @_;
+my $path = $self->{'custom_path'} || die "Catalogue editing is unavailable\n";
+$self->{'lock_file'}->($path, 0, 0, 0) || die "Cannot lock image catalogue\n";
+my @names;
+my $ok = eval {
+	my $settings = $self->custom_catalogue();
+	my %entries = map { $_->{'catalogue_key'} => $_ }
+		@{$self->list_entries()};
+	$callback->($settings);
+	validate_catalogue($settings, 1);
+	# The catalogue contains small configuration records, so retain diffs.
+	local $main::error_must_die = 1;
+	my $mask = umask(0077);
+	my $written = eval { write_file_contents($path,
+		convert_to_json($settings, 0, 1)); 1 };
+	my $error = $@;
+	umask($mask);
+	# Restore process permissions before propagating a write error.
+	die $error if (!$written);
+	# Deleted entries need their old names; saved entries use their new
+	# names.
+	%entries = map { $_->{'catalogue_key'} => $_ } @{$self->list_entries()}
+		if ($action eq 'create' || $action eq 'modify');
+	@names = map { my $entry = $entries{$_};
+		$entry ? $entry->{'name'}.' ('.$entry->{'architecture'}.')'
+		: $_ } @$keys;
+	1;
+	};
+my $error = $@;
+$self->{'unlock_file'}->($path);
+# Do not audit a successful change until the write and validation succeeded.
+die $error if (!$ok);
+$self->{'log'}->($action, 'catalogue', join(',', @$keys),
+	{ names => join("\0", @names) });
+return 1;
+}
+
 # normalize_architecture([architecture])
 # Converts common architecture aliases to libvirt and distribution names.
 # Omitted input becomes an empty filter; unknown names are lowercased and
