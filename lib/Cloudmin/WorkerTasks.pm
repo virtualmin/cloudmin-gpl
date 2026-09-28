@@ -92,4 +92,15 @@ die "Invalid image size.\n"
 return { 'virtual-size' => 0 + $info->{'virtual-size'}, format => $format };
 }
 
+# free_space()
+# Checks the actual worker filesystem, which can differ from Webmin's job store.
+sub free_space
+{
+my $space = command('/usr/bin/stat', '-f', '-c', '%a:%S', '.');
+my ($blocks, $size) = $space =~ /\A(\d+):(\d+)\s*\z/;
+# Without a capacity result, continuing could fill the host filesystem.
+die "Cannot determine worker staging space\n" if (!defined($blocks));
+return $blocks * $size;
+}
+
 1;
