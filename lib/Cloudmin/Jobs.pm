@@ -10,12 +10,80 @@ use POSIX qw(setsid _exit);
 use Time::HiRes ();
 use Fcntl qw(O_RDWR O_NOFOLLOW LOCK_EX LOCK_NB);
 
+# new(class, directory => path, lock_file => callback, unlock_file => callback,
+#     test_lock => callback, log => callback, [host_guard => callback],
+#     [admit => callback])
+# Constructs a lazy store; reading a fresh host creates no files.
+# admit() may reject new submissions; existing IDs and worker updates skip it.
+sub new
+{
+my ($class, %options) = @_;
+# Keep job state in a caller-selected private module directory.
+die "Job directory is required\n" if (!$options{'directory'});
+return bless(\%options, $class);
+}
+
 # dependencies()
 # Loads the SQLite driver only when the controller job store is used.
 sub dependencies
 {
 require DBI;
 require DBD::SQLite;
+}
+
+# lock(self, resource, callback, [nonblocking], [waiting])
+# Holds a named Webmin resource lock and always releases it after the callback.
+# callback() supplies the scalar return value; resource is a safe lock basename.
+# nonblocking refuses a held lock; waiting() checks cancellation between disk
+# queue attempts and may throw to stop waiting.
+sub lock
+{
+my ($self, $resource, $callback, $nonblocking, $waiting) = @_;
+# Resource names become lock basenames and must not contain traversal.
+die "Invalid job resource\n" if ($resource !~ /\A[a-z0-9._-]+\z/);
+make_dir($self->{'directory'}, 0700, 1) || die "Cannot create job directory\n";
+my $file = "$self->{directory}/$resource";
+$self->clear_dead_lock($file);
+if ($resource eq 'vm-work' || $nonblocking) {
+	# Serialize the check and acquisition under a short lock, so workers that
+	# wake together cannot enter Webmin's five-minute blocking lock wait.
+	my $deadline = time()+86400;
+	# Check and claim the resource while the short queue lock is held.
+	while (!$self->lock('vm-queue', sub {
+		# Another worker still owns the resource; leave it for a later attempt.
+		$self->clear_dead_lock($file);
+		return 0 if ($self->lock_pid($file));
+		$self->{'lock_file'}->($file, 0, 0, 1) || die "Cannot lock job resource\n";
+		return 1;
+		})) {
+		if ($nonblocking) {
+			# Schedules must skip overlapping runs instead of queuing them.
+			die $resource eq 'vm-work'
+				? "Another disk operation is running; try again when it finishes\n"
+				: "Another operation is running; try again when it finishes\n";
+			}
+		$waiting->() if ($waiting);
+		die "Timed out waiting for another disk operation\n" if (time() >= $deadline);
+		Time::HiRes::sleep(1);
+		}
+	}
+else {
+	# Short controller transactions use Webmin's ordinary blocking resource lock.
+	$self->{'lock_file'}->($file, 0, 0, 1) || die "Cannot lock job resource\n";
+	}
+my ($result, $ok);
+$ok = eval {
+	# Check host-wide network transactions after acquiring the same lock used
+	# by bridge setup, closing the gap between form validation and execution.
+	$self->{'host_guard'}->() if ($resource eq 'create-host' && $self->{'host_guard'});
+	$result = $callback->();
+	1;
+	};
+my $error = $@;
+$self->{'unlock_file'}->($file);
+# Release the resource before returning the callback's original error.
+die $error if (!$ok);
+return $result;
 }
 
 # zombie(pid) recognizes an exited Linux process that its parent has not reaped.
