@@ -370,6 +370,20 @@ $db->disconnect();
 return [ map { convert_from_json($_->[0]) } @$rows ];
 }
 
+# list_recovery(self, [owner])
+# Lists failed jobs still holding a reservation, including older history.
+sub list_recovery
+{
+my ($self, $owner) = @_;
+my $db = $self->connect(0) || return [];
+my $rows = $db->selectall_arrayref("SELECT record FROM jobs WHERE state = 'failed'".
+	(defined($owner) ? ' AND owner = ?' : ''), undef,
+	(defined($owner) ? ($owner) : ()));
+$db->disconnect();
+return [ grep { $_->{'cleanup_pending'} }
+	map { convert_from_json($_->[0]) } @$rows ];
+}
+
 # validate_id(id)
 # Keeps identifiers safe for SQLite lookups and Webmin lock filenames.
 sub validate_id
