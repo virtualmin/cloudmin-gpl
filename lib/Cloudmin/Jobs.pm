@@ -208,4 +208,37 @@ return ($job->{'resource'},
 		? ('guest:'.lc($job->{'request'}->{'source_uuid'} || '')) : ());
 }
 
+# update(self, id, callback)
+# Applies a small atomic change while preserving concurrent cancellation
+# requests.
+# callback(job) edits the current record in place; its return value is ignored.
+sub update
+{
+my ($self, $id, $callback) = @_;
+validate_id($id);
+return $self->write_data(sub {
+	my ($db) = @_;
+	my ($json) =
+		$db->selectrow_array('SELECT record FROM jobs WHERE id = ?',
+		undef, $id);
+	# Updates never create a job implicitly or run against an empty record.
+	die "Job not found\n" if (!$json);
+	my $job = convert_from_json($json);
+	$callback->($job);
+	$job->{'updated'} = time();
+	# Moving committed creation to software setup releases its old reservation.
+	$db->do('UPDATE jobs SET resource = ?, state = ?, updated = ?, record = ? WHERE id = ?',
+		undef, $job->{'resource'}, $job->{'state'}, $job->{'updated'},
+		convert_to_json($job, 0, 1), $id);
+	return $job;
+	});
+}
+
+# validate_id(id)
+# Keeps identifiers safe for SQLite lookups and Webmin lock filenames.
+sub validate_id
+{
+die "Invalid job ID\n" if (($_[0] || '') !~ /\A[a-f0-9]{32}\z/);
+}
+
 1;
