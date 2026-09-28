@@ -205,6 +205,22 @@ return $self->lock('jobs.sqlite', sub {
 	});
 }
 
+# save_credential(self, id, owner, username, hash)
+# Stores a draft hash with a one-day expiry, without logging its value.
+# Later saves purge expired drafts; reads reject them even before removal.
+sub save_credential
+{
+my ($self, $id, $owner, $username, $hash) = @_;
+validate_id($id);
+return $self->write_data(sub {
+	my ($db) = @_;
+	$db->do('DELETE FROM credentials WHERE expires < ?', undef, time());
+	$db->do('INSERT OR REPLACE INTO credentials VALUES (?, ?, ?, ?, ?)',
+		undef, $id, $owner, $username, time()+86400, $hash);
+	return 1;
+	});
+}
+
 # reserved_resources(job) returns the destination and related reservations.
 # Clones reserve the source UUID; restores reserve the preserved UUID and cached
 # inspection as well as the destination name. All come from validated requests.
