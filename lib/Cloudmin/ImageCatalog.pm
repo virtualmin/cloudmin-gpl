@@ -283,6 +283,32 @@ return $self->change($action, $keys, sub {
 	});
 }
 
+# search_images(self, query, [architecture])
+# Returns compatible images whose searchable metadata contains every term.
+# An empty query returns all enabled matches; omitted architecture includes all.
+sub search_images
+{
+my ($self, $query, $architecture) = @_;
+my @terms = grep { length($_) }
+	map { lc($_) } split(/\s+/, $query || '');
+my $records = $self->list_images($architecture);
+# No search terms means the normal architecture-filtered list.
+return $records if (!@terms);
+
+my @matches = grep {
+	# Match common architecture spellings without changing stored
+	# identifiers.
+	my $architecture = $_->{'architecture'} || '';
+	my $aliases = $architecture eq 'aarch64' ? 'arm64'
+		: $architecture eq 'x86_64' ? 'amd64 x86-64' : '';
+	my $haystack = lc(join(' ', (map { $_ || '' }
+		@{$_}{qw(id name vendor os release architecture format status)}),
+		$aliases));
+	!grep { index($haystack, $_) < 0 } @terms;
+	} @$records;
+return \@matches;
+}
+
 # normalize_architecture([architecture])
 # Converts common architecture aliases to libvirt and distribution names.
 # Omitted input becomes an empty filter; unknown names are lowercased and
