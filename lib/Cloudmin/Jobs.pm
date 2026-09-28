@@ -86,6 +86,74 @@ die $error if (!$ok);
 return $result;
 }
 
+# run_worker(self, id, callback, [prepare])
+# Serializes disk workflows without holding the short host reservation lock.
+# prepare() may wait for shared downloads before taking the disk-work lock.
+# The durable job reserves its guest while other guests remain controllable.
+# callback() runs under the disk-work lock and supplies the return value.
+sub run_worker
+{
+my ($self, $id, $callback, $prepare) = @_;
+# A live worker already owns this job and will handle its cancellation flag.
+return if ($self->busy($id));
+return $self->lock('worker-'.$id, sub {
+	my $job = $self->get($id) || die "Job not found\n";
+	# A delayed launcher must not replay a job that already finished.
+	return 1 if ($job->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+	my $result;
+	my $ok = eval {
+		# Preparation holds this job's lock, leaving disk work free.
+		$prepare->() if ($prepare);
+		# Queue time is separate from the operation's execution deadline.
+		my $deadline = time()+86400;
+		while ($self->lock_pid("$self->{directory}/vm-work")) {
+			$job = $self->get($id);
+			if ($job->{'cancel'} && !$job->{'resources'}->{'started'} &&
+				!keys(%{$job->{'resources'}})) {
+				# A queued request with no resources can cancel without cleanup.
+				$self->update($id, sub {
+					$_[0]->{'state'} = 'cancelled';
+					# Discard unused credentials on cancellation.
+					delete(@{$_[0]->{'request'}}{qw(password_hash webmin_password virtualmin_serial virtualmin_key source_xml console_password)});
+					});
+				return 1;
+				}
+			die "Timed out waiting for another disk operation\n" if (time() >= $deadline);
+			Time::HiRes::sleep(1);
+			}
+		$result = $self->lock('vm-work', sub {
+			# Bridge changes check the queued reservation under this same lock.
+			$self->lock('create-host', sub { return 1; });
+			return $callback->();
+			}, 0, sub {
+			# A competing worker may take the lock after the initial queue check.
+			# Keep cancellation responsive while retrying that acquisition.
+			my $waiting = $self->get($id);
+			die "Virtual machine operation cancelled\n"
+				if ($waiting->{'cancel'} && !keys(%{$waiting->{'resources'}}));
+			});
+		1;
+		};
+	my $error = $@;
+	if (!$ok) {
+		# Failures before disk work must also release queued jobs.
+		my $failed = $self->update($id, sub {
+			$_[0]->{'state'} = $_[0]->{'cancel'} && !keys(%{$_[0]->{'resources'}})
+				? 'cancelled' : 'failed';
+			$_[0]->{'error'} = "$error";
+			$_[0]->{'events'}->[-1]->{'state'} = 'failed'
+				if (@{$_[0]->{'events'}} && $_[0]->{'events'}->[-1]->{'state'} eq 'running');
+			# Cleanup needs resource IDs, not saved credentials.
+			delete(@{$_[0]->{'request'}}{qw(password_hash webmin_password virtualmin_serial virtualmin_key source_xml console_password)});
+			$_[0]->{'cleanup_pending'} ||= keys(%{$_[0]->{'resources'}}) ? 1 : 0;
+			});
+		eval { $self->audit('manage_failed', $failed); };
+		return 0;
+		}
+	return $result;
+	});
+}
+
 # busy(self, id)
 # Reports a live worker through Webmin's lock API, excluding exited Linux
 # processes that still have a PID while waiting to be reaped.
