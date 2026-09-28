@@ -55,4 +55,14 @@ die "$args[0] failed: ".substr($error || 'no diagnostic output', 0, 1000)."\n"
 return $output;
 }
 
+# write_file(name, contents)
+# Writes task data; callers supply fixed names in the private working directory.
+sub write_file
+{
+my ($name, $contents) = @_;
+open(my $fh, '>', $name) || die "Cannot prepare worker file\n";
+binmode($fh);
+print($fh $contents) && close($fh) || die "Cannot write worker file\n";
+}
+
 1;
