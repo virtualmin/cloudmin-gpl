@@ -84,6 +84,17 @@ return [ grep { $_->{'enabled'} &&
 	@{$self->list_entries()} ];
 }
 
+# find_entry(self, key)
+# Looks up an entry for editing, including disabled entries.
+# key has the form id:architecture; no match returns undef.
+sub find_entry
+{
+my ($self, $key) = @_;
+my ($record) = grep { $_->{'catalogue_key'} eq ($key || '') }
+	@{$self->list_entries()};
+return $record;
+}
+
 # custom_catalogue(self)
 # Reads the separate custom catalogue without creating it during page views.
 sub custom_catalogue
