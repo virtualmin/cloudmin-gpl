@@ -393,6 +393,24 @@ return [sort { $b->{'created'} <=> $a->{'created'} }
 	@{$self->list($owner, 1)}, @{$self->list_recovery($owner)}];
 }
 
+# audit(self, action, job)
+# Logs identity and the stored, redacted outcome, never provisioning inputs.
+sub audit
+{
+my ($self, $action, $job) = @_;
+$self->{'log'}->($action, 'vm', $job->{'id'}, {
+	name => $job->{'request'}->{'name'}, state => $job->{'state'},
+		owner => $job->{'owner'},
+	uuid => $job->{'request'}->{'uuid'} || '',
+	($job->{'scope'} ? (scope => $job->{'scope'}) : ()),
+	(($job->{'request'}->{'operation'} || '') =~ /^snapshot_/ ? (
+		snapshot => $job->{'request'}->{'label'},
+		snapshot_id => $job->{'request'}->{'snapshot'}) : ()),
+	($job->{'error'} ? (error => $job->{'error'}) : ()),
+	($job->{'cleanup_pending'} ? (cleanup_pending => 1) : ()),
+});
+}
+
 # validate_id(id)
 # Keeps identifiers safe for SQLite lookups and Webmin lock filenames.
 sub validate_id
