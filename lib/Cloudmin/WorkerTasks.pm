@@ -265,4 +265,138 @@ return { %$info, bytes => $bytes, verified => $expected ? $algorithm : '',
 	checksum_digest => $digest || '' };
 }
 
+# run(request, emit)
+# Dispatches only the small set of data-processing tasks used by the controller.
+# emit(event) writes a protocol event; tasks return a result hash.
+sub run
+{
+my ($r, $emit) = @_;
+# Disk parsers and downloaded content must never execute as the
+# controller.
+die "Image processing must run without root privileges\n"
+	if ($< == 0 || $> == 0);
+my $task = $r->{'task'} || '';
+# Restore only the controller-selected transport settings, without init_config
+# or access to Webmin's private configuration directory.
+my %proxy;
+# Only HTTP tasks receive the selected outgoing proxy settings.
+if ($task eq 'image' || $task eq 'size') {
+	my $settings = $r->{'proxy'} || {};
+	die "Invalid download proxy settings\n" if (ref($settings) ne 'HASH');
+	foreach my $key (qw(http_proxy proxy_user proxy_pass proxy_fallback noproxy bind_proxy)) {
+		next if (!defined($settings->{$key}));
+		die "Invalid download proxy settings\n" if (ref($settings->{$key}));
+		$proxy{$key} = $settings->{$key};
+		}
+	}
+local %WebminCore::gconfig = %proxy;
+# Downloads and local copies share the same validation and output
+# protocol.
+return image($r, $emit) if ($task eq 'image' || $task eq 'local_image');
+if ($task eq 'convert') {
+	# Flatten or change format inside the sandbox before privileged byte copying.
+	# Relink only private copies of a controller-validated managed chain.
+	# Unsafe rebase changes header links without opening the old backing paths.
+	if ($r->{'layers'}) {
+		my $layers = $r->{'layers'};
+		die "Invalid conversion layers\n" if (ref($layers) ne 'ARRAY' || @$layers < 2 || @$layers > 32);
+		die "Conversion format differs from the first layer\n"
+			if (($layers->[0]->{'format'} || '') ne ($r->{'format'} || ''));
+		foreach my $i (reverse(0..$#$layers)) {
+			# Work from the base upward, accepting only controller-assigned names.
+			my $layer = $layers->[$i];
+			my $name = $i ? 'layer'.$i : 'image';
+			die "Invalid conversion layer\n" if (ref($layer) ne 'HASH' ||
+				($layer->{'name'} || '') ne $name || ($layer->{'format'} || '') !~ /\A(?:raw|qcow2)\z/);
+			disk_info($layer->{'format'}, $name, 1);
+			my $next = $layers->[$i+1];
+			die "Raw disks cannot have backing layers\n" if ($next && $layer->{'format'} ne 'qcow2');
+			command('/usr/bin/qemu-img', 'rebase', '-u', '-f', 'qcow2',
+				'-b', $next ? $next->{'name'} : '', $next ? ('-F', $next->{'format'}) : (), $name)
+				if ($layer->{'format'} eq 'qcow2');
+			}
+		}
+	# Explicit formats and private links prevent hidden host-file reads.
+	my $info = disk_info($r->{'format'}, 'image', $r->{'layers'} ? 1 : 0);
+	die "Invalid converted disk format\n" if (($r->{'output_format'} || '') !~ /\A(?:raw|qcow2)\z/);
+	die "Converted disk exceeds its storage budget\n"
+		if ($info->{'virtual-size'} > ($r->{'limit'} || 0));
+	command('/usr/bin/qemu-img', 'convert', '-f', $r->{'format'}, '-O',
+		$r->{'output_format'}, 'image', 'output');
+	if (defined($r->{'capacity'})) {
+		# Match rounded destination capacity by growing only the private output.
+		die "Invalid converted disk capacity\n" if ($r->{'capacity'} !~ /\A[1-9][0-9]*\z/ ||
+			$r->{'capacity'} < $info->{'virtual-size'} || $r->{'capacity'} > $r->{'limit'});
+		command('/usr/bin/qemu-img', 'resize', '-f', $r->{'output_format'}, 'output', $r->{'capacity'})
+			if ($r->{'capacity'} > $info->{'virtual-size'});
+		}
+	return disk_info($r->{'output_format'}, 'output');
+	}
+if ($task eq 'size') {
+	# Header probing needs no image body or disk parser.
+	return { bytes => Cloudmin::HTTP::probe($r->{'url'}) };
+	}
+# Transfer clients receive selected credentials inside the isolated worker.
+if ($task eq 'backup_transfer') {
+	require(dirname(__FILE__).'/BackupTransport.pm');
+	return Cloudmin::BackupTransport::remote($r);
+	}
+if ($task eq 'backup_host_key') {
+	# Contact untrusted SSH servers without controller privileges or credentials.
+	require(dirname(__FILE__).'/BackupSSH.pm');
+	return Cloudmin::BackupSSH::scan($r);
+	}
+if ($task eq 'backup_archive') {
+	# Archive parsing never runs with the controller's root privileges.
+	return convert_from_json(command('/usr/bin/python3',
+		dirname(__FILE__).'/../../backup-archive.py'));
+	}
+if ($task eq 'inspect') {
+	# Guest inspection is optional and follows the standalone-disk checks.
+	my $info = disk_info($r->{'format'});
+	# Format-only checks avoid the cost of booting a libguestfs
+	# appliance.
+	return $info if (!$r->{'guest'} && !$r->{'appliance'});
+	require(dirname(__FILE__).'/ImageInspector.pm');
+	return { %$info,
+		%{Cloudmin::ImageInspector::inspect('image', $r->{'format'},
+		$r->{'appliance'})} };
+	}
+if ($task eq 'clone_prepare') {
+	# Only private disk copies enter the writable, network-isolated appliance.
+	require(dirname(__FILE__).'/CloneGuest.pm');
+	if ($r->{'capture_image'}) {
+		# Capturing reusable images is supplied by the installed Pro extension.
+		require(dirname(__FILE__).'/../../pro/VMImageGuest.pm');
+		return Cloudmin::VMImageGuest::prepare($r);
+	}
+	return Cloudmin::CloneGuest::prepare($r);
+	}
+if ($task eq 'keys') {
+	# Let OpenSSH validate the complete key encoding after the form checks.
+	write_file('keys', $r->{'keys'});
+	command('/usr/bin/ssh-keygen', '-l', '-f', 'keys');
+	return {};
+	}
+if ($task eq 'keypair') {
+	# Keep the private key in the claimed output file, out of JSON and logs.
+	command('/usr/bin/ssh-keygen', '-q', '-t', 'rsa', '-b', '3072',
+		'-N', '', '-C', 'cloudmin-host', '-f', 'output');
+	my $public = command('/usr/bin/ssh-keygen', '-y', '-f', 'output');
+	return { public_key => $public };
+	}
+if ($task eq 'seed') {
+	# Build the NoCloud disk entirely inside the task's private directory.
+	require(dirname(__FILE__).'/VMs.pm');
+	my $data = Cloudmin::VMs::seed_data($r->{'request'}, $r->{'uuid'});
+	write_file($_, $data->{$_}) for keys %$data;
+	command('/usr/bin/xorriso', '-as', 'mkisofs', '-quiet', '-output',
+		'output',
+		'-volid', 'cidata', '-joliet', '-rock',
+		qw(user-data meta-data network-config));
+	return {};
+	}
+die "Unknown image worker task\n";
+}
+
 1;
