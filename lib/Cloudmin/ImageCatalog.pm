@@ -322,6 +322,15 @@ my ($image) = grep { $_->{'id'} eq $id }
 return $image;
 }
 
+# image_count(self)
+# Counts enabled operating-system IDs once, regardless of architecture count.
+sub image_count
+{
+my ($self) = @_;
+my %ids = map { $_->{'id'} => 1 } @{$self->list_images()};
+return scalar(keys %ids);
+}
+
 # normalize_architecture([architecture])
 # Converts common architecture aliases to libvirt and distribution names.
 # Omitted input becomes an empty filter; unknown names are lowercased and
