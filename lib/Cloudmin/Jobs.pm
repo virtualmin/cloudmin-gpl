@@ -221,6 +221,23 @@ return $self->write_data(sub {
 	});
 }
 
+# credential(self, id, owner, username)
+# Returns a matching unexpired draft, or undef before credentials are
+# initialized.
+sub credential
+{
+my ($self, $id, $owner, $username) = @_;
+validate_id($id);
+my $db = $self->connect(0) || return undef;
+my ($exists) = $db->selectrow_array("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'credentials'");
+my ($hash) = $exists ? $db->selectrow_array('SELECT hash FROM credentials
+		WHERE id = ? AND owner = ? AND username = ? AND expires >= ?',
+			undef,
+	$id, $owner, $username, time()) : ();
+$db->disconnect();
+return $hash;
+}
+
 # reserved_resources(job) returns the destination and related reservations.
 # Clones reserve the source UUID; restores reserve the preserved UUID and cached
 # inspection as well as the destination name. All come from validated requests.
