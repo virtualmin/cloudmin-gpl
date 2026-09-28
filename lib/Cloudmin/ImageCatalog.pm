@@ -179,6 +179,55 @@ $self->{'log'}->($action, 'catalogue', join(',', @$keys),
 return 1;
 }
 
+# save_entry(self, record, [new])
+# Adds or edits a custom image without modifying Cloudmin's supplied catalogue.
+# new defaults to false and then requires an existing custom entry.
+sub save_entry
+{
+my ($self, $record, $new) = @_;
+$record = { %$record };
+# Presentation-only fields must not become editable catalogue metadata.
+delete(@{$record}{qw(catalogue_key catalogue_origin enabled)});
+$record->{'architecture'} = normalize_architecture($record->{'architecture'});
+validate_record($record);
+my $key = $record->{'id'}.':'.$record->{'architecture'};
+return $self->change($new ? 'create' : 'modify', [ $key ], sub {
+	# edit(catalogue): recheck the selection while holding the write lock.
+	my ($catalogue) = @_;
+	my $existing = $self->find_entry($key);
+	# Creation, editing and bundled entries have distinct conflict rules.
+	die "Catalogue entry already exists\n" if ($new && $existing);
+	# Editing cannot recreate an entry removed since the form was
+	# loaded.
+	die "Catalogue entry no longer exists\n" if (!$new && !$existing);
+	# Bundled records can be disabled, but their supplied metadata
+	# is immutable.
+	die "Only custom entries can be edited\n"
+		if ($existing && $existing->{'catalogue_origin'} ne 'custom');
+	# Keep locally managed release IDs in their reserved namespace.
+	die "Invalid custom catalogue ID\n" if ($record->{'id'} !~ /\Acustom-/);
+
+	# Keep the same manifest format as the supplied catalogue.
+	my @asset_fields = qw(architecture format url checksum_url
+			     checksum_algorithm signature_url min_disk_bytes
+			     download_size_bytes firmware cloud_init
+			     guest_agent);
+	my %image = %$record;
+	my %asset = map { $_ => delete($image{$_}) }
+		grep { exists($image{$_}) } @asset_fields;
+	my ($saved) = grep { $_->{'id'} eq $record->{'id'} }
+	@{$catalogue->{'images'}};
+	# Updating one architecture retains the release's other downloadable
+	# assets.
+	my @assets = grep { normalize_architecture($_->{'architecture'}) ne $record->{'architecture'} }
+		@{$saved->{'assets'} || []};
+	$image{'assets'} = [ @assets, \%asset ];
+	$catalogue->{'images'} = [
+		grep({ $_->{'id'} ne $record->{'id'} }
+		@{$catalogue->{'images'}}), \%image ];
+	});
+}
+
 # normalize_architecture([architecture])
 # Converts common architecture aliases to libvirt and distribution names.
 # Omitted input becomes an empty filter; unknown names are lowercased and
