@@ -11,6 +11,39 @@ use WebminCore qw(read_file_contents write_file_contents convert_from_json
 require(dirname(__FILE__).'/Images.pm');
 require(Cwd::abs_path(dirname(__FILE__).'/ImageChoices.pm'));
 
+# new(class, path => file, [custom_path => file], [lock_file => callback],
+#     [unlock_file => callback], [log => callback])
+# Creates a lazy catalogue reader; lock/unlock/log callbacks are required for
+# edits.
+sub new
+{
+my ($class, %opts) = @_;
+# The bundled manifest is required even when no custom catalogue exists yet.
+die "Image catalogue path is required" if (!$opts{'path'});
+return bless({ %opts }, $class);
+}
+
+# load(self)
+# Loads, validates, and caches the catalogue manifest.
+sub load
+{
+my ($self) = @_;
+# Cache the immutable bundled manifest for this reader's lifetime.
+return $self->{'catalogue'} if ($self->{'catalogue'});
+
+my $json = read_file_contents($self->{'path'});
+# Distinguish unreadable files from malformed JSON in operator-facing errors.
+die "Cannot read image catalogue $self->{'path'}: $!" if (!defined($json));
+
+my $catalogue = eval { convert_from_json($json) };
+# Validate the full manifest before any entry can be listed or downloaded.
+die "Cannot parse image catalogue $self->{'path'}: ".error_message($@)
+	if (!$catalogue);
+validate_catalogue($catalogue);
+$self->{'catalogue'} = $catalogue;
+return $catalogue;
+}
+
 # validate_record(record)
 # Applies the same schema to custom entries and bundled image assets.
 sub validate_record
