@@ -44,6 +44,36 @@ $self->{'catalogue'} = $catalogue;
 return $catalogue;
 }
 
+# custom_catalogue(self)
+# Reads the separate custom catalogue without creating it during page views.
+sub custom_catalogue
+{
+my ($self) = @_;
+my $path = $self->{'custom_path'};
+# A fresh installation has an empty custom catalogue without needing a file.
+return { schema => 1, images => [], disabled => {} } if (!$path || !-e $path);
+my $json = read_file_contents($path);
+# Existing but unreadable settings must not be silently overwritten as empty.
+die "Cannot read custom image catalogue: $!\n" if (!defined($json));
+my $catalogue = convert_from_json($json);
+validate_catalogue($catalogue, 1);
+$catalogue->{'disabled'} ||= {};
+# Disabled entries are an architecture-keyed map, separate from image records.
+die "Invalid disabled image settings\n"
+	if (ref($catalogue->{'disabled'}) ne 'HASH');
+my %bundled = map { $_->{'id'} => 1 } @{$self->load()->{'images'}};
+foreach my $image (@{$catalogue->{'images'}}) {
+	# Reserve bundled IDs so local edits cannot replace publisher-controlled
+	# data.
+	die "Invalid custom catalogue ID\n" if ($image->{'id'} !~ /\Acustom-/);
+	# Custom releases must not shadow a bundled ID, even with
+	# another asset.
+	die "Custom image conflicts with Cloudmin catalogue\n"
+		if ($bundled{$image->{'id'}});
+	}
+return $catalogue;
+}
+
 # validate_record(record)
 # Applies the same schema to custom entries and bundled image assets.
 sub validate_record
