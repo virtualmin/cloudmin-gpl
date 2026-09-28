@@ -44,6 +44,34 @@ $self->{'catalogue'} = $catalogue;
 return $catalogue;
 }
 
+# list_entries(self)
+# Combines supplied and custom images, including disabled architectures.
+sub list_entries
+{
+my ($self) = @_;
+my $custom = $self->custom_catalogue();
+my @records;
+foreach my $source ([ $self->load(), 'bundled' ], [ $custom, 'custom' ]) {
+	# Flatten each release into architecture-specific rows with stable edit
+	# keys.
+	foreach my $image (@{$source->[0]->{'images'}}) {
+		foreach my $asset (@{$image->{'assets'}}) {
+			my $arch = normalize_architecture($asset->{'architecture'});
+			my $key = $image->{'id'}.':'.$arch;
+			my %record = (%$image, %$asset, architecture => $arch,
+				catalogue_key => $key,
+				catalogue_origin => $source->[1],
+				enabled => $custom->{'disabled'}->{$key} ? 0
+				: 1);
+			delete($record{'assets'});
+			push(@records, \%record);
+			}
+		}
+	}
+# Keep catalogue tables and all image selectors in the same release order.
+return Cloudmin::ImageChoices::sort_images(\@records);
+}
+
 # custom_catalogue(self)
 # Reads the separate custom catalogue without creating it during page views.
 sub custom_catalogue
