@@ -31,6 +31,14 @@ close($fh);
 return $stat && $stat =~ /\A\d+ \(.*\) [ZX] / ? 1 : 0;
 }
 
+# lock_pid(self, file) excludes zombies from Webmin's PID-existence check.
+sub lock_pid
+{
+my ($self, $file) = @_;
+my $pid = $self->{'test_lock'}->($file);
+return $pid && !zombie($pid) ? $pid : 0;
+}
+
 # connect(self, write)
 # Opens a short-lived SQLite connection; only writers initialize its schema.
 # Readers open the existing file read-write without creating it, because a
