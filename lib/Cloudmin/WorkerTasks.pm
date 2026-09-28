@@ -65,4 +65,31 @@ binmode($fh);
 print($fh $contents) && close($fh) || die "Cannot write worker file\n";
 }
 
+# disk_info(format, [path], [allow_backing])
+# Rejects encrypted disks and, by default, backing links before further use.
+# path defaults to the staged file named image; allow_backing defaults false.
+# allow_backing is used only while relinking private, managed conversion layers.
+sub disk_info
+{
+my ($format, $path, $allow_backing) = @_;
+$path ||= 'image';
+# An explicit format prevents automatic format probing of untrusted
+# input.
+die "Select QCOW2 or raw image format.\n"
+	if (($format || '') !~ /\A(?:qcow2|raw)\z/);
+my $output = command('/usr/bin/qemu-img', 'info', '--output=json', '-f',
+	$format, $path);
+my $info = convert_from_json($output);
+# Ordinary imports must be self-contained. Managed conversion alone may retain
+# backing links while replacing them; encryption and external data stay blocked.
+die "Images with backing files, external data files or encryption cannot be imported.\n"
+	if ((!$allow_backing && $info->{'backing-filename'}) || $info->{'encrypted'} ||
+	$output =~ /"(?:data-file|encrypt)"\s*:/);
+# Bound the virtual capacity separately from the smaller staged file
+# size.
+die "Invalid image size.\n"
+	if (!$info->{'virtual-size'} || $info->{'virtual-size'} > 16 * 1024**4);
+return { 'virtual-size' => 0 + $info->{'virtual-size'}, format => $format };
+}
+
 1;
