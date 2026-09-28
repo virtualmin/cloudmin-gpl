@@ -346,6 +346,30 @@ return $self->write_data(sub {
 	});
 }
 
+# list(self, [owner], [active_only])
+# Lists recent jobs, or all unfinished jobs for recovery after a restart.
+sub list
+{
+my ($self, $owner, $active) = @_;
+my $db = $self->connect(0) || return [];
+my @where;
+my @args;
+if (defined($owner)) {
+	# Restrict ordinary users to their own jobs before applying the row
+	# limit.
+	push(@where, 'owner = ?');
+	push(@args, $owner);
+	}
+# Recovery needs every unfinished job, including old ones outside history.
+push(@where, "state NOT IN ('complete', 'failed', 'cancelled')") if ($active);
+my $sql = 'SELECT record FROM jobs'.
+	(@where ? ' WHERE '.join(' AND ', @where) : '').
+	' ORDER BY created DESC'.($active ? '' : ' LIMIT 50');
+my $rows = $db->selectall_arrayref($sql, undef, @args);
+$db->disconnect();
+return [ map { convert_from_json($_->[0]) } @$rows ];
+}
+
 # validate_id(id)
 # Keeps identifiers safe for SQLite lookups and Webmin lock filenames.
 sub validate_id
