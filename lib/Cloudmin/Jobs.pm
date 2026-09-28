@@ -195,4 +195,17 @@ return $self->lock('jobs.sqlite', sub {
 	});
 }
 
+# reserved_resources(job) returns the destination and related reservations.
+# Clones reserve the source UUID; restores reserve the preserved UUID and cached
+# inspection as well as the destination name. All come from validated requests.
+sub reserved_resources
+{
+my ($job) = @_;
+return ($job->{'resource'},
+	($job->{'request'}->{'operation'} || '') eq 'restore'
+		? ('guest:'.lc($job->{'request'}->{'uuid'} || ''), 'backup-inspect:'.$job->{'request'}->{'inspection'}) : (),
+	($job->{'request'}->{'operation'} || '') eq 'clone'
+		? ('guest:'.lc($job->{'request'}->{'source_uuid'} || '')) : ());
+}
+
 1;
