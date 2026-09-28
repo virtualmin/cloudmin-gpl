@@ -309,6 +309,19 @@ my @matches = grep {
 return \@matches;
 }
 
+# find_image(self, id, [architecture])
+# Returns one compatible image record by stable catalogue ID.
+# Without architecture, returns the first enabled architecture for that ID.
+sub find_image
+{
+my ($self, $id, $architecture) = @_;
+# An empty selection is not a catalogue lookup failure.
+return undef if (!defined($id) || $id eq '');
+my ($image) = grep { $_->{'id'} eq $id }
+	@{$self->list_images($architecture)};
+return $image;
+}
+
 # normalize_architecture([architecture])
 # Converts common architecture aliases to libvirt and distribution names.
 # Omitted input becomes an empty filter; unknown names are lowercased and
