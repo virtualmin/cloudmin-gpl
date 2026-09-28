@@ -264,6 +264,43 @@ return ($job->{'resource'},
 		? ('guest:'.lc($job->{'request'}->{'source_uuid'} || '')) : ());
 }
 
+# assert_guest_available(self, uuid, [power_action])
+# Unfinished changes block power and further edits until recovery completes.
+# power_action defaults to ''; named stop/resume actions allow limited recovery.
+sub assert_guest_available
+{
+my ($self, $uuid, $power_action) = @_;
+$power_action ||= '';
+my $db = $self->connect(0) || return;
+my $rows = $db->selectall_arrayref(
+	"SELECT record FROM jobs WHERE resource = ? OR resource LIKE 'vm:%'",
+	undef, 'guest:'.lc($uuid));
+$db->disconnect();
+foreach my $row (@$rows) {
+	my $job = convert_from_json($row->[0]);
+	# Creation reservations use names; compare their recorded guest UUIDs too.
+	next if (lc($job->{'request'}->{'uuid'} || '') ne lc($uuid) &&
+		!(($job->{'request'}->{'operation'} || '') eq 'clone' &&
+		lc($job->{'request'}->{'source_uuid'} || '') eq lc($uuid)));
+	# Failed thaw or pending shutdown recovery may need the user to stop a guest.
+	# Active workers and unrelated unfinished operations still block it.
+	next if ($power_action =~ /\A(?:shutdown|force_off)\z/ && $job->{'state'} eq 'failed' &&
+		($job->{'request'}->{'operation'} || '') =~ /\A(?:snapshot_create|clone|capture_image|backup)\z/ &&
+		($job->{'resources'}->{'quiescing'} ||
+			($job->{'request'}->{'operation'} || '') =~ /\A(?:clone|capture_image|backup)\z/ &&
+			$job->{'resources'}->{'shutdown_requested'} && !$job->{'resources'}->{'shutdown_complete'}) &&
+		!$self->busy($job->{'id'}));
+	# A guest paused during hotplug may need resuming to acknowledge removal or
+	# ballooning. Stopping it also lets recovery finish the saved definition.
+	next if ($power_action =~ /\A(?:resume|shutdown|force_off)\z/ &&
+		$job->{'state'} eq 'failed' && $job->{'resources'}->{'live'} &&
+		!$self->busy($job->{'id'}));
+	die "Another operation on this virtual machine is unfinished; open Active Jobs for progress or recovery\n"
+		if ($job->{'cleanup_pending'} ||
+		$job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
+	}
+}
+
 # update(self, id, callback)
 # Applies a small atomic change while preserving concurrent cancellation
 # requests.
