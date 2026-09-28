@@ -238,6 +238,19 @@ $db->disconnect();
 return $hash;
 }
 
+# delete_credential(self, id, owner)
+# Removes a draft after its hash has been handed to a durable creation job.
+sub delete_credential
+{
+my ($self, $id, $owner) = @_;
+validate_id($id);
+return $self->write_data(sub {
+	$_[0]->do('DELETE FROM credentials WHERE id = ? AND owner = ?', undef,
+		$id, $owner);
+	return 1;
+	});
+}
+
 # reserved_resources(job) returns the destination and related reservations.
 # Clones reserve the source UUID; restores reserve the preserved UUID and cached
 # inspection as well as the destination name. All come from validated requests.
