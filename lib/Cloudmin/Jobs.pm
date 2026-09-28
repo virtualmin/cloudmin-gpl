@@ -319,6 +319,71 @@ return $self->write_data(sub {
 	});
 }
 
+# submit(self, id, owner, resource, request)
+# Reserves a resource and records a request once; retries return the original
+# job.
+sub submit
+{
+my ($self, $id, $owner, $resource, $request) = @_;
+validate_id($id);
+my $created;
+my $job = $self->write_data(sub {
+	my ($db) = @_;
+	my ($json) =
+		$db->selectrow_array('SELECT record FROM jobs WHERE id = ?',
+		undef, $id);
+	if ($json) {
+		# A repeated submission cannot change a queued request or its
+		# owner.
+		my $job = convert_from_json($json);
+		die "Job not found\n" if ($job->{'owner'} ne $owner);
+		return $job;
+		}
+	# Only new submissions need admission. Recovery must finish saved work even
+	# when permissions or license terms have changed since it was accepted.
+	$self->{'admit'}->() if ($self->{'admit'});
+	# Clones reserve their source and destination in the same transaction.
+	# Failed cleanup keeps both reservations until recovery releases them.
+	my %wanted = map { $_ => 1 } reserved_resources({ resource => $resource,
+		request => $request });
+	my $busy;
+	foreach my $row (@{$db->selectall_arrayref('SELECT record FROM jobs')}) {
+		my $other = convert_from_json($row->[0]);
+		next if (!$other->{'cleanup_pending'} &&
+			$other->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+		$busy = 1 if (grep { $wanted{$_} } reserved_resources($other));
+	}
+	# Reject overlapping destination names or source UUIDs across all users.
+	die "A job already uses this virtual machine\n"
+	if ($busy);
+	my $job = { id => $id, owner => $owner, resource => $resource,
+		state => 'queued', created => time(), updated => time(),
+		request => $request, events => [], resources => {} };
+	$db->do('INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?, ?)', undef,
+		$id, $owner, $resource, $job->{'state'}, $job->{'created'},
+		$job->{'updated'}, convert_to_json($job, 0, 1));
+	$created = 1;
+	return $job;
+	});
+# Retries return the existing job without adding another creation audit.
+if ($created) {
+	my $logged = eval {
+		$self->audit(($request->{'operation'} || '') eq 'clone' ? 'clone'
+			: $request->{'operation'} ? 'manage' : 'create', $job);
+		1;
+		};
+	if (!$logged) {
+		# The committed job can run during recovery even if logging fails.
+		# Return it normally so the caller can follow or cancel its work.
+		$job = $self->update($id, sub {
+			$_[0]->{'audit_warning'} =
+				'Could not write the submission audit log';
+			});
+		}
+	}
+return $job;
+}
+
 # reserved_resources(job) returns the destination and related reservations.
 # Clones reserve the source UUID; restores reserve the preserved UUID and cached
 # inspection as well as the destination name. All come from validated requests.
