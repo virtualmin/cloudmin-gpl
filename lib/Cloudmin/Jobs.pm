@@ -384,6 +384,15 @@ return [ grep { $_->{'cleanup_pending'} }
 	map { convert_from_json($_->[0]) } @$rows ];
 }
 
+# list_pending(self, [owner])
+# Includes retained failures even when they are older than recent job history.
+sub list_pending
+{
+my ($self, $owner) = @_;
+return [sort { $b->{'created'} <=> $a->{'created'} }
+	@{$self->list($owner, 1)}, @{$self->list_recovery($owner)}];
+}
+
 # validate_id(id)
 # Keeps identifiers safe for SQLite lookups and Webmin lock filenames.
 sub validate_id
