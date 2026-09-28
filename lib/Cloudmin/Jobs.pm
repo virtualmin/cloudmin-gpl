@@ -18,6 +18,19 @@ require DBI;
 require DBD::SQLite;
 }
 
+# zombie(pid) recognizes an exited Linux process that its parent has not reaped.
+# Missing or unreadable process data never authorizes breaking a live lock.
+sub zombie
+{
+my ($pid) = @_;
+# Only Linux exposes the process state used to distinguish zombies here.
+return 0 if ($^O ne 'linux' || !$pid || $pid !~ /\A[0-9]+\z/);
+open(my $fh, '<', "/proc/$pid/stat") || return 0;
+my $stat = <$fh>;
+close($fh);
+return $stat && $stat =~ /\A\d+ \(.*\) [ZX] / ? 1 : 0;
+}
+
 # connect(self, write)
 # Opens a short-lived SQLite connection; only writers initialize its schema.
 # Readers open the existing file read-write without creating it, because a
