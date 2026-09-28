@@ -39,6 +39,26 @@ my $pid = $self->{'test_lock'}->($file);
 return $pid && !zombie($pid) ? $pid : 0;
 }
 
+# clear_dead_lock(self, file) releases only a lock still owned by a zombie.
+# The file lock and inode check protect a replacement written by another worker.
+sub clear_dead_lock
+{
+my ($self, $file) = @_;
+my $path = "$file.lock";
+# Open the existing lock without following a replacement symlink.
+sysopen(my $fh, $path, O_RDWR | O_NOFOLLOW) || return;
+# Another inspector may be checking or replacing the same lock.
+return if (!flock($fh, LOCK_EX | LOCK_NB));
+my $pid = <$fh>;
+# A missing, malformed or live owner never authorizes removing the file.
+return if (!defined($pid) || $pid !~ /\A([0-9]+)\s*\z/ || !zombie($1));
+my @opened = stat($fh);
+my @current = lstat($path);
+# Leave a new owner's replacement in place even if the old owner has exited.
+return if (!@current || $opened[0] != $current[0] || $opened[1] != $current[1]);
+unlink($path) || die "Cannot release exited job worker lock: $!\n";
+}
+
 # connect(self, write)
 # Opens a short-lived SQLite connection; only writers initialize its schema.
 # Readers open the existing file read-write without creating it, because a
