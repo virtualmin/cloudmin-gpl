@@ -172,4 +172,27 @@ if ($write) {
 return $db;
 }
 
+# write_data(self, callback)
+# Serializes SQLite writers with Webmin; binary database contents never enter
+# diffs.
+# callback(database) runs in a transaction and supplies the scalar return value.
+sub write_data
+{
+my ($self, $callback) = @_;
+return $self->lock('jobs.sqlite', sub {
+	my $db = $self->connect(1);
+	$db->begin_work();
+	my $result;
+	my $ok = eval { $result = $callback->($db); $db->commit(); 1 };
+	my $error = $@;
+	# Discard partial updates while preserving the callback's
+	# failure message.
+	eval { $db->rollback() } if (!$ok);
+	$db->disconnect();
+	# The connection is closed before the enclosing Webmin lock is released.
+	die $error if (!$ok);
+	return $result;
+	});
+}
+
 1;
