@@ -72,6 +72,18 @@ foreach my $source ([ $self->load(), 'bundled' ], [ $custom, 'custom' ]) {
 return Cloudmin::ImageChoices::sort_images(\@records);
 }
 
+# list_images(self, [architecture])
+# Returns enabled entries, optionally limited to the host architecture.
+# An omitted or empty architecture includes all architectures.
+sub list_images
+{
+my ($self, $architecture) = @_;
+$architecture = normalize_architecture($architecture);
+return [ grep { $_->{'enabled'} &&
+	(!$architecture || $_->{'architecture'} eq $architecture) }
+	@{$self->list_entries()} ];
+}
+
 # custom_catalogue(self)
 # Reads the separate custom catalogue without creating it during page views.
 sub custom_catalogue
