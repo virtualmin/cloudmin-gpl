@@ -301,6 +301,25 @@ foreach my $row (@$rows) {
 	}
 }
 
+# get(self, id, [owner])
+# Returns a job, or undef if absent; optional ownership limits apply before
+# returning.
+sub get
+{
+my ($self, $id, $owner) = @_;
+validate_id($id);
+my $db = $self->connect(0) || return undef;
+my ($json) = $db->selectrow_array('SELECT record FROM jobs WHERE id = ?', undef,
+	$id);
+$db->disconnect();
+# An absent row is distinct from a job hidden by the optional owner filter.
+return undef if (!$json);
+my $job = convert_from_json($json);
+# Do not expose another user's job details through a guessed identifier.
+die "Job not found\n" if (defined($owner) && $job->{'owner'} ne $owner);
+return $job;
+}
+
 # update(self, id, callback)
 # Applies a small atomic change while preserving concurrent cancellation
 # requests.
