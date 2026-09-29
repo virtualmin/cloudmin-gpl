@@ -184,4 +184,97 @@ my @active = grep { $_->{'state'} !~ /\A(?:complete|failed|cancelled)\z/ }
 die "Wait for virtual machine operations to finish before changing networking\n" if (@active);
 }
 
+# prepare_network(self, input)
+# Builds a persistent NAT, routed or isolated network after subnet validation.
+sub prepare_network
+{
+my ($self, $in) = @_;
+my $name = name($in->{'name'});
+my $mode = $in->{'mode'} || '';
+die "Select NAT, routed or isolated networking\n" if ($mode !~ /\A(?:nat|route|isolated)\z/);
+# Validate gateways and subnet sizes before checking host route conflicts.
+my $v4 = cidr($in->{'ipv4'}, 4);
+die "Use an IPv4 prefix from 8 to 30\n" if ($v4->{'prefix'} < 8 || $v4->{'prefix'} > 30);
+my $hostbits = substr($v4->{'bits'}, $v4->{'prefix'});
+die "The gateway must be a host address, not the subnet or broadcast address\n"
+	if ($hostbits !~ /1/ || $hostbits !~ /0/);
+my @subnets = ($v4);
+push(@subnets, cidr($in->{'ipv6'}, 6)) if (length($in->{'ipv6'} || ''));
+die "Use an IPv6 /64 network\n" if (@subnets > 1 && $subnets[1]->{'prefix'} != 64);
+foreach my $subnet (@subnets) {
+	# Gateways must be ordinary unicast addresses, never loopback or multicast.
+	my $address = $subnet->{'address'};
+	die "Use a unicast gateway address\n" if ($subnet->{'family'} == 4
+		? $address =~ /\A(?:0|127|169\.254|22[4-9]|23\d|24\d|25[0-5])\./
+		: $address !~ /\A(?:[23][0-9a-f]{3}|f[cd][0-9a-f]{2}):/i);
+	}
+my $host = $self->{'host'}->inventory();
+# An explicit uplink must be live; isolated networks cannot forward through it.
+my $uplink = $in->{'uplink'} || '';
+die "Select an existing uplink interface\n" if ($uplink && !grep {
+	$_->{'name'} eq $uplink && $_->{'active'} && !$_->{'loopback'} } @{$host->{'interfaces'}});
+die "An isolated network cannot have an uplink\n" if ($mode eq 'isolated' && $uplink);
+# Reserve names and include inactive libvirt subnets in overlap detection.
+my @existing = @{$host->{'subnets'}};
+foreach my $net ($self->{'adapter'}->connect()->list_all_networks(0)) {
+	die "A network with this name already exists\n" if ($net->get_name() eq $name);
+	my $doc = Cloudmin::Libvirt::parse_xml_document($net->get_xml_description(0));
+	foreach my $ip ($doc->findnodes('/network/ip')) {
+		my $prefix = $ip->getAttribute('prefix') // '';
+		$prefix = $self->{'host'}->mask_prefix($ip->getAttribute('netmask'))
+			if ($prefix eq '' && $ip->getAttribute('netmask'));
+		$prefix = ($ip->getAttribute('family') || '') eq 'ipv6' ? 64 : 24 if ($prefix eq '');
+		push(@existing, $ip->getAttribute('address').'/'.$prefix);
+		}
+	}
+foreach my $new (@subnets) {
+	# Compare binary prefixes so IPv6 checks retain all address bits.
+	foreach my $old (@existing) {
+		my $parsed = eval { cidr($old) };
+		die "The proposed subnet overlaps $old; choose an unused subnet\n"
+			if ($parsed && overlap($new, $parsed));
+		}
+	}
+require XML::LibXML;
+my $doc = XML::LibXML::Document->new('1.0', 'UTF-8');
+my $root = $doc->createElement('network');
+$doc->setDocumentElement($root);
+$root->appendTextChild('name', $name);
+# Omitting forwarding creates a host-only isolated network.
+if ($mode ne 'isolated') {
+	my $forward = $root->addNewChild(undef, 'forward');
+	$forward->setAttribute('mode', $mode);
+	$forward->setAttribute('dev', $uplink) if ($uplink);
+	$forward->addNewChild(undef, 'nat')->setAttribute('ipv6', 'yes')
+		if ($mode eq 'nat' && @subnets > 1);
+	}
+# Libvirt assigns a virbr* name, covered by the installed host DHCP/DNS rules.
+foreach my $subnet (@subnets) {
+	my $ip = $root->addNewChild(undef, 'ip');
+	$ip->setAttribute('address', $subnet->{'address'});
+	$ip->setAttribute('prefix', $subnet->{'prefix'});
+	$ip->setAttribute('family', 'ipv6') if ($subnet->{'family'} == 6);
+	# DHCP ranges are IPv4-only and must exclude reserved subnet addresses.
+	if ($subnet->{'family'} == 4 && $in->{'dhcp'}) {
+		my @range;
+		foreach my $field (qw(dhcp_start dhcp_end)) {
+			my $item = cidr(($in->{$field} || '').'/32', 4);
+			my $suffix = substr($item->{'bits'}, $v4->{'prefix'});
+			die "DHCP addresses must be inside the subnet and exclude the gateway, subnet and broadcast addresses\n"
+				if (!overlap($v4, $item) || $item->{'address'} eq $v4->{'address'} ||
+				$suffix !~ /1/ || $suffix !~ /0/);
+			push(@range, $item);
+			}
+		die "The DHCP range must be ordered and must not contain the gateway\n"
+			if ($range[0]->{'bits'} gt $range[1]->{'bits'} ||
+			($range[0]->{'bits'} le $v4->{'bits'} && $range[1]->{'bits'} ge $v4->{'bits'}));
+		my $range = $ip->addNewChild(undef, 'dhcp')->addNewChild(undef, 'range');
+		$range->setAttribute('start', $range[0]->{'address'});
+		$range->setAttribute('end', $range[1]->{'address'});
+		}
+	}
+return { name => $name, xml => $doc->toString(), mode => $mode,
+	autostart => $in->{'autostart'} ? 1 : 0 };
+}
+
 1;
