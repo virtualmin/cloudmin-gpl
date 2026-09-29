@@ -220,4 +220,23 @@ foreach my $line (split(/\n/, $output)) {
 return [values %chains];
 }
 
+# hooked_rules(chains, hook)
+# Follows chain jumps from a kernel hook; detached chains cannot pass the check.
+# This checks rule presence, not ordering or arbitrary administrator policies.
+sub hooked_rules
+{
+my ($chains, $hook) = @_;
+my %index = map { $_->{'id'} => $_ } @$chains;
+my @pending = grep { ($_->{'hook'} || '') eq $hook } @$chains;
+my (%seen, @rules);
+while (my $chain = shift(@pending)) {
+	# Shared targets and cycles must not make traversal repeat indefinitely.
+	next if ($seen{$chain->{'id'}}++);
+	push(@rules, @{$chain->{'rules'}});
+	push(@pending, map { $index{$_->{'jump'}} || () }
+		grep { $_->{'jump'} } @{$chain->{'rules'}});
+}
+return \@rules;
+}
+
 1;
