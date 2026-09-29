@@ -251,4 +251,60 @@ else {
 	}
 }
 
+# activate_removal(self, plan, restoring)
+# Applies removal, or restores the saved bridge when restoring is true.
+sub activate_removal
+{
+my ($self, $p, $restoring) = @_;
+my ($name, $source) = @$p{qw(name source)};
+if ($p->{'mode'} eq 'nm') {
+	# Release the old profile before activating its replacement with the same MAC.
+	my $active = $self->command(['nmcli', '-t', '-f', 'UUID', 'connection', 'show', '--active'], 1);
+	my $down = $restoring ? $p->{'uuid'} : $p->{'bridge_uuid'};
+	# A retry may find that the previous attempt already deactivated this UUID.
+	$self->command(['nmcli', '--wait', '30', 'connection', 'down', 'uuid', $down])
+		if (grep { $_ eq $down } split(/\n/, $active));
+	$self->command(['nmcli', 'connection', 'reload']);
+	}
+elsif ($p->{'mode'} eq 'debian-linux') {
+	# ifdown reads the pre-change addressing, even though saved files already changed.
+	my $temporary = "$self->{directory}/ifdown.interfaces";
+	my $down = $restoring ? $source : $name;
+	write_file_contents($temporary, join('', map {
+		'iface '.$down.' '.$_->[1].' '.$_->[2]."\n".join('', map {
+			"\t$_->[0] $_->[1]\n" } grep { !$restoring || $_->[0] !~ /^bridge_/ } @{$_->[3]}) } @{$p->{'defs'}}));
+	# Recovery can be retried after addresses have already left this device.
+	eval { $self->command(['ifdown', '--force', '-i', $temporary, $down]); };
+	}
+if (!$restoring) {
+	# Native apply does not always remove obsolete virtual devices from the kernel.
+	my $links = $self->ip_json('link', 'show');
+	# Removal can be retried after the obsolete bridge has already disappeared.
+	$self->command(['ip', 'link', 'delete', $name, 'type', 'bridge'])
+		if (grep { $_->{'ifname'} eq $name } @$links);
+	}
+if ($p->{'mode'} eq 'nm') {
+	# The same port UUID activates Ethernet, or its restored bridge controller.
+	$self->command(['nmcli', '--wait', '30', 'connection', 'up', $p->{'uuid'}]);
+	}
+elsif ($p->{'mode'} eq 'netplan') {
+	# Regenerate and apply all saved Netplan definitions after the conversion.
+	my $error = net::apply_network();
+	# Propagate native apply failures to the journal's recovery path.
+	die "Cannot apply network configuration: $error\n" if ($error);
+	}
+else {
+	# bridge-utils leaves ports with IPv6 generation disabled after detaching.
+	# Use the bridge's mode so link-local addressing and SLAAC start on Ethernet.
+	if (!$restoring) {
+		# Reset the detached port; recovery uses the saved bridge definition.
+		$self->command(['ip', 'link', 'set', 'dev', $source, 'down']);
+		$self->command(['ip', 'link', 'set', 'dev', $source, 'addrgenmode',
+			$p->{'ipv6_address_mode'} || 'eui64']);
+		$self->command(['ip', 'link', 'set', 'dev', $source, 'up']);
+		}
+	$self->command(['ifup', '--force', $restoring ? $name : $source]);
+	}
+}
+
 1;
