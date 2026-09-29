@@ -104,6 +104,58 @@ my $snapshot = inspect();
 return [map { status($_, $snapshot) } @networks];
 }
 
+# restore(adapter, reconnect) asks the active libvirt daemon to rebuild rules.
+# The controller holds its host lock and checks permissions and running jobs.
+# reconnect() supplies a new adapter after restarting the old connection's daemon.
+sub restore
+{
+my ($adapter, $reconnect) = @_;
+# Never restart local services on behalf of a remote or session connection.
+die "Network rule recovery requires the local qemu:///system connection\n"
+	if ($adapter->uri() ne 'qemu:///system');
+my $before = report($adapter);
+my @failed = grep { !$_->{'ok'} } @$before;
+# A repeated request should leave an already healthy host alone.
+return if (!@failed);
+# Inspection or metadata failures alone do not justify changing host state.
+die join('; ', map { $_->{'detail'} } @failed)."\n"
+	if (!grep { $_->{'repairable'} } @failed);
+my $unit;
+# Prefer the dedicated network daemon when libvirt uses modular services.
+foreach my $candidate (qw(virtnetworkd.service libvirtd.service)) {
+	if (defined(service_command('is-active', $candidate))) {
+		$unit = $candidate;
+		last;
+	}
+}
+# Refuse recovery when neither supported daemon is running.
+die "Cannot find the active libvirt network service\n" if (!$unit);
+
+# Restart the daemon, never the networks or guests. Reload alone cannot rebuild
+# iptables chains erased by a global firewall flush on older libvirt versions.
+$adapter->disconnect();
+my $restart_error;
+# Preserve the service failure instead of reporting a later connection error.
+die(($restart_error || "Restarting $unit failed")."\n")
+	if (!defined(service_command('restart', $unit, \$restart_error)));
+# Existing NAT/routed networks declare the intent to forward guest traffic.
+my $forward = read_file_contents('/proc/sys/net/ipv4/ip_forward') || '';
+if ($forward !~ /\A1\s*\z/) {
+	open(my $fh, '>', '/proc/sys/net/ipv4/ip_forward') ||
+		die "Could not enable IPv4 forwarding: $!\n";
+	print $fh "1\n" or die "Could not enable IPv4 forwarding: $!\n";
+	close($fh) or die "Could not enable IPv4 forwarding: $!\n";
+}
+# Reconnect after the restart; the old adapter may hold a closed socket.
+my $after = report($reconnect->());
+# A changed inventory cannot verify recovery of all previously checked networks.
+die "Could not verify the restored network rules\n" if (@$after != @$before);
+@failed = grep { !$_->{'ok'} } @$after;
+# A successful service restart is insufficient if rules are still missing.
+die join('; ', map { $_->{'detail'} } @failed)."\n" if (@failed);
+return $unit;
+}
+
 # service_command(action, unit, [failure])
 # Runs fixed systemd requests with a timeout.
 # failure is an optional scalar reference receiving the failure reason.
