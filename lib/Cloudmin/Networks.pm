@@ -38,4 +38,14 @@ return { address => inet_ntop($af, $packed), prefix => $prefix,
 	cidr => inet_ntop($af, $packed).'/'.$prefix };
 }
 
+# overlap(first, second)
+# Compares validated subnets without losing IPv6 precision.
+sub overlap
+{
+my ($a, $b) = @_;
+return 0 if ($a->{'family'} != $b->{'family'});
+my $length = $a->{'prefix'} < $b->{'prefix'} ? $a->{'prefix'} : $b->{'prefix'};
+return substr($a->{'bits'}, 0, $length) eq substr($b->{'bits'}, 0, $length);
+}
+
 1;
