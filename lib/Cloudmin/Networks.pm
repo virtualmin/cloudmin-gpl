@@ -173,4 +173,15 @@ foreach my $network ($self->{'adapter'}->connect()->list_all_networks(0)) {
 return $plan;
 }
 
+# assert_idle(self)
+# A queued VM may already reference a network even before libvirt has its NIC.
+sub assert_idle
+{
+my ($self) = @_;
+die "Wait for the pending bridge change to finish\n" if ($self->{'host'}->pending());
+my @active = grep { $_->{'state'} !~ /\A(?:complete|failed|cancelled)\z/ }
+	@{$self->{'jobs'}->list(undef, 1)};
+die "Wait for virtual machine operations to finish before changing networking\n" if (@active);
+}
+
 1;
