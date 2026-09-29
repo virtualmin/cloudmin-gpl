@@ -144,4 +144,54 @@ foreach my $entry (@{$data->{'nftables'}}) {
 return [values %chains];
 }
 
+# iptables_chains(save_output)
+# Normalizes iptables-save, including the legacy backend absent from nft JSON.
+sub iptables_chains
+{
+my ($output) = @_;
+my (%chains, $table);
+foreach my $line (split(/\n/, $output)) {
+	# Chain names are local to the table named by the preceding header.
+	if ($line =~ /^\*(\w+)$/) {
+		$table = $1;
+		next;
+	}
+	# Libvirt's forwarding and source NAT rules use these two legacy tables.
+	next if (!$table || $table !~ /\A(?:nat|filter)\z/);
+	# Built-in chains have a policy; user-defined chains need a reachable
+	# jump.
+	if ($line =~ /^:(\S+) (\S+)/) {
+		my ($name, $policy) = ($1, $2);
+		my $id = "iptables:$table:$name";
+		$chains{$id} = { id => $id, rules => [],
+			hook => $policy ne '-' ? lc($name) : '' };
+		next;
+	}
+	# Counters, comments and commit markers do not describe packet rules.
+	next if ($line !~ /^-A /);
+	my @words = shellwords($line);
+	my $chain = $chains{"iptables:$table:$words[1]"} || next;
+	my %rule;
+	my %fields = ('-s' => 'saddr', '-d' => 'daddr', '-i' => 'iif', '-o' => 'oif');
+	for (my $i = 2; $i < @words; $i++) {
+		my $word = $words[$i];
+		# Negated subnets do not establish which network this rule serves.
+		if ($fields{$word}) {
+			$rule{$fields{$word}} = $words[$i+1] if ($words[$i-1] ne '!');
+			$i++;
+		}
+		elsif ($word eq '-j' || $word eq '-g') {
+			# Record verdicts and chain edges without interpreting
+			# other options.
+			my $target = $words[++$i];
+			$rule{'accept'} = 1 if ($target eq 'ACCEPT');
+			$rule{'nat'} = 1 if ($target =~ /\A(?:MASQUERADE|SNAT)\z/);
+			$rule{'jump'} = "iptables:$table:$target";
+		}
+	}
+	push(@{$chain->{'rules'}}, \%rule);
+}
+return [values %chains];
+}
+
 1;
