@@ -239,4 +239,27 @@ while (my $chain = shift(@pending)) {
 return \@rules;
 }
 
+# missing_rules(network, subnet, chains)
+# Returns the missing prerequisite, or undef when both directions and any
+# required source NAT rules are attached to the packet-processing hooks.
+sub missing_rules
+{
+my ($network, $subnet, $chains) = @_;
+my $bridge = $network->{'bridge'} || '';
+my $rules = hooked_rules($chains, 'forward');
+my $out = grep { $_->{'accept'} && ($_->{'iif'} || '') eq $bridge &&
+	($_->{'saddr'} || '') eq $subnet } @$rules;
+my $in = grep { $_->{'accept'} && ($_->{'oif'} || '') eq $bridge &&
+	($_->{'daddr'} || '') eq $subnet } @$rules;
+# Both directions must identify this bridge and its subnet.
+return 'IPv4 forwarding rules' if (!$bridge || !$out || !$in);
+# Routed networks do not require masquerading or source address translation.
+if ($network->{'forward'} eq 'nat') {
+	my $nat = hooked_rules($chains, 'postrouting');
+	return 'IPv4 NAT rules' if (!grep { $_->{'nat'} &&
+		($_->{'saddr'} || '') eq $subnet } @$nat);
+}
+return undef;
+}
+
 1;
