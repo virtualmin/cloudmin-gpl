@@ -90,6 +90,20 @@ return { name => $name, id => $network->{'id'}, ok => $detail ? 0 : 1,
 	repairable => $repairable ? 1 : 0 };
 }
 
+# report(adapter) checks active local networks using one firewall snapshot.
+sub report
+{
+my ($adapter) = @_;
+# Local firewall state says nothing about a remote libvirt host.
+return [] if ($adapter->uri() ne 'qemu:///system');
+my @networks = grep { $_->{'active'} && managed($_) }
+	@{$adapter->list_networks()};
+# Avoid running firewall tools when no active network needs them.
+return [] if (!@networks);
+my $snapshot = inspect();
+return [map { status($_, $snapshot) } @networks];
+}
+
 # service_command(action, unit, [failure])
 # Runs fixed systemd requests with a timeout.
 # failure is an optional scalar reference receiving the failure reason.
