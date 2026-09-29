@@ -45,4 +45,22 @@ if ($status && $failure) {
 return $status ? undef : $output // '';
 }
 
+# command(program, arguments)
+# Reads fixed firewall commands with a five-second deadline; no caller input
+# reaches the shell. Returns undef for missing tools, failed commands or output
+# over 4 MiB. Callers validate the returned format.
+sub command
+{
+my ($program, $arguments) = @_;
+my ($path) = grep { -x $_ } map { "$_/$program" }
+	qw(/usr/sbin /usr/bin /sbin /bin);
+# Run only when both the tool and its timeout wrapper are available.
+return undef if (!$path || !-x '/usr/bin/timeout');
+my ($output, $error);
+my $status = execute_command("/usr/bin/timeout -k 1 5 $path $arguments",
+	undef, \$output, \$error);
+return !$status && defined($output) && length($output) <= 4*1024*1024
+	? $output : undef;
+}
+
 1;
