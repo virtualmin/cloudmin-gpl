@@ -52,4 +52,59 @@ die "Network command failed: $out\n" if ($rv);
 return $out;
 }
 
+# ip_json(self, arguments...)
+# Reads structured kernel state where Webmin's interface API omits route tables or ports.
+sub ip_json
+{
+my ($self, @args) = @_;
+return convert_from_json($self->command(['ip', '-j', @args], 1, 1), 1);
+}
+
+# inventory(self)
+# Reports current addresses, bridge ports and the route used to reach this browser.
+sub inventory
+{
+my ($self) = @_;
+my $mode = $self->backend();
+my @boot = net::boot_interfaces();
+my $links = $self->ip_json('-details', 'address', 'show');
+my @routes = (@{$self->ip_json('-4', 'route', 'show', 'table', 'all')},
+	@{$self->ip_json('-6', 'route', 'show', 'table', 'all')});
+my %management = map { $_->{'dev'} => 1 } grep {
+	($_->{'dst'} || '') eq 'default' && $_->{'dev'} } @routes;
+# Include a more specific browser route even when it is not the default route.
+if (($self->{'client'} || '') =~ /\A[0-9a-fA-F:.]+\z/) {
+	my $route = eval { $self->ip_json('route', 'get', $self->{'client'}) };
+	$management{$_->{'dev'}} = 1 foreach grep { $_->{'dev'} } @{$route || []};
+	}
+my @interfaces;
+foreach my $link (@$links) {
+	# Match persistent settings to live links and omit temporary IPv6 addresses.
+	my $name = $link->{'ifname'};
+	my ($saved) = grep { ($_->{'fullname'} || '') eq $name } @boot;
+	my $kind = $link->{'linkinfo'}->{'info_kind'} || '';
+	my @addresses = map { $_->{'local'}.'/'.$_->{'prefixlen'} }
+		grep { ($_->{'scope'} || '') ne 'link' && !$_->{'temporary'} } @{$link->{'addr_info'} || []};
+	push(@interfaces, { name => $name, bridge => $kind eq 'bridge' ? 1 : 0,
+		kind => $kind, active => scalar(grep { $_ eq 'UP' } @{$link->{'flags'} || []}) ? 1 : 0,
+		loopback => $link->{'link_type'} eq 'loopback' ? 1 : 0,
+		mac => $link->{'address'}, mtu => $link->{'mtu'}, master => $link->{'master'} || '',
+		# Local children name their parent; link_index can refer to another namespace.
+		parent => $link->{'link'} || '',
+		addresses => \@addresses, persistent => $saved ? 1 : 0,
+		dynamic_ipv6 => [map { $_->{'local'} } grep {
+			($_->{'family'} || '') eq 'inet6' && ($_->{'scope'} || '') eq 'global' &&
+			$_->{'dynamic'} && !$_->{'temporary'} } @{$link->{'addr_info'} || []}],
+		ports => [map { $_->{'ifname'} } grep { ($_->{'master'} || '') eq $name } @$links],
+		management => $management{$name} ? 1 : 0,
+		candidate => $saved && !$kind && !$link->{'master'} &&
+			$link->{'link_type'} eq 'ether' && !-d "/sys/class/net/$name/wireless" ? 1 : 0 });
+	}
+my @subnets = map { $_->{'dst'} } grep { ($_->{'dst'} || '') =~ m{/} &&
+	($_->{'type'} || '') ne 'local' && $_->{'dst'} !~ m{^fe80:} } @routes;
+return { interfaces => \@interfaces, subnets => \@subnets,
+	management => [sort keys %management], backend => $mode,
+	supported => $mode =~ /\A(?:nm|netplan|debian-linux)\z/ ? 1 : 0 };
+}
+
 1;
