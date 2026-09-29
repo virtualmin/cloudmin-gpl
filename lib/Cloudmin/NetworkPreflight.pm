@@ -63,4 +63,25 @@ return !$status && defined($output) && length($output) <= 4*1024*1024
 	? $output : undef;
 }
 
+# subnet(network)
+# Converts libvirt's IPv4 address and prefix/netmask to a canonical subnet.
+sub subnet
+{
+my ($network) = @_;
+my $address = inet_pton(AF_INET, $network->{'address'} || '') || return;
+my $prefix = $network->{'prefix'};
+# Older network definitions store a netmask instead of a prefix length.
+if (!defined($prefix) || $prefix eq '') {
+	my $mask = inet_pton(AF_INET, $network->{'netmask'} || '') || return;
+	my $bits = unpack('B32', $mask);
+	# A non-contiguous netmask cannot describe one IPv4 subnet.
+	return if ($bits !~ /\A(1*)0*\z/);
+	$prefix = length($1);
+}
+# Bound the prefix before constructing the packed network mask.
+return if ($prefix !~ /\A\d+\z/ || $prefix > 32);
+my $mask = pack('B32', ('1' x $prefix).('0' x (32-$prefix)));
+return inet_ntop(AF_INET, $address & $mask).'/'.$prefix;
+}
+
 1;
