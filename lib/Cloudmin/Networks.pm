@@ -131,4 +131,20 @@ return { %$host, networks => [sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @ne
 	bridges => \@bridges };
 }
 
+# prepare_bridge(self, name, source)
+# Refuses to move an interface still named by a guest or libvirt forwarding rule.
+sub prepare_bridge
+{
+my ($self, $name, $source) = @_;
+die "This interface is used directly by a virtual machine\n"
+	if (grep { ($_->{'device'} || '') eq $source } @{$self->guest_links()});
+foreach my $network ($self->{'adapter'}->connect()->list_all_networks(0)) {
+	my $doc = Cloudmin::Libvirt::parse_xml_document($network->get_xml_description(0));
+	die "This interface is an explicit uplink for network ".$network->get_name()."; update that network first\n"
+		if (grep { $_->getValue() eq $source }
+			$doc->findnodes('/network/forward/@dev | /network/forward/interface/@dev'));
+	}
+return $self->{'host'}->prepare($name, $source);
+}
+
 1;
