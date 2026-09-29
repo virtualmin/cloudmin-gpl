@@ -84,4 +84,64 @@ my $mask = pack('B32', ('1' x $prefix).('0' x (32-$prefix)));
 return inet_ntop(AF_INET, $address & $mask).'/'.$prefix;
 }
 
+# nft_chains(document)
+# Normalizes the native nftables and iptables-nft forms emitted by libvirt.
+sub nft_chains
+{
+my ($data) = @_;
+my %chains;
+foreach my $entry (@{$data->{'nftables'}}) {
+	my $item = $entry->{'chain'} || $entry->{'rule'} || next;
+	# Match libvirt's IPv4 tables; other families are outside this check.
+	next if (($item->{'family'} || '') ne 'ip');
+	my $name = $item->{'chain'} || $item->{'name'};
+	my $id = "nft:$item->{'table'}:$name";
+	my $chain = $chains{$id} ||= { id => $id, rules => [] };
+	# Chain declarations attach the collected rules to a kernel hook.
+	if ($entry->{'chain'}) {
+		$chain->{'hook'} = $item->{'hook'} || '';
+		next;
+	}
+	my %rule;
+	foreach my $expr (@{$item->{'expr'} || []}) {
+		# Only equality matches establish the network or bridge scope.
+		my $match = $expr->{'match'};
+		if ($match && $match->{'op'} eq '==') {
+			my $left = $match->{'left'};
+			my $right = $match->{'right'};
+			# Normalize address prefixes for exact subnet comparisons.
+			if (ref($left) eq 'HASH' && $left->{'payload'} &&
+				($left->{'payload'}->{'protocol'} || '') eq 'ip') {
+				my $field = $left->{'payload'}->{'field'};
+				# nft may encode CIDRs as address/length objects.
+				$right = $right->{'prefix'}->{'addr'}.'/'.$right->{'prefix'}->{'len'}
+					if (ref($right) eq 'HASH' && $right->{'prefix'});
+				# Sets and other expressions do not establish
+				# one exact subnet.
+				$rule{$field} = $right if (!ref($right));
+			}
+			# Accept both interface-key spellings used by libvirt.
+			if (ref($left) eq 'HASH' && $left->{'meta'}) {
+				my $key = $left->{'meta'}->{'key'};
+				$key =~ s/name$//;
+				# Ignore metadata other than a literal input or
+				# output interface.
+				$rule{$key} = $right if ($key =~ /\A[io]if\z/ && !ref($right));
+			}
+		}
+		# nft represents argument-free verdicts as null, so test existence.
+		$rule{'accept'} = 1 if (exists($expr->{'accept'}));
+		# iptables-nft may expose NAT through an xt compatibility
+		# target.
+		$rule{'nat'} = 1 if (exists($expr->{'masquerade'}) || exists($expr->{'snat'}) ||
+			($expr->{'xt'} && ($expr->{'xt'}->{'name'} || '') =~ /\A(?:MASQUERADE|SNAT)\z/));
+		my $jump = $expr->{'jump'} || $expr->{'goto'};
+		# Track jumps so detached rules cannot count as active rules.
+		$rule{'jump'} = "nft:$item->{'table'}:$jump->{'target'}" if ($jump);
+	}
+	push(@{$chain->{'rules'}}, \%rule);
+}
+return [values %chains];
+}
+
 1;
