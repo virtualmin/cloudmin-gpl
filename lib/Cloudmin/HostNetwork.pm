@@ -143,4 +143,13 @@ write_file_contents("$self->{directory}/bridge.json", convert_to_json($record, 0
 umask($mask);
 }
 
+# pending(self)
+# Includes failed rollback, which must be resolved before further mutations.
+sub pending
+{
+my ($self) = @_;
+my $state = $self->read_state();
+return $state && $state->{'state'} =~ /\A(?:armed|applying|confirm|rollback_failed)\z/ ? $state : undef;
+}
+
 1;
