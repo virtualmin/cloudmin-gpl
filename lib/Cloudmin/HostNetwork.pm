@@ -38,4 +38,18 @@ no warnings 'once';
 return $net::net_mode;
 }
 
+# command(self, argv, [quiet], [safe])
+# Runs argv with a 60-second timeout and shell-quotes each argument.
+# quiet skips command logging; safe allows a read-only command in demo mode.
+sub command
+{
+my ($self, $argv, $quiet, $safe) = @_;
+my $out = '';
+my $cmd = join(' ', map { quotemeta($_) } ('timeout', '60', @$argv));
+my $rv = $quiet ? execute_command($cmd, undef, \$out, \$out, 0, $safe)
+	: execute_command_logged($cmd, undef, \$out, \$out);
+die "Network command failed: $out\n" if ($rv);
+return $out;
+}
+
 1;
