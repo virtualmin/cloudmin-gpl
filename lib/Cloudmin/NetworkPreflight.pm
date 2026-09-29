@@ -17,6 +17,32 @@ return ($network->{'type'} || 'network') eq 'network' &&
 	$network->{'address'};
 }
 
+# inspect() reads forwarding and firewall state once for all active networks.
+sub inspect
+{
+my $forward = read_file_contents('/proc/sys/net/ipv4/ip_forward') || '';
+# Inspect both backends: legacy iptables rules are not visible through nft.
+# A failed inspection must not be mistaken for an empty ruleset.
+my (@chains, $read);
+my $nft = command('nft', '-j list ruleset');
+if (defined($nft)) {
+	# A successful command alone does not establish that its JSON is usable.
+	my $data = eval { convert_from_json($nft) };
+	if (ref($data) eq 'HASH' && ref($data->{'nftables'}) eq 'ARRAY') {
+		push(@chains, @{nft_chains($data)});
+		$read = 1;
+	}
+}
+my $iptables = command('iptables-save', '');
+# Accept a readable legacy ruleset even when native nft inspection failed.
+if (defined($iptables) && $iptables =~ /^\*(?:filter|nat)$/m) {
+	push(@chains, @{iptables_chains($iptables)});
+	$read = 1;
+}
+return { forwarding => $forward =~ /\A1\s*\z/ ? 1 : 0,
+	readable => $read ? 1 : 0, chains => \@chains };
+}
+
 # service_command(action, unit, [failure])
 # Runs fixed systemd requests with a timeout.
 # failure is an optional scalar reference receiving the failure reason.
