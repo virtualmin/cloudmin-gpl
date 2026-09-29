@@ -277,4 +277,31 @@ return { name => $name, xml => $doc->toString(), mode => $mode,
 	autostart => $in->{'autostart'} ? 1 : 0 };
 }
 
+# create(self, input)
+# Defines and starts a validated network, removing only our definition on failure.
+sub create
+{
+my ($self, $in) = @_;
+return $self->{'jobs'}->lock('create-host', sub {
+	$self->assert_idle();
+	my $plan = $self->prepare_network($in);
+	my $net;
+	my $ok = eval {
+		Cloudmin::Libvirt::log_call('Sys::Virt::define_network', { name => $plan->{'name'}, mode => $plan->{'mode'} });
+		$net = $self->{'adapter'}->connect()->define_network($plan->{'xml'});
+		$net->set_autostart($plan->{'autostart'});
+		$net->create();
+		1;
+		};
+	my $error = $@;
+	# Undo a partially created network without touching existing definitions.
+	if (!$ok && $net) {
+		my $cleanup = eval { $net->destroy() if ($net->is_active()); $net->undefine(); 1 };
+		$error .= " Network cleanup failed: $@" if (!$cleanup);
+		}
+	die $error if (!$ok);
+	return $plan->{'name'};
+	});
+}
+
 1;
