@@ -48,4 +48,14 @@ my $length = $a->{'prefix'} < $b->{'prefix'} ? $a->{'prefix'} : $b->{'prefix'};
 return substr($a->{'bits'}, 0, $length) eq substr($b->{'bits'}, 0, $length);
 }
 
+# name(value)
+# Restricts names used by libvirt, interface backends and unit arguments.
+sub name
+{
+my ($value) = @_;
+die "Use a name starting with a letter, followed by letters, numbers, _ or - (15 characters maximum)\n"
+	if (!defined($value) || ref($value) || $value !~ /\A[a-zA-Z][a-zA-Z0-9_-]{0,14}\z/);
+return $value;
+}
+
 1;
