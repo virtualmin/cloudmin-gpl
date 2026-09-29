@@ -58,4 +58,28 @@ die "Use a name starting with a letter, followed by letters, numbers, _ or - (15
 return $value;
 }
 
+# guest_links(self)
+# Includes live and saved NICs, so pending hardware changes still protect a network.
+sub guest_links
+{
+my ($self) = @_;
+my @links;
+foreach my $domain ($self->{'adapter'}->connect()->list_all_domains(0)) {
+	my %seen;
+	my @flags = ($domain->is_persistent() ? (2) : (), $domain->is_active() ? (0) : ());
+	foreach my $flag (@flags) {
+		my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description($flag));
+		foreach my $nic ($doc->findnodes('/domain/devices/interface')) {
+			my $network = $nic->findvalue('source/@network');
+			my $bridge = $nic->findvalue('source/@bridge');
+			my $device = $nic->findvalue('source/@dev');
+			next if ((!$network && !$bridge && !$device) || $seen{"$network\0$bridge\0$device"}++);
+			push(@links, { uuid => $domain->get_uuid_string(), name => $domain->get_name(),
+				network => $network, bridge => $bridge, device => $device, active => $domain->is_active() ? 1 : 0 });
+			}
+		}
+	}
+return \@links;
+}
+
 1;
