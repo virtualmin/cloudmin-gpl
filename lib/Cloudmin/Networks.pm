@@ -82,4 +82,53 @@ foreach my $domain ($self->{'adapter'}->connect()->list_all_domains(0)) {
 return \@links;
 }
 
+# inventory(self)
+# Combines libvirt networks with persistent and live host bridge information.
+sub inventory
+{
+my ($self) = @_;
+my $host = $self->{'host'}->inventory();
+my $links = $self->guest_links();
+my (@networks, %owned);
+foreach my $net ($self->{'adapter'}->connect()->list_all_networks(0)) {
+	my $xml = $net->get_xml_description(0);
+	my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+	my $record = $self->{'adapter'}->get_network_record($net);
+	$record->{'revision'} = sha256_hex($xml);
+	$record->{'uplink'} = $doc->findvalue('/network/forward/@dev');
+	$record->{'addresses'} = [];
+	$record->{'ranges'} = [];
+	foreach my $ip ($doc->findnodes('/network/ip')) {
+		my $prefix = $ip->getAttribute('prefix') // '';
+		my $mask = $ip->getAttribute('netmask') // '';
+		# Show existing dotted netmasks in the same CIDR form as new networks.
+		$prefix = eval { $self->{'host'}->mask_prefix($mask) } // ''
+			if ($prefix eq '' && $mask);
+		push(@{$record->{'addresses'}}, $ip->getAttribute('address').
+			($prefix ne '' ? '/'.$prefix : $mask ? ' / '.$mask : ''));
+		push(@{$record->{'ranges'}}, map { $_->getAttribute('start').' - '.$_->getAttribute('end') }
+			$ip->findnodes('dhcp/range'));
+		}
+	$record->{'guests'} = [grep { $_->{'network'} eq $record->{'name'} ||
+		($record->{'bridge'} && $_->{'bridge'} eq $record->{'bridge'}) } @$links];
+	$owned{$record->{'bridge'}} = 1 if ($record->{'bridge'} &&
+		$record->{'forward'} =~ /\A(?:nat|route|isolated)\z/);
+	push(@networks, $record);
+	}
+my @bridges = grep { $_->{'bridge'} && !$owned{$_->{'name'}} } @{$host->{'interfaces'}};
+# Associate bridges with guests attached through a libvirt bridge network.
+foreach my $bridge (@bridges) {
+	my %networks = map { $_->{'name'} => 1 } grep {
+		($_->{'bridge'} || '') eq $bridge->{'name'} } @networks;
+	$bridge->{'guests'} = [grep { $_->{'bridge'} eq $bridge->{'name'} ||
+		$networks{$_->{'network'}} } @$links];
+	# Even an unused libvirt network can still depend on this host bridge.
+	$bridge->{'networks'} = [map { $_->{'name'} } grep {
+		($_->{'bridge'} || '') eq $bridge->{'name'} ||
+		($_->{'uplink'} || '') eq $bridge->{'name'} } @networks];
+	}
+return { %$host, networks => [sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @networks],
+	bridges => \@bridges };
+}
+
 1;
