@@ -121,4 +121,15 @@ return { interfaces => \@interfaces, subnets => \@subnets,
 	supported => $mode =~ /\A(?:nm|netplan|debian-linux)\z/ ? 1 : 0 };
 }
 
+# read_state(self)
+# Loads private journal data; callers must not return the backup fields to a browser.
+sub read_state
+{
+my ($self) = @_;
+my $path = "$self->{directory}/bridge.json";
+return undef if (!-f $path);
+# Keep byte strings intact: saved configuration need not be valid UTF-8.
+return convert_from_json(read_file_contents($path), 1);
+}
+
 1;
