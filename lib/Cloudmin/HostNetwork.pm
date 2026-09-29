@@ -60,6 +60,20 @@ my ($self, @args) = @_;
 return convert_from_json($self->command(['ip', '-j', @args], 1, 1), 1);
 }
 
+# mask_prefix(self, mask)
+# Validates and counts the leading bits in a contiguous IPv4 netmask.
+sub mask_prefix
+{
+my ($self, $mask) = @_;
+# Webmin's check_netmask checks IPv4 syntax but accepts noncontiguous masks.
+my @parts = split(/\./, $mask || '', -1);
+die "Invalid network mask\n" if (@parts != 4 || grep { !/\A\d{1,3}\z/ || $_ > 255 } @parts);
+my $bits = unpack('B*', pack('C4', @parts));
+die "Invalid network mask\n" if ($bits !~ /\A1*0*\z/);
+$bits =~ /\A(1*)/;
+return length($1);
+}
+
 # inventory(self)
 # Reports current addresses, bridge ports and the route used to reach this browser.
 sub inventory
