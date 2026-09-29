@@ -43,6 +43,38 @@ return { forwarding => $forward =~ /\A1\s*\z/ ? 1 : 0,
 	readable => $read ? 1 : 0, chains => \@chains };
 }
 
+# status(network, snapshot) returns a displayable result without changing rules.
+sub status
+{
+my ($network, $snapshot) = @_;
+my $name = $network->{'name'};
+my ($detail, $repairable);
+my $subnet = subnet($network);
+# Invalid network metadata cannot be repaired by restarting the daemon.
+if (!$subnet) {
+	$detail = "Cannot check the IPv4 subnet for network $name";
+}
+elsif (!$snapshot->{'forwarding'}) {
+	# Recovery can enable forwarding for managed networks.
+	$detail = 'IPv4 forwarding is disabled on the host';
+	$repairable = 1;
+}
+elsif (!$snapshot->{'readable'}) {
+	# Do not present an inspection failure as proof that rules are missing.
+	$detail = "Cannot read the host firewall rules to check network $name";
+}
+else {
+	# Check rule presence only; arbitrary firewall policies may still block
+	# traffic.
+	my $missing = missing_rules($network, $subnet, $snapshot->{'chains'});
+	$detail = "Network $name is missing $missing" if ($missing);
+	$repairable = $missing ? 1 : 0;
+}
+return { name => $name, id => $network->{'id'}, ok => $detail ? 0 : 1,
+	detail => $detail || "IPv4 forwarding rules are present for network $name",
+	repairable => $repairable ? 1 : 0 };
+}
+
 # service_command(action, unit, [failure])
 # Runs fixed systemd requests with a timeout.
 # failure is an optional scalar reference receiving the failure reason.
