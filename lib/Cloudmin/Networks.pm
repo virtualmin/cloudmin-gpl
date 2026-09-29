@@ -147,4 +147,30 @@ foreach my $network ($self->{'adapter'}->connect()->list_all_networks(0)) {
 return $self->{'host'}->prepare($name, $source);
 }
 
+# prepare_bridge_removal(self, name)
+# Includes saved VM and network references, not just currently attached ports.
+# name is the host bridge; returns the host controller's reviewed removal plan.
+sub prepare_bridge_removal
+{
+my ($self, $name) = @_;
+name($name);
+my $plan = $self->{'host'}->prepare_remove($name);
+my %devices = map { $_ => 1 } ($name, $plan->{'source'});
+# Stopped guests and direct Ethernet attachments also reserve these devices.
+die "Detach virtual machines from this bridge and its Ethernet port before removing it\n"
+	if (grep { $devices{$_->{'bridge'} || ''} || $devices{$_->{'device'} || ''} }
+		@{$self->guest_links()});
+foreach my $network ($self->{'adapter'}->connect()->list_all_networks(0)) {
+	# Check inactive XML as well as live XML for pending persistent changes.
+	foreach my $flag ($network->is_persistent() ? (0, 1) : (0)) {
+		my $doc = Cloudmin::Libvirt::parse_xml_document($network->get_xml_description($flag));
+		# A network can depend on the bridge as its device or as its uplink.
+		die "Network ".$network->get_name()." uses this bridge or its port; update that network first\n"
+			if (grep { $devices{$_->getValue()} } $doc->findnodes(
+				'/network/bridge/@name | /network/forward/@dev | /network/forward/interface/@dev'));
+		}
+	}
+return $plan;
+}
+
 1;
