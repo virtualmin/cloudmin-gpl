@@ -132,4 +132,15 @@ return undef if (!-f $path);
 return convert_from_json(read_file_contents($path), 1);
 }
 
+# write_state(self, record)
+# Atomically replaces the private transaction journal through Webmin's file API.
+sub write_state
+{
+my ($self, $record) = @_;
+make_dir($self->{'directory'}, 0700, 1);
+my $mask = umask(0077);
+write_file_contents("$self->{directory}/bridge.json", convert_to_json($record, 0, 0, 1));
+umask($mask);
+}
+
 1;
