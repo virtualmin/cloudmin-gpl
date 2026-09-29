@@ -544,6 +544,37 @@ $self->{'log'}->($action, 'vm', $job->{'id'}, {
 });
 }
 
+# spawn(self, id, callback)
+# Starts a detached worker; the callback rechecks the job under its resource
+# lock.
+# callback(id) runs in the child; the parent returns the child's PID.
+sub spawn
+{
+my ($self, $id, $callback) = @_;
+# A worker already holding this job's lock will finish or observe cancellation.
+return if ($self->busy($id));
+my $pid = fork();
+# Leave the durable job intact if the host cannot start a controller child.
+die "Cannot start virtual machine worker: $!\n" if (!defined($pid));
+# The request returns immediately; only the child detaches and runs work.
+return $pid if ($pid);
+# The job must outlive the HTTP request without retaining its output pipes.
+setsid();
+untie(*STDIN); untie(*STDOUT); untie(*STDERR);
+$SIG{'CHLD'} = 'DEFAULT';
+# A closed libvirt socket must raise an error, not silently kill the controller.
+$SIG{'PIPE'} = 'IGNORE';
+umask(0077);
+open(STDIN, '<', '/dev/null');
+open(STDOUT, '>', '/dev/null');
+open(STDERR, '>', '/dev/null');
+my $ok = eval { $callback->($id); 1 };
+# Webmin removes its per-process lock directory only from the request process.
+my $links = get_lock_links_dir();
+rmdir($links) if ($links);
+_exit($ok ? 0 : 1);
+}
+
 # validate_id(id)
 # Keeps identifiers safe for SQLite lookups and Webmin lock filenames.
 sub validate_id
