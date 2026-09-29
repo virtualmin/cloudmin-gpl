@@ -17,4 +17,32 @@ return ($network->{'type'} || 'network') eq 'network' &&
 	$network->{'address'};
 }
 
+# service_command(action, unit, [failure])
+# Runs fixed systemd requests with a timeout.
+# failure is an optional scalar reference receiving the failure reason.
+sub service_command
+{
+my ($action, $unit, $failure) = @_;
+my ($output, $error);
+# libvirtd can spend 30 seconds closing clients before it starts again. Leave
+# time for startup instead of ending the wait at the same shutdown deadline.
+my $timeout = $action eq 'restart' ? 60 : 5;
+my $status = execute_command("/usr/bin/timeout -k 2 $timeout /usr/bin/systemctl $action $unit",
+	undef, \$output, \$error);
+if ($status && $failure) {
+	# Killing systemctl only ends our wait; systemd can still finish the restart.
+	if (($status >> 8) == 124 || ($status >> 8) == 137 || $status == 9) {
+		$$failure = "Timed out waiting for $unit. The service may still be restarting; check Host Overview before retrying";
+	}
+	else {
+		# Keep command diagnostics short enough for an inline UI error.
+		$error = substr($error || '', 0, 1000);
+		$error =~ s/\s+/ /g;
+		$error =~ s/^\s+|\s+$//g;
+		$$failure = "Service command failed for $unit".($error ? ": $error" : '');
+	}
+}
+return $status ? undef : $output // '';
+}
+
 1;
