@@ -8,6 +8,21 @@ use Socket qw(AF_INET inet_pton inet_ntop);
 use Text::ParseWords qw(shellwords);
 use WebminCore qw(read_file_contents execute_command convert_from_json);
 
+# check(network)
+# Rejects missing IPv4 prerequisites on local NAT/routed networks. Bridges,
+# isolated networks and IPv6-only networks are outside this check.
+sub check
+{
+my ($network) = @_;
+# Leave networks without libvirt-managed IPv4 forwarding to their own checks.
+return if (!managed($network));
+my $status = status($network, inspect());
+# Offer recovery only when inspection identified a missing prerequisite.
+die $status->{'detail'}.($status->{'repairable'}
+	? '. Open Host Overview and use Restore Network Rules' : '')."\n"
+	if (!$status->{'ok'});
+}
+
 # managed(network) identifies libvirt networks whose IPv4 rules we can inspect.
 sub managed
 {
