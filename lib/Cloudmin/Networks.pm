@@ -304,4 +304,70 @@ return $self->{'jobs'}->lock('create-host', sub {
 	});
 }
 
+# change(self, action, uuid, revision, [enabled])
+# Refuses stale forms and protects both running and stopped attached VMs.
+sub change
+{
+my ($self, $action, $uuid, $revision, $enabled) = @_;
+die "Unknown network action\n" if ($action !~ /\A(?:start|stop|delete|autostart)\z/);
+die "Invalid network ID\n" if (!defined($uuid) || $uuid !~ /\A[0-9a-f-]{36}\z/i);
+return $self->{'jobs'}->lock('create-host', sub {
+	$self->assert_idle();
+	my ($net) = grep { $_->get_uuid_string() eq $uuid }
+		$self->{'adapter'}->connect()->list_all_networks(0);
+	die "Network no longer exists\n" if (!$net);
+	my $xml = $net->get_xml_description(0);
+	die "Network settings changed; reload the page\n" if (($revision || '') ne sha256_hex($xml));
+	my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+	my $bridge = $doc->findvalue('/network/bridge/@name');
+	# Destructive actions must preserve guest attachments and host access.
+	if ($action eq 'stop' || $action eq 'delete') {
+		my @guests = grep { $_->{'network'} eq $net->get_name() ||
+			($bridge && $_->{'bridge'} eq $bridge) } @{$self->guest_links()};
+		die "Detach this network from all virtual machines before stopping or deleting it\n" if (@guests);
+		my $host = $self->{'host'}->inventory();
+		die "This network carries the host's management connection\n"
+			if ($bridge && grep { $_ eq $bridge } @{$host->{'management'}});
+		}
+	# Recheck host routes before activating the saved network.
+	if ($action eq 'start') {
+		die "Network is already active\n" if ($net->is_active());
+		# Starting a saved network must not replace a route used by the host.
+		my $host = $self->{'host'}->inventory();
+		foreach my $ip ($doc->findnodes('/network/ip')) {
+			my $prefix = $ip->getAttribute('prefix');
+			$prefix = $self->{'host'}->mask_prefix($ip->getAttribute('netmask'))
+				if ($prefix eq '' && $ip->getAttribute('netmask'));
+			$prefix = $ip->getAttribute('family') eq 'ipv6' ? 64 : 24 if ($prefix eq '');
+			my $subnet = cidr($ip->getAttribute('address').'/'.$prefix);
+			foreach my $route (@{$host->{'subnets'}}) {
+				my $existing = eval { cidr($route) };
+				die "This network overlaps host route $route\n" if ($existing && overlap($subnet, $existing));
+				}
+			}
+		Cloudmin::Libvirt::log_call('Sys::Virt::Network::create', { uuid => $uuid });
+		$net->create();
+		}
+	# Deactivate the network; only persistent definitions survive this call.
+	elsif ($action eq 'stop') {
+		Cloudmin::Libvirt::log_call('Sys::Virt::Network::destroy', { uuid => $uuid });
+		$net->destroy() if ($net->is_active());
+		}
+	# Require an inactive network before removing its persistent definition.
+	elsif ($action eq 'delete') {
+		die "Stop the network before deleting it\n" if ($net->is_active());
+		Cloudmin::Libvirt::log_call('Sys::Virt::Network::undefine', { uuid => $uuid });
+		$net->undefine();
+		}
+	# Boot policy changes need a persistent definition and an explicit boolean.
+	else {
+		die "Only persistent networks can start at boot\n" if (!$net->is_persistent());
+		die "Invalid start-at-boot value\n" if (!defined($enabled) || $enabled !~ /\A[01]\z/);
+		Cloudmin::Libvirt::log_call('Sys::Virt::Network::set_autostart', { uuid => $uuid, enabled => $enabled });
+		$net->set_autostart($enabled);
+		}
+	return $net->get_name();
+	});
+}
+
 1;
