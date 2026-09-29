@@ -152,4 +152,103 @@ $p->{'revision'} = sha256_hex(convert_to_json($p, 0, 0, 1));
 return $p;
 }
 
+# save_removal(self, plan)
+# Writes a prepare_remove plan without applying it to the live network.
+sub save_removal
+{
+my ($self, $p) = @_;
+$self->backend();
+my ($name, $source) = @$p{qw(name source)};
+if ($p->{'mode'} eq 'nm') {
+	# Write keyfiles without dropping the live connection before apply starts.
+	my @sections = grep { $_->{'sect'} !~ /\A(?:ipv4|ipv6|proxy|bridge-port)\z/ } @{$p->{'port'}->{'cfg'}};
+	push(@sections, grep { $_->{'sect'} =~ /\A(?:ipv4|ipv6|proxy)\z/ } @{$p->{'saved'}->{'cfg'}});
+	# Profiles without physical settings still need the preserved MAC and MTU.
+	push(@sections, {sect => 'ethernet', members => []})
+		if (!grep { $_->{'sect'} =~ /\A(?:ethernet|802-3-ethernet)\z/ } @sections);
+	my $contents = '';
+	foreach my $section (@sections) {
+		my @members = @{$section->{'members'}};
+		if ($section->{'sect'} eq 'connection') {
+			# Turn the existing port profile into a standalone connection.
+			@members = grep { $_->{'name'} !~ /\A(?:master|controller|slave-type|port-type)\z/ } @members;
+			}
+		if ($section->{'sect'} eq 'ipv4' && defined($p->{'dhcp4_client_id'})) {
+			# Keep the client identity that the DHCP server recognizes.
+			@members = grep { $_->{'name'} ne 'dhcp-client-id' } @members;
+			push(@members, {name => 'dhcp-client-id', value => $p->{'dhcp4_client_id'}});
+			}
+		if ($section->{'sect'} =~ /\A(?:ethernet|802-3-ethernet)\z/) {
+			# Keep the bridge's link identity without changing IPv6's own MTU.
+			@members = grep { $_->{'name'} !~ /\A(?:cloned-mac-address|mtu)\z/ } @members;
+			push(@members, {name => 'cloned-mac-address', value => $p->{'mac'}},
+				{name => 'mtu', value => $p->{'mtu'}});
+			}
+		$contents .= "[$section->{sect}]\n".join('', map { "$_->{name}=$_->{value}\n" } @members)."\n";
+		}
+	# Replace saved profiles only; activation happens under the recovery guard.
+	write_file_contents($p->{'port'}->{'file'}, $contents);
+	chmod(0600, $p->{'port'}->{'file'}) || die "Cannot set Ethernet profile permissions: $!\n";
+	unlink_file($p->{'saved'}->{'file'});
+	}
+elsif ($p->{'mode'} eq 'netplan') {
+	# Keep hardware matching on Ethernet while replacing its IP configuration.
+	my %physical = map { $_ => 1 } qw(match set-name renderer optional critical);
+	my %port = (%{$p->{'saved'}}, %{$p->{'port'}});
+	foreach my $key (qw(dhcp auto6 address netmask gateway gateway6 address6 netmask6 nameserver search routes)) {
+		$port{$key} = $p->{'saved'}->{$key};
+		}
+	$port{'ether'} = $p->{'mac'};
+	$port{'up'} = $p->{'saved'}->{'up'};
+	# Keep hardware matching on the port and move only applicable bridge fields.
+	delete(@port{qw(bridge bridgeto bridgestp bridgefd)});
+	$port{'yaml'} = {%{$p->{'port'}->{'yaml'}}, members => [
+		grep({ $physical{$_->{'name'}} } @{$p->{'port'}->{'yaml'}->{'members'}}),
+		grep({ !$physical{$_->{'name'}} && $_->{'name'} ne 'interfaces' && $_->{'name'} ne 'parameters' }
+			@{$p->{'saved'}->{'yaml'}->{'members'}}) ]};
+	net::save_interface(\%port);
+	# Reload line numbers because both devices may share the same YAML file.
+	my ($bridge) = grep { $_->{'fullname'} eq $name } net::boot_interfaces();
+	net::delete_interface($bridge);
+	# A static or externally created bridge may not have a Cloudmin override.
+	unlink_file($p->{'old_dhcp4_dropin'}) if (-e $p->{'old_dhcp4_dropin'});
+	# An empty Cloudmin override directory must not reserve the old bridge name.
+	rmdir(dirname($p->{'old_dhcp4_dropin'}));
+	if ($p->{'dhcp4_dropin'}) {
+		# Request the captured lease with the same identity on Ethernet.
+		make_dir($p->{'dhcp4_directory'}, 0755, 1);
+		write_file_contents($p->{'dhcp4_dropin'}, $p->{'dhcp4_identity'});
+		chmod(0644, $p->{'dhcp4_dropin'}) || die "Cannot set DHCP configuration permissions: $!\n";
+		}
+	my $error = net::validate_netplan_config();
+	# Fail before activation so the journal can restore the saved configuration.
+	die "Invalid Ethernet configuration: $error\n" if ($error);
+	}
+else {
+	# Move the bridge's addresses to port stanzas and remove bridge options.
+	foreach my $def (@{$p->{'defs'}}) {
+		my @options = grep { $_->[0] !~ /^bridge_/ && $_->[0] ne 'hwaddress' } @{$def->[3]};
+		# Set the MAC once for both address families.
+		push(@options, ['hwaddress', 'ether '.$p->{'mac'}]) if ($def->[1] eq 'inet');
+		my ($port) = grep { $_->[1] eq $def->[1] } @{$p->{'port_defs'}};
+		# Reuse the destination stanza when that address family already exists.
+		if ($port) { net::modify_interface_def($source, $def->[1], $def->[2], \@options, 0, $port->[4]); }
+		# Otherwise add the missing family in the port's existing file.
+		else { net::new_interface_def($source, $def->[1], $def->[2], \@options, $p->{'port'}->{'file'}); }
+		net::modify_interface_def($name, $def->[1], '', [], 1, $def->[4]);
+		}
+	# Replace only this name on startup lines, preserving unrelated interfaces.
+	foreach my $file (sort keys %{$p->{'files'}}) {
+		my $contents = read_file_contents($file);
+		$contents =~ s{^(\s*(?:auto|allow-[\w-]+)[ \t]+)([^\n#]+)}{
+			my ($prefix, $names) = ($1, $2);
+			$names =~ s/(?<!\S)\Q$name\E(?!\S)/$source/g;
+			$prefix.$names;
+		}meg;
+		write_file_contents($file, $contents);
+		unflush_file_lines($file);
+		}
+	}
+}
+
 1;
