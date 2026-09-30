@@ -234,4 +234,22 @@ my $duid = join(':', map { sprintf('%02x', $_) } @$id[7..$#$id]);
 return "[DHCPv4]\nClientIdentifier=duid\nIAID=$iaid\nDUIDType=$type\nDUIDRawData=$duid\n".$request;
 }
 
+# nm_dhcp4_identity(self, source)
+# Reads the active lease's client ID, including generated and global defaults.
+sub nm_dhcp4_identity
+{
+my ($self, $source) = @_;
+my $options = $self->command(['nmcli', '--terse', '--mode', 'multiline',
+	'--escape', 'no', '--fields', 'DHCP4.OPTION', 'device', 'show', $source], 1, 1);
+# Without a lease, an absent ID could mean DHCP has not completed yet.
+die "Cannot read the current DHCPv4 lease for $source; configure its bridge in Webmin Network Configuration\n"
+	if ($options !~ /^DHCP4\.OPTION\[\d+\]:ip_address = \d+\.\d+\.\d+\.\d+\s*$/m);
+my @ids = $options =~ /^DHCP4\.OPTION\[\d+\]:dhcp_client_identifier = ([^\r\n]*)/mg;
+# NetworkManager omits the option when the client sends no identifier.
+return 'none' if (!@ids);
+die "Cannot preserve the DHCPv4 client ID for $source; configure its bridge in Webmin Network Configuration\n"
+	if (@ids != 1 || $ids[0] !~ /\A[0-9a-f]{2}(?::[0-9a-f]{2}){1,254}\z/i);
+return lc($ids[0]);
+}
+
 1;
