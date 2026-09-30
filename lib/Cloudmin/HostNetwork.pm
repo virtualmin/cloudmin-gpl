@@ -578,4 +578,61 @@ else {
 	}
 }
 
+# activate(self, plan, rollback)
+# Reconnects only the selected Ethernet/bridge pair except Netplan's native apply.
+sub activate
+{
+my ($self, $p, $rollback) = @_;
+# Removal reconnects the Ethernet port; recovery recreates the saved bridge.
+return $self->activate_removal($p, $rollback) if (($p->{'operation'} || '') eq 'remove');
+my ($name, $source) = @$p{qw(name source)};
+if ($p->{'mode'} eq 'nm') {
+	# Reload saved profiles and activate the existing Ethernet connection.
+	if ($rollback) {
+		# Delete only the bridge profile created by this transaction.
+		my $uuids = $self->command(['nmcli', '-t', '-f', 'UUID', 'connection', 'show'], 1);
+		$self->command(['nmcli', 'connection', 'delete', 'uuid', $p->{'bridge_uuid'}])
+			if (grep { $_ eq $p->{'bridge_uuid'} } split(/\n/, $uuids));
+		}
+	$self->command(['nmcli', 'connection', 'reload']);
+	# Activating the port also activates its controller. Activating the bridge
+	# again afterwards would detach and reconnect the port a second time.
+	$self->command(['nmcli', '--wait', '30', 'connection', 'up', $p->{'uuid'}]);
+	}
+elsif ($p->{'mode'} eq 'netplan') {
+	# Netplan applies the regenerated configuration through its selected renderer.
+	my $error = net::apply_network();
+	die "Cannot apply bridge configuration: $error\n" if ($error);
+	}
+else {
+	# ifdown must use the original definition to release DHCP and old routes.
+	my $temporary = "$self->{directory}/ifdown.interfaces";
+	my $defs = $rollback ? [map { [ $name, $_->[1], $_->[2], $_->[3] ] } @{$p->{'defs'}}] : $p->{'defs'};
+	my $text = join('', map { 'iface '.$_->[0].' '.$_->[1].' '.$_->[2]."\n".
+		join('', map { "\t$_->[0] $_->[1]\n" } @{$_->[3]}) } @$defs);
+	write_file_contents($temporary, $text);
+	eval { $self->command(['ifdown', '--force', '-i', $temporary, $rollback ? $name : $source]); };
+	if ($rollback) {
+		# Release the Ethernet port before restoring DHCP and routes on it.
+		my $links = $self->ip_json('link', 'show');
+		$self->command(['ip', 'link', 'delete', $name, 'type', 'bridge'])
+			if (grep { $_->{'ifname'} eq $name } @$links);
+		# A retried restore may already have some addresses on the port.
+		eval { $self->command(['ifdown', '--force', $source]); };
+		# bridge-utils disables IPv6 generation on ports. Restore the captured
+		# mode (the kernel default for older journals) before restarting the link.
+		$self->command(['ip', 'link', 'set', 'dev', $source, 'down']);
+		$self->command(['ip', 'link', 'set', 'dev', $source, 'addrgenmode',
+			$p->{'ipv6_address_mode'} || 'eui64']);
+		$self->command(['ip', 'link', 'set', 'dev', $source, 'up']);
+		}
+	$self->command(['ifup', '--force', $rollback ? $source : $name]);
+	}
+if ($rollback) {
+	# Removing a bridge releases its port; the restored backend owns the NIC again.
+	my $links = $self->ip_json('link', 'show');
+	$self->command(['ip', 'link', 'delete', $name, 'type', 'bridge']) if (grep { $_->{'ifname'} eq $name } @$links);
+	}
+}
+
 1;
