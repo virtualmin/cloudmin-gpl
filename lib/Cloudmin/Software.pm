@@ -59,4 +59,15 @@ foreach my $field (qw(before_script after_script)) {
 return \%values;
 }
 
+# enabled(settings) checks for packages, scripts or a Virtualmin installation.
+sub enabled
+{
+my ($settings) = @_;
+return (($settings->{'software'} || 'none') ne 'none' ||
+	length($settings->{'packages'} || '') || grep {
+		($settings->{$_.'_mode'} || '') ne 'none' &&
+		(length($settings->{$_} || '') || length($settings->{$_.'_path'} || ''))
+	} qw(before_script after_script)) ? 1 : 0;
+}
+
 1;
