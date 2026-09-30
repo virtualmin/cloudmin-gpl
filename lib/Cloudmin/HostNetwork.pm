@@ -635,6 +635,33 @@ if ($rollback) {
 	}
 }
 
+# apply(self)
+# The systemd worker holds the transaction lock while saving and applying settings.
+sub apply
+{
+my ($self) = @_;
+return $self->{'jobs'}->lock('host-network', sub {
+	my $p = $self->pending() || return;
+	# A timer or another worker may already have advanced this transaction.
+	return if ($p->{'state'} ne 'armed');
+	# Do not begin a connection change after its recovery deadline has passed.
+	die "Bridge review expired before it could be applied\n" if (time() >= $p->{'deadline'});
+	$p->{'state'} = 'applying';
+	# Journal before writing so boot and timeout recovery can undo partial work.
+	$self->write_state($p);
+	# Use the writer for the operation recorded in the recovery journal.
+	if (($p->{'operation'} || '') eq 'remove') { $self->save_removal($p); }
+	# Creation moves the source settings onto a new bridge instead.
+	else { $self->save_bridge($p); }
+	# Offer confirmation only after the destination has the preserved addresses.
+	$self->activate($p, 0);
+	$self->wait_for_connection($p);
+	$p->{'state'} = 'confirm';
+	$self->write_state($p);
+	return $p->{'name'};
+	});
+}
+
 # wait_for_connection(self, plan, [restoring])
 # Allows address acquisition to finish after the backend reports activation.
 # restoring defaults to false; true checks the pre-change topology instead.
