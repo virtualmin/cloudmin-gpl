@@ -75,6 +75,40 @@ return (($settings->{'software'} || 'none') ne 'none' ||
 	} qw(before_script after_script)) ? 1 : 0;
 }
 
+# settings(input) validates supplied options without adding template defaults.
+sub settings
+{
+my ($input) = @_;
+my %patterns = (software => qr/(?:none|virtualmin-gpl|virtualmin-pro)/,
+	virtualmin_bundle => qr/(?:LAMP|LEMP)/, virtualmin_type => qr/(?:full|mini)/,
+	virtualmin_postgres => qr/[01]/, virtualmin_ssl => qr/[01]/,
+	webmin_register => qr/[01]/);
+my %values;
+# Validate only supplied installer choices; defaults are applied at creation.
+foreach my $field (keys %patterns) {
+	next if (!exists($input->{$field}) || defined($input->{$field}) && $input->{$field} eq '');
+	die "Invalid software installation option\n" if (!defined($input->{$field}) ||
+		ref($input->{$field}) || $input->{$field} !~ /\A$patterns{$field}\z/);
+	$values{$field} = $input->{$field};
+}
+# Packages are names, not command options, paths, URLs or shell expressions.
+if (exists($input->{'packages'})) {
+	my $value = $input->{'packages'};
+	die "Enter package names separated by spaces or newlines\n"
+		if (!defined($value) || ref($value) || length($value) > 8192);
+	my @packages = grep { length } split(/\s+/, $value);
+	die "Enter at most 200 package names, without versions or wildcards\n"
+		if (@packages > 200 || grep { !/\A[a-zA-Z0-9][a-zA-Z0-9.+_:-]{0,127}\z/ || /-\z/ } @packages);
+	my %seen;
+	$values{'packages'} = join(' ', grep { !$seen{$_}++ } @packages);
+}
+# The Pro package owns script validation and file access. GPL accepts explicit
+# clearing, but rejects active scripts from forms, presets and API requests.
+my $scripts = script_settings($input);
+@values{keys %$scripts} = values %$scripts;
+return \%values;
+}
+
 # seed(data, request, uuid) adds guest helpers and configuration to cloud-init.
 # Virtualmin license credentials are delivered later over authenticated SSH.
 sub seed
