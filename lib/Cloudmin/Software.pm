@@ -19,4 +19,12 @@ my $pro = dirname(__FILE__).'/../../pro';
 return -r "$pro/SetupScripts.pm" && -r "$pro/guest-scripts.pl";
 }
 
+# require_scripts() refuses script work when its Pro implementation is absent.
+sub require_scripts
+{
+die "Custom setup scripts require Cloudmin Pro. Set both scripts to None or install Cloudmin Pro.\n"
+	if (!has_scripts());
+require(dirname(__FILE__).'/../../pro/SetupScripts.pm');
+}
+
 1;
