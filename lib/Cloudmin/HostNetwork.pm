@@ -424,4 +424,22 @@ $self->unit('stop_unit', 'cloudmin-network-rollback.timer');
 $self->unit('start_unit', 'cloudmin-network-rollback.timer');
 }
 
+# disarm_guards(self, record)
+# Removes scheduled recovery after the journal has committed a final outcome.
+# Cleanup failure is reported without making confirmed networking reversible.
+sub disarm_guards
+{
+my ($self, $p) = @_;
+my @errors;
+foreach my $guard (['stop_unit', 'cloudmin-network-rollback.timer'],
+	['disable_unit', 'cloudmin-network-boot.service']) {
+	push(@errors, "$@") if (!eval { $self->unit(@$guard); 1 });
+	}
+if (@errors) {
+	# Preserve the committed outcome while making incomplete cleanup visible.
+	$p->{'error'} = ($p->{'error'} || '')." Could not disarm network recovery: ".join(' ', @errors);
+	$self->write_state($p);
+	}
+}
+
 1;
