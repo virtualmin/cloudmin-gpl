@@ -152,4 +152,32 @@ my $state = $self->read_state();
 return $state && $state->{'state'} =~ /\A(?:armed|applying|confirm|rollback_failed)\z/ ? $state : undef;
 }
 
+# public_state(self)
+# Exposes progress and identity only, never saved host configuration or credentials.
+sub public_state
+{
+my ($self) = @_;
+# No journal means there is no bridge progress to expose.
+my $state = $self->read_state() || return undef;
+my $restoring;
+# A retry leaves the failed journal intact until it finishes. Read the worker's
+# job too, so the page shows progress as soon as systemd accepts the request.
+if ($state->{'state'} =~ /\A(?:armed|applying|confirm|rollback_failed)\z/) {
+	my $unit = eval { $self->command(['systemctl', 'show',
+		'cloudmin-network-rollback.service', '--property=ActiveState,Job'], 1, 1) } || '';
+	$restoring = $unit =~ /^ActiveState=(?:activating|active|deactivating)$/m ||
+		$unit =~ /^Job=[1-9]\d*(?:\s|$)/m;
+	# The worker may have finished while systemd was being queried.
+	$state = $self->read_state() || return undef;
+	}
+my $public = { map { $_ => $state->{$_} } qw(id name source operation owner state deadline error management) };
+if ($restoring && $state->{'state'} =~ /\A(?:armed|applying|confirm|rollback_failed)\z/) {
+	# Hide the prior failure while its retry is still running. A stopped
+	# or failed worker exposes it again instead of leaving an endless spinner.
+	$public->{'state'} = 'rolling_back';
+	delete($public->{'error'});
+	}
+return $public;
+}
+
 1;
