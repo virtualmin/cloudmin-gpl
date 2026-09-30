@@ -725,6 +725,62 @@ return $self->{'jobs'}->lock('host-network', sub {
 	});
 }
 
+# rollback(self, [boot])
+# Restores exact persistent files even after a worker crash; boot recovery avoids
+# starting network services before systemd has reached network-pre.target.
+# boot defaults to false; true restores files for the normal boot sequence.
+sub rollback
+{
+my ($self, $boot) = @_;
+return $self->{'jobs'}->lock('host-network', sub {
+	my $p = $self->pending() || return;
+	my $ok = eval {
+		$self->backend();
+		foreach my $path (sort keys %{$p->{'files'}}) {
+			my $file = $p->{'files'}->{$path};
+			if ($file) {
+				# Restore both content and metadata for a pre-existing file.
+				# Removal may have deleted an empty override directory as well.
+				make_dir(dirname($path), 0755, 1) if (!-d dirname($path));
+				write_file_contents($path, $file->{'content'});
+				chmod($file->{'mode'}, $path) || die "Cannot restore permissions on $path\n";
+				chown($file->{'uid'}, $file->{'gid'}, $path) || die "Cannot restore ownership on $path\n";
+				}
+			# Files absent before conversion belong solely to this transaction.
+			else { unlink_file($path) if (-e $path); }
+			unflush_file_lines($path);
+			}
+		# Remove the directory created for this transaction once its file is gone.
+		rmdir($p->{'dhcp4_directory'}) if ($p->{'dhcp4_directory'} && -d $p->{'dhcp4_directory'});
+		if ($boot && ($p->{'mode'} || '') eq 'netplan') {
+			# The early systemd generator may already have rendered the unconfirmed
+			# YAML. Replace that runtime configuration before network services start.
+			my $error = net::validate_netplan_config();
+			# Invalid regenerated files must keep recovery marked as failed.
+			die "Cannot regenerate restored Netplan configuration: $error\n" if ($error);
+			}
+		if (!$boot && $p->{'state'} ne 'armed') {
+			# Only an applied change needs live reconnection; boot handles it later.
+			$self->activate($p, 1);
+			$self->restore_netplan_dhcp4($p);
+			# Check management connectivity before marking recovery complete.
+			$self->wait_for_connection($p, 1) if ($p->{'management'});
+			}
+		1;
+		};
+	$p->{'state'} = $ok ? 'rolled_back' : 'rollback_failed';
+	# A successful retry must not display the previous attempt's failure.
+	if ($ok) { delete($p->{'error'}); }
+	# Keep the latest failure visible and leave recovery guards armed.
+	else { $p->{'error'} = "$@"; }
+	$self->write_state($p);
+	# A failed restore must retain its guards so it remains recoverable.
+	die $p->{'error'} if (!$ok);
+	$self->disarm_guards($p);
+	return $p->{'name'};
+	});
+}
+
 # release_netplan_dhcp4(self, target, status)
 # Sends a release for target's configured lease from its networkctl JSON status.
 # Returns 1 when sent, or 0 without a lease. Sending does not confirm receipt.
