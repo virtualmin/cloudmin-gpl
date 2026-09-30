@@ -39,4 +39,24 @@ return scalar grep {
 } qw(before_script after_script);
 }
 
+# script_settings(input) returns normalized script fields for supplied options.
+# GPL can clear fields; active sources require Pro validation. Omitted fields
+# remain absent so callers can preserve template inheritance.
+sub script_settings
+{
+my ($input) = @_;
+if (uses_scripts($input)) {
+	# This gate also protects direct API requests and recovered creation data.
+	require_scripts();
+	return Cloudmin::Pro::SetupScripts::settings($input);
+}
+my %values;
+foreach my $field (qw(before_script after_script)) {
+	# Omitted fields still inherit; explicit None discards either old source.
+	next if (!grep { exists($input->{$_}) } ($field, $field.'_mode', $field.'_path'));
+	@values{$field.'_mode', $field, $field.'_path'} = ('none', '', '');
+}
+return \%values;
+}
+
 1;
