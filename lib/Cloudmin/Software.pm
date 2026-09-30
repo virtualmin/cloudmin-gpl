@@ -255,4 +255,38 @@ die "The virtual machine was stopped before software setup finished\n" if (!$vm-
 return $vm;
 }
 
+# finish(service, id, error, [cancelled], [guest_deleted]) records setup's outcome.
+# Ordinary cancellation keeps the guest; explicit creation cleanup removes it.
+# An empty error denotes success unless cancelled; both flags default to false.
+sub finish
+{
+my ($service, $id, $error, $cancelled, $guest_deleted) = @_;
+my $jobs = $service->{'jobs'};
+# Honor an explicit cleanup request even if setup finishes at the same time.
+return $service->cleanup_creation($id) if ($jobs->get($id)->{'cleanup_created'});
+# Software failure ends monitoring without rolling back the created guest.
+my $job = $jobs->update($id, sub {
+	# Cancellation and completion decide the outcome in the same transaction.
+	return if ($_[0]->{'cleanup_created'});
+	$_[0]->{'state'} = $error ? 'failed' : $cancelled ? 'cancelled' : 'complete';
+	$_[0]->{'error'} = $error ? "The virtual machine was created. $error"
+		: $cancelled ? 'Software setup cancelled'.($guest_deleted
+			? ' because the virtual machine was deleted' : '') : '';
+	$_[0]->{'events'}->[-1]->{'state'} = $error ? 'failed' : $cancelled ? 'cancelled' : 'done';
+	# Only confirmed deletion clears the record that creation produced a guest.
+	$_[0]->{'resources'}->{'domain'} = 0 if ($guest_deleted);
+	# Discard login and license credentials when setup ends.
+	delete(@{$_[0]->{'request'}}{qw(webmin_password virtualmin_serial virtualmin_key)});
+	# Retain the worker reference if its cleanup may have failed.
+	delete($_[0]->{'worker'}) if (!$error);
+});
+# Cleanup may have been requested after the first check but before the update.
+return $service->cleanup_creation($id) if ($job->{'cleanup_created'});
+# An audit failure must not change the provisioning result or retain secrets.
+my $logged = eval { $jobs->audit($error ? 'software_failed' : $cancelled ? 'software_cancelled' : 'software_complete', $job); 1 };
+$jobs->update($id, sub { $_[0]->{'audit_warning'} = 'Could not write the installation audit log'; })
+	if (!$logged);
+return $error ? 0 : 1;
+}
+
 1;
