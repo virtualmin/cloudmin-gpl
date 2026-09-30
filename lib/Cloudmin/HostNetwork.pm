@@ -252,4 +252,22 @@ die "Cannot preserve the DHCPv4 client ID for $source; configure its bridge in W
 return lc($ids[0]);
 }
 
+# check_ipv6_identity(self, interface, [token])
+# Checks live dynamic IPv6 addresses against the preserved MAC or SLAAC token.
+# Other generated identifiers may change when addressing moves to a bridge.
+sub check_ipv6_identity
+{
+my ($self, $live, $token) = @_;
+my $packed = $token ? inet_pton(AF_INET6, $token) : undef;
+my @mac = map { hex($_) } split(/:/, $live->{'mac'});
+my $iid = $packed ? substr($packed, 8) : @mac == 6
+	? pack('C8', $mac[0] ^ 2, @mac[1,2], 255, 254, @mac[3..5]) : undef;
+foreach my $address (@{$live->{'dynamic_ipv6'} || []}) {
+	# Refuse before applying settings that cannot reproduce a host address.
+	my $ip = inet_pton(AF_INET6, $address);
+	die "This interface has automatically generated IPv6 addresses that cannot be preserved on a new bridge. Configure the bridge and its IPv6 addresses in Webmin Network Configuration\n"
+		if (!$iid || !$ip || substr($ip, 8) ne $iid);
+	}
+}
+
 1;
