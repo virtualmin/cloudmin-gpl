@@ -219,4 +219,26 @@ return grep { !$seen{$_}++ &&
 } @addresses;
 }
 
+# failure(result) maps the small guest protocol to safe, useful error messages.
+sub failure
+{
+my ($result) = @_;
+my %reasons = (
+	identity => 'The guest identity does not match this creation request',
+	perl => 'Guest software setup requires Perl and its modules; check the cloud-init log inside the virtual machine',
+	privilege => 'Guest software setup requires passwordless sudo for the initial user',
+	cloud_init_missing => 'Guest software setup requires cloud-init inside the virtual machine',
+	cloud_init_timeout => 'Initial guest setup did not finish within 15 minutes; check cloud-init status inside the virtual machine',
+	cloud_init_failed => 'Initial guest setup failed; check cloud-init status inside the virtual machine',
+	credentials => 'Virtualmin Pro license credentials are missing from the guest setup request',
+	helper => 'The guest setup helper failed; check its configuration and Perl installation inside the virtual machine');
+# Known prerequisite failures have diagnostics that are safe to publish.
+return $reasons{$result->{'reason'} || ''}."\n" if ($reasons{$result->{'reason'} || ''});
+# Step failures keep detailed command output in the guest's private log.
+my %steps = (before => 'Preparation script', packages => 'Package installation',
+	download => 'Virtualmin download', install => 'Virtualmin installation', after => 'Final setup script');
+my $step = $steps{$result->{'failed_step'} || ''} || 'Guest software setup';
+return "$step failed. See /var/lib/cloudmin-install/install.log inside the virtual machine\n";
+}
+
 1;
