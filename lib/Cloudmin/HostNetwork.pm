@@ -707,4 +707,22 @@ die "Network interface $name did not retain the management route\n"
 	if ($p->{'management'} && !grep { $_ eq $name } @{$inventory->{'management'}});
 }
 
+# confirm(self, id, owner)
+# A fresh successful browser request and connectivity checks commit the change.
+sub confirm
+{
+my ($self, $id, $owner) = @_;
+return $self->{'jobs'}->lock('host-network', sub {
+	my $p = $self->pending() || die "No bridge change is awaiting confirmation\n";
+	die "This bridge change belongs to another user or has been replaced\n" if ($p->{'id'} ne $id || $p->{'owner'} ne $owner);
+	die "The bridge is not ready for confirmation\n" if ($p->{'state'} ne 'confirm');
+	die "The confirmation period expired; networking will be restored\n" if (time() >= $p->{'deadline'});
+	$self->check_connection($p);
+	$p->{'state'} = 'complete';
+	$self->write_state($p);
+	$self->disarm_guards($p);
+	return $p->{'name'};
+	});
+}
+
 1;
