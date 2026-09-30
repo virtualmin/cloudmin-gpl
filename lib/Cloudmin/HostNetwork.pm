@@ -270,4 +270,17 @@ foreach my $address (@{$live->{'dynamic_ipv6'} || []}) {
 	}
 }
 
+# ipv6_address_mode(self, device)
+# Reads the named device's IPv6 generation mode, or undef if it is not exposed.
+sub ipv6_address_mode
+{
+my ($self, $device) = @_;
+my $links = $self->ip_json('-details', 'link', 'show', 'dev', $device);
+my $mode = $links->[0]->{'inet6_addr_gen_mode'};
+# Do not pass an unrecognized kernel value into a later ip link command.
+die "Cannot read IPv6 address generation mode for $device\n"
+	if (defined($mode) && $mode !~ /\A(?:eui64|none|stable_secret|random)\z/);
+return $mode;
+}
+
 1;
