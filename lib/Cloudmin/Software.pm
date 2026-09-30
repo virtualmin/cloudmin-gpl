@@ -200,4 +200,23 @@ push(@{$data->{'runcmd'}},
 # is read through libvirt; no host private key is ever written to this seed.
 }
 
+# addresses(request, vm) combines configured static IPs with discovered addresses.
+# Software setup checks the guest's pinned SSH host key before using an address.
+sub addresses
+{
+my ($request, $vm) = @_;
+my @addresses = map { $_->{'address'} || '' } @{$vm->{'addresses'} || []};
+if (($request->{'address_mode'} || '') eq 'static') {
+	# Static form values include a prefix length, which SSH does not accept.
+	unshift(@addresses, map { (split(m{/}, $_ || ''))[0] || '' }
+		@{$request}{qw(ipv4 ipv6)});
+}
+my %seen;
+# Exclude loopback, unspecified and link-local targets, then deduplicate.
+return grep { !$seen{$_}++ &&
+	((check_ipaddress($_) && $_ !~ /\A(?:0\.|127\.|169\.254\.)/) ||
+	 (check_ip6address($_) && $_ !~ /\A(?:::1|::|fe[89ab][0-9a-f]:.*)\z/i))
+} @addresses;
+}
+
 1;
