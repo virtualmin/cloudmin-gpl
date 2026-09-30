@@ -725,4 +725,62 @@ return $self->{'jobs'}->lock('host-network', sub {
 	});
 }
 
+# release_netplan_dhcp4(self, target, status)
+# Sends a release for target's configured lease from its networkctl JSON status.
+# Returns 1 when sent, or 0 without a lease. Sending does not confirm receipt.
+# Static addresses are never selected for release.
+sub release_netplan_dhcp4
+{
+my ($self, $target, $status) = @_;
+Cloudmin::Networks::name($target);
+my @leases = grep { ($_->{'ConfigSource'} || '') eq 'DHCPv4' &&
+	($_->{'ConfigState'} || '') eq 'configured' } @{$status->{'Addresses'} || []};
+# A missing lease needs a new request, without sending a release for an old one.
+return 0 if (!@leases);
+# Never choose arbitrarily between multiple configured leases.
+die "Cannot identify the current DHCPv4 lease for $target\n" if (@leases != 1);
+my ($lease) = @leases;
+my $id = $status->{'DHCPv4Client'}->{'ClientIdentifier'};
+my $mac = $status->{'HardwareAddress'};
+# Validate live address and identity bytes before building a DHCP message.
+foreach my $bytes ($lease->{'Address'}, $lease->{'ConfigProvider'}, $id, $mac) {
+	die "Cannot read DHCPv4 release details for $target\n"
+		if (ref($bytes) ne 'ARRAY' || !@$bytes || @$bytes > 255 ||
+			grep { !defined($_) || ref($_) || !/\A\d{1,3}\z/ || $_ > 255 } @$bytes);
+	}
+# The packet requires IPv4 addresses, an Ethernet MAC and a client identifier.
+die "Invalid DHCPv4 release details for $target\n"
+	if (@{$lease->{'Address'}} != 4 || @{$lease->{'ConfigProvider'}} != 4 ||
+		@$mac != 6 || @$id < 2);
+foreach my $ip ($lease->{'Address'}, $lease->{'ConfigProvider'}) {
+	# A release goes only from the leased unicast address to its actual server.
+	die "Invalid DHCPv4 release address for $target\n"
+		if ($ip->[0] == 0 || $ip->[0] == 127 || $ip->[0] >= 224);
+	}
+my $source = join('.', @{$lease->{'Address'}});
+my $server = pack('C4', @{$lease->{'ConfigProvider'}});
+my $client = pack('C*', @$id);
+# RFC 2131 requires the server identifier and the original client identifier.
+# Some networkd versions omit the server identifier from their release packet.
+my $packet = pack('C4Nn2a4a4a4a4a16a64a128N',
+	1, 1, 6, 0, int(rand(4294967296)), 0, 0,
+	pack('C4', @{$lease->{'Address'}}), '', '', '', pack('C6', @$mac), '', '', 0x63825363);
+$packet .= pack('C*', 53, 1, 7, 54, 4).$server.
+	pack('CC', 61, length($client)).$client.chr(255);
+# Pad short DHCP messages to the BOOTP minimum packet size.
+$packet .= "\0" x (300-length($packet)) if (length($packet) < 300);
+my $socket = IO::Socket::INET->new(Proto => 'udp', LocalAddr => $source,
+	LocalPort => 68, ReuseAddr => 1) || die "Cannot open DHCPv4 release socket for $target: $!\n";
+# Bind both the source address and device so overlapping subnets cannot route
+# this release through another interface. No reply is expected for a release.
+$socket->setsockopt(Socket::SOL_SOCKET(), Socket::SO_BINDTODEVICE(), $target."\0") ||
+	die "Cannot bind DHCPv4 release to $target: $!\n";
+$socket->blocking(0);
+my $sent = $socket->send($packet, 0, Socket::pack_sockaddr_in(67, $server));
+# A failed or incomplete send must stop recovery before taking the link down.
+die "Cannot release DHCPv4 lease for $target: $!\n" if (!defined($sent) || $sent != length($packet));
+$socket->close();
+return 1;
+}
+
 1;
