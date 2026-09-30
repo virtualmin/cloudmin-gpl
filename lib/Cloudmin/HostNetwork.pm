@@ -442,4 +442,50 @@ if (@errors) {
 	}
 }
 
+# begin(self, name, source, revision, owner, [operation])
+# Revalidates the reviewed plan and starts an independent, bounded apply worker.
+# operation defaults to creation; remove moves addressing back to Ethernet.
+# owner is the requesting user; removal derives source from the named bridge.
+sub begin
+{
+my ($self, $name, $source, $revision, $owner, $operation) = @_;
+return $self->{'jobs'}->lock('host-network', sub {
+	# Only one transaction may own the saved files and recovery units at a time.
+	die "Another bridge change needs confirmation or recovery\n" if ($self->pending());
+	my $plan = ($operation || '') eq 'remove'
+		? $self->prepare_remove($name) : $self->prepare($name, $source);
+	# Require another review if topology or file contents changed meanwhile.
+	die "Host networking changed; review the bridge again\n" if ($revision ne $plan->{'revision'});
+	$plan->{'id'} = substr(sha256_hex($revision.':'.$owner.':'.time().':'.$$), 0, 32);
+	$plan->{'owner'} = $owner;
+	if ($plan->{'mode'} eq 'nm' && ($operation || '') ne 'remove') {
+		# Allocate the bridge profile identity before saving the recovery journal.
+		$plan->{'bridge_uuid'} = read_file_contents('/proc/sys/kernel/random/uuid');
+		chomp($plan->{'bridge_uuid'});
+		# Do not journal an unusable profile identity if the kernel read failed.
+		die "Cannot generate a bridge UUID\n" if ($plan->{'bridge_uuid'} !~ /\A[0-9a-f-]{36}\z/);
+		}
+	# Save the deadline before services start; applying the change counts toward it.
+	$plan->{'state'} = 'armed';
+	$plan->{'deadline'} = time()+$self->{'confirm_timeout'};
+	$self->write_state($plan);
+	my $ok = eval {
+		$self->install_guards($plan);
+		# The API's start_unit waits for completion; this change must outlive CGI.
+		$self->command(['systemctl', 'start', '--no-block', 'cloudmin-network-apply.service']);
+		1;
+		};
+	if (!$ok) {
+		# Retire the armed record if recovery setup or service launch fails.
+		my $error = $@;
+		$plan->{'state'} = 'rolled_back';
+		$plan->{'error'} = $error;
+		$self->write_state($plan);
+		$self->disarm_guards($plan);
+		die $error;
+		}
+	return $plan->{'id'};
+	});
+}
+
 1;
