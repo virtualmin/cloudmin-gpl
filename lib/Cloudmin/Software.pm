@@ -27,4 +27,16 @@ die "Custom setup scripts require Cloudmin Pro. Set both scripts to None or inst
 require(dirname(__FILE__).'/../../pro/SetupScripts.pm');
 }
 
+# uses_scripts(settings) detects selected sources, even when their text is empty.
+# Explicit None overrides stale text or paths; older records infer the source.
+sub uses_scripts
+{
+my ($settings) = @_;
+return scalar grep {
+	my $mode = $settings->{$_.'_mode'};
+	defined($mode) && length($mode) ? $mode ne 'none'
+		: length($settings->{$_} // '') || length($settings->{$_.'_path'} // '')
+} qw(before_script after_script);
+}
+
 1;
