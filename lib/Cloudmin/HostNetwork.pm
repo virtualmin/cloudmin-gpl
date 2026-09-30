@@ -488,4 +488,94 @@ return $self->{'jobs'}->lock('host-network', sub {
 	});
 }
 
+# save_bridge(self, plan)
+# Uses each Webmin backend's configuration APIs, preserving complete IP settings.
+sub save_bridge
+{
+my ($self, $p) = @_;
+$self->backend();
+my ($name, $source) = @$p{qw(name source)};
+if ($p->{'mode'} eq 'debian-linux') {
+	# Move addressing to bridge stanzas and leave the physical port unnumbered.
+	my @defs = @{$p->{'defs'}};
+	foreach my $def (@defs) {
+		my @options = map { [@$_] } grep { $_->[0] ne 'hwaddress' } @{$def->[3]};
+		if ($def->[1] eq 'inet') {
+			# Create the bridge once, even when the port has both address families.
+			push(@options, ['bridge_ports', $source], ['bridge_stp', 'off'],
+				['bridge_fd', '0'], ['hwaddress', 'ether '.$p->{'mac'}]);
+			}
+		net::new_interface_def($name, $def->[1], $def->[2], \@options, $def->[4]);
+		net::modify_interface_def($source, $def->[1], 'manual', [], 0, $def->[4]);
+		}
+	if (!grep { $_ eq $name } net::get_auto_defs()) {
+		# Keep existing auto lines and their startup order intact.
+		no warnings 'once';
+		my $file = $net::network_interfaces_config;
+		my $contents = read_file_contents($file);
+		$contents .= "\n" if (length($contents) && $contents !~ /\n\z/);
+		write_file_contents($file, $contents."auto $name\n");
+		unflush_file_lines($file);
+		}
+	}
+elsif ($p->{'mode'} eq 'netplan') {
+	# Keep NIC matching on the port and copy IP settings to a new bridge file.
+	my %physical = map { $_ => 1 } qw(match set-name renderer mtu macaddress optional critical);
+	my $old = $p->{'saved'};
+	my %bridge = (%$old, name => $name, fullname => $name, bridge => 1,
+		bridgeto => $source, bridgestp => 'off', bridgefd => 0, ether => $p->{'mac'}, up => 1);
+	delete(@bridge{qw(file line eline index)});
+	# A new Webmin Netplan file uses four-space section indentation, regardless
+	# of the source file's indentation. Its interface must be one level deeper.
+	$bridge{'yaml'} = { %{$old->{'yaml'}}, indent => 8, members => [grep {
+		!$physical{$_->{'name'}} || $_->{'name'} eq 'renderer' || $_->{'name'} eq 'mtu'
+		} @{$old->{'yaml'}->{'members'}}] };
+	# Each generated file declares its schema and keeps host configuration private.
+	my $mask = umask(0077);
+	write_file_contents($p->{'api_file'}, "network:\n    version: 2\n");
+	net::save_interface(\%bridge);
+	umask($mask);
+	rename_logged($p->{'api_file'}, $p->{'new_file'}) || die "Cannot place the bridge configuration: $!\n";
+	unflush_file_lines($p->{'api_file'});
+	# Reload line positions after appending the new bridge file.
+	my @boot = net::boot_interfaces();
+	my ($port) = grep { $_->{'fullname'} eq $source } @boot;
+	$port = { %$port, dhcp => 0, auto6 => 0, address6 => [], netmask6 => [],
+		# Preserve the port's MAC and keep a minimal DHCP stanza a YAML mapping.
+		ether => $port->{'ether'} || $p->{'mac'},
+		yaml => { %{$port->{'yaml'}}, members => [grep { $physical{$_->{'name'}} }
+		@{$port->{'yaml'}->{'members'}}] } };
+	delete(@$port{qw(address netmask gateway gateway6 nameserver search routes)});
+	net::save_interface($port, \@boot);
+	if ($p->{'dhcp4_dropin'}) {
+		# networkd reads this alongside Netplan's generated bridge configuration.
+		make_dir($p->{'dhcp4_directory'}, 0755, 1);
+		write_file_contents($p->{'dhcp4_dropin'}, $p->{'dhcp4_identity'});
+		chmod(0644, $p->{'dhcp4_dropin'}) || die "Cannot set DHCP configuration permissions: $!\n";
+		}
+	my $error = net::validate_netplan_config();
+	die "Invalid bridge configuration: $error\n" if ($error);
+	}
+else {
+	# Copy IP settings, replacing generated DHCP identity with its saved value.
+	my $cfg = $p->{'saved'}->{'cfg'};
+	my $uuid = $p->{'bridge_uuid'};
+	my $contents = "[connection]\nid=cloudmin-$name\nuuid=$uuid\ntype=bridge\ninterface-name=$name\nautoconnect=true\nautoconnect-slaves=1\n\n[bridge]\nstp=false\nmac-address=$p->{mac}\n";
+	foreach my $section (grep { $_->{'sect'} =~ /\A(?:ipv4|ipv6|proxy)\z/ } @$cfg) {
+		my @members = @{$section->{'members'}};
+		if ($section->{'sect'} eq 'ipv4' && defined($p->{'dhcp4_client_id'})) {
+			# Replace the key rather than relying on duplicate-key precedence.
+			@members = grep { $_->{'name'} ne 'dhcp-client-id' } @members;
+			push(@members, {name => 'dhcp-client-id', value => $p->{'dhcp4_client_id'}});
+			}
+		$contents .= "\n[$section->{sect}]\n".join('', map { "$_->{name}=$_->{value}\n" } @members);
+		}
+	my $mask = umask(0077);
+	write_file_contents($p->{'new_file'}, $contents);
+	umask($mask);
+	$self->command(['nmcli', 'connection', 'load', $p->{'new_file'}]);
+	net::save_nm_config($cfg, 'connection', 'master', $name, 'slave-type', 'bridge');
+	}
+}
+
 1;
