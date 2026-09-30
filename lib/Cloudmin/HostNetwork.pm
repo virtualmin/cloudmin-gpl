@@ -635,4 +635,35 @@ if ($rollback) {
 	}
 }
 
+# check_connection(self, plan, [restoring])
+# Checks the port, preserved addresses and browser/default route before confirmation.
+# restoring defaults to false and reverses the plan's expected destination.
+sub check_connection
+{
+my ($self, $p, $restoring) = @_;
+local $self->{'client'} = $p->{'client'};
+my $inventory = $self->inventory();
+# Creation recovery and forward removal both require standalone Ethernet.
+my $unbridged = !!$restoring != (($p->{'operation'} || '') eq 'remove');
+my $name = $unbridged ? $p->{'source'} : $p->{'name'};
+my ($bridge) = grep { $_->{'name'} eq $name && ($unbridged || $_->{'bridge'}) && $_->{'active'} } @{$inventory->{'interfaces'}};
+# Address checks are meaningful only after the expected device is active.
+die "Network interface $name is not active\n" if (!$bridge);
+# A bridge without its uplink would leave the host isolated from its network.
+die "The Ethernet interface did not join the bridge\n" if (!$unbridged && !grep { $_ eq $p->{'source'} } @{$bridge->{'ports'}});
+# The port must leave the bridge before it can carry the host connection.
+die "The Ethernet interface is still attached to a bridge\n" if ($unbridged && $bridge->{'master'});
+# Successful removal must delete the obsolete kernel device too.
+die "The removed bridge is still present\n" if (($p->{'operation'} || '') eq 'remove' &&
+	!$restoring && grep { $_->{'name'} eq $p->{'name'} } @{$inventory->{'interfaces'}});
+foreach my $address (@{$p->{'addresses'}}) {
+	# Preserve all reviewed addresses, including IPv6, before accepting success.
+	die "The host address $address is missing from $name\n"
+		if (!grep { $_ eq $address } @{$bridge->{'addresses'}});
+	}
+# A management interface must still carry the route used to reach this host.
+die "Network interface $name did not retain the management route\n"
+	if ($p->{'management'} && !grep { $_ eq $name } @{$inventory->{'management'}});
+}
+
 1;
