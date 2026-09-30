@@ -180,4 +180,20 @@ if ($restoring && $state->{'state'} =~ /\A(?:armed|applying|confirm|rollback_fai
 return $public;
 }
 
+# snapshot(self, paths)
+# Saves exact contents and ownership for the files a backend will change.
+sub snapshot
+{
+my ($self, $paths) = @_;
+my %files;
+foreach my $path (@$paths) {
+	next if (exists($files{$path}));
+	die "Network configuration must use ordinary files: $path\n" if (-l $path || (-e $path && !-f $path));
+	my @st = stat($path);
+	$files{$path} = @st ? { content => read_file_contents($path),
+		mode => $st[2] & 07777, uid => $st[4], gid => $st[5] } : undef;
+	}
+return \%files;
+}
+
 1;
