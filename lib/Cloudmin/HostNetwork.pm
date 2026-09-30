@@ -783,4 +783,92 @@ $socket->close();
 return 1;
 }
 
+# restore_netplan_dhcp4(self, plan)
+# Requests plan's saved DHCP address if Netplan recovery got a different lease.
+# Uses a temporary networkd override; throws if recovery or cleanup fails.
+sub restore_netplan_dhcp4
+{
+my ($self, $p) = @_;
+# Other backends and static configurations have no networkd lease to restore.
+return unless (($p->{'mode'} || '') eq 'netplan' && $p->{'saved'}->{'dhcp'});
+# Recovery of a removal restores the lease on the bridge, not its former port.
+my $target = ($p->{'operation'} || '') eq 'remove' ? $p->{'name'} : $p->{'source'};
+my ($address) = ($p->{'dhcp4_identity'} || '') =~ /^RequestAddress=(\S+)$/m;
+# An existing failed transaction may have saved its address only in inventory.
+if (!$address) {
+	my @addresses = map { m{\A([0-9.]+)/\d+\z} ? $1 : () } @{$p->{'addresses'} || []};
+	# DHCP may be enabled on an IPv6-only network with no lease to recover.
+	return if (!@addresses);
+	# Older journals cannot distinguish a DHCP lease from multiple IPv4 entries.
+	die "Cannot identify the original DHCPv4 address for $target\n" if (@addresses != 1);
+	$address = $addresses[0];
+	}
+my @octets = split(/\./, $address, -1);
+# Validate journal data before placing it in a networkd setting.
+die "Invalid saved DHCPv4 address\n" if (@octets != 4 ||
+	grep { !/\A\d{1,3}\z/ || $_ > 255 } @octets);
+my $status = convert_from_json($self->command(
+	['networkctl', '--json=short', 'status', $target], 1), 1);
+# Avoid reconnecting an interface that already recovered its original lease.
+return if (grep { ($_->{'ConfigSource'} || '') eq 'DHCPv4' &&
+	($_->{'ConfigState'} || '') eq 'configured' &&
+	join('.', @{$_->{'Address'} || []}) eq $address } @{$status->{'Addresses'} || []});
+my ($network) = ($status->{'NetworkFile'} || '') =~
+	m{\A/(?:run|etc|usr/lib)/systemd/network/([a-zA-Z0-9_.:-]+\.network)\z};
+# Only a known networkd file basename may select the override directory.
+die "Cannot identify the restored network configuration for $target\n" if (!$network);
+my $root = $self->{'networkd_runtime_directory'} || '/run/systemd/network';
+my $directory = "$root/$network.d";
+# A stable transaction-specific name lets a retry reuse its own runtime hint.
+my $dropin = "$directory/90-cloudmin-restore-".substr(sha256_hex($p->{'id'}), 0, 16).'.conf';
+my $contents = "[DHCPv4]\nRequestAddress=$address\nSendRelease=yes\n";
+# Never follow a replacement directory symlink or overwrite another file.
+die "Recovery configuration is not an ordinary directory\n" if (-l $directory || (-e $directory && !-d $directory));
+# An existing hint is reusable only when it contains exactly this request.
+die "Recovery configuration already exists\n" if (-l $dropin ||
+	(-e $dropin && (!-f $dropin || read_file_contents($dropin) ne $contents)));
+my $existed = -d $directory;
+make_dir($directory, 0755, 1);
+my $down;
+my $ok = eval {
+	# Keep permanent files and the client identity while requesting the old IP.
+	write_file_contents($dropin, $contents);
+	chmod(0644, $dropin) || die "Cannot set DHCP recovery permissions: $!\n";
+	if ($self->release_netplan_dhcp4($target, $status)) {
+		# Clear the wrong cached lease before reload can request it again.
+		# Track the attempted down so even a failed command is followed by up.
+		$down = 1;
+		$self->command(['networkctl', 'down', $target]);
+		}
+	# Load the hint before restarting DHCP. Without a lease, reconfiguration
+	# suffices and avoids taking an otherwise working link down.
+	$self->command(['networkctl', 'reload']);
+	$self->command(['networkctl', $down ? 'up' : 'reconfigure', $target]);
+	$down = 0;
+	$self->wait_for_connection($p, 1);
+	1;
+	};
+my $error = $@;
+# Remove the hint after success or refusal. Recovery guards handle interrupted
+# workers; a retry can reuse the hint, and a reboot discards it automatically.
+my $clean = eval {
+	# A failed write may have left no hint; remove only our own runtime file.
+	unlink_file($dropin) if (-e $dropin);
+	# Leave pre-existing directories and other services' overrides intact.
+	rmdir($directory) if (!$existed);
+	$self->command(['networkctl', 'reload']);
+	1;
+	};
+# Report cleanup failures too, even if the original lease was recovered.
+$error .= $@ if (!$clean);
+# A failed reload or activation must not leave the recovered interface down.
+if ($down) {
+	my $up = eval { $self->command(['networkctl', 'up', $target]); 1; };
+	# Keep the original failure if the final attempt to raise the link also fails.
+	$error .= $@ if (!$up);
+	}
+# Both recovery and cleanup must succeed before the caller clears the error.
+die $error if (!$ok || !$clean);
+}
+
 1;
