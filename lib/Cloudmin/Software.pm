@@ -241,4 +241,18 @@ my $step = $steps{$result->{'failed_step'} || ''} || 'Guest software setup';
 return "$step failed. See /var/lib/cloudmin-install/install.log inside the virtual machine\n";
 }
 
+# guest(adapter, job, [skip_addresses]) checks the original guest still runs.
+# skip_addresses defaults to false; progress checks omit address discovery.
+sub guest
+{
+my ($adapter, $job, $skip_addresses) = @_;
+my $vm = $adapter->get_domain($job->{'request'}->{'uuid'}, $skip_addresses);
+# An absent domain ends setup normally; discovery errors still propagate.
+die bless({}, 'Cloudmin::Software::GuestDeleted') if (!$vm);
+die "The virtual machine's creation identity changed before software setup finished\n"
+	if (($vm->{'cloudmin'}->{'job'} || '') ne $job->{'id'});
+die "The virtual machine was stopped before software setup finished\n" if (!$vm->{'active'});
+return $vm;
+}
+
 1;
