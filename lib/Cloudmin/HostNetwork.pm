@@ -635,6 +635,20 @@ if ($rollback) {
 	}
 }
 
+# wait_for_connection(self, plan, [restoring])
+# Allows address acquisition to finish after the backend reports activation.
+# restoring defaults to false; true checks the pre-change topology instead.
+sub wait_for_connection
+{
+my ($self, $p, $restoring) = @_;
+for (1..20) {
+	# DHCP and IPv6 addresses may arrive after the backend reports success.
+	return if (eval { $self->check_connection($p, $restoring); 1 });
+	sleep(1);
+	}
+$self->check_connection($p, $restoring);
+}
+
 # check_connection(self, plan, [restoring])
 # Checks the port, preserved addresses and browser/default route before confirmation.
 # restoring defaults to false and reverses the plan's expected destination.
