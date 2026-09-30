@@ -396,4 +396,32 @@ my ($ok, $error) = $function->(@args);
 die "Cannot prepare network recovery: $error\n" if (!$ok);
 }
 
+# install_guards(self, plan)
+# Arms recovery before any network write, including a boot-time restore path.
+sub install_guards
+{
+my ($self, $plan) = @_;
+# Use the saved deadline so restarting the timer does not extend it.
+my $remaining = $plan->{'deadline'} - time();
+die "Bridge confirmation time has expired\n" if ($remaining <= 0);
+# Recovery commands must remain valid systemd ExecStart arguments.
+my $script = "$self->{module}/network-worker.pl";
+my $perl = get_perl_path();
+die "Unsupported module path for network recovery\n" if ("$script$perl" =~ /[^a-zA-Z0-9_\/.+-]/);
+my $exec = "$perl $script";
+# Boot recovery survives a reboot while the normal timer covers a lost session.
+$self->unit('create_system_unit', 'cloudmin-network-boot.service',
+	"[Unit]\nDescription=Restore unconfirmed Cloudmin networking\nDefaultDependencies=no\nAfter=local-fs.target\nBefore=network-pre.target\nWants=network-pre.target\n[Service]\nType=oneshot\nExecStart=$exec boot\nTimeoutStartSec=90\n[Install]\nWantedBy=multi-user.target\n");
+$self->unit('enable_unit', 'cloudmin-network-boot.service');
+$self->unit('create_system_unit', 'cloudmin-network-rollback.service',
+	"[Unit]\nDescription=Roll back unconfirmed Cloudmin networking\n[Service]\nType=oneshot\nExecStart=$exec rollback\nTimeoutStartSec=120\n");
+$self->unit('create_system_unit', 'cloudmin-network-rollback.timer',
+	"[Unit]\nDescription=Cloudmin network confirmation timeout\n[Timer]\nOnActiveSec=$remaining\nAccuracySec=1\nUnit=cloudmin-network-rollback.service\n");
+# Apply failures also request rollback; start the timer before launching apply.
+$self->unit('create_system_unit', 'cloudmin-network-apply.service',
+	"[Unit]\nDescription=Apply Cloudmin host bridge\nOnFailure=cloudmin-network-rollback.service\n[Service]\nType=oneshot\nExecStart=$exec apply\nTimeoutStartSec=90\n");
+$self->unit('stop_unit', 'cloudmin-network-rollback.timer');
+$self->unit('start_unit', 'cloudmin-network-rollback.timer');
+}
+
 1;
