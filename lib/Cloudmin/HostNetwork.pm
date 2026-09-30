@@ -283,4 +283,105 @@ die "Cannot read IPv6 address generation mode for $device\n"
 return $mode;
 }
 
+# prepare(self, name, source)
+# Captures a bridge conversion plan, rejecting topology that cannot be preserved.
+sub prepare
+{
+my ($self, $name, $source) = @_;
+Cloudmin::Networks::name($name);
+Cloudmin::Networks::name($source);
+die "Bridge names beginning with virbr are reserved for libvirt\n" if ($name =~ /^virbr/);
+my $inventory = $self->inventory();
+die "Bridge setup is unavailable for this host's network backend\n" if (!$inventory->{'supported'});
+my @boot = net::boot_interfaces();
+die "That interface name already exists\n" if (grep { $_->{'name'} eq $name }
+	(@{$inventory->{'interfaces'}}, @boot));
+my ($live) = grep { $_->{'name'} eq $source && $_->{'candidate'} } @{$inventory->{'interfaces'}};
+die "Choose a standalone, persistently configured Ethernet interface\n" if (!$live);
+my @saved = grep { ($_->{'fullname'} || '') eq $source } @boot;
+die "The interface must have exactly one persistent configuration\n" if (@saved != 1);
+die "Move additional interface aliases manually before creating a bridge\n"
+	if (grep { $_->{'name'} eq $source && defined($_->{'virtual'}) && $_->{'virtual'} ne '' } @boot);
+my $saved = $saved[0];
+my $mode = $inventory->{'backend'};
+# Include the timeout in the review hash so a changed setting requires review.
+my $plan = { name => $name, source => $source, mode => $mode,
+	confirm_timeout => 0 + $self->{'confirm_timeout'},
+	management => $live->{'management'}, mac => $live->{'mac'}, saved => $saved,
+	addresses => $live->{'addresses'}, client => $self->{'client'} };
+my @files = ($saved->{'file'});
+if ($mode eq 'debian-linux') {
+	# ifupdown needs bridge-utils and stanzas that can move without shell hooks.
+	die "Install bridge-utils before creating a persistent bridge on this host\n"
+		if (!WebminCore::has_command('brctl'));
+	my @defs = grep { $_->[0] eq $source } net::get_interface_defs();
+	# Shell hooks can refer to the old device name and cannot be moved blindly.
+	die "This interface has custom hooks or unsupported address methods; configure its bridge in Webmin Network Configuration\n"
+		if (grep { $_->[2] !~ /\A(?:static|dhcp|auto|manual)\z/ ||
+			grep { $_->[0] =~ /^(?:pre-|post-)?(?:up|down)$/ || $_->[0] =~ /^(?:bond|bridge|vlan)/ }
+			@{$_->[3]} } @defs);
+	$plan->{'defs'} = \@defs;
+	$plan->{'ipv6_address_mode'} = $self->ipv6_address_mode($source);
+	no warnings 'once';
+	push(@files, $net::network_interfaces_config, map { $_->[4] } @defs);
+	}
+elsif ($mode eq 'netplan') {
+	# Keep physical matching/renaming on the NIC, moving only IP configuration.
+	my %allowed = map { $_ => 1 } qw(match set-name renderer optional dhcp4 dhcp6
+		dhcp4-overrides dhcp6-overrides accept-ra addresses gateway4 gateway6 nameservers
+		macaddress mtu routes routing-policy link-local ipv6-privacy ipv6-address-generation
+		ipv6-address-token dhcp-identifier critical optional-addresses);
+	die "This interface has unsupported Netplan options; configure its bridge in Webmin Network Configuration\n"
+		if (grep { !$allowed{$_->{'name'}} } @{$saved->{'yaml'}->{'members'} || []});
+	# Copying DHCPv6 or stable-privacy settings may change their addresses.
+	my ($entry) = grep { $_->{'name'} eq 'ipv6-address-token' }
+		@{$saved->{'yaml'}->{'members'} || []};
+	# Webmin's YAML reader retains scalar quotes and trailing whitespace.
+	my $token = $entry ? $entry->{'value'} : '';
+	$token =~ s/^\s*(['"]?)(.*?)\1\s*$/$2/;
+	$self->check_ipv6_identity($live, $token);
+	no warnings 'once';
+	$plan->{'api_file'} = "$net::netplan_dir/$name.yaml";
+	# Netplan resolves bridge ports in file order. Place the final bridge file
+	# after the file defining its Ethernet port, even with custom file names.
+	$plan->{'new_file'} = $saved->{'file'}.".cloudmin-$name.yaml";
+	die "A configuration file for this bridge already exists\n" if (-e $plan->{'api_file'});
+	push(@files, $plan->{'api_file'}, $plan->{'new_file'});
+	if ($saved->{'dhcp'} && grep { /^\d+\./ } @{$live->{'addresses'}}) {
+		# Preserve the active IPv4 lease through a journaled networkd drop-in:
+		# Netplan cannot set its IAID. IPv6-only links skip this step.
+		$plan->{'dhcp4_identity'} = $self->netplan_dhcp4_identity($source, $live->{'mac'});
+		my $directory = $self->{'networkd_directory'} || '/etc/systemd/network';
+		$plan->{'dhcp4_directory'} = "$directory/10-netplan-$name.network.d";
+		$plan->{'dhcp4_dropin'} = "$plan->{dhcp4_directory}/90-cloudmin-dhcp.conf";
+		die "Network configuration for this bridge already exists\n" if (-e $plan->{'dhcp4_directory'});
+		push(@files, $plan->{'dhcp4_dropin'});
+		}
+	}
+else {
+	# NetworkManager converts a plain Ethernet profile into a bridge port.
+	my $cfg = $saved->{'cfg'};
+	my $type = net::find_nm_config($cfg, 'connection', 'type') || '';
+	die "Choose a plain NetworkManager Ethernet connection\n" if ($type !~ /\A(?:ethernet|802-3-ethernet)\z/ ||
+		net::find_nm_config($cfg, 'connection', 'master') || net::find_nm_config($cfg, 'connection', 'controller'));
+	die "This connection uses authentication or advanced Ethernet settings; configure its bridge in Webmin Network Configuration\n"
+		# Cloud-init's origin metadata stays on the existing Ethernet profile.
+		if (grep { $_->{'sect'} !~ /\A(?:connection|ethernet|802-3-ethernet|ipv4|ipv6|proxy|user)\z/ } @$cfg);
+	$plan->{'uuid'} = net::find_nm_config($cfg, 'connection', 'uuid');
+	die "NetworkManager connection UUID is missing\n" if (!$plan->{'uuid'});
+	# Generated addresses must survive the profile and interface name change.
+	$self->check_ipv6_identity($live, net::find_nm_config($cfg, 'ipv6', 'token'));
+	# Preserve the active IPv4 lease. Unaddressed ports have no lease to retain.
+	$plan->{'dhcp4_client_id'} = $self->nm_dhcp4_identity($source)
+		if ($saved->{'dhcp'} && grep { /^\d+\./ } @{$live->{'addresses'} || []});
+	no warnings 'once';
+	$plan->{'new_file'} = "$net::nm_conn_dir/cloudmin-$name.nmconnection";
+	push(@files, $plan->{'new_file'});
+	}
+die "A configuration file for this bridge already exists\n" if ($plan->{'new_file'} && -e $plan->{'new_file'});
+$plan->{'files'} = $self->snapshot(\@files);
+$plan->{'revision'} = sha256_hex(convert_to_json($plan, 0, 0, 1));
+return $plan;
+}
+
 1;
