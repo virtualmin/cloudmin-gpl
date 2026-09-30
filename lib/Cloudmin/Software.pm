@@ -144,6 +144,18 @@ die "Virtualmin needs at least $minimum MiB of memory and 20 GiB of disk space\n
 @{$request}{keys %options} = values %options;
 }
 
+# credentials(software, serial, key) validates one creation's license inputs.
+sub credentials
+{
+my ($software, $serial, $key) = @_;
+# GPL and package-only setup must not retain supplied Pro credentials.
+return {} if (($software || '') ne 'virtualmin-pro');
+die "Enter the Virtualmin Pro license serial and key for this virtual machine\n"
+	if (!defined($serial) || ref($serial) || $serial !~ /\A[0-9]{1,20}\z/ ||
+		!defined($key) || ref($key) || $key !~ /\A[A-Za-z0-9_-]{1,256}\z/);
+return { virtualmin_serial => $serial, virtualmin_key => $key };
+}
+
 # seed(data, request, uuid) adds guest helpers and configuration to cloud-init.
 # Virtualmin license credentials are delivered later over authenticated SSH.
 sub seed
