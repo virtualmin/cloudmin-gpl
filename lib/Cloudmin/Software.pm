@@ -255,6 +255,51 @@ die "The virtual machine was stopped before software setup finished\n" if (!$vm-
 return $vm;
 }
 
+# cancel(service, id, adapter, worker) stops setup over pinned SSH, or runs
+# explicitly requested creation cleanup while holding the worker lock.
+sub cancel
+{
+my ($service, $id, $adapter, $worker) = @_;
+my $job = $service->{'jobs'}->get($id);
+# Explicit guest removal uses the creation rollback, not SSH setup cancellation.
+return $service->cleanup_creation($id) if ($job->{'cleanup_created'});
+my $r = $job->{'request'};
+my $ok = eval {
+	# Confirm that the old monitor and its private inputs are gone first.
+	$worker->cleanup($job->{'worker'}) if ($job->{'worker'});
+	my $vm = $adapter->get_domain($r->{'uuid'});
+	# A deleted or powered-off guest has no running setup process to stop.
+	return finish($service, $id, '', 1, !$vm) if (!$vm || !$vm->{'active'});
+	die "The guest identity changed before software setup could be stopped\n"
+		if (($vm->{'cloudmin'}->{'job'} || '') ne $id);
+	# No SSH launch is possible until the verified public key has been saved.
+	return finish($service, $id, '', 1) if (!$job->{'resources'}->{'ssh_host_public'});
+	my $key = $service->{'ssh_keys'}->find($r->{'uuid'}, $id) ||
+		die "The virtual machine's managed SSH key is missing\n";
+	my $deadline = time()+75;
+	foreach my $address (addresses($r, $vm)) {
+		# Reuse the pinned key; cancellation needs no license credentials.
+		my $result = $worker->run('software', {address => $address,
+			username => $r->{'username'}, uuid => $r->{'uuid'}, action => 'cancel',
+			host_public_key => $job->{'resources'}->{'ssh_host_public'}},
+			files => {identity => $key},
+			started => sub { my $unit = $_[0];
+				# started(unit) saves the stop worker's unit for cleanup.
+				$service->{'jobs'}->update($id, sub { $_[0]->{'worker'} = $unit; }); },
+			# progress(event) enforces the stop deadline while SSH is connected.
+			progress => sub { die "Stopping guest software setup timed out\n" if (time() >= $deadline); });
+		# Setup may have finished before the stop request reached the guest.
+		return finish($service, $id, '', 1) if ($result->{'stage'} eq 'cancelled');
+		return finish($service, $id, '') if ($result->{'stage'} eq 'complete');
+		die failure($result) if ($result->{'stage'} eq 'failed');
+	}
+	die "Cannot confirm that guest software setup stopped. Use the virtual machine's power controls to stop it\n";
+};
+# Failed stop confirmation is recorded without deleting the created guest.
+return finish($service, $id, "$@") if (!$ok);
+return $ok;
+}
+
 # finish(service, id, error, [cancelled], [guest_deleted]) records setup's outcome.
 # Ordinary cancellation keeps the guest; explicit creation cleanup removes it.
 # An empty error denotes success unless cancelled; both flags default to false.
