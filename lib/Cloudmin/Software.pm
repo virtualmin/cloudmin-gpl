@@ -109,6 +109,41 @@ my $scripts = script_settings($input);
 return \%values;
 }
 
+# prepare(input, request) validates guest setup before allocation.
+sub prepare
+{
+my ($input, $request) = @_;
+my $values = settings($input);
+# Generic scripts and packages must not inherit a Virtualmin login request.
+delete($values->{'webmin_register'}) if (($values->{'software'} || 'none') eq 'none');
+# Template hostname rules also apply when no software installation is requested.
+die "The selected template requires a fully qualified hostname, such as host.example.com. ".
+	"Use it as the virtual machine name, or set the guest hostname separately.\n"
+	if ($request->{'install_source'} eq 'cloud' &&
+		($request->{'require_fqdn'} || ($values->{'software'} || '') =~ /\Avirtualmin-/) &&
+		$request->{'hostname'} !~ /\./);
+# Ordinary creation requests need no software prerequisites.
+return if (!enabled($values));
+die "Guest software setup requires a cloud image and Start after creation\n"
+	if ($request->{'install_source'} ne 'cloud' || !$request->{'start'});
+# Copy file contents before submission; workers never reopen the host paths.
+foreach my $field (qw(before_script after_script)) {
+	next if (($values->{$field.'_mode'} || '') ne 'file');
+	$values->{$field} = Cloudmin::Pro::SetupScripts::script_file($values->{$field.'_path'});
+	$values->{$field.'_mode'} = 'inline';
+	$values->{$field.'_path'} = '';
+}
+@{$request}{keys %$values} = values %$values;
+# Package-only and script-only setups need no Virtualmin-specific resources.
+return if (($values->{'software'} || 'none') eq 'none');
+my %options = (virtualmin_bundle => 'LAMP', virtualmin_type => 'full',
+	virtualmin_postgres => '0', virtualmin_ssl => '1', webmin_register => '1', %$values);
+my $minimum = $options{'virtualmin_type'} eq 'mini' ? 1024 : 2048;
+die "Virtualmin needs at least $minimum MiB of memory and 20 GiB of disk space\n"
+	if ($request->{'memory_mib'} < $minimum || $request->{'disk_gib'} < 20);
+@{$request}{keys %options} = values %options;
+}
+
 # seed(data, request, uuid) adds guest helpers and configuration to cloud-init.
 # Virtualmin license credentials are delivered later over authenticated SSH.
 sub seed
