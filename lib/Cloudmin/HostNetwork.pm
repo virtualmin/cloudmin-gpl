@@ -384,4 +384,16 @@ $plan->{'revision'} = sha256_hex(convert_to_json($plan, 0, 0, 1));
 return $plan;
 }
 
+# unit(self, method, arguments...)
+# Converts Webmin systemd's result pair into an exception on failure.
+sub unit
+{
+my ($self, $method, @args) = @_;
+foreign_require('systemd', 'systemd-lib.pl');
+no strict 'refs';
+my $function = "systemd::$method";
+my ($ok, $error) = $function->(@args);
+die "Cannot prepare network recovery: $error\n" if (!$ok);
+}
+
 1;
