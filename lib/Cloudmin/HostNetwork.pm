@@ -196,4 +196,42 @@ foreach my $path (@$paths) {
 return \%files;
 }
 
+# netplan_dhcp4_identity(self, source, mac)
+# Returns networkd settings that keep source's identity and request its lease.
+# mac is the MAC retained by the destination; callers must have an IPv4 lease.
+sub netplan_dhcp4_identity
+{
+my ($self, $source, $mac) = @_;
+my $status = eval { convert_from_json(
+	$self->command(['networkctl', '--json=short', 'status', $source], 1), 1) };
+my $id = ref($status) eq 'HASH' && ref($status->{'DHCPv4Client'}) eq 'HASH'
+	? $status->{'DHCPv4Client'}->{'ClientIdentifier'} : undef;
+# Reject missing or malformed client bytes before generating native settings.
+die "Cannot preserve this interface's DHCP identity; configure its bridge in Webmin Network Configuration\n"
+	if (ref($id) ne 'ARRAY' || !@$id || grep { !defined($_) || ref($_) || !/\A\d+\z/ || $_ > 255 } @$id);
+# A server may forget a released lease. Identity alone does not tell the new
+# client which address to request; copy only the address supplied by DHCP.
+my @leases = grep { ref($_) eq 'HASH' && ($_->{'ConfigSource'} || '') eq 'DHCPv4' &&
+	($_->{'ConfigState'} || '') eq 'configured' } @{$status->{'Addresses'} || []};
+my $address = @leases == 1 ? $leases[0]->{'Address'} : undef;
+# A single DHCP address is required to choose an unambiguous lease request.
+die "Cannot read the current DHCPv4 address for $source; configure its bridge in Webmin Network Configuration\n"
+	if (ref($address) ne 'ARRAY' || @$address != 4 ||
+		grep { !defined($_) || ref($_) || !/\A\d+\z/ || $_ > 255 } @$address);
+my $request = 'RequestAddress='.join('.', @$address)."\n";
+if ($id->[0] == 1 && @$id == 7 &&
+	join(':', map { sprintf('%02x', $_) } @$id[1..6]) eq lc($mac)) {
+	# MAC-based clients keep their identity without switching to a DUID.
+	return "[DHCPv4]\nClientIdentifier=mac\n".$request;
+	}
+# Other supported clients encode an IAID and DUID after the type byte.
+die "Unsupported DHCP client identity; configure its bridge in Webmin Network Configuration\n"
+	if ($id->[0] != 255 || @$id < 8);
+# RFC 4361 combines a four-byte interface ID with the DHCP unique identifier.
+my $iaid = unpack('N', pack('C*', @$id[1..4]));
+my $type = unpack('n', pack('C*', @$id[5..6]));
+my $duid = join(':', map { sprintf('%02x', $_) } @$id[7..$#$id]);
+return "[DHCPv4]\nClientIdentifier=duid\nIAID=$iaid\nDUIDType=$type\nDUIDRawData=$duid\n".$request;
+}
+
 1;
