@@ -207,4 +207,27 @@ return $store->with_lock($store->path($image->{'id'}, 'json'), 0, sub {
 	});
 }
 
+# size_bytes(input, field, default_units, label)
+# Validates ui_bytesbox values while retaining the fixed-unit API defaults.
+sub size_bytes
+{
+my ($input, $field, $default, $label) = @_;
+my $value = $input->{$field};
+my $units = exists($input->{$field.'_units'}) ? $input->{$field.'_units'}
+	: $default;
+# Accept positive decimal input without exponent syntax or structured
+# values.
+die "Enter a positive number for $label\n"
+	if (!defined($value) || ref($value) ||
+	length($value) > 32 || $value !~ /\A(?:\d+(?:\.\d*)?|\.\d+)\z/ ||
+	$value <= 0);
+# Units are one of the binary multipliers offered by ui_bytesbox.
+die "Select valid units for $label\n" if (!defined($units) || ref($units) ||
+	!grep { $units eq int(1024**$_) } 0..5);
+my $bytes = $value * $units;
+# Keep values exact when the browser and JSON exchange them as numbers.
+die "The $label is too large\n" if ($bytes > 2**53);
+return $bytes;
+}
+
 1;
