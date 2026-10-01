@@ -653,4 +653,76 @@ return {
 };
 }
 
+# add_hardware_headroom(doc, cpu_limit)
+# Adds CPU slots, spare PCIe ports and a read-only rescue-media drive offline.
+sub add_hardware_headroom
+{
+my ($doc, $limit) = @_;
+my ($vcpu) = $doc->findnodes('/domain/vcpu');
+my $current = $vcpu->getAttribute('current') || $vcpu->textContent();
+# Expansion never lowers the existing maximum or enables additional CPUs.
+$limit = $vcpu->textContent() if ($limit < $vcpu->textContent());
+$vcpu->removeChildNodes();
+$vcpu->appendText($limit);
+$vcpu->setAttribute('current', $current);
+my ($devices) = $doc->findnodes('/domain/devices');
+my $machine = $doc->findvalue('/domain/os/type/@machine');
+if ($machine =~ /q35|^virt(?:-|$)/) {
+	# Ports must exist at boot; initial virtio devices consume some of them.
+	my @pci = $devices->findnodes('controller[@type="pci"]');
+	my %indexes = map { $_->getAttribute('index') => 1 } @pci;
+	if (!@pci) {
+		# Explicit ports need a root controller when
+		# libvirt has not added one yet.
+		my $root = $devices->addNewChild(undef, 'controller');
+		$root->setAttribute($_, { type => 'pci', index => 0,
+			model => 'pcie-root' }->{$_}) foreach qw(type index model);
+		$indexes{0} = 1;
+		}
+	my @ports = $devices->findnodes('controller[@model="pcie-root-port"]');
+	my $ports = scalar(@ports);
+	# Reuse existing ports and choose unused
+	# controller indexes for new ones.
+	for (my $index = 1; $ports < 16; $index++) {
+		next if ($indexes{$index});
+		my $port = $devices->addNewChild(undef, 'controller');
+		$port->setAttribute($_, { type => 'pci', index => $index,
+			model => 'pcie-root-port' }->{$_}) foreach qw(type index model);
+		$ports++;
+		}
+	}
+if (!$devices->findnodes('disk[@device="cdrom"]')) {
+	# A SCSI drive works on both native x86-64 and ARM64 guests.
+	my %controllers = map { $_->getAttribute('index') => 1 }
+		$devices->findnodes('controller[@type="scsi"]');
+	my $index = 0;
+	$index++ while ($controllers{$index});
+	my $controller = $devices->addNewChild(undef, 'controller');
+	$controller->setAttribute($_, { type => 'scsi', index => $index,
+		model => 'virtio-scsi' }->{$_}) foreach qw(type index model);
+	my %targets = map { $_->getValue() => 1 }
+		$devices->findnodes('disk/target/@dev');
+	# Keep existing disk targets intact when
+	# adding the empty removable drive.
+	my ($target) = grep { !$targets{$_} } map { 'sd'.$_ } 'a'..'z';
+	die "No free CD drive target\n" if (!$target);
+	my $disk = $devices->addNewChild(undef, 'disk');
+	$disk->setAttribute('type', 'file');
+	$disk->setAttribute('device', 'cdrom');
+	my $driver = $disk->addNewChild(undef, 'driver');
+	$driver->setAttribute('name', 'qemu');
+	$driver->setAttribute('type', 'raw');
+	my $node = $disk->addNewChild(undef, 'target');
+	$node->setAttribute('dev', $target);
+	$node->setAttribute('bus', 'scsi');
+	$disk->addNewChild(undef, 'readonly');
+	# Bind the drive to the new SCSI controller instead
+	# of relying on auto-placement.
+	my $address = $disk->addNewChild(undef, 'address');
+	$address->setAttribute($_, { type => 'drive', controller => $index,
+		bus => 0, target => 0, unit => 0 }->{$_})
+		foreach qw(type controller bus target unit);
+	}
+}
+
 1;
