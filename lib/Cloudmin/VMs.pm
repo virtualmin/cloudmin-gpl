@@ -901,4 +901,28 @@ $jobs->update($id, sub {
 });
 }
 
+# cleanup_work(self, id)
+# Removes only this job's fixed temporary filenames, retaining successful VM
+# volumes.
+sub cleanup_work
+{
+my ($self, $id) = @_;
+my $job = $self->{'jobs'}->get($id);
+# Stop a surviving task before deleting any provisioning data it may
+# use.
+Cloudmin::Worker->new()->cleanup($job->{'worker'}) if ($job->{'worker'});
+my $work = "$self->{jobs}->{directory}/$id";
+foreach my $name (qw(keys user-data meta-data network-config seed.iso disk0)) {
+	# Repeated cleanup also handles steps that failed before
+	# producing a file.
+	unlink("$work/$name") ||
+		die "Cannot clean virtual machine work file: $!\n"
+		if (-e "$work/$name");
+	}
+# Remove only an empty job directory; unexpected files remain visible as
+# errors.
+rmdir($work) || die "Cannot clean virtual machine work directory: $!\n"
+	if (-d $work);
+}
+
 1;
