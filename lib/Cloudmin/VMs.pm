@@ -807,4 +807,13 @@ if (!$devices->findnodes('disk[@device="cdrom"]')) {
 	}
 }
 
+# checkpoint(self, id)
+# Observes cancellation between libvirt calls, when rollback can run safely.
+sub checkpoint
+{
+my ($self, $id) = @_;
+die "Virtual machine creation cancelled\n"
+	if ($self->{'jobs'}->get($id)->{'cancel'});
+}
+
 1;
