@@ -122,4 +122,18 @@ if (!$image->{'architecture'} && ($image->{'source'} || '') eq 'download') {
 return $image;
 }
 
+# disk_volume_name(vm_name, role, id, [pool_type])
+# Uses short LV names for logical/lvmthin pools; other or omitted types get
+# readable filenames. Existing volumes keep their original names.
+sub disk_volume_name
+{
+my ($name, $role, $id, $type) = @_;
+# LVM combines escaped group and volume names in one bounded mapper name.
+return "cloudmin-$id-$role" if (($type || '') =~ /\A(?:logical|lvmthin)\z/);
+$name =~ s/[^a-zA-Z0-9_.-]+/-/g;
+$name =~ s/^[^a-zA-Z0-9]+//;
+$name = substr($name || 'vm', 0, 63);
+return "cloudmin-$name-$role-$id.".($role eq 'seed' ? 'iso' : 'qcow2');
+}
+
 1;
