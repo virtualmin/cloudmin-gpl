@@ -30,4 +30,13 @@ $g->chmod($mode // 0600, $path);
 $g->chown(0, 0, $path);
 }
 
+# remove_matches(guestfs, patterns...) removes state matching guest glob patterns.
+sub remove_matches
+{
+my ($g, @patterns) = @_;
+foreach my $pattern (@patterns) {
+	$g->rm_rf($_) foreach $g->glob_expand($pattern);
+}
+}
+
 1;
