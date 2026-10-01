@@ -574,4 +574,83 @@ foreach my $key (@keys) {
 return @keys;
 }
 
+# seed_data(request, uuid)
+# Generates NoCloud data as JSON (valid YAML), including /32 on-link gateways.
+sub seed_data
+{
+my ($r, $uuid) = @_;
+my $password = ($r->{'auth_type'} || 'keys') ne 'keys';
+my $root = $r->{'username'} eq 'root';
+# References to 1 and 0 encode as JSON booleans with either Webmin JSON backend.
+my $user = { name => $r->{'username'}, shell => '/bin/sh',
+	lock_passwd => $password ? \0 : \1 };
+# Ordinary guest administrators need sudo; root already has those
+# privileges.
+$user->{'sudo'} = [ 'ALL=(ALL) NOPASSWD:ALL' ] if (!$root);
+# Include user-supplied keys only when key authentication was selected.
+$user->{'ssh_authorized_keys'} = [ public_keys($r->{'ssh_keys'}) ]
+	if ($r->{'ssh_keys'});
+# Host access is additional to the user's selected password or SSH keys.
+push(@{$user->{'ssh_authorized_keys'}}, public_keys($r->{'host_public_key'}))
+	if ($r->{'host_public_key'});
+# Only password-enabled accounts receive the controller's retained hash.
+$user->{'hashed_passwd'} = $r->{'password_hash'} if ($password);
+# Apply the requested identity and expand the image's root filesystem at boot.
+my $data = { users => [ $user ],
+	disable_root => $root ? \0 : \1,
+	ssh_pwauth => $password ? \1 : \0,
+	chpasswd => { expire => \0 },
+	preserve_hostname => \0,
+	hostname => $r->{'hostname'}, manage_etc_hosts => \1,
+	growpart => { mode => 'auto', devices => ['/'],
+	ignore_growroot_disabled => \0 },
+	resize_rootfs => \1 };
+if ($root && $password) {
+	# Vendor images usually prohibit root passwords independently of
+	# ssh_pwauth.
+	$data->{'write_files'} = [ { path =>
+		'/etc/ssh/sshd_config.d/00-cloudmin.conf',
+		owner => 'root:root', permissions => '0600',
+		content => "PermitRootLogin yes\n" } ];
+	# Refresh a running daemon; socket-activated SSH will load this on
+	# startup.
+	$data->{'runcmd'} = [ [ 'sh', '-c',
+		'systemctl try-reload-or-restart ssh.service 2>/dev/null || systemctl try-reload-or-restart sshd.service' ] ];
+	}
+# Add guest setup files only when software installation is requested.
+Cloudmin::Software::seed($data, $r, $uuid);
+# Match the NIC by MAC without renaming a device the image may already use.
+my $nic = { match => { macaddress => $r->{'mac'} },
+	dhcp4 => $r->{'address_mode'}
+	eq 'dhcp' ? \1 : \0,
+	dhcp6 => \0 };
+if ($r->{'address_mode'} eq 'static') {
+	# Explicit addresses disable router advertisements.
+	$nic->{'accept-ra'} = \0;
+	$nic->{'addresses'} = [ grep { length } @{$r}{qw(ipv4 ipv6)} ];
+	my @routes;
+	foreach my $family (4, 6) {
+		# Reach the gateway directly even with /32 or /128 addresses. The
+		# Netplan-only on-link flag is rejected by other cloud-init renderers.
+		my $gateway = $r->{'gateway'.$family} || next;
+		push(@routes, { to => $gateway.($family == 4 ? '/32' : '/128') },
+			{ to => $family == 4 ? '0.0.0.0/0' : '::/0', via => $gateway });
+		}
+	# A directly connected guest needs no empty default-route
+	# section.
+	$nic->{'routes'} = \@routes if (@routes);
+	# Leave resolver selection to the image when no static servers
+	# were given.
+	$nic->{'nameservers'} = { addresses => [ split(' ', $r->{'dns'}) ] }
+		if ($r->{'dns'});
+	}
+return {
+	'user-data' => "#cloud-config\n".convert_to_json($data, 0, 1),
+	'meta-data' => convert_to_json({ 'instance-id' => $uuid,
+	'local-hostname' => $r->{'hostname'} }, 0, 1),
+	'network-config' => convert_to_json({ version => 2,
+	ethernets => { eth0 => $nic } }, 0, 1),
+};
+}
+
 1;
