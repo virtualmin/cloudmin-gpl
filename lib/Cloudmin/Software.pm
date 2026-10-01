@@ -255,6 +255,138 @@ die "The virtual machine was stopped before software setup finished\n" if (!$vm-
 return $vm;
 }
 
+# run(service, id) monitors guest installation outside the host disk-work lock.
+# service supplies the job store, libvirt adapter and managed SSH keys.
+sub run
+{
+my ($service, $id) = @_;
+my $jobs = $service->{'jobs'};
+# Only one host monitor may own this job, including after CGI disconnection.
+return if ($jobs->busy($id));
+return $jobs->lock('worker-'.$id, sub {
+	my $job = $jobs->get($id);
+	# A stale launcher must not reopen completed or non-software work.
+	return if (!$job->{'resources'}->{'software'} ||
+		$job->{'state'} !~ /\A(?:running|recovering)\z/);
+	# Explicit cleanup owns the worker lock before stopping its sandbox or guest.
+	return $service->cleanup_creation($id) if ($job->{'cleanup_created'});
+	my $adapter = $service->{'adapter'}->();
+	my $worker = $service->{'worker'} || Cloudmin::Worker->new();
+	my $ok = eval {
+		# Recovery must not start saved scripts after the Pro package is removed.
+		require_scripts() if (uses_scripts($job->{'request'}));
+		# Remove the old sandbox before resuming the guest's saved work.
+		$worker->cleanup($job->{'worker'}) if ($job->{'worker'});
+		# A saved deadline bounds recovery after reconnects or controller restarts.
+		while (time() < $job->{'resources'}->{'software_deadline'}) {
+			die "Guest software cancellation requested\n" if ($job->{'cancel'});
+			my $r = $job->{'request'};
+			my $vm = guest($adapter, $job);
+			if (!$job->{'resources'}->{'ssh_host_public'}) {
+				# Learn the public key through the domain's trusted agent channel,
+				# before sending any credentials to a network address.
+				my $final_attempt = time() >= $job->{'resources'}->{'software_deadline'} - 7200;
+				my $public = $adapter->get_setup_host_key($r->{'uuid'}, $final_attempt);
+				if ($public) {
+					# Save the verified key before SSH sends any credentials.
+					$job = $jobs->update($id, sub { $_[0]->{'resources'}->{'ssh_host_public'} = $public; });
+				}
+				else {
+					# The agent and identity file appear during cloud-init. Bound
+					# this wait separately from the software installation deadline.
+					die "Could not verify the guest SSH host key within 15 minutes. Check cloud-init and qemu-guest-agent inside the virtual machine\n"
+						if ($final_attempt);
+					Time::HiRes::sleep(5);
+					$job = $jobs->get($id);
+					next;
+				}
+			}
+			# Recheck before launching a worker if the package changed while waiting.
+			require_scripts() if (uses_scripts($r));
+			# Each address is tried with the same managed key and pinned host key.
+			my @addresses = addresses($r, $vm);
+			my $last_check = time();
+			my $key = $service->{'ssh_keys'}->find($r->{'uuid'}, $id) ||
+				die "The virtual machine's managed SSH key is missing\n";
+			foreach my $address (@addresses) {
+				# Give the worker credentials and this guest's verified keys.
+				my $result = $worker->run('software', {
+					address => $address, username => $r->{'username'}, uuid => $r->{'uuid'},
+					host_public_key => $job->{'resources'}->{'ssh_host_public'},
+					serial => $r->{'virtualmin_serial'}, key => $r->{'virtualmin_key'} },
+					files => { identity => $key },
+					started => sub { my $unit = $_[0];
+						# started(unit) saves the sandbox unit for cleanup.
+						$jobs->update($id, sub { $_[0]->{'worker'} = $unit; }); },
+					progress => sub {
+						# progress(event) checks cancellation and saves stages.
+						# Cancellation stops the SSH monitor before sending a guest stop.
+						die "Guest software cancellation requested\n" if ($jobs->get($id)->{'cancel'});
+						# Periodically notice power or deletion changes during SSH monitoring.
+						if (time() - $last_check >= 5) {
+							guest($adapter, $job, 1);
+							$last_check = time();
+						}
+						# Record known stages without exposing guest output.
+						my $event = $_[0];
+						die "Guest software setup monitoring timed out\n"
+							if (time() >= $job->{'resources'}->{'software_deadline'});
+						return if (($event->{'type'} || '') ne 'progress');
+						my $stage = $event->{'stage'} || '';
+						return if ($stage !~ /\A(?:accepted|before|packages|download|install|after)\z/);
+						$jobs->update($id, sub {
+							my ($current) = @_;
+							# Guest acceptance lets us erase host secrets.
+							delete(@{$current->{'request'}}{qw(virtualmin_serial virtualmin_key)})
+								if ($stage eq 'accepted');
+							# Avoid duplicate stages after reconnection.
+							return if ($stage eq 'accepted' || $current->{'phase'} eq 'software_'.$stage);
+							$current->{'events'}->[-1]->{'state'} = 'done';
+							$current->{'phase'} = 'software_'.$stage;
+							push(@{$current->{'events'}}, {step => $current->{'phase'}, state => 'running'});
+						});
+					});
+				$jobs->update($id, sub { delete($_[0]->{'worker'}); });
+				# Terminal results end monitoring; transport loss tries another
+				# address.
+				if ($result->{'stage'} eq 'complete') {
+					# Register only a verified guest whose installer has finished.
+					# Registration can be retried from Remote Access without reinstalling.
+					if ($r->{'webmin_register'} && $service->{'register_webmin'}) {
+						# Give registration its own progress step.
+						$jobs->update($id, sub {
+							$_[0]->{'events'}->[-1]->{'state'} = 'done';
+							$_[0]->{'phase'} = 'software_webmin';
+							push(@{$_[0]->{'events'}}, {step => 'software_webmin', state => 'running'});
+							});
+						# Registration failure does not fail the install.
+						# Show retry advice without private error details.
+						my $registered = eval { $service->{'register_webmin'}->($jobs->get($id), $address); 1 };
+						$jobs->update($id, sub { $_[0]->{'webmin_warning'} =
+							$registered ? '' : 'Virtualmin is installed, but Webmin registration failed. Open Remote Access, select Webmin, then choose Open embedded Webmin to retry.'; });
+						}
+					return finish($service, $id, '');
+					}
+				return finish($service, $id, '', 1) if ($result->{'stage'} eq 'cancelled');
+				die failure($result) if ($result->{'stage'} eq 'failed');
+			}
+			# Retry guest discovery and monitoring until the saved deadline.
+			Time::HiRes::sleep(5);
+			$job = $jobs->get($id);
+		}
+		die "Could not confirm guest software setup before the deadline. Check the installation log inside the virtual machine\n";
+	};
+	if (!$ok) {
+		# Deletion and cancellation end setup without rolling back the guest.
+		my $error = $@;
+		return finish($service, $id, '', 1, 1)
+			if (ref($error) eq 'Cloudmin::Software::GuestDeleted');
+		return cancel($service, $id, $adapter, $worker) if ($jobs->get($id)->{'cancel'});
+		return finish($service, $id, $error);
+	}
+});
+}
+
 # cancel(service, id, adapter, worker) stops setup over pinned SSH, or runs
 # explicitly requested creation cleanup while holding the worker lock.
 sub cancel
