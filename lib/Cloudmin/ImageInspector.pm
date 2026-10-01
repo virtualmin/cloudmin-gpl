@@ -4,6 +4,40 @@ package Cloudmin::ImageInspector;
 use strict;
 use warnings;
 
+# inspect(path, format, [appliance_only])
+# Opens a standalone local disk without booting it or mounting it on the host.
+# appliance_only verifies appliance boot for installation readiness and skips
+# inspection of the disk's operating system.
+sub inspect
+{
+my ($path, $format, $appliance_only) = @_;
+# Refuse missing disks and implicit format detection for untrusted input.
+die "Select a readable local image\n" if (!$path || !-f $path);
+# Select the disk parser explicitly instead of guessing from image headers.
+die "Select QCOW2 or raw image format\n" if ($format !~ /\A(?:qcow2|raw)\z/);
+eval { require Sys::Guestfs; 1 }
+	|| die "Install libguestfs and its Perl bindings to check custom image compatibility\n";
+my $g = Sys::Guestfs->new();
+my $result;
+my $ok = eval {
+	# Read the disk through a KVM appliance with networking disabled.
+	$g->set_backend('direct');
+	$g->set_backend_setting('force_kvm', '1');
+	$g->set_network(0);
+	$g->set_trace(0);
+	$g->set_verbose(0);
+	$g->add_drive_opts($path, format => $format, readonly => 1);
+	$g->launch();
+	$result = $appliance_only ? { appliance => 1 } : inspect_guest($g);
+	1;
+	};
+my $error = $@;
+# Always release the appliance, without replacing the original inspection error.
+eval { $g->close(); };
+die $error if (!$ok);
+return $result;
+}
+
 # inspect_guest(guestfs)
 # Requires one Linux installation, a known CPU architecture and usable
 # cloud-init files.
