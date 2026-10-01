@@ -136,4 +136,42 @@ $name = substr($name || 'vm', 0, 63);
 return "cloudmin-$name-$role-$id.".($role eq 'seed' ? 'iso' : 'qcow2');
 }
 
+# inspect_custom_image(self, image)
+# Prevents deletion while an isolated helper reads the selected imported volume.
+sub inspect_custom_image
+{
+my ($self, $image) = @_;
+my $store = $self->{'images'};
+return $store->with_lock($store->path($image->{'id'}, 'json'), 0, sub {
+	my $current = $store->get($image->{'id'});
+	# Recheck ownership and readiness after waiting for the image
+	# lock.
+	die "Source image is no longer ready\n"
+	if (!$current || $current->{'state'} ne 'ready' ||
+		$current->{'volume_key'} ne $image->{'volume_key'});
+	# The parser and appliance inspect a copy in an unprivileged sandbox.
+	my $worker = Cloudmin::Worker->new();
+	# Clear an orphan from an earlier inspection before starting
+	# another one.
+	$worker->cleanup($current->{'worker'}) if ($current->{'worker'});
+	my $result = $worker->run('inspect',
+	{ format => $image->{'format'}, guest => 1 },
+		files => { image => $image->{'volume_path'} },
+		started => sub { $current->{'worker'} = $_[0];
+		$store->save($image->{'id'}, $current); });
+	delete($current->{'worker'});
+	# Malformed helper output cannot become cached compatibility
+	# metadata.
+	die "Cannot determine image compatibility\n"
+	if (ref($result) ne 'HASH');
+	# Keep the detected metadata with the image so later forms and worker
+	# preflights do not copy and inspect the same volume again.
+	@{$current}{qw(architecture cloud_init)} =
+		@{$result}{qw(architecture cloud_init)}
+		if ($result->{'architecture'});
+	$store->save($image->{'id'}, $current);
+	return $result;
+	});
+}
+
 1;
