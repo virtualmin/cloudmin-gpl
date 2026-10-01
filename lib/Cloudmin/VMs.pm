@@ -834,4 +834,71 @@ die "Virtual machine creation cancelled\n"
 	if ($self->{'jobs'}->get($id)->{'cancel'});
 }
 
+# ensure_image(self, id) reuses or downloads a catalogue image before disk work.
+# Cancelling a creation leaves the shared import available to other requests.
+sub ensure_image
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+my $job = $jobs->get($id);
+my $request = $job->{'request'}->{'image_download'};
+# Imported images and creations already past preparation need no download.
+return if (!$request || $job->{'state'} ne 'queued');
+$self->checkpoint($id);
+my $images = $self->{'images'};
+# One short reservation lets concurrent creations share an import in this pool.
+my $key = sha256_hex(convert_to_json($request, 0, 1, 1));
+my $image = $jobs->lock('image-'.$key, sub {
+	# Completed sources can be cloned across pools; active imports stay
+	# pool-bound.
+	my ($ready) = grep { Cloudmin::Images::matches_download($_, $request) }
+		@{$self->options()->{'images'}};
+	return $ready if ($ready);
+	my ($active) = grep { $_->{'pool'} eq $request->{'pool'} &&
+		Cloudmin::Images::matches_download($_, $request) }
+		@{$images->list(undef, 1)};
+	return $active if ($active);
+	return $images->create($job->{'owner'}, $images->form_token($job->{'owner'}), $request);
+});
+$jobs->update($id, sub {
+	my ($record) = @_;
+	$record->{'image_job'} = $image->{'id'};
+	$record->{'phase'} = 'image';
+	# Reattaching a queued creation retains its existing progress event.
+	push(@{$record->{'events'}}, {step => 'image', state => 'running'})
+		if (!@{$record->{'events'}} || $record->{'events'}->[-1]->{'step'} ne 'image');
+});
+# Joining an active import must not start another transfer.
+$images->start($image->{'id'}) if ($image->{'state'} eq 'queued');
+# Publish shared transfer progress while observing this creation's cancellation.
+my $cached = $image->{'state'} eq 'ready' ? 1 : 0;
+my $deadline = time()+3700;
+while (1) {
+	$self->checkpoint($id);
+	$image = $images->get($image->{'id'});
+	$jobs->update($id, sub { $_[0]->{'image_progress'} = { cached => $cached,
+		map { $_ => $image->{$_} } qw(name state bytes total) }; });
+	last if ($image->{'state'} eq 'ready');
+	die "Image download failed: ".($image->{'error'} || $image->{'state'})."\n"
+		if ($image->{'state'} =~ /\A(?:failed|cancelled|deleted)\z/);
+	die "Timed out waiting for the image download\n" if (time() >= $deadline);
+	# An interrupted import cannot complete by itself. Keep its error visible.
+	if ($image->{'state'} ne 'queued' && !$images->{'test_lock'}->($images->path($image->{'id'}, 'json'))) {
+		my $latest = $images->get($image->{'id'});
+		die "Image download was interrupted; retry creation\n"
+			if ($latest->{'state'} eq $image->{'state'});
+	}
+	sleep(1);
+}
+# Re-read libvirt inventory rather than trusting a stale ready marker.
+my ($ready) = grep { $_->{'id'} eq $image->{'id'} &&
+	Cloudmin::Images::matches_download($_, $request) } @{$self->options()->{'images'}};
+die "Downloaded image is no longer available\n" if (!$ready);
+$jobs->update($id, sub {
+	$_[0]->{'request'}->{'source_image'} = { map { $_ => $ready->{$_} }
+		qw(id name pool volume volume_key volume_path format virtual_size) };
+	$_[0]->{'events'}->[-1]->{'state'} = 'done';
+});
+}
+
 1;
