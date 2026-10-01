@@ -4,6 +4,52 @@ package Cloudmin::ImageInspector;
 use strict;
 use warnings;
 
+# inspect_guest(guestfs)
+# Requires one Linux installation, a known CPU architecture and usable
+# cloud-init files.
+sub inspect_guest
+{
+my ($g) = @_;
+my @roots = $g->inspect_os();
+# Multi-boot and non-Linux disks cannot use the current cloud-init creation
+# flow.
+die "The image must contain one installed Linux operating system\n"
+	if (@roots != 1 || $g->inspect_get_type($roots[0]) ne 'linux');
+my $root = $roots[0];
+my $architecture = $g->inspect_get_arch($root);
+# An unknown architecture cannot be matched safely to the compute host.
+die "Cannot determine this image's CPU architecture\n"
+	if (!$architecture || $architecture eq 'unknown');
+my %mounts = $g->inspect_get_mountpoints($root);
+# Mount parents before children so a separate /usr does not hide installed
+# software.
+foreach my $mount (sort { length($a) <=> length($b) || $a cmp $b }
+	keys %mounts) {
+	$g->mount_ro($mounts{$mount}, $mount);
+	}
+# A configuration file alone is insufficient if cloud-init is disabled or
+# absent.
+die "Cloud-init is disabled in this image\n"
+	if ($g->exists('/etc/cloud/cloud-init.disabled'));
+# Require cloud-init's configuration and program file, not a package
+# marker.
+die "Cloud-init is not installed in this image\n"
+	if (!$g->is_file('/etc/cloud/cloud.cfg', followsymlinks => 1) ||
+		!grep { $g->is_file($_, followsymlinks => 1) }
+		qw(/usr/bin/cloud-init /usr/local/bin/cloud-init));
+# A masked first-boot service prevents the supplied login and network settings.
+foreach my $unit (qw(cloud-init-local.service cloud-init.service
+		    cloud-init-network.service cloud-config.service
+		    cloud-final.service)) {
+	my $path = '/etc/systemd/system/'.$unit;
+	die "Cloud-init is disabled in this image because $unit is masked\n"
+		if ($g->is_symlink($path) &&
+		$g->readlink($path) eq '/dev/null');
+	}
+check_cloud_config($g);
+return { architecture => $architecture, cloud_init => 1 };
+}
+
 # check_cloud_config(guestfs)
 # Rejects explicit datasource or network settings that ignore Cloudmin's seed
 # disk.
