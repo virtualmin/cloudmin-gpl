@@ -17,4 +17,17 @@ die "Guest configuration is too large: $path\n" if ($g->filesize($path) > 1024*1
 return $g->read_file($path);
 }
 
+# write_private(guestfs, path, content, [mode]) writes a root-owned guest file.
+# mode defaults to 0600; callers can adjust ownership after writing.
+# Replacing a symlink affects only its entry, never an unrelated guest target.
+sub write_private
+{
+my ($g, $path, $content, $mode) = @_;
+$g->mkdir_p(dirname($path));
+$g->rm($path) if ($g->is_symlink($path));
+$g->write($path, $content);
+$g->chmod($mode // 0600, $path);
+$g->chown(0, 0, $path);
+}
+
 1;
