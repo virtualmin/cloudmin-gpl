@@ -901,6 +901,35 @@ $jobs->update($id, sub {
 });
 }
 
+# complete(self, id)
+# Commits the final result and removes temporary provisioning inputs.
+sub complete
+{
+my ($self, $id) = @_;
+my $clean = eval { $self->cleanup_work($id); 1 };
+my $warning = $clean ? '' : Cloudmin::Libvirt::error_message($@);
+my $job = $self->{'jobs'}->update($id, sub {
+	# Completion and cancellation share this final atomic store
+	# update.
+	die "Virtual machine creation cancelled\n" if ($_[0]->{'cancel'});
+	$_[0]->{'cleanup_warning'} = $warning;
+	$_[0]->{'cleanup_pending'} = 0;
+	$_[0]->{'state'} = 'complete';
+	delete($_[0]->{'request'}->{'password_hash'});
+	$_[0]->{'events'}->[-1]->{'state'} = 'done';
+	if (Cloudmin::Software::enabled($_[0]->{'request'})) {
+		# Commit the VM before provisioning; later failures must preserve it.
+		$_[0]->{'state'} = 'running';
+		$_[0]->{'resource'} = 'software:'.$id;
+		$_[0]->{'resources'}->{'software'} = 1;
+		$_[0]->{'resources'}->{'software_deadline'} = time() + 8100;
+		$_[0]->{'phase'} = 'software_boot';
+		push(@{$_[0]->{'events'}}, {step => 'software_boot', state => 'running'});
+		}
+	});
+return $job;
+}
+
 # cleanup_work(self, id)
 # Removes only this job's fixed temporary filenames, retaining successful VM
 # volumes.
