@@ -653,6 +653,88 @@ return {
 };
 }
 
+# domain_xml(request, uuid, job_id, disk, seed, console_password)
+# Builds native KVM hardware with a private console. disk and seed are volume
+# paths; pass undef in the seed position for an ISO install. request supplies
+# the installer volume path, when needed, and job_id marks guest ownership.
+sub domain_xml
+{
+my ($r, $uuid, $id, $disk, $seed, $password) = @_;
+my $installer = ($r->{'install_source'} || '') eq 'iso';
+my $x = \&Cloudmin::Libvirt::xml_escape;
+# Let libvirt choose a GIC version supported by this host.
+my $features = $r->{'architecture'}
+	eq 'aarch64' ? '<acpi/><gic/>' : '<acpi/><apic/>';
+# The virt board has no built-in keyboard or mouse, so the VNC console needs
+# USB input devices. PC machine types get PS/2 devices from libvirt.
+my $inputs = $r->{'architecture'} eq 'aarch64'
+	? "<controller type='usb' model='qemu-xhci' ports='8'/>".
+	  "<input type='keyboard' bus='usb'/><input type='tablet' bus='usb'/>"
+	: '';
+# Keep UEFI variables across boots and exclude stateless SEV/TDX firmware.
+# Libvirt still selects the firmware and its variable-store template.
+my $firmware = $r->{'firmware'} eq 'efi'
+	? "<firmware><feature enabled='no' name='secure-boot'/><feature enabled='no' name='enrolled-keys'/></firmware>".
+	  "<loader stateless='no'/>" : '';
+my $source = $r->{'attachment'}->{'type'} eq 'network' ? 'network' : 'bridge';
+my $os_firmware = $r->{'firmware'} eq 'efi' ? " firmware='efi'" : '';
+my $metadata = join('',
+	map { '<cloudmin:'.$_.'>'.$x->($r->{$_} || '').'</cloudmin:'.$_.'>' }
+	qw(image network ipv4 ipv6 username template));
+# Persist ownership with the guest so recovery can distinguish a replacement VM.
+my $xml = "<domain type='kvm'><name>".$x->($r->{'name'}).
+	"</name><uuid>$uuid</uuid>".
+	'<description>'.$x->($r->{'description'}).'</description>'.
+	"<metadata><cloudmin:vm xmlns:cloudmin='urn:cloudmin:vm:1'><cloudmin:job>$id</cloudmin:job>$metadata</cloudmin:vm></metadata>".
+	"<memory unit='MiB'>$r->{memory_mib}</memory><vcpu>$r->{cpus}</vcpu>".
+	"<os$os_firmware><type arch='$r->{architecture}' machine='".
+	$x->($r->{'machine'})."'>hvm</type>".
+	# Installer media boots first; an ejected drive falls back to the system disk.
+	$firmware.($installer ? "<boot dev='cdrom'/>" : '').
+	"<boot dev='hd'/></os><features>$features</features><cpu mode='host-passthrough'/>".
+	"<clock offset='utc'/><on_poweroff>destroy</on_poweroff><on_reboot>restart</on_reboot><on_crash>destroy</on_crash>".
+	# Every guest has a writable system disk; only cloud images get a seed disk.
+	'<devices><emulator>'.$x->($r->{'emulator'}).'</emulator>'.
+	"<disk type='file' device='disk'><driver name='qemu' type='qcow2'/><source file='".$x->($disk)."'/>".
+	"<target dev='vda' bus='virtio'/></disk>".
+	($installer ? '' :
+	"<disk type='file' device='disk'><driver name='qemu' type='raw'/><source file='".$x->($seed)."'/>".
+	"<target dev='vdb' bus='virtio'/><readonly/></disk>").
+	"<interface type='$source'><mac address='$r->{mac}'/><source $source='".
+	$x->($r->{'attachment'}->{'source'})."'/>".
+	"<model type='virtio'/></interface>".
+	# Expose guest-agent transport and a password-protected local-only
+	# console.
+	"<channel type='unix'><target type='virtio' name='org.qemu.guest_agent.0'/></channel>".
+	"<serial type='pty'/><console type='pty'/>".
+	"<graphics type='vnc' autoport='yes' websocket='-1' listen='127.0.0.1' passwd='".$x->($password)."'>".
+	"<listen type='address' address='127.0.0.1'/></graphics><video><model type='virtio'/></video>$inputs".
+	"<rng model='virtio'><backend model='random'>/dev/urandom</backend></rng>".
+	"<memballoon model='virtio'><stats period='10'/></memballoon></devices></domain>";
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+# LVM destinations expose raw block devices, including the read-only seed.
+if (($r->{'pool_type'} || '') =~ /\A(?:logical|lvmthin)\z/) {
+	foreach my $node ($doc->findnodes('/domain/devices/disk[@device="disk"]')) {
+		$node->setAttribute('type', 'block');
+		my ($source) = $node->findnodes('source');
+		$source->setAttribute('dev', $source->getAttribute('file'));
+		$source->removeAttribute('file');
+		my ($driver) = $node->findnodes('driver');
+		$driver->setAttribute('type', 'raw');
+		$driver->setAttribute('cache', 'none');
+		}
+	}
+# Reserve future device capacity after building the guest's initial hardware.
+add_hardware_headroom($doc, $r->{'cpu_limit'} || $r->{'cpus'});
+if ($installer) {
+	# Reuse the standard removable drive; the imported ISO stays read-only.
+	my ($cdrom) = $doc->findnodes('/domain/devices/disk[@device="cdrom"]');
+	$cdrom->addNewChild(undef, 'source')->setAttribute('file',
+		$r->{'source_image'}->{'volume_path'});
+	}
+return $doc->toString();
+}
+
 # add_hardware_headroom(doc, cpu_limit)
 # Adds CPU slots, spare PCIe ports and a read-only rescue-media drive offline.
 sub add_hardware_headroom
