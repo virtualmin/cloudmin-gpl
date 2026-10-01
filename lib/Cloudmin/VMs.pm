@@ -230,4 +230,22 @@ die "The $label is too large\n" if ($bytes > 2**53);
 return $bytes;
 }
 
+# address(value, family, cidr)
+# Canonicalizes an IPv4 or IPv6 literal. cidr requires a prefix when true and
+# forbids one when false; family is 4 or 6.
+sub address
+{
+my ($value, $family, $cidr) = @_;
+my ($address, $prefix, @extra) = split('/', $value, -1);
+my $valid = $family == 4 ? check_ipaddress($address)
+	: check_ip6address($address);
+die "Invalid IPv$family address: $value\n" if (!$valid || @extra ||
+	($cidr ? !defined($prefix) || $prefix !~ /\A\d+\z/ ||
+	$prefix > ($family == 4 ? 32 : 128)
+		: defined($prefix)));
+my $af = $family == 4 ? AF_INET : AF_INET6;
+my $packed = inet_pton($af, $address) || die "Invalid IP address\n";
+return inet_ntop($af, $packed).($cidr ? '/'.int($prefix) : '');
+}
+
 1;
