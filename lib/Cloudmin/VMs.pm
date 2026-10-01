@@ -136,6 +136,304 @@ $name = substr($name || 'vm', 0, 63);
 return "cloudmin-$name-$role-$id.".($role eq 'seed' ? 'iso' : 'qcow2');
 }
 
+# prepare(self, input, [options], [password_hash])
+# Validates creation settings without creating a VM or its volumes. Custom cloud
+# images with missing metadata may need isolated inspection; ISOs skip it.
+# Password hashes come from the controller's private store, never public input.
+# Omitted options trigger a fresh inventory; callers may pass one already
+# loaded.
+sub prepare
+{
+my ($self, $input, $options, $password_hash) = @_;
+# Reject disabled installers before probing the host or allocating resources.
+die "Virtualmin installation is disabled in Module Configuration. ".
+	"Re-enable it to install Virtualmin.\n"
+	if (defined($self->{'virtualmin_enabled'}) && !$self->{'virtualmin_enabled'} &&
+		!ref($input->{'software'}) &&
+		($input->{'software'} || '') =~ /\Avirtualmin-(?:gpl|pro)\z/);
+$options ||= $self->options();
+my $caps = $options->{'capabilities'};
+my %r;
+# Normalize only the accepted text fields before building the durable request.
+foreach my $field (qw(name image install_source pool network username ssh_keys hostname
+		     firmware ipv4 gateway4 ipv6 gateway6 dns mac
+		     description require_fqdn)) {
+	my $value = defined($input->{$field}) ? $input->{$field} : '';
+	# Reject lists and objects where the form expects one text value.
+	die "Invalid $field\n" if (ref($value));
+	$value =~ s/^\s+|\s+$//g;
+	# Bound text and exclude control bytes before storing or
+	# rendering it.
+	die "Invalid $field\n"
+		if (ref($value) || $value =~ /[\x00-\x08\x0b\x0c\x0e-\x1f]/ ||
+		length($value) > 16384);
+	$r{$field} = $value;
+	}
+# Keep the hostname rule in the saved request for worker revalidation.
+$r{'require_fqdn'} = 0 if ($r{'require_fqdn'} eq '');
+die "Invalid fully qualified hostname requirement\n"
+	if ($r{'require_fqdn'} !~ /\A[01]\z/);
+# Default to cloud images for API clients that omit the installation source.
+$r{'install_source'} ||= 'cloud';
+die "Select a cloud image or installer ISO source\n"
+	if ($r{'install_source'} !~ /\A(?:cloud|iso)\z/);
+my $installer = $r{'install_source'} eq 'iso';
+# Display names have a small, filesystem-independent character set.
+die "Enter a virtual machine name using letters, numbers, spaces, dots, dashes or underscores\n"
+	if ($r{'name'} !~ /\A[a-zA-Z0-9][a-zA-Z0-9_. -]{0,62}\z/);
+# Libvirt domain names are unique across this host's managed inventory.
+die "A virtual machine with this name already exists\n"
+	if (grep { $_->{'name'} eq $r{'name'} } @{$options->{'domains'}});
+my ($image) = grep { $_->{'id'} eq $r{'image'} }
+	(@{$options->{'images'}}, @{$options->{'catalogue_images'} || []});
+# Catalogue selections must still be enabled and compatible with this host.
+die "Select an available image\n" if (!$image);
+# Restrict destinations to the supported active pools returned by options().
+my ($pool) = grep { $_->{'id'} eq $r{'pool'} } @{$options->{'pools'}};
+die "Select an active storage pool\n" if (!$pool);
+$r{'pool_type'} = $pool->{'type'} || 'dir';
+if ($image->{'catalogue_id'}) {
+	# Keep catalogue identity for retries and a fixed asset for the download worker.
+	my $cache = $pool;
+	if ($r{'pool_type'} =~ /\A(?:logical|lvmthin)\z/) {
+		# Downloaded images stay reusable files, separate from the guest's LV.
+		($cache) = grep { $_->{'type'} =~ /\A(?:dir|fs|netfs)\z/ } @{$options->{'pools'}};
+		die "An active file storage pool is required to cache installation images\n" if (!$cache);
+		}
+	$r{'image_download'} = Cloudmin::Images::catalogue_request(
+		{ %$image, id => $image->{'catalogue_id'} }, $cache);
+	my ($ready) = grep { Cloudmin::Images::matches_download($_, $r{'image_download'}) }
+		@{$options->{'images'}};
+	$image = $ready if ($ready);
+}
+# Cloud disks require compatibility metadata or inspection. ISOs use any known
+# catalogue constraints, without parsing their contents.
+if ($installer) {
+	# ISO contents are not inspected; the administrator selects native media.
+	die "Select an installer ISO\n"
+		if (($image->{'format'} || '') ne 'iso');
+	# Enforce catalogue architecture when available, even without inspection.
+	die "This ISO's CPU architecture does not match the host\n"
+		if ($image->{'architecture'} && $image->{'architecture'} ne $caps->{'architecture'});
+	}
+else {
+	# Cloud images need compatible metadata or a successful inspection.
+	die "Select a cloud image, or choose the Installer ISO source\n"
+		if (($image->{'format'} || '') eq 'iso');
+	# Cloud-init dependencies are optional only for the installer path.
+	die "$options->{cloud_init_error}\n" if ($options->{'cloud_init_error'});
+	$self->check_image_compatibility($image, $caps->{'architecture'});
+	}
+# Save the selected volume's identity for the worker to recheck before use.
+$r{'source_image'} = { map { $_ => $image->{$_} }
+	qw(id name pool volume volume_key volume_path format virtual_size prepared_vm) };
+# Captured Virtualmin installations need a qualified application hostname.
+$r{'require_fqdn'} = 1 if ($image->{'prepared_vm'} && $image->{'virtualmin'});
+$r{'image_name'} = $image->{'name'};
+$r{'architecture'} = $caps->{'architecture'};
+$r{'machine'} = $caps->{'machine'};
+$r{'emulator'} = $caps->{'emulator'};
+$r{'pool_name'} = $pool->{'name'};
+# Enforce host capacity and the image's minimum size before allocating a disk.
+my $cpus = $input->{'cpus'} || '';
+die "Enter a whole CPU count from 1 to $caps->{cpus}\n"
+	if ($cpus !~ /\A[1-9][0-9]{0,8}\z/);
+$r{'cpus'} = int($cpus);
+# Unit selectors override the API's default MiB and GiB input units.
+$r{'memory_mib'} = size_bytes($input, 'memory_mib', 1024**2,
+	'memory') / 1024**2;
+# Domain memory and later job validation use whole MiB values.
+die "Memory must be a whole number of MiB\n"
+	if ($r{'memory_mib'} != int($r{'memory_mib'}));
+my $disk_bytes = size_bytes($input, 'disk_gib', 1024**3, 'disk size');
+# Thick LVM uses whole extents; thin and file disks use sectors. Save that size.
+my $unit = $pool->{'allocation_unit'} || 512;
+$r{'disk_gib'} = sprintf('%.17g', ceil($disk_bytes / $unit) * $unit / 1024**3);
+# Limit this guest's CPU count to the host's logical CPU count.
+die "Enter a whole CPU count from 1 to $caps->{cpus}\n"
+	if ($r{'cpus'} > $caps->{'cpus'});
+# Reserve CPU slots without assigning them to the guest at startup.
+$r{'cpu_limit'} = $r{'cpus'} * 2 < $caps->{'cpus'}
+	? $r{'cpus'} * 2 : $caps->{'cpus'};
+# Every guest needs a usable minimum while leaving a basic host reserve.
+die "Select at least 256 MiB and leave 256 MiB of host memory free\n"
+	if ($r{'memory_mib'} < 256 ||
+	$r{'memory_mib'} > $caps->{'memory_kib'}/1024 - 256);
+# An empty installer disk needs at least 1 GiB, regardless of the ISO's size.
+my $minimum = $installer ? 1024**3 : $image->{'virtual_size'} || 0;
+# Apply any larger minimum required by the publisher to either disk type.
+$minimum = $image->{'min_disk_bytes'}
+	if (($image->{'min_disk_bytes'} || 0) > $minimum);
+# Enforce the disk minimum; clones cannot shrink existing filesystems.
+die "The disk must be at least ".int(($minimum + 1024**3 - 1)/1024**3)." GiB\n"
+	if ($r{'disk_gib'} * 1024**3 < $minimum);
+# Require full disk capacity on file and thick pools, including sparse files.
+die "The storage pool needs enough free space for the disk plus 256 MiB\n"
+	if ($r{'pool_type'} ne 'lvmthin' && $r{'disk_gib'} * 1024**3 > $pool->{'available'} - 256*1024**2);
+# Thin capacity can exceed physical space, but data and metadata need headroom.
+die "Extend the thin pool before creating another virtual machine\n"
+	if ($r{'pool_type'} eq 'lvmthin' && ($pool->{'available'} < 256*1024**2 ||
+		($pool->{'data_percent'} // 100) >= 95 || ($pool->{'metadata_percent'} // 100) >= 90));
+if ($image->{'catalogue_id'}) {
+	# A file destination also holds the download; LVM uses a separate file cache.
+	my $download = $image->{'download_size_bytes'} || $image->{'min_disk_bytes'} || 0;
+	die "The storage pool needs space for both the downloaded image and the virtual machine disk\n"
+		if ($r{'pool_type'} !~ /\A(?:logical|lvmthin)\z/ &&
+			$r{'disk_gib'} * 1024**3 + $download > $pool->{'available'} - 256*1024**2);
+}
+$r{'start'} = $input->{'start'} ? 1 : 0;
+$r{'autostart'} = $input->{'autostart'} ? 1 : 0;
+# Immediate startup also needs free memory now, not just installed
+# capacity.
+die "Not enough free host memory to start this virtual machine\n"
+	if ($r{'start'} &&
+	$r{'memory_mib'} * 1024**2 > $caps->{'free_memory'} - 256*1024**2);
+
+# Resolve firmware from image constraints, with an explicit advanced override.
+if (!$r{'firmware'} || $r{'firmware'} eq 'auto') {
+	$r{'firmware'} = ($image->{'firmware'} || '') eq 'bios' ? 'bios'
+		: $caps->{'efi'} ? 'efi' : 'bios';
+	}
+# Overrides still have to name firmware that this host can supply.
+die "The selected firmware is unavailable on this host\n"
+	if ($r{'firmware'} !~ /\A(?:efi|bios)\z/ || !$caps->{$r{'firmware'}});
+# UEFI-only images cannot use a BIOS override.
+die "This image requires UEFI firmware\n"
+	if (($image->{'firmware'} || '') eq 'uefi' && $r{'firmware'} ne 'efi');
+# BIOS-only images cannot use the host's preferred UEFI firmware.
+die "This image requires BIOS firmware\n"
+	if (($image->{'firmware'} || '') eq 'bios' && $r{'firmware'} ne 'bios');
+my ($network) = grep { $_->{'key'} eq $r{'network'} } @{$options->{'networks'}};
+# Form input selects existing attachments; it cannot invent a host
+# device.
+die "Select an active libvirt network or host bridge\n" if (!$network);
+$r{'attachment'} = { map { $_ => $network->{$_} }
+	qw(type source forward dhcp) };
+# ISO installers set guest addresses; Cloudmin attaches the network interface.
+$r{'address_mode'} = $installer ? 'manual' : $input->{'address_mode'} || 'dhcp';
+# Cloud-init generation handles only DHCP or explicit static
+# configuration.
+die "Select automatic or static addressing\n"
+	if (!$installer && $r{'address_mode'} !~ /\A(?:dhcp|static)\z/);
+if ($r{'address_mode'} eq 'static') {
+	# Canonical addresses make duplicate detection independent of IPv6
+	# spelling.
+	die "Enter a static IPv4 or IPv6 address with a prefix length\n"
+		if (!$r{'ipv4'} && !$r{'ipv6'});
+	# Either address family may be omitted when the other is
+	# configured.
+	$r{'ipv4'} = address($r{'ipv4'}, 4, 1) if ($r{'ipv4'});
+	# Normalize IPv6 spelling before checking for duplicate
+	# addresses.
+	$r{'ipv6'} = address($r{'ipv6'}, 6, 1) if ($r{'ipv6'});
+	foreach my $family (4, 6) {
+		# A static guest can use a directly connected subnet
+		# without a gateway.
+		next if (!$r{'gateway'.$family});
+		# An IPv4 gateway cannot provide a route for an
+		# IPv6-only guest.
+		die "A gateway needs a static address of the same family\n"
+			if (!$r{'ipv'.$family});
+		$r{'gateway'.$family} = address($r{'gateway'.$family}, $family,
+			0);
+		}
+	my @dns = grep { length } split(/[\s,]+/, $r{'dns'});
+	# Keep the seed's resolver configuration within the supported
+	# form limit.
+	die "Enter at most three DNS server addresses\n" if (@dns > 3);
+	$r{'dns'} = join(' ',
+		map { address($_, index($_, ':') >= 0 ? 6 : 4, 0) } @dns);
+	}
+else {
+	# Hidden static fields must not affect DHCP or installer-managed addressing.
+	$r{$_} = '' for qw(ipv4 ipv6 gateway4 gateway6 dns);
+	# An installer can configure a static address on a network without DHCP.
+	die "This libvirt network has no DHCP service; use static addressing\n"
+		if (!$installer && $network->{'type'} eq 'network' && !$network->{'dhcp'});
+	}
+$r{'mac'} ||= '52:54:00:'.
+	join(':', substr(Cloudmin::Images::generate_id(), 0, 6) =~ /../g);
+$r{'mac'} = lc($r{'mac'});
+# NIC identities must be valid unicast addresses, never all-zero
+# placeholders.
+die "Enter a unicast MAC address\n"
+	if ($r{'mac'} !~ /\A(?:[a-f0-9]{2}:){5}[a-f0-9]{2}\z/ ||
+	(hex(substr($r{'mac'}, 0, 2)) & 1) || $r{'mac'} eq '00:00:00:00:00:00');
+foreach my $domain (@{$options->{'domains'}}) {
+	# MACs are host-wide; recorded static IP conflicts matter per
+	# attachment.
+	die "This MAC address is already used by a virtual machine\n"
+		if (grep { lc($_) eq $r{'mac'} } @{$domain->{'macs'}});
+	my $metadata = $domain->{'cloudmin'} || {};
+	# The same static address may be valid on a different network
+	# attachment.
+	next if (($metadata->{'network'} || '') ne $r{'network'});
+	foreach my $field (qw(ipv4 ipv6)) {
+		# Compare host addresses without their prefixes inside
+		# one attachment.
+		die "This static address is already assigned to a Cloudmin virtual machine\n"
+			if ($r{$field} &&
+			(split('/',
+			$metadata->{$field} || ''))[0] eq (split('/',
+			$r{$field}))[0]);
+		}
+	}
+
+if ($installer) {
+	# The installer configures accounts and networking. Discard hidden cloud
+	# fields so they cannot become credentials or guest metadata.
+	$r{$_} = '' for qw(username ssh_keys hostname auth_type);
+	}
+else {
+	# Cloud-init needs a valid account; root is allowed and other users get sudo.
+	die "Enter a Linux username of up to 32 lowercase letters, digits, dashes or underscores\n"
+		if ($r{'username'} !~ /\A[a-z_][a-z0-9_-]{0,31}\z/ ||
+			$r{'username'} =~ /\A(?:daemon|bin|sys|nobody|sshd)\z/);
+	$r{'auth_type'} = $input->{'auth_type'} || 'keys';
+	# Unknown authentication choices must not enable password login by
+	# accident.
+	die "Select an authentication method\n" if (ref($r{'auth_type'}) ||
+		$r{'auth_type'} !~ /\A(?:keys|password|both)\z/);
+	$r{'ssh_keys'} = $r{'auth_type'}
+		eq 'password' ? '' : join("\n", public_keys($r{'ssh_keys'}));
+	if ($r{'auth_type'} ne 'keys') {
+		# Cloud-init receives the controller's validated password hash.
+		die "Enter an initial password\n"
+			if (!$password_hash || ref($password_hash) ||
+			$password_hash !~ /\A\$6\$rounds=500000\$[a-f0-9]{16}\$[.\/A-Za-z0-9]{86}\z/);
+		$r{'password_hash'} = $password_hash;
+		}
+	if (!length($r{'hostname'})) {
+		# Derive the guest hostname from the display name, which may contain
+		# separators that are not valid at the edges of hostname labels.
+		my $hostname = lc($r{'name'});
+		$hostname =~ s/[ _]+/-/g;
+		$r{'hostname'} = join('.', grep { length }
+			map { s/\A-+|-+\z//gr } split(/\.+/, $hostname));
+		}
+	# VM display names allow spaces and underscores; guest hostnames do not.
+	$r{'hostname'} =~ s/[ _]+/-/g;
+	die "Enter a valid guest hostname\n"
+		if (!length($r{'hostname'}) || length($r{'hostname'}) > 253 ||
+		grep { length($_) > 63 ||
+		$_ !~ /\A[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\z/ }
+		split(/\./, $r{'hostname'}, -1));
+	}
+# Limit the description stored in job records and domain XML.
+die "Description is too long\n" if (length($r{'description'}) > 2000);
+# Validate guest setup and snapshot selected scripts before allocating resources.
+Cloudmin::Software::prepare($input, \%r);
+if (Cloudmin::Software::enabled(\%r)) {
+	# Refuse missing host tools before downloading an image or creating disks.
+	my $error = Cloudmin::Libvirt::setup_agent_error();
+	die "$error\n" if ($error);
+	# An active libvirt network can have lost its rules after a firewall restart.
+	Cloudmin::NetworkPreflight::check($network)
+		if ($r{'address_mode'} eq 'dhcp' || $r{'ipv4'});
+}
+return \%r;
+}
+
 # check_image_compatibility(self, image, host_architecture)
 # Validates recorded metadata or inspects missing metadata under the image lock.
 sub check_image_compatibility
