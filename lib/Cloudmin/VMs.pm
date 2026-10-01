@@ -136,6 +136,39 @@ $name = substr($name || 'vm', 0, 63);
 return "cloudmin-$name-$role-$id.".($role eq 'seed' ? 'iso' : 'qcow2');
 }
 
+# check_image_compatibility(self, image, host_architecture)
+# Validates recorded metadata or inspects missing metadata under the image lock.
+sub check_image_compatibility
+{
+my ($self, $image, $host_architecture) = @_;
+my %metadata = %$image;
+# Explicit incompatibility is decisive and does not warrant disk
+# inspection.
+die "This image does not support cloud-init\n"
+	if (defined($metadata{'cloud_init'}) && !$metadata{'cloud_init'});
+# The local KVM creation path does not emulate another CPU architecture.
+die "This image's CPU architecture does not match the host\n"
+	if ($metadata{'architecture'} && $metadata{'architecture'}
+	ne $host_architecture);
+if (!$metadata{'architecture'} || !defined($metadata{'cloud_init'})) {
+	# Inspect only the selected custom image; ordinary form views do no disk
+	# scanning.
+	my $detected = $self->inspect_custom_image($image);
+	%metadata = (%metadata, %$detected);
+	}
+# A successful inspection still needs a usable architecture result.
+die "Cannot determine this image's CPU architecture\n"
+	if (!$metadata{'architecture'});
+# Validate newly discovered architecture just as strictly as saved
+# metadata.
+die "This image's CPU architecture does not match the host\n"
+	if ($metadata{'architecture'} ne $host_architecture);
+# Provisioning relies on the guest consuming the NoCloud seed at first
+# boot.
+die "This image does not support cloud-init\n" if (!$metadata{'cloud_init'});
+return 1;
+}
+
 # inspect_custom_image(self, image)
 # Prevents deletion while an isolated helper reads the selected imported volume.
 sub inspect_custom_image
