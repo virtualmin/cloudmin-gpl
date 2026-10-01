@@ -248,4 +248,32 @@ my $packed = inet_pton($af, $address) || die "Invalid IP address\n";
 return inet_ntop($af, $packed).($cidr ? '/'.int($prefix) : '');
 }
 
+# public_keys(text)
+# Accepts plain OpenSSH public keys, without authorized_keys options or private
+# keys.
+sub public_keys
+{
+my ($text) = @_;
+my @keys = grep { /\S/ } split(/\r?\n/, $text);
+# Bound both the number of installed keys and the validation workload.
+die "Enter one to five SSH public keys\n" if (!@keys || @keys > 5);
+foreach my $key (@keys) {
+	# Check both the displayed key type and the type inside the decoded
+	# blob.
+	my ($type,
+		$data) = $key =~ /\A(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519\@openssh\.com|sk-ecdsa-sha2-nistp256\@openssh\.com) ([A-Za-z0-9+\/=]+)(?: [^\r\n]*)?\z/;
+	die "Enter an OpenSSH public key, such as ssh-ed25519; private keys and key options are not accepted\n"
+		if (!$type || length($key) > 8192);
+	my $bytes = decode_base64($data);
+	my $length = length($bytes) >= 4 ? unpack('N', substr($bytes, 0, 4))
+		: 0;
+	# Reject truncated blobs and headers whose embedded type
+	# contradicts them.
+	die "Invalid SSH public key\n" if (!$length || $length > 64 ||
+		substr($bytes, 4, $length) ne $type ||
+		length($bytes) < $length + 36);
+	}
+return @keys;
+}
+
 1;
