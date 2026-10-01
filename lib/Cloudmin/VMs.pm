@@ -807,6 +807,24 @@ if (!$devices->findnodes('disk[@device="cdrom"]')) {
 	}
 }
 
+# step(self, id, name, callback)
+# Publishes a progress event, runs callback(), and marks that event complete.
+# The enclosing run() supplies the creation timeout.
+sub step
+{
+my ($self, $id, $name, $callback) = @_;
+$self->checkpoint($id);
+$self->{'jobs'}->update($id, sub {
+	my ($job) = @_;
+	$job->{'phase'} = $name;
+	push(@{$job->{'events'}}, { step => $name, state => 'running' });
+	});
+my $result = $callback->();
+$self->{'jobs'}->update($id,
+	sub { $_[0]->{'events'}->[-1]->{'state'} = 'done'; });
+return $result;
+}
+
 # checkpoint(self, id)
 # Observes cancellation between libvirt calls, when rollback can run safely.
 sub checkpoint
