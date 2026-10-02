@@ -88,4 +88,19 @@ $value{'bandwidth/'.$_.'/@average'} ||= '0' foreach qw(inbound outbound);
 return convert_to_json(\%value, 0, 0, 1);
 }
 
+# hotplug_reason(domain, plan)
+# Reports a device change that blocks live execution; resource limits defer.
+sub hotplug_reason
+{
+my ($domain, $plan) = @_;
+return $plan->{'offline_reason'} if ($plan->{'offline_reason'});
+my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0));
+my $ports = free_pcie_ports($doc);
+# Compare planned additions with the running guest's spare port count.
+my $additions = grep { ($_->{'method'} || '') eq 'attach_device' } @{$plan->{'live_ops'}};
+return 'Shut down once and enable hardware expansion before adding more devices'
+	if (defined($ports) && $additions > $ports);
+return undef;
+}
+
 1;
