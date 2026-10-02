@@ -901,6 +901,29 @@ $jobs->update($id, sub {
 });
 }
 
+# finish(self, id, adapter)
+# Handles cancellation arriving between the last libvirt call and the final
+# commit.
+sub finish
+{
+my ($self, $id, $adapter) = @_;
+my $job;
+my $ok = eval { $job = $self->complete($id); 1 };
+# Cancellation before commit still rolls back the newly allocated guest.
+return $self->fail($id, $adapter, "$@") if (!$ok);
+# Creation is successful even when optional software setup later fails.
+# Once committed, an audit failure must not destroy the completed VM.
+my $logged = eval { $self->{'jobs'}->audit('complete', {%$job, state => 'complete'}); 1 };
+if (!$logged) {
+	# Show an audit warning while preserving a successfully created guest.
+	my $warning = 'Could not write the completion audit log: '.
+		Cloudmin::Libvirt::error_message($@);
+	$self->{'jobs'}->update($id,
+		sub { $_[0]->{'audit_warning'} = $warning; });
+	}
+return 1;
+}
+
 # complete(self, id)
 # Commits the final result and removes temporary provisioning inputs.
 sub complete
