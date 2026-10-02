@@ -17,4 +17,16 @@ my $minimum = $current - $removable;
 return $minimum > 0 ? $minimum : 1;
 }
 
+# free_pcie_ports(doc)
+# Counts unused root-port buses; legacy PCI guests do not need these ports.
+sub free_pcie_ports
+{
+my ($doc) = @_;
+return undef if ($doc->findvalue('/domain/os/type/@machine') !~ /q35|^virt(?:-|$)/);
+my %used = map { hex($_->getValue()) => 1 }
+	$doc->findnodes('/domain/devices/*/address[@type="pci"]/@bus');
+return scalar(grep { !$used{0 + $_->getAttribute('index')} }
+	$doc->findnodes('/domain/devices/controller[@model="pcie-root-port"]'));
+}
+
 1;
