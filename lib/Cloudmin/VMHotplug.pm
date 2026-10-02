@@ -295,4 +295,29 @@ Cloudmin::Libvirt::log_call('Sys::Virt::define_domain', {
 $adapter->connect()->define_domain($doc->toString(), 1);
 }
 
+# validate_hotplug(domain, plan)
+# Rejects unsupported changes and detects live edits outside the saved definition.
+sub validate_hotplug
+{
+my ($domain, $plan) = @_;
+my $reason = hotplug_reason($domain, $plan);
+die "$reason\n" if ($reason);
+my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0));
+foreach my $op (@{hotplug_operations($domain, $plan)}) {
+	# Deferred settings deliberately differ from the running hardware.
+	next if ($op->{'kind'} eq 'next_start');
+	# An out-of-band live edit must not be overwritten with the saved definition.
+	if ($op->{'kind'} eq 'resize') {
+		# A live-only disk replacement must not receive the queued resize.
+		my $before = Cloudmin::Libvirt::parse_xml_document($plan->{'before_xml'});
+		die "The running disk differs from the saved attachment\n"
+			if (device_value(hotplug_device($doc, 'disk', $op->{'identity'})) ne
+			device_value(hotplug_device($before, 'disk', $op->{'identity'})));
+		next;
+		}
+	die "Running hardware differs from the saved configuration; reload and resolve it before editing\n"
+		if (hotplug_value($doc, $op) ne ($op->{'live_before'} // $op->{'before'}));
+	}
+}
+
 1;
