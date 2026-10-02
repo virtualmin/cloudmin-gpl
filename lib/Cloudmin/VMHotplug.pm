@@ -320,4 +320,36 @@ foreach my $op (@{hotplug_operations($domain, $plan)}) {
 	}
 }
 
+# hotplug_guard(xml, operation)
+# Detects unrelated definition edits while a native call may have partly applied.
+sub hotplug_guard
+{
+my ($xml, $op) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+my @remove;
+if ($op->{'kind'} eq 'next_start') {
+	# Exclude only the resource groups this saved-definition write owns.
+	@remove = next_start_nodes($doc, $op->{'fields'});
+	}
+elsif ($op->{'kind'} =~ /\A(?:disk|interface)\z/) {
+	# A partial device edit may add, remove or replace this one attachment.
+	my $node = hotplug_device($doc, $op->{'kind'}, $op->{'identity'});
+	push(@remove, $node) if ($node);
+	}
+elsif ($op->{'kind'} eq 'cpus') {
+	# The current count may change, but an external maximum change must not.
+	($_->removeAttribute('current')) foreach $doc->findnodes('/domain/vcpu');
+	}
+elsif ($op->{'kind'} ne 'resize') {
+	# Balloon and description updates each own one
+	# element; resize owns no XML.
+	my %fields = (memory => 'currentMemory', description => 'description');
+	@remove = $doc->findnodes('/domain/'.$fields{$op->{'kind'}});
+	}
+$_->unbindNode() foreach @remove;
+# Ignore serialization whitespace while retaining unrelated XML attributes.
+$_->unbindNode() foreach $doc->findnodes('//text()[not(normalize-space())]');
+return sha256_hex($doc->toStringC14N());
+}
+
 1;
