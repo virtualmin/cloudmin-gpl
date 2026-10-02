@@ -103,4 +103,23 @@ return 'Shut down once and enable hardware expansion before adding more devices'
 return undef;
 }
 
+# resource_values(doc)
+# Returns comparable public settings for the running and saved definitions.
+sub resource_values
+{
+return Cloudmin::Libvirt::resource_settings($_[0]);
+}
+
+# next_start_value(doc, fields)
+# Compares selected resource groups without depending on XML units or spacing.
+sub next_start_value
+{
+my ($doc, $fields) = @_;
+my $values = resource_values($doc);
+my %groups = (cpus => [qw(cpus cpu_limit)],
+	memory => [qw(memory_mib memory_limit_mib)], boot => [qw(boot bootmenu)]);
+return convert_to_json({ map { $_ => $values->{$_} }
+	map { @{$groups{$_}} } @$fields }, 0, 0, 1);
+}
+
 1;
