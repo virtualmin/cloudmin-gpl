@@ -901,6 +901,233 @@ $jobs->update($id, sub {
 });
 }
 
+# run(self, id) creates a guest or recovers interrupted creation work.
+# Catalogue downloads precede disk work; guest setup follows a committed guest.
+sub run
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+# An existing controller owns the job; another request should only
+# observe it.
+return if ($jobs->busy($id));
+# Guest setup reconnects to its own journal without repeating disk creation.
+return Cloudmin::Software::run($self, $id)
+	if ($jobs->get($id)->{'resources'}->{'software'});
+my $result = $jobs->run_worker($id, sub {
+	my $job = $jobs->get($id) || die "Job not found\n";
+	# A competing controller may have finished before this worker
+	# took the lock.
+	return 1 if ($job->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+	my $adapter = $self->{'adapter'}->();
+	# Keep disk conversion under this creation job's recoverable worker lease.
+	$adapter->{'disk_worker'} = sub { $self->worker_task($id, @_); };
+	my $r = $job->{'request'};
+	my $installer = ($r->{'install_source'} || '') eq 'iso';
+	if ($job->{'state'} ne 'queued') {
+		# A committed start can outlive its worker; confirm ownership
+		# and outcome.
+		my $vm = eval { $adapter->get_domain($r->{'uuid'}) };
+		# Failed inventory is not proof that the recorded guest
+		# no longer exists.
+		return $self->fail($id, $adapter, "$@") if ($@);
+		if ($job->{'state'} eq 'running' && !$job->{'cleanup_pending'}
+		&& !$job->{'cancel'} &&
+			($job->{'phase'} || '') eq 'start' && $vm &&
+			($vm->{'cloudmin'}->{'job'} || '') eq $id) {
+			# Preserve an owned guest once the start step has been
+			# attempted. Its power state may have changed since, so
+			# rolling it back here would destroy a usable virtual
+			# machine together with its disk.
+			my $finished = $self->finish($id, $adapter);
+			$jobs->update($id,
+			sub { $_[0]->{'cleanup_warning'} ||= 'Creation was interrupted '.
+				'while starting the virtual machine; check its power state'; })
+				if ($finished &&
+				$vm->{'active'} != $r->{'start'});
+			return $finished;
+			}
+		# A retried cleanup keeps the original failure instead of
+		# reporting an interruption.
+		my $error = $job->{'cleanup_pending'} && $job->{'error'}
+			? $job->{'error'} =~ s/; cleanup needs attention:.*//sr
+			: 'Virtual machine creation was interrupted';
+		return $self->fail($id, $adapter, $error);
+		}
+	$jobs->update($id, sub { $_[0]->{'state'} = 'running'; });
+	my $ok = eval {
+		local $SIG{'ALRM'} =
+			sub { die "Virtual machine creation timed out\n" };
+		local $SIG{'TERM'} = sub { die "Virtual machine creation was interrupted\n" };
+		alarm(3600);
+		# create() rechecks inventory, allocates owned storage and defines the VM.
+		# The job lock serializes disk work; the caller chooses how long to hold
+		# the source image lock for a clone or a shared ISO attachment.
+		my $create = sub {
+			$self->step($id, 'preflight', sub {
+				# Revalidate saved choices even if installation was disabled
+				# after submission. Restore policy after preflight.
+				local $self->{'virtualmin_enabled'} = 1;
+				# Recheck current capacity and the source after
+				# waiting for host locks.
+				my $current = $self->prepare({ %$r,
+					image => $r->{'source_image'}->{'id'} || $r->{'image'} }, undef,
+					$r->{'password_hash'});
+				die "Source image changed after submission\n"
+				if ($current->{'source_image'}->{'volume_key'}
+				ne
+					$r->{'source_image'}->{'volume_key'});
+				my $work = "$jobs->{directory}/$id";
+				make_dir($work, 0700, 1) ||
+				die "Cannot create virtual machine work directory\n";
+				if ($r->{'ssh_keys'}) {
+					# Validate supplied public keys before allocating guest storage.
+					$self->worker_task($id, 'keys',
+						{ keys => $r->{'ssh_keys'}.
+						"\n" });
+					}
+				});
+			my ($disk, $seed);
+			# disk() creates an empty installer disk or clones the cloud image.
+			$self->step($id, 'disk', sub {
+				if ($installer) {
+					# The enclosing image lock keeps the ISO from being deleted
+					# before the new domain records its read-only attachment.
+					my $source = $self->{'images'}->get($r->{'source_image'}->{'id'} || $r->{'image'});
+					die "Source ISO is no longer ready\n"
+						if (!$source || $source->{'state'} ne 'ready' ||
+						$source->{'volume_key'} ne $r->{'source_image'}->{'volume_key'});
+					# The mounted path must still identify the selected import volume.
+					my (undef, $media) = $adapter->volume(
+						@{$r->{'source_image'}}{qw(pool volume volume_key)});
+					die "Source ISO volume is missing or changed\n"
+						if (!$media || $media->get_path() ne $r->{'source_image'}->{'volume_path'});
+					# Only the new system disk belongs to this job's rollback.
+					my $name = disk_volume_name($r->{'name'}, 'system', $id, $r->{'pool_type'});
+					# journal_disk() saves the intended name before allocation.
+					$disk = $adapter->create_disk($r->{'pool'}, $name,
+						int($r->{'disk_gib'} * 1024**3), sub {
+							# save_disk_intent(job) records the name for cleanup
+							# if allocation fails or its reply is lost.
+							$jobs->update($id, sub { $_[0]->{'resources'}->{'disk'} = { name => $name }; });
+						});
+					# save_disk(job) records the allocated volume's full identity.
+					$jobs->update($id, sub { $_[0]->{'resources'}->{'disk'} = $disk; });
+					return;
+					}
+				# Holding the image job lock prevents deletion
+				# during a full clone.
+				$self->{'images'}->with_lock($self->{'images'}->path($r->{'source_image'}->{'id'} || $r->{'image'}, 'json'), 0, sub {
+					my $source = $self->{'images'}->get($r->{'source_image'}->{'id'} || $r->{'image'});
+					# Deletion or failed recovery
+					# may have changed the source
+					# meanwhile.
+					die "Source image is no longer ready\n"
+					if ($source->{'state'} ne 'ready');
+					my $name = $jobs->get($id)->{'resources'}->{'disk'}->{'name'} ||
+						disk_volume_name($r->{'name'}, 'system', $id, $r->{'pool_type'});
+					$disk = $adapter->clone_disk($r->{'pool'}, $name,
+						$r->{'source_image'},
+						int($r->{'disk_gib'} * 1024**3),
+						'qcow2', sub {
+							$jobs->update($id,
+								sub { $_[0]->{'resources'}->{'disk'} = { name => $name }; });
+							});
+					$jobs->update($id,
+					sub { $_[0]->{'resources'}->{'disk'} = $disk; });
+					});
+				});
+			# seed() provisions cloud accounts and optional host access. ISO
+			# installs skip this whole step, including key and seed allocation.
+			$self->step($id, 'seed', sub {
+				my $work = "$jobs->{directory}/$id";
+				# Send only guest provisioning data, never
+				# controller credentials.
+				my $public;
+				if ($r->{'host_ssh_key'}) {
+					# Journal before key creation so failure
+					# and cancellation remove it.
+					$jobs->update($id,
+						sub { $_[0]->{'resources'}->{'ssh_key'} = 1; });
+					my $path = $self->{'ssh_keys'}->destination($r->{'uuid'}, $id);
+					$public = $self->worker_task($id,
+					'keypair', {},
+					output => $path)->{'public_key'};
+					# A private key without its
+					# public half cannot grant guest
+					# access.
+					die "Host SSH key generation returned no public key\n" if (!$public);
+					}
+				my %seed = map { $_ => $r->{$_} }
+					qw(username auth_type password_hash ssh_keys
+						hostname mac address_mode ipv4 ipv6 gateway4 gateway6 dns),
+					Cloudmin::Software::fields();
+				# Add managed host access only when a
+				# key pair was requested.
+				$seed{'host_public_key'} = $public if ($public);
+				if ($r->{'source_image'}->{'prepared_vm'}) {
+					# A captured disk needs this guest's host ID and application hostname.
+					my $prepared = $self->prepare_disk($id, $adapter, $disk, {
+						mode => 'prepared', uuid => $r->{'uuid'}, settings => \%seed,
+						confirm_license => 1 });
+					$jobs->update($id, sub { $_[0]->{'resources'}->{'virtualmin'} = $prepared->{'virtualmin'}; });
+				}
+				$self->worker_task($id, 'seed',
+				{ request => \%seed, uuid => $r->{'uuid'} },
+					output => "$work/seed.iso");
+				my $name = $jobs->get($id)->{'resources'}->{'seed'}->{'name'} ||
+					disk_volume_name($r->{'name'}, 'seed', $id, $r->{'pool_type'});
+				$seed = $adapter->upload_seed($r->{'pool'},
+				$name, "$work/seed.iso", sub {
+					$jobs->update($id,
+						sub { $_[0]->{'resources'}->{'seed'} = { name => $name }; });
+					});
+				$jobs->update($id,
+				sub { $_[0]->{'resources'}->{'seed'} = $seed;
+				});
+				}) unless ($installer);
+			$self->step($id, 'define', sub {
+				# Record ownership intent before libvirt can
+				# create persistent state.
+				$jobs->update($id,
+					sub { $_[0]->{'resources'}->{'domain'} = 1; });
+				$adapter->define_guest(domain_xml($r,
+				$r->{'uuid'}, $id,
+					$disk->{'path'}, $installer ? undef : $seed->{'path'},
+					$r->{'console_password'}));
+				$adapter->set_domain_autostart($r->{'uuid'},
+				$r->{'autostart'});
+				});
+			$self->step($id, 'start', sub {
+				# Defined-only requests complete with a
+				# persistent, stopped guest.
+				$adapter->start_domain($r->{'uuid'})
+					if ($r->{'start'});
+				});
+			$self->checkpoint($id);
+			};
+		if ($installer) {
+			# Retain shared media until libvirt can report it as in use.
+			$self->{'images'}->with_lock(
+				$self->{'images'}->path($r->{'source_image'}->{'id'} || $r->{'image'}, 'json'), 0, $create);
+			}
+		else {
+			# Cloud images need the source lock only while making the clone.
+			$create->();
+			}
+		alarm(0);
+		1;
+		};
+	my $error = $@;
+	alarm(0);
+	return $ok ? $self->finish($id, $adapter)
+	: $self->fail($id, $adapter, "$error");
+	}, sub { $self->ensure_image($id); });
+# Guest software runs after releasing the host's disk queue.
+return Cloudmin::Software::run($self, $id)
+	if ($jobs->get($id)->{'resources'}->{'software'});
+return $result;
+}
+
 # finish(self, id, adapter)
 # Handles cancellation arriving between the last libvirt call and the final
 # commit.
