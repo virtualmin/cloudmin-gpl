@@ -88,6 +88,20 @@ $value{'bandwidth/'.$_.'/@average'} ||= '0' foreach qw(inbound outbound);
 return convert_to_json(\%value, 0, 0, 1);
 }
 
+# hotplug_value(doc, operation)
+# Reads the requested resource or device state without exposing secure XML.
+sub hotplug_value
+{
+my ($doc, $op) = @_;
+# Deferred groups compare saved fields together; allocations compare scalars.
+return next_start_value($doc, $op->{'fields'}) if ($op->{'kind'} eq 'next_start');
+return ''.($doc->findvalue('/domain/vcpu/@current') || $doc->findvalue('/domain/vcpu'))
+	if ($op->{'kind'} eq 'cpus');
+return ''.memory_kib($doc, 'currentMemory') if ($op->{'kind'} eq 'memory');
+return ''.$doc->findvalue('/domain/description') if ($op->{'kind'} eq 'description');
+return device_value(hotplug_device($doc, $op->{'kind'}, $op->{'identity'}));
+}
+
 # hotplug_reason(domain, plan)
 # Reports a device change that blocks live execution; resource limits defer.
 sub hotplug_reason
