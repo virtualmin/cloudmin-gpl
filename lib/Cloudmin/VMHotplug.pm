@@ -60,4 +60,32 @@ return (grep { ($kind eq 'disk' ? $_->findvalue('target/@dev') :
 	$doc->findnodes('/domain/devices/'.$kind))[0];
 }
 
+# device_value(node)
+# Serializes editable fields for comparison; an absent node becomes ''.
+# QEMU-assigned aliases and addresses do not identify an attachment change.
+sub device_value
+{
+my ($node) = @_;
+return '' if (!$node);
+my %value;
+foreach my $path (qw(@type @device driver/@type source/@file source/@dev
+	source/@pool source/@volume source/@network target/@dev target/@bus
+	mac/@address model/@type link/@state bandwidth/inbound/@average
+	bandwidth/outbound/@average)) {
+	# Host tap names are runtime details, unlike stable disk targets.
+	next if ($node->nodeName() eq 'interface' && $path =~ /^target/);
+	$value{$path} = ''.$node->findvalue($path);
+	}
+$value{'source/@bridge'} = ''.$node->findvalue('source/@bridge')
+	if ($node->getAttribute('type') eq 'bridge');
+$value{'readonly'} = $node->findnodes('readonly') ? 1 : 0;
+# Libvirt omits the driver format for an empty live CD drive.
+$value{'driver/@type'} = '' if ($value{'@device'} eq 'cdrom' &&
+	!grep { length($value{'source/@'.$_}) } qw(file dev pool volume));
+# Omitted link and bandwidth elements mean connected and unlimited.
+$value{'link/@state'} ||= 'up';
+$value{'bandwidth/'.$_.'/@average'} ||= '0' foreach qw(inbound outbound);
+return convert_to_json(\%value, 0, 0, 1);
+}
+
 1;
