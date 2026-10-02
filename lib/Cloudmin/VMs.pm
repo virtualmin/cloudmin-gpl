@@ -1077,6 +1077,45 @@ rmdir($work) || die "Cannot clean virtual machine work directory: $!\n"
 	if (-d $work);
 }
 
+# prepare_disk(self, id, adapter, disk, request)
+# Prepares an owned copy in isolation and uploads it only after checking its size.
+sub prepare_disk
+{
+my ($self, $id, $adapter, $disk, $request) = @_;
+my $work = "$self->{jobs}->{directory}/$id/disk0";
+my $format = $disk->{'format'} || 'qcow2';
+# Rewrite identity only in the sandbox's private copy of the destination disk.
+my $result = $self->worker_task($id, 'clone_prepare', { %$request,
+	disks => [{name => 'disk0', format => $format, capacity => $disk->{'capacity'}}] },
+	files => {disk0 => $disk->{'path'}}, outputs => {disk0 => $work});
+# Reinspect worker output before libvirt opens it with host privileges.
+my $info = $self->worker_task($id, 'inspect', {format => $format}, files => {image => $work});
+die "Prepared disk capacity changed\n" if ($info->{'virtual-size'} != $disk->{'capacity'});
+# Resolve the recorded destination again so a replaced volume is not
+# overwritten.
+my $r = $self->{'jobs'}->get($id)->{'request'};
+my (undef, $volume) = $adapter->volume($r->{'pool'}, $disk->{'name'}, $disk->{'key'});
+if ($volume->isa('Cloudmin::LVM::Volume')) {
+	# Copy validated raw bytes through the LV guard, then remove private staging.
+	$volume->write_file($work);
+	unlink($work) or die "Cannot remove prepared disk staging file\n";
+	return $result;
+	}
+my $stream = $adapter->connect()->new_stream();
+# Upload only the checked bytes, retaining the original failure on abort.
+my $ok = eval {
+	$volume->upload($stream, 0, -s $work, 0);
+	open(my $fh, '<', $work) or die "Cannot read prepared disk\n";
+	binmode($fh);
+	$stream->send_all(sub { my $n = read($fh, $_[1], $_[2]); die "Cannot read prepared disk\n" if (!defined($n)); return $n; });
+	close($fh); $stream->finish(); 1;
+};
+# Abort partial uploads without losing the error that caused them.
+if (!$ok) { my $error = $@; eval { $stream->abort(); }; die $error; }
+unlink($work) or die "Cannot remove prepared disk staging file\n";
+return $result;
+}
+
 # worker_task(self, id, task, request, [options])
 # Records the sandbox for crash recovery and forwards cancellation while it
 # runs. options are named Cloudmin::Worker::run options, such as output => path.
