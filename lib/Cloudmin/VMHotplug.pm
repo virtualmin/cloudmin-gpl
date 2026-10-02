@@ -424,4 +424,22 @@ else {
 	}
 }
 
+# wait_hotplug(domain, operation, seconds)
+# Polls reported live state for up to seconds; a timeout is not a rollback.
+sub wait_hotplug
+{
+my ($domain, $op, $seconds) = @_;
+my $deadline = time() + $seconds;
+while ($domain->is_active()) {
+	# An accepted request may remain pending after its API call returns.
+	return 1 if (read_hotplug($domain, $op, 0) eq $op->{'after'});
+	die "The guest has not confirmed the hardware change. It may still complete; use Recover to check it again\n"
+		if (time() >= $deadline);
+	sleep(0.2);
+	}
+# A stopped QEMU process has no device left to detach.
+return 1 if (($op->{'method'} || '') eq 'detach_device');
+die "The virtual machine stopped during the hardware change; use Recover to check its saved settings\n";
+}
+
 1;
