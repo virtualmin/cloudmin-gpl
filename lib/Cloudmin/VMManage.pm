@@ -43,4 +43,15 @@ die "Only KVM virtual machines can be managed here\n"
 return ($adapter, $domain, $doc, sha256_hex($xml));
 }
 
+# file_identity(path)
+# Identifies files by device/inode and LVs by VG/LV UUID, not reusable paths.
+sub file_identity
+{
+my ($path) = @_;
+my @stat = stat($path);
+return Cloudmin::LVM::identity($path) if (@stat && -b _);
+die "Cannot identify storage file $path: $!\n" if (!@stat || !-f _);
+return join(':', @stat[0, 1]);
+}
+
 1;
