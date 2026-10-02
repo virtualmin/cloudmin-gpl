@@ -50,4 +50,14 @@ return scalar(grep { !$used{0 + $_->getAttribute('index')} }
 	$doc->findnodes('/domain/devices/controller[@model="pcie-root-port"]'));
 }
 
+# hotplug_device(doc, kind, identity)
+# Finds a disk by target or a network interface by MAC without XPath input.
+sub hotplug_device
+{
+my ($doc, $kind, $identity) = @_;
+return (grep { ($kind eq 'disk' ? $_->findvalue('target/@dev') :
+	lc($_->findvalue('mac/@address'))) eq $identity }
+	$doc->findnodes('/domain/devices/'.$kind))[0];
+}
+
 1;
