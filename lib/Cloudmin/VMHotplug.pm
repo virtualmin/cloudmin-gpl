@@ -364,4 +364,64 @@ return hotplug_value(Cloudmin::Libvirt::parse_xml_document(
 	$domain->get_xml_description($flags)), $op);
 }
 
+# call_hotplug(domain, operation, flags)
+# Sends only the selected hardware operation through the native Sys::Virt API.
+sub call_hotplug
+{
+my ($domain, $op, $flags) = @_;
+my $kind = $op->{'kind'};
+my $method = $kind eq 'cpus' ? 'set_vcpus' : $kind eq 'memory' ? 'set_memory' :
+	$kind eq 'description' ? 'set_metadata' : $kind eq 'resize' ? 'block_resize' : $op->{'method'};
+if ($method eq 'update_device' && ($flags & Sys::Virt::Domain::DEVICE_MODIFY_LIVE())) {
+	# Keep pending boot order out of a live device edit. Split only when the
+	# live and saved device XML need different boot settings.
+	my $live = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0));
+	my $device = hotplug_device($live, $kind, $op->{'identity'});
+	my $request = Cloudmin::Libvirt::parse_xml_document($op->{'xml'})->documentElement();
+	if ($device && ''.$device->findvalue('boot/@order') ne ''.$request->findvalue('boot/@order')) {
+		# Send the live boot order first, then save the
+		# requested persistent order.
+		$_->unbindNode() foreach $request->findnodes('boot');
+		$request->appendChild($_->cloneNode(1)) foreach $device->findnodes('boot');
+		call_hotplug($domain, { %$op, xml => $request->toString() }, Sys::Virt::Domain::DEVICE_MODIFY_LIVE());
+		call_hotplug($domain, $op, Sys::Virt::Domain::DEVICE_MODIFY_CONFIG())
+			if ($flags & Sys::Virt::Domain::DEVICE_MODIFY_CONFIG());
+		return;
+		}
+	}
+# Block resizing has byte-unit flags, not the live/config flag contract.
+$flags = Sys::Virt::Domain::BLOCK_RESIZE_BYTES() if ($kind eq 'resize');
+Cloudmin::Libvirt::log_call('Sys::Virt::Domain::'.$method, {
+	uuid => $domain->get_uuid_string(), flags => $flags,
+	($op->{'identity'} ? (device => $op->{'identity'}) : ()),
+	($kind =~ /\A(?:cpus|memory|resize)\z/ ? (value => 0 + $op->{'after'}) : ()) });
+if ($kind eq 'resize') {
+	# Let QEMU grow the open disk; storage-volume
+	# resize is the offline path.
+	$domain->block_resize($op->{'identity'}, $op->{'after'}, $flags);
+	}
+elsif ($kind eq 'description') {
+	# Description metadata requires its type and unused namespace arguments.
+	$domain->set_metadata(Sys::Virt::Domain::METADATA_DESCRIPTION(), $op->{'after'}, undef, undef, $flags);
+	}
+elsif ($kind eq 'cpus' || $kind eq 'memory') {
+	# CPU counts and balloon targets use their native scalar setters.
+	$domain->$method($op->{'after'}, $flags);
+	}
+else {
+	# Attachment operations use XML; removals need
+	# the current device address.
+	my $xml = $op->{'xml'};
+	if ($method eq 'detach_device') {
+		# Detach the actual live/config device, including its assigned address.
+		my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(
+			$flags == Sys::Virt::Domain::DEVICE_MODIFY_CONFIG() ? 3 : 1));
+		my $node = hotplug_device($doc, $kind, $op->{'identity'});
+		return if (!$node);
+		$xml = $node->toString();
+		}
+	$domain->$method($xml, $flags);
+	}
+}
+
 1;
