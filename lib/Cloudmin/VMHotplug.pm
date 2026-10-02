@@ -198,4 +198,59 @@ return convert_to_json({ map { $_ => $values->{$_} }
 	map { @{$groups{$_}} } @$fields }, 0, 0, 1);
 }
 
+# hotplug_operations(domain, plan)
+# Splits known next-start settings from native live operations before writing.
+sub hotplug_operations
+{
+my ($domain, $plan) = @_;
+my $live = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0));
+my $before = Cloudmin::Libvirt::parse_xml_document($plan->{'before_xml'});
+my $after = Cloudmin::Libvirt::parse_xml_document($plan->{'xml'} || $plan->{'before_xml'});
+my %deferred;
+# Maximums and boot order belong to the next full start even when allocations in
+# the same request can be applied live.
+$deferred{'cpus'} = 1 if ($before->findvalue('/domain/vcpu') != $after->findvalue('/domain/vcpu'));
+$deferred{'memory'} = 1 if (memory_kib($before, 'memory') != memory_kib($after, 'memory'));
+$deferred{'boot'} = 1 if (next_start_value($before, ['boot']) ne next_start_value($after, ['boot']));
+my @ops;
+foreach my $original (@{$plan->{'live_ops'}}) {
+	my $op = { %$original };
+	my $kind = $op->{'kind'};
+	if ($kind eq 'cpus' || $kind eq 'memory') {
+		# Existing pending allocations stay saved unless the user edits them.
+		my $cannot_live = $kind eq 'cpus'
+			? $op->{'after'} < live_cpu_minimum($live) || $op->{'after'} > $live->findvalue('/domain/vcpu')
+			: $op->{'after'} > memory_kib($live, 'memory') ||
+			  !$live->exists('/domain/devices/memballoon[@model="virtio"]');
+		if ($cannot_live) {
+			# Keep valid allocations that this running
+			# guest cannot accept yet.
+			$deferred{$kind} = 1;
+			next;
+			}
+		# A deliberate edit may replace a previously deferred allocation.
+		$op->{'live_before'} = hotplug_value($live, $op);
+		}
+	elsif ($deferred{'boot'} && $kind =~ /\A(?:disk|interface)\z/) {
+		# Apply device edits with their old boot order until the final config save.
+		my $device = Cloudmin::Libvirt::parse_xml_document($op->{'xml'})->documentElement();
+		$_->unbindNode() foreach $device->findnodes('boot');
+		my $old = hotplug_device($before, $kind, $op->{'identity'});
+		$device->appendChild($_->cloneNode(1)) foreach $old ? $old->findnodes('boot') : ();
+		$op->{'xml'} = $device->toString();
+		}
+	push(@ops, $op);
+	}
+if (%deferred) {
+	# Save these fields after live work, preserving the configuration it leaves.
+	# A saved maximum may be lower than the live allocation being requested.
+	$_->{'defer_config'} = 1 foreach grep { $deferred{$_->{'kind'}} } @ops;
+	my @fields = sort keys %deferred;
+	push(@ops, { kind => 'next_start', fields => \@fields,
+		before => next_start_value($before, \@fields),
+		after => next_start_value($after, \@fields) });
+	}
+return \@ops;
+}
+
 1;
