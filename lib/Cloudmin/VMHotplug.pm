@@ -88,6 +88,68 @@ $value{'bandwidth/'.$_.'/@average'} ||= '0' foreach qw(inbound outbound);
 return convert_to_json(\%value, 0, 0, 1);
 }
 
+# prepare_hotplug(plan)
+# Derives native operations from the validated before/after definitions.
+sub prepare_hotplug
+{
+my ($plan) = @_;
+my $before = Cloudmin::Libvirt::parse_xml_document($plan->{'before_xml'});
+my $after = Cloudmin::Libvirt::parse_xml_document($plan->{'xml'} || $plan->{'before_xml'});
+my @ops;
+my $reason = $plan->{'offline_reason'};
+# Destructive removal cannot be expressed as an ordinary live device edit.
+$reason ||= 'Shut down the virtual machine before deleting it or its disk files'
+	if ($plan->{'operation'} =~ /\A(?:delete|delete_disk)\z/);
+# Keep scalar changes separate so partial success can be recovered per field.
+foreach my $field (qw(cpus memory description)) {
+	my $op = { kind => $field };
+	$op->{'before'} = hotplug_value($before, $op);
+	$op->{'after'} = hotplug_value($after, $op);
+	push(@ops, $op) if ($op->{'before'} ne $op->{'after'});
+	}
+# Compare both device lists to find additions, removals and in-place edits.
+foreach my $kind (qw(disk interface)) {
+	my %ids = map { ($kind eq 'disk' ? $_->findvalue('target/@dev') :
+		lc($_->findvalue('mac/@address'))) => 1 }
+		($before->findnodes('/domain/devices/'.$kind), $after->findnodes('/domain/devices/'.$kind));
+	foreach my $id (sort keys %ids) {
+		my $old = hotplug_device($before, $kind, $id);
+		my $new = hotplug_device($after, $kind, $id);
+		next if (device_value($old) eq device_value($new));
+		my $op = { kind => $kind, identity => $id,
+			method => !$old ? 'attach_device' : !$new ? 'detach_device' : 'update_device',
+			before => device_value($old), after => device_value($new),
+			xml => ($new || $old)->toString() };
+		# Replacing media in a read-only CD/DVD drive preserves snapshots.
+		# Adding or removing the drive still counts as a storage change.
+		$op->{'media_change'} = 1 if ($kind eq 'disk' && $old && $new &&
+			$old->getAttribute('device') eq 'cdrom' &&
+			$new->getAttribute('device') eq 'cdrom' &&
+			$old->exists('readonly') && $new->exists('readonly'));
+		if ($kind eq 'disk' && $old && $new && $old->getAttribute('device') ne 'cdrom') {
+			# Only removable media can replace an
+			# existing disk source live.
+			$reason ||= 'Shut down the virtual machine to change this disk attachment';
+			}
+		# Libvirt checks whether the selected network backend can switch live.
+		push(@ops, $op);
+		}
+	}
+foreach my $step ($plan, @{$plan->{'changes'} || []}) {
+	# LVM must allocate and initialize new extents before QEMU can use them.
+	# Keep that operation offline; block_resize alone cannot grow the LV.
+	$reason ||= 'Shut down the virtual machine before growing an LVM disk'
+		if ($step->{'operation'} eq 'grow_disk' && $step->{'volume'}->{'block'});
+	# QEMU owns live image resizing; no independent volume resize follows it.
+	push(@ops, { kind => 'resize', identity => $step->{'target'},
+		before => $step->{'volume'}->{'capacity'}, after => $step->{'bytes'},
+		volume => $step->{'volume'} })
+		if ($step->{'operation'} eq 'grow_disk');
+	}
+$plan->{'live_ops'} = \@ops;
+$plan->{'offline_reason'} = $reason if ($reason);
+}
+
 # hotplug_value(doc, operation)
 # Reads the requested resource or device state without exposing secure XML.
 sub hotplug_value
