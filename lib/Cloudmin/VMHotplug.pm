@@ -442,4 +442,128 @@ return 1 if (($op->{'method'} || '') eq 'detach_device');
 die "The virtual machine stopped during the hardware change; use Recover to check its saved settings\n";
 }
 
+# run_hotplug(self, adapter, domain, job_id)
+# Journals each operation so recovery can finish a live/config partial success.
+sub run_hotplug
+{
+my ($self, $adapter, $domain, $id) = @_;
+my $jobs = $self->{'jobs'};
+my $job = $jobs->get($id);
+my $plan = $job->{'request'};
+my $journal = $job->{'resources'}->{'live'};
+if (!$journal) {
+	# Recheck the definition before the first live write, after any storage work.
+	validate_hotplug($domain, $plan);
+	my $revision = sha256_hex($domain->get_xml_description(3));
+	die "The virtual machine configuration changed; reload the page\n"
+		if ($revision ne $plan->{'revision'});
+	my $ops = hotplug_operations($domain, $plan);
+	$journal = { next => 0, revision => $revision, operations => $ops };
+	$jobs->update($id, sub {
+		$_[0]->{'resources'}->{'live'} = $journal;
+		$_[0]->{'scope'} = (grep { $_->{'kind'} ne 'next_start' } @$ops) ? 'live' : 'config';
+		$_[0]->{'deferred_fields'} = [map { @{$_->{'fields'}} } grep { $_->{'kind'} eq 'next_start' } @$ops];
+		});
+	}
+my @ops = @{$journal->{'operations'} || $plan->{'live_ops'}};
+# Recheck storage identity and other guests' use on recovery as well as startup.
+foreach my $step ($plan, @{$plan->{'changes'} || []}) {
+	foreach my $record (grep { $_ } $step->{'attach_volume'}, $step->{'volume'},
+		($step->{'new_volume'} ? $job->{'resources'}->{'new_volumes'}->{$step->{'new_volume'}->{'name'}} : undef)) {
+		$self->check_volume($adapter, $record, $plan->{'uuid'});
+		}
+	if (my $media = $step->{'media'}) {
+		# Read-only ISOs may be shared, but must
+		# still be the selected file.
+		my (undef, $volume) = $adapter->volume(@$media{qw(pool name key)});
+		die "The selected ISO media changed or was removed\n" if (!$volume ||
+			file_identity($volume->get_path()) ne $media->{'identity'});
+		}
+	}
+for (my $index = $journal->{'next'}; $index < @ops; $index++) {
+	my $op = $ops[$index];
+	my $config_xml = $domain->get_xml_description(3);
+	my $pending = $journal->{'pending'};
+	if (!$pending) {
+		# The next step may begin only with the definition left by the last one.
+		die "The virtual machine configuration changed during this job; review it before recovery\n"
+			if (sha256_hex($config_xml) ne $journal->{'revision'});
+		$pending = { guard => hotplug_guard($config_xml, $op),
+			before => $op->{'kind'} eq 'next_start' ? read_hotplug($domain, $op, 3) : $op->{'before'} };
+		$journal->{'pending'} = $pending;
+		$jobs->update($id, sub {
+			$_[0]->{'events'}->[-1]->{'state'} = 'done'
+				if (@{$_[0]->{'events'}} && $_[0]->{'events'}->[-1]->{'state'} eq 'running');
+			$_[0]->{'resources'}->{'live'} = $journal;
+			$_[0]->{'phase'} = 'live_'.$op->{'kind'};
+			push(@{$_[0]->{'events'}}, { step => 'live_'.$op->{'kind'}, state => 'running' });
+			});
+		}
+	die "Unrelated settings changed during this job; review them before recovery\n"
+		if (hotplug_guard($config_xml, $op) ne $pending->{'guard'});
+	my $config = read_hotplug($domain, $op, 3);
+	# Recovery accepts only the original value or this operation's target.
+	die "The saved hardware no longer matches this operation\n"
+		if ($config ne ($pending->{'before'} // $op->{'before'}) && $config ne $op->{'after'});
+	my $active = $op->{'kind'} ne 'next_start' && $domain->is_active();
+	if (!$active && $op->{'kind'} eq 'resize' && $config ne $op->{'after'}) {
+		# A stopped guest uses the normal volume path when completing recovery.
+		require_stopped($domain);
+		$self->apply_storage($adapter, { operation => 'grow_disk', uuid => $plan->{'uuid'},
+			volume => $op->{'volume'}, bytes => $op->{'after'} }, $id);
+		}
+	my $live = $active ? read_hotplug($domain, $op, 0) : $op->{'after'};
+	my $detach = ($op->{'method'} || '') eq 'detach_device';
+	if ($active && $live ne $op->{'after'}) {
+		# Accepted asynchronous changes are polled, including a balloon that has
+		# reached an intermediate size. Never resend an uncertain unplug.
+		if (!$pending->{'accepted'} && (!$detach || !$pending->{'requested'})) {
+			# Persist intent before calling libvirt so a
+			# lost detach reply is safe.
+			die "Running hardware changed outside this job\n" if ($live ne ($op->{'live_before'} // $op->{'before'}));
+			$pending->{'requested'} = 1;
+			$jobs->update($id, sub { $_[0]->{'resources'}->{'live'} = $journal; });
+			my $flags = Sys::Virt::Domain::DEVICE_MODIFY_LIVE();
+			# Detach must complete live before CONFIG;
+			# deferred groups save later.
+			$flags |= Sys::Virt::Domain::DEVICE_MODIFY_CONFIG() if (!$detach && !$op->{'defer_config'} && $config ne $op->{'after'});
+			$flags = Sys::Virt::Domain::VCPU_LIVE() |
+				(!$op->{'defer_config'} && $config ne $op->{'after'} ? Sys::Virt::Domain::VCPU_CONFIG() : 0)
+				if ($op->{'kind'} eq 'cpus');
+			$flags = Sys::Virt::Domain::MEM_LIVE() |
+				(!$op->{'defer_config'} && $config ne $op->{'after'} ? Sys::Virt::Domain::MEM_CONFIG() : 0)
+				if ($op->{'kind'} eq 'memory');
+			call_hotplug($domain, $op, $flags);
+			$pending->{'accepted'} = 1;
+			$jobs->update($id, sub { $_[0]->{'resources'}->{'live'} = $journal; });
+			}
+		wait_hotplug($domain, $op, $self->{'hotplug_timeout'} // 30);
+		}
+	if (!$op->{'defer_config'} && $op->{'kind'} ne 'resize' && read_hotplug($domain, $op, 3) ne $op->{'after'}) {
+		# Persist only after live success; also repairs a previous config-save failure.
+		if ($op->{'kind'} eq 'next_start') {
+			# Defining persistent XML never powers off or restarts the guest.
+			save_next_start($adapter, $domain, $plan, $op);
+			}
+		else {
+			# Finish the persistent half of a successful
+			# native device/resource edit.
+			call_hotplug($domain, $op, Sys::Virt::Domain::DEVICE_MODIFY_CONFIG());
+			}
+		}
+	die "Libvirt did not retain the requested hardware configuration\n"
+		if (!$op->{'defer_config'} && read_hotplug($domain, $op, 3) ne $op->{'after'});
+	# Advance only after verification; recovery
+	# resumes at the next operation.
+	$journal->{'next'} = $index + 1;
+	$journal->{'revision'} = sha256_hex($domain->get_xml_description(3));
+	delete($journal->{'pending'});
+	$jobs->update($id, sub {
+		$_[0]->{'resources'}->{'live'} = $journal;
+		$_[0]->{'events'}->[-1]->{'state'} = 'done';
+		});
+	}
+$self->complete($id);
+}
+
 1;
