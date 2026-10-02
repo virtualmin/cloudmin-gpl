@@ -930,6 +930,64 @@ my $job = $self->{'jobs'}->update($id, sub {
 return $job;
 }
 
+# fail(self, id, adapter, error)
+# Rolls back only journalled resources; retained resources are reported
+# explicitly.
+sub fail
+{
+my ($self, $id, $adapter, $error) = @_;
+my $job = $self->{'jobs'}->get($id);
+my $r = $job->{'request'};
+# Attempt both kinds of cleanup even when one subsystem is unavailable.
+my $work_clean = eval { $self->cleanup_work($id); 1 };
+my $work_error = $@;
+my $cleanup = eval {
+	# Disks must stay intact if removing the job-owned guest fails.
+	$adapter->remove_created_guest($r->{'uuid'}, $id)
+		if ($job->{'resources'}->{'domain'});
+	# A failed VM may have a key even if it never reached domain definition.
+	$self->{'ssh_keys'}->remove($r->{'uuid'}, $id)
+		if ($job->{'resources'}->{'ssh_key'});
+	foreach my $kind (qw(seed disk)) {
+		my $volume = $job->{'resources'}->{$kind} || next;
+		$adapter->remove_created_volume($r->{'pool'}, $volume->{'name'},
+			$volume->{'key'});
+		}
+	1;
+	};
+# Preserve unfinished cleanup for recovery and redact provisioning secrets.
+$error .= "; cleanup needs attention: $work_error$@"
+	if (!$cleanup || !$work_clean);
+$cleanup = $cleanup && $work_clean;
+# Libvirt errors can echo domain XML containing the console credential.
+$error =~ s/\Q$r->{console_password}\E/[redacted]/g
+	if ($r->{'console_password'});
+# Provisioning failures must not expose the password hash in history or
+# logs.
+$error =~ s/\Q$r->{password_hash}\E/[redacted]/g if ($r->{'password_hash'});
+$error = Cloudmin::Libvirt::error_message($error);
+# Persist the terminal error before writing the failure audit entry.
+$job = $self->{'jobs'}->update($id, sub {
+	my ($record) = @_;
+	$record->{'state'} = $record->{'cancel'} &&
+	$cleanup ? 'cancelled' : 'failed';
+	$record->{'error'} = substr($error, 0, 4000);
+	$record->{'cleanup_pending'} = $cleanup ? 0 : 1;
+	# Explicit cleanup no longer exposes a link to the deleted committed guest.
+	$record->{'resources'}->{'domain'} = 0 if ($cleanup && $record->{'cleanup_created'});
+	# Keep recovery state, but discard password and license credentials.
+	delete(@{$record->{'request'}}{qw(password_hash webmin_password virtualmin_serial virtualmin_key)});
+	# Early failures may occur before the first progress event was
+	# recorded.
+	$record->{'events'}->[-1]->{'state'} = 'failed'
+	if (@{$record->{'events'}});
+	});
+# Audit the outcome that was recorded, which may be a clean cancellation.
+$self->{'jobs'}->audit($job->{'state'} eq 'cancelled' ? 'cancelled' : 'failed',
+	$job);
+return 0;
+}
+
 # cleanup_work(self, id)
 # Removes only this job's fixed temporary filenames, retaining successful VM
 # volumes.
