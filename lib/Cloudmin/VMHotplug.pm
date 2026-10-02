@@ -352,4 +352,16 @@ $_->unbindNode() foreach $doc->findnodes('//text()[not(normalize-space())]');
 return sha256_hex($doc->toStringC14N());
 }
 
+# read_hotplug(domain, operation, flags)
+# Reads native disk capacity or the corresponding live/persistent XML field.
+# flags selects the XML view and is unused for native block-capacity reads.
+sub read_hotplug
+{
+my ($domain, $op, $flags) = @_;
+return ''.$domain->get_block_info($op->{'identity'})->{'capacity'}
+	if ($op->{'kind'} eq 'resize');
+return hotplug_value(Cloudmin::Libvirt::parse_xml_document(
+	$domain->get_xml_description($flags)), $op);
+}
+
 1;
