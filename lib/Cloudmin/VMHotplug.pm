@@ -263,4 +263,36 @@ my %paths = (cpus => '/domain/vcpu', memory => '/domain/memory | /domain/current
 return $doc->findnodes(join(' | ', map { $paths{$_} } @$fields));
 }
 
+# save_next_start(adapter, domain, plan, operation)
+# Patches the latest saved XML; the running hardware and unrelated fields stay intact.
+sub save_next_start
+{
+my ($adapter, $domain, $plan, $op) = @_;
+my $xml = $domain->get_xml_description(3);
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+my $after = Cloudmin::Libvirt::parse_xml_document($plan->{'xml'});
+$_->unbindNode() foreach next_start_nodes($doc, $op->{'fields'});
+foreach my $node (next_start_nodes($after, $op->{'fields'})) {
+	my $parent = $node->parentNode();
+	my $target;
+	if ($parent->nodeName() eq 'disk' || $parent->nodeName() eq 'interface') {
+		# Device boot order belongs to an attachment, not its position in XML.
+		my $kind = $parent->nodeName();
+		$target = hotplug_device($doc, $kind, $parent->findvalue(
+			$kind eq 'disk' ? 'target/@dev' : 'mac/@address'));
+		die "The selected boot device is no longer attached\n" if (!$target);
+		}
+	else {
+		# Resource elements belong to domain; legacy
+		# boot elements belong to os.
+		$target = $parent->nodeName() eq 'os' ? ($doc->findnodes('/domain/os'))[0] : $doc->documentElement();
+		}
+	$target->appendChild($doc->importNode($node, 1));
+	}
+Cloudmin::Libvirt::log_call('Sys::Virt::define_domain', {
+	uuid => $domain->get_uuid_string(), flags => 1, scope => 'config',
+	changes => audit_changes($xml, $doc->toString()) });
+$adapter->connect()->define_domain($doc->toString(), 1);
+}
+
 1;
