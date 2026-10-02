@@ -1011,6 +1011,48 @@ $self->{'jobs'}->audit($job->{'state'} eq 'cancelled' ? 'cancelled' : 'failed',
 return 0;
 }
 
+# cleanup_creation(self, id)
+# Removes a committed creation only after explicit cancellation. The caller
+# holds the worker lock; shared storage or later history prevents deletion.
+sub cleanup_creation
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+# Serialize disk cleanup and prevent new host operations from taking the guest.
+return $jobs->lock('vm-work', sub {
+	return $jobs->lock('create-host', sub {
+		my $job = $jobs->get($id);
+		# A setup failure alone must never delete an already committed
+		# guest.
+		die "Creation cleanup was not requested\n" if (!$job->{'cleanup_created'} ||
+			!$job->{'cancel'} || $job->{'request'}->{'operation'});
+		my $adapter;
+		my $ok = eval {
+			$adapter = $self->{'adapter'}->();
+			# Stop the owned sandbox before inspecting or deleting its inputs.
+			($self->{'worker'} || Cloudmin::Worker->new())->cleanup($job->{'worker'})
+				if ($job->{'worker'});
+			$adapter->check_creation_cleanup($job);
+			1;
+		};
+		if (!$ok) {
+			# Keep the reservation and journal when ownership cannot be proven.
+			my $error = Cloudmin::Libvirt::error_message($@);
+			$jobs->update($id, sub {
+				$_[0]->{'state'} = 'failed'; $_[0]->{'cleanup_pending'} = 1;
+				$_[0]->{'error'} = $error;
+				# Discard credentials even if cancellation fails.
+				delete(@{$_[0]->{'request'}}{qw(password_hash webmin_password virtualmin_serial virtualmin_key)});
+			});
+			return 0;
+		}
+		# Existing rollback rechecks guest ownership and every volume reference.
+		$self->fail($id, $adapter, 'Virtual machine creation cancelled');
+		return !$jobs->get($id)->{'cleanup_pending'};
+	});
+});
+}
+
 # cleanup_work(self, id)
 # Removes only this job's fixed temporary filenames, retaining successful VM
 # volumes.
