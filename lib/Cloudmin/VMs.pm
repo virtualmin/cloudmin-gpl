@@ -1077,4 +1077,19 @@ rmdir($work) || die "Cannot clean virtual machine work directory: $!\n"
 	if (-d $work);
 }
 
+# worker_task(self, id, task, request, [options])
+# Records the sandbox for crash recovery and forwards cancellation while it
+# runs. options are named Cloudmin::Worker::run options, such as output => path.
+sub worker_task
+{
+my ($self, $id, $task, $request, %opts) = @_;
+my $worker = $self->{'worker'} || Cloudmin::Worker->new();
+my $result = $worker->run($task, $request, %opts,
+	started => sub { my $unit = $_[0];
+	$self->{'jobs'}->update($id, sub { $_[0]->{'worker'} = $unit; }); },
+	progress => sub { $self->checkpoint($id); });
+$self->{'jobs'}->update($id, sub { delete($_[0]->{'worker'}); });
+return $result;
+}
+
 1;
