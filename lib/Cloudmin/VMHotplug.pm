@@ -253,4 +253,14 @@ if (%deferred) {
 return \@ops;
 }
 
+# next_start_nodes(doc, fields)
+# Selects only the XML elements owned by the deferred resource groups.
+sub next_start_nodes
+{
+my ($doc, $fields) = @_;
+my %paths = (cpus => '/domain/vcpu', memory => '/domain/memory | /domain/currentMemory',
+	boot => '/domain/os/boot | /domain/os/bootmenu | /domain/devices/*/boot');
+return $doc->findnodes(join(' | ', map { $paths{$_} } @$fields));
+}
+
 1;
