@@ -1390,4 +1390,22 @@ return $jobs->lock('worker-'.$id, sub {
 	});
 }
 
+# complete(self, id)
+# Commits success before writing audit output so logging cannot undo a change.
+sub complete
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+my $job = $jobs->update($id, sub {
+	$_[0]->{'state'} = 'complete';
+	$_[0]->{'cleanup_pending'} = 0;
+	$_->{'state'} = 'done' foreach grep { $_->{'state'} eq 'running' } @{$_[0]->{'events'}};
+	delete($_[0]->{'error'});
+	});
+my $ok = eval { $jobs->audit($job->{'request'}->{'operation'}, $job); 1 };
+$jobs->update($id, sub { $_[0]->{'audit_warning'} =
+	'Could not write the completion audit log' }) if (!$ok);
+return 1;
+}
+
 1;
