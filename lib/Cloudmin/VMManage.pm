@@ -334,6 +334,41 @@ my @xml = sort map { $_->get_xml_description(0) }
 return (\@xml, sha256_hex(join("\0", @xml)));
 }
 
+# check_delete_volumes(self, adapter, volumes, [domain], [targets])
+# Rechecks the frozen plan, ignoring only dependencies removed by this same job.
+# Omit domain after undefine; targets defaults to no removable attachments.
+sub check_delete_volumes
+{
+my ($self, $adapter, $volumes, $domain, $targets) = @_;
+return if (!@$volumes);
+# Refresh file pools before checking for overlays created outside Cloudmin.
+$self->storage($adapter);
+my $excluded = $domain ? $domain->get_uuid_string() : undef;
+my %keys = map { $_->{'key'} => 1 } @$volumes;
+my @refs = grep { !defined($_->{'key'}) || !$keys{$_->{'key'}} }
+	@{Cloudmin::Images::volume_references($adapter->connect(), $excluded)};
+if ($domain) {
+	# Live-only attachments can change without altering the saved XML revision.
+	my %targets = map { $_ => 1 } @{$targets || []};
+	foreach my $flags (2, ($domain->is_active() ? (0) : ())) {
+		my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description($flags));
+		foreach my $disk ($doc->findnodes('/domain/devices/disk[source]')) {
+			my ($source) = $disk->findnodes('source');
+			next if ($targets{$disk->findvalue('target/@dev')} &&
+				grep { Cloudmin::Images::xml_uses_volume($source->toString(),
+					@$_{qw(path pool_name name)}) } @$volumes);
+			push(@refs, { xml => $disk->toString(), reason => 'Storage is needed by a disk you are keeping.' });
+			}
+		}
+	}
+foreach my $v (@$volumes) {
+	my (undef, $volume) = $adapter->volume(@$v{qw(pool name key)});
+	# After undefine, recovery can encounter layers already deleted by this job.
+	next if (!$volume && !defined($excluded));
+	$self->check_volume($adapter, $v, $excluded, \@refs);
+	}
+}
+
 # text(input, key, [default])
 # Bounds scalar form fields and rejects control characters before XML use.
 # An absent key uses default, or an empty string when no default is supplied.
