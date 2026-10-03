@@ -1226,4 +1226,67 @@ elsif ($step->{'operation'} eq 'grow_disk') {
 	}
 }
 
+# run_shutdown(self, id, domain, [force])
+# Stops the guest; clean shutdown retains its deadline across worker recovery.
+# force defaults to false; callers must first verify discarded writable disks.
+# Returns false when cancellation wins before the first power operation.
+sub run_shutdown
+{
+my ($self, $id, $domain, $force) = @_;
+my $jobs = $self->{'jobs'};
+my $job = $jobs->get($id);
+my $resources = $job->{'resources'};
+my $phase = $job->{'request'}->{'operation'}.($force ? '_power_off' : '_shutdown');
+if (!$resources->{'shutdown_complete'}) {
+	# Recovery skips an already confirmed stop,
+	# avoiding a second shutdown request.
+	my ($state) = $domain->get_state();
+	die "Resume the virtual machine before requesting a clean shutdown\n"
+		if (!$force && $domain->is_active() && $state != 1 && $state != 2 && $state != 4);
+	$job = $jobs->update($id, sub {
+		# Cancellation and the first power change compete under the job lock.
+		if ($_[0]->{'cancel'} && !$_[0]->{'resources'}->{'started'}) {
+			$_[0]->{'state'} = 'cancelled';
+			return;
+			}
+		$_[0]->{'state'} = 'running';
+		$_[0]->{'resources'}->{'started'} = 1;
+		$_[0]->{'phase'} = $phase;
+		$_[0]->{'resources'}->{'stop_phase'} = $phase;
+		$_[0]->{'events'} = [{ step => $phase, state => 'running' }];
+		});
+	return if ($job->{'state'} eq 'cancelled');
+	if ($force && $domain->is_active()) {
+		# The deletion plan retains no writable disks, so no guest wait is needed.
+		Cloudmin::Libvirt::log_call('Sys::Virt::Domain::destroy', { uuid => $job->{'request'}->{'uuid'} });
+		$domain->destroy();
+		require_stopped($domain);
+		}
+	elsif ($domain->is_active() && !$resources->{'shutdown_deadline'}) {
+		# Persist the deadline before the request; recovery never extends it.
+		$job = $jobs->update($id, sub {
+			$_[0]->{'resources'}->{'shutdown_deadline'} = time()+($self->{'shutdown_timeout'} // 120);
+			});
+		Cloudmin::Libvirt::log_call('Sys::Virt::Domain::shutdown', { uuid => $job->{'request'}->{'uuid'} });
+		$domain->shutdown();
+		}
+	while ($domain->is_active()) {
+		# Wait within the persisted deadline; expiry
+		# never escalates to force-off.
+		die "The virtual machine did not shut down within two minutes. It may still finish shutting down; check its power state. No forced power-off was attempted\n"
+			if (time() >= $job->{'resources'}->{'shutdown_deadline'});
+		sleep(1);
+		}
+	# Do not continue after a crash or forced stop during the shutdown wait.
+	my ($stopped, $reason) = $domain->get_state();
+	die "The virtual machine stopped without a clean shutdown. Check its state before retrying\n"
+		if ($stopped != 5 || (!$force && $job->{'resources'}->{'shutdown_deadline'} && $reason != 1));
+	$job = $jobs->update($id, sub {
+		$_[0]->{'resources'}->{'shutdown_complete'} = 1;
+		$_[0]->{'events'}->[0]->{'state'} = 'done';
+		});
+	}
+return 1;
+}
+
 1;
