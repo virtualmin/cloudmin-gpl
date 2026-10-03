@@ -1300,4 +1300,67 @@ Cloudmin::Worker->new()->cleanup($lease);
 $self->{'jobs'}->update($id, sub { delete($_[0]->{'worker'}); });
 }
 
+# has_unfinished_change(self, id, [keep_growth])
+# Releases a refused definition or resize only when unchanged state is proven.
+# A failed read leaves recovery pending; completed writes keep their journal.
+# keep_growth permits keeping finished disk growth when discarding other edits.
+sub has_unfinished_change
+{
+my ($self, $id, $keep_growth) = @_;
+my $jobs = $self->{'jobs'};
+return $jobs->lock('create-host', sub {
+	# Do not remove an unused destination while its converter may still run.
+	$self->cleanup_disk_worker($id);
+	my $job = $jobs->get($id);
+	my $r = $job->{'request'};
+	# Deletion may have removed storage; it cannot be discarded as an unused edit.
+	return 1 if ($r->{'operation'} eq 'delete');
+	my ($adapter, $domain, undef, $revision) = $self->get_guest($r->{'uuid'});
+	# A changed definition may already reference this job's new disks.
+	return 1 if ($revision ne $r->{'revision'});
+	if (my $live = $job->{'resources'}->{'live'}) {
+		# A live journal may be unfinished even if
+		# persistent XML is unchanged.
+		my $ops = $live->{'operations'} || $r->{'live_ops'};
+		# A queued detach may finish later even when both XML reads still agree.
+		return 1 if ($live->{'next'} || $live->{'pending'} &&
+			($live->{'pending'}->{'accepted'} ||
+			($ops->[$live->{'next'}]->{'method'} || '') eq 'detach_device'));
+		foreach my $op (@$ops) {
+			# Persistent-only writes are covered by the revision check above.
+			next if ($op->{'kind'} eq 'next_start');
+			return 1 if ($domain->is_active() && read_hotplug($domain, $op, 0) ne ($op->{'live_before'} // $op->{'before'}));
+			}
+		}
+	else {
+		# Without a live journal, only stopped storage
+		# work can be inspected safely.
+		require_stopped($domain);
+		}
+	my @steps = ($r, @{$r->{'changes'} || []});
+	foreach my $step (@steps) {
+		# Any completed growth requires recovery of the rest of the saved plan.
+		next if ($step->{'operation'} ne 'grow_disk');
+		my (undef, $v) = $self->check_volume($adapter,
+			$step->{'volume'}, $r->{'uuid'});
+		my $capacity = $v->get_info()->{'capacity'};
+		return 1 if ($capacity != $step->{'volume'}->{'capacity'} &&
+			!($keep_growth && $capacity == $step->{'bytes'}));
+		}
+	foreach my $step (@steps) {
+		# Only remove recorded, unused disks after an unchanged definition.
+		next if (!$step->{'new_volume'});
+		my $name = $step->{'new_volume'}->{'name'};
+		my (undef, $v) = $adapter->volume($step->{'new_volume'}->{'pool'}, $name);
+		next if (!$v);
+		my $saved = $job->{'resources'}->{'new_volumes'}->{$name} || return 1;
+		$self->check_volume($adapter, $saved);
+		Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::delete', {
+			pool => $saved->{'pool'}, volume => $name, flags => 0 });
+		$v->delete(0);
+		}
+	return 0;
+	});
+}
+
 1;
