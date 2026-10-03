@@ -306,4 +306,16 @@ my @xml = sort map { $_->get_xml_description(0) }
 return (\@xml, sha256_hex(join("\0", @xml)));
 }
 
+# text(input, key, [default])
+# Bounds scalar form fields and rejects control characters before XML use.
+# An absent key uses default, or an empty string when no default is supplied.
+sub text
+{
+my ($input, $key, $default) = @_;
+my $value = exists($input->{$key}) ? $input->{$key} : $default // '';
+die "Invalid $key\n" if (!defined($value) || ref($value) ||
+	length($value) > 4096 || $value =~ /[\x00-\x08\x0b\x0c\x0e-\x1f]/);
+return $value;
+}
+
 1;
