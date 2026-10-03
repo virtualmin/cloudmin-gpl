@@ -100,4 +100,18 @@ $cache->{"$adapter"} = [\@pools, \@volumes] if ($cache);
 return (\@pools, \@volumes);
 }
 
+# networks(adapter)
+# Offers active libvirt networks and existing host bridges, as creation does.
+sub networks
+{
+my ($adapter) = @_;
+my $networks = $adapter->list_networks();
+return [ (map { { key => 'network:'.$_->{'id'}, type => 'network',
+	source => $_->{'name'} } } grep { $_->{'active'} } @$networks),
+	(map { { key => 'bridge:'.$_->{'name'}, type => 'bridge',
+		source => $_->{'name'} } }
+	 grep { $_->{'state'} =~ /\A(?:up|unknown)\z/ }
+	 @{$adapter->list_host_bridges($networks)}) ];
+}
+
 1;
