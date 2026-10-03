@@ -1087,4 +1087,55 @@ $plan->{'xml'} = $doc->toString();
 return $plan;
 }
 
+# check_step(self, adapter, step, job)
+# Revalidates a planned edit and returns its pool and remaining space demand.
+sub check_step
+{
+my ($self, $adapter, $step, $job) = @_;
+if (my $media = $step->{'media'}) {
+	# Shared read-only media are allowed, but a replaced file is not.
+	my (undef, $volume) = $adapter->volume(@$media{qw(pool name key)});
+	die "The selected ISO media changed or was removed\n" if (!$volume ||
+		file_identity($volume->get_path()) ne $media->{'identity'});
+	}
+if ($step->{'mac'}) {
+	# Another guest may have claimed a generated address while this job waited.
+	foreach my $vm (@{$adapter->list_domains(1)}) {
+		die "This MAC address is already in use\n"
+			if (grep { lc($_) eq $step->{'mac'} } @{$vm->{'macs'}});
+		}
+	}
+$self->check_volume($adapter, $step->{'attach_volume'})
+	if ($step->{'attach_volume'});
+die "The selected network is no longer available\n" if ($step->{'network'} &&
+	!grep { $_->{'key'} eq $step->{'network'} } @{networks($adapter)});
+if ($step->{'new_volume'}) {
+	# Reuse an allocated disk only after its file identity was journalled.
+	my $v = $step->{'new_volume'};
+	my ($pool, $volume) = $adapter->volume($v->{'pool'}, $v->{'name'});
+	if ($volume) {
+		# An existing destination must belong to this job before reuse.
+		my $saved = $job->{'resources'}->{'new_volumes'}->{$v->{'name'}};
+		die "An unrecorded disk remains at $v->{path}; inspect it before recovery\n"
+			if (!$saved || $saved->{'key'} ne $volume->get_key());
+		$self->check_volume($adapter, $saved);
+		return ($pool, 0);
+		}
+	$self->clone_source($adapter, $step->{'source_image'}->{'id'}, $step->{'source_image'})
+		if ($step->{'source_image'});
+	return ($pool, $v->{'capacity'});
+	}
+if ($step->{'operation'} eq 'grow_disk') {
+	# A replay may see the original capacity or the completed target capacity.
+	my ($pool, $v) = $self->check_volume($adapter,
+		$step->{'volume'}, $step->{'uuid'});
+	my $capacity = $v->get_info()->{'capacity'};
+	die "Disk capacity changed since submission\n" if
+		($capacity != $step->{'volume'}->{'capacity'} &&
+		 $capacity != $step->{'bytes'});
+	return ($pool, $step->{'bytes'} - $capacity);
+	}
+return;
+}
+
 1;
