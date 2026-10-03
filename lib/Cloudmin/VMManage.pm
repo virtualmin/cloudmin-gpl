@@ -334,6 +334,99 @@ my @xml = sort map { $_->get_xml_description(0) }
 return (\@xml, sha256_hex(join("\0", @xml)));
 }
 
+# delete_volumes(self, adapter, domain, document, targets, history)
+# Plans selected disks and their private history, keeping shared backing files.
+# targets contains guest device names; history contains snapshot/checkpoint XML.
+sub delete_volumes
+{
+my ($self, $adapter, $domain, $doc, $targets, $history) = @_;
+my %targets = map { $_ => 1 } @$targets;
+my (undef, $volumes) = $self->storage($adapter);
+my (%selected, %required, @kept);
+foreach my $target (@$targets) {
+	# Explicitly selected current disks must be removable in their entirety.
+	die "Invalid disk target\n" if (ref($target));
+	my $v = $self->volume_for($adapter, disk_node($doc, $target));
+	$selected{$v->{'key'}} = $v;
+	$required{$v->{'key'}} = 1;
+	}
+my @xml = ($doc->toString(), @$history);
+push(@xml, $domain->get_xml_description(0)) if ($domain->is_active());
+# History includes inactive branches and revert files, not just current disks.
+foreach my $xml (@xml) {
+	my $tree = Cloudmin::Libvirt::parse_xml_document($xml);
+	foreach my $disk ($tree->findnodes('/domain/devices/disk | '.
+		'/domainsnapshot/domain/devices/disk | /domainsnapshot/inactiveDomain/devices/disk | '.
+		'/domainsnapshot/disks/disk | /domainsnapshot/revertDisks/disk | '.
+		'/domaincheckpoint/domain/devices/disk')) {
+		my $target = $disk->findvalue('target/@dev') || $disk->getAttribute('name');
+		my $xml = $disk->toString();
+		if (!$targets{$target || ''}) {
+			# Preserve whole chains for unchecked and historical-only devices.
+			push(@kept, { xml => $xml, reason => 'Storage is needed by a disk you are keeping.' });
+			next;
+			}
+		# Unknown historical files are kept and must retain their backing files.
+		my ($source) = $disk->findnodes('source');
+		if ($source && !grep { Cloudmin::Images::xml_uses_volume($source->toString(),
+			@$_{qw(path pool_name name)}) } @$volumes) {
+			push(@kept, { xml => $xml, reason => 'Storage is needed by an unmanaged snapshot disk.' });
+			}
+		foreach my $v (@$volumes) {
+			# Match both source and backing
+			# references for a selected device.
+			$selected{$v->{'key'}} = $v if (Cloudmin::Images::xml_uses_volume($xml,
+				@$v{qw(path pool_name name)}));
+			}
+		}
+	}
+my $refs = Cloudmin::Images::volume_references($adapter->connect(), $domain->get_uuid_string());
+my %volume_xml = map { $_->{'key'} => $_ } grep { defined($_->{'key'}) } @$refs;
+# Pool metadata supplies backing links even when domain XML omits the chain.
+my @queue = values %selected;
+while (my $v = shift(@queue)) {
+	my $ref = $volume_xml{$v->{'key'}} || next;
+	foreach my $base (@$volumes) {
+		next if ($selected{$base->{'key'}});
+		if (Cloudmin::Images::xml_uses_volume($ref->{'xml'},
+			@$base{qw(path pool_name name)}, $ref->{'base'})) {
+			# Follow each newly found base until the full
+			# dependency chain is known.
+			$selected{$base->{'key'}} = $base;
+			push(@queue, $base);
+			}
+		}
+	}
+my $imports = $self->imported_file_ids($adapter);
+# Remove shared bases from the plan, then protect their own dependencies too.
+my $changed = 1;
+while ($changed) {
+	$changed = 0;
+	my @foreign = (@kept, grep { !defined($_->{'key'}) || !$selected{$_->{'key'}} } @$refs);
+	foreach my $v (values %selected) {
+		# Reject protected selected disks; keep optional shared bases.
+		my $reason = $imports->{$v->{'identity'}} ? 'Imported images cannot be deleted.' :
+			Cloudmin::Images::volume_use(\@foreign, @$v{qw(path pool_name name key)});
+		next if (!$reason);
+		die "$reason\n" if ($required{$v->{'key'}});
+		delete($selected{$v->{'key'}});
+		$changed = 1;
+		}
+	}
+# Delete children before their backing files so every intermediate state is valid.
+my @ordered;
+while (%selected) {
+	my @remaining = map { $volume_xml{$_} } grep { $volume_xml{$_} } keys %selected;
+	my @ready = grep { !Cloudmin::Images::volume_use(\@remaining,
+		@$_{qw(path pool_name name key)}) } sort { $a->{'path'} cmp $b->{'path'} } values %selected;
+	die "Cannot determine the snapshot disk deletion order\n" if (!@ready);
+	push(@ordered, @ready);
+	delete($selected{$_->{'key'}}) foreach @ready;
+	}
+$self->check_delete_volumes($adapter, \@ordered, $domain, $targets);
+return \@ordered;
+}
+
 # check_delete_volumes(self, adapter, volumes, [domain], [targets])
 # Rechecks the frozen plan, ignoring only dependencies removed by this same job.
 # Omit domain after undefine; targets defaults to no removable attachments.
