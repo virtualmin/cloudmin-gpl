@@ -129,4 +129,26 @@ return {
 	};
 }
 
+# delete_can_force(domain, volumes)
+# Returns true only when volumes covers every live and saved writable disk.
+sub delete_can_force
+{
+my ($domain, $volumes) = @_;
+my %selected = map { $_->{'identity'} => 1 } @$volumes;
+# A live-only attachment also needs a clean shutdown if its data will be kept.
+foreach my $flags (2, ($domain->is_active() ? (0) : ())) {
+	my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description($flags));
+	foreach my $disk ($doc->findnodes('/domain/devices/disk[source and not(readonly)]')) {
+		# Unknown or unmanaged storage must be preserved through clean shutdown.
+		my $path = $disk->findvalue('source/@file') || $disk->findvalue('source/@dev');
+		my $identity = $path ? eval { file_identity($path) } : undef;
+		my $included = $identity && $selected{$identity};
+		$included ||= grep { $_->{'pool_name'} eq $disk->findvalue('source/@pool') &&
+			$_->{'name'} eq $disk->findvalue('source/@volume') } @$volumes;
+		return 0 if (!$included);
+		}
+	}
+return 1;
+}
+
 1;
