@@ -622,4 +622,31 @@ else {
 return ($pool, $volume);
 }
 
+# clone_source(self, adapter, image_id, [expected])
+# Resolves a completed import and detects replacement before copying its bytes.
+# expected is the source record saved at submission; omit it for the first read.
+sub clone_source
+{
+my ($self, $adapter, $id, $expected) = @_;
+my $image = $self->{'images'}->get($id);
+die "Select a ready imported image\n" if ($image->{'state'} ne 'ready');
+my (undef, $volume) = $adapter->volume(@$image{qw(pool volume volume_key)});
+die "Source image volume is missing\n" if (!$volume || !$image->{'volume_key'});
+my $format = Cloudmin::Libvirt::parse_xml_document(
+	$volume->get_xml_description(0))->findvalue('/volume/target/format/@type');
+# Check the import type too: ISO bytes can occupy a raw libvirt volume.
+die "Only raw and QCOW2 images can be cloned\n"
+	if ($format !~ /\A(?:raw|qcow2)\z/ || ($image->{'format'} || '') eq 'iso');
+my $source = { id => $id, pool => $image->{'pool'}, volume => $image->{'volume'},
+	volume_key => $volume->get_key(), identity => file_identity($volume->get_path()),
+	capacity => $volume->get_info()->{'capacity'} };
+if ($expected) {
+	# A queued request must copy the exact file and capacity the user selected.
+	foreach my $key (qw(pool volume volume_key identity capacity)) {
+		die "Source image changed after submission\n" if ($source->{$key} ne $expected->{$key});
+		}
+	}
+return ($source, $volume);
+}
+
 1;
