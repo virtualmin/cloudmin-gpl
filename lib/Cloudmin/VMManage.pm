@@ -1363,4 +1363,31 @@ return $jobs->lock('create-host', sub {
 	});
 }
 
+# discard_change(self, id)
+# Releases a failed edit only after proving its definition never changed.
+# Completed growth is retained; recorded unattached disks are cleaned up.
+sub discard_change
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+die "Wait for the operation to finish\n" if ($jobs->busy($id));
+return $jobs->lock('worker-'.$id, sub {
+	return $jobs->lock('vm-work', sub {
+		my $job = $jobs->get($id) || die "Job not found\n";
+		my $r = $job->{'request'};
+		die "Only a failed hardware edit can discard its remaining changes\n"
+			if ($job->{'state'} ne 'failed' || !$job->{'cleanup_pending'} ||
+			($r->{'operation'} || '') ne 'update');
+		die "The virtual machine or its disks changed; recovery is still required\n"
+			if ($self->has_unfinished_change($id, 1));
+		my $released = $jobs->update($id, sub {
+			$_[0]->{'cleanup_pending'} = 0;
+			$_[0]->{'cleanup_warning'} = 'Remaining hardware changes were discarded. Any completed disk growth was kept.';
+			});
+		$jobs->audit('discard', $released);
+		return 1;
+		}, 1);
+	});
+}
+
 1;
