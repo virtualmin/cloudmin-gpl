@@ -43,6 +43,16 @@ die "Only KVM virtual machines can be managed here\n"
 return ($adapter, $domain, $doc, sha256_hex($xml));
 }
 
+# require_stopped(domain)
+# Offline operations require stopped hardware and no managed memory save.
+sub require_stopped
+{
+my ($domain) = @_;
+die "Shut down the virtual machine before changing or deleting it\n"
+	if ($domain->is_active());
+require_editable($domain);
+}
+
 # require_editable(domain, [plan])
 # Rejects managed saves; with plan, also checks storage/history constraints.
 sub require_editable
