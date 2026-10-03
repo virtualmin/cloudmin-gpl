@@ -417,4 +417,48 @@ die "Only managed raw, QCOW2 or ISO volumes can be selected\n"
 return $volume;
 }
 
+# imported_file_ids(self, adapter)
+# Protects aliases of imported disks without requiring unrelated pools to run.
+sub imported_file_ids
+{
+my ($self, $adapter) = @_;
+my %pools = map { $_->get_uuid_string() => $_ }
+	$adapter->connect()->list_all_storage_pools();
+my %identities;
+foreach my $image (@{$self->{'images'}->list()}) {
+	my $pool = $pools{$image->{'pool'} || ''};
+	my @paths = ($image->{'volume_path'});
+	# Resolve current storage identity when the import still names a volume.
+	if ($pool && $image->{'volume'} && $image->{'volume_key'}) {
+		# An active pool can verify the imported volume against libvirt metadata.
+		if ($pool->is_active()) {
+			my $inventory = $self->{'storage_cache'} && $self->{'storage_cache'}->{"$adapter"};
+			if ($inventory) {
+				# Reuse this validation's refreshed metadata without refreshing
+				# the same pool once for every imported image.
+				my ($source) = grep { $_->{'pool'} eq $image->{'pool'} &&
+					$_->{'name'} eq $image->{'volume'} } @{$inventory->[1]};
+				die "The selected volume has changed\n" if ($source && $source->{'key'} ne $image->{'volume_key'});
+				$identities{file_identity($source->{'path'})} = 1 if ($source);
+				}
+			else {
+				# Recovery without a validation cache still checks current identity.
+				my (undef, $source) = $adapter->volume(@$image{qw(pool volume volume_key)});
+				$identities{file_identity($source->get_path())} = 1 if ($source);
+				}
+			}
+		else {
+			# An inactive file pool can still alias a disk in an active pool.
+			my ($type, $target) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
+			push(@paths, "$target/$image->{volume}")
+				if ($target && $type =~ /\A(?:dir|fs|netfs)\z/);
+			}
+		}
+	foreach my $path (grep { defined($_) && length($_) } @paths) {
+		$identities{file_identity($path)} = 1 if (-e $path || -l $path);
+		}
+	}
+return \%identities;
+}
+
 1;
