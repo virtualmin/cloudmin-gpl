@@ -461,4 +461,37 @@ foreach my $image (@{$self->{'images'}->list()}) {
 return \%identities;
 }
 
+# check_volume(self, adapter, record, [excluded_uuid], [references])
+# Protects imported images, shared disks and backing files before mutation.
+sub check_volume
+{
+my ($self, $adapter, $record, $excluded, $refs) = @_;
+my ($pool, $volume) = $adapter->volume(@$record{qw(pool name key)});
+die "Storage volume is missing\n" if (!$volume);
+# Host use may have changed since the volume appeared in a disk picker.
+Cloudmin::LVM::host_use($volume->record(1)) if ($volume->isa('Cloudmin::LVM::Volume'));
+die "The storage volume was replaced; it was not changed\n" if
+	($record->{'identity'} ne file_identity($volume->get_path()));
+foreach my $image (@{$self->{'images'}->list()}) {
+	# Images remain immutable even if someone attached one directly to a VM.
+	die "Detach this imported image without deleting or resizing it\n"
+		if (($image->{'pool'} || '') eq $record->{'pool'} &&
+		($image->{'volume_key'} || '') eq $record->{'key'});
+	}
+# The same imported file can appear under another pool or hard link.
+die "Detach this imported image without deleting or resizing it\n"
+	if ($self->imported_file_ids($adapter)->{$record->{'identity'}});
+if ($refs) {
+	# A deletion plan supplies references excluding its own removable layers.
+	my $reason = Cloudmin::Images::volume_use($refs, @$record{qw(path pool_name name key)});
+	die "$reason\n" if ($reason);
+	}
+else {
+	# Ordinary disk changes exclude only their
+	# guest, never other volume users.
+	Cloudmin::Images::assert_unused(undef, $adapter->connect(), $pool, $volume, $excluded);
+	}
+return ($pool, $volume);
+}
+
 1;
