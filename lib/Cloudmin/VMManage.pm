@@ -372,4 +372,21 @@ return { %{Cloudmin::Libvirt::resource_settings($doc)},
 	interfaces => [ Cloudmin::Libvirt::extract_interfaces($xml) ] };
 }
 
+# audit_changes(before_xml, after_xml)
+# Reports only changed public settings, with their old and requested values.
+sub audit_changes
+{
+my ($before_xml, $after_xml) = @_;
+my $before = audit_settings($before_xml);
+my $after = audit_settings($after_xml);
+my %changes;
+foreach my $key (keys %$after) {
+	# Unchanged fields add noise, especially when a Save touches only one tab.
+	next if (convert_to_json([$before->{$key}], 1) eq
+		convert_to_json([$after->{$key}], 1));
+	$changes{$key} = { before => $before->{$key}, after => $after->{$key} };
+	}
+return \%changes;
+}
+
 1;
