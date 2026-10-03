@@ -346,4 +346,17 @@ die "Invalid $key\n" if (!defined($value) || ref($value) ||
 return $value;
 }
 
+# set_text(parent, name, value, [attributes])
+# Replaces one element's contents while preserving its unrelated attributes.
+sub set_text
+{
+my ($parent, $name, $value, $attrs) = @_;
+my ($node) = $parent->findnodes($name);
+$node ||= $parent->addNewChild(undef, $name);
+$node->removeChildNodes();
+$node->appendText($value);
+$node->setAttribute($_, $attrs->{$_}) foreach keys %{$attrs || {}};
+return $node;
+}
+
 1;
