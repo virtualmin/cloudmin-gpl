@@ -649,6 +649,107 @@ if ($expected) {
 return ($source, $volume);
 }
 
+# prepare(self, action, input, job_id)
+# Builds a private operation plan and checks the form's configuration revision.
+sub prepare
+{
+my ($self, $action, $in, $job_id) = @_;
+# Nested edits share one inventory only during this read-only validation pass.
+local $self->{'storage_cache'} = $self->{'storage_cache'} || {};
+my ($adapter, $domain, $doc, $revision) = $self->get_guest($in->{'id'});
+require_editable($domain);
+if ($action eq 'power_cycle') {
+	# Power cycling applies the latest saved definition, without editing hardware.
+	my ($state) = $domain->get_state();
+	die "Resume the virtual machine before requesting a power cycle\n"
+		if ($domain->is_active() && $state != 1 && $state != 2);
+	return { operation => $action, uuid => $in->{'id'}, name => $domain->get_name(),
+		revision => $revision, scope => 'config' };
+	}
+my $before = $doc->toString();
+die "The virtual machine configuration changed; reload the page\n"
+	if (text($in, 'revision') ne $revision);
+my @changes;
+if ($action eq 'update' && exists($in->{'changes'})) {
+	# Validate every edit against one private XML document before any writes.
+	my $changes = $in->{'changes'};
+	die "Invalid hardware changes\n" if (ref($changes) ne 'ARRAY' ||
+		@$changes > 128);
+	my (%seen, %volumes, $index);
+	foreach my $change (@$changes) {
+		die "Invalid hardware change\n" if (ref($change) ne 'HASH');
+		my $operation = text($change, 'action');
+		die "Invalid hardware action\n" if ($operation !~
+			/\A(?:grow_disk|detach_disk|attach_disk|add_disk|
+			add_interface|update_interface|remove_interface|change_media)\z/x);
+		my $target = $operation =~ /\A(?:(?:grow|detach)_disk|change_media)\z/
+			? 'disk:'.text($change, 'target')
+			: $operation =~ /\A(?:update|remove)_interface\z/
+			? 'nic:'.lc(text($change, 'mac')) : '';
+		die "A device was selected more than once\n"
+			if ($target && $seen{$target}++);
+		if ($operation eq 'grow_disk') {
+			# Unchanged sizes need no exclusive disk access or resize operation.
+			my $disk = disk_node($doc, text($change, 'target'));
+			my $v = $self->volume_for($adapter, $disk);
+			my $bytes = Cloudmin::VMs::size_bytes($change,
+				'disk_gib', 1024**3, 'disk');
+			next if (int(($bytes + 511)/512)*512 == $v->{'capacity'});
+			}
+		elsif ($operation eq 'update_interface') {
+			# Preserve source options on interfaces whose network did not change.
+			my ($nic) = grep { lc($_->findvalue('mac/@address')) eq
+				lc(text($change, 'mac')) }
+				$doc->findnodes('/domain/devices/interface');
+			my ($network) = grep { $_->{'key'} eq text($change, 'network') }
+				@{networks($adapter)};
+			next if (!exists($change->{'link'}) && !exists($change->{'inbound_kib'}) &&
+				!exists($change->{'outbound_kib'}) && $nic && $network &&
+				$nic->getAttribute('type') eq $network->{'type'} &&
+				$nic->findvalue('source/@'.$network->{'type'}) eq
+				$network->{'source'});
+			}
+		# Each new device gets a stable, distinct identity for job recovery.
+		my $step_id = substr(sha256_hex($job_id.':'.++$index), 0, 32);
+		my $step = $self->prepare_change($operation, $change, $step_id,
+			$adapter, $domain, $doc, $revision);
+		# Aliases in different pools must not select the same file twice.
+		my $volume = $step->{'attach_volume'} || $step->{'volume'};
+		die "A storage file was selected more than once\n"
+			if ($volume && $volumes{$volume->{'identity'}}++);
+		delete($step->{'xml'});
+		push(@changes, $step);
+		}
+	}
+# Resources and boot order are checked against the final set of devices.
+my $plan = $self->prepare_change($action, $in, $job_id,
+	$adapter, $domain, $doc, $revision);
+$plan->{'changes'} = \@changes if (@changes);
+$plan->{'before_xml'} = $before;
+prepare_hotplug($plan);
+require_editable($domain, $plan);
+# Confirmed deletion may stop the guest before using the offline removal path.
+if ($action eq 'delete' && $plan->{'shutdown'}) {
+	$plan->{'scope'} = 'config';
+	return $plan;
+	}
+$plan->{'scope'} = $domain->is_active() ? 'live' : 'config';
+if ($domain->is_active()) {
+	# Preserve immediate refusal for destructive actions on a running guest.
+	require_stopped($domain) if ($action =~ /\A(?:delete|delete_disk)\z/);
+	$plan->{'scope'} = 'offline-required' if (hotplug_reason($domain, $plan));
+	if ($plan->{'scope'} eq 'live') {
+		# Publish whether this plan has live work
+		# or only next-start settings.
+		validate_hotplug($domain, $plan);
+		my $ops = hotplug_operations($domain, $plan);
+		$plan->{'scope'} = 'config' if (!grep { $_->{'kind'} ne 'next_start' } @$ops);
+		$plan->{'deferred_fields'} = [map { @{$_->{'fields'}} } grep { $_->{'kind'} eq 'next_start' } @$ops];
+		}
+	}
+return $plan;
+}
+
 # prepare_change(self, action, input, job_id, adapter, domain, doc, revision)
 # Edits the private document and records storage work without changing the host.
 sub prepare_change
