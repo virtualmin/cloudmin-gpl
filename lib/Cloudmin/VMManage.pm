@@ -1289,6 +1289,41 @@ if (!$resources->{'shutdown_complete'}) {
 return 1;
 }
 
+# run_power_cycle(self, id, domain, adapter)
+# Journals a clean shutdown and start so recovery does not repeat the cycle.
+sub run_power_cycle
+{
+my ($self, $id, $domain, $adapter) = @_;
+my $jobs = $self->{'jobs'};
+my $job = $jobs->get($id);
+my $r = $job->{'request'};
+die "Virtual machine not found\n" if (!$domain);
+require_editable($domain);
+if ($job->{'resources'}->{'start_requested'} && $domain->is_active()) {
+	# A lost start reply must not trigger another shutdown on recovery.
+	$self->complete($id);
+	return;
+	}
+# Recheck queued settings before either power operation.
+die "The virtual machine configuration changed; reload the page\n"
+	if (sha256_hex($domain->get_xml_description(3)) ne $r->{'revision'});
+return if (!$self->run_shutdown($id, $domain));
+# Start only from stopped state and persist intent before the native call.
+if (!$domain->is_active()) {
+	die "The virtual machine configuration changed; review its settings before starting it\n"
+		if (sha256_hex($domain->get_xml_description(3)) ne $r->{'revision'});
+	$jobs->update($id, sub {
+		$_[0]->{'phase'} = 'power_cycle_start';
+		$_[0]->{'resources'}->{'start_requested'} = 1;
+		$_[0]->{'events'} = [ { step => 'power_cycle_shutdown', state => 'done' },
+			{ step => 'power_cycle_start', state => 'running' } ];
+		});
+	# Use the same startup tracking as the ordinary Start action.
+	$adapter->start_domain($r->{'uuid'});
+	}
+$self->complete($id);
+}
+
 # cleanup_disk_worker(self, id) stops this edit's worker and releases its lease.
 # A stop failure keeps the lease so later recovery still knows what it owns.
 sub cleanup_disk_worker
