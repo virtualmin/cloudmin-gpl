@@ -171,6 +171,94 @@ return [ (map { { key => 'network:'.$_->{'id'}, type => 'network',
 	 @{$adapter->list_host_bridges($networks)}) ];
 }
 
+# settings(self, id)
+# Supplies editable values and choices without exposing XML or passwords.
+sub settings
+{
+my ($self, $id) = @_;
+local $self->{'storage_cache'} = {};
+my ($adapter, $domain, $doc, $revision) = $self->get_guest($id);
+my ($pools, $volumes) = $self->storage($adapter);
+my $xml = $doc->toString();
+my @disks = Cloudmin::Libvirt::extract_disks($xml);
+my $refs = Cloudmin::Images::volume_references($adapter->connect());
+my @imports = @{$self->{'images'}->list()};
+# Keep immutable image files out of the writable attachment picker, including aliases.
+my %image_files;
+my @images;
+foreach my $image (@imports) {
+	my ($volume) = grep { $_->{'pool'} eq ($image->{'pool'} || '') &&
+		$_->{'key'} eq ($image->{'volume_key'} || '') } @$volumes;
+	# Imports whose volumes are absent cannot supply an attachment or clone.
+	next if (!$volume);
+	$image_files{$volume->{'identity'}} = 1;
+	# Exclude installer media even when the pool reports its format as raw.
+	# Only completed disk imports can be cloned into writable guest storage.
+	if (($image->{'state'} || '') eq 'ready' && ($image->{'format'} || '') ne 'iso' &&
+		$volume->{'format'} =~ /\A(?:raw|qcow2)\z/) {
+		push(@images, { id => $image->{'id'}, name => $image->{'name'},
+			capacity => $volume->{'capacity'}, pool_name => $volume->{'pool_name'} });
+		}
+	}
+my @attachable = grep { $_->{'format'} =~ /\A(?:raw|qcow2)\z/ &&
+	!$image_files{$_->{'identity'}} &&
+	!Cloudmin::Images::volume_use($refs, @{$_}{qw(path pool_name name key)}) } @$volumes;
+foreach my $disk (@disks) {
+	# Pool references and file paths both resolve to the same managed volume.
+	my ($volume) = grep {
+		($_->{'path'} eq ($disk->{'path'} || '')) ||
+		($_->{'pool_name'} eq ($disk->{'pool'} || '') &&
+		 $_->{'name'} eq ($disk->{'volume'} || '')) } @$volumes;
+	$disk->{'volume_info'} = $volume if ($volume);
+	$disk->{'imported'} = 1 if ($volume && $image_files{$volume->{'identity'}});
+	}
+# The form edits the saved allocation, falling back to its maximum if omitted.
+my ($memory) = $doc->findnodes('/domain/currentMemory');
+($memory) = $doc->findnodes('/domain/memory') if (!$memory);
+my %units = (b => 1, bytes => 1, KiB => 1024, k => 1024,
+	MiB => 1024**2, M => 1024**2, GiB => 1024**3, G => 1024**3);
+my $unit = $memory->getAttribute('unit') || 'KiB';
+die "Unsupported memory unit\n" if (!$units{$unit});
+# Show the same CPU limit that submission validation enforces.
+my $caps = $adapter->get_host_capabilities();
+my @interfaces = Cloudmin::Libvirt::extract_interfaces($xml);
+# XML defaults are a connected link and unlimited traffic in each direction.
+foreach my $interface (@interfaces) {
+	my $node = hotplug_device($doc, 'interface', $interface->{'mac'});
+	$interface->{'link'} = $node->findvalue('link/@state') || 'up';
+	$interface->{$_.'_kib'} = 0 + ($node->findvalue('bandwidth/'.$_.'/@average') || 0)
+		foreach qw(inbound outbound);
+	}
+my ($running, %pending);
+if ($domain->is_active()) {
+	# Compare hardware with its saved settings without exposing domain XML.
+	$running = resource_values(Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0)));
+	my $saved = resource_values($doc);
+	%pending = %{$adapter->pending_domain_settings($domain, $running, $saved)};
+	}
+return { id => $id, uuid => $id, name => $domain->get_name(),
+	revision => $revision, active => $domain->is_active() ? 1 : 0,
+	state => Cloudmin::Libvirt::domain_state_name(($domain->get_state())[0]),
+	cpus => 0 + ($doc->findvalue('/domain/vcpu/@current') || $doc->findvalue('/domain/vcpu')),
+	max_cpus => $caps->{'cpus'},
+	max_memory_mib => int($caps->{'memory_kib'}/1024) - 256,
+	cpu_limit => 0 + $doc->findvalue('/domain/vcpu'),
+	memory_limit_mib => memory_kib($doc, 'memory') / 1024,
+	live_limits => live_limits($domain, $doc),
+	resource_locks => resource_locks($doc),
+	running => $running, pending => \%pending,
+	memory_mib => $memory->textContent() * $units{$unit} / 1024**2,
+	description => $doc->findvalue('/domain/description'),
+	history_revision => (delete_history($domain))[1],
+	disks => \@disks, interfaces => \@interfaces,
+	delete_force_blocked => !delete_can_force($domain,
+		[map { $_->{'volume_info'} } grep { $_->{'volume_info'} && !$_->{'imported'} } @disks]) ? 1 : 0,
+	pools => $pools, volumes => $volumes, attachable_volumes => \@attachable,
+	images => \@images, networks => networks($adapter),
+	bootmenu => $doc->findvalue('/domain/os/bootmenu/@enable') eq 'yes'
+		? 1 : 0 };
+}
+
 # resource_locks(doc)
 # Identifies fields tied to settings this editor does not rewrite.
 sub resource_locks
