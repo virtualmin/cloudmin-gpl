@@ -400,4 +400,21 @@ die "Disk is no longer attached\n" if (!$disk);
 return $disk;
 }
 
+# volume_for(self, adapter, disk)
+# Resolves attached disks and media in active managed file or LVM pools.
+sub volume_for
+{
+my ($self, $adapter, $disk) = @_;
+my (undef, $volumes) = $self->storage($adapter);
+my ($volume) = grep {
+	($_->{'path'} eq ($disk->findvalue('source/@file') || $disk->findvalue('source/@dev')) ||
+	 ($_->{'block'} && $disk->findvalue('source/@dev') &&
+	  (abs_path($_->{'path'}) || $_->{'path'}) eq (abs_path($disk->findvalue('source/@dev')) || ''))) ||
+	($_->{'pool_name'} eq $disk->findvalue('source/@pool') &&
+	 $_->{'name'} eq $disk->findvalue('source/@volume')) } @$volumes;
+die "Only managed raw, QCOW2 or ISO volumes can be selected\n"
+	if (!$volume);
+return $volume;
+}
+
 1;
