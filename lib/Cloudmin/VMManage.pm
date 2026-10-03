@@ -359,4 +359,17 @@ $node->setAttribute($_, $attrs->{$_}) foreach keys %{$attrs || {}};
 return $node;
 }
 
+# audit_settings(xml)
+# Selects editor-visible settings for audit comparisons. Private graphics,
+# authentication, metadata and unrelated XML are deliberately excluded.
+sub audit_settings
+{
+my ($xml) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+return { %{Cloudmin::Libvirt::resource_settings($doc)},
+	description => $doc->findvalue('/domain/description'),
+	disks => [ Cloudmin::Libvirt::extract_disks($xml) ],
+	interfaces => [ Cloudmin::Libvirt::extract_interfaces($xml) ] };
+}
+
 1;
