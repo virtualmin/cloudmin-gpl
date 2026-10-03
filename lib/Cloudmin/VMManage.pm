@@ -111,6 +111,34 @@ die "Cannot identify storage file $path: $!\n" if (!@stat || !-f _);
 return join(':', @stat[0, 1]);
 }
 
+# check_nvram(adapter, domain)
+# A copied VM definition must not cause deletion of another guest's variables.
+sub check_nvram
+{
+my ($adapter, $domain) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(3));
+my $path = $doc->findvalue('/domain/os/nvram/source/@file') ||
+	$doc->findvalue('/domain/os/nvram/text()');
+$path =~ s/^\s+|\s+$//g;
+# BIOS guests have no firmware variable file to protect.
+return if (!$path);
+my $real = abs_path($path) || $path;
+foreach my $other ($adapter->connect()->list_all_domains()) {
+	# Compare other guests' live and persistent definitions, excluding this guest.
+	next if ($other->get_uuid_string() eq $domain->get_uuid_string());
+	my @xml = ($other->get_xml_description(0));
+	push(@xml, $other->get_xml_description(2)) if ($other->is_persistent());
+	foreach my $xml (@xml) {
+		my $other_doc = Cloudmin::Libvirt::parse_xml_document($xml);
+		my $ref = $other_doc->findvalue('/domain/os/nvram/source/@file') ||
+			$other_doc->findvalue('/domain/os/nvram/text()');
+		$ref =~ s/^\s+|\s+$//g;
+		die "UEFI variables are shared with another virtual machine\n"
+			if ($ref && (abs_path($ref) || $ref) eq $real);
+		}
+	}
+}
+
 # storage(self, adapter)
 # Returns managed file and LVM volumes; failed inventories must not look empty.
 sub storage
