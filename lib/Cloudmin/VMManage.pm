@@ -1226,6 +1226,262 @@ elsif ($step->{'operation'} eq 'grow_disk') {
 	}
 }
 
+# run(self, id)
+# Replays a durable operation while the job reserves its guest.
+sub run
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+return if ($jobs->busy($id));
+return $jobs->run_worker($id, sub {
+	my $job = $jobs->get($id) || die "Job not found\n";
+	# The worker lock may have been acquired after another launcher finished.
+	return 1 if ($job->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+	my $ok = eval {
+		# timed_out(signal) and interrupted(signal) retain failure state below.
+		local $SIG{'ALRM'} = sub { die "Virtual machine management timed out\n" };
+		local $SIG{'TERM'} = sub { die "Virtual machine management was interrupted\n" };
+		my $request = $job->{'request'};
+		# Disk copies and thick LVM zeroing can take hours on slow storage.
+		alarm(grep({ $_->{'source_image'} ||
+			($_->{'new_volume'} && $_->{'new_volume'}->{'block'}) ||
+			($_->{'volume'} && $_->{'volume'}->{'block'}) }
+			($request, @{$request->{'changes'} || []})) ? 7200 : 180);
+		(sub {
+			$job = $jobs->get($id);
+			# Honor cancellation while no resource changes have started.
+			if ($job->{'cancel'} && !$job->{'resources'}->{'started'}) {
+				$jobs->update($id, sub { $_[0]->{'state'} = 'cancelled'; });
+				return;
+				}
+			my $r = $job->{'request'};
+			# Recovery must stop an earlier converter before inspecting its disks.
+			$self->cleanup_disk_worker($id);
+			my $adapter = $self->{'adapter'}->();
+			# Image conversion uses the same recoverable worker lease as creation.
+			# disk_worker(task, request, [options...]) keeps cancellation and the
+			# worker lease attached to this hardware-edit job.
+			$adapter->{'disk_worker'} = sub {
+				my ($task, $request, %options) = @_;
+				my $worker = Cloudmin::Worker->new();
+				my $previous = $jobs->get($id)->{'worker'};
+				$worker->cleanup($previous) if ($previous);
+				my $result = $worker->run($task, $request, %options,
+					started => sub { my $lease = $_[0]; $jobs->update($id, sub { $_[0]->{'worker'} = $lease; }); },
+					progress => sub { die "Disk operation cancelled\n" if ($jobs->get($id)->{'cancel'}); });
+				$jobs->update($id, sub { delete($_[0]->{'worker'}); });
+				return $result;
+				};
+			my $domain = $adapter->find_domain($r->{'uuid'});
+			if ($r->{'operation'} eq 'power_cycle') {
+				# A durable shutdown/start sequence survives a disconnected browser.
+				$self->run_power_cycle($id, $domain, $adapter);
+				return;
+				}
+			my ($before_xml, $defined);
+			# Revalidate the guest and recognize an already-applied definition.
+			if ($domain) {
+				require_editable($domain, $r);
+				if ($job->{'resources'}->{'live'}) {
+					# Recover native live/config steps from their own durable journal.
+					$self->run_hotplug($adapter, $domain, $id);
+					return;
+					}
+				if ($domain->is_active() && !($r->{'operation'} eq 'delete' && $r->{'shutdown'})) {
+					# A guest started after submission must
+					# satisfy the live-edit checks.
+					$jobs->update($id, sub { $_[0]->{'scope'} = 'offline-required'; })
+						if (hotplug_reason($domain, $r));
+					validate_hotplug($domain, $r);
+					}
+				elsif (!$domain->is_active()) {
+					# Destructive storage work always retains the stopped-only guard.
+					require_stopped($domain);
+					}
+				my $xml = $domain->get_xml_description(3);
+				my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+				my $marker = $doc->findvalue('/domain/metadata/*[namespace-uri()="urn:cloudmin:change:1"]');
+				# Defining XML is atomic; its marker survives a lost reply.
+				if ($r->{'xml'} && $marker eq $id) {
+					# Disk deletion may still need to remove its detached volume.
+					if ($r->{'operation'} eq 'delete_disk') {
+						$defined = 1;
+						}
+					else {
+						# Other edits are complete once their saved XML marker matches.
+						$self->complete($id);
+						return;
+						}
+					}
+				check_nvram($adapter, $domain)
+					if ($r->{'operation'} eq 'delete');
+				die "The virtual machine configuration changed; reload the page\n"
+					if (!$defined && sha256_hex($xml) ne $r->{'revision'});
+				$before_xml = $xml;
+				}
+			else {
+				# Only a journalled deletion may continue after undefine.
+				die "Virtual machine not found\n" unless
+					$r->{'operation'} eq 'delete' && $job->{'resources'}->{'started'};
+				}
+			# Recheck all devices and total pool demand before the first write.
+			my @steps = ($r, @{$r->{'changes'} || []});
+			my %space;
+			foreach my $step (@steps) {
+				my ($pool, $bytes) = $self->check_step($adapter, $step, $job);
+				# Sum all changes sharing a pool before checking free space.
+				if ($pool) {
+					my $needed = ($space{$pool->get_uuid_string()} += $bytes);
+					die "The pool lacks space for these disk changes\n"
+						if (!($pool->isa('Cloudmin::LVM::Pool') && $pool->{'thin'}) &&
+							$needed > $pool->get_info()->{'available'});
+					}
+				}
+			if ($r->{'operation'} eq 'delete') {
+				# Whole-VM deletion checks its complete
+				# dependency plan as one unit.
+				$self->check_delete_volumes($adapter, $r->{'volumes'}, $domain, $r->{'delete_targets'});
+				}
+			else {
+				# Individual disk removals retain their
+				# ordinary per-volume checks.
+				foreach my $v (@{$r->{'volumes'} || []}) {
+					my (undef, $volume) = $adapter->volume(@$v{qw(pool name key)});
+					# A missing volume is expected after a completed deletion step.
+					next if (!$volume && (!$domain || $defined));
+					$self->check_volume($adapter, $v,
+						$domain && !$defined ? $r->{'uuid'} : undef);
+					}
+				}
+			if ($domain && $r->{'operation'} eq 'delete' && $r->{'shutdown'}) {
+				# Kept writable disks need clean shutdown; discarded disks do not.
+				my $force = delete_can_force($domain, $r->{'volumes'});
+				return if (!$self->run_shutdown($id, $domain, $force));
+				# Recheck storage ownership and the revision after either kind of stop.
+				require_stopped($domain);
+				require_editable($domain, $r);
+				check_nvram($adapter, $domain);
+				die "The virtual machine configuration changed; reload the page\n"
+					if (sha256_hex($domain->get_xml_description(3)) ne $r->{'revision'});
+				$self->check_delete_volumes($adapter, $r->{'volumes'}, $domain, $r->{'delete_targets'});
+				}
+			my $current = $jobs->update($id, sub {
+				# Cancellation and the first write compete in this transaction.
+				if ($_[0]->{'cancel'} && !$_[0]->{'resources'}->{'started'}) {
+					$_[0]->{'state'} = 'cancelled';
+					return;
+					}
+				$_[0]->{'state'} = 'running';
+				$_[0]->{'phase'} = 'manage';
+				$_[0]->{'resources'}->{'started'} = 1;
+				$_[0]->{'events'} = [
+					($_[0]->{'resources'}->{'shutdown_complete'}
+						? ({ step => $_[0]->{'resources'}->{'stop_phase'} || 'delete_shutdown', state => 'done' }) : ()),
+					{ step => 'manage', state => 'running' }];
+				delete($_[0]->{'error'});
+				});
+			return if ($current->{'state'} eq 'cancelled');
+			# Choose the execution path again after queueing, before any disk write.
+			my $live = $domain && $domain->is_active() ? 1 : 0;
+			validate_hotplug($domain, $r) if ($live);
+			$jobs->update($id, sub {
+				# update(job) saves scope and notices for the result page.
+				$_[0]->{'scope'} = $live ? 'live' : 'config';
+				$_[0]->{'deferred_fields'} = [];
+				# Compare attachments for networking guidance after saving.
+				# Live moves do not configure guest IPs; the UI checks scope.
+				$_[0]->{'network_changed'} = $r->{'xml'} &&
+					convert_to_json(Cloudmin::Libvirt::network_attachments(
+						Cloudmin::Libvirt::parse_xml_document($r->{'before_xml'})), 0, 0, 1) ne
+					convert_to_json(Cloudmin::Libvirt::network_attachments(
+						Cloudmin::Libvirt::parse_xml_document($r->{'xml'})), 0, 0, 1) ? 1 : 0;
+				});
+			$self->apply_storage($adapter, $_, $id)
+				foreach grep { !$live || $_->{'operation'} ne 'grow_disk' } @steps;
+			# A clone can take minutes. Re-evaluate power state before applying hardware.
+			my $active_now = $domain && $domain->is_active() ? 1 : 0;
+			if ($active_now != $live) {
+				# Long storage work may cross a start or stop
+				# requested outside Cloudmin.
+				$live = $active_now;
+				validate_hotplug($domain, $r) if ($live);
+				# Growth skipped for QEMU can now use the ordinary offline path.
+				$self->apply_storage($adapter, $_, $id)
+					foreach grep { !$live && $_->{'operation'} eq 'grow_disk' } @steps;
+				$jobs->update($id, sub { $_[0]->{'scope'} = $live ? 'live' : 'config'; });
+				}
+			# Copying a disk must not hide an external definition edit made meanwhile.
+			die "The virtual machine configuration changed during storage work; reload the page\n"
+				if ($domain && !$defined &&
+					sha256_hex($domain->get_xml_description(3)) ne $r->{'revision'});
+			require_editable($domain, $r) if ($domain);
+			if ($live) {
+				# Run the journalled live/config sequence.
+				$self->run_hotplug($adapter, $domain, $id);
+				return;
+				}
+			# Offline jobs retain the existing single atomic domain definition.
+			require_stopped($domain) if ($domain);
+			if ($r->{'operation'} eq 'delete') {
+				# Libvirt removes NVRAM; volume deletes follow undefine.
+				$adapter->undefine_domain($r->{'uuid'}) if ($domain);
+				$adapter->removed_guest($r->{'uuid'}, $r->{'creation_job'});
+				}
+			elsif ($r->{'xml'} && !$defined) {
+				# Validate the complete saved definition; never redefine by name.
+				Cloudmin::Libvirt::log_call('Sys::Virt::define_domain', {
+					uuid => $r->{'uuid'}, flags => 1,
+					changes => audit_changes($before_xml, $r->{'xml'}) });
+				$adapter->connect()->define_domain($r->{'xml'}, 1);
+				}
+			# A volume can be removed only once no guest references it, including
+			# a retained guest after detaching one of its disks.
+			foreach my $v (@{$r->{'volumes'} || []}) {
+				my (undef, $volume) = $adapter->volume(@$v{qw(pool name key)});
+				next if (!$volume);
+				$self->check_volume($adapter, $v);
+				Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::delete', {
+					pool => $v->{'pool'}, volume => $v->{'name'}, flags => 0 });
+				$volume->delete(0);
+				}
+			$self->complete($id);
+			})->();
+		1;
+		};
+	my $error = $@;
+	alarm(0);
+	if (!$ok) {
+		# Retain partial deletion or an uncertain reply for explicit recovery.
+		my $pending = $jobs->get($id)->{'resources'}->{'started'} ? 1 : 0;
+		if ($pending && $job->{'request'}->{'operation'} ne 'power_cycle') {
+			# A refused atomic definition must not permanently block the VM.
+			eval { $pending = $self->has_unfinished_change($id); };
+			}
+		# Power failures leave the saved settings intact and allow manual start.
+		$pending = 0 if ($job->{'request'}->{'operation'} eq 'power_cycle');
+		# A failed shutdown has not removed the definition or any disk files.
+		$pending = 0 if (($jobs->get($id)->{'phase'} || '') =~ /\Adelete_(?:shutdown|power_off)\z/);
+		my $failed = $jobs->update($id, sub {
+			$_[0]->{'state'} = 'failed';
+			$_[0]->{'error'} = Cloudmin::Libvirt::error_message($error);
+			$_[0]->{'cleanup_pending'} = $pending;
+			if (@{$_[0]->{'events'}} && $_[0]->{'events'}->[-1]->{'state'} eq 'running') {
+				# Attribute the failure to the actual
+				# power or hardware step.
+				$_[0]->{'events'}->[-1]->{'state'} = 'failed';
+				}
+			else {
+				# Preflight failures have no
+				# running step to mark.
+				push(@{$_[0]->{'events'}}, { step => 'manage', state => 'failed' });
+				}
+			});
+		$jobs->audit('manage_failed', $failed);
+		}
+	return $ok ? 1 : 0;
+	});
+}
+
 # run_shutdown(self, id, domain, [force])
 # Stops the guest; clean shutdown retains its deadline across worker recovery.
 # force defaults to false; callers must first verify discarded writable disks.
