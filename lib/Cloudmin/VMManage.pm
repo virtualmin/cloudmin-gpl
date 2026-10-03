@@ -1289,4 +1289,15 @@ if (!$resources->{'shutdown_complete'}) {
 return 1;
 }
 
+# cleanup_disk_worker(self, id) stops this edit's worker and releases its lease.
+# A stop failure keeps the lease so later recovery still knows what it owns.
+sub cleanup_disk_worker
+{
+my ($self, $id) = @_;
+my $lease = $self->{'jobs'}->get($id)->{'worker'};
+return if (!$lease);
+Cloudmin::Worker->new()->cleanup($lease);
+$self->{'jobs'}->update($id, sub { delete($_[0]->{'worker'}); });
+}
+
 1;
