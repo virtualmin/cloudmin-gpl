@@ -43,6 +43,53 @@ die "Only KVM virtual machines can be managed here\n"
 return ($adapter, $domain, $doc, sha256_hex($xml));
 }
 
+# require_editable(domain, [plan])
+# Rejects managed saves; with plan, also checks storage/history constraints.
+sub require_editable
+{
+my ($domain, $plan) = @_;
+die "Remove the managed save before changing this virtual machine\n"
+	if ($domain->has_managed_save_image(0));
+# Without a plan, only the managed-save check applies.
+return if (!$plan);
+# VM deletion owns a complete storage plan; ordinary disk edits still need
+# snapshot-free storage. Recheck history before stopping or removing the VM.
+if ($plan->{'operation'} eq 'delete') {
+	my ($history, $revision) = delete_history($domain);
+	# Native snapshot LVs need their own ownership-checked deletion first.
+	die "Delete the LVM snapshots before deleting this virtual machine\n"
+		if (grep { /snapshot=["']manual["']/ } @$history);
+	die "Finish the interrupted snapshot operation before deleting this virtual machine\n"
+		if (grep { /<snapshotDeleteInProgress\b/ } @$history);
+	die "The snapshot or backup history changed; reload the deletion page\n"
+		if (($plan->{'history_revision'} || '') ne $revision);
+	if ($domain->is_active()) {
+		# Deletion must not race a migration,
+		# backup or active block job.
+		die "Wait for the current libvirt operation to finish\n" if ($domain->get_job_info()->{'type'});
+		my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0));
+		foreach my $disk ($doc->findnodes('/domain/devices/disk[@device="disk"]')) {
+			my $job = $domain->get_block_job_info($disk->findvalue('target/@dev'), 0);
+			die "Wait for the current disk operation to finish\n" if ($job && $job->{'type'});
+			}
+		}
+	return;
+	}
+my @steps = ($plan, @{$plan->{'changes'} || []});
+# Resource, network and removable media edits leave snapshot chains untouched.
+my $storage = grep { $_->{'operation'} =~
+	/\A(?:delete_disk|grow_disk|detach_disk|attach_disk|add_disk)\z/ } @steps;
+# Hardware expansion can also add a CD/DVD drive without a separate disk action.
+$storage ||= grep { $_->{'kind'} eq 'disk' && !$_->{'media_change'} }
+	@{$plan->{'live_ops'} || []};
+return if (!$storage);
+# Ordinary storage edits cannot reconcile existing snapshot/checkpoint chains.
+my @snapshots = $domain->list_all_snapshots(0);
+my @checkpoints = $domain->list_all_checkpoints(0);
+die "Remove snapshots and backup checkpoints before changing writable disks or adding or removing drives\n"
+	if (@snapshots || @checkpoints);
+}
+
 # file_identity(path)
 # Identifies files by device/inode and LVs by VG/LV UUID, not reusable paths.
 sub file_identity
