@@ -151,4 +151,14 @@ foreach my $flags (2, ($domain->is_active() ? (0) : ())) {
 return 1;
 }
 
+# delete_history(domain)
+# Returns snapshot/checkpoint XML and a stable revision for deletion preflight.
+sub delete_history
+{
+my ($domain) = @_;
+my @xml = sort map { $_->get_xml_description(0) }
+	($domain->list_all_snapshots(0), $domain->list_all_checkpoints(0));
+return (\@xml, sha256_hex(join("\0", @xml)));
+}
+
 1;
