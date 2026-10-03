@@ -114,4 +114,19 @@ return [ (map { { key => 'network:'.$_->{'id'}, type => 'network',
 	 @{$adapter->list_host_bridges($networks)}) ];
 }
 
+# resource_locks(doc)
+# Identifies fields tied to settings this editor does not rewrite.
+sub resource_locks
+{
+my ($doc) = @_;
+return {
+	cpus => $doc->exists('/domain/vcpus') ? 1 : 0,
+	cpu_limit => $doc->exists('/domain/cpu/topology | /domain/cpu/numa | '.
+		'/domain/cputune | /domain/numatune | /domain/vcpus') ? 1 : 0,
+	memory_mib => $doc->exists('/domain/devices/memory') ? 1 : 0,
+	memory_limit_mib => $doc->exists('/domain/cpu/numa | /domain/numatune | '.
+		'/domain/devices/memory | /domain/maxMemory') ? 1 : 0,
+	};
+}
+
 1;
