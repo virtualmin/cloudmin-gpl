@@ -54,4 +54,50 @@ die "Cannot identify storage file $path: $!\n" if (!@stat || !-f _);
 return join(':', @stat[0, 1]);
 }
 
+# storage(self, adapter)
+# Returns managed file and LVM volumes; failed inventories must not look empty.
+sub storage
+{
+my ($self, $adapter) = @_;
+my $cache = $self->{'storage_cache'};
+# One validation pass shares its refreshed inventory across all device changes.
+return @{$cache->{"$adapter"}} if ($cache && $cache->{"$adapter"});
+my (@pools, @volumes);
+foreach my $pool (Cloudmin::Libvirt::storage_pools($adapter)) {
+	# Inactive pools cannot supply volumes for these operations.
+	next if (!$pool->is_active());
+	my ($type) = Cloudmin::Libvirt::parse_pool_xml(
+		$pool->get_xml_description(0));
+	# File disks use inode identities; block disks use their LVM UUIDs.
+	next if (!Cloudmin::Libvirt::disk_pool($type));
+	# Report a busy pool promptly instead of blocking a form for thirty seconds.
+	Cloudmin::Libvirt::refresh_pool($pool, 0);
+	push(@pools, { id => $pool->get_uuid_string(),
+		name => $pool->get_name(), type => $type });
+	foreach my $v ($pool->list_all_volumes()) {
+		# Native restore points belong to the snapshot journal, not disk pickers.
+		next if ($v->isa('Cloudmin::LVM::Volume') &&
+			($v->record()->{'lv_tags'} || '') =~ /(?:^|,)cloudmin_snapshot(?:,|$)/);
+		# Host filesystems, swap and device stacks are never guest disk choices.
+		next if ($v->isa('Cloudmin::LVM::Volume') && !eval { Cloudmin::LVM::host_use($v->record()); 1 });
+		# Incomplete zeroing or a read-only allocation must not expose old bytes.
+		next if ($v->isa('Cloudmin::LVM::Volume') && $v->initialization_pending());
+		next if ($v->isa('Cloudmin::LVM::Volume') && $v->record()->{'lv_attr'} !~ /^.w/);
+		my $doc = Cloudmin::Libvirt::parse_xml_document(
+			$v->get_xml_description(0));
+		my $format = $doc->findvalue('/volume/target/format/@type');
+		# Only supported disks and read-only ISO media belong in this editor.
+		next if ($format !~ /\A(?:raw|qcow2|iso)\z/);
+		push(@volumes, { pool => $pool->get_uuid_string(),
+			pool_name => $pool->get_name(), name => $v->get_name(),
+			key => $v->get_key(), path => $v->get_path(),
+			capacity => $v->get_info()->{'capacity'}, format => $format,
+			block => Cloudmin::Libvirt::block_pool($pool) ? 1 : 0,
+			identity => $v->isa('Cloudmin::LVM::Volume') ? $v->get_key() : file_identity($v->get_path()) });
+		}
+	}
+$cache->{"$adapter"} = [\@pools, \@volumes] if ($cache);
+return (\@pools, \@volumes);
+}
+
 1;
