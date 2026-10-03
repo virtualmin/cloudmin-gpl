@@ -1138,4 +1138,92 @@ if ($step->{'operation'} eq 'grow_disk') {
 return;
 }
 
+# apply_storage(self, adapter, step, job_id)
+# Allocates or grows a disk; retries reuse its journalled identity and size.
+sub apply_storage
+{
+my ($self, $adapter, $step, $id) = @_;
+# Allocate new storage once, reusing a volume retained by an interrupted job.
+if ($step->{'new_volume'}) {
+	my $v = $step->{'new_volume'};
+	my ($pool, $volume) = $adapter->volume($v->{'pool'}, $v->{'name'});
+	if (!$volume) {
+		# Record the allocated file before attempting to attach it to the VM.
+		my $x = \&Cloudmin::Libvirt::xml_escape;
+		my $xml = '<volume><name>'.$x->($v->{'name'}).
+			'</name><capacity unit="bytes">'.$v->{'capacity'}.
+			'</capacity><allocation>0</allocation><target>'.
+			'<format type="'.($v->{'format'} || 'qcow2').'"/></target></volume>';
+		# allocate([original]) journals the new volume before resize or attachment.
+		my $allocate = sub {
+			my ($original) = @_;
+			Cloudmin::Libvirt::log_call($original
+				? 'Sys::Virt::StoragePool::clone_volume'
+				: 'Sys::Virt::StoragePool::create_volume', {
+				pool => $v->{'pool'}, volume => $v->{'name'},
+				capacity_bytes => $v->{'capacity'}, format => 'qcow2',
+				flags => 0, ($original ? (
+					source_volume => $step->{'source_image'}->{'volume'},
+					source_pool => $step->{'source_image'}->{'pool'}) : ()) });
+			if (Cloudmin::Libvirt::block_pool($pool) && $original) {
+				# An imported file needs worker conversion before its bytes reach an LV.
+				$adapter->clone_disk($v->{'pool'}, $v->{'name'}, $step->{'source_image'},
+					$v->{'capacity'}, 'raw', sub { });
+				(undef, $volume) = $adapter->volume($v->{'pool'}, $v->{'name'});
+				}
+			else {
+				# Native file cloning and empty-disk allocation use the pool API.
+				$volume = $original ? $pool->clone_volume($xml, $original, 0)
+					: $pool->create_volume($xml, 0);
+				}
+			die "The new volume has an unexpected path\n"
+				if ($volume->get_path() ne $v->{'path'});
+			$self->{'jobs'}->update($id, sub {
+				$_[0]->{'resources'}->{'new_volumes'}->{$v->{'name'}} = {
+					%$v, key => $volume->get_key(),
+					identity => file_identity($volume->get_path()) };
+				});
+			};
+		if (my $source = $step->{'source_image'}) {
+			# Share creation's image lock so deletion cannot race the full copy.
+			$self->{'images'}->with_lock($self->{'images'}->path($source->{'id'}, 'json'), 0, sub {
+				my (undef, $original) = $self->clone_source($adapter, $source->{'id'}, $source);
+				$allocate->($original);
+				});
+			}
+		else {
+			# Empty disks allocate no guest data until the guest writes to them.
+			$allocate->();
+			}
+		}
+	my $capacity = $volume->get_info()->{'capacity'};
+	# Extend a clone when its driver retained the smaller source capacity.
+	if ($capacity < $v->{'capacity'}) {
+		Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::resize', {
+			pool => $v->{'pool'}, volume => $v->{'name'},
+			before_bytes => $capacity,
+			after_bytes => $v->{'capacity'}, flags => 0 });
+		$volume->resize($v->{'capacity'}, 0);
+		}
+	}
+elsif ($step->{'operation'} eq 'grow_disk') {
+	# Replaying completed growth never resizes twice or shrinks a disk.
+	my (undef, $v) = $self->check_volume($adapter,
+		$step->{'volume'}, $step->{'uuid'});
+	my $capacity = $v->get_info()->{'capacity'};
+	# Retry unfinished allocation or zeroing, without repeating completed growth.
+	if ($capacity < $step->{'bytes'} || $v->isa('Cloudmin::LVM::Volume') && $v->initialization_pending()) {
+		# QEMU may have started since preflight; offline growth needs stopped I/O.
+		my $domain = $adapter->find_domain($step->{'uuid'});
+		require_stopped($domain) if ($domain);
+		require_editable($domain, $step) if ($domain);
+		Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::resize', {
+			pool => $step->{'volume'}->{'pool'}, volume => $step->{'volume'}->{'name'},
+			before_bytes => $capacity,
+			after_bytes => $step->{'bytes'}, flags => 0 });
+		$v->resize($step->{'bytes'}, 0);
+		}
+	}
+}
+
 1;
