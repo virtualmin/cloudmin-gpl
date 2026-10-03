@@ -649,4 +649,341 @@ if ($expected) {
 return ($source, $volume);
 }
 
+# prepare_change(self, action, input, job_id, adapter, domain, doc, revision)
+# Edits the private document and records storage work without changing the host.
+sub prepare_change
+{
+my ($self, $action, $in, $job_id, $adapter, $domain, $doc, $revision) = @_;
+my $root = $doc->documentElement();
+my $plan = { operation => $action, uuid => $domain->get_uuid_string(),
+	name => $domain->get_name(), revision => $revision };
+if ($action eq 'update') {
+	# Validate requested allocations before checking their existing layout.
+	my $caps = $adapter->get_host_capabilities();
+	my $cpus = text($in, 'cpus');
+	die "Enter a whole CPU count from 1 to $caps->{cpus}\n"
+		if ($cpus !~ /\A[1-9][0-9]{0,4}\z/ || $cpus > $caps->{'cpus'});
+	my $memory = Cloudmin::VMs::size_bytes($in, 'memory_mib',
+		1024**2, 'memory') / 1024**2;
+	die "Select whole MiB, at least 256 MiB, leaving 256 MiB for the host\n"
+		if ($memory != int($memory) || $memory < 256 ||
+		$memory > $caps->{'memory_kib'}/1024 - 256);
+	my $old_limit = 0 + $doc->findvalue('/domain/vcpu');
+	# Existing API callers may omit maximums;
+	# retain or raise them as needed.
+	my $old_cpus = $doc->findvalue('/domain/vcpu/@current') || $old_limit;
+	my $limit = text($in, 'cpu_limit', $cpus > $old_limit ? $cpus : $old_limit);
+	die "Select a CPU maximum between the current count and $caps->{cpus}\n"
+		if ($limit !~ /\A[1-9][0-9]*\z/ || $limit < $cpus || $limit > $caps->{'cpus'});
+	my $old_memory = memory_kib($doc, 'memory') / 1024;
+	my $memory_limit = exists($in->{'memory_limit_mib'})
+		? Cloudmin::VMs::size_bytes($in, 'memory_limit_mib', 1024**2, 'maximum memory') / 1024**2
+		: $memory > $old_memory ? $memory : $old_memory;
+	die "Select a whole MiB memory maximum covering the current allocation and leaving 256 MiB for the host\n"
+		if ($memory_limit != int($memory_limit) || $memory_limit < $memory ||
+		$memory_limit > $caps->{'memory_kib'}/1024 - 256);
+	my $old_current = memory_kib($doc, 'currentMemory') / 1024;
+	my $locks = resource_locks($doc);
+	# Preserve topology and pinning when changing only the enabled CPU count.
+	die "The CPU maximum is fixed by the existing CPU layout\n"
+		if ($locks->{'cpu_limit'} && $limit != $old_limit);
+	die "The CPU count is controlled by individual CPU settings\n"
+		if ($locks->{'cpus'} && $cpus != $old_cpus);
+	die "The memory maximum is fixed by the existing NUMA or memory-device layout\n"
+		if ($locks->{'memory_limit_mib'} && $memory_limit != $old_memory);
+	die "Memory allocation is controlled by the configured memory devices\n"
+		if ($locks->{'memory_mib'} && $memory != $old_current);
+	# An unrelated save leaves resource elements and their attributes intact.
+	if ($limit != $old_limit || $cpus != $old_cpus) {
+		my $vcpu = set_text($root, 'vcpu', $limit);
+		$vcpu->setAttribute('current', $cpus);
+		}
+	if ($memory_limit != $old_memory || $memory != $old_current) {
+		# Change allocation and maximum together in
+		# a single, consistent unit.
+		set_text($root, 'memory', $memory_limit, { unit => 'MiB' });
+		set_text($root, 'currentMemory', $memory, { unit => 'MiB' });
+		}
+	# Omitted descriptions retain the saved text for API resource-only edits.
+	set_text($root, 'description', text($in, 'description')) if (exists($in->{'description'}));
+	my ($os) = $doc->findnodes('/domain/os');
+	my $boot = text($in, 'boot');
+	if (length($boot)) {
+		# One explicit first device replaces both forms of libvirt boot order.
+		my ($device) = grep {
+			($_->nodeName() eq 'disk'
+			 ? 'disk:'.$_->findvalue('target/@dev')
+			 : 'nic:'.$_->findvalue('mac/@address')) eq $boot }
+			$doc->findnodes('/domain/devices/disk | /domain/devices/interface');
+		die "Select an attached boot device\n" if (!$device);
+		$_->unbindNode() foreach $doc->findnodes(
+			'/domain/os/boot | /domain/devices/*/boot');
+		$device->addNewChild(undef, 'boot')->setAttribute('order', 1);
+		}
+	my $menu = text($in, 'bootmenu', $doc->findvalue('/domain/os/bootmenu/@enable') eq 'yes' ? 1 : 0);
+	die "Invalid boot menu setting\n" if ($menu !~ /\A[01]\z/);
+	set_text($os, 'bootmenu', '', { enable => $menu ? 'yes' : 'no' });
+	if (text($in, 'enable_live', 0)) {
+		# Existing guests gain ports and a CD drive only during an offline edit.
+		Cloudmin::VMs::add_hardware_headroom($doc,
+			$locks->{'cpu_limit'} ? $limit :
+			$cpus * 2 < $caps->{'cpus'} ? $cpus * 2 : $caps->{'cpus'});
+		$plan->{'offline_reason'} = 'Shut down the virtual machine to add hardware headroom';
+		}
+	}
+elsif ($action eq 'delete') {
+	# API callers must explicitly allow shutdown; the confirmation form does so.
+	my $shutdown = text($in, 'shutdown', '0');
+	die "Invalid shutdown option\n" if ($shutdown !~ /\A[01]\z/);
+	$plan->{'shutdown'} = 0 + $shutdown;
+	# Verify firmware storage ownership before planning guest deletion.
+	check_nvram($adapter, $domain);
+	# Explicit disk targets make keeping data the default for API callers.
+	die "Type the virtual machine name to confirm deletion\n"
+		if (text($in, 'confirm_name') ne $plan->{'name'});
+	my $targets = $in->{'disks'} // [];
+	$targets = [ grep { length } split(/\0|,/, $targets) ]
+		if (!ref($targets));
+	die "Invalid disk selection\n" if (ref($targets) ne 'ARRAY');
+	my ($history, $history_revision) = delete_history($domain);
+	# Native snapshot storage must be removed through its journal, not VM deletion.
+	die "Delete the LVM snapshots before deleting this virtual machine\n"
+		if (grep { /snapshot=["']manual["']/ } @$history);
+	# Reject history changed since the confirmation
+	# page, including old branches.
+	die "The snapshot or backup history changed; reload the deletion page\n"
+		if (exists($in->{'history_revision'}) && text($in, 'history_revision') ne $history_revision);
+	$plan->{'history_revision'} = $history_revision;
+	$plan->{'delete_targets'} = $targets;
+	$plan->{'volumes'} = $self->delete_volumes($adapter, $domain, $doc, $targets, $history);
+	$plan->{'creation_job'} = Cloudmin::Libvirt::extract_metadata(
+		$doc->toString())->{'job'};
+	return $plan;
+	}
+elsif ($action eq 'grow_disk') {
+	# Grow only an exclusive writable disk; guest filesystems are separate.
+	my $disk = disk_node($doc, text($in, 'target'));
+	die "Only writable disks can be grown\n" if ($disk->findnodes('readonly') ||
+		$disk->getAttribute('device') ne 'disk');
+	my $v = $self->volume_for($adapter, $disk);
+	die "Only raw and QCOW2 disks can be grown\n"
+		if ($v->{'format'} !~ /\A(?:raw|qcow2)\z/);
+	my ($pool, $volume) = $self->check_volume($adapter, $v, $plan->{'uuid'});
+	my $bytes = Cloudmin::VMs::size_bytes($in, 'disk_gib', 1024**3, 'disk');
+	$bytes = int(($bytes + 511)/512)*512;
+	$bytes = $pool->aligned_capacity($bytes) if ($pool->isa('Cloudmin::LVM::Pool'));
+	die "The new disk size must be larger than its current capacity\n"
+		if ($bytes <= $volume->get_info()->{'capacity'});
+	die "The pool lacks space for this disk growth\n"
+		if (!($pool->isa('Cloudmin::LVM::Pool') && $pool->{'thin'}) &&
+			$bytes - $v->{'capacity'} > $pool->get_info()->{'available'});
+	$plan->{'volume'} = $v;
+	$plan->{'bytes'} = $bytes;
+	$plan->{'target'} = text($in, 'target');
+	return $plan;
+	}
+elsif ($action eq 'detach_disk') {
+	# Detaching changes the saved definition and never removes storage.
+	disk_node($doc, text($in, 'target'))->unbindNode();
+	}
+elsif ($action eq 'delete_disk') {
+	# Delete one confirmed volume only after removing its saved attachment.
+	my $disk = disk_node($doc, text($in, 'target'));
+	my $v = $self->volume_for($adapter, $disk);
+	$self->check_volume($adapter, $v, $plan->{'uuid'});
+	$disk->unbindNode();
+	# Excluding this guest from shared-use checks must not hide another
+	# attachment or backing reference in the same guest.
+	die "This disk is still used by another device in the virtual machine\n"
+		if (Cloudmin::Images::xml_uses_volume($doc->toString(),
+			@$v{qw(path pool_name name)}));
+	$plan->{'volumes'} = [$v];
+	}
+# Prepare the attachment and reserve either an existing or a new disk.
+elsif ($action eq 'attach_disk' || $action eq 'add_disk') {
+	my $v;
+	if ($action eq 'attach_disk') {
+		# Existing disks are selected by pool and name, never arbitrary paths.
+		my (undef, $volumes) = $self->storage($adapter);
+		($v) = grep { $_->{'pool'} eq text($in, 'pool') &&
+			$_->{'name'} eq text($in, 'volume') &&
+			$_->{'format'} =~ /\A(?:raw|qcow2)\z/ } @$volumes;
+		die "Select an available storage volume\n" if (!$v);
+		$self->check_volume($adapter, $v);
+		$plan->{'attach_volume'} = $v;
+		}
+	else {
+		# New disks are QCOW2 files or raw LVs, empty or independently cloned.
+		my ($pools) = $self->storage($adapter);
+		my ($choice) = grep { $_->{'id'} eq text($in, 'pool') } @$pools;
+		die "Select an active storage pool\n" if (!$choice);
+		my $pool = Cloudmin::Libvirt::storage_pool($adapter, $choice->{'id'});
+		my (undef, $path) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
+		my $source;
+		if (length(text($in, 'image'))) {
+			# Only imported images are clone sources; ordinary disks use Attach.
+			($source) = $self->clone_source($adapter, text($in, 'image'));
+			$plan->{'source_image'} = $source;
+			}
+		my $bytes = $source && !length(text($in, 'disk_gib'))
+			? $source->{'capacity'}
+			: Cloudmin::VMs::size_bytes($in, 'disk_gib', 1024**3, 'disk');
+		die "The disk cannot be smaller than its source image\n"
+			if ($source && $bytes < $source->{'capacity'});
+		$bytes = int(($bytes + 511)/512)*512;
+		$bytes = $pool->aligned_capacity($bytes) if ($pool->isa('Cloudmin::LVM::Pool'));
+		die "The pool lacks space for this disk\n"
+			if (($choice->{'type'} || '') ne 'lvmthin' && $bytes > $pool->get_info()->{'available'});
+		my $name = Cloudmin::VMs::disk_volume_name($domain->get_name(), 'data', $job_id, $choice->{'type'});
+		die "Destination disk already exists\n"
+			if (grep { $_->get_name() eq $name } $pool->list_all_volumes());
+		$v = $plan->{'new_volume'} = { pool => $choice->{'id'},
+			name => $name, path => $pool->isa('Cloudmin::LVM::Pool') ?
+				Cloudmin::LVM::device_path($pool->{'vg'}, $name) : "$path/$name",
+			format => Cloudmin::Libvirt::block_pool($pool) ? 'raw' : 'qcow2',
+			block => Cloudmin::Libvirt::block_pool($pool) ? 1 : 0,
+			capacity => $bytes };
+		}
+	# Choose an unused virtio target for either kind of attached disk.
+	my %targets = map { $_->getValue() => 1 }
+		$doc->findnodes('/domain/devices/disk/target/@dev');
+	my ($target) = grep { !$targets{$_} } map { 'vd'.$_ } 'a'..'z';
+	die "No free virtio disk target\n" if (!$target);
+	my ($devices) = $doc->findnodes('/domain/devices');
+	my $disk = $devices->addNewChild(undef, 'disk');
+	$disk->setAttribute('type', $v->{'block'} ? 'block' : 'file');
+	$disk->setAttribute('device', 'disk');
+	set_text($disk, 'driver', '', { name => 'qemu', type => $v->{'format'},
+		($v->{'block'} ? (cache => 'none') : ()) });
+	set_text($disk, 'source', '', { ($v->{'block'} ? 'dev' : 'file') => $v->{'path'} });
+	set_text($disk, 'target', '', { dev => $target, bus => 'virtio' });
+	}
+elsif ($action eq 'change_media') {
+	# Select managed ISO media by pool/name; never accept a client filesystem path.
+	my $disk = disk_node($doc, text($in, 'target'));
+	die "Select an existing CD drive\n" if ($disk->getAttribute('device') ne 'cdrom');
+	my $volume = text($in, 'volume');
+	$_->unbindNode() foreach $disk->findnodes('source | backingStore');
+	if (length($volume)) {
+		# A nonempty selection inserts a pool ISO;
+		# empty leaves the drive ejected.
+		my (undef, $volumes) = $self->storage($adapter);
+		my ($media) = grep { $_->{'pool'} eq text($in, 'pool') && $_->{'name'} eq $volume &&
+			($_->{'format'} eq 'iso' || $_->{'format'} eq 'raw' && $_->{'name'} =~ /\.iso\z/i) } @$volumes;
+		die "Select ISO media from an active storage pool\n" if (!$media);
+		set_text($disk, 'source', '', { file => $media->{'path'} });
+		$plan->{'media'} = $media;
+		}
+	$disk->setAttribute('type', 'file');
+	# Removable media uses a read-only raw source
+	# even when the drive was empty.
+	set_text($disk, 'driver', '', { name => 'qemu', type => 'raw' });
+	set_text($disk, 'readonly', '');
+	my ($target) = $disk->findnodes('target');
+	$target->removeAttribute('tray');
+	}
+elsif ($action =~ /\A(?:add_interface|update_interface|remove_interface)\z/) {
+	# Resolve an existing interface by its stable MAC address.
+	my $mac = lc(text($in, 'mac'));
+	my ($nic) = grep { lc($_->findvalue('mac/@address')) eq $mac }
+		$doc->findnodes('/domain/devices/interface');
+	if ($action eq 'remove_interface') {
+		# The guest OS keeps its own network configuration after detachment.
+		die "Network interface is no longer attached\n" if (!$nic);
+		$nic->unbindNode();
+		}
+	else {
+		# Networks and bridges must be present on this host at submission.
+		my $key = text($in, 'network');
+		if (!$key && $nic) {
+			# Link and bandwidth edits retain the existing network attachment.
+			my ($existing) = grep { $_->{'type'} eq $nic->getAttribute('type') &&
+				$_->{'source'} eq $nic->findvalue('source/@'.$_->{'type'}) } @{networks($adapter)};
+			$key = $existing->{'key'} if ($existing);
+			}
+		my ($network) = grep { $_->{'key'} eq $key }
+			@{networks($adapter)};
+		die "Select an active network or host bridge\n" if (!$network);
+		$plan->{'network'} = $network->{'key'};
+		if ($action eq 'add_interface') {
+			# A generated unicast address is persisted in the job for retries.
+			$mac ||= '52:54:00:'.join(':',
+				unpack('(A2)3', substr($job_id, 0, 6)));
+			die "Enter a unicast MAC address\n" if (
+				$mac !~ /\A(?:[a-f0-9]{2}:){5}[a-f0-9]{2}\z/ ||
+				(hex(substr($mac, 0, 2)) & 1) || $mac eq '00:00:00:00:00:00');
+			die "This MAC address is already in use\n" if
+				(grep { lc($_->findvalue('mac/@address')) eq $mac }
+				$doc->findnodes('/domain/devices/interface'));
+			foreach my $vm (@{$adapter->list_domains(1)}) {
+				die "This MAC address is already in use\n"
+					if (grep { lc($_) eq $mac } @{$vm->{'macs'}});
+				}
+			$plan->{'mac'} = $mac;
+			my ($devices) = $doc->findnodes('/domain/devices');
+			$nic = $devices->addNewChild(undef, 'interface');
+			set_text($nic, 'mac', '', { address => $mac });
+			set_text($nic, 'model', '', { type => 'virtio' });
+			}
+		else {
+			# Preserve the existing MAC, model, PCI address and filter policy.
+			die "Network interface is no longer attached\n" if (!$nic);
+			die "Only network and bridge interfaces can be changed here\n"
+				if ($nic->getAttribute('type') !~ /\A(?:network|bridge)\z/);
+			}
+		if (($nic->getAttribute('type') || '') ne $network->{'type'} ||
+			$nic->findvalue('source/@'.$network->{'type'}) ne $network->{'source'}) {
+			# Preserve source attributes unless the
+			# network or bridge changes.
+			$nic->setAttribute('type', $network->{'type'});
+			$_->unbindNode() foreach $nic->findnodes('source');
+			set_text($nic, 'source', '', { $network->{'type'} => $network->{'source'} });
+			}
+		if (exists($in->{'link'})) {
+			# An omitted link state preserves the
+			# existing virtual cable state.
+			my $link = text($in, 'link');
+			die "Select connected or disconnected network link\n" if ($link !~ /\A(?:up|down)\z/);
+			set_text($nic, 'link', '', { state => $link });
+			}
+		foreach my $direction (qw(inbound outbound)) {
+			# Omitted limits stay intact; a blank
+			# submitted limit means unlimited.
+			next if (!exists($in->{$direction.'_kib'}));
+			my $rate = text($in, $direction.'_kib', 0);
+			$rate = 0 if ($rate eq '');
+			die "Enter a whole bandwidth limit in KiB/s, or 0 for unlimited\n"
+				if ($rate !~ /\A[0-9]{1,9}\z/);
+			my ($bandwidth) = $nic->findnodes('bandwidth');
+			# Unchanged form values preserve externally configured peak/burst limits.
+			next if ($rate == ($nic->findvalue('bandwidth/'.$direction.'/@average') || 0));
+			$bandwidth ||= $nic->addNewChild(undef, 'bandwidth');
+			if ($rate) {
+				# A changed average replaces that
+				# direction's full rate specification.
+				set_text($bandwidth, $direction, '', { average => $rate });
+				}
+			else {
+				# Remove the direction's limit while
+				# retaining the opposite direction.
+				$_->unbindNode() foreach $bandwidth->findnodes($direction);
+				}
+			}
+		}
+	}
+else {
+	# Reject actions without a validated configuration plan.
+	die "Unknown virtual machine management action\n";
+	}
+# A private marker distinguishes a completed define from an interrupted worker.
+my ($metadata) = $doc->findnodes('/domain/metadata');
+$metadata ||= $root->addNewChild(undef, 'metadata');
+my ($marker) = $metadata->findnodes('*[namespace-uri()="urn:cloudmin:change:1"]');
+$marker->unbindNode() if ($marker);
+$marker = $metadata->addNewChild('urn:cloudmin:change:1', 'change');
+$marker->appendText($job_id);
+$plan->{'xml'} = $doc->toString();
+return $plan;
+}
+
 1;
