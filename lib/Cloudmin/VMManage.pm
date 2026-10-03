@@ -389,4 +389,15 @@ foreach my $key (keys %$after) {
 return \%changes;
 }
 
+# disk_node(doc, target)
+# Resolves an exact target without accepting XPath supplied by a client.
+sub disk_node
+{
+my ($doc, $target) = @_;
+my ($disk) = grep { $_->findvalue('target/@dev') eq $target }
+	$doc->findnodes('/domain/devices/disk');
+die "Disk is no longer attached\n" if (!$disk);
+return $disk;
+}
+
 1;
