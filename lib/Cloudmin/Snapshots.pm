@@ -73,4 +73,23 @@ foreach my $external (@external) {
 return $total;
 }
 
+# revision(domain, [offline])
+# Binds forms to current state; offline omits power state for planned shutdowns.
+sub revision
+{
+my ($domain, $offline) = @_;
+my $live = '';
+if (!$offline && $domain->is_active()) {
+	# Status collection changes only the live balloon sampling interval.
+	my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(1));
+	$_->unbindNode() foreach $doc->findnodes('/domain/devices/memballoon/stats');
+	$_->unbindNode() foreach $doc->findnodes('/domain/devices/memballoon/text()[normalize-space(.)=""]');
+	$live = $doc->toString();
+	}
+return sha256_hex(join("\0", $domain->get_xml_description(3),
+	$live,
+	map { $_->get_xml_description(0) }
+	sort { $a->get_name() cmp $b->get_name() } $domain->list_all_snapshots(0)));
+}
+
 1;
