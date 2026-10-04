@@ -456,4 +456,20 @@ $snapshot->delete(2) if ($snapshot);
 $self->{'jobs'}->update($id, sub { delete($_[0]->{'resources'}->{'native_volumes'}); });
 }
 
+# thaw(self, id, domain)
+# Clears a journalled quiesce attempt only after thaw succeeds or the VM stops.
+sub thaw
+{
+my ($self, $id, $domain) = @_;
+my $job = $self->{'jobs'}->get($id);
+return if (!$job->{'resources'}->{'quiescing'});
+# A stopped guest has no running filesystems left to thaw.
+if ($domain->is_active()) {
+	my $ok = eval { $domain->fs_thaw([], 0); 1 };
+	my $error = $@;
+	die "Could not confirm that guest filesystems are thawed: $error" if (!$ok);
+	}
+$self->{'jobs'}->update($id, sub { delete($_[0]->{'resources'}->{'quiescing'}); });
+}
+
 1;
