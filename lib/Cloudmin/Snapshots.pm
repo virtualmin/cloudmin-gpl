@@ -92,4 +92,21 @@ return sha256_hex(join("\0", $domain->get_xml_description(3),
 	sort { $a->get_name() cmp $b->get_name() } $domain->list_all_snapshots(0)));
 }
 
+# check_guest(domain, document)
+# Refuses state that disk-only snapshots cannot capture or safely coordinate.
+sub check_guest
+{
+# Exclude saved runtime state and devices the disk-only snapshot cannot restore.
+my ($domain, $doc) = @_;
+die "Remove the managed save before using snapshots\n" if ($domain->has_managed_save_image(0));
+my @checkpoints = $domain->list_all_checkpoints(0);
+die "Remove backup checkpoints before using snapshots\n" if (@checkpoints);
+die "Snapshots do not support shared folders, passthrough devices, TPMs or persistent memory\n"
+	if ($doc->exists('/domain/devices/filesystem | /domain/devices/hostdev | /domain/devices/tpm | /domain/devices/memory | /domain/devices/interface[@type="hostdev"]'));
+my ($state) = $domain->get_state();
+die "The virtual machine must be running or shut off\n" if ($state != 1 && $state != 2 && $state != 5);
+my $info = $domain->is_active() ? $domain->get_job_info() : {};
+die "Wait for the current libvirt operation to finish\n" if ($info->{'type'});
+}
+
 1;
