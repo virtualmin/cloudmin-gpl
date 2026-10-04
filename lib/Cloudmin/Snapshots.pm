@@ -188,6 +188,37 @@ if ($resuming_delete) {
 die "Snapshot storage is missing or outside active managed pools\n" if (keys %paths);
 }
 
+# disks(self, adapter, domain, document, [allow_blocks])
+# Includes every writable disk and verifies exclusive, managed storage.
+# allow_blocks defaults off; native snapshots and copies enable managed raw LVs.
+sub disks
+{
+my ($self, $adapter, $domain, $doc, $allow_blocks) = @_;
+my $manager = $self->manager();
+my @disks;
+foreach my $disk ($doc->findnodes('/domain/devices/disk')) {
+	my $target = $disk->findvalue('target/@dev');
+	die "Invalid disk device in virtual machine configuration\n" if ($target !~ /\A[a-zA-Z0-9_-]+\z/);
+	if ($disk->exists('readonly') || !$disk->exists('source')) {
+		# Read-only media remain attached but do not need a writable overlay.
+		push(@disks, { target => $target, readonly => 1 });
+		next;
+		}
+	die "Snapshots require private raw or QCOW2 files, or managed raw LVM disks\n" if (
+		($disk->getAttribute('type') ne 'file' &&
+			!($allow_blocks && $disk->getAttribute('type') eq 'block' && $disk->findvalue('driver/@type') eq 'raw')) ||
+		$disk->getAttribute('device') ne 'disk' ||
+		$disk->findvalue('driver/@type') !~ /\A(?:raw|qcow2)\z/ ||
+		$disk->exists('shareable | source/dataStore | encryption'));
+	my $volume = $manager->volume_for($adapter, $disk);
+	my $job = $domain->is_active() ? $domain->get_block_job_info($target, 0) : undef;
+	die "Wait for the disk operation on $target to finish\n" if ($job && $job->{'type'});
+	push(@disks, { target => $target, volume => $volume });
+	}
+die "The virtual machine has no writable disks to snapshot\n" if (!grep { !$_->{'readonly'} } @disks);
+return \@disks;
+}
+
 # check_delete(domain, snapshot)
 # Refuses libvirt's unsupported current-parent merge before a job is reserved.
 sub check_delete
