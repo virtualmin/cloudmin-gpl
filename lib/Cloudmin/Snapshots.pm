@@ -435,6 +435,22 @@ die "The LVM snapshot has no disks\n" if (!@volumes && !$deleting);
 return @volumes;
 }
 
+# resume_native(self, id, domain)
+# Releases the snapshot pause recorded by this job.
+# Only the running guest paused by this job is resumed; stopped guests stay off.
+sub resume_native
+{
+my ($self, $id, $domain) = @_;
+my $job = $self->{'jobs'}->get($id);
+if ($job->{'resources'}->{'native_pause'}) {
+	# Clear pause ownership only after resume succeeds or no pause remains.
+	my ($state) = $domain->get_state();
+	$domain->resume() if ($state == 3);
+	$self->{'jobs'}->update($id, sub { delete($_[0]->{'resources'}->{'native_pause'}); });
+	}
+$self->thaw($id, $domain);
+}
+
 # remove_native(self, id, adapter, domain)
 # Removes only snapshot volumes recorded in the journal.
 # A lost allocation reply without a saved UUID requires inspection, not guessing.
