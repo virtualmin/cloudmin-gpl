@@ -155,4 +155,27 @@ my $doc = Cloudmin::Libvirt::parse_xml_document($snapshot->get_xml_description(0
 return join('', map { $_->toString() } $doc->findnodes('/domainsnapshot/revertDisks'));
 }
 
+# native_volumes(self, adapter, snapshot, [deleting])
+# Resolves logical volumes recorded in the journal.
+# Native metadata alone never authorizes access to a logical volume.
+sub native_volumes
+{
+my ($self, $adapter, $snapshot, $deleting) = @_;
+my $name = $snapshot->get_name();
+die "Unmanaged LVM snapshot\n" if ($name !~ /\Acloudmin-([a-f0-9]{32})\z/);
+my $job = $self->{'jobs'}->get($1) || die "LVM snapshot journal is missing\n";
+die "The LVM snapshot is incomplete\n" if (!$job->{'resources'}->{'native_complete'});
+my @volumes;
+foreach my $saved (@{$job->{'resources'}->{'native_volumes'} || []}) {
+	my (undef, $volume) = $adapter->volume(@$saved{qw(pool name key)});
+	# Deletion can resume after removing some LVs, and may discard unhealthy ones.
+	next if (!$volume && $deleting);
+	die "An LVM snapshot disk is missing\n" if (!$volume);
+	$volume->snapshot_health() if (!$deleting);
+	push(@volumes, [$saved, $volume]);
+	}
+die "The LVM snapshot has no disks\n" if (!@volumes && !$deleting);
+return @volumes;
+}
+
 1;
