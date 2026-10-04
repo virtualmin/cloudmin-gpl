@@ -133,4 +133,17 @@ foreach my $child ($domain->list_all_snapshots(0)) {
 	}
 }
 
+# snapshot_xml(request)
+# Explicitly excludes memory and read-only media, and includes every other disk.
+sub snapshot_xml
+{
+my ($r) = @_;
+my $escape = \&Cloudmin::Libvirt::xml_escape;
+return '<domainsnapshot><name>'.$escape->($r->{'snapshot'}).'</name><description>'.
+	$escape->($r->{'description'}).'</description><memory snapshot="no"/><disks>'.
+	join('', map { '<disk name="'.$escape->($_->{'target'}).'" snapshot="'.
+		($_->{'readonly'} ? 'no"/>' : $r->{'native_lvm'} ? 'manual"/>' : 'external"><driver type="qcow2"/><source file="'.
+		$escape->($_->{'overlay'}).'"/></disk>') } @{$r->{'disks'}}).'</disks></domainsnapshot>';
+}
+
 1;
