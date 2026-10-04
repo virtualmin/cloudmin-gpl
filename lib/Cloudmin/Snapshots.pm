@@ -451,6 +451,134 @@ if ($job->{'resources'}->{'native_pause'}) {
 $self->thaw($id, $domain);
 }
 
+# apply_native(self, id, adapter, domain, [snapshot], [capture]) handles LVM copies.
+# Guest-agent freeze and a CPU pause coordinate native disk snapshots.
+# Restores copy into the original LVs, preserving their UUIDs and other snapshots.
+# snapshot supplies existing metadata for restore/delete; capture defaults false
+# and creates temporary copies for cloning, backup or reusable-image capture.
+sub apply_native
+{
+my ($self, $id, $adapter, $domain, $snapshot, $capture) = @_;
+my $jobs = $self->{'jobs'};
+my $job = $jobs->get($id);
+my $r = $job->{'request'};
+if ($capture || $r->{'operation'} eq 'snapshot_create') {
+	# Permanent restore points and temporary captures share allocation ordering.
+	die "An interrupted LVM snapshot needs recovery\n" if ($snapshot);
+	my @disks = grep { !$_->{'readonly'} } @{$r->{'disks'}};
+	if ($domain->is_active()) {
+		# Host snapshots cannot flush QEMU's writeback cache. Live capture needs
+		# direct I/O or synchronous caching; other cache modes require shutdown.
+		my $live = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0));
+		foreach my $disk (@disks) {
+			my ($node) = grep { $_->findvalue('target/@dev') eq $disk->{'target'} }
+				$live->findnodes('/domain/devices/disk');
+			die "Shut down the virtual machine before snapshotting disks with pending attachment changes or a writeback cache\n"
+				if (!$node || $node->findvalue('driver/@cache') !~ /\A(?:none|directsync|writethrough)\z/ ||
+					Cloudmin::VMManage::file_identity($node->findvalue('source/@dev')) ne $disk->{'volume'}->{'identity'});
+			}
+		}
+	my @intents = map { {pool => $_->{'volume'}->{'pool'},
+		name => "cloudmin-$id-".$_->{'target'}, target => $_->{'target'},
+		origin => $_->{'volume'}} } @disks;
+	# Save every destination before libvirt or LVM can change anything.
+	$jobs->update($id, sub {
+		$_[0]->{'resources'}->{'native_volumes'} = \@intents;
+		$_[0]->{'resources'}->{'native_pause'} = $domain->is_active() ? 1 : 0;
+		$_[0]->{'resources'}->{'quiescing'} = 1 if ($r->{'mode'} eq 'prepared');
+		});
+	my $ok = eval {
+		# LVM drains each origin's block I/O while creating its snapshot.
+		# Freeze filesystems before pausing so the agent can finish its flush.
+		if ($domain->is_active()) {
+			$domain->fs_freeze([], 0) if ($r->{'mode'} eq 'prepared');
+			$domain->suspend();
+			}
+		foreach my $i (0..$#intents) {
+			# Revalidate each origin and record its copy's UUID before the next disk.
+			my $intent = $intents[$i];
+			my $origin = $intent->{'origin'};
+			my (undef, $volume) = $adapter->volume(@$origin{qw(pool name key)});
+			die "An LVM snapshot source is missing\n" if (!$volume);
+			$volume->snapshot($intent->{'name'}, sub {
+				my ($copy) = @_;
+				$jobs->update($id, sub {
+					$_[0]->{'resources'}->{'native_volumes'}->[$i]->{'key'} = $copy->get_key();
+					});
+				});
+			}
+		if (!$snapshot) {
+			# LVM already took the snapshots. Publish only libvirt history metadata,
+			# including the saved definition and current parent for later restore.
+			my $xml = snapshot_xml($r);
+			my $details = '<state>disk-snapshot</state><creationTime>'.time().'</creationTime>'.
+				$domain->get_xml_description(3);
+			my ($parent) = grep { $_->is_current() } $domain->list_all_snapshots();
+			$details .= '<parent><name>'.Cloudmin::Libvirt::xml_escape($parent->get_name()).
+				'</name></parent>' if ($parent);
+			$xml =~ s{</domainsnapshot>\z}{$details</domainsnapshot>};
+			$snapshot = $domain->create_snapshot($xml, 1|2); # REDEFINE | CURRENT
+			}
+		$jobs->update($id, sub { $_[0]->{'resources'}->{'native_complete'} = 1; });
+		1;
+		};
+	my $error = $@;
+	if (!$ok) {
+		# A failed multi-disk capture is never offered as a valid restore point.
+		my $clean = eval {
+			$self->remove_native($id, $adapter, $domain);
+			1;
+			};
+		$error .= "LVM snapshot cleanup failed: $@" if (!$clean);
+		}
+	my $resumed = eval { $self->resume_native($id, $domain); 1 };
+	$error .= "Could not release the snapshot pause: $@" if (!$resumed);
+	die $error if (!$ok || !$resumed);
+	return;
+	}
+die "Snapshot not found\n" if (!$snapshot);
+die "Snapshot ownership changed\n" if (!$self->record($domain, $snapshot)->{'managed'});
+my @copies = $self->native_volumes($adapter, $snapshot, $r->{'operation'} eq 'snapshot_delete');
+if ($r->{'operation'} eq 'snapshot_restore') {
+	# Restoring bytes in place preserves origin identities and other snapshots.
+	die "Shut down the virtual machine before restoring an LVM snapshot\n" if ($domain->is_active());
+	require File::Temp;
+	foreach my $item (@copies) {
+		my ($saved, $copy) = @$item;
+		my $origin = $saved->{'origin'};
+		my (undef, $volume) = $adapter->volume(@$origin{qw(pool name key)});
+		die "An LVM snapshot origin is missing\n" if (!$volume);
+		my $work = File::Temp->newdir('cloudmin-lvm-restore-XXXXXXXX', DIR => '/var/tmp');
+		# Stage each full saved disk privately before writing back to its origin.
+		my $path = "$work/disk.raw";
+		Cloudmin::LVM::copy_to_file($copy->get_path(), $path, $copy->get_info()->{'capacity'});
+		$volume->write_file($path);
+		unlink($path) or die "Cannot remove restored disk staging file\n";
+		}
+	# Restore the saved hardware as well as its disks, without changing identity.
+	my $saved = Cloudmin::Libvirt::parse_xml_document($snapshot->get_xml_description(1));
+	my ($definition) = $saved->findnodes('/domainsnapshot/domain');
+	die "Saved LVM snapshot configuration is missing\n" if (!$definition ||
+		$definition->findvalue('uuid') ne $domain->get_uuid_string());
+	$adapter->connect()->define_domain($definition->toString());
+	# Record restore completion before making this point current or restarting.
+	$jobs->update($id, sub {
+		$_[0]->{'resources'}->{'native_restored'} = 1;
+		$_[0]->{'resources'}->{'native_restore_revision'} = revision($domain, 1);
+		});
+	$domain->create_snapshot($snapshot->get_xml_description(1), 1|2); # REDEFINE | CURRENT
+	}
+else {
+	# Deleting native copies leaves the guest's current logical volumes intact.
+	foreach my $item (reverse(@copies)) {
+		my ($pool) = $adapter->volume(@{$item->[0]}{qw(pool name key)});
+		Cloudmin::Images::assert_unused(undef, $adapter->connect(), $pool, $item->[1]);
+		$item->[1]->delete();
+		}
+	$snapshot->delete(2); # METADATA_ONLY; do not ask libvirt to merge raw LVs.
+	}
+}
+
 # remove_native(self, id, adapter, domain)
 # Removes only snapshot volumes recorded in the journal.
 # A lost allocation reply without a saved UUID requires inspection, not guessing.
