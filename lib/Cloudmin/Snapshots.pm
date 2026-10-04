@@ -227,6 +227,72 @@ die "The virtual machine has no writable disks to snapshot\n" if (!grep { !$_->{
 return \@disks;
 }
 
+# inventory(self, [uuid])
+# Returns per-VM history or a host overview without exporting guest XML.
+sub inventory
+{
+my ($self, $uuid) = @_;
+my $adapter = $self->{'adapter'}->();
+my @domains = $uuid ? (($self->manager()->get_guest($uuid, 1))[1]) :
+	$adapter->connect()->list_all_domains();
+my (@rows, @guests, @errors, %sizes);
+# Collect each guest independently so one libvirt failure leaves other history usable.
+foreach my $domain (sort { $a->get_name() cmp $b->get_name() } @domains) {
+	my $ok = eval {
+		my @snapshots = map { $self->record($domain, $_, \%sizes) } $domain->list_all_snapshots(0);
+		push(@rows, @snapshots);
+		push(@guests, { uuid => $domain->get_uuid_string(), name => $domain->get_name(),
+			count => scalar(@snapshots), active => $domain->is_active() ? 1 : 0 });
+		1;
+		};
+	push(@errors, $domain->get_name().': '.$@) if (!$ok);
+	}
+my %parents = map { $_->{'uuid'}.':'.($_->{'parent'} || '') => 1 } @rows;
+my (%recovery, %pending_guests);
+foreach my $job (@{$self->{'jobs'}->list_recovery()}) {
+	# Native metadata cannot report a failed freeze, restart, or refused merge.
+	my $r = $job->{'request'};
+	next if (($r->{'operation'} || '') !~ /\Asnapshot_/ || ($uuid && $uuid ne $r->{'uuid'}));
+	$recovery{$r->{'uuid'}.':'.$r->{'snapshot'}} = 1;
+	$pending_guests{$r->{'uuid'}} = 1;
+	}
+foreach my $row (@rows) {
+	# Libvirt cannot merge the current restore point while it has child branches.
+	$row->{'delete_blocked'} = $row->{'current'} && $parents{$row->{'uuid'}.':'.$row->{'id'}} ? 1 : 0;
+	my $key = $row->{'uuid'}.':'.$row->{'id'};
+	$row->{'pending'} = 1 if ($recovery{$key});
+	if ($row->{'pending'}) {
+		# Count each affected restore point once across metadata and the journal.
+		$recovery{$key} = $pending_guests{$row->{'uuid'}} = 1;
+		}
+	}
+my $data = { snapshots => [sort { $b->{'created'} <=> $a->{'created'} || $a->{'id'} cmp $b->{'id'} } @rows],
+	guests => \@guests, errors => \@errors, recovery_count => scalar(keys %recovery),
+	pending_guests => [sort keys %pending_guests] };
+if ($uuid && @guests) {
+	# Viewing history needs neither protected XML nor a guest-agent command.
+	$data->{'guest'} = $guests[0];
+	}
+if ($uuid && @guests && !$self->{'readonly'}) {
+	# Availability is advisory; submission and execution repeat all checks.
+	my $domain = $domains[0];
+	$data->{'revision'} = revision($domain);
+	my $ok = eval {
+		my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(3));
+		check_guest($domain, $doc);
+		$self->{'jobs'}->assert_guest_available($uuid);
+		die "Manage snapshots created outside Cloudmin with their original tool\n" if (grep { !$_->{'managed'} } @rows);
+		1;
+		};
+	$data->{'unavailable'} = "$@" if (!$ok);
+	if ($ok && $domain->is_active()) {
+		# This probe never freezes filesystems; it only offers the downtime fallback.
+		$data->{'preparation_available'} = eval { check_agent($domain); 1 } ? 1 : 0;
+		}
+	}
+return $data;
+}
+
 # prepare(self, action, input, job_id)
 # Validates a submitted operation before reserving the VM in the job store.
 sub prepare
