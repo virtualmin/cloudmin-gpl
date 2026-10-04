@@ -146,4 +146,13 @@ return '<domainsnapshot><name>'.$escape->($r->{'snapshot'}).'</name><description
 		$escape->($_->{'overlay'}).'"/></disk>') } @{$r->{'disks'}}).'</disks></domainsnapshot>';
 }
 
+# revert_disks(snapshot)
+# Libvirt records fresh overlay paths after a successful external restore.
+sub revert_disks
+{
+my ($snapshot) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($snapshot->get_xml_description(0));
+return join('', map { $_->toString() } $doc->findnodes('/domainsnapshot/revertDisks'));
+}
+
 1;
