@@ -435,4 +435,25 @@ die "The LVM snapshot has no disks\n" if (!@volumes && !$deleting);
 return @volumes;
 }
 
+# remove_native(self, id, adapter, domain)
+# Removes only snapshot volumes recorded in the journal.
+# A lost allocation reply without a saved UUID requires inspection, not guessing.
+sub remove_native
+{
+my ($self, $id, $adapter, $domain) = @_;
+my $job = $self->{'jobs'}->get($id);
+foreach my $saved (reverse(@{$job->{'resources'}->{'native_volumes'} || []})) {
+	# A retry may find completed removals; a surviving LV needs its saved UUID.
+	my ($pool, $volume) = $adapter->volume(@$saved{qw(pool name key)});
+	next if (!$volume);
+	die "An LVM snapshot allocation has no saved identity; inspect it before recovery\n"
+		if (!$saved->{'key'});
+	Cloudmin::Images::assert_unused(undef, $adapter->connect(), $pool, $volume);
+	$volume->delete();
+	}
+my $snapshot = find_snapshot($domain, $job->{'request'}->{'snapshot'});
+$snapshot->delete(2) if ($snapshot);
+$self->{'jobs'}->update($id, sub { delete($_[0]->{'resources'}->{'native_volumes'}); });
+}
+
 1;
