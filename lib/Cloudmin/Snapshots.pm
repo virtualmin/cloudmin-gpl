@@ -109,4 +109,15 @@ my $info = $domain->is_active() ? $domain->get_job_info() : {};
 die "Wait for the current libvirt operation to finish\n" if ($info->{'type'});
 }
 
+# check_agent(domain)
+# Checks the actual guest before journalling a possible freeze, never catalogue flags.
+sub check_agent
+{
+my ($domain) = @_;
+# Use the host's agent timeout; it is shared with status and external clients.
+my $info = eval { $domain->get_guest_info(2, 0) };
+die "QEMU Guest Agent is not responding. Turn on Shut down before taking snapshot, or install and start the agent inside the virtual machine\n"
+	if (ref($info) ne 'HASH' || !keys(%$info));
+}
+
 1;
