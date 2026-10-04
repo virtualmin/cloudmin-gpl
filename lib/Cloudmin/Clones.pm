@@ -16,6 +16,24 @@ sub manager { return Cloudmin::VMManage->new(%{$_[0]}); }
 # snapshots(self) supplies file and LVM snapshot validation and operations.
 sub snapshots { return Cloudmin::Snapshots->new(%{$_[0]}); }
 
+# installed_edition(self, document) reads recorded setup, not the guest's name.
+# Offline inspection later checks what is actually installed on the copied disk.
+sub installed_edition
+{
+my ($self, $doc) = @_;
+# Trust only a journal record whose destination UUID matches this domain.
+my $id = $doc->findvalue('/domain/metadata/*[namespace-uri()="urn:cloudmin:vm:1"]/*[local-name()="job"]');
+return '' if ($id !~ /\A[a-f0-9]{32}\z/);
+my $job = $self->{'jobs'}->get($id) || return '';
+return '' if (($job->{'request'}->{'uuid'} || '') ne $doc->findvalue('/domain/uuid'));
+# Clones and captured images record the inspected edition; restores retain it.
+return $job->{'resources'}->{'virtualmin'} || '' if (($job->{'request'}->{'operation'} || '') =~ /\A(?:clone|restore)\z/ ||
+	$job->{'request'}->{'source_image'}->{'prepared_vm'});
+return $1 if ($job->{'resources'}->{'software'} && $job->{'state'} eq 'complete' &&
+	($job->{'request'}->{'software'} || '') =~ /\Avirtualmin-(gpl|pro)\z/);
+return '';
+}
+
 # source(self, uuid) validates storage and hardware before copying anything.
 # Returns the adapter, domain, secure XML document, disk list and NVRAM path.
 sub source
