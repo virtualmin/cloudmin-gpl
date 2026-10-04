@@ -105,4 +105,111 @@ return { id => $uuid, name => $domain->get_name(), revision => Cloudmin::Snapsho
 	options => $options };
 }
 
+# prepare(self, input, job_id, [password_hash]) validates before reserving disks.
+# Prepared copies accept creation's access/network options; unchanged copies
+# retain guest settings except host ID and Pro credentials, and stay stopped.
+sub prepare
+{
+my ($self, $input, $id, $hash) = @_;
+my ($adapter, $domain, $doc, $disks, $nvram) = $self->source($input->{'id'});
+my $revision = Cloudmin::Snapshots::revision($domain);
+# Refuse stale forms before resolving defaults or allocating a destination.
+die "The source virtual machine changed; reload the clone page\n"
+	if (($input->{'revision'} || '') ne $revision);
+my $mode = $input->{'clone_mode'} || 'prepared';
+die "Select prepared or unchanged cloning\n" if ($mode !~ /\A(?:prepared|unchanged)\z/);
+foreach my $field (qw(start autostart shutdown confirm_unchanged confirm_license host_ssh_key)) {
+	die "Invalid clone $field option\n" if (defined($input->{$field}) &&
+		(ref($input->{$field}) || $input->{$field} !~ /\A[01]\z/));
+}
+# Copies that keep guest settings must stay stopped for manual review.
+die "Confirm that this copy keeps guest settings but resets its host ID and Pro license credentials\n"
+	if ($mode eq 'unchanged' && !$input->{'confirm_unchanged'});
+die "Copies that keep guest settings must remain stopped with automatic startup disabled\n"
+	if ($mode eq 'unchanged' && ($input->{'start'} || $input->{'autostart'}));
+die "Prepared cloning supports Cloudmin seed disks only; detach other read-only disks or choose an unchanged copy\n"
+	if ($mode eq 'prepared' && grep { $_->{'readonly'} && $_->{'volume'} && !$_->{'seed'} } @$disks);
+my $edition = $self->installed_edition($doc);
+# Both modes must remove copied Pro credentials inside the offline appliance.
+die "Confirm that the clone's Virtualmin Pro license credentials will be removed; add a separate Pro license or downgrade manually to GPL\n"
+	if ($edition eq 'pro' && !$input->{'confirm_license'});
+die "Cloning requires libguestfs and its Perl bindings to reset the host ID and remove copied Pro credentials\n"
+	if (!eval { require Sys::Guestfs; 1 });
+die "Prepared cloning requires YAML::XS 0.69 or later\n"
+	if ($mode eq 'prepared' && !eval { require YAML::XS; YAML::XS->VERSION(0.69); 1 });
+die "Install bsdtar for cloning\n" if (!-x '/usr/bin/bsdtar');
+# Prepared network configuration currently addresses exactly one interface.
+my @interfaces = $doc->findnodes('/domain/devices/interface');
+die "Prepared cloning currently requires one network interface; choose an unchanged copy instead\n"
+	if ($mode eq 'prepared' && @interfaces != 1);
+my $firmware = $input->{'nvram_mode'} ||
+	($domain->is_active() && !$input->{'shutdown'} ? 'fresh' : 'copy');
+die "Select copied or fresh UEFI variables\n" if ($firmware !~ /\A(?:copy|fresh)\z/);
+if ($domain->is_active() && !$input->{'shutdown'}) {
+	# A filesystem freeze does not make a live firmware-variable file immutable.
+	die "Shut down the source to copy its UEFI variables, or explicitly select fresh variables\n"
+		if ($nvram && $firmware eq 'copy');
+	Cloudmin::Snapshots::check_agent($domain);
+}
+my $options = $self->options();
+my ($primary) = grep { !$_->{'readonly'} } @$disks;
+my $settings = $self->manager()->settings($input->{'id'});
+my ($nic) = @interfaces;
+my $network = $nic && $nic->getAttribute('type') eq 'bridge' ? 'bridge:'.$nic->findvalue('source/@bridge') : '';
+if ($nic && !$network) {
+	# Resolve a libvirt network name to the selector's stable network key.
+	my ($match) = grep { $_->{'source'} eq $nic->findvalue('source/@network') } @{$options->{'networks'}};
+	$network = $match->{'key'} if ($match);
+}
+# Reuse creation validation with the source disk standing in for an image.
+my %values = (cpus => $settings->{'cpus'}, memory_mib => $settings->{'memory_mib'},
+	disk_gib => $primary->{'volume'}->{'capacity'}/1024**3,
+	pool => $primary->{'volume'}->{'pool'}, network => $network, username => 'cloudmin',
+	auth_type => 'password', address_mode => 'dhcp', start => 0, autostart => 0, %$input,
+	image => 'clone-source', install_source => $mode eq 'prepared' ? 'cloud' : 'iso',
+	firmware => $doc->exists('/domain/os/loader') ? 'efi' : 'bios', software => 'none');
+# Templates cannot schedule installation or scripts on a copied guest.
+delete(@values{Cloudmin::Software::fields()});
+$values{'require_fqdn'} = 1 if ($edition && $mode eq 'prepared');
+my $image = { id => 'clone-source', name => $domain->get_name(),
+	format => $mode eq 'prepared' ? 'qcow2' : 'iso', cloud_init => 1,
+	architecture => $doc->findvalue('/domain/os/type/@arch'),
+	virtual_size => $primary->{'volume'}->{'capacity'},
+	min_disk_bytes => $primary->{'volume'}->{'capacity'} };
+my $r = $self->SUPER::prepare(\%values, { %$options, images => [$image], catalogue_images => [] }, $hash);
+# Count secondary disks and retained read-only disks in the destination budget.
+my ($pool) = grep { $_->{'id'} eq $r->{'pool'} } @{$options->{'pools'}};
+my $bytes = $r->{'disk_gib'} * 1024**3;
+$bytes += $_->{'volume'}->{'capacity'} foreach grep { $_->{'volume'} && $_ != $primary &&
+	(!$_->{'readonly'} || $mode eq 'unchanged') } @$disks;
+# File and thick pools need room for full disk capacities after flattening.
+# The LVM driver checks thin-pool data and metadata usage during allocation.
+die "The destination pool needs space for all cloned disks plus 256 MiB\n"
+	if (($pool->{'type'} || '') ne 'lvmthin' && $bytes > $pool->{'available'} - 256*1024**2);
+my $hex;
+# Virtualmin uses the first eight DMI UUID digits, not the full domain UUID.
+my %oldids = map { lc(substr($_, 0, 8)) => 1 }
+	map { $_->textContent() } $doc->findnodes('/domain/uuid | /domain/hwuuid | /domain/sysinfo/system/entry[@name="uuid" or @name="serial"]');
+do { $hex = Cloudmin::Images::generate_id(); } while ($oldids{substr($hex, 0, 8)});
+# Persist source identity and copy choices so recovery needs no browser input.
+@$r{qw(operation clone_mode source_uuid source_name source_revision source_xml disks nvram nvram_mode shutdown active confirm_license)} =
+	('clone', $mode, $input->{'id'}, $domain->get_name(), $revision, $doc->toString(),
+	$disks, $nvram, $firmware, $input->{'shutdown'} ? 1 : 0, $domain->is_active() ? 1 : 0,
+	$input->{'confirm_license'} ? 1 : 0);
+$r->{'uuid'} = join('-', substr($hex,0,8), substr($hex,8,4), '4'.substr($hex,13,3), '8'.substr($hex,17,3), substr($hex,20,12));
+# VNC permits at most eight characters, as in ordinary VM creation.
+$r->{'console_password'} = substr(Cloudmin::Images::generate_id(), 0, 8);
+$r->{'virtualmin'} = $edition;
+$r->{'nvram_identity'} = Cloudmin::VMManage::file_identity($nvram) if ($nvram);
+# Copied firmware stays in a file pool even when guest disks move to LVM.
+$r->{'auxiliary_pool'} = Cloudmin::Libvirt::file_pool($adapter, $r->{'pool'})->get_uuid_string()
+	if ($nvram && $firmware eq 'copy');
+$r->{'nvram_format'} = $doc->findvalue('/domain/os/nvram/@format') || 'raw';
+# Preserve preset IDs for reporting; workers consume the resolved values.
+$r->{'host_ssh_key'} = $mode eq 'prepared' && $input->{'host_ssh_key'} ? 1 : 0;
+$r->{$_} = $input->{$_} for grep { $input->{$_} } qw(template plan);
+delete($r->{'source_image'});
+return $r;
+}
+
 1;
