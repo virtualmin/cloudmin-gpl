@@ -695,4 +695,19 @@ $jobs->update($id, sub { $_[0]->{'resources'}->{'restart_complete'} = 1; });
 $self->phase($id, 'snapshot_restart', 'done');
 }
 
+# complete(self, id)
+# Commits the result before audit output, so logging failure cannot undo success.
+sub complete
+{
+my ($self, $id) = @_;
+my $job = $self->{'jobs'}->update($id, sub {
+	$_[0]->{'state'} = 'complete'; $_[0]->{'cleanup_pending'} = 0;
+	$_->{'state'} = 'done' foreach @{$_[0]->{'events'}};
+	delete($_[0]->{'error'});
+	});
+my $ok = eval { $self->{'jobs'}->audit($job->{'request'}->{'operation'}, $job); 1 };
+$self->{'jobs'}->update($id, sub { $_[0]->{'audit_warning'} = 'Could not write the completion audit log'; }) if (!$ok);
+return 1;
+}
+
 1;
