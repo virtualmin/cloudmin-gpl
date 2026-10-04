@@ -120,4 +120,17 @@ die "QEMU Guest Agent is not responding. Turn on Shut down before taking snapsho
 	if (ref($info) ne 'HASH' || !keys(%$info));
 }
 
+# check_delete(domain, snapshot)
+# Refuses libvirt's unsupported current-parent merge before a job is reserved.
+sub check_delete
+{
+my ($domain, $snapshot) = @_;
+return if (!$snapshot->is_current());
+foreach my $child ($domain->list_all_snapshots(0)) {
+	my $doc = Cloudmin::Libvirt::parse_xml_document($child->get_xml_description(0));
+	die "Delete the child snapshots before deleting the current restore point\n"
+		if ($doc->findvalue('/domainsnapshot/parent/name') eq $snapshot->get_name());
+	}
+}
+
 1;
