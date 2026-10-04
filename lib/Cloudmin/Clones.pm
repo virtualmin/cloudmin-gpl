@@ -84,4 +84,25 @@ if ($doc->exists('/domain/os/nvram')) {
 return ($adapter, $domain, $doc, $disks, $nvram);
 }
 
+# choices(self, uuid) exposes source defaults without secure XML or disk paths.
+sub choices
+{
+my ($self, $uuid) = @_;
+my ($adapter, $domain, $doc, $disks, $nvram) = $self->source($uuid);
+my $settings = $self->manager()->settings($uuid);
+my $options = $self->options();
+# Match the source's first interface to a currently available attachment.
+my $nic = $settings->{'interfaces'}->[0] || {};
+my ($network) = grep { $_->{'type'} eq ($nic->{'type'} || '') &&
+	$_->{'source'} eq ($nic->{'source'} || '') } @{$options->{'networks'}};
+return { id => $uuid, name => $domain->get_name(), revision => Cloudmin::Snapshots::revision($domain),
+	active => $domain->is_active() ? 1 : 0, nvram => $nvram ? 1 : 0,
+	virtualmin => $self->installed_edition($doc),
+	cpus => $settings->{'cpus'}, memory_mib => $settings->{'memory_mib'},
+	pool => (grep { !$_->{'readonly'} } @$disks)[0]->{'volume'}->{'pool'},
+	network => $network ? $network->{'key'} : '',
+	disks => [map { {target => $_->{'target'}, bytes => $_->{'volume'}->{'capacity'}} } grep { !$_->{'readonly'} } @$disks],
+	options => $options };
+}
+
 1;
