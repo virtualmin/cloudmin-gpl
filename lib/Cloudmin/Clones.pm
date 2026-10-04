@@ -218,6 +218,15 @@ sub checkpoint
 die "Virtual machine operation cancelled\n" if ($_[0]->{'jobs'}->get($_[1])->{'cancel'});
 }
 
+# set_text(document, xpath, value) updates a required scalar XML element.
+sub set_text
+{
+my ($doc, $xpath, $value) = @_;
+my ($node) = $doc->findnodes($xpath);
+die "Missing cloned domain field $xpath\n" if (!$node);
+$node->removeChildNodes(); $node->appendText($value);
+}
+
 # quiesce_source(self, id, adapter, [prefix]) snapshots or stops the source.
 # prefix defaults to clone and distinguishes backup snapshot and overlay names.
 # Journal intent before libvirt so recovery can attempt to release the source.
