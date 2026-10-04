@@ -81,6 +81,14 @@ foreach my $external (@external) {
 return $total;
 }
 
+# find_snapshot(domain, name)
+# Listing distinguishes a missing snapshot from a failed libvirt connection.
+sub find_snapshot
+{
+my ($domain, $name) = @_;
+return (grep { $_->get_name() eq $name } $domain->list_all_snapshots(0))[0];
+}
+
 # revision(domain, [offline])
 # Binds forms to current state; offline omits power state for planned shutdowns.
 sub revision
@@ -217,6 +225,90 @@ foreach my $disk ($doc->findnodes('/domain/devices/disk')) {
 	}
 die "The virtual machine has no writable disks to snapshot\n" if (!grep { !$_->{'readonly'} } @disks);
 return \@disks;
+}
+
+# prepare(self, action, input, job_id)
+# Validates a submitted operation before reserving the VM in the job store.
+sub prepare
+{
+my ($self, $action, $input, $id) = @_;
+local $self->{'storage_cache'} = {};
+die "Unknown snapshot action\n" if ($action !~ /\Asnapshot_(?:create|restore|delete)\z/);
+my ($adapter, $domain, $doc) = $self->manager()->get_guest($input->{'id'});
+# Require the submitted guest and snapshot revisions before reserving storage.
+check_guest($domain, $doc);
+my $revision = revision($domain);
+die "The virtual machine or its snapshots changed; reload the page\n"
+	if (!defined($input->{'revision'}) || $input->{'revision'} ne $revision);
+my @snapshots = $domain->list_all_snapshots(0);
+foreach my $snapshot (@snapshots) {
+	my $row = $self->record($domain, $snapshot);
+	die "Manage snapshots created outside Cloudmin with their original tool\n" if (!$row->{'managed'});
+	die "Finish the interrupted snapshot deletion before continuing\n" if ($row->{'pending'});
+	}
+# Record disk identity and both live and offline revisions for later revalidation.
+my $r = { operation => $action, uuid => $domain->get_uuid_string(), name => $domain->get_name(),
+	revision => $revision, config_revision => sha256_hex($domain->get_xml_description(3)),
+	offline_revision => revision($domain, 1),
+	disks => $self->disks($adapter, $domain, $doc, 1),
+	active => $domain->is_active() ? 1 : 0 };
+my @writable = grep { !$_->{'readonly'} } @{$r->{'disks'}};
+# One capture must use a single coordination method for all writable disks.
+$r->{'native_lvm'} = grep { $_->{'volume'}->{'block'} } @writable;
+die "Snapshots cannot combine file-backed and LVM disks\n"
+    if ($r->{'native_lvm'} && grep { !$_->{'volume'}->{'block'} } @writable);
+$r->{'native_lvm'} = $r->{'native_lvm'} ? 1 : 0;
+# Power changes require an explicit choice, independent of snapshot preparation.
+foreach my $field (qw(shutdown restart)) {
+	die "Invalid $field option\n" if (defined($input->{$field}) &&
+		(ref($input->{$field}) || $input->{$field} !~ /\A[01]\z/));
+	}
+$r->{'shutdown'} = $r->{'active'} && $input->{'shutdown'} && $action ne 'snapshot_delete' ? 1 : 0;
+$r->{'restart'} = $input->{'restart'} && ($action eq 'snapshot_restore' ||
+	($action eq 'snapshot_create' && $r->{'shutdown'})) ? 1 : 0;
+$self->check_history_storage($adapter, $domain, $action eq 'snapshot_delete');
+if ($action eq 'snapshot_create') {
+	# Names shown to users stay independent of immutable libvirt identifiers.
+	my $label = $input->{'label'} // '';
+	my $description = $input->{'description'} // '';
+	die "Enter a snapshot name of 1 to 80 characters\n" if (ref($label) || $label !~ /\S/ || length($label) > 80 || $label =~ /[\x00-\x1f]/);
+	die "Snapshot notes must be at most 2000 characters\n" if (ref($description) || length($description) > 2000 || $description =~ /[\x00-\x08\x0b\x0c\x0e-\x1f]/);
+	die "Delete an older snapshot before creating another (maximum 20 per virtual machine)\n" if (@snapshots >= 20);
+	my $mode = $input->{'mode'} || 'prepared';
+	die "Select how to prepare the snapshot\n" if ($mode !~ /\A(?:prepared|unprepared)\z/);
+	if ($r->{'active'} && $mode eq 'prepared') {
+		# Consent to downtime is a fallback: a responding agent keeps the VM live.
+		my $prepared = eval { check_agent($domain); 1 };
+		my $error = $@;
+		die $error if (!$prepared && !$r->{'shutdown'});
+		if ($prepared) {
+			# A successful probe removes downtime consent from the executable request.
+			$r->{'shutdown'} = $r->{'restart'} = 0;
+			}
+		}
+	$r->{'mode'} = $r->{'active'} && !$r->{'shutdown'} ? $mode : 'stopped';
+	$r->{'label'} = $label;
+	$r->{'description'} = $description;
+	$r->{'snapshot'} = 'cloudmin-'.$id;
+	foreach my $disk (@{$r->{'disks'}}) {
+		next if ($disk->{'readonly'} || $r->{'native_lvm'});
+		# Reserve unique overlay names without creating or overwriting disk files.
+		$disk->{'overlay'} = dirname($disk->{'volume'}->{'path'}).'/cloudmin-snapshot-'.$id.'-'.$disk->{'target'}.'.qcow2';
+		die "Snapshot disk already exists\n" if (-e $disk->{'overlay'} || -l $disk->{'overlay'});
+		}
+	}
+else {
+	# Restore discards changes since the snapshot; deletion keeps current VM data.
+	die "Confirm the snapshot action\n" if (($input->{'confirm'} || '') ne '1');
+	my $snapshot = find_snapshot($domain, $input->{'snapshot'} || '') || die "Snapshot not found\n";
+	my $row = $self->record($domain, $snapshot);
+	check_delete($domain, $snapshot) if ($action eq 'snapshot_delete');
+	die "Confirm shutdown before restoring a running virtual machine\n"
+		if ($action eq 'snapshot_restore' && $r->{'active'} && !$r->{'shutdown'});
+	@$r{qw(snapshot label snapshot_revision)} = @$row{qw(id label revision)};
+	$r->{'before_revert'} = revert_disks($snapshot);
+	}
+return $r;
 }
 
 # check_delete(domain, snapshot)
