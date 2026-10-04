@@ -695,6 +695,199 @@ $jobs->update($id, sub { $_[0]->{'resources'}->{'restart_complete'} = 1; });
 $self->phase($id, 'snapshot_restart', 'done');
 }
 
+# run(self, id)
+# Records each planned libvirt change and checks its result after a lost reply.
+sub run
+{
+my ($self, $id) = @_;
+local $self->{'storage_cache'} = {};
+my $jobs = $self->{'jobs'};
+return if ($jobs->busy($id));
+return $jobs->run_worker($id, sub {
+	my $job = $jobs->get($id) || die "Job not found\n";
+	return if ($job->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+	(sub {
+		$job = $jobs->get($id);
+		# Honor cancellation only before any journalled operation has begun.
+		if ($job->{'cancel'} && !$job->{'resources'}->{'started'}) {
+			$jobs->update($id, sub { $_[0]->{'state'} = 'cancelled'; });
+			return;
+			}
+		my ($domain, $adapter);
+		my $ok = eval {
+			local $SIG{'TERM'} = sub { die "Snapshot operation was interrupted\n" };
+			local $SIG{'ALRM'} = sub { die "Snapshot operation timed out; check Active Jobs\n" };
+			alarm(3600);
+			$job = $jobs->get($id);
+			my $r = $job->{'request'};
+			my $doc;
+			($adapter, $domain, $doc) = $self->manager()->get_guest($r->{'uuid'});
+			# Release only our recorded pause before checking the guest's state.
+			$self->resume_native($id, $domain) if ($r->{'native_lvm'});
+			check_guest($domain, $doc);
+			$self->thaw($id, $domain);
+			if ($r->{'native_lvm'} && $r->{'operation'} eq 'snapshot_create' &&
+				$job->{'resources'}->{'native_volumes'} && !$job->{'resources'}->{'native_complete'}) {
+				# An interrupted multi-disk capture must be removed as a whole.
+				$self->remove_native($id, $adapter, $domain);
+				}
+			my $snapshot = find_snapshot($domain, $r->{'snapshot'});
+			my $done = 0;
+			if ($job->{'resources'}->{'snapshot_complete'}) {
+				# A restart failure must not replay a completed disk operation.
+				die "The saved configuration or snapshot history changed; inspect the virtual machine before recovery\n"
+					if (revision($domain, 1) ne $job->{'resources'}->{'result_revision'});
+				$done = 1;
+				}
+			elsif ($job->{'resources'}->{'started'}) {
+				# A lost reply after copying disks must not copy them a second time
+				# just because the final current-snapshot marker was not committed.
+				if ($r->{'native_lvm'} && $r->{'operation'} eq 'snapshot_restore' &&
+					$job->{'resources'}->{'native_restored'} && $snapshot &&
+					!$domain->is_active() && !$snapshot->is_current()) {
+					die "The restored virtual machine changed before recovery\n"
+						if (revision($domain, 1) ne ($job->{'resources'}->{'native_restore_revision'} || ''));
+					$domain->create_snapshot($snapshot->get_xml_description(1), 1|2);
+					}
+				# Libvirt history confirms file operations. LVM also needs its
+				# durable copy/restore completion marker before recovery can finish.
+				$done = $snapshot && $self->record($domain, $snapshot)->{'managed'} &&
+					(!$r->{'native_lvm'} || $job->{'resources'}->{'native_complete'}) if ($r->{'operation'} eq 'snapshot_create');
+				$done = !$snapshot if ($r->{'operation'} eq 'snapshot_delete');
+				$done = $snapshot && !$domain->is_active() && $snapshot->is_current() &&
+					($r->{'native_lvm'} ? $job->{'resources'}->{'native_restored'} :
+					 revert_disks($snapshot) ne ($r->{'before_revert'} || '')) if ($r->{'operation'} eq 'snapshot_restore');
+				}
+			if (!$done) {
+				# Only a native partial-deletion marker permits changed metadata.
+				# A refused merge must still reject later out-of-band changes.
+				my $retry_delete = $job->{'resources'}->{'started'} && $r->{'operation'} eq 'snapshot_delete' &&
+					$snapshot && $self->record($domain, $snapshot)->{'pending'};
+				my $stopping = $job->{'resources'}->{'shutdown_requested'};
+				die "The virtual machine or snapshot history changed; reload the page\n" if (!$retry_delete &&
+					revision($domain, $stopping) ne ($stopping ? $r->{'offline_revision'} : $r->{'revision'}));
+				$self->disks($adapter, $domain, $doc, 1);
+				$self->check_history_storage($adapter, $domain,
+					$retry_delete || $r->{'operation'} eq 'snapshot_delete');
+				if ($r->{'operation'} eq 'snapshot_create' && $r->{'shutdown'} &&
+					!$job->{'resources'}->{'started'} && eval { check_agent($domain); 1 }) {
+					# The agent may have started while queued; avoid unnecessary downtime.
+					$job = $jobs->update($id, sub {
+						@{$_[0]->{'request'}}{qw(shutdown restart mode)} = (0, 0, 'prepared');
+						});
+					$r = $job->{'request'};
+					}
+				check_agent($domain) if ($r->{'operation'} eq 'snapshot_create' && $r->{'mode'} eq 'prepared');
+				if ($r->{'shutdown'}) {
+					# Revalidate saved disks and hardware after the guest finishes stopping.
+					$self->shutdown_guest($id, $domain);
+					die "The virtual machine or snapshot history changed during shutdown; no snapshot change was made\n"
+						if (revision($domain, 1) ne $r->{'offline_revision'});
+					$doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(3));
+					check_guest($domain, $doc);
+					# Shutdown can take minutes; never reuse the pre-shutdown inventory.
+					%{$self->{'storage_cache'}} = ();
+					$self->disks($adapter, $domain, $doc, 1);
+					$self->check_history_storage($adapter, $domain);
+					}
+				# Restore requires stopped disks even if an outside client changed power state.
+				if ($r->{'operation'} eq 'snapshot_restore') {
+					die "Shut down the virtual machine before restoring a snapshot\n" if ($domain->is_active());
+					}
+				check_delete($domain, $snapshot) if ($r->{'operation'} eq 'snapshot_delete' && $snapshot);
+				# Durable intent also prevents cancellation and conflicting VM changes.
+				# Let libvirt report actual support or permission failures here;
+				# version numbers do not account for distribution backports.
+				$self->phase($id, $r->{'operation'}, 'running');
+				$job = $jobs->update($id, sub { $_[0]->{'resources'}->{'snapshot_started'} = 1; });
+				if ($r->{'native_lvm'}) {
+					# LVM keeps writes on the origin; no external overlay merge applies.
+					$self->apply_native($id, $adapter, $domain, $snapshot);
+					}
+				elsif ($r->{'operation'} eq 'snapshot_create') {
+					# Verify source identity again immediately before libvirt creates overlays.
+					foreach my $disk (@{$r->{'disks'}}) {
+						next if ($disk->{'readonly'});
+						die "A snapshot source disk was replaced\n" if (Cloudmin::VMManage::file_identity($disk->{'volume'}->{'path'}) ne $disk->{'volume'}->{'identity'});
+						die "An unfinished snapshot disk needs inspection; no disk was overwritten\n" if (-e $disk->{'overlay'} || -l $disk->{'overlay'});
+						}
+					my $flags = 16 | 128; # DISK_ONLY | ATOMIC
+					if ($r->{'mode'} eq 'prepared') {
+						# Libvirt checks the live agent and performs freeze/snapshot/thaw.
+						$jobs->update($id, sub { $_[0]->{'resources'}->{'quiescing'} = 1; });
+						$flags |= 64; # QUIESCE; never retry without preparation
+						}
+					Cloudmin::Libvirt::log_call('Sys::Virt::Domain::create_snapshot', { uuid => $r->{'uuid'}, name => $r->{'snapshot'}, flags => $flags });
+					$domain->create_snapshot(snapshot_xml($r), $flags);
+					# A successful quiesced call includes libvirt's thaw. Keep the
+					# recovery marker only when the reply fails or is interrupted.
+					$jobs->update($id, sub { delete($_[0]->{'resources'}->{'quiescing'}); });
+					}
+				else {
+					# Deleting a snapshot must merge its data, never just its metadata.
+					die "Snapshot not found\n" if (!$snapshot);
+					die "Snapshot ownership changed\n" if (!$self->record($domain, $snapshot)->{'managed'});
+					my $method = $r->{'operation'} eq 'snapshot_delete' ? 'delete' : 'revert_to';
+					Cloudmin::Libvirt::log_call('Sys::Virt::DomainSnapshot::'.$method, { uuid => $r->{'uuid'}, name => $r->{'snapshot'}, flags => 0 });
+					$snapshot->$method(0);
+					}
+				}
+			if (!$job->{'resources'}->{'snapshot_complete'}) {
+				# Record completion before booting; restore is destructive if repeated.
+				my $result_revision = revision($domain, 1);
+				$jobs->update($id, sub {
+					$_[0]->{'resources'}->{'snapshot_complete'} = 1;
+					$_[0]->{'resources'}->{'result_revision'} = $result_revision;
+					});
+				}
+			$self->phase($id, $r->{'operation'}, 'done');
+			$self->restart_guest($id, $domain);
+			alarm(0);
+			$self->complete($id);
+			1;
+			};
+		my $error = $@;
+		alarm(0);
+		if (!$ok) {
+			# Preserve uncertain state and the reservation until recovery confirms it.
+			my $thawed = eval { $self->resume_native($id, $domain) if ($domain); 1 };
+			$error .= $@ if (!$thawed);
+			$job = $jobs->get($id);
+			my $resources = $job->{'resources'};
+			my $pending = $resources->{'started'} ? 1 : 0;
+			if ($pending && $domain && $thawed) {
+				# An unchanged failed create with no overlays has nothing to recover.
+				my $r = $job->{'request'};
+				my $unchanged = eval { $r->{'operation'} eq 'snapshot_create' &&
+					!@{$resources->{'native_volumes'} || []} &&
+					sha256_hex($domain->get_xml_description(3)) eq $r->{'config_revision'} &&
+					!find_snapshot($domain, $r->{'snapshot'}) &&
+					!grep { !$_->{'readonly'} && $_->{'overlay'} && (-e $_->{'overlay'} || -l $_->{'overlay'}) } @{$r->{'disks'}} };
+				$pending = 0 if ($unchanged && (!$resources->{'shutdown_requested'} ||
+					$resources->{'shutdown_complete'} || $resources->{'shutdown_aborted'}));
+				}
+			# A refused or timed-out shutdown made no disk change to recover.
+			$pending = 0 if ($resources->{'shutdown_aborted'} && !$resources->{'snapshot_started'});
+			$pending = 0 if ($resources->{'shutdown_complete'} && !$resources->{'snapshot_started'} && $thawed);
+			$error .= "The snapshot change completed, but the virtual machine could not be started. Use recovery to retry starting it\n"
+				if ($resources->{'snapshot_complete'} && $job->{'request'}->{'restart'} && !$resources->{'restart_complete'});
+			$error .= "The virtual machine is stopped. Review the error before starting it\n"
+				if ($resources->{'shutdown_complete'} && !$resources->{'snapshot_complete'} && $domain && !$domain->is_active());
+			my $failed = $jobs->update($id, sub {
+				$_[0]->{'state'} = 'failed'; $_[0]->{'error'} = "$error";
+				$_[0]->{'cleanup_pending'} = $pending;
+				my ($event) = grep { $_->{'state'} eq 'running' } @{$_[0]->{'events'} || []};
+				# Mark the phase that failed without losing completed progress rows.
+				if ($event) { $event->{'state'} = 'failed'; }
+				# Failures before a phase starts still need a visible progress entry.
+				else { push(@{$_[0]->{'events'}}, {step => $_[0]->{'phase'} || $_[0]->{'request'}->{'operation'}, state => 'failed'}); }
+				});
+			eval { $jobs->audit('manage_failed', $failed); };
+			}
+		})->();
+	});
+}
+
 # complete(self, id)
 # Commits the result before audit output, so logging failure cannot undo success.
 sub complete
