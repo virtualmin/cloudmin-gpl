@@ -616,4 +616,27 @@ if ($domain->is_active()) {
 $self->{'jobs'}->update($id, sub { delete($_[0]->{'resources'}->{'quiescing'}); });
 }
 
+# phase(self, id, step, state)
+# Keeps stable progress rows when shutdown, snapshot and start span a retry.
+sub phase
+{
+my ($self, $id, $step, $state) = @_;
+return $self->{'jobs'}->update($id, sub {
+	my ($job) = @_;
+	die "Snapshot operation was cancelled\n" if ($job->{'cancel'} && !$job->{'resources'}->{'started'});
+	$job->{'state'} = 'running';
+	$job->{'phase'} = $step;
+	$job->{'resources'}->{'started'} = 1;
+	my ($event) = grep { $_->{'step'} eq $step } @{$job->{'events'} || []};
+	if ($event) {
+		# Reopen the failed phase in place so progress does not jump backwards.
+		$event->{'state'} = $state;
+		}
+	# Append a new phase only once; retries update the existing progress row.
+	else {
+		push(@{$job->{'events'}}, {step => $step, state => $state});
+		}
+	});
+}
+
 1;
