@@ -639,4 +639,39 @@ return $self->{'jobs'}->update($id, sub {
 	});
 }
 
+# shutdown_guest(self, id, domain)
+# Waits for a normal guest shutdown; never falls back to forced power-off.
+sub shutdown_guest
+{
+my ($self, $id, $domain) = @_;
+my $jobs = $self->{'jobs'};
+my $job = $jobs->get($id);
+$self->phase($id, 'snapshot_shutdown', 'running');
+if (!$job->{'resources'}->{'shutdown_requested'}) {
+	# Persist the deadline before sending the asynchronous power request.
+	$job = $jobs->update($id, sub {
+		$_[0]->{'resources'}->{'shutdown_requested'} = 1;
+		$_[0]->{'resources'}->{'shutdown_deadline'} = time()+($self->{'shutdown_timeout'} // 120);
+		});
+	Cloudmin::Libvirt::log_call('Sys::Virt::Domain::shutdown', { uuid => $job->{'request'}->{'uuid'} });
+	$domain->shutdown();
+	}
+while ($domain->is_active()) {
+	# A timeout ends this request; a delayed guest shutdown may still finish.
+	if (time() >= $job->{'resources'}->{'shutdown_deadline'}) {
+		$jobs->update($id, sub { $_[0]->{'resources'}->{'shutdown_aborted'} = 1; });
+		die "The virtual machine did not shut down within two minutes. No snapshot change was made. It may still finish shutting down; check its power state\n";
+		}
+	sleep(1);
+	}
+my ($state, $reason) = $domain->get_state();
+if ($state != 5 || $reason != 1) { # SHUTOFF / SHUTOFF_SHUTDOWN
+	# An unrelated crash or force-off cannot count as a clean shutdown.
+	$jobs->update($id, sub { $_[0]->{'resources'}->{'shutdown_aborted'} = 1; });
+	die "The virtual machine stopped without a clean shutdown. No snapshot change was made\n";
+	}
+$jobs->update($id, sub { $_[0]->{'resources'}->{'shutdown_complete'} = 1; });
+$self->phase($id, 'snapshot_shutdown', 'done');
+}
+
 1;
