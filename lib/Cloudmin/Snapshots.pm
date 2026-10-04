@@ -15,6 +15,14 @@ my ($class, %options) = @_;
 return bless(\%options, $class);
 }
 
+# manager(self)
+# Reuses managed-volume and guest identity checks without the no-snapshots rule.
+sub manager
+{
+my ($self) = @_;
+return Cloudmin::VMManage->new(%$self);
+}
+
 # record(self, domain, snapshot, [size_cache])
 # Exposes safe display fields; ownership requires the original creation journal.
 sub record
@@ -118,6 +126,66 @@ my ($domain) = @_;
 my $info = eval { $domain->get_guest_info(2, 0) };
 die "QEMU Guest Agent is not responding. Turn on Shut down before taking snapshot, or install and start the agent inside the virtual machine\n"
 	if (ref($info) ne 'HASH' || !keys(%$info));
+}
+
+# check_history_storage(self, adapter, domain, [resuming_delete])
+# Another VM or imported image may have adopted a saved base since creation.
+sub check_history_storage
+{
+my ($self, $adapter, $domain, $resuming_delete) = @_;
+my $manager = $self->manager();
+my @xml = ($domain->get_xml_description(2),
+	map { $_->get_xml_description(0) } $domain->list_all_snapshots(0));
+my %paths;
+foreach my $xml (@xml) {
+	my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+	# These are the VM's writable tops and libvirt's own snapshot/revert layers.
+	$paths{$_->getValue()} = 1 foreach $doc->findnodes(
+        '/domain/devices/disk[not(readonly)]/source/@file | '.
+        '/domain/devices/disk[not(readonly)]/source/@dev | '.
+        '/domainsnapshot/domain/devices/disk[not(readonly)]/source/@file | '.
+        '/domainsnapshot/domain/devices/disk[not(readonly)]/source/@dev');
+	# Libvirt can retain names of discarded working layers after a revert.
+	foreach my $source ($doc->findnodes(
+		'/domainsnapshot/disks/disk[@snapshot="external"]/source[@file] | '.
+		'/domainsnapshot/revertDisks/disk/source[@file]')) {
+		my $path = $source->getAttribute('file');
+		$paths{$path} = 1 if (-e $path);
+		}
+	}
+my (undef, $volumes) = $manager->storage($adapter);
+# Libvirt may spell an LV as /dev/VG/LV or /dev/mapper/VG-LV.
+%paths = map { (Cwd::abs_path($_) || $_) => 1 } keys %paths;
+my %aliases = %paths;
+my @owned = grep { exists($aliases{Cwd::abs_path($_->{'path'}) || $_->{'path'}}) } @$volumes;
+my %owned = map { $_->{'key'} => 1 } @owned;
+my $refs = Cloudmin::Images::volume_references($adapter->connect(), $domain->get_uuid_string());
+# A chain's own backing links are expected; references from other VMs or
+# volumes are still checked against every layer, including indirect sharing.
+my %native_paths;
+# Owned native restore points are expected origin references, just like the
+# backing links of owned file snapshots. Keep foreign references in the check.
+foreach my $snapshot ($domain->list_all_snapshots(0)) {
+    my $row = $self->record($domain, $snapshot);
+    next if (!$row->{'native_lvm'});
+    foreach my $item ($self->native_volumes($adapter, $snapshot, $resuming_delete)) {
+        $native_paths{Cwd::abs_path($item->[1]->get_path()) || $item->[1]->get_path()} = 1;
+    }
+}
+my @foreign = grep { (!defined($_->{'key'}) || !$owned{$_->{'key'}}) &&
+    !($_->{'path'} && $native_paths{Cwd::abs_path($_->{'path'}) || $_->{'path'}}) } @$refs;
+my $images = $manager->imported_file_ids($adapter);
+foreach my $volume (@owned) {
+	die "Imported images cannot be changed by snapshot operations\n" if ($images->{$volume->{'identity'}});
+	my $reason = Cloudmin::Images::volume_use(\@foreign, @$volume{qw(path pool_name name key)});
+	die "$reason\n" if ($reason);
+	delete($paths{Cwd::abs_path($volume->{'path'}) || $volume->{'path'}});
+	}
+if ($resuming_delete) {
+	# A native partial merge may already have removed a completed disk layer.
+	delete($paths{$_}) foreach grep { !-e $_ && !-l $_ } keys %paths;
+	}
+die "Snapshot storage is missing or outside active managed pools\n" if (keys %paths);
 }
 
 # check_delete(domain, snapshot)
