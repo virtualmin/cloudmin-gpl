@@ -212,4 +212,67 @@ delete($r->{'source_image'});
 return $r;
 }
 
+# checkpoint(self, id) observes cancellation between safe disk-operation steps.
+sub checkpoint
+{
+die "Virtual machine operation cancelled\n" if ($_[0]->{'jobs'}->get($_[1])->{'cancel'});
+}
+
+# quiesce_source(self, id, adapter, [prefix]) snapshots or stops the source.
+# prefix defaults to clone and distinguishes backup snapshot and overlay names.
+# Journal intent before libvirt so recovery can attempt to release the source.
+sub quiesce_source
+{
+my ($self, $id, $adapter, $prefix) = @_;
+$prefix ||= 'clone';
+my $jobs = $self->{'jobs'};
+my $r = $jobs->get($id)->{'request'};
+my $source = $adapter->find_domain($r->{'source_uuid'});
+$jobs->update($id, sub { $_[0]->{'resources'}->{'started'} = 1; });
+if ($source->is_active() && $r->{'shutdown'}) {
+	# Journal shutdown before sending ACPI so cancellation can restore it.
+	$jobs->update($id, sub { $_[0]->{'resources'}->{'shutdown_requested'} = 1; });
+	$source->shutdown();
+	# Keep cancellation responsive while waiting for the guest to shut down.
+	my $deadline = time()+120;
+	while ($source->is_active()) {
+		die "The source virtual machine did not shut down\n" if (time() >= $deadline);
+		$self->checkpoint($id); sleep(1);
+	}
+	$jobs->update($id, sub { $_[0]->{'resources'}->{'shutdown_complete'} = 1; });
+}
+# Capture a running source without shutting it down.
+elsif ($source->is_active()) {
+	my @writable = grep { !$_->{'readonly'} } @{$r->{'disks'}};
+	if (grep { $_->{'volume'}->{'block'} } @writable) {
+		# Native LVM snapshots keep guest writes on the original logical volumes.
+		die "Shut down the source to copy mixed file-backed and LVM disks\n"
+			if (grep { !$_->{'volume'}->{'block'} } @writable);
+		# Reject an unresponsive agent before pausing the guest or allocating volumes.
+		Cloudmin::Snapshots::check_agent($source);
+		$r->{'native_lvm'} = 1;
+		$r->{'snapshot'} = 'cloudmin-'.$id;
+		$r->{'mode'} = 'prepared';
+		$r->{'description'} = 'Temporary full '.$prefix;
+		$jobs->update($id, sub { $_[0]->{'request'} = $r; $_[0]->{'resources'}->{'snapshot'} = 1; });
+		$self->snapshots()->apply_native($id, $adapter, $source, undef, 1);
+		return;
+		}
+	# Freeze via the agent and move writes to temporary external overlays.
+	Cloudmin::Snapshots::check_agent($source);
+	$r->{'snapshot'} = 'cloudmin-'.$prefix.'-'.$id;
+	foreach my $disk (@{$r->{'disks'}}) {
+		# Read-only media cannot receive writes and need no temporary
+		# overlay.
+		next if ($disk->{'readonly'});
+		$disk->{'overlay'} = dirname($disk->{'volume'}->{'path'}).'/cloudmin-'.$prefix.'-'.$id.'-'.$disk->{'target'}.'.qcow2';
+		die "Temporary snapshot overlay already exists\n" if (-e $disk->{'overlay'} || -l $disk->{'overlay'});
+	}
+	$jobs->update($id, sub { $_[0]->{'request'} = $r; $_[0]->{'resources'}->{'snapshot'} = 1; $_[0]->{'resources'}->{'quiescing'} = 1; });
+	# Disk-only, atomic, quiesced snapshots leave the copied bases stable.
+	$source->create_snapshot(Cloudmin::Snapshots::snapshot_xml({ %$r, description => 'Temporary full '.$prefix }), 16|128|64);
+	$jobs->update($id, sub { delete($_[0]->{'resources'}->{'quiescing'}); });
+}
+}
+
 1;
