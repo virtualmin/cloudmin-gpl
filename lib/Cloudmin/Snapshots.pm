@@ -674,4 +674,25 @@ $jobs->update($id, sub { $_[0]->{'resources'}->{'shutdown_complete'} = 1; });
 $self->phase($id, 'snapshot_shutdown', 'done');
 }
 
+# restart_guest(self, id, domain)
+# Starts only the completed result, including recovery after a lost start reply.
+sub restart_guest
+{
+my ($self, $id, $domain) = @_;
+my $jobs = $self->{'jobs'};
+my $job = $jobs->get($id);
+return if (!$job->{'request'}->{'restart'} || $job->{'resources'}->{'restart_complete'});
+die "The saved configuration or snapshot history changed before restart. Inspect the virtual machine before recovering this job\n"
+	if (revision($domain, 1) ne $job->{'resources'}->{'result_revision'});
+$self->phase($id, 'snapshot_restart', 'running');
+if (!$domain->is_active()) {
+	# Never repeat snapshot creation or restore just because starting failed.
+	$jobs->update($id, sub { $_[0]->{'resources'}->{'restart_requested'} = 1; });
+	Cloudmin::Libvirt::log_call('Sys::Virt::Domain::create', { uuid => $job->{'request'}->{'uuid'} });
+	$domain->create();
+	}
+$jobs->update($id, sub { $_[0]->{'resources'}->{'restart_complete'} = 1; });
+$self->phase($id, 'snapshot_restart', 'done');
+}
+
 1;
