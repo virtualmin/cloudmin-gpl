@@ -71,6 +71,9 @@ return [map { my ($type, $bytes) = split(/ /, key($_));
 	$type.' SHA256:'.sha256_base64(decode_base64($bytes)) } grep { key($_) } @$lines];
 }
 
+# digest(lines) binds approval to the exact displayed keys and previous trust.
+sub digest { return sha256_hex(join("\n", sort @{$_[0]})); }
+
 # scan(target) runs only inside the isolated, network-enabled host-key worker.
 sub scan
 {
@@ -83,6 +86,24 @@ my $output = Cloudmin::WorkerTasks::command('ssh-keyscan', '-T', '5', '-p', $t->
 my %keys = map { my $key = key($_); $key ? ($host.' '.$key => 1) : () } split(/\n/, $output);
 die "The SSH server did not provide a host key\n" if (!keys(%keys));
 return {keys => [sort keys %keys]};
+}
+
+# check(target) compares observed keys with existing trust without accepting any.
+sub check
+{
+my ($t) = @_;
+host($t);
+my $observed = Cloudmin::Worker->new()->run('backup_host_key', {host => $t->{'host'}, port => $t->{'port'} || 22})->{'keys'};
+my $known = known($t);
+# Reject revoked keys before considering any ordinary trusted-key match.
+my %observed = map { key($_) => 1 } @$observed;
+die "The SSH server's host key is revoked. Update this host's SSH trust configuration before connecting.\n"
+	if (grep { /^\@revoked\s/ && $observed{key($_)} } @$known);
+# Certificate-authority entries are not direct matches for scanned host keys.
+my @trusted = grep { !/^\@/ } @$known;
+return {status => (grep { $observed{key($_)} } @trusted) ? 'trusted' : @$known ? 'changed' : 'unknown',
+	host => host($t), old => fingerprints($known), current => fingerprints($observed),
+	previous => digest($known), proposed => digest($observed), keys => $observed};
 }
 
 1;
