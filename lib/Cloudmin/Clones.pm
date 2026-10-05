@@ -385,4 +385,25 @@ elsif ($source->is_active()) {
 }
 }
 
+# stable_volume(self, id, adapter, disk)
+# Selects a native snapshot from the journal.
+# Stopped sources, read-only disks and file snapshot bases keep their volume.
+sub stable_volume
+{
+my ($self, $id, $adapter, $disk) = @_;
+my $job = $self->{'jobs'}->get($id);
+return $disk->{'volume'} if (!$job->{'request'}->{'native_lvm'} || $disk->{'readonly'});
+# The source LV remains writable after a live native capture; copy its saved LV.
+die "Native LVM capture is incomplete\n" if (!$job->{'resources'}->{'native_complete'});
+my ($saved) = grep { $_->{'target'} eq $disk->{'target'} }
+	@{$job->{'resources'}->{'native_volumes'} || []};
+die "Native LVM capture disk is missing\n" if (!$saved);
+my (undef, $volume) = $adapter->volume(@$saved{qw(pool name key)});
+die "Native LVM capture disk is missing\n" if (!$volume);
+$volume->snapshot_health();
+# Downstream copying rechecks this snapshot's identity, not the running origin's.
+return { %{$adapter->get_storage_volume_record($volume)}, pool => $saved->{'pool'},
+	identity => Cloudmin::VMManage::file_identity($volume->get_path()), block => 1 };
+}
+
 1;
