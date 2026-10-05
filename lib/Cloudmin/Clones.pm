@@ -485,4 +485,186 @@ foreach my $name ('seed.iso', 'nvram.fd', map { "disk$_" } 0..31) {
 rmdir($work) or die "Cannot remove clone staging directory\n" if (-d $work);
 }
 
+# run(self, id) copies immutable source states and journals every allocation.
+# Interrupted jobs restore the source and roll back; they never repeat writes.
+sub run
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+return $jobs->run_worker($id, sub {
+	my $job = $jobs->get($id);
+	my $r = $job->{'request'};
+	my $adapter = $self->{'adapter'}->();
+	# Journal conversion workers so cancellation and recovery can stop them.
+	$adapter->{'disk_worker'} = sub { $self->worker_task($id, @_); };
+	my $work = "$jobs->{directory}/$id";
+	my $ok = eval {
+		# An interrupted worker rolls back instead of repeating allocation steps.
+		die "Virtual machine cloning was interrupted\n" if ($job->{'state'} ne 'queued');
+		$jobs->update($id, sub { $_[0]->{'state'} = 'running'; });
+		$self->step($id, 'preflight', sub {
+			# Recheck source revision and destination name after waiting for a worker.
+			my (undef, $source) = $self->source($r->{'source_uuid'});
+			die "The clone source changed after submission\n" if (Cloudmin::Snapshots::revision($source) ne $r->{'source_revision'});
+			die "The clone name is already in use\n" if (grep { $_->get_name() eq $r->{'name'} } $adapter->connect()->list_all_domains());
+			# File copies and overlays share filesystem space. LVM allocation is
+			# checked separately against the VG or thin pool, never the /dev mount.
+			my $pool = Cloudmin::Libvirt::storage_pool($adapter, $r->{'pool'});
+			die "Clone destination pool is no longer active\n" if (!$pool->is_active());
+			my $pooldoc = Cloudmin::Libvirt::parse_xml_document($pool->get_xml_description());
+			my $destination = $pooldoc->findvalue('/pool/target/path');
+			my (%needed, %paths);
+			my $index = 0;
+			foreach my $disk (grep { $_->{'volume'} && (!$_->{'readonly'} || $r->{'clone_mode'} eq 'unchanged') } @{$r->{'disks'}}) {
+				my $capacity = $disk->{'readonly'} || $index++ ? $disk->{'volume'}->{'capacity'} : $r->{'disk_gib'}*1024**3;
+				foreach my $item (Cloudmin::Libvirt::block_pool($pool) ? () : ([$destination, $capacity]),
+					!$disk->{'volume'}->{'block'} && $r->{'active'} && !$r->{'shutdown'} && !$disk->{'readonly'} ? [dirname($disk->{'volume'}->{'path'}), $disk->{'volume'}->{'capacity'}] : ()) {
+					my @stat = stat($item->[0]);
+					die "Cannot check clone storage space\n" if (!@stat);
+					$paths{$stat[0]} = $item->[0]; $needed{$stat[0]} += $item->[1];
+				}
+			}
+			die "Not enough storage for cloned disks and temporary snapshot growth\n"
+				if (grep { Cloudmin::Worker::free_space($paths{$_}) < $needed{$_}+256*1024**2 } keys %needed);
+			make_dir($work, 0700, 1) or die "Cannot create clone staging directory\n";
+			# Validate submitted keys before any source snapshot or shutdown.
+			$self->worker_task($id, 'keys', { keys => $r->{'ssh_keys'}."\n" }) if ($r->{'ssh_keys'});
+		});
+		my $source = $adapter->find_domain($r->{'source_uuid'});
+		$self->step($id, 'clone_quiesce', sub { $self->quiesce_source($id, $adapter); });
+		my @volumes;
+		$self->step($id, 'clone_disks', sub {
+			my ($index, $writable) = (0, 0);
+			foreach my $disk (grep { $_->{'volume'} && (!$_->{'readonly'} || $r->{'clone_mode'} eq 'unchanged') } @{$r->{'disks'}}) {
+				$self->checkpoint($id);
+				# Reject replaced sources; grow only the first writable disk.
+				my $v = $self->stable_volume($id, $adapter, $disk);
+				die "A clone source disk was replaced\n" if (Cloudmin::VMManage::file_identity($v->{'path'}) ne $v->{'identity'});
+				my $name = Cloudmin::VMs::disk_volume_name($r->{'name'}, $disk->{'seed'} ? 'seed' : !$disk->{'readonly'} && !$writable ? 'system' : 'disk'.$index, $id, $r->{'pool_type'});
+				my $capacity = $disk->{'readonly'} || $writable++ ? $v->{'capacity'} : $r->{'disk_gib'}*1024**3;
+				my $format = $disk->{'readonly'} && $v->{'format'} ne 'qcow2' ? 'raw' : 'qcow2';
+				my $slot = $index++;
+				# Record the output name before allocation so rollback can find it.
+				my $copy = $adapter->clone_disk($r->{'pool'}, $name,
+					{ pool => $v->{'pool'}, volume => $v->{'name'}, volume_key => $v->{'key'} }, $capacity, $format, sub {
+						$jobs->update($id, sub { $_[0]->{'resources'}->{'volumes'}->[$slot] = { name => $name }; });
+					});
+				$format = $copy->{'format'} || $format;
+				$copy->{'format'} = $format;
+				$jobs->update($id, sub { $_[0]->{'resources'}->{'volumes'}->[$slot] = $copy; });
+				# Every full copy is checked in isolation before a guest can use it.
+				$self->worker_task($id, 'inspect', { format => $format }, files => { image => $copy->{'path'} });
+				push(@volumes, $copy);
+			}
+			if ($r->{'nvram'} && $r->{'nvram_mode'} eq 'copy') {
+				# Copy stable firmware bytes only after checking identity and size.
+				die "Shut down the source before copying UEFI variables\n" if ($source->is_active());
+				die "The source UEFI variables were replaced\n"
+					if (Cloudmin::VMManage::file_identity($r->{'nvram'}) ne $r->{'nvram_identity'});
+				my $info = $self->worker_task($id, 'inspect', {format => $r->{'nvram_format'}},
+					files => {image => $r->{'nvram'}});
+				die "The source UEFI variables exceed 64 MiB\n" if ($info->{'virtual-size'} > 64*1024**2);
+				# Import opaque firmware bytes; the domain retains their raw/QCOW2
+				# format rather than treating this volume as a guest system disk.
+				Cloudmin::Worker::copy_file($r->{'nvram'}, "$work/nvram.fd", 64*1024**2);
+				my $name = "cloudmin-$id-nvram.fd";
+				my $volume = $adapter->upload_seed($r->{'auxiliary_pool'} || $r->{'pool'}, $name, "$work/nvram.fd", sub {
+					$jobs->update($id, sub { $_[0]->{'resources'}->{'nvram'} = { name => $name, pool => $r->{'auxiliary_pool'} || $r->{'pool'} }; });
+				});
+				$volume->{'pool'} = $r->{'auxiliary_pool'} || $r->{'pool'};
+				$jobs->update($id, sub { $_[0]->{'resources'}->{'nvram'} = $volume; });
+			}
+		});
+		$self->step($id, 'clone_release', sub { $self->release_source($id, $adapter); });
+		my $seed;
+
+		# Use the same identity and access values for disk preparation and NoCloud.
+		my %seed_values = map { $_ => $r->{$_} }
+			qw(username auth_type password_hash ssh_keys hostname mac address_mode ipv4 ipv6 gateway4 gateway6 dns);
+		if ($r->{'clone_mode'} eq 'prepared' && $r->{'host_ssh_key'}) {
+			# Give this clone a separate managed key and journal it before writing.
+			$jobs->update($id, sub { $_[0]->{'resources'}->{'ssh_key'} = 1; });
+			$seed_values{'host_public_key'} = $self->worker_task($id, 'keypair', {},
+				output => $self->{'ssh_keys'}->destination($r->{'uuid'}, $id))->{'public_key'};
+			die "Host SSH key generation returned no public key\n" if (!$seed_values{'host_public_key'});
+		}
+		$self->step($id, 'clone_prepare', sub {
+			# Stage only the cloned volumes under fixed appliance filenames.
+			my (%files, %outputs, @disks);
+			foreach my $i (0..$#volumes) {
+				$files{"disk$i"} = $volumes[$i]->{'path'};
+				$outputs{"disk$i"} = "$work/disk$i";
+				push(@disks, {name => "disk$i", format => $volumes[$i]->{'format'}, capacity => $volumes[$i]->{'capacity'}});
+			}
+			my $result = $self->worker_task($id, 'clone_prepare',
+				{ disks => \@disks, settings => \%seed_values, confirm_license => $r->{'confirm_license'},
+				mode => $r->{'clone_mode'}, uuid => $r->{'uuid'} },
+				files => \%files, outputs => \%outputs);
+			$jobs->update($id, sub { $_[0]->{'resources'}->{'virtualmin'} = $result->{'virtualmin'}; });
+			# Write prepared copies back to this job's unused destination volumes.
+			foreach my $i (0..$#volumes) {
+				# Recheck outputs in a separate read-only task before libvirt
+				# can open them outside the writable preparation sandbox.
+				my $info = $self->worker_task($id, 'inspect', {format => $volumes[$i]->{'format'}},
+					files => {image => "$work/disk$i"});
+				die "Prepared clone disk capacity changed\n"
+					if ($info->{'virtual-size'} != $volumes[$i]->{'capacity'});
+				my ($pool, $volume) = $adapter->volume($r->{'pool'}, $volumes[$i]->{'name'}, $volumes[$i]->{'key'});
+				# Upload only to the job's existing destination volume, never its source.
+				$adapter->write_volume($volume, "$work/disk$i");
+			}
+		});
+		if ($r->{'clone_mode'} eq 'prepared') {
+			# Supply new cloud-init data only when preparing a new guest identity.
+			$self->step($id, 'seed', sub {
+				$self->worker_task($id, 'seed', { request => \%seed_values, uuid => $r->{'uuid'} }, output => "$work/seed.iso");
+				my $name = Cloudmin::VMs::disk_volume_name($r->{'name'}, 'seed', $id, $r->{'pool_type'});
+				$seed = $adapter->upload_seed($r->{'pool'}, $name, "$work/seed.iso", sub {
+					$jobs->update($id, sub { $_[0]->{'resources'}->{'seed'} = { name => $name }; });
+				});
+				$jobs->update($id, sub { $_[0]->{'resources'}->{'seed'} = $seed; });
+			});
+		}
+		$self->step($id, 'define', sub {
+			# Record domain ownership before define so a lost reply can be cleaned up.
+			$jobs->update($id, sub { $_[0]->{'resources'}->{'domain'} = 1; });
+			$adapter->define_guest(domain_xml($r, $id, \@volumes, $seed, $jobs->get($id)->{'resources'}->{'nvram'}));
+			$adapter->set_domain_autostart($r->{'uuid'}, $r->{'autostart'});
+		});
+		$self->step($id, 'start', sub { $adapter->start_domain($r->{'uuid'}) if ($r->{'start'}); });
+		# Cancellation wins until completion is recorded; erase temporary secrets.
+		$self->checkpoint($id);
+		$self->clean_work($id);
+		$jobs->update($id, sub {
+			die "Virtual machine cloning cancelled\n" if ($_[0]->{'cancel'});
+			$_[0]->{'state'} = 'complete';
+			delete(@{$_[0]->{'request'}}{qw(password_hash source_xml console_password)});
+		});
+		1;
+	};
+	my $error = $@;
+	if (!$ok) {
+		# Cleanup failures retain reservations and expose a recoverable job state.
+		my $clean = eval { $self->cleanup($id, $adapter); 1 };
+		$error .= "; cleanup needs attention: $@" if (!$clean);
+		# Keep credentials out of persisted errors and completed request records.
+		$error =~ s/\Q$r->{password_hash}\E/[redacted]/g if ($r->{'password_hash'});
+		$error =~ s/\Q$r->{console_password}\E/[redacted]/g if ($r->{'console_password'});
+		$jobs->update($id, sub {
+			$_[0]->{'state'} = $_[0]->{'cancel'} && $clean ? 'cancelled' : 'failed';
+			$_[0]->{'cleanup_pending'} = $clean ? 0 : 1;
+			$_[0]->{'error'} = substr(Cloudmin::Libvirt::error_message($error),0,4000);
+			$_[0]->{'events'}->[-1]->{'state'} = $_[0]->{'state'} if (@{$_[0]->{'events'}});
+			delete(@{$_[0]->{'request'}}{qw(password_hash source_xml console_password)});
+		});
+	}
+	my $finished = $jobs->get($id);
+	# Audit failure is a warning, not a reason to undo a completed clone.
+	my $logged = eval { $jobs->audit($ok ? 'clone_complete' :
+		$finished->{'state'} eq 'cancelled' ? 'clone_cancelled' : 'clone_failed', $finished); 1 };
+	$jobs->update($id, sub { $_[0]->{'audit_warning'} = 'Could not write the clone completion audit log'; }) if (!$logged);
+	return $ok ? 1 : 0;
+});
+}
+
 1;
