@@ -63,6 +63,14 @@ my ($line) = @_;
 return $line =~ /(?:^|\s)((?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp\d+) [A-Za-z0-9+\/=]+)(?:\s|$)/ ? $1 : '';
 }
 
+# fingerprints(lines) formats public SHA256 fingerprints without key comments.
+sub fingerprints
+{
+my ($lines) = @_;
+return [map { my ($type, $bytes) = split(/ /, key($_));
+	$type.' SHA256:'.sha256_base64(decode_base64($bytes)) } grep { key($_) } @$lines];
+}
+
 # scan(target) runs only inside the isolated, network-enabled host-key worker.
 sub scan
 {
