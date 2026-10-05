@@ -56,4 +56,25 @@ return [@system] if (!-e $file);
 return [entries($file, $host), grep { /^\@revoked\s/ } @system];
 }
 
+# key(line) extracts the algorithm and public key from a known_hosts entry.
+sub key
+{
+my ($line) = @_;
+return $line =~ /(?:^|\s)((?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp\d+) [A-Za-z0-9+\/=]+)(?:\s|$)/ ? $1 : '';
+}
+
+# scan(target) runs only inside the isolated, network-enabled host-key worker.
+sub scan
+{
+my ($t) = @_;
+my $host = host($t);
+require(dirname(__FILE__).'/WorkerTasks.pm');
+# Scanning discovers candidate public keys; it does not authenticate the server.
+my $output = Cloudmin::WorkerTasks::command('ssh-keyscan', '-T', '5', '-p', $t->{'port'} || 22,
+	'-t', 'ed25519,ecdsa,rsa', lc($t->{'host'}));
+my %keys = map { my $key = key($_); $key ? ($host.' '.$key => 1) : () } split(/\n/, $output);
+die "The SSH server did not provide a host key\n" if (!keys(%keys));
+return {keys => [sort keys %keys]};
+}
+
 1;
