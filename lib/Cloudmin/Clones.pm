@@ -456,4 +456,15 @@ elsif ($job->{'resources'}->{'shutdown_requested'} && !$job->{'resources'}->{'sh
 $self->{'jobs'}->update($id, sub { $_[0]->{'resources'}->{'source_released'} = 1; });
 }
 
+# clean_work(self, id) removes fixed staging filenames, never source files.
+sub clean_work
+{
+my ($self, $id) = @_;
+my $work = "$self->{jobs}->{directory}/$id";
+foreach my $name ('seed.iso', 'nvram.fd', map { "disk$_" } 0..31) {
+	unlink("$work/$name") or die "Cannot remove clone staging file\n" if (-e "$work/$name");
+}
+rmdir($work) or die "Cannot remove clone staging directory\n" if (-d $work);
+}
+
 1;
