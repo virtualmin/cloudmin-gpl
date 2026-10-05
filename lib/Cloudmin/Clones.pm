@@ -227,6 +227,107 @@ die "Missing cloned domain field $xpath\n" if (!$node);
 $node->removeChildNodes(); $node->appendText($value);
 }
 
+# domain_xml(request, id, volumes, [seed], [nvram]) rewrites host identities.
+# Inactive secure XML supplies hardware; runtime paths and credentials are reset.
+sub domain_xml
+{
+my ($r, $id, $volumes, $seed, $nvram) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($r->{'source_xml'});
+# Replace the domain identity and discard source-specific resource constraints.
+set_text($doc, '/domain/name', $r->{'name'});
+set_text($doc, '/domain/uuid', $r->{'uuid'});
+set_text($doc, '/domain/memory', $r->{'memory_mib'});
+($doc->findnodes('/domain/memory'))[0]->setAttribute('unit', 'MiB');
+foreach my $node ($doc->findnodes('/domain/currentMemory | /domain/vcpus | /domain/cputune | /domain/numatune | /domain/cpu/topology | /domain/cpu/numa | /domain/sysinfo | /domain/hwuuid | /domain/genid | /domain/seclabel | /domain/metadata')) {
+	$node->unbindNode();
+}
+# Do not expose the source or physical host's DMI identity in the clone.
+$_->setAttribute('mode', 'emulate') foreach $doc->findnodes('/domain/os/smbios');
+set_text($doc, '/domain/vcpu', $r->{'cpus'});
+($doc->findnodes('/domain/vcpu'))[0]->removeAttribute('current');
+my $meta = $doc->documentElement()->addNewChild(undef, 'metadata');
+# Bind Cloudmin metadata to this job and its new guest access settings.
+my $vm = $meta->addNewChild('urn:cloudmin:vm:1', 'vm');
+foreach my $field (qw(job template network ipv4 ipv6 username)) {
+	$vm->addNewChild('urn:cloudmin:vm:1', $field)->appendText($field eq 'job' ? $id : $r->{$field} || '');
+}
+my $index = 0;
+foreach my $disk ($doc->findnodes('/domain/devices/disk')) {
+	if ($disk->exists('readonly') && (($r->{'clone_mode'} || 'prepared') ne 'unchanged' || $disk->getAttribute('device') ne 'disk') || !$disk->exists('source')) {
+		# Discard the old seed and detach installation media from the new machine.
+		# Remove disk devices that have no source in the copy.
+		if ($disk->getAttribute('device') eq 'disk') { $disk->unbindNode(); }
+		# Keep removable drives, but detach their source media.
+		else { $_->unbindNode() foreach $disk->findnodes('source | backingStore'); }
+		next;
+	}
+	# Use independent copies in source order, without backing links or disk IDs.
+	$_->unbindNode() foreach $disk->findnodes('source | backingStore | serial | wwn');
+	my $volume = $volumes->[$index++];
+	$disk->setAttribute('type', $volume->{'block'} ? 'block' : 'file');
+	$disk->addNewChild(undef, 'source')->setAttribute($volume->{'block'} ? 'dev' : 'file', $volume->{'path'});
+	($disk->findnodes('driver'))[0]->setAttribute('type', $volume->{'format'} || 'qcow2');
+	($disk->findnodes('driver'))[0]->setAttribute('cache', 'none') if ($volume->{'block'});
+}
+if ($seed) {
+	# Assign the new seed the first free virtio target after the system disk.
+	my %used = map { $_->getValue() => 1 } $doc->findnodes('/domain/devices/disk/target/@dev');
+	my ($target) = grep { !$used{$_} } map { 'vd'.$_ } 'b'..'z';
+	die "No free target for the clone seed\n" if (!$target);
+	# Present NoCloud data as a read-only raw disk on the existing virtio bus.
+	my ($devices) = $doc->findnodes('/domain/devices');
+	my $disk = $devices->addNewChild(undef, 'disk');
+	$disk->setAttribute('type', $seed->{'block'} ? 'block' : 'file'); $disk->setAttribute('device','disk');
+	my $driver = $disk->addNewChild(undef,'driver');
+	$driver->setAttribute('name','qemu'); $driver->setAttribute('type','raw');
+	$disk->addNewChild(undef,'source')->setAttribute($seed->{'block'} ? 'dev' : 'file',$seed->{'path'});
+	my $t = $disk->addNewChild(undef,'target');
+	$t->setAttribute('dev',$target); $t->setAttribute('bus','virtio');
+	$disk->addNewChild(undef,'readonly');
+}
+$index = 0;
+# Every NIC gets a fresh MAC; unchanged copies may retain additional NICs.
+foreach my $nic ($doc->findnodes('/domain/devices/interface')) {
+	$_->unbindNode() foreach $nic->findnodes('mac | target | alias | filterref');
+	my $mac = $index++ == 0 ? $r->{'mac'} : '52:54:00:'.join(':',substr(Cloudmin::Images::generate_id(),0,6) =~ /../g);
+	$nic->addNewChild(undef,'mac')->setAttribute('address',$mac);
+	if ($index == 1) {
+		# Only the primary interface uses the clone form's selected attachment.
+		$_->unbindNode() foreach $nic->findnodes('source');
+		my $type = $r->{'attachment'}->{'type'};
+		$nic->setAttribute('type',$type);
+		$nic->addNewChild(undef,'source')->setAttribute($type,$r->{'attachment'}->{'source'});
+	}
+}
+# Restrict the new VNC console to localhost with a fresh password and port.
+foreach my $graphics ($doc->findnodes('/domain/devices/graphics')) {
+	$graphics->setAttribute('passwd',$r->{'console_password'});
+	$graphics->setAttribute('autoport','yes'); $graphics->setAttribute('port','-1');
+	$graphics->setAttribute('listen','127.0.0.1');
+	$graphics->removeAttribute($_) foreach qw(socket passwdValidTo tlsPort websocket);
+	$_->unbindNode() foreach $graphics->findnodes('listen');
+	my $listen = $graphics->addNewChild(undef,'listen');
+	$listen->setAttribute('type','address'); $listen->setAttribute('address','127.0.0.1');
+}
+# Let libvirt allocate fresh terminal paths instead of reusing source files.
+foreach my $serial ($doc->findnodes('/domain/devices/serial | /domain/devices/console')) {
+	$serial->setAttribute('type','pty');
+	$_->unbindNode() foreach $serial->findnodes('source | log');
+}
+foreach my $channel ($doc->findnodes('/domain/devices/channel')) {
+	# Drop custom channels that do not belong to the copied guest agent.
+	if ($channel->findvalue('target/@name') ne 'org.qemu.guest_agent.0') { $channel->unbindNode(); }
+	# Let libvirt allocate a socket for the copied guest agent.
+	else { $_->unbindNode() foreach $channel->findnodes('source'); }
+}
+# A copied path preserves variables; an empty node requests fresh variables.
+foreach my $node ($doc->findnodes('/domain/os/nvram')) {
+	$node->removeChildNodes(); $node->removeAttribute('type');
+	$node->appendText($nvram->{'path'}) if ($nvram);
+}
+return $doc->toString();
+}
+
 # quiesce_source(self, id, adapter, [prefix]) snapshots or stops the source.
 # prefix defaults to clone and distinguishes backup snapshot and overlay names.
 # Journal intent before libvirt so recovery can attempt to release the source.
