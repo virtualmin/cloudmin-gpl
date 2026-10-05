@@ -22,6 +22,13 @@ die "Enter a valid SSH server and port\n" if (($t->{'host'} || '') !~ /\A[a-zA-Z
 return ($t->{'port'} || 22) == 22 ? lc($t->{'host'}) : '['.lc($t->{'host'}).']:'.(0+$t->{'port'});
 }
 
+# path(target) identifies approvals shared by schedules and restored archives.
+sub path
+{
+die "SSH backup trust directory is not configured\n" if (!$directory);
+return $directory.'/'.sha256_hex(host($_[0]));
+}
+
 # entries(file, host) delegates hashed names, patterns and markers to OpenSSH.
 sub entries
 {
@@ -35,6 +42,18 @@ close($fh);
 die "Cannot read SSH known hosts\n" if ($? && $? != 256);
 chomp(@lines);
 return @lines;
+}
+
+# known(target) uses approved replacements while retaining external revocations.
+sub known
+{
+my ($t) = @_;
+my $host = host($t);
+my @system = map { entries($_, $host) } @known_files;
+my $file = path($t);
+# An explicit replacement supersedes old ordinary entries, but not revocations.
+return [@system] if (!-e $file);
+return [entries($file, $host), grep { /^\@revoked\s/ } @system];
 }
 
 1;
