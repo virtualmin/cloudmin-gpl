@@ -406,4 +406,54 @@ return { %{$adapter->get_storage_volume_record($volume)}, pool => $saved->{'pool
 	identity => Cloudmin::VMManage::file_identity($volume->get_path()), block => 1 };
 }
 
+# release_source(self, id, adapter) restores the source before finishing a job.
+# Reservations remain held until the job completes or cleanup succeeds.
+sub release_source
+{
+my ($self, $id, $adapter) = @_;
+my $job = $self->{'jobs'}->get($id);
+my $r = $job->{'request'};
+return if ($job->{'resources'}->{'source_released'});
+my $domain = $adapter->find_domain($r->{'source_uuid'}) || die "The clone source disappeared; recovery requires inspection\n";
+if ($job->{'resources'}->{'quiescing'}) {
+	# A lost snapshot reply may leave filesystems frozen even without metadata.
+	# Native capture may also own a CPU pause, which must end before thawing.
+	if ($r->{'native_lvm'}) { $self->snapshots()->resume_native($id, $domain); }
+	# File snapshots only need their filesystem freeze released.
+	else { $self->snapshots()->thaw($id, $domain); }
+}
+# Recover the journaled snapshot attempt, including a lost creation reply.
+if ($job->{'resources'}->{'snapshot'}) {
+	if ($r->{'native_lvm'}) {
+		# Remove only this capture's native copies before releasing its reservation.
+		$self->snapshots()->resume_native($id, $domain);
+		$self->snapshots()->remove_native($id, $adapter, $domain);
+		}
+	else {
+	# File snapshots moved writes to overlays; merge those through libvirt.
+	my $snapshot = Cloudmin::Snapshots::find_snapshot($domain, $r->{'snapshot'});
+	if ($snapshot) {
+		# Verify deletion is safe before asking libvirt to merge the overlay.
+		Cloudmin::Snapshots::check_delete($domain, $snapshot);
+		$snapshot->delete(0);
+	}
+	# A lost snapshot reply must not strand a writable overlay without metadata.
+	my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0));
+	my %paths = map { $_->getValue() => 1 } $doc->findnodes('/domain/devices/disk/source/@file');
+	die "A temporary clone overlay still needs recovery\n"
+		if (grep { $_->{'overlay'} && ($paths{$_->{'overlay'}} ||
+			-e $_->{'overlay'} || -l $_->{'overlay'}) } @{$r->{'disks'}});
+	}
+}
+if ($job->{'resources'}->{'shutdown_requested'} && $r->{'active'} && !$domain->is_active()) {
+	# Restart only a source that this job was asked to shut down for copying.
+	$domain->create();
+}
+elsif ($job->{'resources'}->{'shutdown_requested'} && !$job->{'resources'}->{'shutdown_complete'}) {
+	# A delivered ACPI shutdown may still finish after a cancelled wait.
+	die "The source shutdown is still pending; retry recovery after it stops\n";
+}
+$self->{'jobs'}->update($id, sub { $_[0]->{'resources'}->{'source_released'} = 1; });
+}
+
 1;
