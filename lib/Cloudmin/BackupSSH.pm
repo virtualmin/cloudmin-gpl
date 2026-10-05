@@ -106,4 +106,24 @@ return {status => (grep { $observed{key($_)} } @trusted) ? 'trusted' : @$known ?
 	previous => digest($known), proposed => digest($observed), keys => $observed};
 }
 
+# approve(target, previous_digest, proposed_digest) saves only the reviewed keys.
+sub approve
+{
+my ($t, $previous, $proposed) = @_;
+# Rescan on approval so an old confirmation cannot accept a newly changed key.
+my $state = check($t);
+die "The SSH host keys changed again. Check the fingerprints and try again.\n"
+	if (($previous || '') ne $state->{'previous'} || ($proposed || '') ne $state->{'proposed'});
+# Serialize trust updates and recheck the previous state after taking the lock.
+Cloudmin::SSHKeys->new($directory)->check_directory(1);
+sysopen(my $lock, "$directory/.lock", O_RDWR|O_CREAT|O_NOFOLLOW, 0600) or die "Cannot lock SSH host trust\n";
+flock($lock, LOCK_EX) or die "Cannot lock SSH host trust\n";
+die "SSH host trust changed. Check the fingerprints and try again.\n" if (digest(known($t)) ne $previous);
+# Publish a complete private trust file; never edit system known_hosts entries.
+my ($fh, $temp) = tempfile('.known-XXXXXXXX', DIR => $directory, UNLINK => 1);
+print($fh join("\n", @{$state->{'keys'}})."\n") && close($fh) or die "Cannot save SSH host trust\n";
+rename($temp, path($t)) or die "Cannot save SSH host trust\n";
+return {status => 'trusted', host => $state->{'host'}};
+}
+
 1;
