@@ -22,4 +22,19 @@ die "Enter a valid SSH server and port\n" if (($t->{'host'} || '') !~ /\A[a-zA-Z
 return ($t->{'port'} || 22) == 22 ? lc($t->{'host'}) : '['.lc($t->{'host'}).']:'.(0+$t->{'port'});
 }
 
+# entries(file, host) delegates hashed names, patterns and markers to OpenSSH.
+sub entries
+{
+my ($file, $host) = @_;
+# An absent trust file is normal; a failed lookup must not look like no trust.
+return () if (!-e $file);
+open(my $fh, '-|', 'ssh-keygen', '-F', $host, '-f', $file) or die "Cannot read SSH known hosts\n";
+my @lines = grep { !/^#/ && /\S/ } <$fh>;
+close($fh);
+# ssh-keygen exits with 1 for no match; other failures need attention.
+die "Cannot read SSH known hosts\n" if ($? && $? != 256);
+chomp(@lines);
+return @lines;
+}
+
 1;
