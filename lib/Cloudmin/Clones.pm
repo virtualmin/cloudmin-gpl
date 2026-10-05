@@ -456,6 +456,24 @@ elsif ($job->{'resources'}->{'shutdown_requested'} && !$job->{'resources'}->{'sh
 $self->{'jobs'}->update($id, sub { $_[0]->{'resources'}->{'source_released'} = 1; });
 }
 
+# cleanup(self, id, adapter) restores the source, then removes only owned copies.
+sub cleanup
+{
+my ($self, $id, $adapter) = @_;
+my $job = $self->{'jobs'}->get($id);
+my $r = $job->{'request'};
+Cloudmin::Worker->new()->cleanup($job->{'worker'}) if ($job->{'worker'});
+# Restore the source first; failed restoration must keep both reservations.
+$self->release_source($id, $adapter) if ($job->{'resources'}->{'started'});
+$adapter->remove_created_guest($r->{'uuid'}, $id) if ($job->{'resources'}->{'domain'});
+# Remove credentials and volumes only through their recorded ownership checks.
+$self->{'ssh_keys'}->remove($r->{'uuid'}, $id) if ($job->{'resources'}->{'ssh_key'});
+foreach my $volume (@{$job->{'resources'}->{'volumes'} || []}, map { $job->{'resources'}->{$_} || () } qw(seed nvram)) {
+	$adapter->remove_created_volume($volume->{'pool'} || $r->{'pool'}, $volume->{'name'}, $volume->{'key'});
+}
+$self->clean_work($id);
+}
+
 # clean_work(self, id) removes fixed staging filenames, never source files.
 sub clean_work
 {
