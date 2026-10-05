@@ -126,4 +126,15 @@ rename($temp, path($t)) or die "Cannot save SSH host trust\n";
 return {status => 'trusted', host => $state->{'host'}};
 }
 
+# require_trusted(target) fails before backup work when approval is needed.
+sub require_trusted
+{
+my ($t) = @_;
+my $state = check($t);
+die "SSH host key ".($state->{'status'} eq 'unknown' ? 'is unknown' : 'has changed').
+	" for $state->{host}. Open the backup or restore form to check and approve its fingerprints.\n"
+	if ($state->{'status'} ne 'trusted');
+return 1;
+}
+
 1;
