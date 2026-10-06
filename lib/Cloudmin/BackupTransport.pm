@@ -186,4 +186,103 @@ Cloudmin::Worker->new()->run('backup_transfer', {operation => $op, target => $t,
 	($op eq 'get' ? (output => $local) : ()), %{$opts || {}});
 }
 
+# remote(request) runs native clients or Virtualmin helpers in a private worker.
+sub remote
+{
+my ($r) = @_;
+require(dirname(__FILE__).'/WorkerTasks.pm');
+my $t = validate($r->{'target'});
+my ($op, $name) = @$r{qw(operation filename)};
+my $file = $t->{'path'}.(length($t->{'path'}) ? '/' : '').$name;
+my $local = $op eq 'put' ? 'archive' : 'output';
+my $mode = $t->{'mode'};
+# Keep provider secrets out of command arguments and disable metadata fallback.
+local %ENV = %ENV;
+$ENV{'AWS_EC2_METADATA_DISABLED'} = 'true';
+$ENV{'AWS_PAGER'} = '';
+$ENV{'AWS_ACCESS_KEY_ID'} = $t->{'access'} || '';
+$ENV{'AWS_SECRET_ACCESS_KEY'} = $t->{'secret'} || '';
+$ENV{'AWS_SESSION_TOKEN'} = $t->{'session_token'} || '';
+$ENV{'AWS_DEFAULT_REGION'} = $t->{'region'} || 'us-east-1';
+$ENV{'AWS_CA_BUNDLE'} = 'ca.pem' if ($t->{'ca_file'});
+$ENV{'AZURE_STORAGE_KEY'} = $t->{'secret'} || '';
+$ENV{'B2_APPLICATION_KEY_ID'} = $t->{'access'} || '';
+$ENV{'B2_APPLICATION_KEY'} = $t->{'secret'} || '';
+if ($mode eq 's3') {
+	# Virtualmin also delegates multipart transfers and signing to the AWS CLI.
+	my $url = 's3://'.$t->{'bucket'}.'/'.$file;
+	my @args = ('aws', ($t->{'endpoint'} ? ('--endpoint-url', $t->{'endpoint'}) : ()),
+		's3', $op eq 'delete' ? ('rm', $url) : ('cp', $op eq 'put' ? ($local, $url) : ($url, $local)), '--only-show-errors');
+	Cloudmin::WorkerTasks::command(@args);
+}
+elsif ($mode eq 'ssh') {
+	# The controller supplies trust; SSH still checks the server during transfer.
+	my @args = ('sftp', '-F', '/dev/null', '-P', $t->{'port'}, '-o', 'StrictHostKeyChecking=yes',
+		'-o', 'UserKnownHostsFile=known-hosts', '-o', 'GlobalKnownHostsFile=/dev/null',
+		'-o', 'UpdateHostKeys=no', '-o', 'IdentitiesOnly=yes', '-o', 'ConnectTimeout=30',
+		'-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3');
+	# A selected private key uses noninteractive public-key authentication.
+	if ($t->{'key_file'}) { push(@args, '-i', 'ssh-key', '-o', 'BatchMode=yes'); }
+	else {
+		# sshpass reads a private file, keeping the password out of argv and logs.
+		Cloudmin::WorkerTasks::write_file('password', $t->{'password'}."\n");
+		unshift(@args, 'sshpass', '-f', 'password');
+		push(@args, '-o', 'BatchMode=no');
+	}
+	# Upload to a partial name, then publish through the same SFTP session.
+	my $command = $op eq 'put' ? "put archive \"$file.partial\"\nrename \"$file.partial\" \"$file\"\n" :
+		$op eq 'get' ? "get \"$file\" output\n" : "rm \"$file\"\n";
+	Cloudmin::WorkerTasks::write_file('batch', $command);
+	push(@args, '-b', 'batch', $t->{'user'}.'@'.$t->{'host'});
+	Cloudmin::WorkerTasks::command(@args);
+}
+else {
+	# Keep the provider APIs and their OAuth refresh logic from Virtualmin Pro.
+	require $PRO_HELPERS;
+	# Webmin's general HTTP helpers accept optional certificate requirements;
+	# backup credentials require verified HTTPS on every connection and redirect.
+	my ($ca) = grep { -r $_ } ('/etc/pki/tls/certs/ca-bundle.crt', '/etc/ssl/certs/ca-certificates.crt', '/etc/ssl/ca-bundle.pem');
+	die "Install system CA certificates for cloud backups\n" if (!$ca);
+	my $connect = \&WebminCore::make_http_connection;
+	# verified(connection_args...) preserves Webmin's call signature while
+	# requiring the system CA bundle and peer hostname on each HTTPS
+	# connection.
+	my $verified = sub {
+		my @args = @_;
+		die "Cloud backup connections require HTTPS\n" if (!$args[2]);
+		$args[7] = {capath => $ca, host => $args[0]};
+		return $connect->(@args);
+	};
+	local *WebminCore::make_http_connection = $verified;
+	local *Cloudmin::BackupCloud::make_http_connection = $verified;
+	# OAuth refresh state belongs to this worker, not the host module
+	# settings.
+	local %Cloudmin::BackupCloud::config = (
+		azure_name => $t->{'account'}, azure_id => $t->{'subscription'},
+		(map { ($_.'_account' => 1, $_.'_project' => $t->{'project'}, $_.'_clientid' => $t->{'access'},
+			$_.'_secret' => $t->{'secret'}, $_.'_rtoken' => $t->{'refresh_token'}, $_.'_tstart' => 0, $_.'_ttime' => 0) } qw(google drive)),
+		dropbox_rtoken => $t->{'refresh_token'}, dropbox_tstart => 0, dropbox_expires => 0);
+	local $Cloudmin::BackupCloud::module_config_directory = '.';
+	local $Cloudmin::BackupCloud::dropbox_app_key = $t->{'access'};
+	local $Cloudmin::BackupCloud::dropbox_app_secret = $t->{'secret'};
+	# Adapt the provider helpers' bucket/object API to the chosen operation.
+	my %methods = (
+		gcs => [\&Cloudmin::BackupCloud::upload_gcs_file, \&Cloudmin::BackupCloud::download_gcs_file, \&Cloudmin::BackupCloud::delete_gcs_file],
+		azure => [\&Cloudmin::BackupCloud::upload_azure_file, \&Cloudmin::BackupCloud::download_azure_file, \&Cloudmin::BackupCloud::delete_azure_file],
+		bb => [\&Cloudmin::BackupCloud::upload_bb_file, \&Cloudmin::BackupCloud::download_bb_file, \&Cloudmin::BackupCloud::delete_bb_file],
+		dropbox => [\&Cloudmin::BackupCloud::upload_dropbox_file, \&Cloudmin::BackupCloud::download_dropbox_file, \&Cloudmin::BackupCloud::delete_dropbox_path],
+		drive => [\&Cloudmin::BackupCloud::upload_drive_file, \&Cloudmin::BackupCloud::download_drive_file, \&Cloudmin::BackupCloud::delete_drive_file]);
+	my $method = $methods{$mode}->[$op eq 'put' ? 0 : $op eq 'get' ? 1 : 2];
+	# Drive and Dropbox use a folder path where object stores use a bucket.
+	my ($bucket, $object) = $mode =~ /\A(?:drive|dropbox)\z/ ? ($t->{'path'}, $name) : ($t->{'bucket'}, $file);
+	my $error = $method->($bucket, $object, $op eq 'delete' ? () : (Cwd::getcwd().'/'.$local));
+	# Provider responses can contain secrets; expose only a generic failure
+	# here.
+	die "Cloud backup transfer failed\n" if (defined($error) && !ref($error) && length($error));
+}
+# Validate the downloaded file before the controller claims it from the worker.
+die "The remote backup is empty or exceeds staging space\n" if ($op eq 'get' && (!-s 'output' || -s 'output' > $r->{'limit'}));
+return {};
+}
+
 1;
