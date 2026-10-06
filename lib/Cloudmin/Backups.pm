@@ -25,4 +25,24 @@ die "Unsafe backup metadata directory\n" if (!@st || !-d _ || -l _ || $st[4] != 
 return $dir;
 }
 
+# record(self, id, [value]) reads or atomically saves a private backup record.
+sub record
+{
+my ($self, $id, $value) = @_;
+Cloudmin::Jobs::validate_id($id);
+my $path = $self->directory()."/$id.json";
+if ($value) {
+	# Publish metadata only after writing a complete private file.
+	my ($fh, $temp) = tempfile('.record-XXXXXXXX', DIR => $self->directory(), UNLINK => 1);
+	print($fh encode_json($value)) && close($fh) or die "Cannot write backup record\n";
+	rename($temp, $path) or die "Cannot save backup record\n";
+	return $value;
+}
+# Missing records are normal for unfinished jobs; malformed records must fail.
+return undef if (!-f $path);
+open(my $fh, '<', $path) or die "Cannot read backup record\n";
+local $/;
+return decode_json(<$fh>);
+}
+
 1;
