@@ -45,4 +45,14 @@ local $/;
 return decode_json(<$fh>);
 }
 
+# archive_filename(name, job_id, timestamp, compressed) makes archives identifiable.
+# The full job ID still prevents collisions between simultaneous submissions.
+sub archive_filename
+{
+my ($name, $id, $time, $compressed) = @_;
+$name =~ s/[^a-zA-Z0-9_.-]+/-/g;
+$name = substr($name, 0, 100) || 'machine';
+return 'cloudmin-'.$name.'-'.strftime('%Y%m%dT%H%M%SZ', gmtime($time))."-$id.tar".($compressed ? '.gz' : '');
+}
+
 1;
