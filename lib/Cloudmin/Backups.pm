@@ -45,6 +45,28 @@ local $/;
 return decode_json(<$fh>);
 }
 
+# purge_inspections(self) expires unused downloads after a day, under a lock.
+# Active restores retain their inspection even if its confirmation page is old.
+sub purge_inspections
+{
+my ($self) = @_;
+# Use the submission lock so a restore cannot reserve a download during expiry.
+$self->{'jobs'}->lock('create-host', sub {
+	my %used = map { ($_->{'request'}->{'inspection'} || '') => 1 } @{$self->{'jobs'}->list_pending()};
+	opendir(my $dh, $self->directory()) or die "Cannot read backup staging directory\n";
+	my @ids = map { /^work-([a-f0-9]{32})$/ ? $1 : () } readdir($dh); closedir($dh);
+	foreach my $id (@ids) {
+		# Preserve active restores and any cache still needed for
+		# recovery.
+		next if ($used{$id});
+		my $job = $self->{'jobs'}->get($id) || next;
+		next if (($job->{'request'}->{'operation'} || '') ne 'backup_inspect' || $job->{'state'} ne 'complete' ||
+			$job->{'cleanup_pending'} || $job->{'updated'} >= time()-86400);
+		$self->clean_work($id);
+	}
+});
+}
+
 # archive_filename(name, job_id, timestamp, compressed) makes archives identifiable.
 # The full job ID still prevents collisions between simultaneous submissions.
 sub archive_filename
