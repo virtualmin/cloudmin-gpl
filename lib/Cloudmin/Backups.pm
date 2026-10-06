@@ -55,4 +55,32 @@ $name = substr($name, 0, 100) || 'machine';
 return 'cloudmin-'.$name.'-'.strftime('%Y%m%dT%H%M%SZ', gmtime($time))."-$id.tar".($compressed ? '.gz' : '');
 }
 
+# firmware_digest(path, identity) hashes a bounded regular NVRAM file.
+# Checking both file metadata and content catches writes and replacements.
+sub firmware_digest
+{
+my ($path, $identity) = @_;
+sysopen(my $fh, $path, O_RDONLY|O_NOFOLLOW) or die "Cannot read firmware variables\n";
+# Match the opened inode to the source validated before quiescing.
+my @before = stat($fh);
+die "Invalid firmware variables file\n" if (!-f $fh || !$before[7] || $before[7] > 64*1024**2 ||
+	join(':', @before[0,1]) ne $identity);
+my $hash = Digest::SHA->new(256);
+my ($bytes, $buffer) = (0, '');
+# Bound reads even if the live firmware file grows while it is being hashed.
+while (1) {
+	my $n = read($fh, $buffer, 65536);
+	die "Cannot read firmware variables\n" if (!defined($n));
+	last if (!$n);
+	$bytes += $n;
+	die "Firmware variables grew during backup\n" if ($bytes > 64*1024**2);
+	$hash->add($buffer);
+}
+# Reject metadata or length changes observed during this read.
+my @after = stat($fh); close($fh);
+die "Firmware variables changed during backup; retry or choose clean shutdown\n"
+	if ($bytes != $before[7] || join(':', @before[0,1,7,9,10]) ne join(':', @after[0,1,7,9,10]));
+return $hash->hexdigest();
+}
+
 1;
