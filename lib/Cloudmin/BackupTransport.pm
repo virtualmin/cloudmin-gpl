@@ -25,6 +25,27 @@ sub modes
 return (qw(local ssh s3), has_pro_providers() ? qw(gcs azure bb dropbox drive) : ());
 }
 
+# saved_target(target, [previous]) retains blank credentials only for this provider.
+# Explicit clearing lets administrators remove an optional token or password.
+sub saved_target
+{
+my ($target, $previous) = @_;
+die "Select a backup destination\n" if (ref($target) ne 'HASH');
+my %target = %$target;
+foreach my $field (qw(password secret session_token refresh_token)) {
+	my $clear = delete($target{$field.'_clear'});
+	die "Invalid credential choice\n" if (defined($clear) && $clear !~ /\A[01]?\z/);
+	# Explicit clearing takes priority over the saved-secret fallback.
+	if ($clear) { $target{$field} = ''; }
+	# Reuse blanks only within the same provider, never after a provider
+	# switch.
+	elsif (!length($target{$field} // '') && $previous && ($previous->{'mode'} || '') eq ($target{'mode'} || '')) {
+		$target{$field} = $previous->{$field} // '';
+	}
+}
+return validate(\%target);
+}
+
 # validate(target, [restoring]) checks destination fields without contacting it.
 # The optional restoring flag is accepted by the service callback; validation
 # is identical for backup and restore.
