@@ -97,4 +97,27 @@ $t{'path'} =~ s{/+\z}{} if ($t{'path'} ne '/');
 return \%t;
 }
 
+# preflight(target, restoring) checks tools and storage before stopping a guest.
+sub preflight
+{
+my ($t, $restoring) = @_;
+$t = validate($t, $restoring);
+if ($t->{'mode'} eq 'local') {
+	# Backup may create a private destination; restore requires an existing
+	# one.
+	make_path($t->{'path'}, {mode => 0700}) if (!$restoring && !-e $t->{'path'} && !-l $t->{'path'});
+	my @st = lstat($t->{'path'});
+	die "Select an existing private backup directory\n" if (!@st || !-d _ || -l _ || ($st[2] & 0022));
+}
+# Check command-line dependencies before guest preparation or worker startup.
+my @tools = $t->{'mode'} eq 's3' ? ('aws') : $t->{'mode'} eq 'azure' ? ('az') :
+	$t->{'mode'} eq 'ssh' ? ('sftp', 'ssh-keygen', 'ssh-keyscan', $t->{'password'} && !$t->{'key_file'} ? ('sshpass') : ()) : ();
+foreach my $tool (@tools) { die "Install $tool on this host for the selected backup destination\n" if (!WebminCore::has_command($tool)); }
+Cloudmin::BackupSSH::require_trusted($t) if ($t->{'mode'} eq 'ssh');
+# B2 packages use different executable names across distributions.
+if ($t->{'mode'} eq 'bb') {
+	die "Install the Backblaze B2 command on this host\n" if (!grep { WebminCore::has_command($_) } qw(b2 b2-linux backblaze-b2));
+}
+}
+
 1;
