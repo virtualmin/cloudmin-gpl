@@ -147,4 +147,28 @@ remove_tree($work, {error => \$errors}) if (-d $work);
 die "Cannot remove backup staging files\n" if ($errors && @$errors);
 }
 
+# cleanup(self, id, adapter) releases the source or removes an incomplete restore.
+sub cleanup
+{
+my ($self, $id, $adapter) = @_;
+my $job = $self->{'jobs'}->get($id);
+my $r = $job->{'request'};
+# Stop isolated writers before touching files or reversing libvirt changes.
+Cloudmin::Worker->new()->cleanup($job->{'worker'}) if ($job->{'worker'});
+if ($r->{'operation'} eq 'backup') {
+	# A failed merge or pending shutdown keeps the source reserved for recovery.
+	$self->release_source($id, $adapter) if ($job->{'resources'}->{'started'});
+}
+elsif ($r->{'operation'} eq 'restore') {
+	# Rollback may remove only the new guest carrying this restore job's marker.
+	$adapter->remove_created_guest($r->{'uuid'}, $id) if ($job->{'resources'}->{'domain'});
+	$self->{'ssh_keys'}->remove($r->{'uuid'}, $id) if ($job->{'resources'}->{'ssh_key'});
+}
+# Recovery uses the journalled names even if creation never returned a key.
+foreach my $v (@{$job->{'resources'}->{'volumes'} || []}) {
+	$adapter->remove_created_volume($v->{'pool'}, $v->{'name'}, $v->{'key'});
+}
+$self->clean_work($id);
+}
+
 1;
