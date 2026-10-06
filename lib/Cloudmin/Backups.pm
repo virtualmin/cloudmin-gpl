@@ -83,4 +83,16 @@ die "Firmware variables changed during backup; retry or choose clean shutdown\n"
 return $hash->hexdigest();
 }
 
+# copy_firmware(source, destination, identity, [before]) accepts only stable bytes.
+# For live backup, before is captured immediately before the disk snapshot.
+sub copy_firmware
+{
+my ($source, $dest, $identity, $before) = @_;
+$before ||= firmware_digest($source, $identity);
+Cloudmin::Worker::copy_file($source, $dest, 64*1024**2);
+die "Firmware variables changed during backup; retry or choose clean shutdown\n"
+	if (firmware_digest($source, $identity) ne $before ||
+		firmware_digest($dest, Cloudmin::VMManage::file_identity($dest)) ne $before);
+}
+
 1;
