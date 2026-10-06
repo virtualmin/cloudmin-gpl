@@ -130,4 +130,60 @@ return 'SSH: '.$t->{'host'}.':'.$t->{'path'} if ($t->{'mode'} eq 'ssh');
 return uc($t->{'mode'}).': '.($t->{'bucket'} || '').'/'.$t->{'path'};
 }
 
+# transfer(operation, target, filename, local_file, [worker_options]) transfers one
+# fixed archive. Remote options provide cancellation and worker journalling.
+sub transfer
+{
+my ($op, $t, $name, $local, $opts) = @_;
+$t = validate($t, $op eq 'get');
+die "Invalid backup filename\n" if (($name || '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9_.-]{0,199}\.tar(?:\.gz)?\z/);
+die "Unknown backup transfer operation\n" if ($op !~ /\A(?:put|get|delete)\z/);
+if ($t->{'mode'} eq 'local') {
+	# A single private directory works for local disks and mounted NFS storage.
+	my $dir = $t->{'path'};
+	die "The backup directory does not exist\n" if (!-d $dir || -l $dir);
+	my @st = stat($dir);
+	die "The backup directory must not be writable by other users\n" if ($st[2] & 0022);
+	my $path = "$dir/$name";
+	if ($op eq 'put') {
+		# A repeated upload must not overwrite an already published
+		# archive.
+		die "A backup with this filename already exists\n" if (-e $path || -l $path);
+		# Copy inside a private directory so an existing partial file or symlink
+		# cannot redirect the privileged write. Link publishes without replacing.
+		my $stage = tempdir('.cloudmin-XXXXXXXX', DIR => $dir, CLEANUP => 0);
+		my $temp = "$stage/archive";
+		eval { Cloudmin::Worker::copy_file($local, $temp, -s $local);
+			link($temp, $path) or die "Cannot publish backup archive\n"; unlink($temp) or die "Cannot remove backup transfer file\n";
+			rmdir($stage) or die "Cannot remove backup staging directory\n"; 1 }
+			or do { my $e = $@; unlink($temp); rmdir($stage); die $e; };
+	}
+	# Bound local downloads by available staging space too.
+	elsif ($op eq 'get') { Cloudmin::Worker::copy_file($path, $local, Cloudmin::Worker::free_space(dirname($local))-256*1024**2); }
+	# Deleting an already absent local archive is idempotent.
+	else { unlink($path) or die "Cannot delete backup archive\n" if (-e $path || -l $path); }
+	return;
+}
+# Only uploads need the input archive copied into the isolated worker.
+my %files;
+$files{'archive'} = $local if ($op eq 'put');
+foreach my $field (qw(key_file ca_file)) {
+	# Only administrator-selected credential files cross into the worker.
+	next if (!$t->{$field});
+	die "Select an absolute credential file path\n" if ($t->{$field} !~ m{\A/});
+	$files{$field eq 'key_file' ? 'ssh-key' : 'ca.pem'} = $t->{$field};
+}
+my $limit = Cloudmin::Worker::free_space(dirname($local))-256*1024**2;
+my %contents;
+if ($t->{'mode'} eq 'ssh') {
+	# Give the isolated client only this server's trusted entries.
+	my $known = Cloudmin::BackupSSH::known($t);
+	die "SSH host key is unknown. Open the backup or restore form to approve its fingerprints.\n" if (!@$known);
+	$contents{'known-hosts'} = join("\n", @$known)."\n";
+}
+Cloudmin::Worker->new()->run('backup_transfer', {operation => $op, target => $t,
+	filename => $name, limit => $limit}, files => \%files, contents => \%contents,
+	($op eq 'get' ? (output => $local) : ()), %{$opts || {}});
+}
+
 1;
