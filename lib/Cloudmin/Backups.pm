@@ -45,6 +45,22 @@ local $/;
 return decode_json(<$fh>);
 }
 
+# inventory(self) lists completed backups without transport credentials or XML.
+sub inventory
+{
+my ($self) = @_;
+# Standalone metadata readers may have no job store for cache expiry.
+$self->purge_inspections() if ($self->{'jobs'});
+opendir(my $dh, $self->directory()) or die "Cannot list backups\n";
+my @ids = map { /^([a-f0-9]{32})\.json$/ ? $1 : () } readdir($dh);
+closedir($dh);
+# Newest-first order also lets retention preserve the latest backup of each VM.
+return [sort { $b->{'created'} <=> $a->{'created'} } map {
+	my $r = $self->record($_);
+	+{map { $_ => $r->{$_} } qw(id name uuid created size sha256 filename destination schedule deleted)}
+} @ids];
+}
+
 # purge_inspections(self) expires unused downloads after a day, under a lock.
 # Active restores retain their inspection even if its confirmation page is old.
 sub purge_inspections
