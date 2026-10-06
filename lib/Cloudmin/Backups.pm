@@ -171,4 +171,17 @@ foreach my $v (@{$job->{'resources'}->{'volumes'} || []}) {
 $self->clean_work($id);
 }
 
+# transfer_file(self, id, operation, target, filename, local) journals remote workers.
+sub transfer_file
+{
+my ($self, $id, @args) = @_;
+$self->{'transfer'}->(@args, {
+ # started(worker_id) lets cancellation locate and stop the transfer service.
+ started => sub { my $worker = $_[0]; $self->{'jobs'}->update($id, sub { $_[0]->{'worker'} = $worker; }); },
+ # progress(...) checks cancellation while the worker is still transferring.
+ progress => sub { $self->checkpoint($id); }
+});
+$self->{'jobs'}->update($id, sub { delete($_[0]->{'worker'}); });
+}
+
 1;
