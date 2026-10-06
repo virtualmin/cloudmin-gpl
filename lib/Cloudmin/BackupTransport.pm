@@ -120,4 +120,14 @@ if ($t->{'mode'} eq 'bb') {
 }
 }
 
+# label(target) names a destination without displaying credentials.
+sub label
+{
+my ($t) = @_;
+# Local paths need no protocol prefix; remote labels identify their endpoint.
+return $t->{'path'} if ($t->{'mode'} eq 'local');
+return 'SSH: '.$t->{'host'}.':'.$t->{'path'} if ($t->{'mode'} eq 'ssh');
+return uc($t->{'mode'}).': '.($t->{'bucket'} || '').'/'.$t->{'path'};
+}
+
 1;
