@@ -95,4 +95,18 @@ die "Firmware variables changed during backup; retry or choose clean shutdown\n"
 		firmware_digest($dest, Cloudmin::VMManage::file_identity($dest)) ne $before);
 }
 
+# work(self, id) returns this job's private staging path.
+sub work { Cloudmin::Jobs::validate_id($_[1]); return $_[0]->directory().'/work-'.$_[1]; }
+
+# clean_work(self, id) removes only the job's private staging directory.
+sub clean_work
+{
+my ($self, $id) = @_;
+my $work = $self->work($id);
+die "Unsafe backup staging directory\n" if (-l $work);
+my $errors;
+remove_tree($work, {error => \$errors}) if (-d $work);
+die "Cannot remove backup staging files\n" if ($errors && @$errors);
+}
+
 1;
