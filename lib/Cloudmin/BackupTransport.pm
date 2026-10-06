@@ -25,4 +25,55 @@ sub modes
 return (qw(local ssh s3), has_pro_providers() ? qw(gcs azure bb dropbox drive) : ());
 }
 
+# validate(target, [restoring]) checks destination fields without contacting it.
+# The optional restoring flag is accepted by the service callback; validation
+# is identical for backup and restore.
+sub validate
+{
+my ($t, $restoring) = @_;
+die "Select a backup destination\n" if (ref($t) ne 'HASH');
+my %t = %$t;
+die "Select a supported backup destination\n" if (($t{'mode'} || '') !~ /\A(?:local|ssh|s3|gcs|azure|bb|dropbox|drive)\z/);
+# Enforce the same edition boundary for forms, schedules, APIs and workers.
+die "This backup destination requires Cloudmin Pro\n" if (!grep { $_ eq $t{'mode'} } modes());
+# Bound all fields before constructing client requests or command arguments.
+foreach my $key (keys %t) {
+	die "Invalid backup destination field\n" if (ref($t{$key}) || length($t{$key} // '') > 16384 || ($t{$key} // '') =~ /[\x00-\x08\x0b\x0c\x0e-\x1f]/);
+}
+die "Enter a backup directory or cloud folder\n" if (!defined($t{'path'}) || length($t{'path'}) > 2048 || $t{'path'} =~ /[\r\n]/);
+# Filesystem destinations need an absolute directory without parent traversal.
+if ($t{'mode'} eq 'local' || $t{'mode'} eq 'ssh') {
+	die "Enter an absolute backup directory\n" if ($t{'path'} !~ m{\A/} || $t{'path'} =~ m{(?:\A|/)\.\.(?:/|\z)});
+}
+# SSH connection arguments and SFTP paths must be literal values.
+if ($t{'mode'} eq 'ssh') {
+	die "Enter a valid SSH server, username and port\n" if (($t{'host'} || '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9.:-]*\z/ ||
+		($t{'user'} || '') !~ /\A[a-zA-Z0-9_][a-zA-Z0-9_.-]*\z/ || ($t{'port'} || '22') !~ /\A\d+\z/ || ($t{'port'} || 22) > 65535);
+	$t{'port'} ||= 22;
+	Cloudmin::BackupSSH::host(\%t);
+	die "Enter an SSH password or private key file\n" if (!$t{'password'} && !$t{'key_file'});
+	die "SSH backup directories cannot contain wildcard characters\n" if ($t{'path'} =~ /[*?\[\]]/);
+}
+# Object stores separate the bucket or container from the object path.
+if ($t{'mode'} =~ /\A(?:s3|gcs|azure|bb)\z/) {
+	die "Enter a bucket or container name\n" if (($t{'bucket'} || '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,222}\z/);
+}
+# Cloud providers require explicit credentials rather than host account
+# defaults.
+if ($t{'mode'} !~ /\A(?:local|ssh)\z/) {
+	die "Enter the cloud account's access and secret credentials\n"
+		if (!$t{'secret'} || ($t{'mode'} ne 'azure' && !$t{'access'}));
+	die "Enter an OAuth refresh token\n" if ($t{'mode'} =~ /\A(?:gcs|drive|dropbox)\z/ && !$t{'refresh_token'});
+	die "Enter an Azure storage account\n" if ($t{'mode'} eq 'azure' && ($t{'account'} || '') !~ /\A[a-z0-9]{3,24}\z/);
+}
+# Custom S3 endpoints cannot embed credentials, paths or insecure HTTP.
+die "Use an HTTPS S3 endpoint without credentials or a path\n" if ($t{'endpoint'} &&
+	$t{'endpoint'} !~ m{\Ahttps://[a-zA-Z0-9][a-zA-Z0-9.:-]*\z});
+die "Enter a region name\n" if ($t{'region'} && $t{'region'} !~ /\A[a-zA-Z0-9-]+\z/);
+# Remote folders are literal paths; never allow command or traversal syntax.
+die "Invalid remote backup folder\n" if ($t{'mode'} ne 'local' && ($t{'path'} =~ /[\r\n"\\]/ || $t{'path'} =~ m{(?:\A|/)\.\.(?:/|\z)}));
+$t{'path'} =~ s{/+\z}{} if ($t{'path'} ne '/');
+return \%t;
+}
+
 1;
