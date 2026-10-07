@@ -139,4 +139,26 @@ return { state => 'invalid' } if ($response =~ /\AERR Invalid host or serial num
 return { state => 'unavailable' };
 }
 
+# load(self, credentials) verifies cached state before trusting its timestamps.
+# Missing, edited or copied state requires a new successful server check.
+sub load
+{
+my ($self, $credentials) = @_;
+my $state = eval {
+    my $secret = read_private("$self->{directory}/seal");
+    my $raw = read_private("$self->{directory}/status");
+    die "No cache\n" if (!$secret || !$raw);
+    my $envelope = convert_from_json($raw);
+    die "Invalid cache\n" if (ref($envelope) ne 'HASH' || ref($envelope->{'data'}) ||
+        hmac_sha256_hex($envelope->{'data'} // '', $secret) ne ($envelope->{'mac'} // ''));
+    my $data = convert_from_json($envelope->{'data'});
+    # A valid seal alone does not authorize another host, key or API version.
+    die "Different license\n" if (ref($data) ne 'HASH' ||
+        ($data->{'binding'} || '') ne $self->binding($credentials));
+    $data;
+};
+# Discard unusable cache data and let the caller request fresh verification.
+return $state || {};
+}
+
 1;
