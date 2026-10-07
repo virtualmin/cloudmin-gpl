@@ -587,4 +587,63 @@ $self->clean_work($id);
 $self->clean_work($r->{'inspection'});
 }
 
+# run(self, id) uses the durable job journal for completion, rollback and recovery.
+sub run
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+# The shared VM work lock serializes disk work across manual and scheduled jobs.
+return $jobs->run_worker($id, sub {
+	my $job = $jobs->get($id);
+	my $r = $job->{'request'};
+	my $adapter = $self->{'adapter'}->();
+	# Record conversion leases in this backup/restore job for safe recovery.
+	$adapter->{'disk_worker'} = sub { $self->worker_task($id, @_); };
+	my $ok = eval {
+		# Re-entered jobs roll back; replaying a partly completed copy
+		# is unsafe.
+		die "Backup operation was interrupted\n" if ($job->{'state'} ne 'queued');
+		$jobs->update($id, sub { $_[0]->{'state'} = 'running'; });
+		make_path($self->work($id), {mode => 0700});
+		# Backups must release their source before publishing a
+		# completed archive.
+		if ($r->{'operation'} eq 'backup') { $self->backup($id, $adapter); }
+		# Restores import only the previously inspected archive.
+		elsif ($r->{'operation'} eq 'restore') { $self->restore($id, $adapter); }
+		# Inspection keeps its download for a later confirmation
+		# request.
+		else { $self->inspect_backup($id); }
+		# Completion and a late cancellation compete in one job
+		# transaction.
+		$self->checkpoint($id);
+		$jobs->update($id, sub { die "Backup operation cancelled\n" if ($_[0]->{'cancel'});
+			$_[0]->{'state'} = 'complete'; delete($_[0]->{'request'}->{'source_xml'}); });
+		1;
+	};
+	my $error = $@;
+	# Provider diagnostics must not expose credentials saved in the request.
+	foreach my $field (qw(password secret session_token refresh_token access)) {
+		my $secret = ($r->{'target'} || {})->{$field};
+		$error =~ s/\Q$secret\E/[redacted]/g if ($secret);
+	}
+	# Failed cleanup keeps reservations held for an explicit recovery
+	# attempt.
+	if (!$ok) {
+		my $clean = eval { $self->cleanup($id, $adapter); 1 };
+		$error .= "; cleanup needs attention: $@" if (!$clean);
+		$jobs->update($id, sub {
+			$_[0]->{'state'} = $_[0]->{'cancel'} && $clean ? 'cancelled' : 'failed';
+			$_[0]->{'cleanup_pending'} = $clean ? 0 : 1;
+			$_[0]->{'error'} = substr(Cloudmin::Libvirt::error_message($error), 0, 2000);
+			$_[0]->{'events'}->[-1]->{'state'} = $_[0]->{'state'} if (@{$_[0]->{'events'}});
+			delete($_[0]->{'request'}->{'source_xml'});
+		});
+	}
+	# Audit failure must not undo a completed archive or successful
+	# rollback.
+	eval { $jobs->audit($r->{'operation'}.($ok ? '_complete' : '_failed'), $jobs->get($id)); };
+	return $ok ? 1 : 0;
+});
+}
+
 1;
