@@ -153,6 +153,16 @@ return defined($self->{'virtualmin_enabled'}) && !$self->{'virtualmin_enabled'} 
 	? "Virtualmin installation is disabled in Module Configuration. Re-enable it to use this template.\n" : '';
 }
 
+# base_settings(self, kind) reads inheritance defaults for templates or plans.
+# Bypass selection policy so a template that opts out of Virtualmin can still
+# inherit other settings from a disabled Default Template.
+sub base_settings
+{
+my ($self, $kind) = @_;
+my ($base) = grep { $_->{'id'} eq default_id() } @{$self->read($kind)->{'entries'}};
+return $base->{'settings'};
+}
+
 # fields(kind) lists reusable settings, excluding passwords and VM identities.
 sub fields
 {
