@@ -161,4 +161,22 @@ my $state = eval {
 return $state || {};
 }
 
+# save(self, state) seals the cache with a separate private random key.
+sub save
+{
+my ($self, $state) = @_;
+my $path = "$self->{directory}/seal";
+my $secret = read_private($path);
+if (!$secret) {
+    # OS randomness avoids deriving the cache seal from public host properties.
+    open(my $random, '<', '/dev/urandom') or die "Cannot generate license cache key\n";
+    read($random, $secret, 32) == 32 or die "Cannot generate license cache key\n";
+    close($random);
+    write_private($path, $secret);
+}
+my $data = convert_to_json($state, 0, 1, 1);
+write_private("$self->{directory}/status", convert_to_json({data => $data,
+    mac => hmac_sha256_hex($data, $secret)}, 0, 1));
+}
+
 1;
