@@ -62,4 +62,12 @@ return defined($self->{'virtualmin_enabled'}) && !$self->{'virtualmin_enabled'} 
 	? "Virtualmin installation is disabled in Module Configuration. Re-enable it to use this template.\n" : '';
 }
 
+# fields(kind) lists reusable settings, excluding passwords and VM identities.
+sub fields
+{
+return $_[0] eq 'plan' ? qw(cpus memory_mib disk_gib) :
+	(qw(image install_source pool network username auth_type ssh_keys require_fqdn address_mode
+		gateway4 gateway6 dns firmware start autostart), Cloudmin::Software::fields());
+}
+
 1;
