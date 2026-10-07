@@ -89,4 +89,12 @@ die "Enter a valid license serial number and key\n"
         !defined($key) || ref($key) || $key !~ /\A[A-Za-z0-9_-]{8,256}\z/);
 }
 
+# binding(self, credentials) ties cached decisions to this host and license.
+sub binding
+{
+my ($self, $credentials) = @_;
+return sha256_hex(join("\0", 'license/client-v2:cloudmin', $self->{'host'},
+    map { $credentials->{$_} // '' } qw(serial key)));
+}
+
 1;
