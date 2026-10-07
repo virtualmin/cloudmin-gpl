@@ -416,4 +416,79 @@ die "The backup contains unsupported host devices or extensions\n" if ($doc->exi
 	'/domain/bootloader | /domain/bootloader_args | /domain/devices/*[not(self::emulator or self::disk or self::controller or self::interface or self::input or self::graphics or self::video or self::channel or self::serial or self::console or self::rng or self::memballoon or self::watchdog or self::panic or self::audio)] | /domain/*[namespace-uri()!=""] | /domain/devices/*[namespace-uri()!=""] | /domain/devices/*/rom[@file] | /domain/devices/input/source | /domain/devices/audio[@type!="none"]'));
 }
 
+# restore_xml(xml, manifest, job_id, volumes, [nvram]) rebinds host resources.
+# Guest IDs, MACs, firmware and cloud-init bytes retain their original identity.
+sub restore_xml
+{
+my ($xml, $m, $id, $volumes, $nvram) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+die "The backup XML does not match its manifest\n" if ($doc->findvalue('/domain/name') ne $m->{'name'} || $doc->findvalue('/domain/uuid') ne $m->{'uuid'});
+check_external_state($doc);
+my %disks = map { $_->{'target'} => $_ } @{$m->{'disks'}};
+my %used;
+# Replace storage paths and drop backing chains; leave empty media drives empty.
+foreach my $disk ($doc->findnodes('/domain/devices/disk')) {
+	my $d = $disks{$disk->findvalue('target/@dev')};
+	die "The backup is missing a disk from its domain definition\n" if (!$d && $disk->exists('source'));
+	$_->unbindNode() foreach $disk->findnodes('source | backingStore | mirror | auth | encryption | seclabel');
+	next if (!$d);
+	die "Duplicate disk target in backup XML\n" if ($used{$d->{'target'}}++);
+	my $volume = $volumes->{$d->{'file'}};
+	$disk->setAttribute('type', $volume->{'block'} ? 'block' : 'file');
+	$disk->addNewChild(undef, 'source')->setAttribute($volume->{'block'} ? 'dev' : 'file', $volume->{'path'});
+	my ($driver) = $disk->findnodes('driver');
+	$driver ||= $disk->addNewChild(undef, 'driver');
+	$driver->setAttribute('name', 'qemu'); $driver->setAttribute('type', $volume->{'format'} || $d->{'format'});
+	$driver->setAttribute('cache', 'none') if ($volume->{'block'});
+}
+die "A backed-up disk is missing from the domain definition\n" if (keys(%used) != keys(%disks));
+die "The backup firmware has no matching domain device\n" if ($nvram && !$doc->exists('/domain/os/nvram'));
+# Use the archived variables and verified format, never a host template.
+foreach my $node ($doc->findnodes('/domain/os/nvram')) {
+	die "The backup is missing its UEFI variables\n" if (!$nvram);
+	$node->removeChildNodes(); $node->removeAttribute('type');
+	$node->removeAttribute($_) for qw(template templateFormat);
+	$node->appendText($nvram->{'path'});
+	$node->setAttribute('format', $m->{'nvram_format'});
+}
+# Only the ordinary host random source can be rebound safely.
+foreach my $node ($doc->findnodes('/domain/devices/rng/backend')) {
+	die "The backup contains an unsupported random source\n" if (($node->getAttribute('model') || '') ne 'random');
+	$node->removeChildNodes(); $node->appendText('/dev/urandom');
+}
+# Libvirt allocates fresh host sockets, ports and console paths on restore.
+foreach my $node ($doc->findnodes('/domain/devices/serial | /domain/devices/console')) {
+	$node->setAttribute('type','pty'); $_->unbindNode() foreach $node->findnodes('source | log');
+}
+foreach my $node ($doc->findnodes('/domain/devices/channel')) {
+	die "The backup contains an unsupported channel\n" if ($node->findvalue('target/@name') ne 'org.qemu.guest_agent.0');
+	$node->setAttribute('type','unix'); $_->unbindNode() foreach $node->findnodes('source | log');
+}
+foreach my $node ($doc->findnodes('/domain/devices/interface')) {
+	die "The backup contains an unsupported network interface\n" if ($node->getAttribute('type') !~ /\A(?:network|bridge)\z/ || $node->exists('filterref | script | backend'));
+	# Copy only the attachment name, excluding arbitrary host device attributes.
+	my $attribute = $node->getAttribute('type') eq 'bridge' ? 'bridge' : 'network';
+	my $attachment = $node->findvalue('source/@'.$attribute);
+	$_->unbindNode() foreach $node->findnodes('target | virtualport | source');
+	$node->addNewChild(undef,'source')->setAttribute($attribute, $attachment);
+}
+# Restored VNC consoles must not expose an old address or reuse host ports.
+foreach my $node ($doc->findnodes('/domain/devices/graphics')) {
+	die "The backup contains an unsupported graphical console\n" if ($node->getAttribute('type') ne 'vnc');
+	$node->setAttribute('listen','127.0.0.1'); $node->setAttribute('port','-1'); $node->setAttribute('autoport','yes');
+	$node->removeAttribute($_) for qw(socket websocket tlsPort);
+	$_->unbindNode() foreach $node->findnodes('listen');
+	my $listen = $node->addNewChild(undef,'listen'); $listen->setAttribute('type','address'); $listen->setAttribute('address','127.0.0.1');
+}
+# Let libvirt regenerate host labels and aliases; mark ownership for rollback.
+$_->unbindNode() foreach $doc->findnodes('/domain/seclabel | /domain/devices/*/alias');
+my ($metadata) = $doc->findnodes('/domain/metadata');
+$metadata ||= $doc->documentElement()->addNewChild(undef,'metadata');
+my ($cloudmin) = $metadata->findnodes('*[namespace-uri()="urn:cloudmin:vm:1"]');
+$cloudmin ||= $metadata->addNewChild('urn:cloudmin:vm:1', 'vm');
+$_->unbindNode() foreach $cloudmin->findnodes('*[local-name()="job"]');
+$cloudmin->addNewChild('urn:cloudmin:vm:1','job')->appendText($id);
+return $doc->toString();
+}
+
 1;
