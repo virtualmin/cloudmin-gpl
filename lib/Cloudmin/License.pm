@@ -232,6 +232,39 @@ die $error if ($error);
 return $result;
 }
 
+# status(self, [refresh], [force]) returns public fields, never the license key.
+# Reads recalculate deadlines even when the daily check has not run.
+# refresh permits a due check; force bypasses its interval only with refresh.
+sub status
+{
+my ($self, $refresh, $force) = @_;
+# Missing or malformed credentials cannot reuse a previously valid cache.
+my $credentials = $self->credentials();
+my $valid = eval { validate_credentials(@$credentials{qw(serial key)}); 1 };
+return $self->describe({}, $credentials, 'missing') if (!$valid);
+my $state = $self->load($credentials);
+my $now = $self->{'now'}->();
+# Normally check daily; retry outages hourly and recheck future timestamps.
+if ($refresh && ($force || !$state->{'checked'} || $state->{'checked'} > $now + 300 ||
+    $now - $state->{'checked'} >= ($state->{'unavailable'} ? 3600 : 86400))) {
+    # Reread under the lock so concurrent page loads share the same check.
+    return $self->locked(sub {
+        my $current = $self->credentials();
+        validate_credentials(@$current{qw(serial key)});
+        my $saved = $self->load($current);
+        # Another request may have refreshed the cache while we waited.
+        if ($force || !$saved->{'checked'} || $saved->{'checked'} > $now + 300 ||
+            $now - $saved->{'checked'} >= ($saved->{'unavailable'} ? 3600 : 86400)) {
+            $saved = $self->check($current, $saved);
+            $self->save($saved);
+        }
+        return $self->describe($saved, $current);
+    });
+}
+# Ordinary reads apply current deadlines without contacting the server.
+return $self->describe($state, $credentials);
+}
+
 # describe(self, state, credentials, [reason]) evaluates deadlines as plain data.
 # Expiry gets seven days; host overuse and loss of verification get 21 days.
 # reason overrides the inferred state, for example when credentials are absent.
