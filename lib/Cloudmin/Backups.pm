@@ -363,4 +363,16 @@ return {operation => 'restore', name => $m->{'name'}, uuid => $m->{'uuid'}, pool
 	inspection => $inspection->{'id'}, manifest => $m, archive_sha256 => $inspection->{'resources'}->{'archive_sha256'}, start => 0};
 }
 
+# check_external_state(document) rejects host files and devices absent from archives.
+# Apply the same boundary before creating a backup and before restoring its XML.
+sub check_external_state
+{
+my ($doc) = @_;
+# Reject external host resources before handing restored XML to privileged QEMU.
+die "The backup contains unsupported external host resources\n" if ($doc->exists(
+	'//*[local-name()="commandline"] | /domain/devices/filesystem | /domain/devices/hostdev | /domain/devices/tpm | /domain/devices/memory | /domain/devices/shmem | /domain/launchSecurity | /domain/os/varstore | /domain/os/kernel | /domain/os/initrd | /domain/os/dtb | /domain/os/acpi/table | /domain/sysinfo[@type="fwcfg"]/entry[@file] | /domain/devices/disk/source/dataStore'));
+die "The backup contains unsupported host devices or extensions\n" if ($doc->exists(
+	'/domain/bootloader | /domain/bootloader_args | /domain/devices/*[not(self::emulator or self::disk or self::controller or self::interface or self::input or self::graphics or self::video or self::channel or self::serial or self::console or self::rng or self::memballoon or self::watchdog or self::panic or self::audio)] | /domain/*[namespace-uri()!=""] | /domain/devices/*[namespace-uri()!=""] | /domain/devices/*/rom[@file] | /domain/devices/input/source | /domain/devices/audio[@type!="none"]'));
+}
+
 1;
