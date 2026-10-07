@@ -513,4 +513,78 @@ $devices->addNewChild(undef,'emulator')->appendText($caps->{'emulator'});
 return $doc->toString();
 }
 
+# restore(self, id, adapter) imports verified disks and defines a stopped guest.
+sub restore
+{
+my ($self, $id, $adapter) = @_;
+my $jobs = $self->{'jobs'};
+my $r = $jobs->get($id)->{'request'};
+my $m = $r->{'manifest'};
+my $work = $self->work($id);
+# Worker output names come from the validated manifest, never archive paths.
+my %outputs = map { $_ => "$work/$_" } keys %{$m->{'files'}};
+my $xml;
+$self->step($id, 'backup_verify', sub {
+	# Re-verify during extraction so confirmation cannot authorize changed
+	# bytes.
+	my $result = $self->worker_task($id, 'backup_archive', {extract => 1, limit => Cloudmin::Worker::free_space($work)-256*1024**2},
+		files => {archive => $self->work($r->{'inspection'}).'/archive'}, outputs => \%outputs);
+	die "The backup changed since inspection\n" if ($result->{'sha256'} ne $r->{'archive_sha256'});
+	open(my $fh, '<', "$work/domain.xml") or die "Cannot read restored domain XML\n";
+	local $/; $xml = <$fh>; close($fh);
+	$xml = $self->host_xml($xml, $adapter);
+	# Validate all device mappings before allocating destination volumes.
+	restore_xml($xml, $m, $id, {map { $_ => {path => "$work/$_"} } keys %outputs},
+		$m->{'files'}->{'nvram'} ? {path => "$work/nvram"} : undef);
+});
+my (%volumes, $nvram);
+$self->step($id, 'restore_disks', sub {
+	# File and thick destinations need room for full disk capacities. Thin disks
+	# check data and metadata usage during allocation and uploads.
+	my $pool = Cloudmin::Libvirt::storage_pool($adapter, $r->{'pool'});
+	my $names = restore_volume_names($xml, $m, $id, $r->{'pool_type'});
+	my $needed = 0; $needed += $_->{'capacity'} for @{$m->{'disks'}};
+	die "Not enough space to restore these disks\n" if (($r->{'pool_type'} || '') ne 'lvmthin' && $pool->get_info()->{'available'} < $needed + 256*1024**2);
+	foreach my $d (@{$m->{'disks'}}, $m->{'files'}->{'nvram'} ? ({file => 'nvram', format => $m->{'nvram_format'}}) : ()) {
+		$self->checkpoint($id);
+		my $f = $d->{'file'};
+		my $info = $self->worker_task($id, 'inspect', {format => $d->{'format'}}, files => {image => "$work/$f"});
+		die "Restored disk capacity differs from the backup manifest\n" if ($d->{'capacity'} && $info->{'virtual-size'} != $d->{'capacity'});
+		my $name = $names->{$f} || "cloudmin-$id-$f";
+		my $destination = $f eq 'nvram' ? $r->{'auxiliary_pool'} || $r->{'pool'} : $r->{'pool'};
+		my $slot = scalar(@{$jobs->get($id)->{'resources'}->{'volumes'} || []});
+		# journal() covers interrupted imports before the final volume
+		# key exists.
+		my $volume = $adapter->upload_seed($destination, $name, "$work/$f", sub {
+			$jobs->update($id, sub { $_[0]->{'resources'}->{'volumes'}->[$slot] = {pool => $destination, name => $name}; });
+		}, $d->{'format'}, $d->{'capacity'} || $info->{'virtual-size'});
+		$volume->{'pool'} = $destination;
+		$jobs->update($id, sub { $_[0]->{'resources'}->{'volumes'}->[$slot] = $volume; });
+		# Firmware is attached under os/nvram; ordinary members map to
+		# disks.
+		if ($f eq 'nvram') { $nvram = $volume; }
+		# Keep disk members indexed by manifest name for XML
+		# replacement.
+		else { $volumes{$f} = $volume; }
+	}
+});
+$self->step($id, 'define', sub {
+	$xml = restore_xml($xml, $m, $id, \%volumes, $nvram);
+	# Restore managed SSH access only when the archive contains its private
+	# key.
+	if ($m->{'files'}->{'ssh-key'}) {
+		$jobs->update($id, sub { $_[0]->{'resources'}->{'ssh_key'} = 1; });
+		Cloudmin::Worker::copy_file("$work/ssh-key", $self->{'ssh_keys'}->destination($r->{'uuid'}, $id), 16384);
+	}
+	# Record intent before definition; a recovered guest must stay stopped.
+	$jobs->update($id, sub { $_[0]->{'resources'}->{'domain'} = 1; });
+	$adapter->define_guest($xml);
+	$adapter->set_domain_autostart($r->{'uuid'}, 0);
+	$jobs->update($id, sub { $_[0]->{'resources'}->{'virtualmin'} = $m->{'virtualmin'} || ''; });
+});
+$self->clean_work($id);
+# The successful restore no longer needs its confirmed download.
+$self->clean_work($r->{'inspection'});
+}
+
 1;
