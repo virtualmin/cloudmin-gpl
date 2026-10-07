@@ -292,6 +292,24 @@ return $self->locked(sub {
 });
 }
 
+# deregister(self) clears local credentials under the same lock as a check.
+# Retain the bound cache so adding the same license cannot reset its grace period.
+sub deregister
+{
+my ($self) = @_;
+return $self->locked(sub {
+    if ($self->{'replace'}) {
+        # Clear repository authentication along with the saved license.
+        $self->{'replace'}->('', '');
+    }
+    else {
+        # Clear the saved credentials without contacting the license server.
+        write_private($self->{'file'}, "SerialNumber=\nLicenseKey=\n");
+    }
+    return $self->describe({}, {}, 'missing');
+});
+}
+
 # describe(self, state, credentials, [reason]) evaluates deadlines as plain data.
 # Expiry gets seven days; host overuse and loss of verification get 21 days.
 # reason overrides the inferred state, for example when credentials are absent.
