@@ -276,4 +276,25 @@ $self->{'transfer'}->(@args, {
 $self->{'jobs'}->update($id, sub { delete($_[0]->{'worker'}); });
 }
 
+# validate_manifest(manifest) checks restore identities and disk mappings.
+sub validate_manifest
+{
+my ($m) = @_;
+die "Invalid backup machine identity\n" if (($m->{'uuid'} || '') !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/ ||
+	($m->{'name'} || '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}\z/);
+die "Invalid backup disk list\n" if (ref($m->{'disks'}) ne 'ARRAY' || !@{$m->{'disks'}} || @{$m->{'disks'}} > 64);
+# Require a one-to-one mapping between archive members and guest devices.
+my (%files, %targets);
+foreach my $d (@{$m->{'disks'}}) {
+	die "Invalid backup disk mapping\n" if (ref($d) ne 'HASH' || ($d->{'file'} || '') !~ /\Adisk\d{1,2}\z/ ||
+		($d->{'target'} || '') !~ /\A[a-zA-Z0-9_-]+\z/ || ($d->{'format'} || '') !~ /\A(?:raw|qcow2)\z/ ||
+		!$m->{'files'}->{$d->{'file'}} || $files{$d->{'file'}}++ || $targets{$d->{'target'}}++);
+	Cloudmin::Worker::byte_limit($d->{'capacity'});
+}
+# Only supported firmware formats and known edition markers reach restore.
+die "Invalid backup firmware format\n" if ($m->{'files'}->{'nvram'} && ($m->{'nvram_format'} || '') !~ /\A(?:raw|qcow2)\z/);
+die "Invalid Virtualmin edition in backup\n" if (($m->{'virtualmin'} || '') !~ /\A(?:gpl|pro)?\z/);
+die "A backup disk has no device mapping\n" if (grep { /^disk\d+$/ && !$files{$_} } keys %{$m->{'files'}});
+}
+
 1;
