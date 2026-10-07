@@ -300,4 +300,37 @@ $clean{'settings'} = \%values;
 return \%clean;
 }
 
+# change(self, kind, action, callback) locks configuration edits and logs them.
+# callback(data) edits one complete file and returns the changed record or IDs.
+sub change
+{
+my ($self, $kind, $action, $callback) = @_;
+$self->{'access'}->(1);
+my $path = $self->path($kind);
+$self->{'lock'}->($path) || die "Cannot lock $kind settings\n";
+my ($result, @names);
+my $ok = eval {
+	my $data = $self->read($kind);
+	my %names = map { $_->{'id'} => $_->{'name'} } @{$data->{'entries'}};
+	$result = $callback->($data);
+	@names = map { $names{$_} || $_ } split(/,/, $result) if (!ref($result));
+	# Restore the caller's umask even if the private atomic write fails.
+	local $main::error_must_die = 1;
+	my $mask = umask(0077);
+	my $written = eval { write_file_contents($path, convert_to_json($data, 0, 1)); 1 };
+	my $error = $@;
+	umask($mask);
+	die $error if (!$written);
+	1;
+};
+my $error = $@;
+# Release the configuration lock before reporting a write failure.
+$self->{'unlock'}->($path);
+die $error if (!$ok);
+# Audit names and IDs only; reusable public keys need not enter the action log.
+$self->{'log'}->($action, $kind, ref($result) eq 'HASH' ? $result->{'id'} : $result,
+	ref($result) eq 'HASH' ? { name => $result->{'name'} } : { names => join("\0", @names) });
+return $result;
+}
+
 1;
