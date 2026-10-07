@@ -179,4 +179,36 @@ write_private("$self->{directory}/status", convert_to_json({data => $data,
     mac => hmac_sha256_hex($data, $secret)}, 0, 1));
 }
 
+# check(self, credentials, previous) records one bounded server result.
+# An outage cannot clear a known expiry or restart an existing grace period.
+sub check
+{
+my ($self, $credentials, $old) = @_;
+my $now = $self->{'now'}->();
+my $reply = eval { $self->{'request'}->($self->{'host'}, $credentials->{'key'}) };
+my $result = parse($reply);
+my $state = { %$old, binding => $self->binding($credentials), checked => $now };
+# Keep the last verified terms and grace deadlines when no answer is usable.
+if ($result->{'state'} eq 'unavailable') {
+    $state->{'unavailable'} = 1;
+    return $state;
+}
+# A fresh answer replaces old license terms, including removed host limits.
+$state = { %$result, binding => $self->binding($credentials), checked => $now,
+    verified => $now };
+# A server date well ahead of the local clock must not start a fresh grace.
+$state->{'clock'} = 1 if ($result->{'state'} eq 'expired' &&
+    $result->{'expires'} > $now + 86400);
+if ($result->{'max_hosts'} && $result->{'used_hosts'} > $result->{'max_hosts'}) {
+    # The API has no first-overuse date. Keep our first observation on this host.
+    $state->{'overused_since'} = $old->{'overused_since'} || $now;
+    $state->{'clock'} = 1 if ($state->{'overused_since'} > $now + 300);
+}
+else {
+    # A fresh count within the allowance ends the current migration period.
+    delete($state->{'overused_since'});
+}
+return $state;
+}
+
 1;
