@@ -211,4 +211,25 @@ else {
 return $state;
 }
 
+# locked(self, callback) serializes checks and credential changes across requests.
+sub locked
+{
+my ($self, $callback) = @_;
+my $dir = $self->{'directory'};
+# The lock and cache must live in a private directory owned by this process.
+make_path($dir, {mode => 0700}) if (!-e $dir);
+my @st = lstat($dir);
+die "License directory must be private and owned by the current user\n"
+    if (!-d _ || -l _ || $st[4] != $< || ($st[2] & 0077));
+# Keep the lock across the callback and release it before propagating errors.
+sysopen(my $lock, "$dir/lock", O_WRONLY | O_CREAT | O_NOFOLLOW, 0600)
+    or die "Cannot open license lock\n";
+flock($lock, LOCK_EX) or die "Cannot lock license storage\n";
+my $result = eval { $callback->() };
+my $error = $@;
+close($lock);
+die $error if ($error);
+return $result;
+}
+
 1;
