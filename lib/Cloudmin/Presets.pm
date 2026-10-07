@@ -31,6 +31,89 @@ die "Unknown preset type\n" if ($kind !~ /\A(?:template|plan)\z/);
 return "$self->{directory}/${kind}s.json";
 }
 
+# read(self, kind) combines saved and bundled presets without writing files.
+sub read
+{
+my ($self, $kind) = @_;
+$self->{'access'}->(0);
+my $path = $self->path($kind);
+my $data = -e $path ? convert_from_json(read_file_contents($path))
+	: { version => 1, default => default_id(), entries => [] };
+die "Invalid $kind configuration\n" if (ref($data) ne 'HASH' ||
+ ($data->{'version'} || 0) != 1 || ref($data->{'entries'}) ne 'ARRAY');
+# Bundled records exist on fresh hosts without writing configuration on reads.
+my %saved = map { ref($_) eq 'HASH' ? ($_->{'id'} => 1) : () } @{$data->{'entries'}};
+# Presets remain editable while libvirt is unavailable; creation still validates
+# the host's current capacity before allocating resources.
+my $cpus = $kind eq 'plan' && $self->{'host_cpus'} ? eval { $self->{'host_cpus'}->() } : undef;
+my %bundled = map { $_->{'id'} => $_ } builtin_presets($kind, $cpus);
+my $deleted = $data->{'deleted'} || [];
+# Reject deletion markers that conflict with saved or protected presets.
+die "Invalid deleted $kind list\n" if (ref($deleted) ne 'ARRAY' || grep {
+	ref($_) || !builtin($kind, $_) || $_ eq default_id() || $saved{$_}
+} @$deleted);
+my %deleted = map { $_ => 1 } @$deleted;
+# Remember removed optional templates so reads and upgrades do not restore them.
+push(@{$data->{'entries'}}, grep { !$saved{$_->{'id'}} && !$deleted{$_->{'id'}} }
+ values %bundled);
+# A cleared selection or deleted custom default returns to the built-in preset.
+$data->{'default'} ||= default_id();
+my %ids;
+foreach my $entry (@{$data->{'entries'}}) {
+	# Reject damaged configuration before a save can discard records.
+	die "Invalid $kind record\n" if (ref($entry) ne 'HASH' ||
+		($entry->{'id'} || '') !~ /\A[a-f0-9]{32}\z/ || $ids{$entry->{'id'}}++);
+	# Saved script sources remain readable when their Pro package is absent.
+	$self->validate($kind, $entry, 1);
+	# Missing built-in settings retain their shipped values.
+	$entry->{'settings'} = { %{$bundled{$entry->{'id'}}->{'settings'}}, %{$entry->{'settings'}} }
+		if ($bundled{$entry->{'id'}});
+	# Saving another plan can persist the bundled record without editing it.
+	$entry->{'settings'}->{'cpus'} = 1 if ($kind eq 'plan' && ($cpus || 0) == 1 &&
+		$entry->{'id'} eq default_id() && !$entry->{'updated'} && $entry->{'settings'}->{'cpus'} == 2);
+}
+# The selected default must survive validation and optional-template deletion.
+die "Invalid default $kind\n" if ($data->{'default'} && !$ids{$data->{'default'}});
+return $data;
+}
+
+# default_id() identifies the protected base preset in each list.
+sub default_id { return '0'x31 . '1'; }
+
+# builtin_presets(kind, [host_cpus]) supplies bundled templates or plans.
+# host_cpus caps the unedited plan's CPU allocation when the host has one CPU.
+sub builtin_presets
+{
+my ($kind, $cpus) = @_;
+# Plans define allocations; templates define source and guest setup defaults.
+return ({ id => default_id(), name => 'Default Plan',
+	description => 'Default resources for new virtual machines', created => 0, updated => 0,
+	settings => { cpus => ($cpus || 0) == 1 ? 1 : 2, memory_mib => 2048, disk_gib => 20 } }) if ($kind eq 'plan');
+my @templates = (
+	{ id => default_id(), name => 'Default Template',
+	  description => 'Rocky Linux 10, password login as cloudmin, DHCP and automatic startup',
+	  description_default => 'template',
+	  created => 0, updated => 0, settings => { image => 'catalogue:rocky-linux-10', install_source => 'cloud',
+		username => 'cloudmin', auth_type => 'password', require_fqdn => 0,
+		address_mode => 'dhcp', firmware => 'auto', start => 1, autostart => 1, software => 'none' } });
+my $id = 2;
+# Supply GPL and Pro with each web server, using full installation.
+foreach my $server (['LAMP', 'Apache'], ['LEMP', 'Nginx']) {
+	foreach my $edition ('GPL', 'Pro') {
+		push(@templates, { id => sprintf('%032x', $id++),
+			name => "Virtualmin $edition with $server->[1]", name_default => 1,
+			description => "Virtualmin $edition with $server->[1]",
+			description_default => join('_', 'virtualmin', lc($edition), lc($server->[1]), 'full'),
+			created => 0, updated => 0,
+			settings => { install_source => 'cloud', start => 1, require_fqdn => 1,
+				software => 'virtualmin-'.lc($edition),
+				virtualmin_bundle => $server->[0], virtualmin_type => 'full',
+				virtualmin_postgres => '0', virtualmin_ssl => '1', webmin_register => '1' } });
+	}
+}
+return @templates;
+}
+
 # template_name(settings, names) describes Virtualmin without installation size.
 # names contains lowercase names already in use; a suffix keeps names unique.
 sub template_name
@@ -48,6 +131,14 @@ my ($candidate, $suffix) = ($name, 2);
 # Keep generated names distinct from both custom titles and other variants.
 $candidate = $name.' '.$suffix++ while ($names->{lc($candidate)});
 return $candidate;
+}
+
+# builtin(kind, id) identifies bundled presets, including saved overrides.
+sub builtin
+{
+my ($kind, $id) = @_;
+return defined($id) && ($id eq default_id() ||
+	$kind eq 'template' && $id =~ /\A0{31}[2-5]\z/);
 }
 
 # template_error(self, settings, [base])
