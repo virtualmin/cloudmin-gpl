@@ -333,4 +333,63 @@ $self->{'log'}->($action, $kind, ref($result) eq 'HASH' ? $result->{'id'} : $res
 return $result;
 }
 
+# save(self, kind, record) creates a record or saves the latest submitted values.
+sub save
+{
+my ($self, $kind, $record) = @_;
+$self->{'access'}->(1);
+return $self->change($kind, $record->{'id'} ? 'modify' : 'create', sub {
+	my ($data) = @_;
+	my ($old) = grep { $_->{'id'} eq ($record->{'id'} || '') } @{$data->{'entries'}};
+	if ($record->{'id'}) {
+		# An edit must still refer to an existing preset.
+		die "The selected $kind no longer exists\n" if (!$old);
+	}
+	# GPL may preserve existing script data, but cannot add or change it.
+	# Compare under the write lock so stale requests cannot restore cleared scripts.
+	my $preserve_scripts = $kind eq 'template' && $old &&
+		!grep { ($record->{'settings'}->{$_} // '') ne ($old->{'settings'}->{$_} // '') }
+		Cloudmin::Software::script_fields();
+	my $clean = $self->validate($kind, $record, $preserve_scripts);
+	if ($kind eq 'template') {
+		# Stale submissions cannot create or edit an installer template.
+		my ($base) = grep { $_->{'id'} eq default_id() } @{$data->{'entries'}};
+		my $error = $self->template_error($clean->{'settings'}, $base->{'settings'});
+		die $error if ($error);
+	}
+	# The base template must retain an explicit image selection.
+	die "Select an image for Default Template\n" if ($kind eq 'template' &&
+		($record->{'id'} || '') eq default_id() && !$clean->{'settings'}->{'image'});
+	# Only supplied names follow settings. Renames and copies become custom names.
+	my $automatic = $kind eq 'template' && $old && $old->{'id'} ne default_id() &&
+		$old->{'name_default'} && $clean->{'name'} eq $old->{'name'};
+	if ($automatic && grep { ($clean->{'settings'}->{$_} // '') ne ($old->{'settings'}->{$_} // '') }
+		qw(software virtualmin_bundle virtualmin_type virtualmin_postgres virtualmin_ssl)) {
+		# Refresh only for Virtualmin changes, not unrelated template sections.
+		my ($base) = grep { $_->{'id'} eq default_id() } @{$data->{'entries'}};
+		my %names = map { lc($_->{'name'}) => 1 } grep { $_->{'id'} ne $old->{'id'} } @{$data->{'entries'}};
+		$clean->{'name'} = template_name({ %{$base->{'settings'}}, %{$clean->{'settings'}} }, \%names);
+	}
+	# Names are unique within each list, while edits preserve IDs and dates.
+	die "A $kind with this name already exists\n" if (grep {
+		lc($_->{'name'}) eq lc($clean->{'name'}) && (!$old || $_->{'id'} ne $old->{'id'})
+	} @{$data->{'entries'}});
+	my $saved = { %$clean, id => $old ? $old->{'id'} : substr(Cloudmin::Images::generate_id(), 0, 32),
+		created => $old ? $old->{'created'} : time(), updated => time() };
+	$saved->{'name_default'} = $automatic ? 1 : 0 if ($kind eq 'template');
+	if ($old && $old->{'description_default'} && $clean->{'description'} eq $old->{'description'}) {
+		# Keep shipped text only while its template remains unchanged.
+		my $unchanged = $clean->{'name'} eq $old->{'name'} &&
+			convert_to_json($clean->{'settings'}, 0, 1, 1) eq
+			convert_to_json($self->validate($kind, $old, 1)->{'settings'}, 0, 1, 1);
+		$saved->{'description'} = '' if (!$unchanged);
+		$saved->{'description_default'} = $unchanged ? $old->{'description_default'} : '';
+	}
+	# Replace the record by ID without changing the order of other presets.
+	$data->{'entries'} = [ grep { $_->{'id'} ne $saved->{'id'} } @{$data->{'entries'}} ];
+	push(@{$data->{'entries'}}, $saved);
+	return $saved;
+});
+}
+
 1;
