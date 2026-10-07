@@ -189,6 +189,19 @@ my $default = $available{$data->{'default'}} ? $data->{'default'} :
 return { default => $default, entries => \@entries };
 }
 
+# get(self, kind, id) returns a usable template or plan by its exact record ID.
+sub get
+{
+my ($self, $kind, $id) = @_;
+# Names and paths must not be treated as stored record IDs.
+die "Invalid $kind ID\n" if (!defined($id) || ref($id) || $id !~ /\A[a-f0-9]{32}\z/);
+my ($record) = grep { $_->{'id'} eq $id } @{$self->list($kind)->{'entries'}};
+# Distinguish deleted presets from ones blocked by the current host policy.
+die "The selected $kind no longer exists\n" if (!$record);
+die $record->{'disabled'} if ($record->{'disabled'});
+return $record;
+}
+
 # fields(kind) lists reusable settings, excluding passwords and VM identities.
 sub fields
 {
