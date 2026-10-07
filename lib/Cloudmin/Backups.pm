@@ -171,6 +171,98 @@ foreach my $v (@{$job->{'resources'}->{'volumes'} || []}) {
 $self->clean_work($id);
 }
 
+# backup(self, id, adapter) copies stable disk states, then publishes an archive.
+sub backup
+{
+my ($self, $id, $adapter) = @_;
+my $jobs = $self->{'jobs'};
+my $r = $jobs->get($id)->{'request'};
+my $work = $self->work($id);
+$self->step($id, 'preflight', sub {
+	# A queued job must still have its destination available before quiescing.
+	$self->{'validate_target'}->($r->{'target'}, 0);
+	my (undef, $source) = $self->source($r->{'source_uuid'});
+	die "The virtual machine changed after backup submission\n" if (Cloudmin::Snapshots::revision($source) ne $r->{'source_revision'});
+	# Pools on one filesystem share free space; live disks also need overlay
+	# room.
+	my (%needed, %paths);
+	foreach my $d (grep { $_->{'volume'} } @{$r->{'disks'}}) {
+		my $v = $d->{'volume'};
+		# Logical volumes use VG or thin-pool space, not the filesystem at /dev.
+		next if ($v->{'block'});
+		my $path = dirname($v->{'path'});
+		my @st = stat($path);
+		die "Cannot check backup storage\n" if (!@st);
+		$paths{$st[0]} = $path;
+		$needed{$st[0]} += $v->{'capacity'} * ($r->{'active'} && !$r->{'shutdown'} && !$d->{'readonly'} ? 2 : 1);
+	}
+	die "Not enough storage for backup copies and temporary snapshot growth\n"
+		if (grep { Cloudmin::Worker::free_space($paths{$_}) < $needed{$_} + 256*1024**2 } keys %needed);
+});
+my (%files, @disks);
+my $manifest = {format => 'cloudmin-full-1', name => $r->{'name'}, uuid => $r->{'uuid'}, created => time(), disks => \@disks,
+	virtualmin => $r->{'virtualmin'}};
+$self->step($id, 'backup_quiesce', sub {
+	# Keep firmware consistent with the disk snapshot, not a later disk-copy time.
+	my $before = $r->{'nvram'} && $r->{'active'} && !$r->{'shutdown'}
+		? firmware_digest($r->{'nvram'}, $r->{'nvram_identity'}) : undef;
+	$self->quiesce_source($id, $adapter, 'backup');
+	# BIOS has no variable store; UEFI needs bytes stable across the
+	# snapshot.
+	if ($r->{'nvram'}) {
+		copy_firmware($r->{'nvram'}, "$work/nvram", $r->{'nvram_identity'}, $before);
+		$files{'nvram'} = "$work/nvram";
+		$manifest->{'nvram_format'} = $r->{'nvram_format'};
+	}
+});
+# Clone each stable base into an independent volume, flattening backing chains.
+$self->step($id, 'backup_disks', sub {
+	foreach my $d (grep { $_->{'volume'} } @{$r->{'disks'}}) {
+		$self->checkpoint($id);
+		my $v = $self->stable_volume($id, $adapter, $d);
+		die "A backup source disk was replaced\n" if (Cloudmin::VMManage::file_identity($v->{'path'}) ne $v->{'identity'});
+		my $i = scalar(@disks);
+		my $name = "cloudmin-backup-$id-$i";
+		my $format = $v->{'format'} eq 'qcow2' ? 'qcow2' : 'raw';
+		# journal() records intent before libvirt can leave a volume
+		# behind.
+		my $copy = $adapter->clone_disk($v->{'pool'}, $name,
+			{pool => $v->{'pool'}, volume => $v->{'name'}, volume_key => $v->{'key'}}, $v->{'capacity'}, $format, sub {
+				$jobs->update($id, sub { $_[0]->{'resources'}->{'volumes'}->[$i] = {pool => $v->{'pool'}, name => $name}; });
+			});
+		$copy->{'pool'} = $v->{'pool'};
+		$jobs->update($id, sub { $_[0]->{'resources'}->{'volumes'}->[$i] = $copy; });
+		# Verify the copied disk in isolation before adding its manifest
+		# mapping.
+		$self->worker_task($id, 'inspect', {format => $format}, files => {image => $copy->{'path'}});
+		$files{"disk$i"} = $copy->{'path'};
+		push(@disks, {file => "disk$i", target => $d->{'target'}, format => $format, capacity => $v->{'capacity'}});
+	}
+});
+# Merge overlays or restart the source before compression and remote transfer.
+$self->step($id, 'backup_release', sub { $self->release_source($id, $adapter); });
+Cloudmin::Worker::write_data("$work/domain.xml", $r->{'source_xml'});
+$files{'domain.xml'} = "$work/domain.xml";
+$files{'ssh-key'} = $r->{'ssh_key'} if ($r->{'ssh_key'});
+# Pack secure metadata and disks together, allowing a free-space margin.
+my $packed = $self->step($id, 'backup_archive', sub {
+	return $self->worker_task($id, 'backup_archive', {mode => 'pack', manifest => $manifest,
+		members => [sort keys %files], compression => $r->{'compression'},
+		limit => Cloudmin::Worker::free_space($work)-256*1024**2}, files => \%files, output => "$work/archive");
+});
+$self->step($id, 'backup_upload', sub {
+	$self->transfer_file($id, 'put', $r->{'target'}, $r->{'filename'}, "$work/archive");
+	# Publish the inventory record only after the destination accepts the
+	# archive.
+	$self->record($id, {id => $id, name => $r->{'name'}, uuid => $r->{'uuid'}, created => $manifest->{'created'},
+		size => $packed->{'size'}, sha256 => $packed->{'sha256'}, filename => $r->{'filename'},
+		target => $r->{'target'}, destination => $self->{'target_label'}->($r->{'target'}), schedule => $r->{'schedule'}});
+});
+# A completed archive no longer needs temporary volumes, even after a restart.
+$jobs->update($id, sub { $_[0]->{'resources'}->{'published'} = 1; });
+$self->cleanup($id, $adapter);
+}
+
 # transfer_file(self, id, operation, target, filename, local) journals remote workers.
 sub transfer_file
 {
