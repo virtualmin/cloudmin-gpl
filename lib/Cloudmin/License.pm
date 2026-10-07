@@ -232,4 +232,46 @@ die $error if ($error);
 return $result;
 }
 
+# describe(self, state, credentials, [reason]) evaluates deadlines as plain data.
+# Expiry gets seven days; host overuse and loss of verification get 21 days.
+# reason overrides the inferred state, for example when credentials are absent.
+sub describe
+{
+my ($self, $state, $credentials, $reason) = @_;
+my $now = $self->{'now'}->();
+# Whitelist public fields so the cache binding and credentials stay private.
+my $out = { edition => 'Pro', host_id => $self->{'host'}, serial => $credentials->{'serial'} || '',
+    map { exists($state->{$_}) ? ($_ => $state->{$_}) : () }
+        qw(expiry vm_limit max_hosts used_hosts auto_renew checked verified) };
+# Independent limits share the earliest deadline; no grace extends another.
+my @deadlines;
+push(@deadlines, [$state->{'expires'} + 7*86400, 'expired'])
+    if ($state->{'expires'} && ($now >= $state->{'expires'} || ($state->{'state'} || '') eq 'expired'));
+push(@deadlines, [$state->{'overused_since'} + 21*86400, 'overused']) if ($state->{'overused_since'});
+# Offline use is bounded by the last authenticated result, not the last attempt.
+push(@deadlines, [$state->{'verified'} + 21*86400, 'unavailable']) if ($state->{'verified'});
+my ($deadline) = sort { $a->[0] <=> $b->[0] } @deadlines;
+# Rejection and clock errors take precedence over a remaining grace period.
+$reason ||= $state->{'state'} && $state->{'state'} eq 'invalid' ? 'invalid'
+    : !$state->{'verified'} ? 'unverified'
+    : $state->{'clock'} || $state->{'verified'} > $now + 300 ? 'clock'
+    : $deadline && $now >= $deadline->[0] ? $deadline->[1]
+    : $state->{'expires'} && ($now >= $state->{'expires'} || $state->{'state'} eq 'expired') ? 'expired'
+    : $state->{'overused_since'} ? 'overused'
+    : $state->{'unavailable'} || $now - $state->{'checked'} >= 3*86400 ? 'unavailable'
+    : 'valid';
+# A warning may still permit changes until its earliest deadline is reached.
+$out->{'state'} = $reason;
+$out->{'allowed'} = $reason =~ /\A(?:missing|invalid|unverified|clock)\z/ ||
+    ($deadline && $now >= $deadline->[0]) ? 0 : 1;
+$out->{'check_failed'} = $state->{'unavailable'} ? 1 : 0;
+$out->{'host_tracking'} = exists($state->{'max_hosts'}) ? 1 : 0;
+if ($reason ne 'valid' && $deadline) {
+    # Round remaining days up so the last partial day is not shown as zero.
+    $out->{'deadline'} = $deadline->[0];
+    $out->{'days_left'} = $deadline->[0] > $now ? int(($deadline->[0]-$now+86399)/86400) : 0;
+}
+return $out;
+}
+
 1;
