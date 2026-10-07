@@ -276,6 +276,26 @@ $self->{'transfer'}->(@args, {
 $self->{'jobs'}->update($id, sub { delete($_[0]->{'worker'}); });
 }
 
+# inspect_backup(self, id) downloads and verifies before any guest is defined.
+sub inspect_backup
+{
+my ($self, $id) = @_;
+my $jobs = $self->{'jobs'};
+my $r = $jobs->get($id)->{'request'};
+my $work = $self->work($id);
+$self->step($id, 'backup_download', sub { $self->transfer_file($id, 'get', $r->{'target'}, $r->{'filename'}, "$work/archive"); });
+my $result = $self->step($id, 'backup_verify', sub {
+	return $self->worker_task($id, 'backup_archive', {limit => Cloudmin::Worker::free_space($work)-256*1024**2},
+		files => {archive => "$work/archive"});
+});
+# Listed backups must still match their recorded checksum; external ones bind
+# confirmation to the checksum observed during this inspection.
+validate_manifest($result->{'manifest'});
+die "The archive differs from the completed backup\n" if ($r->{'expected_sha256'} && $result->{'sha256'} ne $r->{'expected_sha256'});
+$jobs->update($id, sub { $_[0]->{'resources'}->{'manifest'} = $result->{'manifest'};
+	$_[0]->{'resources'}->{'archive_sha256'} = $result->{'sha256'}; });
+}
+
 # validate_manifest(manifest) checks restore identities and disk mappings.
 sub validate_manifest
 {
