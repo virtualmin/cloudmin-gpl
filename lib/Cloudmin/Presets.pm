@@ -70,4 +70,94 @@ return $_[0] eq 'plan' ? qw(cpus memory_mib disk_gib) :
 		gateway4 gateway6 dns firmware start autostart), Cloudmin::Software::fields());
 }
 
+# validate(self, kind, record, [stored_scripts]) checks and normalizes a preset.
+# stored_scripts defaults to false. True retains saved script fields without
+# Pro source validation, for reads or saves whose script fields are unchanged.
+# Host capacity and image availability are checked again during VM creation.
+sub validate
+{
+my ($self, $kind, $record, $stored_scripts) = @_;
+$self->path($kind);
+# Bound display text before storing it or including names in the action log.
+my %clean;
+foreach my $field (qw(name description)) {
+	my $value = $record->{$field} // '';
+	die "Invalid $field\n" if (ref($value) || $value =~ /[\x00-\x1f]/ ||
+		length($value) > ($field eq 'name' ? 100 : 1000));
+	$value =~ s/^\s+|\s+$//g;
+	$clean{$field} = $value;
+}
+die "Enter a name\n" if (!length($clean{'name'}));
+my $settings = $record->{'settings'};
+die "Invalid settings\n" if (ref($settings) ne 'HASH');
+my %allowed = map { $_ => 1 } fields($kind);
+die "Unsupported $kind setting\n" if (grep { !$allowed{$_} } keys %$settings);
+# Plan errors use visible labels and the units stored by the API.
+my %plan_fields = (cpus => ['CPU', 1, 1024, ''],
+	memory_mib => ['Memory', 256, 1073741824, ' MiB'],
+	disk_gib => ['Disk size', 1, 1048576, ' GiB']);
+# Preserve script whitespace while normalizing ordinary form values.
+my %values;
+foreach my $field (keys %$settings) {
+	my $value = $settings->{$field};
+	my $label = $kind eq 'plan' ? $plan_fields{$field}->[0] : $field;
+	die "Invalid $label\n" if (!defined($value) || ref($value) ||
+		length($value) > 16384 || $value =~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
+	$value =~ s/^\s+|\s+$//g if ($field !~ /\A(?:before|after)_script\z/);
+	$values{$field} = $value;
+}
+if ($kind eq 'plan') {
+	# Plans use whole MiB and GiB, independently of the current host's capacity.
+	foreach my $field (fields($kind)) {
+		my ($label, $min, $max, $units) = @{$plan_fields{$field}};
+		die "$label must be a whole number from $min to $max$units\n"
+			if (!defined($values{$field}) || $values{$field} !~ /\A\d{1,10}\z/ ||
+			$values{$field} < $min || $values{$field} > $max);
+		$values{$field} = 0 + $values{$field};
+	}
+}
+else {
+	# Empty fields inherit defaults, except a cleared package list, which
+	# explicitly skips package installation.
+	delete($values{$_}) for grep { $values{$_} eq '' && $_ ne 'packages' } keys %values;
+	my $uuid = qr/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}/i;
+	my %patterns = (image => qr/(?:[a-f0-9]{32}|catalogue:[a-z0-9][a-z0-9._-]{0,95})/, pool => $uuid,
+		network => qr/(?:network:$uuid|bridge:[a-zA-Z0-9_.:-]{1,15})/,
+		install_source => qr/(?:cloud|iso)/, firmware => qr/(?:auto|efi|bios)/,
+		username => qr/[a-z_][a-z0-9_-]{0,31}/, auth_type => qr/(?:keys|password|both)/,
+		address_mode => qr/(?:dhcp|static)/, start => qr/[01]/, autostart => qr/[01]/,
+		require_fqdn => qr/[01]/);
+	# Check identifiers and enumerated values before resolving host resources.
+	foreach my $field (keys %patterns) {
+		die "Invalid $field\n" if (exists($values{$field}) &&
+			$values{$field} !~ /\A$patterns{$field}\z/);
+	}
+	# Service accounts cannot be reused as the initial administrator login.
+	die "Choose a guest login account; daemon, bin, sys, nobody and sshd are reserved\n" if (($values{'username'} || '') =~
+		/\A(?:daemon|bin|sys|nobody|sshd)\z/);
+	# Gateways must match their IP family and cannot contain a network prefix.
+	foreach my $family (4, 6) {
+		$values{'gateway'.$family} = Cloudmin::VMs::address($values{'gateway'.$family}, $family, 0)
+			if ($values{'gateway'.$family});
+	}
+	if ($values{'dns'}) {
+		# Store a bounded list of validated addresses in a consistent format.
+		my @dns = split(/[\s,]+/, $values{'dns'});
+		die "Enter at most three DNS servers\n" if (@dns > 3);
+		$values{'dns'} = join(' ', map { Cloudmin::VMs::address($_, /:/ ? 6 : 4, 0) } @dns);
+	}
+	# Validate script sources and installer options without reading host files.
+	my %software_input = %values;
+	# Preserve stored sources while still validating the other software options.
+	delete(@software_input{Cloudmin::Software::script_fields()}) if ($stored_scripts);
+	my $software = Cloudmin::Software::settings(\%software_input);
+	@values{keys %$software} = values %$software;
+	# Save public keys only; credentials belong to individual creation requests.
+	$values{'ssh_keys'} = join("\n", Cloudmin::VMs::public_keys($values{'ssh_keys'}))
+		if ($values{'ssh_keys'});
+}
+$clean{'settings'} = \%values;
+return \%clean;
+}
+
 1;
