@@ -440,4 +440,45 @@ return $self->change($kind, $action, sub {
 });
 }
 
+# resolve(self, input, [mode]) fills missing values from selected presets.
+# Explicit values override defaults, but cannot disable a template's hostname
+# requirement. mode defaults to creation; 'clone' omits installation defaults.
+sub resolve
+{
+my ($self, $input, $mode) = @_;
+my %values;
+foreach my $kind (qw(template plan)) {
+	# API requests may supply settings without selecting either preset.
+	next if (!defined($input->{$kind}) || $input->{$kind} eq '');
+	# Validate the selection, but allow inheritance from a disabled base when
+	# this template explicitly opts out of its installer.
+	my $record = $self->get($kind, $input->{$kind});
+	my %settings = (%{$self->base_settings($kind)}, %{$record->{'settings'}});
+	# Clones keep hardware, access and hostname rules, but never reinstall software.
+	delete(@settings{qw(image install_source), Cloudmin::Software::fields()})
+		if (($mode || '') eq 'clone');
+	# Keep inherited guest setup out of ISO creation requests.
+	delete(@settings{Cloudmin::Software::fields()})
+		if (($input->{'install_source'} || '') eq 'iso');
+	@values{keys %settings} = values %settings;
+}
+# Infer the source from an explicit body or path only when mode is omitted.
+foreach my $field (qw(before_script after_script)) {
+	next if (exists($input->{$field.'_mode'}));
+	if (exists($input->{$field}) || exists($input->{$field.'_path'})) {
+		# Let software validation infer the source from this request alone.
+		delete(@values{$field, $field.'_mode', $field.'_path'});
+	}
+}
+# A required hostname is a template rule, not an overridable creation default.
+my $require_fqdn = $values{'require_fqdn'};
+%values = (%values, %$input);
+$values{'require_fqdn'} = 1 if ($require_fqdn);
+# An inherited value is in base units, even if a client sent a stray unit field.
+foreach my $field (qw(memory_mib disk_gib)) {
+	delete($values{$field.'_units'}) if (!exists($input->{$field}));
+}
+return \%values;
+}
+
 1;
