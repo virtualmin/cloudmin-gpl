@@ -109,4 +109,34 @@ my $time = eval { timegm(0, 0, 0, $d, $m-1, $y) };
 return $@ ? undef : $time + 86400;
 }
 
+# parse(response) reads expiry, allowances, host use and renewal information.
+# Developer codes allow extra hosts; zero means unlimited for either allowance.
+# Unknown responses never become a valid license or disclose server output.
+sub parse
+{
+my ($response) = @_;
+return { state => 'unavailable' } if (!defined($response) || ref($response) || length($response) > 4096);
+# A verified response for the other product cannot use offline grace.
+return { state => 'invalid' } if ($response =~ /\A(?:OK|EXP)\s[^\r\n]*\sproduct=virtualmin\s*\z/);
+# Only the complete Cloudmin response can supply new terms and host counts.
+if ($response =~ /\A(OK|EXP)\s+(\d{4}-\d{2}-\d{2})\s+(\d+)\s+(\d+)\s+(\d+)\s+([01])\s+([NDTQPHY])(?:\s+(\d+))?\s+product=cloudmin\s*\z/) {
+    my ($code, $date, $limit, $max, $used, $renew, $allowance, $subscription) =
+        ($1, $2, $3, $4, $5, $6, $7, $8);
+    my $expires = expiry($date);
+    return { state => 'unavailable' } if (!defined($expires));
+    my %hosts = (D => 2, T => 3, Q => 4, P => 5, H => 6, Y => 0);
+    # A special allowance can increase the base limit, never reduce it.
+    $max = $allowance eq 'Y' ? 0 : $max && ($hosts{$allowance} || 0) > $max
+        ? $hosts{$allowance} : $max;
+    return { state => $code eq 'EXP' ? 'expired' : 'valid', expiry => $date,
+        expires => $expires, vm_limit => 0+$limit,
+        max_hosts => 0+$max, used_hosts => 0+$used, auto_renew => 0+$renew,
+        allowance => $allowance,
+        defined($subscription) ? (subscription => $subscription) : () };
+}
+# Explicit rejection ends grace; unknown replies count as failed checks.
+return { state => 'invalid' } if ($response =~ /\AERR Invalid host or serial number\s*\z/);
+return { state => 'unavailable' };
+}
+
 1;
