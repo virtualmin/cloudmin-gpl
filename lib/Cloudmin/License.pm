@@ -44,4 +44,23 @@ close($fh) or die "Cannot close license storage\n";
 return $value // '';
 }
 
+# write_private(path, value) atomically replaces one owner-only state file.
+sub write_private
+{
+my ($path, $value) = @_;
+my ($dir) = $path =~ m{\A(.+)/[^/]+\z};
+my ($fh, $temp) = tempfile('.license-XXXXXX', DIR => $dir, UNLINK => 0);
+my $ok = eval {
+    chmod(0600, $temp) or die "Cannot protect license storage\n";
+    print {$fh} $value or die "Cannot write license storage\n";
+    close($fh) or die "Cannot close license storage\n";
+    rename($temp, $path) or die "Cannot save license storage\n";
+    1;
+};
+my $error = $@;
+# Failed replacements must not leave temporary credential files behind.
+unlink($temp) if (!$ok);
+die $error if (!$ok);
+}
+
 1;
