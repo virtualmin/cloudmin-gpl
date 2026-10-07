@@ -50,4 +50,16 @@ $candidate = $name.' '.$suffix++ while ($names->{lc($candidate)});
 return $candidate;
 }
 
+# template_error(self, settings, [base])
+# Returns a policy error or an empty string when the template is allowed.
+# base supplies inherited settings. With no installer in either hash, use none.
+sub template_error
+{
+my ($self, $settings, $base) = @_;
+my $software = $settings->{'software'} // ($base || {})->{'software'} // 'none';
+return defined($self->{'virtualmin_enabled'}) && !$self->{'virtualmin_enabled'} &&
+	$software =~ /\Avirtualmin-/
+	? "Virtualmin installation is disabled in Module Configuration. Re-enable it to use this template.\n" : '';
+}
+
 1;
