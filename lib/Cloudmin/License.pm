@@ -80,4 +80,13 @@ foreach my $line (split(/\r?\n/, $raw)) {
 return { serial => $values{'SerialNumber'}, key => $values{'LicenseKey'} };
 }
 
+# validate_credentials(serial, key) rejects malformed inputs without echoing them.
+sub validate_credentials
+{
+my ($serial, $key) = @_;
+die "Enter a valid license serial number and key\n"
+    if (!defined($serial) || ref($serial) || $serial !~ /\A[0-9]{1,32}\z/ ||
+        !defined($key) || ref($key) || $key !~ /\A[A-Za-z0-9_-]{8,256}\z/);
+}
+
 1;
