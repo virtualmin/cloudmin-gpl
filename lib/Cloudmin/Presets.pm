@@ -392,4 +392,52 @@ return $self->change($kind, $record->{'id'} ? 'modify' : 'create', sub {
 });
 }
 
+# update(self, kind, action, ids) deletes or selects a default preset by ID.
+sub update
+{
+my ($self, $kind, $action, $ids) = @_;
+$self->{'access'}->(1);
+die "Invalid preset action\n" if ($action !~ /\A(?:delete|default)\z/);
+die "Select one $kind\n" if ($action eq 'default' && @$ids != 1);
+die "Select at least one $kind\n" if ($action eq 'delete' && !@$ids);
+return $self->change($kind, $action, sub {
+	my ($data) = @_;
+	my %entries = map { $_->{'id'} => $_ } @{$data->{'entries'}};
+	# Validate all selected records before changing any of them.
+	foreach my $id (@$ids) {
+		die "The selected $kind no longer exists\n" if (!exists($entries{$id}));
+	}
+	if ($action eq 'delete') {
+		# Base presets supply inherited settings and must remain available.
+		die (($kind eq 'template' ? 'Default Template' : 'Default Plan')." cannot be deleted\n")
+			if (grep { $_ eq default_id() } @$ids);
+		if ($kind eq 'template') {
+			# Refuse the entire batch if a guest or pending creation uses any selection.
+			die "Cannot check template usage\n" if (!$self->{'template_users'});
+			my $users = $self->{'template_users'}->();
+			die "Cannot check template usage\n" if (ref($users) ne 'HASH');
+			foreach my $id (@$ids) {
+				die "Cannot delete template '$entries{$id}->{name}': used by virtual machines or pending creations: ".
+					join(', ', @{$users->{$id}})."\n" if (@{$users->{$id} || []});
+			}
+		}
+		my %selected = map { $_ => 1 } @$ids;
+		# Only bundled records need a deletion marker; custom IDs are never reseeded.
+		push(@{$data->{'deleted'}}, grep { builtin($kind, $_) } @$ids);
+		$data->{'entries'} = [ grep { !$selected{$_->{'id'}} } @{$data->{'entries'}} ];
+		$data->{'default'} = default_id() if ($selected{$data->{'default'}});
+	}
+	else {
+		# Use the single validated selection as the new default.
+		if ($kind eq 'template') {
+			# A saved ID cannot make a disabled installer the active default.
+			my $error = $self->template_error($entries{$ids->[0]}->{'settings'}, $entries{default_id()}->{'settings'});
+			die $error if ($error);
+		}
+		$data->{'default'} = $ids->[0];
+	}
+	return join(',', @$ids);
+});
+}
+
 1;
