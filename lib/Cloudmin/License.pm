@@ -265,6 +265,33 @@ if ($refresh && ($force || !$state->{'checked'} || $state->{'checked'} > $now + 
 return $self->describe($state, $credentials);
 }
 
+# change(self, serial, key) validates new credentials before replacing any file.
+# An expired or unavailable replacement cannot discard a working license.
+sub change
+{
+my ($self, $serial, $key) = @_;
+validate_credentials($serial, $key);
+return $self->locked(sub {
+    my $credentials = {serial => $serial, key => $key};
+    my $state = $self->check($credentials, $self->load($credentials));
+    die "The license could not be validated\n"
+        if (!$state->{'state'} || $state->{'state'} ne 'valid' || $state->{'unavailable'} ||
+            $state->{'expires'} <= $self->{'now'}->() ||
+            !$self->describe($state, $credentials)->{'allowed'});
+    if ($self->{'replace'}) {
+        # The Webmin integration updates license and repository files together.
+        $self->{'replace'}->($serial, $key);
+    }
+    else {
+        # Standalone callers save the credentials without updating repositories.
+        write_private($self->{'file'}, "SerialNumber=$serial\nLicenseKey=$key\n");
+    }
+    # Cache approval only after the credential transaction succeeds.
+    $self->save($state);
+    return $self->describe($state, $credentials);
+});
+}
+
 # describe(self, state, credentials, [reason]) evaluates deadlines as plain data.
 # Expiry gets seven days; host overuse and loss of verification get 21 days.
 # reason overrides the inferred state, for example when credentials are absent.
