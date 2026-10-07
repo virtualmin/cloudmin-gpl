@@ -63,4 +63,21 @@ unlink($temp) if (!$ok);
 die $error if (!$ok);
 }
 
+# credentials(self) reads the existing Cloudmin license format, never a shell.
+sub credentials
+{
+my ($self) = @_;
+my $raw = read_private($self->{'file'}, 1);
+return {} if (!defined($raw));
+# Parse only the two credential assignments, including old quoted values.
+my %values;
+foreach my $line (split(/\r?\n/, $raw)) {
+    next if ($line !~ /\A(SerialNumber|LicenseKey)=(.*?)\s*\z/);
+    my ($name, $value) = ($1, $2);
+    $value =~ s/\A["'](.*)["']\z/$1/;
+    $values{$name} = $value;
+}
+return { serial => $values{'SerialNumber'}, key => $values{'LicenseKey'} };
+}
+
 1;
