@@ -163,6 +163,32 @@ my ($base) = grep { $_->{'id'} eq default_id() } @{$self->read($kind)->{'entries
 return $base->{'settings'};
 }
 
+# list(self, kind) returns sorted records and an available default for the UI/API.
+# Disabled records retain their ID/name so old CLI references get a clear error.
+sub list
+{
+my ($self, $kind) = @_;
+my $data = $self->read($kind);
+my @entries = sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @{$data->{'entries'}};
+if ($kind eq 'template') {
+	# Check inherited software as well as explicit installer selections.
+	my ($base) = grep { $_->{'id'} eq default_id() } @entries;
+	foreach my $entry (@entries) {
+		my $error = $self->template_error($entry->{'settings'}, $base->{'settings'});
+		# Retain the rejection reason for callers resolving old IDs or names.
+		$entry->{'disabled'} = $error if ($error);
+	}
+}
+# Restrict default selection to usable entries without removing error metadata.
+my %available = map { $_->{'id'} => 1 } grep { !$_->{'disabled'} } @entries;
+my ($first) = grep { !$_->{'disabled'} } @entries;
+# Prefer the saved default, then the base, then the first available entry.
+# An empty ID means none are usable. This fallback never changes saved settings.
+my $default = $available{$data->{'default'}} ? $data->{'default'} :
+	$available{default_id()} ? default_id() : ($first || {})->{'id'} || '';
+return { default => $default, entries => \@entries };
+}
+
 # fields(kind) lists reusable settings, excluding passwords and VM identities.
 sub fields
 {
