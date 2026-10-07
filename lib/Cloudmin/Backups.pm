@@ -317,4 +317,25 @@ die "Invalid Virtualmin edition in backup\n" if (($m->{'virtualmin'} || '') !~ /
 die "A backup disk has no device mapping\n" if (grep { /^disk\d+$/ && !$files{$_} } keys %{$m->{'files'}});
 }
 
+# restore_volume_names(xml, manifest, id, pool_type) preserves recognized roles.
+# The new ownership ID must also appear in system and seed volume names, so
+# later cloning can replace the seed without dropping unrelated read-only data.
+sub restore_volume_names
+{
+my ($xml, $manifest, $id, $type) = @_;
+my %roles = map { $_->{'target'} => $_->{'role'} }
+	Cloudmin::Libvirt::extract_disks($xml);
+my %counts;
+$counts{$_}++ foreach values %roles;
+my %names;
+foreach my $disk (@{$manifest->{'disks'}}) {
+	my $role = $roles{$disk->{'target'}} || '';
+	# Ambiguous or unrecognized roles retain ordinary per-member names.
+	$names{$disk->{'file'}} = $role =~ /\A(?:system|seed)\z/ && $counts{$role} == 1
+		? Cloudmin::VMs::disk_volume_name($manifest->{'name'}, $role, $id, $type)
+		: "cloudmin-$id-$disk->{file}";
+	}
+return \%names;
+}
+
 1;
