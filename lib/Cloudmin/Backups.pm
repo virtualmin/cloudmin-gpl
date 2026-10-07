@@ -491,4 +491,26 @@ $cloudmin->addNewChild('urn:cloudmin:vm:1','job')->appendText($id);
 return $doc->toString();
 }
 
+# host_xml(self, xml, adapter) validates host-specific hardware before import.
+sub host_xml
+{
+my ($self, $xml, $adapter) = @_;
+my $doc = Cloudmin::Libvirt::parse_xml_document($xml);
+my $caps = $adapter->get_host_capabilities($doc->findvalue('/domain/os/type/@arch'));
+my $machine = $doc->findvalue('/domain/os/type/@machine');
+my $domain = Cloudmin::Libvirt::parse_xml_document($adapter->connect()->get_domain_capabilities(
+	undef, $caps->{'architecture'}, $machine || undef, 'kvm', 0));
+# Firmware must come from this host's supported loader list, not archive paths.
+my %loaders = map { $_->textContent() => 1 } $domain->findnodes('/domainCapabilities/os/loader/value');
+foreach my $loader ($doc->findnodes('/domain/os/loader')) {
+	die "This host does not provide the backup's firmware\n" if (!$loaders{$loader->textContent()});
+	$loader->setAttribute('readonly','yes');
+}
+# Use the destination host's emulator for the archived guest architecture.
+my ($devices) = $doc->findnodes('/domain/devices');
+$_->unbindNode() foreach $devices->findnodes('emulator');
+$devices->addNewChild(undef,'emulator')->appendText($caps->{'emulator'});
+return $doc->toString();
+}
+
 1;
