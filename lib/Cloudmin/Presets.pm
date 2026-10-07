@@ -31,4 +31,23 @@ die "Unknown preset type\n" if ($kind !~ /\A(?:template|plan)\z/);
 return "$self->{directory}/${kind}s.json";
 }
 
+# template_name(settings, names) describes Virtualmin without installation size.
+# names contains lowercase names already in use; a suffix keeps names unique.
+sub template_name
+{
+my ($settings, $names) = @_;
+my $name = 'Machine Template';
+if (($settings->{'software'} || '') =~ /\Avirtualmin-(gpl|pro)\z/) {
+	# Include PostgreSQL only when requested; disabling Virtualmin drops its name.
+	my $edition = $1 eq 'gpl' ? 'GPL' : 'Pro';
+	my $server = ($settings->{'virtualmin_bundle'} || 'LAMP') eq 'LEMP' ? 'Nginx' : 'Apache';
+	$name = "Virtualmin $edition with $server";
+	$name .= ' and PostgreSQL' if ($settings->{'virtualmin_postgres'});
+}
+my ($candidate, $suffix) = ($name, 2);
+# Keep generated names distinct from both custom titles and other variants.
+$candidate = $name.' '.$suffix++ while ($names->{lc($candidate)});
+return $candidate;
+}
+
 1;
