@@ -97,4 +97,16 @@ return sha256_hex(join("\0", 'license/client-v2:cloudmin', $self->{'host'},
     map { $credentials->{$_} // '' } qw(serial key)));
 }
 
+# expiry(date) returns the UTC instant after the last licensed calendar day.
+sub expiry
+{
+my ($date) = @_;
+# Reject malformed dates before asking Time::Local to validate the calendar day.
+return undef if (($date || '') !~ /\A(\d{4})-(\d{2})-(\d{2})\z/);
+my ($y, $m, $d) = ($1, $2, $3);
+return undef if ($y < 1970 || $y > 9998);
+my $time = eval { timegm(0, 0, 0, $d, $m-1, $y) };
+return $@ ? undef : $time + 86400;
+}
+
 1;
