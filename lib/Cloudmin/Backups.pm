@@ -83,6 +83,47 @@ $self->{'jobs'}->lock('create-host', sub {
 });
 }
 
+# prepare(self, input, job_id) validates a backup before reserving the source.
+sub prepare
+{
+my ($self, $in, $id) = @_;
+die "Install Python 3 before backing up virtual machines\n" if (!-x '/usr/bin/python3');
+# Reject structured or non-boolean options before reading the source guest.
+foreach my $field (qw(shutdown compression)) {
+	die "Invalid backup option: $field\n" if (defined($in->{$field}) && (ref($in->{$field}) || $in->{$field} !~ /\A[01]\z/));
+}
+# Reuse cloning's managed-disk checks without changing guest identity.
+my ($adapter, $domain, $doc, $disks, $nvram) = $self->source($in->{'id'});
+check_external_state($doc);
+die "Select guest-agent preparation or clean shutdown\n"
+	if (($in->{'shutdown'} // 0) !~ /\A[01]\z/);
+Cloudmin::Snapshots::check_agent($domain) if ($domain->is_active() && !$in->{'shutdown'});
+# Attached installer media must be managed file volumes too, never host devices.
+foreach my $disk (@$disks) {
+	next if ($disk->{'volume'});
+	my ($node) = grep { $_->findvalue('target/@dev') eq $disk->{'target'} } $doc->findnodes('/domain/devices/disk');
+	next if (!$node->exists('source'));
+	$disk->{'volume'} = $self->manager()->volume_for($adapter, $node);
+}
+die "A backup can contain at most 64 disks and attached media files in total\n" if (@$disks > 64);
+# Check destination requirements before reserving or stopping the source.
+my $target = $self->{'validate_target'}->($in->{'target'}, 0);
+Cloudmin::BackupTransport::preflight($target, 0);
+# Include managed SSH access only when its ownership marker matches this guest.
+my $meta = Cloudmin::Libvirt::extract_metadata($doc->toString());
+my $key = ($meta->{'job'} || '') =~ /\A[a-f0-9]{32}\z/
+	? $self->{'ssh_keys'}->find($domain->get_uuid_string(), $meta->{'job'}) : undef;
+return {operation => 'backup', uuid => $domain->get_uuid_string(), name => $domain->get_name(),
+	source_uuid => $domain->get_uuid_string(), source_revision => Cloudmin::Snapshots::revision($domain),
+	virtualmin => $self->installed_edition($doc),
+	source_xml => $doc->toString(), disks => $disks, nvram => $nvram, ssh_key => $key,
+	nvram_format => $doc->findvalue('/domain/os/nvram/@format') || 'raw',
+	nvram_identity => $nvram ? Cloudmin::VMManage::file_identity($nvram) : '',
+	active => $domain->is_active() ? 1 : 0, shutdown => $in->{'shutdown'} ? 1 : 0,
+	target => $target, compression => $in->{'compression'} ? 1 : 0,
+	schedule => $in->{'schedule'} || '', filename => archive_filename($domain->get_name(), $id, time(), $in->{'compression'})};
+}
+
 # archive_filename(name, job_id, timestamp, compressed) makes archives identifiable.
 # The full job ID still prevents collisions between simultaneous submissions.
 sub archive_filename
