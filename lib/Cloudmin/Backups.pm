@@ -338,4 +338,29 @@ foreach my $disk (@{$manifest->{'disks'}}) {
 return \%names;
 }
 
+# prepare_restore(self, input, job_id) binds confirmation to a verified archive.
+sub prepare_restore
+{
+my ($self, $in, $id) = @_;
+# A successful inspection is usable only while its verified download remains.
+my $inspection = $self->{'jobs'}->get($in->{'inspection'}) || die "Backup inspection not found\n";
+die "Inspect the backup before restoring it\n" if (($inspection->{'request'}->{'operation'} || '') ne 'backup_inspect' || $inspection->{'state'} ne 'complete');
+die "Inspect the backup again; its temporary download has expired\n"
+	if (!-f $self->work($inspection->{'id'}).'/archive');
+die "Confirm that this restore preserves the original guest identity and will remain stopped\n" if (($in->{'confirm'} || '') ne '1');
+my $m = $inspection->{'resources'}->{'manifest'};
+validate_manifest($m);
+# Restore preserves identity and therefore cannot coexist with the original.
+my $adapter = $self->{'adapter'}->();
+die "A virtual machine with this name or UUID already exists; remove it before restoring this backup\n"
+	if (grep { $_->get_name() eq $m->{'name'} || $_->get_uuid_string() eq $m->{'uuid'} } $adapter->connect()->list_all_domains());
+my ($pool) = grep { $_->{'uuid'} eq ($in->{'pool'} || '') && $_->{'active'} && Cloudmin::Libvirt::disk_pool($_->{'type'}) }
+	@{$adapter->list_storage_pools(1)};
+die "Select an active storage pool\n" if (!$pool);
+# Guest disks use the chosen backend; UEFI variables still need file storage.
+return {operation => 'restore', name => $m->{'name'}, uuid => $m->{'uuid'}, pool => $pool->{'uuid'}, pool_type => $pool->{'type'},
+	auxiliary_pool => $m->{'files'}->{'nvram'} ? Cloudmin::Libvirt::file_pool($adapter, $pool->{'uuid'})->get_uuid_string() : '',
+	inspection => $inspection->{'id'}, manifest => $m, archive_sha256 => $inspection->{'resources'}->{'archive_sha256'}, start => 0};
+}
+
 1;
