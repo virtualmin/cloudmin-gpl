@@ -963,4 +963,19 @@ my %seen;
 return grep {!$seen{$_}++} (@{$command->{order} || []},sort keys %{options($command)});
 }
 
+# option_usage(name, definition) renders a value, enum, flag or negatable flag.
+sub option_usage
+{
+my ($name,$opt) = @_;
+# Negatable switches take no value and advertise both spellings.
+return "--$name | --no-$name" if ($opt->{type} eq 'yesno');
+# Plain flags take no argument or negative spelling.
+return "--$name" if ($opt->{type} eq 'flag');
+# Prefer an explicit placeholder, then derive one from the value definition.
+my $value = $opt->{metavar} || ($opt->{values} ? join('|',@{$opt->{values}})
+    : $opt->{resolve} ? 'ID|name' : $opt->{type} eq 'file' ? 'file|-'
+    : $opt->{type} eq 'size' ? 'size' : $opt->{type} eq 'i' ? 'number' : 'value');
+return "--$name $value";
+}
+
 1;
