@@ -954,4 +954,13 @@ foreach my $command (@{commands()}) {
 return $text;
 }
 
+# option_order(command) keeps documented ordering stable as fields are added.
+sub option_order
+{
+my ($command) = @_;
+# Explicit priorities precede alphabetical fallback, without duplicate options.
+my %seen;
+return grep {!$seen{$_}++} (@{$command->{order} || []},sort keys %{options($command)});
+}
+
 1;
