@@ -659,4 +659,42 @@ $input{volume} = '' if ($command->{name} eq 'eject-media');
 return ($action,\%input,\%filters,$machine,$current);
 }
 
+# follow(self, job, global, command) waits for an independent job.
+sub follow
+{
+my ($self,$job,$global,$command) = @_;
+# Asynchronous callers receive the submitted record without any polling.
+return $job if ($global->{'no-wait'});
+my $deadline = $self->{now}->() + 3700;
+my ($phase,$failures) = ('',0);
+while (1) {
+    my $next = $job->{phase} || $job->{state} || '';
+    # Report only phase changes, and keep JSON output free of progress text.
+    if ($next ne $phase) {
+        $phase = $next;
+        (my $text = $phase) =~ tr/_/ /;
+        print {$self->{err}} ".. $text\n" if (!$global->{json});
+    }
+    my $state = $job->{state} || '';
+    # A completed operation needs no further status reads.
+    return $job if ($state eq 'complete');
+    # Cancellation or cleanup can succeed while the job stays failed or
+    # cancelled.
+    return $job if ($command->{action} =~ /\A(?:cancel|recover)\z/ &&
+        $state =~ /\A(?:cancelled|failed)\z/ && !$job->{cleanup_pending});
+    # Failed or cancelled ordinary operations must not print a success message.
+    die(($job->{error} || 'Virtual machine operation failed')."\n") if ($state eq 'failed');
+    # Report cancellation as failure for commands that expected completion.
+    die "Virtual machine operation was cancelled\n" if ($state eq 'cancelled');
+    # Stop waiting at the deadline; leave the worker running.
+    die "Job $job->{id} is still running; use cloudmin get-job --job $job->{id}\n" if ($self->{now}->() >= $deadline);
+    $self->{sleep}->();
+    my $current = eval {$self->api('status',{job => $job->{id}})};
+    # A successful status read clears the consecutive-failure counter.
+    if ($current) { $job = $current; $failures = 0; }
+    # Allow transient read failures, then return the job ID for a later check.
+    elsif (++$failures >= 3) { die "Cannot read job $job->{id}; use cloudmin get-job --job $job->{id}\n"; }
+}
+}
+
 1;
