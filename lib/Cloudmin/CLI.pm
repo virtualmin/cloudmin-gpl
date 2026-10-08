@@ -978,4 +978,39 @@ my $value = $opt->{metavar} || ($opt->{values} ? join('|',@{$opt->{values}})
 return "--$name $value";
 }
 
+# synopsis(self, command) generates required and optional syntax from the table.
+sub synopsis
+{
+my ($self,$command) = @_;
+# The raw entry point accepts an action and JSON stdin, not named options.
+return "cloudmin api [action] < request.json\n" if ($command->{raw});
+my $prefix = 'cloudmin '.$command->{name};
+my @parts = ('[--multiline | --json]');
+# List commands additionally offer one identifier per output line.
+push(@parts,'[--name-only | --id-only]') if ($command->{list});
+# Advertise asynchronous waiting only for commands that implement it.
+push(@parts,'[--no-wait]') if ($command->{job} || $command->{wait_state} || $command->{bridge});
+# Machine selectors are alternatives; only host-wide queries may omit them.
+if ($command->{select}) {
+    my $selector = '--name name | --id uuid';
+    push(@parts,$command->{select} eq 'optional-machine' ? "[$selector]" : "($selector)");
+}
+my $options = options($command);
+# A storage review is useful without confirming the destructive action.
+push(@parts, '(--review | --yes)') if ($command->{reviewable});
+# Omit selectors and review/confirmation switches already shown above.
+foreach my $name (option_order($command)) {
+    next if ($command->{select} && $name =~ /\A(?:name|id)\z/);
+    next if ($command->{reviewable} && $name =~ /\A(?:review|yes)\z/);
+    my $opt = $options->{$name};
+    my $part = option_usage($name,$opt);
+    # Required fields and destructive confirmation remain outside brackets.
+    $part = "[$part]" if (!$opt->{required} && !($name eq 'yes' && $command->{confirm}));
+    # An asterisk marks options that accept repeated values.
+    $part .= '*' if ($opt->{type} eq 's@');
+    push(@parts,$part);
+}
+return $prefix.' '.join("\n".(' ' x (length($prefix)+1)),@parts)."\n";
+}
+
 1;
