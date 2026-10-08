@@ -488,4 +488,48 @@ foreach my $name (keys %$options) {
 return (\%values,\%global);
 }
 
+# file_value(self, path, option) reads up to 128 KiB of UTF-8 text.
+# path is a regular file or "-" for stdin. The option definition controls
+# newline retention, secret redaction and the required JSON type.
+sub file_value
+{
+my ($self,$path,$option) = @_;
+my $fh;
+# Stdin is single-use; never wait interactively for a password or request body.
+if ($path eq '-') {
+    usage_error('Only one option may read standard input') if ($self->{stdin_used}++);
+    die "Supply file contents on standard input\n" if (-t $self->{in});
+    $fh = $self->{in};
+}
+# Check both the path and opened handle so nonregular inputs are refused.
+else {
+    die "Input must be a regular file\n" if (!-f $path);
+    open($fh,'<',$path) || die "Cannot open input file: $!\n";
+    die "Input must be a regular file\n" if (!-f $fh);
+}
+# Read one extra byte to distinguish an oversized value from a complete input.
+my $data = '';
+while (length($data) <= 131072) {
+    my $n = read($fh,my $chunk,131073-length($data));
+    die "Cannot read input file: $!\n" if (!defined($n));
+    last if (!$n);
+    $data .= $chunk;
+}
+# Close only handles opened here; the caller retains its standard input.
+close($fh) if ($path ne '-');
+die "Input file is too large\n" if (length($data) > 131072);
+$data = decode('UTF-8',$data,FB_CROAK);
+# Remove editor-added final newlines from values, but preserve script text.
+$data =~ s/\r?\n\z// if (!$option->{keep_newline});
+# Remember known secret contents solely for error redaction.
+push(@{$self->{secrets}},$data) if ($option->{secret} && length($data));
+# Reject JSON that does not match the option's required type.
+if ($option->{json}) {
+    my $decoded = eval {convert_from_json($data,1)};
+    die "Input file must contain a JSON $option->{json}\n" if (ref($decoded) ne $option->{json});
+    return $decoded;
+}
+return $data;
+}
+
 1;
