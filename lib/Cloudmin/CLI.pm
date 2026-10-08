@@ -908,4 +908,33 @@ splice(@rows,1,0,[map {'-' x $_} @width]);
 return join('',map {my $row=$_; join('  ',map {sprintf('%-*s',$width[$_],$row->[$_])} 0..$#keys)."\n"} @rows);
 }
 
+# render(self, command, result, global) prints the chosen output format.
+sub render
+{
+my ($self,$command,$result,$global) = @_;
+my $text;
+# JSON preserves native records and takes precedence over human formatting.
+if ($global->{json}) { $text = convert_to_json({command=>$command->{name},status=>'success',data=>$result},1,1); }
+# Identifier-only lists have no headings or progress decorations.
+elsif ($global->{'name-only'} || $global->{'id-only'}) {
+    my $key = $global->{'id-only'} ? $command->{list}->{id} || 'id' : $command->{list}->{key};
+    $text = join('',map {scalar_text($key,$_->{$key})."\n"} @$result);
+}
+# Explicit multiline output and ordinary detail reads expand nested records.
+elsif ($global->{multiline} || !$command->{list} && !$command->{done}) { $text = multiline($result); }
+# Inventory commands default to a compact aligned table.
+elsif ($command->{list}) { $text = table($command,$result); }
+# Reviews show the proposed settings rather than claiming a completed change.
+elsif ($self->{review}) { $text = multiline($result); }
+# Asynchronous jobs return their durable ID for subsequent status requests.
+elsif ($global->{'no-wait'} && $command->{job} && ref($result) eq 'HASH' && $result->{state}) { $text = $result->{id}."\n"; }
+# Finished immediate actions and followed jobs use their completion message.
+else { $text = sprintf($command->{done},scalar_text('', $self->{done_name}))."\n"; }
+print {$self->{out}} $text;
+# Human bridge output explains the next step without committing the change.
+if (!$global->{json} && ref($result) eq 'HASH' && ($result->{state} || '') eq 'confirm' && $command->{bridge}) {
+    print {$self->{out}} "Check the connection, then run: cloudmin confirm-bridge --id $result->{id}\n";
+}
+}
+
 1;
