@@ -61,4 +61,36 @@ my $ok = eval {
 $self->{'error'} ||= $@ if (!$ok);
 }
 
+# stream_ready(self, events) transfers bytes without interpreting guest output.
+# events uses the same readiness bits as socket_ready().
+sub stream_ready
+{
+my ($self, $events) = @_;
+my $ok = eval {
+	my $stream = $self->{'stream'};
+	if ($events & 1) {
+		# Libvirt returns -2 for a transient lack of data on nonblocking streams.
+		my $count = $stream->recv(my $bytes, 65536);
+		die "Serial console closed\n" if ($count == 0 || $count == -1);
+		# Recorded sessions use one output cursor for history and live bytes.
+		# Drain the PTY as well so it cannot block the guest or duplicate output.
+		$self->{'to_browser'} .= $bytes if ($count > 0 && !$self->{'history'});
+		}
+	if ($events & 2 && length($self->{'to_guest'})) {
+		# Send at most one chunk per event so ACL checks cannot be starved.
+		my $bytes = substr($self->{'to_guest'}, 0, 65536);
+		my $count = $stream->send($bytes, length($bytes));
+		die "Cannot write serial console\n" if ($count == 0 || $count == -1);
+		# Keep unwritten bytes, including all input on would-block (-2).
+		substr($self->{'to_guest'}, 0, $count, '') if ($count > 0);
+		}
+	# A closed guest port must release the browser relay and its proxy route.
+	die "Serial console closed\n" if ($events & (4 | 8));
+	$self->update();
+	1;
+	};
+# Defer callback errors until pump() returns from libvirt's C dispatcher.
+$self->{'error'} ||= $@ if (!$ok);
+}
+
 1;
