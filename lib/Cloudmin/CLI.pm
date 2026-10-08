@@ -805,4 +805,14 @@ $key =~ tr/_/ /;
 return join(' ',map {ucfirst($_)} split(/ /,$key));
 }
 
+# human_size(bytes) formats binary sizes without changing the underlying data.
+sub human_size
+{
+my ($bytes) = @_;
+my @units = qw(B KiB MiB GiB TiB PiB EiB);
+my $i = 0;
+while ($bytes >= 1024 && $i < $#units) { $bytes /= 1024; $i++; }
+return sprintf('%.3g %s',$bytes,$units[$i]);
+}
+
 1;
