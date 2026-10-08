@@ -401,4 +401,91 @@ $options{yes} = option('flag',help => 'Confirm this operation')
 return \%options;
 }
 
+# usage_error(message) distinguishes parser errors from API validation failures.
+sub usage_error { die bless({message => $_[0]}, 'Cloudmin::CLI::Usage'); }
+
+# parse(self, command, argv) consumes argv and returns values and global flags.
+# Getopt parses numbers and switches; request() handles files, units and IDs.
+sub parse
+{
+my ($self,$command,$argv) = @_;
+my (%values,%global);
+my $options = options($command);
+my @specs;
+# Build strict Getopt specifications from the shared command definition.
+foreach my $name (sort keys %$options) {
+    my $type = $options->{$name}->{type};
+    my $spec = $name.($type eq 'yesno' ? '!' : $type eq 'flag' ? ''
+        : $type eq 'i' ? '=i' : $type eq 's@' ? '=s@' : '=s');
+    # collect(option, value) stores repeats only for multi-value options.
+    push(@specs,$spec,sub {
+        my ($opt,$value) = @_;
+        # Repeated selectors and public keys keep every supplied value.
+        if ($type eq 's@') { push(@{$values{$name}},$value); }
+        # Reject a second singular value rather than silently replacing it.
+        # Getopt catches callback exceptions and reports them as warnings, so
+        # die with plain text here; the parser failure becomes a usage error.
+        else {
+            die "Specify --$name only once\n" if (exists($values{$name}));
+            $values{$name} = $value;
+        }
+    });
+}
+# Output, waiting and help flags belong to the CLI, not the API request.
+foreach my $name (qw(multiline json name-only id-only no-wait help)) {
+    push(@specs,$name,\$global{$name});
+}
+# Capture parser warnings so failures use the chosen output and exit contract.
+my $error = '';
+my $ok;
+{
+    # capture_warning(message) keeps Getopt diagnostics out of direct stderr.
+    local $SIG{__WARN__} = sub { $error .= $_[0] };
+    my $parser = Getopt::Long::Parser->new(config => [qw(bundling no_ignore_case no_auto_abbrev no_getopt_compat permute)]);
+    $ok = $parser->getoptionsfromarray($argv,@specs);
+}
+$error =~ s/\s+\z//;
+usage_error($error || 'Invalid command options') if (!$ok);
+usage_error('Unexpected positional argument') if (@$argv);
+# Short help needs no host connection or complete command.
+return (\%values,\%global) if ($global{help});
+# Keep machine-readable output mutually exclusive with scalar identifier lists.
+usage_error('Choose only one output format') if
+    (grep {$global{$_}} qw(json name-only id-only)) > 1 ||
+    $global{multiline} && ($global{'name-only'} || $global{'id-only'});
+# A single detail record has no list identity field to extract.
+usage_error('--name-only and --id-only require a list command')
+    if (!$command->{list} && ($global{'name-only'} || $global{'id-only'}));
+# Check required options and allowed values before host or file access.
+foreach my $name (sort keys %$options) {
+    my $opt = $options->{$name};
+    usage_error("Missing required option --$name") if ($opt->{required} && !exists($values{$name}));
+    next if (!exists($values{$name}));
+    usage_error("Invalid --$name; choose ".join('|',@{$opt->{values}}))
+        if ($opt->{values} && !grep {$_ eq $values{$name}} @{$opt->{values}});
+}
+# A selector is optional only for host-wide lists; name and UUID cannot coexist.
+if ($command->{select}) {
+    my $count = grep {exists($values{$_})} qw(name id);
+    usage_error('Select exactly one of --name or --id')
+        if ($count > 1 || $count == 0 && $command->{select} eq 'machine');
+}
+# Destructive actions need --yes; a storage review alone needs no confirmation.
+usage_error('This operation requires --yes')
+    if (($command->{confirm} || $command->{name} eq 'cancel-job' && $values{cleanup}) && !$values{yes}
+        && !($command->{reviewable} && $values{review}));
+# Cancellation needs confirmation only when it also deletes the guest.
+usage_error('--yes is only used with --cleanup') if ($command->{name} eq 'cancel-job' && $values{yes} && !$values{cleanup});
+# Both key sources map to one API field and must not overwrite each other.
+usage_error('Use --ssh-key or --ssh-keys-file, not both') if (exists($values{'ssh-key'}) && exists($values{'ssh-keys-file'}));
+# Pool registration needs exactly one backend, before any API call.
+usage_error('Specify exactly one of --path or --group')
+    if ($command->{name} eq 'create-pool' && (grep {exists($values{$_})} qw(path group)) != 1);
+# Apply defaults only to omitted options, preserving explicit --no- switches.
+foreach my $name (keys %$options) {
+    $values{$name} = $options->{$name}->{default} if (!exists($values{$name}) && exists($options->{$name}->{default}));
+}
+return (\%values,\%global);
+}
+
 1;
