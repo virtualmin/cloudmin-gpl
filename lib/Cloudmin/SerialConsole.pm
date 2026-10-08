@@ -8,6 +8,49 @@ use Socket qw(AF_UNIX SOCK_STREAM PF_UNSPEC);
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 use Errno qw(EAGAIN EWOULDBLOCK EINTR);
 
+# new(class, adapter, stream, [history_reader])
+# Bridges an already-authorized stream and retains its libvirt adapter until
+# close(). Register libvirt's default event loop before opening the stream.
+# An optional history_reader supplies both the replay and subsequent log output;
+# without one, output comes directly from the PTY.
+sub new
+{
+my ($class, $adapter, $stream, $history) = @_;
+my $replay = $history ? $history->history() : '';
+# A length prefix lets the browser suppress terminal replies during replay.
+my $self = bless { adapter => $adapter, stream => $stream,
+	history => $history, to_guest => '',
+	to_browser => pack('N', length($replay)).$replay }, $class;
+my $ok = eval {
+	# Give the relay a byte socket; keep the management stream in this process.
+	socketpair(my $relay, my $peer, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
+		|| die "Cannot create serial console channel: $!\n";
+	$self->{'handle'} = $relay;
+	$self->{'peer'} = $peer;
+	# A slow relay must not block the supervisor's event loop or access checks.
+	my $flags = fcntl($peer, F_GETFL, 0);
+	defined($flags) && fcntl($peer, F_SETFL, $flags | O_NONBLOCK)
+		|| die "Cannot configure serial console channel: $!\n";
+	# Forward each callback's readiness mask to its bounded I/O handler.
+	$self->{'watch'} = Sys::Virt::Event::add_handle(fileno($peer), 1,
+		sub { $self->socket_ready($_[2]); });
+	$stream->add_callback(1, sub { $self->stream_ready($_[1]); });
+	$self->{'stream_watch'} = 1;
+	# Wake the idle event loop every 100 ms for route cleanup and access checks.
+	$self->{'timer'} = Sys::Virt::Event::add_timeout(100, sub { });
+	# Send the replay prefix even when no live output is available.
+	$self->update();
+	1;
+	};
+if (!$ok) {
+	# Failed setup must release libvirt's exclusive console lock as well.
+	my $error = $@;
+	$self->close();
+	die $error;
+	}
+return $self;
+}
+
 # handle(self) returns the only descriptor given to the unprivileged relay.
 sub handle { return $_[0]->{'handle'}; }
 
