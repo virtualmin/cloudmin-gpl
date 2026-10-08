@@ -794,4 +794,15 @@ $self->{review} = $action eq 'review' || $values->{review};
 return $result;
 }
 
+# label(key) supplies consistent labels for known fields and readable fallbacks.
+sub label
+{
+my ($key) = @_;
+my %labels = (id=>'ID',uuid=>'UUID',cpus=>'CPUs',used_by=>'Used by',memory_mib=>'Memory',disk_gib=>'Disk',addresses=>'IP address',created=>'Created on');
+# Prefer familiar labels; otherwise expand API field names for display.
+return $labels{$key} if ($labels{$key});
+$key =~ tr/_/ /;
+return join(' ',map {ucfirst($_)} split(/ /,$key));
+}
+
 1;
