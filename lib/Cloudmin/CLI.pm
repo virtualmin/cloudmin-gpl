@@ -1081,4 +1081,43 @@ else {
 }
 }
 
+# docs_body(self, command, sections) renders one command's reference entry
+# below its heading: generated syntax, converted POD text, examples and the
+# option list. sections maps command names to their POD sections.
+sub docs_body
+{
+my ($self,$command,$sections) = @_;
+my $name = $command->{name};
+my $text = "```text\n".$self->synopsis($command)."```\n\n";
+my $section = $sections->{$name} || die "Missing help for $name\n";
+$section =~ s/^=head2 [^\n]+\n//;
+my $code = 0;
+# Convert the supported POD subset while keeping examples in shell fences.
+foreach my $line (split(/\n/,$section)) {
+    # Structural list markers and the POD terminator have no Markdown text.
+    next if ($line =~ /^=(?:over|back|cut)/);
+    # Contiguous indented lines belong to a verbatim shell example.
+    if ($line =~ /^    /) {
+        # Open one code fence for each run of example lines.
+        $text .= "```sh\n" if (!$code++);
+        $line =~ s/^    //; $text .= "$line\n"; next;
+    }
+    # A prose line ends the preceding shell example.
+    if ($code) { $text .= "```\n"; $code = 0; }
+    # Lists and inline formatting need explicit Markdown equivalents.
+    $line =~ s/^=item /- /;
+    $line =~ s/C<([^>]+)>/`$1`/g; $line =~ s/B<([^>]+)>/**$1**/g;
+    $text .= "$line\n";
+}
+# Close a final example even when no prose follows it.
+$text .= "```\n" if ($code);
+my $opts = options($command);
+# Append authoritative option descriptions; raw API has no named options.
+if (keys %$opts) {
+    $text .= "\nOptions:\n\n";
+    $text .= '- `'.option_usage($_,$opts->{$_}).'`: '.($opts->{$_}->{help} || label($_)).".\n" for option_order($command);
+}
+return $text;
+}
+
 1;
