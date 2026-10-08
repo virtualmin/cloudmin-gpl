@@ -937,4 +937,21 @@ if (!$global->{json} && ref($result) eq 'HASH' && ($result->{state} || '') eq 'c
 }
 }
 
+# command_list(self) groups commands in the same order as their definitions.
+sub command_list
+{
+my ($self) = @_;
+my $text = "Usage: cloudmin <command> [options]\n       cloudmin help [command]\n";
+my $group = '';
+foreach my $command (@{commands()}) {
+    # Underline each group heading, matching Virtualmin's command list.
+    if ($group ne $command->{group}) {
+        $group = $command->{group};
+        $text .= "\n$group\n".('-' x length($group))."\n";
+    }
+    $text .= sprintf('%-20s %s',$command->{name},$command->{summary})."\n";
+}
+return $text;
+}
+
 1;
