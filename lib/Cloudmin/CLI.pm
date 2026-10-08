@@ -697,4 +697,101 @@ while (1) {
 }
 }
 
+# execute(self, command, values, global) submits and waits as requested.
+sub execute
+{
+my ($self,$command,$values,$global) = @_;
+my ($action,$input,$filters,$machine,$current) = $self->request($command,$values);
+# Storage and bridge preflights already produced the requested review.
+if (($command->{bridge} || $command->{reviewable}) && $values->{review}) {
+    $self->{review} = 1;
+    return $current;
+}
+# A blocked review must never proceed to a destructive request.
+die $current->{usage}->{reason}."\n" if ($command->{reviewable} && $current->{usage}->{reason});
+# Separate autostart from hardware writes so it follows successful completion.
+my $autostart = delete($input->{autostart}) if ($command->{name} eq 'modify-system');
+# Autostart alone uses the immediate action and its enabled field.
+if ($action eq 'autostart') { $input->{enabled} = $autostart; }
+# Do not apply autostart before an asynchronous hardware job has succeeded.
+elsif (defined($autostart) && $global->{'no-wait'}) {
+    usage_error('Change --autostart separately when using --no-wait');
+}
+# Submit once; wait for jobs unless reviewing or changing autostart alone.
+my $result = $self->api($action,$input);
+$result = $self->follow($result,$global,$command) if ($command->{job} && $action ne 'review' && $action ne 'autostart');
+if (defined($autostart) && $action ne 'autostart') {
+    # Apply only after the resource job releases its guest reservation.
+    $self->api('autostart',{id => $input->{id},enabled => $autostart});
+}
+# Simple power requests wait for host state, not guest application readiness.
+if ($command->{wait_state} && !$global->{'no-wait'}) {
+    my $deadline = $self->{now}->() + 120;
+    while (1) {
+        my $state = $self->api('machines',{id => $input->{id}});
+        last if ($state->{state} eq $command->{wait_state});
+        # A delayed guest response remains pending after the CLI timeout.
+        die "State change is still pending; use cloudmin get-system --id $input->{id}\n" if ($self->{now}->() >= $deadline);
+        $self->{sleep}->();
+    }
+}
+# Wait for network confirmation, but leave confirmation to the caller.
+if ($command->{bridge} && !$global->{'no-wait'}) {
+    my $deadline = $self->{now}->() + 3700;
+    while ($result && ($result->{state} || '') !~ /\A(?:confirm|confirmed|rolled_back|rollback_failed|failed)\z/) {
+        # The host recovery timer continues even if this client stops waiting.
+        die "Bridge change is still running; use cloudmin get-bridge-status\n" if ($self->{now}->() >= $deadline);
+        $self->{sleep}->();
+        $result = $self->api('bridge_status',{id => $result->{id}});
+    }
+    # Report failed recovery even when polling itself succeeded.
+    die "Bridge recovery failed; use cloudmin get-bridge-status\n" if ($result && ($result->{state} || '') =~ /\A(?:failed|rollback_failed)\z/);
+    # Successful automatic rollback is still a failed removal request.
+    die "The bridge removal was rolled back\n" if ($action eq 'bridge_remove' && $result && $result->{state} eq 'rolled_back');
+}
+# Machine details include the public inventory row already used for selection.
+if ($command->{summary_action}) {
+    $result = {%$result, summary => $machine};
+}
+if ($command->{storage_volumes}) {
+    # Flatten inventory while retaining the pool ID and complete ownership data.
+    my @pools = grep {!$input->{pool} || $_->{uuid} eq $input->{pool}} @{$result->{pools}};
+    die join("\n", map {$_->{volume_error}} grep {$_->{volume_error}} @pools)."\n"
+        if (grep {$_->{volume_error}} @pools);
+    $result = [map {my $pool = $_; map {{%$_, pool => $pool->{name}, pool_id => $pool->{uuid}}}
+        @{$pool->{volumes} || []}} @pools];
+}
+if (($command->{subset} || '') eq 'lvm_groups') {
+    # A discovery failure is distinct from a host with no unregistered groups.
+    die $result->{lvm_group_error}."\n" if ($result->{lvm_group_error});
+    $result = {%$result, lvm_groups => [map {{name => $_}} @{$result->{lvm_groups}}]};
+}
+if ($command->{subset}) {
+    # List commands expose native records; no text parsing or field renaming.
+    # Fail if any part of the snapshot inventory could not be read.
+    die join("\n",@{$result->{errors}})."\n"
+        if ($command->{subset} eq 'snapshots' && @{$result->{errors} || []});
+    $result = $command->{subset} eq 'images'
+        ? [@{$result->{images} || []},@{$result->{catalogue_images} || []}]
+        : $result->{$command->{subset}};
+}
+# Values within a filter are alternatives; separate filters all have to match.
+if ($command->{list} && keys %$filters) {
+    foreach my $field (sort keys %$filters) {
+        my @wanted = ref($filters->{$field}) eq 'ARRAY' ? @{$filters->{$field}} : ($filters->{$field});
+        # Resolve preset IDs to names for matching against inventory.
+        if ($field =~ /\A(?:template|plan)\z/) {
+            my $id = $self->resolve($field,$wanted[0]);
+            my ($preset) = grep {$_->{id} eq $id} @{$self->{choices}->{presets}->{$field}->{entries}};
+            @wanted = ($preset->{name});
+        }
+        $result = [grep { my $row = $_; grep {defined($row->{$field}) && $row->{$field} eq $_} @wanted } @$result];
+    }
+}
+# Save display context without altering the native API record returned to JSON.
+$self->{done_name} = ref($result) eq 'HASH' && ($result->{name} || $result->{id}) || $input->{name} || ($machine && $machine->{name}) || $input->{job} || $input->{id} || '';
+$self->{review} = $action eq 'review' || $values->{review};
+return $result;
+}
+
 1;
