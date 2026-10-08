@@ -885,4 +885,27 @@ foreach my $key (sort keys %$data) {
 return $text;
 }
 
+# table(command, rows) aligns list columns using their formatted display widths.
+sub table
+{
+my ($command,$rows) = @_;
+my @keys = @{$command->{list}->{columns}};
+my @rows = ([map {label($_)} @keys]);
+# Summarize volume owners and scalar arrays without changing the records.
+foreach my $row (@$rows) {
+    push(@rows,[map {my $key = $_; my $v = $key eq 'used_by'
+        ? join(', ', map {$_->{name} || $_->{id} || $_->{uuid} || $_->{kind}} @{$row->{usage}->{owners} || []}) || $row->{usage}->{reason} || '-'
+        : $row->{$key};
+        ref($v) eq 'ARRAY' ? join(' ',map {scalar_text($key,ref($_) eq 'HASH' ? $_->{address} : $_)} @$v)
+        : scalar_text($key,$v)} @keys]);
+}
+# Measure rendered cells before padding, including labels and unit suffixes.
+my @width = map {length($_)} @{$rows[0]};
+# Grow each column to fit its longest rendered value.
+foreach my $row (@rows) { for my $i (0..$#keys) { $width[$i] = length($row->[$i]) if (length($row->[$i]) > $width[$i]); } }
+# Add separators and align headers and values with the same widths.
+splice(@rows,1,0,[map {'-' x $_} @width]);
+return join('',map {my $row=$_; join('  ',map {sprintf('%-*s',$width[$_],$row->[$_])} 0..$#keys)."\n"} @rows);
+}
+
 1;
