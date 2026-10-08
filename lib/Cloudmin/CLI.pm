@@ -1061,4 +1061,24 @@ Pod::Text->new(sentence=>0,width=>78)->parse_from_filehandle($input,$output);
 return $out;
 }
 
+# show_help(self, [name]) pages terminal help or prints redirected help.
+sub show_help
+{
+my ($self,$name) = @_;
+my $text = $self->help($name);
+my ($pager) = grep {-x $_} qw(/usr/bin/less /bin/less /usr/bin/more /bin/more);
+if (-t $self->{in} && -t $self->{out} && $pager) {
+    # A temporary file lets the reader quit early without breaking a pipe.
+    my ($fh,$path) = tempfile('cloudmin-help-XXXXXX',TMPDIR=>1,UNLINK=>1);
+    print $fh $text;
+    close($fh) || die "Cannot write command help: $!\n";
+    # Run a known pager directly, without a shell or custom command.
+    system($pager,$path) == 0 || die "Cannot display command help\n";
+}
+else {
+    # Pipes, files and hosts without a pager still receive the complete manual.
+    print {$self->{out}} $text;
+}
+}
+
 1;
