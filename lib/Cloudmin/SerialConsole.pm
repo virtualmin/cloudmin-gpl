@@ -93,4 +93,17 @@ my $ok = eval {
 $self->{'error'} ||= $@ if (!$ok);
 }
 
+# pump(self) advances serial I/O once, waiting at most 100 ms when idle.
+sub pump
+{
+my ($self) = @_;
+if ($self->{'history'}) {
+	# Poll regular files with the idle timer; readiness watches would spin.
+	$self->{'to_browser'} .= $self->{'history'}->read();
+	$self->update();
+	}
+Sys::Virt::Event::run_default();
+die $self->{'error'} if ($self->{'error'});
+}
+
 1;
