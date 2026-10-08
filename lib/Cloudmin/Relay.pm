@@ -39,4 +39,13 @@ $key =~ s/\s//g;
 return $key eq encode_base64($session, '');
 }
 
+# ready() confirms that the sandbox loaded its credentials and server code.
+# Standard error is a private startup/diagnostic channel to the supervisor.
+sub ready
+{
+my $message = "Cloudmin relay ready\n";
+syswrite(STDERR, $message) == length($message) ||
+	die "Cannot report relay startup\n";
+}
+
 1;
