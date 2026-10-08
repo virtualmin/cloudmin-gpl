@@ -26,4 +26,17 @@ my $listener = IO::Socket::INET->new_from_fd(0, 'r+') ||
 return ($listener, $session);
 }
 
+# authenticated(key, session) matches Webmin's authenticated proxy handshake.
+# Miniserv replaces Sec-WebSocket-Key with the browser session's base64 value.
+# Keep this compatible with xterm::verify_websocket_key; t/relay.t compares
+# both checks without initializing Webmin in the relay.
+sub authenticated
+{
+my ($key, $session) = @_;
+# Missing credentials must never authenticate as an empty encoded value.
+return 0 if (!defined($key) || !defined($session) || !length($session));
+$key =~ s/\s//g;
+return $key eq encode_base64($session, '');
+}
+
 1;
