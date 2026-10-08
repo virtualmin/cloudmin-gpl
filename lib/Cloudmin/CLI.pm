@@ -815,4 +815,31 @@ while ($bytes >= 1024 && $i < $#units) { $bytes /= 1024; $i++; }
 return sprintf('%.3g %s',$bytes,$units[$i]);
 }
 
+# scalar_text(key, value) formats values and removes terminal controls.
+sub scalar_text
+{
+my ($key,$value) = @_;
+# Unknown measurements stay distinct from measured zero values.
+return '-' if (!defined($value));
+# Accept either JSON-library booleans or Webmin scalar-reference booleans.
+return $value ? 'Yes' : 'No' if (blessed($value) && ref($value) =~ /Boolean\z/);
+# Webmin also represents JSON booleans as references to zero or one.
+return $$value ? 'Yes' : 'No' if (ref($value) eq 'SCALAR');
+# Known numeric flag fields use the same human-readable boolean labels.
+return $value ? 'Yes' : 'No' if ($key =~ /\A(?:autostart|active|persistent|readonly|bootmenu|start|cancel|cleanup_pending)\z/ && $value =~ /\A[01]\z/);
+# API resource fields encode their unit in the key, unlike byte measurements.
+return human_size($value*1024**2) if ($key =~ /_mib\z/);
+# Disk capacities use GiB before being converted for display.
+return human_size($value*1024**3) if ($key =~ /_gib\z/);
+# Storage and explicit byte fields already use bytes.
+return human_size($value) if ($key =~ /\A(?:size|capacity|allocation|available|physical)\z/ || $key =~ /_bytes\z/);
+# Human output uses local creation time; JSON retains the original epoch.
+return strftime('%Y-%m-%d %H:%M:%S',localtime($value)) if ($key eq 'created' && $value =~ /\A\d+\z/);
+# Capitalize state labels without changing their machine-readable API values.
+$value = ucfirst($value) if ($key eq 'state');
+# Guest-controlled text must not inject terminal escape or control sequences.
+$value =~ s/[\x00-\x1f\x7f-\x9f]/ /g;
+return $value;
+}
+
 1;
