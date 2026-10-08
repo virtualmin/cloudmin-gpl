@@ -55,4 +55,24 @@ return {
 };
 }
 
+# destination_options() maps CLI destination fields to the API target object.
+sub destination_options
+{
+# Keep ordinary destination fields separate from file-backed credentials.
+my %options;
+foreach my $field (qw(mode path host user port key_file bucket endpoint region ca_file account project subscription)) {
+    my $name = $field; $name =~ tr/_/-/;
+    $options{'dest-'.$name} = option($field eq 'port' ? 'i' : 's',
+        field => 'target.'.$field, help => 'Backup destination '.$name);
+}
+$options{'dest-mode'}->{'values'} = [qw(local ssh s3 gcs azure bb dropbox drive)];
+# Mark secret file contents for redaction if the controller returns an error.
+foreach my $field (qw(password access secret session_token refresh_token)) {
+    my $name = $field; $name =~ tr/_/-/;
+    $options{'dest-'.$name.'-file'} = option('file', field => 'target.'.$field,
+        secret => 1, help => 'Destination '.$name.' file, or - for stdin');
+}
+return \%options;
+}
+
 1;
