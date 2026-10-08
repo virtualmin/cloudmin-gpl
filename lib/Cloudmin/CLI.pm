@@ -385,4 +385,20 @@ my ($command) = grep {$_->{name} eq $name} @{commands()};
 return $command;
 }
 
+# options(command) adds selectors and confirmation to explicit command options.
+sub options
+{
+my ($command) = @_;
+my %options = %{$command->{options}};
+if ($command->{select}) {
+    # Require a name or UUID so conflicting selectors cannot be ignored.
+    $options{name} = option('s',help => 'Source virtual machine name',metavar => 'name');
+    $options{id} = option('s',help => 'Source virtual machine UUID',metavar => 'uuid');
+}
+# Destructive actions and cancellation cleanup require explicit confirmation.
+$options{yes} = option('flag',help => 'Confirm this operation')
+    if ($command->{confirm} || $command->{name} eq 'cancel-job');
+return \%options;
+}
+
 1;
