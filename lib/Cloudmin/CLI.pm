@@ -545,4 +545,42 @@ my $power = $suffix eq '' ? ($unit eq 'MiB' ? 2 : 3) : $powers{substr($suffix,0,
 return 0 + sprintf('%.17g',$number * 1024**$power / 1024**($unit eq 'MiB' ? 2 : 3));
 }
 
+# api(self, action, input) forwards to the supplied controller callback.
+# The entry point provides authentication; tests supply an isolated substitute.
+sub api { return $_[0]->{api}->($_[1],$_[2]); }
+
+# resolve(self, kind, value) resolves exact IDs or unambiguous display names.
+sub resolve
+{
+my ($self,$kind,$value) = @_;
+if ($kind eq 'storage_pool') {
+    # Creation choices omit stopped pools; management uses full inventory.
+    $self->{storage} ||= $self->api('storage',{});
+    my @items = @{$self->{storage}->{pools}};
+    my @matches = grep {($_->{uuid} || '') eq $value} @items;
+    @matches = grep {$_->{name} eq $value} @items if (!@matches);
+    die "Unknown storage pool: $value\n" if (!@matches);
+    die "Ambiguous storage pool name; use its ID\n" if (@matches != 1);
+    $self->{storage_pool} = $matches[0];
+    return $matches[0]->{uuid};
+}
+# Reuse one options snapshot for all names resolved in this command.
+$self->{choices} ||= $self->api('options',{});
+my $choices = $self->{choices};
+my @items = $kind =~ /\A(?:template|plan)\z/
+    ? @{$choices->{presets}->{$kind}->{entries} || []}
+    : $kind eq 'image' ? (@{$choices->{images} || []},@{$choices->{catalogue_images} || []})
+    : @{$choices->{$kind eq 'pool' ? 'pools' : 'networks'} || []};
+# Match IDs before display names; networks also accept a bare UUID.
+my $key = $kind eq 'network' ? 'key' : 'id';
+my @matches = grep {($_->{$key} || '') eq $value} @items;
+@matches = grep {($_->{name} || '') eq $value || $kind eq 'network' && ($_->{id} || '') eq $value} @items if (!@matches);
+# A missing or ambiguous match must never select an arbitrary resource.
+die "Unknown $kind: $value\n" if (!@matches);
+die "Ambiguous $kind name; use its ID\n" if (@matches != 1);
+# Known but disabled templates must report policy rather than an unknown ID.
+die $matches[0]->{disabled} if ($matches[0]->{disabled});
+return $matches[0]->{$key};
+}
+
 1;
