@@ -1033,4 +1033,32 @@ while ($pod =~ /^=head2 ([a-z-]+)\n(.*?)(?=^=head2 |\z)/msg) { $sections{$1} = "
 return ($pod,\%sections);
 }
 
+# help(self, [name]) renders one command with generated option details.
+# Without a name, renders the complete POD source as one plain-text manual.
+sub help
+{
+my ($self,$name) = @_;
+my ($pod,$sections) = $self->pod_sections();
+# A requested section must also have an executable command definition.
+usage_error("Unknown command: $name") if (defined($name) && !$self->command($name));
+# Promote a command section to the manual title and append its current options.
+if (defined($name)) {
+    my $command = $self->command($name);
+    $pod = $sections->{$name};
+    $pod =~ s/^=head2 [^\n]+\n/=head1 $name\n\n$command->{summary}\n/;
+    my $options = options($command);
+    # Render option details as part of the manual, without repeating syntax.
+    $pod .= "\n=head2 Options\n\n=over\n\n" if (keys %$options);
+    $pod .= '=item C<'.option_usage($_,$options->{$_}).">\n\n".
+        ($options->{$_}->{help} || label($_))."\n\n" for option_order($command);
+    $pod .= "=back\n" if (keys %$options);
+}
+# Render in memory so paging and redirection receive identical manual text.
+my $out = '';
+open(my $input,'<',\$pod) || die $!;
+open(my $output,'>',\$out) || die $!;
+Pod::Text->new(sentence=>0,width=>78)->parse_from_filehandle($input,$output);
+return $out;
+}
+
 1;
