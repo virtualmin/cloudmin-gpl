@@ -583,4 +583,80 @@ die $matches[0]->{disabled} if ($matches[0]->{disabled});
 return $matches[0]->{$key};
 }
 
+# request(self, command, values) builds a request and reads current revisions.
+# Returns action, input, list filters, selected machine and preflight record.
+sub request
+{
+my ($self,$command,$values) = @_;
+my $options = options($command);
+my (%input,%filters);
+my $action = $command->{action};
+# Translate CLI-only switches and typed values before assembling API fields.
+foreach my $name (sort keys %$values) {
+    my $opt = $options->{$name};
+    next if ($name eq 'yes' || $command->{select} && $name =~ /\A(?:name|id)\z/);
+    my $value = $values->{$name};
+    # List filters are applied to returned inventory, not sent as API fields.
+    if ($opt->{filter}) { $filters{$opt->{filter}} = $value; next; }
+    # Review and cleanup switches choose an action instead of an input value.
+    if ($opt->{action}) { $action = $opt->{action} if ($value); next; }
+    # Review chooses the CLI return path; it is not an API input field.
+    next if (($command->{bridge} || $command->{reviewable}) && $name eq 'review');
+    # Read file contents and normalize sizes, booleans, repeated keys and IDs.
+    $value = $self->file_value($value,$opt) if ($opt->{type} eq 'file');
+    $value = size($value,$opt->{unit}) if ($opt->{type} eq 'size');
+    $value = $value eq 'yes' ? 1 : 0 if ($opt->{boolean});
+    $value = join($opt->{join},@$value) if (defined($opt->{join}));
+    $value = $self->resolve($opt->{resolve},$value) if ($opt->{resolve});
+    my $field = $opt->{field} || $name; $field =~ tr/-/_/;
+    # Dotted mappings build nested destination objects; other fields stay flat.
+    if ($field =~ /\A(\w+)\.(\w+)\z/) { $input{$1}->{$2} = $value; }
+    # Ordinary operation fields belong directly in the request object.
+    else { $input{$field} = $value; }
+}
+# Derive the backend and revision from explicit, validated selectors.
+$input{type} = exists($values->{group}) ? 'logical' : 'dir' if ($command->{name} eq 'create-pool');
+$input{revision} = $self->{storage_pool}->{revision} if ($command->{pool_revision});
+my $machine;
+# Resolve a machine from visible inventory, preserving its public summary.
+if ($command->{select} && (exists($values->{name}) || exists($values->{id}))) {
+    my $key = exists($values->{id}) ? 'id' : 'name';
+    my @matches = grep {$_->{$key} eq $values->{$key}} @{$self->api('machines',{})};
+    die "Virtual machine not found\n" if (!@matches);
+    die "Ambiguous virtual machine name; use its UUID\n" if (@matches != 1);
+    $machine = $matches[0];
+    $input{id} = $machine->{id};
+}
+# Pass the CLI confirmation to the API.
+$input{confirm} = 1 if ($command->{confirm} || $action eq 'cancel_cleanup');
+# An autostart-only edit avoids the hardware job; empty edits are usage errors.
+if ($command->{name} eq 'modify-system') {
+    my @fields = grep {$_ ne 'id' && $_ ne 'autostart'} keys %input;
+    usage_error('Specify at least one setting to change') if (!@fields && !exists($input{autostart}));
+    $action = 'autostart' if (!@fields);
+}
+my $current;
+if ($command->{prepare} && $action ne 'autostart') {
+    # Read the revision just before submission; the API detects later changes.
+    $current = $self->api($command->{prepare}, $command->{prepare_fields}
+        ? {map {$_ => $input{$_}} @{$command->{prepare_fields}}}
+        : $command->{prepare} eq 'bridge_remove_review' ? {name => $input{name}} : {id => $input{id}});
+    $input{revision} = $current->{revision};
+}
+if ($command->{name} eq 'modify-system' && $action eq 'update') {
+    # The update API requires both resource fields even for a description edit.
+    foreach my $field (qw(cpus memory_mib)) {
+        $input{$field} = $current->{$field} if (!exists($input{$field}));
+    }
+}
+# Confirm deletion against the current name and snapshot/checkpoint history.
+if ($action eq 'delete') {
+    $input{confirm_name} = $current->{name};
+    $input{history_revision} = $current->{history_revision};
+}
+# The media API ejects the current disc when the volume is empty.
+$input{volume} = '' if ($command->{name} eq 'eject-media');
+return ($action,\%input,\%filters,$machine,$current);
+}
+
 1;
