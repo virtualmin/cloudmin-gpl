@@ -532,4 +532,17 @@ if ($option->{json}) {
 return $data;
 }
 
+# size(value, unit) converts binary sizes to the API's MiB or GiB field units.
+sub size
+{
+my ($value,$unit) = @_;
+die "Invalid size; use a number with optional KiB, MiB, GiB or TiB\n"
+    if ($value !~ /\A\s*(\d+(?:\.\d+)?)\s*([KMGTPE]i?B?|B)?\s*\z/i);
+# Bare sizes use the destination unit; all explicit suffixes use powers of 1024.
+my ($number,$suffix) = ($1,uc($2 || ''));
+my %powers = (B=>0,K=>1,M=>2,G=>3,T=>4,P=>5,E=>6);
+my $power = $suffix eq '' ? ($unit eq 'MiB' ? 2 : 3) : $powers{substr($suffix,0,1)};
+return 0 + sprintf('%.17g',$number * 1024**$power / 1024**($unit eq 'MiB' ? 2 : 3));
+}
+
 1;
