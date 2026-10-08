@@ -1021,4 +1021,16 @@ return "See `cloudmin help $command->{name}` for more details and examples\n\n".
     $command->{summary}."\n\n".$self->synopsis($command);
 }
 
+# pod_sections(self) reads the single long-help source, keyed by command name.
+sub pod_sections
+{
+my ($self) = @_;
+open(my $fh,'<',dirname(__FILE__).'/CLI/commands.pod') || die "Cannot read command help: $!\n";
+local $/; my $pod = <$fh>; close($fh);
+# Keep each command section intact for both terminal and Markdown renderers.
+my %sections;
+while ($pod =~ /^=head2 ([a-z-]+)\n(.*?)(?=^=head2 |\z)/msg) { $sections{$1} = "=head2 $1\n$2"; }
+return ($pod,\%sections);
+}
+
 1;
