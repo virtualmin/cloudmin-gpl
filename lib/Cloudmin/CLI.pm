@@ -1013,4 +1013,12 @@ foreach my $name (option_order($command)) {
 return $prefix.' '.join("\n".(' ' x (length($prefix)+1)),@parts)."\n";
 }
 
+# short_help(self, command) uses the familiar Virtualmin summary and synopsis.
+sub short_help
+{
+my ($self,$command) = @_;
+return "See `cloudmin help $command->{name}` for more details and examples\n\n".
+    $command->{summary}."\n\n".$self->synopsis($command);
+}
+
 1;
