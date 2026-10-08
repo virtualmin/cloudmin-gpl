@@ -27,4 +27,38 @@ $self->{'stream'}->update_callback(
 	1 | (length($self->{'to_guest'}) ? 2 : 0));
 }
 
+# socket_ready(self, events) transfers raw bytes to/from the relay's socket.
+# events is libvirt's readable/writable/error/hangup bitmask (1/2/4/8).
+sub socket_ready
+{
+my ($self, $events) = @_;
+my $ok = eval {
+	my $peer = $self->{'peer'};
+	if ($events & 1) {
+		# EOF means the browser relay has closed; do not keep the port locked.
+		my $count = sysread($peer, my $bytes, 65536);
+		die "Serial console disconnected\n" if (defined($count) && !$count);
+		# Retry interrupted reads or temporary lack of data on a later event.
+		die "Cannot read serial console channel: $!\n" if
+			(!defined($count) && $! != EAGAIN && $! != EWOULDBLOCK && $! != EINTR);
+		$self->{'to_guest'} .= $bytes if ($count);
+		}
+	if ($events & 2 && length($self->{'to_browser'})) {
+		# Keep unsent bytes when the browser is slower than the guest.
+		my $count = syswrite($peer, $self->{'to_browser'}, 65536);
+		die "Serial console disconnected\n" if (defined($count) && !$count);
+		# Temporary write failures leave the queued bytes intact for retry.
+		die "Cannot write serial console channel: $!\n" if
+			(!defined($count) && $! != EAGAIN && $! != EWOULDBLOCK && $! != EINTR);
+		substr($self->{'to_browser'}, 0, $count, '') if ($count);
+		}
+	# Error and hangup events end the session even without readable data.
+	die "Serial console disconnected\n" if ($events & (4 | 8));
+	$self->update();
+	1;
+	};
+# Do not throw through libvirt's C event dispatcher; pump() reports the failure.
+$self->{'error'} ||= $@ if (!$ok);
+}
+
 1;
