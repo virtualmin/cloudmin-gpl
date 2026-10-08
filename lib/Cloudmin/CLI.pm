@@ -842,4 +842,47 @@ $value =~ s/[\x00-\x1f\x7f-\x9f]/ /g;
 return $value;
 }
 
+# multiline(data, [indent]) formats nested records as indented text.
+sub multiline
+{
+my ($data,$indent) = @_;
+$indent ||= '';
+# Scalar leaves use the same formatting as table cells.
+return $indent.scalar_text('', $data)."\n" if (ref($data) ne 'HASH' && ref($data) ne 'ARRAY');
+# Separate list records while preserving the requested nesting level.
+return join("\n",map {multiline($_,$indent)} @$data) if (ref($data) eq 'ARRAY');
+my $text = '';
+# Only outer records get an identity heading; nested records keep field labels.
+if (!$indent) {
+    $text = scalar_text('', $data->{name} || $data->{id} || 'Details')."\n";
+    $indent = '    ';
+}
+foreach my $key (sort keys %$data) {
+    # Avoid repeating the name that is used as an outer record heading.
+    next if ($key eq 'name' && $indent eq '    ');
+    my $value = $data->{$key};
+    my $label = label($key);
+    # Nested objects retain their hierarchy under the field label.
+    if (ref($value) eq 'HASH') { $text .= "$indent$label:\n".multiline($value,$indent.'    '); }
+    # Arrays of records, addresses and simple values need different layouts.
+    elsif (ref($value) eq 'ARRAY') {
+        # Complex array entries each retain their own labeled block.
+        if (grep {ref($_) eq 'HASH' || ref($_) eq 'ARRAY'} @$value) {
+            $text .= "$indent$label:\n".multiline($_,$indent.'    ') for @$value;
+        }
+        # Address lists use one labeled line per address.
+        elsif ($key eq 'addresses') { $text .= "$indent$label: ".scalar_text($key,$_)."\n" for @$value; }
+        # Short scalar lists fit on one line after their label.
+        else { $text .= "$indent$label: ".join(' ',map {scalar_text($key,$_)} @$value)."\n"; }
+    }
+    # Scalar fields get one line, with the raw epoch retained beside a date.
+    else {
+        $text .= "$indent$label: ".scalar_text($key,$value)."\n";
+        # Keep a directly reusable creation timestamp in multiline output.
+        $text .= "${indent}Created Unix time: $value\n" if ($key eq 'created' && defined($value));
+    }
+}
+return $text;
+}
+
 1;
