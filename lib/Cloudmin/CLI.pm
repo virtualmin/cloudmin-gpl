@@ -362,4 +362,27 @@ $add->('api',undef,'Runs the raw JSON API with a request on standard input.',gro
 return \@commands;
 }
 
+# new(class, [api => callback], [raw => callback], [sleep => callback],
+#     [now => callback], [out => handle], [err => handle], [in => handle])
+# Builds a dispatcher using standard streams and a real clock by default.
+# api(action, input) runs host commands; raw([action]) runs raw API requests.
+# Help needs neither. sleep() and now() let tests advance a fake clock.
+sub new
+{
+my ($class,%args) = @_;
+return bless {out => \*STDOUT, err => \*STDERR, in => \*STDIN,
+    sleep => sub {select(undef,undef,undef,0.25)}, now => sub {time()}, %args}, $class;
+}
+
+# read_actions() identifies requests that do not need a form token.
+sub read_actions { return qw(options machines settings status list snapshots clone_options image_options backups bridges bridge_status storage license); }
+
+# command(self, name) finds a command definition without contacting the host.
+sub command
+{
+my ($self,$name) = @_;
+my ($command) = grep {$_->{name} eq $name} @{commands()};
+return $command;
+}
+
 1;
