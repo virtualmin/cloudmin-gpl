@@ -106,4 +106,29 @@ Sys::Virt::Event::run_default();
 die $self->{'error'} if ($self->{'error'});
 }
 
+# close(self) releases event callbacks, descriptors and the exclusive stream.
+# It is safe to call after partial startup or more than once.
+sub close
+{
+my ($self) = @_;
+# Remove only registered watches; partial startup may not have created them all.
+eval { Sys::Virt::Event::remove_timeout(delete $self->{'timer'}); }
+	if (defined($self->{'timer'}));
+eval { Sys::Virt::Event::remove_handle(delete $self->{'watch'}); }
+	if (defined($self->{'watch'}));
+eval { $self->{'stream'}->remove_callback(); }
+	if (delete $self->{'stream_watch'});
+# Abort releases the port's exclusive lock before dropping the connection.
+eval { $self->{'stream'}->abort(); } if ($self->{'stream'});
+delete $self->{'stream'};
+delete $self->{'adapter'};
+# Release the private log handle along with the exclusive console stream.
+delete $self->{'history'};
+foreach my $name (qw(handle peer)) {
+	# The handoff already closed handle on successful startup.
+	close($self->{$name}) if ($self->{$name} && defined(fileno($self->{$name})));
+	delete $self->{$name};
+	}
+}
+
 1;
