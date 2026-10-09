@@ -1,0 +1,215 @@
+/* Keep icons beside their labels; the theme supplies the tab styling. */
+.vm-console-tab-label {
+    display: inline-flex;
+    align-items: center;
+    gap: .4em;
+    white-space: nowrap;
+}
+/* Let each console fill the available height inside the tab wrappers. */
+.tab-content:has(#terminal[data-cloudmin-console], #cloudmin-console, .cloudmin-webmin-view),
+.tab-pane.active:has(#terminal[data-cloudmin-console], #cloudmin-console, .cloudmin-webmin-view),
+.ui_tabs_start:has(#terminal[data-cloudmin-console], #cloudmin-console, .cloudmin-webmin-view) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+/* Reserve the SSH screen while its signed connection request is pending. */
+#terminal[data-cloudmin-console="ssh-loading"] {
+    background: #000;
+    width: 100%;
+    height: 70vh;
+    min-height: 240px;
+}
+/* Let the automatic form fill the same space as the connected terminal. */
+form:has(> #terminal[data-cloudmin-console="ssh-loading"]) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+}
+/* The embedded Webmin fills the page's remaining space, without a resize script. */
+.cloudmin-webmin-view {
+    display: flex;
+    flex: 1;
+    min-height: 240px;
+    background: #000;
+}
+/* Let the frame shrink inside flex layouts and hide its native border. */
+.cloudmin-webmin-view iframe {
+    flex: 1;
+    width: 100%;
+    /* Override percentage heights that leave a fullscreen gap. */
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    border: 0;
+    background: #000;
+    color-scheme: dark;
+}
+/* Keep the blank iframe covered until the guest document and palette load. */
+.cloudmin-webmin-view iframe[data-webmin-loading] {
+    visibility: hidden;
+}
+/* Full-page themes put the header and selected tab directly in the body. */
+body:has(> .ui_tabs_start .cloudmin-webmin-view) {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh !important;
+    box-sizing: border-box;
+}
+body:has(> .ui_tabs_start .cloudmin-webmin-view) > :not(.ui_tabs_start) {
+    /* Give spare height to the guest without compressing the page controls. */
+    flex-shrink: 0;
+}
+/* Fill the content pane when the tab is wrapped in a panel. */
+#content > .container-fluid:has(.cloudmin-webmin-view) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+#content > .container-fluid > .panel:has(.cloudmin-webmin-view),
+#content > .container-fluid > .panel > .panel-body:has(.cloudmin-webmin-view) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+#content > .container-fluid > .panel:has(.cloudmin-webmin-view) > .panel-heading {
+    /* Preserve header height while the guest frame absorbs viewport changes. */
+    flex-shrink: 0;
+}
+/* Drop the embedded minimum height when the view owns the fullscreen area. */
+.cloudmin-webmin-view:fullscreen {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+/* Legacy frames request fullscreen on the containing frame, not this document. */
+.cloudmin-webmin-view.cloudmin-webmin-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    min-height: 0;
+}
+/* Match the space around xterm to the selected terminal palette. */
+#cloudmin-console[data-console-mode="serial"] [data-console-screen] {
+    padding: 0;
+    overflow: hidden;
+    background: var(--terminal-background, #000);
+    color: var(--terminal-foreground, #fff);
+}
+/* FitAddon subtracts the terminal's padding, not its parent's. */
+#cloudmin-console[data-console-mode="serial"] [data-console-screen] > .xterm {
+    padding: 8px;
+}
+/* Keep the display and its controls together, including in fullscreen. */
+#cloudmin-console {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+#cloudmin-console [data-console-toolbar] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+/* Keep serial and graphical padding inside the screen's dimensions. */
+#cloudmin-console [data-console-screen] {
+    position: relative;
+    height: 65vh;
+    min-height: 240px;
+    box-sizing: border-box;
+    padding: 8px;
+    overflow: auto;
+    background: #000;
+}
+/* Keep the framebuffer out of layout: a large guest must not grow its viewport. */
+#cloudmin-console [data-console-display] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+/* Override noVNC's inline auto margins to align the display with the toolbar. */
+#cloudmin-console [data-console-screen] canvas {
+    margin: 0 !important;
+}
+#cloudmin-console [data-console-tools] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline-start: auto;
+    max-width: 100%;
+}
+[data-console-keyboard] { position: relative; flex-shrink: 0; }
+#cloudmin-console [data-console-action="keys"] {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px;
+}
+/* The same menu works in full-page themes and inside the fullscreen console. */
+#cloudmin-console-keys {
+    position: absolute;
+    z-index: 10;
+    right: 0;
+    top: calc(100% + 4px);
+    min-width: 180px;
+    max-width: calc(100vw - 24px);
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 4px;
+    background: var(--ui-surface, #fff);
+    color: var(--ui-fg, #222);
+    border: 1px solid var(--ui-border, #ccc);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px #0003;
+}
+#cloudmin-console-keys [data-console-key] {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 6px 10px;
+    background: transparent;
+    color: inherit;
+    border: 0;
+    border-radius: 2px;
+    /* Theme button rules must not center menu labels. */
+    text-align: left !important;
+    white-space: nowrap;
+    font: inherit;
+}
+#cloudmin-console-keys [data-console-key]:is(:hover, :focus-visible) {
+    background: var(--ui-accent-soft, #eee);
+}
+#cloudmin-console-keys [data-console-key]:focus-visible {
+    /* Keep keyboard focus visible even when the theme resets button outlines. */
+    outline: 2px solid var(--ui-accent, #287bc1) !important;
+    outline-offset: -2px;
+}
+[data-console-status] .ui_badge { white-space: normal; }
+/* Cover the content frame when its parent owns fullscreen. */
+#cloudmin-console.cloudmin-console-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+}
+#cloudmin-console:fullscreen,
+#cloudmin-console.cloudmin-console-fullscreen {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: var(--main-content, #202124);
+    color: var(--text-color, #eee);
+    padding: 12px;
+}
+#cloudmin-console:fullscreen [data-console-screen],
+#cloudmin-console.cloudmin-console-fullscreen [data-console-screen] {
+    flex: 1;
+    min-height: 0;
+}
