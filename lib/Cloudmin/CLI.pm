@@ -1155,4 +1155,65 @@ foreach my $line (split(/\n/,$1)) {
 return \%fields;
 }
 
+# docs_pages(self, directory) writes the site reference into a Hugo section:
+# command-line.md as the overview and API Programs/<command>.md for every
+# command, grouped in the sidebar by subSection. Existing dates and authors
+# are kept so regeneration changes only content. Returns the written paths
+# and warns about pages left over from removed commands.
+sub docs_pages
+{
+my ($self,$dir) = @_;
+my (undef,$sections) = $self->pod_sections();
+my $programs = "$dir/API Programs";
+make_path($programs);
+my $today = strftime('%Y-%m-%d',localtime());
+my @written;
+# write(path, fields, weight, body) stores front matter and Markdown. fields
+# is an ordered list of key/value pairs placed before the date; date and
+# author are reused from an existing page so regeneration keeps them.
+my $write = sub {
+    my ($path,$fields,$weight,$body) = @_;
+    my $existing = page_front_matter($path);
+    my @front = (@$fields,['date',$existing->{date} || $today]);
+    push(@front,['author',$existing->{author}]) if ($existing->{author});
+    push(@front,['weight',$weight]);
+    open(my $fh,'>',$path) || die "Cannot write $path: $!\n";
+    print $fh "---\n",(map {"$_->[0]: $_->[1]\n"} @front),"---\n\n",$body;
+    close($fh) || die "Cannot write $path: $!\n";
+    push(@written,$path);
+};
+# Number groups in table order so the sidebar keeps the command list order.
+my (%group,@groups);
+foreach my $command (@{commands()}) {
+    push(@groups,$command->{group}) if (!$group{$command->{group}}++);
+}
+my %position;
+my $overview = docs_intro().
+    "Each command has its own page with syntax, options and examples. `cloudmin help COMMAND` shows the same text on the host, and `cloudmin COMMAND --help` shows the syntax alone.\n\n";
+foreach my $command (@{commands()}) {
+    my ($name,$grp) = ($command->{name},$command->{group});
+    my $index = (grep {$groups[$_] eq $grp} 0..$#groups)[0]+1;
+    # Group pages sort after the Development overview pages.
+    my $weight = 2840000+$index*1000+(++$position{$grp})*10;
+    (my $heading = $command->{summary}) =~ s/\.\z//;
+    # The sidebar prints subSection wherever it appears, so only the first
+    # page of each group carries it, as the Virtualmin site does.
+    $write->("$programs/$name.md",[['title',"\"$name\""],
+        $position{$grp} == 1 ? (['subSection',"\"$grp\""]) : ()],$weight,
+        "### $heading\n\n".$self->docs_body($command,$sections));
+    $overview .= "### $grp\n\n" if ($position{$grp} == 1);
+    $overview .= "- [$name](/docs/development/api-programs/$name/): $command->{summary}\n";
+    $overview .= "\n" if ($position{$grp} == grep {$_->{group} eq $grp} @{commands()});
+}
+$write->("$dir/command-line.md",[['title','"Command Line API"']],2820000,$overview);
+# Report pages for commands that no longer exist instead of deleting them.
+my %current = map {$_ => 1} @written;
+opendir(my $dh,$programs) || die "Cannot read $programs: $!\n";
+foreach my $stale (sort grep {/\.md\z/ && !$current{"$programs/$_"}} readdir($dh)) {
+    print {$self->{err}} "Stale page: $programs/$stale\n";
+}
+closedir($dh);
+return @written;
+}
+
 1;
