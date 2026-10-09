@@ -1140,4 +1140,19 @@ foreach my $command (@{commands()}) {
 return $text;
 }
 
+# page_front_matter(path) reads simple key: value pairs from an existing page.
+# Returns an empty hash when the page does not exist yet.
+sub page_front_matter
+{
+my ($path) = @_;
+open(my $fh,'<',$path) || return {};
+local $/; my $text = <$fh>; close($fh);
+return {} if ($text !~ /\A---\n(.*?)\n---\n/s);
+my %fields;
+foreach my $line (split(/\n/,$1)) {
+    $fields{$1} = $2 if ($line =~ /\A([A-Za-z]+):\s*(.*?)\s*\z/);
+}
+return \%fields;
+}
+
 1;
