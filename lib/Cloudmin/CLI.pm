@@ -1081,6 +1081,12 @@ else {
 }
 }
 
+# docs_intro() returns the introduction shared by both Markdown layouts.
+sub docs_intro
+{
+return "Run `cloudmin` as root on the Cloudmin host. Lists use tables by default; `--multiline` shows details. `--json` returns an object with `command`, `status` and `data` fields; `data` holds the API result. Success exits 0, operation failures exit 1, and usage errors exit 2.\n\nCommands wait for jobs by default; `--no-wait` returns the job ID immediately. Passwords and license credentials are read from files or standard input.\n\n";
+}
+
 # docs_body(self, command, sections) renders one command's reference entry
 # below its heading: generated syntax, converted POD text, examples and the
 # option list. sections maps command names to their POD sections.
@@ -1116,6 +1122,20 @@ my $opts = options($command);
 if (keys %$opts) {
     $text .= "\nOptions:\n\n";
     $text .= '- `'.option_usage($_,$opts->{$_}).'`: '.($opts->{$_}->{help} || label($_)).".\n" for option_order($command);
+}
+return $text;
+}
+
+# docs(self) renders the whole reference as one Markdown document.
+sub docs
+{
+my ($self) = @_;
+my (undef,$sections) = $self->pod_sections();
+my $text = "# Cloudmin command-line reference\n\n".docs_intro();
+# Pair each manual section with syntax derived from the same command definition.
+foreach my $command (@{commands()}) {
+    $text .= "## $command->{name}\n\n".$command->{summary}."\n\n".
+        $self->docs_body($command,$sections)."\n";
 }
 return $text;
 }
