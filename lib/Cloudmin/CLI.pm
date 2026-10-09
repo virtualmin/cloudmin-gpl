@@ -937,6 +937,83 @@ if (!$global->{json} && ref($result) eq 'HASH' && ($result->{state} || '') eq 'c
 }
 }
 
+# run(self, argv) dispatches commands and formats their results or errors.
+sub run
+{
+my ($self,$argv) = @_;
+my @argv = @$argv;
+my $name = shift(@argv) // '';
+my $command = $self->command($name);
+# Recognize JSON before parsing so even syntax errors use its failure envelope.
+my $global = {json => scalar(grep {$_ eq '--json'} @argv)};
+my $raw_exit;
+my $ok = eval {
+    # List commands without a host connection when no command or --help is
+    # given.
+    if ($name eq '' || $name eq '--help') {
+        usage_error('Unexpected arguments after --help') if (@argv);
+        print {$self->{out}} $self->command_list(); return 1;
+    }
+    # Documentation generation needs only the command table and POD.
+    if ($name eq '--docs') {
+        usage_error('Unexpected arguments after --docs') if (@argv);
+        print {$self->{out}} $self->docs(); return 1;
+    }
+    # Site pages are written into a Hugo section directory supplied by the caller.
+    if ($name eq '--docs-dir') {
+        usage_error('Use cloudmin --docs-dir DIRECTORY') if (@argv != 1);
+        my @pages = $self->docs_pages($argv[0]);
+        print {$self->{out}} scalar(@pages)." pages written under $argv[0]\n"; return 1;
+    }
+    # Long help accepts at most one command and pages only on a terminal.
+    if ($name eq 'help') {
+        usage_error('Use cloudmin help [command]') if (@argv > 1);
+        $self->show_help($argv[0]); return 1;
+    }
+    # Stop unknown commands before trying either raw or named dispatch.
+    usage_error("Unknown command: $name") if (!$command);
+    # Raw JSON requests bypass named-option conversion and job following.
+    if ($command->{raw}) {
+        # Keep normal short help available for the raw API command.
+        if (@argv == 1 && $argv[0] eq '--help') {
+            print {$self->{out}} $self->short_help($command); return 1;
+        }
+        # Forward only an optional action; stdin remains owned by api.pl.
+        usage_error('Use cloudmin api [action] < request.json') if (@argv > 1 || grep {/^-/} @argv);
+        $raw_exit = $self->{raw}->(@argv); return 1;
+    }
+    # Validate named options before reading files or contacting the host.
+    my $values;
+    ($values,$global) = $self->parse($command,\@argv);
+    # Short help exits before required host choices need to be resolved.
+    if ($global->{help}) { print {$self->{out}} $self->short_help($command); return 1; }
+    # Report success only after execution finishes without an error.
+    my $result = $self->execute($command,$values,$global);
+    $self->render($command,$result,$global);
+    1;
+};
+# Preserve a raw callback exit status; ordinary successful commands return zero.
+return $raw_exit // 0 if ($ok);
+# Keep usage failures separate from controller, file and worker errors.
+my $error = $@;
+my $usage = ref($error) eq 'Cloudmin::CLI::Usage';
+$error = $usage ? $error->{message} : "$error";
+$error =~ s/\s+\z//;
+# Always provide a useful message even when a callback dies without one.
+$error = 'Operation failed' if (!length($error));
+# Remove known file-backed secrets before formatting an error for either stream.
+foreach my $secret (@{$self->{secrets} || []}) { $error =~ s/\Q$secret\E/[redacted]/g; }
+# JSON failures stay on stdout so scripts can parse one complete response.
+if ($global->{json}) { print {$self->{out}} convert_to_json({command=>$name,status=>'failure',error=>$error},1,1); }
+# Human errors go to stderr; only usage errors append invocation guidance.
+else {
+    print {$self->{err}} "$error\n";
+    # Show command syntax when known, or the command list for an unknown name.
+    print {$self->{err}} "\n".($command ? $self->synopsis($command) : $self->command_list()) if ($usage);
+}
+return $usage ? 2 : 1;
+}
+
 # command_list(self) groups commands in the same order as their definitions.
 sub command_list
 {
