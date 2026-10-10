@@ -1,0 +1,78 @@
+/* Tab descriptions use the theme's standard vui_ui_block spacing. */
+.cloudmin-network-page { container: cloudmin-network / inline-size; }
+.cloudmin-network-tab > form { margin-top: 0.6em; }
+
+/* Match Storage's square summary tiles, using the page width for wrapping. */
+.cloudmin-network-page .cloudmin-network-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--ui-gap);
+}
+.cloudmin-network-summary .ui_stat {
+    padding: 1.2em;
+    gap: 0.35em;
+    border: 1px solid var(--ui-border);
+    background: var(--ui-surface);
+}
+.cloudmin-network-summary .ui_stat_value { font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.cloudmin-network-summary .ui_stat_desc { line-height: 1.4; }
+/* Keep native table spacing, with scrolling for narrow page areas. */
+.cloudmin-network-overview-table { overflow-x: auto; }
+.cloudmin-network-overview-table table[data-sortable] { min-width: 48em; }
+.cloudmin-network-overview-table td,
+.cloudmin-network-overview-table td a { white-space: normal; overflow-wrap: anywhere; }
+.cloudmin-network-card.cloudmin-network-selected { border-color: var(--ui-accent); }
+@container cloudmin-network (max-width: 58em) {
+    .cloudmin-network-page .cloudmin-network-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container cloudmin-network (max-width: 25em) {
+    .cloudmin-network-page .cloudmin-network-summary { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Keep identity and state together, with quiet, consistently spaced facts. */
+.cloudmin-network-card .ui_card_head { padding: 1em 1.2em 0.7em; align-items: center; }
+.cloudmin-network-card .ui_card_title { display: flex; align-items: center; gap: 0.55em; min-width: 0; overflow-wrap: anywhere; }
+.cloudmin-network-card .ui_card_actions { margin: 0; }
+.cloudmin-network-card .ui_card_body { padding: 0.4em 1.2em 1.1em; container: cloudmin-network-body / inline-size; }
+.cloudmin-network-card .ui_card_foot { padding: 0.85em 1.2em; font-size: inherit; }
+/* Shared columns keep incomplete rows aligned when the card becomes narrower. */
+.cloudmin-network-page .cloudmin-network-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14em), 1fr));
+    align-items: start;
+    gap: 1em 1.5em;
+}
+.cloudmin-network-facts .ui_dl_row { display: block; min-width: 0; max-width: 100%; }
+/* A long IPv6 value may span two columns only when two columns fit. */
+@container cloudmin-network-body (min-width: 29.5em) {
+    /* Use two columns until four fit, so a wide address leaves no empty hole. */
+    .cloudmin-network-facts:has(.cloudmin-network-address6) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cloudmin-network-facts .ui_dl_row:has(.cloudmin-network-address6) { grid-column: span 2; }
+}
+@container cloudmin-network-body (min-width: 60.5em) {
+    .cloudmin-network-facts:has(.cloudmin-network-address6) { grid-template-columns: repeat(auto-fit, minmax(14em, 1fr)); }
+}
+.cloudmin-network-facts .ui_dl_row dt,
+.cloudmin-network-label { display: block; color: var(--ui-fg-muted); font-weight: 400; margin-bottom: 0.35em; }
+.cloudmin-network-facts .ui_dl_row dd { margin: 0; min-width: 0; }
+.cloudmin-network-value { display: block; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.cloudmin-network-muted,
+.cloudmin-network-page .cloudmin-network-hint,
+.cloudmin-network-inline-hint { color: var(--ui-fg-muted); font-size: inherit; }
+.cloudmin-network-page .cloudmin-network-hint { margin-top: 0.5em; }
+.cloudmin-network-inline-hint { margin-inline-start: 0.6em; }
+.cloudmin-network-guest { display: inline-flex; align-items: center; gap: 0.4em; min-width: 0; overflow-wrap: anywhere; }
+.cloudmin-network-attachments { min-width: 0; }
+.cloudmin-network-card form,
+.cloudmin-network-status form { margin: 0; display: inline-flex; }
+
+/* Choice descriptions belong beside the inputs and wrap without narrow tables. */
+.cloudmin-network-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cloudmin-network-choices .ui_choice_item { min-width: 0; }
+.cloudmin-network-range { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em; }
+.cloudmin-network-page input[type=text],
+.cloudmin-network-page select { max-width: 100%; box-sizing: border-box; }
+/* Size the port selector from its cell, not the longest IPv6 option. */
+.cloudmin-network-page select[name=source] { width: 100%; min-width: 0; }
+@media (max-width: 800px) {
+    .cloudmin-network-choices { grid-template-columns: 1fr; }
+}
