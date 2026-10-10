@@ -123,4 +123,16 @@ return get_vm_jobs()->lock('backup-schedules', sub {
 });
 }
 
+# ensure_backup_cleanup() registers hourly expiry independently of UI activity.
+sub ensure_backup_cleanup
+{
+get_vm_jobs()->lock('backup-maintenance', sub {
+	foreign_require('webmincron');
+	# Repeated inspections must not create duplicate hourly cleanup entries.
+	return if (grep { $_->{'module'} eq $module_name && $_->{'func'} eq 'purge_backup_inspections' } webmincron::list_webmin_crons());
+	webmincron::save_webmin_cron({module => $module_name, file => 'server-manager-lib.pl', func => 'purge_backup_inspections',
+		args => [], mins => 17, hours => '*', days => '*', months => '*', weekdays => '*'});
+});
+}
+
 1;
