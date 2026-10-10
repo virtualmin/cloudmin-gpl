@@ -14,4 +14,16 @@ return Cloudmin::Backups->new(%{get_vm_service()}, directory => "$module_var_dir
 	transfer => \&Cloudmin::BackupTransport::transfer);
 }
 
+# backup_schedules() reads private schedules; credentials never enter list rows.
+sub backup_schedules
+{
+my $dir = get_backup_service()->directory().'/schedules';
+# A host with no saved schedules has no schedule directory yet.
+return [] if (!-d $dir);
+opendir(my $dh, $dir) or die "Cannot list backup schedules\n";
+my @ids = map { /^([a-f0-9]{32})\.json$/ ? $1 : () } readdir($dh);
+closedir($dh);
+return [map { convert_from_json(read_file_contents("$dir/$_.json")) } sort @ids];
+}
+
 1;
