@@ -1,0 +1,10 @@
+/* Fit the terminal inside the page or a frame in any Webmin theme. */
+#terminal {
+    background: var(--terminal-background, #000);
+    color: var(--terminal-foreground, #fff);
+    padding: 2px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 70vh;
+    min-height: 240px;
+}
