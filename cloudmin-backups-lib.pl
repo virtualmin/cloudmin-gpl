@@ -57,4 +57,16 @@ if ($frequency eq 'yearly') {
 return \%when;
 }
 
+# backup_schedule_cron(schedule) maps one recurrence to Webmin cron fields.
+sub backup_schedule_cron
+{
+my ($s) = @_;
+my $f = $s->{'frequency'};
+# Keep weekdays unrestricted for calendar dates: cron otherwise matches either.
+return {mins => $s->{'minute'}, hours => $f eq 'hourly' ? '*' : $s->{'hour'},
+	days => $f eq 'monthly' || $f eq 'yearly' ? $s->{'day'} : '*',
+	months => $f eq 'yearly' ? $s->{'month'} : '*',
+	weekdays => $f eq 'weekly' ? $s->{'weekday'} : '*'};
+}
+
 1;
