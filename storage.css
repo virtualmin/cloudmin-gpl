@@ -1,0 +1,104 @@
+/* Pool cards share Networking's spacing and keep wrapped facts in columns. */
+.cloudmin-storage-page { container: cloudmin-storage / inline-size; }
+.cloudmin-storage-tab > form { margin-top: 0.6em; }
+.cloudmin-storage-card .ui_card_head { padding: 1em 1.2em 0.7em; align-items: center; }
+.cloudmin-storage-card .ui_card_title { display: flex; align-items: center; gap: 0.55em; min-width: 0; overflow-wrap: anywhere; }
+.cloudmin-storage-card .ui_card_actions { margin: 0; min-width: 0; max-width: 100%; }
+.cloudmin-storage-card .ui_card_body { padding: 0.4em 1.2em 1.1em; }
+.cloudmin-storage-card .ui_card_foot { padding: 0.85em 1.2em; font-size: inherit; }
+.cloudmin-storage-page .cloudmin-storage-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14em), 1fr));
+    align-items: start;
+    gap: 1em 1.5em;
+}
+.cloudmin-storage-facts .ui_dl_row { display: block; min-width: 0; max-width: 100%; }
+.cloudmin-storage-facts .ui_dl_row dt,
+.cloudmin-storage-label { display: block; color: var(--ui-fg-muted); font-weight: 400; margin-bottom: 0.35em; }
+.cloudmin-storage-facts .ui_dl_row dd { margin: 0; min-width: 0; }
+.cloudmin-storage-path { overflow-wrap: anywhere; }
+.cloudmin-storage-guest { overflow-wrap: anywhere; }
+.cloudmin-storage-card .ui_progress { margin-top: 1em; }
+.cloudmin-storage-page .cloudmin-storage-hint { color: var(--ui-fg-muted); margin: 1em 0 0; }
+.cloudmin-storage-card form { display: inline-flex; margin: 0; }
+.cloudmin-storage-page input[type=text] { max-width: 100%; box-sizing: border-box; }
+/* Summary tiles use the shared palette and keep their columns when wrapping. */
+.cloudmin-storage-page .cloudmin-storage-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--ui-gap);
+}
+.cloudmin-storage-summary .ui_stat {
+    padding: 1.2em;
+    gap: 0.35em;
+    border: 1px solid var(--ui-border);
+    background: var(--ui-surface);
+}
+.cloudmin-storage-summary .ui_stat_value { font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.cloudmin-storage-summary .ui_stat_desc { line-height: 1.4; }
+.cloudmin-storage-pool-link { font-weight: 600; }
+.cloudmin-storage-location,
+.cloudmin-storage-pool-type { display: block; margin-top: 0.35em; color: var(--ui-fg-muted); font-size: 0.9em; }
+.cloudmin-storage-location { overflow-wrap: anywhere; }
+/* Positional widths belong to the full layout; reduced tables size themselves. */
+.cloudmin-storage-overview-table:not(.cloudmin-storage-compact-columns) table { min-width: 44em; }
+.cloudmin-storage-overview-table:not(.cloudmin-storage-compact-columns) th:first-child { width: 32%; }
+.cloudmin-storage-overview-table:not(.cloudmin-storage-compact-columns) th:nth-child(4) { width: 25%; }
+.cloudmin-storage-overview-table td { font-variant-numeric: tabular-nums; }
+/* Themes can force compact table cells; the two-line rows need equal padding. */
+#cloudmin-storage-overview-table table th,
+#cloudmin-storage-overview-table table td,
+#content #cloudmin-storage-overview-table table th,
+#content #cloudmin-storage-overview-table table td { padding: 10px 14px !important; vertical-align: middle; }
+.cloudmin-storage-overview-table .ui_progress { margin-top: 0.5em; }
+.cloudmin-storage-free { font-weight: 600; }
+.cloudmin-storage-total { margin-left: 0.5em; color: var(--ui-fg-muted); font-size: 0.9em; }
+.cloudmin-storage-card.cloudmin-storage-selected { border-color: var(--ui-accent); }
+/* Style only the inventory table, leaving native form buttons and wrappers alone. */
+.cloudmin-storage-table { overflow-x: auto; }
+/* The form handles overflow without another container. Read-only tables use
+   their existing wrapper because they have no form. */
+#cloudmin-storage-volumes > form { overflow-x: auto; }
+#cloudmin-storage-volumes > table.wrapper { display: block; max-width: 100%; overflow-x: auto; }
+/* Preserve the gap above selection controls in themes with negative margins. */
+#cloudmin-storage-volumes > form > .ui_links_row:first-of-type,
+#cloudmin-storage-volumes > form > .ui_links_row:first-of-type > a { margin-top: 0; }
+/* Hidden columns shift cell positions, so do not apply the full volume widths. */
+#cloudmin-storage-volumes:not(.cloudmin-storage-compact-columns) table[data-sortable] { min-width: 68em; }
+#cloudmin-storage-volumes:not(.cloudmin-storage-compact-columns) table[data-sortable] tr > :nth-child(2) { width: 26%; }
+#cloudmin-storage-volumes:not(.cloudmin-storage-compact-columns) table[data-sortable] tr > :nth-child(3) { width: 18%; }
+#cloudmin-storage-volumes:not(.cloudmin-storage-compact-columns) table[data-sortable] tr > :nth-child(5) { min-width: 8em; }
+#cloudmin-storage-volumes:not(.cloudmin-storage-compact-columns) table[data-sortable] tr > :nth-child(6) { width: 18%; }
+#cloudmin-storage-volumes:not(.cloudmin-storage-compact-columns) table[data-sortable] tr > :nth-child(7),
+#cloudmin-storage-volumes:not(.cloudmin-storage-compact-columns) table[data-sortable] tr > :nth-child(8) { white-space: nowrap; }
+/* Allow two-line rows when scrolling tables default to nowrap. */
+#cloudmin-storage-volumes table[data-sortable] td,
+#cloudmin-storage-volumes table[data-sortable] td a:not(.ui_action) { white-space: normal; overflow-wrap: anywhere; }
+.cloudmin-storage-volume-name { display: block; font-weight: 400; }
+.cloudmin-storage-owners > div + div { margin-top: 0.5em; }
+/* Override the page's list reset so compact rows have space around the block. */
+.cloudmin-storage-page .cloudmin-storage-review-details { margin-block: 1em; row-gap: 0.25em; }
+.cloudmin-storage-review-details dd { margin: 0; }
+.cloudmin-storage-review-details .cloudmin-storage-owners > div + div { margin-top: 0.25em; }
+.cloudmin-storage-delete .cloudmin-storage-table { margin-block: var(--ui-gap); }
+.cloudmin-storage-delete td { overflow-wrap: anywhere; }
+#cloudmin-storage-volumes table[data-sortable],
+.cloudmin-storage-table table { width: 100%; }
+.cloudmin-storage-table table th,
+.cloudmin-storage-table table td { padding: 0.85em 1em; vertical-align: middle; }
+.cloudmin-storage-create > form table { table-layout: fixed; }
+@container cloudmin-storage (max-width: 58em) {
+    .cloudmin-storage-page .cloudmin-storage-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container cloudmin-storage (max-width: 25em) {
+    .cloudmin-storage-page .cloudmin-storage-summary { grid-template-columns: minmax(0, 1fr); }
+}
+/* The page can be narrow even on a large screen when a theme keeps its sidebar. */
+@container cloudmin-storage (max-width: 32em) {
+    .cloudmin-storage-create > form table,
+    .cloudmin-storage-create > form tbody,
+    .cloudmin-storage-create > form tr,
+    .cloudmin-storage-create > form td { display: block; width: auto; min-width: 0; max-width: 100%; }
+    .cloudmin-storage-create > form td { text-align: start; }
+    .cloudmin-storage-tab > form .ui_action,
+    .cloudmin-storage-tab > form summary span { white-space: normal; }
+}
