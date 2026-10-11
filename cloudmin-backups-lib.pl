@@ -194,4 +194,26 @@ get_vm_jobs()->lock('backup-maintenance', sub {
 });
 }
 
+# purge_backup_inspections() removes expired downloads without touching archives.
+sub purge_backup_inspections
+{
+get_backup_service()->purge_inspections();
+}
+
+# delete_cloudmin_backup(id) deletes only the archive named by a saved record.
+sub delete_cloudmin_backup
+{
+my ($id) = @_;
+my $service = get_backup_service();
+return get_vm_jobs()->lock('backup-file-'.$id, sub {
+	my $r = $service->record($id) || die "Backup not found\n";
+	# Repeated deletion is harmless; mark success only after removing the
+	# archive.
+	return if ($r->{'deleted'});
+	Cloudmin::BackupTransport::transfer('delete', $r->{'target'}, $r->{'filename'}, $service->directory().'/unused');
+	$r->{'deleted'} = time(); $service->record($id, $r);
+	webmin_log('delete', 'backup', $id, {name => $r->{'name'}});
+});
+}
+
 1;
