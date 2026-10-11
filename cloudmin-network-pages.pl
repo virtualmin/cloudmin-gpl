@@ -94,4 +94,13 @@ return ui_tag('div', ui_card({
 }), { class => 'ui_stack cloudmin-network-status', role => 'status' });
 }
 
+# network_status_badge(active)
+# Uses the same compact status treatment for networks, bridges and interfaces.
+sub network_status_badge
+{
+my ($active) = @_;
+return ui_badge($text{$active ? 'net_active' : 'net_inactive'},
+	$active ? 'success' : 'neutral', { small => 1, dot => 1 });
+}
+
 1;
