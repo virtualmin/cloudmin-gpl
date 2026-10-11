@@ -200,4 +200,36 @@ if (!$ok) {
 unlock_file($_) for reverse @locked;
 }
 
+# cloudmin_license_message(status, [on_page]) explains the problem and remedy.
+# on_page defaults to false; 'manager' omits navigation and 'readonly' asks an
+# administrator to add missing credentials. The result is plain text.
+sub cloudmin_license_message
+{
+my ($s, $on_page) = @_;
+my %messages = (
+    expired => 'The license has expired. Renew it, then recheck.',
+    overused => 'This license is used on too many hosts. Finish the migration or assign a separate license to each extra host, then recheck.',
+    unavailable => 'The license check failed. Check the host clock and HTTPS access to www.virtualmin.com, then recheck.',
+    missing => ($on_page || '') eq 'readonly'
+        ? 'Ask an administrator to add a Cloudmin Pro license to enable changes.'
+        : 'Add your Cloudmin Pro license '.($on_page ? 'using the fields above'
+            : 'in System -> Settings -> License Manager').' to make changes.',
+    invalid => 'The license was not accepted. Check the serial number and key, or enter a different license.',
+    unverified => 'The license has not been verified on this host. Recheck it to enable changes.',
+    clock => 'The host clock appears incorrect. Correct it, then recheck the license.',
+    storage => 'License information could not be loaded. Check the host ID (hardware UUID or /etc/machine-id) and permissions on the license file and state directory, then recheck.',
+);
+my $message = $messages{$s->{'state'}} || '';
+# Healthy and GPL states need no advice beside their status.
+return '' if (!$message);
+# The setup message already explains where to add a license and why.
+if ($s->{'state'} ne 'missing') {
+    $message .= ' Open System -> Settings -> License Manager to update or recheck the license.' if (!$on_page);
+    my $days = $s->{'days_left'} || 0;
+    $message .= $s->{'allowed'} ? " You can make changes for $days more ".($days == 1 ? 'day.' : 'days.')
+        : ' Changes through Cloudmin are blocked.';
+}
+return $message.' Existing machines and services keep running. Scheduled backups and queued or running jobs continue.';
+}
+
 1;
