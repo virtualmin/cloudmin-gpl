@@ -272,4 +272,16 @@ webmincron::save_webmin_cron({module => 'server-manager', file => 'server-manage
     hours => int($slot/60) % 24, days => '*', months => '*', weekdays => '*'});
 }
 
+# check_cloudmin_license_action(action, input) checks access before forms or writes.
+# Confirmation pages and the API share the same ACL, edition and token checks.
+sub check_cloudmin_license_action
+{
+my ($action, $input) = @_;
+require_access('host');
+die "License changes are disabled in read-only mode\n" if (is_readonly_mode());
+die "License management is available in Cloudmin Pro\n" if (!cloudmin_pro());
+get_image_jobs()->check_token($remote_user, $input->{'token'});
+die "Unknown license action\n" if ($action !~ /\A(?:check_license|change_license|deregister_license)\z/);
+}
+
 1;
