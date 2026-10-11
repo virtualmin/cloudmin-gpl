@@ -74,4 +74,29 @@ die "Unknown display setting: $key\n" if (!$fields{$key});
 return @{$fields{$key}};
 }
 
+# view_selection(key, [value])
+# Returns selected definitions in display order, retaining required columns.
+# Omit value to read %config; explicit undef selects the built-in defaults.
+# Empty section selections close every section without removing its controls.
+sub view_selection
+{
+my ($key, $value) = @_;
+# An explicit value lets the configuration editor render unsaved choices.
+$value = $config{$key} if (@_ < 2);
+my @fields = view_fields($key);
+my $sections = $key =~ /_sections\z/;
+# Backup forms open machine and destination sections; other sections collapse.
+# Tables show all columns unless the administrator selects a smaller set.
+my $default = $key eq 'backup_sections' ? 'doms,dest' :
+	$sections ? '' : join(',', map { $_->[0] } @fields);
+# Use defaults for missing or structured values; preserve empty section lists.
+$value = $default if (!defined($value) || ref($value));
+my %wanted = map { $_ => 1 } split(/[,\s]+/, $value);
+# Show all columns if none of the saved column IDs is valid.
+%wanted = map { $_ => 1 } split(/,/, $default)
+	if (!$sections && !grep { $wanted{$_->[0]} } @fields);
+# Walk definitions to discard unknown IDs and duplicates without reordering.
+return grep { $wanted{$_->[0]} || $_->[3] } @fields;
+}
+
 1;
