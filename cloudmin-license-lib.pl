@@ -13,4 +13,18 @@ return (exists($module_info{'gpl'}) && !$module_info{'gpl'}) ||
         qw(SetupScripts.pm VMImages.pm BackupCloud.pm));
 }
 
+# cloudmin_license_host() identifies the host without depending on its IP address.
+sub cloudmin_license_host
+{
+# Prefer the hardware UUID; machine-id also supports hosts without DMI data.
+foreach my $path ('/sys/class/dmi/id/product_uuid', '/etc/machine-id') {
+    next if (!open(my $fh, '<', $path));
+    my $value = <$fh> // '';
+    close($fh);
+    $value =~ s/\s+//g;
+    return lc($value) if ($value =~ /\A[0-9a-f-]{16,64}\z/i && $value =~ /[1-9a-e]/i);
+}
+die "Cannot identify this host for license checks\n";
+}
+
 1;
