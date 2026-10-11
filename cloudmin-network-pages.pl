@@ -43,6 +43,50 @@ return ui_cluster([ map { ui_tag('a', ui_svg_icon('terminal').
 	grep { !$seen{$_->{'uuid'}}++ } @$guests ]);
 }
 
+# show_network_overview(data)
+# Summarizes the inventory and links each network or bridge to its detail card.
+sub show_network_overview
+{
+my ($data) = @_;
+my @networks = @{$data->{'networks'}};
+# Inventory already excludes bridges owned by NAT, routed and isolated networks.
+my @bridges = @{$data->{'bridges'}};
+my %guests = map { $_->{'uuid'} => 1 }
+	map { @{$_->{'guests'}} } (@networks, @bridges);
+my $active = grep { $_->{'active'} } @networks;
+my $html = ui_stats([
+	{ value => scalar(@networks), label => $text{'net_networks'},
+		desc => $text{'net_networks_desc'}, icon => 'globe', state => 'info', href => 'networks.cgi?tab=networks' },
+	{ value => $active, label => $text{'net_active_networks'},
+		desc => $text{'net_active_desc'}, icon => 'check-circle', state => $active ? 'success' : 'neutral' },
+	{ value => scalar(@bridges), label => $text{'net_bridges'},
+		desc => $text{'net_bridges_desc'}, icon => 'server', href => 'networks.cgi?tab=bridges' },
+	{ value => scalar(keys %guests), label => $text{'net_guests'},
+		desc => $text{'net_guests_desc'}, icon => 'terminal' },
+], { class => 'cloudmin-network-summary', shape => 'square' });
+my @rows;
+foreach my $section (qw(networks bridges)) {
+	my $virtual = $section eq 'networks';
+	foreach my $item (@{$data->{$section}}) {
+		my $identity = ui_tag('a', html_escape($item->{'name'}), {
+			href => 'networks.cgi?tab='.$section.'&selected='.urlize($virtual ? $item->{'uuid'} : $item->{'name'}) });
+		my $type = $virtual ? $text{'net_mode_'.$item->{'forward'}} || $item->{'forward'} : $text{'net_host_bridge'};
+		push(@rows, [$identity, html_escape($type), network_status_badge($item->{'active'}),
+			network_values($virtual ? [$item->{'bridge'} || $item->{'uplink'} || ()] : $item->{'ports'}),
+			show_network_guests($item->{'guests'})]);
+		}
+	}
+# Keep setup in its own tab, including when the host has no networks yet.
+return $html.ui_empty_state({ icon => 'globe', title => $text{'net_empty_overview'},
+	desc => $text{'net_empty_networks_desc'}, actions => ui_action_button(
+		$text{'net_networks_button'}, 'info', { icon => 'arrow-right', href => 'networks.cgi?tab=networks' }) }) if (!@rows);
+# Filter the overview columns without changing inventory or guest links.
+my ($heads, $visible, $types) = table_columns('network_columns', \@rows);
+return $html.ui_tag('div', ui_columns_table(
+	$heads, 100, $visible, $types, 0, undef, undef, 1),
+	{ class => 'cloudmin-network-overview-table' });
+}
+
 # show_network_status(state, token, owner)
 # Groups bridge progress, errors and recovery actions in one native card.
 # An empty token hides actions; owner is the user viewing the transaction.
