@@ -14,6 +14,65 @@ return Cloudmin::Backups->new(%{get_vm_service()}, directory => "$module_var_dir
 	transfer => \&Cloudmin::BackupTransport::transfer);
 }
 
+# submit_backup_operation(action, input) journals a validated backup or restore.
+# The API checks host permissions, read-only mode and CSRF before calling here.
+sub submit_backup_operation
+{
+my ($action, $in) = @_;
+my $service = get_backup_service();
+my $jobs = get_vm_jobs();
+# Inspection downloads need expiry even when nobody returns to the list page.
+ensure_backup_cleanup() if ($action eq 'backup_inspect');
+# Bind retries to the form attempt and settings, excluding API envelope fields.
+my $id = substr(Digest::SHA::sha256_hex('backup:'.$action.':'.Cloudmin::Attempts::key(@$in{qw(token attempt)})), 0, 32);
+my %fields = %$in; delete(@fields{qw(token attempt action version)});
+my $fingerprint = Digest::SHA::sha256_hex(convert_to_json(\%fields, 0, 1, 1));
+my $job = $jobs->lock('create-host', sub {
+	my $existing = $jobs->get($id, $remote_user);
+	# Repeated submissions reuse the job only when their settings are
+	# identical.
+	if ($existing) {
+		die "This form already submitted different settings; reload the page\n" if ($existing->{'request'}->{'fingerprint'} ne $fingerprint);
+		return $existing;
+	}
+	my $r;
+	# Reserve the source only after checking for conflicting guest
+	# operations.
+	if ($action eq 'backup') {
+		$jobs->assert_guest_available($in->{'id'});
+		$r = $service->prepare($in, $id);
+	}
+	# Restore validates the cached inspection and destination identity
+	# first.
+	elsif ($action eq 'restore') { $r = $service->prepare_restore($in, $id); }
+	# Inspection downloads bytes without allocating a replacement guest.
+	else {
+		my ($target, $file, $checksum);
+		# A listed archive reuses private settings and its original
+		# checksum.
+		if ($in->{'backup'}) {
+			my $record = $service->record($in->{'backup'}) || die "Backup not found\n";
+			die "This backup was deleted\n" if ($record->{'deleted'});
+			($target, $file) = @$record{qw(target filename)};
+			$checksum = $record->{'sha256'};
+		}
+		# External archives use the submitted destination and acquire a
+		# checksum.
+		else { ($target, $file) = ($in->{'target'}, $in->{'filename'}); }
+		$target = Cloudmin::BackupTransport::validate($target, 1);
+		Cloudmin::BackupTransport::preflight($target, 1);
+		die "Enter a backup archive filename ending in .tar or .tar.gz\n" if (($file || '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9_.-]{0,199}\.tar(?:\.gz)?\z/);
+		$r = {operation => 'backup_inspect', name => $file, target => $target, filename => $file, expected_sha256 => $checksum};
+	}
+	$r->{'fingerprint'} = $fingerprint;
+	return $jobs->submit($id, $remote_user, $action eq 'backup' ? 'guest:'.$r->{'uuid'} :
+		$action eq 'restore' ? 'vm:'.lc($r->{'name'}) : 'backup-inspect:'.$id, $r);
+});
+# Do not restart a terminal job when a browser resubmits its form.
+$jobs->spawn($id, sub { run_vm_job($_[0]); }) if ($job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
+return get_public_vm_job($job);
+}
+
 # backup_schedules() reads private schedules; credentials never enter list rows.
 sub backup_schedules
 {
