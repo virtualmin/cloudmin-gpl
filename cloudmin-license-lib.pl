@@ -118,4 +118,86 @@ return (['/etc/cloudmin-license', 1],
     "$config_directory/webmin/config");
 }
 
+# save_cloudmin_license(serial, key) updates existing repository credentials too.
+# Empty serial and key clear credentials without removing repository definitions.
+# Stage every replacement first. Roll back completed files if a later write fails.
+sub save_cloudmin_license
+{
+my ($serial, $key) = @_;
+my (@changes, @locked);
+# Lock paths in a stable order and collect replacements before writing any.
+my $prepared = eval {
+foreach my $entry (sort { $a->[0] cmp $b->[0] } cloudmin_license_files()) {
+    my ($path, $license) = @$entry;
+    next if (!-e $path && !-l $path && !$license);
+    # Suppress Webmin's configuration diff log: these files contain credentials.
+    lock_file($path, undef, undef, 1);
+    push(@locked, $path);
+    my ($old, $mode, $group);
+    if (-e $path || -l $path) {
+        # Save the original data and access mode for both success and rollback.
+        sysopen(my $fh, $path, Fcntl::O_RDONLY() | Fcntl::O_NOFOLLOW())
+            or die "Cannot read license or repository configuration\n";
+        my @st = stat($fh);
+        die "Unsafe license or repository configuration\n"
+            if (!-f $fh || $st[4] != $< || $st[7] > 2*1024*1024);
+        local $/;
+        $old = <$fh> // '';
+        close($fh);
+        $mode = $st[2] & 0777;
+        $group = $st[5];
+    }
+    # Credential files are authoritative; other files change only matching hosts.
+    my $new = $license ? "SerialNumber=$serial\nLicenseKey=$key\n"
+        : cloudmin_license_repo_text($old, $serial, $key);
+    push(@changes, [$path, $old, $mode, $new, $license, $group]) if (!defined($old) || $new ne $old);
+}
+1;
+};
+if (!$prepared) {
+    # No writes have started, so only the acquired locks need releasing.
+    my $error = $@;
+    unlock_file($_) for reverse @locked;
+    die $error;
+}
+# Record completed replacements in order so rollback can unwind them.
+my @saved;
+my $ok = eval {
+    foreach my $change (@changes) {
+        Cloudmin::License::write_private($change->[0], $change->[3]);
+        push(@saved, $change);
+        # Only the license file needs private mode; preserve repository access.
+        # Record the write first so a permission failure also rolls it back.
+        if (!$change->[4]) {
+            chown(-1, $change->[5], $change->[0]) or die "Cannot preserve repository group\n";
+            chmod($change->[2], $change->[0]) or die "Cannot preserve repository permissions\n";
+        }
+    }
+    1;
+};
+if (!$ok) {
+    # Restore every completed write, even if one rollback operation fails.
+    my $restored = 1;
+    foreach my $change (reverse @saved) {
+        my ($path, $old, $mode, undef, undef, $group) = @$change;
+        my $one = eval {
+            if (defined($old)) {
+                # Existing files recover their contents, group and permissions.
+                Cloudmin::License::write_private($path, $old);
+                chown(-1, $group, $path) or die "Cannot restore group\n";
+                chmod($mode, $path) or die "Cannot restore permissions\n";
+            }
+            # Files created by this attempt must become absent again.
+            else { unlink($path) or die "Cannot restore missing file\n"; }
+            1;
+        } ? 1 : 0;
+        $restored = 0 if (!$one);
+    }
+    unlock_file($_) for reverse @locked;
+    die $restored ? "Cannot save the new license (previous credentials restored)\n"
+        : "Cannot finish the license change or restore all previous files\n";
+}
+unlock_file($_) for reverse @locked;
+}
+
 1;
