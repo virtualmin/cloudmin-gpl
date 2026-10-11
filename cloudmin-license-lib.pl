@@ -245,4 +245,17 @@ if ($s->{'state'} ne 'missing') {
 return $message.' Existing machines and services keep running. Scheduled backups and queued or running jobs continue.';
 }
 
+# require_cloudmin_license() checks stale state before admitting a new change.
+sub require_cloudmin_license
+{
+my $s = cloudmin_license_status(1);
+die cloudmin_license_message($s)."\n" if (!$s->{'allowed'});
+}
+
+# check_cloudmin_license() is the daily Webmin cron callback.
+sub check_cloudmin_license
+{
+cloudmin_license_status(1, 1);
+}
+
 1;
