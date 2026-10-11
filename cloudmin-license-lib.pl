@@ -81,4 +81,28 @@ return Cloudmin::License->new(directory => "$module_var_directory/license",
     request => \&cloudmin_license_request, replace => \&save_cloudmin_license);
 }
 
+# cloudmin_license_repo_text(text, serial, key) replaces only Cloudmin credentials.
+# Public repositories and Virtualmin licenses are unrelated and stay unchanged.
+sub cloudmin_license_repo_text
+{
+my ($value, $serial, $key) = @_;
+# Empty credentials remove authentication when this host is deregistered.
+my $clear = !length($serial) && !length($key);
+my $host = qr/(?:(?:cloudmin|vm2)\.virtualmin\.com|(?:rc\.)?download\.cloudmin\.(?:com|dev)|rc\.cloudmin\.dev)/;
+# APT machine entries carry credentials in separate fields, never in their URL.
+$value =~ s{(\bmachine\s+\S+)|(https?://)(?:[^\s/\@]+\@)?($host)(?=[:/\s]|$)}{
+    defined($1) ? $1 : $clear ? "$2$3" : "$2$serial:$key\@$3";
+}ge;
+# APT auth.conf may hold credentials separately from source URLs. Match a whole
+# machine stanza, allowing a scheme, port and path after the known hostname.
+$value =~ s{(\bmachine\s+(?:https?://)?$host(?=[:/\s]|$)\S*\s+)(.*?)(?=\bmachine\s|\z)}{
+    my ($prefix, $body) = ($1, $2);
+    $body =~ s/(\blogin\s+)\S+/$1$serial/g;
+    $body =~ s/(\bpassword\s+)\S+/$1$key/g;
+    # Remove the matching auth stanza rather than leave an empty login.
+    $clear ? '' : $prefix.$body;
+}gse;
+return $value;
+}
+
 1;
