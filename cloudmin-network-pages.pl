@@ -29,4 +29,18 @@ return join('', map { ui_tag('span', html_escape($_),
 	{ class => 'cloudmin-network-value' }) } @$values);
 }
 
+# show_network_guests(guests)
+# Displays each attached VM once, even when it has several matching interfaces.
+sub show_network_guests
+{
+my ($guests) = @_;
+return ui_tag('span', html_escape($text{'net_no_guests'}),
+	{ class => 'cloudmin-network-muted' }) if (!@$guests);
+my %seen;
+return ui_cluster([ map { ui_tag('a', ui_svg_icon('terminal').
+	ui_tag('span', html_escape($_->{'name'})),
+	{ href => 'machine.cgi?id='.urlize($_->{'uuid'}), class => 'cloudmin-network-guest' }) }
+	grep { !$seen{$_->{'uuid'}}++ } @$guests ]);
+}
+
 1;
