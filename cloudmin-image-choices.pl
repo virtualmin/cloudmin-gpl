@@ -17,4 +17,22 @@ return $text{'vm_image_captures'} if (($image->{'source'} || '') eq 'vm');
 return $image->{'os'} || $fallback || $text{'vm_image_other'};
 }
 
+# get_image_icon(image)
+# Returns a module-relative SVG path from the image's OS and catalogue origin.
+# Only names in this map can select files; catalogue values cannot supply paths.
+sub get_image_icon
+{
+my ($image) = @_;
+my %icons = (
+	'AlmaLinux' => 'alma', 'Alpine Linux' => 'alpine', 'Arch Linux' => 'arch',
+	'CentOS Stream' => 'centos', 'Debian' => 'debian', 'Fedora' => 'fedora',
+	'openSUSE Leap' => 'suse', 'openSUSE Tumbleweed' => 'suse',
+	'Rocky Linux' => 'rocky', 'Ubuntu' => 'ubuntu',
+);
+# Custom and unrecognized images use the module's generic disk icon.
+my $icon = ($image->{'catalogue_origin'} || '') eq 'custom' ? 'custom'
+	: $icons{$image->{'os'} || ''} || 'custom';
+return 'images/os/'.$icon.'.svg';
+}
+
 1;
