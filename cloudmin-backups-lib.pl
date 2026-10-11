@@ -182,6 +182,69 @@ return get_vm_jobs()->lock('backup-schedules', sub {
 });
 }
 
+# run_backup_schedule(id) backs up selected machines serially, then applies retention.
+sub run_backup_schedule
+{
+my ($id) = @_;
+require './server-manager-lib.pl' if (!defined(&get_vm_jobs));
+Cloudmin::Jobs::validate_id($id);
+die "Backup changes are disabled in read-only mode\n" if (is_readonly_mode());
+# A nonblocking schedule lock prevents overlapping runs of this same schedule.
+return get_vm_jobs()->lock('backup-schedule-'.$id, sub {
+	my ($s) = grep { $_->{'id'} eq $id } @{backup_schedules()};
+	die "Backup schedule not found or disabled\n" if (!$s || !$s->{'enabled'});
+	# Scheduled work must not outlive the owner's permission to manage this host.
+	my %modules; read_acl(\%modules, undef, [$s->{'owner'}]);
+	my %acl = get_module_acl($s->{'owner'}, $module_name);
+	my %global = get_module_acl($s->{'owner'}, '');
+	die "The schedule owner no longer has permission to back up this host\n"
+		if ((!$modules{$s->{'owner'},$module_name} && !$modules{$s->{'owner'},'*'}) ||
+			!Cloudmin::Access->new(\%acl, $global{'readonly'})->allows('manage'));
+	my $service = get_backup_service();
+	my $jobs = get_vm_jobs();
+	# Existing schedules retain their backup and retention work after expiry.
+	# Only this jobs instance skips admission; the owner's ACLs were checked above.
+	delete($jobs->{'admit'});
+	my @guests = $s->{'all'} ? map { $_->{'uuid'} } @{get_libvirt()->list_domains(1)} : @{$s->{'guests'}};
+	my @errors;
+	# Finish each guest before the next, while collecting failures for the
+	# report.
+	foreach my $uuid (@guests) {
+		my $ok = eval {
+			my $job_id = substr(Cloudmin::Images::generate_id(),0,32);
+			# Selection and reservation share the same lock as
+			# interactive submissions.
+			$jobs->lock('create-host', sub {
+				$jobs->assert_guest_available($uuid);
+				my $r = $service->prepare({%$s, id => $uuid, schedule => $id}, $job_id);
+				$jobs->submit($job_id, $s->{'owner'}, 'guest:'.$uuid, $r);
+			});
+			$service->run($job_id);
+			my $job = $jobs->get($job_id);
+			die(($job->{'error'} || 'Backup failed')."\n") if ($job->{'state'} ne 'complete');
+			1;
+		};
+		push(@errors, "$uuid: ".error_message($@)) if (!$ok);
+	}
+	# Purge only this schedule's successful backups, retaining the newest per VM.
+	if (!@errors && $s->{'purge'}) {
+		my %newest;
+		foreach my $row (@{$service->inventory()}) {
+			# Inventory is newest first; skip the first live archive
+			# for each guest.
+			next if ($row->{'deleted'} || ($row->{'schedule'} || '') ne $id || !$newest{$row->{'uuid'}}++);
+			next if ($row->{'created'} >= time()-86400*$s->{'purge'});
+			my $ok = eval { delete_cloudmin_backup($row->{'id'}); 1 };
+			push(@errors, error_message($@)) if (!$ok);
+		}
+	}
+	# Report every failed guest or deletion after finishing the remaining
+	# work.
+	die join("\n", @errors)."\n" if (@errors);
+	return 1;
+}, 1);
+}
+
 # ensure_backup_cleanup() registers hourly expiry independently of UI activity.
 sub ensure_backup_cleanup
 {
