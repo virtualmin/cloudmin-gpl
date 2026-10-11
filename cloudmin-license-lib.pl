@@ -72,4 +72,13 @@ eval { close_http_connection($handle) } if (ref($handle));
 return $ok ? $body : undef;
 }
 
+# get_cloudmin_license() uses the shared license file and private Webmin state.
+sub get_cloudmin_license
+{
+return Cloudmin::License->new(directory => "$module_var_directory/license",
+    file => '/etc/cloudmin-license',
+    host => cloudmin_license_host(),
+    request => \&cloudmin_license_request, replace => \&save_cloudmin_license);
+}
+
 1;
