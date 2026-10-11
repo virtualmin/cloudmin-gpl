@@ -105,4 +105,17 @@ $value =~ s{(\bmachine\s+(?:https?://)?$host(?=[:/\s]|$)\S*\s+)(.*?)(?=\bmachine
 return $value;
 }
 
+# cloudmin_license_files() lists the credential file and supported repo formats.
+# The second field marks the license file; other entries contain repository text.
+sub cloudmin_license_files
+{
+our $config_directory;
+return (['/etc/cloudmin-license', 1],
+    map { [$_, 0] }
+    '/etc/apt/sources.list', '/etc/apt/auth.conf',
+    glob('/etc/apt/sources.list.d/*.list'), glob('/etc/apt/sources.list.d/*.sources'),
+    glob('/etc/apt/auth.conf.d/*.conf'), glob('/etc/yum.repos.d/*.repo'),
+    "$config_directory/webmin/config");
+}
+
 1;
