@@ -45,4 +45,23 @@ die "Only creation jobs can remove their virtual machine\n"
 return $job;
 }
 
+# change_job_action(input) checks a signed POST before requesting cleanup.
+sub change_job_action
+{
+my ($input) = @_;
+# A bookmarked link or navigation request cannot cancel work.
+die "Use POST for job changes\n" if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+# Direct action buttons carry this marker; no separate review page is needed.
+die "Confirm this job action\n" if (($input->{'confirm'} || '') ne '1');
+get_job_action($input);
+get_image_jobs()->check_token($remote_user, $input->{'token'});
+# The VM controller rechecks the job inside its update locks.
+if ($input->{'type'} eq 'vm') {
+	return call_vm_api(1, $input->{'action'}, $input);
+}
+# The import worker observes cancellation and removes its own partial output.
+# A waiting or abandoned import can be removed immediately under its locks.
+return get_image_jobs()->remove($input->{'job'});
+}
+
 1;
