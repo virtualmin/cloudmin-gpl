@@ -158,4 +158,17 @@ die "Unknown numeric setting: $key\n" if (!$settings{$key});
 return @{$settings{$key}};
 }
 
+# config_number(key, [value])
+# Returns a valid saved number or the setting's default.
+# Omit value to read %config; explicit undef returns the setting's default.
+sub config_number
+{
+my ($key, $value) = @_;
+# Read the global setting only when the caller has not supplied a value.
+$value = $config{$key} if (@_ < 2);
+my ($default, $min, $max) = number_setting($key);
+return defined($value) && !ref($value) && $value =~ /\A\d{1,10}\z/ &&
+	$value >= $min && $value <= $max ? 0 + $value : $default;
+}
+
 1;
