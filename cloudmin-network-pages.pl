@@ -147,4 +147,61 @@ return ui_badge($text{$active ? 'net_active' : 'net_inactive'},
 	$active ? 'success' : 'neutral', { small => 1, dot => 1 });
 }
 
+# show_virtual_network(net, token, [selected])
+# Separates identity, addressing, attached guests and lifecycle controls.
+sub show_virtual_network
+{
+my ($net, $token, $selected) = @_;
+my @actions;
+# Protected networks expose their attachment state instead of unusable controls.
+if ($token) {
+	my @names = ($net->{'active'} ? 'stop' : 'start');
+	push(@names, 'delete') if (!$net->{'active'} && $net->{'persistent'});
+	foreach my $action (@names) {
+		next if (@{$net->{'guests'}} && $action ne 'start');
+		push(@actions, network_form($action eq 'delete' ? 'delete_review' : $action,
+			$token, { id => $net->{'uuid'}, revision => $net->{'revision'} }).
+			ui_action_button($text{'net_'.$action}, $action eq 'delete' ? 'danger' : 'neutral',
+			{ size => 'small', type => 'submit', icon => $action eq 'delete' ? 'trash' : $action eq 'start' ? 'play' : 'stop' }).
+			ui_form_end());
+		}
+	}
+my $autostart = html_escape($text{$net->{'autostart'} ? 'net_enabled' : 'net_disabled'});
+# A small explicit action keeps the saved boot policy accessible without a column.
+if ($token && $net->{'persistent'}) {
+	$autostart = network_form('autostart', $token, { id => $net->{'uuid'}, revision => $net->{'revision'},
+		enabled => $net->{'autostart'} ? 0 : 1 }).ui_action_button(
+		$text{$net->{'autostart'} ? 'net_enabled' : 'net_disabled'}, 'neutral',
+		{ size => 'small', type => 'submit', icon => $net->{'autostart'} ? 'check' : 'x',
+		  title => $text{'net_toggle_boot'} }).ui_form_end();
+	}
+my @facts = ([$text{'net_bridge'}, network_values([$net->{'bridge'} || ()])]);
+# IPv4, IPv6 and DHCP are distinct facts, never combined into an ambiguous cell.
+foreach my $family (4, 6) {
+	my @addresses = grep { $family == 6 ? /:/ : !/:/ } @{$net->{'addresses'}};
+	push(@facts, [$text{'net_addresses'.$family}, ui_tag('span', network_values(\@addresses),
+		{ class => 'cloudmin-network-address'.$family })]) if (@addresses);
+	}
+push(@facts, [$text{'net_dhcp_range'}, network_values($net->{'ranges'}, $text{'net_disabled'})],
+	[$text{'net_boot'}, $autostart]);
+# Isolated networks have no outgoing connection; avoid implying one exists.
+push(@facts, [$text{'net_uplink'}, network_values([$net->{'uplink'} || $text{'net_automatic'}])])
+	if ($net->{'uplink'} || $net->{'forward'} =~ /\A(?:nat|route)\z/);
+my $guests = ui_tag('div', ui_tag('span', html_escape($text{'net_guests'}),
+	{ class => 'cloudmin-network-label' }).show_network_guests($net->{'guests'}),
+	{ class => 'cloudmin-network-attachments' });
+my $footer = ui_cluster([$guests, ui_cluster(\@actions)], { align => 'between' });
+# Explain why attachment protection hides the stop and delete controls.
+$footer .= ui_tag('p', html_escape($text{'net_in_use'}), { class => 'cloudmin-network-hint' })
+	if ($token && @{$net->{'guests'}});
+return ui_tag('div', ui_card({
+	title_html => ui_svg_icon('globe').ui_tag('span', html_escape($net->{'name'})),
+	actions => ui_cluster([
+		ui_badge($text{'net_mode_'.$net->{'forward'}} || $net->{'forward'}, 'neutral', { small => 1 }),
+		network_status_badge($net->{'active'})]),
+	body => ui_dl(\@facts, { class => 'cloudmin-network-facts' }), footer => $footer,
+	class => 'cloudmin-network-card'.($selected ? ' cloudmin-network-selected' : ''),
+}), { 'data-network-name' => $net->{'name'} });
+}
+
 1;
