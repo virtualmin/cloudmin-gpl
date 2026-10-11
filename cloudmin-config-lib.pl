@@ -99,4 +99,27 @@ my %wanted = map { $_ => 1 } split(/[,\s]+/, $value);
 return grep { $wanted{$_->[0]} || $_->[3] } @fields;
 }
 
+# section_open(key, section)
+# Returns whether section starts expanded under the named configuration key.
+sub section_open
+{
+my ($key, $section) = @_;
+return scalar(grep { $_->[0] eq $section } view_selection($key)) ? 1 : 0;
+}
+
+# image_import_pool(pools, [saved]) selects an eligible import destination.
+# pools contains active file-backed pools. saved is the preferred pool UUID;
+# omit it to read Module Configuration. Unavailable choices use the pool named
+# default, then the first offered pool. An empty list returns an empty string.
+sub image_import_pool
+{
+my ($pools, $saved) = @_;
+# An explicit empty choice requests automatic selection instead of the setting.
+$saved = $config{'image_pool'} if (@_ < 2);
+# Resolve preferences only against pools that the caller can offer for imports.
+my ($chosen) = grep { $_->{'id'} eq ($saved || '') } @$pools;
+my ($default) = grep { $_->{'name'} eq 'default' } @$pools;
+return ($chosen || $default || $pools->[0] || {})->{'id'} || '';
+}
+
 1;
