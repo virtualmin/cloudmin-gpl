@@ -200,6 +200,19 @@ if (!$ok) {
 unlock_file($_) for reverse @locked;
 }
 
+# cloudmin_license_status([refresh], [force]) keeps GPL independent of licensing.
+# Storage failures deny new changes but cannot make inventory pages fail.
+# Both flags default to false and are passed to License::status on Pro hosts.
+sub cloudmin_license_status
+{
+return {edition => 'GPL', state => 'gpl', allowed => 1} if (!cloudmin_pro());
+# Turn identity, credential and cache read errors into a displayable state.
+my $status = eval { get_cloudmin_license()->status(@_) };
+$status ||= {edition => 'Pro', state => 'storage', allowed => 0};
+$status->{'message'} = cloudmin_license_message($status);
+return $status;
+}
+
 # cloudmin_license_message(status, [on_page]) explains the problem and remedy.
 # on_page defaults to false; 'manager' omits navigation and 'readonly' asks an
 # administrator to add missing credentials. The result is plain text.
