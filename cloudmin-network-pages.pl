@@ -204,4 +204,47 @@ return ui_tag('div', ui_card({
 }), { 'data-network-name' => $net->{'name'} });
 }
 
+# show_host_network(item, [interface], [selected], [token])
+# Gives bridges and Ethernet interfaces the same readable address layout.
+# interface and selected default to false; token enables bridge removal review.
+sub show_host_network
+{
+my ($item, $interface, $selected, $token) = @_;
+my @badges = (network_status_badge($item->{'active'}));
+push(@badges, ui_badge($text{'net_management'}, 'info', { small => 1 })) if ($item->{'management'});
+my @facts;
+push(@facts, [$text{$interface ? 'net_bridge' : 'net_ports'},
+	network_values($interface ? [$item->{'master'} || ()] : $item->{'ports'})]);
+foreach my $family (4, 6) {
+	my @addresses = grep { $family == 6 ? /:/ : !/:/ } @{$item->{'addresses'}};
+	push(@facts, [$text{'net_addresses'.$family}, ui_tag('span', network_values(\@addresses),
+		{ class => 'cloudmin-network-address'.$family })]) if (@addresses);
+	}
+push(@facts, [$text{'net_mac'}, network_values([$item->{'mac'} || ()])],
+	[$text{'net_persistent'}, html_escape($text{$item->{'persistent'} ? 'index_yes' : 'index_no'})]);
+my $footer;
+if (!$interface) {
+	# Place removal beside the guest list and hide it while the bridge is in use.
+	my @actions;
+	my $used = @{$item->{'guests'}} || @{$item->{'networks'} || []};
+	# Offer review only for unused persistent bridges with one port. The server
+	# checks saved configuration and dependent interfaces before accepting it.
+	if ($token && !$used && $item->{'persistent'} && @{$item->{'ports'}} == 1) {
+		push(@actions, network_form('bridge_remove_review', $token, { name => $item->{'name'} }).
+			ui_action_button($text{'net_remove_bridge'}, 'danger',
+				{ size => 'small', type => 'submit', icon => 'unplug' }).ui_form_end());
+		}
+	$footer = ui_cluster([show_network_guests($item->{'guests'}), ui_cluster(\@actions)], {align => 'between'});
+	# Explain the missing action when a guest or virtual network still uses it.
+	$footer .= ui_tag('p', html_escape($text{'net_bridge_in_use'}), {class => 'cloudmin-network-hint'})
+		if ($token && $used);
+	}
+return ui_card({ title_html => ui_svg_icon('server').ui_tag('span', html_escape($item->{'name'})),
+	actions => ui_cluster(\@badges),
+	class => 'cloudmin-network-card'.($selected ? ' cloudmin-network-selected' : ''),
+	body => ui_dl(\@facts, { class => 'cloudmin-network-facts' }),
+	footer => $footer,
+});
+}
+
 1;
