@@ -35,4 +35,32 @@ my $icon = ($image->{'catalogue_origin'} || '') eq 'custom' ? 'custom'
 return 'images/os/'.$icon.'.svg';
 }
 
+# show_image_select(name, value, choices, [disabled], [required])
+# Adds native headings from each choice's fourth field to Webmin's select.
+# Choices use [value, label, attributes, group]; an empty group has no heading.
+# disabled and required default to false. Callers supply the display order.
+sub show_image_select
+{
+my ($name, $value, $choices, $disabled, $required) = @_;
+my @groups;
+foreach my $choice (@$choices) {
+	# Inheritance and missing-image choices stay outside distribution groups.
+	my $label = $choice->[3] || '';
+	push(@groups, [$label, []]) if (!@groups || $groups[-1]->[0] ne $label);
+	push(@{$groups[-1]->[1]}, $choice);
+}
+my $content = '';
+foreach my $group (@groups) {
+	# ui_select does not support optgroup; reuse its escaped option markup.
+	my $options = ui_select($name, $value, $group->[1]);
+	$options =~ s/\A<select\b[^>]*>//;
+	$options =~ s{</select>\s*\z}{};
+	$content .= $group->[0] ? ui_tag('optgroup', $options, {label => html_escape($group->[0])}) : $options;
+}
+# Build the outer control once so its ID and validation attributes stay intact.
+my $select = ui_select($name, $value, [], 1, 0, 0, $disabled, $required ? 'required' : undef);
+$select =~ s{</select>}{$content</select>};
+return $select;
+}
+
 1;
