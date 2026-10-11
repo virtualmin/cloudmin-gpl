@@ -143,4 +143,19 @@ return ([($selection ? '' : ()), map { $text{$_->[1]} } @fields],
 	\@rows, [($selection ? undef : ()), map { $_->[2] || 'string' } @fields]);
 }
 
+# number_setting(key)
+# Returns the default, minimum and maximum for a numeric setting named by key.
+# The bridge confirmation timeout is measured in seconds.
+sub number_setting
+{
+my ($key) = @_;
+my %settings = (
+	# Leave time for bridge application, whose service allows up to 90 seconds.
+	bridge_confirm_timeout => [180, 120, 900],
+);
+# Reject unknown keys rather than accepting values without known bounds.
+die "Unknown numeric setting: $key\n" if (!$settings{$key});
+return @{$settings{$key}};
+}
+
 1;
