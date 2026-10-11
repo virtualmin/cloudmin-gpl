@@ -258,4 +258,18 @@ sub check_cloudmin_license
 cloudmin_license_status(1, 1);
 }
 
+# setup_cloudmin_license_check() installs one daily check on Pro hosts only.
+sub setup_cloudmin_license_check
+{
+return if (!cloudmin_pro());
+foreign_require('webmincron');
+return if (grep { $_->{'module'} eq 'server-manager' && $_->{'func'} eq 'check_cloudmin_license' }
+    webmincron::list_webmin_crons());
+# A stable host-specific slot spreads daily checks across the full day.
+my $slot = hex(substr(sha256_hex(cloudmin_license_host()), 0, 4));
+webmincron::save_webmin_cron({module => 'server-manager', file => 'server-manager-lib.pl',
+    func => 'check_cloudmin_license', args => [], mins => $slot % 60,
+    hours => int($slot/60) % 24, days => '*', months => '*', weekdays => '*'});
+}
+
 1;
