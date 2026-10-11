@@ -284,4 +284,40 @@ get_image_jobs()->check_token($remote_user, $input->{'token'});
 die "Unknown license action\n" if ($action !~ /\A(?:check_license|change_license|deregister_license)\z/);
 }
 
+# call_license_api(action, input, [starting]) permits repair while blocked.
+# The optional callback starts UI progress after access and input checks.
+# Licensing never grants access: host ACL, writable session and token still apply.
+sub call_license_api
+{
+my ($action, $input, $starting) = @_;
+# Remove the submitted key from the request before constructing public results.
+my $key = delete($input->{'license_key'});
+require_access('host');
+return cloudmin_license_status() if ($action eq 'license');
+check_cloudmin_license_action($action, $input);
+Cloudmin::License::validate_credentials($input->{'serial'}, $key) if ($action eq 'change_license');
+# API and CLI callers must explicitly confirm removal, just like the form.
+die "Confirm license deregistration\n" if ($action eq 'deregister_license' &&
+    (ref($input->{'confirm'}) || ($input->{'confirm'} // '') ne '1'));
+$starting->() if ($starting);
+my $result;
+if ($action eq 'check_license') {
+    # An explicit recheck ignores the usual daily or hourly refresh interval.
+    $result = cloudmin_license_status(1, 1);
+}
+elsif ($action eq 'deregister_license') {
+    # Removal clears local credentials without contacting the license server.
+    $result = get_cloudmin_license()->deregister();
+}
+else {
+    # Validate replacement terms before updating saved credentials.
+    $result = get_cloudmin_license()->change($input->{'serial'}, $key);
+}
+# Repair the cron after a manual action and audit only the action name.
+setup_cloudmin_license_check();
+webmin_log($action, 'license');
+$result->{'message'} = cloudmin_license_message($result);
+return $result;
+}
+
 1;

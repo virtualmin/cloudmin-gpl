@@ -1,0 +1,31 @@
+<header>License Manager</header>
+
+<p>License Manager shows this host's Cloudmin Pro license, expiry date and last
+check time. Recheck after renewing a license or fixing a connection problem. To
+use a different license, enter its serial number and key. Cloudmin validates
+the new license before replacing the saved credentials.</p>
+
+<p>An expired license allows changes for seven days after its expiry date ends
+in UTC. When this host first detects use on too many hosts, there are 21 days to
+finish the migration or assign separate licenses. Rechecking does not restart
+either grace period.</p>
+
+<p>After a grace period ends, Cloudmin refuses new changes through its web
+interface, API and CLI. Existing machines and services keep running. Inventory,
+guest connections, accepted jobs, scheduled backups, job recovery and network
+rollback remain available. Recheck after renewal, or add a replacement license
+to enable new changes.</p>
+
+<p>Checks use HTTPS to <tt>www.virtualmin.com</tt>. If the server cannot be
+reached, the saved license remains usable for up to 21 days after the last
+successful check, subject to its expiry and migration deadlines. A missing or
+invalid cache requires a successful check. Repeated failures do not restart a
+grace period.</p>
+
+<p><b>Deregister License</b> removes this host's saved license and repository
+credentials after confirmation. Pro updates and new changes through Cloudmin
+require a license again. Running machines, scheduled backups and accepted jobs
+continue. Deregistration does not cancel your subscription or immediately remove
+this host from the license server's count.</p>
+
+<footer>
