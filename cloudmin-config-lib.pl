@@ -122,4 +122,25 @@ my ($default) = grep { $_->{'name'} eq 'default' } @$pools;
 return ($chosen || $default || $pools->[0] || {})->{'id'} || '';
 }
 
+# table_columns(key, rows, [selection_column], [token])
+# Returns matching heading, row and sort-type arrays for the selected columns.
+# rows must use view_fields() order. Set selection_column to preserve
+# a leading checkbox cell; it defaults to false. Without token, omit VM actions.
+sub table_columns
+{
+my ($key, $rows, $selection, $token) = @_;
+my @all = view_fields($key);
+# Checkbox cells precede the configured columns and keep their original IDs.
+my %index = map { $all[$_]->[0] => $_ + ($selection ? 1 : 0) } 0..$#all;
+# A display preference cannot add VM controls when the page has no token.
+my @fields = grep { $key ne 'machine_columns' || $_->[0] ne 'controls' || $token }
+	view_selection($key);
+# Use one index list for every row so hidden fields cannot shift their meaning.
+my @indices = (($selection ? 0 : ()), map { $index{$_->[0]} } @fields);
+my @rows = map { [ @{$_}[@indices] ] } @$rows;
+our %text;
+return ([($selection ? '' : ()), map { $text{$_->[1]} } @fields],
+	\@rows, [($selection ? undef : ()), map { $_->[2] || 'string' } @fields]);
+}
+
 1;
