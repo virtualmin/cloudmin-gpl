@@ -1,0 +1,14 @@
+<header>Compress archives with gzip</header>
+
+<p>When enabled, backups use gzip-compressed <tt>.tar.gz</tt> archives.
+When disabled, they use uncompressed <tt>.tar</tt> archives. Compression is
+enabled by default. Both formats contain the same machine data and checksums,
+and restore accepts either format.</p>
+
+<p>Compression can reduce transfer time and destination space, but uses CPU and
+can make the backup take longer. Already compressed or encrypted disk contents
+may shrink very little. Cloudmin finishes source cleanup before compression starts.</p>
+
+<p>Compression does not remove the need for temporary full disk copies.</p>
+
+<footer>

@@ -1,0 +1,16 @@
+<header>OAuth refresh token</header>
+
+<p>Enter a refresh token issued for the Google or Dropbox account and application
+configured above. Cloudmin exchanges it for a short-lived access token when it
+transfers an archive. An access token cannot be used in this field.</p>
+
+<p>Authorize the application outside this form with access to the required storage.
+It needs write permission for backups, read permission for restore, and delete
+permission for retention or manual deletion. If authorization is revoked, obtain
+a new refresh token.</p>
+
+<p>When editing a schedule, leave this field blank to keep its saved token for the
+same provider. Enter a new token to replace it. <b>Clear saved value</b> removes the
+stored token, but Google and Dropbox still require one to save the destination.</p>
+
+<footer>

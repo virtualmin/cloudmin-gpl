@@ -1,0 +1,22 @@
+<header>Restore a Virtual Machine</header>
+
+<p>Select the backup source and
+archive filename, then choose <b>Read Backup Contents</b>.
+Cloudmin downloads and checks the archive before showing its machine
+name, UUID and disk count.</p>
+
+<p>Review these details, choose a storage pool and confirm
+that the original machine will not run alongside the restored copy. Then choose
+<b>Restore Now</b>. The restored machine stays stopped until you start it.
+Automatic startup is disabled.</p>
+
+<p>Restore keeps the original identity, network settings
+and credentials. It refuses to overwrite a machine with the same name or UUID.
+Use <b>Clone virtual machine</b> when you need another machine with a new identity.</p>
+
+<p>The host must support the archived machine's architecture and firmware, and
+provide its network or bridge attachments. Allow enough space for downloads,
+extracted disks and the final volumes. Disks can need their full logical size;
+do not estimate space from the compressed archive size alone.</p>
+
+<footer>

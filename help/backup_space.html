@@ -1,0 +1,29 @@
+<header>Backup and restore space requirements</header>
+
+<p>A full backup needs space for source-pool disk copies, worker staging and the
+final archive. A remote destination does not remove the local space requirement.</p>
+
+<p>As a planning estimate, allow roughly four times the copied disks' allocated
+size on the staging filesystem, plus the source-pool copies and destination
+archive where those use separate filesystems. If they share a filesystem, allow
+space for all of them there. Sparse files and reflinks can reduce actual use,
+but do not assume they are available.</p>
+
+<p>File pools and standard LVM pools need room for full disk copies and temporary
+snapshot growth during live backups. Thin copies and snapshots share their
+pool's data and metadata space. LVM staging checks also require free space for
+the full disk capacity on the host, even when the temporary copy is sparse. Raw disks
+and extracted archives can require their full logical size. A small compressed
+archive can therefore need much more space to restore.</p>
+
+<p>Restore first downloads and checks the archive in local staging. Importing it
+needs further space to extract and inspect the disks, plus space in the selected
+storage pool for their full capacities. Do not size the pool from the compressed
+archive size alone.</p>
+
+<p>Cloudmin checks space during the job. Other activity can still consume it, so
+leave headroom. Temporary inspection downloads are removed after restore; unused
+inspections expire after one day and are cleaned up hourly or when the backup
+list is read.</p>
+
+<footer>

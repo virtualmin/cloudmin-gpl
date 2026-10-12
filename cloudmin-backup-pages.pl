@@ -302,4 +302,56 @@ return ui_tag('script', '', {src => get_webprefix().'/server-manager/backup-host
 	((stat($module_root_directory.'/backup-host-key.js'))[9] || 0)});
 }
 
+# show_backup_list(token) lists archives and schedules with explicit actions.
+sub show_backup_list
+{
+my ($token) = @_;
+my @backups = grep { !$_->{'deleted'} } @{get_backup_service()->inventory()};
+my @schedules = @{backup_schedules()};
+# Read-only viewers see inventory but receive no mutation controls.
+my $actions = $token ? ui_cluster([
+	ui_action_button($text{'backup_now'}, 'primary', {icon => 'archive', href => 'backup_form.cgi'}),
+	ui_action_button($text{'backup_add_schedule'}, 'neutral', {icon => 'clock', href => 'backup_form.cgi?new=1'}),
+	ui_action_button($text{'restore_title'}, 'neutral', {icon => 'refresh', href => 'restore_form.cgi'}),
+]) : '';
+my @rows;
+# Archive rows expose destination labels, never private transport settings.
+foreach my $row (@backups) {
+	my $buttons = $token ? ui_cluster([
+		ui_action_button($text{'backup_restore'}, 'info', {icon => 'refresh', size => 'small', href => 'restore_form.cgi?backup='.$row->{'id'}}),
+		ui_form_start('delete_backup.cgi','post').ui_hidden('token',$token).ui_hidden('backup',$row->{'id'}).
+			ui_action_button($text{'backup_delete'}, 'danger', {icon => 'trash', size => 'small', type => 'submit'}).ui_form_end(),
+	]) : '';
+	push(@rows, [ui_tag('strong', html_escape($row->{'name'})), make_date($row->{'created'}),
+		'<tt>'.html_escape($row->{'destination'}).'</tt>', nice_size($row->{'size'}), $buttons]);
+}
+# Apply data-column preferences before appending any permitted actions.
+my ($heads, $visible, $types) = table_columns('backup_columns', \@rows);
+# Keep permitted actions available regardless of the selected data columns.
+if ($token) {
+	push(@$heads, '');
+	push(@$types, 'string');
+	push(@{$visible->[$_]}, $rows[$_]->[4]) foreach 0..$#rows;
+	}
+# Use full-width tables when populated and actionable empty states otherwise.
+my $archives = ui_card({id => 'cloudmin-backup-archives', title => $text{'backup_archives'},
+	actions => @rows ? ui_badge(scalar(@rows), 'neutral') : '',
+	body => @rows ? ui_columns_table($heads, 100, $visible, $types, 0, undef, undef, 1)
+		: ui_empty_state({icon => 'archive', title => $text{'backup_empty'}, desc => $text{'backup_empty_help'}})});
+# Summaries show recurrence and state without rendering saved credentials.
+@rows = map { [ui_link('backup_form.cgi?sched='.$_->{'id'},html_escape($_->{'description'} || $text{'backup_schedule'})),
+	'<tt>'.html_escape(Cloudmin::BackupTransport::label($_->{'target'})).'</tt>',
+	$_->{'all'} ? $text{'backup_all'} : scalar(@{$_->{'guests'}}),
+	ui_badge($text{$_->{'enabled'} ? 'backup_active' : 'backup_disabled'}, $_->{'enabled'} ? 'success' : 'neutral', {small => 1}),
+	html_escape(backup_schedule_label($_))] } @schedules;
+# Schedule columns have separate settings; description and status stay visible.
+($heads, $visible, $types) = table_columns('backup_schedule_columns', \@rows);
+my $schedules = ui_card({id => 'cloudmin-backup-schedules', title => $text{'backup_schedules'},
+	desc => @rows ? $text{'backup_schedule_timezone'} : undef,
+	actions => @rows ? ui_badge(scalar(@rows), 'neutral') : '',
+	body => @rows ? ui_columns_table($heads, 100, $visible, $types, 0, undef, undef, 1)
+		: ui_empty_state({icon => 'clock', title => $text{'backup_schedules_empty'}, desc => $text{'backup_schedules_empty_help'}})});
+return ui_page_start().ui_stack([$actions, $archives, $schedules]).ui_page_end();
+}
+
 1;
