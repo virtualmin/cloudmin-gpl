@@ -173,4 +173,21 @@ my $frequency = $in->{'frequency'} || '';
 return {frequency => $frequency, map {$_ => $in->{'schedule_'.$frequency.'_'.$_}} qw(hour minute weekday day month)};
 }
 
+# show_backup_retention(days) groups retention choices without an inline note.
+sub show_backup_retention
+{
+my ($days) = @_;
+# Retention stores elapsed days; month and year choices mean 30 and 365 days.
+my @groups = (['days',1,6], ['weeks',7,4], ['months',30,12], ['years',365,10]);
+my $options = ui_tag('option', html_escape($text{'backup_disabled'}),
+	{value => 0, !$days ? (selected => undef) : ()});
+foreach my $group (@groups) {
+	my ($unit, $factor, $max) = @$group;
+	my $choices = join('', map {ui_tag('option', html_escape(text('backup_retention_'.($_ == 1 ? substr($unit,0,-1) : $unit), $_)),
+		{value => $_*$factor, $days == $_*$factor ? (selected => undef) : ()})} 1..$max);
+	$options .= ui_tag('optgroup', $choices, {label => $text{'backup_'.$unit}});
+}
+return ui_tag('select', $options, {class => 'ui_select', name => 'purge', id => 'purge'});
+}
+
 1;
