@@ -18,4 +18,14 @@ return 'snapshots.cgi?id='.urlize($uuid).
 	(defined($snapshot) ? '&snapshot='.urlize($snapshot) : '');
 }
 
+# snapshot_mode(snapshot)
+# Shows whether the guest was stopped, prepared, or explicitly left unprepared.
+sub snapshot_mode
+{
+my ($snapshot) = @_;
+my $mode = $snapshot->{'mode'} || 'external';
+return ui_badge($text{'snapshots_mode_'.$mode} || $text{'snapshots_mode_external'},
+	$mode eq 'prepared' ? 'success' : $mode eq 'unprepared' ? 'warning' : 'neutral', { small => 1 });
+}
+
 1;
