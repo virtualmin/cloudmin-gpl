@@ -7,6 +7,14 @@ use Cwd ();
 require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-config-lib.pl'));
 our (%text);
 
+# network_page_tab(value)
+# Accepts inventory tabs, defaulting to the overview on an ordinary page visit.
+sub network_page_tab
+{
+my ($value) = @_;
+return defined($value) && $value =~ /\A(?:networks|bridges|interfaces)\z/ ? $value : 'overview';
+}
+
 # network_form(action, token, [fields])
 # Starts an independent POST form that returns to the relevant inventory tab.
 sub network_form
@@ -245,6 +253,68 @@ return ui_card({ title_html => ui_svg_icon('server').ui_tag('span', html_escape(
 	body => ui_dl(\@facts, { class => 'cloudmin-network-facts' }),
 	footer => $footer,
 });
+}
+
+# show_network_page(data, token, state, owner, [tab], [selected])
+# Uses native Webmin tabs and the card, list and empty-state widgets from ui-demo.
+# tab defaults to overview; selected optionally identifies a card to show first.
+sub show_network_page
+{
+my ($data, $token, $state, $owner, $tab, $selected) = @_;
+$selected ||= '';
+$tab = network_page_tab($tab);
+# Pending or failed recovery blocks setup forms and bridge removal actions.
+my $pending = $state && $state->{'state'} =~ /\A(?:armed|applying|confirm|rolling_back|rollback_failed)\z/;
+my $editable = $pending ? '' : $token;
+my $html = ui_tabs_start([
+	['net_overview', $text{'net_overview_tab'}],
+	['net_networks', $text{'net_networks'}], ['net_bridges', $text{'net_bridges'}],
+	['net_interfaces', $text{'net_interfaces_tab'}],
+	], 'cloudmin_network_tabs', 'net_'.$tab, 1);
+# Each inventory owns its setup controls; forms never enclose other forms.
+foreach my $section (qw(overview networks bridges interfaces)) {
+	# Overview has no mutation forms; all actions remain in the detail tabs.
+	if ($section eq 'overview') {
+		$html .= ui_tabs_start_tab('cloudmin_network_tabs', 'net_overview').
+			ui_tag('div', ui_tag('div', ui_p(html_escape($text{'net_overview_intro'})),
+				{ class => 'vui_ui_block' }).show_network_overview($data),
+				{ 'data-network-tab' => 'overview', class => 'cloudmin-network-tab' }).
+			ui_tabs_end_tab('cloudmin_network_tabs', 'net_overview');
+		next;
+		}
+	my @items = $section eq 'interfaces' ? grep {
+		!$_->{'loopback'} && !$_->{'bridge'} && !$_->{'kind'}
+		} @{$data->{'interfaces'}} : @{$data->{$section}};
+	my $key = $section eq 'networks' ? 'uuid' : 'name';
+	my $highlight = $section eq $tab ? $selected : '';
+	# Put a linked card first so navigation also works inside frames.
+	@items = (grep({ $_->{$key} eq $highlight } @items),
+		grep({ $_->{$key} ne $highlight } @items));
+	# Unsupported host backends remain readable but cannot offer bridge removal.
+	my @cards = map { $section eq 'networks' ? show_virtual_network($_, $editable, $_->{$key} eq $highlight)
+		: show_host_network($_, $section eq 'interfaces', $_->{$key} eq $highlight,
+			$data->{'supported'} ? $editable : '') } @items;
+	my $intro = $section eq 'bridges' && !@cards ? 'net_bridges_intro_empty' : 'net_'.$section.'_intro';
+	my $body = ui_tag('div', ui_p(html_escape($text{$intro})),
+		{ class => 'vui_ui_block' });
+	# Bridge recovery belongs beside bridge details, including a removed bridge.
+	$body .= show_network_status($state, $token, $owner) if ($section eq 'bridges');
+	# Empty bridges lead directly into setup, without a second large introduction.
+	if (@cards) {
+		$body .= ui_stack(\@cards);
+		}
+	# Other empty inventories retain a short explanation above their setup form.
+	elsif ($section ne 'bridges') {
+		$body .= ui_empty_state({ icon => $section eq 'networks' ? 'globe' : 'server',
+			title => $text{'net_empty_'.$section}, desc => $text{'net_empty_'.$section.'_desc'} });
+		}
+	$body .= show_network_create_form($data, $editable) if ($editable && $section eq 'networks');
+	$body .= show_bridge_create_form($data, $editable, !@cards) if ($editable && $section eq 'bridges');
+	$html .= ui_tabs_start_tab('cloudmin_network_tabs', 'net_'.$section).
+		ui_tag('div', $body, { 'data-network-tab' => $section, class => 'cloudmin-network-tab' }).
+		ui_tabs_end_tab('cloudmin_network_tabs', 'net_'.$section);
+	}
+return $html.ui_tabs_end(1);
 }
 
 # show_network_create_form(data, token)
