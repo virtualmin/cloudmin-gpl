@@ -40,4 +40,15 @@ return ui_tag('span', '&nbsp;&nbsp;'.ui_tag('small', $label),
 	{'data-pro-disabled' => $feature.'-link'});
 }
 
+# pro_feature_preview(html, [feature]) disables the supplied controls.
+# feature adds muted styling; omit it when controls are styled individually.
+# The fieldset keeps controls disabled when JavaScript changes individual flags.
+sub pro_feature_preview
+{
+my ($html, $feature) = @_;
+return ui_tag('fieldset', $html, {disabled => undef,
+	$feature ? ('data-pro-disabled' => $feature.'-elem') : (),
+	style => 'border:0;padding:0;margin:0;min-width:0'});
+}
+
 1;
