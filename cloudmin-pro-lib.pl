@@ -51,4 +51,16 @@ return ui_tag('fieldset', $html, {disabled => undef,
 	style => 'border:0;padding:0;margin:0;min-width:0'});
 }
 
+# pro_feature_tip(feature) explains a preview and links to its documentation.
+# feature selects both the translated description and documentation anchor.
+sub pro_feature_tip
+{
+my ($feature) = @_;
+return ui_alert_box(html_escape($text{'pro_tip_'.$feature}).' '.
+	ui_tag('a', html_escape($text{'pro_learn'}), {
+		href => 'https://www.cloudmin.com/docs/professional-features/#'.$feature,
+		target => '_blank', rel => 'noopener noreferrer' }),
+	'success', undef, undef, $text{'pro_feature'});
+}
+
 1;
