@@ -157,4 +157,50 @@ return show_image_select('image', $value, \@choices, $disabled, $base) if ($name
 return ui_select($name, $value, \@choices, 1, 0, 0, $disabled);
 }
 
+# show_preset_list(kind, data, [token]) renders Virtualmin-style list actions.
+sub show_preset_list
+{
+my ($kind, $data, $token) = @_;
+my ($list, $edit, $save, $delete) = preset_pages($kind);
+# Use Virtualmin's compact label markup so it follows the active palette.
+my $default_badge = ui_tag('span', ui_tag('span', html_escape(uc($text{'presets_default'})),
+	{style => 'font-size:10px;font-weight:bold;background-color:#bdbdbd;'.
+		'border-radius:50px;color:#fff;line-height:inherit;margin:0 5px 0 10px;'.
+		'padding:1px 5px;vertical-align:inherit;'}),
+	{class => 'vui_inline_label', style => 'display:contents;'});
+# Enable deletion only when the table includes a selectable non-base preset.
+my $deletable = grep { !$_->{'disabled'} && $_->{'id'} ne Cloudmin::Presets::default_id() }
+	@{$data->{'entries'}};
+my @rows;
+# Each selection identifies the preset used by the list actions.
+foreach my $entry (@{$data->{'entries'}}) {
+	# Keep disabled installer templates out of the management table.
+	next if ($entry->{'disabled'});
+	my @cells = ($token ? {type => 'checkbox', name => 'd', value => $entry->{'id'}} : '',
+		ui_link("$edit?id=$entry->{id}", html_escape($entry->{'name'})).
+		($data->{'default'} eq $entry->{'id'} ? $default_badge : ''),
+		html_escape(preset_description($entry)));
+	# Plans expose allocations alongside their editable description.
+	push(@cells, $entry->{'settings'}->{'cpus'},
+		nice_size_text($entry->{'settings'}->{'memory_mib'} * 1024**2),
+		nice_size_text($entry->{'settings'}->{'disk_gib'} * 1024**3)) if ($kind eq 'plan');
+	push(@cells, $entry->{'created'} ? make_date($entry->{'created'}, 1) : $text{'presets_builtin'});
+	push(@rows, \@cells);
+}
+my @create = $kind eq 'template'
+	? (["$edit?new=1&cp=1", $text{'presets_from_defaults'}],
+	   ["$edit?new=1", $text{'presets_empty'}])
+	: (["$edit?new=1", $text{'presets_add_plan_button'}]);
+# A missing token leaves a browsable list without mutation controls.
+return ui_form_columns_table($delete, $token ? [
+		($deletable ? (['delete', $text{'presets_delete'}]) : ()),
+		['default', $text{'presets_set_default'}] ] : [], !!$token,
+		$token ? \@create : [],
+		$token ? [['token', $token]] : [],
+		['', $text{'presets_name'}, $text{'presets_description'},
+			($kind eq 'plan' ? @text{qw(vm_cpus vm_memory_mib vm_disk_gib)} : ()),
+			$text{'presets_created'}],
+		100, \@rows, undef, 0, undef, $text{'presets_none_'.$kind});
+}
+
 1;
