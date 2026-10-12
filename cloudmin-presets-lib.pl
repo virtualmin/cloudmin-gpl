@@ -139,4 +139,22 @@ $record{'settings'} = \%settings;
 return \%record;
 }
 
+# preset_select(name, value, choices, [disabled], [base])
+# Retains missing references so administrators can repair them explicitly.
+# base identifies Default Template; both flags default to false.
+sub preset_select
+{
+my ($name, $value, $choices, $disabled, $base) = @_;
+my @choices = @$choices;
+# The base template has concrete settings; only host resources are automatic.
+unshift(@choices, ['', $text{$base ? 'vm_auto' : 'presets_inherit'}])
+	if (!$base || $name =~ /\A(?:pool|network)\z/);
+# A removed resource must remain visible instead of silently choosing another.
+push(@choices, [$value, text('presets_unavailable', $value)])
+	if (length($value || '') && !grep { $_->[0] eq $value } @choices);
+# Image choices carry distribution headings; other resources are flat lists.
+return show_image_select('image', $value, \@choices, $disabled, $base) if ($name eq 'image');
+return ui_select($name, $value, \@choices, 1, 0, 0, $disabled);
+}
+
 1;
