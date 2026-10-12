@@ -133,4 +133,36 @@ if ($mode eq 'ssh') {
 return $target;
 }
 
+# show_backup_time(schedule) shows only the fields for the selected recurrence.
+sub show_backup_time
+{
+my ($s) = @_;
+my @options;
+foreach my $frequency (qw(hourly daily weekly monthly yearly)) {
+	my $prefix = 'schedule_'.$frequency.'_';
+	my @fields;
+	# Calendar fields precede the time, with no day selector for hourly or daily.
+	foreach my $field ($frequency eq 'weekly' ? ('weekday') : (),
+		$frequency eq 'yearly' ? ('month') : (),
+		$frequency eq 'monthly' || $frequency eq 'yearly' ? ('day') : ()) {
+		my @choices = $field eq 'weekday' ? map {[$_, $text{'backup_day_'.$_}]} 0..6 :
+			$field eq 'month' ? map {[$_, $text{'backup_month_'.$_}]} 1..12 : map {[$_, $_]} 1..31;
+		push(@fields, [undef, ui_field($text{'backup_'.$field}, ui_select($prefix.$field, $s->{$field}, \@choices),
+			{for => $prefix.$field})]);
+	}
+	# Hourly runs need only minutes; other recurrences share the hour/minute
+	# row.
+	my $minute = ui_select($prefix.'minute', $s->{'minute'}, [map {[$_,sprintf('%02d',$_)]} 0..59],
+		undef, undef, undef, undef, 'aria-label="'.quote_escape($text{'backup_minute'}).'"');
+	my $time = $frequency eq 'hourly' ? $minute : ui_cluster([ui_select($prefix.'hour', $s->{'hour'},
+		[map {[$_,sprintf('%02d',$_)]} 0..23], undef, undef, undef, undef,
+		'aria-label="'.quote_escape($text{'backup_hour'}).'"'), ':', $minute], {gap => '0.4em'});
+	push(@fields, [undef, ui_field($text{$frequency eq 'hourly' ? 'backup_minute' : 'backup_time'}, $time,
+		{for => $prefix.($frequency eq 'hourly' ? 'minute' : 'hour')})]);
+	push(@options, {value => $frequency, label => $text{'backup_'.$frequency}, fields => \@fields});
+}
+return ui_select_switch('frequency', $s->{'frequency'}, \@options, {class => 'cloudmin-backup-schedule'}).
+	ui_tag('style', '.cloudmin-backup-schedule [data-ui-switch-value] { border: 0; padding: 0; }');
+}
+
 1;
