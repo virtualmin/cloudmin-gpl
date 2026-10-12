@@ -28,4 +28,13 @@ return ui_badge($text{'snapshots_mode_'.$mode} || $text{'snapshots_mode_external
 	$mode eq 'prepared' ? 'success' : $mode eq 'unprepared' ? 'warning' : 'neutral', { small => 1 });
 }
 
+# snapshot_size(snapshot)
+# Reports saved file allocation without implying that deleting it frees this size.
+sub snapshot_size
+{
+my ($snapshot) = @_;
+return defined($snapshot->{'allocation'}) ?
+	ui_tag('span', nice_size($snapshot->{'allocation'}), { title => $text{'snapshots_size_help'} }) : '&mdash;';
+}
+
 1;
