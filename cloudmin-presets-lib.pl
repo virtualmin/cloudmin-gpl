@@ -74,4 +74,69 @@ die "Unknown template section\n" if (!defined($index));
 return $sections[($index + ($step || 0)) % @sections];
 }
 
+# preset_form_record(kind, input, [base]) parses the displayed settings only.
+# base supplies saved or copied template sections that this form does not edit.
+sub preset_form_record
+{
+my ($kind, $input, $base) = @_;
+$base ||= {settings => {}};
+my %settings = %{$base->{'settings'} || {}};
+my %record = %$base;
+if ($kind eq 'plan') {
+	# Normalize all plan allocations from their displayed units.
+	%settings = map { $_ => $input->{$_} // '' } Cloudmin::Presets::fields($kind);
+	foreach my $size (['memory_mib', 1024**2], ['disk_gib', 1024**3]) {
+		$settings{$size->[0]} = Cloudmin::VMs::size_bytes($input, @$size,
+			$text{'vm_'.$size->[0]}) / $size->[1];
+	}
+}
+else {
+	# Preserve other sections, including explicit No values and public keys.
+	my $section = template_section($input->{'editmode'});
+	foreach my $field (@{$section->[2]}) {
+		# Keep hidden installer defaults for re-enabling; ignore posted edits.
+		next if (!virtualmin_enabled() &&
+			($field eq 'software' || $field eq 'webmin_register' || $field =~ /\Avirtualmin_/));
+		# Disabled Pro fields are omitted; retain saved data until explicitly cleared.
+		next if (!Cloudmin::Software::has_scripts() && $field =~ /\A(?:before|after)_script(?:_mode|_path)?\z/ &&
+			!exists($input->{$field}));
+		$settings{$field} = $input->{$field} // '';
+	}
+	if ($input->{'clear_setup_scripts'}) {
+		# Clearing is available in either edition, but cannot enable execution.
+		delete(@settings{Cloudmin::Software::script_fields()});
+		@settings{qw(before_script_mode after_script_mode)} = ('none', 'none');
+	}
+	if ($section->[0] eq 'software') {
+		# Keep inheritance distinct from an explicitly empty package list.
+		my $mode = $input->{'packages_mode'} || '';
+		die "$text{'vm_packages_emode'}\n" if ($mode !~ /\A(?:inherit|none|list)\z/ ||
+			$mode eq 'inherit' && ($input->{'id'} || '') eq Cloudmin::Presets::default_id());
+		if ($mode eq 'inherit') {
+			# Resolve packages from Default Template at creation time.
+			delete($settings{'packages'});
+		}
+		elsif ($mode eq 'none') {
+			# Ignore any list left in the hidden textarea.
+			$settings{'packages'} = '';
+		}
+		else {
+			# An empty custom list must not silently disable inherited packages.
+			die "$text{'vm_packages_elist'}\n" if (ref($settings{'packages'}) ||
+				$settings{'packages'} !~ /\S/);
+		}
+	}
+}
+if ($kind eq 'plan' || ($input->{'editmode'} || 'basic') eq 'basic') {
+	# Other template sections retain their existing name and description.
+	@record{qw(name description)} = @{$input}{qw(name description)};
+	# An unchanged translated description retains its canonical stored text.
+	$record{'description'} = $base->{'description'} if ($input->{'id'} &&
+		$base->{'description_default'} && ($input->{'description'} || '') eq preset_description($base));
+}
+$record{'id'} = $input->{'id'};
+$record{'settings'} = \%settings;
+return \%record;
+}
+
 1;
