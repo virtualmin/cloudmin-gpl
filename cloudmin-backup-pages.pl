@@ -203,4 +203,56 @@ return text('backup_when_'.$f,
 	$f eq 'yearly' ? ($text{'backup_month_'.$s->{'month'}}, $s->{'day'}, $time) : ($time));
 }
 
+# show_restore_form(input, token) selects an archive or confirms verified contents.
+sub show_restore_form
+{
+my ($in, $token) = @_;
+my $html = ui_page_start();
+# The second stage displays the manifest from the completed inspection job.
+if ($in->{'inspection'}) {
+	my $job = get_vm_jobs()->get($in->{'inspection'}) || die "Backup inspection not found\n";
+	die "Wait for backup inspection to finish\n" if ($job->{'state'} ne 'complete' || ($job->{'request'}->{'operation'} || '') ne 'backup_inspect');
+	my $m = $job->{'resources'}->{'manifest'};
+	# Match the restore controller's file and LVM destination choices.
+	my @pools = grep { $_->{'active'} && Cloudmin::Libvirt::disk_pool($_->{'type'}) } @{get_libvirt()->list_storage_pools(1)};
+	$html .= ui_p($text{'restore_review'}).ui_form_start('restore.cgi','post').ui_hidden('token',$token).
+		ui_hidden('attempt',substr(Cloudmin::Images::generate_id(),0,32)).ui_hidden('inspection',$job->{'id'}).
+		ui_hidden_table_start($text{'restore_contents'},'width=100%',2,'contents',1).
+		ui_table_row(hlink($text{'vm_name'}, 'restore_name'),'<tt>'.html_escape($m->{'name'}).'</tt>').
+		ui_table_row(hlink($text{'restore_uuid'}, 'restore_uuid'),'<tt>'.html_escape($m->{'uuid'}).'</tt>').
+		ui_table_row(hlink($text{'restore_disks'}, 'restore_disks'),scalar(@{$m->{'disks'}})).
+		ui_table_row(hlink($text{'restore_pool'}, 'restore_pool'),ui_select('pool','',[map {[$_->{'uuid'},$_->{'name'}]} @pools])).
+		ui_table_row(undef,ui_checkbox('confirm',1,$text{'restore_confirm'},0),2).
+		ui_hidden_table_end('contents').ui_form_end([[undef,$text{'restore_now'}]]);
+}
+# First download and inspect; no guest resources are created by this form stage.
+else {
+	$html .= ui_p($text{'restore_intro'}).ui_form_start('restore.cgi','post').ui_hidden('token',$token).
+		ui_hidden('attempt',substr(Cloudmin::Images::generate_id(),0,32)).ui_hidden_table_start($text{'restore_source'},'width=100%',2,'source',1);
+	# A listed backup identifies its private destination through a record
+	# ID.
+	if ($in->{'backup'}) {
+		my $r = get_backup_service()->record($in->{'backup'}) || die "Backup not found\n";
+		$html .= ui_hidden('backup',$r->{'id'}).ui_table_row(hlink($text{'restore_source'}, 'restore_source'),
+			'<tt>'.html_escape($r->{'filename'}).'</tt> &mdash; <tt>'.html_escape($r->{'destination'}).'</tt>');
+	}
+	# External archives need an explicit source and a filename within that
+	# source.
+	else {
+		$html .= ui_table_row(hlink($text{'restore_source'}, 'restore_source'),show_backup_destination('src'),1,undef,undef,1).
+			ui_table_row(hlink($text{'restore_filename'}, 'restore_filename'),ui_textbox('filename','',60),1,undef,undef,1);
+	}
+	$html .= ui_hidden_table_end('source').ui_form_end([[undef,$text{'restore_inspect'}]]);
+}
+# The trust script also resolves destinations from saved archive IDs.
+return $html.ui_page_end().backup_host_script();
+}
+
+# backup_host_script() confirms unknown or replaced SSH keys before submission.
+sub backup_host_script
+{
+return ui_tag('script', '', {src => get_webprefix().'/server-manager/backup-host-key.js?'.
+	((stat($module_root_directory.'/backup-host-key.js'))[9] || 0)});
+}
+
 1;
