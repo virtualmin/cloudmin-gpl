@@ -324,4 +324,153 @@ if ($access) {
 return $page;
 }
 
+# preset_page(kind, mode) serves the separate list, editor, save and bulk CGIs.
+sub preset_page
+{
+my ($kind, $mode) = @_;
+error($text{'acl_denied'}) if (!can_access('host'));
+error_setup($text{'presets_error'});
+my $write = $mode eq 'save' || $mode eq 'update';
+# Check permissions and request size before parsing changes.
+error($text{'presets_readonly'}) if ($write && is_readonly_mode());
+error($text{'catalogue_epost'}) if ($write && ($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+error('Form is too large') if (($ENV{'CONTENT_LENGTH'} || 0) > 131072);
+ReadParse();
+my ($list, $edit, $save, $delete) = preset_pages($kind);
+my $store = get_presets();
+my ($page, $title, $subtitle);
+my $ok = eval {
+	if ($write) {
+		# Store methods check access again; the token grants no permissions.
+		get_image_jobs()->check_token($remote_user, $in{'token'});
+		if ($mode eq 'save') {
+			# Handle one editor submission, including its Copy action.
+			if ($in{'clone'}) {
+				# Copy opens the saved source in a new editor.
+				my $source = $store->get($kind, $in{'id'});
+				redirect("$edit?new=1&clone=$source->{id}");
+				return 1;
+			}
+			my $base = {settings => {}};
+			if ($in{'id'}) {
+				# Merge the edited section into the existing record.
+				$base = $store->get($kind, $in{'id'});
+			}
+			elsif ($in{'cloneof'}) {
+				# Copy the source's current settings, including other sections.
+				$base = $store->get($kind, $in{'cloneof'});
+			}
+			my $record = preset_form_record($kind, \%in, $base);
+			if ($kind eq 'template' && ($in{'editmode'} || '') eq 'image' &&
+				$record->{'settings'}->{'image'}) {
+				# Keep other sections editable if their image is removed.
+				my $selection = $record->{'settings'}->{'image'};
+				my $image;
+				if ($selection =~ /\Acatalogue:(.+)\z/) {
+					# Save the release ID; creation will download it if needed.
+					$image = get_available_server_image($1);
+				}
+				else {
+					# Only ready imports can be saved as image choices.
+					$image = get_image_jobs()->get($selection);
+					$image = undef if ($image && $image->{'state'} ne 'ready');
+				}
+				die "Select an available image\n" if (!$image);
+				$record->{'settings'}->{'install_source'} = $image->{'format'} eq 'iso' ? 'iso' : 'cloud';
+			}
+			my $saved = $store->save($kind, $record);
+			# Advance only after saving the validated settings.
+			redirect($kind eq 'template' && $in{'next'}
+				? "$edit?id=$saved->{id}&editmode=".template_section($in{'editmode'}, 1)->[0] : $list);
+			return 1;
+		}
+		# Bulk actions use the selected preset IDs.
+		my @actions = grep { $in{$_} } qw(delete default);
+		die "Select one action\n" if (@actions != 1);
+		my $action = $actions[0];
+		my @ids = unique(grep { length } split(/\0/, $in{'d'} || ''));
+		my @records = map { $store->get($kind, $_) } @ids;
+		die "Select at least one $kind\n" if (!@ids);
+		if ($action eq 'delete' && !$in{'confirm'}) {
+			# Confirm the selected names before deleting presets.
+			$title = $text{'presets_delete'};
+			$page = sub { ui_confirmation_form($delete, $text{'presets_confirm'},
+				[['token', $in{'token'}], ['delete', 1], map { ['d', $_] } @ids],
+				[['confirm', $text{'presets_delete'}]],
+				join(', ', map { '<tt>'.html_escape($_->{'name'}).'</tt>' } @records)) };
+		}
+		else {
+			# Apply confirmed deletion or default selection to the current records.
+			# apply() runs under the creation lock only for template deletion.
+			my $apply = sub { $store->update($kind, $action, \@ids); };
+			# Serialize usage checks and deletion with new creation submissions.
+			if ($kind eq 'template' && $action eq 'delete') {
+				get_vm_jobs()->lock('create-host', $apply);
+			}
+			else {
+				# Plan deletion and default selection need only the preset file lock.
+				$apply->();
+			}
+			redirect($list);
+			return 1;
+		}
+	}
+	elsif ($mode eq 'list') {
+		# Read-only mode omits tokens for preset actions.
+		$title = $text{'presets_'.$kind.'s'};
+		my $token = is_readonly_mode() ? '' : get_image_jobs()->form_token($remote_user);
+		my $data = $store->list($kind);
+		$page = sub { show_preset_list($kind, $data, $token) };
+	}
+	else {
+		# Read-only users can still view records in the editor.
+		error($text{'presets_readonly'}) if ($in{'new'} && is_readonly_mode());
+		my $record = $in{'new'} ? { settings => {} } : $store->get($kind, $in{'id'});
+		if ($in{'new'} && $in{'clone'}) {
+			# Keep the source ID to copy settings from the other sections.
+			$record = $store->get($kind, $in{'clone'});
+			$record->{'cloneof'} = delete($record->{'id'});
+			$record->{'name'} = text('presets_copy_name', $record->{'name'});
+		}
+		elsif ($in{'new'} && $kind eq 'template' && $in{'cp'}) {
+			# Copy the selected default, including a custom template.
+			my $default = $store->list('template')->{'default'};
+			$record = $store->get('template', $default);
+			$record->{'cloneof'} = delete($record->{'id'});
+			$record->{'name'} = text('presets_copy_name', $record->{'name'});
+		}
+		elsif ($in{'new'} && $kind eq 'plan') {
+			# Start new plans with the default plan's resources.
+			$record->{'settings'} = $store->get('plan', $store->list('plan')->{'default'})->{'settings'};
+		}
+		my $section = $in{'new'} ? template_section('basic') :
+			template_section($in{'editmode'}, $in{'nprev'} ? -1 : $in{'nnext'} ? 1 : 0);
+		# Basic, access and boot settings need no libvirt inventory.
+		my $options = $kind eq 'template' && $section->[0] =~ /\A(?:image|network)\z/
+			? call_vm_api(1, 'options', {}) : {};
+		if ($kind eq 'template' && $section->[0] eq 'access') {
+			# Inherit access even when the base installer is disabled.
+			$options->{'default_auth_type'} = $store->base_settings('template')->{'auth_type'};
+		}
+		if ($kind eq 'template' && $section->[0] eq 'basic') {
+			# Read base software without selecting a disabled template.
+			$options->{'default_software'} = $store->base_settings('template')->{'software'};
+		}
+		$subtitle = html_escape($record->{'name'}) if ($kind eq 'template' && $record->{'id'});
+		$title = $text{'presets_'.($in{'new'} ? 'add_' : 'edit_').$kind};
+		my $token = is_readonly_mode() ? '' : get_image_jobs()->form_token($remote_user);
+		$page = sub { show_preset_form($kind, $record, $options, $token, $section->[0]) };
+	}
+	1;
+};
+error(error_html(error_message($@))) if (!$ok);
+return if (!defined($page));
+# The header loads the theme's widget overrides; render forms only afterward.
+ui_print_header($subtitle, $title, '', $kind eq 'template' ? 'tmpls' : 'plans');
+print $page->();
+print software_script() if ($kind eq 'template' && $mode eq 'edit');
+ui_print_footer($mode eq 'list' ? ('index.cgi', $text{'vm_return'}) :
+	($list, $text{'presets_return_'.$kind.'s'}));
+}
+
 1;

@@ -1,0 +1,13 @@
+<header>Require fully qualified hostname</header>
+
+<p>When enabled, a virtual machine created from a cloud image needs a fully
+qualified hostname, such as <tt>host.example.com</tt>. Use it as the virtual
+machine name or enter it separately as the guest hostname.</p>
+
+<p>When disabled, short hostnames are allowed. Templates can also inherit this
+requirement from Default Template.</p>
+
+<p>This checks hostname format, not DNS records. ISO installers configure
+their own guest hostname, so this option does not apply to them.</p>
+
+<footer>

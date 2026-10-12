@@ -1,0 +1,78 @@
+<header>Machine Templates</header>
+
+<p>A template saves image, storage, network, guest access, software and boot defaults.
+Choose it on the Create Virtual Machine page, then review or change its settings
+before creating the virtual machine. Unset fields inherit from Default Template.
+Clearing the package list explicitly skips package installation.
+If no storage pool or network is specified, Cloudmin selects an available one.</p>
+
+<p>You can edit or copy available templates. Default Template cannot
+be deleted because other templates inherit its settings. You can delete other
+templates when no existing virtual machine or pending creation uses them.
+Deleted bundled templates stay removed.</p>
+
+<p>On a new installation, Default Template selects <b>Rocky Linux 10</b> for the
+host architecture. It uses the <b>cloudmin</b> account, password authentication,
+DHCP and automatic firmware. Both startup options are enabled, and no extra
+software is installed.</p>
+
+<p>Default Template requires a specific image. Other templates can select
+<b>Use Default Template</b> or their own image. Images are grouped by distribution,
+with newer releases first. Imported images appear in a separate group.</p>
+
+<p>Included descriptions explain the shipped defaults. Changing a template's name
+or settings clears its supplied description. A description you write is kept until
+you edit it yourself.</p>
+
+<p>Open <b>System Settings → Machine Templates</b>. Create an empty template
+or copy the default settings. Start with its name, then use <b>Create and Next</b>
+to choose the image. The section selector and <b>Previous</b>/<b>Next</b> buttons
+move between sections without saving. <b>Save and Next</b> saves the displayed
+section and opens the next one. Other sections keep their settings.</p>
+
+<p>Use <b>Copy</b> in the editor to start a new template from an existing one.
+Select a template in the list and click <b>Make Default</b> to select it on new
+creation forms. Deleting the selected default selects Default Template again.</p>
+
+<p>Passwords, virtual machine names, hostnames, MAC addresses and individual guest IP addresses
+are entered for each virtual machine. A template can select static addressing and supply
+gateways and DNS servers, but each virtual machine still needs its own address.</p>
+
+<p>Under <b>Basic settings</b>, enable <b>Require fully qualified hostname</b>
+to require a name such as <tt>host.example.com</tt> for cloud-image creation.
+The user can enter it as the virtual machine name or set the guest hostname
+separately. Other templates can inherit this rule from Default Template.</p>
+
+<p>Templates can select any enabled catalogue image compatible with the host,
+even before it is downloaded, or a ready import from Image Manager. Cloudmin
+downloads and verifies catalogue images when creation starts, then caches them for reuse.
+Saving a template does not start a download. Templates do not automate an ISO
+installer. A removed or disabled image, pool or network
+must be replaced before creation can succeed. Access settings apply to cloud
+images; an ISO installer configures accounts and guest networking itself.</p>
+
+<p>The <b>Software</b> section accepts package names and setup scripts. After
+initial guest setup, Cloudmin runs the preparation script, installs the selected
+software, then runs the final setup script. Scripts run once as root
+inside the guest, using <tt>/bin/sh -e</tt>. An unhandled command failure stops
+setup. Scripts never run on the Cloudmin host. Choose <b>None</b>, <b>File on
+host</b>
+or <b>Enter script</b> for each script. A file path is saved in the template;
+its contents are copied into each creation job on submission. Package names must
+match the guest's configured repositories. The field help describes input
+limits, script timing and execution.</p>
+
+<p>Scripts can use <tt>CLOUDMIN_VM_UUID</tt>, <tt>CLOUDMIN_HOSTNAME</tt> and
+<tt>CLOUDMIN_GUEST_USER</tt>. For application work, a script can switch users
+with <tt>runuser -u "$CLOUDMIN_GUEST_USER" -- command</tt>.
+Do not store passwords or license keys in scripts. Guest software setup requires a cloud image with systemd,
+<b>Start after creation</b> and managed virtual machine SSH keys. Failure stops setup and
+preserves the virtual machine; interrupted scripts are never repeated automatically.</p>
+
+<p>Editing a template affects future forms only. Existing virtual machines and
+already submitted creation jobs keep their settings. A deletion refused because a
+template is in use identifies the virtual machines or pending creations using it.
+Host administrators can
+manage templates. In read-only mode, they can only view them.</p>
+
+<footer>
