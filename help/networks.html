@@ -1,0 +1,46 @@
+<header>Networking</header>
+
+<p>Networks connect virtual machines to each other, the host and other systems.
+The page shows addresses, DHCP ranges, bridge interfaces and attached virtual
+machines. A network in use by a virtual machine cannot be stopped or deleted.</p>
+
+<p>The <b>Overview</b> counts virtual networks, active networks, separate host
+bridges and attached virtual machines. Each virtual machine is counted once, including stopped guests. Select a network or bridge in the table to open its detail
+card. Attached virtual machine links appear in both the overview and the detail cards.</p>
+
+<p><b>NAT</b> lets guests share the host's outgoing connection. Incoming access
+needs port forwarding configured on the host or upstream router.
+<b>Bridged</b> guests join the upstream network directly and need an address
+provided by that network. <b>Routed</b> networks need an upstream route to the
+guest subnet through this host. <b>Isolated</b> networks connect guests and the
+host without forwarding traffic to other networks.</p>
+
+<p>Creating a host bridge moves the selected Ethernet interface's saved IP,
+gateway and DNS configuration onto the bridge. Review the interface and host
+addresses before applying. Reconnect and click <b>Keep Network Settings</b>
+before the confirmation timer expires. The timer starts before the change is
+applied and defaults to three minutes; adjust it in Module Configuration.
+Without confirmation, Cloudmin restores the previous configuration automatically.
+Restarting the host before confirmation also restores the previous configuration.</p>
+
+<p><b>Remove Bridge</b> moves an unused bridge's current network settings back to
+its Ethernet interface. Review and confirm the change just as for bridge creation.
+Without confirmation, Cloudmin restores the bridge. Removal supports persistent
+bridges with one Ethernet port. Detach virtual machines, including stopped ones,
+from the bridge and its port. Update virtual networks that use either device.
+Bridges with dependent VLANs or macvlans need Webmin Network Configuration.</p>
+
+<p>Bridge conversion supports standalone Ethernet interfaces managed by
+NetworkManager, Netplan or Debian ifupdown. Debian ifupdown needs bridge-utils.
+Its interface must have an <tt>inet</tt> stanza; <tt>inet manual</tt> is sufficient
+on an IPv6-only host.
+Interfaces with unsupported custom settings must be configured separately
+through Webmin's Network Configuration module. Changing a virtual machine's network interface does not change network
+settings inside its guest OS.</p>
+
+<p>If cloud-init regenerates the host's Netplan files at boot, update its network
+configuration or disable its network rendering before converting the interface.
+Otherwise it can restore the old port addresses after confirmation.
+Cloudmin does not change cloud-init's host configuration.</p>
+
+<footer>

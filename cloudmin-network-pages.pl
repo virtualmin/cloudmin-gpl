@@ -377,4 +377,26 @@ else {
 return $html.ui_hidden_table_end('create_bridge').ui_form_end();
 }
 
+# show_bridge_review(plan, token)
+# Shows a creation or removal plan and includes its signed form token.
+sub show_bridge_review
+{
+my ($p, $token) = @_;
+my $remove = ($p->{'operation'} || '') eq 'remove';
+# Show the reviewed timeout; older plans fall back to the current setting.
+return ui_alert_box(text($remove ? 'net_bridge_remove_help' : 'net_bridge_review_help',
+	$p->{'confirm_timeout'} || config_number('bridge_confirm_timeout')), 'warn').
+	ui_card({ title => $text{$remove ? 'net_remove_bridge_review' : 'net_review'}, class => 'cloudmin-network-card',
+	body => ui_dl([[$text{'net_bridge_name'}, '<tt>'.html_escape($p->{'name'}).'</tt>'],
+		[$text{'net_port'}, '<tt>'.html_escape($p->{'source'}).'</tt>'],
+		[$text{'net_addresses'}, network_values($p->{'addresses'})],
+		[$text{'net_management'}, $text{$p->{'management'} ? 'index_yes' : 'index_no'}]],
+		{ class => 'cloudmin-network-facts' }) }).
+	network_form($remove ? 'bridge_remove' : 'bridge', $token,
+		{ map { $_ => $p->{$_} } qw(name source revision) }).
+	ui_action_button($text{$remove ? 'net_remove_bridge' : 'net_apply_bridge'},
+		$remove ? 'danger' : 'info', {size => 'small', type => 'submit', icon => $remove ? 'unplug' : 'check'}).
+	ui_form_end();
+}
+
 1;
