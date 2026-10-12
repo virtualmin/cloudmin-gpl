@@ -276,4 +276,35 @@ $html .= ui_table_row(undef, ui_action_button($text{'net_create'}, 'success', { 
 return $html.ui_hidden_table_end('create_network').ui_form_end();
 }
 
+# show_bridge_create_form(data, token, [open])
+# Presents the eligible Ethernet port, expanded when there are no host bridges.
+sub show_bridge_create_form
+{
+my ($data, $token, $open) = @_;
+my $html = network_form('bridge_review', $token).
+	ui_hidden_table_start($text{'net_bridge_create'}, 'width=100%', 2, 'create_bridge', $open);
+# Unsupported hosts still explain where their networking can be configured.
+if (!$data->{'supported'}) {
+	$html .= ui_table_row(undef, ui_note($text{'net_backend_unsupported'}), 2);
+	}
+# Offer bridge conversion only for interfaces the backend can preserve.
+else {
+	my @ports = grep { $_->{'candidate'} } @{$data->{'interfaces'}};
+	$html .= ui_table_row(undef, ui_p($text{'net_bridge_help'}), 2);
+	# Avoid empty selectors when every physical interface is already attached.
+	if (@ports) {
+		$html .= ui_table_row($text{'net_bridge_name'}, ui_textbox('name', 'br0', 18));
+		$html .= ui_table_row($text{'net_port'}, ui_select('source', '',
+			[map { [$_->{'name'}, $_->{'name'}.' - '.join(', ', @{$_->{'addresses'}})] } @ports]));
+		$html .= ui_table_row(undef, ui_note($text{'net_explain_bridge'}), 2);
+		$html .= ui_table_row(undef, ui_action_button($text{'net_review'}, 'info', { type => 'submit', icon => 'arrow-right' }), 2);
+		}
+	# All usable ports are already attached or lack persistent configuration.
+	else {
+		$html .= ui_table_row(undef, ui_note($text{'net_no_ports'}), 2);
+		}
+	}
+return $html.ui_hidden_table_end('create_bridge').ui_form_end();
+}
+
 1;
