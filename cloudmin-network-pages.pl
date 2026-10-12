@@ -247,4 +247,33 @@ return ui_card({ title_html => ui_svg_icon('server').ui_tag('span', html_escape(
 });
 }
 
+# show_network_create_form(data, token)
+# Explains connection choices beside their radios, then groups address settings.
+sub show_network_create_form
+{
+my ($data, $token) = @_;
+my $html = network_form('create', $token).
+	ui_hidden_table_start($text{'net_create'}, 'width=100%', 2, 'create_network', 0);
+$html .= ui_table_row(undef, ui_choice('mode', 'nat', [map { {
+	value => $_, label => $text{'net_mode_'.$_}, desc => $text{'net_explain_'.$_}
+	} } qw(nat route isolated)], { class => 'cloudmin-network-choices' }), 2);
+$html .= ui_table_row($text{'net_name'}, ui_textbox('name', '', 18));
+$html .= ui_table_row($text{'net_ipv4'}, ui_textbox('ipv4', '', 24, 0, undef,
+	'placeholder="192.168.130.1/24"').ui_tag('p', html_escape($text{'net_subnet_hint'}), { class => 'cloudmin-network-hint' }));
+$html .= ui_table_row($text{'net_ipv6'}, ui_textbox('ipv6', '', 30, 0, undef,
+	'placeholder="'.quote_escape($text{'net_optional_ipv6'}).'"'));
+$html .= ui_table_row($text{'net_uplink'}, ui_select('uplink', '',
+	[['', $text{'net_automatic'}], map { [$_->{'name'}, $_->{'name'}] }
+	grep { $_->{'active'} && !$_->{'loopback'} } @{$data->{'interfaces'}}]));
+$html .= ui_table_row($text{'net_boot'}, ui_checkbox('autostart', 1, $text{'net_start_automatically'}, 1));
+$html .= ui_table_row($text{'net_dhcp'}, ui_checkbox('dhcp', 1, $text{'net_dhcp_assign'}, 0));
+$html .= ui_table_row($text{'net_dhcp_range'}, ui_tag('div',
+	ui_textbox('dhcp_start', '', 18, 0, undef, 'aria-label="'.quote_escape($text{'net_dhcp_from'}).'"').
+	ui_tag('span', ' &ndash; ', { 'aria-hidden' => 'true' }).
+	ui_textbox('dhcp_end', '', 18, 0, undef, 'aria-label="'.quote_escape($text{'net_dhcp_to'}).'"'),
+	{ class => 'cloudmin-network-range', 'data-network-dhcp' => 1 }));
+$html .= ui_table_row(undef, ui_action_button($text{'net_create'}, 'success', { icon => 'plus', type => 'submit' }), 2);
+return $html.ui_hidden_table_end('create_network').ui_form_end();
+}
+
 1;
