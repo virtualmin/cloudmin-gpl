@@ -50,4 +50,17 @@ return $_[0] eq 'template'
 	: qw(edit_newplan.cgi edit_plan.cgi save_plan.cgi delete_plans.cgi);
 }
 
+# template_sections() defines the editor order and fields saved by each section.
+sub template_sections
+{
+return (
+	['basic', 'presets_basic', ['require_fqdn']],
+	['image', 'presets_image', [qw(image install_source pool)]],
+	['access', 'vm_step_access', [qw(username auth_type ssh_keys)]],
+	['network', 'vm_network', [qw(network address_mode gateway4 gateway6 dns)]],
+	['software', 'vm_software', [Cloudmin::Software::fields()]],
+	['boot', 'vm_boot_options', [qw(firmware start autostart)]],
+);
+}
+
 1;
