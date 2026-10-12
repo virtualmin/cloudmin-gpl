@@ -203,4 +203,125 @@ return ui_form_columns_table($delete, $token ? [
 		100, \@rows, undef, 0, undef, $text{'presets_none_'.$kind});
 }
 
+# show_preset_form(kind, record, options, [token], [editmode]) uses Virtualmin's
+# section navigation for templates and collapsible details for resource plans.
+# Without a token the form is read-only; editmode defaults to Basic.
+sub show_preset_form
+{
+my ($kind, $record, $options, $token, $editmode) = @_;
+my (undef, $edit, $save) = preset_pages($kind);
+my $values = $record->{'settings'} || {};
+my $section = template_section($editmode);
+my $disabled = !$token;
+my $base = ($record->{'id'} || '') eq Cloudmin::Presets::default_id();
+my $page = '';
+if ($kind eq 'template' && $record->{'id'}) {
+	# Navigation alone does not save; Save and Next commits before moving.
+	$page .= ui_form_start($edit).ui_hidden('id', $record->{'id'}).
+		$text{'presets_edit_section'}.' '.ui_select('editmode', $section->[0],
+		[map { [$_->[0], $text{$_->[1]}] } template_sections()],
+		1, 0, 0, 0, 'onchange="form.submit()"').' '.
+		ui_submit($text{'tmpl_switch'}, undef, undef, undef, 'fa fa-fw fa-search').' '.
+		ui_submit($text{'tmpl_nprev'}, 'nprev').' '.
+		ui_submit($text{'tmpl_nnext'}, 'nnext').ui_form_end();
+}
+my $access = $kind eq 'template' && $section->[0] eq 'access';
+# Inherited authentication must show the same controls as Default Template.
+my $access_attrs = $access ? 'data-vm-template-access="1" data-default-auth="'.
+	html_escape($options->{'default_auth_type'} || 'password').'"' : '';
+$page .= ui_form_start($save, 'post', undef, $access_attrs).ui_hidden('id', $record->{'id'} || '');
+$page .= ui_hidden('token', $token) if ($token);
+$page .= ui_hidden('editmode', $section->[0]) if ($kind eq 'template');
+# Copy forms retain the source ID for sections not shown in the form.
+$page .= ui_hidden('cloneof', $record->{'cloneof'}) if ($record->{'cloneof'});
+# Keep tables directly inside the form so standard column and label styling
+# applies without a fieldset wrapper.
+$page .= $kind eq 'plan'
+	? ui_hidden_table_start($text{'presets_plan_details'}, 'width=100%', 2, 'main', 1, ['width=30%'])
+	: ui_table_start($text{$section->[1]}, 'width=100%', 2, ['width=30%']);
+if ($kind eq 'plan' || $section->[0] eq 'basic') {
+	# Names belong to basic settings, not each independently saved section.
+	$page .= ui_table_row($text{'presets_'.$kind.'_name'},
+		ui_textbox('name', $record->{'name'}, 40, $disabled)).
+		ui_table_row($text{'presets_description'},
+		ui_textbox('description', preset_description($record), 60, $disabled));
+}
+if ($kind eq 'plan') {
+	# Plans set initial resources without limiting later edits.
+	$page .= ui_table_row($text{'vm_cpus'}, ui_tag('input', '', {type => 'number', name => 'cpus',
+		value => $values->{'cpus'}, min => 1, max => 1024, step => 1, required => undef,
+		class => 'ui_textbox', style => 'width:8em', inputmode => 'numeric',
+		$disabled ? (disabled => undef) : ()}));
+	foreach my $size (['memory_mib', 1024**2], ['disk_gib', 1024**3]) {
+		$page .= ui_table_row($text{'vm_'.$size->[0]},
+			ui_bytesbox($size->[0], ($values->{$size->[0]} || 0) * $size->[1], 5, $disabled, '', $size->[1]));
+	}
+}
+elsif ($section->[0] eq 'basic') {
+	# Enforce Virtualmin's hostname rule only while installation is allowed,
+	# including when the installer choice is inherited from Default Template.
+	my $virtualmin = virtualmin_enabled() &&
+		($values->{'software'} // $options->{'default_software'} // 'none') =~ /\Avirtualmin-/;
+	my $hostname = preset_select('require_fqdn', $virtualmin ? 1 : $values->{'require_fqdn'},
+		[[1, $text{'yes'}], [0, $text{'no'}]], $disabled || $virtualmin, $base);
+	# Disabled selects are not submitted; keep their value without a second ID.
+	$hostname .= ui_tag('input', '', {type => 'hidden', name => 'require_fqdn', value => 1})
+		if ($virtualmin && !$disabled);
+	$page .= ui_table_row(hlink($text{'presets_require_fqdn'}, 'tmpl_require_fqdn'), $hostname);
+}
+elsif ($section->[0] eq 'image') {
+	# Empty fields use Default Template or available host resources.
+	$page .= ui_table_row($text{'vm_image'}, preset_select('image', $values->{'image'},
+		get_vm_image_choices(get_vm_form_images($options, $values->{'image'})), $disabled, $base)).
+		ui_table_row($text{'images_storage'}, preset_select('pool', $values->{'pool'},
+		[map { [$_->{'id'}, $_->{'name'}] } @{$options->{'pools'} || []}], $disabled, $base));
+}
+elsif ($section->[0] eq 'access') {
+	# Store login choices and public keys; passwords belong to each creation.
+	$page .= ui_table_row($text{'vm_username'}, ui_textbox('username', $values->{'username'}, 30, $disabled)).
+		ui_table_row($text{'vm_auth_type'}, preset_select('auth_type', $values->{'auth_type'},
+		[map { [$_, $text{'vm_auth_'.$_}] } qw(keys password both)], $disabled, $base)).
+		ui_table_row($text{'vm_ssh_keys'}, ui_textarea('ssh_keys', $values->{'ssh_keys'}, 4, 75, undef, $disabled),
+		undef, undef, ['id="vm_keys_row"'.($disabled ? ' data-vm-readonly="1"' : '')]);
+}
+elsif ($section->[0] eq 'network') {
+	# Save network defaults; each new guest needs its own address.
+	$page .= ui_table_row($text{'vm_network'}, preset_select('network', $values->{'network'},
+		[map { [$_->{'key'}, $_->{'name'}.' ('.($_->{'forward'} || $_->{'type'}).')'] }
+			@{$options->{'networks'} || []}], $disabled, $base)).
+		ui_table_row($text{'vm_address_mode'}, preset_select('address_mode', $values->{'address_mode'},
+		[['dhcp', $text{'vm_dhcp'}], ['static', $text{'vm_static'}]], $disabled, $base));
+	foreach my $field (qw(gateway4 gateway6 dns)) {
+		$page .= ui_table_row($text{'vm_'.$field}, ui_textbox($field, $values->{$field}, 45, $disabled));
+	}
+}
+elsif ($section->[0] eq 'software') {
+	# Reuse creation controls with license credential inputs omitted.
+	$page .= show_software_settings($values, $disabled, 0, $base);
+}
+elsif ($section->[0] eq 'boot') {
+	# Firmware and startup choices can inherit the base template's settings.
+	$page .= ui_table_row($text{'catalogue_firmware'}, preset_select('firmware', $values->{'firmware'},
+		[['auto', $text{'vm_auto'}], ['efi', 'UEFI'], ['bios', 'BIOS']], $disabled, $base));
+	foreach my $field (qw(start autostart)) {
+		$page .= ui_table_row($text{'vm_'.$field}, preset_select($field, $values->{$field},
+			[[1, $text{'yes'}], [0, $text{'no'}]], $disabled, $base));
+	}
+}
+$page .= $kind eq 'plan' ? ui_hidden_table_end('main') : ui_table_end();
+# Templates can save and open the next section; saved records also offer Copy.
+my @buttons = (['save', $text{$record->{'id'} ? 'presets_save' : 'presets_create'}]);
+push(@buttons, ['next', $text{$record->{'id'} ? 'tmpl_snext' : 'tmpl_cnext'}])
+	if ($kind eq 'template');
+push(@buttons, ['clone', $text{'presets_clone'}]) if ($record->{'id'});
+$page .= ui_form_end($token ? \@buttons : []);
+if ($access) {
+	# Initialize authentication controls on full loads and theme navigation.
+	$page .= ui_tag('script', '', {src => get_webprefix().'/server-manager/machine_template.js?'.
+		(stat("$module_root_directory/machine_template.js"))[9]}).
+		ui_tag('script', 'window.cloudminTemplateAccessInit?.();');
+}
+return $page;
+}
+
 1;
