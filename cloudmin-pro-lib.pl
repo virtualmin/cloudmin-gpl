@@ -25,4 +25,19 @@ delete($info->{'hide_pro_tips'});
 @$order = grep { $_ ne 'hide_pro_tips' } @$order if ($order);
 }
 
+# pro_feature_badge(feature, [plain]) uses Virtualmin's inline lock and Pro label.
+# feature names the documentation anchor. plain defaults to false; true omits
+# the link so the badge can be placed inside another link.
+sub pro_feature_badge
+{
+my ($feature, $plain) = @_;
+my $label = '&#128274;&nbsp;&nbsp;'.ui_tag('span', 'Pro');
+# Standalone badges open the feature details; nested badges keep the outer link.
+$label = ui_tag('a', $label, {
+	href => 'https://www.cloudmin.com/docs/professional-features/#'.$feature,
+	target => '_blank', rel => 'noopener noreferrer', 'data-pro' => $feature }) if (!$plain);
+return ui_tag('span', '&nbsp;&nbsp;'.ui_tag('small', $label),
+	{'data-pro-disabled' => $feature.'-link'});
+}
+
 1;
