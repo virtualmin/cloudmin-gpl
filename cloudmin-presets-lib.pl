@@ -63,4 +63,15 @@ return (
 );
 }
 
+# template_section(name, [step]) validates and wraps section navigation.
+# Empty names select Basic; step defaults to zero and may be negative.
+sub template_section
+{
+my ($name, $step) = @_;
+my @sections = template_sections();
+my ($index) = grep { $sections[$_]->[0] eq ($name || 'basic') } 0..$#sections;
+die "Unknown template section\n" if (!defined($index));
+return $sections[($index + ($step || 0)) % @sections];
+}
+
 1;
