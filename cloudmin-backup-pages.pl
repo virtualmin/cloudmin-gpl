@@ -190,4 +190,17 @@ foreach my $group (@groups) {
 return ui_tag('select', $options, {class => 'ui_select', name => 'purge', id => 'purge'});
 }
 
+# backup_schedule_label(schedule) describes the saved recurrence in the list.
+sub backup_schedule_label
+{
+my ($s) = @_;
+my $f = $s->{'frequency'};
+my $time = sprintf('%02d:%02d', $s->{'hour'}, $s->{'minute'});
+return text('backup_when_'.$f,
+	$f eq 'hourly' ? (sprintf('%02d', $s->{'minute'})) :
+	$f eq 'weekly' ? ($text{'backup_day_'.$s->{'weekday'}}, $time) :
+	$f eq 'monthly' ? ($s->{'day'}, $time) :
+	$f eq 'yearly' ? ($text{'backup_month_'.$s->{'month'}}, $s->{'day'}, $time) : ($time));
+}
+
 1;
