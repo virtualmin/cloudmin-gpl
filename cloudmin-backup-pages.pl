@@ -203,6 +203,53 @@ return text('backup_when_'.$f,
 	$f eq 'yearly' ? ($text{'backup_month_'.$s->{'month'}}, $s->{'day'}, $time) : ($time));
 }
 
+# show_backup_form(input, token) presents machines, destination, options and time.
+sub show_backup_form
+{
+my ($in, $token) = @_;
+# Editing must load the requested schedule rather than silently creating one.
+my ($s) = grep { $_->{'id'} eq ($in->{'sched'} || '') } @{backup_schedules()};
+die "Backup schedule not found\n" if ($in->{'sched'} && !$s);
+# New forms select all guests unless opened for one guest, with daily defaults.
+$s ||= {all => $in->{'id'} ? 0 : 1, guests => $in->{'id'} ? [$in->{'id'}] : [], hour => 2, minute => 0,
+	frequency => 'daily', weekday => 0, day => 1, month => 1, shutdown => 0, compression => 1, enabled => 1, purge => 0};
+my $scheduled = $in->{'new'} || $in->{'sched'};
+my @domains = @{get_libvirt()->list_domains(1)};
+my $html = ui_page_start().ui_p($text{'backup_intro'}).
+	ui_form_start($scheduled ? 'backup_sched.cgi' : 'backup.cgi', 'post').ui_hidden('token', $token).
+	ui_hidden('attempt', substr(Cloudmin::Images::generate_id(),0,32));
+$html .= ui_hidden('sched', $s->{'id'}) if ($s->{'id'});
+# Display preferences control expansion without changing saved backup options.
+$html .= ui_hidden_table_start($text{'backup_machines'}, 'width=100%', 2, 'doms', section_open('backup_sections', 'doms'));
+# The shared list owns the mode selector and hides choices for all-machine backups.
+$html .= ui_table_row(hlink($text{'backup_machines'}, 'backup_machines'), ui_multi_select_list('guests', $s->{'guests'},
+	[map { [$_->{'uuid'}, $_->{'name'}] } @domains],
+	{ modes => { name => 'all', value => $s->{'all'}, hide => [1],
+		options => [[1, $text{'backup_all'}], [0, $text{'backup_selected'}]] },
+	  empty_label => $text{'index_none'} }));
+$html .= ui_table_row(hlink($text{'backup_description'}, 'backup_description'), ui_textbox('description', $s->{'description'}, 55)) if ($scheduled);
+$html .= ui_hidden_table_end('doms');
+# Keep destination and preparation controls shared by manual and scheduled jobs.
+$html .= ui_hidden_table_start($text{'backup_destination'}, 'width=100%', 2, 'dest', section_open('backup_sections', 'dest')).
+	ui_table_row(hlink($text{'backup_destination'}, 'backup_destination'), show_backup_destination('dest0', $s->{'target'}), 1, undef, undef, 1).ui_hidden_table_end('dest');
+$html .= ui_hidden_table_start($text{'backup_options'}, 'width=100%', 2, 'opts', section_open('backup_sections', 'opts')).
+	ui_table_row(hlink($text{'backup_consistency'}, 'backup_consistency'), ui_select('shutdown', $s->{'shutdown'}, [[0,$text{'backup_agent'}],[1,$text{'backup_shutdown'}]])).
+	ui_table_row(hlink($text{'backup_compression'}, 'backup_compression'), ui_yesno_radio('compression', $s->{'compression'})).
+	ui_hidden_table_end('opts');
+if ($scheduled) {
+	# The schedule follows Virtualmin's enabled/time/retention grouping.
+	$html .= ui_hidden_table_start($text{'backup_schedule'}, 'width=100%', 2, 'sched', section_open('backup_sections', 'sched')).
+		ui_table_row(hlink($text{'backup_enabled'}, 'backup_enabled'), ui_yesno_radio('enabled', $s->{'enabled'})).
+		ui_table_row(hlink($text{'backup_frequency'}, 'backup_frequency'), show_backup_time($s)).
+		ui_table_row(hlink($text{'backup_retention'}, 'backup_retention'), show_backup_retention($s->{'purge'})).
+		ui_hidden_table_end('sched');
+}
+$html .= ui_form_end([[$scheduled ? 'save' : undef, $text{$scheduled ? 'backup_save' : 'backup_now'}],
+	$s->{'id'} ? (['delete', $text{'backup_delete_schedule'}]) : ()]).ui_page_end();
+# Only SSH trust needs a browser check; input errors use the form handler.
+return $html.backup_host_script();
+}
+
 # show_restore_form(input, token) selects an archive or confirms verified contents.
 sub show_restore_form
 {
