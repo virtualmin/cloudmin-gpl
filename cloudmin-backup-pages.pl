@@ -165,4 +165,12 @@ return ui_select_switch('frequency', $s->{'frequency'}, \@options, {class => 'cl
 	ui_tag('style', '.cloudmin-backup-schedule [data-ui-switch-value] { border: 0; padding: 0; }');
 }
 
+# parse_backup_time(input) reads the controls belonging to the chosen recurrence.
+sub parse_backup_time
+{
+my ($in) = @_;
+my $frequency = $in->{'frequency'} || '';
+return {frequency => $frequency, map {$_ => $in->{'schedule_'.$frequency.'_'.$_}} qw(hour minute weekday day month)};
+}
+
 1;
