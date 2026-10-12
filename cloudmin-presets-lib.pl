@@ -42,4 +42,12 @@ foreach my $guest (@{get_libvirt()->list_domains(1)}) {
 return {map { $_ => [sort keys %{$users{$_}}] } keys %users};
 }
 
+# preset_pages(kind) returns the list, editor and action URLs for a preset type.
+sub preset_pages
+{
+return $_[0] eq 'template'
+	? qw(edit_newtmpl.cgi edit_tmpl.cgi save_tmpl.cgi delete_tmpls.cgi)
+	: qw(edit_newplan.cgi edit_plan.cgi save_plan.cgi delete_plans.cgi);
+}
+
 1;
