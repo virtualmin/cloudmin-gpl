@@ -22,4 +22,24 @@ return Cloudmin::Presets->new(directory => $module_config_directory,
 	log => sub { webmin_log(@_); });
 }
 
+# get_template_users() maps template IDs to existing or pending guest names.
+# Deletion holds create-host until the configuration write finishes.
+sub get_template_users
+{
+my $jobs = get_vm_jobs();
+my %users;
+# Read pending jobs first, so a creation finishing during inventory is still seen.
+foreach my $job (@{$jobs->list_pending()}) {
+	my $request = $job->{'request'};
+	$users{$request->{'template'}}->{$request->{'name'}} = 1
+		if (!$request->{'operation'} && $request->{'template'});
+}
+# Strict inventory includes stopped guests and propagates lookup failures.
+foreach my $guest (@{get_libvirt()->list_domains(1)}) {
+	my $template = ($guest->{'cloudmin'} || {})->{'template'};
+	$users{$template}->{$guest->{'name'}} = 1 if ($template);
+}
+return {map { $_ => [sort keys %{$users{$_}}] } keys %users};
+}
+
 1;
