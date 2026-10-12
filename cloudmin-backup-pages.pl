@@ -103,4 +103,34 @@ if ($field =~ /\A(?:password|secret|session_token|refresh_token)\z/) {
 return ui_textbox($name, $value, $size, undef, undef, $hint);
 }
 
+# parse_backup_target(input, prefix) reads only the currently selected provider.
+sub parse_backup_target
+{
+my ($in, $prefix) = @_;
+my $mode = $in->{$prefix.'_mode'} || '';
+my $target = {mode => $mode, map { $_ => $in->{$prefix.'_'.$mode.'_'.$_} // '' }
+	qw(path host port user password key_file bucket access secret session_token endpoint region ca_file account subscription project refresh_token
+	password_clear secret_clear session_token_clear refresh_token_clear)};
+foreach my $field (qw(port region endpoint ca_file)) {
+	# Disabled controls may still be submitted by themes; honor the default choice.
+	$target->{$field} = '' if ($in->{$prefix.'_'.$mode.'_'.$field.'_def'});
+}
+# Read only the selected SSH authentication method.
+if ($mode eq 'ssh') {
+	my $auth = $in->{$prefix.'_ssh_authentication'} || 'password';
+	die "Select password or private key authentication\n" if ($auth !~ /\A(?:password|key)\z/);
+	if ($auth eq 'key') {
+		# Do not retain an old saved password when changing to a private key.
+		$target->{'password'} = ''; $target->{'password_clear'} = 1;
+		$target->{'user'} ||= 'root';
+	}
+	# Password login must not accidentally use a hidden, previously selected
+	# key.
+	else {
+		$target->{'key_file'} = '';
+	}
+}
+return $target;
+}
+
 1;
