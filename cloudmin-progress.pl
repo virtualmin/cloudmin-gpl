@@ -2,6 +2,40 @@ use strict;
 use warnings;
 our (%in, %text, $first_print, $second_print, $progress_callback_url);
 
+# submit_machine(operation)
+# Validates a create, clone or capture form and streams its job.
+sub submit_machine
+{
+my ($operation) = @_;
+error_setup($text{$operation eq 'capture_image' ? 'vm_image_error' : $operation eq 'clone' ? 'vm_clone_error' : 'vm_create_err'});
+my $created = eval {
+	# Validate the submission route before passing its fields to the controller.
+	die "Use POST for virtual machine changes\n"
+		if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+	die "Unknown virtual machine form action\n"
+		if (($in{'vm_operation'} || '') ne $operation);
+	delete($in{'vm_operation'});
+	# Normalize clone checkboxes and ignore an unchecked separate hostname.
+	if ($operation eq 'clone') {
+		$in{'hostname'} = '' if (!$in{'hostname_set'});
+		$in{$_} = $in{$_} ? 1 : 0 for qw(confirm_license confirm_unchanged);
+		}
+	call_vm_api(1, $operation, \%in);
+	};
+my $error = error_message($@);
+# Discard submitted secrets before rendering either an error or progress.
+delete(@in{qw(password password_again password_hash virtualmin_serial virtualmin_key)});
+if (!$created) {
+	# Escape backend text and add the known recovery links.
+	my $html = error_html($error);
+	$html =~ s{(\. Open )Host Overview( and use Restore Network Rules)(?=\s*\z)}
+		{$1.ui_link('index.cgi', html_escape($text{'left_overview'})).$2}e;
+	error($html);
+}
+# Poll only the job ID; submitted credentials are no longer needed.
+show_machine_progress({job => $created->{'id'}});
+}
+
 # show_machine_progress(input, [embedded]) streams the job named by input.job.
 # Optional input.from and input.vm_edit_tabs select validated return links.
 # embedded omits the page header and footer for a list of backup jobs.
