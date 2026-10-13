@@ -55,4 +55,14 @@ foreach my $action ('restore', 'delete') {
 return ui_cluster(\@actions, { class => 'cloudmin-snapshot-actions' });
 }
 
+# snapshot_form(data, token, action, [snapshot])
+# Binds a standard submit form to the rendered guest and history revision.
+sub snapshot_form
+{
+my ($data, $token, $action, $snapshot) = @_;
+return ui_form_start('snapshots.cgi', 'post').ui_hidden('id', $data->{'guest'}->{'uuid'}).
+	ui_hidden('token', $token).ui_hidden('revision', $data->{'revision'}).
+	ui_hidden('action', $action).($snapshot ? ui_hidden('snapshot', $snapshot->{'id'}) : '');
+}
+
 1;
