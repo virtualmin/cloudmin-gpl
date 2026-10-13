@@ -132,4 +132,21 @@ return vm_webmin_lock($uuid, sub {
 	});
 }
 
+# remove_vm_webmin(uuid, job) removes only the deleted creation's server entry.
+sub remove_vm_webmin
+{
+my ($uuid, $job) = @_;
+# Guest deletion also works on hosts without Servers Index installed.
+return if (!foreign_check('servers'));
+return vm_webmin_lock($uuid, sub {
+	my $server = vm_webmin_server($uuid, $job);
+	# A missing matching entry makes repeated cleanup harmless.
+	if ($server) {
+		# Deletion must not retain the former password in audit or undo files.
+		vm_webmin_server_change($server, sub { servers::delete_server($server->{'id'}); });
+		}
+	return 1;
+	});
+}
+
 1;
