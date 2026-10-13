@@ -201,4 +201,69 @@ return html_escape($text{!$usage || !$usage->{'checked'} ? 'index_unknown'
 	: $usage->{'reason'} ? 'storage_volume_other' : 'storage_unused'});
 }
 
+# show_storage_volumes(pools, [token], [local], [formno])
+# Lists owners and capacity, linking local directories to File Manager and
+# offering deletion only for verified unused files.
+sub show_storage_volumes
+{
+my ($pools, $token, $local, $formno) = @_;
+my (@rows, @unavailable);
+my $selectable = 0;
+foreach my $pool (@$pools) {
+	# Inactive pools cannot report volumes; zero would falsely imply emptiness.
+	if (!$pool->{'active'} || $pool->{'volume_error'}) {
+		push(@unavailable, $pool->{'name'});
+		next;
+		}
+	foreach my $volume (@{$pool->{'volumes'} || []}) {
+		# Generated names become readable labels
+		# with full paths under details.
+		my $identity = ui_tag('span', html_escape(storage_volume_label($volume)),
+			{ class => 'cloudmin-storage-volume-name' }).
+			show_disk_location($volume->{'path'} || $volume->{'name'}, $local);
+		my $directory = '&mdash;';
+		if (($volume->{'path'} || '') =~ m{^/}) {
+			# Remote libvirt paths must never open this Webmin host's files.
+			my $dir = $volume->{'path'};
+			$dir =~ s{/[^/]+$}{};
+			$dir ||= '/';
+			$directory = $local ? show_filemin_directory($dir)
+				: ui_tag('tt', html_escape($dir));
+			}
+		my $usage = $volume->{'usage'};
+		# LVM volume deletion is independent of the pool's start/stop controls.
+		my $unused = $token && ($pool->{'manageable'} || $pool->{'volume_manageable'}) &&
+			$usage && $usage->{'checked'} &&
+			!$usage->{'reason'} && !@{$usage->{'owners'} || []};
+		$selectable++ if ($unused);
+		push(@rows, [$token ? { type => 'checkbox', name => 'volume',
+			value => $pool->{'uuid'}.'/'.$volume->{'name'}, disabled => !$unused } : '',
+			$identity, $directory, ui_tag('a', html_escape($pool->{'name'}),
+			{ href => 'storage.cgi?tab=pools&pool='.urlize($pool->{'uuid'}) }),
+			show_storage_volume_type($usage), show_storage_volume_usage($usage),
+			nice_size($volume->{'capacity'}), nice_size($volume->{'allocation'})]);
+		}
+	}
+my $html = @unavailable ? ui_note(text('storage_volumes_unavailable',
+	join(', ', map { '<tt>'.html_escape($_).'</tt>' } @unavailable))) : '';
+if (@rows) {
+	# Keep each selection checkbox attached to its volume when columns are hidden.
+	my ($heads, $visible, $types) =
+		table_columns('storage_volume_columns', \@rows, 1);
+	# Match Images' standard selection controls even when all rows are
+	# protected. The form index is relative to the module's content.
+	$html .= $token ? ui_form_columns_table('storage.cgi',
+		[['delete', $text{'storage_delete_selected'}, undef, !$selectable]], 1, undef,
+		[['action', 'review_volumes'], ['tab', 'volumes'], ['token', $token]],
+		$heads, 100, $visible, $types, 0, undef, undef, $formno || 0, 1)
+		: ui_columns_table($heads, 100, $visible, $types, 0, undef, undef, 1);
+	}
+else {
+	# The preceding notice still distinguishes unavailable pools from empty ones.
+	$html .= ui_empty_state({ icon => 'hard-drive', title => $text{'storage_no_volumes'},
+		desc => $text{'storage_no_volumes_help'} });
+	}
+return $html;
+}
+
 1;
