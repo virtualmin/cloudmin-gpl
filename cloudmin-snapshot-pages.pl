@@ -113,4 +113,37 @@ $html .= ui_table_end().$alerts.ui_form_end([['', $text{'snapshots_create'}, $af
 return $html;
 }
 
+# show_snapshot_review(data, token, snapshot, action, input)
+# Destructive restore and snapshot removal each have their own confirmation.
+sub show_snapshot_review
+{
+my ($data, $token, $snapshot, $action, $input) = @_;
+my $key = $action eq 'restore' ? 'snapshots_restore' : 'snapshots_delete';
+my @hidden = ([id => $data->{'guest'}->{'uuid'}], [token => $token],
+	[revision => $data->{'revision'}], [action => 'snapshot_'.$action],
+	[snapshot => $snapshot->{'id'}], [view => $action], [confirm => 1]);
+# Keep host-wide actions in their original navigation context.
+push(@hidden, [from => 'all']) if (($input->{'from'} || '') eq 'all');
+my $details = ui_text_color('<tt>'.html_escape($snapshot->{'label'}).'</tt>', 'danger');
+my $after_button;
+if ($action eq 'restore') {
+	# Confirm shutdown together with restore; starting afterward is optional.
+	push(@hidden, [shutdown => 1]) if ($data->{'guest'}->{'active'});
+	# Default from the saved state only on first opening. Unchecked boxes are
+	# absent from submitted forms, so a failed submission must keep them off.
+	my $restart = exists($input->{'restart'}) || $input->{'action'}
+		? ($input->{'restart'} ? 1 : 0)
+		: (($snapshot->{'state'} || '') =~ /\A(?:running|blocked|disk-snapshot)\z/ ? 1 : 0);
+	$details .= ui_alert(html_escape($text{$data->{'guest'}->{'active'}
+		? 'snapshots_restore_shutdown' : 'snapshots_restore_stopped'}),
+		'info', ['fa-info-circle', '', 1]);
+	# The standard submit row keeps this choice beside the restore button.
+	$after_button = ui_tag('span',
+		ui_checkbox('restart', 1, $text{'snapshots_restore_start'}, $restart),
+		{ class => 'cloudmin-snapshot-restart' });
+	}
+return ui_confirmation_form('snapshots.cgi', $text{$key.'_confirm'},
+	\@hidden, [[undef, $text{$key}, $after_button]], $details);
+}
+
 1;
