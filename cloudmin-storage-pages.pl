@@ -368,4 +368,35 @@ $html .= ui_table_row(undef, ui_action_button($text{'storage_create'}, 'success'
 return $html.ui_table_end().ui_form_end();
 }
 
+# show_storage_pools(data, token, values, error, selected)
+# Separates existing pools from creation, reopening creation after a failure.
+sub show_storage_pools
+{
+my ($data, $token, $values, $error, $selected) = @_;
+my @pools = @{$data->{'pools'} || []};
+# Open the selected card first without relying on theme-specific anchors.
+my @ordered = (grep({ $_->{'uuid'} eq $selected } @pools),
+	grep({ $_->{'uuid'} ne $selected } @pools));
+my $list = @pools ? ui_stack([map { show_storage_pool($_, $token, $_->{'uuid'} eq $selected) } @ordered])
+	: ui_empty_state({ icon => 'hard-drive', title => $text{'storage_none'}, desc => $text{'storage_none_desc'} });
+# Remote connections and read-only users cannot create pools.
+return $list if (!$token || !$data->{'local'});
+# Nested tabs must not change which outer inventory tab is visible.
+local $main::ui_tabs_selected = $main::ui_tabs_selected;
+my $tab = $error && ($values->{'action'} || '') eq 'create' ? 'create' : 'list';
+# Creation errors retain the form; ordinary visits and successful saves list pools.
+my $html = ui_tabs_start([
+	['storage_pool_list', $text{'storage_existing'}],
+	['storage_pool_create', $text{'storage_create'}]],
+	'cloudmin_storage_pool_tabs', 'storage_pool_'.$tab, 1);
+$html .= ui_tabs_start_tab('cloudmin_storage_pool_tabs', 'storage_pool_list').
+	ui_tag('div', $list, { 'data-storage-pool-tab' => 'list' }).
+	ui_tabs_end_tab('cloudmin_storage_pool_tabs', 'storage_pool_list');
+$html .= ui_tabs_start_tab('cloudmin_storage_pool_tabs', 'storage_pool_create').
+	ui_tag('div', show_storage_create($token, $values, $data->{'lvm_groups'}, $data->{'lvm_group_error'}),
+		{ class => 'cloudmin-storage-tab cloudmin-storage-create', 'data-storage-pool-tab' => 'create' }).
+	ui_tabs_end_tab('cloudmin_storage_pool_tabs', 'storage_pool_create');
+return $html.ui_tabs_end(1);
+}
+
 1;
