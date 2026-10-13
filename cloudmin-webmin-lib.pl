@@ -149,4 +149,27 @@ return vm_webmin_lock($uuid, sub {
 	});
 }
 
+# vm_webmin_address_source(vm, address) checks host records for a reported IP.
+# A match describes host configuration, not the identity of the answering server.
+sub vm_webmin_address_source
+{
+my ($vm, $address) = @_;
+my @static = map { (split(m{/}, $_ || ''))[0] || '' }
+	@{$vm->{'cloudmin'} || {}}{qw(ipv4 ipv6)};
+# Static addresses are recorded in the guest's host-side creation metadata.
+return 'static' if (grep { $_ eq $address } @static);
+my %macs = map { lc($_->{'mac'} || '') => 1 } @{$vm->{'interfaces'} || []};
+delete($macs{''});
+# Query leases separately: normal discovery may have returned only agent data.
+my $addresses = eval {
+	my $adapter = get_libvirt(1);
+	my $domain = $adapter->find_domain($vm->{'uuid'});
+	$domain ? $adapter->get_domain_addresses($domain, $vm, 1) : [];
+	} || [];
+return 'lease' if (grep { ($_->{'source'} || '') eq 'lease' &&
+	$macs{lc($_->{'mac'} || '')} && ($_->{'address'} || '') eq $address } @$addresses);
+# ARP and guest-agent reports alone cannot confirm the host's assigned address.
+return 'unverified';
+}
+
 1;
