@@ -187,4 +187,43 @@ push(@events, { text_html => ui_tag('div', $working, { class => 'cloudmin-snapsh
 return ui_feed(\@events, { class => 'cloudmin-snapshot-feed' });
 }
 
+# show_snapshots_overview(data, token)
+# Combines host totals with direct review actions for each saved snapshot.
+sub show_snapshots_overview
+{
+my ($data, $token) = @_;
+my @snapshots = @{$data->{'snapshots'}};
+my $pending = $data->{'recovery_count'} // scalar(grep { $_->{'pending'} } @snapshots);
+my $html = ui_stats([
+	{ value => scalar(@snapshots), label => $text{'snapshots_total'}, desc => $text{'snapshots_total_desc'}, icon => 'clock', state => 'info' },
+	{ value => scalar(grep { $_->{'count'} } @{$data->{'guests'}}), label => $text{'snapshots_vm_count'},
+		desc => $text{'snapshots_vm_count_desc'}, icon => 'server' },
+	{ value => $pending, label => $text{'snapshots_recovery'}, desc => $text{'snapshots_recovery_desc'},
+		icon => $pending ? 'warning' : 'check-circle', state => $pending ? 'warning' : 'success' },
+	], { class => 'cloudmin-snapshot-summary', shape => 'square' });
+if (@snapshots) {
+	# A failed creation may need recovery without having native metadata yet.
+	my %pending_guests = (map { $_ => 1 } @{$data->{'pending_guests'} || []});
+	$pending_guests{$_->{'uuid'}} = 1 foreach grep { $_->{'pending'} } @snapshots;
+	my @rows = map { [
+		ui_tag('a', html_escape($_->{'label'}), { href => snapshot_url($_->{'uuid'}) }),
+		ui_tag('a', html_escape($_->{'vm'}), { href => 'machine.cgi?id='.urlize($_->{'uuid'}) }),
+		make_date($_->{'created'}), snapshot_size($_), snapshot_mode($_),
+		$_->{'pending'} ? ui_badge($text{'snapshots_recovery'}, 'warning', { small => 1 }) :
+			html_escape($text{$_->{'current'} ? 'snapshots_current_parent' : 'snapshots_saved'}),
+		($token ? (snapshot_actions($_, $token, $pending_guests{$_->{'uuid'}}, 1)) : ())
+		] } @snapshots;
+	# Filter headings, values and sort types together to keep them aligned.
+	my ($heads, $visible, $types) = table_columns('snapshot_columns', \@rows);
+	# Column preferences never hide permitted review actions or add denied ones.
+	if ($token) {
+		push(@$heads, $text{'snapshots_actions'});
+		push(@$types, undef);
+		push(@{$visible->[$_]}, $rows[$_]->[6]) foreach 0..$#rows;
+		}
+	$html .= ui_columns_table($heads, 100, $visible, $types, 0, undef, undef, 1);
+	}
+return $html;
+}
+
 1;
