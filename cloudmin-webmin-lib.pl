@@ -276,4 +276,19 @@ return vm_webmin_lock($vm->{'uuid'}, sub {
 	});
 }
 
+# show_vm_webmin_frame(url) embeds the native proxy with the host's palette.
+sub show_vm_webmin_frame
+{
+my ($url) = @_;
+# This sandbox retains same-origin script access; it does not isolate guests.
+# Hide the initial document until the guest page and its palette have loaded.
+return ui_tag('div',
+	ui_tag('iframe', '', { src => $url, title => $text{'console_webmin'},
+		'data-webmin-loading' => 1,
+		allow => 'fullscreen; clipboard-read; clipboard-write', allowfullscreen => undef,
+		sandbox => 'allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-modals' }),
+	{ class => 'cloudmin-webmin-view' }).
+	ui_tag('script', read_file_contents("$module_root_directory/webmin-view.js"));
+}
+
 1;
