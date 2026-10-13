@@ -266,4 +266,31 @@ else {
 return $html;
 }
 
+# show_storage_delete_volumes(volumes, token)
+# Lists the exact selected files and carries each reviewed revision into POST.
+sub show_storage_delete_volumes
+{
+my ($volumes, $token) = @_;
+my $form = storage_form('delete_volumes', $token, {}, 'volumes');
+my @rows;
+foreach my $volume (@$volumes) {
+	$form .= ui_hidden('volume', $volume->{'uuid'}.'/'.$volume->{'name'}).
+		ui_hidden('revision', $volume->{'revision'});
+	# Presentation labels never replace the submitted volume identifier.
+	push(@rows, [html_escape(storage_volume_label($volume)), html_escape($volume->{'pool'}),
+		show_disk_location($volume->{'path'} || $volume->{'name'}),
+		nice_size_text($volume->{'capacity'}), nice_size_text($volume->{'allocation'})]);
+	}
+return $form.ui_card({ title => $text{'storage_delete_selected'}, class => 'cloudmin-storage-delete',
+	body => ui_alert(html_escape($text{'storage_delete_warning'}), 'warning', ['fa-exclamation-triangle', '', 1]).
+		ui_tag('div', ui_columns_table(
+			[map { $text{$_} } qw(storage_name storage_pool storage_location storage_virtual_size storage_allocated)],
+			100, \@rows, undef, 1), { class => 'cloudmin-storage-table' }).
+		ui_checkbox('confirm', 1, $text{'storage_delete_confirm'}, 0),
+	footer => ui_cluster([
+		ui_action_button($text{'storage_cancel'}, 'neutral', { href => 'storage.cgi?tab=volumes' }),
+		ui_action_button($text{'storage_delete_selected'}, 'danger', { type => 'submit', icon => 'trash' })], { align => 'end' }) }).
+	ui_form_end();
+}
+
 1;
