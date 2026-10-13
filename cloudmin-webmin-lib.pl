@@ -66,4 +66,21 @@ die $error if ($error);
 return $result;
 }
 
+# vm_webmin_server_change(server, callback) excludes login files from audit copies.
+# The callback saves or deletes this entry through the native Servers Index API.
+sub vm_webmin_server_change
+{
+my ($server, $code) = @_;
+my $file = "$servers::module_config_directory/$server->{'id'}.serv";
+# Acquire the native file lock without capturing credentials for diffs or undo.
+lock_data_file($file, 0, 0, 1);
+local $main::error_must_die = 1;
+my $ok = eval { $code->(); 1 };
+my $error = $@;
+# Native saves release the lock themselves; deletes and failures may not.
+unlock_data_file($file);
+# Preserve the native failure after releasing the credential file's lock.
+die $error if (!$ok);
+}
+
 1;
