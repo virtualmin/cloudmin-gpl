@@ -83,4 +83,53 @@ unlock_data_file($file);
 die $error if (!$ok);
 }
 
+# register_vm_webmin(job, [address], [finishing]) adds the guest to Servers Index.
+# Use the initial password if available, or the native login prompt.
+# If address is omitted, use the first configured or discovered guest IP.
+# finishing defaults to false; workers set it when completing accepted creation.
+sub register_vm_webmin
+{
+my ($job, $address, $finishing) = @_;
+require_webmin_registration($finishing);
+my $r = $job->{'request'};
+my ($uuid, $id) = ($r->{'uuid'}, $job->{'id'});
+# Only the Virtualmin installation path promises a guest Webmin service.
+die "This virtual machine was not installed with Virtualmin\n"
+	if (($r->{'software'} || '') !~ /\Avirtualmin-(?:gpl|pro)\z/);
+return vm_webmin_lock($uuid, sub {
+	# Recheck creation ownership before using a saved login.
+	my $adapter = get_libvirt(1);
+	my $vm = Cloudmin::Software::guest($adapter, $job);
+	my $server = vm_webmin_server($uuid, $id);
+	# Existing records retain their administrator's credentials and settings.
+	if ($server) {
+		# Reusing a record still requires its native per-server grant.
+		die "Access to this Webmin server is not allowed\n" if (!servers::can_use_server($server));
+		return $server;
+		}
+	# Use a configured or discovered guest IP instead of a DNS lookup.
+	my @addresses = Cloudmin::Software::addresses($r, $vm);
+	die "The virtual machine has no reported IP address\n" if (!@addresses);
+	# A supplied installer address must remain in the guest's address list.
+	die "The virtual machine address changed; try again\n"
+		if ($address && !grep { $_ eq $address } @addresses);
+	my ($user, $password) = @{$r}{qw(username webmin_password)};
+	my $saved_login = defined($password) && length($password);
+	# Saved credentials must fit the native line-based server configuration.
+	die "Invalid guest Webmin username or password\n" if ($saved_login && (
+		!defined($user) || ref($user) || $user !~ /\A[a-z_][a-z0-9_-]{0,31}\z/ ||
+		ref($password) || length($password) > 1024 || $password =~ /[\x00\r\n]/));
+	# Servers Index owns both automatic login and its browser-session prompt.
+	$server = { host => $r->{'hostname'}, ip => $address || $addresses[0], port => 10000,
+		ssl => 1, fast => 0, type => 'linux', desc => $r->{'name'}, group => 'Cloudmin',
+		($saved_login ? (user => $user, pass => $password) : (autouser => 1)),
+		cloudmin_uuid => $uuid, cloudmin_job => $id };
+	# Reserve an unused native ID without replacing a manually added server.
+	$server->{'id'} = time().$$;
+	$server->{'id'}++ while (servers::get_server($server->{'id'}));
+	vm_webmin_server_change($server, sub { servers::save_server($server); });
+	return $server;
+	});
+}
+
 1;
