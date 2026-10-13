@@ -329,4 +329,43 @@ return storage_form('unregister', $token,
 		footer => ui_cluster(\@actions, { align => 'end' }) }).ui_form_end();
 }
 
+# show_storage_create(token, values, [groups], [group_error])
+# Renders storage registration, retaining entered values after failure.
+# groups defaults to an empty list; group_error reports discovery failures.
+sub show_storage_create
+{
+my ($token, $values, $groups, $group_error) = @_;
+$groups ||= [];
+# A missing or removed group must never select a different group implicitly.
+my $group = (grep { $_ eq ($values->{'group'} || '') } @$groups)
+	? $values->{'group'} : '';
+my @groups = (['', $text{@$groups ? 'storage_group_select' : 'storage_group_none'}, 'disabled'],
+	map { [$_, $_] } @$groups);
+my $html = storage_form('create', $token).
+	ui_table_start(undef, 'width=100%', 2);
+$html .= ui_table_row(undef, ui_p($text{'storage_create_help'}), 2);
+$html .= ui_table_row($text{'storage_name'}, ui_textbox('name', $values->{'name'} || '', 24,
+	0, 64, 'placeholder="extra"'));
+# Keep the selected backend's controls together and leave sizing to the theme.
+$html .= ui_table_row($text{'storage_backend'}, ui_radio_table('type', $values->{'type'} || 'dir', [
+	['dir', $text{'storage_directory'}, ui_textbox('path', $values->{'path'} || '', 45,
+		0, 4096, 'placeholder="/var/lib/libvirt/extra"')],
+	['logical', $text{'storage_group'}, ui_cluster([
+		ui_select('group', $group, \@groups, 1, 0, 0),
+		ui_action_button($text{'storage_lvm_manage'}, 'neutral',
+			{ href => '../lvm/', icon => 'hard-drive' })])]
+	]), 1, undef, undef, 1);
+# Failed VG discovery must still leave directory registration available.
+$html .= ui_table_row(undef, ui_alert_box(text('storage_group_error', html_escape($group_error)), 'warn'), 2)
+	if ($group_error);
+$html .= ui_table_row(undef, ui_p($text{'storage_lvm_help'}), 2);
+# Default startup on for a new form, but preserve an unchecked submitted value.
+$html .= ui_table_row($text{'storage_autostart'}, ui_toggle({ name => 'autostart', value => 1,
+	label => $text{'storage_start_automatically'}, state => 'success', round => 1,
+	checked => exists($values->{'action'}) ? $values->{'autostart'} : 1 }));
+$html .= ui_table_row(undef, ui_action_button($text{'storage_create'}, 'success',
+	{ type => 'submit', icon => 'plus' }), 2);
+return $html.ui_table_end().ui_form_end();
+}
+
 1;
