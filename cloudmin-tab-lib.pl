@@ -80,4 +80,21 @@ unlock_file($file) if ($locked);
 die $error if (!$ok);
 }
 
+# inventory_tab_script(page, [token]) attaches persistence to the native widget.
+# Without a write token or enabled memory, the page has no preference writer.
+sub inventory_tab_script
+{
+my ($page, $token) = @_;
+# Read-only pages and disabled memory need neither a token nor a browser writer.
+return '' if (!$token || ($config{$page.'_remember'} // 1) ne '1');
+# Supply allowed IDs and a signed request token; save failures stay inline.
+my $data = { page => $page, tabs => [inventory_tabs($page)], token => $token,
+	url => get_webprefix().'/server-manager/save_inventory_tab.cgi' };
+return ui_tag('span', '', { 'data-inventory-tabs' => convert_to_json($data), hidden => undef }).
+	ui_tag('span', html_escape($text{'inventory_tab_save_error'}),
+		{ 'data-inventory-tabs-error' => $page, hidden => undef, role => 'status' }).
+	ui_tag('script', '', { src => get_webprefix().'/server-manager/inventory-tabs.js?'.
+		((stat("$module_root_directory/inventory-tabs.js"))[9] || 0) });
+}
+
 1;
