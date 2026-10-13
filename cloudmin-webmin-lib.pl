@@ -172,4 +172,32 @@ return 'lease' if (grep { ($_->{'source'} || '') eq 'lease' &&
 return 'unverified';
 }
 
+# vm_webmin_direct_url(vm) returns the guest HTTPS URL without login credentials.
+# Use a current guest address and the registered port, or port 10000 by default.
+sub vm_webmin_direct_url
+{
+my ($vm) = @_;
+# Direct links retain the tab's permission and running-guest requirements.
+die "Access to guest Webmin is not allowed\n" if (!can_vm_webmin($vm->{'uuid'}));
+die "Start the virtual machine before opening Webmin\n" if (!$vm->{'active'});
+# Use configured or reported addresses without relying on guest DNS.
+my @addresses = Cloudmin::Software::addresses($vm->{'cloudmin'} || {}, $vm);
+die "The virtual machine has no reported IP address\n" if (!@addresses);
+# Only the current creation may supply saved connection settings.
+my $job = $vm->{'cloudmin'}->{'job'} || '';
+my $server = vm_webmin_server($vm->{'uuid'}, $job)
+	if ($job =~ /\A[a-f0-9]{32}\z/);
+die "Access to this Webmin server is not allowed\n"
+	if ($server && !servers::can_use_server($server));
+my $port = $server && $server->{'port'} ? $server->{'port'} : 10000;
+# Reject malformed saved ports before including them in a browser URL.
+die "Invalid Webmin port\n" if ($port !~ /\A[0-9]+\z/ || $port < 1 || $port > 65535);
+# Prefer the saved destination while it remains in the current address list.
+my $address = $server && (grep { $_ eq ($server->{'ip'} || '') } @addresses)
+	? $server->{'ip'} : $addresses[0];
+# IPv6 literals need brackets in URLs. No username or password enters the URL.
+$address = "[$address]" if ($address =~ /:/);
+return "https://$address:$port/";
+}
+
 1;
