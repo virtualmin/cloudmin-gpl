@@ -226,4 +226,44 @@ if (@snapshots) {
 return $html;
 }
 
+# show_snapshots_page(data, token, input, [error])
+# Keeps host inventory, guest history and action reviews in one navigable page.
+sub show_snapshots_page
+{
+my ($data, $token, $input, $error) = @_;
+return ui_alert_box(html_escape($data->{'error'}), 'warn') if ($data->{'error'});
+my $html = $error ? ui_alert_box(html_escape($error), 'danger') : '';
+$html .= ui_alert_box(html_escape(join("\n", @{$data->{'errors'}})), 'warn') if (@{$data->{'errors'} || []});
+my $intro = ui_tag('div', html_escape($text{'snapshots_intro'}), { class => 'cloudmin-snapshot-intro' });
+return $html.$intro.show_snapshots_overview($data, $token) if (!$data->{'guest'});
+my $guest = $data->{'guest'};
+my $view = $input->{'view'} || (($input->{'action'} || '') eq 'snapshot_create' ? 'create' : '');
+# Explain disabled operations while leaving saved history visible.
+if ($data->{'unavailable'}) {
+	$html .= ui_alert_box(html_escape($data->{'unavailable'}), 'warn');
+	}
+# Creation controls are available only to writers with an eligible guest.
+if ($token && !$data->{'unavailable'} && $view eq 'create') {
+	return $html.show_snapshot_create($data, $token, $input);
+	}
+# Resolve review links against current history rather than trusting URL labels.
+if ($token && !$data->{'unavailable'} && $view =~ /\A(?:restore|delete)\z/) {
+	my ($snapshot) = grep { $_->{'id'} eq ($input->{'snapshot'} || '') } @{$data->{'snapshots'}};
+	return $html.ui_alert_box($text{'snapshots_missing'}, 'warn', undef, undef, '') if (!$snapshot || !$snapshot->{'managed'});
+	# The current snapshot cannot be deleted while it remains a parent.
+	return $html.ui_alert_box($text{'snapshots_delete_children'}, 'warn', undef, undef, '')
+		if ($view eq 'delete' && $snapshot->{'delete_blocked'});
+	return $html.show_snapshot_review($data, $token, $snapshot, $view, $input);
+	}
+$html .= $intro;
+my @actions;
+# Offer creation beside the history only when the controller permits it.
+push(@actions, ui_action_button($text{'snapshots_create'}, 'info', { href => snapshot_url($guest->{'uuid'}, 'create'), icon => 'plus', size => 'normal' }))
+	if ($token && !$data->{'unavailable'});
+return $html.ui_card({ title => $text{'snapshots_history'}, class => 'cloudmin-snapshot-history',
+	actions => @actions ? ui_cluster(\@actions) : undef,
+	body => @{$data->{'snapshots'}} ? show_snapshot_history($data, $token) :
+		ui_empty_state({ icon => 'clock', title => $text{'snapshots_none'}, desc => $text{'snapshots_none_vm'} }) });
+}
+
 1;
