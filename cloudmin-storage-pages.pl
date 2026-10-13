@@ -77,4 +77,15 @@ $html .= ui_tag('div', ui_columns_table(
 return $html;
 }
 
+# storage_action(pool, token, action, label, icon, [enabled])
+# Identifies the exact pool and rendered revision for a small lifecycle control.
+sub storage_action
+{
+my ($pool, $token, $action, $label, $icon, $enabled) = @_;
+return storage_form($action, $token, { id => $pool->{'uuid'}, revision => $pool->{'revision'},
+	(defined($enabled) ? (enabled => $enabled) : ()) }).
+	ui_action_button($label, 'neutral', { type => 'submit', size => 'small', icon => $icon,
+		($action eq 'autostart' ? (title => $text{'storage_toggle_boot'}) : ()) }).ui_form_end();
+}
+
 1;
