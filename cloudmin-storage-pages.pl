@@ -161,4 +161,20 @@ return ui_card({ id => 'cloudmin-pool-'.$pool->{'uuid'},
 	body => $body, footer => ui_cluster(\@footer, { align => @{$pool->{'guests'} || []} ? 'between' : 'end' }) });
 }
 
+# show_storage_volume_usage(usage, [empty])
+# Shows each VM once, including references retained by its snapshots or saves.
+# Empty table cells use a dash; callers can supply a different placeholder.
+sub show_storage_volume_usage
+{
+my ($usage, $empty) = @_;
+my (@owners, %seen);
+foreach my $owner (@{$usage->{'owners'} || []}) {
+	# Imported images and backing volumes are classified separately from VMs.
+	next if (!$owner->{'uuid'} || $seen{$owner->{'uuid'}}++);
+	push(@owners, ui_tag('div', ui_tag('a', html_escape($owner->{'name'}),
+		{ href => 'machine.cgi?id='.urlize($owner->{'uuid'}) })));
+	}
+return @owners ? ui_tag('div', join('', @owners), { class => 'cloudmin-storage-owners' }) : ($empty // '&mdash;');
+}
+
 1;
