@@ -88,4 +88,77 @@ return storage_form($action, $token, { id => $pool->{'uuid'}, revision => $pool-
 		($action eq 'autostart' ? (title => $text{'storage_toggle_boot'}) : ()) }).ui_form_end();
 }
 
+# show_storage_pool(pool, token, [selected])
+# Separates pool identity, capacity, location and lifecycle controls.
+sub show_storage_pool
+{
+my ($pool, $token, $selected) = @_;
+my $editable = $token && $pool->{'manageable'};
+my $state = $pool->{'state'} || 'unknown';
+my %tones = (running => 'success', degraded => 'warning', building => 'info', inaccessible => 'danger');
+my $boot = html_escape($text{$pool->{'autostart'} ? 'storage_enabled' : 'storage_disabled'});
+$boot = $text{'storage_not_saved'} if (!$pool->{'persistent'});
+if ($editable) {
+	# Writable managed pools expose boot settings as signed actions.
+	$boot = storage_action($pool, $token, 'autostart',
+		$text{$pool->{'autostart'} ? 'storage_enabled' : 'storage_disabled'},
+		$pool->{'autostart'} ? 'check' : 'x', $pool->{'autostart'} ? 0 : 1);
+	}
+my $volumes = $pool->{'active'} && !$pool->{'volume_error'} ? $pool->{'volume_count'} : $text{'storage_unavailable'};
+my @facts = ([$text{'storage_location'}, ui_tag('span',
+	$pool->{'target'} ? '<tt>'.html_escape($pool->{'target'}).'</tt>'
+		: html_escape($text{'index_unknown'}), { class => 'cloudmin-storage-path' })],
+	[$text{'storage_volume_count'}, html_escape($volumes)], [$text{'storage_autostart'}, $boot]);
+my $body = ui_dl(\@facts, { class => 'cloudmin-storage-facts' });
+if ($pool->{'active'} && $pool->{'capacity'}) {
+	# File pools share filesystem space; block pools report their own allocation.
+	my $percent = int(100 * $pool->{'allocation'} / $pool->{'capacity'} + 0.5);
+	$percent = 0 if ($percent < 0);
+	$percent = 100 if ($percent > 100);
+	$body .= ui_progress($pool->{'allocation'}, { max => $pool->{'capacity'}, thresholds => 1,
+		label => html_escape(text(($pool->{'type'} || '') =~ /\A(?:dir|fs|netfs)\z/
+			? 'storage_filesystem_used' : 'storage_pool_used', $percent)), value => text('storage_free_of',
+		nice_size_text($pool->{'available'}), nice_size_text($pool->{'capacity'})) });
+	}
+elsif (!$pool->{'active'}) {
+	# Inactive pools have no current capacity measurement.
+	$body .= ui_tag('p', html_escape($text{'storage_inactive_help'}), { class => 'cloudmin-storage-hint' });
+	}
+if ($pool->{'volume_error'}) {
+	# Keep a volume-list failure visible beside usable pool settings.
+	$body .= ui_alert_box(text('storage_volume_error', html_escape($pool->{'volume_error'})), 'warn');
+	}
+if ($pool->{'type'} eq 'lvmthin' && defined($pool->{'metadata_percent'})) {
+	# Thin metadata can fill before data space does; expose both measurements.
+	$body .= ui_p(html_escape(text('storage_thin_usage',
+		$pool->{'data_percent'}, $pool->{'metadata_percent'})));
+	$body .= ui_alert_box($text{'storage_thin_full'}, 'warn')
+		if ($pool->{'data_percent'} >= 95 || $pool->{'metadata_percent'} >= 90);
+	}
+my @footer;
+if (@{$pool->{'guests'} || []}) {
+	# VM identities belong beside their volumes; keep the stop restriction here.
+	push(@footer, ui_tag('span', html_escape($text{'storage_pool_busy'})));
+	}
+if ($editable && (!@{$pool->{'guests'} || []} || !$pool->{'active'})) {
+	# Offer lifecycle changes only when the pool state allows them.
+	my $action = $pool->{'active'} ? 'stop' : 'start';
+	push(@footer, storage_action($pool, $token, $action, $text{'storage_'.$action},
+		$pool->{'active'} ? 'stop' : 'play'));
+	}
+if ($token && $pool->{'unregisterable'}) {
+	# Review explains active-pool or ownership restrictions before confirmation.
+	push(@footer, storage_action($pool, $token, 'review_pool',
+		$text{'storage_unregister'}, 'unlink'));
+	}
+return ui_card({ id => 'cloudmin-pool-'.$pool->{'uuid'},
+	class => 'cloudmin-storage-card'.($selected ? ' cloudmin-storage-selected' : ''),
+	title_html => ui_svg_icon('hard-drive').ui_tag('span', html_escape($pool->{'name'})),
+	actions => ui_cluster([
+		ui_badge($text{'storage_type_'.$pool->{'type'}} || $pool->{'type'}, 'neutral', { small => 1 }),
+		ui_badge($text{'storage_state_'.$state} || $text{'storage_state_unknown'},
+			$tones{$state} || 'neutral', { small => 1, dot => 1 })]),
+	body => $body, footer => ui_cluster(\@footer, { align => @{$pool->{'guests'} || []} ? 'between' : 'end' }) });
+}
+
 1;
