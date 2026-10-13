@@ -293,4 +293,40 @@ return $form.ui_card({ title => $text{'storage_delete_selected'}, class => 'clou
 	ui_form_end();
 }
 
+# show_storage_unregister(record, token) renders the service's pool review.
+# Clicking the submit button confirms removal and any reviewed stop.
+sub show_storage_unregister
+{
+my ($record, $token) = @_;
+my $reason = $record->{'usage'}->{'reason'};
+my $label = $text{$record->{'stop_required'} ? 'storage_stop_unregister' : 'storage_unregister'};
+my @details = ([$text{'storage_name'}, html_escape($record->{'name'})],
+	[$text{'storage_location'}, '<tt>'.html_escape($record->{'path'}).'</tt>']);
+# Keep machine links with the pool details and omit unused ownership rows.
+my $owners = show_storage_volume_usage($record->{'usage'}, '');
+push(@details, [$text{'storage_used_by'}, $owners]) if ($owners);
+my $body = ui_p(html_escape($text{'storage_unregister_help'})).
+	ui_dl(\@details, { wide => '5.5em', class => 'cloudmin-storage-review-details' });
+if ($record->{'stop_required'}) {
+	# Explain the stop, including whole-group deactivation for LVM pools.
+	$body .= ui_alert_box(html_escape($text{$record->{'type'} eq 'logical'
+		? 'storage_unregister_lvm_stop' : 'storage_unregister_stop'}), 'warn');
+	}
+my @actions = (ui_action_button($text{'storage_cancel'}, 'neutral', { href => 'storage.cgi?tab=pools' }));
+if ($reason) {
+	# A blocked review displays its reason without a submission control.
+	$body .= ui_alert_box(html_escape($reason), 'warn');
+	return ui_card({ title => $label, body => $body,
+		footer => ui_cluster(\@actions, { align => 'end' }) });
+	}
+# Submitting the reviewed action confirms removal without a second toggle.
+push(@actions, ui_action_button($label, 'danger',
+	{ type => 'submit', icon => 'unlink' }));
+# Match the review's stop permission; an inactive pool requires no stop.
+return storage_form('unregister', $token,
+	{ id => $record->{'id'}, revision => $record->{'revision'}, confirm => 1, stop => 1 }).
+	ui_card({ title => $label, body => $body,
+		footer => ui_cluster(\@actions, { align => 'end' }) }).ui_form_end();
+}
+
 1;
