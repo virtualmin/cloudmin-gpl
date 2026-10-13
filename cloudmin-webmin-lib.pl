@@ -33,4 +33,17 @@ die "Permission to add, edit and connect to Webmin servers is required\n"
 	if (!$servers::access{'edit'} || !$servers::access{'add'} || !$servers::access{'links'});
 }
 
+# vm_webmin_server(uuid, [creation_job]) finds only Cloudmin's own registration.
+# Supplying creation_job prevents a reused UUID from adopting an older login.
+sub vm_webmin_server
+{
+my ($uuid, $job) = @_;
+# An uninstalled module has no registration to find or remove.
+return if (!foreign_check('servers'));
+foreign_require('servers', 'servers-lib.pl');
+my ($server) = grep { ($_->{'cloudmin_uuid'} || '') eq ($uuid || '') &&
+	(!defined($job) || ($_->{'cloudmin_job'} || '') eq $job) } servers::list_servers();
+return $server;
+}
+
 1;
