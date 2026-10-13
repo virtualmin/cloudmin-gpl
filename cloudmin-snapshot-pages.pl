@@ -37,4 +37,22 @@ return defined($snapshot->{'allocation'}) ?
 	ui_tag('span', nice_size($snapshot->{'allocation'}), { title => $text{'snapshots_size_help'} }) : '&mdash;';
 }
 
+# snapshot_actions(snapshot, token, [unavailable], [from_all])
+# Opens the standard review pages from either history or the host inventory.
+sub snapshot_actions
+{
+my ($snapshot, $token, $unavailable, $from_all) = @_;
+return '' if (!$token || !$snapshot->{'managed'} || $unavailable);
+my @actions;
+foreach my $action ('restore', 'delete') {
+	my $blocked = $snapshot->{'pending'} || ($action eq 'delete' && $snapshot->{'delete_blocked'});
+	push(@actions, ui_action_button($text{'snapshots_action_'.$action}, $action eq 'restore' ? 'info' : 'danger', {
+		icon => $action eq 'restore' ? 'refresh' : 'trash', size => 'small',
+		href => snapshot_url($snapshot->{'uuid'}, $action, $snapshot->{'id'}).($from_all ? '&from=all' : ''),
+		disabled => $blocked, title => $snapshot->{'pending'} ? $text{'snapshots_recovery'}
+			: $blocked ? $text{'snapshots_delete_children'} : $text{'snapshots_'.$action} }));
+	}
+return ui_cluster(\@actions, { class => 'cloudmin-snapshot-actions' });
+}
+
 1;
