@@ -177,4 +177,28 @@ foreach my $owner (@{$usage->{'owners'} || []}) {
 return @owners ? ui_tag('div', join('', @owners), { class => 'cloudmin-storage-owners' }) : ($empty // '&mdash;');
 }
 
+# show_storage_volume_type(usage)
+# Keeps additional volume roles in an inline disclosure below the first type.
+sub show_storage_volume_type
+{
+my ($usage) = @_;
+my %kinds = map { $_->{'kind'} => 1 } @{$usage->{'owners'} || []};
+my @types;
+foreach my $kind (grep { $kinds{$_} } qw(image vm saved snapshot checkpoint backing)) {
+	# Explain why a base disk cannot be removed while another volume uses it.
+	my $label = html_escape($text{'storage_owner_'.$kind});
+	$label = ui_tag('span', $label, { title => $text{'storage_owner_backing_help'} }) if ($kind eq 'backing');
+	push(@types, $label);
+	}
+if (@types > 1) {
+	# Keep table rows compact until the user expands the remaining roles.
+	my $first = shift(@types);
+	return ui_details({ html => 1, class => 'inline inlined',
+		title => $first, content => join('<br>', @types) });
+	}
+return $types[0] if (@types);
+return html_escape($text{!$usage || !$usage->{'checked'} ? 'index_unknown'
+	: $usage->{'reason'} ? 'storage_volume_other' : 'storage_unused'});
+}
+
 1;
