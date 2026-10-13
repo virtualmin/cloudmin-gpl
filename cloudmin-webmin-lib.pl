@@ -200,4 +200,37 @@ $address = "[$address]" if ($address =~ /:/);
 return "https://$address:$port/";
 }
 
+# show_vm_webmin_options(vm, direct_url, [register], [change]) shows both actions.
+# register offers entry creation when true; it is off when omitted.
+# change binds address acceptance to the old and new IPs shown in the alert.
+sub show_vm_webmin_options
+{
+my ($vm, $url, $register, $change) = @_;
+my $html = $register ? ui_note($text{'webmin_unregistered'}) : '';
+my $navigation = $main::in{'xnavigation'} ? '&xnavigation=1' : '';
+# Keep ID and tab in the action URL only; duplicate hidden fields break parsing.
+$html .= ui_form_start('remote_access.cgi?id='.urlize($vm->{'uuid'}).
+	'&tab=webmin'.$navigation, 'post').
+	ui_hidden('token', get_image_jobs()->form_token($remote_user));
+# A missing entry is registered only when the embedded button is submitted.
+$html .= ui_hidden('register_webmin', 1) if ($register);
+my $changed = $change && %$change;
+if ($changed) {
+	# The same embedded action also confirms the displayed address change.
+	$html .= ui_hidden('webmin_old_ip', $change->{'old'}).
+		ui_hidden('webmin_new_ip', $change->{'new'});
+	}
+# Direct access is a link; only the warning button submits proxy consent.
+return $html.ui_cluster([
+	ui_action_button($text{'webmin_direct_open'}, 'primary', {href => $url,
+		icon => 'external',
+		title => $text{'webmin_direct_note'},
+		attrs => {target => '_blank', rel => 'noopener noreferrer',
+			'data-webmin-direct' => 1}}),
+	ui_action_button($text{$changed ? 'webmin_address_accept' : 'webmin_proxy_connect'},
+		'warning', {type => 'submit', value => 1, icon => 'warning',
+		name => $changed ? 'accept_webmin_address' : 'connect_webmin'}),
+	]).ui_form_end();
+}
+
 1;
