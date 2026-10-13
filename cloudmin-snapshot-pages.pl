@@ -146,4 +146,45 @@ return ui_confirmation_form('snapshots.cgi', $text{$key.'_confirm'},
 	\@hidden, [[undef, $text{$key}, $after_button]], $details);
 }
 
+# show_snapshot_history(data, token)
+# Shows chronological history, with explicit ancestry for branches and restores.
+sub show_snapshot_history
+{
+my ($data, $token) = @_;
+my %rows = map { $_->{'id'} => $_ } @{$data->{'snapshots'}};
+my (@events, $current);
+foreach my $row (reverse @{$data->{'snapshots'}}) {
+	my @badges = (snapshot_mode($row));
+	push(@badges, ui_badge($text{'snapshots_current_parent'}, 'info', { small => 1, icon => 'check' })) if ($row->{'current'});
+	push(@badges, ui_badge($text{'snapshots_recovery'}, 'warning', { small => 1 })) if ($row->{'pending'});
+	# The theme formats dates as HTML; only user-supplied text needs escaping.
+	my $date = ui_tag('span', make_date($row->{'created'}), { class => 'cloudmin-snapshot-date' });
+	my $size = defined($row->{'allocation'}) ? ui_tag('span', ui_svg_icon('hard-drive').
+		snapshot_size($row), { class => 'cloudmin-snapshot-size' }) : '';
+	# Keep notes separate from date, allocation and branch metadata.
+	my $parent = $rows{$row->{'parent'} || ''};
+	my $ancestry = $parent ? ui_tag('span', text('snapshots_based_on',
+		ui_tag('a', html_escape($parent->{'label'}), { href => '#snapshot-'.urlize($parent->{'id'}) }))) : '';
+	# Hide notes only in this view; keep the saved descriptions.
+	my $notes = ($config{'snapshot_notes'} // 1) eq '1' && $row->{'description'}
+		? ui_tag('p', html_escape($row->{'description'}),
+		{ class => 'cloudmin-snapshot-notes' }) : '';
+	my $details = ui_tag('div',
+		ui_tag('div', ui_tag('strong', html_escape($row->{'label'})).join('', @badges), { class => 'cloudmin-snapshot-name' }).
+		ui_tag('div', $date.$size.$ancestry, { class => 'cloudmin-snapshot-meta' }).$notes,
+		{ class => 'cloudmin-snapshot-details' });
+	push(@events, { text_html => ui_tag('div', $details.snapshot_actions($row, $token, $data->{'unavailable'}),
+		{ id => 'snapshot-'.urlize($row->{'id'}), class => 'cloudmin-snapshot-entry'.($row->{'current'} ? ' cloudmin-snapshot-current' : '') }),
+		state => $row->{'pending'} ? 'warning' : $row->{'current'} ? 'info' : undef });
+	$current = $row if ($row->{'current'});
+	}
+# The working state is always distinct from saved disks. Name its parent even
+# when a newer snapshot exists on another branch.
+my $working = ui_tag('strong', html_escape($text{'snapshots_you_are_here'}));
+$working .= ui_tag('span', text('snapshots_based_on',
+	ui_tag('a', html_escape($current->{'label'}), { href => '#snapshot-'.urlize($current->{'id'}) }))) if ($current);
+push(@events, { text_html => ui_tag('div', $working, { class => 'cloudmin-snapshot-working' }) });
+return ui_feed(\@events, { class => 'cloudmin-snapshot-feed' });
+}
+
 1;
