@@ -46,4 +46,24 @@ my ($server) = grep { ($_->{'cloudmin_uuid'} || '') eq ($uuid || '') &&
 return $server;
 }
 
+# vm_webmin_lock(uuid, callback) serializes changes to a guest's registration.
+# Invoke callback with no arguments and return its result after unlocking.
+sub vm_webmin_lock
+{
+my ($uuid, $code) = @_;
+# The UUID becomes part of a lock filename, so accept no path characters.
+die "Invalid virtual machine ID\n"
+	if (($uuid || '') !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/);
+my $path = "$module_config_directory/webmin-$uuid";
+lock_data_file($path);
+# Catch native errors so failed callbacks still release the lock.
+local $main::error_must_die = 1;
+my $result = eval { $code->() };
+my $error = $@;
+unlock_data_file($path);
+# Rethrow the callback error after releasing the lock.
+die $error if ($error);
+return $result;
+}
+
 1;
