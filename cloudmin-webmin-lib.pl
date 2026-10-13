@@ -233,4 +233,47 @@ return $html.ui_cluster([
 	]).ui_form_end();
 }
 
+# vm_webmin_url(vm, [change], [approval]) checks access before opening the proxy.
+# On an IP change, fill the optional change hash and return no URL until approved.
+# approval contains the old and new IPs from a token-checked POST by the caller.
+sub vm_webmin_url
+{
+my ($vm, $change, $approval) = @_;
+# A reused output hash must not retain a warning from an earlier lookup.
+%$change = () if ($change);
+# Recheck Cloudmin permissions even for callers outside the tab renderer.
+die "Access to guest Webmin is not allowed\n" if (!can_vm_webmin($vm->{'uuid'}));
+# Unmanaged guests cannot adopt a registration from an earlier creation.
+return if (($vm->{'cloudmin'}->{'job'} || '') !~ /\A[a-f0-9]{32}\z/);
+return vm_webmin_lock($vm->{'uuid'}, sub {
+	my $server = vm_webmin_server($vm->{'uuid'}, $vm->{'cloudmin'}->{'job'});
+	# No matching entry means the page should offer registration.
+	return if (!$server);
+	# Also check the native per-server permission.
+	die "Access to this Webmin server is not allowed\n" if (!servers::can_use_server($server));
+	# Require a running guest with a configured or discovered IP.
+	die "Start the virtual machine before opening Webmin\n" if (!$vm->{'active'});
+	my @addresses = Cloudmin::Software::addresses($vm->{'cloudmin'}, $vm);
+	die "The virtual machine has no reported IP address\n" if (!@addresses);
+	# Keep a usable saved address; otherwise warn before sending the saved login.
+	if (!grep { $_ eq ($server->{'ip'} || '') } @addresses) {
+		my $old = $server->{'ip'} || '';
+		my $new = $addresses[0];
+		if (!$approval || ($approval->{'old'} || '') ne $old ||
+		    ($approval->{'new'} || '') ne $new) {
+			# A changed destination or stale confirmation needs a fresh warning.
+			%$change = (old => $old, new => $new,
+				source => vm_webmin_address_source($vm, $new)) if ($change);
+			return;
+			}
+		# Confirmation cannot override either module's permission to edit entries.
+		require_access('manage');
+		die "Permission to edit Webmin servers is required\n" if (!$servers::access{'edit'});
+		$server->{'ip'} = $new;
+		vm_webmin_server_change($server, sub { servers::save_server($server); });
+		}
+	return get_webprefix().'/servers/link.cgi/'.$server->{'id'}.'/';
+	});
+}
+
 1;
