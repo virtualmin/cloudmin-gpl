@@ -7,6 +7,13 @@ use Cwd ();
 require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-config-lib.pl'));
 our %text;
 
+# storage_page_tab(value)
+# Accepts inventory tabs only, including after a form submission.
+sub storage_page_tab
+{
+return ($_[0] || '') =~ /\A(?:pools|volumes)\z/ ? $_[0] : 'overview';
+}
+
 # storage_form(action, token, [fields], [tab])
 # Keeps each action in its own POST form, outside other forms.
 sub storage_form
@@ -396,6 +403,61 @@ $html .= ui_tabs_start_tab('cloudmin_storage_pool_tabs', 'storage_pool_create').
 	ui_tag('div', show_storage_create($token, $values, $data->{'lvm_groups'}, $data->{'lvm_group_error'}),
 		{ class => 'cloudmin-storage-tab cloudmin-storage-create', 'data-storage-pool-tab' => 'create' }).
 	ui_tabs_end_tab('cloudmin_storage_pool_tabs', 'storage_pool_create');
+return $html.ui_tabs_end(1);
+}
+
+# show_storage_page(data, [token], [tab], [values], [error], [selected],
+#                   [deletion], [pool_review])
+# Builds storage tabs; a review replaces its inventory when token is present.
+# values retains form inputs, selected focuses a pool, and tab defaults to
+# overview. Without token, the page offers no changes.
+sub show_storage_page
+{
+my ($data, $token, $tab, $values, $error, $selected, $deletion, $pool_review) = @_;
+$selected ||= '';
+my @pools = @{$data->{'pools'} || []};
+$values ||= {};
+$tab = storage_page_tab($tab);
+my $html = $error ? ui_alert_box(html_escape($error), 'danger') : '';
+return $html.ui_alert_box(text('error_storage', html_escape($data->{'error'})), 'danger') if ($data->{'error'});
+$html .= ui_tabs_start([['storage_overview', $text{'storage_overview_tab'}],
+	['storage_pools', $text{'storage_pools'}], ['storage_volumes', $text{'storage_volumes'}]],
+	'cloudmin_storage_tabs', 'storage_'.$tab, 1);
+foreach my $section (qw(overview pools volumes)) {
+	my $body = ui_tag('div', ui_p(html_escape($text{'storage_'.$section.'_intro'})), { class => 'vui_ui_block' });
+	if ($section eq 'overview') {
+		# Summarize shared filesystem capacity without counting it twice.
+		$body .= show_storage_overview($data);
+		}
+	elsif ($section eq 'pools') {
+		# A pool review replaces both the list and the creation form.
+		$body .= $pool_review && $token ? show_storage_unregister($pool_review, $token)
+			: show_storage_pools($data, $token, $values, $error, $selected);
+		}
+	else {
+		# The volumes tab contains either the reviewed deletion or the inventory.
+		if ($deletion && $token) {
+			# Keep the confirmation focused on the selected volumes.
+			$body .= show_storage_delete_volumes($deletion, $token);
+			}
+		else {
+			# Explain incomplete ownership checks before showing protected rows.
+			$body .= ui_alert_box(text('storage_usage_incomplete',
+				html_escape(join(' ', @{$data->{'usage_errors'}}))), 'warn') if (@{$data->{'usage_errors'} || []});
+			# Count emitted forms, since theme callbacks can also increment
+			# Webmin's global form counter without adding another form.
+			my $formno = () = $html =~ /<form\b/g;
+			$body .= show_storage_volumes(\@pools, $token, $data->{'local'}, $formno);
+			}
+		}
+	# Fixed positional widths apply only when the volume table has every column.
+	$html .= ui_tabs_start_tab('cloudmin_storage_tabs', 'storage_'.$section).
+		ui_tag('div', $body, { class => 'cloudmin-storage-tab'.
+			($section eq 'volumes' && scalar(view_selection('storage_volume_columns')) < 7
+			? ' cloudmin-storage-compact-columns' : ''), 'data-storage-tab' => $section,
+			$section eq 'volumes' ? (id => 'cloudmin-storage-volumes') : () }).
+		ui_tabs_end_tab('cloudmin_storage_tabs', 'storage_'.$section);
+	}
 return $html.ui_tabs_end(1);
 }
 

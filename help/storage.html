@@ -1,0 +1,92 @@
+<header>Storage</header>
+
+<p>The <b>Overview</b> tab shows pool and volume counts, available space and a
+compact pool table. Select a pool name to open its management card. The space
+total counts each local filesystem once, even when several pools share it.
+If a filesystem cannot be identified or a backend is not filesystem-based,
+refer to the space shown for each pool instead.</p>
+
+<p>The <b>Storage pools</b> tab opens <b>Existing Pools</b>, which shows storage
+locations, available space and start-at-boot settings. Local persistent
+directory pools have Start, Stop and start-at-boot controls. Other storage
+backends remain visible for inspection.</p>
+
+<p>Open the <b>Create Storage Pool</b> tab to register an existing directory or create a
+new one. Enter a unique pool name and an absolute path whose parent directory
+already exists. The path must not overlap another pool. Existing files and
+permissions are preserved. New pools start immediately.</p>
+
+<p>For <b>LVM volume group</b>, select an existing group that has not already
+been registered. Registration makes the group available to Cloudmin without
+formatting its disks. Each thin pool in the group appears as a separate
+destination. Use <b>Manage</b> to open Webmin's Logical Volume Management module,
+where you can create or extend groups and thin pools. Groups created with LVM
+command-line tools can also be registered.</p>
+
+<p>Standard LVM disks reserve their full capacity when created. LVM-thin disks
+allocate space as data is written, so their combined capacity can exceed the
+pool's physical space.
+Monitor both data and metadata usage and extend the thin pool before either
+fills. Cloudmin refuses new allocations at 95% data usage or 90% metadata usage
+and checks these limits while copying data into thin volumes. These checks do
+not prevent a running guest from filling its pool. Thin pools must have block
+zeroing enabled.</p>
+
+<p>Both backends support raw guest disks. Shut down the virtual machine before
+growing an LVM disk. Imported images, installation media and UEFI variable
+files use a file storage pool. Processing an LVM disk also requires temporary
+space on the host; free-space checks use its full capacity even when the copy
+is sparse.</p>
+
+<p>Choose a location accessible to libvirt and the virtual machines. Cloudmin
+does not change permissions on existing directories to grant access.</p>
+
+<p>Stopping a pool keeps its files but makes its volumes unavailable for new
+Cloudmin operations until the pool starts again. Stop virtual machines using
+the pool and finish or cancel pending image imports first. Start at boot is a
+separate setting; it does not start or stop the pool immediately.</p>
+
+<p><b>Unregister Pool</b> removes the saved registration for a directory or
+parent LVM pool after checking whether it is still in use. Files, logical volumes,
+volume groups and thin pools remain intact. For an active pool, the confirmation
+page offers <b>Stop and Unregister</b>. Stopping an LVM pool deactivates every
+logical volume in the group, including thin volumes. Host mounts, swap, open
+volumes and other block devices using those volumes prevent the stop. Register
+the group again to use it in Cloudmin. LVM-thin destinations cannot be
+unregistered separately.</p>
+
+<p>If a volume group no longer exists, Cloudmin can remove its inactive
+registration after checking for references. Cloudmin must be able to read the
+LVM inventory and confirm that the group is absent.</p>
+
+<p>The API and CLI provide the same operations and permission checks.
+Use <tt>cloudmin list-pools</tt> and <tt>cloudmin list-volumes</tt> to list storage,
+<tt>cloudmin create-pool</tt> to register storage, and
+<tt>cloudmin delete-volume --review</tt> or
+<tt>cloudmin unregister-pool --review</tt> to check whether removal is allowed.
+Add <tt>--stop</tt> to review or confirm removal of an active pool.
+Use <tt>cloudmin help</tt> followed by the command name for its required options.</p>
+
+<p>The <b>Volumes</b> tab lists disks and images in active pools. <b>Used by</b>
+links to the virtual machines that use a volume, including stopped guests.
+<b>Type</b> identifies imported images, virtual machine volumes and other references.
+Snapshots, saved states and other volumes that use a disk as a backing volume
+also prevent deletion. Virtual size is the capacity presented to the virtual
+machine; allocated space is the storage currently used on the host. Inactive
+pools cannot report their volumes or free space. Directory pools on the same
+filesystem share its capacity; the displayed capacity is not a pool quota.</p>
+
+<p>Unused regular files in local persistent directory pools and unused LVM
+volumes can be selected. Host mounts, swap and snapshot volumes are protected.
+Choose <b>Delete Selected Volumes</b>, review their names, locations and sizes,
+then confirm permanent deletion. Cloudmin rechecks ownership and volume identity
+before deleting each volume and reports any failures.
+Manage imported images in Image Manager and attached disks through their virtual machine.
+Pending operations, unreadable ownership records and inactive pools prevent
+deletion until their dependencies can be checked.</p>
+
+<p>If creation fails, Cloudmin removes its new pool definition where possible
+and leaves the directory and any files intact. Correct the reported problem
+before trying again.</p>
+
+<footer>
