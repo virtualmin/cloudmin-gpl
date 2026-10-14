@@ -230,4 +230,52 @@ die "Enter an initial password\n" if (!$hash);
 return $hash;
 }
 
+# get_public_vm_job(job)
+# Exposes progress and identity without provisioning credentials.
+sub get_public_vm_job
+{
+my ($job) = @_;
+my $request = $job->{'request'};
+my %deployment;
+# Use the saved creation settings, including when reopening an older job.
+if (($request->{'operation'} || 'create') eq 'create' && $request->{'image_name'}) {
+	my $installer = ($request->{'install_source'} || '') eq 'iso';
+	$deployment{'image_name'} = $request->{'image_name'};
+	# Match the form's Virtualmin, script or package summary without exposing
+	# script contents or license credentials. Installer ISOs have no guest setup.
+	$deployment{'software_name'} = !$installer &&
+		($request->{'software'} || '') =~ /\Avirtualmin-(?:gpl|pro)\z/
+		? Cloudmin::Presets::template_name($request, {})
+		: $text{!$installer && Cloudmin::Software::enabled($request)
+			? (Cloudmin::Software::uses_scripts($request) ? 'vm_summary_setup' : 'vm_summary_packages') : 'vm_summary_none'};
+}
+# Include the attachment-change flag for feedback after the editor redirects.
+# It reports a hardware edit, not a change to the guest's IP configuration.
+return { (map { $_ => $job->{$_} }
+	qw(id state phase events error cleanup_pending cleanup_warning
+	   audit_warning created updated cancel cleanup_created image_progress network_changed)),
+	%deployment,
+	name => $job->{'request'}->{'name'},
+	uuid => $job->{'request'}->{'uuid'},
+	operation => $job->{'request'}->{'operation'} || 'create',
+	# Workers may revise the planned scope and
+	# deferred groups after queueing.
+	scope => $job->{'scope'} || $job->{'request'}->{'scope'},
+	deferred_fields => $job->{'deferred_fields'} || $job->{'request'}->{'deferred_fields'} || [],
+	# Copy jobs can roll back after starting; hardware edits cannot.
+	can_cancel => (!$job->{'request'}->{'operation'} ||
+		$job->{'request'}->{'operation'} =~ /\A(?:clone|capture_image|backup|backup_inspect|restore)\z/ ||
+		!$job->{'resources'}->{'started'}) ? 1 : 0,
+	# Committed guests remain accessible even if later software setup fails.
+	vm_created => $job->{'resources'}->{'software'} && $job->{'resources'}->{'domain'} ? 1 : 0,
+	# Registered guests open Remote Access; others link to their own HTTPS page.
+	software_url => ($job->{'request'}->{'software'} || '') =~ /\Avirtualmin-(?:gpl|pro)\z/ && $job->{'state'} eq 'complete'
+		? $job->{'request'}->{'webmin_register'}
+			? 'remote_access.cgi?id='.urlize($job->{'request'}->{'uuid'}).'&tab=webmin'
+			: 'https://'.$job->{'request'}->{'hostname'}.':10000/' : undef,
+	# Registration failure leaves the guest usable and offers a retry.
+	webmin_warning => $job->{'webmin_warning'},
+	start => $job->{'request'}->{'start'} };
+}
+
 1;
