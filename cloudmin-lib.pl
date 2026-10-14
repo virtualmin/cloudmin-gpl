@@ -180,4 +180,54 @@ foreach my $server (@servers) {
 return defined($id) ? $result[0] : \@result;
 }
 
+# generate_random_password()
+# Uses 144 bits from the OS random source without storing the plaintext
+# password.
+sub generate_random_password
+{
+return substr(MIME::Base64::encode_base64(pack('H*',
+	Cloudmin::Images::generate_id()), ''), 0, 24);
+}
+
+# get_vm_password_hash(jobs, input, [password])
+# Hashes a new password with Webmin, or loads the hash retained for this form.
+# Returns undef for ISO installs and key-only cloud accounts.
+sub get_vm_password_hash
+{
+my ($jobs, $input, $password) = @_;
+# Installer credentials are entered inside the guest, never retained here.
+return undef if (($input->{'install_source'} || '') =~ /\A\s*iso\s*\z/);
+# Key-only accounts have no password to hash or recover from this form.
+return undef if (($input->{'auth_type'} || 'keys') eq 'keys');
+# Do not interpret an unknown authentication mode as password access.
+die "Select an authentication method\n"
+	if (($input->{'auth_type'} || '') !~ /\A(?:password|both)\z/);
+my $id = substr(sha256_hex('vm-create:'.Cloudmin::Attempts::key(@$input{qw(token attempt)})), 0, 32);
+my $username = $input->{'username'} || '';
+$username =~ s/^\s+|\s+$//g;
+if (defined($password) && length($password)) {
+	# Do not trim passwords or impose a complexity rule on the initial
+	# account.
+	die "Enter a password of up to 1024 characters without line breaks\n"
+		if (ref($password) || length($password) > 1024 ||
+		$password =~ /[\x00\r\n]/);
+	foreign_require('useradmin', 'user-lib.pl');
+	my $salt = '$6$rounds=500000$'.
+		substr(Cloudmin::Images::generate_id(), 0, 16).'$';
+	# JSON decodes Unicode; crypt expects the same UTF-8 bytes as SSH login.
+	utf8::encode($password) if (utf8::is_utf8($password));
+	my $hash = useradmin::encrypt_sha512($password, $salt);
+	# Reject crypt failures instead of storing a disabled or
+	# malformed hash.
+	die "Password hashing is unavailable on this host\n"
+		if ($hash !~ /\A\$6\$rounds=500000\$[a-f0-9]{16}\$[.\/A-Za-z0-9]{86}\z/);
+	$jobs->save_credential($id, $remote_user, $username, $hash);
+	return $hash;
+	}
+my $hash = $jobs->credential($id, $remote_user, $username);
+# A reused form can omit plaintext only after retaining a matching hash.
+die "Enter an initial password\n" if (!$hash);
+return $hash;
+}
+
 1;
