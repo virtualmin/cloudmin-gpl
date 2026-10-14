@@ -27,6 +27,15 @@ return Cloudmin::Snapshots->new(jobs => get_vm_jobs(),
 	adapter => sub { get_libvirt(!is_readonly_mode()) });
 }
 
+# get_vm_image_service() loads the Pro capture service only when installed.
+sub get_vm_image_service
+{
+die "Creating images from virtual machines requires Cloudmin Pro\n"
+	if (!-r "$module_root_directory/pro/VMImages.pm");
+require "$module_root_directory/pro/VMImages.pm";
+return Cloudmin::VMImages->new(%{get_vm_service()});
+}
+
 # get_vm_jobs()
 # Returns the private SQLite job store with Webmin locks and audit callbacks.
 sub get_vm_jobs
