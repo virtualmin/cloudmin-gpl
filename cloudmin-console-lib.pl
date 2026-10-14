@@ -82,4 +82,52 @@ else {
 	}
 }
 
+# start_console(vm, [mode])
+# Allocates an authenticated route to a fixed backend for this guest only.
+# mode defaults to graphical; serial opens the VM's default PTY console.
+sub start_console
+{
+my ($vm, $mode) = @_;
+check_console($vm, $mode);
+$mode = console_mode($mode);
+# Fail before allocating a route if the host cannot launch an isolated relay.
+die "Consoles require systemd and Python 3\n"
+	if (!has_command('/usr/bin/systemd-run') ||
+	    !has_command('/usr/bin/python3'));
+# The backend binds the route to the browser's authenticated session.
+die "Log in to Webmin before opening a console\n" if (!$main::session_id);
+eval { require Net::WebSocket::Server; 1 } ||
+	die "Net::WebSocket::Server is required\n";
+my $wrapper = "$module_config_directory/console-server.pl";
+# Webmin wrappers restore the module configuration for detached processes.
+create_wrapper($wrapper, $module_name, 'console-server.pl') if (!-x $wrapper);
+my $port = allocate_miniserv_websocket($module_name);
+# Name the log by port, as Webmin's terminal does, so ports reuse log files.
+my $log = "$module_var_directory/console-$port.log";
+my $url;
+my $ok = eval {
+	# Webmin file errors must reach route cleanup, including a full disk.
+	local $main::error_must_die = 1;
+	write_file_contents($log, '');
+	chmod(0600, $log) || die "Cannot protect the console log: $!\n";
+	# Only the root setup process receives the CGI session in its environment.
+	local $ENV{'SESSION_ID'} = $main::session_id;
+	my $command = join(' ',
+		map { quote_path($_) } ($wrapper, $port, $vm->{'uuid'}, $mode));
+	# A busy serial port fails startup; cleanup below removes its route too.
+	die($mode eq 'serial' ? "$text{'console_serial_failed'}\n" : "Cannot start the console\n")
+		if (system_logged("$command >".quote_path($log).
+		" 2>&1 </dev/null"));
+	$url = get_miniserv_websocket_url($port, undef, $module_name);
+	1;
+	};
+if (!$ok) {
+	# A failed launch must not leave a proxy route pointing at an unused port.
+	my $error = $@;
+	remove_miniserv_websocket($port, $module_name);
+	die $error;
+	}
+return { socket_url => $url };
+}
+
 1;
