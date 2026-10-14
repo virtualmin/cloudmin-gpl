@@ -17,6 +17,16 @@ require "$module_root_directory/lib/Cloudmin/VMManage.pm";
 require "$module_root_directory/cloudmin-presets-lib.pl";
 require "$module_root_directory/cloudmin-webmin-lib.pl";
 
+# get_snapshot_manager()
+# Snapshot jobs share the VM journal and honor the module's read-only ACL.
+sub get_snapshot_manager
+{
+require "$module_root_directory/lib/Cloudmin/Snapshots.pm";
+return Cloudmin::Snapshots->new(jobs => get_vm_jobs(),
+	images => get_image_jobs(), readonly => is_readonly_mode(),
+	adapter => sub { get_libvirt(!is_readonly_mode()) });
+}
+
 # get_vm_jobs()
 # Returns the private SQLite job store with Webmin locks and audit callbacks.
 sub get_vm_jobs
