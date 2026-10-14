@@ -776,4 +776,17 @@ while (1) {
 	}
 }
 
+# recover_vm_jobs()
+# Resumes unfinished jobs when a host administrator with write access visits.
+sub recover_vm_jobs
+{
+# Read-only and delegated page visits must not resume jobs that change the host.
+return if (is_readonly_mode() || !can_access('host'));
+my $jobs = get_vm_jobs();
+# Host recovery must also reconcile jobs whose original Webmin user was removed.
+foreach my $job (@{$jobs->list(undef, 1)}) {
+	$jobs->spawn($job->{'id'}, sub { run_vm_job($_[0]); });
+	}
+}
+
 1;
