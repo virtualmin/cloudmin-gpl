@@ -27,6 +27,21 @@ return Cloudmin::Snapshots->new(jobs => get_vm_jobs(),
 	adapter => sub { get_libvirt(!is_readonly_mode()) });
 }
 
+# get_vm_manager()
+# Shares the creation journal and inventory with VM management.
+sub get_vm_manager
+{
+return Cloudmin::VMManage->new(jobs => get_vm_jobs(),
+	images => get_image_jobs(), adapter => sub { get_libvirt(1) });
+}
+
+# get_clone_service() shares creation's workers, inventory and private journal.
+sub get_clone_service
+{
+require "$module_root_directory/lib/Cloudmin/Clones.pm";
+return Cloudmin::Clones->new(%{get_vm_service()});
+}
+
 # get_vm_image_service() loads the Pro capture service only when installed.
 sub get_vm_image_service
 {
@@ -34,6 +49,29 @@ die "Creating images from virtual machines requires Cloudmin Pro\n"
 	if (!-r "$module_root_directory/pro/VMImages.pm");
 require "$module_root_directory/pro/VMImages.pm";
 return Cloudmin::VMImages->new(%{get_vm_service()});
+}
+
+# run_vm_job(id)
+# Dispatches stored requests without trusting a caller's operation type.
+sub run_vm_job
+{
+my ($id) = @_;
+my $job = get_vm_jobs()->get($id) || die "Job not found\n";
+# Backup and restore jobs share the VM journal and reservations.
+if (($job->{'request'}->{'operation'} || '') =~ /\A(?:backup|backup_inspect|restore)\z/) {
+	require "$module_root_directory/cloudmin-backups-lib.pl";
+	return get_backup_service()->run($id);
+}
+# Captures share clone cleanup but publish through the Pro image service.
+return get_vm_image_service()->run($id)
+	if (($job->{'request'}->{'operation'} || '') eq 'capture_image');
+# Clone recovery must restore the source before cleaning up its destination.
+return get_clone_service()->run($id)
+	if (($job->{'request'}->{'operation'} || '') eq 'clone');
+return get_snapshot_manager()->run($id)
+	if (($job->{'request'}->{'operation'} || '') =~ /\Asnapshot_/);
+return $job->{'request'}->{'operation'}
+	? get_vm_manager()->run($id) : get_vm_service()->run($id);
 }
 
 # get_vm_jobs()
