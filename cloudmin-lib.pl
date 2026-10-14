@@ -114,6 +114,471 @@ return Cloudmin::VMs->new(jobs => get_vm_jobs(),
 		});
 }
 
+# call_vm_api(version, action, input)
+# Runs v1 VM operations under module ACLs; changes also require signed tokens.
+sub call_vm_api
+{
+my ($version, $action, $input) = @_;
+# Remove plaintext from the caller's form hash before any logging or rendering.
+my $password = delete($input->{'password'});
+# Do not retain a password confirmation supplied by an API client
+# either.
+delete($input->{'password_again'});
+# License credentials are per submission and never echoed by review or forms.
+my $serial = delete($input->{'virtualmin_serial'});
+my $license = delete($input->{'virtualmin_key'});
+# Reject unsupported API semantics before opening any job store.
+die "Unsupported API version\n" if ($version ne '1');
+# Keep license status and repair reachable while ordinary changes are blocked.
+return call_license_api($action, $input)
+	if ($action =~ /\A(?:license|check_license|change_license|deregister_license)\z/);
+# Machine summaries are also available to delegated viewers. Filter before
+# reading details; the remaining host APIs retain their administrator check.
+return get_api_machines($input) if ($action eq 'machines');
+# Delegate only the listed power actions; a token never substitutes for a grant.
+my $power = $action =~ /\A(?:start|shutdown|reboot|suspend|resume|reset|force_off|autostart)\z/;
+# Power and password changes each need their own grant and exact VM assignment.
+# Check these before opening stores, even when the caller has a valid token.
+if ($power || $action eq 'reset_password') {
+	die "Virtual machine changes are disabled in read-only mode\n" if (is_readonly_mode());
+	require_access($action eq 'reset_password' ? 'password'
+		: power_permission($action), $input->{'id'});
+	}
+# Return delegated grants without reading host resources or opening job stores.
+elsif ($action eq 'options' && !can_access('host')) {
+	return { permissions => access_policy()->{'grants'} };
+	}
+# Settings, jobs and all other actions remain host-administrator operations.
+else {
+	require_access('host');
+	}
+# Host networking uses its own journal and must remain recoverable while pending.
+if ($action =~ /\A(?:bridges|bridge_status|bridge_remove_review|bridge_remove|bridge_confirm|bridge_rollback)\z/) {
+	require "$module_root_directory/cloudmin-network-lib.pl";
+	return call_bridge_api($action, $input);
+	}
+# Host storage uses the page's service, locks and audit trail.
+if ($action =~ /\A(?:storage|register_pool|pool_start|pool_stop|pool_autostart|volume_review|delete_volume|pool_review|unregister_pool)\z/) {
+	require "$module_root_directory/cloudmin-storage-lib.pl";
+	return call_storage_api($action, $input);
+	}
+my $service = get_vm_service();
+my $jobs = $service->{'jobs'};
+# Public inventory excludes the saved credentials used by backup transports.
+if ($action eq 'backups') {
+	require "$module_root_directory/cloudmin-backups-lib.pl";
+	return get_backup_service()->inventory();
+}
+if ($action eq 'image_options') {
+	# Resolve capture choices through the same Pro gate as submission.
+	return get_vm_image_service()->choices($input->{'id'});
+}
+if ($action eq 'clone_options') {
+	# Source choices expose no secure domain XML or provisioning credentials.
+	my $choices = get_clone_service()->choices($input->{'id'});
+	$choices->{'presets'} = { map { $_ => get_presets()->list($_) } qw(template plan) };
+	return $choices;
+}
+if ($action eq 'snapshots') {
+	# Inventory contains labels and relationships, never secure guest XML.
+	return get_snapshot_manager()->inventory($input->{'id'});
+	}
+if ($action eq 'settings') {
+	# The editor receives saved settings, never the private libvirt XML.
+	return get_vm_manager()->settings($input->{'id'});
+	}
+if ($action eq 'options') {
+	# Reading form choices does not require a signed token.
+	return { %{$service->options()}, presets => {
+		map { $_ => get_presets()->list($_) } qw(template plan) } };
+	}
+if ($action eq 'status') {
+	# Host administrators can inspect jobs started by other administrators.
+	my $job = $jobs->get($input->{'job'}) ||
+		die "Job not found\n";
+	return get_public_vm_job($job);
+	}
+if ($action eq 'list') {
+	# Include every owner's jobs, exposing only public progress fields.
+	my %seen;
+	return [ map { get_public_vm_job($_) } grep { !$seen{$_->{'id'}}++ }
+		@{$jobs->list_pending()}, @{$jobs->list()} ];
+	}
+# Every remaining action may change guest state or retain credentials.
+die "Virtual machine changes are disabled in read-only mode\n"
+	if (is_readonly_mode());
+# These actions complete or clean up accepted work. All other new host writes
+# use the same permission gate as the browser, including direct raw API calls.
+require_access('manage') if (!$power && $action ne 'reset_password' &&
+	$action !~ /\A(?:cancel|cancel_cleanup|recover|discard)\z/);
+$service->{'images'}->check_token($remote_user, $input->{'token'});
+# Keep a reviewed bridge conversion isolated from newly submitted VM changes.
+if (-f "$module_var_directory/networking/bridge.json") {
+	require "$module_root_directory/cloudmin-network-lib.pl";
+	die "Wait for the pending bridge change to finish\n" if (get_host_network()->pending());
+	}
+# Backup operations validate and reserve their inputs before starting workers.
+if ($action =~ /\A(?:backup|backup_inspect|restore)\z/) {
+	require "$module_root_directory/cloudmin-backups-lib.pl";
+	return submit_backup_operation($action, $input);
+}
+# Password changes finish in this request, without a recoverable job.
+if ($action eq 'reset_password') {
+	# callback() holds the host lock to exclude concurrent VM reservations.
+	return $jobs->lock('create-host', sub {
+		# Reject malformed IDs and guests reserved by a pending management job.
+		my $id = $input->{'id'};
+		die "Invalid virtual machine ID\n" if (!defined($id) || ref($id) ||
+			$id !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+		$jobs->assert_guest_available($id);
+		# Call libvirt directly, keeping secrets out of jobs and command lines.
+		my $adapter = get_libvirt(1);
+		my $vm = $adapter->get_domain($id, 1) || die "Virtual machine not found\n";
+		$adapter->set_user_password($id, $input->{'username'}, $password);
+		# Audit the account and VM only; libvirt errors also omit the password.
+		webmin_log($action, 'vm', $vm->{'uuid'}, {
+			name => $vm->{'name'}, username => $input->{'username'} });
+		return { id => $vm->{'uuid'}, name => $vm->{'name'}, action => $action };
+		});
+	}
+if ($action =~ /\A(?:snapshot_create|snapshot_restore|snapshot_delete|power_cycle|update|delete|delete_disk|grow_disk|add_disk|attach_disk|detach_disk|
+		add_interface|update_interface|remove_interface|change_media)\z/x) {
+	# A repeated form returns its existing job, including after VM deletion.
+	my $id = substr(sha256_hex('vm-manage:'.$action.':'.Cloudmin::Attempts::key(@$input{qw(token attempt)})),
+		0, 32);
+	my %fields = %$input;
+	delete(@fields{qw(token attempt action version)});
+	my $fingerprint = sha256_hex(convert_to_json(\%fields, 0, 1, 1));
+	my $job = $jobs->lock('create-host', sub {
+		my $existing = $jobs->get($id, $remote_user);
+		# Reconnecting to an attempt requires identical settings.
+		if ($existing) {
+			die "This form has already submitted different settings; reload the page\n"
+				if ($existing->{'request'}->{'fingerprint'} ne $fingerprint);
+			return $existing;
+			}
+		my $manager = $action =~ /\Asnapshot_/ ? get_snapshot_manager() : get_vm_manager();
+		$jobs->assert_guest_available($input->{'id'} || '');
+		# Validate the requested change before reserving the guest.
+		my $request = $manager->prepare($action, $input, $id);
+		$jobs->assert_guest_available($request->{'uuid'});
+		$request->{'fingerprint'} = $fingerprint;
+		return $jobs->submit($id, $remote_user,
+			'guest:'.$request->{'uuid'}, $request);
+		});
+	$jobs->spawn($id, sub { run_vm_job($_[0]); })
+		if ($job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
+	return get_public_vm_job($job);
+	}
+if ($action =~ /\A(?:start|shutdown|reboot|suspend|resume|reset|force_off|autostart)\z/) {
+	# Serialize power changes with edits that require a stable guest state.
+	return $jobs->lock('create-host', sub {
+		# Address guests by UUID so a stale form cannot control a reused name.
+		my $id = $input->{'id'};
+		die "Invalid virtual machine ID\n" if (!defined($id) || ref($id) ||
+			$id !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+		my $adapter = get_libvirt(1);
+		$jobs->assert_guest_available($id, $action);
+		my $vm = $adapter->get_domain($id, 1) || die "Virtual machine not found\n";
+		if ($action eq 'autostart') {
+			# Send the desired value, rather than toggling on a repeated
+			# submission.
+			my $enabled = $input->{'enabled'};
+			# Explicit booleans make retries safe and reject
+			# ambiguous form values.
+			die "Select whether to start at boot\n"
+				if (!defined($enabled) || ref($enabled) ||
+				$enabled !~ /\A[01]\z/);
+			# A transient domain has no saved definition to
+			# autostart at host boot.
+			die "Only persistent virtual machines can start at boot\n"
+				if (!$vm->{'persistent'});
+			$adapter->set_domain_autostart($id, $enabled);
+			}
+		elsif ($action eq 'force_off' || $action eq 'reset') {
+			# Both abrupt power operations require
+			# confirmation and an active guest.
+			die($action eq 'reset' ? "Confirm hard reset\n" : "Confirm force power off\n")
+				if (!defined($input->{'confirm'}) || ref($input->{'confirm'}) ||
+				$input->{'confirm'} ne '1');
+			die "The virtual machine is already stopped\n" if (!$vm->{'active'});
+			$action eq 'reset' ? $adapter->reset_domain($id) : $adapter->destroy_domain($id);
+			}
+		elsif ($action eq 'resume') {
+			# Resume applies only to a paused guest, not a stopped or sleeping OS.
+			die "The virtual machine must be paused\n" if ($vm->{'state'} ne 'paused');
+			$adapter->resume_domain($id);
+			}
+		else {
+			# Check fresh state; libvirt still handles changes made
+			# concurrently.
+			die "The virtual machine is already active\n"
+				if ($action eq 'start' && $vm->{'active'});
+			# Shutdown and reboot require a guest that can receive
+			# the request.
+			die "The virtual machine must be running\n"
+				if ($action ne 'start' &&
+				$vm->{'state'} !~ /\A(?:running|blocked)\z/);
+			my %methods = (start => 'start_domain',
+				shutdown => 'shutdown_domain',
+				reboot => 'reboot_domain', suspend => 'suspend_domain');
+			my $method = $methods{$action};
+			$adapter->$method($id);
+			}
+		webmin_log($action, 'vm', $vm->{'uuid'}, {
+			name => $vm->{'name'},
+				($action eq 'autostart'
+				? (enabled => $input->{'enabled'}) : ()) });
+		require "$module_root_directory/cloudmin-status-lib.pl";
+		notify_status_changed($id);
+		return { id => $vm->{'uuid'}, name => $vm->{'name'},
+			action => $action };
+		});
+	}
+if ($action eq 'review') {
+	# API clients may validate settings without submitting a creation job.
+	# API requests use presets only when explicitly selected.
+	$input = get_presets()->resolve($input) if ($input->{'template'} || $input->{'plan'});
+	my $hash = get_vm_password_hash($jobs, $input, $password);
+	my $review = $service->prepare($input, undef, $hash);
+	# The browser receives only a status flag, never the retained hash.
+	$review->{'password_set'} = delete($review->{'password_hash'}) ? 1 : 0;
+	return $review;
+	}
+if ($action eq 'capture_image') {
+	# Retrying the same form returns its job; different values need a new form.
+	my $capture = get_vm_image_service();
+	my $id = substr(sha256_hex('vm-image:'.Cloudmin::Attempts::key(@$input{qw(token attempt)})), 0, 32);
+	my %fields = %$input;
+	delete(@fields{qw(token attempt action version)});
+	my $fingerprint = sha256_hex(convert_to_json(\%fields, 0, 1, 1));
+	my $job = $jobs->lock('create-host', sub {
+		my $existing = $jobs->get($id, $remote_user);
+		if ($existing) {
+			# Reusing an attempt is safe only when its submitted
+			# settings match.
+			die "This form has already submitted different image settings; reload the page\n"
+				if ($existing->{'request'}->{'fingerprint'} ne $fingerprint);
+			return $existing;
+		}
+		# Reserve the source before a competing clone, backup or edit
+		# can start.
+		$jobs->assert_guest_available($input->{'id'} || '');
+		my $request = $capture->prepare($input, $id);
+		$request->{'fingerprint'} = $fingerprint;
+		return $jobs->submit($id, $remote_user, 'guest:'.$request->{'source_uuid'}, $request);
+	});
+	# Repeated submissions may relaunch unfinished work, never finished jobs.
+	$jobs->spawn($id, sub { run_vm_job($_[0]); })
+		if ($job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
+	return get_public_vm_job($job);
+}
+if ($action eq 'clone') {
+	# Retried submissions retain the original immutable request and destination.
+	my $id = substr(sha256_hex('vm-clone:'.Cloudmin::Attempts::key(@$input{qw(token attempt)})), 0, 32);
+	my %fields = %$input;
+	delete(@fields{qw(token attempt action version)});
+	my $fingerprint = sha256_hex(convert_to_json(\%fields, 0, 1, 1));
+	my $job = $jobs->lock('create-host', sub {
+		my $existing = $jobs->get($id, $remote_user);
+		# Return the accepted clone job without admitting duplicate work.
+		if ($existing) {
+			die "This form has already submitted different clone settings; reload the page\n"
+				if ($existing->{'request'}->{'fingerprint'} ne $fingerprint);
+			return $existing;
+		}
+		$jobs->assert_guest_available($input->{'id'} || '');
+		my $resolved = get_presets()->resolve($input, 'clone');
+		$resolved->{'auth_type'} ||= 'password';
+		$resolved->{'host_ssh_key'} = ($config{'machine_host_ssh_key'} // '1') eq '1' ? 1 : 0
+			if (!exists($resolved->{'host_ssh_key'}));
+		my $hash = ($resolved->{'clone_mode'} || 'prepared') eq 'prepared'
+			? get_vm_password_hash($jobs, $resolved, $password) : undef;
+		my $request = get_clone_service()->prepare($resolved, $id, $hash);
+		# Reserve both machines before discarding a retained form credential.
+		$request->{'fingerprint'} = $fingerprint;
+		my $created = $jobs->submit($id, $remote_user, 'vm:'.$request->{'name'}, $request);
+		my $draft = substr(sha256_hex('vm-create:'.Cloudmin::Attempts::key(@$input{qw(token attempt)})), 0, 32);
+		$jobs->delete_credential($draft, $remote_user);
+		return $created;
+	});
+	$jobs->spawn($id, sub { run_vm_job($_[0]); })
+		if ($job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
+	return get_public_vm_job($job);
+}
+if ($action eq 'create') {
+	# Repeated submissions of one attempt must return the same creation job.
+	my $id = substr(sha256_hex('vm-create:'.Cloudmin::Attempts::key(@$input{qw(token attempt)})), 0, 32);
+	my $job = $jobs->get($id, $remote_user);
+	if ($job) {
+		# Reattach a preset request using its saved values, even after an edit
+		# or deletion of the preset. Explicitly changed selections still fail.
+		foreach my $kind (qw(template plan)) {
+			die "This form has already created a virtual machine. Reload the page\n"
+				if (($input->{$kind} || '') ne ($job->{'request'}->{$kind} || ''));
+			}
+		# Reconnecting keeps the original name, image and installation source.
+		# A clean failure can be retried with a new attempt.
+		my %identity;
+		foreach my $field (qw(name image install_source)) {
+			# Match the text normalization used when the request was
+			# prepared.
+			my $value = defined($input->{$field}) &&
+				!ref($input->{$field}) ? $input->{$field} :
+				!exists($input->{$field}) && $input->{'template'} && $field ne 'name'
+				? $job->{'request'}->{$field} : '';
+			$value =~ s/^\s+|\s+$//g;
+			$identity{$field} = $value;
+			}
+		# Older clients and jobs predate the source selector and use cloud images.
+		$identity{'install_source'} ||= 'cloud';
+		die "This form has already created ".
+			$job->{'request'}->{'name'}.
+			". Reload the page to create another virtual machine\n"
+			if ($identity{'name'} ne $job->{'request'}->{'name'} ||
+			    $identity{'image'} ne $job->{'request'}->{'image'} ||
+			    $identity{'install_source'} ne ($job->{'request'}->{'install_source'} || 'cloud'));
+		}
+	else {
+		# Check current inventory before reserving a name or allocating
+		# resources.
+		$job = $jobs->lock('create-host', sub {
+		# Save resolved defaults and credentials with this attempt.
+		$input = get_presets()->resolve($input) if ($input->{'template'} || $input->{'plan'});
+		my $hash = get_vm_password_hash($jobs, $input, $password);
+		my $request = $service->prepare($input, undef, $hash);
+		# Shared template defaults must not grant delegated creators host logins.
+		$request->{'webmin_register'} = 0 if (($remote_user || '') ne 'root');
+		# Registering a guest must not bypass the host's Servers Index grants.
+		require_webmin_registration() if ($request->{'webmin_register'});
+		# Retain the submitted login privately until Servers Index registration.
+		# Key-only accounts have no usable Unix password to reuse.
+		$request->{'webmin_password'} = $password if ($request->{'webmin_register'} &&
+			($request->{'auth_type'} || 'keys') ne 'keys' && defined($password) && length($password));
+		my $credentials = Cloudmin::Software::credentials($request->{'software'}, $serial, $license);
+		@{$request}{keys %$credentials} = values %$credentials;
+		die "Enable managed virtual machine SSH keys in Module Configuration for guest software setup\n"
+			if (Cloudmin::Software::enabled($request) && ($config{'machine_host_ssh_key'} // '1') ne '1');
+		# Keep IDs for retry matching; workers use the resolved request only.
+		$request->{$_} = $input->{$_} for grep { $input->{$_} } qw(template plan);
+		my $hex = Cloudmin::Images::generate_id();
+		$request->{'uuid'} = join('-', substr($hex, 0, 8),
+			substr($hex, 8, 4),
+			'4'.substr($hex, 13, 3), '8'.substr($hex, 17, 3),
+			substr($hex, 20, 12));
+		# Module configuration controls managed SSH access for cloud images.
+		# ISO installers configure access inside the guest instead.
+		$request->{'host_ssh_key'} =
+			($request->{'install_source'} || '') ne 'iso' &&
+			($config{'machine_host_ssh_key'} // '1') eq '1' ? 1 : 0;
+		$request->{'console_password'} =
+			substr(Cloudmin::Images::generate_id(), 0, 8);
+		my $created = $jobs->submit($id, $remote_user,
+			'vm:'.$request->{'name'}, $request);
+		$jobs->delete_credential($id, $remote_user);
+		return $created;
+		});
+		}
+	# Reattach unfinished work without rerunning a finished job.
+	$jobs->spawn($id, sub { get_vm_service()->run($_[0]); })
+		if ($job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
+	return get_public_vm_job($job);
+	}
+if ($action eq 'discard') {
+	# Host administrators may release a proven partial edit by any owner.
+	my $job = $jobs->get($input->{'job'}) || die "Job not found\n";
+	get_vm_manager()->discard_change($job->{'id'});
+	return get_public_vm_job($jobs->get($job->{'id'}));
+	}
+if ($action eq 'cancel_cleanup') {
+	# Destructive cleanup is explicit and reserves a committed guest again.
+	die "Confirm cancellation and cleanup\n" if (($input->{'confirm'} || '') ne '1');
+	my $job = $jobs->lock('create-host', sub {
+		my $current = $jobs->get($input->{'job'}) || die "Job not found\n";
+		# Completed creations and unrelated operations are not rollback
+		# targets.
+		die "Only unfinished creation jobs can remove their virtual machine\n"
+			if ($current->{'request'}->{'operation'} ||
+				(!$current->{'cleanup_pending'} && $current->{'state'} =~ /\A(?:complete|failed|cancelled)\z/));
+		# Software setup normally leaves the guest editable. Reclaim it before
+		# cleanup so a simultaneous edit, snapshot or backup cannot start.
+		$jobs->assert_guest_available($current->{'request'}->{'uuid'})
+			if ($current->{'resources'}->{'software'} && !$current->{'cleanup_created'});
+		foreach my $other (@{$jobs->list_pending()}) {
+			# Captures reserve their source; include it even without a destination.
+			next if ($other->{'id'} eq $current->{'id'});
+			my $uuid = $current->{'request'}->{'uuid'};
+			die "Another operation uses this virtual machine; finish it before cleanup\n"
+				if (($other->{'resource'} || '') eq 'guest:'.$uuid ||
+					($other->{'request'}->{'source_uuid'} || '') eq $uuid ||
+					($other->{'request'}->{'uuid'} || '') eq $uuid);
+		}
+		return $jobs->update($current->{'id'}, sub {
+			# The worker may have completed while the host lock was
+			# being acquired.
+			die "This job has already finished\n" if (!$_[0]->{'cleanup_pending'} &&
+				$_[0]->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+			$_[0]->{'cancel'} = 1;
+			$_[0]->{'cleanup_created'} = 1;
+			# Resume pending rollback through recovery.
+			$_[0]->{'state'} = 'recovering' if ($_[0]->{'cleanup_pending'});
+			# Setup normally reserves only its installer; deletion
+			# needs the guest.
+			$_[0]->{'resource'} = 'guest:'.$_[0]->{'request'}->{'uuid'}
+				if ($_[0]->{'resources'}->{'software'});
+		});
+	});
+	# Persist and audit the request before a detached worker acts on it.
+	$jobs->audit('cancel_cleanup', $job);
+	$jobs->spawn($job->{'id'}, sub { run_vm_job($_[0]); });
+	return get_public_vm_job($job);
+}
+if ($action eq 'cancel' || $action eq 'recover') {
+	# Host administrators can finish other owners' jobs that block changes.
+	my $job = $jobs->get($input->{'job'}) ||
+		die "Job not found\n";
+	if ($action eq 'cancel') {
+		# Started hardware changes need recovery; copy jobs can cancel
+		# and roll back.
+		die "This change has started; use recovery if it fails\n"
+			if ($job->{'request'}->{'operation'} && $job->{'request'}->{'operation'} !~ /\A(?:clone|capture_image|backup|backup_inspect|restore)\z/ && $job->{'resources'}->{'started'});
+		# A finished job cannot be cancelled, including across
+		# concurrent updates.
+		die "This job has already finished\n"
+			if ($job->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+		$job = $jobs->update($job->{'id'}, sub {
+			# Recheck inside the transaction if a worker started meanwhile.
+			die "This change has started; use recovery if it fails\n"
+				if ($_[0]->{'request'}->{'operation'} &&
+					$_[0]->{'request'}->{'operation'} !~ /\A(?:clone|capture_image|backup|backup_inspect|restore)\z/ &&
+				$_[0]->{'resources'}->{'started'});
+			# Completion and cancellation compete in the same SQLite
+			# transaction.
+			die "This job has already finished\n"
+				if ($_[0]->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+			$_[0]->{'cancel'} = 1;
+			});
+		$jobs->audit('cancel', $job) if ($job->{'request'}->{'operation'});
+		}
+	else {
+		# Recovery is explicit for failed cleanup; running jobs are
+		# simply reattached.
+		if ($job->{'cleanup_pending'}) {
+			# Reopen failed cleanup so the recovery worker can retry
+			# it.
+			$job = $jobs->update($job->{'id'},
+				sub { $_[0]->{'state'} = 'recovering'; });
+			}
+		}
+	# A running worker observes cancellation; recovery may need a
+	# new worker.
+	$jobs->spawn($job->{'id'}, sub { run_vm_job($_[0]); })
+		if ($job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
+	return get_public_vm_job($job);
+	}
+die "Unknown virtual machine API action\n";
+}
+
 # get_api_machines(input) summarizes guests the caller may view.
 # input is a request hash; its optional id is an exact UUID or guest name.
 sub get_api_machines
