@@ -1,0 +1,688 @@
+{
+  "schema": 1,
+  "updated": "2026-10-12",
+  "images": [
+    {
+      "id": "almalinux-10",
+      "name": "AlmaLinux 10",
+      "vendor": "AlmaLinux",
+      "os": "AlmaLinux",
+      "release": "10",
+      "release_date": "2025-05-27",
+      "end_of_life": "2035-05-31",
+      "source_url": "https://wiki.almalinux.org/cloud/Generic-cloud.html",
+      "status": "recommended",
+      "cloud_init": true,
+      "guest_agent": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 442433536,
+          "url": "https://repo.almalinux.org/almalinux/10/cloud/aarch64/images/AlmaLinux-10-GenericCloud-latest.aarch64.qcow2",
+          "checksum_url": "https://repo.almalinux.org/almalinux/10/cloud/aarch64/images/CHECKSUM",
+          "signature_url": "https://repo.almalinux.org/almalinux/10/cloud/aarch64/images/CHECKSUM.asc"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 496631808,
+          "url": "https://repo.almalinux.org/almalinux/10/cloud/x86_64/images/AlmaLinux-10-GenericCloud-latest.x86_64.qcow2",
+          "checksum_url": "https://repo.almalinux.org/almalinux/10/cloud/x86_64/images/CHECKSUM",
+          "signature_url": "https://repo.almalinux.org/almalinux/10/cloud/x86_64/images/CHECKSUM.asc"
+        }
+      ]
+    },
+    {
+      "id": "almalinux-9",
+      "end_of_life": "2032-05-31",
+      "name": "AlmaLinux 9",
+      "vendor": "AlmaLinux",
+      "os": "AlmaLinux",
+      "release": "9",
+      "source_url": "https://wiki.almalinux.org/cloud/Generic-cloud.html",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 451543040,
+          "url": "https://repo.almalinux.org/almalinux/9/cloud/aarch64/images/AlmaLinux-9-GenericCloud-latest.aarch64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://repo.almalinux.org/almalinux/9/cloud/aarch64/images/CHECKSUM"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 589299712,
+          "url": "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-latest.x86_64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/CHECKSUM"
+        }
+      ]
+    },
+    {
+      "id": "almalinux-8",
+      "end_of_life": "2029-05-31",
+      "name": "AlmaLinux 8",
+      "vendor": "AlmaLinux",
+      "os": "AlmaLinux",
+      "release": "8",
+      "source_url": "https://wiki.almalinux.org/cloud/Generic-cloud.html",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 1487208448,
+          "url": "https://repo.almalinux.org/almalinux/8/cloud/aarch64/images/AlmaLinux-8-GenericCloud-latest.aarch64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://repo.almalinux.org/almalinux/8/cloud/aarch64/images/CHECKSUM"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 1622540288,
+          "url": "https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/AlmaLinux-8-GenericCloud-latest.x86_64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/CHECKSUM"
+        }
+      ]
+    },
+    {
+      "id": "alpine-3.24",
+      "end_of_life": "2028-06-01",
+      "name": "Alpine Linux 3.24",
+      "vendor": "Alpine Linux",
+      "os": "Alpine Linux",
+      "release": "3.24",
+      "source_url": "https://www.alpinelinux.org/cloud/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 203161600,
+          "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/alpine-3.24.2-aarch64-cloudinit-r0.qcow2",
+          "checksum_algorithm": "sha512",
+          "checksum_url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/alpine-3.24.2-aarch64-cloudinit-r0.qcow2.sha512"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 175636480,
+          "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/alpine-3.24.2-x86_64-cloudinit-r0.qcow2",
+          "checksum_algorithm": "sha512",
+          "checksum_url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/alpine-3.24.2-x86_64-cloudinit-r0.qcow2.sha512"
+        }
+      ]
+    },
+    {
+      "id": "arch-linux",
+      "name": "Arch Linux (rolling)",
+      "vendor": "Arch Linux",
+      "os": "Arch Linux",
+      "release": "rolling",
+      "source_url": "https://wiki.archlinux.org/title/Arch_Linux_on_a_VPS",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 559367680,
+          "url": "https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2.SHA256"
+        }
+      ]
+    },
+    {
+      "id": "centos-stream-10",
+      "end_of_life": "2030-05-31",
+      "name": "CentOS Stream 10",
+      "vendor": "CentOS Project",
+      "os": "CentOS Stream",
+      "release": "10",
+      "source_url": "https://cloud.centos.org/centos/10-stream/",
+      "status": "recommended",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 883359744,
+          "url": "https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://cloud.centos.org/centos/10-stream/aarch64/images/CentOS-Stream-GenericCloud-10-latest.aarch64.qcow2.SHA256SUM"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 1044643840,
+          "url": "https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2.SHA256SUM"
+        }
+      ]
+    },
+    {
+      "id": "centos-stream-9",
+      "end_of_life": "2027-05-31",
+      "name": "CentOS Stream 9",
+      "vendor": "CentOS Project",
+      "os": "CentOS Stream",
+      "release": "9",
+      "source_url": "https://cloud.centos.org/centos/9-stream/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 1190723584,
+          "url": "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://cloud.centos.org/centos/9-stream/aarch64/images/CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2.SHA256SUM"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 1277034496,
+          "url": "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2.SHA256SUM"
+        }
+      ]
+    },
+    {
+      "id": "debian-13",
+      "name": "Debian 13",
+      "vendor": "Debian Project",
+      "os": "Debian",
+      "release": "13",
+      "release_date": "2025-08-09",
+      "end_of_life": "2030-06-30",
+      "source_url": "https://cloud.debian.org/images/cloud/trixie/latest/",
+      "status": "recommended",
+      "cloud_init": true,
+      "guest_agent": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 336723968,
+          "url": "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-arm64.qcow2",
+          "checksum_algorithm": "sha512",
+          "checksum_url": "https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 340983808,
+          "url": "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2",
+          "checksum_algorithm": "sha512",
+          "checksum_url": "https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS"
+        }
+      ]
+    },
+    {
+      "id": "debian-12",
+      "end_of_life": "2028-06-30",
+      "name": "Debian 12",
+      "vendor": "Debian Project",
+      "os": "Debian",
+      "release": "12",
+      "source_url": "https://cloud.debian.org/images/cloud/bookworm/latest/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 340590592,
+          "url": "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-arm64.qcow2",
+          "checksum_algorithm": "sha512",
+          "checksum_url": "https://cloud.debian.org/images/cloud/bookworm/latest/SHA512SUMS"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 349372416,
+          "url": "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2",
+          "checksum_algorithm": "sha512",
+          "checksum_url": "https://cloud.debian.org/images/cloud/bookworm/latest/SHA512SUMS"
+        }
+      ]
+    },
+    {
+      "id": "debian-11",
+      "name": "Debian 11",
+      "vendor": "Debian Project",
+      "os": "Debian",
+      "release": "11",
+      "end_of_life": "2026-08-31",
+      "status": "older",
+      "source_url": "https://cloud.debian.org/images/cloud/bullseye/latest/",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 265814016,
+          "url": "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-arm64.qcow2",
+          "checksum_url": "https://cloud.debian.org/images/cloud/bullseye/latest/SHA512SUMS",
+          "checksum_algorithm": "sha512"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 288358400,
+          "url": "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2",
+          "checksum_url": "https://cloud.debian.org/images/cloud/bullseye/latest/SHA512SUMS",
+          "checksum_algorithm": "sha512"
+        }
+      ]
+    },
+    {
+      "id": "fedora-44",
+      "end_of_life": "2027-05-19",
+      "end_of_life_planned": 1,
+      "name": "Fedora Cloud 44",
+      "vendor": "Fedora Project",
+      "os": "Fedora",
+      "release": "44",
+      "source_url": "https://fedoraproject.org/cloud/download/",
+      "status": "recommended",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 528154624,
+          "url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-44-1.7.aarch64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/aarch64/images/Fedora-Cloud-44-1.7-aarch64-CHECKSUM"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 583729152,
+          "url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-44-1.7-x86_64-CHECKSUM"
+        }
+      ]
+    },
+    {
+      "id": "fedora-43",
+      "end_of_life": "2026-12-09",
+      "end_of_life_planned": 1,
+      "name": "Fedora Cloud 43",
+      "vendor": "Fedora Project",
+      "os": "Fedora",
+      "release": "43",
+      "source_url": "https://fedoraproject.org/cloud/download/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 544997376,
+          "url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-43-1.6.aarch64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/aarch64/images/Fedora-Cloud-43-1.6-aarch64-CHECKSUM"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 583335936,
+          "url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://dl.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images/Fedora-Cloud-43-1.6-x86_64-CHECKSUM"
+        }
+      ]
+    },
+    {
+      "id": "opensuse-leap-16.0",
+      "end_of_life": "2027-10-31",
+      "end_of_life_planned": 1,
+      "name": "openSUSE Leap 16.0",
+      "vendor": "openSUSE",
+      "os": "openSUSE Leap",
+      "release": "16.0",
+      "source_url": "https://get.opensuse.org/leap/16.0/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 318600704,
+          "url": "https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-VM.aarch64-Cloud.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-VM.aarch64-Cloud.qcow2.sha256"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 338122240,
+          "url": "https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-VM.x86_64-Cloud.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://download.opensuse.org/distribution/leap/16.0/appliances/Leap-16.0-Minimal-VM.x86_64-Cloud.qcow2.sha256"
+        }
+      ]
+    },
+    {
+      "id": "opensuse-tumbleweed",
+      "name": "openSUSE Tumbleweed (rolling)",
+      "vendor": "openSUSE",
+      "os": "openSUSE Tumbleweed",
+      "release": "rolling",
+      "source_url": "https://get.opensuse.org/tumbleweed/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 319294976,
+          "url": "https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.x86_64-Cloud.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.x86_64-Cloud.qcow2.sha256"
+        }
+      ]
+    },
+    {
+      "id": "rocky-linux-10",
+      "name": "Rocky Linux 10",
+      "vendor": "Rocky Enterprise Software Foundation",
+      "os": "Rocky Linux",
+      "release": "10",
+      "release_date": "2025-06-11",
+      "end_of_life": "2035-05-31",
+      "source_url": "https://download.rockylinux.org/pub/rocky/10/images/",
+      "status": "recommended",
+      "cloud_init": true,
+      "guest_agent": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 469368832,
+          "url": "https://download.rockylinux.org/pub/rocky/10/images/aarch64/Rocky-10-GenericCloud-Base.latest.aarch64.qcow2",
+          "checksum_url": "https://download.rockylinux.org/pub/rocky/10/images/aarch64/Rocky-10-GenericCloud-Base.latest.aarch64.qcow2.CHECKSUM",
+          "signature_url": "https://download.rockylinux.org/pub/rocky/10/images/aarch64/Rocky-10-GenericCloud-Base.latest.aarch64.qcow2.CHECKSUM.asc"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 544997376,
+          "url": "https://download.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2",
+          "checksum_url": "https://download.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2.CHECKSUM",
+          "signature_url": "https://download.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2.CHECKSUM.asc"
+        }
+      ]
+    },
+    {
+      "id": "rocky-linux-9",
+      "end_of_life": "2032-05-31",
+      "name": "Rocky Linux 9",
+      "vendor": "Rocky Enterprise Software Foundation",
+      "os": "Rocky Linux",
+      "release": "9",
+      "source_url": "https://download.rockylinux.org/pub/rocky/9/images/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 519831552,
+          "url": "https://download.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud-Base.latest.aarch64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://download.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud-Base.latest.aarch64.qcow2.CHECKSUM"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 645988352,
+          "url": "https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2.CHECKSUM"
+        }
+      ]
+    },
+    {
+      "id": "rocky-linux-8",
+      "end_of_life": "2029-05-31",
+      "name": "Rocky Linux 8",
+      "vendor": "Rocky Enterprise Software Foundation",
+      "os": "Rocky Linux",
+      "release": "8",
+      "source_url": "https://download.rockylinux.org/pub/rocky/8/images/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 1925644288,
+          "url": "https://download.rockylinux.org/pub/rocky/8/images/aarch64/Rocky-8-GenericCloud-Base.latest.aarch64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://download.rockylinux.org/pub/rocky/8/images/aarch64/Rocky-8-GenericCloud-Base.latest.aarch64.qcow2.CHECKSUM"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 2065760256,
+          "url": "https://download.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud-Base.latest.x86_64.qcow2",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://download.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud-Base.latest.x86_64.qcow2.CHECKSUM"
+        }
+      ]
+    },
+    {
+      "id": "ubuntu-26.04",
+      "end_of_life": "2031-05-31",
+      "name": "Ubuntu 26.04 LTS",
+      "vendor": "Canonical",
+      "os": "Ubuntu",
+      "release": "26.04 LTS",
+      "source_url": "https://cloud-images.ubuntu.com/resolute/current/",
+      "status": "recommended",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 944723456,
+          "url": "https://cloud-images.ubuntu.com/resolute/current/resolute-server-cloudimg-arm64.img",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://cloud-images.ubuntu.com/resolute/current/SHA256SUMS"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 863842816,
+          "url": "https://cloud-images.ubuntu.com/resolute/current/resolute-server-cloudimg-amd64.img",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://cloud-images.ubuntu.com/resolute/current/SHA256SUMS"
+        }
+      ]
+    },
+    {
+      "id": "ubuntu-24.04",
+      "name": "Ubuntu 24.04 LTS",
+      "vendor": "Canonical",
+      "os": "Ubuntu",
+      "release": "24.04 LTS",
+      "release_date": "2024-04-25",
+      "end_of_life": "2029-05-31",
+      "source_url": "https://cloud-images.ubuntu.com/noble/current/",
+      "status": "recommended",
+      "cloud_init": true,
+      "guest_agent": false,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 619621888,
+          "url": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-arm64.img",
+          "checksum_url": "https://cloud-images.ubuntu.com/noble/current/SHA256SUMS",
+          "signature_url": "https://cloud-images.ubuntu.com/noble/current/SHA256SUMS.gpg"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 625256960,
+          "url": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+          "checksum_url": "https://cloud-images.ubuntu.com/noble/current/SHA256SUMS",
+          "signature_url": "https://cloud-images.ubuntu.com/noble/current/SHA256SUMS.gpg"
+        }
+      ]
+    },
+    {
+      "id": "ubuntu-22.04",
+      "end_of_life": "2027-05-31",
+      "name": "Ubuntu 22.04 LTS",
+      "vendor": "Canonical",
+      "os": "Ubuntu",
+      "release": "22.04 LTS",
+      "source_url": "https://cloud-images.ubuntu.com/jammy/current/",
+      "status": "supported",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 704992256,
+          "url": "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-arm64.img",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 735465984,
+          "url": "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img",
+          "checksum_algorithm": "sha256",
+          "checksum_url": "https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS"
+        }
+      ]
+    },
+    {
+      "id": "ubuntu-20.04",
+      "end_of_life": "2025-05-31",
+      "name": "Ubuntu 20.04 LTS",
+      "vendor": "Canonical",
+      "os": "Ubuntu",
+      "release": "20.04 LTS",
+      "status": "older",
+      "source_url": "https://cloud-images.ubuntu.com/focal/current/",
+      "cloud_init": true,
+      "assets": [
+        {
+          "architecture": "aarch64",
+          "format": "qcow2",
+          "firmware": "uefi",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 615510528,
+          "url": "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-arm64.img",
+          "checksum_url": "https://cloud-images.ubuntu.com/focal/current/SHA256SUMS",
+          "checksum_algorithm": "sha256"
+        },
+        {
+          "architecture": "x86_64",
+          "format": "qcow2",
+          "firmware": "uefi-or-bios",
+          "min_disk_bytes": 10737418240,
+          "download_size_bytes": 647992832,
+          "url": "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img",
+          "checksum_url": "https://cloud-images.ubuntu.com/focal/current/SHA256SUMS",
+          "checksum_algorithm": "sha256"
+        }
+      ]
+    }
+  ]
+}
