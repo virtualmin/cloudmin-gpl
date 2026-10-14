@@ -46,4 +46,25 @@ return Cloudmin::Jobs->new(directory => "$module_var_directory/vm-jobs",
 	log => sub { webmin_log(@_); });
 }
 
+# get_vm_service()
+# Creates a VM service with connections opened when needed.
+sub get_vm_service
+{
+# adapter() creates a writable adapter; host_memory() returns available bytes.
+return Cloudmin::VMs->new(jobs => get_vm_jobs(),
+	images => get_image_jobs(), catalogue => get_image_catalogue(),
+	adapter => sub { get_libvirt(1) },
+	ssh_keys => get_ssh_keys(),
+	# Enforce installer policy in shared preparation, including CLI/API calls.
+	virtualmin_enabled => virtualmin_enabled(),
+	# register_webmin(job, address) runs after pinned SSH confirms installation.
+	# It completes accepted creation even if the license has since expired.
+	register_webmin => sub { register_vm_webmin($_[0], $_[1], 1) },
+	host_memory => sub {
+		foreign_require('proc', 'proc-lib.pl');
+		my (undef, $available) = proc::get_memory_info();
+		return $available * 1024;
+		});
+}
+
 1;
