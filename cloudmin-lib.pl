@@ -114,4 +114,70 @@ return Cloudmin::VMs->new(jobs => get_vm_jobs(),
 		});
 }
 
+# get_api_machines(input) summarizes guests the caller may view.
+# input is a request hash; its optional id is an exact UUID or guest name.
+sub get_api_machines
+{
+my ($input) = @_;
+my $id = $input->{'id'};
+# Validate the selector's type and length before loading inventory.
+die "Invalid virtual machine selector\n" if (defined($id) &&
+	(ref($id) || !length($id) || length($id) > 255));
+# Report inventory errors and check permissions before reading guest details.
+my @servers = list_managed_servers_sorted();
+die "$main::cloudmin_last_error\n" if ($main::cloudmin_last_error);
+@servers = grep { can_access('view', $_->{'uuid'}) } @servers;
+if (defined($id)) {
+	# Never reveal whether an inaccessible guest exists.
+	@servers = grep { $_->{'uuid'} eq $id || $_->{'name'} eq $id } @servers;
+	die "Virtual machine not found\n" if (!@servers);
+	die "Ambiguous virtual machine name; use its UUID\n" if (@servers != 1);
+}
+# Skip resource and address lookups when no guests are visible.
+return [] if (!@servers);
+# Batch resource statistics for only the guests the caller may view.
+my $adapter = get_libvirt();
+my $stats = $adapter->get_resource_stats([map { $_->{'uuid'} } @servers]);
+require "$module_root_directory/lib/Cloudmin/Metrics.pm";
+my $metrics = Cloudmin::Metrics->new();
+my $jobs = get_vm_jobs();
+my @result;
+# Build an explicit public record instead of exposing libvirt or job internals.
+foreach my $server (@servers) {
+	my $uuid = $server->{'uuid'};
+	my $sample = $metrics->sample($server, $stats->{$uuid} || {}, 0, time());
+	# Load creation metadata only from a valid job ID.
+	my $meta = $server->{'cloudmin'} || {};
+	my $job = ($meta->{'job'} || '') =~ /\A[a-f0-9]{32}\z/
+		? $jobs->get($meta->{'job'}) : undef;
+	# Imported metadata must not disclose another guest's creation record.
+	$job = undef if ($job && ($job->{'request'}->{'uuid'} || '') ne $uuid);
+	# Normalize power states and units; unknown disk capacity stays null.
+	my %row = (id => $uuid, name => $server->{'name'},
+		state => $server->{'state'} =~ /\A(?:running|blocked)\z/ ? 'running'
+			: $server->{'state'} eq 'paused' ? 'paused' : 'stopped',
+		cpus => 0 + $server->{'vcpus'}, memory_mib => $server->{'memory_kib'}/1024,
+		disk_gib => defined($sample->{'disk_capacity_bytes'})
+			? $sample->{'disk_capacity_bytes'}/1024**3 : undef,
+		addresses => [get_server_addresses($server)],
+		autostart => $server->{'autostart'} ? \1 : \0);
+	# Read the creation time only from a matching job.
+	$row{'created'} = 0 + $job->{'created'} if ($job && $job->{'created'});
+	# Expose attached preset names without disclosing their settings.
+	my $presets = Cloudmin::Presets->new(directory => $main::module_config_directory,
+		# access(writing) checks this guest's view grant for preset reads.
+		access => sub { require_access('view', $uuid) });
+	# Omit preset names that can no longer be resolved.
+	foreach my $kind (qw(template plan)) {
+		my $key = $meta->{$kind} || ($job ? $job->{'request'}->{$kind} : '');
+		next if (!$key);
+		my $preset = eval { $presets->get($kind, $key) };
+		$row{$kind} = $preset->{'name'} if ($preset);
+	}
+	push(@result, \%row);
+}
+# Exact selectors return one object; the unfiltered endpoint returns an array.
+return defined($id) ? $result[0] : \@result;
+}
+
 1;
