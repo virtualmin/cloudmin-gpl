@@ -743,4 +743,37 @@ return { (map { $_ => $job->{$_} }
 	start => $job->{'request'}->{'start'} };
 }
 
+# wait_vm_job(job, [timeout])
+# Waits for a submitted job without tying its worker to the browser connection.
+# timeout defaults to 3700 seconds; timeout leaves the background job running.
+sub wait_vm_job
+{
+my ($job, $timeout) = @_;
+my $deadline = time() + ($timeout // 3700);
+my $failures = 0;
+while (1) {
+	# Only completed work may return the user to a freshly editable form.
+	return $job if ($job->{'state'} eq 'complete');
+	die(($job->{'error'} || 'Virtual machine operation failed')."\n")
+		if ($job->{'state'} eq 'failed');
+	die "Virtual machine operation was cancelled\n"
+		if ($job->{'state'} eq 'cancelled');
+	# A disconnected or timed-out request leaves the durable worker running.
+	die "The operation is still running. Check Active Jobs for its status.\n"
+		if (time() >= $deadline);
+	select(undef, undef, undef, 0.25);
+	my $current = eval { call_vm_api(1, 'status', { job => $job->{'id'} }); };
+	if ($current) {
+		# A successful status read resets the transient failure count.
+		$job = $current;
+		$failures = 0;
+		}
+	elsif (++$failures >= 3) {
+		# Report persistent read failures without claiming the job itself failed.
+		die "Could not read the operation status: ".error_message($@).
+			". Check Active Jobs for its status.\n";
+		}
+	}
+}
+
 1;
