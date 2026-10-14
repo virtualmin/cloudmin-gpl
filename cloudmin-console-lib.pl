@@ -55,4 +55,31 @@ die "Invalid console type\n" if ($mode !~ /\A(?:graphical|serial)\z/);
 return $mode;
 }
 
+# check_console(vm, [mode])
+# Checks interactive access and the selected device before allocating a route.
+# mode defaults to graphical; both modes use the same console grant.
+sub check_console
+{
+my ($vm, $mode) = @_;
+# Keyboard access requires its own VM grant and is blocked in read-only mode.
+die "$text{'console_readonly'}\n" if (is_readonly_mode());
+require_access('console', $vm->{'uuid'});
+$mode = console_mode($mode);
+# Webmin's proxy requires the Terminal module; the relay matches its key check.
+die "$text{'terminal_unavailable'}\n" if (!foreign_check('xterm'));
+# The proxy opens guest devices through this host's libvirt connection.
+die "$text{'console_local'}\n" if ($config{'libvirt_uri'} ne 'qemu:///system');
+# A stopped domain has no live console stream to attach to.
+die "$text{'console_stopped'}\n" if (!$vm->{'active'});
+if ($mode eq 'serial') {
+	# A serial connection needs a PTY device, but no display or guest network.
+	die "$text{'console_serial_missing'}\n" if (!$vm->{'serial_console'});
+	}
+else {
+	# The graphical browser client speaks VNC, not other display protocols.
+	die "$text{'console_missing'}\n"
+		if (($vm->{'graphics'}->{'type'} || '') ne 'vnc');
+	}
+}
+
 1;
