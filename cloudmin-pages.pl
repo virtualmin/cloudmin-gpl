@@ -18,6 +18,18 @@ our (%text, %config, %access, $module_root_directory, $remote_user);
 
 require(File::Basename::dirname(__FILE__)."/cloudmin-disk-labels.pl");
 
+# show_disk_location(path, [local])
+# Keeps full storage filenames available without making them the disk heading.
+# local defaults to true; remote paths must not open this host's File Manager.
+sub show_disk_location
+{
+my ($path, $local) = @_;
+return '' if (!length($path || ''));
+return ui_details({ html => 1, class => 'inline inlined',
+	title => html_escape($text{'vm_disk_location'}),
+	content => !defined($local) || $local ? show_image_path($path) : ui_tag('tt', html_escape($path)) });
+}
+
 # show_network_recovery(data)
 # Offers recovery only for a diagnosed failure and an authorized host writer.
 sub show_network_recovery
