@@ -53,4 +53,33 @@ elsif ($job->{'sha256'}) {
 return $text{'images_job_verifying'};
 }
 
+# show_filemin_directory(dir, [label])
+# Links a local directory within the user's File Manager roots. An optional
+# HTML label lets image paths retain their full filename.
+sub show_filemin_directory
+{
+my ($dir, $label) = @_;
+$label = ui_tag('tt', html_escape($dir)) if (!defined($label));
+# Missing modules, denied access and non-filesystem paths stay plain text.
+return $label if ($dir !~ m{^/} || !foreign_available('filemin'));
+foreign_require('filemin', 'filemin-lib.pl');
+my @allowed = filemin::get_allowed_paths($dir);
+foreach my $root (@allowed) {
+	# Do not link a directory outside the user's File Manager roots.
+	next if (!is_under_directory($root, $dir));
+	my $relative = $dir;
+	if (@allowed == 1 && $root ne '/') {
+		# File Manager resolves relative paths under its sole allowed
+		# root. Resolve aliases before making the requested path
+		# relative to it.
+		$relative = resolve_links($dir);
+		my $base = resolve_links($root);
+		$relative =~ s{^\Q$base\E}{};
+		}
+	return ui_link('../filemin/index.cgi?path='.
+		urlize($relative || '/'), $label, 'text-link');
+	}
+return $label;
+}
+
 1;
