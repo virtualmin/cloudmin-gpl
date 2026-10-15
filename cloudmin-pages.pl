@@ -172,6 +172,101 @@ return 'ARMv7' if (($architecture || '') eq 'armv7l');
 return $architecture || $text{'index_unknown'};
 }
 
+# get_vm_row(server, [token])
+# Returns a table row from a normalized guest record, escaping its text fields.
+# A signed token enables lifecycle controls for callers with write access.
+sub get_vm_row
+{
+my ($server, $token) = @_;
+my $state = $server->{'state'} || 'unknown';
+# Highlight attention states and give stopped guests a neutral badge.
+my %badge_states = (
+	'running' => 'success',
+	'paused' => 'warning',
+	'blocked' => 'warning',
+	'shutdown' => 'info',
+	'shutoff' => 'neutral',
+	'crashed' => 'danger',
+	'pmsuspended' => 'warning',
+);
+# Use visible fallback text for unknown states and missing addresses.
+my $state_text = $text{'index_state_'.$state} ||
+	$text{'index_state_unknown'};
+my $macs = @{$server->{'macs'} || []}
+	? join(', ', @{$server->{'macs'}}) : '-';
+my @ips = map { ui_tag('tt', html_escape($_->{'address'})) }
+	@{$server->{'addresses'} || []};
+my $autostart = !defined($server->{'autostart'}) ? $text{'index_unknown'}
+	: $text{$server->{'autostart'} ? 'index_yes' : 'index_no'};
+my $controls = '';
+if ($token && $server->{'uuid'}) {
+	# Each row submits one UUID and only the action the user clicked.
+	# The boot toggle inherits the widget palette's red off-state color.
+	my $form = ui_form_start('index.cgi', 'post', undef,
+		'style="display:inline; --ui-toggle-bg:var(--ui-danger)"').
+		ui_hidden('id', $server->{'uuid'}).ui_hidden('token', $token);
+	# Standard buttons keep Pause styled without link conversion.
+	# Initial rows and live templates share these icons and permitted actions.
+	my %icons = (start => 'play', shutdown => 'power', reboot => 'refresh',
+		suspend => 'pause', resume => 'play');
+	my @actions = !$server->{'active'} ? ('start')
+		: $state =~ /\A(?:running|blocked)\z/ ? ('shutdown', 'reboot', 'suspend')
+		: $state eq 'paused' ? ('resume')
+		: ();
+	# Keep the controls on one line as live resource values resize the table.
+	# Leave the cell empty when the current state has no supported action.
+	$controls = ui_tag('div', join('', map {
+		$form.ui_hidden('action', $_).
+			ui_action_button($text{'vm_control_'.$_}, 'neutral',
+				{type => 'submit', size => 'small', icon => $icons{$_}}).
+			ui_form_end()
+		} @actions), {class => 'ui_cluster', style => 'flex-wrap:nowrap'})
+		if (@actions);
+	if ($server->{'persistent'} && defined($server->{'autostart'})) {
+		# Submit an explicit value for both the on and off toggle
+		# states.
+		$autostart = $form.ui_hidden('action', 'autostart').
+			ui_hidden('enabled', $server->{'autostart'} ? 1 : 0).
+			ui_toggle({ 'id' => 'cloudmin-boot-'.$server->{'uuid'},
+				'checked' => $server->{'autostart'},
+				'state' => 'success',
+				'round' => 1,
+				'attrs' => {
+					'aria-label' => $text{'vm_start_at_boot'}.': '.$server->{'name'},
+					'onchange' => 'this.form.elements.enabled.value = this.checked ? 1 : 0; this.form.requestSubmit();',
+				} }).ui_form_end();
+		}
+	}
+
+# Capacities remain readable while the live channel fills in usage
+# values.
+return [
+	$server->{'uuid'}
+	? ui_link('machine.cgi?id='.urlize($server->{'uuid'}),
+	html_escape($server->{'name'}),
+		undef, 'data-vm-id="'.html_escape($server->{'uuid'}).'"')
+		: html_escape($server->{'name'}),
+	ui_cluster([
+		ui_badge($state_text, $badge_states{$state} || 'neutral',
+			{ 'small' => 1, 'rounded' => 1 }),
+		ui_tag('a', ui_badge($text{'vm_pending_badge'}, 'warning',
+			{ small => 1, rounded => 1, icon => 'power' }),
+			{ href => 'machine.cgi?id='.urlize($server->{'uuid'} || ''),
+			'data-vm-pending-badge' => '',
+			(keys %{$server->{'pending'} || {}} ? () : (hidden => undef)) })
+		], { gap => '.4em' }),
+	@ips ? join('<br>', @ips) : html_escape($text{'index_no_ips'}),
+	show_resource_placeholder('cpu', $server->{'vcpus'} || 0),
+	show_resource_placeholder('memory',
+	nice_size_text(($server->{'memory_kib'} || 0) * 1024)),
+	show_resource_placeholder('disk'),
+	html_escape($macs),
+	$server->{'persistent'} ? $text{'index_yes'} : $text{'index_no'},
+	$autostart,
+	($token ? $controls : ()),
+];
+}
+
 # show_resource_placeholder(field, [total]) shows capacity while usage loads.
 sub show_resource_placeholder
 {
@@ -179,6 +274,14 @@ my ($field, $total) = @_;
 return ui_tag('span', html_escape(defined($total)
 	? text('vm_usage_missing', $total) : $text{'vm_usage_unavailable'}),
 	{ 'data-vm-resource' => $field, title => $text{'vm_usage_'.$field} });
+}
+
+# nice_size_text([bytes])
+# Formats bytes as plain text for widgets that escape their own content.
+sub nice_size_text
+{
+my ($bytes) = @_;
+return html_strip(nice_size($bytes || 0));
 }
 
 1;
