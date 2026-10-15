@@ -172,4 +172,13 @@ return 'ARMv7' if (($architecture || '') eq 'armv7l');
 return $architecture || $text{'index_unknown'};
 }
 
+# show_resource_placeholder(field, [total]) shows capacity while usage loads.
+sub show_resource_placeholder
+{
+my ($field, $total) = @_;
+return ui_tag('span', html_escape(defined($total)
+	? text('vm_usage_missing', $total) : $text{'vm_usage_unavailable'}),
+	{ 'data-vm-resource' => $field, title => $text{'vm_usage_'.$field} });
+}
+
 1;
