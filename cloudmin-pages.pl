@@ -447,6 +447,39 @@ foreach my $root (@allowed) {
 return $label;
 }
 
+# print_image_manager([mode]) displays the inventory, import or catalogue tab.
+# mode accepts images, add or catalogue. Omit it to use the saved tab or images.
+sub print_image_manager
+{
+my ($mode) = @_;
+our $remote_user;
+# Include module help and configuration controls in the Webmin page header.
+ui_print_header(
+	$text{'images_subtitle'},
+	$text{'images_title'},
+	'',
+	'images',
+	1,
+	0,
+);
+
+# Imports continue independently of the browser. Reloading shows their status.
+my $images = get_images_info();
+my $jobs = get_image_jobs();
+# Read-only views need no token and must not create a signing key or lock.
+$images->{'token'} = $jobs->form_token($remote_user) if (!is_readonly_mode());
+$images->{'jobs'} = $jobs->list();
+# Restore navigation even for read-only viewers, but save only with a token.
+$images->{'mode'} = inventory_tab('images', $mode);
+$images->{'readonly'} = is_readonly_mode();
+print show_images_page($images);
+print inventory_tab_script('images', $images->{'token'});
+
+# Retry failed imports through the shared attempt check.
+print submission_script();
+ui_print_footer('index.cgi', $text{'vm_return'});
+}
+
 # show_images_page(data)
 # Uses the standard tab, checked-table and form APIs demonstrated by ui-demo.
 sub show_images_page
