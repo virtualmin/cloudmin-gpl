@@ -145,4 +145,18 @@ $wanted{'name'} = 1;
 return grep { $wanted{$_->{'id'}} } @defs;
 }
 
+# catalogue_link(url, [label])
+# Shows the full URL, or a compact download button when a label is supplied.
+sub catalogue_link
+{
+my ($url, $label) = @_;
+# Optional publisher links should not produce empty anchors.
+return '' if (!$url);
+return ui_tag('a', defined($label)
+	? ui_svg_icon('download').' '.html_escape($label)
+	: html_escape($url),
+	{ href => $url, target => '_blank', rel => 'noopener noreferrer',
+	  defined($label) ? (class => 'ui_link', download => '') : () });
+}
+
 1;
