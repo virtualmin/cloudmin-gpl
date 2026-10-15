@@ -1180,4 +1180,15 @@ push(@items, { type => 'cat', id => 'global_setting', desc => $text{'left_settin
 return @items;
 }
 
+# submission_script() loads shared retry handling for background job forms.
+sub submission_script
+{
+# Let the active theme render errors inserted after an asynchronous check.
+return ui_tag('template', ui_alert_box(
+    ui_tag('span', '', { 'data-submission-message' => 1 }),
+    'danger', undef, undef, ''), { id => 'cloudmin-submission-alert' }).
+    ui_tag('script', '', { src => get_webprefix().'/server-manager/submission.js?'.
+    ((stat(($module_root_directory || '.').'/submission.js'))[9] || 0) });
+}
+
 1;
