@@ -130,4 +130,19 @@ return (
 );
 }
 
+# get_catalogue_columns([value])
+# Filters a stored column list; missing or invalid settings use all columns.
+# value is a comma- or whitespace-separated list of IDs; name always remains.
+sub get_catalogue_columns
+{
+my ($value) = @_;
+my @defs = list_catalogue_columns();
+my %wanted = map { $_ => 1 } split(/[,\s]+/, $value || '');
+my @columns = grep { $wanted{$_->{'id'}} } @defs;
+# An empty or unrecognized selection uses the complete default table.
+return @defs if (!@columns);
+$wanted{'name'} = 1;
+return grep { $wanted{$_->{'id'}} } @defs;
+}
+
 1;
