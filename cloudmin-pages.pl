@@ -708,6 +708,67 @@ return 'ARMv7' if (($architecture || '') eq 'armv7l');
 return $architecture || $text{'index_unknown'};
 }
 
+# get_image_option(image, [today])
+# Returns a grouped download choice with compact metadata. today defaults to
+# the current UTC date, in YYYY-MM-DD form.
+sub get_image_option
+{
+my ($image, $today) = @_;
+my @date = gmtime();
+$today ||= sprintf('%04d-%02d-%02d', $date[5]+1900, $date[4]+1, $date[3]);
+my $end = $image->{'end_of_life'} || '';
+my $dated = $end =~ /^\d{4}-\d{2}-\d{2}$/;
+my $expired = $dated && $end lt $today;
+my %support_states = ( recommended => 'success', supported => 'warning',
+	older => 'danger' );
+# A known expired date takes precedence over stale catalogue recommendations.
+my $status = $expired ? 'older' : $image->{'status'} || 'supported';
+# Unrecognized publisher status must still have a defined badge palette.
+$status = 'supported' if (!exists($support_states{$status}));
+# Download bytes describe the transferred file, not the guest disk capacity.
+my @metadata = ({
+	label => $image->{'download_size_bytes'}
+		? nice_size_text($image->{'download_size_bytes'})
+		: $text{'images_download_size_unknown'},
+	icon => 'download', title => $text{'images_download_size_hint'},
+	state => $support_states{$status},
+});
+# The toolbar identifies bundled images; label custom entries separately.
+push(@metadata, { label => $text{'catalogue_origin_custom'}, icon => 'edit' })
+	if (($image->{'catalogue_origin'} || '') eq 'custom');
+# Only real catalogue dates may claim support has ended; older is not EOL.
+if ($dated) {
+	my $key = $expired ? 'images_support_ended' : 'images_support_until';
+	my $title = text($key, $end);
+	# Distinguish an estimated support date from a confirmed publisher date.
+	$title .= '. '.$text{'images_support_planned'}
+		if ($image->{'end_of_life_planned'});
+	push(@metadata, { label => text($key, substr($end, 0, 4)),
+		title => $title, icon => $expired ? 'warning' : 'clock',
+		state => $support_states{$status} });
+	}
+else {
+	# Rolling releases need updates, but have no fixed support deadline.
+	my $rolling = ($image->{'release'} || '') eq 'rolling';
+	push(@metadata,
+		{ label => $text{$rolling ? 'images_support_rolling'
+		: 'images_support_unknown'},
+		  title => $text{$rolling ? 'images_support_rolling_hint'
+		: 'images_support_unknown'},
+		  icon => 'clock', state => $support_states{$status} });
+	}
+# Pass the logo and download data to the browser; custom entries share a group.
+return { value => $image->{'id'}, label => $image->{'name'}, status => $status,
+	attrs => { 'data-download-id' => $image->{'id'},
+		'data-image-icon' => get_image_icon($image),
+		'data-download-bytes' => $image->{'download_size_bytes'} || '',
+		'data-download-refresh' =>
+			$image->{'download_size_refresh'} // 1 },
+	group => { label => ($image->{'catalogue_origin'} || '') eq 'custom'
+		? $text{'catalogue_origin_custom'} : get_image_group($image) },
+	metadata => \@metadata };
+}
+
 # get_vm_row(server, [token])
 # Returns a table row from a normalized guest record, escaping its text fields.
 # A signed token enables lifecycle controls for callers with write access.
