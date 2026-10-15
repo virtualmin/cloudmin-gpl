@@ -1224,4 +1224,20 @@ return ui_tag('template', ui_alert_box(
     ((stat(($module_root_directory || '.').'/submission.js'))[9] || 0) });
 }
 
+# show_vm_resource_input_styles()
+# Size resource and username fields to their contents, with room by unit menus.
+sub show_vm_resource_input_styles
+{
+my $fields = ':is(#vm-create-form, #vm-edit-form) input';
+return ui_tag('style', $fields.':is([data-vm-resource], [data-vm-autosize]) { '.
+	'field-sizing:content; width:auto !important; min-width:30px !important; max-width:100%; '.
+	'box-sizing:border-box; padding-inline:0.6em !important; } '.
+	$fields.'[data-vm-resource] { text-align:center !important; } '.
+	$fields.'[data-vm-resource="size"] { padding-inline:0.6em 0.7em !important; } '.
+	'#vm-create-form .vm-resource-hint { font-size:inherit; opacity:0.66; margin-inline:0.3em; } '.
+	'#vm-create-form .cloudmin-vm-image-picker select { field-sizing:content; '.
+	'width:auto !important; min-width:0; max-width:100%; } '.
+	'#vm-create-form .cloudmin-vm-image-picker > a { margin:0 !important; }');
+}
+
 1;
