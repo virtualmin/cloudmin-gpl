@@ -33,4 +33,24 @@ return ui_tag('p', html_escape($text{'check_network_restore_desc'})).
 		{type => 'submit', icon => 'refresh', size => 'small'}).ui_form_end();
 }
 
+# describe_image_check(job)
+# Describes disk inspection and the checksum source used for this import.
+sub describe_image_check
+{
+my ($job) = @_;
+if (($job->{'source'} || '') eq 'download') {
+	# Bundled and custom catalogue entries both declare a checksum source.
+	my $algorithm = uc($job->{'checksum_algorithm'} || 'sha256');
+	$algorithm =~ s/^SHA(?=\d)/SHA-/;
+	return text(($job->{'checksum_source'} || '') eq 'catalogue'
+		? 'images_check_catalogue' : 'images_check_vendor', $algorithm);
+	}
+elsif ($job->{'sha256'}) {
+	# Custom imports compare against the checksum supplied in the form.
+	return $text{'images_check_supplied'};
+	}
+# Disk inspection still runs when a custom import has no checksum.
+return $text{'images_job_verifying'};
+}
+
 1;
