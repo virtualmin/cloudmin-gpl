@@ -447,6 +447,219 @@ foreach my $root (@allowed) {
 return $label;
 }
 
+# show_images_page(data)
+# Uses the standard tab, checked-table and form APIs demonstrated by ui-demo.
+sub show_images_page
+{
+my ($data) = @_;
+my @jobs = @{$data->{'jobs'} || []};
+my $page = ui_page_start();
+# Retain catalogue failures above the usable image-management tabs.
+$page .= ui_alert_box(html_escape($data->{'error'}), 'danger', undef, undef,
+	'') if ($data->{'error'});
+$page .= ui_tabs_start([
+	[ 'images', $text{'images_tab_images'}, 'images.cgi' ],
+	[ 'add', $text{'images_tab_add'}, 'image_form.cgi' ],
+	[ 'catalogue', $text{'catalogue_title'}, 'images.cgi?mode=catalogue' ],
+], 'mode', ($data->{'mode'} || '') =~ /\A(?:add|catalogue)\z/
+	? $data->{'mode'} : 'images', 1);
+
+# Keep all imports, including unfinished downloads, in one checked table.
+$page .= ui_tabs_start_tab('mode', 'images');
+$page .= ui_tag('div', ui_p(html_escape($text{'images_manage_desc'})),
+	{ 'class' => 'vui_ui_block' });
+my %volumes = map {
+	my $pool = $_;
+	map { ($pool->{'id'}.':'.$_->{'name'}) => $_ }
+		@{$pool->{'volumes'} || []}
+	} @{$data->{'pools'} || []};
+my @rows;
+foreach my $job (@jobs) {
+	my $s = get_image_job_status($job);
+	if ($s->{'state'} eq 'ready' &&
+		!$volumes{$job->{'pool'}.':'.$job->{'volume'}}) {
+		# Completed metadata can outlive a volume removed outside
+		# Cloudmin.
+		$s->{'label'} = $text{'images_job_missing'};
+		}
+	# Keep paths and failure details under the expandable image name.
+	my $details =
+		show_image_path($job->{'volume_path'} || $job->{'volume'});
+	# Local captures have no publisher checksum; identify their origin instead.
+	$details .= ui_p(html_escape($text{'images_capture_source'}))
+		if (($job->{'source'} || '') eq 'vm');
+	my $error = $s->{'state'} =~ /^(?:failed|interrupted)$/ ? $s->{'detail'}
+		: '';
+	# Polling updates the error as text without treating it as HTML.
+	$details .= ui_tag('div', ui_tag('span', html_escape($error),
+		{ 'data-image-error' => $job->{'id'},
+		$error ? () : (hidden => undef) }));
+	my $name = ui_details({ html => 1, class => 'inline inlined',
+		title => html_escape($job->{'name'}), content => $details });
+	my $status = ui_tag('span', html_escape($s->{'label'}),
+		{ 'data-image-state' => $job->{'id'},
+		  'data-image-active' => $s->{'terminal'} ? 0 : 1 });
+	# Stable job IDs let polling update values without replacing selected
+	# rows. Read-only users see the inventory without selection controls.
+	push(@rows, [
+		$data->{'readonly'} ? ''
+		: { type => 'checkbox', name => 'job', value => $job->{'id'} },
+		$name, $status, html_escape($job->{'pool_name'}),
+		html_escape(uc($job->{'format'})),
+		ui_tag('span', nice_size($job->{'bytes'} || 0),
+			{ 'data-image-size' => $job->{'id'} }),
+		make_date($job->{'created'}),
+		ui_tag('span', $s->{'checksum_html'},
+		{ 'data-image-checksum' => $job->{'id'} }),
+	]);
+	}
+# Filter optional columns while retaining bulk selection and job identity.
+my ($image_heads, $image_rows, $image_types) =
+	table_columns('image_columns', \@rows, 1);
+# Bulk deletion posts the selected job IDs with this page's signed token.
+$page .= ui_form_columns_table('delete_images.cgi',
+	$data->{'readonly'} ? []
+	: [ [ 'delete', $text{'images_delete_button'} ] ],
+	$data->{'readonly'} ? 0 : 1,
+	undef,
+	[ [ 'token', $data->{'token'} ] ],
+	$image_heads, 100, $image_rows, $image_types,
+	0, undef, $text{'images_saved_none'}, 0, 1);
+$page .= ui_tabs_end_tab('mode', 'images');
+
+# Sources share storage and advanced settings, with only relevant fields shown.
+$page .= ui_tabs_start_tab('mode', 'add');
+$page .= ui_tag('div', ui_p(html_escape($text{'images_add_desc'})),
+	{ 'class' => 'vui_ui_block' });
+my @pools = @{$data->{'pools'} || []};
+# Prefer the configured pool when available; keep the form's choice editable.
+my $pool = image_import_pool(\@pools);
+# Use the same distribution order as creation and template image selectors.
+my @sorted = @{Cloudmin::ImageChoices::sort_images($data->{'images'} || [])};
+# Custom entries share a generic icon and follow the bundled distributions.
+my @bundled = grep { ($_->{'catalogue_origin'} || '') ne 'custom' } @sorted;
+my @custom = grep { ($_->{'catalogue_origin'} || '') eq 'custom' } @sorted;
+# Read-only pages show cached sizes without requesting a refresh.
+my @options = map { get_image_option({ %$_,
+	download_size_refresh => $data->{'readonly'} ? 0
+	: $_->{'download_size_refresh'} // 1 })
+} (@bundled, @custom);
+my $bundled = !grep { ($_->{'catalogue_origin'} || 'bundled') ne 'bundled' }
+	@{$data->{'images'} || []};
+# Custom entries use administrator-supplied URLs, not the bundled sources.
+my $download_note = text($bundled ? 'images_download_note'
+	: 'images_catalogue_note',
+	ui_tag('a', html_escape($text{'images_sources_link'}), {
+		href => 'images.cgi?mode=catalogue',
+			id => 'cloudmin-image-sources',
+			class => 'text-link' }));
+$page .= ui_form_start('setup_image.cgi', 'post', undef,
+	'id="cloudmin-image-form"');
+$page .= ui_hidden('token', $data->{'token'} || '');
+$page .= ui_table_start(undef, 'width=100%', 2);
+# Storage pool and image source each span the full form width.
+$page .= ui_table_row($text{'images_storage'}, @pools
+	? ui_select('pool', $pool, [ map { [ $_->{'id'},
+		text('images_pool_option', $_->{'name'},
+		nice_size_text($_->{'available'})) ] } @pools ])
+	: ui_alert_box(html_escape($data->{'storage_error'} ||
+	$text{'images_storage_none'}), 'danger', undef, undef, ''),
+	1, undef, undef, 1);
+$page .= ui_table_hr();
+$page .= ui_table_row($text{'images_installation_type'},
+	ui_select('install_type', 'download', [ map {
+		[ $_, $text{'images_type_'.$_} ] }
+			qw(download url upload local) ]),
+	1, undef, undef, 1);
+# Show the selected source's controls directly below the source selector.
+my @sources = (
+	[ 'download', undef, 'id', ui_multi_select_list('id', [], \@options,
+		{ search => 1, compact => 1, bulk => 0, count => 0,
+		  height => '420px',
+		  summary => $text{$bundled ? 'images_bundled_cloud'
+		: 'images_cloud'},
+		  summary_icon => 'download',
+		  empty_label => $text{'images_no_compatible'} }) ],
+	[ 'url', $text{'images_url'}, 'url', ui_textbox('url', '', 65).
+		ui_tag('span', $text{'images_url_hint'},
+			{ style => 'font-size:inherit;opacity:0.66;margin-inline:0.3em' }) ],
+	[ 'upload', $text{'images_file'}, 'image_file',
+	  ui_upload('image_file', 45) ],
+	[ 'local', $text{'images_path'}, 'path', ui_textbox('path', '', 65).
+		file_chooser_button('path', 0, @jobs ? 1 : 0) ],
+);
+foreach my $source (@sources) {
+	my ($type, $label, $field, $input) = @$source;
+	$page .= ui_table_row($label, $input, defined($label) ? 1 : 2, undef,
+		[ 'id="cloudmin-image-'.$type.'"'.
+		($type eq 'download' ? '' : ' style="display:none"') ], 1);
+	}
+$page .= ui_table_end();
+# Show a total only after images are selected, without adding a selection count.
+$page .= ui_tag('div', '', { id => 'cloudmin-download-total',
+	class => 'ui_note', 'aria-live' => 'polite', hidden => undef });
+# Hide and disable fields belonging to other image sources.
+foreach my $source (@sources) {
+	my ($type, $label, $field) = @$source;
+	$page .= ui_form_field_state_javascript('install_type', [ $type ],
+		[ 'cloudmin-image-'.$type ], [ $field ]);
+	}
+# Format and digest controls apply to user-supplied image sources.
+$page .= ui_tag_start('div', { id => 'cloudmin-custom-options',
+	hidden => undef });
+# Expansion is configurable; catalogue sources still hide these custom options.
+$page .= ui_hidden_table_start($text{'images_advanced'}, 'width=100%', 2,
+	'image_advanced', ($config{'image_advanced'} || '') eq '1');
+$page .= ui_table_row($text{'image_format'}, ui_select('format', 'qcow2',
+	[ [ 'qcow2', 'QCOW2' ], [ 'raw', $text{'images_format_raw'} ],
+	  [ 'iso', $text{'images_format_iso'} ] ]));
+$page .= ui_table_row($text{'images_sha256'}, ui_textbox('sha256', '', 65));
+$page .= ui_hidden_table_end('image_advanced').ui_tag_end('div');
+# Start with QCOW2 help; images.js updates it when the format changes.
+$page .= ui_tag('p',
+	ui_tag('span', $download_note, { id => 'cloudmin-image-note' }).
+	ui_tag('span', html_escape(text('images_custom_note', 'QCOW2')),
+		{ id => 'cloudmin-image-custom-note', hidden => undef }));
+# Show the same administrator cap used by every import source and the browser.
+my $maximum = $data->{'max_image_bytes'} || 0;
+$page .= ui_note($maximum ? text('images_limit_note', nice_size_text($maximum))
+	: $text{'images_space_note'});
+# Browser uploads display transfer progress before opening the job's progress
+# page.
+$page .= ui_tag('div', ui_tag('span', '', { id => 'cloudmin-image-error', role => 'alert',
+	hidden => undef }));
+$page .= ui_tag('div', ui_progress(0, { label => $text{'images_uploading'} }),
+	{ id => 'cloudmin-upload-progress', hidden => undef });
+# Read-only users can review the sources but cannot start an import.
+$page .= ui_form_end(@pools &&
+	!$data->{'readonly'} ? [ [ undef, $text{'images_download'}, undef, 0,
+	'id="cloudmin-image-submit"' ] ] : []);
+$page .= ui_tabs_end_tab('mode', 'add');
+$page .= ui_tabs_start_tab('mode', 'catalogue');
+# The image table is wrapped in a form only when it has rows, which moves the
+# catalogue form's position in document.forms used by its selection links.
+$data->{'catalogue_formno'} = @rows ? 2 : 1;
+$page .= show_catalogue_page($data);
+$page .= ui_tabs_end_tab('mode', 'catalogue').ui_tabs_end(1);
+
+# Supply translated help and progress labels to the browser's import controls.
+my %labels = (id => 'cloudmin-image-labels', hidden => undef);
+foreach my $key (qw(download import start_error poll_error choose_file
+		   custom_note iso_note format_raw
+		   upload_limit download_estimate download_partial
+		   download_unknown download_size_unknown download_size_hint)) {
+	$labels{'data-'.($key =~ s/_/-/gr)} = html_escape($text{'images_'.$key});
+	}
+$labels{'data-max-bytes'} = $maximum;
+$labels{'data-upload-limit'} = html_escape($maximum
+	? text('images_upload_limit', nice_size_text($maximum))
+	: $text{'images_upload_empty'});
+$page .= ui_tag('div', '', \%labels).
+	ui_tag('script', '', { src => 'images.js?'.
+		((stat(($module_root_directory || '.').'/images.js'))[9] || 0) }).ui_page_end();
+return $page;
+}
+
 # list_catalogue_columns()
 # Defines available columns and their sort types in the table's display order.
 sub list_catalogue_columns
