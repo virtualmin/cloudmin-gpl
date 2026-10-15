@@ -102,4 +102,45 @@ webmin_log($action, 'network', $in->{'id'} || $name, { name => $name });
 return $name;
 }
 
+# call_bridge_api(action, input)
+# Uses the UI's bridge validation and recovery, keeping file backups private.
+# input is the decoded request hash; write actions require a signed token.
+sub call_bridge_api
+{
+my ($action, $in) = @_;
+require_access('host');
+my $service = get_network_service();
+my $host = $service->{'host'};
+# Inventory is readable without starting or reserving a network change.
+if ($action eq 'bridges') {
+	return $service->inventory()->{'bridges'};
+	}
+# Poll the current transaction; an optional ID protects against a newer change.
+if ($action eq 'bridge_status') {
+	my $state = $host->public_state();
+	# A stale poll must not report another transaction as its own completion.
+	die "This bridge change has been replaced\n" if ($in->{'id'} &&
+		(!$state || $state->{'id'} ne $in->{'id'}));
+	return $state;
+	}
+# Reviewing a removal requires the same permissions and token as submitting it.
+if ($action eq 'bridge_remove_review') {
+	# Review grants a revision for submission, so it requires write access.
+	die "Networking changes are disabled in read-only mode\n" if (is_readonly_mode());
+	require_access('manage');
+	get_image_jobs()->check_token($remote_user, $in->{'token'});
+	$service->assert_idle();
+	my $plan = $service->prepare_bridge_removal($in->{'name'});
+	# The plan also contains private snapshots that must stay on the host.
+	return { map { $_ => $plan->{$_} }
+		qw(name source operation addresses management confirm_timeout revision) };
+	}
+# Reuse the UI's token, ownership and locking checks for all mutations.
+my %actions = (bridge_remove => 'bridge_remove', bridge_confirm => 'confirm', bridge_rollback => 'rollback');
+# Unknown requests must never fall through to an unrelated network action.
+die "Unknown bridge action\n" if (!$actions{$action});
+change_network($actions{$action}, $in);
+return $host->public_state();
+}
+
 1;
