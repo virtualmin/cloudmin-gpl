@@ -21,4 +21,19 @@ return Cloudmin::HostNetwork->new(directory => "$module_var_directory/networking
 	client => $ENV{'REMOTE_ADDR'});
 }
 
+# get_network_service([writable])
+# Network mutations are local-host operations; inventory shares the same adapter.
+# writable defaults to false; true requests a libvirt connection for changes.
+sub get_network_service
+{
+# Network inventory includes host interfaces outside the user's assigned VMs.
+require_access('host');
+my ($writable) = @_;
+my $adapter = get_libvirt($writable);
+die "Networking is available only for the local qemu:///system host\n"
+	if ($adapter->uri() ne 'qemu:///system');
+return Cloudmin::Networks->new(adapter => $adapter,
+	host => get_host_network(), jobs => get_vm_jobs());
+}
+
 1;
