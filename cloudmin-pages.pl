@@ -567,6 +567,134 @@ return ui_tag('a', defined($label)
 	  defined($label) ? (class => 'ui_link', download => '') : () });
 }
 
+# show_catalogue_form(entry, new, token, [error], [readonly])
+# Builds the standard Webmin editor for one image architecture and its URLs.
+sub show_catalogue_form
+{
+my ($entry, $new, $token, $error, $readonly) = @_;
+if ($readonly) {
+	# Supplied entries and read-only sessions expose details without an
+	# editor.
+	my $page = ui_table_start(undef, 'width=100%', 2);
+	$page .= ui_table_row($text{'catalogue_origin'},
+		$text{'catalogue_origin_'.$entry->{'catalogue_origin'}});
+	foreach my $field (qw(name vendor os release architecture)) {
+		# Omit metadata the publisher has not supplied.
+		next if (!defined($entry->{$field}) || $entry->{$field} eq '');
+		$page .= ui_table_row($text{'catalogue_'.$field},
+			html_escape($field eq 'architecture'
+			? describe_architecture($entry->{$field})
+			: $entry->{$field}));
+		}
+	# Detail views expose the publisher URLs so users can inspect the
+	# sources.
+	foreach my $pair ([ 'url', 'catalogue_image_url' ],
+		[ 'checksum_url', 'catalogue_checksum_url' ],
+		[ 'checksum_algorithm', 'catalogue_checksum_algorithm' ],
+		[ 'format', 'image_format' ],
+		[ 'source_url', 'catalogue_source_url' ],
+		[ 'status', 'catalogue_status' ],
+		[ 'firmware', 'catalogue_firmware' ],
+		[ 'release_date', 'catalogue_release_date' ],
+		[ 'end_of_life', 'catalogue_end_of_life' ]) {
+		my ($field, $label) = @$pair;
+		# Unknown metadata must not appear as an empty detail row.
+		next if (!defined($entry->{$field}) || $entry->{$field} eq '');
+		my $value = $entry->{$field};
+		# Status keys need translated labels, unlike publisher metadata.
+		$value = $text{'catalogue_status_'.$value} || $value
+			if ($field eq 'status');
+		# Uppercase technical abbreviations for display only.
+		$value = uc($value)
+			if ($field =~ /\A(?:checksum_algorithm|format|firmware)\z/);
+		$page .= ui_table_row($text{$label}, $field =~ /url\z/
+			? catalogue_link($value) : html_escape($value));
+		}
+	# Disk capacity and transfer size remain separate quantities in the
+	# details.
+	$page .= ui_table_row($text{'catalogue_min_disk'},
+		$entry->{'min_disk_bytes'}
+		? html_escape(($entry->{'min_disk_bytes'} / 1024**3).' GiB')
+		: $text{'catalogue_unknown'});
+	$page .= ui_table_row($text{'images_download_size'},
+		$entry->{'download_size_bytes'}
+		? html_escape(nice_size_text($entry->{'download_size_bytes'}))
+		: $text{'catalogue_unknown'});
+	foreach my $field (qw(cloud_init guest_agent)) {
+		# Unknown support differs from a publisher's explicit negative
+		# answer.
+		next if (!defined($entry->{$field}));
+		$page .= ui_table_row($text{'catalogue_'.$field},
+			$text{$entry->{$field} ? 'index_yes' : 'index_no'});
+		}
+	return $page.ui_table_end();
+	}
+my $page = $error
+	? ui_alert_box(html_escape($error), 'danger', undef, undef, '') : '';
+# Custom entries retain their ID and architecture across edits.
+$page .= ui_form_start('save_catalog_image.cgi', 'post');
+$page .= ui_hidden('token', $token || '').ui_hidden('new', $new ? 1 : 0);
+$page .= ui_hidden('id', $entry->{'id'});
+$page .= ui_table_start(undef, 'width=100%', 2);
+foreach my $field (qw(name vendor os release)) {
+	$page .= ui_table_row($text{'catalogue_'.$field},
+		ui_textbox($field, $entry->{$field} || '', 60));
+	}
+$page .= ui_table_row($text{'catalogue_architecture'}, $new
+	? ui_textbox('architecture', $entry->{'architecture'} || '', 20)
+	: html_escape(describe_architecture($entry->{'architecture'})).
+	  ui_hidden('architecture', $entry->{'architecture'}));
+# Keep format, download URL and digest settings together for custom assets.
+$page .= ui_table_row($text{'image_format'},
+	ui_select('format', $entry->{'format'} || 'qcow2',
+	[ [ 'qcow2', 'QCOW2' ], [ 'raw', $text{'images_format_raw'} ],
+	  [ 'iso', $text{'images_format_iso'} ] ]));
+foreach my $field (qw(url checksum_url)) {
+	$page .= ui_table_row($text{$field eq 'url' ? 'catalogue_image_url'
+		: 'catalogue_checksum_url'},
+		ui_textbox($field, $entry->{$field} || '', 80));
+	}
+$page .= ui_table_row($text{'catalogue_checksum_algorithm'},
+	ui_select('checksum_algorithm',
+	$entry->{'checksum_algorithm'} || 'sha256',
+	[ [ 'sha256', 'SHA-256' ], [ 'sha512', 'SHA-512' ] ]));
+$page .= ui_table_end();
+$page .= ui_hidden_table_start($text{'images_advanced'}, 'width=100%', 2,
+	'catalogue_advanced', 0);
+# Optional metadata controls support grouping and guest compatibility checks.
+$page .= ui_table_row($text{'catalogue_source_url'},
+	ui_textbox('source_url', $entry->{'source_url'} || '', 80));
+$page .= ui_table_row($text{'catalogue_status'},
+	ui_select('status', $entry->{'status'} || 'supported',
+	[ map { [ $_, $text{'catalogue_status_'.$_} ] }
+	qw(recommended supported older) ]));
+foreach my $field (qw(release_date end_of_life)) {
+	$page .= ui_table_row($text{'catalogue_'.$field},
+		ui_textbox($field, $entry->{$field} || '', 12, 0, 10,
+		'placeholder="YYYY-MM-DD"'));
+	}
+my $disk = exists($entry->{'min_disk_gib'}) ? $entry->{'min_disk_gib'}
+	: ($entry->{'min_disk_bytes'} || 0) / 1024**3;
+# Preserve the Unknown selection when redisplaying a submitted form.
+$disk = '' if ($entry->{'min_disk_gib_def'});
+$page .= ui_table_row($text{'catalogue_min_disk'},
+	ui_opt_textbox('min_disk_gib', $disk || '', 10,
+	$text{'catalogue_unknown'}).' GiB');
+$page .= ui_table_row($text{'catalogue_firmware'},
+	ui_select('firmware', $entry->{'firmware'} || '',
+	[ [ '', $text{'catalogue_unspecified'} ], [ 'bios', 'BIOS' ],
+	  [ 'uefi', 'UEFI' ],
+	  [ 'uefi-or-bios', 'UEFI or BIOS' ] ]));
+$page .= ui_table_row($text{'catalogue_cloud_init'},
+	ui_yesno_radio('cloud_init', $entry->{'cloud_init'} ? 1 : 0));
+$page .= ui_table_row($text{'catalogue_guest_agent'},
+	ui_yesno_radio('guest_agent', $entry->{'guest_agent'} ? 1 : 0));
+$page .= ui_hidden_table_end('catalogue_advanced');
+$page .= ui_form_end($readonly ? [] : [ [ undef,
+	$text{$new ? 'catalogue_create' : 'catalogue_save'} ] ]);
+return $page;
+}
+
 # describe_architecture([architecture])
 # Returns a short human-readable CPU architecture label.
 sub describe_architecture
