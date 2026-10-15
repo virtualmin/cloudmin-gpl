@@ -219,6 +219,19 @@ $page .= ui_page_end();
 return $page;
 }
 
+# show_jobs_page(data)
+# Wraps live progress and recovery controls with a connection warning.
+sub show_jobs_page
+{
+my ($data) = @_;
+return ui_page_start().ui_tag_start('div', {
+	id => 'cloudmin-jobs', 'data-url' => $data->{'refresh_url'},
+}).ui_tag('div', ui_alert_box($text{'jobs_updates_unavailable'},
+	'warn', undef, undef, ''), { 'data-jobs-warning' => 1, hidden => undef }).
+	ui_tag('div', show_jobs_status($data), { 'data-jobs-content' => 1 }).
+	ui_tag_end('div').ui_page_end();
+}
+
 # show_jobs_status(data)
 # Renders a quiet empty state or current job progress using Webmin widgets.
 sub show_jobs_status
