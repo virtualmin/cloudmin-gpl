@@ -108,4 +108,26 @@ foreach my $root (@allowed) {
 return $label;
 }
 
+# list_catalogue_columns()
+# Defines available columns and their sort types in the table's display order.
+sub list_catalogue_columns
+{
+return (
+	{ id => 'name', label => 'images_name', type => 'string' },
+	{ id => 'os', label => 'catalogue_os_release', type => 'string' },
+	{ id => 'architecture', label => 'catalogue_architecture',
+	  type => 'string' },
+	{ id => 'format', label => 'image_format', type => 'string' },
+	{ id => 'size', label => 'catalogue_download_size', type => 'bytes' },
+	{ id => 'checksum', label => 'image_verification', type => 'string' },
+	{ id => 'release_date', label => 'catalogue_release_date',
+	  type => 'string' },
+	{ id => 'end_of_life', label => 'catalogue_end_of_life',
+	  type => 'string' },
+	{ id => 'origin', label => 'catalogue_origin', type => 'string' },
+	{ id => 'state', label => 'index_state', type => 'string' },
+	{ id => 'download', label => 'catalogue_download', type => undef },
+);
+}
+
 1;
