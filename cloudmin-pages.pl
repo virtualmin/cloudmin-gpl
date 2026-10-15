@@ -53,6 +53,20 @@ elsif ($job->{'sha256'}) {
 return $text{'images_job_verifying'};
 }
 
+# show_image_path(path)
+# Shows a file path and links to its allowed File Manager directory when
+# available.
+sub show_image_path
+{
+my $path = $_[0] || '';
+my $label = ui_tag('tt', html_escape($path));
+return $label if ($path !~ m{^/});
+my $dir = $path;
+$dir =~ s{/[^/]+$}{};
+$dir ||= '/';
+return show_filemin_directory($dir, $label);
+}
+
 # show_filemin_directory(dir, [label])
 # Links a local directory within the user's File Manager roots. An optional
 # HTML label lets image paths retain their full filename.
