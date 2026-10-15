@@ -1094,4 +1094,18 @@ my ($bytes) = @_;
 return html_strip(nice_size($bytes || 0));
 }
 
+# get_action_log_url([vm])
+# Returns the action-log URL, optionally filtered by the selected guest's name.
+sub get_action_log_url
+{
+my ($vm) = @_;
+my $url = '/webminlog/search.cgi?uall=1&mall=0&module=server-manager'.
+	'&tall=1&fall=1&no_return=1&nmod=server-manager&search_title='.
+	urlize($text{$vm ? 'log_vm_title' : 'log_title'});
+# Webmin searches the formatted description, just as Virtualmin does.
+$url .= '&desc='.urlize($vm->{'name'}).'&search_sub_title='.
+	urlize(html_escape($vm->{'name'})) if ($vm);
+return $url;
+}
+
 1;
