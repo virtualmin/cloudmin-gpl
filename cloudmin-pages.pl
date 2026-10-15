@@ -354,6 +354,56 @@ elsif ($job->{'sha256'}) {
 return $text{'images_job_verifying'};
 }
 
+# get_image_job_status(job)
+# Returns translated progress text and byte counts, without private inputs.
+sub get_image_job_status
+{
+my ($job) = @_;
+my $state = $job->{'state'};
+my $alive = !$job->{'pid'} || kill(0, $job->{'pid'});
+# A killed worker cannot keep an import looking active indefinitely.
+if ($state !~ /^(?:ready|failed|waiting|deleted)$/ &&
+	((!$alive) || time() - $job->{'updated'} > 3700)) {
+	$state = 'interrupted';
+	}
+my $detail = $job->{'error'} || '';
+if ($state eq 'ready') {
+	# Completed imports name the image and pool,
+	# with a legacy volume fallback.
+	$detail = text('images_ready_detail',
+		$job->{'name'} || storage_volume_label({ name => $job->{'volume'} }), $job->{'pool_name'});
+	}
+elsif ($state eq 'interrupted') {
+	# A dead or stale job needs recovery advice instead of transfer details.
+	$detail = $text{'images_interrupted_detail'};
+	}
+elsif (!$detail) {
+	# Preserve recorded failures; otherwise summarize current byte progress.
+	$detail = text('images_progress_detail', $job->{'name'},
+		$job->{'pool_name'}, nice_size_text($job->{'bytes'}));
+	}
+# Local captures have no upstream checksum against which to verify the image.
+my $checksum = $text{($job->{'source'} || '') eq 'vm' ? 'images_checksum_local'
+	: $job->{'verified'} ? 'images_verified'
+	: 'images_not_verified'};
+return {
+	id => $job->{'id'}, state => $state,
+	bytes => $job->{'bytes'} || 0, total => $job->{'total'} || 0,
+	size => nice_size_text($job->{'bytes'} || 0),
+	checksum => $checksum,
+	checksum_html => html_escape($checksum),
+	label => $state eq 'verifying' ? describe_image_check($job)
+		: $text{'images_job_'.$state} || $state,
+	detail => $detail,
+	percent => $state eq 'importing' && $job->{'bytes'}
+		? int(100 * ($job->{'transferred'} || 0) / $job->{'bytes'})
+		: $state eq 'downloading' &&
+		$job->{'total'} ? int(100 * $job->{'bytes'} / $job->{'total'})
+		: $state eq 'ready' ? 100 : undef,
+	terminal => $state =~ /^(?:ready|failed|interrupted|deleted)$/ ? 1 : 0,
+};
+}
+
 # show_image_path(path)
 # Shows a file path and links to its allowed File Manager directory when
 # available.
