@@ -1108,4 +1108,76 @@ $url .= '&desc='.urlize($vm->{'name'}).'&search_sub_title='.
 return $url;
 }
 
+# get_menu_items(servers, selected, readonly, terminal_available,
+#                [log_available])
+# Places selected-guest actions above a divider and host-wide tools below it.
+# servers must already be filtered by VM assignments. terminal_available is
+# accepted for compatibility; authorized connection pages explain missing tools.
+# log_available defaults to false; logs also require host administrator access.
+sub get_menu_items
+{
+my ($servers, $selected, $readonly, $terminal, $log) = @_;
+my ($vm) = grep { $_->{'uuid'} eq ($selected || '') } @$servers;
+$vm ||= $servers->[0];
+my $base = '/server-manager';
+# Include the title for frame navigation and the format flag for newer renderers.
+my @items = ({ type => 'title', id => 'title', desc => $text{'index_title'} },
+	{ format => 'new' }, { type => 'hr' });
+# Host managers can create a guest even when their inventory is empty.
+if (!$readonly && can_access('manage')) {
+	push(@items, { type => 'item', format => 'link-new',
+		desc => $text{'vm_create'}, link => "$base/machine_form.cgi" },
+		{ type => 'hr' });
+	}
+# Show only permitted controls for the selected guest.
+if ($vm) {
+	my $id = urlize($vm->{'uuid'});
+	push(@items, { type => 'menu', name => 'sid', cgi => '',
+		value => $vm->{'uuid'}, onchange => "$base/machine.cgi?id=",
+		menu => [ map { [ $_->{'uuid'}, html_escape($_->{'name'}),
+			'title="'.html_escape($_->{'name'}).'"' ] }
+			@$servers ] },
+		{ type => 'item', desc => $text{'vm_details'},
+		  link => "$base/machine.cgi?id=$id" });
+	# Route users without host access straight to the password-reset form.
+	push(@items, { type => 'item', desc => $text{'vm_edit'},
+		link => "$base/edit_machine.cgi?id=$id".
+			(can_access('manage') ? '' : '&password_reset=1') })
+		if (!$readonly && (can_access('manage') || can_access('password', $vm->{'uuid'})));
+	push(@items, { type => 'item', desc => $text{'snapshots_title'},
+		link => "$base/snapshots.cgi?id=$id" }) if (can_access('host'));
+	# Any permitted access method shows Remote Access; read-only mode hides it.
+	# The page checks each tab's permission separately.
+	push(@items, { type => 'item', desc => $text{'console_title'},
+		link => "$base/remote_access.cgi?id=$id" }) if (!$readonly &&
+		(can_access('terminal', $vm->{'uuid'}) || can_access('console', $vm->{'uuid'}) ||
+			(defined(&can_vm_webmin) && can_vm_webmin($vm->{'uuid'}))));
+	# Log searches can reveal host activity beyond assigned guests.
+	push(@items, { type => 'item', desc => $text{'log_vm_title'},
+		link => get_action_log_url($vm) }) if ($log && can_access('host'));
+	}
+# Separate guest actions from host tools; an empty host already has a divider.
+push(@items, { type => 'hr' }) if ($vm);
+foreach my $entry ([index => 'left_overview'], [images => 'left_images'],
+	[storage => 'left_storage'], [networks => 'net_title'],
+	[snapshots => 'snapshots_all'], [backups => 'backups_title'], [jobs => 'index_jobs']) {
+	# Delegated users get an overview of assigned VMs without links to host tools.
+	next if ($entry->[0] ne 'index' && !can_access('host'));
+	push(@items, { type => 'item', desc => $text{$entry->[1]},
+		link => "$base/$entry->[0].cgi" });
+	}
+push(@items, { type => 'item', desc => $text{'log_title'},
+	link => get_action_log_url() }) if ($log && can_access('host'));
+# Reuse Virtualmin's category and the header's module configuration permissions.
+push(@items, { type => 'cat', id => 'global_setting', desc => $text{'left_settings'},
+	members => [
+		(!$access{'noconfig'} && !$config{'noprefs'} ? ({ type => 'item',
+			desc => $text{'left_config'}, link => '/config.cgi?server-manager' }) : ()),
+		map { {type => 'item', desc => $text{$_->[1]}, link => "$base/$_->[0].cgi"} }
+		[edit_newtmpl => 'presets_templates'], [edit_newplan => 'presets_plans'],
+		(defined(&cloudmin_pro) && cloudmin_pro() ? (['pro/license' => 'license_title']) : ())] })
+	if (can_access('host'));
+return @items;
+}
+
 1;
