@@ -484,6 +484,75 @@ $wanted{'name'} = 1;
 return grep { $wanted{$_->{'id'}} } @defs;
 }
 
+# show_catalogue_page(data)
+# Lists catalogue_entries from data with links and bulk controls. The caller
+# applies the configured architecture filter before passing the entries here.
+sub show_catalogue_page
+{
+my ($data) = @_;
+my $readonly = $data->{'readonly'};
+my @columns = get_catalogue_columns($data->{'catalogue_columns'});
+my $page = ui_tag('div', ui_p(html_escape($text{'catalogue_desc'})),
+	{ class => 'vui_ui_block' });
+my @rows;
+foreach my $entry (@{$data->{'catalogue_entries'} || []}) {
+	my $key = $entry->{'catalogue_key'};
+	my $name = ui_tag('a', html_escape($entry->{'name'}),
+		{ href => 'edit_catalog_image.cgi?key='.urlize($key) });
+	# Catalogue metadata describes availability, not a completed checksum
+	# check.
+	my $checksum = html_escape($text{$entry->{'checksum_url'}
+		? 'catalogue_checksum_available'
+		: 'catalogue_checksum_unavailable'});
+	# Keep external downloads together without expanding long URLs in the
+	# table.
+	my $downloads = join(' ', grep { length } (
+		catalogue_link($entry->{'url'}, $text{'images_name'}),
+		catalogue_link($entry->{'checksum_url'},
+		$text{'image_verification'})));
+	# Preserve the byte count for numeric sorting across MiB and GiB values.
+	my $bytes = $entry->{'download_size_bytes'};
+	my %cells = (
+		name => $name,
+		os => html_escape($entry->{'os'}.' '.$entry->{'release'}),
+		architecture => html_escape(
+			describe_architecture($entry->{'architecture'})),
+		format => html_escape(uc($entry->{'format'})),
+		checksum => $checksum,
+		size => { type => 'string', value => $bytes
+			? ui_tag('span', html_escape(nice_size_text($bytes)),
+				{ 'data-filesize-bytes' => $bytes,
+				  title => $text{'images_download_size_hint'} })
+			: $text{'catalogue_unknown'},
+			td => 'data-order="'.($bytes || -1).'"' },
+		release_date => html_escape($entry->{'release_date'} || ''),
+		end_of_life => html_escape($entry->{'end_of_life'} || ''),
+		origin => $text{'catalogue_origin_'.
+		$entry->{'catalogue_origin'}},
+		state => $text{$entry->{'enabled'} ? 'catalogue_enabled'
+		: 'catalogue_disabled'},
+		download => $downloads,
+	);
+	push(@rows,
+		[ $readonly ? ''
+		: { type => 'checkbox', name => 'key', value => $key },
+		  map { $cells{$_->{'id'}} } @columns ]);
+	}
+# Preserve column order and omit editing controls for read-only users.
+$page .= ui_form_columns_table('catalogue.cgi', $readonly ? [] : [
+	[ 'enable', $text{'catalogue_enable'} ],
+	[ 'disable', $text{'catalogue_disable'} ],
+	[ 'delete', $text{'catalogue_delete_button'} ],
+], !$readonly,
+$readonly ? []
+: [ [ 'edit_catalog_image.cgi?new=1', $text{'catalogue_add_button'} ] ],
+	[ [ 'token', $data->{'token'} || '' ] ],
+	[ '', map { $text{$_->{'label'}} } @columns ],
+	100, \@rows, [ undef, map { $_->{'type'} } @columns ],
+	0, undef, $text{'catalogue_none'}, $data->{'catalogue_formno'} // 2, 1);
+return $page;
+}
+
 # catalogue_link(url, [label])
 # Shows the full URL, or a compact download button when a label is supplied.
 sub catalogue_link
