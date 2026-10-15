@@ -219,6 +219,108 @@ $page .= ui_page_end();
 return $page;
 }
 
+# show_jobs_status(data)
+# Renders a quiet empty state or current job progress using Webmin widgets.
+sub show_jobs_status
+{
+my ($data) = @_;
+my $html = join('', map {
+	ui_alert_box(html_escape($_), 'danger', undef, undef, '')
+	} @{$data->{'errors'} || []});
+# A failed store must never look like a successfully loaded empty queue.
+if (!@{$data->{'jobs'} || []}) {
+	return $html.ui_empty_state({
+		icon => @{$data->{'errors'} || []} ? 'warning' : 'check-circle',
+		title => $text{@{$data->{'errors'} || []}
+			? 'jobs_unavailable' : 'jobs_empty'},
+		desc => @{$data->{'errors'} || []} ? undef : $text{'jobs_empty_desc'},
+		actions => $data->{'log_url'} ? ui_action_button($text{'log_title'}, 'neutral',
+			{ href => $data->{'log_url'}, icon => 'history', size => 'small' }) : undef,
+	});
+	}
+my @rows;
+foreach my $job (@{$data->{'jobs'}}) {
+	my ($state, $done, $total);
+	if ($job->{'type'} eq 'image') {
+		# Percentages describe the current transfer, not the whole import.
+		$state = $job->{'state'} eq 'verifying' ? describe_image_check($job)
+			: $text{'images_job_'.$job->{'state'}} || $job->{'state'};
+		($done, $total) = $job->{'state'} eq 'importing'
+			? @$job{qw(transferred bytes)}
+			: $job->{'state'} eq 'downloading' ? @$job{qw(bytes total)} : ();
+		}
+	else {
+		# VM operations expose their current step without an invented percentage.
+		$state = $job->{'state'} eq 'running' && $job->{'phase'}
+			? $text{'vm_phase_'.$job->{'phase'}} : undef;
+		$state = $text{'vm_phase_start_stopped'}
+			if ($job->{'state'} eq 'running' &&
+			($job->{'phase'} || '') eq 'start' && !$job->{'start'});
+		$state ||= $text{'jobs_state_'.$job->{'state'}} || $job->{'state'};
+		$state =~ s/ \.\.$//;
+		}
+	# Cancellation has no measurable remaining transfer.
+	my $cancelling = $job->{'cancel'} &&
+		$job->{'state'} !~ /\A(?:complete|failed|cancelled|ready|deleted|interrupted)\z/;
+	# Cancellation has no measurable completion fraction while cleanup runs.
+	if ($cancelling) {
+		$state = $text{'jobs_cancelling'};
+		$total = undef;
+		}
+	my %progress = ( label => $state, indeterminate => !$total );
+	$done ||= 0;
+	if ($total) {
+		# Clamp the display if the source's reported total changed during transfer.
+		$done = $total if ($done > $total);
+		$progress{'max'} = $total;
+		$progress{'value'} = text('jobs_transfer', nice_size_text($done),
+			nice_size_text($total), int(100 * $done / $total));
+		}
+	# Retained failures show their diagnostics beside the recovery controls.
+	my $status = $job->{'cleanup_pending'}
+		? ui_badge($text{'jobs_cleanup_pending'}, 'warning', { small => 1 }).
+			join('', map { ui_tag('div', html_escape($_)) }
+				grep { length($_ || '') } @$job{qw(error cleanup_warning audit_warning)})
+		: ui_progress($done, \%progress);
+	my $name = html_escape($job->{'name'});
+	$name = ui_link('progress.cgi?job='.$job->{'id'}, $name)
+		if ($job->{'type'} eq 'vm');
+	my @controls;
+	if ($data->{'can_control'} && $data->{'token'} && !$cancelling) {
+		# Wait for cancellation to finish before offering another action.
+		# Each button posts only its own action; polling never submits forms.
+		my @actions = $job->{'cleanup_pending'}
+			? ('recover', $job->{'operation'} eq 'update' ? ('discard') : ())
+			: !$job->{'can_cancel'} ? ()
+			: $job->{'operation'} eq 'create' ? ('cancel_cleanup', $job->{'software'} ? ('cancel') : ())
+			: ('cancel');
+		foreach my $action (@actions) {
+			push(@controls, ui_form_start('jobs.cgi', 'post').
+				ui_hidden('token', $data->{'token'}).ui_hidden('job', $job->{'id'}).
+				ui_hidden('type', $job->{'type'}).ui_hidden('action', $action).
+				ui_hidden('confirm', 1).
+				ui_action_button($text{'jobs_action_'.$action},
+				$action eq 'recover' ? 'warning' : $action eq 'discard' ? 'neutral' : 'danger', {
+				size => 'small', icon => $action eq 'recover' ? 'refresh' : 'x',
+				type => 'submit' }).ui_form_end(undef, undef, 1));
+		}
+	}
+	push(@rows, [ $name,
+		$text{'jobs_type_'.$job->{'type'}}, $status,
+		make_date($job->{'created'}), ($data->{'can_control'} ? (ui_cluster(\@controls)) : ()) ]);
+	}
+# Keep column sizing independent of changing transfer sizes and phase labels.
+my @columns = map { 'class="cloudmin-job-'.$_.'"' }
+	(qw(name type progress started), $data->{'can_control'} ? ('actions') : ());
+my $table = ui_columns_start([ $text{'index_name'}, $text{'jobs_type'},
+	$text{'jobs_progress'}, $text{'jobs_started'}, ($data->{'can_control'} ? ($text{'jobs_actions'}) : ()) ], 100, 0, \@columns,
+	undef, 0, 'cloudmin-jobs-table');
+$table .= ui_columns_row($_, \@columns) foreach @rows;
+$table .= ui_columns_end();
+return $html.ui_p($text{'jobs_desc'}).
+	ui_tag('div', $table, { class => 'cloudmin-jobs-scroll' });
+}
+
 # describe_image_check(job)
 # Describes disk inspection and the checksum source used for this import.
 sub describe_image_check
