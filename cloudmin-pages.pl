@@ -159,4 +159,17 @@ return ui_tag('a', defined($label)
 	  defined($label) ? (class => 'ui_link', download => '') : () });
 }
 
+# describe_architecture([architecture])
+# Returns a short human-readable CPU architecture label.
+sub describe_architecture
+{
+my ($architecture) = @_;
+# Translate the common libvirt names to the labels used throughout the
+# UI.
+return 'x86-64' if (($architecture || '') eq 'x86_64');
+return 'ARM64' if (($architecture || '') eq 'aarch64');
+return 'ARMv7' if (($architecture || '') eq 'armv7l');
+return $architecture || $text{'index_unknown'};
+}
+
 1;
