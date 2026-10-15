@@ -45,6 +45,180 @@ return ui_tag('p', html_escape($text{'check_network_restore_desc'})).
 		{type => 'submit', icon => 'refresh', size => 'small'}).ui_form_end();
 }
 
+# show_dashboard_page(data)
+# Builds dashboard widget HTML from a get_dashboard result hash.
+sub show_dashboard_page
+{
+my ($data) = @_;
+my $counts = $data->{'counts'};
+my $host = $data->{'host'};
+my $ready = $data->{'ready'};
+# Compact mode hides healthy host details, but never hides failed requirements
+# from host administrators. The same flag controls the host tile's anchor link.
+my $show_host = can_access('host') &&
+	(($config{'host_details'} || '') ne 'problems' || !$ready);
+my @servers = @{$data->{'servers'} || []};
+
+# Attach live configuration to the page, preserving entities in row templates.
+my $page = ui_page_assets().ui_tag_start('div', {
+	'class' => 'ui_page',
+	($data->{'live'} ? ('id' => 'cloudmin-vm-status',
+		'data-config' => html_escape($data->{'status_config'})) : ()),
+});
+# Explain unavailable controls without showing an alert during normal startup.
+$page .= ui_tag('div', ui_alert_box($text{'vm_status_controls_paused'},
+	'warn', undef, undef, ''),
+	{ 'data-vm-status-warning' => 1, hidden => undef })
+	if ($data->{'live'});
+# Use the stat-tile card shown in ui-demo, with links to page details.
+$page .= ui_card({
+	'id' => 'cloudmin-overview',
+	'title' => $text{'index_overview'},
+	'desc' => $text{'index_intro'},
+	'body' => ui_stats([
+		# Host and job totals are hidden from delegated VM viewers.
+		(can_access('host') ? ({ 'value' => $counts->{'hosts'},
+		  'icon' => 'server',
+		  'label' => $text{'index_hosts'},
+		  'desc' => $text{'index_hosts_desc'},
+		  'href' => $show_host ? '#cloudmin-host' : undef, 'state' => 'info' }) : ()),
+		{ 'value_html' => ui_tag('span', $counts->{'vms'},
+		{ 'data-vm-count' => 'vms' }),
+		  'icon' => 'terminal',
+		  'label' => $text{'index_vms'},
+		  'desc' => $text{'index_vms_desc'},
+		  'href' => '#cloudmin-machines', 'state' => 'info' },
+		{ 'value_html' => ui_tag('span', $counts->{'running'},
+		{ 'data-vm-count' => 'running' }),
+		  'icon' => 'play',
+		  'label' => $text{'index_running'},
+		  'desc' => $text{'index_running_desc'},
+		  'state' => 'success' },
+		(can_access('host') ? ({ 'value_html' => ui_tag('span', $counts->{'jobs'},
+		{ 'data-vm-count' => 'jobs' }),
+		  'icon' => 'clock',
+		  'label' => $text{'index_jobs'},
+		  'desc' => $text{'index_jobs_desc'}, 'href' => 'jobs.cgi' }) : ()),
+	], { 'min' => '140px' }),
+});
+
+# A job-store failure must not look like a healthy empty queue.
+$page .= ui_alert_box(html_escape($data->{'job_error'}), 'danger', undef,
+	undef, '') if ($data->{'job_error'});
+# Combine the host's readiness result with its connection details.
+my $host_status = ui_badge(
+	$ready ? $text{'index_ready'} : $text{'index_notready'},
+	$ready ? 'success' : 'warning',
+	{ 'small' => 1, 'rounded' => 1 },
+);
+my $host_card = ui_card({
+	'id' => 'cloudmin-host',
+	'title' => $text{'index_host'},
+	'desc' => $text{'index_host_desc'},
+	'actions' => $host_status,
+	'body' => ui_dl([
+		[ $text{'index_hostname'}, ui_tag('tt', html_escape(
+			$host->{'hostname'} || $text{'index_unknown'})) ],
+		[ $text{'index_driver'}, html_escape(
+			$host->{'driver'} || $text{'index_unknown'}) ],
+		[ $text{'index_uri'}, ui_tag('tt', html_escape(
+			$host->{'uri'} || $text{'index_unknown'})) ],
+		[ $text{'index_version'},
+		  ui_tag('tt', html_escape(
+			$host->{'libvirt_version'} ||
+			$text{'index_unknown'})) ],
+		[ $text{'index_libvirt_services'}, html_escape(
+			$text{'index_libvirt_'.
+			($host->{'libvirt_layout'} || '')} ||
+			$text{'index_unknown'}) ],
+		[ $text{'index_hypervisor_version'},
+		  ui_tag('tt', html_escape(
+			$host->{'hypervisor_version'} ||
+			$text{'index_unknown'})) ],
+	], { 'wide' => '35%' }),
+});
+
+# Show each requirement's result and failure reason separately.
+my @requirements = map {
+	{
+		'title' => $_->{'label'},
+		'desc' => $_->{'detail'},
+		'badge' => [
+			$_->{'ok'} ? $text{'index_check_ok'}
+				     : $text{'index_check_failed'},
+			$_->{'ok'} ? 'success' : 'warning',
+			{ 'small' => 1, 'rounded' => 1 },
+		],
+		'icon' => $_->{'ok'} ? 'check-circle' : 'warning',
+		'state' => $_->{'ok'} ? 'success' : 'warning',
+		}
+	} @{$data->{'readiness'}->{'checks'}};
+my $requirements_card = ui_card({
+	'title' => $text{'index_requirements'},
+	'desc' => $text{'index_requirements_desc'},
+	'body' => ui_list(\@requirements).show_network_recovery($data),
+});
+
+# Show permitted host details when requested or when requirements fail.
+$page .= ui_grid([
+	$host_card,
+	$requirements_card,
+], { 'min' => '360px' }) if ($show_host);
+
+my $machine_body;
+my $empty_machines = !@servers && !$data->{'domain_error'};
+# Sortable columns provide a compact inventory when guests are present.
+if (@servers || $data->{'live'}) {
+	my @rows = map { get_vm_row($_, $data->{'token'}) } @servers;
+	# Apply the same column order used by live status row templates.
+	my ($heads, $visible, $types) = table_columns(
+		'machine_columns', \@rows, 0, $data->{'token'});
+	$machine_body = ui_columns_table($heads, 100, $visible, $types,
+		0, undef, undef, 1);
+	# Keep the table available for live additions without showing empty
+	# headers or a theme's generated "no data" row beside the empty-state
+	# message.
+	$machine_body = ui_tag('div', $machine_body,
+		{ 'data-vm-table' => 1, @servers ? () : (hidden => undef) });
+	}
+# Live updates can also remove the last VM from an initially populated page.
+if ($empty_machines || $data->{'live'}) {
+	# For delegated users, explain missing assignments and omit the Create action.
+	$machine_body = ($machine_body || '').ui_tag('div', ui_empty_state({
+		'icon' => 'terminal',
+		'title' => $text{'index_none'},
+		'desc' => !can_access('host') ? $text{'acl_empty'} : $ready ? text('index_none_desc',
+			$host->{'hostname'} || $text{'index_unknown'})
+			: $text{'index_none_unready'},
+		'actions' => can_access('manage') ? ui_link_button('machine_form.cgi',
+		$text{'vm_create'}) : '',
+	}), { 'data-vm-empty' => 1, $empty_machines ? () : (hidden => undef) });
+	}
+# Do not present a discovery failure as an empty inventory.
+if ($data->{'domain_error'}) {
+	my $error = ui_alert_box(
+		text('error_domains',
+			html_escape($data->{'domain_error'})), 'danger', undef,
+			undef, '');
+	$machine_body = ui_tag('div', $error,
+		{ 'data-vm-discovery-error' => 1 }).
+		($data->{'live'} ? $machine_body || '' : '');
+	}
+
+# Show the empty heading once; limit host details and creation to administrators.
+$page .= ui_card({
+	'id' => 'cloudmin-machines',
+	'title' => $empty_machines ? undef : $text{'index_machines'},
+	'desc' => $empty_machines || !can_access('host') ? undef : text('index_machines_desc',
+		$host->{'hostname'} || $text{'index_unknown'}),
+	'actions' => $empty_machines || !can_access('manage') ? undef
+	: ui_link('machine_form.cgi', $text{'vm_create_button'}),
+	'body' => $machine_body,
+});
+$page .= ui_page_end();
+return $page;
+}
+
 # describe_image_check(job)
 # Describes disk inspection and the checksum source used for this import.
 sub describe_image_check
