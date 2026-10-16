@@ -1250,4 +1250,19 @@ return defined($username) && !ref($username) &&
 	$username !~ /\A(?:daemon|bin|sys|nobody|sshd)\z/;
 }
 
+# get_vm_form_defaults(config)
+# Supplies built-in fallbacks and presentation preferences for creation forms.
+sub get_vm_form_defaults
+{
+my ($config) = @_;
+my %defaults = map { %{(Cloudmin::Presets::builtin_presets($_))[0]->{'settings'}} }
+	qw(template plan);
+return { %defaults,
+	show_description => ($config->{'machine_show_description'} || '') eq '1' ? 1 : 0,
+	show_template_description => ($config->{'machine_show_template_description'} || '') =~ /\A[12]\z/
+		? 0 + $config->{'machine_show_template_description'} : 0,
+	generate_password => ($config->{'machine_generate_password'} || '') eq '1' ? 1 : 0,
+};
+}
+
 1;
