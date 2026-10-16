@@ -2145,4 +2145,28 @@ if ($kind eq 'disk' && $target) {
 return ($labels->{'kinds'}->{$kind} || $kind).($target ? ' ('.$target.')' : '');
 }
 
+# vm_pending_value(field, value, [boot_labels])
+# Formats running or saved values; callers escape the returned text.
+# Omitted boot_labels uses generic disk and network labels.
+sub vm_pending_value
+{
+my ($field, $value, $labels) = @_;
+# Memory settings arrive in MiB; display them using Webmin's size formatting.
+return nice_size_text($value * 1024**2) if ($field =~ /memory/);
+# Render the boot-menu flag with the same translated values as the form.
+return $text{$value ? 'index_yes' : 'index_no'} if ($field eq 'bootmenu');
+if ($field eq 'networks') {
+	# Stable MACs distinguish multiple interfaces without exposing host tap names.
+	$labels ||= vm_boot_labels({});
+	return join(', ', map { $_->{'mac'}.': '.$labels->{'kinds'}->{$_->{'type'}}.
+		' '.$_->{'source'} } @$value) || $text{'vm_software_none'};
+}
+if ($field eq 'boot') {
+	# Preserve libvirt's reported order, including
+	# legacy device-class entries.
+	return join(' → ', map { vm_boot_label($_, $labels || vm_boot_labels({})) } @$value) || $text{'vm_boot_default'};
+	}
+return $value;
+}
+
 1;
