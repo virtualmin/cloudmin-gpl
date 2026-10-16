@@ -1321,4 +1321,24 @@ return [ map { [ $_->{'id'}, $_->{'name'}.
 	(@$catalogue, @$imports, @$captures, grep { $_->{'unavailable'} } @$images) ];
 }
 
+# get_vm_form_images(options, [selected]) combines catalogue and custom imports.
+# Keep imports referenced by templates, including ones selected in the browser.
+sub get_vm_form_images
+{
+my ($options, $selected) = @_;
+my @catalogue = @{$options->{'catalogue_images'} || []};
+my %referenced = map { ($_->{'settings'}->{'image'} || '') => 1 }
+	@{$options->{'presets'}->{'template'}->{'entries'} || []};
+$referenced{$selected} = 1 if ($selected);
+# Hide redundant cached downloads unless a template still uses their import ID.
+my @imports = grep {
+	my $import = $_;
+	$referenced{$import->{'id'}} || !grep {
+		Cloudmin::Images::matches_download($import,
+			Cloudmin::Images::catalogue_request({%$_, id => $_->{'catalogue_id'}}, {}))
+	} @catalogue
+} @{$options->{'images'} || []};
+return [@catalogue, @imports];
+}
+
 1;
