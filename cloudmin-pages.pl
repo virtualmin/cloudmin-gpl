@@ -2186,4 +2186,25 @@ return ui_tag('span',
 	{ class => 'ui_page vm-header-status' });
 }
 
+# vm_power_cycle_button(vm, token, [return_to])
+# Keeps power cycling beside the other controls in a separate signed POST form.
+# The button requires host management and a token; return_to defaults to details.
+sub vm_power_cycle_button
+{
+my ($vm, $token, $return_to) = @_;
+return '' if (!$token || !can_access('manage'));
+my $state = $vm->{'state'} || ($vm->{'active'} ? 'running' : 'shutoff');
+return ui_form_start('machine.cgi', 'post', undef,
+	'id="vm-power-cycle-form"'.(keys %{$vm->{'pending'} || {}} &&
+		$state =~ /\A(?:running|blocked)\z/ ? '' : ' hidden')).
+	ui_hidden('id', $vm->{'uuid'} || $vm->{'id'}).ui_hidden('token', $token).
+	ui_hidden('action', 'power_cycle').
+	ui_hidden('return', ($return_to || '') eq 'edit_machine' ? 'edit_machine' : 'machine').
+	# Match the controls in the editor footer or compact details row.
+	(($return_to || '') eq 'edit_machine' ? ui_submit($text{'vm_control_power_cycle_button'}) :
+		ui_action_button($text{'vm_control_power_cycle'}, 'warning',
+			{ type => 'submit', size => 'small', icon => 'power' })).
+	ui_form_end(undef, undef, 1);
+}
+
 1;
