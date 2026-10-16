@@ -2084,4 +2084,22 @@ return ui_page_start().ui_note($text{'vm_password_reset_help'}).
 	ui_table_end().ui_form_end([[undef, $text{'vm_password_reset'}]]).ui_page_end();
 }
 
+# show_vm_force_off_form(vm, token, [return_to], [action])
+# Confirms emergency power-off or hard reset without changing the guest on GET.
+# action defaults to force_off; return_to defaults to the VM details page.
+sub show_vm_force_off_form
+{
+my ($vm, $token, $return_to, $action) = @_;
+$action = ($action || '') eq 'reset' ? 'reset' : 'force_off';
+$return_to = ($return_to || '') eq 'edit_machine' ? 'edit_machine' : 'machine';
+return ui_page_start().
+	ui_alert_box(text('vm_control_'.$action.'_warning', '<tt>'.html_escape($vm->{'name'}).'</tt>'),
+		'warn', undef, undef, '').
+	ui_form_start('machine.cgi', 'post', undef, 'id="vm-force-off-form"').
+	ui_hidden('id', $vm->{'uuid'}).ui_hidden('token', $token).
+	ui_hidden('action', $action).ui_hidden('confirm', 1).
+	ui_hidden('return', $return_to).
+	ui_form_end([[undef, $text{'vm_control_'.$action.'_button'}]]).ui_page_end();
+}
+
 1;
