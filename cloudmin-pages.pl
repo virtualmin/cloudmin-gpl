@@ -1512,4 +1512,310 @@ return ui_tag('style', '[data-vm-virtualmin][hidden], [data-vm-script-source][hi
 	ui_tag('script', 'window.cloudminSoftwareInit?.();');
 }
 
+# show_vm_form(options, input, token, [generated_password])
+# Shows editable preset defaults, with identity and credentials in open details.
+# Module Configuration selects which optional sections start open.
+# input may be undef; submitted fields override defaults, except credentials.
+# generated_password defaults to blank and is used only on a fresh form.
+sub show_vm_form
+{
+my ($options, $input, $token, $generated_password) = @_;
+my %values = %{$input || {}};
+# Keep presentation preferences separate from the selected preset settings.
+my $form_defaults = { %{get_vm_form_defaults({})},
+	%{$options->{'form_defaults'} || {}} };
+my $caps = $options->{'capabilities'} || {};
+my @images;
+my @pools = @{$options->{'pools'} || []};
+my @networks = @{$options->{'networks'} || []};
+my $presets = { %{$options->{'presets'} || {}} };
+# Render named defaults even in callers without persisted preset data. The
+# protected base fills gaps even when a different preset is selected as default.
+my %base;
+foreach my $kind (qw(template plan)) {
+	$presets->{$kind} ||= { default => Cloudmin::Presets::default_id(),
+		entries => [Cloudmin::Presets::builtin_presets($kind, $caps->{'cpus'})] };
+	my ($record) = grep { $_->{'id'} eq Cloudmin::Presets::default_id() }
+		@{$presets->{$kind}->{'entries'}};
+	@base{keys %{$record->{'settings'}}} = values %{$record->{'settings'}} if ($record);
+}
+# Saved defaults affect initial display only. API callers choose IDs explicitly.
+foreach my $kind (qw(template plan)) {
+	my $data = $presets->{$kind} || { entries => [], default => '' };
+	$values{$kind} = $data->{'default'} if (!length($values{$kind} || ''));
+	# Disabled records remain in API choices only to explain stale selections.
+	my ($record) = grep { $_->{'id'} eq $values{$kind} && !$_->{'disabled'} } @{$data->{'entries'}};
+	if ($record) {
+		# Fill omitted fields from the selected preset without replacing input.
+		foreach my $field (keys %{$record->{'settings'}}) {
+			$values{$field} = $record->{'settings'}->{$field} if (!exists($values{$field}));
+			}
+		}
+	}
+@images = @{get_vm_form_images($options, $values{'image'} || $base{'image'})};
+my ($default_pool) = grep { $_->{'name'} eq 'default' } @pools;
+my ($default_network) = grep { $_->{'name'} eq 'default' } @networks;
+# Prefer the selected or base image, then an available cloud image before ISO.
+my ($selected_image) = grep { $_->{'id'} eq ($values{'image'} || $base{'image'} || '') } @images;
+$selected_image ||= (grep { ($_->{'format'} || '') ne 'iso' } @images)[0] || $images[0];
+my %defaults = (software => 'none', virtualmin_bundle => 'LAMP', virtualmin_type => 'full',
+	virtualmin_postgres => '0', virtualmin_ssl => '1', webmin_register => '1', image => ($selected_image || {})->{'id'} || '',
+	install_source => (($selected_image || {})->{'format'} || '') eq 'iso' ? 'iso' : 'cloud',
+	pool => ($default_pool || $pools[0] || {})->{'id'},
+	network => ($default_network || $networks[0] || {})->{'key'},
+	cpus => $form_defaults->{'cpus'},
+	memory_mib => $form_defaults->{'memory_mib'},
+	disk_gib => $form_defaults->{'disk_gib'}, username => $form_defaults->{'username'},
+	auth_type => $form_defaults->{'auth_type'}, firmware => 'auto',
+	start => $form_defaults->{'start'}, autostart => $form_defaults->{'autostart'}, %base);
+foreach my $field (keys %defaults) {
+	# Preserve explicit empty values so defaults cannot hide invalid input.
+	$values{$field} = $defaults{$field} if (!exists($values{$field}));
+	}
+# Host policy overrides inherited and submitted choices in the initial summary.
+$values{'software'} = 'none' if (!virtualmin_enabled());
+my $page = ui_page_start();
+if (!@images) {
+	# Keep the setup action visible when neither catalogue entries nor imports
+	# are available.
+	$page .= ui_empty_state({
+		'icon' => 'download',
+		'title' => $text{'vm_no_images'},
+		'desc' => $text{'vm_no_images_desc'},
+		'actions' => ui_link_button('image_form.cgi',
+		$text{'images_tab_add'}),
+	});
+	return $page.ui_page_end();
+	}
+if (!@pools || !@networks) {
+	# Explain missing prerequisites before presenting an unusable submit
+	# button.
+	$page .= ui_alert_box($text{!@pools ? 'vm_no_pools'
+		: 'vm_no_networks'}, 'warn', undef, undef, '');
+	return $page.ui_page_end();
+	}
+$page .= ui_p($text{'vm_create_desc'});
+# Use a streaming URL so the theme displays progress during downloads.
+$page .= ui_form_start('setup_machine.cgi', 'post', undef, 'id="vm-create-form"');
+# Avoid a control named action, which hides form.action from the theme.
+$page .= ui_hidden('token', $token).ui_hidden('vm_operation', 'create');
+# Presets fill the same form; manual edits keep the chosen template and plan.
+my ($base_image) = grep { $_->{'id'} eq ($base{'image'} || '') } @images;
+my %preset_defaults = (ssh_keys => '', address_mode => 'dhcp',
+	gateway4 => '', gateway6 => '', dns => '', %defaults,
+	install_source => $base{'install_source'} ||
+		((($base_image || $images[0])->{'format'} || '') eq 'iso' ? 'iso' : 'cloud'));
+# Send translated summary labels and descriptions with the presets.
+my %labels = map { $_ => $text{'vm_summary_'.$_} }
+	qw(resources network dhcp static none setup packages virtualmin postgres gpl pro apache nginx);
+my %descriptions = map { $_->{'id'} => preset_description($_) }
+	@{$presets->{'template'}->{'entries'} || []};
+# Attribute helpers normalize whitespace, so keep script contents in JSON text.
+# Escaping '<' also prevents a pasted script from closing this HTML element.
+my $preset_json = convert_to_json({ %$presets, defaults => \%preset_defaults,
+	labels => \%labels, descriptions => \%descriptions }, 0, 0);
+$preset_json =~ s/</\\u003c/g;
+$page .= ui_tag('script', $preset_json, { type => 'application/json', 'data-vm-presets' => '1' });
+# Missing template resources must remain visible and fail normal validation.
+foreach my $entry (['image', \@images, 'id'], ['pool', \@pools, 'id'], ['network', \@networks, 'key']) {
+	my ($field, $items, $key) = @$entry;
+	if ($values{$field} && !grep { $_->{$key} eq $values{$field} } @$items) {
+		# Keep a removed resource selected so submission explains what
+		# needs repair.
+		push(@$items, {$key => $values{$field}, name => text('presets_unavailable', $values{$field}),
+			unavailable => 1, format => $values{'install_source'} eq 'iso' ? 'iso' : 'qcow2'});
+		}
+	}
+$page .= show_vm_resource_input_styles();
+# Keep identity, credentials and preset selectors in the initially open section.
+$page .= ui_hidden_table_start($text{'vm_step_details'}, 'width=100%', 2,
+	'vm_details', 1);
+# Use the VM name as hostname unless a separate hostname is requested.
+my $hostname_set = $values{'hostname_set'} ||
+	length($values{'hostname'} || '') ? 1 : 0;
+$page .= ui_table_row($text{'vm_name'},
+	ui_textbox('name', $values{'name'}, 45).
+	ui_tag('div', ui_checkbox('hostname_set', 1, $text{'vm_hostname_set'},
+		$hostname_set), { 'data-vm-hostname-toggle' => 1, 'data-vm-cloud-init' => 1 }));
+# A blank separate hostname also falls back to the virtual machine name.
+$page .= ui_table_row($text{'vm_hostname'},
+	ui_textbox('hostname', $values{'hostname'}, 45, undef, undef,
+	'placeholder="'.html_escape($text{'vm_hostname_placeholder'}).'"'),
+	undef, undef, [ "id='vm_hostname_row' data-vm-cloud-init='1'".
+		($hostname_set ? '' : ' hidden') ]);
+if ($form_defaults->{'show_description'} ||
+	length($values{'description'} || '')) {
+	# Keep a supplied description editable even when hidden by default.
+	$page .= ui_table_row($text{'vm_description'},
+		ui_textarea('description', $values{'description'}, 3, 65));
+	}
+# Only a fresh form may receive a generated password; never echo submitted ones.
+$generated_password = ''
+	if (!$form_defaults->{'generate_password'} || $values{'action'});
+# Show generated passwords directly, including in themes without a reveal button.
+my $password_input = $form_defaults->{'generate_password'} ? \&ui_textbox : \&ui_password;
+my $password = $password_input->('password', $generated_password || '', 30, 0, undef,
+	'data-password autocomplete="new-password"');
+# The browser shows whichever credential rows the login method uses.
+$page .= ui_table_row($text{'vm_password'}, $password, undef, undef,
+	[ "id='vm_password_row' data-vm-cloud-init='1'" ]);
+$page .= ui_table_row($text{'vm_ssh_keys'},
+	ui_textarea('ssh_keys', $values{'ssh_keys'}, 4, 75),
+	undef, undef, [ "id='vm_keys_row' data-vm-cloud-init='1'" ]);
+if ($options->{'cloud_init_error'}) {
+	# Installer creation remains available when cloud-init tools are missing.
+	$page .= ui_table_row(undef, ui_note(html_escape($options->{'cloud_init_error'}), 0), 2);
+	}
+$page .= ui_table_hr();
+my $template_note = '';
+if ($form_defaults->{'show_template_description'}) {
+	# Keep the selected display mode available for browser updates.
+	my ($template) = grep { $_->{'id'} eq ($values{'template'} || '') }
+		@{$presets->{'template'}->{'entries'} || []};
+	my $description = $template ? (preset_description($template) // '') : '';
+	$description = '' if ($form_defaults->{'show_template_description'} == 1 &&
+		$template && lc($description) eq lc($template->{'name'}));
+	$template_note = ui_tag('div', ui_note(ui_tag('span', html_escape($description),
+		{ 'data-vm-template-desc' => 1 }), 0),
+		{ 'data-vm-template-note' => $form_defaults->{'show_template_description'},
+		  $description eq '' ? (hidden => undef) : () });
+}
+# Offer only templates that the host's installation policy allows.
+$page .= ui_table_row($text{'presets_template'},
+	ui_select('template', $values{'template'}, [ map { [$_->{'id'}, $_->{'name'}] }
+		grep { !$_->{'disabled'} } @{$presets->{'template'}->{'entries'} || []} ]).$template_note);
+# Show allocations in plan labels before the user opens Resources.
+$page .= ui_table_row($text{'presets_plan'},
+	ui_select('plan', $values{'plan'}, [ map { [ $_->{'id'},
+		text('vm_plan_option', $_->{'name'}, $_->{'settings'}->{'cpus'},
+			nice_size_text($_->{'settings'}->{'memory_mib'} * 1024**2),
+			nice_size_text($_->{'settings'}->{'disk_gib'} * 1024**3)) ] }
+		@{$presets->{'plan'}->{'entries'} || []} ]));
+$page .= show_license_rows();
+# Put the missing-source warning in details so it is visible on initial load.
+my $source = ($values{'install_source'} || 'cloud') eq 'iso' ? 'iso' : 'cloud';
+my $source_empty = !grep { (($_->{'format'} || '') eq 'iso' ? 'iso' : 'cloud') eq $source } @images;
+$page .= ui_table_row(undef, show_vm_summary(\%values, \@images, \@networks).
+	ui_tag('div', ui_note($text{'vm_source_empty'}, 0),
+		{ 'data-vm-source-empty' => 1, $source_empty ? () : (hidden => undef) }), 2);
+$page .= ui_hidden_table_end('vm_details');
+# Optional sections start open only when selected in Module Configuration.
+$page .= ui_hidden_table_start($text{'presets_image'}, 'width=100%', 2,
+	'vm_image', section_open('machine_create_sections', 'image'));
+$page .= ui_table_row($text{'vm_install_source'},
+	ui_select('install_source', $values{'install_source'}, [
+		[ 'cloud', $text{'vm_source_cloud'} ], [ 'iso', $text{'vm_source_iso'} ] ]));
+$page .= ui_table_row($text{'vm_image'},
+	ui_cluster([
+		show_image_select('image', $values{'image'}, get_vm_image_choices(\@images), 0, 1),
+		ui_action_button($text{'vm_manage_images'}, 'neutral', {
+			href => 'images.cgi', icon => 'hard-drive',
+			attrs => { 'data-vm-manage-images' => 1 } })
+	], { class => 'cloudmin-vm-image-picker', gap => 'var(--gap-content, 10px)' }));
+# Show installer guidance when an ISO is the source.
+$page .= ui_table_row('',
+	ui_tag('div', ui_note($text{'vm_iso_desc'}, 0), { 'data-vm-installer' => 1 }),
+	1, undef, undef, 1);
+my ($selected_pool) = grep { $_->{'id'} eq ($values{'pool'} || '') } @pools;
+# Match the browser's first option when the submitted pool is no longer listed.
+$selected_pool ||= $pools[0];
+# disk_hint(pool) formats the current free-space hint for a pool.
+my $disk_hint = sub {
+	# The pool's current free space is a guide; creation rechecks it on submit.
+	return defined($_[0]->{'available'})
+		? text('vm_disk_available', nice_size_text($_[0]->{'available'})) : '';
+	};
+# Keep the pool beside the image and update the disk capacity hint on changes.
+$page .= ui_table_row($text{'images_storage'},
+	ui_select('pool', $values{'pool'}, [ map {
+	[ $_->{'id'},
+	  text('images_pool_option', $_->{'name'},
+		nice_size_text($_->{'available'})),
+	  'data-vm-available="'.html_escape($disk_hint->($_)).'"' ]
+	} @pools ], undef, undef, undef, undef,
+	q{onchange="this.form.querySelector('[data-vm-capacity=disk_gib]').textContent = this.selectedIndex < 0 ? '' : this.options[this.selectedIndex].getAttribute('data-vm-available') || '';"}));
+$page .= ui_hidden_table_end('vm_image');
+# Show the plan's allocations as editable fields; the server validates them.
+$page .= ui_hidden_table_start($text{'vm_step_resources'}, 'width=100%', 2,
+	'vm_resources', section_open('machine_create_sections', 'resources'));
+$page .= ui_table_row($text{'vm_cpus'},
+	ui_textbox('cpus', $values{'cpus'}, 2, undef, undef, 'data-vm-resource').
+	($caps->{'cpus'} ? ui_tag('span', text('vm_cpus_range', $caps->{'cpus'}),
+		{ class => 'vm-resource-hint' }) : ''));
+foreach my $size ([ 'memory_mib', 1024**2 ], [ 'disk_gib', 1024**3 ]) {
+	# Webmin's size widget selects readable units from the entered byte count.
+	my ($field, $base) = @$size;
+	my $bytes = vm_size_bytes(\%values, $field, $base) || '';
+	# Memory shows installed host capacity; disks use the selected pool's space.
+	my $hint = $field eq 'memory_mib'
+		? ($caps->{'memory_kib'} ? text('vm_memory_range',
+			nice_size_text($caps->{'memory_kib'} * 1024)) : '')
+		: $disk_hint->($selected_pool);
+	$page .= ui_table_row($text{'vm_'.$field},
+		ui_bytesbox($field, $bytes, 4, 0, 'data-vm-resource="size"', $base).
+		ui_tag('span', $hint, { class => 'vm-resource-hint',
+			'data-vm-capacity' => $field, 'aria-live' => 'polite' }));
+	}
+$page .= ui_hidden_table_end('vm_resources');
+# Hide the whole Access accordion in ISO mode. Credentials render in details.
+$page .= ui_hidden_table_start($text{'vm_step_access'},
+	'width=100% data-vm-cloud-init="1"', 2,
+	'vm_access', section_open('machine_create_sections', 'access'));
+$page .= ui_table_row($text{'vm_username'},
+	ui_textbox('username', $values{'username'}, 30, undef, undef, 'data-vm-autosize'));
+$page .= ui_table_row($text{'vm_auth_type'},
+	ui_select('auth_type', $values{'auth_type'},
+	[ map { [ $_, $text{'vm_auth_'.$_} ] } qw(keys password both) ]));
+$page .= ui_hidden_table_end('vm_access');
+# Hide the whole Software accordion in ISO mode. Only Module Configuration
+# decides whether it starts open; selecting a template leaves it as rendered.
+$page .= ui_hidden_table_start($text{'vm_software'},
+	'width=100% data-vm-cloud-init="1"', 2,
+	'vm_software', section_open('machine_create_sections', 'software'));
+$page .= show_software_settings(\%values, 0, 1);
+$page .= ui_hidden_table_end('vm_software');
+$page .= ui_hidden_table_start($text{'vm_network'}, 'width=100%', 2,
+	'vm_network', section_open('machine_create_sections', 'network'));
+# DHCP is the initial choice; static inputs appear only when requested.
+$page .= ui_table_row($text{'vm_network'},
+	ui_select('network', $values{'network'}, [ map {
+	[ $_->{'key'}, $_->{'name'}.' ('.($_->{'forward'} || $_->{'type'}).')' ]
+	} @networks ]));
+my @static = map { [ $text{'vm_'.$_}, ui_textbox($_, $values{$_}, 45,
+	undef, undef, $_ =~ /\A(?:gateway4|gateway6|dns)\z/
+		? 'placeholder="'.html_escape($text{'vm_optional'}).'"' : '') ] }
+	qw(ipv4 gateway4 ipv6 gateway6 dns);
+# ISO installs still need a NIC; only guest addressing is hidden.
+$page .= ui_table_row($text{'vm_address_mode'},
+	ui_select_switch('address_mode', $values{'address_mode'} || 'dhcp', [
+	{ value => 'dhcp', label => $text{'vm_dhcp'}, fields => [] },
+	{ value => 'static', label => $text{'vm_static'}, fields => \@static },
+], { id => 'cloudmin-vm-addresses' }), undef, undef,
+	[ 'data-vm-cloud-init="1"' ]);
+$page .= ui_table_row($text{'vm_mac'}, ui_textbox('mac', $values{'mac'}, 45,
+	undef, undef,
+	'placeholder="'.html_escape($text{'vm_mac_placeholder'}).'"'));
+$page .= ui_hidden_table_end('vm_network');
+# Put firmware and startup settings in the last section.
+$page .= ui_hidden_table_start($text{'vm_boot_options'}, 'width=100%', 2,
+	'vm_boot', section_open('machine_create_sections', 'boot'));
+$page .= ui_table_row($text{'catalogue_firmware'},
+	ui_select('firmware', $values{'firmware'}, [
+	[ 'auto', $text{'vm_auto'} ],
+	map { [ $_, $_ eq 'efi' ? 'UEFI' : 'BIOS' ] }
+	@{$caps->{'firmware'} || []} ]));
+$page .= ui_table_row($text{'vm_autostart'},
+	ui_yesno_radio('autostart', $values{'autostart'}));
+$page .= ui_table_row($text{'vm_start'},
+	ui_yesno_radio('start', $values{'start'}));
+$page .= ui_hidden_table_end('vm_boot');
+$page .= ui_form_end([ [ undef, $text{'vm_create'} ] ]);
+# Initialize the form after theme navigation as well as full page loads.
+# Repeated calls leave existing selections intact.
+$page .= software_script().ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_create.js?'.
+	(stat("$module_root_directory/machine_create.js"))[9] }).
+	ui_tag('script', 'window.cloudminVmCreateInit?.();');
+return $page.ui_page_end();
+}
+
 1;
