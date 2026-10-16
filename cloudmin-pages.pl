@@ -2129,4 +2129,20 @@ return { roles => { map { $_ => $text{'vm_disk_role_'.$_} }
 	interface => $text{'vm_boot_network'}, disk => $text{'vm_disk_role_disk'} } };
 }
 
+# vm_boot_label(device, labels)
+# Uses known disk roles; legacy boot classes retain descriptive generic names.
+sub vm_boot_label
+{
+my ($device, $labels) = @_;
+my $kind = $device->{'device'} || 'disk';
+my $target = $device->{'target'};
+if ($kind eq 'disk' && $target) {
+	# Per-device boot entries retain the guest
+	# target after the friendly role.
+	return ($labels->{'roles'}->{$labels->{'disks'}->{$target} || 'disk'} ||
+		$labels->{'roles'}->{'disk'}).' ('.$target.')';
+	}
+return ($labels->{'kinds'}->{$kind} || $kind).($target ? ' ('.$target.')' : '');
+}
+
 1;
