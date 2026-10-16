@@ -2400,6 +2400,308 @@ return show_vm_pending_styles().
 	ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_pending.js?'.(stat("$module_root_directory/machine_pending.js"))[9] });
 }
 
+# show_vm_edit_form(settings, token, [deleting], [shutdown_requested], [tab])
+# Renders hardware edits or a separate disk-selection confirmation for deletion.
+# Flags default to false; tab defaults to resources.
+sub show_vm_edit_form
+{
+my ($s, $token, $deleting, $shutdown_requested, $tab) = @_;
+my $page = ui_page_assets();
+if ($s->{'active'} && $shutdown_requested) {
+	# Keep the waiting page until the requested shutdown completes.
+	$page .= ui_alert_box($text{'vm_edit_shutdown_requested'},
+		'info', undef, undef, '');
+	my $shutdown = vm_edit_form_start($s, $token, 'shutdown', undef,
+		'vm-shutdown-form').ui_submit($text{'vm_control_shutdown_button'},
+			undef, $shutdown_requested).
+		ui_form_end(undef, undef, 1);
+	# Open confirmation separately from the immediate shutdown submission.
+	my $force_off = ui_form_start('machine.cgi', 'get', undef,
+		'id="vm-force-off-review-form"').ui_hidden('id', $s->{'id'}).
+		ui_hidden('force_off', 1).ui_hidden('return', 'edit_machine').
+		ui_submit($text{'vm_control_force_off_button'}).
+		ui_form_end(undef, undef, 1);
+	return $page.ui_form_grouped_buttons([[$shutdown], [$force_off]]);
+	}
+if ($deleting) {
+	# The Delete button confirms the selected disks; unchecked disks survive.
+	$page .= ui_page_start().ui_alert_box($text{'vm_delete_desc'}, 'warn', undef, undef, '');
+	$page .= vm_edit_form_start($s, $token, 'delete',
+		[[ shutdown => 1 ], [ confirm_name => $s->{'name'} ],
+		 [ history_revision => $s->{'history_revision'} ]], 'vm-delete-confirm-form');
+	$page .= ui_table_start($text{'vm_delete_storage'}, 'width=100%', 2);
+	my $index = 0;
+	foreach my $d (@{$s->{'disks'}}) {
+		# Show occupied storage only; an empty CD
+		# drive has no file to delete.
+		my $volume = $d->{'volume_info'} || {};
+		my $role = $d->{'role'} || 'disk';
+		my $path = $d->{'path'} || $volume->{'path'} || '';
+		next if (!$path && !$d->{'volume'} && $d->{'device'} eq 'cdrom');
+		$page .= ui_table_hr() if ($index++);
+		my $label = html_escape(vm_disk_label($d));
+		# Roles identify the disk; size and access
+		# badges describe its contents.
+		$label .= ' '.ui_badge(nice_size_text($volume->{'capacity'}), undef, { small => 1 })
+			if ($volume->{'capacity'});
+		$label .= ' '.ui_badge($text{'vm_disk_readonly'}, undef, { small => 1 }) if ($d->{'readonly'});
+		my @content = (html_escape($text{'vm_disk_desc_'.$role}));
+		push(@content, show_disk_location($path)) if ($path);
+		# Read-only media can be deleted, but
+		# imported/unmanaged files stay kept.
+		push(@content, ui_tag('span', $d->{'volume_info'} && !$d->{'imported'}
+			? ui_checkbox('disks', $d->{'target'}, $text{'vm_delete_disk'}, 0)
+			: html_escape($text{'vm_keep_disk'}),
+			{ 'data-delete-writable' => $d->{'readonly'} ? 0 : 1 }));
+		$page .= ui_table_row($label, ui_stack(\@content, { gap => '0.5em' }), 1, undef, undef, 1);
+		}
+	$page .= ui_table_end();
+	# The browser previews the stop method; the
+	# worker rechecks disk ownership.
+	$page .= ui_tag('div', ui_note(ui_tag('span', html_escape($text{'vm_delete_stop_clean'}),
+		{ 'data-delete-stop-text' => '' }), 0), {
+		'data-delete-stop' => '', 'data-force-blocked' => $s->{'delete_force_blocked'} || 0,
+		'data-clean' => html_escape($text{'vm_delete_stop_clean'}),
+		'data-force' => html_escape($text{'vm_delete_stop_force'}) }) if ($s->{'active'});
+	$page .= ui_form_end([[undef, $text{'vm_delete'}]]).ui_page_end().
+		ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_delete.js?'.
+			(stat("$module_root_directory/machine_delete.js"))[9] }).
+		ui_tag('script', 'window.cloudminVmDeleteInit?.();');
+	return $page;
+	}
+$page .= show_vm_pending_banner($s);
+$page .= ui_p($text{'vm_edit_desc'});
+$page .= vm_edit_form_start($s, $token, 'update', undef, 'vm-edit-form');
+# Tabs share one form so changing sections never submits partial edits.
+$page .= ui_tabs_start([
+	['resources', $text{'vm_edit_resources'}],
+	['disks', $text{'vm_disks'}],
+	['interfaces', $text{'vm_interfaces'}],
+	], 'vm_edit_tabs', $tab || 'resources', 1).
+	ui_tabs_start_tab('vm_edit_tabs', 'resources');
+$page .= ui_tag('div', ui_p(html_escape($text{'vm_resource_edit_desc'})),
+	{ class => 'vui_ui_block' });
+$page .= show_vm_resource_input_styles();
+my $locks = $s->{'resource_locks'} || {};
+# Saved maximums may exceed live limits; layout-bound fields stay constrained.
+my $cpu_max = $locks->{'cpu_limit'} ? $s->{'cpu_limit'} : $s->{'max_cpus'};
+my $memory_max = $locks->{'memory_limit_mib'} ? $s->{'memory_limit_mib'} : $s->{'max_memory_mib'};
+$page .= ui_table_start($text{'vm_edit_resources'}, 'width=100%', 2);
+$page .= ui_table_row($text{'vm_cpus'},
+	ui_textbox('cpus', $s->{'cpus'}, 2, $locks->{'cpus'}, undef,
+		'data-vm-resource data-vm-min="1" data-vm-max="'.int($cpu_max || 1).'"').
+	($cpu_max ? ui_tag('span', text('vm_cpus_range', $cpu_max),
+		{ style => 'font-size:inherit;opacity:0.66;margin-inline:0.3em' }) : '').
+	($locks->{'cpus'} ? ui_hidden('cpus', $s->{'cpus'}).
+		ui_tag('div', ui_note($text{'vm_cpu_count_fixed'}, 0)) : ''));
+$page .= ui_table_row($text{'vm_cpu_limit'},
+	ui_textbox('cpu_limit', $s->{'cpu_limit'}, 3, $locks->{'cpu_limit'}, undef,
+		'data-vm-resource data-vm-min="1" data-vm-max="'.int($s->{'max_cpus'} || 1).'"').
+	($locks->{'cpu_limit'} ? ui_tag('div', ui_note($text{'vm_cpu_layout_fixed'}, 0)) : ''));
+$page .= ui_table_row($text{'vm_memory_mib'},
+	ui_bytesbox('memory_mib', $s->{'memory_mib'}*1024**2,
+		4, $locks->{'memory_mib'}, 'data-vm-resource="size" data-vm-min="268435456" data-vm-max="'.
+		int(($memory_max || $s->{'memory_mib'})*1024**2).'"', 1024**2).
+	($locks->{'memory_mib'} ? ui_hidden('memory_mib', $s->{'memory_mib'}).
+		ui_hidden('memory_mib_units', 1024**2).
+		ui_tag('div', ui_note($text{'vm_memory_devices_fixed'}, 0)) : ''));
+$page .= ui_table_row($text{'vm_memory_limit'},
+	ui_bytesbox('memory_limit_mib', ($s->{'memory_limit_mib'} || $s->{'memory_mib'})*1024**2,
+		4, $locks->{'memory_limit_mib'}, 'data-vm-resource="size" data-vm-min="268435456" data-vm-max="'.
+		int(($s->{'max_memory_mib'} || $s->{'memory_mib'})*1024**2).'"', 1024**2).
+	($locks->{'memory_limit_mib'} ? ui_tag('div', ui_note($text{'vm_memory_layout_fixed'}, 0)) : ''));
+$page .= ui_table_row($text{'vm_description'},
+	ui_textarea('description', $s->{'description'}, 3, 60,
+		undef, 0));
+my @boot = ([ '', $text{'vm_boot_unchanged'} ],
+	(map { ['disk:'.$_->{'target'}, vm_disk_label($_)] }
+	 @{$s->{'disks'}}),
+	(map { ['nic:'.$_->{'mac'}, $text{'vm_boot_network'}.' ('.$_->{'mac'}.')'] }
+	 @{$s->{'interfaces'}}));
+$page .= ui_table_row($text{'vm_boot_first'},
+	ui_select('boot', '', \@boot, undef, 0, 0));
+$page .= ui_table_row($text{'vm_boot_menu'},
+	ui_hidden('bootmenu_present', 1).
+	ui_checkbox('bootmenu', 1, $text{'index_yes'}, $s->{'bootmenu'},
+		undef, 0));
+if (!$s->{'active'} || defined($s->{'live_limits'}->{'pcie_ports'}) && !$s->{'live_limits'}->{'pcie_ports'}) {
+	# Only guests without spare PCIe ports need the one-time shutdown notice.
+	$page .= ui_table_row($text{'vm_hardware_headroom'},
+		$s->{'active'} ? ui_note($text{'vm_headroom_shutdown'}, 0) :
+		ui_checkbox('enable_live', 1, $text{'vm_headroom_enable'}, 0));
+	}
+$page .= ui_table_end();
+$page .= ui_tabs_end_tab('vm_edit_tabs', 'resources');
+# Disk and network choices are applied together by the shared Save button.
+$page .= ui_tabs_start_tab('vm_edit_tabs', 'disks').
+	ui_tag('div', ui_p(html_escape($text{'vm_disk_edit_desc'})),
+		{ class => 'vui_ui_block' });
+# Show each disk's role and storage details beside its pending edits.
+my @disks;
+my @remove_disks;
+my $index = 0;
+foreach my $d (@{$s->{'disks'}}) {
+	my $prefix = 'disk_'.$index++;
+	my @controls;
+	my %detach_attrs;
+	if ($d->{'device'} eq 'cdrom') {
+		# Blank preserves media; the explicit eject
+		# option retains the CD drive.
+		my @media = map { [$_->{'pool'}.':'.$_->{'name'}, storage_volume_label($_).' ('.$_->{'pool_name'}.')'] }
+			grep { $_->{'format'} eq 'iso' || $_->{'format'} eq 'raw' && $_->{'name'} =~ /\.iso\z/i }
+			@{$s->{'volumes'} || []};
+		push(@controls, ui_select($prefix.'_media', '', [
+			['', $text{'vm_media_unchanged'}], ['eject', $text{'vm_media_eject'}], @media ]));
+		}
+	if ($d->{'volume_info'} && !$d->{'readonly'} && $d->{'device'} eq 'disk') {
+		# Keep the amount and units together; blank means no size change.
+		push(@controls, ui_cluster([
+			html_escape($text{'vm_grow_disk'}),
+			ui_tag('span',
+				ui_bytesbox($prefix.'_size', '', 4, 0, 'data-vm-resource="size"', 1024**3),
+				{ class => 'ui_data' }),
+			], { gap => '0.5em' }));
+		# Detaching excludes growth without discarding the entered size.
+		$detach_attrs{'onchange'} =
+			"this.form.elements['${prefix}_size'].disabled = ".
+			"this.form.elements['${prefix}_size_units'].disabled = ".
+			"this.checked;";
+		}
+	# Detach and permanent deletion live together in the removal panel.
+	my @remove_controls = (ui_toggle({ name => $prefix.'_detach', value => 1,
+		label => $text{'vm_detach_disk'}, state => 'danger', round => 1,
+		attrs => \%detach_attrs }));
+	# The delete link opens confirmation without saving pending edits.
+	push(@remove_controls, ui_action_button($text{'vm_delete_disk_action'}, 'danger',
+		{ size => 'small', icon => 'trash',
+		  href => 'edit_machine.cgi?id='.urlize($s->{'id'}).
+			'&vm_edit_tabs=disks&delete_disk='.urlize($d->{'target'}) }))
+		if ($d->{'volume_info'} && !$d->{'imported'} && !$s->{'active'});
+	my $volume = $d->{'volume_info'} || {};
+	my $label = vm_disk_label($d);
+	my $location = $volume->{'pool_name'} || '';
+	my $size = $volume->{'capacity'} ? nice_size_text($volume->{'capacity'}) : '';
+	push(@remove_disks, [ html_escape($label).' '.
+		($size ? ui_badge($size, undef, { small => 1 }).' ' : '').
+		ui_tag('span', html_escape($location),
+			{ style => 'font-size:inherit;font-weight:normal;opacity:0.66;margin-inline:0.3em' }),
+		ui_cluster(\@remove_controls, { gap => '1em' }) ]);
+	my @badges = $size ? ($size) : ();
+	push(@badges, $text{'vm_disk_readonly'}) if ($d->{'readonly'});
+	push(@disks, { title => $label,
+		icon => 'hard-drive',
+		desc_html => ui_tag('span', html_escape($location),
+			{ style => 'align-self:flex-start' }).' '.
+			show_disk_location($d->{'path'} || $volume->{'path'} || $d->{'volume'} || ''),
+		badge_html => join(' ', map { ui_badge($_, undef, { small => 1 }) } @badges),
+		actions => ui_hidden($prefix.'_target', $d->{'target'}).
+			(@controls ? ui_tag('div', ui_stack(\@controls, { gap => '0.5em' }),
+				{ style => 'width:22em' }) : '') });
+	}
+# Keep disk widgets and removal badges in the same Webmin color context.
+$page .= ui_page_start();
+$page .= ui_card({ flush => 1,
+	body => ui_list(\@disks, { flush => 1 }) })
+	if (@disks);
+# One explicit choice adds one disk when the shared Save is submitted.
+my @pools = map { [$_->{'id'}, $_->{'name'}] } @{$s->{'pools'}};
+my @volumes = map { [$_->{'pool'}.':'.$_->{'name'},
+	storage_volume_label($_).' - '.nice_size_text($_->{'capacity'}).' ('.$_->{'pool_name'}.')'] }
+	@{$s->{'attachable_volumes'} || []};
+# Clone sources use the same grouping helper as creation and templates.
+my @images = map { [$_->{'id'},
+	$_->{'name'}.' - '.nice_size_text($_->{'capacity'}).' ('.$_->{'pool_name'}.')',
+	undef, get_image_group($_, $text{'vm_image_imports'})] }
+	@{Cloudmin::ImageChoices::sort_images($s->{'images'} || [])};
+$page .= ui_tag('style', '#vm-edit-form .ui_radio_table { width:100%; } '.
+	'#vm-edit-form .ui_badge_small { font-size:0.75em; padding-inline:5px; }').
+	ui_hidden_table_start($text{'vm_add_disk_title'}, 'width=100%', 2,
+		'vm_add_disk', 0).
+	ui_table_row(undef, ui_p($text{'vm_add_disk_desc'}).
+		ui_radio_table('add_disk_action', 'none', [
+		['none', $text{'vm_no_disk_addition'}],
+		['create', $text{'vm_create_empty_disk'},
+			ui_tag('span', ui_select('add_disk_pool', '', \@pools).
+				ui_tag('span', html_escape($text{'vm_with_size'}),
+					{ style => 'display:inline-block;margin-inline:0.3em' }).
+				ui_bytesbox('add_disk_size', '', 4, 0, 'data-vm-resource="size"', 1024**3),
+				{ 'data-group' => 'add-disk' })],
+		['clone', $text{'vm_clone_image'},
+			ui_tag('span', show_image_select('clone_image', '', [ ['', $text{@images ? 'vm_choose_image' : 'vm_no_clone_images'}], @images ]).
+				ui_tag('span', html_escape($text{'vm_with_storage_pool'}),
+					{ style => 'display:inline-block;margin-inline:0.3em' }).
+				ui_select('clone_disk_pool', '', \@pools),
+				{ 'data-group' => 'clone-disk' })],
+		['attach', $text{'vm_attach_disk'},
+			ui_select('attach_volume', '', [ ['', $text{@volumes ? 'vm_choose_disk' : 'vm_no_unused_disks'}], @volumes ])],
+		]), 2).
+	ui_hidden_table_end('vm_add_disk');
+if (@remove_disks) {
+	# Removal choices stay pending in the shared form until Save is used.
+	$page .= ui_hidden_table_start($text{'vm_remove_disk_title'}, 'width=100%', 2,
+		'vm_remove_disk', 0).
+		ui_table_row(undef, ui_p($text{'vm_remove_disk_desc'}), 2);
+	$page .= ui_table_row(@$_) foreach @remove_disks;
+	$page .= ui_hidden_table_end('vm_remove_disk');
+	}
+$page .= ui_page_end().ui_tabs_end_tab('vm_edit_tabs', 'disks');
+$page .= ui_tabs_start_tab('vm_edit_tabs', 'interfaces').
+	ui_tag('div', ui_p(html_escape($text{'vm_nic_edit_desc'})),
+		{ class => 'vui_ui_block' }).
+	ui_page_start().ui_table_start(undef, 'width=100%', 2);
+my @networks = map { [ $_->{'key'}, $_->{'source'}.' ('.$_->{'type'}.')' ] }
+	@{$s->{'networks'}};
+$index = 0;
+foreach my $nic (@{$s->{'interfaces'}}) {
+	my $prefix = 'nic_'.$index++;
+	my ($network) = grep { $_->{'source'} eq $nic->{'source'} &&
+		$_->{'type'} eq $nic->{'type'} } @{$s->{'networks'}};
+	# Keep each bandwidth label with its input when the row wraps.
+	my @bandwidth;
+	foreach my $field ([inbound_kib => 'vm_bandwidth_in'],
+			  [outbound_kib => 'vm_bandwidth_out']) {
+		my ($name, $label) = @$field;
+		push(@bandwidth, ui_tag('span',
+			ui_tag('label', html_escape($text{$label}), { for => $prefix.'_'.$name }).
+			ui_textbox($prefix.'_'.$name, $nic->{$name} || '', 6, 0, undef,
+				'placeholder="'.html_escape($text{'vm_bandwidth_unlimited'}).'"'),
+			{ class => 'ui_cluster vm-interface-field', 'data-group' => $name,
+			  style => '--ui-gap:0.5em' }));
+		}
+	$page .= ui_table_row(html_escape($nic->{'mac'}),
+		ui_hidden($prefix.'_mac', $nic->{'mac'}).
+		ui_stack([
+			ui_cluster([
+				ui_tag('span',
+					ui_tag('label', html_escape($text{'vm_network'}), { for => $prefix.'_network' }).
+					ui_select($prefix.'_network', $network ? $network->{'key'} : '',
+						[ ['', $text{'vm_keep_network'}], @networks ], undef, 0, 0, 0,
+						'style="field-sizing:content;width:auto!important;max-width:100%"'),
+					{ class => 'ui_cluster vm-interface-field', 'data-group' => 'network',
+					  style => '--ui-gap:0.5em' }),
+				ui_tag('span', ui_hidden($prefix.'_link_present', 1).
+					ui_toggle({ name => $prefix.'_link', value => 'up',
+						label => $text{'vm_cable_connected'}, round => 1, state => 'success',
+						checked => ($nic->{'link'} || 'up') eq 'up' }),
+					{ 'data-group' => 'link' }),
+				], { gap => '1.5em' }),
+			ui_cluster(\@bandwidth, { gap => '1.5em' }),
+			ui_toggle({ name => $prefix.'_remove', value => 1,
+				label => $text{'vm_remove_interface'}, round => 1, state => 'danger' }),
+			], { class => 'vm-interface-controls', gap => '0.75em' }), 1, undef, undef, 1);
+	}
+$page .= ui_table_hr() if (@{$s->{'interfaces'}});
+$page .= ui_table_row($text{'vm_add_interface'},
+	ui_select('add_interface_network', '',
+		[ ['', $text{'vm_no_interface_addition'}], @networks ]), 1, undef, undef, 1);
+$page .= ui_table_end().ui_page_end().ui_tabs_end_tab('vm_edit_tabs', 'interfaces').
+	ui_tabs_end(1).vm_edit_buttons($s, $token);
+$page .= ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_edit.js?'.
+	(stat("$module_root_directory/machine_edit.js"))[9] }).
+	ui_tag('script', 'window.cloudminVmEditInit?.();');
+return $page;
+}
+
 # show_vm_delete_disk_form(settings, token, disk)
 # Confirms permanent deletion using the editor's signed, revision-bound form.
 sub show_vm_delete_disk_form
