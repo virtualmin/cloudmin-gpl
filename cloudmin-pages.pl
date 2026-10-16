@@ -1341,4 +1341,43 @@ my @imports = grep {
 return [@catalogue, @imports];
 }
 
+# show_software_script(field, values, [disabled]) renders a guest script source.
+# field is before_script or after_script; disabled defaults to false.
+sub show_software_script
+{
+my ($field, $values, $disabled) = @_;
+my $preview = !Cloudmin::Software::has_scripts();
+# Keep saved scripts visible for review even when advertisements are hidden.
+return '' if ($preview && !show_pro_features() && !Cloudmin::Software::uses_scripts($values));
+$disabled ||= $preview;
+# Infer the source for older records that have no explicit mode.
+my $mode = $values->{$field.'_mode'} || ($values->{$field.'_path'} ? 'file'
+	: $values->{$field} ? 'inline' : 'none');
+my $inputs = ui_radio($field.'_mode', $mode,
+	[map { [$_, $text{'vm_script_'.$_}] } qw(none file inline)], $disabled);
+# Reuse Virtualmin's Jailkit styling: muted choices with an inline Pro link.
+if ($preview) {
+	$inputs = ui_tag('span', $inputs, {'data-pro-disabled' => 'setup-scripts-elem'}).
+		pro_feature_badge('setup-scripts');
+}
+# The chooser reads a host path; both sources run only inside the guest.
+foreach my $source (qw(file inline)) {
+	my $inactive = $disabled || $mode ne $source;
+	my $control = $source eq 'file'
+		? ui_textbox($field.'_path', $values->{$field.'_path'}, 60, $inactive).
+			($disabled ? '' : file_chooser_button($field.'_path', 0))
+		: ui_textarea($field, $values->{$field}, 6, 75, undef, $inactive);
+	$inputs .= ui_tag('div', $control, {'data-vm-script-source' => $source,
+		$preview ? ('data-pro-disabled' => 'setup-scripts-elem') : (),
+		$mode ne $source ? (hidden => undef) : ()});
+}
+# The fieldset excludes preview inputs from submission. The help label stays
+# outside it so the option name and help link remain readable.
+$inputs = pro_feature_preview($inputs) if ($preview);
+return ui_table_row(hlink($text{'vm_'.$field}, 'machine_'.$field),
+	ui_tag('div', $inputs, {'data-vm-script' => $field,
+		$disabled ? ('data-vm-readonly' => 1) : ()}), 1,
+	$preview ? ['data-pro-disabled="cell"'] : undef, undef, 1);
+}
+
 1;
