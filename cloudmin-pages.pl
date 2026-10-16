@@ -2001,4 +2001,21 @@ $page .= software_script().ui_tag('script', '', {src => get_webprefix().'/server
 return $page.ui_page_end();
 }
 
+# notify_theme_save(vm, action)
+# Refreshes the theme's guest list after an action such as 'create' or 'delete'.
+sub notify_theme_save
+{
+my ($vm, $action) = @_;
+theme_post_save_server(get_theme_server($vm), $action)
+	if (defined(&theme_post_save_server));
+}
+
+# get_theme_server(vm)
+# Converts a guest record to the id and host keys that theme hooks read.
+sub get_theme_server
+{
+my ($vm) = @_;
+return { 'id' => $vm->{'uuid'}, 'host' => $vm->{'name'} };
+}
+
 1;
