@@ -2102,4 +2102,14 @@ return ui_page_start().
 	ui_form_end([[undef, $text{'vm_control_'.$action.'_button'}]]).ui_page_end();
 }
 
+# vm_pending_fields()
+# Defines display order and labels for pending resource and network changes.
+sub vm_pending_fields
+{
+return ([cpus => 'vm_cpus'], [cpu_limit => 'vm_cpu_limit'],
+	[memory_mib => 'vm_memory_mib'], [memory_limit_mib => 'vm_memory_limit'],
+	[boot => 'vm_boot_first'], [bootmenu => 'vm_boot_menu'],
+	[networks => 'vm_interfaces']);
+}
+
 1;
