@@ -2415,4 +2415,43 @@ return ui_alert_box($text{'vm_delete_disk_desc'}, 'danger', undef, undef, '').
 	ui_table_end().ui_form_end([[undef, $text{'delete'}]]);
 }
 
+# vm_edit_buttons(settings, token)
+# Closes the edit form with Save and separate guest action controls.
+sub vm_edit_buttons
+{
+my ($s, $token) = @_;
+# Separate forms keep power actions and deletion independent of unsaved edits.
+my $power = $s->{'active'} ? 'shutdown' : 'start';
+my $start = vm_edit_form_start($s, $token, $power, undef,
+	'vm-'.$power.'-form').
+	ui_submit($text{'vm_control_'.$power.'_button'} || $text{'vm_control_'.$power}).
+	ui_form_end(undef, undef, 1);
+my $delete = ui_form_start('edit_machine.cgi', 'get', undef,
+	'id="vm-delete-form"').ui_hidden('id', $s->{'id'}).
+	ui_hidden('delete', 1).
+	ui_submit($text{'delete'}).
+	ui_form_end(undef, undef, 1);
+# Show reset only with its own grant, regardless of power or agent state.
+my $password = can_access('password', $s->{'id'})
+	? ui_form_start('edit_machine.cgi', 'get', undef,
+		'id="vm-password-reset-review-form"').ui_hidden('id', $s->{'id'}).
+		ui_hidden('password_reset', 1).ui_submit($text{'vm_password_reset'}).
+		ui_form_end(undef, undef, 1) : '';
+# Open cloning separately from Save; copying guest data requires host access.
+my $clone = can_access('host') && !is_readonly_mode()
+	? ui_form_start('clone_machine_form.cgi', 'get', undef,
+		'id="vm-clone-review-form"').ui_hidden('id', $s->{'id'}).
+		ui_submit($text{'vm_clone_button'}).ui_form_end(undef, undef, 1) : '';
+# Open capture normally; its destination page explains the disabled GPL preview.
+my $image = can_access('host') && !is_readonly_mode() &&
+	(-r "$module_root_directory/pro/VMImages.pm" || show_pro_features())
+	? ui_form_start('image_machine_form.cgi', 'get').ui_hidden('id', $s->{'id'}).
+		ui_submit($text{'vm_image_title'}).
+		ui_form_end(undef, undef, 1) : '';
+# Keep guest actions beside Save, with Delete in its own group.
+return ui_form_end().ui_form_grouped_buttons([
+	[[[undef, $text{'save'}, undef, 0, 'form="vm-edit-form"']],
+	 [$start], [vm_power_cycle_button($s, $token, 'edit_machine')], [$password], [$clone], [$image]], [$delete]]);
+}
+
 1;
