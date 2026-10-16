@@ -2001,6 +2001,15 @@ $page .= software_script().ui_tag('script', '', {src => get_webprefix().'/server
 return $page.ui_page_end();
 }
 
+# select_theme_server(vm)
+# Selects the displayed guest through Webmin's optional theme hook.
+sub select_theme_server
+{
+my ($vm) = @_;
+theme_select_server(get_theme_server($vm))
+	if (defined(&theme_select_server));
+}
+
 # notify_theme_save(vm, action)
 # Refreshes the theme's guest list after an action such as 'create' or 'delete'.
 sub notify_theme_save
