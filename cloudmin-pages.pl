@@ -2207,4 +2207,53 @@ return ui_form_start('machine.cgi', 'post', undef,
 	ui_form_end(undef, undef, 1);
 }
 
+# show_vm_pending_styles()
+# Shares subtitle badge spacing with pages that do not show a pending alert.
+sub show_vm_pending_styles
+{
+return ui_page_assets().ui_tag('link', undef, { rel => 'stylesheet', href => get_webprefix().'/server-manager/machine_pending.css?'.
+	(stat("$module_root_directory/machine_pending.css"))[9] });
+}
+
+# show_vm_pending_banner(vm)
+# Renders supplied running/saved differences above the editor or VM details.
+sub show_vm_pending_banner
+{
+my ($vm) = @_;
+my $pending = $vm->{'pending'} || {};
+my $count = scalar(keys %$pending);
+my $boot_labels = vm_boot_labels($vm);
+# Send the same value labels to the browser for subsequent status updates.
+my $labels = { one => $text{'vm_pending_one'}, many => $text{'vm_pending_many'},
+	values => $text{'vm_pending_values'}, yes => $text{'index_yes'}, no => $text{'index_no'},
+	boot_default => $text{'vm_boot_default'}, boot_labels => $boot_labels,
+	none => $text{'vm_software_none'} };
+my $rows = join('', map {
+	my ($field, $label) = @$_;
+	my $entry = $pending->{$field};
+	# Keep hidden rows in the DOM so status updates
+	# can reveal new differences.
+	ui_tag('div', ui_tag('span', html_escape($text{$label}), { class => 'vm-pending-label' }).
+		ui_tag('span', $entry ? html_escape(text('vm_pending_values',
+			map { vm_pending_value($field, $entry->{$_}, $boot_labels) } qw(running saved))) : '',
+			{ 'data-pending-values' => '', class => 'vm-pending-values' }),
+		{ 'data-pending-field' => $field, ($entry ? () : (hidden => undef)) })
+	} vm_pending_fields());
+my $body = ui_tag('div',
+	ui_tag('strong', html_escape($count == 1 ? $text{'vm_pending_one'} : text('vm_pending_many', $count)),
+		{ 'data-pending-title' => '' }).
+	ui_tag('div', $rows, { class => 'vm-pending-changes' }).
+	ui_tag('p', html_escape($text{'vm_pending_explain'}), { class => 'vm-pending-explain' }),
+	{ class => 'vm-pending-content' });
+# Let the standard warning alert supply colors; this page owns its inner layout.
+return show_vm_pending_styles().
+	ui_tag('div',
+		ui_alert($body, 'warning', ['fa-power-off', '', 1],
+			{ class => 'vm-pending-alert' }),
+		{ class => 'ui_page vm-pending', 'data-vm-pending-banner' => '',
+		'data-pending-config' => html_escape(convert_to_json($labels)),
+		($count ? () : (hidden => undef)), role => 'status', 'aria-live' => 'polite' }).
+	ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_pending.js?'.(stat("$module_root_directory/machine_pending.js"))[9] });
+}
+
 1;
