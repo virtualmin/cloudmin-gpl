@@ -1288,4 +1288,17 @@ return $image->{'download_size_bytes'}
 	: $text{'vm_image_download_needed'};
 }
 
+# vm_size_bytes(values, field, base) converts a displayed allocation to bytes.
+# values holds the amount and optional field_units byte multiplier; base is
+# the byte multiplier used when units are absent. Invalid input yields 0.
+sub vm_size_bytes
+{
+my ($values, $field, $base) = @_;
+my $units = $values->{$field.'_units'} || $base;
+my $amount = $values->{$field};
+return defined($amount) && length($amount) <= 32 &&
+	$amount =~ /\A(?:\d+(?:\.\d*)?|\.\d+)\z/ &&
+	(grep { $units eq int(1024**$_) } 0..5) ? $amount * $units : 0;
+}
+
 1;
