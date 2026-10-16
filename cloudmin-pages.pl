@@ -1240,4 +1240,14 @@ return ui_tag('style', $fields.':is([data-vm-resource], [data-vm-autosize]) { '.
 	'#vm-create-form .cloudmin-vm-image-picker > a { margin:0 !important; }');
 }
 
+# check_vm_username(username)
+# Matches the account names accepted by VM creation.
+sub check_vm_username
+{
+my ($username) = @_;
+return defined($username) && !ref($username) &&
+	$username =~ /\A[a-z_][a-z0-9_-]{0,31}\z/ &&
+	$username !~ /\A(?:daemon|bin|sys|nobody|sshd)\z/;
+}
+
 1;
