@@ -2112,4 +2112,21 @@ return ([cpus => 'vm_cpus'], [cpu_limit => 'vm_cpu_limit'],
 	[networks => 'vm_interfaces']);
 }
 
+# vm_boot_labels(vm)
+# Shares localized boot and network labels between rendering and live updates.
+sub vm_boot_labels
+{
+my ($vm) = @_;
+# Full settings carry disk records; status updates
+# carry only target-to-role maps.
+my %roles = (%{$vm->{'disk_roles'} || {}},
+	map { $_->{'target'} => $_->{'role'} || (($_->{'device'} || '') eq 'cdrom' ? 'cdrom' : 'disk') }
+	@{$vm->{'disks'} || []});
+return { roles => { map { $_ => $text{'vm_disk_role_'.$_} }
+	qw(system data seed disk cdrom) }, disks => \%roles,
+	kinds => { hd => $text{'vm_disks'}, cdrom => $text{'vm_disk_role_cdrom'},
+	fd => $text{'vm_boot_floppy'}, network => $text{'vm_boot_network'}, bridge => $text{'net_bridge'},
+	interface => $text{'vm_boot_network'}, disk => $text{'vm_disk_role_disk'} } };
+}
+
 1;
