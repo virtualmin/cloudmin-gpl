@@ -1897,6 +1897,150 @@ if (@more) {
 return ui_cluster(\@controls, { gap => '0.5em' });
 }
 
+# show_vm_details(vm, [token], [shutdown_requested])
+# Shows configuration, live usage, guest health and attached storage/network
+# devices. A token enables permitted controls; a pending shutdown hides repeats.
+sub show_vm_details
+{
+my ($vm, $token, $shutdown_requested) = @_;
+my $unknown = $text{'vm_usage_unavailable'};
+# escape(value) escapes guest text and supplies a missing-value label.
+my $escape = sub { html_escape(defined($_[0]) &&
+	length($_[0]) ? $_[0] : $unknown) };
+my $page = ui_page_assets();
+my $controls = show_vm_power_controls($vm, $token, $shutdown_requested);
+# Group power and connection health above the three resource summaries.
+my @signals = map {
+	my ($field, $icon) = @$_;
+	my $status = ui_tag('span', $escape->($field eq 'power'
+		? $text{'index_state_'.$vm->{'state'}} ||
+		$vm->{'state'} : $text{'vm_status_checking'}),
+		{ 'data-vm-field' => $field });
+	ui_list([{ title => $text{'vm_status_'.$field}, icon => $icon,
+		desc_html => $field eq 'power'
+			? ui_cluster([$status, $controls], { gap => '0.5em' }) : $status }]);
+	} ([power => 'power'], [agent => 'server'], [ssh => 'terminal']);
+foreach my $item ([vm_cpus => 'cpu', 'gear', $vm->{'vcpus'}],
+	[vm_memory_mib => 'memory', 'server',
+	 nice_size_text(($vm->{'memory_kib'} || 0) * 1024)],
+	[vm_disks => 'disk', 'hard-drive']) {
+	push(@signals,
+		ui_list([{ title => $text{$item->[0]}, icon => $item->[2],
+		desc_html =>
+			show_resource_placeholder($item->[1], $item->[3]) }]));
+	}
+# Keep the main identity and connection details in one compact card.
+my @details = (
+	[ $text{'vm_name'},
+	  ui_tag('span', $escape->($vm->{'name'}),
+	{ 'data-vm-field' => 'name' }) ],
+	[ $text{'vm_guest_os'},
+	  ui_tag('span', $text{'vm_status_checking'},
+	{ 'data-vm-guest' => 'os' }) ],
+	[ $text{'vm_start_at_boot'}, ui_tag('span',
+		defined($vm->{'autostart'})
+		? $text{$vm->{'autostart'} ? 'index_yes' : 'index_no'}
+		: $unknown,
+		{ 'data-vm-field' => 'autostart' }) ]);
+my @addresses = map { $_->{'address'}.' ('.$_->{'source'}.')' }
+	@{$vm->{'addresses'} || []};
+push(@details, [ $text{'vm_addresses'}, ui_tag('span',
+	$escape->(@addresses ? join(', ', @addresses)
+	: $text{'vm_status_checking'}), { 'data-vm-field' => 'addresses' }) ]);
+# An omitted description should not leave an empty identity row.
+push(@details, [ $text{'vm_description'}, $escape->($vm->{'description'}) ])
+	if (length($vm->{'description'} || ''));
+$page .= show_vm_pending_banner($vm);
+$page .= ui_tag('div', ui_card({ body => ui_dl(\@details, { cols => 2 }) }).
+	ui_card({ id => 'cloudmin-vm-summary',
+	body => ui_grid(\@signals, { cols => 3 }) }), {
+	class => 'ui_page', id => 'cloudmin-vm-status', 'data-vm-details' => 1,
+	($shutdown_requested ? ('data-vm-shutdown-requested' => 1) : ()),
+	'data-config' => html_escape(get_status_config($vm)) });
+# Resource usage stays above the expandable detail sections.
+$page .= ui_table_start($text{'vm_resources'}, 'width=100%', 2,
+	[ 'width=30%', undef ]);
+foreach my $field (qw(memory_used disk_used disk_read disk_write network_rx
+		      network_tx)) {
+	$page .= ui_table_row($text{'vm_'.$field},
+		show_resource_placeholder($field));
+	}
+$page .= ui_table_end();
+# Disk sources are escaped text; no graphics passwords or raw XML are rendered.
+my @disks = map {
+	my $disk = $_;
+	[ $escape->(vm_disk_label($disk)), $escape->($disk->{'device'}),
+	  show_disk_location($disk->{'path'} ||
+		join('/', grep { defined($_) } @{$disk}{qw(pool volume)}), 0),
+	  (map { $escape->($_) } @{$disk}{qw(bus format)}),
+	  (map { ui_tag('span', $unknown,
+		{ 'data-vm-disk' => $disk->{'target'},
+		  'data-disk-field' => $_ }) } qw(capacity physical)),
+	  $text{$disk->{'readonly'} ? 'index_yes' : 'index_no'} ]
+	} @{$vm->{'disks'} || []};
+$page .= ui_hidden_table_start($text{'vm_disks'}, 'width=100%', 2, 'vm_disks',
+	section_open('machine_detail_sections', 'disks'));
+$page .= ui_table_row(undef, ui_columns_table(
+	[ map { $text{$_} }
+	qw(vm_delete_disk_name vm_interface_type vm_disk_source vm_disk_bus
+	   vm_disk_format vm_disk_capacity vm_disk_physical vm_disk_readonly) ],
+	100, \@disks), 2);
+$page .= ui_hidden_table_end('vm_disks');
+# Interface definitions remain visible even before guest addresses
+# arrive.
+my @interfaces = map { my $nic = $_;
+	[ map { $escape->($nic->{$_}) } qw(mac type source model target) ] }
+	@{$vm->{'interfaces'} || []};
+$page .= ui_hidden_table_start($text{'vm_interfaces'}, 'width=100%', 2,
+	'vm_interfaces', section_open('machine_detail_sections', 'interfaces'));
+$page .= ui_table_row(undef, @interfaces ? ui_columns_table(
+	[ map { $text{$_} }
+	qw(index_macs vm_interface_type vm_disk_source vm_interface_model
+	   vm_interface_target) ],
+	100, \@interfaces) : ui_note($text{'vm_interfaces_empty'}, 0), 2);
+$page .= ui_hidden_table_end('vm_interfaces');
+# Hide the table and its hint until the guest agent supplies filesystem rows.
+$page .= ui_hidden_table_start($text{'vm_filesystems'}, 'width=100%', 2,
+	'vm_filesystems', section_open('machine_detail_sections', 'filesystems'));
+$page .= ui_table_row(undef,
+	ui_tag('div', ui_note($text{'vm_filesystems_hint'}, 0).
+	ui_columns_table([ map { $text{$_} }
+	qw(vm_disk_target vm_filesystem_mount vm_filesystem_type
+	   vm_filesystem_size vm_filesystem_used) ],
+		100, []), { 'data-vm-filesystems' => 1, hidden => undef }).
+	ui_tag('div', ui_note(ui_tag('span',
+		$text{$vm->{'active'} ? 'vm_filesystems_checking' :
+		'vm_filesystems_stopped'}, { 'data-vm-filesystems-message' => 1 }), 0),
+	{ 'data-vm-filesystems-warning' => 1 }), 2);
+$page .= ui_hidden_table_end('vm_filesystems');
+# Less-used hardware and guest identity fields belong in the last accordion.
+$page .= ui_hidden_table_start($text{'vm_hardware'}, 'width=100%', 2,
+	'vm_hardware', section_open('machine_detail_sections', 'hardware'), [ 'width=30%', undef ]);
+foreach my $pair ([vm_uuid => $vm->{'uuid'}],
+	[catalogue_architecture =>
+		describe_architecture($vm->{'architecture'})],
+	[vm_machine => $vm->{'machine'}],
+	[vm_cpu_mode => $vm->{'cpu_mode'}],
+	[vm_cpu_model => $vm->{'cpu_model'}],
+	[vm_graphics => $vm->{'graphics'}->{'type'}],
+	[vm_memory_max => nice_size_text(($vm->{'max_memory_kib'} ||
+	$vm->{'memory_kib'} || 0) * 1024)],
+	[catalogue_firmware => ($vm->{'firmware'} || '') eq 'efi' ? 'UEFI'
+	: 'BIOS']) {
+	$page .= ui_table_row($text{$pair->[0]}, $escape->($pair->[1]));
+	}
+$page .= ui_table_row($text{'index_persistent'}, ui_tag('span',
+	$text{$vm->{'persistent'} ? 'index_yes' : 'index_no'},
+	{ 'data-vm-field' => 'persistent' }));
+foreach my $field (qw(hostname kernel)) {
+	$page .= ui_table_row($text{'vm_guest_'.$field},
+		ui_tag('span', $text{'vm_status_checking'},
+		{ 'data-vm-guest' => $field }));
+	}
+$page .= ui_hidden_table_end('vm_hardware');
+return $page;
+}
+
 # show_vm_clone_form(source, token) renders source choices with a signed token.
 # Credentials stay visible and optional settings start collapsed. Clone preset
 # resolution excludes installation media and software setup.
