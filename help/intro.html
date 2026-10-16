@@ -1,0 +1,50 @@
+<header>Host Overview</header>
+
+<p>Cloudmin manages virtual machines through libvirt. The first supported
+hypervisor is QEMU/KVM. The dashboard checks the local host and lists the
+virtual machines already defined in libvirt.</p>
+
+<p><b>Host Readiness</b> checks IPv4 forwarding and firewall rules for active
+local libvirt NAT and routed networks. Missing rules remain visible even when
+healthy host details are hidden. These checks do not test guest DNS or Internet
+access.</p>
+
+<p><b>Restore network rules</b> restarts the libvirt network service, enables
+IPv4 forwarding if needed and checks the rules again. Virtual machines keep
+running. Recovery requires host administrator access. Finish any virtual machine
+operations and pending bridge changes before using it. Recovery restores the
+active rules; another firewall reload can remove them again.</p>
+
+<p>The virtual machine table shows IP addresses reported by the guest agent,
+libvirt DHCP leases, or the host's ARP table. <b>Not reported</b> means no address
+is available, including when a virtual machine is stopped. A reported address
+does not confirm that SSH or other services are ready.</p>
+
+<p>Use <b>Start</b>, <b>Shut down</b> and <b>Reboot</b> in the table to control a
+virtual machine. Shutdown and reboot ask the guest operating system to stop
+cleanly and may take a little time. The state updates automatically while the
+page is visible.</p>
+
+<p><b>Start at boot</b> shows whether a virtual machine starts automatically when
+the host boots. Use the toggle to change it. A persistent
+virtual machine keeps its saved configuration, but only starts automatically
+when this separate setting is enabled.</p>
+
+<p><b>Hosts</b> and <b>Virtual Machines</b> jump to their sections on this page.
+<b>Active Jobs</b> opens a list of image imports and virtual machine operations
+in progress or needing recovery. Click a virtual machine job's name to view its
+progress. Available controls appear beside each job. During software setup,
+<b>Cancel job</b> stops setup and keeps the
+virtual machine. <b>Cancel and clean up</b> requests cancellation of an unfinished
+creation and removal of its guest and storage. Cleanup runs in the background.
+Changed disks, snapshots or another operation can block it. If cleanup fails,
+resolve the reported problem and use <b>Retry recovery</b>.</p>
+
+<p><b>Host Action Log</b> opens Webmin's action log for this module.
+<b>Guest Action Log</b> filters it by the selected virtual machine's name.
+These links require access to Webmin's log module. Opening an SSH terminal or
+graphical console does not add an action-log entry.</p>
+
+<p>The module does not install or configure host packages while a page is
+loading. Use the Cloudmin installer and Cloudmin-Config to prepare the host,
+then return to this page to verify it.</p>

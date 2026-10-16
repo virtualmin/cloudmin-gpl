@@ -1,0 +1,27 @@
+<header>Packages</header>
+
+<p>Enter package names separated by spaces or newlines. Cloudmin installs them
+inside the new virtual machine using its configured repositories. Use names
+available for the guest's operating system. When creating a virtual machine,
+leave this field empty to skip package installation.</p>
+
+<p>In a machine template, choose <b>Use Default Template</b> to inherit its package
+list, <b>None</b> to skip packages, or <b>Listed packages</b> to enter a separate
+list. Inheritance follows later changes to Default Template. Default Template
+itself offers only <b>None</b> and <b>Listed packages</b>.</p>
+
+<p>Enter names only, without command options, versions, wildcards or download
+URLs. You can specify up to 200 names, with a total length of 8,192 characters.</p>
+
+<p>Package installation runs after the guest's initial setup and the
+<b>Preparation script</b>, if configured. The <b>Final setup script</b> runs
+after all selected software has been installed.</p>
+
+<p>If a step fails, later steps do not run. The virtual machine is kept, and its creation job
+reports the failure. Details are in <tt>/var/lib/cloudmin-install/install.log</tt>
+inside the guest.</p>
+
+<p>Software setup requires a cloud image with systemd, <b>Start after creation</b>
+and managed virtual machine SSH keys.</p>
+
+<footer>

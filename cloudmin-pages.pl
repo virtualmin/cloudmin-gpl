@@ -2756,4 +2756,86 @@ return ui_form_end().ui_form_grouped_buttons([
 	 [$start], [vm_power_cycle_button($s, $token, 'edit_machine')], [$password], [$clone], [$image]], [$delete]]);
 }
 
+# parse_vm_edit_form(input)
+# Collects one Save request; the manager validates and selects live/saved work.
+sub parse_vm_edit_form
+{
+my ($in) = @_;
+my %values = %$in;
+# An unchecked displayed box means false; an omitted
+# control preserves its value.
+$values{'bootmenu'} ||= 0 if ($in->{'bootmenu_present'});
+my @changes;
+foreach my $key (sort keys %$in) {
+	if ($key =~ /\A(disk_[0-9]+)_target\z/) {
+		# Collect disk edits by their stable target.
+		my $prefix = $1;
+		# Detach keeps data and overrides any size entered for the same disk.
+		if ($in->{$prefix.'_detach'}) {
+			push(@changes, { action => 'detach_disk', target => $in->{$key} });
+			}
+		# A blank size leaves the existing capacity unchanged.
+		elsif (length($in->{$prefix.'_size'} // '')) {
+			push(@changes, { action => 'grow_disk', target => $in->{$key},
+				disk_gib => $in->{$prefix.'_size'},
+				disk_gib_units => $in->{$prefix.'_size_units'} });
+			}
+		elsif (length($in->{$prefix.'_media'} // '')) {
+			# Convert the eject sentinel to an empty
+			# source, keeping the drive target.
+			my ($pool, $volume) = $in->{$prefix.'_media'} eq 'eject'
+				? ('', '') : split(/:/, $in->{$prefix.'_media'}, 2);
+			push(@changes, { action => 'change_media', target => $in->{$key},
+				pool => $pool, volume => $volume });
+			}
+		}
+	elsif ($key =~ /\A(nic_[0-9]+)_mac\z/) {
+		# Collect interface edits by their existing MAC address.
+		my $prefix = $1;
+		if ($in->{$prefix.'_remove'}) {
+			# Removal takes precedence over the same
+			# row's connection controls.
+			push(@changes, { action => 'remove_interface', mac => $in->{$key} });
+			}
+		# An unchecked cable toggle still submits a link-state change.
+		elsif (length($in->{$prefix.'_network'} // '') || exists($in->{$prefix.'_link'}) ||
+			$in->{$prefix.'_link_present'}) {
+			my %fields = map { exists($in->{$prefix.'_'.$_}) ? ($_ => $in->{$prefix.'_'.$_}) : () }
+				qw(link inbound_kib outbound_kib);
+			$fields{'link'} = 'down' if ($in->{$prefix.'_link_present'} && !exists($fields{'link'}));
+			push(@changes, { action => 'update_interface', mac => $in->{$key},
+				network => $in->{$prefix.'_network'} // '', %fields });
+			}
+		}
+	}
+# Older open forms have no action selector; retain their existing submission rules.
+my $mode = $in->{'add_disk_action'};
+die "Select a disk action\n" if (defined($mode) &&
+	$mode !~ /\A(?:none|create|clone|attach)\z/);
+if (defined($mode) ? $mode eq 'create' : length($in->{'add_disk_size'} // '')) {
+	# Create an empty disk with the selected capacity and pool.
+	push(@changes, { action => 'add_disk', pool => $in->{'add_disk_pool'},
+		disk_gib => $in->{'add_disk_size'},
+		disk_gib_units => $in->{'add_disk_size_units'} });
+	}
+if (defined($mode) && $mode eq 'clone') {
+	# A clone keeps the source capacity; it can be grown after attachment.
+	die "Select an imported image\n" if (!length($in->{'clone_image'} // ''));
+	push(@changes, { action => 'add_disk', pool => $in->{'clone_disk_pool'},
+		image => $in->{'clone_image'} });
+	}
+if (defined($mode) ? $mode eq 'attach' : length($in->{'attach_volume'} // '')) {
+	# Split only the pool identifier; volume names may contain colons.
+	die "Select an existing disk\n" if (!length($in->{'attach_volume'} // ''));
+	my ($pool, $volume) = split(/:/, $in->{'attach_volume'}, 2);
+	push(@changes, { action => 'attach_disk', pool => $pool, volume => $volume });
+	}
+if (length($in->{'add_interface_network'} // '')) {
+	# Add an interface only when its destination was explicitly selected.
+	push(@changes, { action => 'add_interface',
+		network => $in->{'add_interface_network'} });
+	}
+return { %values, changes => \@changes };
+}
+
 1;
