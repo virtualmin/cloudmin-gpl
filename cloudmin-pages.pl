@@ -2052,4 +2052,16 @@ foreach my $key (qw(cleanup_warning audit_warning)) {
 	}
 }
 
+# vm_edit_form_start(settings, token, action, [extra], [form_id])
+# Binds one operation to the guest UUID and the configuration shown to the user.
+sub vm_edit_form_start
+{
+my ($s, $token, $action, $extra, $form_id) = @_;
+return ui_form_start('edit_machine.cgi', 'post', undef,
+	$form_id ? 'id="'.quote_escape($form_id).'"' : undef).
+	join('', map { ui_hidden($_->[0], $_->[1]) }
+	[ id => $s->{'id'} ], [ revision => $s->{'revision'} ],
+	[ token => $token ], [ action => $action ], @{$extra || []});
+}
+
 1;
