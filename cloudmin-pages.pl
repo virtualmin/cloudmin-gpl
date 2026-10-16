@@ -2027,4 +2027,29 @@ my ($vm) = @_;
 return { 'id' => $vm->{'uuid'}, 'host' => $vm->{'name'} };
 }
 
+# print_vm_change_result(job_id, operation, [uuid])
+# Shows warnings for a matching completed job; deletion refreshes navigation.
+# When uuid is supplied, feedback must belong to that guest.
+sub print_vm_change_result
+{
+my ($id, $operation, $uuid) = @_;
+# Ordinary page visits have no completed edit to report.
+return if (!$id);
+# Status access is restricted to the current user; stale links add no feedback.
+my $job = eval { call_vm_api(1, 'status', { job => $id }); };
+return if (!$job || $job->{'state'} ne 'complete' ||
+	$job->{'operation'} ne $operation ||
+	(defined($uuid) && $job->{'uuid'} ne $uuid));
+# Only deletion changes the guest list; ordinary saves keep the current menu.
+notify_theme_save($job, 'delete') if ($operation eq 'delete');
+# Live attachment changes can leave the guest using its old IP configuration.
+print ui_alert_box($text{'vm_network_changed'}, 'warn', undef, undef, '')
+	if ($job->{'network_changed'} && ($job->{'scope'} || '') eq 'live');
+# Cleanup and audit failures remain visible even when the edit succeeded.
+foreach my $key (qw(cleanup_warning audit_warning)) {
+	print ui_alert_box(html_escape($job->{$key}), 'warn', undef, undef, '')
+		if ($job->{$key});
+	}
+}
+
 1;
