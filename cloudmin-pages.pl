@@ -2400,4 +2400,19 @@ return show_vm_pending_styles().
 	ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_pending.js?'.(stat("$module_root_directory/machine_pending.js"))[9] });
 }
 
+# show_vm_delete_disk_form(settings, token, disk)
+# Confirms permanent deletion using the editor's signed, revision-bound form.
+sub show_vm_delete_disk_form
+{
+my ($s, $token, $disk) = @_;
+my $volume = $disk->{'volume_info'};
+return ui_alert_box($text{'vm_delete_disk_desc'}, 'danger', undef, undef, '').
+	vm_edit_form_start($s, $token, 'delete_disk',
+		[[ target => $disk->{'target'} ], [ vm_edit_tabs => 'disks' ]]).
+	ui_table_start($text{'vm_delete_disk_title'}, 'width=100%', 2).
+	ui_table_row($text{'vm_delete_disk_name'}, html_escape(vm_disk_label($disk)).
+		show_disk_location($volume->{'path'} || $volume->{'name'})).
+	ui_table_end().ui_form_end([[undef, $text{'delete'}]]);
+}
+
 1;
