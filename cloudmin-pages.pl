@@ -1276,4 +1276,16 @@ return $text{'presets_description_'.$record->{'description_default'}} || $record
 return $record->{'description'};
 }
 
+# vm_download_label([image]) describes a pending download, with its size if known.
+# Missing, imported or already downloaded images return an empty label.
+sub vm_download_label
+{
+my ($image) = @_;
+# Only an uncached catalogue image needs a download notice.
+return '' if (!$image || !$image->{'catalogue_id'} || $image->{'downloaded'});
+return $image->{'download_size_bytes'}
+	? text('vm_image_download_size', nice_size_text($image->{'download_size_bytes'}))
+	: $text{'vm_image_download_needed'};
+}
+
 1;
