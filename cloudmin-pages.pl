@@ -2169,4 +2169,21 @@ if ($field eq 'boot') {
 return $value;
 }
 
+# vm_header_status(vm, [pending_only])
+# Groups subtitle badges; console pages omit the guest's power state.
+# pending_only defaults to false; true keeps only the saved-change badge.
+sub vm_header_status
+{
+my ($vm, $pending_only) = @_;
+my $state = $vm->{'state'} || ($vm->{'active'} ? 'running' : 'shutoff');
+return ui_tag('span',
+	($pending_only ? '' : ui_badge($text{'index_state_'.$state}, $state eq 'running' ? 'success' : 'neutral',
+		{ dot => 1, rounded => 1, small => 1, class => 'vm-pending-state' })).
+	ui_tag('span', ui_badge($text{'vm_pending_badge'}, 'warning',
+		{ icon => 'power', rounded => 1, small => 1 }),
+		{ 'data-vm-header-pending' => '',
+		(keys %{$vm->{'pending'} || {}} ? () : (hidden => undef)) }),
+	{ class => 'ui_page vm-header-status' });
+}
+
 1;
