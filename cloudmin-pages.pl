@@ -1818,4 +1818,83 @@ $page .= software_script().ui_tag('script', '', { src => get_webprefix().'/serve
 return $page.ui_page_end();
 }
 
+# show_vm_power_controls(vm, [token], [shutdown_requested])
+# Keeps common power actions visible and puts secondary actions in a menu.
+# Power actions need a signed token; force actions open their confirmation page.
+sub show_vm_power_controls
+{
+my ($vm, $token, $shutdown_requested) = @_;
+# Render every permitted state group so live updates can switch them in place.
+my $running = $vm->{'active'} && $vm->{'state'} =~ /\A(?:running|blocked)\z/
+	&& !$shutdown_requested;
+my %visible = (start => !$vm->{'active'} && $vm->{'state'} eq 'shutoff',
+	running => $running, paused => $vm->{'state'} eq 'paused',
+	active => $vm->{'active'}, cycle => $running && scalar(keys %{$vm->{'pending'} || {}}));
+my @controls;
+my @more;
+# Keep Start and Resume in the same position as Reboot and Shut down.
+if ($token && can_access('power', $vm->{'uuid'})) {
+	my %actions = (start => ['success', 'play'],
+		reboot => ['info', 'refresh'], shutdown => ['neutral', 'power'],
+		resume => ['success', 'play']);
+	foreach my $group (['start', 'start'], ['running', 'reboot', 'shutdown'], ['paused', 'resume']) {
+		my ($state, @actions) = @$group;
+		# Separate forms submit only the chosen action with its signed token.
+		push(@controls, ui_tag('div', join('', map {
+			ui_form_start('machine.cgi', 'post', undef, 'style="display:inline"').
+			ui_hidden('id', $vm->{'uuid'}).ui_hidden('token', $token).
+			ui_hidden('action', $_).
+			ui_action_button($text{'vm_control_'.$_}, $actions{$_}->[0],
+				{ type => 'submit', size => 'small', icon => $actions{$_}->[1] }).
+			ui_form_end(undef, undef, 1)
+			} @actions),
+			{ 'data-vm-'.$state => 1, class => 'ui_cluster', style => '--ui-gap:0.5em',
+			  ($visible{$state} ? () : (hidden => undef)) }));
+		}
+	}
+# Menu submit buttons share a signed form and submit only their own action.
+foreach my $action ([suspend => 'power', 'running', 'pause'],
+	[power_cycle => 'manage', 'cycle', 'power']) {
+	my ($name, $grant, $state, $icon) = @$action;
+	next if (!$token || !can_access($grant, $vm->{'uuid'}));
+	push(@more, { label => $text{'vm_control_'.$name}, icon => $icon,
+		type => 'submit', name => 'action', value => $name,
+		disabled => !$visible{$state},
+		attrs => { 'data-vm-'.$state => 1,
+			($visible{$state} ? () : (hidden => undef, 'aria-disabled' => 'true')) } });
+	}
+# Force actions need their own permission and open a confirmation page.
+if ($token && can_access('force', $vm->{'uuid'})) {
+	foreach my $action (qw(force_off reset)) {
+		push(@more, { label => $text{'vm_control_'.$action}, icon => 'power',
+			state => 'danger', href => 'machine.cgi?id='.urlize($vm->{'uuid'}).'&'.$action.'=1',
+			attrs => { 'data-vm-active' => 1,
+				($visible{'active'} ? () : (hidden => undef, 'aria-disabled' => 'true')) } });
+		}
+	}
+# Backups, clones and captures copy guest data and require host write access.
+if (can_access('host') && !is_readonly_mode()) {
+	push(@more, { label => $text{'backup_action'}, icon => 'download', href => 'backup_form.cgi?id='.urlize($vm->{'uuid'}) });
+	push(@more, { label => $text{'vm_clone'}, icon => 'copy',
+		href => 'clone_machine_form.cgi?id='.urlize($vm->{'uuid'}) });
+	# The capture page explains the Pro requirement and disables its GPL form.
+	push(@more, { label => $text{'vm_image_action'}, icon => 'hard-drive',
+		href => 'image_machine_form.cgi?id='.urlize($vm->{'uuid'}) })
+		if (-r "$module_root_directory/pro/VMImages.pm" || show_pro_features());
+	}
+# Keep an initially empty menu in the page when a later state can enable it.
+if (@more) {
+	my $menu = ui_dropdown('', \@more,
+		{ size => 'small', id => 'vm-more-actions-menu', icon => 'ellipsis',
+		  caret => 0, title => $text{'vm_control_more'} });
+	# Navigation alone needs no token; power entries share this signed POST form.
+	$menu = ui_form_start('machine.cgi', 'post', undef, 'id="vm-more-actions-form"').
+		ui_hidden('id', $vm->{'uuid'}).ui_hidden('token', $token).
+		$menu.ui_form_end(undef, undef, 1) if ($token);
+	push(@controls, ui_tag('div', $menu, { 'data-vm-more' => 1,
+		((grep { !$_->{'attrs'} || !exists($_->{'attrs'}->{'hidden'}) } @more) ? () : (hidden => undef)) }));
+	}
+return ui_cluster(\@controls, { gap => '0.5em' });
+}
+
 1;
