@@ -1265,4 +1265,15 @@ return { %defaults,
 };
 }
 
+# preset_description(record) returns the display description of a saved preset.
+sub preset_description
+{
+my ($record) = @_;
+# Translate shipped descriptions, falling back to the stored text.
+return $text{'presets_description_'.$record->{'description_default'}} || $record->{'description'}
+	if ($record->{'description_default'});
+# Keep descriptions entered by the user exactly as saved.
+return $record->{'description'};
+}
+
 1;
