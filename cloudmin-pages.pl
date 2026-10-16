@@ -2064,4 +2064,24 @@ return ui_form_start('edit_machine.cgi', 'post', undef,
 	[ token => $token ], [ action => $action ], @{$extra || []});
 }
 
+# show_vm_password_reset_form(vm, token)
+# Renders the reset form with an editable username and signed token.
+sub show_vm_password_reset_form
+{
+my ($vm, $token) = @_;
+# Suggest the creation account; guests without that metadata need a username.
+my $username = ($vm->{'cloudmin'} || {})->{'username'} || '';
+# Never refill the password field from a previous submission.
+return ui_page_start().ui_note($text{'vm_password_reset_help'}).
+	ui_form_start('edit_machine.cgi', 'post', undef, 'id="vm-password-reset-form"').
+	ui_hidden('id', $vm->{'uuid'}).ui_hidden('token', $token).
+	ui_hidden('action', 'reset_password').
+	ui_table_start(undef, 'width=100%', 2).
+	ui_table_row($text{'vm_password_username'}, ui_textbox('username', $username, 30, 0, undef,
+		'autocomplete="off" required')).
+	ui_table_row($text{'vm_password_new'}, ui_password('password', '', 30, 0, undef,
+		'data-password autocomplete="new-password" required')).
+	ui_table_end().ui_form_end([[undef, $text{'vm_password_reset'}]]).ui_page_end();
+}
+
 1;
