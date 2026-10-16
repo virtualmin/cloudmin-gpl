@@ -1441,4 +1441,20 @@ $page .= ui_table_hr()
 return $page.show_software_script('after_script', $values, $disabled);
 }
 
+# show_license_rows() renders Virtualmin Pro credentials for one creation.
+# License credentials belong to this request, never to a template, and the
+# browser shows the rows only while Virtualmin Pro is selected.
+sub show_license_rows
+{
+# Omit credentials along with the installer when host policy disables it.
+return '' if (!virtualmin_enabled());
+my $page = '';
+foreach my $field (qw(virtualmin_serial virtualmin_key)) {
+	$page .= ui_table_row(hlink($text{'vm_'.$field}, 'machine_'.$field),
+		ui_textbox($field, '', 15, 0, undef, 'autocomplete="off"'),
+		undef, undef, ['data-vm-license="1"']);
+}
+return $page;
+}
+
 1;
