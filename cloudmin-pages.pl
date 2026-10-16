@@ -1496,4 +1496,20 @@ return ui_tag('div', ui_cluster([ map { ui_chip($_->[1], { state => $_->[2],
 	{ gap => '8px' }), { 'data-vm-summary' => 1 });
 }
 
+# software_script() loads shared visibility rules after full or theme navigation.
+sub software_script
+{
+# Theme table styles must not override the visibility set by setup controls.
+return ui_tag('style', '[data-vm-virtualmin][hidden], [data-vm-script-source][hidden], [data-vm-package-list][hidden], '.
+	'[data-vm-cloud-init][hidden], [data-vm-license][hidden], [data-vm-installer][hidden], '.
+	'[data-vm-source-empty][hidden], [data-vm-chip][hidden], [data-vm-template-note][hidden], '.
+	'#vm_keys_row[hidden], #vm_password_row[hidden], #vm_hostname_row[hidden] '.
+	'{ display:none !important; } '.
+	# Line the checkbox up with the input above it instead of the cell edge.
+	'[data-vm-hostname-toggle] { margin: 3px 0 0 1.5px; }').
+	ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_software.js?'.
+	(stat("$module_root_directory/machine_software.js"))[9] }).
+	ui_tag('script', 'window.cloudminSoftwareInit?.();');
+}
+
 1;
