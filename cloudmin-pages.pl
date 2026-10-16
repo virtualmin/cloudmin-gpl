@@ -1301,4 +1301,24 @@ return defined($amount) && length($amount) <= 32 &&
 	(grep { $units eq int(1024**$_) } 0..5) ? $amount * $units : 0;
 }
 
+# get_vm_image_choices(images)
+# Groups catalogue releases by distribution, then imports and local captures.
+sub get_vm_image_choices
+{
+my ($images) = @_;
+my $catalogue = Cloudmin::ImageChoices::sort_images([grep { !$_->{'unavailable'} && $_->{'catalogue_id'} } @$images]);
+my $imports = Cloudmin::ImageChoices::sort_images([grep { !$_->{'unavailable'} && !$_->{'catalogue_id'} && ($_->{'source'} || '') ne 'vm' } @$images]);
+my $captures = Cloudmin::ImageChoices::sort_images([grep { !$_->{'unavailable'} && !$_->{'catalogue_id'} && ($_->{'source'} || '') eq 'vm' } @$images]);
+# Keep source tags for browser filtering and pool details for explicit imports.
+# Missing references remain ungrouped and have no size or pool details.
+# Store any download notice on the option for the summary to display.
+return [ map { [ $_->{'id'}, $_->{'name'}.
+	($_->{'catalogue_id'} || $_->{'unavailable'} ? '' : ' ('.nice_size_text($_->{'virtual_size'}).'; '.$_->{'pool_name'}.')'),
+	'data-vm-image-source="'.(($_->{'format'} || '') eq 'iso' ? 'iso' : 'cloud').'"'.
+	(vm_download_label($_) ne '' ? ' data-vm-download="'.html_escape(vm_download_label($_)).'"' : ''),
+	$_->{'unavailable'} ? '' : $_->{'catalogue_id'} || ($_->{'source'} || '') eq 'vm'
+		? get_image_group($_) : $text{'vm_image_imports'} ] }
+	(@$catalogue, @$imports, @$captures, grep { $_->{'unavailable'} } @$images) ];
+}
+
 1;
