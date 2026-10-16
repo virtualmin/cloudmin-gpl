@@ -1457,4 +1457,43 @@ foreach my $field (qw(virtualmin_serial virtualmin_key)) {
 return $page;
 }
 
+# show_vm_summary(values, images, networks)
+# Summarizes current form values using the available image and network records.
+# The browser updates these chips when the user changes presets or fields.
+sub show_vm_summary
+{
+my ($values, $images, $networks) = @_;
+my ($image) = grep { $_->{'id'} eq ($values->{'image'} || '') } @$images;
+my ($network) = grep { $_->{'key'} eq ($values->{'network'} || '') } @$networks;
+my $installer = ($values->{'install_source'} || '') eq 'iso';
+my $software = $installer ? 'none' : $values->{'software'} || 'none';
+my $setup;
+if ($software =~ /\Avirtualmin-/) {
+	# Use template naming for the edition, web server and optional PostgreSQL.
+	$setup = Cloudmin::Presets::template_name($values, {});
+	}
+else {
+	# Distinguish scripts from packages alone; installer ISOs skip guest setup.
+	$setup = $text{!$installer && Cloudmin::Software::enabled($values)
+		? (Cloudmin::Software::uses_scripts($values) ? 'vm_summary_setup' : 'vm_summary_packages') : 'vm_summary_none'};
+	}
+# Show current allocations and omit guest addressing for installer media.
+my @chips = (
+	[ 'image', $image ? $image->{'name'} : '', 'info' ],
+	[ 'download', vm_download_label($image), 'warning' ],
+	[ 'resources', text('vm_summary_resources', $values->{'cpus'} // '',
+		nice_size_text(vm_size_bytes($values, 'memory_mib', 1024**2)),
+		nice_size_text(vm_size_bytes($values, 'disk_gib', 1024**3))), 'success' ],
+	[ 'network', !$network ? '' : $installer ? $network->{'name'}
+		: text('vm_summary_network', $network->{'name'},
+			$text{($values->{'address_mode'} || 'dhcp') eq 'static'
+				? 'vm_summary_static' : 'vm_summary_dhcp'}), 'neutral' ],
+	[ 'software', $setup, $software =~ /\Avirtualmin-/ ? 'info' : 'neutral' ],
+);
+# Keep empty chips hidden but available for later browser updates.
+return ui_tag('div', ui_cluster([ map { ui_chip($_->[1], { state => $_->[2],
+	attrs => { 'data-vm-chip' => $_->[0], $_->[1] eq '' ? (hidden => 'hidden') : () } }) } @chips ],
+	{ gap => '8px' }), { 'data-vm-summary' => 1 });
+}
+
 1;
