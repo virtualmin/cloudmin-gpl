@@ -1897,4 +1897,108 @@ if (@more) {
 return ui_cluster(\@controls, { gap => '0.5em' });
 }
 
+# show_vm_clone_form(source, token) renders source choices with a signed token.
+# Credentials stay visible and optional settings start collapsed. Clone preset
+# resolution excludes installation media and software setup.
+sub show_vm_clone_form
+{
+our %config;
+my ($source, $token) = @_;
+my $options = $source->{'options'};
+my $presets = $source->{'presets'};
+# Template access defaults combine with the source's current resource sizes.
+my $defaults = get_presets()->resolve({template => $presets->{'template'}->{'default'}}, 'clone');
+my %values = (username => 'cloudmin', auth_type => 'password', ssh_keys => '',
+	address_mode => 'dhcp', host_ssh_key => ($config{'machine_host_ssh_key'} // '1'), %$defaults,
+	cpus => $source->{'cpus'}, memory_mib => $source->{'memory_mib'},
+	disk_gib => $source->{'disks'}->[0]->{'bytes'}/1024**3);
+$values{'pool'} ||= $source->{'pool'};
+$values{'network'} ||= $source->{'network'};
+$values{'start'} //= 1;
+$values{'autostart'} //= 0;
+my $page = ui_page_start().ui_p($text{'vm_clone_desc'}).
+	ui_form_start('clone_machine.cgi', 'post', undef, 'id="vm-clone-form"').
+	ui_hidden('id', $source->{'id'}).ui_hidden('revision', $source->{'revision'}).
+	ui_hidden('token', $token).ui_hidden('vm_operation', 'clone');
+my $data = convert_to_json({presets => $presets, defaults => \%values}, 0, 0);
+# Prevent template text from closing the JSON script element.
+$data =~ s/</\\u003c/g;
+$page .= ui_tag('script', $data, {type => 'application/json', 'data-clone-presets' => 1});
+$page .= ui_hidden_table_start($text{'vm_step_details'}, 'width=100%', 2, 'clone_details', 1);
+# The separate hostname stays opt-in, including for templates requiring an FQDN.
+$page .= ui_table_row($text{'vm_name'}, ui_textbox('name', '', 45).
+	ui_tag('div', ui_checkbox('hostname_set', 1, $text{'vm_hostname_set'}, 0),
+		{ 'data-vm-hostname-toggle' => 1 }));
+$page .= ui_table_row($text{'vm_hostname'}, ui_textbox('hostname', '', 45),
+	undef, undef, ['data-clone-hostname hidden']);
+$page .= ui_table_row($text{'vm_password'}, ui_password('password', '', 30, 0, undef,
+	'autocomplete="new-password"'), undef, undef, ['data-clone-password']);
+$page .= ui_table_row($text{'vm_ssh_keys'}, ui_textarea('ssh_keys', $values{'ssh_keys'}, 4, 75),
+	undef, undef, ['data-clone-keys']);
+# Clone forms follow the same template policy as creation and API requests.
+$page .= ui_table_row($text{'presets_template'}, ui_select('template', $presets->{'template'}->{'default'},
+	[map { [$_->{'id'}, $_->{'name'}] } grep { !$_->{'disabled'} } @{$presets->{'template'}->{'entries'}}]));
+$page .= ui_table_row($text{'presets_plan'}, ui_select('plan', '',
+	[['', $text{'vm_clone_source_resources'}], map { [$_->{'id'}, $_->{'name'}] } @{$presets->{'plan'}->{'entries'}}]));
+$page .= ui_hidden_table_end('clone_details');
+# Copy mode and license acknowledgments apply to the source, not its template.
+$page .= ui_hidden_table_start($text{'vm_clone_source'}, 'width=100%', 2, 'clone_source', 0);
+$page .= ui_table_row($text{'vm_clone_source'}, html_escape($source->{'name'}));
+$page .= ui_table_row($text{'vm_clone_mode'}, ui_select('clone_mode', 'prepared',
+	[['prepared', $text{'vm_clone_prepared'}], ['unchanged', $text{'vm_clone_unchanged'}]]));
+$page .= ui_table_row(undef, ui_checkbox('confirm_unchanged', 1, $text{'vm_clone_confirm_unchanged'}, 0),
+	2, undef, ['data-clone-unchanged hidden']);
+$page .= ui_table_row(undef, ui_checkbox('confirm_license', 1, $text{'vm_clone_license'}, 0), 2);
+$page .= ui_table_row($text{'vm_pool'}, ui_select('pool', $values{'pool'} || '',
+	[map { [$_->{'id'}, $_->{'name'}.' ('.nice_size_text($_->{'available'}).')'] } @{$options->{'pools'}}]));
+if ($source->{'active'}) {
+	# Running sources require either guest-agent preparation or clean shutdown.
+	$page .= ui_table_row($text{'vm_clone_consistency'}, ui_select('shutdown', 0,
+		[[0, $text{'vm_clone_agent'}], [1, $text{'vm_clone_shutdown'}]]));
+}
+if ($source->{'nvram'}) {
+	# Live sources default to fresh variables; stopped sources can copy them.
+	$page .= ui_table_row($text{'vm_clone_nvram'}, ui_select('nvram_mode', $source->{'active'} ? 'fresh' : 'copy',
+		[['copy', $text{'vm_clone_nvram_copy'}], ['fresh', $text{'vm_clone_nvram_fresh'}]]));
+}
+$page .= ui_hidden_table_end('clone_source');
+# Resource overrides retain byte-unit controls used by the creation form.
+$page .= ui_hidden_table_start($text{'vm_step_resources'}, 'width=100%', 2, 'clone_resources', 0);
+$page .= ui_table_row($text{'vm_cpus'}, ui_textbox('cpus', $values{'cpus'}, 4));
+foreach my $size (['memory_mib', 1024**2], ['disk_gib', 1024**3]) {
+	$page .= ui_table_row($text{'vm_'.$size->[0]}, ui_bytesbox($size->[0], $values{$size->[0]}*$size->[1], 4, 0, undef, $size->[1]));
+}
+$page .= ui_hidden_table_end('clone_resources');
+# Prepared copies can replace user access and create a separate managed key.
+$page .= ui_hidden_table_start($text{'vm_step_access'}, 'width=100%', 2, 'clone_access', 0);
+$page .= ui_table_row($text{'vm_username'}, ui_textbox('username', $values{'username'}, 30));
+$page .= ui_table_row($text{'vm_auth_type'}, ui_select('auth_type', $values{'auth_type'},
+	[map { [$_, $text{'vm_auth_'.$_}] } qw(password keys both)]));
+$page .= ui_table_row($text{'vm_host_ssh_key'}, ui_select('host_ssh_key', $values{'host_ssh_key'},
+	[[1, $text{'index_yes'}], [0, $text{'index_no'}]]));
+$page .= ui_hidden_table_end('clone_access');
+# Share the address switch so DHCP hides the static-only fields.
+$page .= ui_hidden_table_start($text{'vm_network'}, 'width=100%', 2, 'clone_network', 0);
+$page .= ui_table_row($text{'vm_network'}, ui_select('network', $values{'network'} || '',
+	[map { [$_->{'key'}, $_->{'name'}] } @{$options->{'networks'}}]));
+my @static = map { [$text{'vm_'.$_}, ui_textbox($_, $values{$_}, 45)] } qw(ipv4 gateway4 ipv6 gateway6 dns);
+$page .= ui_table_row($text{'vm_address_mode'}, ui_select_switch('address_mode', $values{'address_mode'}, [
+	{value => 'dhcp', label => $text{'vm_dhcp'}, fields => []},
+	{value => 'static', label => $text{'vm_static'}, fields => \@static}], {id => 'clone-addresses'}));
+$page .= ui_hidden_table_end('clone_network');
+# The browser forces both startup options off for copies without preparation.
+$page .= ui_hidden_table_start($text{'vm_boot_options'}, 'width=100%', 2, 'clone_boot', 0);
+foreach my $field (qw(start autostart)) {
+	$page .= ui_table_row($text{$field eq 'start' ? 'vm_start' : 'vm_autostart'},
+		ui_select($field, $values{$field}, [[1, $text{'index_yes'}], [0, $text{'index_no'}]]));
+}
+$page .= ui_hidden_table_end('clone_boot');
+$page .= ui_form_end([[undef, $text{'vm_clone_button'}]]);
+# Reuse form styling and initialize clone controls after theme navigation too.
+$page .= software_script().ui_tag('script', '', {src => get_webprefix().'/server-manager/machine_clone.js?'.
+	(stat("$module_root_directory/machine_clone.js"))[9]}).
+	ui_tag('script', 'window.cloudminVmCloneInit?.();');
+return $page.ui_page_end();
+}
+
 1;
