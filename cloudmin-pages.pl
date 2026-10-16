@@ -1380,4 +1380,65 @@ return ui_table_row(hlink($text{'vm_'.$field}, 'machine_'.$field),
 	$preview ? ['data-pro-disabled="cell"'] : undef, undef, 1);
 }
 
+# show_software_settings(values, [disabled], [creation], [base])
+# Shows setup in execution order. creation renders the resolved package list
+# without inheritance controls; show_license_rows supplies license inputs.
+# base identifies Default Template, which cannot inherit its package list.
+# All flags default to false for an editable non-default template.
+sub show_software_settings
+{
+my ($values, $disabled, $creation, $base) = @_;
+my $preview = !Cloudmin::Software::has_scripts();
+my $page = show_software_script('before_script', $values, $disabled);
+# Clearing saved scripts remains available in GPL, without silently dropping them.
+if ($preview && !$creation && Cloudmin::Software::uses_scripts($values)) {
+	$page .= ui_table_row('', ui_checkbox('clear_setup_scripts', 1,
+		$text{'pro_scripts_clear'}, 0, undef, $disabled), 3);
+}
+my $packages;
+if ($creation) {
+	# Creation receives the resolved package list and permits per-guest edits.
+	$packages = ui_textarea('packages', $values->{'packages'}, 3, 75, undef, $disabled);
+}
+else {
+	# Saving other software options must not turn inheritance into None.
+	my $mode = exists($values->{'packages'}) ? (length($values->{'packages'}) ? 'list' : 'none')
+		: $base ? 'none' : 'inherit';
+	my @choices = (['none', $text{'vm_packages_none'}], ['list', $text{'vm_packages_list'}]);
+	unshift(@choices, ['inherit', $text{'presets_inherit'}]) if (!$base);
+	$packages = ui_radio('packages_mode', $mode, \@choices, $disabled).
+		ui_tag('div', ui_textarea('packages', $values->{'packages'}, 3, 75, undef,
+			$disabled || $mode ne 'list'), {'data-vm-package-list' => 1,
+			$mode ne 'list' ? (hidden => undef) : ()});
+	$packages = ui_tag('div', $packages, {'data-vm-packages' => 1,
+		$disabled ? ('data-vm-readonly' => 1) : ()});
+}
+$page .= ui_table_row(hlink($text{'vm_packages'}, 'machine_packages'),
+	$packages, 1, undef, undef, 1);
+if (virtualmin_enabled()) {
+	# Render installer controls and their divider only while enabled.
+	$page .= ui_table_hr();
+	my @choices = (
+	 ['software', [['none', $text{'vm_software_none'}], ['virtualmin-gpl', 'Virtualmin GPL'], ['virtualmin-pro', 'Virtualmin Pro']]],
+	 ['virtualmin_bundle', [['LAMP', 'Apache'], ['LEMP', 'Nginx']]],
+	 ['virtualmin_type', [['full', $text{'vm_software_full'}], ['mini', $text{'vm_software_mini'}]]],
+	 ['virtualmin_postgres', [['0', $text{'no'}], ['1', $text{'yes'}]]],
+	 ['virtualmin_ssl', [['1', $text{'yes'}], ['0', $text{'no'}]]],
+	 ['webmin_register', [['1', $text{'yes'}], ['0', $text{'no'}]]]);
+	# Only the host's root login may choose to save a guest login in Servers Index.
+	$page .= join('', map {
+	 my ($field, $choices) = @$_;
+	 ui_table_row(hlink($field eq 'software' ? 'Virtualmin' : $text{'vm_'.$field}, 'machine_'.$field), ui_select($field,
+	  $values->{$field} // $choices->[0]->[0], $choices, 1, 0, 0, $disabled),
+	  undef, undef, $field eq 'software' ? [] : ['data-vm-virtualmin="1"'.
+	    ($disabled ? ' data-vm-readonly="1"' : '')]);
+	} grep { $_->[0] ne 'webmin_register' || ($remote_user || '') eq 'root' } @choices);
+}
+# Add a divider only when both the installer section and final script are shown.
+$page .= ui_table_hr()
+	if (virtualmin_enabled() &&
+		(!$preview || show_pro_features() || Cloudmin::Software::uses_scripts($values)));
+return $page.show_software_script('after_script', $values, $disabled);
+}
+
 1;
