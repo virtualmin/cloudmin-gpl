@@ -79,4 +79,14 @@ foreach my $item (@$selection) {
 return \@records;
 }
 
+# review_storage_volumes(input)
+# Resolves selected files under the user's access rules without changing data.
+sub review_storage_volumes
+{
+my ($in) = @_;
+check_storage_request($in);
+local $main::error_must_die = 1;
+return inspect_storage_selection(get_storage_service(), storage_volume_selection($in));
+}
+
 1;
