@@ -190,4 +190,78 @@ return { uuid => $vm->{'uuid'}, username => $username, auth => $auth,
 	address => $address, port => 0 + $port };
 }
 
+# build_terminal_command(request, unit_id, webmin_user, credential_path)
+# Returns a command that runs SSH under a temporary user ID. Each Webmin
+# user/guest pair retains its own known host keys. Command escapes, forwarding
+# and host credentials are unavailable; the login marker runs in this sandbox.
+sub build_terminal_command
+{
+my ($request, $id, $user, $credential) = @_;
+# Unit names come from generated identifiers, never terminal form fields.
+die "Invalid terminal identifier\n" if ($id !~ /\A[a-f0-9]{32}\z/);
+die "Terminal session credential is required\n" if (!$credential);
+my $identity = substr(sha256_hex($user.':'.$request->{'uuid'}), 0, 24);
+# Retain accepted guest host keys separately for each Webmin user and guest.
+my $home = '/var/lib/cloudmin-ssh/'.$identity;
+my @properties = (
+	'DynamicUser=yes', "User=cmssh-$identity",
+	"StateDirectory=cloudmin-ssh/$identity",
+	'StateDirectoryMode=0700', "WorkingDirectory=$home", 'UMask=0077',
+	'NoNewPrivileges=yes', 'CapabilityBoundingSet=', 'AmbientCapabilities=',
+	'ProtectSystem=strict', 'ProtectHome=yes', 'PrivateTmp=yes',
+	'PrivateDevices=yes',
+	'ProtectProc=invisible', 'ProtectKernelTunables=yes',
+	'ProtectKernelModules=yes',
+	'ProtectKernelLogs=yes', 'ProtectControlGroups=yes',
+	'RestrictNamespaces=yes',
+	'RestrictSUIDSGID=yes', 'RestrictRealtime=yes', 'LockPersonality=yes',
+	'RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX',
+	'KeyringMode=private',
+	'TemporaryFileSystem=/run:ro',
+	# OpenSSH needs the dynamic user's passwd entry, not host control
+	# sockets.
+	'BindReadOnlyPaths=-/run/systemd/userdb',
+	'InaccessiblePaths=-/etc/webmin -/var/webmin -/etc/libvirt -/var/lib/libvirt',
+	'KillMode=control-group', 'TimeoutStopSec=5', 'RuntimeMaxSec=8h',
+	'TasksMax=16', 'MemoryMax=256M', 'LimitCORE=0', 'LimitFSIZE=1048576',
+	'LoadCredential=session:'.$credential,
+);
+# systemd exposes only this VM's private key inside the terminal sandbox.
+my $key = ($request->{'auth'} || 'password') eq 'key';
+# Recheck the credential before constructing a service that would lack it.
+die "$text{'terminal_key_missing'}\n" if ($key && !$request->{'key'});
+# systemd copies the selected key into the service's credential directory.
+push(@properties, 'LoadCredential=ssh-key:'.$request->{'key'}) if ($key);
+# Keep key and password authentication separate; neither borrows host identities.
+my @auth = $key
+	? ('-o', 'PubkeyAuthentication=yes', '-o', 'IdentitiesOnly=yes',
+	   '-o', 'PreferredAuthentications=publickey', '-o',
+	'PasswordAuthentication=no',
+	   '-o', 'KbdInteractiveAuthentication=no')
+	: ('-o', 'PubkeyAuthentication=no', '-o',
+	'PreferredAuthentications=keyboard-interactive,password');
+return ('/usr/bin/systemd-run', '--quiet', '--wait', '--collect', '--pipe',
+	'--no-ask-password', '--service-type=exec',
+	"--unit=cloudmin-terminal-$id",
+	(map { ('--property', $_) } @properties),
+	'--setenv=PATH=/usr/bin:/bin', '--setenv=TERM=xterm-256color',
+	"--setenv=HOME=$home",
+	($key ? ('--setenv=CLOUDMIN_TERMINAL_KEY=1') : ()),
+	# Both WebSocket parsing and the SSH PTY live inside the same sandbox.
+	'/usr/bin/python3', "$module_root_directory/relay-sockets.py",
+	'receive', 1, $^X, "$module_root_directory/terminal-relay.pl",
+	'/usr/bin/ssh', '-F', '/dev/null', '-tt', '-o', 'EscapeChar=none',
+	'-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no', '-o',
+	'ForwardX11=no',
+	'-o', 'IdentityAgent=none', @auth,
+	'-o', 'StrictHostKeyChecking=ask', '-o',
+	'GlobalKnownHostsFile=/dev/null',
+	'-o', "UserKnownHostsFile=$home/known_hosts", '-o',
+	"HostKeyAlias=cloudmin-$request->{uuid}",
+	'-o', 'ConnectTimeout=15', '-o', 'ServerAliveInterval=30', '-o',
+	'ServerAliveCountMax=3',
+	'-p', $request->{'port'}, '-l', $request->{'username'},
+	$request->{'address'});
+}
+
 1;
