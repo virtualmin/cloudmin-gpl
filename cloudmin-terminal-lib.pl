@@ -19,4 +19,17 @@ die "Invalid virtual machine ID\n" if (!defined($uuid) || ref($uuid) ||
 return lc($uuid);
 }
 
+# get_terminal_port(uuid) returns the port from the last successful SSH login.
+# Defaults to 22. Ports are shared by all users and keyed by guest UUID.
+sub get_terminal_port
+{
+my ($uuid) = @_;
+my $key = terminal_port_key($uuid);
+my %ports;
+read_file("$module_var_directory/ssh-ports", \%ports);
+my $port = $ports{$key} || '';
+# Invalid or missing saved values must not become SSH arguments.
+return $port =~ /\A\d{1,5}\z/ && $port > 0 && $port <= 65535 ? 0+$port : 22;
+}
+
 1;
