@@ -156,4 +156,38 @@ return undef if (!$vm->{'cloudmin'}->{'job'});
 return get_ssh_keys()->find($vm->{'uuid'}, $vm->{'cloudmin'}->{'job'});
 }
 
+# parse_terminal_request(vm, input)
+# Limits SSH to a running guest's current IPs; form values cannot add SSH
+# options.
+sub parse_terminal_request
+{
+my ($vm, $input) = @_;
+# SSH requires its own VM grant; read-only mode blocks interactive sessions.
+die "$text{'terminal_readonly'}\n" if (is_readonly_mode());
+require_access('terminal', $vm->{'uuid'});
+# Only running states can answer a new SSH connection.
+die "$text{'terminal_stopped'}\n"
+	if ($vm->{'state'} !~ /\A(?:running|blocked)\z/);
+my @addresses = list_terminal_addresses($vm);
+my $address = $input->{'address'} || '';
+my $username = $input->{'username'} || '';
+my $port = $input->{'port'} || '';
+# Constrain the destination to this guest and reject injected SSH options.
+die "$text{'terminal_invalid'}\n" if (
+	!check_vm_username($username) ||
+	$port !~ /\A\d{1,5}\z/ || $port < 1 || $port > 65535 ||
+	!grep { $_ eq $address } @addresses);
+my $auth = $input->{'auth'} || 'password';
+# The form may choose only the two authentication modes exposed in the UI.
+die "$text{'terminal_auth_invalid'}\n"
+	if (ref($auth) || $auth !~ /\A(?:key|password)\z/);
+# Password sessions never need access to the guest's stored private key.
+my $key = get_terminal_key($vm) if ($auth eq 'key');
+# Do not silently fall back to passwords after selecting a missing key.
+die "$text{'terminal_key_missing'}\n" if ($auth eq 'key' && !$key);
+return { uuid => $vm->{'uuid'}, username => $username, auth => $auth,
+	key => $key,
+	address => $address, port => 0 + $port };
+}
+
 1;
