@@ -60,4 +60,55 @@ foreach my $address (@$addresses) {
 return undef;
 }
 
+# get_server_health(uuid)
+# Returns public health signals; the shared worker drops the localized labels.
+sub get_server_health
+{
+my ($uuid) = @_;
+# Status subscriptions refer to stable inventory UUIDs, not arbitrary
+# names.
+die "Invalid virtual machine ID\n" if (!defined($uuid) || ref($uuid) ||
+	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+my $vm = get_libvirt(1)->get_guest_status($uuid);
+my @addresses = list_terminal_addresses($vm);
+# Probe the same shared port that future SSH connection forms will offer.
+my $port = get_terminal_port($uuid);
+my $running = $vm->{'state'} =~ /\A(?:running|blocked)\z/;
+my $local = $config{'libvirt_uri'} eq 'qemu:///system';
+my $ssh = !$running ? 'inactive' : !$local ? 'remote' : !@addresses
+	? 'no_address' : 'unavailable';
+# The local collector probes only running guests with usable known
+# addresses.
+my $address = check_ssh_service(\@addresses, $port)
+	if ($running && $local && @addresses);
+# Mark SSH as responding only after receiving its identification line.
+$ssh = 'responding' if ($address);
+my $agent = $running ? $vm->{'agent'} : 'inactive';
+return {
+	power => $vm->{'state'}, agent => $agent, ssh => $ssh,
+	ssh_address => $address, ssh_port => $port,
+	addresses => $vm->{'addresses'},
+	labels => {
+		power => $text{'index_state_'.$vm->{'state'}} ||
+			$text{'index_state_unknown'},
+		agent => $text{'vm_agent_'.$agent},
+		ssh => $address ? text('vm_ssh_responding', $address, $port)
+		: text('vm_ssh_'.$ssh, $port),
+		addresses => @addresses ? join(', ', @addresses)
+		: $text{'vm_no_address'},
+	},
+	# A warning page can reopen itself when its prerequisites become
+	# available.
+	terminal_available => $running && @addresses &&
+	foreign_check('xterm') && !is_readonly_mode() ? 1 : 0,
+	console_available => $vm->{'active'} && $local &&
+		($vm->{'graphics'}->{'type'} || '') eq 'vnc' &&
+		foreign_check('xterm') && !is_readonly_mode() ? 1 : 0,
+	# This checks device presence, not whether another client holds the port.
+	# The shared collector filters both console modes with each viewer's grant.
+	serial_available => $vm->{'active'} && $local && $vm->{'serial_console'} &&
+		foreign_check('xterm') && !is_readonly_mode() ? 1 : 0,
+};
+}
+
 1;
