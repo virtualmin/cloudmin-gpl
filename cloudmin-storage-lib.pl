@@ -21,6 +21,15 @@ return Cloudmin::Storage->new(adapter => get_libvirt($writable),
 	jobs => get_vm_jobs(), images => get_image_jobs());
 }
 
+# check_storage_request(input)
+# Requires POST, host management and input.token for UI reviews and changes.
+sub check_storage_request
+{
+my ($in) = @_;
+die "Use the Storage form to make changes\n" if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+check_storage_access($in);
+}
+
 # check_storage_access(input) checks host/manage access and input.token.
 # Shared by browser and local API calls; read-only sessions cannot proceed.
 sub check_storage_access
