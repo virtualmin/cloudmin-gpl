@@ -156,4 +156,52 @@ webmin_log('delete', 'volume', $record->{'key'},
 return $record;
 }
 
+# call_storage_api(action, input) exposes the same storage service as the page.
+# Reviews and changes require POST over HTTP and input.token on every route.
+# Local root entry points enforce permissions without REQUEST_METHOD.
+sub call_storage_api
+{
+my ($action, $in) = @_;
+require_access('host');
+local $main::error_must_die = 1;
+if ($action eq 'storage') {
+	# Inventory needs host access but no write permission or token.
+	my $service = get_storage_service();
+	my $data = $service->inventory();
+	$data->{'lvm_groups'} = [];
+	if ($data->{'local'}) {
+		# Discover local groups without hiding usable pools if LVM tools fail.
+		$data->{'lvm_groups'} = eval { $service->lvm_groups() } || [];
+		$data->{'lvm_group_error'} = error_message($@) if ($@);
+		}
+	return $data;
+	}
+# Reject unknown actions and unsafe HTTP methods before any writable lookup.
+my %actions = (register_pool => 'create', pool_start => 'start', pool_stop => 'stop',
+	pool_autostart => 'autostart', unregister_pool => 'unregister', delete_volume => 'delete_volume');
+die "Unknown storage action\n" if (!$actions{$action} &&
+	$action ne 'volume_review' && $action ne 'pool_review');
+die "Use POST for storage changes\n" if (exists($ENV{'REQUEST_METHOD'}) &&
+	($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+check_storage_access($in);
+if ($action eq 'volume_review') {
+	# A blocked review reports its owners without granting a deletion revision.
+	my (undef, undef, $record) = get_storage_service(1)->review_volume(@$in{qw(pool volume)}, 1);
+	return $record;
+	}
+if ($action eq 'pool_review') {
+	# Review and final unregistration both inspect the entire registered group.
+	my (undef, $record) = get_storage_service(1)->review_pool(@$in{qw(id stop)});
+	return $record;
+	}
+my $result = apply_storage_change($actions{$action}, $in);
+# Deletion and unregistration already return their removed object's identity.
+return $result if (ref($result));
+# Return the changed pool's fresh state, not a private libvirt object.
+my ($record) = grep { $action eq 'register_pool' ? $_->{'name'} eq $result
+	: $_->{'uuid'} eq $in->{'id'} } @{get_storage_service()->inventory()->{'pools'}};
+die "Storage changed, but its updated pool record could not be read\n" if (!$record);
+return $record;
+}
+
 1;
