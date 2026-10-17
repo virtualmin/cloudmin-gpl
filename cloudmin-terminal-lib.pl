@@ -264,4 +264,56 @@ return ('/usr/bin/systemd-run', '--quiet', '--wait', '--collect', '--pipe',
 	$request->{'address'});
 }
 
+# start_terminal(request)
+# Creates a session-bound route and starts the fixed SSH backend, never logging
+# the session cookie or any password entered later through the WebSocket.
+# Returns the WebSocket URL, allocated port and connection attempt ID.
+sub start_terminal
+{
+my ($request) = @_;
+# Recheck access before allocating a route, even for a previously parsed request.
+require_access('terminal', $request->{'uuid'});
+# Mark the attempt before launch so abandoned startup pauses automatic retries.
+my $id = generate_miniserv_websocket_token();
+save_terminal_login($request->{'uuid'}, $id, 'pending', $request);
+my $port;
+my $ok = eval {
+	# Webmin file errors must reach cleanup, including a full disk.
+	local $main::error_must_die = 1;
+	# Detached SSH backends still require a browser session to authenticate.
+	die "Log in to Webmin in a browser before opening a terminal\n"
+		if (!$main::session_id);
+	# Fail before allocating a proxy route when the host cannot run SSH tasks.
+	die "SSH terminals require systemd, Python 3 and OpenSSH\n"
+		if (!has_command('/usr/bin/systemd-run') ||
+		    !has_command('/usr/bin/python3') || !has_command('/usr/bin/ssh'));
+	eval { require Net::WebSocket::Server; 1 } ||
+		die "The Terminal module needs Net::WebSocket::Server\n";
+	my $wrapper = "$module_config_directory/terminal-server.pl";
+	# The detached process needs Webmin's module-specific environment.
+	create_wrapper($wrapper, $module_name, 'terminal-server.pl') if (!-x $wrapper);
+	$port = allocate_miniserv_websocket($module_name);
+	# Name the log by port, as Webmin's terminal does, so ports reuse log files.
+	my $log = "$module_var_directory/terminal-$port.log";
+	write_file_contents($log, '');
+	chmod(0600, $log) || die "Cannot protect the terminal log: $!\n";
+	# The root setup process revalidates this request before starting the service.
+	local $ENV{'SESSION_ID'} = $main::session_id;
+	my $command = join(' ', map { quote_path($_) } ($wrapper, $port, $id,
+		@{$request}{qw(uuid username address port auth)}));
+	die "Cannot start the SSH terminal\n"
+		if (system_logged("$command >".quote_path($log).
+		" 2>&1 </dev/null"));
+	1;
+	};
+if (!$ok) {
+	# A failed launch must not leave an unused proxy route behind.
+	my $error = $@;
+	eval { save_terminal_login($request->{'uuid'}, $id, 'failed'); };
+	remove_miniserv_websocket($port, $module_name) if ($port);
+	die $error;
+	}
+return (get_miniserv_websocket_url($port, undef, $module_name), $port, $id);
+}
+
 1;
