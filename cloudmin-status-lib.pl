@@ -189,4 +189,75 @@ print $fh lc($id)."\n";
 close($fh);
 }
 
+# start_status() reuses one session-authenticated collector for this host.
+sub start_status
+{
+# Sharing a backend does not remove the need for an authenticated
+# browser.
+die "Log in to Webmin to receive live status\n" if (!$main::session_id);
+eval { require Net::WebSocket::Server; require Sys::Virt::Event; 1 }
+	|| die "WebSocket and libvirt event support are required\n";
+# Shared collector bookkeeping must work for read-only viewers too. Restore
+# the CGI's permissions on return or failure; the socket checks each session.
+local $main::readonly_mode_cache = 0;
+# An OS lock serializes concurrent first subscribers and releases on failure.
+make_dir($module_var_directory, 0700, 1);
+open(my $lock, '>>', "$module_var_directory/status-start.lock") ||
+	die "Cannot lock status startup\n";
+flock($lock, LOCK_EX) || die "Cannot lock status startup\n";
+my $file = "$module_var_directory/status-server.json";
+my $state = eval { convert_from_json(read_file_contents($file)) } || {};
+my $port = $state->{'port'};
+my %miniserv;
+get_miniserv_config(\%miniserv);
+my $route = defined($port) ? $miniserv{"websockets_/$module_name/ws-$port"}
+	: undef;
+# A leftover PID can be reused after a crash; also check the bound listener.
+my $listening = $port && $route ? IO::Socket::IP->new(PeerHost => '127.0.0.1',
+	PeerPort => $port, Type => Socket::SOCK_STREAM(), Timeout => 1) : undef;
+if (!$port || !$state->{'pid'} || !kill(0, $state->{'pid'}) || !$route ||
+	!$listening || ($state->{'uri'} || '') ne $config{'libvirt_uri'} ||
+	($state->{'protocol'} || 0) != $cloudmin_status_protocol) {
+	# Only replace our own recorded route; console and terminal routes
+	# coexist.
+	remove_miniserv_websocket($port, $module_name) if ($port && $route);
+	unlink($file);
+	$port = allocate_miniserv_websocket($module_name);
+	my $ok = eval {
+		# Miniserv still requires login, origin and token checks. The
+		# shared backend checks each proxied session's Cloudmin access
+		# independently.
+		lock_file(get_miniserv_config_file());
+		get_miniserv_config(\%miniserv);
+		$miniserv{"websockets_/$module_name/ws-$port"} =~ s/\buser=\S*\s*//;
+		put_miniserv_config(\%miniserv);
+		unlock_file(get_miniserv_config_file());
+		reload_miniserv();
+		my $wrapper = "$module_config_directory/status-server.pl";
+		# The detached collector needs Webmin's module
+		# configuration environment.
+		create_wrapper($wrapper, $module_name, 'status-server.pl')
+			if (!-x $wrapper);
+		my $log = "$module_var_directory/status-server.log";
+		write_file_contents($log, '');
+		chmod(0600, $log) || die "Cannot protect status log\n";
+		local $ENV{'SESSION_ID'} = $main::session_id;
+		my $command = join(' ',
+			map { quote_path($_) } ($wrapper, $port));
+		# Failed startup must unwind the newly allocated shared
+		# route.
+		die "Cannot start status server\n"
+			if (system_logged("$command >".quote_path($log).
+			" 2>&1 </dev/null"));
+		1;
+		};
+	# Keep the startup error after removing an otherwise unusable
+	# proxy route.
+	if (!$ok) { my $error = $@;
+		remove_miniserv_websocket($port, $module_name); die $error; }
+	}
+return { socket_url => get_miniserv_websocket_url($port, undef,
+	$module_name) };
+}
+
 1;
