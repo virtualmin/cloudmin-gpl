@@ -64,4 +64,19 @@ foreach my $value (@values) {
 return \@selected;
 }
 
+# inspect_storage_selection(service, selection)
+# Checks the whole selection before deletion and records each file identity.
+sub inspect_storage_selection
+{
+my ($service, $selection) = @_;
+my @records;
+foreach my $item (@$selection) {
+	my (undef, undef, $record) = $service->inspect_volume(@$item{qw(uuid name)});
+	die "The storage volume changed; review it again before deleting\n"
+		if ($item->{'revision'} && $item->{'revision'} ne $record->{'revision'});
+	push(@records, $record);
+	}
+return \@records;
+}
+
 1;
