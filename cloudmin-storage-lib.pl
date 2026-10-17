@@ -21,4 +21,15 @@ return Cloudmin::Storage->new(adapter => get_libvirt($writable),
 	jobs => get_vm_jobs(), images => get_image_jobs());
 }
 
+# check_storage_access(input) checks host/manage access and input.token.
+# Shared by browser and local API calls; read-only sessions cannot proceed.
+sub check_storage_access
+{
+my ($in) = @_;
+require_access('host');
+die "Storage changes are disabled in read-only mode\n" if (is_readonly_mode());
+require_access('manage');
+get_image_jobs()->check_token($remote_user, $in->{'token'});
+}
+
 1;
