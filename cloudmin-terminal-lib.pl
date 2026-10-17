@@ -75,4 +75,15 @@ return "$module_var_directory/ssh-login-".terminal_port_key($uuid).
 	'-'.urlize($remote_user);
 }
 
+# get_terminal_login(uuid) reads this user's last login settings and outcome.
+# Returns an empty hash reference when no attempt has been saved.
+sub get_terminal_login
+{
+my ($uuid) = @_;
+require_access('terminal', $uuid);
+my %login;
+read_file(terminal_login_file($uuid), \%login);
+return \%login;
+}
+
 1;
