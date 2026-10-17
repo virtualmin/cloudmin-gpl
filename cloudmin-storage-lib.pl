@@ -89,4 +89,15 @@ local $main::error_must_die = 1;
 return inspect_storage_selection(get_storage_service(), storage_volume_selection($in));
 }
 
+# delete_storage_volume(service, pool, volume, revision, confirmed)
+# Deletes the named volume through the service and audits only successful calls.
+sub delete_storage_volume
+{
+my ($service, @args) = @_;
+my $record = $service->delete_volume(@args);
+webmin_log('delete', 'volume', $record->{'key'},
+	{ name => $record->{'name'}, pool => $record->{'pool'}, path => $record->{'path'} });
+return $record;
+}
+
 1;
