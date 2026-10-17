@@ -66,4 +66,13 @@ unlock_file($file) if ($locked);
 die $error if (!$ok);
 }
 
+# terminal_login_file(uuid) returns the current Webmin user's attempt file.
+# Escape the username so it cannot add path components.
+sub terminal_login_file
+{
+my ($uuid) = @_;
+return "$module_var_directory/ssh-login-".terminal_port_key($uuid).
+	'-'.urlize($remote_user);
+}
+
 1;
