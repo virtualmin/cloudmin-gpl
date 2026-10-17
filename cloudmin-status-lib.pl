@@ -111,4 +111,38 @@ return {
 };
 }
 
+# get_status_config(vm, [reopen])
+# Returns socket configuration and the current user's labels and permissions.
+# reopen is terminal, console or serial for a connection, or edit_machine after
+# shutdown. Omit it to update status without navigating to another page.
+sub get_status_config
+{
+my ($vm, $reopen) = @_;
+# Map reconnect targets to tabs without changing the status readiness keys.
+my %tabs = (terminal => 'ssh', serial => 'serial', console => 'graphical');
+my $page = $tabs{$reopen || ''} ? 'remote_access' : $reopen;
+my $config = { endpoint => get_webprefix().'/server-manager/machine_status.cgi',
+	id => $vm->{'uuid'},
+	yes => $text{'index_yes'}, no => $text{'index_no'},
+	usage => { map { $_ => $text{'vm_usage_'.$_} }
+	qw(format missing unavailable cpu memory disk rate) },
+	filesystems => { map { $_ => $text{'vm_filesystems_'.$_} }
+	qw(checking stopped unavailable empty) },
+	units => [ 'B',
+	map { $text{'nice_size_'.$_} } qw(kiB MiB GiB TiB PiB) ],
+	# Connection warning pages must not reopen after their grant is removed.
+	# Serial has its own readiness field but shares the console permission.
+	readonly => is_readonly_mode() || ($reopen && $reopen =~ /\A(?:console|serial|terminal)\z/ &&
+		!can_access($reopen eq 'serial' ? 'console' : $reopen, $vm->{'uuid'})) ? 1 : 0,
+	labels => { map { $_ => $text{$_} }
+	grep { /^(?:index_state_|vm_agent_|vm_ssh_)/ } keys %text },
+	unavailable => $text{'vm_status_unavailable'},
+	checking => $text{'vm_status_checking'}, reopen => $reopen || '',
+	# Reopen the selected console tab, including the theme's navigation mode.
+	url => $reopen ? get_webprefix().'/server-manager/'.$page.'.cgi?id='.
+	urlize($vm->{'uuid'}).($tabs{$reopen} ? '&tab='.$tabs{$reopen} : '').
+	($in{'xnavigation'} ? '&xnavigation=1' : '') : '' };
+return convert_to_json($config);
+}
+
 1;
