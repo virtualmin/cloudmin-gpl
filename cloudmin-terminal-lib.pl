@@ -32,4 +32,38 @@ my $port = $ports{$key} || '';
 return $port =~ /\A\d{1,5}\z/ && $port > 0 && $port <= 65535 ? 0+$port : 22;
 }
 
+# save_terminal_port(uuid, port) remembers a port after SSH authenticates.
+# The supervisor supplies its validated destination, never guest output.
+sub save_terminal_port
+{
+my ($uuid, $port) = @_;
+# Saving a successful login still requires the caller's current terminal grant.
+die "$text{'terminal_readonly'}\n" if (is_readonly_mode());
+require_access('terminal', $uuid);
+my $key = terminal_port_key($uuid);
+# Reject invalid ports even when the caller already parsed the form.
+die "Invalid SSH port\n" if (!defined($port) || ref($port) ||
+	$port !~ /\A\d{1,5}\z/ || $port < 1 || $port > 65535);
+my $file = "$module_var_directory/ssh-ports";
+# Catch native file errors so cleanup runs and callers can report the failure.
+local $main::error_must_die = 1;
+my $locked;
+my $ok = eval {
+	$locked = lock_file($file);
+	# A failed or nested lock must not permit a write to shared state.
+	die "Cannot lock saved SSH ports: $!\n" if (!$locked);
+	# Preserve other guests' ports when simultaneous logins finish.
+	my %ports;
+	read_file($file, \%ports);
+	$ports{$key} = 0+$port;
+	write_file($file, \%ports);
+	chmod(0600, $file) || die "Cannot protect saved SSH ports: $!\n";
+	1;
+	};
+my $error = $@;
+# Release the shared file before reporting a write or permission failure.
+unlock_file($file) if ($locked);
+die $error if (!$ok);
+}
+
 1;
