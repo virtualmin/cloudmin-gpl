@@ -86,4 +86,47 @@ read_file(terminal_login_file($uuid), \%login);
 return \%login;
 }
 
+# save_terminal_login(uuid, attempt, state, [request]) starts or updates a login.
+# Pending and failed attempts pause automatic connection on later visits.
+# request is required for pending and must come from parse_terminal_request.
+# connected and failed update only the matching attempt for this Webmin user.
+sub save_terminal_login
+{
+my ($uuid, $attempt, $state, $request) = @_;
+# Detached callbacks must not save settings after the grant is removed.
+die "$text{'terminal_readonly'}\n" if (is_readonly_mode());
+require_access('terminal', $uuid);
+# Only generated attempt IDs and known states belong in this file.
+die "Invalid SSH connection state\n" if (
+	($attempt || '') !~ /\A[a-f0-9]{32}\z/ ||
+	($state || '') !~ /\A(?:pending|connected|failed)\z/);
+my $file = terminal_login_file($uuid);
+# Lock this account's guest state while starting or updating an attempt.
+local $main::error_must_die = 1;
+my $locked;
+my $ok = eval {
+	$locked = lock_file($file);
+	# Failed acquisition leaves the caller's lock and saved state untouched.
+	die "Cannot lock SSH connection settings: $!\n" if (!$locked);
+	my %login;
+	read_file($file, \%login);
+	if ($state eq 'pending') {
+		# Store only connection fields, never keys, passwords or session cookies.
+		%login = (map { $_ => $request->{$_} } qw(username auth address port));
+		$login{'attempt'} = $attempt;
+		}
+	if ($login{'attempt'} && $login{'attempt'} eq $attempt) {
+		# Late results from an older terminal cannot change a newer attempt.
+		$login{'state'} = $state;
+		write_file($file, \%login);
+		chmod(0600, $file) || die "Cannot protect SSH connection settings: $!\n";
+		}
+	1;
+	};
+my $error = $@;
+# Failed writes must not leave later attempts waiting for this file's lock.
+unlock_file($file) if ($locked);
+die $error if (!$ok);
+}
+
 1;
