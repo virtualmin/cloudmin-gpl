@@ -143,4 +143,17 @@ return unique(grep {
 	} map { $_->{'address'} || '' } @{$vm->{'addresses'} || []});
 }
 
+# get_terminal_key(vm)
+# Finds only the key belonging to this guest's recorded creation job.
+sub get_terminal_key
+{
+my ($vm) = @_;
+# A remote libvirt connection must not borrow this host's local VM keys.
+return undef if (($config{'libvirt_uri'} ||
+	'qemu:///system') ne 'qemu:///system');
+# Imported or externally created guests may have no managed key record.
+return undef if (!$vm->{'cloudmin'}->{'job'});
+return get_ssh_keys()->find($vm->{'uuid'}, $vm->{'cloudmin'}->{'job'});
+}
+
 1;
