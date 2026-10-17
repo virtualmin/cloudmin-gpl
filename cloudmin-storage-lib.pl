@@ -89,6 +89,53 @@ local $main::error_must_die = 1;
 return inspect_storage_selection(get_storage_service(), storage_volume_selection($in));
 }
 
+# apply_storage_change(action, input) applies and audits an authorized change.
+# Callers must check access, input.token and any HTTP method before dispatch.
+sub apply_storage_change
+{
+my ($action, $in) = @_;
+local $main::error_must_die = 1;
+my $service = get_storage_service(1);
+if ($action eq 'unregister') {
+	# Removing a definition preserves all files and logical volumes.
+	my $record = $service->unregister(@$in{qw(id revision confirm stop)});
+	webmin_log('unregister', 'pool', $record->{'id'},
+		{ name => $record->{'name'}, stopped => $record->{'stop_required'} });
+	return $record;
+	}
+if ($action eq 'delete_volume') {
+	# Single-volume API requests use the same deletion and audit as UI batches.
+	return delete_storage_volume($service, @$in{qw(pool volume revision confirm)});
+	}
+if ($action eq 'delete_volumes') {
+	# Revalidate the reviewed batch before deleting any selected volume.
+	die "Confirm permanent volume deletion\n" if (($in->{'confirm'} || '') ne '1');
+	my $records = inspect_storage_selection($service, storage_volume_selection($in, 1));
+	my (@deleted, @errors);
+	foreach my $record (@$records) {
+		# Each file is rechecked under the host lock. Audit successes even if
+		# another deletion fails, and report partial results explicitly.
+		my $volume = eval { delete_storage_volume($service, @$record{qw(uuid name revision)}, 1) };
+		# Retain individual failures while continuing the confirmed batch.
+		if (!$volume) {
+			# Summaries use display names; submitted
+			# values retain exact IDs.
+			push(@errors, $record->{'pool'}.'/'.storage_volume_label($record).': '.error_message($@));
+			next;
+			}
+		push(@deleted, $volume->{'pool'}.'/'.storage_volume_label($volume));
+		}
+	die((@deleted ? 'Deleted: '.join(', ', @deleted).'. ' : '').
+		'Could not delete: '.join('; ', @errors)."\n") if (@errors);
+	return join(', ', @deleted);
+	}
+my $name = $action eq 'create' ? $service->create($in)
+	: $service->change($action, @$in{qw(id revision enabled)});
+webmin_log($action, 'pool', $in->{'id'} || $name,
+	{ name => $name, enabled => $in->{'enabled'} });
+return $name;
+}
+
 # delete_storage_volume(service, pool, volume, revision, confirmed)
 # Deletes the named volume through the service and audits only successful calls.
 sub delete_storage_volume
