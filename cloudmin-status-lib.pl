@@ -172,4 +172,21 @@ $config->{'boot_label'} = $text{'vm_start_at_boot'};
 return convert_to_json($config);
 }
 
+# notify_status_changed(uuid) queues module changes without a libvirt event.
+sub notify_status_changed
+{
+my ($id) = @_;
+# With no collector, the next subscriber's full snapshot covers this
+# change.
+return if (!-e "$module_var_directory/status-server.json");
+open(my $fh, '>>', "$module_var_directory/status-changes") || return;
+chmod(0600, "$module_var_directory/status-changes");
+flock($fh, LOCK_EX) || return;
+# Bound the pending notification file; the collector drains it on its
+# next tick.
+truncate($fh, 0) if (-s $fh > 65536);
+print $fh lc($id)."\n";
+close($fh);
+}
+
 1;
