@@ -89,6 +89,15 @@ local $main::error_must_die = 1;
 return inspect_storage_selection(get_storage_service(), storage_volume_selection($in));
 }
 
+# change_storage(action, input)
+# Checks authorization before opening a writable connection or touching paths.
+sub change_storage
+{
+my ($action, $in) = @_;
+check_storage_request($in);
+return apply_storage_change($action, $in);
+}
+
 # apply_storage_change(action, input) applies and audits an authorized change.
 # Callers must check access, input.token and any HTTP method before dispatch.
 sub apply_storage_change
