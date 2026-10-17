@@ -145,4 +145,31 @@ my $config = { endpoint => get_webprefix().'/server-manager/machine_status.cgi',
 return convert_to_json($config);
 }
 
+# get_overview_status_config([token]) supplies theme-native row templates.
+# Omit the token when power controls are unavailable.
+# Tokens and translated markup belong to the page, never the shared cache.
+sub get_overview_status_config
+{
+my ($token) = @_;
+my $config = convert_from_json(get_status_config({ uuid => 'overview' }));
+my $id = '00000000-0000-0000-0000-000000000000';
+# Send column IDs so live updates find the right cells when columns are hidden.
+# As in the initial table, controls require a token as well as a visible column.
+my @columns = grep { $_->[0] ne 'controls' || $token }
+	view_selection('machine_columns');
+$config->{'columns'} = [map { $_->[0] } @columns];
+# Filter every power-state template with the same settings as the initial rows.
+$config->{'rows'} = { map {
+	my (undef, $rows) = table_columns('machine_columns',
+		[get_vm_row({ uuid => $id, name => '', state => $_,
+		active => $_ ne 'shutoff', persistent => 1, autostart => 0 },
+		$token)], 0, $token);
+	$_ => $rows->[0]
+	} qw(running blocked paused shutdown shutoff crashed nostate
+	     pmsuspended unknown) };
+$config->{'no_ips'} = $text{'index_no_ips'};
+$config->{'boot_label'} = $text{'vm_start_at_boot'};
+return convert_to_json($config);
+}
+
 1;
