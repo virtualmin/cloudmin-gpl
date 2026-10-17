@@ -129,4 +129,18 @@ unlock_file($file) if ($locked);
 die $error if (!$ok);
 }
 
+# list_terminal_addresses(vm)
+# Returns usable guest addresses, excluding loopback and unscoped link-local
+# IPs.
+sub list_terminal_addresses
+{
+my ($vm) = @_;
+return unique(grep {
+	(check_ipaddress($_) && $_ !~ /\A(?:0\.|127\.|169\.254\.)/ &&
+		$_ ne '255.255.255.255') ||
+	(/:/ && check_ip6address($_) &&
+	$_ !~ /\A(?:::1|::|fe[89ab][0-9a-f]:.*)\z/i)
+	} map { $_->{'address'} || '' } @{$vm->{'addresses'} || []});
+}
+
 1;
