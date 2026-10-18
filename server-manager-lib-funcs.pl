@@ -65,4 +65,19 @@ my $lockfile = translate_filename($file).'.lock';
 @main::temporary_files = grep { $_ ne $lockfile } @main::temporary_files;
 }
 
+# get_image_catalogue()
+# Combines the Cloudmin catalogue with the custom catalogue in module
+# configuration.
+sub get_image_catalogue
+{
+return Cloudmin::ImageCatalog->new(
+	'path' => "$module_root_directory/catalog/images.json",
+	custom_path => "$module_config_directory/image-catalogue.json",
+	lock_file => \&lock_data_file,
+	unlock_file => \&unlock_data_file,
+	# log(action, type, object, [params]) keeps audits in this module.
+	log => sub { webmin_log(@_) },
+);
+}
+
 1;
