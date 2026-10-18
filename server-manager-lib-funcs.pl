@@ -289,4 +289,27 @@ return undef if (!$server);
 return { 'id' => '0', 'host' => get_system_hostname(), 'manager' => 'this' };
 }
 
+# type_kvm_list_disk_devices(server, [adapter]) returns guest block-device paths.
+# Webmin's LVM module uses this hook to identify attached logical volumes.
+sub type_kvm_list_disk_devices
+{
+my ($server, $adapter) = @_;
+$adapter ||= get_libvirt();
+my $domain = $adapter->find_domain($server->{'uuid'} || $server->{'id'});
+return () if (!$domain);
+my %paths;
+# Include both current and next-boot attachments so Webmin sees pending use.
+foreach my $flags (0, 2) {
+	my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description($flags));
+	foreach my $source ($doc->findnodes('/domain/devices/disk/source/@dev')) {
+		my $path = $source->getValue();
+		$paths{$path} = 1;
+		# Webmin displays /dev/VG/LV while libvirt uses /dev/mapper aliases.
+		my $record = eval { Cloudmin::LVM::device($path) };
+		$paths{$record->{'lv_path'}} = 1 if ($record);
+		}
+	}
+return sort keys %paths;
+}
+
 1;
