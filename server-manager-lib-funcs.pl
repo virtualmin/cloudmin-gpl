@@ -323,4 +323,18 @@ $html =~ s{\bSystem -&gt; Settings -&gt; License Manager\b}
 return $html;
 }
 
+# error_message(error)
+# Normalizes thrown errors before they are shown or returned to a caller.
+sub error_message
+{
+my ($error) = @_;
+return Cloudmin::Libvirt::error_message($error)
+	if (ref($error) && eval { $error->can('message') });
+my $message = defined($error) ? "$error" : '';
+$message =~ s/\s+$//;
+$message =~ s/\s+at\s+\S+\s+line\s+\d+\.?$//;
+$message =~ s/\s+/ /g;
+return $message || 'Unknown error';
+}
+
 1;
