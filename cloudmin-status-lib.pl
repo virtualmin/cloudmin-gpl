@@ -260,4 +260,14 @@ return { socket_url => get_miniserv_websocket_url($port, undef,
 	$module_name) };
 }
 
+# show_status_script()
+# Loads the updater for full-page and AJAX navigation alike.
+sub show_status_script
+{
+return ui_tag('script', '', { src => get_webprefix().
+	'/server-manager/machine_status.js?'.
+	(stat("$module_root_directory/machine_status.js"))[9] }).
+	ui_tag('script', 'window.cloudminStatusInit?.();');
+}
+
 1;
