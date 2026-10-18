@@ -199,4 +199,22 @@ return Cloudmin::Libvirt->new(
 );
 }
 
+# get_server_addresses(server)
+# Shares one address lookup between the IPv4 and IPv6 helpers. Ordinary menu
+# inventory stays cheap because it does not call these helpers.
+sub get_server_addresses
+{
+my ($server) = @_;
+# A stale or externally supplied record must not bypass the current VM scope.
+return () if (!can_access('view', $server->{'uuid'} || $server->{'id'}));
+if (!exists($server->{'addresses'})) {
+	# Inventory omits addresses; fetch them on demand and retain the result
+	# in this caller's record. A deleted guest has no current addresses.
+	my $vm = $server->{'id'}
+		? get_libvirt(1)->get_domain($server->{'id'}) : undef;
+	$server->{'addresses'} = $vm ? $vm->{'addresses'} : [];
+	}
+return map { $_->{'address'} } @{$server->{'addresses'} || []};
+}
+
 1;
