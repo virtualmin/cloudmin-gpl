@@ -219,6 +219,17 @@ $cloudmin_last_error = undef;
 return grep { can_access('view', $_->{'uuid'}) } @$servers;
 }
 
+# list_managed_servers_sorted([mode], [skip-completion], [adapter])
+# Returns guests sorted by name, ignoring case. Mode and skip-completion are
+# accepted for existing callers but do not change discovery or sorting.
+sub list_managed_servers_sorted
+{
+my ($mode, $nocomplete, $adapter) = @_;
+return sort {
+	lc($a->{'name'}) cmp lc($b->{'name'})
+	} list_managed_servers($nocomplete, $adapter);
+}
+
 # get_server_ip(server)
 # Returns discovered IPv4 addresses in list context, or the first in scalar
 # context. Loads addresses only when the supplied inventory lacks them.
