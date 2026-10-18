@@ -436,6 +436,137 @@ $cloudmin_last_error = undef;
 return @$pools;
 }
 
+# get_server_kvm_instance(server, [adapter])
+# Looks up a fresh guest record by id, falling back to name if id is absent.
+sub get_server_kvm_instance
+{
+my ($server, $adapter) = @_;
+return get_managed_server($server->{'id'} || $server->{'name'}, $adapter);
+}
+
+# check_host_readiness([adapter])
+# Checks the local KVM device and configured libvirt service without changes.
+# Returns check results and any host details, not a full VM-creation preflight.
+sub check_host_readiness
+{
+my ($adapter) = @_;
+$adapter ||= get_libvirt();
+my @checks;
+
+# Identify missing Perl bindings before attempting a libvirt connection.
+my $module_error = $adapter->module_error();
+push(@checks, {
+	'id' => 'perl',
+	'label' => $text{'check_perl'},
+	'ok' => $module_error ? 0 : 1,
+	'detail' => $module_error
+		? $text{'check_perl_fail'}.' '.$module_error
+		: $text{'check_perl_ok'},
+});
+
+# This device check applies to the machine running the Cloudmin module.
+my $has_kvm = -c '/dev/kvm' ? 1 : 0;
+push(@checks, {
+	'id' => 'kvm',
+	'label' => $text{'check_kvm'},
+	'ok' => $has_kvm,
+	'detail' => $has_kvm
+		? $text{'check_kvm_ok'} : $text{'check_kvm_fail'},
+});
+
+# Reuse the binding error rather than connecting without Sys::Virt.
+my $probe = $module_error ? {
+	'ok' => 0,
+	'error' => $module_error,
+} : $adapter->probe();
+push(@checks, {
+	'id' => 'connection',
+	'label' => $text{'check_connection'},
+	'ok' => $probe->{'ok'} ? 1 : 0,
+	'detail' => $probe->{'ok'}
+		? $text{'check_connection_ok'}
+		: text('error_libvirt', $probe->{'error'}),
+});
+
+my $host;
+# Fetch host details only after the connection has opened successfully.
+if ($probe->{'ok'}) {
+	$host = eval { $adapter->get_host_info() };
+	# Treat unreadable host metadata as a connection check failure.
+	if (!$host) {
+		$probe = { 'ok' => 0, 'error' => error_message($@) };
+		$checks[-1]->{'ok'} = 0;
+		$checks[-1]->{'detail'} =
+			text('error_libvirt', $probe->{'error'});
+		}
+	}
+
+# A working libvirt connection may still use an unsupported hypervisor.
+my $is_qemu = $host && uc($host->{'driver'} || '') eq 'QEMU';
+push(@checks, {
+	'id' => 'driver',
+	'label' => $text{'check_driver'},
+	'ok' => $is_qemu ? 1 : 0,
+	'detail' => $is_qemu
+		? $text{'check_driver_ok'} : $text{'check_driver_fail'},
+});
+
+my $pools;
+my $storage_error;
+# A successful QEMU connection may still lack the storage daemon or pools.
+if ($probe->{'ok'} && $is_qemu) {
+	$pools = eval { $adapter->list_storage_pools(0) };
+	# Expose discovery errors separately from a valid empty pool list.
+	$storage_error = error_message($@) if (!$pools);
+	}
+my $active_pools = $pools
+	? scalar(grep { $_->{'active'} } @$pools) : 0;
+my $storage_detail = !$probe->{'ok'} || !$is_qemu
+	? $text{'check_storage_wait'}
+	: $storage_error
+		? text('error_storage', $storage_error)
+		: !@$pools
+			? $text{'check_storage_none'}
+			: !$active_pools
+				? $text{'check_storage_inactive'}
+				: text('check_storage_ok', $active_pools);
+push(@checks, {
+	'id' => 'storage',
+	'label' => $text{'check_storage'},
+	'ok' => $active_pools ? 1 : 0,
+	'detail' => $storage_detail,
+});
+
+# An active network may lose its runtime rules after a firewall restart.
+# Use the creation preflight here too, including in compact overview mode.
+if ($probe->{'ok'} && $is_qemu && $adapter->uri() eq 'qemu:///system') {
+	require "$module_root_directory/lib/Cloudmin/NetworkPreflight.pm";
+	my $networks = eval { Cloudmin::NetworkPreflight::report($adapter) };
+	if ($networks) {
+		# Preserve individual diagnoses so only repairable failures
+		# offer recovery.
+		push(@checks, map { +{ %$_, id => 'network:'.($_->{'id'} || $_->{'name'}),
+			label => text('check_network', $_->{'name'}) } } @$networks);
+	}
+	else {
+		# A failed probe is not evidence of a healthy or empty network
+		# inventory.
+		push(@checks, { id => 'network', label => $text{'check_networks'}, ok => 0,
+			detail => error_message($@) });
+	}
+}
+
+# Require all checks to pass and retain each result for the UI.
+my $ready = !grep { !$_->{'ok'} } @checks;
+return {
+	'ready' => $ready ? 1 : 0,
+	'checks' => \@checks,
+	'probe' => $probe,
+	'host' => $host,
+	'pools' => $pools,
+};
+}
+
 # error_html(message) escapes backend text and links known navigation advice.
 sub error_html
 {
