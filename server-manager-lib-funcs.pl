@@ -21,6 +21,36 @@ require "$module_root_directory/lib/Cloudmin/ImageCatalog.pm";
 require "$module_root_directory/lib/Cloudmin/Images.pm";
 require "$module_root_directory/cloudmin-image-sizes.pl";
 
+# get_image_jobs()
+# Keeps persistent image jobs outside the web-accessible module directory.
+sub get_image_jobs
+{
+return Cloudmin::Images->new(
+	directory => "$module_var_directory/image-jobs",
+	uri => $config{'libvirt_uri'},
+	max_bytes => Cloudmin::Images::import_limit_bytes($config{'image_max_size'}),
+	lock_file => \&lock_data_file,
+	unlock_file => \&unlock_data_file,
+	test_lock => \&test_lock,
+	# log(action, type, object, [params]) retains this module's log context.
+	log => sub { webmin_log(@_) },
+	disk_free => \&get_free_disk_space,
+	# pool_lock(uuid, callback, [creating]) serializes image storage changes
+	# with pool stop and guest disk changes.
+	pool_lock => sub {
+		my ($uuid, $callback, $creating) = @_;
+		return get_vm_jobs()->lock('create-host', sub {
+			# New reservations require an active destination pool.
+			if ($creating) {
+				my $pool = get_libvirt()->connect()->get_storage_pool_by_uuid($uuid);
+				die "The selected storage pool is no longer active\n" if (!$pool->is_active());
+				}
+			return $callback->();
+			});
+		},
+);
+}
+
 # get_free_disk_space(directory)
 # Returns available bytes on the directory's filesystem through Webmin's mount
 # API.
