@@ -346,6 +346,22 @@ return 1 if (!$server);
 return ($server->{'manager'} || '') =~ /^(this|libvirt)$/ ? 1 : 0;
 }
 
+# list_kvm_instances([host], [adapter])
+# Returns an array reference of guest records, or an error string on failure.
+# Host is an optional record checked by can_host_kvm, not a connection address.
+sub list_kvm_instances
+{
+my ($host, $adapter) = @_;
+# Reject unsupported host record types before opening a connection.
+return $text{'check_remote'} if ($host && !can_host_kvm($host));
+$adapter ||= get_libvirt();
+my $domains = eval { $adapter->list_domains() };
+# Return discovery failures as text, not an empty guest list.
+return error_message($@) if (!$domains);
+# Legacy host lookups expose the same assigned guests as the main inventory.
+return [grep { can_access('view', $_->{'uuid'}) } @$domains];
+}
+
 # get_parent_server(server)
 # Returns the host system record that runs a guest, or undef without a guest.
 # Webmin's LVM module compares its id with '0', Cloudmin 9's ID for the system
