@@ -39,4 +39,19 @@ die "Cannot determine free staging space.\n"
 return $free * 1024;
 }
 
+# lock_data_file(file, [readonly], [forcefile], [nodiff])
+# Takes a Webmin lock for job stores and catalogue files, reporting failures as
+# exceptions. Webmin's file locking can be turned off or limited to chosen
+# directories in its configuration; without a real lock, workers and requests
+# would no longer exclude each other, so that setting is an error here.
+sub lock_data_file
+{
+my ($file, @options) = @_;
+die "Changes are disabled in read-only mode\n" if (is_readonly_mode());
+die "Cloudmin needs Webmin file locking enabled for $file\n"
+	if (!can_lock_file($file));
+local $main::error_must_die = 1;
+return lock_file($file, @options);
+}
+
 1;
