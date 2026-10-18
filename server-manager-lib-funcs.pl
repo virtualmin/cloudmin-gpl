@@ -54,4 +54,15 @@ local $main::error_must_die = 1;
 return lock_file($file, @options);
 }
 
+# unlock_data_file(file)
+# Releases the Webmin lock and removes its expired exit-cleanup entry, so this
+# CGI cannot later unlink a lock acquired by a background worker or new request.
+sub unlock_data_file
+{
+my ($file) = @_;
+unlock_file($file);
+my $lockfile = translate_filename($file).'.lock';
+@main::temporary_files = grep { $_ ne $lockfile } @main::temporary_files;
+}
+
 1;
