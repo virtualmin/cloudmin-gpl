@@ -420,6 +420,22 @@ foreach my $flags (0, 2) {
 return sort keys %paths;
 }
 
+# list_storage_pools([adapter])
+# Returns pool records from libvirt, or an empty list after a lookup failure.
+sub list_storage_pools
+{
+my ($adapter) = @_;
+$adapter ||= get_libvirt();
+my $pools = eval { $adapter->list_storage_pools(1) };
+# Keep list context and expose the lookup error through the shared variable.
+if (!$pools) {
+	$cloudmin_last_error = error_message($@);
+	return ();
+	}
+$cloudmin_last_error = undef;
+return @$pools;
+}
+
 # error_html(message) escapes backend text and links known navigation advice.
 sub error_html
 {
