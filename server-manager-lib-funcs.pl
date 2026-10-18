@@ -266,4 +266,15 @@ push(@errors, $text{'validate_estate'})
 return @errors;
 }
 
+# can_host_kvm([server])
+# Accepts an omitted host or a record marked this/libvirt. Checks the record
+# type only, not the host's KVM capabilities or address.
+sub can_host_kvm
+{
+my ($server) = @_;
+# Callers without a host record mean the configured host.
+return 1 if (!$server);
+return ($server->{'manager'} || '') =~ /^(this|libvirt)$/ ? 1 : 0;
+}
+
 1;
