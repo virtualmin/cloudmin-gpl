@@ -199,6 +199,16 @@ return Cloudmin::Libvirt->new(
 );
 }
 
+# get_server_ip(server)
+# Returns discovered IPv4 addresses in list context, or the first in scalar
+# context. Loads addresses only when the supplied inventory lacks them.
+sub get_server_ip
+{
+my ($server) = @_;
+my @ips = grep { !/:/ } get_server_addresses($server);
+return wantarray ? @ips : $ips[0];
+}
+
 # get_server_addresses(server)
 # Shares one address lookup between the IPv4 and IPv6 helpers. Ordinary menu
 # inventory stays cheap because it does not call these helpers.
