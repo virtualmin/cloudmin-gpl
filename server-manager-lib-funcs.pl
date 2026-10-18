@@ -243,6 +243,18 @@ my ($server) = grep {
 return $server;
 }
 
+# get_managed_server_by(key, value, [adapter])
+# Matches a scalar inventory field. Returns all matches in list context or the
+# first match in scalar context; no match or a lookup error returns no record.
+sub get_managed_server_by
+{
+my ($key, $value, $adapter) = @_;
+my @servers = grep {
+	defined($_->{$key}) && $_->{$key} eq $value
+	} list_managed_servers(0, $adapter);
+return wantarray ? @servers : $servers[0];
+}
+
 # get_server_ip(server)
 # Returns discovered IPv4 addresses in list context, or the first in scalar
 # context. Loads addresses only when the supplied inventory lacks them.
