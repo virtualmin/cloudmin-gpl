@@ -209,6 +209,16 @@ my @ips = grep { !/:/ } get_server_addresses($server);
 return wantarray ? @ips : $ips[0];
 }
 
+# get_server_ip6(server)
+# Returns discovered IPv6 addresses in list context, or the first in scalar
+# context, for callers such as Virtualmin's address allocation checks.
+sub get_server_ip6
+{
+my ($server) = @_;
+my @ips = grep { /:/ } get_server_addresses($server);
+return wantarray ? @ips : $ips[0];
+}
+
 # get_server_addresses(server)
 # Shares one address lookup between the IPv4 and IPv6 helpers. Ordinary menu
 # inventory stays cheap because it does not call these helpers.
