@@ -312,4 +312,15 @@ foreach my $flags (0, 2) {
 return sort keys %paths;
 }
 
+# error_html(message) escapes backend text and links known navigation advice.
+sub error_html
+{
+my $html = html_escape($_[0]);
+# Only this fixed destination becomes markup; backend content stays escaped.
+$html =~ s{\bSystem -&gt; Settings -&gt; License Manager\b}
+	{ui_link(get_webprefix().'/server-manager/pro/license.cgi',
+		'System &rarr; Settings &rarr; License Manager')}ge;
+return $html;
+}
+
 1;
