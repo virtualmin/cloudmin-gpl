@@ -230,6 +230,19 @@ return sort {
 	} list_managed_servers($nocomplete, $adapter);
 }
 
+# get_managed_server(id, [adapter])
+# Finds one libvirt guest by UUID or name; returns undef on no match or failure.
+sub get_managed_server
+{
+my ($id, $adapter) = @_;
+# Skip discovery when the caller has supplied no usable identifier.
+return undef if (!defined($id) || $id eq '');
+my ($server) = grep {
+	$_->{'id'} eq $id || $_->{'name'} eq $id
+	} list_managed_servers(0, $adapter);
+return $server;
+}
+
 # get_server_ip(server)
 # Returns discovered IPv4 addresses in list context, or the first in scalar
 # context. Loads addresses only when the supplied inventory lacks them.
