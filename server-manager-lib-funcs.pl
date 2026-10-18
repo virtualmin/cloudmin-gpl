@@ -346,6 +346,20 @@ return 1 if (!$server);
 return ($server->{'manager'} || '') =~ /^(this|libvirt)$/ ? 1 : 0;
 }
 
+# check_kvm_host_software([server], [adapter])
+# Returns undef when the local KVM/libvirt host is ready, or an error message.
+sub check_kvm_host_software
+{
+my ($server, $adapter) = @_;
+# Reject host records outside the local-host convention.
+return $text{'check_remote'}
+	if ($server && !can_host_kvm($server));
+# Return the first readiness error, or undef when every check passed.
+my $readiness = check_host_readiness($adapter);
+my ($failed) = grep { !$_->{'ok'} } @{$readiness->{'checks'}};
+return $failed ? $failed->{'detail'} : undef;
+}
+
 # list_kvm_instances([host], [adapter])
 # Returns an array reference of guest records, or an error string on failure.
 # Host is an optional record checked by can_host_kvm, not a connection address.
