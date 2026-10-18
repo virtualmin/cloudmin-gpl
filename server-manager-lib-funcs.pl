@@ -305,6 +305,19 @@ my @macs = defined($server->{'mac_addresses'})
 return wantarray ? @macs : $macs[0];
 }
 
+# check_server_status(server, [regen], [skipinfo], [time], [adapter])
+# Refreshes the supplied hash in place and returns whether libvirt marks it
+# active. Regen, skipinfo, and time are accepted but unused.
+sub check_server_status
+{
+my ($server, $regen, $skipinfo, $time, $adapter) = @_;
+my $fresh = get_managed_server($server->{'id'}, $adapter);
+# Missing guests and lookup failures leave the old record unchanged.
+return 0 if (!$fresh);
+%$server = %$fresh;
+return $server->{'active'} ? 1 : 0;
+}
+
 # validate_server(server)
 # Returns error messages for a missing UUID, missing name, or unknown state.
 # This checks the supplied record, not whether the guest can be managed safely.
