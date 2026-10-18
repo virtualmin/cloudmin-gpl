@@ -270,4 +270,43 @@ return ui_tag('script', '', { src => get_webprefix().
 	ui_tag('script', 'window.cloudminStatusInit?.();');
 }
 
+# show_status_summary(vm, [reopen], [message])
+# Shows all health signals for a waiting graphical or serial console; other
+# callers get SSH readiness. See get_status_config for reopen values.
+# message adds plain text to SSH readiness after the pending check finishes.
+sub show_status_summary
+{
+my ($vm, $reopen, $message) = @_;
+my $card;
+if (($reopen || '') =~ /\A(?:console|serial)\z/) {
+	# Show power and service status while waiting; consoles do not need SSH.
+	my @signals = map {
+		ui_list([{
+			title => $text{'vm_status_'.$_->[0]}, icon => $_->[1],
+			desc_html => ui_tag('span',
+			html_escape($text{'vm_status_checking'}),
+				{ 'data-vm-field' => $_->[0] }),
+		}])
+		} ([power => 'power'], [agent => 'server'],
+		[ssh => 'terminal']);
+	$card = ui_card({ id => 'cloudmin-connection-status',
+		body => ui_grid(\@signals, { min => '240px' }) });
+	}
+else {
+	# A list keeps the title and live message together without header
+	# padding.
+	$card = ui_card({ id => 'cloudmin-ssh-status', state => 'warning',
+		body => ui_list([{ title => $text{'vm_status_ssh'},
+			desc_html => ui_tag('span', html_escape($text{'vm_status_checking'}),
+				{ 'data-vm-field' => 'ssh', role => 'status',
+				  ($message ? ('data-vm-message' => html_escape($message)) : ()) }) }]) });
+	}
+# Put configuration on the page itself; theme navigation strips script
+# attributes.
+return ui_page_assets().ui_tag('div', $card,
+	{ class => 'ui_page', id => 'cloudmin-vm-status',
+	  'data-config' => get_status_config($vm, $reopen) }).
+	show_status_script();
+}
+
 1;
