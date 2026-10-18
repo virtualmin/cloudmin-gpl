@@ -123,4 +123,16 @@ $entry->{$_} = $input->{$_} ? 1 : 0 for qw(cloud_init guest_agent);
 return $entry;
 }
 
+# save_catalogue_form(input)
+# Validates raw editor fields within the privileged backend before saving them.
+sub save_catalogue_form
+{
+# Catalogue entries affect the host; VM assignments grant no editing access.
+require_access('host');
+my ($input) = @_;
+my $catalogue = get_image_catalogue();
+return $catalogue->save_entry(prepare_catalogue_entry($input, $catalogue),
+	$input->{'new'});
+}
+
 1;
