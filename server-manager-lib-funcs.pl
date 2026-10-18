@@ -277,4 +277,16 @@ return 1 if (!$server);
 return ($server->{'manager'} || '') =~ /^(this|libvirt)$/ ? 1 : 0;
 }
 
+# get_parent_server(server)
+# Returns the host system record that runs a guest, or undef without a guest.
+# Webmin's LVM module compares its id with '0', Cloudmin 9's ID for the system
+# running Cloudmin itself. Every Cloudmin 10 guest runs on this host.
+sub get_parent_server
+{
+my ($server) = @_;
+# A missing guest record has no host system.
+return undef if (!$server);
+return { 'id' => '0', 'host' => get_system_hostname(), 'manager' => 'this' };
+}
+
 1;
