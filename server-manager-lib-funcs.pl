@@ -80,4 +80,47 @@ return Cloudmin::ImageCatalog->new(
 );
 }
 
+# prepare_catalogue_entry(input, catalogue)
+# Validates editor fields while retaining metadata not exposed by the form.
+sub prepare_catalogue_entry
+{
+my ($input, $catalogue) = @_;
+my $architecture = Cloudmin::ImageCatalog::normalize_architecture($input->{'architecture'});
+my $id = $input->{'id'} || '';
+# IDs are stable catalogue keys rather than arbitrary filenames.
+die "Invalid catalogue ID\n"
+	if (length($id) > 96 || $id !~ /\A[a-z0-9][a-z0-9._-]*\z/);
+my $existing = $input->{'new'} ? undef
+	: $catalogue->find_entry($id.':'.$architecture);
+# Editing must not silently recreate an entry removed since the form loaded.
+die "Catalogue entry no longer exists\n" if (!$input->{'new'} && !$existing);
+my $entry = { %{$existing || {}}, id => $id, architecture => $architecture };
+# Preserve hidden metadata while limiting the editable text fields.
+foreach my $field (qw(name vendor os release url checksum_url source_url status checksum_algorithm firmware
+		release_date end_of_life)) {
+	my $value = $input->{$field} || '';
+	$value =~ s/^\s+|\s+$//g;
+	# URLs need more room than labels, but neither may contain control
+	# bytes.
+	die "Invalid catalogue field $field\n"
+		if ($value =~ /[\x00-\x1f]/ || length($value) >
+		($field =~ /url\z/ ? 4096 : 200));
+	$entry->{$field} = $value;
+	}
+$entry->{'source_url'} ||= $entry->{'url'};
+$entry->{'format'} = $input->{'format'} || '';
+# An estimate for the old file does not describe a replacement URL.
+delete($entry->{'download_size_bytes'})
+	if ($existing && $entry->{'url'} ne $existing->{'url'});
+# Catalogue imports always fetch a checksum file before inspecting the image.
+Cloudmin::Images::validate_url($entry->{$_}) for qw(url checksum_url source_url);
+my $disk = $input->{'min_disk_gib_def'} ? 0 : $input->{'min_disk_gib'} || 0;
+# Store a bounded byte count; zero means no stated minimum.
+die "Enter a valid minimum disk size in GiB\n"
+	if ($disk !~ /\A\d+(?:\.\d+)?\z/ || $disk > 16 * 1024);
+$entry->{'min_disk_bytes'} = int($disk * 1024**3);
+$entry->{$_} = $input->{$_} ? 1 : 0 for qw(cloud_init guest_agent);
+return $entry;
+}
+
 1;
