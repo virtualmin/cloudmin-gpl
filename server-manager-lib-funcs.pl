@@ -135,4 +135,38 @@ return $catalogue->save_entry(prepare_catalogue_entry($input, $catalogue),
 	$input->{'new'});
 }
 
+# get_ssh_keys()
+# Stores guest login keys separately from administrator SSH identities.
+sub get_ssh_keys
+{
+return Cloudmin::SSHKeys->new("$module_var_directory/vm-ssh-keys");
+}
+
+# get_libvirt([writable])
+# Returns a new adapter for the configured libvirt URI. Inventory pages use the
+# default read-only connection. Pass a true value for calls that libvirt
+# refuses on read-only connections, such as guest-agent address queries.
+sub get_libvirt
+{
+my ($writable) = @_;
+require "$module_root_directory/lib/Cloudmin/VMStartup.pm";
+require "$module_root_directory/lib/Cloudmin/SerialLog.pm";
+return Cloudmin::Libvirt->new(
+	'uri' => $config{'libvirt_uri'} || 'qemu:///system',
+	'readonly' => $writable ? 0 : 1,
+	# Native serial logs belong only to this local hypervisor.
+	'serial_log' => (!$config{'libvirt_uri'} || $config{'libvirt_uri'} eq 'qemu:///system')
+		? Cloudmin::SerialLog->new() : undef,
+	# Startup memory belongs to this host, not a remote libvirt connection.
+	'startup' => (!$config{'libvirt_uri'} || $config{'libvirt_uri'} eq 'qemu:///system')
+		? Cloudmin::VMStartup->new("$module_var_directory/vm-startup") : undef,
+	# on_remove(uuid, job_id) removes only this creation's local access records.
+	'on_remove' => sub {
+		require "$module_root_directory/cloudmin-webmin-lib.pl";
+		remove_vm_webmin(@_);
+		get_ssh_keys()->remove(@_);
+		},
+);
+}
+
 1;
