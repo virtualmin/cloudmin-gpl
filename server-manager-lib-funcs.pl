@@ -199,6 +199,26 @@ return Cloudmin::Libvirt->new(
 );
 }
 
+# list_managed_servers([skip-completion], [adapter])
+# Returns guest hash references visible under the current ACL; skip-completion
+# is unused. The optional adapter replaces the configured libvirt connection.
+# On failure, returns an empty list and sets cloudmin_last_error.
+sub list_managed_servers
+{
+my ($nocomplete, $adapter) = @_;
+$adapter ||= get_libvirt();
+my $servers = eval { $adapter->list_domains() };
+# Keep the list return type and expose the lookup error separately.
+if (!$servers) {
+	$cloudmin_last_error = error_message($@);
+	return ();
+	}
+# A successful empty inventory must not retain an earlier lookup error.
+$cloudmin_last_error = undef;
+# Apply assignments here so theme and legacy callers share the same inventory.
+return grep { can_access('view', $_->{'uuid'}) } @$servers;
+}
+
 # get_server_ip(server)
 # Returns discovered IPv4 addresses in list context, or the first in scalar
 # context. Loads addresses only when the supplied inventory lacks them.
