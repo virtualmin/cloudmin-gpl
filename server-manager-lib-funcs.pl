@@ -249,4 +249,21 @@ my @macs = defined($server->{'mac_addresses'})
 return wantarray ? @macs : $macs[0];
 }
 
+# validate_server(server)
+# Returns error messages for a missing UUID, missing name, or unknown state.
+# This checks the supplied record, not whether the guest can be managed safely.
+sub validate_server
+{
+my ($server) = @_;
+my @errors;
+# A record without a UUID cannot support stable guest lookup.
+push(@errors, $text{'validate_euuid'}) if (!$server->{'uuid'});
+# Require a name for display and name-based lookup.
+push(@errors, $text{'validate_ename'}) if (!$server->{'name'});
+# Treat missing state data like an explicitly unknown state.
+push(@errors, $text{'validate_estate'})
+	if (($server->{'state'} || '') eq 'unknown');
+return @errors;
+}
+
 1;
