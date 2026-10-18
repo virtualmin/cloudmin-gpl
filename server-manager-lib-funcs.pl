@@ -581,6 +581,32 @@ return {
 };
 }
 
+# get_storage_info()
+# Collects storage-pool and volume totals for the host overview and checks.
+sub get_storage_info
+{
+my $adapter = get_libvirt();
+my $pools = eval { $adapter->list_storage_pools(1) };
+my $error = $pools ? undef : error_message($@);
+$pools ||= [];
+
+# Totals cover active pools because inactive pools have no current capacity.
+my @active = grep { $_->{'active'} } @$pools;
+return {
+	'pools' => $pools,
+	'error' => $error,
+	'counts' => {
+		'pools' => scalar(@$pools),
+		'active' => scalar(@active),
+		'volumes' => sum(0,
+			map { $_->{'volume_count'} || 0 } @active),
+		'capacity' => sum(0, map { $_->{'capacity'} || 0 } @active),
+		'available' => sum(0,
+			map { $_->{'available'} || 0 } @active),
+	},
+};
+}
+
 # error_html(message) escapes backend text and links known navigation advice.
 sub error_html
 {
