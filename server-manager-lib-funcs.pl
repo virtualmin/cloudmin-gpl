@@ -362,6 +362,29 @@ return error_message($@) if (!$domains);
 return [grep { can_access('view', $_->{'uuid'}) } @$domains];
 }
 
+# list_available_managed_servers_sorted()
+# Supplies visible guests, sorted by name, for theme default-server settings.
+sub list_available_managed_servers_sorted
+{
+return list_managed_servers_sorted();
+}
+
+# can_action([server|servers], [action]) implements the theme permission hook.
+# Host administration and unknown legacy actions require an administrator.
+# Returns (ok, error) in list context or ok in scalar context. Omitted arguments
+# check host access; view accepts one server record or an array of records.
+sub can_action
+{
+my ($servers, $action) = @_;
+my $ok = can_access('host');
+# Delegated users must be allowed to view every guest in the requested list.
+if ($servers && ($action || '') eq 'view') {
+	my @servers = ref($servers) eq 'ARRAY' ? @$servers : ($servers);
+	$ok = !grep { !can_access('view', $_->{'uuid'} || $_->{'id'}) } @servers;
+	}
+return wantarray ? ($ok ? 1 : 0, $ok ? undef : $text{'acl_denied'}) : $ok;
+}
+
 # get_parent_server(server)
 # Returns the host system record that runs a guest, or undef without a guest.
 # Webmin's LVM module compares its id with '0', Cloudmin 9's ID for the system
