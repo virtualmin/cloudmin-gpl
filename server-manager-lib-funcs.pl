@@ -237,4 +237,16 @@ if (!exists($server->{'addresses'})) {
 return map { $_->{'address'} } @{$server->{'addresses'} || []};
 }
 
+# get_server_mac(server)
+# Reads Cloudmin's mac_addresses field, or the libvirt macs array.
+# Returns the first address in scalar context, or all in list context.
+sub get_server_mac
+{
+my ($server) = @_;
+my @macs = defined($server->{'mac_addresses'})
+	? split(/\s+/, $server->{'mac_addresses'})
+	: @{$server->{'macs'} || []};
+return wantarray ? @macs : $macs[0];
+}
+
 1;
