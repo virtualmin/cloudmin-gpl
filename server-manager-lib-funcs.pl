@@ -95,6 +95,71 @@ my $lockfile = translate_filename($file).'.lock';
 @main::temporary_files = grep { $_ ne $lockfile } @main::temporary_files;
 }
 
+# prepare_image_import(input)
+# Resolves trusted catalogue metadata and current storage before any write.
+sub prepare_image_import
+{
+my ($input) = @_;
+my $data = get_images_info();
+my ($pool) = grep { $_->{'id'} eq ($input->{'pool'} || '') }
+	@{$data->{'pools'}};
+# A stale form cannot select a pool that is no longer writable by this flow.
+die "$text{'image_epool'}\n" if (!$pool);
+my $source = $input->{'install_type'} || '';
+my $request = { source => $source, pool => $pool->{'id'},
+	pool_name => $pool->{'name'}, slug => 'image' };
+if ($source eq 'download') {
+	# Use the enabled catalogue entry, from Cloudmin or the custom
+	# catalogue.
+	my $image = get_available_server_image($input->{'id'});
+	# Reject removed, disabled or host-incompatible catalogue selections.
+	die "$text{'image_enotfound'}\n" if (!$image);
+	$request = Cloudmin::Images::catalogue_request($image, $pool);
+	}
+else {
+	# Custom images require a declared format and may include a checksum.
+	die "$text{'image_etype'}\n" if ($source !~ /\A(?:url|local|upload)\z/);
+	$request->{'format'} = $input->{'format'} || 'qcow2';
+	# ISO imports skip disk inspection but still verify any supplied checksum.
+	die "$text{'image_eformat'}\n"
+		if ($request->{'format'} !~ /\A(?:qcow2|raw|iso)\z/);
+	my $digest = $input->{'sha256'} || '';
+	$digest =~ s/^\s+|\s+$//g;
+	# An optional user digest must be a complete SHA-256 value.
+	die "$text{'image_echecksum'}\n"
+		if ($digest && $digest !~ /\A[a-fA-F0-9]{64}\z/);
+	$request->{'sha256'} = lc($digest);
+	my $name;
+	if ($source eq 'url') {
+		# Validate the download address and derive a display name from
+		# its path.
+		$request->{'url'} =
+			Cloudmin::Images::validate_url($input->{'url'});
+		($name) = $request->{'url'} =~ m{/([^/?]+)(?:\?.*)?$};
+		}
+	elsif ($source eq 'local') {
+		# The worker later opens this regular host file without root
+		# privileges.
+		my $path = $input->{'path'} || '';
+		die "$text{'image_epath'}\n"
+			if ($path !~ m{\A/} || $path =~ /[\x00-\x1f]/);
+		$request->{'path'} = $path;
+		($name) = $path =~ m{([^/]+)$};
+		}
+	else {
+		# Upload bytes arrive separately; the form must identify the
+		# chosen file.
+		$name = $input->{'filename'};
+		die "$text{'image_eupload'}\n" if (!$name);
+		}
+	$name ||= 'Custom image';
+	# Browser filenames are display text, never destination paths.
+	$name =~ s{.*[\\/]}{};
+	$request->{'name'} = substr($name, 0, 200);
+	}
+return $request;
+}
+
 # get_image_catalogue()
 # Combines the Cloudmin catalogue with the custom catalogue in module
 # configuration.
