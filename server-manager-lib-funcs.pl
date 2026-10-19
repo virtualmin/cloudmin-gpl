@@ -846,6 +846,54 @@ return { jobs => [ sort { $b->{'created'} <=> $a->{'created'} } @jobs ],
 	errors => \@errors };
 }
 
+# get_dashboard()
+# Collects visible guests and, for host administrators, readiness and job counts.
+# Live status refreshes this initial inventory after the page loads.
+sub get_dashboard
+{
+# Libvirt requires a writable connection even for guest-agent address queries.
+my $adapter = get_libvirt(1);
+# Skip host setup checks for users who can only access assigned VMs.
+my $readiness = can_access('host') ? check_host_readiness($adapter)
+	: { ready => 1, probe => { ok => 1 }, checks => [] };
+my @servers;
+my $domain_error;
+# Still show inventory when only non-connection readiness checks fail.
+if ($readiness->{'probe'}->{'ok'}) {
+	my $records = eval { $adapter->list_domains(0, 1) };
+	# Filter successful inventory, including an empty result, before rendering it.
+	if ($records) {
+		@servers = grep { can_access('view', $_->{'uuid'}) } @$records;
+		}
+	# Do not mistake a discovery failure for an empty inventory.
+	else {
+		$domain_error = error_message($@);
+		}
+	}
+
+# Job-store errors must not hide the host inventory.
+my $jobs = get_active_jobs();
+# Keep the configured URI visible even when host metadata is missing.
+return {
+	'ready' => $readiness->{'ready'},
+	'readiness' => $readiness,
+	'host' => $readiness->{'host'} || {
+		'uri' => $adapter->uri(),
+	},
+	'servers' => \@servers,
+	'domain_error' => $domain_error,
+	'job_error' => join('; ', @{$jobs->{'errors'}}),
+	# Count background image imports and unfinished VM operations.
+	'counts' => {
+		'hosts' => 1,
+		'vms' => scalar(@servers),
+		# Libvirt's active flag also includes paused guests.
+		'running' => scalar(grep { $_->{'active'} } @servers),
+		'jobs' => scalar(@{$jobs->{'jobs'}}),
+	},
+};
+}
+
 # error_html(message) escapes backend text and links known navigation advice.
 sub error_html
 {
