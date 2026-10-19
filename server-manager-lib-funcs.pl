@@ -173,6 +173,18 @@ my (undef, undef, undef, undef, $machine) = uname();
 return Cloudmin::ImageCatalog::normalize_architecture($machine);
 }
 
+# list_available_server_images([architecture], [catalogue])
+# Returns enabled catalogue images for the requested architecture.
+# Defaults to the local architecture and configured catalogue.
+sub list_available_server_images
+{
+my ($architecture, $catalogue) = @_;
+# An omitted architecture means the local host, not every catalogue entry.
+$architecture = get_host_image_architecture() if (!defined($architecture));
+$catalogue ||= get_image_catalogue();
+return @{$catalogue->list_images($architecture)};
+}
+
 # get_images_info([query], [architecture], [catalogue])
 # Collects filtered catalogue records and summary counts for the images page. An
 # omitted query lists all host-compatible images from the configured catalogue.
