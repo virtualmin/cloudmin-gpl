@@ -95,6 +95,37 @@ my $lockfile = translate_filename($file).'.lock';
 @main::temporary_files = grep { $_ ne $lockfile } @main::temporary_files;
 }
 
+# start_image_imports(input)
+# Validates a complete batch before queuing it; each selection is idempotent.
+sub start_image_imports
+{
+my ($input) = @_;
+# Refuse read-only and delegated callers before token validation or job creation.
+die "$text{'image_ereadonly'}\n" if (is_readonly_mode());
+require_access('manage');
+my $jobs = get_image_jobs();
+$jobs->check_token($remote_user, $input->{'token'});
+# A download batch has catalogue IDs; custom imports use one empty slot.
+my @ids = ($input->{'install_type'} || '') eq 'download'
+	? grep { length } split(/[\r\n\0]+/, $input->{'id'} || '') : ('');
+@ids = unique(@ids);
+# Bound the selection before preparing any import or starting a worker.
+die "$text{'images_enone'}\n" if (!@ids);
+die "Select at most 16 images at a time.\n" if (@ids > 16);
+my @requests = map { prepare_image_import({ %$input, id => $_ }) } @ids;
+# Repeated attempts return the same jobs; locks serialize repeated starts.
+my $attempts = Cloudmin::Attempts::image_attempts($input);
+my @records;
+foreach my $i (0..$#requests) {
+	my $job = $jobs->create($remote_user, $input->{'token'}, $requests[$i],
+		$ids[$i], $attempts->{$ids[$i]});
+	push(@records, $job);
+	# Completed imports and uploads still waiting for data need no worker.
+	$jobs->start($job->{'id'}) if ($job->{'state'} eq 'queued');
+	}
+return \@records;
+}
+
 # prepare_image_import(input)
 # Resolves trusted catalogue metadata and current storage before any write.
 sub prepare_image_import
