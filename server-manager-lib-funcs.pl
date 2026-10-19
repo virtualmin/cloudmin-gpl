@@ -165,6 +165,72 @@ return $catalogue->save_entry(prepare_catalogue_entry($input, $catalogue),
 	$input->{'new'});
 }
 
+# get_host_image_architecture()
+# Returns the normalized architecture used to filter bootable VM images.
+sub get_host_image_architecture
+{
+my (undef, undef, undef, undef, $machine) = uname();
+return Cloudmin::ImageCatalog::normalize_architecture($machine);
+}
+
+# get_images_info([query], [architecture], [catalogue])
+# Collects filtered catalogue records and summary counts for the images page. An
+# omitted query lists all host-compatible images from the configured catalogue.
+sub get_images_info
+{
+my ($query, $architecture, $catalogue) = @_;
+# Default the picker to the local host. Catalogue filtering is independent.
+$architecture = get_host_image_architecture() if (!defined($architecture));
+$catalogue ||= get_image_catalogue();
+my ($records, $entries, $total, $error);
+# A catalogue failure must still leave the storage and import form usable.
+my $ok = eval {
+	$records = $catalogue->search_images($query, $architecture);
+	$total = $catalogue->image_count();
+	$entries = $catalogue->list_entries();
+	# Default to the host architecture for display. This filter leaves saved
+	# entries and the picker unchanged.
+	if (($config{'catalogue_host_arch'} // 1) eq '1') {
+		my $host_arch = get_host_image_architecture();
+		$entries = [grep { $_->{'architecture'} eq $host_arch } @$entries];
+		}
+	1;
+	};
+# Retain the failure for display without passing an undefined image list on.
+$error = error_message($@) if (!$ok);
+$records ||= [];
+# Render cached estimates immediately; browser requests refresh stale entries.
+my $sizes = get_image_sizes();
+foreach my $entry (@$records, @{$entries || []}) {
+	my $size = $sizes->get($entry);
+	$entry->{'download_size_bytes'} = $size->{'bytes'};
+	$entry->{'download_size_refresh'} = $size->{'refresh'};
+	}
+my $storage = get_storage_info();
+# File images can be uploaded to these libvirt file-backed pool types.
+my @pools = grep {
+	$_->{'active'} && ($_->{'type'} || '') =~ /\A(?:dir|fs|netfs)\z/
+	} @{$storage->{'pools'} || []};
+
+return {
+	'images' => $records,
+	'catalogue_entries' => $entries || [],
+	'catalogue_columns' => $config{'catalogue_columns'},
+	'max_image_bytes' => Cloudmin::Images::import_limit_bytes($config{'image_max_size'}),
+	'error' => $error,
+	'architecture' => $architecture,
+	'pools' => \@pools,
+	'storage_error' => $storage->{'error'},
+	'counts' => {
+		'catalogue' => $total || 0,
+		'compatible' => scalar(@$records),
+		'recommended' => scalar(grep {
+			($_->{'status'} || '') eq 'recommended'
+			} @$records),
+	},
+};
+}
+
 # get_ssh_keys()
 # Stores guest login keys separately from administrator SSH identities.
 sub get_ssh_keys
