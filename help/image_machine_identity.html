@@ -1,0 +1,13 @@
+<header>Remove login credentials?</header>
+<p>When enabled, Cloudmin removes Linux login password hashes,
+home-directory SSH credentials and standard shell histories for all local
+accounts in the image, including root and service accounts. Accounts, permissions
+and application data remain. Services that use these passwords or SSH keys will
+need new credentials. This option is enabled by default.</p>
+<p>When disabled, those passwords, SSH credentials and histories remain in the
+image. Anyone with the old credentials may retain access to virtual machines
+created from it.</p>
+<p>Database and application passwords remain, as do credentials and histories
+in custom locations. Cloudmin always resets machine identity.
+The source virtual machine stays unchanged.</p>
+<footer>

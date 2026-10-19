@@ -1,0 +1,16 @@
+<header>Source preparation</header>
+<p><b>Guest agent (keep running)</b> requires a responding guest agent. Cloudmin
+freezes the guest filesystems briefly and takes a temporary snapshot.
+For file disks, it copies the stable disk, then merges the temporary write overlay.
+For LVM disks, it briefly pauses the guest to create a native snapshot, copies
+that snapshot, then removes it. Writes stay on the original logical volume.
+The source keeps running during copying. Applications
+that need more than filesystem consistency should be stopped first or use
+clean shutdown.</p>
+<p><b>Clean shutdown</b> sends an ACPI shutdown request and waits for the machine
+to stop before copying. Cloudmin restarts a source that was running before the
+job. A source that was already stopped stays stopped.</p>
+<p>Preparation happens offline on a separate disk copy. Cancellation restores
+the source and removes unfinished copies. If cleanup cannot finish, open Active
+Jobs and retry recovery before using the source for another operation.</p>
+<footer>
