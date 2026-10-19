@@ -805,6 +805,47 @@ return {
 };
 }
 
+# get_active_jobs()
+# Shows host administrators all working imports and unfinished VM jobs.
+sub get_active_jobs
+{
+# Skip job stores entirely for delegated users.
+return { jobs => [], errors => [] } if (!can_access('host'));
+my (@jobs, @errors);
+foreach my $type (qw(image vm)) {
+	# Keep the available store visible when the other cannot be read.
+	my $records = eval { $type eq 'image'
+		? get_image_jobs()->list(undef, 1)
+		: get_vm_jobs()->list_pending() };
+	if (!$records) {
+		# Report the failed store and continue collecting the other job
+		# type.
+		push(@errors, text('jobs_error_'.$type, error_message($@)));
+		next;
+		}
+	foreach my $job (@$records) {
+		# Expose display fields, diagnostics and allowed actions.
+		# Keep tokens and private provisioning inputs out of this view.
+		push(@jobs, { type => $type,
+			(map { $_ => $job->{$_} }
+			qw(id state phase created cancel cleanup_pending cleanup_created error cleanup_warning audit_warning source sha256 bytes total transferred
+			   checksum_algorithm checksum_source)),
+			operation => $type eq 'vm' ? ($job->{'request'}->{'operation'} || 'create') : 'import',
+			software => $type eq 'vm' && $job->{'resources'}->{'software'} ? 1 : 0,
+			can_cancel => $type eq 'image' || !$job->{'request'}->{'operation'} ||
+				$job->{'request'}->{'operation'} =~ /\A(?:clone|capture_image|backup|backup_inspect|restore)\z/ ||
+				!$job->{'resources'}->{'started'} ? 1 : 0,
+			name => $type eq 'image' ? $job->{'name'}
+			: $job->{'request'}->{'name'},
+			start => $type eq 'vm' ? $job->{'request'}->{'start'}
+			: undef });
+		}
+	}
+return { jobs => [ sort { $b->{'created'} <=> $a->{'created'} } @jobs ],
+	can_control => !is_readonly_mode(),
+	errors => \@errors };
+}
+
 # error_html(message) escapes backend text and links known navigation advice.
 sub error_html
 {
