@@ -293,6 +293,18 @@ $catalogue ||= get_image_catalogue();
 return $catalogue->find_image($id, $architecture);
 }
 
+# search_available_server_images(query, [architecture], [catalogue])
+# Searches compatible catalogue records by name, OS, release, and format.
+# Defaults to the local architecture and configured catalogue.
+sub search_available_server_images
+{
+my ($query, $architecture, $catalogue) = @_;
+# Searches without an architecture are limited to the local host.
+$architecture = get_host_image_architecture() if (!defined($architecture));
+$catalogue ||= get_image_catalogue();
+return @{$catalogue->search_images($query, $architecture)};
+}
+
 # get_images_info([query], [architecture], [catalogue])
 # Collects filtered catalogue records and summary counts for the images page. An
 # omitted query lists all host-compatible images from the configured catalogue.
