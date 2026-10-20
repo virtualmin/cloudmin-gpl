@@ -112,4 +112,20 @@ error($text{'config_image_pool_error'}) if (!grep {
 return $value;
 }
 
+# show_catalogue_columns(value)
+# Shows known catalogue columns, keeping the required image-name column checked.
+sub show_catalogue_columns
+{
+my ($value) = @_;
+my %selected = map { $_->{'id'} => 1 } get_catalogue_columns($value);
+my @rows;
+foreach my $def (list_catalogue_columns()) {
+	my $id = $def->{'id'};
+	push(@rows, ui_checkbox('cataloguecol_'.$id, 1, $text{$def->{'label'}},
+		$selected{$id} ? 1 : 0, undef, $id eq 'name'));
+	}
+# Wrap choices into columns like the other module configuration checkboxes.
+return ui_grid(\@rows, { min => '180px' });
+}
+
 1;
