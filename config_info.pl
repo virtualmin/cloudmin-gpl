@@ -52,4 +52,13 @@ error(text('config_number_error', $label, $min, $max))
 return 0 + $value;
 }
 
+# show_image_max_size(value)
+# Offers an optional import cap; available storage remains the default limit.
+sub show_image_max_size
+{
+my ($value) = @_;
+return ui_opt_textbox('image_max_size', $value || '', 8,
+	$text{'config_image_space'});
+}
+
 1;
