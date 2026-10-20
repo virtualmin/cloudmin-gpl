@@ -26,4 +26,16 @@ return join(',', map { $_->[0] }
 	grep { $_->[3] || $in{$key.'_'.$_->[0]} } view_fields($key));
 }
 
+# show_cloudmin_number(value, label, type, handler, key)
+# Shows a whole-number setting with the same bounds used by its save parser.
+sub show_cloudmin_number
+{
+my ($value, undef, undef, undef, $key) = @_;
+my (undef, $min, $max) = number_setting($key);
+return ui_tag('input', undef, { type => 'number', name => $key, id => $key,
+	class => 'ui_textbox', value => config_number($key, $value),
+	min => $min, max => $max, step => 1, required => undef,
+	style => 'width:8em', inputmode => 'numeric' });
+}
+
 1;
