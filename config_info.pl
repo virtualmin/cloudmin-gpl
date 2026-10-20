@@ -74,4 +74,21 @@ error($text{'config_image_max_error'}) if (!$bytes || $@);
 return 0 + $value;
 }
 
+# show_image_pool(value) offers file-backed pools and automatic selection.
+# value is the saved pool UUID, or empty for automatic selection. Stopped pools
+# are selectable here; the import form falls back until they are active again.
+sub show_image_pool
+{
+my ($value) = @_;
+my $storage = get_storage_info();
+my @choices = (['', $text{'config_image_pool_auto'}], map {
+	[$_->{'id'}, html_escape($_->{'name'})]
+	} grep { ($_->{'type'} || '') =~ /\A(?:dir|fs|netfs)\z/ }
+	@{$storage->{'pools'} || []});
+# Keep a missing saved choice visible when the user edits other settings.
+push(@choices, [$value, html_escape(text('config_image_pool_missing', $value))])
+	if ($value && !grep { $_->[0] eq $value } @choices);
+return ui_select('image_pool', $value || '', \@choices);
+}
+
 1;
