@@ -61,4 +61,17 @@ return ui_opt_textbox('image_max_size', $value || '', 8,
 	$text{'config_image_space'});
 }
 
+# parse_image_max_size(old_value)
+# Validates the submitted cap before Webmin saves it; old_value is unused.
+sub parse_image_max_size
+{
+# Selecting the default removes the explicit size cap.
+return 0 if ($in{'image_max_size_def'});
+my $value = $in{'image_max_size'} // '';
+$value =~ s/^\s+|\s+$//g;
+my $bytes = eval { Cloudmin::Images::import_limit_bytes($value) };
+error($text{'config_image_max_error'}) if (!$bytes || $@);
+return 0 + $value;
+}
+
 1;
