@@ -91,4 +91,25 @@ push(@choices, [$value, html_escape(text('config_image_pool_missing', $value))])
 return ui_select('image_pool', $value || '', \@choices);
 }
 
+# parse_image_pool(old_value) validates the submitted image_pool UUID.
+# old_value is the previous UUID or empty. Stopped pools can also be saved.
+sub parse_image_pool
+{
+my ($old) = @_;
+my $value = $in{'image_pool'} // '';
+# An empty submission restores automatic pool selection.
+return '' if ($value eq '');
+# Reject malformed IDs even when they match a previously saved value.
+error($text{'config_image_pool_error'}) if ($value !~
+	/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+# An unavailable old choice may be retained when editing another setting.
+return $value if ($value eq ($old || ''));
+# New choices must name an existing pool with a supported file-backed type.
+my $storage = get_storage_info();
+error($text{'config_image_pool_error'}) if (!grep {
+	$_->{'id'} eq $value && ($_->{'type'} || '') =~ /\A(?:dir|fs|netfs)\z/
+	} @{$storage->{'pools'} || []});
+return $value;
+}
+
 1;
