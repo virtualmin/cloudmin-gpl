@@ -38,4 +38,18 @@ return ui_tag('input', undef, { type => 'number', name => $key, id => $key,
 	style => 'width:8em', inputmode => 'numeric' });
 }
 
+# parse_cloudmin_number(old_value, label, type, handler, key)
+# Rejects invalid values before Webmin saves any of this section's settings.
+sub parse_cloudmin_number
+{
+my (undef, $label, undef, undef, $key) = @_;
+my (undef, $min, $max) = number_setting($key);
+# Validate the POST independently of the browser's numeric input constraints.
+my $value = $in{$key} // '';
+$value =~ s/^\s+|\s+$//g;
+error(text('config_number_error', $label, $min, $max))
+	if ($value !~ /\A\d{1,10}\z/ || $value < $min || $value > $max);
+return 0 + $value;
+}
+
 1;
