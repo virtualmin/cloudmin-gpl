@@ -17,4 +17,13 @@ my @rows = map { ui_checkbox($key.'_'.$_->[0], 1, $text{$_->[1]},
 return ui_grid(\@rows, { min => '180px' });
 }
 
+# parse_cloudmin_fields(old_value, label, type, handler, key)
+# Saves known checkbox choices, retaining required columns.
+sub parse_cloudmin_fields
+{
+my (undef, undef, undef, undef, $key) = @_;
+return join(',', map { $_->[0] }
+	grep { $_->[3] || $in{$key.'_'.$_->[0]} } view_fields($key));
+}
+
 1;
