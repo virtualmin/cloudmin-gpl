@@ -128,4 +128,20 @@ foreach my $def (list_catalogue_columns()) {
 return ui_grid(\@rows, { min => '180px' });
 }
 
+# parse_catalogue_columns(old_value)
+# Stores only known columns in display order and always retains the image link.
+# Webmin supplies old_value; selections are read from the submitted form
+# instead.
+sub parse_catalogue_columns
+{
+my @selected = ('name');
+foreach my $def (list_catalogue_columns()) {
+	my $id = $def->{'id'};
+	# Name is already included; accept only selected, recognized
+	# extra columns.
+	push(@selected, $id) if ($id ne 'name' && $in{'cataloguecol_'.$id});
+	}
+return join(',', @selected);
+}
+
 1;
