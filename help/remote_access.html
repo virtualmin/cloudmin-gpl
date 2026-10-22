@@ -1,0 +1,86 @@
+<header>Remote Access</header>
+<p>Choose a tab to connect to a running virtual machine. Only tabs you have
+permission to use appear. Leaving a console tab disconnects it; select it again
+to reconnect.</p>
+<p>Remote Access remembers your last selected tab, including when you open another
+virtual machine. Each Webmin user has a separate saved choice. Turn off
+<b>Remember the last remote connection tab?</b> in Module Configuration to open SSH first
+when permitted. Links to a specific tab override the saved choice.</p>
+
+<h3>SSH terminal</h3>
+<p>Connect using the guest's IP address, username and SSH port. Choose its
+host-managed SSH key, if available, or enter a password in the terminal.
+Passwords entered there are not saved or logged.</p>
+<p>SSH defaults to port 22. After a successful login, Cloudmin saves that virtual
+machine's port as the default for all Webmin users and for the <b>SSH service</b>
+card. If the guest's SSH port changes, enter the new port and log in once to save
+it. Failed logins leave the saved port unchanged.
+An SSH response does not mean first-boot setup has finished.</p>
+<p>Turn on <b>Connect automatically when opening the SSH tab?</b> in Module Configuration to skip the
+form. It is off by default. Automatic connection uses the shared SSH port and your
+saved username and authentication method. These login choices are saved separately
+for each user and virtual machine. The first attempt uses the form defaults.</p>
+<p>Failed logins return to the form. Failed or unfinished
+attempts pause automatic connection until a login succeeds. Use <b>Connection
+settings</b> above the terminal to change your username, port or login method.</p>
+<p>On first connection, confirm the guest's SSH host key. Cloudmin remembers it
+for your Webmin account and blocks connections if it changes.</p>
+
+<h3>Serial console</h3>
+<p>Use the guest's text console without networking or SSH. The guest must send
+boot output or a login prompt to its serial port. Log in with a guest username and password;
+SSH keys cannot be used here.</p>
+<p>When recording is enabled, recent output appears as you connect without sending
+keystrokes. Cloudmin enables recording on supported ports when starting a fully
+stopped virtual machine. A guest reboot or resume from a managed save does not
+enable it. If no history is available, press <b>Enter</b> only when it is safe to
+submit pending input. A previous login may still be active.</p>
+<p>Private logs on the host keep serial output, including echoed commands.
+The logs rotate to limit disk use. A cold start clears the previous recording;
+deleting the virtual machine through Cloudmin removes its logs.</p>
+<p>Only one connection can use the serial port. Use <b>Disconnect serial console</b>
+in the connected tab to release it without leaving the page. Select the Serial
+console tab again to reconnect. An interrupted connection clears within about a minute.</p>
+<p>If text wraps incorrectly after resizing, run <tt>stty rows 24 cols 80</tt>
+inside the guest, using the dimensions you need.</p>
+
+<h3>Graphical console</h3>
+<p>Use the guest's screen, keyboard and mouse, including during boot or without
+networking. A VNC display is required, but no separate VNC password is needed.
+Use the keyboard menu to send shortcuts such as <b>Ctrl+Alt+Delete</b>.</p>
+
+<h3>Console controls</h3>
+<p>Serial and graphical consoles require a local libvirt connection.
+Use <b>Fullscreen</b> for a larger view.</p>
+<p>Click inside the console, then use <b>Command + / −</b> on macOS or
+<b>Ctrl + / −</b> on Linux to zoom. Use <b>Command 0</b> or <b>Ctrl 0</b> to
+reset. Serial zoom changes text size; graphical zoom scales the display without
+changing the guest's resolution.</p>
+
+<h3>Webmin</h3>
+<p><b>Open directly in new tab</b> opens the guest's own HTTPS address. Sign in with a
+guest Webmin account. Private addresses may be unreachable from your browser.</p>
+<p><b>Open embedded Webmin</b> also works behind NAT. Read the orange warning
+before using it: a compromised guest can compromise the host and other virtual machines
+through your host session. Use this mode only for a fully trusted guest.</p>
+<p>By default, opening the <b>Webmin</b> tab shows the connection choices without
+loading the guest's pages. Click the tab again to return to these choices from
+the embedded view. Use <b>Fullscreen</b> for a larger view. Embedded pages follow
+the host's colors; direct tabs use the guest's preferences.</p>
+<p>Disabling <b>Show Webmin connection choices and a trust warning?</b> in Module Configuration
+opens registered guests in the embedded view immediately. Disable it only for
+fully trusted virtual machines. Changed IP addresses still require confirmation.</p>
+<ul>
+<li><b>Embedded login:</b> The host's Servers Index uses its saved guest credentials,
+or asks for a guest login if none were saved. Choose <b>Open embedded Webmin</b>
+to retry a failed registration after setup finishes.</li>
+<li><b>Password changed?</b> Update the saved login in the host's
+<b>Webmin Servers Index</b>.</li>
+<li><b>IP changed?</b> An alert shows both addresses and whether the new one
+matches the host's static configuration or a DHCP lease for this virtual
+machine's MAC address. Confirm the address before opening embedded Webmin.</li>
+</ul>
+<p>Only the host's <b>root</b> Webmin login can use this tab. Servers Index
+permissions still apply. A proxy URL shares the host's browser origin even when
+opened in another tab.</p>
+<footer>
