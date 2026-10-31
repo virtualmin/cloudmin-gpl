@@ -1,0 +1,884 @@
+=head1 NAME
+
+cloudmin - manage virtual machines on a Cloudmin host
+
+Run C<cloudmin> as root on the Cloudmin Linux host. Use C<cloudmin help COMMAND> for the full command manual, or C<cloudmin COMMAND --help> for a short description and syntax. Interactive manuals open in a pager; redirected help is plain text.
+
+Commands that select one existing virtual machine accept either C<--name> with its exact name or C<--id> with its UUID. Names are case-sensitive and do not support wildcards. List commands provide C<--name-only> and C<--id-only> for scripts. Use C<--multiline> for details, or C<--json> for a JSON object with C<command>, C<status> and C<data> fields. The C<data> field holds the API result.
+
+Commands that start background jobs normally wait for completion and report phase changes on standard error. C<--no-wait> returns the job ID immediately. Check it later with C<get-job>. Closing the terminal or reaching the command's waiting timeout does not cancel the worker. JSON mode omits progress messages. A successful command exits 0, an operation failure exits 1, and a command-line usage error exits 2.
+
+Passwords, license credentials and provider secrets are read from files. Use C<-> as the filename to read standard input; only one option in a command can do this. Each input must be UTF-8 text of at most 128 KiB. One final newline is removed from passwords and other single-value files; script contents keep it. SSH login options take public keys, not private keys.
+
+Memory sizes without a suffix are in MiB; disk sizes are in GiB. Binary suffixes such as C<2G> and C<2 GiB> are accepted. Quote values that contain spaces. Examples use placeholder names and IDs; substitute values from your host's list commands.
+
+=head2 list-systems
+
+With no filters, lists the virtual machines visible to the caller, ordered by name. The default table shows each machine's name, power state, CPU count, memory allocation and known IP addresses.
+
+Use C<--name> or C<--id> to select exact names or UUIDs. Repeat either option to select several machines. Multiple values of the same option are alternatives; different filters must all match. For example, two C<--name> options with C<--state running> show only the named machines that are running. An empty result means no machines matched.
+
+C<--state> accepts C<running>, C<stopped> or C<paused>. C<--template> and C<--plan> accept an existing preset's ID or unambiguous name and match the recorded creation preset. They do not compare the machine's current settings with the preset.
+
+Use C<--multiline> to see details including UUID, disk capacity and automatic startup. A disk capacity that could not be measured is unknown, not zero. C<--json> returns structured data for scripts. C<--name-only> and C<--id-only> print one name or UUID per line, without a heading.
+
+    cloudmin list-systems
+    cloudmin list-systems --state running --multiline
+    cloudmin list-systems --name web.example.com --name db.example.com \
+        --id-only
+    cloudmin list-systems --plan "Default Plan" --json
+
+=head2 get-system
+
+Select one virtual machine with C<--name> or C<--id>. The result combines its inventory summary with its saved configuration, including resources, disks, network interfaces and boot settings. Use C<list-systems> to find its name or UUID.
+
+For a running machine, the result also includes running resource settings and any differences from the saved settings. Pending changes take effect after a full shutdown and start; an operating system reboot may not apply them. Use C<restart-system> to perform that full restart.
+
+C<--multiline> expands nested details, and C<--json> returns the complete structured result. For a shorter view of attached devices, use C<list-disks> or C<list-interfaces>. This command reads settings once; it does not monitor changes.
+
+    cloudmin get-system --name guest.example.com --multiline
+    cloudmin get-system --id MACHINE_UUID --json
+
+=head2 start-system
+
+Select a stopped virtual machine with C<--name> or C<--id>. It starts with its saved hardware configuration, applying settings that were waiting for the next start. This command does not change whether the machine starts automatically when the host boots; use C<modify-system --autostart yes> for that.
+
+By default, waits up to two minutes for the host to report the machine running. That state does not mean the guest operating system, network, cloud-init or software installation is ready. C<--no-wait> returns once the start request is accepted. It does not return a background job ID.
+
+Use C<unpause-system> for a paused machine. An unfinished operation can prevent starting a guest; check C<list-jobs> before repeating a refused request.
+
+    cloudmin start-system --name guest.example.com
+    cloudmin start-system --id MACHINE_UUID --no-wait
+
+=head2 shutdown-system
+
+Requests a clean shutdown of the machine selected by C<--name> or C<--id>. The guest operating system must respond to the shutdown request. Its disks, saved hardware settings and automatic startup setting are retained.
+
+By default, waits up to two minutes for the host to report the machine stopped. A timeout fails the command but does not cancel the shutdown request: the guest can still stop later. Cloudmin never turns a timed-out clean shutdown into a forced power-off.
+
+C<--no-wait> returns after the request is accepted. Use C<get-system> or C<list-systems> to check the state later. Use C<restart-system> for a clean shutdown followed by a start, or C<poweroff-system --yes> when a forced stop is necessary.
+
+    cloudmin shutdown-system --name guest.example.com
+    cloudmin shutdown-system --id MACHINE_UUID --no-wait
+
+=head2 reboot-system
+
+Requests an operating system reboot of the running machine selected by C<--name> or C<--id>. This is a clean reboot request; the guest must respond to it. The command returns when libvirt accepts the request, without waiting for the guest to reboot or its services to become ready.
+
+An operating system reboot does not guarantee that pending CPU, memory or boot configuration changes take effect. Use C<restart-system> for a complete shutdown and start with the saved hardware configuration. Use C<reset-system> only when an immediate hardware reset is intended.
+
+    cloudmin reboot-system --name guest.example.com
+    cloudmin reboot-system --id MACHINE_UUID --json
+
+=head2 pause-system
+
+Pauses execution of a running machine selected by C<--name> or C<--id>. Its memory and virtual devices remain allocated on the host. This is not a saved state on disk and does not survive stopping the machine or shutting down the host.
+
+The guest cannot process requests while paused. Network connections and application operations may time out. Resume execution with C<unpause-system>; use C<shutdown-system> when the goal is to stop the operating system cleanly and release its resources.
+
+By default, waits for the paused state. C<--no-wait> returns as soon as the pause request is accepted. Neither form creates a background job.
+
+    cloudmin pause-system --name guest.example.com
+    cloudmin pause-system --id MACHINE_UUID --no-wait
+
+=head2 unpause-system
+
+Resumes execution of a paused machine selected by C<--name> or C<--id>, using its existing memory and running hardware state. It does not boot the operating system again or apply settings saved for the next start.
+
+By default, waits for the host to report the machine running. C<--no-wait> returns after the resume request is accepted. Applications may need to reconnect after the pause, so a running state does not prove that all services have recovered.
+
+Use C<start-system> for a stopped machine. C<list-systems --state paused> finds machines that can be resumed.
+
+    cloudmin unpause-system --name guest.example.com
+    cloudmin unpause-system --id MACHINE_UUID --no-wait
+
+=head2 restart-system
+
+Performs a full shutdown and start of the machine selected by C<--name> or C<--id>. Use this to apply saved CPU, memory or boot settings that C<get-system> shows as pending. A guest operating system reboot alone may leave those changes pending.
+
+The operation runs as a background job. If the machine is running, the worker requests a clean shutdown and waits up to two minutes. A timeout fails the job without forcing the guest off or starting it again. A delayed guest shutdown may still finish after the job reports failure.
+
+By default, waits for the job to finish. C<--no-wait> returns its ID for later inspection with C<get-job>. Success means the machine has been started with its saved configuration; it does not wait for guest applications to become ready.
+
+    cloudmin restart-system --name guest.example.com
+    cloudmin restart-system --id MACHINE_UUID --no-wait
+
+=head2 reset-system
+
+Immediately resets the virtual hardware of the machine selected by C<--name> or C<--id>. The guest has no opportunity to stop applications or flush pending writes. Unsaved data can be lost. C<--yes> is required to confirm this operation.
+
+Use C<reboot-system> for a clean operating system reboot. A hardware reset does not guarantee that pending saved hardware changes are applied; use a full shutdown and start for those changes.
+
+The command returns when the reset is accepted, without waiting for the operating system or services to become ready. It does not delete the machine or its disks.
+
+    cloudmin reset-system --name guest.example.com --yes
+
+=head2 poweroff-system
+
+Immediately stops the machine selected by C<--name> or C<--id>, without asking the guest operating system to shut down. Unsaved data can be lost. C<--yes> is required. Use C<shutdown-system> when the guest can shut down cleanly.
+
+The machine definition, disks and automatic startup setting are retained. Use C<start-system> to start the machine again.
+
+By default, waits for the host to report the machine stopped. C<--no-wait> returns after the forced stop is accepted. This is a power operation, not a background job.
+
+    cloudmin poweroff-system --name guest.example.com --yes
+    cloudmin poweroff-system --id MACHINE_UUID --yes --no-wait
+
+=head2 modify-system
+
+Changes selected settings of the machine identified by C<--name> or C<--id>. Omitted fields keep their existing values. The command reads the current configuration revision before submitting the update, so a conflicting concurrent edit can still cause the request to fail.
+
+=over
+
+=item Resources and boot settings
+
+C<--cpus> and C<--memory> set the allocation. C<--cpu-limit> and C<--memory-limit> set the maximum CPU count and memory, not CPU usage or scheduling limits. Bare memory values use MiB; C<4G> means 4 GiB.
+
+Supported CPU and memory allocation changes can apply while the guest runs. Allocation changes outside its running limits, changes to resource maximums, and boot settings are saved for the next full shutdown and start. If a supported live change fails, the command reports the error. Check C<get-system --multiline> for running values and pending changes, then use C<restart-system> when needed. Adding CPUs or adjusting memory through ballooning also requires guest support.
+
+C<--boot disk:vda> selects a disk as the first boot device; C<--boot nic:MAC> selects a network interface. This replaces the saved boot order. C<--bootmenu yes> enables the firmware boot menu. Use C<list-disks> and C<list-interfaces> to find device identifiers.
+
+=item Preparing for live changes
+
+C<--enable-live> requires a stopped guest. It adds CPU slots, spare device ports and a CD drive for later changes while preserving the current allocation. The command does not shut a running guest down automatically.
+
+=item Combined hardware edits
+
+C<--changes-file> reads a JSON array of up to 128 disk or interface edits. Each entry uses an API action and its fields, for example C<grow_disk> with C<target> and C<disk_gib>. An existing device can be changed only once in the array. Disk deletion requires the separate C<delete-disk> command.
+
+The whole request is validated before any changes, but disk growth cannot be undone if a later step fails. Use C<get-job> and C<recover-job> for an interrupted update. When its safety checks pass, C<discard-job> keeps completed growth and releases the machine for further edits.
+
+=item Automatic startup and completion
+
+C<--autostart yes> starts the machine when the host boots; C<--autostart no> disables that behavior. If combined with hardware edits, it is changed only after their job succeeds. With C<--no-wait>, submit automatic startup as a separate command.
+
+The command waits for hardware edits by default. C<--no-wait> returns the job ID. Use C<--json> for the job record, including any fields saved for the next start.
+
+=back
+
+    cloudmin modify-system --name guest.example.com --memory 4G --cpus 2
+    cloudmin modify-system --name guest.example.com --boot disk:vda \
+        --bootmenu yes
+    cloudmin modify-system --name guest.example.com --autostart yes
+    cloudmin modify-system --id MACHINE_UUID --changes-file \
+        /root/hardware-edits.json
+
+=head2 passwd-system
+
+Changes the login password of an existing account inside the machine selected by C<--name> or C<--id>. C<--user> names the guest account, not a Webmin user. The machine must be running with a responding QEMU guest agent. This command cannot create an account or reset a password in a stopped guest.
+
+C<--password-file> reads the new password from a regular UTF-8 text file. C<--password-file -> reads it from standard input. One final newline is removed. Keep password files private; the password itself is never a command-line argument or part of the public result.
+
+The command returns after the agent accepts the change. It does not change SSH authentication policy, unlock other login methods or replace authorized SSH keys. For example, changing a password does not enable SSH password login if the guest disables it.
+
+    cloudmin passwd-system --name guest.example.com --user cloudmin \
+        --password-file /root/guest-password
+    cloudmin passwd-system --id MACHINE_UUID --user cloudmin --password-file \
+        - < /root/guest-password
+
+=head2 create-system
+
+Creates a new virtual machine named by C<--name>. This name must be unused on the host. The operation runs as a background job; by default the command waits for creation and any selected software setup to finish. C<--no-wait> returns the job ID instead.
+
+=over
+
+=item Image, storage and resources
+
+Use C<list-images>, C<list-pools> and C<list-networks> to find available choices. Image, pool, template and plan options accept an ID or an unambiguous name. A catalogue image uses an ID such as C<catalogue:IMAGE_ID>; Cloudmin downloads or reuses it as needed. C<--pool> selects the destination for the new disk, not the image's existing location.
+
+C<--template> supplies creation defaults and C<--plan> supplies resource defaults. They are used only when explicitly selected. Command-line fields override their defaults, except that a template's required fully qualified hostname cannot be disabled. If you omit a required setting without a preset that supplies it, validation reports the missing value.
+
+C<--cpus> sets the CPU count. Bare C<--memory> values are MiB, and bare C<--disk> values are GiB; C<2G> and C<20G> are also accepted. C<--disk> sets the total disk capacity and cannot be smaller than the image requires.
+
+=item Guest access and networking
+
+For a cloud image, C<--username> names the initial administrator. C<--auth-type keys> requires SSH public keys, supplied with repeatable C<--ssh-key> options or C<--ssh-keys-file>. Use C<--auth-type password> with C<--password-file>, or C<both> with both password and keys. A password filename of C<-> reads standard input. Do not pass a password as a command argument.
+
+C<--hostname> defaults to the new machine's name. Use a fully qualified hostname when installing Virtualmin. C<--network> selects a virtual network or C<bridge:NAME>; it does not create that network. C<--address-mode dhcp> uses automatic addressing. For C<static>, supply addresses with prefixes, gateways where needed and C<--dns> as a quoted list of server addresses. These settings configure the new guest through cloud-init.
+
+=item Power and firmware
+
+The new machine starts by default, including when a template is selected. Use C<--no-start> to leave it stopped. C<--autostart> and C<--no-autostart> control startup when the host boots. C<--firmware auto>, C<efi> or C<bios> must be compatible with the selected image and host.
+
+For an installer ISO, use C<--install-source iso> and select an ISO image. Cloudmin creates an empty disk and attaches the installer. Complete operating system installation through the console; cloud-image account setup and automatic software installation do not apply to this mode.
+
+=item Software and scripts
+
+C<--packages> accepts a quoted, space-separated package list. C<--software virtualmin-gpl> or C<virtualmin-pro> installs Virtualmin after initial cloud-init setup. C<--virtualmin-bundle LAMP> selects Apache, and C<LEMP> selects Nginx; C<--virtualmin-type full> or C<mini> chooses the installation size. Virtualmin Pro also requires C<--license-serial-file> and C<--license-file> for its own license credentials.
+
+When B<Enable Virtualmin installation?> is disabled in Module Configuration, both review and creation reject requests to install Virtualmin. Templates that select Virtualmin directly or inherit it from Default Template are also blocked, even if the command overrides C<--software>. Re-enable the setting to use them.
+
+This setting does not affect package installation or setup scripts. Jobs submitted before it changed keep their settings.
+
+Preparation and final setup scripts require Cloudmin Pro. C<--before-script-file> or C<--after-script-file> reads script contents; the corresponding C<--before-script-path> or C<--after-script-path> selects a file on the Cloudmin host. The scripts execute inside the guest as root, before package installation or after successful setup. Explicit script mode C<none> clears an inherited script. Selecting guest software or scripts requires starting the guest.
+
+=item Review and results
+
+C<--review> validates the request and shows its resolved settings without creating a virtual machine. Omit that flag to submit the same settings for creation. A successful review does not reserve the name or resources against later changes.
+
+C<--json> returns the final job record, or the initial record with C<--no-wait>. If the command loses its connection or times out while waiting, check C<list-jobs> and C<get-job> before submitting another creation. A software setup failure can leave the created machine available for inspection.
+
+=back
+
+    cloudmin create-system --name guest.example.com --template \
+        "Default Template" --plan "Default Plan" --auth-type keys \
+        --ssh-keys-file /root/guest-public-keys --review
+    cloudmin create-system --name guest.example.com --template \
+        "Default Template" --plan "Default Plan" --auth-type keys \
+        --ssh-keys-file /root/guest-public-keys
+    cloudmin create-system --name installer.example.com --install-source iso \
+        --image INSTALLER_IMAGE_ID --pool default --network default --cpus 2 \
+        --memory 2G --disk 20G
+
+=head2 clone-system
+
+Select the source with C<--name> or C<--id>, and give the destination an unused C<--new-name>. Writable disks are copied to independent volumes with no backing files. The copy includes the source's applications and data.
+
+=over
+
+=item Prepared and unchanged copies
+
+The default C<--mode prepared> configures a new guest identity, hostname, network and administrator access before boot. It requires one inspectable Linux installation, enabled cloud-init and one network interface. Supply the new login settings with C<--username>, C<--auth-type> and the password or public-key file options.
+
+C<--mode unchanged> retains guest settings and login credentials, but still resets the host ID and removes copied Virtualmin Pro credentials. It requires C<--confirm-unchanged> and must remain stopped with automatic startup disabled. Review its network and access settings before starting it alongside the source.
+
+Both modes require libguestfs with its Perl bindings and bsdtar on the host. Prepared cloning also needs YAML::XS. A source with Virtualmin Pro requires C<--confirm-license>: copied license credentials are removed, and the clone needs its own license or a manual downgrade to GPL. The source's credentials are unchanged.
+
+=item Resources and source preparation
+
+Without explicit presets, the clone uses the source's CPU count, memory, first-disk capacity, pool and network. C<--pool> changes the destination pool. C<--disk> can enlarge the first disk but cannot shrink it. A selected plan supplies resource defaults; a template supplies access, network and boot defaults. Template software installation and scripts are not run on the clone.
+
+A running source needs a responding guest agent for a filesystem freeze and temporary snapshot. Alternatively, C<--shutdown> stops it cleanly for copying and restarts it afterward. A source that was already stopped stays stopped. Allow storage for independent disk copies and temporary source disk growth.
+
+For UEFI, C<--nvram-mode fresh> creates new firmware variables. C<copy> preserves them from a stopped source or requires C<--shutdown>. The default is fresh variables when copying a running source without shutdown, and copied variables otherwise.
+
+=item Completion
+
+Without a preset or explicit startup options, the clone stays stopped and automatic startup is disabled. Use C<--start> for a prepared clone you want to boot after copying. An unchanged copy cannot start automatically.
+
+The command waits for the job by default. C<--no-wait> returns its ID. If copying or cleanup fails, use C<get-job> and C<recover-job> so Cloudmin can finish restoring the source and remove incomplete copies before releasing their reservations.
+
+=back
+
+    cloudmin clone-system --name source.example.com --new-name \
+        copy.example.com --auth-type keys --ssh-keys-file \
+        /root/guest-public-keys --no-start
+    cloudmin clone-system --id MACHINE_UUID --new-name spare.example.com \
+        --mode unchanged --confirm-unchanged --no-start --no-autostart \
+        --shutdown
+
+=head2 delete-system
+
+Removes the definition of the machine selected by C<--name> or C<--id>. C<--yes> is required. Disk deletion is a separate choice: with no C<--disk> options, every disk is kept, including the cloud-init seed. Repeat C<--disk> with attached target names such as C<vda> to permanently delete only those disks. Use C<list-disks> to inspect the targets first.
+
+A running machine requires C<--shutdown>. If any writable disk is being kept, Cloudmin requests a clean shutdown and waits up to two minutes. If every writable disk is selected for deletion, it powers the machine off immediately. A failed or timed-out stop leaves the definition and disks intact; a delayed clean shutdown may still finish.
+
+Remove native LVM snapshots before deleting the machine. Removing the machine also removes its libvirt snapshot and checkpoint metadata, firmware variable store and Cloudmin-managed SSH keys. Kept disks retain their backing chains, but the deleted machine's snapshot list is no longer available. Selected disks' private snapshot layers are deleted; shared layers and imported images remain protected.
+
+Deletion runs as a job. The command waits for completion by default; C<--no-wait> returns the job ID. Recovery can finish an interrupted deletion but cannot restore deleted data. Kept disks can be transferred or reattached, but they do not preserve the machine definition. Use a backup to preserve the complete machine.
+
+    cloudmin delete-system --name guest.example.com --yes
+    cloudmin delete-system --name guest.example.com --shutdown --disk vda \
+        --disk vdb --yes
+
+=head2 list-disks
+
+Lists saved disk and removable-drive attachments for the machine selected by C<--name> or C<--id>. The default table shows the target, device type, role, format and path. Use it to distinguish writable disks, cloud-init seed media and CD/DVD drives before changing storage.
+
+C<--target> in disk commands refers to a guest device such as C<vda> or C<sda>, not a pool volume name, image ID or host path. C<--multiline> or C<--json> includes available volume details. C<--name-only> and C<--id-only> both print attachment targets, one per line.
+
+This command shows storage attached to this machine. C<list-images> lists reusable creation images instead. It does not inspect filesystems inside the guest.
+
+    cloudmin list-disks --name guest.example.com --multiline
+    cloudmin list-disks --id MACHINE_UUID --id-only
+
+=head2 create-disk
+
+Creates a disk in C<--pool> and attaches it to the machine selected by C<--name> or C<--id>. Specify C<--disk> for an empty disk, or C<--image> for an independent copy of a ready imported image. File pools use QCOW2; LVM and LVM-thin pools use raw logical volumes. Catalogue entries must be imported before they can be used as additional disks.
+
+C<--disk> is the total capacity, in GiB when no suffix is given. With an image, omitting it keeps the image's capacity; a larger value grows the copy, and a smaller value is rejected. The copied disk has no dependency on the original image.
+
+Supported running guests can receive the disk live. A guest may still need to discover, partition, format and mount it. Existing snapshots or backup checkpoints can prevent adding disks. The command waits for the hardware job by default; C<--no-wait> returns its ID. Use C<list-disks> afterward to find the assigned target.
+
+    cloudmin create-disk --name guest.example.com --pool default --disk 50G
+    cloudmin create-disk --id MACHINE_UUID --pool default --image \
+        IMPORTED_IMAGE_ID
+
+=head2 attach-disk
+
+Attaches an existing unused volume to the machine selected by C<--name> or C<--id>. C<--pool> identifies its storage pool, and C<--volume> is the volume's name inside that pool, not a host filesystem path. Use this when reusing a disk kept by C<detach-disk> or machine deletion.
+
+The volume must be a supported raw or QCOW2 disk and pass ownership and dependency checks. Cloudmin protects imported images and disks referenced by other machines or storage. To create a separate copy of an imported image, use C<create-disk --image> instead.
+
+Supported running guests can receive the attachment live; Cloudmin does not mount or reconfigure filesystems inside the guest. Snapshots or checkpoints may block this change. The command waits for the hardware job unless C<--no-wait> is supplied. C<list-disks> shows the new target after completion.
+
+    cloudmin attach-disk --name guest.example.com --pool default --volume \
+        data.qcow2
+
+=head2 detach-disk
+
+Removes an attachment from the machine selected by C<--name> or C<--id> while keeping the storage volume and its data. C<--target> is an attached device name from C<list-disks>, such as C<vdb>. This is different from C<delete-disk>, which also removes the volume permanently.
+
+Before detaching a disk in use, stop the guest applications using it and unmount it. For live removal, Cloudmin waits for the device to disappear from libvirt's running definition before updating the saved configuration. If the guest does not acknowledge removal, the job can fail and require recovery.
+
+Snapshots, checkpoints and unsupported devices can prevent detachment. The command waits for the job by default; C<--no-wait> returns its ID. Use C<attach-disk> with the original pool and volume name to attach the kept disk again.
+
+    cloudmin detach-disk --name guest.example.com --target vdb
+
+=head2 delete-disk
+
+Detaches and permanently deletes one managed disk from the machine selected by C<--name> or C<--id>. C<--target> must be an attached disk target from C<list-disks>. C<--yes> confirms deletion. Other disks and the machine itself are retained.
+
+Use C<detach-disk> when the data should be kept. Deletion cannot be undone by job recovery. Imported images, shared disks and disks with protected dependencies are refused. Snapshot or checkpoint history can also block the operation.
+
+The operation runs as a job. By default, the command waits for completion; C<--no-wait> returns its ID. If deletion is interrupted after detachment, use C<recover-job> to let Cloudmin verify and finish removal of the same volume. This operation cannot be included in C<modify-system --changes-file>.
+
+    cloudmin delete-disk --name guest.example.com --target vdb --yes
+
+=head2 resize-disk
+
+Grows an attached disk on the machine selected by C<--name> or C<--id>. C<--target> identifies the disk, and C<--disk> is its new total capacity, not the amount to add. Bare sizes are GiB; for example, C<--disk 50G> makes the disk 50 GiB.
+
+Shrinking is not supported. Snapshots, checkpoints, shared storage or unsupported disk types can block growth. File disks can grow through libvirt while the guest runs. LVM and LVM-thin disks require the guest to be shut down first.
+
+This changes virtual disk capacity only. Expand partitions, logical volumes and filesystems inside the guest separately. Completed growth cannot be rolled back, including when a later part of a job fails. The command waits for the job by default; C<--no-wait> returns its ID.
+
+    cloudmin resize-disk --name guest.example.com --target vda --disk 50G
+
+=head2 insert-media
+
+Inserts an ISO volume into an existing CD/DVD drive on the machine selected by C<--name> or C<--id>. Find the drive target with C<list-disks>, then supply that C<--target>, the C<--pool> containing the ISO and its C<--volume> name. The volume name is not an image ID or a host path.
+
+This changes the drive's media; it does not create a drive, install an operating system or change boot order. For a stopped machine without a CD drive, C<modify-system --enable-live> can add one. Set the desired boot device separately with C<modify-system --boot>.
+
+Supported guests can change media while running. The command waits for the hardware job unless C<--no-wait> is supplied. Use C<eject-media> to remove the media without deleting its storage volume.
+
+    cloudmin insert-media --name guest.example.com --target sda --pool \
+        default --volume installer.iso
+
+=head2 eject-media
+
+Ejects the media from the CD/DVD target on the machine selected by C<--name> or C<--id>. Find the target with C<list-disks>. The drive stays attached, and the ISO volume remains in its storage pool for later use.
+
+This does not detach a writable disk or change the saved boot order. Supported guests can eject media while running. The command waits for the hardware job by default; C<--no-wait> returns the job ID.
+
+    cloudmin eject-media --name guest.example.com --target sda
+
+=head2 list-interfaces
+
+Lists saved network interfaces for the machine selected by C<--name> or C<--id>. The default table shows each MAC address, source type, network or bridge, device model and link state. C<--multiline> and C<--json> include available bandwidth and other interface settings.
+
+Interface commands identify an existing interface by its MAC address, not a guest name such as C<eth0>. C<--name-only> and C<--id-only> therefore both print MAC addresses. Use C<list-networks> to find network choices for adding or moving an interface.
+
+These are virtual hardware settings. They do not show or rewrite the guest operating system's complete network configuration.
+
+    cloudmin list-interfaces --name guest.example.com --multiline
+    cloudmin list-interfaces --id MACHINE_UUID --id-only
+
+=head2 add-interface
+
+Adds a virtio network interface to the machine selected by C<--name> or C<--id>. C<--network> selects an available virtual network or host bridge from C<list-networks>. It accepts a network key, UUID, unambiguous name or C<bridge:NAME>.
+
+Cloudmin generates a MAC address unless C<--mac> supplies one. The new interface can be attached live when the guest and host support it. The guest may need network configuration for the new device; this command does not rewrite its cloud-init seed or assign an IP address inside it.
+
+The command waits for the job by default. C<--no-wait> returns its ID. Use C<list-interfaces> afterward to find the new MAC address and source.
+
+    cloudmin add-interface --name guest.example.com --network default
+    cloudmin add-interface --id MACHINE_UUID --network bridge:br0
+
+=head2 modify-interface
+
+Changes the interface identified by C<--mac> on the machine selected by C<--name> or C<--id>. Find the MAC address with C<list-interfaces>. Omitted fields keep their current values; C<--mac> selects the interface and does not change its address.
+
+C<--network> moves the interface to another available virtual network or host bridge. C<--link down> disconnects its virtual link while retaining the interface; C<--link up> reconnects it. Network changes can interrupt the guest's connection and may require new addressing inside the guest. Cloudmin does not rewrite guest networking or its cloud-init seed.
+
+C<--inbound-kib> and C<--outbound-kib> set average bandwidth limits in KiB per second, not kilobits. A value of zero removes that direction's limit. Live support depends on the interface and network backend.
+
+The command waits for the hardware job by default; C<--no-wait> returns its ID. This command does not change the interface model or MAC address.
+
+    cloudmin modify-interface --name guest.example.com --mac \
+        52:54:00:12:34:56 --network bridge:br0
+    cloudmin modify-interface --name guest.example.com --mac \
+        52:54:00:12:34:56 --inbound-kib 10240 --outbound-kib 10240
+
+=head2 delete-interface
+
+Removes the interface identified by C<--mac> from the machine selected by C<--name> or C<--id>. Use C<list-interfaces> to find its MAC address. This removes the virtual device; it does not delete the host network or bridge.
+
+Removing an interface can disconnect the guest, including an SSH session using that interface. To disconnect it temporarily while keeping its configuration, use C<modify-interface --link down> instead. Guest network configuration is not rewritten automatically.
+
+Supported devices can be removed live. The command waits for the hardware job unless C<--no-wait> is supplied. If live removal fails or is interrupted, inspect the job before retrying; the guest may acknowledge the removal later.
+
+    cloudmin delete-interface --name guest.example.com --mac 52:54:00:12:34:56
+
+=head2 list-snapshots
+
+With no machine selector, lists snapshots across the host. Supply C<--name> or C<--id> to limit the list to one virtual machine. C<--id> is the machine UUID; a restore point's own identifier is passed as C<--snapshot> to restore or delete commands.
+
+The default table shows snapshot ID, machine, label, state and creation time. C<--multiline> or C<--json> provides detailed records. C<--id-only> and C<--name-only> both print snapshot IDs, since labels need not be unique.
+
+Cloudmin can show externally created snapshots, but it may not support restoring or deleting them. Cloudmin-managed snapshots contain disk state and saved hardware configuration, not running memory. They remain on the host's storage and do not replace backups stored elsewhere.
+
+    cloudmin list-snapshots
+    cloudmin list-snapshots --name guest.example.com --multiline
+    cloudmin list-snapshots --id MACHINE_UUID --id-only
+
+=head2 create-snapshot
+
+Creates a disk restore point for the machine selected by C<--name> or C<--id>. C<--label> is required; C<--desc> adds an optional description. The label describes the restore point, while its generated ID is used for later restore and deletion.
+
+The default C<--mode prepared> uses the guest agent to freeze filesystems briefly when the machine is running. C<--shutdown> permits a clean shutdown when the agent is unavailable. It does not force a shutdown when agent preparation is available. A stopped guest does not need an agent. Add C<--restart> to start the machine after a successful snapshot if it was stopped for the operation.
+
+C<--mode unprepared> captures a running guest's disks without freezing filesystems. The captured data is crash-consistent: applications may need recovery when it is restored, as they would after a sudden power loss. Neither mode saves running memory or external services. Filesystem freezing does not replace application-specific backup steps.
+
+Snapshots support private raw or QCOW2 files and managed LVM disks. A snapshot cannot mix file and LVM disks. Cloudmin limits managed restore points to 20 per machine. Snapshot history restricts disk attachment, removal and growth until that history is removed.
+
+Live LVM snapshots briefly pause the guest and require direct I/O or synchronous disk caching. Disks created by Cloudmin use direct I/O. Standard LVM snapshots reserve space for a full disk's changes, while thin snapshots share their pool. Restoring an LVM snapshot requires temporary space under C</var/tmp> for the largest disk's full capacity plus 256 MiB.
+
+The command waits for the job by default; C<--no-wait> returns its ID. Find the completed restore point with C<list-snapshots>. Snapshot layers use the same storage as the guest, so maintain separate backups for host or disk failure.
+
+    cloudmin create-snapshot --name guest.example.com --label before-upgrade
+    cloudmin create-snapshot --id MACHINE_UUID --label maintenance \
+        --shutdown --restart
+
+=head2 restore-snapshot
+
+Restores the machine selected by C<--name> or C<--id> to the restore point identified by C<--snapshot>. Use C<list-snapshots> to obtain that ID. C<--yes> confirms replacing current disk contents and saved hardware settings with the snapshot's state.
+
+The machine must be stopped, or C<--shutdown> must permit a clean shutdown first. Add C<--restart> to start it after a successful restore. Without that flag, it remains stopped. A failed clean shutdown does not become a forced power-off.
+
+The restore does not resume the old running memory state. Changes made after the restore point can be lost, including files and application data. Other restore points are retained, but only supported Cloudmin-managed history can be restored.
+
+The command waits for the background job by default. C<--no-wait> returns its ID. After success, inspect the guest and its applications before treating the restored service as ready.
+
+    cloudmin restore-snapshot --name guest.example.com --snapshot \
+        SNAPSHOT_ID --yes
+    cloudmin restore-snapshot --id MACHINE_UUID --snapshot SNAPSHOT_ID \
+        --shutdown --restart --yes
+
+=head2 delete-snapshot
+
+Removes the restore point identified by C<--snapshot> from the machine selected by C<--name> or C<--id>. C<--yes> is required. Use C<list-snapshots> to select the snapshot ID, rather than its label.
+
+Deleting a file snapshot merges its disk layers. Deleting an LVM snapshot removes its saved volumes. Both preserve the machine's current disk contents and hardware settings. The selected restore point is no longer available afterward.
+
+History dependencies can prevent deletion, and external snapshot history cannot be changed through this command. Merges may take time and require free space. The command waits for the job unless C<--no-wait> is supplied. If a merge is interrupted, use C<get-job> and C<recover-job>; deleting layer files by hand can damage the remaining disk chain.
+
+    cloudmin delete-snapshot --name guest.example.com --snapshot SNAPSHOT_ID \
+        --yes
+
+=head2 list-backups
+
+Lists completed backup archives recorded by this Cloudmin host. The table includes backup job ID, source machine name, creation time, archive size and destination. Use the ID with C<inspect-backup --backup> before restoring.
+
+This is the local backup inventory, not a scan of every destination. An archive removed outside Cloudmin can still have a record here; inspection verifies that it is available and usable. Backups created on another host can be inspected by supplying their destination and filename directly.
+
+C<--multiline> and C<--json> show detailed records without destination credentials. C<--name-only> prints source machine names, which can repeat across backups. C<--id-only> prints backup job IDs, not virtual machine UUIDs.
+
+    cloudmin list-backups --multiline
+    cloudmin list-backups --id-only
+
+=head2 backup-systems
+
+Creates one complete virtual machine backup per command. Select the machine with C<--name> or C<--id>. The archive includes writable disks, the saved hardware definition and supported firmware state. It retains the guest's identity and login settings for restoration.
+
+=over
+
+=item Guest preparation and storage
+
+A running guest normally needs a responding agent to freeze filesystems while Cloudmin takes a temporary snapshot. C<--shutdown> instead stops it cleanly for copying and restarts it afterward. A source that was already stopped stays stopped. Temporary file snapshot layers are merged back before completion; temporary LVM snapshots are removed.
+
+C<--compression> enables gzip; the default is an uncompressed archive. Allow space for disk copies, archive staging and temporary growth on the source. A filesystem-consistent backup does not coordinate transactions with other machines or replace application-specific backup steps.
+
+=item Local and SSH destinations
+
+C<--dest-mode local> writes to the absolute directory given by C<--dest-path>. A mounted NFS or other network filesystem can be used as a local destination; mount and check it before starting the backup.
+
+C<--dest-mode ssh> transfers by SFTP. Supply C<--dest-host>, C<--dest-user>, an absolute C<--dest-path>, and either C<--dest-password-file> or C<--dest-key-file>. The SSH port defaults to 22. A key option gives the path of a private key on the Cloudmin host; password options read the contents of a file. Unknown or changed server host keys must first be approved in Cloudmin's backup form.
+
+=item S3 destinations
+
+C<--dest-mode s3> uses C<--dest-bucket> for the bucket and C<--dest-path> for an object prefix. Supply the access key ID with C<--dest-access-file> and the secret key with C<--dest-secret-file>. Temporary credentials also use C<--dest-session-token-file>.
+
+C<--dest-region> selects the region. C<--dest-endpoint> selects an S3-compatible HTTPS endpoint; it must not include credentials or a path. C<--dest-ca-file> supplies a CA bundle when needed. Supply provider credentials through the file options; the backup does not use the host's cloud login settings.
+
+=item Additional cloud destinations
+
+Cloudmin Pro also supports C<gcs>, C<azure>, C<bb>, C<dropbox> and C<drive>. For Google Cloud Storage, Google Drive and Dropbox, the access and secret files contain the OAuth client ID or app key and client secret. Supply C<--dest-refresh-token-file> as well. Google Cloud Storage uses a bucket and object prefix; Drive and Dropbox use C<--dest-path> as the folder.
+
+For Azure, C<--dest-account> is the storage account, C<--dest-secret-file> supplies its storage key, and C<--dest-bucket> is the container. For Backblaze B2, C<--dest-access-file> supplies the application key ID and C<--dest-secret-file> supplies the application key; also select the bucket. Object stores use C<--dest-path> as the prefix within that bucket or container.
+
+=item Progress and recovery
+
+The command waits for the job by default. C<--no-wait> returns its ID, and C<--json> returns the final job record, or the initial record with C<--no-wait>, without progress text. Completed backups appear in C<list-backups>. If copying or transfer fails, inspect the job and use C<recover-job> when cleanup is pending to finish restoring the source.
+
+=back
+
+    cloudmin backup-systems --name guest.example.com --dest-mode local \
+        --dest-path /srv/backups --compression
+    cloudmin backup-systems --name guest.example.com --dest-mode ssh \
+        --dest-host backup.example.com --dest-user backup --dest-path \
+        /srv/backups --dest-key-file /root/backup-key
+    cloudmin backup-systems --id MACHINE_UUID --dest-mode s3 --dest-bucket \
+        example-backups --dest-path cloudmin --dest-access-file \
+        /root/s3-access --dest-secret-file /root/s3-secret --no-wait
+
+=head2 inspect-backup
+
+Retrieves and verifies a backup before restoration. C<--backup> selects a backup job ID from C<list-backups> and uses its saved destination. To inspect an archive that is not in this host's inventory, supply destination options and C<--filename> instead. The filename is the archive's name within the destination, not the destination directory itself.
+
+The destination fields have the same meaning as in C<backup-systems>, including credential files and SSH host-key approval. Supported archives are the complete backup files produced by Cloudmin, including gzip-compressed archives.
+
+Inspection checks the manifest, checksums, disk information and saved machine definition. It does not create or start a virtual machine. The archive is downloaded or staged locally, so sufficient temporary space is required.
+
+By default, waits for the inspection job. C<--no-wait> returns its ID for C<get-job>. Pass the completed inspection job ID, not the original backup ID, to C<restore-systems --inspection>. Inspection downloads expire after one day; inspect the archive again if the staged copy is no longer available.
+
+    cloudmin inspect-backup --backup BACKUP_JOB_ID --json
+    cloudmin inspect-backup --dest-mode local --dest-path /srv/backups \
+        --filename guest.tar.gz
+
+=head2 restore-systems
+
+Restores one backup that has already completed C<inspect-backup>. C<--inspection> is the inspection job ID, and C<--pool> selects the destination storage pool. C<--yes> confirms restoring the archived machine and disks.
+
+Restoration preserves the original machine name, UUID, MAC addresses, guest credentials and supported firmware state. It refuses a conflicting existing name or UUID even if that machine is stopped. This command is for recovering a machine; use C<clone-system> when you need another machine with a new identity.
+
+The destination host must support the archive's architecture, firmware and saved network sources. Ensure those networks and bridges are available and that the pool has enough space. The restored machine is left stopped with automatic startup disabled, so its configuration can be checked before it joins the network.
+
+The command waits for the restore job by default. C<--no-wait> returns its ID. After success, use C<get-system>, then C<start-system> when ready. If restoration or cleanup is interrupted, inspect the job and use C<recover-job> rather than submitting duplicate restores.
+
+    cloudmin restore-systems --inspection INSPECTION_JOB_ID --pool default \
+        --yes
+    cloudmin restore-systems --inspection INSPECTION_JOB_ID --pool default \
+        --yes --no-wait
+
+=head2 list-images
+
+Lists ready imported images and available catalogue images that can be selected for machine creation. The default table shows ID, name and format. C<--multiline> or C<--json> includes the available image metadata and compatibility information.
+
+Imported images use their stored image ID. Catalogue entries use C<catalogue:IMAGE_ID>; C<create-system> downloads or reuses the selected catalogue image as part of creation. An unambiguous display name is also accepted by image-selection options, but use the ID when names are duplicated.
+
+C<--name-only> prints display names and C<--id-only> prints selectable IDs. Catalogue entries can appear before their images are downloaded. Additional disks created with C<create-disk --image> need a ready imported image, while C<create-system> can use either source.
+
+    cloudmin list-images --multiline
+    cloudmin list-images --id-only
+    cloudmin list-images --json
+
+=head2 list-pools
+
+Lists all registered storage pools, including stopped pools and LVM-thin destinations. The table shows each pool's name, UUID, backend, active state and available space. Free space is unavailable for inactive pools.
+
+Use C<--multiline> for pool settings, volumes and references, or C<--json> for the full records. C<--name-only> and C<--id-only> print one name or UUID per line. Creating a virtual machine requires an active pool with a supported backend.
+
+    cloudmin list-pools
+    cloudmin list-pools --json
+
+=head2 list-networks
+
+Lists available virtual networks and host bridges that Cloudmin offers for guest network interfaces. The default table shows a selection key, name, type and forwarding mode. Use it before C<create-system>, C<add-interface> or C<modify-interface>.
+
+A libvirt network key has the form C<network:UUID>; a host bridge uses C<bridge:NAME>. C<--id-only> prints these selection keys, not just bare UUIDs. C<--name-only> prints display names. Network options also accept a UUID or an unambiguous name.
+
+C<--multiline> and C<--json> show additional reported network details. Selecting a network connects an interface to its existing configuration; this command does not create networks, configure host bridges or assign addresses inside an existing guest.
+
+    cloudmin list-networks --multiline
+    cloudmin list-networks --id-only
+
+=head2 get-host
+
+Shows host capabilities reported by Cloudmin, including relevant virtualization and image-handling support. Use this to check the host side of a creation or management requirement before choosing guest settings.
+
+C<--multiline> expands the capability fields, and C<--json> returns structured data for scripts.
+
+Use C<list-pools>, C<list-networks> and C<list-images> for selectable resources. C<cloudmin api options> returns the complete raw options response, including templates and plans, when a script needs those choices.
+
+    cloudmin get-host --multiline
+    cloudmin get-host --json
+
+=head2 create-image
+
+Captures a reusable image from the machine selected by C<--name> or C<--id>. C<--image-name> names the new image and C<--pool> selects its storage pool. This operation requires Cloudmin Pro. Use C<backup-systems> instead to preserve a complete machine for restoration.
+
+=over
+
+=item Source requirements
+
+The source must have a supported Linux installation with enabled cloud-init and one writable system disk. Detach installation media and additional read-only data disks first; Cloudmin's own seed disk is omitted automatically. Unsupported devices or disk layouts are rejected before capture.
+
+A running source needs a responding guest agent for a filesystem freeze and temporary snapshot. Alternatively, C<--shutdown> stops it cleanly while copying and restarts it afterward. A source that was already stopped stays stopped. Cleanup changes are made to the independent image copy, not the source disk.
+
+=item Account cleanup
+
+C<--clean-credentials yes> is the default. It removes password hashes, SSH credentials and default shell history files for all local accounts in the image, including root. Accounts, ownership, permissions and application data remain. C<--clean-credentials no> retains those login credentials and histories.
+
+Custom history locations, application credentials and other secrets are not all discoverable, so review the image before sharing it. New-machine creation configures its selected administrator's access separately.
+
+=item Identity and licensing
+
+Regardless of account cleanup, Cloudmin resets cloud-init state, machine and host IDs, SSH host keys and cached network identity on the copy. Each new machine receives its own identity and network settings. Copied Virtualmin Pro license credentials are also removed locally without contacting license servers; each new machine needs its own license or a manual downgrade to GPL.
+
+=item Result
+
+The image retains the source disk's capacity, so new machines need a disk at least that large. The command waits for the capture job by default; C<--no-wait> returns its ID. On success, the image appears in C<list-images> and can be selected by C<create-system>.
+
+If capture is interrupted, inspect the job and use C<recover-job> when needed to finish restoring the source and cleaning up incomplete output.
+
+=back
+
+    cloudmin create-image --name source.example.com --image-name base-server \
+        --pool default
+    cloudmin create-image --id MACHINE_UUID --image-name private-copy --pool \
+        default --clean-credentials no --shutdown
+
+=head2 list-jobs
+
+Lists recent and unfinished jobs recorded by Cloudmin. Jobs include creation, software setup, hardware changes, cloning, snapshots, image capture and backup operations. The default table shows ID, name, operation, state and phase.
+
+Use C<--multiline> for details, or C<--json> for scripts. Results exclude private requests, credentials and recovery backups. C<--id-only> prints job IDs for later C<get-job>, C<cancel-job> or C<recover-job> calls. C<--name-only> prints job names, which need not be unique.
+
+An unfinished job can reserve a machine or storage resource and block another change. Check its phase, error and cleanup status before resubmitting an operation. Leaving a terminal or timing out while waiting does not cancel a worker.
+
+    cloudmin list-jobs
+    cloudmin list-jobs --multiline
+    cloudmin list-jobs --id-only
+
+=head2 get-job
+
+Reads the current public record for C<--job>. This is a job ID returned by a submitted operation or C<list-jobs>, not a virtual machine UUID. It reports state, phase, recorded events, errors and available cleanup information.
+
+The command reads once and returns; it does not keep following the worker. Use it after submitting an operation with C<--no-wait> or after losing a terminal connection. C<--multiline> expands details, while C<--json> is suitable for polling from a script.
+
+A successful status read does not itself mean the underlying job succeeded. Check the returned job state and error. A failed or cancelled job with cleanup pending may still hold resources; C<recover-job> can retry that cleanup. For bridge changes, use C<get-bridge-status> instead.
+
+    cloudmin get-job --job JOB_ID --multiline
+    cloudmin get-job --job JOB_ID --json
+
+=head2 cancel-job
+
+Requests cancellation of the unfinished job identified by C<--job>. Cancellation takes effect at a safe point in the worker; it is not an immediate process kill. Copying and backup operations may need to restore source disk state before releasing their reservations.
+
+Started hardware changes cannot be cancelled after their first write. If such a change fails, use C<recover-job>. Completed, failed or already cancelled jobs cannot receive a new cancellation request.
+
+During guest software setup, ordinary cancellation leaves the created machine and changes already made inside it. C<--cleanup --yes> explicitly requests removal of an eligible unfinished creation and its owned resources. This is not a general command for deleting a completed virtual machine.
+
+By default, waits for cancellation and any cleanup. C<--no-wait> returns immediately. Inspect the job afterward; a cancellation request is not proof that cleanup has finished. C<recover-job> retries pending cleanup if the worker could not complete it.
+
+    cloudmin cancel-job --job JOB_ID
+    cloudmin cancel-job --job JOB_ID --cleanup --yes
+
+=head2 recover-job
+
+Reattaches or restarts work for the job identified by C<--job>, including retrying cleanup marked as pending. It uses the original job's recorded operation and resource identities rather than submitting a new request.
+
+The result depends on the operation. Recovery can finish an interrupted hardware write, restore a source after copying, or remove incomplete creation resources. It checks the recorded state before proceeding and refuses unrelated changes. It cannot shrink a disk back after growth or recover data that was permanently deleted.
+
+A failed job without pending cleanup is not automatically retried as a fresh operation. Likewise, recovery is not a way to rerun completed guest setup scripts. Inspect C<get-job --multiline> for the failure and cleanup state first.
+
+By default, waits until work or cleanup finishes. C<--no-wait> returns immediately. Successful cleanup can leave the original job failed or cancelled with no cleanup pending; that records the original outcome while releasing its resources.
+
+    cloudmin recover-job --job JOB_ID
+    cloudmin recover-job --job JOB_ID --no-wait
+
+=head2 discard-job
+
+Abandons the remaining edits of an eligible failed settings-update job while keeping disk growth that already completed. C<--job> identifies that update. Use this only when you want to stop recovery of the remaining edits; C<recover-job> attempts to finish them instead.
+
+Cloudmin first checks that the original hardware definition is unchanged. It removes new disks allocated by the job only after verifying their identity and that nothing uses them. Completed disk growth remains because it cannot be undone safely.
+
+When those checks pass, the job releases its reservation so the machine can be edited again. Conflicting changes or uncertain ownership block the operation. This command does not delete job history, cancel an active worker or undo other operations.
+
+    cloudmin discard-job --job JOB_ID
+
+=head2 list-bridges
+
+Lists host bridges outside libvirt-managed virtual networks. These bridges connect guests to the host's existing network. Libvirt-managed NAT or routed bridges belong to their virtual networks and are not removal targets here.
+
+The default table shows each bridge's name, whether it is active, its addresses and its ports. C<--multiline> and C<--json> include saved-configuration and dependency details. C<--name-only> and C<--id-only> both print bridge names, such as C<br0>.
+
+Use C<remove-bridge --review> to see whether a bridge can be removed and what settings would move to its Ethernet port. Active or recent bridge transactions are inspected separately with C<get-bridge-status>.
+
+    cloudmin list-bridges --multiline
+    cloudmin list-bridges --name-only
+
+=head2 get-bridge-status
+
+Shows the current host bridge transaction, including its state and available confirmation or recovery information. Without C<--id>, selects the current transaction. With C<--id>, requires that specific transaction so a stale script does not act on a newer change.
+
+The transaction ID is returned by bridge changes; it is not the bridge name or a normal background job ID. The result can be empty when there is no transaction. C<--json> returns structured status for scripts, and C<--multiline> expands human-readable details.
+
+Use this after a connection interruption or C<remove-bridge --no-wait>. A change awaiting confirmation must be kept with C<confirm-bridge> before its deadline, or it is automatically rolled back. Private recovery files are not included in the response.
+
+    cloudmin get-bridge-status --multiline
+    cloudmin get-bridge-status --id TRANSACTION_ID --json
+
+=head2 remove-bridge
+
+Removes an unused, saved host bridge with one supported Ethernet port. C<--name> is the bridge name from C<list-bridges>, not a virtual machine name. The bridge's current addresses, routes and DNS settings move back to its Ethernet port.
+
+Cloudmin supports bridge removal with NetworkManager, Netplan and Debian ifupdown. It refuses unsupported layouts, bridges used by virtual machines or virtual networks, and VLANs or macvlans attached to the bridge or its port. A virtual machine can block removal even when stopped.
+
+C<--review> checks the bridge and shows the plan without applying network changes. Without that flag, the command checks it again and starts the change. Applying settings can interrupt SSH if the bridge carries the host connection. The recovery worker continues on the host even if that connection drops.
+
+By default, waits until the change needs confirmation or has finished. C<--no-wait> returns the initial transaction record instead. The command never confirms automatically. Check the transaction with C<get-bridge-status>, verify connectivity, and use C<confirm-bridge --id> before its deadline to keep the new settings. Otherwise Cloudmin restores the previous settings. C<rollback-bridge> requests that restoration immediately.
+
+    cloudmin remove-bridge --name br0 --review
+    cloudmin remove-bridge --name br0
+
+=head2 confirm-bridge
+
+Keeps the new network settings for the pending bridge transaction identified by C<--id>. Use the transaction ID returned by the change or C<get-bridge-status>, not the bridge name. The transaction must still be awaiting confirmation and within its deadline.
+
+Confirm only after reconnecting and checking the host's network access. Cloudmin performs its connectivity checks before accepting confirmation. A confirmed change no longer rolls back automatically when the original deadline passes.
+
+To reject the change, use C<rollback-bridge>. Once it is confirmed, that rollback command is not a general undo operation for the completed change.
+
+    cloudmin confirm-bridge --id TRANSACTION_ID
+
+=head2 rollback-bridge
+
+Requests restoration of the previous network settings for the bridge transaction identified by C<--id>. Use the transaction ID from C<get-bridge-status>. The transaction must still allow recovery; this is not an undo command for an already confirmed change.
+
+Recovery runs on the host and can interrupt the SSH connection again as addresses move back. By default, the command waits for the transaction's recovery result. C<--no-wait> returns immediately; check C<get-bridge-status> after reconnecting.
+
+A timed-out unconfirmed change also starts automatic recovery. If recovery reports an error, inspect its status and resolve the error before submitting another bridge change.
+
+    cloudmin rollback-bridge --id TRANSACTION_ID
+    cloudmin rollback-bridge --id TRANSACTION_ID --no-wait
+
+=head2 list-volumes
+
+Lists volumes from active storage pools, with their pool, capacity, allocated space and owners. C<--pool> accepts a UUID or a name that identifies exactly one pool, including LVM-thin destinations such as C<guests/thin>. Omit it to list volumes across pools. Stopped pools cannot report their volumes.
+
+C<--multiline> and C<--json> include ownership records and any reason deletion is blocked. A stopped virtual machine, imported image, snapshot or dependent disk can keep a volume in use. Cloudmin also blocks deletion when it cannot check these references. Listing volumes does not change storage.
+
+    cloudmin list-volumes --pool guests/thin
+    cloudmin list-volumes --json
+
+=head2 list-volume-groups
+
+Lists existing local LVM volume groups that have no libvirt registration. Groups already registered are excluded even when their pool is stopped. Thin pools appear as storage destinations after their parent group is registered.
+
+Create and extend groups with Webmin's Logical Volume Management module or the LVM tools. This command lists groups without allocating or formatting disks. If discovery fails, it reports an error.
+
+    cloudmin list-volume-groups
+
+=head2 create-pool
+
+Registers a storage destination and starts it immediately. Supply a unique C<--name> and exactly one of C<--path> or C<--group>. Directory paths must be absolute, have an existing parent and not overlap another pool. A missing directory is created; existing files and permissions are preserved.
+
+C<--group> names an existing LVM volume group. Registration does not format disks or create logical volumes. Its thin pools become separate destinations, named C<POOL/THIN_POOL>. Startup with the host is enabled by default; use C<--no-autostart> to disable it.
+
+The command finishes before returning and shows the new pool record with C<--json>. Running it again with the same name or volume group reports a duplicate registration.
+
+    cloudmin create-pool --name extra --path /var/lib/libvirt/extra
+    cloudmin create-pool --name guests --group vg_guests --no-autostart
+
+=head2 start-pool
+
+Starts a stopped local directory pool with a saved registration. C<--pool> accepts its UUID or a name that identifies exactly one pool. This includes pools unavailable for machine creation. The command reads the pool's revision before starting it. If its settings change in the meantime, run the command again.
+
+Starting does not create or format the directory or change its start-at-boot setting. This command does not start LVM pools.
+
+    cloudmin start-pool --pool extra
+
+=head2 stop-pool
+
+Stops a local directory pool while keeping its saved registration and all files. Stop virtual machines using the pool and finish or cancel pending operations and image imports first. Start the pool again before using it for new storage operations.
+
+The command checks the current revision and finishes before returning. It does not stop LVM pools. Use C<unregister-pool --stop> to stop an unused LVM pool and remove its registration after checking for host and guest use.
+
+    cloudmin stop-pool --pool extra
+
+=head2 set-pool-autostart
+
+Changes whether a local directory pool with a saved registration starts with the host. Supply C<--pool> as a UUID or unambiguous name and C<--enabled yes> or C<--enabled no>. This setting does not immediately start or stop the pool.
+
+The command reads and checks the current revision before saving. LVM registrations receive their start-at-boot setting during C<create-pool>; this command manages directory pools only.
+
+    cloudmin set-pool-autostart --pool extra --enabled no
+
+=head2 delete-volume
+
+Permanently deletes one unused volume from an active local directory or LVM destination. Supply C<--pool> and the exact C<--volume> name. C<--review> shows owners and any refusal reason without changing anything or requiring C<--yes>.
+
+Deletion requires C<--yes>. The command reviews the volume, then sends its revision for a final check under the host storage lock. A replaced volume, new reference or pending operation prevents deletion. Host mounts, swap and Cloudmin snapshots also block deletion. Deleting the volume destroys its data and cannot be undone.
+
+The command finishes before returning. To delete several volumes, run it separately for each volume and check each result before continuing.
+
+    cloudmin delete-volume --pool guests/thin --volume unused.raw --review
+    cloudmin delete-volume --pool guests/thin --volume unused.raw --yes
+
+=head2 unregister-pool
+
+Removes the saved libvirt registration for a local directory or LVM pool. Files, logical volumes, volume groups and thin pools are preserved. Supply the parent pool's UUID or unambiguous name with C<--pool>. LVM-thin destinations cannot be unregistered separately.
+
+C<--review> shows references and any reason removal is blocked without requiring C<--yes>. Removing the registration requires C<--yes> and repeats the revision and reference checks. References from running or stopped guests, images, snapshots and dependent disks block removal, as do pending operations. Other inactive pools may need to be started so their references can be checked.
+
+An active pool requires C<--stop>. For LVM, stopping deactivates every logical volume in the group, including thin volumes. Cloudmin refuses to stop the group if its volumes are mounted, used as swap, open, or used by other block devices outside the group. Register the group again to use it in Cloudmin.
+
+Use C<--stop --review> to review both steps without changing storage. C<--stop --yes> repeats the checks under the host lock, stops the pool and removes its registration. Without C<--stop>, the pool must already be inactive.
+
+If the volume group no longer exists, Cloudmin can remove its inactive registration after checking for references. It must be able to read the LVM inventory and confirm that the group is absent. An active pool or a failed inventory read still blocks removal.
+
+A failed stop keeps the registration. If stopping succeeds but removing the registration fails, the error says the pool is stopped. Review it again before retrying.
+
+    cloudmin unregister-pool --pool extra --review
+    cloudmin unregister-pool --pool extra --yes
+    cloudmin unregister-pool --pool guests --stop --review
+    cloudmin unregister-pool --pool guests --stop --yes
+
+=head2 get-license
+
+Shows the Cloudmin license status, expiry and any grace deadline. The license
+key is never returned. GPL does not require a license.
+
+    cloudmin get-license
+
+=head2 check-license
+
+Checks the saved license with www.virtualmin.com. Use this after renewal
+or after fixing a connection problem. This command remains available when
+license restrictions block other changes.
+
+    cloudmin check-license
+
+=head2 deregister-license
+
+Removes this host's saved license and repository credentials. Running machines,
+scheduled backups and accepted jobs continue. Pro updates and new changes
+through Cloudmin require a license again. Deregistration does not cancel your
+subscription or immediately remove the host from the license server's count.
+
+    cloudmin deregister-license --yes
+
+=head2 change-license
+
+Checks a new Cloudmin Pro license before saving it. Read the key from a private
+file or standard input. Failed validation leaves the current license in place.
+
+    cloudmin change-license --serial 12345 --key-file /root/cloudmin-key
+
+Expiry grace lasts seven days after the expiry date ends in UTC. Migration
+grace lasts 21 days from when this host first detects use on too many hosts.
+A failed check allows up to 21 days from the last successful check, without
+extending expiry or migration deadlines. Existing machines, accepted jobs,
+scheduled backups, job recovery and network rollback keep working when new
+changes are blocked.
+
+=head2 api
+
+Runs the raw JSON API entry point. Use C<cloudmin api ACTION> with a JSON request object on standard input. This is useful for API fields that have no named-command option or for clients that already construct API requests. With no action, it returns C<options>.
+
+The raw response is a JSON object with C<version> and C<result> fields. Named commands use C<command>, C<status> and C<data> instead. Raw errors are written to standard error and exit 1. Do not add named-command output flags such as C<--json> or C<--multiline>.
+
+C<options>, C<list>, C<backups>, C<bridges> and C<storage> need no request body. C<machines> accepts an optional exact name or UUID selector and otherwise lists the visible inventory. Other actions take a JSON object with their documented fields. The root entry point supplies a form token when omitted, but callers remain responsible for other required fields such as revisions and confirmations.
+
+Raw requests return their initial result without waiting for a job to finish. Use the returned job ID with C<get-job> or the raw C<status> action. When retrying a job submission, reuse the same request, token and attempt value so the API can return the existing job. A new named command generates a new token and submits a separate request.
+
+Use the virtual machine API reference for action-specific JSON fields. For example, the selector file below can contain C<{"id":"guest.example.com"}>, and the status request file can contain C<{"job":"JOB_ID"}>. A request file is often easier to review than a long shell-quoted object. Keep files containing passwords or provider credentials private.
+
+    cloudmin api options
+    cloudmin api machines < /root/machine-selector.json
+    cloudmin api status < /root/job-request.json
+
+=cut
