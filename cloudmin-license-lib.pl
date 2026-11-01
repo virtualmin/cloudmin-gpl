@@ -28,7 +28,7 @@ die "Cannot identify this host for license checks\n";
 }
 
 # cloudmin_license_request(host, key) posts to the license API over verified TLS.
-# Keep the key out of URLs. Redirects and transport errors are never passed on.
+# Keep the key out of URLs. Return undef on redirects or transport errors.
 sub cloudmin_license_request
 {
 my ($host, $key) = @_;
