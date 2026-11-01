@@ -1,7 +1,7 @@
 desc=Cloudmin
 longdesc=Manage KVM virtual machines through libvirt.
 category=webmin
-depends=proc mount useradmin xterm systemd net 2.670
+depends=proc mount useradmin xterm systemd net 2.671
 os_support=*-linux
 version=10.0.0
 gpl=1
