@@ -16,7 +16,7 @@ Start with a fresh **Rocky Linux 10**, **AlmaLinux 10**, **Debian 13** or **Ubun
 `cloudmin-install.sh` is the only supported installation method. Run this on the host:
 
 ```sh
-sudo sh -c "$(curl -fsSL https://download.cloudmin.com/cloudmin-install.sh)"
+sudo sh -c "$(curl -fsSL https://download.cloudmin.dev/cloudmin-install.sh)"
 ```
 
 Cloudmin 10 is in development; the installer currently uses the unstable channel. Cloudmin ships with a matching Webmin release and uses the distribution's hypervisor packages.
