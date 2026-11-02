@@ -416,6 +416,11 @@ try:
                            prefix + 'cloud-init schema --system', guest_password, 90)
         assert result.returncode == 0, result.stdout + result.stderr
         print('Generated user and network data pass cloud-init schema validation', flush=True)
+        # Plain cloud-image creation must install and start the agent itself.
+        agent = json.loads(subprocess.check_output(['virsh', 'qemu-agent-command',
+            vm['uuid'], '{"execute":"guest-get-osinfo"}'], text=True))['return']
+        assert agent.get('name') and agent.get('version-id'), agent
+        print('Guest agent reports ' + agent['name'] + ' ' + agent['version-id'], flush=True)
         if args.software_test:
             # A second service start must not repeat scripts, even after failure.
             result = guest_ssh(ssh_base + [fields['username'] + '@' + address],
@@ -468,12 +473,7 @@ try:
             print('Virtualmin GPL installed; private request and installer removed', flush=True)
         # Agent-only addresses arrive through the shared live channel.
         if args.guest_agent:
-            setup = ('if ! command -v qemu-ga >/dev/null; then '
-                     'if command -v dnf >/dev/null; then dnf -y install qemu-guest-agent; '
-                     'else apt-get update -qq && DEBIAN_FRONTEND=noninteractive '
-                     'apt-get install -y -qq qemu-guest-agent; fi; fi; '
-                     'systemctl start qemu-guest-agent && '
-                     'ip address add 192.0.2.77/32 dev "$(ip -4 route show default | '
+            setup = ('ip address add 192.0.2.77/32 dev "$(ip -4 route show default | '
                      "awk 'NR == 1 {print $5}')\"")
             result = guest_ssh(ssh_base + [fields['username'] + '@' + address],
                                prefix + 'sh -ec ' + shlex.quote(setup),

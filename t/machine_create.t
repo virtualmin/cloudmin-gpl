@@ -439,6 +439,19 @@ ok(!$user->{'ssh_pwauth'} && $user->{'disable_root'},
 is($user->{'users'}->[0]->{'ssh_authorized_keys'}->[0], $key,
 	'public key is preserved');
 
+# Plain and software-enabled guests both need the agent, without duplicates.
+for my $software ('none', 'virtualmin-gpl') {
+	my $seed = Cloudmin::VMs::seed_data({%$r, software => $software}, 'fixture');
+	$seed->{'user-data'} =~ s/^#cloud-config\n//;
+	my $config = convert_from_json($seed->{'user-data'});
+	is_deeply($config->{'packages'}, ['qemu-guest-agent'],
+		"$software installs the guest agent once");
+	like($config->{'runcmd'}->[0]->[2], qr/exec systemctl start/,
+		"$software starts the agent before optional software setup");
+	ok($software ne 'none' || !exists($config->{'write_files'}),
+		'plain guests need no software helper or guest RPC policy changes');
+}
+
 # Passwords are supplied through a trusted hash, with root an explicit choice.
 my $hash = '$6$rounds=500000$'.('a'x16).'$'.('b'x86);
 for my $name (qw(root cloudmin)) {

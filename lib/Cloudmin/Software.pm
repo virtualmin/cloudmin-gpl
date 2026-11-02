@@ -189,9 +189,7 @@ if (uses_scripts($request)) {
 		path => '/usr/local/lib/cloudmin/guest-scripts.pl', owner => 'root:root',
 		permissions => '0700', content => read_file_contents("$root/pro/guest-scripts.pl") });
 }
-# Install distro-specific Perl modules before software starts. The agent also
-# supplies bridged DHCP addresses that host leases cannot discover.
-push(@{$data->{'packages'}}, 'qemu-guest-agent');
+# Install distro-specific Perl modules before software starts.
 push(@{$data->{'runcmd'}},
 	['/bin/sh', '/usr/local/lib/cloudmin/guest-software-bootstrap.sh'],
 	['systemctl', 'daemon-reload'],

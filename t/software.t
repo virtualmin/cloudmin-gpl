@@ -148,8 +148,8 @@ my ($generic_config) = grep { $_->{'path'} eq '/etc/cloudmin-install.json' } @{$
 my $setup = convert_from_json($generic_config->{'content'});
 is($setup->{'packages'}, 'jq curl', 'generic package setup reaches the guest');
 is($setup->{'before_script'}, $generic->{'before_script'}, 'generic script reaches the guest unchanged');
-is_deeply($generic_data->{'packages'}, ['qemu-guest-agent'],
-	'setup installs the agent without adding a Python dependency');
+ok(!exists($generic_data->{'packages'}),
+	'optional software leaves common guest packages to VM creation');
 my ($bootstrap) = grep { $_->{'path'} eq '/usr/local/lib/cloudmin/guest-software-bootstrap.sh' }
 	@{$generic_data->{'write_files'}};
 like($bootstrap->{'content'}, qr/perl-JSON-PP/, 'seed installs packaged Perl dependencies on Enterprise Linux');

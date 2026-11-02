@@ -604,7 +604,8 @@ my $data = { users => [ $user ],
 	hostname => $r->{'hostname'}, manage_etc_hosts => \1,
 	growpart => { mode => 'auto', devices => ['/'],
 	ignore_growroot_disabled => \0 },
-	resize_rootfs => \1 };
+	resize_rootfs => \1,
+	packages => [ 'qemu-guest-agent' ] };
 if ($root && $password) {
 	# Vendor images usually prohibit root passwords independently of
 	# ssh_pwauth.
@@ -617,6 +618,25 @@ if ($root && $password) {
 	$data->{'runcmd'} = [ [ 'sh', '-c',
 		'systemctl try-reload-or-restart ssh.service 2>/dev/null || systemctl try-reload-or-restart sshd.service' ] ];
 	}
+# Start the agent for every cloud image, including plain installations.
+# Static units start through udev on later boots. Other units need enabling.
+push(@{$data->{'runcmd'}}, ['sh', '-c', <<'AGENT']);
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload
+    for unit in qemu-guest-agent.service qemu-ga.service 'qemu-ga@virtio\x2dports-org.qemu.guest_agent.0.service'; do
+        if [ "$(systemctl show "$unit" --property=LoadState --value)" = loaded ]; then
+            if [ "$(systemctl is-enabled "$unit")" = disabled ]; then
+                systemctl enable "$unit" || exit 1
+            fi
+            exec systemctl start "$unit"
+        fi
+    done
+    exit 1
+else
+    # Alpine cloud images use OpenRC.
+    rc-update add qemu-guest-agent default && rc-service qemu-guest-agent start
+fi
+AGENT
 # Add guest setup files only when software installation is requested.
 Cloudmin::Software::seed($data, $r, $uuid);
 # Match the NIC by MAC without renaming a device the image may already use.
