@@ -82,8 +82,12 @@ try:
     assert overview, 'Overview card missing'
     overview = overview.group()
     assert 'ui_stats' in overview and overview.count('<svg') == 4, 'Wrong stat layout'
-    assert overview.count('ui_stat_desc') == 4, 'Stat captions missing'
-    assert 'Image imports and virtual machine operations' in overview, 'Job tile description missing'
+    assert 'ui_stat_desc' not in overview, 'Redundant stat captions remain'
+    assert 'ui_card_desc' not in page, 'Redundant card descriptions remain'
+    assert re.search(r'<span data-sub_title><br>libvirt version \d+\.\d+\.\d+</span>', page), \
+        'Libvirt version must use the original subtitle element'
+    assert '<span data-main_title_sub>' not in page, 'Unexpected version header element'
+    assert 'KVM virtual machines managed through libvirt' not in page, 'Old subtitle remains'
     for target in ('cloudmin-host', 'cloudmin-machines'):
         assert f'href="#{target}"' in overview, 'Stat link missing: ' + target
         assert f'id="{target}"' in page, 'Stat link target missing: ' + target
@@ -108,7 +112,6 @@ try:
         assert 'No active jobs' in jobs_page or 'role="progressbar"' in jobs_page or recovery, \
             'Job list has no progress, recovery controls or empty state'
     print('Active jobs tile, GET and theme POST destination: PASS')
-    assert re.search(r'(?:Virtual machines on|Create your first virtual machine on) (?!this host\.)[^<]+\.', page), 'Host missing from VM description'
     assert 'IP addresses' in page or 'No virtual machines yet' in page, \
         'Populated virtual machine overview has no IP address column'
     assert 'Guests currently defined in libvirt.' not in page, 'Old VM text remains'

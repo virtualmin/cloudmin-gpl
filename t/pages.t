@@ -163,16 +163,14 @@ unlike(get_vm_row({ %$guest, persistent => 0 }, 'signed-token')->[8], qr/<form/,
 unlike($html, qr{config\.cgi|Configure Cloudmin},
 	'dashboard does not duplicate the header configuration control');
 
-# Match ui-demo's icon tiles within an overview card, with short captions.
+# Keep the overview tiles concise, with icons and labels.
 my ($overview) =
 	$html =~ /(<section\b[^>]*\bid="cloudmin-overview".*?<\/section>)/s;
 ok($overview, 'statistics have a dedicated overview card');
 like($overview, qr/\bui_stats\b/, 'overview card contains statistic tiles');
 is(scalar(() = $overview =~ /<svg\b/g), 4, 'each statistic has a leading icon');
-is(scalar(() = $overview =~ /\bui_stat_desc\b/g), 4,
-	'each statistic has a short caption');
-like($overview, qr/Image imports and virtual machine operations/,
-	'job tile describes both background workflows');
+unlike($overview, qr/\bui_stat_desc\b/, 'statistics omit redundant captions');
+unlike($html, qr/\bui_card_desc\b/, 'dashboard cards omit redundant descriptions');
 
 # The linked tiles must point to sections that exist on this page.
 like($overview, qr/href="#cloudmin-host"/, 'host tile links to host details');
@@ -238,11 +236,7 @@ unlike(show_jobs_status({ jobs => [{ %$saving_job, bytes => 0 }] }),
 	qr/aria-valuenow/,
 	'an unknown size shows activity without dividing by zero');
 
-# Describe the inventory without requiring users to know libvirt terminology.
-like($html, qr/Virtual machines on kvm1\.example\.test\./,
-	'VM description identifies the host');
-unlike($html, qr/Guests currently defined in libvirt/,
-	'old VM description is gone');
+# Keep useful next steps when the inventory is empty.
 my $empty_html = show_dashboard_page({ %$data, 'servers' => [] });
 like($empty_html,
 	qr/No virtual machines yet.*Create your first virtual machine on kvm1\.example\.test\./s,

@@ -116,7 +116,8 @@ my $creation = { id => 'b'x32, state => 'running', phase => 'disk',
 	local $INC{'./cloudmin-status-lib.pl'} = 1;
 	local *main::error_setup = sub { };
 	local *main::ReadParse = sub { };
-	local *main::ui_print_header = sub { };
+	my @header;
+	local *main::ui_print_header = sub { @header = @_; };
 	local *main::ui_print_footer = sub { };
 	local *main::ui_page_assets = sub { '' };
 	local *main::is_readonly_mode = sub { 0 };
@@ -127,7 +128,7 @@ my $creation = { id => 'b'x32, state => 'running', phase => 'disk',
 	local *main::html_escape = sub { $_[0] };
 	local *main::recover_vm_jobs = sub { die "Store unavailable\n"; };
 	local *main::get_image_jobs = sub { die "Store unavailable\n"; };
-	my $inventory = { servers => [{ name => 'Existing guest' }] };
+	my $inventory = { host => {}, servers => [{ name => 'Existing guest' }] };
 	local *main::get_dashboard = sub { $inventory };
 	local *main::show_dashboard_page = sub {
 		is($_[0]->{'servers'}->[0]->{'name'}, 'Existing guest',
@@ -140,5 +141,14 @@ my $creation = { id => 'b'x32, state => 'running', phase => 'disk',
 		};
 	do "$Bin/../index.cgi";
 	is($@, '', 'overview survives unavailable job stores');
+	ok(!defined($header[0]), 'missing libvirt version omits the subtitle');
+
+	# Keep the original overview subtext argument and header layout.
+	$inventory->{'host'}->{'libvirt_version'} = '11.10.0';
+	do "$Bin/../index.cgi";
+	is($@, '', 'overview renders with a known libvirt version');
+	is($header[0], 'index_subtitle: 11.10.0',
+		'libvirt version replaces the original overview subtext');
+	is(scalar(@header), 6, 'header retains its original arguments');
 	}
 done_testing();

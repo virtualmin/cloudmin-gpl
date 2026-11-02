@@ -44,9 +44,13 @@ if ($in{'action'}) {
 		urlize($in{'id'}));
 	exit;
 	}
-# Include the module help and configuration links in Webmin's page header.
+# Recover existing jobs without preventing inventory when the job store fails.
+eval { recover_vm_jobs(); };
+my $dashboard = get_dashboard();
+# Replace the overview subtext with the collected libvirt version.
+my $version = $dashboard->{'host'}->{'libvirt_version'};
 ui_print_header(
-	$text{'index_subtitle'},
+	$version ? text('index_subtitle', html_escape($version)) : undef,
 	$text{'left_overview'},
 	'',
 	'intro',
@@ -58,9 +62,6 @@ print_vm_change_result($in{'vm_saved'}, 'delete');
 print ui_alert_box($text{'check_network_restored'}, 'success', undef, undef, '')
 	if ($in{'network_rules_restored'});
 
-# Recover existing jobs without preventing inventory when the job store fails.
-eval { recover_vm_jobs(); };
-my $dashboard = get_dashboard();
 # Issue tokens only for permitted overview controls. Keep inventory visible if
 # the token store fails. Force-only users get their controls on VM detail pages.
 $dashboard->{'token'} = eval { get_image_jobs()->form_token($remote_user) }

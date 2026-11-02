@@ -74,31 +74,27 @@ $page .= ui_tag('div', ui_alert_box($text{'vm_status_controls_paused'},
 $page .= ui_card({
 	'id' => 'cloudmin-overview',
 	'title' => $text{'index_overview'},
-	'desc' => $text{'index_intro'},
 	'body' => ui_stats([
 		# Host and job totals are hidden from delegated VM viewers.
 		(can_access('host') ? ({ 'value' => $counts->{'hosts'},
 		  'icon' => 'server',
 		  'label' => $text{'index_hosts'},
-		  'desc' => $text{'index_hosts_desc'},
 		  'href' => $show_host ? '#cloudmin-host' : undef, 'state' => 'info' }) : ()),
 		{ 'value_html' => ui_tag('span', $counts->{'vms'},
 		{ 'data-vm-count' => 'vms' }),
 		  'icon' => 'terminal',
 		  'label' => $text{'index_vms'},
-		  'desc' => $text{'index_vms_desc'},
 		  'href' => '#cloudmin-machines', 'state' => 'info' },
 		{ 'value_html' => ui_tag('span', $counts->{'running'},
 		{ 'data-vm-count' => 'running' }),
 		  'icon' => 'play',
 		  'label' => $text{'index_running'},
-		  'desc' => $text{'index_running_desc'},
 		  'state' => 'success' },
 		(can_access('host') ? ({ 'value_html' => ui_tag('span', $counts->{'jobs'},
 		{ 'data-vm-count' => 'jobs' }),
 		  'icon' => 'clock',
 		  'label' => $text{'index_jobs'},
-		  'desc' => $text{'index_jobs_desc'}, 'href' => 'jobs.cgi' }) : ()),
+		  'href' => 'jobs.cgi' }) : ()),
 	], { 'min' => '140px' }),
 });
 
@@ -114,7 +110,6 @@ my $host_status = ui_badge(
 my $host_card = ui_card({
 	'id' => 'cloudmin-host',
 	'title' => $text{'index_host'},
-	'desc' => $text{'index_host_desc'},
 	'actions' => $host_status,
 	'body' => ui_dl([
 		[ $text{'index_hostname'}, ui_tag('tt', html_escape(
@@ -155,7 +150,6 @@ my @requirements = map {
 	} @{$data->{'readiness'}->{'checks'}};
 my $requirements_card = ui_card({
 	'title' => $text{'index_requirements'},
-	'desc' => $text{'index_requirements_desc'},
 	'body' => ui_list(\@requirements).show_network_recovery($data),
 });
 
@@ -209,8 +203,6 @@ if ($data->{'domain_error'}) {
 $page .= ui_card({
 	'id' => 'cloudmin-machines',
 	'title' => $empty_machines ? undef : $text{'index_machines'},
-	'desc' => $empty_machines || !can_access('host') ? undef : text('index_machines_desc',
-		$host->{'hostname'} || $text{'index_unknown'}),
 	'actions' => $empty_machines || !can_access('manage') ? undef
 	: ui_link('machine_form.cgi', $text{'vm_create_button'}),
 	'body' => $machine_body,
