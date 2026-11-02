@@ -170,7 +170,10 @@
             const values = resourceValues(record);
             for (const field of root.querySelectorAll('[data-vm-resource]')) field.textContent = values[field.dataset.vmResource];
             for (const field of root.querySelectorAll('[data-vm-guest]')) {
-                field.textContent = record?.guest?.[field.dataset.vmGuest] || config.usage.unavailable;
+                const value = record?.guest?.[field.dataset.vmGuest];
+                // Keep OS names and versions without a trailing release codename.
+                field.textContent = (field.dataset.vmGuest === 'os' && value
+                    ? value.replace(/\s+\([^()]*\)$/, '') : value) || config.usage.unavailable;
             }
             for (const field of root.querySelectorAll('[data-vm-disk]')) {
                 field.textContent = size(record?.resources?.disks?.[field.dataset.vmDisk]?.[field.dataset.diskField]);

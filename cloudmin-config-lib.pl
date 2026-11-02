@@ -20,6 +20,7 @@ my %fields = (
 	machine_columns => [
 		['name', 'index_name', 'string', 1],
 		['state', 'index_state', 'string', 1],
+		['os', 'index_os', 'string'],
 		['ips', 'index_ips'], ['cpu', 'index_vcpus'],
 		['memory', 'index_memory'], ['disk', 'vm_disks'],
 		['macs', 'index_macs'], ['persistent', 'index_persistent'],

@@ -99,11 +99,13 @@ like($html, qr/10\.2\.0/, 'dashboard renders the QEMU version');
 # Guest-controlled text must be escaped.
 like($html, qr/&lt;unsafe-vm&gt;/, 'virtual machine names are escaped');
 unlike($html, qr/<unsafe-vm>/, 'raw virtual machine names are not emitted');
+like($html, qr/Operating system/, 'overview includes an operating system column');
+like($html, qr/data-vm-guest="os"/, 'overview uses the existing live guest OS field');
 like($html, qr/IP addresses/, 'overview includes an IP address column');
 like($html,
 	qr/<tt\b[^>]*>192\.0\.2\.10<\/tt>\s*<br><tt\b[^>]*>2001:db8::10<\/tt>/,
 	'overview shows every reported address as plain monospace text');
-is(get_vm_row({ %{$data->{'servers'}->[0]}, addresses => [] })->[2],
+is(get_vm_row({ %{$data->{'servers'}->[0]}, addresses => [] })->[3],
 	'Not reported', 'missing addresses have a clear fallback');
 
 # Live configuration stays on the page root and preserves nested HTML entities.
@@ -130,33 +132,33 @@ unlike($html, qr/data-vm-status-warning|data-config=/,
 my $guest = { %{$data->{'servers'}->[0]},
 	uuid => '11111111-2222-3333-4444-555555555555', autostart => 0 };
 my $running_row = get_vm_row($guest, 'signed-token');
-like($running_row->[9], qr/value="shutdown".*value="reboot"/s,
+like($running_row->[10], qr/value="shutdown".*value="reboot"/s,
 	'running guests offer clean shutdown and reboot');
 # Standard buttons bypass link conversion and its extra wrapper.
-like($running_row->[9], qr/\A<div\b[^>]*\bui_cluster\b/,
+like($running_row->[10], qr/\A<div\b[^>]*\bui_cluster\b/,
 	'power controls share one layout wrapper');
-is(scalar(() = $running_row->[9] =~ /<button\b[^>]*\bui_action_small\b/g), 3,
+is(scalar(() = $running_row->[10] =~ /<button\b[^>]*\bui_action_small\b/g), 3,
 	'all running actions are small buttons');
-like($running_row->[9], qr/value="suspend".*ui_svg_icon_pause.*Pause/s,
+like($running_row->[10], qr/value="suspend".*ui_svg_icon_pause.*Pause/s,
 	'Pause includes its icon and label');
-unlike($running_row->[9], qr/<a\b|data-btns| \| /,
+unlike($running_row->[10], qr/<a\b|data-btns| \| /,
 	'controls contain no legacy links, wrappers or separators');
-unlike($running_row->[9], qr/value="start"/,
+unlike($running_row->[10], qr/value="start"/,
 	'active guest has no start button');
-unlike($running_row->[8], qr/\schecked(?:\s|>)/,
+unlike($running_row->[9], qr/\schecked(?:\s|>)/,
 	'disabled boot policy renders an unchecked toggle');
 my $stopped_row = get_vm_row({ %$guest, state => 'shutoff', active => 0,
 	autostart => 1 }, 'signed-token');
-like($stopped_row->[8], qr/\schecked(?:\s|>)/,
+like($stopped_row->[9], qr/\schecked(?:\s|>)/,
 	'enabled boot policy renders a checked toggle');
-like($stopped_row->[9], qr/value="start"/, 'stopped guest has a start button');
-unlike($stopped_row->[9], qr/value="(?:shutdown|reboot)"/,
+like($stopped_row->[10], qr/value="start"/, 'stopped guest has a start button');
+unlike($stopped_row->[10], qr/value="(?:shutdown|reboot)"/,
 	'stopped guest has no shutdown or reboot button');
-like(get_vm_row({ %$guest, state => 'paused' }, 'signed-token')->[9], qr/value="resume"/,
+like(get_vm_row({ %$guest, state => 'paused' }, 'signed-token')->[10], qr/value="resume"/,
 	'paused guest offers Resume');
 unlike(join('', @{get_vm_row($guest)}), qr/<form|<button/,
 	'read-only inventory has no mutation controls');
-unlike(get_vm_row({ %$guest, persistent => 0 }, 'signed-token')->[8], qr/<form/,
+unlike(get_vm_row({ %$guest, persistent => 0 }, 'signed-token')->[9], qr/<form/,
 	'transient guests cannot enable autostart');
 
 # Settings belong in Webmin's page header, not in a second dashboard button.

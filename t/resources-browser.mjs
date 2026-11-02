@@ -130,20 +130,28 @@ try {
     assert.equal(await value('cpu'), '0.8% of 2');
     assert.equal(await value('memory'), '30% of 1 GiB');
     assert.equal(await value('disk'), '2% of 10 GiB');
+    assert.equal(await evaluate(`document.querySelector('[data-vm-guest=os]').textContent`), record.guest.os);
+    assert.equal(await evaluate(`document.querySelectorAll('#fixture img[onerror]').length`), 0, 'overview OS is plain text');
+    record.guest.os = 'Rocky Linux 10.2 (Red Quartz)';
+    await reply();
+    assert.equal(await evaluate(`document.querySelector('[data-vm-guest=os]').textContent`), 'Rocky Linux 10.2', 'OS omits the release codename');
+    record.guest.os = 'Debian GNU/Linux 13';
+    await reply();
+    assert.equal(await evaluate(`document.querySelector('[data-vm-guest=os]').textContent`), record.guest.os, 'OS version follows live updates');
     const overviewImage = await page('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
     writeFileSync(join(dir, 'overview.png'), Buffer.from(overviewImage.data, 'base64'));
-    assert.equal(await evaluate(`document.querySelector('#cloudmin-machines table tr:last-child').cells.length`), 10);
+    assert.equal(await evaluate(`document.querySelector('#cloudmin-machines table tr:last-child').cells.length`), 11);
     await evaluate(`document.querySelector('input[type=checkbox]').click()`);
     assert.equal(await evaluate('window.submissions'), 1, 'boot toggle remains functional after column insertion');
-    await evaluate(`document.querySelector('form input[value=shutdown]').form.querySelector('a').click()`);
-    assert.equal(await evaluate('window.submissions'), 2, 'shutdown link remains in the controls column');
+    await evaluate(`document.querySelector('form input[value=shutdown]').form.querySelector('button').click()`);
+    assert.equal(await evaluate('window.submissions'), 2, 'shutdown button remains in the controls column');
     record.vm.state = 'shutoff'; record.vm.active = 0;
     record.resources.cpu_percent = null; record.resources.memory_percent = null;
     await reply();
     assert.equal(await value('cpu'), '2');
     assert.equal(await value('memory'), '1 GiB');
     assert.equal(await value('disk'), '10 GiB', 'known disk capacity remains useful without usage');
-    assert.equal(await evaluate(`!!document.querySelector('form input[value=start]')`), true, 'live state changes replace power links');
+    assert.equal(await evaluate(`!!document.querySelector('form input[value=start]')`), true, 'live state changes replace power buttons');
     record.vm.state = 'running'; record.vm.active = 1;
     record.resources.cpu_percent = 0; record.resources.memory_percent = 0;
     await reply();
@@ -244,7 +252,7 @@ try {
     assert.equal(await value('memory'), 'Unavailable', 'disconnect never leaves a stale percentage');
     assert.equal(await value('disk_read'), 'Unavailable', 'disconnect also clears fields in sibling accordions');
     // Configured columns must stay aligned through additions and state changes.
-    for (const columns of ['name,state', 'name,state,memory,autostart,controls', 'name,state,ips,macs']) {
+    for (const columns of ['name,state', 'name,state,os,memory,autostart,controls', 'name,state,ips,macs']) {
         await evaluate(`document.getElementById('fixture').innerHTML = ${JSON.stringify(markup[columns])}; window.cloudminStatusInit();`);
         // check() waits for the fixture's mock socket before sending live data.
         await evaluate(`new Promise(resolve => { const check = () => window.socket?.readyState === 1 ? resolve(true) : setTimeout(check, 10); check(); })`);
@@ -259,6 +267,16 @@ try {
         assert.match(values[1], /Running/);
         // Only layouts with addresses should have a destination for their update.
         if (ids.includes('ips')) assert.match(values[ids.indexOf('ips')], /192.0.2.1/);
+        // OS text follows the configured column and stays absent when hidden.
+        assert.equal(await evaluate(`document.querySelectorAll('[data-vm-guest=os]').length`), ids.includes('os') ? 1 : 0);
+        if (ids.includes('os')) {
+            assert.equal(values[ids.indexOf('os')], record.guest.os);
+            delete record.guest;
+            await reply();
+            assert.equal((await cells())[ids.indexOf('os')], 'Unavailable');
+            record.guest = guest;
+            await reply();
+        }
         // MAC updates must follow their named column rather than an old offset.
         if (ids.includes('macs')) assert.equal(values[ids.indexOf('macs')], record.vm.macs[0]);
         // Power changes must replace state and any visible action buttons.
@@ -272,6 +290,7 @@ try {
         await evaluate(`document.querySelector('[data-vm-id]').closest('tr').remove()`);
         await reply();
         assert.equal((await cells()).length, ids.length);
+        if (ids.includes('os')) assert.equal((await cells())[ids.indexOf('os')], record.guest.os, 'new live rows include OS');
         // Newly inserted rows must retain the saved host-boot toggle state.
         if (ids.includes('autostart')) {
             assert.equal(await evaluate(`document.querySelector('[data-vm-id]').closest('tr').cells[${ids.indexOf('autostart')}].querySelector('input[type=checkbox]').checked`), true);

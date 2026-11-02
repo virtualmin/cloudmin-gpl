@@ -1090,6 +1090,8 @@ return [
 			'data-vm-pending-badge' => '',
 			(keys %{$server->{'pending'} || {}} ? () : (hidden => undef)) })
 		], { gap => '.4em' }),
+	# Reuse guest information supplied by the live status collector.
+	ui_tag('span', $text{'vm_status_checking'}, { 'data-vm-guest' => 'os' }),
 	@ips ? join('<br>', @ips) : html_escape($text{'index_no_ips'}),
 	show_resource_placeholder('cpu', $server->{'vcpus'} || 0),
 	show_resource_placeholder('memory',

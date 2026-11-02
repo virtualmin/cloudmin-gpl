@@ -32,6 +32,7 @@ function harness(pageId = id) {
             classList: { toggle: (name, enabled) => enabled ? badgeClasses.add(name) : badgeClasses.delete(name) }
         } };
         const fields = ['power', 'agent', 'ssh'].map(vmField => ({ dataset: { vmField }, textContent: '' }));
+        const guestFields = ['os', 'hostname', 'kernel'].map(vmGuest => ({ dataset: { vmGuest }, textContent: '' }));
         const statusWarning = { hidden: true };
         // control([tagName]) models a primary group or a dropdown action.
         const control = (tagName = 'DIV') => ({ hidden: true, tagName,
@@ -46,7 +47,7 @@ function harness(pageId = id) {
         const card = reopen === 'console' ? null : { classes, classList: {
             remove: (...names) => names.forEach(name => classes.delete(name)),
             add: name => classes.add(name) } };
-        return { fields, card, statusWarning, start, running, paused, active, pause, cycle, menu, more, header, isConnected: true,
+        return { fields, guestFields, card, statusWarning, start, running, paused, active, pause, cycle, menu, more, header, isConnected: true,
             dataset: { config: JSON.stringify({ id: pageId, endpoint: '/status', unavailable: 'Unavailable', checking: 'Checking',
                 usage: { unavailable: 'Unavailable', format: '$1% of $2', missing: '$1', rate: '$1/s' },
                 units: ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'],
@@ -55,7 +56,9 @@ function harness(pageId = id) {
             contains: node => node.isOverviewAction, dispatchEvent: () => {},
             append: node => { node.parent = current; },
             querySelectorAll: selector => selector === '[data-vm-field]' ? fields :
-                ({ '[data-vm-start]': [start], '[data-vm-running]': [running, pause],
+                ({ '[data-vm-guest]': guestFields,
+                    '[data-vm-resource], [data-vm-guest], [data-vm-disk]': guestFields,
+                    '[data-vm-start]': [start], '[data-vm-running]': [running, pause],
                     '[data-vm-active]': [active], '[data-vm-paused]': [paused], '[data-vm-cycle]': [cycle] })[selector] || [],
             querySelector: selector => ({ '#cloudmin-ssh-status': card,
                 '[data-vm-more]': more,
@@ -114,6 +117,22 @@ const status = (ssh = 'responding') => ({ type: 'status', full: 1,
     t.requests[0].resolve({ ok: true, json: async () => ({ socket_url: 'wss://example/status' }) });
     await settle();
     const s = t.sockets[0]; s.open(); s.reply(status());
+    // OS labels omit release codenames without changing other guest fields.
+    for (const [reported, expected] of [
+        ['Rocky Linux 10.2 (Red Quartz)', 'Rocky Linux 10.2'],
+        ['Debian GNU/Linux 13 (trixie)', 'Debian GNU/Linux 13'],
+        ['Ubuntu 26.04 LTS', 'Ubuntu 26.04 LTS'],
+        [undefined, 'Unavailable']
+    ]) {
+        const frame = status();
+        frame.changed[id].guest = { os: reported, hostname: 'guest (primary)', kernel: '6.12 (custom)' };
+        s.reply(frame);
+        assert.equal(t.current.guestFields[0].textContent, expected);
+        assert.equal(t.current.guestFields[1].textContent, 'guest (primary)');
+        assert.equal(t.current.guestFields[2].textContent, '6.12 (custom)');
+    }
+    s.reply(status());
+    assert.equal(t.current.guestFields[0].textContent, 'Unavailable', 'missing guest data clears the previous OS');
     // State changes hide unavailable actions and close an open menu.
     assert.equal(t.current.pause.hidden, false, 'Pause is available while running');
     assert.equal(t.current.pause.disabled, false, 'visible Pause can submit');

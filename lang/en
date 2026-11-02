@@ -55,6 +55,7 @@ index_check_failed=Needs attention
 index_machines=Virtual Machines
 index_name=Name
 index_state=State
+index_os=Operating system
 index_ips=IP addresses
 index_no_ips=Not reported
 index_vcpus=CPUs

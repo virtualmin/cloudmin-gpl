@@ -83,7 +83,8 @@ def check_browser(jar, theme, conn):
             # For each VM link, record its control markup and dimensions.
             # Exclude tokens and resource values, which can change on updates.
             controls = """Array.from(document.querySelectorAll('[data-vm-id]')).map(marker => {
-                const cell = marker.closest('tr').cells[9];
+                const config = JSON.parse(document.getElementById('cloudmin-vm-status').dataset.config);
+                const cell = marker.closest('tr').cells[config.columns.indexOf('controls')];
                 const buttons = Array.from(cell.querySelectorAll('button.ui_action_small'));
                 const wrapper = cell.querySelector('.ui_cluster');
                 return {

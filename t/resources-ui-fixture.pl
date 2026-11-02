@@ -47,7 +47,7 @@ my $empty = show_dashboard_page({ %$dashboard, servers => [],
 my $details = show_vm_details($vm);
 # Compact variants use the same live templates as the configured dashboard.
 my %compact;
-foreach my $columns ('name,state', 'name,state,memory,autostart,controls', 'name,state,ips,macs') {
+foreach my $columns ('name,state', 'name,state,os,memory,autostart,controls', 'name,state,ips,macs') {
 	local $config{'machine_columns'} = $columns;
 	$compact{$columns} = show_dashboard_page({%$dashboard,
 		status_config => get_overview_status_config('fixture-token')});

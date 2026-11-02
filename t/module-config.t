@@ -47,7 +47,7 @@ foreach my $key (qw(machine_columns image_columns network_columns
 	my @all = view_fields($key);
 	my @ids = map { $_->[0] } @all;
 	is_deeply([map { $_->[0] } view_selection($key, undef)],
-		\@ids, "$key preserves the old layout when absent");
+		\@ids, "$key shows all columns when absent");
 	is_deeply([map { $_->[0] } view_selection($key, 'unknown')],
 		\@ids, "$key falls back safely for unknown saved fields");
 	local $config{$key} = $ids[-1].','.$ids[-1].',unknown';
@@ -69,6 +69,33 @@ foreach my $key (qw(machine_columns image_columns network_columns
 		"$key identity is checked and cannot be unchecked");
 }
 
+# OS and MAC choices use the same editor and row filtering as other columns.
+{
+	local $config{'machine_columns'} = 'name,state,os,ips';
+	my $html = show_cloudmin_fields($config{'machine_columns'}, '', 15,
+		'cloudmin_fields', 'machine_columns');
+	like($html, qr/name="machine_columns_os"[^>]*checked/,
+		'operating system is selectable in the existing column editor');
+	unlike($html, qr/name="machine_columns_macs"[^>]*checked/,
+		'MAC addresses can be hidden independently');
+	my $row = get_vm_row({name => 'guest', state => 'running',
+		addresses => [{address => '192.0.2.1'}], macs => ['52:54:00:00:00:01']});
+	my ($heads, $rows) = table_columns('machine_columns', [$row]);
+	is_deeply($heads, [@text{qw(index_name index_state index_os index_ips)}],
+		'OS heading follows the selected column order');
+	like($rows->[0]->[2], qr/data-vm-guest="os"/,
+		'OS cell reuses the guest status field');
+	like($rows->[0]->[3], qr/192\.0\.2\.1/, 'IP address stays in its named column');
+	unlike(join('', @{$rows->[0]}), qr/52:54:00:00:00:01/, 'hidden MAC has no cell');
+	my $live = convert_from_json(get_overview_status_config('signed-token'));
+	is_deeply($live->{'columns'}, [qw(name state os ips)],
+		'live updates follow the OS column selection');
+	foreach my $template (values %{$live->{'rows'}}) {
+		is(scalar(@$template), 4, 'new rows keep the selected column count');
+		like($template->[2], qr/data-vm-guest="os"/, 'new rows receive live OS text');
+	}
+}
+
 # Reduced live templates must use the same schema as the first HTML table.
 {
 	local $config{'machine_columns'} = 'name,state,autostart,controls';
@@ -84,7 +111,7 @@ foreach my $key (qw(machine_columns image_columns network_columns
 		my $row = get_vm_row({uuid => '00000000-0000-0000-0000-000000000000',
 			state => $state, active => $state ne 'shutoff'}, 'signed-token');
 		is_deeply([$live->{'rows'}->{$state}->[3] =~ /<(div|form|button)\b/g],
-			[$row->[9] =~ /<(div|form|button)\b/g],
+			[$row->[10] =~ /<(div|form|button)\b/g],
 			"$state controls keep the initial tag structure");
 	}
 	my $readonly = convert_from_json(get_overview_status_config());
