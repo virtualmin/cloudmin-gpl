@@ -1,17 +1,14 @@
 <header>Storage pool</header>
-<p>Select an active directory, filesystem or NFS pool for the standalone image.
-The image has no backing link to the source. Deleting the source later does not
-remove it.</p>
-<p>The destination needs free space for the source disk's full capacity.
-Live capture of a file disk also requires that much free space on the source
-filesystem for writes during copying. The check adds both requirements when they share a
-filesystem, plus 256 MiB of headroom on each filesystem. Clean shutdown avoids
-the extra space check for live writes. For an LVM source, snapshot space is
-checked in its volume group or thin pool instead.</p>
-<p>Once copying and snapshot cleanup finish, Cloudmin checks temporary storage
-before each preparation and inspection stage. Writable preparation needs room for the full
-disk capacity; other copies use the actual file size. A space failure rolls back
-the unfinished image. Temporary copies are removed when the job finishes or rolls back.</p>
-<p>New virtual machines need disks at least as large as the source disk's capacity,
-even when much of it is unused.</p>
+
+<p>Use an active directory, filesystem or NFS pool with room for the source
+disk's full capacity. The image is independent of the source.</p>
+
+<p>Live capture also needs space for writes during copying: on the source
+filesystem for file disks, or in the volume group or thin pool for LVM.
+Temporary preparation needs further space on the host. Add these requirements
+when they share storage.</p>
+
+<p>Capturing does not shrink the disk. New machines need at least its original
+capacity.</p>
+
 <footer>

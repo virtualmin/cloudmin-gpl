@@ -1,24 +1,12 @@
 <header>Run</header>
 
-<p>Choose how often the backup runs. Only the time fields used by that choice
-are shown:</p>
-<ul>
-<li><b>Hourly:</b> once each hour, at the selected minute. For example, minute 15
-runs at 00:15, 01:15, 02:15 and so on.</li>
-<li><b>Daily:</b> every day at the selected hour and minute.</li>
-<li><b>Weekly:</b> on the selected day of the week, at the chosen time.</li>
-<li><b>Monthly:</b> on the selected day of each month, at the chosen time.</li>
-<li><b>Yearly:</b> on the selected month and day each year, at the chosen time.</li>
-</ul>
+<p>Times use the Cloudmin host's timezone and a 24-hour clock. New schedules
+default to daily at 02:00.</p>
 
-<p>All times use the Cloudmin host's timezone and a 24-hour clock. New schedules
-default to daily at 02:00. The schedule must be enabled to run automatically.</p>
+<p>Dates that do not occur are skipped. Choose a day from 1 to 28 for a monthly
+backup that must run every month.</p>
 
-<p>Calendar dates that do not occur are skipped: a monthly run on day 31 will not
-run in April, and a yearly run on February 29 runs only in leap years. Choose a
-day from 1 to 28 if a monthly backup must run every month.</p>
-
-<p>Selected machines are backed up one at a time. Runs of the same schedule do not
-overlap. Other backups or disk work can delay a run.</p>
+<p>Machines are backed up one at a time. Runs of the same schedule do not
+overlap, and other disk work can delay them.</p>
 
 <footer>

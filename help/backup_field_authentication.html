@@ -1,25 +1,18 @@
 <header>Authentication</header>
 
-<p><b>Password</b> shows a username and password. Enter the remote account's login
-name and password; no username is prefilled. The account must allow SFTP and have
-access to the backup directory. Password transfers require <tt>sshpass</tt> on the
-Cloudmin host.</p>
+<p>The remote account must allow SFTP and have access to the backup directory.
+Password login requires <tt>sshpass</tt> on this host.</p>
 
-<p><b>Private key file on this host</b> uses an absolute path to a private SSH key
-on the Cloudmin host. Install its public key in the remote account's
-<tt>authorized_keys</tt>. The key must work without a passphrase prompt; backup jobs
-cannot answer prompts or use your workstation's SSH agent.</p>
+<p>For key login, enter an absolute path to a private key on this host and
+install its public key in the remote account. The key must work without a
+passphrase prompt.</p>
 
-<p>The username is hidden in private-key mode. Switching to this mode keeps the
-username entered under <b>Password</b>, or uses <tt>root</tt> when it is blank. To use a
-different key login, enter its username under <b>Password</b> first, then select
-<b>Private key file on this host</b>. Switching to a key clears any saved password.</p>
+<p>Key login keeps the username entered in password mode, or uses <tt>root</tt>
+if blank. To change it, enter the username in password mode before switching to
+key login.</p>
 
-<p>When editing a schedule, a saved password is never sent back to the browser.
-Leave its field blank to keep it, enter a replacement to change it, or select
-<b>Clear saved value</b> to remove it. Password mode still requires a password.</p>
-
-<p>Server identity is checked separately. Unknown servers and changed host keys
-require fingerprint confirmation before a transfer.</p>
+<p>When editing a schedule, a blank password keeps the saved value. Enter a
+replacement or explicitly clear it. Switching to key login clears the saved
+password.</p>
 
 <footer>

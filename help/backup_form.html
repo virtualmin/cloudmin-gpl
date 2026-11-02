@@ -1,29 +1,15 @@
 <header>Backup Virtual Machines</header>
 
-<p>Select the machines and a
-destination, then choose how to
-prepare running machines and whether to
-compress the archives. Each machine gets a
-separate full backup. Follow its progress from Active Jobs.</p>
+<p>Each selected machine gets a full backup of its disks, settings and
+credentials. Backups run in the background; you can leave the page and follow
+them in Active Jobs.</p>
 
-<p>Backups include disks, attached media, machine settings, UEFI variables and
-Cloudmin's managed SSH access. Guest passwords and installed license credentials
-are included too. Archives are not encrypted by Cloudmin; keep the destination
-private.</p>
+<p>Choose guest-agent preparation to keep machines running, or a clean shutdown
+for applications that need it. Already stopped machines stay stopped. Backups do
+not include RAM, snapshot history or external device state.</p>
 
-<p>For scheduled backups, enter a description,
-choose a schedule and set
-retention. Disabling a schedule keeps its settings
-and existing backups.</p>
-
-<p>Full backups need temporary copies as well as the final archive. Allow roughly
-four times the copied disks' allocated size on the staging filesystem, plus
-source-pool copies and the destination archive. If they share a filesystem, allow
-space for all of them there. LVM staging checks use the full disk capacity, even
-when the temporary copy is sparse. Raw disks can also need their full logical
-size. Live backups need additional room for temporary snapshots.</p>
-
-<p>Managed raw and QCOW2 files, LVM disks and LVM-thin disks are supported.
-Unmanaged host devices, TPMs and other external device state are not.</p>
+<p>Archives are not encrypted by Cloudmin. Keep the destination private and
+allow local space for temporary disk copies and the archive, even for remote
+backups.</p>
 
 <footer>

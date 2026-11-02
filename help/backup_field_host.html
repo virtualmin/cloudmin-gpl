@@ -1,20 +1,10 @@
 <header>SSH server</header>
 
-<p>Enter the remote server's hostname or IP address. Enter its port and login in
-their separate fields; do not enter an <tt>sftp://</tt> URL or <tt>user@host</tt>.</p>
+<p>The SSH server hostname or IP address, without a username or URL. Supply the
+port separately.</p>
 
-<p>Cloudmin reuses matching trusted entries from root's <tt>~/.ssh/known_hosts</tt>
-and <tt>/etc/ssh/ssh_known_hosts</tt> on the Cloudmin host. An unknown server prompts
-you to confirm its fingerprints. Check them with the server administrator before choosing
-<b>Trust Host Key</b>.</p>
-
-<p>If a key changes, transfers stop. A legitimate change, such as a server
-reinstallation, can be approved with <b>Trust New Host Key</b> after verifying the
-new fingerprints. Cloudmin saves that approval privately without editing the
-host's SSH files. Schedules cannot approve keys: use the form to approve the change
-before their next run.</p>
-
-<p>SSH verifies the server's key on every transfer. This is separate from the
-password or private key used to log in.</p>
+<p>Unknown or changed host keys require fingerprint confirmation. Verify the
+fingerprint with the server administrator before trusting it. Scheduled backups
+stop on a key change until you approve the new key in the form.</p>
 
 <footer>

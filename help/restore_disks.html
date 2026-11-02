@@ -1,15 +1,9 @@
 <header>Disks and attached media</header>
 
-<p>This is the number of disks and attached media recorded in the archive,
-including seed or installer media when present. Restore imports them together;
-all listed disks are restored.</p>
+<p>All disks and attached media in the archive are restored together as
+independent volumes. Their contents and guest device names are preserved. UEFI
+variables and managed SSH keys are restored when included.</p>
 
-<p>Disks are restored as independent volumes in the chosen storage pool, using
-raw logical volumes for LVM. Their
-guest-visible device names and contents are preserved. UEFI variables and
-Cloudmin's managed SSH key are restored separately when included in the archive.</p>
-
-<p>A full backup preserves the disk contents at backup time, not RAM or the source
-machine's snapshot history.</p>
+<p>Backups do not include RAM or snapshot history.</p>
 
 <footer>

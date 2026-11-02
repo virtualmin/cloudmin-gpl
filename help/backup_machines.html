@@ -1,18 +1,10 @@
 <header>Virtual machines</header>
 
-<p><b>All virtual machines</b> selects every machine on this host when you submit
-a manual backup. A schedule selects them when each run starts, so it also includes
-machines created after the schedule was saved. <b>Selected virtual machines</b>
-backs up only the checked machines.</p>
+<p>Selecting all machines includes every machine present when the backup starts.
+For schedules, this also includes machines created later. Each machine gets its
+own full archive; stopped machines stay stopped.</p>
 
-<p>Each machine gets its own full archive. Selecting several machines queues their
-disk work to avoid copying them all at once. Choose
-how to prepare running machines under Backup
-options. Stopped machines remain stopped.</p>
-
-<p>Backups support managed file disks, attached media, LVM and LVM-thin disks.
-They do not capture RAM or unmanaged host devices. A backup of a
-machine with disk snapshots contains independent disk copies, not its snapshot
-history.</p>
+<p>Backups include managed disks and attached media, but not RAM, unmanaged host
+devices or snapshot history.</p>
 
 <footer>

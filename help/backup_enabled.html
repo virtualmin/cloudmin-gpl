@@ -1,11 +1,9 @@
 <header>Enable schedule</header>
 
-<p>When enabled, this schedule runs automatically at the selected times using
-Webmin's cron service. When disabled, it keeps its settings but does not start
-new backups. Disabling or deleting a schedule does not cancel a running job
-or delete existing archives.</p>
+<p>Disabling a schedule stops future runs and keeps its settings. It does not
+cancel a running backup or delete archives.</p>
 
-<p>The Webmin user who saves the schedule must still have permission to manage
-this host when it runs. Global read-only mode also prevents scheduled backups.</p>
+<p>The user who saved it must retain host-management permission. Schedules do
+not run in global read-only mode.</p>
 
 <footer>

@@ -1,21 +1,16 @@
 <header>Create Image</header>
-<p>Create a reusable QCOW2 image from one Linux system disk.
-The image appears in Image Manager and in the Create Virtual Machine form.
-It contains the installed software and data. It is not a full-machine backup.</p>
-<p>New virtual machines need disks at least as large as the source disk's capacity.
-Capturing an image does not shrink the disk.</p>
-<p>The source must use a virtio system disk and have working cloud-init.
-Additional writable disks are rejected. Detach installation media and read-only
-data disks first; Cloudmin's own seed disk is omitted automatically.</p>
-<p>Each virtual machine created from the image receives a fresh identity.
-Login credential removal is enabled by default. It removes Linux login
-password hashes, home-directory SSH credentials and standard shell histories
-for all local accounts. When disabled, these remain in the image.
-Credentials and histories in custom locations need separate review.</p>
-<p>Copied license credentials for supported software are reset locally, without
-contacting license servers. Each new virtual machine needs appropriate licenses
-for its installed software.</p>
-<p>Accounts, application data, certificates and other secrets remain in the
-image. Keep it private and review its contents before sharing it.
-New virtual machines use fresh firmware variables; custom UEFI settings are not copied.</p>
+
+<p>Capture a Linux system disk as a reusable QCOW2 image, including its software
+and data. New machines created from it receive a fresh identity. This is not a
+full-machine backup.</p>
+
+<p>The source needs cloud-init and one virtio system disk. Remove additional
+disks and installation media first. New machines need at least the source disk's
+full capacity.</p>
+
+<p>Login passwords, home-directory SSH credentials and standard shell histories
+are removed by default. Application secrets and credentials in custom locations
+remain, so review the image before sharing it. Supported software licenses are
+reset in the copy; each new machine needs its own license where required.</p>
+
 <footer>

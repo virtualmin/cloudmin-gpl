@@ -1,24 +1,31 @@
 <header>Snapshots</header>
-<p>A snapshot saves a virtual machine's writable disks and hardware configuration at a point in time. It stays on the same storage as the virtual machine and depends on that storage. Keep separate backups for recovery from disk failure.</p>
-<p>For a running virtual machine, Cloudmin asks libvirt to prepare the guest filesystems using QEMU Guest Agent, take the snapshot, and resume writes. The agent must be installed and responding inside the guest. Cloudmin never silently retries without preparation. Applications such as databases may also need their own hooks to prepare their data.</p>
-<p>If the agent is unavailable, <b>Shut down before taking snapshot</b> is enabled by default. Cloudmin requests a clean shutdown, takes the snapshot, and starts the virtual machine again. If the agent responds before the operation starts, the virtual machine stays running.</p>
-<p>Cloudmin never forces shutdown. If shutdown does not finish within two minutes, the snapshot is not taken. If snapshot creation fails after shutdown, review the error before starting the virtual machine.</p>
-<p>Disabling the shutdown option requests a live snapshot without preparing the guest filesystems. Restoring it may require filesystem or application recovery, as after an unexpected power loss. Taking the snapshot leaves the virtual machine running.</p>
-<p>A stopped virtual machine needs no guest agent. Its disks are clean only if it was shut down normally.</p>
-<p>Snapshots do not save RAM, active connections, firmware variables, or external services. Guests with TPMs, shared folders, persistent memory, or passthrough devices are not supported. Writable disks must be private raw or QCOW2 files, or managed LVM disks. A snapshot cannot mix file and LVM disks.</p>
-<p>LVM snapshots keep writes on the original disks. Cloudmin briefly pauses a running guest while creating them. Live LVM snapshots require direct I/O or synchronous disk caching; disks created by Cloudmin use direct I/O. Standard LVM reserves space for a full disk's changes, while thin snapshots share their pool. Monitor both data and metadata usage in thin pools.</p>
-<p>Restoring an LVM snapshot copies the saved data back while the virtual machine is stopped. The host needs temporary space under <tt>/var/tmp</tt> for the largest disk's full capacity plus 256 MiB. Remove LVM snapshots before deleting the virtual machine.</p>
-<p>Cloudmin attempts snapshot operations using the installed libvirt. If an operation fails, its progress page shows the error returned by libvirt at the affected step. Some host configurations allow creation but reject deletion or restore. If an operation leaves unfinished changes, use its recovery action in Active Jobs. Up to 20 snapshots can be retained per virtual machine; delete unneeded points to keep disk chains manageable.</p>
-<p>Each snapshot has <b>Restore</b> and <b>Delete</b> actions, both in its virtual machine history and on <b>All Snapshots</b>. The confirmation page identifies the snapshot to restore and requests a clean shutdown if the virtual machine is running. Restore discards changes made since the selected snapshot.</p>
-<p><b>Start the virtual machine after restoring</b> is enabled by default for snapshots taken while running and disabled for snapshots taken while stopped. You can change this choice. Starting boots from the restored disks; it does not resume the earlier running session. Other saved snapshots remain available.</p>
-<p>Deleting a snapshot removes that restore point and merges disk data as needed; it does not restore or delete the current virtual machine.</p>
-<p>The activity feed lists snapshots in time order. <b>Based on</b> links show their parent snapshots, and <b>Parent of current state</b> marks the snapshot on which the current virtual machine state is based. The virtual machine continues to change after that point. Snapshots made with other tools are displayed but must be managed with those tools. Cloudmin disables snapshot creation, restore and deletion for that virtual machine until snapshots managed elsewhere have been removed with their original tool.</p>
-<p>If the current restore point has child snapshots, delete those children first. Its Delete action stays disabled until libvirt can remove it safely.</p>
-<p>Snapshot operations appear in Active Jobs and survive browser disconnection. If an operation needs recovery, use the job's recovery action before making further virtual machine changes. Do not manually remove snapshot disk files.</p>
-<p>If the guest agent stops responding during preparation and recovery cannot resume filesystem writes, stop the virtual machine and run recovery again. The confirmed Force power off action remains available for this case.</p>
-<p>After correcting a failed operation, return to its form and submit it again.
-Cloudmin starts a new attempt once recovery has finished. If the operation partly
-completed, use <b>Active Jobs</b> to finish recovery first. Previous attempts
-remain in job history.</p>
+
+<p>Snapshots preserve disks and hardware settings for a later rollback. They do
+not save RAM or firmware variables and are not a substitute for backups on
+separate storage.</p>
+
+<p>A running machine needs guest-agent preparation or a clean shutdown for a
+consistent snapshot. Databases may need additional preparation. Without either,
+restoring is like recovering from sudden power loss. Cloudmin does not force
+shutdown; if creation fails after shutdown, check the error before
+restarting.</p>
+
+<p>Restoring discards changes since the selected snapshot and restores its
+hardware settings. Starting afterward boots the guest afresh. Deleting a
+snapshot removes that restore point while keeping the current machine state.</p>
+
+<p>Snapshots need private file or LVM disks; mixed storage and external device
+state such as TPMs or passthrough devices are unsupported. Monitor snapshot
+space, including thin-pool metadata. LVM restore also needs temporary space for
+the largest disk's full capacity. Remove LVM snapshots before deleting the
+machine.</p>
+
+<p>Up to 20 snapshots are allowed per machine. Snapshots made with other tools
+must be removed with those tools before Cloudmin can manage snapshots. A restore
+point with child snapshots may require deleting the children first.</p>
+
+<p>If an operation partly fails, recover it through Active Jobs before further
+changes. Do not delete snapshot files manually. If recovery cannot thaw guest
+filesystems, stop the machine and retry recovery.</p>
 
 <footer>

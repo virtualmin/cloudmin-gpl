@@ -1,68 +1,19 @@
 <header>Virtualmin</header>
 
-<p>Select <b>Virtualmin GPL</b> or <b>Virtualmin Pro</b> to install that edition
-inside the new virtual machine. <b>None</b> skips Virtualmin; selected packages
-and setup scripts still run.</p>
+<p>Install Virtualmin GPL or Pro inside the new guest. Selecting none still
+allows extra packages and setup scripts.</p>
 
-<p>Choose Apache or Nginx, a full or minimal installation, optional PostgreSQL
-and whether to request a hostname certificate.</p>
+<p>Use a fresh image supported by the Virtualmin installer, with systemd,
+Internet access and a fully qualified hostname. Automatic startup and a managed
+SSH key are required. A full installation needs at least 2 GiB of RAM; minimal
+needs 1 GiB. Both need a 20 GiB disk.</p>
 
-<p>After cloud-init finishes, Cloudmin runs the preparation script, installs
-packages, installs Virtualmin if selected, then runs the final setup script.
-These steps run as root inside the guest.</p>
+<p>Setup runs the preparation script, installs extra packages and Virtualmin,
+then runs the final script. After installation, complete the Virtualmin
+configuration wizard.</p>
 
-<p>Software setup requires a cloud image with systemd and <b>Start after
-creation</b> enabled. In <b>Module Configuration → Virtual machine creation</b>,
-enable <b>Create a host SSH key for each new virtual machine?</b> so Cloudmin can
-connect to the guest.</p>
-
-<p>When software setup is enabled for a guest using DHCP or a static IPv4 address,
-Cloudmin checks host IPv4 forwarding and the selected libvirt NAT or routed
-network's rules before creating disks. Missing rules stop creation with an error.
-Host Overview shows the failed check and offers <b>Restore network rules</b>.
-This does not test guest DNS or access to package repositories.</p>
-
-<p>Virtualmin needs a fresh image supported by its installer, Internet access
-and a fully qualified guest hostname, such as <tt>host.example.com</tt>.
-Use it as the virtual machine name or set the guest hostname separately
-in <b>New virtual machine details</b>. <b>Require fully qualified hostname</b>
-stays enabled while Virtualmin installation is selected. A full installation
-requires at least 2 GiB of memory; a minimal installation requires 1 GiB.
-Both require a disk of at least 20 GiB.</p>
-
-<p>For Virtualmin Pro, enter the license serial and key when creating each virtual machine.
-These fields start empty for each creation. License credentials are never saved
-in templates or cloud-init data. Installation progress appears in the creation job.
-After installation, open Virtualmin to complete its configuration wizard.</p>
-
-<h3>Templates</h3>
-<p>Cloudmin includes four Virtualmin templates: GPL and Pro, each with Apache
-or Nginx. They inherit image and login settings from Default Template and
-default to a full installation, including mail services. A minimal installation
-can be selected in <b>Software</b>. Webmin Servers Index registration is enabled
-by default.</p>
-
-<p>When saved, built-in template names update to match the selected edition,
-web server and PostgreSQL option. Installation size is not included in the name.
-If another template has that name, a number is added. Custom names and
-Default Template's name never change automatically.</p>
-
-<p>Disabling <b>Enable Virtualmin installation?</b> in Module Configuration hides
-these controls and templates that select Virtualmin directly or inherit it
-from Default Template.
-Those templates cannot be used by ID or name until installation is enabled again.
-Their saved settings remain unchanged.</p>
-
-<h3>Clones and images</h3>
-<p>Cloning a guest or capturing an image resets copied Virtualmin Pro license
-and repository credentials locally, without contacting license servers or changing
-the source's license. Pro packages and repository channels remain. Each copy needs
-its own Pro license or a manual downgrade to GPL; Pro repository updates fail
-until then. Virtualmin in the source must support offline license replacement.</p>
-
-<p>When preparing a clone's new identity, Cloudmin also updates Virtualmin's
-management hostname and Postfix hostname settings, creates a new management TLS
-certificate and removes renewal settings for the source hostname. Hosted domains,
-their data and their certificates remain unchanged.</p>
+<p>Pro credentials are entered separately for each new machine and are not saved
+in templates. Clones and captured images reset copied license credentials; each
+copy needs its own license or a switch to GPL.</p>
 
 <footer>

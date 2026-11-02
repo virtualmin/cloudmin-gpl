@@ -1,12 +1,25 @@
 <header>Clone Virtual Machine</header>
-<p>Cloning makes independent copies of a virtual machine's writable disks on this host. It requires host administrator access and active file, LVM or LVM-thin storage pools. The host needs libguestfs, its Perl bindings and bsdtar. The guest must contain exactly one Linux installation that libguestfs can inspect.</p>
-<p><b>Prepare a new guest identity</b> also requires enabled cloud-init, one network interface and YAML::XS on the host. Before the first boot, an isolated libguestfs worker clears the copied machine ID, SSH host keys, DHCP leases and cloud-init state. New cloud-init data supplies the hostname, selected administrator credentials and network settings. Other application accounts and data remain in the copy.</p>
-<p><b>Keep guest settings and leave stopped</b> preserves guest configuration. Cloudmin still resets the copied host ID and license credentials for supported software. Confirm this choice, then resolve duplicate hostnames, static addresses, keys, credentials and application identities before starting the copy. Automatic startup is disabled.</p>
-<p>Templates supply access, network and boot defaults. They do not reinstall software or run provisioning scripts. A template's fully qualified hostname requirement still applies. Plans can change CPU and memory allocations and grow the first disk; disks cannot shrink.</p>
-<p>A running source needs guest-agent preparation with a temporary snapshot, or a clean shutdown followed by copying and restart. A source with both file and LVM disks must be shut down for cloning. Filesystem freezing does not replace database-specific backup procedures.</p>
-<p>UEFI variables can be copied only while the source is stopped. Running guests default to fresh variables unless you select a clean shutdown. Fresh variables do not preserve the source's firmware boot entries.</p>
-<p>Review application settings that use the source hostname or IP address before using the clone. Preparing a new identity does not update every application's configuration.</p>
-<p>Both clone modes reset copied license credentials for supported software without changing the source's license. The installed packages and repository channels remain. Supply a separate license or switch to a free edition where available; licensed repository updates may fail until then.</p>
-<p>File pools and standard LVM pools need room for the full disk capacities. Thin pools allocate space as data is copied. A running source also needs room for temporary snapshots. Both clone modes need temporary storage on the host for writable disk copies. When copying an LVM disk, free-space checks use its full capacity even if the copy is sparse.</p>
-<p>Cancellation and recovery restore the source before releasing its reservation. If cleanup fails, use Active Jobs to retry recovery. Do not remove temporary snapshot files or logical volumes manually.</p>
+
+<p>Cloning creates independent disks for another machine on this host. It
+requires an inspectable Linux guest and enough storage for the copies.</p>
+
+<p>Preparing a new identity requires cloud-init and one network interface.
+Cloudmin replaces the machine ID, SSH host keys, hostname, login and network
+settings. Application data and other accounts remain; review applications that
+depend on the old hostname or address.</p>
+
+<p>Keeping guest settings leaves the clone stopped. Resolve duplicate addresses,
+hostnames and credentials before starting it. Both modes reset copied license
+credentials for supported software; each copy needs its own license where
+required.</p>
+
+<p>A running source needs a responding guest agent or a clean shutdown. Mixed
+file and LVM disks require shutdown. Guest-agent preparation provides filesystem
+consistency, not necessarily database consistency. Copying UEFI variables also
+requires shutdown; fresh variables omit custom boot entries.</p>
+
+<p>Allow space for full disk copies, temporary work and live snapshots. If
+cleanup fails, use Active Jobs to recover before further disk operations. Do not
+delete snapshot files manually.</p>
+
 <footer>

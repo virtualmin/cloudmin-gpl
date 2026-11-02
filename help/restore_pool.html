@@ -1,16 +1,10 @@
 <header>Restore disks to storage pool</header>
 
-<p>Select an active file, LVM or LVM-thin pool on this host. Archived disks are
-imported into this pool, using raw format for LVM. UEFI variables use an active
-file pool. The original host paths are replaced with paths to the new volumes.</p>
+<p>Use an active file, LVM or LVM-thin pool with room for the restored disks.
+LVM uses raw volumes; UEFI variables need a file pool.</p>
 
-<p>File pools and standard LVM pools need room for the disks' full capacities
-plus a free-space margin. Thin pools allocate space as data is restored.
-The archive size alone is not enough to estimate storage needs. The host also
-needs temporary space to download, extract and inspect the archive.</p>
-
-<p>Choosing a pool does not change the guest's network, firmware type or CPU
-architecture. The host must support those settings and provide the networks or
-bridges referenced by the backup.</p>
+<p>Allow for full disk capacities plus temporary space to download, extract and
+inspect the archive. Compressed archive size is not a reliable storage
+estimate.</p>
 
 <footer>

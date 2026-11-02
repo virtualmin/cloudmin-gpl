@@ -1,27 +1,15 @@
 <header>Prepare running machines</header>
 
-<p><b>Use QEMU Guest Agent</b> keeps the machine running and requires a responding
-agent inside it. Cloudmin briefly freezes its filesystems, takes a temporary
-snapshot, then thaws them. For file disks, new writes go to temporary overlays
-while Cloudmin copies the original disks. It then merges those writes back.
-For LVM disks, Cloudmin briefly pauses the guest to create native snapshots.
-Writes stay on the original volumes while Cloudmin copies the snapshots.</p>
+<p>A responding guest agent lets Cloudmin freeze filesystem writes briefly and
+take a snapshot while the machine keeps running. Databases and other
+applications may need their own preparation for a consistent backup.</p>
 
-<p>Freezing filesystems does not guarantee consistent application or database data.
-Use any additional backup preparation your applications require.</p>
+<p>The shutdown method stops the machine cleanly before copying and restarts it
+afterward. It is required when a machine has both file and LVM disks. Machines
+that were already stopped stay stopped.</p>
 
-<p><b>Shut down, back up, then restart</b> requests a clean shutdown before copying
-the disks. A machine that was running is restarted after copying, before archive
-compression and transfer. Cloudmin fails the backup if it cannot shut down cleanly;
-it does not force the power off. A machine with both file and LVM disks requires
-this method.</p>
-
-<p>Stopped machines stay stopped with either choice. For live UEFI backups, the
-firmware variables must remain unchanged during the disk snapshot and firmware
-copy. If they change, the backup fails; retry or choose clean shutdown.</p>
-
-<p>After cancellation or failure, Cloudmin tries to restore the source state and
-clean up temporary snapshots. If cleanup fails, the job reports it and blocks
-conflicting disk operations until recovery finishes.</p>
+<p>A failed shutdown stops the backup. Cloudmin does not force power off. If
+live UEFI backup fails because firmware variables changed, retry with a clean
+shutdown. Use the job recovery action if cleanup fails.</p>
 
 <footer>

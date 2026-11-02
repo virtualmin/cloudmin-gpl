@@ -1,28 +1,12 @@
 <header>Resource Plans</header>
 
-<p>A plan saves the CPU count, memory and system disk size used when
-creating a virtual machine. Select a plan on the creation form, then adjust the
-values as needed. These changes apply only to the new virtual machine; they do
-not change the saved plan.</p>
+<p>Plans supply CPU, memory and system disk defaults for new machines. They are
+not quotas, and changing a plan does not resize existing machines.</p>
 
-<p>Open <b>System Settings → Resource Plans</b>. The editor groups the name,
-description and resource settings under <b>Basic plan details</b>.</p>
+<p>The supplied default uses 2 CPUs, 2 GiB of RAM and a 20 GiB disk, reduced to
+1 CPU on a one-CPU host. You can edit it or select another default.</p>
 
-<p>Use <b>Copy</b> in the editor to make a similar plan. Select a plan in the list
-and click <b>Make Default</b> to select it on new creation forms.
-Deleting a custom default selects Default Plan again.</p>
-
-<p>Cloudmin includes an editable <b>Default Plan</b> with 2 CPUs, 2 GiB
-of memory and a 20 GiB system disk. On a one-CPU host, the unedited Default Plan
-uses 1 CPU. This plan cannot be deleted.</p>
-
-<p>Plans accept 1–1024 CPUs, 256 MiB–1 PiB of memory and 1 GiB–1 PiB of
-disk space. Saved memory must be a whole number of MiB and disk space a whole
-number of GiB. Creation also checks the host's CPU and memory capacity, available
-storage and the selected image's minimum disk size.</p>
-
-<p>Plans are creation defaults, not quotas. Editing or deleting one does not resize
-existing virtual machines or change already submitted jobs. Host administrators
-can manage plans. In read-only mode, they can only view them.</p>
+<p>Creation still checks host capacity, available storage and the image's
+minimum disk size. Use whole MiB for memory and whole GiB for disk sizes.</p>
 
 <footer>

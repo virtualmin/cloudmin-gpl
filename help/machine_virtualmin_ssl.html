@@ -1,12 +1,9 @@
 <header>Request a hostname SSL certificate</header>
 
-<p>When enabled, the Virtualmin installer requests a trusted SSL certificate
-for the guest hostname. Use a fully qualified virtual machine name or set the
-guest hostname separately. Its public DNS must point to the virtual machine,
-and the certificate authority must be able to reach it for validation.</p>
+<p>Request a trusted certificate for the guest hostname. Public DNS must point
+to the guest, and the certificate authority must be able to reach it.</p>
 
-<p>When disabled, the installer skips this request. This is useful when the
-hostname is private or its public DNS is not ready. You can configure
-the hostname certificate after installation.</p>
+<p>Disable this for private hostnames or unfinished DNS setup. You can request
+the certificate later.</p>
 
 <footer>

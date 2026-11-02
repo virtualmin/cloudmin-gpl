@@ -1,125 +1,32 @@
 <header>Create Virtual Machine</header>
 
-<p>Enter a virtual machine name, choose a template and plan, and supply the
-password or SSH keys required by the login method.</p>
+<p>Use a cloud image for automatic guest setup, or an installer ISO to install
+the operating system yourself. Templates supply image, login and network
+settings; plans supply CPU, memory and disk size. Review these defaults before
+creating the machine.</p>
 
-<p>The template supplies the image, network, login and software settings. The
-plan supplies CPU, memory and disk size. The summary below the selectors shows
-the current settings. Open a section below it to change them.</p>
+<p>Cloud images configure the hostname, initial account and networking on first
+boot. Non-root administrators receive sudo access. The guest agent is installed
+automatically. For static networking, include address prefix lengths, gateways
+and DNS servers.</p>
 
-<p>The guest hostname defaults to the virtual machine name. You can enter a
-different hostname in the separate hostname field. Templates can require a
-fully qualified hostname, such as <tt>host.example.com</tt>.</p>
+<p>Missing catalogue images are downloaded and cached when creation starts.
+Installer ISOs boot into the graphical console and do not use cloud-init or
+managed SSH keys. After installation, eject the ISO or put the system disk first
+in the boot order.</p>
 
-<p>Creation makes a separate writable disk: QCOW2 in a file pool, or a raw logical
-volume in an LVM or LVM-thin pool. The source image remains available for reuse.</p>
+<p>Creation runs in the background, so you can leave the page and return through
+Active Jobs. A running machine or responding SSH service does not mean
+first-boot setup has finished.</p>
 
-<p>If a catalogue image is not already available, Cloudmin downloads it when you
-click <b>Create Virtual Machine</b>. Selecting an image or saving a template does
-not download it. Cloudmin shows download progress and verifies the image before
-creating the guest's disks. It saves the source image in the selected file pool,
-where it remains available in Image Manager. Later creations reuse a matching
-downloaded image, including one in another pool. An LVM destination requires
-an active file pool for the source image.</p>
+<p>Optional software setup requires a systemd cloud image, automatic startup and
+a managed SSH key. If it fails or is cancelled, the machine and installed
+software remain. Check <tt>/var/lib/cloudmin-install/install.log</tt> inside the
+guest, or cloud-init logs if setup failed earlier. Failed scripts are not
+repeated automatically.</p>
 
-<p>A failed download stops creation before guest resources are allocated.
-Cancelling creation leaves its shared image download running for other requests.
-To cancel that download too, use Image Manager. Cached images are not refreshed
-automatically when the publisher replaces a file at the same URL.</p>
-
-<p>For <b>Installer ISO</b>, select a catalogue ISO or import your own in Image Manager.
-Cloudmin creates an empty system disk, mounts the ISO in a read-only CD/DVD drive
-and boots from it first. Open <b>Remote Access</b> and select <b>Graphical console</b> to install the operating
-system, create accounts and configure networking. Cloud-init and managed SSH keys
-are not used. Cloudmin does not inspect ISO contents, so choose an ISO that
-supports the host's CPU architecture and the selected firmware.
-After installation, eject the ISO in <b>Edit Virtual Machine</b>
-or select the system disk as the first boot device.</p>
-
-<p>Account, hostname and IP-address settings apply to <b>Cloud image</b> creation.
-The network or bridge selection and MAC address apply to both sources.</p>
-
-<p>On a new installation, the form selects <b>Default Template</b> and <b>Default Plan</b>. Choose other saved presets or adjust the fields below. Edit the defaults under <b>System Settings → Machine Templates</b> and <b>Resource Plans</b>.</p>
-
-<p>Default Plan starts with 2 CPUs, 2 GiB of memory and a 20 GiB disk. On a one-CPU host, the unedited Default Plan uses 1 CPU. Default Template selects <b>Rocky Linux 10</b> for the host architecture, the <b>cloudmin</b> account, password authentication, DHCP, automatic firmware and both startup options. It installs no extra software.</p>
-
-<p><b>Module Configuration → Virtual machine creation</b> controls the optional
-virtual machine description field, template descriptions, automatic password generation and
-managed SSH keys. Template descriptions are hidden by default. Use
-<b>Show template description?</b> to display them below the selector, either
-always or only when they differ from the template name.</p>
-
-<p>When <b>Generate an initial password?</b> is enabled, opening a new form fills
-the password field with a random password. You can see, copy or replace it before
-creating the virtual machine. When disabled, the field starts empty and hides
-what you type.</p>
-
-<p>Under <b>Image and storage</b>, choose the installation source, the image and
-the storage pool. Under <b>Resources</b>, set CPU, memory and disk size.
-<b>Boot options</b> controls firmware, whether to start the virtual machine
-after creation, and whether to start it when the host boots.</p>
-
-<p>Under <b>Access</b>, choose the Linux username and login method:
-<b>SSH keys</b>, <b>Password</b>, or <b>SSH keys and password</b>. The matching
-password and key fields appear in <b>New virtual machine details</b>.</p>
-
-<p>To set an initial root password, enter <b>root</b> as the username and select
-<b>Password</b>. Other users can run commands with sudo. Password authentication
-enables both console and SSH login. The image must support cloud-init
-and match the host CPU architecture. Cloudmin checks catalogue metadata
-automatically. Custom images without this metadata are inspected read-only before
-creation; they require libguestfs, its Perl bindings, and YAML::XS on the host.
-Images with unknown or incompatible settings cannot be used.</p>
-
-<p>Under <b>Network</b>, choose a libvirt network or an existing host bridge.
-Automatic addressing uses DHCP. For static addressing, enter IPv4 and/or IPv6
-addresses with prefix lengths, gateways and DNS servers. Cloudmin adds direct
-routes to gateways, including for /32 IPv4 and /128 IPv6 addresses. Set the MAC
-address here and the guest hostname in <b>New virtual machine details</b>.</p>
-
-<p><b>Software</b> accepts package names, a preparation script and a final setup script.
-After cloud-init finishes, Cloudmin runs the preparation script, installs the
-selected software, then runs the final setup script. Scripts run as root
-inside the guest, using <tt>/bin/sh -e</tt> with no interactive input. They receive
-<tt>CLOUDMIN_VM_UUID</tt>, <tt>CLOUDMIN_HOSTNAME</tt> and
-<tt>CLOUDMIN_GUEST_USER</tt>. Packages use the guest's configured repositories
-and can be skipped by leaving the package list empty. Each script offers
-<b>None</b>, <b>File on host</b> or <b>Enter script</b>. A host file is read when
-the job is submitted; its contents run inside the guest. These settings can
-override the selected template. Use the field help for limits and execution details. Do not include reusable secrets. Guest software setup requires a cloud image with systemd, <b>Start after creation</b> and managed virtual machine SSH keys.</p>
-
-<p>The sections below the details, from <b>Image and storage</b> to <b>Boot
-options</b>, start collapsed by default. Module Configuration controls which
-start open. Selecting a template fills in its settings without opening or
-closing sections. Editing a field keeps the selected template and plan and
-updates the summary.</p>
-
-<p>Click <b>Create Virtual Machine</b> to validate the settings and start a
-background job. If a setting needs correcting, Webmin shows an error with a
-return link. Closing the progress page does not cancel creation.
-Use <b>Active Jobs</b> on <b>Host Overview</b> to return to progress,
-cancel an unfinished creation or retry cleanup. Completed actions appear in the
-<b>Host Action Log</b>.
-Cancellation takes effect between creation steps; a disk copy may need to
-finish first.</p>
-
-<p>When the job reaches software setup, the virtual machine is available for editing, snapshots, power controls and deletion. Cancelling the job stops software setup and keeps the virtual machine and its disks. It does not undo software already installed. If Cloudmin cannot reach the guest to stop setup, it reports an error; you can still stop the virtual machine using its power controls.</p>
-<p>A setup failure also keeps the virtual machine and its disks. For a failed script or software installation, check <tt>/var/lib/cloudmin-install/install.log</tt> inside the guest. Errors during initial guest setup may occur before this log exists; check cloud-init's status and logs for those errors.</p>
-
-<p>Reopening progress shows the saved setup status. Failed or interrupted scripts and installations are never repeated automatically. The full software setup sequence has a two-hour time limit.</p>
-
-<p>When you return to Cloudmin, it checks interrupted jobs against their saved
-records and libvirt. It keeps successfully created virtual machines and attempts to remove
-resources from unfinished creations. Cleanup failures name the problem and
-provide <b>Retry cleanup</b>.
-After correcting a creation failure, return to the form and submit it again. Cloudmin starts a new attempt once cleanup has finished. The previous failure stays in job history. Repeated clicks return to the same attempt. If software setup failed, use the existing virtual machine to resolve it instead of creating another one.</p>
-
-<p>The details page automatically refreshes power state, reported IP addresses,
-guest-agent response and SSH availability on port 22. These are separate checks:
-a running virtual machine or responding SSH service does not mean cloud-init has finished.
-Creation supports cloud images and installer ISOs, with guest disks in active
-directory, filesystem, NFS, LVM or LVM-thin pools. Images and UEFI variables
-need a file pool. After creation, use <b>Edit Virtual Machine</b> to add disks or
-network interfaces. Live changes require support from libvirt and the guest.</p>
+<p>If creation cleanup fails, recover the job before retrying. Cancelling
+creation does not cancel a shared image download; manage that separately in
+Image Manager.</p>
 
 <footer>

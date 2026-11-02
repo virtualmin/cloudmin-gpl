@@ -1,23 +1,19 @@
 <header>Directory or folder</header>
 
-<p>Enter the directory or folder that holds the archives, not an archive filename.
-For restore, enter the filename separately.</p>
-<ul>
-<li><b>Local storage:</b> an absolute path on this host, such as
-<tt>/var/backups/cloudmin</tt>. A missing backup directory is created privately.
-An existing directory must not be a symlink or be writable by group or other users.
-For mounted storage, mount it before running the backup.</li>
-<li><b>SSH:</b> an existing absolute directory on the remote server, such as
-<tt>/srv/backups</tt>. The chosen login needs access to it. Wildcards are not allowed.</li>
-<li><b>S3, Google Cloud Storage, Azure and Backblaze:</b> an optional object prefix
-inside the bucket or container, such as <tt>cloudmin/daily</tt>. Leave it blank to
-use the bucket or container root.</li>
-<li><b>Dropbox:</b> a folder relative to the account or application's accessible
-root, without a leading slash. Leave it blank for that root.</li>
-<li><b>Google Drive:</b> an existing folder name or nested path, such as
-<tt>Backups/Cloudmin</tt>. Enter names, not a folder ID or sharing URL.</li>
-</ul>
+<p>Enter the archive directory or folder, without a filename. Parent-directory
+components (<tt>..</tt>) are not allowed.</p>
 
-<p>Paths are literal: parent-directory components (<tt>..</tt>) are not accepted.</p>
+<ul>
+<li>Local storage: an absolute path such as <tt>/var/backups/cloudmin</tt>.
+Existing directories must not be symlinks or writable by other users. Mount
+remote storage first.</li>
+<li>SFTP: an existing absolute directory on the remote server.</li>
+<li>S3, Google Cloud Storage, Azure or Backblaze: an optional prefix inside the
+bucket, such as <tt>cloudmin/daily</tt>.</li>
+<li>Dropbox: a folder relative to the accessible root, without a leading
+slash.</li>
+<li>Google Drive: an existing folder name or nested path, not a folder ID or
+sharing URL.</li>
+</ul>
 
 <footer>

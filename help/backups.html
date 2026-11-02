@@ -1,24 +1,15 @@
 <header>Backups and Restore</header>
-<p>This page lists completed backups and saved schedules. Each archive contains a
-full virtual machine, including its disks, settings and credentials. Store archives
-privately; Cloudmin does not encrypt them.</p>
 
-<ul>
-<li><b>Back Up Now</b> creates a separate archive for each
-selected machine.</li>
-<li><b>Add a Scheduled Backup</b> sets an hourly, daily,
-weekly, monthly or yearly run. Use retention to
-delete older archives after successful backups.</li>
-<li><b>Restore a Virtual Machine</b> reads an archive and asks
-you to confirm before creating a stopped replacement with the original identity.</li>
-</ul>
+<p>A backup preserves a complete virtual machine for recovery. Archives include
+guest credentials and are not encrypted by Cloudmin, so store them
+privately.</p>
 
-<p>Use Restore beside a saved archive to reuse its recorded source settings.
-Delete backup removes that archive from its destination and cannot be undone.
-Click a schedule's description to change, disable or delete it; deleting a schedule
-does not delete its archives.</p>
+<p>Backups run in the background and can be scheduled. Retention deletes older
+archives after successful scheduled runs. Deleting a schedule keeps its
+archives; deleting an archive permanently removes it.</p>
 
-<p>Click a field label in the backup or restore form for help with that option.
-Allow local space for disk copies, temporary work and the final archive, even
-when using a remote destination.</p>
+<p>Restore preserves the original identity and creates a stopped machine. Keep
+the original off before starting the restored copy. Both backup and restore need
+local working space, even with remote storage.</p>
+
 <footer>

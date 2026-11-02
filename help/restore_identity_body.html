@@ -1,15 +1,9 @@
 <p>The displayed name and UUID identify the machine stored in the archive. They
-are preserved on restore, as are its hostname, machine ID, host ID, MAC addresses,
-IP settings, passwords, SSH keys and license files.</p>
+are preserved on restore, along with its network settings and credentials.</p>
 
-<p>Restore stops if a machine with the same name or UUID already exists. It
-creates a stopped machine with automatic startup disabled. Existing guests are
-never overwritten or merged.</p>
+<p>Keep the original machine off before starting the restored copy, even on
+another host, to avoid address and license conflicts. Restore leaves the copy
+stopped with automatic startup disabled and never overwrites an existing
+machine.</p>
 
-<p>By confirming, you agree to keep the original machine off when starting
-the restored copy, even if the original is on another host. Running both
-can cause address conflicts and duplicate license use. Restore does not replace
-or deregister software licenses.</p>
-
-<p>Use <b>Clone virtual machine</b> when you want another machine with a separate
-identity.</p>
+<p>Use cloning when you need another machine with a separate identity.</p>

@@ -1,41 +1,22 @@
 <p>Scripts run once as root inside the new virtual machine after cloud-init
-finishes. They do not run on the Cloudmin host.</p>
+finishes. The preparation script runs before software installation; the final
+script runs after it succeeds.</p>
 
-<p><b>Preparation script</b> runs before software installation.
-Use it to configure prerequisites, such as an extra package repository.</p>
+<p>Use noninteractive POSIX shell commands. Scripts run with <tt>/bin/sh
+-e</tt>;
+a failed command stops setup. The machine is kept, and failed scripts are not
+repeated automatically. Output goes to
+<tt>/var/lib/cloudmin-install/install.log</tt>
+inside the guest.</p>
 
-<p><b>Final setup script</b> runs after software installation succeeds.
-Use it to configure the installed software. If no software is selected,
-the two scripts still run in order.</p>
+<p>Enter commands or select a UTF-8 file on this host. A template saves the
+path;
+each creation job copies the contents when submitted. Files are limited to
+16 KiB and entered scripts to 16,384 characters.</p>
 
-<ul>
-<li><b>None</b> skips this script.</li>
-<li><b>File on host</b> reads a script from the Cloudmin host. Use the file chooser
-or enter an absolute path. Templates save the path; each creation job saves a
-copy of the file's contents when submitted. Later file edits do not affect that
-job. The source must be a regular UTF-8 text file of at most 16 KiB. File access
-uses your Webmin file permissions and configured Unix user.</li>
-<li><b>Enter script</b> saves the commands you enter, up to 16,384
-characters. Indentation and line breaks are preserved.</li>
-</ul>
+<p>Scripts receive <tt>CLOUDMIN_VM_UUID</tt>, <tt>CLOUDMIN_HOSTNAME</tt> and
+<tt>CLOUDMIN_GUEST_USER</tt>. Do not include reusable passwords or license keys:
+script contents are saved with the job and copied into the guest.</p>
 
-<p>Scripts use <tt>/bin/sh -e</tt> with no interactive input. Use POSIX shell
-syntax. An unhandled command failure stops setup and skips later steps. Failed
-or interrupted scripts are not retried automatically. The virtual machine is
-kept for inspection. Output is written to
-<tt>/var/lib/cloudmin-install/install.log</tt> inside the guest.</p>
-
-<p>Scripts receive these environment variables:</p>
-<ul>
-<li><tt>CLOUDMIN_VM_UUID</tt>: the new virtual machine's UUID.</li>
-<li><tt>CLOUDMIN_HOSTNAME</tt>: its configured hostname.</li>
-<li><tt>CLOUDMIN_GUEST_USER</tt>: the initial guest account.</li>
-</ul>
-
-<p>To run a command as the initial guest account,
-use <tt>runuser -u "$CLOUDMIN_GUEST_USER" -- command</tt> on guests that provide
-<tt>runuser</tt>. Do not put passwords or license keys in reusable scripts.
-Script contents are saved with the creation job and copied into the guest.</p>
-
-<p>Software setup requires a cloud image with systemd, <b>Start after creation</b>
-and managed virtual machine SSH keys.</p>
+<p>Setup requires a systemd cloud image, automatic startup and a managed SSH
+key.</p>

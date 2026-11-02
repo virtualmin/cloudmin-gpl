@@ -1,84 +1,21 @@
 <header>Image Manager</header>
 
-The <b>Images</b> tab lists downloaded images and imports in progress. Use the
-checkboxes, Select all and Invert selection to manage several images at once.
-<b>Delete Selected Images</b> asks for confirmation, cancels active downloads,
-and removes completed images only when they are not used by a virtual machine
-or another volume. It never deletes the original file supplied for a host-file import.
+<p>Import an operating-system image for reuse when creating virtual machines.
+Catalogue images are downloaded from their publishers and checked against the
+supplied checksum.</p>
 
-<p>In <b>Add Images</b>, choose the storage pool and image source. Select
-the operating systems to download and click <b>Download Selected Images</b>.
-Use the list's filter to find a distribution or release. The catalogue is
-filtered for this host's CPU architecture; for example, Arch Linux is listed
-only on x86-64 hosts.</p>
+<p>Custom imports accept standalone QCOW2 or raw disks and installer ISOs, from
+an HTTPS URL, browser upload or host file. Select the correct format and supply
+a checksum when available. Checksums detect corruption; Cloudmin does not verify
+digital signatures. Use sources you trust.</p>
 
-<p><b>Official cloud images</b> are published by the Linux distributions and
-downloaded from their official servers or mirrors over HTTPS. Cloudmin verifies
-the HTTPS certificate and checks each downloaded file against the publisher's
-checksum before import. Open <b>Image Catalogue</b>,
-then click an image name to inspect its download URL, checksum URL and publisher's
-information page. Custom entries use URLs supplied by an administrator.</p>
+<p>Choose an active directory, filesystem or NFS pool and allow space for both
+the image and temporary copies. Host-file imports need readable files and parent
+directories; use browser upload for private files.</p>
 
-<p>Wait for the download or import to finish, then return to Image Manager.
-Expand an image name in the table to see its storage location or any error.
-The <b>Checksum</b> column shows <b>Passed</b> when the downloaded file matched
-its expected checksum, or <b>Not verified</b> when no successful check is recorded.</p>
-
-<p>You can also download a direct HTTPS URL, upload a file, or copy a file already
-on this host. These sources accept standalone QCOW2 or raw disk images and installer ISOs.
-Open <b>Advanced options</b> to select the raw or ISO format and optionally enter
-a SHA-256 checksum. ISO imports verify supplied checksums and enforce transfer
-limits but skip disk inspection. The original file is not changed.</p>
-
-<p>Host files are read without root privileges, so the file and its parent
-directories must allow that access. Files in protected home, Webmin and libvirt
-directories are unavailable to this reader. Upload a private image instead.</p>
-
-<p>Image imports are limited by available space in temporary storage and the
-selected storage pool. To set an additional file-size limit in GiB, open
-<b>Module Configuration</b> and change <b>Maximum image file size in GiB</b>.
-This limits the image file, not the virtual disk capacity inside it.</p>
-
-<p>The <b>Image Catalogue</b> tab shows images for the host's architecture by default.
-Disable <b>Show only the host architecture in the image catalogue?</b> in
-<b>Module Configuration</b> to see all architectures. The
-<b>Source</b> column identifies <b>Bundled</b> and <b>Custom</b> entries.
-<b>Download size</b> shows the estimated file size. Choose which columns appear
-under <b>Module Configuration</b>, <b>Image catalogue columns</b>. The Image
-column is always shown.
-Image choices are grouped by distribution, with newer releases first.
-A compact badge in <b>Add Images</b> shows the estimated download size and
-support date, when known.
-Hover over the date for support details.
-Custom entries are marked; the host architecture is not repeated on each row.
-Support dates cover the vendor or community maintenance included with a release,
-including Debian LTS. Optional extended-support subscriptions are not included.
-Release and end-of-life dates are shown when supplied. The <b>Checksum</b>
-column shows whether a checksum file is available; verification happens during
-import. The <b>Download</b>
-column has separate buttons for the image and its checksum file, when available.
-These links open the source files in your browser; use <b>Add Images</b> to
-import an image into Cloudmin storage.</p>
-
-<p>Click an image name to view its details or edit a custom entry. Choose
-<b>Add custom image</b> to add an entry with an image URL, checksum file URL,
-and checksum algorithm. Both URLs must use HTTPS. The checksum file must
-identify the image filename, or contain a single checksum for that image.</p>
-
-<p>Select entries to enable or disable them in <b>Add Images</b>. Custom entries
-can also be deleted. The custom catalogue is stored in the module configuration
-and survives module updates. These controls do not change downloaded images or
-imports already in progress.</p>
-
-<p>Cloudmin verifies checksums but does not yet verify digital signatures.
-Failed imports are not added to the library as ready images. Directory,
-filesystem and NFS pools are supported for image imports.</p>
-
-<p>This page adds images to storage. It does not create a virtual machine.</p>
-
-<p>After correcting an import failure, return to the form and submit it again.
-Cloudmin retries failed imports after cleanup, keeping successful images in the
-same batch. If a partial import needs cleanup, remove that failed import before
-retrying. The previous attempt stays in history.</p>
+<p>Imports run in the background. After a failure, correct the cause and retry
+once cleanup finishes. Disabling a catalogue entry leaves downloaded images
+intact. Deleting an imported image removes its stored copy only when nothing
+uses it.</p>
 
 <footer>

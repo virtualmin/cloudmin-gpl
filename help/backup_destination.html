@@ -1,26 +1,15 @@
 <header>Backup destination</header>
 
-<p>Choose where to store the completed archives:</p>
-<ul>
-<li><b>Local directory or mounted storage</b> writes to a private directory on this
-host. Use this for mounted NFS storage too; Cloudmin does not mount it for you.</li>
-<li><b>SSH server (SFTP)</b> sends archives to another host using a password or
-private key. Unknown servers and changed host keys require fingerprint
-confirmation before a transfer.</li>
-<li><b>Amazon S3 or compatible storage</b> uses a bucket and optional folder prefix.
-Install the AWS CLI on this host. Custom endpoints must use HTTPS.</li>
-<li><b>Google Cloud Storage, Azure Blob Storage, Backblaze B2, Dropbox and Google
-Drive</b>: Azure needs the Azure CLI; Backblaze needs the B2
-CLI. Google and Dropbox use your OAuth application credentials and refresh token.</li>
-</ul>
+<p>Backups can use local or mounted storage, SFTP, or a supported cloud
+provider. Set up remote directories and storage accounts first. Mount NFS
+storage on this host before using it.</p>
 
-<p>Set up remote directories, buckets, containers and accounts before using them.
-Grant permission to write backups, read them for restore, and delete them if you
-enable retention. Credentials entered here are used on the Cloudmin host, not
-inside the virtual machine.</p>
+<p>S3 requires the AWS CLI, Azure the Azure CLI, and Backblaze the B2 CLI.
+Google and Dropbox require OAuth application credentials and a refresh token.
+The destination account needs write access, read access for restore, and delete
+access for retention.</p>
 
-<p>Archives contain passwords, SSH keys and license credentials. Keep the
-destination private. Remote storage still requires local temporary space for disk
-copies and the archive.</p>
+<p>Archives contain guest credentials and are not encrypted by Cloudmin. Keep
+them private. Remote backups still need local temporary space.</p>
 
 <footer>

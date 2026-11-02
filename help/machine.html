@@ -1,119 +1,30 @@
 <header>Virtual Machine Details</header>
 
-This page shows the virtual machine's hardware, guest status, resource usage,
-disks and network interfaces. Live values update automatically while the page is visible.<p>
+<p>Manage the machine's resources and devices here. Supported changes apply
+while it runs; others wait for a full shutdown and start. A guest reboot may not
+apply pending hardware changes.</p>
 
-The <b>...</b> menu beside the power controls contains <b>Pause</b>,
-<b>Force power off</b>, <b>Hard reset</b> and, for host administrators,
-<b>Clone virtual machine</b>. Available actions depend on the guest's state and your permissions.<p>
+<p>CPU usage is relative to the assigned CPUs. Memory usage excludes reclaimable
+cache and needs a working balloon driver. Guest OS and filesystem details need a
+responding guest agent. Missing measurements mean unknown usage, not zero.</p>
 
-<b>Force power off</b> opens a confirmation page. Use it
-only when a normal shutdown cannot complete. It stops the virtual machine immediately;
-unsaved data will be lost and filesystems may be damaged. It is also available
-on the editor's shutdown waiting page.<p>
+<p>Growing a disk increases its capacity; expand partitions and filesystems
+inside the guest afterward. Network changes also require matching guest settings
+or a renewed DHCP lease. Snapshots and backup checkpoints must be removed before
+changing the disk layout.</p>
 
-<b>Pause</b> suspends execution while keeping the virtual machine's memory and devices.
-<b>Resume</b> continues it. <b>Hard reset</b> opens a confirmation before restarting
-the virtual hardware immediately. It skips clean shutdown, so unsaved data may be lost.<p>
+<p>Password resets require a running guest and responding agent. They change an
+existing guest account, without changing SSH authentication settings or the
+Webmin password.</p>
 
-<b>Reset Password</b> in <b>Edit Virtual Machine</b> changes the password for an
-existing guest account. The form is available even when the guest is stopped or
-its agent is unavailable. Saving requires a running guest with a responding agent.
-Host administrators and users granted <b>Reset guest passwords</b> may use it.
-The password is not stored in jobs or logs. SSH authentication settings and the
-Webmin password stay unchanged.<p>
+<p>Forced power-off and hard reset skip clean shutdown and can lose data.
+Deletion permanently removes the selected disks. Keeping writable disks requires
+a clean shutdown; selecting all writable disks for deletion powers the machine
+off immediately. Shared disks and imported images are protected. Kept disks
+retain their data, but the deleted machine's snapshot history is removed.</p>
 
-<b>CPU</b> shows usage as a percentage of the assigned CPUs. For example,
-50% of 2 means the equivalent of one fully busy CPU. The first reading needs two
-samples, about ten seconds apart.<p>
-
-<b>Memory</b> shows guest RAM in use, excluding reclaimable cache, out of the assigned
-memory. It requires a working balloon driver with recent statistics. The host's
-memory allocation for the virtual machine is a different measurement.<p>
-
-<b>Disks</b> shows used space in mounted guest filesystems out of the combined capacity
-of writable disks. Read-only disks and cloud-init media are excluded. Unmounted
-filesystems are not included in used space. The individual disk table separately
-shows virtual capacity and space allocated on the host.<p>
-
-Guest operating system and filesystem details require a responding QEMU Guest Agent.
-Routine checks run about once per minute per guest. Virtual machine changes can trigger an
-earlier refresh. Large inventories take longer because these checks are spread
-out to limit host load.
-When usage is unknown, the CPU, memory and disk summaries show just the known
-capacity. A dash or <i>Unavailable</i> in other fields means there is no current
-measurement; it does not mean zero usage.<p>
-
-<b>Edit Virtual Machine</b> in the guest menu changes CPU, memory, description
-and boot settings. Resources, disks and network interfaces have separate tabs.
-Make changes in any tab, then click the shared <b>Save</b> button below them.
-It also creates or attaches disks, grows or detaches disks, and manages network
-interfaces. Supported changes apply while the virtual machine runs and are saved
-for its next boot. CPU and memory changes within the running limits apply immediately
-when libvirt and the guest support them. Other allocations, maximums and boot settings
-are saved for the next full shutdown and start.
-A banner shows saved changes with running and next-start values;
-the virtual machine list shows a <b>Power cycle pending</b> badge. <b>Power cycle now</b>
-waits up to two minutes for a clean shutdown, then starts with the saved settings.
-If shutdown times out, it reports failure without forcing power off. A delayed
-shutdown may still finish, so check the power state afterward. Later edits
-preserve unchanged pending settings. A guest reboot or hard reset may not apply them. Memory adjustment uses
-the guest's virtio balloon driver; the guest operating system may need to bring
-new CPUs online. Boot CPUs that cannot be removed set the minimum live CPU count;
-a lower count is saved for the next full shutdown and start. Device removal waits for guest acknowledgement.<p>
-
-Snapshots allow resource, description, boot and network edits, as well as ISO
-insertion and ejection. Restoring a snapshot also restores its saved hardware
-settings. Adding or removing drives, resizing disks, or deleting individual disk
-files requires removing snapshots and backup checkpoints first.
-Deleting the whole virtual machine handles file snapshot chains automatically.
-Delete LVM snapshots before deleting the virtual machine.<p>
-
-For older guests without spare device ports, shut down once and enable hardware
-expansion in Resources. New guests already include spare PCIe ports and a read-only
-CD/DVD drive. Installer guests start with their selected ISO in this drive.
-Select an ISO from an active storage pool to insert it, or eject it while running.
-To boot from this drive, select it as the first boot device. Boot-order changes
-take effect after a full shutdown and start.<p>
-
-Disk growth changes the disk capacity. Expand its partitions and filesystems
-inside the guest afterward; Cloudmin does not do this automatically.<p>
-
-Network changes do not rewrite the guest's OS configuration. After moving an interface to
-another network or bridge, shut down and start the virtual machine or renew its
-DHCP lease inside the guest. Update any static addresses and routes to match the
-new network. The power-cycle warning lists differences between the running and
-saved network connections.<p>
-
-A failed or timed-out live change can leave settings partly applied.
-Check Active Jobs for recovery actions.<p>
-
-Leave disk size fields blank to keep their current sizes. Select <b>Detach and
-keep data</b> or <b>Remove interface</b> to remove devices when you save.
-Selecting a new disk or interface does not change the virtual machine until you click Save.<p>
-
-The editor's <b>Delete</b> button opens a page listing attached disks. Each disk
-shows its role and storage location. The system disk contains the operating system,
-applications and files. Cloud-init configuration is read-only setup media containing
-the initial user, SSH keys and network settings.<p>
-
-Click <b>Delete Virtual Machine</b> to confirm. Keeping any writable disk requires
-a clean shutdown, with a wait of up to two minutes. Selecting every writable disk
-for deletion powers off the guest immediately. Kept read-only media does not
-require a clean shutdown. If stopping fails, nothing is deleted. A delayed clean
-shutdown may still finish.<p>
-Checked disks are deleted together with their private snapshot files, including
-older branches. Unchecked disks and every backing file they need are kept,
-including cloud-init media. Shared backing files and imported images are kept.
-The virtual machine definition, snapshot and backup checkpoint metadata, UEFI
-variables and Cloudmin-managed SSH keys are removed. Kept disks retain their
-data, but the deleted virtual machine's snapshot list is no longer available.
-Shared disks and imported images are protected. Interrupted changes can be retried
-from Active Jobs.<p>
-
-<p>If a change fails before applying anything, correct the cause and submit the
-form again. Cloudmin creates a new attempt and keeps the previous failure in
-job history. Partly applied changes require recovery through <b>Active Jobs</b>
-before another attempt can start.</p>
+<p>Operations continue after you leave the page. If a change partly fails, use
+its recovery action in Active Jobs before trying again. Do not remove snapshot
+files manually.</p>
 
 <footer>

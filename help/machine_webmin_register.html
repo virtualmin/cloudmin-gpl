@@ -1,20 +1,16 @@
 <header>Add to host's Webmin Servers Index</header>
-<p>When enabled, Cloudmin adds this virtual machine to the host's
-<b>Webmin Servers Index</b> after guest software setup. This lets you use
-<b>Open embedded Webmin</b>
-on <b>Remote Access → Webmin</b>, including for guests behind NAT.</p>
-<p><b>Open directly in new tab</b> uses the guest's own address and needs no
-registration. Private addresses may be unreachable from your browser.</p>
-<p>Registration is enabled by default. Change it in a template or when creating
-a virtual machine. Turning it off affects new virtual machines only. Cloudmin
-removes its server entry when it deletes the virtual machine.</p>
-<p>Automatic login uses the initial guest username and password saved in the
-host's protected Servers Index configuration. No extra guest account is created.
-If the password changes, update it in Servers Index. If no password was saved,
-Servers Index asks for the guest login and remembers it for the browser session.</p>
-<p>Only the host's <b>root</b> Webmin login can register guests or use Cloudmin's
-Webmin tab. Virtual machines created by other users skip registration.
-Servers Index permissions still apply. Use the embedded proxy only for fully
-trusted guests. Their pages share the host's browser origin and can use your
-session to compromise the host and other virtual machines.</p>
+
+<p>Register the guest in this host's Webmin Servers Index for embedded access,
+including behind NAT. Enabled by default for new machines created by the host's
+root Webmin login.</p>
+
+<p>Automatic login uses the initial guest username and password saved in Servers
+Index. Update the saved login there if the password changes. Without a saved
+password, the proxy asks for one.</p>
+
+<p>Use embedded access only for fully trusted guests: their pages can use your
+host session to compromise this host and other machines. Direct access needs no
+registration but requires the guest address to be reachable from your
+browser.</p>
+
 <footer>
