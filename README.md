@@ -5,7 +5,7 @@ Cloudmin 10 manages QEMU/KVM virtual machines on one host through libvirt, from 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/host-overview-dark.png">
-    <img src="docs/images/host-overview-light.png" width="900" alt="The Cloudmin host overview: counters for hosts, virtual machines, running guests and active jobs, the libvirt connection details, a host readiness checklist with every item ready, and a table of running virtual machines with their addresses, resources and power controls.">
+    <img src="docs/images/host-overview-light.png" width="900" alt="The Cloudmin host overview: counters for hosts, virtual machines, running guests and active jobs, the libvirt connection details, a host readiness checklist with every item ready, and a table of running virtual machines with their addresses, resources and start-at-boot switches.">
   </picture>
 </p>
 
