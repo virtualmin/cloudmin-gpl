@@ -60,7 +60,10 @@ my $show_host = can_access('host') &&
 my @servers = @{$data->{'servers'} || []};
 
 # Attach live configuration to the page, preserving entities in row templates.
-my $page = ui_page_assets().ui_tag_start('div', {
+my $page = ui_page_assets().ui_tag('link', undef, { rel => 'stylesheet',
+	href => get_webprefix().'/server-manager/overview.css?'.
+		(stat("$module_root_directory/overview.css"))[9] }).
+	ui_tag_start('div', {
 	'class' => 'ui_page',
 	($data->{'live'} ? ('id' => 'cloudmin-vm-status',
 		'data-config' => html_escape($data->{'status_config'})) : ()),
@@ -149,8 +152,10 @@ my @requirements = map {
 		}
 	} @{$data->{'readiness'}->{'checks'}};
 my $requirements_card = ui_card({
+	'class' => 'cloudmin-readiness-card',
 	'title' => $text{'index_requirements'},
-	'body' => ui_list(\@requirements).show_network_recovery($data),
+	'body' => ui_list(\@requirements, { class => 'cloudmin-readiness' }).
+		show_network_recovery($data),
 });
 
 # Show permitted host details when requested or when requirements fail.
