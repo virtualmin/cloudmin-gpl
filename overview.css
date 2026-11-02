@@ -3,7 +3,7 @@
 .cloudmin-readiness .ui_list_desc { overflow-wrap: anywhere; }
 
 /* Keep the standard list on narrow cards and use at most two columns. */
-@container cloudmin-readiness (min-width: 46em) {
+@container cloudmin-readiness (min-width: 36em) {
     .cloudmin-readiness {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
