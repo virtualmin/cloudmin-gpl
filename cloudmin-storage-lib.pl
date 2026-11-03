@@ -138,6 +138,9 @@ if ($action eq 'delete_volumes') {
 		'Could not delete: '.join('; ', @errors)."\n") if (@errors);
 	return join(', ', @deleted);
 	}
+# The NFS form has its own mount field; the API uses path for both backends.
+$in = {%$in, path => $in->{'mount'}}
+	if ($action eq 'create' && ($in->{'type'} || '') eq 'netfs' && exists($in->{'mount'}));
 my $name = $action eq 'create' ? $service->create($in)
 	: $service->change($action, @$in{qw(id revision enabled)});
 webmin_log($action, 'pool', $in->{'id'} || $name,

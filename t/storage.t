@@ -232,4 +232,128 @@ ok(!eval { $service->create({name => 'guests', type => 'logical', group => ''});
 	'empty group selection is rejected before storage changes');
 like($@, qr/Select an existing LVM volume group/, 'empty selection has a clear error');
 
+
+# NFS registration validates the remote source and preserves local data.
+{
+    local $conn->{'pools'} = [];
+    local $conn->{'failure'} = {};
+    local $conn->{'domains'} = [];
+    local $images->{'records'} = [];
+    # Unit tests never change the host's SELinux policy.
+    my $access_checks = 0;
+    local *Cloudmin::Storage::enable_nfs_access = sub { $access_checks++ };
+    my %nfs = (name => 'shared', type => 'netfs', server => 'nas.example.test',
+        export => '/guests', path => "$tmp/nfs", autostart => 1);
+    # Accept all supported address forms without losing export punctuation.
+    for my $server ('nas.example.test', '192.0.2.1', '2001:db8::1') {
+        my $plan = $service->prepare({%nfs, server => $server, export => "/a & b'c"});
+        my $xml = Cloudmin::Libvirt::parse_xml_document($plan->{xml});
+        is($xml->findvalue('/pool/@type'), 'netfs', 'NFS uses native network filesystem pools');
+        # mount.nfs needs IPv6 brackets; names and IPv4 pass through unchanged.
+        is($xml->findvalue('/pool/source/host/@name'), $server =~ /:/ ? "[$server]" : $server,
+            'server is preserved in pool XML');
+        is($xml->findvalue('/pool/source/dir/@path'), "/a & b'c", 'export path is escaped');
+    }
+    # Reject URLs, option-like names and invalid paths before allocating a pool.
+    for my $bad ({server => ''}, {server => '-o'}, {server => 'nfs://server'},
+                 {server => "server\n"}, {export => 'relative'}, {export => '/a/../b'},
+                 {export => "/bad\n"}, {type => 'iscsi'}) {
+        ok(!eval {$service->prepare({%nfs, %$bad}); 1}, 'invalid NFS request rejected');
+    }
+    # Registration must preserve local files instead of mounting over them.
+    make_path($nfs{path});
+    open(my $fh, '>', "$nfs{path}/keep") or die $!;
+    print $fh 'preserve local contents'; close($fh);
+    ok(!eval {$service->create(\%nfs); 1}, 'NFS cannot hide existing local files');
+    like($@, qr/empty directory/, 'nonempty mount refusal is clear');
+    # An empty existing directory needs neither rebuilding nor mode changes.
+    unlink("$nfs{path}/keep") or die $!;
+    is($service->create(\%nfs), 'shared', 'existing empty mount directory accepted');
+    is($access_checks, 1, 'registration configures NFS guest access');
+    my $nfs_pool = $conn->{created};
+    ok(!$nfs_pool->{built}, 'existing mount directory is not rebuilt');
+    ok($nfs_pool->{active} && $nfs_pool->{boot}, 'NFS mount starts with requested boot setting');
+    # Lifecycle controls must not expose deletion of shared NFS volumes.
+    local $conn->{pools} = [$nfs_pool];
+    my $record = $service->inventory()->{pools}->[0];
+    ok($record->{manageable} && $record->{unregisterable}, 'NFS lifecycle and unregistration are available');
+    my $usage = $service->volume_usage($record, {name => 'foreign', path => "$nfs{path}/foreign"},
+        {references => [], images => [], errors => []});
+    like($usage->{reason}, qr/Only volumes/, 'NFS volumes cannot be deleted from storage controls');
+    # Recheck local contents on restart, not just on first registration.
+    my $uuid = $nfs_pool->get_uuid_string();
+    $service->change('stop', $uuid, Cloudmin::Storage::revision($nfs_pool));
+    ok(!$nfs_pool->{active}, 'NFS can be unmounted');
+    open($fh, '>', "$nfs{path}/keep") or die $!; close($fh);
+    ok(!eval {$service->change('start', $uuid, Cloudmin::Storage::revision($nfs_pool)); 1},
+        'remount refuses files added while pool was stopped');
+    unlink("$nfs{path}/keep") or die $!;
+    $service->change('start', $uuid, Cloudmin::Storage::revision($nfs_pool));
+    ok($nfs_pool->{active}, 'empty NFS mount restarts');
+    is($access_checks, 2, 'starting a pool configures NFS guest access');
+    {
+        # Model libvirt losing track of a mount after server alias resolution.
+        local *Cloudmin::Storage::is_mounted = sub { 1 };
+        ok(!eval {$service->change('stop', $uuid, Cloudmin::Storage::revision($nfs_pool)); 1},
+            'stop fails if the NFS mount remains');
+        like($@, qr/still mounted.*registration was kept/, 'stop reports the retained mount');
+        ok(!$nfs_pool->{active} && !$nfs_pool->{undefined}, 'failed stop keeps the inactive registration');
+        # Keep an inactive definition if libvirt left its mount behind.
+        my (undef, $review) = $service->review_pool($uuid, 1);
+        ok(!eval {$service->unregister($uuid, $review->{revision}, 1, 1); 1},
+            'an inactive pool with a lingering mount cannot be unregistered');
+        ok(!$nfs_pool->{undefined}, 'failed unregistration keeps the pool definition');
+        # The combined stop-and-unregister path must enforce the same check.
+        $nfs_pool->{active} = 1;
+        (undef, $review) = $service->review_pool($uuid, 1);
+        ok(!eval {$service->unregister($uuid, $review->{revision}, 1, 1); 1},
+            'stop and unregister also checks for lingering mounts');
+        ok(!$nfs_pool->{active} && !$nfs_pool->{undefined}, 'stop and unregister retains the definition');
+    }
+    # Once no mount remains, normal lifecycle and unregistration can finish.
+    $service->change('start', $uuid, Cloudmin::Storage::revision($nfs_pool));
+    my (undef, $review) = $service->review_pool($uuid, 1);
+    is($review->{usage}->{reason}, '', 'unused NFS registration can be removed');
+    $service->unregister($uuid, $review->{revision}, 1, 1);
+    ok($nfs_pool->{undefined} && !$nfs_pool->{active}, 'unregistration unmounts before forgetting pool');
+    # A failed mount removes the new definition but preserves its directory.
+    local $conn->{pools} = [];
+    local $conn->{failure} = {fail_start => 1};
+    ok(!eval {$service->create(\%nfs); 1}, 'NFS mount failure is reported');
+    ok($conn->{created}->{undefined} && -d $nfs{path}, 'mount failure removes only the new registration');
+    {
+        # A failed autostart write can leave a mounted pool during rollback.
+        local $conn->{failure} = {fail_boot => 1};
+        local *Cloudmin::Storage::is_mounted = sub { $conn->{created}->{fail_boot} };
+        ok(!eval {$service->create(\%nfs); 1}, 'registration failure reports the remaining mount');
+        like($@, qr/boot failure.*still mounted/s, 'rollback reports both registration and unmount errors');
+        ok(!$conn->{created}->{undefined}, 'rollback preserves a still-mounted registration');
+    }
+    {
+        # Policy failures must precede both pool allocation and activation.
+        local *Cloudmin::Storage::enable_nfs_access = sub { die "SELinux policy failure\n" };
+        delete $conn->{created};
+        ok(!eval {$service->create(\%nfs); 1}, 'SELinux setup failure aborts registration');
+        like($@, qr/SELinux policy failure/, 'SELinux setup error is preserved');
+        ok(!$conn->{created}, 'policy failure does not allocate a pool');
+        local $conn->{pools} = [$nfs_pool];
+        ok(!eval {$service->change('start', $uuid, Cloudmin::Storage::revision($nfs_pool)); 1},
+            'SELinux setup failure aborts start');
+        ok(!$nfs_pool->{active}, 'policy failure leaves the export unmounted');
+    }
+}
+
+# Mount checks must recognize aliases of targets that libvirt stores verbatim.
+{
+    make_path("$tmp/nfs-target");
+    my $target = abs_path("$tmp/nfs-target");
+    symlink("$tmp/nfs-target", "$tmp/nfs-link") or die $!;
+    local *Cloudmin::Storage::mount_points = sub { ($target) };
+    ok(Cloudmin::Storage::is_mounted("$tmp/nfs-target/"), 'trailing slash matches a mount');
+    ok(Cloudmin::Storage::is_mounted("$tmp//nfs-target"), 'doubled slash matches a mount');
+    ok(Cloudmin::Storage::is_mounted("$tmp/nfs-link"), 'symlink resolves to its mounted target');
+    ok(!Cloudmin::Storage::is_mounted("$tmp/nfs-target-2"), 'similar unmounted path is ignored');
+    ok(!Cloudmin::Storage::is_mounted("$tmp/missing/"), 'missing path is not mounted');
+}
+
 done_testing();

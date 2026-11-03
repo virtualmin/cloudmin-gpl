@@ -1,8 +1,8 @@
 <header>Storage</header>
 
-<p>Pools make directories and LVM volume groups available for virtual machine
-disks. Registering existing storage preserves its contents. File pools are also
-needed for imported images, installation media and UEFI variables.</p>
+<p>Pools make directories, NFS exports and LVM volume groups available for virtual
+machine disks. Registering existing storage preserves its contents. File pools
+are also needed for imported images, installation media and UEFI variables.</p>
 
 <p>Virtual capacity is the disk size seen by the guest; allocated space is what
 it currently uses on the host. Pools sharing a filesystem share its free space.
@@ -15,6 +15,14 @@ running guests can still fill a pool.</p>
 
 <p>Shut down before growing an LVM disk. Disk copying and preparation also need
 local temporary space, sometimes the full disk capacity.</p>
+
+<p>NFS needs an existing export writable by libvirt and the host's QEMU user.
+Choose an empty local mount directory. Starting the pool mounts the export.
+Stopping it unmounts it. On SELinux hosts, registering or starting an NFS pool
+allows virtual machines to access NFS. This setting survives reboots.</p>
+
+<p>Cloudmin checks only local guests, so do not attach the same writable
+disk to guests on different hosts. NFS volumes cannot be deleted here.</p>
 
 <p>Stopping a pool makes it unavailable for new operations. Stopping an LVM pool
 deactivates its logical volumes, so stop guests and release any mounts or swap

@@ -112,9 +112,9 @@ Storage reads require host administrator access. Reviews and changes also requir
 | Action | Input | Result |
 | --- | --- | --- |
 | `storage` | None | Active and inactive pools, volume ownership, revisions, storage totals and unregistered groups in `lvm_groups`; group discovery errors appear in `lvm_group_error` |
-| `register_pool` | `name`, `type` (`dir` or `logical`), `path` or `group`, optional `autostart` (`0` or `1`), `token` | Newly registered pool |
-| `pool_start`, `pool_stop` | `id`, `revision`, `token` | Updated directory pool |
-| `pool_autostart` | `id`, `revision`, `enabled` (`0` or `1`), `token` | Updated directory pool |
+| `register_pool` | `name`, `type` (`dir`, `netfs` or `logical`), `path` or `group`, `server` and `export` for NFS, optional `autostart` (`0` or `1`), `token` | Newly registered pool |
+| `pool_start`, `pool_stop` | `id`, `revision`, `token` | Updated directory or NFS pool |
+| `pool_autostart` | `id`, `revision`, `enabled` (`0` or `1`), `token` | Updated directory or NFS pool |
 | `volume_review` | `pool`, `volume`, `token` | Volume identity, `usage.owners`, `usage.reason` and a deletion `revision` when allowed |
 | `delete_volume` | `pool`, `volume`, `revision`, `confirm=1`, `token` | Deleted volume record |
 | `pool_review` | `id`, optional `stop` (`0` or `1`), `token` | Pool identity, `stop_required`, `usage.owners`, `usage.reason` and current `revision` |
@@ -126,7 +126,13 @@ LVM registration uses an existing volume group. It does not create a group or fo
 
 Before deleting a volume or unregistering a pool, request a review. Send the returned `revision` with `confirm=1` in the removal request. Reviews report references and any reason removal is blocked without changing storage. Cloudmin repeats the checks under the host lock before making changes. References from running or stopped guests, saved states, snapshots, imported images and dependent disks block removal. Pending operations and references that cannot be checked also block it.
 
-Unregistration removes a saved directory or parent LVM pool definition from libvirt. It preserves files, logical volumes, volume groups and thin pools. LVM-thin destinations cannot be unregistered separately. The `pool_start`, `pool_stop` and `pool_autostart` actions support directory pools only.
+Unregistering removes the saved directory, NFS or parent LVM pool definition from libvirt. Files, logical volumes, volume groups and thin pools are preserved. LVM-thin destinations cannot be unregistered separately.
+
+The `pool_start`, `pool_stop` and `pool_autostart` actions support directory and NFS pools. Starting an NFS pool mounts its export; stopping it unmounts it without deleting files. Before mounting, the local directory must be empty and unmounted.
+
+On SELinux hosts, registering or starting an NFS pool enables `virt_use_nfs` so virtual machines can access NFS. This setting survives reboots.
+
+If a stop leaves the directory mounted, Cloudmin reports an error and keeps the pool registration. Unmount it on the host before retrying. The `delete_volume` action does not support NFS pools.
 
 To unregister an active pool, send `stop=1` to both `pool_review` and `unregister_pool`. The default is `0`, which requires an inactive pool. Changing this choice or the volume group's identity invalidates the review. For LVM, stopping deactivates every logical volume in the group, including thin volumes. Host mounts, swap, open volumes and other block devices using those volumes prevent the stop. Register the group again to use it in Cloudmin.
 

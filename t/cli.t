@@ -419,4 +419,23 @@ for my $command ('delete-volume', 'unregister-pool') {
     is($status, 0, 'thin destination name resolves');
     is($requests->[-1]->[1]->{pool}, 'one', 'resolved thin UUID reaches review');
 }
+
+# NFS CLI options form one source and use the normal pool registration API.
+{
+    my ($status, undef, undef, $requests) = run_cli(['create-pool', '--name', 'shared',
+        '--server', 'nas.example.test', '--export', '/guests', '--path', '/mnt/guests']);
+    is($status, 0, 'NFS CLI registration accepted');
+    my ($request) = grep {$_->[0] eq 'register_pool'} @$requests;
+    is_deeply($request->[1], {name => 'shared', type => 'netfs', server => 'nas.example.test',
+        export => '/guests', path => '/mnt/guests', autostart => 1}, 'NFS request keeps source and mount fields');
+    # Reject incomplete sources and mixed backends before contacting the host.
+    for my $args (['--server','nas','--path','/mnt/guests'],
+                  ['--export','/guests','--path','/mnt/guests'],
+                  ['--server','nas','--export','/guests','--group','guests']) {
+        my ($status, undef, undef, $requests) = run_cli(['create-pool', '--name', 'shared', @$args]);
+        isnt($status, 0, 'incomplete or conflicting NFS options rejected');
+        ok(!@$requests, 'invalid NFS CLI does not call the API');
+    }
+}
+
 done_testing();

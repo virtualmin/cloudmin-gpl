@@ -766,16 +766,23 @@ Create and extend groups with Webmin's Logical Volume Management module or the L
 
 Registers a storage destination and starts it immediately. Supply a unique C<--name> and exactly one of C<--path> or C<--group>. Directory paths must be absolute, have an existing parent and not overlap another pool. A missing directory is created; existing files and permissions are preserved.
 
+For NFS, supply C<--server> and C<--export>, and set C<--path> to an empty, unmounted local directory. The export must already exist and be writable by libvirt and the host's QEMU user. Starting the pool mounts the export; stopping it unmounts it.
+
+On SELinux hosts, registering or starting an NFS pool enables C<virt_use_nfs> so virtual machines can access NFS. This setting survives reboots.
+
+If a stop leaves the directory mounted, the command reports an error and keeps the pool registration. Unmount it on the host before retrying. The C<delete-volume> command does not support NFS pools.
+
 C<--group> names an existing LVM volume group. Registration does not format disks or create logical volumes. Its thin pools become separate destinations, named C<POOL/THIN_POOL>. Startup with the host is enabled by default; use C<--no-autostart> to disable it.
 
 The command finishes before returning and shows the new pool record with C<--json>. Running it again with the same name or volume group reports a duplicate registration.
 
     cloudmin create-pool --name extra --path /var/lib/libvirt/extra
     cloudmin create-pool --name guests --group vg_guests --no-autostart
+    cloudmin create-pool --name shared --server nas.example.com --export /guests --path /var/lib/libvirt/shared
 
 =head2 start-pool
 
-Starts a stopped local directory pool with a saved registration. C<--pool> accepts its UUID or a name that identifies exactly one pool. This includes pools unavailable for machine creation. The command reads the pool's revision before starting it. If its settings change in the meantime, run the command again.
+Starts a stopped local directory or NFS pool with a saved registration. Supply C<--pool> with its UUID or an unambiguous name. Pools unavailable for machine creation can also be started. If the pool's settings change after the command reads them, run it again.
 
 Starting does not create or format the directory or change its start-at-boot setting. This command does not start LVM pools.
 
@@ -783,7 +790,7 @@ Starting does not create or format the directory or change its start-at-boot set
 
 =head2 stop-pool
 
-Stops a local directory pool while keeping its saved registration and all files. Stop virtual machines using the pool and finish or cancel pending operations and image imports first. Start the pool again before using it for new storage operations.
+Stops a local directory or NFS pool while keeping its saved registration and all files. Stop virtual machines using the pool and finish or cancel pending operations and image imports first. Start the pool again before using it for new storage operations.
 
 The command checks the current revision and finishes before returning. It does not stop LVM pools. Use C<unregister-pool --stop> to stop an unused LVM pool and remove its registration after checking for host and guest use.
 
@@ -791,9 +798,9 @@ The command checks the current revision and finishes before returning. It does n
 
 =head2 set-pool-autostart
 
-Changes whether a local directory pool with a saved registration starts with the host. Supply C<--pool> as a UUID or unambiguous name and C<--enabled yes> or C<--enabled no>. This setting does not immediately start or stop the pool.
+Changes whether a local directory or NFS pool with a saved registration starts with the host. Supply C<--pool> as a UUID or unambiguous name and C<--enabled yes> or C<--enabled no>. This setting does not immediately start or stop the pool.
 
-The command reads and checks the current revision before saving. LVM registrations receive their start-at-boot setting during C<create-pool>; this command manages directory pools only.
+The command reads and checks the current revision before saving. LVM registrations receive their start-at-boot setting during C<create-pool>; this command manages directory and NFS pools.
 
     cloudmin set-pool-autostart --pool extra --enabled no
 

@@ -337,4 +337,15 @@ like(storage_volume_label({name => 'cloudmin-ubuntu-24-'.('d'x32).'.qcow2',
     like($form, qr/Stop &lt;pool&gt; first/, 'blocked review explains refusal');
     unlike($form, qr/name="confirm"|value="unregister"/, 'blocked review cannot submit removal');
 }
+
+# NFS fields retain user input and use Webmin's existing backend selector.
+{
+    my $form = show_storage_create('token', {action => 'create', type => 'netfs',
+        server => 'nas.example.test', export => '/guests', mount => '/var/lib/libvirt/shared'});
+    like(storage_input($form, 'server'), qr/value="nas.example.test"/, 'NFS server is retained');
+    like(storage_input($form, 'export'), qr/value="\/guests"/, 'NFS export is retained');
+    like(storage_input($form, 'mount'), qr/value="\/var\/lib\/libvirt\/shared"/, 'NFS mount is retained');
+    like($form, qr/name="type"[^>]*value="netfs"[^>]*checked/, 'NFS backend remains selected');
+}
+
 done_testing();

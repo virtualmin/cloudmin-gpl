@@ -353,14 +353,27 @@ my $html = storage_form('create', $token).
 $html .= ui_table_row(undef, ui_p($text{'storage_create_help'}), 2);
 $html .= ui_table_row($text{'storage_name'}, ui_textbox('name', $values->{'name'} || '', 24,
 	0, 64, 'placeholder="extra"'));
-# Keep the selected backend's controls together and leave sizing to the theme.
-$html .= ui_table_row($text{'storage_backend'}, ui_radio_table('type', $values->{'type'} || 'dir', [
-	['dir', $text{'storage_directory'}, ui_textbox('path', $values->{'path'} || '', 45,
-		0, 4096, 'placeholder="/var/lib/libvirt/extra"')],
-	['logical', $text{'storage_group'}, ui_cluster([
+# Keep each backend's inputs together using the shared choice widget.
+$html .= ui_table_row($text{'storage_backend'}, ui_choice('type', $values->{'type'} || 'dir', [
+	{value => 'dir', label => $text{'storage_directory'}, content =>
+		ui_textbox('path', $values->{'path'} || '', 45,
+			0, 4096, 'placeholder="/var/lib/libvirt/extra"')},
+	# Wrap compact NFS fields together, without ui_field sibling margins.
+	{value => 'netfs', label => $text{'storage_nfs'}, fields => [[undef, ui_cluster([
+		map { ui_tag('div', $_, {style => 'min-width:0'}) }
+		ui_field($text{'storage_nfs_server'},
+			ui_textbox('server', $values->{'server'} || '', 30,
+				0, undef, 'placeholder="nas.example.com"'), {for => 'server'}),
+		ui_field($text{'storage_nfs_export'},
+			ui_textbox('export', $values->{'export'} || '', 30,
+				0, 4096, 'placeholder="/exports/guests"'), {for => 'export'}),
+		ui_field($text{'storage_nfs_mount'},
+			ui_textbox('mount', $values->{'mount'} || '', 30,
+				0, 4096, 'placeholder="/var/lib/libvirt/nfs"'), {for => 'mount'})])]]},
+	{value => 'logical', label => $text{'storage_group'}, content => ui_cluster([
 		ui_select('group', $group, \@groups, 1, 0, 0),
 		ui_action_button($text{'storage_lvm_manage'}, 'neutral',
-			{ href => '../lvm/', icon => 'hard-drive' })])]
+			{ href => '../lvm/', icon => 'hard-drive' })])}
 	]), 1, undef, undef, 1);
 # Failed VG discovery must still leave directory registration available.
 $html .= ui_table_row(undef, ui_alert_box(text('storage_group_error', html_escape($group_error)), 'warn'), 2)

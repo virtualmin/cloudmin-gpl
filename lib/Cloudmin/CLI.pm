@@ -297,18 +297,20 @@ $add->('list-volumes','storage','Lists storage volumes and their owners.', group
     list => {key => 'name', id => 'key', columns => [qw(name pool capacity allocation used_by)]});
 $add->('list-volume-groups','storage','Lists LVM volume groups available for registration.', group => 'Host storage',
     subset => 'lvm_groups', list => {key => 'name', id => 'name', columns => ['name']});
-$add->('create-pool','register_pool','Registers a directory or an existing LVM volume group.',
+$add->('create-pool','register_pool','Registers a directory, NFS export or existing LVM volume group.',
     group => 'Host storage', done => 'Registered storage pool %s', options => {
         name => option('s', required => 1, help => 'New pool name'),
         path => option('s', help => 'Absolute directory path; cannot be used with --group'),
         group => option('s', help => 'Existing LVM volume group; cannot be used with --path'),
+        server => option('s', help => 'NFS server hostname or IP address; requires --export and --path'),
+        export => option('s', help => 'NFS export path; requires --server and --path'),
         autostart => option('yesno', default => 1, help => 'Start the pool at host boot; defaults to enabled'),
     });
 foreach my $item (['start-pool','pool_start'], ['stop-pool','pool_stop'], ['set-pool-autostart','pool_autostart']) {
-    # Directory lifecycle changes echo the current inventory revision.
-    $add->($item->[0],$item->[1],$item->[0] eq 'start-pool' ? 'Starts a directory pool.'
-        : $item->[0] eq 'stop-pool' ? 'Stops a directory pool without deleting its files.'
-        : 'Changes whether a directory pool starts at boot.', group => 'Host storage', pool_revision => 1,
+    # Pass the pool revision to reject changes made since inventory was read.
+    $add->($item->[0],$item->[1],$item->[0] eq 'start-pool' ? 'Starts a directory or NFS pool.'
+        : $item->[0] eq 'stop-pool' ? 'Stops a directory or NFS pool without deleting its files.'
+        : 'Changes whether a directory or NFS pool starts at boot.', group => 'Host storage', pool_revision => 1,
         done => 'Updated storage pool %s', options => {
             pool => option('s', required => 1, resolve => 'storage_pool', field => 'id', help => 'Pool ID or unambiguous name'),
             ($item->[1] eq 'pool_autostart' ? (enabled => option('s', required => 1, boolean => 1,
@@ -481,6 +483,10 @@ usage_error('Use --ssh-key or --ssh-keys-file, not both') if (exists($values{'ss
 # Pool registration needs exactly one backend, before any API call.
 usage_error('Specify exactly one of --path or --group')
     if ($command->{name} eq 'create-pool' && (grep {exists($values{$_})} qw(path group)) != 1);
+# An NFS registration needs both source fields and a local mount directory.
+usage_error('NFS requires --server, --export and --path, without --group')
+    if ($command->{name} eq 'create-pool' && (exists($values{server}) || exists($values{export})) &&
+        (!exists($values{server}) || !exists($values{export}) || !exists($values{path}) || exists($values{group})));
 # Apply defaults only to omitted options, preserving explicit --no- switches.
 foreach my $name (keys %$options) {
     $values{$name} = $options->{$name}->{default} if (!exists($values{$name}) && exists($options->{$name}->{default}));
@@ -615,7 +621,8 @@ foreach my $name (sort keys %$values) {
     else { $input{$field} = $value; }
 }
 # Derive the backend and revision from explicit, validated selectors.
-$input{type} = exists($values->{group}) ? 'logical' : 'dir' if ($command->{name} eq 'create-pool');
+$input{type} = exists($values->{group}) ? 'logical' : exists($values->{server}) ? 'netfs' : 'dir'
+    if ($command->{name} eq 'create-pool');
 $input{revision} = $self->{storage_pool}->{revision} if ($command->{pool_revision});
 my $machine;
 # Resolve a machine from visible inventory, preserving its public summary.

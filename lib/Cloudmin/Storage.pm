@@ -7,6 +7,8 @@ use warnings;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname basename);
 use Digest::SHA qw(sha256_hex);
+use Socket qw(AF_INET6 inet_pton);
+use WebminCore qw(execute_command is_readonly_mode);
 require(dirname(__FILE__).'/Libvirt.pm');
 
 # new(class, adapter => adapter, jobs => jobs, images => images)
@@ -76,7 +78,11 @@ my $id = <$stat>;
 my $ok = close($stat);
 return undef if (!$ok || !defined($id));
 chomp($id);
-return $id =~ /\A[0-9a-f]+:[0-9a-f]*[1-9a-f][0-9a-f]*\z/i ? lc($id) : undef;
+return lc($id) if ($id =~ /\A[0-9a-f]+:[0-9a-f]*[1-9a-f][0-9a-f]*\z/i);
+# Some filesystems, including NFS, report a zero fsid. Use the device number
+# so mounts sharing the same superblock are counted once.
+my @st = stat($path);
+return $id =~ /\A([0-9a-f]+):0+\z/i && @st ? lc($1).":dev$st[0]" : undef;
 }
 
 # overview(pools)
@@ -250,11 +256,12 @@ foreach my $image (@{$context->{'images'}}) {
 		push(@owners, { kind => 'image', name => $image->{'name'}, id => $image->{'id'} });
 		}
 	}
+# NFS may have owners on other hosts, so local checks cannot permit deletion.
 my $reason = @owners ? 'This volume is still owned or referenced. Open its virtual machine or Image Manager to manage it.'
 	: $volume->{'snapshot'} ? 'Delete this restore point from the virtual machine snapshot history.'
 	: @{$context->{'errors'}} ? join(' ', @{$context->{'errors'}})
 	: $context->{'busy'} ? 'Wait for virtual machine operations and image imports to finish before deleting volumes.'
-	: !($pool->{'manageable'} || $pool->{'volume_manageable'}) ? 'Only volumes in local persistent directory or LVM pools can be deleted here.' : '';
+	: (!($pool->{'manageable'} || $pool->{'volume_manageable'}) || ($pool->{'type'} || '') eq 'netfs') ? 'Only volumes in local persistent directory or LVM pools can be deleted here.' : '';
 return { owners => \@owners, reason => $reason, checked => !@{$context->{'errors'}} };
 }
 
@@ -371,8 +378,8 @@ if (!$pool) {
 	}
 # Read other pools' dependencies while excluding the registration being removed.
 my ($type, $target) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
-die "Only persistent directory or LVM pool registrations can be removed\n"
-	if ($type !~ /\A(?:dir|logical)\z/ || !$pool->is_persistent());
+die "Only persistent directory, NFS or LVM pool registrations can be removed\n"
+	if ($type !~ /\A(?:dir|netfs|logical)\z/ || !$pool->is_persistent());
 my $context = $self->volume_context(1, $uuid);
 my %ids = ($uuid => 1);
 my %names = ($pool->get_name() => 1);
@@ -477,6 +484,8 @@ return $self->{'jobs'}->lock('create-host', sub {
 			Cloudmin::Libvirt::error_message($@)."\n" if (!$stopped);
 		die "The pool is still active; its registration was kept\n" if ($pool->is_active());
 		}
+	# Libvirt can report an NFS pool inactive while an aliased mount remains.
+	check_nfs_stopped($record->{'path'}) if ($record->{'type'} eq 'netfs');
 	# Unregister only after inactivity is established; report partial failure.
 	Cloudmin::Libvirt::log_call('Sys::Virt::StoragePool::undefine', { uuid => $uuid });
 	my $removed = eval { $pool->undefine(); 1 };
@@ -487,8 +496,8 @@ return $self->{'jobs'}->lock('create-host', sub {
 }
 
 # inventory(self)
-# Lists all backends. Local directory pools have lifecycle controls; directory
-# and LVM pools also allow deletion of volumes with no owners or host use.
+# Lists all backends. Local persistent directory and NFS pools have lifecycle
+# controls; directory and LVM pools allow deletion after ownership checks.
 sub inventory
 {
 my ($self) = @_;
@@ -497,11 +506,14 @@ my @pools;
 foreach my $pool (Cloudmin::Libvirt::storage_pools($self->{'adapter'})) {
 	my $record = $self->{'adapter'}->get_storage_pool_record($pool, 1);
 	$record->{'revision'} = revision($pool);
+	# Registration removal and volume deletion have different limits.
 	$record->{'unregisterable'} = $local && $record->{'persistent'} &&
-		$record->{'type'} =~ /\A(?:dir|logical)\z/;
-	$record->{'manageable'} = $local && $record->{'persistent'} && $record->{'type'} eq 'dir';
+		$record->{'type'} =~ /\A(?:dir|netfs|logical)\z/;
+	$record->{'manageable'} = $local && $record->{'persistent'} &&
+		$record->{'type'} =~ /\A(?:dir|netfs)\z/;
 	$record->{'volume_manageable'} = $local && $record->{'persistent'} &&
 		$record->{'type'} =~ /\A(?:logical|lvmthin)\z/;
+	# Track running guests and avoid counting the same filesystem twice.
 	$record->{'guests'} = $record->{'manageable'} && $record->{'active'}
 		? $self->active_guests($pool) : [];
 	$record->{'filesystem'} = filesystem_id($record->{'target'})
@@ -558,14 +570,110 @@ die "Storage changes are available only for the local qemu:///system host\n"
 	if ($self->{'adapter'}->uri() ne 'qemu:///system');
 }
 
+# mount_points() lists the kernel's current mount targets with escapes decoded.
+sub mount_points
+{
+# Supported hosts use Linux; source tests may run on other systems.
+return () if ($^O ne 'linux');
+# An unreadable mount table must not be treated as proof of an unmounted path.
+open(my $mounts, '<', '/proc/self/mountinfo') || die "Cannot check host mounts\n";
+my @targets;
+# Decode mountinfo's octal escapes for spaces, tabs, newlines and backslashes.
+while (my $line = <$mounts>) {
+	my $target = (split(/ /, $line))[4];
+	$target =~ s/\\([0-7]{3})/chr(oct($1))/ge;
+	push(@targets, $target);
+	}
+close($mounts);
+return @targets;
+}
+
+# is_mounted(path) checks the kernel mount table, independently of libvirt.
+# Pools defined outside Cloudmin may name a mount through a symlink, doubled
+# or trailing slashes; the kernel lists the resolved path.
+sub is_mounted
+{
+my ($path) = @_;
+# Resolve existing targets and normalize literal paths when resolution fails.
+my $canonical = abs_path($path) || $path;
+$canonical =~ s{/+}{/}g;
+$canonical =~ s{(?<=.)/+\z}{};
+return (grep { $_ eq $canonical } mount_points()) ? 1 : 0;
+}
+
+# check_nfs_stopped(path) refuses to forget a pool while its target is mounted.
+sub check_nfs_stopped
+{
+my ($path) = @_;
+die "The NFS directory is still mounted at $path; its registration was kept. Unmount it on the host before retrying\n"
+	if (is_mounted($path));
+}
+
+# enable_nfs_access() permits guest access on hosts with SELinux enabled.
+# Persist the boolean for pool and guest autostart after a host reboot.
+sub enable_nfs_access
+{
+# Hosts without an active SELinux filesystem need no policy change.
+return if (!-e '/sys/fs/selinux/enforce');
+# Webmin vetoes commands in read-only mode with a zero status; reject it here.
+die "SELinux changes are disabled in read-only mode\n" if (is_readonly_mode());
+# Log the persistent policy write and stop the caller if it fails.
+my ($output, $error);
+my $status = execute_command('/usr/sbin/setsebool -P virt_use_nfs on',
+	undef, \$output, \$error, 0, 0, 1);
+die "Cannot enable SELinux access to NFS for virtual machines: ".
+	($error || $output || 'setsebool failed')."\n" if ($status);
+}
+
+# check_nfs_target(path) refuses mounts and directories containing local data.
+# Mounting an export must not hide files or take over an existing host mount.
+sub check_nfs_target
+{
+my ($path) = @_;
+# Even an empty mount belongs to its existing owner.
+die "The NFS mount directory is already mounted\n" if (is_mounted($path));
+if (-e $path) {
+	# Existing empty directories keep their ownership and permissions.
+	opendir(my $dir, $path) || die "Cannot read the NFS mount directory: $!\n";
+	my @files = grep { $_ ne '.' && $_ ne '..' } readdir($dir);
+	closedir($dir);
+	die "Choose an empty directory for the NFS mount\n" if (@files);
+	}
+}
+
 # prepare(self, input)
-# Validates a name and canonical directory without creating or changing files.
+# Validates a registration and returns its XML and resolved target path.
+# input requires name and path; type defaults to dir and autostart to 0.
+# netfs also requires server and export. No files or mounts are changed.
 sub prepare
 {
 my ($self, $in) = @_;
 $self->assert_local();
 my $name = $in->{'name'} // '';
 my $path = $in->{'path'} // '';
+my $type = $in->{'type'} || 'dir';
+# LVM registration has a separate path; only dir and netfs use this plan.
+die "Unknown storage pool type\n" if ($type !~ /\A(?:dir|netfs)\z/);
+my $source = '';
+if ($type eq 'netfs') {
+	# Accept a DNS name or literal address, never a URL or mount options.
+	my $server = $in->{'server'} || '';
+	die "Enter an NFS server hostname or IP address\n" if (length($server) > 253 ||
+		($server !~ /\A[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9.])?\z/ &&
+		 !inet_pton(AF_INET6, $server)));
+	# mount.nfs splits the server from the export at the first colon, so an IPv6
+	# address needs brackets; libvirt passes the name to mount unchanged.
+	$server = "[$server]" if ($server =~ /:/);
+	# Keep the export path literal and escape both source values for XML.
+	my $export = $in->{'export'} || '';
+	die "Enter an absolute NFS export path without . or .. components\n"
+		if ($export !~ m{\A/[^\x00-\x1f\x7f]*\z} || length($export) > 4096 ||
+			$export =~ m{(?:\A|/)\.{1,2}(?:/|\z)});
+	$source = "<source><host name='".Cloudmin::Libvirt::xml_escape($server).
+		"'/><dir path='".Cloudmin::Libvirt::xml_escape($export).
+		"'/><format type='nfs'/></source>";
+	}
+
 die "Use a pool name of up to 64 letters, numbers, dots, underscores or hyphens, starting with a letter or number\n"
 	if ($name !~ /\A[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}\z/);
 die "Enter an absolute directory path without . or .. components\n"
@@ -581,6 +689,8 @@ my $parent = abs_path(dirname($path));
 die "The parent directory must already exist\n" if (!$parent || !-d $parent);
 $path = $exists ? abs_path($path) : ($parent eq '/' ? '' : $parent).'/'.basename($path);
 die "Choose a dedicated storage directory, not the filesystem root\n" if (!$path || $path eq '/');
+# Resolve aliases before checking that an NFS mount would hide no local data.
+check_nfs_target($path) if ($type eq 'netfs');
 my $autostart = $in->{'autostart'} // 0;
 die "Invalid start-at-boot setting\n" if ($autostart !~ /\A[01]\z/);
 foreach my $pool ($self->{'adapter'}->connect()->list_all_storage_pools(0)) {
@@ -599,23 +709,25 @@ my $uuid = unpack('H*', $bytes);
 substr($uuid, 12, 1) = '4';
 substr($uuid, 16, 1) = sprintf('%x', 8 | (hex(substr($uuid, 16, 1)) & 3));
 $uuid =~ s/\A(.{8})(.{4})(.{4})(.{4})(.{12})\z/$1-$2-$3-$4-$5/;
-my $xml = "<pool type='dir'><name>".Cloudmin::Libvirt::xml_escape($name).
-	"</name><uuid>$uuid</uuid><target><path>".Cloudmin::Libvirt::xml_escape($path)."</path></target></pool>";
+my $xml = "<pool type='$type'><name>".Cloudmin::Libvirt::xml_escape($name).
+	"</name><uuid>$uuid</uuid>$source<target><path>".Cloudmin::Libvirt::xml_escape($path)."</path></target></pool>";
 return { name => $name, path => $path, existing => $exists ? 1 : 0,
 	autostart => 0+$autostart, xml => $xml };
 }
 
 # create(self, input)
-# Registers existing VGs or creates directory pools. Existing directory contents
+# Registers existing VGs or creates directory and NFS pools. Directory contents
 # and permissions are preserved; registering a VG never formats its disks.
+# input follows prepare(), or register_lvm() for type logical.
 sub create
 {
 my ($self, $in) = @_;
 $self->assert_local();
 return $self->register_lvm($in) if (($in->{'type'} || '') eq 'logical');
-die "Unknown storage pool type\n" if (($in->{'type'} || 'dir') ne 'dir');
 return $self->{'jobs'}->lock('create-host', sub {
 	my $plan = $self->prepare($in);
+	# Set host access before allocating a pool, so policy failures leave no mount.
+	enable_nfs_access() if (($in->{'type'} || '') eq 'netfs');
 	my $pool;
 	my $ok = eval {
 		Cloudmin::Libvirt::log_call('Sys::Virt::define_storage_pool', { name => $plan->{'name'}, path => $plan->{'path'} });
@@ -629,7 +741,14 @@ return $self->{'jobs'}->lock('create-host', sub {
 	my $error = $@;
 	if (!$ok && $pool) {
 		# Roll back only the new definition, never remove files or directories.
-		my $cleaned = eval { $pool->destroy() if ($pool->is_active()); $pool->undefine(); 1 };
+		my $cleaned = eval {
+			# Stop the pool before removing its definition.
+			$pool->destroy() if ($pool->is_active());
+			# Keep the definition if an NFS mount remains.
+			check_nfs_stopped($plan->{'path'}) if (($in->{'type'} || '') eq 'netfs');
+			$pool->undefine();
+			1;
+			};
 		$error .= " Pool definition cleanup failed: $@" if (!$cleaned);
 		$error .= " Any created directory was kept at $plan->{path}." if (!$plan->{'existing'});
 		}
@@ -704,7 +823,9 @@ die "Stop virtual machines using this pool before stopping it\n"
 }
 
 # change(self, action, uuid, revision, [enabled])
-# Re-resolves persistent directory pools and refuses stale or unsupported writes.
+# Re-resolves directory and NFS pools and refuses stale or unsupported writes.
+# action is start, stop or autostart; enabled is required for autostart:
+# 0 disables startup at boot, 1 enables it.
 sub change
 {
 my ($self, $action, $uuid, $revision, $enabled) = @_;
@@ -713,8 +834,9 @@ die "Unknown storage action\n" if ($action !~ /\A(?:start|stop|autostart)\z/);
 die "Invalid storage pool ID\n" if (!defined($uuid) || $uuid !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
 return $self->{'jobs'}->lock('create-host', sub {
 	my $pool = $self->{'adapter'}->connect()->get_storage_pool_by_uuid($uuid);
-	my ($type) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
-	die "Only persistent directory pools can be managed here\n" if ($type ne 'dir' || !$pool->is_persistent());
+	my ($type, $target) = Cloudmin::Libvirt::parse_pool_xml($pool->get_xml_description(0));
+	die "Only persistent directory or NFS pools can be managed here\n"
+		if ($type !~ /\A(?:dir|netfs)\z/ || !$pool->is_persistent());
 	die "Storage settings changed; reload the page\n" if (($revision || '') ne revision($pool));
 	if ($action eq 'autostart') {
 		# A missing target must never silently turn off a boot setting.
@@ -724,6 +846,11 @@ return $self->{'jobs'}->lock('create-host', sub {
 	# Starting activates the saved pool definition without creating its directory.
 	elsif ($action eq 'start') {
 		die "Storage pool is already active\n" if ($pool->is_active());
+		if ($type eq 'netfs') {
+			# Recheck local data and host access before remounting the export.
+			check_nfs_target($target);
+			enable_nfs_access();
+			}
 		Cloudmin::Libvirt::log_call('Sys::Virt::StoragePool::create', { uuid => $uuid });
 		$pool->create();
 		}
@@ -733,6 +860,8 @@ return $self->{'jobs'}->lock('create-host', sub {
 		$self->assert_idle($pool);
 		Cloudmin::Libvirt::log_call('Sys::Virt::StoragePool::destroy', { uuid => $uuid });
 		$pool->destroy();
+		# Libvirt may leave an NFS mount despite reporting success.
+		check_nfs_stopped($target) if ($type eq 'netfs');
 		}
 	return $pool->get_name();
 	});
