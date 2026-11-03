@@ -1,7 +1,7 @@
 # Cloudmin 10 design
 
 - Status: Team draft
-- Updated: 2026-10-30
+- Updated: 2026-11-03
 - Replaces: the earlier proposal and the team `.docx` draft
 
 ## 1. Summary
@@ -88,9 +88,9 @@ Web UI          cloudmin CLI          External clients
 ```
 
 **Controller.** The Cloudmin backend runs within Webmin and uses its
-authentication, navigation and UI widgets. Virtual machine creation, power controls and offline
-management use a versioned API shared by the UI, CLI and external clients.
-Future management operations will follow the same pattern.
+authentication, navigation and UI widgets. Virtual machine creation, power controls, offline
+management, snapshots, clones and backups use a versioned API shared by the UI, CLI and
+external clients. Future management operations will follow the same pattern.
 
 SQLite is used only for persistent virtual machine creation and management jobs (requests,
 progress, resource reservations, recovery information, and history) and
@@ -131,8 +131,8 @@ configuration. Standard tools such as `virsh`, virt-manager and Cockpit keep
 working. Cloudmin will add ownership, projects, policies and schedules, and
 must detect and report changes made outside Cloudmin.
 
-**Jobs.** Image imports, virtual machine creation and offline management run as background jobs with
-progress and recovery records. Other long operations must follow the same
+**Jobs.** Image imports, virtual machine creation, offline management, snapshots, clones and
+backups run as background jobs with progress and recovery records. Other long operations must follow the same
 pattern. Job requirements include bounded logs and retries, resource locks,
 duplicate-request protection, cancellation at safe points, and tested recovery
 after a restart. Migration and failover must also prevent two hosts from
@@ -394,8 +394,8 @@ Anti-spoofing through libvirt network filters remains planned.
 
 ## 9. API, CLI and access control
 
-The virtual machine creation, power-control and offline-management API is versioned, uses JSON
-and shares its implementation with the CLI. Future operations will follow this pattern. A machine-readable
+The virtual machine creation, power-control, offline-management, snapshot, clone and backup API
+is versioned, uses JSON and shares its implementation with the CLI. Future operations will follow this pattern. A machine-readable
 schema and generated API documentation are planned.
 
 Module ACLs support host administrators and users assigned to existing virtual machines by
@@ -526,7 +526,7 @@ for Xen support in Cloudmin 10.
 | 2. First complete virtual machine | Image manager; create, start, console, stop, delete | Implemented, including deletion through the UI, API and CLI; full host qualification remains pending |
 | 3. Single-host management | Settings, disks, NICs, storage pools, networks, snapshots, clones, backups, audit | Implemented: offline virtual machine settings, disks, NICs, networks, storage pools, disk snapshots, full cloning, full backups, restore, backup schedules and retention; public cloud account tests pending |
 | 4. Cloudmin Connect and Pro tenancy | Connect GPL registration and cold moves; Connect Pro fleet capabilities; Cloudmin Pro projects, quotas, self-service and automation credentials | Pending |
-| 5. Legacy import and preview | Repeatable migration tests across file, LVM, NFS and adopted block storage; user preview | Pending; fixture collection starts now |
+| 5. Legacy import and preview | Repeatable migration tests across file, LVM, NFS and adopted block storage; user preview | Pending |
 | 6. KVM release, Xen evaluation | Release gates, documentation, then Xen fixtures | Pending |
 
 The proposed workflow uses small commits on `cloudmin-10`, kept installable at each
@@ -535,8 +535,11 @@ first working guest, Connect, tenancy and migration milestones; a final whole-br
 precedes the promotion to `main`. The last Cloudmin 9 state is tagged and kept
 on a named maintenance branch.
 
-Next steps are clean-install tests across the supported host matrix and the
-remaining virtual machine management UI.
+Next steps are the remaining first-release items: clean-install tests across
+the supported host matrix, one fully tested shared storage path, VLAN tags and
+anti-spoofing filters, scheduled snapshots, adoption of guests defined outside
+Cloudmin, the API schema, the catalogue maintenance process, legacy import and
+a stable package repository.
 
 ## 13. Release gates
 
