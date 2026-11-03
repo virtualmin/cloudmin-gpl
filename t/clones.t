@@ -81,6 +81,16 @@ is($unchanged->findvalue('/domain/devices/disk[readonly]/driver/@type'), 'raw', 
     }
 }
 
+# TPM support is opt-in: snapshots, backups and image capture still refuse it.
+{
+    my $doc = Cloudmin::Libvirt::parse_xml_document('<domain><devices><tpm/></devices></domain>');
+    my $domain = bless({}, 'CloneSourceDomain');
+    eval { Cloudmin::Snapshots::check_guest($domain, $doc); };
+    like($@, qr/TPMs/, 'disk-only operations still reject TPM state');
+    ok(eval { Cloudmin::Snapshots::check_guest($domain, $doc, 1); 1 },
+        'clone validation can accept a separately checked TPM copy');
+}
+
 # Real SQLite submission must reserve both objects until cleanup succeeds.
 SKIP: {
     skip 'SQLite bindings required', 10 unless eval { Cloudmin::Jobs::dependencies(); 1 };
@@ -137,6 +147,13 @@ SKIP: {
     unlike($html, qr/name="virtualmin_(?:key|serial)"/, 'clone never asks for installation credentials');
     like($html, qr/<option[^>]*(?:value="fresh"[^>]*selected|selected[^>]*value="fresh")/,
         'running source defaults to fresh firmware');
+    # TPM sources must offer shutdown and copied firmware as the only choices.
+    my $tpm = main::show_vm_clone_form({%$source, tpm=>1}, 'token');
+    like($tpm, qr/name="shutdown"[^>]*>\s*<option[^>]*value="1"/,
+        'TPM source offers clean shutdown only');
+    unlike($tpm, qr/<option[^>]*value="fresh"/, 'TPM source cannot choose fresh firmware');
+    like($tpm, qr/<option[^>]*(?:value="copy"[^>]*selected|selected[^>]*value="copy")/,
+        'TPM source defaults to copied firmware');
     my $stopped = main::show_vm_clone_form({%$source, active=>0}, 'token');
     like($stopped, qr/<option[^>]*(?:value="copy"[^>]*selected|selected[^>]*value="copy")/,
         'stopped source defaults to copied firmware');

@@ -18,6 +18,11 @@ file and LVM disks require shutdown. Guest-agent preparation provides filesystem
 consistency, not necessarily database consistency. Copying UEFI variables also
 requires shutdown; fresh variables omit custom boot entries.</p>
 
+<p>Cloning a software TPM 2.0 guest requires shutdown and preserves its TPM
+state and UEFI variables. Encrypted or custom TPM storage is not supported.
+Keep a recovery key for encrypted disks in case changed hardware or guest
+settings prevent automatic unlocking.</p>
+
 <p>Allow space for full disk copies, temporary work and live snapshots. If
 cleanup fails, use Active Jobs to recover before further disk operations. Do not
 delete snapshot files manually.</p>

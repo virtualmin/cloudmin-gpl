@@ -1119,6 +1119,7 @@ vm_clone_nvram_fresh=Create fresh variables
 vm_host_ssh_key=Create managed SSH access?
 vm_phase_clone_quiesce=Preparing the source for copying ..
 vm_phase_clone_disks=Copying virtual machine disks ..
+vm_phase_clone_tpm=Copying TPM state ..
 vm_phase_clone_release=Restoring the source virtual machine ..
 vm_phase_clone_prepare=Preparing the cloned guest identity ..
 backups_title=Backups and Restore

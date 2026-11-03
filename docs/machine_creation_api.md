@@ -671,6 +671,10 @@ For a running source, the guest agent freezes filesystem writes while Cloudmin t
 
 `nvram_mode` defaults to `fresh` for a running source. Libvirt creates new UEFI variables without copying the source's firmware boot entries. A stopped source or `shutdown: 1` defaults to `copy`. Selecting `copy` for a running source requires `shutdown: 1`.
 
+`clone_options` returns `tpm: 1` for a supported libvirt-managed software TPM 2.0 guest. A running source requires `shutdown: 1`. If it has UEFI variables, use `nvram_mode: "copy"`. Cloudmin copies the TPM state to the clone's own libvirt directory before restarting the source.
+
+Encrypted or custom TPM storage, physical TPMs and externally managed TPMs are not supported. Both clone modes reject encrypted root disks that libguestfs cannot inspect. Keep a recovery key for encrypted disks in case changed hardware or guest settings prevent automatic unlocking.
+
 The source UUID and destination name remain reserved until completion or successful cleanup. Use the existing `status`, `cancel` and `recover` actions. Interrupted jobs restore the source and remove incomplete copies. Cleanup failures keep the reservations.
 
 File and standard LVM pools must have room for full disk capacities and temporary snapshots. Thin pools allocate space as data is copied. LVM processing also needs temporary space on the host; free-space checks use each disk's full capacity even when the copy is sparse. Writable disks must be private raw or QCOW2 files, or managed LVM volumes. The result has no backing files.
@@ -686,6 +690,8 @@ The private worker filesystem also needs space for the full disk capacities, QCO
 Live tests are in `t/live`:
 
 - `check-clones.py` checks identity, boot, multiple disks, source preservation, cancellation and recovery.
+- `check-clone-tpm.py` tests TPM-bound LUKS unlocking in the source and clones after reboot, and confirms that a fresh TPM cannot unlock a copy.
+- `check-clone-tpm-failures.pl` checks TPM cleanup after failure, cancellation and an interrupted worker.
 - `check-clone-access.py` checks HTTP permissions and form validation.
 - `check-clone-storage.pl` checks independent raw/QCOW2 disk copies.
 - `check-clone-pools.py` checks filesystem and NFS pools on a disposable test virtual machine.

@@ -300,7 +300,11 @@ When preparing a new identity, Cloudmin updates Virtualmin's management hostname
 
 Both clone modes replace Pro license and repository credentials with `CLONE_REQUIRES_LICENSE` before boot. They use Virtualmin's offline license API without contacting a server or changing repository channels. The installed Pro files determine whether this is required. The administrator must acknowledge that the clone needs a separate Pro license or a manual downgrade to GPL. The source license stays unchanged.
 
-UEFI variables can be copied from a stopped source. Live cloning defaults to fresh variables, which do not preserve the source's firmware boot entries. Passthrough devices, TPMs, external device state, linked copies and cross-host cloning are outside this implementation.
+UEFI variables can be copied from a stopped source. Live cloning defaults to fresh variables, which do not preserve the source's firmware boot entries.
+
+Cloning copies libvirt-managed software TPM 2.0 state after shutdown and preserves any UEFI variables. Encrypted or custom TPM storage, physical TPMs and externally managed TPMs are not supported. Keep a recovery key for encrypted disks in case changed hardware or guest settings prevent automatic unlocking.
+
+Both clone modes require a Linux installation that libguestfs can inspect. Encrypted root disks that it cannot inspect are rejected. Passthrough devices, other external device state, linked copies and cross-host cloning are not supported.
 
 Full backup and restore support managed file, LVM and LVM-thin disks, hourly through yearly schedules, and retention. Backups use cloning's source preparation and recovery but preserve guest identity and license credentials. Restore verifies the archive before confirmation and leaves the restored machine stopped. Local, SSH and cloud destinations use Virtualmin's backup flow and cloud transfer helpers. Public cloud account tests are still pending. See [Full virtual machine backups](backups.md). Scheduled snapshots and autoscaling remain planned.
 

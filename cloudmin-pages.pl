@@ -2095,14 +2095,14 @@ $page .= ui_table_row(undef, ui_checkbox('confirm_license', 1, $text{'vm_clone_l
 $page .= ui_table_row($text{'vm_pool'}, ui_select('pool', $values{'pool'} || '',
 	[map { [$_->{'id'}, $_->{'name'}.' ('.nice_size_text($_->{'available'}).')'] } @{$options->{'pools'}}]));
 if ($source->{'active'}) {
-	# Running sources require either guest-agent preparation or clean shutdown.
-	$page .= ui_table_row($text{'vm_clone_consistency'}, ui_select('shutdown', 0,
-		[[0, $text{'vm_clone_agent'}], [1, $text{'vm_clone_shutdown'}]]));
+	# TPM state requires shutdown; other guests can use agent preparation.
+	$page .= ui_table_row($text{'vm_clone_consistency'}, ui_select('shutdown', $source->{'tpm'} ? 1 : 0,
+		[$source->{'tpm'} ? () : ([0, $text{'vm_clone_agent'}]), [1, $text{'vm_clone_shutdown'}]]));
 }
 if ($source->{'nvram'}) {
-	# Live sources default to fresh variables; stopped sources can copy them.
-	$page .= ui_table_row($text{'vm_clone_nvram'}, ui_select('nvram_mode', $source->{'active'} ? 'fresh' : 'copy',
-		[['copy', $text{'vm_clone_nvram_copy'}], ['fresh', $text{'vm_clone_nvram_fresh'}]]));
+	# TPM clones require shutdown and copied firmware variables.
+	$page .= ui_table_row($text{'vm_clone_nvram'}, ui_select('nvram_mode', $source->{'active'} && !$source->{'tpm'} ? 'fresh' : 'copy',
+		[['copy', $text{'vm_clone_nvram_copy'}], $source->{'tpm'} ? () : (['fresh', $text{'vm_clone_nvram_fresh'}])]));
 }
 $page .= ui_hidden_table_end('clone_source');
 # Resource overrides retain byte-unit controls used by the creation form.

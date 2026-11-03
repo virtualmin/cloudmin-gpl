@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # clone-fixture.pl fail|cancel|interrupt|cleanup
-# Fault injection and private-journal cleanup for check-clones.py only.
+# Fault injection for check-clones.py and journal cleanup for clone live tests.
 use strict;
 use warnings;
 use FindBin qw($Bin);
@@ -52,13 +52,17 @@ if ($action eq 'cleanup') {
     # Delete only finished fixture journals after their guests and disks are gone.
     foreach my $id (@{$input->{'jobs'}}) {
         my $job=$jobs->get($id) || next;
-        die "Unrelated or active fixture job\n" unless $job->{'request'}->{'name'} =~ /\Acloudmin-clone-test-[a-f0-9]{8}-(?:cold|live|shutdown|cancel|failed|interrupt|unchanged)\z/ &&
+        # Accept finished standard or TPM clone fixtures with no worker left.
+        die "Unrelated or active fixture job\n" unless $job->{'request'}->{'name'} =~ /\Acloudmin-(?:clone-test-[a-f0-9]{8}-(?:cold|live|shutdown|cancel|failed|interrupt|unchanged)|tpm-test-[a-f0-9]{8}-(?:prepared|unchanged))\z/ &&
             ($job->{'request'}->{'operation'} || '') eq 'clone' && $job->{'state'} =~ /\A(?:complete|failed|cancelled)\z/ &&
             !$job->{'cleanup_pending'} && !$jobs->busy($id);
         die "Fixture guest still exists\n" if get_libvirt(1)->find_domain($job->{'request'}->{'uuid'});
         foreach my $volume (@{$job->{'resources'}->{'volumes'} || []}, map { $job->{'resources'}->{$_} || () } qw(seed nvram)) {
             die "Fixture storage still exists\n" if $volume->{'path'} && -e $volume->{'path'};
         }
+        # Keep the journal if TPM cleanup still needs its recorded ownership.
+        die "Fixture TPM still exists\n" if $job->{'resources'}->{'tpm'} &&
+            -d Cloudmin::TPM::path($job->{'request'}->{'uuid'});
         $jobs->write_data(sub { $_[0]->do('DELETE FROM jobs WHERE id = ?',undef,$id); });
     }
     print "{}\n";

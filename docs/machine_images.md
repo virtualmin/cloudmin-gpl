@@ -8,7 +8,7 @@ Capture requires libguestfs and its Perl bindings, YAML::XS 0.69 or later, and b
 
 ## Supported sources
 
-Capture supports one writable Linux system disk using virtio, with working cloud-init and an installation libguestfs can inspect. Cloudmin seed disks are omitted. Additional writable disks, attached installation media and read-only data disks are rejected. The shared clone checks also reject devices whose state cannot be copied, such as TPMs.
+Capture supports one writable Linux system disk using virtio, with working cloud-init and an installation libguestfs can inspect. Cloudmin seed disks are omitted. Additional writable disks, attached installation media and read-only data disks are rejected. TPMs and other devices with external state are not supported.
 
 Live capture requires a responding guest agent. Cloudmin briefly freezes the filesystems and takes a temporary snapshot. For file disks, it copies the stable disk, then merges the temporary write overlay. For LVM disks, it briefly pauses the guest to create a native snapshot, copies that snapshot, then removes it. Writes stay on the original logical volume. Clean-shutdown capture restarts a source that was initially running. A stopped source stays stopped. New virtual machines use fresh firmware variables; custom firmware settings are not preserved.
 

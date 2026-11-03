@@ -8,6 +8,7 @@ use Digest::SHA qw(sha256_hex);
 use WebminCore qw(make_dir convert_to_json);
 require(dirname(__FILE__).'/VMs.pm');
 require(dirname(__FILE__).'/Snapshots.pm');
+require(dirname(__FILE__).'/TPM.pm');
 our @ISA = ('Cloudmin::VMs');
 
 # manager(self) supplies managed-volume and domain validation.
@@ -34,13 +35,16 @@ return $1 if ($job->{'resources'}->{'software'} && $job->{'state'} eq 'complete'
 return '';
 }
 
-# source(self, uuid) validates storage and hardware before copying anything.
-# Returns the adapter, domain, secure XML document, disk list and NVRAM path.
+# source(self, uuid, [copy_tpm]) validates storage before copying anything.
+# copy_tpm defaults to false; backups and image capture still reject TPMs.
+# Returns the adapter, domain, XML, disks, NVRAM path and optional TPM state.
 sub source
 {
-my ($self, $uuid) = @_;
+my ($self, $uuid, $copy_tpm) = @_;
 my ($adapter, $domain, $doc) = $self->manager()->get_guest($uuid);
-Cloudmin::Snapshots::check_guest($domain, $doc);
+# Cloning may accept TPM state only after its separate storage checks pass.
+my $tpm = $copy_tpm ? Cloudmin::TPM::source($adapter, $domain, $doc) : undef;
+Cloudmin::Snapshots::check_guest($domain, $doc, $tpm);
 # Reject unsupported consoles before inspecting or copying any storage.
 die "Cloning supports VNC graphical consoles\n"
 	if ($doc->exists('/domain/devices/graphics[not(@type="vnc")]'));
@@ -81,14 +85,14 @@ if ($doc->exists('/domain/os/nvram')) {
 	die "The source UEFI variables are missing or unusable\n" if (!@stat || !-f _ || -l _ ||
 		$stat[7] < 1024 || $stat[7] > 64*1024**2);
 }
-return ($adapter, $domain, $doc, $disks, $nvram);
+return ($adapter, $domain, $doc, $disks, $nvram, $tpm);
 }
 
 # choices(self, uuid) exposes source defaults without secure XML or disk paths.
 sub choices
 {
 my ($self, $uuid) = @_;
-my ($adapter, $domain, $doc, $disks, $nvram) = $self->source($uuid);
+my ($adapter, $domain, $doc, $disks, $nvram, $tpm) = $self->source($uuid, 1);
 my $settings = $self->manager()->settings($uuid);
 my $options = $self->options();
 # Match the source's first interface to a currently available attachment.
@@ -96,7 +100,7 @@ my $nic = $settings->{'interfaces'}->[0] || {};
 my ($network) = grep { $_->{'type'} eq ($nic->{'type'} || '') &&
 	$_->{'source'} eq ($nic->{'source'} || '') } @{$options->{'networks'}};
 return { id => $uuid, name => $domain->get_name(), revision => Cloudmin::Snapshots::revision($domain),
-	active => $domain->is_active() ? 1 : 0, nvram => $nvram ? 1 : 0,
+	active => $domain->is_active() ? 1 : 0, nvram => $nvram ? 1 : 0, tpm => $tpm ? 1 : 0,
 	virtualmin => $self->installed_edition($doc),
 	cpus => $settings->{'cpus'}, memory_mib => $settings->{'memory_mib'},
 	pool => (grep { !$_->{'readonly'} } @$disks)[0]->{'volume'}->{'pool'},
@@ -111,7 +115,7 @@ return { id => $uuid, name => $domain->get_name(), revision => Cloudmin::Snapsho
 sub prepare
 {
 my ($self, $input, $id, $hash) = @_;
-my ($adapter, $domain, $doc, $disks, $nvram) = $self->source($input->{'id'});
+my ($adapter, $domain, $doc, $disks, $nvram, $tpm) = $self->source($input->{'id'}, 1);
 my $revision = Cloudmin::Snapshots::revision($domain);
 # Refuse stale forms before resolving defaults or allocating a destination.
 die "The source virtual machine changed; reload the clone page\n"
@@ -142,6 +146,12 @@ die "Install bsdtar for cloning\n" if (!-x '/usr/bin/bsdtar');
 my @interfaces = $doc->findnodes('/domain/devices/interface');
 die "Prepared cloning currently requires one network interface; choose an unchanged copy instead\n"
 	if ($mode eq 'prepared' && @interfaces != 1);
+# A filesystem freeze cannot make a running emulator's TPM state safe to copy.
+die "Shut down the source to clone its TPM\n"
+	if ($tpm && $domain->is_active() && !$input->{'shutdown'});
+# Fresh UEFI variables can change boot measurements used by TPM unlock policies.
+die "TPM cloning requires copied UEFI variables\n"
+	if ($tpm && $nvram && ($input->{'nvram_mode'} || 'copy') ne 'copy');
 my $firmware = $input->{'nvram_mode'} ||
 	($domain->is_active() && !$input->{'shutdown'} ? 'fresh' : 'copy');
 die "Select copied or fresh UEFI variables\n" if ($firmware !~ /\A(?:copy|fresh)\z/);
@@ -200,6 +210,8 @@ $r->{'uuid'} = join('-', substr($hex,0,8), substr($hex,8,4), '4'.substr($hex,13,
 # VNC permits at most eight characters, as in ordinary VM creation.
 $r->{'console_password'} = substr(Cloudmin::Images::generate_id(), 0, 8);
 $r->{'virtualmin'} = $edition;
+# Keep the validated TPM path and directory identity for the stopped copy.
+$r->{'tpm'} = $tpm if ($tpm);
 $r->{'nvram_identity'} = Cloudmin::VMManage::file_identity($nvram) if ($nvram);
 # Copied firmware stays in a file pool even when guest disks move to LVM.
 $r->{'auxiliary_pool'} = Cloudmin::Libvirt::file_pool($adapter, $r->{'pool'})->get_uuid_string()
@@ -319,6 +331,12 @@ foreach my $channel ($doc->findnodes('/domain/devices/channel')) {
 	if ($channel->findvalue('target/@name') ne 'org.qemu.guest_agent.0') { $channel->unbindNode(); }
 	# Let libvirt allocate a socket for the copied guest agent.
 	else { $_->unbindNode() foreach $channel->findnodes('source'); }
+}
+# The new UUID selects the copied TPM directory; never retain a source path.
+foreach my $backend ($doc->findnodes('/domain/devices/tpm/backend')) {
+	$_->unbindNode() foreach $backend->findnodes('source');
+	# Remove clone state on undefine, even if the source retained its own state.
+	$backend->setAttribute('persistent_state', 'no');
 }
 # A copied path preserves variables; an empty node requests fresh variables.
 foreach my $node ($doc->findnodes('/domain/os/nvram')) {
@@ -465,7 +483,12 @@ my $r = $job->{'request'};
 Cloudmin::Worker->new()->cleanup($job->{'worker'}) if ($job->{'worker'});
 # Restore the source first; failed restoration must keep both reservations.
 $self->release_source($id, $adapter) if ($job->{'resources'}->{'started'});
+# Undefining the clone can delete its TPM, so check other references first.
+Cloudmin::TPM::assert_unused($adapter, $r->{'uuid'}, Cloudmin::TPM::path($r->{'uuid'}))
+	if ($job->{'resources'}->{'tpm'});
 $adapter->remove_created_guest($r->{'uuid'}, $id) if ($job->{'resources'}->{'domain'});
+# An interrupted allocation may have state without a defined clone to remove.
+Cloudmin::TPM::remove_copy($adapter, $r->{'uuid'}, $id) if ($job->{'resources'}->{'tpm'});
 # Remove credentials and volumes only through their recorded ownership checks.
 $self->{'ssh_keys'}->remove($r->{'uuid'}, $id) if ($job->{'resources'}->{'ssh_key'});
 foreach my $volume (@{$job->{'resources'}->{'volumes'} || []}, map { $job->{'resources'}->{$_} || () } qw(seed nvram)) {
@@ -504,7 +527,7 @@ return $jobs->run_worker($id, sub {
 		$jobs->update($id, sub { $_[0]->{'state'} = 'running'; });
 		$self->step($id, 'preflight', sub {
 			# Recheck source revision and destination name after waiting for a worker.
-			my (undef, $source) = $self->source($r->{'source_uuid'});
+			my (undef, $source) = $self->source($r->{'source_uuid'}, 1);
 			die "The clone source changed after submission\n" if (Cloudmin::Snapshots::revision($source) ne $r->{'source_revision'});
 			die "The clone name is already in use\n" if (grep { $_->get_name() eq $r->{'name'} } $adapter->connect()->list_all_domains());
 			# File copies and overlays share filesystem space. LVM allocation is
@@ -575,6 +598,15 @@ return $jobs->run_worker($id, sub {
 				$jobs->update($id, sub { $_[0]->{'resources'}->{'nvram'} = $volume; });
 			}
 		});
+		if ($r->{'tpm'}) {
+			# Keep the source stopped until disks, firmware and TPM state are copied.
+			$self->step($id, 'clone_tpm', sub {
+				Cloudmin::TPM::copy($r->{'tpm'}, $r->{'uuid'}, $id, $source, sub {
+					# Journal intent before creating the TPM directory.
+					$jobs->update($id, sub { $_[0]->{'resources'}->{'tpm'} = 1; });
+				});
+			});
+		}
 		$self->step($id, 'clone_release', sub { $self->release_source($id, $adapter); });
 		my $seed;
 
