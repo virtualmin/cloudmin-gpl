@@ -13,9 +13,10 @@ inside the guest afterward. Network changes also require matching guest settings
 or a renewed DHCP lease. Snapshots and backup checkpoints must be removed before
 changing the disk layout.</p>
 
-<p>Password resets require a running guest and responding agent. They change an
-existing guest account, without changing SSH authentication settings or the
-Webmin password.</p>
+<p>Open <b>Edit Virtual Machine &gt; Access</b> to manage guest passwords and,
+in Pro, SSH keys. Password resets require a running guest and a responding
+guest agent. They change an existing account's password, leaving SSH login
+settings and the Webmin password unchanged.</p>
 
 <p>Forced power-off and hard reset skip clean shutdown and can lose data.
 Deletion permanently removes the selected disks. Keeping writable disks requires

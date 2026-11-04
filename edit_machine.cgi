@@ -19,47 +19,30 @@ error_setup($text{'vm_control_error'})
 	if (($in{'action'} || '') =~ /\A(?:start|shutdown)\z/);
 # Return successful saves to the selected editor tab.
 my $tab = $in{'vm_edit_tabs'} || 'resources';
-$tab = 'resources' if ($tab !~ /\A(?:resources|disks|interfaces)\z/);
-error($text{'vm_manage_readonly'}) if (is_readonly_mode());
-# The reset form opens even for stopped guests; submission checks readiness.
-# Delegates also land here when following an editor link without an action.
-if ($in{'password_reset'} || ($in{'action'} || '') eq 'reset_password' ||
-	(!can_access('host') && !$in{'action'})) {
+$tab = 'resources' if ($tab !~ /\A(?:resources|disks|interfaces|access)\z/);
+# Old password links now open the Access tab, including delegated sessions.
+$tab = 'access' if ($in{'password_reset'} || !can_access('host'));
+# Read-only sessions may view Access but cannot submit or review changes.
+error($text{'vm_manage_readonly'}) if (is_readonly_mode() &&
+	($tab ne 'access' || $in{'password_reset'} || $in{'action'} || $in{'delete'} ||
+		defined($in{'delete_disk'}) || $in{'shutdown_requested'}));
+# Password submissions use the reset API without applying hardware fields.
+if (($in{'action'} || '') eq 'reset_password') {
 	error_setup($text{'vm_password_reset_error'});
-	# Check the guest assignment before reading inventory or accepting a reset.
-	error($text{'acl_denied'}) if (!can_access('password', $in{'id'}));
-	if ($in{'action'}) {
-		# Accept only reset POSTs, using the API's ACL and token checks.
-		my $result = eval {
-			die "Use POST for virtual machine changes\n"
-				if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
-			die "Unknown password reset action\n" if ($in{'action'} ne 'reset_password');
-			call_vm_api(1, 'reset_password', \%in);
-			};
-		# Report failure before sending any success redirect.
-		error(error_html(error_message($@))) if (!$result);
-		# Redirect without the password so refreshing cannot repeat the reset.
-		redirect('edit_machine.cgi?id='.urlize($result->{'id'}).
-			'&password_reset=1&password_saved=1');
-		exit;
-		}
-	# Basic inventory is enough to render the form, even without a guest agent.
-	my $vm = eval { get_libvirt()->get_domain($in{'id'}, 1) };
-	error(error_html($@ ? error_message($@) : 'Virtual machine not found')) if (!$vm);
-	ui_print_header(html_escape($vm->{'name'}), $text{'vm_password_reset'}, '', 'machine');
-	select_theme_server($vm);
-	# Show confirmation after the successful POST redirects back to this form.
-	print ui_alert_box($text{'vm_password_reset_done'}, 'success', undef, undef, '')
-		if ($in{'password_saved'});
-	print show_vm_password_reset_form($vm, get_image_jobs()->form_token($remote_user));
-	# Delegates return to details because the hardware editor is host-only.
-	ui_print_footer(can_access('host')
-		? ('edit_machine.cgi?id='.urlize($vm->{'uuid'}), $text{'vm_edit_return'})
-		: ('machine.cgi?id='.urlize($vm->{'uuid'}), $text{'vm_view'}));
+	my $result = eval {
+		die "Use POST for virtual machine changes\n"
+			if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+		call_vm_api(1, 'reset_password', \%in);
+		};
+	error(error_html(error_message($@))) if (!$result);
+	# Drop the submitted password from navigation and prevent a refresh replay.
+	redirect('edit_machine.cgi?id='.urlize($result->{'id'}).
+		'&vm_edit_tabs=access&vm_access_tabs=password&password_saved=1');
 	exit;
 	}
-# A password grant never permits hardware editing, deletion or power actions.
-error($text{'acl_denied'}) if (!can_access('host'));
+# A password grant does not permit hardware, power or deletion actions.
+error($text{'acl_denied'}) if (!can_access('host') &&
+	($in{'action'} || $in{'delete'} || defined($in{'delete_disk'}) || $in{'shutdown_requested'}));
 # Every form uses the same controller validation as API and CLI callers.
 if (($ENV{'REQUEST_METHOD'} || '') eq 'POST' && $in{'action'}) {
 	my $job = eval {
@@ -97,6 +80,27 @@ if (($ENV{'REQUEST_METHOD'} || '') eq 'POST' && $in{'action'}) {
 		'vm_saved='.urlize($job->{'id'}));
 	exit;
 	}
+# Access needs only guest inventory; it must also work for password delegates.
+my $access_only = !can_access('host') || is_readonly_mode();
+error($text{'acl_denied'}) if (!can_access('host') && !can_access('password', $in{'id'}));
+# Read-only rendering must not open the writable token store.
+my $token = is_readonly_mode() ? '' : get_image_jobs()->form_token($remote_user);
+my $access_vm;
+# Confirmation and shutdown pages do not render guest access controls.
+if (!$in{'delete'} && !defined($in{'delete_disk'}) && !$in{'shutdown_requested'}) {
+	$access_vm = eval { get_libvirt()->get_domain($in{'id'}, 1) };
+	error(error_html($@ ? error_message($@) : 'Virtual machine not found')) if (!$access_vm);
+	}
+# Restricted sessions render Access without querying hardware edit settings.
+if ($access_only) {
+	ui_print_header(html_escape($access_vm->{'name'}), $text{'vm_edit'}, '', 'machine');
+	select_theme_server($access_vm);
+	print ui_page_assets().vm_edit_tabs_start('access', 1).
+		ui_tabs_start_tab('vm_edit_tabs', 'access').show_vm_access($access_vm, $token, \%in).
+		ui_tabs_end_tab('vm_edit_tabs', 'access').ui_tabs_end(1);
+	ui_print_footer('machine.cgi?id='.urlize($access_vm->{'uuid'}), $text{'vm_view'});
+	exit;
+	}
 my $settings = eval { call_vm_api(1, 'settings', \%in) };
 error(error_html(error_message($@))) if (!$settings);
 my $disk;
@@ -107,7 +111,6 @@ if (defined($in{'delete_disk'})) {
 	error($text{'vm_delete_disk_missing'}) if (!$disk || !$disk->{'volume_info'});
 	error($text{'vm_delete_disk_imported'}) if ($disk->{'imported'});
 	}
-my $token = get_image_jobs()->form_token($remote_user);
 # Edit views share status badges; deletion confirmations keep their own heading.
 ui_print_header(html_escape($settings->{'name'}).
 	(!$disk && !$in{'delete'} ? vm_header_status($settings) : ''),
@@ -117,7 +120,8 @@ print_vm_change_result($in{'vm_disk_deleted'}, 'delete_disk', $settings->{'id'})
 select_theme_server($settings);
 print $disk ? show_vm_delete_disk_form($settings, $token, $disk)
 	: show_vm_edit_form($settings, $token, $in{'delete'},
-		$in{'shutdown_requested'}, $tab);
+		$in{'shutdown_requested'}, $tab,
+		$access_vm ? show_vm_access($access_vm, $token, \%in) : undef);
 if ($settings->{'active'} && $in{'shutdown_requested'}) {
 	# Open the editor once shutdown completes, using the shared socket.
 	# Editable pages do not reload over unsaved changes.

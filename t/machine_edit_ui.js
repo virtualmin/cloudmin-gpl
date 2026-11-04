@@ -8,7 +8,8 @@ function fixture() {
     const elements = {}, handlers = {}, jquery = {};
     const saved = {cpus: 2, cpu_limit: 4, memory_mib: 1024, memory_limit_mib: 1536};
     for (const [name, value] of Object.entries({...saved, memory_mib_units: 1048576, memory_limit_mib_units: 1048576})) {
-        elements[name] = {name, value: String(value), dataset: {}, handlers: {},
+        // setAttribute(name, value) ignores ordinary field associations here.
+        elements[name] = {name, value: String(value), dataset: {}, handlers: {}, setAttribute() {},
             // addEventListener(event, fn) captures field listeners for replay.
             addEventListener(event, fn) { (this.handlers[event] ||= []).push(fn); }};
     }
@@ -16,17 +17,24 @@ function fixture() {
         elements[name].dataset = {vmMin: name.startsWith('memory') ? 256*1048576 : 1,
             vmMax: name.startsWith('memory') ? 8192*1048576 : 8};
     }
-    // Retain listeners so ordinary and synthetic
-    // changes can be fired separately.
-    const form = {dataset: {}, elements, querySelector: selector => elements[selector.match(/name="([^"]+)"/)[1]],
-        querySelectorAll: () => Object.values(elements).filter(input => input.dataset.vmMax),
+    // setAttribute(name, value) records the tab input's form association.
+    elements.vm_edit_tabs = {dataset: {}, attributes: {}, setAttribute(name, value) { this.attributes[name] = value; }};
+    // A hidden id input shadows form.id. One fixture node stands in for both
+    // the hardware form and editor; separate maps retain their listeners.
+    // querySelector(selector) finds a named field and omits the Access pane.
+    const form = {id: {name: "id"}, dataset: {}, elements, querySelector: selector => selector.startsWith('#att_') ? null : elements[selector.match(/name="([^"]+)"/)[1]],
+        // querySelectorAll(selector) supplies tabs or editable resource fields.
+        querySelectorAll: selector => selector.includes('vm_edit_tabs') ? [elements.vm_edit_tabs]
+            : Object.values(elements).filter(input => input.dataset.vmMax),
+        // addEventListener(name, fn) records bubbled native editor events.
         addEventListener: (name, fn) => (handlers[name] ||= []).push(fn)};
     // jQuery(target) returns on(name, fn), which stores synthetic listeners
     // separately from native events for the chosen field or editor.
     const window = {jQuery: target => ({on: (name, fn) => {
         (jquery[target.name || 'form'] ||= {})[name] = fn;
     }})};
-    const document = {readyState: 'complete', getElementById: id => id === 'vm-edit-form' ? form : null};
+    // getElementById(id) maps both editor IDs to the shared fixture node.
+    const document = {readyState: 'complete', getElementById: id => ['vm-edit-form', 'vm-editor'].includes(id) ? form : null};
     const context = vm.createContext({window, document});
     vm.runInContext(source, context);
     return {elements, window, handlers,
@@ -57,6 +65,7 @@ const f = fixture();
 // Allocation ranges track edited maximums and unit conversions.
 assert.equal(f.elements.cpus.max, 4, 'CPU range starts at the saved maximum');
 assert.equal(f.elements.memory_mib.max, 1536, 'memory range starts at the saved maximum');
+assert.equal(f.elements.vm_edit_tabs.attributes.form, 'vm-edit-form', 'the tab selection submits with hardware saves');
 f.change('cpu_limit', '6');
 assert.equal(f.elements.cpus.max, 6, 'CPU range follows the chosen maximum');
 f.change('memory_limit_mib_units', '1073741824', true);

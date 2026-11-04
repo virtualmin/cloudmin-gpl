@@ -87,6 +87,14 @@ my $cli = Cloudmin::CLI->new(out=>$outfh,err=>$errfh,now=>sub {$clock},sleep=>su
         }
         # Review returns validated fields without submitting a job.
         return {name=>$input->{name},password_set=>1} if ($action eq 'review');
+        # Only the explicit download fixture returns private key material.
+        return {private=>'fixture-private-key'} if ($action eq 'download_ssh_key');
+        # Library reads supply a reviewed revision or the complete list.
+        return $input->{key} ? {id=>$job,name=>'Saved',addnew=>1,revision=>'key-revision'} : [] if ($action eq 'ssh_keys');
+        # Guest removal reviews a revision separate from the library record.
+        return {keys=>[],revision=>'guest-key-revision'} if ($action eq 'guest_ssh_keys');
+        # Key changes finish synchronously without creating durable jobs.
+        return {id=>$job,name=>'Saved'} if ($action =~ /^(?:save_ssh_key|delete_ssh_key|add_guest_ssh_key|remove_guest_ssh_key)$/);
         # Remaining mutations submit a durable job that the CLI must follow.
         return {id=>$job,name=>$input->{name} || $machine->{name},state=>'queued',phase=>'queued'};
     });
@@ -179,6 +187,14 @@ my %cases = (
 'deregister-license'=>['deregister_license',['--yes'],{confirm=>1}],
 'check-license'=>['check_license',[],{}],
 'change-license'=>['change_license',['--serial','12345','--key-file',"$tmp/password"],{serial=>'12345',license_key=>'test-secret'}],
+'download-ssh-key'=>['download_ssh_key',['--key',$job],{key=>$job}],
+'list-ssh-keys'=>['ssh_keys',[],{}],
+'create-ssh-key'=>['save_ssh_key',['--name','Saved'],{name=>'Saved',source=>'generate'}],
+'modify-ssh-key'=>['save_ssh_key',['--key',$job,'--name','Renamed'],{key=>$job,name=>'Renamed',addnew=>1,revision=>'key-revision'}],
+'delete-ssh-key'=>['delete_ssh_key',['--key',$job,'--yes'],{key=>$job,revision=>'key-revision',confirm=>1}],
+'list-system-keys'=>['guest_ssh_keys',['--user','admin'],{id=>$uuid,username=>'admin'}],
+'add-system-key'=>['add_guest_ssh_key',['--user','admin','--key',$job],{id=>$uuid,username=>'admin',key=>$job}],
+'remove-system-key'=>['remove_guest_ssh_key',['--user','admin','--key','f'x64,'--yes'],{id=>$uuid,username=>'admin',key=>'f'x64,revision=>'guest-key-revision',confirm=>1}],
 'api'=>['raw',['options'],'options'],
 );
 open(my $pw,'>',"$tmp/password") || die $!; print $pw "test-secret\n"; close($pw);
@@ -205,7 +221,7 @@ foreach my $command (@{Cloudmin::CLI::commands()}) {
 }
 
 # The API action set comes from its public contract, not the CLI definitions.
-my @actions = qw(license check_license change_license deregister_license storage register_pool pool_start pool_stop pool_autostart volume_review delete_volume pool_review unregister_pool options machines review create status list cancel cancel_cleanup recover discard start shutdown reboot suspend resume reset reset_password power_cycle force_off autostart snapshots snapshot_create snapshot_restore snapshot_delete bridges bridge_remove_review bridge_remove bridge_status bridge_confirm bridge_rollback settings update add_disk attach_disk detach_disk delete_disk grow_disk add_interface update_interface remove_interface change_media delete clone_options clone image_options capture_image backups backup backup_inspect restore);
+my @actions = qw(download_ssh_key ssh_keys save_ssh_key delete_ssh_key guest_ssh_keys add_guest_ssh_key remove_guest_ssh_key license check_license change_license deregister_license storage register_pool pool_start pool_stop pool_autostart volume_review delete_volume pool_review unregister_pool options machines review create status list cancel cancel_cleanup recover discard start shutdown reboot suspend resume reset reset_password power_cycle force_off autostart snapshots snapshot_create snapshot_restore snapshot_delete bridges bridge_remove_review bridge_remove bridge_status bridge_confirm bridge_rollback settings update add_disk attach_disk detach_disk delete_disk grow_disk add_interface update_interface remove_interface change_media delete clone_options clone image_options capture_image backups backup backup_inspect restore);
 my %mapped;
 foreach my $c (@{Cloudmin::CLI::commands()}) {
     $mapped{$_}=1 for grep {defined($_)} ($c->{action},$c->{prepare},$c->{summary_action},@{$c->{additional_actions} || []},map {$_->{action}} values %{$c->{options}});

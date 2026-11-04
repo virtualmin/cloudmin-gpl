@@ -127,7 +127,7 @@ is($result->{'url'}, "edit_machine.cgi?id=$uuid&shutdown_requested=1", 'shutdown
 
 # Reset saves synchronously and stays in the editor, without polling a job.
 $result = submit('reset_password', '', { id => $uuid });
-is($result->{'url'}, "edit_machine.cgi?id=$uuid&password_reset=1&password_saved=1",
+is($result->{'url'}, "edit_machine.cgi?id=$uuid&vm_edit_tabs=access&vm_access_tabs=password&password_saved=1",
 	'password reset returns to its editor form');
 is_deeply($result->{'calls'}, ['reset_password'], 'password reset does not wait for a job');
 # A stopped guest or unavailable agent must produce an error, not a success URL.
@@ -161,6 +161,19 @@ local *main::ui_print_header = sub { };
 local *main::ui_print_footer = sub { };
 # select_theme_server(vm) avoids theme state changes in the fixture.
 local *main::select_theme_server = sub { };
+# Tab layout is exercised in pages.t; keep this fixture focused on permissions.
+# ui_page_assets() omits assets from this controller-only fixture.
+local *main::ui_page_assets = sub { '' };
+# vm_edit_tabs_start(tab, [access_only]) omits the outer tab markup.
+local *main::vm_edit_tabs_start = sub { '' };
+# ui_tabs_start_tab(name, tab) omits a pane opener.
+local *main::ui_tabs_start_tab = sub { '' };
+# ui_tabs_end_tab(name, tab) omits a pane closer.
+local *main::ui_tabs_end_tab = sub { '' };
+# ui_tabs_end([footer]) omits the tab container closer.
+local *main::ui_tabs_end = sub { '' };
+# show_vm_access_tabs(password, keys, [tab]) exposes the reset-form marker.
+local *main::show_vm_access_tabs = sub { $_[0] };
 # show_vm_password_reset_form(vm, token) marks that rendering was reached.
 local *main::show_vm_password_reset_form = sub { return 'Password form'; };
 # open_reset([fields]) runs a GET; fields defaults to {} and overrides the input.

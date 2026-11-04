@@ -59,20 +59,30 @@ crypt.crypt.restype = ctypes.c_char_p
 
 
 class Fields(HTMLParser):
-    """Read input values, including the form token, without printing them."""
+    """Read only the password form's input values, without printing them."""
 
-    # __init__(self, page) records each input's name and current value.
+    # __init__(self, page) parses the editor and collects reset-form fields.
     def __init__(self, page):
         super().__init__()
         self.values = {}
+        self.in_form = False
         self.feed(page)
 
-    # handle_starttag(self, tag, attrs) ignores non-input markup.
+    # handle_starttag(self, tag, attrs) tracks the reset form and its inputs.
     def handle_starttag(self, tag, attrs):
-        # Keep routing fields and the token for a normal form submission.
-        if tag == 'input':
-            attrs = dict(attrs)
+        attrs = dict(attrs)
+        # Other editor forms submit different actions and fields.
+        if tag == 'form':
+            self.in_form = attrs.get('id') == 'vm-password-reset-form'
+        # Collect only reset-form fields, including routing values and token.
+        if tag == 'input' and self.in_form:
             self.values[attrs.get('name')] = attrs.get('value', '')
+
+    # handle_endtag(self, tag) excludes inputs from other editor forms.
+    def handle_endtag(self, tag):
+        # Inputs after this closing tag belong to another editor section.
+        if tag == 'form':
+            self.in_form = False
 
 
 # request(opener, path, [fields], [as_json]) sends GET when fields is None.
@@ -279,8 +289,8 @@ try:
         expected = 'must be running' if stopped else 'agent is not responding'
         assert expected in api(opener, 'reset_password', **fields)['error']
         editor = request(opener, '/server-manager/edit_machine.cgi?id=' + identity)
-        assert 'vm-password-reset-review-form' in editor, 'Editor hid password reset'
-        # Open the form in either state; readiness errors belong on POST.
+        assert 'vm-password-reset-form' in editor, 'Editor hid password reset'
+        # Legacy reset links still open Access; readiness is checked on POST.
         page = request(opener, '/server-manager/edit_machine.cgi?id=' + identity + '&password_reset=1')
         assert 'vm-password-reset-form' in page, 'Unavailable guest cannot open reset form'
         form = Fields(page).values

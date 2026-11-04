@@ -35,6 +35,7 @@ return {
     'password-file' => option('file', field => 'password', secret => 1, help => 'Password file, or - for stdin'),
     'ssh-key' => option('s@', field => 'ssh_keys', join => "\n", help => 'SSH public key; repeat for more keys'),
     'ssh-keys-file' => option('file', field => 'ssh_keys', help => 'File containing SSH public keys'),
+    'saved-key' => option('s@', field => 'saved_ssh_keys', join => ',', help => 'Saved SSH key ID (Pro); repeat for more keys'),
     # Power, firmware and identity fields share creation and clone validation.
     network => option('s', resolve => 'network', help => 'Network key, UUID or name, or bridge:name'),
     start => option('yesno', help => 'Start after creation'),
@@ -350,6 +351,51 @@ foreach my $item (
     $add->($item->[0],$item->[1],$item->[2],group => 'Host bridges',bridge => $item->[1] eq 'bridge_rollback' ? 1 : 0,
         options => {id => option('s',required => 1,help => 'Bridge transaction ID')});
 }
+# Pro keys share the same API checks as the web forms.
+$add->('list-ssh-keys', 'ssh_keys', 'Lists saved SSH keys (Pro).',
+    group => 'SSH keys', list => {key => 'name', columns => [qw(id name type fingerprint addnew)]});
+$add->('create-ssh-key', 'save_ssh_key', 'Generates or imports an SSH key (Pro).',
+    group => 'SSH keys', options => {
+        name => option('s', required => 1, help => 'Key name'),
+        source => option('s', default => 'generate', values => [qw(generate public private)], help => 'Generate a key pair, or import a public or unencrypted private key'),
+        type => option('s', values => [qw(ed25519 rsa)], help => 'Generated key type; defaults to Ed25519'),
+        'key-file' => option('file', field => 'data', secret => 1, help => 'Imported key file, or - for stdin'),
+        automatic => option('yesno', field => 'addnew', help => 'Add to new virtual machines created from cloud images and to prepared clones'),
+    });
+# Review the current library revision before changing a saved entry.
+$add->('modify-ssh-key', 'save_ssh_key', 'Changes the name or automatic setting of a saved key (Pro).',
+    group => 'SSH keys', prepare => 'ssh_keys', prepare_fields => ['key'], options => {
+        key => option('s', required => 1, help => 'Saved key ID'),
+        name => option('s', help => 'New key name'),
+        automatic => option('yesno', field => 'addnew', help => 'Add to new virtual machines created from cloud images and to prepared clones'),
+    });
+# Private output is available only through the explicit download command.
+$add->('download-ssh-key', 'download_ssh_key', 'Writes a generated private key to standard output (Pro).',
+    group => 'SSH keys', private_key => 1,
+    options => {key => option('s', required => 1, help => 'Saved key ID')});
+# Deletion needs both the reviewed revision and user confirmation.
+$add->('delete-ssh-key', 'delete_ssh_key', 'Deletes a library entry without changing guests (Pro).',
+    group => 'SSH keys', prepare => 'ssh_keys', prepare_fields => ['key'], confirm => 1,
+    options => {key => option('s', required => 1, help => 'Saved key ID')});
+# Guest commands address an existing account on a selected virtual machine.
+$add->('list-system-keys', 'guest_ssh_keys', 'Lists an existing guest account\'s SSH keys (Pro).',
+    group => 'SSH keys', select => 'machine', subset => 'keys',
+    list => {key => 'id', columns => [qw(id fingerprint protected public)]},
+    options => {user => option('s', required => 1, field => 'username', help => 'Existing guest account')});
+# The API accepts one saved key or pasted public text, never both sources.
+$add->('add-system-key', 'add_guest_ssh_key', 'Adds public keys to an existing guest account (Pro).',
+    group => 'SSH keys', select => 'machine', options => {
+        user => option('s', required => 1, field => 'username', help => 'Existing guest account'),
+        key => option('s', help => 'Saved key ID'),
+        'public-key-file' => option('file', field => 'public', help => 'File of public keys, or - for stdin; use instead of --key'),
+    });
+# Guest removal reviews guest entry IDs, which differ from library IDs.
+$add->('remove-system-key', 'remove_guest_ssh_key', 'Removes one authorized key entry from a guest account (Pro).',
+    group => 'SSH keys', select => 'machine', prepare => 'guest_ssh_keys',
+    prepare_fields => [qw(id username)], confirm => 1, options => {
+        user => option('s', required => 1, field => 'username', help => 'Existing guest account'),
+        key => option('s', required => 1, help => 'Guest key ID from list-system-keys'),
+    });
 # License repair stays available after expiry; keys use private files or stdin.
 $add->('get-license','license','Shows the Cloudmin license status.',group => 'License Manager');
 $add->('check-license','check_license','Rechecks the Cloudmin license with the license server.',group => 'License Manager');
@@ -377,7 +423,7 @@ return bless {out => \*STDOUT, err => \*STDERR, in => \*STDIN,
 }
 
 # read_actions() identifies requests that do not need a form token.
-sub read_actions { return qw(options machines settings status list snapshots clone_options image_options backups bridges bridge_status storage license); }
+sub read_actions { return qw(options machines settings status list snapshots clone_options image_options backups bridges bridge_status storage license ssh_keys guest_ssh_keys); }
 
 # command(self, name) finds a command definition without contacting the host.
 sub command
@@ -650,6 +696,10 @@ if ($command->{prepare} && $action ne 'autostart') {
         : $command->{prepare} eq 'bridge_remove_review' ? {name => $input{name}} : {id => $input{id}});
     $input{revision} = $current->{revision};
 }
+# Preserve omitted name and automatic-install settings during a partial update.
+if ($command->{name} eq 'modify-ssh-key') {
+    $input{$_} = $current->{$_} for grep {!exists($input{$_})} qw(name addnew);
+}
 if ($command->{name} eq 'modify-system' && $action eq 'update') {
     # The update API requires both resource fields even for a description edit.
     foreach my $field (qw(cpus memory_mib)) {
@@ -805,7 +855,7 @@ return $result;
 sub label
 {
 my ($key) = @_;
-my %labels = (id=>'ID',uuid=>'UUID',cpus=>'CPUs',used_by=>'Used by',memory_mib=>'Memory',disk_gib=>'Disk',addresses=>'IP address',created=>'Created on');
+my %labels = (id=>'ID',uuid=>'UUID',cpus=>'CPUs',used_by=>'Used by',memory_mib=>'Memory',disk_gib=>'Disk',addresses=>'IP address',created=>'Created on',addnew=>'Automatic');
 # Prefer familiar labels; otherwise expand API field names for display.
 return $labels{$key} if ($labels{$key});
 $key =~ tr/_/ /;
@@ -833,7 +883,7 @@ return $value ? 'Yes' : 'No' if (blessed($value) && ref($value) =~ /Boolean\z/);
 # Webmin also represents JSON booleans as references to zero or one.
 return $$value ? 'Yes' : 'No' if (ref($value) eq 'SCALAR');
 # Known numeric flag fields use the same human-readable boolean labels.
-return $value ? 'Yes' : 'No' if ($key =~ /\A(?:autostart|active|persistent|readonly|bootmenu|start|cancel|cleanup_pending)\z/ && $value =~ /\A[01]\z/);
+return $value ? 'Yes' : 'No' if ($key =~ /\A(?:autostart|active|persistent|readonly|bootmenu|start|cancel|cleanup_pending|addnew)\z/ && $value =~ /\A[01]\z/);
 # API resource fields encode their unit in the key, unlike byte measurements.
 return human_size($value*1024**2) if ($key =~ /_mib\z/);
 # Disk capacities use GiB before being converted for display.
@@ -922,6 +972,8 @@ my ($self,$command,$result,$global) = @_;
 my $text;
 # JSON preserves native records and takes precedence over human formatting.
 if ($global->{json}) { $text = convert_to_json({command=>$command->{name},status=>'success',data=>$result},1,1); }
+# Only the explicit download command emits private material as a key file.
+elsif ($command->{private_key}) { $text = $result->{private}; }
 # Identifier-only lists have no headings or progress decorations.
 elsif ($global->{'name-only'} || $global->{'id-only'}) {
     my $key = $global->{'id-only'} ? $command->{list}->{id} || 'id' : $command->{list}->{key};
@@ -1280,10 +1332,13 @@ foreach my $command (@{commands()}) {
     # Group pages sort after the Development overview pages.
     my $weight = 2840000+$index*1000+(++$position{$grp})*10;
     (my $heading = $command->{summary}) =~ s/\.\z//;
+    # The site marks Pro commands beside the title; CLI help keeps its label.
+    my $pro = $heading =~ s/ \(Pro\)\z//;
     # The sidebar prints subSection wherever it appears, so only the first
     # page of each group carries it, as the Virtualmin site does.
     $write->("$programs/$name.md",[['title',"\"$name\""],
-        $position{$grp} == 1 ? (['subSection',"\"$grp\""]) : ()],$weight,
+        $position{$grp} == 1 ? (['subSection',"\"$grp\""]) : (),
+        $pro ? (['edition','"pro"']) : ()],$weight,
         "### $heading\n\n".$self->docs_body($command,$sections));
     $overview .= "### $grp\n\n" if ($position{$grp} == 1);
     $overview .= "- [$name](/docs/development/api-programs/$name/): $command->{summary}\n";

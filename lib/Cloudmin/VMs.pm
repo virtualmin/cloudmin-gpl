@@ -632,6 +632,13 @@ if ($root && $password) {
 # Start the agent for every cloud image, including plain installations.
 # Static units start through udev on later boots. Other units need enabling.
 push(@{$data->{'runcmd'}}, ['sh', '-c', <<'AGENT']);
+# Allow key management on SELinux guests, including password-only accounts.
+# Skip guests without this policy boolean; keep SELinux enforcing.
+if command -v getsebool >/dev/null 2>&1 &&
+   command -v setsebool >/dev/null 2>&1 &&
+   getsebool virt_qemu_ga_manage_ssh >/dev/null 2>&1; then
+    setsebool -P virt_qemu_ga_manage_ssh on || exit 1
+fi
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload
     for unit in qemu-guest-agent.service qemu-ga.service 'qemu-ga@virtio\x2dports-org.qemu.guest_agent.0.service'; do

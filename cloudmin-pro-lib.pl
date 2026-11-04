@@ -19,7 +19,7 @@ if (($ENV{'SCRIPT_NAME'} || '') =~ m{/config_save\.cgi\z}) {
 }
 # Keep the preference available while any advertised feature is unavailable.
 return if (grep { !-r "$module_root_directory/pro/$_" }
-	qw(SetupScripts.pm guest-scripts.pl VMImages.pm BackupCloud.pm));
+	qw(SetupScripts.pm guest-scripts.pl VMImages.pm BackupCloud.pm SSHKeys.pm));
 delete($info->{'hide_pro_tips'});
 # Keep an explicit field order consistent with the remaining definitions.
 @$order = grep { $_ ne 'hide_pro_tips' } @$order if ($order);

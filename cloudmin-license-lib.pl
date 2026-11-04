@@ -10,7 +10,7 @@ sub cloudmin_pro
 {
 return (exists($module_info{'gpl'}) && !$module_info{'gpl'}) ||
     scalar(grep { -f "$module_root_directory/pro/$_" }
-        qw(SetupScripts.pm VMImages.pm BackupCloud.pm));
+        qw(SetupScripts.pm VMImages.pm BackupCloud.pm SSHKeys.pm));
 }
 
 # cloudmin_license_host() identifies the host without depending on its IP address.

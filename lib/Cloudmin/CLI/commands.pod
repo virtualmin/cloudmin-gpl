@@ -8,7 +8,7 @@ Commands that select one existing virtual machine accept either C<--name> with i
 
 Commands that start background jobs normally wait for completion and report phase changes on standard error. C<--no-wait> returns the job ID immediately. Check it later with C<get-job>. Closing the terminal or reaching the command's waiting timeout does not cancel the worker. JSON mode omits progress messages. A successful command exits 0, an operation failure exits 1, and a command-line usage error exits 2.
 
-Passwords, license credentials and provider secrets are read from files. Use C<-> as the filename to read standard input; only one option in a command can do this. Each input must be UTF-8 text of at most 128 KiB. One final newline is removed from passwords and other single-value files; script contents keep it. SSH login options take public keys, not private keys.
+Passwords, license credentials and provider secrets are read from files. Use C<-> as the filename to read standard input; only one option in a command can do this. Each input must be UTF-8 text of at most 128 KiB. One final newline is removed from passwords and other single-value files; script contents keep it. SSH login options take public keys. The Pro key library also accepts private-key imports through C<create-ssh-key>.
 
 Memory sizes without a suffix are in MiB; disk sizes are in GiB. Binary suffixes such as C<2G> and C<2 GiB> are accepted. Quote values that contain spaces. Examples use placeholder names and IDs; substitute values from your host's list commands.
 
@@ -180,6 +180,8 @@ The command returns after the agent accepts the change. It does not change SSH a
 
 Creates a new virtual machine named by C<--name>. This name must be unused on the host. The operation runs as a background job; by default the command waits for creation and any selected software setup to finish. C<--no-wait> returns the job ID instead.
 
+On Pro hosts, use C<--saved-key KEY_ID> to select a library key; repeat it for more keys. Keys marked automatic are also added to virtual machines created from cloud images. ISO installs reject C<--saved-key> and skip automatic keys.
+
 =over
 
 =item Image, storage and resources
@@ -239,6 +241,8 @@ Select the source with C<--name> or C<--id>, and give the destination an unused 
 =item Prepared and unchanged copies
 
 The default C<--mode prepared> configures a new guest identity, hostname, network and administrator access before boot. It requires one inspectable Linux installation, enabled cloud-init and one network interface. Supply the new login settings with C<--username>, C<--auth-type> and the password or public-key file options.
+
+On Pro hosts, C<--saved-key KEY_ID> and automatic library keys apply to prepared clones as they do to C<create-system>. Unchanged clones reject C<--saved-key> and skip automatic keys.
 
 C<--mode unchanged> retains guest settings and login credentials, but still resets the host ID and removes copied Virtualmin Pro credentials. It requires C<--confirm-unchanged> and must remain stopped with automatic startup disabled. Review its network and access settings before starting it alongside the source.
 
@@ -833,6 +837,63 @@ A failed stop keeps the registration. If stopping succeeds but removing the regi
     cloudmin unregister-pool --pool extra --yes
     cloudmin unregister-pool --pool guests --stop --review
     cloudmin unregister-pool --pool guests --stop --yes
+
+=head2 list-ssh-keys
+
+Lists saved public keys from the library, including IDs and fingerprints. Private keys are never included. Requires host administrator access. Use C<--json> for JSON output.
+
+    cloudmin list-ssh-keys --json
+
+=head2 create-ssh-key
+
+Generates an Ed25519 key pair by default. Use C<--type rsa> for RSA. To import a key, use C<--source public> or C<--source private> with C<--key-file FILE>. Private imports must be unencrypted; only their public key is saved. Download a generated private key with C<download-ssh-key> or from the web interface.
+
+C<--automatic> adds the public key to new virtual machines created from cloud images and to prepared clones. It does not change existing guests or unchanged clones.
+
+    cloudmin create-ssh-key --name Administrators --source public \
+        --key-file admin.pub --automatic
+
+=head2 modify-ssh-key
+
+Changes a saved key's name or whether it is added automatically. Omitted settings keep their current values. The key itself stays unchanged.
+
+    cloudmin modify-ssh-key --key KEY_ID --no-automatic
+
+=head2 download-ssh-key
+
+Writes a generated private key to standard output. Protect the destination file with C<umask 077>, as below. Imported keys have no saved private key to download. Requires write access.
+
+    umask 077
+    cloudmin download-ssh-key --key KEY_ID > admin.key
+
+=head2 delete-ssh-key
+
+Deletes a library entry after confirmation. Keys on existing virtual machines and in templates stay unchanged.
+
+    cloudmin delete-ssh-key --key KEY_ID --yes
+
+=head2 list-system-keys
+
+Lists keys authorized for an existing account. The virtual machine must be running and its guest agent must support SSH key commands. Requires host administrator access.
+
+    cloudmin list-system-keys --name guest.example.com --user admin --json
+
+=head2 add-system-key
+
+Adds a saved public key with C<--key>, or public keys from C<--public-key-file FILE>, to an existing guest account. Other keys stay unchanged. The virtual machine must be running with an agent that supports SSH key commands. Requires host administrator access.
+
+This command does not change SSH login settings. The account and SSH server must allow key login before the key can be used.
+
+    cloudmin add-system-key --name guest.example.com --user admin --key KEY_ID
+
+=head2 remove-system-key
+
+Removes an entry listed by C<list-system-keys>. Use its guest entry ID with C<--key>. Other entries and open sessions stay unchanged. If the same key is authorized elsewhere, it can still be used.
+
+Requires host administrator access and confirmation. The virtual machine must be running with an agent that supports SSH key commands. Cloudmin's managed login key cannot be removed here.
+
+    cloudmin remove-system-key --name guest.example.com --user admin \
+        --key GUEST_KEY_ID --yes
 
 =head2 get-license
 

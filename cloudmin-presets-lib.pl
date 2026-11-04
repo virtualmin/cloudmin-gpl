@@ -282,11 +282,12 @@ elsif ($section->[0] eq 'image') {
 }
 elsif ($section->[0] eq 'access') {
 	# Store login choices and public keys; passwords belong to each creation.
+	# Keys use a full-width row and retain their text across library edits.
 	$page .= ui_table_row($text{'vm_username'}, ui_textbox('username', $values->{'username'}, 30, $disabled)).
 		ui_table_row($text{'vm_auth_type'}, preset_select('auth_type', $values->{'auth_type'},
 		[map { [$_, $text{'vm_auth_'.$_}] } qw(keys password both)], $disabled, $base)).
-		ui_table_row($text{'vm_ssh_keys'}, ui_textarea('ssh_keys', $values->{'ssh_keys'}, 4, 75, undef, $disabled),
-		undef, undef, ['id="vm_keys_row"'.($disabled ? ' data-vm-readonly="1"' : '')]);
+		ui_table_row($text{'vm_ssh_keys'}, ssh_public_key_input($values->{'ssh_keys'}, $disabled),
+		undef, undef, ['id="vm_keys_row"'.($disabled ? ' data-vm-readonly="1"' : '')], 1);
 }
 elsif ($section->[0] eq 'network') {
 	# Save network defaults; each new guest needs its own address.

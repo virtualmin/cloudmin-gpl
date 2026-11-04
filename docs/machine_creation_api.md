@@ -34,6 +34,13 @@ Actions:
 | `check_license` | `token` | Rechecked license status, including any restriction |
 | `change_license` | `token`, `serial`, `license_key` | Validates and saves a replacement license |
 | `deregister_license` | `token`, `confirm=1` | Removes this host's saved license and repository credentials |
+| `ssh_keys` | Optional `key` library ID | Array of public library records, or one record when `key` is supplied |
+| `save_ssh_key` | `token`, `name`; see [Saved SSH keys](#saved-ssh-keys-pro) for creation and edit fields | Saved public record, including its revision |
+| `delete_ssh_key` | `token`, `key`, `revision`, `confirm=1` | Removes a library entry; guest access stays unchanged |
+| `download_ssh_key` | `token`, `key` | Generated private key in `private`; requires write access and, over HTTP, POST |
+| `guest_ssh_keys` | `id`, `username` | Existing account's key lines with their type, comment, options, fingerprint and guest key ID, plus a revision; requires a running virtual machine and a guest agent with SSH key support |
+| `add_guest_ssh_key` | `token`, `id`, `username`, either library `key` or `public` text | Appends public keys without replacing existing entries |
+| `remove_guest_ssh_key` | `token`, `id`, `username`, guest `key`, `revision`, `confirm=1` | Removes the exact reviewed entry; refuses Cloudmin's managed login key |
 | `machines` | Optional `id` (UUID or exact name) | Visible virtual machines sorted by name, or one matching record |
 | `options` | None | Current images, storage, networks and capabilities; form token for users with write access |
 | `review` | Creation settings | Validated settings without creating a virtual machine |
@@ -711,3 +718,36 @@ Run these only on authorized test hosts. `check-clones.py --virtualmin` installs
 ## Backups and restore
 
 The virtual machine API also runs full backup, inspection and restore jobs. See [Full virtual machine backups](backups.md) for request fields, CLI examples and which guest settings are preserved.
+
+## Saved SSH keys (Pro)
+
+All SSH key actions require Pro and host administrator access. Read-only
+sessions can list public keys but cannot download private keys or make changes.
+Changes and private-key downloads require a token and, over HTTP, POST.
+The local CLI supplies the token automatically. Deleting a library entry leaves
+keys on existing virtual machines and in templates unchanged.
+
+To create an entry with `save_ssh_key`, send `source=generate`, `source=public`
+or `source=private`. The default is `public`. For generation, `type` accepts
+`ed25519` (the default) or `rsa`. For imports, send the key text in `data`.
+Imported private keys must be unencrypted; only their public key is saved.
+
+To edit an entry, send its library ID as `key`, its current `revision`, and
+its `name`. Only the name and automatic setting can change; omit `source`,
+`type` and `data`. For both creation and editing, `addnew=1` adds the key to new
+virtual machines created from cloud images and to prepared clones. Omitting
+`addnew` disables automatic installation.
+
+Creation and prepared-clone requests accept `saved_ssh_keys`, a comma-separated
+list of up to five library IDs. Selected, automatic and supplied public keys
+are merged before the job is queued. The combined list must contain at most
+five distinct keys. If password login was selected, adding library keys sets
+`auth_type=both` to keep it enabled; public key text supplied with password
+login stays ignored. ISO installs and unchanged clones reject
+saved-key selections and skip automatic keys. Templates store public key text,
+so later library edits do not change their saved keys.
+
+Guest actions require an existing account and a running virtual machine whose
+guest agent supports SSH key commands. They do not configure the SSH server or
+end open sessions. Removal rejects stale key lists and deletes only the
+reviewed entry; the same key can still work if authorized elsewhere.

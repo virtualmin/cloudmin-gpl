@@ -218,7 +218,8 @@ def browser_check():
             while not (work / 'locked').exists() and time.monotonic() < deadline:
                 time.sleep(.1)
             assert (work / 'locked').exists()
-            evaluate('window.ed=document.querySelector("#vm-edit-form"); ed.elements.description.value="Retry fixture description"; ed.requestSubmit(ed.querySelector("[type=submit]"))')
+            # Use the external Save button associated with the hardware form.
+            evaluate('window.ed=document.querySelector("#vm-edit-form"); ed.elements.description.value="Retry fixture description"; ed.requestSubmit(document.querySelector(".ui_submit[form=vm-edit-form]"))')
             deadline = time.monotonic() + 30
             update = None
             while time.monotonic() < deadline:
@@ -239,8 +240,9 @@ def browser_check():
             subprocess.run(['virsh', 'define', str(original_file)], check=True, stdout=subprocess.DEVNULL)
             wait('document.body.innerText.includes("configuration changed")')
             evaluate('history.back()')
+            # Revisit the form and retry with its external Save button.
             wait('document.querySelector("#vm-edit-form")')
-            evaluate('window.ed=document.querySelector("#vm-edit-form"); ed.elements.description.value="Retry fixture description"; ed.requestSubmit(ed.querySelector("[type=submit]"))')
+            evaluate('window.ed=document.querySelector("#vm-edit-form"); ed.elements.description.value="Retry fixture description"; ed.requestSubmit(document.querySelector(".ui_submit[form=vm-edit-form]"))')
             deadline = time.monotonic() + 30
             new_update = None
             while time.monotonic() < deadline:

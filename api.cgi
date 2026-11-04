@@ -28,7 +28,7 @@ my $ok = eval {
 	# Read operations allow GET; all other actions require POST and a signed
 	# token.
 	die "Use POST for virtual machine changes\n"
-		if ($action !~ /\A(?:options|machines|settings|status|list|snapshots|clone_options|image_options|backups|bridges|bridge_status|storage|license)\z/ &&
+		if ($action !~ /\A(?:options|machines|settings|status|list|snapshots|clone_options|image_options|backups|bridges|bridge_status|storage|license|ssh_keys|guest_ssh_keys)\z/ &&
 		($ENV{'REQUEST_METHOD'} || '') ne 'POST');
 	$result = call_vm_api($in{'version'} || '1', $action, \%in);
 	# Administrators and users with action grants get tokens unless read-only.

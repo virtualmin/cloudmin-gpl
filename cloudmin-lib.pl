@@ -16,6 +16,7 @@ require "$module_root_directory/lib/Cloudmin/VMs.pm";
 require "$module_root_directory/lib/Cloudmin/VMManage.pm";
 require "$module_root_directory/cloudmin-presets-lib.pl";
 require "$module_root_directory/cloudmin-webmin-lib.pl";
+require "$module_root_directory/cloudmin-ssh-lib.pl";
 
 # get_snapshot_manager()
 # Snapshot jobs share the VM journal and honor the module's read-only ACL.
@@ -161,6 +162,10 @@ if ($action =~ /\A(?:bridges|bridge_status|bridge_remove_review|bridge_remove|br
 if ($action =~ /\A(?:storage|register_pool|pool_start|pool_stop|pool_autostart|volume_review|delete_volume|pool_review|unregister_pool)\z/) {
 	require "$module_root_directory/cloudmin-storage-lib.pl";
 	return call_storage_api($action, $input);
+	}
+# SSH key management has its own Pro gate and token checks.
+if ($action =~ /\A(?:ssh_keys|save_ssh_key|delete_ssh_key|download_ssh_key|guest_ssh_keys|add_guest_ssh_key|remove_guest_ssh_key)\z/) {
+	return call_ssh_key_api($action, $input);
 	}
 my $service = get_vm_service();
 my $jobs = $service->{'jobs'};
@@ -339,6 +344,8 @@ if ($action eq 'review') {
 	# API clients may validate settings without submitting a creation job.
 	# API requests use presets only when explicitly selected.
 	$input = get_presets()->resolve($input) if ($input->{'template'} || $input->{'plan'});
+	# Add selected and automatic library keys before validating the request.
+	$input = resolve_saved_ssh_keys($input);
 	my $hash = get_vm_password_hash($jobs, $input, $password);
 	my $review = $service->prepare($input, undef, $hash);
 	# The browser receives only a status flag, never the retained hash.
@@ -390,6 +397,9 @@ if ($action eq 'clone') {
 		$jobs->assert_guest_available($input->{'id'} || '');
 		my $resolved = get_presets()->resolve($input, 'clone');
 		$resolved->{'auth_type'} ||= 'password';
+		# Prepared clones merge selected and automatic keys. Unchanged clones
+		# keep their existing access and reject explicit library selections.
+		$resolved = resolve_saved_ssh_keys($resolved);
 		$resolved->{'host_ssh_key'} = ($config{'machine_host_ssh_key'} // '1') eq '1' ? 1 : 0
 			if (!exists($resolved->{'host_ssh_key'}));
 		my $hash = ($resolved->{'clone_mode'} || 'prepared') eq 'prepared'
@@ -445,6 +455,8 @@ if ($action eq 'create') {
 		$job = $jobs->lock('create-host', sub {
 		# Save resolved defaults and credentials with this attempt.
 		$input = get_presets()->resolve($input) if ($input->{'template'} || $input->{'plan'});
+		# Add selected and automatic library keys before validating the request.
+		$input = resolve_saved_ssh_keys($input);
 		my $hash = get_vm_password_hash($jobs, $input, $password);
 		my $request = $service->prepare($input, undef, $hash);
 		# Shared template defaults must not grant delegated creators host logins.

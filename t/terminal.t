@@ -5,8 +5,9 @@ use lib "$Bin/lib";
 use CloudminTest;
 use Test::More;
 use File::Temp qw(tempdir);
+use File::Path qw(make_path);
 use WebminCore;
-our (%text, %config);
+our (%text, %config, %access);
 our $remote_user = 'fixture';
 our $root_directory = $CloudminTest::webmin_root;
 our $module_root_directory = "$Bin/..";
@@ -167,6 +168,8 @@ my ($home) = grep { /^--setenv=HOME=/ } @command;
 my ($other) = grep { /^--setenv=HOME=/ } @second;
 isnt($home, $other, 'Webmin users retain separate guest host keys');
 
+# Check both editions independently of the installed Pro extension.
+local $module_root_directory = tempdir(CLEANUP => 1);
 # Match Virtualmin's create/selection/actions/divider/global-link ordering.
 my $stopped = { uuid => '11111111-2222-3333-4444-555555555555',
 	name => 'stopped', state => 'shutoff' };
@@ -188,8 +191,18 @@ is($settings->{'id'}, 'global_setting', 'settings use Virtualmin category ID');
 is($settings->{'desc'}, 'System Settings', 'settings category label');
 is_deeply([map { $_->{'link'} } @{$settings->{'members'}}],
 	['/config.cgi?server-manager', '/server-manager/edit_newtmpl.cgi',
-	 '/server-manager/edit_newplan.cgi'],
-	'module configuration, templates and plans are nested under System Settings');
+	 '/server-manager/edit_newplan.cgi', '/server-manager/ssh_keys.cgi'],
+	'configuration, presets and the SSH key preview are under System Settings');
+my ($key_preview) = grep { ($_->{'link'} || '') eq '/server-manager/ssh_keys.cgi' } @{$settings->{'members'}};
+like($key_preview->{'desc'}, qr/data-pro-disabled="ssh-keys-link"/, 'GPL menu has the shared Pro badge');
+unlike($key_preview->{'desc'}, qr/<a\b/, 'the badge does not nest links inside the menu link');
+# The GPL library preview follows the shared Pro-tip preference.
+{
+	local $config{'hide_pro_tips'} = 1;
+	my ($hidden_settings) = grep { ($_->{'type'} || '') eq 'cat' } get_menu_items([$vm], $uuid, 0, 1);
+	ok(!grep({ ($_->{'link'} || '') =~ /ssh_keys\.cgi/ } @{$hidden_settings->{'members'}}),
+		'hidden Pro tips omit the GPL key library preview');
+}
 my ($selector) = grep { ($_->{'type'} || '') eq 'menu' } @menu;
 is($selector->{'name'}, 'sid', 'use the Cloudmin guest selector');
 is($selector->{'menu'}->[0]->[1], '&lt;guest&gt;', 'guest labels escaped');
@@ -221,4 +234,28 @@ is(scalar(grep { ($_->{'type'} || '') eq 'item' } @menu), 8,
 ($selector) = grep { ($_->{'type'} || '') eq 'menu' } @menu;
 is($selector->{'value'}, $uuid,
 	'stale selection falls back to first visible guest');
+# Guest keys live in the editor; the saved-key library stays in System Settings.
+make_path("$module_root_directory/pro");
+open(my $pro, '>', "$module_root_directory/pro/SSHKeys.pm") || die $!;
+close($pro);
+@menu = get_menu_items([$vm], $uuid, 0, 1);
+ok(!grep({($_->{'link'} || '') =~ /pro\/guest_keys\.cgi/} @menu),
+    'guest SSH Keys has no separate sidebar entry');
+# Read-only Pro navigation goes directly to the SSH inventory tab.
+my @readonly_menu = get_menu_items([$vm], $uuid, 1, 1);
+ok(grep({un_urlize($_->{'link'} || '') eq
+    "/server-manager/edit_machine.cgi?id=$uuid&vm_edit_tabs=access&vm_access_tabs=ssh_keys"} @readonly_menu),
+    'read-only Pro sessions can inspect keys through Access');
+($settings) = grep {($_->{'type'} || '') eq 'cat'} @menu;
+ok(grep({$_->{'link'} eq '/server-manager/pro/list_keys.cgi'} @{$settings->{'members'}}),
+    'Pro library appears under System Settings');
+{
+    # A power-only delegate must not inherit the host's key-library links.
+    local %access = (admin=>0,power=>1,vms=>$uuid);
+    @menu = get_menu_items([$vm], $uuid, 0, 1);
+    ok(!grep({($_->{'link'} || '') =~ /pro\/(?:guest_keys|list_keys)/} @menu),
+        'delegated accounts have no SSH key management link');
+    ok(!grep({($_->{'type'} || '') eq 'cat'} @menu),
+        'delegated accounts have no host key library category');
+}
 done_testing();

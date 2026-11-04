@@ -6,7 +6,7 @@ use lib "$Bin/lib";
 use CloudminTest;
 use WebminCore;
 use Test::More;
-our (%config, %text, $root_directory, $remote_user);
+our (%config, %text, %access, $root_directory, $remote_user);
 our $module_root_directory = "$Bin/..";
 $root_directory = $CloudminTest::webmin_root;
 $remote_user = 'root';
@@ -91,6 +91,58 @@ foreach my $disabled (0, 1) {
   2, 'credential cleanup has a Yes/No radio group');
  like($form, qr/<input\b(?=[^>]*name="clean_credentials")(?=[^>]*value="1")(?=[^>]*checked)/,
   'credential cleanup defaults to Yes');
+}
+
+# GPL advertises guest keys without touching the Pro library or guest agent.
+{
+ no warnings qw(redefine once);
+ # has_ssh_key_manager() forces GPL behavior regardless of installed files.
+ local *main::has_ssh_key_manager = sub { 0 };
+ # guest_ssh_service(id) rejects accidental guest access from a preview.
+ local *main::guest_ssh_service = sub { die "Preview queried the guest agent" };
+ # get_ssh_key_manager() rejects accidental library access from a preview.
+ local *main::get_ssh_key_manager = sub { die "Preview opened the Pro library" };
+ local %access = (admin => 1);
+ local $config{'hide_pro_tips'} = 0;
+ my $vm = {uuid => 'fixture', cloudmin => {username => '"><unsafe>'}};
+ my $page = show_vm_access($vm, 'password-token', {vm_access_tabs => 'ssh_keys'});
+ like($page, qr/name="vm_access_tabs"[^>]*value="ssh_keys"/, 'GPL can select the SSH Keys subtab');
+ like($page, qr/Save reusable SSH keys.*?Cloudmin Pro/s, 'SSH Keys explains its Pro requirement');
+ like($page, qr/name="action"[^>]*value="reset_password"/, 'GPL keeps the password reset form');
+ # Preview selectors retain the compact Pro layout and escape guest metadata.
+ my $preview = show_guest_ssh_preview($vm);
+ like($preview, qr/<select(?=[^>]*name="username")(?=[^>]*disabled)[^>]*>/,
+  'GPL uses a disabled select even for a single preview account');
+ unlike($preview, qr/<input[^>]*name="username"/, 'GPL never previews a username text field');
+ like($preview, qr/&quot;&gt;&lt;unsafe&gt;/, 'preview escapes the recorded guest username');
+ like($preview, qr/\bvalue="&quot;><unsafe>"/, 'select keeps guest metadata inside its quoted value');
+ # The library preview follows the empty Saved Keys page, not the add form.
+ my $library = show_ssh_library_preview();
+ foreach my $label (qw(keys_intro keys_saved keys_none keys_none_desc)) {
+  like(html_strip($library), qr/\Q$text{$label}\E/, "library preview includes $label");
+ }
+ like($library, qr/ui_card_actions.*?<button(?=[^>]*disabled)(?=[^>]*ui_action_normal)[^>]*>.*?Add SSH Key/s,
+  'library preview keeps the normal-sized disabled add action in the card header');
+ unlike($library, qr/<input|<select|<textarea|list_keys\.cgi/,
+  'library preview has no obsolete creation fields or active Pro page links');
+ # Both previews advertise the feature without submitting any operation.
+ foreach my $html ($preview, $library) {
+  like($html, qr/<fieldset\b(?=[^>]*disabled)(?=[^>]*data-pro-disabled="ssh-keys-elem")/,
+   'SSH preview disables and mutes all controls');
+  like($html, qr/professional-features\/\#ssh-keys/, 'SSH preview links to Pro details');
+  unlike($html, qr/<form\b|name="token"|name="action"/, 'preview has no form, token or action');
+  unlike($html, qr/<button\b(?![^>]*disabled)[^>]*>/, 'all preview buttons are disabled');
+ }
+ # Hiding tips removes only the preview, including a saved SSH tab selection.
+ local $config{'hide_pro_tips'} = 1;
+ $page = show_vm_access($vm, 'password-token', {vm_access_tabs => 'ssh_keys'});
+ unlike($page, qr/tab_ssh_keys|data-pro-disabled/, 'hidden Pro tips omit the SSH preview');
+ like($page, qr/name="vm_access_tabs"[^>]*value="password"/, 'hidden preview falls back to Password');
+ # Password delegates get no host key-management advertisement.
+ local $config{'hide_pro_tips'} = 0;
+ local %access = (admin => 0, password => 1, vms => 'fixture');
+ unlike(show_vm_access($vm, 'password-token', {}), qr/tab_ssh_keys|data-pro-disabled/,
+  'delegated users do not see the SSH key preview');
 }
 
 done_testing();

@@ -905,6 +905,53 @@ die $error if (!$ok);
 return $pending ? undef : $identity->{'key'};
 }
 
+# read_guest_file(self, uuid, path, [limit])
+# Returns the file's bytes, or undef if opening times out or the agent is
+# unavailable. Missing files, read failures and files larger than limit raise
+# errors. limit defaults to 64 KiB. Closing a valid opened handle is attempted
+# after success or failure; close errors do not replace the read result.
+# Stop starting reads after 10 seconds; each agent call has its own timeout.
+sub read_guest_file
+{
+my ($self, $uuid, $path, $limit) = @_;
+$limit ||= 65536;
+my $deadline = Time::HiRes::time() + 10;
+# Treat missing files and disabled file operations as final errors.
+my $opened = $self->setup_agent_command($uuid, 'guest-file-open', { path => $path, mode => 'r' }, 1);
+return undef if (!$opened);
+# Reject a malformed handle before issuing reads or attempting a close.
+my $handle = $opened->{'return'};
+die "Invalid guest file handle\n" if (!defined($handle) || ref($handle) || $handle !~ /\A\d+\z/);
+my $bytes = '';
+my $ok = eval {
+	while (1) {
+		# Bound the whole read even if the agent keeps returning small chunks.
+		die "Guest file read timed out\n" if (Time::HiRes::time() >= $deadline);
+		# Base64 and JSON must fit the agent command's 16 KiB response limit.
+		my $read = $self->setup_agent_command($uuid, 'guest-file-read',
+			{ handle => 0+$handle, count => 8192 }, 1);
+		# Require a byte count and a base64-compatible payload before decoding.
+		my $reply = $read ? $read->{'return'} : undef;
+		die "Invalid guest file response\n" if (ref($reply) ne 'HASH' ||
+			!defined($reply->{'count'}) || $reply->{'count'} !~ /\A\d+\z/ ||
+			ref($reply->{'buf-b64'}) || ($reply->{'buf-b64'} // '') !~ /\A[A-Za-z0-9+\/=\r\n]*\z/);
+		# Verify decoded lengths and enforce the total limit before accepting data.
+		my $part = decode_base64($reply->{'buf-b64'} // '');
+		die "Incomplete guest file response\n" if (length($part) != $reply->{'count'});
+		$bytes .= $part;
+		die "Guest file is too large\n" if (length($bytes) > $limit);
+		# The agent reports the end of the file; an empty read also ends it.
+		last if ($reply->{'eof'} || !$reply->{'count'});
+		}
+	1;
+	};
+my $error = $@;
+# Attempt close after success or failure, preserving the original read error.
+eval { $self->setup_agent_command($uuid, 'guest-file-close', { handle => 0+$handle }); };
+die $error if (!$ok);
+return $bytes;
+}
+
 # open_console(self, uuid)
 # Returns a connected VNC filehandle for a local guest. Libvirt authorizes the
 # attachment; the guest's VNC password never leaves the host.

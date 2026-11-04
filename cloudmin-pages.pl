@@ -10,6 +10,7 @@ require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-config-lib.pl
 require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-access-lib.pl'));
 require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-image-choices.pl'));
 require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-pro-lib.pl'));
+require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-ssh-pages.pl'));
 # Page builders also run outside the initialized module in rendering tests.
 require(File::Basename::dirname(__FILE__).'/lib/Cloudmin/Presets.pm');
 no warnings 'once';
@@ -1152,6 +1153,8 @@ my ($servers, $selected, $readonly, $terminal, $log) = @_;
 my ($vm) = grep { $_->{'uuid'} eq ($selected || '') } @$servers;
 $vm ||= $servers->[0];
 my $base = '/server-manager';
+# Installed libraries stay visible independently of the Pro-tip preference.
+my $ssh_installed = -r "$module_root_directory/pro/SSHKeys.pm";
 # Include the title for frame navigation and the format flag for newer renderers.
 my @items = ({ type => 'title', id => 'title', desc => $text{'index_title'} },
 	{ format => 'new' }, { type => 'hr' });
@@ -1171,11 +1174,14 @@ if ($vm) {
 			@$servers ] },
 		{ type => 'item', desc => $text{'vm_details'},
 		  link => "$base/machine.cgi?id=$id" });
-	# Route users without host access straight to the password-reset form.
+	# Delegated and read-only sessions open only the permitted Access controls.
+	my $guest_keys = can_access('host') && -r "$module_root_directory/pro/SSHKeys.pm";
 	push(@items, { type => 'item', desc => $text{'vm_edit'},
 		link => "$base/edit_machine.cgi?id=$id".
-			(can_access('manage') ? '' : '&password_reset=1') })
-		if (!$readonly && (can_access('manage') || can_access('password', $vm->{'uuid'})));
+			($readonly ? '&vm_edit_tabs=access&vm_access_tabs=ssh_keys'
+			 : can_access('manage') ? '' : '&vm_edit_tabs=access') })
+		if ((!$readonly && (can_access('manage') || can_access('password', $vm->{'uuid'}))) ||
+			($readonly && $guest_keys));
 	push(@items, { type => 'item', desc => $text{'snapshots_title'},
 		link => "$base/snapshots.cgi?id=$id" }) if (can_access('host'));
 	# Any permitted access method shows Remote Access; read-only mode hides it.
@@ -1205,8 +1211,12 @@ push(@items, { type => 'cat', id => 'global_setting', desc => $text{'left_settin
 	members => [
 		(!$access{'noconfig'} && !$config{'noprefs'} ? ({ type => 'item',
 			desc => $text{'left_config'}, link => '/config.cgi?server-manager' }) : ()),
-		map { {type => 'item', desc => $text{$_->[1]}, link => "$base/$_->[0].cgi"} }
+		map { {type => 'item', desc => $text{$_->[1]}.
+			($_->[2] ? pro_feature_badge($_->[2], 1) : ''), link => "$base/$_->[0].cgi"} }
 		[edit_newtmpl => 'presets_templates'], [edit_newplan => 'presets_plans'],
+		($ssh_installed || show_pro_features() ?
+			([$ssh_installed ? 'pro/list_keys' : 'ssh_keys', 'keys_title',
+				$ssh_installed ? undef : 'ssh-keys']) : ()),
 		(defined(&cloudmin_pro) && cloudmin_pro() ? (['pro/license' => 'license_title']) : ())] })
 	if (can_access('host'));
 return @items;
@@ -1224,10 +1234,10 @@ return ui_tag('template', ui_alert_box(
 }
 
 # show_vm_resource_input_styles()
-# Size resource and username fields to their contents, with room by unit menus.
+# Size fields to their contents while leaving room for unit menus.
 sub show_vm_resource_input_styles
 {
-my $fields = ':is(#vm-create-form, #vm-edit-form) input';
+my $fields = ':is(#vm-create-form, [data-vm-edit-fields]) input';
 return ui_tag('style', $fields.':is([data-vm-resource], [data-vm-autosize]) { '.
 	'field-sizing:content; width:auto !important; min-width:30px !important; max-width:100%; '.
 	'box-sizing:border-box; padding-inline:0.6em !important; } '.
@@ -1658,9 +1668,10 @@ my $password = $password_input->('password', $generated_password || '', 30, 0, u
 # The browser shows whichever credential rows the login method uses.
 $page .= ui_table_row($text{'vm_password'}, $password, undef, undef,
 	[ "id='vm_password_row' data-vm-cloud-init='1'" ]);
+# Give public keys a full row in themes that arrange fields in columns.
 $page .= ui_table_row($text{'vm_ssh_keys'},
-	ui_textarea('ssh_keys', $values{'ssh_keys'}, 4, 75),
-	undef, undef, [ "id='vm_keys_row' data-vm-cloud-init='1'" ]);
+	ssh_public_key_input($values{'ssh_keys'}),
+	undef, undef, [ "id='vm_keys_row' data-vm-cloud-init='1'" ], 1);
 if ($options->{'cloud_init_error'}) {
 	# Installer creation remains available when cloud-init tools are missing.
 	$page .= ui_table_row(undef, ui_note(html_escape($options->{'cloud_init_error'}), 0), 2);
@@ -2078,8 +2089,9 @@ $page .= ui_table_row($text{'vm_hostname'}, ui_textbox('hostname', '', 45),
 	undef, undef, ['data-clone-hostname hidden']);
 $page .= ui_table_row($text{'vm_password'}, ui_password('password', '', 30, 0, undef,
 	'autocomplete="new-password"'), undef, undef, ['data-clone-password']);
-$page .= ui_table_row($text{'vm_ssh_keys'}, ui_textarea('ssh_keys', $values{'ssh_keys'}, 4, 75),
-	undef, undef, ['data-clone-keys']);
+# Use the same full-width key picker as creation and template forms.
+$page .= ui_table_row($text{'vm_ssh_keys'}, ssh_public_key_input($values{'ssh_keys'}),
+	undef, undef, ['data-clone-keys'], 1);
 # Clone forms follow the same template policy as creation and API requests.
 $page .= ui_table_row($text{'presets_template'}, ui_select('template', $presets->{'template'}->{'default'},
 	[map { [$_->{'id'}, $_->{'name'}] } grep { !$_->{'disabled'} } @{$presets->{'template'}->{'entries'}}]));
@@ -2219,15 +2231,17 @@ my ($vm, $token) = @_;
 # Suggest the creation account; guests without that metadata need a username.
 my $username = ($vm->{'cloudmin'} || {})->{'username'} || '';
 # Never refill the password field from a previous submission.
-return ui_page_start().ui_note($text{'vm_password_reset_help'}).
+return ui_page_start().ui_tag('div', ui_p(html_escape($text{'vm_password_reset_help'})),
+	{ class => 'vui_ui_block' }).
 	ui_form_start('edit_machine.cgi', 'post', undef, 'id="vm-password-reset-form"').
 	ui_hidden('id', $vm->{'uuid'}).ui_hidden('token', $token).
 	ui_hidden('action', 'reset_password').
+	ui_hidden('vm_edit_tabs', 'access').ui_hidden('vm_access_tabs', 'password').
 	ui_table_start(undef, 'width=100%', 2).
 	ui_table_row($text{'vm_password_username'}, ui_textbox('username', $username, 30, 0, undef,
-		'autocomplete="off" required')).
+		'autocomplete="off"')).
 	ui_table_row($text{'vm_password_new'}, ui_password('password', '', 30, 0, undef,
-		'data-password autocomplete="new-password" required')).
+		'data-password autocomplete="new-password"')).
 	ui_table_end().ui_form_end([[undef, $text{'vm_password_reset'}]]).ui_page_end();
 }
 
@@ -2403,12 +2417,84 @@ return show_vm_pending_styles().
 	ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_pending.js?'.(stat("$module_root_directory/machine_pending.js"))[9] });
 }
 
-# show_vm_edit_form(settings, token, [deleting], [shutdown_requested], [tab])
+# vm_edit_tabs_start(tab, [access_only]) opens the editor's main tabs.
+# access_only defaults to false; true omits hardware tabs. Callers select
+# Access in that mode; an empty tab defaults to Resources.
+sub vm_edit_tabs_start
+{
+my ($tab, $access_only) = @_;
+return ui_tabs_start([
+	($access_only ? () : (
+		['resources', $text{'vm_edit_resources'}],
+		['disks', $text{'vm_disks'}],
+		['interfaces', $text{'vm_interfaces'}])),
+	['access', $text{'vm_edit_access'}],
+	], 'vm_edit_tabs', $tab || 'resources', 1);
+}
+
+# show_vm_access(vm, token, input) renders permitted guest access forms.
+# Call after the page header has loaded the theme's widget implementations.
+sub show_vm_access
+{
+my ($vm, $token, $in) = @_;
+my ($password, $ssh);
+# Password grants apply to this guest, including assigned delegates.
+if (can_access('password', $vm->{'uuid'})) {
+	$password = ($in->{'password_saved'}
+		? ui_alert_box($text{'vm_password_reset_done'}, 'success', undef, undef, '') : '').
+		show_vm_password_reset_form($vm, $token);
+	}
+# Guest key management is available only to host administrators with Pro.
+if (can_access('host') && has_ssh_key_manager()) {
+	require "$module_root_directory/pro/ssh-pages.pl";
+	# Agent or library errors stay in the SSH tab, leaving other edits usable.
+	$ssh = eval { show_guest_ssh_page($vm, $in, can_access('manage') ? $token : '') };
+	$ssh = ui_alert_box(error_html(error_message($@)), 'warn') if (!defined($ssh));
+	}
+# GPL keeps the tab as a disabled preview when Pro tips are enabled.
+elsif (can_access('host') && show_pro_features()) {
+	$ssh = show_guest_ssh_preview($vm);
+	}
+# Preserve old password-reset links within the new nested Access tabs.
+return show_vm_access_tabs($password, $ssh,
+	$in->{'password_reset'} ? 'password' : $in->{'vm_access_tabs'});
+}
+
+# show_vm_access_tabs(password_html, ssh_html, [tab]) groups guest login tools.
+# Undefined content omits a tool; tab defaults to the first permitted tool.
+sub show_vm_access_tabs
+{
+my ($password, $ssh, $tab) = @_;
+# Build only the tools allowed by the current session and edition.
+my @tabs;
+push(@tabs, ['password', $text{'vm_access_password'}]) if (defined($password));
+push(@tabs, ['ssh_keys', $text{'keys_guest_title'}]) if (defined($ssh));
+# Omit the group when the session has no guest access tools.
+return '' if (!@tabs);
+# A saved tab may be unavailable after a permission or edition change.
+$tab = $tabs[0]->[0] if (!grep { $_->[0] eq ($tab || '') } @tabs);
+# Nested tabs must not change the selected outer editor tab.
+local $main::ui_tabs_selected = $main::ui_tabs_selected;
+my $html = ui_tag('div', ui_p(html_escape($text{'vm_access_intro'})),
+	{ class => 'vui_ui_block' }).
+	ui_tabs_start(\@tabs, 'vm_access_tabs', $tab, 1);
+# Each pane retains its own form and submits only its own operation.
+foreach my $entry (@tabs) {
+	$html .= ui_tabs_start_tab('vm_access_tabs', $entry->[0]).
+		($entry->[0] eq 'password' ? $password : $ssh).
+		ui_tabs_end_tab('vm_access_tabs', $entry->[0]);
+	}
+return $html.ui_tabs_end(1);
+}
+
+# show_vm_edit_form(settings, token, [deleting], [shutdown_requested], [tab],
+#                   [access_html])
 # Renders hardware edits or a separate disk-selection confirmation for deletion.
-# Flags default to false; tab defaults to resources.
+# Flags default to false; tab defaults to resources. Optional access_html
+# supplies independent forms; omitting it leaves the Access pane empty.
 sub show_vm_edit_form
 {
-my ($s, $token, $deleting, $shutdown_requested, $tab) = @_;
+my ($s, $token, $deleting, $shutdown_requested, $tab, $access) = @_;
 my $page = ui_page_assets();
 if ($s->{'active'} && $shutdown_requested) {
 	# Keep the waiting page until the requested shutdown completes.
@@ -2474,14 +2560,11 @@ if ($deleting) {
 	}
 $page .= show_vm_pending_banner($s);
 $page .= ui_p($text{'vm_edit_desc'});
-$page .= vm_edit_form_start($s, $token, 'update', undef, 'vm-edit-form');
-# Tabs share one form so changing sections never submits partial edits.
-$page .= ui_tabs_start([
-	['resources', $text{'vm_edit_resources'}],
-	['disks', $text{'vm_disks'}],
-	['interfaces', $text{'vm_interfaces'}],
-	], 'vm_edit_tabs', $tab || 'resources', 1).
-	ui_tabs_start_tab('vm_edit_tabs', 'resources');
+# Hardware controls use this form by ID, leaving Access forms independent.
+$page .= vm_edit_form_start($s, $token, 'update', undef, 'vm-edit-form').ui_form_end();
+$page .= vm_edit_tabs_start($tab).
+	ui_tabs_start_tab('vm_edit_tabs', 'resources').
+	ui_tag_start('div', { 'data-vm-edit-fields' => '' });
 $page .= ui_tag('div', ui_p(html_escape($text{'vm_resource_edit_desc'})),
 	{ class => 'vui_ui_block' });
 $page .= show_vm_resource_input_styles();
@@ -2535,9 +2618,10 @@ if (!$s->{'active'} || defined($s->{'live_limits'}->{'pcie_ports'}) && !$s->{'li
 		ui_checkbox('enable_live', 1, $text{'vm_headroom_enable'}, 0));
 	}
 $page .= ui_table_end();
-$page .= ui_tabs_end_tab('vm_edit_tabs', 'resources');
+$page .= ui_tag_end('div').ui_tabs_end_tab('vm_edit_tabs', 'resources');
 # Disk and network choices are applied together by the shared Save button.
 $page .= ui_tabs_start_tab('vm_edit_tabs', 'disks').
+	ui_tag_start('div', { 'data-vm-edit-fields' => '' }).
 	ui_tag('div', ui_p(html_escape($text{'vm_disk_edit_desc'})),
 		{ class => 'vui_ui_block' });
 # Show each disk's role and storage details beside its pending edits.
@@ -2618,8 +2702,8 @@ my @images = map { [$_->{'id'},
 	$_->{'name'}.' - '.nice_size_text($_->{'capacity'}).' ('.$_->{'pool_name'}.')',
 	undef, get_image_group($_, $text{'vm_image_imports'})] }
 	@{Cloudmin::ImageChoices::sort_images($s->{'images'} || [])};
-$page .= ui_tag('style', '#vm-edit-form .ui_radio_table { width:100%; } '.
-	'#vm-edit-form .ui_badge_small { font-size:0.75em; padding-inline:5px; }').
+$page .= ui_tag('style', '[data-vm-edit-fields] .ui_radio_table { width:100%; } '.
+	'[data-vm-edit-fields] .ui_badge_small { font-size:0.75em; padding-inline:5px; }').
 	ui_details({ html => 1, class => 'default default-lg vm-add-disk',
 		title => html_escape($text{'vm_add_disk_title'}),
 		content => ui_tag('div', ui_p($text{'vm_add_disk_desc'}).
@@ -2650,8 +2734,9 @@ if (@remove_disks) {
 		title => html_escape($text{'vm_remove_disk_title'}),
 		content => ui_tag('div', $remove) });
 	}
-$page .= ui_page_end().ui_tabs_end_tab('vm_edit_tabs', 'disks');
+$page .= ui_page_end().ui_tag_end('div').ui_tabs_end_tab('vm_edit_tabs', 'disks');
 $page .= ui_tabs_start_tab('vm_edit_tabs', 'interfaces').
+	ui_tag_start('div', { 'data-vm-edit-fields' => '' }).
 	ui_tag('div', ui_p(html_escape($text{'vm_nic_edit_desc'})),
 		{ class => 'vui_ui_block' }).
 	ui_page_start().ui_table_start(undef, 'width=100%', 2);
@@ -2700,8 +2785,11 @@ $page .= ui_table_hr() if (@{$s->{'interfaces'}});
 $page .= ui_table_row($text{'vm_add_interface'},
 	ui_select('add_interface_network', '',
 		[ ['', $text{'vm_no_interface_addition'}], @networks ]), 1, undef, undef, 1);
-$page .= ui_table_end().ui_page_end().ui_tabs_end_tab('vm_edit_tabs', 'interfaces').
-	ui_tabs_end(1).vm_edit_buttons($s, $token);
+$page .= ui_table_end().ui_page_end().ui_tag_end('div').ui_tabs_end_tab('vm_edit_tabs', 'interfaces').
+	ui_tabs_start_tab('vm_edit_tabs', 'access').($access || '').
+	ui_tabs_end_tab('vm_edit_tabs', 'access').ui_tabs_end(1).
+	ui_tag('div', vm_edit_buttons($s, $token), { id => 'vm-edit-actions' });
+$page = ui_tag('div', $page, { id => 'vm-editor' });
 $page .= ui_tag('script', '', { src => get_webprefix().'/server-manager/machine_edit.js?'.
 	(stat("$module_root_directory/machine_edit.js"))[9] }).
 	ui_tag('script', 'window.cloudminVmEditInit?.();');
@@ -2724,7 +2812,7 @@ return ui_alert_box($text{'vm_delete_disk_desc'}, 'danger', undef, undef, '').
 }
 
 # vm_edit_buttons(settings, token)
-# Closes the edit form with Save and separate guest action controls.
+# Renders Save and separate guest action controls below the editor.
 sub vm_edit_buttons
 {
 my ($s, $token) = @_;
@@ -2739,12 +2827,6 @@ my $delete = ui_form_start('edit_machine.cgi', 'get', undef,
 	ui_hidden('delete', 1).
 	ui_submit($text{'delete'}).
 	ui_form_end(undef, undef, 1);
-# Show reset only with its own grant, regardless of power or agent state.
-my $password = can_access('password', $s->{'id'})
-	? ui_form_start('edit_machine.cgi', 'get', undef,
-		'id="vm-password-reset-review-form"').ui_hidden('id', $s->{'id'}).
-		ui_hidden('password_reset', 1).ui_submit($text{'vm_password_reset'}).
-		ui_form_end(undef, undef, 1) : '';
 # Open cloning separately from Save; copying guest data requires host access.
 my $clone = can_access('host') && !is_readonly_mode()
 	? ui_form_start('clone_machine_form.cgi', 'get', undef,
@@ -2757,9 +2839,9 @@ my $image = can_access('host') && !is_readonly_mode() &&
 		ui_submit($text{'vm_image_title'}).
 		ui_form_end(undef, undef, 1) : '';
 # Keep guest actions beside Save, with Delete in its own group.
-return ui_form_end().ui_form_grouped_buttons([
+return ui_form_grouped_buttons([
 	[[[undef, $text{'save'}, undef, 0, 'form="vm-edit-form"']],
-	 [$start], [vm_power_cycle_button($s, $token, 'edit_machine')], [$password], [$clone], [$image]], [$delete]]);
+	 [$start], [vm_power_cycle_button($s, $token, 'edit_machine')], [$clone], [$image]], [$delete]]);
 }
 
 # parse_vm_edit_form(input)

@@ -9,6 +9,35 @@ import time
 import websocket
 
 
+# check_editor_layout(evaluate) verifies tab boundaries and form ownership.
+# evaluate runs JavaScript in the editor's document, including framed themes.
+def check_editor_layout(evaluate):
+    result = evaluate(r"""(() => {
+        const names = ['resources', 'disks', 'interfaces', 'access'];
+        const panes = names.map(name => document.querySelector('#att_'+name+', #div_'+name));
+        const wrappers = [...document.querySelectorAll('[data-vm-edit-fields]')];
+        const fields = ['cpus', 'add_disk_size', 'add_interface_network', 'password'];
+        return {
+            siblings: panes.every(pane => pane && pane.parentElement === panes[0].parentElement),
+            wrappers: panes.map(pane => pane?.querySelectorAll('[data-vm-edit-fields]').length),
+            tagged: wrappers.every(wrapper => wrapper.classList.contains('ui--div')),
+            fields: fields.map((name, index) => {
+                const field = document.querySelector('[name="'+name+'"]');
+                return {inside: !!panes[index]?.contains(field), form: field?.form?.getAttribute('id')};
+            }),
+            footerOutside: panes.every(pane => !pane?.contains(document.querySelector('#vm-edit-actions'))),
+            panels: [...document.querySelectorAll('.vm-add-disk, .vm-remove-disk')].map(panel =>
+                panel.tagName === 'DETAILS' && panes[1].contains(panel) && !!panel.querySelector(':scope > summary')),
+        };
+    })()""")
+    assert result and result['siblings'] and result['footerOutside'], result
+    assert result['wrappers'] == [1, 1, 1, 0] and result['tagged'], result
+    assert all(field['inside'] for field in result['fields']), result
+    assert [field['form'] for field in result['fields']] == [
+        'vm-edit-form', 'vm-edit-form', 'vm-edit-form', 'vm-password-reset-form'], result
+    assert result['panels'] and all(result['panels']), result
+
+
 # check_memory_inputs(evaluate) checks native browser validity without saving.
 # evaluate runs JavaScript in the editor's document, including framed themes.
 def check_memory_inputs(evaluate):
@@ -376,6 +405,7 @@ def edit_guest(cookies, uuid, action='update', screenshot=None, on_shutdown=None
                 wait('document.querySelector("#cloudmin-overview")', timeout=150)
                 return
             wait('document.querySelector("[name=memory_mib][data-vm-limits-ready]")')
+            check_editor_layout(evaluate)
             check_memory_inputs(evaluate)
             running = action == 'shutdown'
             if running:
@@ -409,7 +439,8 @@ def edit_guest(cookies, uuid, action='update', screenshot=None, on_shutdown=None
                 wait('document.querySelector("#vm-delete-form .ui_submit")'
                      '.getBoundingClientRect().width > 0')
                 controls = evaluate('''(() => {
-                    const save = document.querySelector('[form="vm-edit-form"]');
+                    // Fields also have a form attribute; select Save itself.
+                    const save = document.querySelector('.ui_submit[form="vm-edit-form"]');
                     const start = document.querySelector('#vm-start-form .ui_submit');
                     const remove = document.querySelector('#vm-delete-form .ui_submit');
                     return { save: save.disabled, start: start.disabled, remove: remove.disabled,
@@ -436,7 +467,7 @@ def edit_guest(cookies, uuid, action='update', screenshot=None, on_shutdown=None
                     top.cloudminEditorBeforeSave = document.querySelector('#vm-edit-form');
                     const navigation = top.document.querySelector('aside') || top.frames.left.document.body;
                     top.cloudminNavigationCheck = navigation.querySelector('a[href*="edit_machine.cgi"]');
-                    document.querySelector('[form="vm-edit-form"]').click();
+                    document.querySelector('.ui_submit[form="vm-edit-form"]').click();
                     return true;
                 })()''')
                 wait('document.querySelector("#vm-edit-form") && '
@@ -546,8 +577,9 @@ def edit_guest(cookies, uuid, action='update', screenshot=None, on_shutdown=None
                         open_disk_panel('vm_remove_disk')
                     wait('document.querySelector('+json.dumps(selector)+').getBoundingClientRect().height > 0')
                     assert evaluate('document.querySelector('+json.dumps(selector)+').form.getAttribute("id")') == 'vm-edit-form'
-                    assert evaluate('document.querySelectorAll(".tab-pane .ui_submit, .ui_tabs_start .ui_submit").length') == 0
-                    assert evaluate('document.querySelector("[form=vm-edit-form]").getBoundingClientRect().width') > 0
+                    # Access has separate submit buttons; hardware panes share Save.
+                    assert evaluate('document.querySelectorAll("[data-vm-edit-fields] .ui_submit").length') == 0
+                    assert evaluate('document.querySelector(".ui_submit[form=vm-edit-form]").getBoundingClientRect().width') > 0
                     # Other hardware tabs must hide resource inputs without losing values.
                     if label != 'Resources':
                         assert evaluate('document.querySelector("input[name=cpus]").getBoundingClientRect().width') == 0

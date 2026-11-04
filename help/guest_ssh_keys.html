@@ -1,0 +1,30 @@
+<header>SSH Keys</header>
+
+<p>Manage an existing account's SSH keys under <b>Edit Virtual Machine &gt;
+Access &gt; SSH Keys</b>. The virtual machine must be running, and its guest
+agent must support SSH key commands.</p>
+
+<p>Accounts created with only a password can receive keys later. Adding a key
+does not change SSH login settings. The account and SSH server must allow key
+login before the key can be used.</p>
+
+<p>On SELinux guests, the <tt>virt_qemu_ga_manage_ssh</tt> setting lets the agent
+manage keys. Cloudmin enables it, when available, during setup of virtual
+machines created from cloud images and prepared clones. If access is denied
+just after creation, wait for setup to finish and click <b>Show Keys</b> again.
+If access remains denied, check the account's file permissions. On SELinux
+guests with this setting, run
+<tt>setsebool -P virt_qemu_ga_manage_ssh on</tt> as root inside the virtual
+machine.</p>
+
+<p>Select an account to view its keys. With read-only access, or if account
+lookup fails, the menu offers the account chosen during creation and
+<tt>root</tt>. Suggested accounts are not checked for SSH access. Click a key's
+fingerprint to see its full line, including any <tt>authorized_keys</tt>
+options.</p>
+
+<p>Adding or removing a key leaves other entries and open sessions unchanged.
+Removal deletes the selected entry. If the same key is authorized elsewhere,
+it can still be used. Cloudmin's own login key cannot be removed here.</p>
+
+<footer>

@@ -1,10 +1,29 @@
 /* Apply the server's resource limits to the existing Webmin size widgets. */
-// cloudminVmEditInit() binds ranges once per widget and rendered edit form.
+// cloudminVmEditInit() links hardware fields to their form and binds ranges.
 window.cloudminVmEditInit = () => {
     const form = document.getElementById('vm-edit-form');
+    const editor = document.getElementById('vm-editor');
     // A deferred asset can arrive after navigation has removed the editor.
-    if (!form) return;
-    for (const input of form.querySelectorAll('[data-vm-max]')) {
+    if (!form || !editor) return;
+    // All hardware panes submit together; Access has separate, signed forms.
+    for (const field of editor.querySelectorAll('[data-vm-edit-fields] input, [data-vm-edit-fields] select, [data-vm-edit-fields] textarea')) {
+        field.setAttribute('form', 'vm-edit-form');
+    }
+    // Keep the outer tab selection with hardware saves, not the Access forms.
+    // The tab input sits outside every form; themes without it change nothing.
+    [...editor.querySelectorAll('input[name="vm_edit_tabs"]')].find(input => !input.form)?.setAttribute('form', 'vm-edit-form');
+    // Access actions have their own buttons. Watch the theme's tab visibility.
+    const access = editor.querySelector('#att_access, #div_access');
+    const actions = document.getElementById('vm-edit-actions');
+    // Bind once when the theme exposes an Access pane and hardware actions.
+    if (access && actions && !access.dataset.actionsReady) {
+        access.dataset.actionsReady = '1';
+        // update() shows hardware actions only while Access is hidden.
+        const update = () => { actions.hidden = getComputedStyle(access).display !== 'none'; };
+        new MutationObserver(update).observe(access, { attributes: true, attributeFilter: ['class', 'style'] });
+        update();
+    }
+    for (const input of editor.querySelectorAll('[data-vm-max]')) {
         // Read-only widgets submit their preserved value through hidden fields.
         if (input.disabled) continue;
         // Repeated initialization must not add another unit-change listener.
@@ -57,28 +76,28 @@ window.cloudminVmEditInit = () => {
             }
         }
     }
-    // Keep allocation ranges within the chosen saved maximum, including unit changes.
+    // Keep allocation ranges within the chosen maximum across unit changes.
     if (!form.dataset.rangesReady) {
         // Bind once while allowing future edits to either value or size unit.
         form.dataset.rangesReady = '1';
         // ranges() caps allocations at the smaller host and selected maximum.
         const ranges = () => {
             for (const [name, maximum] of [['cpus', 'cpu_limit'], ['memory_mib', 'memory_limit_mib']]) {
-                const input = form.querySelector('[name="' + name + '"]');
-                const limit = form.querySelector('[name="' + maximum + '"]');
-                const units = form.querySelector('[name="' + name + '_units"]');
-                const limitUnits = form.querySelector('[name="' + maximum + '_units"]');
-                // Fixed layouts submit hidden values and
-                // need no editable range.
+                const input = editor.querySelector('[name="' + name + '"]');
+                const limit = editor.querySelector('[name="' + maximum + '"]');
+                const units = editor.querySelector('[name="' + name + '_units"]');
+                const limitUnits = editor.querySelector('[name="' + maximum + '_units"]');
+                // Fixed layouts submit hidden values without editable ranges.
                 if (!input || input.disabled || !limit) continue;
                 const bytes = Number(limit.value) * (limitUnits ? Number(limitUnits.value) : 1);
                 input.max = Math.min(Number(input.dataset.vmMax), bytes) / (units ? Number(units.value) : 1);
             }
         };
-        form.addEventListener('input', ranges);
-        form.addEventListener('change', ranges);
-        // Theme unit controls can notify the form only through jQuery.
-        if (window.jQuery) window.jQuery(form).on('input.cloudminVmRanges change.cloudminVmRanges', event => {
+        // Form-associated fields bubble to their editor, not the empty form.
+        editor.addEventListener('input', ranges);
+        editor.addEventListener('change', ranges);
+        // Some theme unit controls notify the editor only through jQuery.
+        if (window.jQuery) window.jQuery(editor).on('input.cloudminVmRanges change.cloudminVmRanges', event => {
             // Avoid recalculating twice for a bubbled native change event.
             if (!event.originalEvent) ranges();
         });

@@ -645,7 +645,11 @@ like($editor_confirmation, qr/name="return"[^>]*value="edit_machine"/, 'editor c
 my $settings = { id => 'guest', revision => 'revision', active => 0, max_cpus => 8,
 	cpus => 2, cpu_limit => 4, memory_mib => 1024, memory_limit_mib => 1536, max_memory_mib => 8192, description => '', bootmenu => 0,
 	disks => [], interfaces => [], pools => [], volumes => [], networks => [] };
-my $stopped_editor = show_vm_edit_form($settings, 'fixture-token');
+# Access supplies independent password and SSH forms beside hardware controls.
+my $access_html = show_vm_access_tabs(show_vm_password_reset_form(
+	{ uuid => 'guest', cloudmin => { username => 'cloudmin' } }, 'fixture-token'),
+	'<form id="ssh-fixture"><input name="public"></form>');
+my $stopped_editor = show_vm_edit_form($settings, 'fixture-token', 0, 0, 'resources', $access_html);
 like($stopped_editor, qr/name="cpus"[^>]*>\s*<span\b[^>]*>out of 8<\/span>/,
 	'editor shows the allowed CPU range as a note beside the input');
 my ($start_form) = $stopped_editor =~ /(<form\b[^>]*id="vm-start-form".*?<\/form>)/s;
@@ -658,20 +662,52 @@ unlike($stopped_editor, qr/id="vm-shutdown-form"/, 'stopped editor has no shutdo
 like($stopped_editor, qr/form="vm-edit-form"/, 'Save remains attached to the editor');
 # Running guests keep the editor and deletion confirmation available.
 my $running_editor = show_vm_edit_form({ %$settings, active => 1,
-	live_limits => { cpus => 4, min_cpus => 2, memory_mib => 1536, pcie_ports => 3 } }, 'fixture-token');
+	live_limits => { cpus => 4, min_cpus => 2, memory_mib => 1536, pcie_ports => 3 } }, 'fixture-token', 0, 0, 'access', $access_html);
 like($running_editor, qr/id="vm-shutdown-form"/, 'running guest offers shutdown');
 like($running_editor, qr/id="vm-edit-form"/, 'running guest has a hardware editor');
 my ($delete_form) = $running_editor =~ /(<form\b[^>]*id="vm-delete-form".*?<\/form>)/s;
 ok($delete_form, 'running editor offers deletion confirmation');
 unlike($delete_form, qr/disabled=/, 'Delete stays enabled for running guests');
-# The reset button remains available for stopped guests or missing agent status.
+# Access forms are siblings of the hardware form, not nested within it.
 foreach my $editor ($stopped_editor, $running_editor) {
-	my ($reset) = $editor =~ /(<form\b[^>]*id="vm-password-reset-review-form".*?<\/form>)/s;
-	ok($reset, 'editor always offers password reset');
-	like($reset, qr/action=['"]edit_machine\.cgi['"]/, 'reset stays in the editor');
-	like($reset, qr/name="password_reset"[^>]*value="1"/, 'reset opens its own form');
-	unlike($reset, qr/disabled|hidden(?!['"])/, 'reset is available regardless of guest readiness');
+	like($editor, qr/vm_edit_tabs.*access/s, 'editor offers the Access tab');
+	unlike($editor, qr/vm-password-reset-review-form/, 'footer no longer links to a separate reset page');
+	my ($reset) = $editor =~ /(<form\b[^>]*id="vm-password-reset-form".*?<\/form>)/s;
+	like($reset, qr/name="action"[^>]*value="reset_password"/, 'Access contains the reset form');
+	like($reset, qr/name="token"[^>]*value="fixture-token"/, 'password reset keeps its token');
+	unlike($reset, qr/name="(?:cpus|public)"/, 'password reset does not submit hardware or keys');
+	my ($hardware) = $editor =~ /(<form\b[^>]*id="vm-edit-form".*?<\/form>)/s;
+	unlike($hardware, qr/name="(?:password|username|public)"/, 'hardware form excludes guest credentials');
+	# Scan every form tag to catch invalid nesting across all Access panes.
+	my $depth = 0;
+	foreach my $tag ($editor =~ /(<\/?form\b[^>]*>)/g) {
+		$depth += $tag =~ m{^</} ? -1 : 1;
+		last if ($depth > 1 || $depth < 0);
+		}
+	is($depth, 0, 'forms are balanced and never nested');
+	# Ignore script strings when checking the editor's actual div boundaries.
+	my $markup = $editor;
+	$markup =~ s{<(script|style)\b[^>]*>.*?</\1>}{}gs;
+	$depth = 0;
+	foreach my $tag ($markup =~ /(<\/?div\b[^>]*>)/g) {
+		$depth += $tag =~ m{^</} ? -1 : 1;
+		last if ($depth < 0);
+		}
+	is($depth, 0, 'editor div wrappers are balanced without stray closing tags');
+	my @wrappers = $markup =~ /(<div\b[^>]*data-vm-edit-fields[^>]*>)/g;
+	is(scalar(@wrappers), 3, 'each hardware tab has one field wrapper');
+	like($_, qr/class="ui--div"/, 'hardware wrapper uses the tag API') foreach @wrappers;
 	}
+# An unavailable SSH tool falls back from a saved tab selection.
+my $password_only = show_vm_access_tabs('password form', undef, 'ssh_keys');
+like($password_only, qr/name="vm_access_tabs"[^>]*value="password"/, 'an unavailable SSH tool falls back to Password');
+unlike($password_only, qr/tab_ssh_keys/, 'undefined SSH content omits its subtab');
+{
+	# Rendering nested tabs must not change the selected outer hardware tab.
+	local $main::ui_tabs_selected = 'resources';
+	show_vm_access_tabs('password', 'keys', 'ssh_keys');
+	is($main::ui_tabs_selected, 'resources', 'nested Access tabs preserve the outer selection');
+}
 # Confirmation submits the guest name and history without a typing challenge.
 my $delete_confirmation = show_vm_edit_form({ %$settings, active => 1, history_revision => 'history' }, 'fixture-token', 1);
 like($delete_confirmation, qr/name="history_revision"[^>]*value="history"/, 'deletion submits the displayed snapshot history revision');
@@ -704,7 +740,7 @@ unlike($running_editor, qr/id="vm-next-start-notice"/, 'running editor has no pr
 unlike($running_editor, qr/Shut down once/, 'guests with spare ports have no expansion warning');
 my $pending_editor = show_vm_edit_form({ %$settings, active => 1,
     pending => {cpus => {running => 2, saved => 1}},
-    live_limits => { cpus => 2, min_cpus => 2, memory_mib => 1536, pcie_ports => 3 } }, 'fixture-token');
+    live_limits => { cpus => 2, min_cpus => 2, memory_mib => 1536, pcie_ports => 3 } }, 'fixture-token', 0, 0, 'access', $access_html);
 unlike($pending_editor, qr/name="cpus"[^>]*disabled/, 'CPU count remains editable when no live change is possible');
 is(scalar(() = $pending_editor =~ /Running: 2, next start: 1/g), 1,
 	'pending values appear only in the saved-changes alert');
@@ -1231,7 +1267,7 @@ unlike($details, qr/value="reboot"|value="shutdown"|value="start"/,
 $access{'force'} = 0; $access{'password'} = 1;
 @menu = get_menu_items([$vm], $id, 0, 1, 0);
 $links = join(' ', map { $_->{'link'} || '' } @menu);
-like(un_urlize($links), qr/edit_machine\.cgi\?id=$id&password_reset=1/,
+like(un_urlize($links), qr/edit_machine\.cgi\?id=$id&vm_edit_tabs=access/,
 	'password delegate enters only the reset form');
 $details = show_vm_details($vm, 'token');
 unlike($details, qr/password_reset|data-vm-password-reset|value="reboot"|force_off=1/,

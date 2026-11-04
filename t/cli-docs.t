@@ -82,12 +82,18 @@ is(scalar(@pages),scalar(@commands)+1,'overview plus one page per command');
 my $overview = read_page("$site/command-line.md");
 like($overview,qr/\A---\ntitle: "Command Line API"\ndate: \d{4}-\d\d-\d\d\nweight: 2820000\n---\n/,'overview front matter');
 my %seen_group;
+# These commands require Pro; the website badge must survive regeneration.
+my %pro_commands = map { $_ => 1 } qw(list-ssh-keys create-ssh-key
+    modify-ssh-key download-ssh-key delete-ssh-key list-system-keys
+    add-system-key remove-system-key);
 foreach my $command (@commands) {
     my $name = $command->{name};
     my $page = read_page("$site/API Programs/$name.md");
     # The sidebar shows a group heading for every page that names a subSection.
     my $group = $seen_group{$command->{group}}++ ? '' : "subSection: \"\Q$command->{group}\E\"\n";
-    like($page,qr/\A---\ntitle: "\Q$name\E"\n${group}date: \d{4}-\d\d-\d\d\nweight: \d+\n---\n\n### /,"$name page front matter and heading");
+    my $edition = $pro_commands{$name} ? 'edition: "pro"\n' : '';
+    like($page,qr/\A---\ntitle: "\Q$name\E"\n${group}${edition}date: \d{4}-\d\d-\d\d\nweight: \d+\n---\n\n### /,"$name page front matter and heading");
+    unlike($page,qr/^### .*\(Pro\)/m,"$name heading leaves the edition to its title badge");
     like($page,qr/```text\ncloudmin \Q$name\E/,"$name page has syntax");
     like($page,qr/```sh\n/,"$name page has examples");
     unlike($page,qr/^=(?:head|over|back|item|cut)|[BC]</m,"$name page has no POD");
@@ -102,6 +108,9 @@ my $warnings = '';
 open(my $errfh,'>',\$warnings) || die $!;
 Cloudmin::CLI->new(err=>$errfh)->docs_pages($site);
 like(read_page("$site/API Programs/list-systems.md"),qr/^date: 2026-01-02\nauthor: "Tester"\nweight: \d+\n/m,'date and author kept on regeneration');
+like(read_page("$site/API Programs/download-ssh-key.md"),
+    qr/^edition: "pro"$/m, 'Pro title badge survives regeneration');
+like($cli->help('download-ssh-key'), qr/\(Pro\)/, 'CLI help retains the Pro label');
 like($warnings,qr/^Stale page: .*old-command\.md$/m,'stale page reported');
 ok(-f "$site/API Programs/old-command.md",'stale page is not deleted');
 my $dir = tempdir(CLEANUP=>1);

@@ -8,8 +8,10 @@ use WebminCore;
 use Cloudmin::Jobs;
 # Match the page builders' path so Perl loads the shared module only once.
 BEGIN { require "$Bin/../lib/Cloudmin/Libvirt.pm"; }
-our (%text, %in, $root_directory);
+our (%text, %in, $root_directory, $module_root_directory);
 $root_directory = $CloudminTest::webmin_root;
+# Menu items check the installed edition under the module directory.
+$module_root_directory = "$Bin/..";
 open(my $lang, '<', "$Bin/../lang/en") or die $!;
 while (<$lang>) { chomp; $text{$1} = $2 if (/^([^=]+)=(.*)$/); }
 {
@@ -49,6 +51,18 @@ foreach my $enabled (0, 1) {
 like(parse_webmin_log('root', '', 'console', 'vm', 'old-uuid', {}),
 	qr/<tt>old-uuid<\/tt>/,
 	'old entries do not require a live guest lookup');
+# Guest key changes name the virtual machine; library changes name the key.
+foreach my $action (qw(add_guest_ssh_key remove_guest_ssh_key)) {
+	like(parse_webmin_log('root', '', $action, 'vm', 'uuid',
+		{ name => 'guest<one>', username => 'admin' }),
+		qr/^(?:Added|Removed) .*SSH key.* guest account on <tt>guest&lt;one&gt;<\/tt>$/,
+		"$action has a readable escaped description");
+	}
+# Library audit descriptions use the escaped key name, including downloads.
+foreach my $action (qw(save_ssh_key delete_ssh_key download_ssh_key)) {
+	like(parse_webmin_log('root', '', $action, 'sshkey', 'a'x32, { name => 'Admins<one>' }),
+		qr/SSH key <tt>Admins&lt;one&gt;<\/tt>$/, "$action names the library entry");
+	}
 
 # Storage logs retain names and distinguish enabling boot from disabling it.
 for my $action (qw(create start stop)) {
