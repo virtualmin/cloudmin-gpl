@@ -66,6 +66,7 @@ class Fields(HTMLParser):
         super().__init__()
         self.values = {}
         self.in_form = False
+        self.select = None
         self.feed(page)
 
     # handle_starttag(self, tag, attrs) tracks the reset form and its inputs.
@@ -77,12 +78,20 @@ class Fields(HTMLParser):
         # Collect only reset-form fields, including routing values and token.
         if tag == 'input' and self.in_form:
             self.values[attrs.get('name')] = attrs.get('value', '')
+        # Selects submit the selected option, or the first when none is marked.
+        if tag == 'select' and self.in_form:
+            self.select = attrs.get('name')
+        if tag == 'option' and self.select:
+            if self.select not in self.values or 'selected' in attrs:
+                self.values[self.select] = attrs.get('value', '')
 
     # handle_endtag(self, tag) excludes inputs from other editor forms.
     def handle_endtag(self, tag):
         # Inputs after this closing tag belong to another editor section.
         if tag == 'form':
             self.in_form = False
+        if tag == 'select':
+            self.select = None
 
 
 # request(opener, path, [fields], [as_json]) sends GET when fields is None.
@@ -237,6 +246,16 @@ try:
         user, opener = account(theme)
         token = api(opener, 'options')['result']['token']
         fields = dict(id=identity, username='passwordfixture', password=new_password(), token=token)
+        # Host administrators can select a discovered account or enter another.
+        page = request(opener, '/server-manager/edit_machine.cgi?id=' + identity + '&password_reset=1')
+        form = Fields(page).values
+        assert 'password_username' in form and 'Other account...' in page, 'Account picker is missing'
+        for selection, manual in (('passwordfixture', 'cloudmin_missing_account'), ('', 'passwordfixture')):
+            form.update(password_username=selection, username=manual, password=new_password())
+            page = request(opener, '/server-manager/edit_machine.cgi', form)
+            assert 'The guest password has been reset.' in page, 'Selected account reset did not complete'
+            verify_password(form['password'])
+        print('PASS:', theme, 'listed and manually entered accounts reset the intended guest password', flush=True)
         # Reject missing tokens, power-only grants and foreign VM IDs.
         assert 'expired' in api(opener, 'reset_password', **dict(fields, token=''))['error']
         grants(user, admin=0, vms=identity, power=1)
@@ -254,6 +273,7 @@ try:
         page = request(opener, '/server-manager/edit_machine.cgi?id=' + identity + '&password_reset=1')
         form = Fields(page).values
         assert form.get('action') == 'reset_password' and form.get('password') == ''
+        assert 'password_username' not in form, 'Password-only delegates need manual entry'
         form.update(username='passwordfixture', password=new_password())
         page = request(opener, '/server-manager/edit_machine.cgi', form)
         assert 'The guest password has been reset.' in page, 'Form did not complete'
@@ -294,6 +314,7 @@ try:
         page = request(opener, '/server-manager/edit_machine.cgi?id=' + identity + '&password_reset=1')
         assert 'vm-password-reset-form' in page, 'Unavailable guest cannot open reset form'
         form = Fields(page).values
+        assert 'password_username' not in form, 'Unavailable discovery must keep manual entry'
         form.update(username='passwordfixture', password=new_password())
         page = request(opener, '/server-manager/edit_machine.cgi', form)
         assert expected in page, 'Password reset did not report the guest readiness error'

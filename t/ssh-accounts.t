@@ -83,18 +83,41 @@ is_deeply(login_accounts(undef), [], 'no passwd text gives no accounts');
 my $vm = {uuid => $uuid, cloudmin => {username => 'cloudmin'}};
 {
     no warnings qw(redefine once);
-    my $writable;
+    my ($writable, $reads);
     # get_libvirt(writable) records whether the caller requested write access.
     local *main::get_libvirt = sub { $writable = $_[0]; $adapter };
     # read_guest_file(self, id, path, limit) checks the bounded passwd request.
     local *Cloudmin::Libvirt::read_guest_file = sub { my ($self, $id, $path, $limit) = @_;
+        ++$reads;
         is($path, '/etc/passwd', 'account list comes from passwd'); ok($limit >= 65536, 'bounded read'); $passwd };
     %access = (admin => 1);
     is_deeply(guest_login_accounts($vm), [qw(cloudmin deploy noshell root)], 'writable sessions list guest accounts');
     ok($writable, 'agent file reads use the writable adapter');
+    # Password and SSH rendering share one lookup without persisting the cache.
+    {
+        local $main::guest_login_accounts_cache = {};
+        my $before = $reads;
+        guest_login_accounts($vm);
+        guest_login_accounts($vm);
+        is($reads - $before, 1, 'two Access forms share one account read');
+        local %access = (admin => 0, vms => $uuid, password => 1);
+        is(guest_login_accounts($vm), undef, 'cached accounts do not bypass permissions');
+    }
+    my $before = $reads;
+    guest_login_accounts($vm);
+    is($reads - $before, 1, 'a later rendering reads fresh accounts');
+    is(guest_login_accounts({%$vm, state => 'shutoff'}), undef, 'stopped guests use manual entry');
+    is($reads - $before, 1, 'stopped guest discovery never calls the agent');
     # read_guest_file(self, id, path, limit) models disabled file operations.
-    local *Cloudmin::Libvirt::read_guest_file = sub { die "Guest identity lookup failed: file operations disabled\n" };
+    local *Cloudmin::Libvirt::read_guest_file = sub { ++$reads; die "Guest identity lookup failed: file operations disabled\n" };
     is(guest_login_accounts($vm), undef, 'blocked file operations fall back quietly');
+    {
+        local $main::guest_login_accounts_cache = {};
+        my $before = $reads;
+        guest_login_accounts($vm);
+        guest_login_accounts($vm);
+        is($reads - $before, 1, 'failed discovery is not repeated for the second tab');
+    }
     # read_guest_file(self, id, path, limit) models a disconnected agent.
     local *Cloudmin::Libvirt::read_guest_file = sub { undef };
     is(guest_login_accounts($vm), undef, 'a disconnected agent falls back quietly');

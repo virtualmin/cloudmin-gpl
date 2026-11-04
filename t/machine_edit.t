@@ -47,6 +47,7 @@ sub submit
 {
 my ($action, $tab, $initial, @statuses) = @_;
 my ($url, $output, @calls) = ('', '');
+my $submitted;
 local %in = (action => $action, id => $uuid, vm_edit_tabs => $tab);
 local $ENV{'REQUEST_METHOD'} = 'POST';
 local $ENV{'CONTENT_LENGTH'} = 0;
@@ -54,6 +55,7 @@ local $whatfailed;
 no warnings qw(redefine once);
 local *main::call_vm_api = sub {
 	push(@calls, $_[1]);
+	$submitted = { %{$_[2]} } if ($_[1] eq 'reset_password');
 	my $value = $_[1] eq 'status' ? shift(@statuses) : $initial;
 	die "Unexpected status read\n" if (!defined($value));
 	die $value if (!ref($value));
@@ -66,7 +68,7 @@ local *STDOUT = $fh;
 do "$Bin/../edit_machine.cgi";
 my $error = $@;
 $error = '' if (ref($error) eq 'EditorExit');
-return { url => $url, error => $error, output => $output, calls => \@calls };
+return { url => $url, error => $error, output => $output, calls => \@calls, submitted => $submitted };
 }
 
 # Fast and delayed saves both reopen the selected tab without progress output.
@@ -130,6 +132,18 @@ $result = submit('reset_password', '', { id => $uuid });
 is($result->{'url'}, "edit_machine.cgi?id=$uuid&vm_edit_tabs=access&vm_access_tabs=password&password_saved=1",
 	'password reset returns to its editor form');
 is_deeply($result->{'calls'}, ['reset_password'], 'password reset does not wait for a job');
+# Selection must override stale manual text; Other and legacy forms keep it.
+for my $case (
+	[{password_username => 'deploy', username => 'stale'}, 'deploy'],
+	[{password_username => '', username => 'custom'}, 'custom'],
+	[{username => 'legacy'}, 'legacy'],
+) {
+	no warnings 'redefine';
+	# ReadParse() supplies the account fields from this form variant.
+	local *main::ReadParse = sub { @in{keys %{$case->[0]}} = values %{$case->[0]}; };
+	my $saved = submit('reset_password', '', {id => $uuid});
+	is($saved->{'submitted'}->{'username'}, $case->[1], 'reset API receives the chosen account');
+}
 # A stopped guest or unavailable agent must produce an error, not a success URL.
 foreach my $failure ('Guest agent is not responding', 'Virtual machine must be running') {
 	$result = submit('reset_password', '', "$failure\n");

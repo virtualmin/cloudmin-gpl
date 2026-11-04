@@ -32,6 +32,8 @@ if (($in{'action'} || '') eq 'reset_password') {
 	my $result = eval {
 		die "Use POST for virtual machine changes\n"
 			if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+		# A listed account overrides the hidden manual field; Other keeps its value.
+		$in{'username'} = $in{'password_username'} if (length($in{'password_username'} // ''));
 		call_vm_api(1, 'reset_password', \%in);
 		};
 	error(error_html(error_message($@))) if (!$result);

@@ -15,7 +15,7 @@ require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-ssh-pages.pl'
 require(File::Basename::dirname(__FILE__).'/lib/Cloudmin/Presets.pm');
 no warnings 'once';
 
-our (%text, %config, %access, $module_root_directory, $remote_user);
+our (%text, %config, %access, $module_root_directory, $remote_user, $guest_login_accounts_cache);
 
 require(File::Basename::dirname(__FILE__)."/cloudmin-disk-labels.pl");
 
@@ -2223,13 +2223,26 @@ return ui_form_start('edit_machine.cgi', 'post', undef,
 	[ token => $token ], [ action => $action ], @{$extra || []});
 }
 
-# show_vm_password_reset_form(vm, token)
-# Renders the reset form with an editable username and signed token.
+# show_vm_password_reset_form(vm, token, [accounts])
+# Offers discovered accounts with manual entry for other names. An omitted or
+# empty accounts list keeps the plain username field and signed reset form.
 sub show_vm_password_reset_form
 {
-my ($vm, $token) = @_;
-# Suggest the creation account; guests without that metadata need a username.
+my ($vm, $token, $accounts) = @_;
+# Preserve the creation account even when discovery does not include it.
 my $username = ($vm->{'cloudmin'} || {})->{'username'} || '';
+my $chooser = ui_textbox('username', $username, 30, 0, undef,
+	'autocomplete="off" aria-label="'.quote_escape($text{'vm_password_username'}).'"');
+if ($accounts && @$accounts) {
+	# Missing metadata defaults to the first account; unlisted names stay editable.
+	my $selected = $username || $accounts->[0];
+	$selected = '' if (!grep { $_ eq $selected } @$accounts);
+	$chooser = ui_select_switch('password_username', $selected, [
+		(map { { value => $_, label => $_ } } @$accounts),
+		{ value => '', label => $text{'vm_password_other_account'},
+		  fields => [[undef, $chooser]] },
+		], { class => 'vm-password-account' });
+	}
 # Never refill the password field from a previous submission.
 return ui_page_start().ui_tag('div', ui_p(html_escape($text{'vm_password_reset_help'})),
 	{ class => 'vui_ui_block' }).
@@ -2238,8 +2251,7 @@ return ui_page_start().ui_tag('div', ui_p(html_escape($text{'vm_password_reset_h
 	ui_hidden('action', 'reset_password').
 	ui_hidden('vm_edit_tabs', 'access').ui_hidden('vm_access_tabs', 'password').
 	ui_table_start(undef, 'width=100%', 2).
-	ui_table_row($text{'vm_password_username'}, ui_textbox('username', $username, 30, 0, undef,
-		'autocomplete="off"')).
+	ui_table_row($text{'vm_password_username'}, $chooser).
 	ui_table_row($text{'vm_password_new'}, ui_password('password', '', 30, 0, undef,
 		'data-password autocomplete="new-password"')).
 	ui_table_end().ui_form_end([[undef, $text{'vm_password_reset'}]]).ui_page_end();
@@ -2437,12 +2449,14 @@ return ui_tabs_start([
 sub show_vm_access
 {
 my ($vm, $token, $in) = @_;
+# Both Access forms share discovery, including failures, for this rendering only.
+local $guest_login_accounts_cache = {};
 my ($password, $ssh);
 # Password grants apply to this guest, including assigned delegates.
 if (can_access('password', $vm->{'uuid'})) {
 	$password = ($in->{'password_saved'}
 		? ui_alert_box($text{'vm_password_reset_done'}, 'success', undef, undef, '') : '').
-		show_vm_password_reset_form($vm, $token);
+		show_vm_password_reset_form($vm, $token, guest_login_accounts($vm));
 	}
 # Guest key management is available only to host administrators with Pro.
 if (can_access('host') && has_ssh_key_manager()) {

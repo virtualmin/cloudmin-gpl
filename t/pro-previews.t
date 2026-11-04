@@ -98,6 +98,8 @@ foreach my $disabled (0, 1) {
  no warnings qw(redefine once);
  # has_ssh_key_manager() forces GPL behavior regardless of installed files.
  local *main::has_ssh_key_manager = sub { 0 };
+ # guest_login_accounts(vm) supplies the independent GPL password selector.
+ local *main::guest_login_accounts = sub { ['root'] };
  # guest_ssh_service(id) rejects accidental guest access from a preview.
  local *main::guest_ssh_service = sub { die "Preview queried the guest agent" };
  # get_ssh_key_manager() rejects accidental library access from a preview.
@@ -109,6 +111,7 @@ foreach my $disabled (0, 1) {
  like($page, qr/name="vm_access_tabs"[^>]*value="ssh_keys"/, 'GPL can select the SSH Keys subtab');
  like($page, qr/Save reusable SSH keys.*?Cloudmin Pro/s, 'SSH Keys explains its Pro requirement');
  like($page, qr/name="action"[^>]*value="reset_password"/, 'GPL keeps the password reset form');
+ like($page, qr/<select[^>]*name="password_username"/, 'GPL offers the discovered password accounts');
  # Preview selectors retain the compact Pro layout and escape guest metadata.
  my $preview = show_guest_ssh_preview($vm);
  like($preview, qr/<select(?=[^>]*name="ssh_username")(?=[^>]*disabled)[^>]*>/,

@@ -1288,6 +1288,24 @@ my $recorded_form = show_vm_password_reset_form({ %$vm,
 ($username_input) = $recorded_form =~ /(<input[^>]*name="username"[^>]*>)/;
 like($username_input, qr/value=['"]cloudmin['"]/, 'reset suggests the recorded creation username');
 unlike($username_input, qr/\b(?:readonly|disabled)\b/, 'suggested username remains editable');
+# Discovered accounts use the shared switch widget, with manual entry as needed.
+my $listed_form = show_vm_password_reset_form({ %$vm,
+	cloudmin => { username => 'cloudmin' } }, 'signed-token', [qw(root cloudmin deploy)]);
+like($listed_form, qr/<select[^>]*name="password_username"/, 'available accounts use a dropdown');
+like($listed_form, qr/<option value="cloudmin" selected>/, 'creation account is selected even when not first');
+like($listed_form, qr/<option value="">Other account\.\.\.<\/option>/, 'dropdown offers manual entry');
+like($listed_form, qr/<div(?=[^>]*data-ui-switch-value="")(?=[^>]*hidden)[^>]*>/,
+	'manual input starts hidden for a listed account');
+my $other_form = show_vm_password_reset_form({ %$vm,
+	cloudmin => { username => 'unlisted' } }, 'signed-token', ['root']);
+like($other_form, qr/<option value="" selected>/, 'unlisted creation account selects Other');
+like($other_form, qr/name="username"[^>]*value="unlisted"/, 'unlisted creation account stays editable');
+unlike($other_form, qr/<div(?=[^>]*data-ui-switch-value="")(?=[^>]*hidden)[^>]*>/,
+	'manual input is visible for an unlisted account');
+my $discovered_form = show_vm_password_reset_form($vm, 'signed-token', [qw(deploy root)]);
+like($discovered_form, qr/<option value="deploy" selected>/, 'missing metadata selects the first discovered account');
+unlike(show_vm_password_reset_form($vm, 'signed-token', []), qr/name="password_username"/,
+	'an empty account list keeps plain manual entry');
 # Imported metadata must be escaped before it reaches the username field.
 my $escaped_form = show_vm_password_reset_form({ %$vm,
 	cloudmin => { username => '"><script>bad</script>' } }, 'signed-token');

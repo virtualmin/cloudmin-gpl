@@ -998,6 +998,7 @@ vm_password_reset=Reset Password
 vm_password_reset_error=Cannot reset guest password
 vm_password_reset_help=Set a new password for an existing account inside the virtual machine. The virtual machine must be running and its guest agent must respond. SSH login settings and your Webmin password stay unchanged.
 vm_password_username=Guest username
+vm_password_other_account=Other account...
 vm_password_new=New password
 vm_password_reset_done=The guest password has been reset.
 log_vm_reset_password=Reset a guest account password on $1

@@ -2,7 +2,7 @@
 # require a form token.
 use strict;
 use warnings;
-our ($module_root_directory, $module_var_directory, $remote_user);
+our ($module_root_directory, $module_var_directory, $remote_user, $guest_login_accounts_cache);
 
 # has_ssh_key_manager() checks whether the Pro key module is installed.
 sub has_ssh_key_manager
@@ -134,18 +134,25 @@ return [(grep { $first{$_} } @preferred), (sort grep { !$first{$_} } @accounts)]
 }
 
 # guest_login_accounts(vm) reads the running guest's account list through the
-# agent. Returns undef when the session or the agent cannot read guest files,
-# so the account selector falls back to the creation account and root.
+# agent. Returns undef when the guest, session or agent cannot provide it.
+# Callers choose their fallback. show_vm_access scopes a cache to one rendering.
 sub guest_login_accounts
 {
 my ($vm) = @_;
 # Agent file reads are a write-capable channel, kept from read-only sessions.
 return undef if (!can_access('manage'));
-my $passwd = eval { get_libvirt(1)->read_guest_file($vm->{'uuid'}, '/etc/passwd', 262144) };
-# Agent failures leave the selector with those known account names.
-return undef if (!defined($passwd));
-# Prefer the creation account when it still appears in the guest list.
-return login_accounts($passwd, ($vm->{'cloudmin'} || {})->{'username'} || ());
+# Stopped guests cannot answer; avoid opening an agent channel for them.
+return undef if (defined($vm->{'state'}) && $vm->{'state'} !~ /\A(?:running|blocked)\z/);
+my $id = $vm->{'uuid'};
+return $guest_login_accounts_cache->{$id}
+    if ($guest_login_accounts_cache && exists($guest_login_accounts_cache->{$id}));
+my $passwd = eval { get_libvirt(1)->read_guest_file($id, '/etc/passwd', 262144) };
+# Preserve failures as undef and prefer the creation account when it exists.
+my $accounts = defined($passwd)
+    ? login_accounts($passwd, ($vm->{'cloudmin'} || {})->{'username'} || ()) : undef;
+# Cache only inside the page's local scope, never across CGI requests.
+$guest_login_accounts_cache->{$id} = $accounts if ($guest_login_accounts_cache);
+return $accounts;
 }
 
 # call_ssh_key_api(action, input) dispatches synchronous key requests.

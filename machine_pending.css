@@ -41,3 +41,16 @@
     min-height: 1lh;
     aspect-ratio: 1;
 }
+/* Keep manual account entry beside the picker, wrapping on narrow screens. */
+.ui_select_switch.vm-password-account {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.vm-password-account > .ui_select_switch_panel {
+    width: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+.vm-password-account .ui_select_switch_fields { display: block; }
