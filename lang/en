@@ -469,6 +469,7 @@ vm_cpu_model=CPU model
 vm_cpu_mode=CPU mode
 vm_memory_max=Maximum memory
 vm_guest_os=Guest operating system
+vm_default_login=Default login
 vm_guest_kernel=Guest kernel
 vm_guest_hostname=Guest hostname
 vm_resources=Resource usage

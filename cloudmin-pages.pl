@@ -1959,6 +1959,10 @@ my @addresses = map { $_->{'address'}.' ('.$_->{'source'}.')' }
 push(@details, [ $text{'vm_addresses'}, ui_tag('span',
 	$escape->(@addresses ? join(', ', @addresses)
 	: $text{'vm_status_checking'}), { 'data-vm-field' => 'addresses' }) ]);
+# Show the recorded creation account without querying a running guest.
+my $username = ($vm->{'cloudmin'} || {})->{'username'};
+push(@details, [ $text{'vm_default_login'}, $escape->($username) ])
+	if (defined($username) && length($username));
 # An omitted description should not leave an empty identity row.
 push(@details, [ $text{'vm_description'}, $escape->($vm->{'description'}) ])
 	if (length($vm->{'description'} || ''));
