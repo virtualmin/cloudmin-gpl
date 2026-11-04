@@ -445,16 +445,14 @@ def edit_guest(cookies, uuid, action='update', screenshot=None, on_shutdown=None
                 assert not evaluate('document.querySelector("[data-second-print]") !== null')
                 assert evaluate('!!top.cloudminNavigationCheck?.isConnected'), 'save rebuilt the theme menu'
 
-            # disk_panel(name, [header]) supports both Webmin accordion renderings.
+            # disk_panel(name, [header]) locates the shared disclosure widget.
             def disk_panel(name, header=False):
-                selector = ('#hiddenopener_'+name+', details[data-name="'+name+'"] > summary'
-                            if header else '#hiddendiv_'+name+', details[data-name="'+name+'"] > table')
+                selector = 'details.'+name.replace('_', '-')+(' > summary' if header else '')
                 return 'document.querySelector('+json.dumps(selector)+')'
 
-            # disk_panel_open(name) reads native disclosure state when available.
+            # disk_panel_open(name) reads the native disclosure state.
             def disk_panel_open(name):
-                return ('(panel => panel.closest("details[data-name]")?.open ?? '
-                        '(panel.getBoundingClientRect().height > 0))('+disk_panel(name)+')')
+                return disk_panel(name)+'.open'
 
             # open_disk_panel(name, [opened]) clicks the theme's own panel control.
             def open_disk_panel(name, opened=True):

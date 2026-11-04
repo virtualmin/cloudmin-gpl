@@ -807,6 +807,13 @@ my $disk_editor = show_vm_edit_form({ %$settings,
 	attachable_volumes => [{pool => 'pool', name => 'free.qcow2', capacity => 1024**3, pool_name => 'default'}],
 	images => [{id => 'image', name => 'Original image', capacity => 1024**3, pool_name => 'default'}],
 	}, 'token');
+# Disk disclosures must work without a theme adding an accordion wrapper.
+foreach my $panel ('add', 'remove') {
+	like($disk_editor, qr/<details class="default default-lg vm-$panel-disk"><summary>.*?<\/summary>/,
+		"$panel disk uses a closed native disclosure");
+	}
+unlike($disk_editor, qr/hiddenopener_vm_(?:add|remove)_disk/,
+	'disk disclosures do not depend on theme-specific hidden tables');
 like($disk_editor, qr/Cloud-init configuration/, 'seed disk has a readable role');
 like($disk_editor, qr/>Read-only<\/span>/, 'seed exposes its read-only state as visible text');
 unlike($disk_editor, qr/hidden-original/, 'raw inventory is not used for attachment choices');

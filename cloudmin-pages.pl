@@ -2607,6 +2607,7 @@ $page .= ui_page_start();
 $page .= ui_card({ flush => 1,
 	body => ui_list(\@disks, { flush => 1 }) })
 	if (@disks);
+# Native disclosures work inside tab wrappers without theme-specific accordions.
 # One explicit choice adds one disk when the shared Save is submitted.
 my @pools = map { [$_->{'id'}, $_->{'name'}] } @{$s->{'pools'}};
 my @volumes = map { [$_->{'pool'}.':'.$_->{'name'},
@@ -2619,9 +2620,9 @@ my @images = map { [$_->{'id'},
 	@{Cloudmin::ImageChoices::sort_images($s->{'images'} || [])};
 $page .= ui_tag('style', '#vm-edit-form .ui_radio_table { width:100%; } '.
 	'#vm-edit-form .ui_badge_small { font-size:0.75em; padding-inline:5px; }').
-	ui_hidden_table_start($text{'vm_add_disk_title'}, 'width=100%', 2,
-		'vm_add_disk', 0).
-	ui_table_row(undef, ui_p($text{'vm_add_disk_desc'}).
+	ui_details({ html => 1, class => 'default default-lg vm-add-disk',
+		title => html_escape($text{'vm_add_disk_title'}),
+		content => ui_tag('div', ui_p($text{'vm_add_disk_desc'}).
 		ui_radio_table('add_disk_action', 'none', [
 		['none', $text{'vm_no_disk_addition'}],
 		['create', $text{'vm_create_empty_disk'},
@@ -2638,15 +2639,16 @@ $page .= ui_tag('style', '#vm-edit-form .ui_radio_table { width:100%; } '.
 				{ 'data-group' => 'clone-disk' })],
 		['attach', $text{'vm_attach_disk'},
 			ui_select('attach_volume', '', [ ['', $text{@volumes ? 'vm_choose_disk' : 'vm_no_unused_disks'}], @volumes ])],
-		]), 2).
-	ui_hidden_table_end('vm_add_disk');
+		]), { style => 'width:100%;padding:0.3em 0 0.3em 0' }) });
 if (@remove_disks) {
-	# Removal choices stay pending in the shared form until Save is used.
-	$page .= ui_hidden_table_start($text{'vm_remove_disk_title'}, 'width=100%', 2,
-		'vm_remove_disk', 0).
-		ui_table_row(undef, ui_p($text{'vm_remove_disk_desc'}), 2);
-	$page .= ui_table_row(@$_) foreach @remove_disks;
-	$page .= ui_hidden_table_end('vm_remove_disk');
+	# Removal choices stay pending even when their disclosure is closed.
+	my $remove = ui_p($text{'vm_remove_disk_desc'}).
+		ui_table_start(undef, 'width=100%', 2);
+	$remove .= ui_table_row(@$_) foreach @remove_disks;
+	$remove .= ui_table_end();
+	$page .= ui_details({ html => 1, class => 'default default-lg vm-remove-disk',
+		title => html_escape($text{'vm_remove_disk_title'}),
+		content => ui_tag('div', $remove) });
 	}
 $page .= ui_page_end().ui_tabs_end_tab('vm_edit_tabs', 'disks');
 $page .= ui_tabs_start_tab('vm_edit_tabs', 'interfaces').
