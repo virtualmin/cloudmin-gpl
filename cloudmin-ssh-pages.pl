@@ -33,26 +33,42 @@ return ui_tag('div', ui_stack([$input, ($warning ? $warning : ()), $tools], { ga
         ((stat("$module_root_directory/ssh-keys.js"))[9] || 0) });
 }
 
+# guest_ssh_account_heading(username, accounts, [count], [disabled])
+# Places the labelled account selector and optional nonzero key count together.
+# accounts lists known usernames. disabled defaults to false for live pages.
+sub guest_ssh_account_heading
+{
+my ($username, $accounts, $count, $disabled) = @_;
+# Use a separate field name from Password, including its generated ID.
+# Submit through the theme so account changes retain its navigation shell.
+my $chooser = ui_select('ssh_username', $username, [map { [$_, $_] } @$accounts], 1, 0, 1, $disabled,
+    ($disabled ? '' : 'onchange="this.form.requestSubmit()" ').
+    'title="'.quote_escape($text{'keys_guest_accounts_help'}).'"');
+# Wrapping the select labels it even when the theme emits no ID.
+my $label = ui_tag('label', ui_tag('span', html_escape($text{'keys_guest_for'}),
+    { class => 'cloudmin-ssh-account-label' }).$chooser,
+    { class => 'ui_select_inline ui_select_inline_underlined cloudmin-ssh-account-select' });
+# Unknown and empty inventories have no count beside the selector.
+my $total = $count ? ui_tag('small', html_escape($count == 1 ? $text{'keys_guest_count_one'}
+    : text('keys_guest_count', $count)), { class => 'cloudmin-ssh-count' }) : '';
+# Keep account selection usable when JavaScript is disabled.
+my $fallback = $disabled ? '' : ui_tag('noscript', ui_action_button($text{'keys_show'}, 'neutral',
+    { type => 'submit', size => 'small', icon => 'user' }));
+# Heading content stays inline HTML; its form wraps the card on live pages.
+return ui_tag('span', $label.$total.$fallback,
+    { class => 'ui_cluster ui_cluster_baseline' });
+}
+
 # show_guest_ssh_preview(vm) shows disabled account and key controls on GPL.
 # Use creation metadata only; previews never query the guest agent or library.
 sub show_guest_ssh_preview
 {
 my ($vm) = @_;
 my $username = ($vm->{'cloudmin'} || {})->{'username'} || 'root';
-# Keep the Pro account selector's compact layout, even for one preview account.
-my $chooser = ui_select('username', $username, [[$username, $username]], 1, 0, 1, 1);
-# Avoid sharing the Password subtab's username ID and label.
-$chooser =~ s/\bid="[^"]*"/id="ssh-username"/ ||
-    $chooser =~ s/<select\b/<select id="ssh-username"/;
-my $account = ui_cluster([
-    ui_tag('label', html_escape($text{'keys_guest_account'}), { for => 'ssh-username' }), $chooser,
-    ui_action_button($text{'keys_show'}, 'neutral', { size => 'small', icon => 'user', disabled => 1 })],
-    { gap => '6px', class => 'ui_cluster_small' });
-# Show the account chooser without pretending to have read its authorized keys.
-my $controls = ui_card({ title => $text{'keys_guest_title'},
-    desc => $text{'keys_guest_keys_desc'}, actions => $account });
+# Match the live account heading without reading guest keys or offering changes.
+my $controls = ui_card({ title_html => guest_ssh_account_heading($username, [$username], undef, 1) });
 # Match the Pro addition card with disabled input and submit controls.
-$controls .= ui_card({ title => $text{'keys_guest_add'},
+$controls .= ui_card({ title_html => hlink(html_escape($text{'keys_guest_add'}), 'guest_ssh_keys'),
     body => ui_field($text{'keys_guest_paste'}, ui_textarea('public', '', 4, 70, undef, 1,
         'placeholder="ssh-ed25519 AAAA... user@host"'),
         { for => 'public', help_html => text('keys_guest_paste_help', ui_tag('tt', 'authorized_keys')) }),

@@ -111,9 +111,13 @@ foreach my $disabled (0, 1) {
  like($page, qr/name="action"[^>]*value="reset_password"/, 'GPL keeps the password reset form');
  # Preview selectors retain the compact Pro layout and escape guest metadata.
  my $preview = show_guest_ssh_preview($vm);
- like($preview, qr/<select(?=[^>]*name="username")(?=[^>]*disabled)[^>]*>/,
+ like($preview, qr/<select(?=[^>]*name="ssh_username")(?=[^>]*disabled)[^>]*>/,
   'GPL uses a disabled select even for a single preview account');
- unlike($preview, qr/<input[^>]*name="username"/, 'GPL never previews a username text field');
+ unlike($preview, qr/<input[^>]*name="ssh_username"/, 'GPL never previews a username text field');
+ like($preview, qr/<h2[^>]*>.*?Authorized keys for.*?<select.*?<\/h2>/s,
+  'GPL previews the account selector in the heading');
+ unlike($preview, qr/Choose a guest account|Show Keys|cloudmin-ssh-count/,
+  'GPL omits redundant instructions, the button and an unknown key count');
  like($preview, qr/&quot;&gt;&lt;unsafe&gt;/, 'preview escapes the recorded guest username');
  like($preview, qr/\bvalue="&quot;><unsafe>"/, 'select keeps guest metadata inside its quoted value');
  # The library preview follows the empty Saved Keys page, not the add form.
