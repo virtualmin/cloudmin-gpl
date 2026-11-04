@@ -255,8 +255,10 @@ if ($kind eq 'plan') {
 		class => 'ui_textbox', style => 'width:8em', inputmode => 'numeric',
 		$disabled ? (disabled => undef) : ()}));
 	foreach my $size (['memory_mib', 1024**2], ['disk_gib', 1024**3]) {
+		# Memory choices stop at GiB; disks still offer larger units.
 		$page .= ui_table_row($text{'vm_'.$size->[0]},
-			ui_bytesbox($size->[0], ($values->{$size->[0]} || 0) * $size->[1], 5, $disabled, '', $size->[1]));
+			ui_bytesbox($size->[0], ($values->{$size->[0]} || 0) * $size->[1], 5, $disabled, '', $size->[1],
+				$size->[0] eq 'memory_mib' ? 1024**3 : undef));
 	}
 }
 elsif ($section->[0] eq 'basic') {

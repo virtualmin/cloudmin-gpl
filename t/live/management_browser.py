@@ -9,6 +9,86 @@ import time
 import websocket
 
 
+# check_memory_inputs(evaluate) checks native browser validity without saving.
+# evaluate runs JavaScript in the editor's document, including framed themes.
+def check_memory_inputs(evaluate):
+    result = evaluate(r"""(() => {
+        const form = document.getElementById('vm-edit-form');
+        const memory = form.elements.memory_mib, maximum = form.elements.memory_limit_mib;
+        // Fixed guest layouts do not offer editable memory controls.
+        if (memory.disabled || maximum.disabled) return {locked: true};
+        const units = form.elements.memory_mib_units, maxUnits = form.elements.memory_limit_mib_units;
+        const fields = [memory, maximum, units, maxUnits];
+        const saved = fields.map(input => input.value);
+        // check(ok, message) throws a diagnostic for the Python caller.
+        const check = (ok, message) => { if (!ok) throw new Error(message); };
+        // event(input, name, [synthetic]) sends a native event by default.
+        const event = (input, name, synthetic = false) => {
+            // Exercise theme notifications when jQuery is present.
+            if (synthetic && window.jQuery) jQuery(input).trigger(name);
+            // Framed pages and ordinary controls use native bubbling events.
+            else input.dispatchEvent(new Event(name, {bubbles: true}));
+        };
+        try {
+            // Arbitrary whole MiB must work, not only multiples of 128.
+            units.value = maxUnits.value = '1048576';
+            event(units, 'change'); event(maxUnits, 'change', true);
+            maximum.value = '2000'; event(maximum, 'input');
+            memory.value = '1000'; event(memory, 'input');
+            check(memory.checkValidity() && maximum.checkValidity(), '1000/2000 MiB rejected');
+            // Fractions are invalid while typing and become whole MiB on commit.
+            memory.value = '1152.6'; event(memory, 'input');
+            check(memory.validity.stepMismatch, 'Fractional MiB was accepted');
+            event(memory, 'change', true);
+            check(memory.value === '1153' && memory.checkValidity(), 'MiB commit did not round');
+            // Spinners must keep whole MiB when increasing or decreasing.
+            memory.stepUp(); event(memory, 'input');
+            check(memory.value === '1281' && memory.checkValidity(), 'MiB spinner kept a fraction');
+            memory.stepDown(); event(memory, 'input');
+            check(memory.value === '1153', 'MiB spinner did not decrease by 128');
+            // Theme-only input events must refresh both the grid and allocation cap.
+            memory.value = '1000'; event(memory, 'input', true);
+            maximum.value = '2000'; event(maximum, 'input', true);
+            check(memory.checkValidity() && maximum.checkValidity(), 'Theme integer input rejected');
+            maximum.value = '1500'; event(maximum, 'input', true);
+            check(Number(memory.max) === 1500, 'Theme maximum did not update allocation bounds');
+            // GiB retains tenths and exact quarter-GiB entries.
+            units.value = '1073741824'; event(units, 'change', true);
+            memory.value = '1.1'; event(memory, 'input');
+            memory.stepUp(); event(memory, 'input');
+            check(memory.value === '1.2' && memory.checkValidity(), 'GiB increment is incorrect');
+            memory.stepDown(); event(memory, 'input');
+            check(memory.value === '1.1', 'GiB decrement is incorrect');
+            memory.value = '1.25'; event(memory, 'input', true);
+            check(memory.checkValidity(), 'Quarter GiB rejected');
+            // Unit changes and KiB spinners must still represent whole MiB.
+            memory.value = '1152.6'; event(memory, 'input');
+            units.value = '1048576'; event(units, 'change', true);
+            check(memory.value === '1153' && memory.checkValidity(), 'Unit change kept fractional MiB');
+            units.value = '1024'; event(units, 'change');
+            memory.value = '1048576'; event(memory, 'input');
+            memory.stepUp(); event(memory, 'input');
+            check(memory.value === '1179648' && memory.checkValidity(), 'KiB increment is incorrect');
+            // Host, minimum and selected-maximum checks must remain active.
+            units.value = '1048576'; event(units, 'change');
+            memory.value = '255'; event(memory, 'input');
+            check(memory.validity.rangeUnderflow, 'Minimum memory was bypassed');
+            memory.value = '1501'; event(memory, 'input');
+            check(memory.validity.rangeOverflow, 'Maximum memory was bypassed');
+            check(form.elements.cpus.step === '1', 'CPU step changed');
+            return {passed: true};
+        } catch (error) {
+            // Return assertion details across the browser debugging connection.
+            return {error: error.message};
+        } finally {
+            // Leave the caller's form exactly as it was; never submit these values.
+            fields.forEach((input, index) => { input.value = saved[index]; });
+            event(units, 'change'); event(maxUnits, 'change');
+        }
+    })()""")
+    assert result and (result.get('passed') or result.get('locked')), result
+
+
 # edit_guest(cookies, uuid, [action], [screenshot], [on_shutdown],
 # [disk_choice],
 #            [disk], [on_confirmation]) exercises the installed management UI.
@@ -295,6 +375,8 @@ def edit_guest(cookies, uuid, action='update', screenshot=None, on_shutdown=None
                 # before returning to inventory.
                 wait('document.querySelector("#cloudmin-overview")', timeout=150)
                 return
+            wait('document.querySelector("[name=memory_mib][data-vm-limits-ready]")')
+            check_memory_inputs(evaluate)
             running = action == 'shutdown'
             if running:
                 # Live fields stay editable; shutdown is a separate submission.
@@ -574,6 +656,8 @@ def edit_guest(cookies, uuid, action='update', screenshot=None, on_shutdown=None
                 form.elements.memory_mib_units.value = '1048576';
                 form.elements.memory_mib_units.dispatchEvent(new Event('change', {bubbles: true}));
                 form.elements.memory_mib.value = '1024';
+                // Match typing so the memory step grid follows the new value.
+                form.elements.memory_mib.dispatchEvent(new Event('input', {bubbles: true}));
                 form.elements.description.value = 'Browser edit: <guest & café>';
                 form.elements.boot.value = 'disk:vda';
                 form.elements.bootmenu.checked = true;

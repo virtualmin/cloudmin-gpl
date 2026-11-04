@@ -1750,8 +1750,10 @@ foreach my $size ([ 'memory_mib', 1024**2 ], [ 'disk_gib', 1024**3 ]) {
 		? ($caps->{'memory_kib'} ? text('vm_memory_range',
 			nice_size_text($caps->{'memory_kib'} * 1024)) : '')
 		: $disk_hint->($selected_pool);
+	# Memory menus stop at GiB; disk menus retain their larger units.
 	$page .= ui_table_row($text{'vm_'.$field},
-		ui_bytesbox($field, $bytes, 4, 0, 'data-vm-resource="size"', $base).
+		ui_bytesbox($field, $bytes, 4, 0, 'data-vm-resource="size"', $base,
+			$field eq 'memory_mib' ? 1024**3 : undef).
 		ui_tag('span', $hint, { class => 'vm-resource-hint',
 			'data-vm-capacity' => $field, 'aria-live' => 'polite' }));
 	}
@@ -2109,7 +2111,9 @@ $page .= ui_hidden_table_end('clone_source');
 $page .= ui_hidden_table_start($text{'vm_step_resources'}, 'width=100%', 2, 'clone_resources', 0);
 $page .= ui_table_row($text{'vm_cpus'}, ui_textbox('cpus', $values{'cpus'}, 4));
 foreach my $size (['memory_mib', 1024**2], ['disk_gib', 1024**3]) {
-	$page .= ui_table_row($text{'vm_'.$size->[0]}, ui_bytesbox($size->[0], $values{$size->[0]}*$size->[1], 4, 0, undef, $size->[1]));
+	# Keep clone memory choices consistent with the creation form.
+	$page .= ui_table_row($text{'vm_'.$size->[0]}, ui_bytesbox($size->[0], $values{$size->[0]}*$size->[1], 4, 0, undef, $size->[1],
+		$size->[0] eq 'memory_mib' ? 1024**3 : undef));
 }
 $page .= ui_hidden_table_end('clone_resources');
 # Prepared copies can replace user access and create a separate managed key.
@@ -2497,17 +2501,18 @@ $page .= ui_table_row($text{'vm_cpu_limit'},
 	ui_textbox('cpu_limit', $s->{'cpu_limit'}, 3, $locks->{'cpu_limit'}, undef,
 		'data-vm-resource data-vm-min="1" data-vm-max="'.int($s->{'max_cpus'} || 1).'"').
 	($locks->{'cpu_limit'} ? ui_tag('div', ui_note($text{'vm_cpu_layout_fixed'}, 0)) : ''));
+# GiB is the largest display unit; host limits bound the memory values.
 $page .= ui_table_row($text{'vm_memory_mib'},
 	ui_bytesbox('memory_mib', $s->{'memory_mib'}*1024**2,
 		4, $locks->{'memory_mib'}, 'data-vm-resource="size" data-vm-min="268435456" data-vm-max="'.
-		int(($memory_max || $s->{'memory_mib'})*1024**2).'"', 1024**2).
+		int(($memory_max || $s->{'memory_mib'})*1024**2).'"', 1024**2, 1024**3).
 	($locks->{'memory_mib'} ? ui_hidden('memory_mib', $s->{'memory_mib'}).
 		ui_hidden('memory_mib_units', 1024**2).
 		ui_tag('div', ui_note($text{'vm_memory_devices_fixed'}, 0)) : ''));
 $page .= ui_table_row($text{'vm_memory_limit'},
 	ui_bytesbox('memory_limit_mib', ($s->{'memory_limit_mib'} || $s->{'memory_mib'})*1024**2,
 		4, $locks->{'memory_limit_mib'}, 'data-vm-resource="size" data-vm-min="268435456" data-vm-max="'.
-		int(($s->{'max_memory_mib'} || $s->{'memory_mib'})*1024**2).'"', 1024**2).
+		int(($s->{'max_memory_mib'} || $s->{'memory_mib'})*1024**2).'"', 1024**2, 1024**3).
 	($locks->{'memory_limit_mib'} ? ui_tag('div', ui_note($text{'vm_memory_layout_fixed'}, 0)) : ''));
 $page .= ui_table_row($text{'vm_description'},
 	ui_textarea('description', $s->{'description'}, 3, 60,

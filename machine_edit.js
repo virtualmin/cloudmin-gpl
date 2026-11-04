@@ -11,24 +11,50 @@ window.cloudminVmEditInit = () => {
         if (input.dataset.vmLimitsReady) continue;
         input.dataset.vmLimitsReady = '1';
         const units = form.elements[input.name + '_units'];
-        // update() translates byte limits whenever the selected unit changes.
-        const update = () => {
+        // update([normalize]) refreshes bounds and commits whole-MiB values.
+        // normalize defaults to false, leaving text untouched while typing.
+        const update = (normalize = false) => {
             const multiplier = units ? Number(units.value) : 1;
             input.type = 'number';
-            input.min = Number(input.dataset.vmMin) / multiplier;
+            const minimum = Number(input.dataset.vmMin) / multiplier;
+            input.min = minimum;
             input.max = Number(input.dataset.vmMax) / multiplier;
-            input.step = units ? 1048576 / multiplier : 1;
+            // GiB uses tenths; smaller memory units step by 128 MiB.
+            // CPU counts always step by one.
+            input.step = units ? (multiplier >= 1073741824 ? 0.1 : 134217728 / multiplier) : 1;
+            let value = input.value === '' ? minimum : Number(input.value);
+            // MiB and smaller units must represent whole MiB. Normalize only
+            // on commit or unit changes, so typing does not move the caret.
+            if (units && multiplier <= 1048576 && Number.isFinite(value)) {
+                value = Math.round(value * multiplier / 1048576) * 1048576 / multiplier;
+                // Keep an empty field empty so the user can enter a new value.
+                if (normalize && input.value !== '') input.value = value;
+            }
+            // Anchor steps to finite memory values so manual entries such as
+            // 1.25 GiB remain valid; smaller units use the whole-MiB grid.
+            if (units && Number.isFinite(value)) {
+                const base = value - Math.floor((value - minimum) / input.step + 1e-8) * input.step;
+                input.min = Math.max(minimum, Number(base.toPrecision(12)));
+            }
         };
-        update();
+        update(true);
+        // Only memory fields need unit conversion and rounding listeners.
         if (units) {
-            // Byte widgets need unit conversion; CPU fields are already counts.
-            units.addEventListener('change', update);
-            // Enhanced selects can change the unit through a synthetic jQuery event.
-            if (window.jQuery) window.jQuery(units).on('change.cloudminVmEdit', event => {
-                // Native changes were handled above;
-                // only bridge synthetic ones.
-                if (!event.originalEvent) update();
-            });
+            // Revalidate typed values immediately; commit rounding on change.
+            units.addEventListener('change', () => update(true));
+            input.addEventListener('input', () => update());
+            input.addEventListener('change', () => update(true));
+            // Themes can notify value and unit changes through jQuery only.
+            if (window.jQuery) {
+                window.jQuery(units).on('change.cloudminVmEdit', event => {
+                    // Native changes already reached the listener above.
+                    if (!event.originalEvent) update(true);
+                });
+                window.jQuery(input).on('input.cloudminVmEdit change.cloudminVmEdit', event => {
+                    // Handle synthetic events without repeating native ones.
+                    if (!event.originalEvent) update(event.type === 'change');
+                });
+            }
         }
     }
     // Keep allocation ranges within the chosen saved maximum, including unit changes.
@@ -52,7 +78,7 @@ window.cloudminVmEditInit = () => {
         form.addEventListener('input', ranges);
         form.addEventListener('change', ranges);
         // Theme unit controls can notify the form only through jQuery.
-        if (window.jQuery) window.jQuery(form).on('change.cloudminVmRanges', event => {
+        if (window.jQuery) window.jQuery(form).on('input.cloudminVmRanges change.cloudminVmRanges', event => {
             // Avoid recalculating twice for a bubbled native change event.
             if (!event.originalEvent) ranges();
         });
