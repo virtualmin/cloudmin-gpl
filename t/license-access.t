@@ -66,7 +66,7 @@ for my $state (qw(missing invalid expired overused unavailable unverified clock 
         "$state warning explains the restriction");
     like(cloudmin_license_message($status), qr/System -> Settings -> License Manager/, "$state API error explains where to fix it");
 }
-# Only the fixed License Manager destination becomes HTML in backend errors.
+# Error formatting escapes backend text before adding commands and navigation.
 {
     no warnings 'redefine';
     local *main::get_webprefix = sub { '/webmin' };
@@ -75,6 +75,14 @@ for my $state (qw(missing invalid expired overused unavailable unverified clock 
     like($html, qr{>System &rarr; Settings &rarr; License Manager</a>}, 'license link uses arrows');
     is(error_html('<script>alert("test")</script> & details'),
         html_escape('<script>alert("test")</script> & details'), 'other backend text remains escaped');
+    like(error_html('Run `setsebool -P virt_qemu_ga_manage_ssh on` as root.'),
+        qr{\ARun <tt\b[^>]*>setsebool -P virt_qemu_ga_manage_ssh on</tt>\s+as root\.\z},
+        'commands receive monospace markup');
+    my $escaped_command = html_escape('echo "<script>" & value');
+    my $escaped_tail = html_escape('<img src=x>');
+    like(error_html('Run `echo "<script>" & value` then `true`. <img src=x>'),
+        qr{\ARun <tt\b[^>]*>\Q$escaped_command\E</tt>\s+then <tt\b[^>]*>true</tt>\s*\. \Q$escaped_tail\E\z},
+        'command contents and surrounding text stay escaped');
 }
 # Advice distinguishes editable and read-only views and explains storage failures.
 like(cloudmin_license_message({state => 'missing'}, 1), qr/using the fields above/, 'missing license points to the form');

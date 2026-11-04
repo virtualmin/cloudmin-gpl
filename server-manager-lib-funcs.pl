@@ -894,11 +894,14 @@ return {
 };
 }
 
-# error_html(message) escapes backend text and links known navigation advice.
+# error_html(message) escapes backend text, formats backtick-delimited
+# commands and links known navigation advice.
 sub error_html
 {
 my $html = html_escape($_[0]);
-# Only this fixed destination becomes markup; backend content stays escaped.
+# Add command markup only after escaping all backend text.
+$html =~ s{`([^`\r\n]+)`}{ui_tag('tt', $1)}ge;
+# Only this fixed destination becomes a link; backend content stays escaped.
 $html =~ s{\bSystem -&gt; Settings -&gt; License Manager\b}
 	{ui_link(get_webprefix().'/server-manager/pro/license.cgi',
 		'System &rarr; Settings &rarr; License Manager')}ge;

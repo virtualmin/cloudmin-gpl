@@ -97,7 +97,7 @@ return { keys => [] } if ($status && $command eq 'guest-ssh-get-authorized-keys'
     ($error || '') =~ /unable to execute QEMU agent command 'guest-ssh-get-authorized-keys': failed to read '[^'\r\n]+\/\.ssh\/authorized_keys': [^\r\n]*No such file or directory/);
 # The agent can start before first-boot setup enables SSH key access.
 # Keep denials as errors and suggest a retry before manual repair.
-die "The guest agent was denied access to this account's SSH keys. If the virtual machine was just created, wait for initial setup to finish and try again. If access is still denied, check file permissions. On SELinux guests, run setsebool -P virt_qemu_ga_manage_ssh on as root inside the virtual machine.\n"
+die "The guest agent was denied access to this account's SSH keys. If the virtual machine was just created, wait for initial setup to finish and try again. If access is still denied, check file permissions. On SELinux guests, run `setsebool -P virt_qemu_ga_manage_ssh on` as root inside the virtual machine.\n"
     if ($status && ($error || '') =~ /unable to execute QEMU agent command 'guest-ssh-(?:get|add|remove)-authorized-keys': [^\r\n]*Permission denied/);
 # Other command failures must not be mistaken for an empty key list.
 die "Cannot access guest SSH keys. Check that the account exists and the guest agent is running and allows SSH key commands.\n" if ($status);
