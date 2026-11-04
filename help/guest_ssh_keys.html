@@ -2,7 +2,12 @@
 
 <p>Select the guest account above, then choose a saved key or paste public
 keys, one per line. Pasted keys must not include <tt>authorized_keys</tt>
-options. Click <b>Add Public Key</b> to add them.</p>
+options. Click <b>Add Public Key</b> to add them. Pasted keys are added to
+this account without creating library entries.</p>
+
+<p>Keys that match a library entry use that entry's name. Other keys show
+their comment, or their key type if there is no comment. Click a fingerprint to
+see the full key, including its original comment.</p>
 
 <p>The virtual machine must be running, and its guest agent must support
 SSH key commands.</p>
