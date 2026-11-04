@@ -239,9 +239,8 @@ my $cpus = $input->{'cpus'} || '';
 die "Enter a whole CPU count from 1 to $caps->{cpus}\n"
 	if ($cpus !~ /\A[1-9][0-9]{0,8}\z/);
 $r{'cpus'} = int($cpus);
-# Unit selectors override the API's default MiB and GiB input units.
-$r{'memory_mib'} = size_bytes($input, 'memory_mib', 1024**2,
-	'memory') / 1024**2;
+# Memory defaults to MiB; larger explicit units round to the nearest MiB.
+$r{'memory_mib'} = memory_mib($input, 'memory_mib', 'memory');
 # Domain memory and later job validation use whole MiB values.
 die "Memory must be a whole number of MiB\n"
 	if ($r{'memory_mib'} != int($r{'memory_mib'}));
@@ -526,6 +525,18 @@ my $bytes = $value * $units;
 # Keep values exact when the browser and JSON exchange them as numbers.
 die "The $label is too large\n" if ($bytes > 2**53);
 return $bytes;
+}
+
+# memory_mib(input, field, label) converts a memory control to stored MiB.
+# field names the input value; <field>_units selects units (default MiB).
+# label names the control in validation errors.
+# Round larger display units to whole MiB; explicit MiB and smaller units
+# keep their precision so callers can reject fractional base-unit requests.
+sub memory_mib
+{
+my ($input, $field, $label) = @_;
+my $memory = size_bytes($input, $field, 1024**2, $label) / 1024**2;
+return ($input->{$field.'_units'} || 0) > 1024**2 ? int($memory + 0.5) : $memory;
 }
 
 # address(value, family, cidr)

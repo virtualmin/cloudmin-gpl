@@ -764,8 +764,8 @@ if ($action eq 'update') {
 	my $cpus = text($in, 'cpus');
 	die "Enter a whole CPU count from 1 to $caps->{cpus}\n"
 		if ($cpus !~ /\A[1-9][0-9]{0,4}\z/ || $cpus > $caps->{'cpus'});
-	my $memory = Cloudmin::VMs::size_bytes($in, 'memory_mib',
-		1024**2, 'memory') / 1024**2;
+	# Round decimal GiB before checking whole MiB and host capacity.
+	my $memory = Cloudmin::VMs::memory_mib($in, 'memory_mib', 'memory');
 	die "Select whole MiB, at least 256 MiB, leaving 256 MiB for the host\n"
 		if ($memory != int($memory) || $memory < 256 ||
 		$memory > $caps->{'memory_kib'}/1024 - 256);
@@ -777,8 +777,9 @@ if ($action eq 'update') {
 	die "Select a CPU maximum between the current count and $caps->{cpus}\n"
 		if ($limit !~ /\A[1-9][0-9]*\z/ || $limit < $cpus || $limit > $caps->{'cpus'});
 	my $old_memory = memory_kib($doc, 'memory') / 1024;
+	# Round explicit maximums too; omitted ones retain or raise the old limit.
 	my $memory_limit = exists($in->{'memory_limit_mib'})
-		? Cloudmin::VMs::size_bytes($in, 'memory_limit_mib', 1024**2, 'maximum memory') / 1024**2
+		? Cloudmin::VMs::memory_mib($in, 'memory_limit_mib', 'maximum memory')
 		: $memory > $old_memory ? $memory : $old_memory;
 	die "Select a whole MiB memory maximum covering the current allocation and leaving 256 MiB for the host\n"
 		if ($memory_limit != int($memory_limit) || $memory_limit < $memory ||

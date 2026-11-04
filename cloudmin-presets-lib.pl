@@ -83,11 +83,13 @@ $base ||= {settings => {}};
 my %settings = %{$base->{'settings'} || {}};
 my %record = %$base;
 if ($kind eq 'plan') {
-	# Normalize all plan allocations from their displayed units.
+	# Convert displayed units; round larger memory units to stored whole MiB
+	# while retaining the existing disk-size precision.
 	%settings = map { $_ => $input->{$_} // '' } Cloudmin::Presets::fields($kind);
 	foreach my $size (['memory_mib', 1024**2], ['disk_gib', 1024**3]) {
-		$settings{$size->[0]} = Cloudmin::VMs::size_bytes($input, @$size,
-			$text{'vm_'.$size->[0]}) / $size->[1];
+		$settings{$size->[0]} = $size->[0] eq 'memory_mib'
+			? Cloudmin::VMs::memory_mib($input, $size->[0], $text{'vm_'.$size->[0]})
+			: Cloudmin::VMs::size_bytes($input, @$size, $text{'vm_'.$size->[0]}) / $size->[1];
 	}
 }
 else {

@@ -1758,4 +1758,15 @@ $m->run($id);
 is($jobs->get($id)->{'state'}, 'cancelled', 'cancellation wins before power changes');
 ok(!$d->{'shutdowns'}, 'cancelled cycle leaves the guest running');
 }
+# Both memory controls round decimal GiB to stored whole MiB.
+{
+	my ($manager, $adapter, $journal, $domain) = fixture();
+	my $job = request($manager, 'update', { cpus => 1, memory_mib => 1.1,
+		memory_mib_units => 1024**3, memory_limit_mib => 1.2,
+		memory_limit_mib_units => 1024**3 });
+	ok($manager->run($job), 'decimal memory edit succeeds');
+	my $settings = $manager->settings($uuid);
+	is($settings->{'memory_mib'}, 1126, 'current memory rounds to nearest MiB');
+	is($settings->{'memory_limit_mib'}, 1229, 'maximum memory rounds to nearest MiB');
+}
 done_testing();

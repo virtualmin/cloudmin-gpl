@@ -259,6 +259,14 @@ for my $power (0..5) {
 		$sized->{'disk_gib'},
 		'normalized sizes remain stable during worker preflight');
 	}
+# Decimal GiB round once to stored MiB and survive worker preflight.
+for my $case ([1.1, 1126], [1.2, 1229], [1.25, 1280]) {
+	my $sized = $service->prepare({ %$input, memory_mib => $case->[0],
+		memory_mib_units => 1024**3 }, $options);
+	is($sized->{'memory_mib'}, $case->[1], 'decimal GiB round to nearest MiB');
+	is($service->prepare($sized, $options)->{'memory_mib'}, $case->[1],
+		'normalized memory remains stable during preflight');
+}
 my $odd_size = $service->prepare({ %$input, disk_gib => 10 * 1024**3 + 1,
 	disk_gib_units => 1 }, $options);
 is($odd_size->{'disk_gib'} * 1024**3, 10 * 1024**3 + 512,
@@ -282,7 +290,7 @@ for my $bad (
 	{ disk_gib => 50 }, { pool => 'gone' }, { image => 'gone' },
 	{ network => 'gone' },
 	{ memory_mib => 4, memory_mib_units => 1024**3 },
-	{ memory_mib => 1.2, memory_mib_units => 1024**3 },
+	{ memory_mib => 1024.5, memory_mib_units => 1024**2 },
 	{ memory_mib_units => 1000 }, { memory_mib_units => '' },
 	{ disk_gib => 1, disk_gib_units => 1024**4 }, { disk_gib_units => -1 },
 	{ disk_gib => 'NaN' }, { disk_gib => '1e300' }, { disk_gib => '-10' },

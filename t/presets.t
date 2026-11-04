@@ -185,6 +185,10 @@ my $parsed = preset_form_record('plan', {name => 'Fraction', cpus => 2,
 	memory_mib => 1.5, memory_mib_units => 1024**3, disk_gib => 0.5, disk_gib_units => 1024**4});
 is_deeply($store->validate('plan', $parsed)->{'settings'},
 	{cpus => 2, memory_mib => 1536, disk_gib => 512}, 'byteboxes convert before whole-unit validation');
+# Plans round fractional MiB from decimal GiB just as creation requests do.
+my $rounded_plan = preset_form_record('plan', {name => 'Rounded', cpus => 2,
+	memory_mib => 1.2, memory_mib_units => 1024**3, disk_gib => 20});
+is($rounded_plan->{'settings'}->{'memory_mib'}, 1229, 'plan memory uses the same GiB rounding as creation');
 # Creation applies named presets without hiding manual field overrides.
 my $options = {capabilities => {cpus => 8}, form_defaults => get_vm_form_defaults({}),
 	images => [{id => 'a'x32, name => 'Debian', pool_name => 'default'}],

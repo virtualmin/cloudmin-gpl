@@ -473,8 +473,10 @@ the guest's cloud-init seed to initialize the account on first boot.
 Memory and disk values may include decimals. Without unit selectors, `memory_mib`
 uses MiB and `disk_gib` uses GiB. The optional `memory_mib_units` and `disk_gib_units`
 fields override these units with a byte multiplier: 1, 1024, 1048576, 1073741824,
-1099511627776, or 1125899906842624. Memory must resolve to whole MiB; disk sizes
-round up to a 512-byte sector. Review returns normalized MiB and GiB values.
+1099511627776, or 1125899906842624. Memory entered in GiB or larger units rounds
+to the nearest whole MiB. Values in MiB or smaller units must equal a whole
+number of MiB. Disk sizes round up to a 512-byte sector. Review returns
+normalized MiB and GiB values.
 
 New guests reserve a CPU maximum of twice the requested count, capped at the host's logical CPU count. Only the requested CPUs start online in QEMU. Q35 and ARM virt guests also receive 16 PCIe root ports, shared by initial devices and later additions. These definitions do not allocate extra CPUs or memory to the guest.
 
