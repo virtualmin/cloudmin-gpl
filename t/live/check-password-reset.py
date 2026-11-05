@@ -273,7 +273,7 @@ try:
         page = request(opener, '/server-manager/edit_machine.cgi?id=' + identity + '&password_reset=1')
         form = Fields(page).values
         assert form.get('action') == 'reset_password' and form.get('password') == ''
-        assert 'password_username' not in form, 'Password-only delegates need manual entry'
+        assert form.get('password_username') == '', 'Password-only delegates retain Other account for manual entry'
         form.update(username='passwordfixture', password=new_password())
         page = request(opener, '/server-manager/edit_machine.cgi', form)
         assert 'The guest password has been reset.' in page, 'Form did not complete'
@@ -314,7 +314,7 @@ try:
         page = request(opener, '/server-manager/edit_machine.cgi?id=' + identity + '&password_reset=1')
         assert 'vm-password-reset-form' in page, 'Unavailable guest cannot open reset form'
         form = Fields(page).values
-        assert 'password_username' not in form, 'Unavailable discovery must keep manual entry'
+        assert form.get('password_username') == '', 'Without discovery or metadata, Other account stays selected'
         form.update(username='passwordfixture', password=new_password())
         page = request(opener, '/server-manager/edit_machine.cgi', form)
         assert expected in page, 'Password reset did not report the guest readiness error'
