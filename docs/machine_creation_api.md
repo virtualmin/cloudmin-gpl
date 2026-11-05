@@ -585,7 +585,7 @@ For an older guest without spare PCIe ports, shut down once and select **Add CPU
 A defined CPU maximum does not guarantee live CPU support for that machine type. If libvirt reports that CPU hotplug is unsupported, change the count while stopped. `settings.live_limits.min_cpus` reports the minimum count allowed by the running guest's non-removable CPUs. A lower count is saved for the next full shutdown and start; CPUs added while running can still be removed when libvirt and the guest support it.
 
 Read `settings` with `id` (the virtual machine UUID) to obtain its saved configuration,
-`revision`, disks, interfaces, storage pools and networks. `attachable_volumes` contains unused writable disk choices; `images` contains ready imports that can be cloned. Disk records include a display `role` when Cloudmin recognizes the original system or cloud-init disk. No XML or console
+`revision`, disks, interfaces, storage pools and networks. `attachable_volumes` contains unused writable disk choices; `images` contains ready imports that can be cloned. Disk records include a display `role` when Cloudmin recognizes the original system or cloud-init disk. CD/DVD records include `media_state`: `empty`, `inserted`, or `different` when the running drive no longer matches the saved one. No XML or console
 password is returned. Each change requires the current `revision` and a signed
 `token` from `options`. A stale revision is rejected. Keep the same token and
 optional attempt ID when resubmitting an operation. Changed input requires
@@ -602,7 +602,7 @@ a new attempt after failure and cleanup, or a new token for a separate operation
 | `add_interface` | `network`, optional `mac` | Adds a virtio NIC; generates a MAC if omitted |
 | `update_interface` | `mac`, optional `network`, `link` (`up`/`down`), `inbound_kib`, `outbound_kib` | Changes the source network/bridge, link state or average bandwidth limits in KiB/s; zero removes a limit. Live source switching depends on the libvirt network backend |
 | `remove_interface` | `mac` | Removes the selected NIC |
-| `change_media` | `target`, `pool`, `volume` | Inserts a managed ISO into an existing CD/DVD drive; an empty `volume` ejects it without removing the drive |
+| `change_media` | `target`, `pool`, `volume` | Inserts a managed ISO into an existing CD/DVD drive; an empty `volume` ejects it without removing the drive. Refused while the running drive differs from the saved one; shut down first |
 | `delete` | `confirm_name`, optional `disks`, `shutdown`, `history_revision` | Removes the virtual machine and only the selected disk targets; `shutdown=1` allows stopping it according to the disk selection |
 
 New disk filenames include the virtual machine name, disk role and a unique job identifier. Existing files are not renamed. Libvirt domain XML remains the source of disk attachment information.

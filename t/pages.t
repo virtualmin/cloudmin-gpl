@@ -837,6 +837,20 @@ for my $case (['clone', 'clone_image'], ['attach', 'attach_volume']) {
 	ok(!eval { parse_vm_edit_form({ %disk_fields, add_disk_action => $case->[0], $case->[1] => '' }); 1 },
 		'empty '.$case->[0].' selection is refused');
 	}
+# The media selector reports emptiness instead of implying an ISO is retained.
+for my $case (['empty', 'No ISO inserted', 0],
+    ['inserted', 'Keep current ISO image', 1],
+    ['different', 'Running and saved drive settings differ', 1]) {
+    my ($state, $label, $can_eject) = @$case;
+    my $editor = show_vm_edit_form({ %$settings, disks => [{target => 'sda',
+        device => 'cdrom', readonly => 1, media_state => $state}],
+        volumes => [{pool => 'pool', pool_name => 'default', name => 'rescue.iso', format => 'iso'}]
+    }, 'token');
+    my ($select) = $editor =~ /(<select\b[^>]*name="disk_0_media".*?<\/select>)/s;
+    like($select, qr{<option value="" selected>\Q$label\E</option>}, 'unchanged choice describes '.$state.' drive');
+    is($select =~ /value="eject"/ ? 1 : 0, $can_eject, 'eject is offered only when media may be present');
+    like($select, qr/value="pool:rescue.iso"/, 'ISO insertion remains available');
+}
 my $disk_editor = show_vm_edit_form({ %$settings,
 	disks => [{target => 'vdb', device => 'disk', readonly => 1, role => 'seed', path => '/seed.iso'}],
 	volumes => [{pool => 'pool', name => 'hidden-original.qcow2', format => 'qcow2'}],

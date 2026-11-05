@@ -228,6 +228,9 @@ foreach my $image (@imports) {
 			capacity => $volume->{'capacity'}, pool_name => $volume->{'pool_name'} });
 		}
 	}
+# Keep empty-drive labels honest when external tools changed only live media.
+my $live = $domain->is_active()
+	? Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0)) : undef;
 my @attachable = grep { $_->{'format'} =~ /\A(?:raw|qcow2)\z/ &&
 	!$image_files{$_->{'identity'}} &&
 	!Cloudmin::Images::volume_use($refs, @{$_}{qw(path pool_name name key)}) } @$volumes;
@@ -239,6 +242,15 @@ foreach my $disk (@disks) {
 		 $_->{'name'} eq ($disk->{'volume'} || '')) } @$volumes;
 	$disk->{'volume_info'} = $volume if ($volume);
 	$disk->{'imported'} = 1 if ($volume && $image_files{$volume->{'identity'}});
+	if ($disk->{'device'} eq 'cdrom') {
+		# A source can be a file, block device, pool volume or network image.
+		my $saved = hotplug_device($doc, 'disk', $disk->{'target'});
+		$disk->{'media_state'} = (grep { length($_->getValue()) }
+			$saved->findnodes('source/@file | source/@dev | source/@volume | source/@name'))
+			? 'inserted' : 'empty';
+		$disk->{'media_state'} = 'different' if ($live && device_value($saved) ne
+			device_value(hotplug_device($live, 'disk', $disk->{'target'})));
+		}
 	}
 # The form edits the saved allocation, falling back to its maximum if omitted.
 my ($memory) = $doc->findnodes('/domain/currentMemory');
@@ -258,9 +270,9 @@ foreach my $interface (@interfaces) {
 		foreach qw(inbound outbound);
 	}
 my ($running, %pending);
-if ($domain->is_active()) {
+if ($live) {
 	# Compare hardware with its saved settings without exposing domain XML.
-	$running = resource_values(Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description(0)));
+	$running = resource_values($live);
 	my $saved = resource_values($doc);
 	%pending = %{$adapter->pending_domain_settings($domain, $running, $saved)};
 	}
@@ -962,7 +974,8 @@ elsif ($action eq 'attach_disk' || $action eq 'add_disk') {
 	}
 elsif ($action eq 'change_media') {
 	# Select managed ISO media by pool/name; never accept a client filesystem path.
-	my $disk = disk_node($doc, text($in, 'target'));
+	$plan->{'target'} = text($in, 'target');
+	my $disk = disk_node($doc, $plan->{'target'});
 	die "Select an existing CD drive\n" if ($disk->getAttribute('device') ne 'cdrom');
 	my $volume = text($in, 'volume');
 	$_->unbindNode() foreach $disk->findnodes('source | backingStore');

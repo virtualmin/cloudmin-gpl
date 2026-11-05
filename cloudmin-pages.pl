@@ -2653,13 +2653,16 @@ foreach my $d (@{$s->{'disks'}}) {
 	my @controls;
 	my %detach_attrs;
 	if ($d->{'device'} eq 'cdrom') {
-		# Blank preserves media; the explicit eject
-		# option retains the CD drive.
+		# The unchanged choice shows empty drives and external live conflicts.
+		my $state = $d->{'media_state'} ||
+			($d->{'path'} || $d->{'volume'} ? 'inserted' : 'empty');
+		my $label = $text{$state eq 'empty' ? 'vm_media_empty' :
+			$state eq 'different' ? 'vm_media_different' : 'vm_media_unchanged'};
 		my @media = map { [$_->{'pool'}.':'.$_->{'name'}, storage_volume_label($_).' ('.$_->{'pool_name'}.')'] }
 			grep { $_->{'format'} eq 'iso' || $_->{'format'} eq 'raw' && $_->{'name'} =~ /\.iso\z/i }
 			@{$s->{'volumes'} || []};
 		push(@controls, ui_select($prefix.'_media', '', [
-			['', $text{'vm_media_unchanged'}], ['eject', $text{'vm_media_eject'}], @media ]));
+			['', $label], ($state ne 'empty' ? (['eject', $text{'vm_media_eject'}]) : ()), @media ]));
 		}
 	if ($d->{'volume_info'} && !$d->{'readonly'} && $d->{'device'} eq 'disk') {
 		# Keep the amount and units together; blank means no size change.

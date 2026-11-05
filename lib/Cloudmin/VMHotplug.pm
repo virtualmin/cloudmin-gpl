@@ -107,6 +107,10 @@ foreach my $field (qw(cpus memory description)) {
 	$op->{'after'} = hotplug_value($after, $op);
 	push(@ops, $op) if ($op->{'before'} ne $op->{'after'});
 	}
+# Explicit media requests must validate the live drive even when the saved
+# source already matches; otherwise ejecting live-only media reports success.
+my %media_targets = map { $_->{'target'} => 1 }
+	grep { $_->{'operation'} eq 'change_media' } ($plan, @{$plan->{'changes'} || []});
 # Compare both device lists to find additions, removals and in-place edits.
 foreach my $kind (qw(disk interface)) {
 	my %ids = map { ($kind eq 'disk' ? $_->findvalue('target/@dev') :
@@ -115,7 +119,8 @@ foreach my $kind (qw(disk interface)) {
 	foreach my $id (sort keys %ids) {
 		my $old = hotplug_device($before, $kind, $id);
 		my $new = hotplug_device($after, $kind, $id);
-		next if (device_value($old) eq device_value($new));
+		next if (device_value($old) eq device_value($new) &&
+			!($kind eq 'disk' && $media_targets{$id}));
 		my $op = { kind => $kind, identity => $id,
 			method => !$old ? 'attach_device' : !$new ? 'detach_device' : 'update_device',
 			before => device_value($old), after => device_value($new),
@@ -315,7 +320,10 @@ foreach my $op (@{hotplug_operations($domain, $plan)}) {
 			device_value(hotplug_device($before, 'disk', $op->{'identity'})));
 		next;
 		}
-	die "Running hardware differs from the saved configuration; reload and resolve it before editing\n"
+	# Media conflicts need a shutdown, not another save of the same form.
+	die($op->{'media_change'}
+		? "The running CD/DVD drive differs from its saved configuration; shut down the virtual machine before changing its ISO image\n"
+		: "Running hardware differs from the saved configuration; reload and resolve it before editing\n")
 		if (hotplug_value($doc, $op) ne ($op->{'live_before'} // $op->{'before'}));
 	}
 }

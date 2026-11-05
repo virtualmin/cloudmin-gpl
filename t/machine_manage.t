@@ -1483,6 +1483,57 @@ ok($m->run($id), 'media eject preserves the drive');
 ok(Cloudmin::VMManage::hotplug_device(Cloudmin::Libvirt::parse_xml_document($d->{'xml'}), 'disk', 'sda'),
 	'empty persistent CD drive remains defined');
 }
+# Explicit ejects must check live media even when saved XML is already empty.
+for my $action ('change_media', 'update') {
+for my $state (['', '', 'empty'], ['one.iso', 'one.iso', 'inserted'],
+    ['', 'one.iso', 'different'], ['one.iso', '', 'different'],
+    ['one.iso', 'two.iso', 'different']) {
+    my ($saved, $live, $expected) = @$state;
+    my ($m, $a, $jobs, $d) = running_fixture();
+    for my $side (['xml', $saved], ['live_xml', $live]) {
+        # Model external media edits without changing the CD/DVD hardware.
+        my $source = $side->[1] ? '<source file="/fixture/'.$side->[1].'"/>' : '';
+        my $cd = '<disk type="file" device="cdrom"><driver name="qemu" type="raw"/>'.
+            $source.'<target dev="sda" bus="scsi"/><readonly/></disk>';
+        $d->{$side->[0]} =~ s{</devices>}{$cd</devices>};
+    }
+    my ($cd) = grep { $_->{'device'} eq 'cdrom' } @{$m->settings($uuid)->{'disks'}};
+    is($cd->{'media_state'}, $expected, 'editor distinguishes empty, inserted and conflicting media');
+    my $change = {target => 'sda', volume => ''};
+    my $fields = $action eq 'update' ? {cpus => 1, memory_mib => 512,
+        changes => [{action => 'change_media', %$change}]} : $change;
+    my ($before, $running) = @$d{qw(xml live_xml)};
+    my $id = eval { request($m, $action, $fields) };
+    if ($expected eq 'different') {
+        # Conflicts fail before any write instead of reporting a no-op success.
+        ok(!$id, "$action refuses conflicting media ($saved / $live)");
+        like($@, qr/CD\/DVD drive differs.*shut down/, 'media conflict explains how to proceed');
+        is_deeply([@$d{qw(xml live_xml)}], [$before, $running], 'refusal preserves both definitions');
+        # Once stopped, an eject safely clears the saved attachment.
+        $d->{'active'} = 0;
+        $id = request($m, $action, $fields);
+    }
+    ok($m->run($id), "$action eject succeeds without live conflict") or diag($jobs->get($id)->{'error'});
+    my ($empty) = grep { $_->{'device'} eq 'cdrom' } @{$m->settings($uuid)->{'disks'}};
+    is($empty->{'media_state'}, 'empty', 'completed eject shows an empty retained drive');
+    is(scalar(@{$d->{'calls'} || []}), 0, 'already-empty eject needs no native device update')
+        if (!$saved && !$live);
+}
+}
+# A live-only insert after submission must also stop a queued no-op eject.
+{
+    my ($m, $a, $jobs, $d) = running_fixture();
+    my $cd = '<disk type="file" device="cdrom"><driver name="qemu" type="raw"/><target dev="sda" bus="scsi"/><readonly/></disk>';
+    $d->{$_} =~ s{</devices>}{$cd</devices>} for qw(xml live_xml);
+    my $id = request($m, 'change_media', {target => 'sda', volume => ''});
+    ok($d->{'live_xml'} =~ s{(<target dev="sda")}{<source file="/fixture/external.iso"/>$1},
+        'fixture inserted live-only media after submission');
+    my ($saved, $running) = @$d{qw(xml live_xml)};
+    ok(!$m->run($id), 'queued eject refuses a new external live attachment');
+    like($jobs->get($id)->{'error'}, qr/CD\/DVD drive differs.*shut down/, 'queued conflict is explicit');
+    is_deeply([@$d{qw(xml live_xml)}], [$saved, $running], 'queued refusal preserves both definitions');
+}
+
 # ISO swaps are independent of writable disk snapshot and checkpoint chains.
 for my $history ('snapshot', 'checkpoint') {
 for my $active (0, 1) {
