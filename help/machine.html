@@ -19,8 +19,9 @@ changing the disk layout.</p>
 <p>Open <b>Edit Virtual Machine &gt; Access</b> to manage guest passwords and,
 in Pro, SSH keys. Password resets require a running guest and a responding
 guest agent. Select an account, or choose <b>Other account...</b> to enter a name.
-If the account list is unavailable, enter the username directly. Password resets
-leave SSH login settings and the Webmin password unchanged.</p>
+If account discovery is unavailable, the dropdown still offers the configured
+login and manual entry. Password resets leave SSH login settings unchanged.
+Services using this account's system password will also use the new password.</p>
 
 <p>Forced power-off and hard reset skip clean shutdown and can lose data.
 Deletion permanently removes the selected disks. Keeping writable disks requires

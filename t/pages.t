@@ -1304,12 +1304,30 @@ unlike($other_form, qr/<div(?=[^>]*data-ui-switch-value="")(?=[^>]*hidden)[^>]*>
 	'manual input is visible for an unlisted account');
 my $discovered_form = show_vm_password_reset_form($vm, 'signed-token', [qw(deploy root)]);
 like($discovered_form, qr/<option value="deploy" selected>/, 'missing metadata selects the first discovered account');
-unlike(show_vm_password_reset_form($vm, 'signed-token', []), qr/name="password_username"/,
-	'an empty account list keeps plain manual entry');
+# Failed and empty discovery both retain the picker and the configured login.
+for my $accounts (undef, []) {
+	my $fallback = show_vm_password_reset_form({ %$vm,
+		cloudmin => { username => 'cloudmin' } }, 'signed-token', $accounts);
+	like($fallback, qr/<select[^>]*name="password_username"/,
+		'unavailable accounts retain the dropdown');
+	like($fallback, qr/<option value="cloudmin" selected>/,
+		'unavailable accounts select the configured login');
+	like($fallback, qr/<option value="">Other account\.\.\.<\/option>/,
+		'unavailable accounts still offer manual entry');
+	like($fallback, qr/<div(?=[^>]*data-ui-switch-value="")(?=[^>]*hidden)[^>]*>/,
+		'manual entry starts hidden for the configured login');
+	my $unknown = show_vm_password_reset_form($vm, 'signed-token', $accounts);
+	like($unknown, qr/<option value="" selected>Other account\.\.\.<\/option>/,
+		'no metadata or accounts selects manual entry');
+	unlike($unknown, qr/<div(?=[^>]*data-ui-switch-value="")(?=[^>]*hidden)[^>]*>/,
+		'manual entry remains visible without any known account');
+	}
 # Imported metadata must be escaped before it reaches the username field.
 my $escaped_form = show_vm_password_reset_form({ %$vm,
 	cloudmin => { username => '"><script>bad</script>' } }, 'signed-token');
 unlike($escaped_form, qr/<script>/, 'creation username cannot inject markup into the reset form');
+like($escaped_form, qr/<option value="" selected>/,
+	'invalid configured login stays in manual entry for correction');
 # A console grant exposes the shared Remote access link.
 $access{'console'} = 1;
 @menu = get_menu_items([$vm], $id, 0, 1, 0);

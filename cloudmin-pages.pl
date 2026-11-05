@@ -2228,8 +2228,8 @@ return ui_form_start('edit_machine.cgi', 'post', undef,
 }
 
 # show_vm_password_reset_form(vm, token, [accounts])
-# Offers discovered accounts with manual entry for other names. An omitted or
-# empty accounts list keeps the plain username field and signed reset form.
+# Offers discovered accounts, or the configured login when discovery fails.
+# Other account always allows manual entry, including guests without metadata.
 sub show_vm_password_reset_form
 {
 my ($vm, $token, $accounts) = @_;
@@ -2237,16 +2237,18 @@ my ($vm, $token, $accounts) = @_;
 my $username = ($vm->{'cloudmin'} || {})->{'username'} || '';
 my $chooser = ui_textbox('username', $username, 30, 0, undef,
 	'autocomplete="off" aria-label="'.quote_escape($text{'vm_password_username'}).'"');
-if ($accounts && @$accounts) {
-	# Missing metadata defaults to the first account; unlisted names stay editable.
-	my $selected = $username || $accounts->[0];
-	$selected = '' if (!grep { $_ eq $selected } @$accounts);
-	$chooser = ui_select_switch('password_username', $selected, [
-		(map { { value => $_, label => $_ } } @$accounts),
-		{ value => '', label => $text{'vm_password_other_account'},
-		  fields => [[undef, $chooser]] },
-		], { class => 'vm-password-account' });
-	}
+# Keep the picker available when agent file reads are blocked or unavailable.
+my @accounts = @{$accounts || []};
+@accounts = ($username)
+	if (!@accounts && $username =~ /\A[a-z_][a-z0-9_.-]{0,31}\$?\z/i);
+# Missing metadata defaults to the first account; unlisted names stay editable.
+my $selected = $username || $accounts[0] || '';
+$selected = '' if (!grep { $_ eq $selected } @accounts);
+$chooser = ui_select_switch('password_username', $selected, [
+	(map { { value => $_, label => $_ } } @accounts),
+	{ value => '', label => $text{'vm_password_other_account'},
+	  fields => [[undef, $chooser]] },
+	], { class => 'vm-password-account' });
 # Never refill the password field from a previous submission.
 return ui_page_start().ui_tag('div', ui_p(html_escape($text{'vm_password_reset_help'})),
 	{ class => 'vui_ui_block' }).
