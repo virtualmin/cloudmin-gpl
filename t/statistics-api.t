@@ -22,6 +22,25 @@ while (<$lang>) {
 	$text{$1} = $2 if /^([^=]+)=(.*)$/;
 	}
 close($lang);
+# New installations have neither history nor a live cache, even when enabled.
+{
+	no warnings qw(redefine once);
+	# require_access(grant, [id]) allows the host reads in this fixture.
+	local *main::require_access = sub { };
+	for my $enabled (0, 1) {
+		local $config{statistics_enabled} = $enabled;
+		# Both explicit and default host requests must handle an absent store.
+		for my $input ({id => 'host'}, {}) {
+			my $case = ($input->{id} || 'default')." host, collection=$enabled";
+			my $result = eval { call_statistics_api('statistics', $input) };
+			is($@, '', "$case reads without a database");
+			is_deeply($result->{series}, [], "$case returns empty history");
+			is($result->{history_available}, 0, "$case reports unavailable history");
+			ok(!$result->{live}, "$case has no live readings");
+			}
+		}
+	ok(!-e "$module_var_directory/metrics.sqlite", 'empty host reads do not create history');
+	}
 # Seed a host and two guests to detect cross-owner leaks through either source.
 my $host = Cloudmin::Statistics::host_id($module_config_directory);
 my $vm = '11111111-1111-4111-8111-111111111111';
@@ -116,6 +135,12 @@ my $host_html = show_statistics('host');
 like($host_html, qr/cloudmin-statistics-host/, 'host layout marked');
 like($host_html, qr/cloudmin-statistics-pools/, 'host page lists storage pools in place of guest filesystems');
 unlike($html, qr/cloudmin-statistics-pools/, 'guest page has no storage pool card');
+# Each preset must show its translated label on both statistics pages.
+for my $page (['guest', $html], ['host', $host_html]) {
+	for my $label (qw(1h 6h 24h 7d 30d Custom)) {
+		like($page->[1], qr/>\s*\Q$label\E\s*</, "$page->[0] renders period $label");
+		}
+	}
 
 # The collector publishes fractional seconds. Flooring the reader's clock would
 # briefly mark every new sample as future data during its first second.
