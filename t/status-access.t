@@ -40,32 +40,33 @@ my $domain = bless({changes => []}, 'AccessDomain');
   # disconnect(self) records an attempted close of this fixture's connection.
   sub disconnect { $_[0]->{'disconnected'} = 1; }
 }
-# A read-only administrator gets inventory without enabling guest reporting.
+# A read-only administrator gets inventory without any guest change.
 my $client = bless({session => 'fixture'}, 'AccessClient');
 $access = {user => 'viewer', readonly => 1, policy => Cloudmin::Access->new({}, 1)};
 ok(authorize_client($client), 'read-only module user is authorized');
-ok(!$client->{'writable'}, 'read-only subscription has no guest write grant');
 $clients{$client} = {client => $client};
 collect_domain($domain);
 is_deeply($domain->{'changes'}, [], 'read-only inventory does not enable balloon reports');
 ok($cache->{'vms'}->{'fixture'}, 'read-only viewer still receives inventory');
 
-# Granting host write access refreshes controls and enables live balloon reports.
+# Granting host write access refreshes controls without changing guests or
+# collecting new samples. The statistics service enables balloon reporting.
 $access = {user => 'writer', readonly => 0, policy => Cloudmin::Access->new({})};
 ok(authorize_client($client), 'changed permissions refresh the live subscription');
 like($client->{'notice'}, qr/access_changed/, 'client is told to refresh its controls');
 # A new connection starts without a remembered policy signature.
 delete $client->{'acl_signature'};
 ok(authorize_client($client), 'writer reconnects with fresh permissions');
-ok($dirty{'fixture'}, 'writer arrival refreshes existing cached guests');
+ok(!$dirty{'fixture'}, 'writer arrival does not resample cached guests');
 collect_domain($domain);
-is_deeply($domain->{'changes'}, [[10, 1]], 'writer retains live-only reporting setup');
+is_deeply($domain->{'changes'}, [], 'writer inventory leaves balloon reporting to the collector');
+ok(!exists($client->{'writable'}), 'subscriptions no longer carry a guest write flag');
 
-# Enabling read-only stops guest writes; revoking the login refuses the session.
+# Read-only access uses the same inventory path. Revoked logins are refused.
 $access = {user => 'writer', readonly => 1, policy => Cloudmin::Access->new({}, 1)};
 authorize_client($client);
 collect_domain($domain);
-is(scalar(@{$domain->{'changes'}}), 1, 'ACL downgrade removes the guest write grant');
+is_deeply($domain->{'changes'}, [], 'ACL downgrade changes no guest either');
 # Password grants participate in live ACL changes, even without power access.
 my $uuid = '11111111-2222-3333-4444-555555555555';
 $access = {user => 'operator', policy => Cloudmin::Access->new({admin => 0, vms => $uuid, password => 1})};

@@ -3,9 +3,12 @@ use strict;
 use warnings;
 require 'server-manager-lib.pl';
 
-# module_uninstall() removes this module's wrapper and license check.
+# module_uninstall() stops statistics and removes the CLI and license check.
 sub module_uninstall
 {
+# Stop the collector before deleting its executable or module state.
+require './cloudmin-statistics-lib.pl';
+install_statistics_service(1);
 # Do not leave a scheduled callback pointing at a removed module.
 foreign_require('webmincron');
 foreach my $cron (webmincron::list_webmin_crons()) {

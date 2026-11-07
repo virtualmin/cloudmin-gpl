@@ -92,6 +92,13 @@ user = 'cloudmin-ui-check-' + secrets.token_hex(4)
 other_user = 'cloudmin-ui-check-' + secrets.token_hex(4)
 other_created = False
 preferences = Path('/var/webmin/modules/server-manager')
+# Keep the unit and its running and boot states for cleanup.
+service_name = 'cloudmin-statistics.service'
+was_active = subprocess.run(['systemctl', 'is-active', '--quiet', service_name]).returncode == 0
+was_enabled = subprocess.run(['systemctl', 'is-enabled', service_name], capture_output=True, text=True).stdout.strip() == 'enabled'
+unit = Path('/etc/systemd/system') / service_name
+assert unit.is_file() and not unit.is_symlink(), 'Start with an installed, unmasked collector'
+original_unit = unit.read_bytes()
 # Use a temporary account to test the real configuration editor.
 subprocess.run(['perl', str(helper), 'create', theme, user],
                input=password + '\n', text=True, check=True)
@@ -149,6 +156,9 @@ try:
                   'image_advanced', 'image_columns', 'catalogue_columns'),
         'line7': ('networks_remember', 'bridge_confirm_timeout', 'network_columns'),
         'line8': ('storage_remember', 'storage_pool_columns', 'storage_volume_columns'),
+        'line9': ('statistics_enabled', 'statistics_recording', 'statistics_interval',
+                  'statistics_guest_interval', 'statistics_raw_hours', 'statistics_minute_days',
+                  'statistics_five_days', 'statistics_hour_days', 'statistics_budget', 'statistics_uplinks'),
     }
     changes = {
         'line0': {'host_details': 'problems'},
@@ -163,6 +173,7 @@ try:
                   'image_advanced': '1'},
         'line7': {'networks_remember': '0', 'network_columns': 'name,guests', 'bridge_confirm_timeout': '420'},
         'line8': {'storage_remember': '0', 'storage_pool_columns': 'name,space', 'storage_volume_columns': 'name,used_by'},
+        'line9': {'statistics_enabled': '0'},
     }
     all_keys = {key for keys in categories.values() for key in keys}
     for section, keys in categories.items():
@@ -188,7 +199,11 @@ try:
                 fields[key] = value
         # Saving one category must preserve every setting outside that category.
         before = saved()
-        request('/config_save.cgi', fields)
+        page = request('/config_save.cgi', fields)
+        # The redirected overview must carry the theme's navigation refresh.
+        if section == 'line9':
+            marker = 'theme_post_save=-1' if is_spa_theme(theme) else 'top.left.location = top.left.location'
+            assert marker in page, 'Disabling did not refresh navigation'
         after = saved()
         for key, value in changes[section].items():
             assert after.get(key) == value, key + ' was not saved correctly'
@@ -206,7 +221,50 @@ try:
             else:
                 # Single-value controls must retain the submitted value.
                 assert reopened.fields[key] == value, key + ' did not reopen correctly'
-    print('PASS: all nine categories save and reopen without changing other categories (' + theme + ')', flush=True)
+    print('PASS: all configuration categories save and reopen without changing other categories (' + theme + ')', flush=True)
+
+    # Saving the collection switch stops the process and disables boot startup.
+    assert subprocess.run(['systemctl', 'is-active', '--quiet', service_name]).returncode != 0
+    assert subprocess.run(['systemctl', 'is-enabled', '--quiet', service_name]).returncode != 0
+    # Disabling collection must keep history and hide old live readings.
+    result = json.loads(request('/server-manager/api.cgi?action=statistics'))['result']
+    assert not result['collector']['enabled'] and not result['collector']['available']
+    assert result['history_available'] and not result.get('live'), 'Disabling lost history or kept live readings'
+    # Disabled collection must remove statistics from navigation.
+    menu_path = '/xhr.cgi?type=nav&action=get&subtype=cloudmin' if is_spa_theme(theme) else '/left.cgi?mode=server-manager'
+    menu = request(menu_path)
+    assert 'statistics.cgi' not in menu, 'Disabled statistics links are still in the menu'
+    # Updating the installed unit must not turn collection back on.
+    module = Path(__file__).resolve().parents[2]
+    subprocess.run(['perl', '-I', str(module.parent), '-e',
+                    'require "./server-manager-lib.pl"; require "./cloudmin-statistics-lib.pl"; '
+                    'install_statistics_service();'], cwd=module, check=True, timeout=60,
+                   env={**os.environ, 'WEBMIN_CONFIG': '/etc/webmin', 'WEBMIN_VAR': '/var/webmin',
+                        'FOREIGN_MODULE_NAME': 'server-manager', 'FOREIGN_ROOT_DIRECTORY': str(module.parent)})
+    assert subprocess.run(['systemctl', 'is-active', '--quiet', service_name]).returncode != 0
+    assert subprocess.run(['systemctl', 'is-enabled', '--quiet', service_name]).returncode != 0
+    # Re-enabling must repair a deleted unit through the real configuration form.
+    unit.unlink()
+    subprocess.run(['systemctl', 'daemon-reload'], check=True, timeout=20)
+    stats = editor('line9')
+    page = request('/config_save.cgi', dict(stats.fields, statistics_enabled='1', save='Save'))
+    assert unit.is_file() and unit.stat().st_mode & 0o777 == 0o644, 'Missing unit was not restored'
+    assert marker in page, 'Enabling did not refresh navigation'
+    assert subprocess.run(['systemctl', 'is-active', '--quiet', service_name]).returncode == 0
+    assert subprocess.run(['systemctl', 'is-enabled', '--quiet', service_name]).returncode == 0
+    # Re-enabling must restore both guest and host navigation links.
+    menu = request(menu_path)
+    assert 'Guest Statistics' in menu and 'Host Statistics' in menu, 'Statistics menu links did not return'
+    # The process can start before its first sample is available.
+    deadline = time.monotonic() + 40
+    while True:
+        result = json.loads(request('/server-manager/api.cgi?action=statistics'))['result']
+        # A fresh sample confirms that collection resumed.
+        if result['collector']['available']:
+            break
+        assert time.monotonic() < deadline, 'Collection did not resume'
+        time.sleep(1)
+    print('PASS: collection switch, retained history, upgrade and statistics menus (' + theme + ')', flush=True)
 
     # Required columns stay fixed, including when other columns are hidden.
     ui = editor('line1')
@@ -336,6 +394,13 @@ finally:
     # Restore exact settings and remove accounts even after a failed assertion.
     config.write_bytes(original)
     assert config.read_bytes() == original, 'Configuration restoration failed'
+    # Restore the unit even when the missing-file recovery check failed.
+    unit.write_bytes(original_unit)
+    unit.chmod(0o644)
+    subprocess.run(['systemctl', 'daemon-reload'], check=True, timeout=20)
+    # Restore both boot and running state, including after a failed switch test.
+    subprocess.run(['systemctl', 'enable' if was_enabled else 'disable', service_name], check=True)
+    subprocess.run(['systemctl', 'start' if was_active else 'stop', service_name], check=True)
     backup_path.unlink()
     subprocess.run(['perl', str(helper), 'delete', theme, user], check=True)
     # Earlier assertions may have failed before creating the second account.

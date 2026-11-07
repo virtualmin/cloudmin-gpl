@@ -100,6 +100,21 @@ $add->('list-systems', 'machines', 'Lists the virtual machines on this host.',
     }, list => {key => 'name', columns => [qw(name state cpus memory_mib addresses)]});
 $add->('get-system', 'settings', 'Shows a virtual machine and its saved settings.',
     group => 'Virtual machines', select => 'machine', summary_action => 'machines');
+# Statistics reads share the authenticated API's bounds and permission checks.
+$add->('get-statistics', 'statistics', 'Shows host or virtual machine resource history.',
+    group => 'Statistics', options => {
+        id => option('s', help => 'Virtual machine UUID. Defaults to host'),
+        from => option('i', help => 'Start time in Unix seconds'),
+        to => option('i', help => 'End time in Unix seconds'),
+        points => option('i', help => 'Maximum chart points, from 60 to 1200'),
+        entity => option('s', help => 'Device ID returned by a statistics query'),
+    });
+$add->('export-statistics', 'statistics_export', 'Exports completed resource summaries for synchronization.',
+    group => 'Statistics', options => {
+        step => option('i', help => 'Summary interval: 60, 300 or 3600 seconds'),
+        limit => option('i', help => 'Maximum rows per batch, from 1 to 1000'),
+        cursor => option('s', help => 'Cursor returned by the previous export batch'),
+    });
 # Power actions differ in confirmation and waiting: full restart is a job,
 # simple state changes are polled, and reboot/reset return on acceptance.
 foreach my $item (
@@ -423,7 +438,7 @@ return bless {out => \*STDOUT, err => \*STDERR, in => \*STDIN,
 }
 
 # read_actions() identifies requests that do not need a form token.
-sub read_actions { return qw(options machines settings status list snapshots clone_options image_options backups bridges bridge_status storage license ssh_keys guest_ssh_keys); }
+sub read_actions { return qw(options machines statistics statistics_export settings status list snapshots clone_options image_options backups bridges bridge_status storage license ssh_keys guest_ssh_keys); }
 
 # command(self, name) finds a command definition without contacting the host.
 sub command
@@ -872,16 +887,20 @@ while ($bytes >= 1024 && $i < $#units) { $bytes /= 1024; $i++; }
 return sprintf('%.3g %s',$bytes,$units[$i]);
 }
 
-# scalar_text(key, value) formats values and removes terminal controls.
+# scalar_text(key, value, [parent]) formats values and removes terminal
+# controls. Parent defaults to no field context. It distinguishes collector
+# availability from free storage bytes.
 sub scalar_text
 {
-my ($key,$value) = @_;
+my ($key, $value, $parent) = @_;
 # Unknown measurements stay distinct from measured zero values.
 return '-' if (!defined($value));
 # Accept either JSON-library booleans or Webmin scalar-reference booleans.
 return $value ? 'Yes' : 'No' if (blessed($value) && ref($value) =~ /Boolean\z/);
 # Webmin also represents JSON booleans as references to zero or one.
 return $$value ? 'Yes' : 'No' if (ref($value) eq 'SCALAR');
+# Collector availability is a flag; storage availability remains a byte count.
+return $value ? 'Yes' : 'No' if ($key eq 'available' && ($parent || '') eq 'collector' && $value =~ /\A[01]\z/);
 # Known numeric flag fields use the same human-readable boolean labels.
 return $value ? 'Yes' : 'No' if ($key =~ /\A(?:autostart|active|persistent|readonly|bootmenu|start|cancel|cleanup_pending|addnew)\z/ && $value =~ /\A[01]\z/);
 # API resource fields encode their unit in the key, unlike byte measurements.
@@ -899,15 +918,17 @@ $value =~ s/[\x00-\x1f\x7f-\x9f]/ /g;
 return $value;
 }
 
-# multiline(data, [indent]) formats nested records as indented text.
+# multiline(data, [indent], [parent]) formats nested records as indented text.
+# Indent defaults to empty and parent to no field context. Nested fields retain
+# their parent name for context-dependent scalar formatting.
 sub multiline
 {
-my ($data,$indent) = @_;
+my ($data, $indent, $parent) = @_;
 $indent ||= '';
 # Scalar leaves use the same formatting as table cells.
 return $indent.scalar_text('', $data)."\n" if (ref($data) ne 'HASH' && ref($data) ne 'ARRAY');
 # Separate list records while preserving the requested nesting level.
-return join("\n",map {multiline($_,$indent)} @$data) if (ref($data) eq 'ARRAY');
+return join("\n", map { multiline($_, $indent, $parent) } @$data) if (ref($data) eq 'ARRAY');
 my $text = '';
 # Only outer records get an identity heading; nested records keep field labels.
 if (!$indent) {
@@ -920,12 +941,12 @@ foreach my $key (sort keys %$data) {
     my $value = $data->{$key};
     my $label = label($key);
     # Nested objects retain their hierarchy under the field label.
-    if (ref($value) eq 'HASH') { $text .= "$indent$label:\n".multiline($value,$indent.'    '); }
+    if (ref($value) eq 'HASH') { $text .= "$indent$label:\n".multiline($value, $indent.'    ', $key); }
     # Arrays of records, addresses and simple values need different layouts.
     elsif (ref($value) eq 'ARRAY') {
         # Complex array entries each retain their own labeled block.
         if (grep {ref($_) eq 'HASH' || ref($_) eq 'ARRAY'} @$value) {
-            $text .= "$indent$label:\n".multiline($_,$indent.'    ') for @$value;
+            $text .= "$indent$label:\n".multiline($_, $indent.'    ', $key) for @$value;
         }
         # Address lists use one labeled line per address.
         elsif ($key eq 'addresses') { $text .= "$indent$label: ".scalar_text($key,$_)."\n" for @$value; }
@@ -934,7 +955,7 @@ foreach my $key (sort keys %$data) {
     }
     # Scalar fields get one line, with the raw epoch retained beside a date.
     else {
-        $text .= "$indent$label: ".scalar_text($key,$value)."\n";
+        $text .= "$indent$label: ".scalar_text($key, $value, $parent)."\n";
         # Keep a directly reusable creation timestamp in multiline output.
         $text .= "${indent}Created Unix time: $value\n" if ($key eq 'created' && defined($value));
     }

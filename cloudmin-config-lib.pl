@@ -9,6 +9,12 @@ sub virtualmin_enabled
 return ($config{'virtualmin_enabled'} // '1') ne '0';
 }
 
+# statistics_enabled() returns the collection switch, enabled by default.
+sub statistics_enabled
+{
+return ($config{'statistics_enabled'} // '1') ne '0';
+}
+
 # view_fields(key)
 # Returns field definitions for a column or section setting named by key.
 # Entries contain an ID, language key, optional sort type and required flag.
@@ -153,6 +159,14 @@ my ($key) = @_;
 my %settings = (
 	# Leave time for bridge application, whose service allows up to 90 seconds.
 	bridge_confirm_timeout => [180, 120, 900],
+	# Statistics defaults bound sampling cost, retention and disk use.
+	statistics_interval => [10, 5, 60],
+	statistics_guest_interval => [60, 60, 300],
+	statistics_budget => [1024, 64, 1048576],
+	statistics_raw_hours => [24, 1, 168],
+	statistics_minute_days => [7, 1, 30],
+	statistics_five_days => [30, 1, 366],
+	statistics_hour_days => [365, 1, 1825],
 );
 # Reject unknown keys rather than accepting values without known bounds.
 die "Unknown numeric setting: $key\n" if (!$settings{$key});

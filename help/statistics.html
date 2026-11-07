@@ -1,0 +1,48 @@
+<header>Statistics</header>
+
+<p>These pages show resource usage for the selected virtual machine or the host.
+Host statistics require host-administrator access.</p>
+
+<p>Choose a recent period or a custom range in 15-minute steps, up to 366 days.
+Charts refresh every 10 seconds while visible. They show current readings and
+period peaks, with an average for CPU usage. Hover over a chart for values at
+that time.</p>
+
+<p>Hold Shift and scroll to zoom around the pointer. Once zoomed, scroll sideways
+or drag to move through the period. All charts stay aligned, and refreshes keep
+your zoom. Double-click to restore the full period.</p>
+
+<p>Guest CPU usage is a share of its assigned CPUs. CPU waiting time means the
+guest was ready but waiting for the host to run it. Host load averages count
+tasks running or waiting for CPU time or some I/O operations. High values can
+indicate competing workloads.</p>
+
+<p>Memory is shown against a dashed capacity line. Guest memory usage needs a
+working balloon driver. Disk reads and received network traffic appear above
+zero, with writes and sent traffic below. Host network totals use the configured
+uplinks.</p>
+
+<p>Individual devices can be selected when the period contains more than one disk
+or network interface. Removed devices remain available while they have history
+in that period.</p>
+
+<p>Storage bars show current pool or filesystem usage. The change below their
+heading compares the first and last available totals in the selected period.
+Pools sharing a filesystem count its space once. Guest filesystem readings need
+a running machine and a guest agent that reports disk space. They update every
+60 seconds by default.</p>
+
+<p>The event timeline shows up to 200 state, device and connection changes in
+the selected period, newest first. These also appear as chart markers.
+The timeline is hidden when there are no events.</p>
+
+<p>Blank gaps mean readings are missing, not zero. A notice identifies gaps of
+at least two sampling intervals. Older readings are summarized, so brief peaks
+may be higher than the plotted line.</p>
+
+<p>History is stored on this host. Disabling recording keeps live readings.
+Disabling collection stops them and hides the statistics menu links.
+Saved history is kept. Retention and the disk budget limit how far back you
+can look. These readings are for monitoring, not billing.</p>
+
+<footer>

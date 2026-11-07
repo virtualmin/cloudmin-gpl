@@ -53,6 +53,9 @@ close_tempfile($fh);
 set_ownership_permissions(0,0,0755,$path);
 # Install the Pro check once; GPL hosts need no licensing cron.
 setup_cloudmin_license_check();
+# Keep live collection running even when history recording is turned off.
+require "$module_root_directory/cloudmin-statistics-lib.pl";
+install_statistics_service();
 }
 
 1;

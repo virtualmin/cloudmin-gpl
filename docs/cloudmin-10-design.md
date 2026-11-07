@@ -92,10 +92,15 @@ authentication, navigation and UI widgets. Virtual machine creation, power contr
 management, snapshots, clones and backups use a versioned API shared by the UI, CLI and
 external clients. Future management operations will follow the same pattern.
 
-SQLite is used only for persistent virtual machine creation and management jobs (requests,
+SQLite stores persistent virtual machine creation and management jobs (requests,
 progress, resource reservations, recovery information, and history) and
 short-lived password hashes used during setup. Job records survive
 restarts so interrupted work can be recovered or cleaned up.
+
+Resource history uses a separate SQLite database. Collection continues when
+no pages are open. Disabling history recording keeps live readings. Collection
+can also be disabled entirely. See [resource statistics](statistics.md) for
+retention, coverage and the summary export format intended for Connect.
 
 Server configuration, accounts, and permissions keep their existing Webmin
 file-based storage. Webmin continues to handle audit logging; its audit log

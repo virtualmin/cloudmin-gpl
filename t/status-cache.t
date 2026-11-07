@@ -106,4 +106,24 @@ $leases->record({uuid => 'dhcp', active => 1, pending => {}});
 is_deeply($leases->message($overview)->{changed}{dhcp}{vm}{pending}, {},
 	'matching settings clear pending badges through a delta');
 
+# The shared collector cannot restore resources from before a status event.
+my $shared = Cloudmin::Status->new();
+$shared->record({uuid => 'shared', name => 'Shared', state => 'running', active => 1});
+my $snapshot = {vms => {shared => {state => 'running', checked_at => 101,
+	resources => {cpu_percent => 25}, guest => {filesystem_used_bytes => 123}}}};
+$shared->collected(['shared'], $snapshot, 101);
+is($shared->{resources}->{shared}->{cpu_percent}, 25, 'shared readings populate live status');
+# A lifecycle event invalidates the earlier cache even within the same second.
+$shared->{invalidated}->{shared} = 101.5;
+$shared->collected(['shared'], $snapshot, 102);
+ok(!exists($shared->{resources}->{shared}), 'sample predating an event is discarded');
+# Only a later sample may restore readings after the invalidation.
+$snapshot->{vms}->{shared}->{checked_at} = 102;
+$shared->collected(['shared'], $snapshot, 102);
+is($shared->{resources}->{shared}->{cpu_percent}, 25, 'new sample restores live status');
+# Loss of the shared cache must clear both counters and guest-agent readings.
+$shared->collected(['shared'], {vms => {}}, 103);
+ok(!exists($shared->{resources}->{shared}) && !exists($shared->{guest}->{shared}),
+	'unavailable collector clears both resources and filesystem readings');
+
 done_testing();

@@ -41,6 +41,7 @@ See [How to create a virtual machine](https://www.cloudmin.com/docs/getting-star
 - Creation from [cloud images](https://www.cloudmin.com/docs/getting-started/how-to-create-a-virtual-machine/) and [installer ISOs](https://www.cloudmin.com/docs/virtual-machines/installer-iso/) (experimental).
 - [Machine templates and resource plans](https://www.cloudmin.com/docs/virtual-machines/templates-and-plans/).
 - [Live hardware changes and virtual machine management](https://www.cloudmin.com/docs/virtual-machines/managing-virtual-machines/).
+- [Host and virtual machine statistics with local history](docs/statistics.md).
 - [Disk snapshots with restore and history](https://www.cloudmin.com/docs/virtual-machines/snapshots/).
 - [Full virtual machine clones](https://www.cloudmin.com/docs/virtual-machines/cloning/).
 - [Full backups, restore, schedules and retention](https://www.cloudmin.com/docs/backup-and-migration/backups-and-restore/).

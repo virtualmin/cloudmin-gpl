@@ -40,6 +40,48 @@ ok(virtualmin_enabled(), 'Virtualmin installation defaults to enabled');
 	ui_table_end();
 }
 
+# Collection defaults on and the save hook applies only submitted switches.
+ok(statistics_enabled(), 'resource collection defaults to enabled');
+require "$Bin/../cloudmin-statistics-lib.pl";
+{
+	no warnings qw(redefine once);
+	my @calls;
+	# set_statistics_service_enabled(enabled) records service requests.
+	local *main::set_statistics_service_enabled = sub { push(@calls, $_[0] ? 1 : 0); };
+	local %config = (%config, statistics_enabled => 0);
+	ok(!statistics_enabled(), 'resource collection can be disabled');
+	# Disabling must refresh the menu without replaying old actions.
+	local %in = (statistics_enabled => 0, _cscript => 'machine.cgi',
+		_cparam_id => 'old-guest', _cparam_action => 'old-action', _cparam_xnavigation => 1);
+	config_post_save({statistics_enabled => 0}, {statistics_enabled => 1});
+	is_deeply(\@calls, [0], 'saving No stops collection');
+	is_deeply(\%in, {statistics_enabled => 0, _cscript => 'index.cgi',
+		_cparam_refresh => 1, _cparam_xnavigation => 1},
+		'statistics save returns to the overview for a menu refresh without old actions');
+	# Use the submitted value even while the loaded configuration is stale.
+	$in{'statistics_enabled'} = 1;
+	config_post_save({statistics_enabled => 1}, {statistics_enabled => 0});
+	is_deeply(\@calls, [0, 1], 'saving Yes uses the new value, not cached configuration');
+	# Other categories must leave both collection and navigation alone.
+	%in = (host_details => 'always');
+	config_post_save({statistics_enabled => 1}, {statistics_enabled => 1});
+	is_deeply(\@calls, [0, 1], 'saving another category leaves the service alone');
+	is_deeply(\%in, {host_details => 'always'}, 'other categories keep their return page');
+	# error(message) throws instead of rendering an error page.
+	local *main::error = sub { die $_[0]; };
+	# error_message(message) passes the simulated failure through unchanged.
+	local *main::error_message = sub { $_[0] };
+	# error_html(message) retains the real HTML escaping.
+	local *main::error_html = sub { html_escape($_[0]) };
+	# set_statistics_service_enabled(enabled) simulates a failed start.
+	local *main::set_statistics_service_enabled = sub { die "Service start failed\n"; };
+	# Retry service actions even when the saved switch already matches.
+	%in = (statistics_enabled => 1);
+	eval { config_post_save({statistics_enabled => 1}, {statistics_enabled => 1}); };
+	like($@, qr/Service start failed/, 'a repeated save reports service failure');
+	ok(!exists($in{'_cparam_refresh'}), 'failed service action does not request a successful return');
+	}
+
 # Each configured table keeps headings, sort types and object IDs aligned.
 foreach my $key (qw(machine_columns image_columns network_columns
 	storage_pool_columns storage_volume_columns backup_columns

@@ -1,0 +1,11 @@
+<header>Host network uplinks</header>
+
+<p>Leaving this empty selects physical network interfaces automatically,
+using bonds instead of their member ports. To choose interfaces yourself,
+enter their names separated by spaces or commas, such as <tt>eno1 eno2</tt>.</p>
+
+<p>Use a bridge's physical ports to include forwarded traffic. Do not combine
+a bond or bridge with its member ports, since this counts traffic twice.
+Loopback and guest tap/vnet interfaces cannot be used.</p>
+
+<footer>

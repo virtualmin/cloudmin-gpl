@@ -1,0 +1,24 @@
+# Cloudmin statistics; installed by server-manager/postinstall.pl
+[Unit]
+Description=Cloudmin resource statistics
+After=network.target libvirtd.service virtqemud.service
+[Service]
+Type=simple
+Environment=${SERVICE_CONFIG}
+Environment=${SERVICE_VAR}
+Environment=${SERVICE_PERLLIB}
+ExecStart=${SERVICE_PERL} ${SERVICE_COLLECTOR}
+# Keep live readings private and remove them when collection stops.
+RuntimeDirectory=cloudmin-statistics
+RuntimeDirectoryMode=0700
+# Recover failed or stalled collectors and stop all guest probes with them.
+Restart=always
+RestartSec=5
+WatchdogSec=90
+NotifyAccess=main
+TimeoutStopSec=10
+KillMode=control-group
+UMask=0077
+Nice=10
+[Install]
+WantedBy=multi-user.target

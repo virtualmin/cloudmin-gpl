@@ -11,8 +11,8 @@ use Time::HiRes ();
 use Fcntl qw(:flock);
 our (%text, %config, %in, $module_root_directory, $module_var_directory,
      $module_config_directory, $module_name);
-# Replace collectors that still include licensing in session permissions.
-our $cloudmin_status_protocol = 13;
+# Replace status servers that still sample resources independently.
+our $cloudmin_status_protocol = 14;
 require "$module_root_directory/cloudmin-terminal-lib.pl";
 
 # check_ssh_service(addresses, [port])

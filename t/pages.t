@@ -1265,6 +1265,10 @@ my $vm = {uuid => $id, name => 'Assigned guest', active => 1,
 my @menu = get_menu_items([$vm], $id, 0, 1, 1);
 my $links = join(' ', map { $_->{'link'} || '' } @menu);
 like($links, qr/machine\.cgi/, 'operator can open VM details');
+like(un_urlize($links), qr{statistics\.cgi\?id=$id},
+	'operator can open statistics for the assigned guest');
+ok(!grep({ ($_->{'link'} || '') eq '/server-manager/statistics.cgi' } @menu),
+	'operator has no host statistics link');
 unlike($links, qr/machine_form|edit_machine|storage|networks|images|snapshots|jobs|remote_access|console|terminal|webminlog/,
 	'operator navigation hides ungranted and host tools');
 my $details = show_vm_details($vm, 'token');
@@ -1361,6 +1365,27 @@ foreach my $readonly (0, 1) {
 	my @create = grep { ($_->{'format'} || '') eq 'link-new' } @menu;
 	is(scalar(@create), $readonly ? 0 : 1,
 		'empty menu respects creation permissions');
+	ok(grep({ ($_->{'link'} || '') eq '/server-manager/statistics.cgi' &&
+		$_->{'desc'} eq 'Host Statistics' } @menu),
+		'host statistics remain available without guests, including read-only mode');
+	ok(!grep({ ($_->{'desc'} || '') eq 'Guest Statistics' } @menu),
+		'empty inventory has no guest statistics link');
+	}
+}
+
+# Disabling collection hides both statistics links without removing VM tools.
+{
+our %access;
+local %access = (admin => 1);
+my $id = '11111111-2222-3333-4444-555555555555';
+my $vm = {uuid => $id, name => 'Guest'};
+foreach my $enabled (0, 1) {
+	local $config{'statistics_enabled'} = $enabled;
+	my @menu = get_menu_items([$vm], $id, 0, 1, 1);
+	my @statistics = grep { ($_->{'link'} || '') =~ m{/statistics\.cgi(?:\?|$)} } @menu;
+	is(scalar(@statistics), $enabled ? 2 : 0, 'collection switch controls both statistics links');
+	ok(grep({ ($_->{'link'} || '') =~ m{/machine\.cgi\?} } @menu),
+		'VM details remain available with collection disabled');
 	}
 }
 

@@ -95,6 +95,9 @@ my $cli = Cloudmin::CLI->new(out=>$outfh,err=>$errfh,now=>sub {$clock},sleep=>su
         return {keys=>[],revision=>'guest-key-revision'} if ($action eq 'guest_ssh_keys');
         # Key changes finish synchronously without creating durable jobs.
         return {id=>$job,name=>'Saved'} if ($action =~ /^(?:save_ssh_key|delete_ssh_key|add_guest_ssh_key|remove_guest_ssh_key)$/);
+		# Statistics reads return bounded history and export batches, never jobs.
+		return {version => 1, resolution => 0, series => [], entities => [], events => []} if ($action eq 'statistics');
+		return {version => 1, step => $input->{step}, rows => [], more => 0, cursor => 'generation:60:0'} if ($action eq 'statistics_export');
         # Remaining mutations submit a durable job that the CLI must follow.
         return {id=>$job,name=>$input->{name} || $machine->{name},state=>'queued',phase=>'queued'};
     });
@@ -119,6 +122,9 @@ return ($code,$out,$err,\@calls);
 my %cases = (
 'list-systems'=>['machines',[],{}],
 'get-system'=>['settings',[],{id=>$uuid}],
+# Statistics reads pass their bounds and device selection to the API unchanged.
+'get-statistics' => ['statistics', ['--id', $uuid, '--from', '1700000000', '--to', '1700003600', '--points', '120', '--entity', "$uuid/disk/vda"], {id => $uuid, from => 1700000000, to => 1700003600, points => 120, entity => "$uuid/disk/vda"}],
+'export-statistics' => ['statistics_export', ['--step', '300', '--limit', '10', '--cursor', 'generation:300:5'], {step => 300, limit => 10, cursor => 'generation:300:5'}],
 # Power operations distinguish direct actions from the full restart job.
 'start-system'=>['start',[],{id=>$uuid}],
 'shutdown-system'=>['shutdown',[],{id=>$uuid}],
@@ -221,7 +227,7 @@ foreach my $command (@{Cloudmin::CLI::commands()}) {
 }
 
 # The API action set comes from its public contract, not the CLI definitions.
-my @actions = qw(download_ssh_key ssh_keys save_ssh_key delete_ssh_key guest_ssh_keys add_guest_ssh_key remove_guest_ssh_key license check_license change_license deregister_license storage register_pool pool_start pool_stop pool_autostart volume_review delete_volume pool_review unregister_pool options machines review create status list cancel cancel_cleanup recover discard start shutdown reboot suspend resume reset reset_password power_cycle force_off autostart snapshots snapshot_create snapshot_restore snapshot_delete bridges bridge_remove_review bridge_remove bridge_status bridge_confirm bridge_rollback settings update add_disk attach_disk detach_disk delete_disk grow_disk add_interface update_interface remove_interface change_media delete clone_options clone image_options capture_image backups backup backup_inspect restore);
+my @actions = qw(download_ssh_key ssh_keys save_ssh_key delete_ssh_key guest_ssh_keys add_guest_ssh_key remove_guest_ssh_key license check_license change_license deregister_license storage register_pool pool_start pool_stop pool_autostart volume_review delete_volume pool_review unregister_pool options machines statistics statistics_export review create status list cancel cancel_cleanup recover discard start shutdown reboot suspend resume reset reset_password power_cycle force_off autostart snapshots snapshot_create snapshot_restore snapshot_delete bridges bridge_remove_review bridge_remove bridge_status bridge_confirm bridge_rollback settings update add_disk attach_disk detach_disk delete_disk grow_disk add_interface update_interface remove_interface change_media delete clone_options clone image_options capture_image backups backup backup_inspect restore);
 my %mapped;
 foreach my $c (@{Cloudmin::CLI::commands()}) {
     $mapped{$_}=1 for grep {defined($_)} ($c->{action},$c->{prepare},$c->{summary_action},@{$c->{additional_actions} || []},map {$_->{action}} values %{$c->{options}});
@@ -236,6 +242,27 @@ like($out,qr/guest\.example\.com\s+Stopped\s+2\s+2 GiB\s+192\.0\.2\.10/,'table f
 like($out,qr/^guest\.example\.com\n/m,'multiline record heading');
 like($out,qr/    Autostart: No\n/,'boolean formatting');
 like($out,qr/    Created Unix time: 1700000000\n/,'creation epoch retained');
+# Collector availability is a flag in text, with its numeric API type intact.
+for my $available (0, 1) {
+	my $response = {collector => {available => $available}};
+	for my $format ([], ['--multiline']) {
+		my ($status, $text) = run_cli(['get-statistics', @$format], sub { $response });
+		is($status, 0, 'statistics text command succeeds');
+		like($text, qr/Available: @{[$available ? 'Yes' : 'No']}\n/,
+			'collector availability has no byte unit');
+		}
+	# Human formatting must not alter numeric flags in machine-readable output.
+	my (undef, $json) = run_cli(['get-statistics', '--json'], sub { $response });
+	is_deeply(convert_from_json($json)->{data}, $response,
+		'statistics JSON retains numeric availability');
+	# The same field name still means free bytes in storage pool results.
+	my (undef, $pool) = run_cli(['list-pools'], sub { {pools => [
+		{name => 'default', uuid => 'pool-id', type => 'dir', active => 1, available => $available}]} });
+	like($pool, qr/\b$available B\s*$/m, 'pool table still formats free bytes');
+	my (undef, $details) = run_cli(['list-pools', '--multiline'], sub { {pools => [
+		{name => 'default', uuid => 'pool-id', type => 'dir', active => 1, available => $available}]} });
+	like($details, qr/Available: $available B\n/, 'pool details still format free bytes');
+	}
 # JSON retains native types and uses no human progress or formatting.
 ($code,$out,$err) = run_cli(['list-systems','--json']);
 my $json = convert_from_json($out);

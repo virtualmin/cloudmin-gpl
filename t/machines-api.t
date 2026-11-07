@@ -12,6 +12,7 @@ $module_root_directory = "$Bin/..";
 $module_var_directory = tempdir(CLEANUP=>1);
 $module_config_directory = $module_var_directory;
 require "$module_root_directory/cloudmin-lib.pl";
+require "$module_root_directory/cloudmin-statistics-lib.pl";
 # Two guests distinguish permitted inventory from unrelated private records.
 my $one = '11111111-1111-4111-8111-111111111111';
 my $two = '22222222-2222-4222-8222-222222222222';
@@ -40,8 +41,11 @@ my @probed;
     no warnings qw(redefine once);
     # list_managed_servers_sorted() returns the fixture in inventory order.
     local *main::list_managed_servers_sorted = sub {@servers};
-    # get_libvirt() returns fixture statistics without a host connection.
-    local *main::get_libvirt = sub {bless {},'MachinesAPIAdapter'};
+    # Statistics reads use the collector, never a new libvirt sample per request.
+    local *main::get_libvirt = sub { die "Inventory API must not resample libvirt\n" };
+    local *main::statistics_latest = sub { return {vms => {map {
+        $_->{uuid} => {resources => {disk_capacity_bytes => 25 * 1024 ** 3}}
+    } @servers}}; };
     # get_vm_jobs() supplies a private creation record to test public filtering.
     local *main::get_vm_jobs = sub {bless {},'MachinesAPIJobs'};
     # get_vm_service() fails if inventory tries to load the creation service.

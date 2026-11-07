@@ -243,8 +243,12 @@ The shared status collector must write its own state and remove its proxy route,
 regardless of who first opens a page. Its startup code temporarily lifts Webmin's
 read-only veto, and the dedicated process keeps that permission through cleanup.
 It authenticates every subscribing session and rechecks access while connected.
-Enabling balloon statistics on an existing guest requires a connected writable
-subscriber. Read-only viewers can read reports already enabled on the guest.
+Resource collection runs in `cloudmin-statistics.service` even when no pages
+are open or history recording is off. The collector enables runtime balloon
+reporting and saves live readings in a private cache. Read-only requests use
+that cache without changing guests. Disabling collection in Module Configuration
+stops the service and prevents startup at boot. See
+[resource statistics](statistics.md) for retention and exports.
 
 ## Requirements and limits
 

@@ -57,6 +57,8 @@ ui_print_header(
 	1,
 	1,
 );
+# Refresh the menu after a collection switch, once headers are sent.
+notify_theme_save({}, 'modify') if ($in{'refresh'});
 print_vm_change_result($in{'vm_saved'}, 'delete');
 # The recovery handler redirects here only after its verification succeeds.
 print ui_alert_box($text{'check_network_restored'}, 'success', undef, undef, '')

@@ -136,6 +136,11 @@ return call_license_api($action, $input)
 # Machine summaries are also available to delegated viewers. Filter before
 # reading details; the remaining host APIs retain their administrator check.
 return get_api_machines($input) if ($action eq 'machines');
+# Historical reads apply host or assigned-VM scope before opening the database.
+if ($action eq 'statistics' || $action eq 'statistics_export') {
+	require "$module_root_directory/cloudmin-statistics-lib.pl";
+	return call_statistics_api($action, $input);
+	}
 # Delegate only the listed power actions; a token never substitutes for a grant.
 my $power = $action =~ /\A(?:start|shutdown|reboot|suspend|resume|reset|force_off|autostart)\z/;
 # Power and password changes each need their own grant and exact VM assignment.
@@ -612,17 +617,15 @@ if (defined($id)) {
 }
 # Skip resource and address lookups when no guests are visible.
 return [] if (!@servers);
-# Batch resource statistics for only the guests the caller may view.
-my $adapter = get_libvirt();
-my $stats = $adapter->get_resource_stats([map { $_->{'uuid'} } @servers]);
-require "$module_root_directory/lib/Cloudmin/Metrics.pm";
-my $metrics = Cloudmin::Metrics->new();
+# Reuse the collector's current readings instead of sampling again per API call.
+require "$module_root_directory/cloudmin-statistics-lib.pl";
+my $latest = statistics_latest();
 my $jobs = get_vm_jobs();
 my @result;
 # Build an explicit public record instead of exposing libvirt or job internals.
 foreach my $server (@servers) {
 	my $uuid = $server->{'uuid'};
-	my $sample = $metrics->sample($server, $stats->{$uuid} || {}, 0, time());
+	my $sample = $latest->{'vms'}->{$uuid}->{'resources'} || {};
 	# Load creation metadata only from a valid job ID.
 	my $meta = $server->{'cloudmin'} || {};
 	my $job = ($meta->{'job'} || '') =~ /\A[a-f0-9]{32}\z/

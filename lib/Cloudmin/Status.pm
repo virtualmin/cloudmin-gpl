@@ -3,6 +3,7 @@ package Cloudmin::Status;
 # Shared status cache and per-subscriber changes, independent of the transport.
 use strict;
 use warnings;
+use Time::HiRes ();
 use WebminCore qw(convert_to_json);
 use File::Basename qw(dirname);
 require(dirname(__FILE__).'/Metrics.pm');
@@ -54,6 +55,7 @@ delete $self->{'guest'}->{$id};
 $self->{'metrics'}->forget($id);
 $self->{'guest_due'}->{$id} = 0;
 $self->{'due'}->{$id} = 0;
+$self->{'invalidated'}->{$id} = Time::HiRes::time();
 # Deletion events can arrive after the corresponding inventory record is
 # gone.
 $self->refresh($id) if ($self->{'vms'}->{$id});
@@ -64,7 +66,7 @@ sub remove
 {
 my ($self, $id) = @_;
 delete $self->{$_}->{$id}
-	for qw(vms health due encoded resources guest guest_due);
+	for qw(vms health due encoded resources guest guest_due invalidated);
 $self->{'metrics'}->forget($id);
 $self->{'revision'}++;
 }
@@ -151,6 +153,32 @@ foreach my $id (@$ids) {
 	$self->{'resources'}->{$id} =
 		$self->{'metrics'}->sample($self->{'vms'}->{$id},
 		$stats->{$id} || {}, $now, $wall);
+	$self->refresh($id);
+	}
+}
+
+# collected(self, ids, snapshot, now) copies shared readings for known VM IDs.
+# The caller supplies a freshness-checked snapshot. Now is accepted for the
+# status interface but is not used to calculate resource rates.
+sub collected
+{
+my ($self, $ids, $snapshot, $now) = @_;
+foreach my $id (@$ids) {
+	# Collector data cannot recreate a guest absent from status inventory.
+	next if (!$self->{'vms'}->{$id});
+	my $value = $snapshot->{'vms'}->{$id};
+	# An event must not be undone by a sample taken before it, or while stopped.
+	if ($value && ($value->{'checked_at'} || 0) >
+		($self->{'invalidated'}->{$id} || 0) &&
+		($value->{'state'} || '') eq $self->{'vms'}->{$id}->{'state'}) {
+		$self->{'resources'}->{$id} = $value->{'resources'};
+		$self->{'guest'}->{$id} = $value->{'guest'};
+		}
+	# Clear readings when the collector has not caught up with this guest's state.
+	else {
+		delete($self->{'resources'}->{$id});
+		delete($self->{'guest'}->{$id});
+		}
 	$self->refresh($id);
 	}
 }

@@ -14,11 +14,15 @@ lists the `power`, `force`, `console`, `terminal` and `password` grants under `p
 It includes a token when any of these grants is enabled and Webmin is not in
 read-only mode. Host resources are omitted.
 
-`power` allows `start`, `shutdown`, `reboot`, `suspend`, `resume` and `autostart`;
-`force` allows `force_off` and `reset`; `password` allows `reset_password`. The `machines` action lists only guests the caller may view. Other API actions, including `power_cycle`
-and job history, require a host administrator. Graphical consoles and SSH
-terminals have separate endpoints and permission checks. Tokens belong to the
-authenticated user and do not grant permissions.
+`power` allows `start`, `shutdown`, `reboot`, `suspend`, `resume` and `autostart`.
+`force` allows `force_off` and `reset`. `password` allows `reset_password`.
+The `machines` action lists guests the caller may view. The `statistics` action
+returns history and current readings for those same UUIDs. Host statistics,
+`statistics_export` and other actions, including `power_cycle` and job history,
+require host-administrator access.
+
+Graphical consoles and SSH terminals have separate endpoints and permission
+checks. Tokens belong to the authenticated user and do not grant permissions.
 
 Host administrators can view, cancel or recover other administrators' jobs.
 Read-only administrators can view progress but cannot change jobs. New requests
@@ -42,6 +46,8 @@ Actions:
 | `add_guest_ssh_key` | `token`, `id`, `username`, either library `key` or `public` text | Appends public keys without replacing existing entries |
 | `remove_guest_ssh_key` | `token`, `id`, `username`, guest `key`, `revision`, `confirm=1` | Removes the exact reviewed entry; refuses Cloudmin's managed login key |
 | `machines` | Optional `id` (UUID or exact name) | Visible virtual machines sorted by name, or one matching record |
+| `statistics` | Optional `id` (`host` or VM UUID), `from`, `to`, `points`, `entity` | Resource history and current readings. See [Resource statistics](statistics.md). |
+| `statistics_export` | Optional `step`, `cursor`, `limit` | Completed summaries with a resumable cursor. Host administrators only. |
 | `options` | None | Current images, storage, networks and capabilities; form token for users with write access |
 | `review` | Creation settings | Validated settings without creating a virtual machine |
 | `create` | Creation settings | Job ID, state and progress; repeating the same request with its token and optional `attempt` returns the existing job |

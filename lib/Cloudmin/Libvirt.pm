@@ -1487,9 +1487,9 @@ $record->{'addresses'} = $record->{'active'} && !$skip_addresses
 return $record;
 }
 
-# get_resource_stats(self, [uuids])
-# Reads one batch without waiting on busy QEMU jobs. Omit uuids for the
-# overview; detail viewers request only their selected guests.
+# get_resource_stats(self, [uuids]) Reads one batch without waiting on busy QEMU
+# jobs. The statistics service omits uuids to collect all guests. Other callers
+# may request an explicit list.
 sub get_resource_stats
 {
 my ($self, $ids) = @_;
@@ -1506,7 +1506,7 @@ return { map { $_->{'dom'}->get_uuid_string() => $_->{'data'} } @stats };
 }
 
 # get_guest_resources(self, uuid)
-# Reads OS and mounted filesystem sizes for the status probe worker.
+# Reads OS and mounted filesystem sizes for the statistics probe worker.
 # The probe supervisor bounds the call without changing shared domain settings.
 sub get_guest_resources
 {
@@ -1622,16 +1622,17 @@ sub filesystem_space
 {
 my ($path) = @_;
 return undef if ($^O ne 'linux' || !$path || !-d $path);
-open(my $stat, '-|', 'stat', '-f', '--format=%S %b %f %a', '--', $path) || return undef;
+open(my $stat, '-|', 'stat', '-f', '--format=%S %b %f %a %i', '--', $path) || return undef;
 my $line = <$stat>;
 my $ok = close($stat);
-return undef if (!$ok || !defined($line) || $line !~ /\A(\d+) (\d+) (\d+) (-?\d+)\s*\z/);
-my ($size, $blocks, $free, $available) = ($1, $2, $3, $4);
+return undef if (!$ok || !defined($line) || $line !~ /\A(\d+) (\d+) (\d+) (-?\d+) (\S+)\s*\z/);
+my ($size, $blocks, $free, $available, $fsid) = ($1, $2, $3, $4, $5);
 # Full filesystems may report negative availability after reserves are used.
 return undef if (!$size || !$blocks || $free > $blocks || $available > $free);
 $available = 0 if ($available < 0);
+# The filesystem ID lets pools sharing one filesystem count its space once.
 return { capacity => $blocks * $size, allocation => ($blocks - $free) * $size,
-	available => $available * $size };
+	available => $available * $size, fsid => $fsid };
 }
 
 # get_storage_pool_record(self, pool, [include_volumes])
@@ -1695,7 +1696,7 @@ return {
 	'volumes' => \@volumes,
 	'volume_count' => scalar(@volumes),
 	'volume_error' => $volume_error,
-	map { defined($info->{$_}) ? ($_ => $info->{$_}) : () } qw(data_percent metadata_percent),
+	map { defined($info->{$_}) ? ($_ => $info->{$_}) : () } qw(data_percent metadata_percent fsid),
 };
 }
 

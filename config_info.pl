@@ -1,7 +1,29 @@
 use strict;
 use warnings;
-our (%in, %text);
+our (%in, %text, $module_root_directory);
 require 'server-manager-lib.pl';
+
+# config_post_save(new, old) applies collection settings after Webmin saves.
+# Both arguments are configuration hashes. Old is unused.
+sub config_post_save
+{
+my ($new, $old) = @_;
+# Saving other categories must not change the collector's service state.
+return unless exists($in{'statistics_enabled'});
+require "$module_root_directory/cloudmin-statistics-lib.pl";
+# Apply every save so a failed service action can be retried.
+my $ok = eval {
+	set_statistics_service_enabled(($new->{'statistics_enabled'} // '1') ne '0');
+	1;
+	};
+# A saved preference does not prove that the service change succeeded.
+error(error_html(error_message($@))) unless $ok;
+# Return to the overview to refresh the menu after headers are sent.
+# Keep SPA navigation, but drop old parameters that could trigger an action.
+delete @in{grep { /^_cparam_/ && $_ ne '_cparam_xnavigation' } keys %in};
+$in{'_cscript'} = 'index.cgi';
+$in{'_cparam_refresh'} = 1;
+}
 
 # Webmin passes the saved value and config.info metadata to custom widgets.
 # Save hooks read submitted controls from %in; old_value is unused below.

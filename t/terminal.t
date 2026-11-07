@@ -181,10 +181,10 @@ my @links = map { un_urlize($_->{'link'}) }
 is_deeply(\@links,
 	[map { '/server-manager/'.$_ } ('machine_form.cgi','machine.cgi?id='.$uuid,
 	'edit_machine.cgi?id='.$uuid,'snapshots.cgi?id='.$uuid,
-	'remote_access.cgi?id='.$uuid,'index.cgi',
+	'remote_access.cgi?id='.$uuid, 'statistics.cgi?id='.$uuid, 'index.cgi',
 	'images.cgi','storage.cgi','networks.cgi',
-	'snapshots.cgi','backups.cgi','jobs.cgi')],
-	'guest links precede global tools');
+	'snapshots.cgi', 'backups.cgi', 'jobs.cgi', 'statistics.cgi')],
+	'guest links precede global tools, each group ending with its history');
 # Module configuration and presets share Virtualmin's settings category.
 my ($settings) = grep { ($_->{'type'} || '') eq 'cat' } @menu;
 is($settings->{'id'}, 'global_setting', 'settings use Virtualmin category ID');
@@ -228,7 +228,7 @@ for my $grant ('terminal', 'console') {
 @menu = get_menu_items([], undef, 0, 1);
 ok(!grep({ ($_->{'type'} || '') eq 'menu' } @menu),
 	'empty inventory has no selector');
-is(scalar(grep { ($_->{'type'} || '') eq 'item' } @menu), 8,
+is(scalar(grep { ($_->{'type'} || '') eq 'item' } @menu), 9,
 	'empty menu keeps creation and global links');
 @menu = get_menu_items([$vm,$stopped], 'removed', 0, 1);
 ($selector) = grep { ($_->{'type'} || '') eq 'menu' } @menu;

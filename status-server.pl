@@ -15,6 +15,7 @@ use Sys::Virt;
 use Sys::Virt::Event;
 require './server-manager-lib.pl';
 require './cloudmin-status-lib.pl';
+require './cloudmin-statistics-lib.pl';
 require './lib/Cloudmin/Status.pm';
 require './lib/Cloudmin/Probe.pm';
 our ($module_name, $module_var_directory, $remote_user, %config,
@@ -86,10 +87,10 @@ if (!$worker) {
 		my $task = convert_from_json($line);
 		# The shared cache contains capabilities, not a viewer's grants.
 		# The supervisor stays outside libvirt, even when a native call hangs.
-		# probe() fetches guest metrics or health in a short-lived child.
-		my $result = Cloudmin::Probe::run(sub { $task->{'kind'} eq 'guest'
-			? get_libvirt(1)->get_guest_resources($task->{'id'})
-			: get_server_health($task->{'id'}) }, 8);
+		# Probe connection health in a child with a timeout. Resource collection
+		# runs separately in cloudmin-statistics.service.
+		my $result = Cloudmin::Probe::run(sub {
+			get_server_health($task->{'id'}) }, 8);
 		$result ||= { error => 1 };
 		delete($result->{'labels'});
 		print $write_responses convert_to_json($result, 0, 1)."\n";
@@ -126,12 +127,7 @@ my ($client) = @_;
 my $access = authorized($client->{'session'});
 # Expired or revoked logins cannot keep their previously cached grants.
 return 0 if (!$access);
-# Newly granted host management allows live balloon reporting.
-if ($clients{$client} && $access->{'policy'}->allows('manage') && !$client->{'writable'}) {
-	$dirty{$_} = 1 for keys %{$cache->{'vms'}};
-	}
 $client->{'user'} = $access->{'user'};
-$client->{'writable'} = $access->{'policy'}->allows('manage');
 # Compare sorted JSON so ACL key order alone cannot trigger a page reload.
 my $signature = convert_to_json({ %{$access->{'policy'}} }, 0, 0, 1);
 if (defined($client->{'acl_signature'}) && $client->{'acl_signature'} ne $signature) {
@@ -154,13 +150,6 @@ sub collect_domain
 {
 my ($domain) = @_;
 my $record = $adapter->get_domain_record($domain, 1);
-# Enable cheap balloon reports for existing guests, without changing RAM or
-# persistent definitions. A host administrator with write access must be
-# subscribed. Unsupported balloon drivers remain unavailable.
-if ($record->{'active'} && !$record->{'memory_stats_period'} &&
-	grep { $_->{'client'}->{'writable'} } values %clients) {
-	eval { $domain->set_memory_stats_period(10, 1); };
-	}
 my $id = $record->{'uuid'};
 # Preserve addresses until a lifecycle event or a targeted probe replaces them.
 $record->{'addresses'} = $record->{'active'}
@@ -273,11 +262,6 @@ my $server = Net::WebSocket::Server->new(
 					$id !~ /\A(?:overview|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\z/i ||
 					($id ne 'overview' && !$client->{'policy'}->allows('view', $id))) {
 					$client->disconnect(); return;
-					}
-				# Wait for a host administrator with write access to subscribe. Its target
-				# may arrive after authentication, on the next event-loop tick.
-				if (!$clients{$client} && $client->{'writable'}) {
-					$dirty{$_} = 1 for keys %{$cache->{'vms'}};
 					}
 				my $subscription =
 					$clients{$client} ||= { client =>
@@ -402,7 +386,7 @@ my $server = Net::WebSocket::Server->new(
 		# unavailable.
 		return if ($fault);
 		my $ids = $cache->resource_ids([values %clients]);
-		# One NOWAIT batch per ten seconds serves all viewers of visible guests.
+		# Live values come from the always-on collector, even with history disabled.
 		if (@$ids && $now >= $sample_at) {
 			$sample_at = $now + 10;
 			# DHCP can assign an address after boot without a domain event.
@@ -412,30 +396,19 @@ my $server = Net::WebSocket::Server->new(
 				return $adapter->get_domain_addresses(
 					$connection->get_domain_by_uuid($id), $record, 1);
 				});
-			# Sample every VM only for a host administrator's visible overview.
-			my $all = grep { !$_->{'paused'} && $_->{'id'}
-			eq 'overview' && $_->{'policy'}->allows('host') } values %clients;
-			my $stats = eval {
-				$adapter->get_resource_stats($all ? undef : $ids)
-				} || {};
-			$cache->sampled($ids, $stats,
-			clock_gettime(CLOCK_MONOTONIC), time());
+			$cache->collected($ids, statistics_latest(), time());
 			}
 		# The worker is reused for every viewer; stale results cannot
 		# overwrite events.
 		if (!$pending) {
 			my $id = $cache->next_probe([values %clients], $now);
-			my $kind = 'health';
-			# Detail-view health probes take precedence over slower
-			# guest metrics.
-			if (!$id) { $id = $cache->next_guest_probe([values %clients], $now); $kind = 'guest'; }
+			# Filesystem probes now belong to the always-on collector.
 			# One request at a time keeps probe load independent of
 			# viewer count.
 			if ($id) {
-				$pending = [$id, $generation{$id} || 0,
-					$kind]; $probe_started = $now;
-				(print $request convert_to_json({ id => $id,
-				kind => $kind }, 0, 1)."\n") ||
+				$pending = [$id, $generation{$id} || 0];
+				$probe_started = $now;
+				(print $request convert_to_json({ id => $id }, 0, 1)."\n") ||
 				die "Health worker closed\n";
 				}
 			}
@@ -479,16 +452,12 @@ $server->watch_readable($response, sub {
 	# Keep partial replies buffered until their newline arrives.
 	if ($buffer =~ s/\A([^\n]*)\n//) {
 		my $result = convert_from_json($1);
-		my ($id, $version, $kind) = @$pending;
+		my ($id, $version) = @$pending;
 		# Ignore a reply collected before a lifecycle or device event.
 		if ($version == ($generation{$id} || 0)) {
-			# Guest metrics and connection health have separate
-			# refresh clocks.
-			if ($kind eq 'guest') { $cache->guest_checked($id,
-				$result, time()); }
 			# Health replies update the agent, SSH and console
 			# capabilities.
-			else { $cache->checked($id, $result, time()); }
+			$cache->checked($id, $result, time());
 			}
 		$pending = undef;
 		}

@@ -1193,6 +1193,9 @@ if ($vm) {
 	# Log searches can reveal host activity beyond assigned guests.
 	push(@items, { type => 'item', desc => $text{'log_vm_title'},
 		link => get_action_log_url($vm) }) if ($log && can_access('host'));
+	# Hide guest history in the menu when collection is disabled.
+	push(@items, { type => 'item', desc => $text{'statistics_guest_title'},
+		link => "$base/statistics.cgi?id=$id" }) if (statistics_enabled());
 	}
 # Separate guest actions from host tools; an empty host already has a divider.
 push(@items, { type => 'hr' }) if ($vm);
@@ -1206,6 +1209,9 @@ foreach my $entry ([index => 'left_overview'], [images => 'left_images'],
 	}
 push(@items, { type => 'item', desc => $text{'log_title'},
 	link => get_action_log_url() }) if ($log && can_access('host'));
+# Host history needs both enabled collection and host administrator access.
+push(@items, { type => 'item', desc => $text{'statistics_host_title'},
+	link => "$base/statistics.cgi" }) if (statistics_enabled() && can_access('host'));
 # Reuse Virtualmin's category and the header's module configuration permissions.
 push(@items, { type => 'cat', id => 'global_setting', desc => $text{'left_settings'},
 	members => [
