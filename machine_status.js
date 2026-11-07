@@ -141,10 +141,11 @@
         // resourceValues(record) never substitutes host allocation for guest use.
         function resourceValues(record) {
             const vm = record?.vm, r = record?.resources || {}, guest = record?.guest || {};
-            // usage(percent, total) keeps known capacity when usage is unknown.
+            // usage(percent, total) rounds percentages to one decimal place.
+            // Unknown usage still shows the known capacity.
             const usage = (percent, total) => total == null ? config.usage.unavailable :
                 (percent == null ? config.usage.missing.replace('$1', total) :
-                    config.usage.format.replace('$1', percent).replace('$2', total));
+                    config.usage.format.replace('$1', Math.round(percent * 10) / 10).replace('$2', total));
             const capacity = r.disk_capacity_bytes;
             const memory = r.memory_bytes ?? (vm?.memory_kib == null ? null : vm.memory_kib * 1024);
             const used = guest.filesystem_used_bytes;

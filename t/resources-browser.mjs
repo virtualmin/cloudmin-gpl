@@ -100,7 +100,7 @@ try {
     const id = '11111111-2222-3333-4444-555555555555';
     const record = { vm: { uuid: id, name: 'resource-fixture', state: 'running', active: 1,
         persistent: 1, autostart: 1, vcpus: 2, memory_kib: 1048576, addresses: [{address: '192.0.2.1'}], macs: ['52:54:00:00:00:01'] },
-        resources: { cpu_percent: 0.8, memory_percent: 30, memory_bytes: 1024**3,
+        resources: { cpu_percent: 0.478253857414245, memory_percent: 30, memory_bytes: 1024**3,
             memory_used_bytes: 0.3 * 1024**3, disk_capacity_bytes: 10 * 1024**3,
             disk_read_bytes_sec: 2048, disk_write_bytes_sec: 0, network_rx_bytes_sec: 1024, network_tx_bytes_sec: 0,
             disks: {vda: {capacity: 10 * 1024**3, physical: 1024**3}} },
@@ -127,7 +127,7 @@ try {
     await reply();
     assert.equal(await tableVisible(), true);
     assert.equal(await emptyVisible(), false);
-    assert.equal(await value('cpu'), '0.8% of 2');
+    assert.equal(await value('cpu'), '0.5% of 2', 'overview rounds full-precision CPU readings');
     assert.equal(await value('memory'), '30% of 1 GiB');
     assert.equal(await value('disk'), '2% of 10 GiB');
     assert.equal(await evaluate(`document.querySelector('[data-vm-guest=os]').textContent`), record.guest.os);
@@ -157,7 +157,7 @@ try {
     await reply();
     assert.equal(await value('cpu'), '0% of 2', 'zero usage is a valid measurement');
     assert.equal(await value('memory'), '0% of 1 GiB');
-    record.resources.cpu_percent = 0.8; record.resources.memory_percent = 30;
+    record.resources.cpu_percent = 0.478253857414245; record.resources.memory_percent = 30;
     // Removing the last VM hides the whole table, including theme decorations.
     await evaluate(`window.socket.reply({type: 'status', changed: {}, removed: [${JSON.stringify(id)}]})`);
     assert.equal(await tableVisible(), false);
@@ -200,6 +200,8 @@ try {
         'resource usage uses a regular table before the accordions');
     assert.equal(await evaluate(`document.querySelectorAll('.opener_hidden')[document.querySelectorAll('.opener_hidden').length - 1].contains(document.querySelector('[data-vm-field=persistent]'))`), true,
         'hardware is the last collapsed accordion');
+    // VM details use the same percentage formatting as the overview.
+    assert.equal(await value('cpu'), '0.5% of 2', 'details round full-precision CPU readings');
     assert.equal(await value('disk_read'), '2 KiB/s');
     record.vm.autostart = 0;
     await reply();
