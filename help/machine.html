@@ -1,39 +1,37 @@
 <header>Virtual Machine Details</header>
 
 <p>Manage the machine's resources and devices here. Supported changes apply
-while it runs; others wait for a full shutdown and start. A guest reboot may not
+while it runs. Others need a full shutdown and start. A guest reboot may not
 apply pending hardware changes.</p>
 
-<p><b>Default login</b> is the account configured when Cloudmin created the machine.
-Account changes inside the guest are not reflected here.</p>
+<p>The login account shown here was configured when Cloudmin created the machine.
+Later account changes inside the guest are not reflected here.</p>
 
 <p>CPU usage is relative to the assigned CPUs. Memory usage excludes reclaimable
 cache and needs a working balloon driver. Guest OS and filesystem details need a
-responding guest agent. Missing measurements mean unknown usage, not zero.</p>
+responding guest agent. Missing readings mean unknown usage, not zero.</p>
 
-<p>Growing a disk increases its capacity; expand partitions and filesystems
-inside the guest afterward. Network changes also require matching guest settings
-or a renewed DHCP lease. Snapshots and backup checkpoints must be removed before
-changing the disk layout.</p>
+<p>After growing a disk, expand its partitions and filesystems inside the guest.
+Network changes need matching guest settings or a renewed DHCP lease.
+Remove snapshots and backup checkpoints before changing the disk layout.</p>
 
-<p>Ejecting an ISO leaves the CD/DVD drive in place. Its selector shows
-<b>No ISO inserted</b> when empty. If the running and saved drive settings
-differ, shut down the virtual machine before changing its ISO.</p>
+<p>Ejecting an ISO empties the CD/DVD drive without removing it.
+If the running and saved drive settings differ, shut down the machine
+before changing its ISO.</p>
 
-<p>Open <b>Edit Virtual Machine &gt; Access</b> to manage guest passwords and,
-in Pro, SSH keys. Password resets require a running guest and a responding
-guest agent. Select an account, or choose <b>Other account...</b> to enter a name.
-If account discovery is unavailable, the dropdown still offers the configured
-login and manual entry. Password resets leave SSH login settings unchanged.
-Services using this account's system password will also use the new password.</p>
+<p>The access section of the machine editor manages guest passwords and, in Pro,
+SSH keys. Password resets need a running machine and a responding guest agent.
+Choose an account or enter its name. The configured login and manual entry
+remain available if account discovery fails. SSH login settings stay unchanged.
+Services using that account's system password also use the new password.</p>
 
-<p>Forced power-off and hard reset skip clean shutdown and can lose data.
-Deletion permanently removes the selected disks. Keeping writable disks requires
-a clean shutdown; selecting all writable disks for deletion powers the machine
-off immediately. Shared disks and imported images are protected. Kept disks
-retain their data, but the deleted machine's snapshot history is removed.</p>
+<p>Forced power-off and hard reset can lose data. Deletion permanently removes
+the selected disks. Keeping writable disks needs a clean shutdown. Deleting all
+writable disks powers the machine off immediately. Shared disks and imported
+images are protected. Kept disks retain their data, but the deleted machine's
+snapshot history is removed.</p>
 
-<p>Operations continue after you leave the page. If a change partly fails, use
+<p>Operations continue after you leave this page. If a change partly fails, use
 its recovery action in Active Jobs before trying again. Do not remove snapshot
 files manually.</p>
 
