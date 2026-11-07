@@ -193,7 +193,8 @@ try {
     await reply();
     assert.equal(await evaluate(`document.querySelectorAll('#cloudmin-vm-status .ui_card dl').length`), 1,
         'main details share one compact description card');
-    assert.equal(await evaluate(`document.querySelectorAll('#cloudmin-vm-status table, #cloudmin-vm-status details').length`), 0,
+    // The power-action dropdown also uses details, but is not an accordion.
+    assert.equal(await evaluate(`document.querySelectorAll('#cloudmin-vm-status table, #cloudmin-vm-status details:not(.ui_dropdown)').length`), 0,
         'tables and accordions stay outside the configuration widget');
     assert.equal(await evaluate(`document.querySelector('[data-vm-resource=disk_read]').closest('table').closest('.opener_hidden, .opener_shown')`), null,
         'resource usage uses a regular table before the accordions');
