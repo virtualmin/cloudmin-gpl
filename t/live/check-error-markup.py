@@ -100,12 +100,12 @@ error('Cannot read <tt>'.html_escape('/tmp/<source>&.qcow2').
         # Fatal headings emphasize the path; alerts retain the theme's wrapper.
         message = 'Cannot read <tt>/tmp/&lt;source&gt;&amp;.qcow2</tt> during image inspection'
         for mode in ('early', 'late'):
-            # An already-open Authentic page receives errors through navigation.
+            # An already-open SPA page receives errors through navigation.
             navigation = '&navigation=1' if mode == 'late' else ''
             page = request(opener, '/server-manager/' + probe.name + '?mode=' + mode + navigation)
             assert message in page, (theme, mode)
             if theme == 'authentic-theme' and mode == 'late':
-                # Late Authentic errors arrive inside its existing alert wrapper.
+                # SPA errors reuse the existing alert wrapper.
                 assert re.search(r"<tt\b[^>]*class=['\"]font-size-90pf['\"][^>]*>" +
                                  re.escape(message), page), ('Late errors keep the alert wrapper',
                                      page[max(0, page.index(message) - 150):page.index(message) + len(message)])

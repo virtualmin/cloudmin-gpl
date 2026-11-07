@@ -136,7 +136,7 @@ my $instances = list_kvm_instances(undef, $adapter);
 is(ref($instances), 'ARRAY', 'list_kvm_instances returns an array reference');
 is(scalar(@$instances), 2, 'list_kvm_instances uses libvirt discovery');
 
-# Frame-based themes and Webmin's LVM module still call these Cloudmin 9 functions.
+# Themes and Webmin's LVM module still call these Cloudmin 9 functions.
 ok(scalar(can_action(undef, 'global')),
 	'can_action treats every user as the master administrator');
 is_deeply([ can_action(undef, 'global') ], [ 1, undef ],

@@ -46,7 +46,7 @@
         queue.saving = false;
     }
 
-    // refresh() follows visible panels in both Authentic and frame-based themes.
+    // refresh() follows visible panels in all themes.
     function refresh() {
         document.querySelectorAll('[data-inventory-tabs]').forEach(node => {
             let state = states.get(node);
@@ -57,7 +57,7 @@
                     '[data-inventory-tabs-error="' + config.page + '"]')};
                 states.set(node, state);
             }
-            // The two themes use different prefixes for their visible panels.
+            // Themes use different prefixes for their visible panels.
             const tab = state.config.tabs.find(id => {
                 const panel = document.getElementById('att_' + id) ||
                     document.getElementById('div_' + id);

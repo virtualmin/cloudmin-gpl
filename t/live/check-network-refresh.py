@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Check Authentic's status refresh with a temporary account and browser profile.
+"""Check SPA status refresh with a temporary account and browser profile.
 
 Run as root inside the Linux test host. No network settings are changed.
 For removal review checks, add --bridge-removal --bridge NAME --port NAME.
@@ -51,7 +51,7 @@ def request(path, fields=None):
         return response.read().decode()
 
 
-# Give only the temporary account access to this module and the Authentic theme.
+# Give only the temporary account module access and a theme with SPA navigation.
 subprocess.run(['perl', str(helper), 'create', 'authentic-theme', user],
                input=password + '\n', text=True, check=True)
 try:
@@ -135,14 +135,14 @@ try:
                      'url': base, 'path': cookie.path, 'secure': True})
             call('Page.navigate', {'url': base + '/'})
             wait('document.readyState === "complete" && !!document.querySelector("aside")')
-            # callback() opens Networking through Authentic's link handler.
+            # Open Networking through the SPA navigation handler.
             evaluate("""(() => {
                 const link = document.createElement('a');
                 link.href = '/server-manager/networks.cgi?tab=bridges';
                 document.body.append(link); link.click(); link.remove();
             })()""")
             wait("!!document.querySelector('#cloudmin-network-page') && !!document.querySelector('input[name=action][value=bridge_review]')")
-            # layout() checks that Authentic stacks each label above its field.
+            # Check that the theme stacks each label above its field.
             layout = """(() => {
                 const input = document.querySelector('input[name=action][value=bridge_review]');
                 // Wait until navigation has supplied the creation form.
@@ -158,8 +158,8 @@ try:
             if has_creation_fields:
                 # Hosts without an eligible port have no fields to measure.
                 wait(layout)
-            # Emulate a pending status in this browser only. Its next real status
-            # response must reload the form through Authentic, without a POST.
+            # A simulated pending status must trigger a GET-only SPA reload
+            # when the next real status arrives.
             history_length = evaluate('history.length')
             requests.clear()
             # callback() simulates recovery by changing only browser markers.
@@ -189,7 +189,7 @@ try:
             navigation = [r for r in requests if urllib.parse.urlparse(r['url']).path == '/server-manager/networks.cgi'
                           and 'status=1' not in urllib.parse.urlparse(r['url']).query]
             assert len(navigation) == 1 and navigation[0]['method'] == 'GET', 'Expected exactly one safe page GET'
-            print('PASS: Authentic form layout, active tab, tab controls and GET-only refresh', flush=True)
+            print('PASS: form layout, active tab, tab controls and GET-only refresh', flush=True)
             if args.bridge_removal:
                 # Review the requested existing bridge without applying removal.
                 selector = 'input[name=action][value=bridge_remove_review]'
@@ -221,7 +221,7 @@ try:
                 assert 'review the bridge again' in rejected['error']
                 after = json.loads(request('/server-manager/api.cgi?action=bridge_status'))
                 assert before == after, 'Rejected HTTP request changed the transaction'
-                print(f'PASS: {args.bridge} on {args.port}: compact removal button, Authentic review and HTTP API validation', flush=True)
+                print(f'PASS: {args.bridge} on {args.port}: compact removal button, review form and HTTP API validation', flush=True)
         finally:
             # Only the browser and temporary profile created by this test are closed.
             if socket:

@@ -10,7 +10,7 @@ import websocket
 
 
 # check_editor_layout(evaluate) verifies tab boundaries and form ownership.
-# evaluate runs JavaScript in the editor's document, including framed themes.
+# evaluate runs JavaScript in the editor's document in all themes.
 def check_editor_layout(evaluate):
     result = evaluate(r"""(() => {
         const names = ['resources', 'disks', 'interfaces', 'access'];
@@ -39,7 +39,7 @@ def check_editor_layout(evaluate):
 
 
 # check_memory_inputs(evaluate) checks native browser validity without saving.
-# evaluate runs JavaScript in the editor's document, including framed themes.
+# evaluate runs JavaScript in the editor's document in all themes.
 def check_memory_inputs(evaluate):
     result = evaluate(r"""(() => {
         const form = document.getElementById('vm-edit-form');
@@ -55,7 +55,7 @@ def check_memory_inputs(evaluate):
         const event = (input, name, synthetic = false) => {
             // Exercise theme notifications when jQuery is present.
             if (synthetic && window.jQuery) jQuery(input).trigger(name);
-            // Framed pages and ordinary controls use native bubbling events.
+            // Other controls use native bubbling events.
             else input.dispatchEvent(new Event(name, {bubbles: true}));
         };
         try {
@@ -199,7 +199,7 @@ def edit_guest(cookies, uuid, action='update', screenshot=None, on_shutdown=None
             # Open the theme shell, then use its actual navigation links.
             call('Page.navigate', {'url': 'https://127.0.0.1:10000/'})
             wait('top.document.querySelector("aside") || top.frames.left')
-            # Load Cloudmin navigation in the separate frame-based sidebar.
+            # Load Cloudmin navigation in the sidebar frame when present.
             if evaluate('!!top.frames.left'):
                 evaluate('top.frames.left.location = "/left.cgi?mode=server-manager"')
             navigation = '[top.document, ...Array.from(top.frames, w => w.document)]'

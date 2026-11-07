@@ -46,10 +46,10 @@ No external caller found in that audit uses a renamed helper.
 | Virtualmin Pro additions | No direct Cloudmin references | Uses the shared GPL integration |
 
 Cloudmin calls Webmin's `theme_select_server` and `theme_post_save_server` hooks
-through its selection and save helpers. These hook names and their guest record
-fields are unchanged, so frame-based themes keep working with Cloudmin 10.
-Cloudmin ships its console client, layout and noVNC library and supports both
-frame-based and SPA themes. Themes can add terminal font preferences,
+through its selection and save helpers. The hook names and guest record fields
+stay the same, so existing themes keep working with Cloudmin 10.
+Cloudmin ships its console client, layout and noVNC library. Its consoles work
+in all themes. Themes can add terminal font preferences,
 shortcuts and saved console zoom. Virtualmin's shared JSON and new-feature libraries also
 contain Cloudmin-specific branches, but the new module does not load those
 libraries.

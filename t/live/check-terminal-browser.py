@@ -107,7 +107,7 @@ def call(method, params=None):
 
 # evaluate(expression) runs test code without logging expressions or form values.
 def evaluate(expression):
-    # Frame-based themes host the module in the right-hand frame.
+    # Evaluate in the content frame when the module is loaded there.
     if in_frame:
         expression = 'window.frames.right.eval(' + json.dumps(expression) + ')'
     reply = call('Runtime.evaluate', dict(expression=expression, returnByValue=True, awaitPromise=True))
@@ -172,9 +172,9 @@ try:
         const form = document.querySelector('[name=user]').form;
         form.submit();
     })()''' % (json.dumps(user), json.dumps(password)))
-    # Frame-based navigation needs its Cloudmin menu loaded in the separate left frame.
+    # Load the Cloudmin menu in the left frame before selecting the guest.
     if not spa:
-        wait_for('!!window.frames.right && !!window.frames.left', 'Frame-based frames missing')
+        wait_for('!!window.frames.right && !!window.frames.left', 'Navigation and content frames missing')
         evaluate("window.frames.left.location = '/left.cgi?mode=server-manager'")
         in_frame = True
     navigation = 'parent.frames.left.document' if in_frame else 'document'

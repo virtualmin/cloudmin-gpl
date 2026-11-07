@@ -274,8 +274,8 @@ and the filesystem or network work still needed inside the guest.
 Administrators will also be able to adopt guests defined outside Cloudmin.
 
 Cloudmin ships the graphical console client, layout and noVNC library, without
-noVNC's separate application UI. Both consoles work with frame-based and SPA
-themes. Themes can add terminal font preferences, shortcuts and saved console zoom.
+noVNC's separate application UI. Both consoles work in all themes. Themes can
+add terminal font preferences, shortcuts and saved console zoom.
 Webmin checks permissions and a form token, then proxies a session-bound
 WebSocket to a VNC connection opened through the libvirt API.
 The browser receives neither a VNC password nor a direct QEMU port. This works

@@ -279,7 +279,7 @@ die "Cannot restart libvirt: $out" if (!$ok);
     except (websocket.WebSocketConnectionClosedException, ConnectionResetError):
         disconnected = True
     assert disconnected, 'Logged-out user retained the stream'
-    print('PASS: SPA/frame-based markup, reconnect reuse, logout revocation')
+    print('PASS: markup in all themes, reconnect reuse, logout revocation')
 finally:
     # Remove only this run's synthetic image record, including failed checks.
     if image_record is not None:

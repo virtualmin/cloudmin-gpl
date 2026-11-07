@@ -102,14 +102,14 @@ def check_forms(cookies, theme, source, ssh=None, request=None):
                      'url': 'https://127.0.0.1:10000', 'path': cookie.path, 'secure': True})
             call('Page.navigate', {'url':'https://127.0.0.1:10000/'})
             wait('top.document.querySelector("aside") || top.frames.left')
-            # Frame-based navigation needs its own module selection.
+            # Select the module in the navigation frame when present.
             if evaluate('!!top.frames.left'):
                 evaluate('top.frames.left.location="/left.cgi?mode=server-manager"')
             # Sidebar links can appear before their navigation handlers bind.
             # Frame layouts can start with an empty content frame and no referrer.
             if 'authentic' in theme:
                 wait('document.body.getAttribute("data-initial-load") === "0"')
-            # Gray Theme keeps the module in its right-hand frame.
+            # Open the module directly in the content frame.
             else:
                 tree = call('Page.getFrameTree')['frameTree']
                 frame = next(f['frame']['id'] for f in tree['childFrames']

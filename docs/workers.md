@@ -330,9 +330,9 @@ foreign tokens, concurrent read-only and writable sessions, and collector startu
 and idle cleanup. It requires an idle job queue and closed browser sessions;
 existing job and size-cache stores are moved aside and restored after the test.
 The creation test also checks that libvirt runs the guest's QEMU process without
-root. `t/live/check-theme-hooks.py` checks frame-based and SPA guest navigation
-through Webmin's theme hooks, plus the LVM module's use of Cloudmin's host
-lookup functions. These live tests must not run on a production host.
+root. `t/live/check-theme-hooks.py` checks guest navigation through Webmin's
+theme hooks, including SPA navigation. It also checks how the LVM module finds
+a guest's host through Cloudmin. These live tests must not run on a production host.
 
 `t/live/check-access.py` creates two diskless guests and temporary accounts. It
 submits permissions through Webmin Users and checks that the saved grants and guest

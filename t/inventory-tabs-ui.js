@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync('inventory-tabs.js', 'utf8');
 
-// fixture(prefix) represents Authentic (att_) or Webmin (div_) panels.
+// fixture(prefix) builds panels using either supported ID prefix.
 function fixture(prefix) {
     const requests = [], observers = [], frames = [];
     let selected = 'images', marker, error, panels;

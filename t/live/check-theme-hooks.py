@@ -27,9 +27,9 @@ base = 'https://127.0.0.1:10000'
 user = None
 created = False
 fixture = conn = None
-# This fixture needs an installed frame-based theme.
+# This fixture needs a theme with separate navigation and content frames.
 if not (webmin / 'gray-theme' / 'left.cgi').is_file():
-    raise SystemExit('Frame-based theme is not installed under ' + str(webmin))
+    raise SystemExit('Required theme is not installed under ' + str(webmin))
 
 # Webmin's LVM module resolves guest hosts through Cloudmin 9 functions; a
 # device no guest uses walks every guest record without matching one.
@@ -206,21 +206,21 @@ try:
     check_hooks('gray-theme')
     login('gray-theme')
     left = page('/left.cgi?mode=server-manager')
-    assert '/server-manager/machine_form.cgi' in left, 'Frame-based left frame lacks the Cloudmin menu'
+    assert '/server-manager/machine_form.cgi' in left, 'Navigation frame lacks the Cloudmin menu'
     page('/right.cgi')
     edit = page('/edit_right.cgi')
-    assert 'name="server"' in edit, 'Frame-based right-frame settings lack the default server list'
+    assert 'name="server"' in edit, 'Content-frame settings lack the default server list'
     ids = guest_ids(left)
-    assert ids, 'Frame-based left frame lists no guests'
+    assert ids, 'Navigation frame lists no guests'
     for uuid in ids:
         assert re.search(r'value=[\'"]%s[\'"]' % uuid, edit), 'default server list misses ' + uuid
-    print('Frame-based theme frames render with the Cloudmin master admin check (%d guests): PASS' % len(ids))
+    print('Theme frames render with the Cloudmin master admin check (%d guests): PASS' % len(ids))
 
     # Guest pages select the guest through the theme hook rather than the marker.
     vm = page('/server-manager/machine.cgi?id=' + ids[0])
-    assert 'left.cgi?mode=server-manager&sid=' + ids[0] in vm, 'Frame-based theme did not select the guest'
-    assert 'theme_select_server=' not in vm, 'Frame-based theme received an SPA marker'
-    print('Frame-based theme selects the displayed guest through theme_select_server: PASS')
+    assert 'left.cgi?mode=server-manager&sid=' + ids[0] in vm, 'Theme did not select the guest'
+    assert 'theme_select_server=' not in vm, 'Theme without SPA navigation received an SPA marker'
+    print('Theme selects the displayed guest through theme_select_server: PASS')
 
     # The SPA hook supplies a marker rather than executable JavaScript.
     logout()

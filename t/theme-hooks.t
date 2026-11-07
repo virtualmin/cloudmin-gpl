@@ -84,7 +84,7 @@ close($theme) or die $!;
 		'the same hook supports guest deletion');
 	is($saved[1], 'delete', 'the deletion action is passed unchanged');
 
-	# A marker-based theme owns its output, just like a frame-based theme.
+	# Themes that return markers also supply their own hook output.
 	$markers = 1;
 	is(capture(sub { select_theme_server($vm) }),
 		"<!--\ntheme_select_server=$vm->{'uuid'}\n-->\n",

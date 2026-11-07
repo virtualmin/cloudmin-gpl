@@ -141,7 +141,7 @@ def check_storage(cookies, theme, name, path):
             assert evaluate("!!document.querySelector('select[name=group]')"), 'LVM groups need a dropdown'
             assert evaluate("!document.body.innerText.includes('Cannot list LVM volume groups:')"), 'Live group discovery must succeed'
             assert evaluate("!!document.querySelector('input[name=autostart]')?.closest('.ui_toggle')"), 'Start at boot needs a toggle'
-            # Only Authentic interprets the full-width row metadata.
+            # Check full-width row metadata in the theme that consumes it.
             if theme == 'authentic-theme':
                 assert evaluate("!!document.querySelector('select[name=group]')?.closest('[data-column-span=all]')"), 'Storage backend needs a full-width row'
             management = evaluate("""(() => {

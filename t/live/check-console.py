@@ -188,7 +188,7 @@ def call(method, params=None):
 # evaluate(expression, [gesture]) returns results without logging form data.
 # gesture requests browser user activation for actions such as fullscreen.
 def evaluate(expression, gesture=False):
-    # A frame-based theme renders the module inside its right-hand frame.
+    # Evaluate in the content frame when the module is loaded there.
     if in_frame:
         expression = 'window.frames.right.eval(' + json.dumps(expression) + ')'
     reply = call('Runtime.evaluate', dict(expression=expression, returnByValue=True,
@@ -223,7 +223,7 @@ def wait_saved_zoom(value, preference='console_zoom'):
     raise AssertionError('Console zoom was not saved on the server')
 
 
-# click(selector) sends a real click, including user activation in the frame-based theme's frame.
+# click(selector) clicks in the module document with user activation.
 def click(selector):
     # Wait for the new page when navigation is still in progress.
     wait_for('!!document.querySelector(' + json.dumps(selector) + ')',
@@ -497,14 +497,14 @@ try:
     console_link = 'a[href="/server-manager/remote_access.cgi?id=' + identifier.replace('-', '%2D') + '"]'
     # Frame navigation changes the left and right panes separately.
     if not spa:
-        wait_for('!!window.frames.right && !!window.frames.left', 'Frame-based frames missing')
+        wait_for('!!window.frames.right && !!window.frames.left', 'Navigation and content frames missing')
         evaluate('window.frames.left.location = ' + json.dumps(base + '/left.cgi?mode=server-manager&sid=' + identifier))
-        wait_for('!!window.frames.left.document.querySelector(' + json.dumps(console_link) + ')', 'Frame-based guest menu missing')
+        wait_for('!!window.frames.left.document.querySelector(' + json.dumps(console_link) + ')', 'Guest menu missing from navigation frame')
         evaluate('window.frames.right.location = ' + json.dumps(base + '/server-manager/machine.cgi?id=' + identifier))
         in_frame = True
-        wait_for('document.title.includes("Virtual Machine Details")', 'Frame-based guest page missing')
+        wait_for('document.title.includes("Virtual Machine Details")', 'Guest page missing from content frame')
         check_live_status()
-        wait_for('!!parent.frames.left.document.querySelector(' + json.dumps(console_link) + ')', 'Frame-based console link missing')
+        wait_for('!!parent.frames.left.document.querySelector(' + json.dumps(console_link) + ')', 'Console link missing from navigation frame')
         evaluate('parent.frames.left.document.querySelector(' + json.dumps(console_link) + ').click()')
     # Select the guest through the sidebar's navigation handlers.
     else:
@@ -1154,8 +1154,8 @@ try:
         in_frame = False
         call('Page.navigate', dict(url=base + '/server-manager/remote_access.cgi?id=' + identifier + '&tab=graphical',
                                    referrer=base + '/server-manager/index.cgi'))
-        wait_for(connected, 'Standalone frame-based console did not connect')
-        wait_for(fitted, 'Standalone frame-based canvas does not fit')
+        wait_for(connected, 'Standalone console did not connect')
+        wait_for(fitted, 'Standalone canvas does not fit')
         assert evaluate('document.fullscreenEnabled'), 'Standalone fullscreen unavailable'
         click('[data-console-action=fullscreen]')
         wait_for('document.fullscreenElement?.id === "cloudmin-console"', 'Standalone fullscreen did not open')
@@ -1163,8 +1163,8 @@ try:
         evaluate('document.exitFullscreen()')
         wait_for('!document.fullscreenElement', 'Standalone fullscreen did not close')
         wait_for(fitted, 'Standalone canvas did not resize after fullscreen')
-        assert not errors, 'Frame-based standalone console raised JavaScript errors'
-        print('PASS: standalone frame-based console and fullscreen resizing', flush=True)
+        assert not errors, 'Standalone console raised JavaScript errors'
+        print('PASS: standalone console and fullscreen resizing', flush=True)
 
 except Exception:
     print('Browser errors:', errors, flush=True)
