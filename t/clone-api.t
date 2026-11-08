@@ -15,20 +15,17 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# lock(self, name, callback) isolates controller
 	# validation from host locks.
-
 	sub lock
 	{
 	$_[2]->()
 	}
 
 	# assert_guest_available(self, uuid) supplies an idle fixture source.
-
 	sub assert_guest_available
 	{
 	}
 
 	# get(self, id, [owner]) returns a previously submitted fixture job.
-
 	sub get
 	{
 	$_[0]->{$_[1]}
@@ -36,7 +33,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# submit(self, id, owner, resource, request) captures
 	# the durable request.
-
 	sub submit
 	{
 	$_[0]->{$_[1]} =
@@ -46,7 +42,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# spawn(self, id, callback) records scheduling without
 	# starting libvirt work.
-
 	sub spawn
 	{
 	$_[0]->{'spawned'}++
@@ -54,7 +49,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# delete_credential(self, id, owner) records expiry
 	# of the form's secret.
-
 	sub delete_credential
 	{
 	$_[0]->{'erased'}++
@@ -62,7 +56,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package CloneAPIImages;
 
 	# check_token(self, owner, token) models the signed form token contract.
-
 	sub check_token
 	{
 	die "Bad token\n" if (($_[2] || '') ne 'token')
@@ -71,7 +64,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# prepare(self, input, id, [hash]) captures inputs
 	# after permission checks.
-
 	sub prepare
 	{
 	$_[0]->{'prepared'}++; return { %{$_[1]}, operation =>
@@ -81,7 +73,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	}
 
 	# run(self, id) records dispatch of the immutable stored operation.
-
 	sub run
 	{
 	$_[0]->{'ran'} = $_[1]
@@ -90,7 +81,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# resolve(self, input, mode) proves clone-specific
 	# resolution is selected.
-
 	sub resolve
 	{
 	die "Wrong resolver mode\n"

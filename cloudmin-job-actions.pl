@@ -5,7 +5,6 @@ our ($remote_user);
 
 # get_job_action(input) validates access, the action and the current job state.
 # Filters VM records through get_public_vm_job; keeps image records internal.
-
 sub get_job_action
 {
 my ($input) = @_;
@@ -51,7 +50,6 @@ return $job;
 }
 
 # change_job_action(input) checks a signed POST before requesting cleanup.
-
 sub change_job_action
 {
 my ($input) = @_;

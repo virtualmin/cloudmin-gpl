@@ -25,7 +25,6 @@ our ($adapter, $connection, $sampler, $settings, %vms, %guests, %due,
      $wall_clock);
 
 # time(), clock_gettime(kind) and CLOCK_MONOTONIC() supply a controlled tick.
-
 sub time
 {
 return $wall_clock;
@@ -42,7 +41,6 @@ sub CLOCK_MONOTONIC ()
 }
 
 # error_message(error) keeps fixture failures readable without Webmin startup.
-
 sub error_message
 {
 return "$_[0]";
@@ -53,7 +51,6 @@ eval $functions.'; 1' or die $@;
 	package CollectorDomain;
 
 	# get_uuid_string(self) simulates an identity read racing with deletion.
-
 	sub get_uuid_string
 	{
 	die "Guest identity unavailable\n" if $_[0]->{fail} eq 'identity';
@@ -62,7 +59,6 @@ eval $functions.'; 1' or die $@;
 
 	# get_info(self) supplies counters or a failure from
 	# a strict record read.
-
 	sub get_info
 	{
 	$_[0]->{reads}++;
@@ -73,7 +69,6 @@ eval $functions.'; 1' or die $@;
 
 	# is_active(self), is_persistent(self) and get_name(self)
 	# describe this guest.
-
 	sub is_active
 	{
 	return 1;
@@ -90,7 +85,6 @@ eval $functions.'; 1' or die $@;
 	}
 
 	# get_xml_description(self, flags) fails after the initial strict read.
-
 	sub get_xml_description
 	{
 	die "Guest XML unavailable\n" if $_[0]->{fail} eq 'xml' &&
@@ -100,7 +94,6 @@ eval $functions.'; 1' or die $@;
 	}
 
 	# get_id(self) can fail after XML has already been read.
-
 	sub get_id
 	{
 	die "Guest runtime ID unavailable\n" if $_[0]->{fail} eq 'runtime';
@@ -110,7 +103,6 @@ eval $functions.'; 1' or die $@;
 	package CollectorConnection;
 
 	# list_all_domains(self, flags) can fail at the connection level.
-
 	sub list_all_domains
 	{
 	die "Inventory connection lost\n" if $_[0]->{fail} eq 'inventory';
@@ -118,7 +110,6 @@ eval $functions.'; 1' or die $@;
 	}
 
 	# get_domain_by_uuid(self, id) simulates a guest removed after an event.
-
 	sub get_domain_by_uuid
 	{
 	my ($self, $id) = @_;
@@ -132,7 +123,6 @@ eval $functions.'; 1' or die $@;
 
 	# get_resource_stats(self) returns increasing CPU
 	# counters for real sampling.
-
 	sub get_resource_stats
 	{
 	my ($self) = @_;
@@ -148,7 +138,6 @@ eval $functions.'; 1' or die $@;
 
 	# disconnect(self) records whether one guest interrupted
 	# the shared connection.
-
 	sub disconnect
 	{
 	$_[0]->{disconnects}++;
@@ -156,7 +145,6 @@ eval $functions.'; 1' or die $@;
 
 	# list_storage_pools(self) returns two pools on one filesystem, a volume
 	# group and an inactive pool, without touching libvirt.
-
 	sub list_storage_pools
 	{
 	$_[0]->{pool_reads}++;
@@ -179,7 +167,6 @@ eval $functions.'; 1' or die $@;
 
 # fixture() starts with two measured guests and pending data
 # for the failing one.
-
 sub fixture
 {
 %vms = ();
@@ -211,7 +198,6 @@ return ( $connection->{domains}->[0], $adapter );
 
 # run_tick(next_inventory) executes the daemon's collection block at this time.
 # It returns readings, errors and the next full-inventory deadline.
-
 sub run_tick
 {
 # The deadline is shared with refresh_domain, which can bring it forward.
@@ -231,7 +217,6 @@ return { rows => $rows, live => $live, errors => \@errors, next_inventory =>
 }
 
 # advance() moves both clocks equally, preserving valid counter intervals.
-
 sub advance
 {
 $clock += 10;

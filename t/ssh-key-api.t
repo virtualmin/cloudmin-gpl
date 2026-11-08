@@ -14,14 +14,12 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# Minimal services retain the real controller's permission ordering.
 	# list(self) counts a public library read.
-
 	sub list
 	{
 	$_[0]->{reads}++; [ ]
 	}
 
 	# get(self, id) counts a public detail lookup.
-
 	sub get
 	{
 	$_[0]->{reads}++; { public => 'public', id => 'key', name =>
@@ -29,56 +27,48 @@ require "$module_root_directory/cloudmin-lib.pl";
 	}
 
 	# save(self, fields) counts a library write.
-
 	sub save
 	{
 	$_[0]->{writes}++; { id => 'key', name => 'Name' }
 	}
 
 	# remove(self, id, revision) counts a removal.
-
 	sub remove
 	{
 	$_[0]->{writes}++; { id => 'key', name => 'Name' }
 	}
 
 	# download(self, id) counts a privileged private-key read.
-
 	sub download
 	{
 	$_[0]->{writes}++; 'private-fixture-value'
 	}
 
 	# check_token(self, owner, token) accepts only the fixture token.
-
 	sub check_token
 	{
 	die "Bad token\n" if ($_[2] || '') ne 'valid';
 	}
 
 	# lock(self, name, callback) counts host locks around the callback.
-
 	sub lock
 	{
 	$_[0]->{locks}++; $_[2]->()
 	}
 
 	# assert_guest_available(self, id) models a busy guest reservation.
-
 	sub assert_guest_available
 	{
 	die "Guest busy\n" if $_[0]->{busy};
 	}
 
 	# inventory(self, username) counts a guest-key read.
-
 	sub inventory
 	{
 	$_[0]->{reads}++; { keys => [ ], revision => 'revision' }
 	}
 
 	# add(self, username, public) counts a guest-key write.
-
 	sub add
 	{
 	$_[0]->{writes}++; { added => 1 }

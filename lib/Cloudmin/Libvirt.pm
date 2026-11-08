@@ -59,7 +59,6 @@ our $ADDRESSES_ARP = 2;
 # serial_log optionally configures, reads and removes managed local console
 # logs. startup tracks balloon targets across requests on the local host. lvm
 # optionally supplies a driver; local LVM inventory creates one otherwise.
-
 sub new
 {
 my ($class, %opts) = @_;
@@ -77,7 +76,6 @@ return bless({
 
 # storage_pools(self) returns native pools and discovered LVM thin destinations.
 # Only local logical pools use host LVM commands; remote inventory stays native.
-
 sub storage_pools
 {
 my ($self) = @_;
@@ -116,7 +114,6 @@ return @pools;
 }
 
 # storage_pool(self, uuid) resolves native and thin destinations consistently.
-
 sub storage_pool
 {
 my ($self, $uuid) = @_;
@@ -134,14 +131,12 @@ return $pool;
 }
 
 # disk_pool(type) identifies supported writable disk backends.
-
 sub disk_pool
 {
 return ($_[0] || '') =~ /\A(?:dir|fs|netfs|logical|lvmthin)\z/;
 }
 
 # block_pool(pool) identifies LVM destinations that store raw block devices.
-
 sub block_pool
 {
 my ($type) = parse_pool_xml($_[0]->get_xml_description(0));
@@ -151,7 +146,6 @@ return $type eq 'logical' || $type eq 'lvmthin';
 # file_pool(self, [preferred_uuid]) selects file storage for images and
 # firmware. These auxiliary files cannot be placed in a
 # volume group or thin pool.
-
 sub file_pool
 {
 my ($self, $preferred) = @_;
@@ -170,7 +164,6 @@ return $pool;
 }
 
 # uri(self) Returns the configured libvirt connection URI.
-
 sub uri
 {
 my ($self) = @_;
@@ -180,7 +173,6 @@ return $self->{'uri'};
 # log_call(method, parameters) Attaches a libvirt API call to the next Webmin
 # action log. Callers select public parameters explicitly; never pass domain XML
 # or provisioning inputs.
-
 sub log_call
 {
 my ($method, $parameters) = @_;
@@ -193,7 +185,6 @@ additional_log('exec', undef, "libvirt API: $method\n".
 # module_error(self) Returns the Sys::Virt load error, or undef when the
 # bindings are available or an injected connection factory
 # makes them unnecessary.
-
 sub module_error
 {
 my ($self) = @_;
@@ -206,7 +197,6 @@ return $ok ? undef : error_message($@);
 }
 
 # connect(self) Opens and caches the configured libvirt connection.
-
 sub connect
 {
 my ($self) = @_;
@@ -241,7 +231,6 @@ return $connection;
 
 # disconnect(self) Releases this adapter's connection before
 # restarting its libvirt daemon.
-
 sub disconnect
 {
 my ($self) = @_;
@@ -250,7 +239,6 @@ delete($self->{'connection'});
 
 # probe(self) Tests the connection and returns a result hash instead
 # of throwing an error.
-
 sub probe
 {
 my ($self) = @_;
@@ -266,7 +254,6 @@ return { 'ok' => 1 };
 
 # get_host_info(self) Returns basic, read-only details about the
 # connected hypervisor.
-
 sub get_host_info
 {
 my ($self) = @_;
@@ -298,7 +285,6 @@ return {
 # memory, and the machine type and firmware choices libvirt offers for KVM
 # guests of the given architecture. The architecture defaults to the host CPU
 # reported in libvirt's capabilities XML.
-
 sub get_host_capabilities
 {
 my ($self, $architecture) = @_;
@@ -339,7 +325,6 @@ return {
 
 # parse_xml_document(xml) Parses libvirt XML without resolving external
 # entities or reading DTDs.
-
 sub parse_xml_document
 {
 require XML::LibXML;
@@ -349,7 +334,6 @@ return XML::LibXML->load_xml(string => $_[0], no_network => 1,
 
 # get_machine_type(architecture) Returns the libvirt machine type alias Cloudmin
 # uses for new guests.
-
 sub get_machine_type
 {
 my ($architecture) = @_;
@@ -361,7 +345,6 @@ return 'q35';
 # volume(self, pool_uuid, name, [expected_key]) Resolves a current active pool
 # and volume, preserving lookup failures. Returns (pool, volume); a missing
 # volume is undef, while a key mismatch dies.
-
 sub volume
 {
 my ($self, $pool_id, $name, $key) = @_;
@@ -379,7 +362,6 @@ return ( $pool, $volume );
 # refresh_pool(pool, [timeout]) Retries refresh while a libvirt storage job is
 # busy; timeout defaults to 30 seconds. Other failures propagate immediately;
 # the caller's job deadline still applies.
-
 sub refresh_pool
 {
 my ($pool, $timeout) = @_;
@@ -400,7 +382,6 @@ while (1) {
 # clone_disk(self, pool_uuid, name, source, bytes, format, journal) Makes an
 # independent libvirt volume and grows it without changing the image. source
 # contains pool, volume and volume_key; journal() records cleanup intent.
-
 sub clone_disk
 {
 my ($self, $pool_id, $name, $source, $bytes, $format, $journal) = @_;
@@ -473,7 +454,6 @@ return $self->get_storage_volume_record($volume);
 # conversion. Only libvirt-listed local volumes may supply backing bytes. The
 # worker rewrites links on private copies, so guest-controlled paths
 # never select host files.
-
 sub conversion_sources
 {
 my ($self, $volume) = @_;
@@ -520,7 +500,6 @@ return ( \%files, @layers > 1 ? \@layers : undef );
 
 # write_volume(self, volume, file) copies checked disk bytes
 # through its backend.
-
 sub write_volume
 {
 my ($self, $volume, $file) = @_;
@@ -545,7 +524,6 @@ if (!$ok) { my $error = $@; eval { $stream->abort(); }; die $error; }
 # create_disk(self, pool_uuid, name, bytes, journal) Allocates an empty QCOW2
 # file or raw logical volume at the requested capacity. The required journal()
 # callback records the volume for cleanup before allocation.
-
 sub create_disk
 {
 my ($self, $pool_id, $name, $bytes, $journal) = @_;
@@ -568,7 +546,6 @@ return $self->get_storage_volume_record($volume);
 # Imports checked bytes into the backend; defaults to a raw seed sized to the
 # file. journal() records cleanup intent before the
 # destination volume is created.
-
 sub upload_seed
 {
 my ($self, $pool_id, $name, $file, $journal, $format, $capacity) = @_;
@@ -647,7 +624,6 @@ return $self->get_storage_volume_record($volume);
 
 # define_guest(self, xml) Defines a persistent domain using
 # libvirt's schema validation.
-
 sub define_guest
 {
 my ($self, $xml) = @_;
@@ -668,7 +644,6 @@ return $self->connect()->define_domain($xml, 1);
 
 # check_creation_cleanup(self, job) Refuses rollback of a committed guest whose
 # disks or history changed later.
-
 sub check_creation_cleanup
 {
 my ($self, $job) = @_;
@@ -730,7 +705,6 @@ return 1;
 
 # remove_created_guest(self, uuid, job_id) Removes only a domain carrying this
 # creation job's ownership marker.
-
 sub remove_created_guest
 {
 my ($self, $uuid, $job_id) = @_;
@@ -761,7 +735,6 @@ return 1;
 
 # remove_created_volume(self, pool_uuid, name, [expected_key]) Deletes a
 # journalled volume only after checking every remaining domain reference.
-
 sub remove_created_volume
 {
 my ($self, $pool_id, $name, $key) = @_;
@@ -780,7 +753,6 @@ return 1;
 # strict reads reject incomplete creation preflight data. Address discovery is
 # optional so preflight does not query guest agents. Both optional
 # flags default to false.
-
 sub list_domains
 {
 my ($self, $strict, $include_addresses) = @_;
@@ -815,7 +787,6 @@ return \@records;
 # with disks, interfaces, console and address details, or undef when no guest
 # matches the UUID or name. skip_addresses defaults to false; set it to avoid
 # guest-agent queries.
-
 sub get_domain
 {
 my ($self, $id, $skip_addresses) = @_;
@@ -830,7 +801,6 @@ return $record;
 # get_guest_status(self, uuid) Reads power, guest-agent and address signals
 # inside the bounded status worker. A responding agent does not establish that
 # guest setup has finished.
-
 sub get_guest_status
 {
 my ($self, $uuid) = @_;
@@ -862,7 +832,6 @@ return $record;
 # set_user_password(self, uuid, username, password) Resets an existing guest
 # account's password without saving it in Cloudmin. Requires a writable adapter,
 # running guest and responding agent.
-
 sub set_user_password
 {
 my ($self, $uuid, $username, $password) = @_;
@@ -897,7 +866,6 @@ return 1;
 }
 
 # setup_agent_error() reports missing host tools before guest allocation.
-
 sub setup_agent_error
 {
 return 'Guest software setup requires virsh and timeout on the Cloudmin host'
@@ -910,7 +878,6 @@ return '';
 # final_attempt stops retrying guest file, policy and lost-handle errors.
 # arguments defaults to an empty object; final_attempt defaults to false.
 # Sys::Virt does not expose virDomainQemuAgentCommand; use libvirt's CLI for it.
-
 sub setup_agent_command
 {
 my ($self, $uuid, $command, $arguments, $final_attempt) = @_;
@@ -974,7 +941,6 @@ return $response;
 # disconnected or busy agent returns undef. Missing files, blocked reads and
 # lost handles also return undef until final_attempt requests their diagnostic.
 # final_attempt defaults to false and does not disable transport retries.
-
 sub get_setup_host_key
 {
 my ($self, $uuid, $final_attempt) = @_;
@@ -1036,7 +1002,6 @@ return $pending ? undef : $identity->{'key'};
 # valid opened handle is attempted after success or failure; close errors do not
 # replace the read result. Stop starting reads after 10 seconds; each agent call
 # has its own timeout.
-
 sub read_guest_file
 {
 my ($self, $uuid, $path, $limit) = @_;
@@ -1096,7 +1061,6 @@ return $bytes;
 # open_console(self, uuid) Returns a connected VNC filehandle for a local guest.
 # Libvirt authorizes the attachment; the guest's VNC password
 # never leaves the host.
-
 sub open_console
 {
 my ($self, $uuid) = @_;
@@ -1129,7 +1093,6 @@ return $socket;
 # open_serial_console(self, uuid) Opens the default PTY console as a nonblocking
 # libvirt stream. The caller must run libvirt's event loop and abort the stream
 # when the browser disconnects.
-
 sub open_serial_console
 {
 my ($self, $uuid) = @_;
@@ -1166,7 +1129,6 @@ return $stream;
 
 # serial_history(self, uuid) opens only the running guest's managed log. Call
 # after open_serial_console(), under the same console authorization.
-
 sub serial_history
 {
 my ($self, $uuid) = @_;
@@ -1183,7 +1145,6 @@ return $self->{'serial_log'}->reader($uuid, $domain->get_xml_description(0));
 
 # find_domain(self, id) Matches a guest's UUID or name in the current inventory;
 # returns undef if absent.
-
 sub find_domain
 {
 my ($self, $id) = @_;
@@ -1199,7 +1160,6 @@ return $domain;
 
 # start_domain(self, id) Starts a defined guest; a missing guest or libvirt
 # refusal raises an error.
-
 sub start_domain
 {
 my ($self, $id) = @_;
@@ -1240,7 +1200,6 @@ return 1;
 
 # shutdown_domain(self, id) Requests a clean guest shutdown;
 # completion is asynchronous.
-
 sub shutdown_domain
 {
 return $_[0]->call_domain_method($_[1], 'shutdown');
@@ -1248,7 +1207,6 @@ return $_[0]->call_domain_method($_[1], 'shutdown');
 
 # reboot_domain(self, id) Requests a guest reboot through libvirt and
 # propagates refusal errors.
-
 sub reboot_domain
 {
 return $_[0]->call_domain_method($_[1], 'reboot');
@@ -1256,7 +1214,6 @@ return $_[0]->call_domain_method($_[1], 'reboot');
 
 # destroy_domain(self, id) Forces a guest off without deleting its
 # definition or storage.
-
 sub destroy_domain
 {
 return $_[0]->call_domain_method($_[1], 'destroy');
@@ -1264,14 +1221,12 @@ return $_[0]->call_domain_method($_[1], 'destroy');
 
 # suspend_domain(self, id) Pauses guest execution while retaining
 # its memory and devices.
-
 sub suspend_domain
 {
 return $_[0]->call_domain_method($_[1], 'suspend');
 }
 
 # resume_domain(self, id) Continues execution of a paused guest.
-
 sub resume_domain
 {
 return $_[0]->call_domain_method($_[1], 'resume');
@@ -1279,7 +1234,6 @@ return $_[0]->call_domain_method($_[1], 'resume');
 
 # reset_domain(self, id) Resets the hardware without asking the guest operating
 # system to shut down.
-
 sub reset_domain
 {
 return $_[0]->call_domain_method($_[1], 'reset');
@@ -1287,7 +1241,6 @@ return $_[0]->call_domain_method($_[1], 'reset');
 
 # set_domain_autostart(self, id, enabled) Changes whether libvirt starts the
 # guest when the host boots.
-
 sub set_domain_autostart
 {
 my ($self, $id, $enabled) = @_;
@@ -1302,7 +1255,6 @@ return 1;
 
 # call_domain_method(self, id, method) Runs a Sys::Virt::Domain method and
 # normalizes the error text.
-
 sub call_domain_method
 {
 my ($self, $id, $method) = @_;
@@ -1317,7 +1269,6 @@ return 1;
 # undefine_domain(self, id) Removes a persistent guest definition together with
 # its NVRAM, managed save and snapshot/checkpoint metadata. Disks are not
 # touched; callers remove volumes.
-
 sub undefine_domain
 {
 my ($self, $id) = @_;
@@ -1336,7 +1287,6 @@ return 1;
 # removed_guest(self, uuid, [job_id]) Removes local managed logs after guest
 # deletion. A valid creation job also permits the controller callback to remove
 # that creation's access records.
-
 sub removed_guest
 {
 my ($self, $uuid, $job) = @_;
@@ -1351,7 +1301,6 @@ $self->{'on_remove'}->($uuid, $job) if ($self->uri() eq 'qemu:///system' &&
 
 # list_networks(self) Returns libvirt networks with their forwarding mode,
 # bridge and addressing, sorted by name.
-
 sub list_networks
 {
 my ($self) = @_;
@@ -1367,7 +1316,6 @@ return \@records;
 # required. Pass networks from list_networks() to exclude their bridges;
 # otherwise none are excluded. sys_net always describes the local
 # host, not a remote URI.
-
 sub list_host_bridges
 {
 my ($self, $networks) = @_;
@@ -1396,7 +1344,6 @@ return \@bridges;
 
 # get_network_record(self, network) Converts a Sys::Virt::Network object into a
 # Cloudmin inventory record.
-
 sub get_network_record
 {
 my ($self, $network) = @_;
@@ -1432,7 +1379,6 @@ return {
 
 # list_storage_pools(self, [include_volumes]) Returns active and inactive pools,
 # optionally with volume details. Volume enumeration is omitted by default.
-
 sub list_storage_pools
 {
 my ($self, $include_volumes) = @_;
@@ -1447,7 +1393,6 @@ return \@records;
 # get_domain_record(self, domain, [strict]) Converts a Sys::Virt::Domain object
 # into a Cloudmin inventory hash reference. strict defaults to false; identity
 # lookups always propagate failures.
-
 sub get_domain_record
 {
 my ($self, $domain, $strict) = @_;
@@ -1525,7 +1470,6 @@ return {
 
 # domain_state_name(state) Gives inventory and editor settings the same public
 # libvirt state names.
-
 sub domain_state_name
 {
 return $DOMAIN_STATES{$_[0]} || 'unknown';
@@ -1533,7 +1477,6 @@ return $DOMAIN_STATES{$_[0]} || 'unknown';
 
 # memory_kib(doc, element) Converts libvirt memory fields to KiB, including
 # omitted currentMemory.
-
 sub memory_kib
 {
 my ($doc, $element) = @_;
@@ -1551,7 +1494,6 @@ return $node->textContent() * $units{$unit};
 
 # network_attachments(doc) Returns an array reference of MAC, type and source
 # records from parsed XML. Ignores device details that libvirt adds at runtime.
-
 sub network_attachments
 {
 my ($doc) = @_;
@@ -1572,7 +1514,6 @@ return [ sort { $a->{'mac'} cmp $b->{'mac'} } @interfaces ];
 
 # resource_settings(doc) Normalizes the public settings compared by the editor
 # and status collector.
-
 sub resource_settings
 {
 my ($doc) = @_;
@@ -1605,7 +1546,6 @@ return { cpus =>
 
 # pending_settings(running, saved) Returns differences in public resource
 # settings without retaining guest XML.
-
 sub pending_settings
 {
 my ($running, $saved) = @_;
@@ -1618,7 +1558,6 @@ return { map { $_ => { running => $running->{$_}, saved => $saved->{$_} } }
 
 # pending_domain_settings(self, domain, running, saved) Excludes a cold start's
 # settling balloon without hiding later saved changes.
-
 sub pending_domain_settings
 {
 my ($self, $domain, $running, $saved) = @_;
@@ -1637,7 +1576,6 @@ return $pending;
 # complete_domain(self, domain, record, [skip_addresses]) Adds firmware, disks,
 # interfaces, console and address details read from the guest's XML and, when
 # running, from leases or the agent.
-
 sub complete_domain
 {
 my ($self, $domain, $record, $skip_addresses) = @_;
@@ -1683,7 +1621,6 @@ return $record;
 # get_resource_stats(self, [uuids]) Reads one batch without waiting on busy QEMU
 # jobs. The statistics service omits uuids to collect all guests. Other callers
 # may request an explicit list.
-
 sub get_resource_stats
 {
 my ($self, $ids) = @_;
@@ -1703,7 +1640,6 @@ return { map { $_->{'dom'}->get_uuid_string() => $_->{'data'} } @stats };
 # get_guest_resources(self, uuid) Reads OS and mounted filesystem sizes for the
 # statistics probe worker. The probe supervisor bounds the call without changing
 # shared domain settings.
-
 sub get_guest_resources
 {
 my ($self, $uuid) = @_;
@@ -1774,7 +1710,6 @@ return { os => $info->{'os.pretty-name'} || $info->{'os.name'},
 # addresses from the guest agent when it answers, otherwise combines libvirt
 # DHCP leases and the host ARP table. skip_agent defaults to false. record is
 # accepted for inventory callers but is not read by this method.
-
 sub get_domain_addresses
 {
 my ($self, $domain, $record, $skip_agent) = @_;
@@ -1816,7 +1751,6 @@ return \@addresses;
 
 # filesystem_space(path) Reads current Linux filesystem bytes, excluding
 # reserves from available space.
-
 sub filesystem_space
 {
 my ($path) = @_;
@@ -1839,7 +1773,6 @@ return { capacity => $blocks * $size, allocation => ($blocks - $free) * $size,
 
 # get_storage_pool_record(self, pool, [include_volumes]) Converts a native or
 # LVM pool object into a Cloudmin inventory record.
-
 sub get_storage_pool_record
 {
 my ($self, $pool, $include_volumes) = @_;
@@ -1911,7 +1844,6 @@ return {
 
 # get_storage_volume_record(self, volume) Converts a Sys::Virt::StorageVol
 # object into a Cloudmin inventory record.
-
 sub get_storage_volume_record
 {
 my ($self, $volume) = @_;
@@ -1934,7 +1866,6 @@ return {
 
 # extract_macs(xml) Extracts normalized interface MAC addresses from a
 # libvirt domain document.
-
 sub extract_macs
 {
 my ($xml) = @_;
@@ -1947,7 +1878,6 @@ return @macs;
 
 # extract_metadata(xml) Reads the image and creation details Cloudmin stored in
 # the domain metadata.
-
 sub extract_metadata
 {
 my ($xml) = @_;
@@ -1971,7 +1901,6 @@ return \%fields;
 
 # extract_disks(xml) Returns disk and CD-ROM devices with their
 # source, target and format.
-
 sub extract_disks
 {
 my ($xml) = @_;
@@ -2037,7 +1966,6 @@ return @disks;
 
 # extract_interfaces(xml) Returns network interfaces with their MAC,
 # model and attachment.
-
 sub extract_interfaces
 {
 my ($xml) = @_;
@@ -2068,7 +1996,6 @@ return @interfaces;
 
 # extract_graphics(xml) Returns the VNC graphics device when present, otherwise
 # the first device, with its type, listen address and assigned ports.
-
 sub extract_graphics
 {
 my ($xml) = @_;
@@ -2099,7 +2026,6 @@ return {
 # extract_serial_console(xml) Returns an alias record for the default PTY
 # console, or undef if unsupported. Fall back to the first serial port only when
 # there is no console element.
-
 sub extract_serial_console
 {
 my ($xml) = @_;
@@ -2116,7 +2042,6 @@ return { alias => length($alias) ? $alias : undef };
 
 # parse_pool_xml(xml) Extracts the backend type and target path from a
 # libvirt pool document.
-
 sub parse_pool_xml
 {
 my ($xml) = @_;
@@ -2131,7 +2056,6 @@ return ( $type, $target );
 
 # decode_xml_text(value) Decodes the entities libvirt uses when serializing
 # text and attributes.
-
 sub decode_xml_text
 {
 my ($value) = @_;
@@ -2149,7 +2073,6 @@ return $value;
 
 # xml_escape(value) Escapes text for use inside libvirt XML elements
 # and quoted attributes.
-
 sub xml_escape
 {
 my ($value) = @_;
@@ -2158,7 +2081,6 @@ return html_escape($value);
 
 # format_version(version) Converts libvirt's integer version format into
 # major.minor.release.
-
 sub format_version
 {
 my ($version) = @_;
@@ -2172,7 +2094,6 @@ return join('.', $major, $minor, $release);
 
 # error_message(error) Converts string and Sys::Virt exception objects
 # into one-line messages.
-
 sub error_message
 {
 my ($error) = @_;

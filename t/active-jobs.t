@@ -11,14 +11,12 @@ $module_root_directory = "$Bin/..";
 $remote_user = 'fixture-owner';
 
 # is_readonly_mode() models an administrator allowed to control host jobs.
-
 sub is_readonly_mode
 {
 0
 }
 
 # text(key, [values...]) - Exposes message keys and values for assertions.
-
 sub text
 {
 return join(': ', @_);
@@ -30,7 +28,6 @@ require "$module_root_directory/server-manager-lib-funcs.pl";
 
 	# list(self, [owner], [active]) Records filters and
 	# supplies isolated records.
-
 	sub list
 	{
 	my ($self, @args) = @_;
@@ -41,7 +38,6 @@ require "$module_root_directory/server-manager-lib-funcs.pl";
 
 	# list_pending(self, owner) includes retained failures
 	# in the same fixture.
-
 	sub list_pending
 	{
 	return $_[0]->list($_[1], 1);
@@ -49,14 +45,12 @@ require "$module_root_directory/server-manager-lib-funcs.pl";
 	package Host;
 
 	# uri(self) - Provides a display-only connection identifier.
-
 	sub uri
 	{
 	return 'test:///fixture';
 	}
 
 	# list_domains(self) - Supplies an empty inventory without libvirt.
-
 	sub list_domains
 	{
 	return [ ];

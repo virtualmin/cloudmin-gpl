@@ -23,7 +23,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	package Sys::Virt::Domain;
 
 	# XML_INACTIVE() supplies the libvirt constant for workstation fixtures.
-
 	sub XML_INACTIVE
 	{
 	return 2;
@@ -52,28 +51,24 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# Domain fixture methods expose the persistent definition and saved
 	# state. get_uuid_string(self) keeps guest identity stable across edits.
-
 	sub get_uuid_string
 	{
 	return $_[0]->{'uuid'};
 	}
 
 	# get_name(self) supplies the deletion confirmation name.
-
 	sub get_name
 	{
 	return 'fixture';
 	}
 
 	# is_persistent(self) models a saved domain.
-
 	sub is_persistent
 	{
 	return 1;
 	}
 
 	# is_active(self) reports the fixture's current power state.
-
 	sub is_active
 	{
 	return $_[0]->{'active'} || 0;
@@ -81,7 +76,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get_state(self) supplies running/stopped state and
 	# the last stop reason.
-
 	sub get_state
 	{
 	return ( $_[0]->is_active() ? ($_[0]->{'state'} || 1) : 5,
@@ -90,7 +84,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# shutdown(self) models refusal, timeout and changes
 	# made during the wait.
-
 	sub shutdown
 	{
 	$_[0]->{'shutdowns'}++;
@@ -102,7 +95,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# destroy(self) models immediate power-off without
 	# deleting guest storage.
-
 	sub destroy
 	{
 	$_[0]->{'destroys'}++;
@@ -112,7 +104,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# create(self) boots the saved definition unless startup is refused.
-
 	sub create
 	{
 	$_[0]->{'starts'}++;
@@ -123,7 +114,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get_xml_description(self, [flags]) Defaults to live XML; bit 2 selects
 	# the saved definition.
-
 	sub get_xml_description
 	{
 	return ($_[1] || 0) & 2
@@ -133,7 +123,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# mutate(self, method, value, flags) models
 	# independent live/config writes.
-
 	sub mutate
 	{
 	my ($self, $method, $value, $flags) = @_;
@@ -198,14 +187,12 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# set_vcpus(self, count, flags) records enabled CPU
 	# changes per XML view.
-
 	sub set_vcpus
 	{
 	$_[0]->mutate('set_vcpus', @_[1, 2]);
 	}
 
 	# set_memory(self, kib, flags) records the balloon target per XML view.
-
 	sub set_memory
 	{
 	$_[0]->mutate('set_memory', @_[1, 2]);
@@ -213,7 +200,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# set_metadata(self, type, value, key, uri, flags)
 	# forwards the description.
-
 	sub set_metadata
 	{
 	$_[0]->mutate('set_metadata', $_[2], $_[5]);
@@ -221,7 +207,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# attach_device(self, xml, flags) adds an attachment
 	# to the selected views.
-
 	sub attach_device
 	{
 	$_[0]->mutate('attach_device', @_[1, 2]);
@@ -229,7 +214,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# detach_device(self, xml, flags) removes an attachment
 	# or leaves it pending.
-
 	sub detach_device
 	{
 	$_[0]->mutate('detach_device', @_[1, 2]);
@@ -237,14 +221,12 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# update_device(self, xml, flags) replaces the
 	# identified fixture attachment.
-
 	sub update_device
 	{
 	$_[0]->mutate('update_device', @_[1, 2]);
 	}
 
 	# block_volume(self, target) resolves the fixture disk's actual image.
-
 	sub block_volume
 	{
 	my ($self, $target) = @_;
@@ -260,7 +242,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get_block_info(self, target) reports capacity without a
 	# storage-pool refresh.
-
 	sub get_block_info
 	{
 	return $_[0]->block_volume($_[1])->get_info();
@@ -268,7 +249,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# block_resize(self, target, bytes, flags) changes the
 	# open image through QEMU.
-
 	sub block_resize
 	{
 	push(@{$_[0]->{'calls'}}, [ 'block_resize', $_[3] ]);
@@ -276,14 +256,12 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# has_managed_save_image(self) injects saved memory as an edit blocker.
-
 	sub has_managed_save_image
 	{
 	return $_[0]->{'saved'} || 0;
 	}
 
 	# list_all_snapshots(self, [flags]) injects protected snapshot history.
-
 	sub list_all_snapshots
 	{
 	return @{$_[0]->{'snapshots'} || [ ]},
@@ -292,7 +270,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# list_all_checkpoints(self, [flags]) injects
 	# retained backup checkpoints.
-
 	sub list_all_checkpoints
 	{
 	return $_[0]->{'checkpoint'} ? ($_[0]) : ();
@@ -300,7 +277,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get_job_info(self) injects a running native job that
 	# must block deletion.
-
 	sub get_job_info
 	{
 	return { type => $_[0]->{'native_job'} || 0 };
@@ -308,7 +284,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get_block_job_info(self, target, flags) injects an
 	# active disk operation.
-
 	sub get_block_job_info
 	{
 	return { type => $_[0]->{'block_job'} || 0 };
@@ -317,7 +292,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get_xml_description(self, [flags]) supplies
 	# immutable snapshot history.
-
 	sub get_xml_description
 	{
 	return $_[0]->{'xml'};
@@ -326,28 +300,24 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# Volume fixture methods retain capacity, backing references and
 	# failures. get_name(self) supplies the pool-local volume name.
-
 	sub get_name
 	{
 	return $_[0]->{'name'};
 	}
 
 	# get_key(self) uses the fixture path as a stable storage key.
-
 	sub get_key
 	{
 	return $_[0]->get_path();
 	}
 
 	# get_path(self) supplies a synthetic path without creating a file.
-
 	sub get_path
 	{
 	return '/fixture/'.$_[0]->{'name'};
 	}
 
 	# get_info(self) reports the capacity changed by resize.
-
 	sub get_info
 	{
 	return { capacity => $_[0]->{'capacity'} };
@@ -355,7 +325,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get_xml_description(self, [flags]) supplies disk
 	# format and backing path.
-
 	sub get_xml_description
 	{
 	return '<volume><target><format type="'.($_[0]->{'format'} ||
@@ -367,14 +336,12 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# resize(self, bytes, [flags]) records growth and counts repeat calls.
-
 	sub resize
 	{
 	$_[0]->{'capacity'} = $_[1]; $_[0]->{'resized'}++;
 	}
 
 	# delete(self, [flags]) models refusal or a lost reply after removal.
-
 	sub delete
 	{
 	die "Storage temporarily unavailable\n" if ($_[0]->{'fail'});
@@ -385,35 +352,30 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# Pool fixture methods model active managed storage and sparse
 	# allocation. is_active(self) permits managed volume operations.
-
 	sub is_active
 	{
 	return 1;
 	}
 
 	# refresh(self, [flags]) needs no cache update for in-memory volumes.
-
 	sub refresh
 	{
 	return 1;
 	}
 
 	# get_uuid_string(self) supplies the pool identity used by requests.
-
 	sub get_uuid_string
 	{
 	return 'pool';
 	}
 
 	# get_name(self) supplies the pool display name.
-
 	sub get_name
 	{
 	return 'default';
 	}
 
 	# get_info(self) supplies configurable space for allocation checks.
-
 	sub get_info
 	{
 	return { available =>
@@ -421,21 +383,18 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# get_xml_description(self, [flags]) models a local directory pool.
-
 	sub get_xml_description
 	{
 	return '<pool type="dir"><target><path>/fixture</path></target></pool>';
 	}
 
 	# list_all_volumes(self, [flags]) exposes created and surviving volumes.
-
 	sub list_all_volumes
 	{
 	return values %{$_[0]->{'volumes'}};
 	}
 
 	# create_volume(self, xml, [flags]) models allocation from volume XML.
-
 	sub create_volume
 	{
 	my ($self, $xml) = @_;
@@ -449,7 +408,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# clone_volume(self, xml, original) models an independent libvirt clone.
-
 	sub clone_volume
 	{
 	my ($self, $xml, $original) = @_;
@@ -463,28 +421,24 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# Adapter fixture methods keep libvirt policy in the real management
 	# class. uri(self) permits local storage policy checks.
-
 	sub uri
 	{
 	return 'qemu:///system';
 	}
 
 	# connect(self) reuses this object as the fake native connection.
-
 	sub connect
 	{
 	return $_[0];
 	}
 
 	# find_domain(self, uuid) returns the current guest or an absent result.
-
 	sub find_domain
 	{
 	return $_[0]->{'domains'}->{$_[1]};
 	}
 
 	# list_all_domains(self, [flags]) supplies all guest references.
-
 	sub list_all_domains
 	{
 	return values %{$_[0]->{'domains'}};
@@ -492,7 +446,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# list_all_storage_pools(self, [flags]) supplies the
 	# managed fixture pool.
-
 	sub list_all_storage_pools
 	{
 	return $_[0]->{'pool'};
@@ -500,7 +453,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get_storage_pool_by_uuid(self, uuid) rejects
 	# unexpected pool identities.
-
 	sub get_storage_pool_by_uuid
 	{
 	die 'Wrong pool'
@@ -508,7 +460,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# volume(self, pool, name, [key]) detects a changed native storage key.
-
 	sub volume
 	{
 	my ($self, $pool, $name, $key) = @_;
@@ -519,7 +470,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# list_networks(self) offers one active virtual network.
-
 	sub list_networks
 	{
 	return [ { id => 'nat', name => 'default', active =>
@@ -527,7 +477,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# list_host_bridges(self, [networks]) offers one available host bridge.
-
 	sub list_host_bridges
 	{
 	return [ { name => 'br-test', state => 'up' } ];
@@ -535,7 +484,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# list_domains(self, [strict]) supplies MAC addresses
 	# for conflict checks.
-
 	sub list_domains
 	{
 	return [ map { { macs => [ Cloudmin::Libvirt::extract_macs(
@@ -544,7 +492,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# get_host_capabilities(self) supplies CPU and memory limits.
-
 	sub get_host_capabilities
 	{
 	return { cpus => 8, memory_kib =>
@@ -553,7 +500,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# define_domain(self, xml, [flags]) models refusal or
 	# a lost commit reply.
-
 	sub define_domain
 	{
 	my ($self, $xml) = @_;
@@ -567,14 +513,12 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# undefine_domain(self, uuid) removes the fixture guest definition.
-
 	sub undefine_domain
 	{
 	delete($_[0]->{'domains'}->{$_[1]});
 	}
 
 	# removed_guest(self, uuid, job) records managed-key cleanup.
-
 	sub removed_guest
 	{
 	$_[0]->{'keys_removed'}++;
@@ -582,7 +526,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	package ManageImages;
 
 	# list(self) returns imported images that must remain immutable.
-
 	sub list
 	{
 	return $_[0]->{'images'} || [ ];
@@ -590,7 +533,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# get/path/with_lock model the existing image store's immutable-source
 	# lock. get(self, id) looks up an imported image by its job ID.
-
 	sub get
 	{
 	return (grep { $_->{'id'} eq $_[1] } @{$_[0]->list()})[0] ||
@@ -598,7 +540,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 	}
 
 	# path(self, id, [suffix]) supplies the image lock identity.
-
 	sub path
 	{
 	return $_[1];
@@ -606,7 +547,6 @@ local *Cloudmin::Libvirt::additional_log = sub {
 
 	# with_lock(self, path, nodiff, callback) records entry
 	# without real locking.
-
 	sub with_lock
 	{
 	$_[0]->{'locked'}++; return $_[3]->();
@@ -627,7 +567,6 @@ my $xml =
 	'<graphics type="vnc" passwd="fixture-private"/></devices></domain>';
 
 # fixture() creates independent domain, volume, journal and management objects.
-
 sub fixture
 {
 my %held;
@@ -663,7 +602,6 @@ return ( $manager, $adapter, $jobs, $domain, $images );
 }
 
 # request(manager, action, fields, [id]) validates and journals one operation.
-
 sub request
 {
 my ($m, $action, $fields, $id) = @_;
@@ -894,7 +832,6 @@ ok($a->{'pool'}->{'volumes'}->{'root.qcow2'}, 'existing disk retains its name');
 	}
 
 # snapshot_fixture() supplies two disk chains and a branch discarded by restore.
-
 sub snapshot_fixture
 {
 my ($m, $a, $jobs, $d, $images) = fixture();
@@ -1721,7 +1658,6 @@ ok(Cloudmin::Images::xml_uses_volume(
 	{ package InactivePool;
 
 		# get_uuid_string(self) identifies the unrelated inactive pool.
-
 		sub get_uuid_string
 		{
 		'inactive'
@@ -1729,7 +1665,6 @@ ok(Cloudmin::Images::xml_uses_volume(
 
 		# is_active(self) makes the fixture pool
 		# unavailable for volume lookup.
-
 		sub is_active
 		{
 		0
@@ -1737,7 +1672,6 @@ ok(Cloudmin::Images::xml_uses_volume(
 
 		# get_xml_description(self, [flags]) supplies its
 		# synthetic directory.
-
 		sub get_xml_description
 		{
 		'<pool type="dir"><target><path>/missing-fixture</path></target></pool>'
@@ -1783,7 +1717,6 @@ ok(Cloudmin::Images::xml_uses_volume(
 
 # running_fixture() provides CPU slots and a working balloon
 # in both definitions.
-
 sub running_fixture
 {
 my @fixture = fixture();

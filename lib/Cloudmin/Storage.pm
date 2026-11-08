@@ -13,7 +13,6 @@ require(dirname(__FILE__).'/Libvirt.pm');
 
 # new(class, adapter => adapter, jobs => jobs, images => images) Uses the
 # configured adapter for inventory and the shared job stores for writes.
-
 sub new
 {
 my ($class, %options) = @_;
@@ -22,7 +21,6 @@ return bless(\%options, $class);
 
 # revision(pool) Includes live state and boot policy so old forms cannot
 # undo another change.
-
 sub revision
 {
 my ($pool) = @_;
@@ -39,7 +37,6 @@ return sha256_hex(join("\0", $doc->toStringC14N(),
 
 # contains_path(directory, path) Compares complete path components, resolving
 # existing filesystem aliases.
-
 sub contains_path
 {
 my ($directory, $path) = @_;
@@ -52,7 +49,6 @@ return $path eq $directory || index($path, "$directory/") == 0;
 
 # active_guests(self, pool) Finds running guests using named volumes or files,
 # including backing stores.
-
 sub active_guests
 {
 my ($self, $pool) = @_;
@@ -80,7 +76,6 @@ return \@guests;
 # filesystem_id(path) Identifies the backing filesystem, including bind mounts
 # and Btrfs subvolumes. Remote pool paths must never be passed here: they belong
 # to a different host.
-
 sub filesystem_id
 {
 my ($path) = @_;
@@ -100,7 +95,6 @@ return $id =~ /\A([0-9a-f]+):0+\z/i && @st ? lc($1).":dev$st[0]" : undef;
 
 # overview(pools) Counts live inventory and sums each identified
 # filesystem only once.
-
 sub overview
 {
 my ($pools) = @_;
@@ -152,7 +146,6 @@ return \%counts;
 
 # volume_reference(xml, owner, [base]) Parses file and named-volume references
 # once for each owner or backing disk.
-
 sub volume_reference
 {
 my ($xml, $owner, $base) = @_;
@@ -173,7 +166,6 @@ return { %$owner, paths => [ grep { /\S/ } @paths ], sources => [ map {
 
 # same_file(first, second, local) Detects path aliases on the local host without
 # inspecting remote host paths.
-
 sub same_file
 {
 my ($first, $second, $local) = @_;
@@ -192,7 +184,6 @@ return @first && @second && $first[0] == $second[0] && $first[1] == $second[1];
 # and pending work. Any unreadable source blocks deletion. Pool removal excludes
 # its own inventory, including when inactive. refresh defaults to false;
 # excluded_pool is a native pool UUID to skip.
-
 sub volume_context
 {
 my ($self, $refresh, $excluded_pool) = @_;
@@ -285,7 +276,6 @@ return $context;
 
 # volume_usage(self, pool_record, volume_record, context) Lists every known
 # owner and explains why a volume cannot be deleted directly.
-
 sub volume_usage
 {
 my ($self, $pool, $volume, $context) = @_;
@@ -352,7 +342,6 @@ return { owners => \@owners, reason => $reason, checked =>
 # volume_revision(pool, volume) Binds confirmation to file identity, size and
 # format, or an LV's UUID/capacity. Refresh can enrich XML
 # without changing the disk.
-
 sub volume_revision
 {
 my ($pool, $volume) = @_;
@@ -380,7 +369,6 @@ return sha256_hex(join("\0", $pool->get_uuid_string(), $volume->get_key(),
 # public review, including refusal reasons. uuid selects the pool; name is
 # matched exactly. refresh defaults to false. A blocked review has no deletion
 # revision. Reviews do not change the volume.
-
 sub review_volume
 {
 my ($self, $uuid, $name, $refresh) = @_;
@@ -429,7 +417,6 @@ return ( $pool, $volume, { %$record, pool => $pool->get_name(), uuid => $uuid,
 # inspect_volume(self, uuid, name, [refresh]) refuses unsafe deletion
 # candidates. Returns the same tuple as review_volume;
 # refresh defaults to false.
-
 sub inspect_volume
 {
 my ($self, @args) = @_;
@@ -441,7 +428,6 @@ return @review;
 
 # delete_volume(self, uuid, name, revision, confirmed) Rechecks usage and
 # identity under the host lock immediately before removal.
-
 sub delete_volume
 {
 my ($self, $uuid, $name, $revision, $confirmed) = @_;
@@ -462,7 +448,6 @@ return $self->{'jobs'}->lock('create-host', sub {
 # Returns the native pool and a public review without changing storage. stop
 # defaults to 0; 1 permits a later stop, including whole-group LVM deactivation.
 # References cover the whole VG. Blocked reviews retain their refusal reason.
-
 sub review_pool
 {
 my ($self, $uuid, $stop) = @_;
@@ -623,7 +608,6 @@ return ( $pool,
 # definition. confirmed must be 1; stop defaults to 0 and must match the
 # review's choice. The fresh review runs under the host lock. Files and
 # LVs are never deleted.
-
 sub unregister
 {
 my ($self, $uuid, $revision, $confirmed, $stop) = @_;
@@ -669,7 +653,6 @@ return $self->{'jobs'}->lock('create-host', sub {
 # inventory(self) Lists all backends. Local persistent directory and NFS pools
 # have lifecycle controls; directory and LVM pools allow deletion
 # after ownership checks.
-
 sub inventory
 {
 my ($self) = @_;
@@ -730,7 +713,6 @@ return { pools => [ sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @pools ],
 }
 
 # lvm_groups(self) lists existing groups not already registered with libvirt.
-
 sub lvm_groups
 {
 my ($self) = @_;
@@ -751,7 +733,6 @@ return [ sort { lc($a) cmp lc($b) || $a cmp $b }
 
 # assert_local(self) Filesystem checks and directory creation apply only to
 # the local system host.
-
 sub assert_local
 {
 my ($self) = @_;
@@ -760,7 +741,6 @@ die "Storage changes are available only for the local qemu:///system host\n"
 }
 
 # mount_points() lists the kernel's current mount targets with escapes decoded.
-
 sub mount_points
 {
 # Supported hosts use Linux; source tests may run on other systems.
@@ -782,7 +762,6 @@ return @targets;
 # is_mounted(path) checks the kernel mount table, independently of libvirt.
 # Pools defined outside Cloudmin may name a mount through a symlink, doubled or
 # trailing slashes; the kernel lists the resolved path.
-
 sub is_mounted
 {
 my ($path) = @_;
@@ -794,7 +773,6 @@ return (grep { $_ eq $canonical } mount_points()) ? 1 : 0;
 }
 
 # check_nfs_stopped(path) refuses to forget a pool while its target is mounted.
-
 sub check_nfs_stopped
 {
 my ($path) = @_;
@@ -804,7 +782,6 @@ die "The NFS directory is still mounted at $path; its registration was kept. Unm
 
 # enable_nfs_access() permits guest access on hosts with SELinux enabled.
 # Persist the boolean for pool and guest autostart after a host reboot.
-
 sub enable_nfs_access
 {
 # Hosts without an active SELinux filesystem need no policy change.
@@ -821,7 +798,6 @@ die "Cannot enable SELinux access to NFS for virtual machines: ".
 
 # check_nfs_target(path) refuses mounts and directories containing local data.
 # Mounting an export must not hide files or take over an existing host mount.
-
 sub check_nfs_target
 {
 my ($path) = @_;
@@ -840,7 +816,6 @@ if (-e $path) {
 # prepare(self, input) Validates a registration and returns its XML and resolved
 # target path. input requires name and path; type defaults to dir and autostart
 # to 0. netfs also requires server and export. No files or mounts are changed.
-
 sub prepare
 {
 my ($self, $in) = @_;
@@ -933,7 +908,6 @@ return { name => $name, path => $path, existing => $exists ? 1 : 0,
 # Directory contents and permissions are preserved; registering a VG never
 # formats its disks. input follows prepare(), or
 # register_lvm() for type logical.
-
 sub create
 {
 my ($self, $in) = @_;
@@ -983,7 +957,6 @@ return $self->{'jobs'}->lock('create-host', sub {
 
 # register_lvm(self, input) registers an existing VG without formatting disks.
 # Webmin's LVM module manages PVs, VGs and thin pools; Cloudmin discovers them.
-
 sub register_lvm
 {
 my ($self, $in) = @_;
@@ -1044,7 +1017,6 @@ return $self->{'jobs'}->lock('create-host', sub {
 
 # assert_idle(self, pool) Protects active disk I/O and pending jobs while
 # holding the host mutation lock.
-
 sub assert_idle
 {
 my ($self, $pool) = @_;
@@ -1067,7 +1039,6 @@ die "Stop virtual machines using this pool before stopping it\n"
 # pools and refuses stale or unsupported writes. action is start, stop or
 # autostart; enabled is required for autostart:
 # 0 disables startup at boot, 1 enables it.
-
 sub change
 {
 my ($self, $action, $uuid, $revision, $enabled) = @_;

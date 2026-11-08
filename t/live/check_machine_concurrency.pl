@@ -28,7 +28,6 @@ $main::error_must_die = 1;
 
 # fixture_wait_for(callback, seconds) Bounds coordination without
 # touching user guests.
-
 sub fixture_wait_for
 {
 my ($code, $seconds) = @_;
@@ -44,7 +43,6 @@ while (!$code->()) {
 
 	# clone_disk(self, arguments...) Delays only the
 	# fixture's first real copy.
-
 	sub clone_disk
 	{
 	my ($self, @args) = @_;

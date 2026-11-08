@@ -12,7 +12,6 @@ our (%text, %config, $remote_user, $module_root_directory,
      $module_var_directory, $module_config_directory, $module_name);
 
 # terminal_port_key(uuid) validates and normalizes the saved port's guest ID.
-
 sub terminal_port_key
 {
 my ($uuid) = @_;
@@ -24,7 +23,6 @@ return lc($uuid);
 
 # get_terminal_port(uuid) returns the port from the last successful SSH login.
 # Defaults to 22. Ports are shared by all users and keyed by guest UUID.
-
 sub get_terminal_port
 {
 my ($uuid) = @_;
@@ -38,7 +36,6 @@ return $port =~ /\A\d{1,5}\z/ && $port > 0 && $port <= 65535 ? 0 + $port : 22;
 
 # save_terminal_port(uuid, port) remembers a port after SSH authenticates. The
 # supervisor supplies its validated destination, never guest output.
-
 sub save_terminal_port
 {
 my ($uuid, $port) = @_;
@@ -73,7 +70,6 @@ die $error if (!$ok);
 
 # terminal_login_file(uuid) returns the current Webmin user's attempt file.
 # Escape the username so it cannot add path components.
-
 sub terminal_login_file
 {
 my ($uuid) = @_;
@@ -83,7 +79,6 @@ return "$module_var_directory/ssh-login-".terminal_port_key($uuid).
 
 # get_terminal_login(uuid) reads this user's last login settings and outcome.
 # Returns an empty hash reference when no attempt has been saved.
-
 sub get_terminal_login
 {
 my ($uuid) = @_;
@@ -97,7 +92,6 @@ return \%login;
 # login. Pending and failed attempts pause automatic connection on later visits.
 # request is required for pending and must come from parse_terminal_request.
 # connected and failed update only the matching attempt for this Webmin user.
-
 sub save_terminal_login
 {
 my ($uuid, $attempt, $state, $request) = @_;
@@ -144,7 +138,6 @@ die $error if (!$ok);
 
 # list_terminal_addresses(vm) Returns usable guest addresses, excluding loopback
 # and unscoped link-local IPs.
-
 sub list_terminal_addresses
 {
 my ($vm) = @_;
@@ -159,7 +152,6 @@ return unique(grep {
 
 # get_terminal_key(vm) Finds only the key belonging to this guest's
 # recorded creation job.
-
 sub get_terminal_key
 {
 my ($vm) = @_;
@@ -173,7 +165,6 @@ return get_ssh_keys()->find($vm->{'uuid'}, $vm->{'cloudmin'}->{'job'});
 
 # parse_terminal_request(vm, input) Limits SSH to a running guest's current IPs;
 # form values cannot add SSH options.
-
 sub parse_terminal_request
 {
 my ($vm, $input) = @_;
@@ -209,7 +200,6 @@ return { uuid => $vm->{'uuid'}, username => $username, auth => $auth,
 # a command that runs SSH under a temporary user ID. Each Webmin user/guest pair
 # retains its own known host keys. Command escapes, forwarding and host
 # credentials are unavailable; the login marker runs in this sandbox.
-
 sub build_terminal_command
 {
 my ($request, $id, $user, $credential) = @_;
@@ -291,7 +281,6 @@ return ( '/usr/bin/systemd-run', '--quiet', '--wait', '--collect', '--pipe',
 # backend, never logging the session cookie or any password entered later
 # through the WebSocket. Returns the WebSocket URL, allocated port and
 # connection attempt ID.
-
 sub start_terminal
 {
 my ($request) = @_;

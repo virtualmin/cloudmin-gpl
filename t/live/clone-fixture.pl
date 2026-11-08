@@ -26,7 +26,6 @@ require './lib/Cloudmin/Clones.pm';
 
 	# worker_task(self, id, task, request, [options...])
 	# faults after a real copy.
-
 	sub worker_task
 	{
 	my ($self, $id, $task, @rest) = @_;
@@ -52,7 +51,6 @@ require './lib/Cloudmin/Clones.pm';
 
 	# release_source(self, id, adapter) fails restoration except
 	# during cancellation.
-
 	sub release_source
 	{
 	die "Fixture source restoration failure\n"

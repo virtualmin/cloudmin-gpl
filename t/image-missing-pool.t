@@ -18,7 +18,6 @@ $INC{'Sys/Virt.pm'} = 1;
 
 	# ERR_NO_STORAGE_POOL() Supplies a distinguishable
 	# missing-pool error code.
-
 	sub ERR_NO_STORAGE_POOL
 	{
 	return 49;
@@ -26,7 +25,6 @@ $INC{'Sys/Virt.pm'} = 1;
 	package PoolError;
 
 	# code(self) - Returns the error code raised by this fixture connection.
-
 	sub code
 	{
 	return $_[0]->{'code'};
@@ -36,7 +34,6 @@ $INC{'Sys/Virt.pm'} = 1;
 
 	# new(class, options...) Returns a connection that only
 	# supports pool lookup.
-
 	sub new
 	{
 	return bless({ }, $_[0]);
@@ -44,7 +41,6 @@ $INC{'Sys/Virt.pm'} = 1;
 
 	# get_storage_pool_by_uuid(self, uuid) Fails with the
 	# selected libvirt error.
-
 	sub get_storage_pool_by_uuid
 	{
 	die $failure;

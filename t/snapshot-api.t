@@ -14,28 +14,24 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# Model job storage for the controller's token and retry checks.
 	# lock(self, name, callback) bypasses locking in this controller test.
-
 	sub lock
 	{
 	$_[2]->()
 	}
 
 	# assert_guest_available(self, uuid) models an idle guest.
-
 	sub assert_guest_available
 	{
 	}
 
 	# get(self, id, [owner]) finds a fixture job; ownership
 	# is not modeled here.
-
 	sub get
 	{
 	$_[0]->{$_[1]}
 	}
 
 	# submit(self, id, owner, resource, request) records the queued request.
-
 	sub submit
 	{
 	$_[0]->{$_[1]} =
@@ -45,7 +41,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	}
 
 	# spawn(self, id, callback) counts launches without starting a worker.
-
 	sub spawn
 	{
 	$_[0]->{'spawned'}++
@@ -53,7 +48,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package SnapshotAPIImages;
 
 	# check_token(self, owner, token) accepts only the fixture form token.
-
 	sub check_token
 	{
 	die "Bad token\n" if (($_[2] || '') ne 'token')
@@ -63,7 +57,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	# The controller must call this service only after ACL and token
 	# validation. prepare(self, action, input, id) records
 	# controller validation calls.
-
 	sub prepare
 	{
 	$_[0]->{'prepared'}++; return { operation => $_[1], uuid =>
@@ -72,14 +65,12 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# inventory(self, [uuid]) returns an empty history for
 	# the requested guest.
-
 	sub inventory
 	{
 	{ snapshots => [ ], requested => $_[1] }
 	}
 
 	# run(self, id) records dispatch to the snapshot service.
-
 	sub run
 	{
 	$_[0]->{'ran'} = $_[1]

@@ -12,7 +12,6 @@ use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 # run(callback, timeout) Returns a JSON-compatible probe result, or an error
 # after the time/size limit. Call only from the probe supervisor, before it
 # opens any libvirt connection.
-
 sub run
 {
 my ($callback, $timeout) = @_;

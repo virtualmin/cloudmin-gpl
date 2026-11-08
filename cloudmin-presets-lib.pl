@@ -7,7 +7,6 @@ require "$module_root_directory/lib/Cloudmin/Presets.pm";
 
 # get_presets() uses Webmin access, locking and audit
 # helpers for preset storage.
-
 sub get_presets
 {
 return Cloudmin::Presets->new(directory => $module_config_directory,
@@ -28,7 +27,6 @@ return Cloudmin::Presets->new(directory => $module_config_directory,
 
 # get_template_users() maps template IDs to existing or pending guest names.
 # Deletion holds create-host until the configuration write finishes.
-
 sub get_template_users
 {
 my $jobs = get_vm_jobs();
@@ -49,7 +47,6 @@ return { map { $_ => [ sort keys %{$users{$_}} ] } keys %users };
 }
 
 # preset_pages(kind) returns the list, editor and action URLs for a preset type.
-
 sub preset_pages
 {
 return $_[0] eq 'template'
@@ -58,7 +55,6 @@ return $_[0] eq 'template'
 }
 
 # template_sections() defines the editor order and fields saved by each section.
-
 sub template_sections
 {
 return (
@@ -74,7 +70,6 @@ return (
 
 # template_section(name, [step]) validates and wraps section navigation. Empty
 # names select Basic; step defaults to zero and may be negative.
-
 sub template_section
 {
 my ($name, $step) = @_;
@@ -86,7 +81,6 @@ return $sections[($index + ($step || 0)) % @sections];
 
 # preset_form_record(kind, input, [base]) parses the displayed settings only.
 # base supplies saved or copied template sections that this form does not edit.
-
 sub preset_form_record
 {
 my ($kind, $input, $base) = @_;
@@ -174,7 +168,6 @@ return \%record;
 # preset_select(name, value, choices, [disabled], [base]) Retains missing
 # references so administrators can repair them explicitly. base identifies
 # Default Template; both flags default to false.
-
 sub preset_select
 {
 my ($name, $value, $choices, $disabled, $base) = @_;
@@ -192,7 +185,6 @@ return ui_select($name, $value, \@choices, 1, 0, 0, $disabled);
 }
 
 # show_preset_list(kind, data, [token]) renders Virtualmin-style list actions.
-
 sub show_preset_list
 {
 my ($kind, $data, $token) = @_;
@@ -259,7 +251,6 @@ return ui_form_columns_table($delete, $token
 # show_preset_form(kind, record, options, [token], [editmode]) uses Virtualmin's
 # section navigation for templates and collapsible details for resource plans.
 # Without a token the form is read-only; editmode defaults to Basic.
-
 sub show_preset_form
 {
 my ($kind, $record, $options, $token, $editmode) = @_;
@@ -460,7 +451,6 @@ return $page;
 }
 
 # preset_page(kind, mode) serves the separate list, editor, save and bulk CGIs.
-
 sub preset_page
 {
 my ($kind, $mode) = @_;

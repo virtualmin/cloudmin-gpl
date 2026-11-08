@@ -22,7 +22,6 @@ my %STAGES =
 			1 } qw(boot accepted queued complete failed cancelled unavailable) );
 
 # quote(value) quotes one fixed argument for the remote POSIX shell.
-
 sub quote
 {
 my $value = $_[0];
@@ -31,7 +30,6 @@ return "'$value'";
 }
 
 # failure(reason) emits a fixed JSON error before private stdin is consumed.
-
 sub failure
 {
 return "printf '%s\\n' ".quote(encode_json({ stage => 'failed', reason =>
@@ -41,7 +39,6 @@ return "printf '%s\\n' ".quote(encode_json({ stage => 'failed', reason =>
 # remote_command(username, [wait_boot]) checks guest dependencies before launch.
 # wait_boot defaults to true; cancellation skips it. No prerequisite command may
 # consume the credentials waiting on stdin.
-
 sub remote_command
 {
 my ($username, $wait_boot) = @_;
@@ -76,7 +73,6 @@ return $command;
 }
 
 # emit(value) uses the controller's existing bounded worker protocol.
-
 sub emit
 {
 print encode_json($_[0]), "\n" or die "Controller disconnected\n";
@@ -84,7 +80,6 @@ STDOUT->flush;
 }
 
 # ssh_command(request) validates the target and pins only this guest's host key.
-
 sub ssh_command
 {
 my ($request) = @_;
@@ -120,7 +115,6 @@ return [ '/usr/bin/ssh', '-F', '/dev/null', '-T', '-i', 'identity',
 }
 
 # wait_child(pid, seconds) bounds the wait after SSH closes its output.
-
 sub wait_child
 {
 my ($pid, $seconds) = @_;
@@ -136,7 +130,6 @@ die "SSH exit timed out\n";
 
 # monitor(command, payload, timeout) streams private input
 # and known status only.
-
 sub monitor
 {
 my ($command, $payload, $timeout) = @_;
@@ -232,7 +225,6 @@ return $result;
 }
 
 # run(request) confines SSH to the unprivileged software worker.
-
 sub run
 {
 my ($request) = @_;
@@ -246,7 +238,6 @@ return monitor($command, $payload, ($request->{'action'} || '') eq 'cancel'
 }
 
 # main() keeps request contents and arbitrary child errors out of public events.
-
 sub main
 {
 umask(0077);

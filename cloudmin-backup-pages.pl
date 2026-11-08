@@ -15,7 +15,6 @@ our (%text, $remote_user, $module_root_directory);
 # provider. prefix separates each selector's input names. target defaults to
 # local backups under /var/backups/cloudmin; saved secrets are never
 # echoed into the form.
-
 sub show_backup_destination
 {
 my ($prefix, $target) = @_;
@@ -119,7 +118,6 @@ return $switch.(@preview
 # show_backup_input(prefix, mode, field, [value]) renders a sized destination
 # input. Optional connection settings use the standard
 # default/custom radio controls.
-
 sub show_backup_input
 {
 my ($prefix, $mode, $field, $value) = @_;
@@ -167,7 +165,6 @@ return ui_textbox($name, $value, $size, undef, undef, $hint);
 }
 
 # parse_backup_target(input, prefix) reads only the currently selected provider.
-
 sub parse_backup_target
 {
 my ($in, $prefix) = @_;
@@ -203,7 +200,6 @@ return $target;
 }
 
 # show_backup_time(schedule) shows only the fields for the selected recurrence.
-
 sub show_backup_time
 {
 my ($s) = @_;
@@ -266,7 +262,6 @@ return ui_select_switch('frequency', $s->{'frequency'}, \@options,
 
 # parse_backup_time(input) reads the controls belonging to
 # the chosen recurrence.
-
 sub parse_backup_time
 {
 my ($in) = @_;
@@ -278,7 +273,6 @@ return { frequency => $frequency,
 }
 
 # show_backup_retention(days) groups retention choices without an inline note.
-
 sub show_backup_retention
 {
 my ($days) = @_;
@@ -309,7 +303,6 @@ return ui_tag('select', $options,
 }
 
 # backup_schedule_label(schedule) describes the saved recurrence in the list.
-
 sub backup_schedule_label
 {
 my ($s) = @_;
@@ -331,7 +324,6 @@ return text('backup_when_'.$f,
 
 # show_backup_form(input, token) presents machines,
 # destination, options and time.
-
 sub show_backup_form
 {
 my ($in, $token) = @_;
@@ -416,7 +408,6 @@ return $html.backup_host_script();
 
 # show_restore_form(input, token) selects an archive or
 # confirms verified contents.
-
 sub show_restore_form
 {
 my ($in, $token) = @_;
@@ -504,7 +495,6 @@ return $html.ui_page_end().backup_host_script();
 }
 
 # backup_host_script() confirms unknown or replaced SSH keys before submission.
-
 sub backup_host_script
 {
 return ui_tag('script', '',
@@ -516,7 +506,6 @@ return ui_tag('script', '',
 }
 
 # show_backup_list(token) lists archives and schedules with explicit actions.
-
 sub show_backup_list
 {
 my ($token) = @_;

@@ -13,7 +13,6 @@ plan skip_all => 'SQLite modules required'
 	if (!eval { Cloudmin::Jobs::dependencies(); 1 });
 
 # fixture() supplies a real journal and isolated deletion callbacks.
-
 sub fixture
 {
 my $dir = tempdir(CLEANUP => 1);
@@ -47,7 +46,6 @@ return ( $jobs, $service, $adapter, $id );
 	package CleanupAdapter;
 
 	# check_creation_cleanup(self, job) emulates inventory ownership checks.
-
 	sub check_creation_cleanup
 	{
 	die "Changed storage\n"
@@ -56,7 +54,6 @@ return ( $jobs, $service, $adapter, $id );
 
 	# remove_created_guest(self, uuid, id) records domain
 	# removal before storage.
-
 	sub remove_created_guest
 	{
 	die "Undefine failed\n"
@@ -65,7 +62,6 @@ return ( $jobs, $service, $adapter, $id );
 
 	# remove_created_volume(self, pool, name, key) records
 	# only journalled volumes.
-
 	sub remove_created_volume
 	{
 	push(@{$_[0]->{'volumes'}}, $_[2]);
@@ -74,7 +70,6 @@ return ( $jobs, $service, $adapter, $id );
 
 	# remove(self, uuid, id) records key removal without
 	# using real credentials.
-
 	sub remove
 	{
 	$_[0]->{'removed'} = $_[2];

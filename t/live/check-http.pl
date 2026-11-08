@@ -19,7 +19,6 @@ require "$Bin/../../lib/Cloudmin/Images.pm";
 require "$Bin/../../lib/Cloudmin/HTTP.pm";
 
 # download(url, responses...) feeds raw HTTP responses to the download parser.
-
 sub download
 {
 my ($url, @responses) = @_;

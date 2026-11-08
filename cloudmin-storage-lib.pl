@@ -14,7 +14,6 @@ require "$module_root_directory/cloudmin-disk-labels.pl";
 # get_storage_service([writable]) Opens the configured connection without
 # changing pools during inventory reads. writable defaults to false; true
 # requests a libvirt connection for changes.
-
 sub get_storage_service
 {
 # Pools and volumes are host resources, including during read-only inventory.
@@ -27,7 +26,6 @@ return Cloudmin::Storage->new(adapter => get_libvirt($writable),
 
 # check_storage_request(input) Requires POST, host management and input.token
 # for UI reviews and changes.
-
 sub check_storage_request
 {
 my ($in) = @_;
@@ -38,7 +36,6 @@ check_storage_access($in);
 
 # check_storage_access(input) checks host/manage access and input.token. Shared
 # by browser and local API calls; read-only sessions cannot proceed.
-
 sub check_storage_access
 {
 my ($in) = @_;
@@ -50,7 +47,6 @@ get_image_jobs()->check_token($remote_user, $in->{'token'});
 
 # storage_volume_selection(input, [confirmed]) Keeps names paired with pool IDs
 # and, on confirmation, reviewed revisions.
-
 sub storage_volume_selection
 {
 my ($in, $confirmed) = @_;
@@ -79,7 +75,6 @@ return \@selected;
 
 # inspect_storage_selection(service, selection) Checks the whole selection
 # before deletion and records each file identity.
-
 sub inspect_storage_selection
 {
 my ($service, $selection) = @_;
@@ -97,7 +92,6 @@ return \@records;
 
 # review_storage_volumes(input) Resolves selected files under the user's access
 # rules without changing data.
-
 sub review_storage_volumes
 {
 my ($in) = @_;
@@ -109,7 +103,6 @@ return inspect_storage_selection(get_storage_service(),
 
 # change_storage(action, input) Checks authorization before opening a writable
 # connection or touching paths.
-
 sub change_storage
 {
 my ($action, $in) = @_;
@@ -119,7 +112,6 @@ return apply_storage_change($action, $in);
 
 # apply_storage_change(action, input) applies and audits an authorized change.
 # Callers must check access, input.token and any HTTP method before dispatch.
-
 sub apply_storage_change
 {
 my ($action, $in) = @_;
@@ -187,7 +179,6 @@ return $name;
 
 # delete_storage_volume(service, pool, volume, revision, confirmed) Deletes the
 # named volume through the service and audits only successful calls.
-
 sub delete_storage_volume
 {
 my ($service, @args) = @_;
@@ -201,7 +192,6 @@ return $record;
 # call_storage_api(action, input) exposes the same storage service as the page.
 # Reviews and changes require POST over HTTP and input.token on every route.
 # Local root entry points enforce permissions without REQUEST_METHOD.
-
 sub call_storage_api
 {
 my ($action, $in) = @_;

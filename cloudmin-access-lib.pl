@@ -11,7 +11,6 @@ require(
 our (%access, %text, $module_name);
 
 # access_policy() returns the current request's effective Webmin permissions.
-
 sub access_policy
 {
 # Tests may run without Webmin; real requests also check global read-only mode.
@@ -20,7 +19,6 @@ return Cloudmin::Access->new(\%access,
 }
 
 # can_access(action, [uuid]) checks permission for a page or controller action.
-
 sub can_access
 {
 return access_policy()->allows(@_);
@@ -28,7 +26,6 @@ return access_policy()->allows(@_);
 
 # require_access(action, [uuid]) checks ACLs and licensing for new changes. Use
 # this at action entry, before resource lookup or changes.
-
 sub require_access
 {
 die(($text{'acl_denied'} || 'Access denied by Cloudmin permissions')."\n")
@@ -40,7 +37,6 @@ require_cloudmin_license() if (defined(&require_cloudmin_license) &&
 
 # power_permission(action) selects the ordinary or forced power grant. action
 # must already be one of the supported VM power actions.
-
 sub power_permission
 {
 return $_[0] =~ /\A(?:force_off|reset)\z/ ? 'force' : 'power';
@@ -50,7 +46,6 @@ return $_[0] =~ /\A(?:force_off|reset)\z/ ? 'force' : 'power';
 # and relay processes must check each session's user, not their launcher.
 # Returns identity and policy, or undef if the login or
 # module access is invalid.
-
 sub session_access
 {
 my ($session) = @_;

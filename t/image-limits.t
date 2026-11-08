@@ -75,7 +75,6 @@ $INC{'server-manager-lib.pl'} = 1;
 require "$Bin/../config_info.pl";
 
 # error(message) exposes Webmin validation failures as test exceptions.
-
 sub error
 {
 die $_[0]

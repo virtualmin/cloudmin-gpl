@@ -5,21 +5,18 @@ use strict;
 use warnings;
 
 # new(class) retains the preceding sample for CPU and I/O rates.
-
 sub new
 {
 return bless { previous => { } }, $_[0];
 }
 
 # forget(self, uuid) prevents counter deltas from crossing a reboot or deletion.
-
 sub forget
 {
 delete $_[0]->{'previous'}->{$_[1]};
 }
 
 # percent(used, total) returns a bounded percentage with one decimal place.
-
 sub percent
 {
 my ($used, $total) = @_;
@@ -32,7 +29,6 @@ return 0 + sprintf('%.1f', $value > 100 ? 100 : $value);
 # sample(self, vm, stats, monotonic_seconds, epoch_seconds) Normalizes one
 # sample. Missing or stale guest counters stay unavailable; host RSS
 # is never guest usage.
-
 sub sample
 {
 my ($self, $vm, $stats, $now, $wall) = @_;

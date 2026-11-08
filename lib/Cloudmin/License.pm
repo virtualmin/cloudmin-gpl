@@ -16,7 +16,6 @@ use WebminCore qw(convert_to_json convert_from_json);
 # the system clock; tests supply a clock without changing the host time.
 # replace(serial, key) optionally updates repository credentials with the file.
 # directory holds the private cache; file holds the credentials.
-
 sub new
 {
 my ($class, %args) = @_;
@@ -30,7 +29,6 @@ return bless \%args, $class;
 # allow_read defaults to false. When true, allow group and world reads, but no
 # writes. Cache files remain owner-only. Missing files return undef; unsafe
 # files and I/O failures throw.
-
 sub read_private
 {
 my ($path, $allow_read) = @_;
@@ -51,7 +49,6 @@ return $value // '';
 }
 
 # write_private(path, value) atomically replaces one owner-only state file.
-
 sub write_private
 {
 my ($path, $value) = @_;
@@ -71,7 +68,6 @@ die $error if (!$ok);
 }
 
 # credentials(self) reads the existing Cloudmin license format, never a shell.
-
 sub credentials
 {
 my ($self) = @_;
@@ -90,7 +86,6 @@ return { serial => $values{'SerialNumber'}, key => $values{'LicenseKey'} };
 
 # validate_credentials(serial, key) rejects malformed inputs
 # without echoing them.
-
 sub validate_credentials
 {
 my ($serial, $key) = @_;
@@ -101,7 +96,6 @@ die "Enter a valid license serial number and key\n"
 }
 
 # binding(self, credentials) ties cached decisions to this host and license.
-
 sub binding
 {
 my ($self, $credentials) = @_;
@@ -110,7 +104,6 @@ return sha256_hex(join("\0", 'license/client-v2:cloudmin', $self->{'host'},
 }
 
 # expiry(date) returns the UTC instant after the last licensed calendar day.
-
 sub expiry
 {
 my ($date) = @_;
@@ -125,7 +118,6 @@ return $@ ? undef : $time + 86400;
 # parse(response) reads expiry, allowances, host use and renewal information.
 # Developer codes allow extra hosts; zero means unlimited for either allowance.
 # Unknown responses never become a valid license or disclose server output.
-
 sub parse
 {
 my ($response) = @_;
@@ -165,7 +157,6 @@ return { state => 'unavailable' };
 
 # load(self, credentials) verifies cached state before trusting its timestamps.
 # Missing, edited or copied state requires a new successful server check.
-
 sub load
 {
 my ($self, $credentials) = @_;
@@ -190,7 +181,6 @@ return $state || { };
 }
 
 # save(self, state) seals the cache with a separate private random key.
-
 sub save
 {
 my ($self, $state) = @_;
@@ -213,7 +203,6 @@ write_private("$self->{directory}/status", convert_to_json({ data => $data,
 
 # check(self, credentials, previous) records one bounded server result. An
 # outage cannot clear a known expiry or restart an existing grace period.
-
 sub check
 {
 my ($self, $credentials, $old) = @_;
@@ -249,7 +238,6 @@ return $state;
 
 # locked(self, callback) serializes checks and credential
 # changes across requests.
-
 sub locked
 {
 my ($self, $callback) = @_;
@@ -273,7 +261,6 @@ return $result;
 # status(self, [refresh], [force]) returns public fields, never the license key.
 # Reads recalculate deadlines even when the daily check has not run. refresh
 # permits a due check; force bypasses its interval only with refresh.
-
 sub status
 {
 my ($self, $refresh, $force) = @_;
@@ -310,7 +297,6 @@ return $self->describe($state, $credentials);
 
 # change(self, serial, key) validates new credentials before replacing any file.
 # An expired or unavailable replacement cannot discard a working license.
-
 sub change
 {
 my ($self, $serial, $key) = @_;
@@ -343,7 +329,6 @@ return $self->locked(sub {
 # deregister(self) clears local credentials under the same lock as a check.
 # Retain the bound cache so adding the same license cannot
 # reset its grace period.
-
 sub deregister
 {
 my ($self) = @_;
@@ -365,7 +350,6 @@ return $self->locked(sub {
 # data. Expiry gets seven days; host overuse and loss of verification get 21
 # days. reason overrides the inferred state, for example when
 # credentials are absent.
-
 sub describe
 {
 my ($self, $state, $credentials, $reason) = @_;

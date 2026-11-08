@@ -9,7 +9,6 @@ use JSON::PP qw(encode_json);
 require(dirname(__FILE__).'/ImageInspector.pm');
 
 # read_small(guestfs, path) bounds guest-controlled text before parsing it.
-
 sub read_small
 {
 my ($g, $path) = @_;
@@ -22,7 +21,6 @@ return $g->read_file($path);
 # write_private(guestfs, path, content, [mode]) writes a root-owned guest file.
 # mode defaults to 0600; callers can adjust ownership after writing. Replacing a
 # symlink affects only its entry, never an unrelated guest target.
-
 sub write_private
 {
 my ($g, $path, $content, $mode) = @_;
@@ -35,7 +33,6 @@ $g->chown(0, 0, $path);
 
 # remove_matches(guestfs, patterns...) removes state matching
 # guest glob patterns.
-
 sub remove_matches
 {
 my ($g, @patterns) = @_;
@@ -50,7 +47,6 @@ foreach my $pattern (@patterns) {
 # unmounting. disks is a bounded array of fixed basenames/formats; settings
 # holds validated cloud-init access and hostname data. No guest
 # commands run on the host.
-
 sub prepare
 {
 my ($r, $finish) = @_;

@@ -28,7 +28,6 @@ require($library || "$module/lib/Cloudmin/HostNetwork.pm");
 
 	# command(self, argv, [quiet], [safe]) redirects recovery queries to the
 	# test unit. Other commands run unchanged.
-
 	sub command
 	{
 	my ($self, $argv, @flags) = @_;

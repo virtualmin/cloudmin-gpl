@@ -42,7 +42,6 @@ my $store =
 my $vm = '11111111-1111-4111-8111-111111111111';
 
 # sample(start,end,values) produces a normalized VM interval for storage tests.
-
 sub sample
 {
 my ($a, $b, $v) = @_;
@@ -362,7 +361,6 @@ my $machine =
 
 # stats(counter) changes all counter values while retaining
 # names and allocation.
-
 sub stats
 {
 my ($n) = @_;

@@ -11,7 +11,6 @@ use WebminCore qw(read_file_contents execute_command convert_from_json);
 # check(network) Rejects missing IPv4 prerequisites on local NAT/routed
 # networks. Bridges, isolated networks and IPv6-only networks
 # are outside this check.
-
 sub check
 {
 my ($network) = @_;
@@ -26,7 +25,6 @@ die $status->{'detail'}.($status->{'repairable'}
 }
 
 # managed(network) identifies libvirt networks whose IPv4 rules we can inspect.
-
 sub managed
 {
 my ($network) = @_;
@@ -36,7 +34,6 @@ return ($network->{'type'} || 'network') eq 'network' &&
 }
 
 # inspect() reads forwarding and firewall state once for all active networks.
-
 sub inspect
 {
 my $forward = read_file_contents('/proc/sys/net/ipv4/ip_forward') || '';
@@ -63,7 +60,6 @@ return { forwarding => $forward =~ /\A1\s*\z/ ? 1 : 0,
 }
 
 # status(network, snapshot) returns a displayable result without changing rules.
-
 sub status
 {
 my ($network, $snapshot) = @_;
@@ -97,7 +93,6 @@ return { name => $name, id => $network->{'id'}, ok => $detail ? 0 : 1,
 }
 
 # report(adapter) checks active local networks using one firewall snapshot.
-
 sub report
 {
 my ($adapter) = @_;
@@ -115,7 +110,6 @@ return [ map { status($_, $snapshot) } @networks ];
 # The controller holds its host lock and checks permissions and running jobs.
 # reconnect() supplies a new adapter after restarting the old
 # connection's daemon.
-
 sub restore
 {
 my ($adapter, $reconnect) = @_;
@@ -167,7 +161,6 @@ return $unit;
 
 # service_command(action, unit, [failure]) Runs fixed systemd requests with a
 # timeout. failure is an optional scalar reference receiving the failure reason.
-
 sub service_command
 {
 my ($action, $unit, $failure) = @_;
@@ -202,7 +195,6 @@ return $status ? undef : $output // '';
 # command(program, arguments) Reads fixed firewall commands with a five-second
 # deadline; no caller input reaches the shell. Returns undef for missing tools,
 # failed commands or output over 4 MiB. Callers validate the returned format.
-
 sub command
 {
 my ($program, $arguments) = @_;
@@ -220,7 +212,6 @@ return !$status && defined($output) && length($output) <= 4 * 1024 * 1024
 
 # subnet(network) Converts libvirt's IPv4 address and prefix/netmask
 # to a canonical subnet.
-
 sub subnet
 {
 my ($network) = @_;
@@ -242,7 +233,6 @@ return inet_ntop(AF_INET, $address & $mask).'/'.$prefix;
 
 # nft_chains(document) Normalizes the native nftables and iptables-nft
 # forms emitted by libvirt.
-
 sub nft_chains
 {
 my ($data) = @_;
@@ -313,7 +303,6 @@ return [ values %chains ];
 
 # iptables_chains(save_output) Normalizes iptables-save, including the legacy
 # backend absent from nft JSON.
-
 sub iptables_chains
 {
 my ($output) = @_;
@@ -370,7 +359,6 @@ return [ values %chains ];
 # hooked_rules(chains, hook) Follows chain jumps from a kernel hook; detached
 # chains cannot pass the check. This checks rule presence, not ordering or
 # arbitrary administrator policies.
-
 sub hooked_rules
 {
 my ($chains, $hook) = @_;
@@ -390,7 +378,6 @@ return \@rules;
 # missing_rules(network, subnet, chains) Returns the missing prerequisite, or
 # undef when both directions and any required source NAT rules are attached to
 # the packet-processing hooks.
-
 sub missing_rules
 {
 my ($network, $subnet, $chains) = @_;

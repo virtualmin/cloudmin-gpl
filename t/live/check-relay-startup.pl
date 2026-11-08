@@ -21,7 +21,6 @@ $session_id = 'private-fixture-session';
 
 # remove_miniserv_websocket(port, module) records supervisor cleanup without
 # changing any real browser routes on the test host.
-
 sub remove_miniserv_websocket
 {
 open(my $file, '>', "$module_var_directory/removed") || die $!;

@@ -25,7 +25,6 @@ require "$module_root_directory/cloudmin-image-sizes.pl";
 
 # get_image_jobs() Keeps persistent image jobs outside the
 # web-accessible module directory.
-
 sub get_image_jobs
 {
 return Cloudmin::Images->new(
@@ -59,7 +58,6 @@ return Cloudmin::Images->new(
 
 # get_free_disk_space(directory) Returns available bytes on the directory's
 # filesystem through Webmin's mount API.
-
 sub get_free_disk_space
 {
 my ($directory) = @_;
@@ -80,7 +78,6 @@ return $free * 1024;
 # file locking can be turned off or limited to chosen directories in its
 # configuration; without a real lock, workers and requests would no longer
 # exclude each other, so that setting is an error here.
-
 sub lock_data_file
 {
 my ($file, @options) = @_;
@@ -94,7 +91,6 @@ return lock_file($file, @options);
 # unlock_data_file(file) Releases the Webmin lock and removes its expired
 # exit-cleanup entry, so this CGI cannot later unlink a lock acquired by a
 # background worker or new request.
-
 sub unlock_data_file
 {
 my ($file) = @_;
@@ -105,7 +101,6 @@ my $lockfile = translate_filename($file).'.lock';
 
 # start_image_imports(input) Validates a complete batch before queuing it; each
 # selection is idempotent.
-
 sub start_image_imports
 {
 my ($input) = @_;
@@ -139,7 +134,6 @@ return \@records;
 
 # prepare_image_import(input) Resolves trusted catalogue metadata and current
 # storage before any write.
-
 sub prepare_image_import
 {
 my ($input) = @_;
@@ -206,7 +200,6 @@ return $request;
 
 # get_image_catalogue() Combines the Cloudmin catalogue with the custom
 # catalogue in module configuration.
-
 sub get_image_catalogue
 {
 return Cloudmin::ImageCatalog->new(
@@ -221,7 +214,6 @@ return Cloudmin::ImageCatalog->new(
 
 # prepare_catalogue_entry(input, catalogue) Validates editor fields while
 # retaining metadata not exposed by the form.
-
 sub prepare_catalogue_entry
 {
 my ($input, $catalogue) = @_;
@@ -270,7 +262,6 @@ return $entry;
 
 # save_catalogue_form(input) Validates raw editor fields within the privileged
 # backend before saving them.
-
 sub save_catalogue_form
 {
 # Catalogue entries affect the host; VM assignments grant no editing access.
@@ -283,7 +274,6 @@ return $catalogue->save_entry(prepare_catalogue_entry($input, $catalogue),
 
 # get_host_image_architecture() Returns the normalized architecture used to
 # filter bootable VM images.
-
 sub get_host_image_architecture
 {
 my (undef, undef, undef, undef, $machine) = uname();
@@ -293,7 +283,6 @@ return Cloudmin::ImageCatalog::normalize_architecture($machine);
 # list_available_server_images([architecture], [catalogue]) Returns enabled
 # catalogue images for the requested architecture. Defaults to the local
 # architecture and configured catalogue.
-
 sub list_available_server_images
 {
 my ($architecture, $catalogue) = @_;
@@ -306,7 +295,6 @@ return @{$catalogue->list_images($architecture)};
 # get_available_server_image(id, [architecture], [catalogue]) Returns one
 # compatible catalogue image by its stable ID. Defaults to the local
 # architecture and configured catalogue.
-
 sub get_available_server_image
 {
 my ($id, $architecture, $catalogue) = @_;
@@ -319,7 +307,6 @@ return $catalogue->find_image($id, $architecture);
 # search_available_server_images(query, [architecture], [catalogue]) Searches
 # compatible catalogue records by name, OS, release, and format. Defaults to the
 # local architecture and configured catalogue.
-
 sub search_available_server_images
 {
 my ($query, $architecture, $catalogue) = @_;
@@ -332,7 +319,6 @@ return @{$catalogue->search_images($query, $architecture)};
 # get_images_info([query], [architecture], [catalogue]) Collects filtered
 # catalogue records and summary counts for the images page. An omitted query
 # lists all host-compatible images from the configured catalogue.
-
 sub get_images_info
 {
 my ($query, $architecture, $catalogue) = @_;
@@ -392,7 +378,6 @@ return {
 
 # get_ssh_keys() Stores guest login keys separately from
 # administrator SSH identities.
-
 sub get_ssh_keys
 {
 return Cloudmin::SSHKeys->new("$module_var_directory/vm-ssh-keys");
@@ -402,7 +387,6 @@ return Cloudmin::SSHKeys->new("$module_var_directory/vm-ssh-keys");
 # Inventory pages use the default read-only connection. Pass a true value for
 # calls that libvirt refuses on read-only connections, such as
 # guest-agent address queries.
-
 sub get_libvirt
 {
 my ($writable) = @_;
@@ -438,7 +422,6 @@ return Cloudmin::Libvirt->new(
 # references visible under the current ACL; skip-completion is unused. The
 # optional adapter replaces the configured libvirt connection. On failure,
 # returns an empty list and sets cloudmin_last_error.
-
 sub list_managed_servers
 {
 my ($nocomplete, $adapter) = @_;
@@ -458,7 +441,6 @@ return grep { can_access('view', $_->{'uuid'}) } @$servers;
 # list_managed_servers_sorted([mode], [skip-completion], [adapter]) Returns
 # guests sorted by name, ignoring case. Mode and skip-completion are accepted
 # for existing callers but do not change discovery or sorting.
-
 sub list_managed_servers_sorted
 {
 my ($mode, $nocomplete, $adapter) = @_;
@@ -469,7 +451,6 @@ return sort {
 
 # get_managed_server(id, [adapter]) Finds one libvirt guest by UUID or name;
 # returns undef on no match or failure.
-
 sub get_managed_server
 {
 my ($id, $adapter) = @_;
@@ -484,7 +465,6 @@ return $server;
 # get_managed_server_by(key, value, [adapter]) Matches a scalar inventory field.
 # Returns all matches in list context or the first match in scalar context; no
 # match or a lookup error returns no record.
-
 sub get_managed_server_by
 {
 my ($key, $value, $adapter) = @_;
@@ -497,7 +477,6 @@ return wantarray ? @servers : $servers[0];
 # get_server_ip(server) Returns discovered IPv4 addresses in list context, or
 # the first in scalar context. Loads addresses only when the supplied
 # inventory lacks them.
-
 sub get_server_ip
 {
 my ($server) = @_;
@@ -508,7 +487,6 @@ return wantarray ? @ips : $ips[0];
 # get_server_ip6(server) Returns discovered IPv6 addresses in list context, or
 # the first in scalar context, for callers such as Virtualmin's
 # address allocation checks.
-
 sub get_server_ip6
 {
 my ($server) = @_;
@@ -519,7 +497,6 @@ return wantarray ? @ips : $ips[0];
 # get_server_addresses(server) Shares one address lookup between the IPv4 and
 # IPv6 helpers. Ordinary menu inventory stays cheap because it does
 # not call these helpers.
-
 sub get_server_addresses
 {
 my ($server) = @_;
@@ -539,7 +516,6 @@ return map { $_->{'address'} } @{$server->{'addresses'} || [ ]};
 # get_server_mac(server) Reads Cloudmin's mac_addresses field, or the libvirt
 # macs array. Returns the first address in scalar context, or
 # all in list context.
-
 sub get_server_mac
 {
 my ($server) = @_;
@@ -552,7 +528,6 @@ return wantarray ? @macs : $macs[0];
 # check_server_status(server, [regen], [skipinfo], [time], [adapter]) Refreshes
 # the supplied hash in place and returns whether libvirt marks it active. Regen,
 # skipinfo, and time are accepted but unused.
-
 sub check_server_status
 {
 my ($server, $regen, $skipinfo, $time, $adapter) = @_;
@@ -566,7 +541,6 @@ return $server->{'active'} ? 1 : 0;
 # validate_server(server) Returns error messages for a missing UUID, missing
 # name, or unknown state. This checks the supplied record, not whether the guest
 # can be managed safely.
-
 sub validate_server
 {
 my ($server) = @_;
@@ -584,7 +558,6 @@ return @errors;
 # can_host_kvm([server]) Accepts an omitted host or a record marked
 # this/libvirt. Checks the record type only, not the host's KVM
 # capabilities or address.
-
 sub can_host_kvm
 {
 my ($server) = @_;
@@ -595,7 +568,6 @@ return ($server->{'manager'} || '') =~ /^(this|libvirt)$/ ? 1 : 0;
 
 # check_kvm_host_software([server], [adapter]) Returns undef when the local
 # KVM/libvirt host is ready, or an error message.
-
 sub check_kvm_host_software
 {
 my ($server, $adapter) = @_;
@@ -611,7 +583,6 @@ return $failed ? $failed->{'detail'} : undef;
 # list_kvm_instances([host], [adapter]) Returns an array reference of guest
 # records, or an error string on failure. Host is an optional record checked by
 # can_host_kvm, not a connection address.
-
 sub list_kvm_instances
 {
 my ($host, $adapter) = @_;
@@ -627,7 +598,6 @@ return [ grep { can_access('view', $_->{'uuid'}) } @$domains ];
 
 # list_available_managed_servers_sorted() Supplies visible guests, sorted by
 # name, for theme default-server settings.
-
 sub list_available_managed_servers_sorted
 {
 return list_managed_servers_sorted();
@@ -637,7 +607,6 @@ return list_managed_servers_sorted();
 # Host administration and unknown legacy actions require an administrator.
 # Returns (ok, error) in list context or ok in scalar context. Omitted arguments
 # check host access; view accepts one server record or an array of records.
-
 sub can_action
 {
 my ($servers, $action) = @_;
@@ -655,7 +624,6 @@ return wantarray ? ( $ok ? 1 : 0, $ok ? undef : $text{'acl_denied'} ) : $ok;
 # undef without a guest. Webmin's LVM module compares its id with '0', Cloudmin
 # 9's ID for the system running Cloudmin itself. Every Cloudmin 10
 # guest runs on this host.
-
 sub get_parent_server
 {
 my ($server) = @_;
@@ -667,7 +635,6 @@ return { 'id' => '0', 'host' => get_system_hostname(), 'manager' => 'this' };
 # type_kvm_list_disk_devices(server, [adapter]) returns guest block-device
 # paths. Webmin's LVM module uses this hook to identify
 # attached logical volumes.
-
 sub type_kvm_list_disk_devices
 {
 my ($server, $adapter) = @_;
@@ -695,7 +662,6 @@ return sort keys %paths;
 
 # list_storage_pools([adapter]) Returns pool records from libvirt, or an empty
 # list after a lookup failure.
-
 sub list_storage_pools
 {
 my ($adapter) = @_;
@@ -712,7 +678,6 @@ return @$pools;
 
 # get_server_kvm_instance(server, [adapter]) Looks up a fresh guest record by
 # id, falling back to name if id is absent.
-
 sub get_server_kvm_instance
 {
 my ($server, $adapter) = @_;
@@ -722,7 +687,6 @@ return get_managed_server($server->{'id'} || $server->{'name'}, $adapter);
 # check_host_readiness([adapter]) Checks the local KVM device and configured
 # libvirt service without changes. Returns check results and any host details,
 # not a full VM-creation preflight.
-
 sub check_host_readiness
 {
 my ($adapter) = @_;
@@ -851,7 +815,6 @@ return {
 
 # get_storage_info() Collects storage-pool and volume totals for the host
 # overview and checks.
-
 sub get_storage_info
 {
 my $adapter = get_libvirt();
@@ -878,7 +841,6 @@ return {
 
 # get_active_jobs() Shows host administrators all working imports
 # and unfinished VM jobs.
-
 sub get_active_jobs
 {
 # Skip job stores entirely for delegated users.
@@ -931,7 +893,6 @@ return { jobs => [ sort { $b->{'created'} <=> $a->{'created'} } @jobs ],
 # get_dashboard() Collects visible guests and, for host administrators,
 # readiness and job counts. Live status refreshes this initial inventory
 # after the page loads.
-
 sub get_dashboard
 {
 # Libvirt requires a writable connection even for guest-agent address queries.
@@ -981,7 +942,6 @@ return {
 
 # error_html(message) escapes backend text, formats backtick-delimited commands
 # and links known navigation advice.
-
 sub error_html
 {
 my $html = html_escape($_[0]);
@@ -996,7 +956,6 @@ return $html;
 
 # error_message(error) Normalizes thrown errors before they are shown or
 # returned to a caller.
-
 sub error_message
 {
 my ($error) = @_;

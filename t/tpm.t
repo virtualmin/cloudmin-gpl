@@ -16,7 +16,6 @@ require "$Bin/../lib/Cloudmin/Clones.pm";
 
 	# get_uuid_string(self) identifies the fixture's
 	# managed state directory.
-
 	sub get_uuid_string
 	{
 	$_[0]->{'uuid'}
@@ -24,7 +23,6 @@ require "$Bin/../lib/Cloudmin/Clones.pm";
 
 	# get_xml_description(self, flags) models live XML and saved XML (flag
 	# 2).
-
 	sub get_xml_description
 	{
 	$_[1] == 2 ? $_[0]->{'xml'} : ($_[0]->{'live_xml'} || $_[0]->{'xml'})
@@ -32,14 +30,12 @@ require "$Bin/../lib/Cloudmin/Clones.pm";
 
 	# is_persistent(self) controls whether the fixture
 	# has a saved definition.
-
 	sub is_persistent
 	{
 	!$_[0]->{'transient'}
 	}
 
 	# is_active(self) lets tests model a source restarted after validation.
-
 	sub is_active
 	{
 	$_[0]->{'active'} || 0
@@ -48,21 +44,18 @@ require "$Bin/../lib/Cloudmin/Clones.pm";
 
 	# uri(self) supplies the local system URI required
 	# by TPM storage checks.
-
 	sub uri
 	{
 	'qemu:///system'
 	}
 
 	# connect(self) keeps domain enumeration inside this fixture adapter.
-
 	sub connect
 	{
 	$_[0]
 	}
 
 	# list_all_domains(self) exposes fixture guests for shared-state checks.
-
 	sub list_all_domains
 	{
 	@{$_[0]->{'domains'} || [ ]}
@@ -70,7 +63,6 @@ require "$Bin/../lib/Cloudmin/Clones.pm";
 
 	# find_domain(self, uuid) locates an owner before
 	# rollback removes state.
-
 	sub find_domain
 	{
 	my ($self, $uuid) = @_;
@@ -88,7 +80,6 @@ my $path = Cloudmin::TPM::path($uuid);
 make_path($path);
 
 # state(bytes) changes only the private fixture's permanent TPM state.
-
 sub state
 {
 open(my $fh, '>', "$path/tpm2-00.permall") or die $!;

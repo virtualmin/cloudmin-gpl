@@ -49,7 +49,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	package AccessImages;
 
 	# check_token(self, owner, token) accepts only the acting user's token.
-
 	sub check_token
 	{
 	die "Bad token\n" if ($_[2] ne $_[1].'-token');
@@ -57,7 +56,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	package AccessManager;
 
 	# discard_change(self, id) records access without changing hardware.
-
 	sub discard_change
 	{
 	$_[0]->{'discarded'} = $_[1];

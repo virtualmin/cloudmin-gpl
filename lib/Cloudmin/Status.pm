@@ -9,7 +9,6 @@ use File::Basename qw(dirname);
 require(dirname(__FILE__).'/Metrics.pm');
 
 # new(class) creates an empty collector cache.
-
 sub new
 {
 return bless { vms => { }, health => { }, due => { }, resources => { },
@@ -22,7 +21,6 @@ return bless { vms => { }, health => { }, due => { }, resources => { },
 
 # record(self, vm) Retains only public inventory fields, never
 # guest XML or secrets.
-
 sub record
 {
 my ($self, $vm) = @_;
@@ -41,7 +39,6 @@ $self->refresh($id);
 }
 
 # refresh(self, uuid) compares each changed record once, regardless of viewers.
-
 sub refresh
 {
 my ($self, $id) = @_;
@@ -53,7 +50,6 @@ $self->{'revision'}++;
 }
 
 # invalidate(self, uuid) discards old health after a lifecycle or agent event.
-
 sub invalidate
 {
 my ($self, $id) = @_;
@@ -69,7 +65,6 @@ $self->refresh($id) if ($self->{'vms'}->{$id});
 }
 
 # remove(self, uuid) drops a deleted VM and any pending health result.
-
 sub remove
 {
 my ($self, $id) = @_;
@@ -80,7 +75,6 @@ $self->{'revision'}++;
 }
 
 # checked(self, uuid, result, now) caches one probe for all interested users.
-
 sub checked
 {
 my ($self, $id, $result, $now) = @_;
@@ -99,7 +93,6 @@ $self->refresh($id);
 # refresh_addresses(self, ids, lookup) Refreshes host-observed leases and ARP
 # entries without polling guest agents. lookup(uuid, record) returns an address
 # array; failures retain the last read.
-
 sub refresh_addresses
 {
 my ($self, $ids, $lookup) = @_;
@@ -123,7 +116,6 @@ foreach my $id (@$ids) {
 # for the whole inventory. Socket callers must supply a policy here and to
 # resource_ids and message. Without a policy, these methods do not
 # filter by VM assignments.
-
 sub next_probe
 {
 my ($self, $clients, $now) = @_;
@@ -141,7 +133,6 @@ return $id;
 
 # resource_ids(self, clients) lists VMs that visible clients
 # are allowed to view.
-
 sub resource_ids
 {
 my ($self, $clients) = @_;
@@ -160,7 +151,6 @@ return [ sort keys %ids ];
 
 # sampled(self, ids, stats, monotonic_seconds, epoch_seconds) Replaces metrics
 # and discards guest-agent data older than five minutes.
-
 sub sampled
 {
 my ($self, $ids, $stats, $now, $wall) = @_;
@@ -181,7 +171,6 @@ foreach my $id (@$ids) {
 # collected(self, ids, snapshot, now) copies shared readings for known VM IDs.
 # The caller supplies a freshness-checked snapshot. Now is accepted for the
 # status interface but is not used to calculate resource rates.
-
 sub collected
 {
 my ($self, $ids, $snapshot, $now) = @_;
@@ -210,7 +199,6 @@ foreach my $id (@$ids) {
 # next_guest_probe(self, clients, now) Schedules at most one slow query per
 # second. A 100-VM overview takes at least 100 seconds per round,
 # regardless of viewers.
-
 sub next_guest_probe
 {
 my ($self, $clients, $now) = @_;
@@ -229,7 +217,6 @@ return $id;
 
 # guest_checked(self, uuid, result, now) Shares guest-agent data and schedules
 # its next query one minute later.
-
 sub guest_checked
 {
 my ($self, $id, $result, $now) = @_;
@@ -242,7 +229,6 @@ $self->refresh($id);
 }
 
 # value(self, uuid) combines public inventory, health and resource measurements.
-
 sub value
 {
 my ($self, $id) = @_;
@@ -254,7 +240,6 @@ return { vm => $self->{'vms'}->{$id}, health => $self->{'health'}->{$id},
 # message(self, subscriber) Returns an authorized snapshot or delta, or undef
 # when unchanged. The collector clears subscriber.revision when it
 # rereads permissions.
-
 sub message
 {
 my ($self, $client) = @_;

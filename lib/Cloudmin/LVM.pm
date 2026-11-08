@@ -14,7 +14,6 @@ use WebminCore qw(convert_from_json execute_command quote_path is_readonly_mode
 # new(class, [readonly => boolean], [runner => callback], [creator => callback])
 # Defaults to read-only access and loads metadata on demand. runner(operation,
 # arguments...) and creator(settings) isolate tests.
-
 sub new
 {
 my ($class, %options) = @_;
@@ -24,7 +23,6 @@ return bless({ readonly => 1, %options }, $class);
 # create_logical_volume(self, settings) uses Webmin's existing LVM creation API.
 # Cloudmin validates names, space and ownership before
 # calling the shared helper.
-
 sub create_logical_volume
 {
 my ($self, $settings) = @_;
@@ -46,7 +44,6 @@ die "Cannot create logical volume: $error\n"
 
 # resize_logical_volume(self, record, bytes) uses Webmin
 # after a grow-only check.
-
 sub resize_logical_volume
 {
 my ($self, $record, $bytes) = @_;
@@ -67,7 +64,6 @@ die "Cannot grow logical volume: $error\n"
 # command(self, operation, arguments...) Runs fixed LVM commands and a
 # device-mapper report, with bounded execution. dm_info uses fixed fields and
 # takes no command-line arguments.
-
 sub command
 {
 my ($self, $operation, @args) = @_;
@@ -101,7 +97,6 @@ return $out;
 }
 
 # name(value) validates a volume-group, logical-volume or thin-pool name.
-
 sub name
 {
 my ($name) = @_;
@@ -114,7 +109,6 @@ return $name;
 
 # device_path(group, volume) returns the stable, escaped device-mapper name. Use
 # this canonical path so libvirt does not resolve a longer /dev/VG alias.
-
 sub device_path
 {
 my ($group, $volume) = map { name($_) } @_;
@@ -126,7 +120,6 @@ return "/dev/mapper/$name";
 }
 
 # number(value) requires an exact nonnegative byte count from LVM JSON.
-
 sub number
 {
 my ($value) = @_;
@@ -137,7 +130,6 @@ return 0 + $value;
 
 # report(self, operation, section, fields) Decodes LVM's JSON report without
 # relying on localized table output.
-
 sub report
 {
 my ($self, $operation, $section, $fields) = @_;
@@ -170,7 +162,6 @@ return \@rows;
 # inventory(self, [refresh]) Retains LVM UUIDs so device-node recreation and
 # renamed paths do not hide a replaced volume. A single read supplies every pool
 # in the current operation.
-
 sub inventory
 {
 my ($self, $refresh) = @_;
@@ -207,7 +198,6 @@ return $self->{'inventory'} = \%groups;
 }
 
 # group(self, name, [expected_uuid]) resolves a current volume group.
-
 sub group
 {
 my ($self, $name, $uuid) = @_;
@@ -219,7 +209,6 @@ return $group;
 }
 
 # usable(volume) identifies ordinary disks, excluding pool internals.
-
 sub usable
 {
 my ($volume) = @_;
@@ -229,7 +218,6 @@ return ($volume->{'segtype'} || '') =~ /\A(?:linear|striped|thin|snapshot)\z/ &&
 }
 
 # capacity(record) distinguishes a classic snapshot's origin from its COW store.
-
 sub capacity
 {
 my ($record) = @_;
@@ -239,7 +227,6 @@ return number(($record->{'lv_attr'} || '') =~ /^s/
 }
 
 # identity(path) resolves a local LVM block device to its persistent LV UUID.
-
 sub identity
 {
 my ($path) = @_;
@@ -249,7 +236,6 @@ return 'lvm:'.$volume->{'vg_uuid'}.':'.$volume->{'lv_uuid'};
 
 # device(path, [driver]) resolves a block device, including /dev/mapper aliases.
 # Inventory views may share a driver; mutation guards request fresh metadata.
-
 sub device
 {
 my ($path, $driver) = @_;
@@ -270,7 +256,6 @@ die "Block device is not a supported LVM logical volume\n";
 
 # copy_to_file(path, destination, [limit]) stages opaque LV bytes for a worker.
 # The parser sees only this private regular file, never a host block device.
-
 sub copy_to_file
 {
 my ($path, $destination, $limit) = @_;
@@ -336,7 +321,6 @@ die "The logical volume changed during copying\n"
 # group_devices maps allowed major:minor numbers to true for a whole-group stop;
 # volume must then include open_count. Without
 # group_devices, refuse all holders.
-
 sub host_use
 {
 my ($volume, $group_devices) = @_;
@@ -400,7 +384,6 @@ return 1;
 # Device-mapper UUIDs cover thin-pool aliases and hidden data/metadata devices.
 # group is a fresh inventory record with vg_uuid and
 # volumes; nothing is stopped.
-
 sub group_host_use
 {
 my ($self, $group) = @_;
@@ -442,7 +425,6 @@ return 1;
 
 # btrfs_host_use(device_number, [sysfs_root]) refuses any mounted Btrfs member.
 # The optional root allows isolated tests; callers use the kernel's sysfs tree.
-
 sub btrfs_host_use
 {
 my ($number, $root) = @_;
@@ -477,7 +459,6 @@ return 1;
 }
 
 # thin_id(base_uuid, thin_uuid) gives a thin destination a stable public UUID.
-
 sub thin_id
 {
 my $id = substr(sha256_hex(join(':', 'cloudmin-lvm-thin', @_)), 0, 32);
@@ -489,7 +470,6 @@ return $id;
 
 # pools(self, native_pool) exposes thick allocation and each
 # thin pool separately.
-
 sub pools
 {
 my ($self, $native) = @_;
@@ -514,7 +494,6 @@ use strict;
 use warnings;
 
 # new(class, driver, native_pool, group, [thin_pool]) binds immutable LVM IDs.
-
 sub new
 {
 my ($class, $driver, $native, $group, $thin) = @_;
@@ -530,7 +509,6 @@ return bless({ driver => $driver, native => $native, vg => $group->{'vg_name'},
 }
 
 # group(self, [refresh]) rechecks the VG and thin-pool identities.
-
 sub group
 {
 my ($self, $refresh) = @_;
@@ -548,14 +526,12 @@ return $group;
 }
 
 # get_uuid_string(self) returns the selected destination's public ID.
-
 sub get_uuid_string
 {
 return $_[0]->{'id'};
 }
 
 # get_name(self) distinguishes thin pools sharing one volume group.
-
 sub get_name
 {
 return $_[0]->{'native'}->get_name().($_[0]->{'thin'}
@@ -564,21 +540,18 @@ return $_[0]->{'native'}->get_name().($_[0]->{'thin'}
 }
 
 # is_persistent(self) follows the registered libvirt volume group.
-
 sub is_persistent
 {
 return $_[0]->{'native'}->is_persistent();
 }
 
 # get_autostart(self) reports the volume group's boot policy.
-
 sub get_autostart
 {
 return $_[0]->{'native'}->get_autostart();
 }
 
 # is_active(self) requires both the registered VG and the selected thin pool.
-
 sub is_active
 {
 my ($self) = @_;
@@ -589,7 +562,6 @@ return !$self->{'thin'} ||
 }
 
 # refresh(self) refreshes both libvirt inventory and LVM metadata.
-
 sub refresh
 {
 my ($self) = @_;
@@ -599,7 +571,6 @@ $self->group(1);
 
 # get_info(self) reports physical space and thin
 # data/metadata usage percentages.
-
 sub get_info
 {
 my ($self) = @_;
@@ -626,7 +597,6 @@ return { state => $self->is_active() ? 2 : 0, capacity => $thin->{'lv_size'},
 
 # get_xml_description(self, [flags]) supplies metadata to Cloudmin's pool
 # readers. Synthetic thin-pool XML is never submitted to libvirt.
-
 sub get_xml_description
 {
 my ($self) = @_;
@@ -642,7 +612,6 @@ return '<pool type="lvmthin"><name>'.$escape->($self->get_name()).
 }
 
 # list_all_volumes(self, [flags]) excludes thin metadata and other destinations.
-
 sub list_all_volumes
 {
 my ($self) = @_;
@@ -654,7 +623,6 @@ return map { Cloudmin::LVM::Volume->new($self, $_) }
 
 # aligned_capacity(self, bytes) rounds ordinary disks to complete VG extents.
 # Thin volumes use sectors; their physical allocation follows the thin pool.
-
 sub aligned_capacity
 {
 my ($self, $bytes) = @_;
@@ -663,7 +631,6 @@ return int(($bytes + $unit - 1) / $unit) * $unit;
 }
 
 # create_volume(self, xml, [flags]) creates a raw LV without formatting any PV.
-
 sub create_volume
 {
 my ($self, $xml, $flags) = @_;
@@ -735,7 +702,6 @@ use IO::Handle ();
 use Errno qw(EOPNOTSUPP ENOTTY EINVAL);
 
 # new(class, pool, record) retains UUID identity independently of device paths.
-
 sub new
 {
 my ($class, $pool, $record) = @_;
@@ -744,7 +710,6 @@ return bless({ pool => $pool, name => $record->{'lv_name'}, uuid =>
 }
 
 # record(self, [refresh]) refuses deleted, renamed or replaced logical volumes.
-
 sub record
 {
 my ($self, $refresh) = @_;
@@ -757,14 +722,12 @@ return $record;
 }
 
 # get_name(self) returns the logical volume name.
-
 sub get_name
 {
 return $_[0]->{'name'};
 }
 
 # get_key(self) returns a persistent identity instead of a reusable device path.
-
 sub get_key
 {
 return 'lvm:'.$_[0]->{'pool'}->{'vg_uuid'}.':'.
@@ -772,7 +735,6 @@ return 'lvm:'.$_[0]->{'pool'}->{'vg_uuid'}.':'.
 }
 
 # get_path(self) returns the verified current block-device path.
-
 sub get_path
 {
 my ($self) = @_;
@@ -784,7 +746,6 @@ return Cloudmin::LVM::device_path($record->{'vg_name'}, $record->{'lv_name'});
 # caller must stop guest writes and journal the name before allocation.
 # journal(volume), when supplied, records the new UUID
 # before tagging/activation.
-
 sub snapshot
 {
 my ($self, $name, $journal) = @_;
@@ -832,7 +793,6 @@ return $snapshot;
 }
 
 # snapshot_health(self) rejects invalid or exhausted native restore points.
-
 sub snapshot_health
 {
 my ($self) = @_;
@@ -847,7 +807,6 @@ return 1;
 }
 
 # get_info(self) reports the LV's virtual capacity and physical allocation.
-
 sub get_info
 {
 my ($self) = @_;
@@ -866,7 +825,6 @@ return { type => 1, capacity => Cloudmin::LVM::capacity($record), allocation =>
 }
 
 # get_xml_description(self, [flags]) describes raw block storage for callers.
-
 sub get_xml_description
 {
 my ($self) = @_;
@@ -883,7 +841,6 @@ return '<volume type="block"><name>'.$escape->($self->get_name()).
 
 # write_file(self, path) copies validated raw bytes without parsing guest data.
 # Comparing each chunk avoids allocating empty thin regions or rewriting them.
-
 sub write_file
 {
 my ($self, $path) = @_;
@@ -956,7 +913,6 @@ $self->record(1);
 
 # resize(self, bytes, [flags]) grows an LV without touching
 # its guest filesystem.
-
 sub resize
 {
 my ($self, $bytes, $flags) = @_;
@@ -1011,7 +967,6 @@ if ($tag) {
 }
 
 # initialization_pending(self) returns an unfinished creation/growth marker.
-
 sub initialization_pending
 {
 my ($self) = @_;
@@ -1022,7 +977,6 @@ return $tags[0];
 }
 
 # zero_range(self, offset) erases new thick extents before guest access resumes.
-
 sub zero_range
 {
 my ($self, $offset) = @_;
@@ -1074,7 +1028,6 @@ $self->record(1);
 
 # delete(self, [flags]) removes only the UUID checked by the
 # caller's usage guard.
-
 sub delete
 {
 my ($self, $flags) = @_;

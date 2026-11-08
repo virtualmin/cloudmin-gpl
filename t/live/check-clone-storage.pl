@@ -18,14 +18,12 @@ my $name = 'cloudmin-clone-storage-'.$$;
 my ($pool, $owned, @volumes);
 
 # command(arguments...) runs a fixture tool without shell interpolation.
-
 sub command
 {
 system(@_) == 0 or die "Fixture command failed: $_[0]\n";
 }
 
 # info(path) reads only the generated fixture's qemu-img metadata.
-
 sub info
 {
 open(my $fh, '-|', 'qemu-img', 'info', '--output=json', $_[0]) or die $!;

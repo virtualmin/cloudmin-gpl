@@ -8,7 +8,6 @@ our ($remote_user, $module_var_directory);
 # prepare_submission(input) selects one attempt after checking saved job state.
 # Failed or cancelled jobs can retry after cleanup unless the virtual machine
 # was already created for software setup.
-
 sub prepare_submission
 {
 my ($input) = @_;

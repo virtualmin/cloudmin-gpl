@@ -188,28 +188,24 @@ is_deeply($audit[3],
 	# create/shutdown/reboot/set_autostart model successful libvirt
 	# operations. create(self, [flags]) models a successful
 	# start for audit capture.
-
 	sub create
 	{
 	return 1;
 	}
 
 	# shutdown(self, [flags]) models an accepted shutdown request.
-
 	sub shutdown
 	{
 	return 1;
 	}
 
 	# reboot(self, [flags]) models an accepted reboot request.
-
 	sub reboot
 	{
 	return 1;
 	}
 
 	# set_autostart(self, enabled) models a saved boot-policy change.
-
 	sub set_autostart
 	{
 	return 1;

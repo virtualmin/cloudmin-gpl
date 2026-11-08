@@ -4,7 +4,6 @@ our (%in, %text, $first_print, $second_print, $progress_callback_url);
 
 # submit_machine(operation) Validates a create, clone or capture form
 # and streams its job.
-
 sub submit_machine
 {
 my ($operation) = @_;
@@ -46,7 +45,6 @@ show_machine_progress({ job => $created->{'id'} });
 # show_machine_progress(input, [embedded]) streams the job named by input.job.
 # Optional input.from and input.vm_edit_tabs select validated return links.
 # embedded omits the page header and footer for a list of backup jobs.
-
 sub show_machine_progress
 {
 local %in = %{$_[0]};

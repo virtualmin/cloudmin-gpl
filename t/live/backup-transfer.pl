@@ -45,7 +45,6 @@ Cloudmin::BackupTransport::transfer('put', $target, $name, $file);
 Cloudmin::BackupTransport::transfer('get', $target, $name, "$dir/download");
 
 # checksum(path) streams a fixture file into a SHA-256 digest.
-
 sub checksum
 {
 open(my $f, '<', $_[0]) or

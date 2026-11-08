@@ -12,14 +12,12 @@ require(dirname(__FILE__).'/TPM.pm');
 our @ISA = ('Cloudmin::VMs');
 
 # manager(self) supplies managed-volume and domain validation.
-
 sub manager
 {
 return Cloudmin::VMManage->new(%{$_[0]});
 }
 
 # snapshots(self) supplies file and LVM snapshot validation and operations.
-
 sub snapshots
 {
 return Cloudmin::Snapshots->new(%{$_[0]});
@@ -27,7 +25,6 @@ return Cloudmin::Snapshots->new(%{$_[0]});
 
 # installed_edition(self, document) reads recorded setup, not the guest's name.
 # Offline inspection later checks what is actually installed on the copied disk.
-
 sub installed_edition
 {
 my ($self, $doc) = @_;
@@ -56,7 +53,6 @@ return '';
 # source(self, uuid, [copy_tpm]) validates storage before copying anything.
 # copy_tpm defaults to false; backups and image capture still reject TPMs.
 # Returns the adapter, domain, XML, disks, NVRAM path and optional TPM state.
-
 sub source
 {
 my ($self, $uuid, $copy_tpm) = @_;
@@ -127,7 +123,6 @@ return ( $adapter, $domain, $doc, $disks, $nvram, $tpm );
 }
 
 # choices(self, uuid) exposes source defaults without secure XML or disk paths.
-
 sub choices
 {
 my ($self, $uuid) = @_;
@@ -158,7 +153,6 @@ return { id => $uuid, name => $domain->get_name(), revision =>
 # disks. Prepared copies accept creation's access/network options; unchanged
 # copies retain guest settings except host ID and Pro
 # credentials, and stay stopped.
-
 sub prepare
 {
 my ($self, $input, $id, $hash) = @_;
@@ -310,7 +304,6 @@ return $r;
 }
 
 # checkpoint(self, id) observes cancellation between safe disk-operation steps.
-
 sub checkpoint
 {
 die "Virtual machine operation cancelled\n"
@@ -318,7 +311,6 @@ die "Virtual machine operation cancelled\n"
 }
 
 # set_text(document, xpath, value) updates a required scalar XML element.
-
 sub set_text
 {
 my ($doc, $xpath, $value) = @_;
@@ -330,7 +322,6 @@ $node->removeChildNodes(); $node->appendText($value);
 # domain_xml(request, id, volumes, [seed], [nvram]) rewrites host identities.
 # Inactive secure XML supplies hardware; runtime paths and
 # credentials are reset.
-
 sub domain_xml
 {
 my ($r, $id, $volumes, $seed, $nvram) = @_;
@@ -485,7 +476,6 @@ return $doc->toString();
 # quiesce_source(self, id, adapter, [prefix]) snapshots or stops the source.
 # prefix defaults to clone and distinguishes backup snapshot and overlay names.
 # Journal intent before libvirt so recovery can attempt to release the source.
-
 sub quiesce_source
 {
 my ($self, $id, $adapter, $prefix) = @_;
@@ -561,7 +551,6 @@ elsif ($source->is_active()) {
 # stable_volume(self, id, adapter, disk) Selects a native snapshot from the
 # journal. Stopped sources, read-only disks and file snapshot
 # bases keep their volume.
-
 sub stable_volume
 {
 my ($self, $id, $adapter, $disk) = @_;
@@ -587,7 +576,6 @@ return { %{$adapter->get_storage_volume_record($volume)}, pool =>
 
 # release_source(self, id, adapter) restores the source before finishing a job.
 # Reservations remain held until the job completes or cleanup succeeds.
-
 sub release_source
 {
 my ($self, $id, $adapter) = @_;
@@ -658,7 +646,6 @@ $self->{'jobs'}->update($id,
 
 # cleanup(self, id, adapter) restores the source, then
 # removes only owned copies.
-
 sub cleanup
 {
 my ($self, $id, $adapter) = @_;
@@ -689,7 +676,6 @@ $self->clean_work($id);
 }
 
 # clean_work(self, id) removes fixed staging filenames, never source files.
-
 sub clean_work
 {
 my ($self, $id) = @_;
@@ -703,7 +689,6 @@ rmdir($work) or die "Cannot remove clone staging directory\n" if (-d $work);
 
 # run(self, id) copies immutable source states and journals every allocation.
 # Interrupted jobs restore the source and roll back; they never repeat writes.
-
 sub run
 {
 my ($self, $id) = @_;

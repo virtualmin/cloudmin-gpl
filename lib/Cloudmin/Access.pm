@@ -7,7 +7,6 @@ use warnings;
 # new(class, acl, [readonly]) builds the effective permissions. Missing
 # administrator settings preserve access for existing module users. readonly
 # defaults to false; true blocks changes, consoles and terminals.
-
 sub new
 {
 my ($class, $acl, $readonly) = @_;
@@ -28,7 +27,6 @@ return bless { admin => !defined($acl->{'admin'}) || $acl->{'admin'} eq '1',
 # assignment. Read-only administrators can view host inventory but cannot make
 # changes. Delegated VM permissions require uuid;
 # administrators need no assignment.
-
 sub allows
 {
 my ($self, $action, $id) = @_;

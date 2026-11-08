@@ -116,7 +116,6 @@ rename("$file.saved", $file) or die $!;
 
 	# check_token(self, user, token) validates the
 	# fixture's signed requests.
-
 	sub check_token
 	{
 	die "Bad token\n" if (($_[2] || '') ne 'signed');
@@ -125,7 +124,6 @@ rename("$file.saved", $file) or die $!;
 $INC{'./server-manager-lib.pl'} = 1;
 
 # endpoint(method, fields) captures the real CGI response with isolated inputs.
-
 sub endpoint
 {
 my ($method, $fields) = @_;

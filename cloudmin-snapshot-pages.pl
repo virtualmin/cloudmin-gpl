@@ -12,7 +12,6 @@ our (%text, %config);
 
 # snapshot_url(uuid, [view], [snapshot]) Encodes native snapshot names,
 # including names created by other tools.
-
 sub snapshot_url
 {
 my ($uuid, $view, $snapshot) = @_;
@@ -23,7 +22,6 @@ return 'snapshots.cgi?id='.urlize($uuid).
 
 # snapshot_mode(snapshot) Shows whether the guest was stopped, prepared, or
 # explicitly left unprepared.
-
 sub snapshot_mode
 {
 my ($snapshot) = @_;
@@ -38,7 +36,6 @@ return ui_badge($text{'snapshots_mode_'.$mode} ||
 
 # snapshot_size(snapshot) Reports saved file allocation without implying that
 # deleting it frees this size.
-
 sub snapshot_size
 {
 my ($snapshot) = @_;
@@ -50,7 +47,6 @@ return defined($snapshot->{'allocation'})
 
 # snapshot_actions(snapshot, token, [unavailable], [from_all]) Opens the
 # standard review pages from either history or the host inventory.
-
 sub snapshot_actions
 {
 my ($snapshot, $token, $unavailable, $from_all) = @_;
@@ -82,7 +78,6 @@ return ui_cluster(\@actions, { class => 'cloudmin-snapshot-actions' });
 
 # snapshot_form(data, token, action, [snapshot]) Binds a standard submit form to
 # the rendered guest and history revision.
-
 sub snapshot_form
 {
 my ($data, $token, $action, $snapshot) = @_;
@@ -97,7 +92,6 @@ return ui_form_start('snapshots.cgi', 'post').ui_hidden('id',
 
 # show_snapshot_create(data, token, input) Keeps prepared snapshots live and
 # offers clean shutdown when the agent is absent.
-
 sub show_snapshot_create
 {
 my ($data, $token, $input) = @_;
@@ -172,7 +166,6 @@ return $html;
 
 # show_snapshot_review(data, token, snapshot, action, input) Destructive restore
 # and snapshot removal each have their own confirmation.
-
 sub show_snapshot_review
 {
 my ($data, $token, $snapshot, $action, $input) = @_;
@@ -217,7 +210,6 @@ return ui_confirmation_form('snapshots.cgi', $text{$key.'_confirm'},
 
 # show_snapshot_history(data, token) Shows chronological history, with explicit
 # ancestry for branches and restores.
-
 sub show_snapshot_history
 {
 my ($data, $token) = @_;
@@ -295,7 +287,6 @@ return ui_feed(\@events, { class => 'cloudmin-snapshot-feed' });
 
 # show_snapshots_overview(data, token) Combines host totals with direct review
 # actions for each saved snapshot.
-
 sub show_snapshots_overview
 {
 my ($data, $token) = @_;
@@ -360,7 +351,6 @@ return $html;
 
 # show_snapshots_page(data, token, input, [error]) Keeps host inventory, guest
 # history and action reviews in one navigable page.
-
 sub show_snapshots_page
 {
 my ($data, $token, $input, $error) = @_;

@@ -6,7 +6,6 @@ our %text;
 # show_vm_image_form(source, token, [preview]) renders the image capture form.
 # source contains the source revision, disk size and destination pool choices.
 # preview defaults to false; true disables capture and accepts an empty token.
-
 sub show_vm_image_form
 {
 my ($source, $token, $preview) = @_;

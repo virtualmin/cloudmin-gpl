@@ -64,7 +64,6 @@ my $storage =
 # run_cli(args, [override]) runs an argv array against fixture services. Returns
 # exit code, stdout, stderr and recorded API calls. override(action, input,
 # calls) optionally replaces fixture responses.
-
 sub run_cli
 {
 my ($args, $override) = @_;

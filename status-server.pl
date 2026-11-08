@@ -117,7 +117,6 @@ Sys::Virt::Event::register_default();
 Sys::Virt::Event::add_timeout(0, sub { });
 
 # authorized(session) checks live login and module grants, including revocation.
-
 sub authorized
 {
 return session_access($_[0]);
@@ -125,7 +124,6 @@ return session_access($_[0]);
 
 # authorize_client(client) refreshes identity, VM scope and action grants.
 # Returns false when the login or module access is no longer valid.
-
 sub authorize_client
 {
 my ($client) = @_;
@@ -153,7 +151,6 @@ return 1;
 }
 
 # collect_domain(domain) refreshes one changed VM without guest-agent requests.
-
 sub collect_domain
 {
 my ($domain) = @_;
@@ -169,7 +166,6 @@ $cache->record($record);
 
 # connect_libvirt() Subscribes before reading the inventory so startup
 # changes are retained.
-
 sub connect_libvirt
 {
 $adapter = get_libvirt(1);
@@ -208,7 +204,6 @@ $fault = undef;
 
 # refresh_jobs(now) recounts jobs when either store changes. Image jobs are
 # shared; VM job totals are kept separately for each owner.
-
 sub refresh_jobs
 {
 my ($now) = @_;
@@ -523,7 +518,6 @@ our @ISA = ('Net::WebSocket::Server::Connection');
 
 # send(self, type, [bytes]) Serializes frames and bounds each slow client's
 # queue. Omit bytes for control frames without a payload.
-
 sub send
 {
 my ($self, $type, $bytes) = @_;

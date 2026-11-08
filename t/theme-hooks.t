@@ -16,7 +16,6 @@ my $vm = { 'uuid' => '0f9c2b7e-3a1d-4c5e-9b8a-7d6e5f4c3b2a',
 	   'name' => 'web-01' };
 
 # capture(code) Returns everything the code prints.
-
 sub capture
 {
 my ($code) = @_;

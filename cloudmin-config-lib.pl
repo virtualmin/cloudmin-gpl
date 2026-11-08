@@ -4,14 +4,12 @@ use warnings;
 our %config;
 
 # virtualmin_enabled() checks whether new guests may install Virtualmin.
-
 sub virtualmin_enabled
 {
 return ($config{'virtualmin_enabled'} // '1') ne '0';
 }
 
 # statistics_enabled() returns the collection switch, enabled by default.
-
 sub statistics_enabled
 {
 return ($config{'statistics_enabled'} // '1') ne '0';
@@ -20,7 +18,6 @@ return ($config{'statistics_enabled'} // '1') ne '0';
 # view_fields(key) Returns field definitions for a column or section setting
 # named by key. Entries contain an ID, language key, optional sort
 # type and required flag.
-
 sub view_fields
 {
 my ($key) = @_;
@@ -104,7 +101,6 @@ return @{$fields{$key}};
 # retaining required columns. Omit value to read %config; explicit undef selects
 # the built-in defaults. Empty section selections close every section without
 # removing its controls.
-
 sub view_selection
 {
 my ($key, $value) = @_;
@@ -129,7 +125,6 @@ return grep { $wanted{$_->[0]} || $_->[3] } @fields;
 
 # section_open(key, section) Returns whether section starts expanded under the
 # named configuration key.
-
 sub section_open
 {
 my ($key, $section) = @_;
@@ -140,7 +135,6 @@ return scalar(grep { $_->[0] eq $section } view_selection($key)) ? 1 : 0;
 # pools contains active file-backed pools. saved is the preferred pool UUID;
 # omit it to read Module Configuration. Unavailable choices use the pool named
 # default, then the first offered pool. An empty list returns an empty string.
-
 sub image_import_pool
 {
 my ($pools, $saved) = @_;
@@ -156,7 +150,6 @@ return ($chosen || $default || $pools->[0] || { })->{'id'} || '';
 # heading, row and sort-type arrays for the selected columns. rows must use
 # view_fields() order. Set selection_column to preserve a leading checkbox cell;
 # it defaults to false. Without token, omit VM actions.
-
 sub table_columns
 {
 my ($key, $rows, $selection, $token) = @_;
@@ -178,7 +171,6 @@ return ( [ ($selection ? '' : ()), map { $text{$_->[1]} } @fields ],
 
 # number_setting(key) Returns the default, minimum and maximum for a numeric
 # setting named by key. The bridge confirmation timeout is measured in seconds.
-
 sub number_setting
 {
 my ($key) = @_;
@@ -203,7 +195,6 @@ return @{$settings{$key}};
 # config_number(key, [value]) Returns a valid saved number or the setting's
 # default. Omit value to read %config; explicit undef returns
 # the setting's default.
-
 sub config_number
 {
 my ($key, $value) = @_;

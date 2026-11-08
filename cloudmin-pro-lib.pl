@@ -4,7 +4,6 @@ use warnings;
 our (%config, %text, $module_root_directory);
 
 # show_pro_features() respects the administrator's advertising preference.
-
 sub show_pro_features
 {
 return ($config{'hide_pro_tips'} || 0) != 1;
@@ -13,7 +12,6 @@ return ($config{'hide_pro_tips'} || 0) != 1;
 # config_pre_load(info, [order]) checks saves and hides unused Pro advertising.
 # info maps keys to field definitions; order is an optional list of those keys.
 # Webmin calls this hook when displaying and saving configuration.
-
 sub config_pre_load
 {
 my ($info, $order) = @_;
@@ -34,7 +32,6 @@ delete($info->{'hide_pro_tips'});
 # pro_feature_badge(feature, [plain]) uses Virtualmin's inline lock and Pro
 # label. feature names the documentation anchor. plain defaults to false; true
 # omits the link so the badge can be placed inside another link.
-
 sub pro_feature_badge
 {
 my ($feature, $plain) = @_;
@@ -53,7 +50,6 @@ return ui_tag('span', '&nbsp;&nbsp;'.ui_tag('small', $label),
 # pro_feature_preview(html, [feature]) disables the supplied controls. feature
 # adds muted styling; omit it when controls are styled individually. The
 # fieldset keeps controls disabled when JavaScript changes individual flags.
-
 sub pro_feature_preview
 {
 my ($html, $feature) = @_;
@@ -66,7 +62,6 @@ return ui_tag('fieldset', $html, { disabled => undef,
 
 # pro_feature_tip(feature) explains a preview and links to its documentation.
 # feature selects both the translated description and documentation anchor.
-
 sub pro_feature_tip
 {
 my ($feature) = @_;

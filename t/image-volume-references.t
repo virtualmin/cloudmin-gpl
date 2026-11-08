@@ -11,7 +11,6 @@ use Cloudmin::Images;
 	package Sys::Virt::Error;
 
 	# code(self) returns the simulated libvirt failure code.
-
 	sub code
 	{
 	$_[0]->{'code'}
@@ -19,7 +18,6 @@ use Cloudmin::Images;
 	package ReferenceVolume;
 
 	# field(self, name) injects a failure at any point in volume inspection.
-
 	sub field
 	{
 	my ($self, $name) = @_;
@@ -30,28 +28,24 @@ use Cloudmin::Images;
 	}
 
 	# get_xml_description(self, flags) supplies the volume's backing chain.
-
 	sub get_xml_description
 	{
 	$_[0]->field('xml')
 	}
 
 	# get_key(self) supplies the stable volume key.
-
 	sub get_key
 	{
 	$_[0]->field('key')
 	}
 
 	# get_path(self) supplies the base directory for relative backing paths.
-
 	sub get_path
 	{
 	$_[0]->field('path')
 	}
 
 	# get_name(self) supplies the dependency's display name.
-
 	sub get_name
 	{
 	$_[0]->field('name')
@@ -59,14 +53,12 @@ use Cloudmin::Images;
 	package ReferencePool;
 
 	# is_active(self) keeps inactive pools out of refresh and enumeration.
-
 	sub is_active
 	{
 	!$_[0]->{'inactive'}
 	}
 
 	# refresh(self) expires stale cache entries or fails before inspection.
-
 	sub refresh
 	{
 	my ($self) = @_;
@@ -78,7 +70,6 @@ use Cloudmin::Images;
 
 	# list_all_volumes(self) returns the refreshed cache or
 	# an enumeration error.
-
 	sub list_all_volumes
 	{
 	die "Enumeration failed\n" if ($_[0]->{'list_error'});
@@ -88,7 +79,6 @@ use Cloudmin::Images;
 
 	# list_all_domains(self) isolates backing-volume
 	# references for these tests.
-
 	sub list_all_domains
 	{
 	()
@@ -96,7 +86,6 @@ use Cloudmin::Images;
 
 	# list_all_storage_pools(self) supplies active and
 	# inactive fixture pools.
-
 	sub list_all_storage_pools
 	{
 	@{$_[0]->{'pools'}}

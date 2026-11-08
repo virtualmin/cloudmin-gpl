@@ -18,7 +18,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package PasswordDomain;
 
 	# get_info(self) supplies current state without parsing guest XML.
-
 	sub get_info
 	{
 	return { state => $_[0]->{'state'} };
@@ -26,7 +25,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# get_guest_info(self, types, flags) models readiness
 	# changing after page load.
-
 	sub get_guest_info
 	{
 	# Exercise a failed probe as well as empty and malformed replies.
@@ -36,7 +34,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# set_user_password(self, username, password, flags)
 	# models the native call.
-
 	sub set_user_password
 	{
 	my ($self, @args) = @_;
@@ -48,14 +45,12 @@ require "$module_root_directory/cloudmin-lib.pl";
 	our @ISA = ('Cloudmin::Libvirt');
 
 	# find_domain(self, uuid) records that validation reached libvirt.
-
 	sub find_domain
 	{
 	$_[0]->{'lookups'}++; return $_[0]->{'domain'};
 	}
 
 	# get_domain(self, uuid, [skip_addresses]) returns public identity only.
-
 	sub get_domain
 	{
 	return { uuid => $_[1], name => 'fixture' };
@@ -63,7 +58,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package PasswordJobs;
 
 	# lock(self, resource, callback) requires the VM management lock name.
-
 	sub lock
 	{
 	die "Wrong lock"
@@ -72,14 +66,12 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# assert_guest_available(self, uuid) simulates a VM
 	# reserved by a pending job.
-
 	sub assert_guest_available
 	{
 	die "Guest is busy\n" if ($_[0]->{'busy'});
 	}
 
 	# submit(self, ...) must never retain password changes as jobs.
-
 	sub submit
 	{
 	die "Password reached job persistence";
@@ -87,7 +79,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package PasswordImages;
 
 	# check_token(self, user, token) accepts only the fixture's valid token.
-
 	sub check_token
 	{
 	die "Invalid token\n" if (($_[2] || '') ne 'valid');
@@ -123,7 +114,6 @@ my $secret = 'Secret with spaces and ünicode';
 
 # reset_account([fields]) submits a fresh request with optional field overrides.
 # fields defaults to {}; fresh input is needed because the API removes secrets.
-
 sub reset_account
 {
 my ($fields) = @_;

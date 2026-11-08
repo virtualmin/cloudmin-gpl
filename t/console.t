@@ -74,14 +74,12 @@ $readonly = 0;
 	package ConsoleDomain;
 
 	# new(class, fields) supplies the domain's active state and devices.
-
 	sub new
 	{
 	bless $_[1], $_[0]
 	}
 
 	# get_uuid_string(self) returns the fixture's UUID.
-
 	sub get_uuid_string
 	{
 	$_[0]->{'uuid'}
@@ -89,14 +87,12 @@ $readonly = 0;
 
 	# get_name(self) supplies a name that must not be
 	# accepted as a console ID.
-
 	sub get_name
 	{
 	'fixture'
 	}
 
 	# is_active(self) supplies the current power state.
-
 	sub is_active
 	{
 	$_[0]->{'active'}
@@ -104,7 +100,6 @@ $readonly = 0;
 
 	# get_xml_description(self, flags) Returns the fixture's graphics and
 	# serial device definitions.
-
 	sub get_xml_description
 	{
 	$_[0]->{'xml'}
@@ -112,7 +107,6 @@ $readonly = 0;
 
 	# open_graphics_fd(self, index, flags) records authorization
 	# and returns a socket.
-
 	sub open_graphics_fd
 	{
 	my ($self, @args) = @_;
@@ -123,7 +117,6 @@ $readonly = 0;
 	# open_console(self, stream, device, flags) records safe console
 	# attachment. A busy fixture rejects a second client so failure
 	# cleanup can be checked.
-
 	sub open_console
 	{
 	$_[0]->{'serial_args'} =
@@ -132,7 +125,6 @@ $readonly = 0;
 	package ConsoleConnection;
 
 	# list_all_domains(self, flags) supplies the available domains.
-
 	sub list_all_domains
 	{
 	$_[0]->{'domain'}
@@ -140,7 +132,6 @@ $readonly = 0;
 
 	# new_stream(self, flags) records the flags and
 	# supplies a fixture stream.
-
 	sub new_stream
 	{
 	$_[0]->{'stream_flags'} = $_[1]; return bless { },
@@ -149,7 +140,6 @@ $readonly = 0;
 	package ConsoleStream;
 
 	# abort(self) records release after failed attachment.
-
 	sub abort
 	{
 	$_[0]->{'aborted'}++;

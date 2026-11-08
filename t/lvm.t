@@ -18,7 +18,6 @@ my $groups =
 my @volumes;
 
 # volume(name, segment, [thin_pool]) builds metadata without touching host LVM.
-
 sub volume
 {
 my ($name, $segment, $thin) = @_;
@@ -57,14 +56,12 @@ my $driver = Cloudmin::LVM->new(readonly => 0, runner => sub {
 	package LVMPool;
 
 	# get_uuid_string(self) returns the native libvirt VG registration ID.
-
 	sub get_uuid_string
 	{
 	return $native_id;
 	}
 
 	# get_name(self) returns the registered pool's display name.
-
 	sub get_name
 	{
 	return 'storage';
@@ -72,28 +69,24 @@ my $driver = Cloudmin::LVM->new(readonly => 0, runner => sub {
 
 	# get_xml_description(self, [flags]) identifies the
 	# registered volume group.
-
 	sub get_xml_description
 	{
 	return '<pool type="logical"><name>storage</name><source><name>guests</name></source><target><path>/dev/guests</path></target></pool>';
 	}
 
 	# is_active(self) supplies a running fixture VG.
-
 	sub is_active
 	{
 	return 1;
 	}
 
 	# is_persistent(self) supplies a saved fixture registration.
-
 	sub is_persistent
 	{
 	return 1;
 	}
 
 	# get_autostart(self) supplies the fixture boot policy.
-
 	sub get_autostart
 	{
 	return 1;
@@ -101,7 +94,6 @@ my $driver = Cloudmin::LVM->new(readonly => 0, runner => sub {
 
 	# refresh(self) needs no host action; the driver
 	# reloads fixture metadata.
-
 	sub refresh
 	{
 	}
@@ -327,7 +319,6 @@ like($@, qr/raw disks/, 'format error is explicit');
 
 	# get_path(self) returns a harmless temporary file
 	# representing the layer.
-
 	sub get_path
 	{
 	$_[0]->{path}
@@ -335,7 +326,6 @@ like($@, qr/raw disks/, 'format error is explicit');
 
 	# get_xml_description(self, [flags]) supplies
 	# libvirt's backing metadata.
-
 	sub get_xml_description
 	{
 	my ($self) = @_;
@@ -349,21 +339,18 @@ like($@, qr/raw disks/, 'format error is explicit');
 	package ConversionPool;
 
 	# get_xml_description(self, [flags]) identifies file storage.
-
 	sub get_xml_description
 	{
 	'<pool type="dir"><target><path>/fixture</path></target></pool>'
 	}
 
 	# is_active(self) supplies readable managed storage.
-
 	sub is_active
 	{
 	1
 	}
 
 	# list_all_volumes(self) returns only the explicitly managed layers.
-
 	sub list_all_volumes
 	{
 	@{$_[0]->{volumes}}
@@ -371,7 +358,6 @@ like($@, qr/raw disks/, 'format error is explicit');
 	package ConversionConnection;
 
 	# list_all_storage_pools(self, [flags]) supplies the one fixture pool.
-
 	sub list_all_storage_pools
 	{
 	$_[0]->{pool}
@@ -414,28 +400,24 @@ like($@, qr/raw disks/, 'format error is explicit');
 	package AuxiliaryPool;
 
 	# get_uuid_string(self) returns the fixture pool ID.
-
 	sub get_uuid_string
 	{
 	$_[0]->{uuid}
 	}
 
 	# get_name(self) returns the fixture pool name.
-
 	sub get_name
 	{
 	$_[0]->{name}
 	}
 
 	# is_active(self) marks inactive fixtures ineligible.
-
 	sub is_active
 	{
 	!$_[0]->{inactive}
 	}
 
 	# get_xml_description(self, [flags]) identifies the fixture backend.
-
 	sub get_xml_description
 	{
 	'<pool type="'.($_[0]->{type} ||
@@ -445,7 +427,6 @@ like($@, qr/raw disks/, 'format error is explicit');
 
 	# list_all_storage_pools(self, [flags]) returns fixtures
 	# in an unsorted order.
-
 	sub list_all_storage_pools
 	{
 	@{$_[0]->{pools}}

@@ -92,7 +92,6 @@ is($unchanged->findvalue('/domain/devices/disk[readonly]/driver/@type'), 'raw',
 	package CloneSourceDomain;
 
 	# has_managed_save_image(self) models a source without saved RAM state.
-
 	sub has_managed_save_image
 	{
 	0
@@ -100,7 +99,6 @@ is($unchanged->findvalue('/domain/devices/disk[readonly]/driver/@type'), 'raw',
 
 	# list_all_checkpoints(self) supplies a source
 	# without backup checkpoints.
-
 	sub list_all_checkpoints
 	{
 	()
@@ -108,7 +106,6 @@ is($unchanged->findvalue('/domain/devices/disk[readonly]/driver/@type'), 'raw',
 
 	# get_state(self) supplies libvirt's shutoff state for
 	# hardware validation.
-
 	sub get_state
 	{
 	5
@@ -116,7 +113,6 @@ is($unchanged->findvalue('/domain/devices/disk[readonly]/driver/@type'), 'raw',
 
 	# is_active(self) keeps device validation
 	# independent of a running guest.
-
 	sub is_active
 	{
 	0

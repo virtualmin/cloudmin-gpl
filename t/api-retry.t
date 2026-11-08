@@ -17,7 +17,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# check_token(self, owner, token) Accepts only this
 	# fixture's submitted token.
-
 	sub check_token
 	{
 	die 'Bad token' if ($_[2] ne 'fixture-token');
@@ -26,7 +25,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# get(self, id, owner) Models an already completed
 	# creation owned by this user.
-
 	sub get
 	{
 	return { id => $_[1], owner => $_[2], state => 'complete',
@@ -108,7 +106,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package KeySettingJobs;
 
 	# get(self, id, owner) models a fresh request with no previous job.
-
 	sub get
 	{
 	return undef;
@@ -116,7 +113,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# submit(self, id, owner, resource, request) retains
 	# normalized settings.
-
 	sub submit
 	{
 	return { id => $_[1], state => 'queued',
@@ -125,14 +121,12 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# delete_credential(self, id, owner) needs no disk
 	# state in this fixture.
-
 	sub delete_credential
 	{
 	}
 
 	# spawn(self, id, callback) prevents creation of a
 	# real background process.
-
 	sub spawn
 	{
 	}
@@ -140,7 +134,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# prepare(self, input, [options], [hash]) Supplies validated fixture
 	# settings while preserving the installation mode.
-
 	sub prepare
 	{
 	return { name => 'fixture', image => 'a' x 32, install_source =>
@@ -219,7 +212,6 @@ is(get_vm_password_hash(undef,
 
 	# get(self, id, owner) returns the job captured
 	# before the encoder change.
-
 	sub get
 	{
 	return $_[0]->{'saved'};
@@ -227,7 +219,6 @@ is(get_vm_password_hash(undef,
 
 	# lock(self, resource, callback) needs no disk lock
 	# for this saved fixture.
-
 	sub lock
 	{
 	return $_[2]->();

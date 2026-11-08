@@ -100,7 +100,6 @@ is(system('sh', '-n', "$tmp/cloudmin"), 0, 'wrapper shell syntax');
 
 # Site pages: an overview plus one grouped page per command, stable on rerun.
 # read_page(path) returns a generated page's text.
-
 sub read_page
 {
 open(my $fh, '<', $_[0]) || die "$_[0]: $!"; local $/; my $text =

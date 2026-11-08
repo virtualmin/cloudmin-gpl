@@ -45,7 +45,6 @@ my $guest = { uuid => $uuid, name => '<guest>', active => 1, state => 'running',
 
 	# get_domain(self, id, skip_addresses) records the
 	# lookup and returns a VM.
-
 	sub get_domain
 	{
 	push(@{$_[0]->{'calls'}}, [ 'lookup', $_[1], $_[2] ]);
@@ -54,14 +53,12 @@ my $guest = { uuid => $uuid, name => '<guest>', active => 1, state => 'running',
 	package ConsolePageJobs;
 
 	# form_token(self, user) supplies a token without a writable job store.
-
 	sub form_token
 	{
 	'signed-token'
 	}
 
 	# check_token(self, user, token) refuses invalid Connect submissions.
-
 	sub check_token
 	{
 	die "Invalid token\n"
@@ -70,7 +67,6 @@ my $guest = { uuid => $uuid, name => '<guest>', active => 1, state => 'running',
 
 	# get(self, id) returns the creation record used by
 	# registration retries.
-
 	sub get
 	{
 	$_[0]->{'job'}
@@ -78,7 +74,6 @@ my $guest = { uuid => $uuid, name => '<guest>', active => 1, state => 'running',
 
 	# assert_guest_available(self, uuid) leaves the fixture
 	# available for retry.
-
 	sub assert_guest_available
 	{
 	1
@@ -86,7 +81,6 @@ my $guest = { uuid => $uuid, name => '<guest>', active => 1, state => 'running',
 
 	# update(self, id, callback) applies a retry result to
 	# the same saved record.
-
 	sub update
 	{
 	$_[2]->($_[0]->{'job'}); return $_[0]->{'job'};
@@ -97,7 +91,6 @@ my $guest = { uuid => $uuid, name => '<guest>', active => 1, state => 'running',
 # Defaults allow terminal and console access to a running guest. Options select
 # the user, guest, request method, navigation mode, settings or status endpoint,
 # and can inject launch or tab-preference failures.
-
 sub render
 {
 my ($fields, $grants, $options) = @_;
@@ -121,7 +114,6 @@ local *main::PrintHeader = sub { print "Content-Type: text/html\n\n"; };
 local *main::error = sub { die "$_[0]\n"; };
 
 # error_html(message) escapes non-license errors in this CGI fixture.
-
 sub error_html
 {
 return html_escape($_[0]);
@@ -270,7 +262,6 @@ return { html => $output || '', error => $@, calls => \@calls, footer =>
 
 # submit_fields(html, button) parses a rendered form as Webmin receives it.
 # Include the action query as well as hidden fields to catch duplicate values.
-
 sub submit_fields
 {
 my ($html, $button) = @_;

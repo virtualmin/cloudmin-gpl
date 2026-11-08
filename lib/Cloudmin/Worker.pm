@@ -31,7 +31,6 @@ my $RESERVE_BYTES = 256 * 1024**2;
 
 # byte_limit(value) Accepts positive byte budgets representable exactly in
 # controller and UI JSON.
-
 sub byte_limit
 {
 my ($value) = @_;
@@ -42,7 +41,6 @@ return 0 + $value;
 
 # new(class) Creates a runner without touching the host during
 # ordinary page rendering.
-
 sub new
 {
 return bless({ }, $_[0]);
@@ -50,7 +48,6 @@ return bless({ }, $_[0]);
 
 # generate_id() Allocates a private task identifier
 # independent of all user input.
-
 sub generate_id
 {
 open(my $fh, '<', '/dev/urandom') || die "Cannot allocate image worker\n";
@@ -59,7 +56,6 @@ return unpack('H*', $bytes);
 }
 
 # path(id) Checks a task ID's format before deriving its private directory path.
-
 sub path
 {
 my ($id) = @_;
@@ -70,7 +66,6 @@ return "$ROOT/$id";
 
 # private_root() Requires root-owned, private parents before
 # preparing input for a worker.
-
 sub private_root
 {
 # The isolation policy depends on Linux service and namespace support.
@@ -94,7 +89,6 @@ for my $path ( '/var/lib/private', $ROOT ) {
 # command(self, task, id, [limit]) Builds a fixed sandbox policy. Requests
 # cannot choose users or unit properties. limit is the controller's byte budget,
 # defaulting to 16 MiB.
-
 sub command
 {
 my ($self, $task, $id, $limit) = @_;
@@ -180,7 +174,6 @@ return ( '/usr/bin/systemd-run', '--quiet', '--wait', '--collect',
 
 # kernel_release() Uses the host kernel identity, never a guest image
 # or request parameter.
-
 sub kernel_release
 {
 my $release = (POSIX::uname())[2];
@@ -192,7 +185,6 @@ return $release;
 
 # stage_kernel(directory) Gives the temporary worker its own kernel without
 # changing host permissions.
-
 sub stage_kernel
 {
 my ($work) = @_;
@@ -213,7 +205,6 @@ copy_file($source, "$work/appliance-kernel");
 
 # write_data(path, data) Creates input files privately before systemd gives this
 # directory to the worker.
-
 sub write_data
 {
 my ($path, $data) = @_;
@@ -227,7 +218,6 @@ print($fh $data) && close($fh) || die "Cannot write worker input: $!\n";
 # bytes without parsing disk formats. Regular files use reflinks/sparse copying;
 # LVs become private sparse files. limit optionally bounds inputs or outputs to
 # their controller-issued budget.
-
 sub copy_file
 {
 my ($source, $destination, $limit) = @_;
@@ -256,7 +246,6 @@ chmod(0600, $destination) || die "Cannot protect worker input\n";
 
 # free_space(directory) Reads filesystem capacity without loading Webmin
 # configuration or parsing a disk.
-
 sub free_space
 {
 open(my $fh, '-|', '/usr/bin/stat', '-f', '-c', '%a:%S', '--', $_[0]) ||
@@ -278,7 +267,6 @@ return $blocks * $size;
 # paths. started(id) journals the task; progress(event) can abort it by
 # throwing. consume(path, result) reads claimed conversion output
 # after the worker stops.
-
 sub run
 {
 my ($self, $task, $request, %opts) = @_;
@@ -403,7 +391,6 @@ return $result;
 # launch(self, task, id, [progress], [limit]) Reads bounded events from
 # preopened files, without passing Webmin pipes over D-Bus. limit supplies the
 # controller's file budget to the service policy.
-
 sub launch
 {
 my ($self, $task, $id, $progress, $limit) = @_;
@@ -576,7 +563,6 @@ return $result;
 
 # stop(self, id) Stops only this generated unit and confirms it has stopped
 # before callers read its output.
-
 sub stop
 {
 my ($self, $id) = @_;
@@ -601,7 +587,6 @@ die "Cannot stop image worker service\n"
 # claim(self, source, destination, [limit]) Rejects links and non-regular files
 # before moving output to the private store. limit defaults to the 16 MiB budget
 # for small provisioning tasks.
-
 sub claim
 {
 my ($self, $source, $destination, $limit) = @_;
@@ -625,7 +610,6 @@ chown(0, 0, $destination) && chmod(0600, $destination) ||
 
 # cleanup(self, id) Stops a surviving task and removes its private state
 # without following links.
-
 sub cleanup
 {
 my ($self, $id) = @_;
@@ -648,7 +632,6 @@ unlink("$ROOT/$id.lease") || die "Cannot remove worker lease\n"
 
 # cleanup_stale(self) Reclaims interrupted tasks after their maximum lifetime,
 # using root-owned leases.
-
 sub cleanup_stale
 {
 my ($self) = @_;

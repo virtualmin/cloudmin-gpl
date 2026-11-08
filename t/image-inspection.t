@@ -10,7 +10,6 @@ require "$Bin/../lib/Cloudmin/ImageInspector.pm";
 
 	# new(class, [overrides]) Models the guest files and
 	# inspection API in use.
-
 	sub new
 	{
 	return bless({ roots => [ '/dev/root' ], arch => 'aarch64',
@@ -21,7 +20,6 @@ require "$Bin/../lib/Cloudmin/ImageInspector.pm";
 	}
 
 	# inspect_os(self) - Returns discovered operating-system roots.
-
 	sub inspect_os
 	{
 	return @{$_[0]->{'roots'}};
@@ -29,14 +27,12 @@ require "$Bin/../lib/Cloudmin/ImageInspector.pm";
 
 	# inspect_get_type(self, root) Returns the detected
 	# operating-system family.
-
 	sub inspect_get_type
 	{
 	return $_[0]->{'type'};
 	}
 
 	# inspect_get_arch(self, root) - Returns the detected CPU architecture.
-
 	sub inspect_get_arch
 	{
 	return $_[0]->{'arch'};
@@ -44,7 +40,6 @@ require "$Bin/../lib/Cloudmin/ImageInspector.pm";
 
 	# inspect_get_mountpoints(self, root) Includes a
 	# separate /usr filesystem.
-
 	sub inspect_get_mountpoints
 	{
 	return ( '/usr' => '/dev/usr',
@@ -53,14 +48,12 @@ require "$Bin/../lib/Cloudmin/ImageInspector.pm";
 
 	# mount_ro(self, device, path) Records mount order
 	# without mounting anything.
-
 	sub mount_ro
 	{
 	push(@{$_[0]->{'mounts'}}, $_[2]);
 	}
 
 	# exists(self, path) - Reports fixture files, including disable markers.
-
 	sub exists
 	{
 	return exists($_[0]->{'files'}->{$_[1]});
@@ -68,21 +61,18 @@ require "$Bin/../lib/Cloudmin/ImageInspector.pm";
 
 	# is_file(self, path, options) Follows the fixture's
 	# known regular files.
-
 	sub is_file
 	{
 	return exists($_[0]->{'files'}->{$_[1]});
 	}
 
 	# is_symlink(self, path) - Reports masked fixture services.
-
 	sub is_symlink
 	{
 	return exists($_[0]->{'links'}->{$_[1]});
 	}
 
 	# readlink(self, path) - Returns the fixture symlink target.
-
 	sub readlink
 	{
 	return $_[0]->{'links'}->{$_[1]};
@@ -90,7 +80,6 @@ require "$Bin/../lib/Cloudmin/ImageInspector.pm";
 
 	# glob_expand(self, pattern) Supplies cloud.cfg.d
 	# configuration fragments.
-
 	sub glob_expand
 	{
 	return grep { m{^/etc/cloud/cloud\.cfg\.d/.*\.cfg$} }
@@ -98,14 +87,12 @@ require "$Bin/../lib/Cloudmin/ImageInspector.pm";
 	}
 
 	# filesize(self, path) - Bounds guest configuration reads.
-
 	sub filesize
 	{
 	return length($_[0]->{'files'}->{$_[1]});
 	}
 
 	# read_file(self, path) - Returns fixture configuration bytes.
-
 	sub read_file
 	{
 	return $_[0]->{'files'}->{$_[1]};
@@ -178,7 +165,6 @@ SKIP: {
 	our ($failure, $closed, $backend, $force_kvm);
 
 	# new(class) provides an appliance handle without starting QEMU.
-
 	sub new
 	{
 	bless { }, shift
@@ -186,7 +172,6 @@ SKIP: {
 
 	# set_backend(self, backend) Records which launch
 	# backend inspection selects.
-
 	sub set_backend
 	{
 	$backend = $_[1]
@@ -194,7 +179,6 @@ SKIP: {
 
 	# set_backend_setting(self, name, value) Records the
 	# KVM-only requirement.
-
 	sub set_backend_setting
 	{
 	$force_kvm = "$_[1]=$_[2]"
@@ -202,35 +186,30 @@ SKIP: {
 
 	# set_network(self, enabled) Accepts policy without
 	# creating a guest network.
-
 	sub set_network
 	{
 	}
 
 	# set_trace(self, enabled) Accepts the diagnostic
 	# setting without output.
-
 	sub set_trace
 	{
 	}
 
 	# set_verbose(self, enabled) Accepts the diagnostic
 	# setting without output.
-
 	sub set_verbose
 	{
 	}
 
 	# add_drive_opts(self, path, options...) Avoids
 	# opening a real guest disk.
-
 	sub add_drive_opts
 	{
 	}
 
 	# launch(self) models a successful boot or the
 	# selected appliance failure.
-
 	sub launch
 	{
 	die $failure if $failure
@@ -238,7 +217,6 @@ SKIP: {
 
 	# close(self) Counts cleanup after successful and
 	# failed appliance launches.
-
 	sub close
 	{
 	$closed++

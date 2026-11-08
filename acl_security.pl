@@ -5,7 +5,6 @@ our (%in, %text);
 
 # acl_security_noconfig() hides Webmin's separate module-configuration checkbox.
 # The save hook derives noconfig from the host administrator role instead.
-
 sub acl_security_noconfig
 {
 return 1;
@@ -13,7 +12,6 @@ return 1;
 
 # acl_security_form(options) displays host access, VM assignments and grants.
 # options contains the user's or group's current module ACL.
-
 sub acl_security_form
 {
 my ($o) = @_;
@@ -46,7 +44,6 @@ foreach my $grant (qw(power force console terminal password)) {
 
 # acl_security_save(options) validates grants and VM UUIDs from Webmin's %in.
 # Updates options in place; Webmin saves it after this returns.
-
 sub acl_security_save
 {
 my ($o) = @_;

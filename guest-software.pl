@@ -27,14 +27,12 @@ my %STEPS = map { $_ => 1 } qw(before packages download install after);
 my %STAGES = ( %STEPS, map { $_ => 1 } qw(queued complete failed cancelled) );
 
 # fail(reason) carries only a fixed prerequisite code to the public protocol.
-
 sub fail
 {
 die bless({ reason => $_[0] }, 'Cloudmin::GuestSoftware::Error');
 }
 
 # read_file(path) reads private configuration or saved state as bytes.
-
 sub read_file
 {
 open(my $fh, '<', $_[0]) || die "Cannot read setup file: $!\n";
@@ -46,7 +44,6 @@ return $value;
 }
 
 # write_file(path, contents) writes private inputs and scripts without a shell.
-
 sub write_file
 {
 open(my $fh, '>', $_[0]) || die "Cannot write setup file: $!\n";
@@ -56,14 +53,12 @@ close($fh) || die "Cannot close setup file: $!\n";
 }
 
 # remove_file(path) allows repeated cleanup but retains other filesystem errors.
-
 sub remove_file
 {
 unlink($_[0]) || $! == ENOENT || die "Cannot remove setup file: $!\n";
 }
 
 # save(name, value) commits private state before acknowledging work over SSH.
-
 sub save
 {
 my ($name, $value) = @_;
@@ -81,7 +76,6 @@ close($directory);
 }
 
 # status() exposes only known stages and a known failed step.
-
 sub status
 {
 # No journal means the first SSH request has not been accepted yet.
@@ -97,7 +91,6 @@ return $result;
 }
 
 # report(value) writes one status line, never installer output or credentials.
-
 sub report
 {
 print encode_json($_[0]), "\n" or die "Setup monitor disconnected\n";
@@ -106,7 +99,6 @@ STDOUT->flush;
 
 # executable(name) locates guest tools without interpreting
 # their names as shell.
-
 sub executable
 {
 # Ignore empty PATH entries so tools never resolve from the working directory.
@@ -118,7 +110,6 @@ return undef;
 
 # spawn(command, [config]) starts a child with closed stdin and captured output.
 # Setup commands receive their guest context; control commands discard stderr.
-
 sub spawn
 {
 my ($command, $config) = @_;
@@ -153,7 +144,6 @@ return ( $pid, $output );
 # command(arguments, [timeout]) bounds control commands and their captured
 # output. Returns the exit status and output. timeout defaults to 30 seconds and
 # raises a typed, private error when exceeded.
-
 sub command
 {
 my ($args, $timeout) = @_;
@@ -188,7 +178,6 @@ return ( $code, $text );
 }
 
 # agent_policy(text) permits public identity reads, preserving other RPC rules.
-
 sub agent_policy
 {
 my ($text) = @_;
@@ -217,7 +206,6 @@ return join('', @lines);
 }
 
 # service_unit(names...) finds an installed unit or a loaded template instance.
-
 sub service_unit
 {
 foreach my $name (@_) {
@@ -247,7 +235,6 @@ return undef;
 
 # prepare(config) publishes only the public SSH identity
 # after initial SSH setup.
-
 sub prepare
 {
 my ($config) = @_;
@@ -300,7 +287,6 @@ die "Cannot restart the guest agent service\n" if ($restarted);
 
 # redirect_url(url, location, authenticated) requires HTTPS redirects.
 # Authenticated downloads must also remain on the same host and port.
-
 sub redirect_url
 {
 my ($url, $location, $authenticated) = @_;
@@ -318,7 +304,6 @@ return $after->as_string;
 }
 
 # download(url, headers, post) fetches a bounded installer over verified HTTPS.
-
 sub download
 {
 my ($url, $headers, $post) = @_;
@@ -367,7 +352,6 @@ return $contents;
 }
 
 # arguments(config) uses the official installer's supported flags.
-
 sub arguments
 {
 my ($config) = @_;
@@ -391,7 +375,6 @@ return \@args;
 
 # redact(input, output, secrets) bounds logs and masks
 # secrets across read chunks.
-
 sub redact
 {
 my ($input, $output, $secrets) = @_;
@@ -437,7 +420,6 @@ while (1) {
 }
 
 # package_commands(names) rejects options and shell syntax in package names.
-
 sub package_commands
 {
 my @packages = split(' ', $_[0] || '');
@@ -460,7 +442,6 @@ die "No supported package manager (apt-get, dnf or zypper)\n";
 
 # execute(arguments, log, secrets, config) runs one
 # noninteractive setup command.
-
 sub execute
 {
 my ($args, $log, $secrets, $config) = @_;
@@ -479,7 +460,6 @@ die "Guest command failed\n" if ($code);
 # script(config, name, log, secrets) calls the Pro guest script helper. name
 # selects a script in config; log is the output handle and secrets lists values
 # to redact. The helper runs inside the guest alongside this file.
-
 sub script
 {
 my $helper = dirname(__FILE__).'/guest-scripts.pl';
@@ -491,7 +471,6 @@ goto &run_custom_script;
 }
 
 # cleanup() removes temporary credential and executable copies after setup.
-
 sub cleanup
 {
 remove_file(
@@ -499,7 +478,6 @@ remove_file(
 }
 
 # install(config) never replays saved running, completed or failed work.
-
 sub install
 {
 my ($config) = @_;
@@ -512,7 +490,6 @@ provision($config);
 
 # provision(config) journals each step and stops the
 # sequence on its first error.
-
 sub provision
 {
 my ($config) = @_;
@@ -612,7 +589,6 @@ cleanup();
 }
 
 # cancel() stops the service before marking the journal as cancelled.
-
 sub cancel
 {
 open(my $lock, '>', "$DIRECTORY/submit.lock") ||
@@ -633,7 +609,6 @@ report(status());
 }
 
 # watch(config) accepts one private request and follows its persistent journal.
-
 sub watch
 {
 my ($config) = @_;
@@ -739,7 +714,6 @@ die "Installation monitoring timed out\n";
 }
 
 # main() permits root cloud-init preparation, the service and verified watcher.
-
 sub main
 {
 # This helper is invoked only by cloud-init, its root service or sudo over SSH.

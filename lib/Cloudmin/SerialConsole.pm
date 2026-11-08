@@ -13,7 +13,6 @@ use Errno qw(EAGAIN EWOULDBLOCK EINTR);
 # default event loop before opening the stream. An optional history_reader
 # supplies both the replay and subsequent log output; without one, output comes
 # directly from the PTY.
-
 sub new
 {
 my ($class, $adapter, $stream, $history) = @_;
@@ -56,14 +55,12 @@ return $self;
 }
 
 # handle(self) returns the only descriptor given to the unprivileged relay.
-
 sub handle
 {
 return $_[0]->{'handle'};
 }
 
 # update(self) enables writes only while bytes are queued and bounds memory.
-
 sub update
 {
 my ($self) = @_;
@@ -81,7 +78,6 @@ $self->{'stream'}->update_callback(
 
 # socket_ready(self, events) transfers raw bytes to/from the relay's socket.
 # events is libvirt's readable/writable/error/hangup bitmask (1/2/4/8).
-
 sub socket_ready
 {
 my ($self, $events) = @_;
@@ -125,7 +121,6 @@ $self->{'error'} ||= $@ if (!$ok);
 
 # stream_ready(self, events) transfers bytes without interpreting guest output.
 # events uses the same readiness bits as socket_ready().
-
 sub stream_ready
 {
 my ($self, $events) = @_;
@@ -163,7 +158,6 @@ $self->{'error'} ||= $@ if (!$ok);
 }
 
 # pump(self) advances serial I/O once, waiting at most 100 ms when idle.
-
 sub pump
 {
 my ($self) = @_;
@@ -178,7 +172,6 @@ die $self->{'error'} if ($self->{'error'});
 
 # close(self) releases event callbacks, descriptors and the exclusive stream. It
 # is safe to call after partial startup or more than once.
-
 sub close
 {
 my ($self) = @_;

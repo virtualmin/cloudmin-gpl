@@ -28,7 +28,6 @@ if (!$offline && ($^O ne 'linux' || $< != 0)) {
 my $loaded;
 
 # bootstrap() loads the same root identity and module context as api.pl.
-
 sub bootstrap
 {
 # Initialize the module only once per invocation.

@@ -223,7 +223,6 @@ SKIP: {
 
 	# status(self, [refresh], [force]) keeps all requests
 	# in the expired state.
-
 	sub status
 	{
 	return { state => 'expired', allowed => 0 }
@@ -231,7 +230,6 @@ SKIP: {
 
 	# check_token(self, user, token) models the signed
 	# form-token requirement.
-
 	sub check_token
 	{
 	die "Bad token\n"
@@ -447,21 +445,18 @@ like($@, qr/Bad token/, 'blocked license does not bypass CSRF');
 
 	# lock(self, name, callback) runs the fixture callback
 	# without a real lock.
-
 	sub lock
 	{
 	$_[2]->()
 	}
 
 	# assert_guest_available(self, uuid) models an unreserved fixture guest.
-
 	sub assert_guest_available
 	{
 	}
 
 	# submit(self, id, [owner], [resource], [request]) models
 	# admission and storage.
-
 	sub submit
 	{
 	$_[0]->{'admit'}->()
@@ -470,7 +465,6 @@ like($@, qr/Bad token/, 'blocked license does not bypass CSRF');
 	}
 
 	# get(self, id) returns the job shared with the fake backup worker.
-
 	sub get
 	{
 	$_[0]->{'records'}->{$_[1]}
@@ -478,7 +472,6 @@ like($@, qr/Bad token/, 'blocked license does not bypass CSRF');
 	package LicenseScheduleBackup;
 
 	# prepare(self, input, id) avoids accessing guest disks in the fixture.
-
 	sub prepare
 	{
 	{ }
@@ -486,7 +479,6 @@ like($@, qr/Bad token/, 'blocked license does not bypass CSRF');
 
 	# run(self, id) marks the submitted backup complete
 	# without host changes.
-
 	sub run
 	{
 	$_[0]->{'records'}->{$_[1]}->{'state'} = 'complete'

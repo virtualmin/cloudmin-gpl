@@ -19,7 +19,6 @@ my $RESERVE_BYTES = 256 * 1024**2;
 
 # import_limit_bytes([gib]) Converts the administrator's whole-GiB setting;
 # absent or zero uses space.
-
 sub import_limit_bytes
 {
 my ($gib) = @_;
@@ -39,7 +38,6 @@ return $gib * 1024**3;
 # pool_lock(uuid, callback, creating) coordinates reservations and deletion with
 # pool lifecycle changes; creating requests an active-pool recheck. max_bytes
 # optionally caps image files; zero or absent uses available space.
-
 sub new
 {
 my ($class, %opts) = @_;
@@ -54,7 +52,6 @@ return bless({ %opts, uri => $opts{'uri'} || 'qemu:///system' }, $class);
 # with_lock(self, file, nodiff, callback) Releases Webmin locks even when an
 # operation returns early or throws an error. nodiff suppresses file-content
 # logging; callback() returns the result.
-
 sub with_lock
 {
 my ($self, $file, $nodiff, $code) = @_;
@@ -71,7 +68,6 @@ return $result;
 
 # log_action(self, action, job, [error]) Flushes metadata diffs with the action;
 # never passes form tokens or disk data.
-
 sub log_action
 {
 my ($self, $action, $job, $error) = @_;
@@ -85,7 +81,6 @@ $self->{'log'}->($action, 'image', $job->{'id'}, {
 # with_job_lock(self, id, action, callback) Skips busy jobs, locks their
 # metadata and staging data, and logs after unlock. callback(job) receives the
 # record read under the lock.
-
 sub with_job_lock
 {
 my ($self, $id, $action, $code) = @_;
@@ -115,7 +110,6 @@ return $result;
 
 # generate_id() Returns an unpredictable identifier for form
 # tokens and private files.
-
 sub generate_id
 {
 open(my $fh, '<', '/dev/urandom') || die "Cannot open random source: $!\n";
@@ -126,7 +120,6 @@ return unpack('H*', $bytes);
 
 # key(self) Loads or creates the module-local CSRF signing
 # key under a file lock.
-
 sub key
 {
 my ($self) = @_;
@@ -147,7 +140,6 @@ return $self->with_lock($file, 1, sub {
 
 # form_token(self, owner) Signs a one-day form token, also used to make double
 # submissions idempotent.
-
 sub form_token
 {
 my ($self, $owner) = @_;
@@ -157,7 +149,6 @@ return $value.'.'.hmac_sha256_hex("$owner:$value", $self->key());
 
 # check_token(self, owner, token) Requires a token issued to this authenticated
 # Webmin user within one day.
-
 sub check_token
 {
 my ($self, $owner, $token) = @_;
@@ -172,7 +163,6 @@ die "This form has expired. Reload the page and try again.\n"
 
 # path(self, id, suffix) Validates the job ID; suffix is a fixed extension
 # supplied by internal callers.
-
 sub path
 {
 my ($self, $id, $suffix) = @_;
@@ -182,7 +172,6 @@ return "$self->{directory}/$id.$suffix";
 
 # save(self, id, record) Atomically replaces the status file so readers
 # never see partial JSON.
-
 sub save
 {
 my ($self, $id, $record) = @_;
@@ -192,7 +181,6 @@ write_private_file($self->path($id, 'json'), convert_to_json($record, 0, 1));
 
 # write_private_file(file, data) Uses Webmin's atomic writer with private
 # permissions and catchable errors.
-
 sub write_private_file
 {
 my ($file, $data) = @_;
@@ -208,7 +196,6 @@ die $error if (!$ok);
 
 # get(self, id, [owner]) Reads a job, optionally restricting access to its
 # initiating Webmin user.
-
 sub get
 {
 my ($self, $id, $owner) = @_;
@@ -224,7 +211,6 @@ return $job;
 # list(self, [owner], [active_only], [strict]) Returns jobs newest first,
 # optionally filtering by owner and working imports. Strict reads refuse
 # incomplete ownership information before storage deletion.
-
 sub list
 {
 my ($self, $owner, $active, $strict) = @_;
@@ -254,7 +240,6 @@ return [ sort { $b->{'created'} <=> $a->{'created'} } @jobs ];
 
 # staging_limit(self) Reserves space on the actual staging filesystem, not
 # only the target pool.
-
 sub staging_limit
 {
 my ($self) = @_;
@@ -271,7 +256,6 @@ return $maximum && $maximum < $limit ? $maximum : $limit;
 
 # import_pool(self, uuid, [connection]) Rechecks the current destination before
 # accepting or processing image data.
-
 sub import_pool
 {
 my ($self, $uuid, $conn) = @_;
@@ -288,7 +272,6 @@ return $pool;
 
 # pool_limit(pool) Leaves a filesystem reserve and rejects unknown
 # destination capacity.
-
 sub pool_limit
 {
 my ($pool) = @_;
@@ -302,7 +285,6 @@ return $available - $RESERVE_BYTES;
 
 # validate_url(url) Accepts HTTPS downloads only, without embedded
 # credentials or control bytes.
-
 sub validate_url
 {
 my ($url) = @_;
@@ -315,7 +297,6 @@ return $url;
 }
 
 # catalogue_request(image, pool) copies validated image metadata for an import.
-
 sub catalogue_request
 {
 my ($image, $pool) = @_;
@@ -332,7 +313,6 @@ return { source => 'download', pool => $pool->{'id'}, pool_name =>
 
 # matches_download(job, request) compares assets without trusting display names.
 # The destination pool is checked separately when joining an unfinished import.
-
 sub matches_download
 {
 my ($job, $request) = @_;
@@ -351,7 +331,6 @@ return 1;
 # validated import once. Repeated submission returns the same job. selection
 # distinguishes images submitted together with one form token. attempt permits a
 # fresh submission while preserving the signed token.
-
 sub create
 {
 my ($self, $owner, $token, $request, $selection, $attempt) = @_;
@@ -412,7 +391,6 @@ return $self->{'pool_lock'}
 # prune_deleted(self) Discards deletion markers after their one-day submission
 # tokens have expired. A second day covers allowed clock skew and leaves
 # retries time to finish.
-
 sub prune_deleted
 {
 my ($self) = @_;
@@ -443,7 +421,6 @@ foreach my $id (@ids) {
 
 # start(self, id) Detaches a bounded worker; a per-job lock prevents
 # duplicate execution.
-
 sub start
 {
 my ($self, $id) = @_;
@@ -472,7 +449,6 @@ _exit($ok ? 0 : 1);
 # receive(self, id, owner, input, length) Streams an authenticated browser
 # upload to a fixed private file, not memory. input is a readable handle; length
 # is the complete HTTP body size in bytes.
-
 sub receive
 {
 my ($self, $id, $owner, $input, $length) = @_;
@@ -508,7 +484,6 @@ $self->start($id);
 
 # receive_locked(self, job, input, length) Receives an upload while the caller
 # holds its metadata and staging locks.
-
 sub receive_locked
 {
 my ($self, $job, $input, $length) = @_;
@@ -546,7 +521,6 @@ return 1;
 # transfer(self, job, input, limit, state) Copies bounded binary chunks and
 # publishes byte progress once per second. For uploading, limit is the exact
 # Content-Length; otherwise it is a ceiling.
-
 sub transfer
 {
 my ($self, $job, $input, $limit, $state) = @_;
@@ -605,7 +579,6 @@ die "The upload was interrupted.\n"
 
 # checkpoint(self, job) Checks the cancellation flag without signalling a
 # possibly reused process ID.
-
 sub checkpoint
 {
 my ($self, $job) = @_;
@@ -614,7 +587,6 @@ die "Image import cancelled.\n" if (-e $self->path($job->{'id'}, 'cancel'));
 
 # cleanup_staging(self, id) Stops any orphaned sandbox and removes only
 # this job's staged data.
-
 sub cleanup_staging
 {
 my ($self, $id) = @_;
@@ -634,7 +606,6 @@ foreach my $file (@files) {
 
 # cancel(self, id) Requests worker cleanup without waiting, so a batch can
 # stop every download.
-
 sub cancel
 {
 my ($self, $id) = @_;
@@ -646,7 +617,6 @@ close($cancel) || die "Cannot close image cancellation request: $!\n";
 # remove(self, id) Cancels an active import, or deletes its own unused volume
 # under the job lock. Returns false while the worker is still cleaning up;
 # callers may poll again.
-
 sub remove
 {
 my ($self, $id) = @_;
@@ -667,7 +637,6 @@ return $self->{'pool_lock'}
 
 # remove_locked(self, job) Deletes only this job's unused volume while its
 # Webmin locks are held.
-
 sub remove_locked
 {
 my ($self, $job) = @_;
@@ -723,7 +692,6 @@ return 1;
 # xml_uses_volume(xml, path, pool, volume, [base]) Checks libvirt-generated XML
 # for file, pool-volume and backing-store refs. base resolves relative backing
 # paths when scanning another storage volume.
-
 sub xml_uses_volume
 {
 my ($xml, $path, $pool, $volume, $base) = @_;
@@ -770,7 +738,6 @@ return 0;
 
 # volume_references(connection, [excluded_uuid]) Reads libvirt references once
 # for a picker or an exclusive-use check.
-
 sub volume_references
 {
 my ($conn, $excluded) = @_;
@@ -821,7 +788,6 @@ return \@refs;
 
 # volume_use(references, path, pool_name, volume_name, key) Returns the first
 # use of a volume, including aliases and backing files.
-
 sub volume_use
 {
 my ($refs, $path, $pool, $name, $key) = @_;
@@ -843,7 +809,6 @@ return;
 
 # assert_unused(self, connection, pool, volume, [excluded_uuid]) Rechecks live,
 # persistent, snapshot and backing references before mutation.
-
 sub assert_unused
 {
 my ($self, $conn, $pool, $volume, $excluded) = @_;
@@ -856,7 +821,6 @@ die "$reason\n" if ($reason);
 
 # checksum(manifest, filename, algorithm) Reads named GNU/BSD entries or a
 # single digest from a per-image sidecar.
-
 sub checksum
 {
 my ($manifest, $filename, $algorithm) = @_;
@@ -880,7 +844,6 @@ die "No checksum entry for this image. Check the image and checksum URLs.\n";
 # run(self, id) Acquires, checks and uploads one image through Sys::Virt. On
 # failure, cleanup attempts to delete only this import's new volume and
 # reports deletion errors.
-
 sub run
 {
 my ($self, $id) = @_;
@@ -891,7 +854,6 @@ return $self->with_job_lock($id, 'import', sub {
 
 # run_locked(self, job) Imports a queued image while the caller
 # holds its Webmin locks.
-
 sub run_locked
 {
 my ($self, $job) = @_;

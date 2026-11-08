@@ -17,7 +17,6 @@ require(dirname(__FILE__).'/HTTP.pm');
 
 # command(arguments...) Executes a fixed tool without a shell and bounds stdout
 # and stderr in memory.
-
 sub command
 {
 my @args = @_;
@@ -58,7 +57,6 @@ return $output;
 
 # write_file(name, contents) Writes task data; callers supply fixed names in the
 # private working directory.
-
 sub write_file
 {
 my ($name, $contents) = @_;
@@ -71,7 +69,6 @@ print($fh $contents) && close($fh) || die "Cannot write worker file\n";
 # default, backing links before further use. path defaults to the staged file
 # named image; allow_backing defaults false. allow_backing is used only while
 # relinking private, managed conversion layers.
-
 sub disk_info
 {
 my ($format, $path, $allow_backing) = @_;
@@ -96,7 +93,6 @@ return { 'virtual-size' => 0 + $info->{'virtual-size'}, format => $format };
 
 # free_space() Checks the actual worker filesystem, which can differ
 # from Webmin's job store.
-
 sub free_space
 {
 my $space = command('/usr/bin/stat', '-f', '-c', '%a:%S', '.');
@@ -110,7 +106,6 @@ return $blocks * $size;
 # QCOW2 and raw images undergo disk inspection; ISO imports retain their bytes
 # without inspection. emit(event) publishes progress; output holds the
 # file for the controller.
-
 sub image
 {
 my ($r, $emit) = @_;
@@ -272,7 +267,6 @@ return { %$info, bytes => $bytes, verified => $expected ? $algorithm : '',
 # run(request, emit) Dispatches only the small set of data-processing tasks used
 # by the controller. emit(event) writes a protocol event; tasks
 # return a result hash.
-
 sub run
 {
 my ($r, $emit) = @_;

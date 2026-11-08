@@ -6,7 +6,6 @@ use Digest::SHA qw(sha256_hex);
 use WebminCore qw(make_dir read_file_contents write_file_contents convert_to_json convert_from_json);
 
 # key(token, [attempt]) keeps older API clients on their original job IDs.
-
 sub key
 {
 my ($token, $attempt) = @_;
@@ -18,7 +17,6 @@ return $token.':attempt:'.$attempt;
 }
 
 # image_attempts(input) validates the optional per-image attempt identifiers.
-
 sub image_attempts
 {
 my ($input) = @_;
@@ -38,7 +36,6 @@ return $attempts;
 
 # new(class, directory => path, lock => callback) stores attempt IDs only.
 # lock(name, callback) serializes choices made by concurrent browser requests.
-
 sub new
 {
 my ($class, %options) = @_;
@@ -50,7 +47,6 @@ return bless(\%options, $class);
 # inspect(attempt) returns true only after a failed job has finished cleanup.
 # Persist the successor before replying, so lost replies and racing retries
 # select the same attempt even if its job has already finished.
-
 sub choose
 {
 my ($self, $scope, $previous, $proposed, $inspect) = @_;

@@ -145,7 +145,6 @@ ok(!Cloudmin::NetworkPreflight::missing_rules($network, $cidr,
 	package PreflightAdapter;
 
 	# uri(self) defaults to local QEMU but permits a remote-connection case.
-
 	sub uri
 	{
 	$_[0]->{'uri'} || 'qemu:///system'
@@ -153,14 +152,12 @@ ok(!Cloudmin::NetworkPreflight::missing_rules($network, $cidr,
 
 	# list_networks(self) returns the chosen mix of active
 	# and unmanaged networks.
-
 	sub list_networks
 	{
 	$_[0]->{'networks'}
 	}
 
 	# disconnect(self) records disposal of the pre-restart connection.
-
 	sub disconnect
 	{
 	$_[0]->{'disconnected'}++

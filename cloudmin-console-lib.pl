@@ -14,7 +14,6 @@ our (%config, %text, $remote_user, $module_name, $module_config_directory,
 # arguments for a relay with a listener, guest byte socket and private session
 # credential. id is a generated 32-character hex token. mode defaults to
 # graphical; serial uses a shorter browser connection deadline.
-
 sub build_console_command
 {
 my ($id, $credential, $mode) = @_;
@@ -55,7 +54,6 @@ return ( '/usr/bin/systemd-run', '--quiet', '--wait', '--collect', '--pipe',
 }
 
 # console_mode([mode]) validates the console type, defaulting to graphical.
-
 sub console_mode
 {
 my ($mode) = @_;
@@ -69,7 +67,6 @@ return $mode;
 # check_console(vm, [mode]) Checks interactive access and the selected device
 # before allocating a route. mode defaults to graphical; both modes use
 # the same console grant.
-
 sub check_console
 {
 my ($vm, $mode) = @_;
@@ -98,7 +95,6 @@ else {
 # start_console(vm, [mode]) Allocates an authenticated route to a fixed backend
 # for this guest only. mode defaults to graphical; serial opens the VM's
 # default PTY console.
-
 sub start_console
 {
 my ($vm, $mode) = @_;

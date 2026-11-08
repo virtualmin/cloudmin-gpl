@@ -922,7 +922,6 @@ else {
 
 	# list_pending(self) includes creations waiting for
 	# their first allocation.
-
 	sub list_pending
 	{
 	return $_[0]->{'pending'};
@@ -931,7 +930,6 @@ else {
 
 	# list_domains(self, strict) requires reliable metadata,
 	# including stopped guests.
-
 	sub list_domains
 	{
 	die "Strict inventory required\n"

@@ -12,7 +12,6 @@ open(my $input, '<', 'request.json') || die $!;
 my $r = decode_json(do { local $/; <$input> });
 
 # emit(event) Uses the production worker protocol to expose test observations.
-
 sub emit
 {
 print encode_json($_[0]), "\n";

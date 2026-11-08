@@ -30,7 +30,6 @@ my $dir = tempdir('/var/tmp/cloudmin-license-check-XXXXXX', CLEANUP => 1);
 my $native = get_libvirt(1)->connect();
 
 # inventory() records existing machine states without changing any guest.
-
 sub inventory
 {
 return [ sort map { join(':', $_->get_uuid_string(),

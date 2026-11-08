@@ -21,7 +21,6 @@ require(dirname(__FILE__).'/HostBridgeRemoval.pm');
 # module contains the recovery worker; client identifies the management route.
 # Tests can override command() and the backend methods
 # without touching the host.
-
 sub new
 {
 my ($class, %opts) = @_;
@@ -35,7 +34,6 @@ return bless(\%opts, $class);
 
 # backend(self) Loads the same detected network backend used by Webmin's
 # Network Configuration.
-
 sub backend
 {
 my ($self) = @_;
@@ -47,7 +45,6 @@ return $net::net_mode;
 # command(self, argv, [quiet], [safe]) Runs argv with a 60-second timeout and
 # shell-quotes each argument. quiet skips command logging; safe allows a
 # read-only command in demo mode.
-
 sub command
 {
 my ($self, $argv, $quiet, $safe) = @_;
@@ -62,7 +59,6 @@ return $out;
 
 # ip_json(self, arguments...) Reads structured kernel state where Webmin's
 # interface API omits route tables or ports.
-
 sub ip_json
 {
 my ($self, @args) = @_;
@@ -71,7 +67,6 @@ return convert_from_json($self->command([ 'ip', '-j', @args ], 1, 1), 1);
 
 # mask_prefix(self, mask) Validates and counts the leading bits in a
 # contiguous IPv4 netmask.
-
 sub mask_prefix
 {
 my ($self, $mask) = @_;
@@ -87,7 +82,6 @@ return length($1);
 
 # inventory(self) Reports current addresses, bridge ports and the route used
 # to reach this browser.
-
 sub inventory
 {
 my ($self) = @_;
@@ -156,7 +150,6 @@ return { interfaces => \@interfaces, subnets => \@subnets,
 
 # read_state(self) Loads private journal data; callers must not return the
 # backup fields to a browser.
-
 sub read_state
 {
 my ($self) = @_;
@@ -168,7 +161,6 @@ return convert_from_json(read_file_contents($path), 1);
 
 # write_state(self, record) Atomically replaces the private transaction journal
 # through Webmin's file API.
-
 sub write_state
 {
 my ($self, $record) = @_;
@@ -181,7 +173,6 @@ umask($mask);
 
 # pending(self) Includes failed rollback, which must be resolved
 # before further mutations.
-
 sub pending
 {
 my ($self) = @_;
@@ -194,7 +185,6 @@ return $state &&
 
 # public_state(self) Exposes progress and identity only, never saved host
 # configuration or credentials.
-
 sub public_state
 {
 my ($self) = @_;
@@ -229,7 +219,6 @@ return $public;
 
 # snapshot(self, paths) Saves exact contents and ownership for the files a
 # backend will change.
-
 sub snapshot
 {
 my ($self, $paths) = @_;
@@ -250,7 +239,6 @@ return \%files;
 # netplan_dhcp4_identity(self, source, mac) Returns networkd settings that keep
 # source's identity and request its lease. mac is the MAC retained by the
 # destination; callers must have an IPv4 lease.
-
 sub netplan_dhcp4_identity
 {
 my ($self, $source, $mac) = @_;
@@ -294,7 +282,6 @@ return "[DHCPv4]\nClientIdentifier=duid\nIAID=$iaid\nDUIDType=$type\nDUIDRawData
 
 # nm_dhcp4_identity(self, source) Reads the active lease's client ID, including
 # generated and global defaults.
-
 sub nm_dhcp4_identity
 {
 my ($self, $source) = @_;
@@ -318,7 +305,6 @@ return lc($ids[0]);
 # check_ipv6_identity(self, interface, [token]) Checks live dynamic IPv6
 # addresses against the preserved MAC or SLAAC token. Other generated
 # identifiers may change when addressing moves to a bridge.
-
 sub check_ipv6_identity
 {
 my ($self, $live, $token) = @_;
@@ -339,7 +325,6 @@ foreach my $address (@{$live->{'dynamic_ipv6'} || [ ]}) {
 
 # ipv6_address_mode(self, device) Reads the named device's IPv6 generation mode,
 # or undef if it is not exposed.
-
 sub ipv6_address_mode
 {
 my ($self, $device) = @_;
@@ -354,7 +339,6 @@ return $mode;
 
 # prepare(self, name, source) Captures a bridge conversion plan, rejecting
 # topology that cannot be preserved.
-
 sub prepare
 {
 my ($self, $name, $source) = @_;
@@ -490,7 +474,6 @@ return $plan;
 
 # unit(self, method, arguments...) Converts Webmin systemd's result pair into an
 # exception on failure.
-
 sub unit
 {
 my ($self, $method, @args) = @_;
@@ -503,7 +486,6 @@ die "Cannot prepare network recovery: $error\n" if (!$ok);
 
 # install_guards(self, plan) Arms recovery before any network write, including a
 # boot-time restore path.
-
 sub install_guards
 {
 my ($self, $plan) = @_;
@@ -548,7 +530,6 @@ $self->unit('start_unit', 'cloudmin-network-rollback.timer');
 # disarm_guards(self, record) Removes scheduled recovery after the journal has
 # committed a final outcome. Cleanup failure is reported without making
 # confirmed networking reversible.
-
 sub disarm_guards
 {
 my ($self, $p) = @_;
@@ -572,7 +553,6 @@ if (@errors) {
 # reviewed plan and starts an independent, bounded apply worker. operation
 # defaults to creation; remove moves addressing back to Ethernet. owner is the
 # requesting user; removal derives source from the named bridge.
-
 sub begin
 {
 my ($self, $name, $source, $revision, $owner, $operation) = @_;
@@ -632,7 +612,6 @@ return $self->{'jobs'}->lock('host-network', sub {
 
 # save_bridge(self, plan) Uses each Webmin backend's configuration APIs,
 # preserving complete IP settings.
-
 sub save_bridge
 {
 my ($self, $p) = @_;
@@ -758,7 +737,6 @@ else {
 
 # activate(self, plan, rollback) Reconnects only the selected Ethernet/bridge
 # pair except Netplan's native apply.
-
 sub activate
 {
 my ($self, $p, $rollback) = @_;
@@ -841,7 +819,6 @@ if ($rollback) {
 
 # apply(self) The systemd worker holds the transaction lock while saving
 # and applying settings.
-
 sub apply
 {
 my ($self) = @_;
@@ -874,7 +851,6 @@ return $self->{'jobs'}->lock('host-network', sub {
 # wait_for_connection(self, plan, [restoring]) Allows address acquisition to
 # finish after the backend reports activation. restoring defaults to false; true
 # checks the pre-change topology instead.
-
 sub wait_for_connection
 {
 my ($self, $p, $restoring) = @_;
@@ -889,7 +865,6 @@ $self->check_connection($p, $restoring);
 # check_connection(self, plan, [restoring]) Checks the port, preserved addresses
 # and browser/default route before confirmation. restoring defaults to false and
 # reverses the plan's expected destination.
-
 sub check_connection
 {
 my ($self, $p, $restoring) = @_;
@@ -929,7 +904,6 @@ die "Network interface $name did not retain the management route\n"
 
 # confirm(self, id, owner) A fresh successful browser request and connectivity
 # checks commit the change.
-
 sub confirm
 {
 my ($self, $id, $owner) = @_;
@@ -954,7 +928,6 @@ return $self->{'jobs'}->lock('host-network', sub {
 # crash; boot recovery avoids starting network services before systemd has
 # reached network-pre.target. boot defaults to false; true restores files for
 # the normal boot sequence.
-
 sub rollback
 {
 my ($self, $boot) = @_;
@@ -1025,7 +998,6 @@ return $self->{'jobs'}->lock('host-network', sub {
 # configured lease from its networkctl JSON status. Returns 1 when sent, or 0
 # without a lease. Sending does not confirm receipt. Static addresses are never
 # selected for release.
-
 sub release_netplan_dhcp4
 {
 my ($self, $target, $status) = @_;
@@ -1093,7 +1065,6 @@ return 1;
 # restore_netplan_dhcp4(self, plan) Requests plan's saved DHCP address if
 # Netplan recovery got a different lease. Uses a temporary networkd override;
 # throws if recovery or cleanup fails.
-
 sub restore_netplan_dhcp4
 {
 my ($self, $p) = @_;

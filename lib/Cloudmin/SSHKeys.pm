@@ -7,7 +7,6 @@ use WebminCore qw(make_dir);
 
 # new(class, directory) Uses Cloudmin's private module data directory, outside
 # the web document root.
-
 sub new
 {
 return bless({ directory => $_[1] }, $_[0]);
@@ -15,7 +14,6 @@ return bless({ directory => $_[1] }, $_[0]);
 
 # path(self, uuid, job_id) Binds a key to both the guest UUID and
 # its creation marker.
-
 sub path
 {
 my ($self, $uuid, $job) = @_;
@@ -29,7 +27,6 @@ return "$self->{directory}/$uuid-$job";
 # check_directory(self, [create]) Requires a private directory owned by the
 # controller's user (root in Webmin). create defaults to false; only allocation
 # creates a missing directory.
-
 sub check_directory
 {
 my ($self, $create) = @_;
@@ -49,7 +46,6 @@ return 1;
 
 # destination(self, uuid, job_id) Prepares a new key's location without
 # replacing an existing credential.
-
 sub destination
 {
 my ($self, $uuid, $job) = @_;
@@ -62,7 +58,6 @@ return $path;
 
 # find(self, uuid, job_id) Returns a protected key path, or undef when this
 # guest has no managed key.
-
 sub find
 {
 my ($self, $uuid, $job) = @_;
@@ -80,7 +75,6 @@ return $path;
 
 # remove(self, uuid, job_id) Removes only this creation's key after rollback or
 # successful guest deletion.
-
 sub remove
 {
 my ($self, $uuid, $job) = @_;

@@ -32,34 +32,29 @@ close($lang);
 require "$Bin/../cloudmin-print.pl";
 
 # ReadParse() - Retains the fixture request fields.
-
 sub ReadParse
 {
 }
 
 # is_readonly_mode() - Allows mutations in the in-memory job store.
-
 sub is_readonly_mode
 {
 return 0;
 }
 
 # get_image_jobs() - Returns the selected job fixture.
-
 sub get_image_jobs
 {
 return $fixture;
 }
 
 # error_html(message) keeps non-license errors escaped in this CGI fixture.
-
 sub error_html
 {
 return html_escape($_[0]);
 }
 
 # html_escape(value) - Escapes image names and backend errors as Webmin does.
-
 sub html_escape
 {
 my ($value) = @_;
@@ -70,7 +65,6 @@ return $value;
 }
 
 # text(key, [values...]) - Substitutes the module's translated messages.
-
 sub text
 {
 my ($key, @values) = @_;
@@ -80,21 +74,18 @@ return $value;
 }
 
 # ui_print_unbuffered_header([subtitle], title, help) - Marks the page start.
-
 sub ui_print_unbuffered_header
 {
 print "<header>$_[1]</header>\n";
 }
 
 # ui_print_footer(url, label) - Marks completion of the batch.
-
 sub ui_print_footer
 {
 print "<footer>$_[1]</footer>\n";
 }
 
 # error(message) - Rejects invalid fixture requests.
-
 sub error
 {
 die $_[0];
@@ -105,7 +96,6 @@ die $_[0];
 
 	# new(class, responses, states) Stores deletion
 	# outcomes and current states.
-
 	sub new
 	{
 	return bless({ responses => $_[1], states => $_[2],
@@ -113,14 +103,12 @@ die $_[0];
 	}
 
 	# check_token(self, owner, token) - Requires the fixture's form token.
-
 	sub check_token
 	{
 	die "Invalid token\n" if ($_[2] ne 'fixture-token');
 	}
 
 	# get(self, id) - Supplies a name that tests HTML escaping.
-
 	sub get
 	{
 	return { id => $_[1], name => "Image <$_[1]>",
@@ -128,7 +116,6 @@ die $_[0];
 	}
 
 	# cancel(self, id) - Records each cancellation before deletion starts.
-
 	sub cancel
 	{
 	push(@{$_[0]->{'calls'}}, "cancel:$_[1]");
@@ -136,7 +123,6 @@ die $_[0];
 
 	# remove(self, id) Simulates success, worker
 	# cleanup, or a backend error.
-
 	sub remove
 	{
 	my ($self, $id) = @_;
@@ -150,7 +136,6 @@ die $_[0];
 
 # render(responses, [states], [unconfirmed], [selection]) Runs the actual
 # deletion CGI against current or stale selections.
-
 sub render
 {
 my ($responses, $states, $unconfirmed, $selection) = @_;

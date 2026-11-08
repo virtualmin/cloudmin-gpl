@@ -11,49 +11,42 @@ use Cloudmin::SerialConsole;
 	our (%handles, %timers, $next);
 
 	# add_handle(fd, events, callback) records the requested event mask.
-
 	sub add_handle
 	{
 	$handles{++$next} = [ @_ ]; return $next;
 	}
 
 	# update_handle(id, events) replaces a watcher mask.
-
 	sub update_handle
 	{
 	$handles{$_[0]}->[1] = $_[1];
 	}
 
 	# remove_handle(id) releases the watcher.
-
 	sub remove_handle
 	{
 	delete $handles{$_[0]};
 	}
 
 	# add_timeout(ms, callback) records the idle supervision deadline.
-
 	sub add_timeout
 	{
 	$timers{++$next} = [ @_ ]; return $next;
 	}
 
 	# remove_timeout(id) releases the timer.
-
 	sub remove_timeout
 	{
 	delete $timers{$_[0]};
 	}
 
 	# run_default() permits testing errors stored by a native callback.
-
 	sub run_default
 	{
 	}
 	package SerialStream;
 
 	# add_callback(self, events, callback) registers the stream watcher.
-
 	sub add_callback
 	{
 	$_[0]->{'events'} = $_[1]; $_[0]->{'callback'} =
@@ -62,21 +55,18 @@ use Cloudmin::SerialConsole;
 
 	# update_callback(self, events) records when input
 	# needs writable events.
-
 	sub update_callback
 	{
 	$_[0]->{'events'} = $_[1];
 	}
 
 	# remove_callback(self) releases the callback reference.
-
 	sub remove_callback
 	{
 	delete $_[0]->{'callback'};
 	}
 
 	# abort(self) records release of the exclusive port.
-
 	sub abort
 	{
 	$_[0]->{'aborted'}++;
@@ -84,7 +74,6 @@ use Cloudmin::SerialConsole;
 
 	# recv(self, buffer, size) returns configured guest
 	# output or would-block.
-
 	sub recv
 	{
 	# An empty fixture behaves like an idle nonblocking libvirt stream.
@@ -94,7 +83,6 @@ use Cloudmin::SerialConsole;
 	}
 
 	# send(self, buffer, size) simulates a partial write or a busy stream.
-
 	sub send
 	{
 	# A busy stream consumes no input; the bridge must keep it queued.
@@ -156,14 +144,12 @@ $bridge->close();
 	package SerialHistory;
 
 	# history(self) supplies output produced before the browser connected.
-
 	sub history
 	{
 	return "login: tester";
 	}
 
 	# read(self) supplies the next recorded bytes once.
-
 	sub read
 	{
 	return delete($_[0]->{'output'}) || '';

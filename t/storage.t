@@ -14,42 +14,36 @@ use Cloudmin::Storage;
 
 	# Pool methods model libvirt state and record calls that could alter
 	# files. get_name(self) supplies the fixture pool label.
-
 	sub get_name
 	{
 	$_[0]->{'name'}
 	}
 
 	# get_uuid_string(self) identifies the fixture pool.
-
 	sub get_uuid_string
 	{
 	'11111111-2222-3333-4444-555555555555'
 	}
 
 	# get_xml_description(self, [flags]) supplies pool type and location.
-
 	sub get_xml_description
 	{
 	$_[0]->{'xml'}
 	}
 
 	# is_active(self) models whether native pool operations are available.
-
 	sub is_active
 	{
 	$_[0]->{'active'} || 0
 	}
 
 	# is_persistent(self) distinguishes saved and transient pools.
-
 	sub is_persistent
 	{
 	!$_[0]->{'transient'}
 	}
 
 	# get_autostart(self) supplies the simulated start-at-boot setting.
-
 	sub get_autostart
 	{
 	$_[0]->{'boot'} || 0
@@ -57,7 +51,6 @@ use Cloudmin::Storage;
 
 	# set_autostart(self, enabled) records a setting or
 	# injects a write failure.
-
 	sub set_autostart
 	{
 	die "boot failure\n"
@@ -66,14 +59,12 @@ use Cloudmin::Storage;
 
 	# build(self, [flags]) records initialization without
 	# touching real storage.
-
 	sub build
 	{
 	$_[0]->{'built'}++
 	}
 
 	# create(self, [flags]) simulates activation or a native start failure.
-
 	sub create
 	{
 	die "start failure\n"
@@ -81,14 +72,12 @@ use Cloudmin::Storage;
 	}
 
 	# destroy(self) clears simulated active state without removing files.
-
 	sub destroy
 	{
 	$_[0]->{'active'} = 0
 	}
 
 	# undefine(self) records rollback or injects a cleanup failure.
-
 	sub undefine
 	{
 	die "cleanup failure\n"
@@ -96,7 +85,6 @@ use Cloudmin::Storage;
 	}
 
 	# get_info(self) supplies fixed capacity counters for inventory tests.
-
 	sub get_info
 	{
 	{ state => 2, capacity => 1000, available => 600,
@@ -105,7 +93,6 @@ use Cloudmin::Storage;
 
 	# list_all_volumes(self, [flags]) supplies volumes or
 	# an inventory failure.
-
 	sub list_all_volumes
 	{
 	die "volume inventory failure\n"
@@ -114,21 +101,18 @@ use Cloudmin::Storage;
 	package StorageConnection;
 
 	# list_all_storage_pools(self, [flags]) supplies the fixture pool list.
-
 	sub list_all_storage_pools
 	{
 	@{$_[0]->{'pools'} || [ ]}
 	}
 
 	# list_all_domains(self, [flags]) supplies guests for reference checks.
-
 	sub list_all_domains
 	{
 	@{$_[0]->{'domains'} || [ ]}
 	}
 
 	# get_storage_pool_by_uuid(self, uuid) resolves the fixture pool.
-
 	sub get_storage_pool_by_uuid
 	{
 	$_[0]->{'pools'}->[0] ||
@@ -137,7 +121,6 @@ use Cloudmin::Storage;
 
 	# define_storage_pool(self, xml, [flags]) records a
 	# new fixture definition.
-
 	sub define_storage_pool
 	{
 	my ($self, $xml) = @_;
@@ -150,7 +133,6 @@ use Cloudmin::Storage;
 
 	# lock(self, name, callback) records entry and runs
 	# the guarded callback.
-
 	sub lock
 	{
 	$_[0]->{'locks'}++; $_[2]->()
@@ -158,7 +140,6 @@ use Cloudmin::Storage;
 
 	# list(self, [owner], [active]) supplies jobs that can
 	# block storage changes.
-
 	sub list
 	{
 	$_[0]->{'active'} || [ ]
@@ -167,7 +148,6 @@ use Cloudmin::Storage;
 
 	# list(self, [owner], [active], [strict]) supplies
 	# import ownership records.
-
 	sub list
 	{
 	$_[0]->{'records'} || [ ]
@@ -175,7 +155,6 @@ use Cloudmin::Storage;
 
 	# path(self, id) supplies a fixed filename for
 	# mocked import-lock checks.
-
 	sub path
 	{
 	'/fixture/job.json'

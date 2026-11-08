@@ -6,7 +6,6 @@ our ($config_directory, $var_directory, $root_directory,
      $module_root_directory);
 
 # cloudmin_cli_shell_quote(value) quotes configured paths for a POSIX shell.
-
 sub cloudmin_cli_shell_quote
 {
 my ($value) = @_;
@@ -17,7 +16,6 @@ return "'$value'";
 # cloudmin_cli_wrapper(config, var, root, module, perl) returns a shell wrapper.
 # Arguments are Webmin config, state, root and module directories, then the Perl
 # path. Generation is separate so tests never install a workstation command.
-
 sub cloudmin_cli_wrapper
 {
 my ($config, $var, $root, $module, $perl) =
@@ -41,7 +39,6 @@ EOF_WRAPPER
 }
 
 # module_install() installs the wrapper using Webmin's atomic file helpers.
-
 sub module_install
 {
 die "Install the Cloudmin command on its Linux host as root\n"

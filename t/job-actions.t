@@ -27,28 +27,24 @@ my @actions;
 	}
 
 # get_vm_jobs() supplies VM records without opening the host's job store.
-
 sub get_vm_jobs
 {
 bless({ }, 'ActionStore')
 }
 
 # get_image_jobs() supplies import records and signed-token checks.
-
 sub get_image_jobs
 {
 bless({ }, 'ActionStore')
 }
 
 # get_public_vm_job(job) returns the fixture's already public fields.
-
 sub get_public_vm_job
 {
 +{ %{$_[0]} }
 }
 
 # call_vm_api(version, action, input) records authorized changes only.
-
 sub call_vm_api
 {
 push(@actions, $_[1]); 1
@@ -57,7 +53,6 @@ push(@actions, $_[1]); 1
 	package ActionStore;
 
 	# get(self, id) refuses unknown IDs without touching real job storage.
-
 	sub get
 	{
 	die "Job not found\n" if $_[1] ne $job->{'id'}; $job
@@ -65,14 +60,12 @@ push(@actions, $_[1]); 1
 
 	# check_token(self, owner, token) checks the acting
 	# administrator's token.
-
 	sub check_token
 	{
 	die "Bad token\n" unless ($_[2] || '') eq 'valid'
 	}
 
 	# remove(self, id) records image cancellation.
-
 	sub remove
 	{
 	push(@actions, 'image-remove'); 1

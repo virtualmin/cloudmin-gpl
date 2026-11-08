@@ -8,7 +8,6 @@ use warnings;
 # booting it or mounting it on the host. appliance_only verifies appliance boot
 # for installation readiness and skips inspection of the
 # disk's operating system.
-
 sub inspect
 {
 my ($path, $format, $appliance_only) = @_;
@@ -41,7 +40,6 @@ return $result;
 
 # inspect_guest(guestfs) Requires one Linux installation, a known CPU
 # architecture and usable cloud-init files.
-
 sub inspect_guest
 {
 my ($g) = @_;
@@ -86,7 +84,6 @@ return { architecture => $architecture, cloud_init => 1 };
 
 # check_cloud_config(guestfs) Rejects explicit datasource or network settings
 # that ignore Cloudmin's seed disk.
-
 sub check_cloud_config
 {
 my ($g) = @_;

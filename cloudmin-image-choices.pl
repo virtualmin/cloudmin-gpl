@@ -11,7 +11,6 @@ our %text;
 # get_image_group(image, [fallback]) Uses catalogue distribution names, with a
 # translated label for unknown images. fallback defaults to the
 # translated Other images label.
-
 sub get_image_group
 {
 my ($image, $fallback) = @_;
@@ -23,7 +22,6 @@ return $image->{'os'} || $fallback || $text{'vm_image_other'};
 # get_image_icon(image) Returns a module-relative SVG path from the image's OS
 # and catalogue origin. Only names in this map can select files; catalogue
 # values cannot supply paths.
-
 sub get_image_icon
 {
 my ($image) = @_;
@@ -45,7 +43,6 @@ return 'images/os/'.$icon.'.svg';
 # headings from each choice's fourth field to Webmin's select. Choices use
 # [value, label, attributes, group]; an empty group has no heading. disabled and
 # required default to false. Callers supply the display order.
-
 sub show_image_select
 {
 my ($name, $value, $choices, $disabled, $required) = @_;

@@ -31,7 +31,6 @@ for my $key (qw(first second)) {
 	}
 
 # public_key(name) reads one temporary fixture key without its comment.
-
 sub public_key
 {
 my ($name) = @_;

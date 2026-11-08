@@ -6,7 +6,6 @@ our ($module_root_directory, $module_var_directory, $remote_user,
      $guest_login_accounts_cache);
 
 # has_ssh_key_manager() checks whether the Pro key module is installed.
-
 sub has_ssh_key_manager
 {
 return -r "$module_root_directory/pro/SSHKeys.pm";
@@ -14,7 +13,6 @@ return -r "$module_root_directory/pro/SSHKeys.pm";
 
 # get_ssh_key_manager() opens the Pro library for host administrators. The store
 # checks manage access for writes and private-key downloads.
-
 sub get_ssh_key_manager
 {
 # Both the host grant and installed extension are required, including for reads.
@@ -32,7 +30,6 @@ return Cloudmin::Pro::SSHKeys->new(directory =>
 
 # resolve_saved_ssh_keys(input) resolves library keys before VM validation. Pro
 # merges selected and automatic public keys when the request allows it.
-
 sub resolve_saved_ssh_keys
 {
 my ($input) = @_;
@@ -50,7 +47,6 @@ return get_ssh_key_manager()->resolve($input);
 # and host access first; id is a guest UUID. Agent commands use a writable
 # adapter and bounded virsh calls. Listings are reads and also run for read-only
 # sessions; Webmin vetoes the other commands for them.
-
 sub guest_ssh_service
 {
 my ($id) = @_;
@@ -119,7 +115,6 @@ return ( Cloudmin::Pro::GuestSSH->new(agent => $agent, protected => $protected),
 # guest_ssh_reply(command, status, output, error) decodes one virsh reply. An
 # account without an authorized_keys file has no keys yet; other failures must
 # remain errors so additions never rely on an unreadable key list.
-
 sub guest_ssh_reply
 {
 my ($command, $status, $output, $error) = @_;
@@ -149,7 +144,6 @@ return $reply->{'return'};
 # Include UID 0 and UIDs 1000-65533, excluding known non-login shells. This does
 # not check account locks or SSH policy. Preferred names
 # come first when present.
-
 sub login_accounts
 {
 my ($passwd, @preferred) = @_;
@@ -180,7 +174,6 @@ return [ (grep { $first{$_} } @preferred),
 # guest_login_accounts(vm) reads the running guest's account list through the
 # agent. Returns undef when the guest, session or agent cannot provide it.
 # Callers choose their fallback. show_vm_access scopes a cache to one rendering.
-
 sub guest_login_accounts
 {
 my ($vm) = @_;
@@ -208,7 +201,6 @@ return $accounts;
 
 # call_ssh_key_api(action, input) dispatches synchronous key requests. input
 # holds the action fields and a token for writes or private downloads.
-
 sub call_ssh_key_api
 {
 my ($action, $input) = @_;

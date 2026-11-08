@@ -13,7 +13,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 	package SelectionTokens;
 
 	# check_token(self, owner, token) accepts only the fixture form token.
-
 	sub check_token
 	{
 	die "Expired token\n" if ($_[2] || '') ne 'valid';
@@ -21,7 +20,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 	package SelectionStorage;
 
 	# inspect_volume(self, uuid, name) models ownership and a stable review.
-
 	sub inspect_volume
 	{
 	my ($self, $uuid, $name) = @_;
@@ -34,7 +32,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 
 	# delete_volume(self, uuid, name, revision, confirm) records confirmed
 	# removals and injects a native failure for the selected fixture.
-
 	sub delete_volume
 	{
 	my ($self, $uuid, $name, $revision, $confirm) = @_;

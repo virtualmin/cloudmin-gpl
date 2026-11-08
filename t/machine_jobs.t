@@ -19,7 +19,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	our @ISA = ('Cloudmin::VMs');
 
 	# prepare(self, request) Isolates journal tests from host policy tests.
-
 	sub prepare
 	{
 	return $_[1];
@@ -28,7 +27,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# path(self, id, suffix) Returns an unused lock
 	# identity for this fixture.
-
 	sub path
 	{
 	return 'source-image';
@@ -36,14 +34,12 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# with_lock(self, path, nodiff, callback) Executes a
 	# fake source lock scope.
-
 	sub with_lock
 	{
 	return $_[3]->();
 	}
 
 	# get(self, id) - Supplies a ready, immutable source.
-
 	sub get
 	{
 	return { state => 'ready' };
@@ -52,7 +48,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# clone_disk(self, pool, name, source, bytes, format, journal) Fails
 	# after allocation when requested.
-
 	sub clone_disk
 	{
 	my ($self, $pool, $name, $source, $bytes, $format, $journal) = @_;
@@ -68,7 +63,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# upload_seed(self, pool, name, file, journal) Models a
 	# partly uploaded seed.
-
 	sub upload_seed
 	{
 	my ($self, $pool, $name, $file, $journal) = @_;
@@ -82,7 +76,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# define_guest(self, xml) Preserves the ownership
 	# marker used for recovery.
-
 	sub define_guest
 	{
 	my ($self, $xml) = @_;
@@ -94,7 +87,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# set_domain_autostart(self, uuid, enabled) No host setting
 	# changes in unit tests.
-
 	sub set_domain_autostart
 	{
 	return 1;
@@ -102,7 +94,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# start_domain(self, uuid) Can fail after the
 	# hypervisor has started the VM.
-
 	sub start_domain
 	{
 	$_[0]->{'domain'}->{'active'} = 1;
@@ -110,7 +101,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	}
 
 	# get_domain(self, uuid) - Supplies the reconciled hypervisor state.
-
 	sub get_domain
 	{
 	return $_[0]->{'domain'};
@@ -118,7 +108,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# remove_created_guest(self, uuid, job) Prevents disk
 	# cleanup if undefine fails.
-
 	sub remove_created_guest
 	{
 	die "daemon unavailable\n" if ($_[0]->{'cleanup_failure'});
@@ -127,7 +116,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 
 	# remove_created_volume(self, pool, name, key) Removes only the
 	# named fixture volume.
-
 	sub remove_created_volume
 	{
 	delete($_[0]->{'volumes'}->{$_[2]});
@@ -156,7 +144,6 @@ my $request = { name => 'fixture', image => 'a' x 32,
 
 # make_fixture(name, [failure]) Returns isolated SQLite, fake libvirt
 # and service objects.
-
 sub make_fixture
 {
 my ($name, $failure) = @_;

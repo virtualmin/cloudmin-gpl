@@ -14,14 +14,12 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package ControlJobs;
 
 	# lock(self, resource, callback) models serialized lifecycle requests.
-
 	sub lock
 	{
 	return $_[2]->();
 	}
 
 	# assert_guest_available(self, uuid) models an idle management queue.
-
 	sub assert_guest_available
 	{
 	return 1;
@@ -30,7 +28,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# check_token(self, user, token) rejects missing and
 	# foreign form tokens.
-
 	sub check_token
 	{
 	die "Bad token\n" unless ($_[2] ||
@@ -39,7 +36,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package ControlAdapter;
 
 	# get_domain(self, id) resolves the fixture or simulates a removed VM.
-
 	sub get_domain
 	{
 	return $_[0]->{'vm'}
@@ -48,14 +44,12 @@ require "$module_root_directory/cloudmin-lib.pl";
 	}
 
 	# start_domain(self, id) records the requested operation.
-
 	sub start_domain
 	{
 	push(@{$_[0]->{'calls'}}, [ 'start', $_[1] ]);
 	}
 
 	# shutdown_domain(self, id) records clean shutdown or a libvirt refusal.
-
 	sub shutdown_domain
 	{
 	die "Guest refused shutdown\n" if ($_[0]->{'fail'});
@@ -63,28 +57,24 @@ require "$module_root_directory/cloudmin-lib.pl";
 	}
 
 	# reboot_domain(self, id) records the requested operation.
-
 	sub reboot_domain
 	{
 	push(@{$_[0]->{'calls'}}, [ 'reboot', $_[1] ]);
 	}
 
 	# suspend_domain(self, id) records a pause without powering down.
-
 	sub suspend_domain
 	{
 	push(@{$_[0]->{'calls'}}, [ 'suspend', $_[1] ]);
 	}
 
 	# resume_domain(self, id) records continuation of a paused guest.
-
 	sub resume_domain
 	{
 	push(@{$_[0]->{'calls'}}, [ 'resume', $_[1] ]);
 	}
 
 	# reset_domain(self, id) records the confirmed hard reset.
-
 	sub reset_domain
 	{
 	push(@{$_[0]->{'calls'}}, [ 'reset', $_[1] ]);
@@ -92,7 +82,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# destroy_domain(self, id) records emergency power-off
 	# or a libvirt refusal.
-
 	sub destroy_domain
 	{
 	die "Power off failed\n" if ($_[0]->{'fail'});
@@ -101,7 +90,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 
 	# set_domain_autostart(self, id, enabled) records the
 	# explicit boot policy.
-
 	sub set_domain_autostart
 	{
 	push(@{$_[0]->{'calls'}},

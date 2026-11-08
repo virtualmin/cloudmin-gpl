@@ -98,7 +98,6 @@ Sys::Virt::Event::register_default();
 Sys::Virt::Event::add_timeout(0, sub { });
 
 # notify_watchdog() lets systemd restart a collector stuck in a native call.
-
 sub notify_watchdog
 {
 # Direct runs have no watchdog socket. Systemd may use an abstract UNIX socket.
@@ -109,7 +108,6 @@ $socket->send("WATCHDOG=1") if $socket;
 }
 
 # collect_domain(domain) refreshes runtime device mappings without guest probes.
-
 sub collect_domain
 {
 my ($domain) = @_;
@@ -126,7 +124,6 @@ $vms{$vm->{uuid}} = $vm;
 
 # refresh_domain(id, wall, [domain]) contains a guest's inventory failure. Omit
 # domain to look it up after an event or retry a failed inventory read.
-
 sub refresh_domain
 {
 my ($id, $wall, $domain) = @_;
@@ -166,7 +163,6 @@ return "Guest $id inventory failed: ".error_message($error);
 
 # connect_statistics() subscribes before inventory so device
 # changes cannot be lost.
-
 sub connect_statistics
 {
 $adapter = get_libvirt(1);
@@ -492,7 +488,6 @@ while (!$stop) {
 	}
 
 # min_value(a,b) caps retry backoff without depending on UI math helpers.
-
 sub min_value
 {
 return $_[0] < $_[1] ? $_[0] : $_[1];

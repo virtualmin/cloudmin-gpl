@@ -17,7 +17,6 @@ require "$module_root_directory/lib/Cloudmin/HostNetwork.pm";
 
 # get_host_network() Keeps rollback journals private and uses the VM
 # controller's resource locks.
-
 sub get_host_network
 {
 return Cloudmin::HostNetwork->new(directory =>
@@ -31,7 +30,6 @@ return Cloudmin::HostNetwork->new(directory =>
 # get_network_service([writable]) Network mutations are local-host operations;
 # inventory shares the same adapter. writable defaults to false; true requests a
 # libvirt connection for changes.
-
 sub get_network_service
 {
 # Network inventory includes host interfaces outside the user's assigned VMs.
@@ -47,7 +45,6 @@ return Cloudmin::Networks->new(adapter => $adapter,
 
 # change_network(action, input) Requires host administrator access and a valid
 # token before network changes.
-
 sub change_network
 {
 my ($action, $in) = @_;
@@ -136,7 +133,6 @@ return $name;
 # call_bridge_api(action, input) Uses the UI's bridge validation and recovery,
 # keeping file backups private. input is the decoded request hash; write actions
 # require a signed token.
-
 sub call_bridge_api
 {
 my ($action, $in) = @_;

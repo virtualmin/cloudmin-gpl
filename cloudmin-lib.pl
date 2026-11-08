@@ -22,7 +22,6 @@ require "$module_root_directory/cloudmin-ssh-lib.pl";
 
 # get_snapshot_manager() Snapshot jobs share the VM journal and honor the
 # module's read-only ACL.
-
 sub get_snapshot_manager
 {
 require "$module_root_directory/lib/Cloudmin/Snapshots.pm";
@@ -33,7 +32,6 @@ return Cloudmin::Snapshots->new(jobs => get_vm_jobs(),
 }
 
 # get_vm_manager() Shares the creation journal and inventory with VM management.
-
 sub get_vm_manager
 {
 return Cloudmin::VMManage->new(jobs => get_vm_jobs(),
@@ -42,7 +40,6 @@ return Cloudmin::VMManage->new(jobs => get_vm_jobs(),
 }
 
 # get_clone_service() shares creation's workers, inventory and private journal.
-
 sub get_clone_service
 {
 require "$module_root_directory/lib/Cloudmin/Clones.pm";
@@ -50,7 +47,6 @@ return Cloudmin::Clones->new(%{get_vm_service()});
 }
 
 # get_vm_image_service() loads the Pro capture service only when installed.
-
 sub get_vm_image_service
 {
 die "Creating images from virtual machines requires Cloudmin Pro\n"
@@ -61,7 +57,6 @@ return Cloudmin::VMImages->new(%{get_vm_service()});
 
 # run_vm_job(id) Dispatches stored requests without trusting a
 # caller's operation type.
-
 sub run_vm_job
 {
 my ($id) = @_;
@@ -87,7 +82,6 @@ return $job->{'request'}->{'operation'}
 
 # get_vm_jobs() Returns the private SQLite job store with Webmin locks
 # and audit callbacks.
-
 sub get_vm_jobs
 {
 # log(action, type, id, details) uses Webmin's existing audit log.
@@ -111,7 +105,6 @@ return Cloudmin::Jobs->new(directory => "$module_var_directory/vm-jobs",
 }
 
 # get_vm_service() Creates a VM service with connections opened when needed.
-
 sub get_vm_service
 {
 # adapter() creates a writable adapter; host_memory() returns available bytes.
@@ -138,7 +131,6 @@ return Cloudmin::VMs->new(jobs => get_vm_jobs(),
 
 # call_vm_api(version, action, input) Runs v1 VM operations under module ACLs;
 # changes also require signed tokens.
-
 sub call_vm_api
 {
 my ($version, $action, $input) = @_;
@@ -751,7 +743,6 @@ die "Unknown virtual machine API action\n";
 
 # get_api_machines(input) summarizes guests the caller may view. input is a
 # request hash; its optional id is an exact UUID or guest name.
-
 sub get_api_machines
 {
 my ($input) = @_;
@@ -827,7 +818,6 @@ return defined($id) ? $result[0] : \@result;
 
 # generate_random_password() Uses 144 bits from the OS random source without
 # storing the plaintext password.
-
 sub generate_random_password
 {
 return substr(MIME::Base64::encode_base64(pack('H*',
@@ -838,7 +828,6 @@ return substr(MIME::Base64::encode_base64(pack('H*',
 # get_vm_password_hash(jobs, input, [password]) Hashes a new password with
 # Webmin, or loads the hash retained for this form. Returns undef for ISO
 # installs and key-only cloud accounts.
-
 sub get_vm_password_hash
 {
 my ($jobs, $input, $password) = @_;
@@ -884,7 +873,6 @@ return $hash;
 
 # get_public_vm_job(job) Exposes progress and identity without
 # provisioning credentials.
-
 sub get_public_vm_job
 {
 my ($job) = @_;
@@ -950,7 +938,6 @@ return {
 # wait_vm_job(job, [timeout]) Waits for a submitted job without tying its worker
 # to the browser connection. timeout defaults to 3700 seconds; timeout leaves
 # the background job running.
-
 sub wait_vm_job
 {
 my ($job, $timeout) = @_;
@@ -985,7 +972,6 @@ while (1) {
 
 # recover_vm_jobs() Resumes unfinished jobs when a host administrator with
 # write access visits.
-
 sub recover_vm_jobs
 {
 # Read-only and delegated page visits must not resume jobs that change the host.

@@ -20,7 +20,6 @@ require "$module_root_directory/cloudmin-terminal-lib.pl";
 # check_ssh_service(addresses, [port]) Checks discovered guest addresses for an
 # SSH banner on port (default 22). All addresses share a two-second budget.
 # Callers supply a validated port, normally from get_terminal_port.
-
 sub check_ssh_service
 {
 my ($addresses, $port) = @_;
@@ -68,7 +67,6 @@ return undef;
 
 # get_server_health(uuid) Returns public health signals; the shared worker drops
 # the localized labels.
-
 sub get_server_health
 {
 my ($uuid) = @_;
@@ -131,7 +129,6 @@ return {
 # user's labels and permissions. reopen is terminal, console or serial for a
 # connection, or edit_machine after shutdown. Omit it to update status without
 # navigating to another page.
-
 sub get_status_config
 {
 my ($vm, $reopen) = @_;
@@ -179,7 +176,6 @@ return convert_to_json($config);
 # get_overview_status_config([token]) supplies theme-native row templates. Omit
 # the token when power controls are unavailable. Tokens and translated markup
 # belong to the page, never the shared cache.
-
 sub get_overview_status_config
 {
 my ($token) = @_;
@@ -208,7 +204,6 @@ return convert_to_json($config);
 }
 
 # notify_status_changed(uuid) queues module changes without a libvirt event.
-
 sub notify_status_changed
 {
 my ($id) = @_;
@@ -224,7 +219,6 @@ close($fh);
 }
 
 # start_status() reuses one session-authenticated collector for this host.
-
 sub start_status
 {
 # Sharing a backend does not remove the need for an authenticated browser.
@@ -302,7 +296,6 @@ return { socket_url => get_miniserv_websocket_url($port, undef,
 
 # show_status_script() Loads the updater for full-page and
 # AJAX navigation alike.
-
 sub show_status_script
 {
 return ui_tag('script', '', { src => get_webprefix().
@@ -315,7 +308,6 @@ return ui_tag('script', '', { src => get_webprefix().
 # waiting graphical or serial console; other callers get SSH readiness. See
 # get_status_config for reopen values. message adds plain text to SSH readiness
 # after the pending check finishes.
-
 sub show_status_summary
 {
 my ($vm, $reopen, $message) = @_;

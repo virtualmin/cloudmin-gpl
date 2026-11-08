@@ -13,7 +13,6 @@ use WebminCore qw(read_file_contents write_file_contents make_dir
 # Opens a URL-keyed cache without creating files during ordinary page rendering.
 # probe(url) returns bytes; lock callbacks take a cache path and now() defaults
 # to time(). The probe and lock callbacks are required when calling refresh().
-
 sub new
 {
 my ($class, %opts) = @_;
@@ -23,7 +22,6 @@ return bless(\%opts, $class);
 }
 
 # now(self) Returns the current time, or the clock supplied by a test.
-
 sub now
 {
 my ($self) = @_;
@@ -32,7 +30,6 @@ return $self->{'now'} ? $self->{'now'}->() : time();
 
 # valid_bytes(value) Accepts positive byte counts that JavaScript
 # can represent exactly.
-
 sub valid_bytes
 {
 return defined($_[0]) && !ref($_[0]) && $_[0] =~ /\A[1-9]\d{0,14}\z/;
@@ -40,7 +37,6 @@ return defined($_[0]) && !ref($_[0]) && $_[0] =~ /\A[1-9]\d{0,14}\z/;
 
 # path(self, entry) Keys estimates by URL so editing a source cannot
 # reuse its previous size.
-
 sub path
 {
 my ($self, $entry) = @_;
@@ -50,7 +46,6 @@ return "$self->{directory}/".sha256_hex(encode_utf8($entry->{'url'})).
 
 # get(self, entry) Uses the last successful observation, falling back to
 # the bundled estimate.
-
 sub get
 {
 my ($self, $entry) = @_;
@@ -78,7 +73,6 @@ return { bytes => defined($bytes) ? 0 + $bytes : undef,
 
 # refresh(self, entry) Refreshes stale headers once under a Webmin lock;
 # failures retain estimates.
-
 sub refresh
 {
 my ($self, $entry) = @_;

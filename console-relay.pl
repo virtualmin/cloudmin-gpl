@@ -29,7 +29,6 @@ alarm($mode eq 'serial' ? 15 : 60);
 
 # queue_console_bytes(handle, bytes) Keeps partial writes in memory while
 # bounding a slow peer's pending traffic.
-
 sub queue_console_bytes
 {
 my ($handle, $bytes) = @_;
@@ -57,7 +56,6 @@ $server->watch_writable($handle, sub {
 
 # browser_alive(client) resets the active browser's 60-second timeout. Returns
 # false for other clients. Input, pongs and text count as activity.
-
 sub browser_alive
 {
 # Rejected or additional clients must not keep another session alive.

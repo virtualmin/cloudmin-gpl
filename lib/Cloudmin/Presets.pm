@@ -17,7 +17,6 @@ require(dirname(__FILE__).'/VMs.pm');
 # template_users() maps template IDs to guest names and is required for
 # deletion. virtualmin_enabled defaults to true. When false, it blocks templates
 # that select Virtualmin.
-
 sub new
 {
 my ($class, %args) = @_;
@@ -25,7 +24,6 @@ return bless(\%args, $class);
 }
 
 # path(self, kind) limits storage to the two supported configuration files.
-
 sub path
 {
 my ($self, $kind) = @_;
@@ -34,7 +32,6 @@ return "$self->{directory}/${kind}s.json";
 }
 
 # read(self, kind) combines saved and bundled presets without writing files.
-
 sub read
 {
 my ($self, $kind) = @_;
@@ -95,7 +92,6 @@ return $data;
 }
 
 # default_id() identifies the protected base preset in each list.
-
 sub default_id
 {
 return '0' x 31 . '1';
@@ -103,7 +99,6 @@ return '0' x 31 . '1';
 
 # builtin_presets(kind, [host_cpus]) supplies bundled templates or plans.
 # host_cpus caps the unedited plan's CPU allocation when the host has one CPU.
-
 sub builtin_presets
 {
 my ($kind, $cpus) = @_;
@@ -161,7 +156,6 @@ return @templates;
 
 # template_name(settings, names) describes Virtualmin without installation size.
 # names contains lowercase names already in use; a suffix keeps names unique.
-
 sub template_name
 {
 my ($settings, $names) = @_;
@@ -183,7 +177,6 @@ return $candidate;
 }
 
 # builtin(kind, id) identifies bundled presets, including saved overrides.
-
 sub builtin
 {
 my ($kind, $id) = @_;
@@ -194,7 +187,6 @@ return defined($id) && ($id eq default_id() ||
 # template_error(self, settings, [base]) Returns a policy error or an empty
 # string when the template is allowed. base supplies inherited settings. With no
 # installer in either hash, use none.
-
 sub template_error
 {
 my ($self, $settings, $base) = @_;
@@ -210,7 +202,6 @@ return defined($self->{'virtualmin_enabled'}) &&
 # base_settings(self, kind) reads inheritance defaults for templates or plans.
 # Bypass selection policy so a template that opts out of Virtualmin can still
 # inherit other settings from a disabled Default Template.
-
 sub base_settings
 {
 my ($self, $kind) = @_;
@@ -222,7 +213,6 @@ return $base->{'settings'};
 # list(self, kind) returns sorted records and an available default for the
 # UI/API. Disabled records retain their ID/name so old CLI
 # references get a clear error.
-
 sub list
 {
 my ($self, $kind) = @_;
@@ -255,7 +245,6 @@ return { default => $default, entries => \@entries };
 }
 
 # get(self, kind, id) returns a usable template or plan by its exact record ID.
-
 sub get
 {
 my ($self, $kind, $id) = @_;
@@ -270,7 +259,6 @@ return $record;
 }
 
 # fields(kind) lists reusable settings, excluding passwords and VM identities.
-
 sub fields
 {
 return $_[0] eq 'plan'
@@ -284,7 +272,6 @@ return $_[0] eq 'plan'
 # stored_scripts defaults to false. True retains saved script fields without Pro
 # source validation, for reads or saves whose script fields are unchanged. Host
 # capacity and image availability are checked again during VM creation.
-
 sub validate
 {
 my ($self, $kind, $record, $stored_scripts) = @_;
@@ -397,7 +384,6 @@ return \%clean;
 
 # change(self, kind, action, callback) locks configuration edits and logs them.
 # callback(data) edits one complete file and returns the changed record or IDs.
-
 sub change
 {
 my ($self, $kind, $action, $callback) = @_;
@@ -438,7 +424,6 @@ return $result;
 
 # save(self, kind, record) creates a record or saves the
 # latest submitted values.
-
 sub save
 {
 my ($self, $kind, $record) = @_;
@@ -527,7 +512,6 @@ return $self->change($kind, $record->{'id'} ? 'modify' : 'create', sub {
 }
 
 # update(self, kind, action, ids) deletes or selects a default preset by ID.
-
 sub update
 {
 my ($self, $kind, $action, $ids) = @_;
@@ -593,7 +577,6 @@ return $self->change($kind, $action, sub {
 # resolve(self, input, [mode]) fills missing values from selected presets.
 # Explicit values override defaults, but cannot disable a template's hostname
 # requirement. mode defaults to creation; 'clone' omits installation defaults.
-
 sub resolve
 {
 my ($self, $input, $mode) = @_;

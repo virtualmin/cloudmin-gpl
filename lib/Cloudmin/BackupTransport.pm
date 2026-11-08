@@ -14,14 +14,12 @@ require(dirname(__FILE__).'/BackupSSH.pm');
 my $PRO_HELPERS = dirname(__FILE__).'/../../pro/BackupCloud.pm';
 
 # has_pro_providers() checks for the installed Cloudmin Pro transfer helpers.
-
 sub has_pro_providers
 {
 return -r $PRO_HELPERS;
 }
 
 # modes() lists destinations supported by the installed edition.
-
 sub modes
 {
 return ( qw(local ssh s3), has_pro_providers()
@@ -32,7 +30,6 @@ return ( qw(local ssh s3), has_pro_providers()
 # saved_target(target, [previous]) retains blank credentials only for this
 # provider. Explicit clearing lets administrators remove an
 # optional token or password.
-
 sub saved_target
 {
 my ($target, $previous) = @_;
@@ -57,7 +54,6 @@ return validate(\%target);
 # validate(target, [restoring]) checks destination fields without contacting it.
 # The optional restoring flag is accepted by the service callback; validation is
 # identical for backup and restore.
-
 sub validate
 {
 my ($t, $restoring) = @_;
@@ -132,7 +128,6 @@ return \%t;
 }
 
 # preflight(target, restoring) checks tools and storage before stopping a guest.
-
 sub preflight
 {
 my ($t, $restoring) = @_;
@@ -171,7 +166,6 @@ if ($t->{'mode'} eq 'bb') {
 }
 
 # label(target) names a destination without displaying credentials.
-
 sub label
 {
 my ($t) = @_;
@@ -183,7 +177,6 @@ return uc($t->{'mode'}).': '.($t->{'bucket'} || '').'/'.$t->{'path'};
 
 # transfer(operation, target, filename, local_file, [worker_options]) transfers
 # one fixed archive. Remote options provide cancellation and worker journalling.
-
 sub transfer
 {
 my ($op, $t, $name, $local, $opts) = @_;
@@ -267,7 +260,6 @@ Cloudmin::Worker->new()->run('backup_transfer', { operation => $op,
 }
 
 # remote(request) runs native clients or Virtualmin helpers in a private worker.
-
 sub remote
 {
 my ($r) = @_;

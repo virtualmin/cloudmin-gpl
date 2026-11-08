@@ -30,7 +30,6 @@ my @keys =
 	}
 
 # LibraryFixture::list(self) returns the current public-key widget fixtures.
-
 sub LibraryFixture::list
 {
 \@keys

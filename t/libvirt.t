@@ -14,42 +14,36 @@ use Cloudmin::Libvirt;
 	package TestDomain;
 
 	# new(class, fields) - Wraps guest fixture fields in a domain object.
-
 	sub new
 	{
 	return bless($_[1], $_[0]);
 	}
 
 	# get_name(self) - Supplies the guest name for lookup and sorting.
-
 	sub get_name
 	{
 	return $_[0]->{'name'};
 	}
 
 	# get_uuid_string(self) - Supplies the guest's stable identifier.
-
 	sub get_uuid_string
 	{
 	return $_[0]->{'uuid'};
 	}
 
 	# is_active(self) - Supplies the fixture's active-domain flag.
-
 	sub is_active
 	{
 	return $_[0]->{'active'};
 	}
 
 	# is_persistent(self) - Supplies the saved-definition flag.
-
 	sub is_persistent
 	{
 	return $_[0]->{'persistent'};
 	}
 
 	# get_autostart(self) Supplies boot policy or simulates a failed lookup.
-
 	sub get_autostart
 	{
 	die "Lookup failed\n" if ($_[0]->{'autostart_error'});
@@ -57,14 +51,12 @@ use Cloudmin::Libvirt;
 	}
 
 	# get_info(self) - Supplies raw libvirt-style state and resource values.
-
 	sub get_info
 	{
 	return $_[0]->{'info'};
 	}
 
 	# get_xml_description(self, [flags]) - Returns XML; ignores flags.
-
 	sub get_xml_description
 	{
 	return $_[0]->{'xml'};
@@ -72,7 +64,6 @@ use Cloudmin::Libvirt;
 
 	# get_interface_addresses(self, source, flags) Returns configured
 	# address sources or simulates an unavailable lookup.
-
 	sub get_interface_addresses
 	{
 	my ($self, $source) = @_;
@@ -84,7 +75,6 @@ use Cloudmin::Libvirt;
 
 	# set_agent_response_timeout(self, seconds, flags)
 	# records bounded polling.
-
 	sub set_agent_response_timeout
 	{
 	push(@{$_[0]->{'timeouts'}}, $_[1]);
@@ -92,7 +82,6 @@ use Cloudmin::Libvirt;
 
 	# get_guest_info(self, types, flags) supplies a responding
 	# or unavailable agent.
-
 	sub get_guest_info
 	{
 	$_[0]->{'agent_calls'}++;
@@ -105,49 +94,42 @@ use Cloudmin::Libvirt;
 	package TestConnection;
 
 	# new(class, fields) - Wraps fixture domains in a connection object.
-
 	sub new
 	{
 	return bless($_[1], $_[0]);
 	}
 
 	# get_hostname(self) - Supplies a fixed host name without a live lookup.
-
 	sub get_hostname
 	{
 	return 'kvm1.example.test';
 	}
 
 	# get_type(self) - Emulates the QEMU driver used by Cloudmin.
-
 	sub get_type
 	{
 	return 'QEMU';
 	}
 
 	# get_version(self) - Supplies QEMU's version as a libvirt integer.
-
 	sub get_version
 	{
 	return 10_002_000;
 	}
 
 	# get_library_version(self) - Uses a different version to catch mix-ups.
-
 	sub get_library_version
 	{
 	return 11_010_000;
 	}
 
 	# list_all_domains(self, [flags]) - Returns all guests, ignoring flags.
-
 	sub list_all_domains
 	{
 	return @{$_[0]->{'domains'}};
 	}
 
 	# list_all_storage_pools(self, [flags]) - Returns all pool fixtures.
-
 	sub list_all_storage_pools
 	{
 	return @{$_[0]->{'pools'} || [ ]};
@@ -158,35 +140,30 @@ use Cloudmin::Libvirt;
 	package TestStorageVolume;
 
 	# new(class, fields) - Wraps volume fixture fields in a volume object.
-
 	sub new
 	{
 	return bless($_[1], $_[0]);
 	}
 
 	# get_name(self) - Supplies the volume name.
-
 	sub get_name
 	{
 	return $_[0]->{'name'};
 	}
 
 	# get_key(self) - Supplies the backend's stable volume key.
-
 	sub get_key
 	{
 	return $_[0]->{'key'};
 	}
 
 	# get_path(self) - Supplies the local volume path.
-
 	sub get_path
 	{
 	return $_[0]->{'path'};
 	}
 
 	# get_info(self) - Supplies raw libvirt-style size values.
-
 	sub get_info
 	{
 	return $_[0]->{'info'};
@@ -197,63 +174,54 @@ use Cloudmin::Libvirt;
 	package TestStoragePool;
 
 	# new(class, fields) - Wraps pool fixture fields in a pool object.
-
 	sub new
 	{
 	return bless($_[1], $_[0]);
 	}
 
 	# get_name(self) - Supplies the pool name.
-
 	sub get_name
 	{
 	return $_[0]->{'name'};
 	}
 
 	# get_uuid_string(self) - Supplies the pool's stable identifier.
-
 	sub get_uuid_string
 	{
 	return $_[0]->{'uuid'};
 	}
 
 	# is_active(self) - Supplies the active-pool flag.
-
 	sub is_active
 	{
 	return $_[0]->{'active'};
 	}
 
 	# is_persistent(self) - Supplies the saved-definition flag.
-
 	sub is_persistent
 	{
 	return $_[0]->{'persistent'};
 	}
 
 	# get_autostart(self) - Supplies the host-boot flag.
-
 	sub get_autostart
 	{
 	return $_[0]->{'autostart'};
 	}
 
 	# get_info(self) - Supplies raw libvirt-style pool state and sizes.
-
 	sub get_info
 	{
 	return $_[0]->{'info'};
 	}
 
 	# get_xml_description(self, [flags]) - Returns pool XML; ignores flags.
-
 	sub get_xml_description
 	{
 	return $_[0]->{'xml'};
 	}
 
 	# list_all_volumes(self, [flags]) - Returns all volume fixtures.
-
 	sub list_all_volumes
 	{
 	return @{$_[0]->{'volumes'} || [ ]};
@@ -574,7 +542,6 @@ is_deeply($running->{'address_calls'}, [ ],
 	package Sys::Virt::Error;
 
 	# code(self) - Supplies the numeric libvirt error code.
-
 	sub code
 	{
 	return $_[0]->{'code'};
@@ -582,7 +549,6 @@ is_deeply($running->{'address_calls'}, [ ],
 
 	# message(self) - Supplies the libvirt diagnostic
 	# without string wrapping.
-
 	sub message
 	{
 	return $_[0]->{'message'};
@@ -591,7 +557,6 @@ is_deeply($running->{'address_calls'}, [ ],
 
 	# refresh(self) - Replays one pending clone followed
 	# by a normal refresh.
-
 	sub refresh
 	{
 	$_[0]->{'calls'}++;

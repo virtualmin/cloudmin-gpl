@@ -15,7 +15,6 @@ require(Cwd::abs_path(dirname(__FILE__).'/ImageChoices.pm'));
 #     [unlock_file => callback], [log => callback])
 # Creates a lazy catalogue reader; lock/unlock/log callbacks
 # are required for edits.
-
 sub new
 {
 my ($class, %opts) = @_;
@@ -25,7 +24,6 @@ return bless({ %opts }, $class);
 }
 
 # load(self) Loads, validates, and caches the catalogue manifest.
-
 sub load
 {
 my ($self) = @_;
@@ -47,7 +45,6 @@ return $catalogue;
 
 # list_entries(self) Combines supplied and custom images, including
 # disabled architectures.
-
 sub list_entries
 {
 my ($self) = @_;
@@ -80,7 +77,6 @@ return Cloudmin::ImageChoices::sort_images(\@records);
 # list_images(self, [architecture]) Returns enabled entries, optionally limited
 # to the host architecture. An omitted or empty architecture
 # includes all architectures.
-
 sub list_images
 {
 my ($self, $architecture) = @_;
@@ -93,7 +89,6 @@ return [ grep { $_->{'enabled'} &&
 
 # find_entry(self, key) Looks up an entry for editing, including disabled
 # entries. key has the form id:architecture; no match returns undef.
-
 sub find_entry
 {
 my ($self, $key) = @_;
@@ -104,7 +99,6 @@ return $record;
 
 # custom_catalogue(self) Reads the separate custom catalogue without creating
 # it during page views.
-
 sub custom_catalogue
 {
 my ($self) = @_;
@@ -134,7 +128,6 @@ return $catalogue;
 
 # validate_record(record) Applies the same schema to custom entries and
 # bundled image assets.
-
 sub validate_record
 {
 my ($record) = @_;
@@ -148,7 +141,6 @@ validate_catalogue({ schema => 1, images => [ { %$record,
 # change(self, action, keys, callback) Serializes edits with Webmin locks and
 # records configuration diffs in its log. keys is an array of catalogue keys;
 # callback(settings) edits the locked hash.
-
 sub change
 {
 my ($self, $action, $keys, $callback) = @_;
@@ -194,7 +186,6 @@ return 1;
 # save_entry(self, record, [new]) Adds or edits a custom image without modifying
 # Cloudmin's supplied catalogue. new defaults to false and then requires an
 # existing custom entry.
-
 sub save_entry
 {
 my ($self, $record, $new) = @_;
@@ -245,7 +236,6 @@ return $self->change($new ? 'create' : 'modify', [ $key ], sub {
 # update_entries(self, action, keys) Enables/disables either source or removes
 # selected custom image architectures. action is enable, disable or delete; keys
 # is an array of id:architecture strings.
-
 sub update_entries
 {
 my ($self, $action, $keys) = @_;
@@ -300,7 +290,6 @@ return $self->change($action, $keys, sub {
 # search_images(self, query, [architecture]) Returns compatible images whose
 # searchable metadata contains every term. An empty query returns all enabled
 # matches; omitted architecture includes all.
-
 sub search_images
 {
 my ($self, $query, $architecture) = @_;
@@ -329,7 +318,6 @@ return \@matches;
 # find_image(self, id, [architecture]) Returns one compatible image record by
 # stable catalogue ID. Without architecture, returns the first enabled
 # architecture for that ID.
-
 sub find_image
 {
 my ($self, $id, $architecture) = @_;
@@ -342,7 +330,6 @@ return $image;
 
 # image_count(self) Counts enabled operating-system IDs once, regardless
 # of architecture count.
-
 sub image_count
 {
 my ($self) = @_;
@@ -353,7 +340,6 @@ return scalar(keys %ids);
 # normalize_architecture([architecture]) Converts common architecture aliases to
 # libvirt and distribution names. Omitted input becomes an empty filter; unknown
 # names are lowercased and trimmed.
-
 sub normalize_architecture
 {
 my ($architecture) = @_;
@@ -371,7 +357,6 @@ return $architecture;
 # validate_catalogue(catalogue, [allow_empty]) Rejects malformed or unsafe
 # manifests before their values reach the UI. allow_empty defaults to false;
 # custom catalogues may opt into an empty list.
-
 sub validate_catalogue
 {
 my ($catalogue, $allow_empty) = @_;
@@ -499,7 +484,6 @@ foreach my $image (@{$catalogue->{'images'}}) {
 
 # valid_url(url) Applies the image downloader's URL rules to
 # catalogue metadata too.
-
 sub valid_url
 {
 my ($url) = @_;
@@ -508,7 +492,6 @@ return eval { Cloudmin::Images::validate_url($url); 1 } ? 1 : 0;
 
 # error_message(error) Removes Perl source locations from manifest
 # errors shown to callers.
-
 sub error_message
 {
 my ($error) = @_;

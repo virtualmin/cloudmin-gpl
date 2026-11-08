@@ -7,7 +7,6 @@ our %text;
 
 # vm_disk_label(disk) Names attached disks by their known role, retaining
 # the guest device name.
-
 sub vm_disk_label
 {
 my ($disk) = @_;
@@ -20,7 +19,6 @@ return ($text{'vm_disk_role_'.$role} || $text{'vm_disk_role_disk'}).
 
 # storage_volume_label(volume) Shortens generated filenames for display; custom
 # volume names stay intact.
-
 sub storage_volume_label
 {
 my ($volume) = @_;

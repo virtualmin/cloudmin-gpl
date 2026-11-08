@@ -5,7 +5,6 @@ our ($module_root_directory, %text);
 
 # ssh_public_key_input(value, [disabled]) renders public-key text and a picker.
 # disabled defaults to false. Only Pro host administrators get the picker.
-
 sub ssh_public_key_input
 {
 my ($value, $disabled) = @_;
@@ -52,7 +51,6 @@ return ui_tag('div', ui_stack([ $input, ($warning
 # guest_ssh_account_heading(username, accounts, [count], [disabled]) Places the
 # labelled account selector and optional nonzero key count together. accounts
 # lists known usernames. disabled defaults to false for live pages.
-
 sub guest_ssh_account_heading
 {
 my ($username, $accounts, $count, $disabled) = @_;
@@ -92,7 +90,6 @@ return ui_tag('span', $label.$total.$fallback,
 
 # show_guest_ssh_preview(vm) shows disabled account and key controls on GPL. Use
 # creation metadata only; previews never query the guest agent or library.
-
 sub show_guest_ssh_preview
 {
 my ($vm) = @_;
@@ -130,7 +127,6 @@ return ui_page_start().ui_tag('div',
 # ssh_key_library_list(rows, [add_action]) renders the Pro list and GPL preview.
 # rows is an arrayref of ui_list entries; add_action is optional button HTML.
 # Omit add_action for a read-only library; an empty rows array shows guidance.
-
 sub ssh_key_library_list
 {
 my ($rows, $add_action) = @_;
@@ -145,7 +141,6 @@ return ui_p(html_escape($text{'keys_intro'})).ui_card({ title =>
 }
 
 # show_ssh_library_preview() advertises saved keys without loading Pro code.
-
 sub show_ssh_library_preview
 {
 # Match an empty Pro library without querying storage or offering a live action.

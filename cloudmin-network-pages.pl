@@ -11,7 +11,6 @@ our (%text);
 
 # network_page_tab(value) Accepts inventory tabs, defaulting to the overview on
 # an ordinary page visit.
-
 sub network_page_tab
 {
 my ($value) = @_;
@@ -22,7 +21,6 @@ return defined($value) && $value =~ /\A(?:networks|bridges|interfaces)\z/
 
 # network_form(action, token, [fields]) Starts an independent POST form that
 # returns to the relevant inventory tab.
-
 sub network_form
 {
 my ($action, $token, $fields) = @_;
@@ -38,7 +36,6 @@ return ui_form_start('networks.cgi', 'post').ui_hidden('action', $action).
 
 # network_values(values, [empty]) Keeps addresses on separate lines, wrapping
 # long IPv6 values only when needed.
-
 sub network_values
 {
 my ($values, $empty) = @_;
@@ -50,7 +47,6 @@ return join('', map { ui_tag('span', html_escape($_),
 
 # show_network_guests(guests) Displays each attached VM once, even when it has
 # several matching interfaces.
-
 sub show_network_guests
 {
 my ($guests) = @_;
@@ -66,7 +62,6 @@ return ui_cluster([ map { ui_tag('a', ui_svg_icon('terminal').
 
 # show_network_overview(data) Summarizes the inventory and links each network or
 # bridge to its detail card.
-
 sub show_network_overview
 {
 my ($data) = @_;
@@ -133,7 +128,6 @@ return $html.ui_tag('div', ui_columns_table(
 # show_network_status(state, token, owner) Groups bridge progress, errors and
 # recovery actions in one native card. An empty token hides actions; owner is
 # the user viewing the transaction.
-
 sub show_network_status
 {
 my ($state, $token, $owner) = @_;
@@ -211,7 +205,6 @@ return ui_tag('div', ui_card({
 
 # network_status_badge(active) Uses the same compact status treatment for
 # networks, bridges and interfaces.
-
 sub network_status_badge
 {
 my ($active) = @_;
@@ -221,7 +214,6 @@ return ui_badge($text{$active ? 'net_active' : 'net_inactive'},
 
 # show_virtual_network(net, token, [selected]) Separates identity, addressing,
 # attached guests and lifecycle controls.
-
 sub show_virtual_network
 {
 my ($net, $token, $selected) = @_;
@@ -327,7 +319,6 @@ return ui_tag('div', ui_card({
 # show_host_network(item, [interface], [selected], [token]) Gives bridges and
 # Ethernet interfaces the same readable address layout. interface and selected
 # default to false; token enables bridge removal review.
-
 sub show_host_network
 {
 my ($item, $interface, $selected, $token) = @_;
@@ -395,7 +386,6 @@ return ui_card({ title_html =>
 # show_network_page(data, token, state, owner, [tab], [selected]) Uses native
 # Webmin tabs and the card, list and empty-state widgets from ui-demo. tab
 # defaults to overview; selected optionally identifies a card to show first.
-
 sub show_network_page
 {
 my ($data, $token, $state, $owner, $tab, $selected) = @_;
@@ -487,7 +477,6 @@ return $html.ui_tabs_end(1);
 
 # show_network_create_form(data, token) Explains connection choices beside their
 # radios, then groups address settings.
-
 sub show_network_create_form
 {
 my ($data, $token) = @_;
@@ -541,7 +530,6 @@ return $html.ui_hidden_table_end('create_network').ui_form_end();
 
 # show_bridge_create_form(data, token, [open]) Presents the eligible Ethernet
 # port, expanded when there are no host bridges.
-
 sub show_bridge_create_form
 {
 my ($data, $token, $open) = @_;
@@ -586,7 +574,6 @@ return $html.ui_hidden_table_end('create_bridge').ui_form_end();
 
 # show_bridge_review(plan, token) Shows a creation or removal plan and includes
 # its signed form token.
-
 sub show_bridge_review
 {
 my ($p, $token) = @_;

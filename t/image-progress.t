@@ -32,13 +32,11 @@ require "$Bin/../cloudmin-pages.pl";
 require "$Bin/../cloudmin-print.pl";
 
 # ReadParse() - Keeps the request fields supplied by the fixture.
-
 sub ReadParse
 {
 }
 
 # get_image_jobs() - Supplies the scripted job store.
-
 sub get_image_jobs
 {
 return $fixture;
@@ -46,7 +44,6 @@ return $fixture;
 
 # start_image_imports(input) Models token validation and records attempts to
 # start new background work.
-
 sub start_image_imports
 {
 my ($input) = @_;
@@ -57,14 +54,12 @@ return [ { id => 'a' } ];
 }
 
 # error_html(message) escapes non-license errors in this CGI fixture.
-
 sub error_html
 {
 return html_escape($_[0]);
 }
 
 # html_escape(value) - Models Webmin's escaping for progress and failure text.
-
 sub html_escape
 {
 my ($value) = @_;
@@ -75,21 +70,18 @@ return $value;
 }
 
 # html_strip(value) - Size fixtures contain no markup.
-
 sub html_strip
 {
 return $_[0];
 }
 
 # nice_size(bytes) - Makes byte counters easy to assert without a theme.
-
 sub nice_size
 {
 return "$_[0] bytes";
 }
 
 # text(key, [values...]) - Substitutes Webmin language placeholders.
-
 sub text
 {
 my ($key, @values) = @_;
@@ -99,49 +91,42 @@ return $value;
 }
 
 # ui_p(text) - Preserves the progress page's explanatory paragraph.
-
 sub ui_p
 {
 return "<p>$_[0]</p>\n";
 }
 
 # ui_link(url, label) - Detects an unwanted extra navigation button.
-
 sub ui_link
 {
 return "<a href='$_[0]'>$_[1]</a>\n";
 }
 
 # ui_print_unbuffered_header([title], heading, help) - Captures the heading.
-
 sub ui_print_unbuffered_header
 {
 print "<header>$_[1]</header>\n";
 }
 
 # ui_print_footer(url, label) - Webmin adds its own Return to prefix.
-
 sub ui_print_footer
 {
 print "<footer>Return to $_[1]</footer>\n";
 }
 
 # error(message) - Stops a fixture request if the CGI rejects it.
-
 sub error
 {
 die "$whatfailed: $_[0]";
 }
 
 # error_setup(message) - Records the action shown before a validation error.
-
 sub error_setup
 {
 $whatfailed = $_[0];
 }
 
 # progress_callback(mode, [bytes]) - Records exactly which HTTP events are used.
-
 sub progress_callback
 {
 my ($mode, $bytes) = @_;
@@ -156,14 +141,12 @@ print ".. download complete\n" if ($mode == 4);
 	package ProgressJobs;
 
 	# new(class, scripts) Stores one ordered state sequence per fixture job.
-
 	sub new
 	{
 	return bless({ scripts => $_[1], reads => { } }, $_[0]);
 	}
 
 	# get(self, id) - Handles validation, then advances each progress poll.
-
 	sub get
 	{
 	my ($self, $id) = @_;
@@ -181,7 +164,6 @@ print ".. download complete\n" if ($mode == 4);
 # render(scripts, [method], [fields]) Executes the CGI with GET by default and
 # optional request field overrides. scripts maps job IDs to ordered states;
 # omitted fields use those IDs only.
-
 sub render
 {
 my ($scripts, $method, $fields) = @_;

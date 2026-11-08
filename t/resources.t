@@ -70,7 +70,6 @@ ok(!defined($sample->{cpu_percent}),
 	package ResourceDomain;
 
 	# get_name(self) supplies a fixed guest name for adapter lookup.
-
 	sub get_name
 	{
 	return 'resource-fixture';
@@ -78,14 +77,12 @@ ok(!defined($sample->{cpu_percent}),
 
 	# get_uuid_string(self) returns the same identity as
 	# the sampled counters.
-
 	sub get_uuid_string
 	{
 	return $_[0]->{uuid};
 	}
 
 	# is_active(self) permits guest-agent sampling in this fixture.
-
 	sub is_active
 	{
 	return 1;
@@ -93,7 +90,6 @@ ok(!defined($sample->{cpu_percent}),
 
 	# get_xml_description(self, [flags]) maps two writable disks
 	# and read-only media.
-
 	sub get_xml_description
 	{
 	return q{<domain><devices>
@@ -105,7 +101,6 @@ ok(!defined($sample->{cpu_percent}),
 
 	# set_agent_response_timeout(self, seconds, flags) records
 	# timeout restoration.
-
 	sub set_agent_response_timeout
 	{
 	push(@{$_[0]->{timeouts}}, $_[1]);
@@ -113,7 +108,6 @@ ok(!defined($sample->{cpu_percent}),
 
 	# get_guest_info(self, types, flags) returns data or
 	# simulates agent failure.
-
 	sub get_guest_info
 	{
 	die "Agent unavailable\n" if ($_[0]->{fail});
@@ -122,14 +116,12 @@ ok(!defined($sample->{cpu_percent}),
 	package ResourceConnection;
 
 	# list_all_domains(self, [flags]) supplies the single sampled domain.
-
 	sub list_all_domains
 	{
 	return $_[0]->{domain};
 	}
 
 	# get_domain_by_uuid(self, uuid) resolves the fixture without libvirt.
-
 	sub get_domain_by_uuid
 	{
 	return $_[0]->{domain};
@@ -137,7 +129,6 @@ ok(!defined($sample->{cpu_percent}),
 
 	# get_all_domain_stats(self, mask, domains, flags)
 	# records batch selection.
-
 	sub get_all_domain_stats
 	{
 	my ($self, $mask, $domains, $flags) = @_;

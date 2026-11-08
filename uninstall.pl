@@ -4,7 +4,6 @@ use warnings;
 require 'server-manager-lib.pl';
 
 # module_uninstall() stops statistics and removes the CLI and license check.
-
 sub module_uninstall
 {
 # Stop the collector before deleting its executable or module state.

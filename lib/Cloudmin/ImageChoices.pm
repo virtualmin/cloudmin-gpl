@@ -8,7 +8,6 @@ use WebminCore qw(compare_version_numbers);
 # sort_images(images) Keeps distributions together, newest releases first, then
 # unclassified images. Returns a new array; support status does not split
 # distribution groups.
-
 sub sort_images
 {
 my ($images) = @_;

@@ -33,7 +33,6 @@ require(File::Basename::dirname(__FILE__)."/cloudmin-disk-labels.pl");
 # show_disk_location(path, [local]) Keeps full storage filenames available
 # without making them the disk heading. local defaults to true; remote paths
 # must not open this host's File Manager.
-
 sub show_disk_location
 {
 my ($path, $local) = @_;
@@ -47,7 +46,6 @@ return ui_details({ html => 1, class => 'inline inlined',
 
 # show_network_recovery(data) Offers recovery only for a diagnosed failure and
 # an authorized host writer.
-
 sub show_network_recovery
 {
 my ($data) = @_;
@@ -66,7 +64,6 @@ return ui_tag('p', html_escape($text{'check_network_restore_desc'})).
 
 # show_dashboard_page(data) Builds dashboard widget HTML from a
 # get_dashboard result hash.
-
 sub show_dashboard_page
 {
 my ($data) = @_;
@@ -259,7 +256,6 @@ return $page;
 
 # show_jobs_page(data) Wraps live progress and recovery controls with
 # a connection warning.
-
 sub show_jobs_page
 {
 my ($data) = @_;
@@ -274,7 +270,6 @@ return ui_page_start().ui_tag_start('div', {
 
 # show_jobs_status(data) Renders a quiet empty state or current job progress
 # using Webmin widgets.
-
 sub show_jobs_status
 {
 my ($data) = @_;
@@ -421,7 +416,6 @@ return $html.ui_p($text{'jobs_desc'}).
 
 # describe_image_check(job) Describes disk inspection and the checksum source
 # used for this import.
-
 sub describe_image_check
 {
 my ($job) = @_;
@@ -443,7 +437,6 @@ return $text{'images_job_verifying'};
 
 # get_image_job_status(job) Returns translated progress text and byte counts,
 # without private inputs.
-
 sub get_image_job_status
 {
 my ($job) = @_;
@@ -499,7 +492,6 @@ return {
 
 # show_image_path(path) Shows a file path and links to its allowed File Manager
 # directory when available.
-
 sub show_image_path
 {
 my $path = $_[0] || '';
@@ -514,7 +506,6 @@ return show_filemin_directory($dir, $label);
 # show_filemin_directory(dir, [label]) Links a local directory within the user's
 # File Manager roots. An optional HTML label lets image paths retain
 # their full filename.
-
 sub show_filemin_directory
 {
 my ($dir, $label) = @_;
@@ -543,7 +534,6 @@ return $label;
 
 # print_image_manager([mode]) displays the inventory, import or catalogue tab.
 # mode accepts images, add or catalogue. Omit it to use the saved tab or images.
-
 sub print_image_manager
 {
 my ($mode) = @_;
@@ -577,7 +567,6 @@ ui_print_footer('index.cgi', $text{'vm_return'});
 
 # show_images_page(data) Uses the standard tab, checked-table and form APIs
 # demonstrated by ui-demo.
-
 sub show_images_page
 {
 my ($data) = @_;
@@ -825,7 +814,6 @@ return $page;
 
 # list_catalogue_columns() Defines available columns and their sort types in the
 # table's display order.
-
 sub list_catalogue_columns
 {
 return (
@@ -849,7 +837,6 @@ return (
 # get_catalogue_columns([value]) Filters a stored column list; missing or
 # invalid settings use all columns. value is a comma- or whitespace-separated
 # list of IDs; name always remains.
-
 sub get_catalogue_columns
 {
 my ($value) = @_;
@@ -865,7 +852,6 @@ return grep { $wanted{$_->{'id'}} } @defs;
 # show_catalogue_page(data) Lists catalogue_entries from data with links and
 # bulk controls. The caller applies the configured architecture filter before
 # passing the entries here.
-
 sub show_catalogue_page
 {
 my ($data) = @_;
@@ -942,7 +928,6 @@ return $page;
 
 # catalogue_link(url, [label]) Shows the full URL, or a compact download button
 # when a label is supplied.
-
 sub catalogue_link
 {
 my ($url, $label) = @_;
@@ -958,7 +943,6 @@ return ui_tag('a', defined($label)
 
 # show_catalogue_form(entry, new, token, [error], [readonly]) Builds the
 # standard Webmin editor for one image architecture and its URLs.
-
 sub show_catalogue_form
 {
 my ($entry, $new, $token, $error, $readonly) = @_;
@@ -1107,7 +1091,6 @@ return $page;
 
 # describe_architecture([architecture]) Returns a short human-readable
 # CPU architecture label.
-
 sub describe_architecture
 {
 my ($architecture) = @_;
@@ -1120,7 +1103,6 @@ return $architecture || $text{'index_unknown'};
 
 # get_image_option(image, [today]) Returns a grouped download choice with
 # compact metadata. today defaults to the current UTC date, in YYYY-MM-DD form.
-
 sub get_image_option
 {
 my ($image, $today) = @_;
@@ -1188,7 +1170,6 @@ return { value => $image->{'id'}, label => $image->{'name'}, status => $status,
 # get_vm_row(server, [token]) Returns a table row from a normalized guest
 # record, escaping its text fields. A signed token enables lifecycle controls
 # for callers with write access.
-
 sub get_vm_row
 {
 my ($server, $token) = @_;
@@ -1297,7 +1278,6 @@ return [
 }
 
 # show_resource_placeholder(field, [total]) shows capacity while usage loads.
-
 sub show_resource_placeholder
 {
 my ($field, $total) = @_;
@@ -1310,7 +1290,6 @@ return ui_tag('span', html_escape(defined($total)
 
 # nice_size_text([bytes]) Formats bytes as plain text for widgets that
 # escape their own content.
-
 sub nice_size_text
 {
 my ($bytes) = @_;
@@ -1319,7 +1298,6 @@ return html_strip(nice_size($bytes || 0));
 
 # get_action_log_url([vm]) Returns the action-log URL, optionally filtered by
 # the selected guest's name.
-
 sub get_action_log_url
 {
 my ($vm) = @_;
@@ -1338,7 +1316,6 @@ return $url;
 # servers must already be filtered by VM assignments. terminal_available is
 # accepted for compatibility; authorized connection pages explain missing tools.
 # log_available defaults to false; logs also require host administrator access.
-
 sub get_menu_items
 {
 my ($servers, $selected, $readonly, $terminal, $log) = @_;
@@ -1455,7 +1432,6 @@ return @items;
 }
 
 # submission_script() loads shared retry handling for background job forms.
-
 sub submission_script
 {
 # Let the active theme render errors inserted after an asynchronous check.
@@ -1471,7 +1447,6 @@ return ui_tag('template', ui_alert_box(
 
 # show_vm_resource_input_styles() Size fields to their contents while leaving
 # room for unit menus.
-
 sub show_vm_resource_input_styles
 {
 my $fields = ':is(#vm-create-form, [data-vm-edit-fields]) input';
@@ -1491,7 +1466,6 @@ return ui_tag(
 }
 
 # check_vm_username(username) Matches the account names accepted by VM creation.
-
 sub check_vm_username
 {
 my ($username) = @_;
@@ -1502,7 +1476,6 @@ return defined($username) && !ref($username) &&
 
 # get_vm_form_defaults(config) Supplies built-in fallbacks and presentation
 # preferences for creation forms.
-
 sub get_vm_form_defaults
 {
 my ($config) = @_;
@@ -1523,7 +1496,6 @@ return { %defaults,
 }
 
 # preset_description(record) returns the display description of a saved preset.
-
 sub preset_description
 {
 my ($record) = @_;
@@ -1537,7 +1509,6 @@ return $record->{'description'};
 
 # vm_download_label([image]) describes a pending download, with its size if
 # known. Missing, imported or already downloaded images return an empty label.
-
 sub vm_download_label
 {
 my ($image) = @_;
@@ -1552,7 +1523,6 @@ return $image->{'download_size_bytes'}
 # vm_size_bytes(values, field, base) converts a displayed allocation to bytes.
 # values holds the amount and optional field_units byte multiplier; base is the
 # byte multiplier used when units are absent. Invalid input yields 0.
-
 sub vm_size_bytes
 {
 my ($values, $field, $base) = @_;
@@ -1565,7 +1535,6 @@ return defined($amount) && length($amount) <= 32 &&
 
 # get_vm_image_choices(images) Groups catalogue releases by distribution, then
 # imports and local captures.
-
 sub get_vm_image_choices
 {
 my ($images) = @_;
@@ -1606,7 +1575,6 @@ return [ map { [ $_->{'id'}, $_->{'name'}.
 
 # get_vm_form_images(options, [selected]) combines catalogue and custom imports.
 # Keep imports referenced by templates, including ones selected in the browser.
-
 sub get_vm_form_images
 {
 my ($options, $selected) = @_;
@@ -1628,7 +1596,6 @@ return [ @catalogue, @imports ];
 
 # show_software_script(field, values, [disabled]) renders a guest script source.
 # field is before_script or after_script; disabled defaults to false.
-
 sub show_software_script
 {
 my ($field, $values, $disabled) = @_;
@@ -1687,7 +1654,6 @@ return ui_table_row(hlink($text{'vm_'.$field}, 'machine_'.$field),
 # inheritance controls; show_license_rows supplies license inputs. base
 # identifies Default Template, which cannot inherit its package list. All flags
 # default to false for an editable non-default template.
-
 sub show_software_settings
 {
 my ($values, $disabled, $creation, $base) = @_;
@@ -1781,7 +1747,6 @@ return $page.show_software_script('after_script', $values, $disabled);
 # show_license_rows() renders Virtualmin Pro credentials for one creation.
 # License credentials belong to this request, never to a template, and the
 # browser shows the rows only while Virtualmin Pro is selected.
-
 sub show_license_rows
 {
 # Omit credentials along with the installer when host policy disables it.
@@ -1799,7 +1764,6 @@ return $page;
 # show_vm_summary(values, images, networks) Summarizes current form values using
 # the available image and network records. The browser updates these chips when
 # the user changes presets or fields.
-
 sub show_vm_summary
 {
 my ($values, $images, $networks) = @_;
@@ -1856,7 +1820,6 @@ return ui_tag('div', ui_cluster([ map { ui_chip($_->[1], { state => $_->[2],
 
 # software_script() loads shared visibility rules after full
 # or theme navigation.
-
 sub software_script
 {
 # Theme table styles must not override the visibility set by setup controls.
@@ -1880,7 +1843,6 @@ return ui_tag(
 # Configuration selects which optional sections start open. input may be undef;
 # submitted fields override defaults, except credentials. generated_password
 # defaults to blank and is used only on a fresh form.
-
 sub show_vm_form
 {
 my ($options, $input, $token, $generated_password) = @_;
@@ -2305,7 +2267,6 @@ return $page.ui_page_end();
 # show_vm_power_controls(vm, [token], [shutdown_requested]) Keeps common power
 # actions visible and puts secondary actions in a menu. Power actions need a
 # signed token; force actions open their confirmation page.
-
 sub show_vm_power_controls
 {
 my ($vm, $token, $shutdown_requested) = @_;
@@ -2428,7 +2389,6 @@ return ui_cluster(\@controls, { gap => '0.5em' });
 # show_vm_details(vm, [token], [shutdown_requested]) Shows configuration, live
 # usage, guest health and attached storage/network devices. A token enables
 # permitted controls; a pending shutdown hides repeats.
-
 sub show_vm_details
 {
 my ($vm, $token, $shutdown_requested) = @_;
@@ -2610,7 +2570,6 @@ return $page;
 # show_vm_clone_form(source, token) renders source choices with a signed token.
 # Credentials stay visible and optional settings start collapsed. Clone preset
 # resolution excludes installation media and software setup.
-
 sub show_vm_clone_form
 {
 our %config;
@@ -2794,7 +2753,6 @@ return $page.ui_page_end();
 
 # select_theme_server(vm) Selects the displayed guest through Webmin's
 # optional theme hook.
-
 sub select_theme_server
 {
 my ($vm) = @_;
@@ -2804,7 +2762,6 @@ theme_select_server(get_theme_server($vm))
 
 # notify_theme_save(vm, action) Refreshes the theme's guest list after an action
 # such as 'create' or 'delete'.
-
 sub notify_theme_save
 {
 my ($vm, $action) = @_;
@@ -2814,7 +2771,6 @@ theme_post_save_server(get_theme_server($vm), $action)
 
 # get_theme_server(vm) Converts a guest record to the id and host keys
 # that theme hooks read.
-
 sub get_theme_server
 {
 my ($vm) = @_;
@@ -2824,7 +2780,6 @@ return { 'id' => $vm->{'uuid'}, 'host' => $vm->{'name'} };
 # print_vm_change_result(job_id, operation, [uuid]) Shows warnings for a
 # matching completed job; deletion refreshes navigation. When uuid is supplied,
 # feedback must belong to that guest.
-
 sub print_vm_change_result
 {
 my ($id, $operation, $uuid) = @_;
@@ -2849,7 +2804,6 @@ foreach my $key (qw(cleanup_warning audit_warning)) {
 
 # vm_edit_form_start(settings, token, action, [extra], [form_id]) Binds one
 # operation to the guest UUID and the configuration shown to the user.
-
 sub vm_edit_form_start
 {
 my ($s, $token, $action, $extra, $form_id) = @_;
@@ -2863,7 +2817,6 @@ return ui_form_start('edit_machine.cgi', 'post', undef,
 # show_vm_password_reset_form(vm, token, [accounts]) Offers discovered accounts,
 # or the configured login when discovery fails. Other account always allows
 # manual entry, including guests without metadata.
-
 sub show_vm_password_reset_form
 {
 my ($vm, $token, $accounts) = @_;
@@ -2906,7 +2859,6 @@ return ui_page_start().ui_tag('div',
 # show_vm_force_off_form(vm, token, [return_to], [action]) Confirms emergency
 # power-off or hard reset without changing the guest on GET. action defaults to
 # force_off; return_to defaults to the VM details page.
-
 sub show_vm_force_off_form
 {
 my ($vm, $token, $return_to, $action) = @_;
@@ -2927,7 +2879,6 @@ return ui_page_start().
 
 # vm_pending_fields() Defines display order and labels for pending resource
 # and network changes.
-
 sub vm_pending_fields
 {
 return ( [ cpus => 'vm_cpus' ], [ cpu_limit => 'vm_cpu_limit' ],
@@ -2939,7 +2890,6 @@ return ( [ cpus => 'vm_cpus' ], [ cpu_limit => 'vm_cpu_limit' ],
 
 # vm_boot_labels(vm) Shares localized boot and network labels between
 # rendering and live updates.
-
 sub vm_boot_labels
 {
 my ($vm) = @_;
@@ -2961,7 +2911,6 @@ return { roles => { map { $_ => $text{'vm_disk_role_'.$_} }
 
 # vm_boot_label(device, labels) Uses known disk roles; legacy boot classes
 # retain descriptive generic names.
-
 sub vm_boot_label
 {
 my ($device, $labels) = @_;
@@ -2979,7 +2928,6 @@ return ($labels->{'kinds'}->{$kind} || $kind).($target ? ' ('.$target.')' : '');
 # vm_pending_value(field, value, [boot_labels]) Formats running or saved values;
 # callers escape the returned text. Omitted boot_labels uses generic
 # disk and network labels.
-
 sub vm_pending_value
 {
 my ($field, $value, $labels) = @_;
@@ -3010,7 +2958,6 @@ return $value;
 # vm_header_status(vm, [pending_only]) Groups subtitle badges; console pages
 # omit the guest's power state. pending_only defaults to false; true keeps only
 # the saved-change badge.
-
 sub vm_header_status
 {
 my ($vm, $pending_only) = @_;
@@ -3035,7 +2982,6 @@ return ui_tag('span',
 # vm_power_cycle_button(vm, token, [return_to]) Keeps power cycling beside the
 # other controls in a separate signed POST form. The button requires host
 # management and a token; return_to defaults to details.
-
 sub vm_power_cycle_button
 {
 my ($vm, $token, $return_to) = @_;
@@ -3064,7 +3010,6 @@ return ui_form_start(
 
 # show_vm_pending_styles() Shares subtitle badge spacing with pages that do not
 # show a pending alert.
-
 sub show_vm_pending_styles
 {
 return ui_page_assets().ui_tag('link', undef,
@@ -3078,7 +3023,6 @@ return ui_page_assets().ui_tag('link', undef,
 
 # show_vm_pending_banner(vm) Renders supplied running/saved differences above
 # the editor or VM details.
-
 sub show_vm_pending_banner
 {
 my ($vm) = @_;
@@ -3145,7 +3089,6 @@ return show_vm_pending_styles().
 # vm_edit_tabs_start(tab, [access_only]) opens the editor's main tabs.
 # access_only defaults to false; true omits hardware tabs. Callers select Access
 # in that mode; an empty tab defaults to Resources.
-
 sub vm_edit_tabs_start
 {
 my ($tab, $access_only) = @_;
@@ -3162,7 +3105,6 @@ return ui_tabs_start([
 
 # show_vm_access(vm, token, input) renders permitted guest access forms. Call
 # after the page header has loaded the theme's widget implementations.
-
 sub show_vm_access
 {
 my ($vm, $token, $in) = @_;
@@ -3203,7 +3145,6 @@ return show_vm_access_tabs($password, $ssh,
 
 # show_vm_access_tabs(password_html, ssh_html, [tab]) groups guest login tools.
 # Undefined content omits a tool; tab defaults to the first permitted tool.
-
 sub show_vm_access_tabs
 {
 my ($password, $ssh, $tab) = @_;
@@ -3235,7 +3176,6 @@ return $html.ui_tabs_end(1);
 # Renders hardware edits or a separate disk-selection confirmation for deletion.
 # Flags default to false; tab defaults to resources. Optional access_html
 # supplies independent forms; omitting it leaves the Access pane empty.
-
 sub show_vm_edit_form
 {
 my ($s, $token, $deleting, $shutdown_requested, $tab, $access) = @_;
@@ -3699,7 +3639,6 @@ return $page;
 
 # show_vm_delete_disk_form(settings, token, disk) Confirms permanent deletion
 # using the editor's signed, revision-bound form.
-
 sub show_vm_delete_disk_form
 {
 my ($s, $token, $disk) = @_;
@@ -3717,7 +3656,6 @@ return ui_alert_box($text{'vm_delete_disk_desc'}, 'danger', undef, undef, '').
 
 # vm_edit_buttons(settings, token) Renders Save and separate guest action
 # controls below the editor.
-
 sub vm_edit_buttons
 {
 my ($s, $token) = @_;
@@ -3759,7 +3697,6 @@ return ui_form_grouped_buttons([
 
 # parse_vm_edit_form(input) Collects one Save request; the manager validates and
 # selects live/saved work.
-
 sub parse_vm_edit_form
 {
 my ($in) = @_;

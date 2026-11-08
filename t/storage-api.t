@@ -14,7 +14,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 	package StorageAPITokens;
 
 	# check_token(self, owner, token) accepts only the fixture token.
-
 	sub check_token
 	{
 	die "Invalid token\n" if ($_[2] || '') ne 'valid';
@@ -23,14 +22,12 @@ require "$Bin/../cloudmin-storage-lib.pl";
 
 	# inventory(self) returns mutable fixture records
 	# without opening libvirt.
-
 	sub inventory
 	{
 	{ local => 1, pools => $_[0]->{pools} }
 	}
 
 	# lvm_groups(self) models optional discovery and its failure mode.
-
 	sub lvm_groups
 	{
 	die "No lvm2\n" if $_[0]->{group_error}; [ 'guests' ]
@@ -38,7 +35,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 
 	# create(self, input) records both directory and
 	# existing-VG registration.
-
 	sub create
 	{
 	my ($self, $in) = @_;
@@ -50,7 +46,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 
 	# change(self, action, id, revision, [enabled]) simulates stale refusal.
 	# enabled applies only to autostart changes.
-
 	sub change
 	{
 	my ($self, $action, $id, $revision, $enabled) = @_;
@@ -62,7 +57,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 	# review_volume(self, pool, name, [refresh]) reports ownership without
 	# writing. The fixture ignores refresh and returns its
 	# current ownership flag.
-
 	sub review_volume
 	{
 	( undef, undef,
@@ -74,7 +68,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 
 	# delete_volume(self, pool, name, revision, confirm) models
 	# final service guards.
-
 	sub delete_volume
 	{
 	my ($self, $pool, $name, $revision, $confirm) = @_;
@@ -88,7 +81,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 
 	# review_pool(self, id, [stop]) records stop permission
 	# and returns a review.
-
 	sub review_pool
 	{
 	$_[0]->{review_stop} =
@@ -101,7 +93,6 @@ require "$Bin/../cloudmin-storage-lib.pl";
 
 	# unregister(self, id, revision, confirm, [stop]) records stop
 	# permission and returns the removed pool's public identity.
-
 	sub unregister
 	{
 	$_[0]->{unregistered}++; $_[0]->{stop} =

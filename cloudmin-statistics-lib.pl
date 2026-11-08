@@ -9,7 +9,6 @@ our (%config, %text, $module_root_directory, $module_var_directory,
 require "$module_root_directory/lib/Cloudmin/Statistics.pm";
 
 # statistics_settings() resolves bounded host settings for each collector tick.
-
 sub statistics_settings
 {
 return { recording => ($config{statistics_recording} // 1) ? 1 : 0,
@@ -24,7 +23,6 @@ return { recording => ($config{statistics_recording} // 1) ? 1 : 0,
 }
 
 # statistics_latest() reads fresh collector values without sampling libvirt.
-
 sub statistics_latest
 {
 return Cloudmin::Statistics::latest(statistics_runtime_directory(),
@@ -34,14 +32,12 @@ return Cloudmin::Statistics::latest(statistics_runtime_directory(),
 # statistics_runtime_directory() keeps live readings independent of history disk
 # space. Tests supply a private directory. Systemd creates the
 # host's runtime directory.
-
 sub statistics_runtime_directory
 {
 return $cloudmin_statistics_runtime || '/run/cloudmin-statistics';
 }
 
 # statistics_integer(input, key, default, min, max) validates query bounds.
-
 sub statistics_integer
 {
 my ($input, $key, $default, $min, $max) = @_;
@@ -54,7 +50,6 @@ return 0 + $value;
 }
 
 # call_statistics_api(action, input) checks scope before reading any metrics.
-
 sub call_statistics_api
 {
 my ($action, $input) = @_;
@@ -133,7 +128,6 @@ return $result;
 # show_statistics(owner) renders statistics for 'host' or a VM UUID. Webmin
 # widgets provide the toolbar, cards and headline slots. statistics.js fills the
 # values and draws the charts with Webmin's shared uPlot build.
-
 sub show_statistics
 {
 my ($owner) = @_;
@@ -316,7 +310,6 @@ return ui_page_start({ class => 'cloudmin-statistics-page' }).
 # custom_moment_inputs(prefix, label) returns themed text boxes that the browser
 # shows as a date picker and a quarter-hour time picker. A theme that ships its
 # own calendar replaces the date picker from statistics.js.
-
 sub custom_moment_inputs
 {
 my ($prefix, $label) = @_;
@@ -335,7 +328,6 @@ return $date.$time;
 # statistics_unit(config, var, root, module, perl) fills the service template.
 # The first four arguments are directories. Perl is the interpreter path. This
 # only renders text, without installing or starting the service.
-
 sub statistics_unit
 {
 my ($config, $var, $root, $module, $perl) = @_;
@@ -365,7 +357,6 @@ return substitute_template($data, \%values);
 
 # set_statistics_service_enabled(enabled, [restart]) controls collection.
 # Enabled starts collection. Restart defaults to false and is used for upgrades.
-
 sub set_statistics_service_enabled
 {
 my ($enabled, $restart) = @_;
@@ -399,7 +390,6 @@ else {
 # write_statistics_service(name, path) writes the named unit through Webmin.
 # Path is its destination from get_unit_root(), used to set permissions. The
 # caller must check that it is missing or owned by Cloudmin.
-
 sub write_statistics_service
 {
 my ($name, $path) = @_;
@@ -414,7 +404,6 @@ set_ownership_permissions(0, 0, 0644, $path);
 
 # install_statistics_service([remove]) manages the collector through Webmin. A
 # true remove uninstalls it. Omitting remove installs or updates it.
-
 sub install_statistics_service
 {
 my ($remove) = @_;

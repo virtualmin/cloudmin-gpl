@@ -9,7 +9,6 @@ require(dirname(__FILE__).'/VMManage.pm');
 
 # new(class, jobs => store, images => store, adapter => factory, [readonly =>
 # bool]) Shares VM locks, immutable-image protection and per-user job history.
-
 sub new
 {
 my ($class, %options) = @_;
@@ -18,7 +17,6 @@ return bless(\%options, $class);
 
 # manager(self) Reuses managed-volume and guest identity checks without
 # the no-snapshots rule.
-
 sub manager
 {
 my ($self) = @_;
@@ -27,7 +25,6 @@ return Cloudmin::VMManage->new(%$self);
 
 # record(self, domain, snapshot, [size_cache]) Exposes safe display fields;
 # ownership requires the original creation journal.
-
 sub record
 {
 my ($self, $domain, $snapshot, $size_cache) = @_;
@@ -66,7 +63,6 @@ return { id => $name, uuid => $domain->get_uuid_string(), vm =>
 # disk_allocation(document, cache) Reads allocated blocks in saved disk files
 # without opening or scanning images. Shared backing files are excluded;
 # deletion may merge these blocks elsewhere.
-
 sub disk_allocation
 {
 my ($doc, $cache) = @_;
@@ -101,7 +97,6 @@ return $total;
 
 # find_snapshot(domain, name) Listing distinguishes a missing snapshot from a
 # failed libvirt connection.
-
 sub find_snapshot
 {
 my ($domain, $name) = @_;
@@ -110,7 +105,6 @@ return (grep { $_->get_name() eq $name } $domain->list_all_snapshots(0))[0];
 
 # revision(domain, [offline]) Binds forms to current state; offline omits power
 # state for planned shutdowns.
-
 sub revision
 {
 my ($domain, $offline) = @_;
@@ -136,7 +130,6 @@ return sha256_hex(join("\0", $domain->get_xml_description(3),
 # check_guest(domain, document, [copy_tpm]) Refuses state that disk-only
 # operations cannot restore or safely coordinate. copy_tpm defaults to false;
 # only cloning passes a validated TPM descriptor.
-
 sub check_guest
 {
 # Exclude saved runtime state and devices the disk-only snapshot cannot restore.
@@ -160,7 +153,6 @@ die "Wait for the current libvirt operation to finish\n" if ($info->{'type'});
 
 # check_agent(domain) Checks the actual guest before journalling a possible
 # freeze, never catalogue flags.
-
 sub check_agent
 {
 my ($domain) = @_;
@@ -172,7 +164,6 @@ die "QEMU Guest Agent is not responding. Turn on Shut down before taking snapsho
 
 # check_history_storage(self, adapter, domain, [resuming_delete]) Another VM or
 # imported image may have adopted a saved base since creation.
-
 sub check_history_storage
 {
 my ($self, $adapter, $domain, $resuming_delete) = @_;
@@ -250,7 +241,6 @@ die "Snapshot storage is missing or outside active managed pools\n"
 # disks(self, adapter, domain, document, [allow_blocks]) Includes every writable
 # disk and verifies exclusive, managed storage. allow_blocks defaults off;
 # native snapshots and copies enable managed raw LVs.
-
 sub disks
 {
 my ($self, $adapter, $domain, $doc, $allow_blocks) = @_;
@@ -289,7 +279,6 @@ return \@disks;
 
 # inventory(self, [uuid]) Returns per-VM history or a host overview without
 # exporting guest XML.
-
 sub inventory
 {
 my ($self, $uuid) = @_;
@@ -380,7 +369,6 @@ return $data;
 
 # prepare(self, action, input, job_id) Validates a submitted operation before
 # reserving the VM in the job store.
-
 sub prepare
 {
 my ($self, $action, $input, $id) = @_;
@@ -495,7 +483,6 @@ return $r;
 
 # check_delete(domain, snapshot) Refuses libvirt's unsupported current-parent
 # merge before a job is reserved.
-
 sub check_delete
 {
 my ($domain, $snapshot) = @_;
@@ -514,7 +501,6 @@ foreach my $child ($domain->list_all_snapshots(0)) {
 
 # snapshot_xml(request) Explicitly excludes memory and read-only media, and
 # includes every other disk.
-
 sub snapshot_xml
 {
 my ($r) = @_;
@@ -537,7 +523,6 @@ return '<domainsnapshot><name>'.$escape->($r->{'snapshot'}).
 
 # revert_disks(snapshot) Libvirt records fresh overlay paths after a
 # successful external restore.
-
 sub revert_disks
 {
 my ($snapshot) = @_;
@@ -552,7 +537,6 @@ return join(
 # native_volumes(self, adapter, snapshot, [deleting]) Resolves logical volumes
 # recorded in the journal. Native metadata alone never authorizes access
 # to a logical volume.
-
 sub native_volumes
 {
 my ($self, $adapter, $snapshot, $deleting) = @_;
@@ -578,7 +562,6 @@ return @volumes;
 # resume_native(self, id, domain) Releases the snapshot pause recorded by this
 # job. Only the running guest paused by this job is resumed;
 # stopped guests stay off.
-
 sub resume_native
 {
 my ($self, $id, $domain) = @_;
@@ -599,7 +582,6 @@ $self->thaw($id, $domain);
 # snapshots. snapshot supplies existing metadata for restore/delete; capture
 # defaults false and creates temporary copies for cloning, backup or
 # reusable-image capture.
-
 sub apply_native
 {
 my ($self, $id, $adapter, $domain, $snapshot, $capture) = @_;
@@ -775,7 +757,6 @@ else {
 # remove_native(self, id, adapter, domain) Removes only snapshot volumes
 # recorded in the journal. A lost allocation reply without a saved UUID requires
 # inspection, not guessing.
-
 sub remove_native
 {
 my ($self, $id, $adapter, $domain) = @_;
@@ -799,7 +780,6 @@ $self->{'jobs'}->update($id,
 
 # thaw(self, id, domain) Clears a journalled quiesce attempt only after thaw
 # succeeds or the VM stops.
-
 sub thaw
 {
 my ($self, $id, $domain) = @_;
@@ -818,7 +798,6 @@ $self->{'jobs'}->update($id,
 
 # phase(self, id, step, state) Keeps stable progress rows when shutdown,
 # snapshot and start span a retry.
-
 sub phase
 {
 my ($self, $id, $step, $state) = @_;
@@ -845,7 +824,6 @@ return $self->{'jobs'}->update($id, sub {
 
 # shutdown_guest(self, id, domain) Waits for a normal guest shutdown; never
 # falls back to forced power-off.
-
 sub shutdown_guest
 {
 my ($self, $id, $domain) = @_;
@@ -886,7 +864,6 @@ $self->phase($id, 'snapshot_shutdown', 'done');
 
 # restart_guest(self, id, domain) Starts only the completed result, including
 # recovery after a lost start reply.
-
 sub restart_guest
 {
 my ($self, $id, $domain) = @_;
@@ -913,7 +890,6 @@ $self->phase($id, 'snapshot_restart', 'done');
 
 # run(self, id) Records each planned libvirt change and checks its
 # result after a lost reply.
-
 sub run
 {
 my ($self, $id) = @_;
@@ -1196,7 +1172,6 @@ return $jobs->run_worker($id, sub {
 
 # complete(self, id) Commits the result before audit output, so logging failure
 # cannot undo success.
-
 sub complete
 {
 my ($self, $id) = @_;

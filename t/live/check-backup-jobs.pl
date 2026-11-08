@@ -34,7 +34,6 @@ my ($pool, $guest, $schedule, $secret_schedule); my @ids;
 
 # run_backup([overrides], [change]) submits and runs a real fixture backup.
 # change(job_id) can inject journal state before the controller starts.
-
 sub run_backup
 {
 my ($overrides, $change) = @_; my $id =

@@ -16,7 +16,6 @@ $config{'libvirt_uri'} = 'test:///cloudmin';
 
 # text(key, [args...]) Supplies the positional substitutions needed by
 # the Webmin-free tests.
-
 sub text
 {
 my ($key, @args) = @_;
@@ -27,7 +26,6 @@ return $value;
 
 # get_system_hostname() Stands in for Webmin's hostname lookup used by
 # the host system record.
-
 sub get_system_hostname
 {
 return 'kvm1.example.test';
@@ -39,14 +37,12 @@ require "$module_root_directory/server-manager-lib-funcs.pl";
 	package CompatAdapter;
 
 	# new(class, fields) - Wraps fixture data in an inventory adapter.
-
 	sub new
 	{
 	return bless($_[1], $_[0]);
 	}
 
 	# list_domains(self) - Copies record hashes to protect fixture data.
-
 	sub list_domains
 	{
 	my ($self) = @_;

@@ -16,14 +16,12 @@ my $vms = bless { directory => "$dir/vms", rows => [ ], reads => 0 },
 mkdir($vms->{'directory'}) || die $!;
 
 # get_image_jobs() supplies the isolated JSON store to the collector function.
-
 sub get_image_jobs
 {
 return $images;
 }
 
 # get_vm_jobs() supplies the isolated VM store to the collector function.
-
 sub get_vm_jobs
 {
 return $vms;
@@ -34,7 +32,6 @@ return $vms;
 
 	# list(self, owner, active) counts reads and can
 	# simulate a store outage.
-
 	sub list
 	{
 	my ($self) = @_;
@@ -44,7 +41,6 @@ return $vms;
 	}
 
 	# list_pending(self) includes recovery records in the collector fixture.
-
 	sub list_pending
 	{
 	return $_[0]->list();

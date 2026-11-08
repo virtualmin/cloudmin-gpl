@@ -14,7 +14,6 @@ require(dirname(__FILE__).'/VMHotplug.pm');
 
 # new(class, jobs => store, images => store, adapter => factory) Opens libvirt
 # connections in the process that performs each operation.
-
 sub new
 {
 my ($class, %options) = @_;
@@ -24,7 +23,6 @@ return bless(\%options, $class);
 # get_guest(self, id, [public]) Loads persistent XML, omitting protected fields
 # for read-only inventory. Edits keep secure XML, including console credentials,
 # unless public is true.
-
 sub get_guest
 {
 my ($self, $id, $public) = @_;
@@ -50,7 +48,6 @@ return ( $adapter, $domain, $doc, sha256_hex($xml) );
 
 # require_stopped(domain) Offline operations require stopped hardware and no
 # managed memory save.
-
 sub require_stopped
 {
 my ($domain) = @_;
@@ -61,7 +58,6 @@ require_editable($domain);
 
 # require_editable(domain, [plan]) Rejects managed saves; with plan, also checks
 # storage/history constraints.
-
 sub require_editable
 {
 my ($domain, $plan) = @_;
@@ -117,7 +113,6 @@ die "Remove snapshots and backup checkpoints before changing writable disks or a
 
 # file_identity(path) Identifies files by device/inode and LVs by VG/LV
 # UUID, not reusable paths.
-
 sub file_identity
 {
 my ($path) = @_;
@@ -129,7 +124,6 @@ return join(':', @stat[0, 1]);
 
 # check_nvram(adapter, domain) A copied VM definition must not cause deletion of
 # another guest's variables.
-
 sub check_nvram
 {
 my ($adapter, $domain) = @_;
@@ -162,7 +156,6 @@ foreach my $other ($adapter->connect()->list_all_domains()) {
 
 # storage(self, adapter) Returns managed file and LVM volumes; failed
 # inventories must not look empty.
-
 sub storage
 {
 my ($self, $adapter) = @_;
@@ -228,7 +221,6 @@ return ( \@pools, \@volumes );
 
 # networks(adapter) Offers active libvirt networks and existing host
 # bridges, as creation does.
-
 sub networks
 {
 my ($adapter) = @_;
@@ -244,7 +236,6 @@ return [ (map { {
 
 # settings(self, id) Supplies editable values and choices without
 # exposing XML or passwords.
-
 sub settings
 {
 my ($self, $id) = @_;
@@ -370,7 +361,6 @@ return {
 
 # resource_locks(doc) Identifies fields tied to settings this
 # editor does not rewrite.
-
 sub resource_locks
 {
 my ($doc) = @_;
@@ -391,7 +381,6 @@ return {
 
 # delete_can_force(domain, volumes) Returns true only when volumes covers every
 # live and saved writable disk.
-
 sub delete_can_force
 {
 my ($domain, $volumes) = @_;
@@ -423,7 +412,6 @@ return 1;
 
 # delete_history(domain) Returns snapshot/checkpoint XML and a stable revision
 # for deletion preflight.
-
 sub delete_history
 {
 my ($domain) = @_;
@@ -435,7 +423,6 @@ return ( \@xml, sha256_hex(join("\0", @xml)) );
 # delete_volumes(self, adapter, domain, document, targets, history) Plans
 # selected disks and their private history, keeping shared backing files.
 # targets contains guest device names; history contains snapshot/checkpoint XML.
-
 sub delete_volumes
 {
 my ($self, $adapter, $domain, $doc, $targets, $history) = @_;
@@ -549,7 +536,6 @@ return \@ordered;
 # check_delete_volumes(self, adapter, volumes, [domain], [targets]) Rechecks the
 # frozen plan, ignoring only dependencies removed by this same job. Omit domain
 # after undefine; targets defaults to no removable attachments.
-
 sub check_delete_volumes
 {
 my ($self, $adapter, $volumes, $domain, $targets) = @_;
@@ -595,7 +581,6 @@ foreach my $v (@$volumes) {
 # text(input, key, [default]) Bounds scalar form fields and rejects control
 # characters before XML use. An absent key uses default, or an empty string when
 # no default is supplied.
-
 sub text
 {
 my ($input, $key, $default) = @_;
@@ -607,7 +592,6 @@ return $value;
 
 # set_text(parent, name, value, [attributes]) Replaces one element's contents
 # while preserving its unrelated attributes.
-
 sub set_text
 {
 my ($parent, $name, $value, $attrs) = @_;
@@ -622,7 +606,6 @@ return $node;
 # audit_settings(xml) Selects editor-visible settings for audit comparisons.
 # Private graphics, authentication, metadata and unrelated XML are
 # deliberately excluded.
-
 sub audit_settings
 {
 my ($xml) = @_;
@@ -635,7 +618,6 @@ return { %{Cloudmin::Libvirt::resource_settings($doc)},
 
 # audit_changes(before_xml, after_xml) Reports only changed public settings,
 # with their old and requested values.
-
 sub audit_changes
 {
 my ($before_xml, $after_xml) = @_;
@@ -654,7 +636,6 @@ return \%changes;
 
 # disk_node(doc, target) Resolves an exact target without accepting XPath
 # supplied by a client.
-
 sub disk_node
 {
 my ($doc, $target) = @_;
@@ -666,7 +647,6 @@ return $disk;
 
 # volume_for(self, adapter, disk) Resolves attached disks and media in active
 # managed file or LVM pools.
-
 sub volume_for
 {
 my ($self, $adapter, $disk) = @_;
@@ -689,7 +669,6 @@ return $volume;
 
 # imported_file_ids(self, adapter) Protects aliases of imported disks without
 # requiring unrelated pools to run.
-
 sub imported_file_ids
 {
 my ($self, $adapter) = @_;
@@ -749,7 +728,6 @@ return \%identities;
 
 # check_volume(self, adapter, record, [excluded_uuid], [references]) Protects
 # imported images, shared disks and backing files before mutation.
-
 sub check_volume
 {
 my ($self, $adapter, $record, $excluded, $refs) = @_;
@@ -789,7 +767,6 @@ return ( $pool, $volume );
 # clone_source(self, adapter, image_id, [expected]) Resolves a completed import
 # and detects replacement before copying its bytes. expected is the source
 # record saved at submission; omit it for the first read.
-
 sub clone_source
 {
 my ($self, $adapter, $id, $expected) = @_;
@@ -822,7 +799,6 @@ return ( $source, $volume );
 
 # prepare(self, action, input, job_id) Builds a private operation plan and
 # checks the form's configuration revision.
-
 sub prepare
 {
 my ($self, $action, $in, $job_id) = @_;
@@ -950,7 +926,6 @@ return $plan;
 
 # prepare_change(self, action, input, job_id, adapter, domain, doc, revision)
 # Edits the private document and records storage work without changing the host.
-
 sub prepare_change
 {
 my ($self, $action, $in, $job_id, $adapter, $domain, $doc, $revision) = @_;
@@ -1379,7 +1354,6 @@ return $plan;
 
 # check_step(self, adapter, step, job) Revalidates a planned edit and returns
 # its pool and remaining space demand.
-
 sub check_step
 {
 my ($self, $adapter, $step, $job) = @_;
@@ -1436,7 +1410,6 @@ return;
 
 # apply_storage(self, adapter, step, job_id) Allocates or grows a disk; retries
 # reuse its journalled identity and size.
-
 sub apply_storage
 {
 my ($self, $adapter, $step, $id) = @_;
@@ -1551,7 +1524,6 @@ elsif ($step->{'operation'} eq 'grow_disk') {
 }
 
 # run(self, id) Replays a durable operation while the job reserves its guest.
-
 sub run
 {
 my ($self, $id) = @_;
@@ -1910,7 +1882,6 @@ return $jobs->run_worker($id, sub {
 # retains its deadline across worker recovery. force defaults to false; callers
 # must first verify discarded writable disks. Returns false when cancellation
 # wins before the first power operation.
-
 sub run_shutdown
 {
 my ($self, $id, $domain, $force) = @_;
@@ -1986,7 +1957,6 @@ return 1;
 
 # run_power_cycle(self, id, domain, adapter) Journals a clean shutdown and start
 # so recovery does not repeat the cycle.
-
 sub run_power_cycle
 {
 my ($self, $id, $domain, $adapter) = @_;
@@ -2027,7 +1997,6 @@ $self->complete($id);
 
 # cleanup_disk_worker(self, id) stops this edit's worker and releases its lease.
 # A stop failure keeps the lease so later recovery still knows what it owns.
-
 sub cleanup_disk_worker
 {
 my ($self, $id) = @_;
@@ -2041,7 +2010,6 @@ $self->{'jobs'}->update($id, sub { delete($_[0]->{'worker'}); });
 # or resize only when unchanged state is proven. A failed read leaves recovery
 # pending; completed writes keep their journal. keep_growth permits keeping
 # finished disk growth when discarding other edits.
-
 sub has_unfinished_change
 {
 my ($self, $id, $keep_growth) = @_;
@@ -2119,7 +2087,6 @@ return $jobs->lock('create-host', sub {
 # discard_change(self, id) Releases a failed edit only after proving its
 # definition never changed. Completed growth is retained; recorded unattached
 # disks are cleaned up.
-
 sub discard_change
 {
 my ($self, $id) = @_;
@@ -2148,7 +2115,6 @@ return $jobs->lock('worker-'.$id, sub {
 
 # complete(self, id) Commits success before writing audit output so logging
 # cannot undo a change.
-
 sub complete
 {
 my ($self, $id) = @_;

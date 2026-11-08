@@ -6,7 +6,6 @@ our ($module_root_directory, $module_config_directory, $remote_user, %text);
 
 # can_vm_webmin(uuid) checks access to the Webmin tab for the host's root login.
 # Registered entries also need the per-server check when resolving their URLs.
-
 sub can_vm_webmin
 {
 my ($uuid) = @_;
@@ -22,7 +21,6 @@ return $servers::access{'links'} ? 1 : 0;
 
 # require_webmin_registration([finishing]) checks server-list permissions.
 # finishing is reserved for a worker completing an already accepted creation.
-
 sub require_webmin_registration
 {
 # Registration stores host-side logins and requires Cloudmin management access.
@@ -40,7 +38,6 @@ die "Permission to add, edit and connect to Webmin servers is required\n"
 
 # vm_webmin_server(uuid, [creation_job]) finds only Cloudmin's own registration.
 # Supplying creation_job prevents a reused UUID from adopting an older login.
-
 sub vm_webmin_server
 {
 my ($uuid, $job) = @_;
@@ -56,7 +53,6 @@ return $server;
 
 # vm_webmin_lock(uuid, callback) serializes changes to a guest's registration.
 # Invoke callback with no arguments and return its result after unlocking.
-
 sub vm_webmin_lock
 {
 my ($uuid, $code) = @_;
@@ -78,7 +74,6 @@ return $result;
 # vm_webmin_server_change(server, callback) excludes login files from audit
 # copies. The callback saves or deletes this entry through the
 # native Servers Index API.
-
 sub vm_webmin_server_change
 {
 my ($server, $code) = @_;
@@ -98,7 +93,6 @@ die $error if (!$ok);
 # Index. Use the initial password if available, or the native login prompt. If
 # address is omitted, use the first configured or discovered guest IP. finishing
 # defaults to false; workers set it when completing accepted creation.
-
 sub register_vm_webmin
 {
 my ($job, $address, $finishing) = @_;
@@ -158,7 +152,6 @@ return vm_webmin_lock($uuid, sub {
 }
 
 # remove_vm_webmin(uuid, job) removes only the deleted creation's server entry.
-
 sub remove_vm_webmin
 {
 my ($uuid, $job) = @_;
@@ -179,7 +172,6 @@ return vm_webmin_lock($uuid, sub {
 
 # vm_webmin_address_source(vm, address) checks host records for a reported IP. A
 # match describes host configuration, not the identity of the answering server.
-
 sub vm_webmin_address_source
 {
 my ($vm, $address) = @_;
@@ -206,7 +198,6 @@ return 'unverified';
 # vm_webmin_direct_url(vm) returns the guest HTTPS URL without login
 # credentials. Use a current guest address and the registered port, or port
 # 10000 by default.
-
 sub vm_webmin_direct_url
 {
 my ($vm) = @_;
@@ -239,7 +230,6 @@ return "https://$address:$port/";
 # show_vm_webmin_options(vm, direct_url, [register], [change]) shows both
 # actions. register offers entry creation when true; it is off when omitted.
 # change binds address acceptance to the old and new IPs shown in the alert.
-
 sub show_vm_webmin_options
 {
 my ($vm, $url, $register, $change) = @_;
@@ -281,7 +271,6 @@ return $html.ui_cluster([
 # proxy. On an IP change, fill the optional change hash and return no URL until
 # approved. approval contains the old and new IPs from a
 # token-checked POST by the caller.
-
 sub vm_webmin_url
 {
 my ($vm, $change, $approval) = @_;
@@ -333,7 +322,6 @@ return vm_webmin_lock($vm->{'uuid'}, sub {
 }
 
 # show_vm_webmin_frame(url) embeds the native proxy with the host's palette.
-
 sub show_vm_webmin_frame
 {
 my ($url) = @_;

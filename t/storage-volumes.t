@@ -13,42 +13,36 @@ use Cloudmin::Images;
 	package VolumePool;
 
 	# get_name(self) supplies the fixture pool label.
-
 	sub get_name
 	{
 	$_[0]->{'name'}
 	}
 
 	# get_uuid_string(self) identifies the fixture pool.
-
 	sub get_uuid_string
 	{
 	$_[0]->{'uuid'}
 	}
 
 	# is_active(self) models whether native pool operations are available.
-
 	sub is_active
 	{
 	!$_[0]->{'inactive'}
 	}
 
 	# is_persistent(self) distinguishes saved and transient pools.
-
 	sub is_persistent
 	{
 	!$_[0]->{'transient'}
 	}
 
 	# get_autostart(self) supplies the simulated start-at-boot setting.
-
 	sub get_autostart
 	{
 	0
 	}
 
 	# get_info(self) supplies fixed capacity counters for inventory tests.
-
 	sub get_info
 	{
 	{ state => 2, capacity => 1024, allocation => 512,
@@ -56,7 +50,6 @@ use Cloudmin::Images;
 	}
 
 	# get_xml_description(self, [flags]) supplies pool type and location.
-
 	sub get_xml_description
 	{
 	"<pool type='".($_[0]->{'type'} ||
@@ -66,7 +59,6 @@ use Cloudmin::Images;
 
 	# list_all_volumes(self, [flags]) supplies volumes or
 	# an inventory failure.
-
 	sub list_all_volumes
 	{
 	die "volume list failed\n"
@@ -74,14 +66,12 @@ use Cloudmin::Images;
 	}
 
 	# refresh(self, [flags]) records inventory refresh requests.
-
 	sub refresh
 	{
 	$_[0]->{'refreshes'}++
 	}
 
 	# undefine(self) proves registration removal holds the host lock.
-
 	sub undefine
 	{
 	die "host lock missing\n"
@@ -90,7 +80,6 @@ use Cloudmin::Images;
 	}
 
 	# destroy(self) records a stop only under the shared host lock.
-
 	sub destroy
 	{
 	die "host lock missing\n" if !$_[0]->{jobs}->{locked};
@@ -100,7 +89,6 @@ use Cloudmin::Images;
 	package TestVolume;
 
 	# get_name(self) identifies the volume within its pool.
-
 	sub get_name
 	{
 	$_[0]->{'name'}
@@ -108,7 +96,6 @@ use Cloudmin::Images;
 
 	# get_path(self) supplies a local file or injects an
 	# identity-read failure.
-
 	sub get_path
 	{
 	die "volume path unavailable\n"
@@ -116,21 +103,18 @@ use Cloudmin::Images;
 	}
 
 	# get_key(self) uses the fixture path as its native volume key.
-
 	sub get_key
 	{
 	$_[0]->{'path'}
 	}
 
 	# get_info(self) supplies fixed capacity counters.
-
 	sub get_info
 	{
 	{ type => 0, capacity => 1024, allocation => 512 }
 	}
 
 	# get_xml_description(self, [flags]) models backing paths and metadata.
-
 	sub get_xml_description
 	{
 	my ($self) = @_;
@@ -145,7 +129,6 @@ use Cloudmin::Images;
 
 	# delete(self, [flags]) requires the simulated host
 	# lock before unlinking.
-
 	sub delete
 	{
 	die "host lock missing\n" if !$_[0]->{'jobs'}->{'locked'};
@@ -156,35 +139,30 @@ use Cloudmin::Images;
 	package VolumeDomain;
 
 	# get_name(self) labels the guest owning a fixture volume.
-
 	sub get_name
 	{
 	'fixture VM'
 	}
 
 	# get_uuid_string(self) deduplicates live and saved guest references.
-
 	sub get_uuid_string
 	{
 	'vm-uuid'
 	}
 
 	# is_active(self) models running and stopped owners.
-
 	sub is_active
 	{
 	$_[0]->{'active'} || 0
 	}
 
 	# is_persistent(self) makes inactive guest XML available.
-
 	sub is_persistent
 	{
 	1
 	}
 
 	# get_xml_description(self, flags) selects live or inactive guest XML.
-
 	sub get_xml_description
 	{
 	$_[1] == 2
@@ -194,7 +172,6 @@ use Cloudmin::Images;
 
 	# has_managed_save_image(self) reports the configured
 	# saved-memory fixture.
-
 	sub has_managed_save_image
 	{
 	!!$_[0]->{'saved'}
@@ -202,7 +179,6 @@ use Cloudmin::Images;
 
 	# managed_save_get_xml_description(self, [flags]) exposes
 	# saved disk references.
-
 	sub managed_save_get_xml_description
 	{
 	$_[0]->{'saved'}
@@ -210,7 +186,6 @@ use Cloudmin::Images;
 
 	# list_all_snapshots(self, [flags]) supplies
 	# snapshot reference fixtures.
-
 	sub list_all_snapshots
 	{
 	@{$_[0]->{'snapshots'} || [ ]}
@@ -218,7 +193,6 @@ use Cloudmin::Images;
 
 	# list_all_checkpoints(self, [flags]) supplies
 	# checkpoint reference fixtures.
-
 	sub list_all_checkpoints
 	{
 	@{$_[0]->{'checkpoints'} || [ ]}
@@ -226,7 +200,6 @@ use Cloudmin::Images;
 	package VolumeSnapshot;
 
 	# get_xml_description(self, [flags]) supplies saved volume references.
-
 	sub get_xml_description
 	{
 	$_[0]->{'xml'}
@@ -234,7 +207,6 @@ use Cloudmin::Images;
 	package VolumeConnection;
 
 	# list_all_domains(self, [flags]) supplies guests for reference checks.
-
 	sub list_all_domains
 	{
 	die "domain inventory failed\n"
@@ -242,14 +214,12 @@ use Cloudmin::Images;
 	}
 
 	# list_all_storage_pools(self, [flags]) supplies the fixture pool list.
-
 	sub list_all_storage_pools
 	{
 	@{$_[0]->{'pools'}}
 	}
 
 	# get_storage_pool_by_uuid(self, uuid) resolves the fixture pool.
-
 	sub get_storage_pool_by_uuid
 	{
 	(
@@ -261,7 +231,6 @@ use Cloudmin::Images;
 
 	# inventory(self, [refresh]) exposes fixture VG metadata
 	# without host commands.
-
 	sub inventory
 	{
 	die "LVM metadata unavailable\n"
@@ -270,7 +239,6 @@ use Cloudmin::Images;
 
 	# group_host_use(self, group) models host-only users and
 	# records fresh checks.
-
 	sub group_host_use
 	{
 	$_[0]->{checks}++; die "mounted on the host\n"
@@ -280,7 +248,6 @@ use Cloudmin::Images;
 
 	# lock(self, name, callback) records entry and runs
 	# the guarded callback.
-
 	sub lock
 	{
 	local $_[0]->{'locked'} = 1; $_[2]->()
@@ -288,7 +255,6 @@ use Cloudmin::Images;
 
 	# list(self, [owner], [active]) supplies jobs that can
 	# block storage changes.
-
 	sub list
 	{
 	$_[0]->{'active'} || [ ]
@@ -297,7 +263,6 @@ use Cloudmin::Images;
 
 	# list(self, [owner], [active], [strict]) supplies
 	# import ownership records.
-
 	sub list
 	{
 	die "image record unreadable\n"
@@ -306,7 +271,6 @@ use Cloudmin::Images;
 
 	# path(self, id) supplies a fixed filename for
 	# mocked import-lock checks.
-
 	sub path
 	{
 	'/fixture/image.json'

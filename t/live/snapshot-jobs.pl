@@ -8,7 +8,6 @@ use Cwd qw(abs_path);
 use JSON::PP qw(decode_json);
 
 # snapshot_jobs(database, uuid) includes terminal jobs outside recent history.
-
 sub snapshot_jobs
 {
 my ($db, $uuid) = @_;
@@ -21,7 +20,6 @@ return [ grep { ($_->{'request'}->{'uuid'} || '') eq $uuid }
 
 # cleanup_snapshot_jobs(jobs, adapter, uuid, name, directory) removes only a
 # finished fixture's records, after its guest and storage directory are gone.
-
 sub cleanup_snapshot_jobs
 {
 my ($jobs, $adapter, $uuid, $name, $directory) = @_;
@@ -81,7 +79,6 @@ return $jobs->lock('vm-work', sub { $jobs->lock('create-host', sub {
 }
 
 # main() initializes Webmin only when invoked on the disposable Linux host.
-
 sub main
 {
 die "Linux test host as root only\n" unless $^O eq 'linux' && $< == 0;

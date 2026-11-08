@@ -35,7 +35,6 @@ my $jobs = Cloudmin::Jobs->new(directory => "$dir/jobs",
 		}, log => sub { });
 
 # save(path, data) - Publishes a fixture marker or fake inventory record.
-
 sub save
 {
 open(my $fh, '>', $_[0]) || die $!;
@@ -44,7 +43,6 @@ close($fh) || die $!;
 }
 
 # wait_for(path) - Bounds synchronization with the two child processes.
-
 sub wait_for
 {
 my $end = time() + 10;
@@ -60,7 +58,6 @@ while (!-e $_[0]) {
 
 	# options(self) Supplies host data and the other
 	# process's defined guests.
-
 	sub options
 	{
 	my ($self) = @_;
@@ -80,7 +77,6 @@ while (!-e $_[0]) {
 
 	# worker_task(self, args...) Avoids host commands in this
 	# concurrency fixture.
-
 	sub worker_task
 	{
 	return '';
@@ -88,7 +84,6 @@ while (!-e $_[0]) {
 	package ConcurrentImages;
 
 	# path(self, id, suffix) - Supplies an unused image lock identity.
-
 	sub path
 	{
 	return 'fixture-image';
@@ -96,14 +91,12 @@ while (!-e $_[0]) {
 
 	# with_lock(self, path, nodiff, callback) Leaves host
 	# serialization under test.
-
 	sub with_lock
 	{
 	return $_[3]->();
 	}
 
 	# get(self, id) - Supplies an unchanged ready image.
-
 	sub get
 	{
 	return { state => 'ready' };
@@ -112,7 +105,6 @@ while (!-e $_[0]) {
 
 	# clone_disk(self, pool, name, source, bytes, format, journal)
 	# Gates the first copy.
-
 	sub clone_disk
 	{
 	my ($self, $pool, $name, $source, $bytes, $format, $journal) = @_;
@@ -128,7 +120,6 @@ while (!-e $_[0]) {
 
 	# upload_seed(self, pool, name, path, journal) Supplies
 	# an owned seed volume.
-
 	sub upload_seed
 	{
 	$_[4]->();
@@ -137,7 +128,6 @@ while (!-e $_[0]) {
 
 	# define_guest(self, xml) Makes the first VM's address
 	# visible to both workers.
-
 	sub define_guest
 	{
 	my ($self) = @_;
@@ -147,14 +137,12 @@ while (!-e $_[0]) {
 	}
 
 	# set_domain_autostart(self, uuid, enabled) - Makes no host changes.
-
 	sub set_domain_autostart
 	{
 	}
 
 	# remove_created_volume(self, pool, name, key) There are no
 	# real fixture volumes.
-
 	sub remove_created_volume
 	{
 	}

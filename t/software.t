@@ -288,7 +288,6 @@ SKIP: {
 
 		# get_domain(self, uuid, [skip_addresses]) supplies a
 		# fixture-owned guest.
-
 		sub get_domain
 		{
 		# Distinguish lookup errors, confirmed deletion
@@ -302,7 +301,6 @@ SKIP: {
 
 		# get_setup_host_key(self, uuid, [final_attempt]) emulates
 		# agent identity reads.
-
 		sub get_setup_host_key
 		{
 		if ($_[0]->{'agent_denied'}) {
@@ -318,7 +316,6 @@ SKIP: {
 
 		# cleanup(self, id) records removal of a
 		# disconnected monitor's sandbox.
-
 		sub cleanup
 		{
 		$_[0]->{'cleaned'} = $_[1];
@@ -326,7 +323,6 @@ SKIP: {
 
 		# run(self, task, request, %options) reports guest
 		# acceptance and progress.
-
 		sub run
 		{
 		my ($self, $task, $request, %options) = @_;

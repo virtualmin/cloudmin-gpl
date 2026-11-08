@@ -51,7 +51,6 @@ die "Fixture session was not loaded\n" if (!$session_id ||
 package ReadonlyTerminalGuest;
 
 # get_domain(self, uuid) exposes only this test's synthetic guest destination.
-
 sub get_domain
 {
 die "Unexpected fixture VM\n" if ($_[1] ne $input->{'uuid'});

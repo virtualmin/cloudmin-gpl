@@ -22,14 +22,12 @@ $text{'vm_control_error'} = 'Cannot control virtual machine';
 my $uuid = '11111111-2222-3333-4444-555555555555';
 
 # error_html(message) escapes non-license errors in this CGI fixture.
-
 sub error_html
 {
 return html_escape($_[0]);
 }
 
 # submit(action, [method], [failure], [fields]) exercises the CGI's dispatch.
-
 sub submit
 {
 my ($action, $method, $failure, $fields) = @_;

@@ -13,7 +13,6 @@ use Cloudmin::VMStartup;
 	our @ISA = ('Cloudmin::VMStartup');
 
 	# identity(self, domain) models both host reboots and QEMU generations.
-
 	sub identity
 	{
 	return ($_[0]->{'boot'} ||
@@ -22,14 +21,12 @@ use Cloudmin::VMStartup;
 	package StartupDomain;
 
 	# get_uuid_string(self) gives the fixture a stable storage key.
-
 	sub get_uuid_string
 	{
 	return '11111111-2222-3333-4444-555555555555';
 	}
 
 	# get_id(self) changes with each successful cold start.
-
 	sub get_id
 	{
 	return $_[0]->{'generation'} || 0;
@@ -37,14 +34,12 @@ use Cloudmin::VMStartup;
 
 	# has_managed_save_image(self, flags) distinguishes
 	# resume from cold boot.
-
 	sub has_managed_save_image
 	{
 	return $_[0]->{'managed_save'};
 	}
 
 	# get_xml_description(self, flags) supplies the saved balloon target.
-
 	sub get_xml_description
 	{
 	return '<domain><vcpu>2</vcpu><memory unit="MiB">1024</memory>'.
@@ -54,7 +49,6 @@ use Cloudmin::VMStartup;
 
 	# create(self) either starts a new QEMU generation or
 	# refuses the request.
-
 	sub create
 	{
 	die "Start refused\n"
@@ -65,7 +59,6 @@ use Cloudmin::VMStartup;
 
 	# find_domain(self, id) resolves this fixture without
 	# a native connection.
-
 	sub find_domain
 	{
 	return $_[0]->{'domain'};

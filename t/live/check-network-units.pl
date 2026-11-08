@@ -28,7 +28,6 @@ our $error_must_die = 1;
 
 	# unit(self, method, name, [data]) isolates names and references while
 	# preserving the production systemd calls and rendered directives.
-
 	sub unit
 	{
 	my ($self, $method, $name, @args) = @_;
@@ -67,7 +66,6 @@ WORKER
 close($worker) or die $!;
 
 # fixture_property(name, key) reads one systemd property from a fixture unit.
-
 sub fixture_property
 {
 my ($name, $key) = @_;
@@ -78,14 +76,12 @@ return $value;
 }
 
 # fixture_actions() reads only the harmless worker's execution log.
-
 sub fixture_actions
 {
 return WebminCore::read_file_contents("$dir/actions") || '';
 }
 
 # fixture_wait(callback) allows bounded time for asynchronous systemd jobs.
-
 sub fixture_wait
 {
 my ($check) = @_;

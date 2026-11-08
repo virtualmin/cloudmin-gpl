@@ -8,7 +8,6 @@ $Cloudmin::BackupSSH::directory = "$module_var_directory/backups/ssh";
 
 # get_backup_service() shares VM reservations, isolated
 # workers and audit history.
-
 sub get_backup_service
 {
 return Cloudmin::Backups->new(%{get_vm_service()}, directory =>
@@ -20,7 +19,6 @@ return Cloudmin::Backups->new(%{get_vm_service()}, directory =>
 
 # submit_backup_operation(action, input) journals a validated backup or restore.
 # The API checks host permissions, read-only mode and CSRF before calling here.
-
 sub submit_backup_operation
 {
 my ($action, $in) = @_;
@@ -99,7 +97,6 @@ return get_public_vm_job($job);
 }
 
 # backup_schedules() reads private schedules; credentials never enter list rows.
-
 sub backup_schedules
 {
 my $dir = get_backup_service()->directory().'/schedules';
@@ -112,7 +109,6 @@ return [ map { convert_from_json(read_file_contents("$dir/$_.json")) } sort @ids
 }
 
 # backup_schedule_time(input) validates and normalizes the selected recurrence.
-
 sub backup_schedule_time
 {
 my ($in) = @_;
@@ -153,7 +149,6 @@ return \%when;
 }
 
 # backup_schedule_cron(schedule) maps one recurrence to Webmin cron fields.
-
 sub backup_schedule_cron
 {
 my ($s) = @_;
@@ -166,7 +161,6 @@ return { mins => $s->{'minute'}, hours => $f eq 'hourly' ? '*' : $s->{'hour'},
 }
 
 # save_backup_schedule(input) saves a schedule and Webmin's native cron entry.
-
 sub save_backup_schedule
 {
 my ($in) = @_;
@@ -252,7 +246,6 @@ return get_vm_jobs()->lock('backup-schedules', sub {
 
 # run_backup_schedule(id) backs up selected machines serially,
 # then applies retention.
-
 sub run_backup_schedule
 {
 my ($id) = @_;
@@ -333,7 +326,6 @@ return get_vm_jobs()->lock('backup-schedule-'.$id, sub {
 }
 
 # ensure_backup_cleanup() registers hourly expiry independently of UI activity.
-
 sub ensure_backup_cleanup
 {
 get_vm_jobs()->lock('backup-maintenance', sub {
@@ -353,14 +345,12 @@ get_vm_jobs()->lock('backup-maintenance', sub {
 
 # purge_backup_inspections() removes expired downloads
 # without touching archives.
-
 sub purge_backup_inspections
 {
 get_backup_service()->purge_inspections();
 }
 
 # delete_cloudmin_backup(id) deletes only the archive named by a saved record.
-
 sub delete_cloudmin_backup
 {
 my ($id) = @_;

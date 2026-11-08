@@ -35,7 +35,6 @@ $| = 1;
 	# run(self, task, request, [options...]) gates processing to inspect
 	# real locks. Named options are forwarded unchanged to the
 	# fixture's run callback.
-
 	sub run
 	{
 	return $_[0]->{'run'}->(@_[1 .. $#_]);
@@ -69,7 +68,6 @@ my (@records, %workers);
 
 # wait_until(callback, message) Polls callback() until true, raising message
 # after 30 seconds without progress.
-
 sub wait_until
 {
 my ($code, $message) = @_;
@@ -82,7 +80,6 @@ while (!$code->()) {
 
 # finish_worker(pid) Reaps a fixture worker before checking its final state
 # or deleting its files.
-
 sub finish_worker
 {
 my ($pid) = @_;

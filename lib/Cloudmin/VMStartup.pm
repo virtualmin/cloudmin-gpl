@@ -8,14 +8,12 @@ use File::Path qw(make_path);
 use WebminCore qw(read_file_contents convert_to_json convert_from_json);
 
 # new(class, directory) stores private startup records shared by CGI and status.
-
 sub new
 {
 return bless({ directory => $_[1] }, $_[0]);
 }
 
 # identity(self, domain) distinguishes a QEMU run, including host reboots.
-
 sub identity
 {
 my ($self, $domain) = @_;
@@ -29,7 +27,6 @@ return "$boot:$id";
 
 # record(self, domain, callback) serializes reads and changes for this VM.
 # callback(file, identity) runs under the lock; exceptions release it too.
-
 sub record
 {
 my ($self, $domain, $callback) = @_;
@@ -46,7 +43,6 @@ return $callback->($file, $identity);
 }
 
 # remember(self, domain, memory_mib) records only a successful cold start.
-
 sub remember
 {
 my ($self, $domain, $memory) = @_;
@@ -62,7 +58,6 @@ $self->record($domain, sub {
 
 # settling(self, domain, running, saved) recognizes this start's balloon target.
 # Retire it once reached or edited; other boot generations cannot use it.
-
 sub settling
 {
 my ($self, $domain, $running, $saved) = @_;

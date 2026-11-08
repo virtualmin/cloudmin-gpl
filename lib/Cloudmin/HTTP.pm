@@ -9,7 +9,6 @@ use WebminCore qw(parse_http_url make_http_connection complete_http_download
 
 # authority(host, port) Preserves IPv6 brackets and non-default ports in HTTP
 # headers and redirects.
-
 sub authority
 {
 my ($host, $port) = @_;
@@ -18,7 +17,6 @@ return ($host =~ /:/ ? "[$host]" : $host).($port == 443 ? '' : ":$port");
 
 # redirect(location, host, port, page) Resolves a Location header and rejects
 # HTTPS downgrades before connecting.
-
 sub redirect
 {
 my ($location, $host, $port, $page) = @_;
@@ -44,7 +42,6 @@ return Cloudmin::Images::validate_url($location);
 # external downloader or shared cache is used. destination is a filename or
 # scalar reference; callback(mode, value) receives Webmin's download progress
 # events and may die to cancel the transfer.
-
 sub download
 {
 my ($url, $dest, $callback) = @_;
@@ -137,7 +134,6 @@ die "Too many image download redirects.\n";
 # the image. A range request handles publishers that omit sizes or reject HEAD
 # requests. Returns a positive byte count, undef if unavailable, or throws
 # on transport errors.
-
 sub probe
 {
 my ($url) = @_;

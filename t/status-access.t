@@ -17,7 +17,6 @@ die 'Collector access functions not found' if (!$functions);
 our (%clients, %dirty, $cache, $adapter, $access);
 
 # authorized(session) supplies the policy selected by each scenario.
-
 sub authorized
 {
 return $access;
@@ -28,7 +27,6 @@ eval $functions.'; 1;' or die $@;
 	package AccessCache;
 
 	# record(self, record) retains the collected VM for subsequent viewers.
-
 	sub record
 	{
 	$_[0]->{'vms'}->{$_[1]->{'uuid'}} = $_[1];
@@ -37,7 +35,6 @@ eval $functions.'; 1;' or die $@;
 
 	# get_domain_record(self, domain, brief) supplies an
 	# existing active guest.
-
 	sub get_domain_record
 	{
 	return { uuid => 'fixture', active => 1 };
@@ -45,7 +42,6 @@ eval $functions.'; 1;' or die $@;
 
 	# get_domain_addresses(self, domain, record, brief)
 	# avoids network probes.
-
 	sub get_domain_addresses
 	{
 	return [ ];
@@ -54,7 +50,6 @@ eval $functions.'; 1;' or die $@;
 
 	# set_memory_stats_period(self, period, flags)
 	# records attempted changes.
-
 	sub set_memory_stats_period
 	{
 	push(@{$_[0]->{'changes'}}, [ @_[1, 2] ]);
@@ -67,7 +62,6 @@ my $domain = bless({ changes => [ ] }, 'AccessDomain');
 
 	# send_utf8(self, message) captures permission-change
 	# notices without a socket.
-
 	sub send_utf8
 	{
 	$_[0]->{'notice'} = $_[1];
@@ -75,7 +69,6 @@ my $domain = bless({ changes => [ ] }, 'AccessDomain');
 
 	# disconnect(self) records an attempted close of this
 	# fixture's connection.
-
 	sub disconnect
 	{
 	$_[0]->{'disconnected'} = 1;

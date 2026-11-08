@@ -15,7 +15,6 @@ package Sys::Guestfs;
 our ($source, $last, $fail, $retain, $no_marker);
 
 # new(class) gives each fake appliance an independent copy of the fixture.
-
 sub new
 {
 $last = bless { files => Storable::dclone($source), calls => [ ] },
@@ -23,105 +22,90 @@ $last = bless { files => Storable::dclone($source), calls => [ ] },
 }
 
 # is_file(self, path, [options...]) recognizes files in the fake guest only.
-
 sub is_file
 {
 exists $_[0]->{files}->{$_[1]}
 }
 
 # is_dir(self, path, [options...]) models an installed Pro module directory.
-
 sub is_dir
 {
 $_[1] eq '/usr/share/webmin/virtual-server/pro'
 }
 
 # exists(self, path) checks the fake guest's file map.
-
 sub exists
 {
 exists $_[0]->{files}->{$_[1]}
 }
 
 # filesize(self, path) exposes the stored length for the bounded-read guard.
-
 sub filesize
 {
 length($_[0]->{files}->{$_[1]})
 }
 
 # read_file(self, path) returns in-memory guest contents.
-
 sub read_file
 {
 $_[0]->{files}->{$_[1]}
 }
 
 # write(self, path, content) changes only this appliance's copied file map.
-
 sub write
 {
 $_[0]->{files}->{$_[1]} = $_[2];
 }
 
 # rm(self, path) removes one copied file.
-
 sub rm
 {
 delete $_[0]->{files}->{$_[1]};
 }
 
 # rm_rf(self, path) models removal without touching a real filesystem.
-
 sub rm_rf
 {
 shift->rm(@_);
 }
 
 # is_symlink(self, path) models a fixture containing regular files only.
-
 sub is_symlink
 {
 0
 }
 
 # glob_expand(self, pattern) matches literal fixture paths used by these tests.
-
 sub glob_expand
 {
 exists $_[0]->{files}->{$_[1]} ? ($_[1]) : ()
 }
 
 # inspect_os(self) reports one fake system root.
-
 sub inspect_os
 {
 ('/dev/sda1')
 }
 
 # inspect_get_type(self, root) makes the fixture eligible for Linux preparation.
-
 sub inspect_get_type
 {
 'linux'
 }
 
 # inspect_get_mountpoints(self, root) supplies one mount for the fake appliance.
-
 sub inspect_get_mountpoints
 {
 ( '/' => '/dev/sda1' )
 }
 
 # inspect_get_arch(self, root) includes the fixture architecture in the result.
-
 sub inspect_get_arch
 {
 'aarch64'
 }
 
 # set_network(self, enabled) fails if preparation enables appliance networking.
-
 sub set_network
 {
 die 'Network enabled' if $_[1];
@@ -129,7 +113,6 @@ die 'Network enabled' if $_[1];
 
 # command(self, argv) simulates hostname setup and the
 # offline Virtualmin helper.
-
 sub command
 {
 my ($self, $args) = @_;
@@ -144,7 +127,6 @@ return $no_marker ? "Webmin error\n" : "CLOUDMIN_CLONE_READY\n";
 our $AUTOLOAD;
 
 # AUTOLOAD(self, [arguments...]) accepts appliance setup and cleanup calls only.
-
 sub AUTOLOAD
 {
 my ($method) = $AUTOLOAD =~ /::([^:]+)$/;
@@ -155,7 +137,6 @@ return 1;
 package Cloudmin::WorkerTasks;
 
 # disk_info(format, [path]) gives the fake disk its expected fixed capacity.
-
 sub disk_info
 {
 return { 'virtual-size' => 4096 };

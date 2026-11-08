@@ -50,7 +50,6 @@ my $serial = 0;
 
 # edit(fields) Changes real hardware through the same manager used
 # by the editor and API.
-
 sub edit
 {
 my ($fields) = @_;
@@ -70,7 +69,6 @@ die "Hardware edit failed\n" if ($job->{'state'} ne 'complete');
 # operation(action, fields, [failure]) Uses the real preparation, reservation,
 # worker and reconciliation code. failure is true for a native permission error,
 # or 'lost_reply' for recovery.
-
 sub operation
 {
 my ($action, $fields, $failure) = @_;
@@ -128,7 +126,6 @@ return $r->{'snapshot'};
 
 # disk_paths() Reads libvirt's current disk paths, including overlays
 # created during restore.
-
 sub disk_paths
 {
 my $doc =
@@ -139,7 +136,6 @@ return map { $_->getAttribute('file') } $doc->findnodes(
 
 # pattern(mode, byte) Writes or verifies actual guest-visible sectors while
 # the fixture is stopped.
-
 sub pattern
 {
 my ($mode, $byte) = @_;

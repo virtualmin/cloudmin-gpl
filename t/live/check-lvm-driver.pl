@@ -29,7 +29,6 @@ require "$Bin/../../lib/Cloudmin/Storage.pm";
 
 	# list(self) supplies the empty import set for these
 	# private raw test disks.
-
 	sub list
 	{
 	[ ]
@@ -47,7 +46,6 @@ my $service = Cloudmin::Snapshots->new(jobs => $jobs,
 
 # snapshot_job(action, domain, [snapshot]) exercises the
 # real durable controller.
-
 sub snapshot_job
 {
 my ($action, $domain, $snapshot) = @_;
@@ -68,7 +66,6 @@ return $request->{'snapshot'};
 
 # storage_api(action, input) exercises the installed root
 # API and its audit path.
-
 sub storage_api
 {
 my ($action, $input) = @_;

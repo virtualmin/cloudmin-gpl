@@ -14,28 +14,24 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	package SnapshotAdapter;
 
 	# uri(self) models a local system connection.
-
 	sub uri
 	{
 	'qemu:///system'
 	}
 
 	# connect(self) reuses this object as the fake native connection.
-
 	sub connect
 	{
 	$_[0]
 	}
 
 	# get_library_version(self) exposes the chosen libvirt version.
-
 	sub get_library_version
 	{
 	$_[0]->{'version'} || 12001000
 	}
 
 	# get_capabilities(self) models whether AppArmor is advertised.
-
 	sub get_capabilities
 	{
 	'<capabilities><host>'.($_[0]->{'apparmor'}
@@ -44,14 +40,12 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	}
 
 	# find_domain(self, id) supplies the single fixture guest.
-
 	sub find_domain
 	{
 	$_[0]->{'domain'}
 	}
 
 	# list_all_domains(self, [flags]) supplies that guest to host inventory.
-
 	sub list_all_domains
 	{
 	$_[0]->{'domain'}
@@ -59,35 +53,30 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	package SnapshotDomain;
 
 	# get_name(self) supplies the guest label used by jobs.
-
 	sub get_name
 	{
 	'fixture'
 	}
 
 	# get_uuid_string(self) supplies a stable identity across operations.
-
 	sub get_uuid_string
 	{
 	'11111111-2222-4333-8444-555555555555'
 	}
 
 	# is_persistent(self) models a saved guest definition.
-
 	sub is_persistent
 	{
 	1
 	}
 
 	# is_active(self) reads the state controlled by shutdown and create.
-
 	sub is_active
 	{
 	$_[0]->{'active'} || 0
 	}
 
 	# get_state(self) models running or shut-off state and its stop reason.
-
 	sub get_state
 	{
 	$_[0]->is_active() ? ( 1, 1 ) : ( 5, $_[0]->{'stop_reason'} // 1 )
@@ -95,7 +84,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 
 	# shutdown(self) models clean completion, timeout, and
 	# an interrupted reply.
-
 	sub shutdown
 	{
 	my ($self) = @_;
@@ -107,7 +95,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	}
 
 	# create(self) can fail before boot or lose the reply after booting.
-
 	sub create
 	{
 	my ($self) = @_;
@@ -120,7 +107,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	# Read-only libvirt rejects protected XML even though history is
 	# readable. get_xml_description(self, flags) exposes XML subject
 	# to read-only access.
-
 	sub get_xml_description
 	{
 	die "Secure XML is forbidden\n"
@@ -129,21 +115,18 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	}
 
 	# get_job_info(self) injects a conflicting native job when requested.
-
 	sub get_job_info
 	{
 	{ type => $_[0]->{'busy'} || 0 }
 	}
 
 	# list_all_checkpoints(self, [flags]) models conflicting backup history.
-
 	sub list_all_checkpoints
 	{
 	$_[0]->{'checkpoint'} ? (1) : ()
 	}
 
 	# has_managed_save_image(self) models saved guest memory.
-
 	sub has_managed_save_image
 	{
 	$_[0]->{'saved'} || 0
@@ -151,21 +134,18 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 
 	# list_all_snapshots(self, [flags]) enumerates
 	# committed fixture history.
-
 	sub list_all_snapshots
 	{
 	values %{$_[0]->{'snapshots'}}
 	}
 
 	# set_agent_response_timeout(self, timeout) needs no timer in this mock.
-
 	sub set_agent_response_timeout
 	{
 	}
 
 	# get_guest_info(self, [types]) counts probes and
 	# models agent availability.
-
 	sub get_guest_info
 	{
 	$_[0]->{'agent_probes'}++; die "No agent\n"
@@ -173,7 +153,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	}
 
 	# fs_thaw(self, [mountpoints], [flags]) models thaw success or failure.
-
 	sub fs_thaw
 	{
 	$_[0]->{'thaws'}++; die "Thaw failed\n"
@@ -182,7 +161,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 
 	# create_snapshot(self, xml, flags) can lose a reply after
 	# committing metadata.
-
 	sub create_snapshot
 	{
 	my ($self, $xml, $flags) = @_;
@@ -213,7 +191,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	package SnapshotPoint;
 
 	# get_name(self) identifies this saved point.
-
 	sub get_name
 	{
 	$_[0]->{'name'}
@@ -221,7 +198,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 
 	# is_current(self) compares this point with the
 	# simulated current branch.
-
 	sub is_current
 	{
 	($_[0]->{'domain'}->{'current'} ||
@@ -230,7 +206,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 
 	# get_xml_description(self, [flags]) includes ancestry
 	# and restore markers.
-
 	sub get_xml_description
 	{
 	my ($self) = @_;
@@ -245,7 +220,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	}
 
 	# delete(self, flags) models native merging, including a lost response.
-
 	sub delete
 	{
 	my ($self, $flags) = @_;
@@ -259,7 +233,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 	}
 
 	# revert_to(self, flags) supplies libvirt's durable new overlay marker.
-
 	sub revert_to
 	{
 	my ($self) = @_;
@@ -276,7 +249,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 
 	# Storage itself is exercised by the native two-disk lifecycle fixture.
 	# disks(self, adapter, domain, document) supplies one controlled disk.
-
 	sub disks
 	{
 	[ { target => 'vda', volume => $_[0]->{'volume'} } ]
@@ -284,7 +256,6 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 
 	# check_history_storage(self, adapter, domain, [resuming_delete]) Leaves
 	# storage dependency checks to the live fixture.
-
 	sub check_history_storage
 	{
 	}
@@ -331,7 +302,6 @@ my $sequence = 0;
 	}
 
 # fixture() provides independent persistent jobs and a controllable native API.
-
 sub fixture
 {
 my $id = ++$sequence;
@@ -357,7 +327,6 @@ return ( $service, $jobs, $domain, $adapter );
 }
 
 # submit(service, action, [fields]) queues through production validation.
-
 sub submit
 {
 my ($service, $action, $fields) = @_;
@@ -375,7 +344,6 @@ return $id;
 }
 
 # recover(service, id) models the existing owner's explicit recovery action.
-
 sub recover
 {
 my ($service, $id) = @_;

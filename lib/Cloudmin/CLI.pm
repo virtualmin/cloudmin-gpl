@@ -15,14 +15,12 @@ use Encode qw(decode FB_CROAK);
 
 # option(type, [attributes...]) describes one command-line value. Attributes are
 # key/value pairs for validation, API mapping and help.
-
 sub option
 {
 return { type => shift, @_ };
 }
 
 # creation_options() defines fields shared by creation and prepared clones.
-
 sub creation_options
 {
 return {
@@ -94,7 +92,6 @@ return {
 }
 
 # destination_options() maps CLI destination fields to the API target object.
-
 sub destination_options
 {
 # Keep ordinary destination fields separate from file-backed credentials.
@@ -120,7 +117,6 @@ return \%options;
 }
 
 # commands() returns the ordered command table used by parsing, help and docs.
-
 sub commands
 {
 my @commands;
@@ -859,7 +855,6 @@ return \@commands;
 # Builds a dispatcher using standard streams and a real clock by default.
 # api(action, input) runs host commands; raw([action]) runs raw API requests.
 # Help needs neither. sleep() and now() let tests advance a fake clock.
-
 sub new
 {
 my ($class, %args) = @_;
@@ -870,14 +865,12 @@ return bless { out => \*STDOUT, err => \*STDERR, in => \*STDIN,
 }
 
 # read_actions() identifies requests that do not need a form token.
-
 sub read_actions
 {
 return qw(options machines statistics statistics_export settings status list snapshots clone_options image_options backups bridges bridge_status storage license ssh_keys guest_ssh_keys);
 }
 
 # command(self, name) finds a command definition without contacting the host.
-
 sub command
 {
 my ($self, $name) = @_;
@@ -886,7 +879,6 @@ return $command;
 }
 
 # options(command) adds selectors and confirmation to explicit command options.
-
 sub options
 {
 my ($command) = @_;
@@ -907,7 +899,6 @@ return \%options;
 }
 
 # usage_error(message) distinguishes parser errors from API validation failures.
-
 sub usage_error
 {
 die bless({ message => $_[0] }, 'Cloudmin::CLI::Usage');
@@ -915,7 +906,6 @@ die bless({ message => $_[0] }, 'Cloudmin::CLI::Usage');
 
 # parse(self, command, argv) consumes argv and returns values and global flags.
 # Getopt parses numbers and switches; request() handles files, units and IDs.
-
 sub parse
 {
 my ($self, $command, $argv) = @_;
@@ -1026,7 +1016,6 @@ return ( \%values, \%global );
 # file_value(self, path, option) reads up to 128 KiB of UTF-8 text. path is a
 # regular file or "-" for stdin. The option definition controls newline
 # retention, secret redaction and the required JSON type.
-
 sub file_value
 {
 my ($self, $path, $option) = @_;
@@ -1071,7 +1060,6 @@ return $data;
 }
 
 # size(value, unit) converts binary sizes to the API's MiB or GiB field units.
-
 sub size
 {
 my ($value, $unit) = @_;
@@ -1090,14 +1078,12 @@ return 0 + sprintf('%.17g', $number * 1024**$power / 1024**($unit eq 'MiB'
 
 # api(self, action, input) forwards to the supplied controller callback. The
 # entry point provides authentication; tests supply an isolated substitute.
-
 sub api
 {
 return $_[0]->{api}->($_[1], $_[2]);
 }
 
 # resolve(self, kind, value) resolves exact IDs or unambiguous display names.
-
 sub resolve
 {
 my ($self, $kind, $value) = @_;
@@ -1137,7 +1123,6 @@ return $matches[0]->{$key};
 
 # request(self, command, values) builds a request and reads current revisions.
 # Returns action, input, list filters, selected machine and preflight record.
-
 sub request
 {
 my ($self, $command, $values) = @_;
@@ -1240,7 +1225,6 @@ return ( $action, \%input, \%filters, $machine, $current );
 }
 
 # follow(self, job, global, command) waits for an independent job.
-
 sub follow
 {
 my ($self, $job, $global, $command) = @_;
@@ -1287,7 +1271,6 @@ while (1) {
 }
 
 # execute(self, command, values, global) submits and waits as requested.
-
 sub execute
 {
 my ($self, $command, $values, $global) = @_;
@@ -1423,7 +1406,6 @@ return $result;
 }
 
 # label(key) supplies consistent labels for known fields and readable fallbacks.
-
 sub label
 {
 my ($key) = @_;
@@ -1439,7 +1421,6 @@ return join(' ', map { ucfirst($_) } split(/ /, $key));
 }
 
 # human_size(bytes) formats binary sizes without changing the underlying data.
-
 sub human_size
 {
 my ($bytes) = @_;
@@ -1452,7 +1433,6 @@ return sprintf('%.3g %s', $bytes, $units[$i]);
 # scalar_text(key, value, [parent]) formats values and removes terminal
 # controls. Parent defaults to no field context. It distinguishes collector
 # availability from free storage bytes.
-
 sub scalar_text
 {
 my ($key, $value, $parent) = @_;
@@ -1496,7 +1476,6 @@ return $value;
 # multiline(data, [indent], [parent]) formats nested records as indented text.
 # Indent defaults to empty and parent to no field context. Nested fields retain
 # their parent name for context-dependent scalar formatting.
-
 sub multiline
 {
 my ($data, $indent, $parent) = @_;
@@ -1558,7 +1537,6 @@ return $text;
 }
 
 # table(command, rows) aligns list columns using their formatted display widths.
-
 sub table
 {
 my ($command, $rows) = @_;
@@ -1600,7 +1578,6 @@ return join('',
 }
 
 # render(self, command, result, global) prints the chosen output format.
-
 sub render
 {
 my ($self, $command, $result, $global) = @_;
@@ -1645,7 +1622,6 @@ if (!$global->{json} && ref($result) eq 'HASH' &&
 }
 
 # run(self, argv) dispatches commands and formats their results or errors.
-
 sub run
 {
 my ($self, $argv) = @_;
@@ -1740,7 +1716,6 @@ return $usage ? 2 : 1;
 }
 
 # command_list(self) groups commands in the same order as their definitions.
-
 sub command_list
 {
 my ($self) = @_;
@@ -1760,7 +1735,6 @@ return $text;
 }
 
 # option_order(command) keeps documented ordering stable as fields are added.
-
 sub option_order
 {
 my ($command) = @_;
@@ -1771,7 +1745,6 @@ return grep { !$seen{$_}++ } ( @{$command->{order} || [ ]},
 }
 
 # option_usage(name, definition) renders a value, enum, flag or negatable flag.
-
 sub option_usage
 {
 my ($name, $opt) = @_;
@@ -1793,7 +1766,6 @@ return "--$name $value";
 }
 
 # synopsis(self, command) generates required and optional syntax from the table.
-
 sub synopsis
 {
 my ($self, $command) = @_;
@@ -1835,7 +1807,6 @@ return $prefix.' '.join("\n".(' ' x (length($prefix) + 1)),
 }
 
 # short_help(self, command) uses the familiar Virtualmin summary and synopsis.
-
 sub short_help
 {
 my ($self, $command) = @_;
@@ -1844,7 +1815,6 @@ return "See `cloudmin help $command->{name}` for more details and examples\n\n".
 }
 
 # pod_sections(self) reads the single long-help source, keyed by command name.
-
 sub pod_sections
 {
 my ($self) = @_;
@@ -1861,7 +1831,6 @@ return ( $pod, \%sections );
 
 # help(self, [name]) renders one command with generated option details. Without
 # a name, renders the complete POD source as one plain-text manual.
-
 sub help
 {
 my ($self, $name) = @_;
@@ -1892,7 +1861,6 @@ return $out;
 }
 
 # show_help(self, [name]) pages terminal help or prints redirected help.
-
 sub show_help
 {
 my ($self, $name) = @_;
@@ -1916,7 +1884,6 @@ else {
 }
 
 # docs_intro() returns the introduction shared by both Markdown layouts.
-
 sub docs_intro
 {
 return "Run `cloudmin` as root on the Cloudmin host. Lists use tables by default; `--multiline` shows details. `--json` returns an object with `command`, `status` and `data` fields; `data` holds the API result. Success exits 0, operation failures exit 1, and usage errors exit 2.\n\nCommands wait for jobs by default; `--no-wait` returns the job ID immediately. Passwords and license credentials are read from files or standard input.\n\n";
@@ -1925,7 +1892,6 @@ return "Run `cloudmin` as root on the Cloudmin host. Lists use tables by default
 # docs_body(self, command, sections) renders one command's reference entry below
 # its heading: generated syntax, converted POD text, examples and the option
 # list. sections maps command names to their POD sections.
-
 sub docs_body
 {
 my ($self, $command, $sections) = @_;
@@ -1965,7 +1931,6 @@ return $text;
 }
 
 # docs(self) renders the whole reference as one Markdown document.
-
 sub docs
 {
 my ($self) = @_;
@@ -1981,7 +1946,6 @@ return $text;
 
 # page_front_matter(path) reads simple key: value pairs from an existing page.
 # Returns an empty hash when the page does not exist yet.
-
 sub page_front_matter
 {
 my ($path) = @_;
@@ -2000,7 +1964,6 @@ return \%fields;
 # command, grouped in the sidebar by subSection. Existing dates and authors are
 # kept so regeneration changes only content. Returns the written paths and warns
 # about pages left over from removed commands.
-
 sub docs_pages
 {
 my ($self, $dir) = @_;

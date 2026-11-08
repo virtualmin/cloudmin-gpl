@@ -23,7 +23,6 @@ require './server-manager-lib.pl';
 require './lib/Cloudmin/HTTP.pm';
 
 # probe(responses...) feeds raw HTTP headers through the production parser.
-
 sub probe
 {
 my (@responses) = @_;

@@ -9,7 +9,6 @@ use Errno qw(ENOENT);
 # new(class, [directory], [qemu_config], [log_config]) Creates a log manager
 # using /var/log/libvirt/qemu and the qemu.conf and virtlogd.conf files under
 # /etc/libvirt unless paths are supplied.
-
 sub new
 {
 my ($class, $directory, $qemu, $log) = @_;
@@ -19,7 +18,6 @@ return bless { directory => $directory || '/var/log/libvirt/qemu',
 }
 
 # path(self, uuid) names only this guest's Cloudmin-owned serial log.
-
 sub path
 {
 my ($self, $uuid) = @_;
@@ -30,7 +28,6 @@ return "$self->{directory}/cloudmin-".lc($uuid)."-serial.log";
 }
 
 # setting(file, name, default) reads one scalar libvirt configuration value.
-
 sub setting
 {
 my ($file, $name, $default) = @_;
@@ -50,7 +47,6 @@ return $value;
 }
 
 # bounded(self) requires native log rotation before enabling recording.
-
 sub bounded
 {
 my ($self) = @_;
@@ -65,7 +61,6 @@ return $size =~ /\A[1-9][0-9]*(?:[ \t]*(?:bytes|[KMGTPE]i?B|[bBkKmMgGtTpPeE]))?\
 }
 
 # device(doc) selects the PTY behind libvirt's default console.
-
 sub device
 {
 my ($doc) = @_;
@@ -91,7 +86,6 @@ return $node && $node->getAttribute('type') eq 'pty' ? $node : undef;
 
 # configure(self, xml) adds a private log, cleared on each cold start. Preserve
 # custom logs and unsupported console devices.
-
 sub configure
 {
 my ($self, $xml) = @_;
@@ -136,7 +130,6 @@ return $doc->toString();
 
 # open_private(path) opens a regular private file without following symlinks.
 # Returns undef for an absent file; refuses unsafe ownership, mode or links.
-
 sub open_private
 {
 my ($path) = @_;
@@ -156,7 +149,6 @@ return $fh;
 # reader(self, uuid, xml) returns recent output and a cursor for the same log.
 # The caller supplies the running domain's XML. Its log must match the managed
 # path; this helper does not check the domain's power state or access grants.
-
 sub reader
 {
 my ($self, $uuid, $xml) = @_;
@@ -204,7 +196,6 @@ die "Serial history changed while connecting; reconnect to the console\n";
 }
 
 # remove(self, uuid) removes only this guest's managed log and native rotations.
-
 sub remove
 {
 my ($self, $uuid) = @_;
@@ -221,7 +212,6 @@ use strict;
 use warnings;
 
 # history(self) returns the bounded snapshot once, before following live bytes.
-
 sub history
 {
 return delete($_[0]->{'history'}) || '';
@@ -229,7 +219,6 @@ return delete($_[0]->{'history'}) || '';
 
 # read(self) returns at most 64 KiB, following native
 # renames without duplicates.
-
 sub read
 {
 my ($self) = @_;

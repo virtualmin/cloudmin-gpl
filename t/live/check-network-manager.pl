@@ -33,7 +33,6 @@ chmod(0600, $file);
 	our @ISA = ('Cloudmin::HostNetwork');
 
 	# inventory(self) supplies the isolated NetworkManager profile.
-
 	sub inventory
 	{
 	return { backend => 'nm', supported => 1, interfaces => [

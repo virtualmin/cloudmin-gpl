@@ -14,7 +14,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	package FixtureAdapter;
 
 	# find_domain(self, uuid) models absence, presence or a failed lookup.
-
 	sub find_domain
 	{
 	die "Libvirt unavailable\n"

@@ -26,7 +26,6 @@ our ($module_name, $module_var_directory, $module_root_directory,
 # connected() handles the SSH worker's authenticated event once, when supplied.
 # finished() records the final outcome after relay cleanup, when supplied.
 # Neither callback receives guest output; the caller retains validated settings.
-
 sub run_interactive_relay
 {
 my ($port, $unit, $command, $graphics, $authorized, $connected,

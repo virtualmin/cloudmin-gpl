@@ -20,14 +20,12 @@ use WebminCore;
 
 	# list_all_networks(self, [flags]) supplies the
 	# fixture network inventory.
-
 	sub list_all_networks
 	{
 	return @{$_[0]->{'networks'} || [ ]};
 	}
 
 	# list_all_domains(self, [flags]) supplies guest references to networks.
-
 	sub list_all_domains
 	{
 	return @{$_[0]->{'domains'} || [ ]};
@@ -35,7 +33,6 @@ use WebminCore;
 
 	# define_network(self, xml, [flags]) records a
 	# definition without libvirt.
-
 	sub define_network
 	{
 	my ($self, $xml) = @_;
@@ -50,49 +47,42 @@ use WebminCore;
 	package NetworkObject;
 
 	# get_xml_description(self, [flags]) exposes the stored network XML.
-
 	sub get_xml_description
 	{
 	return $_[0]->{'xml'};
 	}
 
 	# get_uuid_string(self) identifies the fixture network.
-
 	sub get_uuid_string
 	{
 	return $_[0]->{'uuid'};
 	}
 
 	# get_name(self) exposes the name recorded during definition.
-
 	sub get_name
 	{
 	return $_[0]->{'name'};
 	}
 
 	# is_active(self) reports the state changed by create and destroy.
-
 	sub is_active
 	{
 	return $_[0]->{'active'} || 0;
 	}
 
 	# is_persistent(self) models a saved network definition.
-
 	sub is_persistent
 	{
 	return 1;
 	}
 
 	# get_autostart(self) reads the simulated start-at-boot setting.
-
 	sub get_autostart
 	{
 	return $_[0]->{'autostart'} || 0;
 	}
 
 	# set_autostart(self, enabled) records a start-at-boot change.
-
 	sub set_autostart
 	{
 	$_[0]->{'autostart'} = $_[1];
@@ -100,7 +90,6 @@ use WebminCore;
 
 	# create(self, [flags]) simulates successful activation
 	# or a native failure.
-
 	sub create
 	{
 	die "Start refused\n"
@@ -108,14 +97,12 @@ use WebminCore;
 	}
 
 	# destroy(self) records a stop without changing the saved definition.
-
 	sub destroy
 	{
 	$_[0]->{'active'} = 0; $_[0]->{'destroyed'}++;
 	}
 
 	# undefine(self) records removal of the saved definition.
-
 	sub undefine
 	{
 	$_[0]->{'undefined'}++;
@@ -123,14 +110,12 @@ use WebminCore;
 	package NetworkJobs;
 
 	# lock(self, name, callback) runs the callback without real locking.
-
 	sub lock
 	{
 	return $_[2]->();
 	}
 
 	# list(self, [owner], [active]) returns the configured pending jobs.
-
 	sub list
 	{
 	return $_[0]->{'active'} || [ ];
@@ -138,21 +123,18 @@ use WebminCore;
 	package NetworkHost;
 
 	# inventory(self) supplies host interfaces and subnets for validation.
-
 	sub inventory
 	{
 	return $_[0]->{'data'};
 	}
 
 	# pending(self) simulates an unfinished host network change.
-
 	sub pending
 	{
 	return $_[0]->{'pending'};
 	}
 
 	# mask_prefix(mask) uses the production netmask parser.
-
 	sub mask_prefix
 	{
 	return Cloudmin::HostNetwork::mask_prefix(@_);

@@ -11,7 +11,6 @@ require "$Bin/../lib/Cloudmin/Worker.pm";
 
 	# command(self, task, id, [limit]) runs a protocol
 	# fixture without systemd.
-
 	sub command
 	{
 	return @{$_[0]->{'command'}};

@@ -9,7 +9,6 @@ our $webmin_root;
 
 # import(class) Find Webmin for source and installed tests, and run CGI
 # fixtures from the module.
-
 sub import
 {
 my $module_root = abs_path(dirname(__FILE__).'/../..');

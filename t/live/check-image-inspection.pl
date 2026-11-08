@@ -27,7 +27,6 @@ require Sys::Guestfs;
 $| = 1;
 
 # digest(path) Detects any change to the reusable source disk during inspection.
-
 sub digest
 {
 open(my $fh, '<', $_[0]) || die $!;
@@ -36,7 +35,6 @@ return Digest::SHA->new(256)->addfile($fh)->hexdigest();
 }
 
 # command(arguments...) - Builds and inspects only this test's disposable copy.
-
 sub command
 {
 my ($out, $err);

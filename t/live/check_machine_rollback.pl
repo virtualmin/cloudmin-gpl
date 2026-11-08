@@ -26,7 +26,6 @@ require './server-manager-lib.pl';
 
 	# start_domain(self, uuid) Fails after the production worker
 	# defines a real guest.
-
 	sub start_domain
 	{
 	die "fixture start failure\n";
@@ -36,7 +35,6 @@ require './server-manager-lib.pl';
 
 	# define_guest(self, xml) Simulates abrupt worker loss after
 	# both disk allocations.
-
 	sub define_guest
 	{
 	POSIX::_exit(0);
@@ -46,7 +44,6 @@ require './server-manager-lib.pl';
 
 	# start_domain(self, uuid) Stops the job process after
 	# libvirt starts the guest.
-
 	sub start_domain
 	{
 	my ($self, $uuid) = @_;
@@ -58,7 +55,6 @@ require './server-manager-lib.pl';
 
 	# start_domain(self, uuid) Leaves an owned, stopped
 	# guest after worker loss.
-
 	sub start_domain
 	{
 	my ($self, $uuid) = @_;

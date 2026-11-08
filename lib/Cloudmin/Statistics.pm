@@ -14,7 +14,6 @@ use List::Util qw(min max);
 # metrics() defines units and gauge/counter types for the wire format. Gauge
 # sums are value times seconds. Counter sums integrate interval rates into
 # increments. Every duration is measured in seconds.
-
 sub metrics
 {
 return {
@@ -49,7 +48,6 @@ my @fields =
 		$_; map { "${m}_$_" } qw(sum duration min max count) } @metrics;
 
 # uuid() creates an installation or database identity without machine metadata.
-
 sub uuid
 {
 open(my $fh, '<:raw', '/dev/urandom') or
@@ -66,7 +64,6 @@ return join('-', substr($h, 0, 8), substr($h, 8, 4), substr($h, 12, 4),
 }
 
 # host_id(directory) persists identity outside history, including DB recreation.
-
 sub host_id
 {
 my ($directory) = @_;
@@ -96,7 +93,6 @@ return $id;
 
 # atomic_write(path, contents) publishes a private cache or
 # identity in one rename.
-
 sub atomic_write
 {
 my ($path, $contents) = @_;
@@ -117,7 +113,6 @@ die $error if (!$ok);
 
 # latest(directory, now) reads the bounded live cache. Now is Unix seconds.
 # Expired readings stay unknown.
-
 sub latest
 {
 my ($directory, $now) = @_;
@@ -145,7 +140,6 @@ return $data;
 # [hardware_uuid => uuid]) opens history. Write defaults to false. A writer
 # requires host_id. Hardware UUID is an inventory hint, not identity. Readers
 # never initialize a store; an absent database is a normal empty result.
-
 sub new
 {
 my ($class, %args) = @_;
@@ -193,7 +187,6 @@ return $self;
 }
 
 # schema(self) creates the version-one schema only in the collector process.
-
 sub schema
 {
 my ($self) = @_;
@@ -267,7 +260,6 @@ eval {
 # summary(values, duration) calculates weighted totals, bounds and counts.
 # Missing readings remain absent. Each value is a gauge or an interval rate.
 # Counter sums are rate * duration.
-
 sub summary
 {
 my ($values, $duration) = @_;
@@ -288,7 +280,6 @@ return \%result;
 # merge(into, source, [fraction]) combines sums and durations, never averages.
 # Fraction defaults to one. Smaller fractions split intervals at bucket
 # boundaries while retaining the observed minimum and maximum.
-
 sub merge
 {
 my ($into, $source, $fraction) = @_;
@@ -311,7 +302,6 @@ return $into;
 
 # add_bucket(self, entity, step, time, summary, observed_end) updates a bucket.
 # Step is its width in seconds. Time and observed_end are Unix timestamps.
-
 sub add_bucket
 {
 my ($self, $entity, $step, $t, $summary, $observed_end) = @_;
@@ -335,7 +325,6 @@ $db->do('INSERT OR REPLACE INTO samples (entity,step,t,end,observed_end,'.
 # record(self, rows, events, now) commits one host tick and completed summaries.
 # Rows contain entity, owner, kind, label, start, end and normalized values.
 # Events contain owner, t, kind and detail. All timestamps are Unix seconds.
-
 sub record
 {
 my ($self, $rows, $events, $now) = @_;
@@ -429,7 +418,6 @@ die $error unless $ok;
 # query(self, owner, from, to, points, [entity]) returns bounded chart data. The
 # controller must authorize owner before calling this method. From and to are
 # Unix seconds. Omitting entity selects the owner's aggregate readings.
-
 sub query
 {
 my ($self, $owner, $from, $to, $points, $entity) = @_;
@@ -563,7 +551,6 @@ return $result;
 # make retained batches repeatable until retention removes them. Cursors include
 # the DB generation and tier, and never depend on wall-clock time. Step selects
 # 60-, 300- or 3600-second summaries.
-
 sub export
 {
 my ($self, $step, $cursor, $limit) = @_;
@@ -609,7 +596,6 @@ return { version => 1, host_id => $self->{meta}->{host_id}, generation =>
 # maps tier seconds (0 for raw) to maximum ages in seconds. Now is Unix seconds.
 # The budget applies to occupied database pages. Budget pressure expires old
 # sealed rows; readers learn the export retention gap.
-
 sub prune
 {
 my ($self, $now, $retention, $budget) = @_;
@@ -662,7 +648,6 @@ for (1 .. 32) {
 
 # purge(self, step, cutoff) records the last removed
 # sequence in the same commit.
-
 sub purge
 {
 my ($self, $step, $cutoff) = @_;
@@ -701,7 +686,6 @@ eval {
 }
 
 # DESTROY(self) releases SQLite handles at request or service shutdown.
-
 sub DESTROY
 {
 my ($self) = @_;

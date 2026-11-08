@@ -14,28 +14,24 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package CaptureAPIJobs;
 
 	# lock(self, resource, callback) runs without host lock files.
-
 	sub lock
 	{
 	$_[2]->()
 	}
 
 	# assert_guest_available(self, uuid) records which source was checked.
-
 	sub assert_guest_available
 	{
 	$_[0]->{reserved} = $_[1]
 	}
 
 	# get(self, id, [owner]) returns the saved fixture attempt.
-
 	sub get
 	{
 	$_[0]->{$_[1]}
 	}
 
 	# submit(self, id, owner, resource, request) journals inputs in memory.
-
 	sub submit
 	{
 	$_[0]->{$_[1]} =
@@ -44,7 +40,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	}
 
 	# spawn(self, id, callback) counts launches without running a worker.
-
 	sub spawn
 	{
 	$_[0]->{spawned}++
@@ -52,7 +47,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package CaptureAPIImages;
 
 	# check_token(self, owner, token) rejects mutations with a forged token.
-
 	sub check_token
 	{
 	die "Bad token\n" if (($_[2] || '') ne 'token')
@@ -60,7 +54,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	package CaptureAPIService;
 
 	# prepare(self, input, id) records validation without inspecting disks.
-
 	sub prepare
 	{
 	$_[0]->{prepared}++; return { %{$_[1]}, operation =>
@@ -70,7 +63,6 @@ require "$module_root_directory/cloudmin-lib.pl";
 	}
 
 	# run(self, id) records dispatch without touching libvirt.
-
 	sub run
 	{
 	$_[0]->{ran} = $_[1]

@@ -12,14 +12,12 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# get(self, id) returns an independent journal view,
 	# like the real store.
-
 	sub get
 	{
 	Storable::dclone($_[0]->{job})
 	}
 
 	# update(self, id, callback) commits one journal mutation.
-
 	sub update
 	{
 	$_[2]->($_[0]->{job}); $_[0]->get($_[1])
@@ -28,14 +26,12 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# is_active(self) distinguishes running and paused
 	# guests from stopped ones.
-
 	sub is_active
 	{
 	$_[0]->{state} != 5
 	}
 
 	# get_state(self) exposes the simulated libvirt state.
-
 	sub get_state
 	{
 	$_[0]->{state}
@@ -43,7 +39,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# get_xml_description(self, flags) supplies a raw
 	# block disk and its cache.
-
 	sub get_xml_description
 	{
 	return '<domain><uuid>fixture</uuid><devices><disk type="block">'.
@@ -54,7 +49,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# fs_freeze(self, mountpoints, flags) records ordering
 	# before CPU suspension.
-
 	sub fs_freeze
 	{
 	push(@{$_[0]->{events}}, 'freeze'); $_[0]->{frozen} = 1
@@ -62,14 +56,12 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# suspend(self) models the pause used to coordinate
 	# native disk snapshots.
-
 	sub suspend
 	{
 	push(@{$_[0]->{events}}, 'pause'); $_[0]->{state} = 3
 	}
 
 	# resume(self) models a failed or successful release of the owned pause.
-
 	sub resume
 	{
 	die "Resume failed\n" if ($_[0]->{fail_resume});
@@ -78,7 +70,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# fs_thaw(self, mountpoints, flags) refuses an
 	# unresponsive paused agent.
-
 	sub fs_thaw
 	{
 	die "Agent cannot thaw while paused\n" if ($_[0]->{state} == 3);
@@ -86,7 +77,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 	}
 
 	# list_all_snapshots(self, [flags]) returns only fixture metadata.
-
 	sub list_all_snapshots
 	{
 	values %{$_[0]->{snapshots}}
@@ -94,7 +84,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# create_snapshot(self, xml, flags) publishes metadata
 	# after disk allocation.
-
 	sub create_snapshot
 	{
 	my ($self, $xml, $flags) = @_;
@@ -110,21 +99,18 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 	package NativePoint;
 
 	# get_name(self) returns the fixture snapshot identifier.
-
 	sub get_name
 	{
 	$_[0]->{name}
 	}
 
 	# is_current(self) models the newly published current restore point.
-
 	sub is_current
 	{
 	1
 	}
 
 	# delete(self, flags) removes only fixture metadata.
-
 	sub delete
 	{
 	delete($_[0]->{domain}->{snapshots}->{$_[0]->{name}})
@@ -133,7 +119,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# volume(self, pool, name, [key]) enforces identity
 	# in the fake inventory.
-
 	sub volume
 	{
 	my ($self, $pool, $name, $key) = @_;
@@ -144,7 +129,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 	}
 
 	# connect(self) is sufficient for the independently tested usage guard.
-
 	sub connect
 	{
 	$_[0]
@@ -153,7 +137,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# get_key(self) supplies a stable UUID-like identity
 	# for cleanup ownership.
-
 	sub get_key
 	{
 	$_[0]->{name}
@@ -161,7 +144,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 
 	# snapshot(self, name, journal) injects faults before or
 	# after UUID persistence.
-
 	sub snapshot
 	{
 	my ($self, $name, $journal) = @_;
@@ -175,7 +157,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 	}
 
 	# delete(self) removes exactly the recorded fixture volume.
-
 	sub delete
 	{
 	delete($_[0]->{adapter}->{volumes}->{$_[0]->{name}})
@@ -183,7 +164,6 @@ require "$Bin/../lib/Cloudmin/Snapshots.pm";
 	}
 
 # fixture([fault], [cache]) creates a fresh journal, guest and native volume.
-
 sub fixture
 {
 my ($fault, $cache) = @_;

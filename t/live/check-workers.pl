@@ -19,7 +19,6 @@ $| = 1;
 
 	# command(self, task, id, [limit]) Uses the production policy with a
 	# hostile test program.
-
 	sub command
 	{
 	my ($self, $task, $id, $limit) = @_;

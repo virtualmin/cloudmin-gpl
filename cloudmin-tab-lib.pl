@@ -6,7 +6,6 @@ our (%config, %text, $remote_user, $module_var_directory,
 
 # inventory_tabs(page) returns native tab IDs for images, networks or storage.
 # The first ID is the page's default tab.
-
 sub inventory_tabs
 {
 my ($page) = @_;
@@ -24,7 +23,6 @@ return @{$tabs{$page}};
 # inventory_tab(page, [explicit]) selects a permitted saved tab or the default.
 # A valid explicit native tab ID wins; an invalid one selects the default.
 # Without an explicit tab, enabled memory restores the caller's saved choice.
-
 sub inventory_tab
 {
 my ($page, $explicit) = @_;
@@ -44,7 +42,6 @@ return (grep { $_ eq ($saved{$page} || '') } @tabs) ? $saved{$page} : $tabs[0];
 
 # save_inventory_tab(page, tab) saves only the caller's validated choice. The
 # endpoint verifies the signed POST before calling this function.
-
 sub save_inventory_tab
 {
 my ($page, $tab) = @_;
@@ -90,7 +87,6 @@ die $error if (!$ok);
 
 # inventory_tab_script(page, [token]) attaches persistence to the native widget.
 # Without a write token or enabled memory, the page has no preference writer.
-
 sub inventory_tab_script
 {
 my ($page, $token) = @_;

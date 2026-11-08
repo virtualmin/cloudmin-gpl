@@ -65,7 +65,6 @@ chmod(0600, $file);
 	our @ISA = ('Cloudmin::HostNetwork');
 
 	# backend(self) selects the isolated Netplan writer.
-
 	sub backend
 	{
 	return 'netplan';
@@ -73,13 +72,11 @@ chmod(0600, $file);
 
 	# unit(self, action, record) suppresses host
 	# recovery service operations.
-
 	sub unit
 	{
 	}
 
 	# inventory(self) supplies the single synthetic Ethernet interface.
-
 	sub inventory
 	{
 	return { backend => 'netplan', supported => 1,

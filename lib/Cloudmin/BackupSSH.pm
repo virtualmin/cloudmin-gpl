@@ -17,7 +17,6 @@ our @known_files =
 	  ((getpwuid(0))[7] || '/root').'/.ssh/known_hosts' );
 
 # host(target) validates and normalizes the OpenSSH known_hosts lookup name.
-
 sub host
 {
 my ($t) = @_;
@@ -30,7 +29,6 @@ return ($t->{'port'} || 22) == 22
 }
 
 # path(target) identifies approvals shared by schedules and restored archives.
-
 sub path
 {
 die "SSH backup trust directory is not configured\n" if (!$directory);
@@ -38,7 +36,6 @@ return $directory.'/'.sha256_hex(host($_[0]));
 }
 
 # entries(file, host) delegates hashed names, patterns and markers to OpenSSH.
-
 sub entries
 {
 my ($file, $host) = @_;
@@ -55,7 +52,6 @@ return @lines;
 }
 
 # known(target) uses approved replacements while retaining external revocations.
-
 sub known
 {
 my ($t) = @_;
@@ -68,7 +64,6 @@ return [ entries($file, $host), grep { /^\@revoked\s/ } @system ];
 }
 
 # key(line) extracts the algorithm and public key from a known_hosts entry.
-
 sub key
 {
 my ($line) = @_;
@@ -78,7 +73,6 @@ return $line =~ /(?:^|\s)((?:ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp\d+) [A-Za-z0-9
 }
 
 # fingerprints(lines) formats public SHA256 fingerprints without key comments.
-
 sub fingerprints
 {
 my ($lines) = @_;
@@ -89,14 +83,12 @@ return [ map { my ($type, $bytes) = split(/ /, key($_));
 }
 
 # digest(lines) binds approval to the exact displayed keys and previous trust.
-
 sub digest
 {
 return sha256_hex(join("\n", sort @{$_[0]}));
 }
 
 # scan(target) runs only inside the isolated, network-enabled host-key worker.
-
 sub scan
 {
 my ($t) = @_;
@@ -119,7 +111,6 @@ return { keys => [ sort keys %keys ] };
 
 # check(target) compares observed keys with existing trust
 # without accepting any.
-
 sub check
 {
 my ($t) = @_;
@@ -146,7 +137,6 @@ return { status => (grep { $observed{key($_)} } @trusted)
 
 # approve(target, previous_digest, proposed_digest) saves
 # only the reviewed keys.
-
 sub approve
 {
 my ($t, $previous, $proposed) = @_;
@@ -171,7 +161,6 @@ return { status => 'trusted', host => $state->{'host'} };
 }
 
 # require_trusted(target) fails before backup work when approval is needed.
-
 sub require_trusted
 {
 my ($t) = @_;

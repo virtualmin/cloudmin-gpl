@@ -29,35 +29,30 @@ my $jobs =
 			    log => sub { });
 
 # get_image_jobs() returns the isolated image store used by the handshake.
-
 sub get_image_jobs
 {
 $images
 }
 
 # get_vm_jobs() returns the isolated durable job store.
-
 sub get_vm_jobs
 {
 $jobs
 }
 
 # require_access(scope) permits preparation while licensing blocks new changes.
-
 sub require_access
 {
 die "License required\n" if ($_[0] ne 'host'); 1
 }
 
 # is_readonly_mode() allows submissions in the fixture.
-
 sub is_readonly_mode
 {
 0
 }
 
 # unique(values...) removes duplicate selections while retaining their order.
-
 sub unique
 {
 my %seen; grep { !$seen{$_}++ } @_

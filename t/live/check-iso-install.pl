@@ -40,7 +40,6 @@ my $name =
 	'cloudmin-iso-check-'.substr(Cloudmin::Images::generate_id(), 0, 12);
 
 # check(condition, message) stops at the first failure and retains its cause.
-
 sub check
 {
 die "FAILED: $_[1]\n" unless $_[0];
@@ -49,7 +48,6 @@ print "PASS: $_[1]\n";
 
 # api(action, [fields]) uses controller validation and a fresh signed token.
 # Omitted fields supply an empty request, as used by the options action.
-
 sub api
 {
 my ($action, $fields) = @_;
@@ -58,7 +56,6 @@ return call_vm_api(1, $action,
 }
 
 # change(action, [fields]) submits and checks a synchronous fixture job.
-
 sub change
 {
 my ($action, $fields) = @_;
@@ -71,7 +68,6 @@ return $done;
 
 # edit_media(volume) inserts fixture media; an empty volume name ejects it.
 # Fetch the current hardware revision before each change.
-
 sub edit_media
 {
 my ($volume) = @_;

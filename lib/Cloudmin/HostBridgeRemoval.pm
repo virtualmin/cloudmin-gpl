@@ -7,7 +7,6 @@ use warnings;
 
 # prepare_remove(self, name) Returns a removal plan for the named bridge,
 # including current file backups.
-
 sub prepare_remove
 {
 my ($self, $name) = @_;
@@ -205,7 +204,6 @@ return $p;
 
 # save_removal(self, plan) Writes a prepare_remove plan without applying it
 # to the live network.
-
 sub save_removal
 {
 my ($self, $p) = @_;
@@ -356,7 +354,6 @@ else {
 
 # activate_removal(self, plan, restoring) Applies removal, or restores the saved
 # bridge when restoring is true.
-
 sub activate_removal
 {
 my ($self, $p, $restoring) = @_;

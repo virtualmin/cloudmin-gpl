@@ -26,55 +26,47 @@ while (<$lang>) {
 close($lang);
 
 # ReadParse() keeps this request's supplied form fields.
-
 sub ReadParse
 {
 }
 
 # is_readonly_mode() grants this fixture permission to save.
-
 sub is_readonly_mode
 {
 return 0;
 }
 
 # error_setup(message) records Webmin's operation-specific error context.
-
 sub error_setup
 {
 $whatfailed = $_[0];
 }
 
 # error(message) exposes the normal Webmin error path to assertions.
-
 sub error
 {
 die "$whatfailed: $_[0]";
 }
 
 # error_message(error) supplies a readable cause without trailing whitespace.
-
 sub error_message
 {
 my $error = $_[0]; $error =~ s/\s+$//; return $error;
 }
 
 # error_html(message) keeps non-license errors escaped in this CGI fixture.
-
 sub error_html
 {
 return html_escape($_[0]);
 }
 
 # html_escape(value) keeps job failures and warnings as text.
-
 sub html_escape
 {
 return WebminCore::html_escape($_[0]);
 }
 
 # urlize(value) uses Webmin's normal query escaping.
-
 sub urlize
 {
 return WebminCore::urlize($_[0]);
@@ -87,7 +79,6 @@ my $queued =
 my $complete = { %$queued, state => 'complete' };
 
 # submit(action, tab, initial_job, statuses...) executes the real editor CGI.
-
 sub submit
 {
 my ($action, $tab, $initial, @statuses) = @_;

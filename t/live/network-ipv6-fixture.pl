@@ -21,7 +21,6 @@ require './cloudmin-network-lib.pl';
 	# A veth endpoint substitutes for Ethernet without touching the
 	# management NIC. inventory(self) makes only the owned
 	# veth a bridge candidate.
-
 	sub inventory
 	{
 	my $self = shift;
@@ -35,7 +34,6 @@ require './cloudmin-network-lib.pl';
 	# Fixture recovery uses its private journal, with no host-wide service
 	# units. unit(self, action, record) omits recovery service
 	# changes for this fixture.
-
 	sub unit
 	{
 	}
@@ -43,7 +41,6 @@ require './cloudmin-network-lib.pl';
 
 	# lock(self, name, callback) runs this isolated fixture
 	# without a host lock.
-
 	sub lock
 	{
 	$_[2]->()

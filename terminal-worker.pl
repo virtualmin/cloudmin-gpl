@@ -91,7 +91,6 @@ foreach my $handle ( $pty, \*STDOUT ) {
 	}
 
 # queue_bytes(handle, bytes) bounds pending traffic without logging its content.
-
 sub queue_bytes
 {
 my ($handle, $bytes) = @_;

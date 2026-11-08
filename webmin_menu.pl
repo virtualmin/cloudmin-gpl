@@ -9,7 +9,6 @@ require "$module_root_directory/server-manager-lib.pl";
 # list_webmin_menu([data], [input]) Resolves the current guest from the theme or
 # URL, retaining global links when libvirt is unavailable or no virtual machines
 # exist. Missing theme data and request input default to empty hashes.
-
 sub list_webmin_menu
 {
 my ($data, $input) = @_;

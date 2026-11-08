@@ -21,35 +21,30 @@ $text{'check_network_restore_desc'} = 'Restore rules';
 	package RecoveryAdapter;
 
 	# uri(self) selects local host checks without opening libvirt.
-
 	sub uri
 	{
 	'qemu:///system'
 	}
 
 	# module_error(self) models available Perl bindings.
-
 	sub module_error
 	{
 	undef
 	}
 
 	# probe(self) models a connected daemon.
-
 	sub probe
 	{
 	{ ok => 1 }
 	}
 
 	# get_host_info(self) enables QEMU-specific readiness checks.
-
 	sub get_host_info
 	{
 	{ driver => 'QEMU' }
 	}
 
 	# list_storage_pools(self) keeps unrelated storage readiness satisfied.
-
 	sub list_storage_pools
 	{
 	[ { active => 1 } ]
@@ -57,7 +52,6 @@ $text{'check_network_restore_desc'} = 'Restore rules';
 	package RecoveryTokens;
 
 	# check_token(self, owner, token) rejects unsigned recovery requests.
-
 	sub check_token
 	{
 	die "Bad token\n" if (($_[2] || '') ne 'signed');
@@ -66,7 +60,6 @@ $text{'check_network_restore_desc'} = 'Restore rules';
 
 	# lock(self, resource, callback) runs the controller
 	# without real lock files.
-
 	sub lock
 	{
 	$_[2]->()
@@ -74,7 +67,6 @@ $text{'check_network_restore_desc'} = 'Restore rules';
 	package RecoveryService;
 
 	# assert_idle(self) models a job that prevents service restart.
-
 	sub assert_idle
 	{
 	die "Jobs are running\n" if ($_[0]->{'busy'});

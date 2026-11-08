@@ -7,7 +7,6 @@ use Time::HiRes qw(time sleep);
 
 # memory_kib(doc, element) Converts libvirt memory fields to KiB, including
 # omitted currentMemory.
-
 sub memory_kib
 {
 return Cloudmin::Libvirt::memory_kib(@_);
@@ -15,7 +14,6 @@ return Cloudmin::Libvirt::memory_kib(@_);
 
 # live_limits(domain, config) Reads limits from running XML, or from config when
 # the guest is stopped.
-
 sub live_limits
 {
 my ($domain, $config) = @_;
@@ -36,7 +34,6 @@ return { cpus => 0 + $doc->findvalue('/domain/vcpu'),
 # live_cpu_minimum(doc) Subtracts enabled, removable CPUs from the running
 # count. Without individual CPU entries, conservatively treats every enabled
 # CPU as non-removable.
-
 sub live_cpu_minimum
 {
 my ($doc) = @_;
@@ -51,7 +48,6 @@ return $minimum > 0 ? $minimum : 1;
 
 # free_pcie_ports(doc) Counts unused root-port buses; legacy PCI guests do
 # not need these ports.
-
 sub free_pcie_ports
 {
 my ($doc) = @_;
@@ -66,7 +62,6 @@ return scalar(grep { !$used{0 + $_->getAttribute('index')} }
 
 # hotplug_device(doc, kind, identity) Finds a disk by target or a network
 # interface by MAC without XPath input.
-
 sub hotplug_device
 {
 my ($doc, $kind, $identity) = @_;
@@ -79,7 +74,6 @@ return (grep { ($kind eq 'disk'
 # device_value(node) Serializes editable fields for comparison; an absent node
 # becomes ''. QEMU-assigned aliases and addresses do not identify
 # an attachment change.
-
 sub device_value
 {
 my ($node) = @_;
@@ -108,7 +102,6 @@ return convert_to_json(\%value, 0, 0, 1);
 
 # prepare_hotplug(plan) Derives native operations from the validated
 # before/after definitions.
-
 sub prepare_hotplug
 {
 my ($plan) = @_;
@@ -190,7 +183,6 @@ $plan->{'offline_reason'} = $reason if ($reason);
 
 # hotplug_value(doc, operation) Reads the requested resource or device state
 # without exposing secure XML.
-
 sub hotplug_value
 {
 my ($doc, $op) = @_;
@@ -208,7 +200,6 @@ return device_value(hotplug_device($doc, $op->{'kind'}, $op->{'identity'}));
 
 # hotplug_reason(domain, plan) Reports a device change that blocks live
 # execution; resource limits defer.
-
 sub hotplug_reason
 {
 my ($domain, $plan) = @_;
@@ -226,7 +217,6 @@ return undef;
 
 # resource_values(doc) Returns comparable public settings for the running
 # and saved definitions.
-
 sub resource_values
 {
 return Cloudmin::Libvirt::resource_settings($_[0]);
@@ -234,7 +224,6 @@ return Cloudmin::Libvirt::resource_settings($_[0]);
 
 # next_start_value(doc, fields) Compares selected resource groups without
 # depending on XML units or spacing.
-
 sub next_start_value
 {
 my ($doc, $fields) = @_;
@@ -248,7 +237,6 @@ return convert_to_json({ map { $_ => $values->{$_} }
 
 # hotplug_operations(domain, plan) Splits known next-start settings from native
 # live operations before writing.
-
 sub hotplug_operations
 {
 my ($domain, $plan) = @_;
@@ -323,7 +311,6 @@ return \@ops;
 
 # next_start_nodes(doc, fields) Selects only the XML elements owned by the
 # deferred resource groups.
-
 sub next_start_nodes
 {
 my ($doc, $fields) = @_;
@@ -337,7 +324,6 @@ return $doc->findnodes(join(' | ', map { $paths{$_} } @$fields));
 
 # save_next_start(adapter, domain, plan, operation) Patches the latest saved
 # XML; the running hardware and unrelated fields stay intact.
-
 sub save_next_start
 {
 my ($adapter, $domain, $plan, $op) = @_;
@@ -376,7 +362,6 @@ $adapter->connect()->define_domain($doc->toString(), 1);
 
 # validate_hotplug(domain, plan) Rejects unsupported changes and detects live
 # edits outside the saved definition.
-
 sub validate_hotplug
 {
 my ($domain, $plan) = @_;
@@ -413,7 +398,6 @@ foreach my $op (@{hotplug_operations($domain, $plan)}) {
 
 # hotplug_guard(xml, operation) Detects unrelated definition edits while a
 # native call may have partly applied.
-
 sub hotplug_guard
 {
 my ($xml, $op) = @_;
@@ -449,7 +433,6 @@ return sha256_hex($doc->toStringC14N());
 # read_hotplug(domain, operation, flags) Reads native disk capacity or the
 # corresponding live/persistent XML field. flags selects the XML view and is
 # unused for native block-capacity reads.
-
 sub read_hotplug
 {
 my ($domain, $op, $flags) = @_;
@@ -461,7 +444,6 @@ return hotplug_value(Cloudmin::Libvirt::parse_xml_document(
 
 # call_hotplug(domain, operation, flags) Sends only the selected hardware
 # operation through the native Sys::Virt API.
-
 sub call_hotplug
 {
 my ($domain, $op, $flags) = @_;
@@ -548,7 +530,6 @@ else {
 
 # wait_hotplug(domain, operation, seconds) Polls reported live state for up to
 # seconds; a timeout is not a rollback.
-
 sub wait_hotplug
 {
 my ($domain, $op, $seconds) = @_;
@@ -567,7 +548,6 @@ die "The virtual machine stopped during the hardware change; use Recover to chec
 
 # run_hotplug(self, adapter, domain, job_id) Journals each operation so recovery
 # can finish a live/config partial success.
-
 sub run_hotplug
 {
 my ($self, $adapter, $domain, $id) = @_;

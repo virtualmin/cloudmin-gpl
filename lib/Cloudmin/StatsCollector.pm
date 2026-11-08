@@ -10,7 +10,6 @@ require(dirname(__FILE__).'/Metrics.pm');
 
 # new(class, [interval => seconds]) creates fresh counter baselines. The default
 # interval is 10 seconds.
-
 sub new
 {
 my ($class, %args) = @_;
@@ -20,7 +19,6 @@ return bless { interval => $args{interval} || 10, previous => { }, signatures =>
 }
 
 # invalidate(self, owner, time, kind, detail) records a baseline boundary.
-
 sub invalidate
 {
 my ($self, $owner, $wall, $kind, $detail) = @_;
@@ -34,7 +32,6 @@ push @{$self->{events}},
 
 # events(self) drains queued changes for the caller's next history write. The
 # queue is cleared even when history recording is disabled or later fails.
-
 sub events
 {
 my ($self) = @_;
@@ -46,7 +43,6 @@ return $events;
 # row(self, identity, gauges, counters, monotonic, wall) converts one entity.
 # Counter keys use normalized metric names. Missing, reset or delayed values
 # remain absent; current gauges still have a bounded observation interval.
-
 sub row
 {
 my ($self, $identity, $gauges, $counters, $mono, $wall) = @_;
@@ -81,7 +77,6 @@ return { %$identity, start => $wall - $duration, end => $wall, values =>
 # data. XML supplies disk slots and NIC MACs. Runtime names can change between
 # boots. Pass undef for guest_cache when no filesystem probe
 # result is available.
-
 sub vm
 {
 my ($self, $vm, $stats, $guest, $mono, $wall) = @_;
@@ -272,7 +267,6 @@ return ( \@rows,
 }
 
 # read_text(path) reads a proc/sysfs counter file or its test fixture.
-
 sub read_text
 {
 my ($path) = @_;
@@ -287,7 +281,6 @@ return $value || '';
 # Bridges do not represent forwarded traffic reliably. Default to physical
 # ports, replacing enslaved bond ports with the bond. Explicit
 # lists must not overlap.
-
 sub uplinks
 {
 my ($sys, $configured) = @_;
@@ -339,7 +332,6 @@ return [ sort keys %selected ];
 # omitted or empty uplinks option uses automatic interface selection. Optional
 # guests (the tick's live guest records) and pools (active storage pool records)
 # add what running guests hold and how full the pools are.
-
 sub host
 {
 my ($self, $id, $mono, $wall, $options) = @_;

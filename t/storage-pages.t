@@ -19,7 +19,6 @@ require "$Bin/../lib/Cloudmin/Storage.pm";
 
 # storage_input(html, name) Extracts an input without treating angle brackets in
 # quoted values as tags.
-
 sub storage_input
 {
 my ($html, $name) = @_;

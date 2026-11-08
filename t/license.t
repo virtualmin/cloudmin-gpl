@@ -11,7 +11,6 @@ require "$Bin/../lib/Cloudmin/License.pm";
 # fixture([reply]) isolates credentials, the clock and server responses. reply
 # defaults to a valid Cloudmin response. Returns the service, clock, response,
 # request count and directory; the middle three are mutable references.
-
 sub fixture
 {
 my ($reply) = @_;

@@ -30,7 +30,6 @@ chdir($ENV{'STATE_DIRECTORY'} || '') ||
 
 # emit(event) Writes one JSON event; the controller enforces stream
 # and event size limits.
-
 sub emit
 {
 print(convert_to_json($_[0], 0, 1), "\n") || die "Controller disconnected\n";

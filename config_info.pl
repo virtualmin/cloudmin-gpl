@@ -5,7 +5,6 @@ require 'server-manager-lib.pl';
 
 # config_post_save(new, old) applies collection settings after Webmin saves.
 # Both arguments are configuration hashes. Old is unused.
-
 sub config_post_save
 {
 my ($new, $old) = @_;
@@ -31,7 +30,6 @@ $in{'_cparam_refresh'} = 1;
 # hooks read submitted controls from %in; old_value is unused below.
 # show_cloudmin_fields(value, label, type, handler, key) Shows optional columns
 # or initially expanded sections in their display order.
-
 sub show_cloudmin_fields
 {
 my ($value, undef, undef, undef, $key) = @_;
@@ -45,7 +43,6 @@ return ui_grid(\@rows, { min => '180px' });
 
 # parse_cloudmin_fields(old_value, label, type, handler, key) Saves known
 # checkbox choices, retaining required columns.
-
 sub parse_cloudmin_fields
 {
 my (undef, undef, undef, undef, $key) = @_;
@@ -55,7 +52,6 @@ return join(',', map { $_->[0] }
 
 # show_cloudmin_number(value, label, type, handler, key) Shows a whole-number
 # setting with the same bounds used by its save parser.
-
 sub show_cloudmin_number
 {
 my ($value, undef, undef, undef, $key) = @_;
@@ -70,7 +66,6 @@ return ui_tag('input', undef, { type => 'number', name => $key, id => $key,
 
 # parse_cloudmin_number(old_value, label, type, handler, key) Rejects invalid
 # values before Webmin saves any of this section's settings.
-
 sub parse_cloudmin_number
 {
 my (undef, $label, undef, undef, $key) = @_;
@@ -85,7 +80,6 @@ return 0 + $value;
 
 # show_image_max_size(value) Offers an optional import cap; available storage
 # remains the default limit.
-
 sub show_image_max_size
 {
 my ($value) = @_;
@@ -95,7 +89,6 @@ return ui_opt_textbox('image_max_size', $value || '', 8,
 
 # parse_image_max_size(old_value) Validates the submitted cap before Webmin
 # saves it; old_value is unused.
-
 sub parse_image_max_size
 {
 # Selecting the default removes the explicit size cap.
@@ -110,7 +103,6 @@ return 0 + $value;
 # show_image_pool(value) offers file-backed pools and automatic selection. value
 # is the saved pool UUID, or empty for automatic selection. Stopped pools are
 # selectable here; the import form falls back until they are active again.
-
 sub show_image_pool
 {
 my ($value) = @_;
@@ -128,7 +120,6 @@ return ui_select('image_pool', $value || '', \@choices);
 
 # parse_image_pool(old_value) validates the submitted image_pool UUID. old_value
 # is the previous UUID or empty. Stopped pools can also be saved.
-
 sub parse_image_pool
 {
 my ($old) = @_;
@@ -150,7 +141,6 @@ return $value;
 
 # show_catalogue_columns(value) Shows known catalogue columns, keeping the
 # required image-name column checked.
-
 sub show_catalogue_columns
 {
 my ($value) = @_;
@@ -169,7 +159,6 @@ return ui_grid(\@rows, { min => '180px' });
 # parse_catalogue_columns(old_value) Stores only known columns in display order
 # and always retains the image link. Webmin supplies old_value; selections are
 # read from the submitted form instead.
-
 sub parse_catalogue_columns
 {
 my @selected = ('name');

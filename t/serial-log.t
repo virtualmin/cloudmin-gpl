@@ -19,7 +19,6 @@ my $xml = "<domain><name>fixture</name><uuid>$uuid</uuid><devices>".
 	  '<graphics type="vnc" passwd="preserve-me"/></devices></domain>';
 
 # put(path, bytes, [append]) writes only private fixture files.
-
 sub put
 {
 my ($file, $bytes, $append) = @_;
@@ -30,7 +29,6 @@ close($out) or die $!;
 }
 
 # parse(xml) uses the same safe parser as the libvirt adapter.
-
 sub parse
 {
 Cloudmin::Libvirt::parse_xml_document($_[0]);
@@ -130,35 +128,30 @@ ok(-f "$dir/foreign", 'cleanup preserves unrelated files');
 	package LogDomain;
 
 	# get_uuid_string(self) supplies the immutable fixture identity.
-
 	sub get_uuid_string
 	{
 	$uuid
 	}
 
 	# get_name(self) supplies the name used for duplicate-definition checks.
-
 	sub get_name
 	{
 	'fixture'
 	}
 
 	# is_active(self) exposes the fixture's current power state.
-
 	sub is_active
 	{
 	$_[0]->{'active'} || 0
 	}
 
 	# has_managed_save_image(self, flags) reports a saved guest state.
-
 	sub has_managed_save_image
 	{
 	$_[0]->{'saved'} || 0
 	}
 
 	# get_xml_description(self, flags) records which XML view was requested.
-
 	sub get_xml_description
 	{
 	push @{$_[0]->{'flags'}},
@@ -166,7 +159,6 @@ ok(-f "$dir/foreign", 'cleanup preserves unrelated files');
 	}
 
 	# create(self) records a single start and changes the fake power state.
-
 	sub create
 	{
 	$_[0]->{'starts'}++; $_[0]->{'active'} = 1
@@ -174,7 +166,6 @@ ok(-f "$dir/foreign", 'cleanup preserves unrelated files');
 	package LogConnection;
 
 	# list_all_domains(self) returns only the domain owned by this fixture.
-
 	sub list_all_domains
 	{
 	$_[0]->{'domain'} ? ($_[0]->{'domain'}) : ()
@@ -182,7 +173,6 @@ ok(-f "$dir/foreign", 'cleanup preserves unrelated files');
 
 	# define_domain(self, xml, flags) records the
 	# validated persistent update.
-
 	sub define_domain
 	{
 	my ($self, $xml, $flags) = @_;

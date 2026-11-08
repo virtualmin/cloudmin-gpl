@@ -41,14 +41,12 @@ subtest 'xterm handshake compatibility' => sub {
 
 		# init_config() prevents test setup from
 		# loading host configuration.
-
 		sub init_config
 		{
 		}
 
 		# get_module_acl() supplies no privileges to
 		# this helper-only test.
-
 		sub get_module_acl
 		{
 		return ();

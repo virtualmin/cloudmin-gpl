@@ -20,7 +20,6 @@ require './cloudmin-network-lib.pl';
 
 	# inventory(self) admits only the fixture veth as a
 	# physical port substitute.
-
 	sub inventory
 	{
 	my $self = shift;
@@ -33,14 +32,12 @@ require './cloudmin-network-lib.pl';
 
 	# unit(self, action, arguments...) leaves host-wide
 	# recovery services alone.
-
 	sub unit
 	{
 	}
 	package DHCPFixtureLock;
 
 	# lock(self, name, callback) runs against the fixture's private journal.
-
 	sub lock
 	{
 	$_[2]->()

@@ -15,7 +15,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	our @ISA = ('Cloudmin::VMs');
 
 	# options(self) exposes only completed, present source volumes.
-
 	sub options
 	{
 	return { images => [ grep { $_->{'state'} eq 'ready' }
@@ -24,7 +23,6 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	package DownloadFixture;
 
 	# list(self, [owner], [active]) supplies an existing shared download.
-
 	sub list
 	{
 	return [ grep { $_->{'state'} eq 'queued' } values %{
@@ -32,14 +30,12 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	}
 
 	# form_token(self, owner) supplies an unused fixture token.
-
 	sub form_token
 	{
 	return 'fixture';
 	}
 
 	# create(self, owner, token, request) counts newly allocated imports.
-
 	sub create
 	{
 	my ($self, $owner, $token, $request) = @_;
@@ -50,14 +46,12 @@ plan skip_all => 'DBI and DBD::SQLite are required'
 	}
 
 	# get(self, id) returns the import's latest persisted state.
-
 	sub get
 	{
 	return $_[0]->{'records'}->{$_[1]};
 	}
 
 	# start(self, id) completes or fails without invoking a network worker.
-
 	sub start
 	{
 	my ($self, $id) = @_;
@@ -86,7 +80,6 @@ my $asset = { source => 'download', slug => 'rocky-linux-10', pool => 'pool',
 		      'sha256' };
 
 # fixture(name) creates private jobs and observable locks without host changes.
-
 sub fixture
 {
 my ($name) = @_;

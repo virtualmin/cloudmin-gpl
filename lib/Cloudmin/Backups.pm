@@ -14,7 +14,6 @@ require(dirname(__FILE__).'/Clones.pm');
 our @ISA = ('Cloudmin::Clones');
 
 # directory(self) creates private metadata storage outside the web root.
-
 sub directory
 {
 my ($self) = @_;
@@ -28,7 +27,6 @@ return $dir;
 }
 
 # record(self, id, [value]) reads or atomically saves a private backup record.
-
 sub record
 {
 my ($self, $id, $value) = @_;
@@ -53,7 +51,6 @@ return decode_json(<$fh>);
 }
 
 # inventory(self) lists completed backups without transport credentials or XML.
-
 sub inventory
 {
 my ($self) = @_;
@@ -72,7 +69,6 @@ return [ sort { $b->{'created'} <=> $a->{'created'} } map {
 
 # purge_inspections(self) expires unused downloads after a day, under a lock.
 # Active restores retain their inspection even if its confirmation page is old.
-
 sub purge_inspections
 {
 my ($self) = @_;
@@ -102,7 +98,6 @@ $self->{'jobs'}->lock('create-host', sub {
 }
 
 # prepare(self, input, job_id) validates a backup before reserving the source.
-
 sub prepare
 {
 my ($self, $in, $id) = @_;
@@ -164,7 +159,6 @@ return { operation => 'backup', uuid => $domain->get_uuid_string(), name =>
 # archive_filename(name, job_id, timestamp, compressed) makes archives
 # identifiable. The full job ID still prevents collisions between
 # simultaneous submissions.
-
 sub archive_filename
 {
 my ($name, $id, $time, $compressed) = @_;
@@ -176,7 +170,6 @@ return 'cloudmin-'.$name.'-'.strftime('%Y%m%dT%H%M%SZ',
 
 # firmware_digest(path, identity) hashes a bounded regular NVRAM file. Checking
 # both file metadata and content catches writes and replacements.
-
 sub firmware_digest
 {
 my ($path, $identity) = @_;
@@ -211,7 +204,6 @@ return $hash->hexdigest();
 # copy_firmware(source, destination, identity, [before]) accepts only stable
 # bytes. For live backup, before is captured immediately
 # before the disk snapshot.
-
 sub copy_firmware
 {
 my ($source, $dest, $identity, $before) = @_;
@@ -224,7 +216,6 @@ die "Firmware variables changed during backup; retry or choose clean shutdown\n"
 }
 
 # work(self, id) returns this job's private staging path.
-
 sub work
 {
 Cloudmin::Jobs::validate_id($_[1]); return $_[0]->directory().
@@ -232,7 +223,6 @@ Cloudmin::Jobs::validate_id($_[1]); return $_[0]->directory().
 }
 
 # clean_work(self, id) removes only the job's private staging directory.
-
 sub clean_work
 {
 my ($self, $id) = @_;
@@ -245,7 +235,6 @@ die "Cannot remove backup staging files\n" if ($errors && @$errors);
 
 # cleanup(self, id, adapter) releases the source or removes
 # an incomplete restore.
-
 sub cleanup
 {
 my ($self, $id, $adapter) = @_;
@@ -277,7 +266,6 @@ $self->clean_work($id);
 
 # backup(self, id, adapter) copies stable disk states, then
 # publishes an archive.
-
 sub backup
 {
 my ($self, $id, $adapter) = @_;
@@ -418,7 +406,6 @@ $self->cleanup($id, $adapter);
 
 # transfer_file(self, id, operation, target, filename, local)
 # journals remote workers.
-
 sub transfer_file
 {
 my ($self, $id, @args) = @_;
@@ -437,7 +424,6 @@ $self->{'jobs'}->update($id, sub { delete($_[0]->{'worker'}); });
 }
 
 # inspect_backup(self, id) downloads and verifies before any guest is defined.
-
 sub inspect_backup
 {
 my ($self, $id) = @_;
@@ -466,7 +452,6 @@ $jobs->update($id,
 }
 
 # validate_manifest(manifest) checks restore identities and disk mappings.
-
 sub validate_manifest
 {
 my ($m) = @_;
@@ -501,7 +486,6 @@ die "A backup disk has no device mapping\n"
 # restore_volume_names(xml, manifest, id, pool_type) preserves recognized roles.
 # The new ownership ID must also appear in system and seed volume names, so
 # later cloning can replace the seed without dropping unrelated read-only data.
-
 sub restore_volume_names
 {
 my ($xml, $manifest, $id, $type) = @_;
@@ -524,7 +508,6 @@ return \%names;
 }
 
 # prepare_restore(self, input, job_id) binds confirmation to a verified archive.
-
 sub prepare_restore
 {
 my ($self, $in, $id) = @_;
@@ -566,7 +549,6 @@ return { operation => 'restore', name => $m->{'name'}, uuid => $m->{'uuid'},
 # check_external_state(document) rejects host files and devices absent from
 # archives. Apply the same boundary before creating a backup and
 # before restoring its XML.
-
 sub check_external_state
 {
 my ($doc) = @_;
@@ -581,7 +563,6 @@ die "The backup contains unsupported host devices or extensions\n"
 
 # restore_xml(xml, manifest, job_id, volumes, [nvram]) rebinds host resources.
 # Guest IDs, MACs, firmware and cloud-init bytes retain their original identity.
-
 sub restore_xml
 {
 my ($xml, $m, $id, $volumes, $nvram) = @_;
@@ -688,7 +669,6 @@ return $doc->toString();
 }
 
 # host_xml(self, xml, adapter) validates host-specific hardware before import.
-
 sub host_xml
 {
 my ($self, $xml, $adapter) = @_;
@@ -720,7 +700,6 @@ return $doc->toString();
 }
 
 # restore(self, id, adapter) imports verified disks and defines a stopped guest.
-
 sub restore
 {
 my ($self, $id, $adapter) = @_;
@@ -837,7 +816,6 @@ $self->clean_work($r->{'inspection'});
 
 # run(self, id) uses the durable job journal for completion,
 # rollback and recovery.
-
 sub run
 {
 my ($self, $id) = @_;

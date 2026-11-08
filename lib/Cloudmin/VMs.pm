@@ -24,7 +24,6 @@ require(dirname(__FILE__).'/NetworkPreflight.pm');
 # worker defaults to Cloudmin::Worker. Virtualmin installation is allowed unless
 # virtualmin_enabled is false. register_webmin(job, address) optionally
 # registers a completed installation.
-
 sub new
 {
 my ($class, %options) = @_;
@@ -34,7 +33,6 @@ return bless(\%options, $class);
 # options(self) Returns current host capabilities and usable images, pools and
 # network attachments. Missing cloud-init tools are reported
 # without blocking ISO use.
-
 sub options
 {
 my ($self) = @_;
@@ -116,7 +114,6 @@ return { capabilities => $caps, images => \@images, catalogue_images =>
 
 # image_metadata(self, image) Fills missing metadata from the exact downloaded
 # catalogue asset, not its name.
-
 sub image_metadata
 {
 my ($self, $image) = @_;
@@ -136,7 +133,6 @@ return $image;
 # disk_volume_name(vm_name, role, id, [pool_type]) Uses short LV names for
 # logical/lvmthin pools; other or omitted types get readable filenames. Existing
 # volumes keep their original names.
-
 sub disk_volume_name
 {
 my ($name, $role, $id, $type) = @_;
@@ -153,7 +149,6 @@ return "cloudmin-$name-$role-$id.".($role eq 'seed' ? 'iso' : 'qcow2');
 # metadata may need isolated inspection; ISOs skip it. Password hashes come from
 # the controller's private store, never public input. Omitted options trigger a
 # fresh inventory; callers may pass one already loaded.
-
 sub prepare
 {
 my ($self, $input, $options, $password_hash) = @_;
@@ -479,7 +474,6 @@ return \%r;
 
 # check_image_compatibility(self, image, host_architecture) Validates recorded
 # metadata or inspects missing metadata under the image lock.
-
 sub check_image_compatibility
 {
 my ($self, $image, $host_architecture) = @_;
@@ -510,7 +504,6 @@ return 1;
 
 # inspect_custom_image(self, image) Prevents deletion while an isolated helper
 # reads the selected imported volume.
-
 sub inspect_custom_image
 {
 my ($self, $image) = @_;
@@ -547,7 +540,6 @@ return $store->with_lock($store->path($image->{'id'}, 'json'), 0, sub {
 
 # size_bytes(input, field, default_units, label) Validates ui_bytesbox values
 # while retaining the fixed-unit API defaults.
-
 sub size_bytes
 {
 my ($input, $field, $default, $label) = @_;
@@ -575,7 +567,6 @@ return $bytes;
 # the control in validation errors. Round larger display units to whole MiB;
 # explicit MiB and smaller units keep their precision so callers can reject
 # fractional base-unit requests.
-
 sub memory_mib
 {
 my ($input, $field, $label) = @_;
@@ -587,7 +578,6 @@ return ($input->{$field.'_units'} || 0) > 1024**2
 
 # address(value, family, cidr) Canonicalizes an IPv4 or IPv6 literal. cidr
 # requires a prefix when true and forbids one when false; family is 4 or 6.
-
 sub address
 {
 my ($value, $family, $cidr) = @_;
@@ -609,7 +599,6 @@ return inet_ntop($af, $packed).($cidr ? '/'.int($prefix) : '');
 
 # public_keys(text) Accepts plain OpenSSH public keys, without authorized_keys
 # options or private keys.
-
 sub public_keys
 {
 my ($text) = @_;
@@ -640,7 +629,6 @@ return @keys;
 
 # seed_data(request, uuid) Generates NoCloud data as JSON (valid YAML),
 # including /32 on-link gateways.
-
 sub seed_data
 {
 my ($r, $uuid) = @_;
@@ -754,7 +742,6 @@ return {
 # KVM hardware with a private console. disk and seed are volume paths; pass
 # undef in the seed position for an ISO install. request supplies the installer
 # volume path, when needed, and job_id marks guest ownership.
-
 sub domain_xml
 {
 my ($r, $uuid, $id, $disk, $seed, $password) = @_;
@@ -842,7 +829,6 @@ return $doc->toString();
 
 # add_hardware_headroom(doc, cpu_limit) Adds CPU slots, spare PCIe ports and a
 # read-only rescue-media drive offline.
-
 sub add_hardware_headroom
 {
 my ($doc, $limit) = @_;
@@ -919,7 +905,6 @@ if (!$devices->findnodes('disk[@device="cdrom"]')) {
 # step(self, id, name, callback) Publishes a progress event, runs callback(),
 # and marks that event complete. The enclosing run() supplies
 # the creation timeout.
-
 sub step
 {
 my ($self, $id, $name, $callback) = @_;
@@ -937,7 +922,6 @@ return $result;
 
 # checkpoint(self, id) Observes cancellation between libvirt calls, when
 # rollback can run safely.
-
 sub checkpoint
 {
 my ($self, $id) = @_;
@@ -947,7 +931,6 @@ die "Virtual machine creation cancelled\n"
 
 # ensure_image(self, id) reuses or downloads a catalogue image before disk work.
 # Cancelling a creation leaves the shared import available to other requests.
-
 sub ensure_image
 {
 my ($self, $id) = @_;
@@ -1024,7 +1007,6 @@ $jobs->update($id, sub {
 
 # run(self, id) creates a guest or recovers interrupted creation work. Catalogue
 # downloads precede disk work; guest setup follows a committed guest.
-
 sub run
 {
 my ($self, $id) = @_;
@@ -1294,7 +1276,6 @@ return $result;
 
 # finish(self, id, adapter) Handles cancellation arriving between the last
 # libvirt call and the final commit.
-
 sub finish
 {
 my ($self, $id, $adapter) = @_;
@@ -1319,7 +1300,6 @@ return 1;
 
 # complete(self, id) Commits the final result and removes temporary
 # provisioning inputs.
-
 sub complete
 {
 my ($self, $id) = @_;
@@ -1350,7 +1330,6 @@ return $job;
 
 # fail(self, id, adapter, error) Rolls back only journalled resources; retained
 # resources are reported explicitly.
-
 sub fail
 {
 my ($self, $id, $adapter, $error) = @_;
@@ -1411,7 +1390,6 @@ return 0;
 # cleanup_creation(self, id) Removes a committed creation only after explicit
 # cancellation. The caller holds the worker lock; shared storage or later
 # history prevents deletion.
-
 sub cleanup_creation
 {
 my ($self, $id) = @_;
@@ -1465,7 +1443,6 @@ return $jobs->lock('vm-work', sub {
 
 # cleanup_work(self, id) Removes only this job's fixed temporary filenames,
 # retaining successful VM volumes.
-
 sub cleanup_work
 {
 my ($self, $id) = @_;
@@ -1487,7 +1464,6 @@ rmdir($work) || die "Cannot clean virtual machine work directory: $!\n"
 
 # prepare_disk(self, id, adapter, disk, request) Prepares an owned copy in
 # isolation and uploads it only after checking its size.
-
 sub prepare_disk
 {
 my ($self, $id, $adapter, $disk, $request) = @_;
@@ -1538,7 +1514,6 @@ return $result;
 # worker_task(self, id, task, request, [options]) Records the sandbox for crash
 # recovery and forwards cancellation while it runs. options are named
 # Cloudmin::Worker::run options, such as output => path.
-
 sub worker_task
 {
 my ($self, $id, $task, $request, %opts) = @_;

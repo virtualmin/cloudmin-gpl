@@ -7,7 +7,6 @@ our (%module_info, %text, $module_root_directory, $module_var_directory,
 require "$module_root_directory/lib/Cloudmin/License.pm";
 
 # cloudmin_pro() detects installed extensions independently of display settings.
-
 sub cloudmin_pro
 {
 return (exists($module_info{'gpl'}) && !$module_info{'gpl'}) ||
@@ -17,7 +16,6 @@ return (exists($module_info{'gpl'}) && !$module_info{'gpl'}) ||
 
 # cloudmin_license_host() identifies the host without
 # depending on its IP address.
-
 sub cloudmin_license_host
 {
 # Prefer the hardware UUID; machine-id also supports hosts without DMI data.
@@ -34,7 +32,6 @@ die "Cannot identify this host for license checks\n";
 
 # cloudmin_license_request(host, key) posts to the license API over verified
 # TLS. Keep the key out of URLs. Return undef on redirects or transport errors.
-
 sub cloudmin_license_request
 {
 my ($host, $key) = @_;
@@ -92,7 +89,6 @@ return $ok ? $body : undef;
 }
 
 # get_cloudmin_license() uses the shared license file and private Webmin state.
-
 sub get_cloudmin_license
 {
 return Cloudmin::License->new(directory => "$module_var_directory/license",
@@ -105,7 +101,6 @@ return Cloudmin::License->new(directory => "$module_var_directory/license",
 # cloudmin_license_repo_text(text, serial, key) replaces only Cloudmin
 # credentials. Public repositories and Virtualmin licenses are
 # unrelated and stay unchanged.
-
 sub cloudmin_license_repo_text
 {
 my ($value, $serial, $key) = @_;
@@ -132,7 +127,6 @@ return $value;
 # cloudmin_license_files() lists the credential file and supported repo formats.
 # The second field marks the license file; other entries
 # contain repository text.
-
 sub cloudmin_license_files
 {
 our $config_directory;
@@ -149,7 +143,6 @@ return ( [ '/etc/cloudmin-license', 1 ],
 # too. Empty serial and key clear credentials without removing repository
 # definitions. Stage every replacement first. Roll back completed files if
 # a later write fails.
-
 sub save_cloudmin_license
 {
 my ($serial, $key) = @_;
@@ -254,7 +247,6 @@ unlock_file($_) for reverse @locked;
 # licensing. Storage failures deny new changes but cannot make inventory pages
 # fail. Both flags default to false and are passed to
 # License::status on Pro hosts.
-
 sub cloudmin_license_status
 {
 return { edition => 'GPL', state => 'gpl', allowed => 1 } if (!cloudmin_pro());
@@ -268,7 +260,6 @@ return $status;
 # cloudmin_license_message(status, [on_page]) explains the problem and remedy.
 # on_page defaults to false; 'manager' omits navigation and 'readonly' asks an
 # administrator to add missing credentials. The result is plain text.
-
 sub cloudmin_license_message
 {
 my ($s, $on_page) = @_;
@@ -314,7 +305,6 @@ return $message.
 }
 
 # require_cloudmin_license() checks stale state before admitting a new change.
-
 sub require_cloudmin_license
 {
 my $s = cloudmin_license_status(1);
@@ -322,14 +312,12 @@ die cloudmin_license_message($s)."\n" if (!$s->{'allowed'});
 }
 
 # check_cloudmin_license() is the daily Webmin cron callback.
-
 sub check_cloudmin_license
 {
 cloudmin_license_status(1, 1);
 }
 
 # setup_cloudmin_license_check() installs one daily check on Pro hosts only.
-
 sub setup_cloudmin_license_check
 {
 return if (!cloudmin_pro());
@@ -353,7 +341,6 @@ webmincron::save_webmin_cron({ module => 'server-manager', file =>
 # check_cloudmin_license_action(action, input) checks access before forms or
 # writes. Confirmation pages and the API share the same ACL,
 # edition and token checks.
-
 sub check_cloudmin_license_action
 {
 my ($action, $input) = @_;
@@ -369,7 +356,6 @@ die "Unknown license action\n"
 # call_license_api(action, input, [starting]) permits repair while blocked. The
 # optional callback starts UI progress after access and input checks. Licensing
 # never grants access: host ACL, writable session and token still apply.
-
 sub call_license_api
 {
 my ($action, $input, $starting) = @_;

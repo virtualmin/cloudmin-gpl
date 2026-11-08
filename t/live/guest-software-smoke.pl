@@ -7,7 +7,6 @@ use File::Temp qw(tempdir);
 use File::Copy qw(copy);
 
 # main() tests native packages, available Pro scripts and HTTPS in the guest.
-
 sub main
 {
 die "Run only as root in a disposable Linux guest or container\n"

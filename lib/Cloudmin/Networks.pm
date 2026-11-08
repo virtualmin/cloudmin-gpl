@@ -11,7 +11,6 @@ require(dirname(__FILE__).'/Libvirt.pm');
 
 # new(class, adapter => object, host => object, jobs => object) Shares the VM
 # controller lock with creation and hardware changes.
-
 sub new
 {
 my ($class, %opts) = @_;
@@ -20,7 +19,6 @@ return bless(\%opts, $class);
 
 # cidr(value, [family]) Validates an IP/prefix and returns its canonical
 # address and network bits.
-
 sub cidr
 {
 # Parse the family and prefix before comparing or building network ranges.
@@ -46,7 +44,6 @@ return { address => inet_ntop($af, $packed), prefix => $prefix,
 
 # overlap(first, second) Compares validated subnets without
 # losing IPv6 precision.
-
 sub overlap
 {
 my ($a, $b) = @_;
@@ -57,7 +54,6 @@ return substr($a->{'bits'}, 0, $length) eq substr($b->{'bits'}, 0, $length);
 
 # name(value) Restricts names used by libvirt, interface
 # backends and unit arguments.
-
 sub name
 {
 my ($value) = @_;
@@ -69,7 +65,6 @@ return $value;
 
 # guest_links(self) Includes live and saved NICs, so pending hardware changes
 # still protect a network.
-
 sub guest_links
 {
 my ($self) = @_;
@@ -105,7 +100,6 @@ return \@links;
 
 # inventory(self) Combines libvirt networks with persistent and live
 # host bridge information.
-
 sub inventory
 {
 my ($self) = @_;
@@ -161,7 +155,6 @@ return { %$host, networks =>
 
 # prepare_bridge(self, name, source) Refuses to move an interface still named by
 # a guest or libvirt forwarding rule.
-
 sub prepare_bridge
 {
 my ($self, $name, $source) = @_;
@@ -183,7 +176,6 @@ return $self->{'host'}->prepare($name, $source);
 # prepare_bridge_removal(self, name) Includes saved VM and network references,
 # not just currently attached ports. name is the host bridge; returns the host
 # controller's reviewed removal plan.
-
 sub prepare_bridge_removal
 {
 my ($self, $name) = @_;
@@ -214,7 +206,6 @@ return $plan;
 
 # assert_idle(self) A queued VM may already reference a network even before
 # libvirt has its NIC.
-
 sub assert_idle
 {
 my ($self) = @_;
@@ -228,7 +219,6 @@ die "Wait for virtual machine operations to finish before changing networking\n"
 
 # prepare_network(self, input) Builds a persistent NAT, routed or isolated
 # network after subnet validation.
-
 sub prepare_network
 {
 my ($self, $in) = @_;
@@ -339,7 +329,6 @@ return { name => $name, xml => $doc->toString(), mode => $mode,
 
 # create(self, input) Defines and starts a validated network, removing only our
 # definition on failure.
-
 sub create
 {
 my ($self, $in) = @_;
@@ -374,7 +363,6 @@ return $self->{'jobs'}->lock('create-host', sub {
 
 # change(self, action, uuid, revision, [enabled]) Refuses stale forms and
 # protects both running and stopped attached VMs.
-
 sub change
 {
 my ($self, $action, $uuid, $revision, $enabled) = @_;

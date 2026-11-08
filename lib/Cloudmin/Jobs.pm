@@ -15,7 +15,6 @@ use Fcntl qw(O_RDWR O_NOFOLLOW LOCK_EX LOCK_NB);
 #     [admit => callback])
 # Constructs a lazy store; reading a fresh host creates no files. admit() may
 # reject new submissions; existing IDs and worker updates skip it.
-
 sub new
 {
 my ($class, %options) = @_;
@@ -26,7 +25,6 @@ return bless(\%options, $class);
 
 # dependencies() Loads the SQLite driver only when the
 # controller job store is used.
-
 sub dependencies
 {
 require DBI;
@@ -38,7 +36,6 @@ require DBD::SQLite;
 # the scalar return value; resource is a safe lock basename. nonblocking refuses
 # a held lock; waiting() checks cancellation between disk queue attempts and may
 # throw to stop waiting.
-
 sub lock
 {
 my ($self, $resource, $callback, $nonblocking, $waiting) = @_;
@@ -103,7 +100,6 @@ return $result;
 # downloads before taking the disk-work lock. The durable job reserves its guest
 # while other guests remain controllable. callback() runs under the disk-work
 # lock and supplies the return value.
-
 sub run_worker
 {
 my ($self, $id, $callback, $prepare) = @_;
@@ -182,7 +178,6 @@ return $self->lock('worker-'.$id, sub {
 
 # busy(self, id) Reports a live worker through Webmin's lock API, excluding
 # exited Linux processes that still have a PID while waiting to be reaped.
-
 sub busy
 {
 my ($self, $id) = @_;
@@ -192,7 +187,6 @@ return $self->lock_pid("$self->{directory}/worker-$id") ? 1 : 0;
 
 # zombie(pid) recognizes an exited Linux process that its parent has not reaped.
 # Missing or unreadable process data never authorizes breaking a live lock.
-
 sub zombie
 {
 my ($pid) = @_;
@@ -205,7 +199,6 @@ return $stat && $stat =~ /\A\d+ \(.*\) [ZX] / ? 1 : 0;
 }
 
 # lock_pid(self, file) excludes zombies from Webmin's PID-existence check.
-
 sub lock_pid
 {
 my ($self, $file) = @_;
@@ -215,7 +208,6 @@ return $pid && !zombie($pid) ? $pid : 0;
 
 # clear_dead_lock(self, file) releases only a lock still owned by a zombie. The
 # file lock and inode check protect a replacement written by another worker.
-
 sub clear_dead_lock
 {
 my ($self, $file) = @_;
@@ -239,7 +231,6 @@ unlink($path) || die "Cannot release exited job worker lock: $!\n";
 # creating it, because a read-only connection cannot roll back the hot journal
 # left by a writer that was killed mid-transaction, and every later read would
 # fail until a writer ran.
-
 sub connect
 {
 my ($self, $write) = @_;
@@ -284,7 +275,6 @@ return $db;
 # write_data(self, callback) Serializes SQLite writers with Webmin; binary
 # database contents never enter diffs. callback(database) runs in a transaction
 # and supplies the scalar return value.
-
 sub write_data
 {
 my ($self, $callback) = @_;
@@ -307,7 +297,6 @@ return $self->lock('jobs.sqlite', sub {
 # save_credential(self, id, owner, username, hash) Stores a draft hash with a
 # one-day expiry, without logging its value. Later saves purge expired drafts;
 # reads reject them even before removal.
-
 sub save_credential
 {
 my ($self, $id, $owner, $username, $hash) = @_;
@@ -323,7 +312,6 @@ return $self->write_data(sub {
 
 # credential(self, id, owner, username) Returns a matching unexpired draft, or
 # undef before credentials are initialized.
-
 sub credential
 {
 my ($self, $id, $owner, $username) = @_;
@@ -344,7 +332,6 @@ return $hash;
 
 # delete_credential(self, id, owner) Removes a draft after its hash has been
 # handed to a durable creation job.
-
 sub delete_credential
 {
 my ($self, $id, $owner) = @_;
@@ -358,7 +345,6 @@ return $self->write_data(sub {
 
 # submit(self, id, owner, resource, request) Reserves a resource and records a
 # request once; retries return the original job.
-
 sub submit
 {
 my ($self, $id, $owner, $resource, $request) = @_;
@@ -429,7 +415,6 @@ return $job;
 # reserved_resources(job) returns the destination and related reservations.
 # Clones reserve the source UUID; restores reserve the preserved UUID and cached
 # inspection as well as the destination name. All come from validated requests.
-
 sub reserved_resources
 {
 my ($job) = @_;
@@ -446,7 +431,6 @@ return ( $job->{'resource'},
 # assert_guest_available(self, uuid, [power_action]) Unfinished changes block
 # power and further edits until recovery completes. power_action defaults to '';
 # named stop/resume actions allow limited recovery.
-
 sub assert_guest_available
 {
 my ($self, $uuid, $power_action) = @_;
@@ -491,7 +475,6 @@ foreach my $row (@$rows) {
 
 # get(self, id, [owner]) Returns a job, or undef if absent; optional ownership
 # limits apply before returning.
-
 sub get
 {
 my ($self, $id, $owner) = @_;
@@ -511,7 +494,6 @@ return $job;
 # update(self, id, callback) Applies a small atomic change while preserving
 # concurrent cancellation requests. callback(job) edits the current record in
 # place; its return value is ignored.
-
 sub update
 {
 my ($self, $id, $callback) = @_;
@@ -538,7 +520,6 @@ return $self->write_data(sub {
 
 # list(self, [owner], [active_only]) Lists recent jobs, or all unfinished jobs
 # for recovery after a restart.
-
 sub list
 {
 my ($self, $owner, $active) = @_;
@@ -563,7 +544,6 @@ return [ map { convert_from_json($_->[0]) } @$rows ];
 
 # list_recovery(self, [owner]) Lists failed jobs still holding a reservation,
 # including older history.
-
 sub list_recovery
 {
 my ($self, $owner) = @_;
@@ -580,7 +560,6 @@ return [ grep { $_->{'cleanup_pending'} }
 
 # list_pending(self, [owner]) Includes retained failures even when they are
 # older than recent job history.
-
 sub list_pending
 {
 my ($self, $owner) = @_;
@@ -590,7 +569,6 @@ return [ sort { $b->{'created'} <=> $a->{'created'} }
 
 # audit(self, action, job) Logs identity and the stored, redacted outcome, never
 # provisioning inputs.
-
 sub audit
 {
 my ($self, $action, $job) = @_;
@@ -612,7 +590,6 @@ $self->{'log'}->($action, 'vm', $job->{'id'}, {
 # spawn(self, id, callback) Starts a detached worker; the callback rechecks the
 # job under its resource lock. callback(id) runs in the child; the parent
 # returns the child's PID.
-
 sub spawn
 {
 my ($self, $id, $callback) = @_;
@@ -642,7 +619,6 @@ _exit($ok ? 0 : 1);
 
 # validate_id(id) Keeps identifiers safe for SQLite lookups and
 # Webmin lock filenames.
-
 sub validate_id
 {
 die "Invalid job ID\n" if (($_[0] || '') !~ /\A[a-f0-9]{32}\z/);

@@ -15,7 +15,6 @@ our $DIRECTORY = '/var/lib/libvirt/swtpm';
 my $LIMIT = 16 * 1024**2;
 
 # path(uuid) validates the owner UUID and returns its system TPM 2.0 directory.
-
 sub path
 {
 my ($uuid) = @_;
@@ -26,7 +25,6 @@ return "$DIRECTORY/$uuid/tpm2";
 
 # directory(path) returns the device and inode used to detect replacement.
 # Require the canonical path; symlinks in parent directories are also refused.
-
 sub directory
 {
 my ($path) = @_;
@@ -38,7 +36,6 @@ return "$st[0]:$st[1]";
 
 # source(adapter, domain, document) validates an optional software TPM. Returns
 # its path and directory identity, or undef for a guest without a TPM.
-
 sub source
 {
 my ($adapter, $domain, $doc) = @_;
@@ -74,7 +71,6 @@ return { path => $path, identity => $identity };
 
 # assert_unused(adapter, uuid, path) rejects state referenced by another guest.
 # uuid is the owner to exclude; path is its state directory.
-
 sub assert_unused
 {
 my ($adapter, $uuid, $path) = @_;
@@ -105,7 +101,6 @@ foreach my $other ($adapter->connect()->list_all_domains()) {
 }
 
 # read_state(path) reads up to 16 MiB without following links.
-
 sub read_state
 {
 my ($path) = @_;
@@ -134,7 +129,6 @@ return $bytes;
 }
 
 # files(path) lists supported swtpm state files, excluding the lock.
-
 sub files
 {
 my ($path) = @_;
@@ -154,7 +148,6 @@ return sort grep { $_ ne '.lock' } @names;
 # copy(source, uuid, job_id, domain, journal) copies a stopped source's TPM.
 # source is the descriptor from source(); uuid belongs to the new clone.
 # journal() records intent before allocation so interrupted jobs can roll back.
-
 sub copy
 {
 my ($source, $uuid, $id, $domain, $journal) = @_;
@@ -211,7 +204,6 @@ return $path;
 
 # remove_copy(adapter, uuid, job_id) removes an undefined clone's owned state.
 # uuid identifies the clone; job_id must match its allocation marker.
-
 sub remove_copy
 {
 my ($adapter, $uuid, $id) = @_;

@@ -9,7 +9,6 @@ init_config();
 
 # parse_webmin_log(user, script, action, type, object, params, [long]) Formats
 # stored identities and outcomes without loading guests or job stores.
-
 sub parse_webmin_log
 {
 my ($user, $script, $action, $type, $object, $params, $long) = @_;

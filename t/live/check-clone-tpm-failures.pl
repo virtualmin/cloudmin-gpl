@@ -29,7 +29,6 @@ require './lib/Cloudmin/Clones.pm';
 
 	# step(self, id, name, callback) faults only after a
 	# real TPM copy completes.
-
 	sub step
 	{
 	my ($self, $id, $name, $callback) = @_;

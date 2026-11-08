@@ -11,7 +11,6 @@ our %text;
 
 # storage_page_tab(value) Accepts inventory tabs only, including
 # after a form submission.
-
 sub storage_page_tab
 {
 return ($_[0] || '') =~ /\A(?:pools|volumes)\z/ ? $_[0] : 'overview';
@@ -19,7 +18,6 @@ return ($_[0] || '') =~ /\A(?:pools|volumes)\z/ ? $_[0] : 'overview';
 
 # storage_form(action, token, [fields], [tab]) Keeps each action in its own POST
 # form, outside other forms.
-
 sub storage_form
 {
 my ($action, $token, $fields, $tab) = @_;
@@ -31,7 +29,6 @@ return ui_form_start('storage.cgi', 'post').ui_hidden('action', $action).
 
 # show_storage_overview(data) Shows storage totals, pool links and each
 # pool's capacity bar.
-
 sub show_storage_overview
 {
 my ($data) = @_;
@@ -143,7 +140,6 @@ return $html;
 
 # storage_action(pool, token, action, label, icon, [enabled]) Identifies the
 # exact pool and rendered revision for a small lifecycle control.
-
 sub storage_action
 {
 my ($pool, $token, $action, $label, $icon, $enabled) = @_;
@@ -159,7 +155,6 @@ return storage_form($action, $token,
 
 # show_storage_pool(pool, token, [selected]) Separates pool identity, capacity,
 # location and lifecycle controls.
-
 sub show_storage_pool
 {
 my ($pool, $token, $selected) = @_;
@@ -275,7 +270,6 @@ return ui_card({ id => 'cloudmin-pool-'.$pool->{'uuid'},
 # show_storage_volume_usage(usage, [empty]) Shows each VM once, including
 # references retained by its snapshots or saves. Empty table cells use a dash;
 # callers can supply a different placeholder.
-
 sub show_storage_volume_usage
 {
 my ($usage, $empty) = @_;
@@ -295,7 +289,6 @@ return @owners
 
 # show_storage_volume_type(usage) Keeps additional volume roles in an inline
 # disclosure below the first type.
-
 sub show_storage_volume_type
 {
 my ($usage) = @_;
@@ -328,7 +321,6 @@ return html_escape($text{!$usage || !$usage->{'checked'}
 # show_storage_volumes(pools, [token], [local], [formno]) Lists owners and
 # capacity, linking local directories to File Manager and offering deletion only
 # for verified unused files.
-
 sub show_storage_volumes
 {
 my ($pools, $token, $local, $formno) = @_;
@@ -426,7 +418,6 @@ return $html;
 
 # show_storage_delete_volumes(volumes, token) Lists the exact selected files and
 # carries each reviewed revision into POST.
-
 sub show_storage_delete_volumes
 {
 my ($volumes, $token) = @_;
@@ -472,7 +463,6 @@ return $form.ui_card({ title => $text{'storage_delete_selected'}, class =>
 
 # show_storage_unregister(record, token) renders the service's pool review.
 # Clicking the submit button confirms removal and any reviewed stop.
-
 sub show_storage_unregister
 {
 my ($record, $token) = @_;
@@ -522,7 +512,6 @@ return storage_form('unregister', $token,
 # show_storage_create(token, values, [groups], [group_error]) Renders storage
 # registration, retaining entered values after failure. groups defaults to an
 # empty list; group_error reports discovery failures.
-
 sub show_storage_create
 {
 my ($token, $values, $groups, $group_error) = @_;
@@ -607,7 +596,6 @@ return $html.ui_table_end().ui_form_end();
 
 # show_storage_pools(data, token, values, error, selected) Separates existing
 # pools from creation, reopening creation after a failure.
-
 sub show_storage_pools
 {
 my ($data, $token, $values, $error, $selected) = @_;
@@ -650,7 +638,6 @@ return $html.ui_tabs_end(1);
 # Builds storage tabs; a review replaces its inventory when token is present.
 # values retains form inputs, selected focuses a pool, and tab defaults to
 # overview. Without token, the page offers no changes.
-
 sub show_storage_page
 {
 my ($data, $token, $tab, $values, $error, $selected, $deletion,

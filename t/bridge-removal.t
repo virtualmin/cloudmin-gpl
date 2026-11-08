@@ -19,7 +19,6 @@ require "$Bin/../lib/Cloudmin/HostNetwork.pm";
 
 	# lock(self, name, callback) runs the isolated
 	# journal without host locks.
-
 	sub lock
 	{
 	$_[2]->()
@@ -27,7 +26,6 @@ require "$Bin/../lib/Cloudmin/HostNetwork.pm";
 
 	# list(self, [owner], [pending]) supplies active work
 	# for reservation checks.
-
 	sub list
 	{
 	$_[0]->{'active'} || [ ]
@@ -36,21 +34,18 @@ require "$Bin/../lib/Cloudmin/HostNetwork.pm";
 	our @ISA = ('Cloudmin::HostNetwork');
 
 	# inventory(self) supplies only the fixture bridge and Ethernet port.
-
 	sub inventory
 	{
 	$_[0]->{'data'}
 	}
 
 	# backend(self) avoids loading a workstation network backend.
-
 	sub backend
 	{
 	'nm'
 	}
 
 	# unit(self, method, [args...]) records recovery guard actions.
-
 	sub unit
 	{
 	push(@{$_[0]->{'units'}}, [ @_[1 .. $#_] ])
@@ -58,7 +53,6 @@ require "$Bin/../lib/Cloudmin/HostNetwork.pm";
 
 	# command(self, argv, [quiet], [safe]) records calls
 	# without running them.
-
 	sub command
 	{
 	push(@{$_[0]->{'commands'}}, $_[1]); return ''
@@ -83,7 +77,6 @@ my $host =
 				   management => [ 'br0' ] });
 
 # nm_section(name, [pairs...]) builds Webmin sections from name/value pairs.
-
 sub nm_section
 {
 my ($name, %fields) = @_;
@@ -284,21 +277,18 @@ ok(!eval { $host->confirm($host->read_state()->{'id'}, 'other'); 1 },
 	package RemovalNetwork;
 
 	# is_persistent(self) makes inventory inspect saved as well as live XML.
-
 	sub is_persistent
 	{
 	1
 	}
 
 	# get_name(self) identifies the dependent network in refusal messages.
-
 	sub get_name
 	{
 	'fixture-net'
 	}
 
 	# get_xml_description(self, flags) selects live or inactive fixture XML.
-
 	sub get_xml_description
 	{
 	$_[0]->{$_[1] ? 'saved' : 'live'}
@@ -307,7 +297,6 @@ ok(!eval { $host->confirm($host->read_state()->{'id'}, 'other'); 1 },
 
 	# list_all_networks(self, flags) returns the fixture
 	# networks, ignoring flags.
-
 	sub list_all_networks
 	{
 	@{$_[0]->{'networks'}}
@@ -316,7 +305,6 @@ ok(!eval { $host->confirm($host->read_state()->{'id'}, 'other'); 1 },
 
 	# connect(self) returns the in-memory connection
 	# without opening libvirt.
-
 	sub connect
 	{
 	$_[0]->{'connection'}

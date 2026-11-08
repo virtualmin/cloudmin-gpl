@@ -19,7 +19,6 @@ our (%in, %text, $first_print, $second_print, @responses, $reads, $whatfailed,
 our $readonly = 0;
 
 # is_readonly_mode() supplies the fixture viewer's current permission.
-
 sub is_readonly_mode
 {
 return $readonly;
@@ -35,26 +34,22 @@ $first_print = sub { print "Start: $_[0]\n"; };
 $second_print = sub { print "Result: $_[0]\n"; };
 
 # progress_callback(stage, bytes) records native download progress without HTML.
-
 sub progress_callback
 {
 print "Download: $_[0] $_[1]\n";
 }
 
 # ReadParse() - Retains fixture request values.
-
 sub ReadParse
 {
 }
 
 # recover_vm_jobs() - Leaves the scripted states in charge.
-
 sub recover_vm_jobs
 {
 }
 
 # call_vm_api(version, action, input) - Supplies status or a store error.
-
 sub call_vm_api
 {
 push(@calls, [ $_[1], { %{$_[2]} } ]);
@@ -66,21 +61,18 @@ return $next;
 }
 
 # error_message(error) - Preserves the useful cause for the page.
-
 sub error_message
 {
 return $_[0];
 }
 
 # error_html(message) keeps non-license errors escaped in this CGI fixture.
-
 sub error_html
 {
 return html_escape($_[0]);
 }
 
 # html_escape(value) - Prevents fixture error markup from becoming HTML.
-
 sub html_escape
 {
 my ($value) = @_;
@@ -91,14 +83,12 @@ return $value;
 }
 
 # ui_link(url, label) renders a normal navigation link for the fixture.
-
 sub ui_link
 {
 return '<a href="'.html_escape($_[0]).'">'.$_[1].'</a>';
 }
 
 # text(key, value) - Substitutes the status-error detail.
-
 sub text
 {
 my $message = $text{$_[0]};
@@ -107,21 +97,18 @@ return $message;
 }
 
 # error(message) - Makes initial validation failures observable to the test.
-
 sub error
 {
 die "$whatfailed: $_[0]";
 }
 
 # error_setup(message) - Records the action shown before a validation error.
-
 sub error_setup
 {
 $whatfailed = $_[0];
 }
 
 # ui_print_unbuffered_header(args...) - Starts a captured page.
-
 sub ui_print_unbuffered_header
 {
 print "Header: $_[1]\n";
@@ -129,28 +116,24 @@ print "Subtitle: $_[0]\n";
 }
 
 # ui_alert_box(message, type) - Captures an escaped warning.
-
 sub ui_alert_box
 {
 return "Warning: $_[0]\n";
 }
 
 # ui_print_footer(url, label, args...) - Records the recovery destination.
-
 sub ui_print_footer
 {
 print "Footer: $_[0]\n";
 }
 
 # notify_theme_save(vm, action) - Records the navigation refresh.
-
 sub notify_theme_save
 {
 print "Theme: $_[1] $_[0]->{uuid}\n";
 }
 
 # render(responses...) - Runs one CGI request and returns its captured output.
-
 sub render
 {
 @responses = @_;

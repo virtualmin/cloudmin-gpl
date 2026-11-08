@@ -47,7 +47,6 @@ write_file_contents($source_file, $source);
 
 	# backend(self) selects the temporary ifupdown files
 	# without host detection.
-
 	sub backend
 	{
 	'debian-linux'
@@ -55,14 +54,12 @@ write_file_contents($source_file, $source);
 
 	# unit(self, action, arguments...) omits host-wide
 	# recovery service changes.
-
 	sub unit
 	{
 	}
 
 	# command(self, arguments...) prohibits network
 	# activation in this file test.
-
 	sub command
 	{
 	die "Unexpected host command\n"
@@ -70,7 +67,6 @@ write_file_contents($source_file, $source);
 
 	# ipv6_address_mode(self, device) supplies the
 	# fixture's normal kernel mode.
-
 	sub ipv6_address_mode
 	{
 	'eui64'
@@ -78,7 +74,6 @@ write_file_contents($source_file, $source);
 	package IfupdownFixtureLock;
 
 	# lock(self, name, callback) runs against the private fixture journal.
-
 	sub lock
 	{
 	$_[2]->()

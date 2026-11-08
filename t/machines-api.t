@@ -36,7 +36,6 @@ my @probed;
 
 	# get_resource_stats(self, ids) returns statistics for
 	# fixture disks and media.
-
 	sub get_resource_stats
 	{
 	my ($self, $ids) = @_; push(@probed, @$ids);
@@ -52,7 +51,6 @@ my @probed;
 	package MachinesAPIJobs;
 
 	# get(self, id) includes private fields that must never leave the API.
-
 	sub get
 	{
 	return { created => 1700000000, request =>

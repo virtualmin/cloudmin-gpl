@@ -40,7 +40,6 @@ for my $case ( [ 'SSH-2.0-Test\r\n', 1 ], [ 'Notice\r\nSSH-1.99-Test\r\n', 1 ],
 
 	# get_guest_status(self, uuid) returns a fixture
 	# without opening libvirt.
-
 	sub get_guest_status
 	{
 	$_[0]->{'calls'}++;

@@ -143,7 +143,6 @@ my $service = Cloudmin::VMs->new();
 
 	# list_entries(self) Supplies ARM and x86 assets with
 	# the same catalogue ID.
-
 	sub list_entries
 	{
 	return [
@@ -450,7 +449,6 @@ my $custom = { %$options,
 	package PersistingImages;
 
 	# path(self, id, suffix) Returns a fixed lock identity for the fixture.
-
 	sub path
 	{
 	return 'image-lock';
@@ -458,21 +456,18 @@ my $custom = { %$options,
 
 	# with_lock(self, path, nodiff, callback) Runs the callback
 	# without Webmin locks.
-
 	sub with_lock
 	{
 	return $_[3]->();
 	}
 
 	# get(self, id) - Returns a copy of the stored image record.
-
 	sub get
 	{
 	return { %{$_[0]->{'job'}} };
 	}
 
 	# save(self, id, record) - Stores the record as the import job would.
-
 	sub save
 	{
 	$_[0]->{'job'} = { %{$_[2]} };
