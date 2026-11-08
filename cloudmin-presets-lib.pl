@@ -545,18 +545,19 @@ my $ok = eval {
 		if ($action eq 'delete' && !$in{'confirm'}) {
 			# Confirm the selected names before deleting presets.
 			$title = $text{'presets_delete'};
-			$page =
-				sub { ui_confirmation_form($delete,
-							   $text{'presets_confirm'},
-							   [ [ 'token',
-							       $in{'token'} ],
-							     [ 'delete', 1 ],
-							     map { [ 'd',
-								     $_ ] } @ids ],
-							   [ [ 'confirm',
-							       $text{'presets_delete'} ] ],
-							   join(', ',
-								map { '<tt>'.html_escape($_->{'name'}).'</tt>' } @records)) };
+			$page = sub {
+				ui_confirmation_form(
+					$delete, $text{'presets_confirm'},
+					[ [ 'token', $in{'token'} ],
+					  [ 'delete', 1 ],
+					  map { [ 'd', $_ ] } @ids ],
+					[ [ 'confirm',
+					    $text{'presets_delete'} ] ],
+					join(', ', map {
+						ui_tag('tt', html_escape(
+							$_->{'name'}))
+						} @records))
+				};
 			}
 		else {
 			# Apply confirmed deletion or default selection to the

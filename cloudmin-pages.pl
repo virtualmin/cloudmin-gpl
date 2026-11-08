@@ -1284,7 +1284,7 @@ return [
 	# Reuse guest information supplied by the live status collector.
 	ui_tag('span', $text{'vm_status_checking'},
 	       { 'data-vm-guest' => 'os' }),
-	@ips ? join('<br>', @ips) : html_escape($text{'index_no_ips'}),
+	@ips ? join(ui_br(), @ips) : html_escape($text{'index_no_ips'}),
 	show_resource_placeholder('cpu', $server->{'vcpus'} || 0),
 	show_resource_placeholder('memory',
 				  nice_size_text(($server->{'memory_kib'} || 0) * 1024)),
@@ -2914,7 +2914,7 @@ $action = ($action || '') eq 'reset' ? 'reset' : 'force_off';
 $return_to = ($return_to || '') eq 'edit_machine' ? 'edit_machine' : 'machine';
 return ui_page_start().
        ui_alert_box(text('vm_control_'.$action.'_warning',
-			 '<tt>'.html_escape($vm->{'name'}).'</tt>'),
+			 ui_tag('tt', html_escape($vm->{'name'}))),
 		    'warn', undef, undef, '').
        ui_form_start('machine.cgi', 'post', undef, 'id="vm-force-off-form"').
        ui_hidden('id', $vm->{'uuid'}).ui_hidden('token', $token).

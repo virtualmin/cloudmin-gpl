@@ -20,7 +20,7 @@ if (!defined($first_print)) {
 
 sub first_html_print
 {
-print "<span data-first-print>@_</span><br>\n";
+print ui_tag('span', "@_", { 'data-first-print' => undef }).ui_br()."\n";
 }
 
 # second_html_print(html, [html...]) Keeps nested results compact and separates
@@ -29,7 +29,8 @@ print "<span data-first-print>@_</span><br>\n";
 sub second_html_print
 {
 my $break = $print_indent ? '' : ui_brh();
-print "<span data-second-print>@_</span><br>$break\n";
+print ui_tag('span', "@_", { 'data-second-print' => undef }).
+      ui_br().$break."\n";
 }
 
 # indent_html_print() Opens a nested progress section using
@@ -38,7 +39,7 @@ print "<span data-second-print>@_</span><br>$break\n";
 sub indent_html_print
 {
 $print_indent++;
-print "<ul data-indent-print>\n";
+print ui_tag_start('ul', { 'data-indent-print' => undef })."\n";
 }
 
 # outdent_html_print() Closes the nested progress section opened
@@ -48,7 +49,7 @@ sub outdent_html_print
 {
 # Extra closes must not make later top-level progress appear nested.
 $print_indent-- if ($print_indent);
-print "</ul>\n";
+print ui_tag_end('ul');
 }
 
 1;

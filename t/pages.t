@@ -106,7 +106,7 @@ like($html, qr/data-vm-guest="os"/,
      'overview uses the existing live guest OS field');
 like($html, qr/IP addresses/, 'overview includes an IP address column');
 like($html,
-     qr/<tt\b[^>]*>192\.0\.2\.10<\/tt>\s*<br><tt\b[^>]*>2001:db8::10<\/tt>/,
+     qr/<tt\b[^>]*>192\.0\.2\.10<\/tt>\s*<br\b[^>]*><tt\b[^>]*>2001:db8::10<\/tt>/,
      'overview shows every reported address as plain monospace text');
 is(get_vm_row({ %{$data->{'servers'}->[0]}, addresses => [ ] })->[3],
    'Not reported', 'missing addresses have a clear fallback');
@@ -725,7 +725,7 @@ is($unverified->{'checksum'}, 'Not verified',
 	my $confirmation =
 		show_vm_force_off_form({ %$running, name => 'guest<one>' },
 				       'fixture-token');
-	like($confirmation, qr/Force power off <tt>guest&lt;one&gt;<\/tt>\?/,
+	like($confirmation, qr/Force power off <tt\b[^>]*>guest&lt;one&gt;<\/tt>\s*\?/,
 	     'confirmation names the guest safely');
 	like($confirmation,
 	     qr/Unsaved data will be lost and filesystems may be damaged/,

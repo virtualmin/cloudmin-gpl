@@ -121,7 +121,7 @@ like($html, qr/ui_progress/, 'capacity is shown as a progress bar');
 	     'bar uses allocated space without treating reserves as used');
 	}
 like($html, qr/extra &lt;one&gt;/, 'pool name escaped');
-like($html, qr{<tt>/storage/&lt;extra&gt;</tt>},
+like($html, qr{<tt\b[^>]*>/storage/&lt;extra&gt;</tt>\s*},
      'storage paths use escaped technical text');
 like($html, qr/&lt;disk&gt;/, 'volume name escaped');
 my @tags = $html =~ /<([a-z][\w-]*)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
@@ -479,7 +479,7 @@ unlike($html, qr/No storage pools|<form\b/,
 		  usage => { owners => [ ], reason => '' } };
 	my $form = show_storage_unregister($review, 'token');
 	like($form, qr/&lt;pool&gt;/, 'review escapes pool name');
-	like($form, qr{<tt>/storage/&lt;path&gt;</tt>},
+	like($form, qr{<tt\b[^>]*>/storage/&lt;path&gt;</tt>\s*},
 	     'review formats only the escaped path as code');
 	like(storage_input($form, 'action'), qr/value="unregister"/,
 	     'review posts removal separately');

@@ -80,7 +80,7 @@ foreach my $pool (@{$data->{'pools'}}) {
 			urlize($pool->{'uuid'}), class =>
 							 'cloudmin-storage-pool-link' }).
 		       ui_tag('span', $pool->{'target'}
-			       ? '<tt>'.html_escape($pool->{'target'}).'</tt>'
+			       ? ui_tag('tt', html_escape($pool->{'target'}))
 			       : html_escape($text{'index_unknown'}),
 			      { class => 'cloudmin-storage-location' });
 	my $state = $pool->{'state'} || 'unknown';
@@ -184,13 +184,14 @@ if ($editable) {
 my $volumes = $pool->{'active'} && !$pool->{'volume_error'}
 	? $pool->{'volume_count'}
 	: $text{'storage_unavailable'};
-my @facts = ( [ $text{'storage_location'}, ui_tag('span',
-						  $pool->{'target'}
-							  ? '<tt>'.html_escape($pool->{'target'}).'</tt>'
-							  : html_escape($text{'index_unknown'}),
-						  { class => 'cloudmin-storage-path' }) ],
-	      [ $text{'storage_volume_count'}, html_escape($volumes) ],
-	      [ $text{'storage_autostart'}, $boot ] );
+my @facts = (
+	[ $text{'storage_location'}, ui_tag(
+		'span', $pool->{'target'}
+			? ui_tag('tt', html_escape($pool->{'target'}))
+			: html_escape($text{'index_unknown'}),
+		{ class => 'cloudmin-storage-path' }) ],
+	[ $text{'storage_volume_count'}, html_escape($volumes) ],
+	[ $text{'storage_autostart'}, $boot ] );
 my $body = ui_dl(\@facts, { class => 'cloudmin-storage-facts' });
 if ($pool->{'active'} && $pool->{'capacity'}) {
 	# File pools share filesystem space; block pools report
@@ -315,7 +316,8 @@ if (@types > 1) {
 	# Keep table rows compact until the user expands the remaining roles.
 	my $first = shift(@types);
 	return ui_details({ html => 1, class => 'inline inlined',
-			    title => $first, content => join('<br>', @types) });
+			    title => $first,
+			    content => join(ui_br(), @types) });
 	}
 return $types[0] if (@types);
 return html_escape($text{!$usage || !$usage->{'checked'}
@@ -386,7 +388,8 @@ foreach my $pool (@$pools) {
 my $html = @unavailable
 	? ui_note(text('storage_volumes_unavailable',
 		       join(', ',
-			    map { '<tt>'.html_escape($_).'</tt>' } @unavailable)))
+			    map { ui_tag('tt', html_escape($_)) }
+			    @unavailable)))
 	: '';
 if (@rows) {
 	# Keep each selection checkbox attached to its volume
@@ -479,7 +482,7 @@ my $label = $text{$record->{'stop_required'}
 	: 'storage_unregister'};
 my @details = ( [ $text{'storage_name'}, html_escape($record->{'name'}) ],
 		[ $text{'storage_location'},
-		  '<tt>'.html_escape($record->{'path'}).'</tt>' ] );
+		  ui_tag('tt', html_escape($record->{'path'})) ] );
 # Keep machine links with the pool details and omit unused ownership rows.
 my $owners = show_storage_volume_usage($record->{'usage'}, '');
 push(@details, [ $text{'storage_used_by'}, $owners ]) if ($owners);

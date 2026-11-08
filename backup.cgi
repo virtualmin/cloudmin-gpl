@@ -45,14 +45,14 @@ my $ok = eval {
 	};
 error(error_html(error_message($@))) if (!$ok);
 # If no job was accepted, use error() before streaming to allow Back.
-error(join('<br>', map { error_html($_) } unique(@errors)))
+error(join(ui_br(), map { error_html($_) } unique(@errors)))
 	if (!@jobs && @errors);
 # Workers share the disk-work lock; stream the submitted jobs one at a time.
 ui_print_unbuffered_header(undef, $text{'backup_title'}, '');
 print ui_alert_box(error_html($_), 'danger') for @errors;
 foreach my $job (@jobs) {
 	$first_print->(text('backup_progress_system',
-			    '<tt>'.html_escape($job->{'name'}).'</tt>'));
+			    ui_tag('tt', html_escape($job->{'name'}))));
 	$indent_print->();
 	my $result = show_machine_progress({ job => $job->{'id'} }, 1);
 	$outdent_print->();

@@ -3,8 +3,13 @@ use warnings;
 use FindBin qw($Bin);
 use lib "$Bin/lib";
 use CloudminTest;
-use WebminCore qw(unique ui_brh error_setup);
+use WebminCore qw(unique ui_brh ui_tag ui_tag_start ui_tag_end ui_br
+		 error_setup);
 use Test::More;
+
+my $first_tag = qr/<span\b[^>]*\bdata-first-print\b[^>]*>/;
+my $second_tag = qr/<span\b[^>]*\bdata-second-print\b[^>]*>/;
+my $br_tag = qr/<br\b(?![^>]*\bdata-x-br\b)[^>]*>/;
 use Cwd ();
 # Keep the real ACL checks while the CGI fixture skips Webmin initialization.
 require(Cwd::abs_path("$Bin/../cloudmin-access-lib.pl"));
@@ -170,7 +175,7 @@ return $html;
 # Delayed cancellation still produces one adjacent start/result pair per image.
 my $html = render({ a => [ 0, 0, 1 ], b => [ 1 ] });
 like($html,
-     qr{<span data-first-print>Deleting <tt>Image &lt;a&gt;</tt> image \.\.</span><br>\n<span data-second-print>\.\. done</span>},
+     qr{${first_tag}Deleting <tt\b[^>]*>Image &lt;a&gt;</tt>\s* image \.\.</span>\s*${br_tag}\n${second_tag}\.\. done</span>\s*},
      'deletion uses the standard first_print/second_print pair');
 is(scalar(() = $html =~ /data-first-print/g), 2, 'each deletion starts once');
 is(scalar(() = $html =~ /data-second-print/g), 2,
@@ -189,43 +194,43 @@ is_deeply($fixture->{'calls'}, [ qw(cancel:b cancel:a remove:b remove:a) ],
 # A protected image fails visibly without stopping the rest of the selection.
 $html = render({ a => [ 'Image is used by <guest>' ], b => [ 1 ] });
 like($html,
-     qr{data-second-print>\.\. failed : image is used by &lt;guest&gt;</span>},
+     qr{data-second-print\b[^>]*>\.\. failed : image is used by &lt;guest&gt;</span>\s*},
      'backend errors are escaped and reported through second_print');
 like($html,
-     qr{Deleting <tt>Image &lt;b&gt;</tt> image \.\..*?data-second-print>\.\. done}s,
+     qr{Deleting <tt\b[^>]*>Image &lt;b&gt;</tt>\s* image \.\..*?data-second-print\b[^>]*>\.\. done}s,
      'later images are still deleted after a failure');
 
 # Expiring the shared wait must not claim that cleanup has completed.
 $html = render({ a => [ 0 ], b => [ 1 ] });
 like($html,
-     qr{data-second-print>\.\. failed : timed out waiting for deletion while cleanup is still running</span>},
+     qr{data-second-print\b[^>]*>\.\. failed : timed out waiting for deletion while cleanup is still running</span>\s*},
      'pending cleanup reports a timeout result');
 like($html,
-     qr{Deleting <tt>Image &lt;b&gt;</tt> image \.\..*?data-second-print>\.\. done}s,
+     qr{Deleting <tt\b[^>]*>Image &lt;b&gt;</tt>\s* image \.\..*?data-second-print\b[^>]*>\.\. done}s,
      'a slow worker does not prevent subsequent completed deletions');
 
 # Replaying a completed POST must not treat tombstones as new deletions.
 $html = render({ a => [ 1 ], b => [ 1 ] }, { a => 'deleted', b => 'deleted' });
 is(scalar(
 	() =
-	$html =~ m{data-second-print>\.\. failed : image has already been deleted</span>}g),
+	$html =~ m{data-second-print\b[^>]*>\.\. failed : image has already been deleted</span>}g),
    2, 'a stale batch reports each image as already deleted');
 unlike($html, qr/\.\. done/, 'a stale batch never reports success');
 is_deeply($fixture->{'calls'}, [ ],
 	  'deleted images are not cancelled or removed again');
 $html = render({ a => [ 1 ], b => [ 1 ] }, { a => 'deleted' });
 like($html,
-     qr{Deleting <tt>Image &lt;b&gt;</tt> image \.\..*?data-second-print>\.\. done}s,
+     qr{Deleting <tt\b[^>]*>Image &lt;b&gt;</tt>\s* image \.\..*?data-second-print\b[^>]*>\.\. done}s,
      'a stale image does not block remaining valid images');
 is_deeply($fixture->{'calls'}, [ qw(cancel:b remove:b) ],
 	  'only existing images are deleted');
 ok(!eval { render({ a => [ 1 ] }, { a => 'deleted' }, 1); 1 },
    'a stale selection cannot open a new deletion confirmation');
-like($@, qr{These images have already been deleted: <tt>Image &lt;a&gt;</tt>},
+like($@, qr{These images have already been deleted: <tt\b[^>]*>Image &lt;a&gt;</tt>\s*},
      'the confirmation error identifies and escapes stale image names');
 
 # The same request must still accept a worker completing requested cleanup.
 $html = render({ a => [ 0, 1 ] }, { a => 'downloading' });
-like($html, qr{data-second-print>\.\. done</span>},
+like($html, qr{data-second-print\b[^>]*>\.\. done</span>\s*},
      'active worker cleanup is still reported as successful');
 done_testing();

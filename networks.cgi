@@ -93,7 +93,7 @@ if ($review) {
 # Bind deletion confirmation to the network revision shown to the user.
 elsif ($delete) {
 	print ui_alert_box(text('net_delete_help',
-				'<tt>'.html_escape($delete->{'name'}).'</tt>'),
+				ui_tag('tt', html_escape($delete->{'name'}))),
 			   'danger');
 	print network_form('delete', $token,
 			   { id => $delete->{'uuid'},

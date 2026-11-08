@@ -3,8 +3,14 @@ use warnings;
 use FindBin qw($Bin);
 use lib "$Bin/lib";
 use CloudminTest;
-use WebminCore qw(ui_brh);
+use WebminCore qw(ui_brh ui_tag ui_tag_start ui_tag_end ui_br);
 use Test::More;
+
+my $first_tag = qr/<span\b[^>]*\bdata-first-print\b[^>]*>/;
+my $second_tag = qr/<span\b[^>]*\bdata-second-print\b[^>]*>/;
+my $br_tag = qr/<br\b(?![^>]*\bdata-x-br\b)[^>]*>/;
+my $spacer_tag = qr/<br\b[^>]*\bdata-x-br\b[^>]*>/;
+my $indent_tag = qr/<ul\b[^>]*\bdata-indent-print\b[^>]*>/;
 
 # Drive the real CGI through deterministic states without waiting or using VMs.
 
@@ -198,7 +204,8 @@ open(my $output, '>', \$html) || die $!;
 close($output);
 $raw_progress = $html;
 # Keep sequence checks readable while exercising the real print callbacks.
-$html =~ s{<span data-(?:first|second)-print>|</span>|<br data-x-br>}{}g;
+$html =~ s{$first_tag|$second_tag|</span>\s*|$spacer_tag}{}g;
+$html =~ s{$br_tag}{<br>}g;
 $html =~ s/\n{2,}/\n/g;
 return $html;
 }
@@ -217,10 +224,10 @@ my $html = render({ a => [
 is_deeply([ map { $_->[2] } grep { $_->[1] == 3 } @callbacks ], [ 400, 1000 ],
 	  'download bytes finish at 100% and never reset for storage');
 like($html,
-     qr/Received 1000 bytes\n\.\. download complete<br>\nVerifying vendor SHA-256 checksum and checking disk image/,
+     qr/Received 1000 bytes\n\.\. download complete${br_tag}\nVerifying vendor SHA-256 checksum and checking disk image/,
      'download completes before verification is displayed');
 like($raw_progress,
-     qr{<span data-second-print>\.\. download complete</span><br><br data-x-br>\n+<span data-first-print>Verifying vendor SHA-256 checksum and checking disk image \.\.</span>},
+     qr{${second_tag}\.\. download complete</span>\s*${br_tag}${spacer_tag}\n+${first_tag}Verifying vendor SHA-256 checksum and checking disk image \.\.</span>\s*},
      'download completion leaves a blank line before verification');
 unlike($html, qr/Saving to storage.*(?:Received|download complete)/s,
        'HTTP progress does not leak into storage or readiness');
@@ -230,14 +237,14 @@ like($html, qr{<footer>Return to image manager</footer>},
 like($html, qr{</header>\nDownloading Image a \(1000 bytes\) \.\.},
      'progress begins with the image name and download size');
 like($html,
-     qr{Verifying vendor SHA-256 checksum and checking disk image \.\.<br>\n\.\. done<br>\nSaving to storage \.\.<br>\n\.\. done<br>},
+     qr{Verifying vendor SHA-256 checksum and checking disk image \.\.${br_tag}\n\.\. done${br_tag}\nSaving to storage \.\.${br_tag}\n\.\. done${br_tag}},
      'checking and storage each have a separate success result');
 unlike($html, qr/Queued|Downloading image|Ready|is saved in|<h3>/,
        'internal states, headings and redundant completion details are omitted');
 like($raw_progress,
-     qr{<span data-first-print>Verifying vendor SHA-256 checksum and checking disk image \.\.</span><br>\n<span data-second-print>\.\. done</span><br><br data-x-br>\n+<span data-first-print>Saving to storage \.\.</span>},
+     qr{${first_tag}Verifying vendor SHA-256 checksum and checking disk image \.\.</span>\s*${br_tag}\n${second_tag}\.\. done</span>\s*${br_tag}${spacer_tag}\n+${first_tag}Saving to storage \.\.</span>\s*},
      'checking completion leaves a blank line before storage');
-like($raw_progress, qr/<span data-second-print>\.\. done<\/span>/,
+like($raw_progress, qr/${second_tag}\.\. done<\/span>/,
      'results use the second_print API');
 unlike($raw_progress, qr/<ul\b|<\/ul>/,
        'single-image progress is not indented');
@@ -251,7 +258,7 @@ for my $state (qw(verifying importing copying)) {
 				{ state => 'ready', source => 'local',
 				  bytes => 1000 } ] });
 	is(scalar(@callbacks), 0, "$state never emits HTTP download progress");
-	like($html, qr{Saving to storage \.\.<br>\n\.\. done<br>},
+	like($html, qr{Saving to storage \.\.${br_tag}\n\.\. done${br_tag}},
 	     "$state shows storage completion");
 	}
 
@@ -267,7 +274,7 @@ for my $case (
 	my ($fields, $label) = @$case;
 	$html = render({ a => [ { %$fields, state => 'ready',
 		bytes => 100 } ] });
-	like($html, qr/\Q$label\E \.\.<br>\n\.\. done/,
+	like($html, qr/\Q$label\E \.\.${br_tag}\n\.\. done/,
 	     'completed progress describes the actual checks');
 	my $status = get_image_job_status({ %$fields, state => 'verifying',
 					    updated => time(),
@@ -292,12 +299,12 @@ is_deeply([ map { $_->[2] } grep { $_->[1] == 3 } @callbacks ],
 is(scalar(() = $html =~ /\.\. download complete/g), 2,
    'each completed download ends once');
 like($html,
-     qr{Saving to storage \.\.<br>\n\.\. done<br>\n</ul>\n\.\. done<br>\nProcessing <tt>Image b</tt> image \.\.<br>\n<ul data-indent-print>\nDownloading Image b},
+     qr{Saving to storage \.\.${br_tag}\n\.\. done${br_tag}\n</ul>\n\.\. done${br_tag}\nProcessing <tt\b[^>]*>Image b</tt>\s* image \.\.${br_tag}\n${indent_tag}\nDownloading Image b},
      'the first image completes outside its block before the next parent step');
 like($raw_progress,
-     qr{<span data-first-print>Processing <tt>Image a</tt> image \.\.</span><br>\n<ul data-indent-print>},
+     qr{${first_tag}Processing <tt\b[^>]*>Image a</tt>\s* image \.\.</span>\s*${br_tag}\n${indent_tag}},
      'a named parent step introduces the first indented image');
-my @blocks = $raw_progress =~ m{<ul data-indent-print>\n(.*?)</ul>}sg;
+my @blocks = $raw_progress =~ m{${indent_tag}\n(.*?)</ul>}sg;
 is(scalar(@blocks), 2, 'each batch image has a separate indented block');
 like($blocks[0], qr/\A(?!.*data-x-br).*Downloading Image a.*Saving to storage/s,
      'first block contains its image steps without blank gaps');
@@ -317,14 +324,14 @@ for my $case (
 	$html = render({ a => [ { %$fields, name => '<image>', bytes => 100 } ],
 			 b => [ { state => 'ready', bytes => 200 } ] });
 	like($raw_progress,
-	     qr{Processing <tt>&lt;image&gt;</tt> image \.\.</span><br>\n<ul data-indent-print>.*?</ul>\n<span data-second-print>\Q$result\E</span><br><br data-x-br>\n+<span data-first-print>Processing <tt>Image b</tt>}s,
+	     qr{Processing <tt\b[^>]*>&lt;image&gt;</tt>\s* image \.\.</span>\s*${br_tag}\n${indent_tag}.*?</ul>\n${second_tag}\Q$result\E</span>\s*${br_tag}${spacer_tag}\n+${first_tag}Processing <tt\b[^>]*>Image b</tt>\s*}s,
 	     "$fields->{'state'} closes the image block with its actual result");
 	}
 
 # A second batch member may finish before its first progress poll.
 $html = render({ b => [ { state => 'ready', bytes => 200 } ] });
 like($html,
-     qr{Downloading Image b \(200 bytes\).*Verifying vendor SHA-256 checksum and checking disk image \.\.<br>\n\.\. done<br>\nSaving to storage \.\.<br>\n\.\. done<br>}s,
+     qr{Downloading Image b \(200 bytes\).*Verifying vendor SHA-256 checksum and checking disk image \.\.${br_tag}\n\.\. done${br_tag}\nSaving to storage \.\.${br_tag}\n\.\. done${br_tag}}s,
      'already finished downloads retain the full step sequence');
 
 # An aborted download must not get a misleading completion message.
@@ -349,9 +356,9 @@ for my $phase (qw(verifying importing)) {
 		? 'Verifying vendor SHA-256 checksum and checking disk image ..'
 		: 'Saving to storage ..';
 	like($html,
-	     qr{\Q$label\E<br>\n\.\. failed : cannot use &lt;image&gt;<br>},
+	     qr{\Q$label\E${br_tag}\n\.\. failed : cannot use &lt;image&gt;${br_tag}},
 	     "$phase shows its escaped failure on a separate line");
-	unlike($html, qr{\Q$label\E<br>\n\.\. done},
+	unlike($html, qr{\Q$label\E${br_tag}\n\.\. done},
 	       "$phase does not claim success");
 	unlike($html, qr/Ready/, "$phase failure has no Ready line");
 	}
@@ -359,11 +366,11 @@ for my $phase (qw(verifying importing)) {
 # Dead workers must not appear successful, and upload/copy labels retain names.
 $html = render({ a => [ { state => 'importing', updated => time() - 4000,
 			  bytes => 100 } ] });
-like($html, qr{Saving to storage \.\.<br>\n\.\. failed : the import stopped},
+like($html, qr{Saving to storage \.\.${br_tag}\n\.\. failed : the import stopped},
      'interruption is reported against the active step');
 $html = render({ a => [ { state => 'ready', source => 'upload',
 			  bytes => 100 } ] });
-like($html, qr/Uploading <tt>Image a<\/tt>/,
+like($html, qr/Uploading <tt\b[^>]*>Image a<\/tt>\s*/,
      'uploads are identified without a download heading');
 is(scalar(@callbacks), 0, 'completed uploads have no HTTP download output');
 
@@ -371,7 +378,7 @@ is(scalar(@callbacks), 0, 'completed uploads have no HTTP download output');
 for my $method (qw(GET POST)) {
 	$html = render({ a => [ { state => 'ready', source => 'upload',
 				  format => 'iso', bytes => 100 } ] }, $method);
-	like($html, qr/Uploading <tt>Image a<\/tt>.*Saving to storage.*done/s,
+	like($html, qr/Uploading <tt\b[^>]*>Image a<\/tt>\s*.*Saving to storage.*done/s,
 	     "$method reconnects to the uploaded ISO");
 	is($imports_started, 0,
 	   "$method progress does not start another import");
@@ -392,5 +399,6 @@ $html = render({ a => [ { state => 'ready', source => 'local',
 	       { job => undef, install_type => 'local',
 		 token => 'fixture-token' });
 is($imports_started, 1, 'authorized form submission still starts its import');
-like($html, qr/Copying <tt>Image a<\/tt>/, 'new import streams its progress');
+like($html, qr/Copying <tt\b[^>]*>Image a<\/tt>\s*/,
+     'new import streams its progress');
 done_testing();

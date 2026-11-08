@@ -16,11 +16,10 @@ my ($user, $script, $action, $type, $object, $params, $long) = @_;
 # Webmin supplies its own localized description for module configuration.
 return undef if ($action eq '_config_');
 $params ||= { };
-my $name = '<tt>'.html_escape($params->{'name'} || $object || '').'</tt>';
+my $name = ui_tag('tt', html_escape($params->{'name'} || $object || ''));
 # Display generated disk names consistently while preserving raw audit details.
-$name =
-	'<tt>'.html_escape(storage_volume_label({ name => $params->{'name'} ||
-							  $object })).'</tt>'
+$name = ui_tag('tt', html_escape(storage_volume_label({
+	name => $params->{'name'} || $object })))
 	if ($type eq 'volume');
 my $key = 'log_'.$type.'_'.$action;
 if (($type eq 'vm' || $type eq 'pool') && $action eq 'autostart') {
@@ -41,7 +40,7 @@ elsif ($type eq 'catalogue' || $type eq 'template' || $type eq 'plan') {
 		: $params->{'name'}
 			? ($params->{'name'})
 			: split(/,/, $object || '');
-	$name = join(', ', map { '<tt>'.html_escape($_).'</tt>' } @names);
+	$name = join(', ', map { ui_tag('tt', html_escape($_)) } @names);
 	}
 # Unknown action types still need a readable, escaped log description.
 return html_escape(join(' ', grep { defined } $action, $type, $object))
@@ -51,7 +50,7 @@ if ($long) {
 	# Keep technical identifiers in details, with
 	# friendly names in the list.
 	$description .= ' '.
-			text('log_object', '<tt>'.html_escape($object).'</tt>')
+			text('log_object', ui_tag('tt', html_escape($object)))
 		if (defined($object) && length($object) &&
 		    $type ne 'catalogue');
 	# Preserve the recorded failure alongside the action description.

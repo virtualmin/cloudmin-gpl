@@ -203,7 +203,7 @@ if ($tab eq 'webmin') {
 				 # fullscreen from their own document.
 				 onclick => 'const view = document.fullscreenEnabled ? document.querySelector(".cloudmin-webmin-view") : window.frameElement; '.
 					    'if (view?.requestFullscreen) { const doc = view.ownerDocument; '.
-					    'if (doc.fullscreenElement) { doc.exitFullscreen(); } else { view.requestFullscreen().catch(() => {}); } } return false;' }).'<br>'.
+					    'if (doc.fullscreenElement) { doc.exitFullscreen(); } else { view.requestFullscreen().catch(() => {}); } } return false;' }).ui_br().
 			ui_tag('a', html_escape($text{'webmin_new_tab'}),
 			       { href => $webmin_direct,
 				 target => '_blank',
@@ -329,8 +329,8 @@ if ($tab eq 'ssh') {
 					"--terminal-foreground: $terminal_foreground" });
 		# Only Auto needs the theme change listener.
 		print $terminal_theme_script if ($terminal_theme_script);
-		print '<script>var xterm_argv = '.convert_to_json($data).
-			";</script>\n";
+		print ui_tag('script', 'var xterm_argv = '.
+			     convert_to_json($data).';');
 		# Observe the supervisor's login result in
 		# either terminal renderer.
 		print ui_tag('a', html_escape($text{'terminal_settings'}), {
@@ -514,7 +514,7 @@ elsif ($tab eq 'webmin') {
 			print ui_alert(text('webmin_address_changed',
 					    html_escape($webmin_change{'old'}),
 					    html_escape($webmin_change{'new'})).
-				       '<br>'.
+				       ui_br().
 				       html_escape(
 					       $text{'webmin_address_'.$webmin_change{'source'}}),
 				       'warning', [ undef, '', 1 ]);

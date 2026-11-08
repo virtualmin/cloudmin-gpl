@@ -443,9 +443,9 @@ if ($in->{'inspection'}) {
 		 ui_hidden_table_start($text{'restore_contents'}, 'width=100%',
 				       2, 'contents', 1).
 		 ui_table_row(hlink($text{'vm_name'}, 'restore_name'),
-			      '<tt>'.html_escape($m->{'name'}).'</tt>').
+			      ui_tag('tt', html_escape($m->{'name'}))).
 		 ui_table_row(hlink($text{'restore_uuid'}, 'restore_uuid'),
-			      '<tt>'.html_escape($m->{'uuid'}).'</tt>').
+			      ui_tag('tt', html_escape($m->{'uuid'}))).
 		 ui_table_row(hlink($text{'restore_disks'}, 'restore_disks'),
 			      scalar(@{$m->{'disks'}})).
 		 ui_table_row(hlink($text{'restore_pool'}, 'restore_pool'),
@@ -473,12 +473,14 @@ else {
 	if ($in->{'backup'}) {
 		my $r = get_backup_service()->record($in->{'backup'}) ||
 			die "Backup not found\n";
-		$html .= ui_hidden('backup',
-				   $r->{'id'}).ui_table_row(hlink($text{'restore_source'},
-								  'restore_source'),
-							    '<tt>'.html_escape($r->{'filename'}).
-							    '</tt> &mdash; <tt>'.
-							    html_escape($r->{'destination'}).'</tt>');
+		$html .= ui_hidden('backup', $r->{'id'}).
+			 ui_table_row(
+				 hlink($text{'restore_source'},
+				       'restore_source'),
+				 ui_tag('tt', html_escape($r->{'filename'})).
+				 ' &mdash; '.
+				 ui_tag('tt',
+					html_escape($r->{'destination'})));
 		}
 	# External archives need an explicit source and a
 	# filename within that source.
@@ -554,7 +556,7 @@ foreach my $row (@backups) {
 	push(@rows,
 	     [ ui_tag('strong', html_escape($row->{'name'})),
 	       make_date($row->{'created'}),
-	       '<tt>'.html_escape($row->{'destination'}).'</tt>',
+	       ui_tag('tt', html_escape($row->{'destination'})),
 	       nice_size($row->{'size'}), $buttons ]);
 	}
 # Apply data-column preferences before appending any permitted actions.
@@ -582,10 +584,8 @@ my $archives =
 	map { [ ui_link(
 		'backup_form.cgi?sched='.$_->{'id'},
 		html_escape($_->{'description'} || $text{'backup_schedule'})),
-		'<tt>'.
-		html_escape(
-			Cloudmin::BackupTransport::label($_->{'target'})).
-		'</tt>',
+		ui_tag('tt', html_escape(
+			Cloudmin::BackupTransport::label($_->{'target'}))),
 		$_->{'all'} ? $text{'backup_all'} : scalar(@{$_->{'guests'}}),
 		ui_badge($text{$_->{'enabled'}
 			? 'backup_active'

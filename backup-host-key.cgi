@@ -46,8 +46,9 @@ my $ok = eval {
 			# Escape remote data before rendering the
 			# fingerprint confirmation card.
 			my $body =
-				ui_p('<tt>'.html_escape($result->{'host'}).
-				     '</tt>').ui_p($text{'backup_host_verify'});
+				ui_p(ui_tag('tt', html_escape(
+					$result->{'host'}))).
+				ui_p($text{'backup_host_verify'});
 			foreach my $which (qw(old current)) {
 				# Unknown hosts have no old
 				# fingerprint list to display.

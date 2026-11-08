@@ -185,7 +185,7 @@ my @hidden = ( [ id => $data->{'guest'}->{'uuid'} ], [ token => $token ],
 # Keep host-wide actions in their original navigation context.
 push(@hidden, [ from => 'all' ]) if (($input->{'from'} || '') eq 'all');
 my $details =
-	ui_text_color('<tt>'.html_escape($snapshot->{'label'}).'</tt>',
+	ui_text_color(ui_tag('tt', html_escape($snapshot->{'label'})),
 		      'danger');
 my $after_button;
 if ($action eq 'restore') {

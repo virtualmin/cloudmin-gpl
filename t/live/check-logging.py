@@ -333,10 +333,14 @@ try:
             log = request(
                 global_log + '&desc=' + urllib.parse.quote(name.split(' <')[0])
             )
-            assert 'Added <tt>' + html.escape(name) in log, (
+            assert re.search(
+                r'Added <tt\b[^>]*>' + re.escape(html.escape(name)), log
+            ), (
                 'Creation lacks its formatted name'
             )
-            assert 'Removed <tt>' + html.escape(name) in log, (
+            assert re.search(
+                r'Removed <tt\b[^>]*>' + re.escape(html.escape(name)), log
+            ), (
                 'Deletion lost its display name'
             )
             assert '<test>' not in log, 'Log message contains unescaped markup'

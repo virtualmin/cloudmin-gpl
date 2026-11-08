@@ -79,7 +79,7 @@ if (($in{'vm_action'} ||
 	my ($vm) = grep { $_->{'uuid'} eq ($in{'id'} || '') }
 		   @{$dashboard->{'servers'}};
 	print ui_alert_box(text('vm_control_'.$in{'vm_action'}.'_sent',
-				'<tt>'.html_escape($vm->{'name'}).'</tt>'),
+				ui_tag('tt', html_escape($vm->{'name'}))),
 			   'info',
 			   undef, undef,
 			   '') if ($vm);

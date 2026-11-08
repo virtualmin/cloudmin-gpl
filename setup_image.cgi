@@ -55,7 +55,8 @@ foreach my $id (@ids) {
 		# download and import steps.
 		if (@ids > 1 && !$group_started) {
 			$first_print->(text('images_progress_image',
-					    '<tt>'.html_escape($job->{'name'}).'</tt>'));
+					    ui_tag('tt', html_escape(
+						    $job->{'name'}))));
 			$indent_print->();
 			$group_started = 1;
 			}
@@ -102,8 +103,10 @@ foreach my $id (@ids) {
 						   '') eq 'upload'
 							   ? 'images_progress_upload'
 							   : 'images_progress_copy';
-					$first_print->(text($key,
-							    '<tt>'.html_escape($job->{'name'}).'</tt>'));
+					$first_print->(text(
+						$key,
+						ui_tag('tt', html_escape(
+							$job->{'name'}))));
 					}
 				else {
 					# Status labels also appear in
@@ -145,8 +148,8 @@ foreach my $id (@ids) {
 		if ($s->{'terminal'}) {
 			# Failed, interrupted and deleted jobs close the
 			# image block as failures.
-			$first_print->('<tt>'.html_escape($job->{'name'}).
-				       '</tt>'.' ..')
+			$first_print->(
+				ui_tag('tt', html_escape($job->{'name'})).' ..')
 				if (!%started);
 			my $detail = $state eq 'deleted'
 				? $text{'images_job_deleted'}
@@ -159,9 +162,9 @@ foreach my $id (@ids) {
 		if ($state eq 'waiting') {
 			# The browser has not sent its raw upload yet, so
 			# there is nothing to poll.
-			$first_print->('<tt>'.html_escape($job->{'name'}).
-				       '</tt>'.': '.
-				       html_escape($s->{'label'}).' ..');
+			$first_print->(
+				ui_tag('tt', html_escape($job->{'name'})).': '.
+				html_escape($s->{'label'}).' ..');
 			$result = html_escape($s->{'label'});
 			last;
 			}

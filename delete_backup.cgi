@@ -25,17 +25,12 @@ error(error_html(error_message($@))) if (!$ok);
 # Require a second POST naming the selected archive before deleting it.
 if (!$in{'confirm'}) {
 	ui_print_header(undef, $text{'backup_delete_button'}, '');
-	print ui_confirmation_form('delete_backup.cgi',
-				   $text{'backup_delete_confirm'},
-				   [ [ 'token', $in{'token'} ], [ 'backup',
-								  $in{'backup'} ] ],
-				   [ [ 'confirm',
-				       $text{'backup_delete_button'} ] ],
-				   '<tt>'.
-				   html_escape(
-					   get_backup_service()->record(
-						   $in{'backup'})->{'filename'}).
-				   '</tt>');
+	print ui_confirmation_form(
+		'delete_backup.cgi', $text{'backup_delete_confirm'},
+		[ [ 'token', $in{'token'} ], [ 'backup', $in{'backup'} ] ],
+		[ [ 'confirm', $text{'backup_delete_button'} ] ],
+		ui_tag('tt', html_escape(get_backup_service()->record(
+			$in{'backup'})->{'filename'})));
 	ui_print_footer('backups.cgi', $text{'backups_return'});
 	exit;
 	}

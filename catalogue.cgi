@@ -40,18 +40,16 @@ error(error_html("$@")) if ($@);
 # Confirm operations that discard local settings, naming every selected entry.
 if ($action eq 'delete' && !$in{'confirm'}) {
 	ui_print_header(undef, $text{'catalogue_'.$action}, '');
-	print ui_confirmation_form('catalogue.cgi',
-				   $text{'catalogue_confirm_'.$action},
-				   [ [ 'token', $in{'token'} ], [ 'action',
-								  $action ],
-				     map { [ 'key', $_ ] } @keys ],
-				   [ [ 'confirm',
-				       $text{'catalogue_'.$action.'_button'} ] ],
-				   ui_text_color(join(', ',
-						      map { '<tt>'.html_escape($_->{'name'}.' ('.
-									       describe_architecture($_->{'architecture'}).
-									       ')').'</tt>' }
-						      @entries), 'danger'));
+	print ui_confirmation_form(
+		'catalogue.cgi', $text{'catalogue_confirm_'.$action},
+		[ [ 'token', $in{'token'} ], [ 'action', $action ],
+		  map { [ 'key', $_ ] } @keys ],
+		[ [ 'confirm', $text{'catalogue_'.$action.'_button'} ] ],
+		ui_text_color(join(', ', map {
+			ui_tag('tt', html_escape($_->{'name'}.' ('.
+				describe_architecture(
+					$_->{'architecture'}).')'))
+			} @entries), 'danger'));
 	ui_print_footer('images.cgi?mode=catalogue', $text{'images_return'});
 	}
 else {

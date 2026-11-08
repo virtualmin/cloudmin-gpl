@@ -125,8 +125,8 @@ def progress(job):
             'Progress link was treated as a new import'
         )
         assert re.search(
-            r'<span data-second-print>\.\. done</span><br><div data-x-br></div>\s*'
-                         r'<span data-first-print>Saving to storage \.\.</span>',
+            r'<span\b[^>]*\bdata-second-print\b[^>]*>\.\. done</span>\s*<br\b[^>]*><div data-x-br></div>\s*'
+                         r'<span\b[^>]*\bdata-first-print\b[^>]*>Saving to storage \.\.</span>',
             page,
         ), 'Missing spacing between upload verification and storage progress'
     assert set(store.glob('*.json')) == records, (
@@ -157,8 +157,8 @@ def delete(jobs, expect_blocked=False):
     page = request(
         '/server-manager/delete_images.cgi', fields | {'confirm': '1'}
     )
-    starts = re.findall(r'<span data-first-print>(.*?)</span>', page, re.S)
-    results = re.findall(r'<span data-second-print>(.*?)</span>', page, re.S)
+    starts = re.findall(r'<span\b[^>]*\bdata-first-print\b[^>]*>(.*?)</span>', page, re.S)
+    results = re.findall(r'<span\b[^>]*\bdata-second-print\b[^>]*>(.*?)</span>', page, re.S)
     assert len(starts) == len(jobs) and len(results) == len(jobs), (
         'Unpaired deletion output'
     )
@@ -180,7 +180,7 @@ def delete(jobs, expect_blocked=False):
             '/server-manager/delete_images.cgi', fields | {'confirm': '1'}
         )
         results = re.findall(
-            r'<span data-second-print>(.*?)</span>', replay, re.S
+            r'<span\b[^>]*\bdata-second-print\b[^>]*>(.*?)</span>', replay, re.S
         )
         assert len(results) == len(jobs), 'Replay results missing'
         assert all(
@@ -500,16 +500,16 @@ try:
             # Each image owns one parent step, with compact child steps
             # inside it.
             blocks = re.findall(
-                r'<span data-first-print>Processing .*? image \.\.</span><br>\s*'
-                                r'<ul data-indent-print>(.*?)</ul>\s*'
-                                r'<span data-second-print>\.\. done</span>',
+                r'<span\b[^>]*\bdata-first-print\b[^>]*>Processing .*? image \.\.</span>\s*<br\b[^>]*>\s*'
+                                r'<ul\b[^>]*\bdata-indent-print\b[^>]*>(.*?)</ul>\s*'
+                                r'<span\b[^>]*\bdata-second-print\b[^>]*>\.\. done</span>',
                 progress,
                 re.S,
             )
             assert len(blocks) == 2, (
                 'Each image needs a parent step, indented details and final result',
                 re.findall(
-                    r'<span data-(?:first|second)-print>(.*?)</span>',
+                    r'<span\b[^>]*\bdata-(?:first|second)-print\b[^>]*>(.*?)</span>',
                     progress,
                     re.S,
                 ),
@@ -519,11 +519,11 @@ try:
             ), 'Image steps are not grouped together'
             # Check exact spacing and punctuation in the rendered Webmin markup.
             steps = re.findall(
-                r'<span data-second-print>\.\. download complete</span><br>\s*'
-                               r'<span data-first-print>Verifying vendor SHA-(?:256|512) checksum and checking disk image \.\.</span><br>\s*'
-                               r'<span data-second-print>\.\. done</span><br>\s*'
-                               r'<span data-first-print>Saving to storage \.\.</span><br>\s*'
-                               r'<span data-second-print>\.\. done</span>',
+                r'<span\b[^>]*\bdata-second-print\b[^>]*>\.\. download complete</span>\s*<br\b[^>]*>\s*'
+                               r'<span\b[^>]*\bdata-first-print\b[^>]*>Verifying vendor SHA-(?:256|512) checksum and checking disk image \.\.</span>\s*<br\b[^>]*>\s*'
+                               r'<span\b[^>]*\bdata-second-print\b[^>]*>\.\. done</span>\s*<br\b[^>]*>\s*'
+                               r'<span\b[^>]*\bdata-first-print\b[^>]*>Saving to storage \.\.</span>\s*<br\b[^>]*>\s*'
+                               r'<span\b[^>]*\bdata-second-print\b[^>]*>\.\. done</span>',
                 progress,
             )
             assert len(steps) == 2, (

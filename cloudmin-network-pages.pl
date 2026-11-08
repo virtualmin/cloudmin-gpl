@@ -145,8 +145,8 @@ my $key = 'net_state_'.(($state->{'operation'} || '') eq 'remove' &&
 			$status =~ /\A(?:armed|applying|confirm|complete)\z/
 				? 'remove_'
 				: '').$status;
-my $message = text($key, '<tt>'.html_escape($state->{'name'}).'</tt>',
-		   '<tt>'.html_escape($state->{'source'} || '').'</tt>');
+my $message = text($key, ui_tag('tt', html_escape($state->{'name'})),
+		   ui_tag('tt', html_escape($state->{'source'} || '')));
 my $tone = $status eq 'complete'
 	? 'success'
 	: $status eq 'rollback_failed' ? 'danger' : 'info';
@@ -602,9 +602,9 @@ return ui_alert_box(text($remove
 	       : 'net_review'}, class => 'cloudmin-network-card',
 		 body =>
 			 ui_dl([ [ $text{'net_bridge_name'},
-				   '<tt>'.html_escape($p->{'name'}).'</tt>' ],
+				   ui_tag('tt', html_escape($p->{'name'})) ],
 				 [ $text{'net_port'},
-				   '<tt>'.html_escape($p->{'source'}).'</tt>' ],
+				   ui_tag('tt', html_escape($p->{'source'})) ],
 				 [ $text{'net_addresses'},
 				   network_values($p->{'addresses'}) ],
 				 [ $text{'net_management'},

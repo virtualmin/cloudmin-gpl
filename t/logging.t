@@ -42,10 +42,10 @@ my %vm = ( create => 'Queued creation of', complete => 'Created',
 	   console => 'Opened graphical console for',
 	   terminal => 'Opened SSH terminal for' );
 foreach my $action (sort keys %vm) {
-	is(parse_webmin_log('root', '', $action, 'vm', 'uuid',
-			    { name => 'guest<one>' }),
-	   "$vm{$action} virtual machine <tt>guest&lt;one&gt;</tt>",
-	   "$action has a readable escaped description");
+	like(parse_webmin_log('root', '', $action, 'vm', 'uuid',
+			      { name => 'guest<one>' }),
+	     qr/\A\Q$vm{$action}\E virtual machine <tt\b[^>]*>guest&lt;one&gt;<\/tt>\s*\z/,
+	     "$action has a readable escaped description");
 	}
 foreach my $enabled ( 0, 1 ) {
 	like(parse_webmin_log('root', '', 'autostart', 'vm', 'uuid',
@@ -56,20 +56,20 @@ foreach my $enabled ( 0, 1 ) {
 	     'boot policy records the desired value');
 	}
 like(parse_webmin_log('root', '', 'console', 'vm', 'old-uuid', { }),
-     qr/<tt>old-uuid<\/tt>/,
+     qr/<tt\b[^>]*>old-uuid<\/tt>\s*/,
      'old entries do not require a live guest lookup');
 # Guest key changes name the virtual machine; library changes name the key.
 foreach my $action (qw(add_guest_ssh_key remove_guest_ssh_key)) {
 	like(parse_webmin_log('root', '', $action, 'vm', 'uuid',
 			      { name => 'guest<one>', username => 'admin' }),
-	     qr/^(?:Added|Removed) .*SSH key.* guest account on <tt>guest&lt;one&gt;<\/tt>$/,
+	     qr/^(?:Added|Removed) .*SSH key.* guest account on <tt\b[^>]*>guest&lt;one&gt;<\/tt>\s*$/,
 	     "$action has a readable escaped description");
 	}
 # Library audit descriptions use the escaped key name, including downloads.
 foreach my $action (qw(save_ssh_key delete_ssh_key download_ssh_key)) {
 	like(parse_webmin_log('root', '', $action, 'sshkey', 'a' x 32,
 			      { name => 'Admins<one>' }),
-	     qr/SSH key <tt>Admins&lt;one&gt;<\/tt>$/,
+	     qr/SSH key <tt\b[^>]*>Admins&lt;one&gt;<\/tt>\s*$/,
 	     "$action names the library entry");
 	}
 
@@ -77,7 +77,7 @@ foreach my $action (qw(save_ssh_key delete_ssh_key download_ssh_key)) {
 for my $action (qw(create start stop)) {
 	like(parse_webmin_log('root', '', $action, 'pool', 'uuid',
 			      { name => 'extra<one>' }),
-	     qr/storage pool <tt>extra&lt;one&gt;<\/tt>/,
+	     qr/storage pool <tt\b[^>]*>extra&lt;one&gt;<\/tt>\s*/,
 	     'pool action retains escaped display name');
 	}
 foreach my $enabled ( 0, 1 ) {
@@ -90,17 +90,17 @@ foreach my $enabled ( 0, 1 ) {
 	}
 
 # Image outcomes distinguish completion, failures and cancellation.
-is(parse_webmin_log('root', '', 'delete', 'volume', '/old/path',
-		    { name => 'disk<one>' }),
-   'Deleted storage volume <tt>disk&lt;one&gt;</tt>',
-   'volume deletion has a readable escaped audit record');
+like(parse_webmin_log('root', '', 'delete', 'volume', '/old/path',
+		      { name => 'disk<one>' }),
+     qr{\ADeleted storage volume <tt\b[^>]*>disk&lt;one&gt;</tt>\s*\z},
+     'volume deletion has a readable escaped audit record');
 # Compact audit summaries share UI labels; expanded details
 # retain the exact file.
 my $generated_volume = 'cloudmin-alma10-system-'.('a' x 32).'.qcow2';
 like(parse_webmin_log('root', '', 'delete', 'volume',
 		      '/pool/'.$generated_volume,
 		      { name => $generated_volume }),
-     qr/Deleted storage volume <tt>alma10 - System disk \([a-f0-9]{8}\)<\/tt>/,
+     qr/Deleted storage volume <tt\b[^>]*>alma10 - System disk \([a-f0-9]{8}\)<\/tt>\s*/,
      'volume audit summaries use the same friendly name as storage');
 like(parse_webmin_log('root', '', 'delete', 'volume',
 		      '/pool/'.$generated_volume,
@@ -129,14 +129,14 @@ my $long = parse_webmin_log('root', '', 'import', 'image', '<job>',
 			      error => '<script>bad</script>' },
 			    1);
 like($long,
-     qr/Reference: <tt>&lt;job&gt;<\/tt>.*Error: &lt;script&gt;bad&lt;\/script&gt;/,
+     qr/Reference: <tt\b[^>]*>&lt;job&gt;<\/tt>\s*.*Error: &lt;script&gt;bad&lt;\/script&gt;/,
      'action details escape both identifiers and errors');
 for my $action (qw(create modify enable disable delete)) {
 	my $description = parse_webmin_log('root', '', $action, 'catalogue',
 					   'old:key',
 					   { names => "First <image> (ARM64)\0Second (x86-64)" });
 	like($description,
-	     qr/<tt>First &lt;image&gt; \(ARM64\)<\/tt>, <tt>Second \(x86-64\)<\/tt>/,
+	     qr/<tt\b[^>]*>First &lt;image&gt; \(ARM64\)<\/tt>\s*, <tt\b[^>]*>Second \(x86-64\)<\/tt>\s*/,
 	     'catalogue action retains escaped display names');
 	}
 is(parse_webmin_log('', '', '<new>', 'other', '<object>', { }),

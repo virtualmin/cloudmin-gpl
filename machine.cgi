@@ -81,7 +81,9 @@ if (($in{'vm_action'} ||
      '') =~ /\A(?:start|shutdown|reboot|suspend|resume|reset|force_off)\z/) {
 	print ui_tag('div',
 		     ui_alert_box(text('vm_control_'.$in{'vm_action'}.'_sent',
-				       '<tt>'.html_escape($vm->{'name'}).'</tt>'), 'info',
+				       ui_tag('tt', html_escape(
+					       $vm->{'name'}))),
+				  'info',
 				  undef, undef, ''),
 		     { 'data-vm-action-notice' => $in{'vm_action'},
 		       'data-vm-action-id' => $vm->{'uuid'},

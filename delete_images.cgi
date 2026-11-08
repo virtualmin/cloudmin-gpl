@@ -30,20 +30,21 @@ if (!$in{'confirm'}) {
 	# A cached selection may still contain images deleted
 	# by an earlier request.
 	my @deleted = grep { $_->{'state'} eq 'deleted' } @records;
-	error(text('images_delete_estale', join(', ',
-						map { '<tt>'.html_escape($_->{'name'}).
-			'</tt>' } @deleted))) if (@deleted);
+	error(text('images_delete_estale',
+		   join(', ', map {
+			   ui_tag('tt', html_escape($_->{'name'}))
+			   } @deleted)))
+		if (@deleted);
 	ui_print_header(undef, $text{'images_delete_selected'}, '');
-	print ui_confirmation_form('delete_images.cgi',
-				   $text{'images_delete_confirm'},
-				   [ [ 'token', $in{'token'} ], [ 'job',
-								  join(',',
-								       @ids) ] ],
-				   [ [ 'confirm',
-				       $text{'images_delete_button'} ] ],
-				   ui_text_color(join(', ',
-						      map { '<tt>'.html_escape($_->{'name'}).'</tt>' }
-						      @records), 'danger'));
+	print ui_confirmation_form(
+		'delete_images.cgi', $text{'images_delete_confirm'},
+		[ [ 'token', $in{'token'} ], [ 'job', join(',', @ids) ] ],
+		[ [ 'confirm', $text{'images_delete_button'} ] ],
+		ui_text_color(
+			join(', ', map {
+				ui_tag('tt', html_escape($_->{'name'}))
+				} @records),
+			'danger'));
 	ui_print_footer('images.cgi', $text{'images_return'});
 	exit;
 	}
@@ -66,7 +67,7 @@ foreach my $job (@records) {
 my $deadline = time() + 90;
 foreach my $job (@records) {
 	$first_print->(text('images_delete_doing',
-			    '<tt>'.html_escape($job->{'name'}).'</tt>'));
+			    ui_tag('tt', html_escape($job->{'name'}))));
 	my $error = $cancel_errors{$job->{'id'}};
 	my $removed;
 	while (!$error) {
