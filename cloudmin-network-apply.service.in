@@ -1,0 +1,7 @@
+[Unit]
+Description=Apply Cloudmin host bridge
+OnFailure=cloudmin-network-rollback.service
+[Service]
+Type=oneshot
+ExecStart=${NETWORK_EXEC} apply
+TimeoutStartSec=90

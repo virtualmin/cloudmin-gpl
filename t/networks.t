@@ -9,6 +9,11 @@ use Cloudmin::Networks;
 use Cloudmin::HostNetwork;
 use File::Temp qw(tempdir);
 use WebminCore;
+# get_system_hostname() keeps template defaults independent of this host.
+{
+	no warnings 'redefine';
+	*WebminCore::get_system_hostname = sub { 'host.example.test' };
+	}
 
 {
 	package NetworkConnection;
@@ -1070,7 +1075,7 @@ like($@, qr/expired/, 'expired confirmation explains recovery');
 		my $path = tempdir(CLEANUP => 1);
 		my $timed =
 			Cloudmin::HostNetwork->new(directory => "$path/state",
-						   module => '/fixture',
+						   module => "$Bin/..",
 						   jobs => $jobs,
 						   confirm_timeout =>
 							   $seconds);
@@ -1092,6 +1097,41 @@ like($@, qr/expired/, 'expired confirmation explains recovery');
 		       'timer does not extend the saved window');
 		cmp_ok($armed, '>=', $seconds - 2,
 		       'timer matches the saved countdown');
+		# Templates retain the worker actions and recovery dependencies.
+		my %units = map { $_->[1] => $_->[2] }
+			    grep { $_->[0] eq 'create_system_unit' } @guard_calls;
+		foreach my $action (qw(boot rollback apply)) {
+			like($units{"cloudmin-network-$action.service"},
+			     qr{^ExecStart=/usr/bin/perl \Q$Bin/..\E/network-worker\.pl \Q$action\E$}m,
+			     "$action unit runs the installed network worker");
+			}
+		like($units{'cloudmin-network-boot.service'},
+		     qr/^Before=network-pre\.target$/m,
+		     'boot recovery runs before host networking');
+		like($units{'cloudmin-network-boot.service'},
+		     qr/^WantedBy=multi-user\.target$/m,
+		     'boot recovery remains installable');
+		like($units{'cloudmin-network-apply.service'},
+		     qr/^OnFailure=cloudmin-network-rollback\.service$/m,
+		     'failed application still starts rollback');
+		like($timer->[2],
+		     qr/^Unit=cloudmin-network-rollback\.service$/m,
+		     'timer expiry still starts rollback');
+		unlike(join('', values %units), qr/\$\{[A-Z_]+\}/,
+		       'all template variables are expanded');
+		is_deeply([ map { [ @{$_}[0, 1] ] } @guard_calls ],
+			  [ [ 'create_system_unit',
+			      'cloudmin-network-boot.service' ],
+			    [ 'enable_unit', 'cloudmin-network-boot.service' ],
+			    [ 'create_system_unit',
+			      'cloudmin-network-rollback.service' ],
+			    [ 'create_system_unit',
+			      'cloudmin-network-rollback.timer' ],
+			    [ 'create_system_unit',
+			      'cloudmin-network-apply.service' ],
+			    [ 'stop_unit', 'cloudmin-network-rollback.timer' ],
+			    [ 'start_unit', 'cloudmin-network-rollback.timer' ] ],
+			  'unit installation and activation order is unchanged');
 		# Custom timeouts still arm boot recovery before
 		# starting the apply worker.
 		ok(
@@ -1116,6 +1156,15 @@ like($@, qr/expired/, 'expired confirmation explains recovery');
 		ok(!eval { $timed->install_guards({ deadline => time() - 1 }); 1 },
 		   'expired guard cannot be armed with a negative timeout');
 		}
+	# Incomplete packages must fail before creating or enabling any units.
+	my $empty = tempdir(CLEANUP => 1);
+	my $incomplete = Cloudmin::HostNetwork->new(module => $empty);
+	@guard_calls = ();
+	ok(!eval { $incomplete->install_guards({ deadline => time() + 180 }); 1 },
+	   'missing unit template refuses installation');
+	like($@, qr/Cannot read network recovery template/,
+	     'missing template reports the cause');
+	is_deeply(\@guard_calls, [ ], 'missing template leaves units untouched');
 	# Invalid constructor input falls back to the default timeout.
 	foreach my $invalid ( undef, 0, 119, 901, '180s', "180\nUnit=other" ) {
 		is(Cloudmin::HostNetwork->new(confirm_timeout =>

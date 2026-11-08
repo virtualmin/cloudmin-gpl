@@ -11,7 +11,8 @@ use IO::Socket::INET;
 use File::Basename qw(dirname);
 use WebminCore qw(foreign_require read_file_contents write_file_contents
 	make_dir rename_logged unlink_file unflush_file_lines execute_command
-	execute_command_logged get_perl_path convert_from_json convert_to_json);
+	execute_command_logged get_perl_path convert_from_json convert_to_json
+	substitute_template);
 require(dirname(__FILE__).'/HostBridgeRemoval.pm');
 
 # new(class, directory => path, module => path, jobs => object,
@@ -514,22 +515,32 @@ my $script = "$self->{module}/network-worker.pl";
 my $perl = get_perl_path();
 die "Unsupported module path for network recovery\n"
 	if ("$script$perl" =~ /[^a-zA-Z0-9_\/.+-]/);
-my $exec = "$perl $script";
+my %values = ( network_exec => "$perl $script",
+	       network_timeout => $remaining );
+# Read every template before installing any recovery units.
+my %units;
+foreach my $name (qw(boot.service rollback.service rollback.timer apply.service)) {
+	my $file = "$self->{module}/cloudmin-network-$name.in";
+	my $data = read_file_contents($file);
+	die "Cannot read network recovery template $file\n"
+		unless (defined($data) && length($data));
+	$units{$name} = substitute_template($data, \%values);
+	}
 # Boot recovery survives a reboot while the normal timer covers a lost session.
 $self->unit(
 	'create_system_unit', 'cloudmin-network-boot.service',
-	"[Unit]\nDescription=Restore unconfirmed Cloudmin networking\nDefaultDependencies=no\nAfter=local-fs.target\nBefore=network-pre.target\nWants=network-pre.target\n[Service]\nType=oneshot\nExecStart=$exec boot\nTimeoutStartSec=90\n[Install]\nWantedBy=multi-user.target\n");
+	$units{'boot.service'});
 $self->unit('enable_unit', 'cloudmin-network-boot.service');
 $self->unit(
 	'create_system_unit', 'cloudmin-network-rollback.service',
-	"[Unit]\nDescription=Roll back unconfirmed Cloudmin networking\n[Service]\nType=oneshot\nExecStart=$exec rollback\nTimeoutStartSec=120\n");
+	$units{'rollback.service'});
 $self->unit(
 	'create_system_unit', 'cloudmin-network-rollback.timer',
-	"[Unit]\nDescription=Cloudmin network confirmation timeout\n[Timer]\nOnActiveSec=$remaining\nAccuracySec=1\nUnit=cloudmin-network-rollback.service\n");
+	$units{'rollback.timer'});
 # Apply failures also request rollback; start the timer before launching apply.
 $self->unit(
 	'create_system_unit', 'cloudmin-network-apply.service',
-	"[Unit]\nDescription=Apply Cloudmin host bridge\nOnFailure=cloudmin-network-rollback.service\n[Service]\nType=oneshot\nExecStart=$exec apply\nTimeoutStartSec=90\n");
+	$units{'apply.service'});
 $self->unit('stop_unit', 'cloudmin-network-rollback.timer');
 $self->unit('start_unit', 'cloudmin-network-rollback.timer');
 }

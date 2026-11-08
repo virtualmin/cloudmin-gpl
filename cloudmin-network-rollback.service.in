@@ -1,0 +1,6 @@
+[Unit]
+Description=Roll back unconfirmed Cloudmin networking
+[Service]
+Type=oneshot
+ExecStart=${NETWORK_EXEC} rollback
+TimeoutStartSec=120

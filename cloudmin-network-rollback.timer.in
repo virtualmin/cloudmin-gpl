@@ -1,0 +1,6 @@
+[Unit]
+Description=Cloudmin network confirmation timeout
+[Timer]
+OnActiveSec=${NETWORK_TIMEOUT}
+AccuracySec=1
+Unit=cloudmin-network-rollback.service

@@ -6,6 +6,11 @@ use CloudminTest;
 use Test::More;
 use File::Temp qw(tempdir);
 use WebminCore;
+# get_system_hostname() keeps template defaults independent of this host.
+{
+	no warnings 'redefine';
+	*WebminCore::get_system_hostname = sub { 'host.example.test' };
+	}
 require "$Bin/../lib/Cloudmin/Networks.pm";
 require "$Bin/../lib/Cloudmin/HostNetwork.pm";
 
